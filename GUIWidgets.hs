@@ -1,6 +1,8 @@
 -- {-# OPTIONS -Wall #-}
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 import Prelude hiding (lookup)
+
+import qualified GLFWWrap
 import Graphics.Rendering.OpenGL hiding (scale, Color)
 import Graphics.UI.GLFW
 import Control.Arrow
@@ -22,13 +24,11 @@ import Data.Char
 import Data.Maybe
 import qualified Data.Map as Map
 import Data.Map(Map)
-
-assert msg p = unless p (fail msg)
+import qualified Data.Set as Set
+import Data.Set(Set)
 
 defaultFont :: FilePath
 defaultFont = "/usr/share/fonts/truetype/freefont/FreeSerifBold.ttf"
-
-withGLFW = bracket_ (initialize >>= assert "initialize failed") terminate
 
 -- TODO: Modifiers
 data EventType = CharEventType | KeyEventType Key
@@ -194,25 +194,17 @@ make font emptyString maxLines (Model cursor str) = (void image, keymap)
         cursor' = cursor + length l
         str' = concat [before, l, after]
 
-data Quit = Quit
-  deriving (Typeable, Show)
-instance Exception Quit
-
-main = withGLFW $ do
+main = GLFWWrap.withGLFW $ do
   font <- Draw.openFont defaultFont
-  openWindow (Size 800 600) [] Window >>= assert "Open window failed"
+  GLFWWrap.openWindow (Size 800 600) [] Window
 
   modelVar <- newIORef (Model 4 "Text")
 
-  charCallback $= charHandler font modelVar
-  keyCallback $= keyHandler font modelVar
-  windowCloseCallback $= throwIO Quit
-  forever $ do
-    waitEvents
-    model <- readIORef modelVar
-    Draw.clearRender . (Draw.scale (20/800) (20/600) %%) . fst $ widget font model
-    swapBuffers
-    threadDelay 10000
+  let handleEvent (GLFWWrap.CharEvent char state) = charHandler font modelVar char state
+      handleEvent (GLFWWrap.KeyEvent key state) = keyHandler font modelVar key state
+  GLFWWrap.eventLoop $ \events -> do
+    mapM_ handleEvent events
+    Draw.clearRender . (Draw.scale (20/800) (20/600) %%) . fst . widget font =<< readIORef modelVar
 
 widget :: Draw.Font -> Model -> (Draw.Image (), EventMap Model)
 widget font = make font "<empty>" 1
@@ -223,17 +215,10 @@ updateModel font event model =
     snd $
     widget font model
 
-charHandler font modelVar char Press = do
-    putStrLn $ "Char press: " ++ show char
-    modifyIORef modelVar . updateModel font $ CharEvent char
-charHandler _    _        char Release = do
-    putStrLn ("Char released: " ++ show char)
-    return ()
+sendEvent font modelVar = modifyIORef modelVar . updateModel font
 
-keyHandler  font modelVar key Press   = do
-    putStrLn $ "Key pressed: " ++ show key
-    modifyIORef modelVar . updateModel font $ KeyEvent key
+charHandler font modelVar char Press = sendEvent font modelVar $ CharEvent char
+charHandler _    _        char Release = return ()
 
-keyHandler  _    _        key Release = do
-    putStrLn $ "Key released: " ++ show key
-    return ()
+keyHandler  font modelVar key Press   = sendEvent font modelVar $ KeyEvent key
+keyHandler  _    _        key Release = return ()
