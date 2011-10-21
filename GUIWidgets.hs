@@ -8,13 +8,14 @@ import Graphics.UI.GLFW
 import Control.Arrow
 import Control.Newtype
 import Control.Exception(bracket_, Exception, throwIO)
-import Control.Monad(forever, unless, void)
+import Control.Monad
 import Control.Concurrent
 import Control.Newtype.TH
 import Control.Applicative
 import Graphics.DrawingCombinators((%%))
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.DrawingCombinators.Affine as Affine
+import Data.Time.Clock
 import Data.Typeable
 import Data.List.Split(splitOn)
 import Data.StateVar
@@ -30,15 +31,40 @@ import Data.Set(Set)
 defaultFont :: FilePath
 defaultFont = "/usr/share/fonts/truetype/freefont/FreeSerifBold.ttf"
 
+data ModState = ModState {
+  modCtrl :: Bool,
+  modMeta :: Bool,
+  modAlt :: Bool,
+  modShift :: Bool
+  }
+  deriving (Show, Eq, Ord)
+
+noMods = ModState False False False False
+shift = noMods { modShift = True }
+ctrl = noMods { modCtrl = True }
+alt = noMods { modAlt = True }
+
 -- TODO: Modifiers
-data EventType = CharEventType | KeyEventType Key
+data EventType = CharEventType | KeyEventType ModState Key
   deriving (Show, Eq, Ord)
 data Event = CharEvent { fromCharEvent :: Char }
-           | KeyEvent  { fromKeyEvent  :: Key }
+           | KeyEvent ModState Key
+  deriving (Show, Eq, Ord)
+
+modStateFromKeySet :: Set Key -> ModState
+modStateFromKeySet keySet =
+  ModState {
+    modCtrl = isPressed [LCTRL, RCTRL],
+    modMeta = False, -- TODO: GLFW doesn't support meta/winkey?
+    modAlt = isPressed [LALT, RALT],
+    modShift = isPressed [LSHIFT, RSHIFT]
+    }
+  where
+    isPressed = any ((`Set.member` keySet) . SpecialKey)
 
 eventTypeOf :: Event -> EventType
 eventTypeOf (CharEvent _) = CharEventType
-eventTypeOf (KeyEvent k) = KeyEventType k
+eventTypeOf (KeyEvent ms k) = KeyEventType ms k
 
 newtype EventMap a = EventMap (Map EventType (Event -> a))
   deriving (Monoid)
@@ -61,6 +87,12 @@ splitLines :: String -> [String]
 splitLines = splitOn "\n"
 
 square = Draw.convexPoly [ (-1, -1), (1, -1), (1, 1), (-1, 1) ]
+
+tillEndOfWord :: String -> String
+tillEndOfWord xs = spaces ++ nonSpaces
+  where
+    spaces = takeWhile isSpace xs
+    nonSpaces = takeWhile (not . isSpace) . dropWhile isSpace $ xs
 
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
@@ -103,86 +135,107 @@ make font emptyString maxLines (Model cursor str) = (void image, keymap)
     backDelete n = (cursor-n, take (cursor-n) str ++ drop cursor str)
     delete n = (cursor, before ++ drop n after)
 
+    backDeleteWord = backDelete . length . tillEndOfWord . reverse $ before
+    deleteWord = delete . length . tillEndOfWord $ after
+
+    backMoveWord = moveRelative . negate . length . tillEndOfWord . reverse $ before
+    moveWord = moveRelative . length . tillEndOfWord $ after
+
     singleton _doc eventType makeModel =
         pack . Map.singleton eventType $
         uncurry Model . makeModel
-    specialton doc key = singleton doc (KeyEventType (SpecialKey key)) . const
+
+    keys doc = mconcat . map (\event -> singleton doc event . const)
+
+    specialKey = KeyEventType noMods . SpecialKey
+    ctrlSpecialKey = KeyEventType ctrl . SpecialKey
+    ctrlCharKey = KeyEventType ctrl . CharKey . toUpper
+    altCharKey = KeyEventType alt . CharKey . toUpper
+    homeKeys = [specialKey HOME, ctrlCharKey 'A']
+    endKeys = [specialKey END, ctrlCharKey 'E']
 
     keymap =
       mconcat . concat $ [
-        [ specialton "Move left" LEFT $
+        [ keys "Move left" [specialKey LEFT] $
           moveRelative (-1)
         | cursor > 0 ],
 
-        [ specialton "Move right" RIGHT $
+        [ keys "Move right" [specialKey RIGHT] $
           moveRelative 1
         | cursor < textLength ],
 
-        [ specialton "Move up" UP $
+        [ keys "Move word left" [ctrlSpecialKey LEFT] $
+          backMoveWord
+        | cursor > 0 ],
+
+        [ keys "Move word right" [ctrlSpecialKey RIGHT] moveWord
+        | cursor < textLength ],
+
+        [ keys "Move up" [specialKey UP] $
           moveRelative (- cursorX - 1 - length (drop cursorX prevLine))
         | cursorY > 0 ],
 
-        [ specialton "Move down" DOWN $
+        [ keys "Move down" [specialKey DOWN] $
           moveRelative (length curLineAfter + 1 + min cursorX (length nextLine))
         | cursorY < height-1 ],
 
-        -- [ homeKeymap "Move to beginning of line" $
-        --   moveRelative (-cursorX)
-        -- | cursorX > 0 ],
+        [ keys "Move to beginning of line" homeKeys $
+          moveRelative (-cursorX)
+        | cursorX > 0 ],
 
-        -- [ endKeymap "Move to end of line" $
-        --   moveRelative (length curLineAfter)
-        -- | not . null $ curLineAfter ],
+        [ keys "Move to end of line" endKeys $
+          moveRelative (length curLineAfter)
+        | not . null $ curLineAfter ],
 
-        -- [ homeKeymap "Move to beginning of text" $
-        --   moveAbsolute 0
-        -- | cursorX == 0 && cursor > 0 ],
+        [ keys "Move to beginning of text" homeKeys $
+          moveAbsolute 0
+        | cursorX == 0 && cursor > 0 ],
 
-        -- [ endKeymap "Move to end of text" $
-        --   moveAbsolute textLength
-        -- | null curLineAfter && cursor < textLength ],
+        [ keys "Move to end of text" endKeys $
+          moveAbsolute textLength
+        | null curLineAfter && cursor < textLength ],
 
-        [ specialton "Delete backwards" BACKSPACE $
+        [ keys "Delete backwards" [specialKey BACKSPACE] $
           backDelete 1
         | cursor > 0 ],
 
-        -- [ specialton "Delete word backwards" (ctrlCharK 'w')
-        --   backDeleteWord
-        -- | cursor > 0 ],
+        [ keys "Delete word backwards" [ctrlCharKey 'w']
+          backDeleteWord
+        | cursor > 0 ],
 
-        -- let swapPoint = min (textLength - 2) (cursor - 1)
-        --     (beforeSwap, x:y:afterSwap) = splitAt swapPoint str
-        --     swapLetters = (min textLength (cursor + 1),
-        --                    beforeSwap ++ y:x:afterSwap)
-        -- in
+        let swapPoint = min (textLength - 2) (cursor - 1)
+            (beforeSwap, x:y:afterSwap) = splitAt swapPoint str
+            swapLetters = (min textLength (cursor + 1),
+                           beforeSwap ++ y:x:afterSwap)
+        in
 
-        -- [ specialton "Swap letters" (ctrlCharK 't')
-        --   swapLetters
-        -- | cursor > 0 && textLength >= 2 ],
+        [ keys "Swap letters" [ctrlCharKey 't']
+          swapLetters
+        | cursor > 0 && textLength >= 2 ],
 
-        [ specialton "Delete forward" DEL $
+        [ keys "Delete forward" [specialKey DEL] $
           delete 1
         | cursor < textLength ],
 
-        -- [ specialton "Delete word forward" (altCharK 'd')
-        --   deleteWord
-        -- | cursor < textLength ],
+        [ keys "Delete word forward" [altCharKey 'd']
+          deleteWord
+        | cursor < textLength ],
 
-        -- [ specialton "Delete rest of line" (ctrlCharK 'k') $
-        --   delete (length curLineAfter)
-        -- | not . null $ curLineAfter ],
+        [ keys "Delete rest of line" [ctrlCharKey 'k'] $
+          delete (length curLineAfter)
+        | not . null $ curLineAfter ],
 
-        -- [ specialton "Delete newline" (ctrlCharK 'k') $
-        --   delete 1
-        -- | null curLineAfter && cursor < textLength ],
+        [ keys "Delete newline" [ctrlCharKey 'k'] $
+          delete 1
+        | null curLineAfter && cursor < textLength ],
 
-        -- [ specialton "Delete till beginning of line" (ctrlCharK 'u') $
-        --   backDelete (length curLineBefore)
-        -- | not . null $ curLineBefore ],
+        [ keys "Delete till beginning of line" [ctrlCharKey 'u'] $
+          backDelete (length curLineBefore)
+        | not . null $ curLineBefore ],
 
         [ singleton "Insert character" CharEventType (insert . return . fromCharEvent) ],
 
-        [ specialton "Insert Newline" ENTER (insert "\n") ]
+        [ keys "Insert Newline" [specialKey ENTER] (insert "\n") ]
 
         ]
 
@@ -194,31 +247,55 @@ make font emptyString maxLines (Model cursor str) = (void image, keymap)
         cursor' = cursor + length l
         str' = concat [before, l, after]
 
+data TypematicState = NoKey | TypematicRepeat { tsKey :: Key, tsStartTime :: UTCTime, tsCount :: Int }
+
+typematicTime x = 0.5 + fromIntegral x * 0.05
+
 main = GLFWWrap.withGLFW $ do
   font <- Draw.openFont defaultFont
   GLFWWrap.openWindow (Size 800 600) [] Window
 
+  keySetVar <- newIORef Set.empty
   modelVar <- newIORef (Model 4 "Text")
+  typematicStateVar <- newIORef NoKey
 
-  let handleEvent (GLFWWrap.CharEvent char state) = charHandler font modelVar char state
-      handleEvent (GLFWWrap.KeyEvent key state) = keyHandler font modelVar key state
+  let sendEvent = modifyIORef modelVar . updateModel font
+
+      handleEvent (GLFWWrap.KeyEvent key Press) = do
+        modifyIORef keySetVar (Set.insert key)
+        keySet <- readIORef keySetVar
+        now <- getCurrentTime
+        writeIORef typematicStateVar $ TypematicRepeat key now 0
+        sendEvent $ KeyEvent (modStateFromKeySet keySet) key
+
+      handleEvent (GLFWWrap.KeyEvent key Release) = do
+        writeIORef typematicStateVar NoKey
+        modifyIORef keySetVar (Set.delete key)
+
+      handleEvent (GLFWWrap.CharEvent char Press) = do
+        keySet <- readIORef keySetVar
+        when (modStateFromKeySet keySet `elem` [noMods, shift]) . sendEvent $ CharEvent char
+
+      handleEvent GLFWWrap.WindowClose = error "Quit"
+      handleEvent _ = return ()
+
   GLFWWrap.eventLoop $ \events -> do
+    typematicState <- readIORef typematicStateVar
+    case typematicState of
+      TypematicRepeat key startTime count -> do
+        now <- getCurrentTime
+        when (diffUTCTime now startTime >= typematicTime count) $ do
+          keySet <- readIORef keySetVar
+          sendEvent $ KeyEvent (modStateFromKeySet keySet) key
+      _ -> return ()
     mapM_ handleEvent events
     Draw.clearRender . (Draw.scale (20/800) (20/600) %%) . fst . widget font =<< readIORef modelVar
 
 widget :: Draw.Font -> Model -> (Draw.Image (), EventMap Model)
-widget font = make font "<empty>" 1
+widget font = make font "<empty>" 2
 
 updateModel font event model =
     fromMaybe model .
     lookup event .
     snd $
     widget font model
-
-sendEvent font modelVar = modifyIORef modelVar . updateModel font
-
-charHandler font modelVar char Press = sendEvent font modelVar $ CharEvent char
-charHandler _    _        char Release = return ()
-
-keyHandler  font modelVar key Press   = sendEvent font modelVar $ KeyEvent key
-keyHandler  _    _        key Release = return ()
