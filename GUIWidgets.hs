@@ -4,6 +4,7 @@ import Prelude hiding (lookup)
 
 import qualified GLFWWrap
 
+import qualified Codec.Binary.UTF8.String as UTF8
 import Control.Concurrent (forkIO, threadDelay)
 import Control.Newtype
 import Control.Monad
@@ -105,11 +106,11 @@ make font emptyString maxLines (Model cursor str) = (void image, keymap)
 
     image =
       mconcat [
-        Draw.text font t,
+        Draw.text font $ UTF8.encodeString t,
         cursorImage
       ]
 
-    cursorPos = Draw.textWidth font (take cursor t)
+    cursorPos = Draw.textWidth font . UTF8.encodeString $ take cursor t
     cursorImage = Draw.tint (Draw.Color 0 1 0 1) $
                   Affine.translate (cursorPos, 0.5) %%
                   Draw.scale 0.1 1 %%
