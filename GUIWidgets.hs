@@ -4,6 +4,7 @@ import Prelude hiding (lookup)
 
 import qualified GLFWWrap
 
+import Control.Concurrent (forkIO, threadDelay)
 import Control.Newtype
 import Control.Monad
 import Control.Newtype.TH
@@ -248,49 +249,73 @@ make font emptyString maxLines (Model cursor str) = (void image, keymap)
 
 data TypematicState = NoKey | TypematicRepeat { tsKey :: Key, tsStartTime :: UTCTime, tsCount :: Int }
 
-typematicTime x = 0.5 + fromIntegral x * 0.05
-
 assert :: Monad m => String -> Bool -> m ()
 assert msg p = unless p (fail msg)
+
+typematicKeyHandlerWrap :: (Int -> NominalDiffTime) -> (Key -> Bool -> IO ()) -> IO (Key -> Bool -> IO ())
+typematicKeyHandlerWrap timeFunc wrappedHandler = do
+  stateVar <- newIORef NoKey
+  _ <- forkIO . forever $ do
+    state <- readIORef stateVar
+    sleepTime <- case state of
+      TypematicRepeat key startTime count -> do
+        now <- getCurrentTime
+        let timeDiff = diffUTCTime now startTime
+        if timeDiff >= timeFunc count
+          then do
+            wrappedHandler key True
+            writeIORef stateVar . TypematicRepeat key startTime $ count + 1
+            return $ timeFunc (count + 1) - timeDiff
+          else
+            return $ timeFunc count - timeDiff
+      _ -> return $ timeFunc 0
+    threadDelay . round $ 1000000 * sleepTime
+  let
+    handler key True = do
+      now <- getCurrentTime
+      writeIORef stateVar $ TypematicRepeat key now 0
+      wrappedHandler key True
+    handler key False = do
+      writeIORef stateVar NoKey
+      wrappedHandler key False
+  return handler
+
+modifiersEventHandlerWrap :: (Event -> IO ()) -> IO (GLFWWrap.GLFWEvent -> IO ())
+modifiersEventHandlerWrap wrappedHandler = do
+  keySetVar <- newIORef Set.empty
+  let
+    handler (GLFWWrap.KeyEvent key True) = do
+      modifyIORef keySetVar (Set.insert key)
+      keySet <- readIORef keySetVar
+      wrappedHandler $ KeyEvent (modStateFromKeySet keySet) key
+    handler (GLFWWrap.KeyEvent key False) =
+      modifyIORef keySetVar (Set.delete key)
+    handler (GLFWWrap.CharEvent char True) = do
+      keySet <- readIORef keySetVar
+      when (modStateFromKeySet keySet `elem` [noMods, shift]) . wrappedHandler $ CharEvent char
+    handler _ = return ()
+  return handler
 
 main = GLFWWrap.withGLFW $ do
   font <- Draw.openFont (defaultFont System.Info.os)
   openWindow defaultDisplayOptions >>= assert "Open window failed"
 
-  keySetVar <- newIORef Set.empty
   modelVar <- newIORef (Model 4 "Text")
 
-  typematicStateVar <- newIORef NoKey
+  modifiersHandler <- modifiersEventHandlerWrap (modifyIORef modelVar . updateModel font)
 
-  let sendEvent = modifyIORef modelVar . updateModel font
+  let
+    keyHandler key isPress = modifiersHandler $ GLFWWrap.KeyEvent key isPress
+    typematicTime x = 0.5 + fromIntegral x * 0.05
 
-      handleEvent (GLFWWrap.KeyEvent key True) = do
-        modifyIORef keySetVar (Set.insert key)
-        keySet <- readIORef keySetVar
-        now <- getCurrentTime
-        writeIORef typematicStateVar $ TypematicRepeat key now 0
-        sendEvent $ KeyEvent (modStateFromKeySet keySet) key
+  typematicKeyHandler <- typematicKeyHandlerWrap typematicTime keyHandler
 
-      handleEvent (GLFWWrap.KeyEvent key False) = do
-        writeIORef typematicStateVar NoKey
-        modifyIORef keySetVar (Set.delete key)
-
-      handleEvent (GLFWWrap.CharEvent char True) = do
-        keySet <- readIORef keySetVar
-        when (modStateFromKeySet keySet `elem` [noMods, shift]) . sendEvent $ CharEvent char
-
-      handleEvent GLFWWrap.WindowClose = error "Quit"
-      handleEvent _ = return ()
+  let
+    handleEvent (GLFWWrap.KeyEvent key isPress) = typematicKeyHandler key isPress
+    handleEvent GLFWWrap.WindowClose = error "Quit"
+    handleEvent x = modifiersHandler x
 
   GLFWWrap.eventLoop $ \events -> do
-    typematicState <- readIORef typematicStateVar
-    case typematicState of
-      TypematicRepeat key startTime count -> do
-        now <- getCurrentTime
-        when (diffUTCTime now startTime >= typematicTime count) $ do
-          keySet <- readIORef keySetVar
-          sendEvent $ KeyEvent (modStateFromKeySet keySet) key
-      _ -> return ()
     mapM_ handleEvent events
     Draw.clearRender . (Draw.scale (20/800) (20/600) %%) . fst . widget font =<< readIORef modelVar
 
