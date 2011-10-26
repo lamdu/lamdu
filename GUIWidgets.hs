@@ -3,33 +3,29 @@
 import Prelude hiding (lookup)
 
 import qualified GLFWWrap
-import Graphics.Rendering.OpenGL hiding (scale, Color)
-import Graphics.UI.GLFW
-import Control.Arrow
+
 import Control.Newtype
-import Control.Exception(bracket_, Exception, throwIO)
 import Control.Monad
-import Control.Concurrent
 import Control.Newtype.TH
-import Control.Applicative
+import Data.Char
+import Data.IORef
+import Data.List.Split(splitOn)
+import qualified Data.Map as Map
+import Data.Map(Map)
+import Data.Maybe
+import Data.Monoid
+import qualified Data.Set as Set
+import Data.Set(Set)
+import Data.Time.Clock
 import Graphics.DrawingCombinators((%%))
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.DrawingCombinators.Affine as Affine
-import Data.Time.Clock
-import Data.Typeable
-import Data.List.Split(splitOn)
-import Data.StateVar
-import Data.Monoid
-import Data.IORef
-import Data.Char
-import Data.Maybe
-import qualified Data.Map as Map
-import Data.Map(Map)
-import qualified Data.Set as Set
-import Data.Set(Set)
+import Graphics.UI.GLFW
+import qualified System.Info
 
-defaultFont :: FilePath
-defaultFont = "/usr/share/fonts/truetype/freefont/FreeSerifBold.ttf"
+defaultFont :: String -> FilePath
+defaultFont "darwin" = "/Library/Fonts/Arial.ttf"
+defaultFont _ = "/usr/share/fonts/truetype/freefont/FreeSerifBold.ttf"
 
 data ModState = ModState {
   modCtrl :: Bool,
@@ -44,6 +40,9 @@ shift = noMods { modShift = True }
 ctrl = noMods { modCtrl = True }
 alt = noMods { modAlt = True }
 
+instance Ord Key where
+    compare a b = compare (show a) (show b)
+
 -- TODO: Modifiers
 data EventType = CharEventType | KeyEventType ModState Key
   deriving (Show, Eq, Ord)
@@ -54,13 +53,13 @@ data Event = CharEvent { fromCharEvent :: Char }
 modStateFromKeySet :: Set Key -> ModState
 modStateFromKeySet keySet =
   ModState {
-    modCtrl = isPressed [LCTRL, RCTRL],
+    modCtrl = isPressed [KeyLeftCtrl, KeyRightCtrl],
     modMeta = False, -- TODO: GLFW doesn't support meta/winkey?
-    modAlt = isPressed [LALT, RALT],
-    modShift = isPressed [LSHIFT, RSHIFT]
+    modAlt = isPressed [KeyLeftAlt, KeyRightAlt],
+    modShift = isPressed [KeyLeftShift, KeyRightShift]
     }
   where
-    isPressed = any ((`Set.member` keySet) . SpecialKey)
+    isPressed = any (`Set.member` keySet)
 
 eventTypeOf :: Event -> EventType
 eventTypeOf (CharEvent _) = CharEventType
@@ -147,35 +146,35 @@ make font emptyString maxLines (Model cursor str) = (void image, keymap)
 
     keys doc = mconcat . map (\event -> singleton doc event . const)
 
-    specialKey = KeyEventType noMods . SpecialKey
-    ctrlSpecialKey = KeyEventType ctrl . SpecialKey
+    specialKey = KeyEventType noMods
+    ctrlSpecialKey = KeyEventType ctrl
     ctrlCharKey = KeyEventType ctrl . CharKey . toUpper
     altCharKey = KeyEventType alt . CharKey . toUpper
-    homeKeys = [specialKey HOME, ctrlCharKey 'A']
-    endKeys = [specialKey END, ctrlCharKey 'E']
+    homeKeys = [specialKey KeyHome, ctrlCharKey 'A']
+    endKeys = [specialKey KeyEnd, ctrlCharKey 'E']
 
     keymap =
       mconcat . concat $ [
-        [ keys "Move left" [specialKey LEFT] $
+        [ keys "Move left" [specialKey KeyLeft] $
           moveRelative (-1)
         | cursor > 0 ],
 
-        [ keys "Move right" [specialKey RIGHT] $
+        [ keys "Move right" [specialKey KeyRight] $
           moveRelative 1
         | cursor < textLength ],
 
-        [ keys "Move word left" [ctrlSpecialKey LEFT] $
+        [ keys "Move word left" [ctrlSpecialKey KeyLeft] $
           backMoveWord
         | cursor > 0 ],
 
-        [ keys "Move word right" [ctrlSpecialKey RIGHT] moveWord
+        [ keys "Move word right" [ctrlSpecialKey KeyRight] moveWord
         | cursor < textLength ],
 
-        [ keys "Move up" [specialKey UP] $
+        [ keys "Move up" [specialKey KeyUp] $
           moveRelative (- cursorX - 1 - length (drop cursorX prevLine))
         | cursorY > 0 ],
 
-        [ keys "Move down" [specialKey DOWN] $
+        [ keys "Move down" [specialKey KeyDown] $
           moveRelative (length curLineAfter + 1 + min cursorX (length nextLine))
         | cursorY < height-1 ],
 
@@ -195,7 +194,7 @@ make font emptyString maxLines (Model cursor str) = (void image, keymap)
           moveAbsolute textLength
         | null curLineAfter && cursor < textLength ],
 
-        [ keys "Delete backwards" [specialKey BACKSPACE] $
+        [ keys "Delete backwards" [specialKey KeyBackspace] $
           backDelete 1
         | cursor > 0 ],
 
@@ -213,7 +212,7 @@ make font emptyString maxLines (Model cursor str) = (void image, keymap)
           swapLetters
         | cursor > 0 && textLength >= 2 ],
 
-        [ keys "Delete forward" [specialKey DEL] $
+        [ keys "Delete forward" [specialKey KeyDel] $
           delete 1
         | cursor < textLength ],
 
@@ -235,7 +234,7 @@ make font emptyString maxLines (Model cursor str) = (void image, keymap)
 
         [ singleton "Insert character" CharEventType (insert . return . fromCharEvent) ],
 
-        [ keys "Insert Newline" [specialKey ENTER] (insert "\n") ]
+        [ keys "Insert Newline" [specialKey KeyEnter] (insert "\n") ]
 
         ]
 
@@ -251,28 +250,32 @@ data TypematicState = NoKey | TypematicRepeat { tsKey :: Key, tsStartTime :: UTC
 
 typematicTime x = 0.5 + fromIntegral x * 0.05
 
+assert :: Monad m => String -> Bool -> m ()
+assert msg p = unless p (fail msg)
+
 main = GLFWWrap.withGLFW $ do
-  font <- Draw.openFont defaultFont
-  GLFWWrap.openWindow (Size 800 600) [] Window
+  font <- Draw.openFont (defaultFont System.Info.os)
+  openWindow defaultDisplayOptions >>= assert "Open window failed"
 
   keySetVar <- newIORef Set.empty
   modelVar <- newIORef (Model 4 "Text")
+
   typematicStateVar <- newIORef NoKey
 
   let sendEvent = modifyIORef modelVar . updateModel font
 
-      handleEvent (GLFWWrap.KeyEvent key Press) = do
+      handleEvent (GLFWWrap.KeyEvent key True) = do
         modifyIORef keySetVar (Set.insert key)
         keySet <- readIORef keySetVar
         now <- getCurrentTime
         writeIORef typematicStateVar $ TypematicRepeat key now 0
         sendEvent $ KeyEvent (modStateFromKeySet keySet) key
 
-      handleEvent (GLFWWrap.KeyEvent key Release) = do
+      handleEvent (GLFWWrap.KeyEvent key False) = do
         writeIORef typematicStateVar NoKey
         modifyIORef keySetVar (Set.delete key)
 
-      handleEvent (GLFWWrap.CharEvent char Press) = do
+      handleEvent (GLFWWrap.CharEvent char True) = do
         keySet <- readIORef keySetVar
         when (modStateFromKeySet keySet `elem` [noMods, shift]) . sendEvent $ CharEvent char
 
