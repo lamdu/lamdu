@@ -1,27 +1,19 @@
 {-# OPTIONS -Wall #-}
-module GLFWWrap(GLFWEvent(..), withGLFW, eventLoop, openWindow) where
+module GLFWWrap(GLFWEvent(..), withGLFW, eventLoop) where
 
-import Control.Monad(forever, unless)
-import Graphics.Rendering.OpenGL(($=), Size)
-import qualified Graphics.UI.GLFW as GLFW
-import Data.IORef(newIORef, atomicModifyIORef, modifyIORef)
-import Control.Exception(bracket_)
 import Control.Concurrent(threadDelay)
+import Control.Exception(bracket_)
+import Control.Monad(forever, unless)
+import Data.IORef(newIORef, atomicModifyIORef, modifyIORef)
+import qualified Graphics.UI.GLFW as GLFW
 
-data GLFWEvent = CharEvent Char GLFW.KeyButtonState
-               | KeyEvent GLFW.Key GLFW.KeyButtonState
+data GLFWEvent = CharEvent Char Bool
+               | KeyEvent GLFW.Key Bool
                | WindowClose
   deriving (Show, Eq)
 
 assert :: Monad m => String -> Bool -> m ()
 assert msg p = unless p (fail msg)
-
-openWindow :: Size
-           -> [GLFW.DisplayBits]
-           -> GLFW.WindowMode
-           -> IO ()
-openWindow size opts mode = GLFW.openWindow size opts mode >>=
-                            assert "Open window failed"
 
 withGLFW :: IO a -> IO a
 withGLFW = bracket_ (GLFW.initialize >>= assert "initialize failed") GLFW.terminate
@@ -30,12 +22,16 @@ eventLoop :: ([GLFWEvent] -> IO ()) -> IO b
 eventLoop iteration = do
   eventsVar <- newIORef []
 
-  let addEvent = modifyIORef eventsVar . (:)
-      addKeyEvent con c k = addEvent (con c k)
+  let
+    addEvent = modifyIORef eventsVar . (:)
+    addKeyEvent c k = addEvent $ KeyEvent c k
+    charEventHandler c
+      | '\57344' <= c && c <= '\63743' = const $ return () -- Range for "key" characters (keys for left key, right key, etc.)
+      | otherwise = addEvent . CharEvent c
 
-  GLFW.charCallback $= addKeyEvent CharEvent
-  GLFW.keyCallback $= addKeyEvent KeyEvent
-  GLFW.windowCloseCallback $= addEvent WindowClose
+  GLFW.setCharCallback charEventHandler
+  GLFW.setKeyCallback addKeyEvent
+  GLFW.setWindowCloseCallback $ addEvent WindowClose >> return True
 
   forever $ do
     GLFW.pollEvents
