@@ -5,6 +5,7 @@ import qualified GLFWWrap
 
 import Control.Concurrent (forkIO, threadDelay)
 import Control.Concurrent.MVar
+import Control.Applicative (pure)
 import Control.Monad
 import Data.IORef
 import Data.Maybe
@@ -15,8 +16,10 @@ import Graphics.UI.GLFW
 import qualified Graphics.DrawingCombinators as Draw
 import Graphics.DrawingCombinators((%%))
 import qualified System.Info
-import qualified TextEdit
 import EventMap
+import qualified TextEdit
+import qualified GridView
+import           SizeRange                        (SizeRange(..))
 
 data TypematicState = NoKey | TypematicRepeat { _tsKey :: Key, _tsCount :: Int, _tsStartTime :: UTCTime }
 
@@ -86,6 +89,7 @@ main = GLFWWrap.withGLFW $ do
   GLFWWrap.openWindow defaultDisplayOptions
 
   modelVar <- newIORef (TextEdit.Model 4 "Text")
+                        --TextEdit.Model 0 "Text"]
 
   modifiersHandler <- modifiersEventHandlerWrap (modifyIORef modelVar . updateModel font)
 
@@ -105,7 +109,11 @@ main = GLFWWrap.withGLFW $ do
     Draw.clearRender . (Draw.scale (20/800) (20/600) %%) . fst . widget font =<< readIORef modelVar
 
 widget :: Draw.Font -> TextEdit.Model -> (Draw.Image (), EventMap TextEdit.Model)
-widget font = TextEdit.make font "<empty>" 2
+widget font model = (snd grid (pure 0), eventMap)
+  where
+    grid = GridView.make $ replicate 3 [textEdit]
+    textEdit = (SizeRange (pure 2) (pure Nothing), const img)
+    (img, eventMap) = TextEdit.make font "<empty>" 2 model
 
 updateModel :: Draw.Font -> Event -> TextEdit.Model -> TextEdit.Model
 updateModel font event model =
