@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-module GLFWWrap(GLFWEvent(..), withGLFW, eventLoop) where
+module GLFWWrap(GLFWEvent(..), withGLFW, eventLoop, openWindow) where
 
 import Control.Concurrent(threadDelay)
 import Control.Exception(bracket_)
@@ -17,6 +17,9 @@ assert msg p = unless p (fail msg)
 
 withGLFW :: IO a -> IO a
 withGLFW = bracket_ (GLFW.initialize >>= assert "initialize failed") GLFW.terminate
+
+openWindow :: GLFW.DisplayOptions -> IO ()
+openWindow options = GLFW.openWindow options >>= assert "Open window failed"
 
 eventLoop :: ([GLFWEvent] -> IO ()) -> IO b
 eventLoop iteration = do
