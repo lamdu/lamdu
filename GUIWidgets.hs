@@ -6,6 +6,7 @@ import qualified GLFWWrap
 
 import qualified Codec.Binary.UTF8.String as UTF8
 import Control.Concurrent (forkIO, threadDelay)
+import Control.Concurrent.MVar
 import Control.Newtype
 import Control.Monad
 import Control.Newtype.TH
@@ -72,9 +73,10 @@ newtype EventMap a = EventMap (Map EventType (Event -> a))
 $(mkNewTypes [''EventMap])
 
 lookup :: Event -> EventMap a -> Maybe a
-lookup event = fmap ($ event) .
-               Map.lookup (eventTypeOf event) .
-               unpack
+lookup event =
+  fmap ($ event) .
+  Map.lookup (eventTypeOf event) .
+  unpack
 
 type Cursor = Int
 
@@ -111,10 +113,11 @@ make font emptyString maxLines (Model cursor str) = (void image, keymap)
       ]
 
     cursorPos = Draw.textWidth font . UTF8.encodeString $ take cursor t
-    cursorImage = Draw.tint (Draw.Color 0 1 0 1) $
-                  Affine.translate (cursorPos, 0.5) %%
-                  Draw.scale 0.1 1 %%
-                  square
+    cursorImage =
+      Draw.tint (Draw.Color 0 1 0 1) $
+      Affine.translate (cursorPos, 0.5) %%
+      Draw.scale 0.1 1 %%
+      square
 
     (before, after) = splitAt cursor str
     textLength = length str
@@ -143,8 +146,8 @@ make font emptyString maxLines (Model cursor str) = (void image, keymap)
     moveWord = moveRelative . length . tillEndOfWord $ after
 
     singleton _doc eventType makeModel =
-        pack . Map.singleton eventType $
-        uncurry Model . makeModel
+      pack . Map.singleton eventType $
+      uncurry Model . makeModel
 
     keys doc = mconcat . map (\event -> singleton doc event . const)
 
@@ -248,38 +251,39 @@ make font emptyString maxLines (Model cursor str) = (void image, keymap)
         cursor' = cursor + length l
         str' = concat [before, l, after]
 
-data TypematicState = NoKey | TypematicRepeat { tsKey :: Key, tsStartTime :: UTCTime, tsCount :: Int }
-
 assert :: Monad m => String -> Bool -> m ()
 assert msg p = unless p (fail msg)
 
+data TypematicState = NoKey | TypematicRepeat { tsKey :: Key, tsCount :: Int, tsStartTime :: UTCTime }
+
 typematicKeyHandlerWrap :: (Int -> NominalDiffTime) -> (Key -> Bool -> IO ()) -> IO (Key -> Bool -> IO ())
-typematicKeyHandlerWrap timeFunc wrappedHandler = do
-  stateVar <- newIORef NoKey
+typematicKeyHandlerWrap timeFunc handler = do
+  stateVar <- newMVar NoKey
   _ <- forkIO . forever $ do
-    state <- readIORef stateVar
-    sleepTime <- case state of
-      TypematicRepeat key startTime count -> do
-        now <- getCurrentTime
-        let timeDiff = diffUTCTime now startTime
-        if timeDiff >= timeFunc count
-          then do
-            wrappedHandler key True
-            writeIORef stateVar . TypematicRepeat key startTime $ count + 1
-            return $ timeFunc (count + 1) - timeDiff
-          else
-            return $ timeFunc count - timeDiff
-      _ -> return $ timeFunc 0
+    sleepTime <- modifyMVar stateVar typematicIteration
     threadDelay . round $ 1000000 * sleepTime
-  let
-    handler key True = do
+
+  return $ \key isPress -> do
+    newValue <-
+      if isPress
+        then fmap (TypematicRepeat key 0) getCurrentTime
+        else return NoKey
+
+    _ <- swapMVar stateVar newValue
+    handler key isPress
+
+  where
+    typematicIteration state@(TypematicRepeat key count startTime) = do
       now <- getCurrentTime
-      writeIORef stateVar $ TypematicRepeat key now 0
-      wrappedHandler key True
-    handler key False = do
-      writeIORef stateVar NoKey
-      wrappedHandler key False
-  return handler
+      let timeDiff = diffUTCTime now startTime
+      if timeDiff >= timeFunc count
+        then do
+          handler key True
+          return (TypematicRepeat key (count + 1) startTime,
+                  timeFunc (count + 1) - timeDiff)
+        else
+          return (state, timeFunc count - timeDiff)
+    typematicIteration state@NoKey = return (state, timeFunc 0)
 
 modifiersEventHandlerWrap :: (Event -> IO ()) -> IO (GLFWWrap.GLFWEvent -> IO ())
 modifiersEventHandlerWrap wrappedHandler = do
@@ -324,7 +328,7 @@ widget :: Draw.Font -> Model -> (Draw.Image (), EventMap Model)
 widget font = make font "<empty>" 2
 
 updateModel font event model =
-    fromMaybe model .
-    lookup event .
-    snd $
-    widget font model
+  fromMaybe model .
+  lookup event .
+  snd $
+  widget font model
