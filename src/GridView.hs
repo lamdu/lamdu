@@ -1,6 +1,6 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE TypeOperators, GeneralizedNewtypeDeriving #-}
-module GridView(make) where
+module GridView(make, makeGeneric) where
 
 import           Data.List                        (transpose)
 import qualified Data.Label                       as Label
@@ -9,7 +9,7 @@ import           Data.Vector.Vector2              (Vector2(..))
 import qualified Data.Vector.Vector2              as Vector2
 import           Control.Compose                  (result)
 import           Control.Applicative              (liftA2)
-import           Control.Arrow                    (second)
+import           Control.Arrow                    (first, second)
 import qualified Graphics.DrawingCombinators      as Draw
 import           Graphics.DrawingCombinators      ((%%))
 import           SizeRange                        (SizeRange(..), Size, Coordinate)
@@ -68,10 +68,22 @@ makePlacements = (result . second . result) placements makeSizes
 
 --- Displays:
 
-make :: [[Sized (Draw.Image ())]] -> Sized (Draw.Image ())
-make rows = Sized reqSize mkImage
+-- Used by both make and GridEdit's make.
+makeGeneric :: (a -> Draw.Image ()) -> [[Sized a]] -> Sized (Draw.Image (), [[a]])
+makeGeneric toImage rows =
+  Sized reqSize mkRes
   where
     (reqSize, mkPlacements) = makePlacements $ (map . map) requestedSize rows
-    mkImage givenSize =
-      mconcat . concat $ (zipWith . zipWith) locate (mkPlacements givenSize) rows
-    locate (pos, size) image = Draw.translate (Vector2.uncurry (,) pos) %% fromSize image size
+    mkRes givenSize =
+      first (mconcat . concat) . unzip2d $
+      (zipWith . zipWith) locate (mkPlacements givenSize) rows
+    locate (pos, size) sized =
+      (Draw.translate (Vector2.uncurry (,) pos) %% toImage res, res)
+      where
+        res = fromSize sized size
+
+unzip2d :: [[(a, b)]] -> ([[a]], [[b]])
+unzip2d = unzip . map unzip
+
+make :: [[Sized (Draw.Image ())]] -> Sized (Draw.Image ())
+make = fmap fst . makeGeneric id

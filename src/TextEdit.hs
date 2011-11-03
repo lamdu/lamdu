@@ -5,7 +5,6 @@ import Data.Char
 import Data.List.Split(splitOn)
 import Graphics.DrawingCombinators((%%))
 import qualified EventMap
-import EventMap(EventMap)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.DrawingCombinators.Affine as Affine
 import qualified Codec.Binary.UTF8.String as UTF8
@@ -15,6 +14,7 @@ import Graphics.UI.GLFW
 import Data.Vector.Vector2 (Vector2(..))
 import SizeRange (fixedSize)
 import Sized (Sized(..))
+import Widget (Widget)
 
 type Cursor = Int
 
@@ -38,15 +38,17 @@ square = Draw.convexPoly [ (-1, -1), (1, -1), (1, 1), (-1, 1) ]
 
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
-make :: Draw.Font -> String -> Int -> Model -> (Sized (Draw.Image ()), EventMap Model)
-make font emptyString maxLines (Model cursor str) = (img, keymap)
+make :: Draw.Font -> String -> Int -> Model -> Widget Model
+make font emptyString maxLines (Model cursor str) =
+  Sized reqSize $ const (img, Just keymap)
   where
     t = finalText str
     finalText "" = emptyString
     finalText x  = x
 
+    reqSize = fixedSize $ Vector2 (textWidth t) 2
     img =
-      Sized (fixedSize (Vector2 (textWidth t) 2)) . const . void $
+      void $
         mconcat [
           Draw.text font $ UTF8.encodeString t,
           cursorImage
