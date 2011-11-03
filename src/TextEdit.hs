@@ -1,7 +1,6 @@
 {-# OPTIONS -Wall #-}
 module TextEdit(Cursor, Model(..), make) where
 
-import Control.Applicative (pure)
 import Data.Char
 import Data.List.Split(splitOn)
 import Graphics.DrawingCombinators((%%))
@@ -13,7 +12,8 @@ import qualified Codec.Binary.UTF8.String as UTF8
 import Control.Monad
 import Data.Monoid
 import Graphics.UI.GLFW
-import SizeRange (SizeRange(..))
+import Data.Vector.Vector2 (Vector2(..))
+import SizeRange (fixedSize)
 import SizedImage (SizedImage(..))
 
 type Cursor = Int
@@ -46,13 +46,15 @@ make font emptyString maxLines (Model cursor str) = (img, keymap)
     finalText x  = x
 
     img =
-      SizedImage (SizeRange (pure 2) (pure Nothing)) . const . void $
+      SizedImage (fixedSize (Vector2 (textWidth t) 2)) . const . void $
         mconcat [
           Draw.text font $ UTF8.encodeString t,
           cursorImage
         ]
 
-    cursorPos = Draw.textWidth font . UTF8.encodeString $ take cursor t
+    textWidth = Draw.textWidth font . UTF8.encodeString
+
+    cursorPos = textWidth $ take cursor t
     cursorImage =
       Draw.tint (Draw.Color 0 1 0 1) $
       Affine.translate (cursorPos, 0.5) %%

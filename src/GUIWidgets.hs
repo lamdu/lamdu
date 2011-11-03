@@ -111,7 +111,7 @@ main = GLFWWrap.withGLFW $ do
 widget :: Draw.Font -> TextEdit.Model -> (Draw.Image (), EventMap TextEdit.Model)
 widget font model = (imageOfSize grid (pure 0), eventMap)
   where
-    grid = GridView.make $ replicate 3 [img]
+    grid = GridView.make . replicate 3 $ replicate 3 img
     (img, eventMap) = TextEdit.make font "<empty>" 2 model
 
 updateModel :: Draw.Font -> Event -> TextEdit.Model -> TextEdit.Model
