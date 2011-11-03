@@ -19,7 +19,7 @@ import qualified System.Info
 import EventMap
 import qualified TextEdit
 import qualified GridView
-import SizedImage (SizedImage(..))
+import Sized (fromSize)
 
 data TypematicState = NoKey | TypematicRepeat { _tsKey :: Key, _tsCount :: Int, _tsStartTime :: UTCTime }
 
@@ -109,7 +109,7 @@ main = GLFWWrap.withGLFW $ do
     Draw.clearRender . (Draw.scale (20/800) (20/600) %%) . fst . widget font =<< readIORef modelVar
 
 widget :: Draw.Font -> TextEdit.Model -> (Draw.Image (), EventMap TextEdit.Model)
-widget font model = (imageOfSize grid (pure 0), eventMap)
+widget font model = (fromSize grid (pure 0), eventMap)
   where
     grid = GridView.make . replicate 3 $ replicate 3 img
     (img, eventMap) = TextEdit.make font "<empty>" 2 model

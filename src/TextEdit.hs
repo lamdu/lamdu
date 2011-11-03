@@ -14,7 +14,7 @@ import Data.Monoid
 import Graphics.UI.GLFW
 import Data.Vector.Vector2 (Vector2(..))
 import SizeRange (fixedSize)
-import SizedImage (SizedImage(..))
+import Sized (Sized(..))
 
 type Cursor = Int
 
@@ -38,7 +38,7 @@ square = Draw.convexPoly [ (-1, -1), (1, -1), (1, 1), (-1, 1) ]
 
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
-make :: Draw.Font -> String -> Int -> Model -> (SizedImage, EventMap Model)
+make :: Draw.Font -> String -> Int -> Model -> (Sized (Draw.Image ()), EventMap Model)
 make font emptyString maxLines (Model cursor str) = (img, keymap)
   where
     t = finalText str
@@ -46,7 +46,7 @@ make font emptyString maxLines (Model cursor str) = (img, keymap)
     finalText x  = x
 
     img =
-      SizedImage (fixedSize (Vector2 (textWidth t) 2)) . const . void $
+      Sized (fixedSize (Vector2 (textWidth t) 2)) . const . void $
         mconcat [
           Draw.text font $ UTF8.encodeString t,
           cursorImage

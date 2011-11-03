@@ -14,7 +14,7 @@ import qualified Graphics.DrawingCombinators      as Draw
 import           Graphics.DrawingCombinators      ((%%))
 import           SizeRange                        (SizeRange(..), Size, Coordinate)
 import qualified SizeRange                        as SizeRange
-import SizedImage (SizedImage(..))
+import Sized (Sized(..))
 
 --- Size computations:
 
@@ -68,10 +68,10 @@ makePlacements = (result . second . result) placements makeSizes
 
 --- Displays:
 
-make :: [[SizedImage]] -> SizedImage
-make rows = SizedImage reqSize mkImage
+make :: [[Sized (Draw.Image ())]] -> Sized (Draw.Image ())
+make rows = Sized reqSize mkImage
   where
     (reqSize, mkPlacements) = makePlacements $ (map . map) requestedSize rows
     mkImage givenSize =
       mconcat . concat $ (zipWith . zipWith) locate (mkPlacements givenSize) rows
-    locate (pos, size) image = Draw.translate (Vector2.uncurry (,) pos) %% imageOfSize image size
+    locate (pos, size) image = Draw.translate (Vector2.uncurry (,) pos) %% fromSize image size
