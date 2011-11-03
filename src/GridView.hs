@@ -14,6 +14,7 @@ import qualified Graphics.DrawingCombinators      as Draw
 import           Graphics.DrawingCombinators      ((%%))
 import           SizeRange                        (SizeRange(..), Size, Coordinate)
 import qualified SizeRange                        as SizeRange
+import SizedImage (SizedImage(..))
 
 --- Size computations:
 
@@ -26,9 +27,9 @@ disperse extra ((low, high):xs) = r : disperse remaining xs
     remaining = low + extra - r
 
 makeSizes :: [[SizeRange]] -> (SizeRange, Size -> [[Size]])
-makeSizes rows = (requestedSize, mkSizes)
+makeSizes rows = (reqSize, mkSizes)
   where
-    requestedSize = SizeRange minSize maxSize
+    reqSize = SizeRange minSize maxSize
     minSize = fmap sum $ Vector2 columnMinWidths rowMinHeights
     maxSize = fmap (fmap sum . sequence) $ Vector2 columnMaxWidths rowMaxHeights
 
@@ -67,10 +68,10 @@ makePlacements = (result . second . result) placements makeSizes
 
 --- Displays:
 
-make :: Monoid a => [[(SizeRange, Size -> Draw.Image a)]] -> (SizeRange, Size -> Draw.Image a)
-make rows = (requestedSize, mkImage)
+make :: [[SizedImage]] -> SizedImage
+make rows = SizedImage reqSize mkImage
   where
-    (requestedSize, mkPlacements) = makePlacements $ (map . map) fst rows
+    (reqSize, mkPlacements) = makePlacements $ (map . map) requestedSize rows
     mkImage givenSize =
       mconcat . concat $ (zipWith . zipWith) locate (mkPlacements givenSize) rows
-    locate (pos, size) (_, f) = Draw.translate (Vector2.uncurry (,) pos) %% f size
+    locate (pos, size) image = Draw.translate (Vector2.uncurry (,) pos) %% imageOfSize image size

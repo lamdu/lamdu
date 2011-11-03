@@ -1,6 +1,7 @@
 {-# OPTIONS -Wall #-}
 module TextEdit(Cursor, Model(..), make) where
 
+import Control.Applicative (pure)
 import Data.Char
 import Data.List.Split(splitOn)
 import Graphics.DrawingCombinators((%%))
@@ -12,6 +13,8 @@ import qualified Codec.Binary.UTF8.String as UTF8
 import Control.Monad
 import Data.Monoid
 import Graphics.UI.GLFW
+import SizeRange (SizeRange(..))
+import SizedImage (SizedImage(..))
 
 type Cursor = Int
 
@@ -35,18 +38,19 @@ square = Draw.convexPoly [ (-1, -1), (1, -1), (1, 1), (-1, 1) ]
 
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
-make :: Draw.Font -> String -> Int -> Model -> (Draw.Image (), EventMap Model)
-make font emptyString maxLines (Model cursor str) = (void image, keymap)
+make :: Draw.Font -> String -> Int -> Model -> (SizedImage, EventMap Model)
+make font emptyString maxLines (Model cursor str) = (img, keymap)
   where
     t = finalText str
     finalText "" = emptyString
     finalText x  = x
 
-    image =
-      mconcat [
-        Draw.text font $ UTF8.encodeString t,
-        cursorImage
-      ]
+    img =
+      SizedImage (SizeRange (pure 2) (pure Nothing)) . const . void $
+        mconcat [
+          Draw.text font $ UTF8.encodeString t,
+          cursorImage
+        ]
 
     cursorPos = Draw.textWidth font . UTF8.encodeString $ take cursor t
     cursorImage =
