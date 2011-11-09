@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall -fno-warn-orphans #-}
-{-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
+{-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, DeriveFunctor #-}
 module EventMap where
 
 import Graphics.UI.GLFW
@@ -44,7 +44,7 @@ eventTypeOf (CharEvent _) = CharEventType
 eventTypeOf (KeyEvent ms k) = KeyEventType ms k
 
 newtype EventMap a = EventMap (Map EventType (Event -> a))
-  deriving (Monoid)
+  deriving (Monoid, Functor)
 $(mkNewTypes [''EventMap])
 
 lookup :: Event -> EventMap a -> Maybe a

@@ -5,8 +5,9 @@ import qualified GLFWWrap
 
 import Control.Concurrent (forkIO, threadDelay)
 import Control.Concurrent.MVar
-import Control.Applicative (pure)
 import Control.Monad
+import Control.Newtype (unpack)
+import Data.Vector.Vector2(Vector2(..))
 import Data.IORef
 import Data.Maybe
 import qualified Data.Set as Set
@@ -17,8 +18,11 @@ import qualified Graphics.DrawingCombinators as Draw
 import Graphics.DrawingCombinators((%%))
 import qualified System.Info
 import EventMap
+import Widget(Widget(..))
+import qualified Widget
 import qualified TextEdit
 import qualified GridView
+import SizeRange (Size)
 import Sized (fromSize)
 
 data TypematicState = NoKey | TypematicRepeat { _tsKey :: Key, _tsCount :: Int, _tsStartTime :: UTCTime }
@@ -106,18 +110,24 @@ main = GLFWWrap.withGLFW $ do
 
   GLFWWrap.eventLoop $ \events -> do
     mapM_ handleEvent events
-    Draw.clearRender . (Draw.scale (20/800) (20/600) %%) . fst . widget font =<< readIORef modelVar
+    Draw.clearRender .
+      (Draw.scale (20/800) (20/600) %%) .
+      ($ fullSize) . Widget.image . widget font =<<
+      readIORef modelVar
 
-widget :: Draw.Font -> TextEdit.Model -> (Draw.Image (), EventMap TextEdit.Model)
-widget font model = (fromSize grid (pure 0), eventMap)
+fullSize :: Size
+fullSize = Vector2 800 600
+
+widget :: Draw.Font -> TextEdit.Model -> Widget TextEdit.Model
+widget font model = Widget $ fmap (flip (,) mEventMap) grid
   where
-    grid = GridView.make . replicate 3 . replicate 3 $ fmap fst textEdit
+    grid = GridView.make . replicate 3 . replicate 3 $ fmap fst $
+           unpack textEdit
     textEdit = TextEdit.make font "<empty>" 2 model
-    eventMap = fromJust . snd $ fromSize textEdit undefined
+    mEventMap = snd $ fromSize (unpack textEdit) undefined
 
 updateModel :: Draw.Font -> Event -> TextEdit.Model -> TextEdit.Model
 updateModel font event model =
   fromMaybe model .
   lookup event .
-  snd $
-  widget font model
+  fromJust . snd $ fromSize (unpack (widget font model)) undefined

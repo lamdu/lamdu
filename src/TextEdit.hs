@@ -14,7 +14,7 @@ import Graphics.UI.GLFW
 import Data.Vector.Vector2 (Vector2(..))
 import SizeRange (fixedSize)
 import Sized (Sized(..))
-import Widget (Widget)
+import Widget (Widget(..))
 
 type Cursor = Int
 
@@ -40,7 +40,7 @@ square = Draw.convexPoly [ (-1, -1), (1, -1), (1, 1), (-1, 1) ]
 -- | given text...
 make :: Draw.Font -> String -> Int -> Model -> Widget Model
 make font emptyString maxLines (Model cursor str) =
-  Sized reqSize $ const (img, Just keymap)
+  Widget . Sized reqSize $ const (img, Just keymap)
   where
     t = finalText str
     finalText "" = emptyString
