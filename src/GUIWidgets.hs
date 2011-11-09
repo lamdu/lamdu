@@ -4,7 +4,6 @@ import Prelude hiding (lookup)
 import qualified GLFWWrap
 
 import Control.Arrow (first, second)
-import Control.Newtype (unpack)
 import Data.IORef
 import Data.List.Utils (enumerate2d, nth)
 import Data.Maybe
@@ -13,7 +12,6 @@ import EventMap
 import Graphics.DrawingCombinators((%%))
 import Graphics.UI.GLFW
 import SizeRange (Size)
-import Sized (fromSize)
 import Widget(Widget(..))
 import qualified FocusDelegator
 import qualified Graphics.DrawingCombinators as Draw
@@ -80,6 +78,5 @@ widget font origModel@(rowModels, gModel) =
 
 updateModel :: Draw.Font -> Event -> Model -> Model
 updateModel font event model =
-  fromMaybe model .
-  lookup event .
-  fromJust . snd $ fromSize (unpack (widget font model) True) fullSize
+  fromMaybe model $
+  lookup event =<< Widget.eventMap (widget font model) True fullSize
