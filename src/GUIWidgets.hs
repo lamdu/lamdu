@@ -27,7 +27,7 @@ import Sized (fromSize)
 
 data TypematicState = NoKey | TypematicRepeat { _tsKey :: Key, _tsCount :: Int, _tsStartTime :: UTCTime }
 
-type Model = (TextEdit.Model, GridEdit.Model)
+type Model = ([[TextEdit.Model]], GridEdit.Model)
 
 typematicKeyHandlerWrap :: (Int -> NominalDiffTime) -> (Key -> Bool -> IO ()) -> IO (Key -> Bool -> IO ())
 typematicKeyHandlerWrap timeFunc handler = do
@@ -94,7 +94,7 @@ main = GLFWWrap.withGLFW $ do
   font <- Draw.openFont (defaultFont System.Info.os)
   GLFWWrap.openWindow defaultDisplayOptions
 
-  modelVar <- newIORef (TextEdit.Model 4 "Text",
+  modelVar <- newIORef (replicate 3 . replicate 3 $ TextEdit.Model 4 "Text",
                         Vector2 0 0)
                         --TextEdit.Model 0 "Text"]
 
@@ -121,15 +121,30 @@ main = GLFWWrap.withGLFW $ do
 fullSize :: Size
 fullSize = Vector2 800 600
 
-widget :: Draw.Font -> Model -> Widget Model
-widget font (teModel, gModel) =
-  GridEdit.make ((,) teModel) children gModel
+nth :: Int -> (a -> a) -> [a] -> [a]
+nth _ _ [] = error "Apply out of bounds"
+nth 0 f (x:xs) = f x : xs
+nth n f (x:xs) = x : nth (n-1) f xs
+
+enumerate :: (Enum a, Num a) => [b] -> [(a, b)]
+enumerate = zip [0..]
+
+enumerate2d :: (Enum a, Num a) => [[b]] -> [[(Vector2 a, b)]]
+enumerate2d = map f . enumerate . map enumerate
   where
-    children =
-      replicate 3 . replicate 3 .
-      fmap (flip (,) gModel) $
-      textEdit
-    textEdit = TextEdit.make font "<empty>" 2 teModel
+    f (rowIndex, row) = map (g rowIndex) row
+    g rowIndex (colIndex, x) = (Vector2 colIndex rowIndex, x)
+
+widget :: Draw.Font -> Model -> Widget Model
+widget font (teModels, gModel) =
+  GridEdit.make ((,) teModels) children gModel
+  where
+    children = (map . map . uncurry) makeTextEdit . enumerate2d $ teModels
+
+    makeTextEdit index = fmap (liftTeModel index) . TextEdit.make font "<empty>" 2
+
+    liftTeModel (Vector2 colIndex rowIndex) newTeModel =
+      ((nth rowIndex . nth colIndex . const) newTeModel teModels, gModel)
 
 updateModel :: Draw.Font -> Event -> Model -> Model
 updateModel font event model =
