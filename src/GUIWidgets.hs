@@ -7,6 +7,7 @@ import Control.Concurrent (forkIO, threadDelay)
 import Control.Concurrent.MVar
 import Control.Monad
 import Control.Newtype (unpack)
+import Data.List.Utils (enumerate2d)
 import Data.Vector.Vector2(Vector2(..))
 import Data.IORef
 import Data.Maybe
@@ -126,15 +127,6 @@ nth _ _ [] = error "Apply out of bounds"
 nth 0 f (x:xs) = f x : xs
 nth n f (x:xs) = x : nth (n-1) f xs
 
-enumerate :: (Enum a, Num a) => [b] -> [(a, b)]
-enumerate = zip [0..]
-
-enumerate2d :: (Enum a, Num a) => [[b]] -> [[(Vector2 a, b)]]
-enumerate2d = map f . enumerate . map enumerate
-  where
-    f (rowIndex, row) = map (g rowIndex) row
-    g rowIndex (colIndex, x) = (Vector2 colIndex rowIndex, x)
-
 widget :: Draw.Font -> Model -> Widget Model
 widget font (teModels, gModel) =
   GridEdit.make ((,) teModels) children gModel
@@ -143,7 +135,7 @@ widget font (teModels, gModel) =
 
     makeTextEdit index = fmap (liftTeModel index) . TextEdit.make font "<empty>" 2
 
-    liftTeModel (Vector2 colIndex rowIndex) newTeModel =
+    liftTeModel (rowIndex, colIndex) newTeModel =
       ((nth rowIndex . nth colIndex . const) newTeModel teModels, gModel)
 
 updateModel :: Draw.Font -> Event -> Model -> Model
