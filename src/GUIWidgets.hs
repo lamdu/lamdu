@@ -21,11 +21,13 @@ import EventMap
 import Widget(Widget(..))
 import qualified Widget
 import qualified TextEdit
-import qualified GridView
 import SizeRange (Size)
+import qualified GridEdit
 import Sized (fromSize)
 
 data TypematicState = NoKey | TypematicRepeat { _tsKey :: Key, _tsCount :: Int, _tsStartTime :: UTCTime }
+
+type Model = (TextEdit.Model, GridEdit.Model)
 
 typematicKeyHandlerWrap :: (Int -> NominalDiffTime) -> (Key -> Bool -> IO ()) -> IO (Key -> Bool -> IO ())
 typematicKeyHandlerWrap timeFunc handler = do
@@ -92,7 +94,8 @@ main = GLFWWrap.withGLFW $ do
   font <- Draw.openFont (defaultFont System.Info.os)
   GLFWWrap.openWindow defaultDisplayOptions
 
-  modelVar <- newIORef (TextEdit.Model 4 "Text")
+  modelVar <- newIORef (TextEdit.Model 4 "Text",
+                        Vector2 0 0)
                         --TextEdit.Model 0 "Text"]
 
   modifiersHandler <- modifiersEventHandlerWrap (modifyIORef modelVar . updateModel font)
@@ -118,15 +121,17 @@ main = GLFWWrap.withGLFW $ do
 fullSize :: Size
 fullSize = Vector2 800 600
 
-widget :: Draw.Font -> TextEdit.Model -> Widget TextEdit.Model
-widget font model = Widget $ fmap (flip (,) mEventMap) grid
+widget :: Draw.Font -> Model -> Widget Model
+widget font (teModel, gModel) =
+  GridEdit.make ((,) teModel) children gModel
   where
-    grid = GridView.make . replicate 3 . replicate 3 $ fmap fst $
-           unpack textEdit
-    textEdit = TextEdit.make font "<empty>" 2 model
-    mEventMap = snd $ fromSize (unpack textEdit) undefined
+    children =
+      replicate 3 . replicate 3 .
+      fmap (flip (,) gModel) $
+      textEdit
+    textEdit = TextEdit.make font "<empty>" 2 teModel
 
-updateModel :: Draw.Font -> Event -> TextEdit.Model -> TextEdit.Model
+updateModel :: Draw.Font -> Event -> Model -> Model
 updateModel font event model =
   fromMaybe model .
   lookup event .
