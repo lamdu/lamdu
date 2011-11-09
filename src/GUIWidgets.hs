@@ -139,7 +139,7 @@ widget font origModel@(rowModels, gModel) =
     makeTextEdit index (fdModel, teModel) =
       FocusDelegator.make (liftRowModel index . first . const) fdModel .
       fmap (liftRowModel index . second . const) .
-      TextEdit.make font "<empty>" 2 $
+      TextEdit.make font "<empty>" 1 $
       teModel
 
     liftRowModel (rowIndex, colIndex) editCell =
