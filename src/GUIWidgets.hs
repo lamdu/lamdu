@@ -6,7 +6,7 @@ import qualified GLFWWrap
 import Control.Arrow (first, second)
 import Control.Newtype (unpack)
 import Data.IORef
-import Data.List.Utils (enumerate2d)
+import Data.List.Utils (enumerate2d, nth)
 import Data.Maybe
 import Data.Vector.Vector2(Vector2(..))
 import EventMap
@@ -62,11 +62,6 @@ main = GLFWWrap.withGLFW $ do
 
 fullSize :: Size
 fullSize = Vector2 800 600
-
-nth :: Int -> (a -> a) -> [a] -> [a]
-nth _ _ [] = error "Apply out of bounds"
-nth 0 f (x:xs) = f x : xs
-nth n f (x:xs) = x : nth (n-1) f xs
 
 widget :: Draw.Font -> Model -> Widget Model
 widget font origModel@(rowModels, gModel) =
