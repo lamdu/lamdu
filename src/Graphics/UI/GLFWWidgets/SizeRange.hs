@@ -1,7 +1,7 @@
 {-# OPTIONS -O2 -Wall #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module SizeRange
+module Graphics.UI.GLFWWidgets.SizeRange
     (Coordinate, Size,
      SizeRange(SizeRange), srMinSize, srMaxSize,
      inSizeRange, fixedSize, expanding,

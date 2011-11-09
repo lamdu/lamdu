@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-module TextEdit(Cursor, Model(..), make) where
+module Graphics.UI.GLFWWidgets.TextEdit(Cursor, Model(..), make) where
 
 import Control.Monad
 import Data.Char
@@ -9,11 +9,11 @@ import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators((%%))
 import Graphics.DrawingCombinators.Utils(square)
 import Graphics.UI.GLFW
-import SizeRange (fixedSize)
-import Sized (Sized(..))
-import Widget (Widget(..))
+import Graphics.UI.GLFWWidgets.SizeRange (fixedSize)
+import Graphics.UI.GLFWWidgets.Sized (Sized(..))
+import Graphics.UI.GLFWWidgets.Widget (Widget(..))
 import qualified Codec.Binary.UTF8.String as UTF8
-import qualified EventMap
+import qualified Graphics.UI.GLFWWidgets.EventMap as EventMap
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.DrawingCombinators.Affine as Affine
 

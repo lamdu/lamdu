@@ -1,16 +1,16 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE TemplateHaskell, DeriveFunctor, FlexibleInstances,
              MultiParamTypeClasses #-}
-module Widget (Widget(..), image, eventMap, atImageWithSize, atHasFocus, atMaybeEventMap) where
+module Graphics.UI.GLFWWidgets.Widget (Widget(..), image, eventMap, atImageWithSize, atHasFocus, atMaybeEventMap) where
 
 import Control.Arrow (first, second)
 import Control.Newtype
 import Control.Newtype.TH
-import EventMap (EventMap)
-import SizeRange (Size)
-import Sized (Sized)
+import Graphics.UI.GLFWWidgets.EventMap (EventMap)
+import Graphics.UI.GLFWWidgets.SizeRange (Size)
+import Graphics.UI.GLFWWidgets.Sized (Sized)
 import Graphics.DrawingCombinators.Utils(Image)
-import qualified Sized
+import qualified Graphics.UI.GLFWWidgets.Sized as Sized
 
 type HasFocus = Bool
 

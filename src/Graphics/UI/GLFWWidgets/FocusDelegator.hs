@@ -1,16 +1,16 @@
 {-# OPTIONS -Wall #-}
-module FocusDelegator(Model, make) where
+module Graphics.UI.GLFWWidgets.FocusDelegator(Model, make) where
 
 import Control.Newtype
 import Data.Monoid (mappend, mconcat)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators((%%))
 import Graphics.DrawingCombinators.Utils (square)
-import Widget(Widget(..))
-import qualified EventMap
+import Graphics.UI.GLFWWidgets.Widget(Widget(..))
+import qualified Graphics.UI.GLFWWidgets.EventMap as EventMap
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.GLFW as GLFW
-import qualified Widget
+import qualified Graphics.UI.GLFWWidgets.Widget as Widget
 
 type Model = Bool
 

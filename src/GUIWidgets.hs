@@ -6,16 +6,16 @@ import Data.IORef
 import Data.List.Utils (enumerate2d, nth)
 import Data.Maybe
 import Data.Vector.Vector2(Vector2(..))
-import SizeRange (Size)
-import EventMap
-import MainLoop (mainLoop)
-import Widget(Widget(..))
-import qualified FocusDelegator
-import qualified Graphics.DrawingCombinators as Draw
-import qualified GridEdit
+import Graphics.UI.GLFWWidgets.EventMap
+import Graphics.UI.GLFWWidgets.MainLoop (mainLoop)
+import Graphics.UI.GLFWWidgets.SizeRange (Size)
+import Graphics.UI.GLFWWidgets.Widget(Widget(..))
+import qualified Graphics.DrawingCombinators as Draw -- TODO: Only needed for fonts...
+import qualified Graphics.UI.GLFWWidgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.GLFWWidgets.GridEdit as GridEdit
+import qualified Graphics.UI.GLFWWidgets.TextEdit as TextEdit
+import qualified Graphics.UI.GLFWWidgets.Widget as Widget
 import qualified System.Info
-import qualified TextEdit
-import qualified Widget
 
 type Model = ([[(FocusDelegator.Model, TextEdit.Model)]],
               GridEdit.Model)

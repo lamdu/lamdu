@@ -1,6 +1,6 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE TemplateHaskell #-}
-module GridEdit(Model, make) where
+module Graphics.UI.GLFWWidgets.GridEdit(Model, make) where
 
 import Control.Applicative (liftA2)
 import Control.Arrow (second)
@@ -10,11 +10,11 @@ import Data.List.Utils (enumerate, enumerate2d)
 import Data.Maybe (isJust)
 import Data.Monoid (mconcat)
 import Data.Vector.Vector2 (Vector2(..))
-import EventMap (EventMap(..))
-import Widget (Widget(..))
-import qualified EventMap
+import Graphics.UI.GLFWWidgets.EventMap (EventMap(..))
+import Graphics.UI.GLFWWidgets.Widget (Widget(..))
+import qualified Graphics.UI.GLFWWidgets.EventMap as EventMap
 import qualified Graphics.UI.GLFW as GLFW
-import qualified GridView
+import qualified Graphics.UI.GLFWWidgets.GridView as GridView
 
 type Cursor = Vector2 Int
 type Model = Cursor

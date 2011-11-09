@@ -1,13 +1,13 @@
 {-# OPTIONS -Wall #-}
-module KeyHandlers (modifiersEventHandlerWrap) where
+module Graphics.UI.GLFWWidgets.KeyHandlers (modifiersEventHandlerWrap) where
 
 import Control.Monad
-import Data.Set(Set)
-import qualified Data.Set as Set
-import EventMap
-import qualified GLFWWrap
-import Graphics.UI.GLFW
 import Data.IORef
+import Data.Set(Set)
+import Graphics.UI.GLFW
+import Graphics.UI.GLFWWidgets.EventMap
+import qualified Data.Set as Set
+import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 
 modStateFromKeySet :: Set Key -> ModState
 modStateFromKeySet keySet =
@@ -20,17 +20,17 @@ modStateFromKeySet keySet =
   where
     isPressed = any (`Set.member` keySet)
 
-modifiersEventHandlerWrap :: (Event -> IO ()) -> IO (GLFWWrap.GLFWEvent -> IO ())
+modifiersEventHandlerWrap :: (Event -> IO ()) -> IO (GLFWUtils.GLFWEvent -> IO ())
 modifiersEventHandlerWrap wrappedHandler = do
   keySetVar <- newIORef Set.empty
   let
-    handler (GLFWWrap.KeyEvent key True) = do
+    handler (GLFWUtils.KeyEvent key True) = do
       modifyIORef keySetVar (Set.insert key)
       keySet <- readIORef keySetVar
       wrappedHandler $ KeyEvent (modStateFromKeySet keySet) key
-    handler (GLFWWrap.KeyEvent key False) =
+    handler (GLFWUtils.KeyEvent key False) =
       modifyIORef keySetVar (Set.delete key)
-    handler (GLFWWrap.CharEvent char True) = do
+    handler (GLFWUtils.CharEvent char True) = do
       keySet <- readIORef keySetVar
       when (modStateFromKeySet keySet `elem` [noMods, shift]) . wrappedHandler $ CharEvent char
     handler _ = return ()

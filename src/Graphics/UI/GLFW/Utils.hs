@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-module GLFWWrap(GLFWEvent(..), withGLFW, eventLoop, openWindow) where
+module Graphics.UI.GLFW.Utils(GLFWEvent(..), withGLFW, eventLoop, openWindow) where
 
 import Control.Concurrent(threadDelay)
 import Control.Exception(bracket_)

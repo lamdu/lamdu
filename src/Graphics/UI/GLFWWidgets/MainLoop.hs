@@ -1,20 +1,20 @@
 {-# OPTIONS -Wall #-}
-module MainLoop (mainLoop) where
+module Graphics.UI.GLFWWidgets.MainLoop (mainLoop) where
 
 import Data.Vector.Vector2(Vector2(..))
-import EventMap
+import Graphics.UI.GLFWWidgets.EventMap
 import Graphics.DrawingCombinators((%%))
 import Graphics.DrawingCombinators.Utils (Image)
 import Graphics.UI.GLFW
-import KeyHandlers(modifiersEventHandlerWrap)
-import SizeRange (Size)
-import Typematic(typematicKeyHandlerWrap)
-import qualified GLFWWrap
+import Graphics.UI.GLFWWidgets.KeyHandlers(modifiersEventHandlerWrap)
+import Graphics.UI.GLFWWidgets.SizeRange (Size)
+import Graphics.UI.GLFWWidgets.Typematic(typematicKeyHandlerWrap)
+import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 import qualified Graphics.DrawingCombinators as Draw
 
 mainLoop :: (Size -> Event -> IO ()) -> (Size -> IO Image) -> IO a
-mainLoop eventHandler makeImage = GLFWWrap.withGLFW $ do
-  GLFWWrap.openWindow defaultDisplayOptions
+mainLoop eventHandler makeImage = GLFWUtils.withGLFW $ do
+  GLFWUtils.openWindow defaultDisplayOptions
 
   let
     windowSize = do
@@ -25,17 +25,17 @@ mainLoop eventHandler makeImage = GLFWWrap.withGLFW $ do
   modifiersHandler <- modifiersEventHandlerWrap eventHandlerWithSize
 
   let
-    keyHandler key isPress = modifiersHandler $ GLFWWrap.KeyEvent key isPress
+    keyHandler key isPress = modifiersHandler $ GLFWUtils.KeyEvent key isPress
     typematicTime x = 0.5 + fromIntegral x * 0.05
 
   typematicKeyHandler <- typematicKeyHandlerWrap typematicTime keyHandler
 
   let
-    handleEvent (GLFWWrap.KeyEvent key isPress) = typematicKeyHandler key isPress
-    handleEvent GLFWWrap.WindowClose = error "Quit" -- TODO: Make close event
+    handleEvent (GLFWUtils.KeyEvent key isPress) = typematicKeyHandler key isPress
+    handleEvent GLFWUtils.WindowClose = error "Quit" -- TODO: Make close event
     handleEvent x = modifiersHandler x
 
-  GLFWWrap.eventLoop $ \events -> do
+  GLFWUtils.eventLoop $ \events -> do
     winSize@(Vector2 winSizeX winSizeY) <- windowSize
     mapM_ handleEvent events
     Draw.clearRender .

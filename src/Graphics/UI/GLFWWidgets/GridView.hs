@@ -1,20 +1,20 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE TypeOperators, GeneralizedNewtypeDeriving #-}
-module GridView(make, makeGeneric) where
+module Graphics.UI.GLFWWidgets.GridView(make, makeGeneric) where
 
-import           Data.List                        (transpose)
-import qualified Data.Label                       as Label
-import           Data.Monoid                      (Monoid(..))
-import           Data.Vector.Vector2              (Vector2(..))
-import qualified Data.Vector.Vector2              as Vector2
-import           Control.Compose                  (result)
 import           Control.Applicative              (liftA2)
 import           Control.Arrow                    (first, second)
-import qualified Graphics.DrawingCombinators      as Draw
+import           Control.Compose                  (result)
+import           Data.List                        (transpose)
+import           Data.Monoid                      (Monoid(..))
+import           Data.Vector.Vector2              (Vector2(..))
 import           Graphics.DrawingCombinators      ((%%))
-import           SizeRange                        (SizeRange(..), Size, Coordinate)
-import qualified SizeRange                        as SizeRange
-import Sized (Sized(..))
+import           Graphics.UI.GLFWWidgets.SizeRange (SizeRange(..), Size, Coordinate)
+import Graphics.UI.GLFWWidgets.Sized (Sized(..))
+import qualified Data.Label                       as Label
+import qualified Data.Vector.Vector2              as Vector2
+import qualified Graphics.DrawingCombinators      as Draw
+import qualified Graphics.UI.GLFWWidgets.SizeRange as SizeRange
 
 --- Size computations:
 

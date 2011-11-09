@@ -1,6 +1,6 @@
 {-# OPTIONS -Wall -fno-warn-orphans #-}
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, DeriveFunctor #-}
-module EventMap where
+module Graphics.UI.GLFWWidgets.EventMap where
 
 import Graphics.UI.GLFW
 import qualified Data.Map as Map
