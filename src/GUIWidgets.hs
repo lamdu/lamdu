@@ -3,13 +3,11 @@ import Prelude hiding (lookup)
 
 import qualified GLFWWrap
 
-import Control.Monad
 import Control.Arrow (first, second)
 import Control.Newtype (unpack)
 import Data.IORef
 import Data.List.Utils (enumerate2d)
 import Data.Maybe
-import Data.Set(Set)
 import Data.Vector.Vector2(Vector2(..))
 import EventMap
 import Graphics.DrawingCombinators((%%))
@@ -17,7 +15,6 @@ import Graphics.UI.GLFW
 import SizeRange (Size)
 import Sized (fromSize)
 import Widget(Widget(..))
-import qualified Data.Set as Set
 import qualified FocusDelegator
 import qualified Graphics.DrawingCombinators as Draw
 import qualified GridEdit
@@ -25,36 +22,10 @@ import qualified System.Info
 import qualified TextEdit
 import qualified Widget
 import Typematic(typematicKeyHandlerWrap)
+import KeyHandlers(modifiersEventHandlerWrap)
 
 type Model = ([[(FocusDelegator.Model, TextEdit.Model)]],
               GridEdit.Model)
-
-modStateFromKeySet :: Set Key -> ModState
-modStateFromKeySet keySet =
-  ModState {
-    modCtrl = isPressed [KeyLeftCtrl, KeyRightCtrl],
-    modMeta = False, -- TODO: GLFW doesn't support meta/winkey?
-    modAlt = isPressed [KeyLeftAlt, KeyRightAlt],
-    modShift = isPressed [KeyLeftShift, KeyRightShift]
-    }
-  where
-    isPressed = any (`Set.member` keySet)
-
-modifiersEventHandlerWrap :: (Event -> IO ()) -> IO (GLFWWrap.GLFWEvent -> IO ())
-modifiersEventHandlerWrap wrappedHandler = do
-  keySetVar <- newIORef Set.empty
-  let
-    handler (GLFWWrap.KeyEvent key True) = do
-      modifyIORef keySetVar (Set.insert key)
-      keySet <- readIORef keySetVar
-      wrappedHandler $ KeyEvent (modStateFromKeySet keySet) key
-    handler (GLFWWrap.KeyEvent key False) =
-      modifyIORef keySetVar (Set.delete key)
-    handler (GLFWWrap.CharEvent char True) = do
-      keySet <- readIORef keySetVar
-      when (modStateFromKeySet keySet `elem` [noMods, shift]) . wrappedHandler $ CharEvent char
-    handler _ = return ()
-  return handler
 
 defaultFont :: String -> FilePath
 defaultFont "darwin" = "/Library/Fonts/Arial.ttf"
