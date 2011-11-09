@@ -1,8 +1,6 @@
 {-# OPTIONS -Wall #-}
 import Prelude hiding (lookup)
 
-import qualified GLFWWrap
-
 import Control.Arrow (first, second)
 import Data.IORef
 import Data.List.Utils (enumerate2d, nth)
@@ -10,11 +8,7 @@ import Data.Maybe
 import Data.Vector.Vector2(Vector2(..))
 import SizeRange (Size)
 import EventMap
-import Graphics.DrawingCombinators((%%))
-import Graphics.DrawingCombinators.Utils (Image)
-import Graphics.UI.GLFW
-import KeyHandlers(modifiersEventHandlerWrap)
-import Typematic(typematicKeyHandlerWrap)
+import MainLoop (mainLoop)
 import Widget(Widget(..))
 import qualified FocusDelegator
 import qualified Graphics.DrawingCombinators as Draw
@@ -29,36 +23,6 @@ type Model = ([[(FocusDelegator.Model, TextEdit.Model)]],
 defaultFont :: String -> FilePath
 defaultFont "darwin" = "/Library/Fonts/Arial.ttf"
 defaultFont _ = "/usr/share/fonts/truetype/freefont/FreeSerifBold.ttf"
-
-mainLoop :: (Size -> Event -> IO ()) -> (Size -> IO Image) -> IO a
-mainLoop eventHandler makeImage = GLFWWrap.withGLFW $ do
-  GLFWWrap.openWindow defaultDisplayOptions
-
-  let
-    windowSize = do
-      (x, y) <- getWindowDimensions
-      return $ Vector2 (fromIntegral x) (fromIntegral y)
-
-    eventHandlerWithSize event = (`eventHandler` event) =<< windowSize
-  modifiersHandler <- modifiersEventHandlerWrap eventHandlerWithSize
-
-  let
-    keyHandler key isPress = modifiersHandler $ GLFWWrap.KeyEvent key isPress
-    typematicTime x = 0.5 + fromIntegral x * 0.05
-
-  typematicKeyHandler <- typematicKeyHandlerWrap typematicTime keyHandler
-
-  let
-    handleEvent (GLFWWrap.KeyEvent key isPress) = typematicKeyHandler key isPress
-    handleEvent GLFWWrap.WindowClose = error "Quit" -- TODO: Make close event
-    handleEvent x = modifiersHandler x
-
-  GLFWWrap.eventLoop $ \events -> do
-    winSize@(Vector2 winSizeX winSizeY) <- windowSize
-    mapM_ handleEvent events
-    Draw.clearRender .
-      (Draw.scale (20/winSizeX) (-20/winSizeY) %%) =<<
-      makeImage winSize
 
 main :: IO ()
 main = do
