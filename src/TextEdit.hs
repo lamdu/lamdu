@@ -1,20 +1,21 @@
 {-# OPTIONS -Wall #-}
 module TextEdit(Cursor, Model(..), make) where
 
+import Control.Monad
 import Data.Char
 import Data.List.Split(splitOn)
-import Graphics.DrawingCombinators((%%))
-import qualified EventMap
-import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.DrawingCombinators.Affine as Affine
-import qualified Codec.Binary.UTF8.String as UTF8
-import Control.Monad
 import Data.Monoid
-import Graphics.UI.GLFW
 import Data.Vector.Vector2 (Vector2(..))
+import Graphics.DrawingCombinators((%%))
+import Graphics.DrawingCombinators.Utils(square)
+import Graphics.UI.GLFW
 import SizeRange (fixedSize)
 import Sized (Sized(..))
 import Widget (Widget(..))
+import qualified Codec.Binary.UTF8.String as UTF8
+import qualified EventMap
+import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.DrawingCombinators.Affine as Affine
 
 type Cursor = Int
 
@@ -33,9 +34,6 @@ tillEndOfWord xs = spaces ++ nonSpaces
     spaces = takeWhile isSpace xs
     nonSpaces = takeWhile (not . isSpace) . dropWhile isSpace $ xs
 
-square :: Draw.Image Any
-square = Draw.convexPoly [ (-1, -1), (1, -1), (1, 1), (-1, 1) ]
-
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
 make :: Draw.Font -> String -> Int -> Model -> Widget Model
@@ -46,11 +44,13 @@ make font emptyString maxLines (Model cursor str) = Widget helper
     finalText "" = emptyString
     finalText x  = x
 
-    reqSize = fixedSize $ Vector2 (textWidth t) 2
+    (cursorWidth, cursorHeight) = (0.2, 2)
+
+    reqSize = fixedSize $ Vector2 (cursorWidth + textWidth t) 2
     img hasFocus =
-      void . mconcat . concat $ [
-        [ Draw.translate (0, 1) %% Draw.scale 1 (-1) %%
-          Draw.text font (UTF8.encodeString t) ],
+      mconcat . concat $ [
+        [ Draw.translate (cursorWidth / 2, 1.5) %% Draw.scale 1 (-1) %%
+          void (Draw.text font (UTF8.encodeString t)) ],
         [ cursorImage | hasFocus ]
       ]
 
@@ -59,8 +59,8 @@ make font emptyString maxLines (Model cursor str) = Widget helper
     cursorPos = textWidth $ take cursor t
     cursorImage =
       Draw.tint (Draw.Color 0 1 0 1) $
-      Affine.translate (cursorPos, 0.5) %%
-      Draw.scale 0.1 1 %%
+      Affine.translate (cursorPos, 0) %%
+      Draw.scale cursorWidth cursorHeight %%
       square
 
     (before, after) = splitAt cursor str

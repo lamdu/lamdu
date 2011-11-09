@@ -3,32 +3,35 @@ import Prelude hiding (lookup)
 
 import qualified GLFWWrap
 
+import Control.Arrow (first, second)
 import Control.Concurrent (forkIO, threadDelay)
 import Control.Concurrent.MVar
 import Control.Monad
 import Control.Newtype (unpack)
-import Data.List.Utils (enumerate2d)
-import Data.Vector.Vector2(Vector2(..))
 import Data.IORef
+import Data.List.Utils (enumerate2d)
 import Data.Maybe
-import qualified Data.Set as Set
 import Data.Set(Set)
 import Data.Time.Clock
-import Graphics.UI.GLFW
-import qualified Graphics.DrawingCombinators as Draw
-import Graphics.DrawingCombinators((%%))
-import qualified System.Info
+import Data.Vector.Vector2(Vector2(..))
 import EventMap
-import Widget(Widget(..))
-import qualified Widget
-import qualified TextEdit
+import Graphics.DrawingCombinators((%%))
+import Graphics.UI.GLFW
 import SizeRange (Size)
-import qualified GridEdit
 import Sized (fromSize)
+import Widget(Widget(..))
+import qualified Data.Set as Set
+import qualified FocusDelegator
+import qualified Graphics.DrawingCombinators as Draw
+import qualified GridEdit
+import qualified System.Info
+import qualified TextEdit
+import qualified Widget
 
 data TypematicState = NoKey | TypematicRepeat { _tsKey :: Key, _tsCount :: Int, _tsStartTime :: UTCTime }
 
-type Model = ([[TextEdit.Model]], GridEdit.Model)
+type Model = ([[(FocusDelegator.Model, TextEdit.Model)]],
+              GridEdit.Model)
 
 typematicKeyHandlerWrap :: (Int -> NominalDiffTime) -> (Key -> Bool -> IO ()) -> IO (Key -> Bool -> IO ())
 typematicKeyHandlerWrap timeFunc handler = do
@@ -95,7 +98,7 @@ main = GLFWWrap.withGLFW $ do
   font <- Draw.openFont (defaultFont System.Info.os)
   GLFWWrap.openWindow defaultDisplayOptions
 
-  modelVar <- newIORef (replicate 3 . replicate 3 $ TextEdit.Model 4 "Text",
+  modelVar <- newIORef (replicate 3 . replicate 3 $ (False, TextEdit.Model 4 "Text"),
                         Vector2 0 0)
                         --TextEdit.Model 0 "Text"]
 
@@ -128,15 +131,19 @@ nth 0 f (x:xs) = f x : xs
 nth n f (x:xs) = x : nth (n-1) f xs
 
 widget :: Draw.Font -> Model -> Widget Model
-widget font (teModels, gModel) =
-  GridEdit.make ((,) teModels) children gModel
+widget font origModel@(rowModels, gModel) =
+  GridEdit.make ((,) rowModels) gModel children
   where
-    children = (map . map . uncurry) makeTextEdit . enumerate2d $ teModels
+    children = (map . map . uncurry) makeTextEdit . enumerate2d $ rowModels
 
-    makeTextEdit index = fmap (liftTeModel index) . TextEdit.make font "<empty>" 2
+    makeTextEdit index (fdModel, teModel) =
+      FocusDelegator.make (liftRowModel index . first . const) fdModel .
+      fmap (liftRowModel index . second . const) .
+      TextEdit.make font "<empty>" 2 $
+      teModel
 
-    liftTeModel (rowIndex, colIndex) newTeModel =
-      ((nth rowIndex . nth colIndex . const) newTeModel teModels, gModel)
+    liftRowModel (rowIndex, colIndex) editCell =
+      (first . nth rowIndex . nth colIndex) editCell origModel
 
 updateModel :: Draw.Font -> Event -> Model -> Model
 updateModel font event model =

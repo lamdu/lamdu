@@ -1,23 +1,44 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE TemplateHaskell, DeriveFunctor, FlexibleInstances,
              MultiParamTypeClasses #-}
-module Widget (Widget(..), image, eventMap) where
+module Widget (Widget(..), image, eventMap, atImageWithSize, atHasFocus, atMaybeEventMap) where
 
-import qualified Graphics.DrawingCombinators as Draw
-import EventMap (EventMap)
-import Sized (Sized, fromSize)
+import Control.Arrow (first, second)
+import Control.Newtype
 import Control.Newtype.TH
-import Control.Newtype(unpack)
+import EventMap (EventMap)
 import SizeRange (Size)
+import Sized (Sized)
+import Graphics.DrawingCombinators.Utils(Image)
+import qualified Sized
 
 type HasFocus = Bool
 
-newtype Widget k = Widget (HasFocus -> Sized (Draw.Image (), Maybe (EventMap k)))
+type UserIO k = (Image, Maybe (EventMap k))
+
+newtype Widget k = Widget (HasFocus -> Sized (UserIO k))
   deriving (Functor)
 $(mkNewTypes [''Widget])
 
-image :: Widget k -> HasFocus -> Size -> Draw.Image ()
-image = fmap (fmap fst . fromSize) . unpack
+argument :: (a -> b) -> (b -> c) -> a -> c
+argument = flip (.)
+
+atHasFocus :: (Bool -> Bool) -> Widget a -> Widget a
+atHasFocus = over Widget . argument
+
+atMaybeEventMap :: (Maybe (EventMap a) -> Maybe (EventMap b)) -> Widget a -> Widget b
+atMaybeEventMap = over Widget . fmap . fmap . second
+
+atFromSize :: ((Size -> UserIO a) -> Size -> UserIO b) -> Widget a -> Widget b
+atFromSize = over Widget . fmap . Sized.atFromSize
+
+atImageWithSize :: (Size -> Image -> Image) -> Widget a -> Widget a
+atImageWithSize f = atFromSize g
+  where
+    g mkUserIO size = first (f size) (mkUserIO size)
+
+image :: Widget k -> HasFocus -> Size -> Image
+image = fmap (fmap fst . Sized.fromSize) . unpack
 
 eventMap :: Widget k -> HasFocus -> Size -> Maybe (EventMap k)
-eventMap = fmap (fmap snd . fromSize) . unpack
+eventMap = fmap (fmap snd . Sized.fromSize) . unpack

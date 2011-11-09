@@ -1,4 +1,5 @@
 {-# OPTIONS -Wall #-}
+{-# LANGUAGE TemplateHaskell #-}
 module GridEdit(Model, make) where
 
 import Control.Applicative (liftA2)
@@ -57,16 +58,16 @@ mkNavMKeymap wantFocusRows cursor@(Vector2 cursorX cursorY) =
     curRow        = enumerate $ wantFocusRows !! cappedY
     curColumn     = enumerate $ transpose wantFocusRows !! cappedX
 
-make :: (Model -> k) -> [[Widget k]] -> Model -> Widget k
-make liftModel children cursor@(Vector2 x y) =
-  Widget . const .
-  (fmap . second) (f . (map . map) snd) .
-  GridView.makeGeneric fst .
-  (map . map) (applyHasFocus . second unpack) .
-  enumerate2d $
-  children
+make :: (Model -> k) -> Model -> [[Widget k]] -> Widget k
+make liftModel cursor@(Vector2 x y) children = Widget handleHasFocus
   where
-    applyHasFocus ((r, c), inWidget) = inWidget $ Vector2 c r == cursor
+    handleHasFocus hasFocus =
+      (fmap . second) (f . (map . map) snd) .
+      GridView.makeGeneric fst .
+      (map . map) (applyHasFocus hasFocus . second unpack) .
+      enumerate2d $ children
+    applyHasFocus False (_, inWidget) = inWidget False
+    applyHasFocus True ((r, c), inWidget) = inWidget $ Vector2 c r == cursor
     f xss =
       mconcat [
         xss !! y !! x,
