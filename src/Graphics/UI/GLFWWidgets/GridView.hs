@@ -4,7 +4,6 @@ module Graphics.UI.GLFWWidgets.GridView(make, makeGeneric) where
 
 import           Control.Applicative              (liftA2)
 import           Control.Arrow                    (first, second)
-import           Control.Compose                  (result)
 import           Data.List                        (transpose)
 import           Data.Monoid                      (Monoid(..))
 import           Data.Vector.Vector2              (Vector2(..))
@@ -57,7 +56,7 @@ makeSizes rows = (reqSize, mkSizes)
 type Placement = (Coordinate, Size)
 
 makePlacements :: [[SizeRange]] -> (SizeRange, Size -> [[Placement]])
-makePlacements = (result . second . result) placements makeSizes
+makePlacements = (fmap . second . fmap) placements makeSizes
   where
     placements sizes = zipWith zip positions sizes
       where

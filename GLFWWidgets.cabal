@@ -1,0 +1,62 @@
+Name:                GLFWWidgets
+Version:             0.1
+Synopsis:            A GLFW, OpenGL, and DrawingCombinators-based Widget-set
+Description:         GLFW-based widgets
+License:             GPL
+License-file:        LICENSE
+Author:              Eyal Lotem, Yair Chuchem
+Maintainer:          eyal.lotem@gmail.com, yairchu@gmail.com
+Category:            Graphics
+Build-type:          Simple
+-- Extra-source-files:
+Cabal-version:       >= 1.8
+Library
+  -- Modules exported by the library.
+  hs-Source-Dirs:      src
+  Exposed-modules:     Graphics.DrawingCombinators.Utils,
+                       Graphics.UI.GLFWWidgets.SizeRange,
+                       Graphics.UI.GLFWWidgets.TextEdit,
+                       Graphics.UI.GLFWWidgets.Sized,
+                       Graphics.UI.GLFWWidgets.FocusDelegator,
+                       Graphics.UI.GLFWWidgets.EventMap,
+                       Graphics.UI.GLFWWidgets.GridView,
+                       Graphics.UI.GLFWWidgets.Widget,
+                       Graphics.UI.GLFWWidgets.GridEdit,
+                       Graphics.UI.GLFWWidgets.MainLoop,
+                       Graphics.UI.GLFW.Utils,
+                       Data.Vector.Vector2,
+                       Data.List.Utils
+  Build-depends:       base >= 4,
+                       GLFW-b >= 0.0.2,
+                       graphics-drawingcombinators >= 1.4,
+                       fclabels >= 1.0,
+                       utf8-string >= 0.3,
+                       split >= 0.1,
+                       newtype >= 0.2,
+                       newtype-th >= 0.2,
+                       containers >= 0.4,
+                       binary >= 0.5,
+                       array >= 0.3,
+                       time >= 1.2
+  Other-modules:       Graphics.UI.GLFWWidgets.Typematic,
+                       Graphics.UI.GLFWWidgets.KeyHandlers
+
+  -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
+  -- Build-tools:
+
+executable glfwwidgets-example
+  hs-Source-Dirs:      src
+  Build-Depends:       base >= 4,
+                       GLFW-b >= 0.0.2,
+                       graphics-drawingcombinators >= 1.4,
+                       fclabels >= 1.0,
+                       utf8-string >= 0.3,
+                       split >= 0.1,
+                       newtype >= 0.2,
+                       newtype-th >= 0.2,
+                       containers >= 0.4,
+                       binary >= 0.5,
+                       array >= 0.3,
+                       time >= 1.2
+  main-is:             Example.hs
+  ghc-prof-options:    -prof -auto-all
