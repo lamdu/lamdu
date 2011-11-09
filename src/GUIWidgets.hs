@@ -115,7 +115,7 @@ main = GLFWWrap.withGLFW $ do
   GLFWWrap.eventLoop $ \events -> do
     mapM_ handleEvent events
     Draw.clearRender .
-      (Draw.scale (20/800) (20/600) %%) .
+      (Draw.scale (20/800) (-20/600) %%) .
       ($ fullSize) . Widget.image . widget font =<<
       readIORef modelVar
 

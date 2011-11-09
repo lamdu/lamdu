@@ -50,7 +50,8 @@ make font emptyString maxLines (Model cursor str) =
     img =
       void $
         mconcat [
-          Draw.text font $ UTF8.encodeString t,
+          Draw.translate (0, 1) %% Draw.scale 1 (-1) %%
+          Draw.text font (UTF8.encodeString t),
           cursorImage
         ]
 
