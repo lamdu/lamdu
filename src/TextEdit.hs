@@ -39,21 +39,20 @@ square = Draw.convexPoly [ (-1, -1), (1, -1), (1, 1), (-1, 1) ]
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
 make :: Draw.Font -> String -> Int -> Model -> Widget Model
-make font emptyString maxLines (Model cursor str) =
-  Widget . Sized reqSize $ const (img, Just keymap)
+make font emptyString maxLines (Model cursor str) = Widget helper
   where
+    helper hasFocus = Sized reqSize $ const (img hasFocus, Just keymap)
     t = finalText str
     finalText "" = emptyString
     finalText x  = x
 
     reqSize = fixedSize $ Vector2 (textWidth t) 2
-    img =
-      void $
-        mconcat [
-          Draw.translate (0, 1) %% Draw.scale 1 (-1) %%
-          Draw.text font (UTF8.encodeString t),
-          cursorImage
-        ]
+    img hasFocus =
+      void . mconcat . concat $ [
+        [ Draw.translate (0, 1) %% Draw.scale 1 (-1) %%
+          Draw.text font (UTF8.encodeString t) ],
+        [ cursorImage | hasFocus ]
+      ]
 
     textWidth = Draw.textWidth font . UTF8.encodeString
 

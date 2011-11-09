@@ -10,12 +10,14 @@ import Control.Newtype.TH
 import Control.Newtype(unpack)
 import SizeRange (Size)
 
-newtype Widget k = Widget (Sized (Draw.Image (), Maybe (EventMap k)))
+type HasFocus = Bool
+
+newtype Widget k = Widget (HasFocus -> Sized (Draw.Image (), Maybe (EventMap k)))
   deriving (Functor)
 $(mkNewTypes [''Widget])
 
-image :: Widget k -> Size -> Draw.Image ()
-image = fmap fst . fromSize . unpack
+image :: Widget k -> HasFocus -> Size -> Draw.Image ()
+image = fmap (fmap fst . fromSize) . unpack
 
-eventMap :: Widget k -> Size -> Maybe (EventMap k)
-eventMap = fmap snd . fromSize . unpack
+eventMap :: Widget k -> HasFocus -> Size -> Maybe (EventMap k)
+eventMap = fmap (fmap snd . fromSize) . unpack

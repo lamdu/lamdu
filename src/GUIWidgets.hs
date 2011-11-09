@@ -116,7 +116,7 @@ main = GLFWWrap.withGLFW $ do
     mapM_ handleEvent events
     Draw.clearRender .
       (Draw.scale (20/800) (-20/600) %%) .
-      ($ fullSize) . Widget.image . widget font =<<
+      ($ fullSize) . ($ True) . Widget.image . widget font =<<
       readIORef modelVar
 
 fullSize :: Size
@@ -142,4 +142,4 @@ updateModel :: Draw.Font -> Event -> Model -> Model
 updateModel font event model =
   fromMaybe model .
   lookup event .
-  fromJust . snd $ fromSize (unpack (widget font model)) undefined
+  fromJust . snd $ fromSize (unpack (widget font model) True) fullSize

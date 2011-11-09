@@ -5,7 +5,7 @@ import Control.Applicative (liftA2)
 import Control.Arrow (second)
 import Control.Newtype (unpack)
 import Data.List (foldl', find, transpose)
-import Data.List.Utils (enumerate)
+import Data.List.Utils (enumerate, enumerate2d)
 import Data.Maybe (isJust)
 import Data.Monoid (mconcat)
 import Data.Vector.Vector2 (Vector2(..))
@@ -59,12 +59,14 @@ mkNavMKeymap wantFocusRows cursor@(Vector2 cursorX cursorY) =
 
 make :: (Model -> k) -> [[Widget k]] -> Model -> Widget k
 make liftModel children cursor@(Vector2 x y) =
-  Widget .
+  Widget . const .
   (fmap . second) (f . (map . map) snd) .
   GridView.makeGeneric fst .
-  (map . map) unpack $
+  (map . map) (applyHasFocus . second unpack) .
+  enumerate2d $
   children
   where
+    applyHasFocus ((r, c), inWidget) = inWidget $ Vector2 c r == cursor
     f xss =
       mconcat [
         xss !! y !! x,
