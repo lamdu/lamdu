@@ -37,7 +37,7 @@ make liftCursor delegating widget = Widget $ handleFocus delegating
     mkNonDelegatingEventMap eventmap = (fmap . const) nonDelegatingEventMap eventmap
     nonDelegatingEventMap = eventMap startDelegatingKey True
 
-    addEscape = Widget.atMaybeEventMap $ mappend (Just delegatingEventMap)
+    addEscape = Widget.atMaybeEventMap $ flip mappend (Just delegatingEventMap)
     delegatingEventMap = eventMap stopDelegatingKey False
 
     eventMap key = EventMap.singleton key . const . liftCursor
