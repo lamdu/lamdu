@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-module Graphics.UI.GLFWWidgets.TextEdit(Cursor, Model(..), make) where
+module Graphics.UI.GLFWWidgets.TextEdit(Cursor, Model(..), Theme(..), make) where
 
 import Control.Monad
 import Data.Char
@@ -52,13 +52,18 @@ drawLines font =
         Draw.translate (0, -textHeight) %% restImage
       ]
 
+data Theme = Theme {
+  themeFont :: Draw.Font,
+  themeString :: String
+  }
+
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
-make :: Draw.Font -> String -> Model -> Widget Model
-make font emptyString (Model cursor modelStr) = Widget helper
+make :: Theme -> Model -> Widget Model
+make (Theme font emptyString) (Model cursor str) = Widget helper
   where
     helper hasFocus = Sized reqSize $ const (img hasFocus, Just keymap)
-    str = finalText modelStr
+    displayStr = finalText str
     finalText "" = emptyString
     finalText x  = x
 
@@ -72,7 +77,7 @@ make font emptyString (Model cursor modelStr) = Widget helper
         [ cursorImage | hasFocus ]
       ]
 
-    beforeCursor = take cursor modelStr
+    beforeCursor = take cursor str
     cursorPosX = linesWidth font . (: []) . last . splitLines $ beforeCursor
     cursorPosY = (textHeight *) . subtract 1 . genericLength . splitLines $ beforeCursor
     cursorImage =
@@ -83,7 +88,7 @@ make font emptyString (Model cursor modelStr) = Widget helper
 
     (before, after) = splitAt cursor str
     textLength = length str
-    textLines = splitLines str
+    textLines = splitLines displayStr
     width = cursorWidth + linesWidth font textLines
     height = textHeight * fromIntegral lineCount
     lineCount = length textLines
