@@ -2,12 +2,11 @@
 {-# LANGUAGE TupleSections #-}
 import Prelude hiding (lookup)
 
-import Control.Arrow (first, second)
 import Data.IORef
-import Data.List.Utils (enumerate2d, nth)
 import Data.Maybe
 import Data.Vector.Vector2(Vector2(..))
 import Graphics.UI.GLFWWidgets.EventMap
+import Graphics.UI.GLFWWidgets.Model (Theme(..), toWidget)
 import Graphics.UI.GLFWWidgets.MainLoop (mainLoop)
 import Graphics.UI.GLFWWidgets.SizeRange (Size)
 import Graphics.UI.GLFWWidgets.Widget(Widget(..))
@@ -38,20 +37,11 @@ main = do
 
   mainLoop eventHandler draw
 
+theme :: Draw.Font -> Theme
+theme font = Theme $ TextEdit.Theme font "<empty>"
+
 widget :: Draw.Font -> Model -> Widget Model
-widget font origModel@(gModel, rowModels) =
-  GridEdit.make (, rowModels) gModel children
-  where
-    children = (map . map . uncurry) makeTextEdit . enumerate2d $ rowModels
-
-    makeTextEdit index (fdModel, teModel) =
-      FocusDelegator.make (liftRowModel index . first . const) fdModel .
-      fmap (liftRowModel index . second . const) .
-      TextEdit.make (TextEdit.Theme font "<empty>") $
-      teModel
-
-    liftRowModel (rowIndex, colIndex) editCell =
-      (second . nth rowIndex . nth colIndex) editCell origModel
+widget = toWidget . theme
 
 updateModel :: Draw.Font -> Size -> Event -> Model -> Model
 updateModel font size event model =

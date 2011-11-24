@@ -54,7 +54,7 @@ drawLines font =
 
 data Theme = Theme {
   themeFont :: Draw.Font,
-  themeString :: String
+  themeEmptyString :: String
   }
 
 -- | Note: maxLines prevents the *user* from exceeding it, not the
