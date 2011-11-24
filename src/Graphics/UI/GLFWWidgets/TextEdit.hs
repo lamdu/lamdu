@@ -54,8 +54,8 @@ drawLines font =
 
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
-make :: Draw.Font -> String -> Int -> Model -> Widget Model
-make font emptyString maxLines (Model cursor modelStr) = Widget helper
+make :: Draw.Font -> String -> Model -> Widget Model
+make font emptyString (Model cursor modelStr) = Widget helper
   where
     helper hasFocus = Sized reqSize $ const (img hasFocus, Just keymap)
     str = finalText modelStr
@@ -207,9 +207,7 @@ make font emptyString maxLines (Model cursor modelStr) = Widget helper
         ]
 
     insert :: String -> (Cursor, String)
-    insert l = if (length . splitLines) str' <= max lineCount maxLines
-               then (cursor', str')
-               else (cursor, str)
+    insert l = (cursor', str')
       where
         cursor' = cursor + length l
         str' = concat [before, l, after]
