@@ -1,4 +1,5 @@
 {-# OPTIONS -Wall #-}
+{-# LANGUAGE TupleSections #-}
 import Prelude hiding (lookup)
 
 import Control.Arrow (first, second)
@@ -17,8 +18,8 @@ import qualified Graphics.UI.GLFWWidgets.TextEdit as TextEdit
 import qualified Graphics.UI.GLFWWidgets.Widget as Widget
 import qualified System.Info
 
-type Model = ([[(FocusDelegator.Model, TextEdit.Model)]],
-              GridEdit.Model)
+type Model = (GridEdit.Cursor,
+              [[(FocusDelegator.Cursor, TextEdit.Model)]])
 
 defaultFont :: String -> FilePath
 defaultFont "darwin" = "/Library/Fonts/Arial.ttf"
@@ -27,8 +28,7 @@ defaultFont _ = "/usr/share/fonts/truetype/freefont/FreeSerifBold.ttf"
 main :: IO ()
 main = do
   font <- Draw.openFont (defaultFont System.Info.os)
-  modelVar <- newIORef (replicate 3 . replicate 3 $ (False, TextEdit.Model 4 "Text"),
-                        Vector2 0 0)
+  modelVar <- newIORef (Vector2 0 0, replicate 3 . replicate 3 $ (False, TextEdit.Model 4 "Text"))
   let
     draw size = do
       model <- readIORef modelVar
@@ -39,8 +39,8 @@ main = do
   mainLoop eventHandler draw
 
 widget :: Draw.Font -> Model -> Widget Model
-widget font origModel@(rowModels, gModel) =
-  GridEdit.make ((,) rowModels) gModel children
+widget font origModel@(gModel, rowModels) =
+  GridEdit.make (, rowModels) gModel children
   where
     children = (map . map . uncurry) makeTextEdit . enumerate2d $ rowModels
 
@@ -51,7 +51,7 @@ widget font origModel@(rowModels, gModel) =
       teModel
 
     liftRowModel (rowIndex, colIndex) editCell =
-      (first . nth rowIndex . nth colIndex) editCell origModel
+      (second . nth rowIndex . nth colIndex) editCell origModel
 
 updateModel :: Draw.Font -> Size -> Event -> Model -> Model
 updateModel font size event model =

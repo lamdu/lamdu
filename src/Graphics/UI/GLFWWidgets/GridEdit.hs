@@ -1,6 +1,6 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE TemplateHaskell #-}
-module Graphics.UI.GLFWWidgets.GridEdit(Model, make) where
+module Graphics.UI.GLFWWidgets.GridEdit(Cursor, make) where
 
 import Control.Applicative (liftA2)
 import Control.Arrow (second)
@@ -17,7 +17,6 @@ import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFWWidgets.GridView as GridView
 
 type Cursor = Vector2 Int
-type Model = Cursor
 
 length2d :: [[a]] -> Vector2 Int
 length2d xs = Vector2 (foldl' max 0 . map length $ xs) (length xs)
@@ -58,8 +57,8 @@ mkNavMKeymap wantFocusRows cursor@(Vector2 cursorX cursorY) =
     curRow        = enumerate $ wantFocusRows !! cappedY
     curColumn     = enumerate $ transpose wantFocusRows !! cappedX
 
-make :: (Model -> k) -> Model -> [[Widget k]] -> Widget k
-make liftModel cursor@(Vector2 x y) children = Widget handleHasFocus
+make :: (Cursor -> k) -> Cursor -> [[Widget k]] -> Widget k
+make liftCursor cursor@(Vector2 x y) children = Widget handleHasFocus
   where
     handleHasFocus hasFocus =
       (fmap . second) (f . (map . map) snd) .
@@ -71,7 +70,7 @@ make liftModel cursor@(Vector2 x y) children = Widget handleHasFocus
     f xss =
       mconcat [
         xss !! y !! x,
-        (fmap . fmap) liftModel $ mkNavMKeymap wantFocusRows cursor
+        (fmap . fmap) liftCursor $ mkNavMKeymap wantFocusRows cursor
       ]
       where
         wantFocusRows = (map . map) isJust xss
