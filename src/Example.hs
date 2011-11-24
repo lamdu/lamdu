@@ -6,7 +6,7 @@ import Data.IORef
 import Data.Maybe
 import Data.Vector.Vector2(Vector2(..))
 import Graphics.UI.GLFWWidgets.EventMap
-import Graphics.UI.GLFWWidgets.Model (Theme(..), toWidget)
+import Graphics.UI.GLFWWidgets.Widgetable (Theme(..), toWidget)
 import Graphics.UI.GLFWWidgets.MainLoop (mainLoop)
 import Graphics.UI.GLFWWidgets.SizeRange (Size)
 import Graphics.UI.GLFWWidgets.Widget(Widget(..))
