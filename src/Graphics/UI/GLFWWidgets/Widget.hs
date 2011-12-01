@@ -1,7 +1,7 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE TemplateHaskell, DeriveFunctor, FlexibleInstances,
-             MultiParamTypeClasses #-}
-module Graphics.UI.GLFWWidgets.Widget (Widget(..), image, eventMap, atImageWithSize, atHasFocus, atMaybeEventMap) where
+             MultiParamTypeClasses, TupleSections #-}
+module Graphics.UI.GLFWWidgets.Widget (Widget(..), image, eventMap, atImageWithSize, atHasFocus, atMaybeEventMap, liftView) where
 
 import Control.Arrow (first, second)
 import Control.Newtype
@@ -19,6 +19,9 @@ type UserIO k = (Image, Maybe (EventMap k))
 newtype Widget k = Widget (HasFocus -> Sized (UserIO k))
   deriving (Functor)
 $(mkNewTypes [''Widget])
+
+liftView :: Sized Image -> Widget a
+liftView = Widget . const . fmap (, Nothing)
 
 argument :: (a -> b) -> (b -> c) -> a -> c
 argument = flip (.)
