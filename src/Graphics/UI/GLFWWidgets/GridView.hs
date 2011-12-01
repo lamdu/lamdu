@@ -41,7 +41,7 @@ makeSizes rows = (reqSize, mkSizes)
     -- lack of (proper) Rank2Types
     computeSizeRanges f0 f1 xs =
       (map (maximum . map (f0 . Label.getL SizeRange.srMinSize)) xs,
-       map (fmap maximum . mapM (\x -> f1 (Label.getL SizeRange.srMaxSize x))) xs)
+       map (fmap maximum . mapM (f1 . Label.getL SizeRange.srMaxSize)) xs)
 
     rowHeightRanges = zip rowMinHeights rowMaxHeights
     columnWidthRanges = zip columnMinWidths columnMaxWidths

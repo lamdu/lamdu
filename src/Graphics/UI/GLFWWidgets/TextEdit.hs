@@ -44,7 +44,7 @@ linesWidth font = maximum . map (Draw.textWidth font . UTF8.encodeString)
 
 drawLines :: Draw.Font -> [String] -> Image
 drawLines font =
-  void . foldr step mempty . map (Draw.text font . UTF8.encodeString)
+  void . foldr (step . Draw.text font . UTF8.encodeString) mempty
   where
     step lineImage restImage =
       mconcat [
@@ -136,7 +136,7 @@ make (Theme font emptyString) (Model cursor str) = Widget helper
           moveRelative 1
         | cursor < textLength ],
 
-        [ keys "Move word left" [ctrlSpecialKey KeyLeft] $
+        [ keys "Move word left" [ctrlSpecialKey KeyLeft]
           backMoveWord
         | cursor > 0 ],
 

@@ -1,5 +1,4 @@
 {-# OPTIONS -Wall #-}
-{-# LANGUAGE TemplateHaskell #-}
 module Graphics.UI.GLFWWidgets.GridEdit(Cursor, make) where
 
 import Control.Applicative (liftA2)
@@ -26,7 +25,7 @@ capCursor size = fmap (max 0) . liftA2 min (fmap (subtract 1) size)
 
 mkNavMKeymap :: [[Bool]] -> Cursor -> Maybe (EventMap Cursor)
 mkNavMKeymap wantFocusRows cursor@(Vector2 cursorX cursorY) =
-  mconcat $ [
+  mconcat [
     movement "left"      GLFW.KeyLeft   leftOfCursor,
     movement "right"     GLFW.KeyRight  rightOfCursor,
     movement "up"        GLFW.KeyUp     aboveCursor,

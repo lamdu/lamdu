@@ -34,7 +34,7 @@ make liftCursor delegating widget = Widget $ handleFocus delegating
       Widget.atImageWithSize blueBackground .
       Widget.atMaybeEventMap mkNonDelegatingEventMap
 
-    mkNonDelegatingEventMap eventmap = (fmap . const) nonDelegatingEventMap eventmap
+    mkNonDelegatingEventMap = (fmap . const) nonDelegatingEventMap
     nonDelegatingEventMap = eventMap startDelegatingKey True
 
     addEscape = Widget.atMaybeEventMap $ flip mappend (Just delegatingEventMap)
