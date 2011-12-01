@@ -1,19 +1,17 @@
 {-# OPTIONS -Wall #-}
 module Graphics.UI.GLFWWidgets.TextEdit(Cursor, Model(..), Theme(..), make) where
 
-import Control.Monad
 import Data.Char(isSpace)
 import Data.List(genericLength)
 import Data.List.Split(splitOn)
-import Data.Monoid
+import Data.Monoid(mconcat)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators((%%))
-import Graphics.DrawingCombinators.Utils(Image, square)
+import Graphics.DrawingCombinators.Utils(square, drawLines, linesWidth, linesHeight, textHeight)
 import Graphics.UI.GLFW
 import Graphics.UI.GLFWWidgets.SizeRange (fixedSize)
 import Graphics.UI.GLFWWidgets.Sized (Sized(..))
 import Graphics.UI.GLFWWidgets.Widget (Widget(..))
-import qualified Codec.Binary.UTF8.String as UTF8
 import qualified Graphics.UI.GLFWWidgets.EventMap as EventMap
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.DrawingCombinators.Affine as Affine
@@ -35,23 +33,6 @@ tillEndOfWord xs = spaces ++ nonSpaces
     spaces = takeWhile isSpace xs
     nonSpaces = takeWhile (not . isSpace) . dropWhile isSpace $ xs
 
--- TODO: This should come from DrawingCombinators itself
-textHeight :: Num a => a
-textHeight = 2
-
-linesWidth :: Draw.Font -> [String] -> Draw.R
-linesWidth font = maximum . map (Draw.textWidth font . UTF8.encodeString)
-
-drawLines :: Draw.Font -> [String] -> Image
-drawLines font =
-  void . foldr (step . Draw.text font . UTF8.encodeString) mempty
-  where
-    step lineImage restImage =
-      mconcat [
-        lineImage,
-        Draw.translate (0, -textHeight) %% restImage
-      ]
-
 data Theme = Theme {
   themeFont :: Draw.Font,
   themeEmptyString :: String
@@ -72,7 +53,7 @@ make (Theme font emptyString) (Model cursor str) = Widget helper
     reqSize = fixedSize $ Vector2 width height
     img hasFocus =
       mconcat . concat $ [
-        [ Draw.translate (cursorWidth / 2, 1.5) %% Draw.scale 1 (-1) %%
+        [ Draw.translate (cursorWidth / 2, 0) %%
           drawLines font textLines ],
         [ cursorImage | hasFocus ]
       ]
@@ -90,7 +71,7 @@ make (Theme font emptyString) (Model cursor str) = Widget helper
     textLength = length str
     textLines = splitLines displayStr
     width = cursorWidth + linesWidth font textLines
-    height = textHeight * fromIntegral lineCount
+    height = linesHeight textLines
     lineCount = length textLines
 
     linesBefore = reverse (splitLines before)
