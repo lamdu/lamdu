@@ -19,6 +19,7 @@ Library
                        Graphics.UI.GLFWWidgets.Sized,
                        Graphics.UI.GLFWWidgets.FocusDelegator,
                        Graphics.UI.GLFWWidgets.EventMap,
+                       Graphics.UI.GLFWWidgets.Spacer,
                        Graphics.UI.GLFWWidgets.GridView,
                        Graphics.UI.GLFWWidgets.Widget,
                        Graphics.UI.GLFWWidgets.GridEdit,
