@@ -7,10 +7,25 @@ import Control.Monad(forever, unless)
 import Data.IORef(newIORef, atomicModifyIORef, modifyIORef)
 import qualified Graphics.UI.GLFW as GLFW
 
-data GLFWEvent = CharEvent Char Bool
-               | KeyEvent GLFW.Key Bool
+-- This is the reification of the callback information:
+data GLFWRawEvent = RawCharEvent Char Bool
+                  | RawKeyEvent GLFW.Key Bool
+                  | RawWindowClose
+  deriving (Show, Eq)
+
+-- This is the final representation we expose of events:
+data GLFWEvent = KeyEvent (Maybe Char) GLFW.Key Bool
                | WindowClose
   deriving (Show, Eq)
+
+translate :: [GLFWRawEvent] -> [GLFWEvent]
+translate [] = []
+translate (RawWindowClose : xs) = WindowClose : translate xs
+translate (RawKeyEvent key isPress1 : RawCharEvent char isPress2 : xs)
+  | isPress1 == isPress2  =  KeyEvent (Just char) key isPress1 : translate xs
+  | otherwise             =  error "RawCharEvent mismatches the RawKeyEvent"
+translate (RawKeyEvent key isPress : xs) = KeyEvent Nothing key isPress : translate xs
+translate (charEvent@(RawCharEvent _ _) : _) = error $ "Raw Char event (" ++ show charEvent ++ ") must follow a RawKeyEvent!"
 
 assert :: Monad m => String -> Bool -> m ()
 assert msg p = unless p (fail msg)
@@ -27,18 +42,18 @@ eventLoop iteration = do
 
   let
     addEvent = modifyIORef eventsVar . (:)
-    addKeyEvent c k = addEvent $ KeyEvent c k
-    charEventHandler c
-      | '\57344' <= c && c <= '\63743' = const $ return () -- Range for "key" characters (keys for left key, right key, etc.)
-      | otherwise = addEvent . CharEvent c
+    addKeyEvent c k = addEvent $ RawKeyEvent c k
+    charEventHandler c isPress
+      | '\57344' <= c && c <= '\63743' = return () -- Range for "key" characters (keys for left key, right key, etc.)
+      | otherwise = addEvent $ RawCharEvent c isPress
 
   GLFW.setCharCallback charEventHandler
   GLFW.setKeyCallback addKeyEvent
-  GLFW.setWindowCloseCallback $ addEvent WindowClose >> return True
+  GLFW.setWindowCloseCallback $ addEvent RawWindowClose >> return True
 
   forever $ do
     GLFW.pollEvents
-    events <- atomicModifyIORef eventsVar (\o -> ([], reverse o))
+    events <- atomicModifyIORef eventsVar (\o -> ([], translate (reverse o)))
     iteration events
     GLFW.swapBuffers
     threadDelay 10000

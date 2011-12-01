@@ -12,6 +12,7 @@ import qualified Data.Map as Map
 import Data.Map(Map)
 import Data.Monoid(Monoid(..))
 import Data.Char(toUpper)
+import Control.Monad(msum)
 import Control.Newtype
 import Control.Newtype.TH
 
@@ -44,13 +45,15 @@ instance Ord Key where
 -- TODO: Modifiers
 data EventType = CharEventType | KeyEventType ModState Key
   deriving (Show, Eq, Ord)
-data Event = CharEvent { fromCharEvent :: Char }
-           | KeyEvent ModState Key
+data Event = KeyEvent {
+  keyEventModState :: ModState,
+  keyEventChar :: Maybe Char,
+  keyEventKey :: Key }
   deriving (Show, Eq, Ord)
 
-eventTypeOf :: Event -> EventType
-eventTypeOf (CharEvent _) = CharEventType
-eventTypeOf (KeyEvent ms k) = KeyEventType ms k
+eventTypesOf :: Event -> [EventType]
+eventTypesOf (KeyEvent ms Nothing k) = [KeyEventType ms k]
+eventTypesOf (KeyEvent ms (Just _) k) = [CharEventType, KeyEventType ms k]
 
 newtype EventMap a = EventMap (Map EventType (Event -> a))
   deriving (Functor)
@@ -74,10 +77,9 @@ instance Monoid (EventMap a) where
   mappend = overrides
 
 lookup :: Event -> EventMap a -> Maybe a
-lookup event =
-  fmap ($ event) .
-  Map.lookup (eventTypeOf event) .
-  unpack
+lookup event eventMap =
+  fmap ($ event) . msum $
+  map (`Map.lookup` unpack eventMap) (eventTypesOf event)
 
 singleton :: EventType -> (Event -> a) -> EventMap a
 singleton eventType handler = pack $ Map.singleton eventType handler

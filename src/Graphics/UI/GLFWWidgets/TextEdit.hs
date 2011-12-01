@@ -4,6 +4,7 @@ module Graphics.UI.GLFWWidgets.TextEdit(Cursor, Model(..), Theme(..), make) wher
 import Data.Char(isSpace)
 import Data.List(genericLength)
 import Data.List.Split(splitOn)
+import Data.Maybe(fromJust)
 import Data.Monoid(mconcat)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators((%%))
@@ -12,9 +13,9 @@ import Graphics.UI.GLFW
 import Graphics.UI.GLFWWidgets.SizeRange (fixedSize)
 import Graphics.UI.GLFWWidgets.Sized (Sized(..))
 import Graphics.UI.GLFWWidgets.Widget (Widget(..))
-import qualified Graphics.UI.GLFWWidgets.EventMap as EventMap
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.DrawingCombinators.Affine as Affine
+import qualified Graphics.UI.GLFWWidgets.EventMap as EventMap
 
 type Cursor = Int
 
@@ -186,7 +187,7 @@ make (Theme font emptyString) (Model cursor str) = Widget helper
           backDelete (length curLineBefore)
         | not . null $ curLineBefore ],
 
-        [ singleton "Insert character" EventMap.CharEventType (insert . return . EventMap.fromCharEvent) ],
+        [ singleton "Insert character" EventMap.CharEventType (insert . (: []) . fromJust . EventMap.keyEventChar) ],
 
         [ keys "Insert Newline" [specialKey KeyEnter] (insert "\n") ]
 

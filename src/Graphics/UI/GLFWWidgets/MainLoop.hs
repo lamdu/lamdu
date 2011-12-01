@@ -25,15 +25,14 @@ mainLoop eventHandler makeImage = GLFWUtils.withGLFW $ do
   modifiersHandler <- modifiersEventHandlerWrap eventHandlerWithSize
 
   let
-    keyHandler key isPress = modifiersHandler $ GLFWUtils.KeyEvent key isPress
+    keyHandler mchar key isPress = modifiersHandler $ GLFWUtils.KeyEvent mchar key isPress
     typematicTime x = 0.5 + fromIntegral x * 0.05
 
   typematicKeyHandler <- typematicKeyHandlerWrap typematicTime keyHandler
 
   let
-    handleEvent (GLFWUtils.KeyEvent key isPress) = typematicKeyHandler key isPress
+    handleEvent (GLFWUtils.KeyEvent mchar key isPress) = typematicKeyHandler mchar key isPress
     handleEvent GLFWUtils.WindowClose = error "Quit" -- TODO: Make close event
-    handleEvent x = modifiersHandler x
 
   GLFWUtils.eventLoop $ \events -> do
     winSize@(Vector2 winSizeX winSizeY) <- windowSize
@@ -41,4 +40,3 @@ mainLoop eventHandler makeImage = GLFWUtils.withGLFW $ do
     Draw.clearRender .
       (Draw.scale (50/winSizeX) (-50/winSizeY) %%) =<<
       makeImage winSize
-
