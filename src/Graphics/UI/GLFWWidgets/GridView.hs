@@ -9,10 +9,11 @@ import           Data.Monoid                       (Monoid(..))
 import           Data.Vector.Vector2               (Vector2(..))
 import           Graphics.DrawingCombinators       ((%%))
 import           Graphics.UI.GLFWWidgets.SizeRange (SizeRange(..), Size, Coordinate)
+import           Graphics.DrawingCombinators.Utils (Image)
 import           Graphics.UI.GLFWWidgets.Sized     (Sized(..))
-import qualified Data.Record.Label                as Label
-import qualified Data.Vector.Vector2              as Vector2
-import qualified Graphics.DrawingCombinators      as Draw
+import qualified Data.Record.Label                 as Label
+import qualified Data.Vector.Vector2               as Vector2
+import qualified Graphics.DrawingCombinators       as Draw
 import qualified Graphics.UI.GLFWWidgets.SizeRange as SizeRange
 
 --- Size computations:
@@ -68,7 +69,7 @@ makePlacements = (fmap . second . fmap) placements makeSizes
 --- Displays:
 
 -- Used by both make and GridEdit's make.
-makeGeneric :: (a -> Draw.Image ()) -> [[Sized a]] -> Sized (Draw.Image (), [[a]])
+makeGeneric :: (a -> Image) -> [[Sized a]] -> Sized (Image, [[a]])
 makeGeneric toImage rows =
   Sized reqSize mkRes
   where
@@ -84,5 +85,5 @@ makeGeneric toImage rows =
 unzip2d :: [[(a, b)]] -> ([[a]], [[b]])
 unzip2d = unzip . map unzip
 
-make :: [[Sized (Draw.Image ())]] -> Sized (Draw.Image ())
+make :: [[Sized Image]] -> Sized Image
 make = fmap fst . makeGeneric id
