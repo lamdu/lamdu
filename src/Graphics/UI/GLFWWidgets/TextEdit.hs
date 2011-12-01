@@ -7,7 +7,7 @@ import Data.List.Split(splitOn)
 import Data.Monoid(mconcat)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators((%%))
-import Graphics.DrawingCombinators.Utils(square, drawLines, linesWidth, linesHeight, textHeight)
+import Graphics.DrawingCombinators.Utils(square, drawTextLines, textLinesWidth, textLinesHeight, textHeight)
 import Graphics.UI.GLFW
 import Graphics.UI.GLFWWidgets.SizeRange (fixedSize)
 import Graphics.UI.GLFWWidgets.Sized (Sized(..))
@@ -54,12 +54,12 @@ make (Theme font emptyString) (Model cursor str) = Widget helper
     img hasFocus =
       mconcat . concat $ [
         [ Draw.translate (cursorWidth / 2, 0) %%
-          drawLines font textLines ],
+          drawTextLines font textLines ],
         [ cursorImage | hasFocus ]
       ]
 
     beforeCursor = take cursor str
-    cursorPosX = linesWidth font . (: []) . last . splitLines $ beforeCursor
+    cursorPosX = textLinesWidth font . (: []) . last . splitLines $ beforeCursor
     cursorPosY = (textHeight *) . subtract 1 . genericLength . splitLines $ beforeCursor
     cursorImage =
       Draw.tint (Draw.Color 0 1 0 1) $
@@ -70,8 +70,8 @@ make (Theme font emptyString) (Model cursor str) = Widget helper
     (before, after) = splitAt cursor str
     textLength = length str
     textLines = splitLines displayStr
-    width = cursorWidth + linesWidth font textLines
-    height = linesHeight textLines
+    width = cursorWidth + textLinesWidth font textLines
+    height = textLinesHeight textLines
     lineCount = length textLines
 
     linesBefore = reverse (splitLines before)

@@ -1,12 +1,13 @@
 {-# OPTIONS -Wall #-}
 module Graphics.DrawingCombinators.Utils (
   Image, square,
-  textHeight, textWidth,
-  linesWidth, linesHeight,
-  drawLines) where
+  textHeight, textWidth, textSize,
+  textLinesWidth, textLinesHeight, textLinesSize,
+  drawTextLines) where
 
 import Control.Monad(void)
 import Data.Monoid(Monoid(..))
+import Data.Vector.Vector2(Vector2(..))
 import Graphics.DrawingCombinators((%%))
 import qualified Codec.Binary.UTF8.String as UTF8
 import qualified Graphics.DrawingCombinators as Draw
@@ -22,14 +23,20 @@ textHeight = 2
 textWidth :: Draw.Font -> String -> Draw.R
 textWidth font = Draw.textWidth font . UTF8.encodeString
 
-linesHeight :: [String] -> Draw.R
-linesHeight = (textHeight *) . fromIntegral . length
+textSize :: Draw.Font -> String -> Vector2 Draw.R
+textSize font str = Vector2 (textWidth font str) textHeight
 
-linesWidth :: Draw.Font -> [String] -> Draw.R
-linesWidth font = maximum . map (textWidth font)
+textLinesHeight :: [String] -> Draw.R
+textLinesHeight = (textHeight *) . fromIntegral . length
 
-drawLines :: Draw.Font -> [String] -> Image
-drawLines font =
+textLinesWidth :: Draw.Font -> [String] -> Draw.R
+textLinesWidth font = maximum . map (textWidth font)
+
+textLinesSize :: Draw.Font -> [String] -> Vector2 Draw.R
+textLinesSize font textLines = Vector2 (textLinesWidth font textLines) (textLinesHeight textLines)
+
+drawTextLines :: Draw.Font -> [String] -> Image
+drawTextLines font =
   (Draw.translate (0, 1.5) %%) .
   (Draw.scale 1 (-1) %%) .
   void . foldr (step . Draw.text font . UTF8.encodeString) mempty

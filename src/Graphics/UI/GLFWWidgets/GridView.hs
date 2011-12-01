@@ -1,16 +1,19 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE TypeOperators, GeneralizedNewtypeDeriving #-}
-module Graphics.UI.GLFWWidgets.GridView(make, makeGeneric) where
+module Graphics.UI.GLFWWidgets.GridView(
+    make, makeGeneric, makeFromWidgets) where
 
+import           Control.Newtype
 import           Control.Applicative               (liftA2)
 import           Control.Arrow                     (first, second)
 import           Data.List                         (transpose)
 import           Data.Monoid                       (Monoid(..))
 import           Data.Vector.Vector2               (Vector2(..))
 import           Graphics.DrawingCombinators       ((%%))
-import           Graphics.UI.GLFWWidgets.SizeRange (SizeRange(..), Size, Coordinate)
 import           Graphics.DrawingCombinators.Utils (Image)
+import           Graphics.UI.GLFWWidgets.SizeRange (SizeRange(..), Size, Coordinate)
 import           Graphics.UI.GLFWWidgets.Sized     (Sized(..))
+import           Graphics.UI.GLFWWidgets.Widget    (Widget(..))
 import qualified Data.Record.Label                 as Label
 import qualified Data.Vector.Vector2               as Vector2
 import qualified Graphics.DrawingCombinators       as Draw
@@ -87,3 +90,15 @@ unzip2d = unzip . map unzip
 
 make :: [[Sized Image]] -> Sized Image
 make = fmap fst . makeGeneric id
+
+-- ^ This will send events to the first widget in the list that would
+-- take them. It is useful especially for lifting views to widgets and
+-- composing them with widgets.
+makeFromWidgets :: [[Widget k]] -> Widget k
+makeFromWidgets widgets = Widget handleHasFocus
+  where
+    handleHasFocus hasFocus =
+      (fmap . second) (mconcat . map snd . concat) $
+      makeGeneric fst children
+      where
+        children = (map . map) (($ hasFocus) . op Widget) widgets

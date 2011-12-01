@@ -57,7 +57,7 @@ newtype EventMap a = EventMap (Map EventType (Event -> a))
 $(mkNewTypes [''EventMap])
 
 filterByKey :: Ord k => (k -> Bool) -> Map k v -> Map k v
-filterByKey pred = Map.filterWithKey (const . pred)
+filterByKey p = Map.filterWithKey (const . p)
 
 overrides :: EventMap a -> EventMap a -> EventMap a
 EventMap x `overrides` EventMap y =

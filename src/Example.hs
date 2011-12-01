@@ -12,8 +12,10 @@ import Graphics.UI.GLFWWidgets.SizeRange (Size)
 import Graphics.UI.GLFWWidgets.Widget(Widget(..))
 import qualified Graphics.DrawingCombinators as Draw -- TODO: Only needed for fonts...
 import qualified Graphics.UI.GLFWWidgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.GLFWWidgets.GridView as GridView
 import qualified Graphics.UI.GLFWWidgets.GridEdit as GridEdit
 import qualified Graphics.UI.GLFWWidgets.TextEdit as TextEdit
+import qualified Graphics.UI.GLFWWidgets.TextView as TextView
 import qualified Graphics.UI.GLFWWidgets.Widget as Widget
 import qualified System.Info
 
@@ -41,7 +43,13 @@ theme :: Draw.Font -> Theme
 theme font = Theme $ TextEdit.Theme font "<empty>"
 
 widget :: Draw.Font -> Model -> Widget Model
-widget = toWidget . theme
+widget font model =
+  GridView.makeFromWidgets
+  [[ titleWidget ],
+   [ modelWidget ]]
+  where
+    titleWidget = TextView.makeWidget font ["The not-yet glorious structural code editor"]
+    modelWidget = toWidget (theme font) model
 
 updateModel :: Draw.Font -> Size -> Event -> Model -> Model
 updateModel font size event model =
