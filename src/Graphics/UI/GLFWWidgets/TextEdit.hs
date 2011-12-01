@@ -2,7 +2,7 @@
 module Graphics.UI.GLFWWidgets.TextEdit(Cursor, Model(..), Theme(..), make) where
 
 import Control.Monad
-import Data.Char
+import Data.Char(isSpace)
 import Data.List(genericLength)
 import Data.List.Split(splitOn)
 import Data.Monoid
@@ -121,8 +121,8 @@ make (Theme font emptyString) (Model cursor str) = Widget helper
 
     specialKey = EventMap.KeyEventType EventMap.noMods
     ctrlSpecialKey = EventMap.KeyEventType EventMap.ctrl
-    ctrlCharKey = EventMap.KeyEventType EventMap.ctrl . CharKey . toUpper
-    altCharKey = EventMap.KeyEventType EventMap.alt . CharKey . toUpper
+    ctrlCharKey = EventMap.KeyEventType EventMap.ctrl . EventMap.charKey
+    altCharKey = EventMap.KeyEventType EventMap.alt . EventMap.charKey
     homeKeys = [specialKey KeyHome, ctrlCharKey 'A']
     endKeys = [specialKey KeyEnd, ctrlCharKey 'E']
 
