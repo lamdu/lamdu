@@ -2,15 +2,15 @@
 {-# LANGUAGE TypeOperators, GeneralizedNewtypeDeriving #-}
 module Graphics.UI.GLFWWidgets.GridView(make, makeGeneric) where
 
-import           Control.Applicative              (liftA2)
-import           Control.Arrow                    (first, second)
-import           Data.List                        (transpose)
-import           Data.Monoid                      (Monoid(..))
-import           Data.Vector.Vector2              (Vector2(..))
-import           Graphics.DrawingCombinators      ((%%))
+import           Control.Applicative               (liftA2)
+import           Control.Arrow                     (first, second)
+import           Data.List                         (transpose)
+import           Data.Monoid                       (Monoid(..))
+import           Data.Vector.Vector2               (Vector2(..))
+import           Graphics.DrawingCombinators       ((%%))
 import           Graphics.UI.GLFWWidgets.SizeRange (SizeRange(..), Size, Coordinate)
-import Graphics.UI.GLFWWidgets.Sized (Sized(..))
-import qualified Data.Label                       as Label
+import           Graphics.UI.GLFWWidgets.Sized     (Sized(..))
+import qualified Data.Record.Label                as Label
 import qualified Data.Vector.Vector2              as Vector2
 import qualified Graphics.DrawingCombinators      as Draw
 import qualified Graphics.UI.GLFWWidgets.SizeRange as SizeRange
@@ -40,8 +40,8 @@ makeSizes rows = (reqSize, mkSizes)
     -- computeSizeRanges takes f twice (as f0 and f1) to work around
     -- lack of (proper) Rank2Types
     computeSizeRanges f0 f1 xs =
-      (map (maximum . map (f0 . Label.get SizeRange.srMinSize)) xs,
-       map (fmap maximum . mapM (\x -> f1 (Label.get SizeRange.srMaxSize x))) xs)
+      (map (maximum . map (f0 . Label.getL SizeRange.srMinSize)) xs,
+       map (fmap maximum . mapM (\x -> f1 (Label.getL SizeRange.srMaxSize x))) xs)
 
     rowHeightRanges = zip rowMinHeights rowMaxHeights
     columnWidthRanges = zip columnMinWidths columnMaxWidths

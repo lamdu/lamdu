@@ -9,7 +9,7 @@ module Graphics.UI.GLFWWidgets.SizeRange
      )
 where
 
-import Data.Label                  (mkLabels)
+import Data.Record.Label           (mkLabels, (:->), lens)
 import Data.Vector.Vector2         (Vector2(..))
 import Control.Applicative         (pure)
 import Graphics.DrawingCombinators (R)
