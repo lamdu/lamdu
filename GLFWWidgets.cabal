@@ -24,6 +24,7 @@ Library
                        Graphics.UI.GLFWWidgets.Widget,
                        Graphics.UI.GLFWWidgets.Grid,
                        Graphics.UI.GLFWWidgets.GridView,
+                       Graphics.UI.GLFWWidgets.Box,
                        Graphics.UI.GLFWWidgets.MainLoop,
                        Graphics.UI.GLFW.Utils,
                        Data.Vector.Vector2,
