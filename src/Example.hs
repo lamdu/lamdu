@@ -95,6 +95,7 @@ makeDelegatedStringEditWidget theme delegatedStringEdit =
 
 makeWidget :: Scope -> Theme -> ExpressionWithGUI -> Widget ExpressionWithGUI
 makeWidget scope theme node =
+  Widget.removeExtraSize .
   Widget.atMaybeEventMap (flip mappend $ Just addArg) $
   makeWidgetFor scope theme node
   where
