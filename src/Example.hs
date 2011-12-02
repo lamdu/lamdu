@@ -32,7 +32,7 @@ data ExpressionWithGUI =
             _applyCursor :: Box.Cursor }
   | GetValue { _valueId :: StringEdit,
                _valueDelegating :: FocusDelegator.Cursor }
-  | LiteralInt { _litValue :: StringEdit {- TODO: IntegerEdit -} }
+--  | LiteralInt { _litValue :: StringEdit {- TODO: IntegerEdit -} }
 
 $(L.mkLabels [''ExpressionWithGUI])
 
