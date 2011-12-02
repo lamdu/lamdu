@@ -22,8 +22,8 @@ import qualified Graphics.UI.GLFWWidgets.EventMap as EventMap
 type Cursor = Int
 
 data Model = Model {
-  textEditCursor :: Cursor,
-  textEditText :: String
+  modelCursor :: Cursor,
+  modelText :: String
   }
   deriving (Show, Read, Eq, Ord)
 

@@ -2,10 +2,8 @@
 module Graphics.UI.GLFWWidgets.FocusDelegator(Cursor, make) where
 
 import Control.Newtype(unpack)
-import Data.Monoid (mappend, mconcat)
-import Data.Vector.Vector2 (Vector2(..))
-import Graphics.DrawingCombinators((%%))
-import Graphics.DrawingCombinators.Utils (square)
+import Data.Monoid (mappend)
+import Graphics.DrawingCombinators.Utils (backgroundColor)
 import Graphics.UI.GLFWWidgets.Widget(Widget(..))
 import qualified Graphics.UI.GLFWWidgets.EventMap as EventMap
 import qualified Graphics.DrawingCombinators as Draw
@@ -31,7 +29,7 @@ make liftCursor delegating widget = Widget $ handleFocus delegating
     handleFocus True hasFocus = unpack (addEscape widget) hasFocus
 
     blueify =
-      Widget.atImageWithSize blueBackground .
+      Widget.atImageWithSize (backgroundColor blue) .
       Widget.atMaybeEventMap mkNonDelegatingEventMap
 
     mkNonDelegatingEventMap = (fmap . const) nonDelegatingEventMap
@@ -41,9 +39,3 @@ make liftCursor delegating widget = Widget $ handleFocus delegating
     delegatingEventMap = eventMap stopDelegatingKey False
 
     eventMap key = EventMap.singleton key . const . liftCursor
-
-    blueBackground (Vector2 width height) image =
-      mconcat [
-        image,
-        Draw.tint blue $ Draw.scale width height %% square
-      ]

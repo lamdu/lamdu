@@ -4,11 +4,12 @@ import Control.Applicative ((<*>))
 import Data.IORef (newIORef, modifyIORef, readIORef)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..))
-import Data.Record.Label((:->), lens)
-import Data.Vector.Vector2(Vector2(..))
+import Data.Record.Label ((:->), lens)
+import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.GLFWWidgets.MainLoop (mainLoop)
-import Graphics.UI.GLFWWidgets.Widget(Widget(..))
+import Graphics.UI.GLFWWidgets.Widget (Widget(..))
 import Graphics.UI.GLFWWidgets.Widgetable (Widgetable(..), Theme(..))
+import Graphics.DrawingCombinators.Utils (backgroundColor)
 import qualified Data.Record.Label as L
 import qualified Graphics.DrawingCombinators as Draw -- TODO: Only needed for fonts...
 import qualified Graphics.UI.GLFWWidgets.EventMap as E
@@ -60,45 +61,51 @@ set record label val = L.setL label val record
 makeTextView :: Theme -> [String] -> Widget k
 makeTextView theme textLines = TextView.makeWidget (themeFont theme) (themeFontSize theme) textLines
 
-instance Widgetable ExpressionWithGUI where
-  toWidget theme node@(GetValue se delegating) =
-    Widget.atMaybeEventMap (flip mappend $ Just addArg) .
-    FocusDelegator.make (modify valueDelegating) delegating .
-    fmap (modify valueId) $
-    toWidget theme se
-    where
-      addArg =
-        E.fromEventType (uncurry E.KeyEventType addArgKey) $
-        Apply node (GetValue (TextEdit.Model 0 "") True) 3
-      modify = set node
+type Scope = [String]
 
-  toWidget theme node@(Apply func arg cursor) =
-    Box.make Box.horizontal (modify applyCursor) cursor
-    [ makeTextView theme ["("],
-      funcWidget, standardSpacer, argWidget,
-      makeTextView theme [")"] ]
-    where
-      funcWidget = fmap (modify applyFunc) $ toWidget theme func
-      argWidget = fmap (modify applyArg) $ toWidget theme arg
-      modify = set node
+makeWidget :: Scope -> Theme -> ExpressionWithGUI -> Widget ExpressionWithGUI
+makeWidget scope theme node@(GetValue se delegating) =
+  (if inScope
+    then id
+    else Widget.atImageWithSize (backgroundColor (Draw.Color 0.8 0 0 1))) .
+  Widget.atMaybeEventMap (flip mappend $ Just addArg) .
+  FocusDelegator.make (modify valueDelegating) delegating .
+  fmap (modify valueId) $
+  toWidget theme se
+  where
+    inScope = TextEdit.modelText se `elem` scope
+    addArg =
+      E.fromEventType (uncurry E.KeyEventType addArgKey) $
+      Apply node (GetValue (mkStringEdit "") True) 3
+    modify = set node
 
-  toWidget theme node@(Lambda param body cursor) =
-    Box.make Box.vertical (modify lambdaCursor) cursor [
-      GridView.makeFromWidgets [[
-        makeTextView theme ["(λ"],
-        paramWidget, standardSpacer,
-        makeTextView theme ["->"]
-      ]],
-      GridView.makeFromWidgets [[
-        standardSpacer,
-        bodyWidget,
-        makeTextView theme [")"]
-      ]]
-    ]
-    where
-      paramWidget = fmap (modify lambdaParam) $ toWidget theme param
-      bodyWidget = fmap (modify lambdaBody) $ toWidget theme body
-      modify = set node
+makeWidget scope theme node@(Apply func arg cursor) =
+  Box.make Box.horizontal (modify applyCursor) cursor
+  [ makeTextView theme ["("],
+    funcWidget, standardSpacer, argWidget,
+    makeTextView theme [")"] ]
+  where
+    funcWidget = fmap (modify applyFunc) $ makeWidget scope theme func
+    argWidget = fmap (modify applyArg) $ makeWidget scope theme arg
+    modify = set node
+
+makeWidget scope theme node@(Lambda param body cursor) =
+  Box.make Box.vertical (modify lambdaCursor) cursor [
+    GridView.makeFromWidgets [[
+      makeTextView theme ["(λ"],
+      paramWidget, standardSpacer,
+      makeTextView theme ["→"]
+    ]],
+    GridView.makeFromWidgets [[
+      standardSpacer,
+      bodyWidget,
+      makeTextView theme [")"]
+    ]]
+  ]
+  where
+    paramWidget = fmap (modify lambdaParam) $ toWidget theme param
+    bodyWidget = fmap (modify lambdaBody) $ makeWidget (TextEdit.modelText param : scope) theme body
+    modify = set node
 
 type Model = ExpressionWithGUI
 
@@ -141,4 +148,4 @@ widget font basePtSize model =
   where
     titleWidget = Widget.atImage (Draw.tint $ Draw.Color 1 0 1 1) $
                   TextView.makeWidget font (basePtSize * 2) ["The not-yet glorious structural code editor"]
-    modelWidget = toWidget (mkTheme font basePtSize) model
+    modelWidget = makeWidget ["launchMissiles"] (mkTheme font basePtSize) model

@@ -3,7 +3,7 @@ module Graphics.DrawingCombinators.Utils (
   Image, square,
   textHeight, textWidth, textSize,
   textLinesWidth, textLinesHeight, textLinesSize,
-  drawTextLines) where
+  drawTextLines, backgroundColor) where
 
 import Control.Monad(void)
 import Data.Monoid(Monoid(..))
@@ -53,3 +53,10 @@ drawTextLines font ptSize =
         lineImage,
         Draw.translate (0, textHeight ptSize) %% restImage
       ]
+
+backgroundColor :: Draw.Color -> Vector2 Draw.R -> Image -> Image
+backgroundColor color (Vector2 width height) image =
+  mconcat [
+    image,
+    Draw.tint color $ Draw.scale width height %% square
+  ]
