@@ -1,8 +1,8 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE TemplateHaskell, TypeOperators, TupleSections #-}
 import Control.Applicative ((<*>))
-import Data.IORef
-import Data.Maybe
+import Data.IORef (newIORef, modifyIORef, readIORef)
+import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Record.Label((:->), lens)
 import Data.Vector.Vector2(Vector2(..))

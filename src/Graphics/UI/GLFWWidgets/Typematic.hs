@@ -1,11 +1,11 @@
 {-# OPTIONS -Wall #-}
 module Graphics.UI.GLFWWidgets.Typematic (typematicKeyHandlerWrap) where
 
-import Control.Monad
+import Control.Monad (forever)
 import Control.Concurrent (forkIO, threadDelay)
-import Control.Concurrent.MVar
-import Graphics.UI.GLFW
-import Data.Time.Clock
+import Control.Concurrent.MVar (newMVar, modifyMVar, swapMVar)
+import Graphics.UI.GLFW (Key)
+import Data.Time.Clock (UTCTime, getCurrentTime, NominalDiffTime, diffUTCTime)
 
 data TypematicState = NoKey | TypematicRepeat { _tsChar :: Maybe Char, _tsKey :: Key, _tsCount :: Int, _tsStartTime :: UTCTime }
 

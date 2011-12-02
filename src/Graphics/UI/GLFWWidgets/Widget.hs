@@ -4,8 +4,8 @@
 module Graphics.UI.GLFWWidgets.Widget (Widget(..), image, eventMap, atImageWithSize, atImage, atHasFocus, atMaybeEventMap, liftView) where
 
 import Control.Arrow (first, second)
-import Control.Newtype
-import Control.Newtype.TH
+import Control.Newtype (unpack, over)
+import Control.Newtype.TH (mkNewTypes)
 import Graphics.UI.GLFWWidgets.EventMap (EventMap)
 import Graphics.UI.GLFWWidgets.SizeRange (Size)
 import Graphics.UI.GLFWWidgets.Sized (Sized)

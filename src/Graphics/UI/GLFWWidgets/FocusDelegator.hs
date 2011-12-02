@@ -1,7 +1,7 @@
 {-# OPTIONS -Wall #-}
 module Graphics.UI.GLFWWidgets.FocusDelegator(Cursor, make) where
 
-import Control.Newtype
+import Control.Newtype(unpack)
 import Data.Monoid (mappend, mconcat)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators((%%))

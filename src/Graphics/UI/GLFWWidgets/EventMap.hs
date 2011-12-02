@@ -7,14 +7,14 @@ module Graphics.UI.GLFWWidgets.EventMap(
 where
 
 import Prelude hiding (lookup)
-import Graphics.UI.GLFW
+import Graphics.UI.GLFW (Key(..))
 import qualified Data.Map as Map
 import Data.Map(Map)
 import Data.Monoid(Monoid(..))
 import Data.Char(toUpper)
 import Control.Monad(msum)
-import Control.Newtype
-import Control.Newtype.TH
+import Control.Newtype(pack, unpack)
+import Control.Newtype.TH(mkNewTypes)
 
 data ModState = ModState {
   modCtrl :: Bool,

@@ -1,12 +1,12 @@
 {-# OPTIONS -Wall #-}
 module Graphics.UI.GLFWWidgets.MainLoop (mainLoop) where
 
-import Data.Vector.Vector2(Vector2(..))
-import Graphics.UI.GLFWWidgets.EventMap
-import Graphics.DrawingCombinators((%%))
+import Data.Vector.Vector2 (Vector2(..))
+import Graphics.UI.GLFWWidgets.EventMap (Event)
+import Graphics.DrawingCombinators ((%%))
 import Graphics.DrawingCombinators.Utils (Image)
-import Graphics.UI.GLFW
-import Graphics.UI.GLFWWidgets.KeyHandlers(modifiersEventHandlerWrap)
+import Graphics.UI.GLFW (defaultDisplayOptions, getWindowDimensions)
+import Graphics.UI.GLFWWidgets.KeyHandlers (modifiersEventHandlerWrap)
 import Graphics.UI.GLFWWidgets.SizeRange (Size)
 import Graphics.UI.GLFWWidgets.Typematic(typematicKeyHandlerWrap)
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils

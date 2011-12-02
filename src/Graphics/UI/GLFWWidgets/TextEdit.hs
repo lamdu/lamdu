@@ -1,15 +1,17 @@
 {-# OPTIONS -Wall #-}
 module Graphics.UI.GLFWWidgets.TextEdit(Cursor, Model(..), make) where
 
-import Data.Char(isSpace)
-import Data.List(genericLength)
-import Data.List.Split(splitOn)
-import Data.Maybe(fromJust)
-import Data.Monoid(mconcat)
+import Data.Char (isSpace)
+import Data.List (genericLength)
+import Data.List.Split (splitOn)
+import Data.Maybe (fromJust)
+import Data.Monoid (mconcat)
 import Data.Vector.Vector2 (Vector2(..))
-import Graphics.DrawingCombinators((%%))
-import Graphics.DrawingCombinators.Utils(square, drawTextLines, textLinesWidth, textLinesHeight, textHeight)
-import Graphics.UI.GLFW
+import Graphics.DrawingCombinators ((%%))
+import Graphics.DrawingCombinators.Utils (square, drawTextLines, textLinesWidth, textLinesHeight, textHeight)
+import Graphics.UI.GLFW (
+  Key(KeyBackspace, KeyDel, KeyDown, KeyEnd, KeyEnter, KeyHome,
+      KeyLeft, KeyRight, KeyUp))
 import Graphics.UI.GLFWWidgets.SizeRange (fixedSize)
 import Graphics.UI.GLFWWidgets.Sized (Sized(..))
 import Graphics.UI.GLFWWidgets.Widget (Widget(..))
