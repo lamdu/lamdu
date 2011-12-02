@@ -49,32 +49,32 @@ addArgKey :: (E.ModState, E.Key)
 addArgKey = (E.noMods, E.charKey 'a')
 
 set :: f -> (f :-> a) -> a -> f
-set = flip (flip . L.setL)
+set record label val = L.setL label val record
 
 makeTextView :: Theme -> [String] -> Widget k
-makeTextView t textLines = TextView.makeWidget (themeFont t) (themeFontSize t) textLines
+makeTextView theme textLines = TextView.makeWidget (themeFont theme) (themeFontSize theme) textLines
 
 instance Widgetable ExpressionWithGUI where
-  toWidget t getValue@(GetValue se delegating) =
+  toWidget theme node@(GetValue se delegating) =
     Widget.atMaybeEventMap (flip mappend $ Just addArg) .
     FocusDelegator.make (modify valueDelegating) delegating .
     fmap (modify valueId) $
-    toWidget t se
+    toWidget theme se
     where
       addArg =
         E.fromEventType (uncurry E.KeyEventType addArgKey) $
-        Apply getValue (GetValue (TextEdit.Model 0 "") True) (Vector2 3 0)
-      modify = set getValue
+        Apply node (GetValue (TextEdit.Model 0 "") True) (Vector2 3 0)
+      modify = set node
 
-  toWidget t apply@(Apply func arg cursor) =
+  toWidget theme node@(Apply func arg cursor) =
     GridEdit.make (modify applyGridData) cursor
-    [[ makeTextView t ["("],
+    [[ makeTextView theme ["("],
        funcWidget, standardSpacer, argWidget,
-       makeTextView t [")"] ]]
+       makeTextView theme [")"] ]]
     where
-      funcWidget = fmap (modify applyFunc) $ toWidget t func
-      argWidget = fmap (modify applyArg) $ toWidget t arg
-      modify = set apply
+      funcWidget = fmap (modify applyFunc) $ toWidget theme func
+      argWidget = fmap (modify applyArg) $ toWidget theme arg
+      modify = set node
 
 type Model = ExpressionWithGUI
 
@@ -105,8 +105,8 @@ main = do
 
   mainLoop eventHandler draw
 
-theme :: Draw.Font -> Int -> Theme
-theme font ptSize = Theme font ptSize "<empty>"
+mkTheme :: Draw.Font -> Int -> Theme
+mkTheme font ptSize = Theme font ptSize "<empty>"
 
 widget :: Draw.Font -> Int -> Model -> Widget Model
 widget font basePtSize model =
@@ -116,4 +116,4 @@ widget font basePtSize model =
   where
     titleWidget = Widget.atImage (Draw.tint $ Draw.Color 1 0 1 1) $
                   TextView.makeWidget font (basePtSize * 2) ["The not-yet glorious structural code editor"]
-    modelWidget = toWidget (theme font basePtSize) model
+    modelWidget = toWidget (mkTheme font basePtSize) model
