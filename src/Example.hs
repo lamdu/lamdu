@@ -75,22 +75,28 @@ noParens = (empty, empty)
 type Scope = [String]
 
 makeWidget :: Scope -> Theme -> ExpressionWithGUI -> Widget ExpressionWithGUI
-makeWidget scope theme node@(GetValue se delegating) =
+makeWidget scope theme node =
+  Widget.atMaybeEventMap (flip mappend $ Just addArg) $
+  makeWidgetFor scope theme node
+  where
+    addArg =
+      E.fromEventType (uncurry E.KeyEventType addArgKey) $
+      Apply node (GetValue (mkStringEdit "") True) 3 True
+
+makeWidgetFor :: Scope -> Theme -> ExpressionWithGUI -> Widget ExpressionWithGUI
+makeWidgetFor scope theme node@(GetValue se delegating) =
   (if inScope
     then id
-    else Widget.atImageWithSize (backgroundColor (Draw.Color 1 0 0 0.5))) .
-  Widget.atMaybeEventMap (flip mappend $ Just addArg) .
+    else Widget.removeExtraSize .
+         Widget.atImageWithSize (backgroundColor (Draw.Color 1 0 0 0.5))) .
   FocusDelegator.make (modify valueDelegating) delegating .
   fmap (modify valueId) $
   toWidget theme se
   where
     inScope = TextEdit.modelText se `elem` scope
-    addArg =
-      E.fromEventType (uncurry E.KeyEventType addArgKey) $
-      Apply node (GetValue (mkStringEdit "") True) 3 True
     modify = set node
 
-makeWidget scope theme node@(Apply func arg cursor delegating) =
+makeWidgetFor scope theme node@(Apply func arg cursor delegating) =
   FocusDelegator.make (modify applyDelegating) delegating $
   Box.make Box.horizontal (modify applyCursor) cursor
   [ funcWidget, standardSpacer, before, argWidget, after ]
@@ -103,7 +109,7 @@ makeWidget scope theme node@(Apply func arg cursor delegating) =
     argWidget = fmap (modify applyArg) $ makeWidget scope theme arg
     modify = set node
 
-makeWidget scope theme node@(Lambda param body cursor delegating) =
+makeWidgetFor scope theme node@(Lambda param body cursor delegating) =
   FocusDelegator.make (modify lambdaDelegating) delegating $
   Box.make Box.vertical (modify lambdaCursor) cursor [
     GridView.makeFromWidgets [[

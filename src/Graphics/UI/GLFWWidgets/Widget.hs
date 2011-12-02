@@ -1,15 +1,20 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE TemplateHaskell, DeriveFunctor, FlexibleInstances,
              MultiParamTypeClasses, TupleSections #-}
-module Graphics.UI.GLFWWidgets.Widget (Widget(..), image, eventMap, atImageWithSize, atImage, atHasFocus, atMaybeEventMap, liftView) where
+module Graphics.UI.GLFWWidgets.Widget (
+  Widget(..), image, eventMap,
+  atImageWithSize, atImage, atHasFocus, atMaybeEventMap, liftView, removeExtraSize) where
 
+import Control.Applicative (liftA2)
 import Control.Arrow (first, second)
 import Control.Newtype (unpack, over)
 import Control.Newtype.TH (mkNewTypes)
+import Data.Record.Label (getL)
+import Graphics.DrawingCombinators.Utils(Image)
 import Graphics.UI.GLFWWidgets.EventMap (EventMap)
 import Graphics.UI.GLFWWidgets.SizeRange (Size)
 import Graphics.UI.GLFWWidgets.Sized (Sized)
-import Graphics.DrawingCombinators.Utils(Image)
+import qualified Graphics.UI.GLFWWidgets.SizeRange as SizeRange
 import qualified Graphics.UI.GLFWWidgets.Sized as Sized
 
 type HasFocus = Bool
@@ -26,17 +31,29 @@ liftView = Widget . const . fmap (, Nothing)
 argument :: (a -> b) -> (b -> c) -> a -> c
 argument = flip (.)
 
+result :: (b -> c) -> (a -> b) -> a -> c
+result = (.)
+
 atHasFocus :: (Bool -> Bool) -> Widget a -> Widget a
 atHasFocus = over Widget . argument
 
-atMaybeEventMap :: (Maybe (EventMap a) -> Maybe (EventMap b)) -> Widget a -> Widget b
-atMaybeEventMap = over Widget . fmap . fmap . second
+atSized :: (Sized (UserIO k) -> Sized (UserIO k')) -> Widget k -> Widget k'
+atSized = over Widget . result
 
-atFromSize :: ((Size -> UserIO a) -> Size -> UserIO b) -> Widget a -> Widget b
-atFromSize = over Widget . fmap . Sized.atFromSize
+atMaybeEventMap :: (Maybe (EventMap a) -> Maybe (EventMap b)) -> Widget a -> Widget b
+atMaybeEventMap = atSized . fmap . second
+
+removeExtraSize :: Widget a -> Widget a
+removeExtraSize = atSized f
+  where
+    f sized = (Sized.atFromSize . argument) (liftA2 cap maxSize) sized
+      where
+        cap Nothing y = y
+        cap (Just x) y = min x y
+        maxSize = getL SizeRange.srMaxSize $ Sized.requestedSize sized
 
 atImageWithSize :: (Size -> Image -> Image) -> Widget a -> Widget a
-atImageWithSize f = atFromSize g
+atImageWithSize f = atSized . Sized.atFromSize $ g
   where
     g mkUserIO size = first (f size) (mkUserIO size)
 
