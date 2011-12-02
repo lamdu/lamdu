@@ -3,26 +3,25 @@
              TupleSections #-}
 module Graphics.UI.GLFWWidgets.Widgetable(Widgetable(..), Theme(..)) where
 
-import qualified Graphics.UI.GLFWWidgets.TextEdit as TextEdit
-import qualified Graphics.UI.GLFWWidgets.GridEdit as GridEdit
-import qualified Graphics.UI.GLFWWidgets.FocusDelegator as FocusDelegator
-import           Graphics.UI.GLFWWidgets.Widget(Widget)
-import           Data.List.Utils (enumerate2d, nth)
 import           Control.Arrow (second)
+import           Data.List.Utils (enumerate2d, nth)
+import           Graphics.UI.GLFWWidgets.Widget(Widget)
+import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.GLFWWidgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.GLFWWidgets.GridEdit as GridEdit
+import qualified Graphics.UI.GLFWWidgets.TextEdit as TextEdit
 
 data Theme = Theme {
-  textEditTheme :: TextEdit.Theme
+  themeFont :: Draw.Font,
+  themeFontSize :: Int,
+  themeEmptyString :: String
   }
 
 class Widgetable a where
   toWidget :: Theme -> a -> Widget a
 
--- TODO: Move into polymorphic/constrained theme
-ptSize :: Int
-ptSize = 40
-
 instance Widgetable TextEdit.Model where
-  toWidget theme = TextEdit.make (textEditTheme theme) ptSize
+  toWidget (Theme font ptSize emptyStr) = TextEdit.make font ptSize emptyStr
 
 instance Widgetable a => Widgetable (GridEdit.Cursor, [[a]]) where
   toWidget theme (cursor, childrenModels) =

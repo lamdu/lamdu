@@ -1,25 +1,25 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE TemplateHaskell, TypeOperators, TupleSections #-}
+import Control.Applicative ((<*>))
 import Data.IORef
 import Data.Maybe
 import Data.Monoid (Monoid(..))
 import Data.Record.Label((:->), lens)
-import qualified Data.Record.Label as L
 import Data.Vector.Vector2(Vector2(..))
-import Graphics.UI.GLFWWidgets.Widgetable (Widgetable(..), Theme(..))
 import Graphics.UI.GLFWWidgets.MainLoop (mainLoop)
-import Graphics.UI.GLFWWidgets.SizeRange (Size)
 import Graphics.UI.GLFWWidgets.Widget(Widget(..))
+import Graphics.UI.GLFWWidgets.Widgetable (Widgetable(..), Theme(..))
+import qualified Data.Record.Label as L
 import qualified Graphics.DrawingCombinators as Draw -- TODO: Only needed for fonts...
+import qualified Graphics.UI.GLFWWidgets.EventMap as E
 import qualified Graphics.UI.GLFWWidgets.FocusDelegator as FocusDelegator
-import qualified Graphics.UI.GLFWWidgets.GridView as GridView
 import qualified Graphics.UI.GLFWWidgets.GridEdit as GridEdit
+import qualified Graphics.UI.GLFWWidgets.GridView as GridView
+import qualified Graphics.UI.GLFWWidgets.Spacer as Spacer
 import qualified Graphics.UI.GLFWWidgets.TextEdit as TextEdit
 import qualified Graphics.UI.GLFWWidgets.TextView as TextView
-import qualified Graphics.UI.GLFWWidgets.Spacer as Spacer
 import qualified Graphics.UI.GLFWWidgets.Widget as Widget
 import qualified System.Info
-import qualified Graphics.UI.GLFWWidgets.EventMap as E
 
 type StringEdit = TextEdit.Model
 
@@ -51,8 +51,8 @@ addArgKey = (E.noMods, E.charKey 'a')
 set :: f -> (f :-> a) -> a -> f
 set = flip (flip . L.setL)
 
-makeTextView :: Theme -> Int -> [String] -> Widget k
-makeTextView t ptSize textLines = TextView.makeWidget (TextEdit.themeFont (textEditTheme t)) ptSize textLines
+makeTextView :: Theme -> [String] -> Widget k
+makeTextView t textLines = TextView.makeWidget (themeFont t) (themeFontSize t) textLines
 
 instance Widgetable ExpressionWithGUI where
   toWidget t getValue@(GetValue se delegating) =
@@ -68,9 +68,9 @@ instance Widgetable ExpressionWithGUI where
 
   toWidget t apply@(Apply func arg cursor) =
     GridEdit.make (modify applyGridData) cursor
-    [[ makeTextView t 40 ["("],
+    [[ makeTextView t ["("],
        funcWidget, standardSpacer, argWidget,
-       makeTextView t 40 [")"] ]]
+       makeTextView t [")"] ]]
     where
       funcWidget = fmap (modify applyFunc) $ toWidget t func
       argWidget = fmap (modify applyArg) $ toWidget t arg
@@ -81,6 +81,8 @@ type Model = ExpressionWithGUI
 defaultFont :: String -> FilePath
 defaultFont "darwin" = "/Library/Fonts/Arial.ttf"
 defaultFont _ = "/usr/share/fonts/truetype/freefont/FreeSerifBold.ttf"
+defaultBasePtSize :: Int
+defaultBasePtSize = 30
 
 main :: IO ()
 main = do
@@ -89,28 +91,29 @@ main = do
     newIORef $
     mkApply (mkGetValue "launchMissiles") (mkGetValue "Mars")
   let
+    mkWidget model = widget font defaultBasePtSize model
     draw size = do
       model <- readIORef modelVar
-      return $ Widget.image (widget font model) True size
+      return $ Widget.image (mkWidget model) True size
 
-    eventHandler size = modifyIORef modelVar . updateModel font size
+    updateModel size event model w =
+      fromMaybe model $
+      E.lookup event =<< Widget.eventMap w True size
+
+    eventHandler size event =
+      modifyIORef modelVar $ updateModel size event <*> mkWidget
 
   mainLoop eventHandler draw
 
-theme :: Draw.Font -> Theme
-theme font = Theme $ TextEdit.Theme font "<empty>"
+theme :: Draw.Font -> Int -> Theme
+theme font ptSize = Theme font ptSize "<empty>"
 
-widget :: Draw.Font -> Model -> Widget Model
-widget font model =
+widget :: Draw.Font -> Int -> Model -> Widget Model
+widget font basePtSize model =
   GridView.makeFromWidgets
   [[ titleWidget ],
    [ modelWidget ]]
   where
     titleWidget = Widget.atImage (Draw.tint $ Draw.Color 1 0 1 1) $
-                  TextView.makeWidget font 60 ["The not-yet glorious structural code editor"]
-    modelWidget = toWidget (theme font) model
-
-updateModel :: Draw.Font -> Size -> E.Event -> Model -> Model
-updateModel font size event model =
-  fromMaybe model $
-  E.lookup event =<< Widget.eventMap (widget font model) True size
+                  TextView.makeWidget font (basePtSize * 2) ["The not-yet glorious structural code editor"]
+    modelWidget = toWidget (theme font basePtSize) model

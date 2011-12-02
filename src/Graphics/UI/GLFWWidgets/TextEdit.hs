@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-module Graphics.UI.GLFWWidgets.TextEdit(Cursor, Model(..), Theme(..), make) where
+module Graphics.UI.GLFWWidgets.TextEdit(Cursor, Model(..), make) where
 
 import Data.Char(isSpace)
 import Data.List(genericLength)
@@ -34,15 +34,10 @@ tillEndOfWord xs = spaces ++ nonSpaces
     spaces = takeWhile isSpace xs
     nonSpaces = takeWhile (not . isSpace) . dropWhile isSpace $ xs
 
-data Theme = Theme {
-  themeFont :: Draw.Font,
-  themeEmptyString :: String
-  }
-
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
-make :: Theme -> Int -> Model -> Widget Model
-make (Theme font emptyString) ptSize (Model cursor str) = Widget helper
+make :: Draw.Font -> Int -> String -> Model -> Widget Model
+make font ptSize emptyString (Model cursor str) = Widget helper
   where
     helper hasFocus = Sized reqSize $ const (img hasFocus, Just keymap)
     displayStr = finalText str
