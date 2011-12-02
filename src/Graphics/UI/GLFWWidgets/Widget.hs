@@ -1,7 +1,7 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE TemplateHaskell, DeriveFunctor, FlexibleInstances,
              MultiParamTypeClasses, TupleSections #-}
-module Graphics.UI.GLFWWidgets.Widget (Widget(..), image, eventMap, atImageWithSize, atHasFocus, atMaybeEventMap, liftView) where
+module Graphics.UI.GLFWWidgets.Widget (Widget(..), image, eventMap, atImageWithSize, atImage, atHasFocus, atMaybeEventMap, liftView) where
 
 import Control.Arrow (first, second)
 import Control.Newtype
@@ -39,6 +39,9 @@ atImageWithSize :: (Size -> Image -> Image) -> Widget a -> Widget a
 atImageWithSize f = atFromSize g
   where
     g mkUserIO size = first (f size) (mkUserIO size)
+
+atImage :: (Image -> Image) -> Widget a -> Widget a
+atImage = atImageWithSize . const
 
 image :: Widget k -> HasFocus -> Size -> Image
 image = fmap (fmap fst . Sized.fromSize) . unpack

@@ -106,7 +106,8 @@ widget font model =
   [[ titleWidget ],
    [ modelWidget ]]
   where
-    titleWidget = TextView.makeWidget font 60 ["The not-yet glorious structural code editor"]
+    titleWidget = Widget.atImage (Draw.tint $ Draw.Color 1 0 1 1) $
+                  TextView.makeWidget font 60 ["The not-yet glorious structural code editor"]
     modelWidget = toWidget (theme font) model
 
 updateModel :: Draw.Font -> Size -> E.Event -> Model -> Model
