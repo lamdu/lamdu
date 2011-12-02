@@ -13,7 +13,7 @@ import qualified Data.Record.Label as L
 import qualified Graphics.DrawingCombinators as Draw -- TODO: Only needed for fonts...
 import qualified Graphics.UI.GLFWWidgets.EventMap as E
 import qualified Graphics.UI.GLFWWidgets.FocusDelegator as FocusDelegator
-import qualified Graphics.UI.GLFWWidgets.Grid as Grid
+import qualified Graphics.UI.GLFWWidgets.Box as Box
 import qualified Graphics.UI.GLFWWidgets.GridView as GridView
 import qualified Graphics.UI.GLFWWidgets.Spacer as Spacer
 import qualified Graphics.UI.GLFWWidgets.TextEdit as TextEdit
@@ -26,24 +26,30 @@ type StringEdit = TextEdit.Model
 data ExpressionWithGUI =
     Lambda { _lambdaParam :: StringEdit,
              _lambdaBody :: ExpressionWithGUI,
-             _lambdaGridData :: Grid.Cursor }
+             _lambdaCursor :: Box.Cursor }
   | Apply { _applyFunc :: ExpressionWithGUI,
             _applyArg :: ExpressionWithGUI,
-            _applyGridData :: Grid.Cursor }
+            _applyCursor :: Box.Cursor }
   | GetValue { _valueId :: StringEdit,
                _valueDelegating :: FocusDelegator.Cursor }
   | LiteralInt { _litValue :: StringEdit {- TODO: IntegerEdit -} }
 
 $(L.mkLabels [''ExpressionWithGUI])
 
+mkStringEdit :: String -> StringEdit
+mkStringEdit text = TextEdit.Model (length text) text
+
 mkApply :: ExpressionWithGUI -> ExpressionWithGUI -> ExpressionWithGUI
-mkApply func arg = Apply func arg (Vector2 1 0)
+mkApply func arg = Apply func arg 1
 
 mkGetValue :: String -> ExpressionWithGUI
-mkGetValue text = GetValue (TextEdit.Model (length text) text) False
+mkGetValue text = GetValue (mkStringEdit text) False
+
+mkLambda :: String -> ExpressionWithGUI -> ExpressionWithGUI
+mkLambda param body = Lambda (mkStringEdit param) body 1
 
 standardSpacer :: Widget k
-standardSpacer = Spacer.makeWidget (Vector2 1 1)
+standardSpacer = Spacer.makeWidget (Vector2 30 30)
 
 addArgKey :: (E.ModState, E.Key)
 addArgKey = (E.noMods, E.charKey 'a')
@@ -63,17 +69,35 @@ instance Widgetable ExpressionWithGUI where
     where
       addArg =
         E.fromEventType (uncurry E.KeyEventType addArgKey) $
-        Apply node (GetValue (TextEdit.Model 0 "") True) (Vector2 3 0)
+        Apply node (GetValue (TextEdit.Model 0 "") True) 3
       modify = set node
 
   toWidget theme node@(Apply func arg cursor) =
-    Grid.make (modify applyGridData) cursor
-    [[ makeTextView theme ["("],
-       funcWidget, standardSpacer, argWidget,
-       makeTextView theme [")"] ]]
+    Box.make Box.horizontal (modify applyCursor) cursor
+    [ makeTextView theme ["("],
+      funcWidget, standardSpacer, argWidget,
+      makeTextView theme [")"] ]
     where
       funcWidget = fmap (modify applyFunc) $ toWidget theme func
       argWidget = fmap (modify applyArg) $ toWidget theme arg
+      modify = set node
+
+  toWidget theme node@(Lambda param body cursor) =
+    Box.make Box.vertical (modify lambdaCursor) cursor [
+      GridView.makeFromWidgets [[
+        makeTextView theme ["(λ"],
+        paramWidget, standardSpacer,
+        makeTextView theme ["->"]
+      ]],
+      GridView.makeFromWidgets [[
+        standardSpacer,
+        bodyWidget,
+        makeTextView theme [")"]
+      ]]
+    ]
+    where
+      paramWidget = fmap (modify lambdaParam) $ toWidget theme param
+      bodyWidget = fmap (modify lambdaBody) $ toWidget theme body
       modify = set node
 
 type Model = ExpressionWithGUI
@@ -84,12 +108,13 @@ defaultFont _ = "/usr/share/fonts/truetype/freefont/FreeSerifBold.ttf"
 defaultBasePtSize :: Int
 defaultBasePtSize = 30
 
+initialProgram :: ExpressionWithGUI
+initialProgram = mkLambda "x" $ mkApply (mkGetValue "launchMissiles") (mkGetValue "x")
+
 main :: IO ()
 main = do
   font <- Draw.openFont (defaultFont System.Info.os)
-  modelVar <-
-    newIORef $
-    mkApply (mkGetValue "launchMissiles") (mkGetValue "Mars")
+  modelVar <- newIORef initialProgram
   let
     mkWidget model = widget font defaultBasePtSize model
     draw size = do
