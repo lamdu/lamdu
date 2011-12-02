@@ -43,13 +43,13 @@ mkStringEdit :: String -> StringEdit
 mkStringEdit text = TextEdit.Model (length text) text
 
 mkApply :: ExpressionWithGUI -> ExpressionWithGUI -> ExpressionWithGUI
-mkApply func arg = Apply func arg 1 True
+mkApply func arg = Apply func arg 0 True
 
 mkGetValue :: String -> ExpressionWithGUI
 mkGetValue text = GetValue (mkStringEdit text) False
 
 mkLambda :: String -> ExpressionWithGUI -> ExpressionWithGUI
-mkLambda param body = Lambda (mkStringEdit param) body 1 True
+mkLambda param body = Lambda (mkStringEdit param) body 0 True
 
 standardSpacer :: Widget k
 standardSpacer = Spacer.makeWidget (Vector2 30 30)
@@ -62,6 +62,15 @@ set record label val = L.setL label val record
 
 makeTextView :: Theme -> [String] -> Widget k
 makeTextView theme textLines = TextView.makeWidget (themeFont theme) (themeFontSize theme) textLines
+
+empty :: Widget a
+empty = Spacer.makeWidget (Vector2 0 0)
+
+parens :: Theme -> (Widget a, Widget a)
+parens theme = (makeTextView theme ["("], makeTextView theme [")"])
+
+noParens :: (Widget a, Widget a)
+noParens = (empty, empty)
 
 type Scope = [String]
 
@@ -84,10 +93,12 @@ makeWidget scope theme node@(GetValue se delegating) =
 makeWidget scope theme node@(Apply func arg cursor delegating) =
   FocusDelegator.make (modify applyDelegating) delegating $
   Box.make Box.horizontal (modify applyCursor) cursor
-  [ makeTextView theme ["("],
-    funcWidget, standardSpacer, argWidget,
-    makeTextView theme [")"] ]
+  [ funcWidget, standardSpacer, before, argWidget, after ]
   where
+    (before, after) =
+      case arg of
+        Apply{} -> parens theme
+        _       -> noParens
     funcWidget = fmap (modify applyFunc) $ makeWidget scope theme func
     argWidget = fmap (modify applyArg) $ makeWidget scope theme arg
     modify = set node
@@ -96,14 +107,13 @@ makeWidget scope theme node@(Lambda param body cursor delegating) =
   FocusDelegator.make (modify lambdaDelegating) delegating $
   Box.make Box.vertical (modify lambdaCursor) cursor [
     GridView.makeFromWidgets [[
-      makeTextView theme ["(λ"],
+      makeTextView theme ["λ"],
       paramWidget, standardSpacer,
       makeTextView theme ["→"]
     ]],
     GridView.makeFromWidgets [[
       standardSpacer,
-      bodyWidget,
-      makeTextView theme [")"]
+      bodyWidget
     ]]
   ]
   where
@@ -120,7 +130,7 @@ defaultBasePtSize :: Int
 defaultBasePtSize = 30
 
 initialProgram :: ExpressionWithGUI
-initialProgram = mkLambda "x" $ mkApply (mkGetValue "launchMissiles") (mkGetValue "x")
+initialProgram = mkLambda "x" $ mkLambda "y" $ mkApply (mkGetValue "launchMissiles") (mkGetValue "x")
 
 main :: IO ()
 main = do
