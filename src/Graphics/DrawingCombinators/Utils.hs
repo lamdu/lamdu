@@ -17,32 +17,39 @@ type Image = Draw.Image ()
 square :: Image
 square = void $ Draw.convexPoly [ (0, 0), (1, 0), (1, 1), (0, 1) ]
 
-textHeight :: Draw.R
-textHeight = 2
+textHeight :: Int -> Draw.R
+textHeight ptSize = fromIntegral ptSize * 2
 
-textWidth :: Draw.Font -> String -> Draw.R
-textWidth font = Draw.textWidth font . UTF8.encodeString
+textWidth :: Draw.Font -> Int -> String -> Draw.R
+textWidth font ptSize = (fromIntegral ptSize *) . Draw.textWidth font . UTF8.encodeString
 
-textSize :: Draw.Font -> String -> Vector2 Draw.R
-textSize font str = Vector2 (textWidth font str) textHeight
+textSize :: Draw.Font -> Int -> String -> Vector2 Draw.R
+textSize font ptSize str = Vector2 (textWidth font ptSize str) (textHeight ptSize)
 
-textLinesHeight :: [String] -> Draw.R
-textLinesHeight = (textHeight *) . fromIntegral . length
+drawText :: Draw.Font -> Int -> String -> Image
+drawText font ptSize =
+  -- We want to reverse it so that higher y is down, and it is also
+  -- moved to 0..2
+  (Draw.scale (fromIntegral ptSize) (-fromIntegral ptSize) %%) .
+  -- Text is normally at height -1.5..0.5.  We move it to be -2..0
+  (Draw.translate (0, -1.5) %%) .
+  void . Draw.text font . UTF8.encodeString
 
-textLinesWidth :: Draw.Font -> [String] -> Draw.R
-textLinesWidth font = maximum . map (textWidth font)
+textLinesHeight :: Int -> [String] -> Draw.R
+textLinesHeight ptSize = (textHeight ptSize *) . fromIntegral . length
 
-textLinesSize :: Draw.Font -> [String] -> Vector2 Draw.R
-textLinesSize font textLines = Vector2 (textLinesWidth font textLines) (textLinesHeight textLines)
+textLinesWidth :: Draw.Font -> Int -> [String] -> Draw.R
+textLinesWidth font ptSize = maximum . map (textWidth font ptSize)
 
-drawTextLines :: Draw.Font -> [String] -> Image
-drawTextLines font =
-  (Draw.translate (0, 1.5) %%) .
-  (Draw.scale 1 (-1) %%) .
-  void . foldr (step . Draw.text font . UTF8.encodeString) mempty
+textLinesSize :: Draw.Font -> Int -> [String] -> Vector2 Draw.R
+textLinesSize font ptSize textLines = Vector2 (textLinesWidth font ptSize textLines) (textLinesHeight ptSize textLines)
+
+drawTextLines :: Draw.Font -> Int -> [String] -> Image
+drawTextLines font ptSize =
+  foldr (step . drawText font ptSize) mempty
   where
     step lineImage restImage =
       mconcat [
         lineImage,
-        Draw.translate (0, -textHeight) %% restImage
+        Draw.translate (0, textHeight ptSize) %% restImage
       ]

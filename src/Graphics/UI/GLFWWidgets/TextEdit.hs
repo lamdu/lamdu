@@ -41,38 +41,38 @@ data Theme = Theme {
 
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
-make :: Theme -> Model -> Widget Model
-make (Theme font emptyString) (Model cursor str) = Widget helper
+make :: Theme -> Int -> Model -> Widget Model
+make (Theme font emptyString) ptSize (Model cursor str) = Widget helper
   where
     helper hasFocus = Sized reqSize $ const (img hasFocus, Just keymap)
     displayStr = finalText str
     finalText "" = emptyString
     finalText x  = x
 
-    cursorWidth = 0.2
+    cursorWidth = 8
 
     reqSize = fixedSize $ Vector2 width height
     img hasFocus =
       mconcat . concat $ [
         [ Draw.translate (cursorWidth / 2, 0) %%
-          drawTextLines font textLines ],
+          drawTextLines font ptSize textLines ],
         [ cursorImage | hasFocus ]
       ]
 
     beforeCursor = take cursor str
-    cursorPosX = textLinesWidth font . (: []) . last . splitLines $ beforeCursor
-    cursorPosY = (textHeight *) . subtract 1 . genericLength . splitLines $ beforeCursor
+    cursorPosX = textLinesWidth font ptSize . (: []) . last . splitLines $ beforeCursor
+    cursorPosY = (textHeight ptSize *) . subtract 1 . genericLength . splitLines $ beforeCursor
     cursorImage =
       Draw.tint (Draw.Color 0 1 0 1) $
       Affine.translate (cursorPosX, cursorPosY) %%
-      Draw.scale cursorWidth textHeight %%
+      Draw.scale cursorWidth (textHeight ptSize) %%
       square
 
     (before, after) = splitAt cursor str
     textLength = length str
     textLines = splitLines displayStr
-    width = cursorWidth + textLinesWidth font textLines
-    height = textLinesHeight textLines
+    width = cursorWidth + textLinesWidth font ptSize textLines
+    height = textLinesHeight ptSize textLines
     lineCount = length textLines
 
     linesBefore = reverse (splitLines before)
@@ -193,7 +193,6 @@ make (Theme font emptyString) (Model cursor str) = Widget helper
 
         ]
 
-    insert :: String -> (Cursor, String)
     insert l = (cursor', str')
       where
         cursor' = cursor + length l

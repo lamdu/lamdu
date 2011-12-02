@@ -51,8 +51,8 @@ addArgKey = (E.noMods, E.charKey 'a')
 set :: f -> (f :-> a) -> a -> f
 set = flip (flip . L.setL)
 
-makeTextView :: Theme -> [String] -> Widget k
-makeTextView t textLines = TextView.makeWidget (TextEdit.themeFont (textEditTheme t)) textLines
+makeTextView :: Theme -> Int -> [String] -> Widget k
+makeTextView t ptSize textLines = TextView.makeWidget (TextEdit.themeFont (textEditTheme t)) ptSize textLines
 
 instance Widgetable ExpressionWithGUI where
   toWidget t getValue@(GetValue se delegating) =
@@ -68,9 +68,9 @@ instance Widgetable ExpressionWithGUI where
 
   toWidget t apply@(Apply func arg cursor) =
     GridEdit.make (modify applyGridData) cursor
-    [[ makeTextView t ["("],
+    [[ makeTextView t 40 ["("],
        funcWidget, standardSpacer, argWidget,
-       makeTextView t [")"] ]]
+       makeTextView t 40 [")"] ]]
     where
       funcWidget = fmap (modify applyFunc) $ toWidget t func
       argWidget = fmap (modify applyArg) $ toWidget t arg
@@ -106,7 +106,7 @@ widget font model =
   [[ titleWidget ],
    [ modelWidget ]]
   where
-    titleWidget = TextView.makeWidget font ["The not-yet glorious structural code editor"]
+    titleWidget = TextView.makeWidget font 60 ["The not-yet glorious structural code editor"]
     modelWidget = toWidget (theme font) model
 
 updateModel :: Draw.Font -> Size -> E.Event -> Model -> Model

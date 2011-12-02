@@ -17,8 +17,12 @@ data Theme = Theme {
 class Widgetable a where
   toWidget :: Theme -> a -> Widget a
 
+-- TODO: Move into polymorphic/constrained theme
+ptSize :: Int
+ptSize = 40
+
 instance Widgetable TextEdit.Model where
-  toWidget theme = TextEdit.make (textEditTheme theme)
+  toWidget theme = TextEdit.make (textEditTheme theme) ptSize
 
 instance Widgetable a => Widgetable (GridEdit.Cursor, [[a]]) where
   toWidget theme (cursor, childrenModels) =

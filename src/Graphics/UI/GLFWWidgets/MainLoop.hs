@@ -38,5 +38,6 @@ mainLoop eventHandler makeImage = GLFWUtils.withGLFW $ do
     winSize@(Vector2 winSizeX winSizeY) <- windowSize
     mapM_ handleEvent events
     Draw.clearRender .
-      (Draw.scale (50/winSizeX) (-50/winSizeY) %%) =<<
+      (Draw.translate (-1, 1) %%) .
+      (Draw.scale (1/winSizeX) (-1/winSizeY) %%) =<<
       makeImage winSize

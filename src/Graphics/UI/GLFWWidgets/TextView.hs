@@ -7,8 +7,10 @@ import Graphics.UI.GLFWWidgets.Sized (Sized(..))
 import Graphics.UI.GLFWWidgets.Widget (Widget, liftView)
 import qualified Graphics.DrawingCombinators as Draw
 
-make :: Draw.Font -> [String] -> Sized Image
-make font textLines = Sized (fixedSize (textLinesSize font textLines)) $ const (drawTextLines font textLines)
+make :: Draw.Font -> Int -> [String] -> Sized Image
+make font ptSize textLines =
+  Sized (fixedSize (textLinesSize font ptSize textLines)) $
+  const (drawTextLines font ptSize textLines)
 
-makeWidget :: Draw.Font -> [String] -> Widget a
-makeWidget font = liftView . make font
+makeWidget :: Draw.Font -> Int -> [String] -> Widget a
+makeWidget font ptSize = liftView . make font ptSize
