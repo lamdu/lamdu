@@ -3,7 +3,7 @@
 module Graphics.UI.GLFWWidgets.EventMap(
   EventMap, ModState(..), EventType(..), Event(..),
   lookup, noMods, shift, ctrl, alt, singleton, fromEventType,
-  Key(..), charKey)
+  Key(..), charKey, delete)
 where
 
 import Prelude hiding (lookup)
@@ -13,7 +13,7 @@ import Data.Map(Map)
 import Data.Monoid(Monoid(..))
 import Data.Char(toUpper)
 import Control.Monad(msum)
-import Control.Newtype(pack, unpack)
+import Control.Newtype(pack, unpack, over)
 import Control.Newtype.TH(mkNewTypes)
 
 data ModState = ModState {
@@ -75,6 +75,9 @@ EventMap x `overrides` EventMap y =
 instance Monoid (EventMap a) where
   mempty = EventMap mempty
   mappend = overrides
+
+delete :: EventType -> EventMap a -> EventMap a
+delete = over EventMap . Map.delete
 
 lookup :: Event -> EventMap a -> Maybe a
 lookup event eventMap =
