@@ -103,6 +103,13 @@ makeWidget scope theme node =
       E.fromEventType (uncurry E.KeyEventType addArgKey) $
       Apply node (GetValue (True, mkStringEdit "")) 3 True
 
+makeFocusDelegator ::
+  (FocusDelegator.Cursor -> k) -> FocusDelegator.Cursor ->
+  Widget k -> Widget k
+makeFocusDelegator = FocusDelegator.makeWithKeys (shiftK E.KeyRight) (shiftK E.KeyLeft)
+  where
+    shiftK = E.KeyEventType E.shift
+
 makeWidgetFor :: Scope -> Theme -> ExpressionWithGUI -> Widget ExpressionWithGUI
 makeWidgetFor scope theme node@(GetValue se) =
   (if inScope
@@ -116,7 +123,7 @@ makeWidgetFor scope theme node@(GetValue se) =
     modify = set node
 
 makeWidgetFor scope theme node@(Apply func arg cursor delegating) =
-  FocusDelegator.make (modify applyDelegating) delegating $
+  makeFocusDelegator (modify applyDelegating) delegating $
   Box.make Box.horizontal (modify applyCursor) cursor
   [ funcWidget, standardSpacer, before, argWidget, after ]
   where
@@ -129,7 +136,7 @@ makeWidgetFor scope theme node@(Apply func arg cursor delegating) =
     modify = set node
 
 makeWidgetFor scope theme node@(Lambda param body cursor delegating) =
-  FocusDelegator.make (modify lambdaDelegating) delegating $
+  makeFocusDelegator (modify lambdaDelegating) delegating $
   Box.make Box.vertical (modify lambdaCursor) cursor [
     GridView.makeFromWidgets [[
       makeTextView theme ["λ"],
