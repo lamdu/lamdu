@@ -22,7 +22,7 @@ Library
                        Graphics.UI.GLFWWidgets.EventMap,
                        Graphics.UI.GLFWWidgets.Spacer,
                        Graphics.UI.GLFWWidgets.Widget,
-                       Graphics.UI.GLFWWidgets.GridEdit,
+                       Graphics.UI.GLFWWidgets.Grid,
                        Graphics.UI.GLFWWidgets.GridView,
                        Graphics.UI.GLFWWidgets.MainLoop,
                        Graphics.UI.GLFW.Utils,

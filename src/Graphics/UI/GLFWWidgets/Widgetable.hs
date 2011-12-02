@@ -8,7 +8,7 @@ import           Data.List.Utils (enumerate2d, nth)
 import           Graphics.UI.GLFWWidgets.Widget(Widget)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.GLFWWidgets.FocusDelegator as FocusDelegator
-import qualified Graphics.UI.GLFWWidgets.GridEdit as GridEdit
+import qualified Graphics.UI.GLFWWidgets.Grid as Grid
 import qualified Graphics.UI.GLFWWidgets.TextEdit as TextEdit
 
 data Theme = Theme {
@@ -23,9 +23,9 @@ class Widgetable a where
 instance Widgetable TextEdit.Model where
   toWidget (Theme font ptSize emptyStr) = TextEdit.make font ptSize emptyStr
 
-instance Widgetable a => Widgetable (GridEdit.Cursor, [[a]]) where
+instance Widgetable a => Widgetable (Grid.Cursor, [[a]]) where
   toWidget theme (cursor, childrenModels) =
-    GridEdit.make (, childrenModels) cursor .
+    Grid.make (, childrenModels) cursor .
       (map . map) (
         liftInnerWidget .
         second (toWidget theme)

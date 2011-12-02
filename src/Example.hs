@@ -13,7 +13,7 @@ import qualified Data.Record.Label as L
 import qualified Graphics.DrawingCombinators as Draw -- TODO: Only needed for fonts...
 import qualified Graphics.UI.GLFWWidgets.EventMap as E
 import qualified Graphics.UI.GLFWWidgets.FocusDelegator as FocusDelegator
-import qualified Graphics.UI.GLFWWidgets.GridEdit as GridEdit
+import qualified Graphics.UI.GLFWWidgets.Grid as Grid
 import qualified Graphics.UI.GLFWWidgets.GridView as GridView
 import qualified Graphics.UI.GLFWWidgets.Spacer as Spacer
 import qualified Graphics.UI.GLFWWidgets.TextEdit as TextEdit
@@ -26,10 +26,10 @@ type StringEdit = TextEdit.Model
 data ExpressionWithGUI =
     Lambda { _lambdaParam :: StringEdit,
              _lambdaBody :: ExpressionWithGUI,
-             _lambdaGridData :: GridEdit.Cursor }
+             _lambdaGridData :: Grid.Cursor }
   | Apply { _applyFunc :: ExpressionWithGUI,
             _applyArg :: ExpressionWithGUI,
-            _applyGridData :: GridEdit.Cursor }
+            _applyGridData :: Grid.Cursor }
   | GetValue { _valueId :: StringEdit,
                _valueDelegating :: FocusDelegator.Cursor }
   | LiteralInt { _litValue :: StringEdit {- TODO: IntegerEdit -} }
@@ -67,7 +67,7 @@ instance Widgetable ExpressionWithGUI where
       modify = set node
 
   toWidget theme node@(Apply func arg cursor) =
-    GridEdit.make (modify applyGridData) cursor
+    Grid.make (modify applyGridData) cursor
     [[ makeTextView theme ["("],
        funcWidget, standardSpacer, argWidget,
        makeTextView theme [")"] ]]

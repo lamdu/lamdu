@@ -71,7 +71,7 @@ makePlacements = (fmap . second . fmap) placements makeSizes
 
 --- Displays:
 
--- Used by both make and GridEdit's make.
+-- Used by both make and Grid's make.
 makeGeneric :: (a -> Image) -> [[Sized a]] -> Sized (Image, [[a]])
 makeGeneric toImage rows =
   Sized reqSize mkRes

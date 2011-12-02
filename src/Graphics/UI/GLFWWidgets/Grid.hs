@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-module Graphics.UI.GLFWWidgets.GridEdit(Cursor, make) where
+module Graphics.UI.GLFWWidgets.Grid(Cursor, make) where
 
 import Control.Applicative (liftA2)
 import Control.Arrow (second)
