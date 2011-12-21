@@ -13,6 +13,8 @@ Cabal-version:       >= 1.8
 Library
   -- Modules exported by the library.
   hs-Source-Dirs:      src
+
+                       -- Bottle:
   Exposed-modules:     Graphics.UI.Bottle.Widgets.TextEdit,
                        Graphics.UI.Bottle.Widgets.TextView,
                        Graphics.UI.Bottle.Widgets.FocusDelegator,
@@ -27,9 +29,29 @@ Library
                        Graphics.UI.Bottle.MainLoop,
                        Graphics.UI.GLFW.Utils,
                        Graphics.DrawingCombinators.Utils,
-                       Data.Record.Label.Tuple,
                        Data.Vector.Vector2,
                        Data.List.Utils
+
+                       -- DataStore:
+                       Data.Random.Instances,
+                       Data.ByteString.Utils,
+                       Data.Binary.Utils,
+                       Data.Record.Label.Tuple,
+                       Data.Record.Label.Maybe,
+                       Data.Record.Label.Map,
+                       Data.Store.Guid,
+                       Data.Store.ContainerRef,
+                       Data.Store.IRef,
+                       Data.Store.IRef.Tree,
+                       Data.Store.Rev.Change,
+                       Data.Store.Rev.Version,
+                       Data.Store.Rev.Branch,
+                       Data.Store.Rev.ViewBranchInternal,
+                       Data.Store.Rev.View,
+                       Data.Store.Transaction,
+                       Data.Store.Property,
+                       Data.Store.Db
+
   Build-depends:       base >= 4,
                        GLFW-b >= 0.0.2,
                        graphics-drawingcombinators >= 1.4,
@@ -41,7 +63,17 @@ Library
                        containers >= 0.4,
                        binary >= 0.5,
                        array >= 0.3,
-                       time >= 1.2
+                       time >= 1.2,
+                       directory >= 1.0.1.1,
+                       bytestring >= 0.9,
+                       BerkeleyDB >= 0.8,
+                       random >= 1.0.0,
+                       utf8-string >= 0.3,
+                       fclabels >= 0.11.1.1,
+                       containers >= 0.3,
+                       transformers >= 0.2.1,
+                       filepath >= 1.1
+
   Other-modules:       Graphics.UI.Bottle.Typematic,
                        Graphics.UI.Bottle.KeyHandlers
 
