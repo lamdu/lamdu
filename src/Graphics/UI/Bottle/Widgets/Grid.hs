@@ -5,17 +5,18 @@ module Graphics.UI.Bottle.Widgets.Grid(Cursor, make, makeWithLabel) where
 import Control.Applicative (liftA2)
 import Control.Arrow (second)
 import Control.Newtype (unpack)
+import Control.Monad (join)
 import Data.List (foldl', find, transpose)
-import Data.List.Utils (enumerate, enumerate2d)
-import Data.Record.Label ((:->), getL, setL)
-import Data.Maybe (isJust)
+import Data.List.Utils (enumerate, enumerate2d, index)
+import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid (mconcat)
+import Data.Record.Label ((:->), getL, setL)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.EventMap (EventMap)
 import Graphics.UI.Bottle.Widget (Widget(..))
-import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
+import qualified Graphics.UI.GLFW as GLFW
 
 type Cursor = Vector2 Int
 
@@ -55,22 +56,22 @@ mkNavMKeymap wantFocusRows cursor@(Vector2 cursorX cursorY) =
     bottomCursor    = x . take 1 . reverse . drop (cursorY+1) $ curColumn
     rightMostCursor = y . take 1 . reverse . drop (cursorX+1) $ curRow
     findMove      = fmap fst . find snd
-    curRow        = enumerate $ wantFocusRows !! cappedY
-    curColumn     = enumerate $ transpose wantFocusRows !! cappedX
+    curRow        = enumerate . fromMaybe [] $ index wantFocusRows cappedY
+    curColumn     = enumerate . fromMaybe [] $ index (transpose wantFocusRows) cappedX
 
 make :: (Cursor -> k) -> Cursor -> [[Widget k]] -> Widget k
 make liftCursor cursor@(Vector2 x y) children = Widget handleHasFocus
   where
     handleHasFocus hasFocus =
-      (fmap . second) (f . (map . map) snd) .
+      (fmap . second) (buildKeymap . (map . map) snd) .
       GridView.makeGeneric fst .
       (map . map) (applyHasFocus hasFocus . second unpack) .
       enumerate2d $ children
     applyHasFocus False (_, inWidget) = inWidget False
     applyHasFocus True ((r, c), inWidget) = inWidget $ Vector2 c r == cursor
-    f xss =
+    buildKeymap xss =
       mconcat [
-        xss !! y !! x,
+        join $ index xss y >>= (`index` x),
         (fmap . fmap) liftCursor $ mkNavMKeymap wantFocusRows cursor
       ]
       where

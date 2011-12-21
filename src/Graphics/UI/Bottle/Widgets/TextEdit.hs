@@ -1,25 +1,27 @@
 {-# OPTIONS -Wall #-}
-{-# LANGUAGE TypeOperators #-}
-module Graphics.UI.Bottle.Widgets.TextEdit(Cursor, Model(..), make, makeWithLabel) where
+{-# LANGUAGE TemplateHaskell, TypeOperators #-}
+module Graphics.UI.Bottle.Widgets.TextEdit(Cursor, Model(..), make, makeWithLabel, makeModel) where
 
+import Data.Binary  -- open import per derive's requirements :/
 import Data.Char (isSpace)
+import Data.Derive.Binary (makeBinary)
+import Data.DeriveTH (derive)
 import Data.List (genericLength)
 import Data.List.Split (splitOn)
 import Data.Maybe (fromJust)
 import Data.Monoid (mconcat)
-import Data.Vector.Vector2 (Vector2(..))
 import Data.Record.Label ((:->), getL, setL)
+import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators ((%%))
-import Graphics.DrawingCombinators.Utils (square, drawTextLines, textLinesWidth, textLinesHeight, textHeight)
-import Graphics.UI.GLFW (
-  Key(KeyBackspace, KeyDel, KeyDown, KeyEnd, KeyEnter, KeyHome,
-      KeyLeft, KeyRight, KeyUp))
+import Graphics.DrawingCombinators.Utils (square, drawTextLines, textLinesWidth, textLinesHeight, textHeight, backgroundColor)
 import Graphics.UI.Bottle.SizeRange (fixedSize)
 import Graphics.UI.Bottle.Sized (Sized(..))
 import Graphics.UI.Bottle.Widget (Widget(..))
+import Graphics.UI.GLFW (Key(KeyBackspace, KeyDel, KeyDown, KeyEnd, KeyEnter, KeyHome, KeyLeft, KeyRight, KeyUp))
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.DrawingCombinators.Affine as Affine
 import qualified Graphics.UI.Bottle.EventMap as EventMap
+import qualified Graphics.UI.Bottle.Widget as Widget
 
 type Cursor = Int
 
@@ -28,6 +30,11 @@ data Model = Model {
   modelText :: String
   }
   deriving (Show, Read, Eq, Ord)
+
+$(derive makeBinary ''Model)
+
+makeModel :: String -> Model
+makeModel str = Model (length str) str
 
 splitLines :: String -> [String]
 splitLines = splitOn "\n"
@@ -44,8 +51,11 @@ tillEndOfWord xs = spaces ++ nonSpaces
 -- TODO: Instead of font + ptSize, let's pass a text-drawer (that's
 -- what "Font" should be)
 make :: Draw.Font -> Int -> String -> Model -> Widget Model
-make font ptSize emptyStr (Model cursor str) = Widget helper
+make font ptSize emptyStr (Model cursor str) =
+  (Widget.whenFocused . Widget.atImageWithSize . backgroundColor) blue $
+  Widget helper
   where
+    blue = Draw.Color 0 0 0.8 0.8
     helper hasFocus = Sized reqSize $ const (img hasFocus, Just keymap)
     displayStr = finalText str
     finalText "" = emptyStr
@@ -97,9 +107,9 @@ make font ptSize emptyStr (Model cursor str) = Widget helper
     backMoveWord = moveRelative . negate . length . tillEndOfWord . reverse $ before
     moveWord = moveRelative . length . tillEndOfWord $ after
 
-    singleton _doc eventType makeModel =
+    singleton _doc eventType mkModel =
       EventMap.singleton eventType $
-      uncurry Model . makeModel
+      uncurry Model . mkModel
 
     keys doc = mconcat . map (\event -> singleton doc event . const)
 

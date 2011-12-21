@@ -1,16 +1,20 @@
 {-# OPTIONS -Wall #-}
-module Graphics.UI.Bottle.MainLoop (mainLoop) where
+module Graphics.UI.Bottle.MainLoop (mainLoop, mainLoopWidget) where
 
+import Data.Maybe (fromMaybe)
 import Data.Vector.Vector2 (Vector2(..))
-import Graphics.UI.Bottle.EventMap (Event)
 import Graphics.DrawingCombinators ((%%))
 import Graphics.DrawingCombinators.Utils (Image)
-import Graphics.UI.GLFW (defaultDisplayOptions, getWindowDimensions)
+import Graphics.UI.Bottle.EventMap (Event)
 import Graphics.UI.Bottle.KeyHandlers (modifiersEventHandlerWrap)
 import Graphics.UI.Bottle.SizeRange (Size)
 import Graphics.UI.Bottle.Typematic(typematicKeyHandlerWrap)
-import qualified Graphics.UI.GLFW.Utils as GLFWUtils
+import Graphics.UI.Bottle.Widget(Widget)
+import Graphics.UI.GLFW (defaultDisplayOptions, getWindowDimensions)
 import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 
 mainLoop :: (Size -> Event -> IO ()) -> (Size -> IO Image) -> IO a
 mainLoop eventHandler makeImage = GLFWUtils.withGLFW $ do
@@ -41,3 +45,13 @@ mainLoop eventHandler makeImage = GLFWUtils.withGLFW $ do
       (Draw.translate (-1, 1) %%) .
       (Draw.scale (1/winSizeX) (-1/winSizeY) %%) =<<
       makeImage winSize
+
+mainLoopWidget :: IO (Widget (IO ())) -> IO a
+mainLoopWidget mkWidget = mainLoop eventHandler mkImage
+  where
+    eventHandler size event = do
+      widget <- mkWidget
+      fromMaybe (return ()) $ E.lookup event =<< Widget.eventMap widget True size
+    mkImage size = do
+      widget <- mkWidget
+      return $ Widget.image widget True size

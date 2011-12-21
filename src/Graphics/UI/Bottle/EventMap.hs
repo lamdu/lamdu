@@ -9,6 +9,7 @@ where
 import Prelude hiding (lookup)
 import Graphics.UI.GLFW (Key(..))
 import qualified Data.Map as Map
+import Data.Maybe(isJust)
 import Data.Map(Map)
 import Data.Monoid(Monoid(..))
 import Data.Char(toUpper)
@@ -51,13 +52,24 @@ data Event = KeyEvent {
   keyEventKey :: Key }
   deriving (Show, Eq, Ord)
 
+isCharMods :: ModState -> Bool
+isCharMods ModState { modCtrl = False, modAlt = False, modMeta = False } = True
+isCharMods _ = False
+
 eventTypesOf :: Event -> [EventType]
-eventTypesOf (KeyEvent ms Nothing k) = [KeyEventType ms k]
-eventTypesOf (KeyEvent ms (Just _) k) = [CharEventType, KeyEventType ms k]
+eventTypesOf
+  (KeyEvent ms mchar k) = KeyEventType ms k : charEventType
+  where
+   charEventType
+     | isCharMods ms && isJust mchar = [CharEventType]
+     | otherwise = []
 
 newtype EventMap a = EventMap (Map EventType (Event -> a))
   deriving (Functor)
 $(mkNewTypes [''EventMap])
+
+instance Show (EventMap a) where
+  show (EventMap m) = "EventMap (keys = " ++ show (Map.keys m) ++ ")"
 
 filterByKey :: Ord k => (k -> Bool) -> Map k v -> Map k v
 filterByKey p = Map.filterWithKey (const . p)
@@ -67,7 +79,9 @@ EventMap x `overrides` EventMap y =
   EventMap $ x `mappend` filterByKey (not . inX) y
   where
     inX = any (`Map.member` x) . alternates
-    alternates k@(KeyEventType _ (CharKey _)) = [k, CharEventType]
+    alternates k@(KeyEventType ms (CharKey _))
+      | isCharMods ms = [k, CharEventType]
+      | otherwise = [k]
     -- TODO: Bug -- we don't have a good way of doing the reverse
     -- filtering (CharEventType alternates are ALL the KeyEventTypes)
     alternates k = [k]

@@ -1,4 +1,4 @@
-Name:                Bottle
+Name:                bottle
 Version:             0.1
 Synopsis:            A GLFW, OpenGL, and DrawingCombinators-based Widget-set
 Description:         Bottle widgets
@@ -31,6 +31,7 @@ Library
                        Graphics.DrawingCombinators.Utils,
                        Data.Vector.Vector2,
                        Data.List.Utils,
+                       Data.Maybe.Utils,
 
                        -- DataStore:
                        Data.Random.Instances,
@@ -57,6 +58,7 @@ Library
 
   Build-depends:       base >= 4,
                        GLFW-b >= 0.0.2,
+                       derive >= 2.5,
                        graphics-drawingcombinators >= 1.4,
                        fclabels < 1.0.0,
                        utf8-string >= 0.3,
@@ -65,7 +67,6 @@ Library
                        newtype-th >= 0.2,
                        containers >= 0.4,
                        binary >= 0.5,
-                       array >= 0.3,
                        time >= 1.2,
                        directory >= 1.0.1.1,
                        bytestring >= 0.9,
@@ -75,6 +76,7 @@ Library
                        fclabels >= 0.11.1.1,
                        containers >= 0.3,
                        transformers >= 0.2.1,
+                       TraceUtils,
                        filepath >= 1.1
 
   Other-modules:       Graphics.UI.Bottle.Typematic,
@@ -95,8 +97,34 @@ executable bottle-example
                        newtype-th >= 0.2,
                        containers >= 0.4,
                        binary >= 0.5,
-                       array >= 0.3,
                        time >= 1.2,
                        derive
   main-is:             Example.hs
+  ghc-prof-options:    -prof -auto-all
+
+Executable Editor
+  hs-Source-Dirs:      src
+  Build-Depends:       base >= 4 && < 5,
+                       graphics-drawingcombinators >= 1.4,
+                       GLFW-b >= 0.0.2,
+                       newtype >= 0.2,
+                       newtype-th >= 0.2,
+                       containers >= 0.3,
+                       fclabels >= 0.11.1.1,
+                       utf8-string >= 0.3,
+                       binary >= 0.5,
+                       split >= 0.1,
+                       bytestring,
+                       random,
+                       transformers,
+                       directory,
+                       BerkeleyDB,
+                       time,
+                       TraceUtils,
+                       derive
+  Other-Modules:       Editor.Data,
+                       Editor.Anchors,
+                       Editor.Config
+  ghc-options:         -O2 -Wall
+  main-is:             Editor/Main.hs
   ghc-prof-options:    -prof -auto-all

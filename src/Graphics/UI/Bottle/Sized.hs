@@ -11,4 +11,4 @@ data Sized a = Sized
     deriving Functor
 
 atFromSize :: ((Size -> a) -> Size -> b) -> Sized a -> Sized b
-atFromSize f (Sized reqSize fromSize) = Sized reqSize (f fromSize)
+atFromSize f (Sized reqSize fromSz) = Sized reqSize (f fromSz)

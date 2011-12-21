@@ -14,11 +14,9 @@ import Data.Vector.Vector2         (Vector2(..))
 import Control.Applicative         (pure)
 import Graphics.DrawingCombinators (R)
 
-type Scalar = R
-
-type Coordinate = Vector2 Scalar
+type Coordinate = Vector2 R
 type Size = Coordinate
-type MaxSize = Vector2 (Maybe Scalar)
+type MaxSize = Vector2 (Maybe R)
 
 data SizeRange = SizeRange {
   _srMinSize :: Size,
@@ -36,17 +34,17 @@ inSizeRange minFunc maxFunc (SizeRange minSize maxSize) =
 fixedSize :: Size -> SizeRange
 fixedSize size = SizeRange size (fmap Just size)
 
-horizontallyExpanding :: Scalar -> Scalar -> SizeRange
+horizontallyExpanding :: R -> R -> SizeRange
 horizontallyExpanding fixedHeight minWidth =
   SizeRange (Vector2 minWidth fixedHeight)
             (Vector2 Nothing (Just fixedHeight))
 
-verticallyExpanding :: Scalar -> Scalar -> SizeRange
+verticallyExpanding :: R -> R -> SizeRange
 verticallyExpanding fixedWidth minHeight =
   SizeRange (Vector2 fixedWidth minHeight)
             (Vector2 (Just fixedWidth) Nothing)
 
-expanding :: Scalar -> Scalar -> SizeRange
+expanding :: R -> R -> SizeRange
 expanding minWidth minHeight =
   SizeRange (Vector2 minWidth minHeight)
             (pure Nothing)

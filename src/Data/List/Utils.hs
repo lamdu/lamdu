@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-module Data.List.Utils(enumerate, enumerate2d, nth) where
+module Data.List.Utils(enumerate, enumerate2d, nth, index) where
 
 enumerate :: (Enum a, Num a) => [b] -> [(a, b)]
 enumerate = zip [0..]
@@ -14,3 +14,8 @@ nth :: Int -> (a -> a) -> [a] -> [a]
 nth _ _ [] = error "Apply out of bounds"
 nth 0 f (x:xs) = f x : xs
 nth n f (x:xs) = x : nth (n-1) f xs
+
+index :: [a] -> Int -> Maybe a
+index [] _ = Nothing
+index (x:_) 0 = Just x
+index (_:xs) n = index xs (n-1)

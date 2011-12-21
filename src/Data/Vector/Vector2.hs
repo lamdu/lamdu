@@ -6,14 +6,12 @@ module Data.Vector.Vector2
     ,first,second,(***),both,zip
     ,fst,snd,swap
     ,curry,uncurry
-    ,prop_range)
+    )
 where
 
 import           Prelude             hiding (fst, snd, curry, uncurry, zip)
-import qualified Prelude
-import           Control.Applicative (Applicative(..), liftA2, liftA3)
+import           Control.Applicative (Applicative(..), liftA2)
 import           Control.Monad       (join, liftM2)
-import           Data.Array          (Ix(..))
 import           Data.Binary         (Binary(..))
 -- import Test.QuickCheck.Arbitrary(Arbitrary(..))
 
@@ -33,20 +31,20 @@ instance Binary a => Binary (Vector2 a) where
 --   shrink (Vector2 x y) = [ Vector2 x' y | x' <- shrink x ] ++
 --                          [ Vector2 x y' | y' <- shrink y ]
 
-instance Ix a => Ix (Vector2 a) where
-  range (start, stop) = uncurry (liftA2 Vector2) $ liftA2 (Prelude.curry range) start stop
-  inRange (start, stop) = uncurry (&&) . liftA3 (Prelude.curry inRange) start stop
-  index (Vector2 l t, Vector2 r b) (Vector2 x y) = (x' - l') * (b' + 1 - t') + y' - t'
-    where
-      (x', y', l', t', b') = (indexw x, indexh y, indexw l, indexh t, indexh b)
-      indexw = index (l, r)
-      indexh = index (t, b)
+-- instance Ix a => Ix (Vector2 a) where
+--   range (start, stop) = uncurry (liftA2 Vector2) $ liftA2 (Prelude.curry range) start stop
+--   inRange (start, stop) = uncurry (&&) . liftA3 (Prelude.curry inRange) start stop
+--   index (Vector2 l t, Vector2 r b) (Vector2 x y) = (x' - l') * (b' + 1 - t') + y' - t'
+--     where
+--       (x', y', l', t', b') = (indexw x, indexh y, indexw l, indexh t, indexh b)
+--       indexw = index (l, r)
+--       indexh = index (t, b)
 
 -- TODO: QuickCheck this:
-prop_range :: Ix a => (Vector2 a, Vector2 a) -> Bool
-prop_range r = map (index r) vectors == [0..length vectors-1]
-  where
-    vectors = range r
+-- prop_range :: Ix a => (Vector2 a, Vector2 a) -> Bool
+-- prop_range r = map (index r) vectors == [0..length vectors-1]
+--   where
+--     vectors = range r
 
 fst :: Vector2 a -> a
 fst (Vector2 x _) = x

@@ -13,7 +13,7 @@ import           Data.Binary.Utils      (get3, put3)
 import           Data.Store.IRef        (IRef)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
-import           Data.Store.Rev.Change  (Change)
+import           Data.Store.Rev.Change  (Change(..), Key, Value)
 
 data VersionData = VersionData {
   depth :: Int,
@@ -28,8 +28,10 @@ instance Binary VersionData where
 newtype Version = Version { versionIRef :: IRef VersionData }
   deriving (Eq, Ord, Read, Show, Binary)
 
-makeInitialVersion :: Monad m => Transaction t m Version
-makeInitialVersion = liftM Version . Transaction.newIRef $ VersionData 0 Nothing []
+makeInitialVersion :: Monad m => [(Key, Value)] -> Transaction t m Version
+makeInitialVersion initialValues = liftM Version . Transaction.newIRef . VersionData 0 Nothing $ map makeChange initialValues
+  where
+    makeChange (key, value) = Change key Nothing (Just value)
 
 versionData :: Monad m => Version -> Transaction t m VersionData
 versionData = Transaction.readIRef . versionIRef

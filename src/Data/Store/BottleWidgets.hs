@@ -7,16 +7,18 @@ module Data.Store.BottleWidgets
      widgetDownTransaction)
 where
 
-import           Control.Monad                     (when, liftM)
-import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.Bottle.Widgets.Box as Box
-import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 --import qualified Graphics.UI.Bottle.Widgets.Completion as Completion
+import Control.Monad (when, liftM)
+import Data.List.Utils (index)
+import Data.Maybe (listToMaybe)
+import Data.Maybe.Utils (unsafeUnjust)
+import Data.Store.Transaction (Transaction, Store)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
-import Data.Store.Transaction (Transaction, Store)
-import Data.Maybe (listToMaybe)
+import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 
 result :: (b -> c) -> (a -> b) -> a -> c
 result = (.)
@@ -109,7 +111,7 @@ makeChoiceWidget :: Monad m =>
 makeChoiceWidget orientation keys boxModelRef = do
   widget <- makeBox orientation widgets boxModelRef
   itemIndex <- Property.get boxModelRef
-  return (widget, items !! min maxIndex itemIndex)
+  return (widget, unsafeUnjust "Given empty items" . index items $ min maxIndex itemIndex)
   where
     maxIndex = length items - 1
     widgets = map fst keys

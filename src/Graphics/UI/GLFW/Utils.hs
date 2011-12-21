@@ -18,14 +18,24 @@ data GLFWEvent = KeyEvent (Maybe Char) GLFW.Key Bool
                | WindowClose
   deriving (Show, Eq)
 
+isModifierKey :: GLFW.Key -> Bool
+isModifierKey GLFW.KeyRightShift = True
+isModifierKey GLFW.KeyLeftShift = True
+isModifierKey GLFW.KeyRightCtrl = True
+isModifierKey GLFW.KeyLeftCtrl = True
+isModifierKey GLFW.KeyRightAlt = True
+isModifierKey GLFW.KeyLeftAlt = True
+isModifierKey _ = False
+
 translate :: [GLFWRawEvent] -> [GLFWEvent]
 translate [] = []
 translate (RawWindowClose : xs) = WindowClose : translate xs
-translate (RawKeyEvent key isPress1 : RawCharEvent char isPress2 : xs)
-  | isPress1 == isPress2  =  KeyEvent (Just char) key isPress1 : translate xs
-  | otherwise             =  error "RawCharEvent mismatches the RawKeyEvent"
+translate (rk@(RawKeyEvent key isPress1) : rc@(RawCharEvent char isPress2) : xs)
+  | isModifierKey key = KeyEvent Nothing key isPress1 : translate xs
+  | isPress1 == isPress2 =  KeyEvent (Just char) key isPress1 : translate xs
+  | otherwise =  error $ "RawCharEvent " ++ show rc ++ " mismatches the RawKeyEvent: " ++ show rk
 translate (RawKeyEvent key isPress : xs) = KeyEvent Nothing key isPress : translate xs
-translate (charEvent@(RawCharEvent _ _) : _) = error $ "Raw Char event (" ++ show charEvent ++ ") must follow a RawKeyEvent!"
+translate (RawCharEvent _ _ : xs) = translate xs -- This happens when you press shift while a key is pressed, ignore
 
 assert :: Monad m => String -> Bool -> m ()
 assert msg p = unless p (fail msg)
