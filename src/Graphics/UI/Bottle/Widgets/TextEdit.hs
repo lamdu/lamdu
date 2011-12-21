@@ -40,6 +40,9 @@ tillEndOfWord xs = spaces ++ nonSpaces
 
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
+
+-- TODO: Instead of font + ptSize, let's pass a text-drawer (that's
+-- what "Font" should be)
 make :: Draw.Font -> Int -> String -> Model -> Widget Model
 make font ptSize emptyStr (Model cursor str) = Widget helper
   where

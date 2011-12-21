@@ -30,7 +30,7 @@ Library
                        Graphics.UI.GLFW.Utils,
                        Graphics.DrawingCombinators.Utils,
                        Data.Vector.Vector2,
-                       Data.List.Utils
+                       Data.List.Utils,
 
                        -- DataStore:
                        Data.Random.Instances,
@@ -50,7 +50,10 @@ Library
                        Data.Store.Rev.View,
                        Data.Store.Transaction,
                        Data.Store.Property,
-                       Data.Store.Db
+                       Data.Store.Db,
+
+                       -- DataStore-BottleWidgets
+                       Data.Store.BottleWidgets
 
   Build-depends:       base >= 4,
                        GLFW-b >= 0.0.2,

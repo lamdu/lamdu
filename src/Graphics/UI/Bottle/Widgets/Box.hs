@@ -30,7 +30,8 @@ vertical = Orientation {
   toGridChildren = map (: [])
   }
 
-make :: Orientation -> (Cursor -> k) -> Cursor -> [Widget k] -> Widget k
+make ::
+  Orientation -> (Cursor -> k) -> Cursor -> [Widget k] -> Widget k
 make orientation liftCursor cursor children =
   Grid.make
     (liftCursor . fromGridCursor orientation)
