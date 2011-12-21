@@ -1,7 +1,7 @@
-Name:                GLFWWidgets
+Name:                Bottle
 Version:             0.1
 Synopsis:            A GLFW, OpenGL, and DrawingCombinators-based Widget-set
-Description:         GLFW-based widgets
+Description:         Bottle widgets
 License:             GPL
 License-file:        LICENSE
 Author:              Eyal Lotem, Yair Chuchem
@@ -13,20 +13,21 @@ Cabal-version:       >= 1.8
 Library
   -- Modules exported by the library.
   hs-Source-Dirs:      src
-  Exposed-modules:     Graphics.DrawingCombinators.Utils,
-                       Graphics.UI.GLFWWidgets.SizeRange,
-                       Graphics.UI.GLFWWidgets.TextEdit,
-                       Graphics.UI.GLFWWidgets.TextView,
-                       Graphics.UI.GLFWWidgets.Sized,
-                       Graphics.UI.GLFWWidgets.FocusDelegator,
-                       Graphics.UI.GLFWWidgets.EventMap,
-                       Graphics.UI.GLFWWidgets.Spacer,
-                       Graphics.UI.GLFWWidgets.Widget,
-                       Graphics.UI.GLFWWidgets.Grid,
-                       Graphics.UI.GLFWWidgets.GridView,
-                       Graphics.UI.GLFWWidgets.Box,
-                       Graphics.UI.GLFWWidgets.MainLoop,
+  Exposed-modules:     Graphics.UI.Bottle.Widgets.TextEdit,
+                       Graphics.UI.Bottle.Widgets.TextView,
+                       Graphics.UI.Bottle.Widgets.FocusDelegator,
+                       Graphics.UI.Bottle.Widgets.Spacer,
+                       Graphics.UI.Bottle.Widgets.Grid,
+                       Graphics.UI.Bottle.Widgets.GridView,
+                       Graphics.UI.Bottle.Widgets.Box,
+                       Graphics.UI.Bottle.SizeRange,
+                       Graphics.UI.Bottle.Sized,
+                       Graphics.UI.Bottle.EventMap,
+                       Graphics.UI.Bottle.Widget,
+                       Graphics.UI.Bottle.MainLoop,
                        Graphics.UI.GLFW.Utils,
+                       Graphics.DrawingCombinators.Utils,
+                       Data.Record.Label.Tuple,
                        Data.Vector.Vector2,
                        Data.List.Utils
   Build-depends:       base >= 4,
@@ -41,13 +42,13 @@ Library
                        binary >= 0.5,
                        array >= 0.3,
                        time >= 1.2
-  Other-modules:       Graphics.UI.GLFWWidgets.Typematic,
-                       Graphics.UI.GLFWWidgets.KeyHandlers
+  Other-modules:       Graphics.UI.Bottle.Typematic,
+                       Graphics.UI.Bottle.KeyHandlers
 
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   -- Build-tools:
 
-executable glfwwidgets-example
+executable bottle-example
   hs-Source-Dirs:      src
   Build-Depends:       base >= 4,
                        GLFW-b >= 0.0.2,
@@ -60,6 +61,7 @@ executable glfwwidgets-example
                        containers >= 0.4,
                        binary >= 0.5,
                        array >= 0.3,
-                       time >= 1.2
+                       time >= 1.2,
+                       derive
   main-is:             Example.hs
   ghc-prof-options:    -prof -auto-all

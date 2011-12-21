@@ -1,11 +1,12 @@
 {-# OPTIONS -Wall #-}
-{-# LANGUAGE Rank2Types #-}
-module Graphics.UI.GLFWWidgets.Box(Cursor, make, Orientation, horizontal, vertical) where
+{-# LANGUAGE Rank2Types, TypeOperators #-}
+module Graphics.UI.Bottle.Widgets.Box(Cursor, make, Orientation, horizontal, vertical, makeWithLabel) where
 
-import Graphics.UI.GLFWWidgets.Widget(Widget)
-import qualified Graphics.UI.GLFWWidgets.Grid as Grid
-import qualified Data.Vector.Vector2 as Vector2
+import Data.Record.Label ((:->), getL, setL)
 import Data.Vector.Vector2(Vector2(..))
+import Graphics.UI.Bottle.Widget(Widget)
+import qualified Data.Vector.Vector2 as Vector2
+import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 
 type Cursor = Int
 
@@ -35,3 +36,7 @@ make orientation liftCursor cursor children =
     (liftCursor . fromGridCursor orientation)
     (toGridCursor orientation cursor)
     (toGridChildren orientation children)
+
+makeWithLabel :: Orientation -> (model :-> Cursor) -> model -> [Widget model] -> Widget model
+makeWithLabel orientation label model =
+  make orientation (flip (setL label) model) (getL label model)

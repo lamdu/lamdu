@@ -1,7 +1,7 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE TemplateHaskell, DeriveFunctor, FlexibleInstances,
              MultiParamTypeClasses, TupleSections #-}
-module Graphics.UI.GLFWWidgets.Widget (
+module Graphics.UI.Bottle.Widget (
   Widget(..), image, eventMap,
   atImageWithSize, atImage, atHasFocus, atMaybeEventMap, liftView, removeExtraSize) where
 
@@ -11,11 +11,11 @@ import Control.Newtype (unpack, over)
 import Control.Newtype.TH (mkNewTypes)
 import Data.Record.Label (getL)
 import Graphics.DrawingCombinators.Utils(Image)
-import Graphics.UI.GLFWWidgets.EventMap (EventMap)
-import Graphics.UI.GLFWWidgets.SizeRange (Size)
-import Graphics.UI.GLFWWidgets.Sized (Sized)
-import qualified Graphics.UI.GLFWWidgets.SizeRange as SizeRange
-import qualified Graphics.UI.GLFWWidgets.Sized as Sized
+import Graphics.UI.Bottle.EventMap (EventMap)
+import Graphics.UI.Bottle.SizeRange (Size)
+import Graphics.UI.Bottle.Sized (Sized)
+import qualified Graphics.UI.Bottle.SizeRange as SizeRange
+import qualified Graphics.UI.Bottle.Sized as Sized
 
 type HasFocus = Bool
 

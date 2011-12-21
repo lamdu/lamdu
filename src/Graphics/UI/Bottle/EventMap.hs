@@ -1,6 +1,6 @@
 {-# OPTIONS -Wall -fno-warn-orphans #-}
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, DeriveFunctor #-}
-module Graphics.UI.GLFWWidgets.EventMap(
+module Graphics.UI.Bottle.EventMap(
   EventMap, ModState(..), EventType(..), Event(..),
   lookup, noMods, shift, ctrl, alt, singleton, fromEventType,
   Key(..), charKey, delete)

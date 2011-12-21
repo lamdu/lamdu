@@ -1,11 +1,11 @@
 {-# OPTIONS -Wall #-}
-module Graphics.UI.GLFWWidgets.KeyHandlers (modifiersEventHandlerWrap) where
+module Graphics.UI.Bottle.KeyHandlers (modifiersEventHandlerWrap) where
 
 import Data.IORef(newIORef, readIORef, modifyIORef)
 import Data.Set(Set)
 import Graphics.UI.GLFW(
   Key(KeyLeftAlt, KeyLeftCtrl, KeyLeftShift, KeyRightAlt, KeyRightCtrl, KeyRightShift))
-import qualified Graphics.UI.GLFWWidgets.EventMap as E
+import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Data.Set as Set
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 

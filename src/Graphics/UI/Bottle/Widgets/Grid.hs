@@ -1,19 +1,21 @@
 {-# OPTIONS -Wall #-}
-module Graphics.UI.GLFWWidgets.Grid(Cursor, make) where
+{-# LANGUAGE TypeOperators #-}
+module Graphics.UI.Bottle.Widgets.Grid(Cursor, make, makeWithLabel) where
 
 import Control.Applicative (liftA2)
 import Control.Arrow (second)
 import Control.Newtype (unpack)
 import Data.List (foldl', find, transpose)
 import Data.List.Utils (enumerate, enumerate2d)
+import Data.Record.Label ((:->), getL, setL)
 import Data.Maybe (isJust)
 import Data.Monoid (mconcat)
 import Data.Vector.Vector2 (Vector2(..))
-import Graphics.UI.GLFWWidgets.EventMap (EventMap)
-import Graphics.UI.GLFWWidgets.Widget (Widget(..))
-import qualified Graphics.UI.GLFWWidgets.EventMap as EventMap
+import Graphics.UI.Bottle.EventMap (EventMap)
+import Graphics.UI.Bottle.Widget (Widget(..))
 import qualified Graphics.UI.GLFW as GLFW
-import qualified Graphics.UI.GLFWWidgets.GridView as GridView
+import qualified Graphics.UI.Bottle.EventMap as EventMap
+import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 
 type Cursor = Vector2 Int
 
@@ -73,3 +75,6 @@ make liftCursor cursor@(Vector2 x y) children = Widget handleHasFocus
       ]
       where
         wantFocusRows = (map . map) isJust xss
+
+makeWithLabel :: (model :-> Cursor) -> model -> [[Widget model]] -> Widget model
+makeWithLabel label model = make (flip (setL label) model) (getL label model)

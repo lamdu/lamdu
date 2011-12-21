@@ -1,15 +1,15 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE TypeFamilies, FlexibleInstances, TypeSynonymInstances,
              TupleSections #-}
-module Graphics.UI.GLFWWidgets.Widgetable(Widgetable(..), Theme(..)) where
+module Graphics.UI.Bottle.Widgetable(Widgetable(..), Theme(..)) where
 
 import           Control.Arrow (second)
 import           Data.List.Utils (enumerate2d, nth)
-import           Graphics.UI.GLFWWidgets.Widget(Widget)
+import           Graphics.UI.Bottle.Widget(Widget)
 import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.GLFWWidgets.FocusDelegator as FocusDelegator
-import qualified Graphics.UI.GLFWWidgets.Grid as Grid
-import qualified Graphics.UI.GLFWWidgets.TextEdit as TextEdit
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
+import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 
 data Theme = Theme {
   themeFont :: Draw.Font,

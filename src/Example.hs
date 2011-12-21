@@ -1,26 +1,26 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE TemplateHaskell, TypeOperators, TupleSections #-}
-import Control.Arrow (first, second)
 import Control.Applicative ((<*>))
 import Data.IORef (newIORef, modifyIORef, readIORef)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Record.Label ((:->), lens)
 import Data.Vector.Vector2 (Vector2(..))
-import Graphics.UI.GLFWWidgets.MainLoop (mainLoop)
-import Graphics.UI.GLFWWidgets.Widget (Widget(..))
-import Graphics.UI.GLFWWidgets.Widgetable (Theme(..))
 import Graphics.DrawingCombinators.Utils (backgroundColor)
+import Graphics.UI.Bottle.MainLoop (mainLoop)
+import Graphics.UI.Bottle.Widget (Widget(..))
+import Graphics.UI.Bottle.Widgetable (Theme(..))
 import qualified Data.Record.Label as L
+import qualified Data.Record.Label.Tuple as LabelTuple
 import qualified Graphics.DrawingCombinators as Draw -- TODO: Only needed for fonts...
-import qualified Graphics.UI.GLFWWidgets.EventMap as E
-import qualified Graphics.UI.GLFWWidgets.FocusDelegator as FocusDelegator
-import qualified Graphics.UI.GLFWWidgets.Box as Box
-import qualified Graphics.UI.GLFWWidgets.GridView as GridView
-import qualified Graphics.UI.GLFWWidgets.Spacer as Spacer
-import qualified Graphics.UI.GLFWWidgets.TextEdit as TextEdit
-import qualified Graphics.UI.GLFWWidgets.TextView as TextView
-import qualified Graphics.UI.GLFWWidgets.Widget as Widget
+import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
+import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
+import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
+import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified System.Info
 
 type StringEdit = TextEdit.Model
@@ -83,15 +83,18 @@ makeStringEditWidget theme =
     (themeFontSize theme)
     (themeEmptyString theme)
 
+makeStringEditWidgetWithLabel :: Theme -> (model :-> StringEdit) -> model -> Widget model
+makeStringEditWidgetWithLabel theme label model =
+  TextEdit.makeWithLabel
+    (themeFont theme)
+    (themeFontSize theme)
+    (themeEmptyString theme)
+    label model
+
 makeDelegatedStringEditWidget :: Theme -> DelegatedStringEdit -> Widget DelegatedStringEdit
 makeDelegatedStringEditWidget theme delegatedStringEdit =
-  FocusDelegator.make --WithKeys enter enter
-    (flip (first . const) delegatedStringEdit) (fst delegatedStringEdit) .
-  fmap (flip (second . const) delegatedStringEdit) $
---  (Widget.atMaybeEventMap . fmap) (E.delete enter) $
-  makeStringEditWidget theme (snd delegatedStringEdit)
-  -- where
-  --   enter = E.KeyEventType E.noMods E.KeyEnter
+  FocusDelegator.makeWithLabel LabelTuple.first delegatedStringEdit $
+  makeStringEditWidgetWithLabel theme LabelTuple.second delegatedStringEdit
 
 makeWidget :: Scope -> Theme -> ExpressionWithGUI -> Widget ExpressionWithGUI
 makeWidget scope theme node =

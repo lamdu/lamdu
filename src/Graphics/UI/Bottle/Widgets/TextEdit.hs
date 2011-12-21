@@ -1,5 +1,6 @@
 {-# OPTIONS -Wall #-}
-module Graphics.UI.GLFWWidgets.TextEdit(Cursor, Model(..), make) where
+{-# LANGUAGE TypeOperators #-}
+module Graphics.UI.Bottle.Widgets.TextEdit(Cursor, Model(..), make, makeWithLabel) where
 
 import Data.Char (isSpace)
 import Data.List (genericLength)
@@ -7,17 +8,18 @@ import Data.List.Split (splitOn)
 import Data.Maybe (fromJust)
 import Data.Monoid (mconcat)
 import Data.Vector.Vector2 (Vector2(..))
+import Data.Record.Label ((:->), getL, setL)
 import Graphics.DrawingCombinators ((%%))
 import Graphics.DrawingCombinators.Utils (square, drawTextLines, textLinesWidth, textLinesHeight, textHeight)
 import Graphics.UI.GLFW (
   Key(KeyBackspace, KeyDel, KeyDown, KeyEnd, KeyEnter, KeyHome,
       KeyLeft, KeyRight, KeyUp))
-import Graphics.UI.GLFWWidgets.SizeRange (fixedSize)
-import Graphics.UI.GLFWWidgets.Sized (Sized(..))
-import Graphics.UI.GLFWWidgets.Widget (Widget(..))
+import Graphics.UI.Bottle.SizeRange (fixedSize)
+import Graphics.UI.Bottle.Sized (Sized(..))
+import Graphics.UI.Bottle.Widget (Widget(..))
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.DrawingCombinators.Affine as Affine
-import qualified Graphics.UI.GLFWWidgets.EventMap as EventMap
+import qualified Graphics.UI.Bottle.EventMap as EventMap
 
 type Cursor = Int
 
@@ -39,11 +41,11 @@ tillEndOfWord xs = spaces ++ nonSpaces
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
 make :: Draw.Font -> Int -> String -> Model -> Widget Model
-make font ptSize emptyString (Model cursor str) = Widget helper
+make font ptSize emptyStr (Model cursor str) = Widget helper
   where
     helper hasFocus = Sized reqSize $ const (img hasFocus, Just keymap)
     displayStr = finalText str
-    finalText "" = emptyString
+    finalText "" = emptyStr
     finalText x  = x
 
     cursorWidth = 8
@@ -194,3 +196,8 @@ make font ptSize emptyString (Model cursor str) = Widget helper
       where
         cursor' = cursor + length l
         str' = concat [before, l, after]
+
+makeWithLabel :: Draw.Font -> Int -> String -> model :-> Model -> model -> Widget model
+makeWithLabel font ptSize emptyStr label model =
+  fmap (flip (setL label) model) $
+  make font ptSize emptyStr (getL label model)

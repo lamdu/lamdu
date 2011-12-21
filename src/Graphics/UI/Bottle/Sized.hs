@@ -1,8 +1,8 @@
 {-# LANGUAGE DeriveFunctor #-}
 
-module Graphics.UI.GLFWWidgets.Sized (Sized(..), atFromSize) where
+module Graphics.UI.Bottle.Sized (Sized(..), atFromSize) where
 
-import Graphics.UI.GLFWWidgets.SizeRange (Size, SizeRange)
+import Graphics.UI.Bottle.SizeRange (Size, SizeRange)
 
 data Sized a = Sized
     { requestedSize :: SizeRange

@@ -1,6 +1,6 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE TypeOperators, GeneralizedNewtypeDeriving #-}
-module Graphics.UI.GLFWWidgets.GridView(
+module Graphics.UI.Bottle.Widgets.GridView(
     make, makeGeneric, makeFromWidgets) where
 
 import           Control.Newtype
@@ -11,13 +11,13 @@ import           Data.Monoid                       (Monoid(..))
 import           Data.Vector.Vector2               (Vector2(..))
 import           Graphics.DrawingCombinators       ((%%))
 import           Graphics.DrawingCombinators.Utils (Image)
-import           Graphics.UI.GLFWWidgets.SizeRange (SizeRange(..), Size, Coordinate)
-import           Graphics.UI.GLFWWidgets.Sized     (Sized(..))
-import           Graphics.UI.GLFWWidgets.Widget    (Widget(..))
+import           Graphics.UI.Bottle.SizeRange (SizeRange(..), Size, Coordinate)
+import           Graphics.UI.Bottle.Sized     (Sized(..))
+import           Graphics.UI.Bottle.Widget    (Widget(..))
 import qualified Data.Record.Label                 as Label
 import qualified Data.Vector.Vector2               as Vector2
 import qualified Graphics.DrawingCombinators       as Draw
-import qualified Graphics.UI.GLFWWidgets.SizeRange as SizeRange
+import qualified Graphics.UI.Bottle.SizeRange as SizeRange
 
 --- Size computations:
 

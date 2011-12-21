@@ -1,12 +1,12 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE TypeOperators, GeneralizedNewtypeDeriving #-}
-module Graphics.UI.GLFWWidgets.Spacer (make, makeWidget) where
+module Graphics.UI.Bottle.Widgets.Spacer (make, makeWidget) where
 
 import Data.Monoid(mempty)
 import Graphics.DrawingCombinators.Utils (Image)
-import Graphics.UI.GLFWWidgets.SizeRange (fixedSize, Size)
-import Graphics.UI.GLFWWidgets.Sized (Sized(..))
-import Graphics.UI.GLFWWidgets.Widget (Widget, liftView)
+import Graphics.UI.Bottle.SizeRange (fixedSize, Size)
+import Graphics.UI.Bottle.Sized (Sized(..))
+import Graphics.UI.Bottle.Widget (Widget, liftView)
 
 make :: Size -> Sized Image
 make size = Sized (fixedSize size) mempty

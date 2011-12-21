@@ -1,13 +1,15 @@
 {-# OPTIONS -Wall #-}
-module Graphics.UI.GLFWWidgets.FocusDelegator(Cursor, make, makeWithKeys) where
+{-# LANGUAGE TypeOperators #-}
+module Graphics.UI.Bottle.Widgets.FocusDelegator(Cursor, make, makeWithKeys, makeWithLabel) where
 
 import Control.Newtype(unpack)
 import Data.Monoid (mappend)
+import Data.Record.Label ((:->), setL, getL)
 import Graphics.DrawingCombinators.Utils (backgroundColor)
-import Graphics.UI.GLFWWidgets.Widget(Widget(..))
-import qualified Graphics.UI.GLFWWidgets.EventMap as E
+import Graphics.UI.Bottle.Widget(Widget(..))
 import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.GLFWWidgets.Widget as Widget
+import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.Widget as Widget
 
 type Cursor = Bool
 
@@ -44,3 +46,6 @@ makeWithKeys
 
 make :: (Cursor -> k) -> Cursor -> Widget k -> Widget k
 make = makeWithKeys defaultStartDelegatingKey defaultStopDelegatingKey
+
+makeWithLabel :: (model :-> Cursor) -> model -> Widget model -> Widget model
+makeWithLabel cursorL model = make (flip (setL cursorL) model) (getL cursorL model)

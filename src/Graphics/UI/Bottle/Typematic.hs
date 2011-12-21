@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-module Graphics.UI.GLFWWidgets.Typematic (typematicKeyHandlerWrap) where
+module Graphics.UI.Bottle.Typematic (typematicKeyHandlerWrap) where
 
 import Control.Monad (forever)
 import Control.Concurrent (forkIO, threadDelay)
