@@ -109,12 +109,9 @@ makeTreeEdit font ptSize depth clipboardRef treeIRef
   | depth >= Config.maxDepth =
     return $ Widget.strongerKeys goInEventMap $ focusableTextView font ptSize ["[Go deeper]"]
   | otherwise = do
-    valueEdit <- -- (Widget.atMaybeEventMap . fmap . EventMap.removeKeyGroups . concat)
-                 -- [Config.expandKeys, Config.collapseKeys]
-                 -- `liftM`
-                 -- TODO ^^
-                 simpleTextEdit font ptSize valueTextEditModelRef
     isExpanded <- Property.get isExpandedRef
+    valueEdit <- liftM (Widget.strongerKeys $ expandCollapseEventMap isExpanded) $
+                 simpleTextEdit font ptSize valueTextEditModelRef
     childrenIRefs <- Property.get childrenIRefsRef
     childBox <- if isExpanded && not (null childrenIRefs)
                 then liftM ((:[]) . Widget.weakerKeys moveToParentEventMap) $
@@ -131,8 +128,7 @@ makeTreeEdit font ptSize depth clipboardRef treeIRef
           mconcat [
             pasteEventMap clipboard,
             appendNewNodeEventMap,
-            setFocalPointEventMap,
-            expandCollapseEventMap isExpanded
+            setFocalPointEventMap
             ]
     return . Widget.weakerKeys keymap $ outerBox
     where
