@@ -1,6 +1,6 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE TemplateHaskell, TypeOperators #-}
-module Graphics.UI.Bottle.Widgets.TextEdit(Cursor, Model(..), make, makeWithLabel, makeModel) where
+module Graphics.UI.Bottle.Widgets.TextEdit(Cursor, TextView.Style(..), Model(..), make, makeWithLabel, makeModel) where
 
 import Data.Binary  -- open import per derive's requirements :/
 import Data.Char (isSpace)
@@ -22,8 +22,11 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.DrawingCombinators.Affine as Affine
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
 type Cursor = Int
+
+type Style = TextView.Style
 
 data Model = Model {
   modelCursor :: Cursor,
@@ -50,8 +53,8 @@ tillEndOfWord xs = spaces ++ nonSpaces
 
 -- TODO: Instead of font + ptSize, let's pass a text-drawer (that's
 -- what "Font" should be)
-make :: Draw.Font -> Int -> String -> Model -> Widget Model
-make font ptSize emptyStr (Model cursor str) =
+make :: Style -> String -> Model -> Widget Model
+make (TextView.Style font ptSize) emptyStr (Model cursor str) =
   (Widget.whenFocused . Widget.atImageWithSize . backgroundColor) blue $
   Widget helper
   where
@@ -210,7 +213,7 @@ make font ptSize emptyStr (Model cursor str) =
         cursor' = cursor + length l
         str' = concat [before, l, after]
 
-makeWithLabel :: Draw.Font -> Int -> String -> model :-> Model -> model -> Widget model
-makeWithLabel font ptSize emptyStr label model =
+makeWithLabel :: Style -> String -> model :-> Model -> model -> Widget model
+makeWithLabel style emptyStr label model =
   fmap (flip (setL label) model) $
-  make font ptSize emptyStr (getL label model)
+  make style emptyStr (getL label model)

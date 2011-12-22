@@ -37,12 +37,12 @@ import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified System.Info
 
-focusableTextView :: Draw.Font -> Int -> [String] -> Widget a
-focusableTextView font ptSize =
+focusableTextView :: TextView.Style -> [String] -> Widget a
+focusableTextView style =
   (Widget.whenFocused . Widget.atImageWithSize . backgroundColor) blue .
   Widget.takesFocus .
 --  Widget.coloredFocusableDisplay blue .
-  TextView.makeWidget font ptSize
+  TextView.makeWidget style
   where
     blue = Draw.Color 0 0 1 0.8
 
@@ -55,15 +55,15 @@ indentSize = 80
 
 makeChildBox ::
   Monad m =>
-  Draw.Font -> Int ->
+  TextEdit.Style ->
   Int ->
   Transaction.Property ViewTag m [ITreeD] ->
   Transaction.Property ViewTag m Box.Cursor ->
   Transaction.Property ViewTag m Box.Cursor ->
   Transaction.Property ViewTag m [ITreeD] ->
   Transaction ViewTag m (Widget (Transaction ViewTag m ()))
-makeChildBox font ptSize depth clipboardRef outerBoxCursorRef childrenBoxCursorRef childrenIRefsRef = do
-  childItems <- mapM (makeTreeEdit font ptSize (depth+1) clipboardRef) =<< Property.get childrenIRefsRef
+makeChildBox style depth clipboardRef outerBoxCursorRef childrenBoxCursorRef childrenIRefsRef = do
+  childItems <- mapM (makeTreeEdit style (depth+1) clipboardRef) =<< Property.get childrenIRefsRef
   curChildIndex <- getChildIndex . length $ childItems
   childBox <- makeBox Box.vertical childItems childrenBoxCursorRef
   return .
@@ -94,28 +94,28 @@ makeChildBox font ptSize depth clipboardRef outerBoxCursorRef childrenBoxCursorR
 
 simpleTextEdit ::
   Monad m =>
-  Draw.Font -> Int ->
+  TextEdit.Style ->
   Transaction.Property t m TextEdit.Model ->
   MWidget (Transaction t m)
-simpleTextEdit font ptSize = makeTextEdit font ptSize "<empty>"
+simpleTextEdit style = makeTextEdit style "<empty>"
 
 makeTreeEdit ::
   Monad m =>
-  Draw.Font -> Int ->
+  TextEdit.Style ->
   Int -> Transaction.Property ViewTag m [ITreeD] ->
   IRef TreeD ->
   Transaction ViewTag m (Widget (Transaction ViewTag m ()))
-makeTreeEdit font ptSize depth clipboardRef treeIRef
+makeTreeEdit style depth clipboardRef treeIRef
   | depth >= Config.maxDepth =
-    return $ Widget.strongerKeys goInEventMap $ focusableTextView font ptSize ["[Go deeper]"]
+    return $ Widget.strongerKeys goInEventMap $ focusableTextView style ["[Go deeper]"]
   | otherwise = do
     isExpanded <- Property.get isExpandedRef
     valueEdit <- liftM (Widget.strongerKeys $ expandCollapseEventMap isExpanded) $
-                 simpleTextEdit font ptSize valueTextEditModelRef
+                 simpleTextEdit style valueTextEditModelRef
     childrenIRefs <- Property.get childrenIRefsRef
     childBox <- if isExpanded && not (null childrenIRefs)
                 then liftM ((:[]) . Widget.weakerKeys moveToParentEventMap) $
-                     makeChildBox font ptSize depth clipboardRef outerBoxCursorRef childrenBoxCursorRef childrenIRefsRef
+                     makeChildBox style depth clipboardRef outerBoxCursorRef childrenBoxCursorRef childrenIRefsRef
                 else return []
     cValueEdit <- makeBox Box.horizontal
                   [collapser isExpanded,
@@ -149,7 +149,7 @@ makeTreeEdit font ptSize depth clipboardRef treeIRef
       collapse = Property.set isExpandedRef False
       expand = Property.set isExpandedRef True
       collapser isExpanded =
-        TextView.makeWidget font ptSize $
+        TextView.makeWidget style $
         if isExpanded
         then ["[-]"]
         else ["[+]"]
@@ -175,12 +175,12 @@ makeTreeEdit font ptSize depth clipboardRef treeIRef
 
 makeEditWidget ::
   Monad m =>
-  Draw.Font -> Int ->
+  TextEdit.Style ->
   Transaction.Property ViewTag m [ITreeD] ->
   Transaction ViewTag m (Widget (Transaction ViewTag m ()))
-makeEditWidget font ptSize clipboardRef = do
+makeEditWidget style clipboardRef = do
   focalPointIRefs <- Property.get focalPointIRefsRef
-  treeEdit <- makeTreeEdit font ptSize 0 clipboardRef (foldr const Anchors.rootIRef focalPointIRefs)
+  treeEdit <- makeTreeEdit style 0 clipboardRef (foldr const Anchors.rootIRef focalPointIRefs)
   widget <-
     if not $ isAtRoot focalPointIRefs
     then makeBox Box.vertical [goUpButton, treeEdit] (Anchors.viewBoxsAnchor "goUp")
@@ -190,7 +190,7 @@ makeEditWidget font ptSize clipboardRef = do
     widget
   where
     goUpButton = Widget.strongerKeys (fromKeyGroups Config.actionKeys "Go up" goUp) $
-                 focusableTextView font ptSize ["[go up]"]
+                 focusableTextView style ["[go up]"]
     focalPointIRefsRef = Anchors.focalPointIRefs
     isAtRoot = null
     goUpEventMap focalPointIRefs =
@@ -204,11 +204,11 @@ branchSelectorBoxCursor = Anchors.dbBoxsAnchor "branchSelector"
 
 -- Apply the transactions to the given View and convert them to
 -- transactions on a DB
-makeWidgetForView :: Monad m => Draw.Font -> Int -> View -> Transaction DBTag m (Widget (Transaction DBTag m ()))
-makeWidgetForView font ptSize view = do
+makeWidgetForView :: Monad m => TextEdit.Style -> View -> Transaction DBTag m (Widget (Transaction DBTag m ()))
+makeWidgetForView style view = do
   versionData <- Version.versionData =<< View.curVersion view
   widget <- widgetDownTransaction (Anchors.viewStore view) $
-            makeEditWidget font ptSize Anchors.clipboard
+            makeEditWidget style Anchors.clipboard
   let undoEventMap = maybe mempty makeUndoEventMap (Version.parent versionData)
   return $ Widget.strongerKeys undoEventMap widget
   where
@@ -231,14 +231,14 @@ runDbStore font store = do
   Anchors.initDB store
   mainLoopWidget . makeWidget $ store
   where
-    ptSize = 50
+    style = TextEdit.Style font 50
     makeWidget dbStore = widgetDownTransaction dbStore $ do
       view <- Property.get Anchors.view
       branches <- Property.get Anchors.branches
       pairs <- mapM pair branches
       (branchSelector, branch) <- makeChoiceWidget Box.vertical pairs branchSelectorBoxCursor
       View.setBranch view branch
-      viewEdit <- makeWidgetForView font ptSize view
+      viewEdit <- makeWidgetForView style view
       box <- makeBox Box.horizontal
         [viewEdit,
          Widget.liftView Spacer.makeHorizontalExpanding,
@@ -247,7 +247,7 @@ runDbStore font store = do
       return $ Widget.strongerKeys (mappend quitEventMap makeBranchEventMap) box
 
     pair (textEditModelIRef, version) = do
-      textEdit <- simpleTextEdit font ptSize . Transaction.fromIRef $ textEditModelIRef
+      textEdit <- simpleTextEdit style . Transaction.fromIRef $ textEditModelIRef
       return (textEdit, version)
 
     delBranchEventMap numBranches
