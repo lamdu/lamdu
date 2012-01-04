@@ -89,7 +89,7 @@ instance Applicative Vector2 where
   Vector2 f g <*> Vector2 x y = Vector2 (f x) (g y)
 
 -- An improper Num instance, for convenience
-instance (Eq a, Show a, Num a) => Num (Vector2 a) where
+instance Num a => Num (Vector2 a) where
   (+) = liftA2 (+)
   (-) = liftA2 (-)
   (*) = liftA2 (*)
@@ -97,3 +97,7 @@ instance (Eq a, Show a, Num a) => Num (Vector2 a) where
   negate = fmap negate
   signum = fmap signum
   fromInteger = pure . fromInteger
+
+instance Fractional a => Fractional (Vector2 a) where
+  (/) = liftA2 (/)
+  fromRational = pure . fromRational

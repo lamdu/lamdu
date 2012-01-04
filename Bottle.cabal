@@ -128,3 +128,31 @@ Executable Editor
   ghc-options:         -O2 -Wall
   main-is:             Editor/Main.hs
   ghc-prof-options:    -prof -auto-all
+
+
+Executable AnimImage
+  hs-Source-Dirs:      src
+  Build-Depends:       base >= 4 && < 5,
+                       graphics-drawingcombinators >= 1.4,
+                       GLFW-b >= 0.0.2,
+                       newtype >= 0.2,
+                       newtype-th >= 0.2,
+                       containers >= 0.3,
+                       fclabels >= 0.11.1.1,
+                       utf8-string >= 0.3,
+                       binary >= 0.5,
+                       split >= 0.1,
+                       bytestring,
+                       random,
+                       transformers,
+                       directory,
+                       BerkeleyDB,
+                       time,
+                       TraceUtils,
+                       derive
+  Other-Modules:       Editor.Data,
+                       Editor.Anchors,
+                       Editor.Config
+  ghc-options:         -O2 -Wall
+  main-is:             Graphics/UI/Bottle/AnimImage.hs
+  ghc-prof-options:    -prof -auto-all
