@@ -1,13 +1,13 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE TemplateHaskell, TypeOperators, TupleSections #-}
 import Control.Applicative ((<*>))
-import Data.IORef (newIORef, modifyIORef, readIORef)
+import Data.IORef (newIORef, writeIORef, readIORef)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Record.Label ((:->), lens)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators.Utils (backgroundColor)
-import Graphics.UI.Bottle.MainLoop (mainLoop)
+import Graphics.UI.Bottle.MainLoop (mainLoopWidget)
 import Graphics.UI.Bottle.Widget (Widget(..))
 import Graphics.UI.Bottle.Theme (Theme(..))
 import qualified Data.Record.Label as L
@@ -171,19 +171,12 @@ main = do
   font <- Draw.openFont (defaultFont System.Info.os)
   modelVar <- newIORef initialProgram
   let
-    mkWidget = widget font defaultBasePtSize
-    draw size = do
+    mkWidget = do
       model <- readIORef modelVar
-      return $ Widget.image (mkWidget model) True size
+      return . fmap (writeIORef modelVar) $
+        widget font defaultBasePtSize model
 
-    updateModel size event model w =
-      fromMaybe model $
-      E.lookup event =<< Widget.eventMap w True size
-
-    eventHandler size event =
-      modifyIORef modelVar $ updateModel size event <*> mkWidget
-
-  mainLoop eventHandler draw
+  mainLoopWidget mkWidget
 
 mkTheme :: Draw.Font -> Int -> Theme
 mkTheme font ptSize = Theme font ptSize "<empty>"
