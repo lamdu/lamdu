@@ -33,6 +33,7 @@ Library
                        Data.Vector.Vector2,
                        Data.List.Utils,
                        Data.Maybe.Utils,
+                       Data.Map.Ordered,
 
                        -- DataStore:
                        Data.Random.Instances,
