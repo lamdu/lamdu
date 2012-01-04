@@ -34,7 +34,7 @@ exampleFrame b x font =
         (Anim.Rect (Vector2 x 100) (Vector2 20 20))),
        (["yosi"],
         Anim.PositionedImage (() <$ red `Draw.tint` circle)
-        (Anim.Rect (Vector2 (800 - x) 0) (Vector2 200 100))),
+        (Anim.Rect (Vector2 (800 - x) 0) (Vector2 150 x))),
        (["yosi", "name"],
         Anim.PositionedImage (() <$ red `Draw.tint` drawTextLines font 1 ["Yosi"])
         (Anim.Rect (Vector2 (800 - x) 100) (Vector2 20 20)))
