@@ -4,12 +4,12 @@ module Graphics.UI.Bottle.Animation(
 where
 
 import Data.ByteString.Char8() -- IsString instance
-import Data.Map(Map)
+import Data.Map.Ordered(OrderedMap)
 import Data.Monoid(Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators((%%))
 import qualified Data.ByteString as SBS
-import qualified Data.Map as Map
+import qualified Data.Map.Ordered as OrderedMap
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.DrawingCombinators as Draw
 
@@ -26,21 +26,21 @@ data PositionedImage = PositionedImage {
   }
 
 data Frame = Frame {
-  iSubImages :: Map AnimId PositionedImage
+  iSubImages :: OrderedMap AnimId PositionedImage
   }
 
 simpleFrame :: Vector2 Draw.R -> Draw.Image () -> Frame
 simpleFrame size image =
-  Frame $ Map.singleton mempty $ PositionedImage image (Rect 0 size)
+  Frame $ OrderedMap.singleton mempty $ PositionedImage image (Rect 0 size)
 
 instance Monoid Frame where
   mempty = Frame mempty
   mappend (Frame x) (Frame y) =
     Frame $
-    Map.unionWith (error "Attempt to unify same-id sub-images!") x y
+    OrderedMap.unionWith (error "Attempt to unify same-id sub-images!") x y
 
 draw :: Frame -> Draw.Image ()
-draw = mconcat . map posImage . Map.elems . iSubImages
+draw = mconcat . map posImage . OrderedMap.elems . iSubImages
   where
     posImage (PositionedImage img (Rect { rectTopLeft = Vector2 t l, rectSize = Vector2 w h })) =
       Draw.translate (t, l) %% Draw.scale w h %% img
@@ -56,11 +56,11 @@ animSpeed = 0.2
 
 nextFrame :: Frame -> Frame -> Frame
 nextFrame (Frame dest) (Frame cur) =
-  Frame . Map.mapMaybe id $
+  Frame . OrderedMap.mapMaybe id $
   mconcat [
-    fmap add $ Map.difference dest cur,
-    fmap del $ Map.difference cur dest,
-    Map.intersectionWith modify dest cur
+    fmap add $ OrderedMap.difference dest cur,
+    fmap del $ OrderedMap.difference cur dest,
+    OrderedMap.intersectionWith modify dest cur
   ]
   where
     add (PositionedImage img r) =
@@ -78,4 +78,4 @@ nextFrame (Frame dest) (Frame cur) =
           (animSpeed * destSize + (1 - animSpeed) * curSize))
 
 augmentId :: AnimId -> Frame -> Frame
-augmentId prefix (Frame frame) = Frame $ Map.mapKeys (mappend prefix) frame
+augmentId prefix (Frame frame) = Frame $ OrderedMap.mapKeys (mappend prefix) frame
