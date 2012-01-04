@@ -67,27 +67,29 @@ make (TextView.Style font ptSize) emptyStr (Model cursor str) =
     cursorWidth = 8
 
     reqSize = fixedSize $ Vector2 width height
+    sz = fromIntegral ptSize
     img hasFocus =
       mconcat . concat $ [
         [ Draw.translate (cursorWidth / 2, 0) %%
-          drawTextLines font ptSize textLines ],
+          Draw.scale sz sz %%
+          drawTextLines font textLines ],
         [ cursorImage | hasFocus ]
       ]
 
     beforeCursor = take cursor str
-    cursorPosX = textLinesWidth font ptSize . (: []) . last . splitLines $ beforeCursor
-    cursorPosY = (textHeight ptSize *) . subtract 1 . genericLength . splitLines $ beforeCursor
+    cursorPosX = (sz *) . textLinesWidth font . (: []) . last . splitLines $ beforeCursor
+    cursorPosY = ((textHeight * sz) *) . subtract 1 . genericLength . splitLines $ beforeCursor
     cursorImage =
       Draw.tint (Draw.Color 0 1 0 1) $
       Affine.translate (cursorPosX, cursorPosY) %%
-      Draw.scale cursorWidth (textHeight ptSize) %%
+      Draw.scale cursorWidth (sz * textHeight) %%
       square
 
     (before, after) = splitAt cursor str
     textLength = length str
     textLines = splitLines displayStr
-    width = cursorWidth + textLinesWidth font ptSize textLines
-    height = textLinesHeight ptSize textLines
+    width = cursorWidth + sz * textLinesWidth font textLines
+    height = sz * textLinesHeight textLines
     lineCount = length textLines
 
     linesBefore = reverse (splitLines before)
