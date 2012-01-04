@@ -9,7 +9,7 @@ import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators.Utils (backgroundColor)
 import Graphics.UI.Bottle.MainLoop (mainLoop)
 import Graphics.UI.Bottle.Widget (Widget(..))
-import Graphics.UI.Bottle.Widgetable (Theme(..))
+import Graphics.UI.Bottle.Theme (Theme(..))
 import qualified Data.Record.Label as L
 import qualified Data.Record.Label.Tuple as LabelTuple
 import qualified Graphics.DrawingCombinators as Draw -- TODO: Only needed for fonts...
@@ -63,7 +63,7 @@ set :: f -> (f :-> a) -> a -> f
 set record label val = L.setL label val record
 
 makeTextView :: Theme -> [String] -> Widget k
-makeTextView theme = TextView.makeWidget (themeFont theme) (themeFontSize theme)
+makeTextView theme = TextView.makeWidget (TextView.Style (themeFont theme) (themeFontSize theme))
 
 empty :: Widget a
 empty = Spacer.makeWidget (Vector2 0 0)
@@ -79,15 +79,14 @@ type Scope = [String]
 makeStringEditWidget :: Theme -> StringEdit -> Widget StringEdit
 makeStringEditWidget theme =
   TextEdit.make
-    (themeFont theme)
-    (themeFontSize theme)
+    (TextView.Style (themeFont theme)
+                    (themeFontSize theme))
     (themeEmptyString theme)
 
 makeStringEditWidgetWithLabel :: Theme -> (model :-> StringEdit) -> model -> Widget model
 makeStringEditWidgetWithLabel theme label model =
   TextEdit.makeWithLabel
-    (themeFont theme)
-    (themeFontSize theme)
+    (TextView.Style (themeFont theme) (themeFontSize theme))
     (themeEmptyString theme)
     label model
 
@@ -196,5 +195,5 @@ widget font basePtSize model =
    [ modelWidget ]]
   where
     titleWidget = Widget.atImage (Draw.tint $ Draw.Color 1 0 1 1) $
-                  TextView.makeWidget font (basePtSize * 2) ["The not-yet glorious structural code editor"]
+                  TextView.makeWidget (TextView.Style font (basePtSize * 2)) ["The not-yet glorious structural code editor"]
     modelWidget = makeWidget ["launchMissiles"] (mkTheme font basePtSize) model
