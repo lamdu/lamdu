@@ -3,7 +3,7 @@ module Graphics.DrawingCombinators.Utils (
   Image, square,
   textHeight, textWidth, textSize,
   textLinesWidth, textLinesHeight, textLinesSize,
-  drawTextLines, backgroundColor) where
+  drawText, drawTextLines, backgroundColor) where
 
 import Control.Monad(void)
 import Data.List(genericLength)

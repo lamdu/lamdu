@@ -1,33 +1,60 @@
 {-# OPTIONS -Wall #-}
 module Graphics.UI.Bottle.Widgets.TextView (Style(..), make, makeWidget, drawText) where
 
+import Control.Applicative (liftA2)
+import Control.Arrow (first, second, (&&&))
+import Data.List.Utils(enumerate2d)
+import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2(Vector2(..))
-import Graphics.DrawingCombinators.Utils (textLinesSize, drawTextLines)
-import Graphics.UI.Bottle.Animation (AnimId, Frame, simpleFrameDownscale, scale)
 import Graphics.UI.Bottle.SizeRange (fixedSize)
 import Graphics.UI.Bottle.Sized (Sized(..))
 import Graphics.UI.Bottle.Widget (Widget, liftView)
+import qualified Data.ByteString.Char8 as SBS8
+import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.DrawingCombinators.Utils as DrawUtils
+import qualified Graphics.UI.Bottle.Animation as Anim
 
 data Style = Style {
   styleFont :: Draw.Font,
   styleFontSize :: Int
   }
 
-drawText :: Style -> [String] -> (AnimId -> Frame, Vector2 Draw.R)
-drawText (Style font ptSize) textLines =
-  (draw, sz * textSize)
-  where
-    draw animId =
-      scale sz . simpleFrameDownscale animId textSize $
-      drawTextLines font textLines
-    sz = fromIntegral ptSize
-    textSize = textLinesSize font textLines
+augment :: Show a => a -> Anim.AnimId -> Anim.AnimId
+augment x = (SBS8.pack (show x) :)
 
-make :: Style -> [String] -> AnimId -> Sized Frame
+drawText :: Style -> [String] -> (Anim.AnimId -> Anim.Frame, Vector2 Draw.R)
+drawText (Style font ptSize) textLines =
+  (first . fmap) (Anim.scale sz) .
+  second (* sz) .
+  drawMany vertical .
+  map (drawMany horizontal) .
+  (map . map) (nestedFrame . second useFont) .
+  enumerate2d $
+  textLines
+  where
+    useFont = (DrawUtils.drawText font &&& DrawUtils.textSize font) . (: [])
+    nestedFrame (i, (image, size)) = (draw, size)
+      where
+        draw animId = Anim.simpleFrameDownscale (augment (i :: (Int, Int)) animId) size image
+
+    drawMany :: (Vector2 Draw.R -> Vector2 Draw.R) -> [(Anim.AnimId -> Anim.Frame, Vector2 Draw.R)] -> (Anim.AnimId -> Anim.Frame, Vector2 Draw.R)
+    drawMany _ [] = (mempty, 0)
+    drawMany sizeToTranslate ((drawX,sizeX):xs) =
+      (mappend drawX $ fmap (Anim.translate trans) drawXs,
+       liftA2 max sizeX (trans + sizeXs))
+      where
+        trans = sizeToTranslate sizeX
+        (drawXs, sizeXs) = drawMany sizeToTranslate xs
+
+    horizontal = Vector2.second (const 0)
+    vertical = Vector2.first (const 0)
+    sz = fromIntegral ptSize
+
+make :: Style -> [String] -> Anim.AnimId -> Sized Anim.Frame
 make style textLines animId = Sized (fixedSize textSize) . const $ frame animId
   where
     (frame, textSize) = drawText style textLines
 
-makeWidget :: Style -> [String] -> AnimId -> Widget a
+makeWidget :: Style -> [String] -> Anim.AnimId -> Widget a
 makeWidget style textLines = liftView . make style textLines
