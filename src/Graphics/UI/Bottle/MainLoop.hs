@@ -3,8 +3,9 @@ module Graphics.UI.Bottle.MainLoop (mainLoopAnim, mainLoopImage, mainLoopWidget)
 
 import Data.IORef
 import Data.Maybe (fromMaybe)
-import Data.Vector.Vector2 (Vector2(..))
 import Data.Monoid (mempty)
+import Data.StateVar (($=))
+import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators ((%%))
 import Graphics.DrawingCombinators.Utils (Image)
 import Graphics.UI.Bottle.EventMap (Event)
@@ -14,6 +15,7 @@ import Graphics.UI.Bottle.Typematic(typematicKeyHandlerWrap)
 import Graphics.UI.Bottle.Widget(Widget)
 import Graphics.UI.GLFW (defaultDisplayOptions, getWindowDimensions)
 import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.Rendering.OpenGL.GL as GL
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -44,6 +46,9 @@ mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
   GLFWUtils.eventLoop $ \events -> do
     winSize@(Vector2 winSizeX winSizeY) <- windowSize
     mapM_ handleEvent events
+    GL.viewport $=
+      (GL.Position 0 0,
+       GL.Size (round winSizeX) (round winSizeY))
     Draw.clearRender .
       (Draw.translate (-1, 1) %%) .
       (Draw.scale (1/winSizeX) (-1/winSizeY) %%) =<<
