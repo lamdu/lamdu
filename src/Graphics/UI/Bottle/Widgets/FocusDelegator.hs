@@ -7,6 +7,7 @@ import Data.Monoid (mappend)
 import Data.Record.Label ((:->), setL, getL)
 import Graphics.UI.Bottle.Widget(Widget(..))
 import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.AnimIds as AnimIds
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -32,7 +33,7 @@ makeWithKeys
     handleFocus True hasFocus = unpack (addEscape widget) hasFocus
 
     blueify =
-      (Widget.atImageWithSize . Anim.backgroundColor ["blue cursor background"]) blue .
+      (Widget.atImageWithSize . Anim.backgroundColor AnimIds.backgroundCursorId 10) blue .
       Widget.atMaybeEventMap mkNonDelegatingEventMap
 
     mkNonDelegatingEventMap = (fmap . const) nonDelegatingEventMap

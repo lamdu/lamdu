@@ -30,6 +30,7 @@ import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
+import qualified Graphics.UI.Bottle.AnimIds as AnimIds
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -40,7 +41,7 @@ import qualified System.Info
 
 focusableTextView :: TextView.Style -> [String] -> Anim.AnimId -> Widget a
 focusableTextView style textLines animId =
-  (Widget.whenFocused . Widget.atImageWithSize . Anim.backgroundColor ["blue cursor background"]) blue .
+  (Widget.whenFocused . Widget.atImageWithSize . Anim.backgroundColor AnimIds.backgroundCursorId 10) blue .
   Widget.takesFocus $ TextView.makeWidget style textLines animId
   where
     blue = Draw.Color 0 0 1 0.8

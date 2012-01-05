@@ -20,6 +20,7 @@ import Graphics.UI.Bottle.Widget (Widget(..))
 import Graphics.UI.GLFW (Key(KeyBackspace, KeyDel, KeyDown, KeyEnd, KeyEnter, KeyHome, KeyLeft, KeyRight, KeyUp))
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.AnimIds as AnimIds
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -56,7 +57,7 @@ tillEndOfWord xs = spaces ++ nonSpaces
 -- what "Font" should be)
 make :: Style -> String -> Model -> Anim.AnimId -> Widget Model
 make style emptyStr (Model cursor str) animId =
-  (Widget.whenFocused . Widget.atImageWithSize . Anim.backgroundColor ["blue background"]) blue $
+  (Widget.whenFocused . Widget.atImageWithSize . Anim.backgroundColor AnimIds.backgroundCursorId 10) blue $
   Widget helper
   where
     blue = Draw.Color 0 0 0.8 0.8
@@ -84,9 +85,10 @@ make style emptyStr (Model cursor str) animId =
     cursorPosX = textLinesWidth . (: []) . last . splitLines $ beforeCursor
     cursorPosY = (lineHeight *) . subtract 1 . genericLength . splitLines $ beforeCursor
     cursorFrame =
+      Anim.onDepth (+2) .
       Anim.translate (Vector2 cursorPosX cursorPosY) .
       Anim.scale (Vector2 cursorWidth lineHeight) .
-      Anim.simpleFrame ["cursor"] $
+      Anim.simpleFrame AnimIds.textCursorId $
       Draw.tint cursorColor square
 
     (before, after) = splitAt cursor str

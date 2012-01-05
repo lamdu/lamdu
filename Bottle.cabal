@@ -28,12 +28,12 @@ Library
                        Graphics.UI.Bottle.Widget,
                        Graphics.UI.Bottle.MainLoop,
                        Graphics.UI.Bottle.Animation,
+                       Graphics.UI.Bottle.AnimIds,
                        Graphics.UI.GLFW.Utils,
                        Graphics.DrawingCombinators.Utils,
                        Data.Vector.Vector2,
                        Data.List.Utils,
                        Data.Maybe.Utils,
-                       Data.Map.Ordered,
 
                        -- DataStore:
                        Data.Random.Instances,

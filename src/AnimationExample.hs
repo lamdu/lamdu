@@ -1,16 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 import Control.Applicative((<$), pure)
-import Control.Arrow((***))
+import Control.Arrow((***), second)
 import Data.ByteString.Char8() -- IsString instance
+import Data.Fixed(mod')
 import Data.IORef
 import Data.Vector.Vector2 (Vector2(..))
-import Data.Fixed(mod')
 import Graphics.DrawingCombinators((%%))
 import Graphics.DrawingCombinators.Utils(drawTextLines)
-import qualified Graphics.UI.Bottle.MainLoop as MainLoop
-import qualified Graphics.UI.Bottle.Animation as Anim
-import qualified Data.Map.Ordered as OrderedMap
+import qualified Data.Map as Map
 import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.Animation as Anim
+import qualified Graphics.UI.Bottle.MainLoop as MainLoop
 import qualified System.Info
 
 defaultFont :: String -> FilePath
@@ -22,9 +22,9 @@ red = Draw.Color 1 0 0 1
 
 exampleFrame :: Bool -> Draw.R -> Draw.Font -> Anim.Frame
 exampleFrame b x font =
-  Anim.Frame . OrderedMap.fromList . (if b then reverse else id) $ items
+  Anim.Frame . Map.fromList . (if b then reverse else id) $ items
   where
-    items =
+    items = (map . second) ((,) 0) $
       [(["shraga"],
         Anim.PositionedImage (() <$ circle)
         (Anim.Rect (Vector2 x 0) (Vector2 100 100))),
