@@ -14,7 +14,7 @@ typematicKeyHandlerWrap timeFunc handler = do
   stateVar <- newMVar NoKey
   _ <- forkIO . forever $ do
     sleepTime <- modifyMVar stateVar typematicIteration
-    threadDelay . round $ 1000000 * sleepTime
+    threadDelay . max 0 $ round (1000000 * sleepTime)
 
   return $ \mchar key isPress -> do
     newValue <-
