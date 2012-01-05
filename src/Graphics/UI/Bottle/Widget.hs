@@ -12,7 +12,7 @@ import Control.Newtype (unpack, over)
 import Control.Newtype.TH (mkNewTypes)
 import Data.Record.Label (getL)
 import Data.Monoid (Monoid(..))
-import Graphics.DrawingCombinators.Utils(Image)
+import Graphics.UI.Bottle.Animation (Frame)
 import Graphics.UI.Bottle.EventMap (EventMap)
 import Graphics.UI.Bottle.SizeRange (Size)
 import Graphics.UI.Bottle.Sized (Sized)
@@ -21,13 +21,13 @@ import qualified Graphics.UI.Bottle.Sized as Sized
 
 type HasFocus = Bool
 
-type UserIO k = (Image, Maybe (EventMap k))
+type UserIO k = (Frame, Maybe (EventMap k))
 
 newtype Widget k = Widget (HasFocus -> Sized (UserIO k))
   deriving (Functor)
 $(mkNewTypes [''Widget])
 
-liftView :: Sized Image -> Widget a
+liftView :: Sized Frame -> Widget a
 liftView = Widget . const . fmap (, Nothing)
 
 argument :: (a -> b) -> (b -> c) -> a -> c
@@ -54,15 +54,15 @@ removeExtraSize = atSized f
         cap (Just x) y = min x y
         maxSize = getL SizeRange.srMaxSize $ Sized.requestedSize sized
 
-atImageWithSize :: (Size -> Image -> Image) -> Widget a -> Widget a
+atImageWithSize :: (Size -> Frame -> Frame) -> Widget a -> Widget a
 atImageWithSize f = atSized . Sized.atFromSize $ g
   where
     g mkUserIO size = first (f size) (mkUserIO size)
 
-atImage :: (Image -> Image) -> Widget a -> Widget a
+atImage :: (Frame -> Frame) -> Widget a -> Widget a
 atImage = atImageWithSize . const
 
-image :: Widget k -> HasFocus -> Size -> Image
+image :: Widget k -> HasFocus -> Size -> Frame
 image = fmap (fmap fst . Sized.fromSize) . unpack
 
 eventMap :: Widget k -> HasFocus -> Size -> Maybe (EventMap k)

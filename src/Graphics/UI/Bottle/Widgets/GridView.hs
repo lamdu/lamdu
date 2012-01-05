@@ -3,21 +3,19 @@
 module Graphics.UI.Bottle.Widgets.GridView(
     make, makeGeneric, makeFromWidgets) where
 
-import           Control.Newtype
 import           Control.Applicative               (liftA2)
 import           Control.Arrow                     (first, second)
+import           Control.Newtype
 import           Data.List                         (transpose)
 import           Data.Monoid                       (Monoid(..))
 import           Data.Vector.Vector2               (Vector2(..))
-import           Graphics.DrawingCombinators       ((%%))
-import           Graphics.DrawingCombinators.Utils (Image)
 import           Graphics.UI.Bottle.SizeRange (SizeRange(..), Size, Coordinate)
 import           Graphics.UI.Bottle.Sized     (Sized(..))
 import           Graphics.UI.Bottle.Widget    (Widget(..))
-import qualified Data.Record.Label                 as Label
-import qualified Data.Vector.Vector2               as Vector2
-import qualified Graphics.DrawingCombinators       as Draw
+import qualified Data.Record.Label as Label
+import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.UI.Bottle.SizeRange as SizeRange
+import qualified Graphics.UI.Bottle.Animation as Anim
 
 --- Size computations:
 
@@ -72,8 +70,8 @@ makePlacements = (fmap . second . fmap) placements makeSizes
 --- Displays:
 
 -- Used by both make and Grid's make.
-makeGeneric :: (a -> Image) -> [[Sized a]] -> Sized (Image, [[a]])
-makeGeneric toImage rows =
+makeGeneric :: (a -> Anim.Frame) -> [[Sized a]] -> Sized (Anim.Frame, [[a]])
+makeGeneric toFrame rows =
   Sized reqSize mkRes
   where
     (reqSize, mkPlacements) = makePlacements $ (map . map) requestedSize rows
@@ -81,14 +79,14 @@ makeGeneric toImage rows =
       first (mconcat . concat) . unzip2d $
       (zipWith . zipWith) locate (mkPlacements givenSize) rows
     locate (pos, size) sized =
-      (Draw.translate (Vector2.uncurry (,) pos) %% toImage res, res)
+      (Anim.translate pos (toFrame res), res)
       where
         res = fromSize sized size
 
 unzip2d :: [[(a, b)]] -> ([[a]], [[b]])
 unzip2d = unzip . map unzip
 
-make :: [[Sized Image]] -> Sized Image
+make :: [[Sized Anim.Frame]] -> Sized Anim.Frame
 make = fmap fst . makeGeneric id
 
 -- ^ This will send events to the first widget in the list that would

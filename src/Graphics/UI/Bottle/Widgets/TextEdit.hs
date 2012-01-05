@@ -1,7 +1,8 @@
 {-# OPTIONS -Wall #-}
-{-# LANGUAGE TemplateHaskell, TypeOperators #-}
+{-# LANGUAGE TemplateHaskell, TypeOperators, OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.TextEdit(Cursor, TextView.Style(..), Model(..), make, makeWithLabel, makeModel) where
 
+import Control.Arrow(first)
 import Data.Binary  -- open import per derive's requirements :/
 import Data.Char (isSpace)
 import Data.Derive.Binary (makeBinary)
@@ -12,15 +13,15 @@ import Data.Maybe (fromJust)
 import Data.Monoid (mconcat)
 import Data.Record.Label ((:->), getL, setL)
 import Data.Vector.Vector2 (Vector2(..))
-import Graphics.DrawingCombinators ((%%))
-import Graphics.DrawingCombinators.Utils (square, drawTextLines, textLinesWidth, textLinesHeight, textHeight, backgroundColor)
+import Graphics.DrawingCombinators.Utils (square, textHeight)
 import Graphics.UI.Bottle.SizeRange (fixedSize)
 import Graphics.UI.Bottle.Sized (Sized(..))
 import Graphics.UI.Bottle.Widget (Widget(..))
 import Graphics.UI.GLFW (Key(KeyBackspace, KeyDel, KeyDown, KeyEnd, KeyEnter, KeyHome, KeyLeft, KeyRight, KeyUp))
+import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.DrawingCombinators.Affine as Affine
-import qualified Graphics.UI.Bottle.EventMap as EventMap
+import qualified Graphics.UI.Bottle.Animation as Anim
+import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
@@ -53,9 +54,9 @@ tillEndOfWord xs = spaces ++ nonSpaces
 
 -- TODO: Instead of font + ptSize, let's pass a text-drawer (that's
 -- what "Font" should be)
-make :: Style -> String -> Model -> Widget Model
-make (TextView.Style font ptSize) emptyStr (Model cursor str) =
-  (Widget.whenFocused . Widget.atImageWithSize . backgroundColor) blue $
+make :: Style -> String -> Model -> Anim.AnimId -> Widget Model
+make style emptyStr (Model cursor str) animId =
+  (Widget.whenFocused . Widget.atImageWithSize . Anim.backgroundColor ["blue background"]) blue $
   Widget helper
   where
     blue = Draw.Color 0 0 0.8 0.8
@@ -66,30 +67,29 @@ make (TextView.Style font ptSize) emptyStr (Model cursor str) =
 
     cursorWidth = 8
 
-    reqSize = fixedSize $ Vector2 width height
-    sz = fromIntegral ptSize
+    reqSize = fixedSize $ Vector2 (cursorWidth + tlWidth) tlHeight
+    sz = fromIntegral $ TextView.styleFontSize style
     img hasFocus =
       mconcat . concat $ [
-        [ Draw.translate (cursorWidth / 2, 0) %%
-          Draw.scale sz sz %%
-          drawTextLines font textLines ],
-        [ cursorImage | hasFocus ]
+        [ Anim.translate (Vector2 (cursorWidth / 2) 0) frame ],
+        [ cursorFrame | hasFocus ]
       ]
+    (frame, Vector2 tlWidth tlHeight) = first ($ ("text" : animId)) $ TextView.drawText style textLines
 
+    textLinesWidth = Vector2.fst . snd . TextView.drawText style
+    lineHeight = sz * textHeight
     beforeCursor = take cursor str
-    cursorPosX = (sz *) . textLinesWidth font . (: []) . last . splitLines $ beforeCursor
-    cursorPosY = ((textHeight * sz) *) . subtract 1 . genericLength . splitLines $ beforeCursor
-    cursorImage =
-      Draw.tint (Draw.Color 0 1 0 1) $
-      Affine.translate (cursorPosX, cursorPosY) %%
-      Draw.scale cursorWidth (sz * textHeight) %%
-      square
+    cursorPosX = textLinesWidth . (: []) . last . splitLines $ beforeCursor
+    cursorPosY = (lineHeight *) . subtract 1 . genericLength . splitLines $ beforeCursor
+    cursorFrame =
+      Anim.translate (Vector2 cursorPosX cursorPosY) .
+      Anim.scale (Vector2 cursorWidth lineHeight) .
+      Anim.simpleFrame ["cursor"] $
+      Draw.tint (Draw.Color 0 1 0 1) square
 
     (before, after) = splitAt cursor str
     textLength = length str
     textLines = splitLines displayStr
-    width = cursorWidth + sz * textLinesWidth font textLines
-    height = sz * textLinesHeight textLines
     lineCount = length textLines
 
     linesBefore = reverse (splitLines before)
@@ -112,16 +112,18 @@ make (TextView.Style font ptSize) emptyStr (Model cursor str) =
     backMoveWord = moveRelative . negate . length . tillEndOfWord . reverse $ before
     moveWord = moveRelative . length . tillEndOfWord $ after
 
+    singleton :: String -> E.EventType -> (E.Event -> (Cursor, String)) -> E.EventMap Model
     singleton _doc eventType mkModel =
-      EventMap.singleton eventType $
+      E.singleton eventType $
       uncurry Model . mkModel
 
+    keys :: String -> [E.EventType] -> (Cursor, String) -> E.EventMap Model
     keys doc = mconcat . map (\event -> singleton doc event . const)
 
-    specialKey = EventMap.KeyEventType EventMap.noMods
-    ctrlSpecialKey = EventMap.KeyEventType EventMap.ctrl
-    ctrlCharKey = EventMap.KeyEventType EventMap.ctrl . EventMap.charKey
-    altCharKey = EventMap.KeyEventType EventMap.alt . EventMap.charKey
+    specialKey = E.KeyEventType E.noMods
+    ctrlSpecialKey = E.KeyEventType E.ctrl
+    ctrlCharKey = E.KeyEventType E.ctrl . E.charKey
+    altCharKey = E.KeyEventType E.alt . E.charKey
     homeKeys = [specialKey KeyHome, ctrlCharKey 'A']
     endKeys = [specialKey KeyEnd, ctrlCharKey 'E']
 
@@ -204,7 +206,7 @@ make (TextView.Style font ptSize) emptyStr (Model cursor str) =
           backDelete (length curLineBefore)
         | not . null $ curLineBefore ],
 
-        [ singleton "Insert character" EventMap.CharEventType (insert . (: []) . fromJust . EventMap.keyEventChar) ],
+        [ singleton "Insert character" E.CharEventType (insert . (: []) . fromJust . E.keyEventChar) ],
 
         [ keys "Insert Newline" [specialKey KeyEnter] (insert "\n") ]
 
@@ -215,7 +217,7 @@ make (TextView.Style font ptSize) emptyStr (Model cursor str) =
         cursor' = cursor + length l
         str' = concat [before, l, after]
 
-makeWithLabel :: Style -> String -> model :-> Model -> model -> Widget model
+makeWithLabel :: Style -> String -> model :-> Model -> model -> Anim.AnimId -> Widget model
 makeWithLabel style emptyStr label model =
-  fmap (flip (setL label) model) $
+  fmap (flip (setL label) model) .
   make style emptyStr (getL label model)

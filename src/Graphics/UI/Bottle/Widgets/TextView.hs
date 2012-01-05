@@ -1,9 +1,9 @@
 {-# OPTIONS -Wall #-}
-module Graphics.UI.Bottle.Widgets.TextView (Style(..), make, makeWidget) where
+module Graphics.UI.Bottle.Widgets.TextView (Style(..), make, makeWidget, drawText) where
 
-import Control.Applicative (pure)
-import Graphics.DrawingCombinators.Utils (Image, textLinesSize, drawTextLines)
-import Graphics.DrawingCombinators ((%%))
+import Data.Vector.Vector2(Vector2(..))
+import Graphics.DrawingCombinators.Utils (textLinesSize, drawTextLines)
+import Graphics.UI.Bottle.Animation (AnimId, Frame, simpleFrameDownscale, scale)
 import Graphics.UI.Bottle.SizeRange (fixedSize)
 import Graphics.UI.Bottle.Sized (Sized(..))
 import Graphics.UI.Bottle.Widget (Widget, liftView)
@@ -14,12 +14,20 @@ data Style = Style {
   styleFontSize :: Int
   }
 
-make :: Style -> [String] -> Sized Image
-make (Style font ptSize) textLines =
-  Sized (fixedSize (pure sz * textLinesSize font textLines)) $
-  const (Draw.scale sz sz %% drawTextLines font textLines)
+drawText :: Style -> [String] -> (AnimId -> Frame, Vector2 Draw.R)
+drawText (Style font ptSize) textLines =
+  (draw, sz * textSize)
   where
+    draw animId =
+      scale sz . simpleFrameDownscale animId textSize $
+      drawTextLines font textLines
     sz = fromIntegral ptSize
+    textSize = textLinesSize font textLines
 
-makeWidget :: Style -> [String] -> Widget a
-makeWidget style = liftView . make style
+make :: Style -> [String] -> AnimId -> Sized Frame
+make style textLines animId = Sized (fixedSize textSize) . const $ frame animId
+  where
+    (frame, textSize) = drawText style textLines
+
+makeWidget :: Style -> [String] -> AnimId -> Widget a
+makeWidget style textLines = liftView . make style textLines

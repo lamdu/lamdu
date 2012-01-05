@@ -1,8 +1,10 @@
 {-# OPTIONS -Wall #-}
-module Graphics.UI.Bottle.MainLoop (mainLoop, mainLoopWidget) where
+module Graphics.UI.Bottle.MainLoop (mainLoopAnim, mainLoopImage, mainLoopWidget) where
 
+import Data.IORef
 import Data.Maybe (fromMaybe)
 import Data.Vector.Vector2 (Vector2(..))
+import Data.Monoid (mempty)
 import Graphics.DrawingCombinators ((%%))
 import Graphics.DrawingCombinators.Utils (Image)
 import Graphics.UI.Bottle.EventMap (Event)
@@ -12,12 +14,13 @@ import Graphics.UI.Bottle.Typematic(typematicKeyHandlerWrap)
 import Graphics.UI.Bottle.Widget(Widget)
 import Graphics.UI.GLFW (defaultDisplayOptions, getWindowDimensions)
 import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 
-mainLoop :: (Size -> Event -> IO ()) -> (Size -> IO Image) -> IO a
-mainLoop eventHandler makeImage = GLFWUtils.withGLFW $ do
+mainLoopImage :: (Size -> Event -> IO ()) -> (Size -> IO Image) -> IO a
+mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
   GLFWUtils.openWindow defaultDisplayOptions
 
   let
@@ -46,8 +49,20 @@ mainLoop eventHandler makeImage = GLFWUtils.withGLFW $ do
       (Draw.scale (1/winSizeX) (-1/winSizeY) %%) =<<
       makeImage winSize
 
+mainLoopAnim :: (Size -> Event -> IO ()) -> (Size -> IO Anim.Frame) -> IO a
+mainLoopAnim eventHandler makeFrame = do
+  frameVar <- newIORef mempty
+  let
+    makeImage size = do
+      dest <- makeFrame size
+      prevFrame <- readIORef frameVar
+      let frame = Anim.nextFrame dest prevFrame
+      writeIORef frameVar frame
+      return $ Anim.draw frame
+  mainLoopImage eventHandler makeImage
+
 mainLoopWidget :: IO (Widget (IO ())) -> IO a
-mainLoopWidget mkWidget = mainLoop eventHandler mkImage
+mainLoopWidget mkWidget = mainLoopAnim eventHandler mkImage
   where
     eventHandler size event = do
       widget <- mkWidget

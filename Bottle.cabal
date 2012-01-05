@@ -71,7 +71,7 @@ Library
                        binary >= 0.5,
                        time >= 1.2,
                        directory >= 1.0.1.1,
-                       bytestring >= 0.9,
+                       bytestring,
                        BerkeleyDB >= 0.8,
                        random >= 1.0.0,
                        utf8-string >= 0.3,
@@ -85,24 +85,6 @@ Library
                        Graphics.UI.Bottle.KeyHandlers
 
   ghc-options:         -O2 -Wall
-
-executable bottle-example
-  hs-Source-Dirs:      src
-  Build-Depends:       base >= 4,
-                       GLFW-b >= 0.0.2,
-                       graphics-drawingcombinators >= 1.4,
-                       fclabels < 1.0.0,
-                       utf8-string >= 0.3,
-                       split >= 0.1,
-                       newtype >= 0.2,
-                       newtype-th >= 0.2,
-                       containers >= 0.4,
-                       binary >= 0.5,
-                       time >= 1.2,
-                       derive
-  main-is:             Example.hs
-  ghc-options:         -O2 -Wall
-  ghc-prof-options:    -prof -auto-all
 
 Executable Editor
   hs-Source-Dirs:      src

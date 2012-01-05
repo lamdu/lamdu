@@ -3,7 +3,6 @@ import Control.Applicative((<$), pure)
 import Control.Arrow((***))
 import Data.ByteString.Char8() -- IsString instance
 import Data.IORef
-import Data.Monoid(Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Data.Fixed(mod')
 import Graphics.DrawingCombinators((%%))
@@ -46,16 +45,9 @@ main :: IO ()
 main = do
   font <- Draw.openFont (defaultFont System.Info.os)
   xRef <- newIORef (False, 100)
-  imageRef <- newIORef mempty
   let
     mkDestFrame = do
       (order, x) <- readIORef xRef
       return $ exampleFrame order x font
-    mkFrame = do
-      dest <- mkDestFrame
-      prevFrame <- readIORef imageRef
-      let image = Anim.nextFrame dest prevFrame
-      writeIORef imageRef image
-      return $ Anim.draw image
     eventHandler = modifyIORef xRef (not *** ((`mod'` 1000) . (+100)))
-  MainLoop.mainLoop ((pure . pure) eventHandler) (pure mkFrame)
+  MainLoop.mainLoopAnim ((pure . pure) eventHandler) (pure mkDestFrame)

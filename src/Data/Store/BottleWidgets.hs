@@ -16,6 +16,7 @@ import Data.Store.Transaction (Transaction, Store)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
+import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 
@@ -75,14 +76,15 @@ makeWidget ::
   (model -> Widget model) ->
   Transaction.Property t m model ->
   MWidget (Transaction t m)
-makeWidget w ref = (fmap (Property.set ref) . w) `liftM`
-                   Property.get ref
+makeWidget w ref =
+  liftM (fmap (Property.set ref) . w) $
+  Property.get ref
 
 makeTextEdit ::
-  Monad m => TextEdit.Style -> String ->
+  Monad m => TextEdit.Style -> String -> Anim.AnimId ->
   Transaction.Property t m TextEdit.Model ->
   MWidget (Transaction t m)
-makeTextEdit = (result . result) makeWidget TextEdit.make
+makeTextEdit = (result . result) (result makeWidget . flip) $ TextEdit.make
 
 -- makeCompletion :: Monad m =>
 --                   Completion.Theme ->

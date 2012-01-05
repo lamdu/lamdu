@@ -1,5 +1,5 @@
 {-# OPTIONS -O2 -Wall #-}
-{-# LANGUAGE TypeOperators, Rank2Types #-}
+{-# LANGUAGE TypeOperators, Rank2Types, OverloadedStrings #-}
 
 module Main(main) where
 
@@ -9,13 +9,13 @@ import Data.List.Utils (index)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.Monoid(Monoid(..))
 import Data.Store.BottleWidgets(MWidget, makeTextEdit, widgetDownTransaction, makeBox, appendBoxChild, popCurChild, makeChoiceWidget)
-import Data.Store.IRef (IRef)
+import Data.Store.Guid (bs)
+import Data.Store.IRef (IRef, guid)
 import Data.Store.Property (composeLabel)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (DBTag, ViewTag)
-import Editor.Data (ITreeD, TreeD)
-import Graphics.DrawingCombinators.Utils (backgroundColor)
+import Editor.Data (ITreeD)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Widget (Widget)
 import Prelude hiding ((.))
@@ -29,6 +29,7 @@ import qualified Editor.Anchors as Anchors
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -37,12 +38,10 @@ import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified System.Info
 
-focusableTextView :: TextView.Style -> [String] -> Widget a
-focusableTextView style =
-  (Widget.whenFocused . Widget.atImageWithSize . backgroundColor) blue .
-  Widget.takesFocus .
---  Widget.coloredFocusableDisplay blue .
-  TextView.makeWidget style
+focusableTextView :: TextView.Style -> [String] -> Anim.AnimId -> Widget a
+focusableTextView style textLines animId =
+  (Widget.whenFocused . Widget.atImageWithSize . Anim.backgroundColor ["blue cursor background"]) blue .
+  Widget.takesFocus $ TextView.makeWidget style textLines animId
   where
     blue = Draw.Color 0 0 1 0.8
 
@@ -94,7 +93,7 @@ makeChildBox style depth clipboardRef outerBoxCursorRef childrenBoxCursorRef chi
 
 simpleTextEdit ::
   Monad m =>
-  TextEdit.Style ->
+  TextEdit.Style -> Anim.AnimId ->
   Transaction.Property t m TextEdit.Model ->
   MWidget (Transaction t m)
 simpleTextEdit style = makeTextEdit style "<empty>"
@@ -103,15 +102,14 @@ makeTreeEdit ::
   Monad m =>
   TextEdit.Style ->
   Int -> Transaction.Property ViewTag m [ITreeD] ->
-  IRef TreeD ->
-  Transaction ViewTag m (Widget (Transaction ViewTag m ()))
+  ITreeD -> Transaction ViewTag m (Widget (Transaction ViewTag m ()))
 makeTreeEdit style depth clipboardRef treeIRef
   | depth >= Config.maxDepth =
-    return $ Widget.strongerKeys goInEventMap $ focusableTextView style ["[Go deeper]"]
+    return $ Widget.strongerKeys goInEventMap $ focusableTextView style ["[Go deeper]"] ["deeper", bs $ guid treeIRef]
   | otherwise = do
     isExpanded <- Property.get isExpandedRef
     valueEdit <- liftM (Widget.strongerKeys $ expandCollapseEventMap isExpanded) $
-                 simpleTextEdit style valueTextEditModelRef
+                 simpleTextEdit style ["value edit", bs $ guid treeIRef] valueTextEditModelRef
     childrenIRefs <- Property.get childrenIRefsRef
     childBox <- if isExpanded && not (null childrenIRefs)
                 then liftM ((:[]) . Widget.weakerKeys moveToParentEventMap) $
@@ -149,7 +147,7 @@ makeTreeEdit style depth clipboardRef treeIRef
       collapse = Property.set isExpandedRef False
       expand = Property.set isExpandedRef True
       collapser isExpanded =
-        TextView.makeWidget style $
+        flip (TextView.makeWidget style) ["collapser", bs $ guid treeIRef] $
         if isExpanded
         then ["[-]"]
         else ["[+]"]
@@ -190,7 +188,7 @@ makeEditWidget style clipboardRef = do
     widget
   where
     goUpButton = Widget.strongerKeys (fromKeyGroups Config.actionKeys "Go up" goUp) $
-                 focusableTextView style ["[go up]"]
+                 focusableTextView style ["[go up]"] ["upper", "edit widget"]
     focalPointIRefsRef = Anchors.focalPointIRefs
     isAtRoot = null
     goUpEventMap focalPointIRefs =
@@ -247,7 +245,7 @@ runDbStore font store = do
       return $ Widget.strongerKeys (mappend quitEventMap makeBranchEventMap) box
 
     pair (textEditModelIRef, version) = do
-      textEdit <- simpleTextEdit style . Transaction.fromIRef $ textEditModelIRef
+      textEdit <- simpleTextEdit style [bs . guid $ textEditModelIRef] . Transaction.fromIRef $ textEditModelIRef
       return (textEdit, version)
 
     delBranchEventMap numBranches
