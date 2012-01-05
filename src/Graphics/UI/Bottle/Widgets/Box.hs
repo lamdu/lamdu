@@ -31,13 +31,16 @@ vertical = Orientation {
   }
 
 make ::
-  Orientation -> (Cursor -> k) -> Cursor -> [Widget k] -> Widget k
+  Orientation -> (Cursor -> k) -> Cursor ->
+  [Bool -> Widget k] -> Bool -> Widget k
 make orientation liftCursor cursor children =
   Grid.make
     (liftCursor . fromGridCursor orientation)
     (toGridCursor orientation cursor)
     (toGridChildren orientation children)
 
-makeWithLabel :: Orientation -> (model :-> Cursor) -> model -> [Widget model] -> Widget model
+makeWithLabel ::
+  Orientation -> (model :-> Cursor) -> model ->
+  [Bool -> Widget model] -> Bool -> Widget model
 makeWithLabel orientation label model =
   make orientation (flip (setL label) model) (getL label model)

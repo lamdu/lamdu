@@ -1,7 +1,7 @@
 {-# OPTIONS -O2 -Wall #-}
 
 module Data.Store.BottleWidgets
-    (MWidget, TWidget,
+    (MWidget,
      appendBoxChild, popCurChild,
      makeBox, makeTextEdit, makeChoiceWidget,
      widgetDownTransaction)
@@ -29,8 +29,7 @@ removeAt n xs = take n xs ++ drop (n+1) xs
 safeIndex :: Integral ix => ix -> [a] -> Maybe a
 safeIndex n = listToMaybe . drop (fromIntegral n)
 
-type MWidget m = m (Widget (m ()))
-type TWidget t m a = Widget (Transaction t m a)
+type MWidget m = m (Bool -> Widget (m ()))
 
 appendBoxChild ::
   Monad m =>
@@ -62,30 +61,29 @@ popCurChild boxModelRef valuesRef = do
 makeBox ::
   Monad m =>
   Box.Orientation ->
-  [TWidget t m ()] ->
+  [Bool -> Widget (Transaction t m ())] ->
   Transaction.Property t m Box.Cursor ->
   MWidget (Transaction t m)
 makeBox orientation rows boxCursorRef =
   fromCursor `liftM` Property.get boxCursorRef
   where
-    fromCursor cursor =
-      Box.make orientation (Property.set boxCursorRef) cursor rows
+    fromCursor cursor hasFocus =
+      Box.make orientation (Property.set boxCursorRef) cursor rows hasFocus
 
 makeWidget ::
   Monad m =>
-  (model -> Widget model) ->
+  (model -> Bool -> Widget model) ->
   Transaction.Property t m model ->
   MWidget (Transaction t m)
-makeWidget w ref =
-  liftM (fmap (Property.set ref) . w) $
-  Property.get ref
+makeWidget mkWidget ref = do
+  model <- Property.get ref
+  return $ fmap (Property.set ref) . mkWidget model
 
 makeTextEdit ::
   Monad m => TextEdit.Style -> String -> Anim.AnimId ->
   Transaction.Property t m TextEdit.Model ->
   MWidget (Transaction t m)
 makeTextEdit = (result . result) (result makeWidget . flip) $ TextEdit.make
-
 -- makeCompletion :: Monad m =>
 --                   Completion.Theme ->
 --                   [(String, Int)] -> Int -> String -> Int ->
@@ -106,9 +104,9 @@ makeTextEdit = (result . result) (result makeWidget . flip) $ TextEdit.make
 
 makeChoiceWidget :: Monad m =>
                     Box.Orientation ->
-                    [(TWidget t m (), k)] ->
+                    [(Bool -> Widget (Transaction t m ()), k)] ->
                     Transaction.Property t m Box.Cursor ->
-                    Transaction t m (TWidget t m (), k)
+                    Transaction t m (Bool -> Widget (Transaction t m ()), k)
 makeChoiceWidget orientation keys boxModelRef = do
   widget <- makeBox orientation widgets boxModelRef
   itemIndex <- Property.get boxModelRef
@@ -121,10 +119,10 @@ makeChoiceWidget orientation keys boxModelRef = do
 -- Take a widget parameterized on transaction on views (that lives in
 -- a nested transaction monad) and convert it to one parameterized on
 -- the nested transaction
-widgetDownTransaction :: Monad m =>
-                         Store t m ->
-                         MWidget (Transaction t m) ->
-                         MWidget m
-widgetDownTransaction store = runTrans . (liftM . fmap) runTrans
+widgetDownTransaction ::
+  Monad m => Store t m ->
+  MWidget (Transaction t m) ->
+  MWidget m
+widgetDownTransaction store = runTrans . (liftM . fmap . fmap) runTrans
   where
     runTrans = Transaction.run store

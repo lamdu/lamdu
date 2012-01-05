@@ -3,7 +3,7 @@
 module Graphics.UI.Bottle.Widgets.Grid(Cursor, make, makeWithLabel) where
 
 import Control.Applicative (liftA2)
-import Control.Arrow (second)
+import Control.Arrow (first, second)
 import Control.Newtype (unpack)
 import Control.Monad (join)
 import Data.List (foldl', find, transpose)
@@ -59,16 +59,18 @@ mkNavMKeymap wantFocusRows cursor@(Vector2 cursorX cursorY) =
     curRow        = enumerate . fromMaybe [] $ index wantFocusRows cappedY
     curColumn     = enumerate . fromMaybe [] $ index (transpose wantFocusRows) cappedX
 
-make :: (Cursor -> k) -> Cursor -> [[Widget k]] -> Widget k
-make liftCursor cursor@(Vector2 x y) children = Widget handleHasFocus
+make ::
+  (Cursor -> k) -> Cursor ->
+  [[Bool -> Widget k]] -> Bool -> Widget k
+make liftCursor cursor@(Vector2 x y) children hasFocus =
+  Widget $
+    (fmap . second) (buildKeymap . (map . map) snd) .
+    GridView.makeGeneric fst .
+    (map . map) (applyHasFocus . first compareCursor) .
+    enumerate2d $ children
   where
-    handleHasFocus hasFocus =
-      (fmap . second) (buildKeymap . (map . map) snd) .
-      GridView.makeGeneric fst .
-      (map . map) (applyHasFocus hasFocus . second unpack) .
-      enumerate2d $ children
-    applyHasFocus False (_, inWidget) = inWidget False
-    applyHasFocus True ((r, c), inWidget) = inWidget $ Vector2 c r == cursor
+    compareCursor (r, c) = Vector2 c r == cursor
+    applyHasFocus (isSelected, child) = unpack . child $ hasFocus && isSelected
     buildKeymap xss =
       mconcat [
         join $ index xss y >>= (`index` x),
@@ -77,5 +79,7 @@ make liftCursor cursor@(Vector2 x y) children = Widget handleHasFocus
       where
         wantFocusRows = (map . map) isJust xss
 
-makeWithLabel :: (model :-> Cursor) -> model -> [[Widget model]] -> Widget model
+makeWithLabel ::
+  (model :-> Cursor) -> model ->
+  [[Bool -> Widget model]] -> Bool -> Widget model
 makeWithLabel label model = make (flip (setL label) model) (getL label model)

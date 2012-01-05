@@ -2,8 +2,8 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor, FlexibleInstances,
              MultiParamTypeClasses, TupleSections #-}
 module Graphics.UI.Bottle.Widget (
-  Widget(..), image, eventMap, takesFocus, whenFocused,
-  atImageWithSize, atImage, atHasFocus, atMaybeEventMap, liftView, removeExtraSize,
+  Widget(..), image, eventMap, takesFocus,
+  atImageWithSize, atImage, atMaybeEventMap, liftView, removeExtraSize,
   strongerKeys, weakerKeys) where
 
 import Control.Applicative (liftA2)
@@ -19,28 +19,20 @@ import Graphics.UI.Bottle.Sized (Sized)
 import qualified Graphics.UI.Bottle.SizeRange as SizeRange
 import qualified Graphics.UI.Bottle.Sized as Sized
 
-type HasFocus = Bool
-
 type UserIO k = (Frame, Maybe (EventMap k))
 
-newtype Widget k = Widget (HasFocus -> Sized (UserIO k))
+newtype Widget k = Widget (Sized (UserIO k))
   deriving (Functor)
 $(mkNewTypes [''Widget])
 
 liftView :: Sized Frame -> Widget a
-liftView = Widget . const . fmap (, Nothing)
+liftView = Widget . fmap (, Nothing)
 
 argument :: (a -> b) -> (b -> c) -> a -> c
 argument = flip (.)
 
-result :: (b -> c) -> (a -> b) -> a -> c
-result = (.)
-
-atHasFocus :: (Bool -> Bool) -> Widget a -> Widget a
-atHasFocus = over Widget . argument
-
 atSized :: (Sized (UserIO k) -> Sized (UserIO k')) -> Widget k -> Widget k'
-atSized = over Widget . result
+atSized = over Widget
 
 atMaybeEventMap :: (Maybe (EventMap a) -> Maybe (EventMap b)) -> Widget a -> Widget b
 atMaybeEventMap = atSized . fmap . second
@@ -62,19 +54,14 @@ atImageWithSize f = atSized . Sized.atFromSize $ g
 atImage :: (Frame -> Frame) -> Widget a -> Widget a
 atImage = atImageWithSize . const
 
-image :: Widget k -> HasFocus -> Size -> Frame
-image = fmap (fmap fst . Sized.fromSize) . unpack
+image :: Widget k -> Size -> Frame
+image = fmap fst . Sized.fromSize . unpack
 
-eventMap :: Widget k -> HasFocus -> Size -> Maybe (EventMap k)
-eventMap = fmap (fmap snd . Sized.fromSize) . unpack
+eventMap :: Widget k -> Size -> Maybe (EventMap k)
+eventMap = fmap snd . Sized.fromSize . unpack
 
 takesFocus :: Widget a -> Widget a
 takesFocus = atMaybeEventMap $ maybe (Just mempty) Just
-
-whenFocused :: (Widget k -> Widget k) -> Widget k -> Widget k
-whenFocused f widget = Widget mkSized
-  where
-    mkSized hf = (unpack . if hf then f else id) widget hf
 
 strongerKeys :: EventMap a -> Widget a -> Widget a
 strongerKeys = atMaybeEventMap . mappend . Just

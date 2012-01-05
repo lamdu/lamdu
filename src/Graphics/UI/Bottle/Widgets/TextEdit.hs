@@ -26,6 +26,9 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
+result :: (b -> c) -> (a -> b) -> a -> c
+result = (.)
+
 type Cursor = Int
 
 type Style = TextView.Style
@@ -55,13 +58,14 @@ tillEndOfWord xs = spaces ++ nonSpaces
 
 -- TODO: Instead of font + ptSize, let's pass a text-drawer (that's
 -- what "Font" should be)
-make :: Style -> String -> Model -> Anim.AnimId -> Widget Model
-make style emptyStr (Model cursor str) animId =
-  (Widget.whenFocused . Widget.atImageWithSize . Anim.backgroundColor AnimIds.backgroundCursorId 10) blue $
-  Widget helper
+make :: Style -> String -> Model -> Anim.AnimId -> Bool -> Widget Model
+make style emptyStr (Model cursor str) animId hasFocus =
+  (if hasFocus
+    then Widget.atImageWithSize (Anim.backgroundColor AnimIds.backgroundCursorId 10 blue)
+    else id) .
+  Widget . Sized reqSize $ const (img, Just keymap)
   where
     blue = Draw.Color 0 0 0.8 0.8
-    helper hasFocus = Sized reqSize $ const (img hasFocus, Just keymap)
     displayStr = finalText str
     finalText "" = emptyStr
     finalText x  = x
@@ -72,7 +76,7 @@ make style emptyStr (Model cursor str) animId =
 
     reqSize = fixedSize $ Vector2 (cursorWidth + tlWidth) tlHeight
     sz = fromIntegral $ TextView.styleFontSize style
-    img hasFocus =
+    img =
       mconcat . concat $ [
         [ Anim.translate (Vector2 (cursorWidth / 2) 0) frame ],
         [ cursorFrame | hasFocus ]
@@ -221,7 +225,9 @@ make style emptyStr (Model cursor str) animId =
         cursor' = cursor + length l
         str' = concat [before, l, after]
 
-makeWithLabel :: Style -> String -> model :-> Model -> model -> Anim.AnimId -> Widget model
+makeWithLabel ::
+  Style -> String -> model :-> Model -> model -> Anim.AnimId ->
+  Bool -> Widget model
 makeWithLabel style emptyStr label model =
-  fmap (flip (setL label) model) .
+  (result . result . fmap) (flip (setL label) model) $
   make style emptyStr (getL label model)

@@ -39,10 +39,13 @@ import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified System.Info
 
-focusableTextView :: TextView.Style -> [String] -> Anim.AnimId -> Widget a
-focusableTextView style textLines animId =
-  (Widget.whenFocused . Widget.atImageWithSize . Anim.backgroundColor AnimIds.backgroundCursorId 10) blue .
-  Widget.takesFocus $ TextView.makeWidget style textLines animId
+focusableTextView :: TextView.Style -> [String] -> Anim.AnimId -> Bool -> Widget a
+focusableTextView style textLines animId hasFocus =
+  (if hasFocus
+     then Widget.atImageWithSize (Anim.backgroundColor AnimIds.backgroundCursorId 10 blue)
+     else id) .
+  Widget.takesFocus $
+  TextView.makeWidget style textLines animId
   where
     blue = Draw.Color 0 0 1 0.8
 
@@ -61,16 +64,17 @@ makeChildBox ::
   Transaction.Property ViewTag m Box.Cursor ->
   Transaction.Property ViewTag m Box.Cursor ->
   Transaction.Property ViewTag m [ITreeD] ->
-  Transaction ViewTag m (Widget (Transaction ViewTag m ()))
+  Transaction ViewTag m (Bool -> Widget (Transaction ViewTag m ()))
 makeChildBox style depth clipboardRef outerBoxCursorRef childrenBoxCursorRef childrenIRefsRef = do
   childItems <- mapM (makeTreeEdit style (depth+1) clipboardRef) =<< Property.get childrenIRefsRef
   curChildIndex <- getChildIndex . length $ childItems
   childBox <- makeBox Box.vertical childItems childrenBoxCursorRef
   return .
-    Widget.weakerKeys
-    (mappend
-     delNodeEventMap cutNodeEventMap
-     curChildIndex) .
+    fmap (
+      Widget.weakerKeys
+      (mappend
+       delNodeEventMap cutNodeEventMap
+       curChildIndex)) .
     Spacer.indentRightWidget indentSize $
     childBox
   where
@@ -103,22 +107,22 @@ makeTreeEdit ::
   Monad m =>
   TextEdit.Style ->
   Int -> Transaction.Property ViewTag m [ITreeD] ->
-  ITreeD -> Transaction ViewTag m (Widget (Transaction ViewTag m ()))
+  ITreeD -> Transaction ViewTag m (Bool -> Widget (Transaction ViewTag m ()))
 makeTreeEdit style depth clipboardRef treeIRef
   | depth >= Config.maxDepth =
-    return $ Widget.strongerKeys goInEventMap $ focusableTextView style ["[Go deeper]"] ["deeper", bs $ guid treeIRef]
+    return $ fmap (Widget.strongerKeys goInEventMap) $ focusableTextView style ["[Go deeper]"] ["deeper", bs $ guid treeIRef]
   | otherwise = do
     isExpanded <- Property.get isExpandedRef
-    valueEdit <- liftM (Widget.strongerKeys $ expandCollapseEventMap isExpanded) $
+    valueEdit <- liftM (fmap (Widget.strongerKeys $ expandCollapseEventMap isExpanded)) $
                  simpleTextEdit style ["value edit", bs $ guid treeIRef] valueTextEditModelRef
     childrenIRefs <- Property.get childrenIRefsRef
     childBox <- if isExpanded && not (null childrenIRefs)
-                then liftM ((:[]) . Widget.weakerKeys moveToParentEventMap) $
+                then liftM ((:[]) . fmap (Widget.weakerKeys moveToParentEventMap)) $
                      makeChildBox style depth clipboardRef outerBoxCursorRef childrenBoxCursorRef childrenIRefsRef
                 else return []
     cValueEdit <- makeBox Box.horizontal
                   [collapser isExpanded,
-                   Widget.liftView $ Spacer.makeHorizontal 1,
+                   const $ Widget.liftView $ Spacer.makeHorizontal 1,
                    valueEdit]
                   (treeNodeBoxCursorRef 2) -- 2 points to valueEdit
     outerBox <- makeBox Box.vertical (cValueEdit : childBox) outerBoxCursorRef
@@ -129,7 +133,7 @@ makeTreeEdit style depth clipboardRef treeIRef
             appendNewNodeEventMap,
             setFocalPointEventMap
             ]
-    return . Widget.weakerKeys keymap $ outerBox
+    return . fmap (Widget.weakerKeys keymap) $ outerBox
     where
       goInEventMap = fromKeyGroups Config.actionKeys "Go deeper" setFocalPoint
       treeRef = Transaction.fromIRef treeIRef
@@ -148,6 +152,7 @@ makeTreeEdit style depth clipboardRef treeIRef
       collapse = Property.set isExpandedRef False
       expand = Property.set isExpandedRef True
       collapser isExpanded =
+        const .
         flip (TextView.makeWidget style) ["collapser", bs $ guid treeIRef] $
         if isExpanded
         then ["[-]"]
@@ -176,7 +181,7 @@ makeEditWidget ::
   Monad m =>
   TextEdit.Style ->
   Transaction.Property ViewTag m [ITreeD] ->
-  Transaction ViewTag m (Widget (Transaction ViewTag m ()))
+  Transaction ViewTag m (Bool -> Widget (Transaction ViewTag m ()))
 makeEditWidget style clipboardRef = do
   focalPointIRefs <- Property.get focalPointIRefsRef
   treeEdit <- makeTreeEdit style 0 clipboardRef (foldr const Anchors.rootIRef focalPointIRefs)
@@ -185,10 +190,10 @@ makeEditWidget style clipboardRef = do
     then makeBox Box.vertical [goUpButton, treeEdit] (Anchors.viewBoxsAnchor "goUp")
     else return treeEdit
   return .
-    Widget.strongerKeys (goUpEventMap focalPointIRefs) $
+    fmap (Widget.strongerKeys (goUpEventMap focalPointIRefs)) $
     widget
   where
-    goUpButton = Widget.strongerKeys (fromKeyGroups Config.actionKeys "Go up" goUp) $
+    goUpButton = fmap (Widget.strongerKeys (fromKeyGroups Config.actionKeys "Go up" goUp)) $
                  focusableTextView style ["[go up]"] ["upper", "edit widget"]
     focalPointIRefsRef = Anchors.focalPointIRefs
     isAtRoot = null
@@ -203,13 +208,13 @@ branchSelectorBoxCursor = Anchors.dbBoxsAnchor "branchSelector"
 
 -- Apply the transactions to the given View and convert them to
 -- transactions on a DB
-makeWidgetForView :: Monad m => TextEdit.Style -> View -> Transaction DBTag m (Widget (Transaction DBTag m ()))
+makeWidgetForView :: Monad m => TextEdit.Style -> View -> Transaction DBTag m (Bool -> Widget (Transaction DBTag m ()))
 makeWidgetForView style view = do
   versionData <- Version.versionData =<< View.curVersion view
   widget <- widgetDownTransaction (Anchors.viewStore view) $
             makeEditWidget style Anchors.clipboard
   let undoEventMap = maybe mempty makeUndoEventMap (Version.parent versionData)
-  return $ Widget.strongerKeys undoEventMap widget
+  return $ fmap (Widget.strongerKeys undoEventMap) widget
   where
     makeUndoEventMap = fromKeyGroups Config.undoKeys "Undo" . View.move view
 
@@ -231,7 +236,7 @@ runDbStore font store = do
   mainLoopWidget . makeWidget $ store
   where
     style = TextEdit.Style font 50
-    makeWidget dbStore = widgetDownTransaction dbStore $ do
+    makeWidget dbStore = liftM ($True) . widgetDownTransaction dbStore $ do
       view <- Property.get Anchors.view
       branches <- Property.get Anchors.branches
       pairs <- mapM pair branches
@@ -240,10 +245,10 @@ runDbStore font store = do
       viewEdit <- makeWidgetForView style view
       box <- makeBox Box.horizontal
         [viewEdit,
-         Widget.liftView Spacer.makeHorizontalExpanding,
-         Widget.strongerKeys (delBranchEventMap (length branches)) branchSelector]
+         const $ Widget.liftView Spacer.makeHorizontalExpanding,
+         fmap (Widget.strongerKeys (delBranchEventMap (length branches))) branchSelector]
         (Anchors.dbBoxsAnchor "main")
-      return $ Widget.strongerKeys (mappend quitEventMap makeBranchEventMap) box
+      return $ fmap (Widget.strongerKeys (mappend quitEventMap makeBranchEventMap)) box
 
     pair (textEditModelIRef, version) = do
       textEdit <- simpleTextEdit style [bs . guid $ textEditModelIRef] . Transaction.fromIRef $ textEditModelIRef

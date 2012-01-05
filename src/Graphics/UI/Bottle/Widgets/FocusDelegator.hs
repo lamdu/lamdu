@@ -2,7 +2,6 @@
 {-# LANGUAGE TypeOperators, OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.FocusDelegator(Cursor, make, makeWithKeys, makeWithLabel) where
 
-import Control.Newtype(unpack)
 import Data.Monoid (mappend)
 import Data.Record.Label ((:->), setL, getL)
 import Graphics.UI.Bottle.Widget(Widget(..))
@@ -23,14 +22,16 @@ defaultStopDelegatingKey = E.KeyEventType E.noMods E.KeyEsc
 blue :: Draw.Color
 blue = Draw.Color 0 0 1 1
 
-makeWithKeys :: E.EventType -> E.EventType -> (Cursor -> k) -> Cursor -> Anim.AnimId -> Widget k -> Widget k
+makeWithKeys ::
+  E.EventType -> E.EventType -> (Cursor -> k) -> Cursor -> Anim.AnimId ->
+  (Bool -> Widget k) -> Bool -> Widget k
 makeWithKeys
-  startDelegatingKey stopDelegatingKey liftCursor delegating _animId widget =
-  Widget $ handleFocus delegating
+  startDelegatingKey stopDelegatingKey liftCursor delegating _animId widget hasFocus =
+  handleFocus delegating hasFocus
   where
-    handleFocus False True = unpack (blueify widget) False
-    handleFocus False False = unpack widget False
-    handleFocus True hasFocus = unpack (addEscape widget) hasFocus
+    handleFocus False True = blueify (widget False)
+    handleFocus False False = widget False
+    handleFocus True _ = addEscape (widget hasFocus)
 
     blueify =
       (Widget.atImageWithSize . Anim.backgroundColor AnimIds.backgroundCursorId 10) blue .
@@ -44,8 +45,12 @@ makeWithKeys
 
     eventMap key = E.singleton key . const . liftCursor
 
-make :: (Cursor -> k) -> Cursor -> Anim.AnimId -> Widget k -> Widget k
+make ::
+  (Cursor -> k) -> Cursor -> Anim.AnimId ->
+  (Bool -> Widget k) -> Bool -> Widget k
 make = makeWithKeys defaultStartDelegatingKey defaultStopDelegatingKey
 
-makeWithLabel :: (model :-> Cursor) -> model -> Anim.AnimId -> Widget model -> Widget model
+makeWithLabel ::
+  (model :-> Cursor) -> model -> Anim.AnimId ->
+  (Bool -> Widget model) -> Bool -> Widget model
 makeWithLabel cursorL model = make (flip (setL cursorL) model) (getL cursorL model)
