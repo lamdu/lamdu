@@ -65,6 +65,8 @@ make style emptyStr (Model cursor str) animId =
     finalText "" = emptyStr
     finalText x  = x
 
+    -- TODO: Take from style
+    cursorColor = Draw.Color 0 1 0 1
     cursorWidth = 8
 
     reqSize = fixedSize $ Vector2 (cursorWidth + tlWidth) tlHeight
@@ -85,7 +87,7 @@ make style emptyStr (Model cursor str) animId =
       Anim.translate (Vector2 cursorPosX cursorPosY) .
       Anim.scale (Vector2 cursorWidth lineHeight) .
       Anim.simpleFrame ["cursor"] $
-      Draw.tint (Draw.Color 0 1 0 1) square
+      Draw.tint cursorColor square
 
     (before, after) = splitAt cursor str
     textLength = length str
