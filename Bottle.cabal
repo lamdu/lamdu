@@ -64,7 +64,6 @@ Library
                        graphics-drawingcombinators >= 1.4,
                        OpenGL,
                        StateVar,
-                       fclabels < 1.0.0,
                        utf8-string >= 0.3,
                        split >= 0.1,
                        newtype >= 0.2,

@@ -1,9 +1,8 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE TypeOperators, OverloadedStrings #-}
-module Graphics.UI.Bottle.Widgets.FocusDelegator(Cursor, make, makeWithKeys, makeWithLabel) where
+module Graphics.UI.Bottle.Widgets.FocusDelegator(Cursor, make, makeWithKeys) where
 
 import Data.Monoid (mappend)
-import Data.Record.Label ((:->), setL, getL)
 import Graphics.UI.Bottle.Widget(Widget(..))
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.AnimIds as AnimIds
@@ -49,8 +48,3 @@ make ::
   (Cursor -> k) -> Cursor -> Anim.AnimId ->
   (Bool -> Widget k) -> Bool -> Widget k
 make = makeWithKeys defaultStartDelegatingKey defaultStopDelegatingKey
-
-makeWithLabel ::
-  (model :-> Cursor) -> model -> Anim.AnimId ->
-  (Bool -> Widget model) -> Bool -> Widget model
-makeWithLabel cursorL model = make (flip (setL cursorL) model) (getL cursorL model)

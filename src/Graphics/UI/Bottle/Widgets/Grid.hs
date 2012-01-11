@@ -1,6 +1,6 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE TypeOperators #-}
-module Graphics.UI.Bottle.Widgets.Grid(Cursor, make, makeWithLabel) where
+module Graphics.UI.Bottle.Widgets.Grid(Cursor, make) where
 
 import Control.Applicative (liftA2)
 import Control.Arrow (first, second)
@@ -10,7 +10,6 @@ import Data.List (foldl', find, transpose)
 import Data.List.Utils (enumerate, enumerate2d, index)
 import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid (mconcat)
-import Data.Record.Label ((:->), getL, setL)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.EventMap (EventMap)
 import Graphics.UI.Bottle.Widget (Widget(..))
@@ -78,8 +77,3 @@ make liftCursor cursor@(Vector2 x y) children hasFocus =
       ]
       where
         wantFocusRows = (map . map) isJust xss
-
-makeWithLabel ::
-  (model :-> Cursor) -> model ->
-  [[Bool -> Widget model]] -> Bool -> Widget model
-makeWithLabel label model = make (flip (setL label) model) (getL label model)

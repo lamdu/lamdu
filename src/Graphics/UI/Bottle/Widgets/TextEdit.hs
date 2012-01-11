@@ -1,6 +1,6 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE TemplateHaskell, TypeOperators, OverloadedStrings #-}
-module Graphics.UI.Bottle.Widgets.TextEdit(Cursor, TextView.Style(..), Model(..), make, makeWithLabel, makeModel) where
+module Graphics.UI.Bottle.Widgets.TextEdit(Cursor, TextView.Style(..), Model(..), make, makeModel) where
 
 import Control.Arrow(first)
 import Data.Binary  -- open import per derive's requirements :/
@@ -11,7 +11,6 @@ import Data.List (genericLength)
 import Data.List.Split (splitOn)
 import Data.Maybe (fromJust)
 import Data.Monoid (mconcat)
-import Data.Record.Label ((:->), getL, setL)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators.Utils (square, textHeight)
 import Graphics.UI.Bottle.SizeRange (fixedSize)
@@ -25,9 +24,6 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
-
-result :: (b -> c) -> (a -> b) -> a -> c
-result = (.)
 
 type Cursor = Int
 
@@ -224,10 +220,3 @@ make style emptyStr (Model cursor str) animId hasFocus =
       where
         cursor' = cursor + length l
         str' = concat [before, l, after]
-
-makeWithLabel ::
-  Style -> String -> model :-> Model -> model -> Anim.AnimId ->
-  Bool -> Widget model
-makeWithLabel style emptyStr label model =
-  (result . result . fmap) (flip (setL label) model) $
-  make style emptyStr (getL label model)

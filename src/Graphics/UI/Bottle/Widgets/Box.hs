@@ -1,8 +1,7 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE Rank2Types, TypeOperators #-}
-module Graphics.UI.Bottle.Widgets.Box(Cursor, make, Orientation, horizontal, vertical, makeWithLabel) where
+module Graphics.UI.Bottle.Widgets.Box(Cursor, make, Orientation, horizontal, vertical) where
 
-import Data.Record.Label ((:->), getL, setL)
 import Data.Vector.Vector2(Vector2(..))
 import Graphics.UI.Bottle.Widget(Widget)
 import qualified Data.Vector.Vector2 as Vector2
@@ -38,9 +37,3 @@ make orientation liftCursor cursor children =
     (liftCursor . fromGridCursor orientation)
     (toGridCursor orientation cursor)
     (toGridChildren orientation children)
-
-makeWithLabel ::
-  Orientation -> (model :-> Cursor) -> model ->
-  [Bool -> Widget model] -> Bool -> Widget model
-makeWithLabel orientation label model =
-  make orientation (flip (setL label) model) (getL label model)
