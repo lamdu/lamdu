@@ -3,17 +3,18 @@
 module Graphics.UI.Bottle.Widgets.Grid(Cursor, make) where
 
 import Control.Applicative (liftA2)
-import Control.Arrow (first, second)
-import Control.Newtype (unpack)
-import Control.Monad (join)
-import Data.List (foldl', find, transpose)
-import Data.List.Utils (enumerate, enumerate2d, index)
-import Data.Maybe (fromMaybe, isJust)
-import Data.Monoid (mconcat)
+import Control.Arrow (second)
+import Control.Newtype (op)
+import Control.Monad (join, msum)
+import Data.List (foldl', transpose)
+import Data.List.Utils (index)
+import Data.Maybe (fromMaybe, catMaybes)
+import Data.Monoid (mappend, mconcat)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.EventMap (EventMap)
 import Graphics.UI.Bottle.Widget (Widget(..))
 import qualified Graphics.UI.Bottle.EventMap as EventMap
+import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.GLFW as GLFW
 
@@ -25,55 +26,52 @@ length2d xs = Vector2 (foldl' max 0 . map length $ xs) (length xs)
 capCursor :: Vector2 Int -> Vector2 Int -> Vector2 Int
 capCursor size = fmap (max 0) . liftA2 min (fmap (subtract 1) size)
 
-mkNavMKeymap :: [[Bool]] -> Cursor -> Maybe (EventMap Cursor)
-mkNavMKeymap wantFocusRows cursor@(Vector2 cursorX cursorY) =
-  mconcat [
-    movement "left"      GLFW.KeyLeft   leftOfCursor,
-    movement "right"     GLFW.KeyRight  rightOfCursor,
-    movement "up"        GLFW.KeyUp     aboveCursor,
-    movement "down"      GLFW.KeyDown   belowCursor,
+mkNavKeymap :: [[Maybe k]] -> Cursor -> EventMap k
+mkNavKeymap mEnterChildren cursor@(Vector2 cursorX cursorY) =
+  mconcat . catMaybes $ [
+    movement "left"      GLFW.KeyLeft     leftOfCursor,
+    movement "right"     GLFW.KeyRight    rightOfCursor,
+    movement "up"        GLFW.KeyUp       aboveCursor,
+    movement "down"      GLFW.KeyDown     belowCursor,
     movement "top"       GLFW.KeyPageup   topCursor,
     movement "bottom"    GLFW.KeyPagedown bottomCursor,
-    movement "leftmost"  GLFW.KeyHome   leftMostCursor,
-    movement "rightmost" GLFW.KeyEnd    rightMostCursor
+    movement "leftmost"  GLFW.KeyHome     leftMostCursor,
+    movement "rightmost" GLFW.KeyEnd      rightMostCursor
     ]
   where
-    size = length2d wantFocusRows
+    size = length2d mEnterChildren
     Vector2 cappedX cappedY = capCursor size cursor
     movement _dirName key =
-      fmap $
-      EventMap.singleton {-("Move " ++ dirName)-}
-      (EventMap.KeyEventType EventMap.noMods key) . const
-    x = fmap (cappedX `Vector2`) . findMove
-    y = fmap (`Vector2` cappedY) . findMove
-    leftOfCursor    = y . reverse . take cursorX $ curRow
-    aboveCursor     = x . reverse . take cursorY $ curColumn
-    rightOfCursor   = y . drop (cursorX+1) $ curRow
-    belowCursor     = x . drop (cursorY+1) $ curColumn
-    topCursor       = x . take (min 1 cursorY) $ curColumn
-    leftMostCursor  = y . take (min 1 cursorX) $ curRow
-    bottomCursor    = x . take 1 . reverse . drop (cursorY+1) $ curColumn
-    rightMostCursor = y . take 1 . reverse . drop (cursorX+1) $ curRow
-    findMove      = fmap fst . find snd
-    curRow        = enumerate . fromMaybe [] $ index wantFocusRows cappedY
-    curColumn     = enumerate . fromMaybe [] $ index (transpose wantFocusRows) cappedX
+      fmap
+        (EventMap.fromEventType {-("Move " ++ dirName)-}
+         (EventMap.KeyEventType EventMap.noMods key)) .
+      msum
+    leftOfCursor    = reverse . take cursorX $ curRow
+    aboveCursor     = reverse . take cursorY $ curColumn
+    rightOfCursor   = drop (cursorX+1) $ curRow
+    belowCursor     = drop (cursorY+1) $ curColumn
+    topCursor       = take (min 1 cursorY) $ curColumn
+    leftMostCursor  = take (min 1 cursorX) $ curRow
+    bottomCursor    = take 1 . reverse . drop (cursorY+1) $ curColumn
+    rightMostCursor = take 1 . reverse . drop (cursorX+1) $ curRow
+    curRow          = fromMaybe [] $ index mEnterChildren cappedY
+    curColumn       = fromMaybe [] $ index (transpose mEnterChildren) cappedX
 
-make ::
-  (Cursor -> k) -> Cursor ->
-  [[Bool -> Widget k]] -> Bool -> Widget k
-make liftCursor cursor@(Vector2 x y) children hasFocus =
+makeFocused :: Cursor -> [[Widget k]] -> Widget k
+makeFocused cursor@(Vector2 x y) children =
   Widget $
-    (fmap . second) (buildKeymap . (map . map) snd) .
-    GridView.makeGeneric fst .
-    (map . map) (applyHasFocus . first compareCursor) .
-    enumerate2d $ children
+    fmap (uncurry Widget.UserIO .
+          second (buildMEventHandlers . (map . map) Widget.uioMEventHandlers)) .
+    GridView.makeGeneric Widget.uioFrame .
+    (map . map) (op Widget) $ children
   where
-    compareCursor (r, c) = Vector2 c r == cursor
-    applyHasFocus (isSelected, child) = unpack . child $ hasFocus && isSelected
-    buildKeymap xss =
-      mconcat [
-        join $ index xss y >>= (`index` x),
-        (fmap . fmap) liftCursor $ mkNavMKeymap wantFocusRows cursor
-      ]
+    buildMEventHandlers mEventHandlerss =
+      (fmap . Widget.atEhEventMap) (`mappend` navKeymap) mActiveChild
       where
-        wantFocusRows = (map . map) isJust xss
+        mEnterChildren = (map . map . fmap) Widget.ehEnter mEventHandlerss
+        navKeymap = mkNavKeymap mEnterChildren cursor
+        mActiveChild = join $ index mEventHandlerss y >>= (`index` x)
+
+make :: Maybe Cursor -> [[Widget k]] -> Widget k
+make (Just fd) = makeFocused fd
+make Nothing = GridView.makeFromWidgets

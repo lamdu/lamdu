@@ -1,16 +1,13 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE TemplateHaskell, TypeOperators, OverloadedStrings #-}
-module Graphics.UI.Bottle.Widgets.TextEdit(Cursor, TextView.Style(..), Model(..), make, makeModel) where
+module Graphics.UI.Bottle.Widgets.TextEdit(Cursor, TextView.Style(..), make) where
 
 import Control.Arrow(first)
-import Data.Binary  -- open import per derive's requirements :/
 import Data.Char (isSpace)
-import Data.Derive.Binary (makeBinary)
-import Data.DeriveTH (derive)
 import Data.List (genericLength)
 import Data.List.Split (splitOn)
 import Data.Maybe (fromJust)
-import Data.Monoid (mconcat)
+import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators.Utils (square, textHeight)
 import Graphics.UI.Bottle.SizeRange (fixedSize)
@@ -29,17 +26,6 @@ type Cursor = Int
 
 type Style = TextView.Style
 
-data Model = Model {
-  modelCursor :: Cursor,
-  modelText :: String
-  }
-  deriving (Show, Read, Eq, Ord)
-
-$(derive makeBinary ''Model)
-
-makeModel :: String -> Model
-makeModel str = Model (length str) str
-
 splitLines :: String -> [String]
 splitLines = splitOn "\n"
 
@@ -49,37 +35,48 @@ tillEndOfWord xs = spaces ++ nonSpaces
     spaces = takeWhile isSpace xs
     nonSpaces = takeWhile (not . isSpace) . dropWhile isSpace $ xs
 
--- | Note: maxLines prevents the *user* from exceeding it, not the
--- | given text...
+-- TODO: Take from style
+cursorColor :: Draw.Color
+cursorColor = Draw.Color 0 1 0 1
+
+cursorWidth :: Draw.R
+cursorWidth = 8
+
+makeDisplayStr :: String -> String -> String
+makeDisplayStr emptyStr ""  = emptyStr
+makeDisplayStr _        str = str
+
+makeUnfocused :: Style -> String -> String -> Anim.AnimId -> Widget (Cursor, String)
+makeUnfocused style emptyStr str animId =
+  Widget . Sized reqSize . const $
+  Widget.UserIO img (Just eventHandlers)
+  where
+    textLines = splitLines displayStr
+    displayStr = makeDisplayStr emptyStr str
+    reqSize = fixedSize $ Vector2 (cursorWidth + tlWidth) tlHeight
+    img = Anim.translate (Vector2 (cursorWidth / 2) 0) frame
+    (frame, Vector2 tlWidth tlHeight) = first ($ ("text" : animId)) $ TextView.drawText style textLines
+    eventHandlers = Widget.EventHandlers {
+      Widget.ehEnter = (length str, str),
+      Widget.ehEventMap = mempty
+      }
 
 -- TODO: Instead of font + ptSize, let's pass a text-drawer (that's
 -- what "Font" should be)
-make :: Style -> String -> Model -> Anim.AnimId -> Bool -> Widget Model
-make style emptyStr (Model cursor str) animId hasFocus =
-  (if hasFocus
-    then Widget.atImageWithSize (Anim.backgroundColor AnimIds.backgroundCursorId 10 blue)
-    else id) .
-  Widget . Sized reqSize $ const (img, Just keymap)
+-- | Note: maxLines prevents the *user* from exceeding it, not the
+-- | given text...
+makeFocused :: Style -> String -> Cursor -> String -> Anim.AnimId -> Widget (Cursor, String)
+makeFocused style emptyStr cursor str animId =
+  Widget.atImageWithSize
+    (Anim.backgroundColor AnimIds.backgroundCursorId 10 blue) .
+  Widget.atImage (`mappend` cursorFrame) .
+  Widget.strongerKeys eventMap $
+  makeUnfocused style emptyStr str animId
   where
     blue = Draw.Color 0 0 0.8 0.8
-    displayStr = finalText str
-    finalText "" = emptyStr
-    finalText x  = x
-
-    -- TODO: Take from style
-    cursorColor = Draw.Color 0 1 0 1
-    cursorWidth = 8
-
-    reqSize = fixedSize $ Vector2 (cursorWidth + tlWidth) tlHeight
-    sz = fromIntegral $ TextView.styleFontSize style
-    img =
-      mconcat . concat $ [
-        [ Anim.translate (Vector2 (cursorWidth / 2) 0) frame ],
-        [ cursorFrame | hasFocus ]
-      ]
-    (frame, Vector2 tlWidth tlHeight) = first ($ ("text" : animId)) $ TextView.drawText style textLines
 
     textLinesWidth = Vector2.fst . snd . TextView.drawText style
+    sz = fromIntegral $ TextView.styleFontSize style
     lineHeight = sz * textHeight
     beforeCursor = take cursor str
     cursorPosX = textLinesWidth . (: []) . last . splitLines $ beforeCursor
@@ -93,8 +90,9 @@ make style emptyStr (Model cursor str) animId hasFocus =
 
     (before, after) = splitAt cursor str
     textLength = length str
-    textLines = splitLines displayStr
     lineCount = length textLines
+    textLines = splitLines displayStr
+    displayStr = makeDisplayStr emptyStr str
 
     linesBefore = reverse (splitLines before)
     linesAfter = splitLines after
@@ -116,13 +114,10 @@ make style emptyStr (Model cursor str) animId hasFocus =
     backMoveWord = moveRelative . negate . length . tillEndOfWord . reverse $ before
     moveWord = moveRelative . length . tillEndOfWord $ after
 
-    singleton :: String -> E.EventType -> (E.Event -> (Cursor, String)) -> E.EventMap Model
-    singleton _doc eventType mkModel =
-      E.singleton eventType $
-      uncurry Model . mkModel
+    singleton doc eventType mkModel =
+      const (E.singleton eventType $ mkModel) (doc :: String)
 
-    keys :: String -> [E.EventType] -> (Cursor, String) -> E.EventMap Model
-    keys doc = mconcat . map (\event -> singleton doc event . const)
+    keys doc = const (mconcat . map E.fromEventType) (doc :: String)
 
     specialKey = E.KeyEventType E.noMods
     ctrlSpecialKey = E.KeyEventType E.ctrl
@@ -131,7 +126,7 @@ make style emptyStr (Model cursor str) animId hasFocus =
     homeKeys = [specialKey KeyHome, ctrlCharKey 'A']
     endKeys = [specialKey KeyEnd, ctrlCharKey 'E']
 
-    keymap =
+    eventMap =
       mconcat . concat $ [
         [ keys "Move left" [specialKey KeyLeft] $
           moveRelative (-1)
@@ -220,3 +215,10 @@ make style emptyStr (Model cursor str) animId hasFocus =
       where
         cursor' = cursor + length l
         str' = concat [before, l, after]
+
+make :: Style -> String -> Maybe Cursor -> String -> Anim.AnimId -> Widget (Cursor, String)
+make style emptyStr (Just cursor) str =
+  makeFocused style emptyStr cursor str
+make style _        Nothing       str =
+  makeUnfocused style "" str
+

@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeOperators #-}
 
 module Data.Store.Property(
-    Property(..), composeLabel, compose,
+    Property(..), composeLabel, compose, pureCompose,
     modify, modify_, pureModify)
 where
 
@@ -30,8 +30,15 @@ pureModify prop = modify_ prop . (return .)
 inFields :: (m a -> m b) -> ((a -> m ()) -> b -> m ()) -> Property m a -> Property m b
 inFields onGet onSet (Property getter setter) = Property (onGet getter) (onSet setter)
 
-compose :: Monad m => (a -> m b) -> (b -> m a) -> Property m a -> Property m b
+compose ::
+  Monad m =>
+  (a -> m b) -> (b -> m a) ->
+  Property m a -> Property m b
 compose aToB bToA = inFields (>>= aToB) (bToA >=>)
+
+pureCompose ::
+  Monad m => (a -> b) -> (b -> a) -> Property m a -> Property m b
+pureCompose ab ba = compose (return . ab) (return . ba)
 
 infixl 5 `composeLabel`
 composeLabel :: Monad m => (a :-> b) -> Property m a -> Property m b

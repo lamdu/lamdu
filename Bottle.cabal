@@ -53,10 +53,7 @@ Library
                        Data.Store.Rev.View,
                        Data.Store.Transaction,
                        Data.Store.Property,
-                       Data.Store.Db,
-
-                       -- DataStore-BottleWidgets
-                       Data.Store.BottleWidgets
+                       Data.Store.Db
 
   Build-depends:       base >= 4,
                        GLFW-b >= 0.0.2,

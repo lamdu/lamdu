@@ -4,7 +4,6 @@ module Graphics.UI.Bottle.Widgets.Spacer (
   make, makeWidget, indentRight, indentRightWidget, makeHorizontal,
   makeHorizontalExpanding, makeVerticalExpanding) where
 
-import Control.Applicative(Applicative, pure)
 import Data.Monoid(mempty)
 import Data.Vector.Vector2(Vector2(..))
 import Graphics.UI.Bottle.SizeRange (fixedSize, Size)
@@ -33,6 +32,6 @@ makeHorizontalExpanding = Sized (SizeRange.horizontallyExpanding 0 0) mempty
 indentRight :: Draw.R -> Sized Anim.Frame -> Sized Anim.Frame
 indentRight width img = GridView.make [[makeHorizontal width, img]]
 
-indentRightWidget :: Applicative f => Draw.R -> f (Widget a) -> f (Widget a)
+indentRightWidget :: Draw.R -> Widget a -> Widget a
 indentRightWidget width widget =
-  GridView.makeFromWidgets [[pure (liftView (makeHorizontal width)), widget]]
+  GridView.makeFromWidgets [[liftView (makeHorizontal width), widget]]

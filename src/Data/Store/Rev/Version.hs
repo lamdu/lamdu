@@ -1,5 +1,5 @@
 {-# OPTIONS -O2 -Wall #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Data.Store.Rev.Version
     (VersionData, depth, parent, changes,
      Version, versionIRef, versionData,
@@ -9,11 +9,15 @@ where
 
 import           Control.Monad          (liftM, liftM2, join)
 import           Data.Binary            (Binary(..))
-import           Data.Binary.Utils      (get3, put3)
 import           Data.Store.IRef        (IRef)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.Store.Rev.Change  (Change(..), Key, Value)
+import Data.Derive.Binary(makeBinary)
+import Data.DeriveTH(derive)
+
+newtype Version = Version { versionIRef :: IRef VersionData }
+  deriving (Eq, Ord, Read, Show, Binary)
 
 data VersionData = VersionData {
   depth :: Int,
@@ -21,12 +25,7 @@ data VersionData = VersionData {
   changes :: [Change]
   }
   deriving (Eq, Ord, Read, Show)
-instance Binary VersionData where
-  get = get3 VersionData
-  put (VersionData a b c) = put3 a b c
-
-newtype Version = Version { versionIRef :: IRef VersionData }
-  deriving (Eq, Ord, Read, Show, Binary)
+$(derive makeBinary ''VersionData)
 
 makeInitialVersion :: Monad m => [(Key, Value)] -> Transaction t m Version
 makeInitialVersion initialValues = liftM Version . Transaction.newIRef . VersionData 0 Nothing $ map makeChange initialValues

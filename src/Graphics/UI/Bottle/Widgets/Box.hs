@@ -4,36 +4,27 @@ module Graphics.UI.Bottle.Widgets.Box(Cursor, make, Orientation, horizontal, ver
 
 import Data.Vector.Vector2(Vector2(..))
 import Graphics.UI.Bottle.Widget(Widget)
-import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 
 type Cursor = Int
 
 data Orientation = Orientation {
-  toGridCursor :: Cursor -> Grid.Cursor,
-  fromGridCursor :: Grid.Cursor -> Cursor,
-  toGridChildren :: forall a. [a] -> [[a]]
+  oToGridCursor :: Cursor -> Grid.Cursor,
+  oToGridChildren :: forall a. [a] -> [[a]]
   }
 
 horizontal :: Orientation
 horizontal = Orientation {
-  toGridCursor = (`Vector2` 0),
-  fromGridCursor = Vector2.fst,
-  toGridChildren = (: [])
+  oToGridCursor = (`Vector2` 0),
+  oToGridChildren = (: [])
   }
 
 vertical :: Orientation
 vertical = Orientation {
-  toGridCursor = (0 `Vector2`),
-  fromGridCursor = Vector2.snd,
-  toGridChildren = map (: [])
+  oToGridCursor = (0 `Vector2`),
+  oToGridChildren = map (: [])
   }
 
-make ::
-  Orientation -> (Cursor -> k) -> Cursor ->
-  [Bool -> Widget k] -> Bool -> Widget k
-make orientation liftCursor cursor children =
-  Grid.make
-    (liftCursor . fromGridCursor orientation)
-    (toGridCursor orientation cursor)
-    (toGridChildren orientation children)
+make :: Orientation -> Maybe Cursor -> [Widget k] -> Widget k
+make (Orientation toGridCursor toGridChildren) mCursor children =
+  Grid.make (fmap toGridCursor mCursor) (toGridChildren children)

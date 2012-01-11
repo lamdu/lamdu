@@ -5,9 +5,10 @@ module Data.Store.IRef.Tree
 where
 
 import Data.Binary       (Binary(..))
-import Data.Binary.Utils (get2, put2)
 import Data.Store.IRef   (IRef)
 import Data.Record.Label ((:->), mkLabels, lens)
+import Data.Derive.Binary(makeBinary)
+import Data.DeriveTH(derive)
 
 data Tree a = Node {
   _nodeValue :: a,
@@ -17,7 +18,4 @@ data Tree a = Node {
 $(mkLabels [''Tree])
 -- nodeValue :: Tree a :-> a
 -- nodeChildrenRefs :: Tree a :-> [IRef (Tree a)]
-
-instance Binary a => Binary (Tree a) where
-  put (Node value children) = put2 value children
-  get = get2 Node
+$(derive makeBinary ''Tree)

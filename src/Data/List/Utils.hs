@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-module Data.List.Utils(enumerate, enumerate2d, nth, index) where
+module Data.List.Utils(enumerate, enumerate2d, nth, index, removeAt) where
 
 enumerate :: (Enum a, Num a) => [b] -> [(a, b)]
 enumerate = zip [0..]
@@ -19,3 +19,6 @@ index :: [a] -> Int -> Maybe a
 index [] _ = Nothing
 index (x:_) 0 = Just x
 index (_:xs) n = index xs (n-1)
+
+removeAt :: Int -> [a] -> [a]
+removeAt n xs = take n xs ++ drop (n+1) xs

@@ -22,11 +22,12 @@ import qualified Data.Store.Rev.Version as Version
 import           Data.Store.Rev.Change  (Change)
 import qualified Data.Store.Rev.Change  as Change
 import           Data.Binary            (Binary(..))
-import           Data.Binary.Utils      (get2, put2)
 import           Data.Store.IRef        (IRef)
 import qualified Data.Store.IRef        as IRef
 import qualified Data.Record.Label      as Label
 import           Data.Record.Label      ((:->), mkLabels, lens)
+import Data.Derive.Binary(makeBinary)
+import Data.DeriveTH(derive)
 
 newtype ViewData = ViewData { _vdBranch :: Branch }
   deriving (Binary, Eq, Ord, Show, Read)
@@ -49,9 +50,7 @@ $(mkLabels [''ViewData, ''BranchData])
 -- brVersion :: BranchData :-> Version
 -- brViews :: BranchData :-> [View]
 
-instance Binary BranchData where
-  get = get2 BranchData
-  put (BranchData a b) = put2 a b
+$(derive makeBinary ''BranchData)
 
 -- | moveView must be given the correct source of the movement
 -- | or it will result in undefined results!
