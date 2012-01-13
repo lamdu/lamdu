@@ -247,7 +247,7 @@ makeTreeEdit style depth clipboardRef treeIRef cursor
 
       setFocalPointEventMap = fromKeyGroups Config.setFocalPointKeys "Set focal point" setFocalPoint
       setFocalPoint =
-        Property.pureModify Anchors.focalPointIRefs (treeIRef:) >> return myCursor
+        Property.pureModify Anchors.focalPointIRefs (treeIRef:) >> return AnimIds.goUpId
       appendChild newRef = do
         Property.pureModify childrenIRefsRef (++ [newRef])
         return . animIdOfTreeIRef $ newRef
