@@ -26,26 +26,35 @@ length2d xs = Vector2 (foldl' max 0 . map length $ xs) (length xs)
 capCursor :: Vector2 Int -> Vector2 Int -> Vector2 Int
 capCursor size = fmap (max 0) . liftA2 min (fmap (subtract 1) size)
 
-mkNavKeymap :: [[Maybe k]] -> Cursor -> EventMap k
+fromRight :: Widget.Direction
+fromRight = Vector2 1 0
+fromLeft :: Widget.Direction
+fromLeft = Vector2 (-1) 0
+fromAbove :: Widget.Direction
+fromAbove = Vector2 0 (-1)
+fromBelow :: Widget.Direction
+fromBelow = Vector2 0 1
+
+mkNavKeymap :: [[Maybe (Widget.Direction -> k)]] -> Cursor -> EventMap k
 mkNavKeymap mEnterChildren cursor@(Vector2 cursorX cursorY) =
   mconcat . catMaybes $ [
-    movement "left"      GLFW.KeyLeft     leftOfCursor,
-    movement "right"     GLFW.KeyRight    rightOfCursor,
-    movement "up"        GLFW.KeyUp       aboveCursor,
-    movement "down"      GLFW.KeyDown     belowCursor,
-    movement "top"       GLFW.KeyPageup   topCursor,
-    movement "bottom"    GLFW.KeyPagedown bottomCursor,
-    movement "leftmost"  GLFW.KeyHome     leftMostCursor,
-    movement "rightmost" GLFW.KeyEnd      rightMostCursor
+    movement "left"      GLFW.KeyLeft     fromRight  leftOfCursor,
+    movement "right"     GLFW.KeyRight    fromLeft   rightOfCursor,
+    movement "up"        GLFW.KeyUp       fromBelow  aboveCursor,
+    movement "down"      GLFW.KeyDown     fromAbove  belowCursor,
+    movement "top"       GLFW.KeyPageup   fromBelow  topCursor,
+    movement "bottom"    GLFW.KeyPagedown fromAbove  bottomCursor,
+    movement "leftmost"  GLFW.KeyHome     fromRight  leftMostCursor,
+    movement "rightmost" GLFW.KeyEnd      fromLeft   rightMostCursor
     ]
   where
     size = length2d mEnterChildren
     Vector2 cappedX cappedY = capCursor size cursor
-    movement _dirName key =
+    movement _dirName key direction =
       fmap
         (EventMap.fromEventType {-("Move " ++ dirName)-}
          (EventMap.KeyEventType EventMap.noMods key)) .
-      msum
+      fmap ($ direction) . msum
     leftOfCursor    = reverse . take cursorX $ curRow
     aboveCursor     = reverse . take cursorY $ curColumn
     rightOfCursor   = drop (cursorX+1) $ curRow
@@ -73,5 +82,5 @@ makeFocused cursor@(Vector2 x y) children =
         mActiveChild = join $ index mEventHandlerss y >>= (`index` x)
 
 make :: Maybe Cursor -> [[Widget k]] -> Widget k
-make (Just fd) = makeFocused fd
+make (Just cursor) = makeFocused cursor
 make Nothing = GridView.makeFromWidgets

@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor, FlexibleInstances,
              MultiParamTypeClasses #-}
 module Graphics.UI.Bottle.Widget (
-  Widget(..),
+  Widget(..), Direction,
   EventHandlers(..), atEhEnter, atEhEventMap,
   UserIO(..), atUioFrame, atUioMEventHandlers,
   image, eventMap, eventHandlers, takesFocus,
@@ -16,6 +16,7 @@ import Control.Newtype (unpack, over)
 import Control.Newtype.TH (mkNewTypes)
 import Data.Monoid (Monoid(..))
 import Data.Record.Label (getL)
+import Data.Vector.Vector2 (Vector2)
 import Graphics.UI.Bottle.Animation (Frame)
 import Graphics.UI.Bottle.EventMap (EventMap)
 import Graphics.UI.Bottle.SizeRange (Size)
@@ -25,12 +26,14 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.SizeRange as SizeRange
 import qualified Graphics.UI.Bottle.Sized as Sized
 
+type Direction = Vector2 Int
+
 data EventHandlers k = EventHandlers {
-  ehEnter :: k,
+  ehEnter :: Direction -> k,
   ehEventMap :: EventMap k
   }
   deriving (Functor)
-atEhEnter :: (a -> a) -> EventHandlers a -> EventHandlers a
+atEhEnter :: ((Direction -> a) -> Direction -> a) -> EventHandlers a -> EventHandlers a
 atEhEnter f (EventHandlers enter eventMap) =
   EventHandlers (f enter) eventMap
 
@@ -99,13 +102,13 @@ eventMap :: Widget k -> Size -> Maybe (EventMap k)
 eventMap = (fmap . fmap . fmap) ehEventMap eventHandlers
 
 -- ^ If widget already takes focus, it is untouched
-takesFocus :: a -> Widget a -> Widget a
+takesFocus :: (Direction -> a) -> Widget a -> Widget a
 takesFocus enter =
   atMaybeEventHandlers
   (Just .
    maybe (EventHandlers enter mempty) (atEhEnter . const $ enter))
 
-atEnter :: (a -> a) -> Widget a -> Widget a
+atEnter :: ((Direction -> a) -> Direction -> a) -> Widget a -> Widget a
 atEnter = atMaybeEventHandlers . fmap . atEhEnter
 
 atEventMap :: (EventMap a -> EventMap a) -> Widget a -> Widget a

@@ -57,8 +57,11 @@ makeUnfocused style emptyStr str animId =
     img = Anim.translate (Vector2 (cursorWidth / 2) 0) frame
     (frame, Vector2 tlWidth tlHeight) =
       first ($ ("text" : animId)) $ TextView.drawText style textLines
+    enterPos (Vector2 x _)
+      | x < 0 = 0
+      | otherwise = length str
     eventHandlers = Widget.EventHandlers {
-      Widget.ehEnter = (length str, str),
+      Widget.ehEnter = flip (,) str . enterPos,
       Widget.ehEventMap = mempty
       }
 

@@ -26,5 +26,5 @@ vertical = Orientation {
   }
 
 make :: Orientation -> Maybe Cursor -> [Widget k] -> Widget k
-make (Orientation toGridCursor toGridChildren) mCursor children =
-  Grid.make (fmap toGridCursor mCursor) (toGridChildren children)
+make (Orientation toGridCursor toGridChildren) mCursor =
+  Grid.make (fmap toGridCursor mCursor) . toGridChildren

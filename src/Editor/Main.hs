@@ -72,7 +72,7 @@ focusableTextView style textLines animId cursor = return focusable
       (if hasFocus
          then Widget.backgroundColor AnimIds.backgroundCursorId blue
          else id) .
-      Widget.takesFocus animId $
+      Widget.takesFocus (const animId) $
       TextView.makeWidget style textLines animId
 
     hasFocus = animId == cursor
@@ -80,6 +80,9 @@ focusableTextView style textLines animId cursor = return focusable
 
 indentSize :: Num a => a
 indentSize = 80
+
+findFocusedChildIndex :: [Focusable a] -> Maybe Int
+findFocusedChildIndex = fmap fst . find (fIsFocused . snd) . enumerate
 
 makeBox ::
   Monad m => Box.Orientation -> [Focusable (m Cursor)] -> Focusable (m Cursor)
@@ -89,22 +92,25 @@ makeBox orientation children =
     fWidget = Box.make orientation mChildIndex $ map fWidget children
     }
   where
-    mChildIndex = fmap fst . find (fIsFocused . snd) $ enumerate children
+    mChildIndex = findFocusedChildIndex children
 
 makeChoice ::
   (Monad m) =>
   Anim.AnimId -> Transaction.Property t m Int -> Box.Orientation ->
-  [(Cursor, TWidget t m)] -> TWidget t m
+  [TWidget t m] -> TWidget t m
 makeChoice selectionAnimId curChoiceRef orientation children cursor = do
   curChoice <- Property.get curChoiceRef
-  let ids = map fst children
-  focusables <- mapM (($ cursor) . snd) children
-  return .
-    (atWidget . Widget.atEnter . const . return) (ids !! curChoice) .
-    makeBox orientation .
-    (nth curChoice . atWidget) (Widget.backgroundColor selectionAnimId selectedColor) .
-    map updateCurChoice $
-    enumerate focusables
+  focusables <- mapM ($ cursor) children
+  let
+    widget =
+      Box.make orientation (Just curChoice) . map fWidget .
+      (nth curChoice . atWidget) (Widget.backgroundColor selectionAnimId selectedColor) .
+      map updateCurChoice $
+      enumerate focusables
+  return $ Focusable {
+    fIsFocused = isJust $ findFocusedChildIndex focusables,
+    fWidget = widget
+    }
   where
     updateCurChoice (i, focusable) =
       (atWidget . fmap) (Property.set curChoiceRef i >>) focusable
@@ -345,10 +351,7 @@ runDbStore font store = do
 
       let
         makeBranchNameEdit textEditModelIRef =
-          (animId,
-           simpleTextEdit style animId (Transaction.fromIRef textEditModelIRef))
-          where
-            animId = AnimIds.fromIRef textEditModelIRef
+          simpleTextEdit style (AnimIds.fromIRef textEditModelIRef) (Transaction.fromIRef textEditModelIRef)
         guiBranches = (map . first) makeBranchNameEdit namedBranches
 
         branches = map snd guiBranches

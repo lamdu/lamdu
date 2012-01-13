@@ -6,8 +6,10 @@ module Graphics.UI.Bottle.Widgets.GridView(
 import Control.Arrow (first, second)
 import Control.Applicative (liftA2)
 import Control.Newtype
-import Control.Monad (msum)
-import Data.List (transpose)
+import Data.Ord (comparing)
+import Data.List (transpose, maximumBy)
+import Data.List.Utils (enumerate2d)
+import Data.Maybe (mapMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.SizeRange (SizeRange(..), Size, Coordinate)
@@ -91,6 +93,18 @@ unzip2d = unzip . map unzip
 make :: [[Sized Anim.Frame]] -> Sized Anim.Frame
 make = fmap fst . makeGeneric id
 
+maximumOn :: Ord b => (a -> b) -> [a] -> a
+maximumOn = maximumBy . comparing
+
+makeEnter :: [[Maybe (Widget.Direction -> k)]] -> Maybe (Widget.Direction -> k)
+makeEnter =
+  search . mapMaybe inverse . concat . enumerate2d
+  where
+    search [] = Nothing
+    search xs = Just $ byDirection xs
+    byDirection xs dir = ($ dir) . snd . maximumOn fst $ (map . first) (dir *) xs
+    inverse ((y, x), m) = fmap ((,) $ Vector2 x y) m
+
 -- ^ This will send events to the first widget in the list that would
 -- take them. It is useful especially for lifting views to widgets and
 -- composing them with widgets.
@@ -99,7 +113,20 @@ makeFromWidgets =
   Widget .
   fmap
     (uncurry Widget.UserIO .
-     -- TODO: msum takes the first, when we should enter by direction
-     second (msum . map Widget.uioMEventHandlers . concat)) .
+     second (combineEventHandlers .
+             (map . map) Widget.uioMEventHandlers)) .
   makeGeneric Widget.uioFrame .
   (map . map) (op Widget)
+  where
+    combineEventHandlers mEventHandlerss =
+      liftA2 mkEventHandlers mEventMap mEnters
+      where
+        mkEventHandlers eventMap enter =
+          Widget.EventHandlers {
+            Widget.ehEventMap = eventMap,
+            Widget.ehEnter = enter
+            }
+        mEventMap =
+          mconcat . concat $
+          (map . map . fmap) Widget.ehEventMap mEventHandlerss
+        mEnters = makeEnter $ (map . map . fmap) Widget.ehEnter mEventHandlerss
