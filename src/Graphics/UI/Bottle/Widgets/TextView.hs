@@ -38,14 +38,14 @@ drawText (Style font ptSize) textLines =
       where
         draw animId = Anim.simpleFrameDownscale (augment (i :: (Int, Int)) animId) size image
 
-    drawMany :: (Vector2 Draw.R -> Vector2 Draw.R) -> [(Anim.AnimId -> Anim.Frame, Vector2 Draw.R)] -> (Anim.AnimId -> Anim.Frame, Vector2 Draw.R)
-    drawMany _ [] = (mempty, 0)
-    drawMany sizeToTranslate ((drawX,sizeX):xs) =
-      (mappend drawX $ fmap (Anim.translate trans) drawXs,
-       liftA2 max sizeX (trans + sizeXs))
+    resize = liftA2 max $ Vector2 0 DrawUtils.textHeight
+    drawMany sizeToTranslate = second resize . foldr step (mempty, 0)
       where
-        trans = sizeToTranslate sizeX
-        (drawXs, sizeXs) = drawMany sizeToTranslate xs
+        step (drawX, sizeX) (drawXs, sizeXs) =
+          (mappend drawX $ fmap (Anim.translate trans) drawXs,
+           liftA2 max sizeX $ trans + sizeXs)
+          where
+            trans = sizeToTranslate sizeX
 
     horizontal = Vector2.second (const 0)
     vertical = Vector2.first (const 0)

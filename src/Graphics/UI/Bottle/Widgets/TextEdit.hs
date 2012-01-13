@@ -55,7 +55,8 @@ makeUnfocused style emptyStr str animId =
     displayStr = makeDisplayStr emptyStr str
     reqSize = fixedSize $ Vector2 (cursorWidth + tlWidth) tlHeight
     img = Anim.translate (Vector2 (cursorWidth / 2) 0) frame
-    (frame, Vector2 tlWidth tlHeight) = first ($ ("text" : animId)) $ TextView.drawText style textLines
+    (frame, Vector2 tlWidth tlHeight) =
+      first ($ ("text" : animId)) $ TextView.drawText style textLines
     eventHandlers = Widget.EventHandlers {
       Widget.ehEnter = (length str, str),
       Widget.ehEventMap = mempty
