@@ -16,6 +16,7 @@ import Graphics.UI.Bottle.Widget (Widget(..))
 import Graphics.UI.GLFW (Key(KeyBackspace, KeyDel, KeyDown, KeyEnd, KeyEnter, KeyHome, KeyLeft, KeyRight, KeyUp))
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.DrawingCombinators as Draw
+-- TODO: Don't import AnimIds here
 import qualified Graphics.UI.Bottle.AnimIds as AnimIds
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
