@@ -5,7 +5,7 @@ module Main(main) where
 
 import Control.Arrow (first)
 import Control.Category ((.))
-import Control.Monad (liftM, forM)
+import Control.Monad (liftM, forM, when)
 import Data.List (find, findIndex, isPrefixOf, elemIndex)
 import Data.List.Utils (enumerate, nth, removeAt)
 import Data.Maybe (fromMaybe, isJust)
@@ -256,10 +256,7 @@ makeTreeEdit style depth clipboardRef treeIRef cursor
         Property.pureModify Anchors.focalPointIRefs (treeIRef:) >> return AnimIds.goUpId
       appendChild newRef = do
         Property.pureModify childrenIRefsRef (++ [newRef])
-        return . animIdOfTreeIRef $ newRef
-
-animIdOfTreeIRef :: ITreeD -> Anim.AnimId
-animIdOfTreeIRef = AnimIds.valueEditId . AnimIds.fromIRef -- todo: Remove this ugly duplication
+        return . Anchors.animIdOfTreeIRef $ newRef
 
 getFocalPoint :: Monad m => Transaction ViewTag m (Bool, ITreeD)
 getFocalPoint = do
@@ -279,7 +276,7 @@ makeEditWidget style clipboardRef cursor = do
   let
     goUp = do
       Property.pureModify Anchors.focalPointIRefs (drop 1)
-      liftM (animIdOfTreeIRef . snd) getFocalPoint
+      liftM (Anchors.animIdOfTreeIRef . snd) getFocalPoint
     goUpEventMap =
       if isAtRoot
       then mempty
@@ -338,6 +335,65 @@ deleteCurrentBranch = do
   Property.set Anchors.currentBranch . snd $
     newBranches !! min (length newBranches - 1) index
 
+makeRootFocusable ::
+  Monad m =>
+  TextView.Style -> Cursor ->
+  Transaction DBTag m (Focusable (Transaction DBTag m Cursor))
+makeRootFocusable style cursor = do
+  view <- Property.get Anchors.view
+  namedBranches <- Property.get Anchors.branches
+
+  let
+    makeBranchNameEdit textEditModelIRef =
+      simpleTextEdit style (AnimIds.fromIRef textEditModelIRef) (Transaction.fromIRef textEditModelIRef)
+    guiBranches = (map . first) makeBranchNameEdit namedBranches
+
+    branches = map snd guiBranches
+    branchIndexRef =
+      pureCompose
+        (fromMaybe (error "Selected branch not in branch list") .
+         (`elemIndex` branches)) (branches !!)
+        Anchors.currentBranch
+
+  branchSelector <-
+    makeChoice AnimIds.branchSelection branchIndexRef
+    Box.vertical (map fst guiBranches) cursor
+  branch <- Property.get Anchors.currentBranch
+
+  View.setBranch view branch
+  viewEdit <- makeWidgetForView style view cursor
+  let
+    delBranchEventMap numBranches
+      | 1 == numBranches = mempty
+      | otherwise =
+        fromKeyGroups Config.delBranchKeys "Delete Branch" $
+          deleteCurrentBranch >> return cursor
+    box =
+      makeBox Box.horizontal
+      [viewEdit
+      ,focusableFromView Spacer.makeHorizontalExpanding
+      ,atWidget (Widget.strongerKeys (delBranchEventMap (length branches)))
+       branchSelector
+      ]
+  let
+    makeBranchEventMap =
+      fromKeyGroups Config.makeBranchKeys "New Branch" $ do
+        newBranch <- Branch.new =<< View.curVersion view
+        textEditModelIRef <- Transaction.newIRef "New view"
+        let viewPair = (textEditModelIRef, newBranch)
+        Property.pureModify Anchors.branches (++ [viewPair])
+        Property.set Anchors.currentBranch newBranch
+        return cursor
+
+  let
+    quitEventMap = fromKeyGroups Config.quitKeys "Quit" (error "Quit")
+
+  return $
+    atWidget
+    (Widget.strongerKeys
+     (mappend quitEventMap makeBranchEventMap))
+    box
+
 runDbStore :: Draw.Font -> Transaction.Store DBTag IO -> IO a
 runDbStore font store = do
   Anchors.initDB store
@@ -346,60 +402,19 @@ runDbStore font store = do
     style = TextEdit.Style font 50
     makeWidget = widgetDownTransaction $ do
       cursor <- Property.get Anchors.cursor
-      view <- Property.get Anchors.view
-      namedBranches <- Property.get Anchors.branches
+      candidateFocusable <- makeRootFocusable style cursor
+      focusable <-
+        if fIsFocused candidateFocusable
+        then
+          return candidateFocusable
+        else
+          makeRootFocusable style $ Anchors.animIdOfTreeIRef Anchors.rootIRef
 
-      let
-        makeBranchNameEdit textEditModelIRef =
-          simpleTextEdit style (AnimIds.fromIRef textEditModelIRef) (Transaction.fromIRef textEditModelIRef)
-        guiBranches = (map . first) makeBranchNameEdit namedBranches
+      when (not $ fIsFocused focusable) $
+        fail "Root cursor did not match"
 
-        branches = map snd guiBranches
-        branchIndexRef =
-          pureCompose
-            (fromMaybe (error "Selected branch not in branch list") .
-             (`elemIndex` branches)) (branches !!)
-            Anchors.currentBranch
-
-      branchSelector <-
-        makeChoice AnimIds.branchSelection branchIndexRef
-        Box.vertical (map fst guiBranches) cursor
-      branch <- Property.get Anchors.currentBranch
-
-      View.setBranch view branch
-      viewEdit <- makeWidgetForView style view cursor
-      let
-        delBranchEventMap numBranches
-          | 1 == numBranches = mempty
-          | otherwise =
-            fromKeyGroups Config.delBranchKeys "Delete Branch" $
-              deleteCurrentBranch >> return cursor
-        box =
-          makeBox Box.horizontal
-          [viewEdit
-          ,focusableFromView Spacer.makeHorizontalExpanding
-          ,atWidget (Widget.strongerKeys (delBranchEventMap (length branches)))
-           branchSelector
-          ]
-      let
-        makeBranchEventMap =
-          fromKeyGroups Config.makeBranchKeys "New Branch" $ do
-            newBranch <- Branch.new =<< View.curVersion view
-            textEditModelIRef <- Transaction.newIRef "New view"
-            let viewPair = (textEditModelIRef, newBranch)
-            Property.pureModify Anchors.branches (++ [viewPair])
-            Property.set Anchors.currentBranch newBranch
-            return cursor
-
-        focusable =
-          atWidget
-          (Widget.strongerKeys
-           (mappend quitEventMap makeBranchEventMap))
-          box
       return . fmap attachCursor . fWidget $ focusable
 
     widgetDownTransaction = Transaction.run store . (liftM . fmap) (Transaction.run store)
 
     attachCursor transaction = Property.set Anchors.cursor =<< transaction
-
-    quitEventMap = fromKeyGroups Config.quitKeys "Quit" (error "Quit")
