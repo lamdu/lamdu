@@ -60,7 +60,7 @@ atWidget f (Focusable isFocused widget) =
 type TWidget t m =
   Cursor -> Transaction t m (Focusable (Transaction t m Cursor))
 
-focusableTextView :: Monad m => TextView.Style -> [String] -> Anim.AnimId -> TWidget t m
+focusableTextView :: Monad m => TextEdit.Style -> [String] -> Anim.AnimId -> TWidget t m
 focusableTextView style textLines animId cursor = return focusable
   where
     focusable = Focusable {
@@ -73,7 +73,7 @@ focusableTextView style textLines animId cursor = return focusable
          then Widget.backgroundColor AnimIds.backgroundCursorId blue
          else id) .
       Widget.takesFocus (const animId) $
-      TextView.makeWidget style textLines animId
+      TextView.makeWidget (TextEdit.sTextViewStyle style) textLines animId
 
     hasFocus = animId == cursor
     blue = Draw.Color 0 0 1 0.8
@@ -236,7 +236,7 @@ makeTreeEdit style depth clipboardRef treeIRef cursor
       collapse = Property.set isExpandedRef False
       expand = Property.set isExpandedRef True
       collapser isExpanded =
-        flip (TextView.make style) (AnimIds.collapserId animId) $
+        flip (TextView.make (TextEdit.sTextViewStyle style)) (AnimIds.collapserId animId) $
         if isExpanded
         then ["[-]"]
         else ["[+]"]
@@ -337,7 +337,7 @@ deleteCurrentBranch = do
 
 makeRootFocusable ::
   Monad m =>
-  TextView.Style -> Cursor ->
+  TextEdit.Style -> Cursor ->
   Transaction DBTag m (Focusable (Transaction DBTag m Cursor))
 makeRootFocusable style cursor = do
   view <- Property.get Anchors.view
@@ -399,7 +399,17 @@ runDbStore font store = do
   Anchors.initDB store
   mainLoopWidget makeWidget
   where
-    style = TextEdit.Style font 50
+    style = TextEdit.Style {
+      TextEdit.sTextViewStyle =
+        TextView.Style {
+          TextView.styleFont = font,
+          TextView.styleFontSize = 50
+          },
+      TextEdit.sCursorColor = TextEdit.defaultCursorColor,
+      TextEdit.sCursorWidth = TextEdit.defaultCursorWidth,
+      TextEdit.sTextCursorId = AnimIds.textCursorId,
+      TextEdit.sBackgroundCursorId = AnimIds.backgroundCursorId
+      }
     makeWidget = widgetDownTransaction $ do
       cursor <- Property.get Anchors.cursor
       candidateFocusable <- makeRootFocusable style cursor
