@@ -3,13 +3,12 @@
 module Graphics.UI.Bottle.Widgets.Grid(Cursor, make) where
 
 import Control.Applicative (liftA2)
-import Control.Arrow (second)
 import Control.Newtype (op)
 import Control.Monad (join, msum)
 import Data.List (foldl', transpose)
 import Data.List.Utils (index)
 import Data.Maybe (fromMaybe, catMaybes)
-import Data.Monoid (mappend, mconcat)
+import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.EventMap (EventMap)
 import Graphics.UI.Bottle.Widget (Widget(..))
@@ -35,8 +34,8 @@ fromAbove = Vector2 0 (-1)
 fromBelow :: Widget.Direction
 fromBelow = Vector2 0 1
 
-mkNavKeymap :: [[Maybe (Widget.Direction -> k)]] -> Cursor -> EventMap k
-mkNavKeymap mEnterChildren cursor@(Vector2 cursorX cursorY) =
+mkNavEventmap :: [[Maybe (Widget.Direction -> k)]] -> Cursor -> EventMap k
+mkNavEventmap mEnterChildren cursor@(Vector2 cursorX cursorY) =
   mconcat . catMaybes $ [
     movement "left"      GLFW.KeyLeft     fromRight  leftOfCursor,
     movement "right"     GLFW.KeyRight    fromLeft   rightOfCursor,
@@ -69,17 +68,23 @@ mkNavKeymap mEnterChildren cursor@(Vector2 cursorX cursorY) =
 makeFocused :: Cursor -> [[Widget k]] -> Widget k
 makeFocused cursor@(Vector2 x y) children =
   Widget $
-    fmap (uncurry Widget.UserIO .
-          second (buildMEventHandlers . (map . map) Widget.uioMEventHandlers)) .
+    fmap combineUserIOs .
     GridView.makeGeneric Widget.uioFrame .
     (map . map) (op Widget) $ children
   where
-    buildMEventHandlers mEventHandlerss =
-      (fmap . Widget.atEhEventMap) (`mappend` navKeymap) mActiveChild
+    combineUserIOs (frame, userIOss) =
+      Widget.UserIO {
+        Widget.uioFrame = frame,
+        -- Take the enter of the chosen child here. The Grid enter
+        -- logic is in GridView.makeFromWidgets
+        Widget.uioMaybeEnter = join $ fmap Widget.uioMaybeEnter mChosenUserIO,
+        Widget.uioEventMap = chosenEventmap `mappend` navEventmap
+        }
       where
-        mEnterChildren = (map . map . fmap) Widget.ehEnter mEventHandlerss
-        navKeymap = mkNavKeymap mEnterChildren cursor
-        mActiveChild = join $ index mEventHandlerss y >>= (`index` x)
+        mEnterss = (map . map) Widget.uioMaybeEnter userIOss
+        navEventmap = mkNavEventmap mEnterss cursor
+        chosenEventmap = fromMaybe mempty $ fmap Widget.uioEventMap mChosenUserIO
+        mChosenUserIO = index userIOss y >>= (`index` x)
 
 make :: Maybe Cursor -> [[Widget k]] -> Widget k
 make (Just cursor) = makeFocused cursor

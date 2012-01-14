@@ -71,7 +71,7 @@ mainLoopWidget mkWidget = mainLoopAnim eventHandler mkImage
   where
     eventHandler size event = do
       widget <- mkWidget
-      fromMaybe (return ()) $ E.lookup event =<< Widget.eventMap widget size
+      fromMaybe (return ()) . E.lookup event $ Widget.eventMap widget size
     mkImage size = do
       widget <- mkWidget
       return $ Widget.image widget size

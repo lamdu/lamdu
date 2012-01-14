@@ -49,21 +49,23 @@ makeDisplayStr _        str = str
 makeUnfocused :: Style -> String -> String -> Anim.AnimId -> Widget (Cursor, String)
 makeUnfocused style emptyStr str animId =
   Widget . Sized reqSize . const $
-  Widget.UserIO img (Just eventHandlers)
+  Widget.UserIO {
+    Widget.uioFrame = img,
+    Widget.uioEventMap = mempty,
+    Widget.uioMaybeEnter = Just enter
+    }
   where
+    enter dir = (enterPos dir, str)
+    enterPos (Vector2 x _)
+      | x < 0 = 0
+      | otherwise = length str
+
     textLines = splitLines displayStr
     displayStr = makeDisplayStr emptyStr str
     reqSize = fixedSize $ Vector2 (cursorWidth + tlWidth) tlHeight
     img = Anim.translate (Vector2 (cursorWidth / 2) 0) frame
     (frame, Vector2 tlWidth tlHeight) =
       first ($ ("text" : animId)) $ TextView.drawText style textLines
-    enterPos (Vector2 x _)
-      | x < 0 = 0
-      | otherwise = length str
-    eventHandlers = Widget.EventHandlers {
-      Widget.ehEnter = flip (,) str . enterPos,
-      Widget.ehEventMap = mempty
-      }
 
 -- TODO: Instead of font + ptSize, let's pass a text-drawer (that's
 -- what "Font" should be)

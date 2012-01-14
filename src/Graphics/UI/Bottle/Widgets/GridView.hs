@@ -111,22 +111,16 @@ makeEnter =
 makeFromWidgets :: [[Widget k]] -> Widget k
 makeFromWidgets =
   Widget .
-  fmap
-    (uncurry Widget.UserIO .
-     second (combineEventHandlers .
-             (map . map) Widget.uioMEventHandlers)) .
+  fmap combineEventHandlers .
   makeGeneric Widget.uioFrame .
   (map . map) (op Widget)
   where
-    combineEventHandlers mEventHandlerss =
-      liftA2 mkEventHandlers mEventMap mEnters
+    combineEventHandlers (frame, userIOss) =
+      Widget.UserIO {
+        Widget.uioFrame = frame,
+        Widget.uioMaybeEnter = mEnter,
+        Widget.uioEventMap = eventMap
+        }
       where
-        mkEventHandlers eventMap enter =
-          Widget.EventHandlers {
-            Widget.ehEventMap = eventMap,
-            Widget.ehEnter = enter
-            }
-        mEventMap =
-          mconcat . concat $
-          (map . map . fmap) Widget.ehEventMap mEventHandlerss
-        mEnters = makeEnter $ (map . map . fmap) Widget.ehEnter mEventHandlerss
+        eventMap = mconcat $ map Widget.uioEventMap $ concat userIOss
+        mEnter = makeEnter $ (map . map) Widget.uioMaybeEnter userIOss
