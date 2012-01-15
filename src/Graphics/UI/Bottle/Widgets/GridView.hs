@@ -9,7 +9,7 @@ import Control.Newtype
 import Data.Ord (comparing)
 import Data.List (transpose, maximumBy)
 import Data.List.Utils (enumerate2d)
-import Data.Maybe (mapMaybe)
+import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.SizeRange (SizeRange(..), Size, Coordinate)
@@ -102,7 +102,7 @@ makeEnter =
   where
     search [] = Nothing
     search xs = Just $ byDirection xs
-    byDirection xs dir = ($ dir) . snd . maximumOn fst $ (map . first) (dir *) xs
+    byDirection xs dir = ($ dir) . snd . maximumOn fst $ (map . first) (fromMaybe 0 dir *) xs
     inverse ((y, x), m) = fmap ((,) $ Vector2 x y) m
 
 -- ^ This will send events to the first widget in the list that would

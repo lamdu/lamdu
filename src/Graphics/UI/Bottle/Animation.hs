@@ -55,7 +55,7 @@ instance Monoid Frame where
   mempty = Frame mempty
   mappend (Frame x) (Frame y) =
     Frame $
-    Map.unionWith (error "Attempt to unify same-id sub-images!") x y
+    Map.unionWithKey (error . ("Attempt to unify same-id sub-images: " ++) . show) x y
 
 sortOn :: Ord b => (a -> b) -> [a] -> [a]
 sortOn = sortBy . comparing

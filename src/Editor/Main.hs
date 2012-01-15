@@ -37,6 +37,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified System.Info
 
@@ -158,12 +159,39 @@ subId folder path
 joinId :: Anim.AnimId -> Anim.AnimId -> Anim.AnimId
 joinId = (++)
 
+wrapDelegated :: Monad m => (Anim.AnimId -> TWidget t m) -> Anim.AnimId -> TWidget t m
+wrapDelegated f animId cursor = do
+  let textEditAnimId = joinId animId ["delegating"]
+  innerFocusable <- f textEditAnimId cursor
+  let
+    cursorSelf _ = makeDelegator $ Just FocusDelegator.NotDelegating
+    cursorNotSelf
+      | fIsFocused innerFocusable =
+        makeDelegator $ Just FocusDelegator.Delegating
+      | otherwise = makeDelegator Nothing
+
+    selfAnimId = joinId animId ["not delegating"]
+
+    entryState = FocusDelegator.NotDelegating
+
+    makeDelegator delegateCursor =
+      Focusable {
+        fIsFocused = isJust delegateCursor,
+        fWidget =
+          FocusDelegator.make entryState delegateCursor
+          (return selfAnimId) FocusDelegator.defaultKeys
+          AnimIds.backgroundCursorId (fWidget innerFocusable)
+        }
+  return .
+    fromMaybe cursorNotSelf . fmap cursorSelf $
+    subId selfAnimId cursor
+
 simpleTextEdit ::
   Monad m =>
-  TextEdit.Style -> Anim.AnimId ->
-  Transaction.Property t m String ->
+  TextEdit.Style -> Transaction.Property t m String ->
+  Anim.AnimId ->
   TWidget t m
-simpleTextEdit style animId textRef cursor = do
+simpleTextEdit style textRef animId cursor = do
   text <- Property.get textRef
   let
     mCursor = fmap extractTextEditCursor $ subId animId cursor
@@ -190,7 +218,7 @@ makeTreeEdit style depth clipboardRef treeIRef cursor
     isExpanded <- Property.get isExpandedRef
     valueEdit <-
       (liftM . atWidget) (Widget.strongerKeys $ expandCollapseEventMap isExpanded) $
-      simpleTextEdit style valueEditAnimId valueTextEditModelRef cursor
+      simpleTextEdit style valueTextEditModelRef valueEditAnimId cursor
     childrenIRefs <- Property.get childrenIRefsRef
     childBoxL <-
       if isExpanded && not (null childrenIRefs)
@@ -345,7 +373,7 @@ makeRootFocusable style cursor = do
 
   let
     makeBranchNameEdit textEditModelIRef =
-      simpleTextEdit style (AnimIds.fromIRef textEditModelIRef) (Transaction.fromIRef textEditModelIRef)
+      wrapDelegated (simpleTextEdit style (Transaction.fromIRef textEditModelIRef)) (AnimIds.fromIRef textEditModelIRef)
     guiBranches = (map . first) makeBranchNameEdit namedBranches
 
     branches = map snd guiBranches

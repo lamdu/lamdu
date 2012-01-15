@@ -6,6 +6,7 @@ module Graphics.UI.Bottle.Widget (
   UserIO(..), atUioMaybeEnter, atUioEventMap, atUioFrame,
   userIO, image, eventMap, enter,
   takesFocus,
+  atSized, atUserIO,
   atImageWithSize, atImage, atMaybeEnter, atEventMap,
   backgroundColor, liftView, removeExtraSize,
   strongerKeys, weakerKeys) where
@@ -25,7 +26,7 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.SizeRange as SizeRange
 import qualified Graphics.UI.Bottle.Sized as Sized
 
-type Direction = Vector2 Int
+type Direction = Maybe (Vector2 Int)
 
 data UserIO k = UserIO {
   uioFrame :: Frame,
@@ -65,6 +66,9 @@ argument = flip (.)
 atSized :: (Sized (UserIO a) -> Sized (UserIO b)) -> Widget a -> Widget b
 atSized = over Widget
 
+atUserIO :: (UserIO a -> UserIO b) -> Widget a -> Widget b
+atUserIO = atSized . fmap
+
 removeExtraSize :: Widget a -> Widget a
 removeExtraSize = atSized f
   where
@@ -80,7 +84,7 @@ atImageWithSize f = atSized . Sized.atFromSize $ g
     g mkUserIO size = atUioFrame (f size) (mkUserIO size)
 
 atImage :: (Frame -> Frame) -> Widget a -> Widget a
-atImage = atImageWithSize . const
+atImage = atUserIO . atUioFrame
 
 userIO :: Widget a -> Size -> UserIO a
 userIO = Sized.fromSize . unpack
@@ -102,10 +106,10 @@ atMaybeEnter ::
   (Maybe (Direction -> a) ->
    Maybe (Direction -> a)) ->
   Widget a -> Widget a
-atMaybeEnter = atSized . fmap . atUioMaybeEnter
+atMaybeEnter = atUserIO . atUioMaybeEnter
 
 atEventMap :: (EventMap a -> EventMap a) -> Widget a -> Widget a
-atEventMap = atSized . fmap . atUioEventMap
+atEventMap = atUserIO . atUioEventMap
 
 -- ^ If doesn't take focus, event map is ignored
 strongerKeys :: EventMap a -> Widget a -> Widget a

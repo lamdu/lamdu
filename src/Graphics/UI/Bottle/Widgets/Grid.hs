@@ -25,13 +25,13 @@ length2d xs = Vector2 (foldl' max 0 . map length $ xs) (length xs)
 capCursor :: Vector2 Int -> Vector2 Int -> Vector2 Int
 capCursor size = fmap (max 0) . liftA2 min (fmap (subtract 1) size)
 
-fromRight :: Widget.Direction
+fromRight :: Vector2 Int
 fromRight = Vector2 1 0
-fromLeft :: Widget.Direction
+fromLeft :: Vector2 Int
 fromLeft = Vector2 (-1) 0
-fromAbove :: Widget.Direction
+fromAbove :: Vector2 Int
 fromAbove = Vector2 0 (-1)
-fromBelow :: Widget.Direction
+fromBelow :: Vector2 Int
 fromBelow = Vector2 0 1
 
 mkNavEventmap :: [[Maybe (Widget.Direction -> k)]] -> Cursor -> EventMap k
@@ -53,7 +53,7 @@ mkNavEventmap mEnterChildren cursor@(Vector2 cursorX cursorY) =
       fmap
         (EventMap.fromEventType {-("Move " ++ dirName)-}
          (EventMap.KeyEventType EventMap.noMods key)) .
-      fmap ($ direction) . msum
+      fmap ($ Just direction) . msum
     leftOfCursor    = reverse . take cursorX $ curRow
     aboveCursor     = reverse . take cursorY $ curColumn
     rightOfCursor   = drop (cursorX+1) $ curRow

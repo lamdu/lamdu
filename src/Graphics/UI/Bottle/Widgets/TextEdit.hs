@@ -60,9 +60,10 @@ makeUnfocused Style { sTextViewStyle, sCursorWidth } emptyStr str animId =
     }
   where
     enter dir = (enterPos dir, str)
-    enterPos (Vector2 x _)
+    enterPos (Just (Vector2 x _))
       | x < 0 = 0
       | otherwise = length str
+    enterPos Nothing = length str
 
     textLines = splitLines displayStr
     displayStr = makeDisplayStr emptyStr str
