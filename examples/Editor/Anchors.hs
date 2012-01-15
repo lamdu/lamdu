@@ -6,7 +6,7 @@ module Editor.Anchors(
     Cursor, cursor, cursorIRef,
     focalPointIRefs, branches, view,
     currentBranchIRef, currentBranch,
-    initDB, animIdOfTreeIRef,
+    initDB,
     dbStore, DBTag,
     viewStore, ViewTag)
 where
@@ -21,7 +21,6 @@ import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction, Store)
 import Editor.Data (ITreeD, TreeD)
 import Graphics.UI.Bottle.Animation(AnimId)
-import qualified Graphics.UI.Bottle.AnimIds as AnimIds
 import qualified Data.Store.Db as Db
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -86,9 +85,6 @@ viewIRef = IRef.anchor "HEAD"
 view :: Monad m => Transaction.Property DBTag m View
 view = Transaction.fromIRef viewIRef
 
-animIdOfTreeIRef :: ITreeD -> AnimId
-animIdOfTreeIRef = AnimIds.valueEditId . AnimIds.fromIRef -- todo: Remove this ugly duplication
-
 initDB :: Store DBTag IO -> IO ()
 initDB store =
   Transaction.run store $ do
@@ -100,5 +96,5 @@ initDB store =
     let branch = snd $ head bs
     _ <- initRef viewIRef $ View.new branch
     _ <- initRef currentBranchIRef (return branch)
-    _ <- initRef cursorIRef . return $ animIdOfTreeIRef rootIRef
+    _ <- initRef cursorIRef . return $ []
     return ()

@@ -205,6 +205,9 @@ simpleTextEdit style textRef animId cursor = do
     fWidget = fmap (uncurry lifter) $ TextEdit.make style "<empty>" mCursor text animId
     }
 
+animIdOfTreeIRef :: ITreeD -> Anim.AnimId
+animIdOfTreeIRef = AnimIds.valueEditId . AnimIds.fromIRef
+
 makeTreeEdit ::
   Monad m =>
   TextEdit.Style ->
@@ -284,7 +287,7 @@ makeTreeEdit style depth clipboardRef treeIRef cursor
         Property.pureModify Anchors.focalPointIRefs (treeIRef:) >> return AnimIds.goUpId
       appendChild newRef = do
         Property.pureModify childrenIRefsRef (++ [newRef])
-        return . Anchors.animIdOfTreeIRef $ newRef
+        return . animIdOfTreeIRef $ newRef
 
 getFocalPoint :: Monad m => Transaction ViewTag m (Bool, ITreeD)
 getFocalPoint = do
@@ -304,7 +307,7 @@ makeEditWidget style clipboardRef cursor = do
   let
     goUp = do
       Property.pureModify Anchors.focalPointIRefs (drop 1)
-      liftM (Anchors.animIdOfTreeIRef . snd) getFocalPoint
+      liftM (animIdOfTreeIRef . snd) getFocalPoint
     goUpEventMap =
       if isAtRoot
       then mempty
@@ -446,7 +449,7 @@ runDbStore font store = do
         then
           return candidateFocusable
         else
-          makeRootFocusable style $ Anchors.animIdOfTreeIRef Anchors.rootIRef
+          makeRootFocusable style $ animIdOfTreeIRef Anchors.rootIRef
 
       when (not $ fIsFocused focusable) $
         fail "Root cursor did not match"
