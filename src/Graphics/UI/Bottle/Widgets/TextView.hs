@@ -3,7 +3,7 @@ module Graphics.UI.Bottle.Widgets.TextView (Style(..), make, makeWidget, drawTex
 
 import Control.Applicative (liftA2)
 import Control.Arrow (first, second, (&&&))
-import Data.List.Utils(enumerate2d)
+import Data.List.Utils(enumerate, enumerate2d)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2(Vector2(..))
 import Graphics.UI.Bottle.SizeRange (fixedSize)
@@ -21,22 +21,24 @@ data Style = Style {
   }
 
 augment :: Show a => a -> Anim.AnimId -> Anim.AnimId
-augment x = (SBS8.pack (show x) :)
+augment x = (++ [SBS8.pack (show x)])
 
-drawText :: Style -> [String] -> (Anim.AnimId -> Anim.Frame, Vector2 Draw.R)
-drawText (Style font ptSize) textLines =
+drawText :: Bool -> Style -> [String] -> (Anim.AnimId -> Anim.Frame, Vector2 Draw.R)
+drawText isSingleLetterImages (Style font ptSize) textLines =
   (first . fmap) (Anim.scale sz) .
   second (* sz) .
   drawMany vertical .
-  map (drawMany horizontal) .
-  (map . map) (nestedFrame . second useFont) .
-  enumerate2d $
+  go $
   textLines
   where
-    useFont = (DrawUtils.drawText font &&& DrawUtils.textSize font) . (: [])
+    go =
+      if isSingleLetterImages
+      then map (drawMany horizontal . map (nestedFrame . second (useFont . (: [])))) . enumerate2d
+      else map (nestedFrame . second useFont) . enumerate
+    useFont = DrawUtils.drawText font &&& DrawUtils.textSize font
     nestedFrame (i, (image, size)) = (draw, size)
       where
-        draw animId = Anim.simpleFrameDownscale (augment (i :: (Int, Int)) animId) size image
+        draw animId = Anim.simpleFrameDownscale (augment i animId) size image
 
     resize = liftA2 max $ Vector2 0 DrawUtils.textHeight
     drawMany sizeToTranslate = second resize . foldr step (mempty, 0)
@@ -54,7 +56,7 @@ drawText (Style font ptSize) textLines =
 make :: Style -> [String] -> Anim.AnimId -> Sized Anim.Frame
 make style textLines animId = Sized (fixedSize textSize) . const $ frame animId
   where
-    (frame, textSize) = drawText style textLines
+    (frame, textSize) = drawText False style textLines
 
 makeWidget :: Style -> [String] -> Anim.AnimId -> Widget a
 makeWidget style textLines = liftView . make style textLines

@@ -7,18 +7,20 @@ module Graphics.UI.Bottle.Animation(
   simpleFrame, simpleFrameDownscale)
 where
 
+import Control.Applicative(liftA2)
 import Control.Arrow(first, second)
 import Control.Newtype(over)
 import Control.Newtype.TH(mkNewTypes)
 import Data.ByteString.Char8() -- IsString instance
-import Data.List(sortBy)
-import Data.Map(Map)
+import Data.Function(on)
+import Data.Map(Map, (!))
 import Data.Monoid(Monoid(..))
 import Data.Ord(comparing)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators((%%))
 import Graphics.DrawingCombinators.Utils(square)
 import qualified Data.ByteString as SBS
+import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.DrawingCombinators as Draw
@@ -29,7 +31,7 @@ type Layer = Int
 data Rect = Rect {
   rectTopLeft :: Vector2 Draw.R,
   rectSize :: Vector2 Draw.R
-  }
+  } deriving Show
 
 data PositionedImage = PositionedImage {
   piImage :: Draw.Image (), -- Image always occupies (0,0)..(1,1), the translation/scaling occurs when drawing
@@ -58,7 +60,10 @@ instance Monoid Frame where
     Map.unionWithKey (error . ("Attempt to unify same-id sub-images: " ++) . show) x y
 
 sortOn :: Ord b => (a -> b) -> [a] -> [a]
-sortOn = sortBy . comparing
+sortOn = List.sortBy . comparing
+
+groupOn :: Eq b => (a -> b) -> [a] -> [[a]]
+groupOn f = List.groupBy ((==) `on` f)
 
 draw :: Frame -> Draw.Image ()
 draw = mconcat . map posImage . map snd . sortOn fst . Map.elems . iSubImages
@@ -69,25 +74,66 @@ draw = mconcat . map posImage . map snd . sortOn fst . Map.elems . iSubImages
 center :: Rect -> Vector2 Draw.R
 center (Rect tl size) = tl + size / 2
 
+bottomRight :: Rect -> Vector2 Draw.R
+bottomRight (Rect tl size) = tl + size
+
 sqrNorm :: Num a => Vector2 a -> a
 sqrNorm = Vector2.vector2 (+) . (^ (2::Int))
 
 animSpeed :: Fractional a => a
 animSpeed = 0.5
 
+prefixRects :: Map AnimId (Layer, PositionedImage) -> Map AnimId Rect
+prefixRects src =
+  Map.fromList . map perGroup $ groupOn fst $ sortOn fst prefixItems
+  where
+    perGroup xs =
+      (fst (head xs), List.foldl1' joinRects (map snd xs))
+    prefixItems = do
+      (key, (_, PositionedImage _ rect)) <- Map.toList src
+      prefix <- List.inits key
+      return (prefix, rect)
+    joinRects a b =
+      Rect {
+        rectTopLeft = tl,
+        rectSize = br - tl
+      }
+      where
+        tl = liftA2 min (rectTopLeft a) (rectTopLeft b)
+        br = liftA2 max (bottomRight a) (bottomRight b)
+
+findPrefix :: Ord a => [a] -> Map [a] b -> Maybe [a]
+findPrefix key dict =
+  List.find (`Map.member` dict) . reverse $ List.inits key
+
+relocateSubRect :: Rect -> Rect -> Rect -> Rect
+relocateSubRect srcSubRect srcSuperRect dstSuperRect =
+  Rect {
+    rectTopLeft = rectTopLeft dstSuperRect + sizeRatio * (rectTopLeft srcSubRect - rectTopLeft srcSuperRect),
+    rectSize = sizeRatio * rectSize srcSubRect
+  }
+  where
+    sizeRatio = rectSize dstSuperRect / rectSize srcSuperRect
+
 nextFrame :: Frame -> Frame -> Frame
 nextFrame (Frame dest) (Frame cur) =
   Frame . Map.mapMaybe id $
   mconcat [
-    fmap add $ Map.difference dest cur,
-    fmap del $ Map.difference cur dest,
+    Map.mapWithKey add $ Map.difference dest cur,
+    Map.mapWithKey del $ Map.difference cur dest,
     Map.intersectionWith modify dest cur
   ]
   where
-    add (layer, PositionedImage img r) =
-      Just (layer, PositionedImage img (Rect (center r) 0))
-    del (layer, PositionedImage img (Rect pos size))
-      | sqrNorm size < 1 = Nothing
+    curPrefixMap = prefixRects cur
+    destPrefixMap = prefixRects dest
+    add key (layer, PositionedImage img r) =
+      Just (layer, PositionedImage img rect)
+      where
+        rect = maybe (Rect (center r) 0) genRect $ findPrefix key curPrefixMap
+        genRect prefix = relocateSubRect r (destPrefixMap ! prefix) (curPrefixMap ! prefix)
+    del key (layer, PositionedImage img (Rect pos size))
+      | fmap null (findPrefix key destPrefixMap) == Just False
+      || sqrNorm size < 1 = Nothing
       | otherwise = Just (layer, PositionedImage img (Rect (pos + size/2 * animSpeed) (size * (1 - animSpeed))))
     modify
       (layer, PositionedImage destImg (Rect destTopLeft destSize))

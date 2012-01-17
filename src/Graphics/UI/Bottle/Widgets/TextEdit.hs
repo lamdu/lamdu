@@ -2,7 +2,6 @@
 {-# LANGUAGE TemplateHaskell, TypeOperators, OverloadedStrings, NamedFieldPuns #-}
 module Graphics.UI.Bottle.Widgets.TextEdit(Cursor, Style(..), make, defaultCursorColor, defaultCursorWidth) where
 
-import Control.Arrow(first)
 import Data.Char (isSpace)
 import Data.List (genericLength)
 import Data.List.Split (splitOn)
@@ -50,14 +49,10 @@ makeDisplayStr :: String -> String -> String
 makeDisplayStr emptyStr ""  = emptyStr
 makeDisplayStr _        str = str
 
-makeUnfocused :: Style -> String -> String -> Anim.AnimId -> Widget (Cursor, String)
-makeUnfocused Style { sTextViewStyle, sCursorWidth } emptyStr str animId =
-  Widget . Sized reqSize . const $
-  Widget.UserIO {
-    Widget.uioFrame = img,
-    Widget.uioEventMap = mempty,
-    Widget.uioMaybeEnter = Just enter
-    }
+makeUnfocused :: Style -> String -> Anim.AnimId -> Widget (Cursor, String)
+makeUnfocused style str =
+  Widget.takesFocus enter .
+  TextView.makeWidget (sTextViewStyle style) (lines str)
   where
     enter dir = (enterPos dir, str)
     enterPos (Just (Vector2 x _))
@@ -65,20 +60,13 @@ makeUnfocused Style { sTextViewStyle, sCursorWidth } emptyStr str animId =
       | otherwise = length str
     enterPos Nothing = length str
 
-    textLines = splitLines displayStr
-    displayStr = makeDisplayStr emptyStr str
-    reqSize = fixedSize $ Vector2 (sCursorWidth + tlWidth) tlHeight
-    img = Anim.translate (Vector2 (sCursorWidth / 2) 0) frame
-    (frame, Vector2 tlWidth tlHeight) =
-      first ($ ("text" : animId)) $ TextView.drawText sTextViewStyle textLines
-
 -- TODO: Instead of font + ptSize, let's pass a text-drawer (that's
 -- what "Font" should be)
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
 makeFocused :: Style -> String -> Cursor -> String -> Anim.AnimId -> Widget (Cursor, String)
 makeFocused
-  style@Style {
+  Style {
     sBackgroundCursorId, sCursorWidth, sCursorColor,
     sTextCursorId, sTextViewStyle
     }
@@ -87,11 +75,20 @@ makeFocused
     (Anim.backgroundColor sBackgroundCursorId 10 blue) .
   Widget.atImage (`mappend` cursorFrame) .
   Widget.strongerKeys eventMap $
-  makeUnfocused style emptyStr str animId
+  Widget . Sized reqSize . const $
+  Widget.UserIO {
+    Widget.uioFrame = img,
+    Widget.uioEventMap = mempty,
+    Widget.uioMaybeEnter = Nothing
+    }
   where
+    reqSize = fixedSize $ Vector2 (sCursorWidth + tlWidth) tlHeight
+    img = Anim.translate (Vector2 (sCursorWidth / 2) 0) $ frameGen animId
+    (frameGen, Vector2 tlWidth tlHeight) = TextView.drawText True sTextViewStyle textLines
+
     blue = Draw.Color 0 0 0.8 0.8
 
-    textLinesWidth = Vector2.fst . snd . TextView.drawText sTextViewStyle
+    textLinesWidth = Vector2.fst . snd . TextView.drawText True sTextViewStyle
     sz = fromIntegral $ TextView.styleFontSize sTextViewStyle
     lineHeight = sz * textHeight
     beforeCursor = take cursor str
@@ -236,5 +233,5 @@ make :: Style -> String -> Maybe Cursor -> String -> Anim.AnimId -> Widget (Curs
 make style emptyStr (Just cursor) str =
   makeFocused style emptyStr cursor str
 make style _        Nothing       str =
-  makeUnfocused style "" str
+  makeUnfocused style str
 

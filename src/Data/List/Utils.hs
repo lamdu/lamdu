@@ -1,10 +1,10 @@
 {-# OPTIONS -Wall #-}
 module Data.List.Utils(enumerate, enumerate2d, nth, index, removeAt) where
 
-enumerate :: (Enum a, Num a) => [b] -> [(a, b)]
+enumerate :: [a] -> [(Int, a)]
 enumerate = zip [0..]
 
-enumerate2d :: (Enum a, Num a) => [[b]] -> [[((a, a), b)]]
+enumerate2d :: [[a]] -> [[((Int, Int), a)]]
 enumerate2d = map f . enumerate . map enumerate
   where
     f (rowIndex, row) = map (g rowIndex) row
