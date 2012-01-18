@@ -115,8 +115,31 @@ relocateSubRect srcSubRect srcSuperRect dstSuperRect =
   where
     sizeRatio = rectSize dstSuperRect / rectSize srcSuperRect
 
-nextFrame :: Frame -> Frame -> Frame
-nextFrame (Frame dest) (Frame cur) =
+isVirtuallySame :: Frame -> Frame -> Bool
+isVirtuallySame (Frame a) (Frame b) =
+  Map.keysSet a == Map.keysSet b &&
+  diffRects < equalityThreshold
+  where
+    equalityThreshold = 0.2
+    diffRects =
+      maximum . Map.elems $
+      Map.intersectionWith subtractRect
+        (rectMap a) (rectMap b)
+    subtractRect ra rb =
+      Vector2.uncurry max $
+      liftA2 max
+        (fmap abs (rectTopLeft ra - rectTopLeft rb))
+        (fmap abs (bottomRight ra - bottomRight rb))
+    rectMap = Map.map (piRect . snd)
+
+
+nextFrame :: Frame -> Frame -> Maybe Frame
+nextFrame dest cur
+  | isVirtuallySame dest cur = Nothing
+  | otherwise = Just $ makeNextFrame dest cur
+
+makeNextFrame :: Frame -> Frame -> Frame
+makeNextFrame (Frame dest) (Frame cur) =
   Frame . Map.mapMaybe id $
   mconcat [
     Map.mapWithKey add $ Map.difference dest cur,

@@ -1,7 +1,7 @@
 {-# OPTIONS -Wall #-}
 module Graphics.UI.Bottle.MainLoop (mainLoopAnim, mainLoopImage, mainLoopWidget) where
 
-import Control.Concurrent(forkIO)
+import Control.Concurrent(forkIO, threadDelay)
 import Control.Concurrent.MVar
 import Control.Exception(SomeException, try, throwIO)
 import Control.Monad(forever)
@@ -47,7 +47,7 @@ inAnotherThread coalesce action = do
   coalesce (action >>= putMVar m)
   takeMVar m
 
-mainLoopImage :: (Size -> Event -> IO ()) -> (Size -> IO Image) -> IO a
+mainLoopImage :: (Size -> Event -> IO ()) -> (Size -> IO (Maybe Image)) -> IO a
 mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
   decorateIO <- coalsceToThread
   let coalesce = inAnotherThread decorateIO
@@ -73,23 +73,30 @@ mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
       GL.viewport $=
         (GL.Position 0 0,
          GL.Size (round winSizeX) (round winSizeY))
-      Draw.clearRender .
-        (Draw.translate (-1, 1) %%) .
-        (Draw.scale (1/winSizeX) (-1/winSizeY) %%) =<<
-        coalesce (makeImage winSize)
+      mNewImage <- coalesce (makeImage winSize)
+      case mNewImage of
+        Nothing -> threadDelay 10000
+        Just image ->
+          Draw.clearRender .
+          (Draw.translate (-1, 1) %%) .
+          (Draw.scale (1/winSizeX) (-1/winSizeY) %%) $
+          image
   eventLoop handleEvents
 
 mainLoopAnim ::
   (Size -> Event -> IO ()) -> (Size -> IO Anim.Frame) -> IO a
 mainLoopAnim eventHandler makeFrame = do
-  frameVar <- newIORef mempty
+  frameVar <- newIORef mempty :: IO (IORef Anim.Frame)
   let
     makeImage size = do
       dest <- makeFrame size
       prevFrame <- readIORef frameVar
-      let frame = Anim.nextFrame dest prevFrame
-      writeIORef frameVar frame
-      return $ Anim.draw frame
+      let mFrame = Anim.nextFrame dest prevFrame
+      case mFrame of
+        Nothing -> return Nothing
+        Just frame -> do
+          writeIORef frameVar frame
+          return . Just $ Anim.draw frame
   mainLoopImage eventHandler makeImage
 
 mainLoopWidget :: IO (Widget (IO ())) -> IO a
