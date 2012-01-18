@@ -3,7 +3,6 @@
 module Graphics.UI.Bottle.Widgets.Grid(Cursor, make) where
 
 import Control.Applicative (liftA2)
-import Control.Newtype (op)
 import Control.Monad (join, msum)
 import Data.List (foldl', transpose)
 import Data.List.Utils (index)
@@ -67,10 +66,13 @@ mkNavEventmap mEnterChildren cursor@(Vector2 cursorX cursorY) =
 
 makeFocused :: Cursor -> [[Widget k]] -> Widget k
 makeFocused cursor@(Vector2 x y) children =
-  Widget $
-    fmap combineUserIOs .
-    GridView.makeGeneric Widget.uioFrame .
-    (map . map) (op Widget) $ children
+  Widget {
+    wIsFocused = True,
+    wContent =
+      fmap combineUserIOs .
+      GridView.makeGeneric Widget.uioFrame .
+      (map . map) wContent $ children
+    }
   where
     combineUserIOs (frame, userIOss) =
       Widget.UserIO {

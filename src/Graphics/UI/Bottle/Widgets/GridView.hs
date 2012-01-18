@@ -5,7 +5,6 @@ module Graphics.UI.Bottle.Widgets.GridView(
 
 import Control.Arrow (first, second)
 import Control.Applicative (liftA2)
-import Control.Newtype
 import Data.Ord (comparing)
 import Data.List (transpose, maximumBy)
 import Data.List.Utils (enumerate2d)
@@ -109,11 +108,14 @@ makeEnter =
 -- take them. It is useful especially for lifting views to widgets and
 -- composing them with widgets.
 makeFromWidgets :: [[Widget k]] -> Widget k
-makeFromWidgets =
-  Widget .
-  fmap combineEventHandlers .
-  makeGeneric Widget.uioFrame .
-  (map . map) (op Widget)
+makeFromWidgets widgets =
+  Widget {
+    wIsFocused = or . map wIsFocused . concat $ widgets,
+    wContent =
+      fmap combineEventHandlers .
+      makeGeneric Widget.uioFrame .
+      (map . map) wContent $ widgets
+    }
   where
     combineEventHandlers (frame, userIOss) =
       Widget.UserIO {

@@ -16,7 +16,6 @@ import Data.Store.Transaction (Transaction)
 import Editor.Anchors (DBTag, ViewTag, Cursor)
 import Editor.Data (ITreeD)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
-import Graphics.UI.Bottle.Sized (Sized)
 import Graphics.UI.Bottle.Widget (Widget)
 import Prelude hiding ((.))
 import qualified Data.Binary.Utils as BinUtils
@@ -41,34 +40,15 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified System.Info
 
-data Focusable a = Focusable {
-  fIsFocused :: Bool,
-  fWidget :: Widget a
-  }
-
-focusableFromView :: Sized Anim.Frame -> Focusable a
-focusableFromView sizedFrame = Focusable {
-  fIsFocused = False,
-  fWidget = Widget.liftView $ sizedFrame
-  }
-
-atWidget ::
-  (Widget a -> Widget b) ->
-  Focusable a -> Focusable b
-atWidget f (Focusable isFocused widget) =
-  (Focusable isFocused (f widget))
-
 type TWidget t m =
-  Cursor -> Transaction t m (Focusable (Transaction t m Cursor))
+  Cursor -> Transaction t m (Widget (Transaction t m Cursor))
 
 focusableTextView :: Monad m => TextEdit.Style -> [String] -> Anim.AnimId -> TWidget t m
-focusableTextView style textLines animId cursor = return focusable
+focusableTextView style textLines animId cursor =
+  return .
+    (Widget.atIsFocused . const) hasFocus $
+    fmap return widget
   where
-    focusable = Focusable {
-      fIsFocused = hasFocus,
-      fWidget = fmap return widget
-    }
-
     widget =
       (if hasFocus
          then Widget.backgroundColor AnimIds.backgroundCursorId blue
@@ -82,16 +62,14 @@ focusableTextView style textLines animId cursor = return focusable
 indentSize :: Num a => a
 indentSize = 80
 
-findFocusedChildIndex :: [Focusable a] -> Maybe Int
-findFocusedChildIndex = fmap fst . find (fIsFocused . snd) . enumerate
+findFocusedChildIndex :: [Widget a] -> Maybe Int
+findFocusedChildIndex = fmap fst . find (Widget.wIsFocused . snd) . enumerate
 
 makeBox ::
-  Monad m => Box.Orientation -> [Focusable (m Cursor)] -> Focusable (m Cursor)
+  Monad m => Box.Orientation -> [Widget (m Cursor)] -> Widget (m Cursor)
 makeBox orientation children =
-  Focusable {
-    fIsFocused = isJust mChildIndex,
-    fWidget = Box.make orientation mChildIndex $ map fWidget children
-    }
+  (Widget.atIsFocused . const) (isJust mChildIndex) $
+  Box.make orientation mChildIndex $ children
   where
     mChildIndex = findFocusedChildIndex children
 
@@ -104,17 +82,14 @@ makeChoice selectionAnimId curChoiceRef orientation children cursor = do
   focusables <- mapM ($ cursor) children
   let
     widget =
-      Box.make orientation (Just curChoice) . map fWidget .
-      (nth curChoice . atWidget) (Widget.backgroundColor selectionAnimId selectedColor) .
+      Box.make orientation (Just curChoice) .
+      nth curChoice (Widget.backgroundColor selectionAnimId selectedColor) .
       map updateCurChoice $
       enumerate focusables
-  return $ Focusable {
-    fIsFocused = isJust $ findFocusedChildIndex focusables,
-    fWidget = widget
-    }
+  return widget
   where
     updateCurChoice (i, focusable) =
-      (atWidget . fmap) (Property.set curChoiceRef i >>) focusable
+      fmap (Property.set curChoiceRef i >>) focusable
     selectedColor = Draw.Color 0 0.5 0 1
 
 makeChildBox ::
@@ -141,14 +116,14 @@ makeChildBox style parentCursor depth clipboardRef childrenIRefsRef cursor = do
           Property.pureModify childrenIRefsRef $ removeAt curChildIndex
           return parentCursor
       in
-        (liftM . atWidget)
+        liftM
           (Widget.weakerKeys $
            mappend delNodeEventMap cutNodeEventMap) $
         makeTreeEdit style (depth+1) clipboardRef childIRef cursor
 
   let childBox = makeBox Box.vertical childItems
   return .
-    atWidget (Spacer.indentRightWidget indentSize) $
+    Spacer.indentRightWidget indentSize $
     childBox
 
 subId :: Anim.AnimId -> Anim.AnimId -> Maybe Anim.AnimId
@@ -162,11 +137,11 @@ joinId = (++)
 wrapDelegated :: Monad m => (Anim.AnimId -> TWidget t m) -> Anim.AnimId -> TWidget t m
 wrapDelegated f animId cursor = do
   let textEditAnimId = joinId animId ["delegating"]
-  innerFocusable <- f textEditAnimId cursor
+  innerWidget <- f textEditAnimId cursor
   let
     cursorSelf _ = makeDelegator $ Just FocusDelegator.NotDelegating
     cursorNotSelf
-      | fIsFocused innerFocusable =
+      | Widget.wIsFocused innerWidget =
         makeDelegator $ Just FocusDelegator.Delegating
       | otherwise = makeDelegator Nothing
 
@@ -175,13 +150,10 @@ wrapDelegated f animId cursor = do
     entryState = FocusDelegator.NotDelegating
 
     makeDelegator delegateCursor =
-      Focusable {
-        fIsFocused = isJust delegateCursor,
-        fWidget =
-          FocusDelegator.make entryState delegateCursor
-          (return selfAnimId) FocusDelegator.defaultKeys
-          AnimIds.backgroundCursorId (fWidget innerFocusable)
-        }
+      (Widget.atIsFocused . const) (isJust delegateCursor) $
+      FocusDelegator.make entryState delegateCursor
+      (return selfAnimId) FocusDelegator.defaultKeys
+      AnimIds.backgroundCursorId innerWidget
   return .
     fromMaybe cursorNotSelf . fmap cursorSelf $
     subId selfAnimId cursor
@@ -200,10 +172,10 @@ simpleTextEdit style textRef animId cursor = do
     lifter newCursor newText = do
       Property.set textRef newText
       return . joinId animId . (:[]) . BinUtils.encodeS $ newCursor
-  return $ Focusable {
-    fIsFocused = isJust mCursor,
-    fWidget = fmap (uncurry lifter) $ TextEdit.make style "<empty>" mCursor text animId
-    }
+  return .
+    (Widget.atIsFocused . const) (isJust mCursor) .
+    fmap (uncurry lifter) $
+    TextEdit.make style "<empty>" mCursor text animId
 
 animIdOfTreeIRef :: ITreeD -> Anim.AnimId
 animIdOfTreeIRef = AnimIds.valueEditId . AnimIds.fromIRef
@@ -215,12 +187,12 @@ makeTreeEdit ::
   ITreeD -> TWidget ViewTag m
 makeTreeEdit style depth clipboardRef treeIRef cursor
   | depth >= Config.maxDepth =
-    (liftM . atWidget) (Widget.strongerKeys goDeeperEventMap) $
+    liftM (Widget.strongerKeys goDeeperEventMap) $
       focusableTextView style ["[Go deeper]"] (AnimIds.deeperId animId) cursor
   | otherwise = do
     isExpanded <- Property.get isExpandedRef
     valueEdit <-
-      (liftM . atWidget) (Widget.strongerKeys $ expandCollapseEventMap isExpanded) $
+      liftM (Widget.strongerKeys $ expandCollapseEventMap isExpanded) $
       simpleTextEdit style valueTextEditModelRef valueEditAnimId cursor
     childrenIRefs <- Property.get childrenIRefsRef
     childBoxL <-
@@ -230,14 +202,14 @@ makeTreeEdit style depth clipboardRef treeIRef cursor
             moveToParentEventMap =
               fromKeyGroups Config.moveToParentKeys "Move to parent" $
               return myCursor
-          liftM ((:[]) . atWidget (Widget.weakerKeys moveToParentEventMap)) $
+          liftM ((:[]) . Widget.weakerKeys moveToParentEventMap) $
             makeChildBox style myCursor depth clipboardRef childrenIRefsRef cursor
         else return []
     let
       cValueEdit =
         makeBox Box.horizontal
-        [focusableFromView $ collapser isExpanded,
-         focusableFromView $ Spacer.makeHorizontal 1,
+        [Widget.liftView $ collapser isExpanded,
+         Widget.liftView $ Spacer.makeHorizontal 1,
          valueEdit]
       outerBox = makeBox Box.vertical (cValueEdit : childBoxL)
     clipboard <- Property.get clipboardRef
@@ -248,7 +220,7 @@ makeTreeEdit style depth clipboardRef treeIRef cursor
           appendNewNodeEventMap,
           setFocalPointEventMap
           ]
-    return $ atWidget (Widget.weakerKeys keymap) outerBox
+    return $ Widget.weakerKeys keymap outerBox
     where
       goDeeperEventMap = fromKeyGroups Config.actionKeys "Go deeper" setFocalPoint
       animId = AnimIds.fromIRef treeIRef
@@ -314,7 +286,7 @@ makeEditWidget style clipboardRef cursor = do
       else fromKeyGroups Config.goUpKeys "Go up" goUp
 
   goUpButton <-
-    (liftM . atWidget)
+    liftM
     (Widget.strongerKeys
       (fromKeyGroups Config.actionKeys "Go up" goUp)) $
     focusableTextView style ["[go up]"] AnimIds.goUpId cursor
@@ -324,7 +296,7 @@ makeEditWidget style clipboardRef cursor = do
       | isAtRoot = treeEdit
       | otherwise = makeBox Box.vertical [goUpButton, treeEdit]
 
-  return $ atWidget (Widget.strongerKeys goUpEventMap) focusable
+  return $ Widget.strongerKeys goUpEventMap focusable
 
 -- Apply the transactions to the given View and convert them to
 -- transactions on a DB
@@ -335,11 +307,11 @@ makeWidgetForView style view cursor = do
     widgetDownTransaction (Anchors.viewStore view) $
     makeEditWidget style Anchors.clipboard cursor
   let undoEventMap = maybe mempty makeUndoEventMap (Version.parent versionData)
-  return $ atWidget (Widget.strongerKeys undoEventMap) focusable
+  return $ Widget.strongerKeys undoEventMap focusable
   where
     makeUndoEventMap = (fmap . liftM . const) cursor . fromKeyGroups Config.undoKeys "Undo" . View.move view
     widgetDownTransaction store =
-      Transaction.run store . (liftM . atWidget . fmap) (Transaction.run store)
+      Transaction.run store . (liftM . fmap) (Transaction.run store)
 
 fromKeyGroups :: [E.EventType] -> String -> a -> E.EventMap a
 fromKeyGroups keys _doc act = mconcat $ map (`E.fromEventType` act) keys
@@ -366,11 +338,11 @@ deleteCurrentBranch = do
   Property.set Anchors.currentBranch . snd $
     newBranches !! min (length newBranches - 1) index
 
-makeRootFocusable ::
+makeRootWidget ::
   Monad m =>
   TextEdit.Style -> Cursor ->
-  Transaction DBTag m (Focusable (Transaction DBTag m Cursor))
-makeRootFocusable style cursor = do
+  Transaction DBTag m (Widget (Transaction DBTag m Cursor))
+makeRootWidget style cursor = do
   view <- Property.get Anchors.view
   namedBranches <- Property.get Anchors.branches
 
@@ -402,8 +374,8 @@ makeRootFocusable style cursor = do
     box =
       makeBox Box.horizontal
       [viewEdit
-      ,focusableFromView Spacer.makeHorizontalExpanding
-      ,atWidget (Widget.strongerKeys (delBranchEventMap (length branches)))
+      ,Widget.liftView Spacer.makeHorizontalExpanding
+      ,Widget.strongerKeys (delBranchEventMap (length branches))
        branchSelector
       ]
   let
@@ -420,7 +392,6 @@ makeRootFocusable style cursor = do
     quitEventMap = fromKeyGroups Config.quitKeys "Quit" (error "Quit")
 
   return $
-    atWidget
     (Widget.strongerKeys
      (mappend quitEventMap makeBranchEventMap))
     box
@@ -443,18 +414,18 @@ runDbStore font store = do
       }
     makeWidget = widgetDownTransaction $ do
       cursor <- Property.get Anchors.cursor
-      candidateFocusable <- makeRootFocusable style cursor
+      candidateWidget <- makeRootWidget style cursor
       focusable <-
-        if fIsFocused candidateFocusable
+        if Widget.wIsFocused candidateWidget
         then
-          return candidateFocusable
+          return candidateWidget
         else
-          makeRootFocusable style $ animIdOfTreeIRef Anchors.rootIRef
+          makeRootWidget style $ animIdOfTreeIRef Anchors.rootIRef
 
-      when (not $ fIsFocused focusable) $
+      when (not $ Widget.wIsFocused focusable) $
         fail "Root cursor did not match"
 
-      return . fmap attachCursor . fWidget $ focusable
+      return . fmap attachCursor $ focusable
 
     widgetDownTransaction = Transaction.run store . (liftM . fmap) (Transaction.run store)
 

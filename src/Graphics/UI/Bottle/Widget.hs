@@ -1,19 +1,16 @@
 {-# OPTIONS -Wall #-}
-{-# LANGUAGE TemplateHaskell, DeriveFunctor, FlexibleInstances,
-             MultiParamTypeClasses #-}
+{-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses #-}
 module Graphics.UI.Bottle.Widget (
   Widget(..), Direction,
-  UserIO(..), atUioMaybeEnter, atUioEventMap, atUioFrame,
+  UserIO(..), atContent, atIsFocused,
+  atUioMaybeEnter, atUioEventMap, atUioFrame,
   userIO, image, eventMap, enter,
-  takesFocus,
-  atSized, atUserIO,
+  takesFocus, atUserIO,
   atImageWithSize, atImage, atMaybeEnter, atEventMap,
   backgroundColor, liftView, removeExtraSize,
   strongerKeys, weakerKeys) where
 
 import Control.Applicative (liftA2)
-import Control.Newtype (unpack, over)
-import Control.Newtype.TH (mkNewTypes)
 import Data.Monoid (Monoid(..))
 import Data.Record.Label (getL)
 import Data.Vector.Vector2 (Vector2)
@@ -46,12 +43,26 @@ atUioFrame      f u = u { uioFrame      = f . uioFrame      $ u }
 atUioMaybeEnter f u = u { uioMaybeEnter = f . uioMaybeEnter $ u }
 atUioEventMap   f u = u { uioEventMap   = f . uioEventMap   $ u }
 
-newtype Widget a = Widget (Sized (UserIO a))
+data Widget a = Widget {
+  wIsFocused :: Bool,
+  wContent :: Sized (UserIO a)
+  }
   deriving (Functor)
-$(mkNewTypes [''Widget])
+
+atIsFocused :: (Bool -> Bool) -> Widget a -> Widget a
+atIsFocused f w = w { wIsFocused = f (wIsFocused w) }
+
+atContent ::
+  (Sized (UserIO a) -> Sized (UserIO b)) ->
+  Widget a -> Widget b
+atContent f w = w { wContent = f (wContent w) }
 
 liftView :: Sized Frame -> Widget a
-liftView = Widget . fmap buildUserIO
+liftView view =
+  Widget {
+    wIsFocused = False,
+    wContent = fmap buildUserIO view
+    }
   where
     buildUserIO frame =
       UserIO {
@@ -63,14 +74,11 @@ liftView = Widget . fmap buildUserIO
 argument :: (a -> b) -> (b -> c) -> a -> c
 argument = flip (.)
 
-atSized :: (Sized (UserIO a) -> Sized (UserIO b)) -> Widget a -> Widget b
-atSized = over Widget
-
 atUserIO :: (UserIO a -> UserIO b) -> Widget a -> Widget b
-atUserIO = atSized . fmap
+atUserIO = atContent . fmap
 
 removeExtraSize :: Widget a -> Widget a
-removeExtraSize = atSized f
+removeExtraSize = atContent f
   where
     f sized = (Sized.atFromSize . argument) (liftA2 cap maxSize) sized
       where
@@ -79,7 +87,7 @@ removeExtraSize = atSized f
         maxSize = getL SizeRange.srMaxSize $ Sized.requestedSize sized
 
 atImageWithSize :: (Size -> Frame -> Frame) -> Widget a -> Widget a
-atImageWithSize f = atSized . Sized.atFromSize $ g
+atImageWithSize f = atContent . Sized.atFromSize $ g
   where
     g mkUserIO size = atUioFrame (f size) (mkUserIO size)
 
@@ -87,7 +95,7 @@ atImage :: (Frame -> Frame) -> Widget a -> Widget a
 atImage = atUserIO . atUioFrame
 
 userIO :: Widget a -> Size -> UserIO a
-userIO = Sized.fromSize . unpack
+userIO = Sized.fromSize . wContent
 
 image :: Widget a -> Size -> Frame
 image = (fmap . fmap) uioFrame userIO

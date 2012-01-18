@@ -75,13 +75,18 @@ makeFocused style emptyStr cursor str animId =
     (Anim.backgroundColor (sBackgroundCursorId style) 10 blue) .
   Widget.atImage (`mappend` cursorFrame) .
   Widget.strongerKeys eventMap $
-  Widget . Sized reqSize . const $
-  Widget.UserIO {
-    Widget.uioFrame = img,
-    Widget.uioEventMap = mempty,
-    Widget.uioMaybeEnter = Nothing
-    }
+  widget
   where
+    widget = Widget {
+      wIsFocused = True,
+      wContent =
+        Sized reqSize . const $
+        Widget.UserIO {
+          Widget.uioFrame = img,
+          Widget.uioEventMap = mempty,
+          Widget.uioMaybeEnter = Nothing
+          }
+      }
     reqSize = fixedSize $ Vector2 (sCursorWidth style + tlWidth) tlHeight
     img = cursorTranslate style $ frameGen animId
     (frameGen, Vector2 tlWidth tlHeight) = TextView.drawText True (sTextViewStyle style) textLines
