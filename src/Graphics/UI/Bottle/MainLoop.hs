@@ -63,6 +63,7 @@ mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
       eventHandlerWithSize size keyEvent
     handleEvent _ GLFWWindowClose =
       error "Quit" -- TODO: Make close event
+    handleEvent _ GLFWWindowRefresh = return True
 
     handleEvents events = do
       winSize@(Vector2 winSizeX winSizeY) <- windowSize

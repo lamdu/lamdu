@@ -21,6 +21,7 @@ isPressFromBool False = Release
 -- this is the reification of the callback information:
 data GLFWRawEvent = RawCharEvent IsPress Char
                   | RawKeyEvent IsPress GLFW.Key
+                  | RawWindowRefresh
                   | RawWindowClose
   deriving (Show, Eq)
 
@@ -34,11 +35,13 @@ data KeyEvent = KeyEvent {
 -- This is the final representation we expose of events:
 data GLFWEvent = GLFWKeyEvent KeyEvent
                | GLFWWindowClose
+               | GLFWWindowRefresh
   deriving (Show, Eq)
 
 translate :: [(ModState, GLFWRawEvent)] -> [GLFWEvent]
 translate [] = []
 translate ((_, RawWindowClose) : xs) = GLFWWindowClose : translate xs
+translate ((_, RawWindowRefresh) : xs) = GLFWWindowRefresh : translate xs
 translate ((modState1, rk@(RawKeyEvent isPress1 key)) :
            (modState2, rc@(RawCharEvent isPress2 char)) : xs)
   | isModifierKey key =
@@ -72,6 +75,7 @@ rawEventLoop eventsHandler = do
 
   GLFW.setCharCallback charEventHandler
   GLFW.setKeyCallback addKeyEvent
+  GLFW.setWindowRefreshCallback $ addEvent RawWindowRefresh
   GLFW.setWindowCloseCallback $ addEvent RawWindowClose >> return True
 
   forever $ do
