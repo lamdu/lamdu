@@ -49,7 +49,6 @@ inAnotherThread coalesce action = do
 
 mainLoopImage :: (Size -> Event -> IO ()) -> (Size -> IO Image) -> IO a
 mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
-
   decorateIO <- coalsceToThread
   let coalesce = inAnotherThread decorateIO
 

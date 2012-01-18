@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-{-# LANGUAGE TemplateHaskell, TypeOperators, OverloadedStrings, NamedFieldPuns #-}
+{-# LANGUAGE TemplateHaskell, TypeOperators, OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.TextEdit(Cursor, Style(..), make, defaultCursorColor, defaultCursorWidth) where
 
 import Data.Char (isSpace)
@@ -49,9 +49,14 @@ makeDisplayStr :: String -> String -> String
 makeDisplayStr emptyStr ""  = emptyStr
 makeDisplayStr _        str = str
 
+cursorTranslate :: Style -> Anim.Frame -> Anim.Frame
+cursorTranslate style = Anim.translate (Vector2 (sCursorWidth style / 2) 0)
+
 makeUnfocused :: Style -> String -> Anim.AnimId -> Widget (Cursor, String)
 makeUnfocused style str =
   Widget.takesFocus enter .
+  Widget.atImage
+    (cursorTranslate style) .
   TextView.makeWidget (sTextViewStyle style) (lines str)
   where
     enter dir = (enterPos dir, str)
@@ -65,14 +70,9 @@ makeUnfocused style str =
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
 makeFocused :: Style -> String -> Cursor -> String -> Anim.AnimId -> Widget (Cursor, String)
-makeFocused
-  Style {
-    sBackgroundCursorId, sCursorWidth, sCursorColor,
-    sTextCursorId, sTextViewStyle
-    }
-  emptyStr cursor str animId =
+makeFocused style emptyStr cursor str animId =
   Widget.atImageWithSize
-    (Anim.backgroundColor sBackgroundCursorId 10 blue) .
+    (Anim.backgroundColor (sBackgroundCursorId style) 10 blue) .
   Widget.atImage (`mappend` cursorFrame) .
   Widget.strongerKeys eventMap $
   Widget . Sized reqSize . const $
@@ -82,14 +82,14 @@ makeFocused
     Widget.uioMaybeEnter = Nothing
     }
   where
-    reqSize = fixedSize $ Vector2 (sCursorWidth + tlWidth) tlHeight
-    img = Anim.translate (Vector2 (sCursorWidth / 2) 0) $ frameGen animId
-    (frameGen, Vector2 tlWidth tlHeight) = TextView.drawText True sTextViewStyle textLines
+    reqSize = fixedSize $ Vector2 (sCursorWidth style + tlWidth) tlHeight
+    img = cursorTranslate style $ frameGen animId
+    (frameGen, Vector2 tlWidth tlHeight) = TextView.drawText True (sTextViewStyle style) textLines
 
     blue = Draw.Color 0 0 0.8 0.8
 
-    textLinesWidth = Vector2.fst . snd . TextView.drawText True sTextViewStyle
-    sz = fromIntegral $ TextView.styleFontSize sTextViewStyle
+    textLinesWidth = Vector2.fst . snd . TextView.drawText True (sTextViewStyle style)
+    sz = fromIntegral . TextView.styleFontSize $ sTextViewStyle style
     lineHeight = sz * textHeight
     beforeCursor = take cursor str
     cursorPosX = textLinesWidth . (: []) . last . splitLines $ beforeCursor
@@ -97,9 +97,9 @@ makeFocused
     cursorFrame =
       Anim.onDepth (+2) .
       Anim.translate (Vector2 cursorPosX cursorPosY) .
-      Anim.scale (Vector2 sCursorWidth lineHeight) .
-      Anim.simpleFrame sTextCursorId $
-      Draw.tint sCursorColor square
+      Anim.scale (Vector2 (sCursorWidth style) lineHeight) .
+      Anim.simpleFrame (sTextCursorId style) $
+      Draw.tint (sCursorColor style) square
 
     (before, after) = splitAt cursor str
     textLength = length str
