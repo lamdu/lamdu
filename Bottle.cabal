@@ -28,7 +28,6 @@ Library
                        Graphics.UI.Bottle.Widget,
                        Graphics.UI.Bottle.MainLoop,
                        Graphics.UI.Bottle.Animation,
-                       Graphics.UI.Bottle.AnimIds,
                        Graphics.UI.GLFW.ModState,
                        Graphics.UI.GLFW.Events,
                        Graphics.UI.GLFW.Utils,

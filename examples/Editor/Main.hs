@@ -18,6 +18,7 @@ import Editor.Data (ITreeD)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Widget (Widget)
 import Prelude hiding ((.))
+import qualified AnimIds
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.Store.Db as Db
 import qualified Data.Store.Property as Property
@@ -29,14 +30,13 @@ import qualified Editor.Anchors as Anchors
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.Bottle.AnimIds as AnimIds
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified System.Info
 
@@ -120,12 +120,9 @@ subId folder path
   | folder `isPrefixOf` path = Just $ drop (length folder) path
   | otherwise = Nothing
 
-joinId :: Anim.AnimId -> Anim.AnimId -> Anim.AnimId
-joinId = (++)
-
 wrapDelegated :: Monad m => (Anim.AnimId -> TWidget t m) -> Anim.AnimId -> TWidget t m
 wrapDelegated f animId cursor = do
-  let textEditAnimId = joinId animId ["delegating"]
+  let textEditAnimId = AnimIds.delegating animId
   innerWidget <- f textEditAnimId cursor
   let
     cursorSelf _ = makeDelegator $ Just FocusDelegator.NotDelegating
@@ -134,7 +131,7 @@ wrapDelegated f animId cursor = do
         makeDelegator $ Just FocusDelegator.Delegating
       | otherwise = makeDelegator Nothing
 
-    selfAnimId = joinId animId ["not delegating"]
+    selfAnimId = AnimIds.notDelegating animId
 
     entryState = FocusDelegator.NotDelegating
 
@@ -160,7 +157,7 @@ simpleTextEdit style textRef animId cursor = do
     extractTextEditCursor _ = length text
     lifter newCursor newText = do
       Property.set textRef newText
-      return . joinId animId . (:[]) . BinUtils.encodeS $ newCursor
+      return . Anim.joinId animId . (:[]) . BinUtils.encodeS $ newCursor
   return .
     (Widget.atIsFocused . const) (isJust mCursor) .
     fmap (uncurry lifter) $

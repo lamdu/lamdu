@@ -1,11 +1,12 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Graphics.UI.Bottle.AnimIds(
+module AnimIds(
   backgroundCursorId, textCursorId, fromIRef, valueEditId,
-  deeperId, collapserId, branchSelection, goUpId)
+  deeperId, collapserId, branchSelection, goUpId,
+  delegating, notDelegating)
 where
 
-import Graphics.UI.Bottle.Animation(AnimId)
+import Graphics.UI.Bottle.Animation(AnimId, joinId)
 import Data.Store.IRef(IRef, guid)
 import Data.Store.Guid(bs)
 
@@ -19,16 +20,22 @@ fromIRef :: IRef a -> AnimId
 fromIRef = (: []) . bs . guid
 
 valueEditId :: AnimId -> AnimId
-valueEditId = ("value edit" :)
+valueEditId = flip joinId ["value edit"]
 
 deeperId :: AnimId -> AnimId
-deeperId = ("deeper" :)
+deeperId = flip joinId ["deeper"]
 
 collapserId :: AnimId -> AnimId
-collapserId = ("collapser" :)
+collapserId = flip joinId ["collapser"]
 
 branchSelection :: AnimId
 branchSelection = ["selected branch"]
+
+delegating :: AnimId -> AnimId
+delegating = flip joinId ["delegating"]
+
+notDelegating :: AnimId -> AnimId
+notDelegating = flip joinId ["not delegating"]
 
 goUpId :: AnimId
 goUpId = ["go up"]

@@ -4,7 +4,8 @@ module Graphics.UI.Bottle.Animation(
   AnimId, Rect(..), PositionedImage(..), Frame(..),
   draw, nextFrame, backgroundColor,
   translate, scale, onDepth,
-  simpleFrame, simpleFrameDownscale)
+  simpleFrame, simpleFrameDownscale,
+  joinId)
 where
 
 import Control.Applicative(liftA2)
@@ -42,6 +43,9 @@ newtype Frame = Frame {
   iSubImages :: Map AnimId (Layer, PositionedImage)
   }
 $(mkNewTypes [''Frame])
+
+joinId :: AnimId -> AnimId -> AnimId
+joinId = (++)
 
 simpleFrame :: AnimId -> Draw.Image () -> Frame
 simpleFrame animId image =
