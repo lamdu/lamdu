@@ -239,4 +239,3 @@ make style emptyStr (Just cursor) str =
   makeFocused style emptyStr cursor str
 make style _        Nothing       str =
   makeUnfocused style str
-

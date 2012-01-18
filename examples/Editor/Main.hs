@@ -6,7 +6,7 @@ module Main(main) where
 import Control.Arrow (first)
 import Control.Category ((.))
 import Control.Monad (liftM, forM, when)
-import Data.List (find, findIndex, isPrefixOf, elemIndex)
+import Data.List (findIndex, isPrefixOf, elemIndex)
 import Data.List.Utils (enumerate, nth, removeAt)
 import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid(Monoid(..))
@@ -62,17 +62,6 @@ focusableTextView style textLines animId cursor =
 indentSize :: Num a => a
 indentSize = 80
 
-findFocusedChildIndex :: [Widget a] -> Maybe Int
-findFocusedChildIndex = fmap fst . find (Widget.wIsFocused . snd) . enumerate
-
-makeBox ::
-  Monad m => Box.Orientation -> [Widget (m Cursor)] -> Widget (m Cursor)
-makeBox orientation children =
-  (Widget.atIsFocused . const) (isJust mChildIndex) $
-  Box.make orientation mChildIndex $ children
-  where
-    mChildIndex = findFocusedChildIndex children
-
 makeChoice ::
   (Monad m) =>
   Anim.AnimId -> Transaction.Property t m Int -> Box.Orientation ->
@@ -82,7 +71,7 @@ makeChoice selectionAnimId curChoiceRef orientation children cursor = do
   focusables <- mapM ($ cursor) children
   let
     widget =
-      Box.make orientation (Just curChoice) .
+      Box.makeBiased orientation curChoice .
       nth curChoice (Widget.backgroundColor selectionAnimId selectedColor) .
       map updateCurChoice $
       enumerate focusables
@@ -121,7 +110,7 @@ makeChildBox style parentCursor depth clipboardRef childrenIRefsRef cursor = do
            mappend delNodeEventMap cutNodeEventMap) $
         makeTreeEdit style (depth+1) clipboardRef childIRef cursor
 
-  let childBox = makeBox Box.vertical childItems
+  let childBox = Box.make Box.vertical childItems
   return .
     Spacer.indentRightWidget indentSize $
     childBox
@@ -207,11 +196,11 @@ makeTreeEdit style depth clipboardRef treeIRef cursor
         else return []
     let
       cValueEdit =
-        makeBox Box.horizontal
+        Box.make Box.horizontal
         [Widget.liftView $ collapser isExpanded,
          Widget.liftView $ Spacer.makeHorizontal 1,
          valueEdit]
-      outerBox = makeBox Box.vertical (cValueEdit : childBoxL)
+      outerBox = Box.make Box.vertical (cValueEdit : childBoxL)
     clipboard <- Property.get clipboardRef
     let
       keymap =
@@ -294,7 +283,7 @@ makeEditWidget style clipboardRef cursor = do
   let
     focusable
       | isAtRoot = treeEdit
-      | otherwise = makeBox Box.vertical [goUpButton, treeEdit]
+      | otherwise = Box.make Box.vertical [goUpButton, treeEdit]
 
   return $ Widget.strongerKeys goUpEventMap focusable
 
@@ -372,7 +361,7 @@ makeRootWidget style cursor = do
         fromKeyGroups Config.delBranchKeys "Delete Branch" $
           deleteCurrentBranch >> return cursor
     box =
-      makeBox Box.horizontal
+      Box.make Box.horizontal
       [viewEdit
       ,Widget.liftView Spacer.makeHorizontalExpanding
       ,Widget.strongerKeys (delBranchEventMap (length branches))

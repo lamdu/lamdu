@@ -5,10 +5,8 @@ module Graphics.UI.Bottle.Widgets.GridView(
 
 import Control.Arrow (first, second)
 import Control.Applicative (liftA2)
-import Data.Ord (comparing)
-import Data.List (transpose, maximumBy)
-import Data.List.Utils (enumerate2d)
-import Data.Maybe (fromMaybe, mapMaybe)
+import Control.Monad (msum)
+import Data.List (transpose)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.SizeRange (SizeRange(..), Size, Coordinate)
@@ -92,18 +90,6 @@ unzip2d = unzip . map unzip
 make :: [[Sized Anim.Frame]] -> Sized Anim.Frame
 make = fmap fst . makeGeneric id
 
-maximumOn :: Ord b => (a -> b) -> [a] -> a
-maximumOn = maximumBy . comparing
-
-makeEnter :: [[Maybe (Widget.Direction -> k)]] -> Maybe (Widget.Direction -> k)
-makeEnter =
-  search . mapMaybe inverse . concat . enumerate2d
-  where
-    search [] = Nothing
-    search xs = Just $ byDirection xs
-    byDirection xs dir = ($ dir) . snd . maximumOn fst $ (map . first) (fromMaybe 0 dir *) xs
-    inverse ((y, x), m) = fmap ((,) $ Vector2 x y) m
-
 -- ^ This will send events to the first widget in the list that would
 -- take them. It is useful especially for lifting views to widgets and
 -- composing them with widgets.
@@ -124,5 +110,5 @@ makeFromWidgets widgets =
         Widget.uioEventMap = eventMap
         }
       where
-        eventMap = mconcat $ map Widget.uioEventMap $ concat userIOss
-        mEnter = makeEnter $ (map . map) Widget.uioMaybeEnter userIOss
+        eventMap = mconcat . map Widget.uioEventMap $ concat userIOss
+        mEnter = msum . map Widget.uioMaybeEnter $ concat userIOss

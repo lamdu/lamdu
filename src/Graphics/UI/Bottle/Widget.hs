@@ -1,7 +1,7 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses #-}
 module Graphics.UI.Bottle.Widget (
-  Widget(..), Direction,
+  Widget(..), MEnter, Direction,
   UserIO(..), atContent, atIsFocused,
   atUioMaybeEnter, atUioEventMap, atUioFrame,
   userIO, image, eventMap, enter,
@@ -25,20 +25,18 @@ import qualified Graphics.UI.Bottle.Sized as Sized
 
 type Direction = Maybe (Vector2 Int)
 
+type MEnter k = Maybe (Direction -> k)
+
 data UserIO k = UserIO {
   uioFrame :: Frame,
-  uioMaybeEnter :: Maybe (Direction -> k), -- Nothing if we're not enterable
+  uioMaybeEnter :: MEnter k, -- Nothing if we're not enterable
   uioEventMap :: EventMap k
   }
   deriving (Functor)
 
-atUioFrame ::
-  (Frame -> Frame) -> UserIO a -> UserIO a
-atUioMaybeEnter ::
-  (Maybe (Direction -> a) ->
-   Maybe (Direction -> a)) -> UserIO a -> UserIO a
-atUioEventMap ::
-  (EventMap a -> EventMap a) -> UserIO a -> UserIO a
+atUioFrame :: (Frame -> Frame) -> UserIO a -> UserIO a
+atUioMaybeEnter :: (MEnter a -> MEnter a) -> UserIO a -> UserIO a
+atUioEventMap :: (EventMap a -> EventMap a) -> UserIO a -> UserIO a
 atUioFrame      f u = u { uioFrame      = f . uioFrame      $ u }
 atUioMaybeEnter f u = u { uioMaybeEnter = f . uioMaybeEnter $ u }
 atUioEventMap   f u = u { uioEventMap   = f . uioEventMap   $ u }
@@ -110,10 +108,7 @@ enter = (fmap . fmap) uioMaybeEnter userIO
 takesFocus :: (Direction -> a) -> Widget a -> Widget a
 takesFocus = atMaybeEnter . const . Just
 
-atMaybeEnter ::
-  (Maybe (Direction -> a) ->
-   Maybe (Direction -> a)) ->
-  Widget a -> Widget a
+atMaybeEnter :: (MEnter a -> MEnter a) -> Widget a -> Widget a
 atMaybeEnter = atUserIO . atUioMaybeEnter
 
 atEventMap :: (EventMap a -> EventMap a) -> Widget a -> Widget a
