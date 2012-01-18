@@ -57,17 +57,16 @@ mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
       (x, y) <- getWindowDimensions
       return $ Vector2 (fromIntegral x) (fromIntegral y)
 
-    eventHandlerWithSize event =
-      (coalesce . (`eventHandler` event)) =<< windowSize
+    eventHandlerWithSize size event = coalesce $ eventHandler size event
   let
-    handleEvent (GLFWKeyEvent keyEvent) =
-      eventHandlerWithSize keyEvent
-    handleEvent GLFWWindowClose =
+    handleEvent size (GLFWKeyEvent keyEvent) =
+      eventHandlerWithSize size keyEvent
+    handleEvent _ GLFWWindowClose =
       error "Quit" -- TODO: Make close event
 
     handleEvents events = do
       winSize@(Vector2 winSizeX winSizeY) <- windowSize
-      anyChange <- fmap or $ mapM handleEvent events
+      anyChange <- fmap or $ mapM (handleEvent winSize) events
       GL.viewport $=
         (GL.Position 0 0,
          GL.Size (round winSizeX) (round winSizeY))
