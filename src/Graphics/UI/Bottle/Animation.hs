@@ -49,7 +49,7 @@ joinId = (++)
 
 simpleFrame :: AnimId -> Draw.Image () -> Frame
 simpleFrame animId image =
-  Frame $ Map.singleton animId $ (0, PositionedImage image (Rect 0 1))
+  Frame $ Map.singleton animId (0, PositionedImage image (Rect 0 1))
 
 simpleFrameDownscale :: AnimId -> Vector2 Draw.R -> Draw.Image () -> Frame
 simpleFrameDownscale animId size@(Vector2 w h) =
@@ -70,7 +70,7 @@ groupOn :: Eq b => (a -> b) -> [a] -> [[a]]
 groupOn f = List.groupBy ((==) `on` f)
 
 draw :: Frame -> Draw.Image ()
-draw = mconcat . map posImage . map snd . sortOn fst . Map.elems . iSubImages
+draw = mconcat . map (posImage . snd) . sortOn fst . Map.elems . iSubImages
   where
     posImage (PositionedImage img (Rect { rectTopLeft = Vector2 t l, rectSize = Vector2 w h })) =
       Draw.translate (t, l) %% Draw.scale w h %% img

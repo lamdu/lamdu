@@ -5,7 +5,7 @@ module Main(main) where
 
 import Control.Arrow (first)
 import Control.Category ((.))
-import Control.Monad (liftM, forM, when)
+import Control.Monad (liftM, forM, unless)
 import Data.List (findIndex, isPrefixOf, elemIndex)
 import Data.List.Utils (enumerate, nth, removeAt)
 import Data.Maybe (fromMaybe, isJust)
@@ -82,10 +82,7 @@ makeChoice selectionAnimId curChoiceRef orientation children cursor = do
     selectedColor = Draw.Color 0 0.5 0 1
 
 makeChildBox ::
-  Monad m =>
-  TextEdit.Style ->
-  Cursor ->
-  Int ->
+  Monad m => TextEdit.Style -> Cursor -> Int ->
   Transaction.Property ViewTag m [ITreeD] ->
   Transaction.Property ViewTag m [ITreeD] ->
   TWidget ViewTag m
@@ -95,7 +92,7 @@ makeChildBox style parentCursor depth clipboardRef childrenIRefsRef cursor = do
     forM (enumerate childrenIRefs) $ \(curChildIndex, childIRef) ->
       let
         delNodeEventMap =
-          fromKeyGroups Config.delChildKeys "Del node" $ delChild
+          fromKeyGroups Config.delChildKeys "Del node" delChild
         cutNodeEventMap =
           fromKeyGroups Config.cutKeys "Cut node" $ do
             Property.pureModify clipboardRef (childIRef:)
@@ -320,7 +317,7 @@ deleteCurrentBranch = do
       fromMaybe (error "Invalid current branch!") $
       findIndex ((branch ==) . snd) branches
     newBranches = removeAt index branches
-  Property.set Anchors.branches $ newBranches
+  Property.set Anchors.branches newBranches
   Property.set Anchors.currentBranch . snd $
     newBranches !! min (length newBranches - 1) index
 
@@ -378,8 +375,8 @@ makeRootWidget style cursor = do
     quitEventMap = fromKeyGroups Config.quitKeys "Quit" (error "Quit")
 
   return $
-    (Widget.strongerKeys
-     (mappend quitEventMap makeBranchEventMap))
+    Widget.strongerKeys
+     (mappend quitEventMap makeBranchEventMap)
     box
 
 runDbStore :: Draw.Font -> Transaction.Store DBTag IO -> IO a
@@ -408,7 +405,7 @@ runDbStore font store = do
         else
           makeRootWidget style $ animIdOfTreeIRef Anchors.rootIRef
 
-      when (not $ Widget.wIsFocused focusable) $
+      unless (Widget.wIsFocused focusable) $
         fail "Root cursor did not match"
 
       return . fmap attachCursor $ focusable

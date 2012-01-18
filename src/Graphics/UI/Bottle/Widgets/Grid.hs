@@ -53,16 +53,17 @@ mkNavEventmap mEnterChildren cursor@(Vector2 cursorX cursorY) =
     movement _dirName key direction =
       fmap
         (EventMap.fromEventType {-("Move " ++ dirName)-}
-         (EventMap.KeyEventType EventMap.noMods key)) .
-      fmap ($ Just direction) . msum
-    leftOfCursor    = reverse . take cursorX $ curRow
-    aboveCursor     = reverse . take cursorY $ curColumn
-    rightOfCursor   = drop (cursorX+1) $ curRow
-    belowCursor     = drop (cursorY+1) $ curColumn
-    topCursor       = take (min 1 cursorY) $ curColumn
-    leftMostCursor  = take (min 1 cursorX) $ curRow
-    bottomCursor    = take 1 . reverse . drop (cursorY+1) $ curColumn
-    rightMostCursor = take 1 . reverse . drop (cursorX+1) $ curRow
+         (EventMap.KeyEventType EventMap.noMods key) .
+         ($ Just direction)) .
+      msum
+    leftOfCursor    = reverse $ take cursorX curRow
+    aboveCursor     = reverse $ take cursorY curColumn
+    rightOfCursor   = drop (cursorX+1) curRow
+    belowCursor     = drop (cursorY+1) curColumn
+    topCursor       = take (min 1 cursorY) curColumn
+    leftMostCursor  = take (min 1 cursorX) curRow
+    bottomCursor    = take 1 . reverse $ drop (cursorY+1) curColumn
+    rightMostCursor = take 1 . reverse $ drop (cursorX+1) curRow
     curRow          = fromMaybe [] $ index cappedY mEnterChildren
     curColumn       = fromMaybe [] $ index cappedX (transpose mEnterChildren)
 

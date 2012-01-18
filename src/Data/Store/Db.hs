@@ -60,11 +60,11 @@ lookup :: Db -> Guid -> IO (Maybe ByteString)
 lookup db = Berkeley.db_get [] (dbBerkeley db) Nothing . Guid.bs
 
 transaction :: Db -> [(Guid, Maybe ByteString)] -> IO ()
-transaction db changes = -- . Berkeley.dbEnv_withTxn [] [] (dbEnv db) Nothing $ \txn ->
+transaction db = -- . Berkeley.dbEnv_withTxn [] [] (dbEnv db) Nothing $ \txn ->
   mapM_ (uncurry (applyChange
                   -- (Just txn)
                   Nothing
-                 )) changes
+                 ))
   where
     applyChange txn key Nothing = Berkeley.db_del [] (dbBerkeley db) txn (Guid.bs key)
     applyChange txn key (Just value) = Berkeley.db_put [] (dbBerkeley db) txn (Guid.bs key) value

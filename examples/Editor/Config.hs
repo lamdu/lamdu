@@ -13,7 +13,7 @@ import qualified Graphics.UI.Bottle.EventMap as E
 maxDepth :: Int
 maxDepth = 10
 
-group mods k = E.KeyEventType mods k
+group = E.KeyEventType
 ascii k = group E.noMods (E.charKey k)
 ctrl k = group E.ctrl (E.charKey k)
 

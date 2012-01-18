@@ -76,7 +76,7 @@ walkUp onVersion topRef bottomRef
 -- downwards... But we can generate a list of versions by walking up
 -- and accumulating a reverse list)
 versionsBetween :: Monad m => Version -> Version -> Transaction t m [VersionData]
-versionsBetween topRef bottomRef = accumulateWalkUp [] bottomRef
+versionsBetween topRef = accumulateWalkUp []
   where
     accumulateWalkUp vs curRef
       | topRef == curRef  = return vs

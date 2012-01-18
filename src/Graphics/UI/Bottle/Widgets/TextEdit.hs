@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-{-# LANGUAGE TemplateHaskell, TypeOperators, OverloadedStrings #-}
+{-# LANGUAGE TypeOperators, OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.TextEdit(Cursor, Style(..), make, defaultCursorColor, defaultCursorWidth) where
 
 import Data.Char (isSpace)
@@ -133,7 +133,7 @@ makeFocused style emptyStr cursor str animId =
     moveWord = moveRelative . length . tillEndOfWord $ after
 
     singleton doc eventType mkModel =
-      const (E.singleton eventType $ mkModel) (doc :: String)
+      const (E.singleton eventType mkModel) (doc :: String)
 
     keys doc = const (mconcat . map E.fromEventType) (doc :: String)
 

@@ -29,9 +29,8 @@ blue = Draw.Color 0 0 1 1
 makeFocused ::
   Cursor -> k -> Keys -> Anim.AnimId ->
   Widget k -> Widget k
-makeFocused
-  delegating focusSelf keys backgroundCursorId widget =
-  handleFocus delegating widget
+makeFocused delegating focusSelf keys backgroundCursorId =
+  handleFocus delegating
   where
     handleFocus Delegating    = addStopDelegatingEventMap
     handleFocus NotDelegating = blueify . useStartDelegatingEventMap

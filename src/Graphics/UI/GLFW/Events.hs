@@ -113,7 +113,7 @@ typematicKeyHandlerWrap handler = do
       return event
     handleEvent event = return event
 
-  return $ (handler <=< mapM handleEvent)
+  return (handler <=< mapM handleEvent)
 
   where
     timeFunc = (0.5 +) . (0.05 *) . fromIntegral
@@ -138,7 +138,7 @@ modKeyHandlerWrap handler = do
   let
     modState r = do
       keySet <- readIORef keySetVar
-      return $ (modStateFromModkeySet keySet, r)
+      return (modStateFromModkeySet keySet, r)
     handleEvent e@(RawKeyEvent Press key) = do
       maybe (return ()) (modifyIORef keySetVar . Set.insert) $
         asModkey key
