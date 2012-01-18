@@ -6,8 +6,6 @@ import Control.Concurrent.MVar
 import Control.Exception(SomeException, try, throwIO)
 import Control.Monad(forever)
 import Data.IORef
-import Data.Maybe (fromMaybe)
-import Data.Monoid (mempty)
 import Data.StateVar (($=))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators ((%%))
@@ -47,7 +45,7 @@ inAnotherThread coalesce action = do
   coalesce (action >>= putMVar m)
   takeMVar m
 
-mainLoopImage :: (Size -> Event -> IO ()) -> (Size -> IO (Maybe Image)) -> IO a
+mainLoopImage :: (Size -> Event -> IO Bool) -> (Bool -> Size -> IO (Maybe Image)) -> IO a
 mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
   decorateIO <- coalsceToThread
   let coalesce = inAnotherThread decorateIO
@@ -69,11 +67,11 @@ mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
 
     handleEvents events = do
       winSize@(Vector2 winSizeX winSizeY) <- windowSize
-      mapM_ handleEvent events
+      anyChange <- fmap or $ mapM handleEvent events
       GL.viewport $=
         (GL.Position 0 0,
          GL.Size (round winSizeX) (round winSizeY))
-      mNewImage <- coalesce (makeImage winSize)
+      mNewImage <- coalesce (makeImage anyChange winSize)
       case mNewImage of
         Nothing -> threadDelay 10000
         Just image ->
@@ -84,19 +82,34 @@ mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
   eventLoop handleEvents
 
 mainLoopAnim ::
-  (Size -> Event -> IO ()) -> (Size -> IO Anim.Frame) -> IO a
+  (Size -> Event -> IO Bool) -> (Size -> IO Anim.Frame) -> IO a
 mainLoopAnim eventHandler makeFrame = do
-  frameVar <- newIORef mempty :: IO (IORef Anim.Frame)
+  frameStateVar <- newIORef Nothing
   let
-    makeImage size = do
-      dest <- makeFrame size
-      prevFrame <- readIORef frameVar
-      let mFrame = Anim.nextFrame dest prevFrame
-      case mFrame of
-        Nothing -> return Nothing
-        Just frame -> do
-          writeIORef frameVar frame
-          return . Just $ Anim.draw frame
+    makeImage isChange size = do
+      frameState <- readIORef frameStateVar
+
+      newFrameState <-
+        case frameState of
+          Nothing -> fmap (Just . (,) True) $ makeFrame size
+          Just (wasChange, prevFrame) ->
+            if wasChange || isChange
+              then do
+                dest <- makeFrame size
+                return . Just $
+                  case Anim.nextFrame dest prevFrame of
+                    Nothing -> (False, dest)
+                    Just newFrame -> (True, newFrame)
+              else
+                return $ Just (False, prevFrame)
+      writeIORef frameStateVar newFrameState
+      return $
+        case newFrameState of
+          Nothing -> error "No frame to draw at start??"
+          Just (change, frame)
+            | change -> Just (Anim.draw frame)
+            | otherwise -> Nothing
+
   mainLoopImage eventHandler makeImage
 
 mainLoopWidget :: IO (Widget (IO ())) -> IO a
@@ -105,7 +118,8 @@ mainLoopWidget mkWidget =
   where
     eventHandler size event = do
       widget <- mkWidget
-      fromMaybe (return ()) . E.lookup event $ Widget.eventMap widget size
+      maybe (return False) (>> return True) .
+        E.lookup event $ Widget.eventMap widget size
     mkImage size = do
       widget <- mkWidget
       return $ Widget.image widget size
