@@ -81,7 +81,7 @@ sqrNorm :: Num a => Vector2 a -> a
 sqrNorm = Vector2.vector2 (+) . (^ (2::Int))
 
 animSpeed :: Fractional a => a
-animSpeed = 0.5
+animSpeed = 0.2
 
 prefixRects :: Map AnimId (Layer, PositionedImage) -> Map AnimId Rect
 prefixRects src =
