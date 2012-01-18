@@ -1,64 +1,41 @@
 {-# OPTIONS -Wall -fno-warn-orphans #-}
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, DeriveFunctor #-}
 module Graphics.UI.Bottle.EventMap(
-  EventMap, ModState(..), EventType(..), Event(..),
-  lookup, noMods, shift, ctrl, alt, singleton, fromEventType,
+  EventMap, EventType(..), Event,
+  module Graphics.UI.GLFW.ModState,
+  module Graphics.UI.GLFW.Events,
+  lookup, singleton, fromEventType,
   Key(..), charKey, delete)
 where
 
-import Prelude hiding (lookup)
-import Graphics.UI.GLFW (Key(..))
-import qualified Data.Map as Map
-import Data.Maybe(isJust)
-import Data.Map(Map)
-import Data.Monoid(Monoid(..))
-import Data.Char(toUpper)
 import Control.Monad(msum)
 import Control.Newtype(pack, unpack, over)
 import Control.Newtype.TH(mkNewTypes)
-
-data ModState = ModState {
-  modCtrl :: Bool,
-  modMeta :: Bool,
-  modAlt :: Bool,
-  modShift :: Bool
-  }
-  deriving (Show, Eq, Ord)
+import Data.Char(toUpper)
+import Data.Map(Map)
+import Data.Maybe(isJust)
+import Data.Monoid(Monoid(..))
+import Graphics.UI.GLFW (Key(..))
+import Graphics.UI.GLFW.Events (GLFWEvent(..), KeyEvent(..), IsPress(..))
+import Graphics.UI.GLFW.ModState (ModState(..), noMods, shift, ctrl, alt)
+import Prelude hiding (lookup)
+import qualified Data.Map as Map
 
 charKey :: Char -> Key
 charKey = CharKey . toUpper
 
-noMods :: ModState
-noMods = ModState False False False False
-
-shift :: ModState
-shift = noMods { modShift = True }
-
-ctrl :: ModState
-ctrl = noMods { modCtrl = True }
-
-alt :: ModState
-alt = noMods { modAlt = True }
-
-instance Ord Key where
-    compare a b = compare (show a) (show b)
-
--- TODO: Modifiers
 data EventType = CharEventType | KeyEventType ModState Key
-  deriving (Show, Eq, Ord)
-data Event = KeyEvent {
-  keyEventModState :: ModState,
-  keyEventChar :: Maybe Char,
-  keyEventKey :: Key }
   deriving (Show, Eq, Ord)
 
 isCharMods :: ModState -> Bool
-isCharMods ModState { modCtrl = False, modAlt = False, modMeta = False } = True
+isCharMods ModState { modCtrl = False, modAlt = False } = True
 isCharMods _ = False
 
+type Event = KeyEvent
+
 eventTypesOf :: Event -> [EventType]
-eventTypesOf
-  (KeyEvent ms mchar k) = KeyEventType ms k : charEventType
+eventTypesOf (KeyEvent Release _ _ _) = []
+eventTypesOf (KeyEvent Press ms mchar k) = KeyEventType ms k : charEventType
   where
    charEventType
      | isCharMods ms && isJust mchar = [CharEventType]

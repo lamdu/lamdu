@@ -29,6 +29,8 @@ Library
                        Graphics.UI.Bottle.MainLoop,
                        Graphics.UI.Bottle.Animation,
                        Graphics.UI.Bottle.AnimIds,
+                       Graphics.UI.GLFW.ModState,
+                       Graphics.UI.GLFW.Events,
                        Graphics.UI.GLFW.Utils,
                        Graphics.DrawingCombinators.Utils,
                        Data.Vector.Vector2,
@@ -56,7 +58,7 @@ Library
                        Data.Store.Db
 
   Build-depends:       base >= 4,
-                       GLFW-b >= 0.0.2,
+                       GLFW-b >= 0.1.0,
                        derive >= 2.5,
                        graphics-drawingcombinators >= 1.4,
                        OpenGL,
@@ -78,9 +80,6 @@ Library
                        transformers >= 0.2.1,
                        TraceUtils,
                        filepath >= 1.1
-
-  Other-modules:       Graphics.UI.Bottle.Typematic,
-                       Graphics.UI.Bottle.KeyHandlers
 
   ghc-options:         -O2 -Wall
 
