@@ -5,7 +5,7 @@ module Main(main) where
 
 import Control.Arrow (first)
 import Control.Category ((.))
-import Control.Monad (liftM, forM, unless)
+import Control.Monad (when, liftM, forM, unless)
 import Data.List (findIndex, isPrefixOf, elemIndex)
 import Data.List.Utils (enumerate, nth, removeAt)
 import Data.Maybe (fromMaybe, isJust)
@@ -153,7 +153,7 @@ simpleTextEdit style textRef animId cursor = do
     extractTextEditCursor [x] = BinUtils.decodeS x
     extractTextEditCursor _ = length text
     lifter newCursor newText = do
-      Property.set textRef newText
+      when (newText /= text) $ Property.set textRef newText
       return . Anim.joinId animId . (:[]) . BinUtils.encodeS $ newCursor
   return .
     (Widget.atIsFocused . const) (isJust mCursor) .
