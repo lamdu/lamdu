@@ -20,7 +20,6 @@ import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction, Store)
 import Editor.Data (ITreeD, TreeD)
 import Graphics.UI.Bottle.Animation(AnimId)
-import qualified AnimIds
 import qualified Data.Store.Db as Db
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -28,6 +27,7 @@ import qualified Data.Store.Rev.Branch as Branch
 import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
+import qualified Editor.AnimIds as AnimIds
 import qualified Editor.Data as Data
 
 data DBTag

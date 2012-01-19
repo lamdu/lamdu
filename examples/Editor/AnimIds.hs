@@ -1,6 +1,6 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
-module AnimIds(
+module Editor.AnimIds(
   backgroundCursorId, textCursorId, fromIRef,
   deeperId, collapserId, branchSelection, goUpId,
   delegating, notDelegating)

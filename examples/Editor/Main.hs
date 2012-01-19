@@ -18,7 +18,6 @@ import Editor.Data (ITreeD)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Widget (Widget)
 import Prelude hiding ((.))
-import qualified AnimIds
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.Store.Db as Db
 import qualified Data.Store.Property as Property
@@ -27,6 +26,7 @@ import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
+import qualified Editor.AnimIds as AnimIds
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Graphics.DrawingCombinators as Draw
