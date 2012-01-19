@@ -13,14 +13,14 @@ where
 
 import Control.Monad (unless)
 import Data.Binary (Binary)
-import Data.Binary.Utils (encodeS)
 import Data.Store.Db (Db)
-import Data.Store.IRef (IRef, guid)
+import Data.Store.IRef (IRef)
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction, Store)
 import Editor.Data (ITreeD, TreeD)
 import Graphics.UI.Bottle.Animation(AnimId)
+import qualified AnimIds
 import qualified Data.Store.Db as Db
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -67,7 +67,9 @@ type Cursor = AnimId
 cursorIRef :: IRef Cursor
 cursorIRef = IRef.anchor "cursor"
 
-cursor :: Monad m => Transaction.Property DBTag m Cursor
+-- Cursor is untagged because it is both saved globally and per-revision.
+-- Cursor movement without any revisioned changes are not saved per-revision.
+cursor :: Monad m => Transaction.Property t m Cursor
 cursor = Transaction.fromIRef cursorIRef
 
 -- Initialize an IRef if it does not already exist.
@@ -90,7 +92,10 @@ initDB store =
   Transaction.run store $ do
     bs <- initRef branchesIRef $ do
       masterNameIRef <- Transaction.newIRef "master"
-      initialVersionIRef <- Version.makeInitialVersion [(guid rootIRef, encodeS (Data.makeNode "" []))]
+      initialVersionIRef <-
+        Version.makeInitialVersion
+          [Version.makeInitialValue rootIRef (Data.makeNode "" []),
+           Version.makeInitialValue cursorIRef (AnimIds.valueEditId $ AnimIds.fromIRef rootIRef)]
       master <- Branch.new initialVersionIRef
       return [(masterNameIRef, master)]
     let branch = snd $ head bs

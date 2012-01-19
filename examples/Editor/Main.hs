@@ -287,14 +287,21 @@ makeWidgetForView :: Monad m => TextEdit.Style -> View -> TWidget DBTag m
 makeWidgetForView style view cursor = do
   versionData <- Version.versionData =<< View.curVersion view
   focusable <-
-    widgetDownTransaction (Anchors.viewStore view) $
+    widgetDownTransaction .
+    (liftM . fmap) (>>= saveCursor) $
     makeEditWidget style Anchors.clipboard cursor
   let undoEventMap = maybe mempty makeUndoEventMap (Version.parent versionData)
   return $ Widget.strongerKeys undoEventMap focusable
   where
-    makeUndoEventMap = (fmap . liftM . const) cursor . fromKeyGroups Config.undoKeys "Undo" . View.move view
-    widgetDownTransaction store =
+    makeUndoEventMap = fromKeyGroups Config.undoKeys "Undo" . (>> fetchRevisionCursor) . View.move view
+    fetchRevisionCursor = Transaction.run store $ Property.get Anchors.cursor
+    store = Anchors.viewStore view
+    widgetDownTransaction =
       Transaction.run store . (liftM . fmap) (Transaction.run store)
+    saveCursor newCursor = do
+      isEmpty <- Transaction.isEmpty
+      unless isEmpty $ Property.set Anchors.cursor newCursor
+      return newCursor
 
 fromKeyGroups :: [E.EventType] -> String -> a -> E.EventMap a
 fromKeyGroups keys _doc act = mconcat $ map (`E.fromEventType` act) keys

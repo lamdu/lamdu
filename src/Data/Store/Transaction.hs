@@ -8,6 +8,7 @@ module Data.Store.Transaction
      insertBS, insert,
      deleteBS, delete, deleteIRef,
      readIRef, readIRefDef, writeIRef,
+     isEmpty,
      irefExists,
      newIRef, newContainerRef, newKey,
      fromIRef, fromIRefDef,
@@ -21,7 +22,7 @@ where
 import           Prelude                          hiding (lookup)
 import           Control.Applicative              (Applicative)
 import           Control.Monad                    (liftM)
-import           Control.Monad.Trans.State.Strict (StateT, runStateT, get, modify)
+import           Control.Monad.Trans.State        (StateT, runStateT, get, gets, modify)
 import           Control.Monad.Trans.Reader       (ReaderT, runReaderT, ask)
 import           Control.Monad.Trans.Class        (MonadTrans(..))
 import           Data.ByteString.UTF8             (fromString)
@@ -65,6 +66,9 @@ liftStateT :: Monad m => StateT Changes m a -> Transaction t m a
 liftStateT = liftReaderT . lift
 liftInner :: Monad m => m a -> Transaction t m a
 liftInner = Transaction . lift . lift
+
+isEmpty :: Monad m => Transaction t m Bool
+isEmpty = liftStateT (gets Map.null)
 
 lookupBS :: Monad m => Key -> Transaction t m Value
 lookupBS guid = do
