@@ -6,7 +6,7 @@ module Main(main) where
 import Control.Arrow (first)
 import Control.Category ((.))
 import Control.Monad (when, liftM, forM, unless)
-import Data.List (findIndex, isPrefixOf, elemIndex)
+import Data.List (findIndex, elemIndex)
 import Data.List.Utils (enumerate, nth, removeAt)
 import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid(Monoid(..))
@@ -18,7 +18,6 @@ import Editor.Data (ITreeD)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Widget (Widget)
 import Prelude hiding ((.))
-import qualified Data.Binary.Utils as BinUtils
 import qualified Data.Store.Db as Db
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Rev.Branch as Branch
@@ -112,11 +111,6 @@ makeChildBox style parentCursor depth clipboardRef childrenIRefsRef cursor = do
     Spacer.indentRightWidget indentSize $
     childBox
 
-subId :: Anim.AnimId -> Anim.AnimId -> Maybe Anim.AnimId
-subId folder path
-  | folder `isPrefixOf` path = Just $ drop (length folder) path
-  | otherwise = Nothing
-
 wrapDelegated :: Monad m => (Anim.AnimId -> TWidget t m) -> Anim.AnimId -> TWidget t m
 wrapDelegated f animId cursor = do
   let textEditAnimId = AnimIds.delegating animId
@@ -139,7 +133,7 @@ wrapDelegated f animId cursor = do
       AnimIds.backgroundCursorId innerWidget
   return .
     fromMaybe cursorNotSelf . fmap cursorSelf $
-    subId selfAnimId cursor
+    Anim.subId selfAnimId cursor
 
 simpleTextEdit ::
   Monad m =>
@@ -149,16 +143,12 @@ simpleTextEdit ::
 simpleTextEdit style textRef animId cursor = do
   text <- Property.get textRef
   let
-    mCursor = fmap extractTextEditCursor $ subId animId cursor
-    extractTextEditCursor [x] = BinUtils.decodeS x
-    extractTextEditCursor _ = length text
     lifter newCursor newText = do
       when (newText /= text) $ Property.set textRef newText
-      return . Anim.joinId animId . (:[]) . BinUtils.encodeS $ newCursor
+      return newCursor
   return .
-    (Widget.atIsFocused . const) (isJust mCursor) .
     fmap (uncurry lifter) $
-    TextEdit.make style "<empty>" mCursor text animId
+    TextEdit.make style "<empty>" cursor text animId
 
 makeTreeEdit ::
   Monad m =>

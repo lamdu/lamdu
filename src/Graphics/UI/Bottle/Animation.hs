@@ -5,7 +5,7 @@ module Graphics.UI.Bottle.Animation(
   draw, nextFrame, backgroundColor,
   translate, scale, onDepth,
   simpleFrame, simpleFrameDownscale,
-  joinId)
+  joinId, subId)
 where
 
 import Control.Applicative(liftA2)
@@ -14,6 +14,7 @@ import Control.Newtype(over)
 import Control.Newtype.TH(mkNewTypes)
 import Data.ByteString.Char8() -- IsString instance
 import Data.Function(on)
+import Data.List(isPrefixOf)
 import Data.Map(Map, (!))
 import Data.Monoid(Monoid(..))
 import Data.Ord(comparing)
@@ -46,6 +47,11 @@ $(mkNewTypes [''Frame])
 
 joinId :: AnimId -> AnimId -> AnimId
 joinId = (++)
+
+subId :: AnimId -> AnimId -> Maybe AnimId
+subId folder path
+  | folder `isPrefixOf` path = Just $ drop (length folder) path
+  | otherwise = Nothing
 
 simpleFrame :: AnimId -> Draw.Image () -> Frame
 simpleFrame animId image =

@@ -2,6 +2,7 @@
 {-# LANGUAGE TypeOperators, OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.TextEdit(Cursor, Style(..), make, defaultCursorColor, defaultCursorWidth) where
 
+import Control.Arrow (first)
 import Data.Char (isSpace)
 import Data.List (genericLength)
 import Data.List.Split (splitOn)
@@ -13,6 +14,7 @@ import Graphics.UI.Bottle.SizeRange (fixedSize)
 import Graphics.UI.Bottle.Sized (Sized(..))
 import Graphics.UI.Bottle.Widget (Widget(..))
 import Graphics.UI.GLFW (Key(KeyBackspace, KeyDel, KeyDown, KeyEnd, KeyEnter, KeyHome, KeyLeft, KeyRight, KeyUp))
+import qualified Data.Binary.Utils as BinUtils
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -234,8 +236,12 @@ makeFocused style emptyStr cursor str animId =
         cursor' = cursor + length l
         str' = concat [before, l, after]
 
-make :: Style -> String -> Maybe Cursor -> String -> Anim.AnimId -> Widget (Cursor, String)
-make style emptyStr (Just cursor) str =
-  makeFocused style emptyStr cursor str
-make style _        Nothing       str =
-  makeUnfocused style str
+make :: Style -> String -> Anim.AnimId -> String -> Anim.AnimId -> Widget (Anim.AnimId, String)
+make style emptyStr cursor str myId =
+  (fmap . first) toAnimId $
+  maybe (makeUnfocused style) (makeFocused style emptyStr) mCursor str myId
+  where
+    mCursor = fmap extractTextEditCursor $ Anim.subId myId cursor
+    extractTextEditCursor [x] = BinUtils.decodeS x
+    extractTextEditCursor _ = length str
+    toAnimId = Anim.joinId myId . (:[]) . BinUtils.encodeS
