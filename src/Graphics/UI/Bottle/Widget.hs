@@ -2,11 +2,11 @@
 {-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses #-}
 module Graphics.UI.Bottle.Widget (
   Widget(..), MEnter, Direction,
-  UserIO(..), atContent, atIsFocused,
+  UserIO(..), EventResult, EventHandlers, atContent, atIsFocused,
   atUioMaybeEnter, atUioEventMap, atUioFrame,
   userIO, image, eventMap, enter,
   takesFocus, atUserIO,
-  atImageWithSize, atImage, atMaybeEnter, atEventMap,
+  atImageWithSize, atImage, atMaybeEnter, atEventMap, atEvents,
   backgroundColor, liftView, removeExtraSize,
   strongerKeys, weakerKeys) where
 
@@ -25,37 +25,49 @@ import qualified Graphics.UI.Bottle.Sized as Sized
 
 type Direction = Maybe (Vector2 Int)
 
-type MEnter k = Maybe (Direction -> k)
+type MEnter f = Maybe (Direction -> f EventResult)
 
-data UserIO k = UserIO {
+-- TODO: EventResult will also include an AnimIds mapping
+type Cursor = Anim.AnimId
+type EventResult = Cursor
+type EventHandlers f = EventMap (f EventResult)
+
+data UserIO f = UserIO {
   uioFrame :: Frame,
-  uioMaybeEnter :: MEnter k, -- Nothing if we're not enterable
-  uioEventMap :: EventMap k
+  uioMaybeEnter :: MEnter f, -- Nothing if we're not enterable
+  uioEventMap :: EventHandlers f
   }
-  deriving (Functor)
 
-atUioFrame :: (Frame -> Frame) -> UserIO a -> UserIO a
-atUioMaybeEnter :: (MEnter a -> MEnter a) -> UserIO a -> UserIO a
-atUioEventMap :: (EventMap a -> EventMap a) -> UserIO a -> UserIO a
+atUioFrame :: (Frame -> Frame) -> UserIO f -> UserIO f
+atUioMaybeEnter :: (MEnter f -> MEnter f) -> UserIO f -> UserIO f
+atUioEventMap :: (EventHandlers f -> EventHandlers f) -> UserIO f -> UserIO f
 atUioFrame      f u = u { uioFrame      = f . uioFrame      $ u }
 atUioMaybeEnter f u = u { uioMaybeEnter = f . uioMaybeEnter $ u }
 atUioEventMap   f u = u { uioEventMap   = f . uioEventMap   $ u }
 
-data Widget a = Widget {
+data Widget f = Widget {
   wIsFocused :: Bool,
-  wContent :: Sized (UserIO a)
+  wContent :: Sized (UserIO f)
   }
-  deriving (Functor)
 
-atIsFocused :: (Bool -> Bool) -> Widget a -> Widget a
+atEvents :: (f EventResult -> g EventResult) -> Widget f -> Widget g
+atEvents func =
+  atUserIO chg
+  where
+    chg userIo = userIo {
+      uioMaybeEnter = (fmap . fmap) func $ uioMaybeEnter userIo,
+      uioEventMap = fmap func $ uioEventMap userIo
+      }
+
+atIsFocused :: (Bool -> Bool) -> Widget f -> Widget f
 atIsFocused f w = w { wIsFocused = f (wIsFocused w) }
 
 atContent ::
-  (Sized (UserIO a) -> Sized (UserIO b)) ->
-  Widget a -> Widget b
+  (Sized (UserIO f) -> Sized (UserIO b)) ->
+  Widget f -> Widget b
 atContent f w = w { wContent = f (wContent w) }
 
-liftView :: Sized Frame -> Widget a
+liftView :: Sized Frame -> Widget f
 liftView view =
   Widget {
     wIsFocused = False,
@@ -72,10 +84,10 @@ liftView view =
 argument :: (a -> b) -> (b -> c) -> a -> c
 argument = flip (.)
 
-atUserIO :: (UserIO a -> UserIO b) -> Widget a -> Widget b
+atUserIO :: (UserIO f -> UserIO g) -> Widget f -> Widget g
 atUserIO = atContent . fmap
 
-removeExtraSize :: Widget a -> Widget a
+removeExtraSize :: Widget f -> Widget f
 removeExtraSize = atContent f
   where
     f sized = (Sized.atFromSize . argument) (liftA2 cap maxSize) sized
@@ -84,43 +96,43 @@ removeExtraSize = atContent f
         cap (Just x) y = min x y
         maxSize = getL SizeRange.srMaxSize $ Sized.requestedSize sized
 
-atImageWithSize :: (Size -> Frame -> Frame) -> Widget a -> Widget a
+atImageWithSize :: (Size -> Frame -> Frame) -> Widget f -> Widget f
 atImageWithSize f = atContent . Sized.atFromSize $ g
   where
     g mkUserIO size = atUioFrame (f size) (mkUserIO size)
 
-atImage :: (Frame -> Frame) -> Widget a -> Widget a
+atImage :: (Frame -> Frame) -> Widget f -> Widget f
 atImage = atUserIO . atUioFrame
 
-userIO :: Widget a -> Size -> UserIO a
+userIO :: Widget f -> Size -> UserIO f
 userIO = Sized.fromSize . wContent
 
-image :: Widget a -> Size -> Frame
+image :: Widget f -> Size -> Frame
 image = (fmap . fmap) uioFrame userIO
 
-eventMap :: Widget a -> Size -> EventMap a
+eventMap :: Widget f -> Size -> EventHandlers f
 eventMap = (fmap . fmap) uioEventMap userIO
 
-enter :: Widget a -> Size -> Maybe (Direction -> a)
+enter :: Widget f -> Size -> Maybe (Direction -> f EventResult)
 enter = (fmap . fmap) uioMaybeEnter userIO
 
--- ^ If widget already takes focus, it is untouched
-takesFocus :: (Direction -> a) -> Widget a -> Widget a
+-- ^ If Widget flready takes focus, it is untouched
+takesFocus :: (Direction -> f EventResult) -> Widget f -> Widget f
 takesFocus = atMaybeEnter . const . Just
 
-atMaybeEnter :: (MEnter a -> MEnter a) -> Widget a -> Widget a
+atMaybeEnter :: (MEnter f -> MEnter f) -> Widget f -> Widget f
 atMaybeEnter = atUserIO . atUioMaybeEnter
 
-atEventMap :: (EventMap a -> EventMap a) -> Widget a -> Widget a
+atEventMap :: (EventHandlers f -> EventHandlers f) -> Widget f -> Widget f
 atEventMap = atUserIO . atUioEventMap
 
 -- ^ If doesn't take focus, event map is ignored
-strongerKeys :: EventMap a -> Widget a -> Widget a
+strongerKeys :: EventHandlers f -> Widget f -> Widget f
 strongerKeys = atEventMap . mappend
 
 -- ^ If doesn't take focus, event map is ignored
-weakerKeys :: EventMap a -> Widget a -> Widget a
+weakerKeys :: EventHandlers f -> Widget f -> Widget f
 weakerKeys = atEventMap . flip mappend
 
-backgroundColor :: Anim.AnimId -> Draw.Color -> Widget a -> Widget a
+backgroundColor :: Anim.AnimId -> Draw.Color -> Widget f -> Widget f
 backgroundColor animId = atImageWithSize . Anim.backgroundColor animId 10

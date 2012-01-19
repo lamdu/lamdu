@@ -11,7 +11,6 @@ import Data.Maybe (isJust, fromMaybe, mapMaybe, catMaybes)
 import Data.Monoid (Monoid(..))
 import Data.Ord (comparing)
 import Data.Vector.Vector2 (Vector2(..))
-import Graphics.UI.Bottle.EventMap (EventMap)
 import Graphics.UI.Bottle.Widget (Widget(..))
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -35,7 +34,7 @@ fromAbove = Vector2 0 (-1)
 fromBelow :: Vector2 Int
 fromBelow = Vector2 0 1
 
-mkNavEventmap :: [[Widget.MEnter k]] -> Cursor -> EventMap k
+mkNavEventmap :: [[Widget.MEnter f]] -> Cursor -> Widget.EventHandlers f
 mkNavEventmap mEnterChildren cursor@(Vector2 cursorX cursorY) =
   mconcat . catMaybes $ [
     movement "left"      GLFW.KeyLeft     fromRight  leftOfCursor,

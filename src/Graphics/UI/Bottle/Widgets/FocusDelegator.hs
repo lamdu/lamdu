@@ -27,8 +27,8 @@ blue :: Draw.Color
 blue = Draw.Color 0 0 1 1
 
 makeFocused ::
-  Cursor -> k -> Keys -> Anim.AnimId ->
-  Widget k -> Widget k
+  Cursor -> f Widget.EventResult -> Keys -> Anim.AnimId ->
+  Widget f -> Widget f
 makeFocused delegating focusSelf keys backgroundCursorId =
   handleFocus delegating
   where
@@ -58,10 +58,10 @@ makeFocused delegating focusSelf keys backgroundCursorId =
 make ::
   Cursor -> -- ^ Enter/start state
   Maybe Cursor -> -- ^ Current state
-  k -> -- ^ Enter/Stop delegating value
+  f Widget.EventResult -> -- ^ Enter/Stop delegating value
   Keys -> -- ^ Keys configuration
   Anim.AnimId -> -- ^ Background AnimId
-  Widget k -> Widget k
+  Widget f -> Widget f
 make NotDelegating Nothing focusSelf _ _ = Widget.atMaybeEnter . const $ Just (const focusSelf)
 make Delegating Nothing  _     _ _ = id
 make _ (Just cursor) focusSelf keys backgroundCursorId = makeFocused cursor focusSelf keys backgroundCursorId

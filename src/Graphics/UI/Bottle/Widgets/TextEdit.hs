@@ -2,7 +2,6 @@
 {-# LANGUAGE TypeOperators, OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.TextEdit(Cursor, Style(..), make, defaultCursorColor, defaultCursorWidth) where
 
-import Control.Arrow (first)
 import Data.Char (isSpace)
 import Data.List (genericLength)
 import Data.List.Split (splitOn)
@@ -54,14 +53,17 @@ makeDisplayStr _        str = str
 cursorTranslate :: Style -> Anim.Frame -> Anim.Frame
 cursorTranslate style = Anim.translate (Vector2 (sCursorWidth style / 2) 0)
 
-makeUnfocused :: Style -> String -> Anim.AnimId -> Widget (Cursor, String)
-makeUnfocused style str =
+makeTextEditCursor :: Anim.AnimId -> Int -> Anim.AnimId
+makeTextEditCursor myId = Anim.joinId myId . (:[]) . BinUtils.encodeS
+
+makeUnfocused :: Style -> String -> Anim.AnimId -> Widget ((,) String)
+makeUnfocused style str myId =
   Widget.takesFocus enter .
   Widget.atImage
-    (cursorTranslate style) .
-  TextView.makeWidget (sTextViewStyle style) (lines str)
+    (cursorTranslate style) $
+  TextView.makeWidget (sTextViewStyle style) (lines str) myId
   where
-    enter dir = (enterPos dir, str)
+    enter dir = (str, makeTextEditCursor myId (enterPos dir))
     enterPos (Just (Vector2 x _))
       | x < 0 = 0
       | otherwise = length str
@@ -71,8 +73,8 @@ makeUnfocused style str =
 -- what "Font" should be)
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
-makeFocused :: Style -> String -> Cursor -> String -> Anim.AnimId -> Widget (Cursor, String)
-makeFocused style emptyStr cursor str animId =
+makeFocused :: Style -> String -> Cursor -> String -> Anim.AnimId -> Widget ((,) String)
+makeFocused style emptyStr cursor str myId =
   Widget.atImageWithSize
     (Anim.backgroundColor (sBackgroundCursorId style) 10 blue) .
   Widget.atImage (`mappend` cursorFrame) .
@@ -90,7 +92,7 @@ makeFocused style emptyStr cursor str animId =
           }
       }
     reqSize = fixedSize $ Vector2 (sCursorWidth style + tlWidth) tlHeight
-    img = cursorTranslate style $ frameGen animId
+    img = cursorTranslate style $ frameGen myId
     (frameGen, Vector2 tlWidth tlHeight) = TextView.drawText True (sTextViewStyle style) textLines
 
     blue = Draw.Color 0 0 0.8 0.8
@@ -123,10 +125,15 @@ makeFocused style emptyStr cursor str animId =
     cursorX = length curLineBefore
     cursorY = length linesBefore - 1
 
-    moveAbsolute a = (max 0 . min (length str) $ a, str)
+    eventResult newStr newCursor = (newStr, makeTextEditCursor myId newCursor)
+    moveAbsolute a = eventResult str . max 0 $ min (length str) a
     moveRelative d = moveAbsolute (cursor + d)
-    backDelete n = (cursor-n, take (cursor-n) str ++ drop cursor str)
-    delete n = (cursor, before ++ drop n after)
+    backDelete n = eventResult (take (cursor-n) str ++ drop cursor str) (cursor-n)
+    delete n = eventResult (before ++ drop n after) cursor
+    insert l = eventResult str' cursor'
+      where
+        cursor' = cursor + length l
+        str' = concat [before, l, after]
 
     backDeleteWord = backDelete . length . tillEndOfWord . reverse $ before
     deleteWord = delete . length . tillEndOfWord $ after
@@ -197,8 +204,8 @@ makeFocused style emptyStr cursor str animId =
 
         let swapPoint = min (textLength - 2) (cursor - 1)
             (beforeSwap, x:y:afterSwap) = splitAt swapPoint str
-            swapLetters = (min textLength (cursor + 1),
-                           beforeSwap ++ y:x:afterSwap)
+            swapLetters = eventResult (beforeSwap ++ y:x:afterSwap) $ min textLength (cursor + 1)
+
         in
 
         [ keys "Swap letters" [ctrlCharKey 't']
@@ -231,17 +238,10 @@ makeFocused style emptyStr cursor str animId =
 
         ]
 
-    insert l = (cursor', str')
-      where
-        cursor' = cursor + length l
-        str' = concat [before, l, after]
-
-make :: Style -> String -> Anim.AnimId -> String -> Anim.AnimId -> Widget (Anim.AnimId, String)
+make :: Style -> String -> Anim.AnimId -> String -> Anim.AnimId -> Widget ((,) String)
 make style emptyStr cursor str myId =
-  (fmap . first) toAnimId $
   maybe (makeUnfocused style) (makeFocused style emptyStr) mCursor str myId
   where
     mCursor = fmap extractTextEditCursor $ Anim.subId myId cursor
     extractTextEditCursor [x] = BinUtils.decodeS x
     extractTextEditCursor _ = length str
-    toAnimId = Anim.joinId myId . (:[]) . BinUtils.encodeS

@@ -112,7 +112,7 @@ mainLoopAnim eventHandler makeFrame = do
 
   mainLoopImage eventHandler makeImage
 
-mainLoopWidget :: IO (Widget (IO ())) -> IO a
+mainLoopWidget :: IO (Widget IO) -> IO a
 mainLoopWidget mkWidget =
   mainLoopAnim eventHandler mkImage
   where

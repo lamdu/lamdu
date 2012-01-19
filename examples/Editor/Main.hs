@@ -40,19 +40,17 @@ import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified System.Info
 
 type TWidget t m =
-  Cursor -> Transaction t m (Widget (Transaction t m Cursor))
+  Cursor -> Transaction t m (Widget (Transaction t m))
 
 focusableTextView :: Monad m => TextEdit.Style -> [String] -> Anim.AnimId -> TWidget t m
 focusableTextView style textLines animId cursor =
-  return .
-    (Widget.atIsFocused . const) hasFocus $
-    fmap return widget
+  return $ (Widget.atIsFocused . const) hasFocus widget
   where
     widget =
       (if hasFocus
          then Widget.backgroundColor AnimIds.backgroundCursorId blue
          else id) .
-      Widget.takesFocus (const animId) $
+      Widget.takesFocus (const (return animId)) $
       TextView.makeWidget (TextEdit.sTextViewStyle style) textLines animId
 
     hasFocus = animId == cursor
@@ -77,7 +75,7 @@ makeChoice selectionAnimId curChoiceRef orientation children cursor = do
   return widget
   where
     updateCurChoice (i, focusable) =
-      fmap (Property.set curChoiceRef i >>) focusable
+      Widget.atEvents (Property.set curChoiceRef i >>) focusable
     selectedColor = Draw.Color 0 0.5 0 1
 
 makeChildBox ::
@@ -143,11 +141,11 @@ simpleTextEdit ::
 simpleTextEdit style textRef animId cursor = do
   text <- Property.get textRef
   let
-    lifter newCursor newText = do
+    lifter newText newCursor = do
       when (newText /= text) $ Property.set textRef newText
       return newCursor
   return .
-    fmap (uncurry lifter) $
+    Widget.atEvents (uncurry lifter) $
     TextEdit.make style "<empty>" cursor text animId
 
 makeTreeEdit ::
@@ -274,7 +272,7 @@ makeWidgetForView style view cursor = do
   versionData <- Version.versionData =<< View.curVersion view
   focusable <-
     widgetDownTransaction .
-    (liftM . fmap) (>>= saveCursor) $
+    (liftM . Widget.atEvents) (>>= saveCursor) $
     makeEditWidget style Anchors.clipboard cursor
   let undoEventMap = maybe mempty makeUndoEventMap (Version.parent versionData)
   return $ Widget.strongerKeys undoEventMap focusable
@@ -283,7 +281,7 @@ makeWidgetForView style view cursor = do
     fetchRevisionCursor = Transaction.run store $ Property.get Anchors.cursor
     store = Anchors.viewStore view
     widgetDownTransaction =
-      Transaction.run store . (liftM . fmap) (Transaction.run store)
+      Transaction.run store . (liftM . Widget.atEvents) (Transaction.run store)
     saveCursor newCursor = do
       isEmpty <- Transaction.isEmpty
       unless isEmpty $ Property.set Anchors.cursor newCursor
@@ -317,7 +315,7 @@ deleteCurrentBranch = do
 makeRootWidget ::
   Monad m =>
   TextEdit.Style -> Cursor ->
-  Transaction DBTag m (Widget (Transaction DBTag m Cursor))
+  Transaction DBTag m (Widget (Transaction DBTag m))
 makeRootWidget style cursor = do
   view <- Property.get Anchors.view
   namedBranches <- Property.get Anchors.branches
@@ -401,8 +399,10 @@ runDbStore font store = do
       unless (Widget.wIsFocused focusable) $
         fail "Root cursor did not match"
 
-      return . fmap attachCursor $ focusable
+      return $ Widget.atEvents (>>= attachCursor) focusable
 
-    widgetDownTransaction = Transaction.run store . (liftM . fmap) (Transaction.run store)
+    widgetDownTransaction = Transaction.run store . (liftM . Widget.atEvents) (Transaction.run store)
 
-    attachCursor transaction = Property.set Anchors.cursor =<< transaction
+    attachCursor newCursor = do
+      Property.set Anchors.cursor newCursor
+      return newCursor
