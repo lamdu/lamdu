@@ -95,7 +95,7 @@ initDB store =
       initialVersionIRef <-
         Version.makeInitialVersion
           [Version.makeInitialValue rootIRef (Data.makeNode "" []),
-           Version.makeInitialValue cursorIRef (AnimIds.valueEditId $ AnimIds.fromIRef rootIRef)]
+           Version.makeInitialValue cursorIRef (AnimIds.fromIRef rootIRef)]
       master <- Branch.new initialVersionIRef
       return [(masterNameIRef, master)]
     let branch = snd $ head bs

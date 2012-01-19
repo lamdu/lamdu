@@ -160,9 +160,6 @@ simpleTextEdit style textRef animId cursor = do
     fmap (uncurry lifter) $
     TextEdit.make style "<empty>" mCursor text animId
 
-animIdOfTreeIRef :: ITreeD -> Anim.AnimId
-animIdOfTreeIRef = AnimIds.valueEditId . AnimIds.fromIRef
-
 makeTreeEdit ::
   Monad m =>
   TextEdit.Style ->
@@ -176,7 +173,7 @@ makeTreeEdit style depth clipboardRef treeIRef cursor
     isExpanded <- Property.get isExpandedRef
     valueEdit <-
       liftM (Widget.strongerKeys $ expandCollapseEventMap isExpanded) $
-      simpleTextEdit style valueTextEditModelRef valueEditAnimId cursor
+      simpleTextEdit style valueTextEditModelRef animId cursor
     childrenIRefs <- Property.get childrenIRefsRef
     childBoxL <-
       if isExpanded && not (null childrenIRefs)
@@ -207,8 +204,7 @@ makeTreeEdit style depth clipboardRef treeIRef cursor
     where
       goDeeperEventMap = fromKeyGroups Config.actionKeys "Go deeper" setFocalPoint
       animId = AnimIds.fromIRef treeIRef
-      valueEditAnimId = AnimIds.valueEditId animId
-      myCursor = valueEditAnimId
+      myCursor = animId
       treeRef = Transaction.fromIRef treeIRef
       valueRef                  = Data.nodeValue        `composeLabel` treeRef
       valueTextEditModelRef     = Data.textEditModel    `composeLabel` valueRef
@@ -242,7 +238,7 @@ makeTreeEdit style depth clipboardRef treeIRef cursor
         Property.pureModify Anchors.focalPointIRefs (treeIRef:) >> return AnimIds.goUpId
       appendChild newRef = do
         Property.pureModify childrenIRefsRef (++ [newRef])
-        return . animIdOfTreeIRef $ newRef
+        return $ AnimIds.fromIRef newRef
 
 getFocalPoint :: Monad m => Transaction ViewTag m (Bool, ITreeD)
 getFocalPoint = do
@@ -262,7 +258,7 @@ makeEditWidget style clipboardRef cursor = do
   let
     goUp = do
       Property.pureModify Anchors.focalPointIRefs (drop 1)
-      liftM (animIdOfTreeIRef . snd) getFocalPoint
+      liftM (AnimIds.fromIRef . snd) getFocalPoint
     goUpEventMap =
       if isAtRoot
       then mempty
@@ -410,7 +406,7 @@ runDbStore font store = do
         then
           return candidateWidget
         else
-          makeRootWidget style $ animIdOfTreeIRef Anchors.rootIRef
+          makeRootWidget style $ AnimIds.fromIRef Anchors.rootIRef
 
       unless (Widget.wIsFocused focusable) $
         fail "Root cursor did not match"

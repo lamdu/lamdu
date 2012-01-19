@@ -1,7 +1,7 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
 module AnimIds(
-  backgroundCursorId, textCursorId, fromIRef, valueEditId,
+  backgroundCursorId, textCursorId, fromIRef,
   deeperId, collapserId, branchSelection, goUpId,
   delegating, notDelegating)
 where
@@ -18,9 +18,6 @@ textCursorId = ["text cursor"]
 
 fromIRef :: IRef a -> AnimId
 fromIRef = (: []) . bs . guid
-
-valueEditId :: AnimId -> AnimId
-valueEditId = flip joinId ["value edit"]
 
 deeperId :: AnimId -> AnimId
 deeperId = flip joinId ["deeper"]
