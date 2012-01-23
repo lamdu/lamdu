@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TemplateHaskell #-}
 module Graphics.UI.Bottle.Widget (
   Widget(..), MEnter, Direction,
-  UserIO(..), EventResult, EventHandlers, atContent, atIsFocused,
+  UserIO(..), EventResult(..), EventHandlers, atContent, atIsFocused,
   atUioMaybeEnter, atUioEventMap, atUioFrame,
   userIO, image, eventMap, enter,
   takesFocus, atUserIO,
@@ -30,7 +30,11 @@ type MEnter f = Maybe (Direction -> f EventResult)
 
 -- TODO: EventResult will also include an AnimIds mapping
 type Cursor = Anim.AnimId
-type EventResult = Cursor
+
+data EventResult = EventResult {
+  eCursor :: Cursor
+  }
+
 type EventHandlers f = EventMap (f EventResult)
 
 data UserIO f = UserIO {
@@ -106,9 +110,10 @@ eventMap = (fmap . fmap) uioEventMap userIO
 enter :: Widget f -> Size -> Maybe (Direction -> f EventResult)
 enter = (fmap . fmap) uioMaybeEnter userIO
 
--- ^ If Widget flready takes focus, it is untouched
-takesFocus :: (Direction -> f EventResult) -> Widget f -> Widget f
-takesFocus = atMaybeEnter . const . Just
+-- ^ If Widget already takes focus, it is untouched
+-- TODO: Would be nicer as (Direction -> Cursor), but then TextEdit's "f" couldn't be ((,) String)..
+takesFocus :: Functor f => (Direction -> f Cursor) -> Widget f -> Widget f
+takesFocus = atMaybeEnter . const . Just . (fmap . fmap) EventResult
 
 atMaybeEnter :: (MEnter f -> MEnter f) -> Widget f -> Widget f
 atMaybeEnter = atUserIO . atUioMaybeEnter

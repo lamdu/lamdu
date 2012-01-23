@@ -26,8 +26,8 @@ defaultKeys = Keys {
 blue :: Draw.Color
 blue = Draw.Color 0 0 1 1
 
-makeFocused ::
-  Cursor -> f Widget.EventResult -> Keys -> Anim.AnimId ->
+makeFocused :: Monad f =>
+  Cursor -> Anim.AnimId -> Keys -> Anim.AnimId ->
   Widget f -> Widget f
 makeFocused delegating focusSelf keys backgroundCursorId =
   handleFocus delegating
@@ -53,15 +53,15 @@ makeFocused delegating focusSelf keys backgroundCursorId =
       E.fromEventType (startDelegatingKey keys) $ childEnter dir
 
     addStopDelegatingEventMap =
-      Widget.atEventMap . flip mappend $ E.fromEventType (stopDelegatingKey keys) focusSelf
+      Widget.atEventMap . flip mappend . E.fromEventType (stopDelegatingKey keys) . return $ Widget.EventResult focusSelf
 
-make ::
+make :: Monad f => -- actually "Pointed", as only using return.
   Cursor -> -- ^ Enter/start state
   Maybe Cursor -> -- ^ Current state
-  f Widget.EventResult -> -- ^ Enter/Stop delegating value
+  Anim.AnimId -> -- ^ Enter/Stop delegating value
   Keys -> -- ^ Keys configuration
   Anim.AnimId -> -- ^ Background AnimId
   Widget f -> Widget f
-make NotDelegating Nothing focusSelf _ _ = Widget.atMaybeEnter . const $ Just (const focusSelf)
+make NotDelegating Nothing focusSelf _ _ = Widget.atMaybeEnter . const . Just . const . return $ Widget.EventResult focusSelf
 make Delegating Nothing  _     _ _ = id
 make _ (Just cursor) focusSelf keys backgroundCursorId = makeFocused cursor focusSelf keys backgroundCursorId

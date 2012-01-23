@@ -126,7 +126,7 @@ makeFocused cursor style str myId =
     cursorX = length curLineBefore
     cursorY = length linesBefore - 1
 
-    eventResult newStr newCursor = (newStr, makeTextEditCursor myId newCursor)
+    eventResult newStr newCursor = (newStr, Widget.EventResult (makeTextEditCursor myId newCursor))
     moveAbsolute a = eventResult str . max 0 $ min (length str) a
     moveRelative d = moveAbsolute (cursor + d)
     backDelete n = eventResult (take (cursor-n) str ++ drop cursor str) (cursor-n)
