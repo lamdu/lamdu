@@ -28,6 +28,7 @@ data Style = Style {
   sCursorWidth :: Draw.R,
   sTextCursorId :: Anim.AnimId,
   sBackgroundCursorId :: Anim.AnimId,
+  sEmptyString :: String,
   sTextViewStyle :: TextView.Style
   }
 
@@ -46,9 +47,9 @@ tillEndOfWord xs = spaces ++ nonSpaces
     spaces = takeWhile isSpace xs
     nonSpaces = takeWhile (not . isSpace) . dropWhile isSpace $ xs
 
-makeDisplayStr :: String -> String -> String
-makeDisplayStr emptyStr ""  = emptyStr
-makeDisplayStr _        str = str
+makeDisplayStr :: Style -> String -> String
+makeDisplayStr style ""  = sEmptyString style
+makeDisplayStr _     str = str
 
 cursorTranslate :: Style -> Anim.Frame -> Anim.Frame
 cursorTranslate style = Anim.translate (Vector2 (sCursorWidth style / 2) 0)
@@ -73,8 +74,8 @@ makeUnfocused style str myId =
 -- what "Font" should be)
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
-makeFocused :: Style -> String -> Cursor -> String -> Anim.AnimId -> Widget ((,) String)
-makeFocused style emptyStr cursor str myId =
+makeFocused :: Cursor -> Style -> String -> Anim.AnimId -> Widget ((,) String)
+makeFocused cursor style str myId =
   Widget.atImageWithSize
     (Anim.backgroundColor (sBackgroundCursorId style) 10 blue) .
   Widget.atImage (`mappend` cursorFrame) .
@@ -114,7 +115,7 @@ makeFocused style emptyStr cursor str myId =
     textLength = length str
     lineCount = length textLines
     textLines = splitLines displayStr
-    displayStr = makeDisplayStr emptyStr str
+    displayStr = makeDisplayStr style str
 
     linesBefore = reverse (splitLines before)
     linesAfter = splitLines after
@@ -238,9 +239,9 @@ makeFocused style emptyStr cursor str myId =
 
         ]
 
-make :: Style -> String -> Anim.AnimId -> String -> Anim.AnimId -> Widget ((,) String)
-make style emptyStr cursor str myId =
-  maybe (makeUnfocused style) (makeFocused style emptyStr) mCursor str myId
+make :: Style -> Anim.AnimId -> String -> Anim.AnimId -> Widget ((,) String)
+make style cursor str myId =
+  maybe makeUnfocused makeFocused mCursor style str myId
   where
     mCursor = fmap extractTextEditCursor $ Anim.subId myId cursor
     extractTextEditCursor [x] = BinUtils.decodeS x

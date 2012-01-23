@@ -146,7 +146,7 @@ simpleTextEdit style textRef animId cursor = do
       return newCursor
   return .
     Widget.atEvents (uncurry lifter) $
-    TextEdit.make style "<empty>" cursor text animId
+    TextEdit.make style cursor text animId
 
 makeTreeEdit ::
   Monad m =>
@@ -384,7 +384,8 @@ runDbStore font store = do
       TextEdit.sCursorColor = TextEdit.defaultCursorColor,
       TextEdit.sCursorWidth = TextEdit.defaultCursorWidth,
       TextEdit.sTextCursorId = AnimIds.textCursorId,
-      TextEdit.sBackgroundCursorId = AnimIds.backgroundCursorId
+      TextEdit.sBackgroundCursorId = AnimIds.backgroundCursorId,
+      TextEdit.sEmptyString = "<empty>"
       }
     makeWidget = widgetDownTransaction $ do
       cursor <- Property.get Anchors.cursor
