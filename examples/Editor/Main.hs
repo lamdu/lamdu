@@ -116,7 +116,7 @@ wrapDelegated f animId cursor = do
   let
     cursorSelf _ = makeDelegator $ Just FocusDelegator.NotDelegating
     cursorNotSelf
-      | Widget.wIsFocused innerWidget =
+      | Widget.isFocused innerWidget =
         makeDelegator $ Just FocusDelegator.Delegating
       | otherwise = makeDelegator Nothing
 
@@ -390,13 +390,13 @@ runDbStore font store = do
       cursor <- Property.get Anchors.cursor
       candidateWidget <- makeRootWidget style cursor
       focusable <-
-        if Widget.wIsFocused candidateWidget
+        if Widget.isFocused candidateWidget
         then
           return candidateWidget
         else
           makeRootWidget style $ AnimIds.fromIRef Anchors.rootIRef
 
-      unless (Widget.wIsFocused focusable) $
+      unless (Widget.isFocused focusable) $
         fail "Root cursor did not match"
 
       return $ Widget.atEvents (>>= attachCursor) focusable

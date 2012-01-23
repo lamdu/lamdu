@@ -82,8 +82,8 @@ makeFocused style emptyStr cursor str myId =
   widget
   where
     widget = Widget {
-      wIsFocused = True,
-      wContent =
+      isFocused = True,
+      content =
         Sized reqSize . const $
         Widget.UserIO {
           Widget.uioFrame = img,

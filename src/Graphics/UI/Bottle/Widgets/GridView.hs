@@ -96,11 +96,11 @@ make = fmap fst . makeGeneric id
 makeFromWidgets :: [[Widget k]] -> Widget k
 makeFromWidgets widgets =
   Widget {
-    wIsFocused = any wIsFocused $ concat widgets,
-    wContent =
+    isFocused = any isFocused $ concat widgets,
+    content =
       fmap combineEventHandlers .
       makeGeneric Widget.uioFrame .
-      (map . map) wContent $ widgets
+      (map . map) content $ widgets
     }
   where
     combineEventHandlers (frame, userIOss) =

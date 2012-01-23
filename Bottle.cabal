@@ -35,6 +35,7 @@ Library
                        Data.Vector.Vector2,
                        Data.List.Utils,
                        Data.Maybe.Utils,
+                       Data.AtFieldTH,
 
                        -- DataStore:
                        Data.Random.Instances,
@@ -78,7 +79,8 @@ Library
                        containers >= 0.3,
                        transformers >= 0.2.1,
                        TraceUtils,
-                       filepath >= 1.1
+                       filepath >= 1.1,
+                       template-haskell
 
   ghc-options:         -O2 -Wall
 

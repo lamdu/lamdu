@@ -71,7 +71,7 @@ mkNavEventmap mEnterChildren cursor@(Vector2 cursorX cursorY) =
 
 getCursor :: [[Widget k]] -> Maybe Cursor
 getCursor =
-  fmap cursorOf . find (wIsFocused . snd) . concat . enumerate2d
+  fmap cursorOf . find (isFocused . snd) . concat . enumerate2d
   where
     cursorOf ((row, column), _) = Vector2 column row
 
@@ -80,11 +80,11 @@ makeHelper ::
   [[Widget k]] -> Widget k
 makeHelper combineEnters children =
   Widget {
-    wIsFocused = isJust mCursor,
-    wContent =
+    isFocused = isJust mCursor,
+    content =
       fmap combineUserIOs .
       GridView.makeGeneric Widget.uioFrame .
-      (map . map) wContent $ children
+      (map . map) content $ children
     }
   where
     mCursor = getCursor children

@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-{-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TemplateHaskell #-}
 module Graphics.UI.Bottle.Widget (
   Widget(..), MEnter, Direction,
   UserIO(..), EventResult, EventHandlers, atContent, atIsFocused,
@@ -18,6 +18,7 @@ import Graphics.UI.Bottle.Animation (Frame)
 import Graphics.UI.Bottle.EventMap (EventMap)
 import Graphics.UI.Bottle.SizeRange (Size)
 import Graphics.UI.Bottle.Sized (Sized)
+import qualified Data.AtFieldTH as AtFieldTH
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.SizeRange as SizeRange
@@ -38,17 +39,14 @@ data UserIO f = UserIO {
   uioEventMap :: EventHandlers f
   }
 
-atUioFrame :: (Frame -> Frame) -> UserIO f -> UserIO f
-atUioMaybeEnter :: (MEnter f -> MEnter f) -> UserIO f -> UserIO f
-atUioEventMap :: (EventHandlers f -> EventHandlers f) -> UserIO f -> UserIO f
-atUioFrame      f u = u { uioFrame      = f . uioFrame      $ u }
-atUioMaybeEnter f u = u { uioMaybeEnter = f . uioMaybeEnter $ u }
-atUioEventMap   f u = u { uioEventMap   = f . uioEventMap   $ u }
+AtFieldTH.make ''UserIO
 
 data Widget f = Widget {
-  wIsFocused :: Bool,
-  wContent :: Sized (UserIO f)
+  isFocused :: Bool,
+  content :: Sized (UserIO f)
   }
+
+AtFieldTH.make ''Widget
 
 atEvents :: (f EventResult -> g EventResult) -> Widget f -> Widget g
 atEvents func =
@@ -59,19 +57,11 @@ atEvents func =
       uioEventMap = fmap func $ uioEventMap userIo
       }
 
-atIsFocused :: (Bool -> Bool) -> Widget f -> Widget f
-atIsFocused f w = w { wIsFocused = f (wIsFocused w) }
-
-atContent ::
-  (Sized (UserIO f) -> Sized (UserIO b)) ->
-  Widget f -> Widget b
-atContent f w = w { wContent = f (wContent w) }
-
 liftView :: Sized Frame -> Widget f
 liftView view =
   Widget {
-    wIsFocused = False,
-    wContent = fmap buildUserIO view
+    isFocused = False,
+    content = fmap buildUserIO view
     }
   where
     buildUserIO frame =
@@ -105,7 +95,7 @@ atImage :: (Frame -> Frame) -> Widget f -> Widget f
 atImage = atUserIO . atUioFrame
 
 userIO :: Widget f -> Size -> UserIO f
-userIO = Sized.fromSize . wContent
+userIO = Sized.fromSize . content
 
 image :: Widget f -> Size -> Frame
 image = (fmap . fmap) uioFrame userIO
