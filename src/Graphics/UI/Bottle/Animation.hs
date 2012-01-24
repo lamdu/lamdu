@@ -2,7 +2,7 @@
 
 module Graphics.UI.Bottle.Animation(
   AnimId, Rect(..), PositionedImage(..), Frame(..),
-  draw, nextFrame, backgroundColor,
+  draw, nextFrame, mapIdentities, backgroundColor,
   translate, scale, onDepth,
   simpleFrame, simpleFrameDownscale,
   joinId, subId)
@@ -142,6 +142,8 @@ isVirtuallySame (Frame a) (Frame b) =
         (fmap abs (bottomRight ra - bottomRight rb))
     rectMap = Map.map (piRect . snd)
 
+mapIdentities :: (AnimId -> AnimId) -> Frame -> Frame
+mapIdentities = over Frame . Map.mapKeys
 
 nextFrame :: Frame -> Frame -> Maybe Frame
 nextFrame dest cur

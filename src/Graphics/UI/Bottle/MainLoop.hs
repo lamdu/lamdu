@@ -1,10 +1,11 @@
 {-# OPTIONS -Wall #-}
 module Graphics.UI.Bottle.MainLoop (mainLoopAnim, mainLoopImage, mainLoopWidget) where
 
+import Control.Arrow(second)
 import Control.Concurrent(forkIO, threadDelay)
 import Control.Concurrent.MVar
 import Control.Exception(SomeException, try, throwIO)
-import Control.Monad(forever)
+import Control.Monad(forever, liftM)
 import Data.IORef
 import Data.StateVar (($=))
 import Data.Vector.Vector2 (Vector2(..))
@@ -82,7 +83,7 @@ mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
   eventLoop handleEvents
 
 mainLoopAnim ::
-  (Size -> Event -> IO Bool) -> (Size -> IO Anim.Frame) -> IO a
+  (Size -> Event -> IO (Maybe Widget.EventResult)) -> (Size -> IO Anim.Frame) -> IO a
 mainLoopAnim eventHandler makeFrame = do
   frameStateVar <- newIORef Nothing
   let
@@ -109,8 +110,14 @@ mainLoopAnim eventHandler makeFrame = do
           Just (change, frame)
             | change -> Just (Anim.draw frame)
             | otherwise -> Nothing
-
-  mainLoopImage eventHandler makeImage
+    imgEventHandler size event = do
+      mEventResult <- eventHandler size event
+      case mEventResult of
+        Nothing -> return False
+        Just eventResult -> do
+          modifyIORef frameStateVar . fmap . second . Anim.mapIdentities $ Widget.eAnimIdMapping eventResult
+          return True
+  mainLoopImage imgEventHandler makeImage
 
 mainLoopWidget :: IO (Widget IO) -> IO a
 mainLoopWidget mkWidget =
@@ -118,7 +125,7 @@ mainLoopWidget mkWidget =
   where
     eventHandler size event = do
       widget <- mkWidget
-      maybe (return False) (>> return True) .
+      maybe (return Nothing) (liftM Just) .
         E.lookup event $ Widget.eventMap widget size
     mkImage size = do
       widget <- mkWidget
