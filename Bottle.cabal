@@ -80,7 +80,8 @@ Library
                        transformers >= 0.2.1,
                        TraceUtils,
                        filepath >= 1.1,
-                       template-haskell
+                       template-haskell,
+                       safe
 
   ghc-options:         -O2 -Wall
 

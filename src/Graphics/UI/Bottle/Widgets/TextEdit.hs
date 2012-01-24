@@ -2,10 +2,12 @@
 {-# LANGUAGE TypeOperators, OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.TextEdit(Cursor, Style(..), make, defaultCursorColor, defaultCursorWidth) where
 
+import Control.Arrow (first)
 import Data.Char (isSpace)
 import Data.List (genericLength)
-import Data.List.Split (splitOn)
-import Data.Maybe (fromJust)
+import Data.List.Split (splitWhen)
+import Data.List.Utils (enumerate)
+import Data.Maybe (fromJust, mapMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators.Utils (square, textHeight)
@@ -14,12 +16,15 @@ import Graphics.UI.Bottle.Sized (Sized(..))
 import Graphics.UI.Bottle.Widget (Widget(..))
 import Graphics.UI.GLFW (Key(KeyBackspace, KeyDel, KeyDown, KeyEnd, KeyEnter, KeyHome, KeyLeft, KeyRight, KeyUp))
 import qualified Data.Binary.Utils as BinUtils
+import qualified Data.ByteString.Char8 as SBS8
 import qualified Data.Vector.Vector2 as Vector2
+import qualified Data.Map as Map
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import qualified Safe
 
 type Cursor = Int
 
@@ -37,9 +42,6 @@ defaultCursorColor = Draw.Color 0 1 0 1
 
 defaultCursorWidth :: Draw.R
 defaultCursorWidth = 8
-
-splitLines :: String -> [String]
-splitLines = splitOn "\n"
 
 tillEndOfWord :: String -> String
 tillEndOfWord xs = spaces ++ nonSpaces
@@ -101,8 +103,9 @@ makeFocused cursor style str myId =
     textLinesWidth = Vector2.fst . snd . TextView.drawText True (sTextViewStyle style)
     sz = fromIntegral . TextView.styleFontSize $ sTextViewStyle style
     lineHeight = sz * textHeight
-    beforeCursor = take cursor str
-    cursorPosX = textLinesWidth . last . splitLines $ beforeCursor
+    strWithIds = map (first Just) $ enumerate str
+    beforeCursor = take cursor strWithIds
+    cursorPosX = textLinesWidth . map snd . last $ splitLines beforeCursor
     cursorPosY = (lineHeight *) . subtract 1 . genericLength . splitLines $ beforeCursor
     cursorFrame =
       Anim.onDepth (+2) .
@@ -111,12 +114,13 @@ makeFocused cursor style str myId =
       Anim.simpleFrame (sTextCursorId style) $
       Draw.tint (sCursorColor style) square
 
-    (before, after) = splitAt cursor str
+    (before, after) = splitAt cursor strWithIds
     textLength = length str
     lineCount = length textLines
-    textLines = splitLines displayStr
+    textLines = lines displayStr
     displayStr = makeDisplayStr style str
 
+    splitLines = splitWhen ((== '\n') . snd)
     linesBefore = reverse (splitLines before)
     linesAfter = splitLines after
     prevLine = linesBefore !! 1
@@ -126,21 +130,34 @@ makeFocused cursor style str myId =
     cursorX = length curLineBefore
     cursorY = length linesBefore - 1
 
-    eventResult newStr newCursor = (newStr, Widget.eventResultFromCursor (makeTextEditCursor myId newCursor))
-    moveAbsolute a = eventResult str . max 0 $ min (length str) a
+    eventResult newText newCursor =
+      (map snd newText,
+        Widget.EventResult {
+          Widget.eCursor = makeTextEditCursor myId newCursor,
+          Widget.eAnimIdMapping = mapping
+        })
+      where
+        mapping animId = maybe animId (Anim.joinId myId . translateId) $ Anim.subId myId animId
+        translateId [subId] = (:[]) . maybe subId (SBS8.pack . show) $ (`Map.lookup` dict) =<< Safe.readMay (SBS8.unpack subId) 
+        translateId x = x
+        dict = Map.fromList . mapMaybe posMapping . enumerate $ map fst newText
+        posMapping (_, Nothing) = Nothing
+        posMapping (newPos, Just oldPos) = Just (oldPos, newPos)
+
+    moveAbsolute a = eventResult strWithIds . max 0 $ min (length str) a
     moveRelative d = moveAbsolute (cursor + d)
-    backDelete n = eventResult (take (cursor-n) str ++ drop cursor str) (cursor-n)
+    backDelete n = eventResult (take (cursor-n) strWithIds ++ drop cursor strWithIds) (cursor-n)
     delete n = eventResult (before ++ drop n after) cursor
     insert l = eventResult str' cursor'
       where
         cursor' = cursor + length l
-        str' = concat [before, l, after]
+        str' = concat [before, map ((,) Nothing) l, after]
 
-    backDeleteWord = backDelete . length . tillEndOfWord . reverse $ before
-    deleteWord = delete . length . tillEndOfWord $ after
+    backDeleteWord = backDelete . length . tillEndOfWord . reverse $ map snd before
+    deleteWord = delete . length . tillEndOfWord $ map snd after
 
-    backMoveWord = moveRelative . negate . length . tillEndOfWord . reverse $ before
-    moveWord = moveRelative . length . tillEndOfWord $ after
+    backMoveWord = moveRelative . negate . length . tillEndOfWord . reverse $ map snd before
+    moveWord = moveRelative . length . tillEndOfWord $ map snd after
 
     singleton doc eventType mkModel =
       const (E.singleton eventType mkModel) (doc :: String)
@@ -204,7 +221,7 @@ makeFocused cursor style str myId =
         | cursor > 0 ],
 
         let swapPoint = min (textLength - 2) (cursor - 1)
-            (beforeSwap, x:y:afterSwap) = splitAt swapPoint str
+            (beforeSwap, x:y:afterSwap) = splitAt swapPoint strWithIds
             swapLetters = eventResult (beforeSwap ++ y:x:afterSwap) $ min textLength (cursor + 1)
 
         in
