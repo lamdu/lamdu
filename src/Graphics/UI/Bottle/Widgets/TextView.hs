@@ -3,9 +3,10 @@ module Graphics.UI.Bottle.Widgets.TextView (Style(..), make, makeWidget, drawTex
 
 import Control.Applicative (liftA2)
 import Control.Arrow (first, second, (&&&))
-import Data.List.Utils(enumerate, enumerate2d)
+import Data.List.Split (splitWhen)
+import Data.List.Utils (enumerate)
 import Data.Monoid (Monoid(..))
-import Data.Vector.Vector2(Vector2(..))
+import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.SizeRange (fixedSize)
 import Graphics.UI.Bottle.Sized (Sized(..))
 import Graphics.UI.Bottle.Widget (Widget, liftView)
@@ -27,15 +28,13 @@ drawText :: Bool -> Style -> String -> (Anim.AnimId -> Anim.Frame, Vector2 Draw.
 drawText isSingleLetterImages (Style font ptSize) text =
   (first . fmap) (Anim.scale sz) .
   second (* sz) .
-  drawMany vertical .
-  go $
-  textLines
+  drawMany vertical $
+  if isSingleLetterImages
+  then
+    map (drawMany horizontal . map (nestedFrame . second (useFont . (: [])))) .
+    splitWhen ((== '\n') . snd) $ enumerate text
+  else map (nestedFrame . second useFont) . (map . first) ((,) "Line") . enumerate $ lines text
   where
-    textLines = lines text
-    go =
-      if isSingleLetterImages
-      then map (drawMany horizontal . map (nestedFrame . second (useFont . (: [])))) . enumerate2d
-      else map (nestedFrame . second useFont) . enumerate
     useFont = DrawUtils.drawText font &&& DrawUtils.textSize font
     nestedFrame (i, (image, size)) = (draw, size)
       where
