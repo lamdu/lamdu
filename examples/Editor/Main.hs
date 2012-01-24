@@ -100,7 +100,7 @@ makeChildBox style parentCursor depth clipboardRef childrenIRefsRef cursor = do
 
         delChild = do
           Property.pureModify childrenIRefsRef $ removeAt curChildIndex
-          return $ Widget.EventResult parentCursor
+          return $ Widget.eventResultFromCursor parentCursor
       in
         liftM
           (Widget.weakerKeys $
@@ -172,7 +172,7 @@ makeTreeEdit style depth clipboardRef treeIRef cursor
           let
             moveToParentEventMap =
               fromKeyGroups Config.moveToParentKeys "Move to parent" .
-              return $ Widget.EventResult myCursor
+              return $ Widget.eventResultFromCursor myCursor
           liftM ((:[]) . Widget.weakerKeys moveToParentEventMap) $
             makeChildBox style myCursor depth clipboardRef childrenIRefsRef cursor
         else return []
@@ -202,7 +202,7 @@ makeTreeEdit style depth clipboardRef treeIRef cursor
       childrenIRefsRef          = Data.nodeChildrenRefs `composeLabel` treeRef
       isExpandedRef             = Data.isExpanded       `composeLabel` valueRef
       expandCollapseEventMap isExpanded =
-        (fmap . liftM . const . Widget.EventResult) cursor $
+        (fmap . liftM . const . Widget.eventResultFromCursor) cursor $
         if isExpanded
         then fromKeyGroups Config.collapseKeys "Collapse" collapse
         else fromKeyGroups Config.expandKeys "Expand" expand
@@ -227,10 +227,10 @@ makeTreeEdit style depth clipboardRef treeIRef cursor
       setFocalPointEventMap = fromKeyGroups Config.setFocalPointKeys "Set focal point" setFocalPoint
       setFocalPoint = do
         Property.pureModify Anchors.focalPointIRefs (treeIRef:)
-        return $ Widget.EventResult AnimIds.goUpId
+        return $ Widget.eventResultFromCursor AnimIds.goUpId
       appendChild newRef = do
         Property.pureModify childrenIRefsRef (++ [newRef])
-        return . Widget.EventResult $ AnimIds.fromIRef newRef
+        return . Widget.eventResultFromCursor $ AnimIds.fromIRef newRef
 
 getFocalPoint :: Monad m => Transaction ViewTag m (Bool, ITreeD)
 getFocalPoint = do
@@ -250,7 +250,7 @@ makeEditWidget style clipboardRef cursor = do
   let
     goUp = do
       Property.pureModify Anchors.focalPointIRefs (drop 1)
-      liftM (Widget.EventResult . AnimIds.fromIRef . snd) getFocalPoint
+      liftM (Widget.eventResultFromCursor . AnimIds.fromIRef . snd) getFocalPoint
     goUpEventMap =
       if isAtRoot
       then mempty
@@ -283,7 +283,7 @@ makeWidgetForView style view cursor = do
   where
     makeUndoEventMap = fromKeyGroups Config.undoKeys "Undo" . (>> fetchRevisionCursor) . View.move view
     fetchRevisionCursor =
-      liftM Widget.EventResult .
+      liftM Widget.eventResultFromCursor .
       Transaction.run store $
       Property.get Anchors.cursor
     store = Anchors.viewStore view
@@ -352,7 +352,7 @@ makeRootWidget style cursor = do
       | otherwise =
         fromKeyGroups Config.delBranchKeys "Delete Branch" $ do
           deleteCurrentBranch
-          return $ Widget.EventResult cursor
+          return $ Widget.eventResultFromCursor cursor
     box =
       Box.make Box.horizontal
       [viewEdit
@@ -368,7 +368,7 @@ makeRootWidget style cursor = do
         let viewPair = (textEditModelIRef, newBranch)
         Property.pureModify Anchors.branches (++ [viewPair])
         Property.set Anchors.currentBranch newBranch
-        return $ Widget.EventResult cursor
+        return $ Widget.eventResultFromCursor cursor
 
   let
     quitEventMap = fromKeyGroups Config.quitKeys "Quit" (error "Quit")

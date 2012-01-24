@@ -3,7 +3,7 @@
 module Graphics.UI.Bottle.Widget (
   Widget(..), MEnter, Direction,
   UserIO(..), EventResult(..), EventHandlers, atContent, atIsFocused,
-  atUioMaybeEnter, atUioEventMap, atUioFrame,
+  atUioMaybeEnter, atUioEventMap, atUioFrame, eventResultFromCursor,
   userIO, image, eventMap, enter,
   takesFocus, atUserIO,
   atImageWithSize, atImage, atMaybeEnter, atEventMap, atEvents,
@@ -32,7 +32,14 @@ type MEnter f = Maybe (Direction -> f EventResult)
 type Cursor = Anim.AnimId
 
 data EventResult = EventResult {
-  eCursor :: Cursor
+  eCursor :: Cursor,
+  eAnimIdMapping :: Anim.AnimId -> Anim.AnimId
+  }
+
+eventResultFromCursor :: Cursor -> EventResult
+eventResultFromCursor cursor = EventResult {
+  eCursor = cursor,
+  eAnimIdMapping = id
   }
 
 type EventHandlers f = EventMap (f EventResult)
@@ -113,7 +120,7 @@ enter = (fmap . fmap) uioMaybeEnter userIO
 -- ^ If Widget already takes focus, it is untouched
 -- TODO: Would be nicer as (Direction -> Cursor), but then TextEdit's "f" couldn't be ((,) String)..
 takesFocus :: Functor f => (Direction -> f Cursor) -> Widget f -> Widget f
-takesFocus = atMaybeEnter . const . Just . (fmap . fmap) EventResult
+takesFocus = atMaybeEnter . const . Just . (fmap . fmap) eventResultFromCursor
 
 atMaybeEnter :: (MEnter f -> MEnter f) -> Widget f -> Widget f
 atMaybeEnter = atUserIO . atUioMaybeEnter

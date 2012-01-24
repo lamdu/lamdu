@@ -53,7 +53,10 @@ makeFocused delegating focusSelf keys backgroundCursorId =
       E.fromEventType (startDelegatingKey keys) $ childEnter dir
 
     addStopDelegatingEventMap =
-      Widget.atEventMap . flip mappend . E.fromEventType (stopDelegatingKey keys) . return $ Widget.EventResult focusSelf
+      Widget.atEventMap .
+      flip mappend .
+      E.fromEventType (stopDelegatingKey keys) .
+      return $ Widget.eventResultFromCursor focusSelf
 
 make :: Monad f => -- actually "Pointed", as only using return.
   Cursor -> -- ^ Enter/start state
@@ -62,6 +65,7 @@ make :: Monad f => -- actually "Pointed", as only using return.
   Keys -> -- ^ Keys configuration
   Anim.AnimId -> -- ^ Background AnimId
   Widget f -> Widget f
-make NotDelegating Nothing focusSelf _ _ = Widget.atMaybeEnter . const . Just . const . return $ Widget.EventResult focusSelf
+make NotDelegating Nothing focusSelf _ _ =
+  Widget.atMaybeEnter . const . Just . const . return $ Widget.eventResultFromCursor focusSelf
 make Delegating Nothing  _     _ _ = id
 make _ (Just cursor) focusSelf keys backgroundCursorId = makeFocused cursor focusSelf keys backgroundCursorId
