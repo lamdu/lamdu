@@ -41,8 +41,8 @@ mkNavEventmap mEnterChildren cursor@(Vector2 cursorX cursorY) =
     movement "right"     GLFW.KeyRight    fromLeft   rightOfCursor,
     movement "up"        GLFW.KeyUp       fromBelow  aboveCursor,
     movement "down"      GLFW.KeyDown     fromAbove  belowCursor,
-    movement "top"       GLFW.KeyPageup   fromBelow  topCursor,
-    movement "bottom"    GLFW.KeyPagedown fromAbove  bottomCursor,
+    movement "top"       GLFW.KeyPageup   fromAbove  topCursor,
+    movement "bottom"    GLFW.KeyPagedown fromBelow  bottomCursor,
     movement "leftmost"  GLFW.KeyHome     fromRight  leftMostCursor,
     movement "rightmost" GLFW.KeyEnd      fromLeft   rightMostCursor
     ]
@@ -110,7 +110,8 @@ makeEnter =
   where
     search [] = Nothing
     search xs = Just $ byDirection xs
-    byDirection xs dir = ($ dir) . snd . maximumOn fst $ (map . first) (fromMaybe 0 dir *) xs
+    byDirection xs dir =
+      ($ dir) . snd . maximumOn fst $ (map . first) (fromMaybe 0 dir *) xs
     inverse ((y, x), m) = fmap ((,) $ Vector2 x y) m
     maximumOn = maximumBy . comparing
 
