@@ -23,14 +23,15 @@ data Style = Style {
 augment :: Show a => a -> Anim.AnimId -> Anim.AnimId
 augment x = (++ [SBS8.pack (show x)])
 
-drawText :: Bool -> Style -> [String] -> (Anim.AnimId -> Anim.Frame, Vector2 Draw.R)
-drawText isSingleLetterImages (Style font ptSize) textLines =
+drawText :: Bool -> Style -> String -> (Anim.AnimId -> Anim.Frame, Vector2 Draw.R)
+drawText isSingleLetterImages (Style font ptSize) text =
   (first . fmap) (Anim.scale sz) .
   second (* sz) .
   drawMany vertical .
   go $
   textLines
   where
+    textLines = lines text
     go =
       if isSingleLetterImages
       then map (drawMany horizontal . map (nestedFrame . second (useFont . (: [])))) . enumerate2d
@@ -53,10 +54,10 @@ drawText isSingleLetterImages (Style font ptSize) textLines =
     vertical = Vector2.first (const 0)
     sz = fromIntegral ptSize
 
-make :: Style -> [String] -> Anim.AnimId -> Sized Anim.Frame
-make style textLines animId = Sized (fixedSize textSize) . const $ frame animId
+make :: Style -> String -> Anim.AnimId -> Sized Anim.Frame
+make style text animId = Sized (fixedSize textSize) . const $ frame animId
   where
-    (frame, textSize) = drawText False style textLines
+    (frame, textSize) = drawText False style text
 
-makeWidget :: Style -> [String] -> Anim.AnimId -> Widget a
-makeWidget style textLines = liftView . make style textLines
+makeWidget :: Style -> String -> Anim.AnimId -> Widget a
+makeWidget style text = liftView . make style text

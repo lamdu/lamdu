@@ -45,8 +45,8 @@ type TWidget t m =
 class (Monad m, Functor m) => MonadF m
 instance (Monad m, Functor m) => MonadF m
 
-focusableTextView :: MonadF m => TextEdit.Style -> [String] -> Anim.AnimId -> TWidget t m
-focusableTextView style textLines animId cursor =
+focusableTextView :: MonadF m => TextEdit.Style -> String -> Anim.AnimId -> TWidget t m
+focusableTextView style text animId cursor =
   return $ (Widget.atIsFocused . const) hasFocus widget
   where
     widget =
@@ -54,7 +54,7 @@ focusableTextView style textLines animId cursor =
          then Widget.backgroundColor AnimIds.backgroundCursorId blue
          else id) .
       Widget.takesFocus (const (return animId)) $
-      TextView.makeWidget (TextEdit.sTextViewStyle style) textLines animId
+      TextView.makeWidget (TextEdit.sTextViewStyle style) text animId
 
     hasFocus = animId == cursor
     blue = Draw.Color 0 0 1 0.8
@@ -159,7 +159,7 @@ makeTreeEdit ::
 makeTreeEdit style depth clipboardRef treeIRef cursor
   | depth >= Config.maxDepth =
     liftM (Widget.strongerKeys goDeeperEventMap) $
-      focusableTextView style ["[Go deeper]"] (AnimIds.deeperId animId) cursor
+      focusableTextView style "[Go deeper]" (AnimIds.deeperId animId) cursor
   | otherwise = do
     isExpanded <- Property.get isExpandedRef
     valueEdit <-
@@ -211,8 +211,8 @@ makeTreeEdit style depth clipboardRef treeIRef cursor
       collapser isExpanded =
         flip (TextView.make (TextEdit.sTextViewStyle style)) (AnimIds.collapserId animId) $
         if isExpanded
-        then ["[-]"]
-        else ["[+]"]
+        then "[-]"
+        else "[+]"
 
       pasteEventMap [] = mempty
       pasteEventMap (cbChildRef:xs) =
@@ -260,7 +260,7 @@ makeEditWidget style clipboardRef cursor = do
     liftM
     (Widget.strongerKeys
       (fromKeyGroups Config.actionKeys "Go up" goUp)) $
-    focusableTextView style ["[go up]"] AnimIds.goUpId cursor
+    focusableTextView style "[go up]" AnimIds.goUpId cursor
 
   let
     focusable

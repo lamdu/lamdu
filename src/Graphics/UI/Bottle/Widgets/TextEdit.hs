@@ -62,7 +62,7 @@ makeUnfocused style str myId =
   Widget.takesFocus enter .
   Widget.atImage
     (cursorTranslate style) $
-  TextView.makeWidget (sTextViewStyle style) (lines str) myId
+  TextView.makeWidget (sTextViewStyle style) str myId
   where
     enter dir = (str, makeTextEditCursor myId (enterPos dir))
     enterPos (Just (Vector2 x _))
@@ -94,7 +94,7 @@ makeFocused cursor style str myId =
       }
     reqSize = fixedSize $ Vector2 (sCursorWidth style + tlWidth) tlHeight
     img = cursorTranslate style $ frameGen myId
-    (frameGen, Vector2 tlWidth tlHeight) = TextView.drawText True (sTextViewStyle style) textLines
+    (frameGen, Vector2 tlWidth tlHeight) = TextView.drawText True (sTextViewStyle style) str
 
     blue = Draw.Color 0 0 0.8 0.8
 
@@ -102,7 +102,7 @@ makeFocused cursor style str myId =
     sz = fromIntegral . TextView.styleFontSize $ sTextViewStyle style
     lineHeight = sz * textHeight
     beforeCursor = take cursor str
-    cursorPosX = textLinesWidth . (: []) . last . splitLines $ beforeCursor
+    cursorPosX = textLinesWidth . last . splitLines $ beforeCursor
     cursorPosY = (lineHeight *) . subtract 1 . genericLength . splitLines $ beforeCursor
     cursorFrame =
       Anim.onDepth (+2) .
