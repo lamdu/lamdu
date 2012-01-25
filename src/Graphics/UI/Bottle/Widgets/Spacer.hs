@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-{-# LANGUAGE TypeOperators, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Graphics.UI.Bottle.Widgets.Spacer (
   make, makeWidget, indentRight, indentRightWidget, makeHorizontal,
   makeHorizontalExpanding, makeVerticalExpanding) where

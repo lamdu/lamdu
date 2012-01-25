@@ -12,7 +12,6 @@ import Control.Applicative(liftA2)
 import Control.Arrow(first, second)
 import Control.Newtype(over)
 import Control.Newtype.TH(mkNewTypes)
-import Data.ByteString.Char8() -- IsString instance
 import Data.Function(on)
 import Data.List(isPrefixOf)
 import Data.Map(Map, (!))

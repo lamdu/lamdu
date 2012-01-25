@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-{-# LANGUAGE Rank2Types, TypeOperators #-}
+{-# LANGUAGE Rank2Types #-}
 module Graphics.UI.Bottle.Widgets.Box(Cursor, make, makeBiased, Orientation, horizontal, vertical) where
 
 import Data.Vector.Vector2(Vector2(..))

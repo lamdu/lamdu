@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-{-# LANGUAGE TypeOperators, OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.FocusDelegator(Cursor(..), make, defaultKeys) where
 
 import Data.Maybe(fromMaybe)

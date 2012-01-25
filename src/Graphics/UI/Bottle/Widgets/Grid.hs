@@ -1,5 +1,4 @@
 {-# OPTIONS -Wall #-}
-{-# LANGUAGE TypeOperators #-}
 module Graphics.UI.Bottle.Widgets.Grid(Cursor, make, makeBiased) where
 
 import Control.Applicative (liftA2)

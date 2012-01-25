@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-{-# LANGUAGE TypeOperators, OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.TextEdit(Cursor, Style(..), make, defaultCursorColor, defaultCursorWidth) where
 
 import Control.Arrow (first)

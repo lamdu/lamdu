@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-{-# LANGUAGE TypeOperators, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Graphics.UI.Bottle.Widgets.GridView(
     make, makeGeneric, makeFromWidgets) where
 
