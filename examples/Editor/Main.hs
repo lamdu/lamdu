@@ -159,7 +159,7 @@ makeTreeEdit ::
 makeTreeEdit style depth clipboardRef treeIRef cursor
   | depth >= Config.maxDepth =
     liftM (Widget.strongerKeys goDeeperEventMap) $
-      focusableTextView style "[Go deeper]" (AnimIds.deeperId animId) cursor
+      focusableTextView style "[Go deeper]" animId cursor
   | otherwise = do
     isExpanded <- Property.get isExpandedRef
     valueEdit <-

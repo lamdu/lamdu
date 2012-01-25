@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.AnimIds(
   backgroundCursorId, textCursorId, fromIRef,
-  deeperId, collapserId, branchSelection, goUpId,
+  collapserId, branchSelection, goUpId,
   delegating, notDelegating)
 where
 
@@ -18,9 +18,6 @@ textCursorId = ["text cursor"]
 
 fromIRef :: IRef a -> AnimId
 fromIRef = (: []) . bs . guid
-
-deeperId :: AnimId -> AnimId
-deeperId = flip joinId ["deeper"]
 
 collapserId :: AnimId -> AnimId
 collapserId = flip joinId ["collapser"]
