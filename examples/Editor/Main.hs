@@ -9,6 +9,7 @@ import Control.Arrow (first)
 import Control.Category ((.))
 import Control.Monad (when, liftM, forM, unless)
 import Control.Monad.Trans.Class (lift)
+import Data.IORef (newIORef, readIORef, modifyIORef)
 import Data.List (findIndex, elemIndex)
 import Data.List.Utils (enumerate, nth, removeAt)
 import Data.Maybe (fromMaybe, isJust)
@@ -406,10 +407,32 @@ makeRootWidget style = do
       (mappend quitEventMap makeBranchEventMap)
     box
 
+helpAdder :: TextView.Style -> IO (Widget IO -> IO (Widget IO))
+helpAdder style = do
+  showingHelpVar <- newIORef True
+  let
+    toggle =
+      modifyIORef showingHelpVar not >>
+      return Widget.emptyEventResult
+    addToggleEventMap doc =
+      Widget.strongerKeys $
+      fromKeyGroups Config.overlayDocKeys doc toggle
+  return $ \widget -> do
+    showingHelp <- readIORef showingHelpVar
+    return $
+      if showingHelp
+      then
+        EventMapDoc.addHelp style $
+        addToggleEventMap "Hide Key Bindings" widget
+      else
+        addToggleEventMap "Show Key Bindings"
+        widget
+
 runDbStore :: Draw.Font -> Transaction.Store DBTag IO -> IO a
 runDbStore font store = do
   Anchors.initDB store
-  mainLoopWidget $ liftM (EventMapDoc.addHelp helpStyle) makeWidget
+  addHelp <- helpAdder helpStyle
+  mainLoopWidget $ addHelp =<< makeWidget
   where
     helpStyle = TextView.Style {
       TextView.styleFont = font,

@@ -2,6 +2,7 @@
 
 module Editor.Config(
     maxDepth,
+    overlayDocKeys,
     quitKeys, undoKeys, goUpKeys, appendChildKeys, delChildKeys,
     setFocalPointKeys, cutKeys, pasteKeys,
     makeBranchKeys, delBranchKeys,
@@ -16,6 +17,8 @@ maxDepth = 10
 group = E.KeyEventType
 ascii k = group E.noMods (E.charKey k)
 ctrl k = group E.ctrl (E.charKey k)
+simple = group E.noMods
+alt = group E.alt
 
 quitKeys          = [ctrl 'q']
 undoKeys          = [ctrl 'z']
@@ -27,7 +30,9 @@ pasteKeys         = [ctrl 'v']
 cutKeys           = [ctrl 'x']
 makeBranchKeys    = [ctrl 's']
 delBranchKeys     = [ctrl 'o']
-actionKeys        = [group E.noMods E.KeyEnter]
+actionKeys        = [simple E.KeyEnter]
 collapseKeys      = [ascii '[']
 expandKeys        = [ascii ']']
-moveToParentKeys  = [group E.alt E.KeyLeft]
+moveToParentKeys  = [alt E.KeyLeft]
+
+overlayDocKeys = [simple E.KeyF1]
