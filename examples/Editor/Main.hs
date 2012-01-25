@@ -272,7 +272,7 @@ makeEditWidget style clipboardRef = do
   let
     goUp = do
       Property.pureModify Anchors.focalPointIRefs (drop 1)
-      liftM (Widget.eventResultFromCursor . AnimIds.fromIRef . snd) getFocalPoint
+      return . Widget.eventResultFromCursor $ AnimIds.fromIRef focalPoint
     goUpButtonEventMap =
       fromKeyGroups Config.actionKeys "Go up" goUp
     goUpEventMap =
