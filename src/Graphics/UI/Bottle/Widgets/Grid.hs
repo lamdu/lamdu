@@ -49,10 +49,11 @@ mkNavEventmap mEnterChildren cursor@(Vector2 cursorX cursorY) =
   where
     size = length2d mEnterChildren
     Vector2 cappedX cappedY = capCursor size cursor
-    movement _dirName key direction =
+    movement dirName key direction =
       fmap
-        (EventMap.fromEventType {-("Move " ++ dirName)-}
-         (EventMap.KeyEventType EventMap.noMods key) .
+        (EventMap.fromEventType
+         (EventMap.KeyEventType EventMap.noMods key)
+         ("Move " ++ dirName) .
          ($ Just direction)) .
       msum
     leftOfCursor    = reverse $ take cursorX curRow

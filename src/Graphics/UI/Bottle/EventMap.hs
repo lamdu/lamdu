@@ -5,11 +5,11 @@ module Graphics.UI.Bottle.EventMap(
   module Graphics.UI.GLFW.ModState,
   module Graphics.UI.GLFW.Events,
   lookup, singleton, fromEventType,
-  Key(..), charKey, delete)
+  Key(..), charKey, delete, eventMapDocs)
 where
 
 import Control.Monad(msum)
-import Control.Newtype(pack, unpack, over)
+import Control.Newtype(pack, op, over)
 import Control.Newtype.TH(mkNewTypes)
 import Data.Char(toUpper)
 import Data.Map(Map)
@@ -19,6 +19,7 @@ import Graphics.UI.GLFW (Key(..))
 import Graphics.UI.GLFW.Events (GLFWEvent(..), KeyEvent(..), IsPress(..))
 import Graphics.UI.GLFW.ModState (ModState(..), noMods, shift, ctrl, alt)
 import Prelude hiding (lookup)
+--import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Map as Map
 
 charKey :: Char -> Key
@@ -26,6 +27,17 @@ charKey = CharKey . toUpper
 
 data EventType = CharEventType | KeyEventType ModState Key
   deriving (Show, Eq, Ord)
+
+prettyEventType :: EventType -> String
+prettyEventType CharEventType = "Character"
+prettyEventType (KeyEventType ms key) =
+  prettyModState ++ show key
+  where
+    prettyModState =
+      concat $
+      ["ctrl+" | modCtrl ms] ++
+      ["alt+" | modAlt ms] ++
+      ["shift+" | modShift ms]
 
 isCharMods :: ModState -> Bool
 isCharMods ModState { modCtrl = False, modAlt = False } = True
@@ -41,12 +53,28 @@ eventTypesOf (KeyEvent Press ms mchar k) = KeyEventType ms k : charEventType
      | isCharMods ms && isJust mchar = [CharEventType]
      | otherwise = []
 
-newtype EventMap a = EventMap (Map EventType (Event -> a))
+type Doc = String
+
+data EventHandler a = EventHandler {
+  ehDoc :: Doc,
+  ehHandler :: Event -> a
+  }
   deriving (Functor)
-$(mkNewTypes [''EventMap])
+-- AtFieldTH.make ''EventHandler
+
+newtype EventMap a = EventMap (Map EventType (EventHandler a))
+  deriving (Functor)
+mkNewTypes [''EventMap]
 
 instance Show (EventMap a) where
   show (EventMap m) = "EventMap (keys = " ++ show (Map.keys m) ++ ")"
+
+eventMapDocs :: EventMap a -> [(String, Doc)]
+eventMapDocs =
+  map f . Map.toList . op EventMap
+  where
+    f (eventType, eventHandler) =
+      (prettyEventType eventType, ehDoc eventHandler)
 
 filterByKey :: Ord k => (k -> Bool) -> Map k v -> Map k v
 filterByKey p = Map.filterWithKey (const . p)
@@ -72,11 +100,16 @@ delete = over EventMap . Map.delete
 
 lookup :: Event -> EventMap a -> Maybe a
 lookup event eventMap =
-  fmap ($ event) . msum $
-  map (`Map.lookup` unpack eventMap) (eventTypesOf event)
+  fmap (($ event) . ehHandler) . msum $
+  map (`Map.lookup` op EventMap eventMap) (eventTypesOf event)
 
-singleton :: EventType -> (Event -> a) -> EventMap a
-singleton eventType handler = pack $ Map.singleton eventType handler
+singleton :: EventType -> Doc -> (Event -> a) -> EventMap a
+singleton eventType doc handler =
+  pack . Map.singleton eventType $
+  EventHandler {
+    ehDoc = doc,
+    ehHandler = handler
+    }
 
-fromEventType :: EventType -> a -> EventMap a
-fromEventType eventType = singleton eventType . const
+fromEventType :: EventType -> Doc -> a -> EventMap a
+fromEventType eventType doc = singleton eventType doc . const

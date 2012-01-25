@@ -164,10 +164,7 @@ makeFocused cursor style str myId =
     backMoveWord = moveRelative . negate . length . tillEndOfWord . reverse $ map snd before
     moveWord = moveRelative . length . tillEndOfWord $ map snd after
 
-    singleton doc eventType mkModel =
-      const (E.singleton eventType mkModel) (doc :: String)
-
-    keys doc = const (mconcat . map E.fromEventType) (doc :: String)
+    keys doc = mconcat . map (`E.fromEventType` doc)
 
     specialKey = E.KeyEventType E.noMods
     ctrlSpecialKey = E.KeyEventType E.ctrl
@@ -255,7 +252,7 @@ makeFocused cursor style str myId =
           backDelete (length curLineBefore)
         | not . null $ curLineBefore ],
 
-        [ singleton "Insert character" E.CharEventType (insert . (: []) . fromJust . E.keyEventChar) ],
+        [ E.singleton E.CharEventType "Insert character" (insert . (: []) . fromJust . E.keyEventChar) ],
 
         [ keys "Insert Newline" [specialKey KeyEnter] (insert "\n") ]
 

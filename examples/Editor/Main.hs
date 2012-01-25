@@ -323,7 +323,8 @@ maybeUpdateCursor :: Monad m => Widget.EventResult -> Transaction t m ()
 maybeUpdateCursor = maybe (return ()) (Property.set Anchors.cursor) . Widget.eCursor
 
 fromKeyGroups :: [E.EventType] -> String -> a -> E.EventMap a
-fromKeyGroups keys _doc act = mconcat $ map (`E.fromEventType` act) keys
+fromKeyGroups keys doc act =
+  mconcat $ map (flip (`E.fromEventType` doc) act) keys
 
 defaultFont :: String -> FilePath
 defaultFont "darwin" = "/Library/Fonts/Arial.ttf"

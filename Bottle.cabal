@@ -21,6 +21,7 @@ Library
                        Graphics.UI.Bottle.Widgets.Spacer,
                        Graphics.UI.Bottle.Widgets.Grid,
                        Graphics.UI.Bottle.Widgets.GridView,
+                       Graphics.UI.Bottle.Widgets.EventMapDoc,
                        Graphics.UI.Bottle.Widgets.Box,
                        Graphics.UI.Bottle.SizeRange,
                        Graphics.UI.Bottle.Sized,

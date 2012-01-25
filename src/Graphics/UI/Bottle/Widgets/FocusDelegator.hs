@@ -50,12 +50,12 @@ makeFocused delegating focusSelf keys backgroundCursorId =
       Widget.uioMaybeEnter userIO
 
     startDelegatingEventMap childEnter =
-      E.fromEventType (startDelegatingKey keys) $ childEnter dir
+      E.fromEventType (startDelegatingKey keys) "Enter child" $ childEnter dir
 
     addStopDelegatingEventMap =
       Widget.atEventMap .
       flip mappend .
-      E.fromEventType (stopDelegatingKey keys) .
+      E.fromEventType (stopDelegatingKey keys) "Exit child" .
       return $ Widget.eventResultFromCursor focusSelf
 
 make :: Monad f => -- actually "Pointed", as only using return.
