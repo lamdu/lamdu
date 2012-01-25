@@ -414,7 +414,7 @@ runDbStore font store = do
       TextEdit.sTextViewStyle =
         TextView.Style {
           TextView.styleFont = font,
-          TextView.styleFontSize = 50
+          TextView.styleFontSize = 25
           },
       TextEdit.sCursorColor = TextEdit.defaultCursorColor,
       TextEdit.sCursorWidth = TextEdit.defaultCursorWidth,

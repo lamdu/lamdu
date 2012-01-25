@@ -78,7 +78,7 @@ mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
         Just image ->
           Draw.clearRender .
           (Draw.translate (-1, 1) %%) .
-          (Draw.scale (1/winSizeX) (-1/winSizeY) %%) $
+          (Draw.scale (2/winSizeX) (-2/winSizeY) %%) $
           image
   eventLoop handleEvents
 
