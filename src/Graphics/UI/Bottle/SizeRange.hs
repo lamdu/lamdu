@@ -3,13 +3,12 @@
 
 module Graphics.UI.Bottle.SizeRange
     (Coordinate, Size,
-     SizeRange(SizeRange), srMinSize, srMaxSize,
-     inSizeRange, fixedSize, expanding,
+     SizeRange(..),
+     fixedSize, expanding,
      horizontallyExpanding, verticallyExpanding,
      )
 where
 
-import Data.Record.Label           (mkLabels, (:->), lens)
 import Data.Vector.Vector2         (Vector2(..))
 import Control.Applicative         (pure)
 import Graphics.DrawingCombinators (R)
@@ -19,17 +18,10 @@ type Size = Coordinate
 type MaxSize = Vector2 (Maybe R)
 
 data SizeRange = SizeRange {
-  _srMinSize :: Size,
-  _srMaxSize :: MaxSize
+  srMinSize :: Size,
+  srMaxSize :: MaxSize
   }
   deriving (Eq, Ord, Show, Read)
-$(mkLabels [''SizeRange])
-
-inSizeRange ::
-  (Size -> Size) -> (MaxSize -> MaxSize) ->
-  SizeRange -> SizeRange
-inSizeRange minFunc maxFunc (SizeRange minSize maxSize) =
-  SizeRange (minFunc minSize) (maxFunc maxSize)
 
 fixedSize :: Size -> SizeRange
 fixedSize size = SizeRange size (fmap Just size)

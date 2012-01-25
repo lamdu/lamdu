@@ -13,7 +13,6 @@ import Graphics.UI.Bottle.SizeRange (SizeRange(..), Size, Coordinate)
 import Graphics.UI.Bottle.Sized (Sized(..))
 import Graphics.UI.Bottle.Widget (Widget(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Data.Record.Label as Label
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.UI.Bottle.SizeRange as SizeRange
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -43,8 +42,8 @@ makeSizes rows = (reqSize, mkSizes)
     -- computeSizeRanges takes f twice (as f0 and f1) to work around
     -- lack of (proper) Rank2Types
     computeSizeRanges f0 f1 xs =
-      (map (maximum . map (f0 . Label.getL SizeRange.srMinSize)) xs,
-       map (fmap maximum . mapM (f1 . Label.getL SizeRange.srMaxSize)) xs)
+      (map (maximum . map (f0 . SizeRange.srMinSize)) xs,
+       map (fmap maximum . mapM (f1 . SizeRange.srMaxSize)) xs)
 
     rowHeightRanges = zip rowMinHeights rowMaxHeights
     columnWidthRanges = zip columnMinWidths columnMaxWidths

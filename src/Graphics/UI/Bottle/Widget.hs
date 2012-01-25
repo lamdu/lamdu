@@ -13,7 +13,6 @@ module Graphics.UI.Bottle.Widget (
 
 import Control.Applicative (liftA2)
 import Data.Monoid (Monoid(..))
-import Data.Record.Label (getL)
 import Data.Vector.Vector2 (Vector2)
 import Graphics.UI.Bottle.Animation (Frame)
 import Graphics.UI.Bottle.EventMap (EventMap)
@@ -102,7 +101,7 @@ removeExtraSize = atContent f
       where
         cap Nothing y = y
         cap (Just x) y = min x y
-        maxSize = getL SizeRange.srMaxSize $ Sized.requestedSize sized
+        maxSize = SizeRange.srMaxSize $ Sized.requestedSize sized
 
 atImageWithSize :: (Size -> Frame -> Frame) -> Widget f -> Widget f
 atImageWithSize f = atContent . Sized.atFromSize $ g
