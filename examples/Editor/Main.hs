@@ -13,7 +13,7 @@ import Data.List (findIndex, elemIndex)
 import Data.List.Utils (enumerate, nth, removeAt)
 import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid(Monoid(..))
-import Data.Store.Property (pureCompose, composeLabel)
+import Data.Store.Property (composeLabel)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (DBTag, ViewTag, Cursor)
@@ -358,20 +358,19 @@ makeRootWidget style = do
     guiBranches = (map . first) makeBranchNameEdit namedBranches
 
     branches = map snd guiBranches
+    alsoUpdateView branch = do
+      View.setBranch view branch
+      return branch
     branchIndexRef =
-      pureCompose
+      Property.pureCompose
         (fromMaybe (error "Selected branch not in branch list") .
-         (`elemIndex` branches)) (branches !!)
+         (`elemIndex` branches)) (branches !!) .
+      Property.compose return alsoUpdateView $
         Anchors.currentBranch
 
   branchSelector <-
     makeChoice AnimIds.branchSelection branchIndexRef
     Box.vertical (map fst guiBranches)
-  branch <- transaction $ Property.get Anchors.currentBranch
-
-  -- TODO: This setBranch should happen in the choice widget and not
-  -- here!
-  transaction $ View.setBranch view branch
 
   viewEdit <- makeWidgetForView style view
   let

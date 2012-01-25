@@ -27,12 +27,14 @@ modify_ prop f = set prop =<< f =<< get prop
 pureModify :: Monad m => Property m a -> (a -> a) -> m ()
 pureModify prop = modify_ prop . (return .)
 
-inFields :: (m a -> m b) -> ((a -> m ()) -> b -> m ()) -> Property m a -> Property m b
-inFields onGet onSet (Property getter setter) = Property (onGet getter) (onSet setter)
+inFields ::
+  (m a -> m b) -> ((a -> m ()) -> b -> m ()) ->
+  Property m a -> Property m b
+inFields onGet onSet (Property getter setter) =
+  Property (onGet getter) (onSet setter)
 
 compose ::
-  Monad m =>
-  (a -> m b) -> (b -> m a) ->
+  Monad m => (a -> m b) -> (b -> m a) ->
   Property m a -> Property m b
 compose aToB bToA = inFields (>>= aToB) (bToA >=>)
 
@@ -42,7 +44,8 @@ pureCompose ab ba = compose (return . ab) (return . ba)
 
 infixl 5 `composeLabel`
 composeLabel :: Monad m => (a :-> b) -> Property m a -> Property m b
-composeLabel label (Property getter setter) = Property getter' setter'
+composeLabel label (Property getter setter) =
+  Property getter' setter'
   where
     getter' = Label.getL label `liftM` getter
     setter' x = setter . Label.setL label x =<< getter
