@@ -19,6 +19,7 @@ import qualified Data.Binary.Utils as BinUtils
 import qualified Data.ByteString.Char8 as SBS8
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -96,7 +97,7 @@ makeFocused cursor style str myId =
       }
     reqSize = fixedSize $ Vector2 (sCursorWidth style + tlWidth) tlHeight
     img = cursorTranslate style $ frameGen myId
-    (frameGen, Vector2 tlWidth tlHeight) = TextView.drawText True (sTextViewStyle style) str
+    (frameGen, Vector2 tlWidth tlHeight) = TextView.drawText True (sTextViewStyle style) displayStr
 
     blue = Draw.Color 0 0 0.8 0.8
 
@@ -116,8 +117,7 @@ makeFocused cursor style str myId =
 
     (before, after) = splitAt cursor strWithIds
     textLength = length str
-    lineCount = length textLines
-    textLines = lines displayStr
+    lineCount = length (lines displayStr)
     displayStr = makeDisplayStr style str
 
     splitLines = splitWhen ((== '\n') . snd)
@@ -138,11 +138,16 @@ makeFocused cursor style str myId =
         })
       where
         mapping animId = maybe animId (Anim.joinId myId . translateId) $ Anim.subId myId animId
-        translateId [subId] = (:[]) . maybe subId (SBS8.pack . show) $ (`Map.lookup` dict) =<< Safe.readMay (SBS8.unpack subId) 
+        translateId [subId] = (:[]) . maybe subId (SBS8.pack . show) $ (`Map.lookup` dict) =<< Safe.readMay (SBS8.unpack subId)
         translateId x = x
-        dict = Map.fromList . mapMaybe posMapping . enumerate $ map fst newText
+        dict = mappend movedDict deletedDict
+        movedDict = Map.fromList . mapMaybe posMapping . enumerate $ map fst newText
+        deletedDict = Map.fromList . map (flip (,) (-1)) $ Set.toList deletedKeys
         posMapping (_, Nothing) = Nothing
         posMapping (newPos, Just oldPos) = Just (oldPos, newPos)
+        deletedKeys =
+          Set.fromList (mapMaybe fst strWithIds) `Set.difference`
+          Set.fromList (mapMaybe fst newText)
 
     moveAbsolute a = eventResult strWithIds . max 0 $ min (length str) a
     moveRelative d = moveAbsolute (cursor + d)
