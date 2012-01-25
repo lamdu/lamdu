@@ -9,6 +9,7 @@ where
 import Graphics.UI.Bottle.Animation(AnimId, joinId)
 import Data.Store.IRef(IRef, guid)
 import Data.Store.Guid(bs)
+import Data.ByteString.Char8() -- IsString instance
 
 backgroundCursorId :: AnimId
 backgroundCursorId = ["background cursor"]

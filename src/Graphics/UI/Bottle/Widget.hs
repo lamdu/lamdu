@@ -6,7 +6,7 @@ module Graphics.UI.Bottle.Widget (
   atUioMaybeEnter, atUioEventMap, atUioFrame,
   emptyEventResult, eventResultFromCursor,
   userIO, image, eventMap, enter,
-  takesFocus, atUserIO,
+  takesFocus, atMkUserIO, atUserIO,
   atImageWithSize, atImage, atMaybeEnter, atEventMap, atEvents,
   backgroundColor, liftView, removeExtraSize,
   strongerKeys, weakerKeys) where
@@ -103,8 +103,11 @@ removeExtraSize = atContent f
         cap (Just x) y = min x y
         maxSize = SizeRange.srMaxSize $ Sized.requestedSize sized
 
+atMkUserIO :: ((Size -> UserIO f) -> Size -> UserIO f) -> Widget f -> Widget f
+atMkUserIO = atContent . Sized.atFromSize
+
 atImageWithSize :: (Size -> Frame -> Frame) -> Widget f -> Widget f
-atImageWithSize f = atContent . Sized.atFromSize $ g
+atImageWithSize f = atMkUserIO g
   where
     g mkUserIO size = atUioFrame (f size) (mkUserIO size)
 

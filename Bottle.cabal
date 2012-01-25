@@ -94,6 +94,7 @@ Executable Editor
                        binary >= 0.5,
                        transformers,
                        TraceUtils,
+                       bytestring,
                        derive,
                        bottle
   Other-Modules:       Editor.Data,

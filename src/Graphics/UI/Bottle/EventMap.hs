@@ -11,7 +11,8 @@ where
 import Control.Monad(msum)
 import Control.Newtype(pack, op, over)
 import Control.Newtype.TH(mkNewTypes)
-import Data.Char(toUpper)
+import Data.Char(toLower, toUpper)
+import Data.List(isPrefixOf)
 import Data.Map(Map)
 import Data.Maybe(isJust)
 import Data.Monoid(Monoid(..))
@@ -28,16 +29,22 @@ charKey = CharKey . toUpper
 data EventType = CharEventType | KeyEventType ModState Key
   deriving (Show, Eq, Ord)
 
+prettyKey :: Key -> String
+prettyKey (CharKey x) = [toLower x]
+prettyKey k
+  | "Key" `isPrefixOf` show k = drop 3 $ show k
+  | otherwise = show k
+
 prettyEventType :: EventType -> String
 prettyEventType CharEventType = "Character"
 prettyEventType (KeyEventType ms key) =
-  prettyModState ++ show key
+  prettyModState ++ prettyKey key
   where
     prettyModState =
       concat $
-      ["ctrl+" | modCtrl ms] ++
-      ["alt+" | modAlt ms] ++
-      ["shift+" | modShift ms]
+      ["Ctrl+" | modCtrl ms] ++
+      ["Alt+" | modAlt ms] ++
+      ["Shift+" | modShift ms]
 
 isCharMods :: ModState -> Bool
 isCharMods ModState { modCtrl = False, modAlt = False } = True

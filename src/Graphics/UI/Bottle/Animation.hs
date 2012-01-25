@@ -2,6 +2,7 @@
 
 module Graphics.UI.Bottle.Animation(
   AnimId, Rect(..), PositionedImage(..), Frame(..),
+  atPiImage, atPiRect, onImages,
   draw, nextFrame, mapIdentities, backgroundColor,
   translate, scale, onDepth,
   simpleFrame, simpleFrameDownscale,
@@ -20,6 +21,7 @@ import Data.Ord(comparing)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators((%%))
 import Graphics.DrawingCombinators.Utils(square)
+import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.ByteString as SBS
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -38,6 +40,7 @@ data PositionedImage = PositionedImage {
   piImage :: Draw.Image (), -- Image always occupies (0,0)..(1,1), the translation/scaling occurs when drawing
   piRect :: Rect
   }
+AtFieldTH.make ''PositionedImage
 
 newtype Frame = Frame {
   iSubImages :: Map AnimId (Layer, PositionedImage)
@@ -199,3 +202,6 @@ scale factor =
 
 onDepth :: (Int -> Int) -> Frame -> Frame
 onDepth = over Frame . fmap . first
+
+onImages :: (Draw.Image () -> Draw.Image ()) -> Frame -> Frame
+onImages = over Frame . Map.map . second . atPiImage

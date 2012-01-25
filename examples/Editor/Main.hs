@@ -37,6 +37,7 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
@@ -408,8 +409,12 @@ makeRootWidget style = do
 runDbStore :: Draw.Font -> Transaction.Store DBTag IO -> IO a
 runDbStore font store = do
   Anchors.initDB store
-  mainLoopWidget makeWidget
+  mainLoopWidget $ liftM (EventMapDoc.addHelp helpStyle) makeWidget
   where
+    helpStyle = TextView.Style {
+      TextView.styleFont = font,
+      TextView.styleFontSize = 10
+      }
     style = TextEdit.Style {
       TextEdit.sTextViewStyle =
         TextView.Style {
@@ -435,7 +440,9 @@ runDbStore font store = do
         fail "Root cursor did not match"
       return $ Widget.atEvents (>>= attachCursor) focusable
 
-    widgetDownTransaction = Transaction.run store . (liftM . Widget.atEvents) (Transaction.run store)
+    widgetDownTransaction =
+      Transaction.run store .
+      (liftM . Widget.atEvents) (Transaction.run store)
 
     attachCursor eventResult = do
       maybeUpdateCursor eventResult
