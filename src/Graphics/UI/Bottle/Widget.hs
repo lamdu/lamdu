@@ -3,7 +3,8 @@
 module Graphics.UI.Bottle.Widget (
   Widget(..), MEnter, Direction,
   UserIO(..), EventResult(..), EventHandlers, atContent, atIsFocused,
-  atUioMaybeEnter, atUioEventMap, atUioFrame, eventResultFromCursor,
+  atUioMaybeEnter, atUioEventMap, atUioFrame,
+  emptyEventResult, eventResultFromCursor,
   userIO, image, eventMap, enter,
   takesFocus, atUserIO,
   atImageWithSize, atImage, atMaybeEnter, atEventMap, atEvents,
@@ -32,13 +33,19 @@ type MEnter f = Maybe (Direction -> f EventResult)
 type Cursor = Anim.AnimId
 
 data EventResult = EventResult {
-  eCursor :: Cursor,
+  eCursor :: Maybe Cursor,
   eAnimIdMapping :: Anim.AnimId -> Anim.AnimId
+  }
+
+emptyEventResult :: EventResult
+emptyEventResult = EventResult {
+  eCursor = Nothing,
+  eAnimIdMapping = id
   }
 
 eventResultFromCursor :: Cursor -> EventResult
 eventResultFromCursor cursor = EventResult {
-  eCursor = cursor,
+  eCursor = Just cursor,
   eAnimIdMapping = id
   }
 

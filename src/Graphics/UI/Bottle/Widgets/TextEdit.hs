@@ -133,7 +133,7 @@ makeFocused cursor style str myId =
     eventResult newText newCursor =
       (map snd newText,
         Widget.EventResult {
-          Widget.eCursor = makeTextEditCursor myId newCursor,
+          Widget.eCursor = Just $ makeTextEditCursor myId newCursor,
           Widget.eAnimIdMapping = mapping
         })
       where

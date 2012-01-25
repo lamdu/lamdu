@@ -183,9 +183,8 @@ makeTreeEdit style depth clipboardRef treeIRef
       focusableTextView style "[Go deeper]" animId
   | otherwise = do
     isExpanded <- transaction $ Property.get isExpandedRef
-    cursor <- readCursor
     valueEdit <-
-      liftM (Widget.strongerKeys $ expandCollapseEventMap isExpanded cursor) $
+      liftM (Widget.strongerKeys $ expandCollapseEventMap isExpanded) $
       simpleTextEdit style valueTextEditModelRef animId
     childrenIRefs <- transaction $ Property.get childrenIRefsRef
     childBoxL <-
@@ -223,8 +222,8 @@ makeTreeEdit style depth clipboardRef treeIRef
       valueTextEditModelRef     = Data.textEditModel    `composeLabel` valueRef
       childrenIRefsRef          = Data.nodeChildrenRefs `composeLabel` treeRef
       isExpandedRef             = Data.isExpanded       `composeLabel` valueRef
-      expandCollapseEventMap isExpanded cursor =
-        (fmap . liftM . const . Widget.eventResultFromCursor) cursor $
+      expandCollapseEventMap isExpanded =
+        (fmap . liftM . const) Widget.emptyEventResult $
         if isExpanded
         then fromKeyGroups Config.collapseKeys "Collapse" collapse
         else fromKeyGroups Config.expandKeys "Expand" expand
@@ -317,8 +316,11 @@ makeWidgetForView style view = do
       (liftM . Widget.atEvents) (Transaction.run store)
     saveCursor eventResult = do
       isEmpty <- Transaction.isEmpty
-      unless isEmpty . Property.set Anchors.cursor $ Widget.eCursor eventResult
+      unless isEmpty $ maybeUpdateCursor eventResult
       return eventResult
+
+maybeUpdateCursor :: Monad m => Widget.EventResult -> Transaction t m ()
+maybeUpdateCursor = maybe (return ()) (Property.set Anchors.cursor) . Widget.eCursor
 
 fromKeyGroups :: [E.EventType] -> String -> a -> E.EventMap a
 fromKeyGroups keys _doc act = mconcat $ map (`E.fromEventType` act) keys
@@ -372,14 +374,13 @@ makeRootWidget style = do
   transaction $ View.setBranch view branch
 
   viewEdit <- makeWidgetForView style view
-  cursor <- readCursor
   let
     delBranchEventMap numBranches
       | 1 == numBranches = mempty
       | otherwise =
         fromKeyGroups Config.delBranchKeys "Delete Branch" $ do
           deleteCurrentBranch
-          return $ Widget.eventResultFromCursor cursor
+          return Widget.emptyEventResult
     box =
       Box.make Box.horizontal
       [viewEdit
@@ -387,7 +388,7 @@ makeRootWidget style = do
       ,Widget.strongerKeys (delBranchEventMap (length branches))
        branchSelector
       ]
-  let
+
     makeBranchEventMap =
       fromKeyGroups Config.makeBranchKeys "New Branch" $ do
         newBranch <- Branch.new =<< View.curVersion view
@@ -395,9 +396,8 @@ makeRootWidget style = do
         let viewPair = (textEditModelIRef, newBranch)
         Property.pureModify Anchors.branches (++ [viewPair])
         Property.set Anchors.currentBranch newBranch
-        return $ Widget.eventResultFromCursor cursor
+        return Widget.emptyEventResult
 
-  let
     quitEventMap = fromKeyGroups Config.quitKeys "Quit" (error "Quit")
 
   return $
@@ -438,5 +438,5 @@ runDbStore font store = do
     widgetDownTransaction = Transaction.run store . (liftM . Widget.atEvents) (Transaction.run store)
 
     attachCursor eventResult = do
-      Property.set Anchors.cursor $ Widget.eCursor eventResult
+      maybeUpdateCursor eventResult
       return eventResult
