@@ -5,7 +5,7 @@ module Graphics.UI.Bottle.EventMap(
   module Graphics.UI.GLFW.ModState,
   module Graphics.UI.GLFW.Events,
   lookup, singleton, fromEventType,
-  Key(..), charKey, delete, eventMapDocs)
+  Key(..), charKey, delete, Doc, eventMapDocs)
 where
 
 import Control.Monad(msum)

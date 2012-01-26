@@ -5,6 +5,7 @@
 
 module Main(main) where
 
+import Control.Applicative ((<$))
 import Control.Arrow (first)
 import Control.Category ((.))
 import Control.Monad (when, liftM, forM, unless)
@@ -142,6 +143,16 @@ simpleTextEdit style textRef animId = do
     Widget.atEvents (uncurry lifter) $
     TextEdit.make style cursor text animId
 
+makeEventMap ::
+  Monad m => [E.EventType] -> E.Doc ->
+  m (Maybe Cursor) ->
+  Widget.EventHandlers m
+makeEventMap keys doc act =
+  (fmap . liftM)
+    (maybe Widget.emptyEventResult Widget.eventResultFromCursor) .
+  mconcat $
+  map (flip (`E.fromEventType` doc) act) keys
+
 ------
 
 makeChildBox ::
@@ -155,15 +166,15 @@ makeChildBox style parentCursor depth clipboardRef childrenIRefsRef = do
     forM (enumerate childrenIRefs) $ \(curChildIndex, childIRef) ->
       let
         delNodeEventMap =
-          fromKeyGroups Config.delChildKeys "Del node" delChild
+          makeEventMap Config.delChildKeys "Del node" delChild
         cutNodeEventMap =
-          fromKeyGroups Config.cutKeys "Cut node" $ do
+          makeEventMap Config.cutKeys "Cut node" $ do
             Property.pureModify clipboardRef (childIRef:)
             delChild
 
         delChild = do
           Property.pureModify childrenIRefsRef $ removeAt curChildIndex
-          return $ Widget.eventResultFromCursor parentCursor
+          return $ Just parentCursor
       in
         liftM
           (Widget.weakerEvents $
@@ -197,8 +208,8 @@ makeTreeEdit style depth clipboardRef treeIRef
         then do
           let
             moveToParentEventMap =
-              fromKeyGroups Config.moveToParentKeys "Move to parent" .
-              return $ Widget.eventResultFromCursor myCursor
+              makeEventMap Config.moveToParentKeys "Move to parent" .
+              return $ Just myCursor
           liftM ((:[]) . Widget.weakerEvents moveToParentEventMap) $
             makeChildBox style myCursor depth clipboardRef childrenIRefsRef
         else return []
@@ -219,7 +230,6 @@ makeTreeEdit style depth clipboardRef treeIRef
           ]
     return $ Widget.weakerEvents keymap outerBox
     where
-      goDeeperEventMap = fromKeyGroups Config.actionKeys "Go deeper" setFocalPoint
       animId = AnimIds.fromIRef treeIRef
       myCursor = animId
       treeRef = Transaction.fromIRef treeIRef
@@ -227,13 +237,11 @@ makeTreeEdit style depth clipboardRef treeIRef
       valueTextEditModelRef     = Data.textEditModel    `Property.composeLabel` valueRef
       childrenIRefsRef          = Data.nodeChildrenRefs `Property.composeLabel` treeRef
       isExpandedRef             = Data.isExpanded       `Property.composeLabel` valueRef
-      expandCollapseEventMap isExpanded =
-        (fmap . liftM . const) Widget.emptyEventResult $
-        if isExpanded
-        then fromKeyGroups Config.collapseKeys "Collapse" collapse
-        else fromKeyGroups Config.expandKeys "Expand" expand
-      collapse = Property.set isExpandedRef False
-      expand = Property.set isExpandedRef True
+      expandCollapseEventMap isExpanded
+        | isExpanded = makeEventMap Config.collapseKeys "Collapse" collapse
+        | otherwise = makeEventMap Config.expandKeys "Expand" expand
+      collapse = Nothing <$ Property.set isExpandedRef False
+      expand = Nothing <$ Property.set isExpandedRef True
       collapser isExpanded =
         flip (TextView.make (TextEdit.sTextViewStyle style)) (AnimIds.collapserId animId) $
         if isExpanded
@@ -242,21 +250,22 @@ makeTreeEdit style depth clipboardRef treeIRef
 
       pasteEventMap [] = mempty
       pasteEventMap (cbChildRef:xs) =
-        fromKeyGroups Config.pasteKeys "Paste" $ do
+        makeEventMap Config.pasteKeys "Paste" $ do
           Property.set clipboardRef xs
           appendChild cbChildRef
 
       appendNewNodeEventMap =
-        fromKeyGroups Config.appendChildKeys "Append new child node" $
+        makeEventMap Config.appendChildKeys "Append new child node" $
         appendChild =<< Data.makeLeafRef ""
 
-      setFocalPointEventMap = fromKeyGroups Config.setFocalPointKeys "Set focal point" setFocalPoint
+      goDeeperEventMap = makeEventMap Config.actionKeys "Go deeper" setFocalPoint
+      setFocalPointEventMap = makeEventMap Config.setFocalPointKeys "Set focal point" setFocalPoint
       setFocalPoint = do
         Property.pureModify Anchors.focalPointIRefs (treeIRef:)
-        return $ Widget.eventResultFromCursor AnimIds.goUpId
+        return $ Just AnimIds.goUpId
       appendChild newRef = do
         Property.pureModify childrenIRefsRef (++ [newRef])
-        return . Widget.eventResultFromCursor $ AnimIds.fromIRef newRef
+        return . Just $ AnimIds.fromIRef newRef
 
 getFocalPoint :: Monad m => Transaction ViewTag m (Bool, ITreeD)
 getFocalPoint = do
@@ -276,13 +285,13 @@ makeEditWidget style clipboardRef = do
   let
     goUp = do
       Property.pureModify Anchors.focalPointIRefs (drop 1)
-      return . Widget.eventResultFromCursor $ AnimIds.fromIRef focalPoint
+      return . Just $ AnimIds.fromIRef focalPoint
     goUpButtonEventMap =
-      fromKeyGroups Config.actionKeys "Go up" goUp
+      makeEventMap Config.actionKeys "Go up" goUp
     goUpEventMap =
       if isAtRoot
       then mempty
-      else fromKeyGroups Config.goUpKeys "Go up" goUp
+      else makeEventMap Config.goUpKeys "Go up" goUp
 
   goUpButton <-
     liftM
@@ -310,10 +319,10 @@ makeWidgetForView style view = do
   let undoEventMap = maybe mempty makeUndoEventMap (Version.parent versionData)
   return $ Widget.strongerEvents undoEventMap focusable
   where
-    makeUndoEventMap = fromKeyGroups Config.undoKeys "Undo" . (>> fetchRevisionCursor) . View.move view
+    makeUndoEventMap = makeEventMap Config.undoKeys "Undo" . (>> fetchRevisionCursor) . View.move view
     fetchRevisionCursor =
-      liftM Widget.eventResultFromCursor .
-      Transaction.run store $
+      Transaction.run store .
+      liftM Just $
       Property.get Anchors.cursor
     store = Anchors.viewStore view
     widgetDownTransaction =
@@ -326,10 +335,6 @@ makeWidgetForView style view = do
 
 maybeUpdateCursor :: Monad m => Widget.EventResult -> Transaction t m ()
 maybeUpdateCursor = maybe (return ()) (Property.set Anchors.cursor) . Widget.eCursor
-
-fromKeyGroups :: [E.EventType] -> String -> a -> E.EventMap a
-fromKeyGroups keys doc act =
-  mconcat $ map (flip (`E.fromEventType` doc) act) keys
 
 defaultFont :: String -> FilePath
 defaultFont "darwin" = "/Library/Fonts/Arial.ttf"
@@ -383,9 +388,9 @@ makeRootWidget style = do
     delBranchEventMap numBranches
       | 1 == numBranches = mempty
       | otherwise =
-        fromKeyGroups Config.delBranchKeys "Delete Branch" $ do
+        makeEventMap Config.delBranchKeys "Delete Branch" $ do
           deleteCurrentBranch
-          return Widget.emptyEventResult
+          return Nothing
     box =
       Box.make Box.horizontal
       [viewEdit
@@ -395,15 +400,15 @@ makeRootWidget style = do
       ]
 
     makeBranchEventMap =
-      fromKeyGroups Config.makeBranchKeys "New Branch" $ do
+      makeEventMap Config.makeBranchKeys "New Branch" $ do
         newBranch <- Branch.new =<< View.curVersion view
         textEditModelIRef <- Transaction.newIRef "New view"
         let viewPair = (textEditModelIRef, newBranch)
         Property.pureModify Anchors.branches (++ [viewPair])
         Property.set Anchors.currentBranch newBranch
-        return Widget.emptyEventResult
+        return Nothing
 
-    quitEventMap = fromKeyGroups Config.quitKeys "Quit" (error "Quit")
+    quitEventMap = makeEventMap Config.quitKeys "Quit" (error "Quit")
 
   return $
     Widget.strongerEvents
@@ -414,12 +419,10 @@ helpAdder :: TextView.Style -> IO (Widget IO -> IO (Widget IO))
 helpAdder style = do
   showingHelpVar <- newIORef True
   let
-    toggle =
-      modifyIORef showingHelpVar not >>
-      return Widget.emptyEventResult
+    toggle = Nothing <$ modifyIORef showingHelpVar not
     addToggleEventMap doc =
       Widget.strongerEvents $
-      fromKeyGroups Config.overlayDocKeys doc toggle
+      makeEventMap Config.overlayDocKeys doc toggle
   return $ \widget -> do
     showingHelp <- readIORef showingHelpVar
     return $
