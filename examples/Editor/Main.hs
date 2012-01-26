@@ -3,7 +3,7 @@
              OverloadedStrings, UndecidableInstances,
              GeneralizedNewtypeDeriving, TemplateHaskell #-}
 
-module Main(main) where
+module Main(main, atEnvTextStyle) where
 
 import Control.Category ((.))
 import Control.Monad (when, liftM, unless)
