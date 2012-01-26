@@ -6,7 +6,8 @@ module Editor.Config(
     quitKeys, undoKeys, goUpKeys, appendChildKeys, delChildKeys,
     setFocalPointKeys, cutKeys, pasteKeys,
     makeBranchKeys, delBranchKeys,
-    actionKeys, collapseKeys, expandKeys, moveToParentKeys)
+    actionKeys, collapseKeys, expandKeys, moveToParentKeys,
+    addParamKeys)
 where
 
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -34,5 +35,5 @@ actionKeys        = [simple E.KeyEnter]
 collapseKeys      = [ascii '[']
 expandKeys        = [ascii ']']
 moveToParentKeys  = [group E.alt E.KeyLeft]
-
-overlayDocKeys = [simple E.KeyF1, alt 'h']
+overlayDocKeys    = [simple E.KeyF1, alt 'h']
+addParamKeys      = [alt 'p']

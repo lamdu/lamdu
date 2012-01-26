@@ -3,12 +3,12 @@
              OverloadedStrings, UndecidableInstances,
              GeneralizedNewtypeDeriving, TemplateHaskell #-}
 
-module Main(main, atEnvTextStyle) where
+module Main(main) where
 
 import Control.Category ((.))
 import Control.Monad (when, liftM, unless)
 import Control.Monad.Trans.Class (lift)
-import Data.List (findIndex, elemIndex)
+import Data.List (findIndex, elemIndex, intersperse)
 import Data.List.Utils (enumerate, nth, removeAt)
 import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid(Monoid(..))
@@ -16,6 +16,7 @@ import Data.Store.IRef (IRef)
 import Data.Store.Property (Property)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
+import Data.ByteString.Char8 (pack)
 import Editor.Anchors (DBTag, ViewTag, Cursor)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -141,11 +142,11 @@ wrapDelegated f animId = do
     fromMaybe cursorNotSelf . fmap cursorSelf $
     Anim.subId selfAnimId cursor
 
-simpleTextEdit ::
+makeTextEdit ::
   Monad m =>
   Transaction.Property t m String ->
   Anim.AnimId -> TWidget t m
-simpleTextEdit textRef animId = do
+makeTextEdit textRef animId = do
   text <- getP textRef
   let
     lifter newText =
@@ -173,22 +174,42 @@ assignCursor src dest =
       | cursor == src = dest
       | otherwise = cursor
 
+addParameter :: Monad m => Transaction.Property ViewTag m Data.Definition -> Transaction ViewTag m ()
+addParameter definitionRef = do
+  newParamI <- Transaction.newIRef Data.Parameter
+  Property.pureModify definitionRef . Data.atDefParameters $ (++ [newParamI])
+
+makeNameEdit :: Monad m => IRef a -> Anim.AnimId -> TWidget t m
+makeNameEdit = makeTextEdit . Anchors.aNameRef
+
+atEmptyStr :: (String -> String) -> TWidget t m -> TWidget t m
+atEmptyStr = atCTransaction . Reader.withReaderT . atEnvTextStyle . TextEdit.atSEmptyString
+
 makeDefinitionEdit :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
 makeDefinitionEdit definitionI = do
   nameEdit <-
     assignCursor animId nameEditAnimId $
-    simpleTextEdit nameRef nameEditAnimId
-  equals <- makeTextView " = " $ Anim.joinId animId ["equals"]
+    makeNameEdit definitionI nameEditAnimId
+  equals <- makeTextView "=" $ Anim.joinId animId ["equals"]
   expression <- makeFocusableTextView "()" $ Anim.joinId animId ["expression"]
-  return $
-    Box.make Box.horizontal
-    [nameEdit, equals, expression]
+  params <- liftM Data.defParameters $ getP definitionRef
+  paramsEdits <- mapM makeParamEdit $ enumerate params
+  return .
+    Widget.strongerEvents eventMap .
+    Box.make Box.horizontal .
+    intersperse (Widget.liftView (Spacer.makeHorizontal 20)) $
+    [nameEdit] ++ paramsEdits ++ [equals, expression]
   where
+    makeParamEdit (i, paramI) =
+      (atEmptyStr . const) ("<unnamed param " ++ show i ++ ">") .
+      makeTextEdit (Anchors.aNameRef paramI) $
+      Anim.joinId animId ["param", pack (show i)]
+    definitionRef = Transaction.fromIRef definitionI
+    eventMap =
+      Widget.actionEventMap Config.addParamKeys "Add Parameter" $
+      addParameter definitionRef
     nameEditAnimId = Anim.joinId animId ["name"]
     animId = AnimIds.fromIRef definitionI
-    nameRef =
-      Property.pureCompose (fromMaybe "") Just $
-      Anchors.aName definitionI
 
 -- Apply the transactions to the given View and convert them to
 -- transactions on a DB
@@ -269,7 +290,7 @@ makeRootWidget = do
   let
     branchIndexRef = branchSelectorProperty view $ map snd namedBranches
     makeBranchNameEdit textEditModelIRef =
-      wrapDelegated (simpleTextEdit (Transaction.fromIRef textEditModelIRef)) (AnimIds.fromIRef textEditModelIRef)
+      wrapDelegated (makeTextEdit (Transaction.fromIRef textEditModelIRef)) (AnimIds.fromIRef textEditModelIRef)
   branchSelector <-
     makeChoice AnimIds.branchSelection branchIndexRef
     Box.vertical $ map (makeBranchNameEdit . fst) namedBranches

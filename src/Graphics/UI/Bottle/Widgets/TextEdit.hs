@@ -1,6 +1,13 @@
 {-# OPTIONS -Wall #-}
-{-# LANGUAGE OverloadedStrings #-}
-module Graphics.UI.Bottle.Widgets.TextEdit(Cursor, Style(..), make, defaultCursorColor, defaultCursorWidth) where
+{-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
+module Graphics.UI.Bottle.Widgets.TextEdit(
+  Cursor, Style(..), make, defaultCursorColor, defaultCursorWidth,
+  atSCursorColor,
+  atSCursorWidth,
+  atSTextCursorId,
+  atSBackgroundCursorId,
+  atSEmptyString,
+  atSTextViewStyle) where
 
 import Control.Arrow (first)
 import Data.Char (isSpace)
@@ -14,6 +21,7 @@ import Graphics.DrawingCombinators.Utils (square, textHeight)
 import Graphics.UI.Bottle.Sized (Sized(..))
 import Graphics.UI.Bottle.Widget (Widget(..))
 import Graphics.UI.GLFW (Key(KeyBackspace, KeyDel, KeyDown, KeyEnd, KeyEnter, KeyHome, KeyLeft, KeyRight, KeyUp))
+import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.ByteString.Char8 as SBS8
 import qualified Data.Map as Map
@@ -38,6 +46,7 @@ data Style = Style {
   sEmptyString :: String,
   sTextViewStyle :: TextView.Style
   }
+AtFieldTH.make ''Style
 
 defaultCursorColor :: Draw.Color
 defaultCursorColor = Draw.Color 0 1 0 1

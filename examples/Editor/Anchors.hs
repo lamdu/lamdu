@@ -8,13 +8,14 @@ module Editor.Anchors(
     initDB,
     dbStore, DBTag,
     viewStore, ViewTag,
-    aName)
+    aName, aNameRef)
 where
 
 import Control.Monad (unless, (<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Writer (WriterT, tell, execWriterT)
 import Data.Binary (Binary)
+import Data.Maybe (fromMaybe)
 import Data.Store.Db (Db)
 import Data.Store.Guid(Guid)
 import Data.Store.IRef (IRef)
@@ -112,10 +113,9 @@ initDB store =
     bs <- initRef branchesIRef $ do
       masterNameIRef <- Transaction.newIRef "master"
       changes <- collectWrites Transaction.newKey $ do
-        param <- Transaction.newIRef Data.Parameter
         expr <- Transaction.newIRef Data.Expression
         Property.set root $ Data.Definition {
-          Data.defParameters = [param],
+          Data.defParameters = [],
           Data.defBody = expr
           }
         Property.set cursor $ AnimIds.fromIRef rootIRef
@@ -138,3 +138,6 @@ aName iref =
     setter Nothing = Transaction.delete nameGuid
     nameGuid = Guid.combine guid $ Guid.make "Name"
     guid = IRef.guid iref
+
+aNameRef :: Monad m => IRef a -> Property (Transaction t m) String
+aNameRef = Property.pureCompose (fromMaybe "") Just . aName
