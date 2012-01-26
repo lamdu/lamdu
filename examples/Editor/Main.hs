@@ -115,10 +115,19 @@ makeChoice selectionAnimId curChoiceRef orientation children = do
       Widget.atEvents (Property.set curChoiceRef i >>) focusable
     selectedColor = Draw.Color 0 0.5 0 1
 
+assignCursor :: Widget.Cursor -> Widget.Cursor -> TWidget t m -> TWidget t m
+assignCursor src dest =
+  atCTransaction . Reader.withReaderT . atEnvCursor $ f
+  where
+    f cursor
+      | cursor == src = dest
+      | otherwise = cursor
+
+-- TODO: This logic belongs in the FocusDelegator itself
 wrapDelegated :: Monad m => (Anim.AnimId -> TWidget t m) -> Anim.AnimId -> TWidget t m
 wrapDelegated f animId = do
-  let textEditAnimId = AnimIds.delegating animId
-  innerWidget <- f textEditAnimId
+  let innerAnimId = AnimIds.delegating animId
+  innerWidget <- f innerAnimId
   let
     cursorSelf _ = makeDelegator $ Just FocusDelegator.NotDelegating
     cursorNotSelf
@@ -130,15 +139,19 @@ wrapDelegated f animId = do
 
     entryState = FocusDelegator.NotDelegating
 
-    makeDelegator delegateCursor =
-      (Widget.atIsFocused . const) (isJust delegateCursor) $
-      FocusDelegator.make entryState delegateCursor
+    makeDelegator delegateState =
+      (Widget.atIsFocused . const) (isJust delegateState) $
+      FocusDelegator.make entryState delegateState
       selfAnimId FocusDelegator.defaultKeys
       AnimIds.backgroundCursorId innerWidget
-  cursor <- readCursor
-  return .
-    fromMaybe cursorNotSelf . fmap cursorSelf $
-    Anim.subId selfAnimId cursor
+    destAnimId =
+      case entryState of
+        FocusDelegator.NotDelegating -> selfAnimId
+        FocusDelegator.Delegating -> innerAnimId
+  assignCursor animId destAnimId .
+    liftM (fromMaybe cursorNotSelf . fmap cursorSelf .
+           Anim.subId selfAnimId) $
+    readCursor
 
 makeTextEdit ::
   Monad m =>
@@ -156,14 +169,6 @@ makeTextEdit textRef animId = do
     TextEdit.make style cursor text animId
 
 ------
-
-assignCursor :: Widget.Cursor -> Widget.Cursor -> TWidget t m -> TWidget t m
-assignCursor src dest =
-  atCTransaction . Reader.withReaderT . atEnvCursor $ f
-  where
-    f cursor
-      | cursor == src = dest
-      | otherwise = cursor
 
 addParameter ::
   Monad m => Transaction.Property ViewTag m Data.Definition ->
@@ -186,6 +191,7 @@ atEmptyStr = atCTransaction . Reader.withReaderT . atEnvTextStyle . TextEdit.atS
 
 makeNameEdit :: Monad m => String -> IRef a -> Anim.AnimId -> TWidget t m
 makeNameEdit emptyStr iref =
+  wrapDelegated $
   (atEmptyStr . const) emptyStr . makeTextEdit (Anchors.aNameRef iref)
 
 makeDefinitionEdit :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
@@ -204,7 +210,7 @@ makeDefinitionEdit definitionI = do
     [nameEdit] ++ paramsEdits ++ [equals, expression]
   where
     makeParamEdit (i, paramI) =
-      (liftM . Widget.strongerEvents) (paramEventMap paramI) .
+      (liftM . Widget.strongerEvents) (paramEventMap paramI) $
       makeNameEdit ("<unnamed param " ++ show i ++ ">") paramI $
       AnimIds.fromIRef paramI
     definitionRef = Transaction.fromIRef definitionI

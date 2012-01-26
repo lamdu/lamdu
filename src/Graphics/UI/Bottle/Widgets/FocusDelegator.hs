@@ -1,6 +1,6 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Graphics.UI.Bottle.Widgets.FocusDelegator(Cursor(..), make, defaultKeys) where
+module Graphics.UI.Bottle.Widgets.FocusDelegator(IsDelegating(..), make, defaultKeys) where
 
 import Data.Maybe(fromMaybe)
 import Data.Monoid(mappend)
@@ -10,7 +10,7 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 
-data Cursor = Delegating | NotDelegating
+data IsDelegating = Delegating | NotDelegating
 
 data Keys = Keys {
   startDelegatingKey :: E.EventType,
@@ -27,7 +27,7 @@ blue :: Draw.Color
 blue = Draw.Color 0 0 1 1
 
 makeFocused :: Monad f =>
-  Cursor -> Anim.AnimId -> Keys -> Anim.AnimId ->
+  IsDelegating -> Anim.AnimId -> Keys -> Anim.AnimId ->
   Widget f -> Widget f
 makeFocused delegating focusSelf keys backgroundCursorId =
   handleFocus delegating
@@ -59,8 +59,8 @@ makeFocused delegating focusSelf keys backgroundCursorId =
       return $ Widget.eventResultFromCursor focusSelf
 
 make :: Monad f => -- actually "Pointed", as only using return.
-  Cursor -> -- ^ Enter/start state
-  Maybe Cursor -> -- ^ Current state
+  IsDelegating -> -- ^ Enter/start state
+  Maybe IsDelegating -> -- ^ Current state
   Anim.AnimId -> -- ^ Enter/Stop delegating value
   Keys -> -- ^ Keys configuration
   Anim.AnimId -> -- ^ Background AnimId
