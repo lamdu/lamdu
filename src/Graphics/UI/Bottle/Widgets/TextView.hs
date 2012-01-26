@@ -33,7 +33,7 @@ drawText isSingleLetterImages (Style font ptSize) text =
   then
     map (drawMany horizontal . map (nestedFrame . second (useFont . (: [])))) .
     splitWhen ((== '\n') . snd) $ enumerate text
-  else map (nestedFrame . second useFont) . (map . first) ((,) "Line") . enumerate $ lines text
+  else map (nestedFrame . second useFont . first ((,) "Line")) . enumerate $ lines text
   where
     useFont = DrawUtils.drawText font &&& DrawUtils.textSize font
     nestedFrame (i, (image, size)) = (draw, size)
