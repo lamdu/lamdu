@@ -16,8 +16,7 @@ import Data.Store.IRef (IRef)
 import Data.Store.Property (Property)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
-import Data.ByteString.Char8 (pack)
-import Editor.Anchors (DBTag, ViewTag, Cursor)
+import Editor.Anchors (DBTag, ViewTag)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Widget (Widget)
 import Prelude hiding ((.))
@@ -45,7 +44,7 @@ import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified System.Info
 
 data CTransactionEnv = CTransactionEnv {
-  envCursor :: Cursor,
+  envCursor :: Widget.Cursor,
   envTextStyle :: TextEdit.Style
   }
 AtFieldTH.make ''CTransactionEnv
@@ -56,11 +55,11 @@ newtype CTransaction t m a = CTransaction {
   deriving (Monad)
 AtFieldTH.make ''CTransaction
 
-runCTransaction :: Cursor -> TextEdit.Style -> CTransaction t m a -> Transaction t m a
+runCTransaction :: Widget.Cursor -> TextEdit.Style -> CTransaction t m a -> Transaction t m a
 runCTransaction cursor style =
   (`Reader.runReaderT` CTransactionEnv cursor style) . unCTransaction
 
-readCursor :: Monad m => CTransaction t m Cursor
+readCursor :: Monad m => CTransaction t m Widget.Cursor
 readCursor = CTransaction (Reader.asks envCursor)
 
 readTextStyle :: Monad m => CTransaction t m TextEdit.Style
@@ -158,7 +157,7 @@ makeTextEdit textRef animId = do
 
 ------
 
-assignCursor :: Cursor -> Cursor -> TWidget t m -> TWidget t m
+assignCursor :: Widget.Cursor -> Widget.Cursor -> TWidget t m -> TWidget t m
 assignCursor src dest =
   atCTransaction . Reader.withReaderT . atEnvCursor $ f
   where
@@ -168,11 +167,12 @@ assignCursor src dest =
 
 addParameter ::
   Monad m => Transaction.Property ViewTag m Data.Definition ->
-  Transaction ViewTag m ()
+  Transaction ViewTag m (IRef Data.Parameter)
 addParameter definitionRef = do
   newParamI <- Transaction.newIRef Data.Parameter
   Property.pureModify definitionRef . Data.atDefParameters $
     (++ [newParamI])
+  return newParamI
 
 delParameter ::
   Monad m => Transaction.Property ViewTag m Data.Definition ->
@@ -206,13 +206,15 @@ makeDefinitionEdit definitionI = do
     makeParamEdit (i, paramI) =
       (liftM . Widget.strongerEvents) (paramEventMap paramI) .
       makeNameEdit ("<unnamed param " ++ show i ++ ">") paramI $
-      Anim.joinId animId ["param", pack (show i)]
+      AnimIds.fromIRef paramI
     definitionRef = Transaction.fromIRef definitionI
     paramEventMap paramI =
-      Widget.actionEventMap Config.delParamKeys "Delete Parameter" $
+      Widget.actionEventMapMovesCursor Config.delParamKeys "Delete Parameter" .
+      (liftM . const) animId $
       delParameter definitionRef paramI
     eventMap =
-      Widget.actionEventMap Config.addParamKeys "Add Parameter" $
+      Widget.actionEventMapMovesCursor Config.addParamKeys "Add Parameter" .
+      liftM AnimIds.fromIRef $
       addParameter definitionRef
     nameEditAnimId = Anim.joinId animId ["name"]
     animId = AnimIds.fromIRef definitionI

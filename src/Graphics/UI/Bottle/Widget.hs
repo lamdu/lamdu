@@ -1,7 +1,7 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TemplateHaskell #-}
 module Graphics.UI.Bottle.Widget (
-  Widget(..), MEnter, Direction,
+  Widget(..), MEnter, Direction, Cursor,
   UserIO(..), atUioMaybeEnter, atUioEventMap, atUioFrame,
   EventResult(..), atEAnimIdMapping, atECursor,
   emptyEventResult, eventResultFromCursor,

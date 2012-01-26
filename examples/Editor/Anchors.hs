@@ -2,7 +2,7 @@
 
 module Editor.Anchors(
     root, rootIRef,
-    Cursor, cursor, cursorIRef,
+    cursor, cursorIRef,
     branches, view,
     currentBranchIRef, currentBranch,
     initDB,
@@ -24,7 +24,7 @@ import Data.Store.Rev.Change (Key, Value)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction, Store(..))
 import Data.Store.Property(Property(..))
-import Graphics.UI.Bottle.Animation(AnimId)
+import Graphics.UI.Bottle.Widget(Cursor)
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.Db as Db
 import qualified Data.Store.IRef as IRef
@@ -61,8 +61,6 @@ currentBranchIRef = IRef.anchor "currentBranch"
 
 currentBranch :: Monad m => Transaction.Property DBTag m Branch
 currentBranch = Transaction.fromIRef currentBranchIRef
-
-type Cursor = AnimId
 
 cursorIRef :: IRef Cursor
 cursorIRef = IRef.anchor "cursor"
