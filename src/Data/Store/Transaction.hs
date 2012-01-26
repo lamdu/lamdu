@@ -6,7 +6,7 @@ module Data.Store.Transaction
      Store(..),
      lookupBS, lookup,
      insertBS, insert,
-     deleteBS, delete, deleteIRef,
+     delete, deleteIRef,
      readIRef, readIRefDef, writeIRef,
      isEmpty,
      irefExists,
@@ -73,11 +73,8 @@ lookupBS guid = do
 insertBS :: Monad m => Key -> ByteString -> Transaction t m ()
 insertBS key = liftStateT . modify . Map.insert key . Just
 
-deleteBS :: Monad m => Key -> Transaction t m ()
-deleteBS key = liftStateT . modify . Map.insert key $ Nothing
-
 delete :: Monad m => Key -> Transaction t m ()
-delete = deleteBS
+delete key = liftStateT . modify . Map.insert key $ Nothing
 
 lookup :: (Monad m, Binary a) => Key -> Transaction t m (Maybe a)
 lookup = (liftM . fmap) decodeS . lookupBS

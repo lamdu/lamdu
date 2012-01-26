@@ -74,5 +74,5 @@ applyChangesToView vm changeDir = mapM_ applyChange
     applyChange change = setValue
                          (makeViewKey vm $ Change.objectKey change)
                          (changeDir change)
-    setValue key Nothing      = Transaction.deleteBS key
+    setValue key Nothing      = Transaction.delete key
     setValue key (Just value) = Transaction.insertBS key value
