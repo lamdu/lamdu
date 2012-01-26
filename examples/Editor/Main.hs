@@ -8,7 +8,7 @@ module Main(main) where
 import Control.Category ((.))
 import Control.Monad (when, liftM, unless)
 import Control.Monad.Trans.Class (lift)
-import Data.List (findIndex, elemIndex, intersperse)
+import Data.List (findIndex, elemIndex, intersperse, delete)
 import Data.List.Utils (enumerate, nth, removeAt)
 import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid(Monoid(..))
@@ -59,7 +59,7 @@ AtFieldTH.make ''CTransaction
 
 runCTransaction :: Cursor -> TextEdit.Style -> CTransaction t m a -> Transaction t m a
 runCTransaction cursor style =
-  (`Reader.runReaderT` (CTransactionEnv cursor style)) . unCTransaction
+  (`Reader.runReaderT` CTransactionEnv cursor style) . unCTransaction
 
 readCursor :: Monad m => CTransaction t m Cursor
 readCursor = CTransaction (Reader.asks envCursor)
@@ -174,10 +174,20 @@ assignCursor src dest =
       | cursor == src = dest
       | otherwise = cursor
 
-addParameter :: Monad m => Transaction.Property ViewTag m Data.Definition -> Transaction ViewTag m ()
+addParameter ::
+  Monad m => Transaction.Property ViewTag m Data.Definition ->
+  Transaction ViewTag m ()
 addParameter definitionRef = do
   newParamI <- Transaction.newIRef Data.Parameter
-  Property.pureModify definitionRef . Data.atDefParameters $ (++ [newParamI])
+  Property.pureModify definitionRef . Data.atDefParameters $
+    (++ [newParamI])
+
+delParameter ::
+  Monad m => Transaction.Property ViewTag m Data.Definition ->
+  IRef Data.Parameter -> Transaction ViewTag m ()
+delParameter definitionRef paramI =
+  Property.pureModify definitionRef . Data.atDefParameters $
+    delete paramI
 
 makeNameEdit :: Monad m => IRef a -> Anim.AnimId -> TWidget t m
 makeNameEdit = makeTextEdit . Anchors.aNameRef
@@ -201,10 +211,14 @@ makeDefinitionEdit definitionI = do
     [nameEdit] ++ paramsEdits ++ [equals, expression]
   where
     makeParamEdit (i, paramI) =
+      (liftM . Widget.strongerEvents) (paramEventMap paramI) .
       (atEmptyStr . const) ("<unnamed param " ++ show i ++ ">") .
       makeTextEdit (Anchors.aNameRef paramI) $
       Anim.joinId animId ["param", pack (show i)]
     definitionRef = Transaction.fromIRef definitionI
+    paramEventMap paramI =
+      Widget.actionEventMap Config.delChildKeys "Delete Parameter" $
+      delParameter definitionRef paramI
     eventMap =
       Widget.actionEventMap Config.addParamKeys "Add Parameter" $
       addParameter definitionRef
