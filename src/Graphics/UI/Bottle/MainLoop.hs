@@ -92,23 +92,23 @@ mainLoopAnim eventHandler makeFrame = do
 
       newFrameState <-
         case frameState of
-          Nothing -> fmap (Just . (,) True) $ makeFrame size
-          Just (wasChange, prevFrame) ->
-            if wasChange || isChange
+          Nothing -> fmap (Just . (,) 0) $ makeFrame size
+          Just (drawCount, prevFrame) ->
+            if drawCount == 0 || isChange
               then do
                 dest <- makeFrame size
                 return . Just $
                   case Anim.nextFrame dest prevFrame of
-                    Nothing -> (False, dest)
-                    Just newFrame -> (True, newFrame)
+                    Nothing -> (drawCount + 1, dest)
+                    Just newFrame -> (0 :: Int, newFrame)
               else
-                return $ Just (False, prevFrame)
+                return $ Just (drawCount + 1, prevFrame)
       writeIORef frameStateVar newFrameState
       return $
         case newFrameState of
           Nothing -> error "No frame to draw at start??"
-          Just (change, frame)
-            | change -> Just (Anim.draw frame)
+          Just (drawCount, frame)
+            | drawCount < 2 -> Just (Anim.draw frame)
             | otherwise -> Nothing
     imgEventHandler size event = do
       mEventResult <- eventHandler size event
