@@ -108,8 +108,14 @@ mainLoopAnim eventHandler makeFrame = do
         case newFrameState of
           Nothing -> error "No frame to draw at start??"
           Just (drawCount, frame)
-            | drawCount < 2 -> Just (Anim.draw frame)
+            | drawCount < stopAtDrawCount -> Just (Anim.draw frame)
             | otherwise -> Nothing
+    -- A note on draw counts:
+    -- When a frame is dis-similar to the previous the count resets to 0
+    -- When a frame is similar and animation stops the count becomes 1
+    -- We then should draw it again (for double buffering issues) at count 2
+    -- And stop drawing it at count 3.
+    stopAtDrawCount = 3
     imgEventHandler size event = do
       mEventResult <- eventHandler size event
       case mEventResult of
