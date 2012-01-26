@@ -10,10 +10,10 @@ module Graphics.UI.Bottle.Widget (
   userIO, image, eventMap, enter,
   takesFocus, atMkUserIO, atUserIO,
   atImageWithSize, atImage, atMaybeEnter, atEventMap, atEvents,
-  backgroundColor, liftView, removeExtraSize,
-  strongerEvents, weakerEvents) where
+  backgroundColor, liftView,
+  strongerEvents, weakerEvents, align) where
 
-import Control.Applicative (liftA2)
+import Control.Applicative ((<$>), (<*>))
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2)
 import Graphics.UI.Bottle.Animation (Frame)
@@ -93,20 +93,8 @@ liftView view =
         uioMaybeEnter = Nothing
         }
 
-argument :: (a -> b) -> (b -> c) -> a -> c
-argument = flip (.)
-
 atUserIO :: (UserIO f -> UserIO g) -> Widget f -> Widget g
 atUserIO = atContent . fmap
-
-removeExtraSize :: Widget f -> Widget f
-removeExtraSize = atContent f
-  where
-    f sized = (Sized.atFromSize . argument) (liftA2 cap maxSize) sized
-      where
-        cap Nothing y = y
-        cap (Just x) y = min x y
-        maxSize = SizeRange.srMaxSize $ Sized.requestedSize sized
 
 atMkUserIO :: ((Size -> UserIO f) -> Size -> UserIO f) -> Widget f -> Widget f
 atMkUserIO = atContent . Sized.atFromSize
@@ -171,3 +159,19 @@ actionEventMapMovesCursor ::
 actionEventMapMovesCursor keys doc act =
   (fmap . fmap) eventResultFromCursor $
   makeActionEventMap keys doc act
+
+-- If widget's max size is smaller than given size, place widget in
+-- portion of the extra space (0..1 ratio in each dimension):
+align :: Vector2 Draw.R -> Widget f -> Widget f
+align ratio = atContent f
+  where
+    f sized = Sized.atFromSize ((g . SizeRange.srMaxSize . Sized.requestedSize) sized) sized
+    g maxSize mkSize size =
+      atUioFrame (Anim.translate pos) . mkSize $
+      cap <$> maxSize <*> size
+      where
+        pos = mkPos <$> maxSize <*> ratio <*> size
+        mkPos Nothing _ _ = 0
+        mkPos (Just maxSz) r sz = r * (sz - min maxSz sz)
+        cap Nothing sz = sz
+        cap (Just maxSz) sz = min maxSz sz

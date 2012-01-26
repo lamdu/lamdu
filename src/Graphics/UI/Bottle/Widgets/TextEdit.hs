@@ -74,9 +74,11 @@ makeUnfocused :: Style -> String -> Anim.AnimId -> Widget ((,) String)
 makeUnfocused style str myId =
   Widget.takesFocus enter .
   (Widget.atContent .
-   Sized.atRequestedSize .
-   SizeRange.atSrMinSize .
-   Vector2.first) (+ sCursorWidth style) .
+   Sized.atRequestedSize)
+    ((SizeRange.atSrMinSize .
+      Vector2.first) (+ sCursorWidth style) .
+     (SizeRange.atSrMaxSize .
+      Vector2.first . fmap) (+ sCursorWidth style)) .
   Widget.atImage
     (cursorTranslate style) $
   TextView.makeWidget (sTextViewStyle style) str myId
@@ -93,8 +95,7 @@ makeUnfocused style str myId =
 -- | given text...
 makeFocused :: Cursor -> Style -> String -> Anim.AnimId -> Widget ((,) String)
 makeFocused cursor style str myId =
-  Widget.atImageWithSize
-    (Anim.backgroundColor (sBackgroundCursorId style) 10 blue) .
+  Widget.backgroundColor (sBackgroundCursorId style) blue .
   Widget.atImage (`mappend` cursorFrame) .
   Widget.strongerEvents eventMap $
   widget
@@ -131,7 +132,7 @@ makeFocused cursor style str myId =
 
     (before, after) = splitAt cursor strWithIds
     textLength = length str
-    lineCount = length (lines displayStr)
+    lineCount = length $ splitWhen (== '\n') displayStr
     displayStr = makeDisplayStr style str
 
     splitLines = splitWhen ((== '\n') . snd)
@@ -274,6 +275,7 @@ makeFocused cursor style str myId =
 
 make :: Style -> Anim.AnimId -> String -> Anim.AnimId -> Widget ((,) String)
 make style cursor str myId =
+  Widget.align (Vector2 0.5 0.5) $
   maybe makeUnfocused makeFocused mCursor style str myId
   where
     mCursor = fmap extractTextEditCursor $ Anim.subId myId cursor

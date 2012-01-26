@@ -7,6 +7,7 @@ import Data.List.Split (splitWhen)
 import Data.List.Utils (enumerate)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
+import Graphics.DrawingCombinators.Utils(square)
 import Graphics.UI.Bottle.SizeRange (fixedSize)
 import Graphics.UI.Bottle.Sized (Sized(..))
 import Graphics.UI.Bottle.Widget (Widget, liftView)
@@ -21,8 +22,8 @@ data Style = Style {
   styleFontSize :: Int
   }
 
-augment :: Show a => a -> Anim.AnimId -> Anim.AnimId
-augment x = (++ [SBS8.pack (show x)])
+augment :: Show a => Anim.AnimId -> a -> Anim.AnimId
+augment animId = Anim.joinId animId . (:[]) . SBS8.pack . show
 
 drawText :: Bool -> Style -> String -> (Anim.AnimId -> Anim.Frame, Vector2 Draw.R)
 drawText isSingleLetterImages (Style font ptSize) text =
@@ -31,17 +32,29 @@ drawText isSingleLetterImages (Style font ptSize) text =
   drawMany vertical $
   if isSingleLetterImages
   then
-    map (drawMany horizontal . map (nestedFrame . second (useFont . (: [])))) .
-    splitWhen ((== '\n') . snd) $ enumerate text
-  else map (nestedFrame . second useFont . first ((,) "Line")) . enumerate $ lines text
+    map
+      (lineMarker .
+       second (drawMany horizontal . map (nestedFrame . second (useFont . (: []))))) .
+    enumerate . splitWhen ((== '\n') . snd) $ enumerate text
+  else
+    map
+      (lineMarker .
+       second (nestedFrame . second useFont . first ((,) "Line"))) . enumerate . enumerate $
+    splitWhen (== '\n') text
   where
+    lineMarker (lineIndex, (mkFrame, size)) =
+      (newMkFrame, size)
+      where
+        newMkFrame animId =
+          mappend (mkFrame animId) . Anim.scale heightSize $
+          Anim.simpleFrame (augment animId ["line marker", show lineIndex]) square
     useFont = DrawUtils.drawText font &&& DrawUtils.textSize font
     nestedFrame (i, (image, size)) = (draw, size)
       where
-        draw animId = Anim.simpleFrameDownscale (augment i animId) size image
+        draw animId = Anim.simpleFrameDownscale (augment animId i) size image
 
-    resize = liftA2 max $ Vector2 0 DrawUtils.textHeight
-    drawMany sizeToTranslate = second resize . foldr step (mempty, 0)
+    heightSize = Vector2 0 DrawUtils.textHeight
+    drawMany sizeToTranslate = (second . liftA2 max) heightSize . foldr step (mempty, 0)
       where
         step (drawX, sizeX) (drawXs, sizeXs) =
           (mappend drawX $ fmap (Anim.translate trans) drawXs,
