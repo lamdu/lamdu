@@ -21,7 +21,7 @@ move (Branch dataIRef) destVersion = do
     moveToDest srcVersion view = moveView view srcVersion destVersion
 
 curVersion :: Monad m => Branch -> Transaction t m Version
-curVersion (Branch dataIRef) = _brVersion `liftM` Transaction.readIRef dataIRef
+curVersion (Branch dataIRef) = brVersion `liftM` Transaction.readIRef dataIRef
 
 -- | A Branch is a mutable version ptr
 new :: Monad m => Version -> Transaction t m Branch

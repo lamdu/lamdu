@@ -6,11 +6,16 @@ import Language.Haskell.TH.Syntax
 
 make :: Name -> Q [Dec]
 make typeName = do
-    TyConI (DataD _ _ typeVars constructors _) <- reify typeName
-    constructor <- case constructors of
-        [x] -> return x
-        _ -> fail "one constructor expected for Data.AtFieldTH.make"
-    return $ constructorAtFuncs typeName typeVars constructor
+    TyConI typeCons <- reify typeName
+    (typeVars, ctor) <-
+        case typeCons of
+            DataD _ _ typeVars constructors _ ->
+                case constructors of
+                    [ctor] -> return (typeVars, ctor)
+                    _ -> fail "one constructor expected for Data.AtFieldTH.make"
+            NewtypeD _ _ typeVars ctor _ -> return (typeVars, ctor)
+            _ -> error $ show typeCons ++ " is not supported!"
+    return $ constructorAtFuncs typeName typeVars ctor
 
 constructorAtFuncs :: Name -> [TyVarBndr] -> Con -> [Dec]
 constructorAtFuncs typeName typeVars constructor =

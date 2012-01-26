@@ -5,31 +5,28 @@
 -- | contains the parts of both that both may depend on, to avoid the
 -- | cycle.
 module Data.Store.Rev.ViewBranchInternal
-    (ViewData(..), vdBranch,
+    (ViewData(..), atVdBranch,
      View(..),
-     BranchData(..), brVersion, brViews,
+     BranchData(..), atBrVersion, atBrViews,
      Branch(..),
      moveView, applyChangesToView, makeViewKey)
 where
 
-import           Control.Monad          (when)
-import qualified Data.Store.Guid        as Guid
-import           Data.Store.Guid        (Guid)
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
-import           Data.Store.Rev.Version (Version)
-import qualified Data.Store.Rev.Version as Version
-import           Data.Store.Rev.Change  (Change)
-import qualified Data.Store.Rev.Change  as Change
-import           Data.Binary            (Binary(..))
-import           Data.Store.IRef        (IRef)
-import qualified Data.Store.IRef        as IRef
-import           Data.Record.Label      ((:->), mkLabels, lens)
+import Control.Monad (when)
+import Data.Binary (Binary(..))
 import Data.Derive.Binary(makeBinary)
 import Data.DeriveTH(derive)
-
-newtype ViewData = ViewData { _vdBranch :: Branch }
-  deriving (Binary, Eq, Ord, Show, Read)
+import Data.Store.Guid (Guid)
+import Data.Store.IRef (IRef)
+import Data.Store.Rev.Change (Change)
+import Data.Store.Rev.Version (Version)
+import Data.Store.Transaction (Transaction)
+import qualified Data.AtFieldTH as AtFieldTH
+import qualified Data.Store.Guid as Guid
+import qualified Data.Store.IRef as IRef
+import qualified Data.Store.Rev.Change as Change
+import qualified Data.Store.Rev.Version as Version
+import qualified Data.Store.Transaction as Transaction
 
 -- This key is XOR'd with object keys to yield the IRef to each
 -- object's current version ref:
@@ -37,19 +34,21 @@ newtype View = View (IRef ViewData)
   deriving (Eq, Ord, Binary, Show, Read)
 
 data BranchData = BranchData {
-  _brVersion :: Version,
-  _brViews :: [View]
+  brVersion :: Version,
+  brViews :: [View]
   }
   deriving (Eq, Ord, Read, Show)
+
 newtype Branch = Branch (IRef BranchData)
   deriving (Eq, Ord, Read, Show, Binary)
 
-$(mkLabels [''ViewData, ''BranchData])
--- vdBranch :: ViewData :-> Branch
--- brVersion :: BranchData :-> Version
--- brViews :: BranchData :-> [View]
+newtype ViewData = ViewData { vdBranch :: Branch }
+  deriving (Binary, Eq, Ord, Show, Read)
 
-$(derive makeBinary ''BranchData)
+AtFieldTH.make ''BranchData
+AtFieldTH.make ''ViewData
+
+derive makeBinary ''BranchData
 
 -- | moveView must be given the correct source of the movement
 -- | or it will result in undefined results!
