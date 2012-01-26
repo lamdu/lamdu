@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Editor.Data(
     Data(..), atIsExpanded, atTextEditModel,
-    Tree(..), nodeValue, nodeChildrenRefs,
+    Tree(..), atNodeValue, atNodeChildrenRefs,
     ITree, ITreeD, TreeD,
     makeValue, makeNode, makeNodeRef, makeLeafRef)
 where
@@ -12,7 +12,7 @@ import Data.Binary (Binary(..))
 import Data.Derive.Binary(makeBinary)
 import Data.DeriveTH(derive)
 import Data.Store.IRef (IRef)
-import Data.Store.IRef.Tree (Tree(..), nodeValue, nodeChildrenRefs)
+import Data.Store.IRef.Tree (Tree(..), atNodeValue, atNodeChildrenRefs)
 import Data.Store.Transaction (Transaction)
 import Prelude hiding ((.), id)
 import qualified Data.AtFieldTH as AtFieldTH
