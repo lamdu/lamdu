@@ -165,10 +165,18 @@ eventMapMovesCursor keys doc act =
 
 ------
 
-makeDefinitionWidget :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
-makeDefinitionWidget definitionI = do
+assignCursor :: Cursor -> Cursor -> TWidget t m -> TWidget t m
+assignCursor src dest =
+  atCTransaction . Reader.withReaderT . atEnvCursor $ f
+  where
+    f cursor
+      | cursor == src = dest
+      | otherwise = cursor
+
+makeDefinitionEdit :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
+makeDefinitionEdit definitionI = do
   nameEdit <-
-    (atCTransaction . Reader.withReaderT . atEnvCursor) assignCursor $
+    assignCursor animId nameEditAnimId $
     simpleTextEdit nameRef nameEditAnimId
   equals <- makeTextView " = " $ Anim.joinId animId ["equals"]
   expression <- makeFocusableTextView "()" $ Anim.joinId animId ["expression"]
@@ -177,9 +185,6 @@ makeDefinitionWidget definitionI = do
     [nameEdit, equals, expression]
   where
     nameEditAnimId = Anim.joinId animId ["name"]
-    assignCursor cursor
-      | cursor == animId = nameEditAnimId
-      | otherwise = cursor
     animId = AnimIds.fromIRef definitionI
     nameRef =
       Property.pureCompose (fromMaybe "") Just $
@@ -196,7 +201,7 @@ makeWidgetForView view = do
     widgetDownTransaction .
     runCTransaction cursor style .
     (liftM . Widget.atEvents) (>>= applyAndReturn saveCursor) $
-    makeDefinitionWidget Anchors.rootIRef
+    makeDefinitionEdit Anchors.rootIRef
   let undoEventMap = maybe mempty makeUndoEventMap (Version.parent versionData)
   return $ Widget.strongerEvents undoEventMap focusable
   where
