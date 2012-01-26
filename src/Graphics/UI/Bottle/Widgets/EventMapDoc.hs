@@ -34,7 +34,7 @@ addHelp style =
     f mkUserIO size = Widget.atUioFrame (mappend docFrame) userIO
       where
         rSize = srMinSize (requestedSize eventMapDoc)
-        eventMapDoc = make eventMap style []
+        eventMapDoc = make eventMap style ["help box"]
         transparency = Draw.Color 1 1 1
         docFrame =
           (Anim.onImages . Draw.tint . transparency) 0.8 .
