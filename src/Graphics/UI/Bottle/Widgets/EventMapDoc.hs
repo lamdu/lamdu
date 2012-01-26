@@ -2,7 +2,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.EventMapDoc(make, addHelp) where
 
+import Data.List(sortBy)
 import Data.Monoid(mappend)
+import Data.Ord(comparing)
 import Graphics.UI.Bottle.EventMap(EventMap)
 import Graphics.UI.Bottle.SizeRange (srMinSize)
 import Graphics.UI.Bottle.Sized (Sized(..))
@@ -16,9 +18,12 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
+sortOn :: Ord b => (a -> b) -> [a] -> [a]
+sortOn = sortBy . comparing
+
 make :: EventMap a -> TextView.Style -> Anim.AnimId -> Sized Anim.Frame
 make eventMap style animId =
-  GridView.make . map toRow . E.eventMapDocs $ eventMap
+  GridView.make . map toRow . sortOn snd . E.eventMapDocs $ eventMap
   where
     textView str uniq =
       TextView.make style str $
