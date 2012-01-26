@@ -5,7 +5,6 @@
 
 module Main(main) where
 
-import Control.Arrow (first)
 import Control.Category ((.))
 import Control.Monad (when, liftM, forM, unless)
 import Control.Monad.Trans.Class (lift)
@@ -134,9 +133,8 @@ simpleTextEdit ::
 simpleTextEdit style textRef animId = do
   text <- getP textRef
   let
-    lifter newText newCursor = do
-      when (newText /= text) $ Property.set textRef newText
-      return newCursor
+    lifter newText =
+      applyAndReturn . const . when (newText /= text) $ Property.set textRef newText
   cursor <- readCursor
   return .
     Widget.atEvents (uncurry lifter) $
@@ -317,7 +315,7 @@ makeWidgetForView style view = do
   focusable <-
     widgetDownTransaction .
     runCTransaction cursor .
-    (liftM . Widget.atEvents) (>>= saveCursor) $
+    (liftM . Widget.atEvents) (>>= applyAndReturn saveCursor) $
     makeEditWidget style Anchors.clipboard
   let undoEventMap = maybe mempty makeUndoEventMap (Version.parent versionData)
   return $ Widget.strongerEvents undoEventMap focusable
@@ -331,7 +329,6 @@ makeWidgetForView style view = do
     saveCursor eventResult = do
       isEmpty <- Transaction.isEmpty
       unless isEmpty $ maybeUpdateCursor eventResult
-      return eventResult
 
 maybeUpdateCursor :: Monad m => Widget.EventResult -> Transaction t m ()
 maybeUpdateCursor = maybe (return ()) (Property.set Anchors.cursor) . Widget.eCursor
@@ -358,46 +355,45 @@ deleteCurrentBranch = do
   Property.set Anchors.currentBranch . snd $
     newBranches !! min (length newBranches - 1) index
 
+makeBranch :: Monad m => View -> Transaction DBTag m ()
+makeBranch view = do
+  newBranch <- Branch.new =<< View.curVersion view
+  textEditModelIRef <- Transaction.newIRef "New view"
+  let viewPair = (textEditModelIRef, newBranch)
+  Property.pureModify Anchors.branches (++ [viewPair])
+  Property.set Anchors.currentBranch newBranch
+
+applyAndReturn :: Monad m => (a -> m ()) -> a -> m a
+applyAndReturn f val = f val >> return val
+
+branchSelectorProperty :: Monad m => View -> [Branch.Branch] -> Property (Transaction DBTag m) Int
+branchSelectorProperty view branches =
+  Property.pureCompose
+    (fromMaybe (error "Selected branch not in branch list") .
+     (`elemIndex` branches)) (branches !!) .
+  Property.compose return (applyAndReturn (View.setBranch view)) $
+  Anchors.currentBranch
+
 makeRootWidget :: MonadF m => TextEdit.Style -> TWidget DBTag m
 makeRootWidget style = do
   view <- getP Anchors.view
   namedBranches <- getP Anchors.branches
 
   let
+    branchIndexRef = branchSelectorProperty view $ map snd namedBranches
+    delBranchEventMap
+      | null (drop 1 namedBranches) = mempty
+      | otherwise = makeEventMap Config.delBranchKeys "Delete Branch" deleteCurrentBranch
+    makeBranchEventMap = makeEventMap Config.makeBranchKeys "New Branch" (makeBranch view)
+    quitEventMap = makeEventMap Config.quitKeys "Quit" (error "Quit")
     makeBranchNameEdit textEditModelIRef =
       wrapDelegated (simpleTextEdit style (Transaction.fromIRef textEditModelIRef)) (AnimIds.fromIRef textEditModelIRef)
-    guiBranches = (map . first) makeBranchNameEdit namedBranches
-
-    branches = map snd guiBranches
-    alsoUpdateView branch = do
-      View.setBranch view branch
-      return branch
-    branchIndexRef =
-      Property.pureCompose
-        (fromMaybe (error "Selected branch not in branch list") .
-         (`elemIndex` branches)) (branches !!) .
-      Property.compose return alsoUpdateView $
-        Anchors.currentBranch
 
   branchSelector <-
     makeChoice AnimIds.branchSelection branchIndexRef
-    Box.vertical (map fst guiBranches)
+    Box.vertical $ map (makeBranchNameEdit . fst) namedBranches
 
   viewEdit <- makeWidgetForView style view
-  let
-    delBranchEventMap numBranches
-      | 1 == numBranches = mempty
-      | otherwise =
-        makeEventMap Config.delBranchKeys "Delete Branch" deleteCurrentBranch
-    makeBranchEventMap =
-      makeEventMap Config.makeBranchKeys "New Branch" $ do
-        newBranch <- Branch.new =<< View.curVersion view
-        textEditModelIRef <- Transaction.newIRef "New view"
-        let viewPair = (textEditModelIRef, newBranch)
-        Property.pureModify Anchors.branches (++ [viewPair])
-        Property.set Anchors.currentBranch newBranch
-
-    quitEventMap = makeEventMap Config.quitKeys "Quit" (error "Quit")
 
   return .
     Widget.strongerEvents
@@ -405,7 +401,7 @@ makeRootWidget style = do
     Box.make Box.horizontal
     [viewEdit
     ,Widget.liftView Spacer.makeHorizontalExpanding
-    ,Widget.strongerEvents (delBranchEventMap (length branches)) branchSelector
+    ,Widget.strongerEvents delBranchEventMap branchSelector
     ]
 
 helpAdder :: TextView.Style -> IO (Widget IO -> IO (Widget IO))
