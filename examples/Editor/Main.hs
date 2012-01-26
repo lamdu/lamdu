@@ -21,6 +21,7 @@ import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Widget (Widget)
 import Prelude hiding ((.))
 import qualified Control.Monad.Trans.Reader as Reader
+import qualified Data.Record.Label as Label
 import qualified Data.Store.Db as Db
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Rev.Branch as Branch
@@ -226,10 +227,10 @@ makeTreeEdit style depth clipboardRef treeIRef
       animId = AnimIds.fromIRef treeIRef
       myCursor = animId
       treeRef = Transaction.fromIRef treeIRef
-      valueRef                  = Data.nodeValue        `Property.composeLabel` treeRef
-      valueTextEditModelRef     = Data.textEditModel    `Property.composeLabel` valueRef
-      childrenIRefsRef          = Data.nodeChildrenRefs `Property.composeLabel` treeRef
-      isExpandedRef             = Data.isExpanded       `Property.composeLabel` valueRef
+      valueRef = Property.composeLabel (Label.getL Data.nodeValue) (Label.modL Data.nodeValue) treeRef
+      valueTextEditModelRef = Property.composeLabel Data.textEditModel Data.atTextEditModel valueRef
+      childrenIRefsRef = Property.composeLabel (Label.getL Data.nodeChildrenRefs) (Label.modL Data.nodeChildrenRefs) treeRef
+      isExpandedRef = Property.composeLabel Data.isExpanded Data.atIsExpanded valueRef
       expandCollapseEventMap isExpanded
         | isExpanded = Widget.actionEventMap Config.collapseKeys "Collapse" collapse
         | otherwise = Widget.actionEventMap Config.expandKeys "Expand" expand

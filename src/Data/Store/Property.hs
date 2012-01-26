@@ -1,5 +1,4 @@
 {-# OPTIONS -O2 -Wall #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Data.Store.Property(
     Property(..), composeLabel, compose, pureCompose,
@@ -7,8 +6,6 @@ module Data.Store.Property(
 where
 
 import           Control.Monad     (liftM, (>=>))
-import           Data.Record.Label ((:->))
-import qualified Data.Record.Label as Label
 
 data Property m a = Property {
   get :: m a,
@@ -42,10 +39,11 @@ pureCompose ::
   Monad m => (a -> b) -> (b -> a) -> Property m a -> Property m b
 pureCompose ab ba = compose (return . ab) (return . ba)
 
-infixl 5 `composeLabel`
-composeLabel :: Monad m => (a :-> b) -> Property m a -> Property m b
-composeLabel label (Property getter setter) =
+composeLabel ::
+  Monad m => (rec -> field) -> ((field -> field) -> rec -> rec) ->
+  Property m rec -> Property m field
+composeLabel getField modField (Property getter setter) =
   Property getter' setter'
   where
-    getter' = Label.getL label `liftM` getter
-    setter' x = setter . Label.setL label x =<< getter
+    getter' = getField `liftM` getter
+    setter' x = setter . (modField . const) x =<< getter

@@ -5,7 +5,6 @@ module Data.Store.Rev.View
 where
 
 import Control.Monad (liftM, (<=<))
-import Data.Store.Property (composeLabel)
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Change(Change(..))
 import Data.Store.Rev.Version (Version)
@@ -29,21 +28,24 @@ lookupBS view = Transaction.lookupBS . makeViewKey view
 
 setBranch :: Monad m => View -> Branch -> Transaction t m ()
 setBranch view@(View viewDataIRef) newBranch@(Branch newBranchDataIRef) = do
-  let branchRef = vdBranch `composeLabel` Transaction.fromIRef viewDataIRef
+  let
+    branchRef =
+      Property.composeLabel (Label.getL vdBranch) (Label.modL vdBranch) $
+      Transaction.fromIRef viewDataIRef
   oldBranch@(Branch oldBranchDataIRef) <- Property.get branchRef
   oldVersion <- Branch.curVersion oldBranch
   newVersion <- Branch.curVersion newBranch
   moveView view oldVersion newVersion
   Property.set branchRef newBranch
-  Property.pureModify (brViews `composeLabel` Transaction.fromIRef oldBranchDataIRef) (List.delete view)
-  Property.pureModify (brViews `composeLabel` Transaction.fromIRef newBranchDataIRef) (view:)
+  Property.pureModify (Property.composeLabel (Label.getL brViews) (Label.modL brViews) $ Transaction.fromIRef oldBranchDataIRef) (List.delete view)
+  Property.pureModify (Property.composeLabel (Label.getL brViews) (Label.modL brViews) $ Transaction.fromIRef newBranchDataIRef) (view:)
 
 new :: Monad m => Branch -> Transaction t m View
 new br@(Branch branchDataIRef) = do
   view <- View `liftM` Transaction.newIRef (ViewData br)
   version <- Branch.curVersion br
   applyHistory view =<< Version.versionData version
-  Property.pureModify (brViews `composeLabel` Transaction.fromIRef branchDataIRef) (view:)
+  Property.pureModify (Property.composeLabel (Label.getL brViews) (Label.modL brViews) $ Transaction.fromIRef branchDataIRef) (view:)
   return view
   where
     applyHistory view versionData = do
