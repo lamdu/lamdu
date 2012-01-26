@@ -82,7 +82,7 @@ makeFocused cursor style str myId =
   Widget.atImageWithSize
     (Anim.backgroundColor (sBackgroundCursorId style) 10 blue) .
   Widget.atImage (`mappend` cursorFrame) .
-  Widget.strongerKeys eventMap $
+  Widget.strongerEvents eventMap $
   widget
   where
     widget = Widget {

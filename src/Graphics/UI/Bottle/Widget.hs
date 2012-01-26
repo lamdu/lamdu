@@ -9,7 +9,7 @@ module Graphics.UI.Bottle.Widget (
   takesFocus, atMkUserIO, atUserIO,
   atImageWithSize, atImage, atMaybeEnter, atEventMap, atEvents,
   backgroundColor, liftView, removeExtraSize,
-  strongerKeys, weakerKeys) where
+  strongerEvents, weakerEvents) where
 
 import Control.Applicative (liftA2)
 import Data.Monoid (Monoid(..))
@@ -138,12 +138,12 @@ atEventMap :: (EventHandlers f -> EventHandlers f) -> Widget f -> Widget f
 atEventMap = atUserIO . atUioEventMap
 
 -- ^ If doesn't take focus, event map is ignored
-strongerKeys :: EventHandlers f -> Widget f -> Widget f
-strongerKeys = atEventMap . mappend
+strongerEvents :: EventHandlers f -> Widget f -> Widget f
+strongerEvents = atEventMap . mappend
 
 -- ^ If doesn't take focus, event map is ignored
-weakerKeys :: EventHandlers f -> Widget f -> Widget f
-weakerKeys = atEventMap . flip mappend
+weakerEvents :: EventHandlers f -> Widget f -> Widget f
+weakerEvents = atEventMap . flip mappend
 
 backgroundColor :: Anim.AnimId -> Draw.Color -> Widget f -> Widget f
 backgroundColor animId = atImageWithSize . Anim.backgroundColor animId 10

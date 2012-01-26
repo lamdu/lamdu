@@ -166,7 +166,7 @@ makeChildBox style parentCursor depth clipboardRef childrenIRefsRef = do
           return $ Widget.eventResultFromCursor parentCursor
       in
         liftM
-          (Widget.weakerKeys $
+          (Widget.weakerEvents $
            mappend delNodeEventMap cutNodeEventMap) $
         makeTreeEdit style (depth+1) clipboardRef childIRef
 
@@ -184,12 +184,12 @@ makeTreeEdit ::
   ITreeD -> TWidget ViewTag m
 makeTreeEdit style depth clipboardRef treeIRef
   | depth >= Config.maxDepth =
-    liftM (Widget.strongerKeys goDeeperEventMap) $
+    liftM (Widget.strongerEvents goDeeperEventMap) $
       focusableTextView style "[Go deeper]" animId
   | otherwise = do
     isExpanded <- getP isExpandedRef
     valueEdit <-
-      liftM (Widget.strongerKeys $ expandCollapseEventMap isExpanded) $
+      liftM (Widget.strongerEvents $ expandCollapseEventMap isExpanded) $
       simpleTextEdit style valueTextEditModelRef animId
     childrenIRefs <- getP childrenIRefsRef
     childBoxL <-
@@ -199,7 +199,7 @@ makeTreeEdit style depth clipboardRef treeIRef
             moveToParentEventMap =
               fromKeyGroups Config.moveToParentKeys "Move to parent" .
               return $ Widget.eventResultFromCursor myCursor
-          liftM ((:[]) . Widget.weakerKeys moveToParentEventMap) $
+          liftM ((:[]) . Widget.weakerEvents moveToParentEventMap) $
             makeChildBox style myCursor depth clipboardRef childrenIRefsRef
         else return []
     let
@@ -217,7 +217,7 @@ makeTreeEdit style depth clipboardRef treeIRef
           appendNewNodeEventMap,
           setFocalPointEventMap
           ]
-    return $ Widget.weakerKeys keymap outerBox
+    return $ Widget.weakerEvents keymap outerBox
     where
       goDeeperEventMap = fromKeyGroups Config.actionKeys "Go deeper" setFocalPoint
       animId = AnimIds.fromIRef treeIRef
@@ -286,7 +286,7 @@ makeEditWidget style clipboardRef = do
 
   goUpButton <-
     liftM
-    (Widget.strongerKeys goUpButtonEventMap) $
+    (Widget.strongerEvents goUpButtonEventMap) $
     focusableTextView style "[go up]" AnimIds.goUpId
 
   let
@@ -294,7 +294,7 @@ makeEditWidget style clipboardRef = do
       | isAtRoot = treeEdit
       | otherwise = Box.make Box.vertical [goUpButton, treeEdit]
 
-  return $ Widget.strongerKeys goUpEventMap focusable
+  return $ Widget.strongerEvents goUpEventMap focusable
 
 -- Apply the transactions to the given View and convert them to
 -- transactions on a DB
@@ -308,7 +308,7 @@ makeWidgetForView style view = do
     (liftM . Widget.atEvents) (>>= saveCursor) $
     makeEditWidget style Anchors.clipboard
   let undoEventMap = maybe mempty makeUndoEventMap (Version.parent versionData)
-  return $ Widget.strongerKeys undoEventMap focusable
+  return $ Widget.strongerEvents undoEventMap focusable
   where
     makeUndoEventMap = fromKeyGroups Config.undoKeys "Undo" . (>> fetchRevisionCursor) . View.move view
     fetchRevisionCursor =
@@ -390,7 +390,7 @@ makeRootWidget style = do
       Box.make Box.horizontal
       [viewEdit
       ,Widget.liftView Spacer.makeHorizontalExpanding
-      ,Widget.strongerKeys (delBranchEventMap (length branches))
+      ,Widget.strongerEvents (delBranchEventMap (length branches))
        branchSelector
       ]
 
@@ -406,7 +406,7 @@ makeRootWidget style = do
     quitEventMap = fromKeyGroups Config.quitKeys "Quit" (error "Quit")
 
   return $
-    Widget.strongerKeys
+    Widget.strongerEvents
       (mappend quitEventMap makeBranchEventMap)
     box
 
@@ -418,7 +418,7 @@ helpAdder style = do
       modifyIORef showingHelpVar not >>
       return Widget.emptyEventResult
     addToggleEventMap doc =
-      Widget.strongerKeys $
+      Widget.strongerEvents $
       fromKeyGroups Config.overlayDocKeys doc toggle
   return $ \widget -> do
     showingHelp <- readIORef showingHelpVar
