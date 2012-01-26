@@ -16,6 +16,7 @@ import Control.Newtype.TH(mkNewTypes)
 import Data.Function(on)
 import Data.List(isPrefixOf)
 import Data.Map(Map, (!))
+import Data.Maybe(isJust)
 import Data.Monoid(Monoid(..))
 import Data.Ord(comparing)
 import Data.Vector.Vector2 (Vector2(..))
@@ -97,7 +98,7 @@ animSpeed = 0.2
 
 prefixRects :: Map AnimId (Layer, PositionedImage) -> Map AnimId Rect
 prefixRects src =
-  Map.fromList . map perGroup $ groupOn fst $ sortOn fst prefixItems
+  Map.fromList . filter (not . null . fst) . map perGroup $ groupOn fst $ sortOn fst prefixItems
   where
     perGroup xs =
       (fst (head xs), List.foldl1' joinRects (map snd xs))
@@ -169,7 +170,7 @@ makeNextFrame (Frame dest) (Frame cur) =
         rect = maybe (Rect (center r) 0) genRect $ findPrefix key curPrefixMap
         genRect prefix = relocateSubRect r (destPrefixMap ! prefix) (curPrefixMap ! prefix)
     del key (layer, PositionedImage img (Rect pos size))
-      | fmap null (findPrefix key destPrefixMap) == Just False
+      | isJust (findPrefix key destPrefixMap)
       || sqrNorm size < 1 = Nothing
       | otherwise = Just (layer, PositionedImage img (Rect (pos + size/2 * animSpeed) (size * (1 - animSpeed))))
     modify
