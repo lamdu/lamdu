@@ -11,13 +11,17 @@ module Editor.Anchors(
     viewStore, ViewTag)
 where
 
-import Control.Monad (unless)
+import Control.Monad (unless, (<=<))
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Writer (WriterT, tell, execWriterT)
 import Data.Binary (Binary)
 import Data.Store.Db (Db)
+import Data.Store.Guid(Guid)
 import Data.Store.IRef (IRef)
 import Data.Store.Rev.Branch (Branch)
+import Data.Store.Rev.Change (Key, Value)
 import Data.Store.Rev.View (View)
-import Data.Store.Transaction (Transaction, Store)
+import Data.Store.Transaction (Transaction, Store(..))
 import Editor.Data (ITreeD, TreeD)
 import Graphics.UI.Bottle.Animation(AnimId)
 import qualified Data.Store.Db as Db
@@ -41,7 +45,7 @@ viewStore = View.store
 clipboard :: Monad m => Transaction.Property ViewTag m [ITreeD]
 clipboard = Transaction.anchorRefDef "clipboard" []
 
-rootIRef :: ITreeD
+rootIRef :: IRef TreeD
 rootIRef = IRef.anchor "root"
 
 root :: Monad m => Transaction.Property ViewTag m TreeD
@@ -87,15 +91,35 @@ viewIRef = IRef.anchor "HEAD"
 view :: Monad m => Transaction.Property DBTag m View
 view = Transaction.fromIRef viewIRef
 
+type WriteCollector m = WriterT [(Key, Value)] m
+
+writeCollectorStore ::
+  Monad m => m Guid -> Store t (WriteCollector m)
+writeCollectorStore newKey = Store {
+  storeNewKey = lift newKey,
+  storeLookup = fail "Cannot lookup when collecting writes!",
+  storeAtomicWrite = tell <=< mapM makeChange
+  }
+  where
+    makeChange (key, Just value) = return (key, value)
+    makeChange (_, Nothing) =
+      fail "Cannot delete when collecting writes"
+
+collectWrites ::
+  Monad m =>
+  m Guid -> Transaction t (WriteCollector m) () -> m [(Key, Value)]
+collectWrites newGuid =
+  execWriterT . Transaction.run (writeCollectorStore newGuid)
+
 initDB :: Store DBTag IO -> IO ()
 initDB store =
   Transaction.run store $ do
     bs <- initRef branchesIRef $ do
       masterNameIRef <- Transaction.newIRef "master"
-      initialVersionIRef <-
-        Version.makeInitialVersion
-          [Version.makeInitialValue rootIRef (Data.makeNode "" []),
-           Version.makeInitialValue cursorIRef (AnimIds.fromIRef rootIRef)]
+      changes <- collectWrites Transaction.newKey $ do
+        Property.set root $ Data.makeNode "" []
+        Property.set cursor $ AnimIds.fromIRef rootIRef
+      initialVersionIRef <- Version.makeInitialVersion changes
       master <- Branch.new initialVersionIRef
       return [(masterNameIRef, master)]
     let branch = snd $ head bs

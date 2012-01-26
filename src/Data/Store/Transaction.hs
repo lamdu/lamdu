@@ -28,6 +28,7 @@ import           Control.Monad.Trans.Class        (MonadTrans(..))
 import           Data.ByteString.UTF8             (fromString)
 import           Data.Binary                      (Binary)
 import           Data.Binary.Utils                (encodeS, decodeS)
+import           Data.Store.Rev.Change            (Key, Value)
 import           Data.Store.IRef                  (IRef)
 import qualified Data.Store.IRef                  as IRef
 import           Data.Store.ContainerRef          (ContainerRef)
@@ -44,16 +45,14 @@ import           Data.Map                         (Map)
 type Property t m = Property.Property (Transaction t m)
 type Container k t m a = k -> Property t m a
 
-type Key = Guid
-type Value = Maybe ByteString -- Nothing means delete, Just means insert/modify
-type Changes = Map Key Value
+type Changes = Map Key (Maybe Value)
 
 -- 't' is a phantom-type tag meant to make sure you run Transactions
 -- with the right store
 data Store t m = Store {
   storeNewKey :: m Key,
-  storeLookup :: Key -> m Value,
-  storeAtomicWrite :: [(Key, Value)] -> m ()
+  storeLookup :: Key -> m (Maybe Value),
+  storeAtomicWrite :: [(Key, Maybe Value)] -> m ()
   }
 
 -- Define transformer stack:
@@ -70,7 +69,7 @@ liftInner = Transaction . lift . lift
 isEmpty :: Monad m => Transaction t m Bool
 isEmpty = liftStateT (gets Map.null)
 
-lookupBS :: Monad m => Key -> Transaction t m Value
+lookupBS :: Monad m => Key -> Transaction t m (Maybe Value)
 lookupBS guid = do
   changes <- liftStateT get
   case Map.lookup guid changes of

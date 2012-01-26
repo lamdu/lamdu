@@ -3,17 +3,16 @@
 module Data.Store.Rev.Version
     (VersionData, depth, parent, changes,
      Version, versionIRef, versionData,
-     makeInitialVersion, makeInitialValue, newVersion, mostRecentAncestor,
+     makeInitialVersion, newVersion, mostRecentAncestor,
      walkUp, walkDown, versionsBetween)
 where
 
 import           Control.Monad          (liftM, liftM2, join)
 import           Data.Binary            (Binary(..))
-import           Data.Store.IRef        (IRef, guid)
+import           Data.Store.IRef        (IRef)
 import           Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 import           Data.Store.Rev.Change  (Change(..), Key, Value)
-import Data.Binary.Utils(encodeS)
 import Data.Derive.Binary(makeBinary)
 import Data.DeriveTH(derive)
 
@@ -27,9 +26,6 @@ data VersionData = VersionData {
   }
   deriving (Eq, Ord, Read, Show)
 $(derive makeBinary ''VersionData)
-
-makeInitialValue :: Binary a => IRef a -> a -> (Key, Value)
-makeInitialValue key value = (guid key, encodeS value)
 
 makeInitialVersion :: Monad m => [(Key, Value)] -> Transaction t m Version
 makeInitialVersion initialValues = liftM Version . Transaction.newIRef . VersionData 0 Nothing $ map makeChange initialValues
