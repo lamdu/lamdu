@@ -2,9 +2,10 @@
 {-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TemplateHaskell #-}
 module Graphics.UI.Bottle.Widget (
   Widget(..), MEnter, Direction,
-  UserIO(..), EventResult(..), EventHandlers, atContent, atIsFocused,
-  atUioMaybeEnter, atUioEventMap, atUioFrame,
+  UserIO(..), atUioMaybeEnter, atUioEventMap, atUioFrame,
+  EventResult(..), atEAnimIdMapping, atECursor,
   emptyEventResult, eventResultFromCursor,
+  EventHandlers, atContent, atIsFocused,
   userIO, image, eventMap, enter,
   takesFocus, atMkUserIO, atUserIO,
   atImageWithSize, atImage, atMaybeEnter, atEventMap, atEvents,
@@ -35,6 +36,8 @@ data EventResult = EventResult {
   eCursor :: Maybe Cursor,
   eAnimIdMapping :: Anim.AnimId -> Anim.AnimId
   }
+
+AtFieldTH.make ''EventResult
 
 emptyEventResult :: EventResult
 emptyEventResult = EventResult {

@@ -149,7 +149,7 @@ makeEventMap ::
   Widget.EventHandlers m
 makeEventMap keys doc act =
   (fmap . liftM)
-    (maybe Widget.emptyEventResult Widget.eventResultFromCursor) .
+    (flip (Widget.atECursor . const) Widget.emptyEventResult) .
   mconcat $
   map (flip (`E.fromEventType` doc) act) keys
 
