@@ -43,17 +43,25 @@ import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified System.Info
 
+data CTransactionEnv = CTransactionEnv {
+  envCursor :: Cursor,
+  envTextStyle :: TextEdit.Style
+  }
+
 newtype CTransaction t m a = CTransaction {
-  unCTransaction :: Reader.ReaderT Cursor (Transaction t m) a
+  unCTransaction :: Reader.ReaderT CTransactionEnv (Transaction t m) a
   }
   deriving (Monad)
 
-runCTransaction :: Cursor -> CTransaction t m a -> Transaction t m a
-runCTransaction cursor =
-  (`Reader.runReaderT` cursor) . unCTransaction
+runCTransaction :: Cursor -> TextEdit.Style -> CTransaction t m a -> Transaction t m a
+runCTransaction cursor style =
+  (`Reader.runReaderT` (CTransactionEnv cursor style)) . unCTransaction
 
 readCursor :: Monad m => CTransaction t m Cursor
-readCursor = CTransaction Reader.ask
+readCursor = CTransaction (Reader.asks envCursor)
+
+readTextStyle :: Monad m => CTransaction t m TextEdit.Style
+readTextStyle = CTransaction (Reader.asks envTextStyle)
 
 transaction :: Monad m => Transaction t m a -> CTransaction t m a
 transaction = CTransaction . lift
@@ -66,9 +74,10 @@ type TWidget t m = CTransaction t m (Widget (Transaction t m))
 class (Monad m, Functor m) => MonadF m
 instance (Monad m, Functor m) => MonadF m
 
-focusableTextView :: MonadF m => TextEdit.Style -> String -> Anim.AnimId -> TWidget t m
-focusableTextView style text animId = do
+focusableTextView :: MonadF m => String -> Anim.AnimId -> TWidget t m
+focusableTextView text animId = do
   hasFocus <- liftM (animId ==) readCursor
+  style <- readTextStyle
   let
     textView =
       Widget.takesFocus (const (return animId)) $
@@ -127,14 +136,15 @@ wrapDelegated f animId = do
 
 simpleTextEdit ::
   Monad m =>
-  TextEdit.Style -> Transaction.Property t m String ->
+  Transaction.Property t m String ->
   Anim.AnimId -> TWidget t m
-simpleTextEdit style textRef animId = do
+simpleTextEdit textRef animId = do
   text <- getP textRef
   let
     lifter newText =
       applyAndReturn . const . when (newText /= text) $ Property.set textRef newText
   cursor <- readCursor
+  style <- readTextStyle
   return .
     Widget.atEvents (uncurry lifter) $
     TextEdit.make style cursor text animId
@@ -149,11 +159,11 @@ eventMapMovesCursor keys doc act =
 ------
 
 makeChildBox ::
-  MonadF m => TextEdit.Style -> Cursor -> Int ->
+  MonadF m => Cursor -> Int ->
   Transaction.Property ViewTag m [ITreeD] ->
   Transaction.Property ViewTag m [ITreeD] ->
   TWidget ViewTag m
-makeChildBox style parentCursor depth clipboardRef childrenIRefsRef = do
+makeChildBox parentCursor depth clipboardRef childrenIRefsRef = do
   childrenIRefs <- getP childrenIRefsRef
   childItems <-
     forM (enumerate childrenIRefs) $ \(curChildIndex, childIRef) ->
@@ -172,7 +182,7 @@ makeChildBox style parentCursor depth clipboardRef childrenIRefsRef = do
         liftM
           (Widget.weakerEvents $
            mappend delNodeEventMap cutNodeEventMap) $
-        makeTreeEdit style (depth+1) clipboardRef childIRef
+        makeTreeEdit (depth+1) clipboardRef childIRef
 
   let childBox = Box.make Box.vertical childItems
   return .
@@ -183,18 +193,17 @@ makeChildBox style parentCursor depth clipboardRef childrenIRefsRef = do
 
 makeTreeEdit ::
   MonadF m =>
-  TextEdit.Style ->
   Int -> Transaction.Property ViewTag m [ITreeD] ->
   ITreeD -> TWidget ViewTag m
-makeTreeEdit style depth clipboardRef treeIRef
+makeTreeEdit depth clipboardRef treeIRef
   | depth >= Config.maxDepth =
     liftM (Widget.strongerEvents goDeeperEventMap) $
-      focusableTextView style "[Go deeper]" animId
+      focusableTextView "[Go deeper]" animId
   | otherwise = do
     isExpanded <- getP isExpandedRef
     valueEdit <-
       liftM (Widget.strongerEvents $ expandCollapseEventMap isExpanded) $
-      simpleTextEdit style valueTextEditModelRef animId
+      simpleTextEdit valueTextEditModelRef animId
     childrenIRefs <- getP childrenIRefsRef
     childBoxL <-
       if isExpanded && not (null childrenIRefs)
@@ -204,12 +213,18 @@ makeTreeEdit style depth clipboardRef treeIRef
               eventMapMovesCursor Config.moveToParentKeys "Move to parent" $
               return myCursor
           liftM ((:[]) . Widget.weakerEvents moveToParentEventMap) $
-            makeChildBox style myCursor depth clipboardRef childrenIRefsRef
+            makeChildBox myCursor depth clipboardRef childrenIRefsRef
         else return []
+    style <- readTextStyle
     let
+      collapser =
+        flip (TextView.make (TextEdit.sTextViewStyle style)) (AnimIds.collapserId animId) $
+        if isExpanded
+        then "[-]"
+        else "[+]"
       cValueEdit =
         Box.make Box.horizontal
-        [Widget.liftView $ collapser isExpanded,
+        [Widget.liftView collapser,
          Widget.liftView $ Spacer.makeHorizontal 1,
          valueEdit]
       outerBox = Box.make Box.vertical (cValueEdit : childBoxL)
@@ -235,11 +250,6 @@ makeTreeEdit style depth clipboardRef treeIRef
         | otherwise = Widget.actionEventMap Config.expandKeys "Expand" expand
       collapse = Property.set isExpandedRef False
       expand = Property.set isExpandedRef True
-      collapser isExpanded =
-        flip (TextView.make (TextEdit.sTextViewStyle style)) (AnimIds.collapserId animId) $
-        if isExpanded
-        then "[-]"
-        else "[+]"
 
       pasteEventMap [] = mempty
       pasteEventMap (cbChildRef:xs) =
@@ -269,12 +279,11 @@ getFocalPoint = do
 
 makeEditWidget ::
   MonadF m =>
-  TextEdit.Style ->
   Transaction.Property ViewTag m [ITreeD] ->
   TWidget ViewTag m
-makeEditWidget style clipboardRef = do
+makeEditWidget clipboardRef = do
   (isAtRoot, focalPoint) <- transaction getFocalPoint
-  treeEdit <- makeTreeEdit style 0 clipboardRef focalPoint
+  treeEdit <- makeTreeEdit 0 clipboardRef focalPoint
   let
     goUp = do
       Property.pureModify Anchors.focalPointIRefs (drop 1)
@@ -289,7 +298,7 @@ makeEditWidget style clipboardRef = do
   goUpButton <-
     liftM
     (Widget.strongerEvents goUpButtonEventMap) $
-    focusableTextView style "[go up]" AnimIds.goUpId
+    focusableTextView "[go up]" AnimIds.goUpId
 
   let
     focusable
@@ -300,15 +309,16 @@ makeEditWidget style clipboardRef = do
 
 -- Apply the transactions to the given View and convert them to
 -- transactions on a DB
-makeWidgetForView :: MonadF m => TextEdit.Style -> View -> TWidget DBTag m
-makeWidgetForView style view = do
+makeWidgetForView :: MonadF m => View -> TWidget DBTag m
+makeWidgetForView view = do
   versionData <- transaction $ Version.versionData =<< View.curVersion view
   cursor <- readCursor
+  style <- readTextStyle
   focusable <-
     widgetDownTransaction .
-    runCTransaction cursor .
+    runCTransaction cursor style .
     (liftM . Widget.atEvents) (>>= applyAndReturn saveCursor) $
-    makeEditWidget style Anchors.clipboard
+    makeEditWidget Anchors.clipboard
   let undoEventMap = maybe mempty makeUndoEventMap (Version.parent versionData)
   return $ Widget.strongerEvents undoEventMap focusable
   where
@@ -366,17 +376,17 @@ branchSelectorProperty view branches =
   Property.compose return (applyAndReturn (View.setBranch view)) $
   Anchors.currentBranch
 
-makeRootWidget :: MonadF m => TextEdit.Style -> TWidget DBTag m
-makeRootWidget style = do
+makeRootWidget :: MonadF m => TWidget DBTag m
+makeRootWidget = do
   view <- getP Anchors.view
   namedBranches <- getP Anchors.branches
 
-  viewEdit <- makeWidgetForView style view
+  viewEdit <- makeWidgetForView view
 
   let
     branchIndexRef = branchSelectorProperty view $ map snd namedBranches
     makeBranchNameEdit textEditModelIRef =
-      wrapDelegated (simpleTextEdit style (Transaction.fromIRef textEditModelIRef)) (AnimIds.fromIRef textEditModelIRef)
+      wrapDelegated (simpleTextEdit (Transaction.fromIRef textEditModelIRef)) (AnimIds.fromIRef textEditModelIRef)
   branchSelector <-
     makeChoice AnimIds.branchSelection branchIndexRef
     Box.vertical $ map (makeBranchNameEdit . fst) namedBranches
@@ -419,7 +429,7 @@ runDbStore font store = do
       TextEdit.sEmptyString = "<empty>"
       }
 
-    fromCursor cursor = runCTransaction cursor $ makeRootWidget style
+    fromCursor cursor = runCTransaction cursor style makeRootWidget
     makeWidget = widgetDownTransaction $ do
       cursor <- Property.get Anchors.cursor
       candidateWidget <- fromCursor cursor
