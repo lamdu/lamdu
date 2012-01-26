@@ -14,7 +14,7 @@ import Data.List (findIndex, elemIndex)
 import Data.List.Utils (enumerate, nth, removeAt)
 import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid(Monoid(..))
-import Data.Store.Property (composeLabel)
+import Data.Store.Property (Property)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (DBTag, ViewTag, Cursor)
@@ -60,6 +60,9 @@ readCursor = CTransaction Reader.ask
 transaction :: Monad m => Transaction t m a -> CTransaction t m a
 transaction = CTransaction . lift
 
+getP :: Monad m => Property (Transaction t m) a -> CTransaction t m a
+getP = transaction . Property.get
+
 type TWidget t m = CTransaction t m (Widget (Transaction t m))
 
 class (Monad m, Functor m) => MonadF m
@@ -85,7 +88,7 @@ makeChoice ::
   Anim.AnimId -> Transaction.Property t m Int -> Box.Orientation ->
   [TWidget t m] -> TWidget t m
 makeChoice selectionAnimId curChoiceRef orientation children = do
-  curChoice <- transaction $ Property.get curChoiceRef
+  curChoice <- getP curChoiceRef
   focusables <- sequence children
   let
     widget =
@@ -129,7 +132,7 @@ simpleTextEdit ::
   TextEdit.Style -> Transaction.Property t m String ->
   Anim.AnimId -> TWidget t m
 simpleTextEdit style textRef animId = do
-  text <- transaction $ Property.get textRef
+  text <- getP textRef
   let
     lifter newText newCursor = do
       when (newText /= text) $ Property.set textRef newText
@@ -147,7 +150,7 @@ makeChildBox ::
   Transaction.Property ViewTag m [ITreeD] ->
   TWidget ViewTag m
 makeChildBox style parentCursor depth clipboardRef childrenIRefsRef = do
-  childrenIRefs <- transaction $ Property.get childrenIRefsRef
+  childrenIRefs <- getP childrenIRefsRef
   childItems <-
     forM (enumerate childrenIRefs) $ \(curChildIndex, childIRef) ->
       let
@@ -184,11 +187,11 @@ makeTreeEdit style depth clipboardRef treeIRef
     liftM (Widget.strongerKeys goDeeperEventMap) $
       focusableTextView style "[Go deeper]" animId
   | otherwise = do
-    isExpanded <- transaction $ Property.get isExpandedRef
+    isExpanded <- getP isExpandedRef
     valueEdit <-
       liftM (Widget.strongerKeys $ expandCollapseEventMap isExpanded) $
       simpleTextEdit style valueTextEditModelRef animId
-    childrenIRefs <- transaction $ Property.get childrenIRefsRef
+    childrenIRefs <- getP childrenIRefsRef
     childBoxL <-
       if isExpanded && not (null childrenIRefs)
         then do
@@ -206,7 +209,7 @@ makeTreeEdit style depth clipboardRef treeIRef
          Widget.liftView $ Spacer.makeHorizontal 1,
          valueEdit]
       outerBox = Box.make Box.vertical (cValueEdit : childBoxL)
-    clipboard <- transaction $ Property.get clipboardRef
+    clipboard <- getP clipboardRef
     let
       keymap =
         mconcat [
@@ -220,10 +223,10 @@ makeTreeEdit style depth clipboardRef treeIRef
       animId = AnimIds.fromIRef treeIRef
       myCursor = animId
       treeRef = Transaction.fromIRef treeIRef
-      valueRef                  = Data.nodeValue        `composeLabel` treeRef
-      valueTextEditModelRef     = Data.textEditModel    `composeLabel` valueRef
-      childrenIRefsRef          = Data.nodeChildrenRefs `composeLabel` treeRef
-      isExpandedRef             = Data.isExpanded       `composeLabel` valueRef
+      valueRef                  = Data.nodeValue        `Property.composeLabel` treeRef
+      valueTextEditModelRef     = Data.textEditModel    `Property.composeLabel` valueRef
+      childrenIRefsRef          = Data.nodeChildrenRefs `Property.composeLabel` treeRef
+      isExpandedRef             = Data.isExpanded       `Property.composeLabel` valueRef
       expandCollapseEventMap isExpanded =
         (fmap . liftM . const) Widget.emptyEventResult $
         if isExpanded
@@ -352,8 +355,8 @@ deleteCurrentBranch = do
 
 makeRootWidget :: MonadF m => TextEdit.Style -> TWidget DBTag m
 makeRootWidget style = do
-  view <- transaction $ Property.get Anchors.view
-  namedBranches <- transaction $ Property.get Anchors.branches
+  view <- getP Anchors.view
+  namedBranches <- getP Anchors.branches
 
   let
     makeBranchNameEdit textEditModelIRef =
