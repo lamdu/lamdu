@@ -10,13 +10,10 @@ module Data.Store.Transaction
      readIRef, readIRefDef, writeIRef,
      isEmpty,
      irefExists,
-     newIRef, newContainerRef, newKey,
+     newIRef, newKey,
      fromIRef, fromIRefDef,
      followBy,
-     anchorRef, anchorRefDef,
-     Container, containerStr,
-     fromContainerRef, fromContainerRefDef,
-     anchorContainer, anchorContainerDef)
+     anchorRef, anchorRefDef)
 where
 
 import           Prelude                          hiding (lookup)
@@ -25,16 +22,12 @@ import           Control.Monad                    (liftM)
 import           Control.Monad.Trans.State        (StateT, runStateT, get, gets, modify)
 import           Control.Monad.Trans.Reader       (ReaderT, runReaderT, ask)
 import           Control.Monad.Trans.Class        (MonadTrans(..))
-import           Data.ByteString.UTF8             (fromString)
 import           Data.Binary                      (Binary)
 import           Data.Binary.Utils                (encodeS, decodeS)
 import           Data.Store.Rev.Change            (Key, Value)
 import           Data.Store.IRef                  (IRef)
 import qualified Data.Store.IRef                  as IRef
-import           Data.Store.ContainerRef          (ContainerRef)
-import qualified Data.Store.ContainerRef          as ContainerRef
 import           Data.Store.Guid                  (Guid)
-import qualified Data.Store.Guid                  as Guid
 import qualified Data.Store.Property              as Property
 import           Data.Monoid                      (mempty)
 import           Data.Maybe                       (isJust)
@@ -43,7 +36,6 @@ import qualified Data.Map                         as Map
 import           Data.Map                         (Map)
 
 type Property t m = Property.Property (Transaction t m)
-type Container k t m a = k -> Property t m a
 
 type Changes = Map Key (Maybe Value)
 
@@ -132,19 +124,6 @@ fromIRef iref = Property.Property (readIRef iref) (writeIRef iref)
 fromIRefDef :: (Monad m, Binary a) => IRef a -> a -> Property t m a
 fromIRefDef iref def = Property.Property (readIRefDef def iref) (writeIRef iref)
 
-fromContainerRefI :: (Monad m, Binary a) =>
-                     (Guid -> Transaction t m a) ->
-                     ContainerRef a -> Container Guid t m a
-fromContainerRefI guidReader containerRef guid = Property.Property (guidReader key) (writeGuid key)
-  where
-    key = ContainerRef.guidBase containerRef `Guid.xor` guid
-
-fromContainerRef :: (Monad m, Binary a) => ContainerRef a -> Container Guid t m a
-fromContainerRef = fromContainerRefI readGuid
-
-fromContainerRefDef :: (Monad m, Binary a) => a -> ContainerRef a -> Container Guid t m a
-fromContainerRefDef def = fromContainerRefI $ readGuidDef def
-
 newKey :: Monad m => Transaction t m Key
 newKey = liftInner . storeNewKey =<< liftReaderT ask
 
@@ -153,9 +132,6 @@ newIRef val = do
   newGuid <- newKey
   insert newGuid val
   return $ IRef.unsafeFromGuid newGuid
-
-newContainerRef :: (Monad m, Binary a) => Transaction t m (ContainerRef a)
-newContainerRef = ContainerRef.unsafeFromGuid `liftM` newKey
 
 -- Dereference the *current* value of the IRef (Will not track new
 -- values of IRef, by-value and not by-name)
@@ -170,17 +146,6 @@ anchorRef = fromIRef . IRef.anchor
 
 anchorRefDef :: (Monad m, Binary a) => String -> a -> Property t m a
 anchorRefDef name def = flip fromIRefDef def . IRef.anchor $ name
-
-anchorContainer :: (Monad m, Binary a) => String -> Container Guid t m a
-anchorContainer = fromContainerRef . ContainerRef.anchor
-
-anchorContainerDef :: (Monad m, Binary a) => String -> a -> Container Guid t m a
-anchorContainerDef name def = fromContainerRefDef def . ContainerRef.anchor $ name
-
-containerStr :: (Monad m, Binary a) =>
-                Container Guid t m a ->
-                Container String t m a
-containerStr c = c . Guid.make . fromString
 
 run :: Monad m => Store t m -> Transaction t m a -> m a
 run store transaction = do

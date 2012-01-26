@@ -43,7 +43,6 @@ Library
                        Data.ByteString.Utils,
                        Data.Binary.Utils,
                        Data.Store.Guid,
-                       Data.Store.ContainerRef,
                        Data.Store.IRef,
                        Data.Store.IRef.Tree,
                        Data.Store.Rev.Change,
