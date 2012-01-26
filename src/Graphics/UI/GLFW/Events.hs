@@ -76,6 +76,7 @@ rawEventLoop eventsHandler = do
   GLFW.setCharCallback charEventHandler
   GLFW.setKeyCallback addKeyEvent
   GLFW.setWindowRefreshCallback $ addEvent RawWindowRefresh
+  GLFW.setWindowSizeCallback . const . const $ addEvent RawWindowRefresh
   GLFW.setWindowCloseCallback $ addEvent RawWindowClose >> return True
 
   forever $ do
