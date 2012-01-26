@@ -1,7 +1,7 @@
 {-# OPTIONS -O2 -Wall #-}
 
 module Data.Store.Guid
-    (Guid, make, bs, length, new, xor, fromString)
+    (Guid, make, bs, length, new, combine, fromString)
 where
 
 import           Prelude               hiding (length)
@@ -43,5 +43,5 @@ instance Binary Guid where
 new :: IO Guid
 new = Guid `fmap` randomBS length
 
-xor :: Guid -> Guid -> Guid
-xor = inGuid2 xorBS
+combine :: Guid -> Guid -> Guid
+combine = inGuid2 xorBS

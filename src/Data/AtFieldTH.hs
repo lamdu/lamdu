@@ -7,19 +7,19 @@ import Language.Haskell.TH.Syntax
 make :: Name -> Q [Dec]
 make typeName = do
     TyConI typeCons <- reify typeName
-    (typeVars, ctor) <-
+    (makeAtName, typeVars, ctor) <-
         case typeCons of
             DataD _ _ typeVars constructors _ ->
                 case constructors of
-                    [ctor] -> return (typeVars, ctor)
+                    [ctor] -> return (makeAtNameForDataField, typeVars, ctor)
                     _ -> fail "one constructor expected for Data.AtFieldTH.make"
-            NewtypeD _ _ typeVars ctor _ -> return (typeVars, ctor)
+            NewtypeD _ _ typeVars ctor _ -> return (makeAtNameForNewtype typeName, typeVars, ctor)
             _ -> error $ show typeCons ++ " is not supported!"
-    return $ constructorAtFuncs typeName typeVars ctor
+    return $ constructorAtFuncs makeAtName typeName typeVars ctor
 
-constructorAtFuncs :: Name -> [TyVarBndr] -> Con -> [Dec]
-constructorAtFuncs typeName typeVars constructor =
-    concatMap (uncurry (fieldAtFunc typeName typeVars isFreeVar)) fields
+constructorAtFuncs :: (Name -> Name) -> Name -> [TyVarBndr] -> Con -> [Dec]
+constructorAtFuncs makeAtName typeName typeVars constructor =
+    concatMap (uncurry (fieldAtFunc makeAtName typeName typeVars isFreeVar)) fields
     where
         fields = constructorFields constructor
         constructorVars = concatMap (List.nub . varsOfType . snd) fields
@@ -36,8 +36,17 @@ constructorFields _ = error "unsupported constructor for type supplied to Data.A
 countElemRepetitions :: Eq a => a -> [a] -> Int
 countElemRepetitions x = length . filter (== x)
 
-fieldAtFunc :: Name -> [TyVarBndr] -> (Name -> Bool) -> Name -> Type -> [Dec]
-fieldAtFunc typeName typeVars isFreeVar fieldName fieldType =
+makeAtNameForNewtype :: Name -> Name -> Name
+makeAtNameForNewtype newTypeName _ = mkName $ "at" ++ nameBase newTypeName
+
+makeAtNameForDataField :: Name -> Name
+makeAtNameForDataField fieldName =
+    mkName $ "at" ++ (Char.toUpper fieldNameHead : fieldNameTail)
+    where
+        fieldNameHead : fieldNameTail = nameBase fieldName
+
+fieldAtFunc :: (Name -> Name) -> Name -> [TyVarBndr] -> (Name -> Bool) -> Name -> Type -> [Dec]
+fieldAtFunc makeAtName typeName typeVars isFreeVar fieldName fieldType =
     [ SigD resName . ForallT resultTypeVars [] $ foldr1 arrow
         [ arrow (sideType fieldType "Src") (sideType fieldType "Dst")
         , input
@@ -49,8 +58,7 @@ fieldAtFunc typeName typeVars isFreeVar fieldName fieldType =
         arrow = AppT . AppT ArrowT
         funcName = mkName "func"
         valName = mkName "val"
-        resName = mkName $ "at" ++ [Char.toUpper fieldNameHead] ++ fieldNameTail
-        (fieldNameHead : fieldNameTail) = nameBase fieldName
+        resName = makeAtName fieldName
         clause = NormalB $ RecUpdE (VarE valName) [(fieldName, applyExp)]
         applyExp = AppE (VarE funcName) . AppE (VarE fieldName) $ VarE valName
         valType = foldl AppT (ConT typeName) $ map (VarT . tyVarBndrName) typeVars

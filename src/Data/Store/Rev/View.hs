@@ -8,7 +8,7 @@ import Control.Monad (liftM, (<=<))
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Change(Change(..))
 import Data.Store.Rev.Version (Version)
-import Data.Store.Rev.ViewBranchInternal (ViewData(..), View(..), Branch(..), moveView, makeViewKey, applyChangesToView, brViews, vdBranch, atVdBranch, atBrViews)
+import Data.Store.Rev.ViewBranchInternal (ViewData(..), View(..), Branch(..), moveView, makeViewKey, applyChangesToView, brViews, vdBranch, atViewData, atBrViews)
 import Data.Store.Transaction (Transaction, Store(..))
 import Prelude hiding (lookup)
 import qualified Data.List as List
@@ -29,7 +29,7 @@ setBranch :: Monad m => View -> Branch -> Transaction t m ()
 setBranch view@(View viewDataIRef) newBranch@(Branch newBranchDataIRef) = do
   let
     branchRef =
-      Property.composeLabel vdBranch atVdBranch $
+      Property.composeLabel vdBranch atViewData $
       Transaction.fromIRef viewDataIRef
   oldBranch@(Branch oldBranchDataIRef) <- Property.get branchRef
   oldVersion <- Branch.curVersion oldBranch

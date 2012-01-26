@@ -5,7 +5,7 @@
 -- | contains the parts of both that both may depend on, to avoid the
 -- | cycle.
 module Data.Store.Rev.ViewBranchInternal
-    (ViewData(..), atVdBranch,
+    (ViewData(..), atViewData,
      View(..),
      BranchData(..), atBrVersion, atBrViews,
      Branch(..),
@@ -64,7 +64,7 @@ moveView vm srcVersion destVersion =
     apply changeDir version = applyChangesToView vm changeDir . Version.changes $ version
 
 makeViewKey :: View -> Change.Key -> Guid
-makeViewKey (View iref) = Guid.xor . IRef.guid $ iref
+makeViewKey (View iref) = Guid.combine . IRef.guid $ iref
 
 applyChangesToView ::
   Monad m => View -> (Change -> Maybe Change.Value) ->

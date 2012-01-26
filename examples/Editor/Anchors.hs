@@ -1,14 +1,14 @@
-{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE EmptyDataDecls, OverloadedStrings #-}
 
 module Editor.Anchors(
-    clipboard,
     root, rootIRef,
     Cursor, cursor, cursorIRef,
-    focalPointIRefs, branches, view,
+    branches, view,
     currentBranchIRef, currentBranch,
     initDB,
     dbStore, DBTag,
-    viewStore, ViewTag)
+    viewStore, ViewTag,
+    aName)
 where
 
 import Control.Monad (unless, (<=<))
@@ -22,8 +22,9 @@ import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Change (Key, Value)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction, Store(..))
-import Editor.Data (ITreeD, TreeD)
+import Data.Store.Property(Property(..))
 import Graphics.UI.Bottle.Animation(AnimId)
+import qualified Data.Store.Guid as Guid
 import qualified Data.Store.Db as Db
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -42,17 +43,11 @@ data ViewTag
 viewStore :: Monad m => View -> Store ViewTag (Transaction DBTag m)
 viewStore = View.store
 
-clipboard :: Monad m => Transaction.Property ViewTag m [ITreeD]
-clipboard = Transaction.anchorRefDef "clipboard" []
-
-rootIRef :: IRef TreeD
+rootIRef :: IRef Data.Definition
 rootIRef = IRef.anchor "root"
 
-root :: Monad m => Transaction.Property ViewTag m TreeD
+root :: Monad m => Transaction.Property ViewTag m Data.Definition
 root = Transaction.fromIRef rootIRef
-
-focalPointIRefs :: Monad m => Transaction.Property ViewTag m [ITreeD]
-focalPointIRefs = Transaction.anchorRefDef "focalPoint" []
 
 branchesIRef :: IRef [(IRef String, Branch)]
 branchesIRef = IRef.anchor "branches"
@@ -117,7 +112,12 @@ initDB store =
     bs <- initRef branchesIRef $ do
       masterNameIRef <- Transaction.newIRef "master"
       changes <- collectWrites Transaction.newKey $ do
-        Property.set root $ Data.makeNode "" []
+        param <- Transaction.newIRef Data.Parameter
+        expr <- Transaction.newIRef Data.Expression
+        Property.set root $ Data.Definition {
+          Data.defParameters = [param],
+          Data.defBody = expr
+          }
         Property.set cursor $ AnimIds.fromIRef rootIRef
       initialVersionIRef <- Version.makeInitialVersion changes
       master <- Branch.new initialVersionIRef
@@ -127,3 +127,14 @@ initDB store =
     _ <- initRef currentBranchIRef (return branch)
     _ <- initRef cursorIRef . return $ []
     return ()
+
+-- Get an associated name from the given IRef
+aName :: Monad m => IRef a -> Transaction.Property t m (Maybe String)
+aName iref =
+  Property getter setter
+  where
+    getter = Transaction.lookup nameGuid
+    setter (Just val) = Transaction.writeGuid nameGuid val
+    setter Nothing = Transaction.delete nameGuid
+    nameGuid = Guid.combine guid $ Guid.make "Name"
+    guid = IRef.guid iref

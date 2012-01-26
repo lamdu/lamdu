@@ -8,6 +8,7 @@ module Data.Store.Transaction
      insertBS, insert,
      delete, deleteIRef,
      readIRef, readIRefDef, writeIRef,
+     readGuid, writeGuid,
      isEmpty,
      irefExists,
      newIRef, newKey,
@@ -61,7 +62,7 @@ liftInner = Transaction . lift . lift
 isEmpty :: Monad m => Transaction t m Bool
 isEmpty = liftStateT (gets Map.null)
 
-lookupBS :: Monad m => Key -> Transaction t m (Maybe Value)
+lookupBS :: Monad m => Guid -> Transaction t m (Maybe Value)
 lookupBS guid = do
   changes <- liftStateT get
   case Map.lookup guid changes of
@@ -70,16 +71,16 @@ lookupBS guid = do
       liftInner $ storeLookup store guid
     Just res -> return res
 
-insertBS :: Monad m => Key -> ByteString -> Transaction t m ()
+insertBS :: Monad m => Guid -> ByteString -> Transaction t m ()
 insertBS key = liftStateT . modify . Map.insert key . Just
 
-delete :: Monad m => Key -> Transaction t m ()
+delete :: Monad m => Guid -> Transaction t m ()
 delete key = liftStateT . modify . Map.insert key $ Nothing
 
-lookup :: (Monad m, Binary a) => Key -> Transaction t m (Maybe a)
+lookup :: (Monad m, Binary a) => Guid -> Transaction t m (Maybe a)
 lookup = (liftM . fmap) decodeS . lookupBS
 
-insert :: (Monad m, Binary a) => Key -> a -> Transaction t m ()
+insert :: (Monad m, Binary a) => Guid -> a -> Transaction t m ()
 insert key = insertBS key . encodeS
 
 writeGuid :: (Monad m, Binary a) => Guid -> a -> Transaction t m ()
