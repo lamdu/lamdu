@@ -5,7 +5,6 @@
 
 module Main(main) where
 
-import Control.Applicative ((<$))
 import Control.Arrow (first)
 import Control.Category ((.))
 import Control.Monad (when, liftM, forM, unless)
@@ -144,12 +143,16 @@ simpleTextEdit style textRef animId = do
     TextEdit.make style cursor text animId
 
 makeEventMap ::
-  Monad m => [E.EventType] -> E.Doc ->
-  m (Maybe Cursor) ->
-  Widget.EventHandlers m
+  Monad m => [E.EventType] -> E.Doc -> m () -> Widget.EventHandlers m
 makeEventMap keys doc act =
-  (fmap . liftM)
-    (flip (Widget.atECursor . const) Widget.emptyEventResult) .
+  (fmap . liftM . const) Widget.emptyEventResult .
+  mconcat $
+  map (flip (`E.fromEventType` doc) act) keys
+
+makeEventMapMovesCursor ::
+  Monad m => [E.EventType] -> E.Doc -> m Cursor -> Widget.EventHandlers m
+makeEventMapMovesCursor keys doc act =
+  (fmap . liftM) Widget.eventResultFromCursor .
   mconcat $
   map (flip (`E.fromEventType` doc) act) keys
 
@@ -166,15 +169,15 @@ makeChildBox style parentCursor depth clipboardRef childrenIRefsRef = do
     forM (enumerate childrenIRefs) $ \(curChildIndex, childIRef) ->
       let
         delNodeEventMap =
-          makeEventMap Config.delChildKeys "Del node" delChild
+          makeEventMapMovesCursor Config.delChildKeys "Del node" delChild
         cutNodeEventMap =
-          makeEventMap Config.cutKeys "Cut node" $ do
+          makeEventMapMovesCursor Config.cutKeys "Cut node" $ do
             Property.pureModify clipboardRef (childIRef:)
             delChild
 
         delChild = do
           Property.pureModify childrenIRefsRef $ removeAt curChildIndex
-          return $ Just parentCursor
+          return parentCursor
       in
         liftM
           (Widget.weakerEvents $
@@ -208,8 +211,8 @@ makeTreeEdit style depth clipboardRef treeIRef
         then do
           let
             moveToParentEventMap =
-              makeEventMap Config.moveToParentKeys "Move to parent" .
-              return $ Just myCursor
+              makeEventMapMovesCursor Config.moveToParentKeys "Move to parent" $
+              return myCursor
           liftM ((:[]) . Widget.weakerEvents moveToParentEventMap) $
             makeChildBox style myCursor depth clipboardRef childrenIRefsRef
         else return []
@@ -240,8 +243,8 @@ makeTreeEdit style depth clipboardRef treeIRef
       expandCollapseEventMap isExpanded
         | isExpanded = makeEventMap Config.collapseKeys "Collapse" collapse
         | otherwise = makeEventMap Config.expandKeys "Expand" expand
-      collapse = Nothing <$ Property.set isExpandedRef False
-      expand = Nothing <$ Property.set isExpandedRef True
+      collapse = Property.set isExpandedRef False
+      expand = Property.set isExpandedRef True
       collapser isExpanded =
         flip (TextView.make (TextEdit.sTextViewStyle style)) (AnimIds.collapserId animId) $
         if isExpanded
@@ -250,22 +253,22 @@ makeTreeEdit style depth clipboardRef treeIRef
 
       pasteEventMap [] = mempty
       pasteEventMap (cbChildRef:xs) =
-        makeEventMap Config.pasteKeys "Paste" $ do
+        makeEventMapMovesCursor Config.pasteKeys "Paste" $ do
           Property.set clipboardRef xs
           appendChild cbChildRef
 
       appendNewNodeEventMap =
-        makeEventMap Config.appendChildKeys "Append new child node" $
+        makeEventMapMovesCursor Config.appendChildKeys "Append new child node" $
         appendChild =<< Data.makeLeafRef ""
 
-      goDeeperEventMap = makeEventMap Config.actionKeys "Go deeper" setFocalPoint
-      setFocalPointEventMap = makeEventMap Config.setFocalPointKeys "Set focal point" setFocalPoint
+      goDeeperEventMap = makeEventMapMovesCursor Config.actionKeys "Go deeper" setFocalPoint
+      setFocalPointEventMap = makeEventMapMovesCursor Config.setFocalPointKeys "Set focal point" setFocalPoint
       setFocalPoint = do
         Property.pureModify Anchors.focalPointIRefs (treeIRef:)
-        return $ Just AnimIds.goUpId
+        return AnimIds.goUpId
       appendChild newRef = do
         Property.pureModify childrenIRefsRef (++ [newRef])
-        return . Just $ AnimIds.fromIRef newRef
+        return $ AnimIds.fromIRef newRef
 
 getFocalPoint :: Monad m => Transaction ViewTag m (Bool, ITreeD)
 getFocalPoint = do
@@ -285,13 +288,13 @@ makeEditWidget style clipboardRef = do
   let
     goUp = do
       Property.pureModify Anchors.focalPointIRefs (drop 1)
-      return . Just $ AnimIds.fromIRef focalPoint
+      return $ AnimIds.fromIRef focalPoint
     goUpButtonEventMap =
-      makeEventMap Config.actionKeys "Go up" goUp
+      makeEventMapMovesCursor Config.actionKeys "Go up" goUp
     goUpEventMap =
       if isAtRoot
       then mempty
-      else makeEventMap Config.goUpKeys "Go up" goUp
+      else makeEventMapMovesCursor Config.goUpKeys "Go up" goUp
 
   goUpButton <-
     liftM
@@ -319,11 +322,8 @@ makeWidgetForView style view = do
   let undoEventMap = maybe mempty makeUndoEventMap (Version.parent versionData)
   return $ Widget.strongerEvents undoEventMap focusable
   where
-    makeUndoEventMap = makeEventMap Config.undoKeys "Undo" . (>> fetchRevisionCursor) . View.move view
-    fetchRevisionCursor =
-      Transaction.run store .
-      liftM Just $
-      Property.get Anchors.cursor
+    makeUndoEventMap = makeEventMapMovesCursor Config.undoKeys "Undo" . (>> fetchRevisionCursor) . View.move view
+    fetchRevisionCursor = Transaction.run store $ Property.get Anchors.cursor
     store = Anchors.viewStore view
     widgetDownTransaction =
       transaction . Transaction.run store .
@@ -388,17 +388,7 @@ makeRootWidget style = do
     delBranchEventMap numBranches
       | 1 == numBranches = mempty
       | otherwise =
-        makeEventMap Config.delBranchKeys "Delete Branch" $ do
-          deleteCurrentBranch
-          return Nothing
-    box =
-      Box.make Box.horizontal
-      [viewEdit
-      ,Widget.liftView Spacer.makeHorizontalExpanding
-      ,Widget.strongerEvents (delBranchEventMap (length branches))
-       branchSelector
-      ]
-
+        makeEventMap Config.delBranchKeys "Delete Branch" deleteCurrentBranch
     makeBranchEventMap =
       makeEventMap Config.makeBranchKeys "New Branch" $ do
         newBranch <- Branch.new =<< View.curVersion view
@@ -406,20 +396,23 @@ makeRootWidget style = do
         let viewPair = (textEditModelIRef, newBranch)
         Property.pureModify Anchors.branches (++ [viewPair])
         Property.set Anchors.currentBranch newBranch
-        return Nothing
 
     quitEventMap = makeEventMap Config.quitKeys "Quit" (error "Quit")
 
-  return $
+  return .
     Widget.strongerEvents
-      (mappend quitEventMap makeBranchEventMap)
-    box
+      (mappend quitEventMap makeBranchEventMap) $
+    Box.make Box.horizontal
+    [viewEdit
+    ,Widget.liftView Spacer.makeHorizontalExpanding
+    ,Widget.strongerEvents (delBranchEventMap (length branches)) branchSelector
+    ]
 
 helpAdder :: TextView.Style -> IO (Widget IO -> IO (Widget IO))
 helpAdder style = do
   showingHelpVar <- newIORef True
   let
-    toggle = Nothing <$ modifyIORef showingHelpVar not
+    toggle = modifyIORef showingHelpVar not
     addToggleEventMap doc =
       Widget.strongerEvents $
       makeEventMap Config.overlayDocKeys doc toggle
