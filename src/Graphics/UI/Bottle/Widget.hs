@@ -4,7 +4,8 @@ module Graphics.UI.Bottle.Widget (
   Widget(..), MEnter, Direction,
   UserIO(..), atUioMaybeEnter, atUioEventMap, atUioFrame,
   EventResult(..), atEAnimIdMapping, atECursor,
-  emptyEventResult, eventResultFromCursor, actionEventMap,
+  emptyEventResult, eventResultFromCursor,
+  actionEventMap, actionEventMapMovesCursor,
   EventHandlers, atContent, atIsFocused,
   userIO, image, eventMap, enter,
   takesFocus, atMkUserIO, atUserIO,
@@ -152,7 +153,21 @@ weakerEvents = atEventMap . flip mappend
 backgroundColor :: Anim.AnimId -> Draw.Color -> Widget f -> Widget f
 backgroundColor animId = atImageWithSize . Anim.backgroundColor animId 10
 
-actionEventMap :: Functor m => [EventMap.EventType] -> EventMap.Doc -> m () -> EventHandlers m
-actionEventMap keys doc act =
-  (fmap . fmap . const) emptyEventResult .
+makeActionEventMap ::
+  [EventMap.EventType] -> EventMap.Doc -> a -> EventMap a
+makeActionEventMap keys doc act =
   mconcat $ map (flip (`EventMap.fromEventType` doc) act) keys
+
+actionEventMap ::
+  Functor f => [EventMap.EventType] -> EventMap.Doc ->
+  f () -> EventHandlers f
+actionEventMap keys doc act =
+  (fmap . fmap . const) emptyEventResult $
+  makeActionEventMap keys doc act
+
+actionEventMapMovesCursor ::
+  Functor f => [EventMap.EventType] -> EventMap.Doc ->
+  f Cursor -> EventHandlers f
+actionEventMapMovesCursor keys doc act =
+  (fmap . fmap) eventResultFromCursor $
+  makeActionEventMap keys doc act

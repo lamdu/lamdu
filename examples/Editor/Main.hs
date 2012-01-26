@@ -35,7 +35,6 @@ import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
-import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
@@ -157,13 +156,6 @@ makeTextEdit textRef animId = do
     Widget.atEvents (uncurry lifter) $
     TextEdit.make style cursor text animId
 
-eventMapMovesCursor ::
-  Monad m => [E.EventType] -> E.Doc -> m Cursor -> Widget.EventHandlers m
-eventMapMovesCursor keys doc act =
-  (fmap . liftM) Widget.eventResultFromCursor .
-  mconcat $
-  map (flip (`E.fromEventType` doc) act) keys
-
 ------
 
 assignCursor :: Cursor -> Cursor -> TWidget t m -> TWidget t m
@@ -189,17 +181,18 @@ delParameter definitionRef paramI =
   Property.pureModify definitionRef . Data.atDefParameters $
     delete paramI
 
-makeNameEdit :: Monad m => IRef a -> Anim.AnimId -> TWidget t m
-makeNameEdit = makeTextEdit . Anchors.aNameRef
-
 atEmptyStr :: (String -> String) -> TWidget t m -> TWidget t m
 atEmptyStr = atCTransaction . Reader.withReaderT . atEnvTextStyle . TextEdit.atSEmptyString
+
+makeNameEdit :: Monad m => String -> IRef a -> Anim.AnimId -> TWidget t m
+makeNameEdit emptyStr iref =
+  (atEmptyStr . const) emptyStr . makeTextEdit (Anchors.aNameRef iref)
 
 makeDefinitionEdit :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
 makeDefinitionEdit definitionI = do
   nameEdit <-
     assignCursor animId nameEditAnimId $
-    makeNameEdit definitionI nameEditAnimId
+    makeNameEdit "<unnamed>" definitionI nameEditAnimId
   equals <- makeTextView "=" $ Anim.joinId animId ["equals"]
   expression <- makeFocusableTextView "()" $ Anim.joinId animId ["expression"]
   params <- liftM Data.defParameters $ getP definitionRef
@@ -212,12 +205,11 @@ makeDefinitionEdit definitionI = do
   where
     makeParamEdit (i, paramI) =
       (liftM . Widget.strongerEvents) (paramEventMap paramI) .
-      (atEmptyStr . const) ("<unnamed param " ++ show i ++ ">") .
-      makeTextEdit (Anchors.aNameRef paramI) $
+      makeNameEdit ("<unnamed param " ++ show i ++ ">") paramI $
       Anim.joinId animId ["param", pack (show i)]
     definitionRef = Transaction.fromIRef definitionI
     paramEventMap paramI =
-      Widget.actionEventMap Config.delChildKeys "Delete Parameter" $
+      Widget.actionEventMap Config.delParamKeys "Delete Parameter" $
       delParameter definitionRef paramI
     eventMap =
       Widget.actionEventMap Config.addParamKeys "Add Parameter" $
@@ -240,7 +232,7 @@ makeWidgetForView view = do
   let undoEventMap = maybe mempty makeUndoEventMap (Version.parent versionData)
   return $ Widget.strongerEvents undoEventMap focusable
   where
-    makeUndoEventMap = eventMapMovesCursor Config.undoKeys "Undo" . (>> fetchRevisionCursor) . View.move view
+    makeUndoEventMap = Widget.actionEventMapMovesCursor Config.undoKeys "Undo" . (>> fetchRevisionCursor) . View.move view
     fetchRevisionCursor = Transaction.run store $ Property.get Anchors.cursor
     store = Anchors.viewStore view
     widgetDownTransaction =
