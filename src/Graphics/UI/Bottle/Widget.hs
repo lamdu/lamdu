@@ -4,7 +4,7 @@ module Graphics.UI.Bottle.Widget (
   Widget(..), MEnter, Direction,
   UserIO(..), atUioMaybeEnter, atUioEventMap, atUioFrame,
   EventResult(..), atEAnimIdMapping, atECursor,
-  emptyEventResult, eventResultFromCursor,
+  emptyEventResult, eventResultFromCursor, actionEventMap,
   EventHandlers, atContent, atIsFocused,
   userIO, image, eventMap, enter,
   takesFocus, atMkUserIO, atUserIO,
@@ -22,6 +22,7 @@ import Graphics.UI.Bottle.Sized (Sized)
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
+import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.SizeRange as SizeRange
 import qualified Graphics.UI.Bottle.Sized as Sized
 
@@ -150,3 +151,8 @@ weakerEvents = atEventMap . flip mappend
 
 backgroundColor :: Anim.AnimId -> Draw.Color -> Widget f -> Widget f
 backgroundColor animId = atImageWithSize . Anim.backgroundColor animId 10
+
+actionEventMap :: Functor m => [EventMap.EventType] -> EventMap.Doc -> m () -> EventHandlers m
+actionEventMap keys doc act =
+  (fmap . fmap . const) emptyEventResult .
+  mconcat $ map (flip (`EventMap.fromEventType` doc) act) keys

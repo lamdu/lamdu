@@ -8,7 +8,6 @@ module Main(main) where
 import Control.Category ((.))
 import Control.Monad (when, liftM, forM, unless)
 import Control.Monad.Trans.Class (lift)
-import Data.IORef (newIORef, readIORef, modifyIORef)
 import Data.List (findIndex, elemIndex)
 import Data.List.Utils (enumerate, nth, removeAt)
 import Data.Maybe (fromMaybe, isJust)
@@ -140,16 +139,9 @@ simpleTextEdit style textRef animId = do
     Widget.atEvents (uncurry lifter) $
     TextEdit.make style cursor text animId
 
-makeEventMap ::
-  Monad m => [E.EventType] -> E.Doc -> m () -> Widget.EventHandlers m
-makeEventMap keys doc act =
-  (fmap . liftM . const) Widget.emptyEventResult .
-  mconcat $
-  map (flip (`E.fromEventType` doc) act) keys
-
-makeEventMapMovesCursor ::
+eventMapMovesCursor ::
   Monad m => [E.EventType] -> E.Doc -> m Cursor -> Widget.EventHandlers m
-makeEventMapMovesCursor keys doc act =
+eventMapMovesCursor keys doc act =
   (fmap . liftM) Widget.eventResultFromCursor .
   mconcat $
   map (flip (`E.fromEventType` doc) act) keys
@@ -167,9 +159,9 @@ makeChildBox style parentCursor depth clipboardRef childrenIRefsRef = do
     forM (enumerate childrenIRefs) $ \(curChildIndex, childIRef) ->
       let
         delNodeEventMap =
-          makeEventMapMovesCursor Config.delChildKeys "Del node" delChild
+          eventMapMovesCursor Config.delChildKeys "Del node" delChild
         cutNodeEventMap =
-          makeEventMapMovesCursor Config.cutKeys "Cut node" $ do
+          eventMapMovesCursor Config.cutKeys "Cut node" $ do
             Property.pureModify clipboardRef (childIRef:)
             delChild
 
@@ -209,7 +201,7 @@ makeTreeEdit style depth clipboardRef treeIRef
         then do
           let
             moveToParentEventMap =
-              makeEventMapMovesCursor Config.moveToParentKeys "Move to parent" $
+              eventMapMovesCursor Config.moveToParentKeys "Move to parent" $
               return myCursor
           liftM ((:[]) . Widget.weakerEvents moveToParentEventMap) $
             makeChildBox style myCursor depth clipboardRef childrenIRefsRef
@@ -239,8 +231,8 @@ makeTreeEdit style depth clipboardRef treeIRef
       childrenIRefsRef          = Data.nodeChildrenRefs `Property.composeLabel` treeRef
       isExpandedRef             = Data.isExpanded       `Property.composeLabel` valueRef
       expandCollapseEventMap isExpanded
-        | isExpanded = makeEventMap Config.collapseKeys "Collapse" collapse
-        | otherwise = makeEventMap Config.expandKeys "Expand" expand
+        | isExpanded = Widget.actionEventMap Config.collapseKeys "Collapse" collapse
+        | otherwise = Widget.actionEventMap Config.expandKeys "Expand" expand
       collapse = Property.set isExpandedRef False
       expand = Property.set isExpandedRef True
       collapser isExpanded =
@@ -251,16 +243,16 @@ makeTreeEdit style depth clipboardRef treeIRef
 
       pasteEventMap [] = mempty
       pasteEventMap (cbChildRef:xs) =
-        makeEventMapMovesCursor Config.pasteKeys "Paste" $ do
+        eventMapMovesCursor Config.pasteKeys "Paste" $ do
           Property.set clipboardRef xs
           appendChild cbChildRef
 
       appendNewNodeEventMap =
-        makeEventMapMovesCursor Config.appendChildKeys "Append new child node" $
+        eventMapMovesCursor Config.appendChildKeys "Append new child node" $
         appendChild =<< Data.makeLeafRef ""
 
-      goDeeperEventMap = makeEventMapMovesCursor Config.actionKeys "Go deeper" setFocalPoint
-      setFocalPointEventMap = makeEventMapMovesCursor Config.setFocalPointKeys "Set focal point" setFocalPoint
+      goDeeperEventMap = eventMapMovesCursor Config.actionKeys "Go deeper" setFocalPoint
+      setFocalPointEventMap = eventMapMovesCursor Config.setFocalPointKeys "Set focal point" setFocalPoint
       setFocalPoint = do
         Property.pureModify Anchors.focalPointIRefs (treeIRef:)
         return AnimIds.goUpId
@@ -288,11 +280,11 @@ makeEditWidget style clipboardRef = do
       Property.pureModify Anchors.focalPointIRefs (drop 1)
       return $ AnimIds.fromIRef focalPoint
     goUpButtonEventMap =
-      makeEventMapMovesCursor Config.actionKeys "Go up" goUp
+      eventMapMovesCursor Config.actionKeys "Go up" goUp
     goUpEventMap =
       if isAtRoot
       then mempty
-      else makeEventMapMovesCursor Config.goUpKeys "Go up" goUp
+      else eventMapMovesCursor Config.goUpKeys "Go up" goUp
 
   goUpButton <-
     liftM
@@ -320,7 +312,7 @@ makeWidgetForView style view = do
   let undoEventMap = maybe mempty makeUndoEventMap (Version.parent versionData)
   return $ Widget.strongerEvents undoEventMap focusable
   where
-    makeUndoEventMap = makeEventMapMovesCursor Config.undoKeys "Undo" . (>> fetchRevisionCursor) . View.move view
+    makeUndoEventMap = eventMapMovesCursor Config.undoKeys "Undo" . (>> fetchRevisionCursor) . View.move view
     fetchRevisionCursor = Transaction.run store $ Property.get Anchors.cursor
     store = Anchors.viewStore view
     widgetDownTransaction =
@@ -392,11 +384,11 @@ makeRootWidget style = do
   let
     delBranchEventMap
       | null (drop 1 namedBranches) = mempty
-      | otherwise = makeEventMap Config.delBranchKeys "Delete Branch" deleteCurrentBranch
+      | otherwise = Widget.actionEventMap Config.delBranchKeys "Delete Branch" deleteCurrentBranch
   return .
     (Widget.strongerEvents . mconcat)
-      [makeEventMap Config.quitKeys "Quit" (error "Quit")
-      ,makeEventMap Config.makeBranchKeys "New Branch" (makeBranch view)
+      [Widget.actionEventMap Config.quitKeys "Quit" (error "Quit")
+      ,Widget.actionEventMap Config.makeBranchKeys "New Branch" (makeBranch view)
       ] $
     Box.make Box.horizontal
     [viewEdit
@@ -404,29 +396,10 @@ makeRootWidget style = do
     ,Widget.strongerEvents delBranchEventMap branchSelector
     ]
 
-helpAdder :: TextView.Style -> IO (Widget IO -> IO (Widget IO))
-helpAdder style = do
-  showingHelpVar <- newIORef True
-  let
-    toggle = modifyIORef showingHelpVar not
-    addToggleEventMap doc =
-      Widget.strongerEvents $
-      makeEventMap Config.overlayDocKeys doc toggle
-  return $ \widget -> do
-    showingHelp <- readIORef showingHelpVar
-    return $
-      if showingHelp
-      then
-        EventMapDoc.addHelp style $
-        addToggleEventMap "Hide Key Bindings" widget
-      else
-        addToggleEventMap "Show Key Bindings"
-        widget
-
 runDbStore :: Draw.Font -> Transaction.Store DBTag IO -> IO a
 runDbStore font store = do
   Anchors.initDB store
-  addHelp <- helpAdder helpStyle
+  addHelp <- EventMapDoc.makeToggledHelpAdder Config.overlayDocKeys helpStyle
   mainLoopWidget $ addHelp =<< makeWidget
   where
     helpStyle = TextView.Style {

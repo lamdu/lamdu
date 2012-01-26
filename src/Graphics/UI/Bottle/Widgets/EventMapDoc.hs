@@ -1,7 +1,8 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Graphics.UI.Bottle.Widgets.EventMapDoc(make, addHelp) where
+module Graphics.UI.Bottle.Widgets.EventMapDoc(make, addHelp, makeToggledHelpAdder) where
 
+import Data.IORef (newIORef, readIORef, modifyIORef)
 import Data.List(sortBy)
 import Data.Monoid(mappend)
 import Data.Ord(comparing)
@@ -45,7 +46,22 @@ addHelp style =
           (Anim.onImages . Draw.tint . transparency) 0.8 .
           Anim.onDepth (subtract 10) .
           Anim.translate (size - rSize) .
-          Anim.backgroundColor ["help doc background"] (1) (Draw.Color 0.3 0.2 0.1 1) rSize $
+          Anim.backgroundColor ["help doc background"] 1 (Draw.Color 0.3 0.2 0.1 1) rSize $
           Sized.fromSize eventMapDoc size
         eventMap = Widget.uioEventMap userIO
         userIO = mkUserIO size
+
+makeToggledHelpAdder :: [E.EventType] -> TextView.Style -> IO (Widget IO -> IO (Widget IO))
+makeToggledHelpAdder overlayDocKeys style = do
+  showingHelpVar <- newIORef True
+  let
+    toggle = modifyIORef showingHelpVar not
+    addToggleEventMap doc =
+      Widget.strongerEvents $
+      Widget.actionEventMap overlayDocKeys doc toggle
+  return $ \widget -> do
+    showingHelp <- readIORef showingHelpVar
+    return $
+      if showingHelp
+      then addHelp style $ addToggleEventMap "Hide Key Bindings" widget
+      else addToggleEventMap "Show Key Bindings" widget
