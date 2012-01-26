@@ -11,18 +11,19 @@ import Data.Maybe (fromJust, mapMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators.Utils (square, textHeight)
-import Graphics.UI.Bottle.SizeRange (fixedSize)
 import Graphics.UI.Bottle.Sized (Sized(..))
 import Graphics.UI.Bottle.Widget (Widget(..))
 import Graphics.UI.GLFW (Key(KeyBackspace, KeyDel, KeyDown, KeyEnd, KeyEnter, KeyHome, KeyLeft, KeyRight, KeyUp))
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.ByteString.Char8 as SBS8
-import qualified Data.Vector.Vector2 as Vector2
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.SizeRange as SizeRange
+import qualified Graphics.UI.Bottle.Sized as Sized
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Safe
@@ -63,6 +64,10 @@ makeTextEditCursor myId = Anim.joinId myId . (:[]) . BinUtils.encodeS
 makeUnfocused :: Style -> String -> Anim.AnimId -> Widget ((,) String)
 makeUnfocused style str myId =
   Widget.takesFocus enter .
+  (Widget.atContent .
+   Sized.atRequestedSize .
+   SizeRange.atSrMinSize .
+   Vector2.first) (+ sCursorWidth style) .
   Widget.atImage
     (cursorTranslate style) $
   TextView.makeWidget (sTextViewStyle style) str myId
@@ -95,7 +100,7 @@ makeFocused cursor style str myId =
           Widget.uioMaybeEnter = Nothing
           }
       }
-    reqSize = fixedSize $ Vector2 (sCursorWidth style + tlWidth) tlHeight
+    reqSize = SizeRange.fixedSize $ Vector2 (sCursorWidth style + tlWidth) tlHeight
     img = cursorTranslate style $ frameGen myId
     (frameGen, Vector2 tlWidth tlHeight) = TextView.drawText True (sTextViewStyle style) displayStr
 

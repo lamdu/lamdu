@@ -1,8 +1,9 @@
 {-# OPTIONS -O2 -Wall #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Graphics.UI.Bottle.SizeRange
     (Coordinate, Size,
-     SizeRange(..),
+     SizeRange(..), atSrMinSize, atSrMaxSize,
      fixedSize, expanding,
      horizontallyExpanding, verticallyExpanding,
      )
@@ -11,6 +12,7 @@ where
 import Data.Vector.Vector2         (Vector2(..))
 import Control.Applicative         (pure)
 import Graphics.DrawingCombinators (R)
+import qualified Data.AtFieldTH as AtFieldTH
 
 type Coordinate = Vector2 R
 type Size = Coordinate
@@ -21,6 +23,8 @@ data SizeRange = SizeRange {
   srMaxSize :: MaxSize
   }
   deriving (Eq, Ord, Show, Read)
+
+AtFieldTH.make ''SizeRange
 
 fixedSize :: Size -> SizeRange
 fixedSize size = SizeRange size (fmap Just size)

@@ -9,6 +9,6 @@ data Sized a = Sized
     { requestedSize :: SizeRange
     , fromSize :: Size -> a
     }
-    deriving Functor
+    deriving (Functor)
 
 AtFieldTH.make ''Sized
