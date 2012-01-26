@@ -379,25 +379,25 @@ makeRootWidget style = do
   view <- getP Anchors.view
   namedBranches <- getP Anchors.branches
 
+  viewEdit <- makeWidgetForView style view
+
   let
     branchIndexRef = branchSelectorProperty view $ map snd namedBranches
-    delBranchEventMap
-      | null (drop 1 namedBranches) = mempty
-      | otherwise = makeEventMap Config.delBranchKeys "Delete Branch" deleteCurrentBranch
-    makeBranchEventMap = makeEventMap Config.makeBranchKeys "New Branch" (makeBranch view)
-    quitEventMap = makeEventMap Config.quitKeys "Quit" (error "Quit")
     makeBranchNameEdit textEditModelIRef =
       wrapDelegated (simpleTextEdit style (Transaction.fromIRef textEditModelIRef)) (AnimIds.fromIRef textEditModelIRef)
-
   branchSelector <-
     makeChoice AnimIds.branchSelection branchIndexRef
     Box.vertical $ map (makeBranchNameEdit . fst) namedBranches
 
-  viewEdit <- makeWidgetForView style view
-
+  let
+    delBranchEventMap
+      | null (drop 1 namedBranches) = mempty
+      | otherwise = makeEventMap Config.delBranchKeys "Delete Branch" deleteCurrentBranch
   return .
-    Widget.strongerEvents
-      (mappend quitEventMap makeBranchEventMap) $
+    (Widget.strongerEvents . mconcat)
+      [makeEventMap Config.quitKeys "Quit" (error "Quit")
+      ,makeEventMap Config.makeBranchKeys "New Branch" (makeBranch view)
+      ] $
     Box.make Box.horizontal
     [viewEdit
     ,Widget.liftView Spacer.makeHorizontalExpanding
