@@ -93,7 +93,7 @@ guidExists = liftM isJust . lookupBS
 
 readGuidMb :: (Monad m, Binary a) => Transaction t m a -> Guid -> Transaction t m a
 readGuidMb nothingCase guid =
-  maybe nothingCase (return . decodeS) =<< lookupBS guid
+  maybe nothingCase return =<< lookup guid
 
 readGuidDef :: (Monad m, Binary a) => a -> Guid -> Transaction t m a
 readGuidDef = readGuidMb . return
