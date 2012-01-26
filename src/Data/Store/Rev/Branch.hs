@@ -4,13 +4,13 @@ module Data.Store.Rev.Branch
     (Branch, new, move, curVersion, newVersion)
 where
 
-import           Control.Monad                     (liftM)
-import qualified Data.Store.Transaction            as Transaction
-import           Data.Store.Transaction            (Transaction)
-import           Data.Store.Rev.Change             (Change)
-import           Data.Store.Rev.Version            (Version)
-import qualified Data.Store.Rev.Version            as Version
-import           Data.Store.Rev.ViewBranchInternal (BranchData(..), Branch(..), moveView)
+import Control.Monad (liftM)
+import Data.Store.Rev.Change (Change)
+import Data.Store.Rev.Version (Version)
+import Data.Store.Rev.ViewBranchInternal (BranchData(..), Branch(..), moveView)
+import Data.Store.Transaction (Transaction)
+import qualified Data.Store.Rev.Version as Version
+import qualified Data.Store.Transaction as Transaction
 
 move :: Monad m => Branch -> Version -> Transaction t m ()
 move (Branch dataIRef) destVersion = do
