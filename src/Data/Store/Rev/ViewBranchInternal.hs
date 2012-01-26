@@ -1,5 +1,5 @@
 {-# OPTIONS -O2 -Wall #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, TypeOperators #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
 
 -- | View and Branch have a cyclic dependency. This module
 -- | contains the parts of both that both may depend on, to avoid the
@@ -24,7 +24,6 @@ import qualified Data.Store.Rev.Change  as Change
 import           Data.Binary            (Binary(..))
 import           Data.Store.IRef        (IRef)
 import qualified Data.Store.IRef        as IRef
-import qualified Data.Record.Label      as Label
 import           Data.Record.Label      ((:->), mkLabels, lens)
 import Data.Derive.Binary(makeBinary)
 import Data.DeriveTH(derive)
@@ -68,11 +67,13 @@ moveView vm srcVersion destVersion =
 makeViewKey :: View -> Change.Key -> Guid
 makeViewKey (View iref) = Guid.xor . IRef.guid $ iref
 
-applyChangesToView :: Monad m => View -> Change.Dir -> [Change] -> Transaction t m ()
+applyChangesToView ::
+  Monad m => View -> (Change -> Maybe Change.Value) ->
+  [Change] -> Transaction t m ()
 applyChangesToView vm changeDir = mapM_ applyChange
   where
     applyChange change = setValue
-                         (makeViewKey vm $ Label.getL Change.objectKey change)
-                         (Label.getL changeDir change)
+                         (makeViewKey vm $ Change.objectKey change)
+                         (changeDir change)
     setValue key Nothing      = Transaction.deleteBS key
     setValue key (Just value) = Transaction.insertBS key value

@@ -4,21 +4,21 @@ module Data.Store.Rev.View
     (View, curVersion, branch, setBranch, move, new, store)
 where
 
-import           Prelude                hiding (lookup)
-import           Control.Monad          (liftM, (<=<))
-import qualified Data.Record.Label      as Label
-import qualified Data.Store.Property    as Property
-import           Data.Store.Property    (composeLabel)
-import qualified Data.Store.Transaction as Transaction
-import           Data.Store.Transaction (Transaction, Store(..))
-import qualified Data.Store.Rev.Change  as Change
-import           Data.Store.Rev.Branch  (Branch)
-import qualified Data.Store.Rev.Branch  as Branch
-import           Data.Store.Rev.ViewBranchInternal (ViewData(..), View(..), Branch(..), moveView, makeViewKey,
-                                              applyChangesToView, brViews, vdBranch)
-import           Data.Store.Rev.Version (Version)
+import Control.Monad (liftM, (<=<))
+import Data.Store.Property (composeLabel)
+import Data.Store.Rev.Branch (Branch)
+import Data.Store.Rev.Change(Change(..))
+import Data.Store.Rev.Version (Version)
+import Data.Store.Rev.ViewBranchInternal (ViewData(..), View(..), Branch(..), moveView, makeViewKey, applyChangesToView, brViews, vdBranch)
+import Data.Store.Transaction (Transaction, Store(..))
+import Prelude hiding (lookup)
+import qualified Data.List as List
+import qualified Data.Record.Label as Label
+import qualified Data.Store.Property as Property
+import qualified Data.Store.Rev.Branch as Branch
+import qualified Data.Store.Rev.Change as Change
 import qualified Data.Store.Rev.Version as Version
-import qualified Data.List              as List
+import qualified Data.Store.Transaction as Transaction
 
 -- | A Version Map is a large mapping of ObjectKeys to their
 -- | "current-version" values. This serves as a "cache" which is
@@ -66,7 +66,7 @@ transaction view changes = do
   Branch.newVersion b =<< mapM makeChange changes
   where
     makeChange (key, value) =
-      flip (Change.make key) value `liftM` lookupBS view key
+      flip (Change key) value `liftM` lookupBS view key
 
 -- You get a store tagged however you like...
 store :: Monad m => View -> Store t' (Transaction t m)
