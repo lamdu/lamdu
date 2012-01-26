@@ -15,10 +15,10 @@ maxDepth :: Int
 maxDepth = 10
 
 group = E.KeyEventType
-ascii k = group E.noMods (E.charKey k)
-ctrl k = group E.ctrl (E.charKey k)
+ascii = group E.noMods . E.charKey
+ctrl = group E.ctrl . E.charKey
+alt = group E.alt . E.charKey
 simple = group E.noMods
-alt = group E.alt
 
 quitKeys          = [ctrl 'q']
 undoKeys          = [ctrl 'z']
@@ -33,6 +33,6 @@ delBranchKeys     = [ctrl 'o']
 actionKeys        = [simple E.KeyEnter]
 collapseKeys      = [ascii '[']
 expandKeys        = [ascii ']']
-moveToParentKeys  = [alt E.KeyLeft]
+moveToParentKeys  = [group E.alt E.KeyLeft]
 
-overlayDocKeys = [simple E.KeyF1]
+overlayDocKeys = [simple E.KeyF1, alt 'h']
