@@ -19,6 +19,7 @@ import Data.Store.Transaction (Transaction)
 import Editor.Anchors (DBTag, ViewTag)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Widget (Widget)
+import Graphics.UI.Bottle.Sized (Sized)
 import Prelude hiding ((.))
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
@@ -82,8 +83,8 @@ makeTextView text animId = do
   return $
     TextView.makeWidget (TextEdit.sTextViewStyle style) text animId
 
-makeFocusableTextView :: MonadF m => String -> Anim.AnimId -> TWidget t m
-makeFocusableTextView text animId = do
+_makeFocusableTextView :: MonadF m => String -> Anim.AnimId -> TWidget t m
+_makeFocusableTextView text animId = do
   hasFocus <- liftM (animId ==) readCursor
   textView <- makeTextView text animId
   let
@@ -191,27 +192,49 @@ atEmptyStr = atCTransaction . Reader.withReaderT . atEnvTextStyle . TextEdit.atS
 
 makeNameEdit :: Monad m => String -> IRef a -> Anim.AnimId -> TWidget t m
 makeNameEdit emptyStr iref =
-  wrapDelegated $
   (atEmptyStr . const) emptyStr . makeTextEdit (Anchors.aNameRef iref)
+
+spaceView :: Sized Anim.Frame
+spaceView = Spacer.makeHorizontal 20
+
+spaceWidget :: Widget f
+spaceWidget = Widget.liftView spaceView
+
+makeExpressionEdit :: MonadF m => IRef Data.Expression -> TWidget ViewTag m
+makeExpressionEdit expressionI = do
+  expr <- getP expressionRef
+  flip wrapDelegated (AnimIds.fromIRef expressionI) $
+    case expr of
+      Data.ExpressionGetVariable (Data.GetVariable nameI) ->
+        makeTextEdit (Transaction.fromIRef nameI)
+      Data.ExpressionApply (Data.Apply funcI argI) -> \animId -> do
+        before <- makeTextView "(" $ Anim.joinId animId ["("]
+        funcEdit <- makeExpressionEdit funcI
+        argEdit <- makeExpressionEdit argI
+        after <- makeTextView ")" $ Anim.joinId animId [")"]
+        return $ Box.make Box.horizontal [before, funcEdit, spaceWidget, argEdit, after]
+  where
+    expressionRef = Transaction.fromIRef expressionI
+
+hboxSpaced :: [Widget f] -> Widget f
+hboxSpaced = Box.make Box.horizontal . intersperse spaceWidget
 
 makeDefinitionEdit :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
 makeDefinitionEdit definitionI = do
+  Data.Definition params bodyI <- getP definitionRef
   nameEdit <-
     assignCursor animId nameEditAnimId $
     makeNameEdit "<unnamed>" definitionI nameEditAnimId
   equals <- makeTextView "=" $ Anim.joinId animId ["equals"]
-  expression <- makeFocusableTextView "()" $ Anim.joinId animId ["expression"]
-  params <- liftM Data.defParameters $ getP definitionRef
+  expressionEdit <- makeExpressionEdit bodyI
   paramsEdits <- mapM makeParamEdit $ enumerate params
   return .
-    Widget.strongerEvents eventMap .
-    Box.make Box.horizontal .
-    intersperse (Widget.liftView (Spacer.makeHorizontal 20)) $
-    [nameEdit] ++ paramsEdits ++ [equals, expression]
+    Widget.strongerEvents eventMap . hboxSpaced $
+    [nameEdit] ++ paramsEdits ++ [equals, expressionEdit]
   where
     makeParamEdit (i, paramI) =
-      (liftM . Widget.strongerEvents) (paramEventMap paramI) $
-      makeNameEdit ("<unnamed param " ++ show i ++ ">") paramI $
+      (liftM . Widget.strongerEvents) (paramEventMap paramI) .
+      wrapDelegated (makeNameEdit ("<unnamed param " ++ show i ++ ">") paramI) $
       AnimIds.fromIRef paramI
     definitionRef = Transaction.fromIRef definitionI
     paramEventMap paramI =

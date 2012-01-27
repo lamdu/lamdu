@@ -105,17 +105,23 @@ collectWrites ::
 collectWrites newGuid =
   execWriterT . Transaction.run (writeCollectorStore newGuid)
 
+newGetVariable :: Monad m => String -> Transaction t m (IRef Data.Expression)
+newGetVariable = Transaction.newIRef . Data.ExpressionGetVariable . Data.GetVariable <=< Transaction.newIRef
+
 initDB :: Store DBTag IO -> IO ()
 initDB store =
   Transaction.run store $ do
     bs <- initRef branchesIRef $ do
       masterNameIRef <- Transaction.newIRef "master"
       changes <- collectWrites Transaction.newKey $ do
-        expr <- Transaction.newIRef Data.Expression
+        launchMissilesI <- newGetVariable "launchMissiles"
+        unitI <- newGetVariable "()"
+        expr <- Transaction.newIRef . Data.ExpressionApply $ Data.Apply launchMissilesI unitI
         Property.set root $ Data.Definition {
           Data.defParameters = [],
           Data.defBody = expr
           }
+        Property.set (aNameRef rootIRef) "awesomeFunc"
         Property.set cursor $ AnimIds.fromIRef rootIRef
       initialVersionIRef <- Version.makeInitialVersion changes
       master <- Branch.new initialVersionIRef
