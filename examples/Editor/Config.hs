@@ -12,10 +12,13 @@ module Editor.Config(
 
     -- moveToParentKeys,
 
-    addParamKeys, delParamKeys)
+    addParamKeys, delParamKeys,
+
+    exprFocusDelegatorKeys)
 where
 
 import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 group = E.KeyEventType
 ctrl = group E.ctrl . E.charKey
@@ -39,3 +42,8 @@ addParamKeys      = [alt 'p']
 delParamKeys      = [alt 'o']
 
 delBranchKeys     = [alt 'o']
+
+exprFocusDelegatorKeys = FocusDelegator.Keys {
+  FocusDelegator.startDelegatingKey = group E.shift E.KeyRight,
+  FocusDelegator.stopDelegatingKey = group E.shift E.KeyLeft
+  }

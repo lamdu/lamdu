@@ -125,8 +125,11 @@ assignCursor src dest =
       | otherwise = cursor
 
 -- TODO: This logic belongs in the FocusDelegator itself
-wrapDelegated :: Monad m => (Anim.AnimId -> TWidget t m) -> Anim.AnimId -> TWidget t m
-wrapDelegated f animId = do
+wrapDelegatedWithKeys ::
+  Monad m => FocusDelegator.Keys ->
+  FocusDelegator.IsDelegating ->
+  (Anim.AnimId -> TWidget t m) -> Anim.AnimId -> TWidget t m
+wrapDelegatedWithKeys keys entryState f animId = do
   let innerAnimId = AnimIds.delegating animId
   innerWidget <- f innerAnimId
   let
@@ -138,12 +141,10 @@ wrapDelegated f animId = do
 
     selfAnimId = AnimIds.notDelegating animId
 
-    entryState = FocusDelegator.NotDelegating
-
     makeDelegator delegateState =
       (Widget.atIsFocused . const) (isJust delegateState) $
       FocusDelegator.make entryState delegateState
-      selfAnimId FocusDelegator.defaultKeys
+      selfAnimId keys
       AnimIds.backgroundCursorId innerWidget
     destAnimId =
       case entryState of
@@ -153,6 +154,11 @@ wrapDelegated f animId = do
     liftM (fromMaybe cursorNotSelf . fmap cursorSelf .
            Anim.subId selfAnimId) $
     readCursor
+
+wrapDelegated ::
+  Monad m => FocusDelegator.IsDelegating ->
+  (Anim.AnimId -> TWidget t m) -> Anim.AnimId -> TWidget t m
+wrapDelegated = wrapDelegatedWithKeys FocusDelegator.defaultKeys
 
 makeTextEdit ::
   Monad m =>
@@ -203,17 +209,22 @@ spaceWidget = Widget.liftView spaceView
 makeExpressionEdit :: MonadF m => IRef Data.Expression -> TWidget ViewTag m
 makeExpressionEdit expressionI = do
   expr <- getP expressionRef
-  flip wrapDelegated (AnimIds.fromIRef expressionI) $
-    case expr of
-      Data.ExpressionGetVariable (Data.GetVariable nameI) ->
-        makeTextEdit (Transaction.fromIRef nameI)
-      Data.ExpressionApply (Data.Apply funcI argI) -> \animId -> do
+  case expr of
+    Data.ExpressionGetVariable (Data.GetVariable nameI) ->
+      wrap FocusDelegator.defaultKeys FocusDelegator.NotDelegating $
+      makeTextEdit (Transaction.fromIRef nameI)
+    Data.ExpressionApply (Data.Apply funcI argI) ->
+      wrap exprKeys FocusDelegator.Delegating $ \animId -> do
         before <- makeTextView "(" $ Anim.joinId animId ["("]
         funcEdit <- makeExpressionEdit funcI
         argEdit <- makeExpressionEdit argI
         after <- makeTextView ")" $ Anim.joinId animId [")"]
         return $ Box.make Box.horizontal [before, funcEdit, spaceWidget, argEdit, after]
   where
+    exprKeys = Config.exprFocusDelegatorKeys
+    wrap keys entryState f =
+      wrapDelegatedWithKeys keys entryState f $
+      AnimIds.fromIRef expressionI
     expressionRef = Transaction.fromIRef expressionI
 
 hboxSpaced :: [Widget f] -> Widget f
@@ -234,7 +245,7 @@ makeDefinitionEdit definitionI = do
   where
     makeParamEdit (i, paramI) =
       (liftM . Widget.strongerEvents) (paramEventMap paramI) .
-      wrapDelegated (makeNameEdit ("<unnamed param " ++ show i ++ ">") paramI) $
+      wrapDelegated FocusDelegator.NotDelegating (makeNameEdit ("<unnamed param " ++ show i ++ ">") paramI) $
       AnimIds.fromIRef paramI
     definitionRef = Transaction.fromIRef definitionI
     paramEventMap paramI =
@@ -327,7 +338,9 @@ makeRootWidget = do
   let
     branchIndexRef = branchSelectorProperty view $ map snd namedBranches
     makeBranchNameEdit textEditModelIRef =
-      wrapDelegated (makeTextEdit (Transaction.fromIRef textEditModelIRef)) (AnimIds.fromIRef textEditModelIRef)
+      wrapDelegated FocusDelegator.NotDelegating
+      (makeTextEdit (Transaction.fromIRef textEditModelIRef)) $
+      AnimIds.fromIRef textEditModelIRef
   branchSelector <-
     makeChoice AnimIds.branchSelection branchIndexRef
     Box.vertical $ map (makeBranchNameEdit . fst) namedBranches

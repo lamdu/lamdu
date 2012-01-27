@@ -1,6 +1,6 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Graphics.UI.Bottle.Widgets.FocusDelegator(IsDelegating(..), make, defaultKeys) where
+module Graphics.UI.Bottle.Widgets.FocusDelegator(IsDelegating(..), Keys(..), make, defaultKeys) where
 
 import Data.Maybe(fromMaybe)
 import Data.Monoid(mappend)
