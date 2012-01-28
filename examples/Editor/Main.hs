@@ -254,7 +254,7 @@ makeDefinitionEdit definitionI = do
       delParameter definitionRef paramI
     eventMap =
       Widget.actionEventMapMovesCursor Config.addParamKeys "Add Parameter" .
-      liftM AnimIds.fromIRef $
+      liftM (AnimIds.delegating . AnimIds.fromIRef) $
       addParameter definitionRef
     nameEditAnimId = Anim.joinId animId ["name"]
     animId = AnimIds.fromIRef definitionI

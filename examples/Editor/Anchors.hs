@@ -117,7 +117,7 @@ initDB store =
         launchMissilesI <- newGetVariable "launchMissiles"
         unitI <- newGetVariable "()"
         expr <- Transaction.newIRef . Data.ExpressionApply $ Data.Apply launchMissilesI unitI
-        Property.set root $ Data.Definition {
+        Property.set root Data.Definition {
           Data.defParameters = [],
           Data.defBody = expr
           }
