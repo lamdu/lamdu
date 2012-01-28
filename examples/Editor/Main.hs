@@ -223,7 +223,8 @@ makeExpressionEdit expressionPtr = do
     giveAsArg = do
       newFuncNameI <- Transaction.newIRef ""
       newFuncI <- Transaction.newIRef . Data.ExpressionGetVariable $ Data.GetVariable newFuncNameI
-      setExpr =<< (Transaction.newIRef . Data.ExpressionApply) (Data.Apply newFuncI expressionI)
+      Property.set expressionPtr =<< (Transaction.newIRef . Data.ExpressionApply) (Data.Apply newFuncI expressionI)
+      return $ AnimIds.fromIRef newFuncI
     wrap keys entryState f =
       (liftM . Widget.weakerEvents) (Widget.actionEventMapMovesCursor Config.giveAsArgumentKey "Give as argument" giveAsArg) .
       wrapDelegatedWithKeys keys entryState f $
