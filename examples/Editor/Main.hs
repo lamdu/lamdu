@@ -12,7 +12,7 @@ import Data.List.Utils (enumerate, nth, removeAt)
 import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid(Monoid(..))
 import Data.Store.IRef (IRef)
-import Data.Store.Property (Property)
+import Data.Store.Property (Property(Property))
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
@@ -214,8 +214,15 @@ hbox = Box.make Box.horizontal . map (Widget.align center)
 -- vbox :: [Widget f] -> Widget f
 -- vbox = Box.make Box.vertical . map (Widget.align center)
 
-makeExpressionEdit :: MonadF m => IRef Data.Expression -> TWidget ViewTag m
-makeExpressionEdit expressionI = do
+makeExpressionEdit :: MonadF m => Property (Transaction ViewTag m) (IRef Data.Expression) -> TWidget ViewTag m
+makeExpressionEdit expressionPtr = do
+  expressionI <- getP expressionPtr
+  let
+    expressionRef = Transaction.fromIRef expressionI
+    exprKeys = Config.exprFocusDelegatorKeys
+    wrap keys entryState f =
+      wrapDelegatedWithKeys keys entryState f $
+      AnimIds.fromIRef expressionI
   expr <- getP expressionRef
   case expr of
     Data.ExpressionGetVariable (Data.GetVariable nameI) ->
@@ -224,16 +231,10 @@ makeExpressionEdit expressionI = do
     Data.ExpressionApply (Data.Apply funcI argI) ->
       wrap exprKeys FocusDelegator.Delegating $ \animId -> do
         before <- makeTextView "(" $ Anim.joinId animId ["("]
-        funcEdit <- makeExpressionEdit funcI
-        argEdit <- makeExpressionEdit argI
+        funcEdit <- makeExpressionEdit $ Property (return funcI) (Property.set expressionRef . Data.ExpressionApply . (`Data.Apply` argI))
+        argEdit <- makeExpressionEdit $ Property (return argI) (Property.set expressionRef . Data.ExpressionApply . Data.Apply funcI)
         after <- makeTextView ")" $ Anim.joinId animId [")"]
         return $ hbox [before, funcEdit, spaceWidget, argEdit, after]
-  where
-    exprKeys = Config.exprFocusDelegatorKeys
-    wrap keys entryState f =
-      wrapDelegatedWithKeys keys entryState f $
-      AnimIds.fromIRef expressionI
-    expressionRef = Transaction.fromIRef expressionI
 
 hboxSpaced :: [Widget f] -> Widget f
 hboxSpaced = hbox . intersperse spaceWidget
@@ -245,7 +246,7 @@ makeDefinitionEdit definitionI = do
     assignCursor animId nameEditAnimId $
     makeNameEdit "<unnamed>" definitionI nameEditAnimId
   equals <- makeTextView "=" $ Anim.joinId animId ["equals"]
-  expressionEdit <- makeExpressionEdit bodyI
+  expressionEdit <- makeExpressionEdit bodyRef
   paramsEdits <- mapM makeParamEdit $ enumerate params
   return .
     Widget.strongerEvents eventMap . hboxSpaced $
@@ -255,6 +256,7 @@ makeDefinitionEdit definitionI = do
       (liftM . Widget.strongerEvents) (paramEventMap paramI) .
       wrapDelegated FocusDelegator.NotDelegating (makeNameEdit ("<unnamed param " ++ show i ++ ">") paramI) $
       AnimIds.fromIRef paramI
+    bodyRef = Property.composeLabel Data.defBody Data.atDefBody definitionRef
     definitionRef = Transaction.fromIRef definitionI
     paramEventMap paramI =
       Widget.actionEventMapMovesCursor Config.delParamKeys "Delete Parameter" .
