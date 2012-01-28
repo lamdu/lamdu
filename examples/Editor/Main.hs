@@ -220,7 +220,14 @@ makeExpressionEdit expressionPtr = do
   let
     expressionRef = Transaction.fromIRef expressionI
     exprKeys = Config.exprFocusDelegatorKeys
+    giveAsArg = do
+      newFuncNameI <- Transaction.newIRef ""
+      newFuncI <- Transaction.newIRef . Data.ExpressionGetVariable $ Data.GetVariable newFuncNameI
+      newExprI <- Transaction.newIRef . Data.ExpressionApply $ Data.Apply newFuncI expressionI
+      Property.set expressionPtr newExprI
+      return $ AnimIds.fromIRef newExprI
     wrap keys entryState f =
+      (liftM . Widget.weakerEvents) (Widget.actionEventMapMovesCursor Config.giveAsArgumentKey "Give as argument" giveAsArg) .
       wrapDelegatedWithKeys keys entryState f $
       AnimIds.fromIRef expressionI
   expr <- getP expressionRef
@@ -241,7 +248,7 @@ hboxSpaced = hbox . intersperse spaceWidget
 
 makeDefinitionEdit :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
 makeDefinitionEdit definitionI = do
-  Data.Definition params bodyI <- getP definitionRef
+  Data.Definition params _ <- getP definitionRef
   nameEdit <-
     assignCursor animId nameEditAnimId $
     makeNameEdit "<unnamed>" definitionI nameEditAnimId

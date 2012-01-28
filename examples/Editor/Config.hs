@@ -10,6 +10,8 @@ module Editor.Config(
 
     -- actionKeys,
 
+    giveAsArgumentKey,
+
     -- moveToParentKeys,
 
     addParamKeys, delParamKeys,
@@ -42,6 +44,8 @@ addParamKeys      = [alt 'p']
 delParamKeys      = [alt 'o']
 
 delBranchKeys     = [alt 'o']
+
+giveAsArgumentKey = [simple (E.charKey 'a')]
 
 exprFocusDelegatorKeys = FocusDelegator.Keys {
   FocusDelegator.startDelegatingKey = group E.shift E.KeyRight,
