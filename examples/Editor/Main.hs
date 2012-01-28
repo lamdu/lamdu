@@ -7,6 +7,7 @@ module Main(main) where
 
 import Control.Monad (when, liftM, unless)
 import Control.Monad.Trans.Class (lift)
+import Data.ByteString.Char8 (pack)
 import Data.List (findIndex, elemIndex, intersperse, delete)
 import Data.List.Utils (enumerate, nth, removeAt)
 import Data.Maybe (fromMaybe, isJust)
@@ -18,8 +19,8 @@ import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (DBTag, ViewTag)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
-import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Sized (Sized)
+import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Store.Db as Db
@@ -265,14 +266,15 @@ makeExpressionEdit isArgument expressionPtr = do
         makeTextEdit $ Transaction.fromIRef nameI
     Data.ExpressionApply (Data.Apply funcI argI) ->
       wrap exprKeys FocusDelegator.Delegating $ \animId -> do
-        before <- makeTextView "(" $ Anim.joinId animId ["("]
+        let label str = makeTextView str $ Anim.joinId animId [pack str]
+        before <- label "("
+        after <- label ")"
         funcEdit <-
           makeDelEvent argI . makeExpressionEdit False $
           Property (return funcI) (Property.set expressionRef . Data.ExpressionApply . (`Data.Apply` argI))
         argEdit <-
           makeDelEvent funcI . makeExpressionEdit True $
           Property (return argI) (Property.set expressionRef . Data.ExpressionApply . Data.Apply funcI)
-        after <- makeTextView ")" $ Anim.joinId animId [")"]
         return . hbox $ concat
           [[before | isArgument], [funcEdit], [spaceWidget], [argEdit], [after | isArgument]]
 
