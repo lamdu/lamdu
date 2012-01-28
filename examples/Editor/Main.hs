@@ -245,10 +245,10 @@ makeExpressionEdit isArgument expressionPtr = do
       [ Widget.actionEventMapMovesCursor Config.giveAsArgumentKey "Give as argument" .
         fmap (AnimIds.delegating . AnimIds.fromIRef) $
         giveAsArg expressionPtr
-      , Widget.actionEventMapMovesCursor Config.callWithArgumentKey "Call with argument" .
-        fmap (AnimIds.delegating . AnimIds.fromIRef) $
-        callWithArg expressionPtr
+      , Widget.actionEventMapMovesCursor Config.callWithArgumentKey "Call with argument" $
+        mkCallWithArg
       ]
+    mkCallWithArg = fmap (AnimIds.delegating . AnimIds.fromIRef) $ callWithArg expressionPtr
     wrap keys entryState f =
       (liftM . Widget.weakerEvents) eventMap .
       wrapDelegatedWithKeys keys entryState f $
@@ -265,6 +265,8 @@ makeExpressionEdit isArgument expressionPtr = do
       wrap FocusDelegator.defaultKeys FocusDelegator.NotDelegating .
         makeTextEdit $ Transaction.fromIRef nameI
     Data.ExpressionApply (Data.Apply funcI argI) ->
+      (liftM . Widget.weakerEvents)
+        (Widget.actionEventMapMovesCursor Config.addNextArgumentKey "Add another argument" mkCallWithArg) .
       wrap exprKeys FocusDelegator.Delegating $ \animId -> do
         let label str = makeTextView str $ Anim.joinId animId [pack str]
         before <- label "("
