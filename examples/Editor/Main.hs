@@ -346,7 +346,7 @@ defaultFont _ = "/usr/share/fonts/truetype/freefont/FreeSerifBold.ttf"
 main :: IO ()
 main = do
   font <- Draw.openFont (defaultFont System.Info.os)
-  Db.withDb "/tmp/treeedit.db" $ runDbStore font . Anchors.dbStore
+  Db.withDb "/tmp/codeedit.db" $ runDbStore font . Anchors.dbStore
 
 deleteCurrentBranch :: Monad m => Transaction DBTag m ()
 deleteCurrentBranch = do
