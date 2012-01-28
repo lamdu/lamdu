@@ -132,7 +132,7 @@ wrapDelegatedWithKeys keys entryState f animId = do
   let innerAnimId = AnimIds.delegating animId
   innerWidget <- f innerAnimId
   let
-    cursorSelf _ = makeDelegator $ Just FocusDelegator.NotDelegating
+    cursorSelf = makeDelegator $ Just FocusDelegator.NotDelegating
     cursorNotSelf
       | Widget.isFocused innerWidget =
         makeDelegator $ Just FocusDelegator.Delegating
@@ -150,7 +150,7 @@ wrapDelegatedWithKeys keys entryState f animId = do
         FocusDelegator.NotDelegating -> selfAnimId
         FocusDelegator.Delegating -> innerAnimId
   assignCursor animId destAnimId .
-    liftM (fromMaybe cursorNotSelf . fmap cursorSelf .
+    liftM (maybe cursorNotSelf (const cursorSelf) .
            Anim.subId selfAnimId) $
     readCursor
 
@@ -214,22 +214,32 @@ hbox = Box.make Box.horizontal . map (Widget.align center)
 -- vbox :: [Widget f] -> Widget f
 -- vbox = Box.make Box.vertical . map (Widget.align center)
 
-makeExpressionEdit :: MonadF m => Property (Transaction ViewTag m) (IRef Data.Expression) -> TWidget ViewTag m
+giveAsArg ::
+  Monad m =>
+  Property (Transaction ViewTag m) (IRef Data.Expression) ->
+  Transaction ViewTag m (IRef Data.Expression)
+giveAsArg expressionPtr = do
+  expressionI <- Property.get expressionPtr
+  newFuncI <- Transaction.newIRef . Data.ExpressionGetVariable . Data.GetVariable =<< Transaction.newIRef ""
+  Property.set expressionPtr =<< (Transaction.newIRef . Data.ExpressionApply) (Data.Apply newFuncI expressionI)
+  return newFuncI
+
+makeExpressionEdit ::
+  MonadF m => Property (Transaction ViewTag m) (IRef Data.Expression) ->
+  TWidget ViewTag m
 makeExpressionEdit expressionPtr = do
   expressionI <- getP expressionPtr
   let
     expressionRef = Transaction.fromIRef expressionI
     exprKeys = Config.exprFocusDelegatorKeys
-    giveAsArg = do
-      newFuncI <- Transaction.newIRef . Data.ExpressionGetVariable . Data.GetVariable =<< Transaction.newIRef ""
-      Property.set expressionPtr =<< (Transaction.newIRef . Data.ExpressionApply) (Data.Apply newFuncI expressionI)
-      return $ AnimIds.fromIRef newFuncI
     callWithArg = do
       argI <- Transaction.newIRef . Data.ExpressionGetVariable . Data.GetVariable =<< Transaction.newIRef ""
       Property.set expressionPtr =<< (Transaction.newIRef . Data.ExpressionApply) (Data.Apply expressionI argI)
       return $ AnimIds.fromIRef argI
     eventMap = mconcat
-      [ Widget.actionEventMapMovesCursor Config.giveAsArgumentKey "Give as argument" giveAsArg
+      [ Widget.actionEventMapMovesCursor Config.giveAsArgumentKey "Give as argument" .
+        fmap (AnimIds.delegating . AnimIds.fromIRef) $
+        giveAsArg expressionPtr
       , Widget.actionEventMapMovesCursor Config.callWithArgumentKey "Call with argument" callWithArg
       ]
     wrap keys entryState f =
@@ -245,8 +255,8 @@ makeExpressionEdit expressionPtr = do
   expr <- getP expressionRef
   case expr of
     Data.ExpressionGetVariable (Data.GetVariable nameI) ->
-      wrap FocusDelegator.defaultKeys FocusDelegator.NotDelegating $
-      makeTextEdit (Transaction.fromIRef nameI)
+      wrap FocusDelegator.defaultKeys FocusDelegator.NotDelegating .
+        makeTextEdit $ Transaction.fromIRef nameI
     Data.ExpressionApply (Data.Apply funcI argI) ->
       wrap exprKeys FocusDelegator.Delegating $ \animId -> do
         before <- makeTextView "(" $ Anim.joinId animId ["("]
