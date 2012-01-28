@@ -221,12 +221,19 @@ makeExpressionEdit expressionPtr = do
     expressionRef = Transaction.fromIRef expressionI
     exprKeys = Config.exprFocusDelegatorKeys
     giveAsArg = do
-      newFuncNameI <- Transaction.newIRef ""
-      newFuncI <- Transaction.newIRef . Data.ExpressionGetVariable $ Data.GetVariable newFuncNameI
+      newFuncI <- Transaction.newIRef . Data.ExpressionGetVariable . Data.GetVariable =<< Transaction.newIRef ""
       Property.set expressionPtr =<< (Transaction.newIRef . Data.ExpressionApply) (Data.Apply newFuncI expressionI)
       return $ AnimIds.fromIRef newFuncI
+    callWithArg = do
+      argI <- Transaction.newIRef . Data.ExpressionGetVariable . Data.GetVariable =<< Transaction.newIRef ""
+      Property.set expressionPtr =<< (Transaction.newIRef . Data.ExpressionApply) (Data.Apply expressionI argI)
+      return $ AnimIds.fromIRef argI
+    eventMap = mconcat
+      [ Widget.actionEventMapMovesCursor Config.giveAsArgumentKey "Give as argument" giveAsArg
+      , Widget.actionEventMapMovesCursor Config.callWithArgumentKey "Call with argument" callWithArg
+      ]
     wrap keys entryState f =
-      (liftM . Widget.weakerEvents) (Widget.actionEventMapMovesCursor Config.giveAsArgumentKey "Give as argument" giveAsArg) .
+      (liftM . Widget.weakerEvents) eventMap .
       wrapDelegatedWithKeys keys entryState f $
       AnimIds.fromIRef expressionI
     makeDelEvent =
