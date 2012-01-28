@@ -211,11 +211,8 @@ center = Vector2 0.5 0.5
 hbox :: [Widget f] -> Widget f
 hbox = Box.make Box.horizontal . map (Widget.align center)
 
-vbox :: [Widget f] -> Widget f
-vbox = Box.make Box.vertical . map (Widget.align center)
-
-alignTop :: Widget f -> Widget f
-alignTop = vbox . (: [Widget.liftView Spacer.makeVerticalExpanding])
+-- vbox :: [Widget f] -> Widget f
+-- vbox = Box.make Box.vertical . map (Widget.align center)
 
 makeExpressionEdit :: MonadF m => IRef Data.Expression -> TWidget ViewTag m
 makeExpressionEdit expressionI = do
@@ -365,10 +362,10 @@ makeRootWidget = do
       [Widget.actionEventMap Config.quitKeys "Quit" (error "Quit")
       ,Widget.actionEventMap Config.makeBranchKeys "New Branch" (makeBranch view)
       ] .
-    hbox $
-    [alignTop viewEdit
+    Box.make Box.horizontal $
+    [viewEdit
     ,Widget.liftView Spacer.makeHorizontalExpanding
-    ,alignTop $ Widget.strongerEvents delBranchEventMap branchSelector
+    ,Widget.strongerEvents delBranchEventMap branchSelector
     ]
 
 runDbStore :: Draw.Font -> Transaction.Store DBTag IO -> IO a
