@@ -5,7 +5,6 @@
 
 module Main(main) where
 
-import Control.Category ((.))
 import Control.Monad (when, liftM, unless)
 import Control.Monad.Trans.Class (lift)
 import Data.List (findIndex, elemIndex, intersperse, delete)
@@ -20,7 +19,6 @@ import Editor.Anchors (DBTag, ViewTag)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Sized (Sized)
-import Prelude hiding ((.))
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Store.Db as Db
