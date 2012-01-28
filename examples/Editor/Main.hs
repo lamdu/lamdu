@@ -223,13 +223,17 @@ makeExpressionEdit expressionPtr = do
     giveAsArg = do
       newFuncNameI <- Transaction.newIRef ""
       newFuncI <- Transaction.newIRef . Data.ExpressionGetVariable $ Data.GetVariable newFuncNameI
-      newExprI <- Transaction.newIRef . Data.ExpressionApply $ Data.Apply newFuncI expressionI
-      Property.set expressionPtr newExprI
-      return $ AnimIds.fromIRef newExprI
+      setExpr =<< (Transaction.newIRef . Data.ExpressionApply) (Data.Apply newFuncI expressionI)
     wrap keys entryState f =
       (liftM . Widget.weakerEvents) (Widget.actionEventMapMovesCursor Config.giveAsArgumentKey "Give as argument" giveAsArg) .
       wrapDelegatedWithKeys keys entryState f $
       AnimIds.fromIRef expressionI
+    makeDelEvent =
+      liftM . Widget.weakerEvents .
+      Widget.actionEventMapMovesCursor Config.delKeys "Delete" . setExpr
+    setExpr newExprI = do
+      Property.set expressionPtr newExprI
+      return $ AnimIds.fromIRef newExprI
   expr <- getP expressionRef
   case expr of
     Data.ExpressionGetVariable (Data.GetVariable nameI) ->
@@ -238,8 +242,12 @@ makeExpressionEdit expressionPtr = do
     Data.ExpressionApply (Data.Apply funcI argI) ->
       wrap exprKeys FocusDelegator.Delegating $ \animId -> do
         before <- makeTextView "(" $ Anim.joinId animId ["("]
-        funcEdit <- makeExpressionEdit $ Property (return funcI) (Property.set expressionRef . Data.ExpressionApply . (`Data.Apply` argI))
-        argEdit <- makeExpressionEdit $ Property (return argI) (Property.set expressionRef . Data.ExpressionApply . Data.Apply funcI)
+        funcEdit <-
+          makeDelEvent argI . makeExpressionEdit $
+          Property (return funcI) (Property.set expressionRef . Data.ExpressionApply . (`Data.Apply` argI))
+        argEdit <-
+          makeDelEvent funcI . makeExpressionEdit $
+          Property (return argI) (Property.set expressionRef . Data.ExpressionApply . Data.Apply funcI)
         after <- makeTextView ")" $ Anim.joinId animId [")"]
         return $ hbox [before, funcEdit, spaceWidget, argEdit, after]
 
