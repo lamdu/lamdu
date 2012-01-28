@@ -15,6 +15,7 @@ import Data.Store.IRef (IRef)
 import Data.Store.Property (Property)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
+import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (DBTag, ViewTag)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -204,6 +205,12 @@ spaceView = Spacer.makeHorizontal 20
 spaceWidget :: Widget f
 spaceWidget = Widget.liftView spaceView
 
+center :: Vector2 Draw.R
+center = Vector2 0.5 0.5
+
+hbox :: [Widget f] -> Widget f
+hbox = Box.make Box.horizontal . map (Widget.align center)
+
 makeExpressionEdit :: MonadF m => IRef Data.Expression -> TWidget ViewTag m
 makeExpressionEdit expressionI = do
   expr <- getP expressionRef
@@ -217,7 +224,7 @@ makeExpressionEdit expressionI = do
         funcEdit <- makeExpressionEdit funcI
         argEdit <- makeExpressionEdit argI
         after <- makeTextView ")" $ Anim.joinId animId [")"]
-        return $ Box.make Box.horizontal [before, funcEdit, spaceWidget, argEdit, after]
+        return $ hbox [before, funcEdit, spaceWidget, argEdit, after]
   where
     exprKeys = Config.exprFocusDelegatorKeys
     wrap keys entryState f =
@@ -226,7 +233,7 @@ makeExpressionEdit expressionI = do
     expressionRef = Transaction.fromIRef expressionI
 
 hboxSpaced :: [Widget f] -> Widget f
-hboxSpaced = Box.make Box.horizontal . intersperse spaceWidget
+hboxSpaced = hbox . intersperse spaceWidget
 
 makeDefinitionEdit :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
 makeDefinitionEdit definitionI = do
@@ -351,8 +358,8 @@ makeRootWidget = do
     (Widget.strongerEvents . mconcat)
       [Widget.actionEventMap Config.quitKeys "Quit" (error "Quit")
       ,Widget.actionEventMap Config.makeBranchKeys "New Branch" (makeBranch view)
-      ] $
-    Box.make Box.horizontal
+      ] .
+    hbox $
     [viewEdit
     ,Widget.liftView Spacer.makeHorizontalExpanding
     ,Widget.strongerEvents delBranchEventMap branchSelector

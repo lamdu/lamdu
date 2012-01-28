@@ -13,7 +13,6 @@ module Graphics.UI.Bottle.Widget (
   backgroundColor, liftView,
   strongerEvents, weakerEvents, align) where
 
-import Control.Applicative ((<$>), (<*>))
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2)
 import Graphics.UI.Bottle.Animation (Frame)
@@ -24,7 +23,6 @@ import qualified Data.AtFieldTH as AtFieldTH
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as EventMap
-import qualified Graphics.UI.Bottle.SizeRange as SizeRange
 import qualified Graphics.UI.Bottle.Sized as Sized
 
 type Direction = Maybe (Vector2 Int)
@@ -163,15 +161,4 @@ actionEventMapMovesCursor keys doc act =
 -- If widget's max size is smaller than given size, place widget in
 -- portion of the extra space (0..1 ratio in each dimension):
 align :: Vector2 Draw.R -> Widget f -> Widget f
-align ratio = atContent f
-  where
-    f sized = Sized.atFromSize ((g . SizeRange.srMaxSize . Sized.requestedSize) sized) sized
-    g maxSize mkSize size =
-      atUioFrame (Anim.translate pos) . mkSize $
-      cap <$> maxSize <*> size
-      where
-        pos = mkPos <$> maxSize <*> ratio <*> size
-        mkPos Nothing _ _ = 0
-        mkPos (Just maxSz) r sz = r * (sz - min maxSz sz)
-        cap Nothing sz = sz
-        cap (Just maxSz) sz = min maxSz sz
+align = atContent . Sized.align (atUioFrame . Anim.translate)

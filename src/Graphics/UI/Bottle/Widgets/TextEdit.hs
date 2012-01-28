@@ -275,7 +275,6 @@ makeFocused cursor style str myId =
 
 make :: Style -> Anim.AnimId -> String -> Anim.AnimId -> Widget ((,) String)
 make style cursor str myId =
-  Widget.align (Vector2 0.5 0.5) $
   maybe makeUnfocused makeFocused mCursor style str myId
   where
     mCursor = fmap extractTextEditCursor $ Anim.subId myId cursor

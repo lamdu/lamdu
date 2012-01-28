@@ -4,7 +4,6 @@ module Graphics.UI.Bottle.Widgets.FocusDelegator(IsDelegating(..), Keys(..), mak
 
 import Data.Maybe(fromMaybe)
 import Data.Monoid(mappend)
-import Data.Vector.Vector2(Vector2(..))
 import Graphics.UI.Bottle.Widget(Widget(..))
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -31,7 +30,6 @@ makeFocused :: Monad f =>
   IsDelegating -> Anim.AnimId -> Keys -> Anim.AnimId ->
   Widget f -> Widget f
 makeFocused delegating focusSelf keys backgroundCursorId =
-  Widget.align (Vector2 0.5 0.5) .
   handleFocus delegating
   where
     handleFocus Delegating    = addStopDelegatingEventMap
