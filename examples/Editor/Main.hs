@@ -234,10 +234,8 @@ callWithArg expressionPtr = do
   Property.set expressionPtr =<< (Transaction.newIRef . Data.ExpressionApply) (Data.Apply expressionI argI)
   return argI
 
-makeExpressionEdit ::
-  MonadF m => Property (Transaction ViewTag m) (IRef Data.Expression) ->
-  TWidget ViewTag m
-makeExpressionEdit expressionPtr = do
+makeExpressionEdit :: MonadF m => Bool -> Property (Transaction ViewTag m) (IRef Data.Expression) -> TWidget ViewTag m
+makeExpressionEdit isArgument expressionPtr = do
   expressionI <- getP expressionPtr
   let
     expressionRef = Transaction.fromIRef expressionI
@@ -269,13 +267,14 @@ makeExpressionEdit expressionPtr = do
       wrap exprKeys FocusDelegator.Delegating $ \animId -> do
         before <- makeTextView "(" $ Anim.joinId animId ["("]
         funcEdit <-
-          makeDelEvent argI . makeExpressionEdit $
+          makeDelEvent argI . makeExpressionEdit False $
           Property (return funcI) (Property.set expressionRef . Data.ExpressionApply . (`Data.Apply` argI))
         argEdit <-
-          makeDelEvent funcI . makeExpressionEdit $
+          makeDelEvent funcI . makeExpressionEdit True $
           Property (return argI) (Property.set expressionRef . Data.ExpressionApply . Data.Apply funcI)
         after <- makeTextView ")" $ Anim.joinId animId [")"]
-        return $ hbox [before, funcEdit, spaceWidget, argEdit, after]
+        return . hbox $ concat
+          [[before | isArgument], [funcEdit], [spaceWidget], [argEdit], [after | isArgument]]
 
 hboxSpaced :: [Widget f] -> Widget f
 hboxSpaced = hbox . intersperse spaceWidget
@@ -287,7 +286,7 @@ makeDefinitionEdit definitionI = do
     assignCursor animId nameEditAnimId $
     makeNameEdit "<unnamed>" definitionI nameEditAnimId
   equals <- makeTextView "=" $ Anim.joinId animId ["equals"]
-  expressionEdit <- makeExpressionEdit bodyRef
+  expressionEdit <- makeExpressionEdit False bodyRef
   paramsEdits <- mapM makeParamEdit $ enumerate params
   return .
     Widget.strongerEvents eventMap . hboxSpaced $
