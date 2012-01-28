@@ -224,6 +224,16 @@ giveAsArg expressionPtr = do
   Property.set expressionPtr =<< (Transaction.newIRef . Data.ExpressionApply) (Data.Apply newFuncI expressionI)
   return newFuncI
 
+callWithArg ::
+  Monad m =>
+  Property (Transaction ViewTag m) (IRef Data.Expression) ->
+  Transaction ViewTag m (IRef Data.Expression)
+callWithArg expressionPtr = do
+  expressionI <- Property.get expressionPtr
+  argI <- Transaction.newIRef . Data.ExpressionGetVariable . Data.GetVariable =<< Transaction.newIRef ""
+  Property.set expressionPtr =<< (Transaction.newIRef . Data.ExpressionApply) (Data.Apply expressionI argI)
+  return argI
+
 makeExpressionEdit ::
   MonadF m => Property (Transaction ViewTag m) (IRef Data.Expression) ->
   TWidget ViewTag m
@@ -232,15 +242,13 @@ makeExpressionEdit expressionPtr = do
   let
     expressionRef = Transaction.fromIRef expressionI
     exprKeys = Config.exprFocusDelegatorKeys
-    callWithArg = do
-      argI <- Transaction.newIRef . Data.ExpressionGetVariable . Data.GetVariable =<< Transaction.newIRef ""
-      Property.set expressionPtr =<< (Transaction.newIRef . Data.ExpressionApply) (Data.Apply expressionI argI)
-      return $ AnimIds.fromIRef argI
     eventMap = mconcat
       [ Widget.actionEventMapMovesCursor Config.giveAsArgumentKey "Give as argument" .
         fmap (AnimIds.delegating . AnimIds.fromIRef) $
         giveAsArg expressionPtr
-      , Widget.actionEventMapMovesCursor Config.callWithArgumentKey "Call with argument" callWithArg
+      , Widget.actionEventMapMovesCursor Config.callWithArgumentKey "Call with argument" .
+        fmap (AnimIds.delegating . AnimIds.fromIRef) $
+        callWithArg expressionPtr
       ]
     wrap keys entryState f =
       (liftM . Widget.weakerEvents) eventMap .
