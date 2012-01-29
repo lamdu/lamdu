@@ -37,8 +37,6 @@ makeFocused delegating focusSelf keys backgroundCursorId =
 
     blueify = Widget.backgroundColor backgroundCursorId blue
 
-    dir = Nothing
-
     useStartDelegatingEventMap = Widget.atUserIO setStartDelegatingEventMap
     setStartDelegatingEventMap userIO =
       ($ userIO) .
@@ -49,7 +47,7 @@ makeFocused delegating focusSelf keys backgroundCursorId =
       Widget.uioMaybeEnter userIO
 
     startDelegatingEventMap childEnter =
-      E.fromEventType (startDelegatingKey keys) "Enter child" $ childEnter dir
+      E.fromEventType (startDelegatingKey keys) "Enter child" $ childEnter Widget.Outside
 
     addStopDelegatingEventMap =
       Widget.atEventMap .
@@ -58,13 +56,18 @@ makeFocused delegating focusSelf keys backgroundCursorId =
       return $ Widget.eventResultFromCursor focusSelf
 
 make :: Monad f => -- actually "Pointed", as only using return.
-  IsDelegating -> -- ^ Enter/start state
+  IsDelegating -> -- ^ Start state, enter from direction state
   Maybe IsDelegating -> -- ^ Current state
   Anim.AnimId -> -- ^ Enter/Stop delegating value
   Keys -> -- ^ Keys configuration
   Anim.AnimId -> -- ^ Background AnimId
   Widget f -> Widget f
-make NotDelegating Nothing focusSelf _ _ =
-  Widget.atMaybeEnter . const . Just . const . return $ Widget.eventResultFromCursor focusSelf
-make Delegating Nothing  _     _ _ = id
+make isDelegating Nothing focusSelf _ _ =
+  Widget.atMaybeEnter $ mEnter isDelegating
+  where
+    takeFocus = return $ Widget.eventResultFromCursor focusSelf
+    mEnter NotDelegating _ = Just (const takeFocus)
+    mEnter _ Nothing = Nothing
+    mEnter Delegating (Just enterChild) =
+      Just . Widget.direction takeFocus $ enterChild . Widget.Dir
 make _ (Just cursor) focusSelf keys backgroundCursorId = makeFocused cursor focusSelf keys backgroundCursorId

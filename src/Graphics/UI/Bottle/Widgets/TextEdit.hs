@@ -83,11 +83,10 @@ makeUnfocused style str myId =
     (cursorTranslate style) $
   TextView.makeWidget (sTextViewStyle style) str myId
   where
-    enter dir = (str, makeTextEditCursor myId (enterPos dir))
-    enterPos (Just (Vector2 x _))
+    enter dir = (str, makeTextEditCursor myId $ Widget.direction (length str) enterPos dir)
+    enterPos (Vector2 x _)
       | x < 0 = 0
       | otherwise = length str
-    enterPos Nothing = length str
 
 -- TODO: Instead of font + ptSize, let's pass a text-drawer (that's
 -- what "Font" should be)

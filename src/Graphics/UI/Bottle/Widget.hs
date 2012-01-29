@@ -1,7 +1,8 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TemplateHaskell #-}
 module Graphics.UI.Bottle.Widget (
-  Widget(..), MEnter, Direction, Cursor,
+  Widget(..), Cursor, MEnter,
+  Direction(..), direction,
   UserIO(..), atUioMaybeEnter, atUioEventMap, atUioFrame,
   EventResult(..), atEAnimIdMapping, atECursor,
   emptyEventResult, eventResultFromCursor,
@@ -25,11 +26,15 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Sized as Sized
 
-type Direction = Maybe (Vector2 Int)
+data Direction = Outside | Dir (Vector2 Int)
+
+-- cata:
+direction :: r -> (Vector2 Int -> r) -> Direction -> r
+direction outside _ Outside = outside
+direction _ dir (Dir v) = dir v
 
 type MEnter f = Maybe (Direction -> f EventResult)
 
--- TODO: EventResult will also include an AnimIds mapping
 type Cursor = Anim.AnimId
 
 data EventResult = EventResult {

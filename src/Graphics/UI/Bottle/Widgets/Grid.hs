@@ -24,14 +24,14 @@ length2d xs = Vector2 (foldl' max 0 . map length $ xs) (length xs)
 capCursor :: Vector2 Int -> Vector2 Int -> Vector2 Int
 capCursor size = fmap (max 0) . liftA2 min (fmap (subtract 1) size)
 
-fromRight :: Vector2 Int
-fromRight = Vector2 1 0
-fromLeft :: Vector2 Int
-fromLeft = Vector2 (-1) 0
-fromAbove :: Vector2 Int
-fromAbove = Vector2 0 (-1)
-fromBelow :: Vector2 Int
-fromBelow = Vector2 0 1
+fromRight :: Widget.Direction
+fromRight = Widget.Dir (Vector2 1 0)
+fromLeft :: Widget.Direction
+fromLeft = Widget.Dir (Vector2 (-1) 0)
+fromAbove :: Widget.Direction
+fromAbove = Widget.Dir (Vector2 0 (-1))
+fromBelow :: Widget.Direction
+fromBelow = Widget.Dir (Vector2 0 1)
 
 mkNavEventmap :: [[Widget.MEnter f]] -> Cursor -> (Widget.EventHandlers f, Widget.EventHandlers f)
 mkNavEventmap mEnterChildren cursor@(Vector2 cursorX cursorY) = (weakMap, strongMap)
@@ -59,7 +59,7 @@ mkNavEventmap mEnterChildren cursor@(Vector2 cursorX cursorY) = (weakMap, strong
         (EventMap.fromEventType
          event
          ("Move " ++ dirName) .
-         ($ Just direction)) .
+         ($ direction)) .
       msum
     leftOfCursor    = reverse $ take cursorX curRow
     aboveCursor     = reverse $ take cursorY curColumn
@@ -118,7 +118,7 @@ makeEnter =
     search [] = Nothing
     search xs = Just $ byDirection xs
     byDirection xs dir =
-      ($ dir) . snd . maximumOn fst $ (map . first) (fromMaybe 0 dir *) xs
+        ($ dir) . snd . maximumOn fst $ (map . first) (Widget.direction 0 id dir *) xs
     inverse ((y, x), m) = fmap ((,) $ Vector2 x y) m
     maximumOn = maximumBy . comparing
 
