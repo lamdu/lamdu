@@ -282,18 +282,19 @@ makeExpressionEdit isArgument expressionPtr = do
       wrap FocusDelegator.defaultKeys FocusDelegator.NotDelegating .
         makeWordEdit $ Transaction.fromIRef nameI
     Data.ExpressionApply (Data.Apply funcI argI) ->
-      wrap exprKeys FocusDelegator.Delegating $ \animId -> assignCursor animId (AnimIds.fromIRef argI) $ do
-        let label str = makeTextView str $ Anim.joinId animId [pack str]
-        before <- label "("
-        after <- label ")"
-        funcEdit <-
-          mkCallWithArgEvent . mkDelEvent argI . makeExpressionEdit False $
-          Property (return funcI) (Property.set expressionRef . Data.ExpressionApply . (`Data.Apply` argI))
-        argEdit <-
-          mkCallWithArgEvent . mkDelEvent funcI . makeExpressionEdit True $
-          Property (return argI) (Property.set expressionRef . Data.ExpressionApply . Data.Apply funcI)
-        return . hbox $ concat
-          [[before | isArgument], [funcEdit], [spaceWidget], [argEdit], [after | isArgument]]
+      mkCallWithArgEvent . wrap exprKeys FocusDelegator.Delegating $ \animId ->
+        assignCursor animId (AnimIds.fromIRef argI) $ do
+          let label str = makeTextView str $ Anim.joinId animId [pack str]
+          before <- label "("
+          after <- label ")"
+          funcEdit <-
+            mkDelEvent argI . makeExpressionEdit False $
+            Property (return funcI) (Property.set expressionRef . Data.ExpressionApply . (`Data.Apply` argI))
+          argEdit <-
+            mkDelEvent funcI . makeExpressionEdit True $
+            Property (return argI) (Property.set expressionRef . Data.ExpressionApply . Data.Apply funcI)
+          return . hbox $ concat
+            [[before | isArgument], [funcEdit], [spaceWidget], [argEdit], [after | isArgument]]
 
 hboxSpaced :: [Widget f] -> Widget f
 hboxSpaced = hbox . intersperse spaceWidget
