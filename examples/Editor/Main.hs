@@ -253,17 +253,18 @@ makeExpressionEdit isArgument expressionPtr = do
   let
     expressionRef = Transaction.fromIRef expressionI
     exprKeys = Config.exprFocusDelegatorKeys
-    mkCallWithArg = fmap (AnimIds.delegating . AnimIds.fromIRef) $ callWithArg expressionPtr
+    mkCallWithArg = fmap (AnimIds.delegating . AnimIds.fromIRef) . callWithArg
     mkGiveAsArg = fmap (AnimIds.delegating . AnimIds.fromIRef) $ giveAsArg expressionPtr
     eventMap = mconcat
       [ Widget.actionEventMapMovesCursor
         Config.giveAsArgumentKey "Give as argument"
         mkGiveAsArg
       , Widget.actionEventMapMovesCursor
-        Config.callWithArgumentKey "Call with argument"
-        mkCallWithArg
+        Config.callWithArgumentKey "Call with argument" $
+        mkCallWithArg expressionPtr
       ]
     wrap keys entryState f =
+      (if isArgument then id else mkCallWithArgEvent) .
       (liftM . Widget.weakerEvents) eventMap .
       wrapDelegatedWithKeys keys entryState f $
       AnimIds.fromIRef expressionI
@@ -271,8 +272,9 @@ makeExpressionEdit isArgument expressionPtr = do
       liftM . Widget.weakerEvents .
       Widget.actionEventMapMovesCursor Config.delKeys "Delete" . setExpr
     mkCallWithArgEvent =
-      liftM . Widget.weakerEvents $
-      Widget.actionEventMapMovesCursor Config.addNextArgumentKey "Add another argument" mkCallWithArg
+      liftM . Widget.weakerEvents .
+      Widget.actionEventMapMovesCursor Config.addNextArgumentKey "Add another argument" $
+      mkCallWithArg expressionPtr
     setExpr newExprI = do
       Property.set expressionPtr newExprI
       return $ AnimIds.fromIRef newExprI
@@ -282,17 +284,18 @@ makeExpressionEdit isArgument expressionPtr = do
       wrap FocusDelegator.defaultKeys FocusDelegator.NotDelegating .
         makeWordEdit $ Transaction.fromIRef nameI
     Data.ExpressionApply (Data.Apply funcI argI) ->
-      mkCallWithArgEvent . wrap exprKeys FocusDelegator.Delegating $ \animId ->
+      wrap exprKeys FocusDelegator.Delegating $ \animId ->
         assignCursor animId (AnimIds.fromIRef argI) $ do
           let label str = makeTextView str $ Anim.joinId animId [pack str]
           before <- label "("
           after <- label ")"
-          funcEdit <-
-            mkDelEvent argI . makeExpressionEdit False $
-            Property (return funcI) (Property.set expressionRef . Data.ExpressionApply . (`Data.Apply` argI))
-          argEdit <-
-            mkDelEvent funcI . makeExpressionEdit True $
-            Property (return argI) (Property.set expressionRef . Data.ExpressionApply . Data.Apply funcI)
+          let
+            funcIPtr =
+              Property (return funcI) $ Property.set expressionRef . Data.ExpressionApply . (`Data.Apply` argI)
+            argIPtr =
+              Property (return argI) $ Property.set expressionRef . Data.ExpressionApply . (funcI `Data.Apply`)
+          funcEdit <- mkDelEvent argI $ makeExpressionEdit False funcIPtr
+          argEdit <- mkCallWithArgEvent . mkDelEvent funcI $ makeExpressionEdit True argIPtr
           return . hbox $ concat
             [[before | isArgument], [funcEdit], [spaceWidget], [argEdit], [after | isArgument]]
 
