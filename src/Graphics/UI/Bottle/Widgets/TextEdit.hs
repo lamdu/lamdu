@@ -269,7 +269,9 @@ makeFocused cursor style str myId =
 
         [ E.singleton E.CharEventType "Insert character" (insert . (: []) . fromJust . E.keyEventChar) ],
 
-        [ keys "Insert Newline" [specialKey KeyEnter] (insert "\n") ]
+        [ keys "Insert Newline" [specialKey KeyEnter] (insert "\n") ],
+
+        [ keys "Insert Space" [E.SpaceKeyEventType E.noMods] (insert " ") ]
 
         ]
 

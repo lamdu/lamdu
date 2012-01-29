@@ -35,6 +35,7 @@ import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
+import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
@@ -176,6 +177,16 @@ makeTextEdit textRef animId = do
     Widget.atEvents lifter $
     TextEdit.make style cursor text animId
 
+makeWordEdit ::
+  Monad m =>
+  Transaction.Property t m String ->
+  Anim.AnimId -> TWidget t m
+makeWordEdit = (fmap . fmap . liftM . Widget.atEventMap) removeWordSeparators makeTextEdit
+  where
+    removeWordSeparators = foldr (.) id $ map EventMap.delete [newlineKey, newwordKey]
+    newlineKey = EventMap.KeyEventType EventMap.noMods EventMap.KeyEnter
+    newwordKey = EventMap.KeyEventType EventMap.noMods EventMap.KeySpace
+
 ------
 
 addParameter ::
@@ -199,7 +210,7 @@ atEmptyStr = atCTransaction . Reader.withReaderT . atEnvTextStyle . TextEdit.atS
 
 makeNameEdit :: Monad m => String -> IRef a -> Anim.AnimId -> TWidget t m
 makeNameEdit emptyStr iref =
-  (atEmptyStr . const) emptyStr . makeTextEdit (Anchors.aNameRef iref)
+  (atEmptyStr . const) emptyStr . makeWordEdit (Anchors.aNameRef iref)
 
 spaceView :: Sized Anim.Frame
 spaceView = Spacer.makeHorizontal 20
@@ -242,6 +253,8 @@ makeExpressionEdit isArgument expressionPtr = do
   let
     expressionRef = Transaction.fromIRef expressionI
     exprKeys = Config.exprFocusDelegatorKeys
+    mkCallWithArg = fmap (AnimIds.delegating . AnimIds.fromIRef) $ callWithArg expressionPtr
+    mkGiveAsArg = fmap (AnimIds.delegating . AnimIds.fromIRef) $ giveAsArg expressionPtr
     eventMap = mconcat
       [ Widget.actionEventMapMovesCursor
         Config.giveAsArgumentKey "Give as argument"
@@ -250,15 +263,16 @@ makeExpressionEdit isArgument expressionPtr = do
         Config.callWithArgumentKey "Call with argument"
         mkCallWithArg
       ]
-    mkGiveAsArg = fmap (AnimIds.delegating . AnimIds.fromIRef) $ giveAsArg expressionPtr
-    mkCallWithArg = fmap (AnimIds.delegating . AnimIds.fromIRef) $ callWithArg expressionPtr
     wrap keys entryState f =
       (liftM . Widget.weakerEvents) eventMap .
       wrapDelegatedWithKeys keys entryState f $
       AnimIds.fromIRef expressionI
-    makeDelEvent =
+    mkDelEvent =
       liftM . Widget.weakerEvents .
       Widget.actionEventMapMovesCursor Config.delKeys "Delete" . setExpr
+    mkCallWithArgEvent =
+      liftM . Widget.weakerEvents $
+      Widget.actionEventMapMovesCursor Config.addNextArgumentKey "Add another argument" mkCallWithArg
     setExpr newExprI = do
       Property.set expressionPtr newExprI
       return $ AnimIds.fromIRef newExprI
@@ -266,19 +280,17 @@ makeExpressionEdit isArgument expressionPtr = do
   case expr of
     Data.ExpressionGetVariable (Data.GetVariable nameI) ->
       wrap FocusDelegator.defaultKeys FocusDelegator.NotDelegating .
-        makeTextEdit $ Transaction.fromIRef nameI
+        makeWordEdit $ Transaction.fromIRef nameI
     Data.ExpressionApply (Data.Apply funcI argI) ->
-      (liftM . Widget.weakerEvents)
-        (Widget.actionEventMapMovesCursor Config.addNextArgumentKey "Add another argument" mkCallWithArg) .
       wrap exprKeys FocusDelegator.Delegating $ \animId -> assignCursor animId (AnimIds.fromIRef argI) $ do
         let label str = makeTextView str $ Anim.joinId animId [pack str]
         before <- label "("
         after <- label ")"
         funcEdit <-
-          makeDelEvent argI . makeExpressionEdit False $
+          mkCallWithArgEvent . mkDelEvent argI . makeExpressionEdit False $
           Property (return funcI) (Property.set expressionRef . Data.ExpressionApply . (`Data.Apply` argI))
         argEdit <-
-          makeDelEvent funcI . makeExpressionEdit True $
+          mkCallWithArgEvent . mkDelEvent funcI . makeExpressionEdit True $
           Property (return argI) (Property.set expressionRef . Data.ExpressionApply . Data.Apply funcI)
         return . hbox $ concat
           [[before | isArgument], [funcEdit], [spaceWidget], [argEdit], [after | isArgument]]

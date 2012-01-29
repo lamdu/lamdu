@@ -48,7 +48,7 @@ delBranchKeys     = [alt 'o']
 delKeys           = [simple E.KeyBackspace, simple E.KeyDel]
 giveAsArgumentKey = [simple (E.charKey 'a')]
 callWithArgumentKey = [simple (E.charKey 'c')]
-addNextArgumentKey = [simple (E.charKey ' ')]
+addNextArgumentKey = [E.SpaceKeyEventType E.noMods]
 
 exprFocusDelegatorKeys = FocusDelegator.Keys {
   FocusDelegator.startDelegatingKey = group E.shift E.KeyRight,

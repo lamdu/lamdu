@@ -26,7 +26,7 @@ import qualified Data.Map as Map
 charKey :: Char -> Key
 charKey = CharKey . toUpper
 
-data EventType = CharEventType | KeyEventType ModState Key
+data EventType = CharEventType | SpaceKeyEventType ModState | KeyEventType ModState Key
   deriving (Show, Eq, Ord)
 
 prettyKey :: Key -> String
@@ -37,14 +37,15 @@ prettyKey k
 
 prettyEventType :: EventType -> String
 prettyEventType CharEventType = "Character"
+prettyEventType (SpaceKeyEventType ms) = prettyModState ms ++ "Space"
 prettyEventType (KeyEventType ms key) =
-  prettyModState ++ prettyKey key
-  where
-    prettyModState =
-      concat $
-      ["Ctrl+" | modCtrl ms] ++
-      ["Alt+" | modAlt ms] ++
-      ["Shift+" | modShift ms]
+  prettyModState ms ++ prettyKey key
+
+prettyModState :: ModState -> String
+prettyModState ms = concat $
+  ["Ctrl+" | modCtrl ms] ++
+  ["Alt+" | modAlt ms] ++
+  ["Shift+" | modShift ms]
 
 isCharMods :: ModState -> Bool
 isCharMods ModState { modCtrl = False, modAlt = False } = True
@@ -54,7 +55,9 @@ type Event = KeyEvent
 
 eventTypesOf :: Event -> [EventType]
 eventTypesOf (KeyEvent Release _ _ _) = []
-eventTypesOf (KeyEvent Press ms mchar k) = KeyEventType ms k : charEventType
+eventTypesOf (KeyEvent Press ms mchar k)
+  | isCharMods ms && mchar == Just ' ' = [SpaceKeyEventType ms]
+  | otherwise = KeyEventType ms k : charEventType
   where
    charEventType
      | isCharMods ms && isJust mchar = [CharEventType]
