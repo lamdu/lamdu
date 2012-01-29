@@ -118,9 +118,9 @@ makeChoice selectionAnimId curChoiceRef orientation children = do
 
 assignCursor :: Widget.Cursor -> Widget.Cursor -> TWidget t m -> TWidget t m
 assignCursor src dest =
-  atCTransaction . Reader.withReaderT . atEnvCursor $ f
+  (atCTransaction . Reader.withReaderT . atEnvCursor) replace
   where
-    f cursor
+    replace cursor
       | cursor == src = dest
       | otherwise = cursor
 
@@ -167,12 +167,13 @@ makeTextEdit ::
 makeTextEdit textRef animId = do
   text <- getP textRef
   let
-    lifter newText =
-      applyAndReturn . const . when (newText /= text) $ Property.set textRef newText
+    lifter (newText, eventRes) = do
+      when (newText /= text) $ Property.set textRef newText
+      return eventRes
   cursor <- readCursor
   style <- readTextStyle
   return .
-    Widget.atEvents (uncurry lifter) $
+    Widget.atEvents lifter $
     TextEdit.make style cursor text animId
 
 ------
@@ -242,12 +243,14 @@ makeExpressionEdit isArgument expressionPtr = do
     expressionRef = Transaction.fromIRef expressionI
     exprKeys = Config.exprFocusDelegatorKeys
     eventMap = mconcat
-      [ Widget.actionEventMapMovesCursor Config.giveAsArgumentKey "Give as argument" .
-        fmap (AnimIds.delegating . AnimIds.fromIRef) $
-        giveAsArg expressionPtr
-      , Widget.actionEventMapMovesCursor Config.callWithArgumentKey "Call with argument" $
+      [ Widget.actionEventMapMovesCursor
+        Config.giveAsArgumentKey "Give as argument"
+        mkGiveAsArg
+      , Widget.actionEventMapMovesCursor
+        Config.callWithArgumentKey "Call with argument"
         mkCallWithArg
       ]
+    mkGiveAsArg = fmap (AnimIds.delegating . AnimIds.fromIRef) $ giveAsArg expressionPtr
     mkCallWithArg = fmap (AnimIds.delegating . AnimIds.fromIRef) $ callWithArg expressionPtr
     wrap keys entryState f =
       (liftM . Widget.weakerEvents) eventMap .
