@@ -257,10 +257,10 @@ makeExpressionEdit isArgument expressionPtr = do
     mkGiveAsArg = fmap (AnimIds.delegating . AnimIds.fromIRef) $ giveAsArg expressionPtr
     eventMap = mconcat
       [ Widget.actionEventMapMovesCursor
-        Config.giveAsArgumentKey "Give as argument"
+        Config.giveAsArgumentKeys "Give as argument"
         mkGiveAsArg
       , Widget.actionEventMapMovesCursor
-        Config.callWithArgumentKey "Call with argument" $
+        Config.callWithArgumentKeys "Call with argument" $
         mkCallWithArg expressionPtr
       ]
     wrap keys entryState f =
@@ -273,7 +273,7 @@ makeExpressionEdit isArgument expressionPtr = do
       Widget.actionEventMapMovesCursor Config.delKeys "Delete" . setExpr
     mkCallWithArgEvent =
       liftM . Widget.weakerEvents .
-      Widget.actionEventMapMovesCursor Config.addNextArgumentKey "Add another argument" $
+      Widget.actionEventMapMovesCursor Config.addNextArgumentKeys "Add another argument" $
       mkCallWithArg expressionPtr
     setExpr newExprI = do
       Property.set expressionPtr newExprI

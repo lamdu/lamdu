@@ -20,7 +20,6 @@ import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators.Utils (square, textHeight)
 import Graphics.UI.Bottle.Sized (Sized(..))
 import Graphics.UI.Bottle.Widget (Widget(..))
-import Graphics.UI.GLFW (Key(KeyBackspace, KeyDel, KeyDown, KeyEnd, KeyEnter, KeyHome, KeyLeft, KeyRight, KeyUp))
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.ByteString.Char8 as SBS8
@@ -184,31 +183,31 @@ makeFocused cursor style str myId =
     ctrlSpecialKey = E.KeyEventType E.ctrl
     ctrlCharKey = E.KeyEventType E.ctrl . E.charKey
     altCharKey = E.KeyEventType E.alt . E.charKey
-    homeKeys = [specialKey KeyHome, ctrlCharKey 'A']
-    endKeys = [specialKey KeyEnd, ctrlCharKey 'E']
+    homeKeys = [specialKey E.KeyHome, ctrlCharKey 'A']
+    endKeys = [specialKey E.KeyEnd, ctrlCharKey 'E']
 
     eventMap =
       mconcat . concat $ [
-        [ keys "Move left" [specialKey KeyLeft] $
+        [ keys "Move left" [specialKey E.KeyLeft] $
           moveRelative (-1)
         | cursor > 0 ],
 
-        [ keys "Move right" [specialKey KeyRight] $
+        [ keys "Move right" [specialKey E.KeyRight] $
           moveRelative 1
         | cursor < textLength ],
 
-        [ keys "Move word left" [ctrlSpecialKey KeyLeft]
+        [ keys "Move word left" [ctrlSpecialKey E.KeyLeft]
           backMoveWord
         | cursor > 0 ],
 
-        [ keys "Move word right" [ctrlSpecialKey KeyRight] moveWord
+        [ keys "Move word right" [ctrlSpecialKey E.KeyRight] moveWord
         | cursor < textLength ],
 
-        [ keys "Move up" [specialKey KeyUp] $
+        [ keys "Move up" [specialKey E.KeyUp] $
           moveRelative (- cursorX - 1 - length (drop cursorX prevLine))
         | cursorY > 0 ],
 
-        [ keys "Move down" [specialKey KeyDown] $
+        [ keys "Move down" [specialKey E.KeyDown] $
           moveRelative (length curLineAfter + 1 + min cursorX (length nextLine))
         | cursorY < lineCount - 1 ],
 
@@ -228,7 +227,7 @@ makeFocused cursor style str myId =
           moveAbsolute textLength
         | null curLineAfter && cursor < textLength ],
 
-        [ keys "Delete backwards" [specialKey KeyBackspace] $
+        [ keys "Delete backwards" [specialKey E.KeyBackspace] $
           backDelete 1
         | cursor > 0 ],
 
@@ -246,7 +245,7 @@ makeFocused cursor style str myId =
           swapLetters
         | cursor > 0 && textLength >= 2 ],
 
-        [ keys "Delete forward" [specialKey KeyDel] $
+        [ keys "Delete forward" [specialKey E.KeyDel] $
           delete 1
         | cursor < textLength ],
 
@@ -268,7 +267,7 @@ makeFocused cursor style str myId =
 
         [ E.singleton E.CharEventType "Insert character" (insert . (: []) . fromJust . E.keyEventChar) ],
 
-        [ keys "Insert Newline" [specialKey KeyEnter] (insert "\n") ],
+        [ keys "Insert Newline" [specialKey E.KeyEnter] (insert "\n") ],
 
         [ keys "Insert Space" [E.SpaceKeyEventType E.noMods] (insert " ") ]
 

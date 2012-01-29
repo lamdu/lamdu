@@ -10,7 +10,7 @@ module Editor.Config(
 
     -- actionKeys,
 
-    delKeys, callWithArgumentKey, giveAsArgumentKey, addNextArgumentKey,
+    delKeys, callWithArgumentKeys, giveAsArgumentKeys, addNextArgumentKeys,
 
     -- moveToParentKeys,
 
@@ -46,9 +46,9 @@ delParamKeys      = [alt 'o']
 delBranchKeys     = [alt 'o']
 
 delKeys           = [simple E.KeyBackspace, simple E.KeyDel]
-giveAsArgumentKey = [simple (E.charKey 'a')]
-callWithArgumentKey = [simple (E.charKey 'c')]
-addNextArgumentKey = [E.SpaceKeyEventType E.noMods]
+giveAsArgumentKeys = [simple (E.charKey 'a')]
+callWithArgumentKeys = [simple (E.charKey 'c')]
+addNextArgumentKeys = [E.SpaceKeyEventType E.noMods]
 
 exprFocusDelegatorKeys = FocusDelegator.Keys {
   FocusDelegator.startDelegatingKey = group E.shift E.KeyRight,

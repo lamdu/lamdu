@@ -68,7 +68,7 @@ rawEventLoop eventsHandler = do
 
   let
     addEvent event = atomicModifyIORef_ eventsVar (event:)
-    addKeyEvent char isPress = addEvent $ RawKeyEvent (isPressFromBool isPress) char
+    addKeyEvent key isPress = addEvent $ RawKeyEvent (isPressFromBool isPress) key
     charEventHandler char isPress
       | '\57344' <= char && char <= '\63743' = return () -- Range for "key" characters (keys for left key, right key, etc.)
       | otherwise = addEvent $ RawCharEvent (isPressFromBool isPress) char
