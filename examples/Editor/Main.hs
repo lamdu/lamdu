@@ -185,7 +185,7 @@ makeWordEdit = (fmap . fmap . liftM . Widget.atEventMap) removeWordSeparators ma
   where
     removeWordSeparators = foldr (.) id $ map EventMap.delete [newlineKey, newwordKey]
     newlineKey = EventMap.KeyEventType EventMap.noMods EventMap.KeyEnter
-    newwordKey = EventMap.KeyEventType EventMap.noMods EventMap.KeySpace
+    newwordKey = EventMap.SpaceKeyEventType EventMap.noMods
 
 ------
 
