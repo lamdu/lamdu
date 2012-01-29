@@ -130,30 +130,30 @@ wrapDelegatedWithKeys ::
   FocusDelegator.IsDelegating ->
   (Anim.AnimId -> TWidget t m) -> Anim.AnimId -> TWidget t m
 wrapDelegatedWithKeys keys entryState f animId = do
-  let innerAnimId = AnimIds.delegating animId
-  innerWidget <- f innerAnimId
   let
-    cursorSelf = makeDelegator $ Just FocusDelegator.NotDelegating
-    cursorNotSelf
-      | Widget.isFocused innerWidget =
-        makeDelegator $ Just FocusDelegator.Delegating
-      | otherwise = makeDelegator Nothing
-
+    innerAnimId = AnimIds.delegating animId
     selfAnimId = AnimIds.notDelegating animId
-
-    makeDelegator delegateState =
-      (Widget.atIsFocused . const) (isJust delegateState) $
-      FocusDelegator.make entryState delegateState
-      selfAnimId keys
-      AnimIds.backgroundCursorId innerWidget
     destAnimId =
       case entryState of
         FocusDelegator.NotDelegating -> selfAnimId
         FocusDelegator.Delegating -> innerAnimId
-  assignCursor animId destAnimId .
+  assignCursor animId destAnimId $ do
+    innerWidget <- f innerAnimId
+    let
+      cursorSelf = makeDelegator $ Just FocusDelegator.NotDelegating
+      cursorNotSelf
+        | Widget.isFocused innerWidget =
+          makeDelegator $ Just FocusDelegator.Delegating
+        | otherwise = makeDelegator Nothing
+
+      makeDelegator delegateState =
+        (Widget.atIsFocused . const) (isJust delegateState) $
+        FocusDelegator.make entryState delegateState
+        selfAnimId keys
+        AnimIds.backgroundCursorId innerWidget
     liftM (maybe cursorNotSelf (const cursorSelf) .
-           Anim.subId selfAnimId) $
-    readCursor
+             Anim.subId selfAnimId) $
+      readCursor
 
 wrapDelegated ::
   Monad m => FocusDelegator.IsDelegating ->
