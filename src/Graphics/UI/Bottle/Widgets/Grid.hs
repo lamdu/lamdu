@@ -7,7 +7,7 @@ import Control.Monad (msum, (>=>))
 import Data.List (foldl', transpose, find, maximumBy)
 import Data.List.Utils (index, enumerate2d)
 import Data.Maybe (isJust, fromMaybe, mapMaybe, catMaybes)
-import Data.Monoid (Monoid(..))
+import Data.Monoid (mempty, mconcat)
 import Data.Ord (comparing)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Widget (Widget(..))
@@ -33,25 +33,31 @@ fromAbove = Vector2 0 (-1)
 fromBelow :: Vector2 Int
 fromBelow = Vector2 0 1
 
-mkNavEventmap :: [[Widget.MEnter f]] -> Cursor -> Widget.EventHandlers f
-mkNavEventmap mEnterChildren cursor@(Vector2 cursorX cursorY) =
-  mconcat . catMaybes $ [
-    movement "left"      GLFW.KeyLeft     fromRight  leftOfCursor,
-    movement "right"     GLFW.KeyRight    fromLeft   rightOfCursor,
-    movement "up"        GLFW.KeyUp       fromBelow  aboveCursor,
-    movement "down"      GLFW.KeyDown     fromAbove  belowCursor,
-    movement "top"       GLFW.KeyPageup   fromAbove  topCursor,
-    movement "bottom"    GLFW.KeyPagedown fromBelow  bottomCursor,
-    movement "leftmost"  GLFW.KeyHome     fromRight  leftMostCursor,
-    movement "rightmost" GLFW.KeyEnd      fromLeft   rightMostCursor
-    ]
+mkNavEventmap :: [[Widget.MEnter f]] -> Cursor -> (Widget.EventHandlers f, Widget.EventHandlers f)
+mkNavEventmap mEnterChildren cursor@(Vector2 cursorX cursorY) = (weakMap, strongMap)
   where
+    weakMap = mconcat . catMaybes $ [
+      movement "left"       (k GLFW.KeyLeft)  fromRight  leftOfCursor,
+      movement "right"      (k GLFW.KeyRight) fromLeft   rightOfCursor,
+      movement "up"         (k GLFW.KeyUp)    fromBelow  aboveCursor,
+      movement "down"       (k GLFW.KeyDown)  fromAbove  belowCursor,
+      movement "more left"  (k GLFW.KeyHome)  fromLeft   leftMostCursor,
+      movement "more right" (k GLFW.KeyEnd)   fromRight  rightMostCursor
+      ]
+    strongMap = mconcat . catMaybes $ [
+      movement "top"       (k GLFW.KeyPageup)   fromAbove  topCursor,
+      movement "bottom"    (k GLFW.KeyPagedown) fromBelow  bottomCursor,
+      movement "leftmost"  (ctrlK GLFW.KeyHome) fromLeft   leftMostCursor,
+      movement "rightmost" (ctrlK GLFW.KeyEnd)  fromRight  rightMostCursor
+      ]
+    k = EventMap.KeyEventType EventMap.noMods
+    ctrlK = EventMap.KeyEventType EventMap.ctrl
     size = length2d mEnterChildren
     Vector2 cappedX cappedY = capCursor size cursor
-    movement dirName key direction =
+    movement dirName event direction =
       fmap
         (EventMap.fromEventType
-         (EventMap.KeyEventType EventMap.noMods key)
+         event
          ("Move " ++ dirName) .
          ($ Just direction)) .
       msum
@@ -99,8 +105,9 @@ makeHelper combineEnters children =
       where
         mEnterss = (map . map) Widget.uioMaybeEnter userIOss
         makeEventMap cursor =
-          chosenEventmap cursor `mappend`
-          mkNavEventmap mEnterss cursor
+          mconcat [strongMap, chosenEventmap cursor, weakMap]
+          where
+            (weakMap, strongMap) = mkNavEventmap mEnterss cursor
         chosenEventmap = maybe mempty Widget.uioEventMap . mChosenUserIO
         mChosenUserIO (Vector2 x y) = index y userIOss >>= index x
 
