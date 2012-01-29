@@ -270,7 +270,7 @@ makeExpressionEdit isArgument expressionPtr = do
     Data.ExpressionApply (Data.Apply funcI argI) ->
       (liftM . Widget.weakerEvents)
         (Widget.actionEventMapMovesCursor Config.addNextArgumentKey "Add another argument" mkCallWithArg) .
-      wrap exprKeys FocusDelegator.Delegating $ \animId -> do
+      wrap exprKeys FocusDelegator.Delegating $ \animId -> assignCursor animId (AnimIds.fromIRef argI) $ do
         let label str = makeTextView str $ Anim.joinId animId [pack str]
         before <- label "("
         after <- label ")"
