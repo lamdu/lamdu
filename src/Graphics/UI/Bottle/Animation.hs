@@ -126,7 +126,7 @@ relocateSubRect srcSubRect srcSuperRect dstSuperRect =
     rectSize = sizeRatio * rectSize srcSubRect
   }
   where
-    sizeRatio = rectSize dstSuperRect / rectSize srcSuperRect
+    sizeRatio = rectSize dstSuperRect / fmap (max 1) (rectSize srcSuperRect)
 
 isVirtuallySame :: Frame -> Frame -> Bool
 isVirtuallySame (Frame a) (Frame b) =
