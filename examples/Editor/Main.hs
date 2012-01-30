@@ -1,13 +1,10 @@
 {-# OPTIONS -O2 -Wall #-}
-{-# LANGUAGE FlexibleInstances, Rank2Types,
-             OverloadedStrings, UndecidableInstances,
-             GeneralizedNewtypeDeriving, TemplateHaskell #-}
+{-# LANGUAGE FlexibleInstances, UndecidableInstances, OverloadedStrings, TemplateHaskell #-}
 
 module Main(main) where
 
 import Control.Arrow (first)
 import Control.Monad (when, liftM, unless)
-import Control.Monad.Trans.Class (lift)
 import Data.ByteString.Char8 (pack)
 import Data.List (findIndex, elemIndex, intersperse, delete)
 import Data.List.Utils (enumerate, nth, removeAt)
@@ -19,11 +16,10 @@ import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (DBTag, ViewTag)
+import Editor.CTransaction (CTransaction, runCTransaction, readCursor, readTextStyle, transaction, getP, assignCursor, atEmptyStr, TWidget)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Sized (Sized)
 import Graphics.UI.Bottle.Widget (Widget)
-import qualified Control.Monad.Trans.Reader as Reader
-import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Store.Db as Db
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Rev.Branch as Branch
@@ -45,36 +41,6 @@ import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified System.Info
-
-data CTransactionEnv = CTransactionEnv {
-  envCursor :: Widget.Cursor,
-  envTextStyle :: TextEdit.Style
-  }
-AtFieldTH.make ''CTransactionEnv
-
-newtype CTransaction t m a = CTransaction {
-  unCTransaction :: Reader.ReaderT CTransactionEnv (Transaction t m) a
-  }
-  deriving (Monad)
-AtFieldTH.make ''CTransaction
-
-runCTransaction :: Widget.Cursor -> TextEdit.Style -> CTransaction t m a -> Transaction t m a
-runCTransaction cursor style =
-  (`Reader.runReaderT` CTransactionEnv cursor style) . unCTransaction
-
-readCursor :: Monad m => CTransaction t m Widget.Cursor
-readCursor = CTransaction (Reader.asks envCursor)
-
-readTextStyle :: Monad m => CTransaction t m TextEdit.Style
-readTextStyle = CTransaction (Reader.asks envTextStyle)
-
-transaction :: Monad m => Transaction t m a -> CTransaction t m a
-transaction = CTransaction . lift
-
-getP :: Monad m => Property (Transaction t m) a -> CTransaction t m a
-getP = transaction . Property.get
-
-type TWidget t m = CTransaction t m (Widget (Transaction t m))
 
 class (Monad m, Functor m) => MonadF m
 instance (Monad m, Functor m) => MonadF m
@@ -117,14 +83,6 @@ makeChoice selectionAnimId curChoiceRef orientation children = do
     updateCurChoice (i, focusable) =
       Widget.atEvents (Property.set curChoiceRef i >>) focusable
     selectedColor = Draw.Color 0 0.5 0 1
-
-assignCursor :: Widget.Cursor -> Widget.Cursor -> CTransaction t m a -> CTransaction t m a
-assignCursor src dest =
-  (atCTransaction . Reader.withReaderT . atEnvCursor) replace
-  where
-    replace cursor
-      | cursor == src = dest
-      | otherwise = cursor
 
 -- TODO: This logic belongs in the FocusDelegator itself
 wrapDelegatedWithKeys ::
@@ -204,9 +162,6 @@ delParameter ::
 delParameter definitionRef paramI =
   Property.pureModify definitionRef . Data.atDefParameters $
     delete paramI
-
-atEmptyStr :: (String -> String) -> TWidget t m -> TWidget t m
-atEmptyStr = atCTransaction . Reader.withReaderT . atEnvTextStyle . TextEdit.atSEmptyString
 
 makeNameEdit :: Monad m => String -> IRef a -> Anim.AnimId -> TWidget t m
 makeNameEdit emptyStr iref =

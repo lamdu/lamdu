@@ -92,7 +92,8 @@ Executable Editor
                        bottle
   Other-Modules:       Editor.Data,
                        Editor.Anchors,
-                       Editor.Config
+                       Editor.Config,
+                       Editor.CTransaction
   ghc-options:         -O2 -Wall
   main-is:             Editor/Main.hs
   ghc-prof-options:    -prof -auto-all
