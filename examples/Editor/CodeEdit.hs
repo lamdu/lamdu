@@ -26,7 +26,7 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
-    
+
 hboxSpaced :: [Widget f] -> Widget f
 hboxSpaced = BWidgets.hbox . intersperse spaceWidget
 
