@@ -6,7 +6,7 @@ module Main(main) where
 import Control.Arrow (first)
 import Control.Monad (when, liftM, unless)
 import Data.ByteString.Char8 (pack)
-import Data.List (findIndex, elemIndex, intersperse, delete)
+import Data.List (findIndex, elemIndex, intersperse)
 import Data.List.Utils (enumerate, nth, removeAt)
 import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid(Monoid(..))
@@ -147,22 +147,6 @@ makeWordEdit = (fmap . fmap . liftM . Widget.atEventMap) removeWordSeparators ma
 
 ------
 
-addParameter ::
-  Monad m => Transaction.Property ViewTag m Data.Definition ->
-  Transaction ViewTag m (IRef Data.Parameter)
-addParameter definitionRef = do
-  newParamI <- Transaction.newIRef Data.Parameter
-  Property.pureModify definitionRef . Data.atDefParameters $
-    (++ [newParamI])
-  return newParamI
-
-delParameter ::
-  Monad m => Transaction.Property ViewTag m Data.Definition ->
-  IRef Data.Parameter -> Transaction ViewTag m ()
-delParameter definitionRef paramI =
-  Property.pureModify definitionRef . Data.atDefParameters $
-    delete paramI
-
 makeNameEdit :: Monad m => String -> IRef a -> Anim.AnimId -> TWidget t m
 makeNameEdit emptyStr iref =
   (atEmptyStr . const) emptyStr . makeWordEdit (Anchors.aNameRef iref)
@@ -281,11 +265,11 @@ makeDefinitionEdit definitionI = do
     paramEventMap paramI =
       Widget.actionEventMapMovesCursor Config.delParamKeys "Delete Parameter" .
       (liftM . const) animId $
-      delParameter definitionRef paramI
+      Data.delParameter definitionRef paramI
     eventMap =
       Widget.actionEventMapMovesCursor Config.addParamKeys "Add Parameter" .
       liftM (AnimIds.delegating . AnimIds.fromIRef) $
-      addParameter definitionRef
+      Data.addParameter definitionRef
     nameEditAnimId = Anim.joinId animId ["name"]
     animId = AnimIds.fromIRef definitionI
 
