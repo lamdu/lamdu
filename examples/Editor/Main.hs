@@ -5,6 +5,7 @@
 
 module Main(main) where
 
+import Control.Arrow (first)
 import Control.Monad (when, liftM, unless)
 import Control.Monad.Trans.Class (lift)
 import Data.ByteString.Char8 (pack)
@@ -117,7 +118,7 @@ makeChoice selectionAnimId curChoiceRef orientation children = do
       Widget.atEvents (Property.set curChoiceRef i >>) focusable
     selectedColor = Draw.Color 0 0.5 0 1
 
-assignCursor :: Widget.Cursor -> Widget.Cursor -> TWidget t m -> TWidget t m
+assignCursor :: Widget.Cursor -> Widget.Cursor -> CTransaction t m a -> CTransaction t m a
 assignCursor src dest =
   (atCTransaction . Reader.withReaderT . atEnvCursor) replace
   where
@@ -129,8 +130,10 @@ assignCursor src dest =
 wrapDelegatedWithKeys ::
   Monad m => FocusDelegator.Keys ->
   FocusDelegator.IsDelegating ->
-  (Anim.AnimId -> TWidget t m) -> Anim.AnimId -> TWidget t m
-wrapDelegatedWithKeys keys entryState f animId = do
+  (Anim.AnimId -> CTransaction t m a) ->
+  ((Widget (Transaction t m) -> Widget (Transaction t m)) -> a -> r) ->
+  Anim.AnimId -> CTransaction t m r
+wrapDelegatedWithKeys keys entryState mkResult atWidget animId = do
   let
     innerAnimId = AnimIds.delegating animId
     selfAnimId = AnimIds.notDelegating animId
@@ -139,27 +142,24 @@ wrapDelegatedWithKeys keys entryState f animId = do
         FocusDelegator.NotDelegating -> selfAnimId
         FocusDelegator.Delegating -> innerAnimId
   assignCursor animId destAnimId $ do
-    innerWidget <- f innerAnimId
+    innerResult <- mkResult innerAnimId
+    cursor <- readCursor
     let
-      cursorSelf = makeDelegator $ Just FocusDelegator.NotDelegating
-      cursorNotSelf
-        | Widget.isFocused innerWidget =
-          makeDelegator $ Just FocusDelegator.Delegating
-        | otherwise = makeDelegator Nothing
-
+      cursorSelf = Just FocusDelegator.NotDelegating
+      cursorNotSelf innerWidget
+        | Widget.isFocused innerWidget = Just FocusDelegator.Delegating
+        | otherwise = Nothing
       makeDelegator delegateState =
-        (Widget.atIsFocused . const) (isJust delegateState) $
-        FocusDelegator.make entryState delegateState
-        selfAnimId keys
-        AnimIds.backgroundCursorId innerWidget
-    liftM (maybe cursorNotSelf (const cursorSelf) .
-             Anim.subId selfAnimId) $
-      readCursor
+        (Widget.atIsFocused . const) (isJust delegateState) .
+        FocusDelegator.make entryState delegateState selfAnimId keys AnimIds.backgroundCursorId
+      onWidget innerWidget =
+        (`makeDelegator` innerWidget) . maybe (cursorNotSelf innerWidget) (const cursorSelf) . Anim.subId selfAnimId $ cursor
+    return $ atWidget onWidget innerResult
 
 wrapDelegated ::
   Monad m => FocusDelegator.IsDelegating ->
   (Anim.AnimId -> TWidget t m) -> Anim.AnimId -> TWidget t m
-wrapDelegated = wrapDelegatedWithKeys FocusDelegator.defaultKeys
+wrapDelegated entryState f = wrapDelegatedWithKeys FocusDelegator.defaultKeys entryState f id
 
 makeTextEdit ::
   Monad m =>
@@ -247,7 +247,9 @@ callWithArg expressionPtr = do
   Property.set expressionPtr =<< (Transaction.newIRef . Data.ExpressionApply) (Data.Apply expressionI argI)
   return argI
 
-makeExpressionEdit :: MonadF m => Bool -> Property (Transaction ViewTag m) (IRef Data.Expression) -> TWidget ViewTag m
+makeExpressionEdit :: MonadF m =>
+  Bool -> Property (Transaction ViewTag m) (IRef Data.Expression) ->
+  CTransaction ViewTag m (Widget (Transaction ViewTag m), Anim.AnimId)
 makeExpressionEdit isArgument expressionPtr = do
   expressionI <- getP expressionPtr
   let
@@ -263,17 +265,15 @@ makeExpressionEdit isArgument expressionPtr = do
         Config.callWithArgumentKeys "Call with argument" $
         mkCallWithArg expressionPtr
       ]
+    weakerEvents = liftM . first . Widget.weakerEvents
     wrap keys entryState f =
       (if isArgument then id else mkCallWithArgEvent) .
-      (liftM . Widget.weakerEvents) eventMap .
-      wrapDelegatedWithKeys keys entryState f $
+      weakerEvents eventMap .
+      wrapDelegatedWithKeys keys entryState f first $
       AnimIds.fromIRef expressionI
-    mkDelEvent =
-      liftM . Widget.weakerEvents .
-      Widget.actionEventMapMovesCursor Config.delKeys "Delete" . setExpr
+    mkDelEvent = weakerEvents . Widget.actionEventMapMovesCursor Config.delKeys "Delete" . setExpr
     mkCallWithArgEvent =
-      liftM . Widget.weakerEvents .
-      Widget.actionEventMapMovesCursor Config.addNextArgumentKeys "Add another argument" $
+      weakerEvents . Widget.actionEventMapMovesCursor Config.addNextArgumentKeys "Add another argument" $
       mkCallWithArg expressionPtr
     setExpr newExprI = do
       Property.set expressionPtr newExprI
@@ -282,22 +282,24 @@ makeExpressionEdit isArgument expressionPtr = do
   case expr of
     Data.ExpressionGetVariable (Data.GetVariable nameI) ->
       wrap FocusDelegator.defaultKeys FocusDelegator.NotDelegating .
+        (fmap . liftM) (flip (,) (AnimIds.fromIRef expressionI)) .
         makeWordEdit $ Transaction.fromIRef nameI
     Data.ExpressionApply (Data.Apply funcI argI) ->
       wrap exprKeys FocusDelegator.Delegating $ \animId ->
         assignCursor animId (AnimIds.fromIRef argI) $ do
-          let label str = makeTextView str $ Anim.joinId animId [pack str]
-          before <- label "("
-          after <- label ")"
           let
             funcIPtr =
               Property (return funcI) $ Property.set expressionRef . Data.ExpressionApply . (`Data.Apply` argI)
             argIPtr =
               Property (return argI) $ Property.set expressionRef . Data.ExpressionApply . (funcI `Data.Apply`)
-          funcEdit <- mkDelEvent argI $ makeExpressionEdit False funcIPtr
-          argEdit <- mkCallWithArgEvent . mkDelEvent funcI $ makeExpressionEdit True argIPtr
-          return . hbox $ concat
-            [[before | isArgument], [funcEdit], [spaceWidget], [argEdit], [after | isArgument]]
+          (funcEdit, funcAnimId) <- mkDelEvent argI $ makeExpressionEdit False funcIPtr
+          (argEdit, _) <- mkCallWithArgEvent . mkDelEvent funcI $ makeExpressionEdit True argIPtr
+          let label str = makeTextView str $ Anim.joinId funcAnimId [pack str]
+          before <- label "("
+          after <- label ")"
+          return
+            ((hbox . concat) [[before | isArgument], [funcEdit], [spaceWidget], [argEdit], [after | isArgument]]
+            ,funcAnimId)
 
 hboxSpaced :: [Widget f] -> Widget f
 hboxSpaced = hbox . intersperse spaceWidget
@@ -309,7 +311,7 @@ makeDefinitionEdit definitionI = do
     assignCursor animId nameEditAnimId $
     makeNameEdit "<unnamed>" definitionI nameEditAnimId
   equals <- makeTextView "=" $ Anim.joinId animId ["equals"]
-  expressionEdit <- makeExpressionEdit False bodyRef
+  (expressionEdit, _) <- makeExpressionEdit False bodyRef
   paramsEdits <- mapM makeParamEdit $ enumerate params
   return .
     Widget.strongerEvents eventMap . hboxSpaced $
