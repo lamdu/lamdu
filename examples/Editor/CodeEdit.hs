@@ -7,11 +7,12 @@ import Control.Monad(liftM)
 import Data.ByteString.Char8 (pack)
 import Data.List(intersperse)
 import Data.List.Utils(enumerate)
+import Data.Maybe(isJust)
 import Data.Monoid(Monoid(..))
 import Data.Store.IRef (IRef)
 import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
-import Editor.CTransaction (CTransaction, getP, assignCursor, TWidget)
+import Editor.CTransaction (CTransaction, getP, assignCursor, TWidget, readCursor)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Sized (Sized)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -39,8 +40,18 @@ spaceWidget = Widget.liftView spaceView
 
 makeHoleEdit :: MonadF m => Data.HoleState -> IRef Data.Expression -> TWidget t m
 makeHoleEdit curState expressionI =
-  BWidgets.makeTextEdit stateProp (AnimIds.fromIRef expressionI)
+  assignCursor myId searchTermId $ do
+    cursor <- readCursor
+    let isActive = isJust $ Anim.subId myId cursor
+    if isActive
+      then liftM BWidgets.vbox $ sequence
+        [BWidgets.makeTextEdit stateProp searchTermId
+        ,BWidgets.makeFocusableTextView "<TODO: results>" resultsId]
+      else BWidgets.makeFocusableTextView ('<' : Data.holeSearchTerm curState ++ ">") searchTermId
   where
+    searchTermId = Anim.joinId myId ["search term"]
+    resultsId = Anim.joinId myId ["search results"]
+    myId = AnimIds.fromIRef expressionI
     stateProp =
       Property.Property {
         Property.get = return $ Data.holeSearchTerm curState,
@@ -55,8 +66,8 @@ makeExpressionEdit isArgument expressionPtr = do
   let
     expressionRef = Transaction.fromIRef expressionI
     exprKeys = Config.exprFocusDelegatorKeys
-    mkCallWithArg = fmap (AnimIds.delegating . AnimIds.fromIRef) . DataOps.callWithArg
-    mkGiveAsArg = fmap (AnimIds.delegating . AnimIds.fromIRef) $ DataOps.giveAsArg expressionPtr
+    mkCallWithArg = fmap AnimIds.fromIRef . DataOps.callWithArg
+    mkGiveAsArg = fmap AnimIds.fromIRef $ DataOps.giveAsArg expressionPtr
     eventMap = mconcat
       [ Widget.actionEventMapMovesCursor
         Config.giveAsArgumentKeys "Give as argument"
