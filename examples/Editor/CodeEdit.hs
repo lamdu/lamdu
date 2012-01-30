@@ -16,6 +16,7 @@ import Editor.CTransaction (CTransaction, getP, assignCursor, TWidget, readCurso
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Sized (Sized)
 import Graphics.UI.Bottle.Widget (Widget)
+import qualified Data.ByteString.Char8 as SBS8
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
@@ -40,14 +41,22 @@ spaceWidget = Widget.liftView spaceView
 
 makeActiveHoleEdit :: MonadF m => Data.HoleState -> IRef Data.Expression -> TWidget t m
 makeActiveHoleEdit curState expressionI =
-  assignCursor myId searchTermId $
-  liftM BWidgets.vbox $ sequence
-    [BWidgets.makeTextEdit stateProp searchTermId
-    ,BWidgets.makeFocusableTextView "<TODO: results>" resultsId]
+  assignCursor myId searchTermId $ do
+    searchTermWidget <- BWidgets.makeTextEdit stateProp searchTermId
+    resultWidgets <- mapM makeResultWidget [0..(1::Int)]
+    return . BWidgets.vbox $ searchTermWidget : resultWidgets
   where
     myId = AnimIds.fromIRef expressionI
     searchTermId = Anim.joinId myId ["search term"]
-    resultsId = Anim.joinId myId ["search results"]
+    makeResultWidget i =
+      (liftM . Widget.strongerEvents)
+        (Widget.actionEventMapMovesCursor Config.pickResultKeys "Pick this search result" (pickResult i)) $
+      BWidgets.makeFocusableTextView ("TODO:" ++ show i) (Anim.joinId myId ["search results", SBS8.pack (show i)])
+    pickResult i = do
+      newVar <- Transaction.newIRef Data.Variable -- temporary..
+      Property.set (Anchors.aNameRef newVar) ("TODO:" ++ show i)
+      Transaction.writeIRef expressionI $ Data.ExpressionGetVariable newVar
+      return myId
     stateProp =
       Property.Property {
         Property.get = return $ Data.holeSearchTerm curState,
