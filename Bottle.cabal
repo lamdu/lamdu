@@ -97,7 +97,8 @@ Executable Editor
                        Editor.CTransaction,
                        Editor.MonadF,
                        Editor.BottleWidgets,
-                       Editor.CodeEdit
+                       Editor.CodeEdit,
+                       Editor.BranchGUI
   ghc-options:         -O2 -Wall
   main-is:             Editor/Main.hs
   ghc-prof-options:    -prof -auto-all

@@ -8,7 +8,8 @@ module Editor.Anchors(
     initDB,
     dbStore, DBTag,
     viewStore, ViewTag,
-    aName, aNameRef)
+    aName, aNameRef,
+    maybeUpdateCursor)
 where
 
 import Control.Monad (unless, (<=<))
@@ -24,7 +25,7 @@ import Data.Store.Rev.Change (Key, Value)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction, Store(..))
 import Data.Store.Property(Property(..))
-import Graphics.UI.Bottle.Widget(Cursor)
+import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.Db as Db
 import qualified Data.Store.IRef as IRef
@@ -62,12 +63,12 @@ currentBranchIRef = IRef.anchor "currentBranch"
 currentBranch :: Monad m => Transaction.Property DBTag m Branch
 currentBranch = Transaction.fromIRef currentBranchIRef
 
-cursorIRef :: IRef Cursor
+cursorIRef :: IRef Widget.Cursor
 cursorIRef = IRef.anchor "cursor"
 
 -- Cursor is untagged because it is both saved globally and per-revision.
 -- Cursor movement without any revisioned changes are not saved per-revision.
-cursor :: Monad m => Transaction.Property t m Cursor
+cursor :: Monad m => Transaction.Property t m Widget.Cursor
 cursor = Transaction.fromIRef cursorIRef
 
 -- Initialize an IRef if it does not already exist.
@@ -145,3 +146,6 @@ aName iref =
 
 aNameRef :: Monad m => IRef a -> Property (Transaction t m) String
 aNameRef = Property.pureCompose (fromMaybe "") Just . aName
+
+maybeUpdateCursor :: Monad m => Widget.EventResult -> Transaction t m ()
+maybeUpdateCursor = maybe (return ()) (Property.set cursor) . Widget.eCursor
