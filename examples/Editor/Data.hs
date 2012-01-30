@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Editor.Data (
   Definition(..), atDefParameters, atDefBody,
-  Parameter(..),
+  Variable(..),
   GetVariable(..), atGetVarName,
   Apply(..), atApplyFunc, atApplyArg,
   Expression(..))
@@ -16,7 +16,7 @@ import Data.DeriveTH(derive)
 import Data.Store.IRef (IRef)
 import qualified Data.AtFieldTH as AtFieldTH
 
-data Parameter = Parameter
+data Variable = Variable
   deriving (Eq, Ord, Read, Show)
 
 data Apply = Apply {
@@ -34,7 +34,7 @@ data Expression = ExpressionApply Apply | ExpressionGetVariable GetVariable
   deriving (Eq, Ord, Read, Show)
 
 data Definition = Definition {
-  defParameters :: [IRef Parameter],
+  defParameters :: [IRef Variable],
   defBody :: IRef Expression
   }
   deriving (Eq, Ord, Read, Show)
@@ -43,7 +43,7 @@ derive makeBinary ''Definition
 derive makeBinary ''Apply
 derive makeBinary ''GetVariable
 derive makeBinary ''Expression
-derive makeBinary ''Parameter
+derive makeBinary ''Variable
 AtFieldTH.make ''Definition
 AtFieldTH.make ''Apply
 AtFieldTH.make ''GetVariable

@@ -11,16 +11,16 @@ import qualified Editor.Data as Data
 
 addParameter ::
   Monad m => Transaction.Property t m Data.Definition ->
-  Transaction t m (IRef Data.Parameter)
+  Transaction t m (IRef Data.Variable)
 addParameter definitionRef = do
-  newParamI <- Transaction.newIRef Data.Parameter
+  newParamI <- Transaction.newIRef Data.Variable
   Property.pureModify definitionRef . Data.atDefParameters $
     (++ [newParamI])
   return newParamI
 
 delParameter ::
   Monad m => Transaction.Property t m Data.Definition ->
-  IRef Data.Parameter -> Transaction t m ()
+  IRef Data.Variable -> Transaction t m ()
 delParameter definitionRef paramI =
   Property.pureModify definitionRef . Data.atDefParameters $
     delete paramI
