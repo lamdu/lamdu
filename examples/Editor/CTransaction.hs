@@ -1,10 +1,11 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 {-# OPTIONS -Wall #-}
 module Editor.CTransaction(
-  CTransaction, runCTransaction, TWidget,
+  CTransaction, runCTransaction, runNestedCTransaction, TWidget,
   readCursor, readTextStyle, transaction, getP, assignCursor, atEmptyStr)
 where
 
+import Control.Monad (liftM)
 import Control.Monad.Trans.Class (lift)
 import Data.Store.Property(Property)
 import Data.Store.Transaction (Transaction)
@@ -12,6 +13,7 @@ import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Store.Property as Property
+import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 
@@ -32,6 +34,18 @@ type TWidget t m = CTransaction t m (Widget (Transaction t m))
 runCTransaction :: Widget.Cursor -> TextEdit.Style -> CTransaction t m a -> Transaction t m a
 runCTransaction cursor style =
   (`Reader.runReaderT` CTransactionEnv cursor style) . unCTransaction
+
+runNestedCTransaction ::
+  Monad m => Transaction.Store t0 (Transaction t1 m) ->
+  TWidget t0 (Transaction t1 m) -> TWidget t1 m
+runNestedCTransaction store act = do
+  cursor <- readCursor
+  style <- readTextStyle
+  widgetDownTransaction $ runCTransaction cursor style act
+  where
+    widgetDownTransaction =
+      transaction . Transaction.run store .
+      (liftM . Widget.atEvents) (Transaction.run store)
 
 readCursor :: Monad m => CTransaction t m Widget.Cursor
 readCursor = CTransaction (Reader.asks envCursor)

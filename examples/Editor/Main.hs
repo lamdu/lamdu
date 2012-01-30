@@ -1,14 +1,13 @@
 {-# OPTIONS -O2 -Wall #-}
-{-# LANGUAGE FlexibleInstances, UndecidableInstances, OverloadedStrings, TemplateHaskell #-}
-
+{-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
 module Main(main) where
 
 import Control.Arrow (first)
-import Control.Monad (when, liftM, unless)
+import Control.Monad (liftM, unless)
 import Data.ByteString.Char8 (pack)
 import Data.List (findIndex, elemIndex, intersperse)
-import Data.List.Utils (enumerate, nth, removeAt)
-import Data.Maybe (fromMaybe, isJust)
+import Data.List.Utils (enumerate, removeAt)
+import Data.Maybe (fromMaybe)
 import Data.Monoid(Monoid(..))
 import Data.Store.IRef (IRef)
 import Data.Store.Property (Property(Property))
@@ -16,7 +15,8 @@ import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (DBTag, ViewTag)
-import Editor.CTransaction (CTransaction, runCTransaction, readCursor, readTextStyle, transaction, getP, assignCursor, atEmptyStr, TWidget)
+import Editor.CTransaction (CTransaction, runCTransaction, runNestedCTransaction, transaction, getP, assignCursor, atEmptyStr, TWidget)
+import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Sized (Sized)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -28,11 +28,11 @@ import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.AnimIds as AnimIds
+import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
-import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
@@ -42,114 +42,9 @@ import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified System.Info
 
-class (Monad m, Functor m) => MonadF m
-instance (Monad m, Functor m) => MonadF m
-
-makeTextView :: MonadF m => String -> Anim.AnimId -> TWidget t m
-makeTextView text animId = do
-  style <- readTextStyle
-  return $
-    TextView.makeWidget (TextEdit.sTextViewStyle style) text animId
-
-_makeFocusableTextView :: MonadF m => String -> Anim.AnimId -> TWidget t m
-_makeFocusableTextView text animId = do
-  hasFocus <- liftM (animId ==) readCursor
-  textView <- makeTextView text animId
-  let
-    setBackground
-      | hasFocus = Widget.backgroundColor AnimIds.backgroundCursorId blue
-      | otherwise = id
-  return .
-    (Widget.atIsFocused . const) hasFocus . setBackground $
-    Widget.takesFocus (const (return animId)) textView
-  where
-    blue = Draw.Color 0 0 1 0.8
-
-makeChoice ::
-  (Monad m) =>
-  Anim.AnimId -> Transaction.Property t m Int -> Box.Orientation ->
-  [TWidget t m] -> TWidget t m
-makeChoice selectionAnimId curChoiceRef orientation children = do
-  curChoice <- getP curChoiceRef
-  focusables <- sequence children
-  let
-    widget =
-      Box.makeBiased orientation curChoice .
-      nth curChoice (Widget.backgroundColor selectionAnimId selectedColor) .
-      map updateCurChoice $
-      enumerate focusables
-  return widget
-  where
-    updateCurChoice (i, focusable) =
-      Widget.atEvents (Property.set curChoiceRef i >>) focusable
-    selectedColor = Draw.Color 0 0.5 0 1
-
--- TODO: This logic belongs in the FocusDelegator itself
-wrapDelegatedWithKeys ::
-  Monad m => FocusDelegator.Keys ->
-  FocusDelegator.IsDelegating ->
-  (Anim.AnimId -> CTransaction t m a) ->
-  ((Widget (Transaction t m) -> Widget (Transaction t m)) -> a -> r) ->
-  Anim.AnimId -> CTransaction t m r
-wrapDelegatedWithKeys keys entryState mkResult atWidget animId = do
-  let
-    innerAnimId = AnimIds.delegating animId
-    selfAnimId = AnimIds.notDelegating animId
-    destAnimId =
-      case entryState of
-        FocusDelegator.NotDelegating -> selfAnimId
-        FocusDelegator.Delegating -> innerAnimId
-  assignCursor animId destAnimId $ do
-    innerResult <- mkResult innerAnimId
-    cursor <- readCursor
-    let
-      cursorSelf = Just FocusDelegator.NotDelegating
-      cursorNotSelf innerWidget
-        | Widget.isFocused innerWidget = Just FocusDelegator.Delegating
-        | otherwise = Nothing
-      makeDelegator delegateState =
-        (Widget.atIsFocused . const) (isJust delegateState) .
-        FocusDelegator.make entryState delegateState selfAnimId keys AnimIds.backgroundCursorId
-      onWidget innerWidget =
-        (`makeDelegator` innerWidget) . maybe (cursorNotSelf innerWidget) (const cursorSelf) . Anim.subId selfAnimId $ cursor
-    return $ atWidget onWidget innerResult
-
-wrapDelegated ::
-  Monad m => FocusDelegator.IsDelegating ->
-  (Anim.AnimId -> TWidget t m) -> Anim.AnimId -> TWidget t m
-wrapDelegated entryState f = wrapDelegatedWithKeys FocusDelegator.defaultKeys entryState f id
-
-makeTextEdit ::
-  Monad m =>
-  Transaction.Property t m String ->
-  Anim.AnimId -> TWidget t m
-makeTextEdit textRef animId = do
-  text <- getP textRef
-  let
-    lifter (newText, eventRes) = do
-      when (newText /= text) $ Property.set textRef newText
-      return eventRes
-  cursor <- readCursor
-  style <- readTextStyle
-  return .
-    Widget.atEvents lifter $
-    TextEdit.make style cursor text animId
-
-makeWordEdit ::
-  Monad m =>
-  Transaction.Property t m String ->
-  Anim.AnimId -> TWidget t m
-makeWordEdit = (fmap . fmap . liftM . Widget.atEventMap) removeWordSeparators makeTextEdit
-  where
-    removeWordSeparators = foldr (.) id $ map EventMap.delete [newlineKey, newwordKey]
-    newlineKey = EventMap.KeyEventType EventMap.noMods EventMap.KeyEnter
-    newwordKey = EventMap.SpaceKeyEventType EventMap.noMods
-
-------
-
 makeNameEdit :: Monad m => String -> IRef a -> Anim.AnimId -> TWidget t m
 makeNameEdit emptyStr iref =
-  (atEmptyStr . const) emptyStr . makeWordEdit (Anchors.aNameRef iref)
+  (atEmptyStr . const) emptyStr . BWidgets.makeWordEdit (Anchors.aNameRef iref)
 
 spaceView :: Sized Anim.Frame
 spaceView = Spacer.makeHorizontal 20
@@ -208,7 +103,7 @@ makeExpressionEdit isArgument expressionPtr = do
     wrap keys entryState f =
       (if isArgument then id else mkCallWithArgEvent) .
       weakerEvents eventMap .
-      wrapDelegatedWithKeys keys entryState f first $
+      BWidgets.wrapDelegatedWithKeys keys entryState f first $
       AnimIds.fromIRef expressionI
     mkDelEvent = weakerEvents . Widget.actionEventMapMovesCursor Config.delKeys "Delete" . setExpr
     mkCallWithArgEvent =
@@ -222,7 +117,7 @@ makeExpressionEdit isArgument expressionPtr = do
     Data.ExpressionGetVariable (Data.GetVariable nameI) ->
       wrap FocusDelegator.defaultKeys FocusDelegator.NotDelegating .
         (fmap . liftM) (flip (,) (AnimIds.fromIRef expressionI)) .
-        makeWordEdit $ Transaction.fromIRef nameI
+        BWidgets.makeWordEdit $ Transaction.fromIRef nameI
     Data.ExpressionApply (Data.Apply funcI argI) ->
       wrap exprKeys FocusDelegator.Delegating $ \animId ->
         assignCursor animId (AnimIds.fromIRef argI) $ do
@@ -233,7 +128,7 @@ makeExpressionEdit isArgument expressionPtr = do
               Property (return argI) $ Property.set expressionRef . Data.ExpressionApply . (funcI `Data.Apply`)
           (funcEdit, funcAnimId) <- mkDelEvent argI $ makeExpressionEdit False funcIPtr
           (argEdit, _) <- mkCallWithArgEvent . mkDelEvent funcI $ makeExpressionEdit True argIPtr
-          let label str = makeTextView str $ Anim.joinId funcAnimId [pack str]
+          let label str = BWidgets.makeTextView str $ Anim.joinId funcAnimId [pack str]
           before <- label "("
           after <- label ")"
           return
@@ -249,7 +144,7 @@ makeDefinitionEdit definitionI = do
   nameEdit <-
     assignCursor animId nameEditAnimId $
     makeNameEdit "<unnamed>" definitionI nameEditAnimId
-  equals <- makeTextView "=" $ Anim.joinId animId ["equals"]
+  equals <- BWidgets.makeTextView "=" $ Anim.joinId animId ["equals"]
   (expressionEdit, _) <- makeExpressionEdit False bodyRef
   paramsEdits <- mapM makeParamEdit $ enumerate params
   return .
@@ -258,7 +153,7 @@ makeDefinitionEdit definitionI = do
   where
     makeParamEdit (i, paramI) =
       (liftM . Widget.strongerEvents) (paramEventMap paramI) .
-      wrapDelegated FocusDelegator.NotDelegating (makeNameEdit ("<unnamed param " ++ show i ++ ">") paramI) $
+      BWidgets.wrapDelegated FocusDelegator.NotDelegating (makeNameEdit ("<unnamed param " ++ show i ++ ">") paramI) $
       AnimIds.fromIRef paramI
     bodyRef = Property.composeLabel Data.defBody Data.atDefBody definitionRef
     definitionRef = Transaction.fromIRef definitionI
@@ -278,11 +173,8 @@ makeDefinitionEdit definitionI = do
 makeWidgetForView :: MonadF m => View -> TWidget DBTag m
 makeWidgetForView view = do
   versionData <- transaction $ Version.versionData =<< View.curVersion view
-  cursor <- readCursor
-  style <- readTextStyle
   focusable <-
-    widgetDownTransaction .
-    runCTransaction cursor style .
+    runNestedCTransaction store .
     (liftM . Widget.atEvents) (>>= applyAndReturn saveCursor) $
     makeDefinitionEdit Anchors.rootIRef
   let undoEventMap = maybe mempty makeUndoEventMap (Version.parent versionData)
@@ -291,9 +183,6 @@ makeWidgetForView view = do
     makeUndoEventMap = Widget.actionEventMapMovesCursor Config.undoKeys "Undo" . (>> fetchRevisionCursor) . View.move view
     fetchRevisionCursor = Transaction.run store $ Property.get Anchors.cursor
     store = Anchors.viewStore view
-    widgetDownTransaction =
-      transaction . Transaction.run store .
-      (liftM . Widget.atEvents) (Transaction.run store)
     saveCursor eventResult = do
       isEmpty <- Transaction.isEmpty
       unless isEmpty $ maybeUpdateCursor eventResult
@@ -352,11 +241,11 @@ makeRootWidget = do
   let
     branchIndexRef = branchSelectorProperty view $ map snd namedBranches
     makeBranchNameEdit textEditModelIRef =
-      wrapDelegated FocusDelegator.NotDelegating
-      (makeTextEdit (Transaction.fromIRef textEditModelIRef)) $
+      BWidgets.wrapDelegated FocusDelegator.NotDelegating
+      (BWidgets.makeTextEdit (Transaction.fromIRef textEditModelIRef)) $
       AnimIds.fromIRef textEditModelIRef
   branchSelector <-
-    makeChoice AnimIds.branchSelection branchIndexRef
+    BWidgets.makeChoice AnimIds.branchSelection branchIndexRef
     Box.vertical $ map (makeBranchNameEdit . fst) namedBranches
 
   let
