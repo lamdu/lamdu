@@ -37,6 +37,16 @@ spaceView = Spacer.makeHorizontal 20
 spaceWidget :: Widget f
 spaceWidget = Widget.liftView spaceView
 
+makeHoleEdit :: MonadF m => Data.HoleState -> IRef Data.Expression -> TWidget t m
+makeHoleEdit curState expressionI =
+  BWidgets.makeTextEdit stateProp (AnimIds.fromIRef expressionI)
+  where
+    stateProp =
+      Property.Property {
+        Property.get = return $ Data.holeSearchTerm curState,
+        Property.set = Transaction.writeIRef expressionI . Data.ExpressionHole . (`Data.atHoleSearchTerm` curState) . const
+      }
+
 makeExpressionEdit :: MonadF m =>
   Bool -> Property (Transaction t m) (IRef Data.Expression) ->
   CTransaction t m (Widget (Transaction t m), Anim.AnimId)
@@ -70,6 +80,9 @@ makeExpressionEdit isArgument expressionPtr = do
       return $ AnimIds.fromIRef newExprI
   expr <- getP expressionRef
   case expr of
+    Data.ExpressionHole holeState ->
+      liftM (flip (,) (AnimIds.fromIRef expressionI)) $
+      makeHoleEdit holeState expressionI
     Data.ExpressionGetVariable varI ->
       wrap FocusDelegator.defaultKeys FocusDelegator.NotDelegating .
         (fmap . liftM) (flip (,) (AnimIds.fromIRef expressionI)) .

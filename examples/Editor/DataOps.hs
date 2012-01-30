@@ -31,7 +31,7 @@ giveAsArg ::
   Transaction t m (IRef Data.Expression)
 giveAsArg expressionPtr = do
   expressionI <- Property.get expressionPtr
-  newFuncI <- Transaction.newIRef . Data.ExpressionGetVariable =<< Transaction.newIRef Data.Variable
+  newFuncI <- newHole
   Property.set expressionPtr =<< (Transaction.newIRef . Data.ExpressionApply) (Data.Apply newFuncI expressionI)
   return newFuncI
 
@@ -41,6 +41,13 @@ callWithArg ::
   Transaction t m (IRef Data.Expression)
 callWithArg expressionPtr = do
   expressionI <- Property.get expressionPtr
-  argI <- Transaction.newIRef . Data.ExpressionGetVariable =<< Transaction.newIRef Data.Variable
+  argI <- newHole
   Property.set expressionPtr =<< (Transaction.newIRef . Data.ExpressionApply) (Data.Apply expressionI argI)
   return argI
+
+newHole :: Monad m => Transaction t m (IRef Data.Expression)
+newHole =
+  Transaction.newIRef . Data.ExpressionHole $ Data.HoleState
+  { Data.holeSearchTerm = "",
+    Data.holeCachedSearchResults = []
+  }

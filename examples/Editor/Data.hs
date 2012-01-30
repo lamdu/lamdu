@@ -4,6 +4,7 @@ module Editor.Data (
   Definition(..), atDefParameters, atDefBody,
   Variable(..),
   Apply(..), atApplyFunc, atApplyArg,
+  HoleState(..), atHoleSearchTerm, atHoleCachedSearchResults,
   Expression(..))
 where
 
@@ -24,7 +25,13 @@ data Apply = Apply {
   }
   deriving (Eq, Ord, Read, Show)
 
-data Expression = ExpressionApply Apply | ExpressionGetVariable (IRef Variable)
+data HoleState = HoleState {
+  holeSearchTerm :: String,
+  holeCachedSearchResults :: [IRef Variable]
+  }
+  deriving (Eq, Ord, Read, Show)
+
+data Expression = ExpressionApply Apply | ExpressionGetVariable (IRef Variable) | ExpressionHole HoleState
   deriving (Eq, Ord, Read, Show)
 
 data Definition = Definition {
@@ -37,5 +44,7 @@ derive makeBinary ''Definition
 derive makeBinary ''Apply
 derive makeBinary ''Expression
 derive makeBinary ''Variable
+derive makeBinary ''HoleState
 AtFieldTH.make ''Definition
 AtFieldTH.make ''Apply
+AtFieldTH.make ''HoleState
