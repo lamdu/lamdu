@@ -3,7 +3,6 @@
 module Editor.Data (
   Definition(..), atDefParameters, atDefBody,
   Variable(..),
-  GetVariable(..), atGetVarName,
   Apply(..), atApplyFunc, atApplyArg,
   Expression(..))
 where
@@ -25,12 +24,7 @@ data Apply = Apply {
   }
   deriving (Eq, Ord, Read, Show)
 
-data GetVariable = GetVariable {
-  getVarName :: IRef String
-  }
-  deriving (Eq, Ord, Read, Show)
-
-data Expression = ExpressionApply Apply | ExpressionGetVariable GetVariable
+data Expression = ExpressionApply Apply | ExpressionGetVariable (IRef Variable)
   deriving (Eq, Ord, Read, Show)
 
 data Definition = Definition {
@@ -41,9 +35,7 @@ data Definition = Definition {
 
 derive makeBinary ''Definition
 derive makeBinary ''Apply
-derive makeBinary ''GetVariable
 derive makeBinary ''Expression
 derive makeBinary ''Variable
 AtFieldTH.make ''Definition
 AtFieldTH.make ''Apply
-AtFieldTH.make ''GetVariable

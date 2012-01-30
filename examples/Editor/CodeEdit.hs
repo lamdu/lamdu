@@ -17,6 +17,7 @@ import Graphics.UI.Bottle.Sized (Sized)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
+import qualified Editor.Anchors as Anchors
 import qualified Editor.AnimIds as AnimIds
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.Config as Config
@@ -69,10 +70,10 @@ makeExpressionEdit isArgument expressionPtr = do
       return $ AnimIds.fromIRef newExprI
   expr <- getP expressionRef
   case expr of
-    Data.ExpressionGetVariable (Data.GetVariable nameI) ->
+    Data.ExpressionGetVariable varI ->
       wrap FocusDelegator.defaultKeys FocusDelegator.NotDelegating .
         (fmap . liftM) (flip (,) (AnimIds.fromIRef expressionI)) .
-        BWidgets.makeWordEdit $ Transaction.fromIRef nameI
+        BWidgets.makeWordEdit $ Anchors.aNameRef varI
     Data.ExpressionApply (Data.Apply funcI argI) ->
       wrap exprKeys FocusDelegator.Delegating $ \animId ->
         assignCursor animId (AnimIds.fromIRef argI) $ do

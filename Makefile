@@ -1,2 +1,2 @@
 all:
-	cabal build
+	cabal build && ./dist/build/Editor/Editor

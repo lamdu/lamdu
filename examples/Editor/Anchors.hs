@@ -107,7 +107,10 @@ collectWrites newGuid =
   execWriterT . Transaction.run (writeCollectorStore newGuid)
 
 newGetVariable :: Monad m => String -> Transaction t m (IRef Data.Expression)
-newGetVariable = Transaction.newIRef . Data.ExpressionGetVariable . Data.GetVariable <=< Transaction.newIRef
+newGetVariable name = do
+  var <- Transaction.newIRef Data.Variable
+  Property.set (aNameRef var) name
+  Transaction.newIRef $ Data.ExpressionGetVariable var
 
 initDB :: Store DBTag IO -> IO ()
 initDB store =
