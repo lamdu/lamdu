@@ -3,18 +3,22 @@ module Editor.BottleWidgets(
   makeTextView, makeChoice,
   makeFocusableTextView,
   wrapDelegatedWithKeys, wrapDelegated,
-  makeTextEdit, makeWordEdit
+  makeTextEdit, makeWordEdit, makeNameEdit,
+  hbox, vbox
 ) where
 
 import Control.Monad (when, liftM)
 import Data.List.Utils (enumerate, nth)
 import Data.Maybe (isJust)
+import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
-import Editor.CTransaction (TWidget, CTransaction, readTextStyle, readCursor, getP, assignCursor)
+import Data.Vector.Vector2 (Vector2(..))
+import Editor.CTransaction (TWidget, CTransaction, readTextStyle, readCursor, getP, assignCursor, atEmptyStr)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
+import qualified Editor.Anchors as Anchors
 import qualified Editor.AnimIds as AnimIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -121,6 +125,20 @@ makeWordEdit ::
   Anim.AnimId -> TWidget t m
 makeWordEdit = (fmap . fmap . liftM . Widget.atEventMap) removeWordSeparators makeTextEdit
   where
-    removeWordSeparators = foldr (.) id $ map EventMap.delete [newlineKey, newwordKey]
+    compose = foldr (.) id
+    removeWordSeparators = compose $ map EventMap.delete [newlineKey, newwordKey]
     newlineKey = EventMap.KeyEventType EventMap.noMods EventMap.KeyEnter
     newwordKey = EventMap.SpaceKeyEventType EventMap.noMods
+
+makeNameEdit :: Monad m => String -> IRef a -> Anim.AnimId -> TWidget t m
+makeNameEdit emptyStr iref =
+  (atEmptyStr . const) emptyStr . makeWordEdit (Anchors.aNameRef iref)
+
+center :: Vector2 Draw.R
+center = Vector2 0.5 0.5
+
+hbox :: [Widget f] -> Widget f
+hbox = Box.make Box.horizontal . map (Widget.align center)
+
+vbox :: [Widget f] -> Widget f
+vbox = Box.make Box.vertical . map (Widget.align center)

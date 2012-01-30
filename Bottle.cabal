@@ -91,11 +91,13 @@ Executable Editor
                        derive,
                        bottle
   Other-Modules:       Editor.Data,
+                       Editor.DataOps,
                        Editor.Anchors,
                        Editor.Config,
                        Editor.CTransaction,
                        Editor.MonadF,
-                       Editor.BottleWidgets
+                       Editor.BottleWidgets,
+                       Editor.CodeEdit
   ghc-options:         -O2 -Wall
   main-is:             Editor/Main.hs
   ghc-prof-options:    -prof -auto-all
