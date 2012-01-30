@@ -38,25 +38,30 @@ spaceView = Spacer.makeHorizontal 20
 spaceWidget :: Widget f
 spaceWidget = Widget.liftView spaceView
 
-makeHoleEdit :: MonadF m => Data.HoleState -> IRef Data.Expression -> TWidget t m
-makeHoleEdit curState expressionI =
-  assignCursor myId searchTermId $ do
-    cursor <- readCursor
-    let isActive = isJust $ Anim.subId myId cursor
-    if isActive
-      then liftM BWidgets.vbox $ sequence
-        [BWidgets.makeTextEdit stateProp searchTermId
-        ,BWidgets.makeFocusableTextView "<TODO: results>" resultsId]
-      else BWidgets.makeFocusableTextView ('<' : Data.holeSearchTerm curState ++ ">") searchTermId
+makeActiveHoleEdit :: MonadF m => Data.HoleState -> IRef Data.Expression -> TWidget t m
+makeActiveHoleEdit curState expressionI =
+  assignCursor myId searchTermId $
+  liftM BWidgets.vbox $ sequence
+    [BWidgets.makeTextEdit stateProp searchTermId
+    ,BWidgets.makeFocusableTextView "<TODO: results>" resultsId]
   where
+    myId = AnimIds.fromIRef expressionI
     searchTermId = Anim.joinId myId ["search term"]
     resultsId = Anim.joinId myId ["search results"]
-    myId = AnimIds.fromIRef expressionI
     stateProp =
       Property.Property {
         Property.get = return $ Data.holeSearchTerm curState,
         Property.set = Transaction.writeIRef expressionI . Data.ExpressionHole . (`Data.atHoleSearchTerm` curState) . const
       }
+
+makeHoleEdit :: MonadF m => Data.HoleState -> IRef Data.Expression -> TWidget t m
+makeHoleEdit curState expressionI = do
+  cursor <- readCursor
+  if isJust (Anim.subId myId cursor)
+    then makeActiveHoleEdit curState expressionI
+    else BWidgets.makeFocusableTextView ('<' : Data.holeSearchTerm curState ++ ">") myId
+  where
+    myId = AnimIds.fromIRef expressionI
 
 makeExpressionEdit :: MonadF m =>
   Bool -> Property (Transaction t m) (IRef Data.Expression) ->
