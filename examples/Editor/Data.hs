@@ -34,6 +34,8 @@ data HoleState = HoleState {
 data Expression = ExpressionApply Apply | ExpressionGetVariable (IRef Variable) | ExpressionHole HoleState
   deriving (Eq, Ord, Read, Show)
 
+-- TODO:
+-- Does a definition define a variable? (like in Haskell?) In this case, where's the variable?
 data Definition = Definition {
   defParameters :: [IRef Variable],
   defBody :: IRef Expression

@@ -5,6 +5,7 @@ module Editor.Anchors(
     cursor, cursorIRef,
     branches, view,
     currentBranchIRef, currentBranch,
+    globals,
     initDB,
     dbStore, DBTag,
     viewStore, ViewTag,
@@ -66,6 +67,10 @@ currentBranch = Transaction.fromIRef currentBranchIRef
 cursorIRef :: IRef Widget.Cursor
 cursorIRef = IRef.anchor "cursor"
 
+-- (Temporary..)
+globals :: Monad m => Transaction.Property ViewTag m [IRef Data.Variable]
+globals = Transaction.fromIRef $ IRef.anchor "globals"
+
 -- Cursor is untagged because it is both saved globally and per-revision.
 -- Cursor movement without any revisioned changes are not saved per-revision.
 cursor :: Monad m => Transaction.Property t m Widget.Cursor
@@ -106,11 +111,16 @@ collectWrites ::
 collectWrites newGuid =
   execWriterT . Transaction.run (writeCollectorStore newGuid)
 
-newGetVariable :: Monad m => String -> Transaction t m (IRef Data.Expression)
-newGetVariable name = do
+newVariable :: Monad m => String -> Transaction t m (IRef Data.Variable)
+newVariable name = do
   var <- Transaction.newIRef Data.Variable
   Property.set (aNameRef var) name
-  Transaction.newIRef $ Data.ExpressionGetVariable var
+  return var
+
+newGetVariable :: Monad m => String -> Transaction t m (IRef Data.Expression)
+newGetVariable name =
+  newVariable name >>=
+  Transaction.newIRef . Data.ExpressionGetVariable
 
 initDB :: Store DBTag IO -> IO ()
 initDB store =
@@ -127,6 +137,7 @@ initDB store =
           }
         Property.set (aNameRef rootIRef) "awesomeFunc"
         Property.set cursor $ AnimIds.fromIRef rootIRef
+        Property.set globals =<< mapM newVariable temporaryVarsDatabase
       initialVersionIRef <- Version.makeInitialVersion changes
       master <- Branch.new initialVersionIRef
       return [(masterNameIRef, master)]
@@ -135,6 +146,9 @@ initDB store =
     _ <- initRef currentBranchIRef (return branch)
     _ <- initRef cursorIRef . return $ []
     return ()
+  where
+    temporaryVarsDatabase =
+      ["sort", "reverse", "length", "join", "fmap", "liftA2", "const", "pure", "shuki"]
 
 -- Get an associated name from the given IRef
 aName :: Monad m => IRef a -> Transaction.Property t m (Maybe String)

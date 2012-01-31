@@ -12,6 +12,7 @@ import Data.Monoid(Monoid(..))
 import Data.Store.IRef (IRef)
 import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
+import Editor.Anchors (ViewTag)
 import Editor.CTransaction (CTransaction, getP, assignCursor, TWidget, readCursor)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Sized (Sized)
@@ -39,35 +40,32 @@ spaceView = Spacer.makeHorizontal 20
 spaceWidget :: Widget f
 spaceWidget = Widget.liftView spaceView
 
-makeActiveHoleEdit :: MonadF m => Data.HoleState -> IRef Data.Expression -> TWidget t m
+makeActiveHoleEdit :: MonadF m => Data.HoleState -> IRef Data.Expression -> TWidget ViewTag m
 makeActiveHoleEdit curState expressionI =
   assignCursor myId searchTermId $ do
     searchTermWidget <- BWidgets.makeTextEdit stateProp searchTermId
-    resultWidgets <- mapM makeResultWidget results
+    vars <- mapM getVarName =<< getP Anchors.globals
+    resultWidgets <- mapM makeResultWidget . take 3 $ filter goodResult vars
     return . BWidgets.vbox $ searchTermWidget : resultWidgets
   where
     myId = AnimIds.fromIRef expressionI
     searchTermId = Anim.joinId myId ["search term"]
-    makeResultWidget i =
+    makeResultWidget (var, name) =
       (liftM . Widget.strongerEvents)
-        (Widget.actionEventMapMovesCursor Config.pickResultKeys "Pick this search result" (pickResult i)) $
-      BWidgets.makeFocusableTextView i (Anim.joinId myId ["search results", SBS8.pack (show i)])
-    pickResult i = do
-      newVar <- Transaction.newIRef Data.Variable -- temporary..
-      Property.set (Anchors.aNameRef newVar) i
-      Transaction.writeIRef expressionI $ Data.ExpressionGetVariable newVar
+        (Widget.actionEventMapMovesCursor Config.pickResultKeys "Pick this search result" (pickResult var)) $
+      BWidgets.makeFocusableTextView name (Anim.joinId myId ["search results", SBS8.pack name])
+    pickResult var = do
+      Transaction.writeIRef expressionI $ Data.ExpressionGetVariable var
       return myId
     stateProp =
       Property.Property {
         Property.get = return $ Data.holeSearchTerm curState,
         Property.set = Transaction.writeIRef expressionI . Data.ExpressionHole . (`Data.atHoleSearchTerm` curState) . const
       }
-    results = take 3 $ filter goodResult temporaryVarsDatabase
-    temporaryVarsDatabase =
-      ["sort", "reverse", "length", "join", "fmap", "liftA2", "const", "pure", "shuki"]
-    goodResult res = all (`isInfixOf` res) . words $ Data.holeSearchTerm curState
+    getVarName var = liftM ((,) var) . getP $ Anchors.aNameRef var
+    goodResult (_, name) = all (`isInfixOf` name) . words $ Data.holeSearchTerm curState
 
-makeHoleEdit :: MonadF m => Data.HoleState -> IRef Data.Expression -> TWidget t m
+makeHoleEdit :: MonadF m => Data.HoleState -> IRef Data.Expression -> TWidget ViewTag m
 makeHoleEdit curState expressionI = do
   cursor <- readCursor
   if isJust (Anim.subId myId cursor)
@@ -77,8 +75,8 @@ makeHoleEdit curState expressionI = do
     myId = AnimIds.fromIRef expressionI
 
 makeExpressionEdit :: MonadF m =>
-  Bool -> Property (Transaction t m) (IRef Data.Expression) ->
-  CTransaction t m (Widget (Transaction t m), Anim.AnimId)
+  Bool -> Property (Transaction ViewTag m) (IRef Data.Expression) ->
+  CTransaction ViewTag m (Widget (Transaction ViewTag m), Anim.AnimId)
 makeExpressionEdit isArgument expressionPtr = do
   expressionI <- getP expressionPtr
   let
@@ -133,7 +131,7 @@ makeExpressionEdit isArgument expressionPtr = do
             ((BWidgets.hbox . concat) [[before | isArgument], [funcEdit], [spaceWidget], [argEdit], [after | isArgument]]
             ,funcAnimId)
 
-makeDefinitionEdit :: MonadF m => IRef Data.Definition -> TWidget t m
+makeDefinitionEdit :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
 makeDefinitionEdit definitionI = do
   Data.Definition params _ <- getP definitionRef
   nameEdit <-
