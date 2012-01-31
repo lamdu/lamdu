@@ -41,7 +41,7 @@ makeBranchKeys    = [ctrl 's']
 overlayDocKeys    = [simple E.KeyF1, alt 'h']
 
 addParamKeys      = [alt 'p']
-delParamKeys      = [alt 'o']
+delParamKeys      = [simple E.KeyDel]
 
 delBranchKeys     = [alt 'o']
 
