@@ -5,7 +5,7 @@ module Editor.CodeEdit(makeDefinitionEdit) where
 import Control.Arrow (first)
 import Control.Monad(liftM)
 import Data.ByteString.Char8 (pack)
-import Data.List(intersperse)
+import Data.List(intersperse, isInfixOf)
 import Data.List.Utils(enumerate)
 import Data.Maybe(isJust)
 import Data.Monoid(Monoid(..))
@@ -43,7 +43,7 @@ makeActiveHoleEdit :: MonadF m => Data.HoleState -> IRef Data.Expression -> TWid
 makeActiveHoleEdit curState expressionI =
   assignCursor myId searchTermId $ do
     searchTermWidget <- BWidgets.makeTextEdit stateProp searchTermId
-    resultWidgets <- mapM makeResultWidget [0..(1::Int)]
+    resultWidgets <- mapM makeResultWidget results
     return . BWidgets.vbox $ searchTermWidget : resultWidgets
   where
     myId = AnimIds.fromIRef expressionI
@@ -51,10 +51,10 @@ makeActiveHoleEdit curState expressionI =
     makeResultWidget i =
       (liftM . Widget.strongerEvents)
         (Widget.actionEventMapMovesCursor Config.pickResultKeys "Pick this search result" (pickResult i)) $
-      BWidgets.makeFocusableTextView ("TODO:" ++ show i) (Anim.joinId myId ["search results", SBS8.pack (show i)])
+      BWidgets.makeFocusableTextView i (Anim.joinId myId ["search results", SBS8.pack (show i)])
     pickResult i = do
       newVar <- Transaction.newIRef Data.Variable -- temporary..
-      Property.set (Anchors.aNameRef newVar) ("TODO:" ++ show i)
+      Property.set (Anchors.aNameRef newVar) i
       Transaction.writeIRef expressionI $ Data.ExpressionGetVariable newVar
       return myId
     stateProp =
@@ -62,6 +62,10 @@ makeActiveHoleEdit curState expressionI =
         Property.get = return $ Data.holeSearchTerm curState,
         Property.set = Transaction.writeIRef expressionI . Data.ExpressionHole . (`Data.atHoleSearchTerm` curState) . const
       }
+    results = take 3 $ filter goodResult temporaryVarsDatabase
+    temporaryVarsDatabase =
+      ["sort", "reverse", "length", "join", "fmap", "liftA2", "const", "pure", "shuki"]
+    goodResult res = all (`isInfixOf` res) . words $ Data.holeSearchTerm curState
 
 makeHoleEdit :: MonadF m => Data.HoleState -> IRef Data.Expression -> TWidget t m
 makeHoleEdit curState expressionI = do
