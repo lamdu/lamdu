@@ -77,15 +77,15 @@ makeActiveHoleEdit paramIs curState expressionI myId =
     return . BWidgets.vbox $ [searchTermWidget, resultWidgets] ++ moreResultsWidget
   where
     maybeResults [] = BWidgets.makeTextView "(No results)" $ Anim.joinId myId ["no results"]
-    maybeResults xs = liftM BWidgets.vbox $ mapM makeResultWidget xs
+    maybeResults xs = liftM BWidgets.vbox $ mapM (makeResultWidget . fst) xs
     expressionId = AnimIds.fromIRef expressionI
 
     searchTermId = AnimIds.searchTermAnimId myId
     resultAnimId = Anim.joinId (Anim.joinId myId ["search results"]) . Data.onVariableIRef AnimIds.fromIRef
-    makeResultWidget v@(var, _) =
-      (liftM . Widget.strongerEvents) (pickResultEventMap v) .
+    makeResultWidget var =
+      (liftM . Widget.strongerEvents) (pickResultEventMap var) .
       makeVarView var $ resultAnimId var
-    pickResultEventMap (var, _) =
+    pickResultEventMap var =
       EventMap.fromEventTypes Config.pickResultKeys "Pick this search result" $ do
         Transaction.writeIRef expressionI $ Data.ExpressionGetVariable var
         let
