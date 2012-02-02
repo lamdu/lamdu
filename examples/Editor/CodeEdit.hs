@@ -3,7 +3,7 @@
 module Editor.CodeEdit(makePanesEdit) where
 
 import Control.Arrow (first)
-import Control.Monad (liftM)
+import Control.Monad (liftM, when)
 import Data.ByteString.Char8 (pack)
 import Data.List(intersperse, isInfixOf)
 import Data.List.Utils(enumerate, removeAt)
@@ -221,12 +221,11 @@ makeDefinitionEdit definitionI = do
 
 newPane :: Monad m => IRef Data.Definition -> Transaction ViewTag m Widget.Cursor
 newPane defI = do
-  Property.pureModify panesRef maybeAddPane
+  panes <- Property.get panesRef
+  when (all ((/= defI) . Anchors.paneDefinition) panes) $
+    Property.set panesRef $ Anchors.makePane defI : panes
   return $ AnimIds.fromIRef defI
   where
-    maybeAddPane panes
-      | any ((== defI) . Anchors.paneDefinition) panes = panes
-      | otherwise = Anchors.makePane defI : panes
     panesRef = Transaction.fromIRef Anchors.rootIRef
 
 makePanesEdit :: MonadF m => TWidget ViewTag m
