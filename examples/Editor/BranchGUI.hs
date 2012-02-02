@@ -1,6 +1,7 @@
 {-# OPTIONS -O2 -Wall #-}
 module Editor.BranchGUI(makeRootWidget) where
 
+import Control.Applicative ((<*))
 import Control.Monad (liftM, unless)
 import Data.List (findIndex, elemIndex)
 import Data.List.Utils (removeAt)
@@ -10,7 +11,7 @@ import Data.Store.Property(Property)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag, DBTag)
-import Editor.CTransaction (runNestedCTransaction, transaction, getP, TWidget)
+import Editor.CTransaction (TWidget, runNestedCTransaction, transaction, getP, readCursor)
 import Editor.MonadF (MonadF)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Rev.Branch as Branch
@@ -95,15 +96,20 @@ makeRootWidget widget = do
 makeWidgetForView :: MonadF m => View -> TWidget ViewTag (Transaction DBTag m) -> TWidget DBTag m
 makeWidgetForView view widget = do
   versionData <- transaction $ Version.versionData =<< View.curVersion view
+  cursor <- readCursor
+  let
+    saveCursor = do
+      isEmpty <- Transaction.isEmpty
+      unless isEmpty $ Property.set Anchors.cursor cursor
   focusable <-
     runNestedCTransaction store $
-    (liftM . Widget.atEvents) (>>= applyAndReturn saveCursor) widget
+    (liftM . Widget.atEvents) (<* saveCursor) widget
   let undoEventMap = maybe mempty makeUndoEventMap (Version.parent versionData)
   return $ Widget.strongerEvents undoEventMap focusable
   where
-    makeUndoEventMap = Widget.actionEventMapMovesCursor Config.undoKeys "Undo" . (>> fetchRevisionCursor) . View.move view
-    fetchRevisionCursor = Transaction.run store $ Property.get Anchors.cursor
+    makeUndoEventMap version =
+      Widget.actionEventMapMovesCursor Config.undoKeys "Undo" $ do
+        cursor <- Transaction.run store $ Property.get Anchors.cursor
+        View.move view version
+        return cursor
     store = Anchors.viewStore view
-    saveCursor eventResult = do
-      isEmpty <- Transaction.isEmpty
-      unless isEmpty $ Anchors.maybeUpdateCursor eventResult

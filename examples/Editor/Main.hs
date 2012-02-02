@@ -71,5 +71,5 @@ runDbStore font store = do
       (liftM . Widget.atEvents) (Transaction.run store)
 
     attachCursor eventResult = do
-      Anchors.maybeUpdateCursor eventResult
+      maybe (return ()) (Property.set Anchors.cursor) $ Widget.eCursor eventResult
       return eventResult

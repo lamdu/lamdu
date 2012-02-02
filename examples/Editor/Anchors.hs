@@ -9,8 +9,7 @@ module Editor.Anchors(
     initDB,
     dbStore, DBTag,
     viewStore, ViewTag,
-    aName, aNameRef,
-    maybeUpdateCursor)
+    aName, aNameRef)
 where
 
 import Control.Monad (unless, (<=<))
@@ -163,6 +162,3 @@ aName iref =
 
 aNameRef :: Monad m => IRef a -> Property (Transaction t m) String
 aNameRef = Property.pureCompose (fromMaybe "") Just . aName
-
-maybeUpdateCursor :: Monad m => Widget.EventResult -> Transaction t m ()
-maybeUpdateCursor = maybe (return ()) (Property.set cursor) . Widget.eCursor
