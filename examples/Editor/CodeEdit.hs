@@ -59,10 +59,11 @@ makeVarView var animId = do
     BWidgets.makeFocusableTextView name animId
 
 makeActiveHoleEdit ::
-  MonadF m => [IRef Data.Parameter] -> Data.HoleState -> IRef Data.Expression ->
+  MonadF m => IRef Data.Definition -> Data.HoleState -> IRef Data.Expression ->
   Anim.AnimId -> TWidget ViewTag m
-makeActiveHoleEdit paramIs curState expressionI myId =
+makeActiveHoleEdit definitionI curState expressionI myId =
   assignCursor myId searchTermId $ do
+    Data.Definition paramIs _ <- getP $ Transaction.fromIRef definitionI
     searchTermWidget <- BWidgets.makeTextEdit stateProp searchTermId
     globals <- getP Anchors.globals
     vars <- mapM getVarName $ map Data.ParameterRef paramIs ++ globals
@@ -107,13 +108,13 @@ makeActiveHoleEdit paramIs curState expressionI myId =
     goodResult (_, name) = all (`isInfixOf` name) . words $ Data.holeSearchTerm curState
 
 makeHoleEdit ::
-  MonadF m => [IRef Data.Parameter] -> Data.HoleState ->
+  MonadF m => IRef Data.Definition -> Data.HoleState ->
   IRef Data.Expression -> Anim.AnimId -> TWidget ViewTag m
-makeHoleEdit params curState expressionI myId = do
+makeHoleEdit definitionI curState expressionI myId = do
   cursor <- readCursor
   widget <-
     if isJust (Anim.subId myId cursor)
-    then makeActiveHoleEdit params curState expressionI myId
+    then makeActiveHoleEdit definitionI curState expressionI myId
     else BWidgets.makeFocusableTextView snippet $ AnimIds.searchTermAnimId myId
   return $ Widget.backgroundColor (Anim.joinId myId ["hole background"]) holeBackgroundColor widget
   where
@@ -124,10 +125,10 @@ makeHoleEdit params curState expressionI myId = do
     searchText = Data.holeSearchTerm curState
 
 makeExpressionEdit :: MonadF m =>
-  Bool -> [IRef Data.Parameter] ->
+  Bool -> IRef Data.Definition ->
   Property (Transaction ViewTag m) (IRef Data.Expression) ->
   CTransaction ViewTag m (Widget (Transaction ViewTag m), Anim.AnimId)
-makeExpressionEdit isArgument params expressionPtr = do
+makeExpressionEdit isArgument definitionI expressionPtr = do
   expressionI <- getP expressionPtr
   let
     diveIn = AnimIds.delegating . AnimIds.fromIRef
@@ -165,7 +166,7 @@ makeExpressionEdit isArgument params expressionPtr = do
       Data.ExpressionHole holeState ->
         wrapTextEditor .
           (fmap . liftM) (flip (,) myId) $
-          makeHoleEdit params holeState expressionI
+          makeHoleEdit definitionI holeState expressionI
       Data.ExpressionGetVariable varRef -> do
         varRefView <- makeVarView varRef myId
         let
@@ -186,10 +187,10 @@ makeExpressionEdit isArgument params expressionPtr = do
                   Property (return funcI) $ Property.set expressionRef . Data.ExpressionApply . (`Data.Apply` argI)
                 argIPtr =
                   Property (return argI) $ Property.set expressionRef . Data.ExpressionApply . (funcI `Data.Apply`)
-              (funcEdit, funcAnimId) <- mkDelEvent argI $ makeExpressionEdit False params funcIPtr
+              (funcEdit, funcAnimId) <- mkDelEvent argI $ makeExpressionEdit False definitionI funcIPtr
               (argEdit, _) <-
                  weakerEvents mkCallWithArgEventMap .
-                 mkDelEvent funcI $ makeExpressionEdit True params argIPtr
+                 mkDelEvent funcI $ makeExpressionEdit True definitionI argIPtr
               let label str = BWidgets.makeTextView str $ Anim.joinId funcAnimId [pack str]
               before <- label "("
               after <- label ")"
@@ -213,7 +214,7 @@ makeDefinitionEdit definitionI = do
     assignCursor animId nameEditAnimId $
     BWidgets.makeNameEdit "<unnamed>" definitionI nameEditAnimId
   equals <- BWidgets.makeTextView "=" $ Anim.joinId animId ["equals"]
-  (expressionEdit, _) <- makeExpressionEdit False params bodyRef
+  (expressionEdit, _) <- makeExpressionEdit False definitionI bodyRef
   paramsEdits <- mapM makeParamEdit $ enumerate params
   return .
     Widget.strongerEvents eventMap . hboxSpaced $
