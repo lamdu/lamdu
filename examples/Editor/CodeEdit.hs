@@ -62,7 +62,7 @@ makeActiveHoleEdit curState expressionI =
         Property.get = return $ Data.holeSearchTerm curState,
         Property.set = Transaction.writeIRef expressionI . Data.ExpressionHole . (`Data.atHoleSearchTerm` curState) . const
       }
-    getVarName var = liftM ((,) var) . getP $ Anchors.aNameRef var
+    getVarName var = liftM ((,) var) . getP $ Anchors.variableNameRef var
     goodResult (_, name) = all (`isInfixOf` name) . words $ Data.holeSearchTerm curState
 
 makeHoleEdit :: MonadF m => Data.HoleState -> IRef Data.Expression -> TWidget ViewTag m
@@ -113,7 +113,7 @@ makeExpressionEdit isArgument expressionPtr = do
     Data.ExpressionGetVariable varI ->
       wrap FocusDelegator.defaultKeys FocusDelegator.NotDelegating .
         (fmap . liftM) (flip (,) (AnimIds.fromIRef expressionI)) .
-        BWidgets.makeWordEdit $ Anchors.aNameRef varI
+        BWidgets.makeWordEdit $ Anchors.variableNameRef varI
     Data.ExpressionApply (Data.Apply funcI argI) ->
       wrap exprKeys FocusDelegator.Delegating $ \animId ->
         assignCursor animId (AnimIds.fromIRef argI) $ do

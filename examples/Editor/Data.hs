@@ -1,10 +1,13 @@
 {-# OPTIONS -O2 -Wall #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, Rank2Types #-}
 module Editor.Data (
   Definition(..), atDefParameters, atDefBody,
-  Variable(..),
+  Builtin(..),
+  Parameter(..),
+  VariableRef(..), onVariableIRef,
   Apply(..), atApplyFunc, atApplyArg,
-  HoleState(..), atHoleSearchTerm, atHoleCachedSearchResults,
+  HoleState(..),
+    emptyHoleState, atHoleSearchTerm, atHoleCachedSearchResults,
   Expression(..))
 where
 
@@ -16,9 +19,6 @@ import Data.DeriveTH(derive)
 import Data.Store.IRef (IRef)
 import qualified Data.AtFieldTH as AtFieldTH
 
-data Variable = Variable
-  deriving (Eq, Ord, Read, Show)
-
 data Apply = Apply {
   applyFunc :: IRef Expression,
   applyArg :: IRef Expression
@@ -27,26 +27,52 @@ data Apply = Apply {
 
 data HoleState = HoleState {
   holeSearchTerm :: String,
-  holeCachedSearchResults :: [IRef Variable]
+  holeCachedSearchResults :: [VariableRef]
   }
   deriving (Eq, Ord, Read, Show)
 
-data Expression = ExpressionApply Apply | ExpressionGetVariable (IRef Variable) | ExpressionHole HoleState
+emptyHoleState :: HoleState
+emptyHoleState = HoleState "" []
+
+data Expression =
+  ExpressionApply Apply |
+  ExpressionGetVariable VariableRef |
+  ExpressionHole HoleState
   deriving (Eq, Ord, Read, Show)
 
--- TODO:
--- Does a definition define a variable? (like in Haskell?) In this case, where's the variable?
+data Parameter = Parameter
+  deriving (Eq, Ord, Read, Show)
+
 data Definition = Definition {
-  defParameters :: [IRef Variable],
+  defParameters :: [IRef Parameter],
   defBody :: IRef Expression
   }
   deriving (Eq, Ord, Read, Show)
 
-derive makeBinary ''Definition
+data Builtin = Builtin {
+  biModule :: [String],
+  biName :: String
+  }
+  deriving (Eq, Ord, Read, Show)
+
+data VariableRef =
+  ParameterRef (IRef Parameter) |
+  DefinitionRef (IRef Definition) |
+  BuiltinRef (IRef Builtin)
+  deriving (Eq, Ord, Read, Show)
+
+onVariableIRef :: (forall a. IRef a -> b) -> VariableRef -> b
+onVariableIRef f (ParameterRef i) = f i
+onVariableIRef f (DefinitionRef i) = f i
+onVariableIRef f (BuiltinRef i) = f i
+
 derive makeBinary ''Apply
-derive makeBinary ''Expression
-derive makeBinary ''Variable
+derive makeBinary ''Builtin
 derive makeBinary ''HoleState
+derive makeBinary ''Expression
+derive makeBinary ''Parameter
+derive makeBinary ''Definition
+derive makeBinary ''VariableRef
 AtFieldTH.make ''Definition
 AtFieldTH.make ''Apply
 AtFieldTH.make ''HoleState

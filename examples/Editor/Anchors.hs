@@ -9,25 +9,25 @@ module Editor.Anchors(
     initDB,
     dbStore, DBTag,
     viewStore, ViewTag,
-    aName, aNameRef)
+    aNameGuid, aNameRef, variableNameRef)
 where
 
 import Control.Monad (unless, (<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Writer (WriterT, tell, execWriterT)
 import Data.Binary (Binary)
+import Data.List.Split (splitOn)
 import Data.Maybe (fromMaybe)
 import Data.Store.Db (Db)
 import Data.Store.Guid(Guid)
 import Data.Store.IRef (IRef)
+import Data.Store.Property(Property(..))
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Change (Key, Value)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction, Store(..))
-import Data.Store.Property(Property(..))
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Data.Store.Guid as Guid
 import qualified Data.Store.Db as Db
+import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Rev.Branch as Branch
@@ -36,6 +36,7 @@ import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.AnimIds as AnimIds
 import qualified Editor.Data as Data
+import qualified Graphics.UI.Bottle.Widget as Widget
 
 data DBTag
 dbStore :: Db -> Store DBTag IO
@@ -66,8 +67,8 @@ currentBranch = Transaction.fromIRef currentBranchIRef
 cursorIRef :: IRef Widget.Cursor
 cursorIRef = IRef.anchor "cursor"
 
--- (Temporary..)
-globals :: Monad m => Transaction.Property ViewTag m [IRef Data.Variable]
+-- TODO: This should be an index
+globals :: Monad m => Transaction.Property ViewTag m [Data.VariableRef]
 globals = Transaction.fromIRef $ IRef.anchor "globals"
 
 -- Cursor is untagged because it is both saved globally and per-revision.
@@ -110,16 +111,17 @@ collectWrites ::
 collectWrites newGuid =
   execWriterT . Transaction.run (writeCollectorStore newGuid)
 
-newVariable :: Monad m => String -> Transaction t m (IRef Data.Variable)
-newVariable name = do
-  var <- Transaction.newIRef Data.Variable
-  Property.set (aNameRef var) name
-  return var
-
-newGetVariable :: Monad m => String -> Transaction t m (IRef Data.Expression)
-newGetVariable name =
-  newVariable name >>=
-  Transaction.newIRef . Data.ExpressionGetVariable
+newBuiltin :: Monad m => String -> Transaction t m Data.VariableRef
+newBuiltin fullyQualifiedName = do
+  builtinIRef <- Transaction.newIRef Data.Builtin {
+    Data.biModule = init path,
+    Data.biName = name
+    }
+  Property.set (aNameRef builtinIRef) name
+  return $ Data.BuiltinRef builtinIRef
+  where
+    name = last path
+    path = splitOn "." fullyQualifiedName
 
 initDB :: Store DBTag IO -> IO ()
 initDB store =
@@ -127,16 +129,16 @@ initDB store =
     bs <- initRef branchesIRef $ do
       masterNameIRef <- Transaction.newIRef "master"
       changes <- collectWrites Transaction.newKey $ do
-        launchMissilesI <- newGetVariable "launchMissiles"
-        unitI <- newGetVariable "()"
-        expr <- Transaction.newIRef . Data.ExpressionApply $ Data.Apply launchMissilesI unitI
+        Property.set globals =<< mapM newBuiltin temporaryBuiltinsDatabase
+        expr <-
+          Transaction.newIRef $
+          Data.ExpressionHole Data.emptyHoleState
         Property.set root Data.Definition {
           Data.defParameters = [],
           Data.defBody = expr
           }
         Property.set (aNameRef rootIRef) "awesomeFunc"
-        Property.set cursor $ AnimIds.fromIRef rootIRef
-        Property.set globals =<< mapM newVariable temporaryVarsDatabase
+        Property.set cursor $ AnimIds.fromIRef expr
       initialVersionIRef <- Version.makeInitialVersion changes
       master <- Branch.new initialVersionIRef
       return [(masterNameIRef, master)]
@@ -146,19 +148,30 @@ initDB store =
     _ <- initRef cursorIRef . return $ []
     return ()
   where
-    temporaryVarsDatabase =
-      ["sort", "reverse", "length", "join", "fmap", "liftA2", "const", "pure", "shuki"]
+    temporaryBuiltinsDatabase =
+      ["Data.List.sort"
+      ,"Data.List.reverse"
+      ,"Data.List.length"
+      ,"Control.Applicative.liftA2"
+      ,"Control.Applicative.pure"
+      ,"Control.Applicative.shuki"
+      ,"Control.Monad.join"
+      ,"Prelude.fmap"
+      ,"Prelude.const"
+      ]
 
 -- Get an associated name from the given IRef
-aName :: Monad m => IRef a -> Transaction.Property t m (Maybe String)
-aName iref =
+aNameGuid :: Monad m => Guid -> Transaction.Property t m (Maybe String)
+aNameGuid guid =
   Property getter setter
   where
     getter = Transaction.lookup nameGuid
     setter (Just val) = Transaction.writeGuid nameGuid val
     setter Nothing = Transaction.delete nameGuid
     nameGuid = Guid.combine guid $ Guid.make "Name"
-    guid = IRef.guid iref
 
 aNameRef :: Monad m => IRef a -> Property (Transaction t m) String
-aNameRef = Property.pureCompose (fromMaybe "") Just . aName
+aNameRef = Property.pureCompose (fromMaybe "") Just . aNameGuid . IRef.guid
+
+variableNameRef :: Monad m => Data.VariableRef -> Property (Transaction t m) String
+variableNameRef = Data.onVariableIRef aNameRef
