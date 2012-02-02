@@ -63,8 +63,10 @@ makeActiveHoleEdit ::
   Anim.AnimId -> TWidget ViewTag m
 makeActiveHoleEdit definitionI curState expressionI myId =
   assignCursor myId searchTermId $ do
-    Data.Definition paramIs _ <- getP $ Transaction.fromIRef definitionI
-    searchTermWidget <- BWidgets.makeTextEdit stateProp searchTermId
+    Data.Definition paramIs _ <- getP definitionRef
+    searchTermWidget <-
+      (liftM . Widget.strongerEvents) searchTermEventMap $
+      BWidgets.makeTextEdit stateProp searchTermId
     globals <- getP Anchors.globals
     vars <- mapM getVarName $ map Data.ParameterRef paramIs ++ globals
     let
@@ -106,6 +108,14 @@ makeActiveHoleEdit definitionI curState expressionI myId =
       }
     getVarName var = liftM ((,) var) . getP $ Anchors.variableNameRef var
     goodResult (_, name) = all (`isInfixOf` name) . words $ Data.holeSearchTerm curState
+    definitionRef = Transaction.fromIRef definitionI
+    searchTermEventMap =
+      mconcat [
+        Widget.actionEventMapMovesCursor Config.addParamKeys "Add as Parameter" $ do
+          newParam <- DataOps.addParameter (Data.holeSearchTerm curState) definitionRef
+          Transaction.writeIRef expressionI . Data.ExpressionGetVariable $ Data.ParameterRef newParam
+          return . AnimIds.delegating $ AnimIds.fromIRef newParam
+        ]
 
 makeHoleEdit ::
   MonadF m => IRef Data.Definition -> Data.HoleState ->
@@ -217,7 +227,7 @@ makeDefinitionEdit definitionI = do
   (expressionEdit, _) <- makeExpressionEdit False definitionI bodyRef
   paramsEdits <- mapM makeParamEdit $ enumerate params
   return .
-    Widget.strongerEvents eventMap . hboxSpaced $
+    Widget.weakerEvents eventMap . hboxSpaced $
     [nameEdit] ++ paramsEdits ++ [equals, expressionEdit]
   where
     makeParamEdit (i, paramI) =
@@ -235,7 +245,7 @@ makeDefinitionEdit definitionI = do
     eventMap =
       Widget.actionEventMapMovesCursor Config.addParamKeys "Add Parameter" .
       liftM (AnimIds.delegating . AnimIds.fromIRef) $
-      DataOps.addParameter definitionRef
+      DataOps.addParameter "" definitionRef
     nameEditAnimId = Anim.joinId animId ["name"]
     animId = AnimIds.fromIRef definitionI
 
