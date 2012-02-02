@@ -15,7 +15,7 @@ module Editor.Config(
 
     -- moveToParentKeys,
 
-    addParamKeys,
+    addParamKeys, newDefinitionKeys,
 
     exprFocusDelegatorKeys)
 where
@@ -55,3 +55,5 @@ exprFocusDelegatorKeys = FocusDelegator.Keys {
   FocusDelegator.startDelegatingKey = group E.shift E.KeyRight,
   FocusDelegator.stopDelegatingKey = group E.shift E.KeyLeft
   }
+
+newDefinitionKeys = [alt 'n']

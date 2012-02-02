@@ -1,4 +1,4 @@
-{-# LANGUAGE EmptyDataDecls, OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell, EmptyDataDecls, OverloadedStrings #-}
 
 module Editor.Anchors(
     root, rootIRef,
@@ -7,25 +7,30 @@ module Editor.Anchors(
     currentBranchIRef, currentBranch,
     globals,
     initDB,
+    Pane(..), atPaneCursor, atPaneDefinition,
     dbStore, DBTag,
     viewStore, ViewTag,
-    aNameGuid, aNameRef, variableNameRef)
+    aNameGuid, aNameRef, variableNameRef,
+    makePane, makeDefinition)
 where
 
 import Control.Monad (unless, (<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Writer (WriterT, tell, execWriterT)
-import Data.Binary (Binary)
+import Data.Binary (Binary(..))
+import Data.Derive.Binary(makeBinary)
+import Data.DeriveTH(derive)
 import Data.List.Split (splitOn)
 import Data.Maybe (fromMaybe)
 import Data.Store.Db (Db)
 import Data.Store.Guid(Guid)
 import Data.Store.IRef (IRef)
-import Data.Store.Property(Property(..))
+import Data.Store.Property(Property(Property))
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Change (Key, Value)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction, Store(..))
+import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Store.Db as Db
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
@@ -38,6 +43,15 @@ import qualified Editor.AnimIds as AnimIds
 import qualified Editor.Data as Data
 import qualified Graphics.UI.Bottle.Widget as Widget
 
+data Pane = Pane {
+  paneCursor :: Widget.Cursor,
+  paneDefinition :: IRef Data.Definition
+  }
+  deriving (Eq, Ord, Read, Show)
+
+derive makeBinary ''Pane
+AtFieldTH.make ''Pane
+
 data DBTag
 dbStore :: Db -> Store DBTag IO
 dbStore = Db.store
@@ -46,10 +60,10 @@ data ViewTag
 viewStore :: Monad m => View -> Store ViewTag (Transaction DBTag m)
 viewStore = View.store
 
-rootIRef :: IRef Data.Definition
+rootIRef :: IRef [Pane]
 rootIRef = IRef.anchor "root"
 
-root :: Monad m => Transaction.Property ViewTag m Data.Definition
+root :: Monad m => Transaction.Property ViewTag m [Pane]
 root = Transaction.fromIRef rootIRef
 
 branchesIRef :: IRef [(IRef String, Branch)]
@@ -123,6 +137,20 @@ newBuiltin fullyQualifiedName = do
     name = last path
     path = splitOn "." fullyQualifiedName
 
+makePane :: IRef Data.Definition -> Pane
+makePane defI = Pane {
+  paneCursor = AnimIds.fromIRef defI,
+  paneDefinition = defI
+  }
+
+makeDefinition :: Monad m => Transaction t m (IRef Data.Definition)
+makeDefinition = do
+  holeI <- Transaction.newIRef $ Data.ExpressionHole Data.emptyHoleState
+  Transaction.newIRef Data.Definition {
+    Data.defParameters = [],
+    Data.defBody = holeI
+  }
+
 initDB :: Store DBTag IO -> IO ()
 initDB store =
   Transaction.run store $ do
@@ -130,15 +158,9 @@ initDB store =
       masterNameIRef <- Transaction.newIRef "master"
       changes <- collectWrites Transaction.newKey $ do
         Property.set globals =<< mapM newBuiltin temporaryBuiltinsDatabase
-        expr <-
-          Transaction.newIRef $
-          Data.ExpressionHole Data.emptyHoleState
-        Property.set root Data.Definition {
-          Data.defParameters = [],
-          Data.defBody = expr
-          }
-        Property.set (aNameRef rootIRef) "awesomeFunc"
-        Property.set cursor $ AnimIds.fromIRef expr
+        defI <- makeDefinition
+        Property.set root [makePane defI]
+        Property.set cursor $ AnimIds.fromIRef defI
       initialVersionIRef <- Version.makeInitialVersion changes
       master <- Branch.new initialVersionIRef
       return [(masterNameIRef, master)]

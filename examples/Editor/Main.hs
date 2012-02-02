@@ -53,7 +53,9 @@ runDbStore font store = do
       TextEdit.sEmptyString = "<empty>"
       }
 
-    fromCursor cursor = runCTransaction cursor style . BranchGUI.makeRootWidget $ CodeEdit.makeDefinitionEdit Anchors.rootIRef
+    fromCursor cursor =
+      runCTransaction cursor style . BranchGUI.makeRootWidget $
+      CodeEdit.makePanesEdit Anchors.rootIRef
     -- TODO: Move this logic to some more common place?
     makeWidget = widgetDownTransaction $ do
       cursor <- Property.get Anchors.cursor

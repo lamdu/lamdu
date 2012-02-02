@@ -1,6 +1,6 @@
 {-# OPTIONS -O2 -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Editor.CodeEdit(makeDefinitionEdit) where
+module Editor.CodeEdit(makePanesEdit) where
 
 import Control.Arrow (first)
 import Control.Monad(liftM)
@@ -176,3 +176,28 @@ makeDefinitionEdit definitionI = do
       DataOps.addParameter definitionRef
     nameEditAnimId = Anim.joinId animId ["name"]
     animId = AnimIds.fromIRef definitionI
+
+makePanesEdit :: MonadF m => IRef [Anchors.Pane] -> TWidget ViewTag m
+makePanesEdit panesI = do
+  panes <- getP panesRef
+  panesWidget <-
+    case panes of
+      [] -> BWidgets.makeFocusableTextView "<No panes>" myId
+      (firstPane:_) -> do
+        assignCursor myId
+          (AnimIds.fromIRef (Anchors.paneDefinition firstPane)) $ do
+            definitionEdits <-
+              mapM (makeDefinitionEdit . Anchors.paneDefinition) panes
+            return $ BWidgets.vboxAlign 0 definitionEdits
+  let
+    panesEventMap =
+      Widget.actionEventMapMovesCursor Config.newDefinitionKeys
+        "New Definition" $ do
+          newDefI <- Anchors.makeDefinition
+          Property.set panesRef (Anchors.makePane newDefI : panes)
+          return . AnimIds.delegating $ AnimIds.fromIRef newDefI
+
+  return $ Widget.weakerEvents panesEventMap panesWidget
+  where
+    panesRef = Transaction.fromIRef panesI
+    myId = AnimIds.fromIRef panesI

@@ -4,7 +4,8 @@ module Editor.BottleWidgets(
   makeFocusableTextView,
   wrapDelegatedWithKeys, wrapDelegated,
   makeTextEdit, makeWordEdit, makeNameEdit,
-  hbox, vbox
+  hbox, hboxAlign,
+  vbox, vboxAlign
 ) where
 
 import Control.Monad (when, liftM)
@@ -136,11 +137,14 @@ makeNameEdit :: Monad m => String -> IRef a -> Anim.AnimId -> TWidget t m
 makeNameEdit emptyStr iref =
   (atEmptyStr . const) emptyStr . makeWordEdit (Anchors.aNameRef iref)
 
-center :: Vector2 Draw.R
-center = Vector2 0.5 0.5
+hboxAlign :: Draw.R -> [Widget f] -> Widget f
+hboxAlign align = Box.make Box.horizontal . map (Widget.align (Vector2 0 align))
 
 hbox :: [Widget f] -> Widget f
-hbox = Box.make Box.horizontal . map (Widget.align center)
+hbox = hboxAlign 0.5
+
+vboxAlign :: Draw.R -> [Widget f] -> Widget f
+vboxAlign align = Box.make Box.vertical . map (Widget.align (Vector2 align 0))
 
 vbox :: [Widget f] -> Widget f
-vbox = Box.make Box.vertical . map (Widget.align center)
+vbox = vboxAlign 0.5
