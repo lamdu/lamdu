@@ -143,13 +143,15 @@ makePane defI = Pane {
   paneDefinition = defI
   }
 
-makeDefinition :: Monad m => Transaction t m (IRef Data.Definition)
+makeDefinition :: Monad m => Transaction ViewTag m (IRef Data.Definition)
 makeDefinition = do
   holeI <- Transaction.newIRef $ Data.ExpressionHole Data.emptyHoleState
-  Transaction.newIRef Data.Definition {
+  defI <- Transaction.newIRef Data.Definition {
     Data.defParameters = [],
     Data.defBody = holeI
-  }
+    }
+  Property.pureModify globals (Data.DefinitionRef defI :)
+  return defI
 
 initDB :: Store DBTag IO -> IO ()
 initDB store =
