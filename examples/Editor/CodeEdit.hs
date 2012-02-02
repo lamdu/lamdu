@@ -27,6 +27,7 @@ import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
 import qualified Graphics.UI.Bottle.Animation as Anim
+import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
@@ -59,15 +60,26 @@ makeActiveHoleEdit curState expressionI myId =
   where
     maybeResults [] = BWidgets.makeTextView "(No results)" $ Anim.joinId myId ["no results"]
     maybeResults xs = liftM BWidgets.vbox $ mapM makeResultWidget xs
+    expressionId = AnimIds.fromIRef expressionI
 
     searchTermId = Anim.joinId myId ["search term"]
-    makeResultWidget (var, name) =
-      (liftM . Widget.strongerEvents) (pickResultEventMap var) $
-      BWidgets.makeFocusableTextView name (Anim.joinId myId ["search results", SBS8.pack name])
-    pickResultEventMap var =
-      Widget.actionEventMapMovesCursor Config.pickResultKeys "Pick this search result" $ do
+    resultAnimId name = Anim.joinId myId ["search results", SBS8.pack name]
+    makeResultWidget v@(_, name) =
+      (liftM . Widget.strongerEvents) (pickResultEventMap v) .
+      BWidgets.makeFocusableTextView name $ resultAnimId name
+    pickResultEventMap (var, name) =
+      EventMap.fromEventTypes Config.pickResultKeys "Pick this search result" $ do
         Transaction.writeIRef expressionI $ Data.ExpressionGetVariable var
-        return myId
+        let
+          -- TODO: Is there a better way?
+          getVariableTextEditAnimId = AnimIds.delegating expressionId
+          mapAnimId animId =
+            maybe animId (Anim.joinId getVariableTextEditAnimId) $ Anim.subId (resultAnimId name) animId
+
+        return Widget.EventResult {
+          Widget.eCursor = Just expressionId,
+          Widget.eAnimIdMapping = mapAnimId
+          }
     stateProp =
       Property.Property {
         Property.get = return $ Data.holeSearchTerm curState,
@@ -128,7 +140,8 @@ makeExpressionEdit isArgument expressionPtr = do
     Data.ExpressionGetVariable varI ->
       wrapTextEditor .
         (fmap . liftM) (flip (,) myId) .
-        BWidgets.makeWordEdit $ Anchors.variableNameRef varI
+        BWidgets.makeWordEdit $
+        Anchors.variableNameRef varI
     Data.ExpressionApply (Data.Apply funcI argI) ->
       wrap Config.exprFocusDelegatorKeys FocusDelegator.Delegating $
         \animId ->
