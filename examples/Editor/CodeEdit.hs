@@ -6,7 +6,7 @@ import Control.Arrow (first)
 import Control.Monad(liftM)
 import Data.ByteString.Char8 (pack)
 import Data.List(intersperse, isInfixOf)
-import Data.List.Utils(enumerate)
+import Data.List.Utils(enumerate, removeAt)
 import Data.Maybe(isJust)
 import Data.Monoid(Monoid(..))
 import Data.Store.IRef (IRef)
@@ -180,24 +180,40 @@ makeDefinitionEdit definitionI = do
 makePanesEdit :: MonadF m => IRef [Anchors.Pane] -> TWidget ViewTag m
 makePanesEdit panesI = do
   panes <- getP panesRef
-  panesWidget <-
-    case panes of
-      [] -> BWidgets.makeFocusableTextView "<No panes>" myId
-      (firstPane:_) -> do
-        assignCursor myId
-          (AnimIds.fromIRef (Anchors.paneDefinition firstPane)) $ do
-            definitionEdits <-
-              mapM (makeDefinitionEdit . Anchors.paneDefinition) panes
-            return $ BWidgets.vboxAlign 0 definitionEdits
+
   let
-    panesEventMap =
+    newDefinitionEventMap =
       Widget.actionEventMapMovesCursor Config.newDefinitionKeys
         "New Definition" $ do
           newDefI <- Anchors.makeDefinition
           Property.set panesRef (Anchors.makePane newDefI : panes)
           return . AnimIds.delegating $ AnimIds.fromIRef newDefI
 
-  return $ Widget.weakerEvents panesEventMap panesWidget
+    delPane i = do
+      let newPanes = removeAt i panes
+      Property.set panesRef newPanes
+      return . AnimIds.fromIRef . Anchors.paneDefinition . last $
+        take (i+1) newPanes
+
+    paneEventMap (_:_:_) i =
+      Widget.actionEventMapMovesCursor Config.closePaneKeys
+        "Close Pane" $ delPane i
+    paneEventMap _ _ = mempty
+
+    makePaneWidget (i, pane) =
+      (liftM . Widget.weakerEvents) (paneEventMap panes i) .
+      makeDefinitionEdit $ Anchors.paneDefinition pane
+
+  panesWidget <-
+    case panes of
+      [] -> BWidgets.makeFocusableTextView "<No panes>" myId
+      (firstPane:_) -> do
+        assignCursor myId
+          (AnimIds.fromIRef (Anchors.paneDefinition firstPane)) $ do
+            definitionEdits <- mapM makePaneWidget $ enumerate panes
+            return $ BWidgets.vboxAlign 0 definitionEdits
+
+  return $ Widget.weakerEvents newDefinitionEventMap panesWidget
   where
     panesRef = Transaction.fromIRef panesI
     myId = AnimIds.fromIRef panesI

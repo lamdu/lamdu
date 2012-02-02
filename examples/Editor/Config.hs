@@ -17,6 +17,8 @@ module Editor.Config(
 
     addParamKeys, newDefinitionKeys,
 
+    closePaneKeys,
+
     exprFocusDelegatorKeys)
 where
 
@@ -26,6 +28,7 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 group = E.KeyEventType
 ctrl = group E.ctrl . E.charKey
 alt = group E.alt . E.charKey
+-- altShift = group E.noMods { E.modAlt = True, E.modShift = True } . E.charKey
 simple = group E.noMods
 
 -- pasteKeys         = [ctrl 'v']
@@ -44,6 +47,8 @@ overlayDocKeys    = [simple E.KeyF1, alt 'h']
 addParamKeys      = [alt 'p']
 
 delBranchKeys     = [alt 'o']
+
+closePaneKeys       = [ctrl 'w']
 
 pickResultKeys    = [simple E.KeyEnter]
 delKeys           = [simple E.KeyBackspace, simple E.KeyDel]
