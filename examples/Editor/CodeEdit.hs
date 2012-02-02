@@ -42,6 +42,18 @@ spaceView = Spacer.makeHorizontal 20
 spaceWidget :: Widget f
 spaceWidget = Widget.liftView spaceView
 
+makeVarView :: MonadF m => Data.VariableRef -> Anim.AnimId -> TWidget t m
+makeVarView var animId = do
+  name <- getP $ Anchors.variableNameRef var
+  nameView <- BWidgets.makeFocusableTextView name animId
+  let
+    color =
+      case var of
+        Data.BuiltinRef _ -> Draw.Color 1 0.6 0.2 1
+        Data.DefinitionRef _ -> Draw.Color 1 1 1 1
+        Data.ParameterRef _ -> Draw.Color 0.2 0.8 0.9 1
+  return $ Widget.tint color nameView
+
 makeActiveHoleEdit ::
   MonadF m => [IRef Data.Parameter] -> Data.HoleState -> IRef Data.Expression ->
   Anim.AnimId -> TWidget ViewTag m
@@ -66,9 +78,9 @@ makeActiveHoleEdit paramIs curState expressionI myId =
 
     searchTermId = AnimIds.searchTermAnimId myId
     resultAnimId name = Anim.joinId myId ["search results", SBS8.pack name]
-    makeResultWidget v@(_, name) =
+    makeResultWidget v@(var, name) =
       (liftM . Widget.strongerEvents) (pickResultEventMap v) .
-      BWidgets.makeFocusableTextView name $ resultAnimId name
+      makeVarView var $ resultAnimId name
     pickResultEventMap (var, name) =
       EventMap.fromEventTypes Config.pickResultKeys "Pick this search result" $ do
         Transaction.writeIRef expressionI $ Data.ExpressionGetVariable var
@@ -151,8 +163,7 @@ makeExpressionEdit isArgument params expressionPtr = do
           (fmap . liftM) (flip (,) myId) $
           makeHoleEdit params holeState expressionI
       Data.ExpressionGetVariable varRef -> do
-        name <- getP $ Anchors.variableNameRef varRef
-        varRefView <- BWidgets.makeFocusableTextView name myId
+        varRefView <- makeVarView varRef myId
         let
           jumpToDefinitionEventMap =
             Widget.actionEventMapMovesCursor Config.jumpToDefinitionKeys "Jump to definition" jumpToDefinition

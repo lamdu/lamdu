@@ -11,7 +11,7 @@ module Graphics.UI.Bottle.Widget (
   userIO, image, eventMap, enter,
   takesFocus, atMkUserIO, atUserIO,
   atImageWithSize, atImage, atMaybeEnter, atEventMap, atEvents,
-  backgroundColor, liftView,
+  backgroundColor, tint, liftView,
   strongerEvents, weakerEvents, align) where
 
 import Data.Monoid (Monoid(..))
@@ -143,6 +143,9 @@ weakerEvents = atEventMap . flip mappend
 
 backgroundColor :: Anim.AnimId -> Draw.Color -> Widget f -> Widget f
 backgroundColor animId = atImageWithSize . Anim.backgroundColor animId 10
+
+tint :: Draw.Color -> Widget f -> Widget f
+tint = atImage . Anim.onImages . Draw.tint
 
 actionEventMap ::
   Functor f => [EventMap.EventType] -> EventMap.Doc ->
