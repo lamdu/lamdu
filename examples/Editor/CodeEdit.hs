@@ -151,7 +151,7 @@ makeDefinitionEdit definitionI = do
     bodyRef = Property.composeLabel Data.defBody Data.atDefBody definitionRef
     definitionRef = Transaction.fromIRef definitionI
     paramEventMap paramI =
-      Widget.actionEventMapMovesCursor Config.delParamKeys "Delete Parameter" .
+      Widget.actionEventMapMovesCursor Config.delKeys "Delete Parameter" .
       (liftM . const) animId $
       DataOps.delParameter definitionRef paramI
     eventMap =

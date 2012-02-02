@@ -15,7 +15,7 @@ module Editor.Config(
 
     -- moveToParentKeys,
 
-    addParamKeys, delParamKeys,
+    addParamKeys,
 
     exprFocusDelegatorKeys)
 where
@@ -42,7 +42,6 @@ makeBranchKeys    = [ctrl 's']
 overlayDocKeys    = [simple E.KeyF1, alt 'h']
 
 addParamKeys      = [alt 'p']
-delParamKeys      = [simple E.KeyDel]
 
 delBranchKeys     = [alt 'o']
 
