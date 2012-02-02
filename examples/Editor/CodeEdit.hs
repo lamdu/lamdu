@@ -211,8 +211,8 @@ makeDefinitionEdit definitionI = do
     nameEditAnimId = Anim.joinId animId ["name"]
     animId = AnimIds.fromIRef definitionI
 
-makePanesEdit :: MonadF m => IRef [Anchors.Pane] -> TWidget ViewTag m
-makePanesEdit panesI = do
+makePanesEdit :: MonadF m => TWidget ViewTag m
+makePanesEdit = do
   panes <- getP panesRef
 
   let
@@ -249,5 +249,5 @@ makePanesEdit panesI = do
 
   return $ Widget.weakerEvents newDefinitionEventMap panesWidget
   where
-    panesRef = Transaction.fromIRef panesI
-    myId = AnimIds.fromIRef panesI
+    panesRef = Transaction.fromIRef Anchors.rootIRef
+    myId = AnimIds.fromIRef Anchors.rootIRef

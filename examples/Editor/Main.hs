@@ -54,8 +54,8 @@ runDbStore font store = do
       }
 
     fromCursor cursor =
-      runCTransaction cursor style . BranchGUI.makeRootWidget $
-      CodeEdit.makePanesEdit Anchors.rootIRef
+      runCTransaction cursor style $
+      BranchGUI.makeRootWidget CodeEdit.makePanesEdit
     -- TODO: Move this logic to some more common place?
     makeWidget = widgetDownTransaction $ do
       cursor <- Property.get Anchors.cursor
