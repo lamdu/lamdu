@@ -3,7 +3,7 @@
 module Editor.AnimIds(
   backgroundCursorId, textCursorId, fromIRef,
   collapserId, branchSelection, goUpId,
-  delegating, notDelegating)
+  delegating, notDelegating, searchTermAnimId)
 where
 
 import Graphics.UI.Bottle.Animation(AnimId, joinId)
@@ -34,3 +34,6 @@ notDelegating = flip joinId ["not delegating"]
 
 goUpId :: AnimId
 goUpId = ["go up"]
+
+searchTermAnimId :: AnimId -> AnimId
+searchTermAnimId = flip joinId ["search term"]

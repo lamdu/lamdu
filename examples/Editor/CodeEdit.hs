@@ -26,6 +26,7 @@ import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
+import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -62,7 +63,7 @@ makeActiveHoleEdit curState expressionI myId =
     maybeResults xs = liftM BWidgets.vbox $ mapM makeResultWidget xs
     expressionId = AnimIds.fromIRef expressionI
 
-    searchTermId = Anim.joinId myId ["search term"]
+    searchTermId = AnimIds.searchTermAnimId myId
     resultAnimId name = Anim.joinId myId ["search results", SBS8.pack name]
     makeResultWidget v@(_, name) =
       (liftM . Widget.strongerEvents) (pickResultEventMap v) .
@@ -93,9 +94,17 @@ makeHoleEdit ::
   Anim.AnimId -> TWidget ViewTag m
 makeHoleEdit curState expressionI myId = do
   cursor <- readCursor
-  if isJust (Anim.subId myId cursor)
+  widget <-
+    if isJust (Anim.subId myId cursor)
     then makeActiveHoleEdit curState expressionI myId
-    else BWidgets.makeFocusableTextView ('<' : Data.holeSearchTerm curState ++ ">") myId
+    else BWidgets.makeFocusableTextView snippet $ AnimIds.searchTermAnimId myId
+  return $ Widget.backgroundColor (Anim.joinId myId ["hole background"]) holeBackgroundColor widget
+  where
+    holeBackgroundColor = Draw.Color 0.8 0 0 0.3
+    snippet
+      | null searchText = "-"
+      | otherwise = searchText
+    searchText = Data.holeSearchTerm curState
 
 makeExpressionEdit :: MonadF m =>
   Bool -> Property (Transaction ViewTag m) (IRef Data.Expression) ->
