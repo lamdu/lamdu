@@ -11,7 +11,7 @@ module Editor.Config(
     -- actionKeys,
 
     delKeys, callWithArgumentKeys, giveAsArgumentKeys, addNextArgumentKeys,
-    pickResultKeys,
+    pickResultKeys, jumpToDefinitionKeys,
 
     -- moveToParentKeys,
 
@@ -51,6 +51,7 @@ delBranchKeys     = [alt 'o']
 closePaneKeys       = [ctrl 'w']
 
 pickResultKeys    = [simple E.KeyEnter]
+jumpToDefinitionKeys  = [simple E.KeyEnter]
 delKeys           = [simple E.KeyBackspace, simple E.KeyDel]
 giveAsArgumentKeys = [simple (E.charKey 'a')]
 callWithArgumentKeys = [simple (E.charKey 'c')]

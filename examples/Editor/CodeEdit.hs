@@ -148,10 +148,18 @@ makeExpressionEdit isArgument expressionPtr = do
         wrapTextEditor .
           (fmap . liftM) (flip (,) myId) $
           makeHoleEdit holeState expressionI
-      Data.ExpressionGetVariable varI -> do
-        name <- getP (Anchors.variableNameRef varI)
+      Data.ExpressionGetVariable varRef -> do
+        name <- getP $ Anchors.variableNameRef varRef
         varRefView <- BWidgets.makeFocusableTextView name myId
-        return (varRefView, myId)
+        let
+          jumpToDefinitionEventMap =
+            Widget.actionEventMapMovesCursor Config.jumpToDefinitionKeys "Jump to definition" jumpToDefinition
+          jumpToDefinition =
+            case varRef of
+              Data.DefinitionRef defI -> newPane defI
+              Data.ParameterRef _paramI -> error "not yet"
+              Data.BuiltinRef _builtI -> error "todo"
+        return (Widget.weakerEvents jumpToDefinitionEventMap varRefView, myId)
       Data.ExpressionApply (Data.Apply funcI argI) ->
         wrapExpr $
           \animId ->
@@ -211,6 +219,16 @@ makeDefinitionEdit definitionI = do
     nameEditAnimId = Anim.joinId animId ["name"]
     animId = AnimIds.fromIRef definitionI
 
+newPane :: Monad m => IRef Data.Definition -> Transaction ViewTag m Widget.Cursor
+newPane defI = do
+  Property.pureModify panesRef maybeAddPane
+  return $ AnimIds.fromIRef defI
+  where
+    maybeAddPane panes
+      | any ((== defI) . Anchors.paneDefinition) panes = panes
+      | otherwise = Anchors.makePane defI : panes
+    panesRef = Transaction.fromIRef Anchors.rootIRef
+
 makePanesEdit :: MonadF m => TWidget ViewTag m
 makePanesEdit = do
   panes <- getP panesRef
@@ -220,8 +238,7 @@ makePanesEdit = do
       Widget.actionEventMapMovesCursor Config.newDefinitionKeys
         "New Definition" $ do
           newDefI <- Anchors.makeDefinition
-          Property.set panesRef (Anchors.makePane newDefI : panes)
-          return . AnimIds.delegating $ AnimIds.fromIRef newDefI
+          newPane newDefI
 
     delPane i = do
       let newPanes = removeAt i panes
