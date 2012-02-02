@@ -7,15 +7,13 @@ import Data.Store.Property(Property)
 import Data.Store.Transaction (Transaction)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
-import qualified Editor.Anchors as Anchors
 import qualified Editor.Data as Data
 
 addParameter ::
-  Monad m => String -> Transaction.Property t m Data.Definition ->
+  Monad m => Transaction.Property t m Data.Definition ->
   Transaction t m (IRef Data.Parameter)
-addParameter paramName definitionRef = do
+addParameter definitionRef = do
   newParamI <- Transaction.newIRef Data.Parameter
-  Property.set (Anchors.aNameRef newParamI) paramName
   Property.pureModify definitionRef . Data.atDefParameters $
     (++ [newParamI])
   return newParamI

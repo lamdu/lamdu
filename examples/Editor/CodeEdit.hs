@@ -112,7 +112,8 @@ makeActiveHoleEdit definitionI curState expressionI myId =
     searchTermEventMap =
       mconcat [
         Widget.actionEventMapMovesCursor Config.addParamKeys "Add as Parameter" $ do
-          newParam <- DataOps.addParameter (Data.holeSearchTerm curState) definitionRef
+          newParam <- DataOps.addParameter definitionRef
+          Property.set (Anchors.aNameRef newParam) $ Data.holeSearchTerm curState
           Transaction.writeIRef expressionI . Data.ExpressionGetVariable $ Data.ParameterRef newParam
           return . AnimIds.delegating $ AnimIds.fromIRef newParam
         ]
@@ -245,7 +246,7 @@ makeDefinitionEdit definitionI = do
     eventMap =
       Widget.actionEventMapMovesCursor Config.addParamKeys "Add Parameter" .
       liftM (AnimIds.delegating . AnimIds.fromIRef) $
-      DataOps.addParameter "" definitionRef
+      DataOps.addParameter definitionRef
     nameEditAnimId = Anim.joinId animId ["name"]
     animId = AnimIds.fromIRef definitionI
 
