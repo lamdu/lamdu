@@ -72,10 +72,11 @@ makeChoice selectionAnimId curChoiceRef orientation children = do
 wrapDelegatedWithKeys ::
   Monad m => FocusDelegator.Keys ->
   FocusDelegator.IsDelegating ->
+  ((Widget (Transaction t m) ->
+    Widget (Transaction t m)) -> a -> b) ->
   (Anim.AnimId -> CTransaction t m a) ->
-  ((Widget (Transaction t m) -> Widget (Transaction t m)) -> a -> r) ->
-  Anim.AnimId -> CTransaction t m r
-wrapDelegatedWithKeys keys entryState mkResult atWidget animId = do
+  Anim.AnimId -> CTransaction t m b
+wrapDelegatedWithKeys keys entryState atWidget mkResult animId = do
   let
     innerAnimId = AnimIds.delegating animId
     selfAnimId = AnimIds.notDelegating animId
@@ -101,7 +102,8 @@ wrapDelegatedWithKeys keys entryState mkResult atWidget animId = do
 wrapDelegated ::
   Monad m => FocusDelegator.IsDelegating ->
   (Anim.AnimId -> TWidget t m) -> Anim.AnimId -> TWidget t m
-wrapDelegated entryState f = wrapDelegatedWithKeys FocusDelegator.defaultKeys entryState f id
+wrapDelegated entryState =
+  wrapDelegatedWithKeys FocusDelegator.defaultKeys entryState id
 
 makeTextEdit ::
   Monad m =>

@@ -40,15 +40,16 @@ spaceView = Spacer.makeHorizontal 20
 spaceWidget :: Widget f
 spaceWidget = Widget.liftView spaceView
 
-makeActiveHoleEdit :: MonadF m => Data.HoleState -> IRef Data.Expression -> TWidget ViewTag m
-makeActiveHoleEdit curState expressionI =
+makeActiveHoleEdit ::
+  MonadF m => Data.HoleState -> IRef Data.Expression ->
+  Anim.AnimId -> TWidget ViewTag m
+makeActiveHoleEdit curState expressionI myId =
   assignCursor myId searchTermId $ do
     searchTermWidget <- BWidgets.makeTextEdit stateProp searchTermId
     vars <- mapM getVarName =<< getP Anchors.globals
     resultWidgets <- mapM makeResultWidget . take 3 $ filter goodResult vars
     return . BWidgets.vbox $ searchTermWidget : resultWidgets
   where
-    myId = AnimIds.fromIRef expressionI
     searchTermId = Anim.joinId myId ["search term"]
     makeResultWidget (var, name) =
       (liftM . Widget.strongerEvents)
@@ -65,14 +66,14 @@ makeActiveHoleEdit curState expressionI =
     getVarName var = liftM ((,) var) . getP $ Anchors.variableNameRef var
     goodResult (_, name) = all (`isInfixOf` name) . words $ Data.holeSearchTerm curState
 
-makeHoleEdit :: MonadF m => Data.HoleState -> IRef Data.Expression -> TWidget ViewTag m
-makeHoleEdit curState expressionI = do
+makeHoleEdit ::
+  MonadF m => Data.HoleState -> IRef Data.Expression ->
+  Anim.AnimId -> TWidget ViewTag m
+makeHoleEdit curState expressionI myId = do
   cursor <- readCursor
   if isJust (Anim.subId myId cursor)
-    then makeActiveHoleEdit curState expressionI
+    then makeActiveHoleEdit curState expressionI myId
     else BWidgets.makeFocusableTextView ('<' : Data.holeSearchTerm curState ++ ">") myId
-  where
-    myId = AnimIds.fromIRef expressionI
 
 makeExpressionEdit :: MonadF m =>
   Bool -> Property (Transaction ViewTag m) (IRef Data.Expression) ->
@@ -80,10 +81,10 @@ makeExpressionEdit :: MonadF m =>
 makeExpressionEdit isArgument expressionPtr = do
   expressionI <- getP expressionPtr
   let
+    diveIn = AnimIds.delegating . AnimIds.fromIRef
     expressionRef = Transaction.fromIRef expressionI
-    exprKeys = Config.exprFocusDelegatorKeys
-    mkCallWithArg = fmap AnimIds.fromIRef . DataOps.callWithArg
-    mkGiveAsArg = fmap AnimIds.fromIRef $ DataOps.giveAsArg expressionPtr
+    mkCallWithArg = fmap diveIn . DataOps.callWithArg
+    mkGiveAsArg = fmap diveIn $ DataOps.giveAsArg expressionPtr
     eventMap = mconcat
       [ Widget.actionEventMapMovesCursor
         Config.giveAsArgumentKeys "Give as argument"
@@ -93,11 +94,12 @@ makeExpressionEdit isArgument expressionPtr = do
         mkCallWithArg expressionPtr
       ]
     weakerEvents = liftM . first . Widget.weakerEvents
+    myId = AnimIds.fromIRef expressionI
     wrap keys entryState f =
       (if isArgument then id else mkCallWithArgEvent) .
-      weakerEvents eventMap .
-      BWidgets.wrapDelegatedWithKeys keys entryState f first $
-      AnimIds.fromIRef expressionI
+      weakerEvents eventMap $
+      BWidgets.wrapDelegatedWithKeys keys entryState first f
+      myId
     mkDelEvent = weakerEvents . Widget.actionEventMapMovesCursor Config.delKeys "Delete" . setExpr
     mkCallWithArgEvent =
       weakerEvents . Widget.actionEventMapMovesCursor Config.addNextArgumentKeys "Add another argument" $
@@ -105,31 +107,35 @@ makeExpressionEdit isArgument expressionPtr = do
     setExpr newExprI = do
       Property.set expressionPtr newExprI
       return $ AnimIds.fromIRef newExprI
+    wrapTextEditor =
+      wrap FocusDelegator.defaultKeys FocusDelegator.NotDelegating
   expr <- getP expressionRef
   case expr of
     Data.ExpressionHole holeState ->
-      liftM (flip (,) (AnimIds.fromIRef expressionI)) $
-      makeHoleEdit holeState expressionI
+      wrapTextEditor .
+        (fmap . liftM) (flip (,) myId) $
+        makeHoleEdit holeState expressionI
     Data.ExpressionGetVariable varI ->
-      wrap FocusDelegator.defaultKeys FocusDelegator.NotDelegating .
-        (fmap . liftM) (flip (,) (AnimIds.fromIRef expressionI)) .
+      wrapTextEditor .
+        (fmap . liftM) (flip (,) myId) .
         BWidgets.makeWordEdit $ Anchors.variableNameRef varI
     Data.ExpressionApply (Data.Apply funcI argI) ->
-      wrap exprKeys FocusDelegator.Delegating $ \animId ->
-        assignCursor animId (AnimIds.fromIRef argI) $ do
-          let
-            funcIPtr =
-              Property (return funcI) $ Property.set expressionRef . Data.ExpressionApply . (`Data.Apply` argI)
-            argIPtr =
-              Property (return argI) $ Property.set expressionRef . Data.ExpressionApply . (funcI `Data.Apply`)
-          (funcEdit, funcAnimId) <- mkDelEvent argI $ makeExpressionEdit False funcIPtr
-          (argEdit, _) <- mkCallWithArgEvent . mkDelEvent funcI $ makeExpressionEdit True argIPtr
-          let label str = BWidgets.makeTextView str $ Anim.joinId funcAnimId [pack str]
-          before <- label "("
-          after <- label ")"
-          return
-            ((BWidgets.hbox . concat) [[before | isArgument], [funcEdit], [spaceWidget], [argEdit], [after | isArgument]]
-            ,funcAnimId)
+      wrap Config.exprFocusDelegatorKeys FocusDelegator.Delegating $
+        \animId ->
+          assignCursor animId (AnimIds.fromIRef argI) $ do
+            let
+              funcIPtr =
+                Property (return funcI) $ Property.set expressionRef . Data.ExpressionApply . (`Data.Apply` argI)
+              argIPtr =
+                Property (return argI) $ Property.set expressionRef . Data.ExpressionApply . (funcI `Data.Apply`)
+            (funcEdit, funcAnimId) <- mkDelEvent argI $ makeExpressionEdit False funcIPtr
+            (argEdit, _) <- mkCallWithArgEvent . mkDelEvent funcI $ makeExpressionEdit True argIPtr
+            let label str = BWidgets.makeTextView str $ Anim.joinId funcAnimId [pack str]
+            before <- label "("
+            after <- label ")"
+            return
+              ((BWidgets.hbox . concat) [[before | isArgument], [funcEdit], [spaceWidget], [argEdit], [after | isArgument]]
+              ,funcAnimId)
 
 makeDefinitionEdit :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
 makeDefinitionEdit definitionI = do
