@@ -144,24 +144,19 @@ weakerEvents = atEventMap . flip mappend
 backgroundColor :: Anim.AnimId -> Draw.Color -> Widget f -> Widget f
 backgroundColor animId = atImageWithSize . Anim.backgroundColor animId 10
 
-makeActionEventMap ::
-  [EventMap.EventType] -> EventMap.Doc -> a -> EventMap a
-makeActionEventMap keys doc act =
-  mconcat $ map (flip (`EventMap.fromEventType` doc) act) keys
-
 actionEventMap ::
   Functor f => [EventMap.EventType] -> EventMap.Doc ->
   f () -> EventHandlers f
 actionEventMap keys doc act =
   (fmap . fmap . const) emptyEventResult $
-  makeActionEventMap keys doc act
+  EventMap.fromEventTypes keys doc act
 
 actionEventMapMovesCursor ::
   Functor f => [EventMap.EventType] -> EventMap.Doc ->
   f Cursor -> EventHandlers f
 actionEventMapMovesCursor keys doc act =
   (fmap . fmap) eventResultFromCursor $
-  makeActionEventMap keys doc act
+  EventMap.fromEventTypes keys doc act
 
 -- If widget's max size is smaller than given size, place widget in
 -- portion of the extra space (0..1 ratio in each dimension):

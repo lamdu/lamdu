@@ -4,7 +4,7 @@ module Graphics.UI.Bottle.EventMap(
   EventMap, EventType(..), Event,
   module Graphics.UI.GLFW.ModState,
   module Graphics.UI.GLFW.Events,
-  lookup, singleton, fromEventType,
+  lookup, singleton, fromEventType, fromEventTypes,
   Key(..), charKey, delete, Doc, eventMapDocs)
 where
 
@@ -123,3 +123,7 @@ singleton eventType doc handler =
 
 fromEventType :: EventType -> Doc -> a -> EventMap a
 fromEventType eventType doc = singleton eventType doc . const
+
+fromEventTypes :: [EventType] -> Doc -> a -> EventMap a
+fromEventTypes keys doc act =
+  mconcat $ map (flip (`fromEventType` doc) act) keys
