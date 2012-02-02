@@ -17,7 +17,6 @@ import Editor.CTransaction (CTransaction, getP, assignCursor, TWidget, readCurso
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Sized (Sized)
 import Graphics.UI.Bottle.Widget (Widget)
-import qualified Data.ByteString.Char8 as SBS8
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
@@ -82,18 +81,18 @@ makeActiveHoleEdit paramIs curState expressionI myId =
     expressionId = AnimIds.fromIRef expressionI
 
     searchTermId = AnimIds.searchTermAnimId myId
-    resultAnimId name = Anim.joinId myId ["search results", SBS8.pack name]
-    makeResultWidget v@(var, name) =
+    resultAnimId = Anim.joinId (Anim.joinId myId ["search results"]) . Data.onVariableIRef AnimIds.fromIRef
+    makeResultWidget v@(var, _) =
       (liftM . Widget.strongerEvents) (pickResultEventMap v) .
-      makeVarView var $ resultAnimId name
-    pickResultEventMap (var, name) =
+      makeVarView var $ resultAnimId var
+    pickResultEventMap (var, _) =
       EventMap.fromEventTypes Config.pickResultKeys "Pick this search result" $ do
         Transaction.writeIRef expressionI $ Data.ExpressionGetVariable var
         let
           -- TODO: Is there a better way?
           getVariableTextAnimId = expressionId
           mapAnimId animId =
-            maybe animId (Anim.joinId getVariableTextAnimId) $ Anim.subId (resultAnimId name) animId
+            maybe animId (Anim.joinId getVariableTextAnimId) $ Anim.subId (resultAnimId var) animId
 
         return Widget.EventResult {
           Widget.eCursor = Just expressionId,
