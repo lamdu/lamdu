@@ -2,7 +2,7 @@
 {-# OPTIONS -Wall #-}
 module Editor.CTransaction(
   CTransaction, runCTransaction, runNestedCTransaction, TWidget,
-  readCursor, readTextStyle, transaction, getP, assignCursor, atEmptyStr)
+  readCursor, readTextStyle, transaction, getP, assignCursor, atTextStyle)
 where
 
 import Control.Monad (liftM)
@@ -67,5 +67,5 @@ assignCursor src dest =
       | cursor == src = dest
       | otherwise = cursor
 
-atEmptyStr :: (String -> String) -> TWidget t m -> TWidget t m
-atEmptyStr = atCTransaction . Reader.withReaderT . atEnvTextStyle . TextEdit.atSEmptyString
+atTextStyle :: (TextEdit.Style -> TextEdit.Style) -> TWidget t m -> TWidget t m
+atTextStyle = atCTransaction . Reader.withReaderT . atEnvTextStyle

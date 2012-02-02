@@ -1,5 +1,8 @@
 {-# OPTIONS -Wall #-}
-module Graphics.UI.Bottle.Widgets.TextView (Style(..), make, makeWidget, drawText) where
+{-# LANGUAGE TemplateHaskell #-}
+module Graphics.UI.Bottle.Widgets.TextView (
+  Style(..), atStyleColor, atStyleFont, atStyleFontSize,
+  make, makeWidget, drawText) where
 
 import Control.Applicative (liftA2)
 import Control.Arrow (first, second, (&&&))
@@ -11,6 +14,7 @@ import Graphics.DrawingCombinators.Utils(square)
 import Graphics.UI.Bottle.SizeRange (fixedSize)
 import Graphics.UI.Bottle.Sized (Sized(..))
 import Graphics.UI.Bottle.Widget (Widget, liftView)
+import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.ByteString.Char8 as SBS8
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.DrawingCombinators as Draw
@@ -18,15 +22,18 @@ import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import qualified Graphics.UI.Bottle.Animation as Anim
 
 data Style = Style {
+  styleColor :: Draw.Color,
   styleFont :: Draw.Font,
   styleFontSize :: Int
   }
+
+AtFieldTH.make ''Style
 
 augment :: Show a => Anim.AnimId -> a -> Anim.AnimId
 augment animId = Anim.joinId animId . (:[]) . SBS8.pack . show
 
 drawText :: Bool -> Style -> String -> (Anim.AnimId -> Anim.Frame, Vector2 Draw.R)
-drawText isSingleLetterImages (Style font ptSize) text =
+drawText isSingleLetterImages (Style color font ptSize) text =
   (first . fmap) (Anim.scale sz) .
   second (* sz) .
   drawMany vertical $
@@ -48,7 +55,7 @@ drawText isSingleLetterImages (Style font ptSize) text =
         newMkFrame animId =
           mappend (mkFrame animId) . Anim.scale heightSize $
           Anim.simpleFrame (augment animId ["line marker", show lineIndex]) square
-    useFont = DrawUtils.drawText font &&& DrawUtils.textSize font
+    useFont = (Draw.tint color . DrawUtils.drawText font) &&& DrawUtils.textSize font
     nestedFrame (i, (image, size)) = (draw, size)
       where
         draw animId = Anim.simpleFrameDownscale (augment animId i) size image

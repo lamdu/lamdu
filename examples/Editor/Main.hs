@@ -37,12 +37,14 @@ runDbStore font store = do
   mainLoopWidget $ addHelp =<< makeWidget
   where
     helpStyle = TextView.Style {
+      TextView.styleColor = Draw.Color 0 1 0 1,
       TextView.styleFont = font,
       TextView.styleFontSize = 10
       }
     style = TextEdit.Style {
       TextEdit.sTextViewStyle =
         TextView.Style {
+          TextView.styleColor = Draw.Color 1 1 1 1,
           TextView.styleFont = font,
           TextView.styleFontSize = 25
           },

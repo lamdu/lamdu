@@ -13,7 +13,7 @@ import Data.Store.IRef (IRef)
 import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, getP, assignCursor, TWidget, readCursor)
+import Editor.CTransaction (CTransaction, getP, assignCursor, TWidget, readCursor, atTextStyle)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Sized (Sized)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -32,6 +32,8 @@ import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
+import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
+import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
 hboxSpaced :: [Widget f] -> Widget f
 hboxSpaced = BWidgets.hbox . intersperse spaceWidget
@@ -42,17 +44,20 @@ spaceView = Spacer.makeHorizontal 20
 spaceWidget :: Widget f
 spaceWidget = Widget.liftView spaceView
 
+setTextColor :: Draw.Color -> TWidget t m -> TWidget t m
+setTextColor = atTextStyle . TextEdit.atSTextViewStyle . TextView.atStyleColor . const
+
 makeVarView :: MonadF m => Data.VariableRef -> Anim.AnimId -> TWidget t m
 makeVarView var animId = do
   name <- getP $ Anchors.variableNameRef var
-  textView <- BWidgets.makeTextView name animId
   let
     color =
       case var of
-        Data.BuiltinRef _ -> Draw.Color 1 0.6 0.2 1
-        Data.DefinitionRef _ -> Draw.Color 1 1 1 1
-        Data.ParameterRef _ -> Draw.Color 0.2 0.8 0.9 1
-  BWidgets.makeFocusableView (Widget.tint color textView) animId
+        Data.BuiltinRef _ -> Config.builtinColor
+        Data.DefinitionRef _ -> Config.definitionColor
+        Data.ParameterRef _ -> Config.parameterColor
+  setTextColor color $
+    BWidgets.makeFocusableTextView name animId
 
 makeActiveHoleEdit ::
   MonadF m => [IRef Data.Parameter] -> Data.HoleState -> IRef Data.Expression ->
@@ -217,7 +222,9 @@ makeDefinitionEdit definitionI = do
   where
     makeParamEdit (i, paramI) =
       (liftM . Widget.strongerEvents) (paramEventMap paramI) .
-      BWidgets.wrapDelegated FocusDelegator.NotDelegating (BWidgets.makeNameEdit ("<unnamed param " ++ show i ++ ">") paramI) $
+      BWidgets.wrapDelegated FocusDelegator.NotDelegating
+      (setTextColor Config.parameterColor .
+       BWidgets.makeNameEdit ("<unnamed param " ++ show i ++ ">") paramI) $
       AnimIds.fromIRef paramI
     bodyRef = Property.composeLabel Data.defBody Data.atDefBody definitionRef
     definitionRef = Transaction.fromIRef definitionI

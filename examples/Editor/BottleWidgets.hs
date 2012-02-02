@@ -14,7 +14,7 @@ import Data.Maybe (isJust)
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
-import Editor.CTransaction (TWidget, CTransaction, readTextStyle, readCursor, getP, assignCursor, atEmptyStr)
+import Editor.CTransaction (TWidget, CTransaction, readTextStyle, readCursor, getP, assignCursor, atTextStyle)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Store.Property as Property
@@ -139,7 +139,7 @@ makeWordEdit = (fmap . fmap . liftM . Widget.atEventMap) removeWordSeparators ma
 
 makeNameEdit :: Monad m => String -> IRef a -> Anim.AnimId -> TWidget t m
 makeNameEdit emptyStr iref =
-  (atEmptyStr . const) emptyStr . makeWordEdit (Anchors.aNameRef iref)
+  (atTextStyle . TextEdit.atSEmptyString . const) emptyStr . makeWordEdit (Anchors.aNameRef iref)
 
 hboxAlign :: Draw.R -> [Widget f] -> Widget f
 hboxAlign align = Box.make Box.horizontal . map (Widget.align (Vector2 0 align))

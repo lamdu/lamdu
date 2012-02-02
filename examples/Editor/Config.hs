@@ -19,9 +19,12 @@ module Editor.Config(
 
     closePaneKeys,
 
-    exprFocusDelegatorKeys)
+    exprFocusDelegatorKeys,
+
+    builtinColor, definitionColor, parameterColor)
 where
 
+import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
@@ -63,3 +66,7 @@ exprFocusDelegatorKeys = FocusDelegator.Keys {
   }
 
 newDefinitionKeys = [alt 'n']
+
+builtinColor = Draw.Color 1 0.6 0.2 1
+definitionColor = Draw.Color 1 1 1 1
+parameterColor = Draw.Color 0.2 0.8 0.9 1
