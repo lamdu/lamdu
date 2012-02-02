@@ -221,7 +221,7 @@ makeDefinitionEdit definitionI = do
     [nameEdit] ++ paramsEdits ++ [equals, expressionEdit]
   where
     makeParamEdit (i, paramI) =
-      (liftM . Widget.strongerEvents) (paramEventMap paramI) .
+      (liftM . Widget.weakerEvents) (paramEventMap paramI) .
       BWidgets.wrapDelegated FocusDelegator.NotDelegating
       (setTextColor Config.parameterColor .
        BWidgets.makeNameEdit ("<unnamed param " ++ show i ++ ">") paramI) $
