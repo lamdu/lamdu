@@ -47,9 +47,19 @@ makeActiveHoleEdit curState expressionI myId =
   assignCursor myId searchTermId $ do
     searchTermWidget <- BWidgets.makeTextEdit stateProp searchTermId
     vars <- mapM getVarName =<< getP Anchors.globals
-    resultWidgets <- mapM makeResultWidget . take 3 $ filter goodResult vars
-    return . BWidgets.vbox $ searchTermWidget : resultWidgets
+    let
+      results = filter goodResult vars
+      (firstResults, moreResults) = splitAt 3 results
+      mkMoreResultWidget
+        | null moreResults = return []
+        | otherwise = liftM (:[]) . BWidgets.makeTextView "..." $ Anim.joinId myId ["more results"]
+    resultWidgets <- maybeResults firstResults
+    moreResultsWidget <- mkMoreResultWidget
+    return . BWidgets.vbox $ [searchTermWidget, resultWidgets] ++ moreResultsWidget
   where
+    maybeResults [] = BWidgets.makeTextView "(No results)" $ Anim.joinId myId ["no results"]
+    maybeResults xs = liftM BWidgets.vbox $ mapM makeResultWidget xs
+
     searchTermId = Anim.joinId myId ["search term"]
     makeResultWidget (var, name) =
       (liftM . Widget.strongerEvents)
