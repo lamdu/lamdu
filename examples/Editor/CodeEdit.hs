@@ -62,12 +62,12 @@ makeActiveHoleEdit curState expressionI myId =
 
     searchTermId = Anim.joinId myId ["search term"]
     makeResultWidget (var, name) =
-      (liftM . Widget.strongerEvents)
-        (Widget.actionEventMapMovesCursor Config.pickResultKeys "Pick this search result" (pickResult var)) $
+      (liftM . Widget.strongerEvents) (pickResultEventMap var) $
       BWidgets.makeFocusableTextView name (Anim.joinId myId ["search results", SBS8.pack name])
-    pickResult var = do
-      Transaction.writeIRef expressionI $ Data.ExpressionGetVariable var
-      return myId
+    pickResultEventMap var =
+      Widget.actionEventMapMovesCursor Config.pickResultKeys "Pick this search result" $ do
+        Transaction.writeIRef expressionI $ Data.ExpressionGetVariable var
+        return myId
     stateProp =
       Property.Property {
         Property.get = return $ Data.holeSearchTerm curState,
