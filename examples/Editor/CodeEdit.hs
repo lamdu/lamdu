@@ -45,14 +45,14 @@ spaceWidget = Widget.liftView spaceView
 makeVarView :: MonadF m => Data.VariableRef -> Anim.AnimId -> TWidget t m
 makeVarView var animId = do
   name <- getP $ Anchors.variableNameRef var
-  nameView <- BWidgets.makeFocusableTextView name animId
+  textView <- BWidgets.makeTextView name animId
   let
     color =
       case var of
         Data.BuiltinRef _ -> Draw.Color 1 0.6 0.2 1
         Data.DefinitionRef _ -> Draw.Color 1 1 1 1
         Data.ParameterRef _ -> Draw.Color 0.2 0.8 0.9 1
-  return $ Widget.tint color nameView
+  BWidgets.makeFocusableView (Widget.tint color textView) animId
 
 makeActiveHoleEdit ::
   MonadF m => [IRef Data.Parameter] -> Data.HoleState -> IRef Data.Expression ->

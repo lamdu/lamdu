@@ -1,7 +1,7 @@
 {-# OPTIONS -Wall #-}
 module Editor.BottleWidgets(
   makeTextView, makeChoice,
-  makeFocusableTextView,
+  makeFocusableView, makeFocusableTextView,
   wrapDelegatedWithKeys, wrapDelegated,
   makeTextEdit, makeWordEdit, makeNameEdit,
   hbox, hboxAlign,
@@ -36,19 +36,23 @@ makeTextView text animId = do
   return $
     TextView.makeWidget (TextEdit.sTextViewStyle style) text animId
 
-makeFocusableTextView :: MonadF m => String -> Anim.AnimId -> TWidget t m
-makeFocusableTextView text animId = do
+makeFocusableView :: MonadF m => Widget (Transaction t m) -> Anim.AnimId -> TWidget t m
+makeFocusableView widget animId = do
   hasFocus <- liftM (animId ==) readCursor
-  textView <- makeTextView text animId
   let
     setBackground
       | hasFocus = Widget.backgroundColor AnimIds.backgroundCursorId blue
       | otherwise = id
   return .
     (Widget.atIsFocused . const) hasFocus . setBackground $
-    Widget.takesFocus (const (return animId)) textView
+    Widget.takesFocus (const (return animId)) widget
   where
     blue = Draw.Color 0 0 1 0.8
+
+makeFocusableTextView :: MonadF m => String -> Anim.AnimId -> TWidget t m
+makeFocusableTextView text animId = do
+  textView <- makeTextView text animId
+  makeFocusableView textView animId
 
 makeChoice ::
   (Monad m) =>
