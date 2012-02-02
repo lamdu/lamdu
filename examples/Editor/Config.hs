@@ -11,7 +11,7 @@ module Editor.Config(
     -- actionKeys,
 
     delKeys, callWithArgumentKeys, giveAsArgumentKeys, addNextArgumentKeys,
-    pickResultKeys, jumpToDefinitionKeys,
+    pickResultKeys, jumpToDefinitionKeys, relinkKeys,
 
     -- moveToParentKeys,
 
@@ -29,15 +29,17 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 group = E.KeyEventType
+
+noMods = group E.noMods
 ctrl = group E.ctrl . E.charKey
 alt = group E.alt . E.charKey
 -- altShift = group E.noMods { E.modAlt = True, E.modShift = True } . E.charKey
-simple = group E.noMods
+k = noMods . E.charKey
 
 -- pasteKeys         = [ctrl 'v']
 -- cutKeys           = [ctrl 'x']
 
--- actionKeys        = [simple E.KeyEnter]
+-- actionKeys        = [noMods E.KeyEnter]
 
 quitKeys          = [ctrl 'q']
 undoKeys          = [ctrl 'z']
@@ -45,19 +47,21 @@ makeBranchKeys    = [ctrl 's']
 
 -- moveToParentKeys  = [group E.alt E.KeyLeft]
 
-overlayDocKeys    = [simple E.KeyF1, alt 'h']
+overlayDocKeys    = [noMods E.KeyF1, alt 'h']
 
 addParamKeys      = [alt 'p']
 
 delBranchKeys     = [alt 'o']
 
-closePaneKeys       = [alt 'w']
+closePaneKeys     = [alt 'w']
 
-pickResultKeys    = [simple E.KeyEnter]
-jumpToDefinitionKeys  = [simple E.KeyEnter]
-delKeys           = [simple E.KeyBackspace, simple E.KeyDel]
-giveAsArgumentKeys = [simple (E.charKey 'a')]
-callWithArgumentKeys = [simple (E.charKey 'c')]
+relinkKeys        = [alt 'r']
+
+pickResultKeys    = [noMods E.KeyEnter]
+jumpToDefinitionKeys  = [noMods E.KeyEnter]
+delKeys           = [noMods E.KeyBackspace, noMods E.KeyDel]
+giveAsArgumentKeys = [k 'a']
+callWithArgumentKeys = [k 'c']
 addNextArgumentKeys = [E.SpaceKeyEventType E.noMods]
 
 exprFocusDelegatorKeys = FocusDelegator.Keys {

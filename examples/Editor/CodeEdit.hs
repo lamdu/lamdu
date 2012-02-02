@@ -135,25 +135,22 @@ makeHoleEdit definitionI curState expressionI myId = do
       | otherwise = searchText
     searchText = Data.holeSearchTerm curState
 
+diveIn :: Functor f => f (IRef a) -> f Anim.AnimId
+diveIn = fmap $ AnimIds.delegating . AnimIds.fromIRef
+
+replace :: MonadF m => Transaction.Property t m (IRef Data.Expression) -> Transaction t m Anim.AnimId
+replace = diveIn . DataOps.replace
+
 makeExpressionEdit :: MonadF m =>
   Bool -> IRef Data.Definition ->
-  Property (Transaction ViewTag m) (IRef Data.Expression) ->
+  Transaction.Property ViewTag m (IRef Data.Expression) ->
   CTransaction ViewTag m (Widget (Transaction ViewTag m), Anim.AnimId)
 makeExpressionEdit isArgument definitionI expressionPtr = do
   expressionI <- getP expressionPtr
   let
-    diveIn = AnimIds.delegating . AnimIds.fromIRef
     expressionRef = Transaction.fromIRef expressionI
-    mkCallWithArg = fmap diveIn . DataOps.callWithArg
-    mkGiveAsArg = fmap diveIn $ DataOps.giveAsArg expressionPtr
-    eventMap = mconcat
-      [ Widget.actionEventMapMovesCursor
-        Config.giveAsArgumentKeys "Give as argument"
-        mkGiveAsArg
-      , Widget.actionEventMapMovesCursor
-        Config.callWithArgumentKeys "Call with argument" $
-        mkCallWithArg expressionPtr
-      ]
+    mkCallWithArg = diveIn $ DataOps.callWithArg expressionPtr
+    mkGiveAsArg = diveIn $ DataOps.giveAsArg expressionPtr
     weakerEvents = liftM . first . Widget.weakerEvents
     myId = AnimIds.fromIRef expressionI
 
@@ -166,8 +163,7 @@ makeExpressionEdit isArgument definitionI expressionPtr = do
 
     mkDelEvent = weakerEvents . Widget.actionEventMapMovesCursor Config.delKeys "Delete" . setExpr
     mkCallWithArgEventMap =
-      Widget.actionEventMapMovesCursor Config.addNextArgumentKeys "Add another argument" $
-      mkCallWithArg expressionPtr
+      Widget.actionEventMapMovesCursor Config.addNextArgumentKeys "Add another argument" mkCallWithArg
     setExpr newExprI = do
       Property.set expressionPtr newExprI
       return $ AnimIds.fromIRef newExprI
@@ -214,7 +210,13 @@ makeExpressionEdit isArgument definitionI expressionPtr = do
   return .
     (first . Widget.weakerEvents . mconcat . concat) [
       [ mkCallWithArgEventMap | not isArgument ],
-      [ eventMap ]
+      [ Widget.actionEventMapMovesCursor
+        Config.giveAsArgumentKeys "Give as argument"
+        mkGiveAsArg
+      , Widget.actionEventMapMovesCursor
+        Config.callWithArgumentKeys "Call with argument" mkCallWithArg
+      , Widget.actionEventMapMovesCursor
+        Config.relinkKeys "Replace" $ replace expressionPtr ]
     ] $
     widget
 
@@ -227,9 +229,11 @@ makeDefinitionEdit definitionI = do
   equals <- BWidgets.makeTextView "=" $ Anim.joinId animId ["equals"]
   (expressionEdit, _) <- makeExpressionEdit False definitionI bodyRef
   paramsEdits <- mapM makeParamEdit $ enumerate params
+
+  let replaceEventMap = Widget.actionEventMapMovesCursor Config.delKeys "Replace" $ replace bodyRef
   return .
     Widget.weakerEvents eventMap . hboxSpaced $
-    [nameEdit] ++ paramsEdits ++ [equals, expressionEdit]
+    [nameEdit] ++ paramsEdits ++ [equals, Widget.weakerEvents replaceEventMap expressionEdit]
   where
     makeParamEdit (i, paramI) =
       (liftM . Widget.weakerEvents) (paramEventMap paramI) .

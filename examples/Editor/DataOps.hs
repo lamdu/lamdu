@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-module Editor.DataOps (addParameter, delParameter, giveAsArg, callWithArg) where
+module Editor.DataOps (addParameter, delParameter, giveAsArg, callWithArg, replace) where
 
 import Data.List (delete)
 import Data.Store.IRef (IRef)
@@ -51,3 +51,12 @@ newHole =
   { Data.holeSearchTerm = "",
     Data.holeCachedSearchResults = []
   }
+
+replace ::
+  Monad m =>
+  Property (Transaction t m) (IRef Data.Expression) ->
+  Transaction t m (IRef Data.Expression)
+replace expressionPtr = do
+  exprI <- newHole
+  Property.set expressionPtr exprI
+  return exprI
