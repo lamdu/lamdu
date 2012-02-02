@@ -51,7 +51,7 @@ addParamKeys      = [alt 'p']
 
 delBranchKeys     = [alt 'o']
 
-closePaneKeys       = [ctrl 'w']
+closePaneKeys       = [alt 'w']
 
 pickResultKeys    = [simple E.KeyEnter]
 jumpToDefinitionKeys  = [simple E.KeyEnter]
