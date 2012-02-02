@@ -3,7 +3,7 @@
 module Editor.CodeEdit(makePanesEdit) where
 
 import Control.Arrow (first)
-import Control.Monad(liftM)
+import Control.Monad (liftM)
 import Data.ByteString.Char8 (pack)
 import Data.List(intersperse, isInfixOf)
 import Data.List.Utils(enumerate, removeAt)
@@ -73,9 +73,9 @@ makeActiveHoleEdit curState expressionI myId =
         Transaction.writeIRef expressionI $ Data.ExpressionGetVariable var
         let
           -- TODO: Is there a better way?
-          getVariableTextEditAnimId = AnimIds.delegating expressionId
+          getVariableTextAnimId = expressionId
           mapAnimId animId =
-            maybe animId (Anim.joinId getVariableTextEditAnimId) $ Anim.subId (resultAnimId name) animId
+            maybe animId (Anim.joinId getVariableTextAnimId) $ Anim.subId (resultAnimId name) animId
 
         return Widget.EventResult {
           Widget.eCursor = Just expressionId,
@@ -126,9 +126,14 @@ makeExpressionEdit isArgument expressionPtr = do
       ]
     weakerEvents = liftM . first . Widget.weakerEvents
     myId = AnimIds.fromIRef expressionI
+
     wrap keys entryState f =
-      BWidgets.wrapDelegatedWithKeys keys entryState first f
-      myId
+      BWidgets.wrapDelegatedWithKeys keys entryState first f myId
+    wrapTextEditor =
+      wrap FocusDelegator.defaultKeys FocusDelegator.NotDelegating
+    wrapExpr =
+      wrap Config.exprFocusDelegatorKeys FocusDelegator.Delegating
+
     mkDelEvent = weakerEvents . Widget.actionEventMapMovesCursor Config.delKeys "Delete" . setExpr
     mkCallWithArgEventMap =
       Widget.actionEventMapMovesCursor Config.addNextArgumentKeys "Add another argument" $
@@ -136,8 +141,6 @@ makeExpressionEdit isArgument expressionPtr = do
     setExpr newExprI = do
       Property.set expressionPtr newExprI
       return $ AnimIds.fromIRef newExprI
-    wrapTextEditor =
-      wrap FocusDelegator.defaultKeys FocusDelegator.NotDelegating
   expr <- getP expressionRef
   widget <-
     case expr of
@@ -145,13 +148,12 @@ makeExpressionEdit isArgument expressionPtr = do
         wrapTextEditor .
           (fmap . liftM) (flip (,) myId) $
           makeHoleEdit holeState expressionI
-      Data.ExpressionGetVariable varI ->
-        wrapTextEditor .
-          (fmap . liftM) (flip (,) myId) .
-          BWidgets.makeWordEdit $
-          Anchors.variableNameRef varI
+      Data.ExpressionGetVariable varI -> do
+        name <- getP (Anchors.variableNameRef varI)
+        varRefView <- BWidgets.makeFocusableTextView name myId
+        return (varRefView, myId)
       Data.ExpressionApply (Data.Apply funcI argI) ->
-        wrap Config.exprFocusDelegatorKeys FocusDelegator.Delegating $
+        wrapExpr $
           \animId ->
             assignCursor animId (AnimIds.fromIRef argI) $ do
               let
