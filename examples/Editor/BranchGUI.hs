@@ -1,8 +1,7 @@
 {-# OPTIONS -O2 -Wall #-}
 module Editor.BranchGUI(makeRootWidget) where
 
-import Control.Applicative ((<*))
-import Control.Monad (liftM, unless)
+import Control.Monad ((<=<), liftM, unless)
 import Data.List (findIndex, elemIndex)
 import Data.List.Utils (removeAt)
 import Data.Maybe (fromMaybe)
@@ -129,9 +128,12 @@ makeWidgetForView view innerWidget = do
         Property.set Anchors.postCursor . fromMaybe cursor $ Widget.eCursor eventResult
       return eventResult
 
+    updateRedos (isEmpty, widget) = do
+      unless isEmpty . transaction $ Property.set Anchors.redos []
+      return widget
+
   widget <-
-    (liftM . Widget.atEvents) (<* Property.set Anchors.redos []) .
-    runNestedCTransaction store $
+    updateRedos <=< runNestedCTransaction store $
     (liftM . Widget.atEvents) (>>= saveCursor) innerWidget
   return $ Widget.strongerEvents eventMap widget
   where

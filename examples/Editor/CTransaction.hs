@@ -5,7 +5,8 @@ module Editor.CTransaction(
   readCursor, readTextStyle, transaction, getP, assignCursor, atTextStyle)
 where
 
-import Control.Monad (liftM)
+import Control.Arrow (second)
+import Control.Monad (liftM, liftM2)
 import Control.Monad.Trans.Class (lift)
 import Data.Store.Property(Property)
 import Data.Store.Transaction (Transaction)
@@ -35,17 +36,20 @@ runCTransaction :: Widget.Cursor -> TextEdit.Style -> CTransaction t m a -> Tran
 runCTransaction cursor style =
   (`Reader.runReaderT` CTransactionEnv cursor style) . unCTransaction
 
+-- Returns True alongside the widget if the transaction was empty
 runNestedCTransaction ::
   Monad m => Transaction.Store t0 (Transaction t1 m) ->
-  TWidget t0 (Transaction t1 m) -> TWidget t1 m
+  TWidget t0 (Transaction t1 m) ->
+  CTransaction t1 m (Bool, Widget (Transaction t1 m))
 runNestedCTransaction store act = do
   cursor <- readCursor
   style <- readTextStyle
-  widgetDownTransaction $ runCTransaction cursor style act
+  widgetDownTransaction . liftM2 (,) Transaction.isEmpty $
+    runCTransaction cursor style act
   where
     widgetDownTransaction =
       transaction . Transaction.run store .
-      (liftM . Widget.atEvents) (Transaction.run store)
+      (liftM . second . Widget.atEvents) (Transaction.run store)
 
 readCursor :: Monad m => CTransaction t m Widget.Cursor
 readCursor = CTransaction (Reader.asks envCursor)
