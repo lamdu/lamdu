@@ -109,14 +109,20 @@ makeActiveHoleEdit definitionI curState expressionI myId =
     getVarName var = liftM ((,) var) . getP $ Anchors.variableNameRef var
     goodResult (_, name) = all (`isInfixOf` name) . words $ Data.holeSearchTerm curState
     definitionRef = Transaction.fromIRef definitionI
+    newName = concat . words $ Data.holeSearchTerm curState
     searchTermEventMap =
-      mconcat [
-        Widget.actionEventMapMovesCursor Config.addParamKeys "Add as Parameter" $ do
+      mconcat
+      [ Widget.actionEventMapMovesCursor Config.addParamKeys "Add as Parameter" $ do
           newParam <- DataOps.addParameter definitionRef
-          Property.set (Anchors.aNameRef newParam) $ Data.holeSearchTerm curState
+          Property.set (Anchors.aNameRef newParam) newName
           Transaction.writeIRef expressionI . Data.ExpressionGetVariable $ Data.ParameterRef newParam
           return expressionId
-        ]
+      , Widget.actionEventMapMovesCursor Config.newDefinitionKeys "Add new as Definition" $ do
+          newDefI <- Anchors.makeDefinition
+          Property.set (Anchors.aNameRef newDefI) newName
+          Transaction.writeIRef expressionI . Data.ExpressionGetVariable $ Data.DefinitionRef newDefI
+          newPane newDefI
+      ]
 
 makeHoleEdit ::
   MonadF m => IRef Data.Definition -> Data.HoleState ->
