@@ -115,7 +115,7 @@ makeActiveHoleEdit definitionI curState expressionI myId =
           newParam <- DataOps.addParameter definitionRef
           Property.set (Anchors.aNameRef newParam) $ Data.holeSearchTerm curState
           Transaction.writeIRef expressionI . Data.ExpressionGetVariable $ Data.ParameterRef newParam
-          return . AnimIds.delegating $ AnimIds.fromIRef newParam
+          return expressionId
         ]
 
 makeHoleEdit ::
