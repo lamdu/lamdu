@@ -2,7 +2,7 @@
 
 module Editor.Config(
     overlayDocKeys,
-    quitKeys, undoKeys,
+    quitKeys, undoKeys, redoKeys,
 
     -- cutKeys, pasteKeys,
 
@@ -43,6 +43,7 @@ k = noMods . E.charKey
 
 quitKeys          = [ctrl 'q']
 undoKeys          = [ctrl 'z']
+redoKeys          = [ctrl 'y']
 makeBranchKeys    = [ctrl 's']
 
 -- moveToParentKeys  = [group E.alt E.KeyLeft]

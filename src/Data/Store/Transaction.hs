@@ -10,7 +10,7 @@ module Data.Store.Transaction
      readIRef, readIRefDef, writeIRef,
      readGuid, writeGuid,
      isEmpty,
-     irefExists,
+     guidExists, irefExists,
      newIRef, newKey,
      fromIRef, fromIRefDef,
      followBy,

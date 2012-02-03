@@ -94,22 +94,45 @@ makeRootWidget widget = do
 -- Apply the transactions to the given View and convert them to
 -- transactions on a DB
 makeWidgetForView :: MonadF m => View -> TWidget ViewTag (Transaction DBTag m) -> TWidget DBTag m
-makeWidgetForView view widget = do
-  versionData <- transaction $ Version.versionData =<< View.curVersion view
+makeWidgetForView view innerWidget = do
+  curVersion <- transaction $ View.curVersion view
+  curVersionData <- transaction $ Version.versionData curVersion
+  redos <- getP Anchors.redos
   cursor <- readCursor
+
   let
-    saveCursor = do
+    redo version newRedos = do
+      Property.set Anchors.redos newRedos
+      View.move view version
+      Transaction.run store $ Property.get Anchors.postCursor
+    undo parentVersion = do
+      preCursor <- Transaction.run store $ Property.get Anchors.preCursor
+      View.move view parentVersion
+      Property.pureModify Anchors.redos (curVersion:)
+      return preCursor
+
+    redoEventMap [] = mempty
+    redoEventMap (version:restRedos) =
+      Widget.actionEventMapMovesCursor Config.redoKeys "Redo" $
+      redo version restRedos
+    undoEventMap =
+      maybe mempty
+      (Widget.actionEventMapMovesCursor Config.undoKeys "Undo" .
+       undo) $ Version.parent curVersionData
+
+    eventMap = mconcat [undoEventMap, redoEventMap redos]
+
+    saveCursor eventResult = do
       isEmpty <- Transaction.isEmpty
-      unless isEmpty $ Property.set Anchors.cursor cursor
-  focusable <-
+      unless isEmpty $ do
+        Property.set Anchors.preCursor cursor
+        Property.set Anchors.postCursor . fromMaybe cursor $ Widget.eCursor eventResult
+      return eventResult
+
+  widget <-
+    (liftM . Widget.atEvents) (<* Property.set Anchors.redos []) .
     runNestedCTransaction store $
-    (liftM . Widget.atEvents) (<* saveCursor) widget
-  let undoEventMap = maybe mempty makeUndoEventMap (Version.parent versionData)
-  return $ Widget.strongerEvents undoEventMap focusable
+    (liftM . Widget.atEvents) (>>= saveCursor) innerWidget
+  return $ Widget.strongerEvents eventMap widget
   where
-    makeUndoEventMap version =
-      Widget.actionEventMapMovesCursor Config.undoKeys "Undo" $ do
-        cursor <- Transaction.run store $ Property.get Anchors.cursor
-        View.move view version
-        return cursor
     store = Anchors.viewStore view

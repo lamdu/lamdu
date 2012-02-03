@@ -2,8 +2,8 @@
 
 module Editor.Anchors(
     root, rootIRef,
-    cursor, cursorIRef,
-    branches, view,
+    cursor, cursorIRef, preCursor, postCursor,
+    branches, view, redos,
     currentBranchIRef, currentBranch,
     globals,
     initDB,
@@ -28,6 +28,7 @@ import Data.Store.IRef (IRef)
 import Data.Store.Property(Property(Property))
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Change (Key, Value)
+import Data.Store.Rev.Version(Version)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction, Store(..))
 import qualified Data.AtFieldTH as AtFieldTH
@@ -87,8 +88,14 @@ globals = Transaction.fromIRef $ IRef.anchor "globals"
 
 -- Cursor is untagged because it is both saved globally and per-revision.
 -- Cursor movement without any revisioned changes are not saved per-revision.
-cursor :: Monad m => Transaction.Property t m Widget.Cursor
+cursor :: Monad m => Transaction.Property DBTag m Widget.Cursor
 cursor = Transaction.fromIRef cursorIRef
+
+preCursor :: Monad m => Transaction.Property ViewTag m Widget.Cursor
+preCursor = Transaction.fromIRef $ IRef.anchor "precursor"
+
+postCursor :: Monad m => Transaction.Property ViewTag m Widget.Cursor
+postCursor = Transaction.fromIRef $ IRef.anchor "postcursor"
 
 -- Initialize an IRef if it does not already exist.
 initRef :: (Binary a, Monad m) => IRef a -> Transaction t m a -> Transaction t m a
@@ -101,6 +108,12 @@ initRef iref act = do
 
 viewIRef :: IRef View
 viewIRef = IRef.anchor "HEAD"
+
+redosIRef :: IRef [Version]
+redosIRef = IRef.anchor "redos"
+
+redos :: Monad m => Transaction.Property DBTag m [Version]
+redos = Transaction.fromIRef redosIRef
 
 view :: Monad m => Transaction.Property DBTag m View
 view = Transaction.fromIRef viewIRef
@@ -162,14 +175,16 @@ initDB store =
         Property.set globals =<< mapM newBuiltin temporaryBuiltinsDatabase
         defI <- makeDefinition
         Property.set root [makePane defI]
-        Property.set cursor $ AnimIds.fromIRef defI
+        Property.set preCursor $ AnimIds.fromIRef defI
+        Property.set postCursor $ AnimIds.fromIRef defI
       initialVersionIRef <- Version.makeInitialVersion changes
       master <- Branch.new initialVersionIRef
       return [(masterNameIRef, master)]
     let branch = snd $ head bs
     _ <- initRef viewIRef $ View.new branch
     _ <- initRef currentBranchIRef (return branch)
-    _ <- initRef cursorIRef . return $ []
+    _ <- initRef redosIRef $ return []
+    _ <- initRef cursorIRef $ return []
     return ()
   where
     temporaryBuiltinsDatabase =
