@@ -85,22 +85,29 @@ makeActiveHoleEdit definitionI curState expressionI myId =
     expressionAnimId = Widget.cursorId expressionId
 
     searchTermId = WidgetIds.searchTermId myId
-    resultCursorId =
-      mappend (myId `Widget.joinId` ["search results"]) .
-      Data.onVariableIRef WidgetIds.fromIRef
+    searchResultsId = Widget.joinId myId ["search results"]
+    varId = Data.onVariableIRef WidgetIds.fromIRef
     makeResultWidget var =
       (liftM . Widget.strongerEvents) (pickResultEventMap var) .
-      makeVarView var $ resultCursorId var
+      makeVarView var . mappend searchResultsId $ varId var
     pickResultEventMap var =
       EventMap.fromEventTypes Config.pickResultKeys "Pick this search result" $ do
         Transaction.writeIRef expressionI $ Data.ExpressionGetVariable var
         let
           -- TODO: Is there a better way?
           getVariableTextAnimId = expressionAnimId
-          resultCursorAnimId = Widget.cursorId . resultCursorId
 
+          mapOtherResult resultId =
+            ["mismatched result"]
+              `Anim.joinId` expressionAnimId
+              `Anim.joinId` resultId
+          mapSearchResult resultId =
+            maybe (mapOtherResult resultId)
+              (Anim.joinId getVariableTextAnimId) $
+            (Anim.subId . Widget.cursorId . varId) var resultId
           mapAnimId animId =
-            maybe animId (Anim.joinId getVariableTextAnimId) $ Anim.subId (resultCursorAnimId var) animId
+            maybe animId mapSearchResult $
+            Anim.subId (Widget.cursorId searchResultsId) animId
 
         return Widget.EventResult {
           Widget.eCursor = Just expressionId,
