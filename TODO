@@ -1,0 +1,11 @@
+* Rect distance instead of center distance
+
+* TextView returns all character position rects
+  * TextEdit uses the character position rects to locate enter cursor
+
+* Anim.Rect -> Rect
+
+* ScrollBar
+
+* Cursor stack??
+  * When going "up" the expression tree, there's no way to go back down (it loses your cursor)
