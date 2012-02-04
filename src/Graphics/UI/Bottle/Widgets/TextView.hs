@@ -12,7 +12,6 @@ import Data.List.Utils (enumerate)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators((%%))
-import Graphics.DrawingCombinators.Utils(square)
 import Graphics.UI.Bottle.SizeRange (Size, fixedSize)
 import Graphics.UI.Bottle.Sized (Sized(..))
 import Graphics.UI.Bottle.Widget (Widget)
@@ -59,19 +58,13 @@ drawMany sizeToTranslate =
       where
         trans = sizeToTranslate sizeX
 
-drawTextHelper ::
+joinLines ::
   [(AnimId -> Anim.Frame, Size)] ->
   (AnimId -> Anim.Frame, Size)
-drawTextHelper =
-  drawMany vertical . map lineMarker . enumerate
+joinLines =
+  drawMany vertical
   where
     vertical = Vector2.first (const 0)
-    lineMarker (lineIndex, (mkFrame, size)) =
-      (newMkFrame, size)
-      where
-        newMkFrame animId =
-          mappend (mkFrame animId) . Anim.scale heightSize $
-          Anim.simpleFrame (augment animId ["line marker", show lineIndex]) square
 
 nestedFrame ::
   Show a => (a, (Draw.Image (), Size)) -> (AnimId -> Anim.Frame, Size)
@@ -84,17 +77,18 @@ nestedFrame (i, (image, size)) =
 drawTextAsSingleLetters ::
   Style -> String -> (AnimId -> Anim.Frame, Size)
 drawTextAsSingleLetters style text =
-  drawTextHelper $
+  joinLines $
   map
-  (drawMany horizontal .
+  (second (max minLineSize) . drawMany horizontal .
    map (nestedFrame . second (fontRender style . (:[])))) .
   splitWhen ((== '\n') . snd) $ enumerate text
   where
+    (_, minLineSize) = fontRender style ""
     horizontal = Vector2.second (const 0)
 
 drawTextAsLines :: Style -> String -> (AnimId -> Anim.Frame, Size)
 drawTextAsLines style text =
-  drawTextHelper $
+  joinLines $
   map (nestedFrame . second (fontRender style) . first ((,) "Line")) .
   enumerate $ splitWhen (== '\n') text
 
