@@ -67,7 +67,7 @@ makePlacements = (fmap . second . fmap) placements makeSizes
 --- Displays:
 
 -- Used by both make and Grid's make.
-makeGeneric :: (Vector2 Widget.R -> a -> a) -> [[Sized a]] -> Sized [[a]]
+makeGeneric :: (Vector2 Widget.R -> a -> b) -> [[Sized a]] -> Sized [[b]]
 makeGeneric translate rows =
   Sized reqSize mkRes
   where

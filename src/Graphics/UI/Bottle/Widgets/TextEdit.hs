@@ -87,6 +87,7 @@ makeUnfocused style str myId =
       (,) str . makeTextEditCursor myId $
       Widget.direction (length str) enterPos dir
     enterPos (Vector2 x _)
+-- TODO: this is wrong
       | x < 0 = 0
       | otherwise = length str
 
@@ -108,7 +109,8 @@ makeFocused cursor style str myId =
         Widget.UserIO {
           Widget.uioFrame = img,
           Widget.uioEventMap = mempty,
-          Widget.uioMaybeEnter = Nothing
+          Widget.uioMaybeEnter = Nothing,
+          Widget.uioFocalArea = cursorRect
           }
       }
     reqSize = SizeRange.fixedSize $ Vector2 (sCursorWidth style + tlWidth) tlHeight
@@ -124,12 +126,15 @@ makeFocused cursor style str myId =
     lineHeight = sz * textHeight
     strWithIds = map (first Just) $ enumerate str
     beforeCursor = take cursor strWithIds
+    cursorRect = Anim.Rect cursorPos cursorSize
+    cursorPos = Vector2 cursorPosX cursorPosY
+    cursorSize = Vector2 (sCursorWidth style) lineHeight
     cursorPosX = textLinesWidth . map snd . last $ splitLines beforeCursor
     cursorPosY = (lineHeight *) . subtract 1 . genericLength . splitLines $ beforeCursor
     cursorFrame =
       Anim.onDepth (+2) .
-      Anim.translate (Vector2 cursorPosX cursorPosY) .
-      Anim.scale (Vector2 (sCursorWidth style) lineHeight) .
+      Anim.translate cursorPos .
+      Anim.scale cursorSize .
       (Anim.simpleFrame . Widget.cursorId . sTextCursorId) style $
       Draw.tint (sCursorColor style) square
 

@@ -2,9 +2,10 @@
 {-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Graphics.UI.Bottle.Widget (
   Widget(..), MEnter, R,
+  EnterResult(..), atEnterResultEvent, atEnterResultRect,
   Id(..), atId, joinId, subId,
   Direction(..), direction,
-  UserIO(..), atUioMaybeEnter, atUioEventMap, atUioFrame,
+  UserIO(..), atUioMaybeEnter, atUioEventMap, atUioFrame, atUioFocalArea,
   EventResult(..), atEAnimIdMapping, atECursor,
   emptyEventResult, eventResultFromCursor,
   actionEventMap, actionEventMapMovesCursor,
@@ -30,14 +31,26 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Sized as Sized
 
-data Direction = Outside | Dir (Vector2 Int)
+-- RelativePos pos is relative to the top-left of the widget
+data Direction = Outside | RelativePos (Vector2 R)
+
+argument :: (a -> b) -> (b -> c) -> a -> c
+argument = flip (.)
 
 -- cata:
-direction :: r -> (Vector2 Int -> r) -> Direction -> r
+direction :: r -> (Vector2 R -> r) -> Direction -> r
 direction outside _ Outside = outside
-direction _ dir (Dir v) = dir v
+direction _ relativePos (RelativePos v) = relativePos v
 
-type MEnter f = Maybe (Direction -> f EventResult)
+inRelativePos :: (Vector2 R -> Vector2 R) -> Direction -> Direction
+inRelativePos f = direction Outside (RelativePos . f)
+
+data EnterResult f = EnterResult {
+  enterResultRect :: Anim.Rect,
+  enterResultEvent :: f EventResult
+  }
+
+type MEnter f = Maybe (Direction -> EnterResult f)
 
 newtype Id = Id {
   cursorId :: AnimId
@@ -58,6 +71,7 @@ data EventResult = EventResult {
   eAnimIdMapping :: AnimId -> AnimId
   }
 
+AtFieldTH.make ''EnterResult
 AtFieldTH.make ''Id
 AtFieldTH.make ''EventResult
 
@@ -78,7 +92,8 @@ type EventHandlers f = EventMap (f EventResult)
 data UserIO f = UserIO {
   uioFrame :: Frame,
   uioMaybeEnter :: MEnter f, -- Nothing if we're not enterable
-  uioEventMap :: EventHandlers f
+  uioEventMap :: EventHandlers f,
+  uioFocalArea :: Anim.Rect
   }
 
 AtFieldTH.make ''UserIO
@@ -95,7 +110,9 @@ atEvents func =
   atUserIO chg
   where
     chg userIo = userIo {
-      uioMaybeEnter = (fmap . fmap) func $ uioMaybeEnter userIo,
+      uioMaybeEnter =
+        (fmap . fmap . atEnterResultEvent) func $
+        uioMaybeEnter userIo,
       uioEventMap = fmap func $ uioEventMap userIo
       }
 
@@ -103,12 +120,13 @@ liftView :: Sized Frame -> Widget f
 liftView view =
   Widget {
     isFocused = False,
-    content = fmap buildUserIO view
+    content = Sized.atFromSize buildUserIO view
     }
   where
-    buildUserIO frame =
+    buildUserIO mkFrame size =
       UserIO {
-        uioFrame = frame,
+        uioFocalArea = Anim.Rect 0 size,
+        uioFrame = mkFrame size,
         uioEventMap = mempty,
         uioMaybeEnter = Nothing
         }
@@ -136,10 +154,14 @@ image = (fmap . fmap) uioFrame userIO
 eventMap :: Widget f -> Size -> EventHandlers f
 eventMap = (fmap . fmap) uioEventMap userIO
 
--- ^ If Widget already takes focus, it is untouched
 -- TODO: Would be nicer as (Direction -> Id), but then TextEdit's "f" couldn't be ((,) String)..
 takesFocus :: Functor f => (Direction -> f Id) -> Widget f -> Widget f
-takesFocus = atMaybeEnter . const . Just . (fmap . fmap) eventResultFromCursor
+takesFocus enter = atUserIO f
+  where
+    f uio = (atUioMaybeEnter . const) mEnter uio
+      where
+        mEnter = Just $ fmap (EnterResult focalArea . fmap eventResultFromCursor) enter
+        focalArea = uioFocalArea uio
 
 atMaybeEnter :: (MEnter f -> MEnter f) -> Widget f -> Widget f
 atMaybeEnter = atUserIO . atUioMaybeEnter
@@ -176,7 +198,11 @@ actionEventMapMovesCursor keys doc act =
   EventMap.fromEventTypes keys doc act
 
 translateUserIO :: Vector2 R -> UserIO f -> UserIO f
-translateUserIO = atUioFrame . Anim.translate
+translateUserIO pos =
+  (atUioFrame . Anim.translate) pos .
+  (atUioFocalArea . Anim.atRectTopLeft) (+pos) .
+  (atUioMaybeEnter . fmap . fmap . atEnterResultRect . Anim.atRectTopLeft) (+pos) .
+  (atUioMaybeEnter . fmap . argument . inRelativePos) (subtract pos)
 
 translate :: Vector2 R -> Widget f -> Widget f
 translate = atUserIO . translateUserIO

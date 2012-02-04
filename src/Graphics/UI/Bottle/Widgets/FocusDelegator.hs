@@ -6,6 +6,7 @@ import Data.Maybe(fromMaybe)
 import Data.Monoid(mappend)
 import Graphics.UI.Bottle.Widget(Widget(..))
 import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 
@@ -46,7 +47,8 @@ makeFocused delegating focusSelf keys backgroundCursorId =
       Widget.uioMaybeEnter userIO
 
     startDelegatingEventMap childEnter =
-      E.fromEventType (startDelegatingKey keys) "Enter child" $ childEnter Widget.Outside
+      E.fromEventType (startDelegatingKey keys) "Enter child" .
+      Widget.enterResultEvent $ childEnter Widget.Outside
 
     addStopDelegatingEventMap =
       Widget.atEventMap .
@@ -61,12 +63,19 @@ make :: Monad f => -- actually "Pointed", as only using return.
   Keys -> -- ^ Keys configuration
   Widget.Id -> -- ^ Background Cursor Id
   Widget f -> Widget f
-make isDelegating Nothing focusSelf _ _ =
-  Widget.atMaybeEnter $ mEnter isDelegating
+make isDelegating Nothing focusSelf =
+  const . const $ Widget.atMkUserIO f
   where
-    takeFocus = return $ Widget.eventResultFromCursor focusSelf
-    mEnter NotDelegating _ = Just (const takeFocus)
-    mEnter _ Nothing = Nothing
-    mEnter Delegating (Just enterChild) =
-      Just . Widget.direction takeFocus $ enterChild . Widget.Dir
-make _ (Just cursor) focusSelf keys backgroundCursorId = makeFocused cursor focusSelf keys backgroundCursorId
+    f mkUserIO size = Widget.atUioMaybeEnter (mEnter isDelegating size) $ mkUserIO size
+
+    mEnter NotDelegating wholeSize _ = Just . const $ takeFocus wholeSize
+    mEnter _ _ Nothing = Nothing
+    mEnter Delegating wholeSize (Just enterChild) = Just $ handleDir enterChild wholeSize
+
+    handleDir enterChild wholeSize dir =
+      Widget.direction (takeFocus wholeSize) (const (enterChild dir)) dir
+
+    takeFocus wholeSize = Widget.EnterResult (Anim.Rect 0 wholeSize) . return $ Widget.eventResultFromCursor focusSelf
+
+make _ (Just cursor) focusSelf =
+  makeFocused cursor focusSelf

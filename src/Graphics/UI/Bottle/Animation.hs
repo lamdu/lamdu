@@ -1,8 +1,10 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses #-}
 
 module Graphics.UI.Bottle.Animation(
-  R, AnimId, Rect(..), PositionedImage(..), Frame(..),
-  atPiImage, atPiRect, onImages,
+  R, AnimId,
+  Rect(..), atRectTopLeft, atRectSize, center,
+  PositionedImage(..), atPiImage, atPiRect,
+  Frame(..), onImages,
   draw, nextFrame, mapIdentities, backgroundColor,
   translate, scale, onDepth,
   simpleFrame, simpleFrameDownscale,
@@ -36,6 +38,7 @@ data Rect = Rect {
   rectTopLeft :: Vector2 R,
   rectSize :: Vector2 R
   } deriving Show
+AtFieldTH.make ''Rect
 
 data PositionedImage = PositionedImage {
   piImage :: Draw.Image (), -- Image always occupies (0,0)..(1,1), the translation/scaling occurs when drawing
