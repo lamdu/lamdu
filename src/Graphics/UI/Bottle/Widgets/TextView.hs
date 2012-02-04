@@ -7,6 +7,7 @@ module Graphics.UI.Bottle.Widgets.TextView (
 
 import Control.Applicative (liftA2)
 import Control.Arrow (first, second, (&&&))
+import Data.List (foldl')
 import Data.List.Split (splitWhen)
 import Data.List.Utils (enumerate)
 import Data.Monoid (Monoid(..))
@@ -46,13 +47,13 @@ drawMany ::
   [(AnimId -> Anim.Frame, Size)] ->
   (AnimId -> Anim.Frame, Size)
 drawMany sizeToTranslate =
-  foldr step (mempty, 0)
+  foldl' step (mempty, 0)
   where
-    step (drawX, sizeX) (drawXs, sizeXs) =
-      (mappend drawX $ fmap (Anim.translate trans) drawXs,
-       liftA2 max sizeX $ trans + sizeXs)
+    step (drawAcc, sizeAcc) (drawX, sizeX) =
+      (mappend drawAcc $ fmap (Anim.translate trans) drawX,
+       liftA2 max sizeAcc $ trans + sizeX)
       where
-        trans = sizeToTranslate sizeX
+        trans = sizeToTranslate sizeAcc
 
 joinLines ::
   [(AnimId -> Anim.Frame, Size)] ->
