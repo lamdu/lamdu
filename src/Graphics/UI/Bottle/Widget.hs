@@ -1,7 +1,7 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Graphics.UI.Bottle.Widget (
-  Widget(..), MEnter,
+  Widget(..), MEnter, R,
   Id(..), atId, joinId, subId,
   Direction(..), direction,
   UserIO(..), atUioMaybeEnter, atUioEventMap, atUioFrame,
@@ -13,13 +13,14 @@ module Graphics.UI.Bottle.Widget (
   takesFocus, atMkUserIO, atUserIO,
   atImageWithSize, atImage, atMaybeEnter, atEventMap, atEvents,
   backgroundColor, tint, liftView,
-  strongerEvents, weakerEvents, align) where
+  strongerEvents, weakerEvents,
+  translate, translateUserIO, align) where
 
 import Data.Binary (Binary)
 import Data.List(isPrefixOf)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2)
-import Graphics.UI.Bottle.Animation (Frame, AnimId)
+import Graphics.UI.Bottle.Animation (Frame, AnimId, R)
 import Graphics.UI.Bottle.EventMap (EventMap)
 import Graphics.UI.Bottle.SizeRange (Size)
 import Graphics.UI.Bottle.Sized (Sized)
@@ -177,7 +178,13 @@ actionEventMapMovesCursor keys doc act =
   (fmap . fmap) eventResultFromCursor $
   EventMap.fromEventTypes keys doc act
 
+translateUserIO :: Vector2 R -> UserIO f -> UserIO f
+translateUserIO = atUioFrame . Anim.translate
+
+translate :: Vector2 R -> Widget f -> Widget f
+translate = atUserIO . translateUserIO
+
 -- If widget's max size is smaller than given size, place widget in
 -- portion of the extra space (0..1 ratio in each dimension):
-align :: Vector2 Draw.R -> Widget f -> Widget f
-align = atContent . Sized.align (atUioFrame . Anim.translate)
+align :: Vector2 R -> Widget f -> Widget f
+align = atContent . Sized.align translateUserIO

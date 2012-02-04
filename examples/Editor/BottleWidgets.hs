@@ -144,13 +144,13 @@ makeNameEdit :: Monad m => String -> IRef a -> Widget.Id -> TWidget t m
 makeNameEdit emptyStr iref =
   (atTextStyle . TextEdit.atSEmptyString . const) emptyStr . makeWordEdit (Anchors.aNameRef iref)
 
-hboxAlign :: Draw.R -> [Widget f] -> Widget f
+hboxAlign :: Widget.R -> [Widget f] -> Widget f
 hboxAlign align = Box.make Box.horizontal . map (Widget.align (Vector2 0 align))
 
 hbox :: [Widget f] -> Widget f
 hbox = hboxAlign 0.5
 
-vboxAlign :: Draw.R -> [Widget f] -> Widget f
+vboxAlign :: Widget.R -> [Widget f] -> Widget f
 vboxAlign align = Box.make Box.vertical . map (Widget.align (Vector2 align 0))
 
 vbox :: [Widget f] -> Widget f

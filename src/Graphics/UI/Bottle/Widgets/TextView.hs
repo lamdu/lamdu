@@ -13,13 +13,14 @@ import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators.Utils(square)
 import Graphics.UI.Bottle.SizeRange (fixedSize)
 import Graphics.UI.Bottle.Sized (Sized(..))
-import Graphics.UI.Bottle.Widget (Widget, liftView)
+import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.ByteString.Char8 as SBS8
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import qualified Graphics.UI.Bottle.Animation as Anim
+import qualified Graphics.UI.Bottle.Widget as Widget
 
 data Style = Style {
   styleColor :: Draw.Color,
@@ -32,7 +33,7 @@ AtFieldTH.make ''Style
 augment :: Show a => Anim.AnimId -> a -> Anim.AnimId
 augment animId = Anim.joinId animId . (:[]) . SBS8.pack . show
 
-drawText :: Bool -> Style -> String -> (Anim.AnimId -> Anim.Frame, Vector2 Draw.R)
+drawText :: Bool -> Style -> String -> (Anim.AnimId -> Anim.Frame, Vector2 Widget.R)
 drawText isSingleLetterImages (Style color font ptSize) text =
   (first . fmap) (Anim.scale sz) .
   second (* sz) .
@@ -79,4 +80,4 @@ make style text animId = Sized (fixedSize textSize) . const $ frame animId
     (frame, textSize) = drawText False style text
 
 makeWidget :: Style -> String -> Anim.AnimId -> Widget a
-makeWidget style text = liftView . make style text
+makeWidget style text = Widget.liftView . make style text

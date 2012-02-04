@@ -39,7 +39,7 @@ type Cursor = Int
 
 data Style = Style {
   sCursorColor :: Draw.Color,
-  sCursorWidth :: Draw.R,
+  sCursorWidth :: Widget.R,
   sTextCursorId :: Widget.Id,
   sBackgroundCursorId :: Widget.Id,
   sEmptyString :: String,
@@ -50,7 +50,7 @@ AtFieldTH.make ''Style
 defaultCursorColor :: Draw.Color
 defaultCursorColor = Draw.Color 0 1 0 1
 
-defaultCursorWidth :: Draw.R
+defaultCursorWidth :: Widget.R
 defaultCursorWidth = 8
 
 tillEndOfWord :: String -> String

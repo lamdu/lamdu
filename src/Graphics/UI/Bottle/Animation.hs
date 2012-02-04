@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses #-}
 
 module Graphics.UI.Bottle.Animation(
-  AnimId, Rect(..), PositionedImage(..), Frame(..),
+  R, AnimId, Rect(..), PositionedImage(..), Frame(..),
   atPiImage, atPiRect, onImages,
   draw, nextFrame, mapIdentities, backgroundColor,
   translate, scale, onDepth,
@@ -20,7 +20,7 @@ import Data.Maybe(isJust)
 import Data.Monoid(Monoid(..))
 import Data.Ord(comparing)
 import Data.Vector.Vector2 (Vector2(..))
-import Graphics.DrawingCombinators((%%))
+import Graphics.DrawingCombinators(R, (%%))
 import Graphics.DrawingCombinators.Utils(square)
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.ByteString as SBS
@@ -33,8 +33,8 @@ type AnimId = [SBS.ByteString]
 type Layer = Int
 
 data Rect = Rect {
-  rectTopLeft :: Vector2 Draw.R,
-  rectSize :: Vector2 Draw.R
+  rectTopLeft :: Vector2 R,
+  rectSize :: Vector2 R
   } deriving Show
 
 data PositionedImage = PositionedImage {
@@ -60,7 +60,7 @@ simpleFrame :: AnimId -> Draw.Image () -> Frame
 simpleFrame animId image =
   Frame $ Map.singleton animId (0, PositionedImage image (Rect 0 1))
 
-simpleFrameDownscale :: AnimId -> Vector2 Draw.R -> Draw.Image () -> Frame
+simpleFrameDownscale :: AnimId -> Vector2 R -> Draw.Image () -> Frame
 simpleFrameDownscale animId size@(Vector2 w h) =
   scale size .
   simpleFrame animId .
@@ -84,10 +84,10 @@ draw = mconcat . map (posImage . snd) . sortOn fst . Map.elems . iSubImages
     posImage (PositionedImage img (Rect { rectTopLeft = Vector2 t l, rectSize = Vector2 w h })) =
       Draw.translate (t, l) %% Draw.scale w h %% img
 
-center :: Rect -> Vector2 Draw.R
+center :: Rect -> Vector2 R
 center (Rect tl size) = tl + size / 2
 
-bottomRight :: Rect -> Vector2 Draw.R
+bottomRight :: Rect -> Vector2 R
 bottomRight (Rect tl size) = tl + size
 
 sqrNorm :: Num a => Vector2 a -> a
@@ -183,18 +183,18 @@ makeNextFrame (Frame dest) (Frame cur) =
           (animSpeed * destTopLeft + (1 - animSpeed) * curTopLeft)
           (animSpeed * destSize + (1 - animSpeed) * curSize)))
 
-backgroundColor :: AnimId -> Layer -> Draw.Color -> Vector2 Draw.R -> Frame -> Frame
+backgroundColor :: AnimId -> Layer -> Draw.Color -> Vector2 R -> Frame -> Frame
 backgroundColor animId layer color size =
   flip mappend . onDepth (+layer) . scale size . simpleFrame animId $ Draw.tint color square
 
-translate :: Vector2 Draw.R -> Frame -> Frame
+translate :: Vector2 R -> Frame -> Frame
 translate pos =
   over Frame $ (fmap . second) moveImage
   where
     moveImage (PositionedImage img (Rect tl size)) =
       PositionedImage img (Rect (tl + pos) size)
 
-scale :: Vector2 Draw.R -> Frame -> Frame
+scale :: Vector2 R -> Frame -> Frame
 scale factor =
   over Frame $ (fmap . second) scaleImage
   where
