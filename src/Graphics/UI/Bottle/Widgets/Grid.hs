@@ -9,7 +9,6 @@ import Data.Maybe (isJust, fromMaybe, catMaybes)
 import Data.Monoid (mempty, mconcat)
 import Data.Ord (comparing)
 import Data.Vector.Vector2 (Vector2(..))
-import Graphics.UI.Bottle.SizeRange (Coordinate)
 import Graphics.UI.Bottle.Widget (Widget(..), UserIO(..))
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.UI.Bottle.EventMap as EventMap
@@ -27,8 +26,8 @@ length2d xs = Vector2 (foldl' max 0 . map length $ xs) (length xs)
 capCursor :: Vector2 Int -> Vector2 Int -> Vector2 Int
 capCursor size = fmap (max 0) . liftA2 min (fmap (subtract 1) size)
 
-mkNavEventmap :: [[Widget.MEnter f]] -> Coordinate -> Cursor -> (Widget.EventHandlers f, Widget.EventHandlers f)
-mkNavEventmap mEnterChildren curPos cursor@(Vector2 cursorX cursorY) = (weakMap, strongMap)
+mkNavEventmap :: [[Widget.MEnter f]] -> Anim.Rect -> Cursor -> (Widget.EventHandlers f, Widget.EventHandlers f)
+mkNavEventmap mEnterChildren curRect cursor@(Vector2 cursorX cursorY) = (weakMap, strongMap)
   where
     weakMap = mconcat . catMaybes $ [
       movement "left"       (k GLFW.KeyLeft)  leftOfCursor,
@@ -54,7 +53,7 @@ mkNavEventmap mEnterChildren curPos cursor@(Vector2 cursorX cursorY) = (weakMap,
          event
          ("Move " ++ dirName) .
          Widget.enterResultEvent .
-         ($ Widget.RelativePos curPos)) .
+         ($ Widget.RelativePos curRect)) .
       msum
     leftOfCursor    = reverse $ take cursorX curRow
     aboveCursor     = reverse $ take cursorY curColumn
@@ -116,15 +115,35 @@ makeHelper combineEnters children =
         makeEventMap cursor userIO =
           mconcat [strongMap, uioEventMap userIO, weakMap]
           where
-            pos = Anim.center $ uioFocalArea userIO
-            (weakMap, strongMap) = mkNavEventmap mEnterss pos cursor
+            (weakMap, strongMap) = mkNavEventmap mEnterss (uioFocalArea userIO) cursor
 
 -- ^ If unfocused, will enters the given child when entered
 makeBiased :: Cursor -> [[Widget k]] -> Widget k
 makeBiased (Vector2 x y) = makeHelper $ index y >=> index x >=> id
 
-sqrDistance :: Num a => Vector2 a -> Vector2 a -> a
-sqrDistance v1 v2 = Vector2.uncurry (+) $ (v1 - v2) ^ (2 :: Int)
+norm :: Num a => Vector2 a -> a
+norm = Vector2.uncurry (+)
+
+sqr :: Num a => a -> a
+sqr x = x * x
+
+normSqr :: Num a => Vector2 a -> a
+normSqr = norm . sqr
+
+rectDistance :: Anim.Rect -> Anim.Rect -> Anim.R
+rectDistance r1 r2 = normSqr distance - normSqr overlapPercentage
+  where
+    min2 = liftA2 min
+    max2 = liftA2 max
+    overlapPercentage = overlapSize / size1 + overlapSize / size2
+    overlapSize = max2 0 $ min2 br1 br2 - max2 tl1 tl2
+    distance = max2 (max2 0 (tl2 - br1)) (max2 0 (tl1 - br2))
+    size1 = max2 1 $ Anim.rectSize r1
+    size2 = max2 1 $ Anim.rectSize r2
+    tl1 = Anim.rectTopLeft r1
+    tl2 = Anim.rectTopLeft r2
+    br1 = Anim.bottomRight r1
+    br2 = Anim.bottomRight r2
 
 make :: [[Widget k]] -> Widget k
 make = makeHelper makeEnter
@@ -134,9 +153,9 @@ make = makeHelper makeEnter
         search [] = Nothing
         search childEnters = Just $ byDirection childEnters
         byDirection childEnters dir =
-          (snd . minimumOn fst . (map . distanceEnter dir . Widget.direction 0 id) dir) childEnters $ dir
+          (snd . minimumOn fst . (map . distanceEnter dir . Widget.direction (Anim.Rect 0 0) id) dir) childEnters $ dir
 
-        distanceEnter dir entryPos childEnter =
-          ((sqrDistance entryPos . Anim.center . Widget.enterResultRect . childEnter) dir, childEnter)
+        distanceEnter dir entryRect childEnter =
+          ((rectDistance entryRect . Widget.enterResultRect . childEnter) dir, childEnter)
 
         minimumOn = minimumBy . comparing

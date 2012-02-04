@@ -85,11 +85,8 @@ makeUnfocused style str myId =
   where
     enter dir =
       (,) str . makeTextEditCursor myId $
-      Widget.direction (length str) enterPos dir
-    enterPos (Vector2 x _)
--- TODO: this is wrong
-      | x < 0 = 0
-      | otherwise = length str
+      Widget.direction (length str) enterRect dir
+    enterRect _ = length str -- TODO: this is wrong
 
 -- TODO: Instead of font + ptSize, let's pass a text-drawer (that's
 -- what "Font" should be)

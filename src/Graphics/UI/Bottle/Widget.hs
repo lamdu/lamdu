@@ -21,7 +21,7 @@ import Data.Binary (Binary)
 import Data.List(isPrefixOf)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2)
-import Graphics.UI.Bottle.Animation (Frame, AnimId, R)
+import Graphics.UI.Bottle.Animation (AnimId, R)
 import Graphics.UI.Bottle.EventMap (EventMap)
 import Graphics.UI.Bottle.SizeRange (Size)
 import Graphics.UI.Bottle.Sized (Sized)
@@ -32,17 +32,17 @@ import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Sized as Sized
 
 -- RelativePos pos is relative to the top-left of the widget
-data Direction = Outside | RelativePos (Vector2 R)
+data Direction = Outside | RelativePos Anim.Rect
 
 argument :: (a -> b) -> (b -> c) -> a -> c
 argument = flip (.)
 
 -- cata:
-direction :: r -> (Vector2 R -> r) -> Direction -> r
+direction :: r -> (Anim.Rect -> r) -> Direction -> r
 direction outside _ Outside = outside
 direction _ relativePos (RelativePos v) = relativePos v
 
-inRelativePos :: (Vector2 R -> Vector2 R) -> Direction -> Direction
+inRelativePos :: (Anim.Rect -> Anim.Rect) -> Direction -> Direction
 inRelativePos f = direction Outside (RelativePos . f)
 
 data EnterResult f = EnterResult {
@@ -90,7 +90,7 @@ eventResultFromCursor cursor = EventResult {
 type EventHandlers f = EventMap (f EventResult)
 
 data UserIO f = UserIO {
-  uioFrame :: Frame,
+  uioFrame :: Anim.Frame,
   uioMaybeEnter :: MEnter f, -- Nothing if we're not enterable
   uioEventMap :: EventHandlers f,
   uioFocalArea :: Anim.Rect
@@ -116,7 +116,7 @@ atEvents func =
       uioEventMap = fmap func $ uioEventMap userIo
       }
 
-liftView :: Sized Frame -> Widget f
+liftView :: Sized Anim.Frame -> Widget f
 liftView view =
   Widget {
     isFocused = False,
@@ -137,18 +137,18 @@ atUserIO = atContent . fmap
 atMkUserIO :: ((Size -> UserIO f) -> Size -> UserIO f) -> Widget f -> Widget f
 atMkUserIO = atContent . Sized.atFromSize
 
-atImageWithSize :: (Size -> Frame -> Frame) -> Widget f -> Widget f
+atImageWithSize :: (Size -> Anim.Frame -> Anim.Frame) -> Widget f -> Widget f
 atImageWithSize f = atMkUserIO g
   where
     g mkUserIO size = atUioFrame (f size) (mkUserIO size)
 
-atImage :: (Frame -> Frame) -> Widget f -> Widget f
+atImage :: (Anim.Frame -> Anim.Frame) -> Widget f -> Widget f
 atImage = atUserIO . atUioFrame
 
 userIO :: Widget f -> Size -> UserIO f
 userIO = Sized.fromSize . content
 
-image :: Widget f -> Size -> Frame
+image :: Widget f -> Size -> Anim.Frame
 image = (fmap . fmap) uioFrame userIO
 
 eventMap :: Widget f -> Size -> EventHandlers f
@@ -202,7 +202,7 @@ translateUserIO pos =
   (atUioFrame . Anim.translate) pos .
   (atUioFocalArea . Anim.atRectTopLeft) (+pos) .
   (atUioMaybeEnter . fmap . fmap . atEnterResultRect . Anim.atRectTopLeft) (+pos) .
-  (atUioMaybeEnter . fmap . argument . inRelativePos) (subtract pos)
+  (atUioMaybeEnter . fmap . argument . inRelativePos . Anim.atRectTopLeft) (subtract pos)
 
 translate :: Vector2 R -> Widget f -> Widget f
 translate = atUserIO . translateUserIO
