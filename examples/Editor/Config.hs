@@ -60,7 +60,7 @@ relinkKeys        = [alt 'r']
 
 pickResultKeys    = [noMods E.KeyEnter]
 jumpToDefinitionKeys  = [noMods E.KeyEnter]
-delKeys           = [noMods E.KeyBackspace, noMods E.KeyDel]
+delKeys           = [noMods E.KeyBackspace, noMods E.KeyDel, group E.alt E.KeyDel]
 giveAsArgumentKeys = [k 'a']
 callWithArgumentKeys = [k 'c']
 addNextArgumentKeys = [E.SpaceKeyEventType E.noMods]
