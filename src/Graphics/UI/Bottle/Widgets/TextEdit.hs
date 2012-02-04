@@ -74,10 +74,10 @@ makeUnfocused style str myId =
   Widget.takesFocus enter .
   (Widget.atContent .
    Sized.atRequestedSize)
-    ((SizeRange.atSrMinSize .
-      Vector2.first) (+ sCursorWidth style) .
-     (SizeRange.atSrMaxSize .
-      Vector2.first . fmap) (+ sCursorWidth style)) .
+   ((SizeRange.atSrMinSize .
+     Vector2.first) (+ sCursorWidth style) .
+    (SizeRange.atSrMaxSize .
+     Vector2.first . fmap) (+ sCursorWidth style)) .
   Widget.atImage
     (cursorTranslate style) .
   TextView.makeWidget (sTextViewStyle style) str $
@@ -114,11 +114,12 @@ makeFocused cursor style str myId =
     reqSize = SizeRange.fixedSize $ Vector2 (sCursorWidth style + tlWidth) tlHeight
     myAnimId = Widget.cursorId myId
     img = cursorTranslate style $ frameGen myAnimId
-    (frameGen, Vector2 tlWidth tlHeight) = TextView.drawText True (sTextViewStyle style) displayStr
+    drawText = TextView.drawTextAsSingleLetters (sTextViewStyle style)
+    (frameGen, Vector2 tlWidth tlHeight) = drawText displayStr
 
     blue = Draw.Color 0 0 0.8 0.8
 
-    textLinesWidth = Vector2.fst . snd . TextView.drawText True (sTextViewStyle style)
+    textLinesWidth = Vector2.fst . snd . drawText
     sz = fromIntegral . TextView.styleFontSize $ sTextViewStyle style
     lineHeight = sz * textHeight
     strWithIds = map (first Just) $ enumerate str
