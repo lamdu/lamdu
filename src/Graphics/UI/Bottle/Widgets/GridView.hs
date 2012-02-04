@@ -1,17 +1,14 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module Graphics.UI.Bottle.Widgets.GridView(
-    make, makeGeneric, makeFromWidgets) where
+module Graphics.UI.Bottle.Widgets.GridView(make, makeGeneric) where
 
 import Control.Arrow (second)
 import Control.Applicative (liftA2)
-import Control.Monad (mzero, mplus)
 import Data.List (transpose)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.SizeRange (SizeRange(..), Size, Coordinate)
 import Graphics.UI.Bottle.Sized (Sized(..))
-import Graphics.UI.Bottle.Widget (Widget(..), UserIO(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.UI.Bottle.SizeRange as SizeRange
@@ -80,40 +77,3 @@ makeGeneric translate rows =
 
 make :: [[Sized Anim.Frame]] -> Sized Anim.Frame
 make = fmap (mconcat . concat) . makeGeneric Anim.translate
-
-combineUserIOs :: UserIO f -> UserIO f -> UserIO f
-combineUserIOs
-  UserIO {
-    uioFrame = aFrame,
-    uioMaybeEnter = aMaybeEnter,
-    uioEventMap = aEventMap
-    }
-  UserIO {
-    uioFrame = bFrame,
-    uioMaybeEnter = bMaybeEnter,
-    uioEventMap = bEventMap
-    }
-  =
-  UserIO {
-    uioFrame = mappend aFrame bFrame,
-    uioMaybeEnter = mplus aMaybeEnter bMaybeEnter,
-    uioEventMap = mappend aEventMap bEventMap
-    }
-
-emptyUserIO :: UserIO f
-emptyUserIO = UserIO { uioFrame = mempty, uioMaybeEnter = mzero, uioEventMap = mempty }
-
--- ^ This will send events to the first widget in the list that would
--- take them. It is useful especially for lifting views to widgets and
--- composing them with widgets.
-makeFromWidgets :: [[Widget k]] -> Widget k
-makeFromWidgets widgets =
-  Widget {
-    isFocused = any isFocused $ concat widgets,
-    content =
-      fmap (combineEventHandlers . concat) .
-      makeGeneric Widget.translateUserIO .
-      (map . map) content $ widgets
-    }
-  where
-    combineEventHandlers = foldr combineUserIOs emptyUserIO

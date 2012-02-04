@@ -97,8 +97,6 @@ makeHelper combineEnters children =
     combineUserIOs userIOss =
       Widget.UserIO {
         Widget.uioFrame = mconcat . map Widget.uioFrame $ concat userIOss,
-        -- Take the enter of the chosen child here. The Grid enter
-        -- logic is in GridView.makeFromWidgets
         Widget.uioMaybeEnter = combineEnters mEnterss,
         Widget.uioEventMap = maybe mempty makeEventMap mCursor
         }

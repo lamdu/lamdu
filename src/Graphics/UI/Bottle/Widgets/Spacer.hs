@@ -12,6 +12,7 @@ import Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.SizeRange as SizeRange
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 
 make :: Size -> Sized Anim.Frame
@@ -34,4 +35,4 @@ indentRight width img = GridView.make [[makeHorizontal width, img]]
 
 indentRightWidget :: Widget.R -> Widget a -> Widget a
 indentRightWidget width widget =
-  GridView.makeFromWidgets [[Widget.liftView (makeHorizontal width), widget]]
+  Grid.make [[Widget.liftView (makeHorizontal width), widget]]
