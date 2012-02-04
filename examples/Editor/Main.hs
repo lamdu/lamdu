@@ -10,7 +10,7 @@ import qualified Data.Store.Db as Db
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
-import qualified Editor.AnimIds as AnimIds
+import qualified Editor.WidgetIds as WidgetIds
 import qualified Editor.BranchGUI as BranchGUI
 import qualified Editor.CodeEdit as CodeEdit
 import qualified Editor.Config as Config
@@ -50,8 +50,8 @@ runDbStore font store = do
           },
       TextEdit.sCursorColor = TextEdit.defaultCursorColor,
       TextEdit.sCursorWidth = TextEdit.defaultCursorWidth,
-      TextEdit.sTextCursorId = AnimIds.textCursorId,
-      TextEdit.sBackgroundCursorId = AnimIds.backgroundCursorId,
+      TextEdit.sTextCursorId = WidgetIds.textCursorId,
+      TextEdit.sBackgroundCursorId = WidgetIds.backgroundCursorId,
       TextEdit.sEmptyString = "<empty>"
       }
 
@@ -65,7 +65,7 @@ runDbStore font store = do
       focusable <-
         if Widget.isFocused candidateWidget
         then return candidateWidget
-        else fromCursor (AnimIds.fromIRef Anchors.rootIRef)
+        else fromCursor (WidgetIds.fromIRef Anchors.rootIRef)
       unless (Widget.isFocused focusable) $
         fail "Root cursor did not match"
       return $ Widget.atEvents (>>= attachCursor) focusable

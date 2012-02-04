@@ -1,7 +1,8 @@
 {-# OPTIONS -Wall #-}
-{-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TemplateHaskell #-}
+{-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Graphics.UI.Bottle.Widget (
-  Widget(..), Cursor, MEnter,
+  Widget(..), MEnter,
+  Id(..), atId, joinId, subId,
   Direction(..), direction,
   UserIO(..), atUioMaybeEnter, atUioEventMap, atUioFrame,
   EventResult(..), atEAnimIdMapping, atECursor,
@@ -14,9 +15,11 @@ module Graphics.UI.Bottle.Widget (
   backgroundColor, tint, liftView,
   strongerEvents, weakerEvents, align) where
 
+import Data.Binary (Binary)
+import Data.List(isPrefixOf)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2)
-import Graphics.UI.Bottle.Animation (Frame)
+import Graphics.UI.Bottle.Animation (Frame, AnimId)
 import Graphics.UI.Bottle.EventMap (EventMap)
 import Graphics.UI.Bottle.SizeRange (Size)
 import Graphics.UI.Bottle.Sized (Sized)
@@ -35,13 +38,26 @@ direction _ dir (Dir v) = dir v
 
 type MEnter f = Maybe (Direction -> f EventResult)
 
-type Cursor = Anim.AnimId
+newtype Id = Id {
+  cursorId :: AnimId
+  }
+  deriving (Eq, Ord, Show, Read, Binary, Monoid)
+
+joinId :: Id -> AnimId -> Id
+joinId (Id x) y = Id $ x ++ y
+
+subId :: Id -> Id -> Maybe AnimId
+subId (Id folder) (Id path)
+  | folder `isPrefixOf` path = Just $ drop (length folder) path
+  | otherwise = Nothing
+
 
 data EventResult = EventResult {
-  eCursor :: Maybe Cursor,
-  eAnimIdMapping :: Anim.AnimId -> Anim.AnimId
+  eCursor :: Maybe Id,
+  eAnimIdMapping :: AnimId -> AnimId
   }
 
+AtFieldTH.make ''Id
 AtFieldTH.make ''EventResult
 
 emptyEventResult :: EventResult
@@ -50,7 +66,7 @@ emptyEventResult = EventResult {
   eAnimIdMapping = id
   }
 
-eventResultFromCursor :: Cursor -> EventResult
+eventResultFromCursor :: Id -> EventResult
 eventResultFromCursor cursor = EventResult {
   eCursor = Just cursor,
   eAnimIdMapping = id
@@ -123,8 +139,8 @@ enter :: Widget f -> Size -> Maybe (Direction -> f EventResult)
 enter = (fmap . fmap) uioMaybeEnter userIO
 
 -- ^ If Widget already takes focus, it is untouched
--- TODO: Would be nicer as (Direction -> Cursor), but then TextEdit's "f" couldn't be ((,) String)..
-takesFocus :: Functor f => (Direction -> f Cursor) -> Widget f -> Widget f
+-- TODO: Would be nicer as (Direction -> Id), but then TextEdit's "f" couldn't be ((,) String)..
+takesFocus :: Functor f => (Direction -> f Id) -> Widget f -> Widget f
 takesFocus = atMaybeEnter . const . Just . (fmap . fmap) eventResultFromCursor
 
 atMaybeEnter :: (MEnter f -> MEnter f) -> Widget f -> Widget f
@@ -141,8 +157,8 @@ strongerEvents = atEventMap . mappend
 weakerEvents :: EventHandlers f -> Widget f -> Widget f
 weakerEvents = atEventMap . flip mappend
 
-backgroundColor :: Anim.AnimId -> Draw.Color -> Widget f -> Widget f
-backgroundColor animId = atImageWithSize . Anim.backgroundColor animId 10
+backgroundColor :: Id -> Draw.Color -> Widget f -> Widget f
+backgroundColor (Id animId) = atImageWithSize . Anim.backgroundColor animId 10
 
 tint :: Draw.Color -> Widget f -> Widget f
 tint = atImage . Anim.onImages . Draw.tint
@@ -156,7 +172,7 @@ actionEventMap keys doc act =
 
 actionEventMapMovesCursor ::
   Functor f => [EventMap.EventType] -> EventMap.Doc ->
-  f Cursor -> EventHandlers f
+  f Id -> EventHandlers f
 actionEventMapMovesCursor keys doc act =
   (fmap . fmap) eventResultFromCursor $
   EventMap.fromEventTypes keys doc act

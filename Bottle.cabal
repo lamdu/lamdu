@@ -94,6 +94,7 @@ Executable Editor
   Other-Modules:       Editor.Data,
                        Editor.DataOps,
                        Editor.Anchors,
+                       Editor.WidgetIds,
                        Editor.Config,
                        Editor.CTransaction,
                        Editor.MonadF,

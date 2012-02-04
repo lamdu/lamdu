@@ -20,9 +20,8 @@ import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
-import qualified Editor.AnimIds as AnimIds
+import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -30,18 +29,18 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
-makeTextView :: MonadF m => String -> Anim.AnimId -> TWidget t m
-makeTextView text animId = do
+makeTextView :: MonadF m => String -> Widget.Id -> TWidget t m
+makeTextView text myId = do
   style <- readTextStyle
   return $
-    TextView.makeWidget (TextEdit.sTextViewStyle style) text animId
+    TextView.makeWidget (TextEdit.sTextViewStyle style) text $ Widget.cursorId myId
 
-makeFocusableView :: MonadF m => Widget (Transaction t m) -> Anim.AnimId -> TWidget t m
+makeFocusableView :: MonadF m => Widget (Transaction t m) -> Widget.Id -> TWidget t m
 makeFocusableView widget animId = do
   hasFocus <- liftM (animId ==) readCursor
   let
     setBackground
-      | hasFocus = Widget.backgroundColor AnimIds.backgroundCursorId blue
+      | hasFocus = Widget.backgroundColor WidgetIds.backgroundCursorId blue
       | otherwise = id
   return .
     (Widget.atIsFocused . const) hasFocus . setBackground $
@@ -49,14 +48,14 @@ makeFocusableView widget animId = do
   where
     blue = Draw.Color 0 0 1 0.8
 
-makeFocusableTextView :: MonadF m => String -> Anim.AnimId -> TWidget t m
-makeFocusableTextView text animId = do
-  textView <- makeTextView text animId
-  makeFocusableView textView animId
+makeFocusableTextView :: MonadF m => String -> Widget.Id -> TWidget t m
+makeFocusableTextView text myId = do
+  textView <- makeTextView text myId
+  makeFocusableView textView myId
 
 makeChoice ::
   (Monad m) =>
-  Anim.AnimId -> Transaction.Property t m Int -> Box.Orientation ->
+  Widget.Id -> Transaction.Property t m Int -> Box.Orientation ->
   [TWidget t m] -> TWidget t m
 makeChoice selectionAnimId curChoiceRef orientation children = do
   curChoice <- getP curChoiceRef
@@ -79,18 +78,18 @@ wrapDelegatedWithKeys ::
   FocusDelegator.IsDelegating ->
   ((Widget (Transaction t m) ->
     Widget (Transaction t m)) -> a -> b) ->
-  (Anim.AnimId -> CTransaction t m a) ->
-  Anim.AnimId -> CTransaction t m b
-wrapDelegatedWithKeys keys entryState atWidget mkResult animId = do
+  (Widget.Id -> CTransaction t m a) ->
+  Widget.Id -> CTransaction t m b
+wrapDelegatedWithKeys keys entryState atWidget mkResult myId = do
   let
-    innerAnimId = AnimIds.delegating animId
-    selfAnimId = AnimIds.notDelegating animId
-    destAnimId =
+    innerId = WidgetIds.delegating myId
+    delegatorId = WidgetIds.notDelegating myId
+    destId =
       case entryState of
-        FocusDelegator.NotDelegating -> selfAnimId
-        FocusDelegator.Delegating -> innerAnimId
-  assignCursor animId destAnimId $ do
-    innerResult <- mkResult innerAnimId
+        FocusDelegator.NotDelegating -> delegatorId
+        FocusDelegator.Delegating -> innerId
+  assignCursor myId destId $ do
+    innerResult <- mkResult innerId
     cursor <- readCursor
     let
       cursorSelf = Just FocusDelegator.NotDelegating
@@ -99,22 +98,26 @@ wrapDelegatedWithKeys keys entryState atWidget mkResult animId = do
         | otherwise = Nothing
       makeDelegator delegateState =
         (Widget.atIsFocused . const) (isJust delegateState) .
-        FocusDelegator.make entryState delegateState selfAnimId keys AnimIds.backgroundCursorId
+        FocusDelegator.make entryState delegateState delegatorId keys WidgetIds.backgroundCursorId
       onWidget innerWidget =
-        (`makeDelegator` innerWidget) . maybe (cursorNotSelf innerWidget) (const cursorSelf) . Anim.subId selfAnimId $ cursor
+        (`makeDelegator` innerWidget) .
+        maybe (cursorNotSelf innerWidget) (const cursorSelf) .
+        Widget.subId delegatorId $
+        cursor
     return $ atWidget onWidget innerResult
 
 wrapDelegated ::
   Monad m => FocusDelegator.IsDelegating ->
-  (Anim.AnimId -> TWidget t m) -> Anim.AnimId -> TWidget t m
+  (Widget.Id -> TWidget t m) ->
+  Widget.Id -> TWidget t m
 wrapDelegated entryState =
   wrapDelegatedWithKeys FocusDelegator.defaultKeys entryState id
 
 makeTextEdit ::
   Monad m =>
   Transaction.Property t m String ->
-  Anim.AnimId -> TWidget t m
-makeTextEdit textRef animId = do
+  Widget.Id -> TWidget t m
+makeTextEdit textRef myId = do
   text <- getP textRef
   let
     lifter (newText, eventRes) = do
@@ -124,12 +127,12 @@ makeTextEdit textRef animId = do
   style <- readTextStyle
   return .
     Widget.atEvents lifter $
-    TextEdit.make style cursor text animId
+    TextEdit.make style cursor text myId
 
 makeWordEdit ::
   Monad m =>
   Transaction.Property t m String ->
-  Anim.AnimId -> TWidget t m
+  Widget.Id -> TWidget t m
 makeWordEdit = (fmap . fmap . liftM . Widget.atEventMap) removeWordSeparators makeTextEdit
   where
     compose = foldr (.) id
@@ -137,7 +140,7 @@ makeWordEdit = (fmap . fmap . liftM . Widget.atEventMap) removeWordSeparators ma
     newlineKey = EventMap.KeyEventType EventMap.noMods EventMap.KeyEnter
     newwordKey = EventMap.SpaceKeyEventType EventMap.noMods
 
-makeNameEdit :: Monad m => String -> IRef a -> Anim.AnimId -> TWidget t m
+makeNameEdit :: Monad m => String -> IRef a -> Widget.Id -> TWidget t m
 makeNameEdit emptyStr iref =
   (atTextStyle . TextEdit.atSEmptyString . const) emptyStr . makeWordEdit (Anchors.aNameRef iref)
 

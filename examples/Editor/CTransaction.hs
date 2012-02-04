@@ -19,7 +19,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 
 data CTransactionEnv = CTransactionEnv {
-  envCursor :: Widget.Cursor,
+  envCursor :: Widget.Id,
   envTextStyle :: TextEdit.Style
   }
 AtFieldTH.make ''CTransactionEnv
@@ -32,7 +32,7 @@ AtFieldTH.make ''CTransaction
 
 type TWidget t m = CTransaction t m (Widget (Transaction t m))
 
-runCTransaction :: Widget.Cursor -> TextEdit.Style -> CTransaction t m a -> Transaction t m a
+runCTransaction :: Widget.Id -> TextEdit.Style -> CTransaction t m a -> Transaction t m a
 runCTransaction cursor style =
   (`Reader.runReaderT` CTransactionEnv cursor style) . unCTransaction
 
@@ -51,7 +51,7 @@ runNestedCTransaction store act = do
       transaction . Transaction.run store .
       (liftM . second . Widget.atEvents) (Transaction.run store)
 
-readCursor :: Monad m => CTransaction t m Widget.Cursor
+readCursor :: Monad m => CTransaction t m Widget.Id
 readCursor = CTransaction (Reader.asks envCursor)
 
 readTextStyle :: Monad m => CTransaction t m TextEdit.Style
@@ -63,7 +63,7 @@ transaction = CTransaction . lift
 getP :: Monad m => Property (Transaction t m) a -> CTransaction t m a
 getP = transaction . Property.get
 
-assignCursor :: Widget.Cursor -> Widget.Cursor -> CTransaction t m a -> CTransaction t m a
+assignCursor :: Widget.Id -> Widget.Id -> CTransaction t m a -> CTransaction t m a
 assignCursor src dest =
   (atCTransaction . Reader.withReaderT . atEnvCursor) replace
   where

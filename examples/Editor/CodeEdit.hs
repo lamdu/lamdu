@@ -20,7 +20,7 @@ import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
-import qualified Editor.AnimIds as AnimIds
+import qualified Editor.WidgetIds as WidgetIds
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
@@ -46,8 +46,8 @@ spaceWidget = Widget.liftView spaceView
 setTextColor :: Draw.Color -> TWidget t m -> TWidget t m
 setTextColor = atTextStyle . TextEdit.atSTextViewStyle . TextView.atStyleColor . const
 
-makeVarView :: MonadF m => Data.VariableRef -> Anim.AnimId -> TWidget t m
-makeVarView var animId = do
+makeVarView :: MonadF m => Data.VariableRef -> Widget.Id -> TWidget t m
+makeVarView var myId = do
   name <- getP $ Anchors.variableNameRef var
   let
     color =
@@ -56,11 +56,11 @@ makeVarView var animId = do
         Data.DefinitionRef _ -> Config.definitionColor
         Data.ParameterRef _ -> Config.parameterColor
   setTextColor color $
-    BWidgets.makeFocusableTextView name animId
+    BWidgets.makeFocusableTextView name myId
 
 makeActiveHoleEdit ::
   MonadF m => IRef Data.Definition -> Data.HoleState -> IRef Data.Expression ->
-  Anim.AnimId -> TWidget ViewTag m
+  Widget.Id -> TWidget ViewTag m
 makeActiveHoleEdit definitionI curState expressionI myId =
   assignCursor myId searchTermId $ do
     Data.Definition paramIs _ <- getP definitionRef
@@ -74,28 +74,33 @@ makeActiveHoleEdit definitionI curState expressionI myId =
       (firstResults, moreResults) = splitAt 3 results
       mkMoreResultWidget
         | null moreResults = return []
-        | otherwise = liftM (:[]) . BWidgets.makeTextView "..." $ Anim.joinId myId ["more results"]
+        | otherwise = liftM (:[]) . BWidgets.makeTextView "..." $ Widget.joinId myId ["more results"]
     resultWidgets <- maybeResults firstResults
     moreResultsWidget <- mkMoreResultWidget
     return . BWidgets.vbox $ [searchTermWidget, resultWidgets] ++ moreResultsWidget
   where
-    maybeResults [] = BWidgets.makeTextView "(No results)" $ Anim.joinId myId ["no results"]
+    maybeResults [] = BWidgets.makeTextView "(No results)" $ Widget.joinId myId ["no results"]
     maybeResults xs = liftM BWidgets.vbox $ mapM (makeResultWidget . fst) xs
-    expressionId = AnimIds.fromIRef expressionI
+    expressionId = WidgetIds.fromIRef expressionI
+    expressionAnimId = Widget.cursorId expressionId
 
-    searchTermId = AnimIds.searchTermAnimId myId
-    resultAnimId = Anim.joinId (Anim.joinId myId ["search results"]) . Data.onVariableIRef AnimIds.fromIRef
+    searchTermId = WidgetIds.searchTermId myId
+    resultCursorId =
+      mappend (myId `Widget.joinId` ["search results"]) .
+      Data.onVariableIRef WidgetIds.fromIRef
     makeResultWidget var =
       (liftM . Widget.strongerEvents) (pickResultEventMap var) .
-      makeVarView var $ resultAnimId var
+      makeVarView var $ resultCursorId var
     pickResultEventMap var =
       EventMap.fromEventTypes Config.pickResultKeys "Pick this search result" $ do
         Transaction.writeIRef expressionI $ Data.ExpressionGetVariable var
         let
           -- TODO: Is there a better way?
-          getVariableTextAnimId = expressionId
+          getVariableTextAnimId = expressionAnimId
+          resultCursorAnimId = Widget.cursorId . resultCursorId
+
           mapAnimId animId =
-            maybe animId (Anim.joinId getVariableTextAnimId) $ Anim.subId (resultAnimId var) animId
+            maybe animId (Anim.joinId getVariableTextAnimId) $ Anim.subId (resultCursorAnimId var) animId
 
         return Widget.EventResult {
           Widget.eCursor = Just expressionId,
@@ -126,14 +131,14 @@ makeActiveHoleEdit definitionI curState expressionI myId =
 
 makeHoleEdit ::
   MonadF m => IRef Data.Definition -> Data.HoleState ->
-  IRef Data.Expression -> Anim.AnimId -> TWidget ViewTag m
+  IRef Data.Expression -> Widget.Id -> TWidget ViewTag m
 makeHoleEdit definitionI curState expressionI myId = do
   cursor <- readCursor
   widget <-
-    if isJust (Anim.subId myId cursor)
+    if isJust (Widget.subId myId cursor)
     then makeActiveHoleEdit definitionI curState expressionI myId
-    else BWidgets.makeFocusableTextView snippet $ AnimIds.searchTermAnimId myId
-  return $ Widget.backgroundColor (Anim.joinId myId ["hole background"]) holeBackgroundColor widget
+    else BWidgets.makeFocusableTextView snippet $ WidgetIds.searchTermId myId
+  return $ Widget.backgroundColor (Widget.joinId myId ["hole background"]) holeBackgroundColor widget
   where
     holeBackgroundColor = Draw.Color 0.8 0 0 0.3
     snippet
@@ -141,16 +146,16 @@ makeHoleEdit definitionI curState expressionI myId = do
       | otherwise = searchText
     searchText = Data.holeSearchTerm curState
 
-diveIn :: Functor f => f (IRef a) -> f Anim.AnimId
-diveIn = fmap $ AnimIds.delegating . AnimIds.fromIRef
+diveIn :: Functor f => f (IRef a) -> f Widget.Id
+diveIn = fmap $ WidgetIds.delegating . WidgetIds.fromIRef
 
-replace :: MonadF m => Transaction.Property t m (IRef Data.Expression) -> Transaction t m Anim.AnimId
+replace :: MonadF m => Transaction.Property t m (IRef Data.Expression) -> Transaction t m Widget.Id
 replace = diveIn . DataOps.replace
 
 makeExpressionEdit :: MonadF m =>
   Bool -> IRef Data.Definition ->
   Transaction.Property ViewTag m (IRef Data.Expression) ->
-  CTransaction ViewTag m (Widget (Transaction ViewTag m), Anim.AnimId)
+  CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id)
 makeExpressionEdit isArgument definitionI expressionPtr = do
   expressionI <- getP expressionPtr
   let
@@ -158,10 +163,10 @@ makeExpressionEdit isArgument definitionI expressionPtr = do
     mkCallWithArg = diveIn $ DataOps.callWithArg expressionPtr
     mkGiveAsArg = diveIn $ DataOps.giveAsArg expressionPtr
     weakerEvents = liftM . first . Widget.weakerEvents
-    myId = AnimIds.fromIRef expressionI
+    expressionId = WidgetIds.fromIRef expressionI
 
     wrap keys entryState f =
-      BWidgets.wrapDelegatedWithKeys keys entryState first f myId
+      BWidgets.wrapDelegatedWithKeys keys entryState first f expressionId
     wrapTextEditor =
       wrap FocusDelegator.defaultKeys FocusDelegator.NotDelegating
     wrapExpr =
@@ -172,39 +177,39 @@ makeExpressionEdit isArgument definitionI expressionPtr = do
       Widget.actionEventMapMovesCursor Config.addNextArgumentKeys "Add another argument" mkCallWithArg
     setExpr newExprI = do
       Property.set expressionPtr newExprI
-      return $ AnimIds.fromIRef newExprI
+      return $ WidgetIds.fromIRef newExprI
   expr <- getP expressionRef
   widget <-
     case expr of
       Data.ExpressionHole holeState ->
         wrapTextEditor .
-          (fmap . liftM) (flip (,) myId) $
+          (fmap . liftM) (flip (,) expressionId) $
           makeHoleEdit definitionI holeState expressionI
       Data.ExpressionGetVariable varRef -> do
-        varRefView <- makeVarView varRef myId
+        varRefView <- makeVarView varRef expressionId
         let
           jumpToDefinitionEventMap =
             Widget.actionEventMapMovesCursor Config.jumpToDefinitionKeys "Jump to definition" jumpToDefinition
           jumpToDefinition =
             case varRef of
               Data.DefinitionRef defI -> newPane defI
-              Data.ParameterRef paramI -> return $ AnimIds.fromIRef paramI
-              Data.BuiltinRef _builtI -> return myId
-        return (Widget.weakerEvents jumpToDefinitionEventMap varRefView, myId)
+              Data.ParameterRef paramI -> return $ WidgetIds.fromIRef paramI
+              Data.BuiltinRef _builtI -> return expressionId
+        return (Widget.weakerEvents jumpToDefinitionEventMap varRefView, expressionId)
       Data.ExpressionApply (Data.Apply funcI argI) ->
         wrapExpr $
-          \animId ->
-            assignCursor animId (AnimIds.fromIRef argI) $ do
+          \myId ->
+            assignCursor myId (WidgetIds.fromIRef argI) $ do
               let
                 funcIPtr =
                   Property (return funcI) $ Property.set expressionRef . Data.ExpressionApply . (`Data.Apply` argI)
                 argIPtr =
                   Property (return argI) $ Property.set expressionRef . Data.ExpressionApply . (funcI `Data.Apply`)
-              (funcEdit, funcAnimId) <- mkDelEvent argI $ makeExpressionEdit False definitionI funcIPtr
+              (funcEdit, funcId) <- mkDelEvent argI $ makeExpressionEdit False definitionI funcIPtr
               (argEdit, _) <-
                  weakerEvents mkCallWithArgEventMap .
                  mkDelEvent funcI $ makeExpressionEdit True definitionI argIPtr
-              let label str = BWidgets.makeTextView str $ Anim.joinId funcAnimId [pack str]
+              let label str = BWidgets.makeTextView str $ Widget.joinId funcId [pack str]
               before <- label "("
               after <- label ")"
               return
@@ -212,7 +217,7 @@ makeExpressionEdit isArgument definitionI expressionPtr = do
                  [[before | isArgument],
                   [funcEdit], [spaceWidget], [argEdit],
                   [after | isArgument]]
-                , funcAnimId)
+                , funcId)
   return .
     (first . Widget.weakerEvents . mconcat . concat) [
       [ mkCallWithArgEventMap | not isArgument ],
@@ -230,9 +235,9 @@ makeDefinitionEdit :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
 makeDefinitionEdit definitionI = do
   Data.Definition params _ <- getP definitionRef
   nameEdit <-
-    assignCursor animId nameEditAnimId $
+    assignCursor myId nameEditAnimId $
     BWidgets.makeNameEdit "<unnamed>" definitionI nameEditAnimId
-  equals <- BWidgets.makeTextView "=" $ Anim.joinId animId ["equals"]
+  equals <- BWidgets.makeTextView "=" $ Widget.joinId myId ["equals"]
   (expressionEdit, _) <- makeExpressionEdit False definitionI bodyRef
   paramsEdits <- mapM makeParamEdit $ enumerate params
 
@@ -246,26 +251,26 @@ makeDefinitionEdit definitionI = do
       BWidgets.wrapDelegated FocusDelegator.NotDelegating
       (setTextColor Config.parameterColor .
        BWidgets.makeNameEdit ("<unnamed param " ++ show i ++ ">") paramI) $
-      AnimIds.fromIRef paramI
+      WidgetIds.fromIRef paramI
     bodyRef = Property.composeLabel Data.defBody Data.atDefBody definitionRef
     definitionRef = Transaction.fromIRef definitionI
     paramEventMap paramI =
       Widget.actionEventMapMovesCursor Config.delKeys "Delete Parameter" .
-      (liftM . const) animId $
+      (liftM . const) myId $
       DataOps.delParameter definitionRef paramI
     eventMap =
       Widget.actionEventMapMovesCursor Config.addParamKeys "Add Parameter" .
-      liftM (AnimIds.delegating . AnimIds.fromIRef) $
+      liftM (WidgetIds.delegating . WidgetIds.fromIRef) $
       DataOps.addParameter definitionRef
-    nameEditAnimId = Anim.joinId animId ["name"]
-    animId = AnimIds.fromIRef definitionI
+    nameEditAnimId = Widget.joinId myId ["name"]
+    myId = WidgetIds.fromIRef definitionI
 
-newPane :: Monad m => IRef Data.Definition -> Transaction ViewTag m Widget.Cursor
+newPane :: Monad m => IRef Data.Definition -> Transaction ViewTag m Widget.Id
 newPane defI = do
   panes <- Property.get panesRef
   when (all ((/= defI) . Anchors.paneDefinition) panes) $
     Property.set panesRef $ Anchors.makePane defI : panes
-  return $ AnimIds.fromIRef defI
+  return $ WidgetIds.fromIRef defI
   where
     panesRef = Transaction.fromIRef Anchors.rootIRef
 
@@ -283,7 +288,7 @@ makePanesEdit = do
     delPane i = do
       let newPanes = removeAt i panes
       Property.set panesRef newPanes
-      return . AnimIds.fromIRef . Anchors.paneDefinition . last $
+      return . WidgetIds.fromIRef . Anchors.paneDefinition . last $
         take (i+1) newPanes
 
     paneEventMap (_:_:_) i =
@@ -300,11 +305,11 @@ makePanesEdit = do
       [] -> BWidgets.makeFocusableTextView "<No panes>" myId
       (firstPane:_) -> do
         assignCursor myId
-          (AnimIds.fromIRef (Anchors.paneDefinition firstPane)) $ do
+          (WidgetIds.fromIRef (Anchors.paneDefinition firstPane)) $ do
             definitionEdits <- mapM makePaneWidget $ enumerate panes
             return $ BWidgets.vboxAlign 0 definitionEdits
 
   return $ Widget.weakerEvents newDefinitionEventMap panesWidget
   where
     panesRef = Transaction.fromIRef Anchors.rootIRef
-    myId = AnimIds.fromIRef Anchors.rootIRef
+    myId = WidgetIds.fromIRef Anchors.rootIRef

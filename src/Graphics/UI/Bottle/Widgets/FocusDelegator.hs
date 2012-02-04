@@ -6,7 +6,6 @@ import Data.Maybe(fromMaybe)
 import Data.Monoid(mappend)
 import Graphics.UI.Bottle.Widget(Widget(..))
 import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 
@@ -27,7 +26,7 @@ blue :: Draw.Color
 blue = Draw.Color 0 0 1 1
 
 makeFocused :: Monad f =>
-  IsDelegating -> Anim.AnimId -> Keys -> Anim.AnimId ->
+  IsDelegating -> Widget.Id -> Keys -> Widget.Id ->
   Widget f -> Widget f
 makeFocused delegating focusSelf keys backgroundCursorId =
   handleFocus delegating
@@ -58,9 +57,9 @@ makeFocused delegating focusSelf keys backgroundCursorId =
 make :: Monad f => -- actually "Pointed", as only using return.
   IsDelegating -> -- ^ Start state, enter from direction state
   Maybe IsDelegating -> -- ^ Current state
-  Anim.AnimId -> -- ^ Enter/Stop delegating value
+  Widget.Id -> -- ^ Enter/Stop delegating value
   Keys -> -- ^ Keys configuration
-  Anim.AnimId -> -- ^ Background AnimId
+  Widget.Id -> -- ^ Background Cursor Id
   Widget f -> Widget f
 make isDelegating Nothing focusSelf _ _ =
   Widget.atMaybeEnter $ mEnter isDelegating

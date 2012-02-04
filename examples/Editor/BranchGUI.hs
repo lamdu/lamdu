@@ -18,7 +18,7 @@ import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
-import qualified Editor.AnimIds as AnimIds
+import qualified Editor.WidgetIds as WidgetIds
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.Config as Config
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -70,9 +70,9 @@ makeRootWidget widget = do
     makeBranchNameEdit textEditModelIRef =
       BWidgets.wrapDelegated FocusDelegator.NotDelegating
       (BWidgets.makeTextEdit (Transaction.fromIRef textEditModelIRef)) $
-      AnimIds.fromIRef textEditModelIRef
+      WidgetIds.fromIRef textEditModelIRef
   branchSelector <-
-    BWidgets.makeChoice AnimIds.branchSelection branchIndexRef
+    BWidgets.makeChoice WidgetIds.branchSelection branchIndexRef
     Box.vertical $ map (makeBranchNameEdit . fst) namedBranches
 
   let

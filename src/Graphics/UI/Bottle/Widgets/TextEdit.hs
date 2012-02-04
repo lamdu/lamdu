@@ -40,8 +40,8 @@ type Cursor = Int
 data Style = Style {
   sCursorColor :: Draw.Color,
   sCursorWidth :: Draw.R,
-  sTextCursorId :: Anim.AnimId,
-  sBackgroundCursorId :: Anim.AnimId,
+  sTextCursorId :: Widget.Id,
+  sBackgroundCursorId :: Widget.Id,
   sEmptyString :: String,
   sTextViewStyle :: TextView.Style
   }
@@ -66,10 +66,10 @@ makeDisplayStr _     str = str
 cursorTranslate :: Style -> Anim.Frame -> Anim.Frame
 cursorTranslate style = Anim.translate (Vector2 (sCursorWidth style / 2) 0)
 
-makeTextEditCursor :: Anim.AnimId -> Int -> Anim.AnimId
-makeTextEditCursor myId = Anim.joinId myId . (:[]) . BinUtils.encodeS
+makeTextEditCursor :: Widget.Id -> Int -> Widget.Id
+makeTextEditCursor myId = Widget.Id . Anim.joinId (Widget.cursorId myId) . (:[]) . BinUtils.encodeS
 
-makeUnfocused :: Style -> String -> Anim.AnimId -> Widget ((,) String)
+makeUnfocused :: Style -> String -> Widget.Id -> Widget ((,) String)
 makeUnfocused style str myId =
   Widget.takesFocus enter .
   (Widget.atContent .
@@ -79,10 +79,13 @@ makeUnfocused style str myId =
      (SizeRange.atSrMaxSize .
       Vector2.first . fmap) (+ sCursorWidth style)) .
   Widget.atImage
-    (cursorTranslate style) $
-  TextView.makeWidget (sTextViewStyle style) str myId
+    (cursorTranslate style) .
+  TextView.makeWidget (sTextViewStyle style) str $
+  Widget.cursorId myId
   where
-    enter dir = (str, makeTextEditCursor myId $ Widget.direction (length str) enterPos dir)
+    enter dir =
+      (,) str . makeTextEditCursor myId $
+      Widget.direction (length str) enterPos dir
     enterPos (Vector2 x _)
       | x < 0 = 0
       | otherwise = length str
@@ -91,7 +94,7 @@ makeUnfocused style str myId =
 -- what "Font" should be)
 -- | Note: maxLines prevents the *user* from exceeding it, not the
 -- | given text...
-makeFocused :: Cursor -> Style -> String -> Anim.AnimId -> Widget ((,) String)
+makeFocused :: Cursor -> Style -> String -> Widget.Id -> Widget ((,) String)
 makeFocused cursor style str myId =
   Widget.backgroundColor (sBackgroundCursorId style) blue .
   Widget.atImage (`mappend` cursorFrame) .
@@ -109,7 +112,8 @@ makeFocused cursor style str myId =
           }
       }
     reqSize = SizeRange.fixedSize $ Vector2 (sCursorWidth style + tlWidth) tlHeight
-    img = cursorTranslate style $ frameGen myId
+    myAnimId = Widget.cursorId myId
+    img = cursorTranslate style $ frameGen myAnimId
     (frameGen, Vector2 tlWidth tlHeight) = TextView.drawText True (sTextViewStyle style) displayStr
 
     blue = Draw.Color 0 0 0.8 0.8
@@ -125,7 +129,7 @@ makeFocused cursor style str myId =
       Anim.onDepth (+2) .
       Anim.translate (Vector2 cursorPosX cursorPosY) .
       Anim.scale (Vector2 (sCursorWidth style) lineHeight) .
-      Anim.simpleFrame (sTextCursorId style) $
+      (Anim.simpleFrame . Widget.cursorId . sTextCursorId) style $
       Draw.tint (sCursorColor style) square
 
     (before, after) = splitAt cursor strWithIds
@@ -150,7 +154,7 @@ makeFocused cursor style str myId =
           Widget.eAnimIdMapping = mapping
         })
       where
-        mapping animId = maybe animId (Anim.joinId myId . translateId) $ Anim.subId myId animId
+        mapping animId = maybe animId (Anim.joinId myAnimId . translateId) $ Anim.subId myAnimId animId
         translateId [subId] = (:[]) . maybe subId (SBS8.pack . show) $ (`Map.lookup` dict) =<< Safe.readMay (SBS8.unpack subId)
         translateId x = x
         dict = mappend movedDict deletedDict
@@ -273,10 +277,10 @@ makeFocused cursor style str myId =
 
         ]
 
-make :: Style -> Anim.AnimId -> String -> Anim.AnimId -> Widget ((,) String)
+make :: Style -> Widget.Id -> String -> Widget.Id -> Widget ((,) String)
 make style cursor str myId =
   maybe makeUnfocused makeFocused mCursor style str myId
   where
-    mCursor = fmap extractTextEditCursor $ Anim.subId myId cursor
+    mCursor = fmap extractTextEditCursor $ Widget.subId myId cursor
     extractTextEditCursor [x] = BinUtils.decodeS x
     extractTextEditCursor _ = length str

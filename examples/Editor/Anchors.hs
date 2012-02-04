@@ -40,12 +40,12 @@ import qualified Data.Store.Rev.Branch as Branch
 import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
-import qualified Editor.AnimIds as AnimIds
+import qualified Editor.WidgetIds as WidgetIds
 import qualified Editor.Data as Data
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 data Pane = Pane {
-  paneCursor :: Widget.Cursor,
+  paneCursor :: Widget.Id,
   paneDefinition :: IRef Data.Definition
   }
   deriving (Eq, Ord, Read, Show)
@@ -79,7 +79,7 @@ currentBranchIRef = IRef.anchor "currentBranch"
 currentBranch :: Monad m => Transaction.Property DBTag m Branch
 currentBranch = Transaction.fromIRef currentBranchIRef
 
-cursorIRef :: IRef Widget.Cursor
+cursorIRef :: IRef Widget.Id
 cursorIRef = IRef.anchor "cursor"
 
 -- TODO: This should be an index
@@ -88,13 +88,13 @@ globals = Transaction.fromIRef $ IRef.anchor "globals"
 
 -- Cursor is untagged because it is both saved globally and per-revision.
 -- Cursor movement without any revisioned changes are not saved per-revision.
-cursor :: Monad m => Transaction.Property DBTag m Widget.Cursor
+cursor :: Monad m => Transaction.Property DBTag m Widget.Id
 cursor = Transaction.fromIRef cursorIRef
 
-preCursor :: Monad m => Transaction.Property ViewTag m Widget.Cursor
+preCursor :: Monad m => Transaction.Property ViewTag m Widget.Id
 preCursor = Transaction.fromIRef $ IRef.anchor "precursor"
 
-postCursor :: Monad m => Transaction.Property ViewTag m Widget.Cursor
+postCursor :: Monad m => Transaction.Property ViewTag m Widget.Id
 postCursor = Transaction.fromIRef $ IRef.anchor "postcursor"
 
 -- Initialize an IRef if it does not already exist.
@@ -152,7 +152,7 @@ newBuiltin fullyQualifiedName = do
 
 makePane :: IRef Data.Definition -> Pane
 makePane defI = Pane {
-  paneCursor = AnimIds.fromIRef defI,
+  paneCursor = WidgetIds.fromIRef defI,
   paneDefinition = defI
   }
 
@@ -175,8 +175,8 @@ initDB store =
         Property.set globals =<< mapM newBuiltin temporaryBuiltinsDatabase
         defI <- makeDefinition
         Property.set root [makePane defI]
-        Property.set preCursor $ AnimIds.fromIRef defI
-        Property.set postCursor $ AnimIds.fromIRef defI
+        Property.set preCursor $ WidgetIds.fromIRef defI
+        Property.set postCursor $ WidgetIds.fromIRef defI
       initialVersionIRef <- Version.makeInitialVersion changes
       master <- Branch.new initialVersionIRef
       return [(masterNameIRef, master)]
@@ -184,7 +184,7 @@ initDB store =
     _ <- initRef viewIRef $ View.new branch
     _ <- initRef currentBranchIRef (return branch)
     _ <- initRef redosIRef $ return []
-    _ <- initRef cursorIRef $ return []
+    _ <- initRef cursorIRef . return $ Widget.Id []
     return ()
   where
     temporaryBuiltinsDatabase =
