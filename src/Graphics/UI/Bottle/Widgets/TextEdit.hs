@@ -67,7 +67,7 @@ cursorTranslate :: Style -> Anim.Frame -> Anim.Frame
 cursorTranslate style = Anim.translate (Vector2 (sCursorWidth style / 2) 0)
 
 makeTextEditCursor :: Widget.Id -> Int -> Widget.Id
-makeTextEditCursor myId = Widget.Id . Anim.joinId (Widget.cursorId myId) . (:[]) . BinUtils.encodeS
+makeTextEditCursor myId = Widget.joinId myId . (:[]) . BinUtils.encodeS
 
 makeUnfocused :: Style -> String -> Widget.Id -> Widget ((,) String)
 makeUnfocused style str myId =
