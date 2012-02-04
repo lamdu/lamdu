@@ -9,7 +9,7 @@ module Graphics.UI.Bottle.Widget (
   emptyEventResult, eventResultFromCursor,
   actionEventMap, actionEventMapMovesCursor,
   EventHandlers, atContent, atIsFocused,
-  userIO, image, eventMap, enter,
+  userIO, image, eventMap,
   takesFocus, atMkUserIO, atUserIO,
   atImageWithSize, atImage, atMaybeEnter, atEventMap, atEvents,
   backgroundColor, tint, liftView,
@@ -135,9 +135,6 @@ image = (fmap . fmap) uioFrame userIO
 
 eventMap :: Widget f -> Size -> EventHandlers f
 eventMap = (fmap . fmap) uioEventMap userIO
-
-enter :: Widget f -> Size -> Maybe (Direction -> f EventResult)
-enter = (fmap . fmap) uioMaybeEnter userIO
 
 -- ^ If Widget already takes focus, it is untouched
 -- TODO: Would be nicer as (Direction -> Id), but then TextEdit's "f" couldn't be ((,) String)..
