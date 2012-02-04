@@ -3,15 +3,15 @@
 module Graphics.UI.Bottle.Widgets.GridView(
     make, makeGeneric, makeFromWidgets) where
 
-import Control.Arrow (first, second)
+import Control.Arrow (second)
 import Control.Applicative (liftA2)
-import Control.Monad (msum)
+import Control.Monad (mzero, mplus)
 import Data.List (transpose)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.SizeRange (SizeRange(..), Size, Coordinate)
 import Graphics.UI.Bottle.Sized (Sized(..))
-import Graphics.UI.Bottle.Widget (Widget(..))
+import Graphics.UI.Bottle.Widget (Widget(..), UserIO(..))
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.UI.Bottle.SizeRange as SizeRange
@@ -70,24 +70,38 @@ makePlacements = (fmap . second . fmap) placements makeSizes
 --- Displays:
 
 -- Used by both make and Grid's make.
-makeGeneric :: (a -> Anim.Frame) -> [[Sized a]] -> Sized (Anim.Frame, [[a]])
-makeGeneric toFrame rows =
+makeGeneric :: (Vector2 Widget.R -> a -> a) -> [[Sized a]] -> Sized [[a]]
+makeGeneric translate rows =
   Sized reqSize mkRes
   where
     (reqSize, mkPlacements) = makePlacements $ (map . map) requestedSize rows
-    mkRes givenSize =
-      first (mconcat . concat) . unzip2d $
-      (zipWith . zipWith) locate (mkPlacements givenSize) rows
-    locate (pos, size) sized =
-      (Anim.translate pos (toFrame res), res)
-      where
-        res = fromSize sized size
-
-unzip2d :: [[(a, b)]] -> ([[a]], [[b]])
-unzip2d = unzip . map unzip
+    mkRes givenSize = (zipWith . zipWith) locate (mkPlacements givenSize) rows
+    locate (pos, size) sized = translate pos $ fromSize sized size
 
 make :: [[Sized Anim.Frame]] -> Sized Anim.Frame
-make = fmap fst . makeGeneric id
+make = fmap (mconcat . concat) . makeGeneric Anim.translate
+
+combineUserIOs :: UserIO f -> UserIO f -> UserIO f
+combineUserIOs
+  UserIO {
+    uioFrame = aFrame,
+    uioMaybeEnter = aMaybeEnter,
+    uioEventMap = aEventMap
+    }
+  UserIO {
+    uioFrame = bFrame,
+    uioMaybeEnter = bMaybeEnter,
+    uioEventMap = bEventMap
+    }
+  =
+  UserIO {
+    uioFrame = mappend aFrame bFrame,
+    uioMaybeEnter = mplus aMaybeEnter bMaybeEnter,
+    uioEventMap = mappend aEventMap bEventMap
+    }
+
+emptyUserIO :: UserIO f
+emptyUserIO = UserIO { uioFrame = mempty, uioMaybeEnter = mzero, uioEventMap = mempty }
 
 -- ^ This will send events to the first widget in the list that would
 -- take them. It is useful especially for lifting views to widgets and
@@ -97,17 +111,9 @@ makeFromWidgets widgets =
   Widget {
     isFocused = any isFocused $ concat widgets,
     content =
-      fmap combineEventHandlers .
-      makeGeneric Widget.uioFrame .
+      fmap (combineEventHandlers . concat) .
+      makeGeneric Widget.translateUserIO .
       (map . map) content $ widgets
     }
   where
-    combineEventHandlers (frame, userIOss) =
-      Widget.UserIO {
-        Widget.uioFrame = frame,
-        Widget.uioMaybeEnter = mEnter,
-        Widget.uioEventMap = eventMap
-        }
-      where
-        eventMap = mconcat . map Widget.uioEventMap $ concat userIOss
-        mEnter = msum . map Widget.uioMaybeEnter $ concat userIOss
+    combineEventHandlers = foldr combineUserIOs emptyUserIO

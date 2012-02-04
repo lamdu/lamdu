@@ -89,14 +89,14 @@ makeHelper combineEnters children =
     isFocused = isJust mCursor,
     content =
       fmap combineUserIOs .
-      GridView.makeGeneric Widget.uioFrame .
+      GridView.makeGeneric Widget.translateUserIO .
       (map . map) content $ children
     }
   where
     mCursor = getCursor children
-    combineUserIOs (frame, userIOss) =
+    combineUserIOs userIOss =
       Widget.UserIO {
-        Widget.uioFrame = frame,
+        Widget.uioFrame = mconcat . map Widget.uioFrame $ concat userIOss,
         -- Take the enter of the chosen child here. The Grid enter
         -- logic is in GridView.makeFromWidgets
         Widget.uioMaybeEnter = combineEnters mEnterss,
