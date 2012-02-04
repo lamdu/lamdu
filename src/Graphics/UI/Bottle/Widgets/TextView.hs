@@ -10,7 +10,6 @@ import Control.Arrow (first, second, (&&&))
 import Data.List.Split (splitWhen)
 import Data.List.Utils (enumerate)
 import Data.Monoid (Monoid(..))
-import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators((%%))
 import Graphics.UI.Bottle.SizeRange (Size, fixedSize)
 import Graphics.UI.Bottle.Sized (Sized(..))
@@ -35,9 +34,6 @@ AtFieldTH.make ''Style
 augment :: Show a => AnimId -> a -> AnimId
 augment animId = Anim.joinId animId . (:[]) . SBS8.pack . show
 
-heightSize :: Size
-heightSize = Vector2 0 DrawUtils.textHeight
-
 fontRender :: Style -> String -> (Draw.Image (), Size)
 fontRender (Style color font ptSize) =
   ((Draw.scale sz sz %%) . Draw.tint color . DrawUtils.drawText font) &&&
@@ -50,7 +46,7 @@ drawMany ::
   [(AnimId -> Anim.Frame, Size)] ->
   (AnimId -> Anim.Frame, Size)
 drawMany sizeToTranslate =
-  (second . liftA2 max) heightSize . foldr step (mempty, 0)
+  foldr step (mempty, 0)
   where
     step (drawX, sizeX) (drawXs, sizeXs) =
       (mappend drawX $ fmap (Anim.translate trans) drawXs,
