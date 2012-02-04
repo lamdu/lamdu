@@ -9,12 +9,14 @@ import Data.Maybe (isJust, fromMaybe, catMaybes)
 import Data.Monoid (mempty, mconcat)
 import Data.Ord (comparing)
 import Data.Vector.Vector2 (Vector2(..))
+import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.Widget (Widget(..), UserIO(..))
 import qualified Data.Vector.Vector2 as Vector2
-import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Animation as Anim
-import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.EventMap as EventMap
+import qualified Graphics.UI.Bottle.Rect as Rect
 import qualified Graphics.UI.Bottle.Sized as Sized
+import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.GLFW as GLFW
 
@@ -26,7 +28,7 @@ length2d xs = Vector2 (foldl' max 0 . map length $ xs) (length xs)
 capCursor :: Vector2 Int -> Vector2 Int -> Vector2 Int
 capCursor size = fmap (max 0) . liftA2 min (fmap (subtract 1) size)
 
-mkNavEventmap :: [[Widget.MEnter f]] -> Anim.Rect -> Cursor -> (Widget.EventHandlers f, Widget.EventHandlers f)
+mkNavEventmap :: [[Widget.MEnter f]] -> Rect -> Cursor -> (Widget.EventHandlers f, Widget.EventHandlers f)
 mkNavEventmap mEnterChildren curRect cursor@(Vector2 cursorX cursorY) = (weakMap, strongMap)
   where
     weakMap = mconcat . catMaybes $ [
@@ -100,7 +102,7 @@ makeHelper combineEnters children =
           uioFrame = frame,
           uioMaybeEnter = mEnter,
           uioEventMap = mempty,
-          uioFocalArea = Anim.Rect 0 size
+          uioFocalArea = Rect 0 size
           }
 
         makeUserIO cursor@(Vector2 x y) = UserIO {
@@ -130,7 +132,7 @@ sqr x = x * x
 normSqr :: Num a => Vector2 a -> a
 normSqr = norm . sqr
 
-rectDistance :: Anim.Rect -> Anim.Rect -> Anim.R
+rectDistance :: Rect -> Rect -> Anim.R
 rectDistance r1 r2 = normSqr distance - normSqr overlapPercentage
   where
     min2 = liftA2 min
@@ -138,12 +140,12 @@ rectDistance r1 r2 = normSqr distance - normSqr overlapPercentage
     overlapPercentage = overlapSize / size1 + overlapSize / size2
     overlapSize = max2 0 $ min2 br1 br2 - max2 tl1 tl2
     distance = max2 (max2 0 (tl2 - br1)) (max2 0 (tl1 - br2))
-    size1 = max2 1 $ Anim.rectSize r1
-    size2 = max2 1 $ Anim.rectSize r2
-    tl1 = Anim.rectTopLeft r1
-    tl2 = Anim.rectTopLeft r2
-    br1 = Anim.bottomRight r1
-    br2 = Anim.bottomRight r2
+    size1 = max2 1 $ Rect.rectSize r1
+    size2 = max2 1 $ Rect.rectSize r2
+    tl1 = Rect.rectTopLeft r1
+    tl2 = Rect.rectTopLeft r2
+    br1 = Rect.bottomRight r1
+    br2 = Rect.bottomRight r2
 
 make :: [[Widget k]] -> Widget k
 make = makeHelper makeEnter
@@ -153,7 +155,7 @@ make = makeHelper makeEnter
         search [] = Nothing
         search childEnters = Just $ byDirection childEnters
         byDirection childEnters dir =
-          (snd . minimumOn fst . (map . distanceEnter dir . Widget.direction (Anim.Rect 0 0) id) dir) childEnters $ dir
+          (snd . minimumOn fst . (map . distanceEnter dir . Widget.direction (Rect 0 0) id) dir) childEnters $ dir
 
         distanceEnter dir entryRect childEnter =
           ((rectDistance entryRect . Widget.enterResultRect . childEnter) dir, childEnter)

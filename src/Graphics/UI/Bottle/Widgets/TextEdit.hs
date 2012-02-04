@@ -18,6 +18,7 @@ import Data.Maybe (fromJust, mapMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators.Utils (square, textHeight)
+import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.Sized (Sized(..))
 import Graphics.UI.Bottle.Widget (Widget(..))
 import qualified Data.AtFieldTH as AtFieldTH
@@ -123,7 +124,7 @@ makeFocused cursor style str myId =
     lineHeight = sz * textHeight
     strWithIds = map (first Just) $ enumerate str
     beforeCursor = take cursor strWithIds
-    cursorRect = Anim.Rect cursorPos cursorSize
+    cursorRect = Rect cursorPos cursorSize
     cursorPos = Vector2 cursorPosX cursorPosY
     cursorSize = Vector2 (sCursorWidth style) lineHeight
     cursorPosX = textLinesWidth . map snd . last $ splitLines beforeCursor

@@ -23,30 +23,32 @@ import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2)
 import Graphics.UI.Bottle.Animation (AnimId, R)
 import Graphics.UI.Bottle.EventMap (EventMap)
+import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.SizeRange (Size)
 import Graphics.UI.Bottle.Sized (Sized)
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as EventMap
+import qualified Graphics.UI.Bottle.Rect as Rect
 import qualified Graphics.UI.Bottle.Sized as Sized
 
 -- RelativePos pos is relative to the top-left of the widget
-data Direction = Outside | RelativePos Anim.Rect
+data Direction = Outside | RelativePos Rect
 
 argument :: (a -> b) -> (b -> c) -> a -> c
 argument = flip (.)
 
 -- cata:
-direction :: r -> (Anim.Rect -> r) -> Direction -> r
+direction :: r -> (Rect -> r) -> Direction -> r
 direction outside _ Outside = outside
 direction _ relativePos (RelativePos v) = relativePos v
 
-inRelativePos :: (Anim.Rect -> Anim.Rect) -> Direction -> Direction
+inRelativePos :: (Rect -> Rect) -> Direction -> Direction
 inRelativePos f = direction Outside (RelativePos . f)
 
 data EnterResult f = EnterResult {
-  enterResultRect :: Anim.Rect,
+  enterResultRect :: Rect,
   enterResultEvent :: f EventResult
   }
 
@@ -93,7 +95,7 @@ data UserIO f = UserIO {
   uioFrame :: Anim.Frame,
   uioMaybeEnter :: MEnter f, -- Nothing if we're not enterable
   uioEventMap :: EventHandlers f,
-  uioFocalArea :: Anim.Rect
+  uioFocalArea :: Rect
   }
 
 AtFieldTH.make ''UserIO
@@ -125,7 +127,7 @@ liftView view =
   where
     buildUserIO mkFrame size =
       UserIO {
-        uioFocalArea = Anim.Rect 0 size,
+        uioFocalArea = Rect 0 size,
         uioFrame = mkFrame size,
         uioEventMap = mempty,
         uioMaybeEnter = Nothing
@@ -200,9 +202,9 @@ actionEventMapMovesCursor keys doc act =
 translateUserIO :: Vector2 R -> UserIO f -> UserIO f
 translateUserIO pos =
   (atUioFrame . Anim.translate) pos .
-  (atUioFocalArea . Anim.atRectTopLeft) (+pos) .
-  (atUioMaybeEnter . fmap . fmap . atEnterResultRect . Anim.atRectTopLeft) (+pos) .
-  (atUioMaybeEnter . fmap . argument . inRelativePos . Anim.atRectTopLeft) (subtract pos)
+  (atUioFocalArea . Rect.atRectTopLeft) (+pos) .
+  (atUioMaybeEnter . fmap . fmap . atEnterResultRect . Rect.atRectTopLeft) (+pos) .
+  (atUioMaybeEnter . fmap . argument . inRelativePos . Rect.atRectTopLeft) (subtract pos)
 
 translate :: Vector2 R -> Widget f -> Widget f
 translate = atUserIO . translateUserIO

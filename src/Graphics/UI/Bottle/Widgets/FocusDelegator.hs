@@ -4,9 +4,9 @@ module Graphics.UI.Bottle.Widgets.FocusDelegator(IsDelegating(..), Keys(..), mak
 
 import Data.Maybe(fromMaybe)
 import Data.Monoid(mappend)
+import Graphics.UI.Bottle.Rect(Rect(..))
 import Graphics.UI.Bottle.Widget(Widget(..))
 import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 
@@ -75,7 +75,7 @@ make isDelegating Nothing focusSelf =
     handleDir enterChild wholeSize dir =
       Widget.direction (takeFocus wholeSize) (const (enterChild dir)) dir
 
-    takeFocus wholeSize = Widget.EnterResult (Anim.Rect 0 wholeSize) . return $ Widget.eventResultFromCursor focusSelf
+    takeFocus wholeSize = Widget.EnterResult (Rect 0 wholeSize) . return $ Widget.eventResultFromCursor focusSelf
 
 make _ (Just cursor) focusSelf =
   makeFocused cursor focusSelf

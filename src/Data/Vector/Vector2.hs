@@ -2,10 +2,9 @@
 
 module Data.Vector.Vector2
     (Vector2(..)
-    ,vector2
     ,first,second,(***),both,zip
     ,fst,snd,swap
-    ,curry,uncurry
+    ,curry,uncurry,sqrNorm
     )
 where
 
@@ -67,9 +66,6 @@ infixr 3 ***
 (***) :: (a -> b) -> (a -> b) -> Vector2 a -> Vector2 b
 (f *** g) (Vector2 x y) = Vector2 (f x) (g y)
 
-vector2 :: (a -> a -> b) -> Vector2 a -> b
-vector2 f (Vector2 x y) = f x y
-
 both :: (a -> b) -> Vector2 a -> Vector2 b
 both = join (***)
 
@@ -81,6 +77,9 @@ curry f x y = f (Vector2 x y)
 
 uncurry :: (a -> a -> b) -> Vector2 a -> b
 uncurry f (Vector2 x y) = f x y
+
+sqrNorm :: Num a => Vector2 a -> a
+sqrNorm = uncurry (+) . (^ (2::Int))
 
 instance Functor Vector2 where
   fmap = both
