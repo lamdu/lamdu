@@ -17,6 +17,7 @@ import Editor.CTransaction (CTransaction, getP, assignCursor, TWidget, readCurso
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Sized (Sized)
 import Graphics.UI.Bottle.Widget (Widget)
+import qualified Data.Char as Char
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
@@ -167,6 +168,15 @@ makeCallWithArgEventMap =
   Widget.actionEventMapMovesCursor Config.addNextArgumentKeys "Add another argument" .
   diveIn . DataOps.callWithArg
 
+isInfixFunc :: Monad m => IRef Data.Expression -> CTransaction t m Bool
+isInfixFunc funcI = do
+  expr <- getP $ Transaction.fromIRef funcI
+  case expr of
+    Data.ExpressionGetVariable var -> liftM isOperatorName . getP $ Anchors.variableNameRef var
+    _ -> return False
+  where
+    isOperatorName = all (not . Char.isAlphaNum)
+
 makeApplyExpressionEdit :: MonadF m =>
   Bool -> IRef Data.Definition -> Transaction.Property ViewTag m (IRef Data.Expression) ->
   Data.Apply -> Widget.Id ->
@@ -174,27 +184,36 @@ makeApplyExpressionEdit :: MonadF m =>
 makeApplyExpressionEdit isArgument definitionI expressionPtr (Data.Apply funcI argI) myId =
   assignCursor myId (WidgetIds.fromIRef argI) $ do
     expressionI <- getP expressionPtr
+    isInfix <- isInfixFunc funcI
     let
       expressionRef = Transaction.fromIRef expressionI
-      mkDelEvent = weakerEvents . Widget.actionEventMapMovesCursor Config.delKeys "Delete" . setExpr
+      delEventMap = Widget.actionEventMapMovesCursor Config.delKeys "Delete" . setExpr
       funcIPtr = Property (return funcI) $ Property.set expressionRef . Data.ExpressionApply . (`Data.Apply` argI)
       argIPtr = Property (return argI) $ Property.set expressionRef . Data.ExpressionApply . (funcI `Data.Apply`)
-      weakerEvents = liftM . first . Widget.weakerEvents
       setExpr newExprI = do
         Property.set expressionPtr newExprI
         return $ WidgetIds.fromIRef newExprI
-    (funcEdit, funcId) <- mkDelEvent argI $ makeExpressionEdit False definitionI funcIPtr
+      addSecondArgEventMap = makeCallWithArgEventMap expressionPtr
+      funcEvents =
+        Widget.weakerEvents (delEventMap argI) .
+        if isInfix
+        then Widget.strongerEvents addSecondArgEventMap
+        else id
+    (funcEdit, funcId) <-
+      (liftM . first) funcEvents $ makeExpressionEdit False definitionI funcIPtr
     (argEdit, _) <-
-       weakerEvents (makeCallWithArgEventMap expressionPtr) .
-       mkDelEvent funcI $ makeExpressionEdit True definitionI argIPtr
+       (liftM . first . Widget.weakerEvents . mconcat)
+       [ addSecondArgEventMap
+       , delEventMap funcI
+       ] $ makeExpressionEdit True definitionI argIPtr
     let label str = BWidgets.makeTextView str $ Widget.joinId funcId [pack str]
-    before <- label "("
-    after <- label ")"
+    beforeParen <- label "("
+    afterParen <- label ")"
     return
       ((BWidgets.hbox . concat)
-       [[before | isArgument],
-        [funcEdit], [spaceWidget], [argEdit],
-        [after | isArgument]]
+       [[beforeParen | isArgument],
+        (if isInfix then reverse else id) [funcEdit, spaceWidget, argEdit],
+        [afterParen | isArgument]]
       , funcId)
 
 makeExpressionEdit :: MonadF m =>

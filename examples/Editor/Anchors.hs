@@ -197,6 +197,11 @@ initDB store =
       ,"Control.Monad.join"
       ,"Prelude.fmap"
       ,"Prelude.const"
+      ,"Prelude.+"
+      ,"Prelude.-"
+      ,"Prelude.*"
+      ,"Prelude./"
+      ,"Prelude.^"
       ]
 
 -- Get an associated name from the given IRef
