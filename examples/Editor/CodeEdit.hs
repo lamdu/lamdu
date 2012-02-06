@@ -310,7 +310,7 @@ makePanesEdit = do
   panesWidget <-
     case panes of
       [] -> BWidgets.makeFocusableTextView "<No panes>" myId
-      (firstPane:_) -> do
+      (firstPane:_) ->
         assignCursor myId
           (WidgetIds.fromIRef (Anchors.paneDefinition firstPane)) $ do
             definitionEdits <- mapM makePaneWidget $ enumerate panes

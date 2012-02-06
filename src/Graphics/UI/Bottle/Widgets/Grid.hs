@@ -155,7 +155,7 @@ make = makeHelper makeEnter
         search [] = Nothing
         search childEnters = Just $ byDirection childEnters
         byDirection childEnters dir =
-          (snd . minimumOn fst . (map . distanceEnter dir . Widget.direction (Rect 0 0) id) dir) childEnters $ dir
+          (snd . minimumOn fst . (map . distanceEnter dir . Widget.direction (Rect 0 0) id) dir) childEnters dir
 
         distanceEnter dir entryRect childEnter =
           ((rectDistance entryRect . Widget.enterResultRect . childEnter) dir, childEnter)
