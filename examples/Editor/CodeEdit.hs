@@ -159,6 +159,42 @@ diveIn = fmap $ WidgetIds.delegating . WidgetIds.fromIRef
 replace :: MonadF m => Transaction.Property t m (IRef Data.Expression) -> Transaction t m Widget.Id
 replace = diveIn . DataOps.replace
 
+makeCallWithArgEventMap :: MonadF m =>
+  Transaction.Property t m (IRef Data.Expression) -> Widget.EventHandlers (Transaction t m)
+makeCallWithArgEventMap =
+  Widget.actionEventMapMovesCursor Config.addNextArgumentKeys "Add another argument" .
+  diveIn . DataOps.callWithArg
+
+makeApplyExpressionEdit :: MonadF m =>
+  Bool -> IRef Data.Definition -> Transaction.Property ViewTag m (IRef Data.Expression) ->
+  Data.Apply -> Widget.Id ->
+  CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id)
+makeApplyExpressionEdit isArgument definitionI expressionPtr (Data.Apply funcI argI) myId =
+  assignCursor myId (WidgetIds.fromIRef argI) $ do
+    expressionI <- getP expressionPtr
+    let
+      expressionRef = Transaction.fromIRef expressionI
+      mkDelEvent = weakerEvents . Widget.actionEventMapMovesCursor Config.delKeys "Delete" . setExpr
+      funcIPtr = Property (return funcI) $ Property.set expressionRef . Data.ExpressionApply . (`Data.Apply` argI)
+      argIPtr = Property (return argI) $ Property.set expressionRef . Data.ExpressionApply . (funcI `Data.Apply`)
+      weakerEvents = liftM . first . Widget.weakerEvents
+      setExpr newExprI = do
+        Property.set expressionPtr newExprI
+        return $ WidgetIds.fromIRef newExprI
+    (funcEdit, funcId) <- mkDelEvent argI $ makeExpressionEdit False definitionI funcIPtr
+    (argEdit, _) <-
+       weakerEvents (makeCallWithArgEventMap expressionPtr) .
+       mkDelEvent funcI $ makeExpressionEdit True definitionI argIPtr
+    let label str = BWidgets.makeTextView str $ Widget.joinId funcId [pack str]
+    before <- label "("
+    after <- label ")"
+    return
+      ((BWidgets.hbox . concat)
+       [[before | isArgument],
+        [funcEdit], [spaceWidget], [argEdit],
+        [after | isArgument]]
+      , funcId)
+
 makeExpressionEdit :: MonadF m =>
   Bool -> IRef Data.Definition ->
   Transaction.Property ViewTag m (IRef Data.Expression) ->
@@ -169,27 +205,15 @@ makeExpressionEdit isArgument definitionI expressionPtr = do
     expressionRef = Transaction.fromIRef expressionI
     mkCallWithArg = diveIn $ DataOps.callWithArg expressionPtr
     mkGiveAsArg = diveIn $ DataOps.giveAsArg expressionPtr
-    weakerEvents = liftM . first . Widget.weakerEvents
     expressionId = WidgetIds.fromIRef expressionI
 
     wrap keys entryState f =
       BWidgets.wrapDelegatedWithKeys keys entryState first f expressionId
-    wrapTextEditor =
-      wrap FocusDelegator.defaultKeys FocusDelegator.NotDelegating
-    wrapExpr =
-      wrap Config.exprFocusDelegatorKeys FocusDelegator.Delegating
-
-    mkDelEvent = weakerEvents . Widget.actionEventMapMovesCursor Config.delKeys "Delete" . setExpr
-    mkCallWithArgEventMap =
-      Widget.actionEventMapMovesCursor Config.addNextArgumentKeys "Add another argument" mkCallWithArg
-    setExpr newExprI = do
-      Property.set expressionPtr newExprI
-      return $ WidgetIds.fromIRef newExprI
   expr <- getP expressionRef
   widget <-
     case expr of
       Data.ExpressionHole holeState ->
-        wrapTextEditor .
+        wrap FocusDelegator.defaultKeys FocusDelegator.NotDelegating .
           (fmap . liftM) (flip (,) expressionId) $
           makeHoleEdit definitionI holeState expressionI
       Data.ExpressionGetVariable varRef -> do
@@ -203,31 +227,12 @@ makeExpressionEdit isArgument definitionI expressionPtr = do
               Data.ParameterRef paramI -> return $ WidgetIds.fromIRef paramI
               Data.BuiltinRef _builtI -> return expressionId
         return (Widget.weakerEvents jumpToDefinitionEventMap varRefView, expressionId)
-      Data.ExpressionApply (Data.Apply funcI argI) ->
-        wrapExpr $
-          \myId ->
-            assignCursor myId (WidgetIds.fromIRef argI) $ do
-              let
-                funcIPtr =
-                  Property (return funcI) $ Property.set expressionRef . Data.ExpressionApply . (`Data.Apply` argI)
-                argIPtr =
-                  Property (return argI) $ Property.set expressionRef . Data.ExpressionApply . (funcI `Data.Apply`)
-              (funcEdit, funcId) <- mkDelEvent argI $ makeExpressionEdit False definitionI funcIPtr
-              (argEdit, _) <-
-                 weakerEvents mkCallWithArgEventMap .
-                 mkDelEvent funcI $ makeExpressionEdit True definitionI argIPtr
-              let label str = BWidgets.makeTextView str $ Widget.joinId funcId [pack str]
-              before <- label "("
-              after <- label ")"
-              return
-                ((BWidgets.hbox . concat)
-                 [[before | isArgument],
-                  [funcEdit], [spaceWidget], [argEdit],
-                  [after | isArgument]]
-                , funcId)
+      Data.ExpressionApply apply ->
+        wrap Config.exprFocusDelegatorKeys FocusDelegator.Delegating $
+        makeApplyExpressionEdit isArgument definitionI expressionPtr apply
   return .
     (first . Widget.weakerEvents . mconcat . concat) [
-      [ mkCallWithArgEventMap | not isArgument ],
+      [ makeCallWithArgEventMap expressionPtr | not isArgument ],
       [ Widget.actionEventMapMovesCursor
         Config.giveAsArgumentKeys "Give as argument"
         mkGiveAsArg
