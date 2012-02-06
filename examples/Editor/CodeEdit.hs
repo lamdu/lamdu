@@ -64,9 +64,6 @@ makeActiveHoleEdit ::
 makeActiveHoleEdit definitionI curState expressionI myId =
   assignCursor myId searchTermId $ do
     Data.Definition paramIs _ <- getP definitionRef
-    searchTermWidget <-
-      (liftM . Widget.strongerEvents) searchTermEventMap $
-      BWidgets.makeTextEdit stateProp searchTermId
     globals <- getP Anchors.globals
     vars <- mapM getVarName $ map Data.ParameterRef paramIs ++ globals
     let
@@ -75,6 +72,11 @@ makeActiveHoleEdit definitionI curState expressionI myId =
       mkMoreResultWidget
         | null moreResults = return []
         | otherwise = liftM (:[]) . BWidgets.makeTextView "..." $ Widget.joinId myId ["more results"]
+    searchTermWidget <-
+      (liftM . Widget.strongerEvents . mconcat . concat)
+        [map (pickResultEventMap . fst) (take 1 results),
+         [searchTermEventMap]] $
+      BWidgets.makeTextEdit stateProp searchTermId
     resultWidgets <- maybeResults firstResults
     moreResultsWidget <- mkMoreResultWidget
     return . BWidgets.vbox $ [searchTermWidget, resultWidgets] ++ moreResultsWidget
