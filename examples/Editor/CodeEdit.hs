@@ -236,15 +236,15 @@ makeExpressionEdit isArgument definitionI expressionPtr = do
     wrap keys entryState f =
       BWidgets.wrapDelegatedWithKeys keys entryState first f expressionId
 
-    eventMap = mconcat $ concat [
-      [ makeAddNextArgEventMap expressionPtr | not isArgument ],
+    eventMap = mconcat $
+      [ makeAddNextArgEventMap expressionPtr | not isArgument ] ++
       [ Widget.actionEventMapMovesCursor
         Config.giveAsArgumentKeys "Give as argument"
         mkGiveAsArg
       , Widget.actionEventMapMovesCursor
         Config.callWithArgumentKeys "Call with argument" mkCallWithArg
       , Widget.actionEventMapMovesCursor
-        Config.relinkKeys "Replace" $ replace expressionPtr ]
+        Config.relinkKeys "Replace" $ replace expressionPtr
       ]
 
   expr <- getP expressionRef
@@ -282,7 +282,7 @@ makeExpressionEdit isArgument definitionI expressionPtr = do
       let label str = BWidgets.makeTextView str $ Widget.joinId parenId [pack str]
       beforeParen <- label "("
       afterParen <- label ")"
-      return $ (BWidgets.hbox [ beforeParen, widget, afterParen ], expressionId)
+      return (BWidgets.hbox [ beforeParen, widget, afterParen ], expressionId)
     else
       return (widget, parenId)
   return (Widget.weakerEvents eventMap resultWidget, resultParenId)

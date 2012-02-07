@@ -5,7 +5,7 @@ import Control.Applicative (liftA2)
 import Control.Monad (msum, (>=>))
 import Data.List (foldl', transpose, find, minimumBy)
 import Data.List.Utils (index, enumerate2d)
-import Data.Maybe (isJust, fromMaybe, catMaybes)
+import Data.Maybe (isJust, fromMaybe, mapMaybe, catMaybes)
 import Data.Monoid (mempty, mconcat)
 import Data.Ord (comparing)
 import Data.Vector.Vector2 (Vector2(..))
@@ -150,7 +150,7 @@ make =
   makeHelper makeMEnter
   where
     makeMEnter size children =
-      search . catMaybes . map indexIntoMaybe . concat $ enumerate2d children
+      search . mapMaybe indexIntoMaybe . concat $ enumerate2d children
       where
         indexIntoMaybe (i, m) = fmap ((,) i) m
         search [] = Nothing
