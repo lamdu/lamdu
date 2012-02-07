@@ -80,10 +80,10 @@ makeActiveHoleEdit definitionI curState expressionI myId =
       BWidgets.makeTextEdit stateProp searchTermId
     resultWidgets <- maybeResults firstResults
     moreResultsWidget <- mkMoreResultWidget
-    return . BWidgets.vbox $ [searchTermWidget, resultWidgets] ++ moreResultsWidget
+    return . BWidgets.vbox $ (searchTermWidget : resultWidgets) ++ moreResultsWidget
   where
-    maybeResults [] = BWidgets.makeTextView "(No results)" $ Widget.joinId myId ["no results"]
-    maybeResults xs = liftM BWidgets.vbox $ mapM (makeResultWidget . fst) xs
+    maybeResults [] = liftM (:[]) . BWidgets.makeTextView "(No results)" $ Widget.joinId myId ["no results"]
+    maybeResults xs = mapM (makeResultWidget . fst) xs
     expressionId = WidgetIds.fromIRef expressionI
     expressionAnimId = Widget.cursorId expressionId
 
