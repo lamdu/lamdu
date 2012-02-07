@@ -171,18 +171,21 @@ makeCallWithArgEventMap =
 isOperatorName :: String -> Bool
 isOperatorName = all (not . Char.isAlphaNum)
 
+isInfixVar :: Monad m => Data.VariableRef -> CTransaction t m Bool
+isInfixVar = liftM isOperatorName . getP . Anchors.variableNameRef
+
 isInfixFunc :: Monad m => IRef Data.Expression -> CTransaction t m Bool
 isInfixFunc funcI = do
   expr <- getP $ Transaction.fromIRef funcI
   case expr of
-    Data.ExpressionGetVariable var -> liftM isOperatorName . getP $ Anchors.variableNameRef var
+    Data.ExpressionGetVariable var -> isInfixVar var
     _ -> return False
 
 makeApplyExpressionEdit :: MonadF m =>
-  Bool -> IRef Data.Definition -> Transaction.Property ViewTag m (IRef Data.Expression) ->
+  IRef Data.Definition -> Transaction.Property ViewTag m (IRef Data.Expression) ->
   Data.Apply -> Widget.Id ->
   CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id)
-makeApplyExpressionEdit isArgument definitionI expressionPtr (Data.Apply funcI argI) myId =
+makeApplyExpressionEdit definitionI expressionPtr (Data.Apply funcI argI) myId =
   assignCursor myId (WidgetIds.fromIRef argI) $ do
     expressionI <- getP expressionPtr
     isInfix <- isInfixFunc funcI
@@ -200,22 +203,23 @@ makeApplyExpressionEdit isArgument definitionI expressionPtr (Data.Apply funcI a
         if isInfix
         then Widget.strongerEvents addNextArgEventMap
         else id
-    (funcEdit, funcId) <-
+    (funcEdit, parenId) <-
       (liftM . first) funcEvents $ makeExpressionEdit False definitionI funcIPtr
     (argEdit, _) <-
        (liftM . first . Widget.weakerEvents . mconcat)
        [ addNextArgEventMap
        , delEventMap funcI
        ] $ makeExpressionEdit True definitionI argIPtr
-    let label str = BWidgets.makeTextView str $ Widget.joinId funcId [pack str]
-    beforeParen <- label "("
-    afterParen <- label ")"
     return
-      ((BWidgets.hbox . concat)
-       [[beforeParen | isArgument],
-        (if isInfix then reverse else id) [funcEdit, spaceWidget, argEdit],
-        [afterParen | isArgument]]
-      , funcId)
+      ((BWidgets.hbox . if isInfix then reverse else id)
+       [funcEdit, spaceWidget, argEdit], parenId)
+
+isApplyOfInfixOp :: Monad m => IRef Data.Expression -> CTransaction t m Bool
+isApplyOfInfixOp exprI = do
+  expr <- getP $ Transaction.fromIRef exprI
+  case expr of
+    Data.ExpressionApply (Data.Apply funcI _) -> isInfixFunc funcI
+    _ -> return False
 
 makeExpressionEdit :: MonadF m =>
   Bool -> IRef Data.Definition ->
@@ -231,29 +235,8 @@ makeExpressionEdit isArgument definitionI expressionPtr = do
 
     wrap keys entryState f =
       BWidgets.wrapDelegatedWithKeys keys entryState first f expressionId
-  expr <- getP expressionRef
-  widget <-
-    case expr of
-      Data.ExpressionHole holeState ->
-        wrap FocusDelegator.defaultKeys FocusDelegator.NotDelegating .
-          (fmap . liftM) (flip (,) expressionId) $
-          makeHoleEdit definitionI holeState expressionI
-      Data.ExpressionGetVariable varRef -> do
-        varRefView <- makeVarView varRef expressionId
-        let
-          jumpToDefinitionEventMap =
-            Widget.actionEventMapMovesCursor Config.jumpToDefinitionKeys "Jump to definition" jumpToDefinition
-          jumpToDefinition =
-            case varRef of
-              Data.DefinitionRef defI -> newPane defI
-              Data.ParameterRef paramI -> return $ WidgetIds.fromIRef paramI
-              Data.BuiltinRef _builtI -> return expressionId
-        return (Widget.weakerEvents jumpToDefinitionEventMap varRefView, expressionId)
-      Data.ExpressionApply apply ->
-        wrap Config.exprFocusDelegatorKeys FocusDelegator.Delegating $
-        makeApplyExpressionEdit isArgument definitionI expressionPtr apply
-  return .
-    (first . Widget.weakerEvents . mconcat . concat) [
+
+    eventMap = mconcat $ concat [
       [ makeCallWithArgEventMap expressionPtr | not isArgument ],
       [ Widget.actionEventMapMovesCursor
         Config.giveAsArgumentKeys "Give as argument"
@@ -262,8 +245,47 @@ makeExpressionEdit isArgument definitionI expressionPtr = do
         Config.callWithArgumentKeys "Call with argument" mkCallWithArg
       , Widget.actionEventMapMovesCursor
         Config.relinkKeys "Replace" $ replace expressionPtr ]
-    ] $
-    widget
+      ]
+
+  expr <- getP expressionRef
+  (needParen, (widget, parenId)) <-
+    case expr of
+      Data.ExpressionHole holeState ->
+        liftM ((,) False) .
+        wrap FocusDelegator.defaultKeys FocusDelegator.NotDelegating .
+          (fmap . liftM) (flip (,) expressionId) $
+          makeHoleEdit definitionI holeState expressionI
+      Data.ExpressionGetVariable varRef -> do
+        varRefView <- makeVarView varRef expressionId
+        isInfix <- isInfixVar varRef
+        let
+          jumpToDefinitionEventMap =
+            Widget.actionEventMapMovesCursor Config.jumpToDefinitionKeys "Jump to definition" jumpToDefinition
+          jumpToDefinition =
+            case varRef of
+              Data.DefinitionRef defI -> newPane defI
+              Data.ParameterRef paramI -> return $ WidgetIds.fromIRef paramI
+              Data.BuiltinRef _builtI -> return expressionId
+        return
+          (isArgument && isInfix,
+           (Widget.weakerEvents jumpToDefinitionEventMap varRefView,
+            expressionId))
+      Data.ExpressionApply apply -> do
+        isFullOp <- isApplyOfInfixOp (Data.applyFunc apply)
+        result <-
+          wrap Config.exprFocusDelegatorKeys FocusDelegator.Delegating $
+          makeApplyExpressionEdit definitionI expressionPtr apply
+        return (isFullOp || isArgument, result)
+
+  resultWidget <-
+    if needParen then do
+      let label str = BWidgets.makeTextView str $ Widget.joinId parenId [pack str]
+      beforeParen <- label "("
+      afterParen <- label ")"
+      return $ BWidgets.hbox [ beforeParen, widget, afterParen ]
+    else
+      return widget
+  return (Widget.weakerEvents eventMap resultWidget, parenId)
 
 makeDefinitionEdit :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
 makeDefinitionEdit definitionI = do
