@@ -145,10 +145,6 @@ rectDistance r1 r2 = normSqr distance - normSqr overlapPercentage
     br1 = Rect.bottomRight r1
     br2 = Rect.bottomRight r2
 
-whenApply :: Bool -> (a -> a) -> a -> a
-whenApply False _ = id
-whenApply True f = f
-
 make :: [[Widget k]] -> Widget k
 make =
   makeHelper makeMEnter
@@ -157,27 +153,22 @@ make =
       search . catMaybes . map indexIntoMaybe . concat $ enumerate2d children
       where
         indexIntoMaybe (i, m) = fmap ((,) i) m
-        Vector2 w h = length2d children
         search [] = Nothing
         search childEnters = Just $ byDirection childEnters
         byDirection childEnters dir =
           (snd . minimumOn fst .
-           (map . distanceEnter dir . Widget.direction (Rect 0 0) id) dir .
-           map snd . removeNonBorders dir) childEnters dir
+           (map . scoredEnter dir . Widget.direction (Rect 0 0) id) dir) childEnters dir
 
-        removeNonBorders dir = Widget.direction id border dir
-
-        whenApplyFilter b g = whenApply b $ filter (g . fst)
-        border entryRect =
-          whenApplyFilter fromLeft ((== 0) . snd) .
-          whenApplyFilter fromRight ((== (w-1)) . snd) .
-          whenApplyFilter fromTop ((== 0) . fst) .
-          whenApplyFilter fromBottom ((== (h-1)) . fst)
+        rectScore entryRect (row, col) enterResultRect =
+          (borderScore, rectDistance entryRect enterResultRect)
           where
+            borderScore =
+              concat [[col | fromLeft], [-col | fromRight],
+                      [row | fromTop], [-row | fromBottom]]
             Vector2 fromLeft fromTop = fmap (<= 0) (Rect.bottomRight entryRect)
             Vector2 fromRight fromBottom = liftA2 (>=) (Rect.rectTopLeft entryRect) size
 
-        distanceEnter dir entryRect childEnter =
-          ((rectDistance entryRect . Widget.enterResultRect . childEnter) dir, childEnter)
+        scoredEnter dir entryRect (i, childEnter) =
+          ((rectScore entryRect i . Widget.enterResultRect . childEnter) dir, childEnter)
 
         minimumOn = minimumBy . comparing
