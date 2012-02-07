@@ -77,7 +77,7 @@ makeActiveHoleEdit definitionI curState expressionI myId =
       (liftM . Widget.strongerEvents . mconcat . concat)
         [map (pickResultEventMap . fst) (take 1 results),
          [searchTermEventMap]] $
-      BWidgets.makeTextEdit stateProp searchTermId
+      BWidgets.makeWordEdit stateProp searchTermId
     resultWidgets <- maybeResults firstResults
     moreResultsWidget <- mkMoreResultWidget
     return . BWidgets.vbox $ (searchTermWidget : resultWidgets) ++ moreResultsWidget
@@ -168,14 +168,15 @@ makeCallWithArgEventMap =
   Widget.actionEventMapMovesCursor Config.addNextArgumentKeys "Add another argument" .
   diveIn . DataOps.callWithArg
 
+isOperatorName :: String -> Bool
+isOperatorName = all (not . Char.isAlphaNum)
+
 isInfixFunc :: Monad m => IRef Data.Expression -> CTransaction t m Bool
 isInfixFunc funcI = do
   expr <- getP $ Transaction.fromIRef funcI
   case expr of
     Data.ExpressionGetVariable var -> liftM isOperatorName . getP $ Anchors.variableNameRef var
     _ -> return False
-  where
-    isOperatorName = all (not . Char.isAlphaNum)
 
 makeApplyExpressionEdit :: MonadF m =>
   Bool -> IRef Data.Definition -> Transaction.Property ViewTag m (IRef Data.Expression) ->
@@ -193,17 +194,17 @@ makeApplyExpressionEdit isArgument definitionI expressionPtr (Data.Apply funcI a
       setExpr newExprI = do
         Property.set expressionPtr newExprI
         return $ WidgetIds.fromIRef newExprI
-      addSecondArgEventMap = makeCallWithArgEventMap expressionPtr
+      addNextArgEventMap = makeCallWithArgEventMap expressionPtr
       funcEvents =
         Widget.weakerEvents (delEventMap argI) .
         if isInfix
-        then Widget.strongerEvents addSecondArgEventMap
+        then Widget.strongerEvents addNextArgEventMap
         else id
     (funcEdit, funcId) <-
       (liftM . first) funcEvents $ makeExpressionEdit False definitionI funcIPtr
     (argEdit, _) <-
        (liftM . first . Widget.weakerEvents . mconcat)
-       [ addSecondArgEventMap
+       [ addNextArgEventMap
        , delEventMap funcI
        ] $ makeExpressionEdit True definitionI argIPtr
     let label str = BWidgets.makeTextView str $ Widget.joinId funcId [pack str]
