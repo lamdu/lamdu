@@ -1,7 +1,7 @@
 {-# OPTIONS -O2 -Wall #-}
 module Editor.BranchGUI(makeRootWidget) where
 
-import Control.Monad ((<=<), liftM, unless)
+import Control.Monad (liftM, liftM2, unless)
 import Data.List (findIndex, elemIndex)
 import Data.List.Utils (removeAt)
 import Data.Maybe (fromMaybe)
@@ -121,20 +121,26 @@ makeWidgetForView view innerWidget = do
 
     eventMap = mconcat [undoEventMap, redoEventMap redos]
 
-    saveCursor eventResult = do
+    saveCursorUpdateRedos eventResult = do
       isEmpty <- Transaction.isEmpty
       unless isEmpty $ do
         Property.set Anchors.preCursor cursor
         Property.set Anchors.postCursor . fromMaybe cursor $ Widget.eCursor eventResult
       return eventResult
 
-    updateRedos (isEmpty, widget) = do
-      unless isEmpty . transaction $ Property.set Anchors.redos []
-      return widget
+  vWidget <-
+    runNestedCTransaction store $
+    (liftM . Widget.atEvents) (>>= saveCursorUpdateRedos) innerWidget
 
-  widget <-
-    updateRedos <=< runNestedCTransaction store $
-    (liftM . Widget.atEvents) (>>= saveCursor) innerWidget
-  return $ Widget.strongerEvents eventMap widget
+  let
+    lowerWTransaction act = do
+      (r, isEmpty) <-
+        Transaction.run store $ liftM2 (,) act Transaction.isEmpty
+      unless isEmpty $ Property.set Anchors.redos []
+      return r
+
+  return .
+    Widget.strongerEvents eventMap $
+    Widget.atEvents lowerWTransaction vWidget
   where
     store = Anchors.viewStore view
