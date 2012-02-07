@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-module Editor.DataOps (addParameter, delParameter, giveAsArg, callWithArg, replace) where
+module Editor.DataOps (newHole, addParameter, delParameter, giveAsArg, callWithArg, replace) where
 
 import Data.List (delete)
 import Data.Store.IRef (IRef)

@@ -77,32 +77,16 @@ makeVarView var myId = do
     BWidgets.makeFocusableTextView name myId
 
 makeActiveHoleEdit ::
-  MonadF m => IRef Data.Definition -> Data.HoleState -> IRef Data.Expression ->
+  MonadF m => ExpressionAncestry m ->
+  IRef Data.Definition -> Data.HoleState -> Transaction.Property ViewTag m (IRef Data.Expression) ->
   Widget.Id -> TWidget ViewTag m
-makeActiveHoleEdit definitionI curState expressionI myId =
-  assignCursor myId searchTermId $ do
-    Data.Definition paramIs _ <- getP definitionRef
-    globals <- getP Anchors.globals
-    vars <- mapM getVarName $ map Data.ParameterRef paramIs ++ globals
-    let
-      results = filter goodResult vars
-      (firstResults, moreResults) = splitAt 3 results
-      mkMoreResultWidget
-        | null moreResults = return []
-        | otherwise = liftM (:[]) . BWidgets.makeTextView "..." $ Widget.joinId myId ["more results"]
-    searchTermWidget <-
-      (liftM . Widget.strongerEvents . mconcat . concat)
-        [map (pickResultEventMap . fst) (take 1 results),
-         [searchTermEventMap]] $
-      BWidgets.makeWordEdit stateProp searchTermId
-    resultWidgets <- maybeResults firstResults
-    moreResultsWidget <- mkMoreResultWidget
-    return . BWidgets.vbox $ [searchTermWidget, resultWidgets] ++ moreResultsWidget
-  where
-    maybeResults [] = BWidgets.makeTextView "(No results)" $ Widget.joinId myId ["no results"]
-    maybeResults xs = liftM BWidgets.vbox $ mapM (makeResultWidget . fst) xs
+makeActiveHoleEdit ancestry definitionI curState expressionPtr myId = do
+  expressionI <- getP expressionPtr
+  let
     expressionId = WidgetIds.fromIRef expressionI
     expressionAnimId = Widget.cursorId expressionId
+    maybeResults [] = BWidgets.makeTextView "(No results)" $ Widget.joinId myId ["no results"]
+    maybeResults xs = liftM BWidgets.vbox $ mapM (makeResultWidget . fst) xs
 
     searchTermId = WidgetIds.searchTermId myId
     searchResultsId = Widget.joinId myId ["search results"]
@@ -111,28 +95,45 @@ makeActiveHoleEdit definitionI curState expressionI myId =
       (liftM . Widget.strongerEvents) (pickResultEventMap var) .
       makeVarView var . mappend searchResultsId $ varId var
     pickResultEventMap var =
-      EventMap.fromEventTypes Config.pickResultKeys "Pick this search result" $ do
-        Transaction.writeIRef expressionI $ Data.ExpressionGetVariable var
-        let
-          -- TODO: Is there a better way?
-          getVariableTextAnimId = expressionAnimId
+      mconcat [
+        EventMap.fromEventTypes Config.pickResultKeys "Pick this search result" $ pickResult var,
+        EventMap.fromEventTypes Config.addNextArgumentKeys "Pick this search result and add argument" $ pickResultAndAddArg var
+        ]
 
-          mapOtherResult resultId =
-            ["mismatched result"]
-              `Anim.joinId` expressionAnimId
-              `Anim.joinId` resultId
-          mapSearchResult resultId =
-            maybe (mapOtherResult resultId)
-              (Anim.joinId getVariableTextAnimId) $
-            (Anim.subId . Widget.cursorId . varId) var resultId
-          mapAnimId animId =
-            maybe animId mapSearchResult $
-            Anim.subId (Widget.cursorId searchResultsId) animId
+    pickResultAndAddArg var = do
+      Transaction.writeIRef expressionI $ Data.ExpressionGetVariable var
+      cursor <-
+        diveIn $
+        case ancestry of
+          Argument (ArgumentData _ parentPtr) -> DataOps.callWithArg parentPtr
+          _ -> DataOps.callWithArg expressionPtr
+      return Widget.EventResult {
+        Widget.eCursor = Just cursor,
+        Widget.eAnimIdMapping = mapAnimId var
+        }
 
-        return Widget.EventResult {
-          Widget.eCursor = Just expressionId,
-          Widget.eAnimIdMapping = mapAnimId
-          }
+    pickResult var = do
+      Transaction.writeIRef expressionI $ Data.ExpressionGetVariable var
+      return Widget.EventResult {
+        Widget.eCursor = Just expressionId,
+        Widget.eAnimIdMapping = mapAnimId var
+        }
+
+    mapAnimId var animId =
+      maybe animId mapSearchResult $
+      Anim.subId (Widget.cursorId searchResultsId) animId
+      where
+        -- TODO: Is there a better way?
+        getVariableTextAnimId = expressionAnimId
+        mapOtherResult resultId =
+          ["mismatched result"]
+            `Anim.joinId` expressionAnimId
+            `Anim.joinId` resultId
+        mapSearchResult resultId =
+          maybe (mapOtherResult resultId)
+            (Anim.joinId getVariableTextAnimId) $
+          (Anim.subId . Widget.cursorId . varId) var resultId
+
     stateProp =
       Property.Property {
         Property.get = return $ Data.holeSearchTerm curState,
@@ -156,14 +157,36 @@ makeActiveHoleEdit definitionI curState expressionI myId =
           newPane newDefI
       ]
 
+  assignCursor myId searchTermId $ do
+    Data.Definition paramIs _ <- getP definitionRef
+    globals <- getP Anchors.globals
+    vars <- mapM getVarName $ map Data.ParameterRef paramIs ++ globals
+    let
+      results = filter goodResult vars
+      (firstResults, moreResults) = splitAt 3 results
+      mkMoreResultWidget
+        | null moreResults = return []
+        | otherwise = liftM (:[]) . BWidgets.makeTextView "..." $ Widget.joinId myId ["more results"]
+    searchTermWidget <-
+      (liftM . Widget.strongerEvents . mconcat . concat)
+        [map (pickResultEventMap . fst) (take 1 results),
+         [searchTermEventMap]] $
+      BWidgets.makeWordEdit stateProp searchTermId
+    resultWidgets <- maybeResults firstResults
+    moreResultsWidget <- mkMoreResultWidget
+    return .
+      BWidgets.vbox $ [searchTermWidget, resultWidgets] ++ moreResultsWidget
+
 makeHoleEdit ::
-  MonadF m => IRef Data.Definition -> Data.HoleState ->
-  IRef Data.Expression -> Widget.Id -> TWidget ViewTag m
-makeHoleEdit definitionI curState expressionI myId = do
+  MonadF m => ExpressionAncestry m ->
+  IRef Data.Definition -> Data.HoleState ->
+  Transaction.Property ViewTag m (IRef Data.Expression) ->
+  Widget.Id -> TWidget ViewTag m
+makeHoleEdit ancestry definitionI curState expressionPtr myId = do
   cursor <- readCursor
   widget <-
     if isJust (Widget.subId myId cursor)
-    then makeActiveHoleEdit definitionI curState expressionI myId
+    then makeActiveHoleEdit ancestry definitionI curState expressionPtr myId
     else BWidgets.makeFocusableTextView snippet $ WidgetIds.searchTermId myId
   return $ Widget.backgroundColor (Widget.joinId myId ["hole background"]) holeBackgroundColor widget
   where
@@ -274,7 +297,7 @@ makeExpressionEdit ancestry definitionI expressionPtr = do
         liftM ((,) False) .
         wrap FocusDelegator.defaultKeys FocusDelegator.NotDelegating .
           (fmap . liftM) (flip (,) expressionId) $
-          makeHoleEdit definitionI holeState expressionI
+          makeHoleEdit ancestry definitionI holeState expressionPtr
       Data.ExpressionGetVariable varRef -> do
         varRefView <- makeVarView varRef expressionId
         isInfix <- isInfixVar varRef
