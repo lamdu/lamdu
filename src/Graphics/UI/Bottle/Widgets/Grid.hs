@@ -11,6 +11,7 @@ import Data.Ord (comparing)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.Widget (Widget(..), UserIO(..))
+import Graphics.UI.Bottle.SizeRange (Size)
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as EventMap
@@ -68,9 +69,6 @@ mkNavEventmap mEnterChildren curRect cursor@(Vector2 cursorX cursorY) = (weakMap
     curRow          = fromMaybe [] $ index cappedY mEnterChildren
     curColumn       = fromMaybe [] $ index cappedX (transpose mEnterChildren)
 
--- makeHelper :: Bool -> Cursor -> Cursor -> [[Widget k]] -> Widget k
--- makeHelper isFocused =
-
 getCursor :: [[Widget k]] -> Maybe Cursor
 getCursor =
   fmap cursorOf . find (isFocused . snd) . concat . enumerate2d
@@ -78,7 +76,7 @@ getCursor =
     cursorOf ((row, column), _) = Vector2 column row
 
 makeHelper ::
-  ([[Widget.MEnter f]] -> Widget.MEnter f) ->
+  (Size -> [[Widget.MEnter f]] -> Widget.MEnter f) ->
   [[Widget f]] -> Widget f
 makeHelper combineEnters children =
   Widget {
@@ -96,7 +94,7 @@ makeHelper combineEnters children =
         userIOss = mkUserIOss size
         frame = mconcat . map uioFrame $ concat userIOss
         mEnterss = (map . map) uioMaybeEnter userIOss
-        mEnter = combineEnters mEnterss
+        mEnter = combineEnters size mEnterss
 
         unselectedUserIO = UserIO {
           uioFrame = frame,
@@ -121,7 +119,7 @@ makeHelper combineEnters children =
 
 -- ^ If unfocused, will enters the given child when entered
 makeBiased :: Cursor -> [[Widget k]] -> Widget k
-makeBiased (Vector2 x y) = makeHelper $ index y >=> index x >=> id
+makeBiased (Vector2 x y) = makeHelper . const $ index y >=> index x >=> id
 
 norm :: Num a => Vector2 a -> a
 norm = Vector2.uncurry (+)
@@ -147,15 +145,37 @@ rectDistance r1 r2 = normSqr distance - normSqr overlapPercentage
     br1 = Rect.bottomRight r1
     br2 = Rect.bottomRight r2
 
+whenApply :: Bool -> (a -> a) -> a -> a
+whenApply False _ = id
+whenApply True f = f
+
 make :: [[Widget k]] -> Widget k
-make = makeHelper makeEnter
+make =
+  makeHelper makeMEnter
   where
-    makeEnter = search . catMaybes . concat
+    makeMEnter size children =
+      search . catMaybes . map indexIntoMaybe . concat $ enumerate2d children
       where
+        indexIntoMaybe (i, m) = fmap ((,) i) m
+        Vector2 w h = length2d children
         search [] = Nothing
         search childEnters = Just $ byDirection childEnters
         byDirection childEnters dir =
-          (snd . minimumOn fst . (map . distanceEnter dir . Widget.direction (Rect 0 0) id) dir) childEnters dir
+          (snd . minimumOn fst .
+           (map . distanceEnter dir . Widget.direction (Rect 0 0) id) dir .
+           map snd . removeNonBorders dir) childEnters dir
+
+        removeNonBorders dir = Widget.direction id border dir
+
+        whenApplyFilter b g = whenApply b $ filter (g . fst)
+        border entryRect =
+          whenApplyFilter fromLeft ((== 0) . snd) .
+          whenApplyFilter fromRight ((== (w-1)) . snd) .
+          whenApplyFilter fromTop ((== 0) . fst) .
+          whenApplyFilter fromBottom ((== (h-1)) . fst)
+          where
+            Vector2 fromLeft fromTop = fmap (<= 0) (Rect.bottomRight entryRect)
+            Vector2 fromRight fromBottom = liftA2 (>=) (Rect.rectTopLeft entryRect) size
 
         distanceEnter dir entryRect childEnter =
           ((rectDistance entryRect . Widget.enterResultRect . childEnter) dir, childEnter)
