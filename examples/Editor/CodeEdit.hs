@@ -40,7 +40,7 @@ data FuncType = Infix | Prefix
 
 data ArgumentData m = ArgumentData {
   _adFuncType :: FuncType,
-  _adParentPtr :: Transaction.Property ViewTag m (IRef Data.Expression)
+  adParentPtr :: Transaction.Property ViewTag m (IRef Data.Expression)
   }
 
 data ExpressionAncestry m =
@@ -86,38 +86,45 @@ makeActiveHoleEdit ancestry definitionI curState expressionPtr myId = do
     expressionId = WidgetIds.fromIRef expressionI
     expressionAnimId = Widget.cursorId expressionId
     maybeResults [] = BWidgets.makeTextView "(No results)" $ Widget.joinId myId ["no results"]
-    maybeResults xs = liftM BWidgets.vbox $ mapM (makeResultWidget . fst) xs
+    maybeResults xs = liftM BWidgets.vbox $ mapM makeResultWidget xs
 
     searchTermId = WidgetIds.searchTermId myId
     searchResultsId = Widget.joinId myId ["search results"]
     varId = Data.onVariableIRef WidgetIds.fromIRef
-    makeResultWidget var =
-      (liftM . Widget.strongerEvents) (pickResultEventMap var) .
-      makeVarView var . mappend searchResultsId $ varId var
+    makeResultWidget v@(isInfix, var) =
+      (liftM . Widget.strongerEvents) (pickResultEventMap v) .
+      (if isInfix == Just False then (>>= addParens (varId var)) else id) .
+      makeVarView var . mappend searchResultsId .
+      (if isInfix == Just True then (`Widget.joinId` ["infix"]) else id) $
+      varId var
     pickResultEventMap var =
       mconcat [
         EventMap.fromEventTypes Config.pickResultKeys "Pick this search result" $ pickResult var,
         EventMap.fromEventTypes Config.addNextArgumentKeys "Pick this search result and add argument" $ pickResultAndAddArg var
         ]
 
-    pickResultAndAddArg var = do
+    pickResultAndAddArg v@(_, var) = do
+      res <- pickResult v
       Transaction.writeIRef expressionI $ Data.ExpressionGetVariable var
       cursor <-
         diveIn $
         case ancestry of
           Argument (ArgumentData _ parentPtr) -> DataOps.callWithArg parentPtr
           _ -> DataOps.callWithArg expressionPtr
-      return Widget.EventResult {
-        Widget.eCursor = Just cursor,
-        Widget.eAnimIdMapping = mapAnimId var
-        }
+      return res { Widget.eCursor = Just cursor }
 
-    pickResult var = do
+    pickResult (isInfix, var) = do
       Transaction.writeIRef expressionI $ Data.ExpressionGetVariable var
+      when (isInfix == Just True) $ do
+        let Argument argData = ancestry
+        parentI <- Property.get $ adParentPtr argData
+        Property.pureModify (Transaction.fromIRef parentI) flipArgs
       return Widget.EventResult {
         Widget.eCursor = Just expressionId,
         Widget.eAnimIdMapping = mapAnimId var
         }
+    flipArgs (Data.ExpressionApply (Data.Apply x y)) = Data.ExpressionApply $ Data.Apply y x
+    flipArgs _ = error "flipArgs expects func"
 
     mapAnimId var animId =
       maybe animId mapSearchResult $
@@ -156,20 +163,23 @@ makeActiveHoleEdit ancestry definitionI curState expressionPtr myId = do
           Transaction.writeIRef expressionI . Data.ExpressionGetVariable $ Data.DefinitionRef newDefI
           newPane newDefI
       ]
+    processResult (var, name)
+      | isOperatorName name && isArgument ancestry = [(Just True, var), (Just False, var)]
+      | otherwise = [(Nothing, var)]
 
   assignCursor myId searchTermId $ do
     Data.Definition paramIs _ <- getP definitionRef
     globals <- getP Anchors.globals
     vars <- mapM getVarName $ map Data.ParameterRef paramIs ++ globals
     let
-      results = filter goodResult vars
+      results = concatMap processResult $ filter goodResult vars
       (firstResults, moreResults) = splitAt 3 results
       mkMoreResultWidget
         | null moreResults = return []
         | otherwise = liftM (:[]) . BWidgets.makeTextView "..." $ Widget.joinId myId ["more results"]
     searchTermWidget <-
       (liftM . Widget.strongerEvents . mconcat . concat)
-        [map (pickResultEventMap . fst) (take 1 results),
+        [map pickResultEventMap (take 1 firstResults),
          [searchTermEventMap]] $
       BWidgets.makeWordEdit stateProp searchTermId
     resultWidgets <- maybeResults firstResults
@@ -333,13 +343,19 @@ makeExpressionEdit ancestry definitionI expressionPtr = do
 
   (resultWidget, resultParenId) <-
     if needParen then do
-      let label str = BWidgets.makeTextView str $ Widget.joinId parenId [pack str]
-      beforeParen <- label "("
-      afterParen <- label ")"
-      return (BWidgets.hbox [ beforeParen, widget, afterParen ], expressionId)
+      resWidget <- addParens parenId widget
+      return (resWidget, expressionId)
     else
       return (widget, parenId)
   return (Widget.weakerEvents eventMap resultWidget, resultParenId)
+
+addParens :: MonadF m => Widget.Id -> Widget (Transaction t m) -> TWidget t m
+addParens parenId widget = do
+  beforeParen <- label "("
+  afterParen <- label ")"
+  return $ BWidgets.hbox [ beforeParen, widget, afterParen ]
+  where
+    label str = BWidgets.makeTextView str $ Widget.joinId parenId [pack str]
 
 makeDefinitionEdit :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
 makeDefinitionEdit definitionI = do
