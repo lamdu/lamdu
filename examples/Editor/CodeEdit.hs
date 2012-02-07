@@ -162,9 +162,9 @@ diveIn = fmap $ WidgetIds.delegating . WidgetIds.fromIRef
 replace :: MonadF m => Transaction.Property t m (IRef Data.Expression) -> Transaction t m Widget.Id
 replace = diveIn . DataOps.replace
 
-makeCallWithArgEventMap :: MonadF m =>
+makeAddNextArgEventMap :: MonadF m =>
   Transaction.Property t m (IRef Data.Expression) -> Widget.EventHandlers (Transaction t m)
-makeCallWithArgEventMap =
+makeAddNextArgEventMap =
   Widget.actionEventMapMovesCursor Config.addNextArgumentKeys "Add another argument" .
   diveIn . DataOps.callWithArg
 
@@ -197,7 +197,7 @@ makeApplyExpressionEdit definitionI expressionPtr (Data.Apply funcI argI) myId =
       setExpr newExprI = do
         Property.set expressionPtr newExprI
         return $ WidgetIds.fromIRef newExprI
-      addNextArgEventMap = makeCallWithArgEventMap expressionPtr
+      addNextArgEventMap = makeAddNextArgEventMap expressionPtr
       funcEvents =
         Widget.weakerEvents (delEventMap argI) .
         if isInfix
@@ -237,7 +237,7 @@ makeExpressionEdit isArgument definitionI expressionPtr = do
       BWidgets.wrapDelegatedWithKeys keys entryState first f expressionId
 
     eventMap = mconcat $ concat [
-      [ makeCallWithArgEventMap expressionPtr | not isArgument ],
+      [ makeAddNextArgEventMap expressionPtr | not isArgument ],
       [ Widget.actionEventMapMovesCursor
         Config.giveAsArgumentKeys "Give as argument"
         mkGiveAsArg
