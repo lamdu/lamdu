@@ -277,15 +277,15 @@ makeExpressionEdit isArgument definitionI expressionPtr = do
           makeApplyExpressionEdit definitionI expressionPtr apply
         return (isFullOp || isArgument, result)
 
-  resultWidget <-
+  (resultWidget, resultParenId) <-
     if needParen then do
       let label str = BWidgets.makeTextView str $ Widget.joinId parenId [pack str]
       beforeParen <- label "("
       afterParen <- label ")"
-      return $ BWidgets.hbox [ beforeParen, widget, afterParen ]
+      return $ (BWidgets.hbox [ beforeParen, widget, afterParen ], expressionId)
     else
-      return widget
-  return (Widget.weakerEvents eventMap resultWidget, parenId)
+      return (widget, parenId)
+  return (Widget.weakerEvents eventMap resultWidget, resultParenId)
 
 makeDefinitionEdit :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
 makeDefinitionEdit definitionI = do
