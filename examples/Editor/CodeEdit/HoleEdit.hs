@@ -54,7 +54,7 @@ makeResultView myId (Result typ var) =
 
 makeActiveHoleEdit ::
   MonadF m => ETypes.ExpressionAncestry m ->
-  IRef Data.Definition -> Data.HoleState -> Transaction.Property ViewTag m (IRef Data.Expression) ->
+  IRef Data.Definition -> Data.HoleState -> ETypes.ExpressionPtr m ->
   Widget.Id -> TWidget ViewTag m
 makeActiveHoleEdit ancestry definitionI curState expressionPtr myId = do
   expressionI <- getP expressionPtr

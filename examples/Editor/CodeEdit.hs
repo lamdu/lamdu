@@ -1,167 +1,25 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit(makePanesEdit) where
 
-import Control.Arrow (first)
 import Control.Monad (liftM)
 import Data.List.Utils(enumerate, removeAt)
 import Data.Monoid(Monoid(..))
 import Data.Store.IRef (IRef)
-import Data.Store.Property (Property(Property))
-import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, getP, assignCursor, TWidget)
+import Editor.CTransaction (TWidget, getP, assignCursor)
 import Editor.MonadF (MonadF)
-import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
+import qualified Editor.CodeEdit.ExpressionEdit as ExpressionEdit
 import qualified Editor.CodeEdit.Types as ETypes
-import qualified Editor.CodeEdit.VarView as VarView
-import qualified Editor.CodeEdit.HoleEdit as HoleEdit
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-
-replace :: MonadF m => Transaction.Property t m (IRef Data.Expression) -> Transaction t m Widget.Id
-replace = ETypes.diveIn . DataOps.replace
-
-makeAddNextArgEventMap :: MonadF m =>
-  Transaction.Property t m (IRef Data.Expression) -> Widget.EventHandlers (Transaction t m)
-makeAddNextArgEventMap =
-  Widget.actionEventMapMovesCursor Config.addNextArgumentKeys "Add another argument" .
-  ETypes.diveIn . DataOps.callWithArg
-
-isInfixVar :: Monad m => Data.VariableRef -> CTransaction t m Bool
-isInfixVar = liftM ETypes.isOperatorName . getP . Anchors.variableNameRef
-
-isInfixFunc :: Monad m => IRef Data.Expression -> CTransaction t m Bool
-isInfixFunc funcI = do
-  expr <- getP $ Transaction.fromIRef funcI
-  case expr of
-    Data.ExpressionGetVariable var -> isInfixVar var
-    _ -> return False
-
-makeApplyExpressionEdit :: MonadF m =>
-  IRef Data.Definition -> Transaction.Property ViewTag m (IRef Data.Expression) ->
-  Data.Apply -> Widget.Id ->
-  CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id)
-makeApplyExpressionEdit definitionI expressionPtr (Data.Apply funcI argI) myId =
-  assignCursor myId (WidgetIds.fromIRef argI) $ do
-    expressionI <- getP expressionPtr
-    isInfix <- isInfixFunc funcI
-    let
-      funcType
-        | isInfix = ETypes.Infix
-        | otherwise = ETypes.Prefix
-      expressionRef = Transaction.fromIRef expressionI
-      delEventMap = Widget.actionEventMapMovesCursor Config.delKeys "Delete" . setExpr
-      funcIPtr = Property (return funcI) $ Property.set expressionRef . Data.ExpressionApply . (`Data.Apply` argI)
-      argIPtr = Property (return argI) $ Property.set expressionRef . Data.ExpressionApply . (funcI `Data.Apply`)
-      setExpr newExprI = do
-        Property.set expressionPtr newExprI
-        return $ WidgetIds.fromIRef newExprI
-      addNextArgEventMap = makeAddNextArgEventMap expressionPtr
-      funcEvents =
-        Widget.weakerEvents (delEventMap argI) .
-        if isInfix
-        then Widget.strongerEvents addNextArgEventMap
-        else id
-    (funcEdit, parenId) <-
-      (liftM . first) funcEvents $ makeExpressionEdit ETypes.NotArgument definitionI funcIPtr
-    (argEdit, _) <-
-       (liftM . first . Widget.weakerEvents . mconcat)
-       [ addNextArgEventMap
-       , delEventMap funcI
-       ] $ makeExpressionEdit (ETypes.Argument (ETypes.ArgumentData funcType expressionPtr)) definitionI argIPtr
-    return
-      ((BWidgets.hbox . if isInfix then reverse else id)
-       [funcEdit, BWidgets.spaceWidget, argEdit], parenId)
-
-isApplyOfInfixOp :: Monad m => IRef Data.Expression -> CTransaction t m Bool
-isApplyOfInfixOp exprI = do
-  expr <- getP $ Transaction.fromIRef exprI
-  case expr of
-    Data.ExpressionApply (Data.Apply funcI _) -> isInfixFunc funcI
-    _ -> return False
-
-makeExpressionEdit :: MonadF m =>
-  ETypes.ExpressionAncestry m -> IRef Data.Definition ->
-  Transaction.Property ViewTag m (IRef Data.Expression) ->
-  CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id)
-makeExpressionEdit ancestry definitionI expressionPtr = do
-  expressionI <- getP expressionPtr
-  let
-    expressionRef = Transaction.fromIRef expressionI
-    mkCallWithArg = ETypes.diveIn $ DataOps.callWithArg expressionPtr
-    mkGiveAsArg = ETypes.diveIn $ DataOps.giveAsArg expressionPtr
-    expressionId = WidgetIds.fromIRef expressionI
-
-    wrap keys entryState f =
-      BWidgets.wrapDelegatedWithKeys keys entryState first f expressionId
-
-    eventMap = mconcat $
-      [ makeAddNextArgEventMap expressionPtr | not $ ETypes.isArgument ancestry ] ++
-      [ Widget.actionEventMapMovesCursor
-        Config.giveAsArgumentKeys "Give as argument"
-        mkGiveAsArg
-      , Widget.actionEventMapMovesCursor
-        Config.callWithArgumentKeys "Call with argument" mkCallWithArg
-      , Widget.actionEventMapMovesCursor
-        Config.relinkKeys "Replace" $ replace expressionPtr
-      ]
-
-  expr <- getP expressionRef
-  (needParen, (widget, parenId)) <-
-    case expr of
-      Data.ExpressionHole holeState ->
-        liftM ((,) False) .
-        wrap FocusDelegator.defaultKeys FocusDelegator.NotDelegating .
-          (fmap . liftM) (flip (,) expressionId) $
-          HoleEdit.make ancestry definitionI holeState expressionPtr
-      Data.ExpressionGetVariable varRef -> do
-        varRefView <- VarView.make varRef expressionId
-        isInfix <- isInfixVar varRef
-        let
-          jumpToDefinitionEventMap =
-            Widget.actionEventMapMovesCursor Config.jumpToDefinitionKeys "Jump to definition" jumpToDefinition
-          jumpToDefinition =
-            case varRef of
-              Data.DefinitionRef defI -> Anchors.newPane defI
-              Data.ParameterRef paramI -> return $ WidgetIds.fromIRef paramI
-              Data.BuiltinRef _builtI -> return expressionId
-          needParen =
-            case ancestry of
-              ETypes.NotArgument -> False
-              _ -> isInfix
-        return
-          (needParen,
-           (Widget.weakerEvents jumpToDefinitionEventMap varRefView,
-            expressionId))
-      Data.ExpressionApply apply@(Data.Apply funcI _) -> do
-        isFullOp <- isApplyOfInfixOp funcI
-        isInfix <- isInfixFunc funcI
-        result <-
-          wrap Config.exprFocusDelegatorKeys FocusDelegator.Delegating $
-          makeApplyExpressionEdit definitionI expressionPtr apply
-        let
-          needParen =
-            case ancestry of
-              ETypes.Root -> isInfix
-              ETypes.Argument _ -> True
-              ETypes.NotArgument -> isFullOp
-        return (needParen, result)
-
-  (resultWidget, resultParenId) <-
-    if needParen then do
-      resWidget <- ETypes.addParens parenId widget
-      return (resWidget, expressionId)
-    else
-      return (widget, parenId)
-  return (Widget.weakerEvents eventMap resultWidget, resultParenId)
 
 makeDefinitionEdit :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
 makeDefinitionEdit definitionI = do
@@ -170,10 +28,13 @@ makeDefinitionEdit definitionI = do
     assignCursor myId nameEditAnimId $
     BWidgets.makeNameEdit "<unnamed>" definitionI nameEditAnimId
   equals <- BWidgets.makeTextView "=" $ Widget.joinId myId ["equals"]
-  (expressionEdit, _) <- makeExpressionEdit ETypes.Root definitionI bodyRef
+  (expressionEdit, _) <- ExpressionEdit.make ETypes.Root definitionI bodyRef
   paramsEdits <- mapM makeParamEdit $ enumerate params
 
-  let replaceEventMap = Widget.actionEventMapMovesCursor Config.delKeys "Replace" $ replace bodyRef
+  let
+    replaceEventMap =
+      Widget.actionEventMapMovesCursor Config.delKeys "Replace" .
+      ETypes.diveIn $ DataOps.replace bodyRef
   return .
     Widget.weakerEvents eventMap . BWidgets.hboxSpaced $
     [nameEdit] ++ paramsEdits ++ [equals, Widget.weakerEvents replaceEventMap expressionEdit]
