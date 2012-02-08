@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.HoleEdit(make) where
 
+import Control.Arrow (first)
 import Control.Monad (liftM)
 import Data.List(isInfixOf)
 import Data.Maybe(isJust)
@@ -10,6 +11,7 @@ import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (CTransaction, getP, assignCursor, TWidget, readCursor)
 import Editor.MonadF (MonadF)
+import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
@@ -24,6 +26,7 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 data Result m = Result {
   resultName :: String,
@@ -230,12 +233,12 @@ makeActiveHoleEdit
       moreResultsWidget <- mkMoreResultWidget
       return . BWidgets.vbox $ [searchTermWidget, resultWidgets] ++ moreResultsWidget
 
-make ::
+makeInternal ::
   MonadF m => ETypes.ExpressionAncestry m ->
   IRef Data.Definition -> Data.HoleState ->
   Transaction.Property ViewTag m (IRef Data.Expression) ->
   Widget.Id -> TWidget ViewTag m
-make ancestry definitionI curState expressionPtr myId = do
+makeInternal ancestry definitionI curState expressionPtr myId = do
   cursor <- readCursor
   widget <-
     if isJust (Widget.subId myId cursor)
@@ -248,3 +251,15 @@ make ancestry definitionI curState expressionPtr myId = do
       | null searchText = "-"
       | otherwise = searchText
     searchText = Data.holeSearchTerm curState
+
+make ::
+  MonadF m =>
+  ETypes.ExpressionAncestry m -> IRef Data.Definition ->
+  Data.HoleState -> ETypes.ExpressionPtr m ->
+  CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id)
+make ancestry definitionI holeState expressionPtr = do
+  expressionId <- liftM WidgetIds.fromIRef $ getP expressionPtr
+  BWidgets.wrapDelegatedWithKeys
+    FocusDelegator.defaultKeys FocusDelegator.NotDelegating first
+    ((fmap . liftM) (flip (,) expressionId) $
+    makeInternal ancestry definitionI holeState expressionPtr) expressionId

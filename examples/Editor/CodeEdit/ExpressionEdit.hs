@@ -1,8 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit(make) where
 
-import Control.Arrow (first)
-import Control.Monad (liftM, liftM2)
+import Control.Monad (liftM2)
 import Data.Monoid(Monoid(..))
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
@@ -11,7 +10,6 @@ import Editor.CTransaction (CTransaction, getP)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Store.Transaction as Transaction
-import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ApplyEdit as ApplyEdit
 import qualified Editor.CodeEdit.HoleEdit as HoleEdit
 import qualified Editor.CodeEdit.Types as ETypes
@@ -21,19 +19,6 @@ import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-
-makeHoleEdit ::
-  MonadF m =>
-  ETypes.ExpressionAncestry m -> IRef Data.Definition ->
-  Data.HoleState -> ETypes.ExpressionPtr m ->
-  CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id)
-makeHoleEdit ancestry definitionI holeState expressionPtr = do
-  expressionId <- liftM WidgetIds.fromIRef $ getP expressionPtr
-  BWidgets.wrapDelegatedWithKeys
-    FocusDelegator.defaultKeys FocusDelegator.NotDelegating first
-    ((fmap . liftM) (flip (,) expressionId) $
-    HoleEdit.make ancestry definitionI holeState expressionPtr) expressionId
 
 needParen ::
   Monad m => Data.Expression -> ETypes.ExpressionAncestry m ->
@@ -72,7 +57,7 @@ make ancestry definitionI expressionPtr = do
   (widget, parenId) <-
     case expr of
       Data.ExpressionHole holeState ->
-        makeHoleEdit ancestry definitionI holeState expressionPtr
+        HoleEdit.make ancestry definitionI holeState expressionPtr
       Data.ExpressionGetVariable varRef ->
         VarEdit.make expressionId varRef
       Data.ExpressionApply apply ->
