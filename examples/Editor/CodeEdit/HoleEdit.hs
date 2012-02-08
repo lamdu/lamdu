@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.HoleEdit(make) where
 
-import Control.Monad (liftM)
+import Control.Monad (liftM, liftM2)
 import Data.List(isInfixOf)
 import Data.Maybe(isJust)
 import Data.Monoid(Monoid(..))
@@ -54,6 +54,76 @@ makeResultView myId (Result typ var) =
     maybeAddParens PrefixOperator = (>>= ETypes.addParens (ETypes.varId var))
     maybeAddParens _ = id
 
+pickResultEventMap ::
+  MonadF m => ETypes.ExpressionAncestry m ->
+  ETypes.ExpressionPtr m -> Widget.Id -> Result m ->
+  CTransaction ViewTag m (Widget.EventHandlers (Transaction ViewTag m))
+pickResultEventMap ancestry expressionPtr searchResultsId var = do
+  expressionI <- getP expressionPtr
+  return $ mconcat [
+    EventMap.fromEventTypes Config.pickResultKeys
+    "Pick this search result" $
+    pickResult searchResultsId expressionI var,
+
+    EventMap.fromEventTypes Config.addNextArgumentKeys
+    "Pick this search result and add argument" $
+    pickResultAndAddArg ancestry expressionPtr searchResultsId var
+    ]
+
+pickResultAndAddArg ::
+  MonadF m => ETypes.ExpressionAncestry m ->
+  ETypes.ExpressionPtr m -> Widget.Id -> Result m ->
+  Transaction ViewTag m Widget.EventResult
+pickResultAndAddArg ancestry expressionPtr searchResultsId result = do
+  expressionI <- Property.get expressionPtr
+  res <- pickResult searchResultsId expressionI result
+  cursor <-
+    ETypes.diveIn $
+    case ancestry of
+      ETypes.Argument (ETypes.ArgumentData { ETypes.adParentPtr = parentPtr }) ->
+        DataOps.callWithArg parentPtr
+      _ -> DataOps.callWithArg expressionPtr
+  return res { Widget.eCursor = Just cursor }
+
+mapAnimId ::
+  Widget.Id -> Widget.Id -> Data.VariableRef -> Anim.AnimId -> Anim.AnimId
+mapAnimId expressionId searchResultsId var animId =
+  maybe animId mapSearchResult $
+  Anim.subId (Widget.cursorId searchResultsId) animId
+  where
+    expressionAnimId = Widget.cursorId expressionId
+    -- TODO: Is there a better way?
+    getVariableTextAnimId = expressionAnimId
+    mapOtherResult resultId =
+      ["mismatched result"]
+        `Anim.joinId` expressionAnimId
+        `Anim.joinId` resultId
+    mapSearchResult resultId =
+      maybe (mapOtherResult resultId)
+        (Anim.joinId getVariableTextAnimId) $
+      (Anim.subId . Widget.cursorId . ETypes.varId) var resultId
+
+pickResult ::
+  MonadF m =>
+  Widget.Id -> IRef Data.Expression -> Result m ->
+  Transaction ViewTag m Widget.EventResult
+pickResult searchResultsId expressionI (Result rType var) = do
+  Transaction.writeIRef expressionI $ Data.ExpressionGetVariable var
+  case rType of
+    InfixOperator (ETypes.ArgumentData { ETypes.adParentPtr = parentPtr, ETypes.adApply = apply}) -> do
+      parentI <- Property.get parentPtr
+      Property.set (Transaction.fromIRef parentI) . Data.ExpressionApply $ flipArgs apply
+    _ -> return ()
+  return Widget.EventResult {
+    Widget.eCursor = Just expressionId,
+    Widget.eAnimIdMapping = mapAnimId expressionId searchResultsId var
+    }
+  where
+    expressionId = WidgetIds.fromIRef expressionI
+
+flipArgs :: Data.Apply -> Data.Apply
+flipArgs (Data.Apply x y) = Data.Apply y x
+
 makeActiveHoleEdit ::
   MonadF m => ETypes.ExpressionAncestry m ->
   IRef Data.Definition -> Data.HoleState -> ETypes.ExpressionPtr m ->
@@ -61,59 +131,15 @@ makeActiveHoleEdit ::
 makeActiveHoleEdit ancestry definitionI curState expressionPtr myId = do
   expressionI <- getP expressionPtr
   let
-    expressionId = WidgetIds.fromIRef expressionI
-    expressionAnimId = Widget.cursorId expressionId
     maybeResults [] = BWidgets.makeTextView "(No results)" $ Widget.joinId myId ["no results"]
     maybeResults xs = liftM BWidgets.vbox $ mapM makeResultWidget xs
 
     searchTermId = WidgetIds.searchTermId myId
     searchResultsId = Widget.joinId myId ["search results"]
     makeResultWidget result =
-      (liftM . Widget.strongerEvents) (pickResultEventMap result) $
-      makeResultView searchResultsId result
-    pickResultEventMap var =
-      mconcat [
-        EventMap.fromEventTypes Config.pickResultKeys "Pick this search result" $ pickResult var,
-        EventMap.fromEventTypes Config.addNextArgumentKeys "Pick this search result and add argument" $ pickResultAndAddArg var
-        ]
-
-    pickResultAndAddArg result = do
-      res <- pickResult result
-      cursor <-
-        ETypes.diveIn $
-        case ancestry of
-          ETypes.Argument (ETypes.ArgumentData { ETypes.adParentPtr = parentPtr }) ->
-            DataOps.callWithArg parentPtr
-          _ -> DataOps.callWithArg expressionPtr
-      return res { Widget.eCursor = Just cursor }
-
-    pickResult (Result rType var) = do
-      Transaction.writeIRef expressionI $ Data.ExpressionGetVariable var
-      case rType of
-        InfixOperator (ETypes.ArgumentData { ETypes.adParentPtr = parentPtr, ETypes.adApply = apply}) -> do
-          parentI <- Property.get parentPtr
-          Property.set (Transaction.fromIRef parentI) . Data.ExpressionApply $ flipArgs apply
-        _ -> return ()
-      return Widget.EventResult {
-        Widget.eCursor = Just expressionId,
-        Widget.eAnimIdMapping = mapAnimId var
-        }
-    flipArgs (Data.Apply x y) = Data.Apply y x
-
-    mapAnimId var animId =
-      maybe animId mapSearchResult $
-      Anim.subId (Widget.cursorId searchResultsId) animId
-      where
-        -- TODO: Is there a better way?
-        getVariableTextAnimId = expressionAnimId
-        mapOtherResult resultId =
-          ["mismatched result"]
-            `Anim.joinId` expressionAnimId
-            `Anim.joinId` resultId
-        mapSearchResult resultId =
-          maybe (mapOtherResult resultId)
-            (Anim.joinId getVariableTextAnimId) $
-          (Anim.subId . Widget.cursorId . ETypes.varId) var resultId
+      liftM2 Widget.strongerEvents
+        (pickResultEventMap ancestry expressionPtr searchResultsId result)
+        (makeResultView searchResultsId result)
 
     stateProp =
       Property.Property {
@@ -123,19 +149,6 @@ makeActiveHoleEdit ancestry definitionI curState expressionPtr myId = do
     goodResult (_, name) = all (`isInfixOf` name) . words $ Data.holeSearchTerm curState
     definitionRef = Transaction.fromIRef definitionI
     newName = concat . words $ Data.holeSearchTerm curState
-    searchTermEventMap =
-      mconcat
-      [ Widget.actionEventMapMovesCursor Config.addParamKeys "Add as Parameter" $ do
-          newParam <- DataOps.addParameter definitionRef
-          Property.set (Anchors.aNameRef newParam) newName
-          Transaction.writeIRef expressionI . Data.ExpressionGetVariable $ Data.ParameterRef newParam
-          return expressionId
-      , Widget.actionEventMapMovesCursor Config.newDefinitionKeys "Add new as Definition" $ do
-          newDefI <- Anchors.makeDefinition
-          Property.set (Anchors.aNameRef newDefI) newName
-          Transaction.writeIRef expressionI . Data.ExpressionGetVariable $ Data.DefinitionRef newDefI
-          Anchors.newPane newDefI
-      ]
     processResult (var, name)
       | ETypes.isOperatorName name =
         case ancestry of
@@ -156,15 +169,22 @@ makeActiveHoleEdit ancestry definitionI curState expressionPtr myId = do
       mkMoreResultWidget
         | null moreResults = return []
         | otherwise = liftM (:[]) . BWidgets.makeTextView "..." $ Widget.joinId myId ["more results"]
+
+    pickFirstResultEventMaps <- mapM (pickResultEventMap ancestry expressionPtr searchResultsId) $ take 1 firstResults
+    let
+      searchTermEventMap =
+        mconcat $ pickFirstResultEventMaps ++
+        [ Widget.actionEventMapMovesCursor Config.addParamKeys "Add as Parameter" .
+          liftM WidgetIds.fromIRef $ DataOps.addAsParameter newName definitionRef expressionI
+        , Widget.actionEventMapMovesCursor Config.newDefinitionKeys "Add new as Definition" $
+          liftM WidgetIds.fromIRef $ DataOps.addAsDefinition newName expressionI
+        ]
     searchTermWidget <-
-      (liftM . Widget.strongerEvents . mconcat . concat)
-        [map pickResultEventMap (take 1 firstResults),
-         [searchTermEventMap]] $
+      (liftM . Widget.strongerEvents) searchTermEventMap $
       BWidgets.makeWordEdit stateProp searchTermId
     resultWidgets <- maybeResults firstResults
     moreResultsWidget <- mkMoreResultWidget
-    return .
-      BWidgets.vbox $ [searchTermWidget, resultWidgets] ++ moreResultsWidget
+    return . BWidgets.vbox $ [searchTermWidget, resultWidgets] ++ moreResultsWidget
 
 make ::
   MonadF m => ETypes.ExpressionAncestry m ->

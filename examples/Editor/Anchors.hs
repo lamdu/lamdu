@@ -220,11 +220,10 @@ aNameRef = Property.pureCompose (fromMaybe "") Just . aNameGuid . IRef.guid
 variableNameRef :: Monad m => Data.VariableRef -> Property (Transaction t m) String
 variableNameRef = Data.onVariableIRef aNameRef
 
-newPane :: Monad m => IRef Data.Definition -> Transaction ViewTag m Widget.Id
+newPane :: Monad m => IRef Data.Definition -> Transaction ViewTag m ()
 newPane defI = do
   panes <- Property.get panesRef
   when (all ((/= defI) . paneDefinition) panes) $
     Property.set panesRef $ makePane defI : panes
-  return $ WidgetIds.fromIRef defI
   where
     panesRef = Transaction.fromIRef rootIRef

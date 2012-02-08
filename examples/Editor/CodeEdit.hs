@@ -68,6 +68,7 @@ makePanesEdit = do
         "New Definition" $ do
           newDefI <- Anchors.makeDefinition
           Anchors.newPane newDefI
+          return $ WidgetIds.fromIRef newDefI
 
     delPane i = do
       let newPanes = removeAt i panes

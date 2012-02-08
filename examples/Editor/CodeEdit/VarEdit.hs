@@ -36,7 +36,7 @@ make expressionId varRef = do
       Widget.actionEventMapMovesCursor Config.jumpToDefinitionKeys "Jump to definition" jumpToDefinition
     jumpToDefinition =
       case varRef of
-        Data.DefinitionRef defI -> Anchors.newPane defI
+        Data.DefinitionRef defI -> Anchors.newPane defI >> return (WidgetIds.fromIRef defI)
         Data.ParameterRef paramI -> return $ WidgetIds.fromIRef paramI
         Data.BuiltinRef _builtI -> return expressionId
   return

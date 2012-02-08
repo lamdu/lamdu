@@ -1,5 +1,8 @@
 {-# OPTIONS -Wall #-}
-module Editor.DataOps (newHole, addParameter, delParameter, giveAsArg, callWithArg, replace) where
+module Editor.DataOps (
+  newHole, addParameter, delParameter, giveAsArg, callWithArg, replace,
+  addAsParameter, addAsDefinition)
+where
 
 import Data.List (delete)
 import Data.Store.IRef (IRef)
@@ -7,6 +10,7 @@ import Data.Store.Property(Property)
 import Data.Store.Transaction (Transaction)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
+import qualified Editor.Anchors as Anchors
 import qualified Editor.Data as Data
 
 addParameter ::
@@ -60,3 +64,22 @@ replace expressionPtr = do
   exprI <- newHole
   Property.set expressionPtr exprI
   return exprI
+
+addAsParameter ::
+  Monad m => String -> Transaction.Property t m Data.Definition ->
+  IRef Data.Expression -> Transaction t m (IRef Data.Expression)
+addAsParameter newName definitionRef expressionI = do
+  newParam <- addParameter definitionRef
+  Property.set (Anchors.aNameRef newParam) newName
+  Transaction.writeIRef expressionI . Data.ExpressionGetVariable $ Data.ParameterRef newParam
+  return expressionI
+
+addAsDefinition ::
+  Monad m => String -> IRef Data.Expression ->
+  Transaction Anchors.ViewTag m (IRef Data.Definition)
+addAsDefinition newName expressionI = do
+  newDefI <- Anchors.makeDefinition
+  Property.set (Anchors.aNameRef newDefI) newName
+  Transaction.writeIRef expressionI . Data.ExpressionGetVariable $ Data.DefinitionRef newDefI
+  Anchors.newPane newDefI
+  return newDefI
