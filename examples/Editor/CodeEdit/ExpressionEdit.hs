@@ -2,7 +2,7 @@
 module Editor.CodeEdit.ExpressionEdit(make) where
 
 import Control.Arrow (first)
-import Control.Monad (liftM)
+import Control.Monad (liftM, liftM2)
 import Data.Monoid(Monoid(..))
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
@@ -44,8 +44,15 @@ needParen (Data.ExpressionGetVariable varRef) _ =
   ETypes.isInfixVar varRef
 needParen (Data.ExpressionHole _) _ =
   return False
-needParen (Data.ExpressionApply _) (ETypes.Argument _) =
-  return True
+needParen (Data.ExpressionApply (Data.Apply funcI _)) (ETypes.Argument argData) = do
+  let
+    apply = ETypes.adApply argData
+    leftFuncI = Data.applyFunc apply
+  insideInfix <- case ETypes.adFuncType argData of
+    ETypes.Infix -> return True
+    ETypes.Prefix -> ETypes.isApplyOfInfixOp leftFuncI
+  isInfix <- liftM2 (||) (ETypes.isInfixFunc funcI) (ETypes.isApplyOfInfixOp funcI)
+  return $ isInfix == insideInfix
 needParen (Data.ExpressionApply (Data.Apply funcI _)) ETypes.Root =
   ETypes.isInfixFunc funcI
 needParen (Data.ExpressionApply (Data.Apply funcI _)) ETypes.NotArgument =

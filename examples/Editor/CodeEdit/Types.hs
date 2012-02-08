@@ -35,7 +35,7 @@ data FuncType = Infix | Prefix
   deriving (Eq, Ord, Show, Read)
 
 data ArgumentData m = ArgumentData {
-  _adFuncType :: FuncType,
+  adFuncType :: FuncType,
   adParentPtr :: Transaction.Property ViewTag m (IRef Data.Expression),
   adApply :: Data.Apply
   }
