@@ -16,7 +16,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.Types as ETypes
-import qualified Editor.CodeEdit.VarView as VarView
+import qualified Editor.CodeEdit.VarEdit as VarEdit
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
@@ -43,7 +43,7 @@ makeResultView ::
   CTransaction t m (Widget (Transaction t m))
 makeResultView myId (Result typ var) =
   maybeAddParens typ .
-  VarView.make var . mappend myId .
+  VarEdit.makeView var . mappend myId .
   maybeAddPrefixWrap typ $
   ETypes.varId var
   where

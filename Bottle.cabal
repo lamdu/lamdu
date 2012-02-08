@@ -105,7 +105,7 @@ Executable Editor
                        Editor.CodeEdit.ExpressionEdit,
                        Editor.CodeEdit.HoleEdit,
                        Editor.CodeEdit.Types,
-                       Editor.CodeEdit.VarView,
+                       Editor.CodeEdit.VarEdit,
                        Editor.BranchGUI
   ghc-options:         -O2 -Wall
   main-is:             Editor/Main.hs

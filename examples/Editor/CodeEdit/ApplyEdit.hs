@@ -18,42 +18,47 @@ import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
-make :: MonadF m =>
+make ::
+  (MonadF m) =>
   (ETypes.ExpressionAncestry m ->
    ETypes.ExpressionPtr m ->
    CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id)) ->
-  ETypes.ExpressionPtr m ->
-  Data.Apply -> Widget.Id ->
+  ETypes.ExpressionPtr m -> Data.Apply ->
   CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id)
-make makeExpressionEdit expressionPtr (Data.Apply funcI argI) myId =
-  assignCursor myId (WidgetIds.fromIRef argI) $ do
-    expressionI <- getP expressionPtr
-    isInfix <- ETypes.isInfixFunc funcI
-    let
-      funcType
-        | isInfix = ETypes.Infix
-        | otherwise = ETypes.Prefix
-      expressionRef = Transaction.fromIRef expressionI
-      delEventMap = Widget.actionEventMapMovesCursor Config.delKeys "Delete" . setExpr
-      funcIPtr = Property (return funcI) $ Property.set expressionRef . Data.ExpressionApply . (`Data.Apply` argI)
-      argIPtr = Property (return argI) $ Property.set expressionRef . Data.ExpressionApply . (funcI `Data.Apply`)
-      setExpr newExprI = do
-        Property.set expressionPtr newExprI
-        return $ WidgetIds.fromIRef newExprI
-      addNextArgEventMap = ETypes.makeAddNextArgEventMap expressionPtr
-      funcEvents =
-        Widget.weakerEvents (delEventMap argI) .
-        if isInfix
-        then Widget.strongerEvents addNextArgEventMap
-        else id
-    (funcEdit, parenId) <-
-      (liftM . first) funcEvents $ makeExpressionEdit ETypes.NotArgument funcIPtr
-    (argEdit, _) <-
-       (liftM . first . Widget.weakerEvents . mconcat)
-       [ addNextArgEventMap
-       , delEventMap funcI
-       ] $ makeExpressionEdit (ETypes.Argument (ETypes.ArgumentData funcType expressionPtr)) argIPtr
-    return
-      ((BWidgets.hbox . if isInfix then reverse else id)
-       [funcEdit, BWidgets.spaceWidget, argEdit], parenId)
+make makeExpressionEdit expressionPtr (Data.Apply funcI argI) = do
+  expressionI <- getP expressionPtr
+  let expressionId = WidgetIds.fromIRef expressionI
+  flip
+    (BWidgets.wrapDelegatedWithKeys
+     Config.exprFocusDelegatorKeys FocusDelegator.Delegating first) expressionId $
+    \myId -> assignCursor myId (WidgetIds.fromIRef argI) $ do
+      isInfix <- ETypes.isInfixFunc funcI
+      let
+        funcType
+          | isInfix = ETypes.Infix
+          | otherwise = ETypes.Prefix
+        expressionRef = Transaction.fromIRef expressionI
+        delEventMap = Widget.actionEventMapMovesCursor Config.delKeys "Delete" . setExpr
+        funcIPtr = Property (return funcI) $ Property.set expressionRef . Data.ExpressionApply . (`Data.Apply` argI)
+        argIPtr = Property (return argI) $ Property.set expressionRef . Data.ExpressionApply . (funcI `Data.Apply`)
+        setExpr newExprI = do
+          Property.set expressionPtr newExprI
+          return $ WidgetIds.fromIRef newExprI
+        addNextArgEventMap = ETypes.makeAddNextArgEventMap expressionPtr
+        funcEvents =
+          Widget.weakerEvents (delEventMap argI) .
+          if isInfix
+          then Widget.strongerEvents addNextArgEventMap
+          else id
+      (funcEdit, parenId) <-
+        (liftM . first) funcEvents $ makeExpressionEdit ETypes.NotArgument funcIPtr
+      (argEdit, _) <-
+         (liftM . first . Widget.weakerEvents . mconcat)
+         [ addNextArgEventMap
+         , delEventMap funcI
+         ] $ makeExpressionEdit (ETypes.Argument (ETypes.ArgumentData funcType expressionPtr)) argIPtr
+      return
+        ((BWidgets.hbox . if isInfix then reverse else id)
+         [funcEdit, BWidgets.spaceWidget, argEdit], parenId)
