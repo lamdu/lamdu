@@ -20,33 +20,17 @@ import qualified Data.Char as Char
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
-import qualified Editor.WidgetIds as WidgetIds
 import qualified Editor.BottleWidgets as BWidgets
+import qualified Editor.CodeEdit.Types as ETypes
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
+import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-
-data FuncType = Infix | Prefix
-  deriving (Eq, Ord, Show, Read)
-
-data ArgumentData m = ArgumentData {
-  _adFuncType :: FuncType,
-  adParentPtr :: Transaction.Property ViewTag m (IRef Data.Expression)
-  }
-
-data ExpressionAncestry m =
-    Argument (ArgumentData m)
-  | NotArgument
-  | Root
-
-isArgument :: ExpressionAncestry m -> Bool
-isArgument (Argument _) = True
-isArgument _ = False
 
 makeVarView :: MonadF m => Data.VariableRef -> Widget.Id -> TWidget t m
 makeVarView var myId = do
@@ -91,7 +75,7 @@ makeResultView myId (Result typ var) =
 
 
 makeActiveHoleEdit ::
-  MonadF m => ExpressionAncestry m ->
+  MonadF m => ETypes.ExpressionAncestry m ->
   IRef Data.Definition -> Data.HoleState -> Transaction.Property ViewTag m (IRef Data.Expression) ->
   Widget.Id -> TWidget ViewTag m
 makeActiveHoleEdit ancestry definitionI curState expressionPtr myId = do
@@ -119,15 +103,15 @@ makeActiveHoleEdit ancestry definitionI curState expressionPtr myId = do
       cursor <-
         diveIn $
         case ancestry of
-          Argument (ArgumentData _ parentPtr) -> DataOps.callWithArg parentPtr
+          ETypes.Argument (ETypes.ArgumentData _ parentPtr) -> DataOps.callWithArg parentPtr
           _ -> DataOps.callWithArg expressionPtr
       return res { Widget.eCursor = Just cursor }
 
     pickResult (Result isInfix var) = do
       Transaction.writeIRef expressionI $ Data.ExpressionGetVariable var
       when (isInfix == InfixOperator) $ do
-        let Argument argData = ancestry
-        parentI <- Property.get $ adParentPtr argData
+        let ETypes.Argument argData = ancestry
+        parentI <- Property.get $ ETypes.adParentPtr argData
         Property.pureModify (Transaction.fromIRef parentI) flipArgs
       return Widget.EventResult {
         Widget.eCursor = Just expressionId,
@@ -173,7 +157,7 @@ makeActiveHoleEdit ancestry definitionI curState expressionPtr myId = do
           newPane newDefI
       ]
     processResult (var, name)
-      | isOperatorName name && isArgument ancestry =
+      | isOperatorName name && ETypes.isArgument ancestry =
         [Result InfixOperator var, Result PrefixOperator var]
       | otherwise = [Result NotOperator var]
 
@@ -199,7 +183,7 @@ makeActiveHoleEdit ancestry definitionI curState expressionPtr myId = do
       BWidgets.vbox $ [searchTermWidget, resultWidgets] ++ moreResultsWidget
 
 makeHoleEdit ::
-  MonadF m => ExpressionAncestry m ->
+  MonadF m => ETypes.ExpressionAncestry m ->
   IRef Data.Definition -> Data.HoleState ->
   Transaction.Property ViewTag m (IRef Data.Expression) ->
   Widget.Id -> TWidget ViewTag m
@@ -252,8 +236,8 @@ makeApplyExpressionEdit definitionI expressionPtr (Data.Apply funcI argI) myId =
     isInfix <- isInfixFunc funcI
     let
       funcType
-        | isInfix = Infix
-        | otherwise = Prefix
+        | isInfix = ETypes.Infix
+        | otherwise = ETypes.Prefix
       expressionRef = Transaction.fromIRef expressionI
       delEventMap = Widget.actionEventMapMovesCursor Config.delKeys "Delete" . setExpr
       funcIPtr = Property (return funcI) $ Property.set expressionRef . Data.ExpressionApply . (`Data.Apply` argI)
@@ -268,12 +252,12 @@ makeApplyExpressionEdit definitionI expressionPtr (Data.Apply funcI argI) myId =
         then Widget.strongerEvents addNextArgEventMap
         else id
     (funcEdit, parenId) <-
-      (liftM . first) funcEvents $ makeExpressionEdit NotArgument definitionI funcIPtr
+      (liftM . first) funcEvents $ makeExpressionEdit ETypes.NotArgument definitionI funcIPtr
     (argEdit, _) <-
        (liftM . first . Widget.weakerEvents . mconcat)
        [ addNextArgEventMap
        , delEventMap funcI
-       ] $ makeExpressionEdit (Argument (ArgumentData funcType expressionPtr)) definitionI argIPtr
+       ] $ makeExpressionEdit (ETypes.Argument (ETypes.ArgumentData funcType expressionPtr)) definitionI argIPtr
     return
       ((BWidgets.hbox . if isInfix then reverse else id)
        [funcEdit, BWidgets.spaceWidget, argEdit], parenId)
@@ -286,7 +270,7 @@ isApplyOfInfixOp exprI = do
     _ -> return False
 
 makeExpressionEdit :: MonadF m =>
-  ExpressionAncestry m -> IRef Data.Definition ->
+  ETypes.ExpressionAncestry m -> IRef Data.Definition ->
   Transaction.Property ViewTag m (IRef Data.Expression) ->
   CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id)
 makeExpressionEdit ancestry definitionI expressionPtr = do
@@ -301,7 +285,7 @@ makeExpressionEdit ancestry definitionI expressionPtr = do
       BWidgets.wrapDelegatedWithKeys keys entryState first f expressionId
 
     eventMap = mconcat $
-      [ makeAddNextArgEventMap expressionPtr | not $ isArgument ancestry ] ++
+      [ makeAddNextArgEventMap expressionPtr | not $ ETypes.isArgument ancestry ] ++
       [ Widget.actionEventMapMovesCursor
         Config.giveAsArgumentKeys "Give as argument"
         mkGiveAsArg
@@ -332,7 +316,7 @@ makeExpressionEdit ancestry definitionI expressionPtr = do
               Data.BuiltinRef _builtI -> return expressionId
           needParen =
             case ancestry of
-              NotArgument -> False
+              ETypes.NotArgument -> False
               _ -> isInfix
         return
           (needParen,
@@ -347,9 +331,9 @@ makeExpressionEdit ancestry definitionI expressionPtr = do
         let
           needParen =
             case ancestry of
-              Root -> isInfix
-              Argument _ -> True
-              NotArgument -> isFullOp
+              ETypes.Root -> isInfix
+              ETypes.Argument _ -> True
+              ETypes.NotArgument -> isFullOp
         return (needParen, result)
 
   (resultWidget, resultParenId) <-
@@ -375,7 +359,7 @@ makeDefinitionEdit definitionI = do
     assignCursor myId nameEditAnimId $
     BWidgets.makeNameEdit "<unnamed>" definitionI nameEditAnimId
   equals <- BWidgets.makeTextView "=" $ Widget.joinId myId ["equals"]
-  (expressionEdit, _) <- makeExpressionEdit Root definitionI bodyRef
+  (expressionEdit, _) <- makeExpressionEdit ETypes.Root definitionI bodyRef
   paramsEdits <- mapM makeParamEdit $ enumerate params
 
   let replaceEventMap = Widget.actionEventMapMovesCursor Config.delKeys "Replace" $ replace bodyRef
