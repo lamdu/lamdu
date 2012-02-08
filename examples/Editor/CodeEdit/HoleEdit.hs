@@ -31,7 +31,7 @@ data ResultType = InfixOperator | PrefixOperator | NotOperator
 
 data Result = Result {
   _resultType :: ResultType,
-  resultVar :: Data.VariableRef
+  _resultVar :: Data.VariableRef
   }
 
 getDefinitionParamRefs :: Data.Definition -> [Data.VariableRef]
@@ -77,7 +77,6 @@ makeActiveHoleEdit ancestry definitionI curState expressionPtr myId = do
 
     pickResultAndAddArg result = do
       res <- pickResult result
-      Transaction.writeIRef expressionI . Data.ExpressionGetVariable $ resultVar result
       cursor <-
         ETypes.diveIn $
         case ancestry of
@@ -96,7 +95,7 @@ makeActiveHoleEdit ancestry definitionI curState expressionPtr myId = do
         Widget.eAnimIdMapping = mapAnimId var
         }
     flipArgs (Data.ExpressionApply (Data.Apply x y)) = Data.ExpressionApply $ Data.Apply y x
-    flipArgs _ = error "flipArgs expects func"
+    flipArgs _ = error "flipArgs expects apply"
 
     mapAnimId var animId =
       maybe animId mapSearchResult $
