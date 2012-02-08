@@ -61,8 +61,8 @@ relinkKeys        = [alt 'r']
 pickResultKeys    = [noMods E.KeyEnter]
 jumpToDefinitionKeys  = [noMods E.KeyEnter]
 delKeys           = [noMods E.KeyBackspace, noMods E.KeyDel, group E.alt E.KeyDel]
-giveAsArgumentKeys = [k 'a']
-callWithArgumentKeys = [k 'c']
+giveAsArgumentKeys = [k '[']
+callWithArgumentKeys = [k ']']
 addNextArgumentKeys = [E.SpaceKeyEventType E.noMods]
 
 exprFocusDelegatorKeys = FocusDelegator.Keys {
