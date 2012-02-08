@@ -1,4 +1,3 @@
-{-# OPTIONS -O2 -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit(makePanesEdit) where
 
@@ -22,6 +21,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.Types as ETypes
+import qualified Editor.CodeEdit.VarView as VarView
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
@@ -31,18 +31,6 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-
-makeVarView :: MonadF m => Data.VariableRef -> Widget.Id -> TWidget t m
-makeVarView var myId = do
-  name <- getP $ Anchors.variableNameRef var
-  let
-    color =
-      case var of
-        Data.BuiltinRef _ -> Config.builtinColor
-        Data.DefinitionRef _ -> Config.definitionColor
-        Data.ParameterRef _ -> Config.parameterColor
-  BWidgets.setTextColor color $
-    BWidgets.makeFocusableTextView name myId
 
 getDefinitionParamRefs :: Data.Definition -> [Data.VariableRef]
 getDefinitionParamRefs (Data.Definition { Data.defParameters = paramIs }) =
@@ -64,7 +52,7 @@ makeResultView ::
   CTransaction t m (Widget (Transaction t m))
 makeResultView myId (Result typ var) =
   maybeAddParens typ .
-  makeVarView var . mappend myId .
+  VarView.make var . mappend myId .
   maybeAddPrefixWrap typ $
   varId var
   where
@@ -304,7 +292,7 @@ makeExpressionEdit ancestry definitionI expressionPtr = do
           (fmap . liftM) (flip (,) expressionId) $
           makeHoleEdit ancestry definitionI holeState expressionPtr
       Data.ExpressionGetVariable varRef -> do
-        varRefView <- makeVarView varRef expressionId
+        varRefView <- VarView.make varRef expressionId
         isInfix <- isInfixVar varRef
         let
           jumpToDefinitionEventMap =
