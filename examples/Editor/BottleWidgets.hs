@@ -4,11 +4,14 @@ module Editor.BottleWidgets(
   makeFocusableView, makeFocusableTextView,
   wrapDelegatedWithKeys, wrapDelegated,
   makeTextEdit, makeWordEdit, makeNameEdit,
-  hbox, hboxAlign,
-  vbox, vboxAlign
+  hbox, hboxAlign, hboxSpaced,
+  vbox, vboxAlign,
+  spaceView, spaceWidget,
+  setTextColor
 ) where
 
 import Control.Monad (when, liftM)
+import Data.List (intersperse)
 import Data.List.Utils (enumerate, nth)
 import Data.Maybe (isJust)
 import Data.Store.IRef (IRef)
@@ -16,16 +19,19 @@ import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.CTransaction (TWidget, CTransaction, readTextStyle, readCursor, getP, assignCursor, atTextStyle)
 import Editor.MonadF (MonadF)
+import Graphics.UI.Bottle.Sized (Sized)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
@@ -155,3 +161,15 @@ vboxAlign align = Box.make Box.vertical . map (Widget.align (Vector2 align 0))
 
 vbox :: [Widget f] -> Widget f
 vbox = vboxAlign 0.5
+
+hboxSpaced :: [Widget f] -> Widget f
+hboxSpaced = hbox . intersperse spaceWidget
+
+spaceView :: Sized Anim.Frame
+spaceView = Spacer.makeHorizontal 20
+
+spaceWidget :: Widget f
+spaceWidget = Widget.liftView spaceView
+
+setTextColor :: Draw.Color -> TWidget t m -> TWidget t m
+setTextColor = atTextStyle . TextEdit.atSTextViewStyle . TextView.atStyleColor . const

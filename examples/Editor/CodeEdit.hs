@@ -5,7 +5,7 @@ module Editor.CodeEdit(makePanesEdit) where
 import Control.Arrow (first)
 import Control.Monad (liftM, when)
 import Data.ByteString.Char8 (pack)
-import Data.List(intersperse, isInfixOf)
+import Data.List(isInfixOf)
 import Data.List.Utils(enumerate, removeAt)
 import Data.Maybe(isJust)
 import Data.Monoid(Monoid(..))
@@ -13,9 +13,8 @@ import Data.Store.IRef (IRef)
 import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, getP, assignCursor, TWidget, readCursor, atTextStyle)
+import Editor.CTransaction (CTransaction, getP, assignCursor, TWidget, readCursor)
 import Editor.MonadF (MonadF)
-import Graphics.UI.Bottle.Sized (Sized)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Char as Char
 import qualified Data.Store.Property as Property
@@ -31,9 +30,6 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
-import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
-import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
 data FuncType = Infix | Prefix
   deriving (Eq, Ord, Show, Read)
@@ -52,18 +48,6 @@ isArgument :: ExpressionAncestry m -> Bool
 isArgument (Argument _) = True
 isArgument _ = False
 
-hboxSpaced :: [Widget f] -> Widget f
-hboxSpaced = BWidgets.hbox . intersperse spaceWidget
-
-spaceView :: Sized Anim.Frame
-spaceView = Spacer.makeHorizontal 20
-
-spaceWidget :: Widget f
-spaceWidget = Widget.liftView spaceView
-
-setTextColor :: Draw.Color -> TWidget t m -> TWidget t m
-setTextColor = atTextStyle . TextEdit.atSTextViewStyle . TextView.atStyleColor . const
-
 makeVarView :: MonadF m => Data.VariableRef -> Widget.Id -> TWidget t m
 makeVarView var myId = do
   name <- getP $ Anchors.variableNameRef var
@@ -73,7 +57,7 @@ makeVarView var myId = do
         Data.BuiltinRef _ -> Config.builtinColor
         Data.DefinitionRef _ -> Config.definitionColor
         Data.ParameterRef _ -> Config.parameterColor
-  setTextColor color $
+  BWidgets.setTextColor color $
     BWidgets.makeFocusableTextView name myId
 
 makeActiveHoleEdit ::
@@ -265,7 +249,7 @@ makeApplyExpressionEdit definitionI expressionPtr (Data.Apply funcI argI) myId =
        ] $ makeExpressionEdit (Argument (ArgumentData funcType expressionPtr)) definitionI argIPtr
     return
       ((BWidgets.hbox . if isInfix then reverse else id)
-       [funcEdit, spaceWidget, argEdit], parenId)
+       [funcEdit, BWidgets.spaceWidget, argEdit], parenId)
 
 isApplyOfInfixOp :: Monad m => IRef Data.Expression -> CTransaction t m Bool
 isApplyOfInfixOp exprI = do
@@ -369,13 +353,13 @@ makeDefinitionEdit definitionI = do
 
   let replaceEventMap = Widget.actionEventMapMovesCursor Config.delKeys "Replace" $ replace bodyRef
   return .
-    Widget.weakerEvents eventMap . hboxSpaced $
+    Widget.weakerEvents eventMap . BWidgets.hboxSpaced $
     [nameEdit] ++ paramsEdits ++ [equals, Widget.weakerEvents replaceEventMap expressionEdit]
   where
     makeParamEdit (i, paramI) =
       (liftM . Widget.weakerEvents) (paramEventMap paramI) .
       BWidgets.wrapDelegated FocusDelegator.NotDelegating
-      (setTextColor Config.parameterColor .
+      (BWidgets.setTextColor Config.parameterColor .
        BWidgets.makeNameEdit ("<unnamed param " ++ show i ++ ">") paramI) $
       WidgetIds.fromIRef paramI
     bodyRef = Property.composeLabel Data.defBody Data.atDefBody definitionRef
