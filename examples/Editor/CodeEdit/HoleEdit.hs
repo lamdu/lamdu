@@ -90,16 +90,15 @@ makeActiveHoleEdit ancestry definitionI curState expressionPtr myId = do
     pickResult (Result rType var) = do
       Transaction.writeIRef expressionI $ Data.ExpressionGetVariable var
       case rType of
-        InfixOperator argData -> do
-          parentI <- Property.get $ ETypes.adParentPtr argData
-          Property.pureModify (Transaction.fromIRef parentI) flipArgs
+        InfixOperator (ETypes.ArgumentData { ETypes.adParentPtr = parentPtr, ETypes.adApply = apply}) -> do
+          parentI <- Property.get parentPtr
+          Property.set (Transaction.fromIRef parentI) . Data.ExpressionApply $ flipArgs apply
         _ -> return ()
       return Widget.EventResult {
         Widget.eCursor = Just expressionId,
         Widget.eAnimIdMapping = mapAnimId var
         }
-    flipArgs (Data.ExpressionApply (Data.Apply x y)) = Data.ExpressionApply $ Data.Apply y x
-    flipArgs _ = error "flipArgs expects apply"
+    flipArgs (Data.Apply x y) = Data.Apply y x
 
     mapAnimId var animId =
       maybe animId mapSearchResult $
@@ -143,7 +142,7 @@ makeActiveHoleEdit ancestry definitionI curState expressionPtr myId = do
           ETypes.Argument argData ->
             [Result (InfixOperator argData) var,
              Result PrefixOperator var]
-          _ -> [Result NotOperator var]
+          _ -> [Result PrefixOperator var]
       | otherwise = [Result NotOperator var]
 
   assignCursor myId searchTermId $ do
