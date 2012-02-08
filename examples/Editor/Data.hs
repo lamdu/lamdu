@@ -37,7 +37,8 @@ emptyHoleState = HoleState ""
 data Expression =
   ExpressionApply Apply |
   ExpressionGetVariable VariableRef |
-  ExpressionHole HoleState
+  ExpressionHole HoleState |
+  ExpressionLiteralInteger Integer
   deriving (Eq, Ord, Read, Show)
 
 data Parameter = Parameter

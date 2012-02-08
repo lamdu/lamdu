@@ -1,28 +1,6 @@
 {-# OPTIONS -fno-warn-missing-signatures #-}
 
-module Editor.Config(
-    overlayDocKeys,
-    quitKeys, undoKeys, redoKeys,
-
-    -- cutKeys, pasteKeys,
-
-    makeBranchKeys, delBranchKeys,
-
-    -- actionKeys,
-
-    delKeys, callWithArgumentKeys, giveAsArgumentKeys, addNextArgumentKeys,
-    pickResultKeys, jumpToDefinitionKeys, relinkKeys,
-
-    -- moveToParentKeys,
-
-    addParamKeys, newDefinitionKeys,
-
-    closePaneKeys,
-
-    exprFocusDelegatorKeys,
-
-    builtinColor, definitionColor, parameterColor)
-where
+module Editor.Config where
 
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -75,3 +53,5 @@ newDefinitionKeys = [alt 'n']
 builtinColor = Draw.Color 1 0.6 0.2 1
 definitionColor = Draw.Color 1 1 1 1
 parameterColor = Draw.Color 0.2 0.8 0.9 1
+
+literalIntColor = Draw.Color 0 1 0 1

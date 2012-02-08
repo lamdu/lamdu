@@ -11,6 +11,7 @@ import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.CodeEdit.ApplyEdit as ApplyEdit
+import qualified Editor.CodeEdit.LiteralEdit as LiteralEdit
 import qualified Editor.CodeEdit.HoleEdit as HoleEdit
 import qualified Editor.CodeEdit.Types as ETypes
 import qualified Editor.CodeEdit.VarEdit as VarEdit
@@ -28,6 +29,8 @@ needParen (Data.ExpressionGetVariable _) ETypes.NotArgument =
 needParen (Data.ExpressionGetVariable varRef) _ =
   ETypes.isInfixVar varRef
 needParen (Data.ExpressionHole _) _ =
+  return False
+needParen (Data.ExpressionLiteralInteger _) _ =
   return False
 needParen (Data.ExpressionApply (Data.Apply funcI _)) (ETypes.Argument argData) = do
   let
@@ -62,6 +65,8 @@ make ancestry definitionI expressionPtr = do
         VarEdit.make expressionId varRef
       Data.ExpressionApply apply ->
         ApplyEdit.make (flip make definitionI) expressionPtr apply
+      Data.ExpressionLiteralInteger integer ->
+        LiteralEdit.makeInt expressionI integer
 
   exprNeedParen <- needParen expr ancestry
   (resultWidget, resultParenId) <-
