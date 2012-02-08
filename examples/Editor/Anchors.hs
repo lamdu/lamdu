@@ -11,10 +11,10 @@ module Editor.Anchors(
     dbStore, DBTag,
     viewStore, ViewTag,
     aNameGuid, aNameRef, variableNameRef,
-    makePane, makeDefinition)
+    makePane, makeDefinition, newPane)
 where
 
-import Control.Monad (unless, (<=<))
+import Control.Monad (when, unless, (<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Writer (WriterT, tell, execWriterT)
 import Data.Binary (Binary(..))
@@ -219,3 +219,12 @@ aNameRef = Property.pureCompose (fromMaybe "") Just . aNameGuid . IRef.guid
 
 variableNameRef :: Monad m => Data.VariableRef -> Property (Transaction t m) String
 variableNameRef = Data.onVariableIRef aNameRef
+
+newPane :: Monad m => IRef Data.Definition -> Transaction ViewTag m Widget.Id
+newPane defI = do
+  panes <- Property.get panesRef
+  when (all ((/= defI) . paneDefinition) panes) $
+    Property.set panesRef $ makePane defI : panes
+  return $ WidgetIds.fromIRef defI
+  where
+    panesRef = Transaction.fromIRef rootIRef

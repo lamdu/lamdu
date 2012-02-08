@@ -2,210 +2,41 @@
 module Editor.CodeEdit(makePanesEdit) where
 
 import Control.Arrow (first)
-import Control.Monad (liftM, when)
-import Data.ByteString.Char8 (pack)
-import Data.List(isInfixOf)
+import Control.Monad (liftM)
 import Data.List.Utils(enumerate, removeAt)
-import Data.Maybe(isJust)
 import Data.Monoid(Monoid(..))
 import Data.Store.IRef (IRef)
 import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, getP, assignCursor, TWidget, readCursor)
+import Editor.CTransaction (CTransaction, getP, assignCursor, TWidget)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
-import qualified Data.Char as Char
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.Types as ETypes
 import qualified Editor.CodeEdit.VarView as VarView
+import qualified Editor.CodeEdit.HoleEdit as HoleEdit
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
 import qualified Editor.WidgetIds as WidgetIds
-import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.Bottle.Animation as Anim
-import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
-getDefinitionParamRefs :: Data.Definition -> [Data.VariableRef]
-getDefinitionParamRefs (Data.Definition { Data.defParameters = paramIs }) =
-  map Data.ParameterRef paramIs
-
-data ResultType = InfixOperator | PrefixOperator | NotOperator
-  deriving (Eq, Ord, Read, Show)
-
-data Result = Result {
-  _resultType :: ResultType,
-  resultVar :: Data.VariableRef
-  }
-
-varId :: Data.VariableRef -> Widget.Id
-varId = Data.onVariableIRef WidgetIds.fromIRef
-
-makeResultView ::
-  (MonadF m) => Widget.Id -> Result ->
-  CTransaction t m (Widget (Transaction t m))
-makeResultView myId (Result typ var) =
-  maybeAddParens typ .
-  VarView.make var . mappend myId .
-  maybeAddPrefixWrap typ $
-  varId var
-  where
-    maybeAddPrefixWrap PrefixOperator = (`Widget.joinId` ["prefix"])
-    maybeAddPrefixWrap _ = id
-    maybeAddParens PrefixOperator = (>>= addParens (varId var))
-    maybeAddParens _ = id
-
-
-makeActiveHoleEdit ::
-  MonadF m => ETypes.ExpressionAncestry m ->
-  IRef Data.Definition -> Data.HoleState -> Transaction.Property ViewTag m (IRef Data.Expression) ->
-  Widget.Id -> TWidget ViewTag m
-makeActiveHoleEdit ancestry definitionI curState expressionPtr myId = do
-  expressionI <- getP expressionPtr
-  let
-    expressionId = WidgetIds.fromIRef expressionI
-    expressionAnimId = Widget.cursorId expressionId
-    maybeResults [] = BWidgets.makeTextView "(No results)" $ Widget.joinId myId ["no results"]
-    maybeResults xs = liftM BWidgets.vbox $ mapM makeResultWidget xs
-
-    searchTermId = WidgetIds.searchTermId myId
-    searchResultsId = Widget.joinId myId ["search results"]
-    makeResultWidget result =
-      (liftM . Widget.strongerEvents) (pickResultEventMap result) $
-      makeResultView searchResultsId result
-    pickResultEventMap var =
-      mconcat [
-        EventMap.fromEventTypes Config.pickResultKeys "Pick this search result" $ pickResult var,
-        EventMap.fromEventTypes Config.addNextArgumentKeys "Pick this search result and add argument" $ pickResultAndAddArg var
-        ]
-
-    pickResultAndAddArg result = do
-      res <- pickResult result
-      Transaction.writeIRef expressionI . Data.ExpressionGetVariable $ resultVar result
-      cursor <-
-        diveIn $
-        case ancestry of
-          ETypes.Argument (ETypes.ArgumentData _ parentPtr) -> DataOps.callWithArg parentPtr
-          _ -> DataOps.callWithArg expressionPtr
-      return res { Widget.eCursor = Just cursor }
-
-    pickResult (Result isInfix var) = do
-      Transaction.writeIRef expressionI $ Data.ExpressionGetVariable var
-      when (isInfix == InfixOperator) $ do
-        let ETypes.Argument argData = ancestry
-        parentI <- Property.get $ ETypes.adParentPtr argData
-        Property.pureModify (Transaction.fromIRef parentI) flipArgs
-      return Widget.EventResult {
-        Widget.eCursor = Just expressionId,
-        Widget.eAnimIdMapping = mapAnimId var
-        }
-    flipArgs (Data.ExpressionApply (Data.Apply x y)) = Data.ExpressionApply $ Data.Apply y x
-    flipArgs _ = error "flipArgs expects func"
-
-    mapAnimId var animId =
-      maybe animId mapSearchResult $
-      Anim.subId (Widget.cursorId searchResultsId) animId
-      where
-        -- TODO: Is there a better way?
-        getVariableTextAnimId = expressionAnimId
-        mapOtherResult resultId =
-          ["mismatched result"]
-            `Anim.joinId` expressionAnimId
-            `Anim.joinId` resultId
-        mapSearchResult resultId =
-          maybe (mapOtherResult resultId)
-            (Anim.joinId getVariableTextAnimId) $
-          (Anim.subId . Widget.cursorId . varId) var resultId
-
-    stateProp =
-      Property.Property {
-        Property.get = return $ Data.holeSearchTerm curState,
-        Property.set = Transaction.writeIRef expressionI . Data.ExpressionHole . (`Data.atHoleSearchTerm` curState) . const
-      }
-    goodResult (_, name) = all (`isInfixOf` name) . words $ Data.holeSearchTerm curState
-    definitionRef = Transaction.fromIRef definitionI
-    newName = concat . words $ Data.holeSearchTerm curState
-    searchTermEventMap =
-      mconcat
-      [ Widget.actionEventMapMovesCursor Config.addParamKeys "Add as Parameter" $ do
-          newParam <- DataOps.addParameter definitionRef
-          Property.set (Anchors.aNameRef newParam) newName
-          Transaction.writeIRef expressionI . Data.ExpressionGetVariable $ Data.ParameterRef newParam
-          return expressionId
-      , Widget.actionEventMapMovesCursor Config.newDefinitionKeys "Add new as Definition" $ do
-          newDefI <- Anchors.makeDefinition
-          Property.set (Anchors.aNameRef newDefI) newName
-          Transaction.writeIRef expressionI . Data.ExpressionGetVariable $ Data.DefinitionRef newDefI
-          newPane newDefI
-      ]
-    processResult (var, name)
-      | isOperatorName name && ETypes.isArgument ancestry =
-        [Result InfixOperator var, Result PrefixOperator var]
-      | otherwise = [Result NotOperator var]
-
-  assignCursor myId searchTermId $ do
-    params <- liftM getDefinitionParamRefs $ getP definitionRef
-    globals <- getP Anchors.globals
-    let addVarName var = liftM ((,) var) . getP $ Anchors.variableNameRef var
-    vars <- mapM addVarName $ params ++ globals
-    let
-      results = concatMap processResult $ filter goodResult vars
-      (firstResults, moreResults) = splitAt 3 results
-      mkMoreResultWidget
-        | null moreResults = return []
-        | otherwise = liftM (:[]) . BWidgets.makeTextView "..." $ Widget.joinId myId ["more results"]
-    searchTermWidget <-
-      (liftM . Widget.strongerEvents . mconcat . concat)
-        [map pickResultEventMap (take 1 firstResults),
-         [searchTermEventMap]] $
-      BWidgets.makeWordEdit stateProp searchTermId
-    resultWidgets <- maybeResults firstResults
-    moreResultsWidget <- mkMoreResultWidget
-    return .
-      BWidgets.vbox $ [searchTermWidget, resultWidgets] ++ moreResultsWidget
-
-makeHoleEdit ::
-  MonadF m => ETypes.ExpressionAncestry m ->
-  IRef Data.Definition -> Data.HoleState ->
-  Transaction.Property ViewTag m (IRef Data.Expression) ->
-  Widget.Id -> TWidget ViewTag m
-makeHoleEdit ancestry definitionI curState expressionPtr myId = do
-  cursor <- readCursor
-  widget <-
-    if isJust (Widget.subId myId cursor)
-    then makeActiveHoleEdit ancestry definitionI curState expressionPtr myId
-    else BWidgets.makeFocusableTextView snippet $ WidgetIds.searchTermId myId
-  return $ Widget.backgroundColor (Widget.joinId myId ["hole background"]) holeBackgroundColor widget
-  where
-    holeBackgroundColor = Draw.Color 0.8 0 0 0.3
-    snippet
-      | null searchText = "-"
-      | otherwise = searchText
-    searchText = Data.holeSearchTerm curState
-
-diveIn :: Functor f => f (IRef a) -> f Widget.Id
-diveIn = fmap $ WidgetIds.delegating . WidgetIds.fromIRef
-
 replace :: MonadF m => Transaction.Property t m (IRef Data.Expression) -> Transaction t m Widget.Id
-replace = diveIn . DataOps.replace
+replace = ETypes.diveIn . DataOps.replace
 
 makeAddNextArgEventMap :: MonadF m =>
   Transaction.Property t m (IRef Data.Expression) -> Widget.EventHandlers (Transaction t m)
 makeAddNextArgEventMap =
   Widget.actionEventMapMovesCursor Config.addNextArgumentKeys "Add another argument" .
-  diveIn . DataOps.callWithArg
-
-isOperatorName :: String -> Bool
-isOperatorName = all (not . Char.isAlphaNum)
+  ETypes.diveIn . DataOps.callWithArg
 
 isInfixVar :: Monad m => Data.VariableRef -> CTransaction t m Bool
-isInfixVar = liftM isOperatorName . getP . Anchors.variableNameRef
+isInfixVar = liftM ETypes.isOperatorName . getP . Anchors.variableNameRef
 
 isInfixFunc :: Monad m => IRef Data.Expression -> CTransaction t m Bool
 isInfixFunc funcI = do
@@ -265,8 +96,8 @@ makeExpressionEdit ancestry definitionI expressionPtr = do
   expressionI <- getP expressionPtr
   let
     expressionRef = Transaction.fromIRef expressionI
-    mkCallWithArg = diveIn $ DataOps.callWithArg expressionPtr
-    mkGiveAsArg = diveIn $ DataOps.giveAsArg expressionPtr
+    mkCallWithArg = ETypes.diveIn $ DataOps.callWithArg expressionPtr
+    mkGiveAsArg = ETypes.diveIn $ DataOps.giveAsArg expressionPtr
     expressionId = WidgetIds.fromIRef expressionI
 
     wrap keys entryState f =
@@ -290,7 +121,7 @@ makeExpressionEdit ancestry definitionI expressionPtr = do
         liftM ((,) False) .
         wrap FocusDelegator.defaultKeys FocusDelegator.NotDelegating .
           (fmap . liftM) (flip (,) expressionId) $
-          makeHoleEdit ancestry definitionI holeState expressionPtr
+          HoleEdit.make ancestry definitionI holeState expressionPtr
       Data.ExpressionGetVariable varRef -> do
         varRefView <- VarView.make varRef expressionId
         isInfix <- isInfixVar varRef
@@ -299,7 +130,7 @@ makeExpressionEdit ancestry definitionI expressionPtr = do
             Widget.actionEventMapMovesCursor Config.jumpToDefinitionKeys "Jump to definition" jumpToDefinition
           jumpToDefinition =
             case varRef of
-              Data.DefinitionRef defI -> newPane defI
+              Data.DefinitionRef defI -> Anchors.newPane defI
               Data.ParameterRef paramI -> return $ WidgetIds.fromIRef paramI
               Data.BuiltinRef _builtI -> return expressionId
           needParen =
@@ -326,19 +157,11 @@ makeExpressionEdit ancestry definitionI expressionPtr = do
 
   (resultWidget, resultParenId) <-
     if needParen then do
-      resWidget <- addParens parenId widget
+      resWidget <- ETypes.addParens parenId widget
       return (resWidget, expressionId)
     else
       return (widget, parenId)
   return (Widget.weakerEvents eventMap resultWidget, resultParenId)
-
-addParens :: MonadF m => Widget.Id -> Widget (Transaction t m) -> TWidget t m
-addParens parenId widget = do
-  beforeParen <- label "("
-  afterParen <- label ")"
-  return $ BWidgets.hbox [ beforeParen, widget, afterParen ]
-  where
-    label str = BWidgets.makeTextView str $ Widget.joinId parenId [pack str]
 
 makeDefinitionEdit :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
 makeDefinitionEdit definitionI = do
@@ -374,15 +197,6 @@ makeDefinitionEdit definitionI = do
     nameEditAnimId = Widget.joinId myId ["name"]
     myId = WidgetIds.fromIRef definitionI
 
-newPane :: Monad m => IRef Data.Definition -> Transaction ViewTag m Widget.Id
-newPane defI = do
-  panes <- Property.get panesRef
-  when (all ((/= defI) . Anchors.paneDefinition) panes) $
-    Property.set panesRef $ Anchors.makePane defI : panes
-  return $ WidgetIds.fromIRef defI
-  where
-    panesRef = Transaction.fromIRef Anchors.rootIRef
-
 makePanesEdit :: MonadF m => TWidget ViewTag m
 makePanesEdit = do
   panes <- getP panesRef
@@ -392,7 +206,7 @@ makePanesEdit = do
       Widget.actionEventMapMovesCursor Config.newDefinitionKeys
         "New Definition" $ do
           newDefI <- Anchors.makeDefinition
-          newPane newDefI
+          Anchors.newPane newDefI
 
     delPane i = do
       let newPanes = removeAt i panes

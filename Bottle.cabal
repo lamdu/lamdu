@@ -102,7 +102,7 @@ Executable Editor
                        Editor.BottleWidgets,
                        Editor.CodeEdit,
                        Editor.CodeEdit.Types,
-                       Editor.CodeEdit.Hole,
+                       Editor.CodeEdit.HoleEdit,
                        Editor.CodeEdit.VarView,
                        Editor.BranchGUI
   ghc-options:         -O2 -Wall
