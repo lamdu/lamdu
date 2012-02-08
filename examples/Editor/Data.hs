@@ -7,7 +7,7 @@ module Editor.Data (
   VariableRef(..), onVariableIRef,
   Apply(..), atApplyFunc, atApplyArg,
   HoleState(..),
-    emptyHoleState, atHoleSearchTerm, atHoleCachedSearchResults,
+    emptyHoleState, atHoleSearchTerm, --atHoleCachedSearchResults,
   Expression(..))
 where
 
@@ -25,14 +25,14 @@ data Apply = Apply {
   }
   deriving (Eq, Ord, Read, Show)
 
-data HoleState = HoleState {
-  holeSearchTerm :: String,
-  holeCachedSearchResults :: [VariableRef]
+data HoleState = HoleState
+  { holeSearchTerm :: String
+  --, holeCachedSearchResults :: [VariableRef]
   }
   deriving (Eq, Ord, Read, Show)
 
 emptyHoleState :: HoleState
-emptyHoleState = HoleState "" []
+emptyHoleState = HoleState ""
 
 data Expression =
   ExpressionApply Apply |

@@ -52,8 +52,8 @@ callWithArg expressionPtr = do
 newHole :: Monad m => Transaction t m (IRef Data.Expression)
 newHole =
   Transaction.newIRef . Data.ExpressionHole $ Data.HoleState
-  { Data.holeSearchTerm = "",
-    Data.holeCachedSearchResults = []
+  { Data.holeSearchTerm = ""
+  --, Data.holeCachedSearchResults = []
   }
 
 replace ::
