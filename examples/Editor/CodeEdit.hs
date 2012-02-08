@@ -60,9 +60,35 @@ makeVarView var myId = do
   BWidgets.setTextColor color $
     BWidgets.makeFocusableTextView name myId
 
-getDefinitionParamRefs :: Data.Definition -> [VariableRef]
+getDefinitionParamRefs :: Data.Definition -> [Data.VariableRef]
 getDefinitionParamRefs (Data.Definition { Data.defParameters = paramIs }) =
   map Data.ParameterRef paramIs
+
+data ResultType = InfixOperator | PrefixOperator | NotOperator
+  deriving (Eq, Ord, Read, Show)
+
+data Result = Result {
+  _resultType :: ResultType,
+  resultVar :: Data.VariableRef
+  }
+
+varId :: Data.VariableRef -> Widget.Id
+varId = Data.onVariableIRef WidgetIds.fromIRef
+
+makeResultView ::
+  (MonadF m) => Widget.Id -> Result ->
+  CTransaction t m (Widget (Transaction t m))
+makeResultView myId (Result typ var) =
+  maybeAddParens typ .
+  makeVarView var . mappend myId .
+  maybeAddPrefixWrap typ $
+  varId var
+  where
+    maybeAddPrefixWrap PrefixOperator = (`Widget.joinId` ["prefix"])
+    maybeAddPrefixWrap _ = id
+    maybeAddParens PrefixOperator = (>>= addParens (varId var))
+    maybeAddParens _ = id
+
 
 makeActiveHoleEdit ::
   MonadF m => ExpressionAncestry m ->
@@ -78,22 +104,18 @@ makeActiveHoleEdit ancestry definitionI curState expressionPtr myId = do
 
     searchTermId = WidgetIds.searchTermId myId
     searchResultsId = Widget.joinId myId ["search results"]
-    varId = Data.onVariableIRef WidgetIds.fromIRef
-    makeResultWidget v@(isInfix, var) =
-      (liftM . Widget.strongerEvents) (pickResultEventMap v) .
-      (if isInfix == Just False then (>>= addParens (varId var)) else id) .
-      makeVarView var . mappend searchResultsId .
-      (if isInfix == Just True then (`Widget.joinId` ["infix"]) else id) $
-      varId var
+    makeResultWidget result =
+      (liftM . Widget.strongerEvents) (pickResultEventMap result) $
+      makeResultView searchResultsId result
     pickResultEventMap var =
       mconcat [
         EventMap.fromEventTypes Config.pickResultKeys "Pick this search result" $ pickResult var,
         EventMap.fromEventTypes Config.addNextArgumentKeys "Pick this search result and add argument" $ pickResultAndAddArg var
         ]
 
-    pickResultAndAddArg v@(_, var) = do
-      res <- pickResult v
-      Transaction.writeIRef expressionI $ Data.ExpressionGetVariable var
+    pickResultAndAddArg result = do
+      res <- pickResult result
+      Transaction.writeIRef expressionI . Data.ExpressionGetVariable $ resultVar result
       cursor <-
         diveIn $
         case ancestry of
@@ -101,9 +123,9 @@ makeActiveHoleEdit ancestry definitionI curState expressionPtr myId = do
           _ -> DataOps.callWithArg expressionPtr
       return res { Widget.eCursor = Just cursor }
 
-    pickResult (isInfix, var) = do
+    pickResult (Result isInfix var) = do
       Transaction.writeIRef expressionI $ Data.ExpressionGetVariable var
-      when (isInfix == Just True) $ do
+      when (isInfix == InfixOperator) $ do
         let Argument argData = ancestry
         parentI <- Property.get $ adParentPtr argData
         Property.pureModify (Transaction.fromIRef parentI) flipArgs
@@ -151,8 +173,9 @@ makeActiveHoleEdit ancestry definitionI curState expressionPtr myId = do
           newPane newDefI
       ]
     processResult (var, name)
-      | isOperatorName name && isArgument ancestry = [(Just True, var), (Just False, var)]
-      | otherwise = [(Nothing, var)]
+      | isOperatorName name && isArgument ancestry =
+        [Result InfixOperator var, Result PrefixOperator var]
+      | otherwise = [Result NotOperator var]
 
   assignCursor myId searchTermId $ do
     params <- liftM getDefinitionParamRefs $ getP definitionRef
