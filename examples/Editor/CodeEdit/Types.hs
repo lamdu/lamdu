@@ -36,7 +36,8 @@ data FuncType = Infix | Prefix
 
 data ArgumentData m = ArgumentData {
   _adFuncType :: FuncType,
-  adParentPtr :: Transaction.Property ViewTag m (IRef Data.Expression)
+  adParentPtr :: Transaction.Property ViewTag m (IRef Data.Expression),
+  adApply :: Data.Apply
   }
 
 data ExpressionAncestry m =

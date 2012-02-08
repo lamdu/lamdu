@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.HoleEdit(make) where
 
-import Control.Monad (liftM, when)
+import Control.Monad (liftM)
 import Data.List(isInfixOf)
 import Data.Maybe(isJust)
 import Data.Monoid(Monoid(..))
@@ -26,11 +26,13 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
 
-data ResultType = InfixOperator | PrefixOperator | NotOperator
-  deriving (Eq, Ord, Read, Show)
+data ResultType m =
+  InfixOperator (ETypes.ArgumentData m) |
+  PrefixOperator |
+  NotOperator
 
-data Result = Result {
-  _resultType :: ResultType,
+data Result m = Result {
+  _resultType :: ResultType m,
   _resultVar :: Data.VariableRef
   }
 
@@ -39,7 +41,7 @@ getDefinitionParamRefs (Data.Definition { Data.defParameters = paramIs }) =
   map Data.ParameterRef paramIs
 
 makeResultView ::
-  (MonadF m) => Widget.Id -> Result ->
+  (MonadF m) => Widget.Id -> Result m ->
   CTransaction t m (Widget (Transaction t m))
 makeResultView myId (Result typ var) =
   maybeAddParens typ .
@@ -80,16 +82,18 @@ makeActiveHoleEdit ancestry definitionI curState expressionPtr myId = do
       cursor <-
         ETypes.diveIn $
         case ancestry of
-          ETypes.Argument (ETypes.ArgumentData _ parentPtr) -> DataOps.callWithArg parentPtr
+          ETypes.Argument (ETypes.ArgumentData { ETypes.adParentPtr = parentPtr }) ->
+            DataOps.callWithArg parentPtr
           _ -> DataOps.callWithArg expressionPtr
       return res { Widget.eCursor = Just cursor }
 
-    pickResult (Result isInfix var) = do
+    pickResult (Result rType var) = do
       Transaction.writeIRef expressionI $ Data.ExpressionGetVariable var
-      when (isInfix == InfixOperator) $ do
-        let ETypes.Argument argData = ancestry
-        parentI <- Property.get $ ETypes.adParentPtr argData
-        Property.pureModify (Transaction.fromIRef parentI) flipArgs
+      case rType of
+        InfixOperator argData -> do
+          parentI <- Property.get $ ETypes.adParentPtr argData
+          Property.pureModify (Transaction.fromIRef parentI) flipArgs
+        _ -> return ()
       return Widget.EventResult {
         Widget.eCursor = Just expressionId,
         Widget.eAnimIdMapping = mapAnimId var
@@ -134,8 +138,12 @@ makeActiveHoleEdit ancestry definitionI curState expressionPtr myId = do
           Anchors.newPane newDefI
       ]
     processResult (var, name)
-      | ETypes.isOperatorName name && ETypes.isArgument ancestry =
-        [Result InfixOperator var, Result PrefixOperator var]
+      | ETypes.isOperatorName name =
+        case ancestry of
+          ETypes.Argument argData ->
+            [Result (InfixOperator argData) var,
+             Result PrefixOperator var]
+          _ -> [Result NotOperator var]
       | otherwise = [Result NotOperator var]
 
   assignCursor myId searchTermId $ do

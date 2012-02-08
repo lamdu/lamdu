@@ -27,7 +27,7 @@ make ::
    CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id)) ->
   ETypes.ExpressionPtr m -> Data.Apply ->
   CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id)
-make makeExpressionEdit expressionPtr (Data.Apply funcI argI) = do
+make makeExpressionEdit expressionPtr apply@(Data.Apply funcI argI) = do
   expressionI <- getP expressionPtr
   let expressionId = WidgetIds.fromIRef expressionI
   flip
@@ -58,7 +58,7 @@ make makeExpressionEdit expressionPtr (Data.Apply funcI argI) = do
          (liftM . first . Widget.weakerEvents . mconcat)
          [ addNextArgEventMap
          , delEventMap funcI
-         ] $ makeExpressionEdit (ETypes.Argument (ETypes.ArgumentData funcType expressionPtr)) argIPtr
+         ] $ makeExpressionEdit (ETypes.Argument (ETypes.ArgumentData funcType expressionPtr apply)) argIPtr
       return
         ((BWidgets.hbox . if isInfix then reverse else id)
          [funcEdit, BWidgets.spaceWidget, argEdit], parenId)
