@@ -60,6 +60,10 @@ makeVarView var myId = do
   BWidgets.setTextColor color $
     BWidgets.makeFocusableTextView name myId
 
+getDefinitionParamRefs :: Data.Definition -> [VariableRef]
+getDefinitionParamRefs (Data.Definition { Data.defParameters = paramIs }) =
+  map Data.ParameterRef paramIs
+
 makeActiveHoleEdit ::
   MonadF m => ExpressionAncestry m ->
   IRef Data.Definition -> Data.HoleState -> Transaction.Property ViewTag m (IRef Data.Expression) ->
@@ -130,7 +134,6 @@ makeActiveHoleEdit ancestry definitionI curState expressionPtr myId = do
         Property.get = return $ Data.holeSearchTerm curState,
         Property.set = Transaction.writeIRef expressionI . Data.ExpressionHole . (`Data.atHoleSearchTerm` curState) . const
       }
-    getVarName var = liftM ((,) var) . getP $ Anchors.variableNameRef var
     goodResult (_, name) = all (`isInfixOf` name) . words $ Data.holeSearchTerm curState
     definitionRef = Transaction.fromIRef definitionI
     newName = concat . words $ Data.holeSearchTerm curState
@@ -152,9 +155,10 @@ makeActiveHoleEdit ancestry definitionI curState expressionPtr myId = do
       | otherwise = [(Nothing, var)]
 
   assignCursor myId searchTermId $ do
-    Data.Definition paramIs _ <- getP definitionRef
+    params <- liftM getDefinitionParamRefs $ getP definitionRef
     globals <- getP Anchors.globals
-    vars <- mapM getVarName $ map Data.ParameterRef paramIs ++ globals
+    let addVarName var = liftM ((,) var) . getP $ Anchors.variableNameRef var
+    vars <- mapM addVarName $ params ++ globals
     let
       results = concatMap processResult $ filter goodResult vars
       (firstResults, moreResults) = splitAt 3 results
