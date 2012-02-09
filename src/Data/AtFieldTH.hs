@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Data.AtFieldTH (make) where
 
 import qualified Data.Char as Char
@@ -81,7 +82,9 @@ varsOfType (ForallT _ _ t) = varsOfType t -- TODO: dwa need todo something wrt t
 varsOfType (VarT x) = [x]
 varsOfType (ConT _) = []
 varsOfType (TupleT _) = []
+#if __GLASGOW_HASKELL__ >= 704
 varsOfType (UnboxedTupleT _) = []
+#endif
 varsOfType ArrowT = []
 varsOfType ListT = []
 varsOfType (AppT x y) = varsOfType x ++ varsOfType y
@@ -94,7 +97,9 @@ mapTypeVarNames func (ForallT vars cxt t) =
 mapTypeVarNames func (VarT x) = VarT (func x)
 mapTypeVarNames _ (ConT x) = ConT x
 mapTypeVarNames _ (TupleT x) = TupleT x
+#if __GLASGOW_HASKELL__ >= 704
 mapTypeVarNames _ (UnboxedTupleT x) = UnboxedTupleT x
+#endif
 mapTypeVarNames _ ArrowT = ArrowT
 mapTypeVarNames _ ListT = ListT
 mapTypeVarNames func (AppT x y) = AppT (mapTypeVarNames func x) (mapTypeVarNames func y)
