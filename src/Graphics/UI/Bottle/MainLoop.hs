@@ -84,8 +84,9 @@ mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
   eventLoop handleEvents
 
 mainLoopAnim ::
-  (Size -> Event -> IO (Maybe Widget.EventResult)) -> (Size -> IO Anim.Frame) -> IO a
-mainLoopAnim eventHandler makeFrame = do
+  (Size -> Event -> IO (Maybe Widget.EventResult)) -> (Size -> IO Anim.Frame) ->
+  IO Anim.R -> IO a
+mainLoopAnim eventHandler makeFrame getAnimationHalfLife = do
   frameStateVar <- newIORef Nothing
   let
     makeImage isChange size = do
@@ -101,9 +102,10 @@ mainLoopAnim eventHandler makeFrame = do
             if drawCount == 0 || isChange
               then do
                 dest <- makeFrame size
+                animationHalfLife <- getAnimationHalfLife
                 let
                   elapsed = realToFrac (curTime `diffUTCTime` prevTime)
-                  progress = (1 - 0.5 ** (elapsed/0.05))
+                  progress = (1 - 0.5 ** (elapsed/animationHalfLife))
                 return . Just $
                   case Anim.nextFrame progress dest prevFrame of
                     Nothing -> (drawCount + 1, (curTime, dest))
@@ -135,9 +137,9 @@ mainLoopAnim eventHandler makeFrame = do
           return True
   mainLoopImage imgEventHandler makeImage
 
-mainLoopWidget :: IO (Widget IO) -> IO a
-mainLoopWidget mkWidget =
-  mainLoopAnim eventHandler mkImage
+mainLoopWidget :: IO (Widget IO) -> IO Anim.R -> IO a
+mainLoopWidget mkWidget getAnimationHalfLife =
+  mainLoopAnim eventHandler mkImage getAnimationHalfLife
   where
     eventHandler size event = do
       widget <- mkWidget

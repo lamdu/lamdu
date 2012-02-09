@@ -11,6 +11,7 @@ group = E.KeyEventType
 noMods = group E.noMods
 ctrl = group E.ctrl . E.charKey
 alt = group E.alt . E.charKey
+ctrlAlt = group (E.noMods {E.modCtrl = True, E.modAlt = True}) . E.charKey
 -- altShift = group E.noMods { E.modAlt = True, E.modShift = True } . E.charKey
 k = noMods . E.charKey
 
@@ -42,6 +43,7 @@ delKeys           = [noMods E.KeyBackspace, noMods E.KeyDel, group E.alt E.KeyDe
 giveAsArgumentKeys = [k '[']
 callWithArgumentKeys = [k ']']
 addNextArgumentKeys = [E.SpaceKeyEventType E.noMods]
+debugModeKeys = [ctrlAlt 'd']
 
 exprFocusDelegatorKeys = FocusDelegator.Keys {
   FocusDelegator.startDelegatingKey = group E.shift E.KeyRight,

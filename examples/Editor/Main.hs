@@ -3,9 +3,11 @@
 module Main(main) where
 
 import Control.Monad (liftM, unless)
+import Data.IORef
 import Editor.Anchors (DBTag)
 import Editor.CTransaction (runCTransaction)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
+import Graphics.UI.Bottle.Widget(Widget)
 import qualified Data.Store.Db as Db
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -30,11 +32,28 @@ main = do
   font <- Draw.openFont (defaultFont System.Info.os)
   Db.withDb "/tmp/codeedit.db" $ runDbStore font . Anchors.dbStore
 
+mainLoopDebugMode :: IO (Widget IO) -> (Widget IO -> IO (Widget IO)) -> IO a
+mainLoopDebugMode makeWidget addHelp = do
+  debugModeRef <- newIORef False
+  let
+    getAnimHalfLife = do
+      isDebugMode <- readIORef debugModeRef
+      return $ if isDebugMode then 1.0 else 0.05
+    addDebugMode widget = do
+      isDebugMode <- readIORef debugModeRef
+      let
+        doc = (if isDebugMode then "Disable" else "Enable") ++ " Debug Mode"
+        set = writeIORef debugModeRef (not isDebugMode)
+      return $
+        Widget.strongerEvents (Widget.actionEventMap Config.debugModeKeys doc set) widget
+    makeDebugModeWidget = addHelp =<< addDebugMode =<< makeWidget
+  mainLoopWidget makeDebugModeWidget getAnimHalfLife
+
 runDbStore :: Draw.Font -> Transaction.Store DBTag IO -> IO a
 runDbStore font store = do
   Anchors.initDB store
   addHelp <- EventMapDoc.makeToggledHelpAdder Config.overlayDocKeys helpStyle
-  mainLoopWidget $ addHelp =<< makeWidget
+  mainLoopDebugMode makeWidget addHelp
   where
     helpStyle = TextView.Style {
       TextView.styleColor = Draw.Color 1 1 1 1,
