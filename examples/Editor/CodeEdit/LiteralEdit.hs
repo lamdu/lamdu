@@ -35,5 +35,5 @@ makeInt expressionI integer =
     intAsStr =
       Property.pureCompose
         (const (show integer))
-        (Data.ExpressionLiteralInteger . read) expressionRef
+        (Data.ExpressionLiteralInteger . read . ("0" ++)) expressionRef
     myId = WidgetIds.fromIRef expressionI
