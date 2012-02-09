@@ -40,7 +40,7 @@ needParen (Data.ExpressionApply (Data.Apply funcI _)) (ETypes.Argument argData) 
     ETypes.Infix -> return True
     ETypes.Prefix -> ETypes.isApplyOfInfixOp leftFuncI
   isInfix <- liftM2 (||) (ETypes.isInfixFunc funcI) (ETypes.isApplyOfInfixOp funcI)
-  return $ isInfix == insideInfix
+  return $ not insideInfix || isInfix
 needParen (Data.ExpressionApply (Data.Apply funcI _)) ETypes.Root =
   ETypes.isInfixFunc funcI
 needParen (Data.ExpressionApply (Data.Apply funcI _)) ETypes.NotArgument =
