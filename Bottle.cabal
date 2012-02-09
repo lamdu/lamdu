@@ -63,8 +63,6 @@ Library
                        StateVar,
                        utf8-string >= 0.3,
                        split >= 0.1,
-                       newtype >= 0.2,
-                       newtype-th >= 0.2,
                        containers >= 0.4,
                        binary >= 0.5,
                        time >= 1.2,
@@ -83,7 +81,7 @@ Library
 
 Executable Editor
   hs-Source-Dirs:      examples
-  Build-Depends:       base >= 4 && < 5,
+  Build-Depends:       base >= 4,
                        graphics-drawingcombinators >= 1.4,
                        binary >= 0.5,
                        transformers,

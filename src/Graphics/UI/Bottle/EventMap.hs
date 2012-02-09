@@ -9,8 +9,6 @@ module Graphics.UI.Bottle.EventMap(
 where
 
 import Control.Monad(msum)
-import Control.Newtype(pack, op, over)
-import Control.Newtype.TH(mkNewTypes)
 import Data.Char(toLower, toUpper)
 import Data.List(isPrefixOf)
 import Data.Map(Map)
@@ -20,7 +18,7 @@ import Graphics.UI.GLFW (Key(..))
 import Graphics.UI.GLFW.Events (GLFWEvent(..), KeyEvent(..), IsPress(..))
 import Graphics.UI.GLFW.ModState (ModState(..), noMods, shift, ctrl, alt)
 import Prelude hiding (lookup)
---import qualified Data.AtFieldTH as AtFieldTH
+import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Map as Map
 
 charKey :: Char -> Key
@@ -70,18 +68,18 @@ data EventHandler a = EventHandler {
   ehHandler :: Event -> a
   }
   deriving (Functor)
--- AtFieldTH.make ''EventHandler
+--AtFieldTH.make ''EventHandler
 
-newtype EventMap a = EventMap (Map EventType (EventHandler a))
+newtype EventMap a = EventMap { unEventMap :: Map EventType (EventHandler a) }
   deriving (Functor)
-mkNewTypes [''EventMap]
+AtFieldTH.make ''EventMap
 
 instance Show (EventMap a) where
   show (EventMap m) = "EventMap (keys = " ++ show (Map.keys m) ++ ")"
 
 eventMapDocs :: EventMap a -> [(String, Doc)]
 eventMapDocs =
-  map f . Map.toList . op EventMap
+  map f . Map.toList . unEventMap
   where
     f (eventType, eventHandler) =
       (prettyEventType eventType, ehDoc eventHandler)
@@ -106,16 +104,16 @@ instance Monoid (EventMap a) where
   mappend = overrides
 
 delete :: EventType -> EventMap a -> EventMap a
-delete = over EventMap . Map.delete
+delete = atEventMap . Map.delete
 
 lookup :: Event -> EventMap a -> Maybe a
 lookup event eventMap =
   fmap (($ event) . ehHandler) . msum $
-  map (`Map.lookup` op EventMap eventMap) (eventTypesOf event)
+  map (`Map.lookup` unEventMap eventMap) (eventTypesOf event)
 
 singleton :: EventType -> Doc -> (Event -> a) -> EventMap a
 singleton eventType doc handler =
-  pack . Map.singleton eventType $
+  EventMap . Map.singleton eventType $
   EventHandler {
     ehDoc = doc,
     ehHandler = handler

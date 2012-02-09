@@ -12,8 +12,6 @@ where
 
 import Control.Applicative(liftA2)
 import Control.Arrow(first, second)
-import Control.Newtype(over)
-import Control.Newtype.TH(mkNewTypes)
 import Data.Function(on)
 import Data.List(isPrefixOf)
 import Data.Map(Map, (!))
@@ -44,7 +42,7 @@ AtFieldTH.make ''PositionedImage
 newtype Frame = Frame {
   iSubImages :: Map AnimId (Layer, PositionedImage)
   }
-$(mkNewTypes [''Frame])
+AtFieldTH.make ''Frame
 
 joinId :: AnimId -> AnimId -> AnimId
 joinId = (++)
@@ -135,7 +133,7 @@ isVirtuallySame (Frame a) (Frame b) =
     rectMap = Map.map (piRect . snd)
 
 mapIdentities :: (AnimId -> AnimId) -> Frame -> Frame
-mapIdentities = over Frame . Map.mapKeys
+mapIdentities = atFrame . Map.mapKeys
 
 nextFrame :: Frame -> Frame -> Maybe Frame
 nextFrame dest cur
@@ -178,20 +176,20 @@ backgroundColor animId layer color size =
 
 translate :: Vector2 R -> Frame -> Frame
 translate pos =
-  over Frame $ (fmap . second) moveImage
+  atFrame $ (fmap . second) moveImage
   where
     moveImage (PositionedImage img (Rect tl size)) =
       PositionedImage img (Rect (tl + pos) size)
 
 scale :: Vector2 R -> Frame -> Frame
 scale factor =
-  over Frame $ (fmap . second) scaleImage
+  atFrame $ (fmap . second) scaleImage
   where
     scaleImage (PositionedImage img (Rect tl size)) =
       PositionedImage img (Rect (tl * factor) (size * factor))
 
 onDepth :: (Int -> Int) -> Frame -> Frame
-onDepth = over Frame . fmap . first
+onDepth = atFrame . fmap . first
 
 onImages :: (Draw.Image () -> Draw.Image ()) -> Frame -> Frame
-onImages = over Frame . Map.map . second . atPiImage
+onImages = atFrame . Map.map . second . atPiImage
