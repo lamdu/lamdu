@@ -1,3 +1,7 @@
+* Literals: delegator, bad inputs, zero
+
+* HoleEdit: AnimId mapping for new param/def
+
 * TextView returns all character position rects
   * TextEdit uses the character position rects to locate enter cursor
 
