@@ -14,6 +14,7 @@ import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 setColor :: TWidget t m -> TWidget t m
 setColor = BWidgets.setTextColor Config.literalIntColor
@@ -29,7 +30,7 @@ makeInt ::
   CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id)
 makeInt expressionI integer =
   liftM (flip (,) (WidgetIds.fromIRef expressionI)) . setColor $
-    BWidgets.makeWordEdit intAsStr myId
+    BWidgets.wrapDelegated FocusDelegator.NotDelegating (BWidgets.makeWordEdit intAsStr) myId
   where
     expressionRef = Transaction.fromIRef expressionI
     intAsStr =
