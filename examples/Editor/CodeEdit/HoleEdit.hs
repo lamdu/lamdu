@@ -52,7 +52,7 @@ makeResultVariables ::
   Widget.Id -> ETypes.ExpressionPtr m ->
   Data.VariableRef ->
   CTransaction ViewTag m [Result m]
-makeResultVariables ancestry searchResultsPrefix expressionPtr varRef = do
+makeResultVariables ancestry myId expressionPtr varRef = do
   varName <- getP $ Anchors.variableNameRef varRef
   sequence $
     if ETypes.isOperatorName varName
@@ -66,13 +66,12 @@ makeResultVariables ancestry searchResultsPrefix expressionPtr varRef = do
     else
       [result varName dontFlip resultId dontAddParens]
   where
-    resultId = searchResultsPrefix `mappend` ETypes.varId varRef
+    resultId = searchResultsPrefix myId `mappend` ETypes.varId varRef
     resultIdAsPrefix = Widget.joinId resultId ["prefix"]
 
     result name flipAct wid maybeAddParens = do
       pickEventMap <-
-        pickResultEventMap ancestry expressionPtr
-        searchResultsPrefix getVar flipAct resultId
+        pickResultEventMap ancestry expressionPtr myId getVar flipAct resultId
       return $
         Result name pickEventMap $
           liftM (Widget.strongerEvents pickEventMap) .
@@ -105,18 +104,18 @@ pickResultEventMap ::
   Data.Expression -> Transaction ViewTag m () -> Widget.Id ->
   CTransaction ViewTag m (Widget.EventHandlers (Transaction ViewTag m))
 pickResultEventMap
-  ancestry expressionPtr searchResultsPrefix expr flipAct resultId =
+  ancestry expressionPtr myId expr flipAct resultId =
   do
     expressionI <- getP expressionPtr
     return $ mconcat [
       EventMap.fromEventTypes Config.pickResultKeys
       "Pick this search result" $
-      pickResult searchResultsPrefix expressionI expr flipAct resultId,
+      pickResult myId expressionI expr flipAct resultId,
 
       EventMap.fromEventTypes Config.addNextArgumentKeys
       "Pick this search result and add argument" $
       pickResultAndAddArg
-        ancestry expressionPtr searchResultsPrefix expr flipAct resultId
+        ancestry expressionPtr myId expr flipAct resultId
       ]
 
 pickResultAndAddArg ::
@@ -125,10 +124,10 @@ pickResultAndAddArg ::
   Data.Expression -> Transaction ViewTag m () -> Widget.Id ->
   Transaction ViewTag m Widget.EventResult
 pickResultAndAddArg
-  ancestry expressionPtr searchResultsPrefix expr flipAct resultId =
+  ancestry expressionPtr myId expr flipAct resultId =
   do
     expressionI <- Property.get expressionPtr
-    res <- pickResult searchResultsPrefix expressionI expr flipAct resultId
+    res <- pickResult myId expressionI expr flipAct resultId
     cursor <-
       ETypes.diveIn $
       case ancestry of
@@ -137,26 +136,27 @@ pickResultAndAddArg
         _ -> DataOps.callWithArg expressionPtr
     return res { Widget.eCursor = Just cursor }
 
+searchResultsPrefix :: Widget.Id -> Widget.Id
+searchResultsPrefix = flip Widget.joinId ["search results"]
+
 pickResult ::
   MonadF m =>
   Widget.Id -> IRef Data.Expression ->
   Data.Expression -> Transaction ViewTag m () -> Widget.Id ->
   Transaction ViewTag m Widget.EventResult
-pickResult searchResultsPrefix expressionI expr flipAct resultId =
-  do
-    Transaction.writeIRef expressionI expr
-    flipAct
-    return Widget.EventResult {
-      Widget.eCursor = Just expressionId,
-      Widget.eAnimIdMapping =
-        renamePrefix searchResultsPrefixAnimId ["mismatched result"] .
-        renamePrefix resultAnimId expressionAnimId
-      }
-    where
-      searchResultsPrefixAnimId = Widget.cursorId searchResultsPrefix
-      expressionAnimId = Widget.cursorId expressionId
-      resultAnimId = Widget.cursorId resultId
-      expressionId = WidgetIds.fromIRef expressionI
+pickResult myId expressionI expr flipAct resultId = do
+  Transaction.writeIRef expressionI expr
+  flipAct
+  return Widget.EventResult {
+    Widget.eCursor = Just expressionId,
+    Widget.eAnimIdMapping =
+      renamePrefix (Widget.cursorId (searchResultsPrefix myId)) ["mismatched result"] .
+      renamePrefix resultAnimId expressionAnimId
+    }
+  where
+    expressionAnimId = Widget.cursorId expressionId
+    resultAnimId = Widget.cursorId resultId
+    expressionId = WidgetIds.fromIRef expressionI
 
 flipArgs :: Data.Apply -> Data.Apply
 flipArgs (Data.Apply x y) = Data.Apply y x
@@ -174,12 +174,11 @@ makeActiveHoleEdit
     assignCursor myId searchTermId $ do
       let
         definitionRef = Transaction.fromIRef definitionI
-        searchResultsPrefix = Widget.joinId myId ["search results"]
-        literalIntId = Widget.joinId searchResultsPrefix ["literal int"]
+        literalIntId = Widget.joinId (searchResultsPrefix myId) ["literal int"]
         makeLiteralIntResult integer = do
           pickEventMap <-
             pickResultEventMap ancestry expressionPtr
-            searchResultsPrefix (Data.ExpressionLiteralInteger integer) (return ()) literalIntId
+            myId (Data.ExpressionLiteralInteger integer) (return ()) literalIntId
           return .
             Result (show integer) pickEventMap .
             liftM (Widget.strongerEvents pickEventMap) .
@@ -195,7 +194,7 @@ makeActiveHoleEdit
       allResults <-
         liftM concat .
         mapM
-        (makeResultVariables ancestry searchResultsPrefix expressionPtr) $
+        (makeResultVariables ancestry myId expressionPtr) $
         params ++ globals
 
       literalResults <- makeLiteralResults
