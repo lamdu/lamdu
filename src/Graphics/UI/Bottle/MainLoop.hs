@@ -1,7 +1,7 @@
 {-# OPTIONS -Wall #-}
 module Graphics.UI.Bottle.MainLoop (mainLoopAnim, mainLoopImage, mainLoopWidget) where
 
-import Control.Arrow(second)
+import Control.Arrow(first, second)
 import Control.Concurrent(forkIO, threadDelay)
 import Control.Concurrent.MVar
 import Control.Exception(SomeException, try, throwIO)
@@ -129,8 +129,9 @@ mainLoopAnim eventHandler makeFrame = do
       case mEventResult of
         Nothing -> return False
         Just eventResult -> do
-          modifyIORef frameStateVar . fmap . second . second . Anim.mapIdentities $
-            Widget.eAnimIdMapping eventResult
+          (modifyIORef frameStateVar . fmap)
+            (first (const 0) .
+             (second . second . Anim.mapIdentities . Widget.eAnimIdMapping) eventResult)
           return True
   mainLoopImage imgEventHandler makeImage
 
