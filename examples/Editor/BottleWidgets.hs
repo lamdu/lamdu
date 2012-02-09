@@ -41,23 +41,23 @@ makeTextView text myId = do
   return $
     TextView.makeWidget (TextEdit.sTextViewStyle style) text $ Widget.cursorId myId
 
-makeFocusableView :: MonadF m => Widget (Transaction t m) -> Widget.Id -> TWidget t m
-makeFocusableView widget animId = do
-  hasFocus <- liftM (animId ==) readCursor
+makeFocusableView :: MonadF m => Widget.Id -> Widget (Transaction t m) -> TWidget t m
+makeFocusableView myId widget = do
+  hasFocus <- liftM (myId ==) readCursor
   let
     setBackground
       | hasFocus = Widget.backgroundColor WidgetIds.backgroundCursorId blue
       | otherwise = id
   return .
     (Widget.atIsFocused . const) hasFocus . setBackground $
-    Widget.takesFocus (const (return animId)) widget
+    Widget.takesFocus (const (return myId)) widget
   where
     blue = Draw.Color 0 0 1 0.8
 
 makeFocusableTextView :: MonadF m => String -> Widget.Id -> TWidget t m
 makeFocusableTextView text myId = do
   textView <- makeTextView text myId
-  makeFocusableView textView myId
+  makeFocusableView myId textView
 
 makeChoice ::
   (Monad m) =>

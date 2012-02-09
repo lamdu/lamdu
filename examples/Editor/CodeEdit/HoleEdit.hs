@@ -182,8 +182,9 @@ makeActiveHoleEdit
             searchResultsPrefix (Data.ExpressionLiteralInteger integer) (return ()) literalIntId
           return .
             Result (show integer) pickEventMap .
-              liftM (Widget.strongerEvents pickEventMap) $
-                LiteralEdit.makeIntView literalIntId integer
+            liftM (Widget.strongerEvents pickEventMap) .
+            BWidgets.makeFocusableView literalIntId =<<
+            LiteralEdit.makeIntView literalIntId integer
 
         makeLiteralResults =
           sequence
