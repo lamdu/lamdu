@@ -10,7 +10,7 @@ module Graphics.UI.Bottle.Animation(
   joinId, subId)
 where
 
-import Control.Applicative(liftA2)
+import Control.Applicative(pure, liftA2)
 import Control.Arrow(first, second)
 import Data.Function(on)
 import Data.List(isPrefixOf)
@@ -80,9 +80,6 @@ draw = mconcat . map (posImage . snd) . sortOn fst . Map.elems . iSubImages
     posImage (PositionedImage img (Rect { rectTopLeft = Vector2 t l, rectSize = Vector2 w h })) =
       Draw.translate (t, l) %% Draw.scale w h %% img
 
-animSpeed :: Fractional a => a
-animSpeed = 0.2
-
 prefixRects :: Map AnimId (Layer, PositionedImage) -> Map AnimId Rect
 prefixRects src =
   Map.fromList . filter (not . null . fst) . map perGroup $ groupOn fst $ sortOn fst prefixItems
@@ -135,13 +132,13 @@ isVirtuallySame (Frame a) (Frame b) =
 mapIdentities :: (AnimId -> AnimId) -> Frame -> Frame
 mapIdentities = atFrame . Map.mapKeys
 
-nextFrame :: Frame -> Frame -> Maybe Frame
-nextFrame dest cur
+nextFrame :: R -> Frame -> Frame -> Maybe Frame
+nextFrame movement dest cur
   | isVirtuallySame dest cur = Nothing
-  | otherwise = Just $ makeNextFrame dest cur
+  | otherwise = Just $ makeNextFrame movement dest cur
 
-makeNextFrame :: Frame -> Frame -> Frame
-makeNextFrame (Frame dest) (Frame cur) =
+makeNextFrame :: R -> Frame -> Frame -> Frame
+makeNextFrame movement (Frame dest) (Frame cur) =
   Frame . Map.mapMaybe id $
   mconcat [
     Map.mapWithKey add $ Map.difference dest cur,
@@ -149,6 +146,7 @@ makeNextFrame (Frame dest) (Frame cur) =
     Map.intersectionWith modify dest cur
   ]
   where
+    animSpeed = pure movement
     curPrefixMap = prefixRects cur
     destPrefixMap = prefixRects dest
     add key (layer, PositionedImage img r) =

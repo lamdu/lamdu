@@ -8,6 +8,7 @@ import Control.Exception(SomeException, try, throwIO)
 import Control.Monad(forever, liftM)
 import Data.IORef
 import Data.StateVar (($=))
+import Data.Time.Clock (getCurrentTime, diffUTCTime)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators ((%%))
 import Graphics.DrawingCombinators.Utils (Image)
@@ -89,25 +90,32 @@ mainLoopAnim eventHandler makeFrame = do
   let
     makeImage isChange size = do
       frameState <- readIORef frameStateVar
+      curTime <- getCurrentTime
 
       newFrameState <-
         case frameState of
-          Nothing -> fmap (Just . (,) 0) $ makeFrame size
-          Just (drawCount, prevFrame) ->
+          Nothing -> do
+            dest <- makeFrame size
+            return $ Just (0, (curTime, dest))
+          Just (drawCount, (prevTime, prevFrame)) ->
             if drawCount == 0 || isChange
               then do
                 dest <- makeFrame size
+                let
+                  elapsed = realToFrac (curTime `diffUTCTime` prevTime)
+                  progress = (1 - 0.5 ** (elapsed/0.05))
                 return . Just $
-                  case Anim.nextFrame dest prevFrame of
-                    Nothing -> (drawCount + 1, dest)
-                    Just newFrame -> (0 :: Int, newFrame)
+                  case Anim.nextFrame progress dest prevFrame of
+                    Nothing -> (drawCount + 1, (curTime, dest))
+                    Just newFrame -> (0 :: Int, (curTime, newFrame))
               else
-                return $ Just (drawCount + 1, prevFrame)
+                return $ Just (drawCount + 1, (curTime, prevFrame))
+
       writeIORef frameStateVar newFrameState
       return $
         case newFrameState of
           Nothing -> error "No frame to draw at start??"
-          Just (drawCount, frame)
+          Just (drawCount, (_, frame))
             | drawCount < stopAtDrawCount -> Just (Anim.draw frame)
             | otherwise -> Nothing
     -- A note on draw counts:
@@ -121,7 +129,8 @@ mainLoopAnim eventHandler makeFrame = do
       case mEventResult of
         Nothing -> return False
         Just eventResult -> do
-          modifyIORef frameStateVar . fmap . second . Anim.mapIdentities $ Widget.eAnimIdMapping eventResult
+          modifyIORef frameStateVar . fmap . second . second . Anim.mapIdentities $
+            Widget.eAnimIdMapping eventResult
           return True
   mainLoopImage imgEventHandler makeImage
 
