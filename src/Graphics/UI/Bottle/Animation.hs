@@ -3,7 +3,7 @@
 module Graphics.UI.Bottle.Animation(
   R, AnimId,
   PositionedImage(..), atPiImage, atPiRect,
-  Frame(..), onImages,
+  Frame(..), atFrame, onImages,
   draw, nextFrame, mapIdentities, backgroundColor,
   translate, scale, onDepth,
   simpleFrame, simpleFrameDownscale,
