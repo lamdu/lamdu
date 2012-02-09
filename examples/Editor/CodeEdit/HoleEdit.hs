@@ -150,10 +150,11 @@ pickResult myId expressionI expr flipAct resultId = do
   return Widget.EventResult {
     Widget.eCursor = Just expressionId,
     Widget.eAnimIdMapping =
-      renamePrefix (Widget.cursorId (searchResultsPrefix myId)) ["mismatched result"] .
-      renamePrefix resultAnimId expressionAnimId
+      renamePrefix ("old hole" : resultAnimId) expressionAnimId .
+      renamePrefix myAnimId ("old hole" : myAnimId)
     }
   where
+    myAnimId = Widget.cursorId myId
     expressionAnimId = Widget.cursorId expressionId
     resultAnimId = Widget.cursorId resultId
     expressionId = WidgetIds.fromIRef expressionI
