@@ -73,20 +73,21 @@ makeTextEditCursor myId = Widget.joinId myId . (:[]) . BinUtils.encodeS
 makeUnfocused :: Style -> String -> Widget.Id -> Widget ((,) String)
 makeUnfocused style str myId =
   Widget.takesFocus enter .
-  (Widget.atContent .
-   Sized.atRequestedSize)
-   ((SizeRange.atSrMinSize .
-     Vector2.first) (+ sCursorWidth style) .
-    (SizeRange.atSrMaxSize .
-     Vector2.first . fmap) (+ sCursorWidth style)) .
-  Widget.atImage
-    (cursorTranslate style) .
+  (Widget.atContent . Sized.atRequestedSize)
+   ((SizeRange.atSrMinSize . Vector2.first) (+ sCursorWidth style) .
+    (SizeRange.atSrMaxSize . Vector2.first . fmap) (+ sCursorWidth style)) .
+  Widget.atImage (cursorTranslate style) .
   TextView.makeWidget (sTextViewStyle style) str $
   Widget.cursorId myId
   where
     enter dir =
       (,) str . makeTextEditCursor myId $
       Widget.direction (length str) enterRect dir
+    -- TODO: Figure out what rect each letter is at, and find the one
+    -- closest to the argument rect, and return that instead of
+    -- (length str)
+    -- A. TextView needs to export a function: String -> [Rect]
+    -- B. We need to find the closest one here
     enterRect _ = length str -- TODO: this is wrong
 
 -- TODO: Instead of font + ptSize, let's pass a text-drawer (that's

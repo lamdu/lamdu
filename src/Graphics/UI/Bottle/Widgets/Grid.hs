@@ -130,6 +130,7 @@ sqr x = x * x
 normSqr :: Num a => Vector2 a -> a
 normSqr = norm . sqr
 
+-- TODO: Put this in a more generic location
 rectDistance :: Rect -> Rect -> Anim.R
 rectDistance r1 r2 = normSqr distance - normSqr overlapPercentage
   where
@@ -159,6 +160,7 @@ make =
           (snd . minimumOn fst .
            (map . scoredEnter dir . Widget.direction (Rect 0 0) id) dir) childEnters dir
 
+        -- TODO: Take this out to a generic location
         rectScore entryRect (row, col) enterResultRect =
           (borderScore, rectDistance entryRect enterResultRect)
           where
