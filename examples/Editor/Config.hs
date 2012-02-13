@@ -6,13 +6,13 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
-group = E.KeyEventType
+mk = E.KeyEventType
 
-noMods = group E.noMods
-ctrl = group E.ctrl . E.charKey
-alt = group E.alt . E.charKey
-ctrlAlt = group (E.noMods {E.modCtrl = True, E.modAlt = True}) . E.charKey
--- altShift = group E.noMods { E.modAlt = True, E.modShift = True } . E.charKey
+noMods = mk E.noMods
+ctrl = mk E.ctrl . E.charKey
+alt = mk E.alt . E.charKey
+ctrlAlt = mk (E.noMods {E.modCtrl = True, E.modAlt = True}) . E.charKey
+-- altShift = mk E.noMods { E.modAlt = True, E.modShift = True } . E.charKey
 k = noMods . E.charKey
 
 -- pasteKeys         = [ctrl 'v']
@@ -25,7 +25,7 @@ undoKeys          = [ctrl 'z']
 redoKeys          = [ctrl 'y']
 makeBranchKeys    = [ctrl 's']
 
--- moveToParentKeys  = [group E.alt E.KeyLeft]
+-- moveToParentKeys  = [mk E.alt E.KeyLeft]
 
 overlayDocKeys    = [noMods E.KeyF1, alt 'h']
 
@@ -39,15 +39,15 @@ relinkKeys        = [alt 'r']
 
 pickResultKeys    = [noMods E.KeyEnter]
 jumpToDefinitionKeys  = [noMods E.KeyEnter]
-delKeys           = [noMods E.KeyBackspace, noMods E.KeyDel, group E.alt E.KeyDel]
+delKeys           = [noMods E.KeyBackspace, noMods E.KeyDel, mk E.alt E.KeyDel]
 giveAsArgumentKeys = [k '[']
 callWithArgumentKeys = [k ']']
 addNextArgumentKeys = [E.SpaceKeyEventType E.noMods]
 debugModeKeys = [ctrlAlt 'd']
 
 exprFocusDelegatorKeys = FocusDelegator.Keys {
-  FocusDelegator.startDelegatingKey = group E.shift E.KeyRight,
-  FocusDelegator.stopDelegatingKey = group E.shift E.KeyLeft
+  FocusDelegator.startDelegatingKey = mk E.shift E.KeyRight,
+  FocusDelegator.stopDelegatingKey = mk E.shift E.KeyLeft
   }
 
 newDefinitionKeys = [alt 'n']
