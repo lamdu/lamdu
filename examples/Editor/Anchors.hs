@@ -179,7 +179,7 @@ initDB store =
         Property.set globals =<< mapM newBuiltin temporaryBuiltinsDatabase
         defI <- makeDefinition
         Property.set root [makePane defI]
-        Property.set preJumps $ []
+        Property.set preJumps []
         Property.set preCursor $ WidgetIds.fromIRef defI
         Property.set postCursor $ WidgetIds.fromIRef defI
       initialVersionIRef <- Version.makeInitialVersion changes

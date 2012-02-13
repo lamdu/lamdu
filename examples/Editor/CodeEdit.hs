@@ -94,7 +94,7 @@ makePanesEdit = do
             definitionEdits <- mapM makePaneWidget $ enumerate panes
             return $ BWidgets.vboxAlign 0 definitionEdits
 
-  canJumpBack <- transaction $ Anchors.canJumpBack
+  canJumpBack <- transaction Anchors.canJumpBack
   let
     panesEventMap =
       mconcat $ concat

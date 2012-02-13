@@ -105,7 +105,7 @@ mainLoopAnim eventHandler makeFrame getAnimationHalfLife = do
                 animationHalfLife <- getAnimationHalfLife
                 let
                   elapsed = realToFrac (curTime `diffUTCTime` prevTime)
-                  progress = (1 - 0.5 ** (elapsed/animationHalfLife))
+                  progress = 1 - 0.5 ** (elapsed/animationHalfLife)
                 return . Just $
                   case Anim.nextFrame progress dest prevFrame of
                     Nothing -> (drawCount + 1, (curTime, dest))
