@@ -137,6 +137,13 @@ pickResultAndAddArg
 searchResultsPrefix :: Widget.Id -> Widget.Id
 searchResultsPrefix = flip Widget.joinId ["search results"]
 
+holeResultAnimMapping :: Widget.Id -> Widget.Id -> Widget.Id -> AnimId -> AnimId
+holeResultAnimMapping myId resultId expressionId =
+  renamePrefix ("old hole" : Widget.cursorId resultId) (Widget.cursorId expressionId) .
+  renamePrefix myAnimId ("old hole" : myAnimId)
+  where
+    myAnimId = Widget.cursorId myId
+
 pickResult ::
   MonadF m =>
   Widget.Id -> IRef Data.Expression ->
@@ -147,14 +154,9 @@ pickResult myId expressionI expr flipAct resultId = do
   flipAct
   return Widget.EventResult {
     Widget.eCursor = Just expressionId,
-    Widget.eAnimIdMapping =
-      renamePrefix ("old hole" : resultAnimId) expressionAnimId .
-      renamePrefix myAnimId ("old hole" : myAnimId)
+    Widget.eAnimIdMapping = holeResultAnimMapping myId resultId expressionId
     }
   where
-    myAnimId = Widget.cursorId myId
-    expressionAnimId = Widget.cursorId expressionId
-    resultAnimId = Widget.cursorId resultId
     expressionId = WidgetIds.fromIRef expressionI
 
 flipArgs :: Data.Apply -> Data.Apply
@@ -210,10 +212,19 @@ makeActiveHoleEdit
         newName = concat . words $ searchTerm
         searchTermEventMap =
           mconcat $ pickFirstResultEventMaps ++
-          [ Widget.actionEventMapMovesCursor Config.addParamKeys "Add as Parameter" .
-            liftM WidgetIds.fromIRef $ DataOps.addAsParameter newName definitionRef expressionI
-          , Widget.actionEventMapMovesCursor Config.newDefinitionKeys "Add new as Definition" $
-            liftM WidgetIds.fromIRef $ DataOps.addAsDefinition newName expressionI
+          [ EventMap.fromEventTypes Config.addParamKeys "Add as Parameter" $ do
+              DataOps.addAsParameter newName definitionRef expressionI
+              let exprId = WidgetIds.fromIRef expressionI
+              return Widget.EventResult {
+                Widget.eCursor = Just exprId,
+                Widget.eAnimIdMapping = holeResultAnimMapping myId searchTermId exprId
+                }
+          , EventMap.fromEventTypes Config.newDefinitionKeys "Add new as Definition" $ do
+              newDef <- DataOps.addAsDefinition newName expressionI
+              return Widget.EventResult {
+                Widget.eCursor = Just $ WidgetIds.fromIRef newDef,
+                Widget.eAnimIdMapping = holeResultAnimMapping myId searchTermId (WidgetIds.fromIRef expressionI)
+                }
           ]
         stateProp =
           Property.Property {

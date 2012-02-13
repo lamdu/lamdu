@@ -67,12 +67,11 @@ replace expressionPtr = do
 
 addAsParameter ::
   Monad m => String -> Transaction.Property t m Data.Definition ->
-  IRef Data.Expression -> Transaction t m (IRef Data.Expression)
+  IRef Data.Expression -> Transaction t m ()
 addAsParameter newName definitionRef expressionI = do
   newParam <- addParameter definitionRef
   Property.set (Anchors.aNameRef newParam) newName
   Transaction.writeIRef expressionI . Data.ExpressionGetVariable $ Data.ParameterRef newParam
-  return expressionI
 
 addAsDefinition ::
   Monad m => String -> IRef Data.Expression ->
