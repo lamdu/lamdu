@@ -191,6 +191,8 @@ initDB store =
       ["Data.List.sort"
       ,"Data.List.reverse"
       ,"Data.List.length"
+      ,"Data.List.tail"
+      ,"Data.List.zipWith"
       ,"Control.Applicative.liftA2"
       ,"Control.Applicative.pure"
       ,"Control.Applicative.shuki"
@@ -202,6 +204,9 @@ initDB store =
       ,"Prelude.*"
       ,"Prelude./"
       ,"Prelude.^"
+      ,"Prelude.:"
+      ,"Prelude.=="
+      ,"Prelude.bool"
       ]
 
 -- Get an associated name from the given IRef
