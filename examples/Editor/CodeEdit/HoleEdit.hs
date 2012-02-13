@@ -239,9 +239,16 @@ makeActiveHoleEdit
         mkMoreResultWidget
           | null moreResults = return []
           | otherwise = liftM (:[]) $ makeMoreResults myId
+        blockEvent key side =
+          Widget.actionEventMap [EventMap.KeyEventType EventMap.noMods key]
+          ("Nothing (at " ++ side ++ ")") (return ())
+        blockUpDownEventMap =
+          mconcat [blockEvent EventMap.KeyUp "top", blockEvent EventMap.KeyDown "bottom"]
 
       moreResultsWidget <- mkMoreResultWidget
-      return . BWidgets.vbox $ [searchTermWidget, resultWidgets] ++ moreResultsWidget
+      return .
+        Widget.weakerEvents blockUpDownEventMap .
+        BWidgets.vbox $ [searchTermWidget, resultWidgets] ++ moreResultsWidget
 
 makeInternal ::
   MonadF m => ETypes.ExpressionAncestry m ->
