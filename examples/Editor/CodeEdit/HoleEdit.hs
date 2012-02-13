@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.HoleEdit(make) where
 
-import Control.Arrow (first)
 import Control.Monad (liftM)
 import Data.List(isInfixOf)
 import Data.Maybe(isJust)
@@ -29,7 +28,6 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 data Result m = Result {
   resultName :: String,
@@ -276,7 +274,5 @@ make ::
   CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id)
 make ancestry definitionI holeState expressionPtr = do
   expressionId <- liftM WidgetIds.fromIRef $ getP expressionPtr
-  BWidgets.wrapDelegatedWithKeys
-    FocusDelegator.defaultKeys FocusDelegator.NotDelegating first
-    ((fmap . liftM) (flip (,) expressionId) $
-    makeInternal ancestry definitionI holeState expressionPtr) expressionId
+  liftM (flip (,) expressionId) $
+    makeInternal ancestry definitionI holeState expressionPtr expressionId
