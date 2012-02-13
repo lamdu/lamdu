@@ -61,7 +61,7 @@ varId :: Data.VariableRef -> Widget.Id
 varId = Data.onVariableIRef WidgetIds.fromIRef
 
 diveIn :: Functor f => f (IRef a) -> f Widget.Id
-diveIn = fmap WidgetIds.fromIRef
+diveIn = fmap $ WidgetIds.delegating . WidgetIds.fromIRef
 
 isOperatorName :: String -> Bool
 isOperatorName = all (not . Char.isAlphaNum)
