@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
 module Graphics.UI.Bottle.Widgets.TextEdit(
   Cursor, Style(..), make, defaultCursorColor, defaultCursorWidth,
+  makeTextEditCursor,
   atSCursorColor,
   atSCursorWidth,
   atSTextCursorId,
@@ -287,5 +288,5 @@ make style cursor str myId =
   maybe makeUnfocused makeFocused mCursor style str myId
   where
     mCursor = fmap extractTextEditCursor $ Widget.subId myId cursor
-    extractTextEditCursor [x] = BinUtils.decodeS x
+    extractTextEditCursor [x] = min (length str) $ BinUtils.decodeS x
     extractTextEditCursor _ = length str
