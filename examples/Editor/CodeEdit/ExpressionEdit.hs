@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit(make) where
 
-import Control.Monad (liftM2)
+import Control.Arrow (first)
+import Control.Monad (liftM2, (<=<))
 import Data.Monoid(Monoid(..))
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
@@ -10,9 +11,10 @@ import Editor.CTransaction (CTransaction, getP)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Store.Transaction as Transaction
+import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ApplyEdit as ApplyEdit
-import qualified Editor.CodeEdit.LiteralEdit as LiteralEdit
 import qualified Editor.CodeEdit.HoleEdit as HoleEdit
+import qualified Editor.CodeEdit.LiteralEdit as LiteralEdit
 import qualified Editor.CodeEdit.Types as ETypes
 import qualified Editor.CodeEdit.VarEdit as VarEdit
 import qualified Editor.Config as Config
@@ -20,6 +22,7 @@ import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 needParen ::
   Monad m => Data.Expression -> ETypes.ExpressionAncestry m ->
@@ -46,7 +49,6 @@ needParen (Data.ExpressionApply (Data.Apply funcI _)) ETypes.Root =
 needParen (Data.ExpressionApply (Data.Apply funcI _)) ETypes.NotArgument =
   ETypes.isApplyOfInfixOp funcI
 
-
 make :: MonadF m =>
   ETypes.ExpressionAncestry m -> IRef Data.Definition ->
   ETypes.ExpressionPtr m ->
@@ -57,24 +59,34 @@ make ancestry definitionI expressionPtr = do
     expressionId = WidgetIds.fromIRef expressionI
 
   expr <- getP $ Transaction.fromIRef expressionI
-  (widget, parenId) <-
-    case expr of
-      Data.ExpressionHole holeState ->
-        HoleEdit.make ancestry definitionI holeState expressionPtr
-      Data.ExpressionGetVariable varRef ->
-        VarEdit.make expressionId varRef
-      Data.ExpressionApply apply ->
-        ApplyEdit.make (flip make definitionI) expressionPtr apply
-      Data.ExpressionLiteralInteger integer ->
-        LiteralEdit.makeInt expressionI integer
-
   exprNeedParen <- needParen expr ancestry
-  (resultWidget, resultParenId) <-
-    if exprNeedParen then do
-      resWidget <- ETypes.addParens parenId widget
-      return (resWidget, expressionId)
-    else
-      return (widget, parenId)
+  let
+    addParens (widget, parenId)
+      | exprNeedParen =
+        do
+          resWidget <- ETypes.addParens parenId widget
+          return (resWidget, expressionId)
+      | otherwise = return (widget, parenId)
+
+    makeEditor =
+      case expr of
+        Data.ExpressionHole holeState ->
+          BWidgets.wrapDelegatedWithKeys
+            FocusDelegator.defaultKeys FocusDelegator.Delegating first $
+          HoleEdit.make ancestry definitionI holeState expressionPtr
+        Data.ExpressionGetVariable varRef ->
+          addParens <=< VarEdit.make varRef
+        Data.ExpressionApply apply ->
+          BWidgets.wrapDelegatedWithKeys
+            Config.exprFocusDelegatorKeys FocusDelegator.Delegating first $
+          addParens <=<
+          ApplyEdit.make (flip make definitionI) expressionPtr apply
+        Data.ExpressionLiteralInteger integer ->
+          BWidgets.wrapDelegatedWithKeys
+            FocusDelegator.defaultKeys FocusDelegator.NotDelegating first $
+          addParens <=<
+          LiteralEdit.makeInt expressionI integer
+  (widget, parenId) <- makeEditor expressionId
 
   let
     eventMap = mconcat $
@@ -87,4 +99,4 @@ make ancestry definitionI expressionPtr = do
       , Widget.actionEventMapMovesCursor
         Config.relinkKeys "Replace" . ETypes.diveIn $ DataOps.replace expressionPtr
       ]
-  return (Widget.weakerEvents eventMap resultWidget, resultParenId)
+  return (Widget.weakerEvents eventMap widget, parenId)

@@ -17,7 +17,6 @@ import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 
 setColor :: TWidget t m -> TWidget t m
@@ -59,12 +58,14 @@ makeIntEdit intRef myId = do
     emptyZeroCursor = ["empty-zero"]
 
 makeInt ::
-  (Monad m) => IRef Data.Expression -> Integer ->
-  CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id)
-makeInt expressionI integer =
+  (Monad m) =>
+  IRef Data.Expression
+  -> Integer
+  -> Widget.Id
+  -> CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id)
+makeInt expressionI integer myId =
   liftM (flip (,) (WidgetIds.fromIRef expressionI)) . setColor $
-    BWidgets.wrapDelegated FocusDelegator.NotDelegating (makeIntEdit intRef) myId
+    makeIntEdit intRef myId
   where
     expressionRef = Transaction.fromIRef expressionI
     intRef = Property.pureCompose (const integer) Data.ExpressionLiteralInteger expressionRef
-    myId = WidgetIds.fromIRef expressionI

@@ -27,10 +27,11 @@ makeView var myId = do
 
 make ::
   (Functor m, Monad m) =>
-  Widget.Id -> Data.VariableRef ->
-  CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id)
-make expressionId varRef = do
-  varRefView <- makeView varRef expressionId
+  Data.VariableRef
+  -> Widget.Id
+  -> CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id)
+make varRef myId = do
+  varRefView <- makeView varRef myId
   let
     jumpToDefinitionEventMap =
       Widget.actionEventMapMovesCursor Config.jumpToDefinitionKeys "Jump to definition" jumpToDefinition
@@ -38,7 +39,5 @@ make expressionId varRef = do
       case varRef of
         Data.DefinitionRef defI -> Anchors.newPane defI >> return (WidgetIds.fromIRef defI)
         Data.ParameterRef paramI -> return $ WidgetIds.fromIRef paramI
-        Data.BuiltinRef _builtI -> return expressionId
-  return
-    (Widget.weakerEvents jumpToDefinitionEventMap varRefView,
-     expressionId)
+        Data.BuiltinRef _builtI -> return myId
+  return (Widget.weakerEvents jumpToDefinitionEventMap varRefView, myId)
