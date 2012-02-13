@@ -3,10 +3,11 @@ module Editor.CodeEdit(makePanesEdit) where
 
 import Control.Monad (liftM)
 import Data.List.Utils(enumerate, removeAt)
+import Data.Maybe (fromMaybe)
 import Data.Monoid(Monoid(..))
 import Data.Store.IRef (IRef)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (TWidget, getP, assignCursor)
+import Editor.CTransaction (TWidget, getP, assignCursor, transaction)
 import Editor.MonadF (MonadF)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -58,18 +59,17 @@ makeDefinitionEdit definitionI = do
     nameEditAnimId = Widget.joinId myId ["name"]
     myId = WidgetIds.fromIRef definitionI
 
+newDefinition :: Monad m => Transaction.Transaction ViewTag m Widget.Id
+newDefinition = do
+  newDefI <- Anchors.makeDefinition
+  Anchors.newPane newDefI
+  return $ WidgetIds.fromIRef newDefI
+
 makePanesEdit :: MonadF m => TWidget ViewTag m
 makePanesEdit = do
   panes <- getP panesRef
 
   let
-    newDefinitionEventMap =
-      Widget.actionEventMapMovesCursor Config.newDefinitionKeys
-        "New Definition" $ do
-          newDefI <- Anchors.makeDefinition
-          Anchors.newPane newDefI
-          return $ WidgetIds.fromIRef newDefI
-
     delPane i = do
       let newPanes = removeAt i panes
       Property.set panesRef newPanes
@@ -94,7 +94,20 @@ makePanesEdit = do
             definitionEdits <- mapM makePaneWidget $ enumerate panes
             return $ BWidgets.vboxAlign 0 definitionEdits
 
-  return $ Widget.weakerEvents newDefinitionEventMap panesWidget
+  canJumpBack <- transaction $ Anchors.canJumpBack
+  let
+    panesEventMap =
+      mconcat $ concat
+      [ [ Widget.actionEventMapMovesCursor Config.newDefinitionKeys
+          "New Definition" newDefinition
+        ]
+      , [ Widget.actionEventMapMovesCursor Config.previousCursor
+          "Go to previous position" $ liftM (fromMaybe myId) Anchors.jumpBack
+        | canJumpBack
+        ]
+      ]
+
+  return $ Widget.weakerEvents panesEventMap panesWidget
   where
     panesRef = Transaction.fromIRef Anchors.rootIRef
     myId = WidgetIds.fromIRef Anchors.rootIRef

@@ -57,3 +57,5 @@ definitionColor = Draw.Color 1 1 1 1
 parameterColor = Draw.Color 0.2 0.8 0.9 1
 
 literalIntColor = Draw.Color 0 1 0 1
+
+previousCursor = [mk E.alt E.KeyLeft]

@@ -37,7 +37,9 @@ make varRef myId = do
       Widget.actionEventMapMovesCursor Config.jumpToDefinitionKeys "Jump to definition" jumpToDefinition
     jumpToDefinition =
       case varRef of
-        Data.DefinitionRef defI -> Anchors.newPane defI >> return (WidgetIds.fromIRef defI)
-        Data.ParameterRef paramI -> return $ WidgetIds.fromIRef paramI
+        Data.DefinitionRef defI -> do
+          Anchors.newPane defI
+          Anchors.jumpTo myId $ WidgetIds.fromIRef defI
+        Data.ParameterRef paramI -> Anchors.jumpTo myId $ WidgetIds.fromIRef paramI
         Data.BuiltinRef _builtI -> return myId
   return (Widget.weakerEvents jumpToDefinitionEventMap varRefView, myId)

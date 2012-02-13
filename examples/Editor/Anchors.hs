@@ -2,7 +2,7 @@
 
 module Editor.Anchors(
     root, rootIRef,
-    cursor, cursorIRef, preCursor, postCursor,
+    cursor, cursorIRef, preCursor, postCursor, preJumps,
     branches, view, redos,
     currentBranchIRef, currentBranch,
     globals,
@@ -11,10 +11,11 @@ module Editor.Anchors(
     dbStore, DBTag,
     viewStore, ViewTag,
     aNameGuid, aNameRef, variableNameRef,
-    makePane, makeDefinition, newPane)
+    makePane, makeDefinition, newPane,
+    jumpTo, canJumpBack, jumpBack)
 where
 
-import Control.Monad (when, unless, (<=<))
+import Control.Monad (when, unless, (<=<), liftM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Writer (WriterT, tell, execWriterT)
 import Data.Binary (Binary(..))
@@ -90,6 +91,9 @@ globals = Transaction.fromIRef $ IRef.anchor "globals"
 -- Cursor movement without any revisioned changes are not saved per-revision.
 cursor :: Monad m => Transaction.Property DBTag m Widget.Id
 cursor = Transaction.fromIRef cursorIRef
+
+preJumps :: Monad m => Transaction.Property ViewTag m [Widget.Id]
+preJumps = Transaction.fromIRef $ IRef.anchor "prejumps"
 
 preCursor :: Monad m => Transaction.Property ViewTag m Widget.Id
 preCursor = Transaction.fromIRef $ IRef.anchor "precursor"
@@ -175,6 +179,7 @@ initDB store =
         Property.set globals =<< mapM newBuiltin temporaryBuiltinsDatabase
         defI <- makeDefinition
         Property.set root [makePane defI]
+        Property.set preJumps $ []
         Property.set preCursor $ WidgetIds.fromIRef defI
         Property.set postCursor $ WidgetIds.fromIRef defI
       initialVersionIRef <- Version.makeInitialVersion changes
@@ -232,3 +237,24 @@ newPane defI = do
     Property.set panesRef $ makePane defI : panes
   where
     panesRef = Transaction.fromIRef rootIRef
+
+jumpTo ::
+  Monad m
+  => Widget.Id
+  -> Widget.Id
+  -> Transaction ViewTag m Widget.Id
+jumpTo old new = do
+  Property.pureModify preJumps $ (old :) . take 19
+  return new
+
+canJumpBack :: Monad m => Transaction ViewTag m Bool
+canJumpBack = liftM (not . null) $ Property.get preJumps
+
+jumpBack :: Monad m => Transaction ViewTag m (Maybe Widget.Id)
+jumpBack = do
+  jumps <- Property.get preJumps
+  case jumps of
+    [] -> return Nothing
+    (j:js) -> do
+      Property.set preJumps js
+      return $ Just j
