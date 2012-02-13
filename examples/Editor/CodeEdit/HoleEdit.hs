@@ -277,6 +277,6 @@ make ::
 make ancestry definitionI holeState expressionPtr = do
   expressionId <- liftM WidgetIds.fromIRef $ getP expressionPtr
   BWidgets.wrapDelegatedWithKeys
-    FocusDelegator.defaultKeys FocusDelegator.NotDelegating first
+    FocusDelegator.defaultKeys FocusDelegator.Delegating first
     ((fmap . liftM) (flip (,) expressionId) $
     makeInternal ancestry definitionI holeState expressionPtr) expressionId
