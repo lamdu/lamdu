@@ -1,4 +1,4 @@
-* Literals: bad inputs, zero
+* Show empty names as "noname" or something
 
 * HoleEdit: AnimId mapping for new param/def
 
@@ -6,6 +6,3 @@
   * TextEdit uses the character position rects to locate enter cursor
 
 * ScrollBar
-
-* Cursor stack??
-  * When going "up" the expression tree, there's no way to go back down (it loses your cursor)
