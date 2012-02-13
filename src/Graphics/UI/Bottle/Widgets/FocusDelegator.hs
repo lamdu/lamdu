@@ -56,13 +56,15 @@ makeFocused delegating focusSelf keys backgroundCursorId =
       E.fromEventType (stopDelegatingKey keys) "Exit child" .
       return $ Widget.eventResultFromCursor focusSelf
 
-make :: Monad f => -- actually "Pointed", as only using return.
-  IsDelegating -> -- ^ Start state, enter from direction state
-  Maybe IsDelegating -> -- ^ Current state
-  Widget.Id -> -- ^ Enter/Stop delegating value
-  Keys -> -- ^ Keys configuration
-  Widget.Id -> -- ^ Background Cursor Id
-  Widget f -> Widget f
+-- | Make a focus delegator
+make ::
+  Monad f => -- actually "Pointed", as only using return.
+  IsDelegating -- ^ Start state, enter from direction state
+  -> Maybe IsDelegating -- ^ Current state
+  -> Widget.Id -- ^ Enter/Stop delegating value
+  -> Keys -- ^ Keys configuration
+  -> Widget.Id -- ^ Background Cursor Id
+  -> Widget f -> Widget f
 make isDelegating Nothing focusSelf =
   const . const $ Widget.atMkUserIO f
   where
