@@ -49,12 +49,13 @@ make makeExpressionEdit expressionPtr apply@(Data.Apply funcI argI) myId = do
 
     let
       makeAncestry role =
-        ETypes.ApplyChild ApplyData {
+        [ApplyData {
           adRole = role,
           adFuncType = funcType,
           adApply = apply,
           adParentPtr = expressionPtr
           }
+        ]
     (funcEdit, parenId) <-
       addDelEventMap argI $
       makeExpressionEdit (makeAncestry ETypes.ApplyFunc) funcIPtr

@@ -28,7 +28,7 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 needParen ::
   Monad m => Data.Expression -> ETypes.ExpressionAncestry m ->
   Transaction ViewTag m Bool
-needParen (Data.ExpressionGetVariable _) (ETypes.ApplyChild ApplyData { adRole = ApplyFunc }) =
+needParen (Data.ExpressionGetVariable _) (ApplyData { adRole = ApplyFunc } : _) =
   return False
 needParen (Data.ExpressionGetVariable varRef) _ =
   ETypes.isInfixVar varRef
@@ -38,11 +38,11 @@ needParen (Data.ExpressionLiteralInteger _) _ =
   return False
 needParen
   (Data.ExpressionApply (Data.Apply funcI _))
-  (ETypes.ApplyChild ApplyData {
+  (ApplyData {
      adRole = ApplyArg
    , adApply = apply
    , adFuncType = funcType
-   })
+   } : _)
   = do
     insideInfix <- isInsideInfix funcType
     isInfix <- liftM2 (||) (ETypes.isInfixFunc funcI) (ETypes.isApplyOfInfixOp funcI)
@@ -51,10 +51,10 @@ needParen
     leftFuncI = Data.applyFunc apply
     isInsideInfix ETypes.Infix = return True
     isInsideInfix ETypes.Prefix = ETypes.isApplyOfInfixOp leftFuncI
-needParen (Data.ExpressionApply (Data.Apply funcI _)) ETypes.Root =
+needParen (Data.ExpressionApply (Data.Apply funcI _)) [] =
   ETypes.isInfixFunc funcI
 needParen (Data.ExpressionApply (Data.Apply funcI _))
-  (ETypes.ApplyChild ApplyData { adRole = ApplyFunc }) =
+  (ApplyData { adRole = ApplyFunc } : _) =
   ETypes.isApplyOfInfixOp funcI
 
 make :: MonadF m =>

@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.Types(
   ExpressionPtr,
-  ExpressionAncestry(..), ApplyData(..), ApplyRole(..),
+  ExpressionAncestry, ApplyData(..), ApplyRole(..),
   FuncType(..),
   addParens,
   varId, diveIn, isInfixName,
@@ -43,9 +43,7 @@ data ApplyData m = ApplyData {
   adParentPtr :: Transaction.Property ViewTag m (IRef Data.Expression)
   }
 
-data ExpressionAncestry m =
-    ApplyChild (ApplyData m)
-  | Root
+type ExpressionAncestry m = [ApplyData m]
 
 addParens :: MonadF m => Widget.Id -> Widget (Transaction t m) -> TWidget t m
 addParens parenId widget = do
@@ -86,8 +84,8 @@ addArgTargetExpression
   => ExpressionAncestry m
   -> Transaction.Property ViewTag m (IRef Data.Expression)
   -> Transaction ViewTag m (Transaction.Property ViewTag m (IRef Data.Expression))
-addArgTargetExpression Root expressionPtr = return expressionPtr
-addArgTargetExpression (ApplyChild argData) expressionPtr =
+addArgTargetExpression [] expressionPtr = return expressionPtr
+addArgTargetExpression (argData : _) expressionPtr =
   case adRole argData of
   ApplyArg -> do
     isApplyOfInfix <- isApplyOfInfixOp funcI
@@ -106,7 +104,7 @@ makeAddArgHandler
   -> Transaction ViewTag m (String, Transaction ViewTag m Widget.Id)
 makeAddArgHandler ancestry expressionPtr = do
   case ancestry of
-    ApplyChild ApplyData { adRole = ApplyFunc, adApply = Data.Apply _ argI } -> do
+    (ApplyData { adRole = ApplyFunc, adApply = Data.Apply _ argI } : _) -> do
       arg <- Property.get $ Transaction.fromIRef argI
       case arg of
         Data.ExpressionHole _ ->

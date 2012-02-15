@@ -56,8 +56,7 @@ makeResultVariables ancestry myId expressionPtr varRef = do
     if ETypes.isInfixName varName
     then
       case ancestry of
-        ETypes.ApplyChild
-          argData@ETypes.ApplyData { ETypes.adRole = ETypes.ApplyArg } ->
+        (argData @ ETypes.ApplyData { ETypes.adRole = ETypes.ApplyArg } : _) ->
             [result varName (doFlip argData) resultId dontAddParens,
              result
                (concat ["(", varName, ")"]) dontFlip resultIdAsPrefix addParens]
