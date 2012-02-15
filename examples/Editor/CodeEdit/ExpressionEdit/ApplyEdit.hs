@@ -3,11 +3,11 @@ module Editor.CodeEdit.ExpressionEdit.ApplyEdit(make) where
 
 import Control.Arrow (first)
 import Control.Monad (liftM)
-import Data.Monoid(Monoid(..))
 import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, getP, assignCursor)
+import Editor.CTransaction (CTransaction, getP, assignCursor, transaction)
+import Editor.CodeEdit.Types(ApplyData(..))
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Store.Property as Property
@@ -31,7 +31,7 @@ make ::
 make makeExpressionEdit expressionPtr apply@(Data.Apply funcI argI) myId = do
   expressionI <- getP expressionPtr
   assignCursor myId (WidgetIds.fromIRef argI) $ do
-    isInfix <- ETypes.isInfixFunc funcI
+    isInfix <- transaction $ ETypes.isInfixFunc funcI
     let
       funcType
         | isInfix = ETypes.Infix
@@ -43,19 +43,26 @@ make makeExpressionEdit expressionPtr apply@(Data.Apply funcI argI) myId = do
       setExpr newExprI = do
         Property.set expressionPtr newExprI
         return $ WidgetIds.fromIRef newExprI
-      addNextArgEventMap = ETypes.makeAddNextArgEventMap expressionPtr
-      funcEvents =
-        Widget.weakerEvents (delEventMap argI) .
-        if isInfix
-        then Widget.strongerEvents addNextArgEventMap
-        else id
+
+      addDelEventMap =
+        liftM . first . Widget.weakerEvents . delEventMap
+
+    let
+      makeAncestry role =
+        ETypes.ApplyChild ApplyData {
+          adRole = role,
+          adFuncType = funcType,
+          adApply = apply,
+          adParentPtr = expressionPtr
+          }
     (funcEdit, parenId) <-
-      (liftM . first) funcEvents $ makeExpressionEdit ETypes.NotArgument funcIPtr
+      addDelEventMap argI $
+      makeExpressionEdit (makeAncestry ETypes.ApplyFunc) funcIPtr
+
     (argEdit, _) <-
-       (liftM . first . Widget.weakerEvents . mconcat)
-       [ addNextArgEventMap
-       , delEventMap funcI
-       ] $ makeExpressionEdit (ETypes.Argument (ETypes.ArgumentData funcType expressionPtr apply)) argIPtr
+      addDelEventMap funcI $
+      makeExpressionEdit (makeAncestry ETypes.ApplyArg) argIPtr
+
     return
       ((BWidgets.hbox . if isInfix then reverse else id)
        [funcEdit, BWidgets.spaceWidget, argEdit], parenId)

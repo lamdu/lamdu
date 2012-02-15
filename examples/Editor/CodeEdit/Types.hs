@@ -2,28 +2,27 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.Types(
   ExpressionPtr,
-  ExpressionAncestry(..),
-  ArgumentData(..),
+  ExpressionAncestry(..), ApplyData(..), ApplyRole(..),
   FuncType(..),
-  isArgument, addParens,
+  addParens,
   varId, diveIn, isInfixName,
   isInfixVar, isInfixFunc, isApplyOfInfixOp,
-  makeAddNextArgEventMap)
+  addArgHandler)
 where
 
-import Control.Monad (liftM)
+import Control.Monad (liftM, liftM2, (<=<))
 import Data.ByteString.Char8 (pack)
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, getP, TWidget)
+import Editor.CTransaction (TWidget)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Char as Char
 import qualified Data.Store.Transaction as Transaction
+import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
 import qualified Editor.WidgetIds as WidgetIds
@@ -34,20 +33,19 @@ type ExpressionPtr m = Transaction.Property ViewTag m (IRef Data.Expression)
 data FuncType = Infix | Prefix
   deriving (Eq, Ord, Show, Read)
 
-data ArgumentData m = ArgumentData {
+data ApplyRole = ApplyFunc | ApplyArg
+  deriving (Show, Read, Eq, Ord)
+
+data ApplyData m = ApplyData {
+  adRole :: ApplyRole,
   adFuncType :: FuncType,
-  adParentPtr :: Transaction.Property ViewTag m (IRef Data.Expression),
-  adApply :: Data.Apply
+  adApply :: Data.Apply,
+  adParentPtr :: Transaction.Property ViewTag m (IRef Data.Expression)
   }
 
 data ExpressionAncestry m =
-    Argument (ArgumentData m)
-  | NotArgument
+    ApplyChild (ApplyData m)
   | Root
-
-isArgument :: ExpressionAncestry m -> Bool
-isArgument (Argument _) = True
-isArgument _ = False
 
 addParens :: MonadF m => Widget.Id -> Widget (Transaction t m) -> TWidget t m
 addParens parenId widget = do
@@ -66,25 +64,52 @@ diveIn = fmap $ WidgetIds.delegating . WidgetIds.fromIRef
 isInfixName :: String -> Bool
 isInfixName = all (not . Char.isAlphaNum)
 
-isInfixVar :: Monad m => Data.VariableRef -> CTransaction t m Bool
-isInfixVar = liftM isInfixName . getP . Anchors.variableNameRef
+isInfixVar :: Monad m => Data.VariableRef -> Transaction t m Bool
+isInfixVar = liftM isInfixName . Property.get . Anchors.variableNameRef
 
-isInfixFunc :: Monad m => IRef Data.Expression -> CTransaction t m Bool
+isInfixFunc :: Monad m => IRef Data.Expression -> Transaction t m Bool
 isInfixFunc funcI = do
-  expr <- getP $ Transaction.fromIRef funcI
+  expr <- Property.get $ Transaction.fromIRef funcI
   case expr of
     Data.ExpressionGetVariable var -> isInfixVar var
     _ -> return False
 
-isApplyOfInfixOp :: Monad m => IRef Data.Expression -> CTransaction t m Bool
+isApplyOfInfixOp :: Monad m => IRef Data.Expression -> Transaction t m Bool
 isApplyOfInfixOp exprI = do
-  expr <- getP $ Transaction.fromIRef exprI
+  expr <- Property.get $ Transaction.fromIRef exprI
   case expr of
     Data.ExpressionApply (Data.Apply funcI _) -> isInfixFunc funcI
     _ -> return False
 
-makeAddNextArgEventMap :: MonadF m =>
-  Transaction.Property t m (IRef Data.Expression) -> Widget.EventHandlers (Transaction t m)
-makeAddNextArgEventMap =
-  Widget.actionEventMapMovesCursor Config.addNextArgumentKeys "Add another argument" .
-  diveIn . DataOps.callWithArg
+addArgTargetExpression
+  :: MonadF m
+  => ExpressionAncestry m
+  -> Transaction.Property ViewTag m (IRef Data.Expression)
+  -> Transaction ViewTag m (Transaction.Property ViewTag m (IRef Data.Expression))
+addArgTargetExpression Root expressionPtr = return expressionPtr
+addArgTargetExpression
+  (ApplyChild argData@ApplyData { adRole = ApplyArg })
+  expressionPtr =
+  do
+    isInfix <-
+      liftM2 (||) (isInfixFunc funcI) (isApplyOfInfixOp funcI)
+    return $
+      if isInfix then expressionPtr else adParentPtr argData
+    where
+      (Data.Apply funcI _) = adApply argData
+addArgTargetExpression
+  (ApplyChild argData@ApplyData { adRole = ApplyFunc })
+  expressionPtr =
+  do
+    expressionI <- Property.get expressionPtr
+    isInfix <- isInfixFunc expressionI
+    return $
+      if isInfix then adParentPtr argData else expressionPtr
+
+addArgHandler
+  :: MonadF m
+  => ExpressionAncestry m
+  -> Transaction.Property ViewTag m (IRef Data.Expression)
+  -> Transaction ViewTag m Widget.Id
+addArgHandler ancestry =
+  diveIn . DataOps.callWithArg <=< addArgTargetExpression ancestry

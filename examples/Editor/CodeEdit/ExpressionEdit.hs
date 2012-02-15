@@ -7,7 +7,8 @@ import Data.Monoid(Monoid(..))
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, getP)
+import Editor.CTransaction (CTransaction, getP, transaction)
+import Editor.CodeEdit.Types(ApplyRole(..), ApplyData(..))
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Store.Transaction as Transaction
@@ -26,8 +27,8 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 needParen ::
   Monad m => Data.Expression -> ETypes.ExpressionAncestry m ->
-  CTransaction ViewTag m Bool
-needParen (Data.ExpressionGetVariable _) ETypes.NotArgument =
+  Transaction ViewTag m Bool
+needParen (Data.ExpressionGetVariable _) (ETypes.ApplyChild ApplyData { adRole = ApplyFunc }) =
   return False
 needParen (Data.ExpressionGetVariable varRef) _ =
   ETypes.isInfixVar varRef
@@ -35,18 +36,25 @@ needParen (Data.ExpressionHole _) _ =
   return False
 needParen (Data.ExpressionLiteralInteger _) _ =
   return False
-needParen (Data.ExpressionApply (Data.Apply funcI _)) (ETypes.Argument argData) = do
-  let
-    apply = ETypes.adApply argData
+needParen
+  (Data.ExpressionApply (Data.Apply funcI _))
+  (ETypes.ApplyChild ApplyData {
+     adRole = ApplyArg
+   , adApply = apply
+   , adFuncType = funcType
+   })
+  = do
+    insideInfix <- isInsideInfix funcType
+    isInfix <- liftM2 (||) (ETypes.isInfixFunc funcI) (ETypes.isApplyOfInfixOp funcI)
+    return $ not insideInfix || isInfix
+  where
     leftFuncI = Data.applyFunc apply
-  insideInfix <- case ETypes.adFuncType argData of
-    ETypes.Infix -> return True
-    ETypes.Prefix -> ETypes.isApplyOfInfixOp leftFuncI
-  isInfix <- liftM2 (||) (ETypes.isInfixFunc funcI) (ETypes.isApplyOfInfixOp funcI)
-  return $ not insideInfix || isInfix
+    isInsideInfix ETypes.Infix = return True
+    isInsideInfix ETypes.Prefix = ETypes.isApplyOfInfixOp leftFuncI
 needParen (Data.ExpressionApply (Data.Apply funcI _)) ETypes.Root =
   ETypes.isInfixFunc funcI
-needParen (Data.ExpressionApply (Data.Apply funcI _)) ETypes.NotArgument =
+needParen (Data.ExpressionApply (Data.Apply funcI _))
+  (ETypes.ApplyChild ApplyData { adRole = ApplyFunc }) =
   ETypes.isApplyOfInfixOp funcI
 
 make :: MonadF m =>
@@ -59,7 +67,7 @@ make ancestry definitionI expressionPtr = do
     expressionId = WidgetIds.fromIRef expressionI
 
   expr <- getP $ Transaction.fromIRef expressionI
-  exprNeedParen <- needParen expr ancestry
+  exprNeedParen <- transaction $ needParen expr ancestry
   let
     addParens (widget, parenId)
       | exprNeedParen =
@@ -87,11 +95,12 @@ make ancestry definitionI expressionPtr = do
           addParens <=<
           LiteralEdit.makeInt expressionI integer
   (widget, parenId) <- makeEditor expressionId
-
   let
     eventMap = mconcat $
-      [ ETypes.makeAddNextArgEventMap expressionPtr | not $ ETypes.isArgument ancestry ] ++
       [ Widget.actionEventMapMovesCursor
+        Config.addNextArgumentKeys "Add argument" $
+        ETypes.addArgHandler ancestry expressionPtr
+      , Widget.actionEventMapMovesCursor
         Config.giveAsArgumentKeys "Give as argument" .
         ETypes.diveIn $ DataOps.giveAsArg expressionPtr
       , Widget.actionEventMapMovesCursor

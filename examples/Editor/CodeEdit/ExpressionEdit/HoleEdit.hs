@@ -56,10 +56,11 @@ makeResultVariables ancestry myId expressionPtr varRef = do
     if ETypes.isInfixName varName
     then
       case ancestry of
-        ETypes.Argument argData ->
-          [result varName (doFlip argData) resultId dontAddParens,
-           result
-             (concat ["(", varName, ")"]) dontFlip resultIdAsPrefix addParens]
+        ETypes.ApplyChild
+          argData@ETypes.ApplyData { ETypes.adRole = ETypes.ApplyArg } ->
+            [result varName (doFlip argData) resultId dontAddParens,
+             result
+               (concat ["(", varName, ")"]) dontFlip resultIdAsPrefix addParens]
         _ -> [result varName dontFlip resultId dontAddParens]
     else
       [result varName dontFlip resultId dontAddParens]
@@ -81,7 +82,7 @@ makeResultVariables ancestry myId expressionPtr varRef = do
     addParens = (>>= ETypes.addParens resultId)
 
     dontFlip = return ()
-    doFlip (ETypes.ArgumentData _ parentPtr apply) = do
+    doFlip (ETypes.ApplyData _ _ apply parentPtr) = do
       parentI <- Property.get parentPtr
       Property.set (Transaction.fromIRef parentI) .
         Data.ExpressionApply $ flipArgs apply
@@ -126,12 +127,7 @@ pickResultAndAddArg
   do
     expressionI <- Property.get expressionPtr
     res <- pickResult myId expressionI expr flipAct resultId
-    cursor <-
-      ETypes.diveIn $
-      case ancestry of
-        ETypes.Argument (ETypes.ArgumentData { ETypes.adParentPtr = parentPtr }) ->
-          DataOps.callWithArg parentPtr
-        _ -> DataOps.callWithArg expressionPtr
+    cursor <- ETypes.addArgHandler ancestry expressionPtr
     return res { Widget.eCursor = Just cursor }
 
 searchResultsPrefix :: Widget.Id -> Widget.Id
