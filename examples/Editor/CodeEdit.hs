@@ -5,7 +5,6 @@ import Control.Monad (liftM)
 import Data.List.Utils(enumerate, removeAt)
 import Data.Maybe (fromMaybe)
 import Data.Monoid(Monoid(..))
-import Data.Store.IRef (IRef)
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (TWidget, getP, assignCursor, transaction)
 import Editor.MonadF (MonadF)
@@ -13,51 +12,10 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.CodeEdit.ExpressionEdit as ExpressionEdit
-import qualified Editor.CodeEdit.Types as ETypes
+import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
 import qualified Editor.Config as Config
-import qualified Editor.Data as Data
-import qualified Editor.DataOps as DataOps
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-
-makeDefinitionEdit :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
-makeDefinitionEdit definitionI = do
-  Data.Definition params _ <- getP definitionRef
-  nameEdit <-
-    assignCursor myId nameEditAnimId $
-    BWidgets.makeNameEdit "<unnamed>" definitionI nameEditAnimId
-  equals <- BWidgets.makeTextView "=" $ Widget.joinId myId ["equals"]
-  (expressionEdit, _) <- ExpressionEdit.make ETypes.Root definitionI bodyRef
-  paramsEdits <- mapM makeParamEdit $ enumerate params
-
-  let
-    replaceEventMap =
-      Widget.actionEventMapMovesCursor Config.delKeys "Replace" .
-      ETypes.diveIn $ DataOps.replace bodyRef
-  return .
-    Widget.weakerEvents eventMap . BWidgets.hboxSpaced $
-    [nameEdit] ++ paramsEdits ++ [equals, Widget.weakerEvents replaceEventMap expressionEdit]
-  where
-    makeParamEdit (i, paramI) =
-      (liftM . Widget.weakerEvents) (paramEventMap paramI) .
-      BWidgets.wrapDelegated FocusDelegator.NotDelegating
-      (BWidgets.setTextColor Config.parameterColor .
-       BWidgets.makeNameEdit ("<unnamed param " ++ show i ++ ">") paramI) $
-      WidgetIds.fromIRef paramI
-    bodyRef = Property.composeLabel Data.defBody Data.atDefBody definitionRef
-    definitionRef = Transaction.fromIRef definitionI
-    paramEventMap paramI =
-      Widget.actionEventMapMovesCursor Config.delKeys "Delete Parameter" .
-      (liftM . const) myId $
-      DataOps.delParameter definitionRef paramI
-    eventMap =
-      Widget.actionEventMapMovesCursor Config.addParamKeys "Add Parameter" .
-      liftM (WidgetIds.delegating . WidgetIds.fromIRef) $
-      DataOps.addParameter definitionRef
-    nameEditAnimId = Widget.joinId myId ["name"]
-    myId = WidgetIds.fromIRef definitionI
 
 newDefinition :: Monad m => Transaction.Transaction ViewTag m Widget.Id
 newDefinition = do
@@ -83,7 +41,7 @@ makePanesEdit = do
 
     makePaneWidget (i, pane) =
       (liftM . Widget.weakerEvents) (paneEventMap panes i) .
-      makeDefinitionEdit $ Anchors.paneDefinition pane
+      DefinitionEdit.make $ Anchors.paneDefinition pane
 
   panesWidget <-
     case panes of
