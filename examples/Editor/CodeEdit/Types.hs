@@ -99,7 +99,7 @@ makeAddArgHandler
   => ExpressionAncestry m
   -> Transaction.Property ViewTag m (IRef Data.Expression)
   -> Transaction ViewTag m (String, Transaction ViewTag m Widget.Id)
-makeAddArgHandler ancestry expressionPtr = do
+makeAddArgHandler ancestry expressionPtr =
   case ancestry of
     (ApplyData { adRole = ApplyFunc, adApply = Data.Apply _ argI } : _) -> do
       arg <- Property.get $ Transaction.fromIRef argI

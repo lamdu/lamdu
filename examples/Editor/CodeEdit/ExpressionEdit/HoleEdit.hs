@@ -118,7 +118,7 @@ pickResultEventMap
       pickResult myId expressionI expr flipAct resultId,
 
       EventMap.fromEventTypes Config.addNextArgumentKeys
-      ("Pick this search result and " ++ addArgDoc) $
+      ("Pick this search result and " ++ addArgDoc)
       pickResultAndAddArg
       ]
 
