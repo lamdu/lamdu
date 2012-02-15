@@ -11,6 +11,7 @@ mk = E.KeyEventType
 noMods = mk E.noMods
 ctrl = mk E.ctrl . E.charKey
 alt = mk E.alt . E.charKey
+shift = mk E.shift . E.charKey
 ctrlAlt = mk (E.noMods {E.modCtrl = True, E.modAlt = True}) . E.charKey
 -- altShift = mk E.noMods { E.modAlt = True, E.modShift = True } . E.charKey
 k = noMods . E.charKey
@@ -40,8 +41,8 @@ relinkKeys        = [alt 'r']
 pickResultKeys    = [noMods E.KeyEnter]
 jumpToDefinitionKeys  = [noMods E.KeyEnter]
 delKeys           = [noMods E.KeyBackspace, noMods E.KeyDel, mk E.alt E.KeyDel]
-giveAsArgumentKeys = [k '[']
-callWithArgumentKeys = [k ']']
+giveAsArgumentKeys = [k '[', shift '9']
+callWithArgumentKeys = [k ']', shift '0']
 addNextArgumentKeys = [E.KeyEventType E.noMods E.KeySpace]
 debugModeKeys = [ctrlAlt 'd']
 
