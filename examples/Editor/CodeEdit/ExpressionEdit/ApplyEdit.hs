@@ -24,11 +24,12 @@ make ::
   (ETypes.ExpressionAncestry m
    -> ETypes.ExpressionPtr m
    -> CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id))
+  -> ETypes.ExpressionAncestry m
   -> ETypes.ExpressionPtr m
   -> Data.Apply
   -> Widget.Id
   -> CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id)
-make makeExpressionEdit expressionPtr apply@(Data.Apply funcI argI) myId = do
+make makeExpressionEdit ancestry expressionPtr apply@(Data.Apply funcI argI) myId = do
   expressionI <- getP expressionPtr
   assignCursor myId (WidgetIds.fromIRef argI) $ do
     isInfix <- transaction $ ETypes.isInfixFunc funcI
@@ -49,13 +50,13 @@ make makeExpressionEdit expressionPtr apply@(Data.Apply funcI argI) myId = do
 
     let
       makeAncestry role =
-        [ApplyData {
+        ApplyData {
           adRole = role,
           adFuncType = funcType,
           adApply = apply,
           adParentPtr = expressionPtr
           }
-        ]
+        : ancestry
     (funcEdit, parenId) <-
       addDelEventMap argI $
       makeExpressionEdit (makeAncestry ETypes.ApplyFunc) funcIPtr

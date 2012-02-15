@@ -88,7 +88,7 @@ make ancestry definitionI expressionPtr = do
           BWidgets.wrapDelegatedWithKeys
             Config.exprFocusDelegatorKeys FocusDelegator.Delegating first $
           addParens <=<
-          ApplyEdit.make (`make` definitionI) expressionPtr apply
+          ApplyEdit.make (`make` definitionI) ancestry expressionPtr apply
         Data.ExpressionLiteralInteger integer ->
           BWidgets.wrapDelegatedWithKeys
             FocusDelegator.defaultKeys FocusDelegator.NotDelegating first $
