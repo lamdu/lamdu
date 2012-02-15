@@ -1,6 +1,13 @@
+* = on lhs of = goes to definition
+* space on lhs of = adds a param after current pos
+* space before hole goes to hole
+* '('/'[' in hole -- replace with apply hole on hole
+* Space on child of infix should make apply of child
 * Show empty names as "noname" or something
 
 * TextView returns all character position rects
   * TextEdit uses the character position rects to locate enter cursor
 
 * ScrollBar
+
+* Fix C-home to really go all the way left
