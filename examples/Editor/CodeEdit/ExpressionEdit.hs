@@ -96,7 +96,7 @@ make ancestry definitionI expressionPtr = do
           LiteralEdit.makeInt expressionI integer
   (widget, parenId) <- makeEditor expressionId
   let
-    eventMap = mconcat $
+    eventMap = mconcat
       [ Widget.actionEventMapMovesCursor
         Config.addNextArgumentKeys "Add argument" $
         ETypes.addArgHandler ancestry expressionPtr
