@@ -46,11 +46,11 @@ make definitionI = do
     bodyRef = Property.composeLabel Data.defBody Data.atDefBody definitionRef
     definitionRef = Transaction.fromIRef definitionI
     paramEventMap paramI =
-      Widget.actionEventMapMovesCursor Config.delKeys "Delete Parameter" .
+      Widget.actionEventMapMovesCursor Config.delKeys "Delete parameter" .
       (liftM . const) myId $
       DataOps.delParameter definitionRef paramI
     eventMap =
-      Widget.actionEventMapMovesCursor Config.addParamKeys "Add Parameter" .
+      Widget.actionEventMapMovesCursor Config.addParamKeys "Add parameter" .
       liftM (WidgetIds.delegating . WidgetIds.fromIRef) $
       DataOps.addParameter definitionRef
     nameEditAnimId = Widget.joinId myId ["name"]

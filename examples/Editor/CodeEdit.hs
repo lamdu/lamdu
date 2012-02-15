@@ -36,7 +36,7 @@ makePanesEdit = do
 
     paneEventMap (_:_:_) i =
       Widget.actionEventMapMovesCursor Config.closePaneKeys
-        "Close Pane" $ delPane i
+        "Close pane" $ delPane i
     paneEventMap _ _ = mempty
 
     makePaneWidget (i, pane) =
@@ -57,7 +57,7 @@ makePanesEdit = do
     panesEventMap =
       mconcat $ concat
       [ [ Widget.actionEventMapMovesCursor Config.newDefinitionKeys
-          "New Definition" newDefinition
+          "New definition" newDefinition
         ]
       , [ Widget.actionEventMapMovesCursor Config.previousCursor
           "Go to previous position" $ liftM (fromMaybe myId) Anchors.jumpBack
