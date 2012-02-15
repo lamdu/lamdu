@@ -6,7 +6,7 @@ module Editor.CodeEdit.Types(
   ArgumentData(..),
   FuncType(..),
   isArgument, addParens,
-  varId, diveIn, isOperatorName,
+  varId, diveIn, isInfixName,
   isInfixVar, isInfixFunc, isApplyOfInfixOp,
   makeAddNextArgEventMap)
 where
@@ -63,11 +63,11 @@ varId = Data.onVariableIRef WidgetIds.fromIRef
 diveIn :: Functor f => f (IRef a) -> f Widget.Id
 diveIn = fmap $ WidgetIds.delegating . WidgetIds.fromIRef
 
-isOperatorName :: String -> Bool
-isOperatorName = all (not . Char.isAlphaNum)
+isInfixName :: String -> Bool
+isInfixName = all (not . Char.isAlphaNum)
 
 isInfixVar :: Monad m => Data.VariableRef -> CTransaction t m Bool
-isInfixVar = liftM isOperatorName . getP . Anchors.variableNameRef
+isInfixVar = liftM isInfixName . getP . Anchors.variableNameRef
 
 isInfixFunc :: Monad m => IRef Data.Expression -> CTransaction t m Bool
 isInfixFunc funcI = do

@@ -53,7 +53,7 @@ makeResultVariables ::
 makeResultVariables ancestry myId expressionPtr varRef = do
   varName <- getP $ Anchors.variableNameRef varRef
   sequence $
-    if ETypes.isOperatorName varName
+    if ETypes.isInfixName varName
     then
       case ancestry of
         ETypes.Argument argData ->
