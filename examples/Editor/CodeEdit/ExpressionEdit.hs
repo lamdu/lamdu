@@ -36,21 +36,12 @@ needParen (Data.ExpressionHole _) _ =
   return False
 needParen (Data.ExpressionLiteralInteger _) _ =
   return False
+needParen _ (ApplyData { adRole = ApplyArg, adFuncType = ETypes.Prefix } : _) =
+  return True
 needParen
   (Data.ExpressionApply (Data.Apply funcI _))
-  (ApplyData {
-     adRole = ApplyArg
-   , adApply = apply
-   , adFuncType = funcType
-   } : _)
-  = do
-    insideInfix <- isInsideInfix funcType
-    isInfix <- liftM2 (||) (ETypes.isInfixFunc funcI) (ETypes.isApplyOfInfixOp funcI)
-    return $ not insideInfix || isInfix
-  where
-    leftFuncI = Data.applyFunc apply
-    isInsideInfix ETypes.Infix = return True
-    isInsideInfix ETypes.Prefix = ETypes.isApplyOfInfixOp leftFuncI
+  (ApplyData { adRole = ApplyArg } : _) =
+    liftM2 (||) (ETypes.isInfixFunc funcI) (ETypes.isApplyOfInfixOp funcI)
 needParen (Data.ExpressionApply (Data.Apply funcI _)) [] =
   ETypes.isInfixFunc funcI
 needParen (Data.ExpressionApply (Data.Apply funcI _))

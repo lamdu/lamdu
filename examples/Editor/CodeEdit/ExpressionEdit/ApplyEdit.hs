@@ -33,9 +33,11 @@ make makeExpressionEdit ancestry expressionPtr apply@(Data.Apply funcI argI) myI
   expressionI <- getP expressionPtr
   assignCursor myId (WidgetIds.fromIRef argI) $ do
     isInfix <- transaction $ ETypes.isInfixFunc funcI
+    isApplyOfInfix <- transaction $ ETypes.isApplyOfInfixOp funcI
     let
       funcType
-        | isInfix = ETypes.Infix
+        | isInfix = ETypes.InfixLeft
+        | isApplyOfInfix = ETypes.InfixRight
         | otherwise = ETypes.Prefix
       expressionRef = Transaction.fromIRef expressionI
       delEventMap = Widget.actionEventMapMovesCursor Config.delKeys "Delete" . setExpr

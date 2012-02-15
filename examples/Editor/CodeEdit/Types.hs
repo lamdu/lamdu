@@ -30,7 +30,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 
 type ExpressionPtr m = Transaction.Property ViewTag m (IRef Data.Expression)
 
-data FuncType = Infix | Prefix
+data FuncType = Prefix | InfixLeft | InfixRight
   deriving (Eq, Ord, Show, Read)
 
 data ApplyRole = ApplyFunc | ApplyArg
@@ -94,7 +94,7 @@ addArgTargetExpression (argData : _) expressionPtr =
   ApplyFunc ->
     return $ if infixFunc then adParentPtr argData else expressionPtr
   where
-    infixFunc = adFuncType argData == Infix
+    infixFunc = adFuncType argData == InfixLeft
     (Data.Apply funcI _) = adApply argData
 
 makeAddArgHandler
