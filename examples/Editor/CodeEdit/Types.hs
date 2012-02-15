@@ -10,7 +10,7 @@ module Editor.CodeEdit.Types(
   addArgHandler)
 where
 
-import Control.Monad (liftM, liftM2, (<=<))
+import Control.Monad (liftM, (<=<))
 import Data.ByteString.Char8 (pack)
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
@@ -91,10 +91,9 @@ addArgTargetExpression
   (ApplyChild argData@ApplyData { adRole = ApplyArg })
   expressionPtr =
   do
-    isInfix <-
-      liftM2 (||) (isInfixFunc funcI) (isApplyOfInfixOp funcI)
-    return $
-      if isInfix then expressionPtr else adParentPtr argData
+    isApplyOfInfix <- isApplyOfInfixOp funcI
+    let isInfix = isApplyOfInfix || adFuncType argData == Infix
+    return $ if isInfix then expressionPtr else adParentPtr argData
     where
       (Data.Apply funcI _) = adApply argData
 addArgTargetExpression
