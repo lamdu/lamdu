@@ -100,16 +100,25 @@ makeAddArgHandler
   -> Transaction.Property ViewTag m (IRef Data.Expression)
   -> Transaction ViewTag m (String, Transaction ViewTag m Widget.Id)
 makeAddArgHandler ancestry expressionPtr =
-  case ancestry of
-    (ApplyData { adRole = ApplyFunc, adApply = Data.Apply _ argI } : _) -> do
-      arg <- Property.get $ Transaction.fromIRef argI
-      case arg of
-        Data.ExpressionHole _ ->
-          return ("Move to next arg", return (WidgetIds.fromIRef argI))
-        _ ->
-          return addArg
-    _ -> return addArg
+  case mHoleCandidateI of
+    Nothing -> return addArg
+    Just holeCandidateI -> do
+      holeCandidate <- Property.get $ Transaction.fromIRef holeCandidateI
+      return $ case holeCandidate of
+        Data.ExpressionHole _ -> ("Move to next arg", return (WidgetIds.fromIRef holeCandidateI))
+        _ -> addArg
   where
+    mHoleCandidateI =
+      case ancestry of
+        [] -> Nothing
+        (x : xs) ->
+          case (adRole x, adFuncType x, xs) of
+            (ApplyFunc, _, _) -> Just . Data.applyArg $ adApply x
+            (ApplyArg, Prefix, y : _) ->
+              case adRole y of
+                ApplyFunc -> Just . Data.applyArg $ adApply y
+                ApplyArg -> Nothing
+            (ApplyArg, _, _) -> Nothing
     addArg =
       ("Add next arg",
        diveIn . DataOps.callWithArg $ addArgTargetExpression ancestry expressionPtr)
