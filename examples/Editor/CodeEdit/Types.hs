@@ -87,23 +87,17 @@ addArgTargetExpression
   -> Transaction.Property ViewTag m (IRef Data.Expression)
   -> Transaction ViewTag m (Transaction.Property ViewTag m (IRef Data.Expression))
 addArgTargetExpression Root expressionPtr = return expressionPtr
-addArgTargetExpression
-  (ApplyChild argData@ApplyData { adRole = ApplyArg })
-  expressionPtr =
-  do
+addArgTargetExpression (ApplyChild argData) expressionPtr =
+  case adRole argData of
+  ApplyArg -> do
     isApplyOfInfix <- isApplyOfInfixOp funcI
-    let isInfix = isApplyOfInfix || adFuncType argData == Infix
+    let isInfix = isApplyOfInfix || infixFunc
     return $ if isInfix then expressionPtr else adParentPtr argData
-    where
-      (Data.Apply funcI _) = adApply argData
-addArgTargetExpression
-  (ApplyChild argData@ApplyData { adRole = ApplyFunc })
-  expressionPtr =
-  do
-    expressionI <- Property.get expressionPtr
-    isInfix <- isInfixFunc expressionI
-    return $
-      if isInfix then adParentPtr argData else expressionPtr
+  ApplyFunc ->
+    return $ if infixFunc then adParentPtr argData else expressionPtr
+  where
+    infixFunc = adFuncType argData == Infix
+    (Data.Apply funcI _) = adApply argData
 
 makeAddArgHandler
   :: MonadF m
