@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Editor.CodeEdit.LiteralEdit(makeInt, makeIntView) where
+module Editor.CodeEdit.ExpressionEdit.LiteralEdit(makeInt, makeIntView) where
 
 import Control.Monad (liftM)
 import Data.Store.IRef (IRef)

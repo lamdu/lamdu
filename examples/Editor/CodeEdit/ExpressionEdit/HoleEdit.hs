@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Editor.CodeEdit.HoleEdit(make) where
+module Editor.CodeEdit.ExpressionEdit.HoleEdit(make) where
 
 import Control.Monad (liftM)
 import Data.List(isInfixOf)
@@ -17,9 +17,9 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.CodeEdit.LiteralEdit as LiteralEdit
+import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Editor.CodeEdit.Types as ETypes
-import qualified Editor.CodeEdit.VarEdit as VarEdit
+import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps

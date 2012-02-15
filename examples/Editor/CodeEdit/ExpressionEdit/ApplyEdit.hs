@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Editor.CodeEdit.ApplyEdit(make) where
+module Editor.CodeEdit.ExpressionEdit.ApplyEdit(make) where
 
 import Control.Arrow (first)
 import Control.Monad (liftM)

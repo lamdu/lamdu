@@ -12,11 +12,11 @@ import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.CodeEdit.ApplyEdit as ApplyEdit
-import qualified Editor.CodeEdit.HoleEdit as HoleEdit
-import qualified Editor.CodeEdit.LiteralEdit as LiteralEdit
+import qualified Editor.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
+import qualified Editor.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
+import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
+import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
 import qualified Editor.CodeEdit.Types as ETypes
-import qualified Editor.CodeEdit.VarEdit as VarEdit
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps

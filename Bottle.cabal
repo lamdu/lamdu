@@ -100,12 +100,12 @@ Executable Editor
                        Editor.MonadF,
                        Editor.BottleWidgets,
                        Editor.CodeEdit,
-                       Editor.CodeEdit.ApplyEdit,
                        Editor.CodeEdit.ExpressionEdit,
-                       Editor.CodeEdit.HoleEdit,
+                       Editor.CodeEdit.ExpressionEdit.ApplyEdit,
+                       Editor.CodeEdit.ExpressionEdit.HoleEdit,
+                       Editor.CodeEdit.ExpressionEdit.LiteralEdit,
+                       Editor.CodeEdit.ExpressionEdit.VarEdit,
                        Editor.CodeEdit.Types,
-                       Editor.CodeEdit.VarEdit,
-                       Editor.CodeEdit.LiteralEdit,
                        Editor.BranchGUI
   ghc-options:         -O2 -Wall
   main-is:             Editor/Main.hs

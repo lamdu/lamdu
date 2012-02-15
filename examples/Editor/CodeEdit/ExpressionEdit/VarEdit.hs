@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Editor.CodeEdit.VarEdit(make, makeView) where
+module Editor.CodeEdit.ExpressionEdit.VarEdit(make, makeView) where
 
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
