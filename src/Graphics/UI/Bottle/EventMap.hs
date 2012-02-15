@@ -89,15 +89,7 @@ filterByKey p = Map.filterWithKey (const . p)
 
 overrides :: EventMap a -> EventMap a -> EventMap a
 EventMap x `overrides` EventMap y =
-  EventMap $ x `mappend` filterByKey (not . inX) y
-  where
-    inX = any (`Map.member` x) . alternates
-    alternates k@(KeyEventType ms (CharKey _))
-      | isCharMods ms = [k, CharEventType]
-      | otherwise = [k]
-    -- TODO: Bug -- we don't have a good way of doing the reverse
-    -- filtering (CharEventType alternates are ALL the KeyEventTypes)
-    alternates k = [k]
+  EventMap $ x `mappend` filterByKey (`Map.notMember` x) y
 
 instance Monoid (EventMap a) where
   mempty = EventMap mempty
