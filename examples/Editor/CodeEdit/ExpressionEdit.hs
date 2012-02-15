@@ -95,11 +95,12 @@ make ancestry definitionI expressionPtr = do
           addParens <=<
           LiteralEdit.makeInt expressionI integer
   (widget, parenId) <- makeEditor expressionId
+  (addArgDoc, addArgHandler) <-
+    transaction $ ETypes.makeAddArgHandler ancestry expressionPtr
   let
     eventMap = mconcat
       [ Widget.actionEventMapMovesCursor
-        Config.addNextArgumentKeys "Add argument" $
-        ETypes.addArgHandler ancestry expressionPtr
+        Config.addNextArgumentKeys addArgDoc addArgHandler
       , Widget.actionEventMapMovesCursor
         Config.giveAsArgumentKeys "Give as argument" .
         ETypes.diveIn $ DataOps.giveAsArg expressionPtr

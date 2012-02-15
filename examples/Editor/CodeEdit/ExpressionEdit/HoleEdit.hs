@@ -2,13 +2,13 @@
 module Editor.CodeEdit.ExpressionEdit.HoleEdit(make) where
 
 import Control.Monad (liftM)
-import Data.List(isInfixOf)
+import Data.List(isInfixOf, sort)
 import Data.Maybe(isJust)
 import Data.Monoid(Monoid(..))
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, getP, assignCursor, TWidget, readCursor)
+import Editor.CTransaction (CTransaction, transaction, getP, assignCursor, TWidget, readCursor)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -106,29 +106,22 @@ pickResultEventMap
   ancestry expressionPtr myId expr flipAct resultId =
   do
     expressionI <- getP expressionPtr
+    (addArgDoc, addArgHandler) <-
+      transaction $ ETypes.makeAddArgHandler ancestry expressionPtr
+    let
+      pickResultAndAddArg = do
+        res <- pickResult myId expressionI expr flipAct resultId
+        cursor <- addArgHandler
+        return res { Widget.eCursor = Just cursor }
     return $ mconcat [
       EventMap.fromEventTypes Config.pickResultKeys
       "Pick this search result" $
       pickResult myId expressionI expr flipAct resultId,
 
       EventMap.fromEventTypes Config.addNextArgumentKeys
-      "Pick this search result and add argument" $
+      ("Pick this search result and " ++ addArgDoc) $
       pickResultAndAddArg
-        ancestry expressionPtr myId expr flipAct resultId
       ]
-
-pickResultAndAddArg ::
-  MonadF m => ETypes.ExpressionAncestry m ->
-  ETypes.ExpressionPtr m -> Widget.Id ->
-  Data.Expression -> Transaction ViewTag m () -> Widget.Id ->
-  Transaction ViewTag m Widget.EventResult
-pickResultAndAddArg
-  ancestry expressionPtr myId expr flipAct resultId =
-  do
-    expressionI <- Property.get expressionPtr
-    res <- pickResult myId expressionI expr flipAct resultId
-    cursor <- ETypes.addArgHandler ancestry expressionPtr
-    return res { Widget.eCursor = Just cursor }
 
 searchResultsPrefix :: Widget.Id -> Widget.Id
 searchResultsPrefix = flip Widget.joinId ["search results"]
@@ -192,7 +185,7 @@ makeActiveHoleEdit
         liftM concat .
         mapM
         (makeResultVariables ancestry myId expressionPtr) $
-        params ++ globals
+        sort params ++ sort globals
 
       literalResults <- makeLiteralResults
       let

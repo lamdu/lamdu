@@ -7,10 +7,10 @@ module Editor.CodeEdit.Types(
   addParens,
   varId, diveIn, isInfixName,
   isInfixVar, isInfixFunc, isApplyOfInfixOp,
-  addArgHandler)
+  makeAddArgHandler)
 where
 
-import Control.Monad (liftM, (<=<))
+import Control.Monad (liftM)
 import Data.ByteString.Char8 (pack)
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
@@ -105,10 +105,22 @@ addArgTargetExpression
     return $
       if isInfix then adParentPtr argData else expressionPtr
 
-addArgHandler
+makeAddArgHandler
   :: MonadF m
   => ExpressionAncestry m
   -> Transaction.Property ViewTag m (IRef Data.Expression)
-  -> Transaction ViewTag m Widget.Id
-addArgHandler ancestry =
-  diveIn . DataOps.callWithArg <=< addArgTargetExpression ancestry
+  -> Transaction ViewTag m (String, Transaction ViewTag m Widget.Id)
+makeAddArgHandler ancestry expressionPtr = do
+  case ancestry of
+    ApplyChild ApplyData { adRole = ApplyFunc, adApply = Data.Apply _ argI } -> do
+      arg <- Property.get $ Transaction.fromIRef argI
+      case arg of
+        Data.ExpressionHole _ ->
+          return ("Move to next arg", return (WidgetIds.fromIRef argI))
+        _ ->
+          return addArg
+    _ -> return addArg
+  where
+    addArg =
+      ("Add next arg",
+       diveIn . DataOps.callWithArg =<< addArgTargetExpression ancestry expressionPtr)
