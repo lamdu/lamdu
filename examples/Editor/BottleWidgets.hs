@@ -144,7 +144,7 @@ makeWordEdit = (fmap . fmap . liftM . Widget.atEventMap) removeWordSeparators ma
     compose = foldr (.) id
     removeWordSeparators = compose $ map EventMap.delete [newlineKey, newwordKey]
     newlineKey = EventMap.KeyEventType EventMap.noMods EventMap.KeyEnter
-    newwordKey = EventMap.SpaceKeyEventType EventMap.noMods
+    newwordKey = EventMap.KeyEventType EventMap.noMods EventMap.KeySpace
 
 makeNameEdit :: Monad m => String -> IRef a -> Widget.Id -> TWidget t m
 makeNameEdit emptyStr iref =

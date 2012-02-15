@@ -24,7 +24,7 @@ import qualified Data.Map as Map
 charKey :: Char -> Key
 charKey = CharKey . toUpper
 
-data EventType = CharEventType | SpaceKeyEventType ModState | KeyEventType ModState Key
+data EventType = CharEventType | KeyEventType ModState Key
   deriving (Show, Eq, Ord)
 
 prettyKey :: Key -> String
@@ -35,7 +35,7 @@ prettyKey k
 
 prettyEventType :: EventType -> String
 prettyEventType CharEventType = "Character"
-prettyEventType (SpaceKeyEventType ms) = prettyModState ms ++ "Space"
+prettyEventType (KeyEventType ms KeySpace) = prettyModState ms ++ "Space"
 prettyEventType (KeyEventType ms key) =
   prettyModState ms ++ prettyKey key
 
@@ -54,7 +54,7 @@ type Event = KeyEvent
 eventTypesOf :: Event -> [EventType]
 eventTypesOf (KeyEvent Release _ _ _) = []
 eventTypesOf (KeyEvent Press ms mchar k)
-  | isCharMods ms && mchar == Just ' ' = [SpaceKeyEventType ms]
+  | isCharMods ms && mchar == Just ' ' = [KeyEventType ms KeySpace]
   | otherwise = KeyEventType ms k : charEventType
   where
    charEventType

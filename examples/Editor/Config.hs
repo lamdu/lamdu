@@ -42,7 +42,7 @@ jumpToDefinitionKeys  = [noMods E.KeyEnter]
 delKeys           = [noMods E.KeyBackspace, noMods E.KeyDel, mk E.alt E.KeyDel]
 giveAsArgumentKeys = [k '[']
 callWithArgumentKeys = [k ']']
-addNextArgumentKeys = [E.SpaceKeyEventType E.noMods]
+addNextArgumentKeys = [E.KeyEventType E.noMods E.KeySpace]
 debugModeKeys = [ctrlAlt 'd']
 
 exprFocusDelegatorKeys = FocusDelegator.Keys {

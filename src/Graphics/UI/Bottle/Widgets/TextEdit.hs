@@ -279,7 +279,7 @@ makeFocused cursor style str myId =
 
         [ keys "Insert Newline" [specialKey E.KeyEnter] (insert "\n") ],
 
-        [ keys "Insert Space" [E.SpaceKeyEventType E.noMods] (insert " ") ]
+        [ keys "Insert Space" [E.KeyEventType E.noMods E.KeySpace] (insert " ") ]
 
         ]
 
