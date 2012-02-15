@@ -83,19 +83,16 @@ addArgTargetExpression
   :: MonadF m
   => ExpressionAncestry m
   -> Transaction.Property ViewTag m (IRef Data.Expression)
-  -> Transaction ViewTag m (Transaction.Property ViewTag m (IRef Data.Expression))
-addArgTargetExpression [] expressionPtr = return expressionPtr
+  -> Transaction.Property ViewTag m (IRef Data.Expression)
+addArgTargetExpression [] expressionPtr = expressionPtr
 addArgTargetExpression (argData : _) expressionPtr =
-  case adRole argData of
-  ApplyArg -> do
-    isApplyOfInfix <- isApplyOfInfixOp funcI
-    let isInfix = isApplyOfInfix || infixFunc
-    return $ if isInfix then expressionPtr else adParentPtr argData
-  ApplyFunc ->
-    return $ if infixFunc then adParentPtr argData else expressionPtr
+  if isParent then adParentPtr argData else expressionPtr
   where
-    infixFunc = adFuncType argData == InfixLeft
-    (Data.Apply funcI _) = adApply argData
+    isParent =
+      case adRole argData of
+        ApplyArg -> funcType == Prefix
+        ApplyFunc -> funcType == InfixLeft
+    funcType = adFuncType argData
 
 makeAddArgHandler
   :: MonadF m
@@ -115,4 +112,4 @@ makeAddArgHandler ancestry expressionPtr = do
   where
     addArg =
       ("Add next arg",
-       diveIn . DataOps.callWithArg =<< addArgTargetExpression ancestry expressionPtr)
+       diveIn . DataOps.callWithArg $ addArgTargetExpression ancestry expressionPtr)
