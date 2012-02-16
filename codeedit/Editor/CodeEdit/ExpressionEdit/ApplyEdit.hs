@@ -1,15 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit.ApplyEdit(make) where
 
-import Control.Arrow (first)
-import Control.Monad (liftM)
+import Control.Monad (liftM, liftM2)
+import Data.ByteString.Char8 (pack)
 import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, getP, assignCursor, transaction)
-import Editor.CodeEdit.Types(ApplyData(..))
+import Editor.CTransaction (TWidget, getP, assignCursor, transaction)
+import Editor.CodeEdit.Types(ApplyData(..), ApplyRole(..))
 import Editor.MonadF (MonadF)
-import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.BottleWidgets as BWidgets
@@ -19,16 +18,33 @@ import qualified Editor.Data as Data
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 
+needParen
+  :: Monad m
+  => Data.Apply -> ETypes.ExpressionAncestry m
+  -> Transaction ViewTag m Bool
+needParen _ (ApplyData { adRole = ApplyArg, adFuncType = ETypes.Prefix } : _) =
+  return True
+needParen
+  (Data.Apply funcI _)
+  (ApplyData { adRole = ApplyArg } : _) =
+    liftM2 (||)
+    (ETypes.isInfixFunc funcI) (ETypes.isApplyOfInfixOp funcI)
+needParen (Data.Apply funcI _) [] =
+  ETypes.isInfixFunc funcI
+needParen (Data.Apply funcI _)
+  (ApplyData { adRole = ApplyFunc } : _) =
+  ETypes.isApplyOfInfixOp funcI
+
 make ::
   (MonadF m) =>
   (ETypes.ExpressionAncestry m
    -> ETypes.ExpressionPtr m
-   -> CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id))
+   -> TWidget ViewTag m)
   -> ETypes.ExpressionAncestry m
   -> ETypes.ExpressionPtr m
   -> Data.Apply
   -> Widget.Id
-  -> CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id)
+  -> TWidget ViewTag m
 make makeExpressionEdit ancestry expressionPtr apply@(Data.Apply funcI argI) myId = do
   expressionI <- getP expressionPtr
   assignCursor myId (WidgetIds.fromIRef argI) $ do
@@ -48,7 +64,7 @@ make makeExpressionEdit ancestry expressionPtr apply@(Data.Apply funcI argI) myI
         return $ WidgetIds.fromIRef newExprI
 
       addDelEventMap =
-        liftM . first . Widget.weakerEvents . delEventMap
+        liftM . Widget.weakerEvents . delEventMap
 
     let
       makeAncestry role =
@@ -59,14 +75,30 @@ make makeExpressionEdit ancestry expressionPtr apply@(Data.Apply funcI argI) myI
           adParentPtr = expressionPtr
           }
         : ancestry
-    (funcEdit, parenId) <-
+    funcEdit <-
       addDelEventMap argI $
       makeExpressionEdit (makeAncestry ETypes.ApplyFunc) funcIPtr
 
-    (argEdit, _) <-
+    argEdit <-
       addDelEventMap funcI $
       makeExpressionEdit (makeAncestry ETypes.ApplyArg) argIPtr
 
-    return
-      ((BWidgets.hbox . if isInfix then reverse else id)
-       [funcEdit, BWidgets.spaceWidget, argEdit], parenId)
+    exprNeedParen <- transaction $ needParen apply ancestry
+    let
+      makeParensId (ad : _) = do
+        parentI <- getP $ adParentPtr ad
+        return $
+          Widget.joinId (WidgetIds.fromIRef parentI)
+          [pack . show $ adRole ad]
+      makeParensId [] = return $ Widget.Id ["root parens"]
+      rParenId = Widget.joinId myId [")"]
+      addParens widget
+        | exprNeedParen = do
+          parensId <- makeParensId ancestry
+          ETypes.addParens id
+            (>>= BWidgets.makeFocusableView rParenId)
+            parensId widget
+        | otherwise = return widget
+    addParens . BWidgets.hbox $
+      (if isInfix then reverse else id)
+      [funcEdit, BWidgets.spaceWidget, argEdit]

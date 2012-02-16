@@ -2,7 +2,6 @@
 
 module Editor.CodeEdit.ExpressionEdit.LiteralEdit(makeInt, makeIntView) where
 
-import Control.Monad (liftM)
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors(ViewTag)
@@ -15,7 +14,6 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
-import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 
@@ -62,10 +60,9 @@ makeInt ::
   IRef Data.Expression
   -> Integer
   -> Widget.Id
-  -> CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id)
+  -> TWidget ViewTag m
 makeInt expressionI integer myId =
-  liftM (flip (,) (WidgetIds.fromIRef expressionI)) . setColor $
-    makeIntEdit intRef myId
+  setColor $ makeIntEdit intRef myId
   where
     expressionRef = Transaction.fromIRef expressionI
     intRef = Property.pureCompose (const integer) Data.ExpressionLiteralInteger expressionRef

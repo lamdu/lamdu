@@ -11,7 +11,6 @@ import Editor.Anchors (ViewTag)
 import Editor.CTransaction (CTransaction, transaction, getP, assignCursor, TWidget, readCursor)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Animation(AnimId)
-import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Char as Char
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -247,12 +246,12 @@ makeActiveHoleEdit
         Widget.weakerEvents blockUpDownEventMap .
         BWidgets.vbox $ [searchTermWidget, resultWidgets] ++ moreResultsWidget
 
-makeInternal ::
+make ::
   MonadF m => ETypes.ExpressionAncestry m ->
   IRef Data.Definition -> Data.HoleState ->
   Transaction.Property ViewTag m (IRef Data.Expression) ->
   Widget.Id -> TWidget ViewTag m
-makeInternal ancestry definitionI curState expressionPtr myId = do
+make ancestry definitionI curState expressionPtr myId = do
   cursor <- readCursor
   widget <-
     if isJust (Widget.subId myId cursor)
@@ -269,15 +268,3 @@ makeInternal ancestry definitionI curState expressionPtr myId = do
       | null searchText = "  "
       | otherwise = searchText
     searchText = Data.holeSearchTerm curState
-
-make ::
-  MonadF m =>
-  ETypes.ExpressionAncestry m
-  -> IRef Data.Definition
-  -> Data.HoleState
-  -> ETypes.ExpressionPtr m
-  -> Widget.Id
-  -> CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id)
-make ancestry definitionI holeState expressionPtr myId =
-  ((fmap . liftM) (flip (,) myId) $
-  makeInternal ancestry definitionI holeState expressionPtr) myId

@@ -1,11 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit.VarEdit(make, makeView, colorOf) where
 
-import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, TWidget, getP)
+import Editor.CTransaction (TWidget, getP)
 import Editor.MonadF(MonadF)
-import Graphics.UI.Bottle.Widget (Widget)
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.Types as ETypes
@@ -39,7 +37,7 @@ make
   :: (Functor m, Monad m)
   => ETypes.ExpressionAncestry m
   -> Data.VariableRef -> Widget.Id
-  -> CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id)
+  -> TWidget ViewTag m
 make ancestry varRef myId = do
   varRefView <- makeView ancestry varRef myId
   let
@@ -52,4 +50,4 @@ make ancestry varRef myId = do
           Anchors.jumpTo myId $ WidgetIds.fromIRef defI
         Data.ParameterRef paramI -> Anchors.jumpTo myId $ WidgetIds.fromIRef paramI
         Data.BuiltinRef _builtI -> return myId
-  return (Widget.weakerEvents jumpToDefinitionEventMap varRefView, myId)
+  return $ Widget.weakerEvents jumpToDefinitionEventMap varRefView

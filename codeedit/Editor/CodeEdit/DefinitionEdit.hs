@@ -26,7 +26,7 @@ make definitionI = do
     assignCursor myId nameEditAnimId $
     BWidgets.makeNameEdit "<unnamed>" definitionI nameEditAnimId
   equals <- BWidgets.makeTextView "=" $ Widget.joinId myId ["equals"]
-  (expressionEdit, _) <- ExpressionEdit.make [] definitionI bodyRef
+  expressionEdit <- ExpressionEdit.make [] definitionI bodyRef
   paramsEdits <- mapM makeParamEdit $ enumerate params
 
   let
