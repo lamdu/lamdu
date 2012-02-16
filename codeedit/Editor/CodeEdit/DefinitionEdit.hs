@@ -24,7 +24,7 @@ make definitionI = do
   Data.Definition params _ <- getP definitionRef
   nameEdit <-
     assignCursor myId nameEditAnimId $
-    BWidgets.makeNameEdit "<unnamed>" definitionI nameEditAnimId
+    BWidgets.makeNameEdit Config.unnamedStr definitionI nameEditAnimId
   equals <- BWidgets.makeTextView "=" $ Widget.joinId myId ["equals"]
   expressionEdit <- ExpressionEdit.make [] definitionI bodyRef
   paramsEdits <- mapM makeParamEdit $ enumerate params

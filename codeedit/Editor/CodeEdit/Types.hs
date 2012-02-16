@@ -73,7 +73,8 @@ diveIn :: Functor f => f (IRef a) -> f Widget.Id
 diveIn = fmap $ WidgetIds.delegating . WidgetIds.fromIRef
 
 isInfixName :: String -> Bool
-isInfixName = all (not . Char.isAlphaNum)
+isInfixName "" = False
+isInfixName name = all (not . Char.isAlphaNum) name
 
 isInfixVar :: Monad m => Data.VariableRef -> Transaction t m Bool
 isInfixVar = liftM isInfixName . Property.get . Anchors.variableNameRef

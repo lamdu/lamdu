@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit.VarEdit(make, makeView, colorOf) where
 
+import Control.Monad (liftM)
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (TWidget, getP)
 import Editor.MonadF(MonadF)
@@ -18,12 +19,16 @@ colorOf (Data.BuiltinRef _) = Config.builtinColor
 colorOf (Data.DefinitionRef _) = Config.definitionColor
 colorOf (Data.ParameterRef _) = Config.parameterColor
 
+fixName :: String -> String
+fixName "" = Config.unnamedStr
+fixName x = x
+
 makeView
   :: MonadF m
   => ETypes.ExpressionAncestry m
   -> Data.VariableRef -> Widget.Id -> TWidget t m
 makeView ancestry var myId = do
-  name <- getP $ Anchors.variableNameRef var
+  name <- liftM fixName . getP $ Anchors.variableNameRef var
   widget <- BWidgets.setTextColor (colorOf var) $
     BWidgets.makeFocusableTextView name myId
   if ETypes.isInfixName name
