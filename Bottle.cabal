@@ -12,7 +12,7 @@ Build-type:          Simple
 Cabal-version:       >= 1.8
 Library
   -- Modules exported by the library.
-  hs-Source-Dirs:      src
+  hs-Source-Dirs:      bottlelib
 
                        -- Bottle:
   Exposed-modules:     Graphics.UI.Bottle.Widgets.TextEdit,
@@ -80,7 +80,7 @@ Library
   ghc-options:         -O2 -Wall
 
 Executable Editor
-  hs-Source-Dirs:      examples
+  hs-Source-Dirs:      codeedit
   Build-Depends:       base >= 4,
                        containers,
                        graphics-drawingcombinators >= 1.4,
