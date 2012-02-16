@@ -45,10 +45,16 @@ data ApplyData m = ApplyData {
 
 type ExpressionAncestry m = [ApplyData m]
 
-addParens :: MonadF m => Widget.Id -> Widget (Transaction t m) -> TWidget t m
-addParens parenId widget = do
-  beforeParen <- label "("
-  afterParen <- label ")"
+addParens
+  :: MonadF m
+  => (TWidget t m -> TWidget t m)
+  -> (TWidget t m -> TWidget t m)
+  -> Widget.Id
+  -> Widget (Transaction t m)
+  -> TWidget t m
+addParens onLParen onRParen parenId widget = do
+  beforeParen <- onLParen $ label "("
+  afterParen <- onRParen $ label ")"
   return $ BWidgets.hbox [ beforeParen, widget, afterParen ]
   where
     label str = BWidgets.makeTextView str $ Widget.joinId parenId [pack str]

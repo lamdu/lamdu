@@ -59,11 +59,14 @@ make ancestry definitionI expressionPtr = do
 
   expr <- getP $ Transaction.fromIRef expressionI
   exprNeedParen <- transaction $ needParen expr ancestry
+  (addArgDoc, addArgHandler) <-
+    transaction $ ETypes.makeAddArgHandler ancestry expressionPtr
   let
+    rParenId = Widget.joinId expressionId [")"]
     addParens (widget, parenId)
       | exprNeedParen =
         do
-          resWidget <- ETypes.addParens parenId widget
+          resWidget <- ETypes.addParens id (>>= BWidgets.makeFocusableView rParenId) parenId widget
           return (resWidget, expressionId)
       | otherwise = return (widget, parenId)
 
@@ -86,8 +89,6 @@ make ancestry definitionI expressionPtr = do
           addParens <=<
           LiteralEdit.makeInt expressionI integer
   (widget, parenId) <- makeEditor expressionId
-  (addArgDoc, addArgHandler) <-
-    transaction $ ETypes.makeAddArgHandler ancestry expressionPtr
   let
     eventMap = mconcat
       [ Widget.actionEventMapMovesCursor

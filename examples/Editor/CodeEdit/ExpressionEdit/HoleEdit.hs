@@ -78,7 +78,7 @@ makeResultVariables ancestry myId expressionPtr varRef = do
     getVar = Data.ExpressionGetVariable varRef
 
     dontAddParens = id
-    addParens = (>>= ETypes.addParens resultId)
+    addParens = (>>= ETypes.addParens id id resultId)
 
     dontFlip = return ()
     doFlip (ETypes.ApplyData _ _ apply parentPtr) = do
