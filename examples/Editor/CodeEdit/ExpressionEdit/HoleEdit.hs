@@ -45,6 +45,8 @@ makeMoreResults myId =
   BWidgets.makeTextView "..." $
   Widget.joinId myId ["more results"]
 
+data NeedFlip m = DontFlip | DoFlip (ETypes.ApplyData m)
+
 makeResultVariables ::
   MonadF m => ETypes.ExpressionAncestry m ->
   Widget.Id -> ETypes.ExpressionPtr m ->
@@ -57,35 +59,28 @@ makeResultVariables ancestry myId expressionPtr varRef = do
     then
       case ancestry of
         (x @ ETypes.ApplyData { ETypes.adRole = ETypes.ApplyArg } : xs) ->
-          [result varName (doFlip x) resultId
+          [result varName (DoFlip x) resultId
            ((ETypes.atAdRole . const) ETypes.ApplyFunc x : xs)
           ,result
-           (concat ["(", varName, ")"]) dontFlip resultIdAsPrefix
+           (concat ["(", varName, ")"]) DontFlip resultIdAsPrefix
            ancestry
           ]
-        _ -> [result varName dontFlip resultId ancestry]
+        _ -> [result varName DontFlip resultId ancestry]
     else
-      [result varName dontFlip resultId ancestry]
+      [result varName DontFlip resultId ancestry]
   where
     resultId = searchResultsPrefix myId `mappend` ETypes.varId varRef
     resultIdAsPrefix = Widget.joinId resultId ["prefix"]
 
-    result name flipAct wid resultAncestry = do
+    result name needFlip wid resultAncestry = do
       pickEventMap <-
-        pickResultEventMap ancestry expressionPtr myId getVar flipAct resultId
+        pickResultEventMap ancestry expressionPtr myId getVar needFlip resultId
       return .
         Result name pickEventMap .
         liftM (Widget.strongerEvents pickEventMap) $
         VarEdit.makeView resultAncestry varRef wid
 
     getVar = Data.ExpressionGetVariable varRef
-
-    dontFlip = return ()
-    doFlip (ETypes.ApplyData _ _ apply parentPtr) = do
-      parentI <- Property.get parentPtr
-      Property.set (Transaction.fromIRef parentI) .
-        Data.ExpressionApply $ flipArgs apply
-
 
 getDefinitionParamRefs :: Data.Definition -> [Data.VariableRef]
 getDefinitionParamRefs (Data.Definition { Data.defParameters = paramIs }) =
@@ -96,26 +91,26 @@ renamePrefix srcPrefix destPrefix animId =
   maybe animId (Anim.joinId destPrefix) $
   Anim.subId srcPrefix animId
 
-pickResultEventMap ::
-  MonadF m => ETypes.ExpressionAncestry m ->
-  ETypes.ExpressionPtr m -> Widget.Id ->
-  Data.Expression -> Transaction ViewTag m () -> Widget.Id ->
-  CTransaction ViewTag m (Widget.EventHandlers (Transaction ViewTag m))
 pickResultEventMap
-  ancestry expressionPtr myId expr flipAct resultId =
+  :: MonadF m => ETypes.ExpressionAncestry m
+  -> ETypes.ExpressionPtr m -> Widget.Id -> Data.Expression
+  -> NeedFlip m -> Widget.Id
+  -> CTransaction ViewTag m (Widget.EventHandlers (Transaction ViewTag m))
+pickResultEventMap
+  ancestry expressionPtr myId expr needFlip resultId =
   do
     expressionI <- getP expressionPtr
     (addArgDoc, addArgHandler) <-
       transaction $ ETypes.makeAddArgHandler ancestry expressionPtr
     let
       pickResultAndAddArg = do
-        res <- pickResult myId expressionI expr flipAct resultId
+        res <- pickResult myId expressionI expr needFlip resultId
         cursor <- addArgHandler
         return res { Widget.eCursor = Just cursor }
     return $ mconcat [
       EventMap.fromEventTypes Config.pickResultKeys
       "Pick this search result" $
-      pickResult myId expressionI expr flipAct resultId,
+      pickResult myId expressionI expr needFlip resultId,
 
       EventMap.fromEventTypes Config.addNextArgumentKeys
       ("Pick this search result and " ++ addArgDoc)
@@ -132,19 +127,25 @@ holeResultAnimMapping myId resultId expressionId =
   where
     myAnimId = Widget.cursorId myId
 
-pickResult ::
-  MonadF m =>
-  Widget.Id -> IRef Data.Expression ->
-  Data.Expression -> Transaction ViewTag m () -> Widget.Id ->
-  Transaction ViewTag m Widget.EventResult
-pickResult myId expressionI expr flipAct resultId = do
+pickResult
+  :: MonadF m => Widget.Id -> IRef Data.Expression
+  -> Data.Expression -> NeedFlip m -> Widget.Id
+  -> Transaction ViewTag m Widget.EventResult
+pickResult myId expressionI expr needFlip resultId = do
   Transaction.writeIRef expressionI expr
-  flipAct
+  flipAct needFlip
   return Widget.EventResult {
     Widget.eCursor = Just expressionId,
-    Widget.eAnimIdMapping = holeResultAnimMapping myId resultId expressionId
+    Widget.eAnimIdMapping =
+      holeResultAnimMapping myId resultId expressionId
     }
   where
+    flipAct DontFlip = return ()
+    flipAct (DoFlip (ETypes.ApplyData _ _ apply parentPtr)) = do
+      parentI <- Property.get parentPtr
+      Property.set (Transaction.fromIRef parentI) .
+        Data.ExpressionApply $ flipArgs apply
+
     expressionId = WidgetIds.fromIRef expressionI
 
 flipArgs :: Data.Apply -> Data.Apply
@@ -167,7 +168,7 @@ makeActiveHoleEdit
         makeLiteralIntResult integer = do
           pickEventMap <-
             pickResultEventMap ancestry expressionPtr
-            myId (Data.ExpressionLiteralInteger integer) (return ()) literalIntId
+            myId (Data.ExpressionLiteralInteger integer) DontFlip literalIntId
           return .
             Result (show integer) pickEventMap .
             liftM (Widget.strongerEvents pickEventMap) .
