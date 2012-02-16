@@ -56,29 +56,29 @@ makeResultVariables ancestry myId expressionPtr varRef = do
     if ETypes.isInfixName varName
     then
       case ancestry of
-        (argData @ ETypes.ApplyData { ETypes.adRole = ETypes.ApplyArg } : _) ->
-            [result varName (doFlip argData) resultId dontAddParens,
-             result
-               (concat ["(", varName, ")"]) dontFlip resultIdAsPrefix addParens]
-        _ -> [result varName dontFlip resultId dontAddParens]
+        (x @ ETypes.ApplyData { ETypes.adRole = ETypes.ApplyArg } : xs) ->
+          [result varName (doFlip x) resultId
+           ((ETypes.atAdRole . const) ETypes.ApplyFunc x : xs)
+          ,result
+           (concat ["(", varName, ")"]) dontFlip resultIdAsPrefix
+           ancestry
+          ]
+        _ -> [result varName dontFlip resultId ancestry]
     else
-      [result varName dontFlip resultId dontAddParens]
+      [result varName dontFlip resultId ancestry]
   where
     resultId = searchResultsPrefix myId `mappend` ETypes.varId varRef
     resultIdAsPrefix = Widget.joinId resultId ["prefix"]
 
-    result name flipAct wid maybeAddParens = do
+    result name flipAct wid resultAncestry = do
       pickEventMap <-
         pickResultEventMap ancestry expressionPtr myId getVar flipAct resultId
-      return $
-        Result name pickEventMap $
-          liftM (Widget.strongerEvents pickEventMap) .
-          maybeAddParens $ VarEdit.makeView varRef wid
+      return .
+        Result name pickEventMap .
+        liftM (Widget.strongerEvents pickEventMap) $
+        VarEdit.makeView resultAncestry varRef wid
 
     getVar = Data.ExpressionGetVariable varRef
-
-    dontAddParens = id
-    addParens = (>>= ETypes.addParens id id resultId)
 
     dontFlip = return ()
     doFlip (ETypes.ApplyData _ _ apply parentPtr) = do

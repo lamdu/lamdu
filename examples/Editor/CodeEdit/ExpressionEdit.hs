@@ -28,10 +28,8 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 needParen ::
   Monad m => Data.Expression -> ETypes.ExpressionAncestry m ->
   Transaction ViewTag m Bool
-needParen (Data.ExpressionGetVariable _) (ApplyData { adRole = ApplyFunc } : _) =
+needParen (Data.ExpressionGetVariable _) _ =
   return False
-needParen (Data.ExpressionGetVariable varRef) _ =
-  ETypes.isInfixVar varRef
 needParen (Data.ExpressionHole _) _ =
   return False
 needParen (Data.ExpressionLiteralInteger _) _ =
@@ -75,9 +73,10 @@ make ancestry definitionI expressionPtr = do
         Data.ExpressionHole holeState ->
           BWidgets.wrapDelegatedWithKeys
             FocusDelegator.defaultKeys FocusDelegator.Delegating first $
+          addParens <=<
           HoleEdit.make ancestry definitionI holeState expressionPtr
         Data.ExpressionGetVariable varRef ->
-          addParens <=< VarEdit.make varRef
+          addParens <=< VarEdit.make ancestry varRef
         Data.ExpressionApply apply ->
           BWidgets.wrapDelegatedWithKeys
             Config.exprFocusDelegatorKeys FocusDelegator.Delegating first $

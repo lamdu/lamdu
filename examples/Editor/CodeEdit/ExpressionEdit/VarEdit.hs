@@ -8,6 +8,7 @@ import Editor.MonadF(MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
+import qualified Editor.CodeEdit.Types as ETypes
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.WidgetIds as WidgetIds
@@ -19,19 +20,28 @@ colorOf (Data.BuiltinRef _) = Config.builtinColor
 colorOf (Data.DefinitionRef _) = Config.definitionColor
 colorOf (Data.ParameterRef _) = Config.parameterColor
 
-makeView :: MonadF m => Data.VariableRef -> Widget.Id -> TWidget t m
-makeView var myId = do
+makeView
+  :: MonadF m
+  => ETypes.ExpressionAncestry m
+  -> Data.VariableRef -> Widget.Id -> TWidget t m
+makeView ancestry var myId = do
   name <- getP $ Anchors.variableNameRef var
-  BWidgets.setTextColor (colorOf var) $
+  widget <- BWidgets.setTextColor (colorOf var) $
     BWidgets.makeFocusableTextView name myId
+  if ETypes.isInfixName name
+    then case ancestry of
+      (ETypes.ApplyData { ETypes.adRole = ETypes.ApplyFunc } : _) ->
+        return widget
+      _ -> ETypes.addParens id id myId widget
+    else return widget
 
-make ::
-  (Functor m, Monad m) =>
-  Data.VariableRef
-  -> Widget.Id
+make
+  :: (Functor m, Monad m)
+  => ETypes.ExpressionAncestry m
+  -> Data.VariableRef -> Widget.Id
   -> CTransaction ViewTag m (Widget (Transaction ViewTag m), Widget.Id)
-make varRef myId = do
-  varRefView <- makeView varRef myId
+make ancestry varRef myId = do
+  varRefView <- makeView ancestry varRef myId
   let
     jumpToDefinitionEventMap =
       Widget.actionEventMapMovesCursor Config.jumpToDefinitionKeys "Jump to definition" jumpToDefinition

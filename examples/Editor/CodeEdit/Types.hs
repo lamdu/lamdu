@@ -1,8 +1,10 @@
 {-# OPTIONS -O2 -Wall #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
 module Editor.CodeEdit.Types(
   ExpressionPtr,
-  ExpressionAncestry, ApplyData(..), ApplyRole(..),
+  ExpressionAncestry,
+  ApplyData(..), atAdRole, atAdFuncType, atAdApply, atAdParentPtr,
+  ApplyRole(..),
   FuncType(..),
   addParens,
   varId, diveIn, isInfixName,
@@ -18,9 +20,10 @@ import Editor.Anchors (ViewTag)
 import Editor.CTransaction (TWidget)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
+import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Char as Char
-import qualified Data.Store.Transaction as Transaction
 import qualified Data.Store.Property as Property
+import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.Data as Data
@@ -42,6 +45,7 @@ data ApplyData m = ApplyData {
   adApply :: Data.Apply,
   adParentPtr :: Transaction.Property ViewTag m (IRef Data.Expression)
   }
+AtFieldTH.make ''ApplyData
 
 type ExpressionAncestry m = [ApplyData m]
 
