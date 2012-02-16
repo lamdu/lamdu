@@ -211,6 +211,11 @@ initDB store =
       ,"Prelude.^"
       ,"Prelude.:"
       ,"Prelude.=="
+      ,"Prelude./="
+      ,"Prelude.<="
+      ,"Prelude.>="
+      ,"Prelude.<"
+      ,"Prelude.>"
       ,"Prelude.bool"
       ]
 
