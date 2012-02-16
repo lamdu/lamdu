@@ -35,7 +35,6 @@ prettyKey k
 
 prettyEventType :: EventType -> String
 prettyEventType CharEventType = "Character"
-prettyEventType (KeyEventType ms KeySpace) = prettyModState ms ++ "Space"
 prettyEventType (KeyEventType ms key) =
   prettyModState ms ++ prettyKey key
 
