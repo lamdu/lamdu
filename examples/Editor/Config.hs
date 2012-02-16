@@ -60,3 +60,6 @@ parameterColor = Draw.Color 0.2 0.8 0.9 1
 literalIntColor = Draw.Color 0 1 0 1
 
 previousCursor = [mk E.alt E.KeyLeft]
+
+focusedHoleBackgroundColor = Draw.Color 1 0 0 0.361
+unfocusedHoleBackgroundColor = Draw.Color 1 0 0 1

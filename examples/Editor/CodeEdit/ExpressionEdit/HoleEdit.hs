@@ -24,7 +24,6 @@ import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
 import qualified Editor.WidgetIds as WidgetIds
-import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -257,13 +256,17 @@ makeInternal ancestry definitionI curState expressionPtr myId = do
   cursor <- readCursor
   widget <-
     if isJust (Widget.subId myId cursor)
-    then makeActiveHoleEdit ancestry definitionI curState expressionPtr myId
-    else BWidgets.makeFocusableTextView snippet $ WidgetIds.searchTermId myId
-  return $ Widget.backgroundColor (Widget.joinId myId ["hole background"]) holeBackgroundColor widget
+    then
+      makeBackground Config.focusedHoleBackgroundColor $
+      makeActiveHoleEdit ancestry definitionI curState expressionPtr myId
+    else
+      makeBackground Config.unfocusedHoleBackgroundColor .
+      BWidgets.makeFocusableTextView snippet $ WidgetIds.searchTermId myId
+  return widget
   where
-    holeBackgroundColor = Draw.Color 0.8 0 0 0.3
+    makeBackground = liftM . (Widget.backgroundColor (Widget.joinId myId ["hole background"]))
     snippet
-      | null searchText = "-"
+      | null searchText = "  "
       | otherwise = searchText
     searchText = Data.holeSearchTerm curState
 
