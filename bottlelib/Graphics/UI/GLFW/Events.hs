@@ -94,16 +94,29 @@ data TypematicState =
     _tsStartTime :: UTCTime
     }
 
+pureModifyMVar :: MVar a -> (a -> a) -> IO ()
+pureModifyMVar mvar f = modifyMVar_ mvar (return . f)
+
 -- Calls handler from multiple threads!
 typematicKeyHandlerWrap ::
   ([GLFWEvent] -> IO ()) -> IO ([GLFWEvent] -> IO ())
 typematicKeyHandlerWrap handler = do
   stateVar <- newMVar NoKey
-  _ <- forkIO . forever $ do
-    sleepTime <- modifyMVar stateVar typematicIteration
-    threadDelay . max 0 $ round (1000000 * sleepTime)
+  accumulatedVar <- newMVar []
 
   let
+    addEvent = pureModifyMVar accumulatedVar . (:)
+    typematicIteration state@(TypematicRepeat keyEvent count startTime) = do
+      now <- getCurrentTime
+      let timeDiff = diffUTCTime now startTime
+      if timeDiff >= timeFunc count
+        then do
+          addEvent $ GLFWKeyEvent keyEvent
+          return (TypematicRepeat keyEvent (count + 1) startTime,
+                  timeFunc (count + 1) - timeDiff)
+        else
+          return (state, timeFunc count - timeDiff)
+    typematicIteration state@NoKey = return (state, timeFunc 0)
     handleEvent event@(GLFWKeyEvent keyEvent@KeyEvent { keyPress=isPress }) = do
       newValue <-
         case isPress of
@@ -111,25 +124,20 @@ typematicKeyHandlerWrap handler = do
           Release -> return NoKey
 
       _ <- swapMVar stateVar newValue
-      return event
-    handleEvent event = return event
+      addEvent event
+    handleEvent event = addEvent event
 
-  return (handler <=< mapM handleEvent)
+  _ <- forkIO . forever $ do
+    sleepTime <- modifyMVar stateVar typematicIteration
+    threadDelay . max 0 $ round (1000000 * sleepTime)
+
+  return $ \events -> do
+    mapM_ handleEvent events
+    accumulated <- swapMVar accumulatedVar []
+    handler $ reverse accumulated
 
   where
-    timeFunc = (0.5 +) . (0.05 *) . fromIntegral
-
-    typematicIteration state@(TypematicRepeat keyEvent count startTime) = do
-      now <- getCurrentTime
-      let timeDiff = diffUTCTime now startTime
-      if timeDiff >= timeFunc count
-        then do
-          handler [GLFWKeyEvent keyEvent]
-          return (TypematicRepeat keyEvent (count + 1) startTime,
-                  timeFunc (count + 1) - timeDiff)
-        else
-          return (state, timeFunc count - timeDiff)
-    typematicIteration state@NoKey = return (state, timeFunc 0)
+    timeFunc = (0.5 +) . (0.025 *) . fromIntegral
 
 modKeyHandlerWrap ::
   ([(ModState, GLFWRawEvent)] -> IO ()) ->

@@ -2,10 +2,8 @@
 module Graphics.UI.Bottle.MainLoop (mainLoopAnim, mainLoopImage, mainLoopWidget) where
 
 import Control.Arrow(first, second)
-import Control.Concurrent(forkIO, threadDelay)
-import Control.Concurrent.MVar
-import Control.Exception(SomeException, try, throwIO)
-import Control.Monad(forever, liftM)
+import Control.Concurrent(threadDelay)
+import Control.Monad(liftM)
 import Data.IORef
 import Data.StateVar (($=))
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
@@ -24,34 +22,8 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 
--- ^ Returns a function that makes all of the given IO actions execute
--- in the same new thread.
-coalsceToThread :: IO (IO () -> IO ())
-coalsceToThread = do
-  requestVar <- newEmptyMVar
-  _ <- forkIO . forever $ do
-    (action, responseVar) <- takeMVar requestVar
-    result <- try action :: IO (Either SomeException ())
-    putMVar responseVar result
-  let
-    runAction action = do
-      responseVar <- newEmptyMVar
-      putMVar requestVar (action, responseVar)
-      either throwIO return =<< takeMVar responseVar
-
-  return runAction
-
-inAnotherThread :: (IO () -> IO ()) -> IO a -> IO a
-inAnotherThread coalesce action = do
-  m <- newEmptyMVar
-  coalesce (action >>= putMVar m)
-  takeMVar m
-
 mainLoopImage :: (Size -> Event -> IO Bool) -> (Bool -> Size -> IO (Maybe Image)) -> IO a
 mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
-  decorateIO <- coalsceToThread
-  let coalesce = inAnotherThread decorateIO
-
   GLFWUtils.openWindow defaultDisplayOptions
 
   let
@@ -59,7 +31,7 @@ mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
       (x, y) <- getWindowDimensions
       return $ Vector2 (fromIntegral x) (fromIntegral y)
 
-    eventHandlerWithSize size event = coalesce $ eventHandler size event
+    eventHandlerWithSize size event = eventHandler size event
   let
     handleEvent size (GLFWKeyEvent keyEvent) =
       eventHandlerWithSize size keyEvent
@@ -73,7 +45,7 @@ mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
       GL.viewport $=
         (GL.Position 0 0,
          GL.Size (round winSizeX) (round winSizeY))
-      mNewImage <- coalesce (makeImage anyChange winSize)
+      mNewImage <- makeImage anyChange winSize
       case mNewImage of
         Nothing -> threadDelay 10000
         Just image ->
