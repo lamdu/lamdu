@@ -1,6 +1,7 @@
 * del on params should set cursor on next thing
-* = on lhs of = goes to definition
 * space on lhs of = adds a param after current pos
+* delegator on defname/params?
+* = on lhs of = goes to definition
 
 * TextView returns all character position rects
   * TextEdit uses the character position rects to locate enter cursor
