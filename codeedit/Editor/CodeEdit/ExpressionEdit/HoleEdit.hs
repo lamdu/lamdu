@@ -2,9 +2,10 @@
 module Editor.CodeEdit.ExpressionEdit.HoleEdit(make) where
 
 import Control.Monad (liftM)
-import Data.List(isInfixOf, sort)
+import Data.List(isInfixOf, isPrefixOf, sort, sortBy)
 import Data.Maybe(isJust)
 import Data.Monoid(Monoid(..))
+import Data.Ord(comparing)
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
@@ -149,6 +150,15 @@ pickResult myId expressionI expr needFlip resultId = do
 flipArgs :: Data.Apply -> Data.Apply
 flipArgs (Data.Apply x y) = Data.Apply y x
 
+sortOn :: Ord b => (a -> b) -> [a] -> [a]
+sortOn = sortBy . comparing
+
+resultOrdering :: String -> Result m -> (Bool, Bool)
+resultOrdering searchTerm result =
+  (searchTerm /= name, not (searchTerm `isPrefixOf` name))
+  where
+    name = resultName result
+
 makeActiveHoleEdit ::
   MonadF m => ETypes.ExpressionAncestry m ->
   IRef Data.Definition -> Data.HoleState -> ETypes.ExpressionPtr m ->
@@ -188,7 +198,9 @@ makeActiveHoleEdit
       literalResults <- makeLiteralResults
       let
         goodResult = (searchTerm `isInfixOf`) . resultName
-        filteredResults = literalResults ++ filter goodResult allResults
+        filteredResults =
+          sortOn (resultOrdering searchTerm) $
+          literalResults ++ filter goodResult allResults
 
         (firstResults, moreResults) = splitAt 3 filteredResults
 
