@@ -216,7 +216,7 @@ initDB store =
       ,"Prelude.>="
       ,"Prelude.<"
       ,"Prelude.>"
-      ,"Prelude.bool"
+      ,"Prelude.if"
       ]
 
 -- Get an associated name from the given IRef
