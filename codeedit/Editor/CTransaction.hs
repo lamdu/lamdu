@@ -2,12 +2,14 @@
 {-# OPTIONS -Wall #-}
 module Editor.CTransaction(
   CTransaction, runCTransaction, runNestedCTransaction, TWidget,
-  readCursor, readTextStyle, transaction, getP, assignCursor, atTextStyle)
+  readCursor, subCursor, readTextStyle, transaction, getP, assignCursor, atTextStyle)
 where
 
+import Control.Monad (liftM)
 import Control.Monad.Trans.Class (lift)
 import Data.Store.Property(Property)
 import Data.Store.Transaction (Transaction)
+import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
@@ -46,6 +48,9 @@ runNestedCTransaction store act = do
 
 readCursor :: Monad m => CTransaction t m Widget.Id
 readCursor = CTransaction (Reader.asks envCursor)
+
+subCursor :: Monad m => Widget.Id -> CTransaction t m (Maybe AnimId)
+subCursor folder = liftM (Widget.subId folder) readCursor
 
 readTextStyle :: Monad m => CTransaction t m TextEdit.Style
 readTextStyle = CTransaction (Reader.asks envTextStyle)

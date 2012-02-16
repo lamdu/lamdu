@@ -3,7 +3,8 @@
 module Editor.WidgetIds(
   backgroundCursorId, textCursorId, fromIRef,
   collapserId, branchSelection, goUpId,
-  delegating, notDelegating, searchTermId)
+  delegating, notDelegating, searchTermId,
+  parenHighlightId)
 where
 
 import Data.ByteString.Char8() -- IsString instance
@@ -37,3 +38,6 @@ goUpId = Widget.Id ["go up"]
 
 searchTermId :: Widget.Id -> Widget.Id
 searchTermId = flip Widget.joinId ["search term"]
+
+parenHighlightId :: Widget.Id
+parenHighlightId = Widget.Id ["paren highlight"]

@@ -6,7 +6,7 @@ import Data.ByteString.Char8 (pack)
 import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (TWidget, getP, assignCursor, transaction)
+import Editor.CTransaction (TWidget, getP, subCursor, assignCursor, transaction)
 import Editor.CodeEdit.Types(ApplyData(..), ApplyRole(..))
 import Editor.MonadF (MonadF)
 import qualified Data.Store.Property as Property
@@ -94,11 +94,17 @@ make makeExpressionEdit ancestry expressionPtr apply@(Data.Apply funcI argI) myI
       rParenId = Widget.joinId myId [")"]
       addParens widget
         | exprNeedParen = do
+          mInsideParenId <- subCursor rParenId
           parensId <- makeParensId ancestry
-          ETypes.addParens id
+          widgetWithParens <- ETypes.addParens id
             (>>= BWidgets.makeFocusableView rParenId)
             parensId widget
+          return $ maybe id (const highlightExpression) mInsideParenId widgetWithParens
         | otherwise = return widget
+
+      highlightExpression =
+        Widget.backgroundColor WidgetIds.parenHighlightId Config.parenHighlightColor
+
     addParens . BWidgets.hbox $
       (if isInfix then reverse else id)
       [funcEdit, BWidgets.spaceWidget, argEdit]
