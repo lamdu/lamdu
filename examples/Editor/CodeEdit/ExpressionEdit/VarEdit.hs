@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Editor.CodeEdit.ExpressionEdit.VarEdit(make, makeView) where
+module Editor.CodeEdit.ExpressionEdit.VarEdit(make, makeView, colorOf) where
 
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
@@ -11,18 +11,18 @@ import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.WidgetIds as WidgetIds
+import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Widget as Widget
+
+colorOf :: Data.VariableRef -> Draw.Color
+colorOf (Data.BuiltinRef _) = Config.builtinColor
+colorOf (Data.DefinitionRef _) = Config.definitionColor
+colorOf (Data.ParameterRef _) = Config.parameterColor
 
 makeView :: MonadF m => Data.VariableRef -> Widget.Id -> TWidget t m
 makeView var myId = do
   name <- getP $ Anchors.variableNameRef var
-  let
-    color =
-      case var of
-        Data.BuiltinRef _ -> Config.builtinColor
-        Data.DefinitionRef _ -> Config.definitionColor
-        Data.ParameterRef _ -> Config.parameterColor
-  BWidgets.setTextColor color $
+  BWidgets.setTextColor (colorOf var) $
     BWidgets.makeFocusableTextView name myId
 
 make ::
