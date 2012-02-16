@@ -6,7 +6,7 @@ module Editor.CodeEdit.Types(
   ApplyData(..), atAdRole, atAdFuncType, atAdApply, atAdParentPtr,
   ApplyRole(..),
   FuncType(..),
-  addParens,
+  parensPrefix, addParens,
   varId, diveIn, isInfixName,
   isInfixVar, isInfixFunc, isApplyOfInfixOp,
   makeAddArgHandler)
@@ -49,6 +49,9 @@ AtFieldTH.make ''ApplyData
 
 type ExpressionAncestry m = [ApplyData m]
 
+parensPrefix :: Widget.Id -> Widget.Id
+parensPrefix = flip Widget.joinId ["parens"]
+
 addParens
   :: MonadF m
   => (TWidget t m -> TWidget t m)
@@ -61,7 +64,7 @@ addParens onLParen onRParen parenId widget = do
   afterParen <- onRParen $ label ")"
   return $ BWidgets.hbox [ beforeParen, widget, afterParen ]
   where
-    label str = BWidgets.makeTextView str $ Widget.joinId parenId [pack str]
+    label str = BWidgets.makeTextView str $ Widget.joinId (parensPrefix parenId) [pack str]
 
 varId :: Data.VariableRef -> Widget.Id
 varId = Data.onVariableIRef WidgetIds.fromIRef
