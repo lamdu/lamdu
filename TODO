@@ -1,3 +1,4 @@
+* del on params should set cursor on next thing
 * = on lhs of = goes to definition
 * space on lhs of = adds a param after current pos
 * Show empty names as "noname" or something
