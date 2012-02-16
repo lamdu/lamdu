@@ -6,5 +6,3 @@
   * TextEdit uses the character position rects to locate enter cursor
 
 * ScrollBar
-
-* Fix C-home to really go all the way left

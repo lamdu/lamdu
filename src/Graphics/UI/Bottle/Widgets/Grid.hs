@@ -29,35 +29,46 @@ length2d xs = Vector2 (foldl' max 0 . map length $ xs) (length xs)
 capCursor :: Vector2 Int -> Vector2 Int -> Vector2 Int
 capCursor size = fmap (max 0) . liftA2 min (fmap (subtract 1) size)
 
-mkNavEventmap :: [[Widget.MEnter f]] -> Rect -> Cursor -> (Widget.EventHandlers f, Widget.EventHandlers f)
-mkNavEventmap mEnterChildren curRect cursor@(Vector2 cursorX cursorY) = (weakMap, strongMap)
+mkNavEventmap :: [[Widget.MEnter f]] -> Size -> Rect -> Cursor -> (Widget.EventHandlers f, Widget.EventHandlers f)
+mkNavEventmap mEnterChildren widgetSize curRect cursor@(Vector2 cursorX cursorY) = (weakMap, strongMap)
   where
     weakMap = mconcat . catMaybes $ [
       movement "left"       (k GLFW.KeyLeft)  leftOfCursor,
       movement "right"      (k GLFW.KeyRight) rightOfCursor,
       movement "up"         (k GLFW.KeyUp)    aboveCursor,
       movement "down"       (k GLFW.KeyDown)  belowCursor,
-      movement "more left"  (k GLFW.KeyHome)  leftMostCursor,
-      movement "more right" (k GLFW.KeyEnd)   rightMostCursor
+      edgeMovement (Vector2 (Just 0) Nothing) "more left" (k GLFW.KeyHome) leftMostCursor,
+      edgeMovement (Vector2 (Just 1) Nothing) "more right" (k GLFW.KeyEnd) rightMostCursor
       ]
     strongMap = mconcat . catMaybes $ [
-      movement "top"       (k GLFW.KeyPageup)   topCursor,
-      movement "bottom"    (k GLFW.KeyPagedown) bottomCursor,
-      movement "leftmost"  (ctrlK GLFW.KeyHome) leftMostCursor,
-      movement "rightmost" (ctrlK GLFW.KeyEnd)  rightMostCursor
+      edgeMovement (Vector2 Nothing (Just 0)) "top"       (k GLFW.KeyPageup)   topCursor,
+      edgeMovement (Vector2 Nothing (Just 1)) "bottom"    (k GLFW.KeyPagedown) bottomCursor,
+      edgeMovement (Vector2 (Just 0) Nothing) "leftmost"  (ctrlK GLFW.KeyHome) leftMostCursor,
+      edgeMovement (Vector2 (Just 1) Nothing) "rightmost" (ctrlK GLFW.KeyEnd)  rightMostCursor
       ]
     k = EventMap.KeyEventType EventMap.noMods
     ctrlK = EventMap.KeyEventType EventMap.ctrl
     size = length2d mEnterChildren
     Vector2 cappedX cappedY = capCursor size cursor
-    movement dirName event =
+    movementHelper rect dirName event =
       fmap
         (EventMap.fromEventType
          event
          ("Move " ++ dirName) .
          Widget.enterResultEvent .
-         ($ Widget.RelativePos curRect)) .
+         ($ Widget.RelativePos rect)) .
       msum
+    movement = movementHelper curRect
+    edgeMovement edge =
+      movementHelper
+      Rect {
+        Rect.rectTopLeft =
+          liftA2 fromMaybe (Rect.rectTopLeft curRect) $
+            liftA2 (fmap . (*)) widgetSize edge,
+        Rect.rectSize =
+          liftA2 fromMaybe (Rect.rectSize curRect) $
+            (fmap . fmap) (const 0) edge
+        }
     leftOfCursor    = reverse $ take cursorX curRow
     aboveCursor     = reverse $ take cursorY curColumn
     rightOfCursor   = drop (cursorX+1) curRow
@@ -115,7 +126,7 @@ makeHelper combineEnters children =
         makeEventMap cursor userIO =
           mconcat [strongMap, uioEventMap userIO, weakMap]
           where
-            (weakMap, strongMap) = mkNavEventmap mEnterss (uioFocalArea userIO) cursor
+            (weakMap, strongMap) = mkNavEventmap mEnterss size (uioFocalArea userIO) cursor
 
 -- ^ If unfocused, will enters the given child when entered
 makeBiased :: Cursor -> [[Widget k]] -> Widget k
