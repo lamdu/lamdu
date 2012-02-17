@@ -4,12 +4,15 @@ module Editor.BottleWidgets(
   makeFocusableView, makeFocusableTextView,
   wrapDelegatedWithKeys, wrapDelegated,
   makeTextEdit, makeWordEdit, makeNameEdit,
-  hbox, hboxAlign, hboxSpaced,
-  vbox, vboxAlign,
+  hbox,  hboxAlign,  hboxSpaced,
+  hboxK, hboxAlignK, hboxSpacedK,
+  vbox,  vboxAlign,
+  vboxK, vboxAlignK,
   spaceView, spaceWidget,
   setTextColor
 ) where
 
+import Control.Arrow (second)
 import Control.Monad (when, liftM)
 import Data.List (intersperse)
 import Data.List.Utils (enumerate, nth)
@@ -21,6 +24,7 @@ import Editor.CTransaction (TWidget, CTransaction, readTextStyle, readCursor, ge
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Sized (Sized)
 import Graphics.UI.Bottle.Widget (Widget)
+import Graphics.UI.Bottle.Widgets.Box(KBox)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
@@ -151,25 +155,48 @@ makeNameEdit :: Monad m => String -> IRef a -> Widget.Id -> TWidget t m
 makeNameEdit emptyStr iref =
   (atTextStyle . TextEdit.atSEmptyString . const) emptyStr . makeWordEdit (Anchors.aNameRef iref)
 
-boxAlign :: Vector2 Widget.R -> Box.Orientation -> [Widget f] -> Widget f
-boxAlign align orientation =
-  Box.toWidget . Box.make orientation .
-  map (Widget.align align)
+boxAlignK :: Vector2 Widget.R -> Box.Orientation -> [(key, Widget f)] -> KBox key f
+boxAlignK align orientation =
+  Box.makeKeyed orientation .
+  (map . second) (Widget.align align)
 
-hboxAlign :: Widget.R -> [Widget f] -> Widget f
-hboxAlign align = boxAlign (Vector2 0 align) Box.horizontal
+hboxAlignK :: Widget.R -> [(key, Widget f)] -> KBox key f
+hboxAlignK align = boxAlignK (Vector2 0 align) Box.horizontal
 
-vboxAlign :: Widget.R -> [Widget f] -> Widget f
-vboxAlign align = boxAlign (Vector2 align 0) Box.vertical
+vboxAlignK :: Widget.R -> [(key, Widget f)] -> KBox key f
+vboxAlignK align = boxAlignK (Vector2 align 0) Box.vertical
+
+hboxK :: [(key, Widget f)] -> KBox key f
+hboxK = hboxAlignK 0.5
+
+vboxK :: [(key, Widget f)] -> KBox key f
+vboxK = vboxAlignK 0.5
+
+unK
+  :: ([((), Widget f1)]
+  -> KBox key f)
+  -> [Widget f1] -> Widget f
+unK f = Box.toWidget . f . Box.unkey
+
+hboxAlign
+  :: Widget.R -> [Widget f] -> Widget f
+hboxAlign = unK . hboxAlignK
+
+vboxAlign
+  :: Widget.R -> [Widget f] -> Widget f
+vboxAlign = unK . vboxAlignK
 
 hbox :: [Widget f] -> Widget f
-hbox = hboxAlign 0.5
+hbox = unK hboxK
 
 vbox :: [Widget f] -> Widget f
-vbox = vboxAlign 0.5
+vbox = unK vboxK
+
+hboxSpacedK :: key -> [(key, Widget f)] -> KBox key f
+hboxSpacedK spaceKey = hboxK . intersperse (spaceKey, spaceWidget)
 
 hboxSpaced :: [Widget f] -> Widget f
-hboxSpaced = hbox . intersperse spaceWidget
+hboxSpaced = unK (hboxSpacedK ())
 
 spaceView :: Sized Anim.Frame
 spaceView = Spacer.makeHorizontal 20

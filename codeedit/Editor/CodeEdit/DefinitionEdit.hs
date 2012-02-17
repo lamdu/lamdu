@@ -2,7 +2,8 @@
 module Editor.CodeEdit.DefinitionEdit(make) where
 
 import Control.Monad (liftM)
-import Data.List.Utils(enumerate)
+import Data.List.Utils (enumerate, atPred)
+import Data.Monoid (Monoid(..))
 import Data.Store.IRef (IRef)
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (TWidget, getP, assignCursor)
@@ -16,23 +17,31 @@ import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
 import qualified Editor.WidgetIds as WidgetIds
+import qualified Graphics.UI.Bottle.Direction as Direction
+import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 make :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
 make definitionI = do
-  Data.Definition params bodyIRef <- getP definitionRef
+  Data.Definition params _ <- getP definitionRef
   nameEdit <-
     assignCursor myId nameEditAnimId .
     BWidgets.setTextColor Config.definitionColor $
     BWidgets.makeNameEdit Config.unnamedStr definitionI nameEditAnimId
   equals <- BWidgets.makeTextView "=" $ Widget.joinId myId ["equals"]
-  expressionEdit <- ExpressionEdit.make [] definitionI bodyRef
 
   let
     replaceEventMap =
       Widget.actionEventMapMovesCursor Config.delKeys "Replace" .
       ETypes.diveIn $ DataOps.replace bodyRef
+
+  expressionEdit <-
+    liftM (Widget.weakerEvents replaceEventMap) $
+    ExpressionEdit.make [] definitionI bodyRef
+
+  let
     paramEventMap i paramI =
       Widget.actionEventMapMovesCursor Config.delKeys
       "Delete parameter" $ do
@@ -51,16 +60,32 @@ make definitionI = do
   paramsEdits <- mapM makeParamEdit $ enumerate params
 
   let
-    jumpToExpressionEventMap =
-      Widget.actionEventMapMovesCursor Config.jumpToExpressionKeys
-      "Jump to expression" . return $ WidgetIds.fromIRef bodyIRef
-    lhs =
-      Widget.strongerEvents jumpToExpressionEventMap .
-      BWidgets.hboxSpaced $ nameEdit : paramsEdits
+    makeEnterRhsEventMap rhsRect enterRhs =
+      E.fromEventTypes Config.jumpToExpressionKeys
+      "Jump to expression" . Widget.enterResultEvent . enterRhs $
+      Direction.fromLeft rhsRect
 
-  return .
-    Widget.weakerEvents eventMap . BWidgets.hboxSpaced $
-    [lhs, equals, Widget.weakerEvents replaceEventMap expressionEdit]
+    jumpToExpressionEventMap rhsBoxElement =
+      maybe mempty (makeEnterRhsEventMap (Box.boxElementRect rhsBoxElement)) .
+      Widget.uioMaybeEnter $ Box.boxElementUio rhsBoxElement
+
+    addJumpToExpression defKBoxElements =
+      atPred (=="lhs") addEventMapToLhs defKBoxElements
+      where
+        addEventMapToLhs =
+          (Box.atBoxElementUio . Widget.atUioEventMap . mappend)
+          (jumpToExpressionEventMap rhsElement)
+        rhsElement = Box.getElement "rhs" defKBoxElements
+
+    box =
+      Box.toWidget .
+      (Box.atBoxContent . fmap) addJumpToExpression .
+      BWidgets.hboxSpacedK ("space" :: String) $
+      [("lhs", BWidgets.hboxSpaced (nameEdit : paramsEdits)),
+       ("equals", equals),
+       ("rhs", expressionEdit)]
+  return . Widget.weakerEvents eventMap $ box
+
   where
     bodyRef = Property.composeLabel Data.defBody Data.atDefBody definitionRef
     definitionRef = Transaction.fromIRef definitionI
