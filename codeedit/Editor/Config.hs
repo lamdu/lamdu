@@ -68,4 +68,5 @@ parenHighlightColor = Draw.Color 0.3 0 1 0.25
 
 unnamedStr = "<noname>"
 
-jumpToExpressionKeys = [k '=']
+jumpToLhsKeys = [k '`']
+jumpToRhsKeys = [k '=']

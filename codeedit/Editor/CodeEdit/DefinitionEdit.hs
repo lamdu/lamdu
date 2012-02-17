@@ -8,6 +8,8 @@ import Data.Store.IRef (IRef)
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (TWidget, getP, assignCursor)
 import Editor.MonadF (MonadF)
+import Graphics.UI.Bottle.Rect(Rect)
+import Graphics.UI.Bottle.Widgets.Grid(GridElement)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.BottleWidgets as BWidgets
@@ -39,7 +41,7 @@ make definitionI = do
       Widget.actionEventMapMovesCursor Config.delKeys "Replace" .
       ETypes.diveIn $ DataOps.replace bodyRef
 
-  expressionEdit <-
+  rhsEdit <-
     liftM (Widget.weakerEvents replaceEventMap) $
     ExpressionEdit.make [] definitionI bodyRef
 
@@ -61,32 +63,14 @@ make definitionI = do
 
   paramsEdits <- mapM makeParamEdit $ enumerate params
 
-  let
-    makeEnterRhsEventMap rhsRect enterRhs =
-      E.fromEventTypes Config.jumpToExpressionKeys
-      "Jump to expression" . Widget.enterResultEvent . enterRhs $
-      Direction.fromLeft rhsRect
-
-    jumpToExpressionEventMap rhsBoxElement =
-      maybe mempty (makeEnterRhsEventMap (Box.boxElementRect rhsBoxElement)) .
-      Widget.uioMaybeEnter $ Box.boxElementUio rhsBoxElement
-
-    addJumpToExpression defKBoxElements =
-      atPred (=="lhs") addEventMapToLhs defKBoxElements
-      where
-        addEventMapToLhs =
-          (Box.atBoxElementUio . Widget.atUioEventMap . mappend)
-          (jumpToExpressionEventMap rhsElement)
-        rhsElement = Box.getElement "rhs" defKBoxElements
-
-    box =
-      Box.toWidget .
-      (Box.atBoxContent . fmap) addJumpToExpression .
-      BWidgets.hboxSpacedK ("space" :: String) $
-      [("lhs", BWidgets.hboxSpaced (nameEdit : paramsEdits)),
-       ("equals", equals),
-       ("rhs", expressionEdit)]
-  return . Widget.weakerEvents eventMap $ box
+  return .
+    Widget.weakerEvents eventMap .
+    Box.toWidget .
+    (Box.atBoxContent . fmap) addJumps .
+    BWidgets.hboxSpacedK ("space" :: String) $
+    [("lhs", BWidgets.hboxSpaced (nameEdit : paramsEdits)),
+     ("equals", equals),
+     ("rhs", rhsEdit)]
 
   where
     bodyRef = Property.composeLabel Data.defBody Data.atDefBody definitionRef
@@ -98,3 +82,49 @@ make definitionI = do
     nameEditAnimId = Widget.joinId myId ["name"]
     myId = WidgetIds.fromIRef definitionI
 
+makeJumpEventMap
+  :: String
+  -> [E.EventType]
+  -> (Graphics.UI.Bottle.Rect.Rect -> enter)
+  -> Graphics.UI.Bottle.Widgets.Grid.GridElement f1
+  -> (enter -> Widget.EnterResult f2)
+  -> E.EventMap (f2 Widget.EventResult)
+makeJumpEventMap doc keys dir destElement enter =
+  E.fromEventTypes keys ("Jump to "++doc) .
+  Widget.enterResultEvent . enter . dir $
+  Box.boxElementRect destElement
+
+jumpToExpressionEventMap
+  :: String
+  -> [E.EventType]
+  -> (Graphics.UI.Bottle.Rect.Rect -> Direction.Direction)
+  -> Graphics.UI.Bottle.Widgets.Grid.GridElement f
+  -> E.EventMap (f Widget.EventResult)
+jumpToExpressionEventMap doc keys dir destElement =
+  maybe mempty
+  (makeJumpEventMap doc keys dir destElement) .
+  Widget.uioMaybeEnter $ Box.boxElementUio destElement
+
+addJumpsToSrc
+  :: String
+  -> [E.EventType]
+  -> (Graphics.UI.Bottle.Rect.Rect -> Direction.Direction)
+  -> Graphics.UI.Bottle.Widgets.Grid.GridElement f
+  -> Graphics.UI.Bottle.Widgets.Grid.GridElement f
+  -> Graphics.UI.Bottle.Widgets.Grid.GridElement f
+addJumpsToSrc doc keys dir destElement srcElement =
+  (Box.atBoxElementUio . Widget.atUioEventMap . mappend)
+  (jumpToExpressionEventMap doc keys dir destElement)
+  srcElement
+
+addJumps
+  :: [(String, Box.BoxElement f)]
+  -> [(String, Graphics.UI.Bottle.Widgets.Grid.GridElement f)]
+addJumps defKBoxElements =
+  addEventMap "lhs" "rhs" "right-hand side" Config.jumpToRhsKeys Direction.fromLeft .
+  addEventMap "rhs" "lhs" "left-hand side" Config.jumpToLhsKeys Direction.fromRight $
+  defKBoxElements
+  where
+    addEventMap srcSide destSide doc keys dir =
+      atPred (== srcSide)
+      (addJumpsToSrc doc keys dir $ Box.getElement destSide defKBoxElements)
