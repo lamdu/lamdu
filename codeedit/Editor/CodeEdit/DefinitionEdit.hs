@@ -28,8 +28,10 @@ make definitionI = do
   Data.Definition params _ <- getP definitionRef
   nameEdit <-
     assignCursor myId nameEditAnimId .
-    BWidgets.setTextColor Config.definitionColor $
-    BWidgets.makeNameEdit Config.unnamedStr definitionI nameEditAnimId
+    BWidgets.wrapDelegated FocusDelegator.NotDelegating
+    (BWidgets.setTextColor Config.definitionColor .
+     BWidgets.makeNameEdit Config.unnamedStr definitionI) $
+    nameEditAnimId
   equals <- BWidgets.makeTextView "=" $ Widget.joinId myId ["equals"]
 
   let
