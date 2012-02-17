@@ -27,7 +27,7 @@ make :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
 make definitionI = do
   Data.Definition params _ <- getP definitionRef
   nameEdit <-
-    assignCursor myId nameEditAnimId .
+    assignCursor myId (WidgetIds.delegating nameEditAnimId) .
     BWidgets.wrapDelegated FocusDelegator.NotDelegating
     (BWidgets.setTextColor Config.definitionColor .
      BWidgets.makeNameEdit Config.unnamedStr definitionI) $
