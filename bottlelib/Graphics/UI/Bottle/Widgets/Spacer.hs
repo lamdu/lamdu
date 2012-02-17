@@ -35,4 +35,4 @@ indentRight width img = GridView.make [[makeHorizontal width, img]]
 
 indentRightWidget :: Widget.R -> Widget a -> Widget a
 indentRightWidget width widget =
-  Grid.make [[Widget.liftView (makeHorizontal width), widget]]
+  Grid.toWidget $ Grid.make [[Widget.liftView (makeHorizontal width), widget]]

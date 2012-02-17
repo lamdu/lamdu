@@ -67,3 +67,5 @@ unfocusedHoleBackgroundColor = Draw.Color 1 0 0 1
 parenHighlightColor = Draw.Color 0.3 0 1 0.25
 
 unnamedStr = "<noname>"
+
+jumpToExpressionKeys = [k '=']

@@ -1,5 +1,7 @@
 {-# OPTIONS -Wall #-}
-module Graphics.UI.Bottle.Widgets.Grid(Cursor, make, makeBiased) where
+module Graphics.UI.Bottle.Widgets.Grid(
+  Grid(..), make, Cursor, toWidget, toWidgetBiased)
+where
 
 import Control.Applicative (liftA2)
 import Control.Monad (msum, (>=>))
@@ -10,10 +12,9 @@ import Data.Monoid (mempty, mconcat)
 import Data.Ord (comparing)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Rect (Rect(..))
-import Graphics.UI.Bottle.Widget (Widget(..), UserIO(..))
 import Graphics.UI.Bottle.SizeRange (Size)
-import qualified Data.Vector.Vector2 as Vector2
-import qualified Graphics.UI.Bottle.Animation as Anim
+import Graphics.UI.Bottle.Sized (Sized(..))
+import Graphics.UI.Bottle.Widget (Widget(..), UserIO(..))
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Rect as Rect
 import qualified Graphics.UI.Bottle.Sized as Sized
@@ -86,23 +87,34 @@ getCursor =
   where
     cursorOf ((row, column), _) = Vector2 column row
 
-makeHelper ::
+data Grid f = Grid {
+  gridMCursor :: Maybe Cursor,
+  gridContent :: Sized [[(Rect, UserIO f)]]
+  }
+
+make :: [[Widget f]] -> Grid f
+make children = Grid {
+  gridMCursor = getCursor children,
+  gridContent =
+   GridView.makeGeneric translate
+   ((map . map) Widget.content children)
+  }
+  where
+    translate rect = (,) rect . Widget.translateUserIO (Rect.rectTopLeft rect)
+
+helper ::
   (Size -> [[Widget.MEnter f]] -> Widget.MEnter f) ->
-  [[Widget f]] -> Widget f
-makeHelper combineEnters children =
+  Grid f -> Widget f
+helper combineEnters (Grid mCursor sChildren) =
   Widget {
     isFocused = isJust mCursor,
-    content =
-      Sized.atFromSize combineUserIOs .
-      GridView.makeGeneric Widget.translateUserIO .
-      (map . map) content $ children
+    content = Sized.atFromSize combineUserIOs sChildren
     }
   where
-    mCursor = getCursor children
     combineUserIOs mkUserIOss size =
       maybe unselectedUserIO makeUserIO mCursor
       where
-        userIOss = mkUserIOss size
+        userIOss = (map . map) snd $ mkUserIOss size
         frame = mconcat . map uioFrame $ concat userIOss
         mEnterss = (map . map) uioMaybeEnter userIOss
         mEnter = combineEnters size mEnterss
@@ -128,38 +140,9 @@ makeHelper combineEnters children =
           where
             (weakMap, strongMap) = mkNavEventmap mEnterss size (uioFocalArea userIO) cursor
 
--- ^ If unfocused, will enters the given child when entered
-makeBiased :: Cursor -> [[Widget k]] -> Widget k
-makeBiased (Vector2 x y) = makeHelper . const $ index y >=> index x >=> id
-
-norm :: Num a => Vector2 a -> a
-norm = Vector2.uncurry (+)
-
-sqr :: Num a => a -> a
-sqr x = x * x
-
-normSqr :: Num a => Vector2 a -> a
-normSqr = norm . sqr
-
--- TODO: Put this in a more generic location
-rectDistance :: Rect -> Rect -> Anim.R
-rectDistance r1 r2 = normSqr distance - normSqr overlapPercentage
-  where
-    min2 = liftA2 min
-    max2 = liftA2 max
-    overlapPercentage = overlapSize / size1 + overlapSize / size2
-    overlapSize = max2 0 $ min2 br1 br2 - max2 tl1 tl2
-    distance = max2 (max2 0 (tl2 - br1)) (max2 0 (tl1 - br2))
-    size1 = max2 1 $ Rect.rectSize r1
-    size2 = max2 1 $ Rect.rectSize r2
-    tl1 = Rect.rectTopLeft r1
-    tl2 = Rect.rectTopLeft r2
-    br1 = Rect.bottomRight r1
-    br2 = Rect.bottomRight r2
-
-make :: [[Widget k]] -> Widget k
-make =
-  makeHelper makeMEnter
+toWidget :: Grid f -> Widget f
+toWidget =
+  helper makeMEnter
   where
     makeMEnter size children =
       search . mapMaybe indexIntoMaybe . concat $ enumerate2d children
@@ -173,7 +156,7 @@ make =
 
         -- TODO: Take this out to a generic location
         rectScore entryRect (row, col) enterResultRect =
-          (borderScore, rectDistance entryRect enterResultRect)
+          (borderScore, Rect.distance entryRect enterResultRect)
           where
             borderScore =
               concat [[col | fromLeft], [-col | fromRight],
@@ -185,3 +168,8 @@ make =
           ((rectScore entryRect i . Widget.enterResultRect . childEnter) dir, childEnter)
 
         minimumOn = minimumBy . comparing
+
+-- ^ If unfocused, will enters the given child when entered
+toWidgetBiased :: Cursor -> Grid f -> Widget f
+toWidgetBiased (Vector2 x y) =
+  helper . const $ index y >=> index x >=> id

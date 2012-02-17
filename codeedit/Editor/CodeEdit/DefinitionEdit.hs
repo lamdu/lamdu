@@ -21,7 +21,7 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 make :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
 make definitionI = do
-  Data.Definition params _ <- getP definitionRef
+  Data.Definition params bodyIRef <- getP definitionRef
   nameEdit <-
     assignCursor myId nameEditAnimId .
     BWidgets.setTextColor Config.definitionColor $
@@ -50,9 +50,17 @@ make definitionI = do
 
   paramsEdits <- mapM makeParamEdit $ enumerate params
 
+  let
+    jumpToExpressionEventMap =
+      Widget.actionEventMapMovesCursor Config.jumpToExpressionKeys
+      "Jump to expression" . return $ WidgetIds.fromIRef bodyIRef
+    lhs =
+      Widget.strongerEvents jumpToExpressionEventMap .
+      BWidgets.hboxSpaced $ nameEdit : paramsEdits
+
   return .
     Widget.weakerEvents eventMap . BWidgets.hboxSpaced $
-    [nameEdit] ++ paramsEdits ++ [equals, Widget.weakerEvents replaceEventMap expressionEdit]
+    [lhs, equals, Widget.weakerEvents replaceEventMap expressionEdit]
   where
     bodyRef = Property.composeLabel Data.defBody Data.atDefBody definitionRef
     definitionRef = Transaction.fromIRef definitionI

@@ -68,7 +68,8 @@ makeChoice selectionAnimId curChoiceRef orientation children = do
   focusables <- sequence children
   let
     widget =
-      Box.makeBiased orientation curChoice .
+      Box.toWidgetBiased curChoice .
+      Box.make orientation .
       nth curChoice (Widget.backgroundColor selectionAnimId selectedColor) .
       map updateCurChoice $
       enumerate focusables
@@ -151,13 +152,17 @@ makeNameEdit emptyStr iref =
   (atTextStyle . TextEdit.atSEmptyString . const) emptyStr . makeWordEdit (Anchors.aNameRef iref)
 
 hboxAlign :: Widget.R -> [Widget f] -> Widget f
-hboxAlign align = Box.make Box.horizontal . map (Widget.align (Vector2 0 align))
+hboxAlign align =
+  Box.toWidget . Box.make Box.horizontal .
+  map (Widget.align (Vector2 0 align))
 
 hbox :: [Widget f] -> Widget f
 hbox = hboxAlign 0.5
 
 vboxAlign :: Widget.R -> [Widget f] -> Widget f
-vboxAlign align = Box.make Box.vertical . map (Widget.align (Vector2 align 0))
+vboxAlign align =
+  Box.toWidget . Box.make Box.vertical .
+  map (Widget.align (Vector2 align 0))
 
 vbox :: [Widget f] -> Widget f
 vbox = vboxAlign 0.5

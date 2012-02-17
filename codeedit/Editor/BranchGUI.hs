@@ -84,7 +84,7 @@ makeRootWidget widget = do
       [Widget.actionEventMap Config.quitKeys "Quit" (error "Quit")
       ,Widget.actionEventMap Config.makeBranchKeys "New Branch" (makeBranch view)
       ] .
-    Box.make Box.horizontal $
+    Box.toWidget . Box.make Box.horizontal $
     [viewEdit
     ,Widget.liftView Spacer.makeHorizontalExpanding
     ,Widget.strongerEvents delBranchEventMap branchSelector
