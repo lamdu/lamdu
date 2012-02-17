@@ -7,6 +7,7 @@ import Data.Monoid(mappend)
 import Graphics.UI.Bottle.Rect(Rect(..))
 import Graphics.UI.Bottle.Widget(Widget(..))
 import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 
@@ -48,7 +49,7 @@ makeFocused delegating focusSelf keys backgroundCursorId =
 
     startDelegatingEventMap childEnter =
       E.fromEventType (startDelegatingKey keys) "Enter child" .
-      Widget.enterResultEvent $ childEnter Widget.Outside
+      Widget.enterResultEvent $ childEnter Direction.Outside
 
     addStopDelegatingEventMap =
       Widget.atEventMap .
@@ -75,7 +76,7 @@ make isDelegating Nothing focusSelf =
     mEnter Delegating wholeSize (Just enterChild) = Just $ handleDir enterChild wholeSize
 
     handleDir enterChild wholeSize dir =
-      Widget.direction (takeFocus wholeSize) (const (enterChild dir)) dir
+      Direction.fold (takeFocus wholeSize) (const (enterChild dir)) dir
 
     takeFocus wholeSize = Widget.EnterResult (Rect 0 wholeSize) . return $ Widget.eventResultFromCursor focusSelf
 

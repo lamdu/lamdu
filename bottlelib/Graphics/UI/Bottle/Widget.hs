@@ -4,7 +4,6 @@ module Graphics.UI.Bottle.Widget (
   Widget(..), MEnter, R,
   EnterResult(..), atEnterResultEvent, atEnterResultRect,
   Id(..), atId, joinId, subId,
-  Direction(..), direction,
   UserIO(..), atUioMaybeEnter, atUioEventMap, atUioFrame, atUioFocalArea,
   EventResult(..), atEAnimIdMapping, atECursor,
   emptyEventResult, eventResultFromCursor,
@@ -22,6 +21,7 @@ import Data.List(isPrefixOf)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2)
 import Graphics.UI.Bottle.Animation (AnimId, R)
+import Graphics.UI.Bottle.Direction (Direction)
 import Graphics.UI.Bottle.EventMap (EventMap)
 import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.SizeRange (Size)
@@ -29,23 +29,13 @@ import Graphics.UI.Bottle.Sized (Sized)
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
+import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Rect as Rect
 import qualified Graphics.UI.Bottle.Sized as Sized
 
--- RelativePos pos is relative to the top-left of the widget
-data Direction = Outside | RelativePos Rect
-
 argument :: (a -> b) -> (b -> c) -> a -> c
 argument = flip (.)
-
--- cata:
-direction :: r -> (Rect -> r) -> Direction -> r
-direction outside _ Outside = outside
-direction _ relativePos (RelativePos v) = relativePos v
-
-inRelativePos :: (Rect -> Rect) -> Direction -> Direction
-inRelativePos f = direction Outside (RelativePos . f)
 
 data EnterResult f = EnterResult {
   enterResultRect :: Rect,
@@ -204,7 +194,7 @@ translateUserIO pos =
   (atUioFrame . Anim.translate) pos .
   (atUioFocalArea . Rect.atRectTopLeft) (+pos) .
   (atUioMaybeEnter . fmap . fmap . atEnterResultRect . Rect.atRectTopLeft) (+pos) .
-  (atUioMaybeEnter . fmap . argument . inRelativePos . Rect.atRectTopLeft) (subtract pos)
+  (atUioMaybeEnter . fmap . argument . Direction.inRelativePos . Rect.atRectTopLeft) (subtract pos)
 
 translate :: Vector2 R -> Widget f -> Widget f
 translate = atUserIO . translateUserIO

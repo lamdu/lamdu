@@ -15,6 +15,7 @@ import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.SizeRange (Size)
 import Graphics.UI.Bottle.Sized (Sized(..))
 import Graphics.UI.Bottle.Widget (Widget(..), UserIO(..))
+import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Rect as Rect
 import qualified Graphics.UI.Bottle.Sized as Sized
@@ -57,7 +58,7 @@ mkNavEventmap mEnterChildren widgetSize curRect cursor@(Vector2 cursorX cursorY)
          event
          ("Move " ++ dirName) .
          Widget.enterResultEvent .
-         ($ Widget.RelativePos rect)) .
+         ($ Direction.RelativePos rect)) .
       msum
     movement = movementHelper curRect
     edgeMovement edge =
@@ -152,7 +153,7 @@ toWidget =
         search childEnters = Just $ byDirection childEnters
         byDirection childEnters dir =
           (snd . minimumOn fst .
-           (map . scoredEnter dir . Widget.direction (Rect 0 0) id) dir) childEnters dir
+           (map . scoredEnter dir . Direction.fold (Rect 0 0) id) dir) childEnters dir
 
         -- TODO: Take this out to a generic location
         rectScore entryRect (row, col) enterResultRect =

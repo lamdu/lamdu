@@ -30,6 +30,7 @@ import qualified Data.Set as Set
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
+import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.SizeRange as SizeRange
 import qualified Graphics.UI.Bottle.Sized as Sized
@@ -83,7 +84,7 @@ makeUnfocused style str myId =
   where
     enter dir =
       (,) str . makeTextEditCursor myId $
-      Widget.direction (length str) enterRect dir
+      Direction.fold (length str) enterRect dir
     -- TODO: Figure out what rect each letter is at, and find the one
     -- closest to the argument rect, and return that instead of
     -- (length str)

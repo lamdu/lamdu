@@ -27,6 +27,7 @@ Library
                        Graphics.UI.Bottle.Sized,
                        Graphics.UI.Bottle.EventMap,
                        Graphics.UI.Bottle.Widget,
+                       Graphics.UI.Bottle.Direction,
                        Graphics.UI.Bottle.MainLoop,
                        Graphics.UI.Bottle.Animation,
                        Graphics.UI.Bottle.Rect,
