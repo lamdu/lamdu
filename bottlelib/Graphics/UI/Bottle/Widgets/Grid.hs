@@ -1,9 +1,16 @@
-{-# OPTIONS -Wall #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Graphics.UI.Bottle.Widgets.Grid(
-  Grid(..), make, Cursor, toWidget, toWidgetBiased)
+  Grid, KGrid(..), make, makeKeyed, unkey, getElement,
+  atGridMCursor,
+  atGridContent,
+  GridElement(..),
+  atGridElementRect,
+  atGridElementUio,
+  Cursor, toWidget, toWidgetBiased)
 where
 
 import Control.Applicative (liftA2)
+import Control.Arrow (second)
 import Control.Monad (msum, (>=>))
 import Data.List (foldl', transpose, find, minimumBy)
 import Data.List.Utils (index, enumerate2d)
@@ -15,6 +22,7 @@ import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.SizeRange (Size)
 import Graphics.UI.Bottle.Sized (Sized(..))
 import Graphics.UI.Bottle.Widget (Widget(..), UserIO(..))
+import qualified Data.AtFieldTH as AtFieldTH
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Rect as Rect
@@ -88,34 +96,61 @@ getCursor =
   where
     cursorOf ((row, column), _) = Vector2 column row
 
-data Grid f = Grid {
-  gridMCursor :: Maybe Cursor,
-  gridContent :: Sized [[(Rect, UserIO f)]]
+data GridElement f = GridElement {
+  gridElementRect :: Rect,
+  gridElementUio :: UserIO f
   }
 
-make :: [[Widget f]] -> Grid f
-make children = Grid {
-  gridMCursor = getCursor children,
+data KGrid key f = KGrid {
+  gridMCursor :: Maybe Cursor,
+  gridContent :: Sized [[(key, GridElement f)]]
+  }
+
+AtFieldTH.make ''GridElement
+AtFieldTH.make ''KGrid
+
+type Grid = KGrid ()
+
+makeKeyed :: [[(key, Widget f)]] -> KGrid key f
+makeKeyed children = KGrid {
+  gridMCursor = getCursor $ (map . map) snd children,
   gridContent =
-   GridView.makeGeneric translate
-   ((map . map) Widget.content children)
+   GridView.makeGeneric (second . translate) $
+   (map . map) (keyIntoSized . second Widget.content) children
   }
   where
-    translate rect = (,) rect . Widget.translateUserIO (Rect.rectTopLeft rect)
+    keyIntoSized (key, sized) = fmap ((,) key) sized
+    translate rect =
+      GridElement rect .
+      Widget.translateUserIO (Rect.rectTopLeft rect)
+
+unkey :: [[Widget f]] -> [[((), Widget f)]]
+unkey = (map . map) ((,) ())
+
+getElement :: (Show key, Eq key) => key -> [[(key, GridElement f)]] -> GridElement f
+getElement key =
+  fromMaybe (error errorMsg) . lookup key . concat
+  where
+    errorMsg = "getElement: " ++ show key ++ " not found in Grid!"
+
+make :: [[Widget f]] -> Grid f
+make = makeKeyed . unkey
 
 helper ::
   (Size -> [[Widget.MEnter f]] -> Widget.MEnter f) ->
-  Grid f -> Widget f
-helper combineEnters (Grid mCursor sChildren) =
+  KGrid key f -> Widget f
+helper combineEnters (KGrid mCursor sChildren) =
   Widget {
     isFocused = isJust mCursor,
-    content = Sized.atFromSize combineUserIOs sChildren
+    content =
+      Sized.atFromSize combineUserIOs $
+      (fmap . map . map) snd sChildren
     }
   where
     combineUserIOs mkUserIOss size =
       maybe unselectedUserIO makeUserIO mCursor
       where
-        userIOss = (map . map) snd $ mkUserIOss size
+        userIOss = (map . map) gridElementUio $ mkUserIOss size
         frame = mconcat . map uioFrame $ concat userIOss
         mEnterss = (map . map) uioMaybeEnter userIOss
         mEnter = combineEnters size mEnterss
@@ -141,7 +176,7 @@ helper combineEnters (Grid mCursor sChildren) =
           where
             (weakMap, strongMap) = mkNavEventmap mEnterss size (uioFocalArea userIO) cursor
 
-toWidget :: Grid f -> Widget f
+toWidget :: KGrid key f -> Widget f
 toWidget =
   helper makeMEnter
   where
@@ -171,6 +206,6 @@ toWidget =
         minimumOn = minimumBy . comparing
 
 -- ^ If unfocused, will enters the given child when entered
-toWidgetBiased :: Cursor -> Grid f -> Widget f
+toWidgetBiased :: Cursor -> KGrid key f -> Widget f
 toWidgetBiased (Vector2 x y) =
   helper . const $ index y >=> index x >=> id
