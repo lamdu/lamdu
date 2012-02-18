@@ -211,7 +211,7 @@ makeActiveHoleEdit
         newName = concat . words $ searchTerm
         searchTermEventMap =
           mconcat $ pickFirstResultEventMaps ++
-          [ EventMap.fromEventTypes Config.addParamKeys "Add as Parameter" $ do
+          [ EventMap.fromEventTypes Config.addAsParamKeys "Add as Parameter" $ do
               DataOps.addAsParameter newName definitionRef expressionI
               let exprId = WidgetIds.fromIRef expressionI
               return Widget.EventResult {

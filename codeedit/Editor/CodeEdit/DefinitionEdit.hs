@@ -55,12 +55,19 @@ makeLHSEdit
   -> [IRef Data.Parameter]
   -> TWidget t m
 makeLHSEdit myId definitionI params = do
-  nameEdit <- makeNameEdit myId definitionI
+  nameEdit <-
+    weakerEvents (addParamEventMap 0) $
+    makeNameEdit myId definitionI
   paramsEdits <- mapM makeParamEdit $ enumerate params
   return $ BWidgets.hboxSpaced (nameEdit : paramsEdits)
   where
+    weakerEvents = liftM . Widget.weakerEvents
     definitionRef = Transaction.fromIRef definitionI
-    paramEventMap i paramI =
+    addParamEventMap i =
+      Widget.actionEventMapMovesCursor Config.addNextParamKeys "Add parameter" .
+      liftM (WidgetIds.delegating . WidgetIds.fromIRef) $
+      DataOps.addParameter i definitionRef
+    delParamEventMap i paramI =
       Widget.actionEventMapMovesCursor Config.delKeys
       "Delete parameter" $ do
         DataOps.delParameter definitionRef paramI
@@ -68,8 +75,12 @@ makeLHSEdit myId definitionI params = do
         return $
           (myId : map WidgetIds.fromIRef newParams)
           !! min (1+i) (length newParams)
+    paramEventMap i paramI = mconcat
+      [addParamEventMap (i+1)
+      ,delParamEventMap i paramI
+      ]
     makeParamEdit (i, paramI) =
-      (liftM . Widget.weakerEvents) (paramEventMap i paramI) .
+      weakerEvents (paramEventMap i paramI) .
       BWidgets.wrapDelegated FocusDelegator.NotDelegating
       (BWidgets.setTextColor Config.parameterColor .
        BWidgets.makeNameEdit ("<unnamed param " ++ show i ++ ">") paramI) $
@@ -111,7 +122,6 @@ make definitionI = do
     makeRHSEdit definitionI $
     Property.composeLabel Data.defBody Data.atDefBody definitionRef
   return .
-    Widget.weakerEvents addParamEventMap .
     Box.toWidget . (Box.atBoxContent . fmap) (addJumps "lhs" "rhs") .
     BWidgets.hboxSpacedK ("space" :: String) $
     [("lhs", lhsEdit),
@@ -119,8 +129,4 @@ make definitionI = do
      ("rhs", rhsEdit)]
   where
     definitionRef = Transaction.fromIRef definitionI
-    addParamEventMap =
-      Widget.actionEventMapMovesCursor Config.addParamKeys "Add parameter" .
-      liftM (WidgetIds.delegating . WidgetIds.fromIRef) $
-      DataOps.addParameter definitionRef
     myId = WidgetIds.fromIRef definitionI

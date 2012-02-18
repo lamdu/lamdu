@@ -4,6 +4,8 @@ module Editor.DataOps (
   addAsParameter, addAsDefinition)
 where
 
+import Control.Arrow (second)
+import Control.Monad (liftM)
 import Data.List (delete)
 import Data.Store.IRef (IRef)
 import Data.Store.Property(Property)
@@ -13,13 +15,16 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.Data as Data
 
+insertAt :: Int -> a -> [a] -> [a]
+insertAt i x = uncurry (++) . second (x:) . splitAt i
+
 addParameter ::
-  Monad m => Transaction.Property t m Data.Definition ->
+  Monad m => Int -> Transaction.Property t m Data.Definition ->
   Transaction t m (IRef Data.Parameter)
-addParameter definitionRef = do
+addParameter i definitionRef = do
   newParamI <- Transaction.newIRef Data.Parameter
   Property.pureModify definitionRef . Data.atDefParameters $
-    (++ [newParamI])
+    insertAt i newParamI
   return newParamI
 
 delParameter ::
@@ -69,7 +74,8 @@ addAsParameter ::
   Monad m => String -> Transaction.Property t m Data.Definition ->
   IRef Data.Expression -> Transaction t m ()
 addAsParameter newName definitionRef expressionI = do
-  newParam <- addParameter definitionRef
+  params <- liftM Data.defParameters $ Property.get definitionRef
+  newParam <- addParameter (length params) definitionRef
   Property.set (Anchors.aNameRef newParam) newName
   Transaction.writeIRef expressionI . Data.ExpressionGetVariable $ Data.ParameterRef newParam
 
