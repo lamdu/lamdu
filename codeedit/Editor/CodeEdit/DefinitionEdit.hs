@@ -36,20 +36,27 @@ makeNameEdit myId definitionI =
   where
     nameEditAnimId = Widget.joinId myId ["name"]
 
+makeRHSEdit
+  :: MonadF m
+  => IRef Data.Definition
+  -> ETypes.ExpressionPtr m
+  -> TWidget ViewTag m
+makeRHSEdit definitionI bodyRef =
+  liftM (Widget.weakerEvents replaceEventMap) $
+  ExpressionEdit.make [] definitionI bodyRef
+  where
+    replaceEventMap =
+      Widget.actionEventMapMovesCursor Config.delKeys "Replace" .
+      ETypes.diveIn $ DataOps.replace bodyRef
+
 make :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
 make definitionI = do
   Data.Definition params _ <- getP definitionRef
   nameEdit <- makeNameEdit myId definitionI
   equals <- BWidgets.makeTextView "=" $ Widget.joinId myId ["equals"]
-
-  let
-    replaceEventMap =
-      Widget.actionEventMapMovesCursor Config.delKeys "Replace" .
-      ETypes.diveIn $ DataOps.replace bodyRef
-
   rhsEdit <-
-    liftM (Widget.weakerEvents replaceEventMap) $
-    ExpressionEdit.make [] definitionI bodyRef
+    makeRHSEdit definitionI $
+    Property.composeLabel Data.defBody Data.atDefBody definitionRef
 
   let
     paramEventMap i paramI =
@@ -79,7 +86,6 @@ make definitionI = do
      ("rhs", rhsEdit)]
 
   where
-    bodyRef = Property.composeLabel Data.defBody Data.atDefBody definitionRef
     definitionRef = Transaction.fromIRef definitionI
     eventMap =
       Widget.actionEventMapMovesCursor Config.addParamKeys "Add parameter" .
