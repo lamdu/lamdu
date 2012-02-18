@@ -5,11 +5,9 @@ import Control.Monad (liftM)
 import Data.List.Utils (enumerate, atPred)
 import Data.Monoid (Monoid(..))
 import Data.Store.IRef (IRef)
-import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, TWidget, getP, assignCursor)
+import Editor.CTransaction (TWidget, getP, assignCursor)
 import Editor.MonadF (MonadF)
-import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Widgets.Grid(GridElement)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -50,15 +48,18 @@ makeRHSEdit definitionI bodyRef =
       Widget.actionEventMapMovesCursor Config.delKeys "Replace" .
       ETypes.diveIn $ DataOps.replace bodyRef
 
-makeParamsEdit
+makeLHSEdit
   :: MonadF m
   => Widget.Id
-  -> Transaction.Property t m Data.Definition
+  -> IRef Data.Definition
   -> [IRef Data.Parameter]
-  -> CTransaction t m [Widget (Transaction t m)]
-makeParamsEdit myId definitionRef =
-  mapM makeParamEdit . enumerate
+  -> TWidget t m
+makeLHSEdit myId definitionI params = do
+  nameEdit <- makeNameEdit myId definitionI
+  paramsEdits <- mapM makeParamEdit $ enumerate params
+  return $ BWidgets.hboxSpaced (nameEdit : paramsEdits)
   where
+    definitionRef = Transaction.fromIRef definitionI
     paramEventMap i paramI =
       Widget.actionEventMapMovesCursor Config.delKeys
       "Delete parameter" $ do
@@ -104,9 +105,7 @@ addJumps lhs rhs defKBoxElements =
 make :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
 make definitionI = do
   Data.Definition params _ <- getP definitionRef
-  nameEdit <- makeNameEdit myId definitionI
-  paramsEdits <- makeParamsEdit myId definitionRef params
-  let lhsEdit = BWidgets.hboxSpaced (nameEdit : paramsEdits)
+  lhsEdit <- makeLHSEdit myId definitionI params
   equals <- BWidgets.makeLabel "=" myId
   rhsEdit <-
     makeRHSEdit definitionI $
