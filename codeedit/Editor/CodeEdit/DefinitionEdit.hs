@@ -76,7 +76,7 @@ makeParamsEdit myId definitionRef =
       WidgetIds.fromIRef paramI
 
 makeJumpEventMap
-  :: String
+  :: E.Doc
   -> [E.EventType]
   -> (Graphics.UI.Bottle.Rect.Rect -> enter)
   -> Graphics.UI.Bottle.Widgets.Grid.GridElement f1
@@ -88,7 +88,7 @@ makeJumpEventMap doc keys dir destElement enter =
   Box.boxElementRect destElement
 
 jumpToExpressionEventMap
-  :: String
+  :: E.Doc
   -> [E.EventType]
   -> (Graphics.UI.Bottle.Rect.Rect -> Direction.Direction)
   -> Graphics.UI.Bottle.Widgets.Grid.GridElement f
@@ -99,7 +99,7 @@ jumpToExpressionEventMap doc keys dir destElement =
   Widget.uioMaybeEnter $ Box.boxElementUio destElement
 
 addJumpsToSrc
-  :: String
+  :: E.Doc
   -> [E.EventType]
   -> (Graphics.UI.Bottle.Rect.Rect -> Direction.Direction)
   -> Graphics.UI.Bottle.Widgets.Grid.GridElement f
