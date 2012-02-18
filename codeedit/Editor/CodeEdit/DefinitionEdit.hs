@@ -111,11 +111,13 @@ addJumpsToSrc doc keys dir destElement srcElement =
   srcElement
 
 addJumps
-  :: [(String, Box.BoxElement f)]
-  -> [(String, Graphics.UI.Bottle.Widgets.Grid.GridElement f)]
-addJumps defKBoxElements =
-  addEventMap "lhs" "rhs" "right-hand side" Config.jumpToRhsKeys Direction.fromLeft .
-  addEventMap "rhs" "lhs" "left-hand side" Config.jumpToLhsKeys Direction.fromRight $
+  :: (Show key, Eq key)
+  => key -> key
+  -> [(key, Box.BoxElement f)]
+  -> [(key, Graphics.UI.Bottle.Widgets.Grid.GridElement f)]
+addJumps lhs rhs defKBoxElements =
+  addEventMap lhs rhs "right-hand side" Config.jumpToRhsKeys Direction.fromLeft .
+  addEventMap rhs lhs "left-hand side" Config.jumpToLhsKeys Direction.fromRight $
   defKBoxElements
   where
     addEventMap srcSide destSide doc keys dir =
@@ -133,8 +135,7 @@ make definitionI = do
     Property.composeLabel Data.defBody Data.atDefBody definitionRef
   return .
     Widget.weakerEvents eventMap .
-    Box.toWidget .
-    (Box.atBoxContent . fmap) addJumps .
+    Box.toWidget . (Box.atBoxContent . fmap) (addJumps "lhs" "rhs") .
     BWidgets.hboxSpacedK ("space" :: String) $
     [("lhs", BWidgets.hboxSpaced (nameEdit : paramsEdits)),
      ("equals", equals),
