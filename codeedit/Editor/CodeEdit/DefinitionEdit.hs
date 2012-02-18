@@ -5,10 +5,12 @@ import Control.Monad (liftM)
 import Data.List.Utils (enumerate, atPred)
 import Data.Monoid (Monoid(..))
 import Data.Store.IRef (IRef)
+import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (TWidget, getP, assignCursor)
+import Editor.CTransaction (CTransaction, TWidget, getP, assignCursor)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Rect(Rect)
+import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Widgets.Grid(GridElement)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -49,16 +51,15 @@ makeRHSEdit definitionI bodyRef =
       Widget.actionEventMapMovesCursor Config.delKeys "Replace" .
       ETypes.diveIn $ DataOps.replace bodyRef
 
-make :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
-make definitionI = do
-  Data.Definition params _ <- getP definitionRef
-  nameEdit <- makeNameEdit myId definitionI
-  equals <- BWidgets.makeTextView "=" $ Widget.joinId myId ["equals"]
-  rhsEdit <-
-    makeRHSEdit definitionI $
-    Property.composeLabel Data.defBody Data.atDefBody definitionRef
-
-  let
+makeParamsEdit
+  :: MonadF m
+  => Widget.Id
+  -> Transaction.Property t m Data.Definition
+  -> [IRef Data.Parameter]
+  -> CTransaction t m [Widget (Transaction t m)]
+makeParamsEdit myId definitionRef =
+  mapM makeParamEdit . enumerate
+  where
     paramEventMap i paramI =
       Widget.actionEventMapMovesCursor Config.delKeys
       "Delete parameter" $ do
@@ -74,7 +75,15 @@ make definitionI = do
        BWidgets.makeNameEdit ("<unnamed param " ++ show i ++ ">") paramI) $
       WidgetIds.fromIRef paramI
 
-  paramsEdits <- mapM makeParamEdit $ enumerate params
+make :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
+make definitionI = do
+  Data.Definition params _ <- getP definitionRef
+  nameEdit <- makeNameEdit myId definitionI
+  paramsEdits <- makeParamsEdit myId definitionRef params
+  equals <- BWidgets.makeTextView "=" $ Widget.joinId myId ["equals"]
+  rhsEdit <-
+    makeRHSEdit definitionI $
+    Property.composeLabel Data.defBody Data.atDefBody definitionRef
 
   return .
     Widget.weakerEvents eventMap .
