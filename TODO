@@ -1,5 +1,3 @@
-* space on lhs of = adds a param after current pos
-
 * TextView returns all character position rects
   * TextEdit uses the character position rects to locate enter cursor
 
