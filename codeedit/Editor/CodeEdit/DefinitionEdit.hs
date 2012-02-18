@@ -9,7 +9,6 @@ import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (CTransaction, TWidget, getP, assignCursor)
 import Editor.MonadF (MonadF)
-import Graphics.UI.Bottle.Rect(Rect)
 import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Widgets.Grid(GridElement)
 import qualified Data.Store.Property as Property
@@ -75,41 +74,7 @@ makeParamsEdit myId definitionRef =
        BWidgets.makeNameEdit ("<unnamed param " ++ show i ++ ">") paramI) $
       WidgetIds.fromIRef paramI
 
-makeJumpEventMap
-  :: E.Doc
-  -> [E.EventType]
-  -> (Graphics.UI.Bottle.Rect.Rect -> enter)
-  -> Graphics.UI.Bottle.Widgets.Grid.GridElement f1
-  -> (enter -> Widget.EnterResult f2)
-  -> E.EventMap (f2 Widget.EventResult)
-makeJumpEventMap doc keys dir destElement enter =
-  E.fromEventTypes keys ("Jump to "++doc) .
-  Widget.enterResultEvent . enter . dir $
-  Box.boxElementRect destElement
-
-jumpToExpressionEventMap
-  :: E.Doc
-  -> [E.EventType]
-  -> (Graphics.UI.Bottle.Rect.Rect -> Direction.Direction)
-  -> Graphics.UI.Bottle.Widgets.Grid.GridElement f
-  -> E.EventMap (f Widget.EventResult)
-jumpToExpressionEventMap doc keys dir destElement =
-  maybe mempty
-  (makeJumpEventMap doc keys dir destElement) .
-  Widget.uioMaybeEnter $ Box.boxElementUio destElement
-
-addJumpsToSrc
-  :: E.Doc
-  -> [E.EventType]
-  -> (Graphics.UI.Bottle.Rect.Rect -> Direction.Direction)
-  -> Graphics.UI.Bottle.Widgets.Grid.GridElement f
-  -> Graphics.UI.Bottle.Widgets.Grid.GridElement f
-  -> Graphics.UI.Bottle.Widgets.Grid.GridElement f
-addJumpsToSrc doc keys dir destElement srcElement =
-  (Box.atBoxElementUio . Widget.atUioEventMap . mappend)
-  (jumpToExpressionEventMap doc keys dir destElement)
-  srcElement
-
+-- from lhs->rhs and vice-versa:
 addJumps
   :: (Show key, Eq key)
   => key -> key
@@ -122,7 +87,19 @@ addJumps lhs rhs defKBoxElements =
   where
     addEventMap srcSide destSide doc keys dir =
       atPred (== srcSide)
-      (addJumpsToSrc doc keys dir $ Box.getElement destSide defKBoxElements)
+      (addJumpsTo doc keys dir $ Box.getElement destSide defKBoxElements)
+    addJumpsTo doc keys dir destElement srcElement =
+      (Box.atBoxElementUio . Widget.atUioEventMap . mappend)
+      (jumpToExpressionEventMap doc keys dir destElement)
+      srcElement
+    jumpToExpressionEventMap doc keys dir destElement =
+      maybe mempty
+      (makeJumpForEnter doc keys dir destElement) .
+      Widget.uioMaybeEnter $ Box.boxElementUio destElement
+    makeJumpForEnter doc keys dir destElement enter =
+      E.fromEventTypes keys ("Jump to "++doc) .
+      Widget.enterResultEvent . enter . dir $
+      Box.boxElementRect destElement
 
 make :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
 make definitionI = do
