@@ -10,7 +10,7 @@ module Graphics.UI.Bottle.Widgets.Grid(
 where
 
 import Control.Applicative (liftA2)
-import Control.Arrow (second)
+import Control.Arrow (first, second)
 import Control.Monad (msum, (>=>))
 import Data.List (foldl', transpose, find, minimumBy)
 import Data.List.Utils (index, enumerate2d)
@@ -18,6 +18,7 @@ import Data.Maybe (isJust, fromMaybe, mapMaybe, catMaybes)
 import Data.Monoid (mempty, mconcat)
 import Data.Ord (comparing)
 import Data.Vector.Vector2 (Vector2(..))
+import Graphics.DrawingCombinators(R)
 import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.SizeRange (Size)
 import Graphics.UI.Bottle.Sized (Sized(..))
@@ -181,7 +182,9 @@ toWidget =
   helper makeMEnter
   where
     makeMEnter size children =
-      search . mapMaybe indexIntoMaybe . concat $ enumerate2d children
+      search . mapMaybe indexIntoMaybe .
+      concatMap (map $ first tupleToVector2) $
+      enumerate2d children
       where
         indexIntoMaybe (i, m) = fmap ((,) i) m
         search [] = Nothing
@@ -190,20 +193,22 @@ toWidget =
           (snd . minimumOn fst .
            (map . scoredEnter dir . Direction.fold (Rect 0 0) id) dir) childEnters dir
 
-        -- TODO: Take this out to a generic location
-        rectScore entryRect (row, col) enterResultRect =
-          (borderScore, Rect.distance entryRect enterResultRect)
-          where
-            borderScore =
-              concat [[col | fromLeft], [-col | fromRight],
-                      [row | fromTop], [-row | fromBottom]]
-            Vector2 fromLeft fromTop = fmap (<= 0) (Rect.bottomRight entryRect)
-            Vector2 fromRight fromBottom = liftA2 (>=) (Rect.rectTopLeft entryRect) size
-
         scoredEnter dir entryRect (i, childEnter) =
-          ((rectScore entryRect i . Widget.enterResultRect . childEnter) dir, childEnter)
+          ((rectScore size entryRect i . Widget.enterResultRect . childEnter) dir, childEnter)
 
         minimumOn = minimumBy . comparing
+
+        tupleToVector2 (x, y) = Vector2 x y
+
+rectScore:: Vector2 R -> Rect -> Vector2 Int -> Rect -> ([Int], R)
+rectScore size entryRect (Vector2 row col) enterResultRect =
+  (borderScore, Rect.distance entryRect enterResultRect)
+    where
+      borderScore =
+        concat [[col | fromLeft], [-col | fromRight],
+                [row | fromTop], [-row | fromBottom]]
+      Vector2 fromLeft fromTop = fmap (<= 0) (Rect.bottomRight entryRect)
+      Vector2 fromRight fromBottom = liftA2 (>=) (Rect.rectTopLeft entryRect) size
 
 -- ^ If unfocused, will enters the given child when entered
 toWidgetBiased :: Cursor -> KGrid key f -> Widget f

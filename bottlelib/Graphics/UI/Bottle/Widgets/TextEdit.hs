@@ -12,11 +12,12 @@ module Graphics.UI.Bottle.Widgets.TextEdit(
 
 import Control.Arrow (first)
 import Data.Char (isSpace)
-import Data.List (genericLength)
+import Data.List (genericLength, minimumBy)
 import Data.List.Split (splitWhen)
 import Data.List.Utils (enumerate)
 import Data.Maybe (fromJust, mapMaybe)
 import Data.Monoid (Monoid(..))
+import Data.Ord (comparing)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators.Utils (square, textHeight)
 import Graphics.UI.Bottle.Rect (Rect(..))
@@ -32,6 +33,7 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.Rect as Rect
 import qualified Graphics.UI.Bottle.SizeRange as SizeRange
 import qualified Graphics.UI.Bottle.Sized as Sized
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -72,6 +74,26 @@ cursorTranslate style = Anim.translate (Vector2 (sCursorWidth style / 2) 0)
 makeTextEditCursor :: Widget.Id -> Int -> Widget.Id
 makeTextEditCursor myId = Widget.joinId myId . (:[]) . BinUtils.encodeS
 
+rightSideOfRect :: Rect -> Rect
+rightSideOfRect rect =
+  (Rect.atLeft . const) (Rect.right rect) .
+  (Rect.atWidth . const) 0 $ rect
+
+cursorRects :: Style -> String -> [Rect]
+cursorRects style str =
+  concat .
+  -- A bit ugly: letterRects returns rects for all but newlines, and
+  -- returns a list of lines. Then addFirstCursor adds the left-most
+  -- cursor of each line, thereby the number of rects becomes the
+  -- original number of letters which can be used to match the
+  -- original string index-wise.
+  zipWith addFirstCursor (iterate (+lineHeight) 0) .
+  (map . map) rightSideOfRect $
+  TextView.letterRects (sTextViewStyle style) str
+  where
+    addFirstCursor y = (Rect (Vector2 0 y) (Vector2 0 lineHeight) :)
+    lineHeight = lineHeightOfStyle style
+
 makeUnfocused :: Style -> String -> Widget.Id -> Widget ((,) String)
 makeUnfocused style str myId =
   Widget.takesFocus enter .
@@ -84,13 +106,17 @@ makeUnfocused style str myId =
   where
     enter dir =
       (,) str . makeTextEditCursor myId $
-      Direction.fold (length str) enterRect dir
-    -- TODO: Figure out what rect each letter is at, and find the one
-    -- closest to the argument rect, and return that instead of
-    -- (length str)
-    -- A. TextView needs to export a function: String -> [Rect]
-    -- B. We need to find the closest one here
-    enterRect _ = length str -- TODO: this is wrong
+      Direction.fold (length str) rectToCursor dir
+      where
+        minimumOn = minimumBy . comparing
+        rectToCursor fromRect =
+          fst . minimumOn snd . enumerate . map (Rect.distance fromRect) $
+          cursorRects style str
+
+lineHeightOfStyle :: Style -> Widget.R
+lineHeightOfStyle style = sz * textHeight
+  where
+    sz = fromIntegral . TextView.styleFontSize $ sTextViewStyle style
 
 -- TODO: Instead of font + ptSize, let's pass a text-drawer (that's
 -- what "Font" should be)
@@ -123,8 +149,7 @@ makeFocused cursor style str myId =
     blue = Draw.Color 0 0 0.8 0.8
 
     textLinesWidth = Vector2.fst . snd . drawText
-    sz = fromIntegral . TextView.styleFontSize $ sTextViewStyle style
-    lineHeight = sz * textHeight
+    lineHeight = lineHeightOfStyle style
     strWithIds = map (first Just) $ enumerate str
     beforeCursor = take cursor strWithIds
     cursorRect = Rect cursorPos cursorSize
