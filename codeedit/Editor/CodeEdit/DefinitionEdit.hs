@@ -129,20 +129,21 @@ make definitionI = do
   Data.Definition params _ <- getP definitionRef
   nameEdit <- makeNameEdit myId definitionI
   paramsEdits <- makeParamsEdit myId definitionRef params
+  let lhsEdit = BWidgets.hboxSpaced (nameEdit : paramsEdits)
   equals <- BWidgets.makeLabel "=" myId
   rhsEdit <-
     makeRHSEdit definitionI $
     Property.composeLabel Data.defBody Data.atDefBody definitionRef
   return .
-    Widget.weakerEvents eventMap .
+    Widget.weakerEvents addParamEventMap .
     Box.toWidget . (Box.atBoxContent . fmap) (addJumps "lhs" "rhs") .
     BWidgets.hboxSpacedK ("space" :: String) $
-    [("lhs", BWidgets.hboxSpaced (nameEdit : paramsEdits)),
+    [("lhs", lhsEdit),
      ("equals", equals),
      ("rhs", rhsEdit)]
   where
     definitionRef = Transaction.fromIRef definitionI
-    eventMap =
+    addParamEventMap =
       Widget.actionEventMapMovesCursor Config.addParamKeys "Add parameter" .
       liftM (WidgetIds.delegating . WidgetIds.fromIRef) $
       DataOps.addParameter definitionRef
