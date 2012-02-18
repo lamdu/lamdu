@@ -30,7 +30,7 @@ import qualified Graphics.UI.Bottle.Sized as Sized
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.GLFW as GLFW
-
+import qualified Graphics.UI.Bottle.Geometry as Geometry
 type Cursor = Vector2 Int
 
 length2d :: [[a]] -> Vector2 Int
@@ -190,18 +190,8 @@ toWidget =
           (snd . minimumOn fst .
            (map . scoredEnter dir . Direction.fold (Rect 0 0) id) dir) childEnters dir
 
-        -- TODO: Take this out to a generic location
-        rectScore entryRect (row, col) enterResultRect =
-          (borderScore, Rect.distance entryRect enterResultRect)
-          where
-            borderScore =
-              concat [[col | fromLeft], [-col | fromRight],
-                      [row | fromTop], [-row | fromBottom]]
-            Vector2 fromLeft fromTop = fmap (<= 0) (Rect.bottomRight entryRect)
-            Vector2 fromRight fromBottom = liftA2 (>=) (Rect.rectTopLeft entryRect) size
-
         scoredEnter dir entryRect (i, childEnter) =
-          ((rectScore entryRect i . Widget.enterResultRect . childEnter) dir, childEnter)
+          ((Geometry.rectScore size entryRect i . Widget.enterResultRect . childEnter) dir, childEnter)
 
         minimumOn = minimumBy . comparing
 
