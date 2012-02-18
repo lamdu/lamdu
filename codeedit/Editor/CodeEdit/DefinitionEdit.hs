@@ -25,15 +25,21 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
+makeNameEdit
+  :: Monad m => Widget.Id -> IRef a -> TWidget t m
+makeNameEdit myId definitionI =
+  assignCursor myId (WidgetIds.delegating nameEditAnimId) .
+  BWidgets.wrapDelegated FocusDelegator.NotDelegating
+  (BWidgets.setTextColor Config.definitionColor .
+   BWidgets.makeNameEdit Config.unnamedStr definitionI) $
+  nameEditAnimId
+  where
+    nameEditAnimId = Widget.joinId myId ["name"]
+
 make :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
 make definitionI = do
   Data.Definition params _ <- getP definitionRef
-  nameEdit <-
-    assignCursor myId (WidgetIds.delegating nameEditAnimId) .
-    BWidgets.wrapDelegated FocusDelegator.NotDelegating
-    (BWidgets.setTextColor Config.definitionColor .
-     BWidgets.makeNameEdit Config.unnamedStr definitionI) $
-    nameEditAnimId
+  nameEdit <- makeNameEdit myId definitionI
   equals <- BWidgets.makeTextView "=" $ Widget.joinId myId ["equals"]
 
   let
@@ -79,7 +85,6 @@ make definitionI = do
       Widget.actionEventMapMovesCursor Config.addParamKeys "Add parameter" .
       liftM (WidgetIds.delegating . WidgetIds.fromIRef) $
       DataOps.addParameter definitionRef
-    nameEditAnimId = Widget.joinId myId ["name"]
     myId = WidgetIds.fromIRef definitionI
 
 makeJumpEventMap
