@@ -1,6 +1,6 @@
 {-# OPTIONS -Wall #-}
 module Editor.BottleWidgets(
-  makeTextView, makeChoice,
+  makeTextView, makeLabel, makeChoice,
   makeFocusableView, makeFocusableTextView,
   wrapDelegatedWithKeys, wrapDelegated,
   makeTextEdit, makeWordEdit, makeNameEdit,
@@ -14,6 +14,7 @@ module Editor.BottleWidgets(
 
 import Control.Arrow (second)
 import Control.Monad (when, liftM)
+import Data.ByteString.Char8 (pack)
 import Data.List (intersperse)
 import Data.List.Utils (enumerate, nth)
 import Data.Maybe (isJust)
@@ -44,6 +45,10 @@ makeTextView text myId = do
   style <- readTextStyle
   return $
     TextView.makeWidget (TextEdit.sTextViewStyle style) text $ Widget.cursorId myId
+
+makeLabel :: MonadF m => String -> Widget.Id -> TWidget t m
+makeLabel text prefix =
+  makeTextView text $ Widget.joinId prefix [pack text]
 
 makeFocusableView :: MonadF m => Widget.Id -> Widget (Transaction t m) -> TWidget t m
 makeFocusableView myId widget = do

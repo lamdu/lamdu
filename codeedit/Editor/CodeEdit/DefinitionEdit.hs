@@ -75,33 +75,6 @@ makeParamsEdit myId definitionRef =
        BWidgets.makeNameEdit ("<unnamed param " ++ show i ++ ">") paramI) $
       WidgetIds.fromIRef paramI
 
-make :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
-make definitionI = do
-  Data.Definition params _ <- getP definitionRef
-  nameEdit <- makeNameEdit myId definitionI
-  paramsEdits <- makeParamsEdit myId definitionRef params
-  equals <- BWidgets.makeTextView "=" $ Widget.joinId myId ["equals"]
-  rhsEdit <-
-    makeRHSEdit definitionI $
-    Property.composeLabel Data.defBody Data.atDefBody definitionRef
-
-  return .
-    Widget.weakerEvents eventMap .
-    Box.toWidget .
-    (Box.atBoxContent . fmap) addJumps .
-    BWidgets.hboxSpacedK ("space" :: String) $
-    [("lhs", BWidgets.hboxSpaced (nameEdit : paramsEdits)),
-     ("equals", equals),
-     ("rhs", rhsEdit)]
-
-  where
-    definitionRef = Transaction.fromIRef definitionI
-    eventMap =
-      Widget.actionEventMapMovesCursor Config.addParamKeys "Add parameter" .
-      liftM (WidgetIds.delegating . WidgetIds.fromIRef) $
-      DataOps.addParameter definitionRef
-    myId = WidgetIds.fromIRef definitionI
-
 makeJumpEventMap
   :: String
   -> [E.EventType]
@@ -148,3 +121,28 @@ addJumps defKBoxElements =
     addEventMap srcSide destSide doc keys dir =
       atPred (== srcSide)
       (addJumpsToSrc doc keys dir $ Box.getElement destSide defKBoxElements)
+
+make :: MonadF m => IRef Data.Definition -> TWidget ViewTag m
+make definitionI = do
+  Data.Definition params _ <- getP definitionRef
+  nameEdit <- makeNameEdit myId definitionI
+  paramsEdits <- makeParamsEdit myId definitionRef params
+  equals <- BWidgets.makeLabel "=" myId
+  rhsEdit <-
+    makeRHSEdit definitionI $
+    Property.composeLabel Data.defBody Data.atDefBody definitionRef
+  return .
+    Widget.weakerEvents eventMap .
+    Box.toWidget .
+    (Box.atBoxContent . fmap) addJumps .
+    BWidgets.hboxSpacedK ("space" :: String) $
+    [("lhs", BWidgets.hboxSpaced (nameEdit : paramsEdits)),
+     ("equals", equals),
+     ("rhs", rhsEdit)]
+  where
+    definitionRef = Transaction.fromIRef definitionI
+    eventMap =
+      Widget.actionEventMapMovesCursor Config.addParamKeys "Add parameter" .
+      liftM (WidgetIds.delegating . WidgetIds.fromIRef) $
+      DataOps.addParameter definitionRef
+    myId = WidgetIds.fromIRef definitionI

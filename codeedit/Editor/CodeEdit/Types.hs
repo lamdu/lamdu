@@ -13,7 +13,6 @@ module Editor.CodeEdit.Types(
 where
 
 import Control.Monad (liftM)
-import Data.ByteString.Char8 (pack)
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
@@ -64,7 +63,7 @@ addParens onLParen onRParen parenId widget = do
   afterParen <- onRParen $ label ")"
   return $ BWidgets.hbox [ beforeParen, widget, afterParen ]
   where
-    label str = BWidgets.makeTextView str $ Widget.joinId (parensPrefix parenId) [pack str]
+    label str = BWidgets.makeLabel str $ parensPrefix parenId
 
 varId :: Data.VariableRef -> Widget.Id
 varId = Data.onVariableIRef WidgetIds.fromIRef
