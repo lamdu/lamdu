@@ -13,7 +13,6 @@ import Editor.Anchors (ViewTag)
 import Editor.CTransaction (CTransaction, transaction, getP, assignCursor, TWidget, readCursor)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Animation(AnimId)
-import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Char as Char
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -253,23 +252,20 @@ makeResultsWidget firstResults moreResults myId = do
   firstResultsWidget <-
     case firstResultsWidgets of
       [] -> makeNoResults myId
-      xs -> return $ BWidgets.vbox xs
+      xs -> return . blockDownEvents $ BWidgets.vbox xs
   let
     makeMoreResultWidgets [] = return []
     makeMoreResultWidgets _ = liftM (: []) $ makeMoreResults myId
   moreResultsWidgets <- makeMoreResultWidgets moreResults
 
   return $ BWidgets.vbox (firstResultsWidget : moreResultsWidgets)
-
-blockEvents :: MonadF m => Widget m -> Widget m
-blockEvents = Widget.weakerEvents blockUpDownEventMap
   where
-    blockUpDownEventMap = mconcat [
-      blockEvent EventMap.KeyUp "top",
-      blockEvent EventMap.KeyDown "bottom"]
-    blockEvent key side =
-      Widget.actionEventMap [EventMap.KeyEventType EventMap.noMods key]
-      ("Nothing (at " ++ side ++ ")") (return ())
+    blockDownEvents =
+      Widget.weakerEvents $
+      Widget.actionEventMap
+      [EventMap.KeyEventType EventMap.noMods EventMap.KeyDown]
+      ("Nothing (at bottom)") (return ())
+
 
 makeActiveHoleEdit ::
   MonadF m => ETypes.ExpressionAncestry m ->
@@ -294,8 +290,7 @@ makeActiveHoleEdit
         definitionRef expressionI myId
 
       resultsWidget <- makeResultsWidget firstResults moreResults myId
-      return . blockEvents $
-        BWidgets.vbox [searchTermWidget, resultsWidget]
+      return $ BWidgets.vbox [searchTermWidget, resultsWidget]
 
 make ::
   MonadF m => ETypes.ExpressionAncestry m ->
