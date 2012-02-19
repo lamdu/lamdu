@@ -7,19 +7,21 @@ import Data.Maybe(isJust)
 import Data.Monoid(Monoid(..))
 import Data.Ord(comparing)
 import Data.Store.IRef (IRef)
+import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (CTransaction, transaction, getP, assignCursor, TWidget, readCursor)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Animation(AnimId)
+import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Char as Char
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
-import qualified Editor.CodeEdit.Types as ETypes
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
+import qualified Editor.CodeEdit.Types as ETypes
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
@@ -159,6 +161,116 @@ resultOrdering searchTerm result =
   where
     name = resultName result
 
+makeLiteralResults
+  :: MonadF m
+  => ETypes.ExpressionAncestry m
+  -> String -> ETypes.ExpressionPtr m
+  -> Widget.Id
+  -> CTransaction ViewTag m [Result m]
+makeLiteralResults ancestry searchTerm expressionPtr myId =
+  sequence
+  [ makeLiteralIntResult (read searchTerm)
+  | not (null searchTerm) && all Char.isDigit searchTerm]
+  where
+    literalIntId = Widget.joinId (searchResultsPrefix myId) ["literal int"]
+    makeLiteralIntResult integer = do
+      pickEventMap <-
+        pickResultEventMap ancestry expressionPtr
+        myId (Data.ExpressionLiteralInteger integer) DontFlip literalIntId
+      return .
+        Result (show integer) pickEventMap .
+        liftM (Widget.strongerEvents pickEventMap) .
+        BWidgets.makeFocusableView literalIntId =<<
+        LiteralEdit.makeIntView literalIntId integer
+
+makeAllResults
+  :: MonadF m
+  => ETypes.ExpressionAncestry m
+  -> String
+  -> Property (Transaction ViewTag m) Data.Definition
+  -> ETypes.ExpressionPtr m -> Widget.Id
+  -> CTransaction ViewTag m [Result m]
+makeAllResults ancestry searchTerm definitionRef expressionPtr myId = do
+  params <- liftM getDefinitionParamRefs $ getP definitionRef
+  globals <- getP Anchors.globals
+  varResults <- liftM concat .
+    mapM (makeResultVariables ancestry myId expressionPtr) $
+    sort params ++ sort globals
+  literalResults <-
+    makeLiteralResults ancestry searchTerm expressionPtr myId
+  let goodResult = (searchTerm `isInfixOf`) . resultName
+  return .
+    sortOn (resultOrdering searchTerm) $
+    literalResults ++ filter goodResult varResults
+
+
+makeSearchTermWidget
+  :: MonadF m
+  => Widget.Id -> String -> [Result m]
+  -> Transaction.Property ViewTag m Data.Definition
+  -> IRef Data.Expression -> Widget.Id
+  -> TWidget ViewTag m
+makeSearchTermWidget
+  searchTermId searchTerm firstResults definitionRef expressionI myId
+  =
+  (liftM . Widget.strongerEvents) searchTermEventMap $
+    BWidgets.makeWordEdit searchTermRef searchTermId
+  where
+    pickFirstResultEventMaps =
+      map resultPickEventMap $ take 1 firstResults
+
+    newName = concat . words $ searchTerm
+    searchTermEventMap =
+      mconcat $ pickFirstResultEventMaps ++
+      [ EventMap.fromEventTypes Config.addAsParamKeys "Add as Parameter" $ do
+          DataOps.addAsParameter newName definitionRef expressionI
+          let exprId = WidgetIds.fromIRef expressionI
+          return Widget.EventResult {
+            Widget.eCursor = Just exprId,
+            Widget.eAnimIdMapping = holeResultAnimMapping myId searchTermId exprId
+            }
+      , EventMap.fromEventTypes Config.newDefinitionKeys "Add new as Definition" $ do
+          newDef <- DataOps.addAsDefinition newName expressionI
+          return Widget.EventResult {
+            Widget.eCursor = Just $ WidgetIds.fromIRef newDef,
+            Widget.eAnimIdMapping = holeResultAnimMapping myId searchTermId (WidgetIds.fromIRef expressionI)
+            }
+      ]
+    searchTermRef =
+      Property {
+        get = return searchTerm,
+        set =
+          Transaction.writeIRef expressionI .
+          Data.ExpressionHole . Data.HoleState
+        }
+
+makeResultsWidget
+  :: MonadF m
+  => [Result m] -> [Result m] -> Widget.Id
+  -> TWidget ViewTag m
+makeResultsWidget firstResults moreResults myId = do
+  firstResultsWidgets <- mapM resultMakeWidget firstResults
+  firstResultsWidget <-
+    case firstResultsWidgets of
+      [] -> makeNoResults myId
+      xs -> return $ BWidgets.vbox xs
+  let
+    makeMoreResultWidgets [] = return []
+    makeMoreResultWidgets _ = liftM (: []) $ makeMoreResults myId
+  moreResultsWidgets <- makeMoreResultWidgets moreResults
+
+  return $ BWidgets.vbox (firstResultsWidget : moreResultsWidgets)
+
+blockEvents :: MonadF m => Widget m -> Widget m
+blockEvents = Widget.weakerEvents blockUpDownEventMap
+  where
+    blockUpDownEventMap = mconcat [
+      blockEvent EventMap.KeyUp "top",
+      blockEvent EventMap.KeyDown "bottom"]
+    blockEvent key side =
+      Widget.actionEventMap [EventMap.KeyEventType EventMap.noMods key]
+      ("Nothing (at " ++ side ++ ")") (return ())
+
 makeActiveHoleEdit ::
   MonadF m => ETypes.ExpressionAncestry m ->
   IRef Data.Definition -> Data.HoleState -> ETypes.ExpressionPtr m ->
@@ -170,93 +282,20 @@ makeActiveHoleEdit
     expressionI <- getP expressionPtr
     let searchTermId = WidgetIds.searchTermId myId
     assignCursor myId searchTermId $ do
-      let
-        definitionRef = Transaction.fromIRef definitionI
-        literalIntId = Widget.joinId (searchResultsPrefix myId) ["literal int"]
-        makeLiteralIntResult integer = do
-          pickEventMap <-
-            pickResultEventMap ancestry expressionPtr
-            myId (Data.ExpressionLiteralInteger integer) DontFlip literalIntId
-          return .
-            Result (show integer) pickEventMap .
-            liftM (Widget.strongerEvents pickEventMap) .
-            BWidgets.makeFocusableView literalIntId =<<
-            LiteralEdit.makeIntView literalIntId integer
-
-        makeLiteralResults =
-          sequence
-          [ makeLiteralIntResult (read searchTerm)
-          | not (null searchTerm) && all Char.isDigit searchTerm]
-      params <- liftM getDefinitionParamRefs $ getP definitionRef
-      globals <- getP Anchors.globals
+      let definitionRef = Transaction.fromIRef definitionI
       allResults <-
-        liftM concat .
-        mapM
-        (makeResultVariables ancestry myId expressionPtr) $
-        sort params ++ sort globals
+        makeAllResults ancestry searchTerm definitionRef
+        expressionPtr myId
 
-      literalResults <- makeLiteralResults
-      let
-        goodResult = (searchTerm `isInfixOf`) . resultName
-        filteredResults =
-          sortOn (resultOrdering searchTerm) $
-          literalResults ++ filter goodResult allResults
-
-        (firstResults, moreResults) = splitAt 3 filteredResults
-
-      let
-        pickFirstResultEventMaps =
-          map resultPickEventMap $ take 1 firstResults
-
-        newName = concat . words $ searchTerm
-        searchTermEventMap =
-          mconcat $ pickFirstResultEventMaps ++
-          [ EventMap.fromEventTypes Config.addAsParamKeys "Add as Parameter" $ do
-              DataOps.addAsParameter newName definitionRef expressionI
-              let exprId = WidgetIds.fromIRef expressionI
-              return Widget.EventResult {
-                Widget.eCursor = Just exprId,
-                Widget.eAnimIdMapping = holeResultAnimMapping myId searchTermId exprId
-                }
-          , EventMap.fromEventTypes Config.newDefinitionKeys "Add new as Definition" $ do
-              newDef <- DataOps.addAsDefinition newName expressionI
-              return Widget.EventResult {
-                Widget.eCursor = Just $ WidgetIds.fromIRef newDef,
-                Widget.eAnimIdMapping = holeResultAnimMapping myId searchTermId (WidgetIds.fromIRef expressionI)
-                }
-          ]
-        stateProp =
-          Property.Property {
-            Property.get = return searchTerm,
-            Property.set =
-              Transaction.writeIRef expressionI .
-              Data.ExpressionHole . Data.HoleState
-            }
+      let (firstResults, moreResults) = splitAt 3 allResults
 
       searchTermWidget <-
-        (liftM . Widget.strongerEvents) searchTermEventMap $
-        BWidgets.makeWordEdit stateProp searchTermId
+        makeSearchTermWidget searchTermId searchTerm firstResults
+        definitionRef expressionI myId
 
-      resultWidgets <-
-        case firstResults of
-          [] -> makeNoResults myId
-          _ ->
-            liftM BWidgets.vbox $ mapM resultMakeWidget firstResults
-
-      let
-        mkMoreResultWidget
-          | null moreResults = return []
-          | otherwise = liftM (:[]) $ makeMoreResults myId
-        blockEvent key side =
-          Widget.actionEventMap [EventMap.KeyEventType EventMap.noMods key]
-          ("Nothing (at " ++ side ++ ")") (return ())
-        blockUpDownEventMap =
-          mconcat [blockEvent EventMap.KeyUp "top", blockEvent EventMap.KeyDown "bottom"]
-
-      moreResultsWidget <- mkMoreResultWidget
-      return .
-        Widget.weakerEvents blockUpDownEventMap .
-        BWidgets.vbox $ [searchTermWidget, resultWidgets] ++ moreResultsWidget
+      resultsWidget <- makeResultsWidget firstResults moreResults myId
+      return . blockEvents $
+        BWidgets.vbox [searchTermWidget, resultsWidget]
 
 make ::
   MonadF m => ETypes.ExpressionAncestry m ->
