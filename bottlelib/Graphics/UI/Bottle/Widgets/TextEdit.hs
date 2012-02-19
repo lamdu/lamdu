@@ -12,11 +12,12 @@ module Graphics.UI.Bottle.Widgets.TextEdit(
 
 import Control.Arrow (first)
 import Data.Char (isSpace)
-import Data.List (genericLength)
+import Data.List (genericLength, minimumBy)
 import Data.List.Split (splitWhen)
 import Data.List.Utils (enumerate)
 import Data.Maybe (fromJust, mapMaybe)
 import Data.Monoid (Monoid(..))
+import Data.Ord (comparing)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators.Utils (square, textHeight)
 import Graphics.UI.Bottle.Rect (Rect(..))
@@ -32,6 +33,7 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.Rect as Rect
 import qualified Graphics.UI.Bottle.SizeRange as SizeRange
 import qualified Graphics.UI.Bottle.Sized as Sized
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -85,12 +87,11 @@ makeUnfocused style str myId =
     enter dir =
       (,) str . makeTextEditCursor myId $
       Direction.fold (length str) enterRect dir
-    -- TODO: Figure out what rect each letter is at, and find the one
-    -- closest to the argument rect, and return that instead of
-    -- (length str)
-    -- A. TextView needs to export a function: String -> [Rect]
-    -- B. We need to find the closest one here
-    enterRect _ = length str -- TODO: this is wrong
+      where
+        enterRect fromRect = minimumOn
+          (\i -> Rect.distance fromRect (strRects !! i)) [0..length str - 1]
+        strRects = concat $ TextView.letterRects (sTextViewStyle style) str
+        minimumOn = minimumBy . comparing
 
 -- TODO: Instead of font + ptSize, let's pass a text-drawer (that's
 -- what "Font" should be)

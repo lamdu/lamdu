@@ -10,6 +10,7 @@ import Graphics.DrawingCombinators(R)
 import Graphics.UI.Bottle.Rect (Rect(..))
 import qualified Graphics.UI.Bottle.Rect as Rect
 
+-- TODO: (Int, Int) -> Vector2
 rectScore:: Vector2 R -> Rect -> (Int, Int) -> Rect -> ([Int], R)
 rectScore size entryRect (row, col) enterResultRect =
   (borderScore, Rect.distance entryRect enterResultRect)
