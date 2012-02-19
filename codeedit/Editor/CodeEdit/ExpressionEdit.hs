@@ -1,7 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit(make) where
 
-import Data.Monoid(Monoid(..))
+import Control.Arrow (second)
+import Control.Monad (liftM)
+import Data.Monoid (Monoid(..))
 import Data.Store.IRef (IRef)
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (TWidget, getP, transaction)
@@ -26,32 +28,43 @@ make
   -> ETypes.ExpressionPtr m -> TWidget ViewTag m
 make ancestry definitionI expressionPtr = do
   expressionI <- getP expressionPtr
-  let
-    expressionId = WidgetIds.fromIRef expressionI
-
   expr <- getP $ Transaction.fromIRef expressionI
-  (addArgDoc, addArgHandler) <-
-    transaction $ ETypes.makeAddArgHandler ancestry expressionPtr
   let
+    noPickResult = (fmap . liftM) ((,) Nothing)
     makeEditor =
       case expr of
-        Data.ExpressionHole holeState ->
+        Data.ExpressionHole holeState -> do
           BWidgets.wrapDelegatedWithKeys
-            FocusDelegator.defaultKeys FocusDelegator.Delegating id $
-          HoleEdit.make ancestry definitionI holeState expressionPtr
+            FocusDelegator.defaultKeys FocusDelegator.Delegating second $
+            HoleEdit.make ancestry definitionI holeState expressionPtr
         Data.ExpressionGetVariable varRef ->
-          VarEdit.make ancestry varRef
+          noPickResult $ VarEdit.make ancestry varRef
         Data.ExpressionApply apply ->
+          noPickResult .
           BWidgets.wrapDelegatedWithKeys
             Config.exprFocusDelegatorKeys FocusDelegator.Delegating id $
           ApplyEdit.make (`make` definitionI) ancestry expressionPtr apply
         Data.ExpressionLiteralInteger integer ->
+          noPickResult .
           BWidgets.wrapDelegatedWithKeys
             FocusDelegator.defaultKeys FocusDelegator.NotDelegating id $
           LiteralEdit.makeInt expressionI integer
-  widget <- makeEditor expressionId
+  let expressionId = WidgetIds.fromIRef expressionI
+  (mPick, widget) <- makeEditor expressionId
+  (addArgDoc, addArgHandler) <-
+    transaction $ ETypes.makeAddArgHandler ancestry expressionPtr
   let
     eventMap = mconcat
+      [ pickersEventMap
+      , Widget.actionEventMapMovesCursor
+        Config.relinkKeys "Replace" . ETypes.diveIn $
+        DataOps.replace expressionPtr
+      ]
+    pickResultFirst =
+      maybe id (fmap . (>>)) mPick
+    pickersEventMap =
+      pickResultFirst $
+      mconcat
       [ Widget.actionEventMapMovesCursor
         Config.addNextArgumentKeys addArgDoc addArgHandler
       , Widget.actionEventMapMovesCursor
@@ -59,7 +72,5 @@ make ancestry definitionI expressionPtr = do
         ETypes.diveIn $ DataOps.giveAsArg expressionPtr
       , Widget.actionEventMapMovesCursor
         Config.callWithArgumentKeys "Call with argument" . ETypes.diveIn $ DataOps.callWithArg expressionPtr
-      , Widget.actionEventMapMovesCursor
-        Config.relinkKeys "Replace" . ETypes.diveIn $ DataOps.replace expressionPtr
       ]
   return $ Widget.weakerEvents eventMap widget

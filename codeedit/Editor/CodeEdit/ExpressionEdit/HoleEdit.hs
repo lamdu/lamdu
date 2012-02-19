@@ -1,18 +1,20 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit.HoleEdit(make) where
 
+import Control.Arrow (first, second)
 import Control.Monad (liftM)
-import Data.List(isInfixOf, isPrefixOf, sort, sortBy)
-import Data.Maybe(isJust)
-import Data.Monoid(Monoid(..))
-import Data.Ord(comparing)
+import Data.List (isInfixOf, isPrefixOf, sort, sortBy)
+import Data.Maybe (isJust, listToMaybe)
+import Data.Monoid (Monoid(..))
+import Data.Ord (comparing)
 import Data.Store.IRef (IRef)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, transaction, getP, assignCursor, TWidget, readCursor)
+import Editor.CTransaction (CTransaction, getP, assignCursor, TWidget, readCursor)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Animation(AnimId)
+import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Char as Char
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -26,14 +28,41 @@ import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Animation as Anim
-import qualified Graphics.UI.Bottle.EventMap as EventMap
+import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
+
+type ResultPicker m = Transaction ViewTag m Widget.EventResult
 
 data Result m = Result {
   resultName :: String,
-  resultPickEventMap :: Widget.EventHandlers (Transaction ViewTag m),
+  resultPick :: ResultPicker m,
   resultMakeWidget :: TWidget ViewTag m
   }
+
+makeResult
+  :: MonadF m
+  => String -> ETypes.ExpressionPtr m -> Widget.Id
+  -> Data.Expression -> NeedFlip m -> Widget.Id
+  -> TWidget ViewTag m
+  -> CTransaction ViewTag m (Result m)
+makeResult name expressionPtr myId newExpr needFlip resultId
+  mkWidget =
+  do
+    expressionI <- getP expressionPtr
+    let pick = pickResult expressionI myId newExpr needFlip resultId
+    return $ Result name pick mkWidget
+
+resultPickEventMap
+  :: Result m -> Widget.EventHandlers (Transaction ViewTag m)
+resultPickEventMap =
+  E.fromEventTypes Config.pickResultKeys "Pick this search result" .
+  resultPick
+
+resultToWidget :: Monad m => Result m -> TWidget ViewTag m
+resultToWidget result =
+  (liftM . Widget.strongerEvents)
+  (resultPickEventMap result) $
+  resultMakeWidget result
 
 makeNoResults :: MonadF m => Widget.Id -> TWidget t m
 makeNoResults myId =
@@ -72,12 +101,8 @@ makeResultVariables ancestry myId expressionPtr varRef = do
     resultId = searchResultsPrefix myId `mappend` ETypes.varId varRef
     resultIdAsPrefix = Widget.joinId resultId ["prefix"]
 
-    result name needFlip wid resultAncestry = do
-      pickEventMap <-
-        pickResultEventMap ancestry expressionPtr myId getVar needFlip resultId
-      return .
-        Result name pickEventMap .
-        liftM (Widget.strongerEvents pickEventMap) $
+    result name needFlip wid resultAncestry =
+      makeResult name expressionPtr myId getVar needFlip resultId $
         VarEdit.makeView resultAncestry varRef wid
 
     getVar = Data.ExpressionGetVariable varRef
@@ -91,32 +116,6 @@ renamePrefix srcPrefix destPrefix animId =
   maybe animId (Anim.joinId destPrefix) $
   Anim.subId srcPrefix animId
 
-pickResultEventMap
-  :: MonadF m => ETypes.ExpressionAncestry m
-  -> ETypes.ExpressionPtr m -> Widget.Id -> Data.Expression
-  -> NeedFlip m -> Widget.Id
-  -> CTransaction ViewTag m (Widget.EventHandlers (Transaction ViewTag m))
-pickResultEventMap
-  ancestry expressionPtr myId expr needFlip resultId =
-  do
-    expressionI <- getP expressionPtr
-    (addArgDoc, addArgHandler) <-
-      transaction $ ETypes.makeAddArgHandler ancestry expressionPtr
-    let
-      pickResultAndAddArg = do
-        res <- pickResult myId expressionI expr needFlip resultId
-        cursor <- addArgHandler
-        return res { Widget.eCursor = Just cursor }
-    return $ mconcat [
-      EventMap.fromEventTypes Config.pickResultKeys
-      "Pick this search result" $
-      pickResult myId expressionI expr needFlip resultId,
-
-      EventMap.fromEventTypes Config.addNextArgumentKeys
-      ("Pick this search result and " ++ addArgDoc)
-      pickResultAndAddArg
-      ]
-
 searchResultsPrefix :: Widget.Id -> Widget.Id
 searchResultsPrefix = flip Widget.joinId ["search results"]
 
@@ -128,11 +127,11 @@ holeResultAnimMapping myId resultId expressionId =
     myAnimId = Widget.cursorId myId
 
 pickResult
-  :: MonadF m => Widget.Id -> IRef Data.Expression
+  :: MonadF m => IRef Data.Expression -> Widget.Id
   -> Data.Expression -> NeedFlip m -> Widget.Id
-  -> Transaction ViewTag m Widget.EventResult
-pickResult myId expressionI expr needFlip resultId = do
-  Transaction.writeIRef expressionI expr
+  -> ResultPicker m
+pickResult expressionI myId newExpr needFlip resultId = do
+  Transaction.writeIRef expressionI newExpr
   flipAct needFlip
   return Widget.EventResult {
     Widget.eCursor = Just expressionId,
@@ -140,13 +139,12 @@ pickResult myId expressionI expr needFlip resultId = do
       holeResultAnimMapping myId resultId expressionId
     }
   where
+    expressionId = WidgetIds.fromIRef expressionI
     flipAct DontFlip = return ()
     flipAct (DoFlip (ETypes.ApplyData _ _ apply parentPtr)) = do
       parentI <- Property.get parentPtr
       Property.set (Transaction.fromIRef parentI) .
         Data.ExpressionApply $ flipArgs apply
-
-    expressionId = WidgetIds.fromIRef expressionI
 
 flipArgs :: Data.Apply -> Data.Apply
 flipArgs (Data.Apply x y) = Data.Apply y x
@@ -162,23 +160,19 @@ resultOrdering searchTerm result =
 
 makeLiteralResults
   :: MonadF m
-  => ETypes.ExpressionAncestry m
-  -> String -> ETypes.ExpressionPtr m
+  => String -> ETypes.ExpressionPtr m
   -> Widget.Id
   -> CTransaction ViewTag m [Result m]
-makeLiteralResults ancestry searchTerm expressionPtr myId =
+makeLiteralResults searchTerm expressionPtr myId =
   sequence
   [ makeLiteralIntResult (read searchTerm)
   | not (null searchTerm) && all Char.isDigit searchTerm]
   where
     literalIntId = Widget.joinId (searchResultsPrefix myId) ["literal int"]
-    makeLiteralIntResult integer = do
-      pickEventMap <-
-        pickResultEventMap ancestry expressionPtr
-        myId (Data.ExpressionLiteralInteger integer) DontFlip literalIntId
-      return .
-        Result (show integer) pickEventMap .
-        liftM (Widget.strongerEvents pickEventMap) .
+    makeLiteralIntResult integer =
+      makeResult (show integer) expressionPtr myId
+        (Data.ExpressionLiteralInteger integer) DontFlip
+        literalIntId $
         BWidgets.makeFocusableView literalIntId =<<
         LiteralEdit.makeIntView literalIntId integer
 
@@ -196,7 +190,7 @@ makeAllResults ancestry searchTerm definitionRef expressionPtr myId = do
     mapM (makeResultVariables ancestry myId expressionPtr) $
     sort params ++ sort globals
   literalResults <-
-    makeLiteralResults ancestry searchTerm expressionPtr myId
+    makeLiteralResults searchTerm expressionPtr myId
   let goodResult = (searchTerm `isInfixOf`) . resultName
   return .
     sortOn (resultOrdering searchTerm) $
@@ -221,14 +215,14 @@ makeSearchTermWidget
     newName = concat . words $ searchTerm
     searchTermEventMap =
       mconcat $ pickFirstResultEventMaps ++
-      [ EventMap.fromEventTypes Config.addAsParamKeys "Add as Parameter" $ do
+      [ E.fromEventTypes Config.addAsParamKeys "Add as Parameter" $ do
           DataOps.addAsParameter newName definitionRef expressionI
           let exprId = WidgetIds.fromIRef expressionI
           return Widget.EventResult {
             Widget.eCursor = Just exprId,
             Widget.eAnimIdMapping = holeResultAnimMapping myId searchTermId exprId
             }
-      , EventMap.fromEventTypes Config.newDefinitionKeys "Add new as Definition" $ do
+      , E.fromEventTypes Config.newDefinitionKeys "Add new as Definition" $ do
           newDef <- DataOps.addAsDefinition newName expressionI
           return Widget.EventResult {
             Widget.eCursor = Just $ WidgetIds.fromIRef newDef,
@@ -246,31 +240,45 @@ makeSearchTermWidget
 makeResultsWidget
   :: MonadF m
   => [Result m] -> [Result m] -> Widget.Id
-  -> TWidget ViewTag m
+  -> CTransaction ViewTag m
+     (Maybe (Result m), Widget (Transaction ViewTag m))
 makeResultsWidget firstResults moreResults myId = do
-  firstResultsWidgets <- mapM resultMakeWidget firstResults
-  firstResultsWidget <-
-    case firstResultsWidgets of
-      [] -> makeNoResults myId
-      xs -> return . blockDownEvents $ BWidgets.vbox xs
+  let
+    resultAndWidget result =
+      liftM ((,) result) $ resultToWidget result
+  firstResultsAndWidgets <- mapM resultAndWidget firstResults
+  (mResult, firstResultsWidget) <-
+    case firstResultsAndWidgets of
+      [] -> liftM ((,) Nothing) $ makeNoResults myId
+      xs -> do
+        let
+          widget = blockDownEvents . BWidgets.vbox $ map snd xs
+          mResult =
+            listToMaybe . map fst $
+            filter (Widget.isFocused . snd) xs
+        return (mResult, widget)
   let
     makeMoreResultWidgets [] = return []
     makeMoreResultWidgets _ = liftM (: []) $ makeMoreResults myId
   moreResultsWidgets <- makeMoreResultWidgets moreResults
 
-  return $ BWidgets.vbox (firstResultsWidget : moreResultsWidgets)
+  return $ (mResult, BWidgets.vbox (firstResultsWidget : moreResultsWidgets))
   where
     blockDownEvents =
       Widget.weakerEvents $
       Widget.actionEventMap
-      [EventMap.KeyEventType EventMap.noMods EventMap.KeyDown]
+      [E.KeyEventType E.noMods E.KeyDown]
       ("Nothing (at bottom)") (return ())
 
 
-makeActiveHoleEdit ::
-  MonadF m => ETypes.ExpressionAncestry m ->
-  IRef Data.Definition -> Data.HoleState -> ETypes.ExpressionPtr m ->
-  Widget.Id -> TWidget ViewTag m
+makeActiveHoleEdit
+  :: MonadF m
+  => ETypes.ExpressionAncestry m
+  -> IRef Data.Definition -> Data.HoleState
+  -> ETypes.ExpressionPtr m
+  -> Widget.Id
+  -> CTransaction ViewTag m
+     (Maybe (Result m), Widget (Transaction ViewTag m))
 makeActiveHoleEdit
   ancestry definitionI (Data.HoleState searchTerm)
   expressionPtr myId =
@@ -289,27 +297,37 @@ makeActiveHoleEdit
         makeSearchTermWidget searchTermId searchTerm firstResults
         definitionRef expressionI myId
 
-      resultsWidget <- makeResultsWidget firstResults moreResults myId
-      return $ BWidgets.vbox [searchTermWidget, resultsWidget]
+      (mResult, resultsWidget) <-
+        makeResultsWidget firstResults moreResults myId
+      return
+        ( maybe (listToMaybe $ take 1 firstResults) Just mResult
+        , BWidgets.vbox [searchTermWidget, resultsWidget] )
 
-make ::
-  MonadF m => ETypes.ExpressionAncestry m ->
-  IRef Data.Definition -> Data.HoleState ->
-  Transaction.Property ViewTag m (IRef Data.Expression) ->
-  Widget.Id -> TWidget ViewTag m
+make
+  :: MonadF m => ETypes.ExpressionAncestry m
+  -> IRef Data.Definition
+  -> Data.HoleState
+  -> Transaction.Property ViewTag m (IRef Data.Expression)
+  -> Widget.Id
+  -> CTransaction ViewTag m
+     (Maybe (ResultPicker m), Widget (Transaction ViewTag m))
 make ancestry definitionI curState expressionPtr myId = do
   cursor <- readCursor
-  widget <-
-    if isJust (Widget.subId myId cursor)
+  if isJust (Widget.subId myId cursor)
     then
-      makeBackground Config.focusedHoleBackgroundColor $
+      (liftM . first . fmap) resultPick .
+      (liftM . second)
+        (makeBackground Config.focusedHoleBackgroundColor) $
       makeActiveHoleEdit ancestry definitionI curState expressionPtr myId
     else
-      makeBackground Config.unfocusedHoleBackgroundColor .
-      BWidgets.makeFocusableTextView snippet $ WidgetIds.searchTermId myId
-  return widget
+      liftM
+      ((,) Nothing .
+       makeBackground Config.unfocusedHoleBackgroundColor) .
+      BWidgets.makeFocusableTextView snippet $
+      WidgetIds.searchTermId myId
   where
-    makeBackground = liftM . (Widget.backgroundColor (Widget.joinId myId ["hole background"]))
+    makeBackground =
+      Widget.backgroundColor $ Widget.joinId myId ["hole background"]
     snippet
       | null searchText = "  "
       | otherwise = searchText
