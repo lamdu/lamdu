@@ -1,3 +1,6 @@
+* Add JumpTo which gives a hole-like search -- that can sit in a "tab"
+  in place of a DefinitionEdit
+
 * TextView returns all character position rects
   * TextEdit uses the character position rects to locate enter cursor
 
