@@ -1,3 +1,5 @@
+* Delete of infix-right-arg goes to infix-left-arg, where it should go to func
+
 * Add JumpTo which gives a hole-like search -- that can sit in a "tab"
   in place of a DefinitionEdit
 
