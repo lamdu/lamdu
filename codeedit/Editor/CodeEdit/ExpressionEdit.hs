@@ -55,24 +55,26 @@ make ancestry definitionI expressionPtr = do
     transaction $ ETypes.makeAddArgHandler ancestry expressionPtr
   let
     eventMap = mconcat
-      [ pickersEventMap
-      , Widget.actionEventMapMovesCursor
+      [ moveUnlessOnHole .
+        Widget.actionEventMapMovesCursor
         Config.giveAsArgumentKeys "Give as argument" .
         ETypes.diveIn $ DataOps.giveAsArg expressionPtr
-      , Widget.actionEventMapMovesCursor
+      , moveUnlessOnHole .
+        Widget.actionEventMapMovesCursor
+        Config.callWithArgumentKeys "Call with argument" . ETypes.diveIn $ DataOps.callWithArg expressionPtr
+      , pickResultFirst $
+        Widget.actionEventMapMovesCursor
+        Config.addNextArgumentKeys addArgDoc addArgHandler
+      , unlessOnHole $
+        Widget.actionEventMapMovesCursor
         Config.relinkKeys "Replace" . ETypes.diveIn $
         DataOps.replace expressionPtr
       ]
+    unlessOnHole = maybe id (const mempty) mPick
+    moveUnlessOnHole =
+      maybe id ((const . fmap . liftM . Widget.atECursor . const) Nothing) mPick
     pickResultFirst = maybe id (fmap . joinEvents) mPick
     joinEvents x y = do
       r <- liftM Widget.eAnimIdMapping x
       (liftM . Widget.atEAnimIdMapping) (. r) y
-    pickersEventMap =
-      pickResultFirst $
-      mconcat
-      [ Widget.actionEventMapMovesCursor
-        Config.addNextArgumentKeys addArgDoc addArgHandler
-      , Widget.actionEventMapMovesCursor
-        Config.callWithArgumentKeys "Call with argument" . ETypes.diveIn $ DataOps.callWithArg expressionPtr
-      ]
   return $ Widget.weakerEvents eventMap widget
