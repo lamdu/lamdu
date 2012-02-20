@@ -297,7 +297,7 @@ makeActiveHoleEdit
       (mResult, resultsWidget) <-
         makeResultsWidget firstResults moreResults myId
       return
-        ( mplus (listToMaybe $ take 1 firstResults) mResult
+        ( mplus mResult (listToMaybe $ take 1 firstResults)
         , BWidgets.vbox [searchTermWidget, resultsWidget] )
 
 make
