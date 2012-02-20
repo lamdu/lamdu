@@ -63,8 +63,10 @@ make ancestry definitionI expressionPtr = do
         Config.relinkKeys "Replace" . ETypes.diveIn $
         DataOps.replace expressionPtr
       ]
-    pickResultFirst =
-      maybe id (fmap . (>>)) mPick
+    pickResultFirst = maybe id (fmap . joinEvents) mPick
+    joinEvents x y = do
+      r <- liftM Widget.eAnimIdMapping x
+      (liftM . Widget.atEAnimIdMapping) (. r) y
     pickersEventMap =
       pickResultFirst $
       mconcat
