@@ -3,10 +3,10 @@ module Editor.CodeEdit.ExpressionEdit.HoleEdit(make) where
 
 import Control.Arrow (first, second)
 import Control.Monad (liftM)
-import Data.List (isInfixOf, isPrefixOf, sort, sortBy)
+import Data.List (isInfixOf, isPrefixOf, sort)
+import Data.List.Utils (sortOn)
 import Data.Maybe (isJust, listToMaybe)
 import Data.Monoid (Monoid(..))
-import Data.Ord (comparing)
 import Data.Store.IRef (IRef)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
@@ -148,9 +148,6 @@ pickResult expressionI myId newExpr needFlip resultId = do
 
 flipArgs :: Data.Apply -> Data.Apply
 flipArgs (Data.Apply x y) = Data.Apply y x
-
-sortOn :: Ord b => (a -> b) -> [a] -> [a]
-sortOn = sortBy . comparing
 
 resultOrdering :: String -> Result m -> (Bool, Bool)
 resultOrdering searchTerm result =

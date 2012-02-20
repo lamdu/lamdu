@@ -12,12 +12,11 @@ where
 
 import Control.Applicative(pure, liftA2)
 import Control.Arrow(first, second)
-import Data.Function(on)
 import Data.List(isPrefixOf)
+import Data.List.Utils(groupOn, sortOn)
 import Data.Map(Map, (!))
 import Data.Maybe(isJust)
 import Data.Monoid(Monoid(..))
-import Data.Ord(comparing)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators(R, (%%))
 import Graphics.DrawingCombinators.Utils(square)
@@ -67,12 +66,6 @@ instance Monoid Frame where
   mappend (Frame x) (Frame y) =
     Frame $
     Map.unionWithKey (error . ("Attempt to unify same-id sub-images: " ++) . show) x y
-
-sortOn :: Ord b => (a -> b) -> [a] -> [a]
-sortOn = List.sortBy . comparing
-
-groupOn :: Eq b => (a -> b) -> [a] -> [[a]]
-groupOn f = List.groupBy ((==) `on` f)
 
 draw :: Frame -> Draw.Image ()
 draw = mconcat . map (posImage . snd) . sortOn fst . Map.elems . iSubImages

@@ -1,7 +1,18 @@
 {-# OPTIONS -Wall #-}
-module Data.List.Utils(enumerate, enumerate2d, nth, index, removeAt, atPred) where
+module Data.List.Utils
+	( groupOn, sortOn, enumerate, enumerate2d, nth, index, removeAt, atPred
+	) where
 
-import Data.Maybe(listToMaybe)
+import Data.Function (on)
+import Data.List (groupBy, sortBy)
+import Data.Maybe (listToMaybe)
+import Data.Ord (comparing)
+
+groupOn :: Eq b => (a -> b) -> [a] -> [[a]]
+groupOn = groupBy . on (==)
+
+sortOn :: Ord b => (a -> b) -> [a] -> [a]
+sortOn = sortBy . comparing
 
 enumerate :: [a] -> [(Int, a)]
 enumerate = zip [0..]

@@ -3,10 +3,9 @@
 module Graphics.UI.Bottle.Widgets.EventMapDoc(make, addHelp, makeToggledHelpAdder) where
 
 import Data.IORef (newIORef, readIORef, modifyIORef)
-import Data.List(sortBy)
-import Data.Monoid(mappend)
-import Data.Ord(comparing)
-import Graphics.UI.Bottle.EventMap(EventMap)
+import Data.List.Utils (sortOn)
+import Data.Monoid (mappend)
+import Graphics.UI.Bottle.EventMap (EventMap)
 import Graphics.UI.Bottle.SizeRange (srMinSize)
 import Graphics.UI.Bottle.Sized (Sized(..))
 import Graphics.UI.Bottle.Widget (Widget)
@@ -18,9 +17,6 @@ import qualified Graphics.UI.Bottle.Sized as Sized
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
-
-sortOn :: Ord b => (a -> b) -> [a] -> [a]
-sortOn = sortBy . comparing
 
 make :: EventMap a -> TextView.Style -> Anim.AnimId -> Sized Anim.Frame
 make eventMap style animId =
