@@ -33,7 +33,7 @@ make ancestry definitionI expressionPtr = do
     noPickResult = (fmap . liftM) ((,) Nothing)
     makeEditor =
       case expr of
-        Data.ExpressionHole holeState -> do
+        Data.ExpressionHole holeState ->
           BWidgets.wrapDelegatedWithKeys
             FocusDelegator.defaultKeys FocusDelegator.Delegating second $
             HoleEdit.make ancestry definitionI holeState expressionPtr

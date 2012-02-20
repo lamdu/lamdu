@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-{-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TemplateHaskell, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, GeneralizedNewtypeDeriving #-}
 module Graphics.UI.Bottle.Direction(
   Direction(..), fold, inRelativePos,
   fromLeft, fromTop, fromRight, fromBottom)

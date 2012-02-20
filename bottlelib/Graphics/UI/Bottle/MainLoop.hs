@@ -31,10 +31,8 @@ mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
       (x, y) <- getWindowDimensions
       return $ Vector2 (fromIntegral x) (fromIntegral y)
 
-    eventHandlerWithSize size event = eventHandler size event
-  let
     handleEvent size (GLFWKeyEvent keyEvent) =
-      eventHandlerWithSize size keyEvent
+      eventHandler size keyEvent
     handleEvent _ GLFWWindowClose =
       error "Quit" -- TODO: Make close event
     handleEvent _ GLFWWindowRefresh = return True

@@ -2,7 +2,7 @@
 module Editor.CodeEdit.ExpressionEdit.HoleEdit(make) where
 
 import Control.Arrow (first, second)
-import Control.Monad (liftM)
+import Control.Monad (liftM, mplus)
 import Data.List (isInfixOf, isPrefixOf, sort)
 import Data.List.Utils (sortOn)
 import Data.Maybe (isJust, listToMaybe)
@@ -259,13 +259,13 @@ makeResultsWidget firstResults moreResults myId = do
     makeMoreResultWidgets _ = liftM (: []) $ makeMoreResults myId
   moreResultsWidgets <- makeMoreResultWidgets moreResults
 
-  return $ (mResult, BWidgets.vbox (firstResultsWidget : moreResultsWidgets))
+  return (mResult, BWidgets.vbox (firstResultsWidget : moreResultsWidgets))
   where
     blockDownEvents =
       Widget.weakerEvents $
       Widget.actionEventMap
       [E.KeyEventType E.noMods E.KeyDown]
-      ("Nothing (at bottom)") (return ())
+      "Nothing (at bottom)" (return ())
 
 
 makeActiveHoleEdit
@@ -297,7 +297,7 @@ makeActiveHoleEdit
       (mResult, resultsWidget) <-
         makeResultsWidget firstResults moreResults myId
       return
-        ( maybe (listToMaybe $ take 1 firstResults) Just mResult
+        ( mplus (listToMaybe $ take 1 firstResults) mResult
         , BWidgets.vbox [searchTermWidget, resultsWidget] )
 
 make
