@@ -57,6 +57,9 @@ make ancestry definitionI expressionPtr = do
     eventMap = mconcat
       [ pickersEventMap
       , Widget.actionEventMapMovesCursor
+        Config.giveAsArgumentKeys "Give as argument" .
+        ETypes.diveIn $ DataOps.giveAsArg expressionPtr
+      , Widget.actionEventMapMovesCursor
         Config.relinkKeys "Replace" . ETypes.diveIn $
         DataOps.replace expressionPtr
       ]
@@ -67,9 +70,6 @@ make ancestry definitionI expressionPtr = do
       mconcat
       [ Widget.actionEventMapMovesCursor
         Config.addNextArgumentKeys addArgDoc addArgHandler
-      , Widget.actionEventMapMovesCursor
-        Config.giveAsArgumentKeys "Give as argument" .
-        ETypes.diveIn $ DataOps.giveAsArg expressionPtr
       , Widget.actionEventMapMovesCursor
         Config.callWithArgumentKeys "Call with argument" . ETypes.diveIn $ DataOps.callWithArg expressionPtr
       ]
