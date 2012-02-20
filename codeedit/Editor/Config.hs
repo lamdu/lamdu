@@ -70,4 +70,4 @@ parenHighlightColor = Draw.Color 0.3 0 1 0.25
 unnamedStr = "<noname>"
 
 jumpToLhsKeys = [k '`']
-jumpToRhsKeys = [k '=']
+jumpToRhsKeys = [k '=', noMods E.KeyPadEqual]
