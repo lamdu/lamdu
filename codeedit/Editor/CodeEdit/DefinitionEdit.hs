@@ -40,13 +40,7 @@ makeRHSEdit
   => IRef Data.Definition
   -> ETypes.ExpressionPtr m
   -> TWidget ViewTag m
-makeRHSEdit definitionI bodyRef =
-  liftM (Widget.weakerEvents replaceEventMap) $
-  ExpressionEdit.make [] definitionI bodyRef
-  where
-    replaceEventMap =
-      Widget.actionEventMapMovesCursor Config.delKeys "Replace" .
-      ETypes.diveIn $ DataOps.replace bodyRef
+makeRHSEdit = ExpressionEdit.make []
 
 makeLHSEdit
   :: MonadF m

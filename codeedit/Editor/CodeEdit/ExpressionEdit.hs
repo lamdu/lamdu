@@ -67,9 +67,12 @@ make ancestry definitionI expressionPtr = do
         Config.addNextArgumentKeys addArgDoc addArgHandler
       , unlessOnHole $
         Widget.actionEventMapMovesCursor
-        Config.relinkKeys "Replace" . ETypes.diveIn $
+        relinkKeys "Replace" . ETypes.diveIn $
         DataOps.replace expressionPtr
       ]
+    relinkKeys
+      | null ancestry = Config.relinkKeys ++ Config.delKeys
+      | otherwise = Config.relinkKeys
     unlessOnHole = maybe id (const mempty) mPick
     moveUnlessOnHole =
       maybe id ((const . fmap . liftM . Widget.atECursor . const) Nothing) mPick
