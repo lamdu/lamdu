@@ -80,7 +80,7 @@ makeUnfocused style str myId =
     (SizeRange.atSrMaxSize . Vector2.first . fmap) (+ sCursorWidth style)) .
   Widget.atImage (cursorTranslate style) .
   TextView.makeWidget (sTextViewStyle style) str $
-  Widget.cursorId myId
+  Widget.toAnimId myId
   where
     enter dir =
       (,) str . makeTextEditCursor myId $
@@ -115,7 +115,7 @@ makeFocused cursor style str myId =
           }
       }
     reqSize = SizeRange.fixedSize $ Vector2 (sCursorWidth style + tlWidth) tlHeight
-    myAnimId = Widget.cursorId myId
+    myAnimId = Widget.toAnimId myId
     img = cursorTranslate style $ frameGen myAnimId
     drawText = TextView.drawTextAsSingleLetters (sTextViewStyle style)
     (frameGen, Vector2 tlWidth tlHeight) = drawText displayStr
@@ -136,7 +136,7 @@ makeFocused cursor style str myId =
       Anim.onDepth (+2) .
       Anim.translate cursorPos .
       Anim.scale cursorSize .
-      (Anim.simpleFrame . Widget.cursorId . sTextCursorId) style $
+      (Anim.simpleFrame . Widget.toAnimId . sTextCursorId) style $
       Draw.tint (sCursorColor style) square
 
     (before, after) = splitAt cursor strWithIds

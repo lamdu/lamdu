@@ -44,7 +44,7 @@ makeTextView :: MonadF m => String -> Widget.Id -> TWidget t m
 makeTextView text myId = do
   style <- readTextStyle
   return $
-    TextView.makeWidget (TextEdit.sTextViewStyle style) text $ Widget.cursorId myId
+    TextView.makeWidget (TextEdit.sTextViewStyle style) text $ Widget.toAnimId myId
 
 makeLabel :: MonadF m => String -> Widget.Id -> TWidget t m
 makeLabel text prefix =

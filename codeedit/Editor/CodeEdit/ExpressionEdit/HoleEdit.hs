@@ -121,10 +121,10 @@ searchResultsPrefix = flip Widget.joinId ["search results"]
 
 holeResultAnimMapping :: Widget.Id -> Widget.Id -> Widget.Id -> AnimId -> AnimId
 holeResultAnimMapping myId resultId expressionId =
-  renamePrefix ("old hole" : Widget.cursorId resultId) (Widget.cursorId expressionId) .
+  renamePrefix ("old hole" : Widget.toAnimId resultId) (Widget.toAnimId expressionId) .
   renamePrefix myAnimId ("old hole" : myAnimId)
   where
-    myAnimId = Widget.cursorId myId
+    myAnimId = Widget.toAnimId myId
 
 pickResult
   :: MonadF m => IRef Data.Expression -> Widget.Id

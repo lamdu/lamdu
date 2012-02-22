@@ -38,7 +38,7 @@ argument :: (a -> b) -> (b -> c) -> a -> c
 argument = flip (.)
 
 newtype Id = Id {
-  cursorId :: AnimId
+  toAnimId :: AnimId
   }
   deriving (Eq, Ord, Show, Read, Binary, Monoid)
 
