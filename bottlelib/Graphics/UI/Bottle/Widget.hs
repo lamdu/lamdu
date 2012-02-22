@@ -37,13 +37,6 @@ import qualified Graphics.UI.Bottle.Sized as Sized
 argument :: (a -> b) -> (b -> c) -> a -> c
 argument = flip (.)
 
-data EnterResult f = EnterResult {
-  enterResultRect :: Rect,
-  enterResultEvent :: f EventResult
-  }
-
-type MEnter f = Maybe (Direction -> EnterResult f)
-
 newtype Id = Id {
   cursorId :: AnimId
   }
@@ -63,9 +56,31 @@ data EventResult = EventResult {
   eAnimIdMapping :: AnimId -> AnimId
   }
 
+data EnterResult f = EnterResult {
+  enterResultRect :: Rect,
+  enterResultEvent :: f EventResult
+  }
+
+type MEnter f = Maybe (Direction -> EnterResult f)
+type EventHandlers f = EventMap (f EventResult)
+
+data UserIO f = UserIO {
+  uioFrame :: Anim.Frame,
+  uioMaybeEnter :: MEnter f, -- Nothing if we're not enterable
+  uioEventMap :: EventHandlers f,
+  uioFocalArea :: Rect
+  }
+
+data Widget f = Widget {
+  isFocused :: Bool,
+  content :: Sized (UserIO f)
+  }
+
 AtFieldTH.make ''EnterResult
 AtFieldTH.make ''Id
 AtFieldTH.make ''EventResult
+AtFieldTH.make ''UserIO
+AtFieldTH.make ''Widget
 
 emptyEventResult :: EventResult
 emptyEventResult = EventResult {
@@ -78,24 +93,6 @@ eventResultFromCursor cursor = EventResult {
   eCursor = Just cursor,
   eAnimIdMapping = id
   }
-
-type EventHandlers f = EventMap (f EventResult)
-
-data UserIO f = UserIO {
-  uioFrame :: Anim.Frame,
-  uioMaybeEnter :: MEnter f, -- Nothing if we're not enterable
-  uioEventMap :: EventHandlers f,
-  uioFocalArea :: Rect
-  }
-
-AtFieldTH.make ''UserIO
-
-data Widget f = Widget {
-  isFocused :: Bool,
-  content :: Sized (UserIO f)
-  }
-
-AtFieldTH.make ''Widget
 
 atEvents :: (f EventResult -> g EventResult) -> Widget f -> Widget g
 atEvents func =
