@@ -37,8 +37,15 @@ constructorFields _ = error "unsupported constructor for type supplied to Data.A
 countElemRepetitions :: Eq a => a -> [a] -> Int
 countElemRepetitions x = length . filter (== x)
 
+-- When field name is *Typename, such as unTypename, or getTypename,
+-- As is common convention for 'conceptual' newtype wrappers, we name the accessor atTypename.
+-- Otherwise we name it as we do normally with Data constructors.
 makeAtNameForNewtype :: Name -> Name -> Name
-makeAtNameForNewtype newTypeName _ = mkName $ "at" ++ nameBase newTypeName
+makeAtNameForNewtype newTypeName fieldName
+    | typeNameStr `List.isSuffixOf` nameBase fieldName = mkName $ "at" ++ typeNameStr
+    | otherwise = makeAtNameForDataField fieldName
+    where
+        typeNameStr = nameBase newTypeName
 
 makeAtNameForDataField :: Name -> Name
 makeAtNameForDataField fieldName =
