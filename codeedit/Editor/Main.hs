@@ -59,7 +59,7 @@ annotationSize :: Vector2 Draw.R
 annotationSize = 5
 
 addAnnotations :: Draw.Font -> Anim.Frame -> Anim.Frame
-addAnnotations font = Anim.atFrame $ Map.mapWithKey annotateItem
+addAnnotations font = Anim.atFSubImages $ Map.mapWithKey annotateItem
   where
     annotateItem animId = second $ annotatePosImage animId
     annotatePosImage animId posImage =

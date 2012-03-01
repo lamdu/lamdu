@@ -3,7 +3,7 @@
 module Graphics.UI.Bottle.Animation(
   R, AnimId,
   PositionedImage(..), atPiImage, atPiRect,
-  Frame(..), atFrame, onImages,
+  Frame(..), atFSubImages, onImages,
   draw, nextFrame, mapIdentities, backgroundColor,
   translate, scale, onDepth,
   simpleFrame, simpleFrameDownscale,
@@ -39,7 +39,7 @@ data PositionedImage = PositionedImage {
 AtFieldTH.make ''PositionedImage
 
 newtype Frame = Frame {
-  iSubImages :: Map AnimId (Layer, PositionedImage)
+  fSubImages :: Map AnimId (Layer, PositionedImage)
   }
 AtFieldTH.make ''Frame
 
@@ -68,7 +68,7 @@ instance Monoid Frame where
     Map.unionWithKey (error . ("Attempt to unify same-id sub-images: " ++) . show) x y
 
 draw :: Frame -> Draw.Image ()
-draw = mconcat . map (posImage . snd) . sortOn fst . Map.elems . iSubImages
+draw = mconcat . map (posImage . snd) . sortOn fst . Map.elems . fSubImages
   where
     posImage (PositionedImage img (Rect { rectTopLeft = Vector2 t l, rectSize = Vector2 w h })) =
       Draw.translate (t, l) %% Draw.scale w h %% img
@@ -123,7 +123,7 @@ isVirtuallySame (Frame a) (Frame b) =
     rectMap = Map.map (piRect . snd)
 
 mapIdentities :: (AnimId -> AnimId) -> Frame -> Frame
-mapIdentities = atFrame . Map.mapKeys
+mapIdentities = atFSubImages . Map.mapKeys
 
 nextFrame :: R -> Frame -> Frame -> Maybe Frame
 nextFrame movement dest cur
@@ -167,20 +167,20 @@ backgroundColor animId layer color size =
 
 translate :: Vector2 R -> Frame -> Frame
 translate pos =
-  atFrame $ (fmap . second) moveImage
+  atFSubImages $ (fmap . second) moveImage
   where
     moveImage (PositionedImage img (Rect tl size)) =
       PositionedImage img (Rect (tl + pos) size)
 
 scale :: Vector2 R -> Frame -> Frame
 scale factor =
-  atFrame $ (fmap . second) scaleImage
+  atFSubImages $ (fmap . second) scaleImage
   where
     scaleImage (PositionedImage img (Rect tl size)) =
       PositionedImage img (Rect (tl * factor) (size * factor))
 
 onDepth :: (Int -> Int) -> Frame -> Frame
-onDepth = atFrame . fmap . first
+onDepth = atFSubImages . fmap . first
 
 onImages :: (Draw.Image () -> Draw.Image ()) -> Frame -> Frame
-onImages = atFrame . Map.map . second . atPiImage
+onImages = atFSubImages . Map.map . second . atPiImage

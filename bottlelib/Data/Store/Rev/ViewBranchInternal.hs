@@ -5,7 +5,7 @@
 -- | contains the parts of both that both may depend on, to avoid the
 -- | cycle.
 module Data.Store.Rev.ViewBranchInternal
-    (ViewData(..), atViewData,
+    (ViewData(..), atVdBranch,
      View(..),
      BranchData(..), atBrVersion, atBrViews,
      Branch(..),
