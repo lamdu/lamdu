@@ -3,13 +3,14 @@ module Graphics.UI.Bottle.MainLoop (mainLoopAnim, mainLoopImage, mainLoopWidget)
 
 import Control.Arrow(first, second)
 import Control.Concurrent(threadDelay)
-import Control.Monad(liftM)
+import Control.Monad (liftM)
 import Data.IORef
 import Data.StateVar (($=))
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators ((%%))
 import Graphics.DrawingCombinators.Utils (Image)
+import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.EventMap (Event)
 import Graphics.UI.Bottle.SizeRange (Size)
 import Graphics.UI.Bottle.Widget(Widget)
@@ -54,7 +55,7 @@ mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
   eventLoop handleEvents
 
 mainLoopAnim ::
-  (Size -> Event -> IO (Maybe Widget.EventResult)) -> (Size -> IO Anim.Frame) ->
+  (Size -> Event -> IO (Maybe (AnimId -> AnimId))) -> (Size -> IO Anim.Frame) ->
   IO Anim.R -> IO a
 mainLoopAnim eventHandler makeFrame getAnimationHalfLife = do
   frameStateVar <- newIORef Nothing
@@ -100,10 +101,10 @@ mainLoopAnim eventHandler makeFrame getAnimationHalfLife = do
       mEventResult <- eventHandler size event
       case mEventResult of
         Nothing -> return False
-        Just eventResult -> do
+        Just animIdMapping -> do
           (modifyIORef frameStateVar . fmap)
-            (first (const 0) .
-             (second . second . Anim.mapIdentities . Widget.eAnimIdMapping) eventResult)
+            ((first . const) 0 .
+             (second . second . Anim.mapIdentities) animIdMapping)
           return True
   mainLoopImage imgEventHandler makeImage
 
@@ -113,7 +114,7 @@ mainLoopWidget mkWidget getAnimationHalfLife =
   where
     eventHandler size event = do
       widget <- mkWidget
-      maybe (return Nothing) (liftM Just) .
+      maybe (return Nothing) (liftM (Just . Widget.eAnimIdMapping)) .
         E.lookup event $ Widget.eventMap widget size
     mkImage size = do
       widget <- mkWidget
