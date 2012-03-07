@@ -155,7 +155,8 @@ make ancestry definitionI expressionPtr = do
       (liftM . Widget.atEAnimIdMapping) (. r) y
 
   mParenInfo <- transaction $ getParensInfo expr ancestry
-  addParens expressionId mParenInfo $ Widget.weakerEvents eventMap widget
+  liftM (Widget.weakerEvents eventMap) $
+    addParens expressionId mParenInfo widget
 
 highlightExpression :: Widget.Widget f -> Widget.Widget f
 highlightExpression =
