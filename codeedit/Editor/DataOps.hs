@@ -1,7 +1,8 @@
 {-# OPTIONS -Wall #-}
 module Editor.DataOps (
   ExpressionPtr,
-  newHole, addParameter, delParameter, giveAsArg, callWithArg, replaceWithHole,
+  newHole, addParameter, delParameter, giveAsArg, callWithArg,
+  replace, replaceWithHole,
   addAsParameter, addAsDefinition, lambdaWrap)
 where
 
@@ -64,14 +65,20 @@ newHole =
   --, Data.holeCachedSearchResults = []
   }
 
+replace
+  :: Monad m
+  => ExpressionPtr m
+  -> IRef Data.Expression
+  -> Transaction ViewTag m (IRef Data.Expression)
+replace expressionPtr newExpressionI = do
+  Property.set expressionPtr newExpressionI
+  return newExpressionI
+
 replaceWithHole
   :: Monad m
   => ExpressionPtr m
   -> Transaction ViewTag m (IRef Data.Expression)
-replaceWithHole expressionPtr = do
-  exprI <- newHole
-  Property.set expressionPtr exprI
-  return exprI
+replaceWithHole expressionPtr = replace expressionPtr =<< newHole
 
 lambdaWrap
   :: Monad m
