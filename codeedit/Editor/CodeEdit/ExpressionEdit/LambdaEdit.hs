@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit.LambdaEdit(make) where
 
+import Editor.CodeEdit.Types(AncestryItem(..), LambdaParent(..))
 import Data.Store.Property (Property(Property))
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (TWidget, getP, assignCursor)
@@ -33,14 +34,14 @@ make makeExpressionEdit ancestry expressionPtr lambda myId =
       expressionRef = Transaction.fromIRef expressionI
       bodyIPtr =
         Property (return bodyI) $ Property.set expressionRef . Data.ExpressionLambda . (paramI `Data.Lambda`)
-    bodyEdit <- makeExpressionEdit ancestry bodyIPtr
+      ancestryItem = AncestryItemLambda $ LambdaParent lambda expressionPtr
+    bodyEdit <- makeExpressionEdit (ancestryItem : ancestry) bodyIPtr
     return $ BWidgets.hbox [
       lambdaLabel,
       paramEdit,
       rightArrowLabel,
       bodyEdit
       ]
-
   where
     paramI = Data.lambdaParam lambda
     bodyI = Data.lambdaBody lambda

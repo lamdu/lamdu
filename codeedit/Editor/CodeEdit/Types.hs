@@ -3,7 +3,9 @@
 module Editor.CodeEdit.Types(
   ExpressionPtr,
   ExpressionAncestry,
+  AncestryItem(..),
   ApplyParent(..), atApRole, atApFuncType, atApApply, atApParentPtr,
+  LambdaParent(..), atLpLambda, atLpParentPtr,
   ApplyRole(..),
   FuncType(..),
   parensPrefix, addParens,
@@ -46,7 +48,17 @@ data ApplyParent m = ApplyParent {
   }
 AtFieldTH.make ''ApplyParent
 
-type ExpressionAncestry m = [ApplyParent m]
+data LambdaParent m = LambdaParent {
+  lpLambda :: Data.Lambda,
+  lpParentPtr :: ExpressionPtr m
+  }
+AtFieldTH.make ''LambdaParent
+
+data AncestryItem m =
+    AncestryItemApply (ApplyParent m)
+  | AncestryItemLambda (LambdaParent m)
+
+type ExpressionAncestry m = [AncestryItem m]
 
 parensPrefix :: Widget.Id -> Widget.Id
 parensPrefix = flip Widget.joinId ["parens"]
@@ -98,8 +110,8 @@ addNextArgTargetExpression
   => ExpressionAncestry m
   -> Transaction.Property ViewTag m (IRef Data.Expression)
   -> Transaction.Property ViewTag m (IRef Data.Expression)
-addNextArgTargetExpression (ApplyParent ApplyArg Prefix _ parentPtr : _) _ = parentPtr
-addNextArgTargetExpression (ApplyParent ApplyFunc InfixLeft _ parentPtr : _) _ = parentPtr
+addNextArgTargetExpression (AncestryItemApply (ApplyParent ApplyArg Prefix _ parentPtr) : _) _ = parentPtr
+addNextArgTargetExpression (AncestryItemApply (ApplyParent ApplyFunc InfixLeft _ parentPtr) : _) _ = parentPtr
 addNextArgTargetExpression _ expressionPtr = expressionPtr
 
 makeAddArgHandler
@@ -122,10 +134,10 @@ makeAddArgHandler ancestry expressionPtr =
 
 getNextArg :: ExpressionAncestry m -> Maybe (IRef Data.Expression)
 getNextArg (
-  ApplyParent ApplyFunc _ apply _ :
+  AncestryItemApply (ApplyParent ApplyFunc _ apply _) :
   _) = Just $ Data.applyArg apply
 getNextArg (
-  ApplyParent ApplyArg Prefix _ _ :
-  ApplyParent ApplyFunc _ parentApply _ :
+  AncestryItemApply (ApplyParent ApplyArg Prefix _ _) :
+  AncestryItemApply (ApplyParent ApplyFunc _ parentApply _) :
   _) = Just $ Data.applyArg parentApply
 getNextArg _ = Nothing

@@ -12,6 +12,7 @@ import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (CTransaction, getP, assignCursor, TWidget, readCursor)
+import Editor.CodeEdit.Types(AncestryItem(..), ApplyParent(..), ApplyRole(..))
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -74,7 +75,7 @@ makeMoreResults myId =
   BWidgets.makeTextView "..." $
   Widget.joinId myId ["more results"]
 
-data NeedFlip m = DontFlip | DoFlip (ETypes.ApplyParent m)
+data NeedFlip m = DontFlip | DoFlip (ApplyParent m)
 
 makeResultVariables ::
   MonadF m => ETypes.ExpressionAncestry m ->
@@ -83,19 +84,23 @@ makeResultVariables ::
   CTransaction ViewTag m [Result m]
 makeResultVariables ancestry myId expressionPtr varRef = do
   varName <- getP $ Anchors.variableNameRef varRef
+  let
+    ordinary = result varName DontFlip resultId return
+    parened =
+      result
+      (concat ["(", varName, ")"]) DontFlip resultIdAsPrefix $
+      ETypes.addParens id id myId
   sequence $
     if ETypes.isInfixName varName
     then
       case ancestry of
-        (x @ ETypes.ApplyParent { ETypes.apRole = ETypes.ApplyArg } : _) ->
-          [result varName (DoFlip x) resultId return
-          ,result
-           (concat ["(", varName, ")"]) DontFlip resultIdAsPrefix $
-           ETypes.addParens id id myId
-          ]
-        _ -> [result varName DontFlip resultId return]
+        (AncestryItemApply x@(ApplyParent ApplyArg _ _ _) : _) ->
+          [result varName (DoFlip x) resultId return, parened]
+        (AncestryItemApply (ApplyParent ApplyFunc _ _ _) : _) ->
+          [ordinary]
+        _ -> [parened]
     else
-      [result varName DontFlip resultId return]
+      [ordinary]
   where
     resultId = searchResultsPrefix myId `mappend` ETypes.varId varRef
     resultIdAsPrefix = Widget.joinId resultId ["prefix"]
@@ -140,7 +145,7 @@ pickResult expressionI myId newExpr needFlip resultId = do
   where
     expressionId = WidgetIds.fromIRef expressionI
     flipAct DontFlip = return ()
-    flipAct (DoFlip (ETypes.ApplyParent _ _ apply parentPtr)) = do
+    flipAct (DoFlip (ApplyParent _ _ apply parentPtr)) = do
       parentI <- Property.get parentPtr
       Property.set (Transaction.fromIRef parentI) .
         Data.ExpressionApply $ flipArgs apply

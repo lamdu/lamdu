@@ -5,7 +5,7 @@ import Control.Monad (liftM)
 import Data.Store.Property (Property(Property))
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (TWidget, getP, assignCursor, transaction)
-import Editor.CodeEdit.Types(ApplyParent(..))
+import Editor.CodeEdit.Types(AncestryItem(..), ApplyParent(..))
 import Editor.MonadF (MonadF)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -49,13 +49,7 @@ make makeExpressionEdit ancestry expressionPtr apply@(Data.Apply funcI argI) myI
 
     let
       makeAncestry role =
-        ApplyParent {
-          apRole = role,
-          apFuncType = funcType,
-          apApply = apply,
-          apParentPtr = expressionPtr
-          }
-        : ancestry
+        AncestryItemApply (ApplyParent role funcType apply expressionPtr) : ancestry
     funcEdit <-
       addDelEventMap argI $
       makeExpressionEdit (makeAncestry ETypes.ApplyFunc) funcIPtr
