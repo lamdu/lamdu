@@ -185,7 +185,10 @@ makeAllResults
   -> ETypes.ExpressionPtr m -> Widget.Id
   -> CTransaction ViewTag m [Result m]
 makeAllResults ancestry searchTerm definitionRef expressionPtr myId = do
-  params <- liftM getDefinitionParamRefs $ getP definitionRef
+  defParams <- liftM getDefinitionParamRefs $ getP definitionRef
+  let
+    allLambdaParams = ETypes.getAncestryParams ancestry
+    params = defParams ++ map Data.ParameterRef allLambdaParams
   globals <- getP Anchors.globals
   varResults <- liftM concat .
     mapM (makeResultVariables ancestry myId expressionPtr) $

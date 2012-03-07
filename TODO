@@ -1,5 +1,3 @@
-* Add scoping of params (in completions)
-
 * Lambda lacks sugar:
   * Lambda-inside-lambda -> Spaced params (currying)
   * Redex -> Where

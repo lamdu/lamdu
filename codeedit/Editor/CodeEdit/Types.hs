@@ -3,7 +3,7 @@
 module Editor.CodeEdit.Types(
   ExpressionPtr,
   ExpressionAncestry,
-  AncestryItem(..),
+  AncestryItem(..), getAncestryParams,
   ApplyParent(..), atApRole, atApFuncType, atApApply, atApParentPtr,
   LambdaParent(..), atLpLambda, atLpParentPtr,
   ApplyRole(..),
@@ -59,6 +59,11 @@ data AncestryItem m =
   | AncestryItemLambda (LambdaParent m)
 
 type ExpressionAncestry m = [AncestryItem m]
+
+getAncestryParams :: ExpressionAncestry m -> [IRef Data.Parameter]
+getAncestryParams ancestryItems =
+  [ paramI
+  | AncestryItemLambda (LambdaParent (Data.Lambda paramI _) _) <- ancestryItems ]
 
 parensPrefix :: Widget.Id -> Widget.Id
 parensPrefix = flip Widget.joinId ["parens"]
