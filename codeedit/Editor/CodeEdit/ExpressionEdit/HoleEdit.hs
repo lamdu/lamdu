@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Editor.CodeEdit.ExpressionEdit.HoleEdit(make) where
+module Editor.CodeEdit.ExpressionEdit.HoleEdit(make, ResultPicker) where
 
 import Control.Arrow (first, second)
 import Control.Monad (liftM, mplus)

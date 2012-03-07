@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit(make) where
 
-import Control.Arrow (second)
+import Control.Arrow (first, second)
 import Control.Monad (liftM)
 import Data.Monoid (Monoid(..))
 import Data.Store.IRef (IRef)
@@ -22,6 +22,8 @@ import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
+data HoleResultPicker m = NotAHole | IsAHole (Maybe (HoleEdit.ResultPicker m))
+
 make
   :: MonadF m
   => ETypes.ExpressionAncestry m -> IRef Data.Definition
@@ -30,27 +32,28 @@ make ancestry definitionI expressionPtr = do
   expressionI <- getP expressionPtr
   expr <- getP $ Transaction.fromIRef expressionI
   let
-    noPickResult = (fmap . liftM) ((,) Nothing)
+    notAHole = (fmap . liftM) ((,) NotAHole)
     makeEditor =
       case expr of
         Data.ExpressionHole holeState ->
+          (fmap . liftM . first) IsAHole .
           BWidgets.wrapDelegatedWithKeys
             FocusDelegator.defaultKeys FocusDelegator.Delegating second $
             HoleEdit.make ancestry definitionI holeState expressionPtr
         Data.ExpressionGetVariable varRef ->
-          noPickResult $ VarEdit.make ancestry varRef
+          notAHole $ VarEdit.make ancestry varRef
         Data.ExpressionApply apply ->
-          noPickResult .
+          notAHole .
           BWidgets.wrapDelegatedWithKeys
             Config.exprFocusDelegatorKeys FocusDelegator.Delegating id $
           ApplyEdit.make (`make` definitionI) ancestry expressionPtr apply
         Data.ExpressionLiteralInteger integer ->
-          noPickResult .
+          notAHole .
           BWidgets.wrapDelegatedWithKeys
             FocusDelegator.defaultKeys FocusDelegator.NotDelegating id $
           LiteralEdit.makeInt expressionI integer
   let expressionId = WidgetIds.fromIRef expressionI
-  (mPick, widget) <- makeEditor expressionId
+  (holePicker, widget) <- makeEditor expressionId
   (addArgDoc, addArgHandler) <-
     transaction $ ETypes.makeAddArgHandler ancestry expressionPtr
   let
@@ -61,11 +64,12 @@ make ancestry definitionI expressionPtr = do
         ETypes.diveIn $ DataOps.giveAsArg expressionPtr
       , moveUnlessOnHole .
         Widget.actionEventMapMovesCursor
-        Config.callWithArgumentKeys "Call with argument" . ETypes.diveIn $ DataOps.callWithArg expressionPtr
+        Config.callWithArgumentKeys "Call with argument" .
+        ETypes.diveIn $ DataOps.callWithArg expressionPtr
       , pickResultFirst $
         Widget.actionEventMapMovesCursor
         Config.addNextArgumentKeys addArgDoc addArgHandler
-      , unlessOnHole $
+      , ifHole (const mempty) $
         Widget.actionEventMapMovesCursor
         relinkKeys "Replace" . ETypes.diveIn $
         DataOps.replace expressionPtr
@@ -73,10 +77,12 @@ make ancestry definitionI expressionPtr = do
     relinkKeys
       | null ancestry = Config.relinkKeys ++ Config.delKeys
       | otherwise = Config.relinkKeys
-    unlessOnHole = maybe id (const mempty) mPick
-    moveUnlessOnHole =
-      maybe id ((const . fmap . liftM . Widget.atECursor . const) Nothing) mPick
-    pickResultFirst = maybe id (fmap . joinEvents) mPick
+    ifHole f =
+      case holePicker of
+        NotAHole -> id
+        IsAHole x -> f x
+    moveUnlessOnHole = ifHole $ (const . fmap . liftM . Widget.atECursor . const) Nothing
+    pickResultFirst = ifHole (maybe id (fmap . joinEvents))
     joinEvents x y = do
       r <- liftM Widget.eAnimIdMapping x
       (liftM . Widget.atEAnimIdMapping) (. r) y
