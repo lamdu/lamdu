@@ -201,11 +201,10 @@ makeAllResults ancestry searchTerm definitionRef expressionPtr myId = do
 makeSearchTermWidget
   :: MonadF m
   => Widget.Id -> String -> [Result m]
-  -> Transaction.Property ViewTag m Data.Definition
   -> IRef Data.Expression -> Widget.Id
   -> TWidget ViewTag m
 makeSearchTermWidget
-  searchTermId searchTerm firstResults definitionRef expressionI myId
+  searchTermId searchTerm firstResults expressionI myId
   =
   (liftM . Widget.strongerEvents) searchTermEventMap $
     BWidgets.makeWordEdit searchTermRef searchTermId
@@ -216,14 +215,7 @@ makeSearchTermWidget
     newName = concat . words $ searchTerm
     searchTermEventMap =
       mconcat $ pickFirstResultEventMaps ++
-      [ E.fromEventTypes Config.addAsParamKeys "Add as Parameter" $ do
-          DataOps.addAsParameter newName definitionRef expressionI
-          let exprId = WidgetIds.fromIRef expressionI
-          return Widget.EventResult {
-            Widget.eCursor = Just exprId,
-            Widget.eAnimIdMapping = holeResultAnimMapping myId searchTermId exprId
-            }
-      , E.fromEventTypes Config.newDefinitionKeys "Add new as Definition" $ do
+      [ E.fromEventTypes Config.newDefinitionKeys "Add new as Definition" $ do
           newDef <- DataOps.addAsDefinition newName expressionI
           return Widget.EventResult {
             Widget.eCursor = Just $ WidgetIds.fromIRef newDef,
@@ -296,7 +288,7 @@ makeActiveHoleEdit
 
       searchTermWidget <-
         makeSearchTermWidget searchTermId searchTerm firstResults
-        definitionRef expressionI myId
+        expressionI myId
 
       (mResult, resultsWidget) <-
         makeResultsWidget firstResults moreResults myId

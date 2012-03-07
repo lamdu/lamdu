@@ -31,7 +31,6 @@ makeBranchKeys    = [ctrl 's']
 overlayDocKeys    = [noMods E.KeyF1, alt 'h']
 
 addNextParamKeys  = [E.KeyEventType E.noMods E.KeySpace]
-addAsParamKeys    = [alt 'p']
 
 delBranchKeys     = [alt 'o']
 
