@@ -1,5 +1,10 @@
-* Lambda lacks parenthesis
-* Lambda lacks sugar
+* Add scoping of params (in completions)
+
+* Lambda lacks sugar:
+  * Lambda-inside-lambda -> Spaced params (currying)
+  * Redex -> Where
+
+* Remove definition parameters
 
 * Delete of infix-right-arg goes to infix-left-arg, where it should go to func
 
