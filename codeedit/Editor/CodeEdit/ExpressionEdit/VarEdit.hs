@@ -39,7 +39,7 @@ makeView ancestry var myId = do
     else return widget
 
 make
-  :: (Functor m, Monad m)
+  :: MonadF m
   => ETypes.ExpressionAncestry m
   -> Data.VariableRef -> Widget.Id
   -> TWidget ViewTag m

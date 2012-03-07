@@ -1,7 +1,7 @@
 {-# OPTIONS -Wall #-}
 module Editor.DataOps (
   newHole, addParameter, delParameter, giveAsArg, callWithArg, replace,
-  addAsParameter, addAsDefinition)
+  addAsParameter, addAsDefinition, lambdaWrap)
 where
 
 import Control.Arrow (second)
@@ -69,6 +69,18 @@ replace expressionPtr = do
   exprI <- newHole
   Property.set expressionPtr exprI
   return exprI
+
+lambdaWrap
+  :: Monad m
+  => Property (Transaction t m) (IRef Data.Expression)
+  -> Transaction t m (IRef Data.Parameter)
+lambdaWrap expressionPtr = do
+  newParamI <- Transaction.newIRef Data.Parameter
+  expressionI <- Property.get expressionPtr
+  let newLambda = Data.Lambda newParamI expressionI
+  newExpressionI <- Transaction.newIRef $ Data.ExpressionLambda newLambda
+  Property.set expressionPtr newExpressionI
+  return newParamI
 
 addAsParameter ::
   Monad m => String -> Transaction.Property t m Data.Definition ->

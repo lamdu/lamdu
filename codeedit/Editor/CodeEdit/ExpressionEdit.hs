@@ -14,6 +14,7 @@ import qualified Editor.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Editor.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
+import qualified Editor.CodeEdit.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Editor.CodeEdit.Types as ETypes
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
@@ -33,6 +34,9 @@ make ancestry definitionI expressionPtr = do
   expr <- getP $ Transaction.fromIRef expressionI
   let
     notAHole = (fmap . liftM) ((,) NotAHole)
+    wrapNonHole keys isDelegating f =
+      notAHole . BWidgets.wrapDelegatedWithKeys keys isDelegating f
+    makeExpression = (`make` definitionI)
     makeEditor =
       case expr of
         Data.ExpressionHole holeState ->
@@ -42,15 +46,17 @@ make ancestry definitionI expressionPtr = do
             HoleEdit.make ancestry definitionI holeState expressionPtr
         Data.ExpressionGetVariable varRef ->
           notAHole $ VarEdit.make ancestry varRef
+        Data.ExpressionLambda lambda ->
+          wrapNonHole Config.exprFocusDelegatorKeys
+            FocusDelegator.Delegating id $
+          LambdaEdit.make makeExpression ancestry expressionPtr lambda
         Data.ExpressionApply apply ->
-          notAHole .
-          BWidgets.wrapDelegatedWithKeys
-            Config.exprFocusDelegatorKeys FocusDelegator.Delegating id $
-          ApplyEdit.make (`make` definitionI) ancestry expressionPtr apply
+          wrapNonHole Config.exprFocusDelegatorKeys
+            FocusDelegator.Delegating id $
+          ApplyEdit.make makeExpression ancestry expressionPtr apply
         Data.ExpressionLiteralInteger integer ->
-          notAHole .
-          BWidgets.wrapDelegatedWithKeys
-            FocusDelegator.defaultKeys FocusDelegator.NotDelegating id $
+          wrapNonHole FocusDelegator.defaultKeys
+            FocusDelegator.NotDelegating id $
           LiteralEdit.makeInt expressionI integer
   let expressionId = WidgetIds.fromIRef expressionI
   (holePicker, widget) <- makeEditor expressionId
@@ -73,6 +79,9 @@ make ancestry definitionI expressionPtr = do
         Widget.actionEventMapMovesCursor
         relinkKeys "Replace" . ETypes.diveIn $
         DataOps.replace expressionPtr
+      , Widget.actionEventMapMovesCursor
+        Config.lambdaWrapKeys "Lambda wrap" . ETypes.diveIn $
+        DataOps.lambdaWrap expressionPtr
       ]
     relinkKeys
       | null ancestry = Config.relinkKeys ++ Config.delKeys

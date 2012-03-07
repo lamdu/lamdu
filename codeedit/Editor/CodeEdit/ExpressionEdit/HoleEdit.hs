@@ -301,7 +301,8 @@ makeActiveHoleEdit
         , BWidgets.vbox [searchTermWidget, resultsWidget] )
 
 make
-  :: MonadF m => ETypes.ExpressionAncestry m
+  :: MonadF m
+  => ETypes.ExpressionAncestry m
   -> IRef Data.Definition
   -> Data.HoleState
   -> Transaction.Property ViewTag m (IRef Data.Expression)

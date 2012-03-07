@@ -5,6 +5,7 @@ module Editor.Data (
   Builtin(..),
   Parameter(..),
   VariableRef(..), onVariableIRef,
+  Lambda(..), atLambdaParam, atLambdaBody,
   Apply(..), atApplyFunc, atApplyArg,
   HoleState(..),
     emptyHoleState, atHoleSearchTerm, --atHoleCachedSearchResults,
@@ -18,6 +19,15 @@ import Data.Derive.Binary(makeBinary)
 import Data.DeriveTH(derive)
 import Data.Store.IRef (IRef)
 import qualified Data.AtFieldTH as AtFieldTH
+
+data Parameter = Parameter
+  deriving (Eq, Ord, Read, Show)
+
+data Lambda = Lambda {
+  lambdaParam :: IRef Parameter,
+  lambdaBody :: IRef Expression
+  }
+  deriving (Eq, Ord, Read, Show)
 
 data Apply = Apply {
   applyFunc :: IRef Expression,
@@ -35,13 +45,11 @@ emptyHoleState :: HoleState
 emptyHoleState = HoleState ""
 
 data Expression =
+  ExpressionLambda Lambda |
   ExpressionApply Apply |
   ExpressionGetVariable VariableRef |
   ExpressionHole HoleState |
   ExpressionLiteralInteger Integer
-  deriving (Eq, Ord, Read, Show)
-
-data Parameter = Parameter
   deriving (Eq, Ord, Read, Show)
 
 data Definition = Definition {
@@ -68,6 +76,7 @@ onVariableIRef f (DefinitionRef i) = f i
 onVariableIRef f (BuiltinRef i) = f i
 
 derive makeBinary ''Apply
+derive makeBinary ''Lambda
 derive makeBinary ''Builtin
 derive makeBinary ''HoleState
 derive makeBinary ''Expression
@@ -75,5 +84,6 @@ derive makeBinary ''Parameter
 derive makeBinary ''Definition
 derive makeBinary ''VariableRef
 AtFieldTH.make ''Definition
+AtFieldTH.make ''Lambda
 AtFieldTH.make ''Apply
 AtFieldTH.make ''HoleState

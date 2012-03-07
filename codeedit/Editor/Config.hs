@@ -71,3 +71,5 @@ unnamedStr = "<noname>"
 
 jumpToLhsKeys = [k '`']
 jumpToRhsKeys = [k '=', noMods E.KeyPadEqual]
+
+lambdaWrapKeys = [k '\\']

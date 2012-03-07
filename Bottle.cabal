@@ -106,6 +106,7 @@ Executable Editor
                        Editor.CodeEdit.ExpressionEdit.ApplyEdit,
                        Editor.CodeEdit.ExpressionEdit.HoleEdit,
                        Editor.CodeEdit.ExpressionEdit.LiteralEdit,
+                       Editor.CodeEdit.ExpressionEdit.LambdaEdit,
                        Editor.CodeEdit.ExpressionEdit.VarEdit,
                        Editor.CodeEdit.Types,
                        Editor.BranchGUI
