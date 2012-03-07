@@ -29,6 +29,12 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 data HoleResultPicker m = NotAHole | IsAHole (Maybe (HoleEdit.ResultPicker m))
+foldHolePicker
+  :: r -> (Maybe (HoleEdit.ResultPicker m) -> r)
+  -> HoleResultPicker m -> r
+foldHolePicker notHole _isHole NotAHole = notHole
+foldHolePicker _notHole isHole (IsAHole x) = isHole x
+
 
 data HighlightParens = DoHighlightParens | DontHighlightParens
 
@@ -133,23 +139,14 @@ make ancestry definitionI expressionPtr = do
       , pickResultFirst $
         Widget.actionEventMapMovesCursor
         Config.addNextArgumentKeys addArgDoc addArgHandler
-      , ifHole (const mempty) $
-        Widget.actionEventMapMovesCursor
-        relinkKeys "Replace" . ETypes.diveIn $
-        DataOps.replace expressionPtr
+      , ifHole (const mempty) $ replaceEventMap ancestry expressionPtr
       , Widget.actionEventMapMovesCursor
         Config.lambdaWrapKeys "Lambda wrap" . ETypes.diveIn $
         DataOps.lambdaWrap expressionPtr
       ]
-    relinkKeys
-      | null ancestry = Config.relinkKeys ++ Config.delKeys
-      | otherwise = Config.relinkKeys
-    ifHole f =
-      case holePicker of
-        NotAHole -> id
-        IsAHole x -> f x
     moveUnlessOnHole = ifHole $ (const . fmap . liftM . Widget.atECursor . const) Nothing
-    pickResultFirst = ifHole (maybe id (fmap . joinEvents))
+    pickResultFirst = ifHole $ maybe id (fmap . joinEvents)
+    ifHole isHole = foldHolePicker id isHole holePicker
     joinEvents x y = do
       r <- liftM Widget.eAnimIdMapping x
       (liftM . Widget.atEAnimIdMapping) (. r) y
@@ -157,6 +154,23 @@ make ancestry definitionI expressionPtr = do
   mParenInfo <- transaction $ getParensInfo expr ancestry
   liftM (Widget.weakerEvents eventMap) $
     addParens expressionId mParenInfo widget
+
+replaceEventMap
+  :: (Monad m, Functor m)
+  => ETypes.ExpressionAncestry m
+  -> Property.Property (Transaction t m) (IRef Data.Expression)
+  -> Widget.EventHandlers (Transaction t m)
+replaceEventMap ancestry expressionPtr =
+  Widget.actionEventMapMovesCursor
+  relinkKeys "Replace" . ETypes.diveIn $
+  DataOps.replace expressionPtr
+  where
+    relinkKeys =
+      case ancestry of
+        [] -> Config.relinkKeys ++ Config.delKeys
+        (AncestryItemLambda _ : _) ->
+          Config.relinkKeys ++ Config.delKeys
+        _ -> Config.relinkKeys
 
 highlightExpression :: Widget.Widget f -> Widget.Widget f
 highlightExpression =
