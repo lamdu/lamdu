@@ -7,7 +7,6 @@ import Editor.CTransaction (TWidget, getP)
 import Editor.MonadF(MonadF)
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.CodeEdit.Types as ETypes
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.WidgetIds as WidgetIds
@@ -25,26 +24,18 @@ fixName x = x
 
 makeView
   :: MonadF m
-  => ETypes.ExpressionAncestry m
-  -> Data.VariableRef -> Widget.Id -> TWidget t m
-makeView ancestry var myId = do
+  => Data.VariableRef -> Widget.Id -> TWidget t m
+makeView var myId = do
   name <- liftM fixName . getP $ Anchors.variableNameRef var
-  widget <- BWidgets.setTextColor (colorOf var) $
+  BWidgets.setTextColor (colorOf var) $
     BWidgets.makeFocusableTextView name myId
-  if ETypes.isInfixName name
-    then case ancestry of
-      (ETypes.ApplyParent { ETypes.apRole = ETypes.ApplyFunc } : _) ->
-        return widget
-      _ -> ETypes.addParens id id myId widget
-    else return widget
 
 make
   :: MonadF m
-  => ETypes.ExpressionAncestry m
-  -> Data.VariableRef -> Widget.Id
+  => Data.VariableRef -> Widget.Id
   -> TWidget ViewTag m
-make ancestry varRef myId = do
-  varRefView <- makeView ancestry varRef myId
+make varRef myId = do
+  varRefView <- makeView varRef myId
   let
     jumpToDefinitionEventMap =
       Widget.actionEventMapMovesCursor Config.jumpToDefinitionKeys "Jump to definition" jumpToDefinition

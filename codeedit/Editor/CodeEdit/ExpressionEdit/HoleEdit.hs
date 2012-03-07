@@ -87,23 +87,22 @@ makeResultVariables ancestry myId expressionPtr varRef = do
     if ETypes.isInfixName varName
     then
       case ancestry of
-        (x @ ETypes.ApplyParent { ETypes.apRole = ETypes.ApplyArg } : xs) ->
-          [result varName (DoFlip x) resultId
-           ((ETypes.atApRole . const) ETypes.ApplyFunc x : xs)
+        (x @ ETypes.ApplyParent { ETypes.apRole = ETypes.ApplyArg } : _) ->
+          [result varName (DoFlip x) resultId return
           ,result
-           (concat ["(", varName, ")"]) DontFlip resultIdAsPrefix
-           ancestry
+           (concat ["(", varName, ")"]) DontFlip resultIdAsPrefix $
+           ETypes.addParens id id myId
           ]
-        _ -> [result varName DontFlip resultId ancestry]
+        _ -> [result varName DontFlip resultId return]
     else
-      [result varName DontFlip resultId ancestry]
+      [result varName DontFlip resultId return]
   where
     resultId = searchResultsPrefix myId `mappend` ETypes.varId varRef
     resultIdAsPrefix = Widget.joinId resultId ["prefix"]
 
-    result name needFlip wid resultAncestry =
+    result name needFlip wid addParens =
       makeResult name expressionPtr myId getVar needFlip resultId $
-        VarEdit.makeView resultAncestry varRef wid
+        addParens =<< VarEdit.makeView varRef wid
 
     getVar = Data.ExpressionGetVariable varRef
 

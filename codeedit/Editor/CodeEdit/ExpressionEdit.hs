@@ -2,19 +2,24 @@
 module Editor.CodeEdit.ExpressionEdit(make) where
 
 import Control.Arrow (first, second)
-import Control.Monad (liftM)
+import Control.Monad (liftM, liftM2)
+import Data.ByteString.Char8 (pack)
 import Data.Monoid (Monoid(..))
 import Data.Store.IRef (IRef)
+import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (TWidget, getP, transaction)
+import Editor.CTransaction (TWidget, getP, transaction, subCursor)
+import Editor.CodeEdit.Types(ApplyParent(..), ApplyRole(..))
 import Editor.MonadF (MonadF)
+import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
+import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Editor.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
+import qualified Editor.CodeEdit.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
-import qualified Editor.CodeEdit.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Editor.CodeEdit.Types as ETypes
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
@@ -24,6 +29,43 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 data HoleResultPicker m = NotAHole | IsAHole (Maybe (HoleEdit.ResultPicker m))
+
+makeParensId :: Monad m => ApplyParent m -> Transaction ViewTag m Widget.Id
+makeParensId (ApplyParent role _ _ parentPtr) = do
+  parentI <- Property.get parentPtr
+  return $
+    Widget.joinId (WidgetIds.fromIRef parentI)
+    [pack $ show role]
+
+makeCondParensId :: Monad m => Bool -> ApplyParent m -> Transaction ViewTag m (Maybe Widget.Id)
+makeCondParensId False = const $ return Nothing
+makeCondParensId True = liftM Just . makeParensId
+
+getParensId
+  :: Monad m
+  => Data.Expression -> ETypes.ExpressionAncestry m
+  -> Transaction ViewTag m (Maybe Widget.Id)
+getParensId (Data.ExpressionApply _) (ad@(ApplyParent ApplyArg ETypes.Prefix _ _) : _) =
+  liftM Just $ makeParensId ad
+getParensId (Data.ExpressionApply (Data.Apply funcI _)) (ad@(ApplyParent ApplyArg _ _ _) : _) = do
+  isInfix <-
+    liftM2 (||)
+    (ETypes.isInfixFunc funcI) (ETypes.isApplyOfInfixOp funcI)
+  makeCondParensId isInfix ad
+getParensId (Data.ExpressionApply (Data.Apply funcI _)) (ad@(ApplyParent ApplyFunc _ _ _) : _) = do
+  isInfix <- ETypes.isApplyOfInfixOp funcI
+  makeCondParensId isInfix ad
+getParensId (Data.ExpressionApply (Data.Apply funcI _)) [] = do
+  isInfix <- ETypes.isInfixFunc funcI
+  return $
+    if isInfix
+    then Just $ Widget.Id ["root parens"]
+    else Nothing
+getParensId (Data.ExpressionGetVariable var) (ad@(ApplyParent ApplyArg _ _ _) : _) = do
+  name <- Property.get $ Anchors.variableNameRef var
+  makeCondParensId (ETypes.isInfixName name) ad
+getParensId (Data.ExpressionLambda _) (ad : _) = return Nothing -- liftM Just $ makeParensId ad
+getParensId _ _ = return Nothing
 
 make
   :: MonadF m
@@ -44,8 +86,7 @@ make ancestry definitionI expressionPtr = do
           BWidgets.wrapDelegatedWithKeys
             FocusDelegator.defaultKeys FocusDelegator.Delegating second $
             HoleEdit.make ancestry definitionI holeState expressionPtr
-        Data.ExpressionGetVariable varRef ->
-          notAHole $ VarEdit.make ancestry varRef
+        Data.ExpressionGetVariable varRef -> notAHole (VarEdit.make varRef)
         Data.ExpressionLambda lambda ->
           wrapNonHole Config.exprFocusDelegatorKeys
             FocusDelegator.Delegating id $
@@ -95,4 +136,26 @@ make ancestry definitionI expressionPtr = do
     joinEvents x y = do
       r <- liftM Widget.eAnimIdMapping x
       (liftM . Widget.atEAnimIdMapping) (. r) y
-  return $ Widget.weakerEvents eventMap widget
+
+  mParenId <- transaction $ getParensId expr ancestry
+  addParens expressionId mParenId $ Widget.weakerEvents eventMap widget
+
+highlightExpression :: Widget.Widget f -> Widget.Widget f
+highlightExpression =
+  Widget.backgroundColor WidgetIds.parenHighlightId Config.parenHighlightColor
+
+addParens
+  :: (Monad m, Functor m)
+  => Widget.Id
+  -> Maybe Widget.Id
+  -> Widget.Widget (Transaction t m)
+  -> TWidget t m
+addParens _ Nothing widget = return widget
+addParens myId (Just parensId) widget = do
+  let rParenId = Widget.joinId myId [")"]
+  mInsideParenId <- subCursor rParenId
+  widgetWithParens <-
+    ETypes.addParens id
+    (>>= BWidgets.makeFocusableView rParenId)
+    parensId widget
+  return $ maybe id (const highlightExpression) mInsideParenId widgetWithParens
