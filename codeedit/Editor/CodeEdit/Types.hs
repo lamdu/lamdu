@@ -92,20 +92,15 @@ isApplyOfInfixOp exprI = do
     Data.ExpressionApply (Data.Apply funcI _) -> isInfixFunc funcI
     _ -> return False
 
-addArgTargetExpression
+-- Return the target function to add "next arg" for
+addNextArgTargetExpression
   :: MonadF m
   => ExpressionAncestry m
   -> Transaction.Property ViewTag m (IRef Data.Expression)
   -> Transaction.Property ViewTag m (IRef Data.Expression)
-addArgTargetExpression [] expressionPtr = expressionPtr
-addArgTargetExpression (argData : _) expressionPtr =
-  if isParent then apParentPtr argData else expressionPtr
-  where
-    isParent =
-      case apRole argData of
-        ApplyArg -> funcType == Prefix
-        ApplyFunc -> funcType == InfixLeft
-    funcType = apFuncType argData
+addNextArgTargetExpression (ApplyParent ApplyArg Prefix _ parentPtr : _) _ = parentPtr
+addNextArgTargetExpression (ApplyParent ApplyFunc InfixLeft _ parentPtr : _) _ = parentPtr
+addNextArgTargetExpression _ expressionPtr = expressionPtr
 
 makeAddArgHandler
   :: MonadF m
@@ -123,7 +118,7 @@ makeAddArgHandler ancestry expressionPtr =
   where
     addArg =
       ("Add next arg",
-       diveIn . DataOps.callWithArg $ addArgTargetExpression ancestry expressionPtr)
+       diveIn . DataOps.callWithArg $ addNextArgTargetExpression ancestry expressionPtr)
 
 getNextArg :: ExpressionAncestry m -> Maybe (IRef Data.Expression)
 getNextArg (
