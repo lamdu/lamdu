@@ -18,22 +18,37 @@ import qualified Editor.Data as Data
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 
-needParen
+makeParensId :: Monad m => ApplyParent m -> Transaction ViewTag m Widget.Id
+makeParensId (ApplyParent role _ _ parentPtr) = do
+  parentI <- Property.get parentPtr
+  return $
+    Widget.joinId (WidgetIds.fromIRef parentI)
+    [pack $ show role]
+
+getParensId
   :: Monad m
   => Data.Apply -> ETypes.ExpressionAncestry m
-  -> Transaction ViewTag m Bool
-needParen _ (ApplyParent { apRole = ApplyArg, apFuncType = ETypes.Prefix } : _) =
-  return True
-needParen
-  (Data.Apply funcI _)
-  (ApplyParent { apRole = ApplyArg } : _) =
+  -> Transaction ViewTag m (Maybe Widget.Id)
+getParensId _ (ad@(ApplyParent ApplyArg ETypes.Prefix _ _) : _) =
+  liftM Just $ makeParensId ad
+getParensId (Data.Apply funcI _) (ad@(ApplyParent ApplyArg _ _ _) : _) = do
+  isInfix <-
     liftM2 (||)
     (ETypes.isInfixFunc funcI) (ETypes.isApplyOfInfixOp funcI)
-needParen (Data.Apply funcI _) [] =
-  ETypes.isInfixFunc funcI
-needParen (Data.Apply funcI _)
-  (ApplyParent { apRole = ApplyFunc } : _) =
-  ETypes.isApplyOfInfixOp funcI
+  if isInfix
+    then liftM Just $ makeParensId ad
+    else return Nothing
+getParensId (Data.Apply funcI _) (ad@(ApplyParent ApplyFunc _ _ _) : _) = do
+  isInfix <- ETypes.isApplyOfInfixOp funcI
+  if isInfix
+    then liftM Just $ makeParensId ad
+    else return Nothing
+getParensId (Data.Apply funcI _) [] = do
+  isInfix <- ETypes.isInfixFunc funcI
+  return $
+    if isInfix
+    then Just $ Widget.Id ["root parens"]
+    else Nothing
 
 make ::
   (MonadF m) =>
@@ -83,27 +98,21 @@ make makeExpressionEdit ancestry expressionPtr apply@(Data.Apply funcI argI) myI
       addDelEventMap funcI $
       makeExpressionEdit (makeAncestry ETypes.ApplyArg) argIPtr
 
-    exprNeedParen <- transaction $ needParen apply ancestry
+    mParenId <- transaction $ getParensId apply ancestry
     let
-      makeParensId (ad : _) = do
-        parentI <- getP $ apParentPtr ad
-        return $
-          Widget.joinId (WidgetIds.fromIRef parentI)
-          [pack . show $ apRole ad]
-      makeParensId [] = return $ Widget.Id ["root parens"]
-      rParenId = Widget.joinId myId [")"]
-      addParens widget
-        | exprNeedParen = do
-          mInsideParenId <- subCursor rParenId
-          parensId <- makeParensId ancestry
-          widgetWithParens <- ETypes.addParens id
-            (>>= BWidgets.makeFocusableView rParenId)
-            parensId widget
-          return $ maybe id (const highlightExpression) mInsideParenId widgetWithParens
-        | otherwise = return widget
-
       highlightExpression =
         Widget.backgroundColor WidgetIds.parenHighlightId Config.parenHighlightColor
+      addParens widget =
+        case mParenId of
+          Nothing -> return widget
+          Just parensId -> do
+            let rParenId = Widget.joinId myId [")"]
+            mInsideParenId <- subCursor rParenId
+            widgetWithParens <-
+              ETypes.addParens id
+              (>>= BWidgets.makeFocusableView rParenId)
+              parensId widget
+            return $ maybe id (const highlightExpression) mInsideParenId widgetWithParens
 
     addParens . BWidgets.hbox $
       (if isInfix then reverse else id)
