@@ -13,6 +13,7 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit as ExpressionEdit
+import qualified Editor.CodeEdit.ParamEdit as ParamEdit
 import qualified Editor.CodeEdit.Types as ETypes
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
@@ -55,6 +56,8 @@ makeLHSEdit myId definitionI params = do
   paramsEdits <- mapM makeParamEdit $ enumerate params
   return $ BWidgets.hboxSpaced (nameEdit : paramsEdits)
   where
+    makeParamEdit (i, paramI) =
+      weakerEvents (paramEventMap i paramI) $ ParamEdit.make paramI
     weakerEvents = liftM . Widget.weakerEvents
     definitionRef = Transaction.fromIRef definitionI
     addParamEventMap i =
@@ -73,12 +76,6 @@ makeLHSEdit myId definitionI params = do
       [addParamEventMap (i+1)
       ,delParamEventMap i paramI
       ]
-    makeParamEdit (i, paramI) =
-      weakerEvents (paramEventMap i paramI) .
-      BWidgets.wrapDelegated FocusDelegator.NotDelegating
-      (BWidgets.setTextColor Config.parameterColor .
-       BWidgets.makeNameEdit ("<unnamed param " ++ show i ++ ">") paramI) $
-      WidgetIds.fromIRef paramI
 
 -- from lhs->rhs and vice-versa:
 addJumps

@@ -101,6 +101,7 @@ Executable Editor
                        Editor.MonadF,
                        Editor.BottleWidgets,
                        Editor.CodeEdit,
+                       Editor.CodeEdit.ParamEdit,
                        Editor.CodeEdit.ExpressionEdit,
                        Editor.CodeEdit.ExpressionEdit.ApplyEdit,
                        Editor.CodeEdit.ExpressionEdit.HoleEdit,
