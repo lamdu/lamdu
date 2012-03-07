@@ -12,6 +12,13 @@ import Data.Vector.Vector2(Vector2(..))
 import Graphics.DrawingCombinators((%%))
 import qualified Codec.Binary.UTF8.String as UTF8
 import qualified Graphics.DrawingCombinators as Draw
+import qualified System.Info
+
+utf8Bugfix :: String -> String
+utf8Bugfix =
+  case System.Info.os of
+    "darwin" -> UTF8.encodeString
+    _ -> id
 
 type Image = Draw.Image ()
 
@@ -22,7 +29,7 @@ textHeight :: Draw.R
 textHeight = 2
 
 textWidth :: Draw.Font -> String -> Draw.R
-textWidth font = Draw.textWidth font . UTF8.encodeString
+textWidth font = Draw.textWidth font . utf8Bugfix
 
 textSize :: Draw.Font -> String -> Vector2 Draw.R
 textSize font str = Vector2 (textWidth font str) textHeight
@@ -34,7 +41,7 @@ drawText font =
   (Draw.scale 1 (-1) %%) .
   -- Text is normally at height -1.5..0.5.  We move it to be -2..0
   (Draw.translate (0, -1.5) %%) .
-  void . Draw.text font . UTF8.encodeString
+  void . Draw.text font . utf8Bugfix
 
 textLinesHeight :: [String] -> Draw.R
 textLinesHeight = (textHeight *) . genericLength
