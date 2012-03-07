@@ -1,3 +1,5 @@
+* Lambda unwrap invalidates params
+
 * Lambda lacks sugar:
   * Lambda-inside-lambda -> Spaced params (currying)
   * Redex -> Where
