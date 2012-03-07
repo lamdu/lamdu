@@ -30,6 +30,8 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 data HoleResultPicker m = NotAHole | IsAHole (Maybe (HoleEdit.ResultPicker m))
 
+data HighlightParens = DoHighlightParens | DontHighlightParens
+
 makeParensId
   :: Monad m => ETypes.ExpressionAncestry m
   -> Transaction ViewTag m Widget.Id
@@ -50,29 +52,37 @@ makeCondParensId
 makeCondParensId False = const $ return Nothing
 makeCondParensId True = liftM Just . makeParensId
 
-getParensId
+setDoHighlight :: (Monad m, Functor f) => m (f a) -> m (f (HighlightParens, a))
+setDoHighlight = (liftM . fmap) ((,) DoHighlightParens)
+
+setDontHighlight :: (Monad m, Functor f) => m (f a) -> m (f (HighlightParens, a))
+setDontHighlight = (liftM . fmap) ((,) DontHighlightParens)
+
+getParensInfo
   :: Monad m
   => Data.Expression -> ETypes.ExpressionAncestry m
-  -> Transaction ViewTag m (Maybe Widget.Id)
-getParensId (Data.ExpressionApply _) ancestry@(AncestryItemApply (ApplyParent ApplyArg ETypes.Prefix _ _) : _) =
-  liftM Just $ makeParensId ancestry
-getParensId (Data.ExpressionApply (Data.Apply funcI _)) ancestry@(AncestryItemApply (ApplyParent ApplyArg _ _ _) : _) = do
+  -> Transaction ViewTag m (Maybe (HighlightParens, Widget.Id))
+getParensInfo (Data.ExpressionApply _) ancestry@(AncestryItemApply (ApplyParent ApplyArg ETypes.Prefix _ _) : _) =
+  setDoHighlight . liftM Just $ makeParensId ancestry
+getParensInfo (Data.ExpressionApply (Data.Apply funcI _)) ancestry@(AncestryItemApply (ApplyParent ApplyArg _ _ _) : _) = do
   isInfix <-
     liftM2 (||)
     (ETypes.isInfixFunc funcI) (ETypes.isApplyOfInfixOp funcI)
-  makeCondParensId isInfix ancestry
-getParensId (Data.ExpressionApply (Data.Apply funcI _)) ancestry@(AncestryItemApply (ApplyParent ApplyFunc _ _ _) : _) = do
+  setDoHighlight $ makeCondParensId isInfix ancestry
+getParensInfo (Data.ExpressionApply (Data.Apply funcI _)) ancestry@(AncestryItemApply (ApplyParent ApplyFunc _ _ _) : _) = do
   isInfix <- ETypes.isApplyOfInfixOp funcI
-  makeCondParensId isInfix ancestry
-getParensId (Data.ExpressionApply (Data.Apply funcI _)) ancestry = do
+  setDoHighlight $ makeCondParensId isInfix ancestry
+getParensInfo (Data.ExpressionApply (Data.Apply funcI _)) ancestry = do
   isInfix <- ETypes.isInfixFunc funcI
-  makeCondParensId isInfix ancestry
-getParensId (Data.ExpressionGetVariable _) (AncestryItemApply (ApplyParent ApplyFunc _ _ _) : _) = return Nothing
-getParensId (Data.ExpressionGetVariable var) ancestry = do
+  setDoHighlight $ makeCondParensId isInfix ancestry
+getParensInfo (Data.ExpressionGetVariable _) (AncestryItemApply (ApplyParent ApplyFunc _ _ _) : _) =
+  return Nothing
+getParensInfo (Data.ExpressionGetVariable var) ancestry = do
   name <- Property.get $ Anchors.variableNameRef var
-  makeCondParensId (ETypes.isInfixName name) ancestry
-getParensId (Data.ExpressionLambda _) (_ : _) = return Nothing -- liftM Just $ makeParensId ad
-getParensId _ _ = return Nothing
+  setDontHighlight $ makeCondParensId (ETypes.isInfixName name) ancestry
+getParensInfo (Data.ExpressionLambda _) ancestry@(AncestryItemApply _ : _) =
+  setDoHighlight $ liftM Just $ makeParensId ancestry
+getParensInfo _ _ = return Nothing
 
 make
   :: MonadF m
@@ -144,8 +154,8 @@ make ancestry definitionI expressionPtr = do
       r <- liftM Widget.eAnimIdMapping x
       (liftM . Widget.atEAnimIdMapping) (. r) y
 
-  mParenId <- transaction $ getParensId expr ancestry
-  addParens expressionId mParenId $ Widget.weakerEvents eventMap widget
+  mParenInfo <- transaction $ getParensInfo expr ancestry
+  addParens expressionId mParenInfo $ Widget.weakerEvents eventMap widget
 
 highlightExpression :: Widget.Widget f -> Widget.Widget f
 highlightExpression =
@@ -154,15 +164,17 @@ highlightExpression =
 addParens
   :: (Monad m, Functor m)
   => Widget.Id
-  -> Maybe Widget.Id
+  -> Maybe (HighlightParens, Widget.Id)
   -> Widget.Widget (Transaction t m)
   -> TWidget t m
 addParens _ Nothing widget = return widget
-addParens myId (Just parensId) widget = do
-  let rParenId = Widget.joinId myId [")"]
+addParens myId (Just (needHighlight, parensId)) widget = do
   mInsideParenId <- subCursor rParenId
-  widgetWithParens <-
-    ETypes.addParens id
-    (>>= BWidgets.makeFocusableView rParenId)
-    parensId widget
+  widgetWithParens <- ETypes.addParens id doHighlight parensId widget
   return $ maybe id (const highlightExpression) mInsideParenId widgetWithParens
+  where
+    rParenId = Widget.joinId myId [")"]
+    doHighlight =
+      case needHighlight of
+        DoHighlightParens -> (>>= BWidgets.makeFocusableView rParenId)
+        DontHighlightParens -> id
