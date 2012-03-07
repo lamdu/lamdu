@@ -163,7 +163,7 @@ replaceEventMap
 replaceEventMap ancestry expressionPtr =
   Widget.actionEventMapMovesCursor
   relinkKeys "Replace" . ETypes.diveIn $
-  DataOps.replace expressionPtr
+  DataOps.replaceWithHole expressionPtr
   where
     relinkKeys =
       case ancestry of
