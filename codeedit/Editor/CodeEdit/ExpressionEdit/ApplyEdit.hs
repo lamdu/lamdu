@@ -13,6 +13,7 @@ import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.Types as ETypes
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
+import qualified Editor.DataOps as DataOps
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 
@@ -40,9 +41,7 @@ make makeExpressionEdit ancestry expressionPtr apply@(Data.Apply funcI argI) myI
       delEventMap = Widget.actionEventMapMovesCursor Config.delKeys "Delete" . setExpr
       funcIPtr = Property (return funcI) $ Property.set expressionRef . Data.ExpressionApply . (`Data.Apply` argI)
       argIPtr = Property (return argI) $ Property.set expressionRef . Data.ExpressionApply . (funcI `Data.Apply`)
-      setExpr newExprI = do
-        Property.set expressionPtr newExprI
-        return $ WidgetIds.fromIRef newExprI
+      setExpr = liftM WidgetIds.fromIRef . DataOps.replace expressionPtr
 
       addDelEventMap =
         liftM . Widget.weakerEvents . delEventMap
