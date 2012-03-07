@@ -33,7 +33,7 @@ makeView ancestry var myId = do
     BWidgets.makeFocusableTextView name myId
   if ETypes.isInfixName name
     then case ancestry of
-      (ETypes.ApplyData { ETypes.adRole = ETypes.ApplyFunc } : _) ->
+      (ETypes.ApplyParent { ETypes.apRole = ETypes.ApplyFunc } : _) ->
         return widget
       _ -> ETypes.addParens id id myId widget
     else return widget

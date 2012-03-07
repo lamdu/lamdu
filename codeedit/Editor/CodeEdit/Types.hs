@@ -3,7 +3,7 @@
 module Editor.CodeEdit.Types(
   ExpressionPtr,
   ExpressionAncestry,
-  ApplyData(..), atAdRole, atAdFuncType, atAdApply, atAdParentPtr,
+  ApplyParent(..), atApRole, atApFuncType, atApApply, atApParentPtr,
   ApplyRole(..),
   FuncType(..),
   parensPrefix, addParens,
@@ -38,15 +38,15 @@ data FuncType = Prefix | InfixLeft | InfixRight
 data ApplyRole = ApplyFunc | ApplyArg
   deriving (Show, Read, Eq, Ord)
 
-data ApplyData m = ApplyData {
-  adRole :: ApplyRole,
-  adFuncType :: FuncType,
-  adApply :: Data.Apply,
-  adParentPtr :: Transaction.Property ViewTag m (IRef Data.Expression)
+data ApplyParent m = ApplyParent {
+  apRole :: ApplyRole,
+  apFuncType :: FuncType,
+  apApply :: Data.Apply,
+  apParentPtr :: ExpressionPtr m
   }
-AtFieldTH.make ''ApplyData
+AtFieldTH.make ''ApplyParent
 
-type ExpressionAncestry m = [ApplyData m]
+type ExpressionAncestry m = [ApplyParent m]
 
 parensPrefix :: Widget.Id -> Widget.Id
 parensPrefix = flip Widget.joinId ["parens"]
@@ -99,13 +99,13 @@ addArgTargetExpression
   -> Transaction.Property ViewTag m (IRef Data.Expression)
 addArgTargetExpression [] expressionPtr = expressionPtr
 addArgTargetExpression (argData : _) expressionPtr =
-  if isParent then adParentPtr argData else expressionPtr
+  if isParent then apParentPtr argData else expressionPtr
   where
     isParent =
-      case adRole argData of
+      case apRole argData of
         ApplyArg -> funcType == Prefix
         ApplyFunc -> funcType == InfixLeft
-    funcType = adFuncType argData
+    funcType = apFuncType argData
 
 makeAddArgHandler
   :: MonadF m
@@ -125,11 +125,11 @@ makeAddArgHandler ancestry expressionPtr =
       case ancestry of
         [] -> Nothing
         (x : xs) ->
-          case (adRole x, adFuncType x, xs) of
-            (ApplyFunc, _, _) -> Just . Data.applyArg $ adApply x
+          case (apRole x, apFuncType x, xs) of
+            (ApplyFunc, _, _) -> Just . Data.applyArg $ apApply x
             (ApplyArg, Prefix, y : _) ->
-              case adRole y of
-                ApplyFunc -> Just . Data.applyArg $ adApply y
+              case apRole y of
+                ApplyFunc -> Just . Data.applyArg $ apApply y
                 ApplyArg -> Nothing
             (ApplyArg, _, _) -> Nothing
     addArg =

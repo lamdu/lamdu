@@ -74,7 +74,7 @@ makeMoreResults myId =
   BWidgets.makeTextView "..." $
   Widget.joinId myId ["more results"]
 
-data NeedFlip m = DontFlip | DoFlip (ETypes.ApplyData m)
+data NeedFlip m = DontFlip | DoFlip (ETypes.ApplyParent m)
 
 makeResultVariables ::
   MonadF m => ETypes.ExpressionAncestry m ->
@@ -87,9 +87,9 @@ makeResultVariables ancestry myId expressionPtr varRef = do
     if ETypes.isInfixName varName
     then
       case ancestry of
-        (x @ ETypes.ApplyData { ETypes.adRole = ETypes.ApplyArg } : xs) ->
+        (x @ ETypes.ApplyParent { ETypes.apRole = ETypes.ApplyArg } : xs) ->
           [result varName (DoFlip x) resultId
-           ((ETypes.atAdRole . const) ETypes.ApplyFunc x : xs)
+           ((ETypes.atApRole . const) ETypes.ApplyFunc x : xs)
           ,result
            (concat ["(", varName, ")"]) DontFlip resultIdAsPrefix
            ancestry
@@ -141,7 +141,7 @@ pickResult expressionI myId newExpr needFlip resultId = do
   where
     expressionId = WidgetIds.fromIRef expressionI
     flipAct DontFlip = return ()
-    flipAct (DoFlip (ETypes.ApplyData _ _ apply parentPtr)) = do
+    flipAct (DoFlip (ETypes.ApplyParent _ _ apply parentPtr)) = do
       parentI <- Property.get parentPtr
       Property.set (Transaction.fromIRef parentI) .
         Data.ExpressionApply $ flipArgs apply

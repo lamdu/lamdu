@@ -7,7 +7,7 @@ import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (TWidget, getP, subCursor, assignCursor, transaction)
-import Editor.CodeEdit.Types(ApplyData(..), ApplyRole(..))
+import Editor.CodeEdit.Types(ApplyParent(..), ApplyRole(..))
 import Editor.MonadF (MonadF)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -22,17 +22,17 @@ needParen
   :: Monad m
   => Data.Apply -> ETypes.ExpressionAncestry m
   -> Transaction ViewTag m Bool
-needParen _ (ApplyData { adRole = ApplyArg, adFuncType = ETypes.Prefix } : _) =
+needParen _ (ApplyParent { apRole = ApplyArg, apFuncType = ETypes.Prefix } : _) =
   return True
 needParen
   (Data.Apply funcI _)
-  (ApplyData { adRole = ApplyArg } : _) =
+  (ApplyParent { apRole = ApplyArg } : _) =
     liftM2 (||)
     (ETypes.isInfixFunc funcI) (ETypes.isApplyOfInfixOp funcI)
 needParen (Data.Apply funcI _) [] =
   ETypes.isInfixFunc funcI
 needParen (Data.Apply funcI _)
-  (ApplyData { adRole = ApplyFunc } : _) =
+  (ApplyParent { apRole = ApplyFunc } : _) =
   ETypes.isApplyOfInfixOp funcI
 
 make ::
@@ -68,11 +68,11 @@ make makeExpressionEdit ancestry expressionPtr apply@(Data.Apply funcI argI) myI
 
     let
       makeAncestry role =
-        ApplyData {
-          adRole = role,
-          adFuncType = funcType,
-          adApply = apply,
-          adParentPtr = expressionPtr
+        ApplyParent {
+          apRole = role,
+          apFuncType = funcType,
+          apApply = apply,
+          apParentPtr = expressionPtr
           }
         : ancestry
     funcEdit <-
@@ -86,10 +86,10 @@ make makeExpressionEdit ancestry expressionPtr apply@(Data.Apply funcI argI) myI
     exprNeedParen <- transaction $ needParen apply ancestry
     let
       makeParensId (ad : _) = do
-        parentI <- getP $ adParentPtr ad
+        parentI <- getP $ apParentPtr ad
         return $
           Widget.joinId (WidgetIds.fromIRef parentI)
-          [pack . show $ adRole ad]
+          [pack . show $ apRole ad]
       makeParensId [] = return $ Widget.Id ["root parens"]
       rParenId = Widget.joinId myId [")"]
       addParens widget
