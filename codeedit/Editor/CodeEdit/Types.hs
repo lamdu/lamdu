@@ -19,6 +19,7 @@ import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (TWidget)
+import Editor.DataOps(ExpressionPtr)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.AtFieldTH as AtFieldTH
@@ -31,8 +32,6 @@ import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
-
-type ExpressionPtr m = Transaction.Property ViewTag m (IRef Data.Expression)
 
 data FuncType = Prefix | InfixLeft | InfixRight
   deriving (Eq, Ord, Show, Read)

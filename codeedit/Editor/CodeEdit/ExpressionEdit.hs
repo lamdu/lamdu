@@ -158,8 +158,8 @@ make ancestry definitionI expressionPtr = do
 replaceEventMap
   :: (Monad m, Functor m)
   => ETypes.ExpressionAncestry m
-  -> Property.Property (Transaction t m) (IRef Data.Expression)
-  -> Widget.EventHandlers (Transaction t m)
+  -> Transaction.Property ViewTag m (IRef Data.Expression)
+  -> Widget.EventHandlers (Transaction ViewTag m)
 replaceEventMap ancestry expressionPtr =
   Widget.actionEventMapMovesCursor
   relinkKeys "Replace" . ETypes.diveIn $

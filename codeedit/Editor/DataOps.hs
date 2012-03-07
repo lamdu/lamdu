@@ -1,5 +1,6 @@
 {-# OPTIONS -Wall #-}
 module Editor.DataOps (
+  ExpressionPtr,
   newHole, addParameter, delParameter, giveAsArg, callWithArg, replaceWithHole,
   addAsParameter, addAsDefinition, lambdaWrap)
 where
@@ -8,12 +9,14 @@ import Control.Arrow (second)
 import Control.Monad (liftM)
 import Data.List (delete)
 import Data.Store.IRef (IRef)
-import Data.Store.Property(Property)
 import Data.Store.Transaction (Transaction)
+import Editor.Anchors(ViewTag)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.Data as Data
+
+type ExpressionPtr m = Transaction.Property ViewTag m (IRef Data.Expression)
 
 insertAt :: Int -> a -> [a] -> [a]
 insertAt i x = uncurry (++) . second (x:) . splitAt i
@@ -36,8 +39,8 @@ delParameter definitionRef paramI =
 
 giveAsArg ::
   Monad m =>
-  Property (Transaction t m) (IRef Data.Expression) ->
-  Transaction t m (IRef Data.Expression)
+  ExpressionPtr m ->
+  Transaction ViewTag m (IRef Data.Expression)
 giveAsArg expressionPtr = do
   expressionI <- Property.get expressionPtr
   newFuncI <- newHole
@@ -46,25 +49,25 @@ giveAsArg expressionPtr = do
 
 callWithArg ::
   Monad m =>
-  Property (Transaction t m) (IRef Data.Expression) ->
-  Transaction t m (IRef Data.Expression)
+  ExpressionPtr m ->
+  Transaction ViewTag m (IRef Data.Expression)
 callWithArg expressionPtr = do
   expressionI <- Property.get expressionPtr
   argI <- newHole
   Property.set expressionPtr =<< (Transaction.newIRef . Data.ExpressionApply) (Data.Apply expressionI argI)
   return argI
 
-newHole :: Monad m => Transaction t m (IRef Data.Expression)
+newHole :: Monad m => Transaction ViewTag m (IRef Data.Expression)
 newHole =
   Transaction.newIRef . Data.ExpressionHole $ Data.HoleState
   { Data.holeSearchTerm = ""
   --, Data.holeCachedSearchResults = []
   }
 
-replaceWithHole ::
-  Monad m =>
-  Property (Transaction t m) (IRef Data.Expression) ->
-  Transaction t m (IRef Data.Expression)
+replaceWithHole
+  :: Monad m
+  => ExpressionPtr m
+  -> Transaction ViewTag m (IRef Data.Expression)
 replaceWithHole expressionPtr = do
   exprI <- newHole
   Property.set expressionPtr exprI
@@ -72,8 +75,8 @@ replaceWithHole expressionPtr = do
 
 lambdaWrap
   :: Monad m
-  => Property (Transaction t m) (IRef Data.Expression)
-  -> Transaction t m (IRef Data.Parameter)
+  => ExpressionPtr m
+  -> Transaction ViewTag m (IRef Data.Parameter)
 lambdaWrap expressionPtr = do
   newParamI <- Transaction.newIRef Data.Parameter
   expressionI <- Property.get expressionPtr
@@ -93,7 +96,7 @@ addAsParameter newName definitionRef expressionI = do
 
 addAsDefinition ::
   Monad m => String -> IRef Data.Expression ->
-  Transaction Anchors.ViewTag m (IRef Data.Definition)
+  Transaction ViewTag m (IRef Data.Definition)
 addAsDefinition newName expressionI = do
   newDefI <- Anchors.makeDefinition
   Property.set (Anchors.aNameRef newDefI) newName
