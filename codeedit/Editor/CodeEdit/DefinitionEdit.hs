@@ -91,10 +91,9 @@ addJumps lhs rhs defKBoxElements =
     addEventMap srcSide destSide doc keys dir =
       atPred (== srcSide)
       (addJumpsTo doc keys dir $ Box.getElement destSide defKBoxElements)
-    addJumpsTo doc keys dir destElement srcElement =
-      (Box.atBoxElementUio . Widget.atUioEventMap . mappend)
-      (jumpToExpressionEventMap doc keys dir destElement)
-      srcElement
+    addJumpsTo doc keys dir =
+      Box.atBoxElementUio . Widget.atUioEventMap . mappend .
+      jumpToExpressionEventMap doc keys dir
     jumpToExpressionEventMap doc keys dir destElement =
       maybe mempty
       (makeJumpForEnter doc keys dir destElement) .

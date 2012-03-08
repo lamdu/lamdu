@@ -55,13 +55,12 @@ makePanesEdit = do
   canJumpBack <- transaction Anchors.canJumpBack
   let
     panesEventMap =
-      mconcat $
-      [ Widget.actionEventMapMovesCursor Config.newDefinitionKeys
-        "New definition" newDefinition
-      ] ++
-      [ Widget.actionEventMapMovesCursor Config.previousCursor
-        "Go to previous position" $ liftM (fromMaybe myId) Anchors.jumpBack
-      | canJumpBack
+      mconcat . concat $
+      [[ Widget.actionEventMapMovesCursor Config.newDefinitionKeys
+        "New definition" newDefinition],
+       [ Widget.actionEventMapMovesCursor Config.previousCursor
+         "Go to previous position" $ liftM (fromMaybe myId) Anchors.jumpBack
+       | canJumpBack]
       ]
 
   return $ Widget.weakerEvents panesEventMap panesWidget

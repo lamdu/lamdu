@@ -293,9 +293,9 @@ make ancestry definitionI curState expressionPtr myId = do
       }
   if isJust (Widget.subId myId cursor)
     then
-      (liftM . first . fmap) resultPick .
-      (liftM . second)
-        (makeBackground Config.focusedHoleBackgroundColor) $
+      liftM (
+        first (fmap resultPick) .
+        second (makeBackground Config.focusedHoleBackgroundColor)) $
       makeActiveHoleEdit holeInfo definitionI curState
     else
       liftM
