@@ -40,18 +40,11 @@ data Result m = Result {
   resultMakeWidget :: TWidget ViewTag m
   }
 
-makeResult
-  :: MonadF m
-  => String -> ETypes.ExpressionPtr m -> Widget.Id
-  -> Data.Expression -> NeedFlip m -> Widget.Id
-  -> TWidget ViewTag m
-  -> CTransaction ViewTag m (Result m)
-makeResult name expressionPtr myId newExpr needFlip resultId
-  mkWidget =
-  do
-    expressionI <- getP expressionPtr
-    let pick = pickResult expressionI myId newExpr needFlip resultId
-    return $ Result name pick mkWidget
+data HoleInfo m = HoleInfo
+  { hiExpressionI :: IRef Data.Expression
+  , hiHoleId :: Widget.Id
+  , hiAncestry :: ETypes.ExpressionAncestry m
+  }
 
 resultPickEventMap
   :: Result m -> Widget.EventHandlers (Transaction ViewTag m)
@@ -78,11 +71,8 @@ makeMoreResults myId =
 data NeedFlip m = DontFlip | DoFlip (ApplyParent m)
 
 makeResultVariables ::
-  MonadF m => ETypes.ExpressionAncestry m ->
-  Widget.Id -> ETypes.ExpressionPtr m ->
-  Data.VariableRef ->
-  CTransaction ViewTag m [Result m]
-makeResultVariables ancestry myId expressionPtr varRef = do
+  MonadF m => HoleInfo m -> Data.VariableRef -> CTransaction ViewTag m [Result m]
+makeResultVariables holeInfo varRef = do
   varName <- getP $ Anchors.variableNameRef varRef
   let
     ordinary = result varName DontFlip resultId return
@@ -90,10 +80,10 @@ makeResultVariables ancestry myId expressionPtr varRef = do
       result
       (concat ["(", varName, ")"]) DontFlip resultIdAsPrefix $
       ETypes.addParens id id resultId
-  sequence $
+  return $
     if ETypes.isInfixName varName
     then
-      case ancestry of
+      case hiAncestry holeInfo of
         (AncestryItemApply x@(ApplyParent ApplyArg _ _ _) : _) ->
           [result varName (DoFlip x) resultId return, parened]
         (AncestryItemApply (ApplyParent ApplyFunc _ _ _) : _) ->
@@ -102,14 +92,14 @@ makeResultVariables ancestry myId expressionPtr varRef = do
     else
       [ordinary]
   where
-    resultId = searchResultsPrefix myId `mappend` ETypes.varId varRef
+    resultId = searchResultsPrefix (hiHoleId holeInfo) `mappend` ETypes.varId varRef
     resultIdAsPrefix = Widget.joinId resultId ["prefix"]
-
     result name needFlip wid addParens =
-      makeResult name expressionPtr myId getVar needFlip resultId $
-        addParens =<< VarEdit.makeView varRef wid
-
-    getVar = Data.ExpressionGetVariable varRef
+      Result
+      { resultName = name
+      , resultPick = pickResult holeInfo (Data.ExpressionGetVariable varRef) needFlip resultId
+      , resultMakeWidget = addParens =<< VarEdit.makeView varRef wid
+      }
 
 getDefinitionParamRefs :: Data.Definition -> [Data.VariableRef]
 getDefinitionParamRefs (Data.Definition { Data.defParameters = paramIs }) =
@@ -123,27 +113,27 @@ renamePrefix srcPrefix destPrefix animId =
 searchResultsPrefix :: Widget.Id -> Widget.Id
 searchResultsPrefix = flip Widget.joinId ["search results"]
 
-holeResultAnimMapping :: Widget.Id -> Widget.Id -> Widget.Id -> AnimId -> AnimId
-holeResultAnimMapping myId resultId expressionId =
+holeResultAnimMapping :: HoleInfo m -> Widget.Id -> AnimId -> AnimId
+holeResultAnimMapping holeInfo resultId =
   renamePrefix ("old hole" : Widget.toAnimId resultId) (Widget.toAnimId expressionId) .
-  renamePrefix myAnimId ("old hole" : myAnimId)
+  renamePrefix myId ("old hole" : myId)
   where
-    myAnimId = Widget.toAnimId myId
+    myId = Widget.toAnimId $ hiHoleId holeInfo
+    expressionId = WidgetIds.fromIRef $ hiExpressionI holeInfo
 
 pickResult
-  :: MonadF m => IRef Data.Expression -> Widget.Id
+  :: MonadF m => HoleInfo m
   -> Data.Expression -> NeedFlip m -> Widget.Id
   -> ResultPicker m
-pickResult expressionI myId newExpr needFlip resultId = do
-  Transaction.writeIRef expressionI newExpr
+pickResult holeInfo newExpr needFlip resultId = do
+  Transaction.writeIRef (hiExpressionI holeInfo) newExpr
   flipAct needFlip
   return Widget.EventResult {
-    Widget.eCursor = Just expressionId,
+    Widget.eCursor = Just . WidgetIds.fromIRef $ hiExpressionI holeInfo,
     Widget.eAnimIdMapping =
-      holeResultAnimMapping myId resultId expressionId
+      holeResultAnimMapping holeInfo resultId
     }
   where
-    expressionId = WidgetIds.fromIRef expressionI
     flipAct DontFlip = return ()
     flipAct (DoFlip (ApplyParent _ _ apply parentPtr)) = do
       parentI <- Property.get parentPtr
@@ -160,42 +150,38 @@ resultOrdering searchTerm result =
     name = resultName result
 
 makeLiteralResults
-  :: MonadF m
-  => String -> ETypes.ExpressionPtr m
-  -> Widget.Id
-  -> CTransaction ViewTag m [Result m]
-makeLiteralResults searchTerm expressionPtr myId =
-  sequence
+  :: MonadF m => HoleInfo m -> String -> [Result m]
+makeLiteralResults holeInfo searchTerm =
   [ makeLiteralIntResult (read searchTerm)
   | not (null searchTerm) && all Char.isDigit searchTerm]
   where
-    literalIntId = Widget.joinId (searchResultsPrefix myId) ["literal int"]
+    literalIntId = Widget.joinId (searchResultsPrefix (hiHoleId holeInfo)) ["literal int"]
     makeLiteralIntResult integer =
-      makeResult (show integer) expressionPtr myId
-        (Data.ExpressionLiteralInteger integer) DontFlip
-        literalIntId $
-        BWidgets.makeFocusableView literalIntId =<<
-        LiteralEdit.makeIntView literalIntId integer
+      Result
+      { resultName = show integer
+      , resultPick = pickResult holeInfo (Data.ExpressionLiteralInteger integer) DontFlip literalIntId
+      , resultMakeWidget =
+          BWidgets.makeFocusableView literalIntId =<<
+          LiteralEdit.makeIntView literalIntId integer
+      }
 
 makeAllResults
   :: MonadF m
-  => ETypes.ExpressionAncestry m
-  -> String
+  => HoleInfo m -> String
   -> Property (Transaction ViewTag m) Data.Definition
-  -> ETypes.ExpressionPtr m -> Widget.Id
   -> CTransaction ViewTag m [Result m]
-makeAllResults ancestry searchTerm definitionRef expressionPtr myId = do
+makeAllResults holeInfo searchTerm definitionRef = do
   defParams <- liftM getDefinitionParamRefs $ getP definitionRef
   let
-    allLambdaParams = ETypes.getAncestryParams ancestry
+    allLambdaParams = ETypes.getAncestryParams $ hiAncestry holeInfo
     params = defParams ++ map Data.ParameterRef allLambdaParams
   globals <- getP Anchors.globals
   varResults <- liftM concat .
-    mapM (makeResultVariables ancestry myId expressionPtr) $
+    mapM (makeResultVariables holeInfo) $
     sort params ++ sort globals
-  literalResults <-
-    makeLiteralResults searchTerm expressionPtr myId
-  let goodResult = (searchTerm `isInfixOf`) . resultName
+  let
+    literalResults = makeLiteralResults holeInfo searchTerm
+    goodResult = (searchTerm `isInfixOf`) . resultName
   return .
     sortOn (resultOrdering searchTerm) $
     literalResults ++ filter goodResult varResults
@@ -203,12 +189,8 @@ makeAllResults ancestry searchTerm definitionRef expressionPtr myId = do
 
 makeSearchTermWidget
   :: MonadF m
-  => Widget.Id -> String -> [Result m]
-  -> IRef Data.Expression -> Widget.Id
-  -> TWidget ViewTag m
-makeSearchTermWidget
-  searchTermId searchTerm firstResults expressionI myId
-  =
+  => HoleInfo m -> Widget.Id -> String -> [Result m] -> TWidget ViewTag m
+makeSearchTermWidget holeInfo searchTermId searchTerm firstResults =
   (liftM . Widget.strongerEvents) searchTermEventMap $
     BWidgets.makeWordEdit searchTermRef searchTermId
   where
@@ -219,17 +201,17 @@ makeSearchTermWidget
     searchTermEventMap =
       mconcat $ pickFirstResultEventMaps ++
       [ E.fromEventTypes Config.newDefinitionKeys "Add new as Definition" $ do
-          newDef <- DataOps.addAsDefinition newName expressionI
+          newDef <- DataOps.addAsDefinition newName $ hiExpressionI holeInfo
           return Widget.EventResult {
             Widget.eCursor = Just $ WidgetIds.fromIRef newDef,
-            Widget.eAnimIdMapping = holeResultAnimMapping myId searchTermId (WidgetIds.fromIRef expressionI)
+            Widget.eAnimIdMapping = holeResultAnimMapping holeInfo searchTermId
             }
       ]
     searchTermRef =
       Property {
         get = return searchTerm,
         set =
-          Transaction.writeIRef expressionI .
+          Transaction.writeIRef (hiExpressionI holeInfo) .
           Data.ExpressionHole . Data.HoleState
         }
 
@@ -269,35 +251,27 @@ makeResultsWidget firstResults moreResults myId = do
 
 makeActiveHoleEdit
   :: MonadF m
-  => ETypes.ExpressionAncestry m
+  => HoleInfo m
   -> IRef Data.Definition -> Data.HoleState
-  -> ETypes.ExpressionPtr m
-  -> Widget.Id
   -> CTransaction ViewTag m
      (Maybe (Result m), Widget (Transaction ViewTag m))
-makeActiveHoleEdit
-  ancestry definitionI (Data.HoleState searchTerm)
-  expressionPtr myId =
-  do
-    expressionI <- getP expressionPtr
-    let searchTermId = WidgetIds.searchTermId myId
-    assignCursor myId searchTermId $ do
-      let definitionRef = Transaction.fromIRef definitionI
-      allResults <-
-        makeAllResults ancestry searchTerm definitionRef
-        expressionPtr myId
+makeActiveHoleEdit holeInfo definitionI (Data.HoleState searchTerm) =
+  assignCursor (hiHoleId holeInfo) searchTermId $ do
+    let definitionRef = Transaction.fromIRef definitionI
+    allResults <- makeAllResults holeInfo searchTerm definitionRef
 
-      let (firstResults, moreResults) = splitAt 3 allResults
+    let (firstResults, moreResults) = splitAt 3 allResults
 
-      searchTermWidget <-
-        makeSearchTermWidget searchTermId searchTerm firstResults
-        expressionI myId
+    searchTermWidget <-
+      makeSearchTermWidget holeInfo searchTermId searchTerm firstResults
 
-      (mResult, resultsWidget) <-
-        makeResultsWidget firstResults moreResults myId
-      return
-        ( mplus mResult (listToMaybe $ take 1 firstResults)
-        , BWidgets.vbox [searchTermWidget, resultsWidget] )
+    (mResult, resultsWidget) <-
+      makeResultsWidget firstResults moreResults $ hiHoleId holeInfo
+    return
+      ( mplus mResult (listToMaybe $ take 1 firstResults)
+      , BWidgets.vbox [searchTermWidget, resultsWidget] )
+  where
+    searchTermId = WidgetIds.searchTermId $ hiHoleId holeInfo
 
 make
   :: MonadF m
@@ -310,12 +284,19 @@ make
      (Maybe (ResultPicker m), Widget (Transaction ViewTag m))
 make ancestry definitionI curState expressionPtr myId = do
   cursor <- readCursor
+  expressionI <- getP expressionPtr
+  let
+    holeInfo = HoleInfo
+      { hiExpressionI = expressionI
+      , hiHoleId = myId
+      , hiAncestry = ancestry
+      }
   if isJust (Widget.subId myId cursor)
     then
       (liftM . first . fmap) resultPick .
       (liftM . second)
         (makeBackground Config.focusedHoleBackgroundColor) $
-      makeActiveHoleEdit ancestry definitionI curState expressionPtr myId
+      makeActiveHoleEdit holeInfo definitionI curState
     else
       liftM
       ((,) Nothing .
