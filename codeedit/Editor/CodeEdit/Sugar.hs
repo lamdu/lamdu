@@ -1,10 +1,11 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Editor.CodeEdit.Sugar
-    ( Expression(..)
-    , Where(..), atWWheres, atWBody
-    , getExpression
-    ) where
+  ( Expression(..)
+  , Where(..), atWWheres, atWBody
+  , WhereItem(..)
+  , getExpression
+  ) where
 
 import Data.Store.IRef(IRef)
 import Data.Store.Property(Property(Property))
@@ -17,15 +18,20 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Data as Data
 
+data WhereItem m = WhereItem
+  { wiParamI :: IRef Data.Parameter
+  , wiExprPtr :: ExpressionPtr m
+  }
+
 data Where m = Where
-    { wWheres :: [(IRef Data.Parameter, ExpressionPtr m)]
-    , wBody :: ExpressionPtr m
-    }
+  { wWheres :: [WhereItem m]
+  , wBody :: ExpressionPtr m
+  }
 AtFieldTH.make ''Where
 
 data Expression m
-    = ExpressionPlain (ExpressionPtr m)
-    | ExpressionWhere (Where m)
+  = ExpressionPlain (ExpressionPtr m)
+  | ExpressionWhere (Where m)
 
 getExpression :: MonadF m => ExpressionPtr m -> Transaction ViewTag m (Expression m)
 getExpression exprPtr = do
@@ -47,8 +53,12 @@ getExpression exprPtr = do
               Property (return bodyI) $
               Transaction.writeIRef funcI .
               Data.ExpressionLambda . (Data.Lambda paramI)
+            item = WhereItem
+              { wiParamI = paramI
+              , wiExprPtr = argPtr
+              }
           sBody <- getExpression bodyPtr
-          return . ExpressionWhere . atWWheres ((paramI, argPtr) :) $ case sBody of
+          return . ExpressionWhere . atWWheres (item :) $ case sBody of
             ExpressionPlain innerBodyI -> Where [] innerBodyI
             ExpressionWhere x -> x
         _ -> plain
