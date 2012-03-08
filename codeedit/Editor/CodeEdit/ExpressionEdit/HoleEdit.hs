@@ -89,7 +89,7 @@ makeResultVariables ancestry myId expressionPtr varRef = do
     parened =
       result
       (concat ["(", varName, ")"]) DontFlip resultIdAsPrefix $
-      ETypes.addParens id id myId
+      ETypes.addParens id id resultId
   sequence $
     if ETypes.isInfixName varName
     then
