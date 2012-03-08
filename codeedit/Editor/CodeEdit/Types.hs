@@ -11,10 +11,11 @@ module Editor.CodeEdit.Types(
   parensPrefix, addParens,
   varId, diveIn, isInfixName,
   isInfixVar, isInfixFunc, isApplyOfInfixOp,
-  makeAddArgHandler)
+  makeAddArgHandler, makeParensId)
 where
 
 import Control.Monad (liftM)
+import Data.ByteString.Char8 (pack)
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
@@ -145,3 +146,14 @@ getNextArg (
   AncestryItemApply (ApplyParent ApplyFunc _ parentApply _) :
   _) = Just $ Data.applyArg parentApply
 getNextArg _ = Nothing
+
+makeParensId :: Monad m => ExpressionAncestry m -> Transaction ViewTag m Widget.Id
+makeParensId (AncestryItemApply (ApplyParent role _ _ parentPtr) : _) = do
+  parentI <- Property.get parentPtr
+  return $
+    Widget.joinId (WidgetIds.fromIRef parentI)
+    [pack $ show role]
+makeParensId (AncestryItemLambda (LambdaParent _ parentPtr) : _) =
+  liftM WidgetIds.fromIRef $ Property.get parentPtr
+makeParensId [] =
+  return $ Widget.Id ["root parens"]

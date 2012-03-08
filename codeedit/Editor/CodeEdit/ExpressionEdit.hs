@@ -3,13 +3,12 @@ module Editor.CodeEdit.ExpressionEdit(make) where
 
 import Control.Arrow (first, second)
 import Control.Monad (liftM, liftM2)
-import Data.ByteString.Char8 (pack)
 import Data.Monoid (Monoid(..))
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (TWidget, getP, transaction, subCursor)
-import Editor.CodeEdit.Types(AncestryItem(..), ApplyParent(..), LambdaParent(..), ApplyRole(..))
+import Editor.CodeEdit.Types(AncestryItem(..), ApplyParent(..), ApplyRole(..))
 import Editor.MonadF (MonadF)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -38,25 +37,12 @@ foldHolePicker _notHole isHole (IsAHole x) = isHole x
 
 data HighlightParens = DoHighlightParens | DontHighlightParens
 
-makeParensId
-  :: Monad m => ETypes.ExpressionAncestry m
-  -> Transaction ViewTag m Widget.Id
-makeParensId (AncestryItemApply (ApplyParent role _ _ parentPtr) : _) = do
-  parentI <- Property.get parentPtr
-  return $
-    Widget.joinId (WidgetIds.fromIRef parentI)
-    [pack $ show role]
-makeParensId (AncestryItemLambda (LambdaParent _ parentPtr) : _) =
-  liftM WidgetIds.fromIRef $ Property.get parentPtr
-makeParensId [] =
-  return $ Widget.Id ["root parens"]
-
 makeCondParensId
   :: Monad m
   => Bool -> ETypes.ExpressionAncestry m
   -> Transaction ViewTag m (Maybe Widget.Id)
 makeCondParensId False = const $ return Nothing
-makeCondParensId True = liftM Just . makeParensId
+makeCondParensId True = liftM Just . ETypes.makeParensId
 
 setDoHighlight :: (Monad m, Functor f) => m (f a) -> m (f (HighlightParens, a))
 setDoHighlight = (liftM . fmap) ((,) DoHighlightParens)
@@ -69,7 +55,7 @@ getParensInfo
   => Data.Expression -> ETypes.ExpressionAncestry m
   -> Transaction ViewTag m (Maybe (HighlightParens, Widget.Id))
 getParensInfo (Data.ExpressionApply _) ancestry@(AncestryItemApply (ApplyParent ApplyArg ETypes.Prefix _ _) : _) =
-  setDoHighlight . liftM Just $ makeParensId ancestry
+  setDoHighlight . liftM Just $ ETypes.makeParensId ancestry
 getParensInfo (Data.ExpressionApply (Data.Apply funcI _)) ancestry@(AncestryItemApply (ApplyParent ApplyArg _ _ _) : _) = do
   isInfix <-
     liftM2 (||)
@@ -87,7 +73,7 @@ getParensInfo (Data.ExpressionGetVariable var) ancestry = do
   name <- Property.get $ Anchors.variableNameRef var
   setDontHighlight $ makeCondParensId (ETypes.isInfixName name) ancestry
 getParensInfo (Data.ExpressionLambda _) ancestry@(AncestryItemApply _ : _) =
-  setDoHighlight $ liftM Just $ makeParensId ancestry
+  setDoHighlight $ liftM Just $ ETypes.makeParensId ancestry
 getParensInfo _ _ = return Nothing
 
 make
