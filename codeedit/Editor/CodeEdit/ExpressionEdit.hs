@@ -19,6 +19,7 @@ import qualified Editor.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Editor.CodeEdit.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
+import qualified Editor.CodeEdit.ExpressionEdit.WhereEdit as WhereEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.CodeEdit.Types as ETypes
 import qualified Editor.Config as Config
@@ -46,9 +47,12 @@ makeCondParensId True = liftM Just . ETypes.makeParensId
 
 getParensInfo
   :: Monad m
-  => Sugar.Expression -> ETypes.ExpressionAncestry m
+  => Sugar.Expression m -> ETypes.ExpressionAncestry m
   -> Transaction ViewTag m (Maybe (HighlightParens, Widget.Id))
-getParensInfo (Sugar.ExpressionPlain exprI) ancestry = do
+getParensInfo (Sugar.ExpressionWhere _) _ =
+  return Nothing
+getParensInfo (Sugar.ExpressionPlain exprPtr) ancestry = do
+  exprI <- Property.get exprPtr
   expr <- Transaction.readIRef exprI
   case (expr, ancestry) of
     (Data.ExpressionApply _, AncestryItemApply (ApplyParent ApplyArg ETypes.Prefix _ _) : _) ->
@@ -79,9 +83,9 @@ getParensInfo (Sugar.ExpressionPlain exprI) ancestry = do
 make
   :: MonadF m
   => IRef Data.Definition -> ETypes.ExpressionEditMaker m
-make definitionI ancestry expressionPtr = do
-  expressionI <- getP expressionPtr
-  sExpr <- transaction $ Sugar.getExpression expressionI
+make definitionI ancestry exprPtr = do
+  exprI <- getP exprPtr
+  sExpr <- transaction $ Sugar.getExpression exprPtr
   let
     notAHole = (fmap . liftM) ((,) NotAHole)
     wrapNonHole keys isDelegating f =
@@ -89,48 +93,53 @@ make definitionI ancestry expressionPtr = do
     makeExpression = make definitionI
     makeEditor =
       case sExpr of
-      Sugar.ExpressionPlain exprI -> do
-        expr <- getP $ Transaction.fromIRef exprI
+      Sugar.ExpressionWhere w ->
+        return .
+          wrapNonHole Config.exprFocusDelegatorKeys
+            FocusDelegator.Delegating id $
+          WhereEdit.make makeExpression ancestry w
+      Sugar.ExpressionPlain plainExprPtr -> do
+        expr <- transaction $ Transaction.readIRef =<< Property.get plainExprPtr
         return $ case expr of
           Data.ExpressionHole holeState ->
             (fmap . liftM . first) IsAHole .
             BWidgets.wrapDelegatedWithKeys
               FocusDelegator.defaultKeys FocusDelegator.Delegating second $
-              HoleEdit.make ancestry definitionI holeState expressionPtr
+              HoleEdit.make ancestry definitionI holeState exprPtr
           Data.ExpressionGetVariable varRef -> notAHole (VarEdit.make varRef)
           Data.ExpressionLambda lambda ->
             wrapNonHole Config.exprFocusDelegatorKeys
               FocusDelegator.Delegating id $
-            LambdaEdit.make makeExpression ancestry expressionPtr lambda
+            LambdaEdit.make makeExpression ancestry exprPtr lambda
           Data.ExpressionApply apply ->
             wrapNonHole Config.exprFocusDelegatorKeys
               FocusDelegator.Delegating id $
-            ApplyEdit.make makeExpression ancestry expressionPtr apply
+            ApplyEdit.make makeExpression ancestry exprPtr apply
           Data.ExpressionLiteralInteger integer ->
             wrapNonHole FocusDelegator.defaultKeys
               FocusDelegator.NotDelegating id $
-            LiteralEdit.makeInt expressionI integer
-    expressionId = WidgetIds.fromIRef expressionI
-  (holePicker, widget) <- ($ expressionId) =<< makeEditor
+            LiteralEdit.makeInt exprI integer
+    exprId = WidgetIds.fromIRef exprI
+  (holePicker, widget) <- ($ exprId) =<< makeEditor
   (addArgDoc, addArgHandler) <-
-    transaction $ ETypes.makeAddArgHandler ancestry expressionPtr
+    transaction $ ETypes.makeAddArgHandler ancestry exprPtr
   let
     eventMap = mconcat
       [ moveUnlessOnHole .
         Widget.actionEventMapMovesCursor
         Config.giveAsArgumentKeys "Give as argument" .
-        ETypes.diveIn $ DataOps.giveAsArg expressionPtr
+        ETypes.diveIn $ DataOps.giveAsArg exprPtr
       , moveUnlessOnHole .
         Widget.actionEventMapMovesCursor
         Config.callWithArgumentKeys "Call with argument" .
-        ETypes.diveIn $ DataOps.callWithArg expressionPtr
+        ETypes.diveIn $ DataOps.callWithArg exprPtr
       , pickResultFirst $
         Widget.actionEventMapMovesCursor
         Config.addNextArgumentKeys addArgDoc addArgHandler
-      , ifHole (const mempty) $ replaceEventMap ancestry expressionPtr
+      , ifHole (const mempty) $ replaceEventMap ancestry exprPtr
       , Widget.actionEventMapMovesCursor
         Config.lambdaWrapKeys "Lambda wrap" . ETypes.diveIn $
-        DataOps.lambdaWrap expressionPtr
+        DataOps.lambdaWrap exprPtr
       ]
     moveUnlessOnHole = ifHole $ (const . fmap . liftM . Widget.atECursor . const) Nothing
     pickResultFirst = ifHole $ maybe id (fmap . joinEvents)
@@ -141,17 +150,17 @@ make definitionI ancestry expressionPtr = do
 
   mParenInfo <- transaction $ getParensInfo sExpr ancestry
   liftM (Widget.weakerEvents eventMap) $
-    addParens expressionId mParenInfo widget
+    addParens exprId mParenInfo widget
 
 replaceEventMap
   :: (Monad m, Functor m)
   => ETypes.ExpressionAncestry m
   -> Transaction.Property ViewTag m (IRef Data.Expression)
   -> Widget.EventHandlers (Transaction ViewTag m)
-replaceEventMap ancestry expressionPtr =
+replaceEventMap ancestry exprPtr =
   Widget.actionEventMapMovesCursor
   relinkKeys "Replace" . ETypes.diveIn $
-  DataOps.replaceWithHole expressionPtr
+  DataOps.replaceWithHole exprPtr
   where
     relinkKeys =
       case ancestry of
