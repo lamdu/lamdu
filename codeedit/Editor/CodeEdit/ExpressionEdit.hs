@@ -78,16 +78,15 @@ getParensInfo (Sugar.ExpressionPlain exprI) ancestry = do
 
 make
   :: MonadF m
-  => ETypes.ExpressionAncestry m -> IRef Data.Definition
-  -> ETypes.ExpressionPtr m -> TWidget ViewTag m
-make ancestry definitionI expressionPtr = do
+  => IRef Data.Definition -> ETypes.ExpressionEditMaker m
+make definitionI ancestry expressionPtr = do
   expressionI <- getP expressionPtr
   sExpr <- transaction $ Sugar.getExpression expressionI
   let
     notAHole = (fmap . liftM) ((,) NotAHole)
     wrapNonHole keys isDelegating f =
       notAHole . BWidgets.wrapDelegatedWithKeys keys isDelegating f
-    makeExpression = (`make` definitionI)
+    makeExpression = make definitionI
     makeEditor =
       case sExpr of
       Sugar.ExpressionPlain exprI -> do

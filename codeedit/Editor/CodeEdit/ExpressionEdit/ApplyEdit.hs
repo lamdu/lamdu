@@ -17,11 +17,9 @@ import qualified Editor.DataOps as DataOps
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 
-make ::
-  (MonadF m) =>
-  (ETypes.ExpressionAncestry m
-   -> ETypes.ExpressionPtr m
-   -> TWidget ViewTag m)
+make
+  :: MonadF m
+  => ETypes.ExpressionEditMaker m
   -> ETypes.ExpressionAncestry m
   -> ETypes.ExpressionPtr m
   -> Data.Apply

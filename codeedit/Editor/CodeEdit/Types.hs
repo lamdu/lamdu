@@ -8,6 +8,7 @@ module Editor.CodeEdit.Types(
   LambdaParent(..), atLpLambda, atLpParentPtr,
   ApplyRole(..),
   FuncType(..),
+  ExpressionEditMaker,
   parensPrefix, addParens,
   varId, diveIn, isInfixName,
   isInfixVar, isInfixFunc, isApplyOfInfixOp,
@@ -59,6 +60,9 @@ data AncestryItem m =
   | AncestryItemLambda (LambdaParent m)
 
 type ExpressionAncestry m = [AncestryItem m]
+
+type ExpressionEditMaker m =
+  ExpressionAncestry m -> ExpressionPtr m -> TWidget ViewTag m
 
 getAncestryParams :: ExpressionAncestry m -> [IRef Data.Parameter]
 getAncestryParams ancestryItems =

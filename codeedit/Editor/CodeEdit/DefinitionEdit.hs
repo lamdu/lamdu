@@ -41,7 +41,7 @@ makeRHSEdit
   => IRef Data.Definition
   -> ETypes.ExpressionPtr m
   -> TWidget ViewTag m
-makeRHSEdit = ExpressionEdit.make []
+makeRHSEdit = flip ExpressionEdit.make []
 
 makeLHSEdit
   :: MonadF m
