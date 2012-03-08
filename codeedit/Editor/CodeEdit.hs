@@ -58,7 +58,7 @@ makePanesEdit = do
       mconcat . concat $
       [[ Widget.actionEventMapMovesCursor Config.newDefinitionKeys
         "New definition" newDefinition],
-       [ Widget.actionEventMapMovesCursor Config.previousCursor
+       [ Widget.actionEventMapMovesCursor Config.previousCursorKeys
          "Go to previous position" $ liftM (fromMaybe myId) Anchors.jumpBack
        | canJumpBack]
       ]
