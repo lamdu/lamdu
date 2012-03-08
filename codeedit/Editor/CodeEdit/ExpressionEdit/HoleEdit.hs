@@ -113,12 +113,19 @@ renamePrefix srcPrefix destPrefix animId =
 searchResultsPrefix :: Widget.Id -> Widget.Id
 searchResultsPrefix = flip Widget.joinId ["search results"]
 
-holeResultAnimMapping :: HoleInfo m -> Widget.Id -> AnimId -> AnimId
-holeResultAnimMapping holeInfo resultId =
+holeResultAnimMappingNoParens :: HoleInfo m -> Widget.Id -> AnimId -> AnimId
+holeResultAnimMappingNoParens holeInfo resultId =
   renamePrefix ("old hole" : Widget.toAnimId resultId) (Widget.toAnimId expressionId) .
   renamePrefix myId ("old hole" : myId)
   where
     myId = Widget.toAnimId $ hiHoleId holeInfo
+    expressionId = WidgetIds.fromIRef $ hiExpressionI holeInfo
+
+holeResultAnimMapping :: HoleInfo m -> Widget.Id -> Widget.Id -> AnimId -> AnimId
+holeResultAnimMapping holeInfo resultId parensId =
+  renamePrefix (Widget.toAnimId (ETypes.parensPrefix expressionId)) (Widget.toAnimId (ETypes.parensPrefix parensId)) .
+  holeResultAnimMappingNoParens holeInfo resultId
+  where
     expressionId = WidgetIds.fromIRef $ hiExpressionI holeInfo
 
 pickResult
@@ -128,10 +135,11 @@ pickResult
 pickResult holeInfo newExpr needFlip resultId = do
   Transaction.writeIRef (hiExpressionI holeInfo) newExpr
   flipAct needFlip
+  parensId <- ETypes.makeParensId $ hiAncestry holeInfo
   return Widget.EventResult {
     Widget.eCursor = Just . WidgetIds.fromIRef $ hiExpressionI holeInfo,
     Widget.eAnimIdMapping =
-      holeResultAnimMapping holeInfo resultId
+      holeResultAnimMapping holeInfo resultId parensId
     }
   where
     flipAct DontFlip = return ()
@@ -186,7 +194,6 @@ makeAllResults holeInfo searchTerm definitionRef = do
     sortOn (resultOrdering searchTerm) $
     literalResults ++ filter goodResult varResults
 
-
 makeSearchTermWidget
   :: MonadF m
   => HoleInfo m -> Widget.Id -> String -> [Result m] -> TWidget ViewTag m
@@ -204,7 +211,7 @@ makeSearchTermWidget holeInfo searchTermId searchTerm firstResults =
           newDef <- DataOps.addAsDefinition newName $ hiExpressionI holeInfo
           return Widget.EventResult {
             Widget.eCursor = Just $ WidgetIds.fromIRef newDef,
-            Widget.eAnimIdMapping = holeResultAnimMapping holeInfo searchTermId
+            Widget.eAnimIdMapping = holeResultAnimMappingNoParens holeInfo searchTermId
             }
       ]
     searchTermRef =
