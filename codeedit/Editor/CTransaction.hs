@@ -2,7 +2,8 @@
 {-# OPTIONS -Wall #-}
 module Editor.CTransaction(
   CTransaction, runCTransaction, runNestedCTransaction, TWidget,
-  readCursor, subCursor, readTextStyle, transaction, getP, assignCursor, atTextStyle)
+  readCursor, subCursor, readTextStyle, transaction, getP, assignCursor,
+  atTextStyle, atTextSizeColor)
 where
 
 import Control.Monad (liftM)
@@ -15,8 +16,10 @@ import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
+import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
+import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
 data CTransactionEnv = CTransactionEnv {
   envCursor :: Widget.Id,
@@ -71,3 +74,13 @@ assignCursor src dest =
 
 atTextStyle :: (TextEdit.Style -> TextEdit.Style) -> TWidget t m -> TWidget t m
 atTextStyle = atCTransaction . Reader.withReaderT . atEnvTextStyle
+
+atTextSizeColor
+  :: Int
+  -> Draw.Color
+  -> TWidget t m
+  -> TWidget t m
+atTextSizeColor textSize textColor =
+  (atTextStyle . TextEdit.atSTextViewStyle)
+  ((TextView.atStyleFontSize . const) textSize .
+   (TextView.atStyleColor . const) textColor)

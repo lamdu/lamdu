@@ -1,3 +1,4 @@
+{-# LANGUAGE NoMonomorphismRestriction #-}
 {-# OPTIONS -fno-warn-missing-signatures #-}
 
 module Editor.Config where
@@ -72,3 +73,12 @@ jumpToLhsKeys = [k '`']
 jumpToRhsKeys = [k '=', noMods E.KeyPadEqual]
 
 lambdaWrapKeys = [k '\\']
+
+lambdaColor = Draw.Color 1 0.2 0.2 1
+lambdaTextSize = 30
+
+rightArrowColor = Draw.Color 1 0.2 0.2 1
+rightArrowTextSize = 30
+
+whereColor = Draw.Color 0.8 0.6 0.1 1
+whereTextSize = 12

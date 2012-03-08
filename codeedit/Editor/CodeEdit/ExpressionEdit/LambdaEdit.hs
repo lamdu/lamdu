@@ -4,7 +4,7 @@ module Editor.CodeEdit.ExpressionEdit.LambdaEdit(make) where
 import Control.Monad(liftM)
 import Data.Store.Property (Property(Property))
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (TWidget, getP, assignCursor)
+import Editor.CTransaction (TWidget, getP, assignCursor, atTextSizeColor)
 import Editor.CodeEdit.Types(AncestryItem(..), LambdaParent(..))
 import Editor.MonadF (MonadF)
 import qualified Data.Store.Property as Property
@@ -31,8 +31,12 @@ make makeExpressionEdit ancestry expressionPtr lambda myId =
   assignCursor myId (WidgetIds.fromIRef bodyI) $ do
     expressionI <- getP expressionPtr
     paramEdit <- ParamEdit.make paramI
-    lambdaLabel <- BWidgets.makeLabel "λ" myId
-    rightArrowLabel <- BWidgets.makeLabel "→" myId
+    lambdaLabel <-
+      atTextSizeColor Config.lambdaTextSize Config.lambdaColor $
+      BWidgets.makeLabel "λ" myId
+    rightArrowLabel <-
+      atTextSizeColor Config.rightArrowTextSize Config.rightArrowColor $
+      BWidgets.makeLabel "→" myId
     let
       expressionRef = Transaction.fromIRef expressionI
       bodyIPtr =
