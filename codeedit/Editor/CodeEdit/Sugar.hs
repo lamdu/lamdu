@@ -21,6 +21,7 @@ import qualified Editor.Data as Data
 data WhereItem m = WhereItem
   { wiParamI :: IRef Data.Parameter
   , wiExprPtr :: ExpressionPtr m
+  , wiRemoveItem :: Transaction ViewTag m (IRef Data.Expression)
   }
 
 data Where m = Where
@@ -56,6 +57,9 @@ getExpression exprPtr = do
             item = WhereItem
               { wiParamI = paramI
               , wiExprPtr = argPtr
+              , wiRemoveItem = do
+                  Property.set exprPtr bodyI
+                  return bodyI
               }
           sBody <- getExpression bodyPtr
           return . ExpressionWhere . atWWheres (item :) $ case sBody of

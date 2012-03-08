@@ -21,20 +21,23 @@ make
   -> Sugar.Where m
   -> Widget.Id -> TWidget ViewTag m
 make makeExpressionEdit ancestry (Sugar.Where items bodyI) myId = do
-    whereLabel <-
-      atTextSizeColor Config.whereTextSize Config.whereColor $
-      BWidgets.makeLabel "where" myId
-    bodyEdit <- makeExpressionEdit ancestry bodyI
-    whereEdits <- mapM makeWhereItemEdits items
-    return . BWidgets.vbox $ [
-        bodyEdit,
-        whereLabel,
-        Grid.toWidget $ Grid.make whereEdits
-        ]
-    where
-        makeWhereItemEdits item =
-          sequence
-          [ (liftM . Widget.align) (Vector2 1 0.5) . ParamEdit.make $ Sugar.wiParamI item
-          , (liftM . Widget.align) (Vector2 0.5 0.5) . BWidgets.makeLabel "=" . WidgetIds.fromIRef $ Sugar.wiParamI item
-          , (liftM . Widget.align) (Vector2 0 0.5) . makeExpressionEdit [] $ Sugar.wiExprPtr item
-          ]
+  whereLabel <-
+    atTextSizeColor Config.whereTextSize Config.whereColor $
+    BWidgets.makeLabel "where" myId
+  bodyEdit <- makeExpressionEdit ancestry bodyI
+  whereEdits <- mapM makeWhereItemEdits items
+  return . BWidgets.vbox $ [
+    bodyEdit,
+    whereLabel,
+    Grid.toWidget $ Grid.make whereEdits
+    ]
+  where
+    makeWhereItemEdits item =
+      (mapM . liftM . Widget.weakerEvents) (whereItemDeleteEventMap item)
+      [ (liftM . Widget.align) (Vector2 1 0.5) . ParamEdit.make $ Sugar.wiParamI item
+      , (liftM . Widget.align) (Vector2 0.5 0.5) . BWidgets.makeLabel "=" . WidgetIds.fromIRef $ Sugar.wiParamI item
+      , (liftM . Widget.align) (Vector2 0 0.5) . makeExpressionEdit [] $ Sugar.wiExprPtr item
+      ]
+    whereItemDeleteEventMap item =
+      Widget.actionEventMapMovesCursor Config.delKeys "Delete variable" .
+      liftM WidgetIds.fromIRef $ Sugar.wiRemoveItem item
