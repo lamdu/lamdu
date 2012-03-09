@@ -5,8 +5,10 @@ module Editor.CodeEdit.Types(
   ExpressionAncestry,
   AncestryItem(..), getAncestryParams,
   ApplyParent(..), atApRole, atApFuncType, atApApply, atApParentPtr,
-  LambdaParent(..), atLpLambda, atLpParentPtr,
   ApplyRole(..),
+  LambdaParent(..), atLpLambda, atLpParentPtr,
+  WhereParent(..), atWpWhere, atWpRole,
+  WhereRole(..),
   FuncType(..),
   ExpressionEditMaker,
   parensPrefix, addParens,
@@ -30,6 +32,7 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
+import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
 import qualified Editor.WidgetIds as WidgetIds
@@ -41,23 +44,35 @@ data FuncType = Prefix | InfixLeft | InfixRight
 data ApplyRole = ApplyFunc | ApplyArg
   deriving (Show, Read, Eq, Ord)
 
-data ApplyParent m = ApplyParent {
-  apRole :: ApplyRole,
-  apFuncType :: FuncType,
-  apApply :: Data.Apply,
-  apParentPtr :: ExpressionPtr m
+data ApplyParent m = ApplyParent
+  { apRole :: ApplyRole
+  , apFuncType :: FuncType
+  , apApply :: Data.Apply
+  , apParentPtr :: ExpressionPtr m
   }
 AtFieldTH.make ''ApplyParent
 
-data LambdaParent m = LambdaParent {
-  lpLambda :: Data.Lambda,
-  lpParentPtr :: ExpressionPtr m
+data LambdaParent m = LambdaParent
+  { lpLambda :: Data.Lambda
+  , lpParentPtr :: ExpressionPtr m
   }
 AtFieldTH.make ''LambdaParent
+
+data WhereRole
+  = WhereBody
+  | WhereDef (IRef Data.Parameter)
+  deriving (Show, Read, Eq, Ord)
+
+data WhereParent m = WhereParent
+  { wpWhere :: Sugar.Where m
+  , wpRole :: WhereRole
+  }
+AtFieldTH.make ''WhereParent
 
 data AncestryItem m =
     AncestryItemApply (ApplyParent m)
   | AncestryItemLambda (LambdaParent m)
+  | AncestryItemWhere (WhereParent m)
 
 type ExpressionAncestry m = [AncestryItem m]
 
@@ -65,9 +80,12 @@ type ExpressionEditMaker m =
   ExpressionAncestry m -> ExpressionPtr m -> TWidget ViewTag m
 
 getAncestryParams :: ExpressionAncestry m -> [IRef Data.Parameter]
-getAncestryParams ancestryItems =
-  [ paramI
-  | AncestryItemLambda (LambdaParent (Data.Lambda paramI _) _) <- ancestryItems ]
+getAncestryParams = concatMap params
+  where
+    params (AncestryItemLambda (LambdaParent (Data.Lambda paramI _) _)) = [paramI]
+    params (AncestryItemWhere (WhereParent (Sugar.Where items _) _)) = map paramOfWhereItem items
+    params _ = []
+    paramOfWhereItem (Sugar.WhereItem paramI _ _) = paramI
 
 parensPrefix :: Widget.Id -> Widget.Id
 parensPrefix = flip Widget.joinId ["parens"]
@@ -159,5 +177,10 @@ makeParensId (AncestryItemApply (ApplyParent role _ _ parentPtr) : _) = do
     [pack $ show role]
 makeParensId (AncestryItemLambda (LambdaParent _ parentPtr) : _) =
   liftM WidgetIds.fromIRef $ Property.get parentPtr
+makeParensId (AncestryItemWhere (WhereParent (Sugar.Where _ body) role) : _) = do
+  bodyI <- Property.get body
+  return $
+    Widget.joinId (WidgetIds.fromIRef bodyI)
+    [pack $ show role]
 makeParensId [] =
   return $ Widget.Id ["root parens"]
