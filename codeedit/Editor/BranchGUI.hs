@@ -26,7 +26,7 @@ import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
-deleteCurrentBranch :: Monad m => Transaction DBTag m ()
+deleteCurrentBranch :: Monad m => Transaction DBTag m Widget.Id
 deleteCurrentBranch = do
   branch <- Property.get Anchors.currentBranch
   branches <- Property.get Anchors.branches
@@ -36,8 +36,11 @@ deleteCurrentBranch = do
       findIndex ((branch ==) . snd) branches
     newBranches = removeAt index branches
   Property.set Anchors.branches newBranches
-  Property.set Anchors.currentBranch . snd $
-    newBranches !! min (length newBranches - 1) index
+  let
+    newCurrentBranch =
+      newBranches !! min (length newBranches - 1) index
+  Property.set Anchors.currentBranch $ snd newCurrentBranch
+  return . WidgetIds.fromIRef $ fst newCurrentBranch
 
 makeBranch :: Monad m => View -> Transaction DBTag m ()
 makeBranch view = do
@@ -78,7 +81,7 @@ makeRootWidget widget = do
   let
     delBranchEventMap
       | null (drop 1 namedBranches) = mempty
-      | otherwise = Widget.actionEventMap Config.delBranchKeys "Delete Branch" deleteCurrentBranch
+      | otherwise = Widget.actionEventMapMovesCursor Config.delBranchKeys "Delete Branch" deleteCurrentBranch
   return .
     (Widget.strongerEvents . mconcat)
       [Widget.actionEventMap Config.quitKeys "Quit" (error "Quit")
