@@ -3,7 +3,7 @@ module Editor.CodeEdit.ExpressionEdit.WhereEdit(make) where
 import Control.Monad (liftM)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (TWidget, atTextSizeColor)
+import Editor.CTransaction (TWidget, getP, atTextSizeColor, assignCursor)
 import Editor.MonadF (MonadF)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ParamEdit as ParamEdit
@@ -20,27 +20,29 @@ make
   -> ETypes.ExpressionAncestry m
   -> Sugar.Where m
   -> Widget.Id -> TWidget ViewTag m
-make makeExpressionEdit ancestry w@(Sugar.Where items bodyI) myId = do
-  whereLabel <-
-    atTextSizeColor Config.whereTextSize Config.whereColor $
-    BWidgets.makeLabel "where" myId
-  bodyEdit <- makeExpressionEdit bodyAncestry bodyI
-  whereEdits <- mapM makeWhereItemEdits items
-  return . BWidgets.vbox $ [
-    bodyEdit,
-    whereLabel,
-    Grid.toWidget $ Grid.make whereEdits
-    ]
-  where
-    makeAncestry role = ETypes.AncestryItemWhere (ETypes.WhereParent w role) : ancestry
-    bodyAncestry = makeAncestry ETypes.WhereBody
-    witemAncestry = makeAncestry . ETypes.WhereDef
-    makeWhereItemEdits item =
-      (mapM . liftM . Widget.weakerEvents) (whereItemDeleteEventMap item)
-      [ (liftM . Widget.align) (Vector2 1 0.5) . ParamEdit.make $ Sugar.wiParamI item
-      , (liftM . Widget.align) (Vector2 0.5 0.5) . BWidgets.makeLabel "=" . WidgetIds.fromIRef $ Sugar.wiParamI item
-      , (liftM . Widget.align) (Vector2 0 0.5) . makeExpressionEdit (witemAncestry (Sugar.wiParamI item)) $ Sugar.wiExprPtr item
+make makeExpressionEdit ancestry w@(Sugar.Where items bodyPtr) myId = do
+  bodyI <- getP bodyPtr
+  assignCursor myId (WidgetIds.fromIRef bodyI) $ do
+    whereLabel <-
+      atTextSizeColor Config.whereTextSize Config.whereColor $
+      BWidgets.makeLabel "where" myId
+    bodyEdit <- makeExpressionEdit bodyAncestry bodyPtr
+    whereEdits <- mapM makeWhereItemEdits items
+    return . BWidgets.vbox $ [
+      bodyEdit,
+      whereLabel,
+      Grid.toWidget $ Grid.make whereEdits
       ]
-    whereItemDeleteEventMap item =
-      Widget.actionEventMapMovesCursor Config.delKeys "Delete variable" .
-      liftM WidgetIds.fromIRef $ Sugar.wiRemoveItem item
+    where
+      makeAncestry role = ETypes.AncestryItemWhere (ETypes.WhereParent w role) : ancestry
+      bodyAncestry = makeAncestry ETypes.WhereBody
+      witemAncestry = makeAncestry . ETypes.WhereDef
+      makeWhereItemEdits item =
+        (mapM . liftM . Widget.weakerEvents) (whereItemDeleteEventMap item)
+        [ (liftM . Widget.align) (Vector2 1 0.5) . ParamEdit.make $ Sugar.wiParamI item
+        , (liftM . Widget.align) (Vector2 0.5 0.5) . BWidgets.makeLabel "=" . WidgetIds.fromIRef $ Sugar.wiParamI item
+        , (liftM . Widget.align) (Vector2 0 0.5) . makeExpressionEdit (witemAncestry (Sugar.wiParamI item)) $ Sugar.wiExprPtr item
+        ]
+      whereItemDeleteEventMap item =
+        Widget.actionEventMapMovesCursor Config.delKeys "Delete variable" .
+        liftM WidgetIds.fromIRef $ Sugar.wiRemoveItem item
