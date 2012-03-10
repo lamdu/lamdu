@@ -164,10 +164,8 @@ replaceEventMap ancestry exprPtr =
   where
     relinkKeys =
       case ancestry of
-        [] -> Config.relinkKeys ++ Config.delKeys
-        (AncestryItemLambda _ : _) ->
-          Config.relinkKeys ++ Config.delKeys
-        _ -> Config.relinkKeys
+        (AncestryItemApply _ : _) -> Config.relinkKeys
+        _ -> Config.relinkKeys ++ Config.delKeys
 
 highlightExpression :: Widget.Widget f -> Widget.Widget f
 highlightExpression =
