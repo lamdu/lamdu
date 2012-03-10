@@ -13,12 +13,13 @@ module Editor.CodeEdit.Types(
   ExpressionEditMaker,
   parensPrefix, addParens,
   varId, diveIn, isInfixName,
-  isInfixVar, isInfixFunc, isApplyOfInfixOp,
+  isInfixVar, isInfixFunc, isApplyOfInfixOp, infixFuncOfRArg,
   makeAddArgHandler, makeParensId)
 where
 
 import Control.Monad (liftM)
 import Data.ByteString.Char8 (pack)
+import Data.Maybe (isJust)
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
@@ -119,17 +120,27 @@ isInfixVar = liftM isInfixName . Property.get . Anchors.variableNameRef
 
 isInfixFunc :: Monad m => IRef Data.Expression -> Transaction t m Bool
 isInfixFunc funcI = do
-  expr <- Property.get $ Transaction.fromIRef funcI
+  expr <- Transaction.readIRef funcI
   case expr of
     Data.ExpressionGetVariable var -> isInfixVar var
     _ -> return False
 
-isApplyOfInfixOp :: Monad m => IRef Data.Expression -> Transaction t m Bool
-isApplyOfInfixOp exprI = do
-  expr <- Property.get $ Transaction.fromIRef exprI
+infixFuncOfRArg
+  :: Monad m
+  => IRef Data.Expression
+  -> Transaction t m (Maybe (IRef Data.Expression))
+infixFuncOfRArg exprI = do
+  expr <- Transaction.readIRef exprI
   case expr of
-    Data.ExpressionApply (Data.Apply funcI _) -> isInfixFunc funcI
-    _ -> return False
+    Data.ExpressionApply (Data.Apply funcI _) -> do
+      res <- isInfixFunc funcI
+      if res
+        then return (Just funcI)
+        else return Nothing
+    _ -> return Nothing
+
+isApplyOfInfixOp :: Monad m => IRef Data.Expression -> Transaction t m Bool
+isApplyOfInfixOp = liftM isJust . infixFuncOfRArg
 
 -- Return the target function to add "next arg" for
 addNextArgTargetExpression

@@ -30,29 +30,34 @@ make makeExpressionEdit ancestry expressionPtr apply@(Data.Apply funcI argI) myI
   assignCursor myId (WidgetIds.fromIRef argI) $ do
     isInfix <- transaction $ ETypes.isInfixFunc funcI
     isApplyOfInfix <- transaction $ ETypes.isApplyOfInfixOp funcI
+    mInfixOpOfRArg <- transaction $ ETypes.infixFuncOfRArg funcI
     let
       funcType
         | isInfix = ETypes.InfixLeft
         | isApplyOfInfix = ETypes.InfixRight
         | otherwise = ETypes.Prefix
       expressionRef = Transaction.fromIRef expressionI
-      delEventMap = Widget.actionEventMapMovesCursor Config.delKeys "Delete" . setExpr
+      delArgTarget =
+        case mInfixOpOfRArg of
+          Nothing -> funcI
+          Just infixFuncI -> infixFuncI
+      addDelEventMap target =
+        liftM . Widget.weakerEvents .
+        Widget.actionEventMapMovesCursor Config.delKeys "Delete" .
+        liftM WidgetIds.fromIRef .
+        (>> return target) . DataOps.replace expressionPtr
       funcIPtr = Property (return funcI) $ Property.set expressionRef . Data.ExpressionApply . (`Data.Apply` argI)
       argIPtr = Property (return argI) $ Property.set expressionRef . Data.ExpressionApply . (funcI `Data.Apply`)
-      setExpr = liftM WidgetIds.fromIRef . DataOps.replace expressionPtr
-
-      addDelEventMap =
-        liftM . Widget.weakerEvents . delEventMap
 
     let
       makeAncestry role =
         AncestryItemApply (ApplyParent role funcType apply expressionPtr) : ancestry
     funcEdit <-
-      addDelEventMap argI $
+      addDelEventMap argI argI $
       makeExpressionEdit (makeAncestry ETypes.ApplyFunc) funcIPtr
 
     argEdit <-
-      addDelEventMap funcI $
+      addDelEventMap delArgTarget funcI $
       makeExpressionEdit (makeAncestry ETypes.ApplyArg) argIPtr
 
     return . BWidgets.hbox $
