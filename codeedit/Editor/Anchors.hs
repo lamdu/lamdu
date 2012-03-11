@@ -10,7 +10,7 @@ module Editor.Anchors(
     Pane(..), atPaneCursor, atPaneDefinition,
     dbStore, DBTag,
     viewStore, ViewTag,
-    aNameGuid, aNameRef, variableNameRef,
+    aNameRef, variableNameRef,
     makePane, makeDefinition, newPane,
     jumpTo, canJumpBack, jumpBack)
 where
@@ -220,17 +220,16 @@ initDB store =
       ]
 
 -- Get an associated name from the given IRef
-aNameGuid :: Monad m => Guid -> Transaction.Property t m (Maybe String)
-aNameGuid guid =
-  Property getter setter
-  where
-    getter = Transaction.lookup nameGuid
-    setter (Just val) = Transaction.writeGuid nameGuid val
-    setter Nothing = Transaction.delete nameGuid
-    nameGuid = Guid.combine guid $ Guid.make "Name"
-
 aNameRef :: Monad m => IRef a -> Property (Transaction t m) String
 aNameRef = Property.pureCompose (fromMaybe "") Just . aNameGuid . IRef.guid
+  where
+    aNameGuid guid =
+      Property getter setter
+      where
+        getter = Transaction.lookup nameGuid
+        setter (Just val) = Transaction.writeGuid nameGuid val
+        setter Nothing = Transaction.delete nameGuid
+        nameGuid = Guid.combine guid $ Guid.make "Name"
 
 variableNameRef :: Monad m => Data.VariableRef -> Property (Transaction t m) String
 variableNameRef = Data.onVariableIRef aNameRef
