@@ -8,7 +8,7 @@ import Data.List (transpose)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Rect (Rect(..))
-import Graphics.UI.Bottle.SizeRange (SizeRange(..), Size)
+import Graphics.UI.Bottle.SizeRange (fixedSize, SizeRange(..), Size)
 import Graphics.UI.Bottle.Sized (Sized(..))
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -67,6 +67,10 @@ makePlacements = (fmap . second . fmap) placements makeSizes
 
 -- Used by both make and Grid's make.
 makeGeneric :: (Rect -> a -> b) -> [[Sized a]] -> Sized [[b]]
+-- Special case to preserve shape to avoid handling it above in
+-- "maximum", "transpose", etc
+makeGeneric _ [[]] =
+  Sized (fixedSize 0) (const [[]])
 makeGeneric translate rows =
   Sized reqSize mkRes
   where
