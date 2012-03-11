@@ -10,7 +10,7 @@ module Editor.Anchors(
     Pane(..), atPaneCursor, atPaneDefinition,
     dbStore, DBTag,
     viewStore, ViewTag,
-    aNameRef, variableNameRef,
+    aDataRef, aNameRef, variableNameRef,
     makePane, makeDefinition, newPane,
     jumpTo, canJumpBack, jumpBack)
 where
@@ -33,6 +33,7 @@ import Data.Store.Rev.Version(Version)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction, Store(..))
 import qualified Data.AtFieldTH as AtFieldTH
+import qualified Data.ByteString as SBS
 import qualified Data.Store.Db as Db
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
@@ -41,8 +42,8 @@ import qualified Data.Store.Rev.Branch as Branch
 import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
-import qualified Editor.WidgetIds as WidgetIds
 import qualified Editor.Data as Data
+import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 data Pane = Pane {
@@ -219,17 +220,20 @@ initDB store =
       ,"Prelude.if"
       ]
 
--- Get an associated name from the given IRef
-aNameRef :: Monad m => IRef a -> Property (Transaction t m) String
-aNameRef = Property.pureCompose (fromMaybe "") Just . aNameGuid . IRef.guid
+aDataRef :: (Binary b, Monad m) => SBS.ByteString -> b -> IRef a -> Property (Transaction t m) b
+aDataRef str def = Property.pureCompose (fromMaybe def) Just . combineGuid . IRef.guid
   where
-    aNameGuid guid =
+    combineGuid guid =
       Property getter setter
       where
-        getter = Transaction.lookup nameGuid
-        setter (Just val) = Transaction.writeGuid nameGuid val
-        setter Nothing = Transaction.delete nameGuid
-        nameGuid = Guid.combine guid $ Guid.make "Name"
+        getter = Transaction.lookup aGuid
+        setter (Just val) = Transaction.writeGuid aGuid val
+        setter Nothing = Transaction.delete aGuid
+        aGuid = Guid.combine guid $ Guid.make str
+
+-- Get an associated name from the given IRef
+aNameRef :: Monad m => IRef a -> Property (Transaction t m) String
+aNameRef = aDataRef "Name" ""
 
 variableNameRef :: Monad m => Data.VariableRef -> Property (Transaction t m) String
 variableNameRef = Data.onVariableIRef aNameRef
