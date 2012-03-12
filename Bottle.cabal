@@ -104,6 +104,7 @@ Executable Editor
                        Editor.CodeEdit.ParamEdit,
                        Editor.CodeEdit.ExpressionEdit,
                        Editor.CodeEdit.ExpressionEdit.ApplyEdit,
+                       Editor.CodeEdit.ExpressionEdit.FuncEdit,
                        Editor.CodeEdit.ExpressionEdit.HoleEdit,
                        Editor.CodeEdit.ExpressionEdit.LiteralEdit,
                        Editor.CodeEdit.ExpressionEdit.LambdaEdit,

@@ -15,6 +15,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
+import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Editor.CodeEdit.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
@@ -49,8 +50,6 @@ getParensInfo
   :: Monad m
   => Sugar.Expression m -> ETypes.ExpressionAncestry m
   -> Transaction ViewTag m (Maybe (HighlightParens, Widget.Id))
-getParensInfo (Sugar.ExpressionWhere _) _ =
-  return Nothing
 getParensInfo (Sugar.ExpressionPlain exprPtr) ancestry = do
   exprI <- Property.get exprPtr
   expr <- Transaction.readIRef exprI
@@ -79,6 +78,8 @@ getParensInfo (Sugar.ExpressionPlain exprPtr) ancestry = do
   where
     setDoHighlight = (liftM . fmap) ((,) DoHighlightParens)
     setDontHighlight = (liftM . fmap) ((,) DontHighlightParens)
+getParensInfo _ _ =
+  return Nothing
 
 make
   :: MonadF m
@@ -98,6 +99,11 @@ make definitionI ancestry exprPtr = do
           wrapNonHole Config.exprFocusDelegatorKeys
             FocusDelegator.Delegating id $
           WhereEdit.make makeExpression ancestry w
+      Sugar.ExpressionFunc f ->
+        return .
+          wrapNonHole Config.exprFocusDelegatorKeys
+            FocusDelegator.Delegating id $
+          FuncEdit.make makeExpression ancestry exprPtr f
       Sugar.ExpressionPlain plainExprPtr -> do
         expr <- transaction $ Transaction.readIRef =<< Property.get plainExprPtr
         return $ case expr of

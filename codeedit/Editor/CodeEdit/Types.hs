@@ -6,7 +6,7 @@ module Editor.CodeEdit.Types(
   AncestryItem(..), getAncestryParams,
   ApplyParent(..), atApRole, atApFuncType, atApApply, atApParentPtr,
   ApplyRole(..),
-  LambdaParent(..), atLpLambda, atLpParentPtr,
+  LambdaParent(..), atLpFunc, atLpParentPtr,
   WhereParent(..), atWpWhere, atWpRole,
   WhereRole(..),
   FuncType(..),
@@ -54,7 +54,7 @@ data ApplyParent m = ApplyParent
 AtFieldTH.make ''ApplyParent
 
 data LambdaParent m = LambdaParent
-  { lpLambda :: Data.Lambda
+  { lpFunc :: Sugar.Func m
   , lpParentPtr :: ExpressionPtr m
   }
 AtFieldTH.make ''LambdaParent
@@ -81,9 +81,10 @@ type ExpressionEditMaker m =
   ExpressionAncestry m -> ExpressionPtr m -> TWidget ViewTag m
 
 getAncestryParams :: ExpressionAncestry m -> [IRef Data.Parameter]
-getAncestryParams = concatMap params
+getAncestryParams =
+  concatMap params
   where
-    params (AncestryItemLambda (LambdaParent (Data.Lambda paramI _) _)) = [paramI]
+    params (AncestryItemLambda (LambdaParent (Sugar.Func items _) _)) = items
     params (AncestryItemWhere (WhereParent (Sugar.Where items _) _)) = map paramOfWhereItem items
     params _ = []
     paramOfWhereItem (Sugar.WhereItem paramI _ _) = paramI
