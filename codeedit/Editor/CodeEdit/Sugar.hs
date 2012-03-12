@@ -63,7 +63,7 @@ getExpression exprPtr = do
               }
           sBody <- getExpression bodyPtr
           return . ExpressionWhere . atWWheres (item :) $ case sBody of
-            ExpressionPlain innerBodyI -> Where [] innerBodyI
             ExpressionWhere x -> x
+            _ -> Where [] bodyPtr
         _ -> plain
     _ -> plain
