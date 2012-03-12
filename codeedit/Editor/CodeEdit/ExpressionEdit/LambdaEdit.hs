@@ -20,9 +20,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 
 make
   :: MonadF m
-  => (ETypes.ExpressionAncestry m
-   -> ETypes.ExpressionPtr m
-   -> TWidget ViewTag m)
+  => ETypes.ExpressionEditMaker m
   -> ETypes.ExpressionAncestry m
   -> ETypes.ExpressionPtr m
   -> Data.Lambda -> Widget.Id

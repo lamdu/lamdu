@@ -2,6 +2,7 @@
 module Editor.CodeEdit.ExpressionEdit.ApplyEdit(make) where
 
 import Control.Monad (liftM)
+import Data.Maybe (fromMaybe)
 import Data.Store.Property (Property(Property))
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (TWidget, getP, assignCursor, transaction)
@@ -37,10 +38,7 @@ make makeExpressionEdit ancestry expressionPtr apply@(Data.Apply funcI argI) myI
         | isApplyOfInfix = ETypes.InfixRight
         | otherwise = ETypes.Prefix
       expressionRef = Transaction.fromIRef expressionI
-      delArgTarget =
-        case mInfixOpOfRArg of
-          Nothing -> funcI
-          Just infixFuncI -> infixFuncI
+      delArgTarget = fromMaybe funcI mInfixOpOfRArg
       addDelEventMap target =
         liftM . Widget.weakerEvents .
         Widget.actionEventMapMovesCursor Config.delKeys "Delete" .

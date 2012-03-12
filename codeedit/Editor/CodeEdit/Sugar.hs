@@ -45,7 +45,7 @@ getExpression exprPtr = do
         argPtr =
           Property (return argI) $
           Transaction.writeIRef exprI .
-          Data.ExpressionApply . (Data.Apply funcI)
+          Data.ExpressionApply . Data.Apply funcI
       func <- Transaction.readIRef funcI
       case func of
         Data.ExpressionLambda (Data.Lambda paramI bodyI) -> do
@@ -53,7 +53,7 @@ getExpression exprPtr = do
             bodyPtr =
               Property (return bodyI) $
               Transaction.writeIRef funcI .
-              Data.ExpressionLambda . (Data.Lambda paramI)
+              Data.ExpressionLambda . Data.Lambda paramI
             item = WhereItem
               { wiParamI = paramI
               , wiExprPtr = argPtr
