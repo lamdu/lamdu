@@ -165,7 +165,6 @@ makeDefinition :: Monad m => Transaction ViewTag m (IRef Data.Definition)
 makeDefinition = do
   holeI <- Transaction.newIRef $ Data.ExpressionHole Data.emptyHoleState
   defI <- Transaction.newIRef Data.Definition {
-    Data.defParameters = [],
     Data.defBody = holeI
     }
   Property.pureModify globals (Data.DefinitionRef defI :)

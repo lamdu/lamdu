@@ -81,29 +81,26 @@ getParensInfo (Sugar.ExpressionPlain exprPtr) ancestry = do
 getParensInfo _ _ =
   return Nothing
 
-make
-  :: MonadF m
-  => IRef Data.Definition -> ETypes.ExpressionEditMaker m
-make definitionI ancestry exprPtr = do
+make :: MonadF m => ETypes.ExpressionEditMaker m
+make ancestry exprPtr = do
   exprI <- getP exprPtr
   sExpr <- transaction $ Sugar.getExpression exprPtr
   let
     notAHole = (fmap . liftM) ((,) NotAHole)
     wrapNonHole keys isDelegating f =
       notAHole . BWidgets.wrapDelegatedWithKeys keys isDelegating f
-    makeExpression = make definitionI
     makeEditor =
       case sExpr of
       Sugar.ExpressionWhere w ->
         return .
           wrapNonHole Config.exprFocusDelegatorKeys
             FocusDelegator.Delegating id $
-          WhereEdit.make makeExpression ancestry w
+          WhereEdit.make make ancestry w
       Sugar.ExpressionFunc f ->
         return .
           wrapNonHole Config.exprFocusDelegatorKeys
             FocusDelegator.Delegating id $
-          FuncEdit.make makeExpression ancestry exprPtr f
+          FuncEdit.make make ancestry exprPtr f
       Sugar.ExpressionPlain plainExprPtr -> do
         expr <- transaction $ Transaction.readIRef =<< Property.get plainExprPtr
         return $ case expr of
@@ -111,16 +108,16 @@ make definitionI ancestry exprPtr = do
             (fmap . liftM . first) IsAHole .
             BWidgets.wrapDelegatedWithKeys
               FocusDelegator.defaultKeys FocusDelegator.Delegating second $
-              HoleEdit.make ancestry definitionI holeState exprPtr
+              HoleEdit.make ancestry holeState exprPtr
           Data.ExpressionGetVariable varRef -> notAHole (VarEdit.make varRef)
           Data.ExpressionLambda lambda ->
             wrapNonHole Config.exprFocusDelegatorKeys
               FocusDelegator.Delegating id $
-            LambdaEdit.make makeExpression ancestry exprPtr lambda
+            LambdaEdit.make make ancestry exprPtr lambda
           Data.ExpressionApply apply ->
             wrapNonHole Config.exprFocusDelegatorKeys
               FocusDelegator.Delegating id $
-            ApplyEdit.make makeExpression ancestry exprPtr apply
+            ApplyEdit.make make ancestry exprPtr apply
           Data.ExpressionLiteralInteger integer ->
             wrapNonHole FocusDelegator.defaultKeys
               FocusDelegator.NotDelegating id $

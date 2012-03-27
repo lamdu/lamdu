@@ -53,7 +53,7 @@ data Expression m
 funcParamOfLambda :: Monad m => ExpressionPtr m -> Data.Lambda -> Transaction ViewTag m (FuncParam m)
 funcParamOfLambda exprPtr (Data.Lambda paramI bodyI) = do
   exprI <- Property.get exprPtr
-  return $
+  return
     FuncParam
     { fpParamI = paramI
     , fpLambdaI = exprI
@@ -73,7 +73,7 @@ getExpression exprPtr = do
         bodyPtr =
           Property (return bodyI) $
           Transaction.writeIRef exprI .
-          Data.ExpressionLambda . (Data.Lambda paramI)
+          Data.ExpressionLambda . Data.Lambda paramI
       item <- funcParamOfLambda exprPtr lambda
       sBody <- getExpression bodyPtr
       return . ExpressionFunc . atFParams (item :) $ case sBody of

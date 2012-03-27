@@ -101,10 +101,6 @@ makeResultVariables holeInfo varRef = do
       , resultMakeWidget = addParens =<< VarEdit.makeView varRef wid
       }
 
-getDefinitionParamRefs :: Data.Definition -> [Data.VariableRef]
-getDefinitionParamRefs (Data.Definition { Data.defParameters = paramIs }) =
-  map Data.ParameterRef paramIs
-
 renamePrefix :: AnimId -> AnimId -> AnimId -> AnimId
 renamePrefix srcPrefix destPrefix animId =
   maybe animId (Anim.joinId destPrefix) $
@@ -176,13 +172,8 @@ makeLiteralResults holeInfo searchTerm =
 makeAllResults
   :: MonadF m
   => HoleInfo m -> String
-  -> Property (Transaction ViewTag m) Data.Definition
   -> CTransaction ViewTag m [Result m]
-makeAllResults holeInfo searchTerm definitionRef = do
-  defParams <- liftM getDefinitionParamRefs $ getP definitionRef
-  let
-    allLambdaParams = ETypes.getAncestryParams $ hiAncestry holeInfo
-    params = defParams ++ map Data.ParameterRef allLambdaParams
+makeAllResults holeInfo searchTerm = do
   globals <- getP Anchors.globals
   varResults <- liftM concat .
     mapM (makeResultVariables holeInfo) $
@@ -193,6 +184,8 @@ makeAllResults holeInfo searchTerm definitionRef = do
   return .
     sortOn (resultOrdering searchTerm) $
     literalResults ++ filter goodResult varResults
+  where
+    params = map Data.ParameterRef . ETypes.getAncestryParams $ hiAncestry holeInfo
 
 makeSearchTermWidget
   :: MonadF m
@@ -259,13 +252,12 @@ makeResultsWidget firstResults moreResults myId = do
 makeActiveHoleEdit
   :: MonadF m
   => HoleInfo m
-  -> IRef Data.Definition -> Data.HoleState
+  -> Data.HoleState
   -> CTransaction ViewTag m
      (Maybe (Result m), Widget (Transaction ViewTag m))
-makeActiveHoleEdit holeInfo definitionI (Data.HoleState searchTerm) =
+makeActiveHoleEdit holeInfo (Data.HoleState searchTerm) =
   assignCursor (hiHoleId holeInfo) searchTermId $ do
-    let definitionRef = Transaction.fromIRef definitionI
-    allResults <- makeAllResults holeInfo searchTerm definitionRef
+    allResults <- makeAllResults holeInfo searchTerm
 
     let (firstResults, moreResults) = splitAt 3 allResults
 
@@ -283,13 +275,12 @@ makeActiveHoleEdit holeInfo definitionI (Data.HoleState searchTerm) =
 make
   :: MonadF m
   => ETypes.ExpressionAncestry m
-  -> IRef Data.Definition
   -> Data.HoleState
   -> Transaction.Property ViewTag m (IRef Data.Expression)
   -> Widget.Id
   -> CTransaction ViewTag m
      (Maybe (ResultPicker m), Widget (Transaction ViewTag m))
-make ancestry definitionI curState expressionPtr myId = do
+make ancestry curState expressionPtr myId = do
   cursor <- readCursor
   expressionI <- getP expressionPtr
   let
@@ -303,7 +294,7 @@ make ancestry definitionI curState expressionPtr myId = do
       liftM (
         first (fmap resultPick) .
         second (makeBackground Config.focusedHoleBackgroundColor)) $
-      makeActiveHoleEdit holeInfo definitionI curState
+      makeActiveHoleEdit holeInfo curState
     else
       liftM
       ((,) Nothing .

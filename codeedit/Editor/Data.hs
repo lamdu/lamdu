@@ -1,7 +1,7 @@
 {-# OPTIONS -O2 -Wall #-}
 {-# LANGUAGE TemplateHaskell, Rank2Types #-}
 module Editor.Data (
-  Definition(..), atDefParameters, atDefBody,
+  Definition(..), atDefBody,
   Builtin(..),
   Parameter(..),
   VariableRef(..), onVariableIRef,
@@ -52,8 +52,7 @@ data Expression =
   ExpressionLiteralInteger Integer
   deriving (Eq, Ord, Read, Show)
 
-data Definition = Definition {
-  defParameters :: [IRef Parameter],
+newtype Definition = Definition {
   defBody :: IRef Expression
   }
   deriving (Eq, Ord, Read, Show)

@@ -1,4 +1,4 @@
-module Editor.CodeEdit.ExpressionEdit.FuncEdit(make, makeParamsEdit) where
+module Editor.CodeEdit.ExpressionEdit.FuncEdit(make, makeParamEdit) where
 
 import Control.Monad (liftM)
 import Editor.Anchors (ViewTag)
@@ -14,18 +14,15 @@ import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 -- makeParamsEdit exported for use in definition sugaring.
-makeParamsEdit :: MonadF m => Sugar.Func m -> TWidget ViewTag m
-makeParamsEdit (Sugar.Func params _) = do
-  paramEdits <- mapM makeParamEdit params
-  return $ BWidgets.hbox paramEdits
+makeParamEdit :: MonadF m => Sugar.FuncParam m -> TWidget ViewTag m
+makeParamEdit param =
+  assignCursor (WidgetIds.fromIRef (Sugar.fpLambdaI param)) (WidgetIds.fromIRef (Sugar.fpParamI param)) .
+  (liftM . Widget.weakerEvents) paramDeleteEventMap $
+  ParamEdit.make (Sugar.fpParamI param)
   where
-    makeParamEdit param =
-      assignCursor (WidgetIds.fromIRef (Sugar.fpLambdaI param)) (WidgetIds.fromIRef (Sugar.fpParamI param)) .
-      (liftM . Widget.weakerEvents) (paramDeleteEventMap param) $
-      ParamEdit.make (Sugar.fpParamI param)
     paramDeleteEventMap =
       Widget.actionEventMapMovesCursor Config.delKeys "Delete parameter" .
-      liftM WidgetIds.fromIRef . Sugar.fpRemoveParam
+      liftM WidgetIds.fromIRef $ Sugar.fpRemoveParam param
 
 make
   :: MonadF m
@@ -35,7 +32,7 @@ make
   -> Sugar.Func m
   -> Widget.Id
   -> TWidget ViewTag m
-make makeExpressionEdit ancestry expressionPtr func@(Sugar.Func _ bodyPtr) myId = do
+make makeExpressionEdit ancestry expressionPtr func@(Sugar.Func params bodyPtr) myId = do
   bodyI <- getP bodyPtr
   assignCursor myId (WidgetIds.fromIRef bodyI) $ do
     lambdaLabel <-
@@ -45,7 +42,7 @@ make makeExpressionEdit ancestry expressionPtr func@(Sugar.Func _ bodyPtr) myId 
       atTextSizeColor Config.rightArrowTextSize Config.rightArrowColor $
       BWidgets.makeLabel "→" myId
     bodyEdit <- makeExpressionEdit (ancestryItem : ancestry) bodyPtr
-    paramsEdit <- makeParamsEdit func
+    paramsEdit <- liftM BWidgets.hboxSpaced $ mapM makeParamEdit params
     return $ BWidgets.hbox [lambdaLabel, paramsEdit, rightArrowLabel, bodyEdit]
   where
     ancestryItem = AncestryItemLambda $ LambdaParent func expressionPtr
