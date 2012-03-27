@@ -84,10 +84,9 @@ getAncestryParams :: ExpressionAncestry m -> [IRef Data.Parameter]
 getAncestryParams =
   concatMap params
   where
-    params (AncestryItemLambda (LambdaParent (Sugar.Func items _) _)) = items
-    params (AncestryItemWhere (WhereParent (Sugar.Where items _) _)) = map paramOfWhereItem items
+    params (AncestryItemLambda (LambdaParent (Sugar.Func items _) _)) = map Sugar.fpParamI items
+    params (AncestryItemWhere (WhereParent (Sugar.Where items _) _)) = map Sugar.wiParamI items
     params _ = []
-    paramOfWhereItem (Sugar.WhereItem paramI _ _) = paramI
 
 parensPrefix :: Widget.Id -> Widget.Id
 parensPrefix = flip Widget.joinId ["parens"]

@@ -86,6 +86,6 @@ make makeExpressionEdit ancestry w@(Sugar.Where items bodyPtr) myId = do
       , (liftM . Widget.align) (Vector2 0.5 0.5) . BWidgets.makeLabel "=" . WidgetIds.fromIRef $ Sugar.wiParamI item
       , (liftM . Widget.align) (Vector2 0 0.5) . makeExpressionEdit (witemAncestry (Sugar.wiParamI item)) $ Sugar.wiExprPtr item
       ]
-    whereItemDeleteEventMap item =
+    whereItemDeleteEventMap =
       Widget.actionEventMapMovesCursor Config.delKeys "Delete variable" .
-      liftM WidgetIds.fromIRef $ Sugar.wiRemoveItem item
+      liftM WidgetIds.fromIRef . Sugar.wiRemoveItem
