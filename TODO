@@ -1,9 +1,3 @@
-* Lambda lacks sugar:
-  * Lambda-inside-lambda -> Spaced params (currying)
-  * Redex -> Where
-
-* Remove definition parameters
-
 * TextView returns all character position rects
   * TextEdit uses the character position rects to locate enter cursor
 
