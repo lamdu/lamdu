@@ -5,7 +5,6 @@ import Control.Monad (liftM)
 import Data.Store.IRef (IRef)
 import Data.Store.Property(Property)
 import Data.Store.Transaction (Transaction)
-import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (CTransaction, TWidget, getP, atTextSizeColor, assignCursor)
 import Editor.MonadF (MonadF)
@@ -13,7 +12,7 @@ import Graphics.UI.Bottle.Widget(Widget)
 import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.CodeEdit.ParamEdit as ParamEdit
+import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.CodeEdit.Types as ETypes
 import qualified Editor.Config as Config
@@ -79,13 +78,11 @@ make makeExpressionEdit ancestry w@(Sugar.Where items bodyPtr) myId = do
     makeWhereItemsGrid = liftM (Grid.toWidget . Grid.make) $ mapM makeWhereItemEdits items
     makeAncestry role = ETypes.AncestryItemWhere (ETypes.WhereParent w role) : ancestry
     bodyAncestry = makeAncestry ETypes.WhereBody
-    witemAncestry = makeAncestry . ETypes.WhereDef
+    witemAncestry = makeAncestry . ETypes.WhereDef . Sugar.wiParamI
     makeWhereItemEdits item =
-      (mapM . liftM . Widget.weakerEvents) (whereItemDeleteEventMap item)
-      [ (liftM . Widget.align) (Vector2 1 0.5) . ParamEdit.make $ Sugar.wiParamI item
-      , (liftM . Widget.align) (Vector2 0.5 0.5) . BWidgets.makeLabel "=" . WidgetIds.fromIRef $ Sugar.wiParamI item
-      , (liftM . Widget.align) (Vector2 0 0.5) . makeExpressionEdit (witemAncestry (Sugar.wiParamI item)) $ Sugar.wiExprPtr item
-      ]
+      (liftM . map) (Widget.weakerEvents (whereItemDeleteEventMap item) . snd) $
+      DefinitionEdit.makeParts makeExpressionEdit
+      (witemAncestry item) (Sugar.wiParamI item) (Sugar.wiExprPtr item)
     whereItemDeleteEventMap =
       Widget.actionEventMapMovesCursor Config.delKeys "Delete variable" .
       liftM WidgetIds.fromIRef . Sugar.wiRemoveItem

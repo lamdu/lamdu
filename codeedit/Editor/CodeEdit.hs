@@ -13,6 +13,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
+import qualified Editor.CodeEdit.ExpressionEdit as ExpressionEdit
 import qualified Editor.Config as Config
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -41,7 +42,7 @@ makePanesEdit = do
 
     makePaneWidget (i, pane) =
       (liftM . Widget.weakerEvents) (paneEventMap panes i) .
-      DefinitionEdit.make $ Anchors.paneDefinition pane
+      DefinitionEdit.make ExpressionEdit.make $ Anchors.paneDefinition pane
 
   panesWidget <-
     case panes of
