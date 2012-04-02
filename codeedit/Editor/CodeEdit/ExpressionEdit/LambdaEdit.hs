@@ -19,7 +19,7 @@ lambdaToFunc exprPtr lambda@(Data.Lambda paramI bodyI) = do
   let
     expressionRef = Transaction.fromIRef expressionI
     bodyIPtr =
-      Property (return bodyI) $ Property.set expressionRef . Data.ExpressionLambda . (paramI `Data.Lambda`)
+      Property (return bodyI) $ Property.set expressionRef . Data.ExpressionLambda . Data.Lambda paramI
   func <- transaction $ Sugar.funcParamOfLambda exprPtr lambda
   return $ Sugar.Func [func] bodyIPtr
 
