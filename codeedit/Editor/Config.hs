@@ -37,7 +37,7 @@ delBranchKeys     = [alt 'o']
 
 closePaneKeys     = [alt 'w']
 
-relinkKeys        = [alt 'r']
+replaceKeys       = [alt 'r']
 
 pickResultKeys    = [noMods E.KeyEnter]
 jumpToDefinitionKeys  = [noMods E.KeyEnter]

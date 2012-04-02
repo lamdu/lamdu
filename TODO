@@ -1,5 +1,3 @@
-* "Replace" is sometimes called "Relink", use a single name
-
 * Alt-left to work after Alt-n
 
 * Add parens (boxes) to where clauses
@@ -30,5 +28,5 @@ For correctness:
 
 * Lambda unwrap invalidates params
 
-* Need relink/del to mark entire expression hierarchy now unreachable
+* Need replace/del to mark entire expression hierarchy now unreachable
   as invalidated for delete/modify conflicts

@@ -162,13 +162,13 @@ replaceEventMap
   -> Widget.EventHandlers (Transaction ViewTag m)
 replaceEventMap ancestry exprPtr =
   Widget.actionEventMapMovesCursor
-  relinkKeys "Replace" . ETypes.diveIn $
+  (Config.replaceKeys ++ extraReplaceKeys) "Replace" . ETypes.diveIn $
   DataOps.replaceWithHole exprPtr
   where
-    relinkKeys =
+    extraReplaceKeys =
       case ancestry of
-        (AncestryItemApply _ : _) -> Config.relinkKeys
-        _ -> Config.relinkKeys ++ Config.delKeys
+        (AncestryItemApply _ : _) -> []
+        _ -> Config.delKeys
 
 highlightExpression :: Widget.Widget f -> Widget.Widget f
 highlightExpression =
