@@ -9,7 +9,7 @@ import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, TWidget, assignCursor, transaction)
+import Editor.CTransaction (CTransaction, TWidget, transaction)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Widgets.Grid (GridElement)
@@ -28,25 +28,20 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
-makeNameEdit
-  :: Monad m => Widget.Id -> IRef a -> TWidget t m
-makeNameEdit myId definitionI =
-  assignCursor myId (WidgetIds.delegating nameEditAnimId) .
+makeNameEdit :: Monad m => IRef a -> TWidget t m
+makeNameEdit definitionI =
   BWidgets.wrapDelegated FocusDelegator.NotDelegating
   (BWidgets.setTextColor Config.definitionColor .
    BWidgets.makeNameEdit Config.unnamedStr definitionI) $
-  nameEditAnimId
-  where
-    nameEditAnimId = Widget.joinId myId ["name"]
+  WidgetIds.fromIRef definitionI
 
 makeLHSEdit
   :: MonadF m
-  => Widget.Id
-  -> IRef a
+  => IRef a
   -> [Sugar.FuncParam m]
   -> TWidget ViewTag m
-makeLHSEdit myId definitionI params = do
-  nameEdit <- makeNameEdit myId definitionI
+makeLHSEdit definitionI params = do
+  nameEdit <- makeNameEdit definitionI
   paramsEdits <- mapM FuncEdit.makeParamEdit params
   return $ BWidgets.hboxSpaced (nameEdit : paramsEdits)
 
@@ -106,8 +101,8 @@ makeParts makeExpressionEdit ancestry definitionI exprPtr = do
       case sExpr of
       Sugar.ExpressionFunc x -> x
       _ -> Sugar.Func [] exprPtr
-  lhsEdit <- makeLHSEdit myId definitionI $ Sugar.fParams func
-  equals <- BWidgets.makeLabel "=" myId
+  lhsEdit <- makeLHSEdit definitionI $ Sugar.fParams func
+  equals <- BWidgets.makeLabel "=" (WidgetIds.fromIRef definitionI)
   rhsEdit <-
     makeExpressionEdit
     (ETypes.AncestryItemLambda (ETypes.LambdaParent func exprPtr) : ancestry)
@@ -117,5 +112,3 @@ makeParts makeExpressionEdit ancestry definitionI exprPtr = do
     [("lhs", lhsEdit),
      ("equals", equals),
      ("rhs", rhsEdit)]
-  where
-    myId = WidgetIds.fromIRef definitionI
