@@ -3,10 +3,11 @@ module Editor.DataOps (
   ExpressionPtr,
   newHole, giveAsArg, callWithArg,
   replace, replaceWithHole,
-  addAsDefinition, lambdaWrap)
+  addAsDefinition, lambdaWrap, lambdaBodyRef)
 where
 
 import Data.Store.IRef (IRef)
+import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors(ViewTag)
 import qualified Data.Store.Property as Property
@@ -64,8 +65,9 @@ lambdaWrap
   -> Transaction ViewTag m (IRef Data.Parameter)
 lambdaWrap expressionPtr = do
   newParamI <- Transaction.newIRef Data.Parameter
+  newParamTypeI <- newHole
   expressionI <- Property.get expressionPtr
-  let newLambda = Data.Lambda newParamI expressionI
+  let newLambda = Data.Lambda newParamI newParamTypeI expressionI
   newExpressionI <- Transaction.newIRef $ Data.ExpressionLambda newLambda
   Property.set expressionPtr newExpressionI
   return newParamI
@@ -79,3 +81,9 @@ addAsDefinition newName expressionI = do
   Transaction.writeIRef expressionI . Data.ExpressionGetVariable $ Data.DefinitionRef newDefI
   Anchors.newPane newDefI
   return newDefI
+
+lambdaBodyRef :: Monad m => IRef Data.Expression -> Data.Lambda -> Transaction.Property t m (IRef Data.Expression)
+lambdaBodyRef lambdaIRef (Data.Lambda paramI paramTypeI bodyI) =
+  Property
+    (return bodyI)
+    (Transaction.writeIRef lambdaIRef . Data.ExpressionLambda . Data.Lambda paramI paramTypeI)

@@ -19,6 +19,7 @@ import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Data as Data
+import qualified Editor.DataOps as DataOps
 
 data WhereItem m = WhereItem
   { wiParamI :: IRef Data.Parameter
@@ -51,7 +52,7 @@ data Expression m
   | ExpressionFunc (Func m)
 
 funcParamOfLambda :: Monad m => ExpressionPtr m -> Data.Lambda -> Transaction ViewTag m (FuncParam m)
-funcParamOfLambda exprPtr (Data.Lambda paramI bodyI) = do
+funcParamOfLambda exprPtr (Data.Lambda paramI _ bodyI) = do
   exprI <- Property.get exprPtr
   return
     FuncParam
@@ -68,12 +69,8 @@ getExpression exprPtr = do
   expr <- Transaction.readIRef exprI
   let plain = return $ ExpressionPlain exprPtr
   case expr of
-    Data.ExpressionLambda lambda@(Data.Lambda paramI bodyI) -> do
-      let
-        bodyPtr =
-          Property (return bodyI) $
-          Transaction.writeIRef exprI .
-          Data.ExpressionLambda . Data.Lambda paramI
+    Data.ExpressionLambda lambda -> do
+      let bodyPtr = DataOps.lambdaBodyRef exprI lambda
       item <- funcParamOfLambda exprPtr lambda
       sBody <- getExpression bodyPtr
       return . ExpressionFunc . atFParams (item :) $ case sBody of
@@ -87,12 +84,9 @@ getExpression exprPtr = do
           Data.ExpressionApply . Data.Apply funcI
       func <- Transaction.readIRef funcI
       case func of
-        Data.ExpressionLambda (Data.Lambda paramI bodyI) -> do
+        Data.ExpressionLambda lambda@(Data.Lambda paramI _ bodyI) -> do
           let
-            bodyPtr =
-              Property (return bodyI) $
-              Transaction.writeIRef funcI .
-              Data.ExpressionLambda . Data.Lambda paramI
+            bodyPtr = DataOps.lambdaBodyRef funcI lambda
             item = WhereItem
               { wiParamI = paramI
               , wiExprPtr = argPtr

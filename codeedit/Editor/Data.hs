@@ -5,7 +5,7 @@ module Editor.Data (
   Builtin(..),
   Parameter(..),
   VariableRef(..), onVariableIRef,
-  Lambda(..), atLambdaParam, atLambdaBody,
+  Lambda(..), atLambdaParam, atLambdaParamType, atLambdaBody,
   Apply(..), atApplyFunc, atApplyArg,
   HoleState(..),
     emptyHoleState, atHoleSearchTerm, --atHoleCachedSearchResults,
@@ -25,6 +25,7 @@ data Parameter = Parameter
 
 data Lambda = Lambda {
   lambdaParam :: IRef Parameter,
+  lambdaParamType :: IRef Expression,
   lambdaBody :: IRef Expression
   }
   deriving (Eq, Ord, Read, Show)
