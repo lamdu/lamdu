@@ -78,6 +78,10 @@ getParensInfo (Sugar.ExpressionPlain exprPtr) ancestry = do
   where
     setDoHighlight = (liftM . fmap) ((,) DoHighlightParens)
     setDontHighlight = (liftM . fmap) ((,) DontHighlightParens)
+getParensInfo (Sugar.ExpressionWhere _) ancestry =
+  if ETypes.isAncestryRHS ancestry
+  then return Nothing
+  else liftM (Just . (,) DontHighlightParens) $ ETypes.makeParensId ancestry
 getParensInfo _ _ =
   return Nothing
 

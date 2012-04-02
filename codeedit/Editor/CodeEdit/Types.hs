@@ -14,7 +14,7 @@ module Editor.CodeEdit.Types(
   parensPrefix, addParens,
   varId, diveIn, isInfixName,
   isInfixVar, isInfixFunc, isApplyOfInfixOp, infixFuncOfRArg,
-  makeAddArgHandler, makeParensId)
+  makeAddArgHandler, makeParensId, isAncestryRHS)
 where
 
 import Control.Monad (liftM)
@@ -195,3 +195,8 @@ makeParensId (AncestryItemWhere (WhereParent (Sugar.Where _ body) role) : _) = d
     [pack $ show role]
 makeParensId [] =
   return $ Widget.Id ["root parens"]
+
+isAncestryRHS :: ExpressionAncestry m -> Bool
+isAncestryRHS [AncestryItemLambda _] = True
+isAncestryRHS (AncestryItemLambda _ : AncestryItemWhere _ : _) = True
+isAncestryRHS _ = False
