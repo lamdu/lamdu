@@ -202,6 +202,7 @@ makeSearchTermWidget holeInfo searchTermId searchTerm firstResults =
       mconcat $ pickFirstResultEventMaps ++
       [ E.fromEventTypes Config.newDefinitionKeys "Add new as Definition" $ do
           newDef <- DataOps.addAsDefinition newName $ hiExpressionI holeInfo
+          Anchors.savePreJumpPosition . WidgetIds.fromIRef $ hiExpressionI holeInfo
           return Widget.EventResult {
             Widget.eCursor = Just $ WidgetIds.fromIRef newDef,
             Widget.eAnimIdMapping = holeResultAnimMappingNoParens holeInfo searchTermId

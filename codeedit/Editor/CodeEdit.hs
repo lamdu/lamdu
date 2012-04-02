@@ -6,7 +6,7 @@ import Data.List.Utils(enumerate, removeAt)
 import Data.Maybe (fromMaybe)
 import Data.Monoid(Monoid(..))
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (TWidget, getP, assignCursor, transaction)
+import Editor.CTransaction (CTransaction, TWidget, getP, assignCursor, readCursor, transaction)
 import Editor.MonadF (MonadF)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -18,11 +18,14 @@ import qualified Editor.Config as Config
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 
-newDefinition :: Monad m => Transaction.Transaction ViewTag m Widget.Id
+newDefinition :: Monad m => CTransaction ViewTag m (Transaction.Transaction ViewTag m Widget.Id)
 newDefinition = do
-  newDefI <- Anchors.makeDefinition
-  Anchors.newPane newDefI
-  return $ WidgetIds.fromIRef newDefI
+  curCursor <- readCursor
+  return $ do
+    newDefI <- Anchors.makeDefinition
+    Anchors.newPane newDefI
+    Anchors.savePreJumpPosition curCursor
+    return $ WidgetIds.fromIRef newDefI
 
 makePanesEdit :: MonadF m => TWidget ViewTag m
 makePanesEdit = do
@@ -54,11 +57,12 @@ makePanesEdit = do
             return $ BWidgets.vboxAlign 0 definitionEdits
 
   canJumpBack <- transaction Anchors.canJumpBack
+  newDef <- newDefinition
   let
     panesEventMap =
       mconcat . concat $
       [[ Widget.actionEventMapMovesCursor Config.newDefinitionKeys
-        "New definition" newDefinition],
+        "New definition" newDef],
        [ Widget.actionEventMapMovesCursor Config.previousCursorKeys
          "Go to previous position" $ liftM (fromMaybe myId) Anchors.jumpBack
        | canJumpBack]

@@ -124,7 +124,7 @@ makeWidgetForView view innerWidget = do
 
     eventMap = mconcat [undoEventMap, redoEventMap redos]
 
-    saveCursorUpdateRedos eventResult = do
+    saveCursor eventResult = do
       isEmpty <- Transaction.isEmpty
       unless isEmpty $ do
         Property.set Anchors.preCursor cursor
@@ -133,7 +133,7 @@ makeWidgetForView view innerWidget = do
 
   vWidget <-
     runNestedCTransaction store $
-    (liftM . Widget.atEvents) (>>= saveCursorUpdateRedos) innerWidget
+    (liftM . Widget.atEvents) (>>= saveCursor) innerWidget
 
   let
     lowerWTransaction act = do

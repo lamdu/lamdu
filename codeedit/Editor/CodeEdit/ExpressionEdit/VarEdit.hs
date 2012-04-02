@@ -43,7 +43,10 @@ make varRef myId = do
       case varRef of
         Data.DefinitionRef defI -> do
           Anchors.newPane defI
-          Anchors.jumpTo myId $ WidgetIds.fromIRef defI
-        Data.ParameterRef paramI -> Anchors.jumpTo myId $ WidgetIds.fromIRef paramI
+          Anchors.savePreJumpPosition myId
+          return $ WidgetIds.fromIRef defI
+        Data.ParameterRef paramI -> do
+          Anchors.savePreJumpPosition myId
+          return $ WidgetIds.fromIRef paramI
         Data.BuiltinRef _builtI -> return myId
   return $ Widget.weakerEvents jumpToDefinitionEventMap varRefView

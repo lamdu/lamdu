@@ -12,7 +12,7 @@ module Editor.Anchors(
     viewStore, ViewTag,
     aDataRef, aNameRef, variableNameRef,
     makePane, makeDefinition, newPane,
-    jumpTo, canJumpBack, jumpBack)
+    savePreJumpPosition, canJumpBack, jumpBack)
 where
 
 import Control.Monad (when, unless, (<=<), liftM)
@@ -245,14 +245,8 @@ newPane defI = do
   where
     panesRef = Transaction.fromIRef rootIRef
 
-jumpTo ::
-  Monad m
-  => Widget.Id
-  -> Widget.Id
-  -> Transaction ViewTag m Widget.Id
-jumpTo old new = do
-  Property.pureModify preJumps $ (old :) . take 19
-  return new
+savePreJumpPosition :: Monad m => Widget.Id -> Transaction ViewTag m ()
+savePreJumpPosition pos = Property.pureModify preJumps $ (pos :) . take 19
 
 canJumpBack :: Monad m => Transaction ViewTag m Bool
 canJumpBack = liftM (not . null) $ Property.get preJumps
