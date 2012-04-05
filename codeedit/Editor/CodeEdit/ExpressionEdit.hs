@@ -50,8 +50,7 @@ getParensInfo
   :: Monad m
   => Sugar.Expression m -> ETypes.ExpressionAncestry m
   -> Transaction ViewTag m (Maybe (HighlightParens, Widget.Id))
-getParensInfo (Sugar.ExpressionPlain exprPtr) ancestry = do
-  exprI <- Property.get exprPtr
+getParensInfo (Sugar.ExpressionPlain exprI) ancestry = do
   expr <- Transaction.readIRef exprI
   case (expr, ancestry) of
     (Data.ExpressionApply _, AncestryItemApply (ApplyParent ApplyArg ETypes.Prefix _ _) : _) ->
@@ -87,7 +86,6 @@ getParensInfo _ _ =
 
 make :: MonadF m => ETypes.ExpressionEditMaker m
 make ancestry exprPtr = do
-  exprI <- getP exprPtr
   sExpr <- transaction $ Sugar.getExpression exprPtr
   let
     notAHole = (fmap . liftM) ((,) NotAHole)
@@ -105,8 +103,8 @@ make ancestry exprPtr = do
           wrapNonHole Config.exprFocusDelegatorKeys
             FocusDelegator.Delegating id $
           FuncEdit.make make ancestry exprPtr f
-      Sugar.ExpressionPlain plainExprPtr -> do
-        expr <- transaction $ Transaction.readIRef =<< Property.get plainExprPtr
+      Sugar.ExpressionPlain exprI -> do
+        expr <- transaction $ Transaction.readIRef exprI
         return $ case expr of
           Data.ExpressionHole holeState ->
             (fmap . liftM . first) IsAHole .
@@ -126,7 +124,8 @@ make ancestry exprPtr = do
             wrapNonHole FocusDelegator.defaultKeys
               FocusDelegator.NotDelegating id $
             LiteralEdit.makeInt exprI integer
-    exprId = WidgetIds.fromIRef exprI
+  exprI <- getP exprPtr
+  let exprId = WidgetIds.fromIRef exprI
   (holePicker, widget) <- ($ exprId) =<< makeEditor
   (addArgDoc, addArgHandler) <-
     transaction $ ETypes.makeAddArgHandler ancestry exprPtr

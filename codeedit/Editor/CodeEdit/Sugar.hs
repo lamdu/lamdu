@@ -47,7 +47,7 @@ data Func m = Func
 AtFieldTH.make ''Func
 
 data Expression m
-  = ExpressionPlain (ExpressionPtr m)
+  = ExpressionPlain (IRef Data.Expression)
   | ExpressionWhere (Where m)
   | ExpressionFunc (Func m)
 
@@ -67,7 +67,7 @@ getExpression :: MonadF m => ExpressionPtr m -> Transaction ViewTag m (Expressio
 getExpression exprPtr = do
   exprI <- Property.get exprPtr
   expr <- Transaction.readIRef exprI
-  let plain = return $ ExpressionPlain exprPtr
+  let plain = return $ ExpressionPlain exprI
   case expr of
     Data.ExpressionLambda lambda -> do
       let bodyPtr = DataOps.lambdaBodyRef exprI lambda
