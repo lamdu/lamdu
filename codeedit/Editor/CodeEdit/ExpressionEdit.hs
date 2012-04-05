@@ -46,6 +46,16 @@ makeCondParensId
 makeCondParensId False = const $ return Nothing
 makeCondParensId True = liftM Just . ETypes.makeParensId
 
+setDoHighlight
+  :: (Monad m, Functor f)
+  => m (f a) -> m (f (HighlightParens, a))
+setDoHighlight = (liftM . fmap) ((,) DoHighlightParens)
+
+setDontHighlight
+  :: (Monad m, Functor f)
+  => m (f a) -> m (f (HighlightParens, a))
+setDontHighlight = (liftM . fmap) ((,) DontHighlightParens)
+
 getParensInfo
   :: Monad m
   => Sugar.Expression m -> ETypes.ExpressionAncestry m
@@ -74,13 +84,12 @@ getParensInfo (Sugar.ExpressionPlain exprI) ancestry = do
     (Data.ExpressionLambda _, AncestryItemApply _ : _) ->
       setDoHighlight $ liftM Just $ ETypes.makeParensId ancestry
     _ -> return Nothing
-  where
-    setDoHighlight = (liftM . fmap) ((,) DoHighlightParens)
-    setDontHighlight = (liftM . fmap) ((,) DontHighlightParens)
 getParensInfo (Sugar.ExpressionWhere _) ancestry =
   if ETypes.isAncestryRHS ancestry
   then return Nothing
-  else liftM (Just . (,) DontHighlightParens) $ ETypes.makeParensId ancestry
+  else setDontHighlight . liftM Just $ ETypes.makeParensId ancestry
+getParensInfo (Sugar.ExpressionFunc _) ancestry@(AncestryItemApply _ : _) =
+  setDoHighlight . liftM Just $ ETypes.makeParensId ancestry
 getParensInfo _ _ =
   return Nothing
 
