@@ -24,7 +24,8 @@ import qualified Editor.DataOps as DataOps
 data WhereItem m = WhereItem
   { wiParamI :: IRef Data.Parameter
   , wiValuePtr :: ExpressionPtr m
-  , wiRemoveItem :: Transaction ViewTag m (IRef Data.Expression)
+  , wiApplyPtr :: ExpressionPtr m
+  , wiLambdaBodyI :: IRef Data.Expression
   }
 
 data Where m = Where
@@ -91,9 +92,8 @@ getExpression exprPtr = do
             item = WhereItem
               { wiParamI = paramI
               , wiValuePtr = argPtr
-              , wiRemoveItem = do
-                  Property.set exprPtr bodyI
-                  return bodyI
+              , wiApplyPtr = exprPtr
+              , wiLambdaBodyI = bodyI
               }
           sBody <- getExpression bodyPtr
           return . ExpressionWhere . atWWheres (item :) $ case sBody of

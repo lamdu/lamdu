@@ -83,6 +83,11 @@ make makeExpressionEdit ancestry w@(Sugar.Where items bodyPtr) myId = do
       (liftM . map) (Widget.weakerEvents (whereItemDeleteEventMap item) . snd) $
       DefinitionEdit.makeParts makeExpressionEdit
       (witemAncestry item) (Sugar.wiParamI item) (Sugar.wiValuePtr item)
-    whereItemDeleteEventMap =
+    whereItemDeleteEventMap whereItem =
       Widget.actionEventMapMovesCursor Config.delKeys "Delete variable" .
-      liftM WidgetIds.fromIRef . Sugar.wiRemoveItem
+      liftM WidgetIds.fromIRef $ do
+        Property.set
+          (Sugar.wiApplyPtr whereItem)
+          (Sugar.wiLambdaBodyI whereItem)
+        return $ Sugar.wiLambdaBodyI whereItem
+
