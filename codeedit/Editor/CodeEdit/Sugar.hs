@@ -37,7 +37,7 @@ AtFieldTH.make ''Where
 data FuncParam m = FuncParam
   { fpParamI :: IRef Data.Parameter
   , fpLambdaPtr :: ExpressionPtr m
-  , fpRemoveParam :: Transaction ViewTag m (IRef Data.Expression)
+  , fpBodyI :: IRef Data.Expression
   }
 
 -- Multi-param Lambda
@@ -58,9 +58,7 @@ funcParamOfLambda exprPtr (Data.Lambda paramI _ bodyI) =
   FuncParam
   { fpParamI = paramI
   , fpLambdaPtr = exprPtr
-  , fpRemoveParam = do
-      Property.set exprPtr bodyI
-      return bodyI
+  , fpBodyI = bodyI
   }
 
 getExpression :: MonadF m => ExpressionPtr m -> Transaction ViewTag m (Expression m)

@@ -2,9 +2,10 @@ module Editor.CodeEdit.ExpressionEdit.FuncEdit(make, makeParamEdit) where
 
 import Control.Monad (liftM)
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.Types(AncestryItem(..), LambdaParent(..))
 import Editor.CTransaction (TWidget, getP, assignCursor, atTextSizeColor)
+import Editor.CodeEdit.Types(AncestryItem(..), LambdaParent(..))
 import Editor.MonadF (MonadF)
+import qualified Data.Store.Property as Property
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ParamEdit as ParamEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
@@ -22,8 +23,9 @@ makeParamEdit param = do
     ParamEdit.make (Sugar.fpParamI param)
   where
     paramDeleteEventMap =
-      Widget.actionEventMapMovesCursor Config.delKeys "Delete parameter" .
-      liftM WidgetIds.fromIRef $ Sugar.fpRemoveParam param
+      Widget.actionEventMapMovesCursor Config.delKeys "Delete parameter" $ do
+        Property.set (Sugar.fpLambdaPtr param) (Sugar.fpBodyI param)
+        return . WidgetIds.fromIRef $ Sugar.fpBodyI param
 
 make
   :: MonadF m
