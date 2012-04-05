@@ -23,7 +23,7 @@ import qualified Editor.DataOps as DataOps
 
 data WhereItem m = WhereItem
   { wiParamI :: IRef Data.Parameter
-  , wiExprPtr :: ExpressionPtr m
+  , wiValuePtr :: ExpressionPtr m
   , wiRemoveItem :: Transaction ViewTag m (IRef Data.Expression)
   }
 
@@ -76,6 +76,7 @@ getExpression exprPtr = do
       return . ExpressionFunc . atFParams (item :) $ case sBody of
         ExpressionFunc x -> x
         _ -> Func [] bodyPtr
+    -- Match apply-of-lambda(redex/where)
     Data.ExpressionApply (Data.Apply funcI argI) -> do
       let
         argPtr =
@@ -89,7 +90,7 @@ getExpression exprPtr = do
             bodyPtr = DataOps.lambdaBodyRef funcI lambda
             item = WhereItem
               { wiParamI = paramI
-              , wiExprPtr = argPtr
+              , wiValuePtr = argPtr
               , wiRemoveItem = do
                   Property.set exprPtr bodyI
                   return bodyI
