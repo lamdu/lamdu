@@ -5,7 +5,7 @@ module Editor.CodeEdit.Sugar
   , Where(..), atWWheres, atWBody
   , WhereItem(..)
   , Func(..), atFParams, atFBody
-  , FuncParam(..), funcParamOfLambda
+  , FuncParam(..)
   , getExpression
   ) where
 
@@ -48,35 +48,33 @@ data Func m = Func
 AtFieldTH.make ''Func
 
 data Expression m
-  = ExpressionPlain (IRef Data.Expression)
+  = ExpressionApply Data.Apply
+  | ExpressionGetVariable Data.VariableRef
+  | ExpressionHole Data.HoleState
+  | ExpressionLiteralInteger Integer
   | ExpressionWhere (Where m)
   | ExpressionFunc (Func m)
-
-funcParamOfLambda
-  :: Monad m => ExpressionPtr m -> Data.Lambda -> FuncParam m
-funcParamOfLambda exprPtr (Data.Lambda paramI _ bodyI) =
-  FuncParam
-  { fpParamI = paramI
-  , fpLambdaPtr = exprPtr
-  , fpBodyI = bodyI
-  }
 
 getExpression :: MonadF m => ExpressionPtr m -> Transaction ViewTag m (Expression m)
 getExpression exprPtr = do
   exprI <- Property.get exprPtr
   expr <- Transaction.readIRef exprI
-  let plain = return $ ExpressionPlain exprI
   case expr of
     Data.ExpressionLambda lambda -> do
       let
         bodyPtr = DataOps.lambdaBodyRef exprI lambda
-        item = funcParamOfLambda exprPtr lambda
+        item =
+          FuncParam
+          { fpParamI = Data.lambdaParam lambda
+          , fpLambdaPtr = exprPtr
+          , fpBodyI = Data.lambdaBody lambda
+          }
       sBody <- getExpression bodyPtr
       return . ExpressionFunc . atFParams (item :) $ case sBody of
         ExpressionFunc x -> x
         _ -> Func [] bodyPtr
     -- Match apply-of-lambda(redex/where)
-    Data.ExpressionApply (Data.Apply funcI argI) -> do
+    Data.ExpressionApply apply@(Data.Apply funcI argI) -> do
       let
         argPtr =
           Property (return argI) $
@@ -97,5 +95,7 @@ getExpression exprPtr = do
           return . ExpressionWhere . atWWheres (item :) $ case sBody of
             ExpressionWhere x -> x
             _ -> Where [] bodyPtr
-        _ -> plain
-    _ -> plain
+        _ -> return $ ExpressionApply apply
+    Data.ExpressionGetVariable x -> return $ ExpressionGetVariable x
+    Data.ExpressionHole x -> return $ ExpressionHole x
+    Data.ExpressionLiteralInteger x -> return $ ExpressionLiteralInteger x

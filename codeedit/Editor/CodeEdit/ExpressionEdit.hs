@@ -17,7 +17,6 @@ import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
-import qualified Editor.CodeEdit.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
 import qualified Editor.CodeEdit.ExpressionEdit.WhereEdit as WhereEdit
@@ -60,30 +59,24 @@ getParensInfo
   :: Monad m
   => Sugar.Expression m -> ETypes.ExpressionAncestry m
   -> Transaction ViewTag m (Maybe (HighlightParens, Widget.Id))
-getParensInfo (Sugar.ExpressionPlain exprI) ancestry = do
-  expr <- Transaction.readIRef exprI
-  case (expr, ancestry) of
-    (Data.ExpressionApply _, AncestryItemApply (ApplyParent ApplyArg ETypes.Prefix _ _) : _) ->
-      setDoHighlight . liftM Just $ ETypes.makeParensId ancestry
-    (Data.ExpressionApply (Data.Apply funcI _), AncestryItemApply (ApplyParent ApplyArg _ _ _) : _) -> do
-      isInfix <-
-        liftM2 (||)
-        (ETypes.isInfixFunc funcI) (ETypes.isApplyOfInfixOp funcI)
-      setDoHighlight $ makeCondParensId isInfix ancestry
-    (Data.ExpressionApply (Data.Apply funcI _), AncestryItemApply (ApplyParent ApplyFunc _ _ _) : _) -> do
-      isInfix <- ETypes.isApplyOfInfixOp funcI
-      setDoHighlight $ makeCondParensId isInfix ancestry
-    (Data.ExpressionApply (Data.Apply funcI _), _) -> do
-      isInfix <- ETypes.isInfixFunc funcI
-      setDoHighlight $ makeCondParensId isInfix ancestry
-    (Data.ExpressionGetVariable _, AncestryItemApply (ApplyParent ApplyFunc _ _ _) : _) ->
-      return Nothing
-    (Data.ExpressionGetVariable var, _) -> do
-      name <- Property.get $ Anchors.variableNameRef var
-      setDontHighlight $ makeCondParensId (ETypes.isInfixName name) ancestry
-    (Data.ExpressionLambda _, AncestryItemApply _ : _) ->
-      setDoHighlight $ liftM Just $ ETypes.makeParensId ancestry
-    _ -> return Nothing
+getParensInfo (Sugar.ExpressionApply _) ancestry@(AncestryItemApply (ApplyParent ApplyArg ETypes.Prefix _ _) : _) =
+  setDoHighlight . liftM Just $ ETypes.makeParensId ancestry
+getParensInfo (Sugar.ExpressionApply (Data.Apply funcI _)) ancestry@(AncestryItemApply (ApplyParent ApplyArg _ _ _) : _) = do
+  isInfix <-
+    liftM2 (||)
+    (ETypes.isInfixFunc funcI) (ETypes.isApplyOfInfixOp funcI)
+  setDoHighlight $ makeCondParensId isInfix ancestry
+getParensInfo (Sugar.ExpressionApply (Data.Apply funcI _)) ancestry@(AncestryItemApply (ApplyParent ApplyFunc _ _ _) : _) = do
+  isInfix <- ETypes.isApplyOfInfixOp funcI
+  setDoHighlight $ makeCondParensId isInfix ancestry
+getParensInfo (Sugar.ExpressionApply (Data.Apply funcI _)) ancestry = do
+  isInfix <- ETypes.isInfixFunc funcI
+  setDoHighlight $ makeCondParensId isInfix ancestry
+getParensInfo (Sugar.ExpressionGetVariable _) (AncestryItemApply (ApplyParent ApplyFunc _ _ _) : _) =
+  return Nothing
+getParensInfo (Sugar.ExpressionGetVariable var) ancestry = do
+  name <- Property.get $ Anchors.variableNameRef var
+  setDontHighlight $ makeCondParensId (ETypes.isInfixName name) ancestry
 getParensInfo (Sugar.ExpressionWhere _) ancestry =
   if ETypes.isAncestryRHS ancestry
   then return Nothing
@@ -96,6 +89,7 @@ getParensInfo _ _ =
 make :: MonadF m => ETypes.ExpressionEditMaker m
 make ancestry exprPtr = do
   sExpr <- transaction $ Sugar.getExpression exprPtr
+  exprI <- getP exprPtr
   let
     notAHole = (fmap . liftM) ((,) NotAHole)
     wrapNonHole keys isDelegating f =
@@ -103,39 +97,29 @@ make ancestry exprPtr = do
     makeEditor =
       case sExpr of
       Sugar.ExpressionWhere w ->
-        return .
-          wrapNonHole Config.exprFocusDelegatorKeys
+        wrapNonHole Config.exprFocusDelegatorKeys
             FocusDelegator.Delegating id $
           WhereEdit.make make ancestry w
       Sugar.ExpressionFunc f ->
-        return .
-          wrapNonHole Config.exprFocusDelegatorKeys
-            FocusDelegator.Delegating id $
+        wrapNonHole Config.exprFocusDelegatorKeys
+          FocusDelegator.Delegating id $
           FuncEdit.make make ancestry exprPtr f
-      Sugar.ExpressionPlain exprI -> do
-        expr <- transaction $ Transaction.readIRef exprI
-        return $ case expr of
-          Data.ExpressionHole holeState ->
-            (fmap . liftM . first) IsAHole .
-            BWidgets.wrapDelegatedWithKeys
-              FocusDelegator.defaultKeys FocusDelegator.Delegating second $
-              HoleEdit.make ancestry holeState exprPtr
-          Data.ExpressionGetVariable varRef -> notAHole (VarEdit.make varRef)
-          Data.ExpressionLambda lambda ->
-            wrapNonHole Config.exprFocusDelegatorKeys
-              FocusDelegator.Delegating id $
-            LambdaEdit.make make ancestry exprPtr lambda
-          Data.ExpressionApply apply ->
-            wrapNonHole Config.exprFocusDelegatorKeys
-              FocusDelegator.Delegating id $
-            ApplyEdit.make make ancestry exprPtr apply
-          Data.ExpressionLiteralInteger integer ->
-            wrapNonHole FocusDelegator.defaultKeys
-              FocusDelegator.NotDelegating id $
-            LiteralEdit.makeInt exprI integer
-  exprI <- getP exprPtr
-  let exprId = WidgetIds.fromIRef exprI
-  (holePicker, widget) <- ($ exprId) =<< makeEditor
+      Sugar.ExpressionHole holeState ->
+        (fmap . liftM . first) IsAHole .
+        BWidgets.wrapDelegatedWithKeys
+          FocusDelegator.defaultKeys FocusDelegator.Delegating second $
+          HoleEdit.make ancestry holeState exprPtr
+      Sugar.ExpressionGetVariable varRef -> notAHole (VarEdit.make varRef)
+      Sugar.ExpressionApply apply ->
+        wrapNonHole Config.exprFocusDelegatorKeys
+          FocusDelegator.Delegating id $
+        ApplyEdit.make make ancestry exprPtr apply
+      Sugar.ExpressionLiteralInteger integer ->
+        wrapNonHole FocusDelegator.defaultKeys
+          FocusDelegator.NotDelegating id $
+        LiteralEdit.makeInt exprI integer
+    exprId = WidgetIds.fromIRef exprI
+  (holePicker, widget) <- makeEditor exprId
   (addArgDoc, addArgHandler) <-
     transaction $ ETypes.makeAddArgHandler ancestry exprPtr
   let
