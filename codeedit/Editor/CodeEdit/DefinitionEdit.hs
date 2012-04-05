@@ -9,7 +9,7 @@ import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, TWidget, transaction)
+import Editor.CTransaction (CTransaction, TWidget, transaction, getP)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Widgets.Grid (GridElement)
@@ -95,6 +95,7 @@ makeParts
   -> ETypes.ExpressionPtr m
   -> CTransaction ViewTag m [(String, Widget (Transaction ViewTag m))]
 makeParts makeExpressionEdit ancestry definitionI exprPtr = do
+  exprI <- getP exprPtr
   sExpr <- transaction $ Sugar.getExpression exprPtr
   let
     func =
@@ -105,7 +106,7 @@ makeParts makeExpressionEdit ancestry definitionI exprPtr = do
   equals <- BWidgets.makeLabel "=" (WidgetIds.fromIRef definitionI)
   rhsEdit <-
     makeExpressionEdit
-    (ETypes.AncestryItemLambda (ETypes.LambdaParent func exprPtr) : ancestry)
+    (ETypes.AncestryItemLambda (ETypes.LambdaParent func exprI) : ancestry)
     (Sugar.fBody func)
   return $
     zipWith (second . Widget.align . (`Vector2` 0.5)) [1, 0.5, 0]

@@ -6,7 +6,7 @@ module Editor.CodeEdit.Types(
   AncestryItem(..), getAncestryParams,
   ApplyParent(..), atApRole, atApFuncType, atApApply, atApParentPtr,
   ApplyRole(..),
-  LambdaParent(..), atLpFunc, atLpParentPtr,
+  LambdaParent(..), atLpFunc, atLpParentI,
   WhereParent(..), atWpWhere, atWpRole,
   WhereRole(..),
   FuncType(..),
@@ -55,7 +55,7 @@ AtFieldTH.make ''ApplyParent
 
 data LambdaParent m = LambdaParent
   { lpFunc :: Sugar.Func m
-  , lpParentPtr :: ExpressionPtr m
+  , lpParentI :: IRef Data.Expression
   }
 AtFieldTH.make ''LambdaParent
 
@@ -186,8 +186,8 @@ makeParensId (AncestryItemApply (ApplyParent role _ _ parentPtr) : _) = do
   return $
     Widget.joinId (WidgetIds.fromIRef parentI)
     [pack $ show role]
-makeParensId (AncestryItemLambda (LambdaParent _ parentPtr) : _) =
-  liftM WidgetIds.fromIRef $ Property.get parentPtr
+makeParensId (AncestryItemLambda (LambdaParent _ parentI) : _) =
+  return $ WidgetIds.fromIRef parentI
 makeParensId (AncestryItemWhere (WhereParent (Sugar.Where _ body) role) : _) = do
   bodyI <- Property.get body
   return $
