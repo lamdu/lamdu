@@ -1,8 +1,14 @@
+* Show type of lambda params
+
 * Make where clauses parens boxes
 
-* Add remappings to sugars
+* Remove where bindings' folding
 
 * Key to add redex
+
+* Dapaot:
+  * Add anim-id-remappings to sugar changes
+  * Multi-ids
 
 * Branch selection is buggy:
 
