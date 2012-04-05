@@ -2,7 +2,7 @@
 module Editor.CodeEdit.ExpressionEdit.LambdaEdit(make) where
 
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, TWidget, getP, transaction)
+import Editor.CTransaction (CTransaction, TWidget, getP)
 import Editor.MonadF (MonadF)
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
@@ -14,8 +14,9 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 lambdaToFunc :: MonadF m => ETypes.ExpressionPtr m -> Data.Lambda -> CTransaction ViewTag m (Sugar.Func m)
 lambdaToFunc exprPtr lambda = do
   expressionI <- getP exprPtr
-  let bodyIPtr = DataOps.lambdaBodyRef expressionI lambda
-  func <- transaction $ Sugar.funcParamOfLambda exprPtr lambda
+  let
+    bodyIPtr = DataOps.lambdaBodyRef expressionI lambda
+    func = Sugar.funcParamOfLambda exprPtr lambda
   return $ Sugar.Func [func] bodyIPtr
 
 make

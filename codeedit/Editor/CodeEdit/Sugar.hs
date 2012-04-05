@@ -36,7 +36,7 @@ AtFieldTH.make ''Where
 
 data FuncParam m = FuncParam
   { fpParamI :: IRef Data.Parameter
-  , fpLambdaI :: IRef Data.Expression
+  , fpLambdaPtr :: ExpressionPtr m
   , fpRemoveParam :: Transaction ViewTag m (IRef Data.Expression)
   }
 
@@ -52,17 +52,16 @@ data Expression m
   | ExpressionWhere (Where m)
   | ExpressionFunc (Func m)
 
-funcParamOfLambda :: Monad m => ExpressionPtr m -> Data.Lambda -> Transaction ViewTag m (FuncParam m)
-funcParamOfLambda exprPtr (Data.Lambda paramI _ bodyI) = do
-  exprI <- Property.get exprPtr
-  return
-    FuncParam
-    { fpParamI = paramI
-    , fpLambdaI = exprI
-    , fpRemoveParam = do
-        Property.set exprPtr bodyI
-        return bodyI
-    }
+funcParamOfLambda
+  :: Monad m => ExpressionPtr m -> Data.Lambda -> FuncParam m
+funcParamOfLambda exprPtr (Data.Lambda paramI _ bodyI) =
+  FuncParam
+  { fpParamI = paramI
+  , fpLambdaPtr = exprPtr
+  , fpRemoveParam = do
+      Property.set exprPtr bodyI
+      return bodyI
+  }
 
 getExpression :: MonadF m => ExpressionPtr m -> Transaction ViewTag m (Expression m)
 getExpression exprPtr = do
@@ -71,8 +70,9 @@ getExpression exprPtr = do
   let plain = return $ ExpressionPlain exprI
   case expr of
     Data.ExpressionLambda lambda -> do
-      let bodyPtr = DataOps.lambdaBodyRef exprI lambda
-      item <- funcParamOfLambda exprPtr lambda
+      let
+        bodyPtr = DataOps.lambdaBodyRef exprI lambda
+        item = funcParamOfLambda exprPtr lambda
       sBody <- getExpression bodyPtr
       return . ExpressionFunc . atFParams (item :) $ case sBody of
         ExpressionFunc x -> x

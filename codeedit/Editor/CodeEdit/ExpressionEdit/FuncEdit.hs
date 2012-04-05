@@ -15,10 +15,11 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 
 -- makeParamsEdit exported for use in definition sugaring.
 makeParamEdit :: MonadF m => Sugar.FuncParam m -> TWidget ViewTag m
-makeParamEdit param =
-  assignCursor (WidgetIds.fromIRef (Sugar.fpLambdaI param)) (WidgetIds.fromIRef (Sugar.fpParamI param)) .
-  (liftM . Widget.weakerEvents) paramDeleteEventMap $
-  ParamEdit.make (Sugar.fpParamI param)
+makeParamEdit param = do
+  lambdaI <- getP $ Sugar.fpLambdaPtr param
+  assignCursor (WidgetIds.fromIRef lambdaI) (WidgetIds.fromIRef (Sugar.fpParamI param)) .
+    (liftM . Widget.weakerEvents) paramDeleteEventMap $
+    ParamEdit.make (Sugar.fpParamI param)
   where
     paramDeleteEventMap =
       Widget.actionEventMapMovesCursor Config.delKeys "Delete parameter" .
