@@ -14,7 +14,9 @@ module Graphics.UI.Bottle.Widget (
   atImageWithSize, atImage, atMaybeEnter, atEventMap, atEvents,
   backgroundColor, tint, liftView,
   strongerEvents, weakerEvents,
-  translate, translateUserIO, align) where
+  translate, translateUserIO,
+  scale, scaleUserIO,
+  align) where
 
 import Data.Binary (Binary)
 import Data.List(isPrefixOf)
@@ -32,6 +34,7 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Rect as Rect
+import qualified Graphics.UI.Bottle.SizeRange as SizeRange
 import qualified Graphics.UI.Bottle.Sized as Sized
 
 argument :: (a -> b) -> (b -> c) -> a -> c
@@ -195,6 +198,19 @@ translateUserIO pos =
 
 translate :: Vector2 R -> Widget f -> Widget f
 translate = atUserIO . translateUserIO
+
+scaleUserIO :: Vector2 R -> UserIO f -> UserIO f
+scaleUserIO mult =
+  (atUioFrame . Anim.scale) mult .
+  (atUioFocalArea . Rect.atTopLeftAndSize) (* mult) .
+  (atUioMaybeEnter . fmap . fmap . atEnterResultRect . Rect.atTopLeftAndSize) (*mult) .
+  (atUioMaybeEnter . fmap . argument . Direction.inRelativePos . Rect.atTopLeftAndSize) (/mult)
+
+scale :: Vector2 R -> Widget f -> Widget f
+scale mult =
+  (atUserIO . scaleUserIO) mult .
+  (atContent . Sized.atRequestedSize) (SizeRange.lift2 (*) mult) .
+  (atContent . Sized.atFromSize . argument) (/ mult)
 
 -- If widget's max size is smaller than given size, place widget in
 -- portion of the extra space (0..1 ratio in each dimension):

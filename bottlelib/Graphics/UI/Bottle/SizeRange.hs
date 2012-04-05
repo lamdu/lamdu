@@ -4,13 +4,13 @@
 module Graphics.UI.Bottle.SizeRange
     (Coordinate, Size,
      SizeRange(..), atSrMinSize, atSrMaxSize,
-     fixedSize, expanding,
+     lift2, fixedSize, expanding,
      horizontallyExpanding, verticallyExpanding,
      )
 where
 
 import Data.Vector.Vector2         (Vector2(..))
-import Control.Applicative         (pure)
+import Control.Applicative         (pure, liftA2)
 import Graphics.DrawingCombinators (R)
 import qualified Data.AtFieldTH as AtFieldTH
 
@@ -25,6 +25,13 @@ data SizeRange = SizeRange {
   deriving (Eq, Ord, Show, Read)
 
 AtFieldTH.make ''SizeRange
+
+lift2 :: (a -> R -> R) -> Vector2 a -> SizeRange -> SizeRange
+lift2 f v (SizeRange minSize maxSize) =
+  SizeRange
+  { srMinSize = liftA2 f v minSize
+  , srMaxSize = (liftA2 . liftA2) f (fmap Just v) maxSize
+  }
 
 fixedSize :: Size -> SizeRange
 fixedSize size = SizeRange size (fmap Just size)

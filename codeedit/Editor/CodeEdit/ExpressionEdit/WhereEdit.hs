@@ -72,7 +72,7 @@ make makeExpressionEdit ancestry w@(Sugar.Where items bodyPtr) myId = do
       BWidgets.vbox $ Widget.weakerEvents eventMapOnBody bodyEdit :
         (map . Widget.weakerEvents) eventMapOnItems
         [ whereLabel
-        , whereEdits
+        , Widget.scale Config.whereScaleFactor whereEdits
         ]
   where
     makeWhereItemsGrid = liftM (Grid.toWidget . Grid.make) $ mapM makeWhereItemEdits items

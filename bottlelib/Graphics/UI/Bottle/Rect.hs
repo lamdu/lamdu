@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Graphics.UI.Bottle.Rect(
   R, Rect(..),
+  atTopLeftAndSize,
   atRectTopLeft, atLeft, atTop,
   atRectSize, atWidth, atHeight, width, height,
   bottomRight, center, distance)
@@ -17,6 +18,9 @@ data Rect = Rect {
   rectSize :: Vector2 R
   } deriving Show
 AtFieldTH.make ''Rect
+
+atTopLeftAndSize :: (Vector2 R -> Vector2 R) -> Rect -> Rect
+atTopLeftAndSize f = atRectTopLeft f . atRectSize f
 
 width :: Rect -> R
 width = Vector2.fst . rectSize
