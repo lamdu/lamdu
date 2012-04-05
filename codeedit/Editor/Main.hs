@@ -103,14 +103,14 @@ runDbStore font store = do
     helpStyle = TextView.Style {
       TextView.styleColor = Draw.Color 1 1 1 1,
       TextView.styleFont = font,
-      TextView.styleFontSize = 10
+      TextView.styleFontSize = Config.helpTextSize
       }
     style = TextEdit.Style {
       TextEdit.sTextViewStyle =
         TextView.Style {
           TextView.styleColor = Draw.Color 1 1 1 1,
           TextView.styleFont = font,
-          TextView.styleFontSize = 25
+          TextView.styleFontSize = Config.baseTextSize
           },
       TextEdit.sCursorColor = TextEdit.defaultCursorColor,
       TextEdit.sCursorWidth = TextEdit.defaultCursorWidth,

@@ -86,3 +86,6 @@ whereScaleFactor = 0.85
 
 foldKeys = [k '-']
 unfoldKeys = foldKeys
+
+helpTextSize = 10
+baseTextSize = 30
