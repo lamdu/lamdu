@@ -82,7 +82,7 @@ addAsDefinition newName expressionI = do
   Anchors.newPane newDefI
   return newDefI
 
-lambdaBodyRef :: Monad m => IRef Data.Expression -> Data.Lambda -> Transaction.Property t m (IRef Data.Expression)
+lambdaBodyRef :: Monad m => IRef Data.Expression -> Data.Lambda -> ExpressionPtr m
 lambdaBodyRef lambdaIRef (Data.Lambda paramI paramTypeI bodyI) =
   Property
     (return bodyI)
