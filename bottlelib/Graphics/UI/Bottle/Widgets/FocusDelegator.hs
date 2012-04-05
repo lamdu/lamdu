@@ -2,7 +2,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.FocusDelegator(IsDelegating(..), Keys(..), make, defaultKeys) where
 
-import Data.Maybe(fromMaybe)
 import Data.Monoid(mappend)
 import Graphics.UI.Bottle.Rect(Rect(..))
 import Graphics.UI.Bottle.Widget(Widget(..))
@@ -42,9 +41,9 @@ makeFocused delegating focusSelf keys backgroundCursorId =
     setStartDelegatingEventMap userIO =
       ($ userIO) .
       -- Don't touch event map if child has no enter (is not focusable)
-      fromMaybe id .
+      maybe id
       -- If child has enter, set event map to the result of startDelegatingEventMap
-      fmap (Widget.atUioEventMap . const . startDelegatingEventMap) $
+      (Widget.atUioEventMap . const . startDelegatingEventMap) $
       Widget.uioMaybeEnter userIO
 
     startDelegatingEventMap childEnter =

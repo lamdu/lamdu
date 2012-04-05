@@ -109,8 +109,7 @@ mainLoopAnim eventHandler makeFrame getAnimationHalfLife = do
   mainLoopImage imgEventHandler makeImage
 
 mainLoopWidget :: IO (Widget IO) -> IO Anim.R -> IO a
-mainLoopWidget mkWidget getAnimationHalfLife =
-  mainLoopAnim eventHandler mkImage getAnimationHalfLife
+mainLoopWidget mkWidget = mainLoopAnim eventHandler mkImage
   where
     eventHandler size event = do
       widget <- mkWidget
