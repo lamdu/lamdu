@@ -3,7 +3,7 @@ module Editor.DataOps (
   ExpressionPtr,
   newHole, giveAsArg, callWithArg,
   replace, replaceWithHole,
-  addAsDefinition, lambdaWrap, lambdaBodyRef)
+  addAsDefinition, lambdaWrap, lambdaBodyRef, lambdaParamTypeRef)
 where
 
 import Data.Store.IRef (IRef)
@@ -87,3 +87,9 @@ lambdaBodyRef lambdaIRef (Data.Lambda paramI paramTypeI bodyI) =
   Property
     (return bodyI)
     (Transaction.writeIRef lambdaIRef . Data.ExpressionLambda . Data.Lambda paramI paramTypeI)
+
+lambdaParamTypeRef :: Monad m => IRef Data.Expression -> Data.Lambda -> ExpressionPtr m
+lambdaParamTypeRef lambdaIRef (Data.Lambda paramI paramTypeI bodyI) =
+  Property
+    (return paramTypeI)
+    (Transaction.writeIRef lambdaIRef . Data.ExpressionLambda . flip (Data.Lambda paramI) bodyI)

@@ -2,14 +2,13 @@
 {-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
 module Editor.CodeEdit.Types(
   ExpressionPtr,
-  ExpressionAncestry,
-  AncestryItem(..), getAncestryParams,
-  ApplyParent(..), atApRole, atApFuncType, atApApply, atApParentPtr,
-  ApplyRole(..),
+
+  ExpressionAncestry, AncestryItem(..), getAncestryParams,
+  ApplyParent(..), atApRole, atApFuncType, atApApply, atApParentPtr, ApplyRole(..), FuncType(..),
   LambdaParent(..), atLpFunc, atLpParentI,
-  WhereParent(..), atWpWhere, atWpRole,
-  WhereRole(..),
-  FuncType(..),
+  WhereParent(..), atWpWhere, atWpRole, WhereRole(..),
+  ParamTypeParent(..), atPtParamI,
+
   ExpressionEditMaker,
   parensPrefix, addParens,
   varId, diveIn, isInfixName,
@@ -70,9 +69,15 @@ data WhereParent m = WhereParent
   }
 AtFieldTH.make ''WhereParent
 
+newtype ParamTypeParent = ParamTypeParent
+  { ptParamI :: IRef Data.Parameter
+  }
+AtFieldTH.make ''ParamTypeParent
+
 data AncestryItem m =
     AncestryItemApply (ApplyParent m)
   | AncestryItemLambda (LambdaParent m)
+  | AncestryItemParamType ParamTypeParent
   | AncestryItemWhere (WhereParent m)
 
 type ExpressionAncestry m = [AncestryItem m]
@@ -193,6 +198,8 @@ makeParensId (AncestryItemWhere (WhereParent (Sugar.Where _ body) role) : _) = d
   return $
     Widget.joinId (WidgetIds.fromIRef bodyI)
     [pack $ show role]
+makeParensId (AncestryItemParamType (ParamTypeParent parentI) : _) =
+  return $ WidgetIds.fromIRef parentI
 makeParensId [] =
   return $ Widget.Id ["root parens"]
 

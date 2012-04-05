@@ -1,6 +1,16 @@
+* paramI/paramTypePtr to their own little tuple record
+
+* AncestryItem should contain parent ptr out-of-band???
+
+* Extract Ancestry from Types
+
 * Show type of lambda params
 
 * Make where clauses parens boxes
+
+* A Monad type for expression edit makers -- with hidden ReaderT for
+  ancestry, and ExpressionEditMaker, and only allow recursing and
+  passing prefixed ancestry when recursing
 
 * Remove where bindings' folding
 

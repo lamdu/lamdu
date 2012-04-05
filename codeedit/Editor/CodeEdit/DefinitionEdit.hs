@@ -37,12 +37,14 @@ makeNameEdit definitionI =
 
 makeLHSEdit
   :: MonadF m
-  => IRef a
+  => ETypes.ExpressionEditMaker m
+  -> ETypes.ExpressionAncestry m
+  -> IRef a
   -> [Sugar.FuncParam m]
   -> TWidget ViewTag m
-makeLHSEdit definitionI params = do
+makeLHSEdit makeExpressionEdit ancestry definitionI params = do
   nameEdit <- makeNameEdit definitionI
-  paramsEdits <- mapM FuncEdit.makeParamEdit params
+  paramsEdits <- mapM (FuncEdit.makeParamEdit makeExpressionEdit ancestry) params
   return $ BWidgets.hboxSpaced (nameEdit : paramsEdits)
 
 -- from lhs->rhs and vice-versa:
@@ -102,7 +104,7 @@ makeParts makeExpressionEdit ancestry definitionI exprPtr = do
       case sExpr of
       Sugar.ExpressionFunc x -> x
       _ -> Sugar.Func [] exprPtr
-  lhsEdit <- makeLHSEdit definitionI $ Sugar.fParams func
+  lhsEdit <- makeLHSEdit makeExpressionEdit ancestry definitionI $ Sugar.fParams func
   equals <- BWidgets.makeLabel "=" (WidgetIds.fromIRef definitionI)
   rhsEdit <-
     makeExpressionEdit

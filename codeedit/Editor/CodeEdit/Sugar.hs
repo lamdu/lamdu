@@ -36,6 +36,7 @@ AtFieldTH.make ''Where
 
 data FuncParam m = FuncParam
   { fpParamI :: IRef Data.Parameter
+  , fpTypePtr :: ExpressionPtr m
   , fpLambdaPtr :: ExpressionPtr m
   , fpBodyI :: IRef Data.Expression
   }
@@ -66,6 +67,7 @@ getExpression exprPtr = do
         item =
           FuncParam
           { fpParamI = Data.lambdaParam lambda
+          , fpTypePtr = DataOps.lambdaParamTypeRef exprI lambda
           , fpLambdaPtr = exprPtr
           , fpBodyI = Data.lambdaBody lambda
           }
