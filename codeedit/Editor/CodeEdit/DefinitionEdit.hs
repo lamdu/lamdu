@@ -28,6 +28,9 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
+data Side = LHS | RHS | Other
+  deriving (Show, Eq)
+
 makeNameEdit :: Monad m => IRef a -> TWidget t m
 makeNameEdit definitionI =
   BWidgets.wrapDelegated FocusDelegator.NotDelegating
@@ -49,13 +52,11 @@ makeLHSEdit makeExpressionEdit ancestry definitionI params = do
 
 -- from lhs->rhs and vice-versa:
 addJumps
-  :: (Show key, Eq key)
-  => key -> key
-  -> [(key, Box.BoxElement f)]
-  -> [(key, Graphics.UI.Bottle.Widgets.Grid.GridElement f)]
-addJumps lhs rhs defKBoxElements =
-  addEventMap lhs rhs "right-hand side" Config.jumpToRhsKeys Direction.fromLeft .
-  addEventMap rhs lhs "left-hand side" Config.jumpToLhsKeys Direction.fromRight $
+  :: [(Side, Box.BoxElement f)]
+  -> [(Side, Graphics.UI.Bottle.Widgets.Grid.GridElement f)]
+addJumps defKBoxElements =
+  addEventMap LHS RHS "right-hand side" Config.jumpToRhsKeys Direction.fromLeft .
+  addEventMap RHS LHS "left-hand side"  Config.jumpToLhsKeys Direction.fromRight $
   defKBoxElements
   where
     addEventMap srcSide destSide doc keys dir =
@@ -73,29 +74,13 @@ addJumps lhs rhs defKBoxElements =
       Widget.enterResultEvent . enter . dir $
       Box.boxElementRect destElement
 
-make
-  :: MonadF m
-  => ETypes.ExpressionEditMaker m
-  -> IRef Data.Definition
-  -> TWidget ViewTag m
-make makeExpressionEdit definitionI =
-  liftM
-  ( Box.toWidget . (Box.atBoxContent . fmap) (addJumps "lhs" "rhs") .
-    BWidgets.hboxSpacedK ("space" :: String)
-  ) $
-  makeParts makeExpressionEdit [] definitionI exprPtr
-  where
-    exprPtr =
-      Property.composeLabel Data.defBody Data.atDefBody
-      (Transaction.fromIRef definitionI)
-
 makeParts
   :: MonadF m
   => ETypes.ExpressionEditMaker m
   -> ETypes.ExpressionAncestry m
   -> IRef a
   -> ETypes.ExpressionPtr m
-  -> CTransaction ViewTag m [(String, Widget (Transaction ViewTag m))]
+  -> CTransaction ViewTag m [(Side, Widget (Transaction ViewTag m))]
 makeParts makeExpressionEdit ancestry definitionI exprPtr = do
   exprI <- getP exprPtr
   sExpr <- transaction $ Sugar.getExpression exprPtr
@@ -112,6 +97,22 @@ makeParts makeExpressionEdit ancestry definitionI exprPtr = do
     (Sugar.fBody func)
   return $
     zipWith (second . Widget.align . (`Vector2` 0.5)) [1, 0.5, 0]
-    [("lhs", lhsEdit),
-     ("equals", equals),
-     ("rhs", rhsEdit)]
+    [(LHS, lhsEdit),
+     (Other, equals),
+     (RHS, rhsEdit)]
+
+make
+  :: MonadF m
+  => ETypes.ExpressionEditMaker m
+  -> IRef Data.Definition
+  -> TWidget ViewTag m
+make makeExpressionEdit definitionI =
+  liftM
+  ( Box.toWidget . (Box.atBoxContent . fmap) addJumps .
+    BWidgets.hboxSpacedK Other
+  ) $
+  makeParts makeExpressionEdit [] definitionI exprPtr
+  where
+    exprPtr =
+      Property.composeLabel Data.defBody Data.atDefBody
+      (Transaction.fromIRef definitionI)
