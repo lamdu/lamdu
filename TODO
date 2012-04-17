@@ -1,4 +1,14 @@
+* UserIO -> SizeDependentWidgetData ?
+
+* FocusDelegator should not keep the eventmap of an unfocusable child
+  when it isn't delegating (the "id" in the "maybe" call)
+
+* Types should be an extra row in a grid. Not mess up the layout of the non-typed code
+
+* makeParts should add the jumps in there..
+
 * paramI/paramTypePtr to their own little tuple record
+  * WhereItem should get a type under it too
 
 * AncestryItem should contain parent ptr out-of-band???
 
