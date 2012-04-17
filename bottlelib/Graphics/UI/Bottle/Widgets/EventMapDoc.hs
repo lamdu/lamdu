@@ -39,9 +39,9 @@ make eventMap style animId =
 
 addHelp :: TextView.Style -> Widget f -> Widget f
 addHelp style =
-  Widget.atMkUserIO f
+  Widget.atMkSizeDependentWidgetData f
   where
-    f mkUserIO size = Widget.atUioFrame (mappend docFrame) userIO
+    f mkSizeDependentWidgetData size = Widget.atSdwdFrame (mappend docFrame) userIO
       where
         rSize = srMinSize (requestedSize eventMapDoc)
         eventMapDoc = make eventMap style ["help box"]
@@ -52,8 +52,8 @@ addHelp style =
           Anim.translate (size - rSize) .
           Anim.backgroundColor ["help doc background"] 1 (Draw.Color 0.3 0.2 0.1 1) rSize $
           Sized.fromSize eventMapDoc size
-        eventMap = Widget.uioEventMap userIO
-        userIO = mkUserIO size
+        eventMap = Widget.sdwdEventMap userIO
+        userIO = mkSizeDependentWidgetData size
 
 makeToggledHelpAdder :: [E.EventType] -> TextView.Style -> IO (Widget IO -> IO (Widget IO))
 makeToggledHelpAdder overlayDocKeys style = do

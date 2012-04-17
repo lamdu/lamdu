@@ -107,11 +107,11 @@ makeFocused cursor style str myId =
       isFocused = True,
       content =
         Sized reqSize . const $
-        Widget.UserIO {
-          Widget.uioFrame = img,
-          Widget.uioEventMap = mempty,
-          Widget.uioMaybeEnter = Nothing,
-          Widget.uioFocalArea = cursorRect
+        Widget.SizeDependentWidgetData {
+          Widget.sdwdFrame = img,
+          Widget.sdwdEventMap = mempty,
+          Widget.sdwdMaybeEnter = Nothing,
+          Widget.sdwdFocalArea = cursorRect
           }
       }
     reqSize = SizeRange.fixedSize $ Vector2 (sCursorWidth style + tlWidth) tlHeight

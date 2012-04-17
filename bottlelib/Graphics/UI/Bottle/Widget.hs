@@ -4,18 +4,18 @@ module Graphics.UI.Bottle.Widget (
   Widget(..), MEnter, R,
   EnterResult(..), atEnterResultEvent, atEnterResultRect,
   Id(..), atId, joinId, subId,
-  UserIO(..), atUioMaybeEnter, atUioEventMap, atUioFrame, atUioFocalArea,
+  SizeDependentWidgetData(..), atSdwdMaybeEnter, atSdwdEventMap, atSdwdFrame, atSdwdFocalArea,
   EventResult(..), atEAnimIdMapping, atECursor,
   emptyEventResult, eventResultFromCursor,
   actionEventMap, actionEventMapMovesCursor,
   EventHandlers, atContent, atIsFocused,
   userIO, image, eventMap,
-  takesFocus, atMkUserIO, atUserIO,
+  takesFocus, atMkSizeDependentWidgetData, atSizeDependentWidgetData,
   atImageWithSize, atImage, atMaybeEnter, atEventMap, atEvents,
   backgroundColor, tint, liftView,
   strongerEvents, weakerEvents,
-  translate, translateUserIO,
-  scale, scaleUserIO,
+  translate, translateSizeDependentWidgetData,
+  scale, scaleSizeDependentWidgetData,
   align) where
 
 import Data.Binary (Binary)
@@ -67,22 +67,22 @@ data EnterResult f = EnterResult {
 type MEnter f = Maybe (Direction -> EnterResult f)
 type EventHandlers f = EventMap (f EventResult)
 
-data UserIO f = UserIO {
-  uioFrame :: Anim.Frame,
-  uioMaybeEnter :: MEnter f, -- Nothing if we're not enterable
-  uioEventMap :: EventHandlers f,
-  uioFocalArea :: Rect
+data SizeDependentWidgetData f = SizeDependentWidgetData {
+  sdwdFrame :: Anim.Frame,
+  sdwdMaybeEnter :: MEnter f, -- Nothing if we're not enterable
+  sdwdEventMap :: EventHandlers f,
+  sdwdFocalArea :: Rect
   }
 
 data Widget f = Widget {
   isFocused :: Bool,
-  content :: Sized (UserIO f)
+  content :: Sized (SizeDependentWidgetData f)
   }
 
 AtFieldTH.make ''EnterResult
 AtFieldTH.make ''Id
 AtFieldTH.make ''EventResult
-AtFieldTH.make ''UserIO
+AtFieldTH.make ''SizeDependentWidgetData
 AtFieldTH.make ''Widget
 
 emptyEventResult :: EventResult
@@ -99,67 +99,67 @@ eventResultFromCursor cursor = EventResult {
 
 atEvents :: (f EventResult -> g EventResult) -> Widget f -> Widget g
 atEvents func =
-  atUserIO chg
+  atSizeDependentWidgetData chg
   where
     chg userIo = userIo {
-      uioMaybeEnter =
+      sdwdMaybeEnter =
         (fmap . fmap . atEnterResultEvent) func $
-        uioMaybeEnter userIo,
-      uioEventMap = fmap func $ uioEventMap userIo
+        sdwdMaybeEnter userIo,
+      sdwdEventMap = fmap func $ sdwdEventMap userIo
       }
 
 liftView :: Sized Anim.Frame -> Widget f
 liftView view =
   Widget {
     isFocused = False,
-    content = Sized.atFromSize buildUserIO view
+    content = Sized.atFromSize buildSizeDependentWidgetData view
     }
   where
-    buildUserIO mkFrame size =
-      UserIO {
-        uioFocalArea = Rect 0 size,
-        uioFrame = mkFrame size,
-        uioEventMap = mempty,
-        uioMaybeEnter = Nothing
+    buildSizeDependentWidgetData mkFrame size =
+      SizeDependentWidgetData {
+        sdwdFocalArea = Rect 0 size,
+        sdwdFrame = mkFrame size,
+        sdwdEventMap = mempty,
+        sdwdMaybeEnter = Nothing
         }
 
-atUserIO :: (UserIO f -> UserIO g) -> Widget f -> Widget g
-atUserIO = atContent . fmap
+atSizeDependentWidgetData :: (SizeDependentWidgetData f -> SizeDependentWidgetData g) -> Widget f -> Widget g
+atSizeDependentWidgetData = atContent . fmap
 
-atMkUserIO :: ((Size -> UserIO f) -> Size -> UserIO f) -> Widget f -> Widget f
-atMkUserIO = atContent . Sized.atFromSize
+atMkSizeDependentWidgetData :: ((Size -> SizeDependentWidgetData f) -> Size -> SizeDependentWidgetData f) -> Widget f -> Widget f
+atMkSizeDependentWidgetData = atContent . Sized.atFromSize
 
 atImageWithSize :: (Size -> Anim.Frame -> Anim.Frame) -> Widget f -> Widget f
-atImageWithSize f = atMkUserIO g
+atImageWithSize f = atMkSizeDependentWidgetData g
   where
-    g mkUserIO size = atUioFrame (f size) (mkUserIO size)
+    g mkSizeDependentWidgetData size = atSdwdFrame (f size) (mkSizeDependentWidgetData size)
 
 atImage :: (Anim.Frame -> Anim.Frame) -> Widget f -> Widget f
-atImage = atUserIO . atUioFrame
+atImage = atSizeDependentWidgetData . atSdwdFrame
 
-userIO :: Widget f -> Size -> UserIO f
+userIO :: Widget f -> Size -> SizeDependentWidgetData f
 userIO = Sized.fromSize . content
 
 image :: Widget f -> Size -> Anim.Frame
-image = (fmap . fmap) uioFrame userIO
+image = (fmap . fmap) sdwdFrame userIO
 
 eventMap :: Widget f -> Size -> EventHandlers f
-eventMap = (fmap . fmap) uioEventMap userIO
+eventMap = (fmap . fmap) sdwdEventMap userIO
 
 -- TODO: Would be nicer as (Direction -> Id), but then TextEdit's "f" couldn't be ((,) String)..
 takesFocus :: Functor f => (Direction -> f Id) -> Widget f -> Widget f
-takesFocus enter = atUserIO f
+takesFocus enter = atSizeDependentWidgetData f
   where
-    f uio = (atUioMaybeEnter . const) mEnter uio
+    f sdwd = (atSdwdMaybeEnter . const) mEnter sdwd
       where
         mEnter = Just $ fmap (EnterResult focalArea . fmap eventResultFromCursor) enter
-        focalArea = uioFocalArea uio
+        focalArea = sdwdFocalArea sdwd
 
 atMaybeEnter :: (MEnter f -> MEnter f) -> Widget f -> Widget f
-atMaybeEnter = atUserIO . atUioMaybeEnter
+atMaybeEnter = atSizeDependentWidgetData . atSdwdMaybeEnter
 
 atEventMap :: (EventHandlers f -> EventHandlers f) -> Widget f -> Widget f
-atEventMap = atUserIO . atUioEventMap
+atEventMap = atSizeDependentWidgetData . atSdwdEventMap
 
 -- ^ If doesn't take focus, event map is ignored
 strongerEvents :: EventHandlers f -> Widget f -> Widget f
@@ -189,27 +189,27 @@ actionEventMapMovesCursor keys doc act =
   (fmap . fmap) eventResultFromCursor $
   EventMap.fromEventTypes keys doc act
 
-translateUserIO :: Vector2 R -> UserIO f -> UserIO f
-translateUserIO pos =
-  (atUioFrame . Anim.translate) pos .
-  (atUioFocalArea . Rect.atRectTopLeft) (+pos) .
-  (atUioMaybeEnter . fmap . fmap . atEnterResultRect . Rect.atRectTopLeft) (+pos) .
-  (atUioMaybeEnter . fmap . argument . Direction.inRelativePos . Rect.atRectTopLeft) (subtract pos)
+translateSizeDependentWidgetData :: Vector2 R -> SizeDependentWidgetData f -> SizeDependentWidgetData f
+translateSizeDependentWidgetData pos =
+  (atSdwdFrame . Anim.translate) pos .
+  (atSdwdFocalArea . Rect.atRectTopLeft) (+pos) .
+  (atSdwdMaybeEnter . fmap . fmap . atEnterResultRect . Rect.atRectTopLeft) (+pos) .
+  (atSdwdMaybeEnter . fmap . argument . Direction.inRelativePos . Rect.atRectTopLeft) (subtract pos)
 
 translate :: Vector2 R -> Widget f -> Widget f
-translate = atUserIO . translateUserIO
+translate = atSizeDependentWidgetData . translateSizeDependentWidgetData
 
-scaleUserIO :: Vector2 R -> UserIO f -> UserIO f
-scaleUserIO mult =
-  (atUioFrame . Anim.scale) mult .
-  (atUioFocalArea . Rect.atTopLeftAndSize) (* mult) .
-  (atUioMaybeEnter . fmap)
+scaleSizeDependentWidgetData :: Vector2 R -> SizeDependentWidgetData f -> SizeDependentWidgetData f
+scaleSizeDependentWidgetData mult =
+  (atSdwdFrame . Anim.scale) mult .
+  (atSdwdFocalArea . Rect.atTopLeftAndSize) (* mult) .
+  (atSdwdMaybeEnter . fmap)
     ((fmap . atEnterResultRect . Rect.atTopLeftAndSize) (*mult) .
      (argument . Direction.inRelativePos . Rect.atTopLeftAndSize) (/mult))
 
 scale :: Vector2 R -> Widget f -> Widget f
 scale mult =
-  (atUserIO . scaleUserIO) mult .
+  (atSizeDependentWidgetData . scaleSizeDependentWidgetData) mult .
   atContent
     (Sized.atRequestedSize (SizeRange.lift2 (*) mult) .
      (Sized.atFromSize . argument) (/ mult))
@@ -217,4 +217,4 @@ scale mult =
 -- If widget's max size is smaller than given size, place widget in
 -- portion of the extra space (0..1 ratio in each dimension):
 align :: Vector2 R -> Widget f -> Widget f
-align = atContent . Sized.align translateUserIO
+align = atContent . Sized.align translateSizeDependentWidgetData

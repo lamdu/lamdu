@@ -1,5 +1,3 @@
-* UserIO -> SizeDependentWidgetData ?
-
 * FocusDelegator should not keep the eventmap of an unfocusable child
   when it isn't delegating (the "id" in the "maybe" call)
 

@@ -5,7 +5,7 @@ module Graphics.UI.Bottle.Widgets.Grid(
   atGridContent,
   GridElement(..),
   atGridElementRect,
-  atGridElementUio,
+  atGridElementSdwd,
   Cursor, toWidget, toWidgetBiased)
 where
 
@@ -21,7 +21,7 @@ import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.SizeRange (Size)
 import Graphics.UI.Bottle.Sized (Sized(..))
-import Graphics.UI.Bottle.Widget (Widget(..), UserIO(..))
+import Graphics.UI.Bottle.Widget (Widget(..), SizeDependentWidgetData(..))
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as EventMap
@@ -98,7 +98,7 @@ getCursor =
 
 data GridElement f = GridElement {
   gridElementRect :: Rect,
-  gridElementUio :: UserIO f
+  gridElementSdwd :: SizeDependentWidgetData f
   }
 
 data KGrid key f = KGrid {
@@ -122,7 +122,7 @@ makeKeyed children = KGrid {
     keyIntoSized (key, sized) = fmap ((,) key) sized
     translate rect =
       GridElement rect .
-      Widget.translateUserIO (Rect.rectTopLeft rect)
+      Widget.translateSizeDependentWidgetData (Rect.rectTopLeft rect)
 
 unkey :: [[Widget f]] -> [[((), Widget f)]]
 unkey = (map . map) ((,) ())
@@ -143,38 +143,38 @@ helper combineEnters (KGrid mCursor sChildren) =
   Widget {
     isFocused = isJust mCursor,
     content =
-      Sized.atFromSize combineUserIOs $
+      Sized.atFromSize combineSizeDependentWidgetDatas $
       (fmap . map . map) snd sChildren
     }
   where
-    combineUserIOs mkUserIOss size =
-      maybe unselectedUserIO makeUserIO mCursor
+    combineSizeDependentWidgetDatas mkSizeDependentWidgetDatass size =
+      maybe unselectedSizeDependentWidgetData makeSizeDependentWidgetData mCursor
       where
-        userIOss = (map . map) gridElementUio $ mkUserIOss size
-        frame = mconcat . map uioFrame $ concat userIOss
-        mEnterss = (map . map) uioMaybeEnter userIOss
+        userIOss = (map . map) gridElementSdwd $ mkSizeDependentWidgetDatass size
+        frame = mconcat . map sdwdFrame $ concat userIOss
+        mEnterss = (map . map) sdwdMaybeEnter userIOss
         mEnter = combineEnters size mEnterss
 
-        unselectedUserIO = UserIO {
-          uioFrame = frame,
-          uioMaybeEnter = mEnter,
-          uioEventMap = mempty,
-          uioFocalArea = Rect 0 size
+        unselectedSizeDependentWidgetData = SizeDependentWidgetData {
+          sdwdFrame = frame,
+          sdwdMaybeEnter = mEnter,
+          sdwdEventMap = mempty,
+          sdwdFocalArea = Rect 0 size
           }
 
-        makeUserIO cursor@(Vector2 x y) = UserIO {
-          uioFrame = frame,
-          uioMaybeEnter = Nothing, -- We're already entered
-          uioEventMap = makeEventMap cursor userIO,
-          uioFocalArea = uioFocalArea userIO
+        makeSizeDependentWidgetData cursor@(Vector2 x y) = SizeDependentWidgetData {
+          sdwdFrame = frame,
+          sdwdMaybeEnter = Nothing, -- We're already entered
+          sdwdEventMap = makeEventMap cursor userIO,
+          sdwdFocalArea = sdwdFocalArea userIO
           }
           where
             userIO = userIOss !! y !! x
 
         makeEventMap cursor userIO =
-          mconcat [strongMap, uioEventMap userIO, weakMap]
+          mconcat [strongMap, sdwdEventMap userIO, weakMap]
           where
-            (weakMap, strongMap) = mkNavEventmap mEnterss size (uioFocalArea userIO) cursor
+            (weakMap, strongMap) = mkNavEventmap mEnterss size (sdwdFocalArea userIO) cursor
 
 toWidget :: KGrid key f -> Widget f
 toWidget =

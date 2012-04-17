@@ -36,14 +36,14 @@ makeFocused delegating focusSelf keys backgroundCursorId =
 
     blueify = Widget.backgroundColor backgroundCursorId blue
 
-    useStartDelegatingEventMap = Widget.atUserIO setStartDelegatingEventMap
+    useStartDelegatingEventMap = Widget.atSizeDependentWidgetData setStartDelegatingEventMap
     setStartDelegatingEventMap userIO =
       ($ userIO) .
       -- Don't touch event map if child has no enter (is not focusable)
       maybe id
       -- If child has enter, set event map to the result of startDelegatingEventMap
-      (Widget.atUioEventMap . const . startDelegatingEventMap) $
-      Widget.uioMaybeEnter userIO
+      (Widget.atSdwdEventMap . const . startDelegatingEventMap) $
+      Widget.sdwdMaybeEnter userIO
 
     startDelegatingEventMap childEnter =
       E.fromEventType (startDelegatingKey keys) "Enter child" .
@@ -64,9 +64,9 @@ make
   -> Widget.Id -- ^ Background Cursor Id
   -> Widget f -> Widget f
 make isDelegating Nothing focusSelf =
-  const . const $ Widget.atMkUserIO f
+  const . const $ Widget.atMkSizeDependentWidgetData f
   where
-    f mkUserIO size = Widget.atUioMaybeEnter (mEnter isDelegating size) $ mkUserIO size
+    f mkSizeDependentWidgetData size = Widget.atSdwdMaybeEnter (mEnter isDelegating size) $ mkSizeDependentWidgetData size
 
     mEnter NotDelegating wholeSize _ = Just . const $ takeFocus wholeSize
     mEnter _ _ Nothing = Nothing
