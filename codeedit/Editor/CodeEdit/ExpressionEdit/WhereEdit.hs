@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Editor.CodeEdit.ExpressionEdit.WhereEdit(make) where
+module Editor.CodeEdit.ExpressionEdit.WhereEdit(make, makeWithBody) where
 
 import Control.Monad (liftM)
 import Editor.Anchors (ViewTag)
@@ -21,28 +21,23 @@ make
   -> ETypes.ExpressionAncestry m
   -> Sugar.Where m
   -> Widget.Id -> TWidget ViewTag m
-make makeExpressionEdit ancestry w@(Sugar.Where items bodyPtr) myId = do
-  bodyI <- getP bodyPtr
-  assignCursor myId (WidgetIds.fromIRef bodyI) $ do
+make makeExpressionEdit ancestry where_@(Sugar.Where items _) myId = do
     whereLabel <-
       atTextSizeColor Config.whereTextSize Config.whereColor $
       BWidgets.makeLabel "where" myId
-    bodyEdit <- makeExpressionEdit bodyAncestry bodyPtr
     whereEdits <- makeWhereItemsGrid
     return . BWidgets.vbox $
-      [ bodyEdit
-      , whereLabel
+      [ whereLabel
       , Widget.scale Config.whereScaleFactor whereEdits
       ]
   where
     makeWhereItemsGrid = liftM (Grid.toWidget . Grid.make) $ mapM makeWhereItemEdits items
-    makeAncestry role = ETypes.AncestryItemWhere (ETypes.WhereParent w role) : ancestry
-    bodyAncestry = makeAncestry ETypes.WhereBody
-    witemAncestry = makeAncestry . ETypes.WhereDef . Sugar.wiParamI
     makeWhereItemEdits item =
       (liftM . map) (Widget.weakerEvents (whereItemDeleteEventMap item) . snd) $
       DefinitionEdit.makeParts makeExpressionEdit
       (witemAncestry item) (Sugar.wiParamI item) (Sugar.wiValuePtr item)
+    makeAncestry role = ETypes.AncestryItemWhere (ETypes.WhereParent where_ role) : ancestry
+    witemAncestry = makeAncestry . ETypes.WhereDef . Sugar.wiParamI
     whereItemDeleteEventMap whereItem =
       Widget.actionEventMapMovesCursor Config.delKeys "Delete variable" .
       liftM WidgetIds.fromIRef $ do
@@ -51,3 +46,21 @@ make makeExpressionEdit ancestry w@(Sugar.Where items bodyPtr) myId = do
           (Sugar.wiLambdaBodyI whereItem)
         return $ Sugar.wiLambdaBodyI whereItem
 
+makeWithBody
+  :: MonadF m
+  => ETypes.ExpressionEditMaker m
+  -> ETypes.ExpressionAncestry m
+  -> Sugar.Where m
+  -> Widget.Id -> TWidget ViewTag m
+makeWithBody makeExpressionEdit ancestry where_@(Sugar.Where _ bodyPtr) myId = do
+  bodyI <- getP bodyPtr
+  whereEdit <- make makeExpressionEdit ancestry where_ myId
+  assignCursor myId (WidgetIds.fromIRef bodyI) $ do
+    bodyEdit <- makeExpressionEdit bodyAncestry bodyPtr
+    return . BWidgets.vbox $
+      [ bodyEdit
+      , whereEdit
+      ]
+  where
+    makeAncestry role = ETypes.AncestryItemWhere (ETypes.WhereParent where_ role) : ancestry
+    bodyAncestry = makeAncestry ETypes.WhereBody

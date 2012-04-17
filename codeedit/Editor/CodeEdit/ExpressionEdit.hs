@@ -99,7 +99,7 @@ make ancestry exprPtr = do
       Sugar.ExpressionWhere w ->
         wrapNonHole Config.exprFocusDelegatorKeys
             FocusDelegator.Delegating id $
-          WhereEdit.make make ancestry w
+          WhereEdit.makeWithBody make ancestry w
       Sugar.ExpressionFunc f ->
         wrapNonHole Config.exprFocusDelegatorKeys
           FocusDelegator.Delegating id $
