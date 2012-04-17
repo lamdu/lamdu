@@ -2,7 +2,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.FocusDelegator(IsDelegating(..), Keys(..), make, defaultKeys) where
 
-import Data.Monoid(mappend)
 import Graphics.UI.Bottle.Rect(Rect(..))
 import Graphics.UI.Bottle.Widget(Widget(..))
 import qualified Graphics.DrawingCombinators as Draw
@@ -51,15 +50,14 @@ makeFocused delegating focusSelf keys backgroundCursorId =
       Widget.enterResultEvent $ childEnter Direction.Outside
 
     addStopDelegatingEventMap =
-      Widget.atEventMap .
-      flip mappend .
+      Widget.weakerEvents .
       E.fromEventType (stopDelegatingKey keys) "Exit child" .
       return $ Widget.eventResultFromCursor focusSelf
 
 -- | Make a focus delegator
-make ::
-  Monad f => -- actually "Pointed", as only using return.
-  IsDelegating -- ^ Start state, enter from direction state
+make
+  :: Monad f
+  => IsDelegating -- ^ Start state, enter from direction state
   -> Maybe IsDelegating -- ^ Current state
   -> Widget.Id -- ^ Enter/Stop delegating value
   -> Keys -- ^ Keys configuration
