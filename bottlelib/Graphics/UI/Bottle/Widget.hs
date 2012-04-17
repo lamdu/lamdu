@@ -203,9 +203,9 @@ scaleUserIO :: Vector2 R -> UserIO f -> UserIO f
 scaleUserIO mult =
   (atUioFrame . Anim.scale) mult .
   (atUioFocalArea . Rect.atTopLeftAndSize) (* mult) .
-  atUioMaybeEnter
-    ((fmap . fmap . atEnterResultRect . Rect.atTopLeftAndSize) (*mult) .
-     (fmap . argument . Direction.inRelativePos . Rect.atTopLeftAndSize) (/mult))
+  (atUioMaybeEnter . fmap)
+    ((fmap . atEnterResultRect . Rect.atTopLeftAndSize) (*mult) .
+     (argument . Direction.inRelativePos . Rect.atTopLeftAndSize) (/mult))
 
 scale :: Vector2 R -> Widget f -> Widget f
 scale mult =
