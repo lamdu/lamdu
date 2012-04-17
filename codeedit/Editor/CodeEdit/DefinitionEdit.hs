@@ -1,5 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
-module Editor.CodeEdit.DefinitionEdit(make, makeParts) where
+module Editor.CodeEdit.DefinitionEdit(make, makeParts, addJumps) where
 
 import Control.Arrow (second)
 import Control.Monad (liftM)
@@ -63,7 +62,7 @@ addJumps defKBoxElements =
       atPred (== srcSide)
       (addJumpsTo doc keys dir $ Box.getElement destSide defKBoxElements)
     addJumpsTo doc keys dir =
-      Box.atBoxElementUio . Widget.atUioEventMap . mappend .
+      Box.atBoxElementUio . Widget.atUioEventMap . flip mappend .
       jumpToExpressionEventMap doc keys dir
     jumpToExpressionEventMap doc keys dir destElement =
       maybe mempty

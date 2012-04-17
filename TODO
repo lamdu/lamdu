@@ -5,8 +5,6 @@
 
 * Types should be an extra row in a grid. Not mess up the layout of the non-typed code
 
-* makeParts should add the jumps in there..
-
 * paramI/paramTypePtr to their own little tuple record
   * WhereItem should get a type under it too
 

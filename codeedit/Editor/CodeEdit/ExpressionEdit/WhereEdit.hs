@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit.WhereEdit(make, makeWithBody) where
 
+import Control.Arrow (second)
 import Control.Monad (liftM)
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (TWidget, getP, atTextSizeColor, assignCursor)
@@ -31,9 +32,10 @@ make makeExpressionEdit ancestry where_@(Sugar.Where items _) myId = do
       , Widget.scale Config.whereScaleFactor whereEdits
       ]
   where
-    makeWhereItemsGrid = liftM (Grid.toWidget . Grid.make) $ mapM makeWhereItemEdits items
+    makeWhereItemsGrid = liftM (Grid.toWidget . addJumps . Grid.makeKeyed) $ mapM makeWhereItemEdits items
+    addJumps = (Grid.atGridContent . fmap . map) DefinitionEdit.addJumps
     makeWhereItemEdits item =
-      (liftM . map) (Widget.weakerEvents (whereItemDeleteEventMap item) . snd) $
+      (liftM . map . second) (Widget.weakerEvents (whereItemDeleteEventMap item)) $
       DefinitionEdit.makeParts makeExpressionEdit
       (witemAncestry item) (Sugar.wiParamI item) (Sugar.wiValuePtr item)
     makeAncestry role = ETypes.AncestryItemWhere (ETypes.WhereParent where_ role) : ancestry
