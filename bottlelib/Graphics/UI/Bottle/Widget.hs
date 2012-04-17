@@ -203,14 +203,16 @@ scaleUserIO :: Vector2 R -> UserIO f -> UserIO f
 scaleUserIO mult =
   (atUioFrame . Anim.scale) mult .
   (atUioFocalArea . Rect.atTopLeftAndSize) (* mult) .
-  (atUioMaybeEnter . fmap . fmap . atEnterResultRect . Rect.atTopLeftAndSize) (*mult) .
-  (atUioMaybeEnter . fmap . argument . Direction.inRelativePos . Rect.atTopLeftAndSize) (/mult)
+  atUioMaybeEnter
+    ((fmap . fmap . atEnterResultRect . Rect.atTopLeftAndSize) (*mult) .
+     (fmap . argument . Direction.inRelativePos . Rect.atTopLeftAndSize) (/mult))
 
 scale :: Vector2 R -> Widget f -> Widget f
 scale mult =
   (atUserIO . scaleUserIO) mult .
-  (atContent . Sized.atRequestedSize) (SizeRange.lift2 (*) mult) .
-  (atContent . Sized.atFromSize . argument) (/ mult)
+  atContent
+    (Sized.atRequestedSize (SizeRange.lift2 (*) mult) .
+     (Sized.atFromSize . argument) (/ mult))
 
 -- If widget's max size is smaller than given size, place widget in
 -- portion of the extra space (0..1 ratio in each dimension):
