@@ -1,7 +1,6 @@
-* Types should be an extra row in a grid. Not mess up the layout of the non-typed code
-
 * paramI/paramTypePtr to their own little tuple record
-  * WhereItem should get a type under it too
+
+* Types should be an extra row in a grid. Not mess up the layout of the non-typed code
 
 * AncestryItem should contain parent ptr out-of-band???
 

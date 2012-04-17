@@ -24,6 +24,7 @@ import qualified Editor.DataOps as DataOps
 data WhereItem m = WhereItem
   { wiParamI :: IRef Data.Parameter
   , wiValuePtr :: ExpressionPtr m
+  , wiValueType :: IRef Data.Expression
   , wiApplyPtr :: ExpressionPtr m
   , wiLambdaBodyI :: IRef Data.Expression
   }
@@ -84,12 +85,13 @@ getExpression exprPtr = do
           Data.ExpressionApply . Data.Apply funcI
       func <- Transaction.readIRef funcI
       case func of
-        Data.ExpressionLambda lambda@(Data.Lambda paramI _ bodyI) -> do
+        Data.ExpressionLambda lambda@(Data.Lambda paramI paramTypeI bodyI) -> do
           let
             bodyPtr = DataOps.lambdaBodyRef funcI lambda
             item = WhereItem
               { wiParamI = paramI
               , wiValuePtr = argPtr
+              , wiValueType = paramTypeI
               , wiApplyPtr = exprPtr
               , wiLambdaBodyI = bodyI
               }
