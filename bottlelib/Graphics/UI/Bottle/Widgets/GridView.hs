@@ -4,7 +4,7 @@ module Graphics.UI.Bottle.Widgets.GridView(make, makeGeneric) where
 
 import Control.Applicative (liftA2)
 import Control.Arrow (second)
-import Data.List (transpose)
+import Data.List (transpose, foldl')
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Rect (Rect(..))
@@ -26,6 +26,8 @@ disperse extra ((low, high):xs) = r : disperse remaining xs
     remaining = low + extra - r
 
 makeSizes :: [[SizeRange]] -> (SizeRange, Size -> [[Size]])
+makeSizes [] = (SizeRange.fixedSize 0, const [])
+makeSizes [[]] = (SizeRange.fixedSize 0, const [[]])
 makeSizes rows = (reqSize, mkSizes)
   where
     reqSize = SizeRange minSize maxSize
@@ -40,8 +42,8 @@ makeSizes rows = (reqSize, mkSizes)
     -- computeSizeRanges takes f twice (as f0 and f1) to work around
     -- lack of (proper) Rank2Types
     computeSizeRanges f0 f1 xs =
-      (map (maximum . map (f0 . SizeRange.srMinSize)) xs,
-       map (fmap maximum . mapM (f1 . SizeRange.srMaxSize)) xs)
+      (map (foldl' max 0 . map (f0 . SizeRange.srMinSize)) xs,
+       map (fmap (foldl' max 0) . mapM (f1 . SizeRange.srMaxSize)) xs)
 
     rowHeightRanges = zip rowMinHeights rowMaxHeights
     columnWidthRanges = zip columnMinWidths columnMaxWidths
@@ -69,6 +71,8 @@ makePlacements = (fmap . second . fmap) placements makeSizes
 makeGeneric :: (Rect -> a -> b) -> [[Sized a]] -> Sized [[b]]
 -- Special case to preserve shape to avoid handling it above in
 -- "maximum", "transpose", etc
+makeGeneric _ [] =
+  Sized (fixedSize 0) (const [])
 makeGeneric _ [[]] =
   Sized (fixedSize 0) (const [[]])
 makeGeneric translate rows =
