@@ -1,6 +1,7 @@
-* paramI/paramTypePtr to their own little tuple record
+* Param Types should have their own row in a grid (so navigation keys
+  work properly) and the types should be up-aligned
 
-* Types should be an extra row in a grid. Not mess up the layout of the non-typed code
+* paramI/paramTypePtr to their own little tuple record
 
 * AncestryItem should contain parent ptr out-of-band???
 
