@@ -46,8 +46,8 @@ makeLHSEdit
   -> TWidget ViewTag m
 makeLHSEdit makeExpressionEdit ancestry definitionI params = do
   nameEdit <- makeNameEdit definitionI
-  paramsEdits <- mapM (FuncEdit.makeParamEdit makeExpressionEdit ancestry) params
-  return $ BWidgets.hboxSpaced (nameEdit : paramsEdits)
+  paramsEdit <- FuncEdit.makeParamsEdit makeExpressionEdit ancestry params
+  return $ BWidgets.hboxSpaced [nameEdit, paramsEdit]
 
 -- from lhs->rhs and vice-versa:
 addJumps

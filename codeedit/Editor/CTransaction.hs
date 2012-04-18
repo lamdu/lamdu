@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 {-# OPTIONS -Wall #-}
 module Editor.CTransaction(
-  CTransaction, runCTransaction, runNestedCTransaction, TWidget,
+  CTransaction, runCTransaction, runNestedCTransaction, TWidget, WidgetT,
   readCursor, subCursor, readTextStyle, transaction, getP, assignCursor,
   atTextStyle, atTextSizeColor)
 where
@@ -33,7 +33,8 @@ newtype CTransaction t m a = CTransaction {
   deriving (Monad)
 AtFieldTH.make ''CTransaction
 
-type TWidget t m = CTransaction t m (Widget (Transaction t m))
+type WidgetT t m = Widget (Transaction t m)
+type TWidget t m = CTransaction t m (WidgetT t m)
 
 runCTransaction :: Widget.Id -> TextEdit.Style -> CTransaction t m a -> Transaction t m a
 runCTransaction cursor style =
