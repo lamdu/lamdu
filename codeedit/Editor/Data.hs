@@ -5,7 +5,8 @@ module Editor.Data (
   Builtin(..),
   Parameter(..),
   VariableRef(..), onVariableIRef,
-  Lambda(..), atLambdaParam, atLambdaParamType, atLambdaBody,
+  TypedParam(..),
+  Lambda(..), atLambdaParam, atLambdaBody,
   Apply(..), atApplyFunc, atApplyArg,
   HoleState(..),
     emptyHoleState, atHoleSearchTerm, --atHoleCachedSearchResults,
@@ -23,9 +24,14 @@ import qualified Data.AtFieldTH as AtFieldTH
 data Parameter = Parameter
   deriving (Eq, Ord, Read, Show)
 
+data TypedParam = TypedParam {
+  tpParam :: IRef Parameter,
+  tpType :: IRef Expression
+  }
+  deriving (Eq, Ord, Read, Show)
+
 data Lambda = Lambda {
-  lambdaParam :: IRef Parameter,
-  lambdaParamType :: IRef Expression,
+  lambdaParam :: TypedParam,
   lambdaBody :: IRef Expression
   }
   deriving (Eq, Ord, Read, Show)
@@ -75,6 +81,7 @@ onVariableIRef f (ParameterRef i) = f i
 onVariableIRef f (DefinitionRef i) = f i
 onVariableIRef f (BuiltinRef i) = f i
 
+derive makeBinary ''TypedParam
 derive makeBinary ''Apply
 derive makeBinary ''Lambda
 derive makeBinary ''Builtin

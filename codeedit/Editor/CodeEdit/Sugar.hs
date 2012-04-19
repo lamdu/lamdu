@@ -2,7 +2,7 @@
 
 module Editor.CodeEdit.Sugar
   ( Expression(..)
-  , Where(..), atWWheres, atWBody
+  , Where(..), atWWheres, atWBody, wiParamI
   , WhereItem(..)
   , Func(..), atFParams, atFBody
   , FuncParam(..)
@@ -22,12 +22,14 @@ import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
 
 data WhereItem m = WhereItem
-  { wiParamI :: IRef Data.Parameter
+  { wiParam :: Data.TypedParam
   , wiValuePtr :: ExpressionPtr m
-  , wiValueType :: IRef Data.Expression
   , wiApplyPtr :: ExpressionPtr m
   , wiLambdaBodyI :: IRef Data.Expression
   }
+
+wiParamI :: WhereItem m -> IRef Data.Parameter
+wiParamI = Data.tpParam . wiParam
 
 data Where m = Where
   { wWheres :: [WhereItem m]
@@ -67,7 +69,7 @@ getExpression exprPtr = do
         bodyPtr = DataOps.lambdaBodyRef exprI lambda
         item =
           FuncParam
-          { fpParamI = Data.lambdaParam lambda
+          { fpParamI = Data.tpParam (Data.lambdaParam lambda)
           , fpTypePtr = DataOps.lambdaParamTypeRef exprI lambda
           , fpLambdaPtr = exprPtr
           , fpBodyI = Data.lambdaBody lambda
@@ -85,13 +87,12 @@ getExpression exprPtr = do
           Data.ExpressionApply . Data.Apply funcI
       func <- Transaction.readIRef funcI
       case func of
-        Data.ExpressionLambda lambda@(Data.Lambda paramI paramTypeI bodyI) -> do
+        Data.ExpressionLambda lambda@(Data.Lambda typedParam bodyI) -> do
           let
             bodyPtr = DataOps.lambdaBodyRef funcI lambda
             item = WhereItem
-              { wiParamI = paramI
+              { wiParam = typedParam
               , wiValuePtr = argPtr
-              , wiValueType = paramTypeI
               , wiApplyPtr = exprPtr
               , wiLambdaBodyI = bodyI
               }

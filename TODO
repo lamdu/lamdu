@@ -1,8 +1,3 @@
-* Param Types should have their own row in a grid (so navigation keys
-  work properly) and the types should be up-aligned
-
-* paramI/paramTypePtr to their own little tuple record
-
 * AncestryItem should contain parent ptr out-of-band???
 
 * Extract Ancestry from Types
