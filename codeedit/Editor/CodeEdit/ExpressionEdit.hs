@@ -8,20 +8,24 @@ import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (TWidget, getP, transaction, subCursor)
-import Editor.CodeEdit.Types(AncestryItem(..), ApplyParent(..), ApplyRole(..))
+import Editor.CodeEdit.Ancestry(AncestryItem(..), ApplyParent(..), ApplyRole(..))
+import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
+import qualified Editor.CodeEdit.Ancestry as Ancestry
+import qualified Editor.CodeEdit.NextArg as NextArg
 import qualified Editor.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
 import qualified Editor.CodeEdit.ExpressionEdit.WhereEdit as WhereEdit
+import qualified Editor.CodeEdit.Infix as Infix
+import qualified Editor.CodeEdit.Parens as Parens
 import qualified Editor.CodeEdit.Sugar as Sugar
-import qualified Editor.CodeEdit.Types as ETypes
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
@@ -40,10 +44,10 @@ data HighlightParens = DoHighlightParens | DontHighlightParens
 
 makeCondParensId
   :: Monad m
-  => Bool -> ETypes.ExpressionAncestry m
+  => Bool -> Ancestry.ExpressionAncestry m
   -> Transaction ViewTag m (Maybe Widget.Id)
 makeCondParensId False = const $ return Nothing
-makeCondParensId True = liftM Just . ETypes.makeParensId
+makeCondParensId True = liftM Just . Parens.makeParensId
 
 setDoHighlight
   :: (Monad m, Functor f)
@@ -57,36 +61,36 @@ setDontHighlight = (liftM . fmap) ((,) DontHighlightParens)
 
 getParensInfo
   :: Monad m
-  => Sugar.Expression m -> ETypes.ExpressionAncestry m
+  => Sugar.Expression m -> Ancestry.ExpressionAncestry m
   -> Transaction ViewTag m (Maybe (HighlightParens, Widget.Id))
-getParensInfo (Sugar.ExpressionApply _) ancestry@(AncestryItemApply (ApplyParent ApplyArg ETypes.Prefix _ _) : _) =
-  setDoHighlight . liftM Just $ ETypes.makeParensId ancestry
+getParensInfo (Sugar.ExpressionApply _) ancestry@(AncestryItemApply (ApplyParent ApplyArg Ancestry.Prefix _ _) : _) =
+  setDoHighlight . liftM Just $ Parens.makeParensId ancestry
 getParensInfo (Sugar.ExpressionApply (Data.Apply funcI _)) ancestry@(AncestryItemApply (ApplyParent ApplyArg _ _ _) : _) = do
   isInfix <-
     liftM2 (||)
-    (ETypes.isInfixFunc funcI) (ETypes.isApplyOfInfixOp funcI)
+    (Infix.isInfixFunc funcI) (Infix.isApplyOfInfixOp funcI)
   setDoHighlight $ makeCondParensId isInfix ancestry
 getParensInfo (Sugar.ExpressionApply (Data.Apply funcI _)) ancestry@(AncestryItemApply (ApplyParent ApplyFunc _ _ _) : _) = do
-  isInfix <- ETypes.isApplyOfInfixOp funcI
+  isInfix <- Infix.isApplyOfInfixOp funcI
   setDoHighlight $ makeCondParensId isInfix ancestry
 getParensInfo (Sugar.ExpressionApply (Data.Apply funcI _)) ancestry = do
-  isInfix <- ETypes.isInfixFunc funcI
+  isInfix <- Infix.isInfixFunc funcI
   setDoHighlight $ makeCondParensId isInfix ancestry
 getParensInfo (Sugar.ExpressionGetVariable _) (AncestryItemApply (ApplyParent ApplyFunc _ _ _) : _) =
   return Nothing
 getParensInfo (Sugar.ExpressionGetVariable var) ancestry = do
   name <- Property.get $ Anchors.variableNameRef var
-  setDontHighlight $ makeCondParensId (ETypes.isInfixName name) ancestry
+  setDontHighlight $ makeCondParensId (Infix.isInfixName name) ancestry
 getParensInfo (Sugar.ExpressionWhere _) ancestry =
-  if ETypes.isAncestryRHS ancestry
+  if Ancestry.isAncestryRHS ancestry
   then return Nothing
-  else setDontHighlight . liftM Just $ ETypes.makeParensId ancestry
+  else setDontHighlight . liftM Just $ Parens.makeParensId ancestry
 getParensInfo (Sugar.ExpressionFunc _) ancestry@(AncestryItemApply _ : _) =
-  setDoHighlight . liftM Just $ ETypes.makeParensId ancestry
+  setDoHighlight . liftM Just $ Parens.makeParensId ancestry
 getParensInfo _ _ =
   return Nothing
 
-make :: MonadF m => ETypes.ExpressionEditMaker m
+make :: MonadF m => ExpressionEditMaker m
 make ancestry exprPtr = do
   sExpr <- transaction $ Sugar.getExpression exprPtr
   exprI <- getP exprPtr
@@ -121,23 +125,23 @@ make ancestry exprPtr = do
     exprId = WidgetIds.fromIRef exprI
   (holePicker, widget) <- makeEditor exprId
   (addArgDoc, addArgHandler) <-
-    transaction $ ETypes.makeAddArgHandler ancestry exprPtr
+    transaction $ NextArg.makeAddArgHandler ancestry exprPtr
   let
     eventMap = mconcat
       [ moveUnlessOnHole .
         Widget.actionEventMapMovesCursor
         Config.giveAsArgumentKeys "Give as argument" .
-        ETypes.diveIn $ DataOps.giveAsArg exprPtr
+        WidgetIds.diveIn $ DataOps.giveAsArg exprPtr
       , moveUnlessOnHole .
         Widget.actionEventMapMovesCursor
         Config.callWithArgumentKeys "Call with argument" .
-        ETypes.diveIn $ DataOps.callWithArg exprPtr
+        WidgetIds.diveIn $ DataOps.callWithArg exprPtr
       , pickResultFirst $
         Widget.actionEventMapMovesCursor
         Config.addNextArgumentKeys addArgDoc addArgHandler
       , ifHole (const mempty) $ replaceEventMap ancestry exprPtr
       , Widget.actionEventMapMovesCursor
-        Config.lambdaWrapKeys "Lambda wrap" . ETypes.diveIn $
+        Config.lambdaWrapKeys "Lambda wrap" . WidgetIds.diveIn $
         DataOps.lambdaWrap exprPtr
       ]
     moveUnlessOnHole = ifHole $ (const . fmap . liftM . Widget.atECursor . const) Nothing
@@ -153,12 +157,12 @@ make ancestry exprPtr = do
 
 replaceEventMap
   :: (Monad m, Functor m)
-  => ETypes.ExpressionAncestry m
+  => Ancestry.ExpressionAncestry m
   -> Transaction.Property ViewTag m (IRef Data.Expression)
   -> Widget.EventHandlers (Transaction ViewTag m)
 replaceEventMap ancestry exprPtr =
   Widget.actionEventMapMovesCursor
-  (Config.replaceKeys ++ extraReplaceKeys) "Replace" . ETypes.diveIn $
+  (Config.replaceKeys ++ extraReplaceKeys) "Replace" . WidgetIds.diveIn $
   DataOps.replaceWithHole exprPtr
   where
     extraReplaceKeys =
@@ -179,7 +183,7 @@ addParens
 addParens _ Nothing widget = return widget
 addParens myId (Just (needHighlight, parensId)) widget = do
   mInsideParenId <- subCursor rParenId
-  widgetWithParens <- ETypes.addParens id doHighlight parensId widget
+  widgetWithParens <- Parens.addParens id doHighlight parensId widget
   return $ maybe id (const highlightExpression) mInsideParenId widgetWithParens
   where
     rParenId = Widget.joinId myId [")"]

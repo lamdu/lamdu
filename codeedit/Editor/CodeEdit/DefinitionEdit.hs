@@ -9,15 +9,17 @@ import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (CTransaction, TWidget, transaction, getP)
+import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
+import Editor.DataOps (ExpressionPtr)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Widgets.Grid (GridElement)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.BottleWidgets as BWidgets
+import qualified Editor.CodeEdit.Ancestry as Ancestry
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
-import qualified Editor.CodeEdit.Types as ETypes
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.WidgetIds as WidgetIds
@@ -39,8 +41,8 @@ makeNameEdit definitionI =
 
 makeLHSEdit
   :: MonadF m
-  => ETypes.ExpressionEditMaker m
-  -> ETypes.ExpressionAncestry m
+  => ExpressionEditMaker m
+  -> Ancestry.ExpressionAncestry m
   -> IRef a
   -> [Sugar.FuncParam m]
   -> TWidget ViewTag m
@@ -75,10 +77,10 @@ addJumps defKBoxElements =
 
 makeParts
   :: MonadF m
-  => ETypes.ExpressionEditMaker m
-  -> ETypes.ExpressionAncestry m
+  => ExpressionEditMaker m
+  -> Ancestry.ExpressionAncestry m
   -> IRef a
-  -> ETypes.ExpressionPtr m
+  -> ExpressionPtr m
   -> CTransaction ViewTag m [(Maybe Side, Widget (Transaction ViewTag m))]
 makeParts makeExpressionEdit ancestry definitionI exprPtr = do
   exprI <- getP exprPtr
@@ -92,7 +94,7 @@ makeParts makeExpressionEdit ancestry definitionI exprPtr = do
   equals <- BWidgets.makeLabel "=" (WidgetIds.fromIRef definitionI)
   rhsEdit <-
     makeExpressionEdit
-    (ETypes.AncestryItemLambda (ETypes.LambdaParent func exprI) : ancestry)
+    (Ancestry.AncestryItemLambda (Ancestry.LambdaParent func exprI) : ancestry)
     (Sugar.fBody func)
   return $
     zipWith (second . Widget.align . (`Vector2` 0.5)) [1, 0.5, 0]
@@ -102,7 +104,7 @@ makeParts makeExpressionEdit ancestry definitionI exprPtr = do
 
 make
   :: MonadF m
-  => ETypes.ExpressionEditMaker m
+  => ExpressionEditMaker m
   -> IRef Data.Definition
   -> TWidget ViewTag m
 make makeExpressionEdit definitionI =

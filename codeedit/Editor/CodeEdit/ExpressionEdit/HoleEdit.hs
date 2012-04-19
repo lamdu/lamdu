@@ -12,7 +12,7 @@ import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (CTransaction, getP, assignCursor, TWidget, readCursor)
-import Editor.CodeEdit.Types(AncestryItem(..), ApplyParent(..), ApplyRole(..))
+import Editor.CodeEdit.Ancestry(AncestryItem(..), ApplyParent(..), ApplyRole(..))
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -21,9 +21,11 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
+import qualified Editor.CodeEdit.Ancestry as Ancestry
 import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
-import qualified Editor.CodeEdit.Types as ETypes
+import qualified Editor.CodeEdit.Infix as Infix
+import qualified Editor.CodeEdit.Parens as Parens
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
@@ -43,7 +45,7 @@ data Result m = Result {
 data HoleInfo m = HoleInfo
   { hiExpressionI :: IRef Data.Expression
   , hiHoleId :: Widget.Id
-  , hiAncestry :: ETypes.ExpressionAncestry m
+  , hiAncestry :: Ancestry.ExpressionAncestry m
   }
 
 resultPickEventMap
@@ -79,9 +81,9 @@ makeResultVariables holeInfo varRef = do
     parened =
       result
       (concat ["(", varName, ")"]) DontFlip resultIdAsPrefix $
-      ETypes.addParens id id resultId
+      Parens.addParens id id resultId
   return $
-    if ETypes.isInfixName varName
+    if Infix.isInfixName varName
     then
       case hiAncestry holeInfo of
         (AncestryItemApply x@(ApplyParent ApplyArg _ _ _) : _) ->
@@ -92,7 +94,7 @@ makeResultVariables holeInfo varRef = do
     else
       [ordinary]
   where
-    resultId = searchResultsPrefix (hiHoleId holeInfo) `mappend` ETypes.varId varRef
+    resultId = searchResultsPrefix (hiHoleId holeInfo) `mappend` WidgetIds.varId varRef
     resultIdAsPrefix = Widget.joinId resultId ["prefix"]
     result name needFlip wid addParens =
       Result
@@ -119,7 +121,7 @@ holeResultAnimMappingNoParens holeInfo resultId =
 
 holeResultAnimMapping :: HoleInfo m -> Widget.Id -> Widget.Id -> AnimId -> AnimId
 holeResultAnimMapping holeInfo resultId parensId =
-  renamePrefix (Widget.toAnimId (ETypes.parensPrefix expressionId)) (Widget.toAnimId (ETypes.parensPrefix parensId)) .
+  renamePrefix (Widget.toAnimId (WidgetIds.parensPrefix expressionId)) (Widget.toAnimId (WidgetIds.parensPrefix parensId)) .
   holeResultAnimMappingNoParens holeInfo resultId
   where
     expressionId = WidgetIds.fromIRef $ hiExpressionI holeInfo
@@ -131,7 +133,7 @@ pickResult
 pickResult holeInfo newExpr needFlip resultId = do
   Transaction.writeIRef (hiExpressionI holeInfo) newExpr
   flipAct needFlip
-  parensId <- ETypes.makeParensId $ hiAncestry holeInfo
+  parensId <- Parens.makeParensId $ hiAncestry holeInfo
   return Widget.EventResult {
     Widget.eCursor = Just . WidgetIds.fromIRef $ hiExpressionI holeInfo,
     Widget.eAnimIdMapping =
@@ -185,7 +187,7 @@ makeAllResults holeInfo searchTerm = do
     sortOn (resultOrdering searchTerm) $
     literalResults ++ filter goodResult varResults
   where
-    params = map Data.ParameterRef . ETypes.getAncestryParams $ hiAncestry holeInfo
+    params = map Data.ParameterRef . Ancestry.getAncestryParams $ hiAncestry holeInfo
 
 makeSearchTermWidget
   :: MonadF m
@@ -275,7 +277,7 @@ makeActiveHoleEdit holeInfo (Data.HoleState searchTerm) =
 
 make
   :: MonadF m
-  => ETypes.ExpressionAncestry m
+  => Ancestry.ExpressionAncestry m
   -> Data.HoleState
   -> Transaction.Property ViewTag m (IRef Data.Expression)
   -> Widget.Id

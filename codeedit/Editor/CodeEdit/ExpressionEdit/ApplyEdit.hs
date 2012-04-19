@@ -6,12 +6,15 @@ import Data.Maybe (fromMaybe)
 import Data.Store.Property (Property(Property))
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (TWidget, getP, assignCursor, transaction)
-import Editor.CodeEdit.Types(AncestryItem(..), ApplyParent(..))
+import Editor.CodeEdit.Ancestry (AncestryItem(..), ApplyParent(..))
+import Editor.CodeEdit.ExpressionEdit.ExpressionMaker (ExpressionEditMaker)
+import Editor.DataOps (ExpressionPtr)
 import Editor.MonadF (MonadF)
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.CodeEdit.Types as ETypes
+import qualified Editor.CodeEdit.Ancestry as Ancestry
+import qualified Editor.CodeEdit.Infix as Infix
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
@@ -20,23 +23,23 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 
 make
   :: MonadF m
-  => ETypes.ExpressionEditMaker m
-  -> ETypes.ExpressionAncestry m
-  -> ETypes.ExpressionPtr m
+  => ExpressionEditMaker m
+  -> Ancestry.ExpressionAncestry m
+  -> ExpressionPtr m
   -> Data.Apply
   -> Widget.Id
   -> TWidget ViewTag m
 make makeExpressionEdit ancestry expressionPtr apply@(Data.Apply funcI argI) myId = do
   expressionI <- getP expressionPtr
   assignCursor myId (WidgetIds.fromIRef argI) $ do
-    isInfix <- transaction $ ETypes.isInfixFunc funcI
-    isApplyOfInfix <- transaction $ ETypes.isApplyOfInfixOp funcI
-    mInfixOpOfRArg <- transaction $ ETypes.infixFuncOfRArg funcI
+    isInfix <- transaction $ Infix.isInfixFunc funcI
+    isApplyOfInfix <- transaction $ Infix.isApplyOfInfixOp funcI
+    mInfixOpOfRArg <- transaction $ Infix.infixFuncOfRArg funcI
     let
       funcType
-        | isInfix = ETypes.InfixLeft
-        | isApplyOfInfix = ETypes.InfixRight
-        | otherwise = ETypes.Prefix
+        | isInfix = Ancestry.InfixLeft
+        | isApplyOfInfix = Ancestry.InfixRight
+        | otherwise = Ancestry.Prefix
       expressionRef = Transaction.fromIRef expressionI
       delArgTarget = fromMaybe funcI mInfixOpOfRArg
       addDelEventMap target =
@@ -52,11 +55,11 @@ make makeExpressionEdit ancestry expressionPtr apply@(Data.Apply funcI argI) myI
         AncestryItemApply (ApplyParent role funcType apply expressionPtr) : ancestry
     funcEdit <-
       addDelEventMap argI argI $
-      makeExpressionEdit (makeAncestry ETypes.ApplyFunc) funcIPtr
+      makeExpressionEdit (makeAncestry Ancestry.ApplyFunc) funcIPtr
 
     argEdit <-
       addDelEventMap delArgTarget funcI $
-      makeExpressionEdit (makeAncestry ETypes.ApplyArg) argIPtr
+      makeExpressionEdit (makeAncestry Ancestry.ApplyArg) argIPtr
 
     return . BWidgets.hbox $
       (if isInfix then reverse else id)

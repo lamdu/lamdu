@@ -92,25 +92,28 @@ Executable Editor
                        bytestring,
                        derive,
                        bottle
-  Other-Modules:       Editor.Data,
-                       Editor.DataOps,
-                       Editor.Anchors,
-                       Editor.WidgetIds,
-                       Editor.Config,
-                       Editor.CTransaction,
-                       Editor.MonadF,
+  Other-Modules:       Editor.Anchors,
                        Editor.BottleWidgets,
+                       Editor.BranchGUI,
+                       Editor.CTransaction,
                        Editor.CodeEdit,
+                       Editor.CodeEdit.Ancestry,
                        Editor.CodeEdit.ExpressionEdit,
                        Editor.CodeEdit.ExpressionEdit.ApplyEdit,
+                       Editor.CodeEdit.ExpressionEdit.ExpressionMaker,
                        Editor.CodeEdit.ExpressionEdit.FuncEdit,
                        Editor.CodeEdit.ExpressionEdit.HoleEdit,
                        Editor.CodeEdit.ExpressionEdit.LiteralEdit,
                        Editor.CodeEdit.ExpressionEdit.VarEdit,
                        Editor.CodeEdit.ExpressionEdit.WhereEdit,
+                       Editor.CodeEdit.NextArg,
+                       Editor.CodeEdit.Parens,
                        Editor.CodeEdit.Sugar,
-                       Editor.CodeEdit.Types,
-                       Editor.BranchGUI
+                       Editor.Config,
+                       Editor.Data,
+                       Editor.DataOps,
+                       Editor.MonadF,
+                       Editor.WidgetIds
   ghc-options:         -O2 -Wall
   main-is:             Editor/Main.hs
   ghc-prof-options:    -prof -auto-all

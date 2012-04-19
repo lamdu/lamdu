@@ -4,12 +4,15 @@ module Editor.WidgetIds(
   backgroundCursorId, textCursorId, fromIRef,
   collapserId, branchSelection, goUpId,
   delegating, notDelegating, searchTermId,
-  parenHighlightId)
+  parenHighlightId,
+  parensPrefix,
+  varId, diveIn)
 where
 
 import Data.ByteString.Char8() -- IsString instance
 import Data.Store.Guid(bs)
 import Data.Store.IRef(IRef, guid)
+import qualified Editor.Data as Data
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 backgroundCursorId :: Widget.Id
@@ -41,3 +44,12 @@ searchTermId = flip Widget.joinId ["search term"]
 
 parenHighlightId :: Widget.Id
 parenHighlightId = Widget.Id ["paren highlight"]
+
+parensPrefix :: Widget.Id -> Widget.Id
+parensPrefix = flip Widget.joinId ["parens"]
+
+varId :: Data.VariableRef -> Widget.Id
+varId = Data.onVariableIRef fromIRef
+
+diveIn :: Functor f => f (IRef a) -> f Widget.Id
+diveIn = fmap $ delegating . fromIRef

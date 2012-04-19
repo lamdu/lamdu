@@ -1,9 +1,3 @@
-* AncestryItem should contain parent ptr out-of-band???
-
-* Extract Ancestry from Types
-
-* Show type of lambda params
-
 * Make where clauses parens boxes
 
 * A Monad type for expression edit makers -- with hidden ReaderT for
