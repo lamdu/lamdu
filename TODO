@@ -4,8 +4,6 @@
   ancestry, and ExpressionEditMaker, and only allow recursing and
   passing prefixed ancestry when recursing
 
-* Remove where bindings' folding
-
 * Key to add redex
 
 * Dapaot:
@@ -17,8 +15,6 @@
   We can create a discrepency between cursor pointing at one of the
   branches (e.g: after makeBranch) and the currentBranch property
   which updates the currentBranch and view!
-
-* Types??
 
 -------
 
