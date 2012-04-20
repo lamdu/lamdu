@@ -3,9 +3,11 @@
 module Editor.CodeEdit.Parens(addTextParens, addParens, makeParensId)
 where
 
-import Control.Monad (liftM, liftM2)
+import Control.Monad (liftM, liftM2, void)
 import Data.ByteString.Char8 (pack)
+import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
+import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (TWidget, WidgetT, transaction, subCursor)
 import Editor.MonadF (MonadF)
@@ -19,12 +21,15 @@ import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.WidgetIds as WidgetIds
+import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 data HighlightParens = DoHighlightParens | DontHighlightParens
 
 data ParensInfo
   = TextParens HighlightParens Widget.Id
+  | SquareParens Widget.Id
   | NoParens
 
 makeCondParensId
@@ -71,7 +76,7 @@ getParensInfo (Sugar.ExpressionGetVariable var) ancestry = do
 getParensInfo (Sugar.ExpressionWhere _) ancestry =
   if A.isAncestryRHS ancestry
   then return NoParens
-  else liftM (TextParens DontHighlightParens) $ makeParensId ancestry
+  else liftM SquareParens $ makeParensId ancestry
 getParensInfo (Sugar.ExpressionFunc _) ancestry@(A.AncestryItemApply _ : _) =
   liftM (TextParens DoHighlightParens) $ makeParensId ancestry
 getParensInfo _ _ =
@@ -90,6 +95,26 @@ addTextParens onLParen onRParen parenId widget = do
   return $ BWidgets.hbox [ beforeParen, widget, afterParen ]
   where
     label str = BWidgets.makeLabel str $ parensPrefix parenId
+
+squareDraw :: Vector2 Widget.R -> Draw.Image Draw.Any
+squareDraw (Vector2 w h) = mconcat
+  [ Draw.line (0, 0) (w, 0)
+  , Draw.line (w, 0) (w, h)
+  , Draw.line (w, h) (0, h)
+  , Draw.line (0, h) (0, 0)
+  ]
+
+squareFrame :: Anim.AnimId -> Vector2 Widget.R -> Anim.Frame
+squareFrame animId size =
+  Anim.simpleFrameDownscale animId size . void $ squareDraw size
+
+addSquareParens :: Widget.Id -> WidgetT t m -> WidgetT t m
+addSquareParens parensId =
+  Widget.atImageWithSize addSquareFrame .
+  Widget.translateBy (* ((1 - Config.squareParensScaleFactor) / Config.squareParensScaleFactor / 2)) .
+  Widget.atSizeDependentWidgetData (Widget.scaleSizeDependentWidgetData Config.squareParensScaleFactor)
+  where
+    addSquareFrame size = mappend $ squareFrame (Widget.toAnimId parensId) size
 
 makeParensId :: Monad m => A.ExpressionAncestry m -> Transaction ViewTag m Widget.Id
 makeParensId (A.AncestryItemApply (A.ApplyParent role _ _ parentPtr) : _) = do
@@ -124,6 +149,7 @@ addParens myId sExpr ancestry widget = do
   mInfo <- transaction $ getParensInfo sExpr ancestry
   case mInfo of
     NoParens -> return widget
+    SquareParens parensId -> return $ addSquareParens parensId widget
     TextParens needHighlight parensId -> do
       mInsideParenId <- subCursor rParenId
       widgetWithParens <- addTextParens id doHighlight parensId widget

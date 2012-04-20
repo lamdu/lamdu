@@ -1,5 +1,3 @@
-* Make where clauses parens boxes
-
 * A Monad type for expression edit makers -- with hidden ReaderT for
   ancestry, and ExpressionEditMaker, and only allow recursing and
   passing prefixed ancestry when recursing

@@ -91,3 +91,4 @@ helpTextSize = 10
 baseTextSize = 30
 
 typeScaleFactor = 0.6
+squareParensScaleFactor = 0.96
