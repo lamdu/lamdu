@@ -1,7 +1,6 @@
 module Editor.CodeEdit.ExpressionEdit.FuncEdit(make, makeParamsEdit) where
 
 import Control.Monad (liftM)
-import Data.List (intersperse)
 import Data.Store.IRef (IRef)
 import Data.Vector.Vector2 (Vector2(Vector2))
 import Editor.Anchors (ViewTag)
@@ -66,7 +65,7 @@ makeParamEdit makeExpressionEdit ancestry param = do
 paramTypesGrid :: [(WidgetT t m, WidgetT t m)] -> WidgetT t m
 paramTypesGrid paramTypes = Grid.toWidget $ Grid.make [params, types]
   where
-    (params, types) = unzip $ intersperse space paramTypes
+    (params, types) = unzip $ concatMap (\x -> [space, x]) paramTypes
     space = (BWidgets.spaceWidget, BWidgets.spaceWidget)
 
 -- exported for use in definition sugaring.

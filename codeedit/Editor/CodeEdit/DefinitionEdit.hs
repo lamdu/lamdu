@@ -49,7 +49,7 @@ makeLHSEdit
 makeLHSEdit makeExpressionEdit ancestry definitionI params = do
   nameEdit <- makeNameEdit definitionI
   paramsEdit <- FuncEdit.makeParamsEdit makeExpressionEdit ancestry params
-  return $ BWidgets.hboxSpaced [nameEdit, paramsEdit]
+  return $ BWidgets.hbox [nameEdit, paramsEdit]
 
 -- from lhs->rhs and vice-versa:
 addJumps
@@ -97,10 +97,13 @@ makeParts makeExpressionEdit ancestry definitionI exprPtr = do
     (Ancestry.AncestryItemLambda (Ancestry.LambdaParent func exprI) : ancestry)
     (Sugar.fBody func)
   return $
-    zipWith (second . Widget.align . (`Vector2` 0.5)) [1, 0.5, 0]
-    [(Just LHS, lhsEdit),
-     (Nothing, equals),
-     (Just RHS, rhsEdit)]
+    zipWith (second . Widget.align . (`Vector2` 0.5)) [1, 0.5, 0.5, 0.5, 0]
+    [(Just LHS, lhsEdit)
+    ,(Nothing, BWidgets.spaceWidget)
+    ,(Nothing, equals)
+    ,(Nothing, BWidgets.spaceWidget)
+    ,(Just RHS, rhsEdit)
+    ]
 
 make
   :: MonadF m
@@ -110,7 +113,7 @@ make
 make makeExpressionEdit definitionI =
   liftM
   ( Box.toWidget . (Box.atBoxContent . fmap) addJumps .
-    BWidgets.hboxSpacedK Nothing
+    BWidgets.hboxK
   ) $
   makeParts makeExpressionEdit [] definitionI exprPtr
   where
