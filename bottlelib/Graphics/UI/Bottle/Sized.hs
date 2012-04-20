@@ -5,7 +5,7 @@ module Graphics.UI.Bottle.Sized (Sized(..), atRequestedSize, atFromSize, align) 
 import Control.Applicative ((<$>), (<*>))
 import Data.Vector.Vector2 (Vector2)
 import Graphics.UI.Bottle.SizeRange (Size, SizeRange)
-import qualified Graphics.UI.Bottle.Animation as Anim
+import Graphics.UI.Bottle.Animation (R)
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Graphics.UI.Bottle.SizeRange as SizeRange
 
@@ -17,8 +17,7 @@ data Sized a = Sized
 
 AtFieldTH.make ''Sized
 
-align ::
-  (Vector2 Anim.R -> a -> a) -> Vector2 Anim.R -> Sized a -> Sized a
+align :: (Vector2 R -> a -> a) -> Vector2 R -> Sized a -> Sized a
 align translate ratio sized =
   atFromSize ((g . SizeRange.srMaxSize . requestedSize) sized) sized
   where
