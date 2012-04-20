@@ -1,6 +1,6 @@
 {-# OPTIONS -O2 -Wall #-}
-{-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
-module Editor.CodeEdit.Parens(addParens, makeParensId)
+{-# LANGUAGE OverloadedStrings #-}
+module Editor.CodeEdit.Parens(addTextParens, addParens, makeParensId)
 where
 
 import Data.ByteString.Char8 (pack)

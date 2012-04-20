@@ -1,5 +1,4 @@
 {-# OPTIONS -O2 -Wall #-}
-{-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
 module Editor.CodeEdit.NextArg(makeAddArgHandler)
 where
 
