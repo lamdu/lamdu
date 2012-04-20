@@ -1,4 +1,4 @@
-* A Monad type for expression edit makers -- with hidden ReaderT for
+* Oops, now that where is grid, it doesn't add space properly* A Monad type for expression edit makers -- with hidden ReaderT for
   ancestry, and ExpressionEditMaker, and only allow recursing and
   passing prefixed ancestry when recursing
 
