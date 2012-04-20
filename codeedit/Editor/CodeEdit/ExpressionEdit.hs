@@ -2,28 +2,25 @@
 module Editor.CodeEdit.ExpressionEdit(make) where
 
 import Control.Arrow (first, second)
-import Control.Monad (liftM, liftM2)
+import Control.Monad (liftM)
 import Data.Monoid (Monoid(..))
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (TWidget, getP, transaction, subCursor)
-import Editor.CodeEdit.Ancestry(AncestryItem(..), ApplyParent(..), ApplyRole(..))
+import Editor.CTransaction (getP, transaction)
+import Editor.CodeEdit.Ancestry(AncestryItem(..))
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
-import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
-import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.Ancestry as Ancestry
-import qualified Editor.CodeEdit.NextArg as NextArg
 import qualified Editor.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
 import qualified Editor.CodeEdit.ExpressionEdit.WhereEdit as WhereEdit
-import qualified Editor.CodeEdit.Infix as Infix
+import qualified Editor.CodeEdit.NextArg as NextArg
 import qualified Editor.CodeEdit.Parens as Parens
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
@@ -39,56 +36,6 @@ foldHolePicker
   -> HoleResultPicker m -> r
 foldHolePicker notHole _isHole NotAHole = notHole
 foldHolePicker _notHole isHole (IsAHole x) = isHole x
-
-data HighlightParens = DoHighlightParens | DontHighlightParens
-
-makeCondParensId
-  :: Monad m
-  => Bool -> Ancestry.ExpressionAncestry m
-  -> Transaction ViewTag m (Maybe Widget.Id)
-makeCondParensId False = const $ return Nothing
-makeCondParensId True = liftM Just . Parens.makeParensId
-
-setDoHighlight
-  :: (Monad m, Functor f)
-  => m (f a) -> m (f (HighlightParens, a))
-setDoHighlight = (liftM . fmap) ((,) DoHighlightParens)
-
-setDontHighlight
-  :: (Monad m, Functor f)
-  => m (f a) -> m (f (HighlightParens, a))
-setDontHighlight = (liftM . fmap) ((,) DontHighlightParens)
-
-getParensInfo
-  :: Monad m
-  => Sugar.Expression m -> Ancestry.ExpressionAncestry m
-  -> Transaction ViewTag m (Maybe (HighlightParens, Widget.Id))
-getParensInfo (Sugar.ExpressionApply _) ancestry@(AncestryItemApply (ApplyParent ApplyArg Ancestry.Prefix _ _) : _) =
-  setDoHighlight . liftM Just $ Parens.makeParensId ancestry
-getParensInfo (Sugar.ExpressionApply (Data.Apply funcI _)) ancestry@(AncestryItemApply (ApplyParent ApplyArg _ _ _) : _) = do
-  isInfix <-
-    liftM2 (||)
-    (Infix.isInfixFunc funcI) (Infix.isApplyOfInfixOp funcI)
-  setDoHighlight $ makeCondParensId isInfix ancestry
-getParensInfo (Sugar.ExpressionApply (Data.Apply funcI _)) ancestry@(AncestryItemApply (ApplyParent ApplyFunc _ _ _) : _) = do
-  isInfix <- Infix.isApplyOfInfixOp funcI
-  setDoHighlight $ makeCondParensId isInfix ancestry
-getParensInfo (Sugar.ExpressionApply (Data.Apply funcI _)) ancestry = do
-  isInfix <- Infix.isInfixFunc funcI
-  setDoHighlight $ makeCondParensId isInfix ancestry
-getParensInfo (Sugar.ExpressionGetVariable _) (AncestryItemApply (ApplyParent ApplyFunc _ _ _) : _) =
-  return Nothing
-getParensInfo (Sugar.ExpressionGetVariable var) ancestry = do
-  name <- Property.get $ Anchors.variableNameRef var
-  setDontHighlight $ makeCondParensId (Infix.isInfixName name) ancestry
-getParensInfo (Sugar.ExpressionWhere _) ancestry =
-  if Ancestry.isAncestryRHS ancestry
-  then return Nothing
-  else setDontHighlight . liftM Just $ Parens.makeParensId ancestry
-getParensInfo (Sugar.ExpressionFunc _) ancestry@(AncestryItemApply _ : _) =
-  setDoHighlight . liftM Just $ Parens.makeParensId ancestry
-getParensInfo _ _ =
-  return Nothing
 
 make :: MonadF m => ExpressionEditMaker m
 make ancestry exprPtr = do
@@ -151,9 +98,8 @@ make ancestry exprPtr = do
       r <- liftM Widget.eAnimIdMapping x
       (liftM . Widget.atEAnimIdMapping) (. r) y
 
-  mParenInfo <- transaction $ getParensInfo sExpr ancestry
   liftM (Widget.weakerEvents eventMap) $
-    addParens exprId mParenInfo widget
+    Parens.addParens exprId sExpr ancestry widget
 
 replaceEventMap
   :: (Monad m, Functor m)
@@ -169,25 +115,3 @@ replaceEventMap ancestry exprPtr =
       case ancestry of
         (AncestryItemApply _ : _) -> []
         _ -> Config.delKeys
-
-highlightExpression :: Widget.Widget f -> Widget.Widget f
-highlightExpression =
-  Widget.backgroundColor WidgetIds.parenHighlightId Config.parenHighlightColor
-
-addParens
-  :: (Monad m, Functor m)
-  => Widget.Id
-  -> Maybe (HighlightParens, Widget.Id)
-  -> Widget.Widget (Transaction t m)
-  -> TWidget t m
-addParens _ Nothing widget = return widget
-addParens myId (Just (needHighlight, parensId)) widget = do
-  mInsideParenId <- subCursor rParenId
-  widgetWithParens <- Parens.addParens id doHighlight parensId widget
-  return $ maybe id (const highlightExpression) mInsideParenId widgetWithParens
-  where
-    rParenId = Widget.joinId myId [")"]
-    doHighlight =
-      case needHighlight of
-        DoHighlightParens -> (>>= BWidgets.makeFocusableView rParenId)
-        DontHighlightParens -> id
