@@ -15,6 +15,7 @@ module Graphics.UI.Bottle.Widget (
   backgroundColor, tint, liftView,
   strongerEvents, weakerEvents,
   translate, translateSizeDependentWidgetData,
+  translateBy,
   scale, scaleSizeDependentWidgetData,
   align) where
 
@@ -196,8 +197,16 @@ translateSizeDependentWidgetData pos =
   (atSdwdMaybeEnter . fmap . fmap . atEnterResultRect . Rect.atRectTopLeft) (+pos) .
   (atSdwdMaybeEnter . fmap . argument . Direction.inRelativePos . Rect.atRectTopLeft) (subtract pos)
 
+-- TODO: This actually makes an incorrect widget because its size
+-- remains same, but it is now translated away from 0..size
 translate :: Vector2 R -> Widget f -> Widget f
 translate = atSizeDependentWidgetData . translateSizeDependentWidgetData
+
+-- Translate a multiple of size
+translateBy :: (Vector2 R -> Vector2 R) -> Widget f -> Widget f
+translateBy translationOfSize = (atContent . Sized.atFromSize) f
+  where
+    f fromSize size = translateSizeDependentWidgetData (translationOfSize size) $ fromSize size
 
 scaleSizeDependentWidgetData :: Vector2 R -> SizeDependentWidgetData f -> SizeDependentWidgetData f
 scaleSizeDependentWidgetData mult =
