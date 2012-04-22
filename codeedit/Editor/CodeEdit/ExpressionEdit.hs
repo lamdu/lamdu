@@ -7,10 +7,11 @@ import Data.Monoid (Monoid(..))
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (getP, transaction)
+import Editor.CTransaction (CTransaction, getP, transaction)
 import Editor.CodeEdit.Ancestry(AncestryItem(..))
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
+import Graphics.UI.Bottle.Widget (EventHandlers)
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.Ancestry as Ancestry
@@ -71,35 +72,44 @@ make ancestry exprPtr = do
         LiteralEdit.makeInt exprI integer
     exprId = WidgetIds.fromIRef exprI
   (holePicker, widget) <- makeEditor exprId
-  (addArgDoc, addArgHandler) <-
-    transaction $ NextArg.makeAddArgHandler ancestry exprPtr
-  let
-    eventMap = mconcat
-      [ moveUnlessOnHole .
-        Widget.actionEventMapMovesCursor
-        Config.giveAsArgumentKeys "Give as argument" .
-        WidgetIds.diveIn $ DataOps.giveAsArg exprPtr
-      , moveUnlessOnHole .
-        Widget.actionEventMapMovesCursor
-        Config.callWithArgumentKeys "Call with argument" .
-        WidgetIds.diveIn $ DataOps.callWithArg exprPtr
-      , pickResultFirst $
-        Widget.actionEventMapMovesCursor
-        Config.addNextArgumentKeys addArgDoc addArgHandler
-      , ifHole (const mempty) $ replaceEventMap ancestry exprPtr
-      , Widget.actionEventMapMovesCursor
-        Config.lambdaWrapKeys "Lambda wrap" . WidgetIds.diveIn $
-        DataOps.lambdaWrap exprPtr
-      ]
-    moveUnlessOnHole = ifHole $ (const . fmap . liftM . Widget.atECursor . const) Nothing
-    pickResultFirst = ifHole $ maybe id (fmap . joinEvents)
-    ifHole isHole = foldHolePicker id isHole holePicker
-    joinEvents x y = do
-      r <- liftM Widget.eAnimIdMapping x
-      (liftM . Widget.atEAnimIdMapping) (. r) y
+  eventMap <- expressionEventMap ancestry exprPtr holePicker
 
   liftM (Widget.weakerEvents eventMap) $
     Parens.addParens exprId sExpr ancestry widget
+
+expressionEventMap
+  :: MonadF m
+  => Ancestry.ExpressionAncestry m
+  -> Transaction.Property ViewTag m (IRef Data.Expression)
+  -> HoleResultPicker m
+  -> CTransaction ViewTag m (EventHandlers (Transaction ViewTag m))
+expressionEventMap ancestry exprPtr holePicker = do
+  (addArgDoc, addArgHandler) <-
+    transaction $ NextArg.makeAddArgHandler ancestry exprPtr
+  return . mconcat $
+    [ moveUnlessOnHole .
+      Widget.actionEventMapMovesCursor
+      Config.giveAsArgumentKeys "Give as argument" .
+      WidgetIds.diveIn $ DataOps.giveAsArg exprPtr
+    , moveUnlessOnHole .
+      Widget.actionEventMapMovesCursor
+      Config.callWithArgumentKeys "Call with argument" .
+      WidgetIds.diveIn $ DataOps.callWithArg exprPtr
+    , pickResultFirst $
+      Widget.actionEventMapMovesCursor
+      Config.addNextArgumentKeys addArgDoc addArgHandler
+    , ifHole (const mempty) $ replaceEventMap ancestry exprPtr
+    , Widget.actionEventMapMovesCursor
+      Config.lambdaWrapKeys "Lambda wrap" . WidgetIds.diveIn $
+      DataOps.lambdaWrap exprPtr
+    ]
+  where
+    moveUnlessOnHole = ifHole $ (const . fmap . liftM . Widget.atECursor . const) Nothing
+    pickResultFirst = ifHole $ maybe id (fmap . joinEvents)
+    ifHole whenHole = foldHolePicker id whenHole holePicker
+    joinEvents x y = do
+      r <- liftM Widget.eAnimIdMapping x
+      (liftM . Widget.atEAnimIdMapping) (. r) y
 
 replaceEventMap
   :: (Monad m, Functor m)
