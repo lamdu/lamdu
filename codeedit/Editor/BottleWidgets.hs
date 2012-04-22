@@ -12,16 +12,15 @@ module Editor.BottleWidgets(
   setTextColor
 ) where
 
-import Control.Arrow (second)
+import Control.Arrow (first, second)
 import Control.Monad (when, liftM)
 import Data.ByteString.Char8 (pack)
-import Data.List (intersperse)
-import Data.List.Utils (enumerate, nth)
+import Data.List (findIndex, intersperse)
 import Data.Maybe (isJust)
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
-import Editor.CTransaction (TWidget, CTransaction, readTextStyle, readCursor, getP, assignCursor, atTextStyle)
+import Editor.CTransaction (WidgetT, TWidget, CTransaction, readTextStyle, readCursor, getP, assignCursor, atTextStyle)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Sized (Sized)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -68,24 +67,20 @@ makeFocusableTextView text myId = do
   textView <- makeTextView text myId
   makeFocusableView myId textView
 
-makeChoice ::
-  (Monad m) =>
-  Widget.Id -> Transaction.Property t m Int -> Box.Orientation ->
-  [TWidget t m] -> TWidget t m
-makeChoice selectionAnimId curChoiceRef orientation children = do
-  curChoice <- getP curChoiceRef
-  focusables <- sequence children
+makeChoice
+  :: (Monad m, Eq a)
+  => Widget.Id -> Box.Orientation -> [(a, WidgetT t m)] -> a -> TWidget t m
+makeChoice selectionAnimId orientation children curChild = do
   let
-    widget =
-      Box.toWidgetBiased curChoice .
-      Box.make orientation .
-      nth curChoice (Widget.backgroundColor selectionAnimId selectedColor) .
-      map updateCurChoice $
-      enumerate focusables
-  return widget
+    mCurChildIndex = findIndex ((curChild ==) . fst) children
+    colorizedChildren =
+      map (uncurry colorize . first (curChild ==)) children
+    box = Box.make orientation colorizedChildren
+  return $
+    maybe Box.toWidget Box.toWidgetBiased mCurChildIndex box
   where
-    updateCurChoice (i, focusable) =
-      Widget.atEvents (Property.set curChoiceRef i >>) focusable
+    colorize True = Widget.backgroundColor selectionAnimId selectedColor
+    colorize False = id
     selectedColor = Draw.Color 0 0.5 0 1
 
 -- TODO: This logic belongs in the FocusDelegator itself

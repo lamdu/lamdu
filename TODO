@@ -8,12 +8,6 @@
   * Add anim-id-remappings to sugar changes
   * Multi-ids
 
-* Branch selection is buggy:
-
-  We can create a discrepency between cursor pointing at one of the
-  branches (e.g: after makeBranch) and the currentBranch property
-  which updates the currentBranch and view!
-
 -------
 
 * Add JumpTo which gives a hole-like search -- that can sit in a "tab"

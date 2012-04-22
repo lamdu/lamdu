@@ -2,11 +2,11 @@
 module Editor.BranchGUI(makeRootWidget) where
 
 import Control.Monad (liftM, liftM2, unless)
-import Data.List (findIndex, elemIndex)
+import Data.List (findIndex)
 import Data.List.Utils (removeAt)
 import Data.Maybe (fromMaybe)
 import Data.Monoid(Monoid(..))
-import Data.Store.Property(Property)
+import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag, DBTag)
@@ -18,16 +18,21 @@ import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
-import qualified Editor.WidgetIds as WidgetIds
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.Config as Config
+import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
-deleteCurrentBranch :: Monad m => Transaction DBTag m Widget.Id
-deleteCurrentBranch = do
+setCurrentBranch :: Monad m => View -> Branch -> Transaction DBTag m ()
+setCurrentBranch view branch = do
+  Property.set Anchors.currentBranch branch
+  View.setBranch view branch
+
+deleteCurrentBranch :: Monad m => View -> Transaction DBTag m Widget.Id
+deleteCurrentBranch view = do
   branch <- Property.get Anchors.currentBranch
   branches <- Property.get Anchors.branches
   let
@@ -39,7 +44,7 @@ deleteCurrentBranch = do
   let
     newCurrentBranch =
       newBranches !! min (length newBranches - 1) index
-  Property.set Anchors.currentBranch $ snd newCurrentBranch
+  setCurrentBranch view $ snd newCurrentBranch
   return . WidgetIds.fromIRef $ fst newCurrentBranch
 
 makeBranch :: Monad m => View -> Transaction DBTag m ()
@@ -48,44 +53,39 @@ makeBranch view = do
   textEditModelIRef <- Transaction.newIRef "New view"
   let viewPair = (textEditModelIRef, newBranch)
   Property.pureModify Anchors.branches (++ [viewPair])
-  Property.set Anchors.currentBranch newBranch
-
-applyAndReturn :: Monad m => (a -> m ()) -> a -> m a
-applyAndReturn f val = f val >> return val
-
-branchSelectorProperty :: Monad m => View -> [Branch.Branch] -> Property (Transaction DBTag m) Int
-branchSelectorProperty view branches =
-  Property.pureCompose
-    (fromMaybe (error "Selected branch not in branch list") .
-     (`elemIndex` branches)) (branches !!) .
-  Property.compose return (applyAndReturn (View.setBranch view)) $
-  Anchors.currentBranch
+  setCurrentBranch view newBranch
 
 makeRootWidget :: MonadF m => TWidget ViewTag (Transaction DBTag m) -> TWidget DBTag m
 makeRootWidget widget = do
   view <- getP Anchors.view
   namedBranches <- getP Anchors.branches
-
   viewEdit <- makeWidgetForView view widget
+  currentBranch <- getP Anchors.currentBranch
 
   let
-    branchIndexRef = branchSelectorProperty view $ map snd namedBranches
-    makeBranchNameEdit textEditModelIRef =
-      BWidgets.wrapDelegated FocusDelegator.NotDelegating
-      (BWidgets.makeTextEdit (Transaction.fromIRef textEditModelIRef)) $
-      WidgetIds.fromIRef textEditModelIRef
+    makeBranchNameEdit textEditModelIRef branch = do
+      branchNameEdit <-
+        BWidgets.wrapDelegated FocusDelegator.NotDelegating
+        (BWidgets.makeTextEdit (Transaction.fromIRef textEditModelIRef)) $
+        WidgetIds.fromIRef textEditModelIRef
+      return
+        (branch,
+         (Widget.atMaybeEnter . fmap . fmap . Widget.atEnterResultEvent)
+         (setCurrentBranch view branch >>)
+         branchNameEdit)
+  branchNameEdits <- mapM (uncurry makeBranchNameEdit) namedBranches
   branchSelector <-
-    BWidgets.makeChoice WidgetIds.branchSelection branchIndexRef
-    Box.vertical $ map (makeBranchNameEdit . fst) namedBranches
+    BWidgets.makeChoice WidgetIds.branchSelection Box.vertical branchNameEdits
+    currentBranch
 
   let
     delBranchEventMap
       | null (drop 1 namedBranches) = mempty
-      | otherwise = Widget.actionEventMapMovesCursor Config.delBranchKeys "Delete Branch" deleteCurrentBranch
+      | otherwise = Widget.actionEventMapMovesCursor Config.delBranchKeys "Delete Branch" $ deleteCurrentBranch view
   return .
     (Widget.strongerEvents . mconcat)
       [Widget.actionEventMap Config.quitKeys "Quit" (error "Quit")
-      ,Widget.actionEventMap Config.makeBranchKeys "New Branch" (makeBranch view)
+      ,Widget.actionEventMap Config.makeBranchKeys "New Branch" $ makeBranch view
       ] .
     Box.toWidget . Box.make Box.horizontal $
     [viewEdit
