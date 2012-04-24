@@ -9,6 +9,7 @@ import Editor.CodeEdit.Ancestry (AncestryItem(..), LambdaParent(..))
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.DataOps (ExpressionPtr)
 import Editor.MonadF (MonadF)
+import qualified Data.List as List
 import qualified Data.Store.Property as Property
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.Ancestry as Ancestry
@@ -63,9 +64,10 @@ makeParamEdit makeExpressionEdit ancestry param = do
         return . WidgetIds.fromIRef $ Sugar.fpBodyI param
 
 paramTypesGrid :: [(WidgetT t m, WidgetT t m)] -> WidgetT t m
-paramTypesGrid paramTypes = Grid.toWidget $ Grid.make [params, types]
+paramTypesGrid paramTypes =
+  Grid.toWidget $ Grid.make [params, types]
   where
-    (params, types) = unzip $ concatMap (\x -> [space, x]) paramTypes
+    (params, types) = unzip $ List.intersperse space paramTypes
     space = (BWidgets.spaceWidget, BWidgets.spaceWidget)
 
 -- exported for use in definition sugaring.

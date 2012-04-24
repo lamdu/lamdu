@@ -49,7 +49,7 @@ makeLHSEdit
 makeLHSEdit makeExpressionEdit ancestry definitionI params = do
   nameEdit <- makeNameEdit definitionI
   paramsEdit <- FuncEdit.makeParamsEdit makeExpressionEdit ancestry params
-  return $ BWidgets.hbox [nameEdit, paramsEdit]
+  return $ BWidgets.hbox [nameEdit, BWidgets.spaceWidget, paramsEdit]
 
 -- from lhs->rhs and vice-versa:
 addJumps
