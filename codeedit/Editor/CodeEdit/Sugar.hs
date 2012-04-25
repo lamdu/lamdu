@@ -1,14 +1,17 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Editor.CodeEdit.Sugar
-  ( Expression(..)
-  , Where(..), atWWheres, atWBody, wiParamI
+  ( Expression(..), ExpressionRef(..)
+  , Where(..), atWWheres, atWBody
   , WhereItem(..)
   , Func(..), atFParams, atFBody
   , FuncParam(..)
+  , Apply(..)
+  , Parens(..), ParensInfo(..), HighlightParens(..)
   , getExpression
   ) where
 
+import Control.Monad (liftM)
 import Data.Store.IRef(IRef)
 import Data.Store.Property(Property(Property))
 import Data.Store.Transaction(Transaction)
@@ -20,66 +23,93 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
+import qualified Graphics.UI.Bottle.Widget as Widget
+
+data ExpressionRef m = ExpressionRef
+  { rExpressionPtr :: ExpressionPtr m
+  , rExpression :: Expression m
+  }
 
 data WhereItem m = WhereItem
-  { wiParam :: Data.TypedParam
-  , wiValuePtr :: ExpressionPtr m
+  { wiParamI :: IRef Data.Parameter
+  -- TODO: Show type as well ?
+  , wiValue :: ExpressionRef m
+  -- Pointer to original apply provided to still give access to it.
   , wiApplyPtr :: ExpressionPtr m
+  -- IRef to body of lambda provided to allow deleting the where item.
   , wiLambdaBodyI :: IRef Data.Expression
   }
 
-wiParamI :: WhereItem m -> IRef Data.Parameter
-wiParamI = Data.tpParam . wiParam
-
 data Where m = Where
   { wWheres :: [WhereItem m]
-  , wBody :: ExpressionPtr m
+  , wBody :: ExpressionRef m
   }
-AtFieldTH.make ''Where
 
 data FuncParam m = FuncParam
   { fpParamI :: IRef Data.Parameter
-  , fpTypePtr :: ExpressionPtr m
+  , fpType :: ExpressionRef m
+  -- Pointer to original lambda expression provided to still give access to the lambda.
   , fpLambdaPtr :: ExpressionPtr m
+  -- IRef to original body of lambda provided to allow deleting the param/lambda.
   , fpBodyI :: IRef Data.Expression
   }
 
 -- Multi-param Lambda
 data Func m = Func
   { fParams :: [FuncParam m]
-  , fBody :: ExpressionPtr m
+  , fBody :: ExpressionRef m
   }
-AtFieldTH.make ''Func
+
+data HighlightParens = DoHighlightParens | DontHighlightParens
+
+data ParensInfo
+  = TextParens HighlightParens Widget.Id
+  | SquareParens Widget.Id
+
+data Parens m = Parens
+  { parensInfo :: ParensInfo
+  , parensBody :: ExpressionRef m
+  }
+
+data Apply m = Apply
+  { applyFunc :: ExpressionRef m
+  , applyArg :: ExpressionRef m
+  }
 
 data Expression m
-  = ExpressionApply Data.Apply
+  = ExpressionParens (Parens m)
+  | ExpressionApply (Apply m)
   | ExpressionGetVariable Data.VariableRef
   | ExpressionHole Data.HoleState
   | ExpressionLiteralInteger Integer
   | ExpressionWhere (Where m)
   | ExpressionFunc (Func m)
 
-getExpression :: MonadF m => ExpressionPtr m -> Transaction ViewTag m (Expression m)
+AtFieldTH.make ''Where
+AtFieldTH.make ''Func
+
+getExpression :: MonadF m => ExpressionPtr m -> Transaction ViewTag m (ExpressionRef m)
 getExpression exprPtr = do
   exprI <- Property.get exprPtr
   expr <- Transaction.readIRef exprI
-  case expr of
+  liftM (ExpressionRef exprPtr) $ case expr of
     Data.ExpressionLambda lambda -> do
+      typeExpr <- getExpression $ DataOps.lambdaParamTypeRef exprI lambda
       let
         bodyPtr = DataOps.lambdaBodyRef exprI lambda
         item =
           FuncParam
           { fpParamI = Data.tpParam (Data.lambdaParam lambda)
-          , fpTypePtr = DataOps.lambdaParamTypeRef exprI lambda
+          , fpType = typeExpr
           , fpLambdaPtr = exprPtr
           , fpBodyI = Data.lambdaBody lambda
           }
       sBody <- getExpression bodyPtr
-      return . ExpressionFunc . atFParams (item :) $ case sBody of
+      return . ExpressionFunc . atFParams (item :) $ case rExpression sBody of
         ExpressionFunc x -> x
-        _ -> Func [] bodyPtr
+        _ -> Func [] sBody
     -- Match apply-of-lambda(redex/where)
-    Data.ExpressionApply apply@(Data.Apply funcI argI) -> do
+    Data.ExpressionApply (Data.Apply funcI argI) -> do
       let
         argPtr =
           Property (return argI) $
@@ -87,20 +117,29 @@ getExpression exprPtr = do
           Data.ExpressionApply . Data.Apply funcI
       func <- Transaction.readIRef funcI
       case func of
-        Data.ExpressionLambda lambda@(Data.Lambda typedParam bodyI) -> do
+        Data.ExpressionLambda lambda@(Data.Lambda (Data.TypedParam paramI _) bodyI) -> do
+          value <- getExpression argPtr
           let
             bodyPtr = DataOps.lambdaBodyRef funcI lambda
             item = WhereItem
-              { wiParam = typedParam
-              , wiValuePtr = argPtr
+              { wiParamI = paramI
+              , wiValue = value
               , wiApplyPtr = exprPtr
               , wiLambdaBodyI = bodyI
               }
           sBody <- getExpression bodyPtr
-          return . ExpressionWhere . atWWheres (item :) $ case sBody of
+          return . ExpressionWhere . atWWheres (item :) $ case rExpression sBody of
             ExpressionWhere x -> x
-            _ -> Where [] bodyPtr
-        _ -> return $ ExpressionApply apply
+            _ -> Where [] sBody
+        _ -> do
+          let
+            funcPtr =
+              Property (return funcI) $
+              Transaction.writeIRef exprI .
+              Data.ExpressionApply . (`Data.Apply` argI)
+          funcExpr <- getExpression funcPtr
+          argExpr <- getExpression argPtr
+          return . ExpressionApply $ Apply funcExpr argExpr
     Data.ExpressionGetVariable x -> return $ ExpressionGetVariable x
     Data.ExpressionHole x -> return $ ExpressionHole x
     Data.ExpressionLiteralInteger x -> return $ ExpressionLiteralInteger x

@@ -10,7 +10,6 @@ import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (CTransaction, TWidget, transaction, getP)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
-import Editor.DataOps (ExpressionPtr)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Widgets.Grid (GridElement)
@@ -84,16 +83,16 @@ makeParts
   => ExpressionEditMaker m
   -> Ancestry.ExpressionAncestry m
   -> IRef a
-  -> ExpressionPtr m
+  -> Sugar.ExpressionRef m
   -> CTransaction ViewTag m [(Maybe Side, Widget (Transaction ViewTag m))]
-makeParts makeExpressionEdit ancestry definitionI exprPtr = do
-  exprI <- getP exprPtr
-  sExpr <- transaction $ Sugar.getExpression exprPtr
+makeParts makeExpressionEdit ancestry definitionI exprRef = do
+  exprI <- getP $ Sugar.rExpressionPtr exprRef
   let
+    sExpr = Sugar.rExpression exprRef
     func =
       case sExpr of
       Sugar.ExpressionFunc x -> x
-      _ -> Sugar.Func [] exprPtr
+      _ -> Sugar.Func [] exprRef
   lhsEdit <- makeLHSEdit makeExpressionEdit ancestry definitionI $ Sugar.fParams func
   equals <- BWidgets.makeLabel "=" (WidgetIds.fromIRef definitionI)
   rhsEdit <-
@@ -114,12 +113,13 @@ make
   => ExpressionEditMaker m
   -> IRef Data.Definition
   -> TWidget ViewTag m
-make makeExpressionEdit definitionI =
+make makeExpressionEdit definitionI = do
+  sExpr <- transaction $ Sugar.getExpression exprPtr
   liftM
-  ( Box.toWidget . (Box.atBoxContent . fmap) addJumps .
-    BWidgets.hboxK
-  ) $
-  makeParts makeExpressionEdit [] definitionI exprPtr
+    ( Box.toWidget . (Box.atBoxContent . fmap) addJumps .
+      BWidgets.hboxK
+    ) $
+    makeParts makeExpressionEdit [] definitionI sExpr
   where
     exprPtr =
       Property.composeLabel Data.defBody Data.atDefBody

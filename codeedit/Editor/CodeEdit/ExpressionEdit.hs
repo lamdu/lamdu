@@ -39,15 +39,16 @@ foldHolePicker notHole _isHole NotAHole = notHole
 foldHolePicker _notHole isHole (IsAHole x) = isHole x
 
 make :: MonadF m => ExpressionEditMaker m
-make ancestry exprPtr = do
-  sExpr <- transaction $ Sugar.getExpression exprPtr
-  exprI <- getP exprPtr
+make ancestry exprRef = do
+  sExpr <- transaction . Sugar.getExpression $ Sugar.rExpressionPtr exprRef
+  exprI <- getP $ Sugar.rExpressionPtr exprRef
   let
     notAHole = (fmap . liftM) ((,) NotAHole)
     wrapNonHole keys isDelegating f =
       notAHole . BWidgets.wrapDelegatedWithKeys keys isDelegating f
     makeEditor =
-      case sExpr of
+      case Sugar.rExpression sExpr of
+      Sugar.ExpressionParens _ -> undefined -- TODO
       Sugar.ExpressionWhere w ->
         wrapNonHole Config.exprFocusDelegatorKeys
             FocusDelegator.Delegating id $
@@ -55,32 +56,32 @@ make ancestry exprPtr = do
       Sugar.ExpressionFunc f ->
         wrapNonHole Config.exprFocusDelegatorKeys
           FocusDelegator.Delegating id $
-          FuncEdit.make make ancestry exprPtr f
+          FuncEdit.make make ancestry (Sugar.rExpressionPtr exprRef) f
       Sugar.ExpressionHole holeState ->
         (fmap . liftM . first) IsAHole .
         BWidgets.wrapDelegatedWithKeys
           FocusDelegator.defaultKeys FocusDelegator.Delegating second $
-          HoleEdit.make ancestry holeState exprPtr
+          HoleEdit.make ancestry holeState (Sugar.rExpressionPtr exprRef)
       Sugar.ExpressionGetVariable varRef -> notAHole (VarEdit.make varRef)
       Sugar.ExpressionApply apply ->
         wrapNonHole Config.exprFocusDelegatorKeys
           FocusDelegator.Delegating id $
-        ApplyEdit.make make ancestry exprPtr apply
+        ApplyEdit.make make ancestry (Sugar.rExpressionPtr exprRef) apply
       Sugar.ExpressionLiteralInteger integer ->
         wrapNonHole FocusDelegator.defaultKeys
           FocusDelegator.NotDelegating id $
         LiteralEdit.makeInt exprI integer
     exprId = WidgetIds.fromIRef exprI
   (holePicker, widget) <- makeEditor exprId
-  eventMap <- expressionEventMap ancestry exprPtr holePicker
+  eventMap <- expressionEventMap ancestry (Sugar.rExpressionPtr exprRef) holePicker
 
   liftM (Widget.weakerEvents eventMap) $
-    Parens.addParens exprId sExpr ancestry widget
+    Parens.addParens exprId (Sugar.rExpression sExpr) ancestry widget
 
 expressionEventMap
   :: MonadF m
   => Ancestry.ExpressionAncestry m
-  -> Transaction.Property ViewTag m (IRef Data.Expression)
+  -> DataOps.ExpressionPtr m
   -> HoleResultPicker m
   -> CTransaction ViewTag m (EventHandlers (Transaction ViewTag m))
 expressionEventMap ancestry exprPtr holePicker = do

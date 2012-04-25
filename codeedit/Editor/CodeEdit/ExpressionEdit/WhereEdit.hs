@@ -38,7 +38,7 @@ make makeExpressionEdit ancestry where_@(Sugar.Where items _) myId = do
     makeWhereItemEdits item =
       (liftM . map . second) (Widget.weakerEvents (whereItemDeleteEventMap item)) $
       DefinitionEdit.makeParts makeExpressionEdit
-      (witemAncestry item) (Sugar.wiParamI item) (Sugar.wiValuePtr item)
+      (witemAncestry item) (Sugar.wiParamI item) (Sugar.wiValue item)
     makeAncestry role = Ancestry.AncestryItemWhere (Ancestry.WhereParent where_ role) : ancestry
     witemAncestry = makeAncestry . Ancestry.WhereDef . Sugar.wiParamI
     whereItemDeleteEventMap whereItem =
@@ -55,11 +55,11 @@ makeWithBody
   -> Ancestry.ExpressionAncestry m
   -> Sugar.Where m
   -> Widget.Id -> TWidget ViewTag m
-makeWithBody makeExpressionEdit ancestry where_@(Sugar.Where _ bodyPtr) myId = do
-  bodyI <- getP bodyPtr
+makeWithBody makeExpressionEdit ancestry where_@(Sugar.Where _ body) myId = do
+  bodyI <- getP $ Sugar.rExpressionPtr body
   whereEdit <- make makeExpressionEdit ancestry where_ myId
   assignCursor myId (WidgetIds.fromIRef bodyI) $ do
-    bodyEdit <- makeExpressionEdit bodyAncestry bodyPtr
+    bodyEdit <- makeExpressionEdit bodyAncestry body
     return . BWidgets.vbox $
       [ bodyEdit
       , whereEdit

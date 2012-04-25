@@ -9,6 +9,7 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
+import Editor.CodeEdit.Sugar (ParensInfo(..), HighlightParens(..))
 import Editor.CTransaction (TWidget, WidgetT, transaction, subCursor)
 import Editor.MonadF (MonadF)
 import Editor.WidgetIds (parensPrefix)
@@ -19,17 +20,10 @@ import qualified Editor.CodeEdit.Ancestry as A
 import qualified Editor.CodeEdit.Infix as Infix
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
-import qualified Editor.Data as Data
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
-
-data HighlightParens = DoHighlightParens | DontHighlightParens
-
-data ParensInfo
-  = TextParens HighlightParens Widget.Id
-  | SquareParens Widget.Id
 
 makeCondParensId
   :: Monad m
@@ -56,15 +50,18 @@ getParensInfo
   -> Transaction ViewTag m (Maybe ParensInfo)
 getParensInfo (Sugar.ExpressionApply _) ancestry@(A.AncestryItemApply (A.ApplyParent A.ApplyArg A.Prefix _ _) : _) =
   liftM (Just . TextParens DoHighlightParens) $ makeParensId ancestry
-getParensInfo (Sugar.ExpressionApply (Data.Apply funcI _)) ancestry@(A.AncestryItemApply (A.ApplyParent A.ApplyArg _ _ _) : _) = do
+getParensInfo (Sugar.ExpressionApply (Sugar.Apply func _)) ancestry@(A.AncestryItemApply (A.ApplyParent A.ApplyArg _ _ _) : _) = do
+  funcI <- Property.get $ Sugar.rExpressionPtr func
   isInfix <-
     liftM2 (||)
     (Infix.isInfixFunc funcI) (Infix.isApplyOfInfixOp funcI)
   makeCondHighlightedTextParens isInfix ancestry
-getParensInfo (Sugar.ExpressionApply (Data.Apply funcI _)) ancestry@(A.AncestryItemApply (A.ApplyParent A.ApplyFunc _ _ _) : _) = do
+getParensInfo (Sugar.ExpressionApply (Sugar.Apply func _)) ancestry@(A.AncestryItemApply (A.ApplyParent A.ApplyFunc _ _ _) : _) = do
+  funcI <- Property.get $ Sugar.rExpressionPtr func
   isInfix <- Infix.isApplyOfInfixOp funcI
   makeCondHighlightedTextParens isInfix ancestry
-getParensInfo (Sugar.ExpressionApply (Data.Apply funcI _)) ancestry = do
+getParensInfo (Sugar.ExpressionApply (Sugar.Apply func _)) ancestry = do
+  funcI <- Property.get $ Sugar.rExpressionPtr func
   isInfix <- Infix.isInfixFunc funcI
   makeCondHighlightedTextParens isInfix ancestry
 getParensInfo (Sugar.ExpressionGetVariable _) (A.AncestryItemApply (A.ApplyParent A.ApplyFunc _ _ _) : _) =
@@ -124,7 +121,7 @@ makeParensId (A.AncestryItemApply (A.ApplyParent role _ _ parentPtr) : _) = do
 makeParensId (A.AncestryItemLambda (A.LambdaParent _ parentI) : _) =
   return $ WidgetIds.fromIRef parentI
 makeParensId (A.AncestryItemWhere (A.WhereParent (Sugar.Where _ body) role) : _) = do
-  bodyI <- Property.get body
+  bodyI <- Property.get $ Sugar.rExpressionPtr body
   return $
     Widget.joinId (WidgetIds.fromIRef bodyI)
     [pack $ show role]

@@ -54,7 +54,7 @@ makeParamEdit makeExpressionEdit ancestry param = do
       liftM
       (Widget.scale Config.typeScaleFactor .
        Widget.align up) $
-      makeExpressionEdit (newAncestryItem : ancestry) (Sugar.fpTypePtr param)
+      makeExpressionEdit (newAncestryItem : ancestry) (Sugar.fpType param)
     return (paramNameEdit, paramTypeEdit)
   where
     up = Vector2 0.5 0
@@ -82,9 +82,9 @@ make
   -> Sugar.Func m
   -> Widget.Id
   -> TWidget ViewTag m
-make makeExpressionEdit ancestry expressionPtr func@(Sugar.Func params bodyPtr) myId = do
+make makeExpressionEdit ancestry expressionPtr func@(Sugar.Func params body) myId = do
   exprI <- getP expressionPtr
-  bodyI <- getP bodyPtr
+  bodyI <- getP $ Sugar.rExpressionPtr body
   assignCursor myId (WidgetIds.fromIRef bodyI) $ do
     lambdaLabel <-
       atTextSizeColor Config.lambdaTextSize Config.lambdaColor $
@@ -92,6 +92,6 @@ make makeExpressionEdit ancestry expressionPtr func@(Sugar.Func params bodyPtr) 
     rightArrowLabel <-
       atTextSizeColor Config.rightArrowTextSize Config.rightArrowColor $
       BWidgets.makeLabel "→" myId
-    bodyEdit <- makeExpressionEdit (AncestryItemLambda (LambdaParent func exprI) : ancestry) bodyPtr
+    bodyEdit <- makeExpressionEdit (AncestryItemLambda (LambdaParent func exprI) : ancestry) body
     paramsEdit <- makeParamsEdit makeExpressionEdit ancestry params
     return $ BWidgets.hbox [lambdaLabel, paramsEdit, rightArrowLabel, bodyEdit]
