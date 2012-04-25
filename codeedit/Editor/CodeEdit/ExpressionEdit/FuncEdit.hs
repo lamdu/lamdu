@@ -1,6 +1,7 @@
 module Editor.CodeEdit.ExpressionEdit.FuncEdit(make, makeParamsEdit) where
 
 import Control.Monad (liftM)
+import Data.List.Utils (pairList)
 import Data.Store.IRef (IRef)
 import Data.Vector.Vector2 (Vector2(Vector2))
 import Editor.Anchors (ViewTag)
@@ -19,7 +20,6 @@ import qualified Editor.Data as Data
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 
 makeParamNameEdit
   :: Monad m
@@ -63,13 +63,6 @@ makeParamEdit makeExpressionEdit ancestry param = do
         Property.set (Sugar.fpLambdaPtr param) (Sugar.fpBodyI param)
         return . WidgetIds.fromIRef $ Sugar.fpBodyI param
 
-paramTypesGrid :: [(WidgetT t m, WidgetT t m)] -> WidgetT t m
-paramTypesGrid paramTypes =
-  Grid.toWidget $ Grid.make [params, types]
-  where
-    (params, types) = unzip $ List.intersperse space paramTypes
-    space = (BWidgets.spaceWidget, BWidgets.spaceWidget)
-
 -- exported for use in definition sugaring.
 makeParamsEdit
   :: MonadF m
@@ -78,7 +71,7 @@ makeParamsEdit
   -> [Sugar.FuncParam m]
   -> TWidget ViewTag m
 makeParamsEdit makeExpressionEdit ancestry =
-  liftM paramTypesGrid .
+  liftM (BWidgets.gridHSpaced . List.transpose . map pairList) .
   mapM (makeParamEdit makeExpressionEdit ancestry)
 
 make

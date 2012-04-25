@@ -8,6 +8,7 @@ module Editor.BottleWidgets(
   hboxK, hboxAlignK, hboxSpacedK,
   vbox,  vboxAlign,
   vboxK, vboxAlignK,
+  gridHSpaced,
   spaceView, spaceWidget,
   setTextColor
 ) where
@@ -35,6 +36,7 @@ import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
@@ -206,3 +208,6 @@ spaceWidget = Widget.liftView spaceView
 
 setTextColor :: Draw.Color -> TWidget t m -> TWidget t m
 setTextColor = atTextStyle . TextEdit.atSTextViewStyle . TextView.atStyleColor . const
+
+gridHSpaced :: [[Widget f]] -> Widget f
+gridHSpaced = Grid.toWidget . Grid.make . map (intersperse spaceWidget)

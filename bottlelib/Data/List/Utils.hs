@@ -1,6 +1,6 @@
 {-# OPTIONS -Wall #-}
 module Data.List.Utils
-	( groupOn, sortOn, enumerate, enumerate2d, nth, index, removeAt, atPred
+	( groupOn, sortOn, enumerate, enumerate2d, nth, index, removeAt, atPred, pairList
 	) where
 
 import Data.Function (on)
@@ -42,3 +42,6 @@ atPred
 atPred p f xs =
   [ (key, if p key then f x else x)
   | (key, x) <- xs ]
+
+pairList :: (a, a) -> [a]
+pairList (x, y) = [x, y]
