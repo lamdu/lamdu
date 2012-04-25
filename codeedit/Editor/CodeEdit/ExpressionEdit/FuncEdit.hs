@@ -1,4 +1,4 @@
-module Editor.CodeEdit.ExpressionEdit.FuncEdit(make, makeParamsEdit) where
+module Editor.CodeEdit.ExpressionEdit.FuncEdit(make, makeParamEdit) where
 
 import Control.Monad (liftM)
 import Data.List.Utils (pairList)
@@ -34,6 +34,7 @@ makeParamNameEdit paramI =
 both :: (a -> b) -> (a, a) -> (b, b)
 both f (x, y) = (f x, f y)
 
+-- exported for use in definition sugaring.
 makeParamEdit
   :: MonadF m
   => ExpressionEditMaker m
@@ -63,7 +64,6 @@ makeParamEdit makeExpressionEdit ancestry param = do
         Property.set (Sugar.fpLambdaPtr param) (Sugar.fpBodyI param)
         return . WidgetIds.fromIRef $ Sugar.fpBodyI param
 
--- exported for use in definition sugaring.
 makeParamsEdit
   :: MonadF m
   => ExpressionEditMaker m

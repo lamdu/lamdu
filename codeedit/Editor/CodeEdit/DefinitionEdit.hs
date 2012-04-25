@@ -2,7 +2,7 @@ module Editor.CodeEdit.DefinitionEdit(make, makeParts, addJumps) where
 
 import Control.Arrow (second)
 import Control.Monad (liftM)
-import Data.List.Utils (atPred)
+import Data.List.Utils (atPred, pairList)
 import Data.Monoid (Monoid(..))
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
@@ -14,6 +14,7 @@ import Editor.DataOps (ExpressionPtr)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Widgets.Grid (GridElement)
+import qualified Data.List as List
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.BottleWidgets as BWidgets
@@ -48,8 +49,11 @@ makeLHSEdit
   -> TWidget ViewTag m
 makeLHSEdit makeExpressionEdit ancestry definitionI params = do
   nameEdit <- makeNameEdit definitionI
-  paramsEdit <- FuncEdit.makeParamsEdit makeExpressionEdit ancestry params
-  return $ BWidgets.hbox [nameEdit, BWidgets.spaceWidget, paramsEdit]
+  liftM (BWidgets.gridHSpaced . List.transpose . map pairList . ((nameEdit, nameTypeFiller) :)) .
+    mapM (FuncEdit.makeParamEdit makeExpressionEdit ancestry) $ params
+  where
+    -- no type for def name (yet):
+    nameTypeFiller = BWidgets.spaceWidget
 
 -- from lhs->rhs and vice-versa:
 addJumps
