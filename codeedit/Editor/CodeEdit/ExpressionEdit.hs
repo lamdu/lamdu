@@ -39,9 +39,8 @@ foldHolePicker notHole _isHole NotAHole = notHole
 foldHolePicker _notHole isHole (IsAHole x) = isHole x
 
 make :: MonadF m => ExpressionEditMaker m
-make ancestry exprRef = do
-  sExpr <- transaction . Sugar.convertExpression $ Sugar.rExpressionPtr exprRef
-  exprI <- getP $ Sugar.rExpressionPtr exprRef
+make ancestry sExpr = do
+  exprI <- getP $ Sugar.rExpressionPtr sExpr
   let
     notAHole = (fmap . liftM) ((,) NotAHole)
     wrapNonHole keys isDelegating f =
@@ -56,24 +55,24 @@ make ancestry exprRef = do
       Sugar.ExpressionFunc f ->
         wrapNonHole Config.exprFocusDelegatorKeys
           FocusDelegator.Delegating id $
-          FuncEdit.make make ancestry (Sugar.rExpressionPtr exprRef) f
+          FuncEdit.make make ancestry (Sugar.rExpressionPtr sExpr) f
       Sugar.ExpressionHole holeState ->
         (fmap . liftM . first) IsAHole .
         BWidgets.wrapDelegatedWithKeys
           FocusDelegator.defaultKeys FocusDelegator.Delegating second $
-          HoleEdit.make ancestry holeState (Sugar.rExpressionPtr exprRef)
+          HoleEdit.make ancestry holeState (Sugar.rExpressionPtr sExpr)
       Sugar.ExpressionGetVariable varRef -> notAHole (VarEdit.make varRef)
       Sugar.ExpressionApply apply ->
         wrapNonHole Config.exprFocusDelegatorKeys
           FocusDelegator.Delegating id $
-        ApplyEdit.make make ancestry (Sugar.rExpressionPtr exprRef) apply
+        ApplyEdit.make make ancestry (Sugar.rExpressionPtr sExpr) apply
       Sugar.ExpressionLiteralInteger integer ->
         wrapNonHole FocusDelegator.defaultKeys
           FocusDelegator.NotDelegating id $
         LiteralEdit.makeInt exprI integer
     exprId = WidgetIds.fromIRef exprI
   (holePicker, widget) <- makeEditor exprId
-  eventMap <- expressionEventMap ancestry (Sugar.rExpressionPtr exprRef) holePicker
+  eventMap <- expressionEventMap ancestry (Sugar.rExpressionPtr sExpr) holePicker
 
   liftM (Widget.weakerEvents eventMap) $
     Parens.addParens exprId (Sugar.rExpression sExpr) ancestry widget

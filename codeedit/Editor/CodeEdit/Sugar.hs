@@ -145,12 +145,21 @@ convertApply exprPtr (Data.Apply funcI argI) = do
       argExpr <- convertExpression argPtr
       return . ExpressionApply $ Apply funcExpr argExpr
 
+convertGetVariable :: Monad m => ExpressionPtr m -> Data.VariableRef -> Transaction ViewTag m (Expression m)
+convertGetVariable _exprPtr = return . ExpressionGetVariable
+
+convertHole :: Monad m => ExpressionPtr m -> Data.HoleState -> Transaction ViewTag m (Expression m)
+convertHole _exprPtr = return . ExpressionHole
+
+convertLiteralInteger :: Monad m => ExpressionPtr m -> Integer -> Transaction ViewTag m (Expression m)
+convertLiteralInteger _exprPtr = return . ExpressionLiteralInteger
+
 convertExpression :: Monad m => ExpressionPtr m -> Transaction ViewTag m (ExpressionRef m)
 convertExpression exprPtr = do
   expr <- Transaction.readIRef =<< Property.get exprPtr
   liftM (ExpressionRef exprPtr) $ case expr of
-    Data.ExpressionLambda lambda -> convertLambda exprPtr lambda
-    Data.ExpressionApply apply -> convertApply exprPtr apply
-    Data.ExpressionGetVariable x -> return $ ExpressionGetVariable x
-    Data.ExpressionHole x -> return $ ExpressionHole x
-    Data.ExpressionLiteralInteger x -> return $ ExpressionLiteralInteger x
+    Data.ExpressionLambda x -> convertLambda exprPtr x
+    Data.ExpressionApply x -> convertApply exprPtr x
+    Data.ExpressionGetVariable x -> convertGetVariable exprPtr x
+    Data.ExpressionHole x -> convertHole exprPtr x
+    Data.ExpressionLiteralInteger x -> convertLiteralInteger exprPtr x
