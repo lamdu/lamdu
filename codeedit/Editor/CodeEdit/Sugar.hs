@@ -156,7 +156,8 @@ convertLiteralInteger _exprPtr = return . ExpressionLiteralInteger
 
 convertExpression :: Monad m => ExpressionPtr m -> Transaction ViewTag m (ExpressionRef m)
 convertExpression exprPtr = do
-  expr <- Transaction.readIRef =<< Property.get exprPtr
+  exprI <- Property.get exprPtr
+  expr <- Transaction.readIRef exprI
   liftM (ExpressionRef exprPtr) $ case expr of
     Data.ExpressionLambda x -> convertLambda exprPtr x
     Data.ExpressionApply x -> convertApply exprPtr x

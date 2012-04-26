@@ -3,21 +3,19 @@
 module Editor.CodeEdit.Parens(addTextParens, addParens, makeParensId)
 where
 
-import Control.Monad (liftM, liftM2, void)
+import Control.Monad (void)
 import Data.ByteString.Char8 (pack)
 import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.Sugar (ParensInfo(..), HighlightParens(..))
-import Editor.CTransaction (TWidget, WidgetT, transaction, subCursor)
+import Editor.CTransaction (TWidget, WidgetT, subCursor)
 import Editor.MonadF (MonadF)
 import Editor.WidgetIds (parensPrefix)
 import qualified Data.Store.Property as Property
-import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.Ancestry as A
-import qualified Editor.CodeEdit.Infix as Infix
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.WidgetIds as WidgetIds
@@ -25,58 +23,58 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
 
-makeCondParensId
-  :: Monad m
-  => Bool -> A.ExpressionAncestry m
-  -> Transaction ViewTag m (Maybe Widget.Id)
-makeCondParensId False = const $ return Nothing
-makeCondParensId True = liftM Just . makeParensId
+-- makeCondParensId
+--   :: Monad m
+--   => Bool -> A.ExpressionAncestry m
+--   -> Transaction ViewTag m (Maybe Widget.Id)
+-- makeCondParensId False = const $ return Nothing
+-- makeCondParensId True = liftM Just . makeParensId
 
-makeCondHighlightedTextParens
-  :: Monad m => Bool -> A.ExpressionAncestry m -> Transaction ViewTag m (Maybe ParensInfo)
-makeCondHighlightedTextParens bool ancestry =
-  (liftM . fmap) (TextParens DoHighlightParens) $
-  makeCondParensId bool ancestry
+-- makeCondHighlightedTextParens
+--   :: Monad m => Bool -> A.ExpressionAncestry m -> Transaction ViewTag m (Maybe ParensInfo)
+-- makeCondHighlightedTextParens bool ancestry =
+--   (liftM . fmap) (TextParens DoHighlightParens) $
+--   makeCondParensId bool ancestry
 
-makeCondUnhighlightedTextParens
-  :: Monad m => Bool -> A.ExpressionAncestry m -> Transaction ViewTag m (Maybe ParensInfo)
-makeCondUnhighlightedTextParens bool ancestry =
-  (liftM . fmap) (TextParens DontHighlightParens) $
-  makeCondParensId bool ancestry
+-- makeCondUnhighlightedTextParens
+--   :: Monad m => Bool -> A.ExpressionAncestry m -> Transaction ViewTag m (Maybe ParensInfo)
+-- makeCondUnhighlightedTextParens bool ancestry =
+--   (liftM . fmap) (TextParens DontHighlightParens) $
+--   makeCondParensId bool ancestry
 
-getParensInfo
-  :: Monad m
-  => Sugar.Expression m -> A.ExpressionAncestry m
-  -> Transaction ViewTag m (Maybe ParensInfo)
-getParensInfo (Sugar.ExpressionApply _) ancestry@(A.AncestryItemApply (A.ApplyParent A.ApplyArg A.Prefix _ _) : _) =
-  liftM (Just . TextParens DoHighlightParens) $ makeParensId ancestry
-getParensInfo (Sugar.ExpressionApply (Sugar.Apply func _)) ancestry@(A.AncestryItemApply (A.ApplyParent A.ApplyArg _ _ _) : _) = do
-  funcI <- Property.get $ Sugar.rExpressionPtr func
-  isInfix <-
-    liftM2 (||)
-    (Infix.isInfixFunc funcI) (Infix.isApplyOfInfixOp funcI)
-  makeCondHighlightedTextParens isInfix ancestry
-getParensInfo (Sugar.ExpressionApply (Sugar.Apply func _)) ancestry@(A.AncestryItemApply (A.ApplyParent A.ApplyFunc _ _ _) : _) = do
-  funcI <- Property.get $ Sugar.rExpressionPtr func
-  isInfix <- Infix.isApplyOfInfixOp funcI
-  makeCondHighlightedTextParens isInfix ancestry
-getParensInfo (Sugar.ExpressionApply (Sugar.Apply func _)) ancestry = do
-  funcI <- Property.get $ Sugar.rExpressionPtr func
-  isInfix <- Infix.isInfixFunc funcI
-  makeCondHighlightedTextParens isInfix ancestry
-getParensInfo (Sugar.ExpressionGetVariable _) (A.AncestryItemApply (A.ApplyParent A.ApplyFunc _ _ _) : _) =
-  return Nothing
-getParensInfo (Sugar.ExpressionGetVariable var) ancestry = do
-  name <- Property.get $ Anchors.variableNameRef var
-  makeCondUnhighlightedTextParens (Infix.isInfixName name) ancestry
-getParensInfo (Sugar.ExpressionWhere _) ancestry =
-  if A.isAncestryRHS ancestry
-  then return Nothing
-  else liftM (Just . SquareParens) $ makeParensId ancestry
-getParensInfo (Sugar.ExpressionFunc _) ancestry@(A.AncestryItemApply _ : _) =
-  liftM (Just . TextParens DoHighlightParens) $ makeParensId ancestry
-getParensInfo _ _ =
-  return Nothing
+-- getParensInfo
+--   :: Monad m
+--   => Sugar.Expression m -> A.ExpressionAncestry m
+--   -> Transaction ViewTag m (Maybe ParensInfo)
+-- getParensInfo (Sugar.ExpressionApply _) ancestry@(A.AncestryItemApply (A.ApplyParent A.ApplyArg A.Prefix _ _) : _) =
+--   liftM (Just . TextParens DoHighlightParens) $ makeParensId ancestry
+-- getParensInfo (Sugar.ExpressionApply (Sugar.Apply func _)) ancestry@(A.AncestryItemApply (A.ApplyParent A.ApplyArg _ _ _) : _) = do
+--   funcI <- Property.get $ Sugar.rExpressionPtr func
+--   isInfix <-
+--     liftM2 (||)
+--     (Infix.isInfixFunc funcI) (Infix.isApplyOfInfixOp funcI)
+--   makeCondHighlightedTextParens isInfix ancestry
+-- getParensInfo (Sugar.ExpressionApply (Sugar.Apply func _)) ancestry@(A.AncestryItemApply (A.ApplyParent A.ApplyFunc _ _ _) : _) = do
+--   funcI <- Property.get $ Sugar.rExpressionPtr func
+--   isInfix <- Infix.isApplyOfInfixOp funcI
+--   makeCondHighlightedTextParens isInfix ancestry
+-- getParensInfo (Sugar.ExpressionApply (Sugar.Apply func _)) ancestry = do
+--   funcI <- Property.get $ Sugar.rExpressionPtr func
+--   isInfix <- Infix.isInfixFunc funcI
+--   makeCondHighlightedTextParens isInfix ancestry
+-- getParensInfo (Sugar.ExpressionGetVariable _) (A.AncestryItemApply (A.ApplyParent A.ApplyFunc _ _ _) : _) =
+--   return Nothing
+-- getParensInfo (Sugar.ExpressionGetVariable var) ancestry = do
+--   name <- Property.get $ Anchors.variableNameRef var
+--   makeCondUnhighlightedTextParens (Infix.isInfixName name) ancestry
+-- getParensInfo (Sugar.ExpressionWhere _) ancestry =
+--   if A.isAncestryRHS ancestry
+--   then return Nothing
+--   else liftM (Just . SquareParens) $ makeParensId ancestry
+-- getParensInfo (Sugar.ExpressionFunc _) ancestry@(A.AncestryItemApply _ : _) =
+--   liftM (Just . TextParens DoHighlightParens) $ makeParensId ancestry
+-- getParensInfo _ _ =
+--   return Nothing
 
 addTextParens
   :: MonadF m
@@ -136,23 +134,18 @@ highlightExpression =
 
 addParens
   :: (MonadF m)
-  => Widget.Id
-  -> Sugar.Expression m
-  -> A.ExpressionAncestry m
-  -> WidgetT ViewTag m
+  => WidgetT ViewTag m
+  -> Sugar.ParensInfo
+  -> Widget.Id
   -> TWidget ViewTag m
-addParens myId sExpr ancestry widget = do
-  mInfo <- transaction $ getParensInfo sExpr ancestry
-  case mInfo of
-    Nothing -> return widget
-    Just (SquareParens parensId) -> return $ addSquareParens parensId widget
-    Just (TextParens needHighlight parensId) -> do
-      mInsideParenId <- subCursor rParenId
-      widgetWithParens <- addTextParens id doHighlight parensId widget
-      return $ maybe id (const highlightExpression) mInsideParenId widgetWithParens
-      where
-        rParenId = Widget.joinId myId [")"]
-        doHighlight =
-          case needHighlight of
-            DoHighlightParens -> (>>= BWidgets.makeFocusableView rParenId)
-            DontHighlightParens -> id
+addParens widget (SquareParens parensId) _ = return $ addSquareParens parensId widget
+addParens widget (TextParens needHighlight parensId) myId = do
+  mInsideParenId <- subCursor rParenId
+  widgetWithParens <- addTextParens id doHighlight parensId widget
+  return $ maybe id (const highlightExpression) mInsideParenId widgetWithParens
+  where
+    rParenId = Widget.joinId myId [")"]
+    doHighlight =
+      case needHighlight of
+        DoHighlightParens -> (>>= BWidgets.makeFocusableView rParenId)
+        DontHighlightParens -> id
