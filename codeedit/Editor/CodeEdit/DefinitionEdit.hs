@@ -114,7 +114,7 @@ make
   -> IRef Data.Definition
   -> TWidget ViewTag m
 make makeExpressionEdit definitionI = do
-  sExpr <- transaction $ Sugar.getExpression exprPtr
+  sExpr <- transaction $ Sugar.convertExpression exprPtr
   liftM
     ( Box.toWidget . (Box.atBoxContent . fmap) addJumps .
       BWidgets.hboxK

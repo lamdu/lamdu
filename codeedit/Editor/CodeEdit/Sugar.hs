@@ -8,7 +8,7 @@ module Editor.CodeEdit.Sugar
   , FuncParam(..)
   , Apply(..)
   , Parens(..), ParensInfo(..), HighlightParens(..)
-  , getExpression
+  , convertExpression
   ) where
 
 import Control.Monad (liftM)
@@ -17,7 +17,6 @@ import Data.Store.Property(Property(Property))
 import Data.Store.Transaction(Transaction)
 import Editor.Anchors(ViewTag)
 import Editor.DataOps(ExpressionPtr)
-import Editor.MonadF(MonadF)
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -88,58 +87,70 @@ data Expression m
 AtFieldTH.make ''Where
 AtFieldTH.make ''Func
 
-getExpression :: MonadF m => ExpressionPtr m -> Transaction ViewTag m (ExpressionRef m)
-getExpression exprPtr = do
+convertLambda :: Monad m => ExpressionPtr m -> Data.Lambda -> Transaction ViewTag m (Expression m)
+convertLambda exprPtr lambda = do
   exprI <- Property.get exprPtr
-  expr <- Transaction.readIRef exprI
-  liftM (ExpressionRef exprPtr) $ case expr of
-    Data.ExpressionLambda lambda -> do
-      typeExpr <- getExpression $ DataOps.lambdaParamTypeRef exprI lambda
+  let
+    typePtr = DataOps.lambdaParamTypeRef exprI lambda
+    bodyPtr = DataOps.lambdaBodyRef exprI lambda
+  typeExpr <- convertExpression typePtr
+  sBody <- convertExpression bodyPtr
+  let
+    item = FuncParam
+      { fpParamI = Data.tpParam (Data.lambdaParam lambda)
+      , fpType = typeExpr
+      , fpLambdaPtr = exprPtr
+      , fpBodyI = Data.lambdaBody lambda
+      }
+
+  return . ExpressionFunc . atFParams (item :) $ case rExpression sBody of
+    ExpressionFunc x -> x
+    _ -> Func [] sBody
+
+convertApply
+  :: Monad m
+  => Property (Transaction ViewTag m) (IRef Data.Expression)
+  -> Data.Apply
+  -> Transaction ViewTag m (Expression m)
+convertApply exprPtr (Data.Apply funcI argI) = do
+  exprI <- Property.get exprPtr
+  let
+    argPtr =
+      Property (return argI) $
+      Transaction.writeIRef exprI .
+      Data.ExpressionApply . Data.Apply funcI
+  func <- Transaction.readIRef funcI
+  case func of
+    Data.ExpressionLambda lambda@(Data.Lambda (Data.TypedParam paramI _) bodyI) -> do
+      value <- convertExpression argPtr
       let
-        bodyPtr = DataOps.lambdaBodyRef exprI lambda
-        item =
-          FuncParam
-          { fpParamI = Data.tpParam (Data.lambdaParam lambda)
-          , fpType = typeExpr
-          , fpLambdaPtr = exprPtr
-          , fpBodyI = Data.lambdaBody lambda
+        bodyPtr = DataOps.lambdaBodyRef funcI lambda
+        item = WhereItem
+          { wiParamI = paramI
+          , wiValue = value
+          , wiApplyPtr = exprPtr
+          , wiLambdaBodyI = bodyI
           }
-      sBody <- getExpression bodyPtr
-      return . ExpressionFunc . atFParams (item :) $ case rExpression sBody of
-        ExpressionFunc x -> x
-        _ -> Func [] sBody
-    -- Match apply-of-lambda(redex/where)
-    Data.ExpressionApply (Data.Apply funcI argI) -> do
+      sBody <- convertExpression bodyPtr
+      return . ExpressionWhere . atWWheres (item :) $ case rExpression sBody of
+        ExpressionWhere x -> x
+        _ -> Where [] sBody
+    _ -> do
       let
-        argPtr =
-          Property (return argI) $
+        funcPtr =
+          Property (return funcI) $
           Transaction.writeIRef exprI .
-          Data.ExpressionApply . Data.Apply funcI
-      func <- Transaction.readIRef funcI
-      case func of
-        Data.ExpressionLambda lambda@(Data.Lambda (Data.TypedParam paramI _) bodyI) -> do
-          value <- getExpression argPtr
-          let
-            bodyPtr = DataOps.lambdaBodyRef funcI lambda
-            item = WhereItem
-              { wiParamI = paramI
-              , wiValue = value
-              , wiApplyPtr = exprPtr
-              , wiLambdaBodyI = bodyI
-              }
-          sBody <- getExpression bodyPtr
-          return . ExpressionWhere . atWWheres (item :) $ case rExpression sBody of
-            ExpressionWhere x -> x
-            _ -> Where [] sBody
-        _ -> do
-          let
-            funcPtr =
-              Property (return funcI) $
-              Transaction.writeIRef exprI .
-              Data.ExpressionApply . (`Data.Apply` argI)
-          funcExpr <- getExpression funcPtr
-          argExpr <- getExpression argPtr
-          return . ExpressionApply $ Apply funcExpr argExpr
+          Data.ExpressionApply . (`Data.Apply` argI)
+      funcExpr <- convertExpression funcPtr
+      argExpr <- convertExpression argPtr
+      return . ExpressionApply $ Apply funcExpr argExpr
+
+convertExpression :: Monad m => ExpressionPtr m -> Transaction ViewTag m (ExpressionRef m)
+convertExpression exprPtr = do
+  expr <- Transaction.readIRef =<< Property.get exprPtr
+  liftM (ExpressionRef exprPtr) $ case expr of
+    Data.ExpressionLambda lambda -> convertLambda exprPtr lambda
+    Data.ExpressionApply apply -> convertApply exprPtr apply
     Data.ExpressionGetVariable x -> return $ ExpressionGetVariable x
     Data.ExpressionHole x -> return $ ExpressionHole x
     Data.ExpressionLiteralInteger x -> return $ ExpressionLiteralInteger x

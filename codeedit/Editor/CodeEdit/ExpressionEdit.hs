@@ -40,7 +40,7 @@ foldHolePicker _notHole isHole (IsAHole x) = isHole x
 
 make :: MonadF m => ExpressionEditMaker m
 make ancestry exprRef = do
-  sExpr <- transaction . Sugar.getExpression $ Sugar.rExpressionPtr exprRef
+  sExpr <- transaction . Sugar.convertExpression $ Sugar.rExpressionPtr exprRef
   exprI <- getP $ Sugar.rExpressionPtr exprRef
   let
     notAHole = (fmap . liftM) ((,) NotAHole)
