@@ -72,7 +72,7 @@ make ancestry sExpr = do
         (fmap . liftM . first) IsAHole .
         BWidgets.wrapDelegatedWithKeys
           FocusDelegator.defaultKeys FocusDelegator.Delegating second $
-          HoleEdit.make ancestry holeState (Sugar.rExpressionPtr sExpr)
+          HoleEdit.make ancestry holeState sExpr
       Sugar.ExpressionGetVariable varRef -> notAHole (VarEdit.make varRef)
       Sugar.ExpressionApply apply ->
         wrapNonHoleExpr id $ ApplyEdit.make make ancestry (Sugar.rExpressionPtr sExpr) apply

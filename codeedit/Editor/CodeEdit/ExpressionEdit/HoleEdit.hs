@@ -26,6 +26,7 @@ import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
 import qualified Editor.CodeEdit.Infix as Infix
 import qualified Editor.CodeEdit.Parens as Parens
+import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
@@ -279,13 +280,13 @@ make
   :: MonadF m
   => Ancestry.ExpressionAncestry m
   -> Data.HoleState
-  -> Transaction.Property ViewTag m (IRef Data.Expression)
+  -> Sugar.ExpressionRef m
   -> Widget.Id
   -> CTransaction ViewTag m
      (Maybe (ResultPicker m), Widget (Transaction ViewTag m))
-make ancestry curState expressionPtr myId = do
+make ancestry curState expressionRef myId = do
   cursor <- readCursor
-  expressionI <- getP expressionPtr
+  expressionI <- getP $ Sugar.rExpressionPtr expressionRef
   let
     holeInfo = HoleInfo
       { hiExpressionI = expressionI
