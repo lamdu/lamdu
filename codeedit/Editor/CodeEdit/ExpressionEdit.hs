@@ -87,13 +87,15 @@ expressionEventMap ancestry sExpr holePicker = do
       WidgetIds.diveIn $ DataOps.callWithArg (Sugar.rExpressionPtr sExpr)
     , pickResultFirst .
       Widget.actionEventMapMovesCursor
-      Config.addNextArgumentKeys "Add next arg" . liftM WidgetIds.fromGuid $ Sugar.rAddNextArg sExpr
+      Config.addNextArgumentKeys "Add arg" .
+      liftM WidgetIds.fromGuid $ Sugar.addNextArg actions
     , ifHole (const mempty) $ replaceEventMap ancestry (Sugar.rExpressionPtr sExpr)
     , Widget.actionEventMapMovesCursor
-      Config.lambdaWrapKeys "Lambda wrap" . WidgetIds.diveIn $
-      DataOps.lambdaWrap (Sugar.rExpressionPtr sExpr)
+      Config.lambdaWrapKeys "Lambda wrap" .
+      liftM (WidgetIds.delegating . WidgetIds.fromGuid) $ Sugar.lambdaWrap actions
     ]
   where
+    actions = Sugar.rActions sExpr
     moveUnlessOnHole = ifHole $ (const . fmap . liftM . Widget.atECursor . const) Nothing
     pickResultFirst = ifHole $ maybe id (fmap . joinEvents)
     ifHole whenHole = foldHolePicker id whenHole holePicker

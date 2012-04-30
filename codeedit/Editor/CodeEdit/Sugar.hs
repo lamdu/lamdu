@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
 
 module Editor.CodeEdit.Sugar
-  ( Expression(..), ExpressionRef(..)
+  ( Expression(..), ExpressionRef(..), ExpressionActions(..)
   , Where(..), atWWheres, atWBody
   , WhereItem(..)
   , Func(..), atFParams, atFBody
@@ -28,11 +28,16 @@ import qualified Editor.DataOps as DataOps
 
 data ParensType = TextParens | SquareParens
 
+data ExpressionActions m = ExpressionActions
+  { addNextArg :: m Guid
+  , lambdaWrap :: m Guid
+  }
+
 data ExpressionRef m = ExpressionRef
   { rExpressionPtr :: ExpressionPtr m
   , rMParensType :: Maybe ParensType
   , rExpression :: Expression m
-  , rAddNextArg :: Transaction ViewTag m Guid
+  , rActions :: ExpressionActions (Transaction ViewTag m)
   }
 
 data WhereItem m = WhereItem
@@ -100,7 +105,11 @@ mkExpressionRef mParensType cp expr =
   { rExpression = expr
   , rMParensType = mParensType
   , rExpressionPtr = cpPtr cp
-  , rAddNextArg = liftM guid $ DataOps.callWithArg addNextArgPos
+  , rActions =
+      ExpressionActions
+      { addNextArg = liftM guid $ DataOps.callWithArg addNextArgPos
+      , lambdaWrap = liftM guid . DataOps.lambdaWrap $ cpPtr cp
+      }
   }
   where
     addNextArgPos =
