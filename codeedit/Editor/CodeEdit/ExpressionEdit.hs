@@ -79,9 +79,9 @@ expressionEventMap sExpr holePicker = do
       Widget.actionEventMapMovesCursor
       Config.callWithArgumentKeys "Call with argument" .
       WidgetIds.diveIn $ DataOps.callWithArg (Sugar.rExpressionPtr sExpr)
-    , pickResultFirst .
+    , ifHole pickResultFirst .
       Widget.actionEventMapMovesCursor
-      Config.addNextArgumentKeys "Add arg" .
+      Config.addNextArgumentKeys (ifHole (const ("Pick result and " ++)) "Add arg") .
       liftM WidgetIds.fromGuid $ Sugar.addNextArg actions
     , maybe mempty
       (Widget.actionEventMapMovesCursor (Config.replaceKeys ++ extraReplaceKeys) "Replace" .
@@ -98,7 +98,7 @@ expressionEventMap sExpr holePicker = do
   where
     actions = Sugar.rActions sExpr
     moveUnlessOnHole = ifHole $ (const . fmap . liftM . Widget.atECursor . const) Nothing
-    pickResultFirst = ifHole $ maybe id (fmap . joinEvents)
+    pickResultFirst = maybe id (fmap . joinEvents)
     ifHole whenHole = foldHolePicker id whenHole holePicker
     joinEvents x y = do
       r <- liftM Widget.eAnimIdMapping x
