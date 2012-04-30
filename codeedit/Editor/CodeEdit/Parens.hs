@@ -23,59 +23,6 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
 
--- makeCondParensId
---   :: Monad m
---   => Bool -> A.ExpressionAncestry m
---   -> Transaction ViewTag m (Maybe Widget.Id)
--- makeCondParensId False = const $ return Nothing
--- makeCondParensId True = liftM Just . makeParensId
-
--- makeCondHighlightedTextParens
---   :: Monad m => Bool -> A.ExpressionAncestry m -> Transaction ViewTag m (Maybe ParensInfo)
--- makeCondHighlightedTextParens bool ancestry =
---   (liftM . fmap) (TextParens DoHighlightParens) $
---   makeCondParensId bool ancestry
-
--- makeCondUnhighlightedTextParens
---   :: Monad m => Bool -> A.ExpressionAncestry m -> Transaction ViewTag m (Maybe ParensInfo)
--- makeCondUnhighlightedTextParens bool ancestry =
---   (liftM . fmap) (TextParens DontHighlightParens) $
---   makeCondParensId bool ancestry
-
--- getParensInfo
---   :: Monad m
---   => Sugar.Expression m -> A.ExpressionAncestry m
---   -> Transaction ViewTag m (Maybe ParensInfo)
--- getParensInfo (Sugar.ExpressionApply _) ancestry@(A.AncestryItemApply (A.ApplyParent A.ApplyArg A.Prefix _ _) : _) =
---   liftM (Just . TextParens DoHighlightParens) $ makeParensId ancestry
--- getParensInfo (Sugar.ExpressionApply (Sugar.Apply func _)) ancestry@(A.AncestryItemApply (A.ApplyParent A.ApplyArg _ _ _) : _) = do
---   funcI <- Property.get $ Sugar.rExpressionPtr func
---   isInfix <-
---     liftM2 (||)
---     (Infix.isInfixFunc funcI) (Infix.isApplyOfInfixOp funcI)
---   makeCondHighlightedTextParens isInfix ancestry
--- getParensInfo (Sugar.ExpressionApply (Sugar.Apply func _)) ancestry@(A.AncestryItemApply (A.ApplyParent A.ApplyFunc _ _ _) : _) = do
---   funcI <- Property.get $ Sugar.rExpressionPtr func
---   isInfix <- Infix.isApplyOfInfixOp funcI
---   makeCondHighlightedTextParens isInfix ancestry
--- getParensInfo (Sugar.ExpressionApply (Sugar.Apply func _)) ancestry = do
---   funcI <- Property.get $ Sugar.rExpressionPtr func
---   isInfix <- Infix.isInfixFunc funcI
---   makeCondHighlightedTextParens isInfix ancestry
--- getParensInfo (Sugar.ExpressionGetVariable _) (A.AncestryItemApply (A.ApplyParent A.ApplyFunc _ _ _) : _) =
---   return Nothing
--- getParensInfo (Sugar.ExpressionGetVariable var) ancestry = do
---   name <- Property.get $ Anchors.variableNameRef var
---   makeCondUnhighlightedTextParens (Infix.isInfixName name) ancestry
--- getParensInfo (Sugar.ExpressionWhere _) ancestry =
---   if A.isAncestryRHS ancestry
---   then return Nothing
---   else liftM (Just . SquareParens) $ makeParensId ancestry
--- getParensInfo (Sugar.ExpressionFunc _) ancestry@(A.AncestryItemApply _ : _) =
---   liftM (Just . TextParens DoHighlightParens) $ makeParensId ancestry
--- getParensInfo _ _ =
---   return Nothing
-
 addTextParens
   :: MonadF m
   => (TWidget t m -> TWidget t m)

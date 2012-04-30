@@ -60,7 +60,8 @@ make ancestry sExpr = do
         wrapNonHoleExpr . parenify  $ FuncEdit.make make ancestry (Sugar.rExpressionPtr sExpr) f
       Sugar.ExpressionHole holeState ->
         isAHole . maybe id (error "parens on hole?") (Sugar.rMParensType sExpr) $ HoleEdit.make ancestry holeState sExpr
-      Sugar.ExpressionGetVariable varRef -> notAHole (VarEdit.make varRef)
+      Sugar.ExpressionGetVariable varRef ->
+        notAHole . parenify $ VarEdit.make varRef
       Sugar.ExpressionApply apply ->
         wrapNonHoleExpr . parenify  $ ApplyEdit.make make ancestry (Sugar.rExpressionPtr sExpr) apply
       Sugar.ExpressionLiteralInteger integer ->

@@ -19,6 +19,8 @@ import Editor.DataOps(ExpressionPtr)
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
+import qualified Editor.Anchors as Anchors
+import qualified Editor.CodeEdit.Infix as Infix
 import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
 
@@ -76,7 +78,7 @@ data Expression m
 AtFieldTH.make ''Where
 AtFieldTH.make ''Func
 
-data ParenState = ParensNeverNeeded | ApplyFunc | ApplyArg
+data ParenState = ParensNeverNeeded | ApplyFunc | ApplyArg | InfixArg
 
 convertLambda :: Monad m => ParenState -> ExpressionPtr m -> Data.Lambda -> Transaction ViewTag m (ExpressionRef m)
 convertLambda parenState exprPtr lambda = do
@@ -95,9 +97,10 @@ convertLambda parenState exprPtr lambda = do
       }
     mParenType =
       case parenState of
+      InfixArg -> Just TextParens
       ApplyArg -> Just TextParens
       ApplyFunc -> error "redex should not be handled by convertLambda"
-      _ -> Nothing
+      ParensNeverNeeded -> Nothing
   return . ExpressionRef exprPtr mParenType . ExpressionFunc . atFParams (item :) $ case rExpression sBody of
     ExpressionFunc x -> x
     _ -> Func [] sBody
@@ -147,21 +150,35 @@ convertApply parenState exprPtr (Data.Apply funcI argI) = do
     Data.ExpressionLambda lambda ->
       convertWhere parenState argPtr funcI exprPtr lambda
     _ -> do
+      isInfixFunc <- Infix.isInfixFunc funcI
+      isFullInfix <- Infix.isApplyOfInfixOp funcI
       let
         funcPtr =
           Property (return funcI) $
           Transaction.writeIRef exprI .
           Data.ExpressionApply . (`Data.Apply` argI)
-        mParenType =
+        isInfix = isInfixFunc || isFullInfix
+        hasParens =
           case parenState of
-          ApplyArg -> Just TextParens
-          _ -> Nothing
+          ApplyArg -> True
+          ApplyFunc -> isFullInfix
+          ParensNeverNeeded -> isInfixFunc
+          InfixArg -> isInfix
+        mParenType = if hasParens then Just TextParens else Nothing
+        argParenState = if isInfix then InfixArg else ApplyArg
       funcExpr <- convertNode ApplyFunc funcPtr
-      argExpr <- convertNode ApplyArg argPtr
+      argExpr <- convertNode argParenState argPtr
       return . ExpressionRef exprPtr mParenType . ExpressionApply $ Apply funcExpr argExpr
 
-convertGetVariable :: Monad m => ExpressionPtr m -> Data.VariableRef -> Transaction ViewTag m (ExpressionRef m)
-convertGetVariable exprPtr = return . ExpressionRef exprPtr Nothing . ExpressionGetVariable
+convertGetVariable :: Monad m => ParenState -> ExpressionPtr m -> Data.VariableRef -> Transaction ViewTag m (ExpressionRef m)
+convertGetVariable parenState exprPtr varRef = do
+  mParenType <-
+    case parenState of
+    ApplyFunc -> return Nothing
+    _ -> do
+      name <- Property.get $ Anchors.variableNameRef varRef
+      return $ if Infix.isInfixName name then Just TextParens else Nothing
+  return . ExpressionRef exprPtr mParenType $ ExpressionGetVariable varRef
 
 convertHole :: Monad m => ExpressionPtr m -> Data.HoleState -> Transaction ViewTag m (ExpressionRef m)
 convertHole exprPtr = return . ExpressionRef exprPtr Nothing . ExpressionHole
@@ -176,7 +193,7 @@ convertNode parenState exprPtr = do
   case expr of
     Data.ExpressionLambda x -> convertLambda parenState exprPtr x
     Data.ExpressionApply x -> convertApply parenState exprPtr x
-    Data.ExpressionGetVariable x -> convertGetVariable exprPtr x
+    Data.ExpressionGetVariable x -> convertGetVariable parenState exprPtr x
     Data.ExpressionHole x -> convertHole exprPtr x
     Data.ExpressionLiteralInteger x -> convertLiteralInteger exprPtr x
 
