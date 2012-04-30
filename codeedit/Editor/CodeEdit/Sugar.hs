@@ -102,6 +102,33 @@ convertLambda parenState exprPtr lambda = do
     ExpressionFunc x -> x
     _ -> Func [] sBody
 
+convertWhere
+  :: Monad m
+  => ParenState
+  -> ExpressionPtr m
+  -> IRef Data.Expression
+  -> ExpressionPtr m
+  -> Data.Lambda
+  -> Transaction ViewTag m (ExpressionRef m)
+convertWhere parenState argPtr funcI exprPtr lambda@(Data.Lambda (Data.TypedParam paramI _) bodyI) = do
+  value <- convertNode ParensNeverNeeded argPtr
+  let
+    bodyPtr = DataOps.lambdaBodyRef funcI lambda
+    item = WhereItem
+      { wiParamI = paramI
+      , wiValue = value
+      , wiApplyPtr = exprPtr
+      , wiLambdaBodyI = bodyI
+      }
+    mParenType =
+      case parenState of
+      ParensNeverNeeded -> Nothing
+      _ -> Just SquareParens
+  sBody <- convertNode ParensNeverNeeded bodyPtr
+  return . ExpressionRef exprPtr mParenType . ExpressionWhere . atWWheres (item :) $ case rExpression sBody of
+    ExpressionWhere x -> x
+    _ -> Where [] sBody
+
 convertApply
   :: Monad m
   => ParenState
@@ -117,24 +144,8 @@ convertApply parenState exprPtr (Data.Apply funcI argI) = do
       Data.ExpressionApply . Data.Apply funcI
   func <- Transaction.readIRef funcI
   case func of
-    Data.ExpressionLambda lambda@(Data.Lambda (Data.TypedParam paramI _) bodyI) -> do
-      value <- convertNode ParensNeverNeeded argPtr
-      let
-        bodyPtr = DataOps.lambdaBodyRef funcI lambda
-        item = WhereItem
-          { wiParamI = paramI
-          , wiValue = value
-          , wiApplyPtr = exprPtr
-          , wiLambdaBodyI = bodyI
-          }
-        mParenType =
-          case parenState of
-          ParensNeverNeeded -> Nothing
-          _ -> Just SquareParens
-      sBody <- convertNode ParensNeverNeeded bodyPtr
-      return . ExpressionRef exprPtr mParenType . ExpressionWhere . atWWheres (item :) $ case rExpression sBody of
-        ExpressionWhere x -> x
-        _ -> Where [] sBody
+    Data.ExpressionLambda lambda ->
+      convertWhere parenState argPtr funcI exprPtr lambda
     _ -> do
       let
         funcPtr =
