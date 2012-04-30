@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.FocusDelegator(IsDelegating(..), Keys(..), make, defaultKeys) where
 
-import Data.Monoid (mempty)
+import Data.Monoid (mappend, mempty)
 import Graphics.UI.Bottle.Rect(Rect(..))
 import Graphics.UI.Bottle.Widget(Widget(..))
 import qualified Graphics.DrawingCombinators as Draw
@@ -35,7 +35,7 @@ makeFocused delegating focusSelf keys backgroundCursorId =
     handleFocus Delegating    = addStopDelegatingEventMap
     handleFocus NotDelegating = blueify . useStartDelegatingEventMap
 
-    blueify = Widget.backgroundColor backgroundCursorId blue
+    blueify = Widget.backgroundColor (mappend backgroundCursorId focusSelf) blue
 
     useStartDelegatingEventMap = Widget.atSizeDependentWidgetData setStartDelegatingEventMap
     setStartDelegatingEventMap userIO =
