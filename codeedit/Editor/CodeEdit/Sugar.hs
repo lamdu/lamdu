@@ -12,6 +12,7 @@ module Editor.CodeEdit.Sugar
   ) where
 
 import Control.Monad(liftM)
+import Data.Maybe(fromMaybe)
 import Data.Store.Guid(Guid)
 import Data.Store.IRef(IRef, guid)
 import Data.Store.Property(Property(Property))
@@ -32,6 +33,7 @@ data ExpressionActions m = ExpressionActions
   { addNextArg :: m Guid
   , lambdaWrap :: m Guid
   , mReplace :: Maybe (m Guid)
+  , mDelete :: Maybe (m Guid)
   }
 
 data ExpressionRef m = ExpressionRef
@@ -87,14 +89,16 @@ data Expression m
 AtFieldTH.make ''Where
 AtFieldTH.make ''Func
 
-data ApplyRole = ApplyFunc | ApplyArg
+data ApplyRole = ApplyFunc | ApplyArg deriving Eq
+data InfixSide = InfixLeft | InfixRight deriving Eq
 
 data ParentInfo m
   = ExpressionTop
   | ApplyChild
     { _aRole :: ApplyRole
-    , _aIsInfix :: Bool
+    , _aMInfixSide :: Maybe InfixSide
     , _aParentPtr :: ExpressionPtr m
+    , _aOtherChild :: IRef Data.Expression
     }
 
 data ConvertParams m = ConvertParams
@@ -118,15 +122,24 @@ mkExpressionRef isReplaceable mParensType cp expr =
           if isReplaceable
           then Just . liftM guid . DataOps.replaceWithHole $ cpPtr cp
           else Nothing
+      , mDelete =
+          case cpParentInfo cp of
+          ExpressionTop -> Nothing
+          ApplyChild applyRole mInfixSide ptr other -> Just $ do
+            _ <- DataOps.replace ptr other
+            liftM guid $ if (applyRole, mInfixSide) == (ApplyArg, Just InfixRight)
+              then liftM (fromMaybe other) $ Infix.infixFuncOfRArg other
+              else return other
       }
   }
   where
     addNextArgPos =
       case cpParentInfo cp of
       ExpressionTop -> cpPtr cp
-      ApplyChild ApplyFunc False _ -> cpPtr cp
-      ApplyChild ApplyArg True _ -> cpPtr cp
-      ApplyChild _ _ ptr -> ptr
+      ApplyChild ApplyFunc (Just InfixLeft) ptr _ -> ptr
+      ApplyChild ApplyFunc _ _ _ -> cpPtr cp
+      ApplyChild ApplyArg Nothing ptr _ -> ptr
+      ApplyChild ApplyArg _ _ _ -> cpPtr cp
 
 convertLambda :: Monad m => Data.Lambda -> Convertor m
 convertLambda lambda cp = do
@@ -145,8 +158,8 @@ convertLambda lambda cp = do
       }
     mParenType =
       case cpParentInfo cp of
-      ApplyChild ApplyArg _ _ -> Just TextParens
-      ApplyChild ApplyFunc _ _ -> error "redex should not be handled by convertLambda"
+      ApplyChild ApplyArg _ _ _ -> Just TextParens
+      ApplyChild ApplyFunc _ _ _ -> error "redex should not be handled by convertLambda"
       ExpressionTop -> Nothing
   return . mkExpressionRef True mParenType cp . ExpressionFunc . atFParams (item :) $ case rExpression sBody of
     ExpressionFunc x -> x
@@ -201,19 +214,25 @@ convertApply (Data.Apply funcI argI) cp = do
         hasParens =
           case cpParentInfo cp of
           ExpressionTop -> isInfixFunc
-          ApplyChild ApplyArg False _ -> True
-          ApplyChild ApplyArg True _ -> isInfix
-          ApplyChild ApplyFunc _ _ -> isFullInfix
+          ApplyChild ApplyArg Nothing _ _ -> True
+          ApplyChild ApplyArg (Just _) _ _ -> isInfix
+          ApplyChild ApplyFunc _ _ _ -> isFullInfix
         mParenType = if hasParens then Just TextParens else Nothing
-      funcExpr <- convertNode . ConvertParams funcPtr . ApplyChild ApplyFunc isInfixFunc $ cpPtr cp
-      argExpr <- convertNode . ConvertParams argPtr . ApplyChild ApplyArg isInfix $ cpPtr cp
+        mInfixSide =
+          if isInfixFunc
+          then Just InfixLeft
+          else if isFullInfix
+          then Just InfixRight
+          else Nothing
+      funcExpr <- convertNode . ConvertParams funcPtr $ ApplyChild ApplyFunc mInfixSide (cpPtr cp) argI
+      argExpr <- convertNode . ConvertParams argPtr $ ApplyChild ApplyArg mInfixSide (cpPtr cp) funcI
       return . mkExpressionRef True mParenType cp . ExpressionApply $ Apply funcExpr argExpr
 
 convertGetVariable :: Monad m => Data.VariableRef -> Convertor m
 convertGetVariable varRef cp = do
   mParenType <-
     case cpParentInfo cp of
-    ApplyChild ApplyFunc _ _ -> return Nothing
+    ApplyChild ApplyFunc _ _ _ -> return Nothing
     _ -> do
       name <- Property.get $ Anchors.variableNameRef varRef
       return $ if Infix.isInfixName name then Just TextParens else Nothing

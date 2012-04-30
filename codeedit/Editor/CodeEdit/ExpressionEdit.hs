@@ -7,12 +7,10 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (CTransaction, getP)
-import Editor.CodeEdit.Ancestry(AncestryItem(..))
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (EventHandlers)
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.CodeEdit.Ancestry as Ancestry
 import qualified Editor.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
@@ -53,26 +51,25 @@ make ancestry sExpr = do
         wrapNonHoleExpr . parenify $
           WhereEdit.makeWithBody make ancestry w
       Sugar.ExpressionFunc f ->
-        wrapNonHoleExpr . parenify  $ FuncEdit.make make ancestry (Sugar.rExpressionPtr sExpr) f
+        wrapNonHoleExpr . parenify $ FuncEdit.make make ancestry (Sugar.rExpressionPtr sExpr) f
       Sugar.ExpressionHole holeState ->
         isAHole . maybe id (error "parens on hole?") (Sugar.rMParensType sExpr) $ HoleEdit.make ancestry holeState sExpr
       Sugar.ExpressionGetVariable varRef ->
         notAHole . parenify $ VarEdit.make varRef
       Sugar.ExpressionApply apply ->
-        wrapNonHoleExpr . parenify  $ ApplyEdit.make make ancestry (Sugar.rExpressionPtr sExpr) apply
+        wrapNonHoleExpr . parenify $ ApplyEdit.make make ancestry (Sugar.rExpressionPtr sExpr) apply
       Sugar.ExpressionLiteralInteger integer ->
         notAHole . parenify $ LiteralEdit.makeInt exprI integer
   (holePicker, widget) <- makeEditor exprId
-  eventMap <- expressionEventMap ancestry sExpr holePicker
+  eventMap <- expressionEventMap sExpr holePicker
   return $ Widget.weakerEvents eventMap widget
 
 expressionEventMap
   :: MonadF m
-  => Ancestry.ExpressionAncestry m
-  -> Sugar.ExpressionRef m
+  => Sugar.ExpressionRef m
   -> HoleResultPicker m
   -> CTransaction ViewTag m (EventHandlers (Transaction ViewTag m))
-expressionEventMap ancestry sExpr holePicker = do
+expressionEventMap sExpr holePicker = do
   return . mconcat $
     [ moveUnlessOnHole .
       Widget.actionEventMapMovesCursor
@@ -90,6 +87,10 @@ expressionEventMap ancestry sExpr holePicker = do
       (Widget.actionEventMapMovesCursor (Config.replaceKeys ++ extraReplaceKeys) "Replace" .
        liftM (WidgetIds.delegating . WidgetIds.fromGuid))
       (Sugar.mReplace actions)
+    , maybe mempty
+      (Widget.actionEventMapMovesCursor Config.delKeys "Delete" .
+       liftM WidgetIds.fromGuid)
+      (Sugar.mDelete actions)
     , Widget.actionEventMapMovesCursor
       Config.lambdaWrapKeys "Lambda wrap" .
       liftM (WidgetIds.delegating . WidgetIds.fromGuid) $ Sugar.lambdaWrap actions
@@ -102,7 +103,4 @@ expressionEventMap ancestry sExpr holePicker = do
     joinEvents x y = do
       r <- liftM Widget.eAnimIdMapping x
       (liftM . Widget.atEAnimIdMapping) (. r) y
-    extraReplaceKeys =
-      case ancestry of
-        (AncestryItemApply _ : _) -> []
-        _ -> Config.delKeys
+    extraReplaceKeys = maybe Config.delKeys (const []) $ Sugar.mDelete actions

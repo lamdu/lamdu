@@ -1,8 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit.ApplyEdit(make) where
 
-import Control.Monad (liftM)
-import Data.Maybe (fromMaybe)
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (TWidget, getP, assignCursor, transaction)
 import Editor.CodeEdit.Ancestry (AncestryItem(..), ApplyParent(..))
@@ -14,9 +12,7 @@ import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.Ancestry as Ancestry
 import qualified Editor.CodeEdit.Infix as Infix
 import qualified Editor.CodeEdit.Sugar as Sugar
-import qualified Editor.Config as Config
 import qualified Editor.Data as Data
-import qualified Editor.DataOps as DataOps
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 
@@ -38,29 +34,15 @@ make makeExpressionEdit ancestry expressionPtr (Sugar.Apply func arg) myId = do
     -- TODO: This will come from sugar
     isInfix <- transaction $ Infix.isInfixFunc funcI
     isApplyOfInfix <- transaction $ Infix.isApplyOfInfixOp funcI
-    mInfixOpOfRArg <- transaction $ Infix.infixFuncOfRArg funcI
     let
       funcType
         | isInfix = Ancestry.InfixLeft
         | isApplyOfInfix = Ancestry.InfixRight
         | otherwise = Ancestry.Prefix
-      delArgTarget = fromMaybe funcI mInfixOpOfRArg
-      addDelEventMap target =
-        liftM . Widget.weakerEvents .
-        Widget.actionEventMapMovesCursor Config.delKeys "Delete" .
-        liftM WidgetIds.fromIRef .
-        (>> return target) . DataOps.replace expressionPtr
-
-    let
       makeAncestry role =
         AncestryItemApply (ApplyParent role funcType origApply expressionPtr) : ancestry
-    funcEdit <-
-      addDelEventMap argI argI $
-      makeExpressionEdit (makeAncestry Ancestry.ApplyFunc) func
-
-    argEdit <-
-      addDelEventMap delArgTarget funcI $
-      makeExpressionEdit (makeAncestry Ancestry.ApplyArg) arg
+    funcEdit <- makeExpressionEdit (makeAncestry Ancestry.ApplyFunc) func
+    argEdit <- makeExpressionEdit (makeAncestry Ancestry.ApplyArg) arg
 
     return . BWidgets.hbox $
       (if isInfix then reverse else id)
