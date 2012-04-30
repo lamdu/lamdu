@@ -87,11 +87,15 @@ data Expression m
 AtFieldTH.make ''Where
 AtFieldTH.make ''Func
 
+data ApplyRole = ApplyFunc | ApplyArg
+
 data ParentInfo m
   = ExpressionTop
-  | ApplyFunc { _piAddNextArgPos :: ExpressionPtr m }
-  | ApplyArg (ExpressionPtr m)
-  | InfixArg
+  | ApplyChild
+    { _aRole :: ApplyRole
+    , _aIsInfix :: Bool
+    , _aParentPtr :: ExpressionPtr m
+    }
 
 data ConvertParams m = ConvertParams
   { cpPtr :: ExpressionPtr m
@@ -119,9 +123,10 @@ mkExpressionRef isReplaceable mParensType cp expr =
   where
     addNextArgPos =
       case cpParentInfo cp of
-      ApplyFunc ptr -> ptr
-      ApplyArg ptr -> ptr
-      _ -> cpPtr cp
+      ExpressionTop -> cpPtr cp
+      ApplyChild ApplyFunc False _ -> cpPtr cp
+      ApplyChild ApplyArg True _ -> cpPtr cp
+      ApplyChild _ _ ptr -> ptr
 
 convertLambda :: Monad m => Data.Lambda -> Convertor m
 convertLambda lambda cp = do
@@ -140,9 +145,8 @@ convertLambda lambda cp = do
       }
     mParenType =
       case cpParentInfo cp of
-      InfixArg -> Just TextParens
-      ApplyArg _ -> Just TextParens
-      ApplyFunc _ -> error "redex should not be handled by convertLambda"
+      ApplyChild ApplyArg _ _ -> Just TextParens
+      ApplyChild ApplyFunc _ _ -> error "redex should not be handled by convertLambda"
       ExpressionTop -> Nothing
   return . mkExpressionRef True mParenType cp . ExpressionFunc . atFParams (item :) $ case rExpression sBody of
     ExpressionFunc x -> x
@@ -196,23 +200,20 @@ convertApply (Data.Apply funcI argI) cp = do
         isInfix = isInfixFunc || isFullInfix
         hasParens =
           case cpParentInfo cp of
-          ApplyArg _ -> True
-          ApplyFunc _ -> isFullInfix
           ExpressionTop -> isInfixFunc
-          InfixArg -> isInfix
+          ApplyChild ApplyArg False _ -> True
+          ApplyChild ApplyArg True _ -> isInfix
+          ApplyChild ApplyFunc _ _ -> isFullInfix
         mParenType = if hasParens then Just TextParens else Nothing
-        argParentInfo = if isInfix then InfixArg else ApplyArg (cpPtr cp)
-      funcExpr <-
-        convertNode . ConvertParams funcPtr . ApplyFunc $
-        if isInfixFunc then cpPtr cp else funcPtr
-      argExpr <- convertNode $ ConvertParams argPtr argParentInfo
+      funcExpr <- convertNode . ConvertParams funcPtr . ApplyChild ApplyFunc isInfixFunc $ cpPtr cp
+      argExpr <- convertNode . ConvertParams argPtr . ApplyChild ApplyArg isInfix $ cpPtr cp
       return . mkExpressionRef True mParenType cp . ExpressionApply $ Apply funcExpr argExpr
 
 convertGetVariable :: Monad m => Data.VariableRef -> Convertor m
 convertGetVariable varRef cp = do
   mParenType <-
     case cpParentInfo cp of
-    ApplyFunc _ -> return Nothing
+    ApplyChild ApplyFunc _ _ -> return Nothing
     _ -> do
       name <- Property.get $ Anchors.variableNameRef varRef
       return $ if Infix.isInfixName name then Just TextParens else Nothing
