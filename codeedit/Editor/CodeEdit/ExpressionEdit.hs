@@ -4,7 +4,6 @@ module Editor.CodeEdit.ExpressionEdit(make) where
 import Control.Arrow (first)
 import Control.Monad (liftM)
 import Data.Monoid (Monoid(..))
-import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (CTransaction, getP)
@@ -12,7 +11,6 @@ import Editor.CodeEdit.Ancestry(AncestryItem(..))
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (EventHandlers)
-import qualified Data.Store.Transaction as Transaction
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.Ancestry as Ancestry
 import qualified Editor.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
@@ -24,7 +22,6 @@ import qualified Editor.CodeEdit.ExpressionEdit.WhereEdit as WhereEdit
 import qualified Editor.CodeEdit.Parens as Parens
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
-import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -89,7 +86,10 @@ expressionEventMap ancestry sExpr holePicker = do
       Widget.actionEventMapMovesCursor
       Config.addNextArgumentKeys "Add arg" .
       liftM WidgetIds.fromGuid $ Sugar.addNextArg actions
-    , ifHole (const mempty) $ replaceEventMap ancestry (Sugar.rExpressionPtr sExpr)
+    , maybe mempty
+      (Widget.actionEventMapMovesCursor (Config.replaceKeys ++ extraReplaceKeys) "Replace" .
+       liftM (WidgetIds.delegating . WidgetIds.fromGuid))
+      (Sugar.mReplace actions)
     , Widget.actionEventMapMovesCursor
       Config.lambdaWrapKeys "Lambda wrap" .
       liftM (WidgetIds.delegating . WidgetIds.fromGuid) $ Sugar.lambdaWrap actions
@@ -102,17 +102,6 @@ expressionEventMap ancestry sExpr holePicker = do
     joinEvents x y = do
       r <- liftM Widget.eAnimIdMapping x
       (liftM . Widget.atEAnimIdMapping) (. r) y
-
-replaceEventMap
-  :: (Monad m, Functor m)
-  => Ancestry.ExpressionAncestry m
-  -> Transaction.Property ViewTag m (IRef Data.Expression)
-  -> Widget.EventHandlers (Transaction ViewTag m)
-replaceEventMap ancestry exprPtr =
-  Widget.actionEventMapMovesCursor
-  (Config.replaceKeys ++ extraReplaceKeys) "Replace" . WidgetIds.diveIn $
-  DataOps.replaceWithHole exprPtr
-  where
     extraReplaceKeys =
       case ancestry of
         (AncestryItemApply _ : _) -> []

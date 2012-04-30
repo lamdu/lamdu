@@ -31,6 +31,7 @@ data ParensType = TextParens | SquareParens
 data ExpressionActions m = ExpressionActions
   { addNextArg :: m Guid
   , lambdaWrap :: m Guid
+  , mReplace :: Maybe (m Guid)
   }
 
 data ExpressionRef m = ExpressionRef
@@ -99,8 +100,8 @@ data ConvertParams m = ConvertParams
 
 type Convertor m = ConvertParams m -> Transaction ViewTag m (ExpressionRef m)
 
-mkExpressionRef :: Monad m => Maybe ParensType -> ConvertParams m -> Expression m -> ExpressionRef m
-mkExpressionRef mParensType cp expr =
+mkExpressionRef :: Monad m => Bool -> Maybe ParensType -> ConvertParams m -> Expression m -> ExpressionRef m
+mkExpressionRef isReplaceable mParensType cp expr =
   ExpressionRef
   { rExpression = expr
   , rMParensType = mParensType
@@ -109,6 +110,10 @@ mkExpressionRef mParensType cp expr =
       ExpressionActions
       { addNextArg = liftM guid $ DataOps.callWithArg addNextArgPos
       , lambdaWrap = liftM guid . DataOps.lambdaWrap $ cpPtr cp
+      , mReplace =
+          if isReplaceable
+          then Just . liftM guid . DataOps.replaceWithHole $ cpPtr cp
+          else Nothing
       }
   }
   where
@@ -139,7 +144,7 @@ convertLambda lambda cp = do
       ApplyArg _ -> Just TextParens
       ApplyFunc _ -> error "redex should not be handled by convertLambda"
       ExpressionTop -> Nothing
-  return . mkExpressionRef mParenType cp . ExpressionFunc . atFParams (item :) $ case rExpression sBody of
+  return . mkExpressionRef True mParenType cp . ExpressionFunc . atFParams (item :) $ case rExpression sBody of
     ExpressionFunc x -> x
     _ -> Func [] sBody
 
@@ -164,7 +169,7 @@ convertWhere argPtr funcI lambda@(Data.Lambda (Data.TypedParam paramI _) bodyI) 
       ExpressionTop -> Nothing
       _ -> Just SquareParens
   sBody <- convertNode $ ConvertParams bodyPtr ExpressionTop
-  return . mkExpressionRef mParenType cp . ExpressionWhere . atWWheres (item :) $ case rExpression sBody of
+  return . mkExpressionRef True mParenType cp . ExpressionWhere . atWWheres (item :) $ case rExpression sBody of
     ExpressionWhere x -> x
     _ -> Where [] sBody
 
@@ -201,7 +206,7 @@ convertApply (Data.Apply funcI argI) cp = do
         convertNode . ConvertParams funcPtr . ApplyFunc $
         if isInfixFunc then cpPtr cp else funcPtr
       argExpr <- convertNode $ ConvertParams argPtr argParentInfo
-      return . mkExpressionRef mParenType cp . ExpressionApply $ Apply funcExpr argExpr
+      return . mkExpressionRef True mParenType cp . ExpressionApply $ Apply funcExpr argExpr
 
 convertGetVariable :: Monad m => Data.VariableRef -> Convertor m
 convertGetVariable varRef cp = do
@@ -211,15 +216,15 @@ convertGetVariable varRef cp = do
     _ -> do
       name <- Property.get $ Anchors.variableNameRef varRef
       return $ if Infix.isInfixName name then Just TextParens else Nothing
-  return . mkExpressionRef mParenType cp $ ExpressionGetVariable varRef
+  return . mkExpressionRef True mParenType cp $ ExpressionGetVariable varRef
 
 convertHole :: Monad m => Data.HoleState -> Convertor m
 convertHole state cp =
-  return . mkExpressionRef Nothing cp $ ExpressionHole state
+  return . mkExpressionRef False Nothing cp $ ExpressionHole state
 
 convertLiteralInteger :: Monad m => Integer -> Convertor m
 convertLiteralInteger i cp =
-  return . mkExpressionRef Nothing cp $ ExpressionLiteralInteger i
+  return . mkExpressionRef True Nothing cp $ ExpressionLiteralInteger i
 
 convertNode :: Monad m => Convertor m
 convertNode cp = do
