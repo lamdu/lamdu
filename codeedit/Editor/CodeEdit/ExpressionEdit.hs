@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit(make) where
 
-import Control.Arrow (first, second)
+import Control.Arrow (first)
 import Control.Monad (liftM)
 import Data.Monoid (Monoid(..))
 import Data.Store.IRef (IRef)
@@ -55,30 +55,27 @@ make ancestry sExpr = do
   exprI <- getP $ Sugar.rExpressionPtr sExpr
   let
     notAHole = (fmap . liftM) ((,) NotAHole)
-    wrapNonHole keys isDelegating f =
-      notAHole . BWidgets.wrapDelegatedWithKeys keys isDelegating f
-    wrapNonHoleExpr = wrapNonHole Config.exprFocusDelegatorKeys FocusDelegator.Delegating
+    wrapNonHoleExpr =
+      notAHole .
+      BWidgets.wrapDelegatedWithKeys Config.exprFocusDelegatorKeys FocusDelegator.Delegating id
     makeEditor =
       case Sugar.rExpression sExpr of
       Sugar.ExpressionParens parens ->
-        wrapNonHoleExpr id $
+        wrapNonHoleExpr $
           makeParens ancestry parens
       Sugar.ExpressionWhere w ->
-        wrapNonHoleExpr id $
+        wrapNonHoleExpr $
           WhereEdit.makeWithBody make ancestry w
       Sugar.ExpressionFunc f ->
-        wrapNonHoleExpr id $ FuncEdit.make make ancestry (Sugar.rExpressionPtr sExpr) f
+        wrapNonHoleExpr $ FuncEdit.make make ancestry (Sugar.rExpressionPtr sExpr) f
       Sugar.ExpressionHole holeState ->
-        (fmap . liftM . first) IsAHole .
-        BWidgets.wrapDelegatedWithKeys
-          FocusDelegator.defaultKeys FocusDelegator.Delegating second $
-          HoleEdit.make ancestry holeState sExpr
+        (fmap . liftM . first) IsAHole $
+        HoleEdit.make ancestry holeState sExpr
       Sugar.ExpressionGetVariable varRef -> notAHole (VarEdit.make varRef)
       Sugar.ExpressionApply apply ->
-        wrapNonHoleExpr id $ ApplyEdit.make make ancestry (Sugar.rExpressionPtr sExpr) apply
+        wrapNonHoleExpr $ ApplyEdit.make make ancestry (Sugar.rExpressionPtr sExpr) apply
       Sugar.ExpressionLiteralInteger integer ->
-        wrapNonHole FocusDelegator.defaultKeys FocusDelegator.NotDelegating id $
-        LiteralEdit.makeInt exprI integer
+        notAHole $ LiteralEdit.makeInt exprI integer
     exprId = WidgetIds.fromIRef exprI
   (holePicker, widget) <- makeEditor exprId
   eventMap <- expressionEventMap ancestry (Sugar.rExpressionPtr sExpr) holePicker

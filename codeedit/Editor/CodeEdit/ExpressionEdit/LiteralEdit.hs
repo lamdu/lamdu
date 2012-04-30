@@ -15,6 +15,7 @@ import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 
 setColor :: TWidget t m -> TWidget t m
@@ -61,8 +62,9 @@ makeInt ::
   -> Integer
   -> Widget.Id
   -> TWidget ViewTag m
-makeInt expressionI integer myId =
-  setColor $ makeIntEdit intRef myId
+makeInt expressionI integer =
+  BWidgets.wrapDelegatedWithKeys FocusDelegator.defaultKeys FocusDelegator.NotDelegating id
+  (setColor . makeIntEdit intRef)
   where
     expressionRef = Transaction.fromIRef expressionI
     intRef = Property.pureCompose (const integer) Data.ExpressionLiteralInteger expressionRef

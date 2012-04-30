@@ -34,6 +34,7 @@ import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 type ResultPicker m = Transaction ViewTag m Widget.EventResult
 
@@ -276,7 +277,7 @@ makeActiveHoleEdit holeInfo (Data.HoleState searchTerm) =
   where
     searchTermId = WidgetIds.searchTermId $ hiHoleId holeInfo
 
-make
+makeH
   :: MonadF m
   => Ancestry.ExpressionAncestry m
   -> Data.HoleState
@@ -284,7 +285,7 @@ make
   -> Widget.Id
   -> CTransaction ViewTag m
      (Maybe (ResultPicker m), Widget (Transaction ViewTag m))
-make ancestry curState expressionRef myId = do
+makeH ancestry curState expressionRef myId = do
   cursor <- readCursor
   expressionI <- getP $ Sugar.rExpressionPtr expressionRef
   let
@@ -312,3 +313,15 @@ make ancestry curState expressionRef myId = do
       | null searchText = "  "
       | otherwise = searchText
     searchText = Data.holeSearchTerm curState
+
+make
+  :: MonadF m
+  => Ancestry.ExpressionAncestry m
+  -> Data.HoleState
+  -> Sugar.ExpressionRef m
+  -> Widget.Id
+  -> CTransaction ViewTag m
+     (Maybe (ResultPicker m), Widget (Transaction ViewTag m))
+make ancestry curState expressionRef =
+  BWidgets.wrapDelegatedWithKeys FocusDelegator.defaultKeys FocusDelegator.Delegating second
+  (makeH ancestry curState expressionRef)
