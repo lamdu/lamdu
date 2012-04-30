@@ -7,7 +7,7 @@ import Data.Monoid (Monoid(..))
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, getP, transaction)
+import Editor.CTransaction (CTransaction, getP)
 import Editor.CodeEdit.Ancestry(AncestryItem(..))
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
@@ -21,7 +21,6 @@ import qualified Editor.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
 import qualified Editor.CodeEdit.ExpressionEdit.WhereEdit as WhereEdit
-import qualified Editor.CodeEdit.NextArg as NextArg
 import qualified Editor.CodeEdit.Parens as Parens
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
@@ -67,34 +66,32 @@ make ancestry sExpr = do
       Sugar.ExpressionLiteralInteger integer ->
         notAHole . parenify $ LiteralEdit.makeInt exprI integer
   (holePicker, widget) <- makeEditor exprId
-  eventMap <- expressionEventMap ancestry (Sugar.rExpressionPtr sExpr) holePicker
+  eventMap <- expressionEventMap ancestry sExpr holePicker
   return $ Widget.weakerEvents eventMap widget
 
 expressionEventMap
   :: MonadF m
   => Ancestry.ExpressionAncestry m
-  -> DataOps.ExpressionPtr m
+  -> Sugar.ExpressionRef m
   -> HoleResultPicker m
   -> CTransaction ViewTag m (EventHandlers (Transaction ViewTag m))
-expressionEventMap ancestry exprPtr holePicker = do
-  (addArgDoc, addArgHandler) <-
-    transaction $ NextArg.makeAddArgHandler ancestry exprPtr
+expressionEventMap ancestry sExpr holePicker = do
   return . mconcat $
     [ moveUnlessOnHole .
       Widget.actionEventMapMovesCursor
       Config.giveAsArgumentKeys "Give as argument" .
-      WidgetIds.diveIn $ DataOps.giveAsArg exprPtr
+      WidgetIds.diveIn $ DataOps.giveAsArg (Sugar.rExpressionPtr sExpr)
     , moveUnlessOnHole .
       Widget.actionEventMapMovesCursor
       Config.callWithArgumentKeys "Call with argument" .
-      WidgetIds.diveIn $ DataOps.callWithArg exprPtr
-    , pickResultFirst $
+      WidgetIds.diveIn $ DataOps.callWithArg (Sugar.rExpressionPtr sExpr)
+    , pickResultFirst .
       Widget.actionEventMapMovesCursor
-      Config.addNextArgumentKeys addArgDoc addArgHandler
-    , ifHole (const mempty) $ replaceEventMap ancestry exprPtr
+      Config.addNextArgumentKeys "Add next arg" . liftM WidgetIds.fromGuid $ Sugar.rAddNextArg sExpr
+    , ifHole (const mempty) $ replaceEventMap ancestry (Sugar.rExpressionPtr sExpr)
     , Widget.actionEventMapMovesCursor
       Config.lambdaWrapKeys "Lambda wrap" . WidgetIds.diveIn $
-      DataOps.lambdaWrap exprPtr
+      DataOps.lambdaWrap (Sugar.rExpressionPtr sExpr)
     ]
   where
     moveUnlessOnHole = ifHole $ (const . fmap . liftM . Widget.atECursor . const) Nothing

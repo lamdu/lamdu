@@ -1,7 +1,7 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.WidgetIds(
-  backgroundCursorId, textCursorId, fromIRef,
+  backgroundCursorId, textCursorId, fromIRef, fromGuid,
   collapserId, branchSelection, goUpId,
   delegating, notDelegating, searchTermId,
   parenHighlightId,
@@ -10,7 +10,7 @@ module Editor.WidgetIds(
 where
 
 import Data.ByteString.Char8() -- IsString instance
-import Data.Store.Guid(bs)
+import Data.Store.Guid(Guid, bs)
 import Data.Store.IRef(IRef, guid)
 import qualified Editor.Data as Data
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -22,7 +22,10 @@ textCursorId :: Widget.Id
 textCursorId = Widget.Id ["text cursor"]
 
 fromIRef :: IRef a -> Widget.Id
-fromIRef = Widget.Id . (: []) . bs . guid
+fromIRef = fromGuid . guid
+
+fromGuid :: Guid -> Widget.Id
+fromGuid = Widget.Id . (: []) . bs
 
 collapserId :: Widget.Id -> Widget.Id
 collapserId = flip Widget.joinId ["collapser"]

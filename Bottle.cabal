@@ -106,7 +106,6 @@ Executable Editor
                        Editor.CodeEdit.ExpressionEdit.LiteralEdit,
                        Editor.CodeEdit.ExpressionEdit.VarEdit,
                        Editor.CodeEdit.ExpressionEdit.WhereEdit,
-                       Editor.CodeEdit.NextArg,
                        Editor.CodeEdit.Parens,
                        Editor.CodeEdit.Sugar,
                        Editor.Config,
