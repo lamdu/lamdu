@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
 
 module Editor.CodeEdit.Sugar
   ( Expression(..), ExpressionRef(..)
@@ -7,11 +7,10 @@ module Editor.CodeEdit.Sugar
   , Func(..), atFParams, atFBody
   , FuncParam(..)
   , Apply(..)
-  , Parens(..), ParensInfo(..), HighlightParens(..)
+  , ParensType(..)
   , convertExpression
   ) where
 
-import Control.Monad (liftM)
 import Data.Store.IRef(IRef)
 import Data.Store.Property(Property(Property))
 import Data.Store.Transaction(Transaction)
@@ -22,10 +21,12 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
-import qualified Graphics.UI.Bottle.Widget as Widget
+
+data ParensType = TextParens | SquareParens
 
 data ExpressionRef m = ExpressionRef
   { rExpressionPtr :: ExpressionPtr m
+  , rMParensType :: Maybe ParensType
   , rExpression :: Expression m
   }
 
@@ -59,25 +60,13 @@ data Func m = Func
   , fBody :: ExpressionRef m
   }
 
-data HighlightParens = DoHighlightParens | DontHighlightParens
-
-data ParensInfo
-  = TextParens HighlightParens Widget.Id
-  | SquareParens Widget.Id
-
-data Parens m = Parens
-  { parensInfo :: ParensInfo
-  , parensBody :: ExpressionRef m
-  }
-
 data Apply m = Apply
   { applyFunc :: ExpressionRef m
   , applyArg :: ExpressionRef m
   }
 
 data Expression m
-  = ExpressionParens (Parens m)
-  | ExpressionApply (Apply m)
+  = ExpressionApply (Apply m)
   | ExpressionGetVariable Data.VariableRef
   | ExpressionHole Data.HoleState
   | ExpressionLiteralInteger Integer
@@ -87,14 +76,16 @@ data Expression m
 AtFieldTH.make ''Where
 AtFieldTH.make ''Func
 
-convertLambda :: Monad m => ExpressionPtr m -> Data.Lambda -> Transaction ViewTag m (Expression m)
-convertLambda exprPtr lambda = do
+data ParenState = ParensNeverNeeded | ApplyFunc | ApplyArg
+
+convertLambda :: Monad m => ParenState -> ExpressionPtr m -> Data.Lambda -> Transaction ViewTag m (ExpressionRef m)
+convertLambda parenState exprPtr lambda = do
   exprI <- Property.get exprPtr
   let
     typePtr = DataOps.lambdaParamTypeRef exprI lambda
     bodyPtr = DataOps.lambdaBodyRef exprI lambda
-  typeExpr <- convertExpression typePtr
-  sBody <- convertExpression bodyPtr
+  typeExpr <- convertNode ParensNeverNeeded typePtr
+  sBody <- convertNode ParensNeverNeeded bodyPtr
   let
     item = FuncParam
       { fpParamI = Data.tpParam (Data.lambdaParam lambda)
@@ -102,17 +93,22 @@ convertLambda exprPtr lambda = do
       , fpLambdaPtr = exprPtr
       , fpBodyI = Data.lambdaBody lambda
       }
-
-  return . ExpressionFunc . atFParams (item :) $ case rExpression sBody of
+    mParenType =
+      case parenState of
+      ApplyArg -> Just TextParens
+      ApplyFunc -> error "redex should not be handled by convertLambda"
+      _ -> Nothing
+  return . ExpressionRef exprPtr mParenType . ExpressionFunc . atFParams (item :) $ case rExpression sBody of
     ExpressionFunc x -> x
     _ -> Func [] sBody
 
 convertApply
   :: Monad m
-  => Property (Transaction ViewTag m) (IRef Data.Expression)
+  => ParenState
+  -> Property (Transaction ViewTag m) (IRef Data.Expression)
   -> Data.Apply
-  -> Transaction ViewTag m (Expression m)
-convertApply exprPtr (Data.Apply funcI argI) = do
+  -> Transaction ViewTag m (ExpressionRef m)
+convertApply parenState exprPtr (Data.Apply funcI argI) = do
   exprI <- Property.get exprPtr
   let
     argPtr =
@@ -122,7 +118,7 @@ convertApply exprPtr (Data.Apply funcI argI) = do
   func <- Transaction.readIRef funcI
   case func of
     Data.ExpressionLambda lambda@(Data.Lambda (Data.TypedParam paramI _) bodyI) -> do
-      value <- convertExpression argPtr
+      value <- convertNode ParensNeverNeeded argPtr
       let
         bodyPtr = DataOps.lambdaBodyRef funcI lambda
         item = WhereItem
@@ -131,8 +127,12 @@ convertApply exprPtr (Data.Apply funcI argI) = do
           , wiApplyPtr = exprPtr
           , wiLambdaBodyI = bodyI
           }
-      sBody <- convertExpression bodyPtr
-      return . ExpressionWhere . atWWheres (item :) $ case rExpression sBody of
+        mParenType =
+          case parenState of
+          ParensNeverNeeded -> Nothing
+          _ -> Just SquareParens
+      sBody <- convertNode ParensNeverNeeded bodyPtr
+      return . ExpressionRef exprPtr mParenType . ExpressionWhere . atWWheres (item :) $ case rExpression sBody of
         ExpressionWhere x -> x
         _ -> Where [] sBody
     _ -> do
@@ -141,26 +141,33 @@ convertApply exprPtr (Data.Apply funcI argI) = do
           Property (return funcI) $
           Transaction.writeIRef exprI .
           Data.ExpressionApply . (`Data.Apply` argI)
-      funcExpr <- convertExpression funcPtr
-      argExpr <- convertExpression argPtr
-      return . ExpressionApply $ Apply funcExpr argExpr
+        mParenType =
+          case parenState of
+          ApplyArg -> Just TextParens
+          _ -> Nothing
+      funcExpr <- convertNode ApplyFunc funcPtr
+      argExpr <- convertNode ApplyArg argPtr
+      return . ExpressionRef exprPtr mParenType . ExpressionApply $ Apply funcExpr argExpr
 
-convertGetVariable :: Monad m => ExpressionPtr m -> Data.VariableRef -> Transaction ViewTag m (Expression m)
-convertGetVariable _exprPtr = return . ExpressionGetVariable
+convertGetVariable :: Monad m => ExpressionPtr m -> Data.VariableRef -> Transaction ViewTag m (ExpressionRef m)
+convertGetVariable exprPtr = return . ExpressionRef exprPtr Nothing . ExpressionGetVariable
 
-convertHole :: Monad m => ExpressionPtr m -> Data.HoleState -> Transaction ViewTag m (Expression m)
-convertHole _exprPtr = return . ExpressionHole
+convertHole :: Monad m => ExpressionPtr m -> Data.HoleState -> Transaction ViewTag m (ExpressionRef m)
+convertHole exprPtr = return . ExpressionRef exprPtr Nothing . ExpressionHole
 
-convertLiteralInteger :: Monad m => ExpressionPtr m -> Integer -> Transaction ViewTag m (Expression m)
-convertLiteralInteger _exprPtr = return . ExpressionLiteralInteger
+convertLiteralInteger :: Monad m => ExpressionPtr m -> Integer -> Transaction ViewTag m (ExpressionRef m)
+convertLiteralInteger exprPtr = return . ExpressionRef exprPtr Nothing . ExpressionLiteralInteger
 
-convertExpression :: Monad m => ExpressionPtr m -> Transaction ViewTag m (ExpressionRef m)
-convertExpression exprPtr = do
+convertNode :: Monad m => ParenState -> ExpressionPtr m -> Transaction ViewTag m (ExpressionRef m)
+convertNode parenState exprPtr = do
   exprI <- Property.get exprPtr
   expr <- Transaction.readIRef exprI
-  liftM (ExpressionRef exprPtr) $ case expr of
-    Data.ExpressionLambda x -> convertLambda exprPtr x
-    Data.ExpressionApply x -> convertApply exprPtr x
+  case expr of
+    Data.ExpressionLambda x -> convertLambda parenState exprPtr x
+    Data.ExpressionApply x -> convertApply parenState exprPtr x
     Data.ExpressionGetVariable x -> convertGetVariable exprPtr x
     Data.ExpressionHole x -> convertHole exprPtr x
     Data.ExpressionLiteralInteger x -> convertLiteralInteger exprPtr x
+
+convertExpression :: Monad m => ExpressionPtr m -> Transaction ViewTag m (ExpressionRef m)
+convertExpression = convertNode ParensNeverNeeded

@@ -9,7 +9,7 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.Sugar (ParensInfo(..), HighlightParens(..))
+import Editor.CodeEdit.Sugar (ParensType(..))
 import Editor.CTransaction (TWidget, WidgetT, subCursor)
 import Editor.MonadF (MonadF)
 import Editor.WidgetIds (parensPrefix)
@@ -134,18 +134,15 @@ highlightExpression =
 
 addParens
   :: (MonadF m)
-  => WidgetT ViewTag m
-  -> Sugar.ParensInfo
+  => ParensType
   -> Widget.Id
+  -> WidgetT ViewTag m
   -> TWidget ViewTag m
-addParens widget (SquareParens parensId) _ = return $ addSquareParens parensId widget
-addParens widget (TextParens needHighlight parensId) myId = do
+addParens SquareParens myId widget = return $ addSquareParens myId widget
+addParens TextParens myId widget = do
   mInsideParenId <- subCursor rParenId
-  widgetWithParens <- addTextParens id doHighlight parensId widget
+  widgetWithParens <- addTextParens id doHighlight myId widget
   return $ maybe id (const highlightExpression) mInsideParenId widgetWithParens
   where
     rParenId = Widget.joinId myId [")"]
-    doHighlight =
-      case needHighlight of
-        DoHighlightParens -> (>>= BWidgets.makeFocusableView rParenId)
-        DontHighlightParens -> id
+    doHighlight = (>>= BWidgets.makeFocusableView rParenId)
