@@ -193,11 +193,12 @@ convertApply (Data.Apply funcI argI) ptr = do
           | otherwise = addArgHere
       funcExpr <- convertExpression funcPtr
       argExpr <- convertExpression argPtr
+      needAddFuncParens <-
+        case rExpression funcExpr of
+        ExpressionGetVariable{} -> return False
+        ExpressionApply (Apply funcFunc _) -> Infix.isApplyOfInfixOp =<< Property.get (rExpressionPtr funcFunc)
+        _ -> return True
       let
-        needAddFuncParens =
-          case rExpression funcExpr of
-          ExpressionApply{} -> False
-          _ -> True
         modifyFuncParens
           | needAddFuncParens = const . exprParensType $ rExpression funcExpr
           | isInfix = const Nothing
@@ -209,7 +210,7 @@ convertApply (Data.Apply funcI argI) ptr = do
             _ -> const . exprParensType $ rExpression argExpr
           | otherwise = const . exprParensType $ rExpression argExpr
         mParensType
-          | isInfix = Just TextParens
+          | isInfixFunc = Just TextParens
           | otherwise = Nothing
         newArgExpr =
           atRMParensType modifyArgParens .
@@ -230,7 +231,7 @@ convertApply (Data.Apply funcI argI) ptr = do
   where
     exprParensType ExpressionHole{} = Nothing
     exprParensType ExpressionLiteralInteger{} = Nothing
-    exprParensType ExpressionGetVariable{} = Nothing
+    exprParensType ExpressionGetVariable{} = Just TextParens
     exprParensType ExpressionApply{} = Just TextParens
     exprParensType ExpressionFunc{} = Just TextParens
     exprParensType ExpressionWhere{} = Just SquareParens
