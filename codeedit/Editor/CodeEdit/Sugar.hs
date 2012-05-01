@@ -89,16 +89,14 @@ data Expression m
 AtFieldTH.make ''Where
 AtFieldTH.make ''Func
 
-data ApplyRole = ApplyFunc | ApplyArg deriving Eq
-data InfixSide = InfixLeft | InfixRight deriving Eq
+data ApplyRole = ApplyFunc | ApplyArg
+data InfixSide = InfixLeft | InfixRight
 
 data ParentInfo m
   = ExpressionTop
   | ApplyChild
     { _aRole :: ApplyRole
     , _aMInfixSide :: Maybe InfixSide
-    , _aParentPtr :: ExpressionPtr m
-    , _aOtherChild :: IRef Data.Expression
     }
 
 data ConvertParams m = ConvertParams
@@ -116,30 +114,16 @@ mkExpressionRef isReplaceable mParensType cp expr =
   , rExpressionPtr = cpPtr cp
   , rActions =
       ExpressionActions
-      { addNextArg = liftM guid $ DataOps.callWithArg addNextArgPos
+      { addNextArg = liftM guid . DataOps.callWithArg $ cpPtr cp
       , lambdaWrap = liftM guid . DataOps.lambdaWrap $ cpPtr cp
       , mReplace =
           if isReplaceable
           then Just . liftM guid . DataOps.replaceWithHole $ cpPtr cp
           else Nothing
-      , mDelete =
-          case cpParentInfo cp of
-          ExpressionTop -> Nothing
-          ApplyChild applyRole mInfixSide ptr other -> Just $ do
-            _ <- DataOps.replace ptr other
-            liftM guid $ if (applyRole, mInfixSide) == (ApplyArg, Just InfixRight)
-              then liftM (fromMaybe other) $ Infix.infixFuncOfRArg other
-              else return other
+        -- mDelete gets overridden by parent if it is an apply.
+      , mDelete = Nothing
       }
   }
-  where
-    addNextArgPos =
-      case cpParentInfo cp of
-      ExpressionTop -> cpPtr cp
-      ApplyChild ApplyFunc (Just InfixLeft) ptr _ -> ptr
-      ApplyChild ApplyFunc _ _ _ -> cpPtr cp
-      ApplyChild ApplyArg Nothing ptr _ -> ptr
-      ApplyChild ApplyArg _ _ _ -> cpPtr cp
 
 convertLambda :: Monad m => Data.Lambda -> Convertor m
 convertLambda lambda cp = do
@@ -158,8 +142,8 @@ convertLambda lambda cp = do
       }
     mParenType =
       case cpParentInfo cp of
-      ApplyChild ApplyArg _ _ _ -> Just TextParens
-      ApplyChild ApplyFunc _ _ _ -> error "redex should not be handled by convertLambda"
+      ApplyChild ApplyArg _ -> Just TextParens
+      ApplyChild ApplyFunc _ -> error "redex should not be handled by convertLambda"
       ExpressionTop -> Nothing
   return . mkExpressionRef True mParenType cp . ExpressionFunc . atFParams (item :) $ case rExpression sBody of
     ExpressionFunc x -> x
@@ -214,9 +198,9 @@ convertApply (Data.Apply funcI argI) cp = do
         hasParens =
           case cpParentInfo cp of
           ExpressionTop -> isInfixFunc
-          ApplyChild ApplyArg Nothing _ _ -> True
-          ApplyChild ApplyArg (Just _) _ _ -> isInfix
-          ApplyChild ApplyFunc _ _ _ -> isFullInfix
+          ApplyChild ApplyArg Nothing -> True
+          ApplyChild ApplyArg (Just _) -> isInfix
+          ApplyChild ApplyFunc _ -> isFullInfix
         mParenType = if hasParens then Just TextParens else Nothing
         mInfixSide =
           if isInfixFunc
@@ -224,15 +208,37 @@ convertApply (Data.Apply funcI argI) cp = do
           else if isFullInfix
           then Just InfixRight
           else Nothing
-      funcExpr <- convertNode . ConvertParams funcPtr $ ApplyChild ApplyFunc mInfixSide (cpPtr cp) argI
-      argExpr <- convertNode . ConvertParams argPtr $ ApplyChild ApplyArg mInfixSide (cpPtr cp) funcI
-      return . mkExpressionRef True mParenType cp . ExpressionApply $ Apply funcExpr argExpr
+        atActions f sExpr = sExpr { rActions = f (rActions sExpr) }
+        deleteNode siblingI whereToGo =
+          atActions $ \x -> x
+          { mDelete = Just $ do
+              _ <- DataOps.replace (cpPtr cp) siblingI
+              liftM guid whereToGo
+          }
+        whereToGoAfterDeleteArg =
+          liftM (fromMaybe funcI) (Infix.infixFuncOfRArg funcI)
+        addArgHere =
+          atActions $ \x -> x
+          { addNextArg = liftM guid . DataOps.callWithArg $ cpPtr cp
+          }
+        addArgAfterFunc
+          | isInfixFunc = addArgHere
+          | otherwise = id
+        addArgAfterArg
+          | isInfix = id
+          | otherwise = addArgHere
+      funcExpr <- convertNode . ConvertParams funcPtr $ ApplyChild ApplyFunc mInfixSide
+      argExpr <- convertNode . ConvertParams argPtr $ ApplyChild ApplyArg mInfixSide
+      return . mkExpressionRef True mParenType cp . ExpressionApply $
+        Apply
+        ((addArgAfterFunc . deleteNode argI (return argI)) funcExpr)
+        ((addArgAfterArg . deleteNode funcI whereToGoAfterDeleteArg) argExpr)
 
 convertGetVariable :: Monad m => Data.VariableRef -> Convertor m
 convertGetVariable varRef cp = do
   mParenType <-
     case cpParentInfo cp of
-    ApplyChild ApplyFunc _ _ _ -> return Nothing
+    ApplyChild ApplyFunc _ -> return Nothing
     _ -> do
       name <- Property.get $ Anchors.variableNameRef varRef
       return $ if Infix.isInfixName name then Just TextParens else Nothing
