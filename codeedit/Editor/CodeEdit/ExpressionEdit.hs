@@ -83,9 +83,7 @@ expressionEventMap sExpr holePicker = do
 
     -- Move to next arg overrides add arg's keys.
     , moveToNextArgHole
-    , ifHole pickResultFirst .
-      Widget.actionEventMapMovesCursor
-      Config.addNextArgumentKeys (ifHole (const ("Pick result and " ++)) "Add arg") .
+    , withPickResultFirst Config.addNextArgumentKeys "Add arg" .
       liftM WidgetIds.fromGuid $ Sugar.addNextArg actions
 
     -- Replace has the keys of Delete if delete is not available.
@@ -103,6 +101,10 @@ expressionEventMap sExpr holePicker = do
       liftM (WidgetIds.delegating . WidgetIds.fromGuid) $ Sugar.lambdaWrap actions
     ]
   where
+    withPickResultFirst keys doc action=
+      ifHole pickResultFirst .
+      Widget.actionEventMapMovesCursor
+      keys (ifHole (const ("Pick result and " ++)) doc) $ action
     actions = Sugar.rActions sExpr
     moveUnlessOnHole = ifHole $ (const . fmap . liftM . Widget.atECursor . const) Nothing
     pickResultFirst = maybe id (fmap . joinEvents)
@@ -116,8 +118,6 @@ expressionEventMap sExpr holePicker = do
       Just nextArg ->
         case Sugar.rExpression nextArg of
         Sugar.ExpressionHole{} ->
-          ifHole pickResultFirst .
-          Widget.actionEventMapMovesCursor
-          Config.addNextArgumentKeys (ifHole (const ("Pick result and " ++)) "Move to next arg") .
+          withPickResultFirst Config.addNextArgumentKeys "Move to next arg" .
           liftM WidgetIds.fromIRef . Property.get $ Sugar.rExpressionPtr nextArg
         _ -> mempty
