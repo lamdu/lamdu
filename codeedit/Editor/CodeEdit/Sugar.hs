@@ -1,10 +1,10 @@
-{-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Editor.CodeEdit.Sugar
   ( Expression(..), ExpressionActions(..), ExpressionRef(..)
   , Where(..), WhereItem(..)
   , Func(..), FuncParam(..)
-  , Apply(..)
+  , Apply(..), Hole(..)
   , ParensType(..)
   , convertExpression
   ) where
@@ -77,14 +77,20 @@ data Apply m = Apply
   , applyArg :: ExpressionRef m
   }
 
+data Hole m = Hole
+  { holeState :: Data.HoleState
+  , holeMFlipInfix :: Maybe (Transaction ViewTag m ())
+  }
+
 data Expression m
   = ExpressionApply (Apply m)
   | ExpressionGetVariable Data.VariableRef
-  | ExpressionHole Data.HoleState
+  | ExpressionHole (Hole m)
   | ExpressionLiteralInteger Integer
   | ExpressionWhere (Where m)
   | ExpressionFunc (Func m)
 
+AtFieldTH.make ''Hole
 AtFieldTH.make ''Where
 AtFieldTH.make ''Func
 AtFieldTH.make ''ExpressionRef
@@ -157,6 +163,10 @@ atExpressionApply :: (Apply m -> Apply m) -> Expression m -> Expression m
 atExpressionApply f (ExpressionApply apply) = ExpressionApply $ f apply
 atExpressionApply _ x = x
 
+atExpressionHole :: (Hole m -> Hole m) -> Expression m -> Expression m
+atExpressionHole f (ExpressionHole x) = ExpressionHole $ f x
+atExpressionHole _ x = x
+
 convertApply :: Monad m => Data.Apply -> Convertor m
 convertApply (Data.Apply funcI argI) ptr = do
   exprI <- Property.get ptr
@@ -212,7 +222,11 @@ convertApply (Data.Apply funcI argI) ptr = do
         mParensType
           | isInfixFunc = Just TextParens
           | otherwise = Nothing
+        flipInfixFuncAndArg =
+          Transaction.writeIRef exprI . Data.ExpressionApply $
+          Data.Apply argI funcI
         newArgExpr =
+          (atRExpression . atExpressionHole . atHoleMFlipInfix . const . Just) flipInfixFuncAndArg .
           atRMParensType modifyArgParens .
           addArgAfterArg .
           deleteNode funcI whereToGoAfterDeleteArg $
@@ -247,7 +261,7 @@ convertGetVariable varRef ptr = do
 
 convertHole :: Monad m => Data.HoleState -> Convertor m
 convertHole state ptr =
-  return . mkExpressionRef False Nothing ptr $ ExpressionHole state
+  return . mkExpressionRef False Nothing ptr . ExpressionHole $ Hole state Nothing
 
 convertLiteralInteger :: Monad m => Integer -> Convertor m
 convertLiteralInteger i ptr =

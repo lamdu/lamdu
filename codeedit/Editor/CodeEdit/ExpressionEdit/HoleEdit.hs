@@ -5,7 +5,7 @@ import Control.Arrow (first, second)
 import Control.Monad (liftM, mplus)
 import Data.List (isInfixOf, isPrefixOf, sort)
 import Data.List.Utils (sortOn)
-import Data.Maybe (isJust, listToMaybe)
+import Data.Maybe (isJust, listToMaybe, fromMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.IRef (IRef)
 import Data.Store.Property (Property(..))
@@ -17,7 +17,6 @@ import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Char as Char
-import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
@@ -48,6 +47,7 @@ data HoleInfo m = HoleInfo
   { hiExpressionI :: IRef Data.Expression
   , hiHoleId :: Widget.Id
   , hiAncestry :: Ancestry.ExpressionAncestry m
+  , hiHole :: Sugar.Hole m
   }
 
 resultPickEventMap
@@ -72,7 +72,7 @@ makeMoreResults myId =
   BWidgets.makeTextView "..." $
   Widget.joinId myId ["more results"]
 
-data NeedFlip m = DontFlip | DoFlip (ApplyParent m)
+data NeedFlip = DontFlip | DoFlip
 
 makeResultVariables ::
   MonadF m => HoleInfo m -> Data.VariableRef -> CTransaction ViewTag m [Result m]
@@ -88,8 +88,8 @@ makeResultVariables holeInfo varRef = do
     if Infix.isInfixName varName
     then
       case hiAncestry holeInfo of
-        (AncestryItemApply x@(ApplyParent ApplyArg _ _ _) : _) ->
-          [result varName (DoFlip x) resultId return, parened]
+        (AncestryItemApply (ApplyParent ApplyArg _ _ _) : _) ->
+          [result varName DoFlip resultId return, parened]
         (AncestryItemApply (ApplyParent ApplyFunc _ _ _) : _) ->
           [ordinary]
         _ -> [parened]
@@ -130,7 +130,7 @@ holeResultAnimMapping holeInfo resultId parensId =
 
 pickResult
   :: MonadF m => HoleInfo m
-  -> Data.Expression -> NeedFlip m -> Widget.Id
+  -> Data.Expression -> NeedFlip -> Widget.Id
   -> ResultPicker m
 pickResult holeInfo newExpr needFlip resultId = do
   Transaction.writeIRef (hiExpressionI holeInfo) newExpr
@@ -143,13 +143,7 @@ pickResult holeInfo newExpr needFlip resultId = do
     }
   where
     flipAct DontFlip = return ()
-    flipAct (DoFlip (ApplyParent _ _ apply parentPtr)) = do
-      parentI <- Property.get parentPtr
-      Property.set (Transaction.fromIRef parentI) .
-        Data.ExpressionApply $ flipArgs apply
-
-flipArgs :: Data.Apply -> Data.Apply
-flipArgs (Data.Apply x y) = Data.Apply y x
+    flipAct DoFlip = fromMaybe (return ()) . Sugar.holeMFlipInfix $ hiHole holeInfo
 
 resultOrdering :: String -> Result m -> (Bool, Bool)
 resultOrdering searchTerm result =
@@ -280,12 +274,12 @@ makeActiveHoleEdit holeInfo (Data.HoleState searchTerm) =
 makeH
   :: MonadF m
   => Ancestry.ExpressionAncestry m
-  -> Data.HoleState
+  -> Sugar.Hole m
   -> Sugar.ExpressionRef m
   -> Widget.Id
   -> CTransaction ViewTag m
      (Maybe (ResultPicker m), Widget (Transaction ViewTag m))
-makeH ancestry curState expressionRef myId = do
+makeH ancestry hole expressionRef myId = do
   cursor <- readCursor
   expressionI <- getP $ Sugar.rExpressionPtr expressionRef
   let
@@ -293,13 +287,14 @@ makeH ancestry curState expressionRef myId = do
       { hiExpressionI = expressionI
       , hiHoleId = myId
       , hiAncestry = ancestry
+      , hiHole = hole
       }
   if isJust (Widget.subId myId cursor)
     then
       liftM (
         first (fmap resultPick) .
         second (makeBackground Config.focusedHoleBackgroundColor)) $
-      makeActiveHoleEdit holeInfo curState
+      makeActiveHoleEdit holeInfo (Sugar.holeState hole)
     else
       liftM
       ((,) Nothing .
@@ -312,16 +307,16 @@ makeH ancestry curState expressionRef myId = do
     snippet
       | null searchText = "  "
       | otherwise = searchText
-    searchText = Data.holeSearchTerm curState
+    searchText = Data.holeSearchTerm $ Sugar.holeState hole
 
 make
   :: MonadF m
   => Ancestry.ExpressionAncestry m
-  -> Data.HoleState
+  -> Sugar.Hole m
   -> Sugar.ExpressionRef m
   -> Widget.Id
   -> CTransaction ViewTag m
      (Maybe (ResultPicker m), Widget (Transaction ViewTag m))
-make ancestry curState expressionRef =
+make ancestry hole expressionRef =
   BWidgets.wrapDelegatedWithKeys FocusDelegator.defaultKeys FocusDelegator.Delegating second
-  (makeH ancestry curState expressionRef)
+  (makeH ancestry hole expressionRef)
