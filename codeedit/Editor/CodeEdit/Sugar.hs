@@ -1,7 +1,8 @@
 {-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
 
 module Editor.CodeEdit.Sugar
-  ( Expression(..), ExpressionRef(..), ExpressionActions(..)
+  ( Expression(..), ExpressionActions(..)
+  , ExpressionRef(..), atRMParensType, atRExpression, atRExpressionPtr, atRActions
   , Where(..), atWWheres, atWBody
   , WhereItem(..)
   , Func(..), atFParams, atFBody
@@ -88,37 +89,23 @@ data Expression m
 
 AtFieldTH.make ''Where
 AtFieldTH.make ''Func
+AtFieldTH.make ''ExpressionRef
 
-data ApplyRole = ApplyFunc | ApplyArg
-data InfixSide = InfixLeft | InfixRight
+type Convertor m = ExpressionPtr m -> Transaction ViewTag m (ExpressionRef m)
 
-data ParentInfo m
-  = ExpressionTop
-  | ApplyChild
-    { _aRole :: ApplyRole
-    , _aMInfixSide :: Maybe InfixSide
-    }
-
-data ConvertParams m = ConvertParams
-  { cpPtr :: ExpressionPtr m
-  , cpParentInfo :: ParentInfo m
-  }
-
-type Convertor m = ConvertParams m -> Transaction ViewTag m (ExpressionRef m)
-
-mkExpressionRef :: Monad m => Bool -> Maybe ParensType -> ConvertParams m -> Expression m -> ExpressionRef m
-mkExpressionRef isReplaceable mParensType cp expr =
+mkExpressionRef :: Monad m => Bool -> Maybe ParensType -> ExpressionPtr m -> Expression m -> ExpressionRef m
+mkExpressionRef isReplaceable mParensType ptr expr =
   ExpressionRef
   { rExpression = expr
   , rMParensType = mParensType
-  , rExpressionPtr = cpPtr cp
+  , rExpressionPtr = ptr
   , rActions =
       ExpressionActions
-      { addNextArg = liftM guid . DataOps.callWithArg $ cpPtr cp
-      , lambdaWrap = liftM guid . DataOps.lambdaWrap $ cpPtr cp
+      { addNextArg = liftM guid $ DataOps.callWithArg ptr
+      , lambdaWrap = liftM guid $ DataOps.lambdaWrap ptr
       , mReplace =
           if isReplaceable
-          then Just . liftM guid . DataOps.replaceWithHole $ cpPtr cp
+          then Just . liftM guid $ DataOps.replaceWithHole ptr
           else Nothing
         -- mDelete gets overridden by parent if it is an apply.
       , mDelete = Nothing
@@ -126,26 +113,21 @@ mkExpressionRef isReplaceable mParensType cp expr =
   }
 
 convertLambda :: Monad m => Data.Lambda -> Convertor m
-convertLambda lambda cp = do
-  exprI <- Property.get $ cpPtr cp
+convertLambda lambda ptr = do
+  exprI <- Property.get ptr
   let
     typePtr = DataOps.lambdaParamTypeRef exprI lambda
     bodyPtr = DataOps.lambdaBodyRef exprI lambda
-  typeExpr <- convertNode $ ConvertParams typePtr ExpressionTop
-  sBody <- convertNode $ ConvertParams bodyPtr ExpressionTop
+  typeExpr <- convertExpression typePtr
+  sBody <- convertExpression bodyPtr
   let
     item = FuncParam
       { fpParamI = Data.tpParam (Data.lambdaParam lambda)
       , fpType = typeExpr
-      , fpLambdaPtr = cpPtr cp
+      , fpLambdaPtr = ptr
       , fpBodyI = Data.lambdaBody lambda
       }
-    mParenType =
-      case cpParentInfo cp of
-      ApplyChild ApplyArg _ -> Just TextParens
-      ApplyChild ApplyFunc _ -> error "redex should not be handled by convertLambda"
-      ExpressionTop -> Nothing
-  return . mkExpressionRef True mParenType cp . ExpressionFunc . atFParams (item :) $ case rExpression sBody of
+  return . mkExpressionRef True Nothing ptr . ExpressionFunc . atFParams (item :) $ case rExpression sBody of
     ExpressionFunc x -> x
     _ -> Func [] sBody
 
@@ -155,28 +137,24 @@ convertWhere
   -> IRef Data.Expression
   -> Data.Lambda
   -> Convertor m
-convertWhere argPtr funcI lambda@(Data.Lambda (Data.TypedParam paramI _) bodyI) cp = do
-  value <- convertNode $ ConvertParams argPtr ExpressionTop
+convertWhere argPtr funcI lambda@(Data.Lambda (Data.TypedParam paramI _) bodyI) ptr = do
+  value <- convertExpression argPtr
   let
     bodyPtr = DataOps.lambdaBodyRef funcI lambda
     item = WhereItem
       { wiParamI = paramI
       , wiValue = value
-      , wiApplyPtr = cpPtr cp
+      , wiApplyPtr = ptr
       , wiLambdaBodyI = bodyI
       }
-    mParenType =
-      case cpParentInfo cp of
-      ExpressionTop -> Nothing
-      _ -> Just SquareParens
-  sBody <- convertNode $ ConvertParams bodyPtr ExpressionTop
-  return . mkExpressionRef True mParenType cp . ExpressionWhere . atWWheres (item :) $ case rExpression sBody of
+  sBody <- convertExpression bodyPtr
+  return . mkExpressionRef True Nothing ptr . ExpressionWhere . atWWheres (item :) $ case rExpression sBody of
     ExpressionWhere x -> x
     _ -> Where [] sBody
 
 convertApply :: Monad m => Data.Apply -> Convertor m
-convertApply (Data.Apply funcI argI) cp = do
-  exprI <- Property.get $ cpPtr cp
+convertApply (Data.Apply funcI argI) ptr = do
+  exprI <- Property.get ptr
   let
     argPtr =
       Property (return argI) $
@@ -185,7 +163,7 @@ convertApply (Data.Apply funcI argI) cp = do
   func <- Transaction.readIRef funcI
   case func of
     Data.ExpressionLambda lambda ->
-      convertWhere argPtr funcI lambda cp
+      convertWhere argPtr funcI lambda ptr
     _ -> do
       isInfixFunc <- Infix.isInfixFunc funcI
       isFullInfix <- Infix.isApplyOfInfixOp funcI
@@ -195,31 +173,18 @@ convertApply (Data.Apply funcI argI) cp = do
           Transaction.writeIRef exprI .
           Data.ExpressionApply . (`Data.Apply` argI)
         isInfix = isInfixFunc || isFullInfix
-        hasParens =
-          case cpParentInfo cp of
-          ExpressionTop -> isInfixFunc
-          ApplyChild ApplyArg Nothing -> True
-          ApplyChild ApplyArg (Just _) -> isInfix
-          ApplyChild ApplyFunc _ -> isFullInfix
-        mParenType = if hasParens then Just TextParens else Nothing
-        mInfixSide =
-          if isInfixFunc
-          then Just InfixLeft
-          else if isFullInfix
-          then Just InfixRight
-          else Nothing
         atActions f sExpr = sExpr { rActions = f (rActions sExpr) }
         deleteNode siblingI whereToGo =
           atActions $ \x -> x
           { mDelete = Just $ do
-              _ <- DataOps.replace (cpPtr cp) siblingI
+              _ <- DataOps.replace ptr siblingI
               liftM guid whereToGo
           }
         whereToGoAfterDeleteArg =
           liftM (fromMaybe funcI) (Infix.infixFuncOfRArg funcI)
         addArgHere =
           atActions $ \x -> x
-          { addNextArg = liftM guid . DataOps.callWithArg $ cpPtr cp
+          { addNextArg = liftM guid $ DataOps.callWithArg ptr
           }
         addArgAfterFunc
           | isInfixFunc = addArgHere
@@ -227,34 +192,58 @@ convertApply (Data.Apply funcI argI) cp = do
         addArgAfterArg
           | isInfix = id
           | otherwise = addArgHere
-      funcExpr <- convertNode . ConvertParams funcPtr $ ApplyChild ApplyFunc mInfixSide
-      argExpr <- convertNode . ConvertParams argPtr $ ApplyChild ApplyArg mInfixSide
-      return . mkExpressionRef True mParenType cp . ExpressionApply $
+      funcExpr <- convertExpression funcPtr
+      argExpr <- convertExpression argPtr
+      let
+        needAddFuncParens =
+          case rExpression funcExpr of
+          ExpressionApply{} -> False
+          _ -> True
+        modifyFuncParens
+          | needAddFuncParens = const . exprParensType $ rExpression funcExpr
+          | isInfix = const Nothing
+          | otherwise = id
+        modifyArgParens
+          | isInfix =
+            case rExpression argExpr of
+            ExpressionApply{} -> id
+            _ -> const . exprParensType $ rExpression argExpr
+          | otherwise = const . exprParensType $ rExpression argExpr
+        mParensType
+          | isInfix = Just TextParens
+          | otherwise = Nothing
+      return . mkExpressionRef True mParensType ptr . ExpressionApply $
         Apply
-        ((addArgAfterFunc . deleteNode argI (return argI)) funcExpr)
-        ((addArgAfterArg . deleteNode funcI whereToGoAfterDeleteArg) argExpr)
+        ((atRMParensType modifyFuncParens . addArgAfterFunc . deleteNode argI (return argI)) funcExpr)
+        ((atRMParensType modifyArgParens . addArgAfterArg . deleteNode funcI whereToGoAfterDeleteArg) argExpr)
+  where
+    exprParensType ExpressionHole{} = Nothing
+    exprParensType ExpressionLiteralInteger{} = Nothing
+    exprParensType ExpressionGetVariable{} = Nothing
+    exprParensType ExpressionApply{} = Just TextParens
+    exprParensType ExpressionFunc{} = Just TextParens
+    exprParensType ExpressionWhere{} = Just SquareParens
 
 convertGetVariable :: Monad m => Data.VariableRef -> Convertor m
-convertGetVariable varRef cp = do
-  mParenType <-
-    case cpParentInfo cp of
-    ApplyChild ApplyFunc _ -> return Nothing
-    _ -> do
-      name <- Property.get $ Anchors.variableNameRef varRef
-      return $ if Infix.isInfixName name then Just TextParens else Nothing
-  return . mkExpressionRef True mParenType cp $ ExpressionGetVariable varRef
+convertGetVariable varRef ptr = do
+  name <- Property.get $ Anchors.variableNameRef varRef
+  let
+    parens
+      | Infix.isInfixName name = Just TextParens
+      | otherwise = Nothing
+  return . mkExpressionRef True parens ptr $ ExpressionGetVariable varRef
 
 convertHole :: Monad m => Data.HoleState -> Convertor m
-convertHole state cp =
-  return . mkExpressionRef False Nothing cp $ ExpressionHole state
+convertHole state ptr =
+  return . mkExpressionRef False Nothing ptr $ ExpressionHole state
 
 convertLiteralInteger :: Monad m => Integer -> Convertor m
-convertLiteralInteger i cp =
-  return . mkExpressionRef True Nothing cp $ ExpressionLiteralInteger i
+convertLiteralInteger i ptr =
+  return . mkExpressionRef True Nothing ptr $ ExpressionLiteralInteger i
 
-convertNode :: Monad m => Convertor m
-convertNode cp = do
-  exprI <- Property.get $ cpPtr cp
+convertExpression :: Monad m => Convertor m
+convertExpression ptr = do
+  exprI <- Property.get ptr
   expr <- Transaction.readIRef exprI
   let
     conv =
@@ -264,9 +253,4 @@ convertNode cp = do
       Data.ExpressionGetVariable x -> convertGetVariable x
       Data.ExpressionHole x -> convertHole x
       Data.ExpressionLiteralInteger x -> convertLiteralInteger x
-  conv cp
-
-convertExpression :: Monad m => ExpressionPtr m -> Transaction ViewTag m (ExpressionRef m)
-convertExpression ptr =
-  convertNode
-  ConvertParams { cpParentInfo = ExpressionTop, cpPtr = ptr }
+  conv ptr
