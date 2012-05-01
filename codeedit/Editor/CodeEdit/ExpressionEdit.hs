@@ -6,10 +6,11 @@ import Control.Monad (liftM)
 import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, getP)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
+import Editor.CTransaction (CTransaction, getP)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (EventHandlers)
+import qualified Data.Store.Property as Property
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
@@ -79,18 +80,24 @@ expressionEventMap sExpr holePicker = do
       Widget.actionEventMapMovesCursor
       Config.callWithArgumentKeys "Call with argument" .
       WidgetIds.diveIn $ DataOps.callWithArg (Sugar.rExpressionPtr sExpr)
+
+    -- Move to next arg overrides add arg's keys.
+    , moveToNextArgHole
     , ifHole pickResultFirst .
       Widget.actionEventMapMovesCursor
       Config.addNextArgumentKeys (ifHole (const ("Pick result and " ++)) "Add arg") .
       liftM WidgetIds.fromGuid $ Sugar.addNextArg actions
-    , maybe mempty
-      (Widget.actionEventMapMovesCursor (Config.replaceKeys ++ extraReplaceKeys) "Replace" .
-       liftM (WidgetIds.delegating . WidgetIds.fromGuid))
-      (Sugar.mReplace actions)
+
+    -- Replace has the keys of Delete if delete is not available.
     , maybe mempty
       (Widget.actionEventMapMovesCursor Config.delKeys "Delete" .
        liftM WidgetIds.fromGuid)
       (Sugar.mDelete actions)
+    , maybe mempty
+      (Widget.actionEventMapMovesCursor (Config.replaceKeys ++ Config.delKeys) "Replace" .
+       liftM (WidgetIds.delegating . WidgetIds.fromGuid))
+      (Sugar.mReplace actions)
+
     , Widget.actionEventMapMovesCursor
       Config.lambdaWrapKeys "Lambda wrap" .
       liftM (WidgetIds.delegating . WidgetIds.fromGuid) $ Sugar.lambdaWrap actions
@@ -103,4 +110,14 @@ expressionEventMap sExpr holePicker = do
     joinEvents x y = do
       r <- liftM Widget.eAnimIdMapping x
       (liftM . Widget.atEAnimIdMapping) (. r) y
-    extraReplaceKeys = maybe Config.delKeys (const []) $ Sugar.mDelete actions
+    moveToNextArgHole =
+      case Sugar.mNextArg actions of
+      Nothing -> mempty
+      Just nextArg ->
+        case Sugar.rExpression nextArg of
+        Sugar.ExpressionHole{} ->
+          ifHole pickResultFirst .
+          Widget.actionEventMapMovesCursor
+          Config.addNextArgumentKeys (ifHole (const ("Pick result and " ++)) "Move to next arg") .
+          liftM WidgetIds.fromIRef . Property.get $ Sugar.rExpressionPtr nextArg
+        _ -> mempty

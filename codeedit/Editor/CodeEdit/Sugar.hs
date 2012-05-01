@@ -28,17 +28,18 @@ import qualified Editor.DataOps as DataOps
 data ParensType = TextParens | SquareParens
 
 data ExpressionActions m = ExpressionActions
-  { addNextArg :: m Guid
-  , lambdaWrap :: m Guid
-  , mReplace :: Maybe (m Guid)
-  , mDelete :: Maybe (m Guid)
+  { addNextArg :: Transaction ViewTag m Guid
+  , lambdaWrap :: Transaction ViewTag m Guid
+  , mReplace :: Maybe (Transaction ViewTag m Guid)
+  , mDelete :: Maybe (Transaction ViewTag m Guid)
+  , mNextArg :: Maybe (ExpressionRef m)
   }
 
 data ExpressionRef m = ExpressionRef
   { rExpressionPtr :: ExpressionPtr m
   , rMParensType :: Maybe ParensType
   , rExpression :: Expression m
-  , rActions :: ExpressionActions (Transaction ViewTag m)
+  , rActions :: ExpressionActions m
   }
 
 data WhereItem m = WhereItem
@@ -87,6 +88,8 @@ data Expression m
 AtFieldTH.make ''Where
 AtFieldTH.make ''Func
 AtFieldTH.make ''ExpressionRef
+AtFieldTH.make ''ExpressionActions
+AtFieldTH.make ''Apply
 
 type Convertor m = ExpressionPtr m -> Transaction ViewTag m (ExpressionRef m)
 
@@ -106,6 +109,7 @@ mkExpressionRef isReplaceable mParensType ptr expr =
           else Nothing
         -- mDelete gets overridden by parent if it is an apply.
       , mDelete = Nothing
+      , mNextArg = Nothing
       }
   }
 
@@ -149,6 +153,10 @@ convertWhere argPtr funcI lambda@(Data.Lambda (Data.TypedParam paramI _) bodyI) 
     ExpressionWhere x -> x
     _ -> Where [] sBody
 
+atExpressionApply :: (Apply m -> Apply m) -> Expression m -> Expression m
+atExpressionApply f (ExpressionApply apply) = ExpressionApply $ f apply
+atExpressionApply _ x = x
+
 convertApply :: Monad m => Data.Apply -> Convertor m
 convertApply (Data.Apply funcI argI) ptr = do
   exprI <- Property.get ptr
@@ -170,19 +178,13 @@ convertApply (Data.Apply funcI argI) ptr = do
           Transaction.writeIRef exprI .
           Data.ExpressionApply . (`Data.Apply` argI)
         isInfix = isInfixFunc || isFullInfix
-        atActions f sExpr = sExpr { rActions = f (rActions sExpr) }
         deleteNode siblingI whereToGo =
-          atActions $ \x -> x
-          { mDelete = Just $ do
-              _ <- DataOps.replace ptr siblingI
-              liftM guid whereToGo
-          }
+          atRActions . atMDelete . const . Just $ do
+            _ <- DataOps.replace ptr siblingI
+            liftM guid whereToGo
         whereToGoAfterDeleteArg =
           liftM (fromMaybe funcI) (Infix.infixFuncOfRArg funcI)
-        addArgHere =
-          atActions $ \x -> x
-          { addNextArg = liftM guid $ DataOps.callWithArg ptr
-          }
+        addArgHere = atRActions . atAddNextArg . const . liftM guid $ DataOps.callWithArg ptr
         addArgAfterFunc
           | isInfixFunc = addArgHere
           | otherwise = id
@@ -209,10 +211,22 @@ convertApply (Data.Apply funcI argI) ptr = do
         mParensType
           | isInfix = Just TextParens
           | otherwise = Nothing
+        newArgExpr =
+          atRMParensType modifyArgParens .
+          addArgAfterArg .
+          deleteNode funcI whereToGoAfterDeleteArg $
+          argExpr
+        setNextArg = atRActions . atMNextArg . const $ Just newArgExpr
+        setFuncArgNextArg =
+          atRExpression . atExpressionApply . atApplyArg $ setNextArg
       return . mkExpressionRef True mParensType ptr . ExpressionApply $
         Apply
-        ((atRMParensType modifyFuncParens . addArgAfterFunc . deleteNode argI (return argI)) funcExpr)
-        ((atRMParensType modifyArgParens . addArgAfterArg . deleteNode funcI whereToGoAfterDeleteArg) argExpr)
+        ((setFuncArgNextArg . setNextArg .
+          atRMParensType modifyFuncParens .
+          addArgAfterFunc .
+          deleteNode argI (return argI)
+         ) funcExpr)
+        newArgExpr
   where
     exprParensType ExpressionHole{} = Nothing
     exprParensType ExpressionLiteralInteger{} = Nothing
