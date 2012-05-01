@@ -208,13 +208,17 @@ convertApply (Data.Apply funcI argI) ptr = do
         ExpressionGetVariable{} -> return False
         ExpressionApply (Apply funcFunc _) -> Infix.isApplyOfInfixOp =<< Property.get (rExpressionPtr funcFunc)
         _ -> return True
+      isArgFullyAppliedInfix <-
+        case rExpression argExpr of
+        ExpressionApply (Apply argFunc _) -> Infix.isApplyOfInfixOp =<< Property.get (rExpressionPtr argFunc)
+        _ -> return False
       let
         modifyFuncParens
           | needAddFuncParens = const . exprParensType $ rExpression funcExpr
           | isInfix = const Nothing
           | otherwise = id
         modifyArgParens
-          | isInfix =
+          | isInfix && not isArgFullyAppliedInfix =
             case rExpression argExpr of
             ExpressionApply{} -> id
             _ -> const . exprParensType $ rExpression argExpr
