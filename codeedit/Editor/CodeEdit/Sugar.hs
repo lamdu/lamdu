@@ -1,12 +1,9 @@
 {-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
 
 module Editor.CodeEdit.Sugar
-  ( Expression(..), ExpressionActions(..)
-  , ExpressionRef(..), atRMParensType, atRExpression, atRExpressionPtr, atRActions
-  , Where(..), atWWheres, atWBody
-  , WhereItem(..)
-  , Func(..), atFParams, atFBody
-  , FuncParam(..)
+  ( Expression(..), ExpressionActions(..), ExpressionRef(..)
+  , Where(..), WhereItem(..)
+  , Func(..), FuncParam(..)
   , Apply(..)
   , ParensType(..)
   , convertExpression

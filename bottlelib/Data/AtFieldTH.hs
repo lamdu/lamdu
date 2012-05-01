@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP, TemplateHaskell #-}
 module Data.AtFieldTH (make) where
 
 import qualified Data.Char as Char
@@ -53,6 +53,15 @@ makeAtNameForDataField fieldName =
     where
         fieldNameHead : fieldNameTail = nameBase fieldName
 
+unusedWarnPragma :: Name -> [Dec]
+unusedWarnPragma name =
+    [ SigD extraName $ ConT ''Int
+    , FunD extraName [ Clause [] clause [] ]
+    ]
+    where
+        extraName = mkName $ "_unused_pragma_" ++ nameBase name
+        clause = NormalB $ foldl AppE (VarE 'const) [LitE (IntegerL 9), VarE name]
+
 fieldAtFunc :: (Name -> Name) -> Name -> [TyVarBndr] -> (Name -> Bool) -> Name -> Type -> [Dec]
 fieldAtFunc makeAtName typeName typeVars isFreeVar fieldName fieldType =
     [ SigD resName . ForallT resultTypeVars [] $ foldr1 arrow
@@ -61,7 +70,7 @@ fieldAtFunc makeAtName typeName typeVars isFreeVar fieldName fieldType =
         , output
         ]
     , FunD resName [ Clause [VarP funcName, VarP valName] clause [] ]
-    ]
+    ] ++ unusedWarnPragma resName
     where
         arrow = AppT . AppT ArrowT
         funcName = mkName "func"
