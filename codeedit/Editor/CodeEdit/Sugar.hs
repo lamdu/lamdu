@@ -71,9 +71,15 @@ data Func m = Func
   , fBody :: ExpressionRef m
   }
 
+data ApplyType
+  = ApplyPrefix
+  | ApplyInfixL -- ^ Apply of infix op (Arg is larg to infix)
+  | ApplyInfixR -- ^ Apply of apply of infix op (Arg is rarg to infix)
+
 data Apply m = Apply
   { applyFunc :: ExpressionRef m
   , applyArg :: ExpressionRef m
+  , applyType :: ApplyType
   }
 
 data Hole m = Hole
@@ -187,6 +193,11 @@ convertApply apply ptr = do
     Data.ExpressionLambda lambda -> convertWhere arg funcI lambda ptr
     _ -> convertApplyNonLambda apply exprI ptr
 
+applyTypeOfFunc :: Expression m -> ApplyType
+applyTypeOfFunc (ExpressionGetVariable (GetVariable _ VariableInfix)) = ApplyInfixL
+applyTypeOfFunc (ExpressionApply (Apply _ _ ApplyInfixL)) = ApplyInfixR
+applyTypeOfFunc _ = ApplyPrefix
+
 convertApplyNonLambda
   :: Monad m
   => Data.Apply
@@ -195,7 +206,9 @@ convertApplyNonLambda
 convertApplyNonLambda apply@(Data.Apply funcI argI) exprI ptr = do
   isInfixFunc <- Infix.isInfixFunc funcI
   isFullInfix <- Infix.isApplyOfInfixOp funcI
+  funcExpr <- convertExpression $ DataOps.applyFuncRef exprI apply
   let
+    appType = applyTypeOfFunc $ rExpression funcExpr
     isInfix = isInfixFunc || isFullInfix
     deleteNode siblingI whereToGo =
       atRActions . atMDelete . const . Just $ do
@@ -210,16 +223,15 @@ convertApplyNonLambda apply@(Data.Apply funcI argI) exprI ptr = do
     addArgAfterArg
       | isInfix = id
       | otherwise = addArgHere
-  funcExpr <- convertExpression $ DataOps.applyFuncRef exprI apply
   argExpr <- convertExpression $ DataOps.applyArgRef exprI apply
   needAddFuncParens <-
     case rExpression funcExpr of
     ExpressionGetVariable{} -> return False
-    ExpressionApply (Apply funcFunc _) -> Infix.isApplyOfInfixOp =<< Property.get (rExpressionPtr funcFunc)
+    ExpressionApply (Apply funcFunc _ _) -> Infix.isApplyOfInfixOp =<< Property.get (rExpressionPtr funcFunc)
     _ -> return True
   isArgFullyAppliedInfix <-
     case rExpression argExpr of
-    ExpressionApply (Apply argFunc _) -> Infix.isApplyOfInfixOp =<< Property.get (rExpressionPtr argFunc)
+    ExpressionApply (Apply argFunc _ _) -> Infix.isApplyOfInfixOp =<< Property.get (rExpressionPtr argFunc)
     _ -> return False
   let
     modifyFuncParens
@@ -255,6 +267,7 @@ convertApplyNonLambda apply@(Data.Apply funcI argI) exprI ptr = do
       deleteNode argI (return argI)
      ) funcExpr)
     newArgExpr
+    appType
   where
     exprParensType ExpressionHole{} = Nothing
     exprParensType ExpressionLiteralInteger{} = Nothing
