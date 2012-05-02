@@ -4,7 +4,7 @@ module Editor.CodeEdit.Sugar
   ( Expression(..), ExpressionActions(..), ExpressionRef(..)
   , Where(..), WhereItem(..)
   , Func(..), FuncParam(..)
-  , Apply(..), Hole(..)
+  , Apply(..), Hole(..), GetVariable(..)
   , ParensType(..)
   , convertExpression
   ) where
@@ -81,9 +81,13 @@ data Hole m = Hole
   , holeMFlipInfix :: Maybe (Transaction ViewTag m ())
   }
 
+data VariableType = VariableNormal | VariableInfix
+
+data GetVariable = GetVariable Data.VariableRef VariableType
+
 data Expression m
   = ExpressionApply (Apply m)
-  | ExpressionGetVariable Data.VariableRef
+  | ExpressionGetVariable GetVariable
   | ExpressionHole (Hole m)
   | ExpressionLiteralInteger Integer
   | ExpressionWhere (Where m)
@@ -263,10 +267,10 @@ convertGetVariable :: Monad m => Data.VariableRef -> Convertor m
 convertGetVariable varRef ptr = do
   name <- Property.get $ Anchors.variableNameRef varRef
   let
-    parens
-      | Infix.isInfixName name = Just TextParens
-      | otherwise = Nothing
-  return . mkExpressionRef CanReplaceWithHole parens ptr $ ExpressionGetVariable varRef
+    (parens, infixType)
+      | Infix.isInfixName name = (Just TextParens, VariableInfix)
+      | otherwise = (Nothing, VariableNormal)
+  return . mkExpressionRef CanReplaceWithHole parens ptr $ ExpressionGetVariable (GetVariable varRef infixType)
 
 convertHole :: Monad m => Data.HoleState -> Convertor m
 convertHole state ptr =

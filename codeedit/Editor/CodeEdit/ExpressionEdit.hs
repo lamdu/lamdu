@@ -56,7 +56,7 @@ make ancestry sExpr = do
       Sugar.ExpressionHole hole ->
         isAHole . maybe id (error "parens on hole?") (Sugar.rMParensType sExpr) $
         HoleEdit.make ancestry hole sExpr
-      Sugar.ExpressionGetVariable varRef ->
+      Sugar.ExpressionGetVariable (Sugar.GetVariable varRef _) ->
         notAHole . parenify $ VarEdit.make varRef
       Sugar.ExpressionApply apply ->
         wrapNonHoleExpr . parenify $ ApplyEdit.make make ancestry (Sugar.rExpressionPtr sExpr) apply
