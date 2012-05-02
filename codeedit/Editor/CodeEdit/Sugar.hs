@@ -13,7 +13,6 @@ import Control.Monad(liftM)
 import Data.Maybe(fromMaybe)
 import Data.Store.Guid(Guid)
 import Data.Store.IRef(IRef, guid)
-import Data.Store.Property(Property(Property))
 import Data.Store.Transaction(Transaction)
 import Editor.Anchors(ViewTag)
 import Editor.DataOps(ExpressionPtr)
@@ -174,24 +173,12 @@ atExpressionHole :: (Hole m -> Hole m) -> Expression m -> Expression m
 atExpressionHole f (ExpressionHole x) = ExpressionHole $ f x
 atExpressionHole _ x = x
 
-funcPtr :: Monad m => IRef Data.Expression -> Data.Apply -> ExpressionPtr m
-funcPtr exprI (Data.Apply funcI argI) =
-  Property (return funcI) $
-  Transaction.writeIRef exprI .
-  Data.ExpressionApply . (`Data.Apply` argI)
-
-argPtr :: Monad m => IRef Data.Expression -> Data.Apply -> ExpressionPtr m
-argPtr exprI (Data.Apply funcI argI) =
-  Property (return argI) $
-  Transaction.writeIRef exprI .
-  Data.ExpressionApply . Data.Apply funcI
-
 convertApply :: Monad m => Data.Apply -> Convertor m
 convertApply apply ptr = do
   exprI <- Property.get ptr
   let funcI = Data.applyFunc apply
   func <- Transaction.readIRef funcI
-  arg <- convertExpression $ argPtr exprI apply
+  arg <- convertExpression $ DataOps.applyArgRef exprI apply
   case func of
     Data.ExpressionLambda lambda -> convertWhere arg funcI lambda ptr
     _ -> convertApplyNonLambda apply exprI ptr
@@ -219,8 +206,8 @@ convertApplyNonLambda apply@(Data.Apply funcI argI) exprI ptr = do
     addArgAfterArg
       | isInfix = id
       | otherwise = addArgHere
-  funcExpr <- convertExpression $ funcPtr exprI apply
-  argExpr <- convertExpression $ argPtr exprI apply
+  funcExpr <- convertExpression $ DataOps.applyFuncRef exprI apply
+  argExpr <- convertExpression $ DataOps.applyArgRef exprI apply
   needAddFuncParens <-
     case rExpression funcExpr of
     ExpressionGetVariable{} -> return False

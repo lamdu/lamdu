@@ -3,7 +3,8 @@ module Editor.DataOps (
   ExpressionPtr,
   newHole, giveAsArg, callWithArg,
   replace, replaceWithHole,
-  addAsDefinition, lambdaWrap, lambdaBodyRef, lambdaParamTypeRef)
+  addAsDefinition, lambdaWrap, lambdaBodyRef, lambdaParamTypeRef,
+  applyFuncRef, applyArgRef)
 where
 
 import Data.Store.IRef (IRef)
@@ -83,15 +84,27 @@ addAsDefinition newName expressionI = do
   return newDefI
 
 lambdaBodyRef :: Monad m => IRef Data.Expression -> Data.Lambda -> ExpressionPtr m
-lambdaBodyRef lambdaIRef (Data.Lambda (Data.TypedParam paramI paramTypeI) bodyI) =
+lambdaBodyRef lambdaI (Data.Lambda (Data.TypedParam paramI paramTypeI) bodyI) =
   Property
     (return bodyI)
-    (Transaction.writeIRef lambdaIRef . Data.ExpressionLambda . Data.Lambda (Data.TypedParam paramI paramTypeI))
+    (Transaction.writeIRef lambdaI . Data.ExpressionLambda . Data.Lambda (Data.TypedParam paramI paramTypeI))
 
 lambdaParamTypeRef :: Monad m => IRef Data.Expression -> Data.Lambda -> ExpressionPtr m
-lambdaParamTypeRef lambdaIRef (Data.Lambda (Data.TypedParam paramI paramTypeI) bodyI) =
+lambdaParamTypeRef lambdaI (Data.Lambda (Data.TypedParam paramI paramTypeI) bodyI) =
   Property
     (return paramTypeI)
-    (Transaction.writeIRef lambdaIRef . Data.ExpressionLambda . buildLambda)
+    (Transaction.writeIRef lambdaI . Data.ExpressionLambda . buildLambda)
   where
     buildLambda newTypeI = Data.Lambda (Data.TypedParam paramI newTypeI) bodyI
+
+applyFuncRef :: Monad m => IRef Data.Expression -> Data.Apply -> ExpressionPtr m
+applyFuncRef applyI (Data.Apply funcI argI) =
+  Property (return funcI) $
+  Transaction.writeIRef applyI .
+  Data.ExpressionApply . (`Data.Apply` argI)
+
+applyArgRef :: Monad m => IRef Data.Expression -> Data.Apply -> ExpressionPtr m
+applyArgRef applyI (Data.Apply funcI argI) =
+  Property (return argI) $
+  Transaction.writeIRef applyI .
+  Data.ExpressionApply . Data.Apply funcI
