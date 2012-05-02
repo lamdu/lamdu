@@ -86,12 +86,13 @@ makeUnfocused style str myId =
   where
     enter dir =
       (,) str . makeTextEditCursor myId $
-      Direction.fold (length str) enterRect dir
+      Direction.fold (length str) rectToCursor dir
       where
-        enterRect fromRect = minimumOn
-          (\i -> Rect.distance fromRect (strRects !! i)) [0..length str - 1]
-        strRects = concat $ TextView.letterRects (sTextViewStyle style) str
         minimumOn = minimumBy . comparing
+        rectToCursor fromRect =
+          fst . minimumOn snd . enumerate . map (Rect.distance fromRect) .
+          concat $
+          TextView.letterRects (sTextViewStyle style) str
 
 -- TODO: Instead of font + ptSize, let's pass a text-drawer (that's
 -- what "Font" should be)
