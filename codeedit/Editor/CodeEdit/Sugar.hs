@@ -259,15 +259,13 @@ convertApplyNonLambda apply@(Data.Apply funcI argI) exprI ptr = do
     setNextArg = atRActions . atMNextArg . const $ Just newArgExpr
     setFuncArgNextArg =
       atRExpression . atExpressionApply . atApplyArg $ setNextArg
-  return . mkExpressionRef NoReplace mParensType ptr . ExpressionApply $
-    Apply
-    ((setFuncArgNextArg . setNextArg .
+    newFuncExpr =
+      setFuncArgNextArg . setNextArg .
       atRMParensType modifyFuncParens .
       addArgAfterFunc .
-      deleteNode argI (return argI)
-     ) funcExpr)
-    newArgExpr
-    appType
+      deleteNode argI (return argI) $ funcExpr
+  return . mkExpressionRef NoReplace mParensType ptr . ExpressionApply $
+    Apply newFuncExpr newArgExpr appType
 
 exprParensType :: Expression m -> Maybe ParensType
 exprParensType ExpressionHole{} = Nothing
