@@ -268,13 +268,14 @@ convertApplyNonLambda apply@(Data.Apply funcI argI) exprI ptr = do
      ) funcExpr)
     newArgExpr
     appType
-  where
-    exprParensType ExpressionHole{} = Nothing
-    exprParensType ExpressionLiteralInteger{} = Nothing
-    exprParensType ExpressionGetVariable{} = Just TextParens
-    exprParensType ExpressionApply{} = Just TextParens
-    exprParensType ExpressionFunc{} = Just TextParens
-    exprParensType ExpressionWhere{} = Just SquareParens
+
+exprParensType :: Expression m -> Maybe ParensType
+exprParensType ExpressionHole{} = Nothing
+exprParensType ExpressionLiteralInteger{} = Nothing
+exprParensType ExpressionGetVariable{} = Just TextParens
+exprParensType ExpressionApply{} = Just TextParens
+exprParensType ExpressionFunc{} = Just TextParens
+exprParensType ExpressionWhere{} = Just SquareParens
 
 convertGetVariable :: Monad m => Data.VariableRef -> Convertor m
 convertGetVariable varRef ptr = do
