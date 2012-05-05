@@ -230,6 +230,39 @@ makeApplyArg isInfix addArgHere exprI apply@(Data.Apply funcI argI) = do
     addArgAfterArg $
     argExpr
 
+makeFuncArg
+  :: Monad m
+  => Bool
+  -> (ExpressionRef m -> ExpressionRef m)
+  -> IRef Data.Expression
+  -> Data.Apply
+  -> ExpressionRef m
+  -> Transaction ViewTag m (ApplyType, ExpressionRef m)
+makeFuncArg isInfix addArgHere exprI apply@(Data.Apply funcI _) argExpr = do
+  isInfixFunc <- Infix.isInfixFunc funcI
+  funcExpr <- convertExpression $ DataOps.applyFuncRef exprI apply
+  needAddFuncParens <-
+    case rExpression funcExpr of
+    ExpressionGetVariable{} -> return False
+    ExpressionApply (Apply funcFunc _ _) -> Infix.isApplyOfInfixOp =<< Property.get (rExpressionPtr funcFunc)
+    _ -> return True
+  let
+    appType = applyTypeOfFunc $ rExpression funcExpr
+    modifyFuncParens
+      | needAddFuncParens = const . exprParensType $ rExpression funcExpr
+      | isInfix = const Nothing
+      | otherwise = id
+    setNextArg = atRActions . atMNextArg . const $ Just argExpr
+    setFuncArgNextArg =
+      atRExpression . atExpressionApply . atApplyArg $ setNextArg
+    addArgAfterFunc
+      | isInfixFunc = addArgHere
+      | otherwise = id
+  return . ((,) appType) $
+    setFuncArgNextArg . setNextArg .
+    atRMParensType modifyFuncParens .
+    addArgAfterFunc $ funcExpr
+
 convertApplyNonLambda
   :: Monad m
   => Data.Apply
@@ -237,11 +270,8 @@ convertApplyNonLambda
   -> Convertor m
 convertApplyNonLambda apply@(Data.Apply funcI argI) exprI ptr = do
   isInfixFunc <- Infix.isInfixFunc funcI
-  isFullInfix <- Infix.isApplyOfInfixOp funcI
-  funcExpr <- convertExpression $ DataOps.applyFuncRef exprI apply
+  isInfix <- liftM (isInfixFunc ||) (Infix.isApplyOfInfixOp funcI)
   let
-    appType = applyTypeOfFunc $ rExpression funcExpr
-    isInfix = isInfixFunc || isFullInfix
     deleteNode siblingI whereToGo =
       atRActions . atMDelete . const . Just $ do
         _ <- DataOps.replace ptr siblingI
@@ -249,35 +279,15 @@ convertApplyNonLambda apply@(Data.Apply funcI argI) exprI ptr = do
     whereToGoAfterDeleteArg =
       liftM (fromMaybe funcI) (Infix.infixFuncOfRArg funcI)
     addArgHere = atRActions . atAddNextArg . const . liftM guid $ DataOps.callWithArg ptr
-    addArgAfterFunc
-      | isInfixFunc = addArgHere
-      | otherwise = id
-  needAddFuncParens <-
-    case rExpression funcExpr of
-    ExpressionGetVariable{} -> return False
-    ExpressionApply (Apply funcFunc _ _) -> Infix.isApplyOfInfixOp =<< Property.get (rExpressionPtr funcFunc)
-    _ -> return True
-  argExpr <-
-    liftM (deleteNode funcI whereToGoAfterDeleteArg) $
-    makeApplyArg isInfix addArgHere exprI apply
-  let
-    modifyFuncParens
-      | needAddFuncParens = const . exprParensType $ rExpression funcExpr
-      | isInfix = const Nothing
-      | otherwise = id
     mParensType
       | isInfixFunc = Just TextParens
       | otherwise = Nothing
-    setNextArg = atRActions . atMNextArg . const $ Just argExpr
-    setFuncArgNextArg =
-      atRExpression . atExpressionApply . atApplyArg $ setNextArg
-    newFuncExpr =
-      setFuncArgNextArg . setNextArg .
-      atRMParensType modifyFuncParens .
-      addArgAfterFunc .
-      deleteNode argI (return argI) $ funcExpr
+  argExpr <- makeApplyArg isInfix addArgHere exprI apply
+  (appType, funcExpr) <- makeFuncArg isInfix addArgHere exprI apply argExpr
   return . mkExpressionRef NoReplace mParensType ptr . ExpressionApply $
-    Apply newFuncExpr argExpr appType
+    Apply
+      (deleteNode argI (return argI) funcExpr)
+      (deleteNode funcI whereToGoAfterDeleteArg argExpr) appType
 
 exprParensType :: Expression m -> Maybe ParensType
 exprParensType ExpressionHole{} = Nothing
