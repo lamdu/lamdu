@@ -84,7 +84,7 @@ data Apply m = Apply
 
 data Hole m = Hole
   { holeState :: Data.HoleState
-  , holeMFlipInfix :: Maybe (Transaction ViewTag m ())
+  , holeMFlipFuncArg :: Maybe (Transaction ViewTag m ())
   }
 
 data VariableType = VariableNormal | VariableInfix
@@ -218,14 +218,14 @@ makeApplyArg isInfix addArgHere exprI apply@(Data.Apply funcI argI) = do
         ExpressionApply{} -> id
         _ -> const . exprParensType $ rExpression argExpr
       | otherwise = const . exprParensType $ rExpression argExpr
-    flipInfixFuncAndArg =
+    flipFuncAndArg =
       Transaction.writeIRef exprI . Data.ExpressionApply $
       Data.Apply argI funcI
     addArgAfterArg
       | isInfix = id
       | otherwise = addArgHere
   return $
-    (atRExpression . atExpressionHole . atHoleMFlipInfix . const . Just) flipInfixFuncAndArg .
+    (atRExpression . atExpressionHole . atHoleMFlipFuncArg . const . Just) flipFuncAndArg .
     atRMParensType modifyArgParens .
     addArgAfterArg $
     argExpr

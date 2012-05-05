@@ -143,7 +143,7 @@ pickResult holeInfo newExpr needFlip resultId = do
     }
   where
     flipAct DontFlip = return ()
-    flipAct DoFlip = fromMaybe (return ()) . Sugar.holeMFlipInfix $ hiHole holeInfo
+    flipAct DoFlip = fromMaybe (return ()) . Sugar.holeMFlipFuncArg $ hiHole holeInfo
 
 resultOrdering :: String -> Result m -> (Bool, Bool)
 resultOrdering searchTerm result =
