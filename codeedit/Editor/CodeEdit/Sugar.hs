@@ -74,9 +74,15 @@ data Func m = Func
   , fBody :: ExpressionRef m
   }
 
+data ApplyType
+  = ApplyPrefix
+  | ApplyInfixL -- ^ Apply of infix op (Arg is larg to infix)
+  | ApplyInfixR -- ^ Apply of apply of infix op (Arg is rarg to infix)
+
 data Apply m = Apply
   { applyFunc :: ExpressionRef m
   , applyArg :: ExpressionRef m
+  , applyType :: ApplyType
   }
 
 data Hole m = Hole
@@ -190,6 +196,11 @@ convertApply apply ptr = do
     Data.ExpressionLambda lambda -> convertWhere arg funcI lambda ptr
     _ -> convertApplyNonLambda apply exprI ptr
 
+applyTypeOfFunc :: Expression m -> ApplyType
+applyTypeOfFunc (ExpressionGetVariable (GetVariable _ VariableInfix)) = ApplyInfixL
+applyTypeOfFunc (ExpressionApply (Apply _ _ ApplyInfixL)) = ApplyInfixR
+applyTypeOfFunc _ = ApplyPrefix
+
 makeApplyArg
   :: Monad m
   => Bool
@@ -201,7 +212,7 @@ makeApplyArg isInfix addArgHere exprI apply@(Data.Apply funcI argI) = do
   argExpr <- convertExpression $ DataOps.applyArgRef exprI apply
   isArgFullyAppliedInfix <-
     case rExpression argExpr of
-    ExpressionApply (Apply argFunc _) -> Infix.isApplyOfInfixOp =<< Property.get (rExpressionPtr argFunc)
+    ExpressionApply (Apply argFunc _ _) -> Infix.isApplyOfInfixOp =<< Property.get (rExpressionPtr argFunc)
     _ -> return False
   let
     modifyArgParens
@@ -229,16 +240,17 @@ makeFuncArg
   -> IRef Data.Expression
   -> Data.Apply
   -> ExpressionRef m
-  -> Transaction ViewTag m (ExpressionRef m)
+  -> Transaction ViewTag m (ApplyType, ExpressionRef m)
 makeFuncArg isInfix addArgHere exprI apply@(Data.Apply funcI _) argExpr = do
   isInfixFunc <- Infix.isInfixFunc funcI
   funcExpr <- convertExpression $ DataOps.applyFuncRef exprI apply
   needAddFuncParens <-
     case rExpression funcExpr of
     ExpressionGetVariable{} -> return False
-    ExpressionApply (Apply funcFunc _) -> Infix.isApplyOfInfixOp =<< Property.get (rExpressionPtr funcFunc)
+    ExpressionApply (Apply funcFunc _ _) -> Infix.isApplyOfInfixOp =<< Property.get (rExpressionPtr funcFunc)
     _ -> return True
   let
+    appType = applyTypeOfFunc $ rExpression funcExpr
     modifyFuncParens
       | needAddFuncParens = const . exprHasParens $ rExpression funcExpr
       | isInfix = const DontHaveParens
@@ -249,7 +261,7 @@ makeFuncArg isInfix addArgHere exprI apply@(Data.Apply funcI _) argExpr = do
     addArgAfterFunc
       | isInfixFunc = addArgHere
       | otherwise = id
-  return $
+  return . ((,) appType) $
     setFuncArgNextArg . setNextArg .
     atRHasParens modifyFuncParens .
     addArgAfterFunc $ funcExpr
@@ -274,11 +286,11 @@ convertApplyNonLambda apply@(Data.Apply funcI argI) exprI ptr = do
       | isInfixFunc = HaveParens
       | otherwise = DontHaveParens
   argExpr <- makeApplyArg isInfix addArgHere exprI apply
-  funcExpr <- makeFuncArg isInfix addArgHere exprI apply argExpr
+  (appType, funcExpr) <- makeFuncArg isInfix addArgHere exprI apply argExpr
   return . mkExpressionRef NoReplace mParensType ptr . ExpressionApply $
     Apply
       (deleteNode argI (return argI) funcExpr)
-      (deleteNode funcI whereToGoAfterDeleteArg argExpr)
+      (deleteNode funcI whereToGoAfterDeleteArg argExpr) appType
 
 exprHasParens :: Expression m -> HasParens
 exprHasParens ExpressionHole{} = DontHaveParens

@@ -24,7 +24,7 @@ make
   -> Sugar.Apply m
   -> Widget.Id
   -> TWidget ViewTag m
-make makeExpressionEdit ancestry expressionPtr (Sugar.Apply func arg) myId = do
+make makeExpressionEdit ancestry expressionPtr (Sugar.Apply func arg _applyType) myId = do
   expressionI <- getP expressionPtr
   -- TODO: Remove this when obliterate ancestry
   Data.ExpressionApply origApply <- transaction $ Transaction.readIRef expressionI
