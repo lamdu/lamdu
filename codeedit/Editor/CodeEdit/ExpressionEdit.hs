@@ -37,31 +37,35 @@ make :: MonadF m => ExpressionEditMaker m
 make ancestry sExpr = do
   exprI <- getP $ Sugar.rExpressionPtr sExpr
   let
+    parenify mkParens mkWidget myId =
+      mkWidget myId >>=
+      case Sugar.rHasParens sExpr of
+      Sugar.HaveParens -> mkParens myId
+      Sugar.DontHaveParens -> return
     isAHole = (fmap . liftM . first) IsAHole
     notAHole = (fmap . liftM) ((,) NotAHole)
     wrapNonHoleExpr =
       notAHole .
       BWidgets.wrapDelegatedWithKeys Config.exprFocusDelegatorKeys FocusDelegator.Delegating id
     exprId = WidgetIds.fromIRef exprI
-    addParens parensType mkWidget myId =
-      mkWidget myId >>= Parens.addParens parensType exprId
-    parenify = maybe id addParens (Sugar.rMParensType sExpr)
+    textParenify = parenify Parens.addTextParens
+    squareParenify = parenify Parens.addSquareParens
     makeEditor =
       case Sugar.rExpression sExpr of
       Sugar.ExpressionWhere w ->
-        wrapNonHoleExpr . parenify $
+        wrapNonHoleExpr . squareParenify $
           WhereEdit.makeWithBody make ancestry w
       Sugar.ExpressionFunc f ->
-        wrapNonHoleExpr . parenify $ FuncEdit.make make ancestry (Sugar.rExpressionPtr sExpr) f
+        wrapNonHoleExpr . textParenify $ FuncEdit.make make ancestry (Sugar.rExpressionPtr sExpr) f
       Sugar.ExpressionHole hole ->
-        isAHole . maybe id (error "parens on hole?") (Sugar.rMParensType sExpr) $
+        isAHole {- TODO: Don't ignore parens? -} $
         HoleEdit.make ancestry hole sExpr
       Sugar.ExpressionGetVariable (Sugar.GetVariable varRef _) ->
-        notAHole . parenify $ VarEdit.make varRef
+        notAHole . textParenify $ VarEdit.make varRef
       Sugar.ExpressionApply apply ->
-        wrapNonHoleExpr . parenify $ ApplyEdit.make make ancestry (Sugar.rExpressionPtr sExpr) apply
+        wrapNonHoleExpr . textParenify $ ApplyEdit.make make ancestry (Sugar.rExpressionPtr sExpr) apply
       Sugar.ExpressionLiteralInteger integer ->
-        notAHole . parenify $ LiteralEdit.makeInt exprI integer
+        notAHole . textParenify $ LiteralEdit.makeInt exprI integer
   (holePicker, widget) <- makeEditor exprId
   eventMap <- expressionEventMap sExpr holePicker
   return $ Widget.weakerEvents eventMap widget

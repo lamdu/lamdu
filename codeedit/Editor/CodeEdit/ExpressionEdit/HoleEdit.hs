@@ -83,7 +83,7 @@ makeResultVariables holeInfo varRef = do
     parened =
       result
       (concat ["(", varName, ")"]) DontFlip resultIdAsPrefix $
-      Parens.addTextParens id id resultId
+      Parens.addTextParens resultId
   return $
     if Infix.isInfixName varName
     then

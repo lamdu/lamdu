@@ -1,6 +1,10 @@
 {-# OPTIONS -O2 -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Editor.CodeEdit.Parens(addTextParens, addParens, makeParensId)
+module Editor.CodeEdit.Parens
+  ( addTextParens
+  , addSquareParens
+  , addHighlightedTextParens
+  , makeParensId)
 where
 
 import Control.Monad (void)
@@ -9,7 +13,6 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.Sugar (ParensType(..))
 import Editor.CTransaction (TWidget, WidgetT, subCursor)
 import Editor.MonadF (MonadF)
 import Editor.WidgetIds (parensPrefix)
@@ -23,14 +26,14 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
 
-addTextParens
+addTextParensI
   :: MonadF m
   => (TWidget t m -> TWidget t m)
   -> (TWidget t m -> TWidget t m)
   -> Widget.Id
   -> WidgetT t m
   -> TWidget t m
-addTextParens onLParen onRParen parenId widget = do
+addTextParensI onLParen onRParen parenId widget = do
   beforeParen <- onLParen $ label "("
   afterParen <- onRParen $ label ")"
   return $ BWidgets.hbox [ beforeParen, widget, afterParen ]
@@ -49,8 +52,9 @@ squareFrame :: Anim.AnimId -> Vector2 Widget.R -> Anim.Frame
 squareFrame animId size =
   Anim.simpleFrameDownscale animId size . void $ squareDraw size
 
-addSquareParens :: Widget.Id -> WidgetT t m -> WidgetT t m
+addSquareParens :: Monad m => Widget.Id -> WidgetT t m -> TWidget t m
 addSquareParens parensId =
+  return .
   Widget.atImageWithSize addSquareFrame .
   Widget.translateBy (* ((1 - Config.squareParensScaleFactor) / Config.squareParensScaleFactor / 2)) .
   Widget.atSizeDependentWidgetData (Widget.scaleSizeDependentWidgetData Config.squareParensScaleFactor)
@@ -79,16 +83,21 @@ highlightExpression :: Widget.Widget f -> Widget.Widget f
 highlightExpression =
   Widget.backgroundColor WidgetIds.parenHighlightId Config.parenHighlightColor
 
-addParens
+addTextParens
+  :: MonadF m
+  => Widget.Id
+  -> WidgetT t m
+  -> TWidget t m
+addTextParens = addTextParensI id id
+
+addHighlightedTextParens
   :: (MonadF m)
-  => ParensType
-  -> Widget.Id
+  => Widget.Id
   -> WidgetT ViewTag m
   -> TWidget ViewTag m
-addParens SquareParens myId widget = return $ addSquareParens myId widget
-addParens TextParens myId widget = do
+addHighlightedTextParens myId widget = do
   mInsideParenId <- subCursor rParenId
-  widgetWithParens <- addTextParens id doHighlight myId widget
+  widgetWithParens <- addTextParensI id doHighlight myId widget
   return $ maybe id (const highlightExpression) mInsideParenId widgetWithParens
   where
     rParenId = Widget.joinId myId [")"]
