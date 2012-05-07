@@ -1,37 +1,61 @@
 {-# LANGUAGE CPP, TemplateHaskell #-}
 module Data.AtFieldTH (make) where
 
+import Control.Arrow (second)
 import qualified Data.Char as Char
+import qualified Data.Function as Function
 import qualified Data.List as List
 import Language.Haskell.TH.Syntax
 
 make :: Name -> Q [Dec]
 make typeName = do
     TyConI typeCons <- reify typeName
-    (makeAtName, typeVars, ctor) <-
-        case typeCons of
-            DataD _ _ typeVars constructors _ ->
-                case constructors of
-                    [ctor] -> return (makeAtNameForDataField, typeVars, ctor)
-                    _ -> fail "one constructor expected for Data.AtFieldTH.make"
-            NewtypeD _ _ typeVars ctor _ -> return (makeAtNameForNewtype typeName, typeVars, ctor)
-            _ -> error $ show typeCons ++ " is not supported!"
-    return $ constructorAtFuncs makeAtName typeName typeVars ctor
+    return $ makePure typeName typeCons
 
-constructorAtFuncs :: (Name -> Name) -> Name -> [TyVarBndr] -> Con -> [Dec]
-constructorAtFuncs makeAtName typeName typeVars constructor =
-    concatMap (uncurry (fieldAtFunc makeAtName typeName typeVars isFreeVar)) fields
+makePure :: Name -> Dec -> [Dec]
+makePure typeName (NewtypeD _ _ typeVars ctor _) =
+    constructorAtFuncs (makeAtNameForNewtype typeName) typeName typeVars [ctor]
+makePure typeName (DataD _ _ typeVars ctors _) =
+    constructorAtFuncs makeAtNameForDataField typeName typeVars ctors
+makePure _ typeCons = error $ show typeCons ++ " not supported!"
+
+-- A sortOn for when you lack an Ord instance.
+-- An Eq instance is required.
+-- Equal values are garaunteed to be grouped together. Other than that the order is arbitrary.
+-- O(n^2) complexity.
+sillySortOn :: Eq b => (a -> b) -> [a] -> [a]
+sillySortOn _ [] = []
+sillySortOn f (x:xs) =
+    x : eq ++ sillySortOn f neq
     where
-        fields = constructorFields constructor
-        constructorVars = concatMap (List.nub . varsOfType . snd) fields
+        (eq, neq) = List.partition ((== f x) . f) xs
+
+groupOn :: Eq b => (a -> b) -> [a] -> [[a]]
+groupOn = List.groupBy . Function.on (==)
+
+groups :: Eq a => [(a, b)] -> [(a, [b])]
+groups =
+    map f . groupOn fst . sillySortOn fst
+    where
+        f xs = (fst (head xs), map snd xs)
+
+constructorAtFuncs :: (Name -> Name) -> Name -> [TyVarBndr] -> [Con] -> [Dec]
+constructorAtFuncs makeAtName typeName typeVars ctors =
+    concatMap (fieldAtFunc makeAtName typeName typeVars isFreeVar) fields
+    where
+        fields = (map . second) checkAllCtors . groups $ concatMap constructorFields ctors
+        checkAllCtors xs
+            | length xs == length ctors = Nothing
+            | otherwise = Just xs
+        constructorVars = concatMap (List.nub . varsOfType . snd . fst) fields
         isFreeVar v = 1 == countElemRepetitions v constructorVars
 
-constructorFields :: Con -> [(Name, Type)]
-constructorFields (NormalC name [(_, t)]) = [(name, t)]
-constructorFields (RecC _ fields) =
+constructorFields :: Con -> [((Name, Type), Name)]
+constructorFields (RecC conName fields) =
     map f fields
     where
-        f (name, _, t) = (name, t)
+        f (name, _, t) = ((name, t), conName)
+constructorFields (NormalC _ []) = []
 constructorFields _ = error "unsupported constructor for type supplied to Data.AtFieldTH.make"
 
 countElemRepetitions :: Eq a => a -> [a] -> Int
@@ -62,20 +86,25 @@ unusedWarnPragma name =
         extraName = mkName $ "_unused_pragma_" ++ nameBase name
         clause = NormalB $ foldl AppE (VarE 'const) [LitE (IntegerL 9), VarE name]
 
-fieldAtFunc :: (Name -> Name) -> Name -> [TyVarBndr] -> (Name -> Bool) -> Name -> Type -> [Dec]
-fieldAtFunc makeAtName typeName typeVars isFreeVar fieldName fieldType =
+fieldAtFunc :: (Name -> Name) -> Name -> [TyVarBndr] -> (Name -> Bool) -> ((Name, Type), Maybe [Name]) -> [Dec]
+fieldAtFunc makeAtName typeName typeVars isFreeVar ((fieldName, fieldType), mCtors) =
     [ SigD resName . ForallT resultTypeVars [] $ foldr1 arrow
         [ arrow (sideType fieldType "Src") (sideType fieldType "Dst")
         , input
         , output
         ]
-    , FunD resName [ Clause [VarP funcName, VarP valName] clause [] ]
+    , FunD resName $ case mCtors of
+        Nothing -> [mkClause (VarP valName)]
+        Just ctors ->
+            map (mkClause . AsP valName . (`RecP` [])) ctors ++
+            [ Clause [WildP, VarP valName] (NormalB (VarE valName)) [] ]
     ] ++ unusedWarnPragma resName
     where
         arrow = AppT . AppT ArrowT
         funcName = mkName "func"
         valName = mkName "val"
         resName = makeAtName fieldName
+        mkClause valPat = Clause [VarP funcName, valPat] clause []
         clause = NormalB $ RecUpdE (VarE valName) [(fieldName, applyExp)]
         applyExp = AppE (VarE funcName) . AppE (VarE fieldName) $ VarE valName
         valType = foldl AppT (ConT typeName) $ map (VarT . tyVarBndrName) typeVars
