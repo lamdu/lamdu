@@ -10,7 +10,8 @@ module Editor.BottleWidgets(
   vboxK, vboxAlignK,
   gridHSpaced,
   spaceView, spaceWidget,
-  setTextColor
+  setTextColor,
+  empty
 ) where
 
 import Control.Arrow (first, second)
@@ -211,3 +212,6 @@ setTextColor = atTextStyle . TextEdit.atSTextViewStyle . TextView.atStyleColor .
 
 gridHSpaced :: [[Widget f]] -> Widget f
 gridHSpaced = Grid.toWidget . Grid.make . map (intersperse spaceWidget)
+
+empty :: Widget f
+empty = Spacer.makeWidget 0
