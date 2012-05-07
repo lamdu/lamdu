@@ -115,6 +115,19 @@ type Convertor m = ExpressionPtr m -> Transaction ViewTag m (ExpressionRef m)
 addArg :: Monad m => ExpressionPtr m -> Transaction ViewTag m Guid
 addArg = liftM IRef.guid . DataOps.callWithArg
 
+makeActions :: Monad m => Guid -> ExpressionPtr m -> ExpressionActions m
+makeActions g ptr =
+  ExpressionActions
+  { guid = g
+  , addNextArg = addArg ptr
+  , lambdaWrap = liftM IRef.guid $ DataOps.lambdaWrap ptr
+    -- Hole will remove mReplace because no point replacing hole with hole.
+  , mReplace = Just . liftM IRef.guid $ DataOps.replaceWithHole ptr
+    -- mDelete gets overridden by parent if it is an apply.
+  , mDelete = Nothing
+  , mNextArg = Nothing
+  }
+
 mkExpressionRef :: Monad m => ExpressionPtr m -> Expression m -> Transaction ViewTag m (ExpressionRef m)
 mkExpressionRef ptr expr = do
   iref <- Property.get ptr
@@ -122,17 +135,7 @@ mkExpressionRef ptr expr = do
     ExpressionRef
     { rExpression = expr
     , rExpressionPtr = ptr
-    , rActions =
-        ExpressionActions
-        { guid = IRef.guid iref
-        , addNextArg = addArg ptr
-        , lambdaWrap = liftM IRef.guid $ DataOps.lambdaWrap ptr
-          -- Hole will remove mReplace because no point replacing hole with hole.
-        , mReplace = Just . liftM IRef.guid $ DataOps.replaceWithHole ptr
-          -- mDelete gets overridden by parent if it is an apply.
-        , mDelete = Nothing
-        , mNextArg = Nothing
-        }
+    , rActions = makeActions (IRef.guid iref) ptr
     }
 
 convertLambda :: Monad m => Data.Lambda -> Convertor m
