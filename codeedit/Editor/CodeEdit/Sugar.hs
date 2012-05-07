@@ -110,13 +110,11 @@ AtFieldTH.make ''Expression
 
 type Convertor m = ExpressionPtr m -> Transaction ViewTag m (ExpressionRef m)
 
-data IsReplacable = CanReplaceWithHole | NoReplace
-
 addArg :: Monad m => ExpressionPtr m -> Transaction ViewTag m Guid
 addArg = liftM guid . DataOps.callWithArg
 
-mkExpressionRef :: Monad m => IsReplacable -> ExpressionPtr m -> Expression m -> ExpressionRef m
-mkExpressionRef isReplaceable ptr expr =
+mkExpressionRef :: Monad m => ExpressionPtr m -> Expression m -> ExpressionRef m
+mkExpressionRef ptr expr =
   ExpressionRef
   { rExpression = expr
   , rExpressionPtr = ptr
@@ -124,18 +122,13 @@ mkExpressionRef isReplaceable ptr expr =
       ExpressionActions
       { addNextArg = addArg ptr
       , lambdaWrap = liftM guid $ DataOps.lambdaWrap ptr
-      , mReplace = replace
+        -- Hole will remove mReplace because no point replacing hole with hole.
+      , mReplace = Just . liftM guid $ DataOps.replaceWithHole ptr
         -- mDelete gets overridden by parent if it is an apply.
       , mDelete = Nothing
       , mNextArg = Nothing
       }
   }
-  where
-    replace =
-      case isReplaceable of
-        CanReplaceWithHole -> Just . liftM guid $ DataOps.replaceWithHole ptr
-        NoReplace -> Nothing
-
 
 convertLambda :: Monad m => Data.Lambda -> Convertor m
 convertLambda lambda ptr = do
@@ -152,7 +145,7 @@ convertLambda lambda ptr = do
       , fpLambdaPtr = ptr
       , fpBodyI = Data.lambdaBody lambda
       }
-  return . mkExpressionRef CanReplaceWithHole ptr .
+  return . mkExpressionRef ptr .
     ExpressionFunc DontHaveParens . atFParams (item :) $
     case rExpression sBody of
       ExpressionFunc _ x -> x
@@ -174,7 +167,7 @@ convertWhere value funcI lambda@(Data.Lambda (Data.TypedParam paramI _) bodyI) p
       , wiLambdaBodyI = bodyI
       }
   sBody <- convertExpression bodyPtr
-  return . mkExpressionRef CanReplaceWithHole ptr . ExpressionWhere DontHaveParens . atWWheres (item :) $
+  return . mkExpressionRef ptr . ExpressionWhere DontHaveParens . atWWheres (item :) $
     case rExpression sBody of
       ExpressionWhere _ x -> x
       _ -> Where [] sBody
@@ -300,7 +293,7 @@ convertApplyI
         return $ guid whereToGo
   argExpr <- makeApplyArg prefixArgNeedsParens addArgAfterArg exprI apply
   (appType, funcExpr) <- makeApplyFunc addArgAfterFunc exprI apply argExpr
-  return . mkExpressionRef NoReplace ptr . ExpressionApply hasParens $
+  return . mkExpressionRef ptr . ExpressionApply hasParens $
     Apply
       (deleteNode argI argI funcExpr)
       (deleteNode funcI whereToGoAfterDeleteArg argExpr)
@@ -313,16 +306,18 @@ convertGetVariable varRef ptr = do
     (_parens, infixType)
       | Infix.isInfixName name = (HaveParens, VariableInfix)
       | otherwise = (DontHaveParens, VariableNormal)
-  return . mkExpressionRef CanReplaceWithHole ptr $
+  return . mkExpressionRef ptr $
     ExpressionGetVariable {-TODO: parens-} (GetVariable varRef infixType)
 
 convertHole :: Monad m => Data.HoleState -> Convertor m
 convertHole state ptr =
-  return . mkExpressionRef NoReplace ptr . ExpressionHole $ Hole state Nothing
+  return .
+  (atRActions . atMReplace . const) Nothing .
+  mkExpressionRef ptr . ExpressionHole $ Hole state Nothing
 
 convertLiteralInteger :: Monad m => Integer -> Convertor m
 convertLiteralInteger i ptr =
-  return . mkExpressionRef CanReplaceWithHole ptr $ ExpressionLiteralInteger i
+  return . mkExpressionRef ptr $ ExpressionLiteralInteger i
 
 convertExpression :: Monad m => Convertor m
 convertExpression ptr = do
