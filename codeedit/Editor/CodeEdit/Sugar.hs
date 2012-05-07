@@ -10,7 +10,6 @@ module Editor.CodeEdit.Sugar
   ) where
 
 import Control.Monad(liftM)
-import Data.Maybe(fromMaybe)
 import Data.Store.Guid(Guid)
 import Data.Store.IRef(IRef, guid)
 import Data.Store.Transaction(Transaction)
@@ -118,6 +117,9 @@ type Convertor m = ExpressionPtr m -> Transaction ViewTag m (ExpressionRef m)
 
 data IsReplacable = CanReplaceWithHole | NoReplace
 
+addArg :: Monad m => ExpressionPtr m -> Transaction ViewTag m Guid
+addArg = liftM guid . DataOps.callWithArg
+
 mkExpressionRef :: Monad m => IsReplacable -> ExpressionPtr m -> Expression m -> ExpressionRef m
 mkExpressionRef isReplaceable ptr expr =
   ExpressionRef
@@ -125,7 +127,7 @@ mkExpressionRef isReplaceable ptr expr =
   , rExpressionPtr = ptr
   , rActions =
       ExpressionActions
-      { addNextArg = liftM guid $ DataOps.callWithArg ptr
+      { addNextArg = addArg ptr
       , lambdaWrap = liftM guid $ DataOps.lambdaWrap ptr
       , mReplace = replace
         -- mDelete gets overridden by parent if it is an apply.
@@ -208,90 +210,106 @@ applyTypeOfFunc _ = ApplyPrefix
 makeApplyArg
   :: Monad m
   => Bool
-  -> (ExpressionRef m -> ExpressionRef m)
+  -> (Transaction ViewTag m Guid
+      -> Transaction ViewTag m Guid)
   -> IRef Data.Expression
   -> Data.Apply
   -> Transaction ViewTag m (ExpressionRef m)
-makeApplyArg isInfix addArgHere exprI apply@(Data.Apply funcI argI) = do
+makeApplyArg prefixArgNeedsParens addArgAfterArg exprI apply@(Data.Apply funcI argI) = do
   argExpr <- convertExpression $ DataOps.applyArgRef exprI apply
   let
     modifyArgParens =
-      case (isInfix, rExpression argExpr) of
-      (False, _) -> const HaveParens
-      (True, ExpressionApply _ (Apply _ _ ApplyInfixR)) -> const HaveParens
-      (True, ExpressionApply _ _) -> id
-      (True, _) -> const HaveParens
+      case (prefixArgNeedsParens, rExpression argExpr) of
+      (False, ExpressionApply _ (Apply _ _ ApplyPrefix)) -> id
+      _ -> const HaveParens
   let
     flipFuncAndArg =
       Transaction.writeIRef exprI . Data.ExpressionApply $
       Data.Apply argI funcI
-    addArgAfterArg
-      | isInfix = id
-      | otherwise = addArgHere
   return $
     (atRExpression . atExpressionHole . atHoleMFlipFuncArg . const . Just) flipFuncAndArg .
     (atRExpression . atEHasParens) modifyArgParens .
-    addArgAfterArg $
+    (atRActions . atAddNextArg) addArgAfterArg $
     argExpr
 
-makeFuncArg
+makeApplyFunc
   :: Monad m
-  => Bool
-  -> (ExpressionRef m -> ExpressionRef m)
+  => (Transaction ViewTag m Guid
+      -> Transaction ViewTag m Guid)
   -> IRef Data.Expression
   -> Data.Apply
   -> ExpressionRef m
   -> Transaction ViewTag m (ApplyType, ExpressionRef m)
-makeFuncArg isInfix addArgHere exprI apply@(Data.Apply funcI _) argExpr = do
-  isInfixFunc <- Infix.isInfixFunc funcI
+makeApplyFunc addArgAfterFunc exprI apply argExpr = do
   funcExpr <- convertExpression $ DataOps.applyFuncRef exprI apply
-  needAddFuncParens <-
-    case rExpression funcExpr of
-    ExpressionGetVariable{} -> return False
-    ExpressionApply _ (Apply funcFunc _ _) -> Infix.isApplyOfInfixOp =<< Property.get (rExpressionPtr funcFunc)
-    _ -> return True
   let
+    modifyFuncParens =
+      case rExpression funcExpr of
+      ExpressionApply _ (Apply _ _ ApplyPrefix) -> id
+      ExpressionApply _ (Apply _ _ ApplyInfixL) -> const DontHaveParens
+      _ -> const HaveParens
     appType = applyTypeOfFunc $ rExpression funcExpr
-    modifyFuncParens
-      | needAddFuncParens = const HaveParens
-      | isInfix = const DontHaveParens
-      | otherwise = id
     setNextArg = atRActions . atMNextArg . const $ Just argExpr
     setFuncArgNextArg =
       atRExpression . atExpressionApply . atApplyArg $ setNextArg
-    addArgAfterFunc
-      | isInfixFunc = addArgHere
-      | otherwise = id
   return . ((,) appType) $
     setFuncArgNextArg . setNextArg .
     (atRExpression . atEHasParens) modifyFuncParens .
-    addArgAfterFunc $ funcExpr
+    (atRActions . atAddNextArg) addArgAfterFunc $ funcExpr
 
 convertApplyNonLambda
   :: Monad m
   => Data.Apply
   -> IRef Data.Expression
   -> Convertor m
-convertApplyNonLambda apply@(Data.Apply funcI argI) exprI ptr = do
-  isInfixFunc <- Infix.isInfixFunc funcI
-  isInfix <- liftM (isInfixFunc ||) (Infix.isApplyOfInfixOp funcI)
+convertApplyNonLambda apply@(Data.Apply funcI _) exprI ptr = do
+  isInfixL <- Infix.isInfixFunc funcI
+  mInfixRFunc <- Infix.infixFuncOfRArg funcI
+  let
+    convertor =
+      if isInfixL
+      then convertApplyInfixL
+      else
+        case mInfixRFunc of
+        Just infixRFunc -> convertApplyInfixR infixRFunc
+        Nothing -> convertApplyPrefix
+  convertor apply exprI ptr
+
+convertApplyInfixR :: Monad m => IRef Data.Expression -> Data.Apply -> IRef Data.Expression -> Convertor m
+convertApplyInfixR infixRFunc apply expr ptr =
+  convertApplyI infixRFunc HaveParens False id id apply expr ptr
+
+convertApplyInfixL :: Monad m => Data.Apply -> IRef Data.Expression -> Convertor m
+convertApplyInfixL apply@(Data.Apply funcI _) expr ptr =
+  convertApplyI funcI HaveParens False (const (addArg ptr)) id apply expr ptr
+
+convertApplyPrefix :: Monad m => Data.Apply -> IRef Data.Expression -> Convertor m
+convertApplyPrefix apply@(Data.Apply funcI _) expr ptr =
+  convertApplyI funcI DontHaveParens True id (const (addArg ptr)) apply expr ptr
+
+convertApplyI
+  :: Monad m
+  => IRef Data.Expression -> HasParens
+  -> Bool
+  -> (Transaction ViewTag m Guid -> Transaction ViewTag m Guid)
+  -> (Transaction ViewTag m Guid -> Transaction ViewTag m Guid)
+  -> Data.Apply -> IRef Data.Expression -> Convertor m
+convertApplyI
+  whereToGoAfterDeleteArg hasParens
+  prefixArgNeedsParens addArgAfterFunc addArgAfterArg
+  apply@(Data.Apply funcI argI) exprI ptr = do
   let
     deleteNode siblingI whereToGo =
       atRActions . atMDelete . const . Just $ do
         _ <- DataOps.replace ptr siblingI
-        liftM guid whereToGo
-    whereToGoAfterDeleteArg =
-      liftM (fromMaybe funcI) (Infix.infixFuncOfRArg funcI)
-    addArgHere = atRActions . atAddNextArg . const . liftM guid $ DataOps.callWithArg ptr
-    hasParens
-      | isInfixFunc = HaveParens
-      | otherwise = DontHaveParens
-  argExpr <- makeApplyArg isInfix addArgHere exprI apply
-  (appType, funcExpr) <- makeFuncArg isInfix addArgHere exprI apply argExpr
+        return $ guid whereToGo
+  argExpr <- makeApplyArg prefixArgNeedsParens addArgAfterArg exprI apply
+  (appType, funcExpr) <- makeApplyFunc addArgAfterFunc exprI apply argExpr
   return . mkExpressionRef NoReplace ptr . ExpressionApply hasParens $
     Apply
-      (deleteNode argI (return argI) funcExpr)
-      (deleteNode funcI whereToGoAfterDeleteArg argExpr) appType
+      (deleteNode argI argI funcExpr)
+      (deleteNode funcI whereToGoAfterDeleteArg argExpr)
+      appType
 
 convertGetVariable :: Monad m => Data.VariableRef -> Convertor m
 convertGetVariable varRef ptr = do
