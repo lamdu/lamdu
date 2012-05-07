@@ -96,9 +96,9 @@ data Expression m
   = ExpressionApply { eHasParens :: HasParens, eApply :: Apply m }
   | ExpressionWhere { eHasParens :: HasParens, eWhere :: Where m }
   | ExpressionFunc  { eHasParens :: HasParens, eFunc :: Func m }
-  | ExpressionGetVariable GetVariable
-  | ExpressionHole (Hole m)
-  | ExpressionLiteralInteger Integer
+  | ExpressionGetVariable { _eGetVar :: GetVariable }
+  | ExpressionHole { _eHole :: Hole m }
+  | ExpressionLiteralInteger { _eLit :: Integer }
 
 AtFieldTH.make ''Hole
 AtFieldTH.make ''Where
@@ -106,12 +106,7 @@ AtFieldTH.make ''Func
 AtFieldTH.make ''ExpressionRef
 AtFieldTH.make ''ExpressionActions
 AtFieldTH.make ''Apply
-
-atEHasParens :: (HasParens -> HasParens) -> Expression m -> Expression m
-atEHasParens f e@ExpressionApply{} = e { eHasParens = f (eHasParens e) }
-atEHasParens f e@ExpressionWhere{} = e { eHasParens = f (eHasParens e) }
-atEHasParens f e@ExpressionFunc{}  = e { eHasParens = f (eHasParens e) }
-atEHasParens _ e = e
+AtFieldTH.make ''Expression
 
 type Convertor m = ExpressionPtr m -> Transaction ViewTag m (ExpressionRef m)
 
