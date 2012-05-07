@@ -36,7 +36,7 @@ AtFieldTH.make ''LambdaParent
 
 data WhereRole
   = WhereBody
-  | WhereDef (IRef Data.Parameter)
+  | WhereDef (IRef Data.Expression)
   deriving (Show, Read, Eq, Ord)
 
 data WhereParent m = WhereParent
@@ -46,7 +46,7 @@ data WhereParent m = WhereParent
 AtFieldTH.make ''WhereParent
 
 newtype ParamTypeParent = ParamTypeParent
-  { ptParamI :: IRef Data.Parameter
+  { ptParamI :: IRef Data.Expression
   }
 AtFieldTH.make ''ParamTypeParent
 
@@ -58,7 +58,7 @@ data AncestryItem m =
 
 type ExpressionAncestry m = [AncestryItem m]
 
-getAncestryParams :: ExpressionAncestry m -> [IRef Data.Parameter]
+getAncestryParams :: ExpressionAncestry m -> [IRef Data.Expression]
 getAncestryParams =
   concatMap params
   where

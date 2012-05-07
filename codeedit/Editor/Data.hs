@@ -3,10 +3,8 @@
 module Editor.Data (
   Definition(..), atDefBody,
   Builtin(..),
-  Parameter(..),
   VariableRef(..), onVariableIRef,
-  TypedParam(..),
-  Lambda(..), atLambdaParam, atLambdaBody,
+  Lambda(..), atLambdaParamType, atLambdaBody,
   Apply(..), atApplyFunc, atApplyArg,
   HoleState(..),
     emptyHoleState, atHoleSearchTerm, --atHoleCachedSearchResults,
@@ -21,17 +19,8 @@ import Data.DeriveTH(derive)
 import Data.Store.IRef (IRef)
 import qualified Data.AtFieldTH as AtFieldTH
 
-data Parameter = Parameter
-  deriving (Eq, Ord, Read, Show)
-
-data TypedParam = TypedParam {
-  tpParam :: IRef Parameter,
-  tpType :: IRef Expression
-  }
-  deriving (Eq, Ord, Read, Show)
-
 data Lambda = Lambda {
-  lambdaParam :: TypedParam,
+  lambdaParamType :: IRef Expression,
   lambdaBody :: IRef Expression
   }
   deriving (Eq, Ord, Read, Show)
@@ -70,10 +59,10 @@ data Builtin = Builtin {
   }
   deriving (Eq, Ord, Read, Show)
 
-data VariableRef =
-  ParameterRef (IRef Parameter) |
-  DefinitionRef (IRef Definition) |
-  BuiltinRef (IRef Builtin)
+data VariableRef
+  = ParameterRef { _lambdaRef :: IRef Expression }
+  | DefinitionRef (IRef Definition)
+  | BuiltinRef (IRef Builtin)
   deriving (Eq, Ord, Read, Show)
 
 onVariableIRef :: (forall a. IRef a -> b) -> VariableRef -> b
@@ -81,13 +70,11 @@ onVariableIRef f (ParameterRef i) = f i
 onVariableIRef f (DefinitionRef i) = f i
 onVariableIRef f (BuiltinRef i) = f i
 
-derive makeBinary ''TypedParam
 derive makeBinary ''Apply
 derive makeBinary ''Lambda
 derive makeBinary ''Builtin
 derive makeBinary ''HoleState
 derive makeBinary ''Expression
-derive makeBinary ''Parameter
 derive makeBinary ''Definition
 derive makeBinary ''VariableRef
 AtFieldTH.make ''Definition

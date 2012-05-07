@@ -63,15 +63,15 @@ replaceWithHole expressionPtr = replace expressionPtr =<< newHole
 lambdaWrap
   :: Monad m
   => ExpressionPtr m
-  -> Transaction ViewTag m (IRef Data.Parameter)
+  -> Transaction ViewTag m (IRef Data.Expression)
 lambdaWrap expressionPtr = do
-  newParamI <- Transaction.newIRef Data.Parameter
   newParamTypeI <- newHole
   expressionI <- Property.get expressionPtr
-  let newLambda = Data.Lambda (Data.TypedParam newParamI newParamTypeI) expressionI
-  newExpressionI <- Transaction.newIRef $ Data.ExpressionLambda newLambda
+  newExpressionI <-
+    Transaction.newIRef . Data.ExpressionLambda $
+    Data.Lambda newParamTypeI expressionI
   Property.set expressionPtr newExpressionI
-  return newParamI
+  return newExpressionI
 
 addAsDefinition ::
   Monad m => String -> IRef Data.Expression ->
@@ -84,18 +84,18 @@ addAsDefinition newName expressionI = do
   return newDefI
 
 lambdaBodyRef :: Monad m => IRef Data.Expression -> Data.Lambda -> ExpressionPtr m
-lambdaBodyRef lambdaI (Data.Lambda (Data.TypedParam paramI paramTypeI) bodyI) =
+lambdaBodyRef lambdaI (Data.Lambda paramTypeI bodyI) =
   Property
     (return bodyI)
-    (Transaction.writeIRef lambdaI . Data.ExpressionLambda . Data.Lambda (Data.TypedParam paramI paramTypeI))
+    (Transaction.writeIRef lambdaI . Data.ExpressionLambda . Data.Lambda paramTypeI)
 
 lambdaParamTypeRef :: Monad m => IRef Data.Expression -> Data.Lambda -> ExpressionPtr m
-lambdaParamTypeRef lambdaI (Data.Lambda (Data.TypedParam paramI paramTypeI) bodyI) =
+lambdaParamTypeRef lambdaI (Data.Lambda paramTypeI bodyI) =
   Property
     (return paramTypeI)
     (Transaction.writeIRef lambdaI . Data.ExpressionLambda . buildLambda)
   where
-    buildLambda newTypeI = Data.Lambda (Data.TypedParam paramI newTypeI) bodyI
+    buildLambda newTypeI = Data.Lambda newTypeI bodyI
 
 applyFuncRef :: Monad m => IRef Data.Expression -> Data.Apply -> ExpressionPtr m
 applyFuncRef applyI (Data.Apply funcI argI) =

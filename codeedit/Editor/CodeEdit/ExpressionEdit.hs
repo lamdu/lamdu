@@ -102,7 +102,7 @@ expressionEventMap sExpr holePicker = do
 
     , Widget.actionEventMapMovesCursor
       Config.lambdaWrapKeys "Lambda wrap" .
-      liftM (WidgetIds.delegating . WidgetIds.fromGuid) $ Sugar.lambdaWrap actions
+      liftM (WidgetIds.delegating . WidgetIds.paramId) $ Sugar.lambdaWrap actions
     ]
   where
     withPickResultFirst keys doc action=

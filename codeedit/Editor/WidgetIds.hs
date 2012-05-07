@@ -6,7 +6,7 @@ module Editor.WidgetIds(
   delegating, notDelegating, searchTermId,
   parenHighlightId,
   parensPrefix,
-  varId, diveIn)
+  paramId, varId, diveIn)
 where
 
 import Data.ByteString.Char8() -- IsString instance
@@ -56,3 +56,6 @@ varId = Data.onVariableIRef fromIRef
 
 diveIn :: Functor f => f (IRef a) -> f Widget.Id
 diveIn = fmap $ delegating . fromIRef
+
+paramId :: Guid -> Widget.Id
+paramId x = Widget.joinId (fromGuid x) ["param"]

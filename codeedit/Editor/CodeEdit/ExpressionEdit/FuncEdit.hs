@@ -11,6 +11,7 @@ import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.DataOps (ExpressionPtr)
 import Editor.MonadF (MonadF)
 import qualified Data.List as List
+import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.Ancestry as Ancestry
@@ -23,13 +24,13 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 makeParamNameEdit
   :: Monad m
-  => IRef Data.Parameter
+  => IRef Data.Expression
   -> TWidget t m
 makeParamNameEdit paramI =
   BWidgets.wrapDelegated FocusDelegator.NotDelegating
   (BWidgets.setTextColor Config.parameterColor .
    BWidgets.makeNameEdit "<unnamed param>" paramI) $
-  WidgetIds.fromIRef paramI
+  WidgetIds.paramId (IRef.guid paramI)
 
 both :: (a -> b) -> (a, a) -> (b, b)
 both f (x, y) = (f x, f y)

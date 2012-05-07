@@ -45,7 +45,7 @@ data ExpressionRef m = ExpressionRef
   }
 
 data WhereItem m = WhereItem
-  { wiParamI :: IRef Data.Parameter
+  { wiParamI :: IRef Data.Expression
   -- TODO: Show type as well ?
   , wiValue :: ExpressionRef m
   -- Pointer to original apply provided to still give access to it.
@@ -60,7 +60,7 @@ data Where m = Where
   }
 
 data FuncParam m = FuncParam
-  { fpParamI :: IRef Data.Parameter
+  { fpParamI :: IRef Data.Expression
   , fpType :: ExpressionRef m
   -- Pointer to original lambda expression provided to still give access to the lambda.
   , fpLambdaPtr :: ExpressionPtr m
@@ -145,7 +145,7 @@ convertLambda lambda ptr = do
   sBody <- convertExpression bodyPtr
   let
     item = FuncParam
-      { fpParamI = Data.tpParam (Data.lambdaParam lambda)
+      { fpParamI = exprI
       , fpType = typeExpr
       , fpLambdaPtr = ptr
       , fpBodyI = Data.lambdaBody lambda
@@ -162,11 +162,11 @@ convertWhere
   -> IRef Data.Expression
   -> Data.Lambda
   -> Convertor m
-convertWhere value funcI lambda@(Data.Lambda (Data.TypedParam paramI _) bodyI) ptr = do
+convertWhere value funcI lambda@(Data.Lambda _ bodyI) ptr = do
   let
     bodyPtr = DataOps.lambdaBodyRef funcI lambda
     item = WhereItem
-      { wiParamI = paramI
+      { wiParamI = funcI
       , wiValue = value
       , wiApplyPtr = ptr
       , wiLambdaBodyI = bodyI
