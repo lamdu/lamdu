@@ -25,7 +25,8 @@ import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
 
 data ExpressionActions m = ExpressionActions
-  { addNextArg :: Transaction ViewTag m Guid
+  { guid :: Guid
+  , addNextArg :: Transaction ViewTag m Guid
   , lambdaWrap :: Transaction ViewTag m Guid
   , mReplace :: Maybe (Transaction ViewTag m Guid)
   , mDelete :: Maybe (Transaction ViewTag m Guid)
@@ -114,22 +115,25 @@ type Convertor m = ExpressionPtr m -> Transaction ViewTag m (ExpressionRef m)
 addArg :: Monad m => ExpressionPtr m -> Transaction ViewTag m Guid
 addArg = liftM IRef.guid . DataOps.callWithArg
 
-mkExpressionRef :: Monad m => ExpressionPtr m -> Expression m -> ExpressionRef m
-mkExpressionRef ptr expr =
-  ExpressionRef
-  { rExpression = expr
-  , rExpressionPtr = ptr
-  , rActions =
-      ExpressionActions
-      { addNextArg = addArg ptr
-      , lambdaWrap = liftM IRef.guid $ DataOps.lambdaWrap ptr
-        -- Hole will remove mReplace because no point replacing hole with hole.
-      , mReplace = Just . liftM IRef.guid $ DataOps.replaceWithHole ptr
-        -- mDelete gets overridden by parent if it is an apply.
-      , mDelete = Nothing
-      , mNextArg = Nothing
-      }
-  }
+mkExpressionRef :: Monad m => ExpressionPtr m -> Expression m -> Transaction ViewTag m (ExpressionRef m)
+mkExpressionRef ptr expr = do
+  iref <- Property.get ptr
+  return
+    ExpressionRef
+    { rExpression = expr
+    , rExpressionPtr = ptr
+    , rActions =
+        ExpressionActions
+        { guid = IRef.guid iref
+        , addNextArg = addArg ptr
+        , lambdaWrap = liftM IRef.guid $ DataOps.lambdaWrap ptr
+          -- Hole will remove mReplace because no point replacing hole with hole.
+        , mReplace = Just . liftM IRef.guid $ DataOps.replaceWithHole ptr
+          -- mDelete gets overridden by parent if it is an apply.
+        , mDelete = Nothing
+        , mNextArg = Nothing
+        }
+    }
 
 convertLambda :: Monad m => Data.Lambda -> Convertor m
 convertLambda lambda ptr = do
@@ -146,7 +150,7 @@ convertLambda lambda ptr = do
       , fpLambdaPtr = ptr
       , fpBodyI = Data.lambdaBody lambda
       }
-  return . mkExpressionRef ptr .
+  mkExpressionRef ptr .
     ExpressionFunc DontHaveParens . atFParams (item :) $
     case rExpression sBody of
       ExpressionFunc _ x -> x
@@ -168,7 +172,7 @@ convertWhere value funcI lambda@(Data.Lambda (Data.TypedParam paramI _) bodyI) p
       , wiLambdaBodyI = bodyI
       }
   sBody <- convertExpression bodyPtr
-  return . mkExpressionRef ptr . ExpressionWhere DontHaveParens . atWWheres (item :) $
+  mkExpressionRef ptr . ExpressionWhere DontHaveParens . atWWheres (item :) $
     case rExpression sBody of
       ExpressionWhere _ x -> x
       _ -> Where [] sBody
@@ -294,7 +298,7 @@ convertApplyI
         return $ IRef.guid whereToGo
   argExpr <- makeApplyArg prefixArgNeedsParens addArgAfterArg exprI apply
   (appType, funcExpr) <- makeApplyFunc addArgAfterFunc exprI apply argExpr
-  return . mkExpressionRef ptr . ExpressionApply hasParens $
+  mkExpressionRef ptr . ExpressionApply hasParens $
     Apply
       (deleteNode argI argI funcExpr)
       (deleteNode funcI whereToGoAfterDeleteArg argExpr)
@@ -307,18 +311,17 @@ convertGetVariable varRef ptr = do
     (_parens, infixType)
       | Infix.isInfixName name = (HaveParens, VariableInfix)
       | otherwise = (DontHaveParens, VariableNormal)
-  return . mkExpressionRef ptr $
+  mkExpressionRef ptr $
     ExpressionGetVariable {-TODO: parens-} (GetVariable varRef infixType)
 
 convertHole :: Monad m => Data.HoleState -> Convertor m
 convertHole state ptr =
-  return .
-  (atRActions . atMReplace . const) Nothing .
+  (liftM . atRActions . atMReplace . const) Nothing .
   mkExpressionRef ptr . ExpressionHole $ Hole state Nothing
 
 convertLiteralInteger :: Monad m => Integer -> Convertor m
 convertLiteralInteger i ptr =
-  return . mkExpressionRef ptr $ ExpressionLiteralInteger i
+  mkExpressionRef ptr $ ExpressionLiteralInteger i
 
 convertExpression :: Monad m => Convertor m
 convertExpression ptr = do
