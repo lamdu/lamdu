@@ -1,10 +1,10 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Editor.CodeEdit.Sugar
-  ( Expression(..), ExpressionActions(..), ExpressionRef(..)
+  ( Expression(..), Actions(..), ExpressionRef(..)
   , Where(..), WhereItem(..)
   , Func(..), FuncParam(..)
-  , Apply(..), Hole(..), GetVariable(..)
+  , Apply(..), Section(..), Hole(..)
   , HasParens(..)
   , convertExpression
   ) where
@@ -24,7 +24,7 @@ import qualified Editor.CodeEdit.Infix as Infix
 import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
 
-data ExpressionActions m = ExpressionActions
+data Actions m = Actions
   { guid :: Guid
   , addNextArg :: Transaction ViewTag m Guid
   , lambdaWrap :: Transaction ViewTag m Guid
@@ -41,17 +41,13 @@ data HasParens = HaveParens | DontHaveParens
 data ExpressionRef m = ExpressionRef
   { rExpressionPtr :: ExpressionPtr m
   , rExpression :: Expression m
-  , rActions :: ExpressionActions m
+  , rActions :: Actions m
   }
 
 data WhereItem m = WhereItem
-  { wiParamI :: IRef Data.Expression
+  { wiActions :: Actions m
   -- TODO: Show type as well ?
   , wiValue :: ExpressionRef m
-  -- Pointer to original apply provided to still give access to it.
-  , wiApplyPtr :: ExpressionPtr m
-  -- IRef to body of lambda provided to allow deleting the where item.
-  , wiLambdaBodyI :: IRef Data.Expression
   }
 
 data Where m = Where
@@ -60,12 +56,8 @@ data Where m = Where
   }
 
 data FuncParam m = FuncParam
-  { fpParamI :: IRef Data.Expression
+  { fpActions :: Actions m
   , fpType :: ExpressionRef m
-  -- Pointer to original lambda expression provided to still give access to the lambda.
-  , fpLambdaPtr :: ExpressionPtr m
-  -- IRef to original body of lambda provided to allow deleting the param/lambda.
-  , fpBodyI :: IRef Data.Expression
   }
 
 -- Multi-param Lambda
@@ -74,15 +66,17 @@ data Func m = Func
   , fBody :: ExpressionRef m
   }
 
-data ApplyType
-  = ApplyPrefix
-  | ApplyInfixL -- ^ Apply of infix op (Arg is larg to infix)
-  | ApplyInfixR -- ^ Apply of apply of infix op (Arg is rarg to infix)
-
 data Apply m = Apply
   { applyFunc :: ExpressionRef m
   , applyArg :: ExpressionRef m
-  , applyType :: ApplyType
+  }
+
+-- Infix Sections include: (+), (1+), (+1), (1+2). Last is really just
+-- infix application, but considered an infix section too.
+data Section m = Section
+  { sectionLArg :: Maybe (ExpressionRef m)
+  , sectionOp :: ExpressionRef m -- Always a GetVariable
+  , sectionRArg :: Maybe (ExpressionRef m)
   }
 
 data Hole m = Hole
@@ -90,24 +84,22 @@ data Hole m = Hole
   , holeMFlipFuncArg :: Maybe (Transaction ViewTag m ())
   }
 
-data VariableType = VariableNormal | VariableInfix
-
-data GetVariable = GetVariable Data.VariableRef VariableType
-
 data Expression m
-  = ExpressionApply { eHasParens :: HasParens, eApply :: Apply m }
-  | ExpressionWhere { eHasParens :: HasParens, eWhere :: Where m }
-  | ExpressionFunc  { eHasParens :: HasParens, eFunc :: Func m }
-  | ExpressionGetVariable { _eGetVar :: GetVariable }
-  | ExpressionHole { _eHole :: Hole m }
+  = ExpressionApply   { eHasParens :: HasParens, eApply :: Apply m }
+  | ExpressionSection { eHasParens :: HasParens, eSection :: Section m }
+  | ExpressionWhere   { eHasParens :: HasParens, eWhere :: Where m }
+  | ExpressionFunc    { eHasParens :: HasParens, eFunc :: Func m }
+  | ExpressionGetVariable { _eGetVar :: Data.VariableRef }
+  | ExpressionHole { eHole :: Hole m }
   | ExpressionLiteralInteger { _eLit :: Integer }
 
 AtFieldTH.make ''Hole
 AtFieldTH.make ''Where
 AtFieldTH.make ''Func
 AtFieldTH.make ''ExpressionRef
-AtFieldTH.make ''ExpressionActions
+AtFieldTH.make ''Actions
 AtFieldTH.make ''Apply
+AtFieldTH.make ''Section
 AtFieldTH.make ''Expression
 
 type Convertor m = ExpressionPtr m -> Transaction ViewTag m (ExpressionRef m)
@@ -115,9 +107,9 @@ type Convertor m = ExpressionPtr m -> Transaction ViewTag m (ExpressionRef m)
 addArg :: Monad m => ExpressionPtr m -> Transaction ViewTag m Guid
 addArg = liftM IRef.guid . DataOps.callWithArg
 
-makeActions :: Monad m => Guid -> ExpressionPtr m -> ExpressionActions m
+makeActions :: Monad m => Guid -> ExpressionPtr m -> Actions m
 makeActions g ptr =
-  ExpressionActions
+  Actions
   { guid = g
   , addNextArg = addArg ptr
   , lambdaWrap = liftM IRef.guid $ DataOps.lambdaWrap ptr
@@ -146,12 +138,16 @@ convertLambda lambda ptr = do
     bodyPtr = DataOps.lambdaBodyRef exprI lambda
   typeExpr <- convertExpression typePtr
   sBody <- convertExpression bodyPtr
+  bodyI <- Property.get bodyPtr
   let
+    deleteArg = do
+      Property.set ptr bodyI
+      return . guid $ rActions sBody
     item = FuncParam
-      { fpParamI = exprI
+      { fpActions =
+          (atMDelete . const . Just) deleteArg $
+          makeActions (IRef.guid exprI) ptr
       , fpType = typeExpr
-      , fpLambdaPtr = ptr
-      , fpBodyI = Data.lambdaBody lambda
       }
   mkExpressionRef ptr .
     ExpressionFunc DontHaveParens . atFParams (item :) $
@@ -165,14 +161,17 @@ convertWhere
   -> IRef Data.Expression
   -> Data.Lambda
   -> Convertor m
-convertWhere value funcI lambda@(Data.Lambda _ bodyI) ptr = do
+convertWhere valueRef funcI lambda@(Data.Lambda _ bodyI) ptr = do
   let
     bodyPtr = DataOps.lambdaBodyRef funcI lambda
+    deleteItem = do
+      Property.set ptr bodyI
+      return $ IRef.guid bodyI
     item = WhereItem
-      { wiParamI = funcI
-      , wiValue = value
-      , wiApplyPtr = ptr
-      , wiLambdaBodyI = bodyI
+      { wiActions =
+          (atMDelete . const . Just) deleteItem $
+          makeActions (IRef.guid funcI) ptr
+      , wiValue = valueRef
       }
   sBody <- convertExpression bodyPtr
   mkExpressionRef ptr . ExpressionWhere DontHaveParens . atWWheres (item :) $
@@ -180,142 +179,139 @@ convertWhere value funcI lambda@(Data.Lambda _ bodyI) ptr = do
       ExpressionWhere _ x -> x
       _ -> Where [] sBody
 
-atExpressionApply :: (Apply m -> Apply m) -> Expression m -> Expression m
-atExpressionApply f e@ExpressionApply{} = e { eApply = f (eApply e) }
-atExpressionApply _ x = x
-
-atExpressionHole :: (Hole m -> Hole m) -> Expression m -> Expression m
-atExpressionHole f (ExpressionHole x) = ExpressionHole $ f x
-atExpressionHole _ x = x
+addParensAtSection :: ExpressionRef m -> ExpressionRef m
+addParensAtSection =
+  atRExpression f
+  where
+    f (ExpressionSection _ section) = ExpressionSection HaveParens section
+    f x = x
 
 convertApply :: Monad m => Data.Apply -> Convertor m
-convertApply apply ptr = do
+convertApply apply@(Data.Apply funcI _) ptr = do
   exprI <- Property.get ptr
-  let funcI = Data.applyFunc apply
   func <- Transaction.readIRef funcI
-  arg <- convertExpression $ DataOps.applyArgRef exprI apply
+  argRef <- convertExpression $ DataOps.applyArgRef exprI apply
+  let prefixApply = convertApplyPrefix exprI apply argRef ptr
   case func of
-    Data.ExpressionLambda lambda -> convertWhere arg funcI lambda ptr
-    _ -> convertApplyNonLambda apply exprI ptr
+    Data.ExpressionLambda lambda -> convertWhere argRef funcI lambda ptr
+    -- InfixR or ordinary prefix:
+    Data.ExpressionApply funcApply@(Data.Apply funcFuncI _) -> do
+      mInfixOp <- Infix.infixOp funcFuncI
+      case mInfixOp of
+        Just op -> convertApplyInfixFull funcApply op exprI apply argRef ptr
+        Nothing -> prefixApply
+    -- InfixL or ordinary prefix:
+    _ -> do
+      mInfixOp <- Infix.infixOp funcI
+      case mInfixOp of
+        Just op -> convertApplyInfixL op exprI apply argRef ptr
+        Nothing -> prefixApply
 
-applyTypeOfFunc :: Expression m -> ApplyType
-applyTypeOfFunc (ExpressionGetVariable (GetVariable _ VariableInfix)) = ApplyInfixL
-applyTypeOfFunc (ExpressionApply _ (Apply _ _ ApplyInfixL)) = ApplyInfixR
-applyTypeOfFunc _ = ApplyPrefix
+setAddArg :: Monad m => ExpressionPtr m -> ExpressionRef m -> ExpressionRef m
+setAddArg = atRActions . atAddNextArg . const . addArg
 
-makeApplyArg
+convertApplyInfixFull
   :: Monad m
-  => Bool
-  -> (Transaction ViewTag m Guid
-      -> Transaction ViewTag m Guid)
-  -> IRef Data.Expression
-  -> Data.Apply
-  -> Transaction ViewTag m (ExpressionRef m)
-makeApplyArg prefixArgNeedsParens addArgAfterArg exprI apply@(Data.Apply funcI argI) = do
-  argExpr <- convertExpression $ DataOps.applyArgRef exprI apply
-  let
-    modifyArgParens =
-      case (prefixArgNeedsParens, rExpression argExpr) of
-      (False, ExpressionApply _ (Apply _ _ ApplyPrefix)) -> id
-      _ -> const HaveParens
-  let
-    flipFuncAndArg =
-      Transaction.writeIRef exprI . Data.ExpressionApply $
-      Data.Apply argI funcI
-  return $
-    (atRExpression . atExpressionHole . atHoleMFlipFuncArg . const . Just) flipFuncAndArg .
-    (atRExpression . atEHasParens) modifyArgParens .
-    (atRActions . atAddNextArg) addArgAfterArg $
-    argExpr
-
-makeApplyFunc
-  :: Monad m
-  => (Transaction ViewTag m Guid
-      -> Transaction ViewTag m Guid)
+  => Data.Apply
+  -> Data.VariableRef
   -> IRef Data.Expression
   -> Data.Apply
   -> ExpressionRef m
-  -> Transaction ViewTag m (ApplyType, ExpressionRef m)
-makeApplyFunc addArgAfterFunc exprI apply argExpr = do
-  funcExpr <- convertExpression $ DataOps.applyFuncRef exprI apply
-  let
-    modifyFuncParens =
-      case rExpression funcExpr of
-      ExpressionApply _ (Apply _ _ ApplyPrefix) -> id
-      ExpressionApply _ (Apply _ _ ApplyInfixL) -> const DontHaveParens
-      _ -> const HaveParens
-    appType = applyTypeOfFunc $ rExpression funcExpr
-    setNextArg = atRActions . atMNextArg . const $ Just argExpr
-    setFuncArgNextArg =
-      atRExpression . atExpressionApply . atApplyArg $ setNextArg
-  return . ((,) appType) $
-    setFuncArgNextArg . setNextArg .
-    (atRExpression . atEHasParens) modifyFuncParens .
-    (atRActions . atAddNextArg) addArgAfterFunc $ funcExpr
-
-convertApplyNonLambda
-  :: Monad m
-  => Data.Apply
-  -> IRef Data.Expression
   -> Convertor m
-convertApplyNonLambda apply@(Data.Apply funcI _) exprI ptr = do
-  isInfixL <- Infix.isInfixFunc funcI
-  mInfixRFunc <- Infix.infixFuncOfRArg funcI
+convertApplyInfixFull funcApply@(Data.Apply funcFuncI funcArgI) op exprI apply@(Data.Apply funcI _) rArgRef ptr = do
+  lArgRef <- convertExpression $ DataOps.applyArgRef funcI funcApply
+  opRef <-
+    mkExpressionRef (DataOps.applyFuncRef funcI funcApply) $
+    ExpressionGetVariable op
   let
-    convertor =
-      if isInfixL
-      then convertApplyInfixL
-      else
-        case mInfixRFunc of
-        Just infixRFunc -> convertApplyInfixR infixRFunc
-        Nothing -> convertApplyPrefix
-  convertor apply exprI ptr
+    newLArgRef =
+      addDelete funcFuncI funcPtr .
+      addParensAtSection $
+      lArgRef
+    newOpRef =
+      addDelete funcArgI funcPtr .
+      setAddArg ptr $
+      opRef
+    newRArgRef =
+      addDelete funcI ptr .
+      addParensAtSection $
+      rArgRef
+  mkExpressionRef ptr . ExpressionSection DontHaveParens $
+    Section (Just newLArgRef) newOpRef (Just newRArgRef)
+  where
+    funcPtr = DataOps.applyFuncRef exprI apply
 
-convertApplyInfixR :: Monad m => IRef Data.Expression -> Data.Apply -> IRef Data.Expression -> Convertor m
-convertApplyInfixR infixRFunc apply expr ptr =
-  convertApplyI infixRFunc HaveParens False id id apply expr ptr
-
-convertApplyInfixL :: Monad m => Data.Apply -> IRef Data.Expression -> Convertor m
-convertApplyInfixL apply@(Data.Apply funcI _) expr ptr =
-  convertApplyI funcI HaveParens False (const (addArg ptr)) id apply expr ptr
-
-convertApplyPrefix :: Monad m => Data.Apply -> IRef Data.Expression -> Convertor m
-convertApplyPrefix apply@(Data.Apply funcI _) expr ptr =
-  convertApplyI funcI DontHaveParens True id (const (addArg ptr)) apply expr ptr
-
-convertApplyI
+convertApplyInfixL
   :: Monad m
-  => IRef Data.Expression -> HasParens
-  -> Bool
-  -> (Transaction ViewTag m Guid -> Transaction ViewTag m Guid)
-  -> (Transaction ViewTag m Guid -> Transaction ViewTag m Guid)
-  -> Data.Apply -> IRef Data.Expression -> Convertor m
-convertApplyI
-  whereToGoAfterDeleteArg hasParens
-  prefixArgNeedsParens addArgAfterFunc addArgAfterArg
-  apply@(Data.Apply funcI argI) exprI ptr = do
+  => Data.VariableRef
+  -> IRef Data.Expression
+  -> Data.Apply
+  -> ExpressionRef m
+  -> Convertor m
+convertApplyInfixL op exprI apply@(Data.Apply opI argI) argRef ptr = do
+  opRef <-
+    mkExpressionRef (DataOps.applyFuncRef exprI apply) $
+    ExpressionGetVariable op
   let
-    deleteNode siblingI whereToGo =
-      atRActions . atMDelete . const . Just $ do
-        _ <- DataOps.replace ptr siblingI
-        return $ IRef.guid whereToGo
-  argExpr <- makeApplyArg prefixArgNeedsParens addArgAfterArg exprI apply
-  (appType, funcExpr) <- makeApplyFunc addArgAfterFunc exprI apply argExpr
-  mkExpressionRef ptr . ExpressionApply hasParens $
-    Apply
-      (deleteNode argI argI funcExpr)
-      (deleteNode funcI whereToGoAfterDeleteArg argExpr)
-      appType
+    newOpRef =
+      addDelete argI ptr .
+      setAddArg ptr $
+      opRef
+  mkExpressionRef ptr . ExpressionSection HaveParens $
+    Section (Just newArgRef) newOpRef Nothing
+  where
+    newArgRef =
+      addDelete opI ptr .
+      addParensAtSection $
+      argRef
+
+convertApplyPrefix
+  :: Monad m
+  => IRef Data.Expression
+  -> Data.Apply
+  -> ExpressionRef m
+  -> Convertor m
+convertApplyPrefix exprI apply@(Data.Apply funcI argI) argRef ptr = do
+  funcRef <- convertExpression $ DataOps.applyFuncRef exprI apply
+  let
+    newFuncRef =
+      addDelete argI ptr .
+      setNextArg .
+      addParensAtSection .
+      (atRExpression . atEApply . atApplyArg) setNextArg $
+      funcRef
+  mkExpressionRef ptr . ExpressionApply DontHaveParens $
+    Apply newFuncRef newArgRef
+  where
+    newArgRef =
+      addDelete funcI ptr .
+      setAddArg ptr .
+      addFlipFuncArg .
+      addParens $ argRef
+    setNextArg = atRActions . atMNextArg . const . Just $ newArgRef
+    addFlipFuncArg =
+      atRExpression . atEHole . atHoleMFlipFuncArg . const . Just .
+      Transaction.writeIRef exprI . Data.ExpressionApply $
+      Data.Apply argI funcI
+    addParens = atRExpression . atEHasParens . const $ HaveParens
+
+addDelete :: Monad m => IRef Data.Expression -> ExpressionPtr m -> ExpressionRef m -> ExpressionRef m
+addDelete replacer parentPtr =
+  atRActions . atMDelete . const . Just $ do
+    Property.set parentPtr replacer
+    return $ IRef.guid replacer
 
 convertGetVariable :: Monad m => Data.VariableRef -> Convertor m
 convertGetVariable varRef ptr = do
   name <- Property.get $ Anchors.variableNameRef varRef
-  let
-    (_parens, infixType)
-      | Infix.isInfixName name = (HaveParens, VariableInfix)
-      | otherwise = (DontHaveParens, VariableNormal)
-  mkExpressionRef ptr $
-    ExpressionGetVariable {-TODO: parens-} (GetVariable varRef infixType)
+  getVarExpr <-
+    mkExpressionRef ptr $
+    ExpressionGetVariable varRef
+  if Infix.isInfixName name
+    then
+      mkExpressionRef ptr $
+      ExpressionSection HaveParens (Section Nothing getVarExpr Nothing)
+    else return getVarExpr
 
 convertHole :: Monad m => Data.HoleState -> Convertor m
 convertHole state ptr =

@@ -100,6 +100,7 @@ Executable Editor
                        Editor.CodeEdit.Ancestry,
                        Editor.CodeEdit.ExpressionEdit,
                        Editor.CodeEdit.ExpressionEdit.ApplyEdit,
+                       Editor.CodeEdit.ExpressionEdit.SectionEdit,
                        Editor.CodeEdit.ExpressionEdit.ExpressionMaker,
                        Editor.CodeEdit.ExpressionEdit.FuncEdit,
                        Editor.CodeEdit.ExpressionEdit.HoleEdit,

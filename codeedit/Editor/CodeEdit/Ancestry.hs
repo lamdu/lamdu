@@ -8,7 +8,8 @@ module Editor.CodeEdit.Ancestry(
   ParamTypeParent(..), atPtParamI, isAncestryRHS)
 where
 
-import Data.Store.IRef (IRef)
+import Data.Store.Guid(Guid)
+import Data.Store.IRef(IRef)
 import Editor.DataOps(ExpressionPtr)
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Editor.CodeEdit.Sugar as Sugar
@@ -58,12 +59,12 @@ data AncestryItem m =
 
 type ExpressionAncestry m = [AncestryItem m]
 
-getAncestryParams :: ExpressionAncestry m -> [IRef Data.Expression]
+getAncestryParams :: ExpressionAncestry m -> [Guid]
 getAncestryParams =
-  concatMap params
+  map Sugar.guid . concatMap params
   where
-    params (AncestryItemLambda (LambdaParent (Sugar.Func items _) _)) = map Sugar.fpParamI items
-    params (AncestryItemWhere (WhereParent (Sugar.Where items _) _)) = map Sugar.wiParamI items
+    params (AncestryItemLambda (LambdaParent (Sugar.Func items _) _)) = map Sugar.fpActions items
+    params (AncestryItemWhere (WhereParent (Sugar.Where items _) _)) = map Sugar.wiActions items
     params _ = []
 
 isAncestryRHS :: ExpressionAncestry m -> Bool

@@ -17,6 +17,7 @@ import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Char as Char
+import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
@@ -183,7 +184,8 @@ makeAllResults holeInfo searchTerm = do
     sortOn (resultOrdering searchTerm) $
     literalResults ++ filter goodResult varResults
   where
-    params = map Data.ParameterRef . Ancestry.getAncestryParams $ hiAncestry holeInfo
+    -- TODO: don't use unsafe
+    params = map (Data.ParameterRef . IRef.unsafeFromGuid) . Ancestry.getAncestryParams $ hiAncestry holeInfo
 
 makeSearchTermWidget
   :: MonadF m

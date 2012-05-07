@@ -13,6 +13,7 @@ import Graphics.UI.Bottle.Widget (EventHandlers)
 import qualified Data.Store.Property as Property
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
+import qualified Editor.CodeEdit.ExpressionEdit.SectionEdit as SectionEdit
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
@@ -59,10 +60,12 @@ make ancestry sExpr = do
         wrapNonHoleExpr . textParenify hasParens $ FuncEdit.make make ancestry (Sugar.rExpressionPtr sExpr) f
       Sugar.ExpressionHole hole ->
         isAHole $ HoleEdit.make ancestry hole sExpr
-      Sugar.ExpressionGetVariable (Sugar.GetVariable varRef _) ->
+      Sugar.ExpressionGetVariable varRef ->
         notAHole {- TODO: May need parenification -} $ VarEdit.make varRef
       Sugar.ExpressionApply hasParens apply ->
         wrapNonHoleExpr . textParenify hasParens $ ApplyEdit.make make ancestry (Sugar.rExpressionPtr sExpr) apply
+      Sugar.ExpressionSection hasParens section ->
+        wrapNonHoleExpr . textParenify hasParens $ SectionEdit.make make ancestry (Sugar.rExpressionPtr sExpr) section
       Sugar.ExpressionLiteralInteger integer ->
         notAHole $ LiteralEdit.makeInt exprI integer
   (holePicker, widget) <- makeEditor exprId

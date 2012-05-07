@@ -2,7 +2,8 @@ module Editor.CodeEdit.ExpressionEdit.FuncEdit(make, makeParamEdit) where
 
 import Control.Monad (liftM)
 import Data.List.Utils (pairList)
-import Data.Store.IRef (IRef)
+import Data.Monoid (mempty)
+import Data.Store.Guid (Guid)
 import Data.Vector.Vector2 (Vector2(Vector2))
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (CTransaction, TWidget, WidgetT, getP, assignCursor, atTextSizeColor)
@@ -12,25 +13,23 @@ import Editor.DataOps (ExpressionPtr)
 import Editor.MonadF (MonadF)
 import qualified Data.List as List
 import qualified Data.Store.IRef as IRef
-import qualified Data.Store.Property as Property
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.Ancestry as Ancestry
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
-import qualified Editor.Data as Data
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 makeParamNameEdit
   :: Monad m
-  => IRef Data.Expression
+  => Guid
   -> TWidget t m
-makeParamNameEdit paramI =
+makeParamNameEdit ident =
   BWidgets.wrapDelegated FocusDelegator.NotDelegating
   (BWidgets.setTextColor Config.parameterColor .
-   BWidgets.makeNameEdit "<unnamed param>" paramI) $
-  WidgetIds.paramId (IRef.guid paramI)
+   BWidgets.makeNameEdit "<unnamed param>" ident) $
+  WidgetIds.paramId ident
 
 both :: (a -> b) -> (a, a) -> (b, b)
 both f (x, y) = (f x, f y)
@@ -43,14 +42,16 @@ makeParamEdit
   -> Sugar.FuncParam m
   -> CTransaction ViewTag m (WidgetT ViewTag m, WidgetT ViewTag m)
 makeParamEdit makeExpressionEdit ancestry param = do
-  lambdaI <- getP $ Sugar.fpLambdaPtr param
-  let paramI = Sugar.fpParamI param
-  assignCursor (WidgetIds.fromIRef lambdaI) (WidgetIds.fromIRef paramI) .
+  assignCursor (WidgetIds.fromGuid ident) (WidgetIds.paramId ident) .
     (liftM . both . Widget.weakerEvents) paramDeleteEventMap $ do
     paramNameEdit <-
       liftM (Widget.align down) $
-      makeParamNameEdit (Sugar.fpParamI param)
-    let newAncestryItem = Ancestry.AncestryItemParamType $ Ancestry.ParamTypeParent paramI
+      makeParamNameEdit ident
+    let
+      newAncestryItem =
+        Ancestry.AncestryItemParamType $
+        -- TODO: don't use IRef.unsafeFromGuid
+        Ancestry.ParamTypeParent (IRef.unsafeFromGuid ident)
     paramTypeEdit <-
       liftM
       (Widget.scale Config.typeScaleFactor .
@@ -58,12 +59,13 @@ makeParamEdit makeExpressionEdit ancestry param = do
       makeExpressionEdit (newAncestryItem : ancestry) (Sugar.fpType param)
     return (paramNameEdit, paramTypeEdit)
   where
+    ident = Sugar.guid $ Sugar.fpActions param
     up = Vector2 0.5 0
     down = Vector2 0.5 1
     paramDeleteEventMap =
-      Widget.actionEventMapMovesCursor Config.delKeys "Delete parameter" $ do
-        Property.set (Sugar.fpLambdaPtr param) (Sugar.fpBodyI param)
-        return . WidgetIds.fromIRef $ Sugar.fpBodyI param
+      maybe mempty
+      (Widget.actionEventMapMovesCursor Config.delKeys "Delete parameter" . liftM WidgetIds.fromGuid)
+      (Sugar.mDelete (Sugar.fpActions param))
 
 makeParamsEdit
   :: MonadF m

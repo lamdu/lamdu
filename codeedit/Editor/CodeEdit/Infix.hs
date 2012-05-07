@@ -1,5 +1,5 @@
 {-# OPTIONS -O2 -Wall #-}
-module Editor.CodeEdit.Infix(isInfixName, isInfixVar, isInfixFunc, isApplyOfInfixOp, infixFuncOfRArg)
+module Editor.CodeEdit.Infix(isInfixName, isInfixVar, isInfixFunc, infixOp, isApplyOfInfixOp, infixFuncOfRArg)
 where
 
 import Control.Monad (liftM)
@@ -19,12 +19,17 @@ isInfixName name = all (not . Char.isAlphaNum) name
 isInfixVar :: Monad m => Data.VariableRef -> Transaction t m Bool
 isInfixVar = liftM isInfixName . Property.get . Anchors.variableNameRef
 
-isInfixFunc :: Monad m => IRef Data.Expression -> Transaction t m Bool
-isInfixFunc funcI = do
+infixOp :: Monad m => IRef Data.Expression -> Transaction t m (Maybe Data.VariableRef)
+infixOp funcI = do
   expr <- Transaction.readIRef funcI
   case expr of
-    Data.ExpressionGetVariable var -> isInfixVar var
-    _ -> return False
+    Data.ExpressionGetVariable var -> do
+      isInfix <- isInfixVar var
+      return $ if isInfix then Just var else Nothing
+    _ -> return Nothing
+
+isInfixFunc :: Monad m => IRef Data.Expression -> Transaction t m Bool
+isInfixFunc = liftM isJust . infixOp
 
 infixFuncOfRArg
   :: Monad m

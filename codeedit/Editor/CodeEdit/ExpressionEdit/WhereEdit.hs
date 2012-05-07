@@ -3,11 +3,12 @@ module Editor.CodeEdit.ExpressionEdit.WhereEdit(make, makeWithBody) where
 
 import Control.Arrow (second)
 import Control.Monad (liftM)
+import Data.Monoid (mempty)
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (TWidget, getP, atTextSizeColor, assignCursor)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
-import qualified Data.Store.Property as Property
+import qualified Data.Store.IRef as IRef
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.Ancestry as Ancestry
 import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
@@ -38,16 +39,13 @@ make makeExpressionEdit ancestry where_@(Sugar.Where items _) myId = do
     makeWhereItemEdits item =
       (liftM . map . second) (Widget.weakerEvents (whereItemDeleteEventMap item)) $
       DefinitionEdit.makeParts makeExpressionEdit
-      (witemAncestry item) (Sugar.wiParamI item) (Sugar.wiValue item)
+      (witemAncestry item) (Sugar.guid (Sugar.wiActions item)) (Sugar.wiValue item)
     makeAncestry role = Ancestry.AncestryItemWhere (Ancestry.WhereParent where_ role) : ancestry
-    witemAncestry = makeAncestry . Ancestry.WhereDef . Sugar.wiParamI
+    witemAncestry = makeAncestry . Ancestry.WhereDef . IRef.unsafeFromGuid . Sugar.guid . Sugar.wiActions
     whereItemDeleteEventMap whereItem =
-      Widget.actionEventMapMovesCursor Config.delKeys "Delete variable" .
-      liftM WidgetIds.fromIRef $ do
-        Property.set
-          (Sugar.wiApplyPtr whereItem)
-          (Sugar.wiLambdaBodyI whereItem)
-        return $ Sugar.wiLambdaBodyI whereItem
+      maybe mempty
+      (Widget.actionEventMapMovesCursor Config.delKeys "Delete variable" . liftM WidgetIds.fromGuid)
+      (Sugar.mDelete (Sugar.wiActions whereItem))
 
 makeWithBody
   :: MonadF m

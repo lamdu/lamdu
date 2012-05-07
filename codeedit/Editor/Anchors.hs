@@ -149,7 +149,7 @@ newBuiltin fullyQualifiedName = do
     Data.biModule = init path,
     Data.biName = name
     }
-  Property.set (aNameRef builtinIRef) name
+  Property.set (aNameRef (IRef.guid builtinIRef)) name
   return $ Data.BuiltinRef builtinIRef
   where
     name = last path
@@ -219,8 +219,8 @@ initDB store =
       ,"Prelude.if"
       ]
 
-aDataRef :: (Binary b, Monad m) => SBS.ByteString -> b -> IRef a -> Property (Transaction t m) b
-aDataRef str def = Property.pureCompose (fromMaybe def) Just . combineGuid . IRef.guid
+aDataRef :: (Binary b, Monad m) => SBS.ByteString -> b -> Guid -> Property (Transaction t m) b
+aDataRef str def = Property.pureCompose (fromMaybe def) Just . combineGuid
   where
     combineGuid guid =
       Property getter setter
@@ -231,11 +231,11 @@ aDataRef str def = Property.pureCompose (fromMaybe def) Just . combineGuid . IRe
         aGuid = Guid.combine guid $ Guid.make str
 
 -- Get an associated name from the given IRef
-aNameRef :: Monad m => IRef a -> Property (Transaction t m) String
+aNameRef :: Monad m => Guid -> Property (Transaction t m) String
 aNameRef = aDataRef "Name" ""
 
 variableNameRef :: Monad m => Data.VariableRef -> Property (Transaction t m) String
-variableNameRef = Data.onVariableIRef aNameRef
+variableNameRef = Data.onVariableIRef (aNameRef . IRef.guid)
 
 newPane :: Monad m => IRef Data.Definition -> Transaction ViewTag m ()
 newPane defI = do

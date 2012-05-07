@@ -19,7 +19,7 @@ import Control.Monad (when, liftM)
 import Data.ByteString.Char8 (pack)
 import Data.List (findIndex, intersperse)
 import Data.Maybe (isJust)
-import Data.Store.IRef (IRef)
+import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.CTransaction (WidgetT, TWidget, CTransaction, readTextStyle, readCursor, getP, assignCursor, atTextStyle)
@@ -154,9 +154,9 @@ makeWordEdit = (fmap . fmap . liftM . Widget.atEventMap) removeWordSeparators ma
     newlineKey = EventMap.KeyEventType EventMap.noMods EventMap.KeyEnter
     newwordKey = EventMap.KeyEventType EventMap.noMods EventMap.KeySpace
 
-makeNameEdit :: Monad m => String -> IRef a -> Widget.Id -> TWidget t m
-makeNameEdit emptyStr iref =
-  (atTextStyle . TextEdit.atSEmptyString . const) emptyStr . makeWordEdit (Anchors.aNameRef iref)
+makeNameEdit :: Monad m => String -> Guid -> Widget.Id -> TWidget t m
+makeNameEdit emptyStr ident =
+  (atTextStyle . TextEdit.atSEmptyString . const) emptyStr . makeWordEdit (Anchors.aNameRef ident)
 
 boxAlignK :: Vector2 Widget.R -> Box.Orientation -> [(key, Widget f)] -> KBox key f
 boxAlignK align orientation =
