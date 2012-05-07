@@ -43,7 +43,10 @@ constructorAtFuncs :: (Name -> Name) -> Name -> [TyVarBndr] -> [Con] -> [Dec]
 constructorAtFuncs makeAtName typeName typeVars ctors =
     concatMap (fieldAtFunc makeAtName typeName typeVars isFreeVar) fields
     where
-        fields = (map . second) checkAllCtors . groups $ concatMap constructorFields ctors
+        fields =
+            (map . second) checkAllCtors . groups .
+            filter (not . ("_" `List.isPrefixOf`) . nameBase . fst . fst) $
+            concatMap constructorFields ctors
         checkAllCtors xs
             | length xs == length ctors = Nothing
             | otherwise = Just xs
