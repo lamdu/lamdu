@@ -210,17 +210,15 @@ makeApplyArg
   -> Transaction ViewTag m (ExpressionRef m)
 makeApplyArg isInfix addArgHere exprI apply@(Data.Apply funcI argI) = do
   argExpr <- convertExpression $ DataOps.applyArgRef exprI apply
-  isArgFullyAppliedInfix <-
-    case rExpression argExpr of
-    ExpressionApply (Apply argFunc _ _) -> Infix.isApplyOfInfixOp =<< Property.get (rExpressionPtr argFunc)
-    _ -> return False
   let
-    modifyArgParens
-      | isInfix && not isArgFullyAppliedInfix =
-        case rExpression argExpr of
-        ExpressionApply{} -> id
-        _ -> const . exprHasParens $ rExpression argExpr
-      | otherwise = const . exprHasParens $ rExpression argExpr
+    setHasParens = const . exprHasParens $ rExpression argExpr
+    modifyArgParens =
+      case (isInfix, rExpression argExpr) of
+      (False, _) -> setHasParens
+      (True, ExpressionApply (Apply _ _ ApplyInfixR)) -> setHasParens
+      (True, ExpressionApply _) -> id
+      (True, _) -> setHasParens
+  let
     flipFuncAndArg =
       Transaction.writeIRef exprI . Data.ExpressionApply $
       Data.Apply argI funcI
