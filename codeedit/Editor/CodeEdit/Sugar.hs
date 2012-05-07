@@ -11,11 +11,12 @@ module Editor.CodeEdit.Sugar
 
 import Control.Monad(liftM)
 import Data.Store.Guid(Guid)
-import Data.Store.IRef(IRef, guid)
+import Data.Store.IRef(IRef)
 import Data.Store.Transaction(Transaction)
 import Editor.Anchors(ViewTag)
 import Editor.DataOps(ExpressionPtr)
 import qualified Data.AtFieldTH as AtFieldTH
+import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
@@ -111,7 +112,7 @@ AtFieldTH.make ''Expression
 type Convertor m = ExpressionPtr m -> Transaction ViewTag m (ExpressionRef m)
 
 addArg :: Monad m => ExpressionPtr m -> Transaction ViewTag m Guid
-addArg = liftM guid . DataOps.callWithArg
+addArg = liftM IRef.guid . DataOps.callWithArg
 
 mkExpressionRef :: Monad m => ExpressionPtr m -> Expression m -> ExpressionRef m
 mkExpressionRef ptr expr =
@@ -121,9 +122,9 @@ mkExpressionRef ptr expr =
   , rActions =
       ExpressionActions
       { addNextArg = addArg ptr
-      , lambdaWrap = liftM guid $ DataOps.lambdaWrap ptr
+      , lambdaWrap = liftM IRef.guid $ DataOps.lambdaWrap ptr
         -- Hole will remove mReplace because no point replacing hole with hole.
-      , mReplace = Just . liftM guid $ DataOps.replaceWithHole ptr
+      , mReplace = Just . liftM IRef.guid $ DataOps.replaceWithHole ptr
         -- mDelete gets overridden by parent if it is an apply.
       , mDelete = Nothing
       , mNextArg = Nothing
@@ -290,7 +291,7 @@ convertApplyI
     deleteNode siblingI whereToGo =
       atRActions . atMDelete . const . Just $ do
         _ <- DataOps.replace ptr siblingI
-        return $ guid whereToGo
+        return $ IRef.guid whereToGo
   argExpr <- makeApplyArg prefixArgNeedsParens addArgAfterArg exprI apply
   (appType, funcExpr) <- makeApplyFunc addArgAfterFunc exprI apply argExpr
   return . mkExpressionRef ptr . ExpressionApply hasParens $
