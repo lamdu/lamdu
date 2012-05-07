@@ -91,7 +91,7 @@ makeParts makeExpressionEdit ancestry definitionI exprRef = do
     sExpr = Sugar.rExpression exprRef
     func =
       case sExpr of
-      Sugar.ExpressionFunc x -> x
+      Sugar.ExpressionFunc _ x -> x
       _ -> Sugar.Func [] exprRef
   lhsEdit <- makeLHSEdit makeExpressionEdit ancestry definitionI $ Sugar.fParams func
   equals <- BWidgets.makeLabel "=" (WidgetIds.fromIRef definitionI)

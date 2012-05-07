@@ -37,9 +37,9 @@ make :: MonadF m => ExpressionEditMaker m
 make ancestry sExpr = do
   exprI <- getP $ Sugar.rExpressionPtr sExpr
   let
-    parenify mkParens mkWidget myId =
+    parenify mkParens hasParens mkWidget myId =
       mkWidget myId >>=
-      case Sugar.rHasParens sExpr of
+      case hasParens of
       Sugar.HaveParens -> mkParens myId
       Sugar.DontHaveParens -> return
     isAHole = (fmap . liftM . first) IsAHole
@@ -52,20 +52,19 @@ make ancestry sExpr = do
     squareParenify = parenify Parens.addSquareParens
     makeEditor =
       case Sugar.rExpression sExpr of
-      Sugar.ExpressionWhere w ->
-        wrapNonHoleExpr . squareParenify $
+      Sugar.ExpressionWhere hasParens w ->
+        wrapNonHoleExpr . squareParenify hasParens $
           WhereEdit.makeWithBody make ancestry w
-      Sugar.ExpressionFunc f ->
-        wrapNonHoleExpr . textParenify $ FuncEdit.make make ancestry (Sugar.rExpressionPtr sExpr) f
+      Sugar.ExpressionFunc hasParens f ->
+        wrapNonHoleExpr . textParenify hasParens $ FuncEdit.make make ancestry (Sugar.rExpressionPtr sExpr) f
       Sugar.ExpressionHole hole ->
-        isAHole {- TODO: Don't ignore parens? -} $
-        HoleEdit.make ancestry hole sExpr
+        isAHole $ HoleEdit.make ancestry hole sExpr
       Sugar.ExpressionGetVariable (Sugar.GetVariable varRef _) ->
-        notAHole . textParenify $ VarEdit.make varRef
-      Sugar.ExpressionApply apply ->
-        wrapNonHoleExpr . textParenify $ ApplyEdit.make make ancestry (Sugar.rExpressionPtr sExpr) apply
+        notAHole {- TODO: May need parenification -} $ VarEdit.make varRef
+      Sugar.ExpressionApply hasParens apply ->
+        wrapNonHoleExpr . textParenify hasParens $ ApplyEdit.make make ancestry (Sugar.rExpressionPtr sExpr) apply
       Sugar.ExpressionLiteralInteger integer ->
-        notAHole . textParenify $ LiteralEdit.makeInt exprI integer
+        notAHole $ LiteralEdit.makeInt exprI integer
   (holePicker, widget) <- makeEditor exprId
   eventMap <- expressionEventMap sExpr holePicker
   return $ Widget.weakerEvents eventMap widget
