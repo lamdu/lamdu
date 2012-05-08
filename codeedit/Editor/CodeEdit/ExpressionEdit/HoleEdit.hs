@@ -16,7 +16,6 @@ import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Char as Char
-import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
@@ -44,6 +43,7 @@ data HoleInfo m = HoleInfo
   { hiHoleId :: Widget.Id
   , hiSearchTerm :: Property (Transaction ViewTag m) String
   , hiHole :: Sugar.Hole m
+  , hiGuid :: Guid
   }
 
 resultPickEventMap
@@ -116,11 +116,11 @@ pickResult
   => HoleInfo m
   -> Data.Expression -> Transaction ViewTag m ()
   -> ResultPicker m
-pickResult _holeInfo newExpr flipAct = do
-  Transaction.writeIRef (error "TODO Result pick") newExpr
+pickResult holeInfo newExpr flipAct = do
+  Sugar.holePickResult (hiHole holeInfo) newExpr
   flipAct
   return Widget.EventResult {
-    Widget.eCursor = Just $ error "TODO: Cursor pos",
+    Widget.eCursor = Just . WidgetIds.fromGuid $ hiGuid holeInfo,
     Widget.eAnimIdMapping = id -- TODO: Need to fix the parens id
     }
 
@@ -257,6 +257,7 @@ makeH hole guid myId = do
       { hiHoleId = myId
       , hiSearchTerm = Anchors.aDataRef "searchTerm" "" guid
       , hiHole = hole
+      , hiGuid = guid
       }
   searchText <- getP $ hiSearchTerm holeInfo
   let
