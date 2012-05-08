@@ -80,8 +80,11 @@ data Section m = Section
   , sectionRArg :: Maybe (ExpressionRef m)
   }
 
+type Scope = [Data.VariableRef]
+
 data Hole m = Hole
   { holeState :: Data.HoleState
+  , holeScope :: Scope
   , holeMFlipFuncArg :: Maybe (Transaction ViewTag m ())
   }
 
@@ -137,14 +140,14 @@ mkExpressionRef ptr expr = do
     , rActions = makeActions (IRef.guid iref) ptr
     }
 
-convertLambda :: Monad m => Data.Lambda -> Convertor m
-convertLambda lambda ptr = do
+convertLambda :: Monad m => Data.Lambda -> Scope -> Convertor m
+convertLambda lambda scope ptr = do
   exprI <- Property.get ptr
   let
     typePtr = DataOps.lambdaParamTypeRef exprI lambda
     bodyPtr = DataOps.lambdaBodyRef exprI lambda
-  typeExpr <- convertExpression typePtr
-  sBody <- convertExpression bodyPtr
+  typeExpr <- convertNode scope typePtr
+  sBody <- convertNode (Data.ParameterRef exprI : scope) bodyPtr
   bodyI <- Property.get bodyPtr
   let
     deleteArg = do
@@ -167,8 +170,9 @@ convertWhere
   => ExpressionRef m
   -> IRef Data.Expression
   -> Data.Lambda
+  -> Scope
   -> Convertor m
-convertWhere valueRef funcI lambda@(Data.Lambda _ bodyI) ptr = do
+convertWhere valueRef funcI lambda@(Data.Lambda _ bodyI) scope ptr = do
   let
     bodyPtr = DataOps.lambdaBodyRef funcI lambda
     deleteItem = do
@@ -180,7 +184,7 @@ convertWhere valueRef funcI lambda@(Data.Lambda _ bodyI) ptr = do
           makeActions (IRef.guid funcI) ptr
       , wiValue = valueRef
       }
-  sBody <- convertExpression bodyPtr
+  sBody <- convertNode (Data.ParameterRef funcI : scope) bodyPtr
   mkExpressionRef ptr . ExpressionWhere DontHaveParens . atWWheres (item :) $
     case rExpression sBody of
       ExpressionWhere _ x -> x
@@ -193,19 +197,19 @@ addParensAtSection =
     f (ExpressionSection _ section) = ExpressionSection HaveParens section
     f x = x
 
-convertApply :: Monad m => Data.Apply -> Convertor m
-convertApply apply@(Data.Apply funcI _) ptr = do
+convertApply :: Monad m => Data.Apply -> Scope -> Convertor m
+convertApply apply@(Data.Apply funcI _) scope ptr = do
   exprI <- Property.get ptr
   func <- Transaction.readIRef funcI
-  argRef <- convertExpression $ DataOps.applyArgRef exprI apply
-  let prefixApply = convertApplyPrefix exprI apply argRef ptr
+  argRef <- convertNode scope $ DataOps.applyArgRef exprI apply
+  let prefixApply = convertApplyPrefix exprI apply argRef scope ptr
   case func of
-    Data.ExpressionLambda lambda -> convertWhere argRef funcI lambda ptr
+    Data.ExpressionLambda lambda -> convertWhere argRef funcI lambda scope ptr
     -- InfixR or ordinary prefix:
     Data.ExpressionApply funcApply@(Data.Apply funcFuncI _) -> do
       mInfixOp <- Infix.infixOp funcFuncI
       case mInfixOp of
-        Just op -> convertApplyInfixFull funcApply op exprI apply argRef ptr
+        Just op -> convertApplyInfixFull funcApply op exprI apply argRef scope ptr
         Nothing -> prefixApply
     -- InfixL or ordinary prefix:
     _ -> do
@@ -224,9 +228,10 @@ convertApplyInfixFull
   -> IRef Data.Expression
   -> Data.Apply
   -> ExpressionRef m
+  -> Scope
   -> Convertor m
-convertApplyInfixFull funcApply@(Data.Apply funcFuncI funcArgI) op exprI apply@(Data.Apply funcI _) rArgRef ptr = do
-  lArgRef <- convertExpression $ DataOps.applyArgRef funcI funcApply
+convertApplyInfixFull funcApply@(Data.Apply funcFuncI funcArgI) op exprI apply@(Data.Apply funcI _) rArgRef scope ptr = do
+  lArgRef <- convertNode scope $ DataOps.applyArgRef funcI funcApply
   opRef <-
     mkExpressionRef (DataOps.applyFuncRef funcI funcApply) $
     ExpressionGetVariable op
@@ -277,9 +282,10 @@ convertApplyPrefix
   => IRef Data.Expression
   -> Data.Apply
   -> ExpressionRef m
+  -> Scope
   -> Convertor m
-convertApplyPrefix exprI apply@(Data.Apply funcI argI) argRef ptr = do
-  funcRef <- convertExpression $ DataOps.applyFuncRef exprI apply
+convertApplyPrefix exprI apply@(Data.Apply funcI argI) argRef scope ptr = do
+  funcRef <- convertNode scope $ DataOps.applyFuncRef exprI apply
   let
     newFuncRef =
       addDelete argI ptr .
@@ -320,10 +326,10 @@ convertGetVariable varRef ptr = do
       ExpressionSection HaveParens (Section Nothing getVarExpr Nothing)
     else return getVarExpr
 
-convertHole :: Monad m => Data.HoleState -> Convertor m
-convertHole state ptr =
+convertHole :: Monad m => Data.HoleState -> Scope -> Convertor m
+convertHole state scope ptr =
   (liftM . atRActions . atMReplace . const) Nothing .
-  mkExpressionRef ptr . ExpressionHole $ Hole state Nothing
+  mkExpressionRef ptr . ExpressionHole $ Hole state scope Nothing
 
 convertLiteralInteger :: Monad m => IRef Data.Expression -> Integer -> Convertor m
 convertLiteralInteger iref i ptr =
@@ -333,16 +339,19 @@ convertLiteralInteger iref i ptr =
   , liSetValue = Transaction.writeIRef iref . Data.ExpressionLiteralInteger
   }
 
-convertExpression :: Monad m => Convertor m
-convertExpression ptr = do
+convertNode :: Monad m => Scope -> Convertor m
+convertNode scope ptr = do
   exprI <- Property.get ptr
   expr <- Transaction.readIRef exprI
   let
     conv =
       case expr of
-      Data.ExpressionLambda x -> convertLambda x
-      Data.ExpressionApply x -> convertApply x
+      Data.ExpressionLambda x -> convertLambda x scope
+      Data.ExpressionApply x -> convertApply x scope
       Data.ExpressionGetVariable x -> convertGetVariable x
-      Data.ExpressionHole x -> convertHole x
+      Data.ExpressionHole x -> convertHole x scope
       Data.ExpressionLiteralInteger x -> convertLiteralInteger exprI x
   conv ptr
+
+convertExpression :: Monad m => Convertor m
+convertExpression = convertNode []

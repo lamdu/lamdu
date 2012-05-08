@@ -152,7 +152,7 @@ makeAllResults holeInfo searchTerm = do
   globals <- getP Anchors.globals
   varResults <- liftM concat .
     mapM (makeResultVariables holeInfo) $
-    sort params ++ sort globals
+    params ++ sort globals
   let
     literalResults = makeLiteralResults holeInfo searchTerm
     goodResult = (searchTerm `isInfixOf`) . resultName
@@ -160,7 +160,7 @@ makeAllResults holeInfo searchTerm = do
     sortOn (resultOrdering searchTerm) $
     literalResults ++ filter goodResult varResults
   where
-    params = [] -- TODO: params
+    params = Sugar.holeScope $ hiHole holeInfo
 
 makeSearchTermWidget
   :: MonadF m
