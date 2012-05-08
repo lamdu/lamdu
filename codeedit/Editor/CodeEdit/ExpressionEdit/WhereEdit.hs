@@ -8,9 +8,7 @@ import Editor.Anchors (ViewTag)
 import Editor.CTransaction (TWidget, getP, atTextSizeColor, assignCursor)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
-import qualified Data.Store.IRef as IRef
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.CodeEdit.Ancestry as Ancestry
 import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
@@ -21,10 +19,9 @@ import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 make
   :: MonadF m
   => ExpressionEditMaker m
-  -> Ancestry.ExpressionAncestry m
   -> Sugar.Where m
   -> Widget.Id -> TWidget ViewTag m
-make makeExpressionEdit ancestry where_@(Sugar.Where items _) myId = do
+make makeExpressionEdit (Sugar.Where items _) myId = do
     whereLabel <-
       atTextSizeColor Config.whereTextSize Config.whereColor $
       BWidgets.makeLabel "where" myId
@@ -39,9 +36,7 @@ make makeExpressionEdit ancestry where_@(Sugar.Where items _) myId = do
     makeWhereItemEdits item =
       (liftM . map . second) (Widget.weakerEvents (whereItemDeleteEventMap item)) $
       DefinitionEdit.makeParts makeExpressionEdit
-      (witemAncestry item) (Sugar.guid (Sugar.wiActions item)) (Sugar.wiValue item)
-    makeAncestry role = Ancestry.AncestryItemWhere (Ancestry.WhereParent where_ role) : ancestry
-    witemAncestry = makeAncestry . Ancestry.WhereDef . IRef.unsafeFromGuid . Sugar.guid . Sugar.wiActions
+      (Sugar.guid (Sugar.wiActions item)) (Sugar.wiValue item)
     whereItemDeleteEventMap whereItem =
       maybe mempty
       (Widget.actionEventMapMovesCursor Config.delKeys "Delete variable" . liftM WidgetIds.fromGuid)
@@ -50,18 +45,14 @@ make makeExpressionEdit ancestry where_@(Sugar.Where items _) myId = do
 makeWithBody
   :: MonadF m
   => ExpressionEditMaker m
-  -> Ancestry.ExpressionAncestry m
   -> Sugar.Where m
   -> Widget.Id -> TWidget ViewTag m
-makeWithBody makeExpressionEdit ancestry where_@(Sugar.Where _ body) myId = do
+makeWithBody makeExpressionEdit where_@(Sugar.Where _ body) myId = do
   bodyI <- getP $ Sugar.rExpressionPtr body
-  whereEdit <- make makeExpressionEdit ancestry where_ myId
+  whereEdit <- make makeExpressionEdit where_ myId
   assignCursor myId (WidgetIds.fromIRef bodyI) $ do
-    bodyEdit <- makeExpressionEdit bodyAncestry body
+    bodyEdit <- makeExpressionEdit body
     return . BWidgets.vbox $
       [ bodyEdit
       , whereEdit
       ]
-  where
-    makeAncestry role = Ancestry.AncestryItemWhere (Ancestry.WhereParent where_ role) : ancestry
-    bodyAncestry = makeAncestry Ancestry.WhereBody

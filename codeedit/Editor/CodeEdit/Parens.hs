@@ -3,23 +3,17 @@
 module Editor.CodeEdit.Parens
   ( addTextParens
   , addSquareParens
-  , addHighlightedTextParens
-  , makeParensId)
+  , addHighlightedTextParens)
 where
 
 import Control.Monad (void)
-import Data.ByteString.Char8 (pack)
 import Data.Monoid (Monoid(..))
-import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (TWidget, WidgetT, subCursor)
 import Editor.MonadF (MonadF)
 import Editor.WidgetIds (parensPrefix)
-import qualified Data.Store.Property as Property
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.CodeEdit.Ancestry as A
-import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
@@ -60,24 +54,6 @@ addSquareParens parensId =
   Widget.atSizeDependentWidgetData (Widget.scaleSizeDependentWidgetData Config.squareParensScaleFactor)
   where
     addSquareFrame size = mappend $ squareFrame (Widget.toAnimId parensId) size
-
-makeParensId :: Monad m => A.ExpressionAncestry m -> Transaction ViewTag m Widget.Id
-makeParensId (A.AncestryItemApply (A.ApplyParent role _ _ parentPtr) : _) = do
-  parentI <- Property.get parentPtr
-  return $
-    Widget.joinId (WidgetIds.fromIRef parentI)
-    [pack $ show role]
-makeParensId (A.AncestryItemLambda (A.LambdaParent _ parentI) : _) =
-  return $ WidgetIds.fromIRef parentI
-makeParensId (A.AncestryItemWhere (A.WhereParent (Sugar.Where _ body) role) : _) = do
-  bodyI <- Property.get $ Sugar.rExpressionPtr body
-  return $
-    Widget.joinId (WidgetIds.fromIRef bodyI)
-    [pack $ show role]
-makeParensId (A.AncestryItemParamType (A.ParamTypeParent parentI) : _) =
-  return $ WidgetIds.fromIRef parentI
-makeParensId [] =
-  return $ Widget.Id ["root parens"]
 
 highlightExpression :: Widget.Widget f -> Widget.Widget f
 highlightExpression =

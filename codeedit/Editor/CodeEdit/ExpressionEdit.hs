@@ -35,7 +35,7 @@ foldHolePicker notHole _isHole NotAHole = notHole
 foldHolePicker _notHole isHole (IsAHole x) = isHole x
 
 make :: MonadF m => ExpressionEditMaker m
-make ancestry sExpr = do
+make sExpr = do
   exprI <- getP $ Sugar.rExpressionPtr sExpr
   let
     parenify mkParens hasParens mkWidget myId =
@@ -55,17 +55,17 @@ make ancestry sExpr = do
       case Sugar.rExpression sExpr of
       Sugar.ExpressionWhere hasParens w ->
         wrapNonHoleExpr . squareParenify hasParens $
-          WhereEdit.makeWithBody make ancestry w
+          WhereEdit.makeWithBody make w
       Sugar.ExpressionFunc hasParens f ->
-        wrapNonHoleExpr . textParenify hasParens $ FuncEdit.make make ancestry (Sugar.rExpressionPtr sExpr) f
+        wrapNonHoleExpr . textParenify hasParens $ FuncEdit.make make f
       Sugar.ExpressionHole hole ->
-        isAHole $ HoleEdit.make ancestry hole sExpr
+        isAHole $ HoleEdit.make hole sExpr
       Sugar.ExpressionGetVariable varRef ->
         notAHole {- TODO: May need parenification -} $ VarEdit.make varRef
       Sugar.ExpressionApply hasParens apply ->
-        wrapNonHoleExpr . textParenify hasParens $ ApplyEdit.make make ancestry (Sugar.rExpressionPtr sExpr) apply
+        wrapNonHoleExpr . textParenify hasParens $ ApplyEdit.make make apply
       Sugar.ExpressionSection hasParens section ->
-        wrapNonHoleExpr . textParenify hasParens $ SectionEdit.make make ancestry (Sugar.rExpressionPtr sExpr) section
+        wrapNonHoleExpr . textParenify hasParens $ SectionEdit.make make section
       Sugar.ExpressionLiteralInteger integer ->
         notAHole $ LiteralEdit.makeInt exprI integer
   (holePicker, widget) <- makeEditor exprId

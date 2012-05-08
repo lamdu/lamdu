@@ -9,7 +9,7 @@ import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, TWidget, transaction, getP)
+import Editor.CTransaction (CTransaction, TWidget, transaction)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -19,7 +19,6 @@ import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.CodeEdit.Ancestry as Ancestry
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
@@ -44,14 +43,13 @@ makeNameEdit ident =
 makeLHSEdit
   :: MonadF m
   => ExpressionEditMaker m
-  -> Ancestry.ExpressionAncestry m
   -> Guid
   -> [Sugar.FuncParam m]
   -> TWidget ViewTag m
-makeLHSEdit makeExpressionEdit ancestry ident params = do
+makeLHSEdit makeExpressionEdit ident params = do
   nameEdit <- makeNameEdit ident
   liftM (BWidgets.gridHSpaced . List.transpose . map pairList . ((nameEdit, nameTypeFiller) :)) .
-    mapM (FuncEdit.makeParamEdit makeExpressionEdit ancestry) $ params
+    mapM (FuncEdit.makeParamEdit makeExpressionEdit) $ params
   where
     -- no type for def name (yet):
     nameTypeFiller = BWidgets.spaceWidget
@@ -83,24 +81,19 @@ addJumps defKBoxElements =
 makeParts
   :: MonadF m
   => ExpressionEditMaker m
-  -> Ancestry.ExpressionAncestry m
   -> Guid
   -> Sugar.ExpressionRef m
   -> CTransaction ViewTag m [(Maybe Side, Widget (Transaction ViewTag m))]
-makeParts makeExpressionEdit ancestry ident exprRef = do
-  exprI <- getP $ Sugar.rExpressionPtr exprRef
+makeParts makeExpressionEdit ident exprRef = do
   let
     sExpr = Sugar.rExpression exprRef
     func =
       case sExpr of
       Sugar.ExpressionFunc _ x -> x
       _ -> Sugar.Func [] exprRef
-  lhsEdit <- makeLHSEdit makeExpressionEdit ancestry ident $ Sugar.fParams func
+  lhsEdit <- makeLHSEdit makeExpressionEdit ident $ Sugar.fParams func
   equals <- BWidgets.makeLabel "=" (WidgetIds.fromGuid ident)
-  rhsEdit <-
-    makeExpressionEdit
-    (Ancestry.AncestryItemLambda (Ancestry.LambdaParent func exprI) : ancestry)
-    (Sugar.fBody func)
+  rhsEdit <- makeExpressionEdit $ Sugar.fBody func
   return $
     zipWith (second . Widget.align . (`Vector2` 0.5)) [1, 0.5, 0.5, 0.5, 0]
     [(Just LHS, lhsEdit)
@@ -121,7 +114,7 @@ make makeExpressionEdit definitionI = do
     ( Box.toWidget . (Box.atBoxContent . fmap) addJumps .
       BWidgets.hboxK
     ) $
-    makeParts makeExpressionEdit [] (IRef.guid definitionI) sExpr
+    makeParts makeExpressionEdit (IRef.guid definitionI) sExpr
   where
     exprPtr =
       Property.composeLabel Data.defBody Data.atDefBody

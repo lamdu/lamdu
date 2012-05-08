@@ -97,7 +97,6 @@ Executable Editor
                        Editor.BranchGUI,
                        Editor.CTransaction,
                        Editor.CodeEdit,
-                       Editor.CodeEdit.Ancestry,
                        Editor.CodeEdit.ExpressionEdit,
                        Editor.CodeEdit.ExpressionEdit.ApplyEdit,
                        Editor.CodeEdit.ExpressionEdit.SectionEdit,

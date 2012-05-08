@@ -16,11 +16,9 @@ import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Char as Char
-import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.CodeEdit.Ancestry as Ancestry
 import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
 import qualified Editor.CodeEdit.Infix as Infix
@@ -46,7 +44,6 @@ data Result m = Result {
 data HoleInfo m = HoleInfo
   { hiExpressionI :: IRef Data.Expression
   , hiHoleId :: Widget.Id
-  , hiAncestry :: Ancestry.ExpressionAncestry m
   , hiHole :: Sugar.Hole m
   }
 
@@ -96,7 +93,7 @@ makeResultVariables holeInfo varRef = do
     result name flipAct wid addParens =
       Result
       { resultName = name
-      , resultPick = pickResult holeInfo (Data.ExpressionGetVariable varRef) flipAct resultId
+      , resultPick = pickResult holeInfo (Data.ExpressionGetVariable varRef) flipAct
       , resultMakeWidget = addParens =<< VarEdit.makeView varRef wid
       }
 
@@ -116,25 +113,24 @@ holeResultAnimMappingNoParens holeInfo resultId =
     myId = Widget.toAnimId $ hiHoleId holeInfo
     expressionId = WidgetIds.fromIRef $ hiExpressionI holeInfo
 
-holeResultAnimMapping :: HoleInfo m -> Widget.Id -> Widget.Id -> AnimId -> AnimId
-holeResultAnimMapping holeInfo resultId parensId =
-  renamePrefix (Widget.toAnimId (WidgetIds.parensPrefix expressionId)) (Widget.toAnimId (WidgetIds.parensPrefix parensId)) .
-  holeResultAnimMappingNoParens holeInfo resultId
-  where
-    expressionId = WidgetIds.fromIRef $ hiExpressionI holeInfo
+-- TODO: Resurrect?
+-- holeResultAnimMapping :: HoleInfo m -> Widget.Id -> Widget.Id -> AnimId -> AnimId
+-- holeResultAnimMapping holeInfo resultId parensId =
+--   renamePrefix (Widget.toAnimId (WidgetIds.parensPrefix expressionId)) (Widget.toAnimId (WidgetIds.parensPrefix parensId)) .
+--   holeResultAnimMappingNoParens holeInfo resultId
+--   where
+--     expressionId = WidgetIds.fromIRef $ hiExpressionI holeInfo
 
 pickResult
   :: MonadF m => HoleInfo m
-  -> Data.Expression -> Transaction ViewTag m () -> Widget.Id
+  -> Data.Expression -> Transaction ViewTag m ()
   -> ResultPicker m
-pickResult holeInfo newExpr flipAct resultId = do
+pickResult holeInfo newExpr flipAct = do
   Transaction.writeIRef (hiExpressionI holeInfo) newExpr
   flipAct
-  parensId <- Parens.makeParensId $ hiAncestry holeInfo
   return Widget.EventResult {
     Widget.eCursor = Just . WidgetIds.fromIRef $ hiExpressionI holeInfo,
-    Widget.eAnimIdMapping =
-      holeResultAnimMapping holeInfo resultId parensId
+    Widget.eAnimIdMapping = id -- TODO: Need to fix the parens id
     }
 
 resultOrdering :: String -> Result m -> (Bool, Bool)
@@ -153,7 +149,7 @@ makeLiteralResults holeInfo searchTerm =
     makeLiteralIntResult integer =
       Result
       { resultName = show integer
-      , resultPick = pickResult holeInfo (Data.ExpressionLiteralInteger integer) (return ()) literalIntId
+      , resultPick = pickResult holeInfo (Data.ExpressionLiteralInteger integer) (return ())
       , resultMakeWidget =
           BWidgets.makeFocusableView literalIntId =<<
           LiteralEdit.makeIntView literalIntId integer
@@ -175,8 +171,7 @@ makeAllResults holeInfo searchTerm = do
     sortOn (resultOrdering searchTerm) $
     literalResults ++ filter goodResult varResults
   where
-    -- TODO: don't use unsafe
-    params = map (Data.ParameterRef . IRef.unsafeFromGuid) . Ancestry.getAncestryParams $ hiAncestry holeInfo
+    params = [] -- TODO: params
 
 makeSearchTermWidget
   :: MonadF m
@@ -266,20 +261,18 @@ makeActiveHoleEdit holeInfo (Data.HoleState searchTerm) =
 
 makeH
   :: MonadF m
-  => Ancestry.ExpressionAncestry m
-  -> Sugar.Hole m
+  => Sugar.Hole m
   -> Sugar.ExpressionRef m
   -> Widget.Id
   -> CTransaction ViewTag m
      (Maybe (ResultPicker m), Widget (Transaction ViewTag m))
-makeH ancestry hole expressionRef myId = do
+makeH hole expressionRef myId = do
   cursor <- readCursor
   expressionI <- getP $ Sugar.rExpressionPtr expressionRef
   let
     holeInfo = HoleInfo
       { hiExpressionI = expressionI
       , hiHoleId = myId
-      , hiAncestry = ancestry
       , hiHole = hole
       }
   if isJust (Widget.subId myId cursor)
@@ -304,12 +297,11 @@ makeH ancestry hole expressionRef myId = do
 
 make
   :: MonadF m
-  => Ancestry.ExpressionAncestry m
-  -> Sugar.Hole m
+  => Sugar.Hole m
   -> Sugar.ExpressionRef m
   -> Widget.Id
   -> CTransaction ViewTag m
      (Maybe (ResultPicker m), Widget (Transaction ViewTag m))
-make ancestry hole expressionRef =
-  BWidgets.wrapDelegatedWithKeys FocusDelegator.defaultKeys FocusDelegator.Delegating second
-  (makeH ancestry hole expressionRef)
+make hole =
+  BWidgets.wrapDelegatedWithKeys FocusDelegator.defaultKeys FocusDelegator.Delegating second .
+  makeH hole

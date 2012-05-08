@@ -7,14 +7,10 @@ import Data.Store.Guid (Guid)
 import Data.Vector.Vector2 (Vector2(Vector2))
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (CTransaction, TWidget, WidgetT, getP, assignCursor, atTextSizeColor)
-import Editor.CodeEdit.Ancestry (AncestryItem(..), LambdaParent(..))
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
-import Editor.DataOps (ExpressionPtr)
 import Editor.MonadF (MonadF)
 import qualified Data.List as List
-import qualified Data.Store.IRef as IRef
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.CodeEdit.Ancestry as Ancestry
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.WidgetIds as WidgetIds
@@ -38,25 +34,19 @@ both f (x, y) = (f x, f y)
 makeParamEdit
   :: MonadF m
   => ExpressionEditMaker m
-  -> Ancestry.ExpressionAncestry m
   -> Sugar.FuncParam m
   -> CTransaction ViewTag m (WidgetT ViewTag m, WidgetT ViewTag m)
-makeParamEdit makeExpressionEdit ancestry param = do
+makeParamEdit makeExpressionEdit param = do
   assignCursor (WidgetIds.fromGuid ident) (WidgetIds.paramId ident) .
     (liftM . both . Widget.weakerEvents) paramDeleteEventMap $ do
     paramNameEdit <-
       liftM (Widget.align down) $
       makeParamNameEdit ident
-    let
-      newAncestryItem =
-        Ancestry.AncestryItemParamType $
-        -- TODO: don't use IRef.unsafeFromGuid
-        Ancestry.ParamTypeParent (IRef.unsafeFromGuid ident)
     paramTypeEdit <-
       liftM
       (Widget.scale Config.typeScaleFactor .
-       Widget.align up) $
-      makeExpressionEdit (newAncestryItem : ancestry) (Sugar.fpType param)
+       Widget.align up) . makeExpressionEdit $
+      Sugar.fpType param
     return (paramNameEdit, paramTypeEdit)
   where
     ident = Sugar.guid $ Sugar.fpActions param
@@ -70,23 +60,19 @@ makeParamEdit makeExpressionEdit ancestry param = do
 makeParamsEdit
   :: MonadF m
   => ExpressionEditMaker m
-  -> Ancestry.ExpressionAncestry m
   -> [Sugar.FuncParam m]
   -> TWidget ViewTag m
-makeParamsEdit makeExpressionEdit ancestry =
+makeParamsEdit makeExpressionEdit =
   liftM (BWidgets.gridHSpaced . List.transpose . map pairList) .
-  mapM (makeParamEdit makeExpressionEdit ancestry)
+  mapM (makeParamEdit makeExpressionEdit)
 
 make
   :: MonadF m
   => ExpressionEditMaker m
-  -> Ancestry.ExpressionAncestry m
-  -> ExpressionPtr m
   -> Sugar.Func m
   -> Widget.Id
   -> TWidget ViewTag m
-make makeExpressionEdit ancestry expressionPtr func@(Sugar.Func params body) myId = do
-  exprI <- getP expressionPtr
+make makeExpressionEdit (Sugar.Func params body) myId = do
   bodyI <- getP $ Sugar.rExpressionPtr body
   assignCursor myId (WidgetIds.fromIRef bodyI) $ do
     lambdaLabel <-
@@ -95,6 +81,6 @@ make makeExpressionEdit ancestry expressionPtr func@(Sugar.Func params body) myI
     rightArrowLabel <-
       atTextSizeColor Config.rightArrowTextSize Config.rightArrowColor $
       BWidgets.makeLabel "→" myId
-    bodyEdit <- makeExpressionEdit (AncestryItemLambda (LambdaParent func exprI) : ancestry) body
-    paramsEdit <- makeParamsEdit makeExpressionEdit ancestry params
+    bodyEdit <- makeExpressionEdit body
+    paramsEdit <- makeParamsEdit makeExpressionEdit params
     return $ BWidgets.hbox [lambdaLabel, paramsEdit, rightArrowLabel, bodyEdit]
