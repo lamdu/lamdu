@@ -41,8 +41,7 @@ data Actions m = Actions
 data HasParens = HaveParens | DontHaveParens
 
 data ExpressionRef m = ExpressionRef
-  { rExpressionPtr :: ExpressionPtr m
-  , rExpression :: Expression m
+  { rExpression :: Expression m
   , rActions :: Actions m
   }
 
@@ -130,7 +129,6 @@ mkExpressionRef ptr expr = do
   return
     ExpressionRef
     { rExpression = expr
-    , rExpressionPtr = ptr
     , rActions = makeActions (IRef.guid iref) ptr
     }
 

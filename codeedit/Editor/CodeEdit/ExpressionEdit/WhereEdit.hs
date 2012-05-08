@@ -5,7 +5,7 @@ import Control.Arrow (second)
 import Control.Monad (liftM)
 import Data.Monoid (mempty)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (TWidget, getP, atTextSizeColor, assignCursor)
+import Editor.CTransaction (TWidget, atTextSizeColor, assignCursor)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
 import qualified Editor.BottleWidgets as BWidgets
@@ -48,9 +48,8 @@ makeWithBody
   -> Sugar.Where m
   -> Widget.Id -> TWidget ViewTag m
 makeWithBody makeExpressionEdit where_@(Sugar.Where _ body) myId = do
-  bodyI <- getP $ Sugar.rExpressionPtr body
   whereEdit <- make makeExpressionEdit where_ myId
-  assignCursor myId (WidgetIds.fromIRef bodyI) $ do
+  assignCursor myId ((WidgetIds.fromGuid . Sugar.guid . Sugar.rActions) body) $ do
     bodyEdit <- makeExpressionEdit body
     return . BWidgets.vbox $
       [ bodyEdit

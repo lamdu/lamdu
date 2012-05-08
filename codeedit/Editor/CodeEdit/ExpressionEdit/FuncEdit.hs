@@ -6,7 +6,7 @@ import Data.Monoid (mempty)
 import Data.Store.Guid (Guid)
 import Data.Vector.Vector2 (Vector2(Vector2))
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, TWidget, WidgetT, getP, assignCursor, atTextSizeColor)
+import Editor.CTransaction (CTransaction, TWidget, WidgetT, assignCursor, atTextSizeColor)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
 import qualified Data.List as List
@@ -72,9 +72,8 @@ make
   -> Sugar.Func m
   -> Widget.Id
   -> TWidget ViewTag m
-make makeExpressionEdit (Sugar.Func params body) myId = do
-  bodyI <- getP $ Sugar.rExpressionPtr body
-  assignCursor myId (WidgetIds.fromIRef bodyI) $ do
+make makeExpressionEdit (Sugar.Func params body) myId =
+  assignCursor myId ((WidgetIds.fromGuid . Sugar.guid . Sugar.rActions) body) $ do
     lambdaLabel <-
       atTextSizeColor Config.lambdaTextSize Config.lambdaColor $
       BWidgets.makeLabel "λ" myId

@@ -2,9 +2,9 @@
 module Editor.CodeEdit.ExpressionEdit.SectionEdit(make) where
 
 import Control.Monad (liftM)
-import Data.Maybe (catMaybes)
+import Data.Maybe (fromMaybe)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (TWidget, getP, assignCursor)
+import Editor.CTransaction (TWidget, assignCursor)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker (ExpressionEditMaker)
 import Editor.MonadF (MonadF)
 import qualified Editor.BottleWidgets as BWidgets
@@ -19,10 +19,12 @@ make
   -> Widget.Id
   -> TWidget ViewTag m
 make makeExpressionEdit (Sugar.Section mLArg op mRArg) myId = do
-  cursorPosI <- getP . Sugar.rExpressionPtr . head $ catMaybes [mRArg, Just op, mLArg]
-  assignCursor myId (WidgetIds.fromIRef cursorPosI) $ do
-    let fromMArg = maybe (return []) $ liftM (:[]) . makeExpressionEdit
-    lArgEdit <- fromMArg mLArg
-    opEdit <- liftM (:[]) $ makeExpressionEdit op
-    rArgEdit <- fromMArg mRArg
-    return . BWidgets.hboxSpaced $ lArgEdit ++ opEdit ++ rArgEdit
+  assignCursor myId (WidgetIds.fromGuid cursorPos) $ do
+    lArgEdits <- fromMArg mLArg
+    opEdits <- makeExpressionsEdit op
+    rArgEdits <- fromMArg mRArg
+    return . BWidgets.hboxSpaced $ lArgEdits ++ opEdits ++ rArgEdits
+  where
+    makeExpressionsEdit = liftM (:[]) . makeExpressionEdit
+    fromMArg = maybe (return []) makeExpressionsEdit
+    cursorPos = Sugar.guid . Sugar.rActions $ fromMaybe op mRArg

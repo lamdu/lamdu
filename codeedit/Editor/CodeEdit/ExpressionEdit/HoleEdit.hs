@@ -7,7 +7,6 @@ import Data.List (isInfixOf, isPrefixOf, sort)
 import Data.List.Utils (sortOn)
 import Data.Maybe (isJust, listToMaybe)
 import Data.Monoid (Monoid(..))
-import Data.Store.IRef (IRef)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
@@ -26,7 +25,6 @@ import qualified Editor.CodeEdit.Parens as Parens
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
-import qualified Editor.DataOps as DataOps
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -42,8 +40,7 @@ data Result m = Result {
   }
 
 data HoleInfo m = HoleInfo
-  { hiExpressionI :: IRef Data.Expression
-  , hiHoleId :: Widget.Id
+  { hiHoleId :: Widget.Id
   , hiHole :: Sugar.Hole m
   }
 
@@ -107,29 +104,21 @@ searchResultsPrefix = flip Widget.joinId ["search results"]
 
 holeResultAnimMappingNoParens :: HoleInfo m -> Widget.Id -> AnimId -> AnimId
 holeResultAnimMappingNoParens holeInfo resultId =
-  renamePrefix ("old hole" : Widget.toAnimId resultId) (Widget.toAnimId expressionId) .
+  renamePrefix ("old hole" : Widget.toAnimId resultId) myId .
   renamePrefix myId ("old hole" : myId)
   where
     myId = Widget.toAnimId $ hiHoleId holeInfo
-    expressionId = WidgetIds.fromIRef $ hiExpressionI holeInfo
-
--- TODO: Resurrect?
--- holeResultAnimMapping :: HoleInfo m -> Widget.Id -> Widget.Id -> AnimId -> AnimId
--- holeResultAnimMapping holeInfo resultId parensId =
---   renamePrefix (Widget.toAnimId (WidgetIds.parensPrefix expressionId)) (Widget.toAnimId (WidgetIds.parensPrefix parensId)) .
---   holeResultAnimMappingNoParens holeInfo resultId
---   where
---     expressionId = WidgetIds.fromIRef $ hiExpressionI holeInfo
 
 pickResult
-  :: MonadF m => HoleInfo m
+  :: MonadF m
+  => HoleInfo m
   -> Data.Expression -> Transaction ViewTag m ()
   -> ResultPicker m
-pickResult holeInfo newExpr flipAct = do
-  Transaction.writeIRef (hiExpressionI holeInfo) newExpr
+pickResult _holeInfo newExpr flipAct = do
+  Transaction.writeIRef (error "TODO") newExpr
   flipAct
   return Widget.EventResult {
-    Widget.eCursor = Just . WidgetIds.fromIRef $ hiExpressionI holeInfo,
+    Widget.eCursor = Just $ error "TODO",
     Widget.eAnimIdMapping = id -- TODO: Need to fix the parens id
     }
 
@@ -183,12 +172,12 @@ makeSearchTermWidget holeInfo searchTermId searchTerm firstResults =
     pickFirstResultEventMaps =
       map resultPickEventMap $ take 1 firstResults
 
-    newName = concat . words $ searchTerm
+    -- newName = concat . words $ searchTerm
     searchTermEventMap =
       mconcat $ pickFirstResultEventMaps ++
       [ E.fromEventTypes Config.newDefinitionKeys "Add new as Definition" $ do
-          newDef <- DataOps.addAsDefinition newName $ hiExpressionI holeInfo
-          Anchors.savePreJumpPosition . WidgetIds.fromIRef $ hiExpressionI holeInfo
+          newDef <- error "addAsDefinition TODO" -- DataOps.addAsDefinition newName $ hiExpressionI holeInfo
+          Anchors.savePreJumpPosition $ hiHoleId holeInfo
           return Widget.EventResult {
             Widget.eCursor = Just $ WidgetIds.fromIRef newDef,
             Widget.eAnimIdMapping = holeResultAnimMappingNoParens holeInfo searchTermId
@@ -198,7 +187,7 @@ makeSearchTermWidget holeInfo searchTermId searchTerm firstResults =
       Property {
         get = return searchTerm,
         set =
-          Transaction.writeIRef (hiExpressionI holeInfo) .
+          Transaction.writeIRef (error "TODO setHoleState") .
           Data.ExpressionHole . Data.HoleState
         }
 
@@ -266,13 +255,11 @@ makeH
   -> Widget.Id
   -> CTransaction ViewTag m
      (Maybe (ResultPicker m), Widget (Transaction ViewTag m))
-makeH hole expressionRef myId = do
+makeH hole _expressionRef myId = do
   cursor <- readCursor
-  expressionI <- getP $ Sugar.rExpressionPtr expressionRef
   let
     holeInfo = HoleInfo
-      { hiExpressionI = expressionI
-      , hiHoleId = myId
+      { hiHoleId = myId
       , hiHole = hole
       }
   if isJust (Widget.subId myId cursor)

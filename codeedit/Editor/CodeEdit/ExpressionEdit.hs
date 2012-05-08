@@ -7,10 +7,9 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
-import Editor.CTransaction (CTransaction, getP)
+import Editor.CTransaction (CTransaction)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (EventHandlers)
-import qualified Data.Store.Property as Property
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Editor.CodeEdit.ExpressionEdit.SectionEdit as SectionEdit
@@ -35,7 +34,6 @@ foldHolePicker _notHole isHole (IsAHole x) = isHole x
 
 make :: MonadF m => ExpressionEditMaker m
 make sExpr = do
-  exprI <- getP $ Sugar.rExpressionPtr sExpr
   let
     parenify mkParens hasParens mkWidget myId =
       mkWidget myId >>=
@@ -47,7 +45,7 @@ make sExpr = do
     wrapNonHoleExpr =
       notAHole .
       BWidgets.wrapDelegatedWithKeys Config.exprFocusDelegatorKeys FocusDelegator.Delegating id
-    exprId = WidgetIds.fromIRef exprI
+    exprId = WidgetIds.fromGuid . Sugar.guid . Sugar.rActions $ sExpr
     textParenify = parenify Parens.addTextParens
     squareParenify = parenify Parens.addSquareParens
     makeEditor =
@@ -66,7 +64,7 @@ make sExpr = do
       Sugar.ExpressionSection hasParens section ->
         wrapNonHoleExpr . textParenify hasParens $ SectionEdit.make make section
       Sugar.ExpressionLiteralInteger integer ->
-        notAHole $ LiteralEdit.makeInt exprI integer
+        notAHole $ LiteralEdit.makeInt integer
   (holePicker, widget) <- makeEditor exprId
   eventMap <- expressionEventMap sExpr holePicker
   return $ Widget.weakerEvents eventMap widget
@@ -125,5 +123,5 @@ expressionEventMap sExpr holePicker = do
         case Sugar.rExpression nextArg of
         Sugar.ExpressionHole{} ->
           withPickResultFirst Config.addNextArgumentKeys "Move to next arg" .
-          liftM WidgetIds.fromIRef . Property.get $ Sugar.rExpressionPtr nextArg
+          return . WidgetIds.fromGuid . Sugar.guid . Sugar.rActions $ nextArg
         _ -> mempty
