@@ -22,7 +22,6 @@ import qualified Editor.CodeEdit.ExpressionEdit.WhereEdit as WhereEdit
 import qualified Editor.CodeEdit.Parens as Parens
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
-import qualified Editor.DataOps as DataOps
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -82,11 +81,11 @@ expressionEventMap sExpr holePicker = do
     [ moveUnlessOnHole .
       Widget.actionEventMapMovesCursor
       Config.giveAsArgumentKeys "Give as argument" .
-      WidgetIds.diveIn $ DataOps.giveAsArg (Sugar.rExpressionPtr sExpr)
+      liftM WidgetIds.fromGuid $ Sugar.giveAsArg actions
     , moveUnlessOnHole .
       Widget.actionEventMapMovesCursor
       Config.callWithArgumentKeys "Call with argument" .
-      WidgetIds.diveIn $ DataOps.callWithArg (Sugar.rExpressionPtr sExpr)
+      liftM WidgetIds.fromGuid $ Sugar.callWithArg actions
 
     -- Move to next arg overrides add arg's keys.
     , moveToNextArgHole

@@ -25,12 +25,14 @@ import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
 
 data Actions m = Actions
-  { guid :: Guid
-  , addNextArg :: Transaction ViewTag m Guid
-  , lambdaWrap :: Transaction ViewTag m Guid
-  , mReplace :: Maybe (Transaction ViewTag m Guid)
-  , mDelete :: Maybe (Transaction ViewTag m Guid)
-  , mNextArg :: Maybe (ExpressionRef m)
+  { guid        :: Guid
+  , addNextArg  :: Transaction ViewTag m Guid
+  , giveAsArg   :: Transaction ViewTag m Guid
+  , callWithArg :: Transaction ViewTag m Guid
+  , lambdaWrap  :: Transaction ViewTag m Guid
+  , mReplace    :: Maybe (Transaction ViewTag m Guid)
+  , mDelete     :: Maybe (Transaction ViewTag m Guid)
+  , mNextArg    :: Maybe (ExpressionRef m)
   }
 
 -- TODO: Only Expression types that CAN be wrapped with () should be,
@@ -112,6 +114,8 @@ makeActions g ptr =
   Actions
   { guid = g
   , addNextArg = addArg ptr
+  , callWithArg = addArg ptr
+  , giveAsArg = liftM IRef.guid $ DataOps.giveAsArg ptr
   , lambdaWrap = liftM IRef.guid $ DataOps.lambdaWrap ptr
     -- Hole will remove mReplace because no point replacing hole with hole.
   , mReplace = Just . liftM IRef.guid $ DataOps.replaceWithHole ptr
