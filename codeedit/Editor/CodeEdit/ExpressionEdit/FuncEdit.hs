@@ -36,7 +36,7 @@ makeParamEdit
   => ExpressionEditMaker m
   -> Sugar.FuncParam m
   -> CTransaction ViewTag m (WidgetT ViewTag m, WidgetT ViewTag m)
-makeParamEdit makeExpressionEdit param = do
+makeParamEdit makeExpressionEdit param =
   assignCursor (WidgetIds.fromGuid ident) (WidgetIds.paramId ident) .
     (liftM . both . Widget.weakerEvents) paramDeleteEventMap $ do
     paramNameEdit <-

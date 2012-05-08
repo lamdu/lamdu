@@ -18,7 +18,7 @@ make
   -> Sugar.Section m
   -> Widget.Id
   -> TWidget ViewTag m
-make makeExpressionEdit (Sugar.Section mLArg op mRArg) myId = do
+make makeExpressionEdit (Sugar.Section mLArg op mRArg) myId =
   assignCursor myId (WidgetIds.fromGuid cursorPos) $ do
     lArgEdits <- fromMArg mLArg
     opEdits <- makeExpressionsEdit op

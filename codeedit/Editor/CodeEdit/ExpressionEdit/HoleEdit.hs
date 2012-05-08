@@ -168,7 +168,7 @@ makeAllResults holeInfo = do
 makeSearchTermWidget
   :: MonadF m
   => HoleInfo m -> Widget.Id -> [Result m] -> TWidget ViewTag m
-makeSearchTermWidget holeInfo searchTermId firstResults = do
+makeSearchTermWidget holeInfo searchTermId firstResults =
   -- searchTerm <- getP $ hiSearchTerm holeInfo
   -- let newName = concat . words $ searchTerm
   (liftM . Widget.strongerEvents) searchTermEventMap $

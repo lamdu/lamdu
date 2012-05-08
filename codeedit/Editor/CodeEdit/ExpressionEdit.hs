@@ -74,7 +74,7 @@ expressionEventMap
   => Sugar.ExpressionRef m
   -> HoleResultPicker m
   -> CTransaction ViewTag m (EventHandlers (Transaction ViewTag m))
-expressionEventMap sExpr holePicker = do
+expressionEventMap sExpr holePicker =
   return . mconcat $
     [ moveUnlessOnHole .
       Widget.actionEventMapMovesCursor
