@@ -251,11 +251,10 @@ makeActiveHoleEdit holeInfo (Data.HoleState searchTerm) =
 makeH
   :: MonadF m
   => Sugar.Hole m
-  -> Sugar.ExpressionRef m
   -> Widget.Id
   -> CTransaction ViewTag m
      (Maybe (ResultPicker m), Widget (Transaction ViewTag m))
-makeH hole _expressionRef myId = do
+makeH hole myId = do
   cursor <- readCursor
   let
     holeInfo = HoleInfo
@@ -285,10 +284,8 @@ makeH hole _expressionRef myId = do
 make
   :: MonadF m
   => Sugar.Hole m
-  -> Sugar.ExpressionRef m
   -> Widget.Id
   -> CTransaction ViewTag m
      (Maybe (ResultPicker m), Widget (Transaction ViewTag m))
-make hole =
-  BWidgets.wrapDelegatedWithKeys FocusDelegator.defaultKeys FocusDelegator.Delegating second .
-  makeH hole
+make =
+  BWidgets.wrapDelegatedWithKeys FocusDelegator.defaultKeys FocusDelegator.Delegating second . makeH

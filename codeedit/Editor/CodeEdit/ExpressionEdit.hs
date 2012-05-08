@@ -56,7 +56,7 @@ make sExpr = do
       Sugar.ExpressionFunc hasParens f ->
         wrapNonHoleExpr . textParenify hasParens $ FuncEdit.make make f
       Sugar.ExpressionHole hole ->
-        isAHole $ HoleEdit.make hole sExpr
+        isAHole $ HoleEdit.make hole
       Sugar.ExpressionGetVariable varRef ->
         notAHole {- TODO: May need parenification -} $ VarEdit.make varRef
       Sugar.ExpressionApply hasParens apply ->
