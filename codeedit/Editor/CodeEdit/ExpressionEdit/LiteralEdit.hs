@@ -9,6 +9,7 @@ import Editor.MonadF(MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Char as Char
 import qualified Editor.BottleWidgets as BWidgets
+import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -18,7 +19,7 @@ setColor :: TWidget t m -> TWidget t m
 setColor = BWidgets.setTextColor Config.literalIntColor
 
 makeIntView
-  :: (MonadF m)
+  :: MonadF m
   => Widget.Id -> Integer
   -> CTransaction ViewTag m (Widget (Transaction ViewTag m))
 makeIntView myId integer =
@@ -26,23 +27,23 @@ makeIntView myId integer =
 
 makeIntEdit
   :: Monad m
-  => Integer -> Widget.Id -> TWidget t m
+  => Sugar.LiteralInteger m -> Widget.Id -> TWidget ViewTag m
 makeIntEdit integer myId = do
   cursor <- readCursor
   let
     subCursor = Widget.subId myId cursor
-    isEmpty = integer == 0 && subCursor == Just emptyZeroCursor
+    isEmpty = Sugar.liValue integer == 0 && subCursor == Just emptyZeroCursor
     (text, textCursor)
       | isEmpty = ("", TextEdit.makeTextEditCursor myId 0)
-      | otherwise = (show integer, cursor)
+      | otherwise = (show (Sugar.liValue integer), cursor)
     lifter (newText, eventRes)
       | newText == text = return eventRes
       | not (all Char.isDigit newText) = return Widget.emptyEventResult
       | null newText = do
-        _ <- error "TODO: Set to 0"
+        _ <- Sugar.liSetValue integer 0
         return . Widget.eventResultFromCursor $ Widget.joinId myId emptyZeroCursor
       | otherwise = do
-        _ <- error "TODO: Set to (read newText)"
+        _ <- Sugar.liSetValue integer $ read newText
         return eventRes
   style <- readTextStyle
   return .
@@ -53,7 +54,7 @@ makeIntEdit integer myId = do
 
 makeInt
   :: Monad m
-  => Integer
+  => Sugar.LiteralInteger m
   -> Widget.Id
   -> TWidget ViewTag m
 makeInt integer =

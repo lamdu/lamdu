@@ -4,7 +4,7 @@ module Editor.CodeEdit.Sugar
   ( Expression(..), Actions(..), ExpressionRef(..)
   , Where(..), WhereItem(..)
   , Func(..), FuncParam(..)
-  , Apply(..), Section(..), Hole(..)
+  , Apply(..), Section(..), Hole(..), LiteralInteger(..)
   , HasParens(..)
   , convertExpression
   ) where
@@ -85,6 +85,11 @@ data Hole m = Hole
   , holeMFlipFuncArg :: Maybe (Transaction ViewTag m ())
   }
 
+data LiteralInteger m = LiteralInteger
+  { liValue :: Integer
+  , liSetValue :: Integer -> Transaction ViewTag m ()
+  }
+
 data Expression m
   = ExpressionApply   { eHasParens :: HasParens, eApply :: Apply m }
   | ExpressionSection { eHasParens :: HasParens, eSection :: Section m }
@@ -92,7 +97,7 @@ data Expression m
   | ExpressionFunc    { eHasParens :: HasParens, eFunc :: Func m }
   | ExpressionGetVariable { _eGetVar :: Data.VariableRef }
   | ExpressionHole { eHole :: Hole m }
-  | ExpressionLiteralInteger { _eLit :: Integer }
+  | ExpressionLiteralInteger { _eLit :: LiteralInteger m }
 
 AtFieldTH.make ''Hole
 AtFieldTH.make ''Where
@@ -320,9 +325,13 @@ convertHole state ptr =
   (liftM . atRActions . atMReplace . const) Nothing .
   mkExpressionRef ptr . ExpressionHole $ Hole state Nothing
 
-convertLiteralInteger :: Monad m => Integer -> Convertor m
-convertLiteralInteger i ptr =
-  mkExpressionRef ptr $ ExpressionLiteralInteger i
+convertLiteralInteger :: Monad m => IRef Data.Expression -> Integer -> Convertor m
+convertLiteralInteger iref i ptr =
+  mkExpressionRef ptr . ExpressionLiteralInteger $
+  LiteralInteger
+  { liValue = i
+  , liSetValue = Transaction.writeIRef iref . Data.ExpressionLiteralInteger
+  }
 
 convertExpression :: Monad m => Convertor m
 convertExpression ptr = do
@@ -335,5 +344,5 @@ convertExpression ptr = do
       Data.ExpressionApply x -> convertApply x
       Data.ExpressionGetVariable x -> convertGetVariable x
       Data.ExpressionHole x -> convertHole x
-      Data.ExpressionLiteralInteger x -> convertLiteralInteger x
+      Data.ExpressionLiteralInteger x -> convertLiteralInteger exprI x
   conv ptr
