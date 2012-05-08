@@ -16,6 +16,7 @@ import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Char as Char
+import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
@@ -168,8 +169,6 @@ makeSearchTermWidget
   :: MonadF m
   => HoleInfo m -> Widget.Id -> [Result m] -> TWidget ViewTag m
 makeSearchTermWidget holeInfo searchTermId firstResults =
-  -- searchTerm <- getP $ hiSearchTerm holeInfo
-  -- let newName = concat . words $ searchTerm
   (liftM . Widget.strongerEvents) searchTermEventMap $
     BWidgets.makeWordEdit (hiSearchTerm holeInfo) searchTermId
   where
@@ -179,10 +178,16 @@ makeSearchTermWidget holeInfo searchTermId firstResults =
     searchTermEventMap =
       mconcat $ pickFirstResultEventMaps ++
       [ E.fromEventTypes Config.newDefinitionKeys "Add new as Definition" $ do
-          newDef <- error "addAsDefinition TODO" -- DataOps.addAsDefinition newName $ hiExpressionI holeInfo
-          Anchors.savePreJumpPosition $ hiHoleId holeInfo
+          searchTerm <- Property.get $ hiSearchTerm holeInfo
+          let newName = concat . words $ searchTerm
+          newDefI <- Anchors.makeDefinition newName -- TODO: From Sugar
+          Anchors.newPane newDefI
+          let defRef = Data.ExpressionGetVariable $ Data.DefinitionRef newDefI
+          -- TODO: Can we use pickResult's animIdMapping?
+          eventResult <- pickResult holeInfo defRef $ return ()
+          maybe (return ()) Anchors.savePreJumpPosition $ Widget.eCursor eventResult
           return Widget.EventResult {
-            Widget.eCursor = Just $ WidgetIds.fromIRef newDef,
+            Widget.eCursor = Just $ WidgetIds.fromIRef newDefI,
             Widget.eAnimIdMapping = holeResultAnimMappingNoParens holeInfo searchTermId
             }
       ]

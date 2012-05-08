@@ -22,7 +22,7 @@ newDefinition :: Monad m => CTransaction ViewTag m (Transaction.Transaction View
 newDefinition = do
   curCursor <- readCursor
   return $ do
-    newDefI <- Anchors.makeDefinition
+    newDefI <- Anchors.makeDefinition ""
     Anchors.newPane newDefI
     Anchors.savePreJumpPosition curCursor
     return $ WidgetIds.fromIRef newDefI

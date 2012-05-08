@@ -161,13 +161,14 @@ makePane defI = Pane {
   paneDefinition = defI
   }
 
-makeDefinition :: Monad m => Transaction ViewTag m (IRef Data.Definition)
-makeDefinition = do
+makeDefinition :: Monad m => String -> Transaction ViewTag m (IRef Data.Definition)
+makeDefinition newName = do
   holeI <- Transaction.newIRef Data.ExpressionHole
   defI <- Transaction.newIRef Data.Definition {
     Data.defBody = holeI
     }
   Property.pureModify globals (Data.DefinitionRef defI :)
+  (Property.set . aNameRef . IRef.guid) defI newName
   return defI
 
 initDB :: Store DBTag IO -> IO ()
@@ -177,7 +178,7 @@ initDB store =
       masterNameIRef <- Transaction.newIRef "master"
       changes <- collectWrites Transaction.newKey $ do
         Property.set globals =<< mapM newBuiltin temporaryBuiltinsDatabase
-        defI <- makeDefinition
+        defI <- makeDefinition "foo"
         Property.set root [makePane defI]
         Property.set preJumps []
         Property.set preCursor $ WidgetIds.fromIRef defI
