@@ -1,4 +1,4 @@
-* Sugar Apply should tell whether it is infix
+* Parens no longer highlightable
 
 * Bug: Parens around unapplied infix op act no different to the infix
   op itself. Either get rid of them like before, or better yet: make
