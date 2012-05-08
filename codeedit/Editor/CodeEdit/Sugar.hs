@@ -84,7 +84,7 @@ type Scope = [Data.VariableRef]
 
 data Hole m = Hole
   { holeScope :: Scope
-  , holePickResult :: Data.Expression -> Transaction ViewTag m ()
+  , holePickResult :: Data.Expression -> Transaction ViewTag m Guid
   , holeMFlipFuncArg :: Maybe (Transaction ViewTag m ())
   }
 
@@ -339,6 +339,7 @@ convertHole scope ptr =
     pickResult result = do
       expressionI <- Property.get ptr
       Transaction.writeIRef expressionI result
+      return $ IRef.guid expressionI
 
 convertLiteralInteger :: Monad m => IRef Data.Expression -> Integer -> Convertor m
 convertLiteralInteger iref i ptr =

@@ -43,7 +43,6 @@ data HoleInfo m = HoleInfo
   { hiHoleId :: Widget.Id
   , hiSearchTerm :: Property (Transaction ViewTag m) String
   , hiHole :: Sugar.Hole m
-  , hiGuid :: Guid
   }
 
 resultPickEventMap
@@ -117,10 +116,10 @@ pickResult
   -> Data.Expression -> Transaction ViewTag m ()
   -> ResultPicker m
 pickResult holeInfo newExpr flipAct = do
-  Sugar.holePickResult (hiHole holeInfo) newExpr
+  guid <- Sugar.holePickResult (hiHole holeInfo) newExpr
   flipAct
   return Widget.EventResult {
-    Widget.eCursor = Just . WidgetIds.fromGuid $ hiGuid holeInfo,
+    Widget.eCursor = Just $ WidgetIds.fromGuid guid,
     Widget.eAnimIdMapping = id -- TODO: Need to fix the parens id
     }
 
@@ -257,7 +256,6 @@ makeH hole guid myId = do
       { hiHoleId = myId
       , hiSearchTerm = Anchors.aDataRef "searchTerm" "" guid
       , hiHole = hole
-      , hiGuid = guid
       }
   searchText <- getP $ hiSearchTerm holeInfo
   let
