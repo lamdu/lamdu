@@ -42,7 +42,7 @@ data Result m = Result {
 
 data HoleInfo m = HoleInfo
   { hiHoleId :: Widget.Id
-  , hiGuid :: Guid
+  , hiSearchTerm :: Property (Transaction ViewTag m) String
   , hiHole :: Sugar.Hole m
   }
 
@@ -117,10 +117,10 @@ pickResult
   -> Data.Expression -> Transaction ViewTag m ()
   -> ResultPicker m
 pickResult _holeInfo newExpr flipAct = do
-  Transaction.writeIRef (error "TODO") newExpr
+  Transaction.writeIRef (error "TODO Result pick") newExpr
   flipAct
   return Widget.EventResult {
-    Widget.eCursor = Just $ error "TODO",
+    Widget.eCursor = Just $ error "TODO: Cursor pos",
     Widget.eAnimIdMapping = id -- TODO: Need to fix the parens id
     }
 
@@ -148,13 +148,14 @@ makeLiteralResults holeInfo searchTerm =
 
 makeAllResults
   :: MonadF m
-  => HoleInfo m -> String
+  => HoleInfo m
   -> CTransaction ViewTag m [Result m]
-makeAllResults holeInfo searchTerm = do
+makeAllResults holeInfo = do
   globals <- getP Anchors.globals
   varResults <- liftM concat .
     mapM (makeResultVariables holeInfo) $
     params ++ sort globals
+  searchTerm <- getP $ hiSearchTerm holeInfo
   let
     literalResults = makeLiteralResults holeInfo searchTerm
     goodResult = (searchTerm `isInfixOf`) . resultName
@@ -166,15 +167,16 @@ makeAllResults holeInfo searchTerm = do
 
 makeSearchTermWidget
   :: MonadF m
-  => HoleInfo m -> Widget.Id -> String -> [Result m] -> TWidget ViewTag m
-makeSearchTermWidget holeInfo searchTermId searchTerm firstResults =
+  => HoleInfo m -> Widget.Id -> [Result m] -> TWidget ViewTag m
+makeSearchTermWidget holeInfo searchTermId firstResults = do
+  -- searchTerm <- getP $ hiSearchTerm holeInfo
+  -- let newName = concat . words $ searchTerm
   (liftM . Widget.strongerEvents) searchTermEventMap $
-    BWidgets.makeWordEdit searchTermRef searchTermId
+    BWidgets.makeWordEdit (hiSearchTerm holeInfo) searchTermId
   where
     pickFirstResultEventMaps =
       map resultPickEventMap $ take 1 firstResults
 
-    -- newName = concat . words $ searchTerm
     searchTermEventMap =
       mconcat $ pickFirstResultEventMaps ++
       [ E.fromEventTypes Config.newDefinitionKeys "Add new as Definition" $ do
@@ -185,13 +187,6 @@ makeSearchTermWidget holeInfo searchTermId searchTerm firstResults =
             Widget.eAnimIdMapping = holeResultAnimMappingNoParens holeInfo searchTermId
             }
       ]
-    searchTermRef =
-      Property {
-        get = return searchTerm,
-        set =
-          Transaction.writeIRef (error "TODO setHoleState") .
-          Data.ExpressionHole . Data.HoleState
-        }
 
 makeResultsWidget
   :: MonadF m
@@ -226,21 +221,19 @@ makeResultsWidget firstResults moreResults myId = do
       [E.KeyEventType E.noMods E.KeyDown]
       "Nothing (at bottom)" (return ())
 
-
 makeActiveHoleEdit
   :: MonadF m
   => HoleInfo m
-  -> Data.HoleState
   -> CTransaction ViewTag m
      (Maybe (Result m), Widget (Transaction ViewTag m))
-makeActiveHoleEdit holeInfo (Data.HoleState searchTerm) =
+makeActiveHoleEdit holeInfo =
   assignCursor (hiHoleId holeInfo) searchTermId $ do
-    allResults <- makeAllResults holeInfo searchTerm
+    allResults <- makeAllResults holeInfo
 
     let (firstResults, moreResults) = splitAt 3 allResults
 
     searchTermWidget <-
-      makeSearchTermWidget holeInfo searchTermId searchTerm firstResults
+      makeSearchTermWidget holeInfo searchTermId firstResults
 
     (mResult, resultsWidget) <-
       makeResultsWidget firstResults moreResults $ hiHoleId holeInfo
@@ -262,15 +255,20 @@ makeH hole guid myId = do
   let
     holeInfo = HoleInfo
       { hiHoleId = myId
-      , hiGuid = guid
+      , hiSearchTerm = Anchors.aDataRef "searchTerm" "" guid
       , hiHole = hole
       }
+  searchText <- getP $ hiSearchTerm holeInfo
+  let
+    snippet
+      | null searchText = "  "
+      | otherwise = searchText
   if isJust (Widget.subId myId cursor)
     then
       liftM (
         first (fmap resultPick) .
         second (makeBackground Config.focusedHoleBackgroundColor)) $
-      makeActiveHoleEdit holeInfo (Sugar.holeState hole)
+      makeActiveHoleEdit holeInfo
     else
       liftM
       ((,) Nothing .
@@ -280,10 +278,6 @@ makeH hole guid myId = do
   where
     makeBackground =
       Widget.backgroundColor $ Widget.joinId myId ["hole background"]
-    snippet
-      | null searchText = "  "
-      | otherwise = searchText
-    searchText = Data.holeSearchTerm $ Sugar.holeState hole
 
 make
   :: MonadF m

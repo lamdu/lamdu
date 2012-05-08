@@ -40,11 +40,7 @@ callWithArg expressionPtr = do
   return argI
 
 newHole :: Monad m => Transaction ViewTag m (IRef Data.Expression)
-newHole =
-  Transaction.newIRef . Data.ExpressionHole $ Data.HoleState
-  { Data.holeSearchTerm = ""
-  --, Data.holeCachedSearchResults = []
-  }
+newHole = Transaction.newIRef Data.ExpressionHole
 
 replace
   :: Monad m

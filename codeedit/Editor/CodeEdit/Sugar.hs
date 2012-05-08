@@ -83,8 +83,7 @@ data Section m = Section
 type Scope = [Data.VariableRef]
 
 data Hole m = Hole
-  { holeState :: Data.HoleState
-  , holeScope :: Scope
+  { holeScope :: Scope
   , holeMFlipFuncArg :: Maybe (Transaction ViewTag m ())
   }
 
@@ -326,10 +325,10 @@ convertGetVariable varRef ptr = do
       ExpressionSection HaveParens (Section Nothing getVarExpr Nothing)
     else return getVarExpr
 
-convertHole :: Monad m => Data.HoleState -> Scope -> Convertor m
-convertHole state scope ptr =
+convertHole :: Monad m => Scope -> Convertor m
+convertHole scope ptr =
   (liftM . atRActions . atMReplace . const) Nothing .
-  mkExpressionRef ptr . ExpressionHole $ Hole state scope Nothing
+  mkExpressionRef ptr . ExpressionHole $ Hole scope Nothing
 
 convertLiteralInteger :: Monad m => IRef Data.Expression -> Integer -> Convertor m
 convertLiteralInteger iref i ptr =
@@ -349,7 +348,7 @@ convertNode scope ptr = do
       Data.ExpressionLambda x -> convertLambda x scope
       Data.ExpressionApply x -> convertApply x scope
       Data.ExpressionGetVariable x -> convertGetVariable x
-      Data.ExpressionHole x -> convertHole x scope
+      Data.ExpressionHole -> convertHole scope
       Data.ExpressionLiteralInteger x -> convertLiteralInteger exprI x
   conv ptr
 

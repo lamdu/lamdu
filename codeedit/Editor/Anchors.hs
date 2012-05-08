@@ -163,7 +163,7 @@ makePane defI = Pane {
 
 makeDefinition :: Monad m => Transaction ViewTag m (IRef Data.Definition)
 makeDefinition = do
-  holeI <- Transaction.newIRef $ Data.ExpressionHole Data.emptyHoleState
+  holeI <- Transaction.newIRef Data.ExpressionHole
   defI <- Transaction.newIRef Data.Definition {
     Data.defBody = holeI
     }

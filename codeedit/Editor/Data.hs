@@ -6,8 +6,6 @@ module Editor.Data (
   VariableRef(..), onVariableIRef,
   Lambda(..), atLambdaParamType, atLambdaBody,
   Apply(..), atApplyFunc, atApplyArg,
-  HoleState(..),
-    emptyHoleState, atHoleSearchTerm, --atHoleCachedSearchResults,
   Expression(..))
 where
 
@@ -31,20 +29,11 @@ data Apply = Apply {
   }
   deriving (Eq, Ord, Read, Show)
 
-data HoleState = HoleState
-  { holeSearchTerm :: String
-  --, holeCachedSearchResults :: [VariableRef]
-  }
-  deriving (Eq, Ord, Read, Show)
-
-emptyHoleState :: HoleState
-emptyHoleState = HoleState ""
-
 data Expression =
   ExpressionLambda Lambda |
   ExpressionApply Apply |
   ExpressionGetVariable VariableRef |
-  ExpressionHole HoleState |
+  ExpressionHole |
   ExpressionLiteralInteger Integer
   deriving (Eq, Ord, Read, Show)
 
@@ -73,11 +62,9 @@ onVariableIRef f (BuiltinRef i) = f i
 derive makeBinary ''Apply
 derive makeBinary ''Lambda
 derive makeBinary ''Builtin
-derive makeBinary ''HoleState
 derive makeBinary ''Expression
 derive makeBinary ''Definition
 derive makeBinary ''VariableRef
 AtFieldTH.make ''Definition
 AtFieldTH.make ''Lambda
 AtFieldTH.make ''Apply
-AtFieldTH.make ''HoleState
