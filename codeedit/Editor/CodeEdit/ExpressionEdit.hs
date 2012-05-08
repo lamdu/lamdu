@@ -46,7 +46,7 @@ make sExpr = do
       notAHole .
       BWidgets.wrapDelegatedWithKeys Config.exprFocusDelegatorKeys FocusDelegator.Delegating id
     exprId = WidgetIds.fromGuid . Sugar.guid . Sugar.rActions $ sExpr
-    textParenify = parenify Parens.addTextParens
+    textParenify = parenify Parens.addHighlightedTextParens
     squareParenify = parenify Parens.addSquareParens
     makeEditor =
       case Sugar.rExpression sExpr of
