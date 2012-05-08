@@ -5,14 +5,13 @@ import Control.Arrow (first, second)
 import Control.Monad (liftM, mplus)
 import Data.List (isInfixOf, isPrefixOf, sort)
 import Data.List.Utils (sortOn)
-import Data.Maybe (isJust, listToMaybe, fromMaybe)
+import Data.Maybe (isJust, listToMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.IRef (IRef)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (CTransaction, getP, assignCursor, TWidget, readCursor)
-import Editor.CodeEdit.Ancestry(AncestryItem(..), ApplyParent(..), ApplyRole(..))
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -73,36 +72,31 @@ makeMoreResults myId =
   BWidgets.makeTextView "..." $
   Widget.joinId myId ["more results"]
 
-data NeedFlip = DontFlip | DoFlip
-
 makeResultVariables ::
   MonadF m => HoleInfo m -> Data.VariableRef -> CTransaction ViewTag m [Result m]
 makeResultVariables holeInfo varRef = do
   varName <- getP $ Anchors.variableNameRef varRef
   let
-    ordinary = result varName DontFlip resultId return
+    ordinary = result varName (return ()) resultId return
     parened =
       result
-      (concat ["(", varName, ")"]) DontFlip resultIdAsPrefix $
+      (concat ["(", varName, ")"]) (return ()) resultIdAsPrefix $
       Parens.addTextParens resultId
   return $
     if Infix.isInfixName varName
     then
-      case hiAncestry holeInfo of
-        (AncestryItemApply (ApplyParent ApplyArg _ _ _) : _) ->
-          [result varName DoFlip resultId return, parened]
-        (AncestryItemApply (ApplyParent ApplyFunc _ _ _) : _) ->
-          [ordinary]
-        _ -> [parened]
+      case Sugar.holeMFlipFuncArg (hiHole holeInfo) of
+      Nothing -> [ordinary]
+      Just flipAct -> [result varName flipAct resultId return, parened]
     else
       [ordinary]
   where
     resultId = searchResultsPrefix (hiHoleId holeInfo) `mappend` WidgetIds.varId varRef
     resultIdAsPrefix = Widget.joinId resultId ["prefix"]
-    result name needFlip wid addParens =
+    result name flipAct wid addParens =
       Result
       { resultName = name
-      , resultPick = pickResult holeInfo (Data.ExpressionGetVariable varRef) needFlip resultId
+      , resultPick = pickResult holeInfo (Data.ExpressionGetVariable varRef) flipAct resultId
       , resultMakeWidget = addParens =<< VarEdit.makeView varRef wid
       }
 
@@ -131,20 +125,17 @@ holeResultAnimMapping holeInfo resultId parensId =
 
 pickResult
   :: MonadF m => HoleInfo m
-  -> Data.Expression -> NeedFlip -> Widget.Id
+  -> Data.Expression -> Transaction ViewTag m () -> Widget.Id
   -> ResultPicker m
-pickResult holeInfo newExpr needFlip resultId = do
+pickResult holeInfo newExpr flipAct resultId = do
   Transaction.writeIRef (hiExpressionI holeInfo) newExpr
-  flipAct needFlip
+  flipAct
   parensId <- Parens.makeParensId $ hiAncestry holeInfo
   return Widget.EventResult {
     Widget.eCursor = Just . WidgetIds.fromIRef $ hiExpressionI holeInfo,
     Widget.eAnimIdMapping =
       holeResultAnimMapping holeInfo resultId parensId
     }
-  where
-    flipAct DontFlip = return ()
-    flipAct DoFlip = fromMaybe (return ()) . Sugar.holeMFlipFuncArg $ hiHole holeInfo
 
 resultOrdering :: String -> Result m -> (Bool, Bool)
 resultOrdering searchTerm result =
@@ -162,7 +153,7 @@ makeLiteralResults holeInfo searchTerm =
     makeLiteralIntResult integer =
       Result
       { resultName = show integer
-      , resultPick = pickResult holeInfo (Data.ExpressionLiteralInteger integer) DontFlip literalIntId
+      , resultPick = pickResult holeInfo (Data.ExpressionLiteralInteger integer) (return ()) literalIntId
       , resultMakeWidget =
           BWidgets.makeFocusableView literalIntId =<<
           LiteralEdit.makeIntView literalIntId integer
