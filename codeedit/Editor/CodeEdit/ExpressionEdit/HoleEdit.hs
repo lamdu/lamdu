@@ -7,6 +7,7 @@ import Data.List (isInfixOf, isPrefixOf, sort)
 import Data.List.Utils (sortOn)
 import Data.Maybe (isJust, listToMaybe)
 import Data.Monoid (Monoid(..))
+import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
@@ -41,6 +42,7 @@ data Result m = Result {
 
 data HoleInfo m = HoleInfo
   { hiHoleId :: Widget.Id
+  , hiGuid :: Guid
   , hiHole :: Sugar.Hole m
   }
 
@@ -251,14 +253,16 @@ makeActiveHoleEdit holeInfo (Data.HoleState searchTerm) =
 makeH
   :: MonadF m
   => Sugar.Hole m
+  -> Guid
   -> Widget.Id
   -> CTransaction ViewTag m
      (Maybe (ResultPicker m), Widget (Transaction ViewTag m))
-makeH hole myId = do
+makeH hole guid myId = do
   cursor <- readCursor
   let
     holeInfo = HoleInfo
       { hiHoleId = myId
+      , hiGuid = guid
       , hiHole = hole
       }
   if isJust (Widget.subId myId cursor)
@@ -284,8 +288,9 @@ makeH hole myId = do
 make
   :: MonadF m
   => Sugar.Hole m
+  -> Guid
   -> Widget.Id
   -> CTransaction ViewTag m
      (Maybe (ResultPicker m), Widget (Transaction ViewTag m))
-make =
-  BWidgets.wrapDelegatedWithKeys FocusDelegator.defaultKeys FocusDelegator.Delegating second . makeH
+make hole =
+  BWidgets.wrapDelegatedWithKeys FocusDelegator.defaultKeys FocusDelegator.Delegating second . makeH hole
