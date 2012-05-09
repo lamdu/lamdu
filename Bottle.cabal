@@ -114,6 +114,7 @@ Executable Editor
                        Editor.CodeEdit.Sugar,
                        Editor.Config,
                        Editor.Data,
+                       Editor.DataLoad,
                        Editor.DataOps,
                        Editor.MonadF,
                        Editor.WidgetIds
