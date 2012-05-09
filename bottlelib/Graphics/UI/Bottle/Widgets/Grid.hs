@@ -10,7 +10,7 @@ module Graphics.UI.Bottle.Widgets.Grid(
 where
 
 import Control.Applicative (liftA2)
-import Control.Arrow (second)
+import Control.Arrow (first, second)
 import Control.Monad (msum, (>=>))
 import Data.List (foldl', transpose, find, minimumBy)
 import Data.List.Utils (index, enumerate2d)
@@ -181,7 +181,7 @@ toWidget =
   helper makeMEnter
   where
     makeMEnter size children =
-      search . mapMaybe indexIntoMaybe . concat $ enumerate2d children
+      search . mapMaybe indexIntoMaybe . concat . (map . map $ first tupleToVector2) $ enumerate2d children
       where
         indexIntoMaybe (i, m) = fmap ((,) i) m
         search [] = Nothing
@@ -194,6 +194,8 @@ toWidget =
           ((Geometry.rectScore size entryRect i . Widget.enterResultRect . childEnter) dir, childEnter)
 
         minimumOn = minimumBy . comparing
+
+        tupleToVector2 (x, y) = Vector2 x y
 
 -- ^ If unfocused, will enters the given child when entered
 toWidgetBiased :: Cursor -> KGrid key f -> Widget f
