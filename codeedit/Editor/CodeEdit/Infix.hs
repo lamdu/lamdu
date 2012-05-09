@@ -3,7 +3,6 @@ module Editor.CodeEdit.Infix(isInfixName, isInfixVar, infixOp)
 where
 
 import Control.Monad (liftM)
-import Data.Maybe (isJust)
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import qualified Data.Char as Char
