@@ -74,6 +74,17 @@ cursorTranslate style = Anim.translate (Vector2 (sCursorWidth style / 2) 0)
 makeTextEditCursor :: Widget.Id -> Int -> Widget.Id
 makeTextEditCursor myId = Widget.joinId myId . (:[]) . BinUtils.encodeS
 
+zeroWideRectsBetween :: [Rect] -> [Rect]
+zeroWideRectsBetween allRects@(rect:_) = zeroWideRectsBetween_
+  (Rect.top rect) (Rect.height rect) (Rect.left rect) allRects
+  where
+    zeroWideRectsBetween_ y height startX [] = [Rect (Vector2 startX y)
+                                                     (Vector2 0 height)]
+    zeroWideRectsBetween_ y height startX
+      (Rect _ (Vector2 width _): rects) =
+        (Rect (Vector2 startX y) (Vector2 0 height):
+          zeroWideRectsBetween_ y height (startX + width) rects)
+
 makeUnfocused :: Style -> String -> Widget.Id -> Widget ((,) String)
 makeUnfocused style str myId =
   Widget.takesFocus enter .
@@ -91,8 +102,8 @@ makeUnfocused style str myId =
         minimumOn = minimumBy . comparing
         rectToCursor fromRect =
           fst . minimumOn snd . enumerate . map (Rect.distance fromRect) .
-          concat $
-          TextView.letterRects (sTextViewStyle style) str
+          concat .
+          (map zeroWideRectsBetween) $ TextView.letterRects (sTextViewStyle style) str
 
 -- TODO: Instead of font + ptSize, let's pass a text-drawer (that's
 -- what "Font" should be)
