@@ -181,7 +181,9 @@ toWidget =
   helper makeMEnter
   where
     makeMEnter size children =
-      search . mapMaybe indexIntoMaybe . concat . (map . map $ first tupleToVector2) $ enumerate2d children
+      search . mapMaybe indexIntoMaybe .
+      concatMap (map $ first tupleToVector2) $
+      enumerate2d children
       where
         indexIntoMaybe (i, m) = fmap ((,) i) m
         search [] = Nothing

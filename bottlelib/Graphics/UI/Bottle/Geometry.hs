@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Graphics.UI.Bottle.Geometry(
   rectScore)
 where

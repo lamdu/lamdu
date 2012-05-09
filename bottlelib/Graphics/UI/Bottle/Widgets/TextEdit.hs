@@ -82,8 +82,8 @@ zeroWideRectsBetween allRects@(rect:_) = zeroWideRectsBetween_
                                                      (Vector2 0 height)]
     zeroWideRectsBetween_ y height startX
       (Rect _ (Vector2 width _): rects) =
-        (Rect (Vector2 startX y) (Vector2 0 height):
-          zeroWideRectsBetween_ y height (startX + width) rects)
+        Rect (Vector2 startX y) (Vector2 0 height):
+          zeroWideRectsBetween_ y height (startX + width) rects
 
 makeUnfocused :: Style -> String -> Widget.Id -> Widget ((,) String)
 makeUnfocused style str myId =
@@ -102,8 +102,8 @@ makeUnfocused style str myId =
         minimumOn = minimumBy . comparing
         rectToCursor fromRect =
           fst . minimumOn snd . enumerate . map (Rect.distance fromRect) .
-          concat .
-          (map zeroWideRectsBetween) $ TextView.letterRects (sTextViewStyle style) str
+          concatMap zeroWideRectsBetween $
+          TextView.letterRects (sTextViewStyle style) str
 
 -- TODO: Instead of font + ptSize, let's pass a text-drawer (that's
 -- what "Font" should be)
