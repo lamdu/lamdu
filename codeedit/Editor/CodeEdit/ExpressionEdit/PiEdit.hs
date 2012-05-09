@@ -25,7 +25,7 @@ make makeExpressionEdit (Sugar.Pi param resultType) myId =
     (resultTypeEdit, usedVars) <- usedVariables $ makeExpressionEdit resultType
     let
       paramGuid = Sugar.guid $ Sugar.fpActions param
-      paramUsed = any ((== paramGuid) . Data.onVariableIRef IRef.guid) usedVars
+      paramUsed = any ((== paramGuid) . Data.onVariableRef IRef.guid) usedVars
       redirectCursor cursor
         | paramUsed = cursor
         | otherwise = case Widget.subId (WidgetIds.paramId paramGuid) cursor of

@@ -91,7 +91,7 @@ type Scope = [Data.VariableRef]
 
 data Hole m = Hole
   { holeScope :: Scope
-  , holePickResult :: Data.Expression -> Transaction ViewTag m Guid
+  , holePickResult :: Data.Expression IRef -> Transaction ViewTag m Guid
   , holeMFlipFuncArg :: Maybe (Transaction ViewTag m ())
   }
 
@@ -134,12 +134,12 @@ AtFieldTH.make ''Apply
 AtFieldTH.make ''Section
 AtFieldTH.make ''Expression
 
-type Convertor m = IRef Data.Expression -> ExpressionSetter m -> Transaction ViewTag m (ExpressionRef m)
+type Convertor m = IRef (Data.Expression IRef) -> ExpressionSetter m -> Transaction ViewTag m (ExpressionRef m)
 
-addArg :: Monad m => IRef Data.Expression -> ExpressionSetter m -> Transaction ViewTag m Guid
+addArg :: Monad m => IRef (Data.Expression IRef) -> ExpressionSetter m -> Transaction ViewTag m Guid
 addArg exprI setExprI = liftM IRef.guid $ DataOps.callWithArg exprI setExprI
 
-makeActions :: Monad m => IRef Data.Expression -> ExpressionSetter m -> Actions m
+makeActions :: Monad m => IRef (Data.Expression IRef) -> ExpressionSetter m -> Actions m
 makeActions exprI setExprI =
   Actions
   { guid = IRef.guid exprI
@@ -155,7 +155,7 @@ makeActions exprI setExprI =
   , mNextArg = Nothing
   }
 
-mkExpressionRef :: Monad m => IRef Data.Expression -> ExpressionSetter m -> Expression m -> Transaction ViewTag m (ExpressionRef m)
+mkExpressionRef :: Monad m => IRef (Data.Expression IRef) -> ExpressionSetter m -> Expression m -> Transaction ViewTag m (ExpressionRef m)
 mkExpressionRef exprI setExprI expr =
   return
     ExpressionRef
@@ -165,9 +165,9 @@ mkExpressionRef exprI setExprI expr =
 
 convertLambdaParam
   :: Monad m
-  => (Data.Lambda -> Data.Expression)
-  -> Data.Lambda -> Scope
-  -> IRef Data.Expression -> ExpressionSetter m
+  => (Data.Lambda IRef -> Data.Expression IRef)
+  -> Data.Lambda IRef -> Scope
+  -> IRef (Data.Expression IRef) -> ExpressionSetter m
   -> Transaction ViewTag m (FuncParam m)
 convertLambdaParam con (Data.Lambda paramTypeI bodyI) scope exprI setExprI = do
   typeExpr <- convertExpression scope paramTypeI typeSetter
@@ -183,7 +183,7 @@ convertLambdaParam con (Data.Lambda paramTypeI bodyI) scope exprI setExprI = do
       setExprI bodyI
       return $ IRef.guid bodyI
 
-convertLambda :: Monad m => Data.Lambda -> Scope -> Convertor m
+convertLambda :: Monad m => Data.Lambda IRef -> Scope -> Convertor m
 convertLambda lambda@(Data.Lambda _ bodyI) scope exprI setExprI = do
   param <- convertLambdaParam Data.ExpressionLambda lambda scope exprI setExprI
   sBody <- convertExpression (Data.ParameterRef exprI : scope) bodyI bodySetter
@@ -195,13 +195,13 @@ convertLambda lambda@(Data.Lambda _ bodyI) scope exprI setExprI = do
   where
     bodySetter = DataOps.lambdaBodySetter Data.ExpressionLambda exprI lambda
 
-addDelete :: Monad m => ExpressionSetter m -> IRef Data.Expression -> ExpressionRef m -> ExpressionRef m
+addDelete :: Monad m => ExpressionSetter m -> IRef (Data.Expression IRef) -> ExpressionRef m -> ExpressionRef m
 addDelete parentSetter replacer =
   atRActions . atMDelete . const . Just $ do
     parentSetter replacer
     return $ IRef.guid replacer
 
-convertPi :: Monad m => Data.Lambda -> Scope -> Convertor m
+convertPi :: Monad m => Data.Lambda IRef -> Scope -> Convertor m
 convertPi lambda@(Data.Lambda paramTypeI bodyI) scope exprI setExprI = do
   param <- convertLambdaParam Data.ExpressionPi lambda scope exprI setExprI
   sBody <- convertExpression (Data.ParameterRef exprI : scope) bodyI bodySetter
@@ -216,8 +216,8 @@ convertPi lambda@(Data.Lambda paramTypeI bodyI) scope exprI setExprI = do
 convertWhere
   :: Monad m
   => ExpressionRef m
-  -> IRef Data.Expression
-  -> Data.Lambda
+  -> IRef (Data.Expression IRef)
+  -> Data.Lambda IRef
   -> Scope
   -> Convertor m
 convertWhere valueRef lambdaI lambda@(Data.Lambda _ bodyI) scope applyI setApplyI = do
@@ -245,7 +245,7 @@ addApplyChildParens =
     f x@(ExpressionApply _ _) = x
     f x = (atEHasParens . const) HaveParens x
 
-convertApply :: Monad m => Data.Apply -> Scope -> Convertor m
+convertApply :: Monad m => Data.Apply IRef -> Scope -> Convertor m
 convertApply apply@(Data.Apply funcI argI) scope exprI setExprI = do
   func <- Transaction.readIRef funcI
   let
@@ -268,14 +268,14 @@ convertApply apply@(Data.Apply funcI argI) scope exprI setExprI = do
         Just op -> convertApplyInfixL op apply scope exprI setExprI
         Nothing -> prefixApply
 
-setAddArg :: Monad m => IRef Data.Expression -> ExpressionSetter m -> ExpressionRef m -> ExpressionRef m
+setAddArg :: Monad m => IRef (Data.Expression IRef) -> ExpressionSetter m -> ExpressionRef m -> ExpressionRef m
 setAddArg exprI setExprI = atRActions . atAddNextArg . const $ addArg exprI setExprI
 
 convertApplyInfixFull
   :: Monad m
-  => Data.Apply
+  => Data.Apply IRef
   -> Data.VariableRef
-  -> Data.Apply
+  -> Data.Apply IRef
   -> Scope
   -> Convertor m
 convertApplyInfixFull funcApply@(Data.Apply funcFuncI funcArgI) op apply@(Data.Apply funcI argI) scope exprI setExprI = do
@@ -305,7 +305,7 @@ convertApplyInfixFull funcApply@(Data.Apply funcFuncI funcArgI) op apply@(Data.A
 convertApplyInfixL
   :: Monad m
   => Data.VariableRef
-  -> Data.Apply
+  -> Data.Apply IRef
   -> Scope
   -> Convertor m
 convertApplyInfixL op apply@(Data.Apply opI argI) scope exprI setExprI = do
@@ -328,7 +328,7 @@ convertApplyInfixL op apply@(Data.Apply opI argI) scope exprI setExprI = do
 
 convertApplyPrefix
   :: Monad m
-  => Data.Apply
+  => Data.Apply IRef
   -> Scope
   -> Convertor m
 convertApplyPrefix apply@(Data.Apply funcI argI) scope exprI setExprI = do
@@ -406,7 +406,7 @@ convertExpression scope exprI setExprI = do
 
 convertDefinition
   :: Monad m
-  => IRef Data.Definition -> Transaction ViewTag m (DefinitionRef m)
+  => IRef (Data.Definition IRef) -> Transaction ViewTag m (DefinitionRef m)
 convertDefinition defI = do
   def <- Transaction.readIRef defI
   liftM (DefinitionRef (IRef.guid defI)) $

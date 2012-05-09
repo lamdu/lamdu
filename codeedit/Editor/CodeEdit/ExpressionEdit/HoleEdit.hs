@@ -4,10 +4,11 @@ module Editor.CodeEdit.ExpressionEdit.HoleEdit(make, ResultPicker) where
 import Control.Arrow (first, second)
 import Control.Monad (liftM, mplus)
 import Data.ByteString (ByteString)
-import Data.List (isInfixOf, isPrefixOf, sort)
+import Data.List (isInfixOf, isPrefixOf)
 import Data.List.Utils (sortOn)
 import Data.Maybe (isJust, listToMaybe)
 import Data.Monoid (Monoid(..))
+import Data.Store.IRef (IRef)
 import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
@@ -117,7 +118,7 @@ holeResultAnimMappingNoParens holeInfo resultId =
 pickResult
   :: MonadF m
   => HoleInfo m
-  -> Data.Expression -> Transaction ViewTag m ()
+  -> Data.Expression IRef -> Transaction ViewTag m ()
   -> ResultPicker m
 pickResult holeInfo newExpr flipAct = do
   guid <- Sugar.holePickResult (hiHole holeInfo) newExpr
@@ -165,7 +166,7 @@ makeAllResults holeInfo = do
   globals <- getP Anchors.globals
   varResults <- liftM concat .
     mapM (makeResultVariables holeInfo) $
-    params ++ sort globals
+    params ++ globals
   searchTerm <- getP $ hiSearchTerm holeInfo
   let
     literalResults = makeLiteralResults holeInfo searchTerm

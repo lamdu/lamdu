@@ -1,70 +1,117 @@
-{-# LANGUAGE TemplateHaskell, Rank2Types #-}
+{-# LANGUAGE TemplateHaskell, Rank2Types, StandaloneDeriving, FlexibleInstances, FlexibleContexts, UndecidableInstances #-}
 module Editor.Data (
   Definition(..),
   Builtin(..), FFIName(..),
-  VariableRef(..), onVariableIRef,
+  VariableRef(..), onVariableRef,
   Lambda(..), atLambdaParamType, atLambdaBody,
   Apply(..), atApplyFunc, atApplyArg,
   Expression(..))
 where
 
+import Control.Applicative (pure, liftA2)
 import Data.Binary (Binary(..))
 import Data.Binary.Get (getWord8)
 import Data.Binary.Put (putWord8)
 import Data.Derive.Binary(makeBinary)
 import Data.DeriveTH(derive)
-import Data.Store.IRef (IRef)
+import Data.Store.IRef(IRef)
 import qualified Data.AtFieldTH as AtFieldTH
 
-data Lambda = Lambda {
-  lambdaParamType :: IRef Expression,
-  lambdaBody :: IRef Expression
-  } deriving (Eq, Ord, Read, Show)
+data Lambda i = Lambda {
+  lambdaParamType :: i (Expression i),
+  lambdaBody :: i (Expression i)
+  }
 
-data Apply = Apply {
-  applyFunc :: IRef Expression,
-  applyArg :: IRef Expression
-  } deriving (Eq, Ord, Read, Show)
+instance Binary (i (Expression i)) => Binary (Lambda i) where
+  get = liftA2 Lambda get get
+  put (Lambda x y) = put x >> put y
 
-data Expression
-  = ExpressionLambda Lambda
-  | ExpressionPi Lambda
-  | ExpressionApply Apply
+data Apply i = Apply {
+  applyFunc :: i (Expression i),
+  applyArg :: i (Expression i)
+  }
+
+data VariableRef
+  = ParameterRef (IRef (Expression IRef))
+  | DefinitionRef (IRef (Definition IRef))
+
+data Expression i
+  = ExpressionLambda (Lambda i)
+  | ExpressionPi (Lambda i)
+  | ExpressionApply (Apply i)
   | ExpressionGetVariable VariableRef
   | ExpressionHole
   | ExpressionLiteralInteger Integer
-  deriving (Eq, Ord, Read, Show)
+
+instance Binary (i (Expression i)) => Binary (Apply i) where
+  get = liftA2 Apply get get
+  put (Apply x y) = put x >> put y
 
 data FFIName = FFIName
   { fModule :: [String]
   , fName :: String
   } deriving (Eq, Ord, Read, Show)
 
-data Builtin = Builtin {
-  biName :: FFIName,
-  biType :: IRef Expression
-  } deriving (Eq, Ord, Read, Show)
+data Builtin i = Builtin
+  { biName :: FFIName
+  , biType :: i (Expression i)
+  }
 
-data Definition
-  = DefinitionExpression (IRef Expression)
-  | DefinitionBuiltin Builtin
-  deriving (Eq, Ord, Read, Show)
+instance Binary (i (Expression i)) => Binary (Builtin i) where
+  get = liftA2 Builtin get get
+  put (Builtin x y) = put x >> put y
 
-data VariableRef
-  = ParameterRef (IRef Expression)
-  | DefinitionRef (IRef Definition)
-  deriving (Eq, Ord, Read, Show)
+data Definition i
+  = DefinitionExpression (i (Expression i))
+  | DefinitionBuiltin (Builtin i)
 
-onVariableIRef :: (forall a. IRef a -> b) -> VariableRef -> b
-onVariableIRef f (ParameterRef i) = f i
-onVariableIRef f (DefinitionRef i) = f i
+instance Binary (i (Expression i)) => Binary (Definition i) where
+  get = do
+    tag <- getWord8
+    case tag of
+      0 -> fmap DefinitionExpression get
+      1 -> fmap DefinitionBuiltin get
+      _ -> fail "Invalid tag in serialization of Definition"
+  put (DefinitionExpression x) = putWord8 0 >> put x
+  put (DefinitionBuiltin x) = putWord8 1 >> put x
 
-derive makeBinary ''Apply
-derive makeBinary ''Lambda
+instance Binary VariableRef where
+  get = do
+    tag <- getWord8
+    case tag of
+      0 -> fmap ParameterRef  get
+      1 -> fmap DefinitionRef get
+      _ -> fail "Invalid tag in serialization of VariableRef"
+  put (ParameterRef x)  = putWord8 0 >> put x
+  put (DefinitionRef x) = putWord8 1 >> put x
+
+instance
+  (Binary (i (Expression i)),
+   Binary (i (Definition i)),
+   Binary (i (Builtin i)))
+  => Binary (Expression i)
+  where
+  get = do
+    tag <- getWord8
+    case tag of
+      0 -> fmap ExpressionLambda         get
+      1 -> fmap ExpressionPi             get
+      2 -> fmap ExpressionApply          get
+      3 -> fmap ExpressionGetVariable    get
+      4 -> pure ExpressionHole
+      5 -> fmap ExpressionLiteralInteger get
+      _ -> fail "Invalid tag in serialization of Expression"
+  put (ExpressionLambda x)         = putWord8 0 >> put x
+  put (ExpressionPi x)             = putWord8 1 >> put x
+  put (ExpressionApply x)          = putWord8 2 >> put x
+  put (ExpressionGetVariable x)    = putWord8 3 >> put x
+  put ExpressionHole               = putWord8 4
+  put (ExpressionLiteralInteger x) = putWord8 5 >> put x
+
+onVariableRef :: (forall a. IRef a -> b) -> VariableRef -> b
+onVariableRef f (ParameterRef i) = f i
+onVariableRef f (DefinitionRef i) = f i
+
 derive makeBinary ''FFIName
-derive makeBinary ''Builtin
-derive makeBinary ''Definition
-derive makeBinary ''Expression
-derive makeBinary ''VariableRef
 AtFieldTH.make ''Lambda
 AtFieldTH.make ''Apply

@@ -17,7 +17,7 @@ isInfixName name = all (not . Char.isAlphaNum) name
 isInfixVar :: Monad m => Data.VariableRef -> Transaction t m Bool
 isInfixVar = liftM isInfixName . Property.get . Anchors.variableNameRef
 
-infixOp :: Monad m => IRef Data.Expression -> Transaction t m (Maybe Data.VariableRef)
+infixOp :: Monad m => IRef (Data.Expression IRef) -> Transaction t m (Maybe Data.VariableRef)
 infixOp funcI = do
   expr <- Transaction.readIRef funcI
   case expr of

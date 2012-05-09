@@ -40,7 +40,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Data as Data
 import qualified Graphics.UI.Bottle.Widget as Widget
 
-type Pane = IRef Data.Definition
+type Pane = IRef (Data.Definition IRef)
 
 data DBTag
 dbStore :: Db -> Store DBTag IO
@@ -101,10 +101,10 @@ redos = Transaction.fromIRef redosIRef
 view :: Monad m => Transaction.Property DBTag m View
 view = Transaction.fromIRef viewIRef
 
-makePane :: IRef Data.Definition -> Pane
+makePane :: IRef (Data.Definition IRef) -> Pane
 makePane = id
 
-makeDefinition :: Monad m => String -> Transaction ViewTag m (IRef Data.Definition)
+makeDefinition :: Monad m => String -> Transaction ViewTag m (IRef (Data.Definition IRef))
 makeDefinition newName = do
   holeI <- Transaction.newIRef Data.ExpressionHole
   defI <- Transaction.newIRef $ Data.DefinitionExpression holeI
@@ -129,9 +129,9 @@ aNameRef :: Monad m => Guid -> Property (Transaction t m) String
 aNameRef = aDataRef "Name" ""
 
 variableNameRef :: Monad m => Data.VariableRef -> Property (Transaction t m) String
-variableNameRef = Data.onVariableIRef (aNameRef . IRef.guid)
+variableNameRef = Data.onVariableRef (aNameRef . IRef.guid)
 
-newPane :: Monad m => IRef Data.Definition -> Transaction ViewTag m ()
+newPane :: Monad m => IRef (Data.Definition IRef) -> Transaction ViewTag m ()
 newPane defI = do
   ps <- Property.get panes
   when (defI `notElem` ps) $
@@ -152,7 +152,7 @@ jumpBack = do
       Property.set preJumps js
       return $ Just j
 
-newBuiltin :: Monad m => String -> IRef Data.Expression -> Transaction t m Data.VariableRef
+newBuiltin :: Monad m => String -> IRef (Data.Expression IRef) -> Transaction t m Data.VariableRef
 newBuiltin fullyQualifiedName typeI = do
   builtinIRef <- Transaction.newIRef $ Data.DefinitionBuiltin Data.Builtin
     { Data.biName = Data.FFIName (init path) name
