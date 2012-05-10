@@ -216,6 +216,7 @@ initDB store =
       ,"Prelude.<"
       ,"Prelude.>"
       ,"Prelude.if"
+      ,"Prelude.Set"
       ]
 
 aDataRef :: (Binary b, Monad m) => SBS.ByteString -> b -> Guid -> Property (Transaction t m) b
