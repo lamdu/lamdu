@@ -4,6 +4,7 @@ module Editor.CodeEdit.Sugar
   ( Expression(..), Actions(..), ExpressionRef(..)
   , Where(..), WhereItem(..)
   , Func(..), FuncParam(..)
+  , SimpleFuncType(..), BindingFuncType(..)
   , Apply(..), Section(..), Hole(..), LiteralInteger(..)
   , HasParens(..)
   , convertExpression
@@ -67,6 +68,18 @@ data Func m = Func
   , fBody :: ExpressionRef m
   }
 
+data SimpleFuncType m = SimpleFuncType
+  { _sftParamType :: ExpressionRef m
+  , _sftResultType :: ExpressionRef m
+  , _sftTransformToBindingFuncType :: Transaction ViewTag m ()
+  }
+
+-- Deleting a BindingFuncType's parameter turns it into a SimpleFuncType
+data BindingFuncType m = BindingFuncType
+  { _bftParam :: FuncParam m
+  , _bftResultType :: ExpressionRef m
+  }
+
 data Apply m = Apply
   { applyFunc :: ExpressionRef m
   , applyArg :: ExpressionRef m
@@ -94,10 +107,12 @@ data LiteralInteger m = LiteralInteger
   }
 
 data Expression m
-  = ExpressionApply   { eHasParens :: HasParens, eApply :: Apply m }
-  | ExpressionSection { eHasParens :: HasParens, eSection :: Section m }
-  | ExpressionWhere   { eHasParens :: HasParens, eWhere :: Where m }
-  | ExpressionFunc    { eHasParens :: HasParens, eFunc :: Func m }
+  = ExpressionApply           { eHasParens :: HasParens, eApply :: Apply m }
+  | ExpressionSection         { eHasParens :: HasParens, eSection :: Section m }
+  | ExpressionWhere           { eHasParens :: HasParens, eWhere :: Where m }
+  | ExpressionFunc            { eHasParens :: HasParens, eFunc :: Func m }
+  | ExpressionSimpleFuncType  { eHasParens :: HasParens, eSFuncType :: SimpleFuncType m }
+  | ExpressionBindingFuncType { eHasParens :: HasParens, eBFuncType :: BindingFuncType m }
   | ExpressionGetVariable { _eGetVar :: Data.VariableRef }
   | ExpressionHole { eHole :: Hole m }
   | ExpressionLiteralInteger { _eLit :: LiteralInteger m }
