@@ -9,7 +9,7 @@ import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, TWidget, transaction)
+import Editor.CTransaction (CTransaction, TWidget, transaction, getP)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -109,7 +109,8 @@ make
   -> IRef Data.Definition
   -> TWidget ViewTag m
 make makeExpressionEdit definitionI = do
-  sExpr <- transaction $ Sugar.convertExpression exprPtr
+  exprI <- getP exprPtr
+  sExpr <- transaction . Sugar.convertExpression exprI $ Property.set exprPtr
   liftM
     ( Box.toWidget . (Box.atBoxContent . fmap) addJumps .
       BWidgets.hboxK
