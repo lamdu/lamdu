@@ -1,4 +1,3 @@
-{-# OPTIONS -O2 -Wall #-}
 {-# LANGUAGE TemplateHaskell, Rank2Types #-}
 module Editor.Data (
   Definition(..), atDefBody,
