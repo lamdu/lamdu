@@ -59,7 +59,8 @@ constructorFields (RecC conName fields) =
     where
         f (name, _, t) = ((name, t), conName)
 constructorFields (NormalC _ []) = []
-constructorFields _ = error "unsupported constructor for type supplied to Data.AtFieldTH.make"
+constructorFields (NormalC name _) = error $ "Constructor " ++ show name ++ " contains non-record fields. This is not supported by Data.AtFieldTH.make"
+constructorFields x = error $ "unsupported constructor " ++ show x ++ " supplied to Data.AtFieldTH.make"
 
 countElemRepetitions :: Eq a => a -> [a] -> Int
 countElemRepetitions x = length . filter (== x)
