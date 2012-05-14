@@ -17,6 +17,7 @@ import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Char as Char
+import qualified Data.Function as Function
 import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
@@ -125,9 +126,14 @@ pickResult holeInfo newExpr flipAct = do
     Widget.eAnimIdMapping = id -- TODO: Need to fix the parens id
     }
 
-resultOrdering :: String -> Result m -> (Bool, Bool)
+resultOrdering :: String -> Result m -> [Bool]
 resultOrdering searchTerm result =
-  (searchTerm /= name, not (searchTerm `isPrefixOf` name))
+  map not $
+  [ searchTerm == name
+  , isPrefixOf searchTerm name
+  , Function.on isPrefixOf (map Char.toLower) searchTerm name
+  , isInfixOf searchTerm name
+  ]
   where
     name = resultName result
 
@@ -162,10 +168,10 @@ makeAllResults holeInfo = do
   searchTerm <- getP $ hiSearchTerm holeInfo
   let
     literalResults = makeLiteralResults holeInfo searchTerm
-    goodResult = (searchTerm `isInfixOf`) . resultName
+    goodResult = Function.on isInfixOf (map Char.toLower) searchTerm . resultName
   return .
     sortOn (resultOrdering searchTerm) $
-    piResult : literalResults ++ filter goodResult varResults
+    literalResults ++ filter goodResult (piResult : varResults)
   where
     params = Sugar.holeScope $ hiHole holeInfo
     piResult =
