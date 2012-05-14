@@ -76,8 +76,8 @@ data SimpleFuncType m = SimpleFuncType
 
 -- Deleting a BindingFuncType's parameter turns it into a SimpleFuncType
 data BindingFuncType m = BindingFuncType
-  { _bftParam :: FuncParam m
-  , _bftResultType :: ExpressionRef m
+  { bftParam :: FuncParam m
+  , bftResultType :: ExpressionRef m
   }
 
 data Apply m = Apply
@@ -186,7 +186,12 @@ convertWhere
   -> Scope
   -> Convertor m
 convertWhere valueRef lambdaI lambda@(Data.Lambda _ bodyI) scope applyI setApplyI = do
-  let
+  sBody <- convertNode (Data.ParameterRef lambdaI : scope) bodyI bodySetter
+  mkExpressionRef applyI setApplyI . ExpressionWhere DontHaveParens . atWWheres (item :) $
+    case rExpression sBody of
+      ExpressionWhere _ x -> x
+      _ -> Where [] sBody
+  where
     bodySetter = DataOps.lambdaBodySetter lambdaI lambda
     deleteItem = do
       setApplyI bodyI
@@ -197,11 +202,28 @@ convertWhere valueRef lambdaI lambda@(Data.Lambda _ bodyI) scope applyI setApply
           makeActions lambdaI setApplyI
       , wiValue = valueRef
       }
-  sBody <- convertNode (Data.ParameterRef lambdaI : scope) bodyI bodySetter
-  mkExpressionRef applyI setApplyI . ExpressionWhere DontHaveParens . atWWheres (item :) $
-    case rExpression sBody of
-      ExpressionWhere _ x -> x
-      _ -> Where [] sBody
+
+convertBindingFuncType
+  :: Monad m
+  => IRef Data.Expression -> ExpressionSetter m -> Data.Lambda
+  -> Scope -> Convertor m
+convertBindingFuncType lambdaI setLambdaI lambda@(Data.Lambda argTypeI resultTypeI) scope applyI setApplyI = do
+  argTypeExpr <- convertNode scope argTypeI $ DataOps.lambdaParamTypeSetter lambdaI lambda
+  resultTypeExpr <- convertNode (Data.ParameterRef lambdaI : scope) resultTypeI $ DataOps.lambdaBodySetter lambdaI lambda
+  mkExpressionRef applyI setApplyI . ExpressionBindingFuncType DontHaveParens $
+    BindingFuncType
+    { bftParam = FuncParam
+        { fpActions =
+            (atMDelete . const . Just) deleteItem $
+            makeActions lambdaI setLambdaI
+        , fpType = argTypeExpr
+        }
+    , bftResultType = resultTypeExpr
+    }
+  where
+    deleteItem = do
+      setLambdaI resultTypeI
+      return $ IRef.guid resultTypeI
 
 addParensAtSection :: ExpressionRef m -> ExpressionRef m
 addParensAtSection =
@@ -213,11 +235,19 @@ addParensAtSection =
 convertApply :: Monad m => Data.Apply -> Scope -> Convertor m
 convertApply apply@(Data.Apply funcI argI) scope exprI setExprI = do
   func <- Transaction.readIRef funcI
-  let prefixApply = convertApplyPrefix apply scope exprI setExprI
+  let
+    prefixApply = convertApplyPrefix apply scope exprI setExprI
+    setArgI = DataOps.applyArgSetter exprI apply
   case func of
     Data.ExpressionLambda lambda -> do
-      valueRef <- convertNode scope argI $ DataOps.applyArgSetter exprI apply
+      valueRef <- convertNode scope argI setArgI
       convertWhere valueRef funcI lambda scope exprI setExprI
+    -- BindingFuncType or ordinary prefix:
+    Data.ExpressionPi -> do
+      arg <- Transaction.readIRef argI
+      case arg of
+        Data.ExpressionLambda lambda -> convertBindingFuncType argI setArgI lambda scope exprI setExprI
+        _ -> prefixApply
     -- InfixR or ordinary prefix:
     Data.ExpressionApply funcApply@(Data.Apply funcFuncI _) -> do
       mInfixOp <- Infix.infixOp funcFuncI
