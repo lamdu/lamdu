@@ -123,20 +123,23 @@ runDbStore font store = do
       runCTransaction cursor style $
       BranchGUI.makeRootWidget CodeEdit.makePanesEdit
     -- TODO: Move this logic to some more common place?
-    makeWidget = widgetDownTransaction $ do
-      cursor <- Property.get Anchors.cursor
-      candidateWidget <- fromCursor cursor
-      focusable <-
-        if Widget.isFocused candidateWidget
-        then return candidateWidget
-        else fromCursor (WidgetIds.fromIRef Anchors.rootIRef)
-      unless (Widget.isFocused focusable) $
-        fail "Root cursor did not match"
-      return $ Widget.atEvents (>>= attachCursor) focusable
+    makeWidget = do
+      (invalidCursor, widget) <- widgetDownTransaction $ do
+        cursor <- Property.get Anchors.cursor
+        candidateWidget <- fromCursor cursor
+        (validCursor, focusable) <-
+          if Widget.isFocused candidateWidget
+          then return (Nothing, candidateWidget)
+          else liftM ((,) (Just cursor)) . fromCursor $ WidgetIds.fromIRef Anchors.rootIRef
+        unless (Widget.isFocused focusable) $
+          fail "Root cursor did not match"
+        return (validCursor, Widget.atEvents (>>= attachCursor) focusable)
+      maybe (return ()) (putStrLn . ("Invalid cursor: " ++) . show) invalidCursor
+      return widget
 
     widgetDownTransaction =
       Transaction.run store .
-      (liftM . Widget.atEvents) (Transaction.run store)
+      (liftM . second . Widget.atEvents) (Transaction.run store)
 
     attachCursor eventResult = do
       maybe (return ()) (Property.set Anchors.cursor) $ Widget.eCursor eventResult
