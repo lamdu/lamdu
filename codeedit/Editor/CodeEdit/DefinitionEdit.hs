@@ -9,14 +9,13 @@ import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, TWidget, transaction, getP)
+import Editor.CTransaction (CTransaction, TWidget, transaction)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Widgets.Grid (GridElement)
 import qualified Data.List as List
 import qualified Data.Store.IRef as IRef
-import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
@@ -109,14 +108,25 @@ make
   -> IRef Data.Definition
   -> TWidget ViewTag m
 make makeExpressionEdit definitionI = do
-  exprI <- getP exprPtr
-  sExpr <- transaction . Sugar.convertExpression exprI $ Property.set exprPtr
-  liftM
-    ( Box.toWidget . (Box.atBoxContent . fmap) addJumps .
-      BWidgets.hboxK
-    ) $
-    makeParts makeExpressionEdit (IRef.guid definitionI) sExpr
+  -- TODO: What to do with builtins?
+  def <- transaction $ Transaction.readIRef definitionI
+  case def of
+    Data.DefinitionExpression exprI -> do
+      sExpr <-
+        transaction $ Sugar.convertExpression exprI
+        (Transaction.writeIRef definitionI . Data.DefinitionExpression)
+      liftM
+        ( Box.toWidget . (Box.atBoxContent . fmap) addJumps .
+          BWidgets.hboxK
+        ) $
+        makeParts makeExpressionEdit (IRef.guid definitionI) sExpr
+    Data.DefinitionBuiltin (Data.Builtin modulePath name) -> do
+      moduleName <-
+        BWidgets.setTextColor Config.foreignModuleColor $
+        BWidgets.makeLabel (concatMap (++ ".") modulePath) myId
+      varName <-
+        BWidgets.setTextColor Config.foreignVarColor $
+        BWidgets.makeLabel name myId
+      BWidgets.makeFocusableView myId $ BWidgets.hbox [moduleName, varName]
   where
-    exprPtr =
-      Property.composeLabel Data.defBody Data.atDefBody
-      (Transaction.fromIRef definitionI)
+    myId = WidgetIds.fromIRef definitionI

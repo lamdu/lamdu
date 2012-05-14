@@ -76,6 +76,7 @@ assignCursor src dest =
 atTextStyle :: (TextEdit.Style -> TextEdit.Style) -> TWidget t m -> TWidget t m
 atTextStyle = atCTransaction . Reader.withReaderT . atEnvTextStyle
 
+-- Todo: set, not at
 atTextSizeColor
   :: Int
   -> Draw.Color

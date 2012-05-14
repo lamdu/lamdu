@@ -145,12 +145,12 @@ collectWrites newGuid =
 
 newBuiltin :: Monad m => String -> Transaction t m Data.VariableRef
 newBuiltin fullyQualifiedName = do
-  builtinIRef <- Transaction.newIRef Data.Builtin {
+  builtinIRef <- Transaction.newIRef $ Data.DefinitionBuiltin Data.Builtin {
     Data.biModule = init path,
     Data.biName = name
     }
   Property.set (aNameRef (IRef.guid builtinIRef)) name
-  return $ Data.BuiltinRef builtinIRef
+  return $ Data.DefinitionRef builtinIRef
   where
     name = last path
     path = splitOn "." fullyQualifiedName
@@ -164,9 +164,7 @@ makePane defI = Pane {
 makeDefinition :: Monad m => String -> Transaction ViewTag m (IRef Data.Definition)
 makeDefinition newName = do
   holeI <- Transaction.newIRef Data.ExpressionHole
-  defI <- Transaction.newIRef Data.Definition {
-    Data.defBody = holeI
-    }
+  defI <- Transaction.newIRef $ Data.DefinitionExpression holeI
   Property.pureModify globals (Data.DefinitionRef defI :)
   (Property.set . aNameRef . IRef.guid) defI newName
   return defI

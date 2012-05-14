@@ -14,7 +14,6 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 colorOf :: Data.VariableRef -> Draw.Color
-colorOf (Data.BuiltinRef _) = Config.builtinColor
 colorOf (Data.DefinitionRef _) = Config.definitionColor
 colorOf (Data.ParameterRef _) = Config.parameterColor
 
@@ -48,5 +47,4 @@ make varRef myId = do
         Data.ParameterRef paramI -> do
           Anchors.savePreJumpPosition myId
           return $ WidgetIds.fromIRef paramI
-        Data.BuiltinRef _builtI -> return myId
   return $ Widget.weakerEvents jumpToDefinitionEventMap varRefView

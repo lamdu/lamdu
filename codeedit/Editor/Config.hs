@@ -54,7 +54,6 @@ exprFocusDelegatorKeys = FocusDelegator.Keys {
 
 newDefinitionKeys = [alt 'n']
 
-builtinColor = Draw.Color 1 0.6 0.2 1
 definitionColor = Draw.Color 0.8 0.5 1 1
 parameterColor = Draw.Color 0.2 0.8 0.9 1
 
@@ -92,3 +91,6 @@ baseTextSize = 30
 
 typeScaleFactor = 0.6
 squareParensScaleFactor = 0.96
+
+foreignModuleColor = Draw.Color 1 0.3 0.35 1
+foreignVarColor = Draw.Color 1 0.65 0.25 1
