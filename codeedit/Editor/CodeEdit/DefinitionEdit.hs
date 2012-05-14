@@ -32,21 +32,22 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 data Side = LHS | RHS
   deriving (Show, Eq)
 
-makeNameEdit :: Monad m => Guid -> TWidget t m
-makeNameEdit ident =
+makeNameEdit :: Monad m => Widget.Id -> Guid -> TWidget t m
+makeNameEdit myId ident =
   BWidgets.wrapDelegated FocusDelegator.NotDelegating
   (BWidgets.setTextColor Config.definitionColor .
    BWidgets.makeNameEdit Config.unnamedStr ident) $
-  WidgetIds.fromGuid ident
+  myId
 
 makeLHSEdit
   :: MonadF m
   => ExpressionEditMaker m
+  -> Widget.Id
   -> Guid
   -> [Sugar.FuncParam m]
   -> TWidget ViewTag m
-makeLHSEdit makeExpressionEdit ident params = do
-  nameEdit <- makeNameEdit ident
+makeLHSEdit makeExpressionEdit myId ident params = do
+  nameEdit <- makeNameEdit myId ident
   liftM (BWidgets.gridHSpaced . List.transpose . map pairList . ((nameEdit, nameTypeFiller) :)) .
     mapM (FuncEdit.makeParamEdit makeExpressionEdit) $ params
   where
@@ -80,18 +81,19 @@ addJumps defKBoxElements =
 makeParts
   :: MonadF m
   => ExpressionEditMaker m
+  -> Widget.Id
   -> Guid
   -> Sugar.ExpressionRef m
   -> CTransaction ViewTag m [(Maybe Side, Widget (Transaction ViewTag m))]
-makeParts makeExpressionEdit ident exprRef = do
+makeParts makeExpressionEdit myId ident exprRef = do
   let
     sExpr = Sugar.rExpression exprRef
     func =
       case sExpr of
       Sugar.ExpressionFunc _ x -> x
       _ -> Sugar.Func [] exprRef
-  lhsEdit <- makeLHSEdit makeExpressionEdit ident $ Sugar.fParams func
-  equals <- BWidgets.makeLabel "=" (WidgetIds.fromGuid ident)
+  lhsEdit <- makeLHSEdit makeExpressionEdit myId ident $ Sugar.fParams func
+  equals <- BWidgets.makeLabel "=" myId
   rhsEdit <- makeExpressionEdit $ Sugar.fBody func
   return $
     zipWith (second . Widget.align . (`Vector2` 0.5)) [1, 0.5, 0.5, 0.5, 0]
@@ -119,7 +121,7 @@ make makeExpressionEdit definitionI = do
         ( Box.toWidget . (Box.atBoxContent . fmap) addJumps .
           BWidgets.hboxK
         ) $
-        makeParts makeExpressionEdit (IRef.guid definitionI) sExpr
+        makeParts makeExpressionEdit myId ident sExpr
     Data.DefinitionBuiltin (Data.Builtin modulePath name) -> do
       moduleName <-
         BWidgets.setTextColor Config.foreignModuleColor $
@@ -129,4 +131,5 @@ make makeExpressionEdit definitionI = do
         BWidgets.makeLabel name myId
       BWidgets.makeFocusableView myId $ BWidgets.hbox [moduleName, varName]
   where
-    myId = WidgetIds.fromIRef definitionI
+    ident = IRef.guid definitionI
+    myId = WidgetIds.fromGuid ident
