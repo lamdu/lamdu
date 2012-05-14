@@ -116,6 +116,7 @@ data Expression m
   | ExpressionGetVariable { _eGetVar :: Data.VariableRef }
   | ExpressionHole { eHole :: Hole m }
   | ExpressionLiteralInteger { _eLit :: LiteralInteger m }
+  | ExpressionPi
 
 AtFieldTH.make ''Hole
 AtFieldTH.make ''Where
@@ -356,6 +357,10 @@ convertLiteralInteger i exprI setExprI =
   , liSetValue = Transaction.writeIRef exprI . Data.ExpressionLiteralInteger
   }
 
+convertPi :: Monad m => Convertor m
+convertPi exprI setExprI =
+  mkExpressionRef exprI setExprI ExpressionPi
+
 convertNode :: Monad m => Scope -> Convertor m
 convertNode scope exprI setExprI = do
   expr <- Transaction.readIRef exprI
@@ -367,6 +372,7 @@ convertNode scope exprI setExprI = do
       Data.ExpressionGetVariable x -> convertGetVariable x
       Data.ExpressionHole -> convertHole scope
       Data.ExpressionLiteralInteger x -> convertLiteralInteger x
+      Data.ExpressionPi -> convertPi
   conv exprI setExprI
 
 convertExpression :: Monad m => Convertor m

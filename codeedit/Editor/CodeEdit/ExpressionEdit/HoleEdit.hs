@@ -3,6 +3,7 @@ module Editor.CodeEdit.ExpressionEdit.HoleEdit(make, ResultPicker) where
 
 import Control.Arrow (first, second)
 import Control.Monad (liftM, mplus)
+import Data.ByteString (ByteString)
 import Data.List (isInfixOf, isPrefixOf, sort)
 import Data.List.Utils (sortOn)
 import Data.Maybe (isJust, listToMaybe)
@@ -130,13 +131,16 @@ resultOrdering searchTerm result =
   where
     name = resultName result
 
+searchResultId :: HoleInfo m -> ByteString -> Widget.Id
+searchResultId holeInfo = Widget.joinId (searchResultsPrefix (hiHoleId holeInfo)) . (:[])
+
 makeLiteralResults
   :: MonadF m => HoleInfo m -> String -> [Result m]
 makeLiteralResults holeInfo searchTerm =
   [ makeLiteralIntResult (read searchTerm)
   | not (null searchTerm) && all Char.isDigit searchTerm]
   where
-    literalIntId = Widget.joinId (searchResultsPrefix (hiHoleId holeInfo)) ["literal int"]
+    literalIntId = searchResultId holeInfo "literal int"
     makeLiteralIntResult integer =
       Result
       { resultName = show integer
@@ -161,9 +165,16 @@ makeAllResults holeInfo = do
     goodResult = (searchTerm `isInfixOf`) . resultName
   return .
     sortOn (resultOrdering searchTerm) $
-    literalResults ++ filter goodResult varResults
+    piResult : literalResults ++ filter goodResult varResults
   where
     params = Sugar.holeScope $ hiHole holeInfo
+    piResult =
+      Result
+      { resultName = "Pi"
+      , resultPick = pickResult holeInfo Data.ExpressionPi (return ())
+      , resultMakeWidget =
+          BWidgets.makeFocusableTextView "Pi" $ searchResultId holeInfo "Pi result"
+      }
 
 makeSearchTermWidget
   :: MonadF m

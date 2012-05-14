@@ -28,14 +28,14 @@ data Apply = Apply {
   }
   deriving (Eq, Ord, Read, Show)
 
-data Expression =
-  ExpressionLambda Lambda |
-  ExpressionApply Apply |
-  ExpressionGetVariable VariableRef |
-  ExpressionHole |
-  ExpressionLiteralInteger Integer
+data Expression
+  = ExpressionLambda Lambda
+  | ExpressionApply Apply
+  | ExpressionGetVariable VariableRef
+  | ExpressionHole
+  | ExpressionLiteralInteger Integer
+  | ExpressionPi
   deriving (Eq, Ord, Read, Show)
-
 
 data Builtin = Builtin {
   biModule :: [String],

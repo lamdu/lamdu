@@ -71,6 +71,8 @@ make sExpr = do
         wrapNonHoleExpr . textParenify hasParens $ SectionEdit.make make section
       Sugar.ExpressionLiteralInteger integer ->
         notAHole $ LiteralEdit.makeInt integer
+      Sugar.ExpressionPi ->
+        notAHole $ BWidgets.makeFocusableTextView "π"
   (holePicker, widget) <- makeEditor exprId
   eventMap <- expressionEventMap sExpr holePicker
   return $ Widget.weakerEvents eventMap widget
