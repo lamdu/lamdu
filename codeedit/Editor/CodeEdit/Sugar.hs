@@ -213,21 +213,22 @@ addParensAtSection =
 convertApply :: Monad m => Data.Apply -> Scope -> Convertor m
 convertApply apply@(Data.Apply funcI argI) scope exprI setExprI = do
   func <- Transaction.readIRef funcI
-  argRef <- convertNode scope argI $ DataOps.applyArgSetter exprI apply
-  let prefixApply = convertApplyPrefix apply argRef scope exprI setExprI
+  let prefixApply = convertApplyPrefix apply scope exprI setExprI
   case func of
-    Data.ExpressionLambda lambda -> convertWhere argRef funcI lambda scope exprI setExprI
+    Data.ExpressionLambda lambda -> do
+      valueRef <- convertNode scope argI $ DataOps.applyArgSetter exprI apply
+      convertWhere valueRef funcI lambda scope exprI setExprI
     -- InfixR or ordinary prefix:
     Data.ExpressionApply funcApply@(Data.Apply funcFuncI _) -> do
       mInfixOp <- Infix.infixOp funcFuncI
       case mInfixOp of
-        Just op -> convertApplyInfixFull funcApply op apply argRef scope exprI setExprI
+        Just op -> convertApplyInfixFull funcApply op apply scope exprI setExprI
         Nothing -> prefixApply
     -- InfixL or ordinary prefix:
     _ -> do
       mInfixOp <- Infix.infixOp funcI
       case mInfixOp of
-        Just op -> convertApplyInfixL op apply argRef exprI setExprI
+        Just op -> convertApplyInfixL op apply scope exprI setExprI
         Nothing -> prefixApply
 
 setAddArg :: Monad m => IRef Data.Expression -> ExpressionSetter m -> ExpressionRef m -> ExpressionRef m
@@ -244,10 +245,10 @@ convertApplyInfixFull
   => Data.Apply
   -> Data.VariableRef
   -> Data.Apply
-  -> ExpressionRef m
   -> Scope
   -> Convertor m
-convertApplyInfixFull funcApply@(Data.Apply funcFuncI funcArgI) op apply@(Data.Apply funcI _) rArgRef scope exprI setExprI = do
+convertApplyInfixFull funcApply@(Data.Apply funcFuncI funcArgI) op apply@(Data.Apply funcI argI) scope exprI setExprI = do
+  rArgRef <- convertNode scope argI $ DataOps.applyArgSetter exprI apply
   lArgRef <- convertNode scope funcArgI $ DataOps.applyArgSetter funcI funcApply
   opRef <-
     mkExpressionRef funcFuncI (DataOps.applyFuncSetter funcI funcApply) $
@@ -274,9 +275,15 @@ convertApplyInfixL
   :: Monad m
   => Data.VariableRef
   -> Data.Apply
-  -> ExpressionRef m
+  -> Scope
   -> Convertor m
-convertApplyInfixL op apply@(Data.Apply opI argI) argRef exprI setExprI = do
+convertApplyInfixL op apply@(Data.Apply opI argI) scope exprI setExprI = do
+  argRef <- convertNode scope argI $ DataOps.applyArgSetter exprI apply
+  let
+    newArgRef =
+      addDelete setExprI opI .
+      addParensAtSection $
+      argRef
   opRef <-
     mkExpressionRef opI (DataOps.applyFuncSetter exprI apply) $
     ExpressionGetVariable op
@@ -287,21 +294,22 @@ convertApplyInfixL op apply@(Data.Apply opI argI) argRef exprI setExprI = do
       opRef
   mkExpressionRef exprI setExprI . ExpressionSection HaveParens $
     Section (Just newArgRef) newOpRef Nothing
-  where
-    newArgRef =
-      addDelete setExprI opI .
-      addParensAtSection $
-      argRef
 
 convertApplyPrefix
   :: Monad m
   => Data.Apply
-  -> ExpressionRef m
   -> Scope
   -> Convertor m
-convertApplyPrefix apply@(Data.Apply funcI argI) argRef scope exprI setExprI = do
+convertApplyPrefix apply@(Data.Apply funcI argI) scope exprI setExprI = do
+  argRef <- convertNode scope argI $ DataOps.applyArgSetter exprI apply
   funcRef <- convertNode scope funcI $ DataOps.applyFuncSetter exprI apply
   let
+    newArgRef =
+      addDelete setExprI funcI .
+      setAddArg exprI setExprI .
+      addFlipFuncArg .
+      addParens $ argRef
+    setNextArg = atRActions . atMNextArg . const . Just $ newArgRef
     newFuncRef =
       addDelete setExprI argI .
       setNextArg .
@@ -311,12 +319,6 @@ convertApplyPrefix apply@(Data.Apply funcI argI) argRef scope exprI setExprI = d
   mkExpressionRef exprI setExprI . ExpressionApply DontHaveParens $
     Apply newFuncRef newArgRef
   where
-    newArgRef =
-      addDelete setExprI funcI .
-      setAddArg exprI setExprI .
-      addFlipFuncArg .
-      addParens $ argRef
-    setNextArg = atRActions . atMNextArg . const . Just $ newArgRef
     addFlipFuncArg =
       atRExpression . atEHole . atHoleMFlipFuncArg . const . Just .
       Transaction.writeIRef exprI . Data.ExpressionApply $
