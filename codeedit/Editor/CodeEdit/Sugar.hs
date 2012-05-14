@@ -147,7 +147,7 @@ makeActions exprI setExprI =
   }
 
 mkExpressionRef :: Monad m => IRef Data.Expression -> ExpressionSetter m -> Expression m -> Transaction ViewTag m (ExpressionRef m)
-mkExpressionRef exprI setExprI expr = do
+mkExpressionRef exprI setExprI expr =
   return
     ExpressionRef
     { rExpression = expr
@@ -348,12 +348,12 @@ convertHole scope exprI setExprI =
       Transaction.writeIRef exprI result
       return $ IRef.guid exprI
 
-convertLiteralInteger :: Monad m => IRef Data.Expression -> Integer -> Convertor m
-convertLiteralInteger iref i exprI setExprI =
+convertLiteralInteger :: Monad m => Integer -> Convertor m
+convertLiteralInteger i exprI setExprI =
   mkExpressionRef exprI setExprI . ExpressionLiteralInteger $
   LiteralInteger
   { liValue = i
-  , liSetValue = Transaction.writeIRef iref . Data.ExpressionLiteralInteger
+  , liSetValue = Transaction.writeIRef exprI . Data.ExpressionLiteralInteger
   }
 
 convertNode :: Monad m => Scope -> Convertor m
@@ -366,7 +366,7 @@ convertNode scope exprI setExprI = do
       Data.ExpressionApply x -> convertApply x scope
       Data.ExpressionGetVariable x -> convertGetVariable x
       Data.ExpressionHole -> convertHole scope
-      Data.ExpressionLiteralInteger x -> convertLiteralInteger exprI x
+      Data.ExpressionLiteralInteger x -> convertLiteralInteger x
   conv exprI setExprI
 
 convertExpression :: Monad m => Convertor m
