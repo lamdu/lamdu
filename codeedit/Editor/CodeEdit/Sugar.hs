@@ -225,12 +225,12 @@ convertBindingFuncType lambdaI setLambdaI lambda@(Data.Lambda argTypeI resultTyp
       setLambdaI resultTypeI
       return $ IRef.guid resultTypeI
 
-addParensAtSection :: ExpressionRef m -> ExpressionRef m
-addParensAtSection =
+addApplyChildParens :: ExpressionRef m -> ExpressionRef m
+addApplyChildParens =
   atRExpression f
   where
-    f (ExpressionSection _ section) = ExpressionSection HaveParens section
-    f x = x
+    f x@(ExpressionApply _ _) = x
+    f x = (atEHasParens . const) HaveParens x
 
 convertApply :: Monad m => Data.Apply -> Scope -> Convertor m
 convertApply apply@(Data.Apply funcI argI) scope exprI setExprI = do
@@ -286,7 +286,7 @@ convertApplyInfixFull funcApply@(Data.Apply funcFuncI funcArgI) op apply@(Data.A
   let
     newLArgRef =
       addDelete funcSetter funcFuncI .
-      addParensAtSection $
+      addApplyChildParens $
       lArgRef
     newOpRef =
       addDelete funcSetter funcArgI .
@@ -294,7 +294,7 @@ convertApplyInfixFull funcApply@(Data.Apply funcFuncI funcArgI) op apply@(Data.A
       opRef
     newRArgRef =
       addDelete setExprI funcI .
-      addParensAtSection $
+      addApplyChildParens $
       rArgRef
   mkExpressionRef exprI setExprI . ExpressionSection DontHaveParens $
     Section (Just newLArgRef) newOpRef (Just newRArgRef)
@@ -312,7 +312,7 @@ convertApplyInfixL op apply@(Data.Apply opI argI) scope exprI setExprI = do
   let
     newArgRef =
       addDelete setExprI opI .
-      addParensAtSection $
+      addApplyChildParens $
       argRef
   opRef <-
     mkExpressionRef opI (DataOps.applyFuncSetter exprI apply) $
@@ -343,7 +343,7 @@ convertApplyPrefix apply@(Data.Apply funcI argI) scope exprI setExprI = do
     newFuncRef =
       addDelete setExprI argI .
       setNextArg .
-      addParensAtSection .
+      addApplyChildParens .
       (atRExpression . atEApply . atApplyArg) setNextArg $
       funcRef
   mkExpressionRef exprI setExprI . ExpressionApply DontHaveParens $
