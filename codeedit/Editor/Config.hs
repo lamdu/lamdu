@@ -36,6 +36,8 @@ addNextParamKeys  = [E.KeyEventType E.noMods E.KeySpace]
 delBranchKeys     = [alt 'o']
 
 closePaneKeys     = [alt 'w']
+movePaneDownKeys  = [mk E.alt E.KeyDown]
+movePaneUpKeys    = [mk E.alt E.KeyUp]
 
 replaceKeys       = [alt 'r']
 

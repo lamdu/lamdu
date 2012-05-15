@@ -2,7 +2,7 @@
 module Editor.CodeEdit(makePanesEdit) where
 
 import Control.Monad (liftM)
-import Data.List.Utils(enumerate, removeAt)
+import Data.List.Utils(enumerate, insertAt, removeAt)
 import Data.Maybe (fromMaybe)
 import Data.Monoid(Monoid(..))
 import Editor.Anchors (ViewTag)
@@ -37,10 +37,21 @@ makePanesEdit = do
       Property.set panesRef newPanes
       return . WidgetIds.fromIRef . Anchors.paneDefinition . last $
         take (i+1) newPanes
+    movePane oldIndex newIndex = do
+      let
+        (before, item:after) = splitAt oldIndex panes
+        newPanes = insertAt newIndex item $ before ++ after
+      Property.set panesRef newPanes
 
-    paneEventMap (_:_:_) i =
-      Widget.actionEventMapMovesCursor Config.closePaneKeys
-        "Close pane" $ delPane i
+    paneEventMap (_:_:_) i = mconcat $ concat
+      [ [ Widget.actionEventMapMovesCursor Config.closePaneKeys "Close pane" $ delPane i ]
+      , [ Widget.actionEventMap Config.movePaneDownKeys "Move pane down" $ movePane i (i+1)
+        | i+1 < length panes
+        ]
+      , [ Widget.actionEventMap Config.movePaneUpKeys "Move pane up" $ movePane i (i-1)
+        | i-1 >= 0
+        ]
+      ]
     paneEventMap _ _ = mempty
 
     makePaneWidget (i, pane) =

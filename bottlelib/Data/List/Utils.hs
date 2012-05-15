@@ -1,6 +1,6 @@
 {-# OPTIONS -Wall #-}
 module Data.List.Utils
-	( groupOn, sortOn, enumerate, enumerate2d, nth, index, removeAt, atPred, pairList
+	( groupOn, sortOn, enumerate, enumerate2d, nth, index, insertAt, removeAt, atPred, pairList
 	) where
 
 import Data.Function (on)
@@ -33,6 +33,9 @@ index n = listToMaybe . drop n
 
 removeAt :: Int -> [a] -> [a]
 removeAt n xs = take n xs ++ drop (n+1) xs
+
+insertAt :: Int -> a -> [a] -> [a]
+insertAt n x xs = take n xs ++ x : drop n xs
 
 atPred
   :: (key -> Bool)
