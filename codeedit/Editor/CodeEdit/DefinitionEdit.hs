@@ -36,7 +36,7 @@ makeNameEdit :: Monad m => Widget.Id -> Guid -> TWidget t m
 makeNameEdit myId ident =
   BWidgets.wrapDelegated FocusDelegator.NotDelegating
   (BWidgets.setTextColor Config.definitionColor .
-   BWidgets.makeNameEdit Config.unnamedStr ident) $
+   BWidgets.makeNameEdit Config.unnamedStr ident)
   myId
 
 makeLHSEdit

@@ -129,11 +129,11 @@ pickResult holeInfo newExpr flipAct = do
 
 resultOrdering :: String -> Result m -> [Bool]
 resultOrdering searchTerm result =
-  map not $
+  map not
   [ searchTerm == name
-  , isPrefixOf searchTerm name
+  , searchTerm `isPrefixOf` name
   , Function.on isPrefixOf (map Char.toLower) searchTerm name
-  , isInfixOf searchTerm name
+  , searchTerm `isInfixOf` name
   ]
   where
     name = resultName result

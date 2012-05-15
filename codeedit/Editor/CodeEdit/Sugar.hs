@@ -153,7 +153,7 @@ convertLambdaParam
   -> Transaction ViewTag m (FuncParam m)
 convertLambdaParam con (Data.Lambda paramTypeI bodyI) scope exprI setExprI = do
   typeExpr <- convertNode scope paramTypeI typeSetter
-  return $ FuncParam
+  return FuncParam
     { fpActions =
         (atMDelete . const . Just) deleteArg $
         makeActions exprI setExprI
