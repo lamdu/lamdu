@@ -93,6 +93,7 @@ Executable Editor
                        derive,
                        bottle
   Other-Modules:       Editor.Anchors,
+                       Editor.ExampleDB,
                        Editor.BottleWidgets,
                        Editor.BranchGUI,
                        Editor.CTransaction,

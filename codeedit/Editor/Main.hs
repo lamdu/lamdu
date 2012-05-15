@@ -26,6 +26,7 @@ import qualified Editor.Anchors as Anchors
 import qualified Editor.BranchGUI as BranchGUI
 import qualified Editor.CodeEdit as CodeEdit
 import qualified Editor.Config as Config
+import qualified Editor.ExampleDB as ExampleDB
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
@@ -96,7 +97,7 @@ mainLoopDebugMode font makeWidget addHelp = do
 
 runDbStore :: Draw.Font -> Transaction.Store DBTag IO -> IO a
 runDbStore font store = do
-  Anchors.initDB store
+  ExampleDB.initDB store
   addHelp <- EventMapDoc.makeToggledHelpAdder Config.overlayDocKeys helpStyle
   mainLoopDebugMode font makeWidget addHelp
   where

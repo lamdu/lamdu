@@ -18,8 +18,8 @@ import qualified Editor.Config as Config
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 
-newDefinition :: Monad m => CTransaction ViewTag m (Transaction.Transaction ViewTag m Widget.Id)
-newDefinition = do
+makeNewDefinitionAction :: Monad m => CTransaction ViewTag m (Transaction.Transaction ViewTag m Widget.Id)
+makeNewDefinitionAction = do
   curCursor <- readCursor
   return $ do
     newDefI <- Anchors.makeDefinition ""
@@ -57,15 +57,17 @@ makePanesEdit = do
             return $ BWidgets.vboxAlign 0 definitionEdits
 
   canJumpBack <- transaction Anchors.canJumpBack
-  newDef <- newDefinition
+  newDefinition <- makeNewDefinitionAction
   let
     panesEventMap =
       mconcat . concat $
       [[ Widget.actionEventMapMovesCursor Config.newDefinitionKeys
-        "New definition" newDef],
-       [ Widget.actionEventMapMovesCursor Config.previousCursorKeys
+         "New definition" newDefinition
+       ]
+      ,[ Widget.actionEventMapMovesCursor Config.previousCursorKeys
          "Go to previous position" $ liftM (fromMaybe myId) Anchors.jumpBack
-       | canJumpBack]
+       | canJumpBack
+       ]
       ]
 
   return $ Widget.weakerEvents panesEventMap panesWidget
