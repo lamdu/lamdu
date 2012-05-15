@@ -21,7 +21,7 @@ make
   -> Widget.Id
   -> TWidget ViewTag m
 make makeExpressionEdit (Sugar.Pi param resultType) myId =
-  assignCursor myId ((WidgetIds.fromGuid . Sugar.guid . Sugar.rActions) resultType) $ do
+  assignCursor myId ((WidgetIds.fromGuid . Sugar.guid . Sugar.rActions . Sugar.fpType) param) $ do
     (paramNameEdit, paramTypeEdit) <- FuncEdit.makeParamEdit makeExpressionEdit param
     rightArrowLabel <-
       atTextSizeColor Config.rightArrowTextSize Config.rightArrowColor $
