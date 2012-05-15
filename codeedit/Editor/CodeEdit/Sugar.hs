@@ -155,28 +155,35 @@ mkExpressionRef exprI setExprI expr =
     , rActions = makeActions exprI setExprI
     }
 
-convertLambda :: Monad m => Data.Lambda -> Scope -> Convertor m
-convertLambda lambda@(Data.Lambda paramTypeI bodyI) scope exprI setExprI = do
-  let
-    typeSetter = DataOps.lambdaParamTypeSetter exprI lambda
-    bodySetter = DataOps.lambdaBodySetter exprI lambda
+convertLambdaParam
+  :: Monad m => Data.Lambda -> Scope
+  -> IRef Data.Expression -> ExpressionSetter m
+  -> Transaction ViewTag m (FuncParam m)
+convertLambdaParam lambda@(Data.Lambda paramTypeI bodyI) scope exprI setExprI = do
   typeExpr <- convertNode scope paramTypeI typeSetter
-  sBody <- convertNode (Data.ParameterRef exprI : scope) bodyI bodySetter
-  let
+  return $ FuncParam
+    { fpActions =
+        (atMDelete . const . Just) deleteArg $
+        makeActions exprI setExprI
+    , fpType = typeExpr
+    }
+  where
+    typeSetter = DataOps.lambdaParamTypeSetter exprI lambda
     deleteArg = do
       setExprI bodyI
-      return . guid $ rActions sBody
-    item = FuncParam
-      { fpActions =
-          (atMDelete . const . Just) deleteArg $
-          makeActions exprI setExprI
-      , fpType = typeExpr
-      }
+      return $ IRef.guid bodyI
+
+convertLambda :: Monad m => Data.Lambda -> Scope -> Convertor m
+convertLambda lambda@(Data.Lambda _ bodyI) scope exprI setExprI = do
+  param <- convertLambdaParam lambda scope exprI setExprI
+  sBody <- convertNode (Data.ParameterRef exprI : scope) bodyI bodySetter
   mkExpressionRef exprI setExprI .
-    ExpressionFunc DontHaveParens . atFParams (item :) $
+    ExpressionFunc DontHaveParens . atFParams (param :) $
     case rExpression sBody of
       ExpressionFunc _ x -> x
       _ -> Func [] sBody
+  where
+    bodySetter = DataOps.lambdaBodySetter exprI lambda
 
 convertWhere
   :: Monad m
