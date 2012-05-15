@@ -12,7 +12,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, getP, assignCursor, TWidget, readCursor)
+import Editor.CTransaction (CTransaction, getP, assignCursor, TWidget, readCursor, markVariablesAsUsed)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -253,6 +253,8 @@ makeActiveHoleEdit
      (Maybe (Result m), Widget (Transaction ViewTag m))
 makeActiveHoleEdit holeInfo =
   assignCursor (hiHoleId holeInfo) searchTermId $ do
+    markVariablesAsUsed . Sugar.holeScope $ hiHole holeInfo
+
     allResults <- makeAllResults holeInfo
 
     let (firstResults, moreResults) = splitAt 3 allResults

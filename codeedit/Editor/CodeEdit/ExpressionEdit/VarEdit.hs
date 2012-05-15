@@ -3,7 +3,7 @@ module Editor.CodeEdit.ExpressionEdit.VarEdit(make, makeView, colorOf) where
 
 import Control.Monad (liftM)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (TWidget, getP)
+import Editor.CTransaction (TWidget, getP, markVariablesAsUsed)
 import Editor.MonadF(MonadF)
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
@@ -34,6 +34,7 @@ make
   => Data.VariableRef -> Widget.Id
   -> TWidget ViewTag m
 make varRef myId = do
+  markVariablesAsUsed [varRef]
   varRefView <- makeView varRef myId
   let
     jumpToDefinitionEventMap =
