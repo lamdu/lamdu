@@ -48,13 +48,42 @@ initRef iref act = do
   where
     p = Transaction.fromIRef iref
 
+builtinsDatabase :: [String]
+builtinsDatabase =
+  ["Data.List.sort"
+  ,"Data.List.reverse"
+  ,"Data.List.length"
+  ,"Data.List.tail"
+  ,"Data.List.zipWith"
+  ,"Control.Applicative.liftA2"
+  ,"Control.Applicative.pure"
+  ,"Control.Applicative.shuki"
+  ,"Control.Monad.join"
+  ,"Prelude.fmap"
+  ,"Prelude.const"
+  ,"Prelude.+"
+  ,"Prelude.-"
+  ,"Prelude.*"
+  ,"Prelude./"
+  ,"Prelude.^"
+  ,"Prelude.:"
+  ,"Prelude.=="
+  ,"Prelude./="
+  ,"Prelude.<="
+  ,"Prelude.>="
+  ,"Prelude.<"
+  ,"Prelude.>"
+  ,"Prelude.if"
+  ,"Prelude.Set"
+  ]
+
 initDB :: Store DBTag IO -> IO ()
 initDB store =
   Transaction.run store $ do
     bs <- initRef A.branchesIRef $ do
       masterNameIRef <- Transaction.newIRef "master"
       changes <- collectWrites Transaction.newKey $ do
-        Property.set A.globals =<< mapM A.newBuiltin temporaryBuiltinsDatabase
+        Property.set A.globals =<< mapM A.newBuiltin builtinsDatabase
         defI <- A.makeDefinition "foo"
         Property.set A.root [A.makePane defI]
         Property.set A.preJumps []
@@ -69,31 +98,3 @@ initDB store =
     _ <- initRef A.redosIRef $ return []
     _ <- initRef A.cursorIRef . return $ Widget.Id []
     return ()
-  where
-    temporaryBuiltinsDatabase =
-      ["Data.List.sort"
-      ,"Data.List.reverse"
-      ,"Data.List.length"
-      ,"Data.List.tail"
-      ,"Data.List.zipWith"
-      ,"Control.Applicative.liftA2"
-      ,"Control.Applicative.pure"
-      ,"Control.Applicative.shuki"
-      ,"Control.Monad.join"
-      ,"Prelude.fmap"
-      ,"Prelude.const"
-      ,"Prelude.+"
-      ,"Prelude.-"
-      ,"Prelude.*"
-      ,"Prelude./"
-      ,"Prelude.^"
-      ,"Prelude.:"
-      ,"Prelude.=="
-      ,"Prelude./="
-      ,"Prelude.<="
-      ,"Prelude.>="
-      ,"Prelude.<"
-      ,"Prelude.>"
-      ,"Prelude.if"
-      ,"Prelude.Set"
-      ]
