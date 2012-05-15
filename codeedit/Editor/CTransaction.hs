@@ -29,30 +29,37 @@ data CTransactionEnv = CTransactionEnv {
   }
 AtFieldTH.make ''CTransactionEnv
 
+type WidgetT t m = Widget (Transaction t m)
+type TWidget t m = CTransaction t m (WidgetT t m)
+
 newtype CTransaction t m a = CTransaction {
   unCTransaction :: Reader.ReaderT CTransactionEnv (Writer.WriterT [Data.VariableRef] (Transaction t m)) a
   }
   deriving (Monad)
 AtFieldTH.make ''CTransaction
 
-type WidgetT t m = Widget (Transaction t m)
-type TWidget t m = CTransaction t m (WidgetT t m)
+liftEnv
+  :: Reader.ReaderT CTransactionEnv (Writer.WriterT [Data.VariableRef] (Transaction t m)) a
+  -> CTransaction t m a
+liftEnv = CTransaction
 
-markVariablesAsUsed :: Monad m => [Data.VariableRef] -> CTransaction t m ()
-markVariablesAsUsed = CTransaction . lift . Writer.tell
+liftUsedvars :: Monad m => Writer.WriterT [Data.VariableRef] (Transaction t m) a -> CTransaction t m a
+liftUsedvars = liftEnv . lift
 
-usedVariables :: Monad m => CTransaction t m a -> CTransaction t m (a, [Data.VariableRef])
-usedVariables action = do
-  env <- CTransaction Reader.ask
-  r@(_, vars) <- transaction . Writer.runWriterT . (`Reader.runReaderT` env) . unCTransaction $ action
-  markVariablesAsUsed vars
-  return r
+transaction :: Monad m => Transaction t m a -> CTransaction t m a
+transaction = liftUsedvars . lift
 
 runCTransaction :: Monad m => Widget.Id -> TextEdit.Style -> CTransaction t m a -> Transaction t m a
 runCTransaction cursor style =
   liftM fst . Writer.runWriterT .
   (`Reader.runReaderT` CTransactionEnv cursor style) .
   unCTransaction
+
+markVariablesAsUsed :: Monad m => [Data.VariableRef] -> CTransaction t m ()
+markVariablesAsUsed = liftUsedvars . Writer.tell
+
+usedVariables :: Monad m => CTransaction t m a -> CTransaction t m (a, [Data.VariableRef])
+usedVariables = atCTransaction $ Reader.mapReaderT Writer.listen
 
 runNestedCTransaction ::
   Monad m => Transaction.Store t0 (Transaction t1 m) ->
@@ -65,16 +72,13 @@ runNestedCTransaction store act = do
     runCTransaction cursor style act
 
 readCursor :: Monad m => CTransaction t m Widget.Id
-readCursor = CTransaction $ Reader.asks envCursor
+readCursor = liftEnv $ Reader.asks envCursor
 
 subCursor :: Monad m => Widget.Id -> CTransaction t m (Maybe AnimId)
 subCursor folder = liftM (Widget.subId folder) readCursor
 
 readTextStyle :: Monad m => CTransaction t m TextEdit.Style
-readTextStyle = CTransaction $ Reader.asks envTextStyle
-
-transaction :: Monad m => Transaction t m a -> CTransaction t m a
-transaction = CTransaction . lift . lift
+readTextStyle = liftEnv $ Reader.asks envTextStyle
 
 getP :: Monad m => Property (Transaction t m) a -> CTransaction t m a
 getP = transaction . Property.get
