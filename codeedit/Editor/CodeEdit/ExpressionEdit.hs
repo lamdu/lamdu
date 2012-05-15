@@ -12,12 +12,11 @@ import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (EventHandlers)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
-import qualified Editor.CodeEdit.ExpressionEdit.BindingFuncTypeEdit as BindingFuncTypeEdit
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
+import qualified Editor.CodeEdit.ExpressionEdit.PiEdit as PiEdit
 import qualified Editor.CodeEdit.ExpressionEdit.SectionEdit as SectionEdit
-import qualified Editor.CodeEdit.ExpressionEdit.SimpleFuncTypeEdit as SimpleFuncTypeEdit
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
 import qualified Editor.CodeEdit.ExpressionEdit.WhereEdit as WhereEdit
 import qualified Editor.CodeEdit.Parens as Parens
@@ -63,10 +62,8 @@ make sExpr = do
         notAHole {- TODO: May need parenification -} $ VarEdit.make varRef
       Sugar.ExpressionApply hasParens apply ->
         wrapNonHoleExpr . textParenify hasParens $ ApplyEdit.make make apply
-      Sugar.ExpressionSimpleFuncType hasParens funcType ->
-        wrapNonHoleExpr . textParenify hasParens $ SimpleFuncTypeEdit.make make funcType
-      Sugar.ExpressionBindingFuncType hasParens funcType ->
-        wrapNonHoleExpr . textParenify hasParens $ BindingFuncTypeEdit.make make funcType
+      Sugar.ExpressionPi hasParens funcType ->
+        wrapNonHoleExpr . textParenify hasParens $ PiEdit.make make funcType
       Sugar.ExpressionSection hasParens section ->
         wrapNonHoleExpr . textParenify hasParens $ SectionEdit.make make section
       Sugar.ExpressionLiteralInteger integer ->

@@ -4,8 +4,7 @@ module Editor.CodeEdit.Sugar
   ( Expression(..), Actions(..), ExpressionRef(..)
   , Where(..), WhereItem(..)
   , Func(..), FuncParam(..)
-  , SimpleFuncType(..), BindingFuncType(..)
-  , Apply(..), Section(..), Hole(..), LiteralInteger(..)
+  , Pi(..), Apply(..), Section(..), Hole(..), LiteralInteger(..)
   , HasParens(..)
   , convertExpression
   ) where
@@ -68,15 +67,9 @@ data Func m = Func
   , fBody :: ExpressionRef m
   }
 
-data SimpleFuncType m = SimpleFuncType
-  { _sftParamType :: ExpressionRef m
-  , _sftResultType :: ExpressionRef m
-  , _sftTransformToBindingFuncType :: Transaction ViewTag m ()
-  }
-
-data BindingFuncType m = BindingFuncType
-  { bftParam :: FuncParam m
-  , bftResultType :: ExpressionRef m
+data Pi m = Pi
+  { pParam :: FuncParam m
+  , pResultType :: ExpressionRef m
   }
 
 data Apply m = Apply
@@ -106,12 +99,11 @@ data LiteralInteger m = LiteralInteger
   }
 
 data Expression m
-  = ExpressionApply           { eHasParens :: HasParens, eApply :: Apply m }
-  | ExpressionSection         { eHasParens :: HasParens, eSection :: Section m }
-  | ExpressionWhere           { eHasParens :: HasParens, eWhere :: Where m }
-  | ExpressionFunc            { eHasParens :: HasParens, eFunc :: Func m }
-  | ExpressionSimpleFuncType  { eHasParens :: HasParens, eSFuncType :: SimpleFuncType m }
-  | ExpressionBindingFuncType { eHasParens :: HasParens, eBFuncType :: BindingFuncType m }
+  = ExpressionApply   { eHasParens :: HasParens, eApply :: Apply m }
+  | ExpressionSection { eHasParens :: HasParens, eSection :: Section m }
+  | ExpressionWhere   { eHasParens :: HasParens, eWhere :: Where m }
+  | ExpressionFunc    { eHasParens :: HasParens, eFunc :: Func m }
+  | ExpressionPi      { eHasParens :: HasParens, ePi :: Pi m }
   | ExpressionGetVariable { _eGetVar :: Data.VariableRef }
   | ExpressionHole { eHole :: Hole m }
   | ExpressionLiteralInteger { _eLit :: LiteralInteger m }
@@ -372,10 +364,10 @@ convertPi :: Monad m => Data.Lambda -> Scope -> Convertor m
 convertPi lambda@(Data.Lambda paramTypeI bodyI) scope exprI setExprI = do
   param <- convertLambdaParam Data.ExpressionPi lambda scope exprI setExprI
   sBody <- convertNode (Data.ParameterRef exprI : scope) bodyI bodySetter
-  mkExpressionRef exprI setExprI . ExpressionBindingFuncType DontHaveParens $
-    BindingFuncType
-    { bftParam = param
-    , bftResultType = sBody
+  mkExpressionRef exprI setExprI . ExpressionPi DontHaveParens $
+    Pi
+    { pParam = param
+    , pResultType = sBody
     }
   where
     bodySetter = Transaction.writeIRef exprI . Data.ExpressionPi . Data.Lambda paramTypeI

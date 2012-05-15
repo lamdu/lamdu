@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Editor.CodeEdit.ExpressionEdit.BindingFuncTypeEdit(make) where
+module Editor.CodeEdit.ExpressionEdit.PiEdit(make) where
 
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (TWidget, assignCursor, atTextSizeColor)
@@ -15,10 +15,10 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 make
   :: MonadF m
   => ExpressionEditMaker m
-  -> Sugar.BindingFuncType m
+  -> Sugar.Pi m
   -> Widget.Id
   -> TWidget ViewTag m
-make makeExpressionEdit (Sugar.BindingFuncType param resultType) myId =
+make makeExpressionEdit (Sugar.Pi param resultType) myId =
   assignCursor myId ((WidgetIds.fromGuid . Sugar.guid . Sugar.rActions) resultType) $ do
     (paramNameEdit, paramTypeEdit) <- FuncEdit.makeParamEdit makeExpressionEdit param
     let paramEdit = BWidgets.vbox [paramNameEdit, paramTypeEdit]
