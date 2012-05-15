@@ -2,7 +2,7 @@
 {-# OPTIONS -Wall #-}
 module Editor.CTransaction(
   CTransaction, runCTransaction, runNestedCTransaction, TWidget, WidgetT,
-  readCursor, subCursor, readTextStyle, transaction, getP, assignCursor,
+  readCursor, subCursor, readTextStyle, transaction, getP, atCursor, assignCursor,
   atTextStyle, atTextSizeColor, markVariablesAsUsed, usedVariables)
 where
 
@@ -83,9 +83,12 @@ readTextStyle = liftEnv $ Reader.asks envTextStyle
 getP :: Monad m => Property (Transaction t m) a -> CTransaction t m a
 getP = transaction . Property.get
 
+atCursor :: (Widget.Id -> Widget.Id) -> CTransaction t m a -> CTransaction t m a
+atCursor = atCTransaction . Reader.withReaderT . atEnvCursor
+
 assignCursor :: Widget.Id -> Widget.Id -> CTransaction t m a -> CTransaction t m a
 assignCursor src dest =
-  (atCTransaction . Reader.withReaderT . atEnvCursor) replace
+  atCursor replace
   where
     replace cursor
       | cursor == src = dest
