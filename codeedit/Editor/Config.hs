@@ -89,6 +89,7 @@ unfoldKeys = foldKeys
 helpTextSize = 10
 baseTextSize = 30
 
+piValueScaleFactor = 0.6
 typeScaleFactor = 0.6
 squareParensScaleFactor = 0.96
 

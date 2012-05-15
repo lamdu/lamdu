@@ -31,6 +31,6 @@ make makeExpressionEdit (Sugar.Pi param resultType) myId =
       paramGuid = Sugar.guid $ Sugar.fpActions param
       paramUsed = any ((== paramGuid) . Data.onVariableIRef IRef.guid) usedVars
       paramEdit
-        | paramUsed = BWidgets.vbox [paramNameEdit, paramTypeEdit]
+        | paramUsed = BWidgets.vbox [Widget.scale Config.piValueScaleFactor paramNameEdit, paramTypeEdit]
         | otherwise = paramTypeEdit
     return $ BWidgets.hboxSpaced [paramEdit, rightArrowLabel, resultTypeEdit]

@@ -1,5 +1,6 @@
 module Editor.CodeEdit.ExpressionEdit.FuncEdit(make, makeParamEdit) where
 
+import Control.Arrow (second)
 import Control.Monad (liftM)
 import Data.List.Utils (pairList)
 import Data.Monoid (mempty)
@@ -39,15 +40,11 @@ makeParamEdit
 makeParamEdit makeExpressionEdit param =
   assignCursor (WidgetIds.fromGuid ident) (WidgetIds.paramId ident) .
     (liftM . both . Widget.weakerEvents) paramDeleteEventMap $ do
-    paramNameEdit <-
-      liftM (Widget.align down) $
-      makeParamNameEdit ident
-    paramTypeEdit <-
-      liftM
-      (Widget.scale Config.typeScaleFactor .
-       Widget.align up) . makeExpressionEdit $
-      Sugar.fpType param
-    return (paramNameEdit, paramTypeEdit)
+    paramNameEdit <- makeParamNameEdit ident
+    paramTypeEdit <- makeExpressionEdit $ Sugar.fpType param
+    return
+      (Widget.align down paramNameEdit,
+       Widget.align up paramTypeEdit)
   where
     ident = Sugar.guid $ Sugar.fpActions param
     up = Vector2 0.5 0
@@ -63,8 +60,10 @@ makeParamsEdit
   -> [Sugar.FuncParam m]
   -> TWidget ViewTag m
 makeParamsEdit makeExpressionEdit =
-  liftM (BWidgets.gridHSpaced . List.transpose . map pairList) .
+  liftM (BWidgets.gridHSpaced . List.transpose . map (pairList . scaleDownType)) .
   mapM (makeParamEdit makeExpressionEdit)
+  where
+    scaleDownType = second $ Widget.scale Config.typeScaleFactor
 
 make
   :: MonadF m

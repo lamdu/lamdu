@@ -48,9 +48,11 @@ makeLHSEdit
   -> TWidget ViewTag m
 makeLHSEdit makeExpressionEdit myId ident params = do
   nameEdit <- makeNameEdit myId ident
-  liftM (BWidgets.gridHSpaced . List.transpose . map pairList . ((nameEdit, nameTypeFiller) :)) .
+  liftM (BWidgets.gridHSpaced . List.transpose .
+         map pairList . ((nameEdit, nameTypeFiller) :) . map scaleDownType) .
     mapM (FuncEdit.makeParamEdit makeExpressionEdit) $ params
   where
+    scaleDownType = second $ Widget.scale Config.typeScaleFactor
     -- no type for def name (yet):
     nameTypeFiller = BWidgets.spaceWidget
 
