@@ -178,14 +178,20 @@ convertLambda lambda@(Data.Lambda _ bodyI) scope exprI setExprI = do
   where
     bodySetter = DataOps.lambdaBodySetter Data.ExpressionLambda exprI lambda
 
+addDelete :: Monad m => ExpressionSetter m -> IRef Data.Expression -> ExpressionRef m -> ExpressionRef m
+addDelete parentSetter replacer =
+  atRActions . atMDelete . const . Just $ do
+    parentSetter replacer
+    return $ IRef.guid replacer
+
 convertPi :: Monad m => Data.Lambda -> Scope -> Convertor m
-convertPi lambda@(Data.Lambda _ bodyI) scope exprI setExprI = do
+convertPi lambda@(Data.Lambda paramTypeI bodyI) scope exprI setExprI = do
   param <- convertLambdaParam Data.ExpressionPi lambda scope exprI setExprI
   sBody <- convertNode (Data.ParameterRef exprI : scope) bodyI bodySetter
   mkExpressionRef exprI setExprI $ ExpressionPi DontHaveParens
     Pi
     { pParam = atFpType addApplyChildParens param
-    , pResultType = sBody
+    , pResultType = addDelete setExprI paramTypeI sBody
     }
   where
     bodySetter = DataOps.lambdaBodySetter Data.ExpressionPi exprI lambda
@@ -247,12 +253,6 @@ convertApply apply@(Data.Apply funcI argI) scope exprI setExprI = do
 
 setAddArg :: Monad m => IRef Data.Expression -> ExpressionSetter m -> ExpressionRef m -> ExpressionRef m
 setAddArg exprI setExprI = atRActions . atAddNextArg . const $ addArg exprI setExprI
-
-addDelete :: Monad m => ExpressionSetter m -> IRef Data.Expression -> ExpressionRef m -> ExpressionRef m
-addDelete parentSetter replacer =
-  atRActions . atMDelete . const . Just $ do
-    parentSetter replacer
-    return $ IRef.guid replacer
 
 convertApplyInfixFull
   :: Monad m
