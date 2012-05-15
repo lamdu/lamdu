@@ -110,6 +110,7 @@ data Expression m
 
 AtFieldTH.make ''Hole
 AtFieldTH.make ''Where
+AtFieldTH.make ''FuncParam
 AtFieldTH.make ''Func
 AtFieldTH.make ''ExpressionRef
 AtFieldTH.make ''Actions
@@ -183,7 +184,7 @@ convertPi lambda@(Data.Lambda _ bodyI) scope exprI setExprI = do
   sBody <- convertNode (Data.ParameterRef exprI : scope) bodyI bodySetter
   mkExpressionRef exprI setExprI $ ExpressionPi DontHaveParens
     Pi
-    { pParam = param
+    { pParam = atFpType addApplyChildParens param
     , pResultType = sBody
     }
   where
