@@ -177,13 +177,13 @@ makeAllResults holeInfo = do
     params = Sugar.holeScope $ hiHole holeInfo
     piResult =
       Result
-      { resultName = "Pi"
+      { resultName = "->"
       , resultPick = do
           paramTypeI <- DataOps.newHole
           resultTypeI <- DataOps.newHole
           pickResult holeInfo (Data.ExpressionPi (Data.Lambda paramTypeI resultTypeI)) (return ())
       , resultMakeWidget =
-          BWidgets.makeFocusableTextView "Pi" $ searchResultId holeInfo "Pi result"
+          BWidgets.makeFocusableTextView "→" $ searchResultId holeInfo "Pi result"
       }
 
 makeSearchTermWidget
