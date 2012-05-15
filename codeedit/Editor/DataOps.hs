@@ -3,7 +3,7 @@ module Editor.DataOps
   ( ExpressionSetter
   , newHole, giveAsArg, callWithArg
   , replace, replaceWithHole, lambdaWrap
-  , lambdaBodySetter, lambdaParamTypeSetter
+  , lambdaBodySetter
   , applyFuncSetter, applyArgSetter
   )
 where
@@ -65,13 +65,11 @@ lambdaWrap exprI setExprI = do
   setExprI newExprI
   return newExprI
 
-lambdaBodySetter :: Monad m => IRef Data.Expression -> Data.Lambda -> ExpressionSetter m
-lambdaBodySetter lambdaI (Data.Lambda paramTypeI _) =
-  Transaction.writeIRef lambdaI . Data.ExpressionLambda . Data.Lambda paramTypeI
-
-lambdaParamTypeSetter :: Monad m => IRef Data.Expression -> Data.Lambda -> ExpressionSetter m
-lambdaParamTypeSetter lambdaI (Data.Lambda _ bodyI) =
-  Transaction.writeIRef lambdaI . Data.ExpressionLambda . (`Data.Lambda` bodyI)
+lambdaBodySetter
+  :: Monad m
+  => (Data.Lambda -> Data.Expression) -> IRef Data.Expression -> Data.Lambda -> ExpressionSetter m
+lambdaBodySetter cons lambdaI (Data.Lambda paramTypeI _) =
+  Transaction.writeIRef lambdaI . cons . Data.Lambda paramTypeI
 
 applyFuncSetter :: Monad m => IRef Data.Expression -> Data.Apply -> ExpressionSetter m
 applyFuncSetter applyI (Data.Apply _ argI) =

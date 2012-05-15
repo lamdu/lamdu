@@ -175,7 +175,19 @@ convertLambda lambda@(Data.Lambda _ bodyI) scope exprI setExprI = do
       ExpressionFunc _ x -> x
       _ -> Func [] sBody
   where
-    bodySetter = DataOps.lambdaBodySetter exprI lambda
+    bodySetter = DataOps.lambdaBodySetter Data.ExpressionLambda exprI lambda
+
+convertPi :: Monad m => Data.Lambda -> Scope -> Convertor m
+convertPi lambda@(Data.Lambda _ bodyI) scope exprI setExprI = do
+  param <- convertLambdaParam Data.ExpressionPi lambda scope exprI setExprI
+  sBody <- convertNode (Data.ParameterRef exprI : scope) bodyI bodySetter
+  mkExpressionRef exprI setExprI $ ExpressionPi DontHaveParens
+    Pi
+    { pParam = param
+    , pResultType = sBody
+    }
+  where
+    bodySetter = DataOps.lambdaBodySetter Data.ExpressionPi exprI lambda
 
 convertWhere
   :: Monad m
@@ -191,7 +203,7 @@ convertWhere valueRef lambdaI lambda@(Data.Lambda _ bodyI) scope applyI setApply
       ExpressionWhere _ x -> x
       _ -> Where [] sBody
   where
-    bodySetter = DataOps.lambdaBodySetter lambdaI lambda
+    bodySetter = DataOps.lambdaBodySetter Data.ExpressionLambda lambdaI lambda
     deleteItem = do
       setApplyI bodyI
       return $ IRef.guid bodyI
@@ -359,18 +371,6 @@ convertLiteralInteger i exprI setExprI =
   { liValue = i
   , liSetValue = Transaction.writeIRef exprI . Data.ExpressionLiteralInteger
   }
-
-convertPi :: Monad m => Data.Lambda -> Scope -> Convertor m
-convertPi lambda@(Data.Lambda paramTypeI bodyI) scope exprI setExprI = do
-  param <- convertLambdaParam Data.ExpressionPi lambda scope exprI setExprI
-  sBody <- convertNode (Data.ParameterRef exprI : scope) bodyI bodySetter
-  mkExpressionRef exprI setExprI . ExpressionPi DontHaveParens $
-    Pi
-    { pParam = param
-    , pResultType = sBody
-    }
-  where
-    bodySetter = Transaction.writeIRef exprI . Data.ExpressionPi . Data.Lambda paramTypeI
 
 convertNode :: Monad m => Scope -> Convertor m
 convertNode scope exprI setExprI = do
