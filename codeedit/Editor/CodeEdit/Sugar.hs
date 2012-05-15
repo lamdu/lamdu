@@ -74,7 +74,6 @@ data SimpleFuncType m = SimpleFuncType
   , _sftTransformToBindingFuncType :: Transaction ViewTag m ()
   }
 
--- Deleting a BindingFuncType's parameter turns it into a SimpleFuncType
 data BindingFuncType m = BindingFuncType
   { bftParam :: FuncParam m
   , bftResultType :: ExpressionRef m
@@ -116,7 +115,6 @@ data Expression m
   | ExpressionGetVariable { _eGetVar :: Data.VariableRef }
   | ExpressionHole { eHole :: Hole m }
   | ExpressionLiteralInteger { _eLit :: LiteralInteger m }
-  | ExpressionPi
 
 AtFieldTH.make ''Hole
 AtFieldTH.make ''Where
@@ -156,10 +154,12 @@ mkExpressionRef exprI setExprI expr =
     }
 
 convertLambdaParam
-  :: Monad m => Data.Lambda -> Scope
+  :: Monad m
+  => (Data.Lambda -> Data.Expression)
+  -> Data.Lambda -> Scope
   -> IRef Data.Expression -> ExpressionSetter m
   -> Transaction ViewTag m (FuncParam m)
-convertLambdaParam lambda@(Data.Lambda paramTypeI bodyI) scope exprI setExprI = do
+convertLambdaParam con (Data.Lambda paramTypeI bodyI) scope exprI setExprI = do
   typeExpr <- convertNode scope paramTypeI typeSetter
   return $ FuncParam
     { fpActions =
@@ -168,14 +168,14 @@ convertLambdaParam lambda@(Data.Lambda paramTypeI bodyI) scope exprI setExprI = 
     , fpType = typeExpr
     }
   where
-    typeSetter = DataOps.lambdaParamTypeSetter exprI lambda
+    typeSetter = Transaction.writeIRef exprI . con . (`Data.Lambda` bodyI)
     deleteArg = do
       setExprI bodyI
       return $ IRef.guid bodyI
 
 convertLambda :: Monad m => Data.Lambda -> Scope -> Convertor m
 convertLambda lambda@(Data.Lambda _ bodyI) scope exprI setExprI = do
-  param <- convertLambdaParam lambda scope exprI setExprI
+  param <- convertLambdaParam Data.ExpressionLambda lambda scope exprI setExprI
   sBody <- convertNode (Data.ParameterRef exprI : scope) bodyI bodySetter
   mkExpressionRef exprI setExprI .
     ExpressionFunc DontHaveParens . atFParams (param :) $
@@ -210,28 +210,6 @@ convertWhere valueRef lambdaI lambda@(Data.Lambda _ bodyI) scope applyI setApply
       , wiValue = valueRef
       }
 
-convertBindingFuncType
-  :: Monad m
-  => IRef Data.Expression -> ExpressionSetter m -> Data.Lambda
-  -> Scope -> Convertor m
-convertBindingFuncType lambdaI setLambdaI lambda@(Data.Lambda argTypeI resultTypeI) scope applyI setApplyI = do
-  argTypeExpr <- convertNode scope argTypeI $ DataOps.lambdaParamTypeSetter lambdaI lambda
-  resultTypeExpr <- convertNode (Data.ParameterRef lambdaI : scope) resultTypeI $ DataOps.lambdaBodySetter lambdaI lambda
-  mkExpressionRef applyI setApplyI . ExpressionBindingFuncType DontHaveParens $
-    BindingFuncType
-    { bftParam = FuncParam
-        { fpActions =
-            (atMDelete . const . Just) deleteItem $
-            makeActions lambdaI setLambdaI
-        , fpType = argTypeExpr
-        }
-    , bftResultType = resultTypeExpr
-    }
-  where
-    deleteItem = do
-      setLambdaI resultTypeI
-      return $ IRef.guid resultTypeI
-
 addApplyChildParens :: ExpressionRef m -> ExpressionRef m
 addApplyChildParens =
   atRExpression f
@@ -249,12 +227,6 @@ convertApply apply@(Data.Apply funcI argI) scope exprI setExprI = do
     Data.ExpressionLambda lambda -> do
       valueRef <- convertNode scope argI setArgI
       convertWhere valueRef funcI lambda scope exprI setExprI
-    -- BindingFuncType or ordinary prefix:
-    Data.ExpressionPi -> do
-      arg <- Transaction.readIRef argI
-      case arg of
-        Data.ExpressionLambda lambda -> convertBindingFuncType argI setArgI lambda scope exprI setExprI
-        _ -> prefixApply
     -- InfixR or ordinary prefix:
     Data.ExpressionApply funcApply@(Data.Apply funcFuncI _) -> do
       mInfixOp <- Infix.infixOp funcFuncI
@@ -396,9 +368,17 @@ convertLiteralInteger i exprI setExprI =
   , liSetValue = Transaction.writeIRef exprI . Data.ExpressionLiteralInteger
   }
 
-convertPi :: Monad m => Convertor m
-convertPi exprI setExprI =
-  mkExpressionRef exprI setExprI ExpressionPi
+convertPi :: Monad m => Data.Lambda -> Scope -> Convertor m
+convertPi lambda@(Data.Lambda paramTypeI bodyI) scope exprI setExprI = do
+  param <- convertLambdaParam Data.ExpressionPi lambda scope exprI setExprI
+  sBody <- convertNode (Data.ParameterRef exprI : scope) bodyI bodySetter
+  mkExpressionRef exprI setExprI . ExpressionBindingFuncType DontHaveParens $
+    BindingFuncType
+    { bftParam = param
+    , bftResultType = sBody
+    }
+  where
+    bodySetter = Transaction.writeIRef exprI . Data.ExpressionPi . Data.Lambda paramTypeI
 
 convertNode :: Monad m => Scope -> Convertor m
 convertNode scope exprI setExprI = do
@@ -407,11 +387,11 @@ convertNode scope exprI setExprI = do
     conv =
       case expr of
       Data.ExpressionLambda x -> convertLambda x scope
+      Data.ExpressionPi x -> convertPi x scope
       Data.ExpressionApply x -> convertApply x scope
       Data.ExpressionGetVariable x -> convertGetVariable x
       Data.ExpressionHole -> convertHole scope
       Data.ExpressionLiteralInteger x -> convertLiteralInteger x
-      Data.ExpressionPi -> convertPi
   conv exprI setExprI
 
 convertExpression :: Monad m => Convertor m

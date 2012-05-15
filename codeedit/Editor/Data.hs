@@ -30,11 +30,11 @@ data Apply = Apply {
 
 data Expression
   = ExpressionLambda Lambda
+  | ExpressionPi Lambda
   | ExpressionApply Apply
   | ExpressionGetVariable VariableRef
   | ExpressionHole
   | ExpressionLiteralInteger Integer
-  | ExpressionPi
   deriving (Eq, Ord, Read, Show)
 
 data Builtin = Builtin {

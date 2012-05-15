@@ -28,6 +28,7 @@ import qualified Editor.CodeEdit.Parens as Parens
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
+import qualified Editor.DataOps as DataOps
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -177,7 +178,10 @@ makeAllResults holeInfo = do
     piResult =
       Result
       { resultName = "Pi"
-      , resultPick = pickResult holeInfo Data.ExpressionPi (return ())
+      , resultPick = do
+          paramTypeI <- DataOps.newHole
+          resultTypeI <- DataOps.newHole
+          pickResult holeInfo (Data.ExpressionPi (Data.Lambda paramTypeI resultTypeI)) (return ())
       , resultMakeWidget =
           BWidgets.makeFocusableTextView "Pi" $ searchResultId holeInfo "Pi result"
       }
