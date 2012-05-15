@@ -5,6 +5,7 @@ import Control.Monad (liftM)
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (TWidget, getP, markVariablesAsUsed)
 import Editor.MonadF(MonadF)
+import qualified Data.Store.IRef as IRef
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.Config as Config
@@ -47,5 +48,5 @@ make varRef myId = do
           return $ WidgetIds.fromIRef defI
         Data.ParameterRef paramI -> do
           Anchors.savePreJumpPosition myId
-          return $ WidgetIds.fromIRef paramI
+          return . WidgetIds.paramId $ IRef.guid paramI
   return $ Widget.weakerEvents jumpToDefinitionEventMap varRefView
