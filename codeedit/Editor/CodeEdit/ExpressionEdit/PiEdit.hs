@@ -38,7 +38,7 @@ make makeExpressionEdit (Sugar.Pi param resultType) myId =
         BWidgets.makeFocusableTextView "→" $ Widget.joinId myId ["arrow"]
       let
         paramEdit
-          | paramUsed = BWidgets.vbox [Widget.scale Config.piValueScaleFactor paramNameEdit, paramTypeEdit]
+          | paramUsed = BWidgets.vbox [paramNameEdit, paramTypeEdit]
           | otherwise = paramTypeEdit
       return $ BWidgets.hboxSpaced [paramEdit, rightArrowLabel, resultTypeEdit]
   where
