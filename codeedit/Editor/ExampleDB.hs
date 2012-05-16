@@ -62,13 +62,16 @@ fixIRef createOuter = do
 createBuiltins :: Monad m => Transaction t m [Data.VariableRef]
 createBuiltins =
   Writer.execWriterT $ do
-    magic <- mkType . liftM Data.DefinitionRef . fixIRef $ \magicI -> do
+    magicI <- lift . fixIRef $ \magicI -> do
+      Property.set (A.aNameRef (IRef.guid magicI)) "Magic"
       magicE <- getVar $ Data.DefinitionRef magicI
       return $ Data.DefinitionBuiltin Data.Builtin
         { Data.biModule = ["Core"]
         , Data.biName = "Magic"
         , Data.biType = magicE
         }
+
+    let magic = getVar (Data.DefinitionRef magicI)
 
     set <- mkType . A.newBuiltin "Core.Set" =<< lift magic
     let
