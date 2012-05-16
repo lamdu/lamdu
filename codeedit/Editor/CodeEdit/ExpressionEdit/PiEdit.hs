@@ -28,7 +28,7 @@ make makeExpressionEdit (Sugar.Pi param resultType) myId =
       paramUsed = any ((== paramGuid) . Data.onVariableIRef IRef.guid) usedVars
       redirectCursor cursor
         | paramUsed = cursor
-        | otherwise = case Widget.subId (WidgetIds.fromGuid paramGuid) cursor of
+        | otherwise = case Widget.subId (WidgetIds.paramId paramGuid) cursor of
           Nothing -> cursor
           Just _ -> typeId
     atCursor redirectCursor $ do
