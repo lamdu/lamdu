@@ -72,7 +72,8 @@ createBuiltins =
 
     set <- mkType . A.newBuiltin "Core.Set" =<< lift magic
     let
-      forAll f = fixIRef $ \aI -> do
+      forAll name f = fixIRef $ \aI -> do
+        Property.set (A.aNameRef (IRef.guid aI)) name
         s <- set
         return . Data.ExpressionPi . Data.Lambda s =<< f ((getVar . Data.ParameterRef) aI)
       setToSet = mkPi set set
@@ -85,20 +86,20 @@ createBuiltins =
     integer <- mkType . A.newBuiltin "Prelude.Integer" =<< lift set
     bool <- mkType . A.newBuiltin "Prelude.Bool" =<< lift set
 
-    makeWithType "Prelude.if" . forAll $ \a ->
+    makeWithType "Prelude.if" . forAll "a" $ \a ->
       mkPi bool . mkPi a $ mkPi a a
 
-    makeWithType "Prelude.const" . forAll $ \a -> forAll $ \b ->
+    makeWithType "Prelude.const" . forAll "a" $ \a -> forAll "b" $ \b ->
       mkPi a $ mkPi b a
 
-    let endoListOfA = forAll $ \a -> mkPi (listOf a) (listOf a)
+    let endoListOfA = forAll "a" $ \a -> mkPi (listOf a) (listOf a)
     makeWithType "Data.List.reverse" endoListOfA
     makeWithType "Data.List.tail" endoListOfA
 
-    makeWithType "Data.List.length" . forAll $ \a ->
+    makeWithType "Data.List.length" . forAll "a" $ \a ->
       mkPi (listOf a) integer
 
-    makeWithType "Data.List.zipWith" . forAll $ \a -> forAll $ \b -> forAll $ \c ->
+    makeWithType "Data.List.zipWith" . forAll "a" $ \a -> forAll "b" $ \b -> forAll "c" $ \c ->
       mkPi (mkPi a (mkPi b c)) . mkPi (listOf a) . mkPi (listOf b) $ listOf c
 
     let intToIntToInt = mkPi integer $ mkPi integer integer
