@@ -117,4 +117,4 @@ Executable Editor
                        Editor.WidgetIds
   ghc-options:         -O2 -Wall
   main-is:             Editor/Main.hs
-  ghc-prof-options:    -prof -auto-all
+  ghc-prof-options:    -Wall -auto-all -caf-all -rtsopts
