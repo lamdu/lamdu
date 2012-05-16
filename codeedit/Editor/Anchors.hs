@@ -167,11 +167,12 @@ jumpBack = do
       Property.set preJumps js
       return $ Just j
 
-newBuiltin :: Monad m => String -> Transaction t m Data.VariableRef
-newBuiltin fullyQualifiedName = do
-  builtinIRef <- Transaction.newIRef $ Data.DefinitionBuiltin Data.Builtin {
-    Data.biModule = init path,
-    Data.biName = name
+newBuiltin :: Monad m => String -> IRef Data.Expression -> Transaction t m Data.VariableRef
+newBuiltin fullyQualifiedName typeI = do
+  builtinIRef <- Transaction.newIRef $ Data.DefinitionBuiltin Data.Builtin
+    { Data.biModule = init path
+    , Data.biName = name
+    , Data.biType = typeI
     }
   Property.set (aNameRef (IRef.guid builtinIRef)) name
   return $ Data.DefinitionRef builtinIRef

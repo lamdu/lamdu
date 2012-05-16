@@ -39,7 +39,8 @@ data Expression
 
 data Builtin = Builtin {
   biModule :: [String],
-  biName :: String
+  biName :: String,
+  biType :: IRef Expression
   }
   deriving (Eq, Ord, Read, Show)
 

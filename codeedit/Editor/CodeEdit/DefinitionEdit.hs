@@ -124,14 +124,20 @@ make makeExpressionEdit definitionI = do
           BWidgets.hboxK
         ) $
         makeParts makeExpressionEdit myId ident sExpr
-    Data.DefinitionBuiltin (Data.Builtin modulePath name) -> do
+    Data.DefinitionBuiltin (Data.Builtin modulePath name typeI) -> do
       moduleName <-
         BWidgets.setTextColor Config.foreignModuleColor $
         BWidgets.makeLabel (concatMap (++ ".") modulePath) myId
       varName <-
         BWidgets.setTextColor Config.foreignVarColor $
         BWidgets.makeLabel name myId
-      BWidgets.makeFocusableView myId $ BWidgets.hbox [moduleName, varName]
+      colon <- BWidgets.makeLabel ":" myId
+      sType <-
+        transaction $ Sugar.convertExpression typeI
+        (Transaction.writeIRef definitionI . Data.DefinitionBuiltin . Data.Builtin modulePath name)
+      typeEdit <- makeExpressionEdit sType
+      BWidgets.makeFocusableView myId $
+        BWidgets.hboxSpaced [BWidgets.hbox [moduleName, varName], colon, typeEdit]
   where
     ident = IRef.guid definitionI
     myId = WidgetIds.fromGuid ident
