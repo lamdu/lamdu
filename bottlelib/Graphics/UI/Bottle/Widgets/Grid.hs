@@ -183,7 +183,7 @@ toWidget =
   where
     makeMEnter size children =
       search . mapMaybe indexIntoMaybe .
-      concatMap (map $ first tupleToVector2) $
+      (concatMap . map . first) tupleToVector2 $
       enumerate2d children
       where
         indexIntoMaybe (i, m) = fmap ((,) i) m
