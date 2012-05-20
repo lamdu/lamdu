@@ -2,6 +2,7 @@
 module Graphics.UI.Bottle.Rect(
   R, Rect(..),
   atTopLeftAndSize,
+  left, top,
   atRectTopLeft, atLeft, atTop,
   atRectSize, atWidth, atHeight, width, height,
   bottomRight, center, distance)
@@ -21,6 +22,12 @@ AtFieldTH.make ''Rect
 
 atTopLeftAndSize :: (Vector2 R -> Vector2 R) -> Rect -> Rect
 atTopLeftAndSize f = atRectTopLeft f . atRectSize f
+
+left :: Rect -> R
+left = Vector2.fst . rectTopLeft
+
+top :: Rect -> R
+top = Vector2.snd . rectTopLeft
 
 width :: Rect -> R
 width = Vector2.fst . rectSize

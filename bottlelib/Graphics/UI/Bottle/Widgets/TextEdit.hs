@@ -12,11 +12,12 @@ module Graphics.UI.Bottle.Widgets.TextEdit(
 
 import Control.Arrow (first)
 import Data.Char (isSpace)
-import Data.List (genericLength)
+import Data.List (genericLength, minimumBy)
 import Data.List.Split (splitWhen)
 import Data.List.Utils (enumerate)
 import Data.Maybe (fromJust, mapMaybe)
 import Data.Monoid (Monoid(..))
+import Data.Ord (comparing)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators.Utils (square, textHeight)
 import Graphics.UI.Bottle.Rect (Rect(..))
@@ -32,6 +33,7 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.Rect as Rect
 import qualified Graphics.UI.Bottle.SizeRange as SizeRange
 import qualified Graphics.UI.Bottle.Sized as Sized
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -72,6 +74,17 @@ cursorTranslate style = Anim.translate (Vector2 (sCursorWidth style / 2) 0)
 makeTextEditCursor :: Widget.Id -> Int -> Widget.Id
 makeTextEditCursor myId = Widget.joinId myId . (:[]) . BinUtils.encodeS
 
+zeroWideRectsBetween :: [Rect] -> [Rect]
+zeroWideRectsBetween allRects@(rect:_) = zeroWideRectsBetween_
+  (Rect.top rect) (Rect.height rect) (Rect.left rect) allRects
+  where
+    zeroWideRectsBetween_ y height startX [] = [Rect (Vector2 startX y)
+                                                     (Vector2 0 height)]
+    zeroWideRectsBetween_ y height startX
+      (Rect _ (Vector2 width _): rects) =
+        Rect (Vector2 startX y) (Vector2 0 height):
+          zeroWideRectsBetween_ y height (startX + width) rects
+
 makeUnfocused :: Style -> String -> Widget.Id -> Widget ((,) String)
 makeUnfocused style str myId =
   Widget.takesFocus enter .
@@ -84,13 +97,13 @@ makeUnfocused style str myId =
   where
     enter dir =
       (,) str . makeTextEditCursor myId $
-      Direction.fold (length str) enterRect dir
-    -- TODO: Figure out what rect each letter is at, and find the one
-    -- closest to the argument rect, and return that instead of
-    -- (length str)
-    -- A. TextView needs to export a function: String -> [Rect]
-    -- B. We need to find the closest one here
-    enterRect _ = length str -- TODO: this is wrong
+      Direction.fold (length str) rectToCursor dir
+      where
+        minimumOn = minimumBy . comparing
+        rectToCursor fromRect =
+          fst . minimumOn snd . enumerate . map (Rect.distance fromRect) .
+          concatMap zeroWideRectsBetween $
+          TextView.letterRects (sTextViewStyle style) str
 
 -- TODO: Instead of font + ptSize, let's pass a text-drawer (that's
 -- what "Font" should be)
