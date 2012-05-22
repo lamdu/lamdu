@@ -79,6 +79,7 @@ Library
                        safe
 
   ghc-options:         -O2 -Wall
+  ghc-prof-options:    -Wall -auto-all -caf-all -rtsopts
 
 Executable Editor
   hs-Source-Dirs:      codeedit
@@ -116,5 +117,5 @@ Executable Editor
                        Editor.MonadF,
                        Editor.WidgetIds
   ghc-options:         -O2 -Wall
-  main-is:             Editor/Main.hs
   ghc-prof-options:    -Wall -auto-all -caf-all -rtsopts
+  main-is:             Editor/Main.hs
