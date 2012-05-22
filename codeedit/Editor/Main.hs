@@ -11,12 +11,13 @@ import Data.Monoid(Monoid(..))
 import Data.Vector.Vector2(Vector2)
 import Data.Word(Word8)
 import Editor.Anchors (DBTag)
-import Editor.CTransaction (runCTransaction, transaction)
+import Editor.CTransaction (runCTransaction)
 import Graphics.DrawingCombinators((%%))
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Widget(Widget)
 import Numeric (showHex)
+import qualified Control.Compose as Compose
 import qualified Data.Map as Map
 import qualified Data.Store.Db as Db
 import qualified Data.Store.Property as Property
@@ -99,6 +100,36 @@ runDbStore :: Draw.Font -> Transaction.Store DBTag IO -> IO a
 runDbStore font store = do
   ExampleDB.initDB store
   addHelp <- EventMapDoc.makeToggledHelpAdder Config.overlayDocKeys helpStyle
+  initPanes <- Transaction.run store $ do
+    view <- Property.get Anchors.view
+    Transaction.run (Anchors.viewStore view) $
+      CodeEdit.makeSugarPanes
+  panesCacheRef <- newIORef initPanes
+
+  let
+    -- TODO: Move this logic to some more common place?
+    makeWidget = do
+      panes <- readIORef panesCacheRef
+      (invalidCursor, widget) <- widgetDownTransaction $ do
+        cursor <- Property.get Anchors.cursor
+        candidateWidget <- fromCursor panes cursor
+        (invalidCursor, focusable) <-
+          if Widget.isFocused candidateWidget
+          then return (Nothing, candidateWidget)
+          else liftM ((,) (Just cursor)) . fromCursor panes $ WidgetIds.fromIRef Anchors.panesIRef
+        unless (Widget.isFocused focusable) $
+          fail "Root cursor did not match"
+        return (invalidCursor, Widget.atEvents attachCursor focusable)
+      maybe (return ()) (putStrLn . ("Invalid cursor: " ++) . show) invalidCursor
+      return $ Widget.atEvents savePanes widget
+
+    savePanes (Compose.O action) = do
+      (mPanesCache, eventResult) <- action
+      case mPanesCache of
+        Nothing -> return ()
+        Just newPanes -> writeIORef panesCacheRef newPanes
+      return eventResult
+
   mainLoopDebugMode font makeWidget addHelp
   where
     helpStyle = TextView.Style {
@@ -120,30 +151,15 @@ runDbStore font store = do
       TextEdit.sEmptyString = "<empty>"
       }
 
-    fromCursor cursor =
-      runCTransaction cursor style . BranchGUI.makeRootWidget $ do
-        panes <- transaction $ CodeEdit.makeSugarPanes
+    fromCursor panes cursor =
+      runCTransaction cursor style . BranchGUI.makeRootWidget CodeEdit.makeSugarPanes $ do
         CodeEdit.makePanesEdit panes
-
-    -- TODO: Move this logic to some more common place?
-    makeWidget = do
-      (invalidCursor, widget) <- widgetDownTransaction $ do
-        cursor <- Property.get Anchors.cursor
-        candidateWidget <- fromCursor cursor
-        (invalidCursor, focusable) <-
-          if Widget.isFocused candidateWidget
-          then return (Nothing, candidateWidget)
-          else liftM ((,) (Just cursor)) . fromCursor $ WidgetIds.fromIRef Anchors.panesIRef
-        unless (Widget.isFocused focusable) $
-          fail "Root cursor did not match"
-        return (invalidCursor, Widget.atEvents (>>= attachCursor) focusable)
-      maybe (return ()) (putStrLn . ("Invalid cursor: " ++) . show) invalidCursor
-      return widget
 
     widgetDownTransaction =
       Transaction.run store .
-      (liftM . second . Widget.atEvents) (Transaction.run store)
+      (liftM . second . Widget.atEvents . Compose.inO) (Transaction.run store)
 
-    attachCursor eventResult = do
+    attachCursor (Compose.O action) = Compose.O $ do
+      (panes, eventResult) <- action
       maybe (return ()) (Property.set Anchors.cursor) $ Widget.eCursor eventResult
-      return eventResult
+      return (panes, eventResult)

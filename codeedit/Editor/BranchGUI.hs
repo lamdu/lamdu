@@ -1,6 +1,7 @@
-{-# OPTIONS -O2 -Wall #-}
+{-# LANGUAGE TypeOperators #-}
 module Editor.BranchGUI(makeRootWidget) where
 
+import Control.Compose ((:.))
 import Control.Monad (liftM, liftM2, unless)
 import Data.List (findIndex)
 import Data.List.Utils (removeAt)
@@ -10,8 +11,10 @@ import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag, DBTag)
-import Editor.CTransaction (TWidget, runNestedCTransaction, transaction, getP, readCursor)
+import Editor.CTransaction (CTransaction, TWidget, runNestedCTransaction, transaction, getP, readCursor)
 import Editor.MonadF (MonadF)
+import Graphics.UI.Bottle.Widget (Widget)
+import qualified Control.Compose as Compose
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Rev.Branch as Branch
 import qualified Data.Store.Rev.Version as Version
@@ -55,37 +58,60 @@ makeBranch view = do
   Property.pureModify Anchors.branches (++ [viewPair])
   setCurrentBranch view newBranch
 
-makeRootWidget :: MonadF m => TWidget ViewTag (Transaction DBTag m) -> TWidget DBTag m
-makeRootWidget widget = do
+addNewCache
+  :: Monad m
+  => Transaction ViewTag (Transaction DBTag m) versionCache
+  -> View -> Transaction DBTag m a
+  -> (Transaction DBTag m :. (,) (Maybe versionCache)) a
+addNewCache mkCache view act = Compose.O $ do
+  result <- act
+  newCache <- Transaction.run (Anchors.viewStore view) mkCache
+  return (Just newCache, result)
+
+makeRootWidget
+  :: MonadF m
+  => Transaction ViewTag (Transaction DBTag m) versionCache
+  -> TWidget ViewTag (Transaction DBTag m)
+  -> CTransaction DBTag m (Widget (Transaction DBTag m :. (,) (Maybe versionCache)))
+makeRootWidget mkCache widget = do
   view <- getP Anchors.view
   namedBranches <- getP Anchors.branches
-  viewEdit <- makeWidgetForView view widget
+  viewEdit <- makeWidgetForView mkCache view widget
   currentBranch <- getP Anchors.currentBranch
 
   let
-    makeBranchNameEdit textEditModelIRef branch = do
+    withNewCache = addNewCache mkCache view
+    makeBranchNameEdit (textEditModelIRef, branch) = do
       branchNameEdit <-
         BWidgets.wrapDelegated FocusDelegator.NotDelegating
         (BWidgets.makeTextEdit (Transaction.fromIRef textEditModelIRef)) $
         WidgetIds.fromIRef textEditModelIRef
+      let
+        setBranch (Compose.O action) = withNewCache $ do
+          setCurrentBranch view branch
+          (_versionCache, result) <- action
+          -- get rid of any VersionCache because we generate a new one
+          -- in addNewCache:
+          return result
       return
         (branch,
-         (Widget.atMaybeEnter . fmap . fmap . Widget.atEnterResultEvent)
-         (setCurrentBranch view branch >>)
+         (Widget.atMaybeEnter . fmap . fmap . Widget.atEnterResultEvent) setBranch .
+         Widget.atEvents (Compose.O . liftM ((,) Nothing)) $
          branchNameEdit)
-  branchNameEdits <- mapM (uncurry makeBranchNameEdit) namedBranches
-  branchSelector <-
-    BWidgets.makeChoice WidgetIds.branchSelection Box.vertical branchNameEdits
-    currentBranch
-
+  branchNameEdits <- mapM makeBranchNameEdit namedBranches
   let
+    branchSelector =
+      BWidgets.makeChoice WidgetIds.branchSelection Box.vertical branchNameEdits currentBranch
     delBranchEventMap
       | null (drop 1 namedBranches) = mempty
-      | otherwise = Widget.actionEventMapMovesCursor Config.delBranchKeys "Delete Branch" $ deleteCurrentBranch view
+      | otherwise =
+        Widget.actionEventMapMovesCursor Config.delBranchKeys "Delete Branch" .
+        withNewCache $ deleteCurrentBranch view
   return .
     (Widget.strongerEvents . mconcat)
       [Widget.actionEventMap Config.quitKeys "Quit" (error "Quit")
-      ,Widget.actionEventMap Config.makeBranchKeys "New Branch" $ makeBranch view
+      ,Widget.actionEventMap Config.makeBranchKeys "New Branch" . 
+       Compose.O . liftM ((,) Nothing) $ makeBranch view
       ] .
     Box.toWidget . Box.make Box.horizontal $
     [viewEdit
@@ -95,8 +121,13 @@ makeRootWidget widget = do
 
 -- Apply the transactions to the given View and convert them to
 -- transactions on a DB
-makeWidgetForView :: MonadF m => View -> TWidget ViewTag (Transaction DBTag m) -> TWidget DBTag m
-makeWidgetForView view innerWidget = do
+makeWidgetForView
+  :: MonadF m
+  => Transaction ViewTag (Transaction DBTag m) versionCache
+  -> View
+  -> TWidget ViewTag (Transaction DBTag m)
+  -> CTransaction DBTag m (Widget (Transaction DBTag m :. (,) (Maybe versionCache)))
+makeWidgetForView mkCache view innerWidget = do
   curVersion <- transaction $ View.curVersion view
   curVersionData <- transaction $ Version.versionData curVersion
   redos <- getP Anchors.redos
@@ -122,23 +153,28 @@ makeWidgetForView view innerWidget = do
       (Widget.actionEventMapMovesCursor Config.undoKeys "Undo" .
        undo) $ Version.parent curVersionData
 
-    eventMap = mconcat [undoEventMap, redoEventMap redos]
+    eventMap = fmap (addNewCache mkCache view) $ mconcat [undoEventMap, redoEventMap redos]
 
-    saveCursor eventResult = do
+    afterEvent action = Compose.O $ do
+      eventResult <- action
       isEmpty <- Transaction.isEmpty
-      unless isEmpty $ do
-        Property.set Anchors.preCursor cursor
-        Property.set Anchors.postCursor . fromMaybe cursor $ Widget.eCursor eventResult
-      return eventResult
+      mCache <-
+        if isEmpty
+        then return Nothing
+        else do
+          Property.set Anchors.preCursor cursor
+          Property.set Anchors.postCursor . fromMaybe cursor $ Widget.eCursor eventResult
+          liftM Just mkCache
+      return (mCache, eventResult)
 
   vWidget <-
     runNestedCTransaction store $
-    (liftM . Widget.atEvents) (>>= saveCursor) innerWidget
+    (liftM . Widget.atEvents) afterEvent innerWidget
 
   let
-    lowerWTransaction act = do
+    lowerWTransaction act = Compose.O $ do
       (r, isEmpty) <-
-        Transaction.run store $ liftM2 (,) act Transaction.isEmpty
+        Transaction.run store $ liftM2 (,) (Compose.unO act) Transaction.isEmpty
       unless isEmpty $ Property.set Anchors.redos []
       return r
 
