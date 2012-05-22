@@ -19,7 +19,6 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as A
 import qualified Editor.Data as Data
 import qualified Editor.WidgetIds as WidgetIds
-import qualified Graphics.UI.Bottle.Widget as Widget
 
 type WriteCollector m = WriterT [(Key, Value)] m
 
@@ -141,8 +140,10 @@ initDB store =
       master <- Branch.new initialVersionIRef
       return [(masterNameIRef, master)]
     let branch = snd $ head bs
-    _ <- initRef A.viewIRef $ View.new branch
+    view <- initRef A.viewIRef $ View.new branch
     _ <- initRef A.currentBranchIRef (return branch)
     _ <- initRef A.redosIRef $ return []
-    _ <- initRef A.cursorIRef . return $ Widget.Id []
+    _ <- initRef A.cursorIRef . Transaction.run (View.store view) $ do
+      (A.Pane paneCursor _ : _) <- Property.get A.root
+      return paneCursor
     return ()
