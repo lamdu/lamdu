@@ -5,11 +5,13 @@ import Control.Monad (liftM)
 import Data.List.Utils(enumerate, insertAt, removeAt)
 import Data.Maybe (fromMaybe)
 import Data.Monoid(Monoid(..))
+import Data.Store.Guid (Guid)
+import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (CTransaction, TWidget, getP, assignCursor, readCursor, transaction)
 import Editor.MonadF (MonadF)
+import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
-import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
@@ -19,7 +21,15 @@ import qualified Editor.Config as Config
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 
-makeNewDefinitionAction :: Monad m => CTransaction ViewTag m (Transaction.Transaction ViewTag m Widget.Id)
+-- This is not in Sugar because Sugar is for code
+data SugarPane m = SugarPane
+  { spDef :: Sugar.DefinitionRef m
+  , mDelPane :: Maybe (Transaction ViewTag m Guid)
+  , mMovePaneDown :: Maybe (Transaction ViewTag m ())
+  , mMovePaneUp :: Maybe (Transaction ViewTag m ())
+  }
+
+makeNewDefinitionAction :: Monad m => CTransaction ViewTag m (Transaction ViewTag m Widget.Id)
 makeNewDefinitionAction = do
   curCursor <- readCursor
   return $ do
@@ -28,46 +38,59 @@ makeNewDefinitionAction = do
     Anchors.savePreJumpPosition curCursor
     return $ WidgetIds.fromIRef newDefI
 
-makePanesEdit :: MonadF m => TWidget ViewTag m
-makePanesEdit = do
+makeSugarPanes :: Monad m => CTransaction ViewTag m [SugarPane m]
+makeSugarPanes = do
   panes <- getP Anchors.panes
-
   let
-    delPane i = do
-      let newPanes = removeAt i panes
-      Property.set Anchors.panes newPanes
-      return . WidgetIds.fromIRef . last $
-        take (i+1) newPanes
+    mkMDelPane i
+      | length panes > 1 = Just $ do
+        let newPanes = removeAt i panes
+        Property.set Anchors.panes newPanes
+        return . IRef.guid . last $
+          take (i+1) newPanes
+      | otherwise = Nothing
     movePane oldIndex newIndex = do
       let
         (before, item:after) = splitAt oldIndex panes
         newPanes = insertAt newIndex item $ before ++ after
       Property.set Anchors.panes newPanes
+    mkMMovePaneDown i
+      | i+1 < length panes = Just $ movePane i (i+1)
+      | otherwise = Nothing
+    mkMMovePaneUp i
+      | i-1 >= 0 = Just $ movePane i (i-1)
+      | otherwise = Nothing
+    convertPane (i, defI) = do
+      def <- Sugar.convertDefinition defI
+      return SugarPane
+        { spDef = def
+        , mDelPane = mkMDelPane i
+        , mMovePaneDown = mkMMovePaneDown i
+        , mMovePaneUp = mkMMovePaneUp i
+        }
+  transaction . mapM convertPane $ enumerate panes
 
-    paneEventMap (_:_:_) i = mconcat $ concat
-      [ [ Widget.actionEventMapMovesCursor Config.closePaneKeys "Close pane" $ delPane i ]
-      , [ Widget.actionEventMap Config.movePaneDownKeys "Move pane down" $ movePane i (i+1)
-        | i+1 < length panes
-        ]
-      , [ Widget.actionEventMap Config.movePaneUpKeys "Move pane up" $ movePane i (i-1)
-        | i-1 >= 0
-        ]
+makePanesEdit :: MonadF m => TWidget ViewTag m
+makePanesEdit = do
+  panes <- makeSugarPanes
+  let
+    paneEventMap pane = mconcat
+      [ maybe mempty (Widget.actionEventMapMovesCursor Config.closePaneKeys "Close pane" . liftM WidgetIds.fromGuid) $ mDelPane pane
+      , maybe mempty (Widget.actionEventMap Config.movePaneDownKeys "Move pane down") $ mMovePaneDown pane
+      , maybe mempty (Widget.actionEventMap Config.movePaneUpKeys "Move pane up") $ mMovePaneUp pane
       ]
-    paneEventMap _ _ = mempty
 
-    makePaneWidget (i, pane) = do
-      def <- transaction $ Sugar.convertDefinition pane
-      defEdit <- DefinitionEdit.make ExpressionEdit.make def
-      return $ Widget.weakerEvents (paneEventMap panes i) defEdit
+    makePaneWidget pane =
+      liftM (Widget.weakerEvents (paneEventMap pane)) .
+      DefinitionEdit.make ExpressionEdit.make $ spDef pane
 
   panesWidget <-
     case panes of
-      [] -> BWidgets.makeFocusableTextView "<No panes>" myId
-      (firstPane:_) ->
-        assignCursor myId
-          (WidgetIds.fromIRef firstPane) $ do
-            definitionEdits <- mapM makePaneWidget $ enumerate panes
-            return $ BWidgets.vboxAlign 0 definitionEdits
+    [] -> BWidgets.makeFocusableTextView "<No panes>" myId
+    (firstPane:_) ->
+      (assignCursor myId . WidgetIds.fromGuid . Sugar.drGuid . spDef) firstPane $ do
+        definitionEdits <- mapM makePaneWidget panes
+        return $ BWidgets.vboxAlign 0 definitionEdits
 
   canJumpBack <- transaction Anchors.canJumpBack
   newDefinition <- makeNewDefinitionAction
