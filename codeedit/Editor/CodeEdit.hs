@@ -30,19 +30,19 @@ makeNewDefinitionAction = do
 
 makePanesEdit :: MonadF m => TWidget ViewTag m
 makePanesEdit = do
-  panes <- getP panesRef
+  panes <- getP Anchors.panes
 
   let
     delPane i = do
       let newPanes = removeAt i panes
-      Property.set panesRef newPanes
+      Property.set Anchors.panes newPanes
       return . WidgetIds.fromIRef . Anchors.paneDefinition . last $
         take (i+1) newPanes
     movePane oldIndex newIndex = do
       let
         (before, item:after) = splitAt oldIndex panes
         newPanes = insertAt newIndex item $ before ++ after
-      Property.set panesRef newPanes
+      Property.set Anchors.panes newPanes
 
     paneEventMap (_:_:_) i = mconcat $ concat
       [ [ Widget.actionEventMapMovesCursor Config.closePaneKeys "Close pane" $ delPane i ]
@@ -85,5 +85,4 @@ makePanesEdit = do
 
   return $ Widget.weakerEvents panesEventMap panesWidget
   where
-    panesRef = Transaction.fromIRef Anchors.rootIRef
-    myId = WidgetIds.fromIRef Anchors.rootIRef
+    myId = WidgetIds.fromIRef Anchors.panesIRef

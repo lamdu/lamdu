@@ -131,7 +131,7 @@ initDB store =
         builtins <- createBuiltins
         Property.set A.globals builtins
         defI <- A.makeDefinition "foo"
-        Property.set A.root [A.makePane defI]
+        Property.set A.panes [A.makePane defI]
         Property.set A.preJumps []
         Property.set A.preCursor $ WidgetIds.fromIRef defI
         Property.set A.postCursor $ WidgetIds.fromIRef defI
@@ -143,6 +143,6 @@ initDB store =
     _ <- initRef A.currentBranchIRef (return branch)
     _ <- initRef A.redosIRef $ return []
     _ <- initRef A.cursorIRef . Transaction.run (View.store view) $ do
-      (A.Pane paneCursor _ : _) <- Property.get A.root
+      (A.Pane paneCursor _ : _) <- Property.get A.panes
       return paneCursor
     return ()

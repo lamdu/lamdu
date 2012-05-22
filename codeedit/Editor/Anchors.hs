@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, EmptyDataDecls, OverloadedStrings #-}
 
 module Editor.Anchors(
-    root, rootIRef,
+    panes, panesIRef,
     cursor, cursorIRef, preCursor, postCursor, preJumps,
     branches, branchesIRef,
     view, viewIRef,
@@ -60,11 +60,11 @@ data ViewTag
 viewStore :: Monad m => View -> Store ViewTag (Transaction DBTag m)
 viewStore = View.store
 
-rootIRef :: IRef [Pane]
-rootIRef = IRef.anchor "root"
+panesIRef :: IRef [Pane]
+panesIRef = IRef.anchor "panes"
 
-root :: Monad m => Transaction.Property ViewTag m [Pane]
-root = Transaction.fromIRef rootIRef
+panes :: Monad m => Transaction.Property ViewTag m [Pane]
+panes = Transaction.fromIRef panesIRef
 
 branchesIRef :: IRef [(IRef String, Branch)]
 branchesIRef = IRef.anchor "branches"
@@ -146,11 +146,9 @@ variableNameRef = Data.onVariableIRef (aNameRef . IRef.guid)
 
 newPane :: Monad m => IRef Data.Definition -> Transaction ViewTag m ()
 newPane defI = do
-  panes <- Property.get panesRef
-  when (all ((/= defI) . paneDefinition) panes) $
-    Property.set panesRef $ makePane defI : panes
-  where
-    panesRef = Transaction.fromIRef rootIRef
+  ps <- Property.get panes
+  when (all ((/= defI) . paneDefinition) ps) $
+    Property.set panes $ makePane defI : ps
 
 savePreJumpPosition :: Monad m => Widget.Id -> Transaction ViewTag m ()
 savePreJumpPosition pos = Property.pureModify preJumps $ (pos :) . take 19

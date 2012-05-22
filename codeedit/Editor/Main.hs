@@ -131,7 +131,7 @@ runDbStore font store = do
         (invalidCursor, focusable) <-
           if Widget.isFocused candidateWidget
           then return (Nothing, candidateWidget)
-          else liftM ((,) (Just cursor)) . fromCursor $ WidgetIds.fromIRef Anchors.rootIRef
+          else liftM ((,) (Just cursor)) . fromCursor $ WidgetIds.fromIRef Anchors.panesIRef
         unless (Widget.isFocused focusable) $
           fail "Root cursor did not match"
         return (invalidCursor, Widget.atEvents (>>= attachCursor) focusable)
