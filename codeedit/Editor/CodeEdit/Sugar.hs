@@ -1,12 +1,13 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Editor.CodeEdit.Sugar
-  ( Expression(..), Actions(..), ExpressionRef(..)
+  ( Definition(..), DefinitionRef(..), Builtin(..)
+  , Expression(..), Actions(..), ExpressionRef(..)
   , Where(..), WhereItem(..)
   , Func(..), FuncParam(..)
   , Pi(..), Apply(..), Section(..), Hole(..), LiteralInteger(..)
   , HasParens(..)
-  , convertExpression
+  , convertDefinition
   ) where
 
 import Control.Monad(liftM)
@@ -108,6 +109,20 @@ data Expression m
   | ExpressionHole { eHole :: Hole m }
   | ExpressionLiteralInteger { _eLit :: LiteralInteger m }
 
+data Builtin m = Builtin
+  { biName :: Data.FFIName
+  , biType :: ExpressionRef m
+  }
+
+data Definition m
+  = DefinitionExpression (ExpressionRef m)
+  | DefinitionBuiltin (Builtin m)
+
+data DefinitionRef m = DefinitionRef
+  { drGuid :: Guid
+  , drDef :: Definition m
+  }
+
 AtFieldTH.make ''Hole
 AtFieldTH.make ''Where
 AtFieldTH.make ''FuncParam
@@ -153,7 +168,7 @@ convertLambdaParam
   -> IRef Data.Expression -> ExpressionSetter m
   -> Transaction ViewTag m (FuncParam m)
 convertLambdaParam con (Data.Lambda paramTypeI bodyI) scope exprI setExprI = do
-  typeExpr <- convertNode scope paramTypeI typeSetter
+  typeExpr <- convertExpression scope paramTypeI typeSetter
   return FuncParam
     { fpActions =
         (atMDelete . const . Just) deleteArg $
@@ -169,7 +184,7 @@ convertLambdaParam con (Data.Lambda paramTypeI bodyI) scope exprI setExprI = do
 convertLambda :: Monad m => Data.Lambda -> Scope -> Convertor m
 convertLambda lambda@(Data.Lambda _ bodyI) scope exprI setExprI = do
   param <- convertLambdaParam Data.ExpressionLambda lambda scope exprI setExprI
-  sBody <- convertNode (Data.ParameterRef exprI : scope) bodyI bodySetter
+  sBody <- convertExpression (Data.ParameterRef exprI : scope) bodyI bodySetter
   mkExpressionRef exprI setExprI .
     ExpressionFunc DontHaveParens . atFParams (param :) $
     case rExpression sBody of
@@ -187,7 +202,7 @@ addDelete parentSetter replacer =
 convertPi :: Monad m => Data.Lambda -> Scope -> Convertor m
 convertPi lambda@(Data.Lambda paramTypeI bodyI) scope exprI setExprI = do
   param <- convertLambdaParam Data.ExpressionPi lambda scope exprI setExprI
-  sBody <- convertNode (Data.ParameterRef exprI : scope) bodyI bodySetter
+  sBody <- convertExpression (Data.ParameterRef exprI : scope) bodyI bodySetter
   mkExpressionRef exprI setExprI $ ExpressionPi DontHaveParens
     Pi
     { pParam = atFpType addApplyChildParens param
@@ -204,7 +219,7 @@ convertWhere
   -> Scope
   -> Convertor m
 convertWhere valueRef lambdaI lambda@(Data.Lambda _ bodyI) scope applyI setApplyI = do
-  sBody <- convertNode (Data.ParameterRef lambdaI : scope) bodyI bodySetter
+  sBody <- convertExpression (Data.ParameterRef lambdaI : scope) bodyI bodySetter
   mkExpressionRef applyI setApplyI . ExpressionWhere DontHaveParens . atWWheres (item :) $
     case rExpression sBody of
       ExpressionWhere _ x -> x
@@ -236,7 +251,7 @@ convertApply apply@(Data.Apply funcI argI) scope exprI setExprI = do
     setArgI = DataOps.applyArgSetter exprI apply
   case func of
     Data.ExpressionLambda lambda -> do
-      valueRef <- convertNode scope argI setArgI
+      valueRef <- convertExpression scope argI setArgI
       convertWhere valueRef funcI lambda scope exprI setExprI
     -- InfixR or ordinary prefix:
     Data.ExpressionApply funcApply@(Data.Apply funcFuncI _) -> do
@@ -262,8 +277,8 @@ convertApplyInfixFull
   -> Scope
   -> Convertor m
 convertApplyInfixFull funcApply@(Data.Apply funcFuncI funcArgI) op apply@(Data.Apply funcI argI) scope exprI setExprI = do
-  rArgRef <- convertNode scope argI $ DataOps.applyArgSetter exprI apply
-  lArgRef <- convertNode scope funcArgI $ DataOps.applyArgSetter funcI funcApply
+  rArgRef <- convertExpression scope argI $ DataOps.applyArgSetter exprI apply
+  lArgRef <- convertExpression scope funcArgI $ DataOps.applyArgSetter funcI funcApply
   opRef <-
     mkExpressionRef funcFuncI (DataOps.applyFuncSetter funcI funcApply) $
     ExpressionGetVariable op
@@ -292,7 +307,7 @@ convertApplyInfixL
   -> Scope
   -> Convertor m
 convertApplyInfixL op apply@(Data.Apply opI argI) scope exprI setExprI = do
-  argRef <- convertNode scope argI $ DataOps.applyArgSetter exprI apply
+  argRef <- convertExpression scope argI $ DataOps.applyArgSetter exprI apply
   let
     newArgRef =
       addDelete setExprI opI .
@@ -315,8 +330,8 @@ convertApplyPrefix
   -> Scope
   -> Convertor m
 convertApplyPrefix apply@(Data.Apply funcI argI) scope exprI setExprI = do
-  argRef <- convertNode scope argI $ DataOps.applyArgSetter exprI apply
-  funcRef <- convertNode scope funcI $ DataOps.applyFuncSetter exprI apply
+  argRef <- convertExpression scope argI $ DataOps.applyArgSetter exprI apply
+  funcRef <- convertExpression scope funcI $ DataOps.applyFuncSetter exprI apply
   let
     newArgRef =
       addDelete setExprI funcI .
@@ -373,8 +388,8 @@ convertLiteralInteger i exprI setExprI =
   , liSetValue = Transaction.writeIRef exprI . Data.ExpressionLiteralInteger
   }
 
-convertNode :: Monad m => Scope -> Convertor m
-convertNode scope exprI setExprI = do
+convertExpression :: Monad m => Scope -> Convertor m
+convertExpression scope exprI setExprI = do
   expr <- Transaction.readIRef exprI
   let
     conv =
@@ -387,5 +402,19 @@ convertNode scope exprI setExprI = do
       Data.ExpressionLiteralInteger x -> convertLiteralInteger x
   conv exprI setExprI
 
-convertExpression :: Monad m => Convertor m
-convertExpression = convertNode []
+convertDefinition
+  :: Monad m
+  => IRef Data.Definition -> Transaction ViewTag m (DefinitionRef m)
+convertDefinition defI = do
+  def <- Transaction.readIRef defI
+  liftM (DefinitionRef (IRef.guid defI)) $
+    case def of
+    Data.DefinitionExpression exprI ->
+      liftM DefinitionExpression $
+      convertExpression [] exprI
+      (Transaction.writeIRef defI . Data.DefinitionExpression)
+    Data.DefinitionBuiltin (Data.Builtin ffiName typeI) ->
+      liftM (DefinitionBuiltin . Builtin ffiName) $
+      convertExpression [] typeI
+      (Transaction.writeIRef defI . Data.DefinitionBuiltin .
+       Data.Builtin ffiName)

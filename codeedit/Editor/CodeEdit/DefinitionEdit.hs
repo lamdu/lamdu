@@ -15,8 +15,6 @@ import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Widgets.Grid (GridElement)
 import qualified Data.List as List
-import qualified Data.Store.IRef as IRef
-import qualified Data.Store.Transaction as Transaction
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
@@ -111,20 +109,19 @@ make
   => ExpressionEditMaker m
   -> IRef Data.Definition
   -> TWidget ViewTag m
-make makeExpressionEdit definitionI = do
-  -- TODO: What to do with builtins?
-  def <- transaction $ Transaction.readIRef definitionI
-  case def of
-    Data.DefinitionExpression exprI -> do
-      sExpr <-
-        transaction $ Sugar.convertExpression exprI
-        (Transaction.writeIRef definitionI . Data.DefinitionExpression)
+make makeExpressionEdit defI = do
+  def <- transaction $ Sugar.convertDefinition defI
+  let
+    ident = Sugar.drGuid def
+    myId = WidgetIds.fromGuid ident
+  case Sugar.drDef def of
+    Sugar.DefinitionExpression sExpr -> do
       liftM
         ( Box.toWidget . (Box.atBoxContent . fmap) addJumps .
           BWidgets.hboxK
         ) $
         makeParts makeExpressionEdit myId ident sExpr
-    Data.DefinitionBuiltin (Data.Builtin ffiName@(Data.FFIName modulePath name) typeI) -> do
+    Sugar.DefinitionBuiltin (Sugar.Builtin (Data.FFIName modulePath name) sType) -> do
       moduleName <-
         BWidgets.setTextColor Config.foreignModuleColor $
         BWidgets.makeLabel (concatMap (++ ".") modulePath) myId
@@ -132,12 +129,6 @@ make makeExpressionEdit definitionI = do
         BWidgets.setTextColor Config.foreignVarColor $
         BWidgets.makeLabel name myId
       colon <- BWidgets.makeLabel ":" myId
-      sType <-
-        transaction $ Sugar.convertExpression typeI
-        (Transaction.writeIRef definitionI . Data.DefinitionBuiltin . Data.Builtin ffiName)
       typeEdit <- makeExpressionEdit sType
       BWidgets.makeFocusableView myId $
         BWidgets.hboxSpaced [BWidgets.hbox [moduleName, varName], colon, typeEdit]
-  where
-    ident = IRef.guid definitionI
-    myId = WidgetIds.fromGuid ident
