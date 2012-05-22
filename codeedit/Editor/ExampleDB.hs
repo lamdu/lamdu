@@ -65,8 +65,7 @@ createBuiltins =
       Property.set (A.aNameRef (IRef.guid magicI)) "Magic"
       magicE <- getVar $ Data.DefinitionRef magicI
       return $ Data.DefinitionBuiltin Data.Builtin
-        { Data.biModule = ["Core"]
-        , Data.biName = "Magic"
+        { Data.biName = Data.FFIName ["Core"] "Magic"
         , Data.biType = magicE
         }
 

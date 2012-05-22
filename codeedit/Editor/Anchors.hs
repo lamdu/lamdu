@@ -170,8 +170,7 @@ jumpBack = do
 newBuiltin :: Monad m => String -> IRef Data.Expression -> Transaction t m Data.VariableRef
 newBuiltin fullyQualifiedName typeI = do
   builtinIRef <- Transaction.newIRef $ Data.DefinitionBuiltin Data.Builtin
-    { Data.biModule = init path
-    , Data.biName = name
+    { Data.biName = Data.FFIName (init path) name
     , Data.biType = typeI
     }
   Property.set (aNameRef (IRef.guid builtinIRef)) name

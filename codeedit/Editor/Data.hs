@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, Rank2Types #-}
 module Editor.Data (
   Definition(..),
-  Builtin(..),
+  Builtin(..), FFIName(..),
   VariableRef(..), onVariableIRef,
   Lambda(..), atLambdaParamType, atLambdaBody,
   Apply(..), atApplyFunc, atApplyArg,
@@ -19,14 +19,12 @@ import qualified Data.AtFieldTH as AtFieldTH
 data Lambda = Lambda {
   lambdaParamType :: IRef Expression,
   lambdaBody :: IRef Expression
-  }
-  deriving (Eq, Ord, Read, Show)
+  } deriving (Eq, Ord, Read, Show)
 
 data Apply = Apply {
   applyFunc :: IRef Expression,
   applyArg :: IRef Expression
-  }
-  deriving (Eq, Ord, Read, Show)
+  } deriving (Eq, Ord, Read, Show)
 
 data Expression
   = ExpressionLambda Lambda
@@ -37,12 +35,15 @@ data Expression
   | ExpressionLiteralInteger Integer
   deriving (Eq, Ord, Read, Show)
 
+data FFIName = FFIName
+  { fModule :: [String]
+  , fName :: String
+  } deriving (Eq, Ord, Read, Show)
+
 data Builtin = Builtin {
-  biModule :: [String],
-  biName :: String,
+  biName :: FFIName,
   biType :: IRef Expression
-  }
-  deriving (Eq, Ord, Read, Show)
+  } deriving (Eq, Ord, Read, Show)
 
 data Definition
   = DefinitionExpression (IRef Expression)
@@ -60,6 +61,7 @@ onVariableIRef f (DefinitionRef i) = f i
 
 derive makeBinary ''Apply
 derive makeBinary ''Lambda
+derive makeBinary ''FFIName
 derive makeBinary ''Builtin
 derive makeBinary ''Definition
 derive makeBinary ''Expression
