@@ -1,26 +1,25 @@
 {-# LANGUAGE TemplateHaskell, EmptyDataDecls, OverloadedStrings #-}
 
-module Editor.Anchors(
-    panes, panesIRef,
-    cursor, cursorIRef, preCursor, postCursor, preJumps,
-    branches, branchesIRef,
-    view, viewIRef,
-    redos, redosIRef,
-    currentBranchIRef, currentBranch,
-    globals,
-    newBuiltin,
-    Pane(..), atPaneCursor, atPaneDefinition,
-    dbStore, DBTag,
-    viewStore, ViewTag,
-    aDataRef, aNameRef, variableNameRef,
-    makePane, makeDefinition, newPane,
-    savePreJumpPosition, canJumpBack, jumpBack)
+module Editor.Anchors
+  ( panes, panesIRef
+  , cursor, cursorIRef, preCursor, postCursor, preJumps
+  , branches, branchesIRef
+  , view, viewIRef
+  , redos, redosIRef
+  , currentBranchIRef, currentBranch
+  , globals
+  , newBuiltin
+  , Pane
+  , dbStore, DBTag
+  , viewStore, ViewTag
+  , aDataRef, aNameRef, variableNameRef
+  , makePane, makeDefinition, newPane
+  , savePreJumpPosition, canJumpBack, jumpBack
+  )
 where
 
 import Control.Monad (when, liftM)
 import Data.Binary (Binary(..))
-import Data.Derive.Binary(makeBinary)
-import Data.DeriveTH(derive)
 import Data.List.Split (splitOn)
 import Data.Maybe (fromMaybe)
 import Data.Store.Db (Db)
@@ -31,7 +30,6 @@ import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Version(Version)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction, Store(..))
-import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.ByteString as SBS
 import qualified Data.Store.Db as Db
 import qualified Data.Store.Guid as Guid
@@ -40,17 +38,9 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Data as Data
-import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 
-data Pane = Pane {
-  paneCursor :: Widget.Id,
-  paneDefinition :: IRef Data.Definition
-  }
-  deriving (Eq, Ord, Read, Show)
-
-derive makeBinary ''Pane
-AtFieldTH.make ''Pane
+type Pane = IRef Data.Definition
 
 data DBTag
 dbStore :: Db -> Store DBTag IO
@@ -112,10 +102,7 @@ view :: Monad m => Transaction.Property DBTag m View
 view = Transaction.fromIRef viewIRef
 
 makePane :: IRef Data.Definition -> Pane
-makePane defI = Pane {
-  paneCursor = WidgetIds.fromIRef defI,
-  paneDefinition = defI
-  }
+makePane = id
 
 makeDefinition :: Monad m => String -> Transaction ViewTag m (IRef Data.Definition)
 makeDefinition newName = do
@@ -147,7 +134,7 @@ variableNameRef = Data.onVariableIRef (aNameRef . IRef.guid)
 newPane :: Monad m => IRef Data.Definition -> Transaction ViewTag m ()
 newPane defI = do
   ps <- Property.get panes
-  when (all ((/= defI) . paneDefinition) ps) $
+  when (all (/= defI) ps) $
     Property.set panes $ makePane defI : ps
 
 savePreJumpPosition :: Monad m => Widget.Id -> Transaction ViewTag m ()

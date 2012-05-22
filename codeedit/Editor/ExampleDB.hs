@@ -143,6 +143,6 @@ initDB store =
     _ <- initRef A.currentBranchIRef (return branch)
     _ <- initRef A.redosIRef $ return []
     _ <- initRef A.cursorIRef . Transaction.run (View.store view) $ do
-      (A.Pane paneCursor _ : _) <- Property.get A.panes
-      return paneCursor
+      (defI : _) <- Property.get A.panes
+      return $ WidgetIds.fromIRef defI
     return ()

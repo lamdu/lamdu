@@ -36,7 +36,7 @@ makePanesEdit = do
     delPane i = do
       let newPanes = removeAt i panes
       Property.set Anchors.panes newPanes
-      return . WidgetIds.fromIRef . Anchors.paneDefinition . last $
+      return . WidgetIds.fromIRef . last $
         take (i+1) newPanes
     movePane oldIndex newIndex = do
       let
@@ -56,7 +56,7 @@ makePanesEdit = do
     paneEventMap _ _ = mempty
 
     makePaneWidget (i, pane) = do
-      def <- transaction . Sugar.convertDefinition $ Anchors.paneDefinition pane
+      def <- transaction $ Sugar.convertDefinition pane
       defEdit <- DefinitionEdit.make ExpressionEdit.make def
       return $ Widget.weakerEvents (paneEventMap panes i) defEdit
 
@@ -65,7 +65,7 @@ makePanesEdit = do
       [] -> BWidgets.makeFocusableTextView "<No panes>" myId
       (firstPane:_) ->
         assignCursor myId
-          (WidgetIds.fromIRef (Anchors.paneDefinition firstPane)) $ do
+          (WidgetIds.fromIRef firstPane) $ do
             definitionEdits <- mapM makePaneWidget $ enumerate panes
             return $ BWidgets.vboxAlign 0 definitionEdits
 
