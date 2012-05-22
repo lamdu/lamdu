@@ -22,7 +22,7 @@ import Data.Maybe (isJust)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
-import Editor.CTransaction (WidgetT, TWidget, CTransaction, readTextStyle, readCursor, getP, assignCursor, atTextStyle)
+import Editor.CTransaction (TWidget, CTransaction, readTextStyle, readCursor, getP, assignCursor, atTextStyle)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Sized (Sized)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -71,17 +71,18 @@ makeFocusableTextView text myId = do
   makeFocusableView myId textView
 
 makeChoice
-  :: (Monad m, Eq a)
-  => Widget.Id -> Box.Orientation -> [(a, WidgetT t m)] -> a -> TWidget t m
-makeChoice selectionAnimId orientation children curChild = do
-  let
+  :: Eq a
+  => Widget.Id
+  -> Box.Orientation
+  -> [(a, Widget f)]
+  -> a -> Widget f
+makeChoice selectionAnimId orientation children curChild =
+  maybe Box.toWidget Box.toWidgetBiased mCurChildIndex box
+  where
     mCurChildIndex = findIndex ((curChild ==) . fst) children
     colorizedChildren =
       map (uncurry colorize . first (curChild ==)) children
     box = Box.make orientation colorizedChildren
-  return $
-    maybe Box.toWidget Box.toWidgetBiased mCurChildIndex box
-  where
     colorize True = Widget.backgroundColor selectionAnimId selectedColor
     colorize False = id
     selectedColor = Draw.Color 0 0.5 0 1
@@ -127,10 +128,10 @@ wrapDelegated ::
 wrapDelegated entryState =
   wrapDelegatedWithKeys FocusDelegator.defaultKeys entryState id
 
-makeTextEdit ::
-  Monad m =>
-  Transaction.Property t m String ->
-  Widget.Id -> TWidget t m
+makeTextEdit
+  :: Monad m
+  => Transaction.Property t m String
+  -> Widget.Id -> TWidget t m
 makeTextEdit textRef myId = do
   text <- getP textRef
   let
