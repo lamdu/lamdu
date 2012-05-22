@@ -1,5 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Editor.CodeEdit(makePanesEdit) where
+module Editor.CodeEdit
+  ( makePanesEdit
+  , SugarPane, makeSugarPanes )
+where
 
 import Control.Monad (liftM)
 import Data.List.Utils(enumerate, insertAt, removeAt)
@@ -8,7 +11,7 @@ import Data.Monoid(Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, TWidget, getP, assignCursor, readCursor, transaction)
+import Editor.CTransaction (CTransaction, TWidget, assignCursor, readCursor, transaction)
 import Editor.MonadF (MonadF)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -38,9 +41,9 @@ makeNewDefinitionAction = do
     Anchors.savePreJumpPosition curCursor
     return $ WidgetIds.fromIRef newDefI
 
-makeSugarPanes :: Monad m => CTransaction ViewTag m [SugarPane m]
+makeSugarPanes :: Monad m => Transaction ViewTag m [SugarPane m]
 makeSugarPanes = do
-  panes <- getP Anchors.panes
+  panes <- Property.get Anchors.panes
   let
     mkMDelPane i
       | length panes > 1 = Just $ do
@@ -68,22 +71,10 @@ makeSugarPanes = do
         , mMovePaneDown = mkMMovePaneDown i
         , mMovePaneUp = mkMMovePaneUp i
         }
-  transaction . mapM convertPane $ enumerate panes
+  mapM convertPane $ enumerate panes
 
-makePanesEdit :: MonadF m => TWidget ViewTag m
-makePanesEdit = do
-  panes <- makeSugarPanes
-  let
-    paneEventMap pane = mconcat
-      [ maybe mempty (Widget.actionEventMapMovesCursor Config.closePaneKeys "Close pane" . liftM WidgetIds.fromGuid) $ mDelPane pane
-      , maybe mempty (Widget.actionEventMap Config.movePaneDownKeys "Move pane down") $ mMovePaneDown pane
-      , maybe mempty (Widget.actionEventMap Config.movePaneUpKeys "Move pane up") $ mMovePaneUp pane
-      ]
-
-    makePaneWidget pane =
-      liftM (Widget.weakerEvents (paneEventMap pane)) .
-      DefinitionEdit.make ExpressionEdit.make $ spDef pane
-
+makePanesEdit :: MonadF m => [SugarPane m] -> TWidget ViewTag m
+makePanesEdit panes = do
   panesWidget <-
     case panes of
     [] -> BWidgets.makeFocusableTextView "<No panes>" myId
@@ -109,3 +100,11 @@ makePanesEdit = do
   return $ Widget.weakerEvents panesEventMap panesWidget
   where
     myId = WidgetIds.fromIRef Anchors.panesIRef
+    paneEventMap pane = mconcat
+      [ maybe mempty (Widget.actionEventMapMovesCursor Config.closePaneKeys "Close pane" . liftM WidgetIds.fromGuid) $ mDelPane pane
+      , maybe mempty (Widget.actionEventMap Config.movePaneDownKeys "Move pane down") $ mMovePaneDown pane
+      , maybe mempty (Widget.actionEventMap Config.movePaneUpKeys "Move pane up") $ mMovePaneUp pane
+      ]
+    makePaneWidget pane =
+      liftM (Widget.weakerEvents (paneEventMap pane)) .
+      DefinitionEdit.make ExpressionEdit.make $ spDef pane

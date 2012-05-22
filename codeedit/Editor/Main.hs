@@ -11,7 +11,7 @@ import Data.Monoid(Monoid(..))
 import Data.Vector.Vector2(Vector2)
 import Data.Word(Word8)
 import Editor.Anchors (DBTag)
-import Editor.CTransaction (runCTransaction)
+import Editor.CTransaction (runCTransaction, transaction)
 import Graphics.DrawingCombinators((%%))
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
@@ -121,8 +121,10 @@ runDbStore font store = do
       }
 
     fromCursor cursor =
-      runCTransaction cursor style $
-      BranchGUI.makeRootWidget CodeEdit.makePanesEdit
+      runCTransaction cursor style . BranchGUI.makeRootWidget $ do
+        panes <- transaction $ CodeEdit.makeSugarPanes
+        CodeEdit.makePanesEdit panes
+
     -- TODO: Move this logic to some more common place?
     makeWidget = do
       (invalidCursor, widget) <- widgetDownTransaction $ do
