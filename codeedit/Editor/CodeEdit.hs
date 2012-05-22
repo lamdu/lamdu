@@ -14,6 +14,7 @@ import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
 import qualified Editor.CodeEdit.ExpressionEdit as ExpressionEdit
+import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -54,9 +55,10 @@ makePanesEdit = do
       ]
     paneEventMap _ _ = mempty
 
-    makePaneWidget (i, pane) =
-      (liftM . Widget.weakerEvents) (paneEventMap panes i) .
-      DefinitionEdit.make ExpressionEdit.make $ Anchors.paneDefinition pane
+    makePaneWidget (i, pane) = do
+      def <- transaction . Sugar.convertDefinition $ Anchors.paneDefinition pane
+      defEdit <- DefinitionEdit.make ExpressionEdit.make def
+      return $ Widget.weakerEvents (paneEventMap panes i) defEdit
 
   panesWidget <-
     case panes of

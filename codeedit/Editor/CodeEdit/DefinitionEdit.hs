@@ -5,11 +5,10 @@ import Control.Monad (liftM)
 import Data.List.Utils (atPred, pairList)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
-import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, TWidget, transaction)
+import Editor.CTransaction (CTransaction, TWidget)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -126,19 +125,18 @@ makeBuiltinView makeExpressionEdit myId (Sugar.Builtin (Data.FFIName modulePath 
 make
   :: MonadF m
   => ExpressionEditMaker m
-  -> IRef Data.Definition
+  -> Sugar.DefinitionRef m
   -> TWidget ViewTag m
-make makeExpressionEdit defI = do
-  def <- transaction $ Sugar.convertDefinition defI
-  let
+make makeExpressionEdit def =
+  case Sugar.drDef def of
+  Sugar.DefinitionExpression sExpr ->
+    liftM
+      ( Box.toWidget . (Box.atBoxContent . fmap) addJumps .
+        BWidgets.hboxK
+      ) $
+      makeParts makeExpressionEdit myId ident sExpr
+  Sugar.DefinitionBuiltin builtin ->
+    makeBuiltinView makeExpressionEdit myId builtin
+  where
     ident = Sugar.drGuid def
     myId = WidgetIds.fromGuid ident
-  case Sugar.drDef def of
-    Sugar.DefinitionExpression sExpr -> do
-      liftM
-        ( Box.toWidget . (Box.atBoxContent . fmap) addJumps .
-          BWidgets.hboxK
-        ) $
-        makeParts makeExpressionEdit myId ident sExpr
-    Sugar.DefinitionBuiltin builtin ->
-      makeBuiltinView makeExpressionEdit myId builtin
