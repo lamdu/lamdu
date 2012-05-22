@@ -104,6 +104,25 @@ makeParts makeExpressionEdit myId ident exprRef = do
     ,(Just RHS, rhsEdit)
     ]
 
+makeBuiltinView
+  :: MonadF m
+  => ExpressionEditMaker m
+  -> Widget.Id
+  -> Sugar.Builtin m
+  -> TWidget ViewTag m
+makeBuiltinView makeExpressionEdit myId (Sugar.Builtin (Data.FFIName modulePath name) sType) = do
+  moduleName <-
+    BWidgets.setTextColor Config.foreignModuleColor $
+    BWidgets.makeLabel (concatMap (++ ".") modulePath) myId
+  varName <-
+    BWidgets.setTextColor Config.foreignVarColor $
+    BWidgets.makeLabel name myId
+  colon <- BWidgets.makeLabel ":" myId
+  typeEdit <- makeExpressionEdit sType
+  BWidgets.makeFocusableView myId $
+    BWidgets.hboxSpaced [BWidgets.hbox [moduleName, varName], colon, typeEdit]
+
+
 make
   :: MonadF m
   => ExpressionEditMaker m
@@ -121,14 +140,5 @@ make makeExpressionEdit defI = do
           BWidgets.hboxK
         ) $
         makeParts makeExpressionEdit myId ident sExpr
-    Sugar.DefinitionBuiltin (Sugar.Builtin (Data.FFIName modulePath name) sType) -> do
-      moduleName <-
-        BWidgets.setTextColor Config.foreignModuleColor $
-        BWidgets.makeLabel (concatMap (++ ".") modulePath) myId
-      varName <-
-        BWidgets.setTextColor Config.foreignVarColor $
-        BWidgets.makeLabel name myId
-      colon <- BWidgets.makeLabel ":" myId
-      typeEdit <- makeExpressionEdit sType
-      BWidgets.makeFocusableView myId $
-        BWidgets.hboxSpaced [BWidgets.hbox [moduleName, varName], colon, typeEdit]
+    Sugar.DefinitionBuiltin builtin ->
+      makeBuiltinView makeExpressionEdit myId builtin
