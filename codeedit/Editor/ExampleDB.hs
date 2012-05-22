@@ -2,7 +2,7 @@ module Editor.ExampleDB(initDB) where
 
 import Control.Monad (liftM, unless, (<=<))
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Writer (WriterT, tell, execWriterT)
+import Control.Monad.Trans.Writer (WriterT)
 import Data.Binary (Binary(..))
 import Data.Store.Guid(Guid)
 import Data.Store.IRef (IRef)
@@ -28,7 +28,7 @@ writeCollectorStore ::
 writeCollectorStore newKey = Store {
   storeNewKey = lift newKey,
   storeLookup = fail "Cannot lookup when collecting writes!",
-  storeAtomicWrite = tell <=< mapM makeChange
+  storeAtomicWrite = Writer.tell <=< mapM makeChange
   }
   where
     makeChange (key, Just value) = return (key, value)
@@ -39,7 +39,7 @@ collectWrites ::
   Monad m =>
   m Guid -> Transaction t (WriteCollector m) () -> m [(Key, Value)]
 collectWrites newGuid =
-  execWriterT . Transaction.run (writeCollectorStore newGuid)
+  Writer.execWriterT . Transaction.run (writeCollectorStore newGuid)
 
 -- Initialize an IRef if it does not already exist.
 initRef :: (Binary a, Monad m) => IRef a -> Transaction t m a -> Transaction t m a
@@ -112,14 +112,14 @@ createBuiltins =
     mapM_ ((`makeWithType` intToIntToBool) . ("Prelude." ++))
       ["==", "/=", "<=", ">=", "<", ">"]
   where
-    tellift f = tell . (:[]) =<< lift f
+    tellift f = Writer.tell . (:[]) =<< lift f
     getVar = Transaction.newIRef . Data.ExpressionGetVariable
     mkPi mkArgType mkResType = do
       argType <- mkArgType
       Transaction.newIRef . Data.ExpressionPi . Data.Lambda argType =<< mkResType
     mkType f = do
       x <- lift f
-      tell [x]
+      Writer.tell [x]
       return $ getVar x
     makeWithType builtinName typeMaker =
       tellift (A.newBuiltin builtinName =<< typeMaker)
