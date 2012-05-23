@@ -111,14 +111,28 @@ mainLoopAnim eventHandler makeFrame getAnimationHalfLife = do
 mainLoopWidget :: IO (Widget IO) -> IO Anim.R -> IO a
 mainLoopWidget mkWidget getAnimationHalfLife = do
   widgetRef <- newIORef =<< mkWidget
+  imageRef <- newIORef Nothing
   let
     eventHandler size event = do
       widget <- readIORef widgetRef
       result <- maybe (return Nothing) (liftM (Just . Widget.eAnimIdMapping)) .
         E.lookup event $ Widget.eventMap widget size
       writeIORef widgetRef =<< mkWidget
+      writeIORef imageRef Nothing
       return result
     mkImage size = do
-      widget <- readIORef widgetRef
-      return $ Widget.image widget size
+      mPrevImage <- readIORef imageRef
+      let
+        calcImage = do
+          widget <- readIORef widgetRef
+          return $ Widget.image widget size
+      image <-
+        case mPrevImage of
+        Nothing -> calcImage
+        Just (prevSize, prevImage) ->
+          if prevSize == size
+          then return prevImage
+          else calcImage
+      writeIORef imageRef $ Just (size, image)
+      return image
   mainLoopAnim eventHandler mkImage getAnimationHalfLife
