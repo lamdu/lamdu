@@ -1,4 +1,3 @@
-{-# OPTIONS -O2 -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Main(main) where
 

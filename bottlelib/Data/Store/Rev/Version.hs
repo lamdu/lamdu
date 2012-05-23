@@ -1,4 +1,3 @@
-{-# OPTIONS -O2 -Wall #-}
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Data.Store.Rev.Version
     (VersionData, depth, parent, changes,

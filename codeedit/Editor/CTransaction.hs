@@ -1,5 +1,4 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
-{-# OPTIONS -Wall #-}
 module Editor.CTransaction(
   CTransaction, runCTransaction, runNestedCTransaction, TWidget, WidgetT,
   readCursor, subCursor, readTextStyle, transaction, getP, atCursor, assignCursor,

@@ -1,5 +1,3 @@
-{-# OPTIONS -O2 -Wall #-}
-
 module Data.Store.Db
     (Db, withDb,
      nextKeyBS, nextKey, lookup, transaction, store)

@@ -1,4 +1,3 @@
-{-# OPTIONS -Wall #-}
 module Graphics.UI.Bottle.MainLoop (mainLoopAnim, mainLoopImage, mainLoopWidget) where
 
 import Control.Arrow(first, second)

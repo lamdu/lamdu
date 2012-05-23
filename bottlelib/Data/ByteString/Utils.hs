@@ -1,5 +1,3 @@
-{-# OPTIONS -O2 -Wall #-}
-
 module Data.ByteString.Utils
     (lazifyBS, strictifyBS, randomBS, xorBS)
 where

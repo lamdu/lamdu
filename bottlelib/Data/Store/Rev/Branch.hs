@@ -1,4 +1,3 @@
-{-# OPTIONS -O2 -Wall #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Data.Store.Rev.Branch
     (Branch, new, move, curVersion, newVersion)

@@ -1,4 +1,4 @@
-{-# OPTIONS -Wall -fno-warn-orphans #-}
+{-# OPTIONS -fno-warn-orphans #-}
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, DeriveFunctor #-}
 module Graphics.UI.Bottle.EventMap(
   EventMap, EventType(..), Event,

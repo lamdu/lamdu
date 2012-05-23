@@ -1,4 +1,3 @@
-{-# OPTIONS -Wall #-}
 {-# LANGUAGE TemplateHaskell #-}
 module Graphics.UI.Bottle.Widgets.TextView (
   Style(..), atStyleColor, atStyleFont, atStyleFontSize,

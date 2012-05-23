@@ -1,4 +1,3 @@
-{-# OPTIONS -O2 -Wall #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Graphics.UI.Bottle.SizeRange

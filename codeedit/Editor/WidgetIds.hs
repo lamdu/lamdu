@@ -1,4 +1,3 @@
-{-# OPTIONS -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.WidgetIds(
   backgroundCursorId, textCursorId, fromIRef, fromGuid,

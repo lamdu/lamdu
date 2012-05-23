@@ -1,5 +1,4 @@
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS -O2 -Wall #-}
 module Data.Store.Rev.Change (Key, Value, Change(..))
 where
 

@@ -1,4 +1,3 @@
-{-# OPTIONS -Wall #-}
 module Graphics.UI.GLFW.Utils(withGLFW, openWindow) where
 
 import Control.Exception(bracket_)

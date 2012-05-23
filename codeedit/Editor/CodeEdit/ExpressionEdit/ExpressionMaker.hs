@@ -1,4 +1,3 @@
-{-# OPTIONS -O2 -Wall #-}
 module Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker) where
 
 import Editor.Anchors(ViewTag)

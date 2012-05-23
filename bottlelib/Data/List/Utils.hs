@@ -1,4 +1,3 @@
-{-# OPTIONS -Wall #-}
 module Data.List.Utils
 	( groupOn, sortOn, enumerate, enumerate2d, nth, index, insertAt, removeAt, atPred, pairList
 	) where

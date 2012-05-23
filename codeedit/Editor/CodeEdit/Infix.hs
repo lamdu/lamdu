@@ -1,4 +1,3 @@
-{-# OPTIONS -O2 -Wall #-}
 module Editor.CodeEdit.Infix(isInfixName, isInfixVar, infixOp)
 where
 

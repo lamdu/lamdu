@@ -1,4 +1,3 @@
-{-# OPTIONS -Wall #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Graphics.UI.Bottle.Widgets.GridView(make, makeGeneric) where
 

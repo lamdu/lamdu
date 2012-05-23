@@ -1,4 +1,3 @@
-{-# OPTIONS -Wall #-}
 module Graphics.DrawingCombinators.Utils (
   Image, square,
   textHeight, textWidth, textSize,

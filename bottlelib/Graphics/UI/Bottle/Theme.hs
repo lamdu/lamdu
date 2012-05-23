@@ -1,4 +1,3 @@
-{-# OPTIONS -Wall #-}
 {-# LANGUAGE TypeFamilies, FlexibleInstances, TypeSynonymInstances,
              TupleSections #-}
 module Graphics.UI.Bottle.Theme(Theme(..)) where

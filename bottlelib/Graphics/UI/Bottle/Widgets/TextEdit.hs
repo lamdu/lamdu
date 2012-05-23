@@ -1,4 +1,3 @@
-{-# OPTIONS -Wall #-}
 {-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
 module Graphics.UI.Bottle.Widgets.TextEdit(
   Cursor, Style(..), make, defaultCursorColor, defaultCursorWidth,

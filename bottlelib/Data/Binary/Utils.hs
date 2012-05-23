@@ -1,5 +1,3 @@
-{-# OPTIONS -O2 -Wall #-}
-
 module Data.Binary.Utils
     (decodeS, encodeS)
 where

@@ -1,4 +1,3 @@
-{-# OPTIONS -Wall #-}
 module Graphics.UI.GLFW.ModState (
   ModState(..), noMods, shift, ctrl, alt,
   Pos(..), ModType(..), Modkey(..),

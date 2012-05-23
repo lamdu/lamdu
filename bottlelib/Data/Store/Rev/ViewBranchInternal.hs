@@ -1,4 +1,3 @@
-{-# OPTIONS -O2 -Wall #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
 
 -- | View and Branch have a cyclic dependency. This module

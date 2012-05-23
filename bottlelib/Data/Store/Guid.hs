@@ -1,5 +1,3 @@
-{-# OPTIONS -O2 -Wall #-}
-
 module Data.Store.Guid
     (Guid, make, bs, length, new, combine, fromString)
 where

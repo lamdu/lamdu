@@ -1,4 +1,3 @@
-{-# OPTIONS -Wall #-}
 module Editor.BottleWidgets(
   makeTextView, makeLabel, makeChoice,
   makeFocusableView, makeFocusableTextView,

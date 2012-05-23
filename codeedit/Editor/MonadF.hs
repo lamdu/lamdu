@@ -1,4 +1,3 @@
-{-# OPTIONS -Wall #-}
 {-# LANGUAGE FlexibleInstances, UndecidableInstances #-}
 module Editor.MonadF(MonadF) where
 

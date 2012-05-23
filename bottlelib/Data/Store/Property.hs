@@ -1,5 +1,3 @@
-{-# OPTIONS -O2 -Wall #-}
-
 module Data.Store.Property(
     Property(..), composeLabel, compose, pureCompose,
     modify, modify_, pureModify)

@@ -1,5 +1,3 @@
-{-# OPTIONS -Wall -O2 #-}
-
 module Data.Vector.Vector2
     (Vector2(..)
     ,first,second,(***),both,zip

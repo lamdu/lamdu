@@ -1,5 +1,4 @@
 {-# LANGUAGE CPP #-}
-{-# OPTIONS -O2 -Wall #-}
 {-# OPTIONS -fno-warn-orphans #-}
 module Data.Random.Instances()
 where
