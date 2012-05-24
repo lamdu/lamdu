@@ -1,34 +1,122 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, FlexibleContexts #-}
 module Editor.DataLoad
-  ( Entity(..), loadExpression
+  ( Entity(..), EntityType(..), WritableEntityData(..)
+  , EntityT
+  , guid
+  , loadDefinition
+  , replacer, iref, maybeSet
   )
 where
 
-import Control.Monad (liftM, liftM2)
+import Control.Monad (liftM, liftM2, (<=<))
+import Data.Binary (Binary)
+import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
-import Editor.Data (Expression(..), Apply(..), Lambda(..))
+import Editor.Anchors (ViewTag)
+import Editor.Data (Definition(..), Builtin(..), Expression(..), Apply(..), Lambda(..))
+import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Transaction as Transaction
+import qualified Editor.DataOps as DataOps
 
 -- Have to use type families to avoid infinite kinds.
 type family ReplaceArg_1_0 (i :: * -> *) (a :: *)
 type instance ReplaceArg_1_0 i (f k) = f i
 
+data WritableEntityData m a = WritableEntityData
+  { wedIRef :: IRef a
+  , wedReplace :: Maybe (IRef a -> m ())
+  }
+
+data EntityType m a = ReadOnly Guid | Writable (WritableEntityData m a)
+
 -- Pure alternative for IRef
-data Entity a = Entity
-  { entityIRef :: IRef (ReplaceArg_1_0 IRef a)
+data Entity m a = Entity
+  { entityType :: EntityType m (ReplaceArg_1_0 IRef a)
   , entityValue :: a
   }
 
-loadExpression :: Monad m => IRef (Expression IRef) -> Transaction t m (Entity (Expression Entity))
-loadExpression ref = do
-  expr <- Transaction.readIRef ref
-  liftM (Entity ref) $ case expr of
-    ExpressionLambda lambda -> loadLambda ExpressionLambda lambda
-    ExpressionPi lambda -> loadLambda ExpressionPi lambda
-    ExpressionApply (Apply x y) -> liftM ExpressionApply $ liftM2 Apply (loadExpression x) (loadExpression y)
-    ExpressionGetVariable x -> return $ ExpressionGetVariable x
-    ExpressionHole -> return ExpressionHole
-    ExpressionLiteralInteger x -> return $ ExpressionLiteralInteger x
+type EntityM m f = Entity m (f (Entity m))
+type EntityT m f = EntityM (Transaction ViewTag m) f
+
+guidT :: EntityType m a -> Guid
+guidT (ReadOnly g) = g
+guidT (Writable i) = IRef.guid $ wedIRef i
+
+guid :: Entity m a -> Guid
+guid = guidT . entityType
+
+writableEntityData
+  :: Entity m a
+  -> Maybe (WritableEntityData m (ReplaceArg_1_0 IRef a))
+writableEntityData =
+  f . entityType
   where
-    loadLambda f (Lambda x y) = liftM f $ liftM2 Lambda (loadExpression x) (loadExpression y)
+    f (ReadOnly _) = Nothing
+    f (Writable i) = Just $ i
+
+replacer
+  :: Entity m a
+  -> Maybe (IRef (ReplaceArg_1_0 IRef a) -> m ())
+replacer = wedReplace <=< writableEntityData
+
+iref :: Entity m a -> Maybe (IRef (ReplaceArg_1_0 IRef a))
+iref = fmap wedIRef . writableEntityData
+
+maybeSet
+  :: (Monad m, Binary (ReplaceArg_1_0 IRef a))
+  => Entity m a -> Maybe (ReplaceArg_1_0 IRef a -> Transaction t m ())
+maybeSet = fmap Transaction.writeIRef . iref
+
+load
+  :: (Monad m, Binary (f IRef))
+  => IRef (f IRef)
+  -> (f IRef -> Transaction t m (f (Entity (Transaction t m))))
+  -> Maybe (IRef (f IRef) -> Transaction t m ())
+  -> Transaction t m (EntityM (Transaction t m) f)
+load exprI f mSetter = do
+  expr <- Transaction.readIRef exprI
+  liftM (Entity (Writable (WritableEntityData exprI mSetter))) $ f expr
+
+loadExpression
+  :: Monad m
+  => IRef (Expression IRef)
+  -> Maybe (IRef (Expression IRef) -> Transaction ViewTag m ())
+  -> Transaction ViewTag m (EntityT m Expression)
+loadExpression exprI = load exprI $ \expr -> case expr of
+  ExpressionLambda lambda ->
+    liftM ExpressionLambda $ loadLambda ExpressionLambda lambda
+  ExpressionPi lambda ->
+    liftM ExpressionPi $ loadLambda ExpressionPi lambda
+  ExpressionApply apply@(Apply funcI argI) ->
+    liftM ExpressionApply $
+    liftM2 Apply
+    (loadExpression funcI (Just (DataOps.applyFuncSetter exprI apply)))
+    (loadExpression argI (Just (DataOps.applyArgSetter exprI apply)))
+  ExpressionGetVariable x -> return $ ExpressionGetVariable x
+  ExpressionHole -> return ExpressionHole
+  ExpressionLiteralInteger x -> return $ ExpressionLiteralInteger x
+  where
+    loadLambda cons lambda@(Lambda argType body) =
+      liftM2 Lambda
+      (loadExpression argType
+       (Just (DataOps.lambdaTypeSetter cons exprI lambda)))
+      (loadExpression body
+       (Just (DataOps.lambdaBodySetter cons exprI lambda)))
+
+loadDefinition
+  :: Monad m
+  => IRef (Definition IRef)
+  -> Transaction ViewTag m (EntityT m Definition)
+loadDefinition defI = flip (load defI) Nothing $ \def -> case def of
+    DefinitionBuiltin (Builtin ffiName bType) ->
+      liftM (DefinitionBuiltin . Builtin ffiName) .
+      loadExpression bType $ Just
+      (Transaction.writeIRef defI .
+       DefinitionBuiltin .
+       Builtin ffiName)
+    DefinitionExpression expr ->
+      liftM DefinitionExpression .
+      loadExpression expr $ Just
+      (Transaction.writeIRef defI .
+       DefinitionExpression)

@@ -3,7 +3,7 @@ module Editor.DataOps
   ( ExpressionSetter
   , newHole, giveAsArg, callWithArg
   , replace, replaceWithHole, lambdaWrap, redexWrap
-  , lambdaBodySetter
+  , lambdaTypeSetter, lambdaBodySetter
   , applyFuncSetter, applyArgSetter
   )
 where
@@ -14,7 +14,8 @@ import Editor.Anchors(ViewTag)
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Data as Data
 
-type ExpressionSetter m = IRef (Data.Expression IRef) -> Transaction ViewTag m ()
+type ExpressionSetter m =
+  IRef (Data.Expression IRef) -> Transaction ViewTag m ()
 
 giveAsArg ::
   Monad m =>
@@ -80,6 +81,12 @@ redexWrap exprI setExprI = do
     Data.Apply newLambdaI newValueI
   setExprI newApplyI
   return newLambdaI
+
+lambdaTypeSetter
+  :: Monad m
+  => (Data.Lambda IRef -> Data.Expression IRef) -> IRef (Data.Expression IRef) -> Data.Lambda IRef -> ExpressionSetter m
+lambdaTypeSetter cons lambdaI (Data.Lambda _ bodyI) =
+  Transaction.writeIRef lambdaI . cons . flip Data.Lambda bodyI
 
 lambdaBodySetter
   :: Monad m
