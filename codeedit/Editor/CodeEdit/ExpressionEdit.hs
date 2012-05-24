@@ -106,6 +106,9 @@ expressionEventMap sExpr holePicker =
     , Widget.actionEventMapMovesCursor
       Config.lambdaWrapKeys "Lambda wrap" .
       liftM (WidgetIds.delegating . WidgetIds.paramId) $ Sugar.lambdaWrap actions
+    , Widget.actionEventMapMovesCursor
+      Config.addWhereItemKeys "Add where item" .
+      liftM (WidgetIds.delegating . WidgetIds.paramId) $ Sugar.addWhereItem actions
     ]
   where
     withPickResultFirst keys doc action=

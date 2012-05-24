@@ -26,14 +26,15 @@ import qualified Editor.Data as Data
 import qualified Editor.DataOps as DataOps
 
 data Actions m = Actions
-  { guid        :: Guid
-  , addNextArg  :: Transaction ViewTag m Guid
-  , giveAsArg   :: Transaction ViewTag m Guid
-  , callWithArg :: Transaction ViewTag m Guid
-  , lambdaWrap  :: Transaction ViewTag m Guid
-  , mReplace    :: Maybe (Transaction ViewTag m Guid)
-  , mDelete     :: Maybe (Transaction ViewTag m Guid)
-  , mNextArg    :: Maybe (ExpressionRef m)
+  { guid         :: Guid
+  , addNextArg   :: Transaction ViewTag m Guid
+  , giveAsArg    :: Transaction ViewTag m Guid
+  , callWithArg  :: Transaction ViewTag m Guid
+  , lambdaWrap   :: Transaction ViewTag m Guid
+  , addWhereItem :: Transaction ViewTag m Guid
+  , mReplace     :: Maybe (Transaction ViewTag m Guid)
+  , mDelete      :: Maybe (Transaction ViewTag m Guid)
+  , mNextArg     :: Maybe (ExpressionRef m)
   }
 
 -- TODO: Only Expression types that CAN be wrapped with () should be,
@@ -146,6 +147,7 @@ makeActions exprI setExprI =
   , callWithArg = addArg exprI setExprI
   , giveAsArg = liftM IRef.guid $ DataOps.giveAsArg exprI setExprI
   , lambdaWrap = liftM IRef.guid $ DataOps.lambdaWrap exprI setExprI
+  , addWhereItem = liftM IRef.guid $ DataOps.redexWrap exprI setExprI
     -- Hole will remove mReplace because no point replacing hole with hole.
   , mReplace = Just . liftM IRef.guid $ DataOps.replaceWithHole setExprI
     -- mDelete gets overridden by parent if it is an apply.

@@ -2,7 +2,7 @@
 module Editor.DataOps
   ( ExpressionSetter
   , newHole, giveAsArg, callWithArg
-  , replace, replaceWithHole, lambdaWrap
+  , replace, replaceWithHole, lambdaWrap, redexWrap
   , lambdaBodySetter
   , applyFuncSetter, applyArgSetter
   )
@@ -64,6 +64,22 @@ lambdaWrap exprI setExprI = do
     Data.Lambda newParamTypeI exprI
   setExprI newExprI
   return newExprI
+
+redexWrap
+  :: Monad m
+  => IRef Data.Expression -> ExpressionSetter m
+  -> Transaction ViewTag m (IRef Data.Expression)
+redexWrap exprI setExprI = do
+  newParamTypeI <- newHole
+  newLambdaI <-
+    Transaction.newIRef . Data.ExpressionLambda $
+    Data.Lambda newParamTypeI exprI
+  newValueI <- newHole
+  newApplyI <-
+    Transaction.newIRef . Data.ExpressionApply $
+    Data.Apply newLambdaI newValueI
+  setExprI newApplyI
+  return newLambdaI
 
 lambdaBodySetter
   :: Monad m
