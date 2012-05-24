@@ -1,4 +1,11 @@
+* Pure in-memory representation
+
+  * Inferred types
+
+* 1-use wheres to Sugar as "Titled Expressions"
+
 * Space key to add params
+  * Shared Clause for Where/Definition
 
 * Dapaot:
   * Add anim-id-remappings to sugar changes
