@@ -51,7 +51,7 @@ parensPrefix :: Widget.Id -> Widget.Id
 parensPrefix = flip Widget.joinId ["parens"]
 
 varId :: Data.VariableRef -> Widget.Id
-varId = Data.onVariableRef fromIRef
+varId = fromGuid . Data.variableRefGuid
 
 diveIn :: Functor f => f (IRef a) -> f Widget.Id
 diveIn = fmap $ delegating . fromIRef

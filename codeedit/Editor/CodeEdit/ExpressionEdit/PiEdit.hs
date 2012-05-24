@@ -5,7 +5,6 @@ import Editor.Anchors (ViewTag)
 import Editor.CTransaction (TWidget, assignCursor, atCursor, atTextSizeColor, usedVariables)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker (ExpressionEditMaker)
 import Editor.MonadF (MonadF)
-import qualified Data.Store.IRef as IRef
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
@@ -25,7 +24,7 @@ make makeExpressionEdit (Sugar.Pi param resultType) myId =
     (resultTypeEdit, usedVars) <- usedVariables $ makeExpressionEdit resultType
     let
       paramGuid = Sugar.guid $ Sugar.fpActions param
-      paramUsed = any ((== paramGuid) . Data.onVariableRef IRef.guid) usedVars
+      paramUsed = any ((== paramGuid) . Data.variableRefGuid) usedVars
       redirectCursor cursor
         | paramUsed = cursor
         | otherwise = case Widget.subId (WidgetIds.paramId paramGuid) cursor of

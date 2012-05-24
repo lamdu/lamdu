@@ -74,9 +74,10 @@ createBuiltins =
     set <- mkType . A.newBuiltin "Core.Set" =<< lift magic
     let
       forAll name f = fixIRef $ \aI -> do
-        Property.set (A.aNameRef (IRef.guid aI)) name
+        let aGuid = IRef.guid aI
+        Property.set (A.aNameRef aGuid) name
         s <- set
-        return . Data.ExpressionPi . Data.Lambda s =<< f ((getVar . Data.ParameterRef) aI)
+        return . Data.ExpressionPi . Data.Lambda s =<< f ((getVar . Data.ParameterRef) aGuid)
       setToSet = mkPi set set
     list <- mkType . A.newBuiltin "Data.List.List" =<< lift setToSet
     let

@@ -186,7 +186,7 @@ convertLambdaParam con (Data.Lambda paramTypeI bodyI) scope exprI setExprI = do
 convertLambda :: Monad m => Data.Lambda IRef -> Scope -> Convertor m
 convertLambda lambda@(Data.Lambda _ bodyI) scope exprI setExprI = do
   param <- convertLambdaParam Data.ExpressionLambda lambda scope exprI setExprI
-  sBody <- convertExpression (Data.ParameterRef exprI : scope) bodyI bodySetter
+  sBody <- convertExpression (Data.ParameterRef (IRef.guid exprI) : scope) bodyI bodySetter
   mkExpressionRef exprI setExprI .
     ExpressionFunc DontHaveParens . atFParams (param :) $
     case rExpression sBody of
@@ -204,7 +204,7 @@ addDelete parentSetter replacer =
 convertPi :: Monad m => Data.Lambda IRef -> Scope -> Convertor m
 convertPi lambda@(Data.Lambda paramTypeI bodyI) scope exprI setExprI = do
   param <- convertLambdaParam Data.ExpressionPi lambda scope exprI setExprI
-  sBody <- convertExpression (Data.ParameterRef exprI : scope) bodyI bodySetter
+  sBody <- convertExpression (Data.ParameterRef (IRef.guid exprI) : scope) bodyI bodySetter
   mkExpressionRef exprI setExprI $ ExpressionPi DontHaveParens
     Pi
     { pParam = atFpType addApplyChildParens param
@@ -221,7 +221,7 @@ convertWhere
   -> Scope
   -> Convertor m
 convertWhere valueRef lambdaI lambda@(Data.Lambda _ bodyI) scope applyI setApplyI = do
-  sBody <- convertExpression (Data.ParameterRef lambdaI : scope) bodyI bodySetter
+  sBody <- convertExpression (Data.ParameterRef (IRef.guid lambdaI) : scope) bodyI bodySetter
   mkExpressionRef applyI setApplyI . ExpressionWhere DontHaveParens . atWWheres (item :) $
     case rExpression sBody of
       ExpressionWhere _ x -> x

@@ -129,7 +129,7 @@ aNameRef :: Monad m => Guid -> Property (Transaction t m) String
 aNameRef = aDataRef "Name" ""
 
 variableNameRef :: Monad m => Data.VariableRef -> Property (Transaction t m) String
-variableNameRef = Data.onVariableRef (aNameRef . IRef.guid)
+variableNameRef = aNameRef . Data.variableRefGuid
 
 newPane :: Monad m => IRef (Data.Definition IRef) -> Transaction ViewTag m ()
 newPane defI = do

@@ -2,7 +2,7 @@
 module Editor.Data (
   Definition(..),
   Builtin(..), FFIName(..),
-  VariableRef(..), onVariableRef,
+  VariableRef(..), variableRefGuid,
   Lambda(..), atLambdaParamType, atLambdaBody,
   Apply(..), atApplyFunc, atApplyArg,
   Expression(..))
@@ -14,8 +14,10 @@ import Data.Binary.Get (getWord8)
 import Data.Binary.Put (putWord8)
 import Data.Derive.Binary(makeBinary)
 import Data.DeriveTH(derive)
+import Data.Store.Guid (Guid)
 import Data.Store.IRef(IRef)
 import qualified Data.AtFieldTH as AtFieldTH
+import qualified Data.Store.IRef as IRef
 
 data Lambda i = Lambda {
   lambdaParamType :: i (Expression i),
@@ -32,7 +34,7 @@ data Apply i = Apply {
   }
 
 data VariableRef
-  = ParameterRef (IRef (Expression IRef))
+  = ParameterRef Guid -- of the lambda/pi
   | DefinitionRef (IRef (Definition IRef))
 
 data Expression i
@@ -108,9 +110,9 @@ instance
   put ExpressionHole               = putWord8 4
   put (ExpressionLiteralInteger x) = putWord8 5 >> put x
 
-onVariableRef :: (forall a. IRef a -> b) -> VariableRef -> b
-onVariableRef f (ParameterRef i) = f i
-onVariableRef f (DefinitionRef i) = f i
+variableRefGuid :: VariableRef -> Guid
+variableRefGuid (ParameterRef i) = i
+variableRefGuid (DefinitionRef i) = IRef.guid i
 
 derive makeBinary ''FFIName
 AtFieldTH.make ''Lambda
