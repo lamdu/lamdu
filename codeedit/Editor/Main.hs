@@ -101,8 +101,7 @@ runDbStore font store = do
   addHelp <- EventMapDoc.makeToggledHelpAdder Config.overlayDocKeys helpStyle
   initPanes <- Transaction.run store $ do
     view <- Property.get Anchors.view
-    Transaction.run (Anchors.viewStore view) $
-      CodeEdit.makeSugarPanes
+    Transaction.run (Anchors.viewStore view) CodeEdit.makeSugarPanes
   panesCacheRef <- newIORef initPanes
 
   let
@@ -151,8 +150,9 @@ runDbStore font store = do
       }
 
     fromCursor panes cursor =
-      runCTransaction cursor style . BranchGUI.makeRootWidget CodeEdit.makeSugarPanes $ do
-        CodeEdit.makePanesEdit panes
+      runCTransaction cursor style .
+      BranchGUI.makeRootWidget CodeEdit.makeSugarPanes $
+      CodeEdit.makePanesEdit panes
 
     widgetDownTransaction =
       Transaction.run store .

@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, EmptyDataDecls, OverloadedStrings #-}
+{-# LANGUAGE EmptyDataDecls, OverloadedStrings #-}
 
 module Editor.Anchors
   ( panes, panesIRef
@@ -134,7 +134,7 @@ variableNameRef = Data.onVariableIRef (aNameRef . IRef.guid)
 newPane :: Monad m => IRef Data.Definition -> Transaction ViewTag m ()
 newPane defI = do
   ps <- Property.get panes
-  when (all (/= defI) ps) $
+  when (defI `notElem` ps) $
     Property.set panes $ makePane defI : ps
 
 savePreJumpPosition :: Monad m => Widget.Id -> Transaction ViewTag m ()
