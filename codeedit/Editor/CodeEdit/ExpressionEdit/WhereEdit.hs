@@ -31,10 +31,12 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
       , Widget.scale Config.whereScaleFactor whereEdits
       ]
   where
-    makeWhereItemsGrid = liftM (Grid.toWidget . addJumps . Grid.makeKeyed) $ mapM makeWhereItemEdits items
+    makeWhereItemsGrid =
+      liftM (Grid.toWidget . addJumps . Grid.makeKeyed) $
+      mapM makeWhereItemEdits items
     addJumps = (Grid.atGridContent . fmap . map) DefinitionEdit.addJumps
     makeWhereItemEdits item =
-      (liftM . map . second) (Widget.weakerEvents (whereItemDeleteEventMap item)) $
+      (liftM . map . second . Widget.weakerEvents) (whereItemDeleteEventMap item) $
       DefinitionEdit.makeParts makeExpressionEdit
       (paramId item) (guid item) (Sugar.wiValue item)
     paramId = WidgetIds.paramId . guid
