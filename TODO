@@ -1,3 +1,8 @@
+* Associated comment for any expression to title it? Otherwise we're
+  modifying the model to add a comment
+
+* Allow editing built-ins
+
 * Pure in-memory representation
 
   * Inferred types
