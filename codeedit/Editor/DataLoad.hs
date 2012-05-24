@@ -11,12 +11,12 @@ import Editor.Data (Expression(..), Apply(..), Lambda(..))
 import qualified Data.Store.Transaction as Transaction
 
 -- Have to use type families to avoid infinite kinds.
-type family EntityToIRef a
-type instance EntityToIRef (a Entity) = a IRef
+type family ReplaceArg_1_0 (i :: * -> *) (a :: *)
+type instance ReplaceArg_1_0 i (f k) = f i
 
 -- Pure alternative for IRef
 data Entity a = Entity
-  { entityIRef :: IRef (EntityToIRef a)
+  { entityIRef :: IRef (ReplaceArg_1_0 IRef a)
   , entityValue :: a
   }
 
