@@ -3,8 +3,10 @@ module Editor.CodeEdit.DefinitionEdit(make, makeParts, addJumps) where
 import Control.Arrow (second)
 import Control.Monad (liftM)
 import Data.List.Utils (atPred, pairList)
+import Data.List.Split (splitOn)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
+import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
@@ -109,18 +111,24 @@ makeBuiltinEdit
   -> Widget.Id
   -> Sugar.Builtin m
   -> TWidget ViewTag m
-makeBuiltinEdit makeExpressionEdit myId (Sugar.Builtin (Data.FFIName modulePath name) sType) =
-  (assignCursor myId . WidgetIds.fromGuid . Sugar.guid . Sugar.rActions) sType $ do
+makeBuiltinEdit makeExpressionEdit myId (Sugar.Builtin (Data.FFIName modulePath name) setFFIName sType) =
+  assignCursor myId (WidgetIds.builtinFFIName myId) $ do
     moduleName <-
       BWidgets.setTextColor Config.foreignModuleColor $
-      BWidgets.makeLabel (concatMap (++ ".") modulePath) myId
+      BWidgets.makeTextEdit (Property (return modulePathStr) modulePathSetter) (WidgetIds.builtinFFIPath myId)
     varName <-
       BWidgets.setTextColor Config.foreignVarColor $
-      BWidgets.makeLabel name myId
+      BWidgets.makeTextEdit (Property (return name) nameSetter) (WidgetIds.builtinFFIName myId)
+    dot <- BWidgets.makeLabel "." myId
     colon <- BWidgets.makeLabel ":" myId
     typeEdit <- makeExpressionEdit sType
-    return $ BWidgets.hboxSpaced [BWidgets.hbox [moduleName, varName], colon, typeEdit]
-
+    return $ BWidgets.hboxSpaced [BWidgets.hbox [moduleName, dot, varName], colon, typeEdit]
+  where
+    maybeSetter f = maybe (const (return ())) f setFFIName
+    modulePathStr = List.intercalate "." modulePath
+    modulePathSetter = maybeSetter $ \ffiNameSetter ->
+      ffiNameSetter . (`Data.FFIName` name) . splitOn "."
+    nameSetter = maybeSetter $ \ffiNameSetter -> ffiNameSetter . Data.FFIName modulePath
 
 make
   :: MonadF m

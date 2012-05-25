@@ -114,6 +114,7 @@ data Expression m
 
 data Builtin m = Builtin
   { biName :: Data.FFIName
+  , biSetFFIName :: Maybe (Data.FFIName -> Transaction ViewTag m ())
   , biType :: ExpressionRef m
   }
 
@@ -206,9 +207,9 @@ convertLambda lambda@(Data.Lambda _ bodyI) scope exprI = do
       ExpressionFunc _ x -> x
       _ -> Func [] sBody
 
-addDeleteAction 
-  :: Monad m 
-  => EntityExpr m -> EntityExpr m 
+addDeleteAction
+  :: Monad m
+  => EntityExpr m -> EntityExpr m
   -> Actions m -> Actions m
 addDeleteAction exprI replacerI =
   atMDelete . const $ deleter <$> DataLoad.replacer exprI <*> DataLoad.iref replacerI
@@ -217,9 +218,9 @@ addDeleteAction exprI replacerI =
       ~() <- replacer val
       return $ IRef.guid val
 
-addDelete 
+addDelete
   :: Monad m
-  => EntityExpr m -> EntityExpr m 
+  => EntityExpr m -> EntityExpr m
   -> ExpressionRef m -> ExpressionRef m
 addDelete exprI replacerI = atRActions $ addDeleteAction exprI replacerI
 
@@ -357,9 +358,9 @@ convertApplyPrefix (Data.Apply funcI argI) scope exprI = do
     mFlippedApply = Data.ExpressionApply <$> (Data.Apply <$> DataLoad.iref argI <*> DataLoad.iref funcI)
     addParens = atRExpression . atEHasParens . const $ HaveParens
 
-convertGetVariable 
-  :: Monad m 
-  => Data.VariableRef -> EntityExpr m 
+convertGetVariable
+  :: Monad m
+  => Data.VariableRef -> EntityExpr m
   -> Transaction ViewTag m (ExpressionRef m)
 convertGetVariable varRef exprI = do
   name <- Property.get $ Anchors.variableNameRef varRef
@@ -403,6 +404,17 @@ convertExpression scope exprI = case DataLoad.entityValue exprI of
   Data.ExpressionHole -> convertHole scope exprI
   Data.ExpressionLiteralInteger x -> convertLiteralInteger x exprI
 
+convertDefinitionBuiltin
+  :: Monad m
+  => DataLoad.EntityT m Data.Definition
+  -> Data.Builtin (Entity m)
+  -> Transaction ViewTag m (Definition m)
+convertDefinitionBuiltin defI (Data.Builtin ffiName typeI) =
+  liftM (DefinitionBuiltin . Builtin ffiName setFFIName) $ convertExpression [] typeI
+  where
+    setFFIName = builtinFromFFIName >>= (`DataLoad.writeIRefVia` defI)
+    builtinFromFFIName = fmap ((fmap . fmap) Data.DefinitionBuiltin (flip Data.Builtin)) $ DataLoad.iref typeI
+
 convertDefinition
   :: Monad m
   => DataLoad.EntityT m Data.Definition
@@ -412,8 +424,8 @@ convertDefinition defI =
     case DataLoad.entityValue defI of
     Data.DefinitionExpression exprI ->
       liftM DefinitionExpression $ convertExpression [] exprI
-    Data.DefinitionBuiltin (Data.Builtin ffiName typeI) ->
-      liftM (DefinitionBuiltin . Builtin ffiName) $ convertExpression [] typeI
+    Data.DefinitionBuiltin builtin ->
+      convertDefinitionBuiltin defI builtin
 
 loadConvertDefinition
   :: Monad m

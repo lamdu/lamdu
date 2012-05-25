@@ -5,7 +5,8 @@ module Editor.WidgetIds(
   delegating, notDelegating, searchTermId,
   parenHighlightId,
   parensPrefix,
-  paramId, varId, diveIn)
+  paramId, varId, diveIn,
+  builtinFFIName, builtinFFIPath)
 where
 
 import Data.ByteString.Char8() -- IsString instance
@@ -40,6 +41,12 @@ notDelegating = flip Widget.joinId ["not delegating"]
 
 goUpId :: Widget.Id
 goUpId = Widget.Id ["go up"]
+
+builtinFFIPath :: Widget.Id -> Widget.Id
+builtinFFIPath = flip Widget.joinId ["FFIPath"]
+
+builtinFFIName :: Widget.Id -> Widget.Id
+builtinFFIName = flip Widget.joinId ["FFIName"]
 
 searchTermId :: Widget.Id -> Widget.Id
 searchTermId = flip Widget.joinId ["search term"]

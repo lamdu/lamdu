@@ -1,4 +1,4 @@
-* Allow editing built-in names
+* Allow using replace-with-hole key to replace builtin with expression
 
 * Pure in-memory representation
 
