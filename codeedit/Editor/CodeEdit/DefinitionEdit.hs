@@ -129,17 +129,18 @@ makeBuiltinEdit
   -> TWidget ViewTag m
 makeBuiltinEdit makeExpressionEdit myId (Sugar.Builtin (Data.FFIName modulePath name) setFFIName sType) =
   assignCursor myId (WidgetIds.builtinFFIName myId) $ do
-    moduleName <-
-      BWidgets.setTextColor Config.foreignModuleColor $
-      BWidgets.makeTextEdit (Property (return modulePathStr) modulePathSetter) (WidgetIds.builtinFFIPath myId)
-    varName <-
-      BWidgets.setTextColor Config.foreignVarColor $
-      BWidgets.makeTextEdit (Property (return name) nameSetter) (WidgetIds.builtinFFIName myId)
+    moduleName <- makeNamePartEditor Config.foreignModuleColor modulePathStr modulePathSetter WidgetIds.builtinFFIPath
+    varName <- makeNamePartEditor Config.foreignVarColor name nameSetter WidgetIds.builtinFFIName
     dot <- BWidgets.makeLabel "." myId
     colon <- BWidgets.makeLabel ":" myId
     typeEdit <- makeExpressionEdit sType
     return $ BWidgets.hboxSpaced [BWidgets.hbox [moduleName, dot, varName], colon, typeEdit]
   where
+    makeNamePartEditor color namePartStr setter makeWidgetId =
+      BWidgets.setTextColor color .
+      BWidgets.wrapDelegated FocusDelegator.NotDelegating
+      (BWidgets.makeWordEdit (Property (return namePartStr) setter)) $
+      makeWidgetId myId
     maybeSetter f = maybe (const (return ())) f setFFIName
     modulePathStr = List.intercalate "." modulePath
     modulePathSetter = maybeSetter $ \ffiNameSetter ->
