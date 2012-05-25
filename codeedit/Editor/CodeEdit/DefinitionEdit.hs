@@ -8,7 +8,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, TWidget)
+import Editor.CTransaction (CTransaction, TWidget, assignCursor)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -103,23 +103,23 @@ makeParts makeExpressionEdit myId ident exprRef = do
     ,(Just RHS, rhsEdit)
     ]
 
-makeBuiltinView
+makeBuiltinEdit
   :: MonadF m
   => ExpressionEditMaker m
   -> Widget.Id
   -> Sugar.Builtin m
   -> TWidget ViewTag m
-makeBuiltinView makeExpressionEdit myId (Sugar.Builtin (Data.FFIName modulePath name) sType) = do
-  moduleName <-
-    BWidgets.setTextColor Config.foreignModuleColor $
-    BWidgets.makeLabel (concatMap (++ ".") modulePath) myId
-  varName <-
-    BWidgets.setTextColor Config.foreignVarColor $
-    BWidgets.makeLabel name myId
-  colon <- BWidgets.makeLabel ":" myId
-  typeEdit <- makeExpressionEdit sType
-  BWidgets.makeFocusableView myId $
-    BWidgets.hboxSpaced [BWidgets.hbox [moduleName, varName], colon, typeEdit]
+makeBuiltinEdit makeExpressionEdit myId (Sugar.Builtin (Data.FFIName modulePath name) sType) =
+  (assignCursor myId . WidgetIds.fromGuid . Sugar.guid . Sugar.rActions) sType $ do
+    moduleName <-
+      BWidgets.setTextColor Config.foreignModuleColor $
+      BWidgets.makeLabel (concatMap (++ ".") modulePath) myId
+    varName <-
+      BWidgets.setTextColor Config.foreignVarColor $
+      BWidgets.makeLabel name myId
+    colon <- BWidgets.makeLabel ":" myId
+    typeEdit <- makeExpressionEdit sType
+    return $ BWidgets.hboxSpaced [BWidgets.hbox [moduleName, varName], colon, typeEdit]
 
 
 make
@@ -136,7 +136,7 @@ make makeExpressionEdit def =
       ) $
       makeParts makeExpressionEdit myId ident sExpr
   Sugar.DefinitionBuiltin builtin ->
-    makeBuiltinView makeExpressionEdit myId builtin
+    makeBuiltinEdit makeExpressionEdit myId builtin
   where
     ident = Sugar.drGuid def
     myId = WidgetIds.fromGuid ident
