@@ -10,12 +10,13 @@ import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, TWidget, assignCursor)
+import Editor.CTransaction (CTransaction, TWidget, assignCursor, readCursor)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Widgets.Grid (GridElement)
 import qualified Data.List as List
+import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
@@ -67,9 +68,11 @@ makeLHSEdit makeExpressionEdit myId ident mAddFirstParameter params = do
 
 -- from lhs->rhs and vice-versa:
 addJumps
-  :: [(Maybe Side, Box.BoxElement f)]
-  -> [(Maybe Side, Graphics.UI.Bottle.Widgets.Grid.GridElement f)]
-addJumps defKBoxElements =
+  :: Monad m
+  => Widget.Id
+  -> [(Maybe Side, Box.BoxElement (Transaction ViewTag m))]
+  -> [(Maybe Side, Graphics.UI.Bottle.Widgets.Grid.GridElement (Transaction ViewTag m))]
+addJumps cursor defKBoxElements =
   addEventMap LHS RHS "right-hand side" Config.jumpToRhsKeys Direction.fromLeft .
   addEventMap RHS LHS "left-hand side"  Config.jumpToLhsKeys Direction.fromRight $
   defKBoxElements
@@ -86,6 +89,7 @@ addJumps defKBoxElements =
       Widget.sdwdMaybeEnter $ Box.boxElementSdwd destElement
     makeJumpForEnter doc keys dir destElement enter =
       E.fromEventTypes keys ("Jump to "++doc) .
+      (Anchors.savePreJumpPosition cursor >>) .
       Widget.enterResultEvent . enter . dir $
       Box.boxElementRect destElement
 
@@ -148,17 +152,18 @@ make
   => ExpressionEditMaker m
   -> Sugar.DefinitionRef m
   -> TWidget ViewTag m
-make makeExpressionEdit def =
+make makeExpressionEdit def = do
+  cursor <- readCursor
   case Sugar.drDef def of
-  Sugar.DefinitionExpression sExpr ->
-    liftM
-      ( Box.toWidget . (Box.atBoxContent . fmap) addJumps .
-        BWidgets.hboxK
-      ) $
-      makeParts makeExpressionEdit myId ident sExpr
-  Sugar.DefinitionBuiltin builtin ->
-    (liftM . Widget.weakerEvents) builtinEventMap $
-    makeBuiltinEdit makeExpressionEdit myId builtin
+    Sugar.DefinitionExpression sExpr ->
+      liftM
+        ( Box.toWidget . (Box.atBoxContent . fmap) (addJumps cursor) .
+          BWidgets.hboxK
+        ) $
+        makeParts makeExpressionEdit myId ident sExpr
+    Sugar.DefinitionBuiltin builtin ->
+      (liftM . Widget.weakerEvents) builtinEventMap $
+      makeBuiltinEdit makeExpressionEdit myId builtin
   where
     replaceWithExpression setter = do
       newExprI <- DataOps.newHole

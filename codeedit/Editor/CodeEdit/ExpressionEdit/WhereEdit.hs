@@ -5,7 +5,7 @@ import Control.Arrow (second)
 import Control.Monad (liftM)
 import Data.Monoid (mempty)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (TWidget, atTextSizeColor, assignCursor)
+import Editor.CTransaction (TWidget, atTextSizeColor, assignCursor, readCursor)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
 import qualified Editor.BottleWidgets as BWidgets
@@ -22,19 +22,21 @@ make
   -> Sugar.Where m
   -> Widget.Id -> TWidget ViewTag m
 make makeExpressionEdit (Sugar.Where items _) myId = do
-    whereLabel <-
-      atTextSizeColor Config.whereTextSize Config.whereColor $
-      BWidgets.makeLabel "where" myId
-    whereEdits <- makeWhereItemsGrid
-    return . BWidgets.vbox $
-      [ whereLabel
-      , Widget.scale Config.whereScaleFactor whereEdits
-      ]
-  where
+  cursor <- readCursor
+  whereLabel <-
+    atTextSizeColor Config.whereTextSize Config.whereColor $
+    BWidgets.makeLabel "where" myId
+  let
     makeWhereItemsGrid =
       liftM (Grid.toWidget . addJumps . Grid.makeKeyed) $
       mapM makeWhereItemEdits items
-    addJumps = (Grid.atGridContent . fmap . map) DefinitionEdit.addJumps
+    addJumps = (Grid.atGridContent . fmap . map) (DefinitionEdit.addJumps cursor)
+  whereEdits <- makeWhereItemsGrid
+  return . BWidgets.vbox $
+    [ whereLabel
+    , Widget.scale Config.whereScaleFactor whereEdits
+    ]
+  where
     makeWhereItemEdits item =
       (liftM . map . second . Widget.weakerEvents) (whereItemDeleteEventMap item) $
       DefinitionEdit.makeParts makeExpressionEdit
