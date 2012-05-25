@@ -44,14 +44,23 @@ makeLHSEdit
   => ExpressionEditMaker m
   -> Widget.Id
   -> Guid
+  -> Maybe (Transaction ViewTag m Guid)
   -> [Sugar.FuncParam m]
   -> TWidget ViewTag m
-makeLHSEdit makeExpressionEdit myId ident params = do
-  nameEdit <- makeNameEdit myId ident
+makeLHSEdit makeExpressionEdit myId ident mAddFirstParameter params = do
+  nameEdit <-
+    (liftM . Widget.weakerEvents) addFirstParamEventMap $
+    makeNameEdit myId ident
   liftM (BWidgets.gridHSpaced . List.transpose .
          map pairList . ((nameEdit, nameTypeFiller) :) . map scaleDownType) .
     mapM (FuncEdit.makeParamEdit makeExpressionEdit) $ params
   where
+    addFirstParamEventMap =
+      maybe mempty
+      (Widget.actionEventMapMovesCursor Config.addNextParamKeys
+       "Add parameter" .
+       liftM (WidgetIds.delegating . WidgetIds.paramId))
+      mAddFirstParameter
     scaleDownType = second $ Widget.scale Config.typeScaleFactor
     -- no type for def name (yet):
     nameTypeFiller = BWidgets.spaceWidget
@@ -94,7 +103,9 @@ makeParts makeExpressionEdit myId ident exprRef = do
       case sExpr of
       Sugar.ExpressionFunc _ x -> x
       _ -> Sugar.Func [] exprRef
-  lhsEdit <- makeLHSEdit makeExpressionEdit myId ident $ Sugar.fParams func
+  lhsEdit <-
+    makeLHSEdit makeExpressionEdit myId ident
+    (Sugar.lambdaWrap (Sugar.rActions exprRef)) (Sugar.fParams func)
   equals <- BWidgets.makeLabel "=" myId
   rhsEdit <- makeExpressionEdit $ Sugar.fBody func
   return $
