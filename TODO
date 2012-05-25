@@ -1,6 +1,3 @@
-* Bug: Space on full infix op adds hole outside parens. However, if
-  hole already there, won't jump to it
-
 * Associated comment for any expression to title it? Otherwise we're
   modifying the model to add a comment
 

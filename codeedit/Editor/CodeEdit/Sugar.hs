@@ -349,7 +349,8 @@ convertApplyPrefix (Data.Apply funcI argI) scope exprI = do
       addDelete exprI argI .
       setNextArg .
       addApplyChildParens .
-      (atRExpression . atEApply . atApplyArg) setNextArg $
+      (atRExpression . atEApply . atApplyArg) setNextArg .
+      (atRExpression . atESection . atSectionOp) setNextArg $
       funcRef
   mkExpressionRef exprI . ExpressionApply DontHaveParens $
     Apply newFuncRef newArgRef
