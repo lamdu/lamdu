@@ -167,7 +167,7 @@ make makeExpressionEdit def =
     builtinEventMap =
       maybe mempty
       (Widget.actionEventMapMovesCursor
-       Config.replaceBuiltinWithExpressionKeys 
+       Config.replaceBuiltinWithExpressionKeys
        "Replace with Expression" .
        replaceWithExpression) $
       Sugar.defReplace actions

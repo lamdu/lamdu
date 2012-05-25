@@ -64,6 +64,7 @@ data Where m = Where
 data FuncParam m = FuncParam
   { fpActions :: Actions m
   , fpType :: ExpressionRef m
+  , fpBody :: ExpressionRef m
   }
 
 -- Multi-param Lambda
@@ -187,16 +188,17 @@ mkExpressionRef exprI expr =
 
 convertLambdaParam
   :: Monad m
-  => Data.Lambda (Entity m) -> Scope
-  -> EntityExpr m
-  -> Transaction ViewTag m (FuncParam m)
-convertLambdaParam (Data.Lambda paramTypeI bodyI) scope exprI = do
+  => Data.Lambda (Entity m)
+  -> ExpressionRef m
+  -> Scope -> EntityExpr m -> Transaction ViewTag m (FuncParam m)
+convertLambdaParam (Data.Lambda paramTypeI bodyI) bodyRef scope exprI = do
   typeExpr <- convertExpression scope paramTypeI
   return FuncParam
     { fpActions =
         addDeleteAction exprI bodyI $
         makeActions exprI
     , fpType = typeExpr
+    , fpBody = bodyRef
     }
 
 convertLambda
@@ -204,9 +206,9 @@ convertLambda
   => Data.Lambda (Entity m)
   -> Convertor m
 convertLambda lambda@(Data.Lambda _ bodyI) scope exprI = do
-  param <- convertLambdaParam lambda scope exprI
   sBody <-
     convertExpression (Data.ParameterRef (DataLoad.guid exprI) : scope) bodyI
+  param <- convertLambdaParam lambda sBody scope exprI
   mkExpressionRef exprI .
     ExpressionFunc DontHaveParens . atFParams (param :) $
     case rExpression sBody of
@@ -235,8 +237,8 @@ convertPi
   => Data.Lambda (Entity m)
   -> Convertor m
 convertPi lambda@(Data.Lambda paramTypeI bodyI) scope exprI = do
-  param <- convertLambdaParam lambda scope exprI
   sBody <- convertExpression (Data.ParameterRef (DataLoad.guid exprI) : scope) bodyI
+  param <- convertLambdaParam lambda sBody scope exprI
   mkExpressionRef exprI $ ExpressionPi DontHaveParens
     Pi
     { pParam = atFpType addApplyChildParens param
