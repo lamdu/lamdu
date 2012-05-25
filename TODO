@@ -1,9 +1,13 @@
-* Inferred types
-
-* 1-use wheres to Sugar as "Titled Expressions"
-
 * Space key to add params
   * Shared Clause for Where/Definition
+
+* Inferred types
+
+* Add JumpTo which gives a hole-like search -- that can sit in a "tab" in place of a DefinitionEdit
+
+-------
+
+* 1-use wheres to Sugar as "Titled Expressions"
 
 * Associated comment for any expression to title it? Otherwise we're
   modifying the model to add a comment
@@ -14,15 +18,7 @@
 
 -------
 
-* Add JumpTo which gives a hole-like search -- that can sit in a "tab"
-  in place of a DefinitionEdit
-
 * ScrollBar
-
-* From Nimrod: TextView returns all character position rects
-  * TextEdit uses the character position rects to locate enter cursor
-
-For correctness:
 
 * Lambda unwrap invalidates params
 
