@@ -111,13 +111,16 @@ runDbStore font store = do
       (invalidCursor, widget) <- widgetDownTransaction $ do
         cursor <- Property.get Anchors.cursor
         candidateWidget <- fromCursor panes cursor
-        (invalidCursor, focusable) <-
+        (invalidCursor, widget) <-
           if Widget.isFocused candidateWidget
           then return (Nothing, candidateWidget)
-          else liftM ((,) (Just cursor)) . fromCursor panes $ WidgetIds.fromIRef Anchors.panesIRef
-        unless (Widget.isFocused focusable) $
+          else do
+            finalWidget <- fromCursor panes rootCursor
+            Property.set Anchors.cursor rootCursor
+            return (Just cursor, finalWidget)
+        unless (Widget.isFocused widget) $
           fail "Root cursor did not match"
-        return (invalidCursor, Widget.atEvents attachCursor focusable)
+        return (invalidCursor, Widget.atEvents attachCursor widget)
       maybe (return ()) (putStrLn . ("Invalid cursor: " ++) . show) invalidCursor
       return $ Widget.atEvents savePanes widget
 
@@ -130,6 +133,7 @@ runDbStore font store = do
 
   mainLoopDebugMode font makeWidget addHelp
   where
+    rootCursor = WidgetIds.fromIRef Anchors.panesIRef
     helpStyle = TextView.Style {
       TextView.styleColor = Draw.Color 1 1 1 1,
       TextView.styleFont = font,
