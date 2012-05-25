@@ -27,4 +27,4 @@ make makeExpressionEdit (Sugar.Section mLArg op mRArg) myId =
   where
     makeExpressionsEdit = liftM (:[]) . makeExpressionEdit
     fromMArg = maybe (return []) makeExpressionsEdit
-    cursorPos = Sugar.guid . Sugar.rActions $ fromMaybe op mRArg
+    cursorPos = Sugar.guid . Sugar.rActions $ fromMaybe op mLArg
