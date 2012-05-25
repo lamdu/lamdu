@@ -20,6 +20,8 @@ import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.DataOps as DataOps
 
+{-# ANN module "HLint: ignore Use camelCase" #-}
+
 -- Have to use type families to avoid infinite kinds.
 type family ReplaceArg_1_0 (i :: * -> *) (a :: *)
 type instance ReplaceArg_1_0 i (f k) = f i
@@ -54,7 +56,7 @@ writableEntityData =
   f . entityType
   where
     f (ReadOnly _) = Nothing
-    f (Writable i) = Just $ i
+    f (Writable i) = Just i
 
 replacer
   :: Entity m a
