@@ -64,7 +64,7 @@ makeSugarPanes = do
       | i-1 >= 0 = Just $ movePane i (i-1)
       | otherwise = Nothing
     convertPane (i, defI) = do
-      def <- Sugar.convertDefinition defI
+      def <- Sugar.loadConvertDefinition defI
       return SugarPane
         { spDef = def
         , mDelPane = mkMDelPane i

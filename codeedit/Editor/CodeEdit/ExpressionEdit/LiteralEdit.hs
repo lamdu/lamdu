@@ -36,18 +36,19 @@ makeIntEdit integer myId = do
     (text, textCursor)
       | isEmpty = ("", TextEdit.makeTextEditCursor myId 0)
       | otherwise = (show (Sugar.liValue integer), cursor)
-    lifter (newText, eventRes)
+    lifter Nothing (_newText, eventRes) = return eventRes
+    lifter (Just setValue) (newText, eventRes)
       | newText == text = return eventRes
       | not (all Char.isDigit newText) = return Widget.emptyEventResult
       | null newText = do
-        _ <- Sugar.liSetValue integer 0
+        _ <- setValue 0
         return . Widget.eventResultFromCursor $ Widget.joinId myId emptyZeroCursor
       | otherwise = do
-        _ <- Sugar.liSetValue integer $ read newText
+        _ <- setValue $ read newText
         return eventRes
   style <- readTextStyle
   return .
-    Widget.atEvents lifter $
+    (Widget.atEvents (lifter (Sugar.liSetValue integer))) $
     TextEdit.make style { TextEdit.sEmptyString = "<0>" } textCursor text myId
   where
     emptyZeroCursor = ["empty-zero"]

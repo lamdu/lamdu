@@ -79,36 +79,38 @@ expressionEventMap
   -> CTransaction ViewTag m (EventHandlers (Transaction ViewTag m))
 expressionEventMap sExpr holePicker =
   return . mconcat $
-    [ moveUnlessOnHole .
+    [ maybeMempty (Sugar.giveAsArg actions) $
+      moveUnlessOnHole .
       Widget.actionEventMapMovesCursor
       Config.giveAsArgumentKeys "Give as argument" .
-      liftM WidgetIds.fromGuid $ Sugar.giveAsArg actions
-    , moveUnlessOnHole .
+      liftM WidgetIds.fromGuid
+    , maybeMempty (Sugar.callWithArg actions) $
+      moveUnlessOnHole .
       Widget.actionEventMapMovesCursor
       Config.callWithArgumentKeys "Call with argument" .
-      liftM WidgetIds.fromGuid $ Sugar.callWithArg actions
+      liftM WidgetIds.fromGuid
 
     -- Move to next arg overrides add arg's keys.
-    , moveToNextArgHole
-    , withPickResultFirst Config.addNextArgumentKeys "Add arg" .
-      liftM WidgetIds.fromGuid $ Sugar.addNextArg actions
+    , maybeMempty (Sugar.mNextArg actions) moveToIfHole
+    , maybeMempty (Sugar.addNextArg actions) $
+      withPickResultFirst Config.addNextArgumentKeys "Add arg" .
+      liftM WidgetIds.fromGuid
 
     -- Replace has the keys of Delete if delete is not available.
-    , maybe mempty
-      (Widget.actionEventMapMovesCursor Config.delKeys "Delete" .
-       liftM WidgetIds.fromGuid)
-      (Sugar.mDelete actions)
-    , maybe mempty
-      (Widget.actionEventMapMovesCursor (Config.replaceKeys ++ Config.delKeys) "Replace" .
-       liftM (WidgetIds.delegating . WidgetIds.fromGuid))
-      (Sugar.mReplace actions)
+    , maybeMempty (Sugar.mDelete actions) $
+      Widget.actionEventMapMovesCursor Config.delKeys "Delete" .
+      liftM WidgetIds.fromGuid
+      
+    , maybeMempty (Sugar.mReplace actions) $
+      Widget.actionEventMapMovesCursor (Config.replaceKeys ++ Config.delKeys) "Replace" .
+      liftM (WidgetIds.delegating . WidgetIds.fromGuid)
 
-    , Widget.actionEventMapMovesCursor
-      Config.lambdaWrapKeys "Lambda wrap" .
-      liftM (WidgetIds.delegating . WidgetIds.paramId) $ Sugar.lambdaWrap actions
-    , Widget.actionEventMapMovesCursor
-      Config.addWhereItemKeys "Add where item" .
-      liftM (WidgetIds.delegating . WidgetIds.paramId) $ Sugar.addWhereItem actions
+    , maybeMempty (Sugar.lambdaWrap actions) $
+      Widget.actionEventMapMovesCursor Config.lambdaWrapKeys "Lambda wrap" .
+      liftM (WidgetIds.delegating . WidgetIds.paramId)
+    , maybeMempty (Sugar.addWhereItem actions) $
+      Widget.actionEventMapMovesCursor Config.addWhereItemKeys "Add where item" .
+      liftM (WidgetIds.delegating . WidgetIds.paramId)
     ]
   where
     withPickResultFirst keys doc action=
@@ -122,12 +124,10 @@ expressionEventMap sExpr holePicker =
     joinEvents x y = do
       r <- liftM Widget.eAnimIdMapping x
       (liftM . Widget.atEAnimIdMapping) (. r) y
-    moveToNextArgHole =
-      case Sugar.mNextArg actions of
-      Nothing -> mempty
-      Just nextArg ->
-        case Sugar.rExpression nextArg of
-        Sugar.ExpressionHole{} ->
-          withPickResultFirst Config.addNextArgumentKeys "Move to next arg" .
-          return . WidgetIds.fromGuid . Sugar.guid . Sugar.rActions $ nextArg
-        _ -> mempty
+    maybeMempty x f = maybe mempty f x
+    moveToIfHole nextArg =
+      case Sugar.rExpression nextArg of
+      Sugar.ExpressionHole{} ->
+        withPickResultFirst Config.addNextArgumentKeys "Move to next arg" .
+        return . WidgetIds.fromGuid . Sugar.guid . Sugar.rActions $ nextArg
+      _ -> mempty

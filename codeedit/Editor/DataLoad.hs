@@ -4,7 +4,7 @@ module Editor.DataLoad
   , EntityT
   , guid
   , loadDefinition
-  , replacer, iref, maybeSet
+  , replacer, iref, writeIRef
   )
 where
 
@@ -63,10 +63,11 @@ replacer = wedReplace <=< writableEntityData
 iref :: Entity m a -> Maybe (IRef (ReplaceArg_1_0 IRef a))
 iref = fmap wedIRef . writableEntityData
 
-maybeSet
+writeIRef
   :: (Monad m, Binary (ReplaceArg_1_0 IRef a))
-  => Entity m a -> Maybe (ReplaceArg_1_0 IRef a -> Transaction t m ())
-maybeSet = fmap Transaction.writeIRef . iref
+  => Entity (Transaction ViewTag m) a
+  -> Maybe (ReplaceArg_1_0 IRef a -> Transaction t m ())
+writeIRef = fmap Transaction.writeIRef . iref
 
 load
   :: (Monad m, Binary (f IRef))

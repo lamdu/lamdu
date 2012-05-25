@@ -40,7 +40,7 @@ type ResultPicker m = Transaction ViewTag m Widget.EventResult
 
 data Result m = Result {
   resultName :: String,
-  resultPick :: ResultPicker m,
+  resultPick :: Maybe (ResultPicker m),
   resultMakeWidget :: TWidget ViewTag m
   }
 
@@ -53,7 +53,7 @@ data HoleInfo m = HoleInfo
 resultPickEventMap
   :: Result m -> Widget.EventHandlers (Transaction ViewTag m)
 resultPickEventMap =
-  E.fromEventTypes Config.pickResultKeys "Pick this search result" .
+  maybe mempty (E.fromEventTypes Config.pickResultKeys "Pick this search result") .
   resultPick
 
 resultToWidget :: Monad m => Result m -> TWidget ViewTag m
@@ -96,9 +96,10 @@ makeResultVariables holeInfo varRef = do
     result name flipAct wid addParens =
       Result
       { resultName = name
-      , resultPick = pickResult holeInfo (Data.ExpressionGetVariable varRef) flipAct
+      , resultPick = fmap (pickGetVariable flipAct) $ mPickResult holeInfo
       , resultMakeWidget = addParens =<< VarEdit.makeView varRef wid
       }
+    pickGetVariable flipAct pickResult = pickResult (Data.ExpressionGetVariable varRef) flipAct
 
 renamePrefix :: AnimId -> AnimId -> AnimId -> AnimId
 renamePrefix srcPrefix destPrefix animId =
@@ -115,18 +116,22 @@ holeResultAnimMappingNoParens holeInfo resultId =
   where
     myId = Widget.toAnimId $ hiHoleId holeInfo
 
-pickResult
+mPickResult
   :: MonadF m
   => HoleInfo m
-  -> Data.Expression IRef -> Transaction ViewTag m ()
-  -> ResultPicker m
-pickResult holeInfo newExpr flipAct = do
-  guid <- Sugar.holePickResult (hiHole holeInfo) newExpr
-  flipAct
-  return Widget.EventResult {
-    Widget.eCursor = Just $ WidgetIds.fromGuid guid,
-    Widget.eAnimIdMapping = id -- TODO: Need to fix the parens id
-    }
+  -> Maybe
+     (Data.Expression IRef -> Transaction ViewTag m ()
+      -> ResultPicker m)
+mPickResult holeInfo =
+  fmap picker . Sugar.holePickResult $ hiHole holeInfo
+  where
+    picker holePickResult newExpr flipAct = do
+      guid <- holePickResult newExpr
+      ~() <- flipAct
+      return Widget.EventResult {
+        Widget.eCursor = Just $ WidgetIds.fromGuid guid,
+        Widget.eAnimIdMapping = id -- TODO: Need to fix the parens id
+        }
 
 resultOrdering :: String -> Result m -> [Bool]
 resultOrdering searchTerm result =
@@ -152,11 +157,12 @@ makeLiteralResults holeInfo searchTerm =
     makeLiteralIntResult integer =
       Result
       { resultName = show integer
-      , resultPick = pickResult holeInfo (Data.ExpressionLiteralInteger integer) (return ())
+      , resultPick = fmap (pickLiteralInt integer) $ mPickResult holeInfo
       , resultMakeWidget =
           BWidgets.makeFocusableView literalIntId =<<
           LiteralEdit.makeIntView literalIntId integer
       }
+    pickLiteralInt integer holePickResult = holePickResult (Data.ExpressionLiteralInteger integer) (return ())
 
 makeAllResults
   :: MonadF m
@@ -179,13 +185,14 @@ makeAllResults holeInfo = do
     piResult =
       Result
       { resultName = "->"
-      , resultPick = do
-          paramTypeI <- DataOps.newHole
-          resultTypeI <- DataOps.newHole
-          pickResult holeInfo (Data.ExpressionPi (Data.Lambda paramTypeI resultTypeI)) (return ())
+      , resultPick = fmap pickPiResult $ mPickResult holeInfo
       , resultMakeWidget =
           BWidgets.makeFocusableTextView "→" $ searchResultId holeInfo "Pi result"
       }
+    pickPiResult holePickResult = do
+      paramTypeI <- DataOps.newHole
+      resultTypeI <- DataOps.newHole
+      holePickResult (Data.ExpressionPi (Data.Lambda paramTypeI resultTypeI)) (return ())
 
 makeSearchTermWidget
   :: MonadF m
@@ -199,20 +206,23 @@ makeSearchTermWidget holeInfo searchTermId firstResults =
 
     searchTermEventMap =
       mconcat $ pickFirstResultEventMaps ++
-      [ E.fromEventTypes Config.newDefinitionKeys "Add new as Definition" $ do
-          searchTerm <- Property.get $ hiSearchTerm holeInfo
-          let newName = concat . words $ searchTerm
-          newDefI <- Anchors.makeDefinition newName -- TODO: From Sugar
-          Anchors.newPane newDefI
-          let defRef = Data.ExpressionGetVariable $ Data.DefinitionRef newDefI
-          -- TODO: Can we use pickResult's animIdMapping?
-          eventResult <- pickResult holeInfo defRef $ return ()
-          maybe (return ()) Anchors.savePreJumpPosition $ Widget.eCursor eventResult
-          return Widget.EventResult {
-            Widget.eCursor = Just $ WidgetIds.fromIRef newDefI,
-            Widget.eAnimIdMapping = holeResultAnimMappingNoParens holeInfo searchTermId
-            }
-      ]
+      case mPickResult holeInfo of
+      Nothing -> []
+      Just holePickResult ->
+        [ E.fromEventTypes Config.newDefinitionKeys "Add new as Definition" $ do
+            searchTerm <- Property.get $ hiSearchTerm holeInfo
+            let newName = concat . words $ searchTerm
+            newDefI <- Anchors.makeDefinition newName -- TODO: From Sugar
+            Anchors.newPane newDefI
+            let defRef = Data.ExpressionGetVariable $ Data.DefinitionRef newDefI
+            -- TODO: Can we use pickResult's animIdMapping?
+            eventResult <- holePickResult defRef $ return ()
+            maybe (return ()) Anchors.savePreJumpPosition $ Widget.eCursor eventResult
+            return Widget.EventResult {
+              Widget.eCursor = Just $ WidgetIds.fromIRef newDefI,
+              Widget.eAnimIdMapping = holeResultAnimMappingNoParens holeInfo searchTermId
+              }
+        ]
 
 makeResultsWidget
   :: MonadF m
@@ -294,7 +304,7 @@ makeH hole guid myId = do
   if isJust (Widget.subId myId cursor)
     then
       liftM (
-        first (fmap resultPick) .
+        first (>>= resultPick) .
         second (makeBackground Config.focusedHoleBackgroundColor)) $
       makeActiveHoleEdit holeInfo
     else
