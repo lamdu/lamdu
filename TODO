@@ -1,8 +1,4 @@
-* Allow using replace-with-hole key to replace builtin with expression
-
-* Pure in-memory representation
-
-  * Inferred types
+* Inferred types
 
 * 1-use wheres to Sugar as "Titled Expressions"
 

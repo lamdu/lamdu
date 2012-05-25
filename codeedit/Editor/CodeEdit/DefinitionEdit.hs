@@ -2,8 +2,8 @@ module Editor.CodeEdit.DefinitionEdit(make, makeParts, addJumps) where
 
 import Control.Arrow (second)
 import Control.Monad (liftM)
-import Data.List.Utils (atPred, pairList)
 import Data.List.Split (splitOn)
+import Data.List.Utils (atPred, pairList)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
@@ -21,6 +21,7 @@ import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
+import qualified Editor.DataOps as DataOps
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -130,6 +131,7 @@ makeBuiltinEdit makeExpressionEdit myId (Sugar.Builtin (Data.FFIName modulePath 
       ffiNameSetter . (`Data.FFIName` name) . splitOn "."
     nameSetter = maybeSetter $ \ffiNameSetter -> ffiNameSetter . Data.FFIName modulePath
 
+
 make
   :: MonadF m
   => ExpressionEditMaker m
@@ -144,7 +146,20 @@ make makeExpressionEdit def =
       ) $
       makeParts makeExpressionEdit myId ident sExpr
   Sugar.DefinitionBuiltin builtin ->
+    (liftM . Widget.weakerEvents) builtinEventMap $
     makeBuiltinEdit makeExpressionEdit myId builtin
   where
-    ident = Sugar.drGuid def
+    replaceWithExpression setter = do
+      newExprI <- DataOps.newHole
+      ~() <- setter $ Data.DefinitionExpression newExprI
+      return $ WidgetIds.fromIRef newExprI
+    builtinEventMap =
+      maybe mempty
+      (Widget.actionEventMapMovesCursor
+       Config.replaceBuiltinWithExpressionKeys 
+       "Replace with Expression" .
+       replaceWithExpression) $
+      Sugar.defReplace actions
+    actions = Sugar.drActions def
+    ident = Sugar.defGuid actions
     myId = WidgetIds.fromGuid ident

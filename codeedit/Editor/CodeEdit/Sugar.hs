@@ -1,7 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Editor.CodeEdit.Sugar
-  ( Definition(..), DefinitionRef(..), Builtin(..)
+  ( Definition(..), DefinitionRef(..), DefinitionActions(..)
+  , Builtin(..)
   , Expression(..), Actions(..), ExpressionRef(..)
   , Where(..), WhereItem(..)
   , Func(..), FuncParam(..)
@@ -114,7 +115,7 @@ data Expression m
 
 data Builtin m = Builtin
   { biName :: Data.FFIName
-  , biSetFFIName :: Maybe (Data.FFIName -> Transaction ViewTag m ())
+  , biActions :: Maybe (Data.FFIName -> Transaction ViewTag m ())
   , biType :: ExpressionRef m
   }
 
@@ -122,8 +123,13 @@ data Definition m
   = DefinitionExpression (ExpressionRef m)
   | DefinitionBuiltin (Builtin m)
 
+data DefinitionActions m = DefinitionActions
+  { defGuid :: Guid
+  , defReplace :: Maybe (Data.Definition IRef -> Transaction ViewTag m ())
+  }
+
 data DefinitionRef m = DefinitionRef
-  { drGuid :: Guid
+  { drActions :: DefinitionActions m
   , drDef :: Definition m
   }
 
@@ -420,12 +426,16 @@ convertDefinition
   => DataLoad.EntityT m Data.Definition
   -> Transaction ViewTag m (DefinitionRef m)
 convertDefinition defI =
-  liftM (DefinitionRef (DataLoad.guid defI)) $
+  liftM mkDefinitionRef $
     case DataLoad.entityValue defI of
     Data.DefinitionExpression exprI ->
       liftM DefinitionExpression $ convertExpression [] exprI
     Data.DefinitionBuiltin builtin ->
       convertDefinitionBuiltin defI builtin
+  where
+    dGuid = DataLoad.guid defI
+    mkDefinitionRef = DefinitionRef $ DefinitionActions dGuid replaceDefinition
+    replaceDefinition = DataLoad.writeIRef defI
 
 loadConvertDefinition
   :: Monad m

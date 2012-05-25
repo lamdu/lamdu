@@ -40,6 +40,7 @@ movePaneDownKeys  = [mk E.alt E.KeyDown]
 movePaneUpKeys    = [mk E.alt E.KeyUp]
 
 replaceKeys       = [alt 'r']
+replaceBuiltinWithExpressionKeys = [alt 'r']
 
 pickResultKeys    = [noMods E.KeyEnter]
 jumpToDefinitionKeys  = [noMods E.KeyEnter]
