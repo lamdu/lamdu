@@ -178,9 +178,6 @@ mkExpressionRef exprI expr =
     , rActions = makeActions exprI
     }
 
-argument :: (a -> b) -> (b -> c) -> a -> c
-argument = flip (.)
-
 convertLambdaParam
   :: Monad m
   => Data.Lambda (Entity m) -> Scope
@@ -394,7 +391,7 @@ convertLiteralInteger i exprI =
   mkExpressionRef exprI . ExpressionLiteralInteger $
   LiteralInteger
   { liValue = i
-  , liSetValue = (fmap . argument) Data.ExpressionLiteralInteger $ DataLoad.writeIRef exprI
+  , liSetValue = DataLoad.writeIRefVia Data.ExpressionLiteralInteger exprI
   }
 
 convertExpression :: Monad m => Convertor m

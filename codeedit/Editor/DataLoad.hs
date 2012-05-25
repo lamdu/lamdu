@@ -4,7 +4,8 @@ module Editor.DataLoad
   , EntityT
   , guid
   , loadDefinition
-  , replacer, iref, writeIRef
+  , replacer, iref
+  , writeIRef, writeIRefVia
   )
 where
 
@@ -68,6 +69,16 @@ writeIRef
   => Entity (Transaction ViewTag m) a
   -> Maybe (ReplaceArg_1_0 IRef a -> Transaction t m ())
 writeIRef = fmap Transaction.writeIRef . iref
+
+argument :: (a -> b) -> (b -> c) -> a -> c
+argument = flip (.)
+
+writeIRefVia
+  :: (Monad m, Binary (ReplaceArg_1_0 IRef b))
+  => (a -> ReplaceArg_1_0 IRef b)
+  -> Entity (Transaction ViewTag m) b
+  -> Maybe (a -> Transaction t m ())
+writeIRefVia f = (fmap . fmap . argument) f writeIRef
 
 load
   :: (Monad m, Binary (f IRef))
