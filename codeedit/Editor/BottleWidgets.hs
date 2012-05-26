@@ -89,7 +89,7 @@ makeChoice selectionAnimId orientation children curChild =
 
 -- TODO: This logic belongs in the FocusDelegator itself
 wrapDelegatedWithKeys ::
-  Monad m => FocusDelegator.Keys ->
+  MonadF m => FocusDelegator.Keys ->
   FocusDelegator.IsDelegating ->
   ((Widget (Transaction t m) ->
     Widget (Transaction t m)) -> a -> b) ->
@@ -122,7 +122,7 @@ wrapDelegatedWithKeys keys entryState atWidget mkResult myId = do
     return $ atWidget onWidget innerResult
 
 wrapDelegated ::
-  Monad m => FocusDelegator.IsDelegating ->
+  MonadF m => FocusDelegator.IsDelegating ->
   (Widget.Id -> TWidget t m) ->
   Widget.Id -> TWidget t m
 wrapDelegated entryState =

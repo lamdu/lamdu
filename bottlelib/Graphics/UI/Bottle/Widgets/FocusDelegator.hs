@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.FocusDelegator(IsDelegating(..), Keys(..), make, defaultKeys) where
 
+import Control.Applicative (Applicative(..))
 import Data.Monoid (mappend, mempty)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Rect(Rect(..))
@@ -26,7 +27,7 @@ defaultKeys = Keys {
 blue :: Draw.Color
 blue = Draw.Color 0 0 1 1
 
-makeFocused :: Monad f =>
+makeFocused :: Applicative f =>
   IsDelegating -> Widget.Id -> Keys -> AnimId ->
   Widget f -> Widget f
 makeFocused delegating focusSelf keys backgroundCursorId =
@@ -54,11 +55,11 @@ makeFocused delegating focusSelf keys backgroundCursorId =
     addStopDelegatingEventMap =
       Widget.weakerEvents .
       E.fromEventType (stopDelegatingKey keys) "Exit child" .
-      return $ Widget.eventResultFromCursor focusSelf
+      pure $ Widget.eventResultFromCursor focusSelf
 
 -- | Make a focus delegator
 make
-  :: Monad f
+  :: Applicative f
   => IsDelegating -- ^ Start state, enter from direction state
   -> Maybe IsDelegating -- ^ Current state
   -> Widget.Id -- ^ Enter/Stop delegating value
@@ -77,7 +78,7 @@ make isDelegating Nothing focusSelf =
     handleDir enterChild wholeSize dir =
       Direction.fold (takeFocus wholeSize) (const (enterChild dir)) dir
 
-    takeFocus wholeSize = Widget.EnterResult (Rect 0 wholeSize) . return $ Widget.eventResultFromCursor focusSelf
+    takeFocus wholeSize = Widget.EnterResult (Rect 0 wholeSize) . pure $ Widget.eventResultFromCursor focusSelf
 
 make _ (Just cursor) focusSelf =
   makeFocused cursor focusSelf

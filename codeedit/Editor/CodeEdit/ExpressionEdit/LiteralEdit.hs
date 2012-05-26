@@ -54,7 +54,7 @@ makeIntEdit integer myId = do
     emptyZeroCursor = ["empty-zero"]
 
 makeInt
-  :: Monad m
+  :: MonadF m
   => Sugar.LiteralInteger m
   -> Widget.Id
   -> TWidget ViewTag m

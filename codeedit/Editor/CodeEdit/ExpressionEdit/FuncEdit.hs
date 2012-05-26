@@ -19,7 +19,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 makeParamNameEdit
-  :: Monad m
+  :: MonadF m
   => Guid
   -> TWidget t m
 makeParamNameEdit ident =

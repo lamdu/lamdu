@@ -33,7 +33,7 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 data Side = LHS | RHS
   deriving (Show, Eq)
 
-makeNameEdit :: Monad m => Widget.Id -> Guid -> TWidget t m
+makeNameEdit :: MonadF m => Widget.Id -> Guid -> TWidget t m
 makeNameEdit myId ident =
   BWidgets.wrapDelegated FocusDelegator.NotDelegating
   (BWidgets.setTextColor Config.definitionColor .
