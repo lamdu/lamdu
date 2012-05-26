@@ -315,7 +315,7 @@ makeH hole guid myId = do
       WidgetIds.searchTermId myId
   where
     makeBackground =
-      Widget.backgroundColor $ Widget.joinId myId ["hole background"]
+      Widget.backgroundColor $ mappend (Widget.toAnimId myId) ["hole background"]
 
 make
   :: MonadF m

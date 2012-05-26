@@ -23,6 +23,7 @@ import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.CTransaction (TWidget, CTransaction, readTextStyle, readCursor, getP, assignCursor, atTextStyle)
 import Editor.MonadF (MonadF)
+import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Sized (Sized)
 import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Widgets.Box(KBox)
@@ -71,7 +72,7 @@ makeFocusableTextView text myId = do
 
 makeChoice
   :: Eq a
-  => Widget.Id
+  => AnimId
   -> Box.Orientation
   -> [(a, Widget f)]
   -> a -> Widget f

@@ -2,6 +2,7 @@
 module Graphics.UI.Bottle.Widgets.FocusDelegator(IsDelegating(..), Keys(..), make, defaultKeys) where
 
 import Data.Monoid (mappend, mempty)
+import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Rect(Rect(..))
 import Graphics.UI.Bottle.Widget(Widget(..))
 import qualified Graphics.DrawingCombinators as Draw
@@ -26,7 +27,7 @@ blue :: Draw.Color
 blue = Draw.Color 0 0 1 1
 
 makeFocused :: Monad f =>
-  IsDelegating -> Widget.Id -> Keys -> Widget.Id ->
+  IsDelegating -> Widget.Id -> Keys -> AnimId ->
   Widget f -> Widget f
 makeFocused delegating focusSelf keys backgroundCursorId =
   handleFocus delegating
@@ -34,7 +35,7 @@ makeFocused delegating focusSelf keys backgroundCursorId =
     handleFocus Delegating    = addStopDelegatingEventMap
     handleFocus NotDelegating = blueify . useStartDelegatingEventMap
 
-    blueify = Widget.backgroundColor (mappend backgroundCursorId focusSelf) blue
+    blueify = Widget.backgroundColor (mappend backgroundCursorId (Widget.toAnimId focusSelf)) blue
 
     useStartDelegatingEventMap = Widget.atSizeDependentWidgetData setStartDelegatingEventMap
     setStartDelegatingEventMap userIO =
@@ -62,7 +63,7 @@ make
   -> Maybe IsDelegating -- ^ Current state
   -> Widget.Id -- ^ Enter/Stop delegating value
   -> Keys -- ^ Keys configuration
-  -> Widget.Id -- ^ Background Cursor Id
+  -> AnimId -- ^ Background Cursor Id
   -> Widget f -> Widget f
 make isDelegating Nothing focusSelf =
   const . const $ Widget.atMkSizeDependentWidgetData f

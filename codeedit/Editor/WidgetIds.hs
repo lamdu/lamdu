@@ -12,14 +12,15 @@ where
 import Data.ByteString.Char8() -- IsString instance
 import Data.Store.Guid(Guid, bs)
 import Data.Store.IRef(IRef, guid)
+import Graphics.UI.Bottle.Animation (AnimId)
 import qualified Editor.Data as Data
 import qualified Graphics.UI.Bottle.Widget as Widget
 
-backgroundCursorId :: Widget.Id
-backgroundCursorId = Widget.Id ["background cursor"]
+backgroundCursorId :: AnimId
+backgroundCursorId = ["background cursor"]
 
-textCursorId :: Widget.Id
-textCursorId = Widget.Id ["text cursor"]
+textCursorId :: AnimId
+textCursorId = ["text cursor"]
 
 fromIRef :: IRef a -> Widget.Id
 fromIRef = fromGuid . guid
@@ -30,8 +31,8 @@ fromGuid = Widget.Id . (: []) . bs
 collapserId :: Widget.Id -> Widget.Id
 collapserId = flip Widget.joinId ["collapser"]
 
-branchSelection :: Widget.Id
-branchSelection = Widget.Id ["selected branch"]
+branchSelection :: AnimId
+branchSelection = ["selected branch"]
 
 delegating :: Widget.Id -> Widget.Id
 delegating = flip Widget.joinId ["delegating"]
@@ -51,8 +52,8 @@ builtinFFIName = flip Widget.joinId ["FFIName"]
 searchTermId :: Widget.Id -> Widget.Id
 searchTermId = flip Widget.joinId ["search term"]
 
-parenHighlightId :: Widget.Id
-parenHighlightId = Widget.Id ["paren highlight"]
+parenHighlightId :: AnimId
+parenHighlightId = ["paren highlight"]
 
 parensPrefix :: Widget.Id -> Widget.Id
 parensPrefix = flip Widget.joinId ["parens"]

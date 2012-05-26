@@ -169,8 +169,8 @@ strongerEvents = atEventMap . mappend
 weakerEvents :: EventHandlers f -> Widget f -> Widget f
 weakerEvents = atEventMap . flip mappend
 
-backgroundColor :: Id -> Draw.Color -> Widget f -> Widget f
-backgroundColor (Id animId) = atImageWithSize . Anim.backgroundColor animId 10
+backgroundColor :: AnimId -> Draw.Color -> Widget f -> Widget f
+backgroundColor animId = atImageWithSize . Anim.backgroundColor animId 10
 
 tint :: Draw.Color -> Widget f -> Widget f
 tint = atImage . Anim.onImages . Draw.tint

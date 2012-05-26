@@ -44,8 +44,8 @@ type Cursor = Int
 data Style = Style {
   sCursorColor :: Draw.Color,
   sCursorWidth :: Widget.R,
-  sTextCursorId :: Widget.Id,
-  sBackgroundCursorId :: Widget.Id,
+  sTextCursorId :: Anim.AnimId,
+  sBackgroundCursorId :: Anim.AnimId,
   sEmptyString :: String,
   sTextViewStyle :: TextView.Style
   }
@@ -160,7 +160,7 @@ makeFocused cursor style str myId =
       Anim.onDepth (+2) .
       Anim.translate cursorPos .
       Anim.scale cursorSize .
-      (Anim.simpleFrame . Widget.toAnimId . sTextCursorId) style $
+      (Anim.simpleFrame . sTextCursorId) style $
       Draw.tint (sCursorColor style) square
 
     (before, after) = splitAt cursor strWithIds
