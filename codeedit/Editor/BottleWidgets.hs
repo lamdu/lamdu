@@ -88,13 +88,14 @@ makeChoice selectionAnimId orientation children curChild =
     selectedColor = Draw.Color 0 0.5 0 1
 
 -- TODO: This logic belongs in the FocusDelegator itself
-wrapDelegatedWithKeys ::
-  MonadF m => FocusDelegator.Keys ->
-  FocusDelegator.IsDelegating ->
-  ((Widget (Transaction t m) ->
-    Widget (Transaction t m)) -> a -> b) ->
-  (Widget.Id -> CTransaction t m a) ->
-  Widget.Id -> CTransaction t m b
+wrapDelegatedWithKeys
+  :: MonadF m
+  => FocusDelegator.Keys
+  -> FocusDelegator.IsDelegating
+  -> ((Widget (Transaction t m) ->
+       Widget (Transaction t m)) -> a -> b)
+  -> (Widget.Id -> CTransaction t m a)
+  -> Widget.Id -> CTransaction t m b
 wrapDelegatedWithKeys keys entryState atWidget mkResult myId = do
   let
     innerId = WidgetIds.delegating myId
