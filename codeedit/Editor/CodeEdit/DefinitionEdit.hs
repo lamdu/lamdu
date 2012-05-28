@@ -60,7 +60,7 @@ makeLHSEdit makeExpressionEdit myId ident mAddFirstParameter params = do
       maybe mempty
       (Widget.actionEventMapMovesCursor Config.addNextParamKeys
        "Add parameter" .
-       liftM (WidgetIds.delegating . WidgetIds.paramId))
+       liftM (FocusDelegator.delegatingId . WidgetIds.paramId))
       mAddFirstParameter
     scaleDownType = second $ Widget.scale Config.typeScaleFactor
     -- no type for def name (yet):

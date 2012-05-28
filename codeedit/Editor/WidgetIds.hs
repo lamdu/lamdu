@@ -2,7 +2,7 @@
 module Editor.WidgetIds(
   backgroundCursorId, textCursorId, fromIRef, fromGuid,
   collapserId, branchSelection, goUpId,
-  delegating, notDelegating, searchTermId,
+  searchTermId,
   parenHighlightId,
   parensPrefix,
   paramId, varId, diveIn,
@@ -15,6 +15,7 @@ import Data.Store.IRef(IRef, guid)
 import Graphics.UI.Bottle.Animation (AnimId)
 import qualified Editor.Data as Data
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 backgroundCursorId :: AnimId
 backgroundCursorId = ["background cursor"]
@@ -33,12 +34,6 @@ collapserId = flip Widget.joinId ["collapser"]
 
 branchSelection :: AnimId
 branchSelection = ["selected branch"]
-
-delegating :: Widget.Id -> Widget.Id
-delegating = flip Widget.joinId ["delegating"]
-
-notDelegating :: Widget.Id -> Widget.Id
-notDelegating = flip Widget.joinId ["not delegating"]
 
 goUpId :: Widget.Id
 goUpId = Widget.Id ["go up"]
@@ -62,7 +57,7 @@ varId :: Data.VariableRef -> Widget.Id
 varId = fromGuid . Data.variableRefGuid
 
 diveIn :: Functor f => f (IRef a) -> f Widget.Id
-diveIn = fmap $ delegating . fromIRef
+diveIn = fmap $ FocusDelegator.delegatingId . fromIRef
 
 paramId :: Guid -> Widget.Id
 paramId x = Widget.joinId (fromGuid x) ["param"]

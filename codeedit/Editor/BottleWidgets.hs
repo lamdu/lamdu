@@ -17,11 +17,10 @@ import Control.Arrow (first, second)
 import Control.Monad (when, liftM)
 import Data.ByteString.Char8 (pack)
 import Data.List (findIndex, intersperse)
-import Data.Maybe (isJust)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
-import Editor.CTransaction (TWidget, CTransaction, readTextStyle, readCursor, getP, assignCursor, atTextStyle)
+import Editor.CTransaction (TWidget, CTransaction, readTextStyle, readCursor, getP, atTextStyle, atCursor)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Sized (Sized)
@@ -92,35 +91,17 @@ wrapDelegatedWithKeys
   :: MonadF m
   => FocusDelegator.Keys
   -> FocusDelegator.IsDelegating
-  -> ((Widget (Transaction t m) ->
-       Widget (Transaction t m)) -> a -> b)
+  -> ((Widget (Transaction t m)
+       -> Widget (Transaction t m)) -> a -> b)
   -> (Widget.Id -> CTransaction t m a)
   -> Widget.Id -> CTransaction t m b
-wrapDelegatedWithKeys keys entryState atWidget mkResult myId = do
-  let
-    innerId = WidgetIds.delegating myId
-    delegatorId = WidgetIds.notDelegating myId
-    destId =
-      case entryState of
-        FocusDelegator.NotDelegating -> delegatorId
-        FocusDelegator.Delegating -> innerId
-  assignCursor myId destId $ do
-    innerResult <- mkResult innerId
-    cursor <- readCursor
-    let
-      cursorSelf = Just FocusDelegator.NotDelegating
-      cursorNotSelf innerWidget
-        | Widget.isFocused innerWidget = Just FocusDelegator.Delegating
-        | otherwise = Nothing
-      makeDelegator delegateState =
-        (Widget.atIsFocused . const) (isJust delegateState) .
-        FocusDelegator.make entryState delegateState delegatorId keys WidgetIds.backgroundCursorId
-      onWidget innerWidget =
-        (`makeDelegator` innerWidget) .
-        maybe (cursorNotSelf innerWidget) (const cursorSelf) .
-        Widget.subId delegatorId $
-        cursor
-    return $ atWidget onWidget innerResult
+wrapDelegatedWithKeys keys entryState aToB mkA myId = do
+  cursor <- readCursor
+  FocusDelegator.wrapKeys keys entryState mk
+    WidgetIds.backgroundCursorId myId cursor
+  where
+    mk f innerId newCursor =
+      liftM (aToB f) . (atCursor . const) newCursor $ mkA innerId
 
 wrapDelegated ::
   MonadF m => FocusDelegator.IsDelegating ->

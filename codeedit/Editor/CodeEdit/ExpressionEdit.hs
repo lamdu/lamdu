@@ -103,14 +103,14 @@ expressionEventMap sExpr holePicker =
       
     , maybeMempty (Sugar.mReplace actions) $
       Widget.actionEventMapMovesCursor (Config.replaceKeys ++ Config.delKeys) "Replace" .
-      liftM (WidgetIds.delegating . WidgetIds.fromGuid)
+      liftM (FocusDelegator.delegatingId . WidgetIds.fromGuid)
 
     , maybeMempty (Sugar.lambdaWrap actions) $
       Widget.actionEventMapMovesCursor Config.lambdaWrapKeys "Lambda wrap" .
-      liftM (WidgetIds.delegating . WidgetIds.paramId)
+      liftM (FocusDelegator.delegatingId . WidgetIds.paramId)
     , maybeMempty (Sugar.addWhereItem actions) $
       Widget.actionEventMapMovesCursor Config.addWhereItemKeys "Add where item" .
-      liftM (WidgetIds.delegating . WidgetIds.paramId)
+      liftM (FocusDelegator.delegatingId . WidgetIds.paramId)
     ]
   where
     withPickResultFirst keys doc action=

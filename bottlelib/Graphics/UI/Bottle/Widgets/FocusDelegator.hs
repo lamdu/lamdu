@@ -1,7 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Graphics.UI.Bottle.Widgets.FocusDelegator(IsDelegating(..), Keys(..), make, defaultKeys) where
+module Graphics.UI.Bottle.Widgets.FocusDelegator
+  ( IsDelegating(..)
+  , Keys(..)
+  , make
+  , defaultKeys
+  , wrapKeys
+  , delegatingId, notDelegatingId
+  )
+where
 
 import Control.Applicative (Applicative(..))
+import Data.ByteString.Char8() -- IsString instance
+import Data.Maybe (isJust)
 import Data.Monoid (mappend, mempty)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Rect(Rect(..))
@@ -82,3 +92,40 @@ make isDelegating Nothing focusSelf =
 
 make _ (Just cursor) focusSelf =
   makeFocused cursor focusSelf
+
+delegatingId :: Widget.Id -> Widget.Id
+delegatingId = flip Widget.joinId ["delegating"]
+
+notDelegatingId :: Widget.Id -> Widget.Id
+notDelegatingId = flip Widget.joinId ["not delegating"]
+
+wrapKeys
+  :: Applicative f
+  => Keys
+  -> IsDelegating
+  -> ((Widget f -> Widget f) -> Widget.Id -> Widget.Id -> a)
+  -> AnimId
+  -> Widget.Id
+  -> Widget.Id -> a
+wrapKeys keys entryState mkResult backgroundCursorId myId cursor =
+  mkResult atWidget innerId newCursor
+  where
+    atWidget innerWidget =
+      (Widget.atIsFocused . const) (isJust mIsDelegating) $
+      make entryState mIsDelegating delegatorId keys backgroundCursorId innerWidget
+      where
+        mIsDelegating =
+          case Widget.subId delegatorId newCursor of
+            Nothing
+              | Widget.isFocused innerWidget -> Just Delegating
+              | otherwise -> Nothing
+            Just _ -> Just NotDelegating
+    newCursor
+      | cursor == myId = destId
+      | otherwise = cursor
+    destId =
+      case entryState of
+        NotDelegating -> delegatorId
+        Delegating -> innerId
+    innerId = delegatingId myId
+    delegatorId = notDelegatingId myId

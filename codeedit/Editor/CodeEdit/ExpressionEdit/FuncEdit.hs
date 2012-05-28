@@ -56,7 +56,7 @@ makeParamEdit makeExpressionEdit param =
     paramAddNextEventMap =
       maybe mempty
       (Widget.actionEventMapMovesCursor Config.addNextParamKeys "Add next parameter" .
-       liftM (WidgetIds.delegating . WidgetIds.paramId)) .
+       liftM (FocusDelegator.delegatingId . WidgetIds.paramId)) .
       Sugar.lambdaWrap . Sugar.rActions $ Sugar.fpBody param
     paramDeleteEventMap =
       maybe mempty
