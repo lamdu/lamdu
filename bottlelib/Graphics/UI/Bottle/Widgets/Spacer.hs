@@ -1,13 +1,22 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module Graphics.UI.Bottle.Widgets.Spacer (
-  make, makeWidget, indentRight, indentRightWidget, makeHorizontal,
-  makeHorizontalExpanding, makeVerticalExpanding) where
+module Graphics.UI.Bottle.Widgets.Spacer
+  ( make
+  , makeWidget
+  , indentRight, indentRightWidget
+  , makeHorizontal
+  , makeHorizontalExpanding
+  , makeVerticalExpanding
+  , makeHorizLine
+  , makeHorizLineWidget
+) where
 
-import Data.Monoid(mempty)
-import Data.Vector.Vector2(Vector2(..))
+import Control.Monad (void)
+import Data.Monoid (mempty)
+import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.SizeRange (fixedSize, Size)
 import Graphics.UI.Bottle.Sized (Sized(..))
 import Graphics.UI.Bottle.Widget (Widget)
+import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.SizeRange as SizeRange
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -36,3 +45,13 @@ indentRightWidget :: Widget.R -> Widget a -> Widget a
 indentRightWidget width widget =
   Grid.toWidget $
   Grid.make [[Widget.liftView (makeHorizontal width), widget]]
+
+horizLineFrame :: Anim.AnimId -> Vector2 Widget.R -> Anim.Frame
+horizLineFrame animId size@(Vector2 w h) =
+  Anim.simpleFrameDownscale animId size . void $ Draw.line (0, h/2) (w, h/2)
+
+makeHorizLine :: Anim.AnimId -> Sized Anim.Frame
+makeHorizLine animId = Sized (SizeRange.horizontallyExpanding 1 0) (horizLineFrame animId)
+
+makeHorizLineWidget :: Anim.AnimId -> Widget a
+makeHorizLineWidget = Widget.liftView . makeHorizLine
