@@ -9,7 +9,7 @@ module Editor.Data.Typed
   )
 where
 
-import Control.Monad (liftM, liftM2, (<=<))
+import Control.Monad (liftM, (<=<))
 import Data.Binary (Binary)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
@@ -97,7 +97,15 @@ inferExpression scope (DataLoad.Entity iref mReplace value) =
   case value of
   ExpressionLambda lambda -> liftM ((,) Nothing . ExpressionLambda) $ inferLambda lambda
   ExpressionPi lambda -> liftM ((,) Nothing . ExpressionPi) $ inferLambda lambda
-  ExpressionApply apply -> liftM ((,) Nothing . ExpressionApply) $ inferApply apply
+  ExpressionApply (Apply func arg) -> do
+    inferredFunc <- inferExpression scope func
+    let
+      applyType = case entityType inferredFunc of
+        Just (Entity _ _ (ExpressionPi (Lambda _ resultType))) ->
+          Just resultType
+        _ -> Nothing -- TODO: Split to "bad type" and "missing type"
+    liftM ((,) applyType . ExpressionApply . Apply inferredFunc) $
+      inferExpression scope arg
   ExpressionGetVariable varRef ->
     return
     ( case varRef of
@@ -111,8 +119,6 @@ inferExpression scope (DataLoad.Entity iref mReplace value) =
     makeEntity (t, expr) =
       Entity (OriginStored (Stored iref mReplace))
       (fmap (uniqify (guidToStdGen (IRef.guid iref))) t) expr
-    inferApply (Apply func arg) =
-      liftM2 Apply (inferExpression scope func) (inferExpression scope arg)
     inferLambda (Lambda paramType body) = do
       inferredParamType <- inferExpression scope paramType
       liftM (Lambda inferredParamType) $
