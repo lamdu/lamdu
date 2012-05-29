@@ -10,6 +10,7 @@ module Editor.WidgetIds(
 where
 
 import Data.ByteString.Char8() -- IsString instance
+import Data.Monoid(mappend)
 import Data.Store.Guid(Guid, bs)
 import Data.Store.IRef(IRef, guid)
 import Graphics.UI.Bottle.Animation (AnimId)
@@ -50,8 +51,8 @@ searchTermId = flip Widget.joinId ["search term"]
 parenHighlightId :: AnimId
 parenHighlightId = ["paren highlight"]
 
-parensPrefix :: Widget.Id -> Widget.Id
-parensPrefix = flip Widget.joinId ["parens"]
+parensPrefix :: AnimId -> AnimId
+parensPrefix = flip mappend ["parens"]
 
 varId :: Data.VariableRef -> Widget.Id
 varId = fromGuid . Data.variableRefGuid

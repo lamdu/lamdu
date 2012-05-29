@@ -62,15 +62,13 @@ resultToWidget result =
   (resultPickEventMap result) $
   resultMakeWidget result
 
-makeNoResults :: MonadF m => Widget.Id -> TWidget t m
+makeNoResults :: MonadF m => AnimId -> TWidget t m
 makeNoResults myId =
-  BWidgets.makeTextView "(No results)" $
-  Widget.joinId myId ["no results"]
+  BWidgets.makeTextView "(No results)" $ mappend myId ["no results"]
 
-makeMoreResults :: MonadF m => Widget.Id -> TWidget t m
+makeMoreResults :: MonadF m => AnimId -> TWidget t m
 makeMoreResults myId =
-  BWidgets.makeTextView "..." $
-  Widget.joinId myId ["more results"]
+  BWidgets.makeTextView "..." $ mappend myId ["more results"]
 
 makeResultVariables ::
   MonadF m => HoleInfo m -> Data.VariableRef -> CTransaction ViewTag m [Result m]
@@ -80,8 +78,8 @@ makeResultVariables holeInfo varRef = do
     ordinary = result varName (return ()) resultId return
     parened =
       result
-      (concat ["(", varName, ")"]) (return ()) resultIdAsPrefix $
-      Parens.addTextParens resultId
+      (concat ["(", varName, ")"]) (return ()) resultIdAsPrefix .
+      Parens.addTextParens $ Widget.toAnimId resultId
   return $
     if Infix.isInfixName varName
     then
@@ -160,7 +158,7 @@ makeLiteralResults holeInfo searchTerm =
       , resultPick = fmap (pickLiteralInt integer) $ mPickResult holeInfo
       , resultMakeWidget =
           BWidgets.makeFocusableView literalIntId =<<
-          LiteralEdit.makeIntView literalIntId integer
+          LiteralEdit.makeIntView (Widget.toAnimId literalIntId) integer
       }
     pickLiteralInt integer holePickResult = holePickResult (Data.ExpressionLiteralInteger integer) (return ())
 
@@ -236,7 +234,7 @@ makeResultsWidget firstResults moreResults myId = do
   firstResultsAndWidgets <- mapM resultAndWidget firstResults
   (mResult, firstResultsWidget) <-
     case firstResultsAndWidgets of
-      [] -> liftM ((,) Nothing) $ makeNoResults myId
+      [] -> liftM ((,) Nothing) . makeNoResults $ Widget.toAnimId myId
       xs -> do
         let
           widget = blockDownEvents . BWidgets.vbox $ map snd xs
@@ -246,7 +244,7 @@ makeResultsWidget firstResults moreResults myId = do
         return (mResult, widget)
   let
     makeMoreResultWidgets [] = return []
-    makeMoreResultWidgets _ = liftM (: []) $ makeMoreResults myId
+    makeMoreResultWidgets _ = liftM (: []) $ makeMoreResults $ Widget.toAnimId myId
   moreResultsWidgets <- makeMoreResultWidgets moreResults
 
   return (mResult, BWidgets.vbox (firstResultsWidget : moreResultsWidgets))

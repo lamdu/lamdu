@@ -23,7 +23,7 @@ addTextParensI
   :: MonadF m
   => (TWidget t m -> TWidget t m)
   -> (TWidget t m -> TWidget t m)
-  -> Widget.Id
+  -> Anim.AnimId
   -> WidgetT t m
   -> TWidget t m
 addTextParensI onLParen onRParen parenId widget = do
@@ -45,14 +45,14 @@ squareFrame :: Anim.AnimId -> Vector2 Widget.R -> Anim.Frame
 squareFrame animId size =
   Anim.simpleFrameDownscale animId size . void $ squareDraw size
 
-addSquareParens :: Monad m => Widget.Id -> WidgetT t m -> TWidget t m
+addSquareParens :: Monad m => Anim.AnimId -> WidgetT t m -> TWidget t m
 addSquareParens parensId =
   return .
   Widget.atImageWithSize addSquareFrame .
   Widget.translateBy (* ((1 - Config.squareParensScaleFactor) / Config.squareParensScaleFactor / 2)) .
   Widget.atSizeDependentWidgetData (Widget.scaleSizeDependentWidgetData Config.squareParensScaleFactor)
   where
-    addSquareFrame size = mappend $ squareFrame (Widget.toAnimId parensId) size
+    addSquareFrame size = mappend $ squareFrame parensId size
 
 highlightExpression :: Widget.Widget f -> Widget.Widget f
 highlightExpression =
@@ -60,7 +60,7 @@ highlightExpression =
 
 addTextParens
   :: MonadF m
-  => Widget.Id
+  => Anim.AnimId
   -> WidgetT t m
   -> TWidget t m
 addTextParens = addTextParensI id id
@@ -72,7 +72,7 @@ addHighlightedTextParens
   -> TWidget ViewTag m
 addHighlightedTextParens myId widget = do
   mInsideParenId <- subCursor rParenId
-  widgetWithParens <- addTextParensI id doHighlight myId widget
+  widgetWithParens <- addTextParensI id doHighlight (Widget.toAnimId myId) widget
   return $ maybe id (const highlightExpression) mInsideParenId widgetWithParens
   where
     rParenId = Widget.joinId myId [")"]

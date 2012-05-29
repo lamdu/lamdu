@@ -25,7 +25,7 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
   cursor <- readCursor
   whereLabel <-
     atTextSizeColor Config.whereTextSize Config.whereColor $
-    BWidgets.makeLabel "where" myId
+    BWidgets.makeLabel "where" $ Widget.toAnimId myId
   let
     makeWhereItemsGrid =
       liftM (Grid.toWidget . addJumps . Grid.makeKeyed) $

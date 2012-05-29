@@ -17,6 +17,7 @@ import Control.Arrow (first, second)
 import Control.Monad (when, liftM)
 import Data.ByteString.Char8 (pack)
 import Data.List (findIndex, intersperse)
+import Data.Monoid (mappend)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
@@ -41,15 +42,15 @@ import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
-makeTextView :: MonadF m => String -> Widget.Id -> TWidget t m
+makeTextView :: MonadF m => String -> Anim.AnimId -> TWidget t m
 makeTextView text myId = do
   style <- readTextStyle
   return $
-    TextView.makeWidget (TextEdit.sTextViewStyle style) text $ Widget.toAnimId myId
+    TextView.makeWidget (TextEdit.sTextViewStyle style) text myId
 
-makeLabel :: MonadF m => String -> Widget.Id -> TWidget t m
+makeLabel :: MonadF m => String -> Anim.AnimId -> TWidget t m
 makeLabel text prefix =
-  makeTextView text $ Widget.joinId prefix [pack text]
+  makeTextView text $ mappend prefix [pack text]
 
 makeFocusableView :: MonadF m => Widget.Id -> Widget (Transaction t m) -> TWidget t m
 makeFocusableView myId widget = do
@@ -66,7 +67,7 @@ makeFocusableView myId widget = do
 
 makeFocusableTextView :: MonadF m => String -> Widget.Id -> TWidget t m
 makeFocusableTextView text myId = do
-  textView <- makeTextView text myId
+  textView <- makeTextView text $ Widget.toAnimId myId
   makeFocusableView myId textView
 
 makeChoice

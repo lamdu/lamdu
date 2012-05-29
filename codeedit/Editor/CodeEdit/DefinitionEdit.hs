@@ -110,7 +110,7 @@ makeParts makeExpressionEdit myId ident exprRef = do
   lhsEdit <-
     makeLHSEdit makeExpressionEdit myId ident
     (Sugar.lambdaWrap (Sugar.rActions exprRef)) (Sugar.fParams func)
-  equals <- BWidgets.makeLabel "=" myId
+  equals <- BWidgets.makeLabel "=" $ Widget.toAnimId myId
   rhsEdit <- makeExpressionEdit $ Sugar.fBody func
   return $
     zipWith (second . Widget.align . (`Vector2` 0.5)) [1, 0.5, 0.5, 0.5, 0]
@@ -131,8 +131,8 @@ makeBuiltinEdit makeExpressionEdit myId (Sugar.Builtin (Data.FFIName modulePath 
   assignCursor myId (WidgetIds.builtinFFIName myId) $ do
     moduleName <- makeNamePartEditor Config.foreignModuleColor modulePathStr modulePathSetter WidgetIds.builtinFFIPath
     varName <- makeNamePartEditor Config.foreignVarColor name nameSetter WidgetIds.builtinFFIName
-    dot <- BWidgets.makeLabel "." myId
-    colon <- BWidgets.makeLabel ":" myId
+    dot <- BWidgets.makeLabel "." $ Widget.toAnimId myId
+    colon <- BWidgets.makeLabel ":" $ Widget.toAnimId myId
     typeEdit <- makeExpressionEdit sType
     return $ BWidgets.hboxSpaced [BWidgets.hbox [moduleName, dot, varName], colon, typeEdit]
   where

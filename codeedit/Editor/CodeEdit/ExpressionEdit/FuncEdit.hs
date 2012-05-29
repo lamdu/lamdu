@@ -84,11 +84,11 @@ make
 make makeExpressionEdit (Sugar.Func params body) myId =
   assignCursor myId ((WidgetIds.fromGuid . Sugar.guid . Sugar.rActions) body) $ do
     lambdaLabel <-
-      atTextSizeColor Config.lambdaTextSize Config.lambdaColor $
-      BWidgets.makeLabel "λ" myId
+      atTextSizeColor Config.lambdaTextSize Config.lambdaColor .
+      BWidgets.makeLabel "λ" $ Widget.toAnimId myId
     rightArrowLabel <-
-      atTextSizeColor Config.rightArrowTextSize Config.rightArrowColor $
-      BWidgets.makeLabel "→" myId
+      atTextSizeColor Config.rightArrowTextSize Config.rightArrowColor .
+      BWidgets.makeLabel "→" $ Widget.toAnimId myId
     bodyEdit <- makeExpressionEdit body
     paramsEdit <- makeParamsEdit makeExpressionEdit params
     return $ BWidgets.hbox [lambdaLabel, paramsEdit, rightArrowLabel, bodyEdit]

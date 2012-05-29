@@ -6,6 +6,7 @@ import Data.Store.Transaction (Transaction)
 import Editor.Anchors(ViewTag)
 import Editor.CTransaction (CTransaction, TWidget, readCursor, readTextStyle)
 import Editor.MonadF(MonadF)
+import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Char as Char
 import qualified Editor.BottleWidgets as BWidgets
@@ -20,7 +21,7 @@ setColor = BWidgets.setTextColor Config.literalIntColor
 
 makeIntView
   :: MonadF m
-  => Widget.Id -> Integer
+  => AnimId -> Integer
   -> CTransaction ViewTag m (Widget (Transaction ViewTag m))
 makeIntView myId integer =
   setColor $ BWidgets.makeTextView (show integer) myId
