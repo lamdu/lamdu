@@ -2,6 +2,7 @@ module Data.Store.Guid
     (Guid, make, bs, length, new, combine, fromString)
 where
 
+import           Control.Arrow         (first)
 import           Prelude               hiding (length)
 import qualified Data.ByteString       as SBS
 import           Data.Monoid           (mappend)
@@ -10,6 +11,7 @@ import           Data.ByteString.Utils (randomBS, xorBS)
 import           Data.Binary           (Binary(..))
 import           Data.Binary.Get       (getByteString)
 import           Data.Binary.Put       (putByteString)
+import           System.Random         (Random(..), split)
 
 newtype Guid = Guid { bs :: SBS.ByteString }
   deriving (Eq, Ord, Read, Show)
@@ -18,6 +20,10 @@ inGuid f = Guid . f . bs
 inGuid2 :: (SBS.ByteString -> SBS.ByteString -> SBS.ByteString) ->
            Guid -> Guid -> Guid
 inGuid2 f = inGuid . f . bs
+
+instance Random Guid where
+  randomR = error "randomR: you nuts?"
+  random = first (Guid . SBS.pack . take 16 . randoms) . split
 
 length :: Int
 length = 16
