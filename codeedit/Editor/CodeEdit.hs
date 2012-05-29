@@ -67,7 +67,7 @@ makeSugarPanes = do
       | otherwise = Nothing
     convertPane (i, defI) = do
       loadedDef <- DataLoad.loadDefinition defI
-      typedDef <- DataTyped.inferTypes loadedDef
+      typedDef <- DataTyped.inferDefinition loadedDef
       def <- Sugar.convertDefinition typedDef
       return SugarPane
         { spDef = def

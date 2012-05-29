@@ -93,7 +93,8 @@ Executable Editor
                        TypeCompose,
                        bytestring,
                        derive,
-                       bottle
+                       bottle,
+                       random
   Other-Modules:       Editor.Anchors,
                        Editor.ExampleDB,
                        Editor.BottleWidgets,
