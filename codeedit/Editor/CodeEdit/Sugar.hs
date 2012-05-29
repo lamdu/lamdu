@@ -8,11 +8,11 @@ module Editor.CodeEdit.Sugar
   , Func(..), FuncParam(..)
   , Pi(..), Apply(..), Section(..), Hole(..), LiteralInteger(..)
   , HasParens(..)
-  , loadConvertDefinition
+  , convertDefinition
   ) where
 
 import Control.Applicative((<$>), (<*>))
-import Control.Monad(liftM, (<=<))
+import Control.Monad(liftM)
 import Data.Store.Guid(Guid)
 import Data.Store.IRef(IRef)
 import Data.Store.Transaction(Transaction)
@@ -438,9 +438,3 @@ convertDefinition defI =
     dGuid = DataLoad.guid defI
     mkDefinitionRef = DefinitionRef $ DefinitionActions dGuid replaceDefinition
     replaceDefinition = DataLoad.writeIRef defI
-
-loadConvertDefinition
-  :: Monad m
-  => IRef (Data.Definition IRef)
-  -> Transaction ViewTag m (DefinitionRef m)
-loadConvertDefinition = convertDefinition <=< DataLoad.loadDefinition
