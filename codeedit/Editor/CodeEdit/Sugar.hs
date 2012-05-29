@@ -151,7 +151,7 @@ type Convertor m = Scope -> EntityExpr m -> Transaction ViewTag m (ExpressionRef
 
 addArg :: Monad m => EntityExpr m -> EntityExpr m -> MAction m
 addArg whereI exprI =
-  (fmap . liftM) IRef.guid $ DataOps.callWithArg <$> DataLoad.iref exprI <*> DataLoad.replacer whereI
+  (fmap . liftM) IRef.guid $ DataOps.callWithArg <$> DataLoad.iref exprI <*> DataLoad.entityReplace whereI
 
 makeActions :: Monad m => EntityExpr m -> Actions m
 makeActions exprI = makeActionsGuid (DataLoad.guid exprI) exprI
@@ -173,7 +173,7 @@ makeActionsGuid exprGuid exprI =
   , mNextArg = Nothing
   }
   where
-    setExprI = DataLoad.replacer exprI
+    setExprI = DataLoad.entityReplace exprI
     withIRef f =
       (fmap . liftM) IRef.guid $
       f <$> DataLoad.iref exprI <*> setExprI
@@ -220,7 +220,7 @@ addDeleteAction
   => EntityExpr m -> EntityExpr m
   -> Actions m -> Actions m
 addDeleteAction exprI replacerI =
-  atMDelete . const $ deleter <$> DataLoad.replacer exprI <*> DataLoad.iref replacerI
+  atMDelete . const $ deleter <$> DataLoad.entityReplace exprI <*> DataLoad.iref replacerI
   where
     deleter replacer val = do
       ~() <- replacer val

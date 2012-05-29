@@ -1,15 +1,15 @@
 {-# LANGUAGE TypeFamilies, FlexibleContexts #-}
 module Editor.Data.Load
-  ( Entity(..), EntityType(..), WritableEntityData(..)
+  ( Entity(..)
   , EntityT
   , guid
   , loadDefinition
-  , replacer, iref
+  , iref
   , writeIRef, writeIRefVia
   )
 where
 
-import Control.Monad (liftM, liftM2, (<=<))
+import Control.Monad (liftM, liftM2)
 import Data.Binary (Binary)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
@@ -26,45 +26,21 @@ import qualified Editor.Data.Ops as DataOps
 type family ReplaceArg_1_0 (i :: * -> *) (a :: *)
 type instance ReplaceArg_1_0 i (f k) = f i
 
-data WritableEntityData m a = WritableEntityData
-  { wedIRef :: IRef a
-  , wedReplace :: Maybe (IRef a -> m ())
-  }
-
-data EntityType m a = ReadOnly Guid | Writable (WritableEntityData m a)
-
 -- Pure alternative for IRef
 data Entity m a = Entity
-  { entityType :: EntityType m (ReplaceArg_1_0 IRef a)
+  { entityIRef :: IRef (ReplaceArg_1_0 IRef a)
+  , entityReplace :: Maybe (IRef (ReplaceArg_1_0 IRef a) -> m ())
   , entityValue :: a
   }
 
 type EntityM m f = Entity m (f (Entity m))
 type EntityT m f = EntityM (Transaction ViewTag m) f
 
-guidT :: EntityType m a -> Guid
-guidT (ReadOnly g) = g
-guidT (Writable i) = IRef.guid $ wedIRef i
-
 guid :: Entity m a -> Guid
-guid = guidT . entityType
-
-writableEntityData
-  :: Entity m a
-  -> Maybe (WritableEntityData m (ReplaceArg_1_0 IRef a))
-writableEntityData =
-  f . entityType
-  where
-    f (ReadOnly _) = Nothing
-    f (Writable i) = Just i
-
-replacer
-  :: Entity m a
-  -> Maybe (IRef (ReplaceArg_1_0 IRef a) -> m ())
-replacer = wedReplace <=< writableEntityData
+guid = IRef.guid . entityIRef
 
 iref :: Entity m a -> Maybe (IRef (ReplaceArg_1_0 IRef a))
-iref = fmap wedIRef . writableEntityData
+iref = Just . entityIRef
 
 writeIRef
   :: (Monad m, Binary (ReplaceArg_1_0 IRef a))
@@ -90,7 +66,7 @@ load
   -> Transaction t m (EntityM (Transaction t m) f)
 load exprI f mSetter = do
   expr <- Transaction.readIRef exprI
-  liftM (Entity (Writable (WritableEntityData exprI mSetter))) $ f expr
+  liftM (Entity exprI mSetter) $ f expr
 
 loadExpression
   :: Monad m
