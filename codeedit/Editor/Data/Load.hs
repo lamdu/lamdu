@@ -4,8 +4,6 @@ module Editor.Data.Load
   , EntityT
   , guid
   , loadDefinition
-  , iref
-  , writeIRef, writeIRefVia
   )
 where
 
@@ -21,8 +19,6 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Data.Ops as DataOps
 
 {-# ANN module "HLint: ignore Use camelCase" #-}
-
--- Have to use type families to avoid infinite kinds.
 type family ReplaceArg_1_0 (i :: * -> *) (a :: *)
 type instance ReplaceArg_1_0 i (f k) = f i
 
@@ -38,25 +34,6 @@ type EntityT m f = EntityM (Transaction ViewTag m) f
 
 guid :: Entity m a -> Guid
 guid = IRef.guid . entityIRef
-
-iref :: Entity m a -> Maybe (IRef (ReplaceArg_1_0 IRef a))
-iref = Just . entityIRef
-
-writeIRef
-  :: (Monad m, Binary (ReplaceArg_1_0 IRef a))
-  => Entity (Transaction ViewTag m) a
-  -> Maybe (ReplaceArg_1_0 IRef a -> Transaction t m ())
-writeIRef = fmap Transaction.writeIRef . iref
-
-argument :: (a -> b) -> (b -> c) -> a -> c
-argument = flip (.)
-
-writeIRefVia
-  :: (Monad m, Binary (ReplaceArg_1_0 IRef b))
-  => (a -> ReplaceArg_1_0 IRef b)
-  -> Entity (Transaction ViewTag m) b
-  -> Maybe (a -> Transaction t m ())
-writeIRefVia f = (fmap . fmap . argument) f writeIRef
 
 load
   :: (Monad m, Binary (f IRef))

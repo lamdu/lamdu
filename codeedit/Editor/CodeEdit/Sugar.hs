@@ -23,7 +23,7 @@ import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
 import qualified Editor.CodeEdit.Infix as Infix
 import qualified Editor.Data as Data
-import qualified Editor.Data.Load as DataLoad
+import qualified Editor.Data.Typed as DataTyped
 import qualified Editor.Data.Ops as DataOps
 
 type MAction m = Maybe (Transaction ViewTag m Guid)
@@ -144,17 +144,17 @@ AtFieldTH.make ''Apply
 AtFieldTH.make ''Section
 AtFieldTH.make ''Expression
 
-type EntityExpr m = DataLoad.EntityT m Data.Expression
-type Entity m = DataLoad.Entity (Transaction ViewTag m)
+type EntityExpr m = DataTyped.EntityT m Data.Expression
+type Entity m = DataTyped.Entity (Transaction ViewTag m)
 
 type Convertor m = Scope -> EntityExpr m -> Transaction ViewTag m (ExpressionRef m)
 
 addArg :: Monad m => EntityExpr m -> EntityExpr m -> MAction m
 addArg whereI exprI =
-  (fmap . liftM) IRef.guid $ DataOps.callWithArg <$> DataLoad.iref exprI <*> DataLoad.entityReplace whereI
+  (fmap . liftM) IRef.guid $ DataOps.callWithArg <$> DataTyped.entityIRef exprI <*> DataTyped.entityReplace whereI
 
 makeActions :: Monad m => EntityExpr m -> Actions m
-makeActions exprI = makeActionsGuid (DataLoad.guid exprI) exprI
+makeActions exprI = makeActionsGuid (DataTyped.entityGuid exprI) exprI
 
 makeActionsGuid :: Monad m => Guid -> EntityExpr m -> Actions m
 makeActionsGuid exprGuid exprI =
@@ -173,10 +173,10 @@ makeActionsGuid exprGuid exprI =
   , mNextArg = Nothing
   }
   where
-    setExprI = DataLoad.entityReplace exprI
+    setExprI = DataTyped.entityReplace exprI
     withIRef f =
       (fmap . liftM) IRef.guid $
-      f <$> DataLoad.iref exprI <*> setExprI
+      f <$> DataTyped.entityIRef exprI <*> setExprI
 
 mkExpressionRef :: Monad m => EntityExpr m -> Expression m -> Transaction ViewTag m (ExpressionRef m)
 mkExpressionRef exprI expr =
@@ -207,7 +207,7 @@ convertLambda
   -> Convertor m
 convertLambda lambda@(Data.Lambda _ bodyI) scope exprI = do
   sBody <-
-    convertExpression (Data.ParameterRef (DataLoad.guid exprI) : scope) bodyI
+    convertExpression (Data.ParameterRef (DataTyped.entityGuid exprI) : scope) bodyI
   param <- convertLambdaParam lambda sBody scope exprI
   mkExpressionRef exprI .
     ExpressionFunc DontHaveParens . atFParams (param :) $
@@ -220,7 +220,7 @@ addDeleteAction
   => EntityExpr m -> EntityExpr m
   -> Actions m -> Actions m
 addDeleteAction exprI replacerI =
-  atMDelete . const $ deleter <$> DataLoad.entityReplace exprI <*> DataLoad.iref replacerI
+  atMDelete . const $ deleter <$> DataTyped.entityReplace exprI <*> DataTyped.entityIRef replacerI
   where
     deleter replacer val = do
       ~() <- replacer val
@@ -237,7 +237,7 @@ convertPi
   => Data.Lambda (Entity m)
   -> Convertor m
 convertPi lambda@(Data.Lambda paramTypeI bodyI) scope exprI = do
-  sBody <- convertExpression (Data.ParameterRef (DataLoad.guid exprI) : scope) bodyI
+  sBody <- convertExpression (Data.ParameterRef (DataTyped.entityGuid exprI) : scope) bodyI
   param <- convertLambdaParam lambda sBody scope exprI
   mkExpressionRef exprI $ ExpressionPi DontHaveParens
     Pi
@@ -252,7 +252,7 @@ convertWhere
   -> Data.Lambda (Entity m)
   -> Convertor m
 convertWhere valueRef lambdaI (Data.Lambda _ bodyI) scope applyI = do
-  sBody <- convertExpression (Data.ParameterRef (DataLoad.guid lambdaI) : scope) bodyI
+  sBody <- convertExpression (Data.ParameterRef (DataTyped.entityGuid lambdaI) : scope) bodyI
   mkExpressionRef applyI . ExpressionWhere DontHaveParens . atWWheres (item :) $
     case rExpression sBody of
       ExpressionWhere _ x -> x
@@ -261,7 +261,7 @@ convertWhere valueRef lambdaI (Data.Lambda _ bodyI) scope applyI = do
     item = WhereItem
       { wiActions =
           addDeleteAction applyI bodyI $
-          makeActionsGuid (DataLoad.guid lambdaI) applyI
+          makeActionsGuid (DataTyped.entityGuid lambdaI) applyI
       , wiValue = valueRef
       }
 
@@ -273,14 +273,14 @@ addApplyChildParens =
     f x = (atEHasParens . const) HaveParens x
 
 infixOp :: Monad m => EntityExpr m -> Transaction ViewTag m (Maybe Data.VariableRef)
-infixOp = maybe (return Nothing) Infix.infixOp . DataLoad.iref
+infixOp = maybe (return Nothing) Infix.infixOp . DataTyped.entityIRef
 
 convertApply
   :: Monad m
   => Data.Apply (Entity m)
   -> Convertor m
 convertApply apply@(Data.Apply funcI argI) scope exprI =
-  case DataLoad.entityValue funcI of
+  case DataTyped.entityValue funcI of
     Data.ExpressionLambda lambda -> do
       valueRef <- convertExpression scope argI
       convertWhere valueRef funcI lambda scope exprI
@@ -362,8 +362,8 @@ convertApplyPrefix (Data.Apply funcI argI) scope exprI = do
     Apply newFuncRef newArgRef
   where
     addFlipFuncArg = atRExpression . atEHole . atHoleMFlipFuncArg . const $ mSetFlippedApply
-    mSetFlippedApply = DataLoad.writeIRef exprI <*> mFlippedApply
-    mFlippedApply = Data.ExpressionApply <$> (Data.Apply <$> DataLoad.iref argI <*> DataLoad.iref funcI)
+    mSetFlippedApply = DataTyped.writeIRef exprI <*> mFlippedApply
+    mFlippedApply = Data.ExpressionApply <$> (Data.Apply <$> DataTyped.entityIRef argI <*> DataTyped.entityIRef funcI)
     addParens = atRExpression . atEHasParens . const $ HaveParens
 
 convertGetVariable
@@ -387,24 +387,24 @@ convertHole scope exprI =
   mkExpressionRef exprI . ExpressionHole $
   Hole
   { holeScope = scope
-  , holePickResult = pickResult <$> DataLoad.writeIRef exprI
+  , holePickResult = pickResult <$> DataTyped.writeIRef exprI
   , holeMFlipFuncArg = Nothing
   }
   where
     pickResult writeIRef result = do
       ~() <- writeIRef result
-      return $ DataLoad.guid exprI
+      return $ DataTyped.entityGuid exprI
 
 convertLiteralInteger :: Monad m => Integer -> EntityExpr m -> Transaction ViewTag m (ExpressionRef m)
 convertLiteralInteger i exprI =
   mkExpressionRef exprI . ExpressionLiteralInteger $
   LiteralInteger
   { liValue = i
-  , liSetValue = DataLoad.writeIRefVia Data.ExpressionLiteralInteger exprI
+  , liSetValue = DataTyped.writeIRefVia Data.ExpressionLiteralInteger exprI
   }
 
 convertExpression :: Monad m => Convertor m
-convertExpression scope exprI = case DataLoad.entityValue exprI of
+convertExpression scope exprI = case DataTyped.entityValue exprI of
   Data.ExpressionLambda x -> convertLambda x scope exprI
   Data.ExpressionPi x -> convertPi x scope exprI
   Data.ExpressionApply x -> convertApply x scope exprI
@@ -414,27 +414,27 @@ convertExpression scope exprI = case DataLoad.entityValue exprI of
 
 convertDefinitionBuiltin
   :: Monad m
-  => DataLoad.EntityT m Data.Definition
+  => DataTyped.EntityT m Data.Definition
   -> Data.Builtin (Entity m)
   -> Transaction ViewTag m (Definition m)
 convertDefinitionBuiltin defI (Data.Builtin ffiName typeI) =
   liftM (DefinitionBuiltin . Builtin ffiName setFFIName) $ convertExpression [] typeI
   where
-    setFFIName = builtinFromFFIName >>= (`DataLoad.writeIRefVia` defI)
-    builtinFromFFIName = fmap ((fmap . fmap) Data.DefinitionBuiltin (flip Data.Builtin)) $ DataLoad.iref typeI
+    setFFIName = builtinFromFFIName >>= (`DataTyped.writeIRefVia` defI)
+    builtinFromFFIName = fmap ((fmap . fmap) Data.DefinitionBuiltin (flip Data.Builtin)) $ DataTyped.entityIRef typeI
 
 convertDefinition
   :: Monad m
-  => DataLoad.EntityT m Data.Definition
+  => DataTyped.EntityT m Data.Definition
   -> Transaction ViewTag m (DefinitionRef m)
 convertDefinition defI =
   liftM mkDefinitionRef $
-    case DataLoad.entityValue defI of
+    case DataTyped.entityValue defI of
     Data.DefinitionExpression exprI ->
       liftM DefinitionExpression $ convertExpression [] exprI
     Data.DefinitionBuiltin builtin ->
       convertDefinitionBuiltin defI builtin
   where
-    dGuid = DataLoad.guid defI
+    dGuid = DataTyped.entityGuid defI
     mkDefinitionRef = DefinitionRef $ DefinitionActions dGuid replaceDefinition
-    replaceDefinition = DataLoad.writeIRef defI
+    replaceDefinition = DataTyped.writeIRef defI

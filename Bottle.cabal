@@ -115,6 +115,7 @@ Executable Editor
                        Editor.Config,
                        Editor.Data,
                        Editor.Data.Load,
+                       Editor.Data.Typed,
                        Editor.Data.Ops,
                        Editor.MonadF,
                        Editor.WidgetIds

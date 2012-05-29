@@ -22,6 +22,7 @@ import qualified Editor.CodeEdit.ExpressionEdit as ExpressionEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.Data.Load as DataLoad
+import qualified Editor.Data.Typed as DataTyped
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 
@@ -65,8 +66,9 @@ makeSugarPanes = do
       | i-1 >= 0 = Just $ movePane i (i-1)
       | otherwise = Nothing
     convertPane (i, defI) = do
-      loaded <- DataLoad.loadDefinition defI
-      def <- Sugar.convertDefinition loaded
+      loadedDef <- DataLoad.loadDefinition defI
+      typedDef <- DataTyped.inferTypes loadedDef
+      def <- Sugar.convertDefinition typedDef
       return SugarPane
         { spDef = def
         , mDelPane = mkMDelPane i
