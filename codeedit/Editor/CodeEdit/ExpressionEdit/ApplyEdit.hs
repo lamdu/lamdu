@@ -17,7 +17,7 @@ make
   -> Widget.Id
   -> TWidget ViewTag m
 make makeExpressionEdit (Sugar.Apply func arg) myId =
-  (assignCursor myId . WidgetIds.fromGuid . Sugar.guid . Sugar.rActions) func $ do
+  (assignCursor myId . WidgetIds.fromGuid . Sugar.guid . Sugar.rActions) arg $ do
     funcEdit <- makeExpressionEdit func
     argEdit <- makeExpressionEdit arg
     return $ BWidgets.hboxSpaced [funcEdit, argEdit]

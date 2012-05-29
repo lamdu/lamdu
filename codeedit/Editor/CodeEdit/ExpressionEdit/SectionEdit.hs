@@ -19,12 +19,12 @@ make
   -> Widget.Id
   -> TWidget ViewTag m
 make makeExpressionEdit (Sugar.Section mLArg op mRArg) myId =
-  assignCursor myId (WidgetIds.fromGuid cursorPos) $ do
+  assignCursor myId destId $ do
     lArgEdits <- fromMArg mLArg
     opEdits <- makeExpressionsEdit op
     rArgEdits <- fromMArg mRArg
     return . BWidgets.hboxSpaced $ lArgEdits ++ opEdits ++ rArgEdits
   where
+    destId = WidgetIds.fromGuid . Sugar.guid . Sugar.rActions $ fromMaybe op mRArg
     makeExpressionsEdit = liftM (:[]) . makeExpressionEdit
     fromMArg = maybe (return []) makeExpressionsEdit
-    cursorPos = Sugar.guid . Sugar.rActions $ fromMaybe op mLArg
