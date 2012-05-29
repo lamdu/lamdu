@@ -4,6 +4,7 @@ module Editor.WidgetIds(
   collapserId, branchSelection, goUpId,
   searchTermId,
   parenHighlightId,
+  underlineId,
   parensPrefix,
   paramId, varId, diveIn,
   builtinFFIName, builtinFFIPath)
@@ -62,3 +63,6 @@ diveIn = fmap $ FocusDelegator.delegatingId . fromIRef
 
 paramId :: Guid -> Widget.Id
 paramId x = Widget.joinId (fromGuid x) ["param"]
+
+underlineId :: AnimId -> AnimId
+underlineId = flip mappend ["underline"]

@@ -6,8 +6,8 @@ import Control.Monad (liftM)
 import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.CTransaction (CTransaction, TWidget)
+import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget, EventHandlers)
 import qualified Editor.BottleWidgets as BWidgets
@@ -25,6 +25,7 @@ import qualified Editor.Config as Config
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
 data HoleResultPicker m = NotAHole | IsAHole (Maybe (HoleEdit.ResultPicker m))
 foldHolePicker
@@ -69,18 +70,24 @@ make sExpr = do
       Sugar.ExpressionLiteralInteger integer ->
         notAHole $ LiteralEdit.makeInt integer
   (holePicker, exprWidget) <- makeEditor exprId
-  widget <- maybe return addType (Sugar.rType sExpr) exprWidget
+  widget <- maybe return (addType exprId) (Sugar.rType sExpr) exprWidget
   eventMap <- expressionEventMap sExpr holePicker
   return $ Widget.weakerEvents eventMap widget
 
 addType
   :: MonadF m
-  => Sugar.ExpressionRef m
+  => Widget.Id -> Sugar.ExpressionRef m
   -> Widget (Transaction ViewTag m)
   -> TWidget ViewTag m
-addType sType widget = do
+addType exprId sType widget = do
+  let underlineId = WidgetIds.underlineId $ Widget.toAnimId exprId
   typeEdit <- liftM (Widget.scale Config.typeScaleFactor) $ make sType
-  return $ BWidgets.vbox [widget, typeEdit]
+  return $
+    BWidgets.vbox
+    [ widget
+    , Spacer.makeHorizLineWidget underlineId
+    , typeEdit
+    ]
 
 expressionEventMap
   :: MonadF m
