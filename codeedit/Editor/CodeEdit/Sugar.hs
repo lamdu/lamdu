@@ -47,6 +47,7 @@ data HasParens = HaveParens | DontHaveParens
 
 data ExpressionRef m = ExpressionRef
   { rExpression :: Expression m
+  , rType :: Maybe (ExpressionRef m)
   , rActions :: Actions m
   }
 
@@ -178,11 +179,18 @@ makeActionsGuid exprGuid exprI =
       (fmap . liftM) IRef.guid $
       f <$> DataTyped.entityIRef exprI <*> setExprI
 
-mkExpressionRef :: Monad m => EntityExpr m -> Expression m -> Transaction ViewTag m (ExpressionRef m)
-mkExpressionRef exprI expr =
+mkExpressionRef
+  :: Monad m
+  => Scope -> EntityExpr m
+  -> Expression m -> Transaction ViewTag m (ExpressionRef m)
+mkExpressionRef scope exprI expr = do
+  typeRef <-
+    maybe (return Nothing) (liftM Just . convertExpression scope) $
+    DataTyped.entityType exprI
   return
     ExpressionRef
     { rExpression = expr
+    , rType = typeRef
     , rActions = makeActions exprI
     }
 
@@ -209,7 +217,7 @@ convertLambda lambda@(Data.Lambda _ bodyI) scope exprI = do
   sBody <-
     convertExpression (Data.ParameterRef (DataTyped.entityGuid exprI) : scope) bodyI
   param <- convertLambdaParam lambda sBody scope exprI
-  mkExpressionRef exprI .
+  mkExpressionRef scope exprI .
     ExpressionFunc DontHaveParens . atFParams (param :) $
     case rExpression sBody of
       ExpressionFunc _ x -> x
@@ -239,7 +247,7 @@ convertPi
 convertPi lambda@(Data.Lambda paramTypeI bodyI) scope exprI = do
   sBody <- convertExpression (Data.ParameterRef (DataTyped.entityGuid exprI) : scope) bodyI
   param <- convertLambdaParam lambda sBody scope exprI
-  mkExpressionRef exprI $ ExpressionPi DontHaveParens
+  mkExpressionRef scope exprI $ ExpressionPi DontHaveParens
     Pi
     { pParam = atFpType addApplyChildParens param
     , pResultType = addDelete exprI paramTypeI sBody
@@ -253,7 +261,7 @@ convertWhere
   -> Convertor m
 convertWhere valueRef lambdaI (Data.Lambda _ bodyI) scope applyI = do
   sBody <- convertExpression (Data.ParameterRef (DataTyped.entityGuid lambdaI) : scope) bodyI
-  mkExpressionRef applyI . ExpressionWhere DontHaveParens . atWWheres (item :) $
+  mkExpressionRef scope applyI . ExpressionWhere DontHaveParens . atWWheres (item :) $
     case rExpression sBody of
       ExpressionWhere _ x -> x
       _ -> Where [] sBody
@@ -312,12 +320,12 @@ convertApplyInfixFull
 convertApplyInfixFull (Data.Apply funcFuncI funcArgI) op (Data.Apply funcI argI) scope exprI = do
   rArgRef <- convertExpression scope argI
   lArgRef <- convertExpression scope funcArgI
-  opRef <- mkExpressionRef funcFuncI $ ExpressionGetVariable op
+  opRef <- mkExpressionRef scope funcFuncI $ ExpressionGetVariable op
   let
     newLArgRef = addDelete funcI funcFuncI $ addApplyChildParens lArgRef
     newRArgRef = addDelete exprI funcI $ addApplyChildParens rArgRef
     newOpRef = addDelete funcI funcArgI $ setAddArg exprI exprI opRef
-  mkExpressionRef exprI . ExpressionSection DontHaveParens $
+  mkExpressionRef scope exprI . ExpressionSection DontHaveParens $
     Section (Just newLArgRef) newOpRef (Just newRArgRef)
 
 convertApplyInfixL
@@ -328,13 +336,13 @@ convertApplyInfixL
 convertApplyInfixL op (Data.Apply opI argI) scope exprI = do
   argRef <- convertExpression scope argI
   let newArgRef = addDelete exprI opI $ addApplyChildParens argRef
-  opRef <- mkExpressionRef opI $ ExpressionGetVariable op
+  opRef <- mkExpressionRef scope opI $ ExpressionGetVariable op
   let
     newOpRef =
       addDelete exprI argI .
       setAddArg exprI exprI $
       opRef
-  mkExpressionRef exprI . ExpressionSection HaveParens $
+  mkExpressionRef scope exprI . ExpressionSection HaveParens $
     Section (Just newArgRef) newOpRef Nothing
 
 convertApplyPrefix
@@ -358,7 +366,7 @@ convertApplyPrefix (Data.Apply funcI argI) scope exprI = do
       (atRExpression . atEApply . atApplyArg) setNextArg .
       (atRExpression . atESection . atSectionOp) setNextArg $
       funcRef
-  mkExpressionRef exprI . ExpressionApply DontHaveParens $
+  mkExpressionRef scope exprI . ExpressionApply DontHaveParens $
     Apply newFuncRef newArgRef
   where
     addFlipFuncArg = atRExpression . atEHole . atHoleMFlipFuncArg . const $ mSetFlippedApply
@@ -366,25 +374,22 @@ convertApplyPrefix (Data.Apply funcI argI) scope exprI = do
     mFlippedApply = Data.ExpressionApply <$> (Data.Apply <$> DataTyped.entityIRef argI <*> DataTyped.entityIRef funcI)
     addParens = atRExpression . atEHasParens . const $ HaveParens
 
-convertGetVariable
-  :: Monad m
-  => Data.VariableRef -> EntityExpr m
-  -> Transaction ViewTag m (ExpressionRef m)
-convertGetVariable varRef exprI = do
+convertGetVariable :: Monad m => Data.VariableRef -> Convertor m
+convertGetVariable varRef scope exprI = do
   name <- Property.get $ Anchors.variableNameRef varRef
   getVarExpr <-
-    mkExpressionRef exprI $
+    mkExpressionRef scope exprI $
     ExpressionGetVariable varRef
   if Infix.isInfixName name
     then
-      mkExpressionRef exprI $
+      mkExpressionRef scope exprI $
       ExpressionSection HaveParens (Section Nothing getVarExpr Nothing)
     else return getVarExpr
 
 convertHole :: Monad m => Convertor m
 convertHole scope exprI =
   (liftM . atRActions . atMReplace . const) Nothing .
-  mkExpressionRef exprI . ExpressionHole $
+  mkExpressionRef scope exprI . ExpressionHole $
   Hole
   { holeScope = scope
   , holePickResult = pickResult <$> DataTyped.writeIRef exprI
@@ -395,22 +400,24 @@ convertHole scope exprI =
       ~() <- writeIRef result
       return $ DataTyped.entityGuid exprI
 
-convertLiteralInteger :: Monad m => Integer -> EntityExpr m -> Transaction ViewTag m (ExpressionRef m)
-convertLiteralInteger i exprI =
-  mkExpressionRef exprI . ExpressionLiteralInteger $
+convertLiteralInteger :: Monad m => Integer -> Convertor m
+convertLiteralInteger i scope exprI =
+  mkExpressionRef scope exprI . ExpressionLiteralInteger $
   LiteralInteger
   { liValue = i
   , liSetValue = DataTyped.writeIRefVia Data.ExpressionLiteralInteger exprI
   }
 
 convertExpression :: Monad m => Convertor m
-convertExpression scope exprI = case DataTyped.entityValue exprI of
-  Data.ExpressionLambda x -> convertLambda x scope exprI
-  Data.ExpressionPi x -> convertPi x scope exprI
-  Data.ExpressionApply x -> convertApply x scope exprI
-  Data.ExpressionGetVariable x -> convertGetVariable x exprI
-  Data.ExpressionHole -> convertHole scope exprI
-  Data.ExpressionLiteralInteger x -> convertLiteralInteger x exprI
+convertExpression scope exprI =
+  convert (DataTyped.entityValue exprI) scope exprI
+  where
+    convert (Data.ExpressionLambda x) = convertLambda x
+    convert (Data.ExpressionPi x) = convertPi x
+    convert (Data.ExpressionApply x) = convertApply x
+    convert (Data.ExpressionGetVariable x) = convertGetVariable x
+    convert (Data.ExpressionHole) = convertHole
+    convert (Data.ExpressionLiteralInteger x) = convertLiteralInteger x
 
 convertDefinitionBuiltin
   :: Monad m
