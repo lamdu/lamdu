@@ -7,9 +7,9 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
-import Editor.CTransaction (CTransaction)
+import Editor.CTransaction (CTransaction, TWidget)
 import Editor.MonadF (MonadF)
-import Graphics.UI.Bottle.Widget (EventHandlers)
+import Graphics.UI.Bottle.Widget (Widget, EventHandlers)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
@@ -68,9 +68,19 @@ make sExpr = do
         wrapNonHoleExpr . textParenify hasParens $ SectionEdit.make make section
       Sugar.ExpressionLiteralInteger integer ->
         notAHole $ LiteralEdit.makeInt integer
-  (holePicker, widget) <- makeEditor exprId
+  (holePicker, exprWidget) <- makeEditor exprId
+  widget <- maybe return addType (Sugar.rType sExpr) exprWidget
   eventMap <- expressionEventMap sExpr holePicker
   return $ Widget.weakerEvents eventMap widget
+
+addType
+  :: MonadF m
+  => Sugar.ExpressionRef m
+  -> Widget (Transaction ViewTag m)
+  -> TWidget ViewTag m
+addType sType widget = do
+  typeEdit <- liftM (Widget.scale Config.typeScaleFactor) $ make sType
+  return $ BWidgets.vbox [widget, typeEdit]
 
 expressionEventMap
   :: MonadF m
@@ -100,7 +110,7 @@ expressionEventMap sExpr holePicker =
     , maybeMempty (Sugar.mDelete actions) $
       Widget.actionEventMapMovesCursor Config.delKeys "Delete" .
       liftM WidgetIds.fromGuid
-      
+
     , maybeMempty (Sugar.mReplace actions) $
       Widget.actionEventMapMovesCursor (Config.replaceKeys ++ Config.delKeys) "Replace" .
       liftM (FocusDelegator.delegatingId . WidgetIds.fromGuid)
