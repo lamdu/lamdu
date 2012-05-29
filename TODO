@@ -1,5 +1,8 @@
 * Inferred types
 
+* Widget framework:
+  * Move "Cursor->" reader into widget
+
 * Add JumpTo which gives a hole-like search -- that can sit in a "tab" in place of a DefinitionEdit
 
 -------
