@@ -23,8 +23,8 @@ import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
 import qualified Editor.CodeEdit.Infix as Infix
 import qualified Editor.Data as Data
-import qualified Editor.DataLoad as DataLoad
-import qualified Editor.DataOps as DataOps
+import qualified Editor.Data.Load as DataLoad
+import qualified Editor.Data.Ops as DataOps
 
 type MAction m = Maybe (Transaction ViewTag m Guid)
 

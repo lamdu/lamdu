@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeFamilies, FlexibleContexts #-}
-module Editor.DataLoad
+module Editor.Data.Load
   ( Entity(..), EntityType(..), WritableEntityData(..)
   , EntityT
   , guid
@@ -18,7 +18,7 @@ import Editor.Anchors (ViewTag)
 import Editor.Data (Definition(..), Builtin(..), Expression(..), Apply(..), Lambda(..))
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Transaction as Transaction
-import qualified Editor.DataOps as DataOps
+import qualified Editor.Data.Ops as DataOps
 
 {-# ANN module "HLint: ignore Use camelCase" #-}
 

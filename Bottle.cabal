@@ -114,8 +114,8 @@ Executable Editor
                        Editor.CodeEdit.Sugar,
                        Editor.Config,
                        Editor.Data,
-                       Editor.DataLoad,
-                       Editor.DataOps,
+                       Editor.Data.Load,
+                       Editor.Data.Ops,
                        Editor.MonadF,
                        Editor.WidgetIds
   ghc-options:         -O2 -Wall

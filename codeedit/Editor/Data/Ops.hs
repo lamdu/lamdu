@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveFunctor #-}
-module Editor.DataOps
+module Editor.Data.Ops
   ( ExpressionSetter
   , newHole, giveAsArg, callWithArg
   , replace, replaceWithHole, lambdaWrap, redexWrap
