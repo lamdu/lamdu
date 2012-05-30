@@ -15,11 +15,12 @@ import Control.Monad (liftM, (<=<))
 import Data.Binary (Binary)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe, maybeToList)
+import Data.Monoid (mempty)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.Data (Definition(..), Expression(..), Apply(..), Lambda(..), VariableRef(..))
+import Editor.Data (Definition(..), Expression(..), FFIName(..), Apply(..), Lambda(..), VariableRef(..))
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
 import qualified Data.Map as Map
@@ -178,7 +179,9 @@ inferExpression scope (DataLoad.Entity iref mReplace value) =
           inferExpression [] =<< DataLoad.loadExpression dType Nothing
         return [inferredDType]
     return (types, ExpressionGetVariable varRef)
-  ExpressionLiteralInteger int -> return ([], ExpressionLiteralInteger int)
+  ExpressionLiteralInteger int ->
+    let intType = Entity (OriginGenerated zeroGuid) [] $ ExpressionBuiltin (FFIName ["Prelude"] "Integer")
+    in return ([intType], ExpressionLiteralInteger int)
   ExpressionBuiltin bi -> return ([], ExpressionBuiltin bi)
   ExpressionHole -> return ([], ExpressionHole)
   ExpressionMagic -> return ([], ExpressionMagic)
@@ -189,6 +192,10 @@ inferExpression scope (DataLoad.Entity iref mReplace value) =
       inferredParamType <- inferExpression scope paramType
       liftM (Lambda inferredParamType) $
         inferExpression ((IRef.guid iref, inferredParamType) : scope) body
+
+-- This is replaced in all use cases by uniqify:
+zeroGuid :: Guid
+zeroGuid = Guid.make mempty
 
 guidToStdGen :: Guid -> Random.StdGen
 guidToStdGen = Random.mkStdGen . BinaryUtils.decodeS . Guid.bs
