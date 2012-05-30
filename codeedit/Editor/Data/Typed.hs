@@ -6,6 +6,7 @@ module Editor.Data.Typed
   , loadInferDefinition
   , entityGuid, entityIRef
   , writeIRef, writeIRefVia
+  , foldValues
   )
 where
 
@@ -193,8 +194,8 @@ guidToStdGen = Random.mkStdGen . BinaryUtils.decodeS . Guid.bs
 uniqify
   :: Map Guid Guid
   -> Random.StdGen -> EntityT m Expression -> EntityT m Expression
-uniqify symbolMap gen (Entity oldOrigin t v) =
-  Entity (OriginGenerated newGuid) (uniqifyList symbolMap genT t) $
+uniqify symbolMap gen (Entity oldOrigin ts v) =
+  Entity (OriginGenerated newGuid) (uniqifyList symbolMap genT ts) $
   case v of
   ExpressionLambda lambda -> ExpressionLambda $ onLambda lambda
   ExpressionPi lambda -> ExpressionPi $ onLambda lambda
@@ -215,18 +216,26 @@ uniqify symbolMap gen (Entity oldOrigin t v) =
     (genT, genV) = Random.split newGen
 
 uniqifyTypes :: EntityT m Expression -> EntityT m Expression
-uniqifyTypes (Entity origin ts v) =
-  Entity origin (uniqifyList Map.empty tGen ts) $
+uniqifyTypes =
+  foldValues f
+  where
+    f (Entity origin ts val) =
+      Entity origin (uniqifyList Map.empty (guidToStdGen (entityOriginGuid origin)) ts) val
+
+foldValues
+  :: (EntityT m Expression -> EntityT m Expression)
+  -> EntityT m Expression -> EntityT m Expression
+foldValues f (Entity origin ts v) =
+  f . Entity origin ts $
   case v of
   ExpressionLambda lambda -> ExpressionLambda $ onLambda lambda
   ExpressionPi lambda -> ExpressionPi $ onLambda lambda
   ExpressionApply (Apply func arg) ->
-    ExpressionApply $ Apply (uniqifyTypes func) (uniqifyTypes arg)
+    ExpressionApply $ Apply (foldValues f func) (foldValues f arg)
   x -> x
   where
-    tGen = guidToStdGen $ entityOriginGuid origin
     onLambda (Lambda paramType body) =
-      Lambda (uniqifyTypes paramType) (uniqifyTypes body)
+      Lambda (foldValues f paramType) (foldValues f body)
 
 uniqifyList
   :: Map Guid Guid -> Random.StdGen
