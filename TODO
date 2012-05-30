@@ -1,4 +1,6 @@
+* LiteralInt type
 * Something type of its self -- causes loop/hang
+* Definition Type to propagate inside and to come from inside
 
 * Oops, if type of left-hand-side is hole, then read-only holes at
    right should NOT have their scope based on their location (They are
