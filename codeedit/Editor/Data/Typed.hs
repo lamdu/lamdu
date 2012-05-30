@@ -246,13 +246,14 @@ mapTypes
 mapTypes f =
   foldValues g
   where
+    recurse = f . mapTypes f
     g (Entity origin ts v) =
-      Entity origin (map f ts) $
+      Entity origin (map recurse ts) $
       case v of
       ExpressionLambda lambda -> ExpressionLambda $ onLambda lambda
       ExpressionPi lambda -> ExpressionPi $ onLambda lambda
       x -> x
-    onLambda (Lambda paramType body) = Lambda (f paramType) body
+    onLambda (Lambda paramType body) = Lambda (recurse paramType) body
 
 uniqifyList
   :: Map Guid Guid -> Random.StdGen
