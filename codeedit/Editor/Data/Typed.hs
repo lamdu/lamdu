@@ -19,7 +19,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.Data (Definition(..), DefinitionBody(..), Expression(..), Apply(..), Lambda(..), VariableRef(..))
+import Editor.Data (Definition(..), Expression(..), Apply(..), Lambda(..), VariableRef(..))
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
 import qualified Data.Map as Map
@@ -170,17 +170,18 @@ inferExpression scope (DataLoad.Entity iref mReplace value) =
         _ -> ([], inferredArg) -- TODO: Split to "bad type" and "missing type"
     return (applyType, ExpressionApply (Apply inferredFunc modArg))
   ExpressionGetVariable varRef -> do
-    tuype <- case varRef of
+    types <- case varRef of
       ParameterRef guid -> return . maybeToList $ lookup guid scope
       DefinitionRef defI -> do
-        Definition dType dBody <- Transaction.readIRef defI
-        case dBody of
-          DefinitionMagic -> return []
-          _ -> liftM (:[]) . inferExpression [] =<<
-               DataLoad.loadExpression dType Nothing
-    return (tuype, ExpressionGetVariable varRef)
-  ExpressionHole -> return ([], ExpressionHole)
+        dType <- liftM defType $ Transaction.readIRef defI
+        inferredDType <-
+          inferExpression [] =<< DataLoad.loadExpression dType Nothing
+        return [inferredDType]
+    return (types, ExpressionGetVariable varRef)
   ExpressionLiteralInteger int -> return ([], ExpressionLiteralInteger int)
+  ExpressionBuiltin bi -> return ([], ExpressionBuiltin bi)
+  ExpressionHole -> return ([], ExpressionHole)
+  ExpressionMagic -> return ([], ExpressionMagic)
   where
     makeEntity (t, expr) =
       Entity (OriginStored (Stored iref mReplace)) t expr
@@ -266,15 +267,10 @@ inferDefinition
 inferDefinition (DataLoad.Entity iref mReplace value) =
   liftM (Entity (OriginStored (Stored iref mReplace)) []) $
   case value of
-  Definition typeI body -> do
+  Definition typeI bodyI -> do
     inferredType <- liftM uniqifyTypes $ inferExpression [] typeI
-    liftM (Definition inferredType) $
-      case body of
-      DefinitionMagic -> return DefinitionMagic
-      DefinitionExpression expr ->
-        liftM (DefinitionExpression . uniqifyTypes) $ inferExpression [] expr
-      DefinitionBuiltin ffiName ->
-        return $ DefinitionBuiltin ffiName
+    inferredBody <- liftM uniqifyTypes $ inferExpression [] bodyI
+    return $ Definition inferredType inferredBody
 
 loadInferDefinition
   :: Monad m => IRef (Definition IRef)

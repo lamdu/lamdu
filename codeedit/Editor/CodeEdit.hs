@@ -81,7 +81,7 @@ makePanesEdit panes = do
     case panes of
     [] -> BWidgets.makeFocusableTextView "<No panes>" myId
     (firstPane:_) ->
-      (assignCursor myId . WidgetIds.fromGuid . Sugar.defGuid . Sugar.drActions . spDef) firstPane $ do
+      (assignCursor myId . WidgetIds.fromGuid . Sugar.drGuid . spDef) firstPane $ do
         definitionEdits <- mapM makePaneWidget panes
         return $ BWidgets.vboxAlign 0 definitionEdits
 

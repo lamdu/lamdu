@@ -13,6 +13,7 @@ import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget, EventHandlers)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
+import qualified Editor.CodeEdit.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
@@ -71,6 +72,9 @@ make sExpr = do
         wrapNonHoleExpr . textParenify hasParens $ SectionEdit.make make section
       Sugar.ExpressionLiteralInteger integer ->
         notAHole $ LiteralEdit.makeInt integer
+      Sugar.ExpressionBuiltin builtin ->
+        wrapNonHoleExpr $ BuiltinEdit.make builtin
+
   (holePicker, exprWidget) <- makeEditor exprId
   widget <- addType exprId (Sugar.rType sExpr) exprWidget
   eventMap <- expressionEventMap sExpr holePicker

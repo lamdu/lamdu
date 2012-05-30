@@ -104,17 +104,21 @@ view = Transaction.fromIRef viewIRef
 makePane :: IRef (Data.Definition IRef) -> Pane
 makePane = id
 
-makeDefinition :: Monad m => String -> Transaction ViewTag m (IRef (Data.Definition IRef))
+makeDefinition
+  :: Monad m => String
+  -> Transaction ViewTag m (IRef (Data.Definition IRef))
 makeDefinition newName = do
   holeI <- Transaction.newIRef Data.ExpressionHole
   typeI <- Transaction.newIRef Data.ExpressionHole
-  defI <- Transaction.newIRef . Data.Definition typeI $ Data.DefinitionExpression holeI
+  defI <- Transaction.newIRef $ Data.Definition typeI holeI
   Property.pureModify globals (Data.DefinitionRef defI :)
   (Property.set . aNameRef . IRef.guid) defI newName
   return defI
 
 
-aDataRef :: (Binary b, Monad m) => SBS.ByteString -> b -> Guid -> Property (Transaction t m) b
+aDataRef
+  :: (Binary b, Monad m) => SBS.ByteString -> b -> Guid
+  -> Property (Transaction t m) b
 aDataRef str def = Property.pureCompose (fromMaybe def) Just . combineGuid
   where
     combineGuid guid =
@@ -129,10 +133,12 @@ aDataRef str def = Property.pureCompose (fromMaybe def) Just . combineGuid
 aNameRef :: Monad m => Guid -> Property (Transaction t m) String
 aNameRef = aDataRef "Name" ""
 
-variableNameRef :: Monad m => Data.VariableRef -> Property (Transaction t m) String
+variableNameRef
+  :: Monad m => Data.VariableRef -> Property (Transaction t m) String
 variableNameRef = aNameRef . Data.variableRefGuid
 
-newPane :: Monad m => IRef (Data.Definition IRef) -> Transaction ViewTag m ()
+newPane
+  :: Monad m => IRef (Data.Definition IRef) -> Transaction ViewTag m ()
 newPane defI = do
   ps <- Property.get panes
   when (defI `notElem` ps) $
@@ -153,11 +159,16 @@ jumpBack = do
       Property.set preJumps js
       return $ Just j
 
-newBuiltin :: Monad m => String -> IRef (Data.Expression IRef) -> Transaction t m Data.VariableRef
+newBuiltin
+  :: Monad m
+  => String -> IRef (Data.Expression IRef)
+  -> Transaction t m Data.VariableRef
 newBuiltin fullyQualifiedName typeI = do
-  builtinIRef <-
-    Transaction.newIRef . Data.Definition typeI . Data.DefinitionBuiltin $
+  builtinExprI <-
+    Transaction.newIRef . Data.ExpressionBuiltin $
     Data.FFIName (init path) name
+  builtinIRef <- Transaction.newIRef $ Data.Definition typeI builtinExprI
+
   Property.set (aNameRef (IRef.guid builtinIRef)) name
   return $ Data.DefinitionRef builtinIRef
   where

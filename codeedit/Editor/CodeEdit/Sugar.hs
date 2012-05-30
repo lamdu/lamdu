@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Editor.CodeEdit.Sugar
-  ( Definition(..), DefinitionRef(..), DefinitionActions(..)
+  ( DefinitionRef(..)
   , Builtin(..)
   , Expression(..), Actions(..), ExpressionRef(..)
   , Where(..), WhereItem(..)
@@ -114,24 +114,18 @@ data Expression m
   | ExpressionGetVariable { _eGetVar :: Data.VariableRef }
   | ExpressionHole { eHole :: Hole m }
   | ExpressionLiteralInteger { _eLit :: LiteralInteger m }
+  | ExpressionBuiltin { eBuiltin :: Builtin m }
 
 data Builtin m = Builtin
   { biName :: Data.FFIName
   , biSetFFIName :: Maybe (Data.FFIName -> Transaction ViewTag m ())
   }
 
-data Definition m
-  = DefinitionExpression (ExpressionRef m)
-  | DefinitionBuiltin (Builtin m)
-
-data DefinitionActions m = DefinitionActions
-  { defGuid :: Guid
-  , defReplace :: Maybe (Data.DefinitionBody IRef -> Transaction ViewTag m ())
-  }
-
 data DefinitionRef m = DefinitionRef
-  { drActions :: DefinitionActions m
-  , drDef :: Definition m
+  { drGuid :: Guid
+    -- TODO: This is the opposite order of the data model, reverse
+    -- either of them:
+  , drDef :: ExpressionRef m
   , drType :: ExpressionRef m
   }
 
@@ -411,6 +405,22 @@ convertLiteralInteger i scope exprI =
   , liSetValue = DataTyped.writeIRefVia Data.ExpressionLiteralInteger exprI
   }
 
+convertBuiltin :: Monad m => Data.FFIName -> Convertor m
+convertBuiltin name scope exprI =
+  mkExpressionRef scope exprI . ExpressionBuiltin $
+  Builtin
+  { biName = name
+  , biSetFFIName = DataTyped.writeIRefVia Data.ExpressionBuiltin exprI
+  }
+
+convertMagic :: Monad m => Convertor m
+convertMagic scope exprI =
+  mkExpressionRef scope exprI . ExpressionBuiltin $
+  Builtin
+  { biName = Data.FFIName ["Core"] "Magic"
+  , biSetFFIName = Nothing
+  }
+
 convertExpression :: Monad m => Convertor m
 convertExpression scope exprI =
   convert (DataTyped.entityValue exprI) scope exprI
@@ -419,8 +429,10 @@ convertExpression scope exprI =
     convert (Data.ExpressionPi x) = convertPi x
     convert (Data.ExpressionApply x) = convertApply x
     convert (Data.ExpressionGetVariable x) = convertGetVariable x
-    convert (Data.ExpressionHole) = convertHole
     convert (Data.ExpressionLiteralInteger x) = convertLiteralInteger x
+    convert (Data.ExpressionBuiltin x) = convertBuiltin x
+    convert Data.ExpressionMagic = convertMagic
+    convert Data.ExpressionHole = convertHole
 
 convertDefinitionI
   :: Monad m
@@ -428,30 +440,13 @@ convertDefinitionI
   -> Transaction ViewTag m (DefinitionRef m)
 convertDefinitionI defI =
   case DataTyped.entityValue defI of
-  Data.Definition typeI body -> do
+  Data.Definition typeI bodyI -> do
     defType <- convertExpression [] typeI
-    let giveTypeIRefTo = (DataTyped.entityIRef typeI >>=)
-    defBody <- case body of
-      Data.DefinitionExpression exprI ->
-        liftM DefinitionExpression $
-        convertExpression [] exprI
-      Data.DefinitionBuiltin ffiName ->
-        return . DefinitionBuiltin $
-        Builtin ffiName (giveTypeIRefTo setFFIName)
-      Data.DefinitionMagic ->
-        return . DefinitionBuiltin $
-        Builtin (Data.FFIName ["Core"] "Magic") Nothing
-    let
-      replaceBody typeIRef =
-        DataTyped.writeIRefVia (Data.Definition typeIRef) defI
-      defActions = DefinitionActions dGuid $ giveTypeIRefTo replaceBody
-    return $ DefinitionRef defActions defBody defType
+    defBody <- convertExpression [] bodyI
+    return $ DefinitionRef defGuid defBody defType
 
   where
-    dGuid = DataTyped.entityGuid defI
-
-    setFFIName typeIRef =
-      (`DataTyped.writeIRefVia` defI) $ Data.Definition typeIRef . Data.DefinitionBuiltin
+    defGuid = DataTyped.entityGuid defI
 
 convertDefinition
   :: Monad m
@@ -460,7 +455,7 @@ convertDefinition
 convertDefinition =
   convertDefinitionI .
   DataTyped.atEntityValue
-  ((Data.atDefBody . Data.atDefBodyExpr) removeTypesOfTypes .
+  (Data.atDefBody removeTypesOfTypes .
    Data.atDefType removeTypes)
   where
     removeTypesOfTypes =

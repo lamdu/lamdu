@@ -3,15 +3,13 @@ module Editor.CodeEdit.DefinitionEdit(make, makeParts, addJumps) where
 
 import Control.Arrow (second)
 import Control.Monad (liftM)
-import Data.List.Split (splitOn)
 import Data.List.Utils (atPred, pairList)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
-import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, TWidget, assignCursor, readCursor)
+import Editor.CTransaction (CTransaction, TWidget, readCursor)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -22,8 +20,6 @@ import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
-import qualified Editor.Data as Data
-import qualified Editor.Data.Ops as DataOps
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -122,71 +118,25 @@ makeParts makeExpressionEdit myId ident exprRef = do
     ,(Just RHS, rhsEdit)
     ]
 
-makeBuiltinEdit
-  :: MonadF m
-  => Widget.Id
-  -> Sugar.Builtin m
-  -> TWidget ViewTag m
-makeBuiltinEdit myId (Sugar.Builtin (Data.FFIName modulePath name) setFFIName) =
-  assignCursor myId (WidgetIds.builtinFFIName myId) $ do
-    moduleName <- makeNamePartEditor Config.foreignModuleColor modulePathStr modulePathSetter WidgetIds.builtinFFIPath
-    varName <- makeNamePartEditor Config.foreignVarColor name nameSetter WidgetIds.builtinFFIName
-    dot <- BWidgets.makeLabel "." $ Widget.toAnimId myId
-    return $ BWidgets.hbox [moduleName, dot, varName]
-  where
-    makeNamePartEditor color namePartStr mSetter makeWidgetId =
-      BWidgets.setTextColor color .
-      BWidgets.wrapDelegated FocusDelegator.NotDelegating
-      (maybe
-       (BWidgets.makeTextView namePartStr . Widget.toAnimId)
-       (BWidgets.makeWordEdit . Property (return namePartStr)) mSetter) $
-      makeWidgetId myId
-    maybeSetter f = fmap f setFFIName
-    modulePathStr = List.intercalate "." modulePath
-    modulePathSetter = maybeSetter $ \ffiNameSetter ->
-      ffiNameSetter . (`Data.FFIName` name) . splitOn "."
-    nameSetter = maybeSetter $ \ffiNameSetter -> ffiNameSetter . Data.FFIName modulePath
-
-
 make
   :: MonadF m
   => ExpressionEditMaker m
   -> Sugar.DefinitionRef m
   -> TWidget ViewTag m
-make makeExpressionEdit def = do
+make makeExpressionEdit (Sugar.DefinitionRef ident sBody sType) = do
   cursor <- readCursor
-  typeEdit <- makeExpressionEdit $ Sugar.drType def
+  typeEdit <- makeExpressionEdit sType
   colon <- BWidgets.makeLabel ":" $ Widget.toAnimId myId
-  case Sugar.drDef def of
-    Sugar.DefinitionExpression sExpr -> do
-      name <- makeNameEdit (Widget.joinId myId ["typeDeclName"]) ident
-      parts <- makeParts makeExpressionEdit myId ident sExpr
-      let
-        defEdit =
-          Box.toWidget . (Box.atBoxContent . fmap) (addJumps cursor) .
-          BWidgets.hboxK $ parts
-      return $
-        BWidgets.vboxAlign 0
-        [ BWidgets.hboxSpaced [ name, colon, typeEdit ]
-        , defEdit ]
+  name <- makeNameEdit (Widget.joinId myId ["typeDeclName"]) ident
+  parts <- makeParts makeExpressionEdit myId ident sBody
+  let
+    defEdit =
+      Box.toWidget . (Box.atBoxContent . fmap) (addJumps cursor) .
+      BWidgets.hboxK $ parts
+  return $
+    BWidgets.vboxAlign 0
+    [ BWidgets.hboxSpaced [ name, colon, typeEdit ]
+    , defEdit ]
 
-    Sugar.DefinitionBuiltin builtin -> do
-      builtinEdit <-
-        (liftM . Widget.weakerEvents) builtinEventMap $
-        makeBuiltinEdit myId builtin
-      return $ BWidgets.hboxSpaced [ builtinEdit, colon, typeEdit ]
   where
-    replaceWithExpression setter = do
-      newExprI <- DataOps.newHole
-      ~() <- setter $ Data.DefinitionExpression newExprI
-      return $ WidgetIds.fromIRef newExprI
-    builtinEventMap =
-      maybe mempty
-      (Widget.actionEventMapMovesCursor
-       Config.replaceBuiltinWithExpressionKeys
-       "Replace with Expression" .
-       replaceWithExpression) $
-      Sugar.defReplace actions
-    actions = Sugar.drActions def
-    ident = Sugar.defGuid actions
     myId = WidgetIds.fromGuid ident

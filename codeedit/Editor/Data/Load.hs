@@ -14,7 +14,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.Data (Definition(..), DefinitionBody(..), Expression(..), Apply(..), Lambda(..))
+import Editor.Data (Definition(..), Expression(..), Apply(..), Lambda(..))
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Data.Ops as DataOps
@@ -62,8 +62,10 @@ loadExpression exprI = load exprI $ \expr -> case expr of
     (loadExpression funcI (Just (DataOps.applyFuncSetter exprI apply)))
     (loadExpression argI (Just (DataOps.applyArgSetter exprI apply)))
   ExpressionGetVariable x -> return $ ExpressionGetVariable x
-  ExpressionHole -> return ExpressionHole
   ExpressionLiteralInteger x -> return $ ExpressionLiteralInteger x
+  ExpressionHole -> return ExpressionHole
+  ExpressionMagic -> return ExpressionMagic
+  ExpressionBuiltin bi -> return $ ExpressionBuiltin bi
   where
     loadLambda cons lambda@(Lambda argType body) =
       liftM2 Lambda
@@ -79,16 +81,11 @@ loadDefinition
 loadDefinition defI =
   flip (load defI) Nothing $ \def ->
   case def of
-  Definition typeI body -> do
+  Definition typeI bodyI -> do
     loadedType <-
       loadExpression typeI . Just $
-      Transaction.writeIRef defI . flip Definition body
-    liftM (Definition loadedType) $
-      case body of
-      DefinitionMagic -> return DefinitionMagic
-      DefinitionBuiltin ffiName -> return $ DefinitionBuiltin ffiName
-      DefinitionExpression expr -> do
-        loadedExpr <-
-          loadExpression expr . Just $
-          Transaction.writeIRef defI . Definition typeI . DefinitionExpression
-        return $ DefinitionExpression loadedExpr
+      Transaction.writeIRef defI . flip Definition bodyI
+    loadedExpr <-
+      loadExpression bodyI . Just $
+      Transaction.writeIRef defI . Definition typeI
+    return $ Definition loadedType loadedExpr

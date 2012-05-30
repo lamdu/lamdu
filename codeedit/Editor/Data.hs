@@ -1,7 +1,6 @@
 {-# LANGUAGE TemplateHaskell, Rank2Types, StandaloneDeriving, FlexibleInstances, FlexibleContexts, UndecidableInstances #-}
 module Editor.Data
   ( Definition(..), atDefBody, atDefType
-  , DefinitionBody(..), atDefBodyExpr
   , FFIName(..)
   , VariableRef(..), variableRefGuid
   , Lambda(..), atLambdaParamType, atLambdaBody
@@ -26,10 +25,6 @@ data Lambda i = Lambda {
   lambdaBody :: i (Expression i)
   }
 
-instance Binary (i (Expression i)) => Binary (Lambda i) where
-  get = liftA2 Lambda get get
-  put (Lambda x y) = put x >> put y
-
 data Apply i = Apply {
   applyFunc :: i (Expression i),
   applyArg :: i (Expression i)
@@ -39,6 +34,10 @@ data VariableRef
   = ParameterRef Guid -- of the lambda/pi
   | DefinitionRef (IRef (Definition IRef))
 
+instance Binary (i (Expression i)) => Binary (Lambda i) where
+  get = liftA2 Lambda get get
+  put (Lambda x y) = put x >> put y
+
 data Expression i
   = ExpressionLambda (Lambda i)
   | ExpressionPi (Lambda i)
@@ -46,6 +45,8 @@ data Expression i
   | ExpressionGetVariable VariableRef
   | ExpressionHole
   | ExpressionLiteralInteger Integer
+  | ExpressionBuiltin FFIName
+  | ExpressionMagic
 
 instance Binary (i (Expression i)) => Binary (Apply i) where
   get = liftA2 Apply get get
@@ -56,34 +57,10 @@ data FFIName = FFIName
   , fName :: String
   } deriving (Eq, Ord, Read, Show)
 
-data DefinitionBody i
-  = DefinitionExpression { defBodyExpr :: i (Expression i) }
-  | DefinitionBuiltin FFIName
-  | DefinitionMagic
-
-atDefBodyExpr
-  :: (i (Expression i) -> j (Expression j))
-  -> DefinitionBody i -> DefinitionBody j
-atDefBodyExpr f (DefinitionExpression x) = DefinitionExpression $ f x
-atDefBodyExpr _ (DefinitionBuiltin x) = DefinitionBuiltin x
-atDefBodyExpr _ DefinitionMagic = DefinitionMagic
-
 data Definition i = Definition
   { defType :: i (Expression i)
-  , defBody :: DefinitionBody i
+  , defBody :: i (Expression i)
   }
-
-instance Binary (i (Expression i)) => Binary (DefinitionBody i) where
-  get = do
-    tag <- getWord8
-    case tag of
-      0 -> fmap DefinitionExpression get
-      1 -> fmap DefinitionBuiltin get
-      2 -> return DefinitionMagic
-      _ -> fail "Invalid tag in serialization of Definition"
-  put (DefinitionExpression x) = putWord8 0 >> put x
-  put (DefinitionBuiltin x) = putWord8 1 >> put x
-  put DefinitionMagic = putWord8 2
 
 instance Binary (i (Expression i)) => Binary (Definition i) where
   get = liftA2 Definition get get
@@ -113,6 +90,8 @@ instance
       3 -> fmap ExpressionGetVariable    get
       4 -> pure ExpressionHole
       5 -> fmap ExpressionLiteralInteger get
+      6 -> fmap ExpressionBuiltin        get
+      7 -> pure ExpressionMagic
       _ -> fail "Invalid tag in serialization of Expression"
   put (ExpressionLambda x)         = putWord8 0 >> put x
   put (ExpressionPi x)             = putWord8 1 >> put x
@@ -120,6 +99,8 @@ instance
   put (ExpressionGetVariable x)    = putWord8 3 >> put x
   put ExpressionHole               = putWord8 4
   put (ExpressionLiteralInteger x) = putWord8 5 >> put x
+  put (ExpressionBuiltin x)        = putWord8 6 >> put x
+  put ExpressionMagic              = putWord8 7
 
 variableRefGuid :: VariableRef -> Guid
 variableRefGuid (ParameterRef i) = i
