@@ -1,22 +1,24 @@
 {-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TemplateHaskell, GeneralizedNewtypeDeriving #-}
-module Graphics.UI.Bottle.Widget (
-  Widget(..), MEnter, R,
-  EnterResult(..), atEnterResultEvent, atEnterResultRect,
-  Id(..), atId, joinId, subId,
-  SizeDependentWidgetData(..), atSdwdMaybeEnter, atSdwdEventMap, atSdwdFrame, atSdwdFocalArea,
-  EventResult(..), atEAnimIdMapping, atECursor,
-  emptyEventResult, eventResultFromCursor,
-  actionEventMap, actionEventMapMovesCursor,
-  EventHandlers, atContent, atIsFocused,
-  userIO, image, eventMap,
-  takesFocus, atMkSizeDependentWidgetData, atSizeDependentWidgetData,
-  atImageWithSize, atImage, atMaybeEnter, atEventMap, atEvents,
-  backgroundColor, tint, liftView,
-  strongerEvents, weakerEvents,
-  translate, translateSizeDependentWidgetData,
-  translateBy,
-  scale, scaleSizeDependentWidgetData,
-  align) where
+module Graphics.UI.Bottle.Widget
+  ( Widget(..), MEnter, R
+  , EnterResult(..), atEnterResultEvent, atEnterResultRect
+  , Id(..), atId, joinId, subId
+  , SizeDependentWidgetData(..)
+  , atSdwdMaybeEnter, atSdwdEventMap, atSdwdFrame, atSdwdFocalArea
+  , EventResult(..), atEAnimIdMapping, atECursor
+  , emptyEventResult, eventResultFromCursor
+  , actionEventMap, actionEventMapMovesCursor
+  , EventHandlers, atContent, atIsFocused
+  , userIO, image, eventMap
+  , takesFocus, atMkSizeDependentWidgetData, atSizeDependentWidgetData
+  , atImageWithSize, atImage, atMaybeEnter, atEventMap, atEvents
+  , backgroundColor, tint, liftView
+  , strongerEvents, weakerEvents
+  , translate, translateSizeDependentWidgetData
+  , translateBy
+  , scale, scaleSizeDependentWidgetData
+  , align
+  ) where
 
 import Data.Binary (Binary)
 import Data.List(isPrefixOf)
