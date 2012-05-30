@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, FlexibleContexts #-}
 module Editor.Data.Typed
   ( Entity(..), EntityM, EntityT
   , Stored(..), EntityOrigin(..)
@@ -18,6 +18,7 @@ import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.Data (Definition(..), DefinitionBody(..), Expression(..), Apply(..), Lambda(..), VariableRef(..))
+import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
@@ -54,6 +55,11 @@ data Entity m a = Entity
   , entityValue :: a
   }
 
+type EntityM m f = Entity m (f (Entity m))
+type EntityT m f = EntityM (Transaction ViewTag m) f
+
+AtFieldTH.make ''Entity
+
 type TypedEntity m = Entity (Transaction ViewTag m)
 
 entityOriginStored
@@ -86,9 +92,6 @@ writeIRefVia
   -> TypedEntity m b
   -> Maybe (a -> Transaction t m ())
 writeIRefVia f = (fmap . fmap . argument) f writeIRef
-
-type EntityM m f = Entity m (f (Entity m))
-type EntityT m f = EntityM (Transaction ViewTag m) f
 
 subst
   :: Guid
@@ -123,11 +126,12 @@ inferExpression scope (DataLoad.Entity iref mReplace value) =
     inferredFunc <- inferExpression scope func
     inferredArg <- inferExpression scope arg
     let
-      applyType = case entityType inferredFunc of
-        Entity origin _ (ExpressionPi (Lambda _ resultType)) : _ ->
-          return $ subst (entityOriginGuid origin) (entityValue inferredArg) resultType
-        _ -> [] -- TODO: Split to "bad type" and "missing type"
-    return (applyType, ExpressionApply (Apply inferredFunc inferredArg))
+      (applyType, modArg) = case entityType inferredFunc of
+        Entity origin _ (ExpressionPi (Lambda paramType resultType)) : _ ->
+          ( [subst (entityOriginGuid origin) (entityValue inferredArg) resultType]
+          , atEntityType (paramType :) inferredArg)
+        _ -> ([], inferredArg) -- TODO: Split to "bad type" and "missing type"
+    return (applyType, ExpressionApply (Apply inferredFunc modArg))
   ExpressionGetVariable varRef ->
     return
     ( case varRef of
@@ -139,8 +143,7 @@ inferExpression scope (DataLoad.Entity iref mReplace value) =
   ExpressionLiteralInteger int -> return ([], ExpressionLiteralInteger int)
   where
     makeEntity (t, expr) =
-      Entity (OriginStored (Stored iref mReplace))
-      (fmap (uniqify Map.empty (guidToStdGen (IRef.guid iref))) t) expr
+      Entity (OriginStored (Stored iref mReplace)) t expr
     inferLambda (Lambda paramType body) = do
       inferredParamType <- inferExpression scope paramType
       liftM (Lambda inferredParamType) $
@@ -173,6 +176,22 @@ uniqify symbolMap gen (Entity oldOrigin t v) =
     (newGuid, newGen) = Random.random gen
     (genT, genV) = Random.split newGen
 
+uniqifyTypes :: EntityT m Expression -> EntityT m Expression
+uniqifyTypes (Entity origin ts v) =
+  Entity origin (zipWith (uniqify Map.empty) stdGens ts) $
+  case v of
+  ExpressionLambda lambda -> ExpressionLambda $ onLambda lambda
+  ExpressionPi lambda -> ExpressionPi $ onLambda lambda
+  ExpressionApply (Apply func arg) ->
+    ExpressionApply $ Apply (uniqifyTypes func) (uniqifyTypes arg)
+  x -> x
+  where
+    onLambda (Lambda paramType body) =
+      Lambda (uniqifyTypes paramType) (uniqifyTypes body)
+    stdGens =
+      map Random.mkStdGen . Random.randoms . guidToStdGen $
+      entityOriginGuid origin
+
 inferDefinition
   :: Monad m
   => DataLoad.EntityT m Definition
@@ -181,8 +200,10 @@ inferDefinition (DataLoad.Entity iref mReplace value) =
   liftM (Entity (OriginStored (Stored iref mReplace)) []) $
   case value of
   Definition typeI body -> do
-    inferredType <- inferExpression [] typeI
+    inferredType <- liftM uniqifyTypes $ inferExpression [] typeI
     liftM (Definition inferredType) $
       case body of
-      DefinitionExpression expr -> liftM DefinitionExpression $ inferExpression [] expr
-      DefinitionBuiltin ffiName -> return $ DefinitionBuiltin ffiName
+      DefinitionExpression expr ->
+        liftM (DefinitionExpression . uniqifyTypes) $ inferExpression [] expr
+      DefinitionBuiltin ffiName ->
+        return $ DefinitionBuiltin ffiName
