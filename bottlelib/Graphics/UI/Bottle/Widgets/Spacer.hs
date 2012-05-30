@@ -50,8 +50,11 @@ horizLineFrame :: Anim.AnimId -> Vector2 Widget.R -> Anim.Frame
 horizLineFrame animId size@(Vector2 w h) =
   Anim.simpleFrameDownscale animId size . void $ Draw.line (0, h/2) (w, h/2)
 
+-- Fills only the given space (if align is used on this, it will be an empty widget)
 makeHorizLine :: Anim.AnimId -> Sized Anim.Frame
-makeHorizLine animId = Sized (SizeRange.horizontallyExpanding 1 0) (horizLineFrame animId)
+-- TODO: 1 1 is ugly, but 0 0 is not compatible with animations
+-- apparently.. Look into this
+makeHorizLine animId = Sized (fixedSize (Vector2 1 1)) (horizLineFrame animId)
 
 makeHorizLineWidget :: Anim.AnimId -> Widget a
 makeHorizLineWidget = Widget.liftView . makeHorizLine

@@ -5,6 +5,7 @@ import Control.Arrow (first)
 import Control.Monad (liftM)
 import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
+import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (CTransaction, TWidget)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
@@ -24,6 +25,7 @@ import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
@@ -82,11 +84,12 @@ addType
 addType exprId sType widget = do
   let underlineId = WidgetIds.underlineId $ Widget.toAnimId exprId
   typeEdit <- liftM (Widget.scale Config.typeScaleFactor) $ make sType
-  return $
-    BWidgets.vbox
-    [ widget
+  return .
+    Box.toWidget $ Box.make Box.vertical
+    [ Widget.align (Vector2 0.5 0.5) widget
+      -- must not be aligned if space is to be used
     , Spacer.makeHorizLineWidget underlineId
-    , typeEdit
+    , Widget.align (Vector2 0.5 0.5) typeEdit
     ]
 
 expressionEventMap
