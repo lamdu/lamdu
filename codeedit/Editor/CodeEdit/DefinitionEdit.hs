@@ -154,22 +154,25 @@ make
 make makeExpressionEdit def = do
   cursor <- readCursor
   typeEdit <- makeExpressionEdit $ Sugar.drType def
-  name <- makeNameEdit (Widget.joinId myId ["typeDeclName"]) ident
   colon <- BWidgets.makeLabel ":" $ Widget.toAnimId myId
-  defEdit <- case Sugar.drDef def of
-    Sugar.DefinitionExpression sExpr ->
-      liftM
-        ( Box.toWidget . (Box.atBoxContent . fmap) (addJumps cursor) .
-          BWidgets.hboxK
-        ) $
-        makeParts makeExpressionEdit myId ident sExpr
-    Sugar.DefinitionBuiltin builtin ->
-      (liftM . Widget.weakerEvents) builtinEventMap $
-      makeBuiltinEdit myId builtin
-  return $ BWidgets.vboxAlign 0
-    [ BWidgets.hboxSpaced [ name, colon, typeEdit ]
-    , defEdit
-    ]
+  case Sugar.drDef def of
+    Sugar.DefinitionExpression sExpr -> do
+      name <- makeNameEdit (Widget.joinId myId ["typeDeclName"]) ident
+      parts <- makeParts makeExpressionEdit myId ident sExpr
+      let
+        defEdit =
+          Box.toWidget . (Box.atBoxContent . fmap) (addJumps cursor) .
+          BWidgets.hboxK $ parts
+      return $
+        BWidgets.vboxAlign 0
+        [ BWidgets.hboxSpaced [ name, colon, typeEdit ]
+        , defEdit ]
+
+    Sugar.DefinitionBuiltin builtin -> do
+      builtinEdit <-
+        (liftM . Widget.weakerEvents) builtinEventMap $
+        makeBuiltinEdit myId builtin
+      return $ BWidgets.hboxSpaced [ builtinEdit, colon, typeEdit ]
   where
     replaceWithExpression setter = do
       newExprI <- DataOps.newHole
