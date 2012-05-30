@@ -117,8 +117,7 @@ data Expression m
 
 data Builtin m = Builtin
   { biName :: Data.FFIName
-  , biActions :: Maybe (Data.FFIName -> Transaction ViewTag m ())
-  , biType :: ExpressionRef m
+  , biSetFFIName :: Maybe (Data.FFIName -> Transaction ViewTag m ())
   }
 
 data Definition m
@@ -127,12 +126,13 @@ data Definition m
 
 data DefinitionActions m = DefinitionActions
   { defGuid :: Guid
-  , defReplace :: Maybe (Data.Definition IRef -> Transaction ViewTag m ())
+  , defReplace :: Maybe (Data.DefinitionBody IRef -> Transaction ViewTag m ())
   }
 
 data DefinitionRef m = DefinitionRef
   { drActions :: DefinitionActions m
   , drDef :: Definition m
+  , drType :: ExpressionRef m
   }
 
 AtFieldTH.make ''Hole
@@ -419,29 +419,30 @@ convertExpression scope exprI =
     convert (Data.ExpressionHole) = convertHole
     convert (Data.ExpressionLiteralInteger x) = convertLiteralInteger x
 
-convertDefinitionBuiltin
-  :: Monad m
-  => DataTyped.EntityT m Data.Definition
-  -> Data.Builtin (Entity m)
-  -> Transaction ViewTag m (Definition m)
-convertDefinitionBuiltin defI (Data.Builtin ffiName typeI) =
-  liftM (DefinitionBuiltin . Builtin ffiName setFFIName) $ convertExpression [] typeI
-  where
-    setFFIName = builtinFromFFIName >>= (`DataTyped.writeIRefVia` defI)
-    builtinFromFFIName = fmap ((fmap . fmap) Data.DefinitionBuiltin (flip Data.Builtin)) $ DataTyped.entityIRef typeI
-
 convertDefinition
   :: Monad m
   => DataTyped.EntityT m Data.Definition
   -> Transaction ViewTag m (DefinitionRef m)
 convertDefinition defI =
-  liftM mkDefinitionRef $
-    case DataTyped.entityValue defI of
-    Data.DefinitionExpression exprI ->
-      liftM DefinitionExpression $ convertExpression [] exprI
-    Data.DefinitionBuiltin builtin ->
-      convertDefinitionBuiltin defI builtin
+  case DataTyped.entityValue defI of
+  Data.Definition typeI body -> do
+    defType <- convertExpression [] typeI
+    let giveTypeIRefTo = (DataTyped.entityIRef typeI >>=)
+    defBody <- case body of
+      Data.DefinitionExpression exprI ->
+        liftM DefinitionExpression $
+        convertExpression [] exprI
+      Data.DefinitionBuiltin ffiName ->
+        return . DefinitionBuiltin $
+        Builtin ffiName (giveTypeIRefTo setFFIName)
+    let
+      replaceBody typeIRef =
+        DataTyped.writeIRefVia (Data.Definition typeIRef) defI
+      defActions = DefinitionActions dGuid $ giveTypeIRefTo replaceBody
+    return $ DefinitionRef defActions defBody defType
+
   where
     dGuid = DataTyped.entityGuid defI
-    mkDefinitionRef = DefinitionRef $ DefinitionActions dGuid replaceDefinition
-    replaceDefinition = DataTyped.writeIRef defI
+
+    setFFIName typeIRef =
+      (`DataTyped.writeIRefVia` defI) $ Data.Definition typeIRef . Data.DefinitionBuiltin

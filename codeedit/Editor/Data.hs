@@ -1,11 +1,12 @@
 {-# LANGUAGE TemplateHaskell, Rank2Types, StandaloneDeriving, FlexibleInstances, FlexibleContexts, UndecidableInstances #-}
-module Editor.Data (
-  Definition(..),
-  Builtin(..), FFIName(..),
-  VariableRef(..), variableRefGuid,
-  Lambda(..), atLambdaParamType, atLambdaBody,
-  Apply(..), atApplyFunc, atApplyArg,
-  Expression(..))
+module Editor.Data
+  ( Definition(..), DefinitionBody(..)
+  , FFIName(..)
+  , VariableRef(..), variableRefGuid
+  , Lambda(..), atLambdaParamType, atLambdaBody
+  , Apply(..), atApplyFunc, atApplyArg
+  , Expression(..)
+  )
 where
 
 import Control.Applicative (pure, liftA2)
@@ -54,20 +55,16 @@ data FFIName = FFIName
   , fName :: String
   } deriving (Eq, Ord, Read, Show)
 
-data Builtin i = Builtin
-  { biName :: FFIName
-  , biType :: i (Expression i)
+data DefinitionBody i
+  = DefinitionExpression (i (Expression i))
+  | DefinitionBuiltin FFIName
+
+data Definition i = Definition
+  { defType :: i (Expression i)
+  , defBody :: DefinitionBody i
   }
 
-instance Binary (i (Expression i)) => Binary (Builtin i) where
-  get = liftA2 Builtin get get
-  put (Builtin x y) = put x >> put y
-
-data Definition i
-  = DefinitionExpression (i (Expression i))
-  | DefinitionBuiltin (Builtin i)
-
-instance Binary (i (Expression i)) => Binary (Definition i) where
+instance Binary (i (Expression i)) => Binary (DefinitionBody i) where
   get = do
     tag <- getWord8
     case tag of
@@ -76,6 +73,10 @@ instance Binary (i (Expression i)) => Binary (Definition i) where
       _ -> fail "Invalid tag in serialization of Definition"
   put (DefinitionExpression x) = putWord8 0 >> put x
   put (DefinitionBuiltin x) = putWord8 1 >> put x
+
+instance Binary (i (Expression i)) => Binary (Definition i) where
+  get = liftA2 Definition get get
+  put (Definition x y) = put x >> put y
 
 instance Binary VariableRef where
   get = do
@@ -89,8 +90,7 @@ instance Binary VariableRef where
 
 instance
   (Binary (i (Expression i)),
-   Binary (i (Definition i)),
-   Binary (i (Builtin i)))
+   Binary (i (Definition i)))
   => Binary (Expression i)
   where
   get = do

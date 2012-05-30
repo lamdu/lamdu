@@ -107,7 +107,8 @@ makePane = id
 makeDefinition :: Monad m => String -> Transaction ViewTag m (IRef (Data.Definition IRef))
 makeDefinition newName = do
   holeI <- Transaction.newIRef Data.ExpressionHole
-  defI <- Transaction.newIRef $ Data.DefinitionExpression holeI
+  typeI <- Transaction.newIRef Data.ExpressionHole
+  defI <- Transaction.newIRef . Data.Definition typeI $ Data.DefinitionExpression holeI
   Property.pureModify globals (Data.DefinitionRef defI :)
   (Property.set . aNameRef . IRef.guid) defI newName
   return defI
@@ -154,10 +155,9 @@ jumpBack = do
 
 newBuiltin :: Monad m => String -> IRef (Data.Expression IRef) -> Transaction t m Data.VariableRef
 newBuiltin fullyQualifiedName typeI = do
-  builtinIRef <- Transaction.newIRef $ Data.DefinitionBuiltin Data.Builtin
-    { Data.biName = Data.FFIName (init path) name
-    , Data.biType = typeI
-    }
+  builtinIRef <-
+    Transaction.newIRef . Data.Definition typeI . Data.DefinitionBuiltin $
+    Data.FFIName (init path) name
   Property.set (aNameRef (IRef.guid builtinIRef)) name
   return $ Data.DefinitionRef builtinIRef
   where

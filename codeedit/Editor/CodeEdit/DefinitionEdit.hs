@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.DefinitionEdit(make, makeParts, addJumps) where
 
 import Control.Arrow (second)
@@ -123,18 +124,15 @@ makeParts makeExpressionEdit myId ident exprRef = do
 
 makeBuiltinEdit
   :: MonadF m
-  => ExpressionEditMaker m
-  -> Widget.Id
+  => Widget.Id
   -> Sugar.Builtin m
   -> TWidget ViewTag m
-makeBuiltinEdit makeExpressionEdit myId (Sugar.Builtin (Data.FFIName modulePath name) setFFIName sType) =
+makeBuiltinEdit myId (Sugar.Builtin (Data.FFIName modulePath name) setFFIName) =
   assignCursor myId (WidgetIds.builtinFFIName myId) $ do
     moduleName <- makeNamePartEditor Config.foreignModuleColor modulePathStr modulePathSetter WidgetIds.builtinFFIPath
     varName <- makeNamePartEditor Config.foreignVarColor name nameSetter WidgetIds.builtinFFIName
     dot <- BWidgets.makeLabel "." $ Widget.toAnimId myId
-    colon <- BWidgets.makeLabel ":" $ Widget.toAnimId myId
-    typeEdit <- makeExpressionEdit sType
-    return $ BWidgets.hboxSpaced [BWidgets.hbox [moduleName, dot, varName], colon, typeEdit]
+    return $ BWidgets.hbox [moduleName, dot, varName]
   where
     makeNamePartEditor color namePartStr setter makeWidgetId =
       BWidgets.setTextColor color .
@@ -155,7 +153,10 @@ make
   -> TWidget ViewTag m
 make makeExpressionEdit def = do
   cursor <- readCursor
-  case Sugar.drDef def of
+  typeEdit <- makeExpressionEdit $ Sugar.drType def
+  name <- makeNameEdit (Widget.joinId myId ["typeDeclName"]) ident
+  colon <- BWidgets.makeLabel ":" $ Widget.toAnimId myId
+  defEdit <- case Sugar.drDef def of
     Sugar.DefinitionExpression sExpr ->
       liftM
         ( Box.toWidget . (Box.atBoxContent . fmap) (addJumps cursor) .
@@ -164,7 +165,11 @@ make makeExpressionEdit def = do
         makeParts makeExpressionEdit myId ident sExpr
     Sugar.DefinitionBuiltin builtin ->
       (liftM . Widget.weakerEvents) builtinEventMap $
-      makeBuiltinEdit makeExpressionEdit myId builtin
+      makeBuiltinEdit myId builtin
+  return $ BWidgets.vboxAlign 0
+    [ BWidgets.hboxSpaced [ name, colon, typeEdit ]
+    , defEdit
+    ]
   where
     replaceWithExpression setter = do
       newExprI <- DataOps.newHole

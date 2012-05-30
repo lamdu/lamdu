@@ -13,7 +13,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.Data (Definition(..), Builtin(..), Expression(..), Apply(..), Lambda(..))
+import Editor.Data (Definition(..), DefinitionBody(..), Expression(..), Apply(..), Lambda(..))
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Data.Ops as DataOps
@@ -75,15 +75,18 @@ loadDefinition
   :: Monad m
   => IRef (Definition IRef)
   -> Transaction ViewTag m (EntityT m Definition)
-loadDefinition defI = flip (load defI) Nothing $ \def -> case def of
-    DefinitionBuiltin (Builtin ffiName bType) ->
-      liftM (DefinitionBuiltin . Builtin ffiName) .
-      loadExpression bType $ Just
-      (Transaction.writeIRef defI .
-       DefinitionBuiltin .
-       Builtin ffiName)
-    DefinitionExpression expr ->
-      liftM DefinitionExpression .
-      loadExpression expr $ Just
-      (Transaction.writeIRef defI .
-       DefinitionExpression)
+loadDefinition defI =
+  flip (load defI) Nothing $ \def ->
+  case def of
+  Definition typeI body -> do
+    loadedType <-
+      loadExpression typeI . Just $
+      Transaction.writeIRef defI . flip Definition body
+    liftM (Definition loadedType) $
+      case body of
+      DefinitionBuiltin ffiName -> return $ DefinitionBuiltin ffiName
+      DefinitionExpression expr -> do
+        loadedExpr <-
+          loadExpression expr . Just $
+          Transaction.writeIRef defI . Definition typeI . DefinitionExpression
+        return $ DefinitionExpression loadedExpr

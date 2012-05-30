@@ -15,7 +15,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.Data (Definition(..), Expression(..), Apply(..), Lambda(..), Builtin(..), VariableRef(..))
+import Editor.Data (Definition(..), DefinitionBody(..), Expression(..), Apply(..), Lambda(..), VariableRef(..))
 import qualified Data.Binary.Utils as BinaryUtils
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
@@ -150,9 +150,9 @@ inferDefinition
 inferDefinition (DataLoad.Entity iref mReplace value) =
   liftM (Entity (OriginStored (Stored iref mReplace)) Nothing) $
   case value of
-  DefinitionExpression expr ->
-    liftM DefinitionExpression $ inferExpression [] expr
-  DefinitionBuiltin builtin ->
-    liftM DefinitionBuiltin $ inferBuiltin builtin
-  where
-    inferBuiltin (Builtin name t) = liftM (Builtin name) $ inferExpression [] t
+  Definition typeI body -> do
+    inferredType <- inferExpression [] typeI
+    liftM (Definition inferredType) $
+      case body of
+      DefinitionExpression expr -> liftM DefinitionExpression $ inferExpression [] expr
+      DefinitionBuiltin ffiName -> return $ DefinitionBuiltin ffiName
