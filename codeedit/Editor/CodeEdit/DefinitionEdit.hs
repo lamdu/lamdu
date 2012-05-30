@@ -134,12 +134,14 @@ makeBuiltinEdit myId (Sugar.Builtin (Data.FFIName modulePath name) setFFIName) =
     dot <- BWidgets.makeLabel "." $ Widget.toAnimId myId
     return $ BWidgets.hbox [moduleName, dot, varName]
   where
-    makeNamePartEditor color namePartStr setter makeWidgetId =
+    makeNamePartEditor color namePartStr mSetter makeWidgetId =
       BWidgets.setTextColor color .
       BWidgets.wrapDelegated FocusDelegator.NotDelegating
-      (BWidgets.makeWordEdit (Property (return namePartStr) setter)) $
+      (maybe
+       (BWidgets.makeTextView namePartStr . Widget.toAnimId)
+       (BWidgets.makeWordEdit . Property (return namePartStr)) mSetter) $
       makeWidgetId myId
-    maybeSetter f = maybe (const (return ())) f setFFIName
+    maybeSetter f = fmap f setFFIName
     modulePathStr = List.intercalate "." modulePath
     modulePathSetter = maybeSetter $ \ffiNameSetter ->
       ffiNameSetter . (`Data.FFIName` name) . splitOn "."
