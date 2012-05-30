@@ -322,7 +322,10 @@ convertApplyInfixFull (Data.Apply funcFuncI funcArgI) op (Data.Apply funcI argI)
   let
     newLArgRef = addDelete funcI funcFuncI $ addApplyChildParens lArgRef
     newRArgRef = addDelete exprI funcI $ addApplyChildParens rArgRef
-    newOpRef = addDelete funcI funcArgI $ setAddArg exprI exprI opRef
+    newOpRef =
+      (atRType . const) [] .
+      addDelete funcI funcArgI $
+      setAddArg exprI exprI opRef
   mkExpressionRef scope exprI . ExpressionSection DontHaveParens $
     Section (Just newLArgRef) newOpRef (Just newRArgRef)
 
@@ -337,6 +340,7 @@ convertApplyInfixL op (Data.Apply opI argI) scope exprI = do
   opRef <- mkExpressionRef scope opI $ ExpressionGetVariable op
   let
     newOpRef =
+      (atRType . const) [] .
       addDelete exprI argI .
       setAddArg exprI exprI $
       opRef
@@ -361,6 +365,7 @@ convertApplyPrefix (Data.Apply funcI argI) scope exprI = do
       addDelete exprI argI .
       setNextArg .
       addApplyChildParens .
+      (atRType . const) [] .
       (atRExpression . atEApply . atApplyArg) setNextArg .
       (atRExpression . atESection . atSectionOp) setNextArg $
       funcRef
