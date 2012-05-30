@@ -156,7 +156,7 @@ uniqify
   :: Map Guid Guid
   -> Random.StdGen -> EntityT m Expression -> EntityT m Expression
 uniqify symbolMap gen (Entity oldOrigin t v) =
-  Entity (OriginGenerated newGuid) (fmap (u genT) t) $
+  Entity (OriginGenerated newGuid) (uniqifyList symbolMap genT t) $
   case v of
   ExpressionLambda lambda -> ExpressionLambda $ onLambda lambda
   ExpressionPi lambda -> ExpressionPi $ onLambda lambda
@@ -178,7 +178,7 @@ uniqify symbolMap gen (Entity oldOrigin t v) =
 
 uniqifyTypes :: EntityT m Expression -> EntityT m Expression
 uniqifyTypes (Entity origin ts v) =
-  Entity origin (zipWith (uniqify Map.empty) stdGens ts) $
+  Entity origin (uniqifyList Map.empty tGen ts) $
   case v of
   ExpressionLambda lambda -> ExpressionLambda $ onLambda lambda
   ExpressionPi lambda -> ExpressionPi $ onLambda lambda
@@ -186,11 +186,15 @@ uniqifyTypes (Entity origin ts v) =
     ExpressionApply $ Apply (uniqifyTypes func) (uniqifyTypes arg)
   x -> x
   where
+    tGen = guidToStdGen $ entityOriginGuid origin
     onLambda (Lambda paramType body) =
       Lambda (uniqifyTypes paramType) (uniqifyTypes body)
-    stdGens =
-      map Random.mkStdGen . Random.randoms . guidToStdGen $
-      entityOriginGuid origin
+
+uniqifyList
+  :: Map Guid Guid -> Random.StdGen
+  -> [EntityT m Expression] -> [EntityT m Expression]
+uniqifyList symbolMap =
+  zipWith (uniqify symbolMap) . map Random.mkStdGen . Random.randoms
 
 inferDefinition
   :: Monad m
