@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell, TypeFamilies, FlexibleContexts #-}
 module Editor.Data.Typed
-  ( Entity(..), EntityM, EntityT
+  ( Entity(..), atEntityType, atEntityValue
+  , EntityM, EntityT
   , Stored(..), EntityOrigin(..)
   , entityReplace
   , loadInferDefinition

@@ -422,11 +422,11 @@ convertExpression scope exprI =
     convert (Data.ExpressionHole) = convertHole
     convert (Data.ExpressionLiteralInteger x) = convertLiteralInteger x
 
-convertDefinition
+convertDefinitionI
   :: Monad m
   => DataTyped.EntityT m Data.Definition
   -> Transaction ViewTag m (DefinitionRef m)
-convertDefinition defI =
+convertDefinitionI defI =
   case DataTyped.entityValue defI of
   Data.Definition typeI body -> do
     defType <- convertExpression [] typeI
@@ -452,3 +452,18 @@ convertDefinition defI =
 
     setFFIName typeIRef =
       (`DataTyped.writeIRefVia` defI) $ Data.Definition typeIRef . Data.DefinitionBuiltin
+
+convertDefinition
+  :: Monad m
+  => DataTyped.EntityT m Data.Definition
+  -> Transaction ViewTag m (DefinitionRef m)
+convertDefinition =
+  convertDefinitionI .
+  DataTyped.atEntityValue
+  ((Data.atDefBody . Data.atDefBodyExpr) removeTypesOfTypes .
+   Data.atDefType removeTypes)
+  where
+    removeTypesOfTypes =
+      DataTyped.foldValues . DataTyped.atEntityType . map $ removeTypes
+    removeTypes =
+      DataTyped.foldValues . DataTyped.atEntityType . const $ []

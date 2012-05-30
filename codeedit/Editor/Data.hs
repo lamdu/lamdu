@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell, Rank2Types, StandaloneDeriving, FlexibleInstances, FlexibleContexts, UndecidableInstances #-}
 module Editor.Data
-  ( Definition(..), DefinitionBody(..)
+  ( Definition(..), atDefBody, atDefType
+  , DefinitionBody(..), atDefBodyExpr
   , FFIName(..)
   , VariableRef(..), variableRefGuid
   , Lambda(..), atLambdaParamType, atLambdaBody
@@ -56,9 +57,16 @@ data FFIName = FFIName
   } deriving (Eq, Ord, Read, Show)
 
 data DefinitionBody i
-  = DefinitionExpression (i (Expression i))
+  = DefinitionExpression { defBodyExpr :: i (Expression i) }
   | DefinitionBuiltin FFIName
   | DefinitionMagic
+
+atDefBodyExpr
+  :: (i (Expression i) -> j (Expression j))
+  -> DefinitionBody i -> DefinitionBody j
+atDefBodyExpr f (DefinitionExpression x) = DefinitionExpression $ f x
+atDefBodyExpr _ (DefinitionBuiltin x) = DefinitionBuiltin x
+atDefBodyExpr _ DefinitionMagic = DefinitionMagic
 
 data Definition i = Definition
   { defType :: i (Expression i)
@@ -120,3 +128,4 @@ variableRefGuid (DefinitionRef i) = IRef.guid i
 derive makeBinary ''FFIName
 AtFieldTH.make ''Lambda
 AtFieldTH.make ''Apply
+AtFieldTH.make ''Definition
