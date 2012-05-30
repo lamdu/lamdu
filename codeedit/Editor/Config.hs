@@ -67,6 +67,8 @@ previousCursorKeys = [mk E.alt E.KeyLeft]
 focusedHoleBackgroundColor = Draw.Color 1 0 0 0.361
 unfocusedHoleBackgroundColor = Draw.Color 1 0 0 1
 
+unfocusedReadOnlyHoleBackgroundColor = Draw.Color 0.7 0.3 0.3 1
+
 parenHighlightColor = Draw.Color 0.3 0 1 0.25
 
 unnamedStr = "<noname>"

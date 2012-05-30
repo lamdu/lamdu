@@ -288,32 +288,36 @@ makeH
      (Maybe (ResultPicker m), Widget (Transaction ViewTag m))
 makeH hole guid myId = do
   cursor <- readCursor
-  let
-    holeInfo = HoleInfo
-      { hiHoleId = myId
-      , hiSearchTerm = Anchors.aDataRef "searchTerm" "" guid
-      , hiHole = hole
-      }
   searchText <- getP $ hiSearchTerm holeInfo
   let
     snippet
       | null searchText = "  "
       | otherwise = searchText
-  if isJust (Widget.subId myId cursor)
+  if isJust (Widget.subId myId cursor) && canPickResult
     then
-      liftM (
-        first (>>= resultPick) .
-        second (makeBackground Config.focusedHoleBackgroundColor)) $
+      liftM
+      (first (>>= resultPick) .
+       second (makeBackground Config.focusedHoleBackgroundColor)) $
       makeActiveHoleEdit holeInfo
     else
       liftM
       ((,) Nothing .
-       makeBackground Config.unfocusedHoleBackgroundColor) .
+       makeBackground unfocusedColor) .
       BWidgets.makeFocusableTextView snippet $
       WidgetIds.searchTermId myId
   where
+    unfocusedColor
+      | canPickResult = Config.unfocusedHoleBackgroundColor
+      | otherwise = Config.unfocusedReadOnlyHoleBackgroundColor
+    holeInfo = HoleInfo
+      { hiHoleId = myId
+      , hiSearchTerm = Anchors.aDataRef "searchTerm" "" guid
+      , hiHole = hole
+      }
+    canPickResult = isJust $ Sugar.holePickResult hole
     makeBackground =
-      Widget.backgroundColor $ mappend (Widget.toAnimId myId) ["hole background"]
+      Widget.backgroundColor $
+      mappend (Widget.toAnimId myId) ["hole background"]
 
 make
   :: MonadF m
