@@ -1,5 +1,11 @@
-* LiteralInt type
-* Something type of its self -- causes loop/hang
+* More type rules:
+  * Type of value means its kind is Set
+  * Type of type means its kind is Magic
+  * If its apply func its type is Pi of arg-type
+
+* Something type of its self -- causes loop/hang (Probably in
+  Typed.inferExpression. Keep around a Map DefinitionGuid Type?
+
 * Definition Type to propagate inside and to come from inside
 
 * Oops, if type of left-hand-side is hole, then read-only holes at
