@@ -464,6 +464,6 @@ convertDefinition =
    Data.atDefType removeTypes)
   where
     removeTypesOfTypes =
-      DataTyped.foldValues . DataTyped.atEntityType . map $ removeTypes
+      DataTyped.mapTypes . DataTyped.atEntityType . const $ []
     removeTypes =
       DataTyped.foldValues . DataTyped.atEntityType . const $ []

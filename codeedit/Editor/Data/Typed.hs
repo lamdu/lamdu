@@ -7,7 +7,7 @@ module Editor.Data.Typed
   , loadInferDefinition
   , entityGuid, entityIRef
   , writeIRef, writeIRefVia
-  , foldValues
+  , foldValues, mapTypes
   )
 where
 
@@ -237,6 +237,21 @@ foldValues f (Entity origin ts v) =
   where
     onLambda (Lambda paramType body) =
       Lambda (foldValues f paramType) (foldValues f body)
+
+-- | Execute on types in the Expression tree
+mapTypes
+  :: (EntityT m Expression -> EntityT m Expression)
+  -> EntityT m Expression -> EntityT m Expression
+mapTypes f =
+  foldValues g
+  where
+    g (Entity origin ts v) =
+      Entity origin (map f ts) $
+      case v of
+      ExpressionLambda lambda -> ExpressionLambda $ onLambda lambda
+      ExpressionPi lambda -> ExpressionPi $ onLambda lambda
+      x -> x
+    onLambda (Lambda paramType body) = Lambda (f paramType) body
 
 uniqifyList
   :: Map Guid Guid -> Random.StdGen
