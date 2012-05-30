@@ -134,6 +134,8 @@ alphaEq guidMap (Entity origin0 _ value0) (Entity origin1 _ value1) =
   (ExpressionHole, ExpressionHole) -> True
   (ExpressionLiteralInteger int0,
    ExpressionLiteralInteger int1) -> int0 == int1
+  (ExpressionBuiltin name0, ExpressionBuiltin name1) -> name0 == name1
+  (ExpressionMagic, ExpressionMagic) -> True
   _ -> False
   where
     onLambda
