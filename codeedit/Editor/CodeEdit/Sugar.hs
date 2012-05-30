@@ -433,6 +433,9 @@ convertDefinition defI =
       Data.DefinitionBuiltin ffiName ->
         return . DefinitionBuiltin $
         Builtin ffiName (giveTypeIRefTo setFFIName)
+      Data.DefinitionMagic ->
+        return . DefinitionBuiltin $
+        Builtin (Data.FFIName ["Core"] "Magic") Nothing
     let
       replaceBody typeIRef =
         DataTyped.writeIRefVia (Data.Definition typeIRef) defI

@@ -64,8 +64,7 @@ createBuiltins =
     magicI <- lift . fixIRef $ \magicI -> do
       Property.set (A.aNameRef (IRef.guid magicI)) "Magic"
       magicE <- getVar $ Data.DefinitionRef magicI
-      return . Data.Definition magicE . Data.DefinitionBuiltin $
-        Data.FFIName ["Core"] "Magic"
+      return $ Data.Definition magicE Data.DefinitionMagic
 
     let magic = getVar (Data.DefinitionRef magicI)
 

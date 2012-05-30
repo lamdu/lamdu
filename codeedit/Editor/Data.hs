@@ -58,6 +58,7 @@ data FFIName = FFIName
 data DefinitionBody i
   = DefinitionExpression (i (Expression i))
   | DefinitionBuiltin FFIName
+  | DefinitionMagic
 
 data Definition i = Definition
   { defType :: i (Expression i)
@@ -70,9 +71,11 @@ instance Binary (i (Expression i)) => Binary (DefinitionBody i) where
     case tag of
       0 -> fmap DefinitionExpression get
       1 -> fmap DefinitionBuiltin get
+      2 -> return DefinitionMagic
       _ -> fail "Invalid tag in serialization of Definition"
   put (DefinitionExpression x) = putWord8 0 >> put x
   put (DefinitionBuiltin x) = putWord8 1 >> put x
+  put DefinitionMagic = putWord8 2
 
 instance Binary (i (Expression i)) => Binary (Definition i) where
   get = liftA2 Definition get get

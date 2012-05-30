@@ -17,7 +17,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.Data (Definition(..), DefinitionBody(..), Expression(..), Apply(..), Lambda(..), VariableRef(..), FFIName(..))
+import Editor.Data (Definition(..), DefinitionBody(..), Expression(..), Apply(..), Lambda(..), VariableRef(..))
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
 import qualified Data.Map as Map
@@ -138,8 +138,7 @@ inferExpression scope (DataLoad.Entity iref mReplace value) =
       DefinitionRef defI -> do
         Definition dType dBody <- Transaction.readIRef defI
         case dBody of
-          DefinitionBuiltin (FFIName ["Core"] "Magic") ->
-            return []
+          DefinitionMagic -> return []
           _ -> liftM (:[]) . inferExpression [] =<<
                DataLoad.loadExpression dType Nothing
     return (tuype, ExpressionGetVariable varRef)
@@ -211,6 +210,7 @@ inferDefinition (DataLoad.Entity iref mReplace value) =
     inferredType <- liftM uniqifyTypes $ inferExpression [] typeI
     liftM (Definition inferredType) $
       case body of
+      DefinitionMagic -> return DefinitionMagic
       DefinitionExpression expr ->
         liftM (DefinitionExpression . uniqifyTypes) $ inferExpression [] expr
       DefinitionBuiltin ffiName ->

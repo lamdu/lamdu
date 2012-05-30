@@ -85,6 +85,7 @@ loadDefinition defI =
       Transaction.writeIRef defI . flip Definition body
     liftM (Definition loadedType) $
       case body of
+      DefinitionMagic -> return DefinitionMagic
       DefinitionBuiltin ffiName -> return $ DefinitionBuiltin ffiName
       DefinitionExpression expr -> do
         loadedExpr <-
