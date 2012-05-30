@@ -90,6 +90,25 @@ writeIRefVia f = (fmap . fmap . argument) f writeIRef
 type EntityM m f = Entity m (f (Entity m))
 type EntityT m f = EntityM (Transaction ViewTag m) f
 
+subst
+  :: Guid
+  -> Expression (Entity m)
+  -> EntityM m Expression
+  -> EntityM m Expression
+subst guid newExpr (Entity origin mType value) =
+  Entity origin mType $
+  case value of
+  ExpressionLambda lambda -> ExpressionLambda $ onLambda lambda
+  ExpressionPi lambda -> ExpressionPi $ onLambda lambda
+  ExpressionApply (Apply func arg) -> ExpressionApply $ Apply (s func) (s arg)
+  var@(ExpressionGetVariable (ParameterRef guidRef))
+    | guidRef == guid -> newExpr
+    | otherwise -> var
+  x -> x
+  where
+    s = subst guid newExpr
+    onLambda (Lambda paramType body) = Lambda (s paramType) (s body)
+
 inferExpression
   :: Monad m
   => Scope m
@@ -102,13 +121,14 @@ inferExpression scope (DataLoad.Entity iref mReplace value) =
   ExpressionPi lambda -> liftM ((,) Nothing . ExpressionPi) $ inferLambda lambda
   ExpressionApply (Apply func arg) -> do
     inferredFunc <- inferExpression scope func
+    inferredArg <- inferExpression scope arg
     let
       applyType = case entityType inferredFunc of
-        Just (Entity _ _ (ExpressionPi (Lambda _ resultType))) ->
-          Just resultType
+        Just (Entity origin _ (ExpressionPi (Lambda _ resultType))) ->
+          Just $ subst (entityOriginGuid origin) (entityValue inferredArg) resultType
         _ -> Nothing -- TODO: Split to "bad type" and "missing type"
-    liftM ((,) applyType . ExpressionApply . Apply inferredFunc) $
-      inferExpression scope arg
+    return (applyType, ExpressionApply (Apply inferredFunc inferredArg))
+
   ExpressionGetVariable varRef ->
     return
     ( case varRef of
