@@ -62,7 +62,7 @@ annotationSize = 5
 addAnnotations :: Draw.Font -> Anim.Frame -> Anim.Frame
 addAnnotations font = Anim.atFSubImages $ Map.mapWithKey annotateItem
   where
-    annotateItem animId = second $ annotatePosImage animId
+    annotateItem animId = map . second $ annotatePosImage animId
     annotatePosImage animId posImage =
       (`Anim.atPiImage` posImage) . mappend .
       (Vector2.uncurry Draw.scale antiScale %%) .

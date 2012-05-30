@@ -10,8 +10,9 @@ module Graphics.UI.Bottle.Animation(
   joinId, subId)
 where
 
-import Control.Applicative(pure, liftA2)
+import Control.Applicative(Applicative(..), liftA2)
 import Control.Arrow(first, second)
+import Control.Monad(void)
 import Data.List(isPrefixOf)
 import Data.List.Utils(groupOn, sortOn)
 import Data.Map(Map, (!))
@@ -39,7 +40,7 @@ data PositionedImage = PositionedImage {
 AtFieldTH.make ''PositionedImage
 
 newtype Frame = Frame {
-  fSubImages :: Map AnimId (Layer, PositionedImage)
+  fSubImages :: Map AnimId [(Layer, PositionedImage)]
   }
 AtFieldTH.make ''Frame
 
@@ -53,7 +54,7 @@ subId folder path
 
 simpleFrame :: AnimId -> Draw.Image () -> Frame
 simpleFrame animId image =
-  Frame $ Map.singleton animId (0, PositionedImage image (Rect 0 1))
+  Frame $ Map.singleton animId [(0, PositionedImage image (Rect 0 1))]
 
 simpleFrameDownscale :: AnimId -> Vector2 R -> Draw.Image () -> Frame
 simpleFrameDownscale animId size@(Vector2 w h) =
@@ -64,12 +65,23 @@ simpleFrameDownscale animId size@(Vector2 w h) =
 instance Monoid Frame where
   mempty = Frame mempty
   mappend (Frame x) (Frame y) =
-    Frame $
-    Map.unionWithKey (error . ("Attempt to unify same-id sub-images: " ++) . show) x y
+    Frame $ Map.unionWith (++) x y
+
+unitX :: Draw.Image ()
+unitX = void $ mconcat
+  [ Draw.line (0, 0) (1, 1)
+  , Draw.line (1, 0) (0, 1)
+  ]
+
+red :: Draw.Color
+red = Draw.Color 1 0 0 1
 
 draw :: Frame -> Draw.Image ()
-draw = mconcat . map (posImage . snd) . sortOn fst . Map.elems . fSubImages
+draw = mconcat . map (posImages . map snd) . sortOn (fst . head) . Map.elems . fSubImages
   where
+    putXOn (PositionedImage img r) = PositionedImage (mappend (Draw.tint red unitX) img) r
+    posImages [x] = posImage x
+    posImages xs = mconcat $ map (posImage . putXOn) xs
     posImage (PositionedImage img (Rect { rectTopLeft = Vector2 t l, rectSize = Vector2 w h })) =
       Draw.translate (t, l) %% Draw.scale w h %% img
 
@@ -120,7 +132,7 @@ isVirtuallySame (Frame a) (Frame b) =
       liftA2 max
         (fmap abs (Rect.rectTopLeft ra - Rect.rectTopLeft rb))
         (fmap abs (Rect.bottomRight ra - Rect.bottomRight rb))
-    rectMap = Map.map (piRect . snd)
+    rectMap = Map.map (piRect . snd . head)
 
 mapIdentities :: (AnimId -> AnimId) -> Frame -> Frame
 mapIdentities = atFSubImages . Map.mapKeys
@@ -131,14 +143,16 @@ nextFrame movement dest cur
   | otherwise = Just $ makeNextFrame movement dest cur
 
 makeNextFrame :: R -> Frame -> Frame -> Frame
-makeNextFrame movement (Frame dest) (Frame cur) =
-  Frame . Map.mapMaybe id $
+makeNextFrame movement (Frame dests) (Frame curs) =
+  Frame . Map.map (:[]) . Map.mapMaybe id $
   mconcat [
     Map.mapWithKey add $ Map.difference dest cur,
     Map.mapWithKey del $ Map.difference cur dest,
     Map.intersectionWith modify dest cur
   ]
   where
+    dest = Map.map head dests
+    cur = Map.map head curs
     animSpeed = pure movement
     curPrefixMap = prefixRects cur
     destPrefixMap = prefixRects dest
@@ -167,20 +181,20 @@ backgroundColor animId layer color size =
 
 translate :: Vector2 R -> Frame -> Frame
 translate pos =
-  atFSubImages $ (fmap . second) moveImage
+  atFSubImages $ (Map.map . map . second) moveImage
   where
     moveImage (PositionedImage img (Rect tl size)) =
       PositionedImage img (Rect (tl + pos) size)
 
 scale :: Vector2 R -> Frame -> Frame
 scale factor =
-  atFSubImages $ (fmap . second) scaleImage
+  atFSubImages $ (Map.map . map . second) scaleImage
   where
     scaleImage (PositionedImage img (Rect tl size)) =
       PositionedImage img (Rect (tl * factor) (size * factor))
 
 onDepth :: (Int -> Int) -> Frame -> Frame
-onDepth = atFSubImages . fmap . first
+onDepth = atFSubImages . Map.map . map . first
 
 onImages :: (Draw.Image () -> Draw.Image ()) -> Frame -> Frame
-onImages = atFSubImages . Map.map . second . atPiImage
+onImages = atFSubImages . Map.map . map . second . atPiImage
