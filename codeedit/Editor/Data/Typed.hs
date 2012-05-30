@@ -11,12 +11,15 @@ where
 
 import Control.Monad (liftM, (<=<))
 import Data.Binary (Binary)
+import Data.Map (Map)
+import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.Data (Definition(..), DefinitionBody(..), Expression(..), Apply(..), Lambda(..), VariableRef(..))
 import qualified Data.Binary.Utils as BinaryUtils
+import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Transaction as Transaction
@@ -118,7 +121,7 @@ inferExpression scope (DataLoad.Entity iref mReplace value) =
   where
     makeEntity (t, expr) =
       Entity (OriginStored (Stored iref mReplace))
-      (fmap (uniqify (guidToStdGen (IRef.guid iref))) t) expr
+      (fmap (uniqify Map.empty (guidToStdGen (IRef.guid iref))) t) expr
     inferLambda (Lambda paramType body) = do
       inferredParamType <- inferExpression scope paramType
       liftM (Lambda inferredParamType) $
@@ -127,19 +130,27 @@ inferExpression scope (DataLoad.Entity iref mReplace value) =
 guidToStdGen :: Guid -> Random.StdGen
 guidToStdGen = Random.mkStdGen . BinaryUtils.decodeS . Guid.bs
 
-uniqify :: Random.StdGen -> EntityT m Expression -> EntityT m Expression
-uniqify gen (Entity _ t v) =
-  Entity (OriginGenerated newGuid) (fmap (uniqify genT) t) $
+uniqify
+  :: Map Guid Guid
+  -> Random.StdGen -> EntityT m Expression -> EntityT m Expression
+uniqify symbolMap gen (Entity oldOrigin t v) =
+  Entity (OriginGenerated newGuid) (fmap (u genT) t) $
   case v of
   ExpressionLambda lambda -> ExpressionLambda $ onLambda lambda
   ExpressionPi lambda -> ExpressionPi $ onLambda lambda
   ExpressionApply (Apply func arg) ->
-    ExpressionApply $ Apply (uniqify genV0 func) (uniqify genV1 arg)
+    ExpressionApply $ Apply (u genV0 func) (u genV1 arg)
+  ExpressionGetVariable (ParameterRef guid) ->
+    ExpressionGetVariable . ParameterRef . fromMaybe guid $
+    Map.lookup guid symbolMap
   x -> x
   where
+    oldGuid = entityOriginGuid oldOrigin
+    u = uniqify symbolMap
     (genV0, genV1) = Random.split genV
     onLambda (Lambda paramType body) =
-      Lambda (uniqify genV0 paramType) (uniqify genV1 body)
+      Lambda (u genV0 paramType)
+      (uniqify (Map.insert oldGuid newGuid symbolMap) genV1 body)
     (newGuid, newGen) = Random.random gen
     (genT, genV) = Random.split newGen
 
