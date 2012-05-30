@@ -54,7 +54,7 @@ horizLineFrame animId size@(Vector2 w h) =
 makeHorizLine :: Anim.AnimId -> Sized Anim.Frame
 -- TODO: 1 1 is ugly, but 0 0 is not compatible with animations
 -- apparently.. Look into this
-makeHorizLine animId = Sized (fixedSize (Vector2 1 1)) (horizLineFrame animId)
+makeHorizLine animId = Sized (fixedSize (Vector2 0 1)) (horizLineFrame animId)
 
 makeHorizLineWidget :: Anim.AnimId -> Widget a
 makeHorizLineWidget = Widget.liftView . makeHorizLine
