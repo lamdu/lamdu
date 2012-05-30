@@ -72,18 +72,19 @@ make sExpr = do
       Sugar.ExpressionLiteralInteger integer ->
         notAHole $ LiteralEdit.makeInt integer
   (holePicker, exprWidget) <- makeEditor exprId
-  widget <- maybe return (addType exprId) (Sugar.rType sExpr) exprWidget
+  widget <- addType exprId (Sugar.rType sExpr) exprWidget
   eventMap <- expressionEventMap sExpr holePicker
   return $ Widget.weakerEvents eventMap widget
 
 addType
   :: MonadF m
-  => Widget.Id -> Sugar.ExpressionRef m
+  => Widget.Id -> [Sugar.ExpressionRef m]
   -> Widget (Transaction ViewTag m)
   -> TWidget ViewTag m
-addType exprId sType widget = do
-  let underlineId = WidgetIds.underlineId $ Widget.toAnimId exprId
-  typeEdit <- liftM (Widget.scale Config.typeScaleFactor) $ make sType
+addType _ [] widget = return widget
+addType exprId sTypes widget = do
+  typeEdits <- mapM make sTypes
+  let typeEdit = Widget.scale Config.typeScaleFactor $ BWidgets.vbox typeEdits
   return .
     Box.toWidget $ Box.make Box.vertical
     [ Widget.align (Vector2 0.5 0.5) widget
@@ -91,6 +92,8 @@ addType exprId sType widget = do
     , Spacer.makeHorizLineWidget underlineId
     , Widget.align (Vector2 0.5 0.5) typeEdit
     ]
+  where
+    underlineId = WidgetIds.underlineId $ Widget.toAnimId exprId
 
 expressionEventMap
   :: MonadF m

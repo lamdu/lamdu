@@ -47,7 +47,7 @@ data HasParens = HaveParens | DontHaveParens
 
 data ExpressionRef m = ExpressionRef
   { rExpression :: Expression m
-  , rType :: Maybe (ExpressionRef m)
+  , rType :: [ExpressionRef m]
   , rActions :: Actions m
   }
 
@@ -184,9 +184,7 @@ mkExpressionRef
   => Scope -> EntityExpr m
   -> Expression m -> Transaction ViewTag m (ExpressionRef m)
 mkExpressionRef scope exprI expr = do
-  typeRef <-
-    maybe (return Nothing) (liftM Just . convertExpression scope) $
-    DataTyped.entityType exprI
+  typeRef <- mapM (convertExpression scope) $ DataTyped.entityType exprI
   return
     ExpressionRef
     { rExpression = expr

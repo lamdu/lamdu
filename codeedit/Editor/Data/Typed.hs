@@ -12,7 +12,7 @@ where
 import Control.Monad (liftM, (<=<))
 import Data.Binary (Binary)
 import Data.Map (Map)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, maybeToList)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
@@ -50,7 +50,7 @@ entityGuid = entityOriginGuid . entityOrigin
 
 data Entity m a = Entity
   { entityOrigin :: EntityOrigin m a
-  , entityType :: Maybe (Entity m (Expression (Entity m))) -- Inferred type
+  , entityType :: [Entity m (Expression (Entity m))] -- Inferred types
   , entityValue :: a
   }
 
@@ -117,27 +117,26 @@ inferExpression
 inferExpression scope (DataLoad.Entity iref mReplace value) =
   liftM makeEntity $
   case value of
-  ExpressionLambda lambda -> liftM ((,) Nothing . ExpressionLambda) $ inferLambda lambda
-  ExpressionPi lambda -> liftM ((,) Nothing . ExpressionPi) $ inferLambda lambda
+  ExpressionLambda lambda -> liftM ((,) [] . ExpressionLambda) $ inferLambda lambda
+  ExpressionPi lambda -> liftM ((,) [] . ExpressionPi) $ inferLambda lambda
   ExpressionApply (Apply func arg) -> do
     inferredFunc <- inferExpression scope func
     inferredArg <- inferExpression scope arg
     let
       applyType = case entityType inferredFunc of
-        Just (Entity origin _ (ExpressionPi (Lambda _ resultType))) ->
-          Just $ subst (entityOriginGuid origin) (entityValue inferredArg) resultType
-        _ -> Nothing -- TODO: Split to "bad type" and "missing type"
+        Entity origin _ (ExpressionPi (Lambda _ resultType)) : _ ->
+          return $ subst (entityOriginGuid origin) (entityValue inferredArg) resultType
+        _ -> [] -- TODO: Split to "bad type" and "missing type"
     return (applyType, ExpressionApply (Apply inferredFunc inferredArg))
-
   ExpressionGetVariable varRef ->
     return
     ( case varRef of
-      ParameterRef guid -> lookup guid scope
-      DefinitionRef _ -> Nothing
+      ParameterRef guid -> maybeToList $ lookup guid scope
+      DefinitionRef _ -> []
     , ExpressionGetVariable varRef
     )
-  ExpressionHole -> return (Nothing, ExpressionHole)
-  ExpressionLiteralInteger int -> return (Nothing, ExpressionLiteralInteger int)
+  ExpressionHole -> return ([], ExpressionHole)
+  ExpressionLiteralInteger int -> return ([], ExpressionLiteralInteger int)
   where
     makeEntity (t, expr) =
       Entity (OriginStored (Stored iref mReplace))
@@ -179,7 +178,7 @@ inferDefinition
   => DataLoad.EntityT m Definition
   -> Transaction ViewTag m (EntityT m Definition)
 inferDefinition (DataLoad.Entity iref mReplace value) =
-  liftM (Entity (OriginStored (Stored iref mReplace)) Nothing) $
+  liftM (Entity (OriginStored (Stored iref mReplace)) []) $
   case value of
   Definition typeI body -> do
     inferredType <- inferExpression [] typeI
