@@ -3,7 +3,7 @@ module Editor.Data.Typed
   ( Entity(..), EntityM, EntityT
   , Stored(..), EntityOrigin(..)
   , entityReplace
-  , inferDefinition
+  , loadInferDefinition
   , entityGuid, entityIRef
   , writeIRef, writeIRefVia
   )
@@ -17,7 +17,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.Data (Definition(..), DefinitionBody(..), Expression(..), Apply(..), Lambda(..), VariableRef(..))
+import Editor.Data (Definition(..), DefinitionBody(..), Expression(..), Apply(..), Lambda(..), VariableRef(..), FFIName(..))
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
 import qualified Data.Map as Map
@@ -132,13 +132,17 @@ inferExpression scope (DataLoad.Entity iref mReplace value) =
           , atEntityType (paramType :) inferredArg)
         _ -> ([], inferredArg) -- TODO: Split to "bad type" and "missing type"
     return (applyType, ExpressionApply (Apply inferredFunc modArg))
-  ExpressionGetVariable varRef ->
-    return
-    ( case varRef of
-      ParameterRef guid -> maybeToList $ lookup guid scope
-      DefinitionRef _ -> []
-    , ExpressionGetVariable varRef
-    )
+  ExpressionGetVariable varRef -> do
+    tuype <- case varRef of
+      ParameterRef guid -> return . maybeToList $ lookup guid scope
+      DefinitionRef defI -> do
+        Definition dType dBody <- Transaction.readIRef defI
+        case dBody of
+          DefinitionBuiltin (FFIName ["Core"] "Magic") ->
+            return []
+          _ -> liftM (:[]) . inferExpression [] =<<
+               DataLoad.loadExpression dType Nothing
+    return (tuype, ExpressionGetVariable varRef)
   ExpressionHole -> return ([], ExpressionHole)
   ExpressionLiteralInteger int -> return ([], ExpressionLiteralInteger int)
   where
@@ -211,3 +215,8 @@ inferDefinition (DataLoad.Entity iref mReplace value) =
         liftM (DefinitionExpression . uniqifyTypes) $ inferExpression [] expr
       DefinitionBuiltin ffiName ->
         return $ DefinitionBuiltin ffiName
+
+loadInferDefinition
+  :: Monad m => IRef (Definition IRef)
+  -> Transaction ViewTag m (EntityT m Definition)
+loadInferDefinition = inferDefinition <=< DataLoad.loadDefinition

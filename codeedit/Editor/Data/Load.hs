@@ -4,6 +4,7 @@ module Editor.Data.Load
   , EntityT
   , guid
   , loadDefinition
+  , loadExpression
   )
 where
 
