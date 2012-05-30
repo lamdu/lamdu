@@ -11,7 +11,7 @@ module Editor.Data.Typed
   )
 where
 
-import Control.Monad (liftM, (<=<))
+import Control.Monad (liftM, liftM2, (<=<))
 import Data.Binary (Binary)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe, maybeToList)
@@ -23,6 +23,7 @@ import Editor.Anchors (ViewTag)
 import Editor.Data (Definition(..), Expression(..), FFIName(..), Apply(..), Lambda(..), VariableRef(..))
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
+import qualified Data.Functor.Identity as Identity
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
@@ -226,41 +227,47 @@ uniqify symbolMap gen (Entity oldOrigin ts v) =
 
 uniqifyTypes :: EntityT m Expression -> EntityT m Expression
 uniqifyTypes =
-  foldValues f
+  Identity.runIdentity . foldValues f
   where
     f (Entity origin ts val) =
+      return $
       Entity origin (uniqifyList Map.empty (guidToStdGen (entityOriginGuid origin)) ts) val
 
 foldValues
-  :: (EntityT m Expression -> EntityT m Expression)
-  -> EntityT m Expression -> EntityT m Expression
+  :: Monad m
+  => (EntityT f Expression -> m (EntityT f Expression))
+  -> EntityT f Expression -> m (EntityT f Expression)
 foldValues f (Entity origin ts v) =
-  f . Entity origin ts $
+  f . Entity origin ts =<<
   case v of
-  ExpressionLambda lambda -> ExpressionLambda $ onLambda lambda
-  ExpressionPi lambda -> ExpressionPi $ onLambda lambda
+  ExpressionLambda lambda -> liftM ExpressionLambda $ onLambda lambda
+  ExpressionPi lambda -> liftM ExpressionPi $ onLambda lambda
   ExpressionApply (Apply func arg) ->
-    ExpressionApply $ Apply (foldValues f func) (foldValues f arg)
-  x -> x
+    liftM ExpressionApply $ liftM2 Apply (foldValues f func) (foldValues f arg)
+  x -> return x
   where
     onLambda (Lambda paramType body) =
-      Lambda (foldValues f paramType) (foldValues f body)
+      liftM2 Lambda (foldValues f paramType) (foldValues f body)
 
 -- | Execute on types in the Expression tree
 mapTypes
-  :: (EntityT m Expression -> EntityT m Expression)
-  -> EntityT m Expression -> EntityT m Expression
+  :: Monad m
+  => (EntityT f Expression -> m (EntityT f Expression))
+  -> EntityT f Expression -> m (EntityT f Expression)
 mapTypes f =
   foldValues g
   where
-    recurse = f . mapTypes f
-    g (Entity origin ts v) =
-      Entity origin (map recurse ts) $
-      case v of
-      ExpressionLambda lambda -> ExpressionLambda $ onLambda lambda
-      ExpressionPi lambda -> ExpressionPi $ onLambda lambda
-      x -> x
-    onLambda (Lambda paramType body) = Lambda (recurse paramType) body
+    recurse = f <=< mapTypes f
+    g (Entity origin ts v) = do
+      newTs <- mapM recurse ts
+      liftM (Entity origin newTs) $
+        case v of
+        ExpressionLambda lambda -> liftM ExpressionLambda $ onLambda lambda
+        ExpressionPi lambda -> liftM ExpressionPi $ onLambda lambda
+        x -> return x
+    onLambda (Lambda paramType body) = do
+      newParamType <- recurse paramType
+      return $ Lambda newParamType body
 
 uniqifyList
   :: Map Guid Guid -> Random.StdGen

@@ -13,6 +13,7 @@ module Editor.CodeEdit.Sugar
 
 import Control.Applicative((<$>), (<*>))
 import Control.Monad(liftM)
+import Data.Functor.Identity (Identity(..))
 import Data.Store.Guid(Guid)
 import Data.Store.IRef(IRef)
 import Data.Store.Transaction(Transaction)
@@ -459,6 +460,6 @@ convertDefinition =
    Data.atDefType removeTypes)
   where
     removeTypesOfTypes =
-      DataTyped.mapTypes . DataTyped.atEntityType . const $ []
+      runIdentity . DataTyped.mapTypes (Identity . (DataTyped.atEntityType . const) [])
     removeTypes =
-      DataTyped.foldValues . DataTyped.atEntityType . const $ []
+      runIdentity . DataTyped.foldValues (Identity . (DataTyped.atEntityType . const) [])
