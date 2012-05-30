@@ -1,3 +1,12 @@
+* Oops, if type of left-hand-side is hole, then read-only holes at
+   right should NOT have their scope based on their location (They are
+   copies!)
+
+   * In fact, maybe type annotations in general should not have all
+   the surrounding values in scope? Is that too much free dependency?
+
+   * Maybe read-only hole should not show results at all?
+
 * Inferred types
 
 * Widget framework:
