@@ -153,13 +153,22 @@ unify x xs
   | any (alphaEq Map.empty x) xs = xs
   | otherwise = (x : xs)
 
+expand :: Monad m => EntityT m Expression -> Transaction ViewTag m (EntityT m Expression)
+expand =
+  foldValues f
+  where
+    f (Entity _ _ (ExpressionGetVariable (DefinitionRef defI))) = do
+      def <- Transaction.readIRef defI
+      inferExpression [] =<< DataLoad.loadExpression (defBody def) Nothing
+    f x = return x
+
 inferExpression
   :: Monad m
   => Scope m
   -> DataLoad.EntityT m Expression
   -> Transaction ViewTag m (EntityT m Expression)
 inferExpression scope (DataLoad.Entity iref mReplace value) =
-  liftM makeEntity $
+  makeEntity =<<
   case value of
   ExpressionLambda lambda -> liftM ((,) [] . ExpressionLambda) $ inferLambda lambda
   ExpressionPi lambda -> liftM ((,) [] . ExpressionPi) $ inferLambda lambda
@@ -189,8 +198,9 @@ inferExpression scope (DataLoad.Entity iref mReplace value) =
   ExpressionHole -> return ([], ExpressionHole)
   ExpressionMagic -> return ([], ExpressionMagic)
   where
-    makeEntity (t, expr) =
-      Entity (OriginStored (Stored iref mReplace)) t expr
+    makeEntity (ts, expr) = do
+      expandedTs <- mapM expand ts
+      return $ Entity (OriginStored (Stored iref mReplace)) expandedTs expr
     inferLambda (Lambda paramType body) = do
       inferredParamType <- inferExpression scope paramType
       liftM (Lambda inferredParamType) $
