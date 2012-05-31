@@ -7,7 +7,7 @@ module Editor.Anchors
   , view, viewIRef
   , redos, redosIRef
   , currentBranchIRef, currentBranch
-  , globals
+  , globals, builtinsMap
   , newBuiltin
   , Pane
   , dbStore, DBTag
@@ -21,6 +21,7 @@ where
 import Control.Monad (when, liftM)
 import Data.Binary (Binary(..))
 import Data.List.Split (splitOn)
+import Data.Map (Map)
 import Data.Maybe (fromMaybe)
 import Data.Store.Db (Db)
 import Data.Store.Guid(Guid)
@@ -75,6 +76,9 @@ cursorIRef = IRef.anchor "cursor"
 globals :: Monad m => Transaction.Property ViewTag m [Data.VariableRef]
 globals = Transaction.fromIRef $ IRef.anchor "globals"
 
+builtinsMap :: Monad m => Transaction.Property ViewTag m (Map Data.FFIName Data.VariableRef)
+builtinsMap = Transaction.fromIRef $ IRef.anchor "builtinsMap"
+
 -- Cursor is untagged because it is both saved globally and per-revision.
 -- Cursor movement without any revisioned changes are not saved per-revision.
 cursor :: Monad m => Transaction.Property DBTag m Widget.Id
@@ -114,7 +118,6 @@ makeDefinition newName = do
   Property.pureModify globals (Data.DefinitionRef defI :)
   (Property.set . aNameRef . IRef.guid) defI newName
   return defI
-
 
 aDataRef
   :: (Binary b, Monad m) => SBS.ByteString -> b -> Guid

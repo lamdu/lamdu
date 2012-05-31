@@ -4,12 +4,14 @@ import Control.Monad (liftM, unless, (<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Writer (WriterT)
 import Data.Binary (Binary(..))
+import Data.Maybe (catMaybes)
 import Data.Store.Guid(Guid)
 import Data.Store.IRef (IRef)
 import Data.Store.Rev.Change (Key, Value)
 import Data.Store.Transaction (Transaction, Store(..))
 import Editor.Anchors (DBTag)
 import qualified Control.Monad.Trans.Writer as Writer
+import qualified Data.Map as Map
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Rev.Branch as Branch
@@ -123,6 +125,7 @@ initDB store =
       changes <- collectWrites Transaction.newKey $ do
         builtins <- createBuiltins
         Property.set A.globals builtins
+        Property.set A.builtinsMap . Map.fromList . catMaybes =<< mapM builtinsMapEntry builtins
         defI <- A.makeDefinition "foo"
         Property.set A.panes [A.makePane defI]
         Property.set A.preJumps []
@@ -139,3 +142,10 @@ initDB store =
       (defI : _) <- Property.get A.panes
       return $ WidgetIds.fromIRef defI
     return ()
+  where
+    builtinsMapEntry (Data.ParameterRef _) = return Nothing
+    builtinsMapEntry (Data.DefinitionRef defI) = do
+      expr <- Transaction.readIRef . Data.defBody =<< Transaction.readIRef defI
+      return $ case expr of
+        Data.ExpressionBuiltin name -> Just (name, Data.DefinitionRef defI)
+        _ -> Nothing

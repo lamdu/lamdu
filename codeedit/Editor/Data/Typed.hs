@@ -14,7 +14,7 @@ where
 import Control.Monad (liftM, liftM2, (<=<))
 import Data.Binary (Binary)
 import Data.Map (Map)
-import Data.Maybe (catMaybes, fromMaybe, maybeToList)
+import Data.Maybe (fromMaybe, maybeToList)
 import Data.Monoid (mempty)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
@@ -275,8 +275,7 @@ uniqifyList symbolMap =
 
 canonicalize :: Monad m => EntityT m Expression -> Transaction ViewTag m (EntityT m Expression)
 canonicalize expr = do
-  -- Processing DataLoad entites rather than inferred entities to avoid infinite loops
-  globals <- liftM (Map.fromList . catMaybes) . mapM processGlobal =<< Property.get Anchors.globals
+  globals <- Property.get Anchors.builtinsMap
   let
     f entity@(Entity origin ts (ExpressionBuiltin name)) =
       return .
@@ -284,18 +283,6 @@ canonicalize expr = do
       Map.lookup name globals
     f entity = return entity
   foldValues f expr
-  where
-    processGlobal (ParameterRef _) = return Nothing
-    processGlobal varRef@(DefinitionRef defI) = do
-      def <- liftM DataLoad.entityValue $ DataLoad.loadDefinition defI
-      return $
-        case (DataLoad.entityValue . defBody) def of
-        ExpressionBuiltin name ->
-          Just
-          ( name
-          , varRef
-          )
-        _ -> Nothing
 
 inferDefinition
   :: Monad m
