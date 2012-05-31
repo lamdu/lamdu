@@ -143,17 +143,33 @@ expand =
   where
     f (Entity _ _ (ExpressionGetVariable (DefinitionRef defI))) = do
       def <- Transaction.readIRef defI
-      inferExpression [] =<< DataLoad.loadExpression (defBody def) Nothing
+      inferExpression [] . convertExpression =<< DataLoad.loadExpression (defBody def) Nothing
     f (Entity _ _ (ExpressionApply (Apply (Entity lambdaOrigin _ (ExpressionLambda (Lambda _ body))) val))) =
       return $ subst (entityOriginGuid lambdaOrigin) (entityValue val) body
     f x = return x
 
+convertExpression :: DataLoad.EntityT m Expression -> EntityT m Expression
+convertExpression (DataLoad.Entity iref mReplace value) =
+  Entity (OriginStored (Stored iref mReplace)) [] $
+  case value of
+  ExpressionLambda lambda -> ExpressionLambda $ convertLambda lambda
+  ExpressionPi lambda -> ExpressionPi $ convertLambda lambda
+  ExpressionApply (Apply func arg) ->
+    ExpressionApply $ Apply (convertExpression func) (convertExpression arg)
+  ExpressionGetVariable varRef -> ExpressionGetVariable varRef
+  ExpressionLiteralInteger int -> ExpressionLiteralInteger int
+  ExpressionBuiltin bi -> ExpressionBuiltin bi
+  ExpressionHole -> ExpressionHole
+  ExpressionMagic -> ExpressionMagic
+  where
+    convertLambda (Lambda paramType body) = Lambda (convertExpression paramType) (convertExpression body)
+
 inferExpression
   :: Monad m
   => Scope m
-  -> DataLoad.EntityT m Expression
+  -> EntityT m Expression
   -> Transaction ViewTag m (EntityT m Expression)
-inferExpression scope (DataLoad.Entity iref mReplace value) =
+inferExpression scope (Entity origin prevTypes value) =
   makeEntity =<<
   case value of
   ExpressionLambda lambda -> liftM ((,) [] . ExpressionLambda) $ inferLambda lambda
@@ -163,8 +179,8 @@ inferExpression scope (DataLoad.Entity iref mReplace value) =
     inferredArg <- inferExpression scope arg
     let
       (applyType, modArg) = case entityType inferredFunc of
-        Entity origin _ (ExpressionPi (Lambda paramType resultType)) : _ ->
-          ( [subst (entityOriginGuid origin) (entityValue inferredArg) resultType]
+        Entity piOrigin _ (ExpressionPi (Lambda paramType resultType)) : _ ->
+          ( [subst (entityOriginGuid piOrigin) (entityValue inferredArg) resultType]
           , atEntityType (unify paramType) inferredArg)
         _ -> ([], inferredArg) -- TODO: Split to "bad type" and "missing type"
     return (applyType, ExpressionApply (Apply inferredFunc modArg))
@@ -174,23 +190,21 @@ inferExpression scope (DataLoad.Entity iref mReplace value) =
       DefinitionRef defI -> do
         dType <- liftM defType $ Transaction.readIRef defI
         inferredDType <-
-          inferExpression [] =<< DataLoad.loadExpression dType Nothing
+          inferExpression [] . convertExpression =<< DataLoad.loadExpression dType Nothing
         return [inferredDType]
     return (types, ExpressionGetVariable varRef)
   ExpressionLiteralInteger int ->
     let intType = Entity (OriginGenerated zeroGuid) [] $ ExpressionBuiltin (FFIName ["Prelude"] "Integer")
     in return ([intType], ExpressionLiteralInteger int)
-  ExpressionBuiltin bi -> return ([], ExpressionBuiltin bi)
-  ExpressionHole -> return ([], ExpressionHole)
-  ExpressionMagic -> return ([], ExpressionMagic)
+  x -> return ([], x)
   where
     makeEntity (ts, expr) = do
-      expandedTs <- mapM expand ts
-      return $ Entity (OriginStored (Stored iref mReplace)) expandedTs expr
+      expandedTs <- mapM expand $ ts ++ prevTypes
+      return $ Entity origin expandedTs expr
     inferLambda (Lambda paramType body) = do
       inferredParamType <- inferExpression scope paramType
       liftM (Lambda inferredParamType) $
-        inferExpression ((IRef.guid iref, inferredParamType) : scope) body
+        inferExpression ((entityOriginGuid origin, inferredParamType) : scope) body
 
 -- This is replaced in all use cases by uniqify:
 zeroGuid :: Guid
@@ -292,8 +306,8 @@ inferDefinition (DataLoad.Entity iref mReplace value) =
   liftM (Entity (OriginStored (Stored iref mReplace)) []) $
   case value of
   Definition typeI bodyI -> do
-    inferredType <- liftM uniqifyTypes . mapTypes canonicalize =<< inferExpression [] typeI
-    inferredBody <- liftM uniqifyTypes . mapTypes canonicalize =<< inferExpression [] bodyI
+    inferredType <- liftM uniqifyTypes . mapTypes canonicalize =<< inferExpression [] (convertExpression typeI)
+    inferredBody <- liftM uniqifyTypes . mapTypes canonicalize =<< inferExpression [] (convertExpression bodyI)
     return $ Definition inferredType inferredBody
 
 loadInferDefinition
