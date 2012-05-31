@@ -143,7 +143,7 @@ expand =
   where
     f (Entity _ _ (ExpressionGetVariable (DefinitionRef defI))) = do
       def <- Transaction.readIRef defI
-      inferExpression [] . convertExpression =<< DataLoad.loadExpression (defBody def) Nothing
+      liftM convertExpression $ DataLoad.loadExpression (defBody def) Nothing
     f (Entity _ _ (ExpressionApply (Apply (Entity lambdaOrigin _ (ExpressionLambda (Lambda _ body))) val))) =
       return $ subst (entityOriginGuid lambdaOrigin) (entityValue val) body
     f x = return x
@@ -190,7 +190,7 @@ inferExpression scope (Entity origin prevTypes value) =
       DefinitionRef defI -> do
         dType <- liftM defType $ Transaction.readIRef defI
         inferredDType <-
-          inferExpression [] . convertExpression =<< DataLoad.loadExpression dType Nothing
+          liftM convertExpression $ DataLoad.loadExpression dType Nothing
         return [inferredDType]
     return (types, ExpressionGetVariable varRef)
   ExpressionLiteralInteger int ->
@@ -306,7 +306,7 @@ inferDefinition (DataLoad.Entity iref mReplace value) =
   liftM (Entity (OriginStored (Stored iref mReplace)) []) $
   case value of
   Definition typeI bodyI -> do
-    inferredType <- liftM uniqifyTypes . mapTypes canonicalize =<< inferExpression [] (convertExpression typeI)
+    inferredType <- liftM uniqifyTypes . mapTypes canonicalize $ convertExpression typeI
     inferredBody <- liftM uniqifyTypes . mapTypes canonicalize =<< inferExpression [] (convertExpression bodyI)
     return $ Definition inferredType inferredBody
 
