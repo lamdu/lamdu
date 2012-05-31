@@ -34,10 +34,6 @@ data VariableRef
   = ParameterRef Guid -- of the lambda/pi
   | DefinitionRef (IRef (Definition IRef))
 
-instance Binary (i (Expression i)) => Binary (Lambda i) where
-  get = liftA2 Lambda get get
-  put (Lambda x y) = put x >> put y
-
 data Expression i
   = ExpressionLambda (Lambda i)
   | ExpressionPi (Lambda i)
@@ -47,10 +43,6 @@ data Expression i
   | ExpressionLiteralInteger Integer
   | ExpressionBuiltin FFIName
   | ExpressionMagic
-
-instance Binary (i (Expression i)) => Binary (Apply i) where
-  get = liftA2 Apply get get
-  put (Apply x y) = put x >> put y
 
 data FFIName = FFIName
   { fModule :: [String]
@@ -76,31 +68,46 @@ instance Binary VariableRef where
   put (ParameterRef x)  = putWord8 0 >> put x
   put (DefinitionRef x) = putWord8 1 >> put x
 
-instance
-  (Binary (i (Expression i)),
-   Binary (i (Definition i)))
-  => Binary (Expression i)
-  where
+instance Eq VariableRef where
+  ParameterRef x == ParameterRef y = x == y
+  DefinitionRef x == DefinitionRef y = x == y
+  _ == _ = False
+
+instance Binary (i (Expression i)) => Binary (Expression i) where
   get = do
     tag <- getWord8
     case tag of
-      0 -> fmap ExpressionLambda         get
-      1 -> fmap ExpressionPi             get
-      2 -> fmap ExpressionApply          get
-      3 -> fmap ExpressionGetVariable    get
+      0 -> fmap ExpressionLambda $ liftA2 Lambda get get
+      1 -> fmap ExpressionPi     $ liftA2 Lambda get get
+      2 -> fmap ExpressionApply  $ liftA2 Apply get get
+      3 -> fmap ExpressionGetVariable get
       4 -> pure ExpressionHole
       5 -> fmap ExpressionLiteralInteger get
-      6 -> fmap ExpressionBuiltin        get
+      6 -> fmap ExpressionBuiltin get
       7 -> pure ExpressionMagic
       _ -> fail "Invalid tag in serialization of Expression"
-  put (ExpressionLambda x)         = putWord8 0 >> put x
-  put (ExpressionPi x)             = putWord8 1 >> put x
-  put (ExpressionApply x)          = putWord8 2 >> put x
-  put (ExpressionGetVariable x)    = putWord8 3 >> put x
-  put ExpressionHole               = putWord8 4
-  put (ExpressionLiteralInteger x) = putWord8 5 >> put x
-  put (ExpressionBuiltin x)        = putWord8 6 >> put x
-  put ExpressionMagic              = putWord8 7
+  put (ExpressionLambda (Lambda x y)) = putWord8 0 >> put x >> put y
+  put (ExpressionPi (Lambda x y))     = putWord8 1 >> put x >> put y
+  put (ExpressionApply (Apply x y))   = putWord8 2 >> put x >> put y
+  put (ExpressionGetVariable x)       = putWord8 3 >> put x
+  put ExpressionHole                  = putWord8 4
+  put (ExpressionLiteralInteger x)    = putWord8 5 >> put x
+  put (ExpressionBuiltin x)           = putWord8 6 >> put x
+  put ExpressionMagic                 = putWord8 7
+
+instance Eq (i (Expression i)) => Eq (Expression i) where
+  ExpressionLambda (Lambda x0 y0) == ExpressionLambda (Lambda x1 y1) =
+    x0 == x1 && y0 == y1
+  ExpressionPi (Lambda x0 y0) == ExpressionPi (Lambda x1 y1) =
+    x0 == x1 && y0 == y1
+  ExpressionApply (Apply x0 y0) == ExpressionApply (Apply x1 y1) =
+    x0 == x1 && y0 == y1
+  ExpressionGetVariable x == ExpressionGetVariable y = x == y
+  ExpressionHole == ExpressionHole = True
+  ExpressionLiteralInteger x == ExpressionLiteralInteger y = x == y
+  ExpressionBuiltin x == ExpressionBuiltin y = x == y
+  ExpressionMagic == ExpressionMagic = True
+  _ == _ = False
 
 variableRefGuid :: VariableRef -> Guid
 variableRefGuid (ParameterRef i) = i
