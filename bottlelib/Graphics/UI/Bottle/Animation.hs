@@ -1,13 +1,15 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses #-}
 
-module Graphics.UI.Bottle.Animation(
-  R, AnimId,
-  PositionedImage(..), atPiImage, atPiRect,
-  Frame(..), atFSubImages, onImages,
-  draw, nextFrame, mapIdentities, backgroundColor,
-  translate, scale, onDepth,
-  simpleFrame, simpleFrameDownscale,
-  joinId, subId)
+module Graphics.UI.Bottle.Animation
+  ( R, AnimId
+  , PositionedImage(..), atPiImage, atPiRect
+  , Frame(..), atFSubImages, onImages
+  , draw, nextFrame, mapIdentities
+  , unitSquare, backgroundColor
+  , translate, scale, onDepth
+  , simpleFrame, simpleFrameDownscale
+  , joinId, subId
+  , weaker, stronger)
 where
 
 import Control.Applicative(Applicative(..), liftA2)
@@ -20,7 +22,6 @@ import Data.Maybe(isJust)
 import Data.Monoid(Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators(R, (%%))
-import Graphics.DrawingCombinators.Utils(square)
 import Graphics.UI.Bottle.Rect(Rect(..))
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.ByteString as SBS
@@ -28,6 +29,7 @@ import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import qualified Graphics.UI.Bottle.Rect as Rect
 
 type AnimId = [SBS.ByteString]
@@ -62,10 +64,22 @@ simpleFrameDownscale animId size@(Vector2 w h) =
   simpleFrame animId .
   (Draw.scale (1 / w) (1 / h) %%)
 
+inFrame2
+  :: (Map AnimId [(Layer, PositionedImage)]
+      -> Map AnimId [(Layer, PositionedImage)]
+      -> Map AnimId [(Layer, PositionedImage)])
+  -> Frame -> Frame -> Frame
+inFrame2 f (Frame x) (Frame y) = Frame (f x y)
+
+stronger :: Frame -> Frame -> Frame
+stronger = inFrame2 Map.union
+
+weaker :: Frame -> Frame -> Frame
+weaker = flip stronger
+
 instance Monoid Frame where
   mempty = Frame mempty
-  mappend (Frame x) (Frame y) =
-    Frame $ Map.unionWith (++) x y
+  mappend = inFrame2 $ Map.unionWith (++)
 
 unitX :: Draw.Image ()
 unitX = void $ mconcat
@@ -175,9 +189,12 @@ makeNextFrame movement (Frame dests) (Frame curs) =
           (animSpeed * destTopLeft + (1 - animSpeed) * curTopLeft)
           (animSpeed * destSize + (1 - animSpeed) * curSize)))
 
+unitSquare :: AnimId -> Frame
+unitSquare animId = simpleFrame animId DrawUtils.square
+
 backgroundColor :: AnimId -> Layer -> Draw.Color -> Vector2 R -> Frame -> Frame
 backgroundColor animId layer color size =
-  flip mappend . onDepth (+layer) . scale size . simpleFrame animId $ Draw.tint color square
+  flip mappend . onDepth (+layer) . scale size . onImages (Draw.tint color) $ unitSquare animId
 
 translate :: Vector2 R -> Frame -> Frame
 translate pos =

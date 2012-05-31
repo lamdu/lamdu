@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.Grid(
   Grid, KGrid(..), make, makeKeyed, unkey, getElement,
   atGridMCursor,
@@ -15,7 +15,7 @@ import Control.Monad (msum, (>=>))
 import Data.List (foldl', transpose, find, minimumBy)
 import Data.List.Utils (index, enumerate2d)
 import Data.Maybe (isJust, fromMaybe, mapMaybe, catMaybes)
-import Data.Monoid (mempty, mconcat)
+import Data.Monoid (Monoid(..))
 import Data.Ord (comparing)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators(R)
@@ -40,56 +40,74 @@ length2d xs = Vector2 (foldl' max 0 . map length $ xs) (length xs)
 capCursor :: Vector2 Int -> Vector2 Int -> Vector2 Int
 capCursor size = fmap (max 0) . liftA2 min (fmap (subtract 1) size)
 
-mkNavEventmap :: [[Widget.MEnter f]] -> Size -> Rect -> Cursor -> (Widget.EventHandlers f, Widget.EventHandlers f)
-mkNavEventmap mEnterChildren widgetSize curRect cursor@(Vector2 cursorX cursorY) = (weakMap, strongMap)
+data NavDests f = NavDests
+  { leftOfCursor
+  , aboveCursor
+  , rightOfCursor
+  , belowCursor
+  , topCursor
+  , leftMostCursor
+  , bottomCursor
+  , rightMostCursor :: Maybe (Widget.EnterResult f)
+  }
+
+mkNavDests :: Size -> Rect -> [[Widget.MEnter f]] -> Cursor -> NavDests f
+mkNavDests widgetSize selfRect mEnterss cursor@(Vector2 cursorX cursorY) = NavDests
+  { leftOfCursor    = giveSelf . reverse $ take cursorX curRow
+  , aboveCursor     = giveSelf . reverse $ take cursorY curColumn
+  , rightOfCursor   = giveSelf $ drop (cursorX+1) curRow
+  , belowCursor     = giveSelf $ drop (cursorY+1) curColumn
+
+  , topCursor       = giveEdge (Vector2 Nothing (Just 0)) $ take (min 1 cursorY) curColumn
+  , leftMostCursor  = giveEdge (Vector2 (Just 0) Nothing) $ take (min 1 cursorX) curRow
+  , bottomCursor    = giveEdge (Vector2 Nothing (Just 1)) . take 1 . reverse $ drop (cursorY+1) curColumn
+  , rightMostCursor = giveEdge (Vector2 (Just 1) Nothing) . take 1 . reverse $ drop (cursorX+1) curRow
+  }
+  where
+    curRow = fromMaybe [] $ index cappedY mEnterss
+    curColumn = fromMaybe [] $ index cappedX (transpose mEnterss)
+    Vector2 cappedX cappedY = capCursor size cursor
+    size = length2d mEnterss
+
+    give dir = fmap ($ Direction.RelativePos dir) . msum
+    giveSelf = give selfRect
+    giveEdge edge = give Rect
+      { Rect.rectTopLeft =
+          liftA2 fromMaybe (Rect.rectTopLeft selfRect) $
+          liftA2 (fmap . (*)) widgetSize edge
+      , Rect.rectSize =
+          liftA2 fromMaybe (Rect.rectSize selfRect) $
+          (fmap . fmap) (const 0) edge
+      }
+
+
+mkNavEventmap
+  :: NavDests f -> (Widget.EventHandlers f, Widget.EventHandlers f)
+mkNavEventmap navDests = (weakMap, strongMap)
   where
     weakMap = mconcat . catMaybes $ [
       movement "left"       (k GLFW.KeyLeft)  leftOfCursor,
       movement "right"      (k GLFW.KeyRight) rightOfCursor,
       movement "up"         (k GLFW.KeyUp)    aboveCursor,
       movement "down"       (k GLFW.KeyDown)  belowCursor,
-      edgeMovement (Vector2 (Just 0) Nothing) "more left" (k GLFW.KeyHome) leftMostCursor,
-      edgeMovement (Vector2 (Just 1) Nothing) "more right" (k GLFW.KeyEnd) rightMostCursor
+      movement "more left"  (k GLFW.KeyHome)  leftMostCursor,
+      movement "more right" (k GLFW.KeyEnd)   rightMostCursor
       ]
     strongMap = mconcat . catMaybes $ [
-      edgeMovement (Vector2 Nothing (Just 0)) "top"       (k GLFW.KeyPageup)   topCursor,
-      edgeMovement (Vector2 Nothing (Just 1)) "bottom"    (k GLFW.KeyPagedown) bottomCursor,
-      edgeMovement (Vector2 (Just 0) Nothing) "leftmost"  (ctrlK GLFW.KeyHome) leftMostCursor,
-      edgeMovement (Vector2 (Just 1) Nothing) "rightmost" (ctrlK GLFW.KeyEnd)  rightMostCursor
+      movement "top"       (k GLFW.KeyPageup)   topCursor,
+      movement "bottom"    (k GLFW.KeyPagedown) bottomCursor,
+      movement "leftmost"  (ctrlK GLFW.KeyHome) leftMostCursor,
+      movement "rightmost" (ctrlK GLFW.KeyEnd)  rightMostCursor
       ]
     k = EventMap.KeyEventType EventMap.noMods
     ctrlK = EventMap.KeyEventType EventMap.ctrl
-    size = length2d mEnterChildren
-    Vector2 cappedX cappedY = capCursor size cursor
-    movementHelper rect dirName event =
+    movement dirName event =
       fmap
         (EventMap.fromEventType
          event
          ("Move " ++ dirName) .
-         Widget.enterResultEvent .
-         ($ Direction.RelativePos rect)) .
-      msum
-    movement = movementHelper curRect
-    edgeMovement edge =
-      movementHelper
-      Rect {
-        Rect.rectTopLeft =
-          liftA2 fromMaybe (Rect.rectTopLeft curRect) $
-            liftA2 (fmap . (*)) widgetSize edge,
-        Rect.rectSize =
-          liftA2 fromMaybe (Rect.rectSize curRect) $
-            (fmap . fmap) (const 0) edge
-        }
-    leftOfCursor    = reverse $ take cursorX curRow
-    aboveCursor     = reverse $ take cursorY curColumn
-    rightOfCursor   = drop (cursorX+1) curRow
-    belowCursor     = drop (cursorY+1) curColumn
-    topCursor       = take (min 1 cursorY) curColumn
-    leftMostCursor  = take (min 1 cursorX) curRow
-    bottomCursor    = take 1 . reverse $ drop (cursorY+1) curColumn
-    rightMostCursor = take 1 . reverse $ drop (cursorX+1) curRow
-    curRow          = fromMaybe [] $ index cappedY mEnterChildren
-    curColumn       = fromMaybe [] $ index cappedX (transpose mEnterChildren)
+         Widget.enterResultEvent) .
+      ($ navDests)
 
 getCursor :: [[Widget k]] -> Maybe Cursor
 getCursor =
@@ -97,9 +115,9 @@ getCursor =
   where
     cursorOf ((row, column), _) = Vector2 column row
 
-data GridElement f = GridElement {
-  gridElementRect :: Rect,
-  gridElementSdwd :: SizeDependentWidgetData f
+data GridElement f = GridElement
+  { gridElementRect :: Rect
+  , gridElementSdwd :: SizeDependentWidgetData f
   }
 
 data KGrid key f = KGrid {
@@ -141,41 +159,43 @@ helper ::
   (Size -> [[Widget.MEnter f]] -> Widget.MEnter f) ->
   KGrid key f -> Widget f
 helper combineEnters (KGrid mCursor sChildren) =
-  Widget {
-    isFocused = isJust mCursor,
-    content =
+  Widget
+    { isFocused = isJust mCursor
+    , content =
       Sized.atFromSize combineSizeDependentWidgetDatas $
       (fmap . map . map) snd sChildren
     }
   where
-    combineSizeDependentWidgetDatas mkSizeDependentWidgetDatass size =
+    combineSizeDependentWidgetDatas mkGridElementss size =
       maybe unselectedSizeDependentWidgetData makeSizeDependentWidgetData mCursor
       where
-        userIOss = (map . map) gridElementSdwd $ mkSizeDependentWidgetDatass size
-        frame = mconcat . map sdwdFrame $ concat userIOss
-        mEnterss = (map . map) sdwdMaybeEnter userIOss
+        sdwdss = (map . map) gridElementSdwd $ mkGridElementss size
+        framess = (map . map) sdwdFrame sdwdss
+        mEnterss = (map . map) sdwdMaybeEnter sdwdss
+        frame = mconcat $ concat framess
         mEnter = combineEnters size mEnterss
 
-        unselectedSizeDependentWidgetData = SizeDependentWidgetData {
-          sdwdFrame = frame,
-          sdwdMaybeEnter = mEnter,
-          sdwdEventMap = mempty,
-          sdwdFocalArea = Rect 0 size
+        unselectedSizeDependentWidgetData = SizeDependentWidgetData
+          { sdwdFrame = frame
+          , sdwdMaybeEnter = mEnter
+          , sdwdEventMap = mempty
+          , sdwdFocalArea = Rect 0 size
           }
 
-        makeSizeDependentWidgetData cursor@(Vector2 x y) = SizeDependentWidgetData {
-          sdwdFrame = frame,
-          sdwdMaybeEnter = Nothing, -- We're already entered
-          sdwdEventMap = makeEventMap cursor userIO,
-          sdwdFocalArea = sdwdFocalArea userIO
+        makeSizeDependentWidgetData cursor@(Vector2 x y) = SizeDependentWidgetData
+          { sdwdFrame = frame
+          , sdwdMaybeEnter = Nothing -- We're already entered
+          , sdwdEventMap = makeEventMap sdwd navDests
+          , sdwdFocalArea = sdwdFocalArea sdwd
           }
           where
-            userIO = userIOss !! y !! x
+            navDests = mkNavDests size (sdwdFocalArea sdwd) mEnterss cursor
+            sdwd = sdwdss !! y !! x
 
-        makeEventMap cursor userIO =
-          mconcat [strongMap, sdwdEventMap userIO, weakMap]
+        makeEventMap sdwd navDests =
+          mconcat [strongMap, sdwdEventMap sdwd, weakMap]
           where
-            (weakMap, strongMap) = mkNavEventmap mEnterss size (sdwdFocalArea userIO) cursor
+            (weakMap, strongMap) = mkNavEventmap navDests
 
 toWidget :: KGrid key f -> Widget f
 toWidget =
@@ -191,7 +211,8 @@ toWidget =
         search childEnters = Just $ byDirection childEnters
         byDirection childEnters dir =
           (snd . minimumOn fst .
-           (map . scoredEnter dir . Direction.fold (Rect 0 0) id) dir) childEnters dir
+           (map . scoredEnter dir .
+            Direction.fold (Rect 0 0) id) dir) childEnters dir
 
         scoredEnter dir entryRect (i, childEnter) =
           ((rectScore size entryRect i . Widget.enterResultRect . childEnter) dir, childEnter)
@@ -200,7 +221,7 @@ toWidget =
 
         tupleToVector2 (x, y) = Vector2 x y
 
-rectScore:: Vector2 R -> Rect -> Vector2 Int -> Rect -> ([Int], R)
+rectScore :: Vector2 R -> Rect -> Vector2 Int -> Rect -> ([Int], R)
 rectScore size entryRect (Vector2 row col) enterResultRect =
   (borderScore, Rect.distance entryRect enterResultRect)
     where
