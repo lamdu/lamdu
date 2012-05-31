@@ -460,6 +460,6 @@ convertDefinition =
    Data.atDefType removeTypes)
   where
     removeTypesOfTypes =
-      runIdentity . DataTyped.mapTypes (Identity . (DataTyped.atEntityType . const) [])
+      runIdentity . DataTyped.mapTypes (Identity . removeTypes)
     removeTypes =
       runIdentity . DataTyped.foldValues (Identity . (DataTyped.atEntityType . const) [])
