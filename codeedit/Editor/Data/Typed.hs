@@ -14,7 +14,7 @@ where
 import Control.Monad (liftM, liftM2, (<=<))
 import Data.Binary (Binary)
 import Data.Map (Map)
-import Data.Maybe (fromMaybe, maybeToList)
+import Data.Maybe (catMaybes, fromMaybe, maybeToList)
 import Data.Monoid (mempty)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
@@ -27,7 +27,9 @@ import qualified Data.Functor.Identity as Identity
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
+import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
+import qualified Editor.Anchors as Anchors
 import qualified Editor.Data.Load as DataLoad
 import qualified System.Random as Random
 
@@ -271,6 +273,30 @@ uniqifyList
 uniqifyList symbolMap =
   zipWith (uniqify symbolMap) . map Random.mkStdGen . Random.randoms
 
+canonicalize :: Monad m => EntityT m Expression -> Transaction ViewTag m (EntityT m Expression)
+canonicalize expr = do
+  -- Processing DataLoad entites rather than inferred entities to avoid infinite loops
+  globals <- liftM (Map.fromList . catMaybes) . mapM processGlobal =<< Property.get Anchors.globals
+  let
+    f entity@(Entity origin ts (ExpressionBuiltin name)) =
+      return .
+      maybe entity (Entity origin ts . ExpressionGetVariable) $
+      Map.lookup name globals
+    f entity = return entity
+  foldValues f expr
+  where
+    processGlobal (ParameterRef _) = return Nothing
+    processGlobal varRef@(DefinitionRef defI) = do
+      def <- liftM DataLoad.entityValue $ DataLoad.loadDefinition defI
+      return $
+        case (DataLoad.entityValue . defBody) def of
+        ExpressionBuiltin name ->
+          Just
+          ( name
+          , varRef
+          )
+        _ -> Nothing
+
 inferDefinition
   :: Monad m
   => DataLoad.EntityT m Definition
@@ -279,8 +305,8 @@ inferDefinition (DataLoad.Entity iref mReplace value) =
   liftM (Entity (OriginStored (Stored iref mReplace)) []) $
   case value of
   Definition typeI bodyI -> do
-    inferredType <- liftM uniqifyTypes $ inferExpression [] typeI
-    inferredBody <- liftM uniqifyTypes $ inferExpression [] bodyI
+    inferredType <- liftM uniqifyTypes . mapTypes canonicalize =<< inferExpression [] typeI
+    inferredBody <- liftM uniqifyTypes . mapTypes canonicalize =<< inferExpression [] bodyI
     return $ Definition inferredType inferredBody
 
 loadInferDefinition
