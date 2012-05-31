@@ -40,9 +40,15 @@ data Stored m a = Stored
   , esReplace :: Maybe (IRef a -> m ())
   }
 
+-- TODO: explain..
+-- How could we compare the esReplace field?
+instance Eq (Stored m a) where
+  Stored x _ == Stored y _ = x == y
+
 data EntityOrigin m a
   = OriginGenerated Guid
   | OriginStored (Stored m (ReplaceArg_1_0 IRef a))
+  deriving Eq
 
 type Scope m = [(Guid, EntityT m Expression)]
 
@@ -57,7 +63,7 @@ data Entity m a = Entity
   { entityOrigin :: EntityOrigin m a
   , entityType :: [Entity m (Expression (Entity m))] -- Inferred types
   , entityValue :: a
-  }
+  } deriving Eq
 
 type EntityM m f = Entity m (f (Entity m))
 type EntityT m f = EntityM (Transaction ViewTag m) f
@@ -116,41 +122,17 @@ subst guid newExpr (Entity origin mType value) =
     s = subst guid newExpr
     onLambda (Lambda paramType body) = Lambda (s paramType) (s body)
 
-alphaEq :: Map Guid Guid -> EntityT m Expression -> EntityT m Expression -> Bool
-alphaEq guidMap (Entity origin0 _ value0) (Entity origin1 _ value1) =
-  case (value0, value1) of
-  (ExpressionLambda lambda0,
-   ExpressionLambda lambda1) -> onLambda lambda0 lambda1
-  (ExpressionPi lambda0,
-   ExpressionPi lambda1) -> onLambda lambda0 lambda1
-  (ExpressionApply (Apply func0 arg0),
-   ExpressionApply (Apply func1 arg1)) ->
-    alphaEq guidMap func0 func1 &&
-    alphaEq guidMap arg0 arg1
-  (ExpressionGetVariable (DefinitionRef iref0),
-   ExpressionGetVariable (DefinitionRef iref1)) -> iref0 == iref1
-  (ExpressionGetVariable (ParameterRef guidRef0),
-   ExpressionGetVariable (ParameterRef guidRef1)) -> fromMaybe guidRef0 (Map.lookup guidRef0 guidMap) == guidRef1
-  (ExpressionHole, ExpressionHole) -> True
-  (ExpressionLiteralInteger int0,
-   ExpressionLiteralInteger int1) -> int0 == int1
-  (ExpressionBuiltin name0, ExpressionBuiltin name1) -> name0 == name1
-  (ExpressionMagic, ExpressionMagic) -> True
-  _ -> False
+alphaEq :: EntityT m Expression -> EntityT m Expression -> Bool
+alphaEq e0 e1 =
+  uniqify Map.empty gen e0 == uniqify Map.empty gen e1
   where
-    onLambda
-      (Lambda paramType0 body0)
-      (Lambda paramType1 body1)
-      = alphaEq guidMap paramType0 paramType1 &&
-        alphaEq (Map.insert guid0 guid1 guidMap) body0 body1
-    guid0 = entityOriginGuid origin0
-    guid1 = entityOriginGuid origin1
+    gen = Random.mkStdGen 0
 
 unify
   :: EntityT m Expression
   -> [EntityT m Expression] -> [EntityT m Expression]
 unify x xs
-  | any (alphaEq Map.empty x) xs = xs
+  | any (alphaEq x) xs = xs
   | otherwise = (x : xs)
 
 expand :: Monad m => EntityT m Expression -> Transaction ViewTag m (EntityT m Expression)
