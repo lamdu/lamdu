@@ -160,6 +160,8 @@ expand =
     f (Entity _ _ (ExpressionGetVariable (DefinitionRef defI))) = do
       def <- Transaction.readIRef defI
       inferExpression [] =<< DataLoad.loadExpression (defBody def) Nothing
+    f (Entity _ _ (ExpressionApply (Apply (Entity lambdaOrigin _ (ExpressionLambda (Lambda _ body))) val))) =
+      return $ subst (entityOriginGuid lambdaOrigin) (entityValue val) body
     f x = return x
 
 inferExpression
