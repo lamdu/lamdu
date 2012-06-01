@@ -92,7 +92,7 @@ foldKeys = [k '-']
 unfoldKeys = foldKeys
 
 helpTextSize = 10
-baseTextSize = 30
+baseTextSize = 25
 
 typeScaleFactor = 0.6
 squareParensScaleFactor = 0.96
