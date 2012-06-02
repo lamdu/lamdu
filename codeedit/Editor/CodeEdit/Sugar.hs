@@ -229,11 +229,13 @@ addDeleteAction
   :: Monad m
   => EntityExpr m -> EntityExpr m -> EntityExpr m
   -> Actions m -> Actions m
-addDeleteAction deletedI exprI replacerI =
+addDeleteAction deletedI exprI replacerI actions =
   (atMCut . const)    mCutter .
-  (atMDelete . const) mDeleter
+  (atMDelete . const) mDeleter $
+  actions
   where
-    mCutter = mkCutter <$> DataTyped.entityIRef deletedI <*> mDeleter
+    -- if no replacer, no cutter either:
+    mCutter = const (mkCutter <$> DataTyped.entityIRef deletedI <*> mDeleter) =<< mReplace actions
     mDeleter = mkDeleter <$> DataTyped.entityReplace exprI <*> DataTyped.entityIRef replacerI
     mkDeleter replacer val = do
       ~() <- replacer val
