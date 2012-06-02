@@ -234,8 +234,9 @@ addDeleteAction deletedI exprI replacerI actions =
   (atMDelete . const) mDeleter $
   actions
   where
-    -- if no replacer, no cutter either:
-    mCutter = const (mkCutter <$> DataTyped.entityIRef deletedI <*> mDeleter) =<< mReplace actions
+    mCutter = do
+      _ <- mReplace actions -- mReplace as a guard here: if no replacer, no cutter either
+      mkCutter <$> DataTyped.entityIRef deletedI <*> mDeleter
     mDeleter = mkDeleter <$> DataTyped.entityReplace exprI <*> DataTyped.entityIRef replacerI
     mkDeleter replacer val = do
       ~() <- replacer val
