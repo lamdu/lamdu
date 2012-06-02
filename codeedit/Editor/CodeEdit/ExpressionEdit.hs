@@ -136,21 +136,25 @@ expressionEventMap sExpr holePicker =
        liftM WidgetIds.fromGuid)
     delete =
       -- Replace has the keys of Delete if delete is not available:
-      maybeMempty (Sugar.mDelete actions) $
-      Widget.actionEventMapMovesCursor Config.delKeys "Delete" .
-      liftM WidgetIds.fromGuid
+      mkEventMap Sugar.mDelete
+      Config.delKeys "Delete" WidgetIds.fromGuid
     replace =
-      maybeMempty (Sugar.mReplace actions) $
-      Widget.actionEventMapMovesCursor (Config.replaceKeys ++ Config.delKeys) "Replace" .
-      liftM (FocusDelegator.delegatingId . WidgetIds.fromGuid)
+      mkEventMap Sugar.mReplace
+      (Config.replaceKeys ++ Config.delKeys) "Replace" diveGuid
     lambdaWrap =
-      maybeMempty (Sugar.lambdaWrap actions) $
-      Widget.actionEventMapMovesCursor Config.lambdaWrapKeys "Lambda wrap" .
-      liftM (FocusDelegator.delegatingId . WidgetIds.paramId)
+      mkEventMap Sugar.lambdaWrap
+      Config.lambdaWrapKeys "Lambda wrap" diveParam
     addWhereItem =
-      maybeMempty (Sugar.addWhereItem actions) $
-      Widget.actionEventMapMovesCursor Config.addWhereItemKeys "Add where item" .
-      liftM (FocusDelegator.delegatingId . WidgetIds.paramId)
+      mkEventMap Sugar.addWhereItem
+      Config.addWhereItemKeys "Add where item" diveParam
+
+    diveGuid = FocusDelegator.delegatingId . WidgetIds.fromGuid
+    diveParam = FocusDelegator.delegatingId . WidgetIds.paramId
+    mkEventMap getAct keys doc f =
+      maybeMempty (getAct actions) $
+      Widget.actionEventMapMovesCursor keys doc .
+      liftM f
+
 
     withPickResultFirst keys doc action=
       ifHole pickResultFirst .
