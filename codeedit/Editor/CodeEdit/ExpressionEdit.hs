@@ -106,40 +106,52 @@ expressionEventMap
   -> CTransaction ViewTag m (EventHandlers (Transaction ViewTag m))
 expressionEventMap sExpr holePicker =
   return . mconcat $
-    [ maybeMempty (Sugar.giveAsArg actions) $
+    [ giveAsArg
+    , callWithArg
+    , addArg
+    , delete
+    , replace
+    , lambdaWrap
+    , addWhereItem
+    ]
+  where
+    giveAsArg =
+      maybeMempty (Sugar.giveAsArg actions) $
       moveUnlessOnHole .
       Widget.actionEventMapMovesCursor
       Config.giveAsArgumentKeys "Give as argument" .
       liftM WidgetIds.fromGuid
-    , maybeMempty (Sugar.callWithArg actions) $
+    callWithArg =
+      maybeMempty (Sugar.callWithArg actions) $
       moveUnlessOnHole .
       Widget.actionEventMapMovesCursor
       Config.callWithArgumentKeys "Call with argument" .
       liftM WidgetIds.fromGuid
-
-    -- Move to next arg overrides add arg's keys.
-    , maybeMempty (Sugar.mNextArg actions) moveToIfHole
-    , maybeMempty (Sugar.addNextArg actions) $
-      withPickResultFirst Config.addNextArgumentKeys "Add arg" .
-      liftM WidgetIds.fromGuid
-
-    -- Replace has the keys of Delete if delete is not available.
-    , maybeMempty (Sugar.mDelete actions) $
+    addArg =
+      maybeMempty (Sugar.mNextArg actions) moveToIfHole
+      -- Move to next arg overrides add arg's keys.
+      `mappend`
+      maybeMempty (Sugar.addNextArg actions)
+      (withPickResultFirst Config.addNextArgumentKeys "Add arg" .
+       liftM WidgetIds.fromGuid)
+    delete =
+      -- Replace has the keys of Delete if delete is not available:
+      maybeMempty (Sugar.mDelete actions) $
       Widget.actionEventMapMovesCursor Config.delKeys "Delete" .
       liftM WidgetIds.fromGuid
-
-    , maybeMempty (Sugar.mReplace actions) $
+    replace =
+      maybeMempty (Sugar.mReplace actions) $
       Widget.actionEventMapMovesCursor (Config.replaceKeys ++ Config.delKeys) "Replace" .
       liftM (FocusDelegator.delegatingId . WidgetIds.fromGuid)
-
-    , maybeMempty (Sugar.lambdaWrap actions) $
+    lambdaWrap =
+      maybeMempty (Sugar.lambdaWrap actions) $
       Widget.actionEventMapMovesCursor Config.lambdaWrapKeys "Lambda wrap" .
       liftM (FocusDelegator.delegatingId . WidgetIds.paramId)
-    , maybeMempty (Sugar.addWhereItem actions) $
+    addWhereItem =
+      maybeMempty (Sugar.addWhereItem actions) $
       Widget.actionEventMapMovesCursor Config.addWhereItemKeys "Add where item" .
       liftM (FocusDelegator.delegatingId . WidgetIds.paramId)
-    ]
-  where
+
     withPickResultFirst keys doc action=
       ifHole pickResultFirst .
       Widget.actionEventMapMovesCursor
