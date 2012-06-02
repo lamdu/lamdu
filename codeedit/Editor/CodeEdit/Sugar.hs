@@ -398,8 +398,9 @@ convertGetVariable varRef scope exprI = do
     ExpressionGetVariable varRef
   if Infix.isInfixName name
     then
-      mkExpressionRef scope exprI $
-      ExpressionSection HaveParens (Section Nothing getVarExpr Nothing Nothing)
+      mkExpressionRef scope exprI .
+      ExpressionSection HaveParens $
+      Section Nothing ((atRType . const) [] getVarExpr) Nothing Nothing
     else return getVarExpr
 
 convertHole :: Monad m => Convertor m
