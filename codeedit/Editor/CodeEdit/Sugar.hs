@@ -56,8 +56,8 @@ data ExpressionRef m = ExpressionRef
 
 data WhereItem m = WhereItem
   { wiActions :: Actions m
-  -- TODO: Show type as well ?
   , wiValue :: ExpressionRef m
+  , wiType :: ExpressionRef m
   }
 
 data Where m = Where
@@ -268,18 +268,20 @@ convertWhere
   -> EntityExpr m
   -> Data.Lambda (Entity m)
   -> Convertor m
-convertWhere valueRef lambdaI (Data.Lambda _ bodyI) scope applyI = do
+convertWhere valueRef lambdaI (Data.Lambda typeI bodyI) scope applyI = do
+  typeRef <- convertScopedExpression scope typeI
   sBody <- convertScopedExpression (Data.ParameterRef (DataTyped.entityGuid lambdaI) : scope) bodyI
-  mkExpressionRef scope applyI . ExpressionWhere DontHaveParens . atWWheres (item :) $
+  mkExpressionRef scope applyI . ExpressionWhere DontHaveParens . atWWheres (item typeRef :) $
     case rExpression sBody of
       ExpressionWhere _ x -> x
       _ -> Where [] sBody
   where
-    item = WhereItem
+    item typeRef = WhereItem
       { wiActions =
           addDeleteAction applyI applyI bodyI $
           makeActionsGuid (DataTyped.entityGuid lambdaI) applyI
       , wiValue = valueRef
+      , wiType = typeRef
       }
 
 addApplyChildParens :: ExpressionRef m -> ExpressionRef m

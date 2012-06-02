@@ -4,6 +4,7 @@ module Editor.CodeEdit.ExpressionEdit.WhereEdit(make, makeWithBody) where
 import Control.Arrow (second)
 import Control.Monad (liftM)
 import Data.Monoid (mempty)
+import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (TWidget, atTextSizeColor, assignCursor, readCursor)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
@@ -28,7 +29,7 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
     BWidgets.makeLabel "where" $ Widget.toAnimId myId
   let
     makeWhereItemsGrid =
-      liftM (Grid.toWidget . addJumps . Grid.makeKeyed) $
+      liftM (Grid.toWidget . addJumps . Grid.makeKeyed . concat) $
       mapM makeWhereItemEdits items
     addJumps = (Grid.atGridContent . fmap . map) (DefinitionEdit.addJumps cursor)
   whereEdits <- makeWhereItemsGrid
@@ -37,10 +38,13 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
     , Widget.scale Config.whereScaleFactor whereEdits
     ]
   where
+    onAllWidgets item =
+      Widget.weakerEvents (whereItemDeleteEventMap item) .
+      Widget.align (Vector2 0 0.5)
     makeWhereItemEdits item =
-      (liftM . map . second . Widget.weakerEvents) (whereItemDeleteEventMap item) $
+      (liftM . map . map . second . onAllWidgets) item $
       DefinitionEdit.makeParts makeExpressionEdit
-      (paramId item) (guid item) (Sugar.wiValue item)
+      (paramId item) (guid item) (Sugar.wiValue item) (Sugar.wiType item)
     paramId = WidgetIds.paramId . guid
     guid = Sugar.guid . Sugar.wiActions
     whereItemDeleteEventMap whereItem =

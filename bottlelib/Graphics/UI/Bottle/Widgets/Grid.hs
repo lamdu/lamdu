@@ -146,9 +146,9 @@ makeKeyed children = KGrid {
 unkey :: [[Widget f]] -> [[((), Widget f)]]
 unkey = (map . map) ((,) ())
 
-getElement :: (Show key, Eq key) => key -> [[(key, GridElement f)]] -> GridElement f
+getElement :: (Show key, Eq key) => key -> [(key, GridElement f)] -> GridElement f
 getElement key =
-  fromMaybe (error errorMsg) . lookup key . concat
+  fromMaybe (error errorMsg) . lookup key
   where
     errorMsg = "getElement: " ++ show key ++ " not found in Grid!"
 
