@@ -93,6 +93,7 @@ data Section m = Section
   { sectionLArg :: Maybe (ExpressionRef m)
   , sectionOp :: ExpressionRef m -- Always a GetVariable
   , sectionRArg :: Maybe (ExpressionRef m)
+  , sectionInnerApplyGuid :: Maybe Guid
   }
 
 type Scope = [Data.VariableRef]
@@ -336,8 +337,8 @@ convertApplyInfixFull (Data.Apply funcFuncI funcArgI) op (Data.Apply funcI argI)
       (atRType . const) [] .
       addDelete funcFuncI funcI funcArgI $
       setAddArg exprI exprI opRef
-  mkExpressionRef scope exprI . ExpressionSection DontHaveParens $
-    Section (Just newLArgRef) newOpRef (Just newRArgRef)
+  mkExpressionRef scope exprI . ExpressionSection DontHaveParens .
+    Section (Just newLArgRef) newOpRef (Just newRArgRef) . Just $ DataTyped.entityGuid funcI
 
 convertApplyInfixL
   :: Monad m
@@ -355,7 +356,7 @@ convertApplyInfixL op (Data.Apply opI argI) scope exprI = do
       setAddArg exprI exprI $
       opRef
   mkExpressionRef scope exprI . ExpressionSection HaveParens $
-    Section (Just newArgRef) newOpRef Nothing
+    Section (Just newArgRef) newOpRef Nothing Nothing
 
 convertApplyPrefix
   :: Monad m
@@ -396,7 +397,7 @@ convertGetVariable varRef scope exprI = do
   if Infix.isInfixName name
     then
       mkExpressionRef scope exprI $
-      ExpressionSection HaveParens (Section Nothing getVarExpr Nothing)
+      ExpressionSection HaveParens (Section Nothing getVarExpr Nothing Nothing)
     else return getVarExpr
 
 convertHole :: Monad m => Convertor m

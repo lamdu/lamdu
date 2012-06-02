@@ -1,6 +1,3 @@
-* when deleting right-arg of section such that the new right arg
-   becomes a section, cursor becomes invalid
-
 * Show type of where param
 
 * Show func types if they're problematic
