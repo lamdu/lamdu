@@ -50,6 +50,14 @@ data HoleInfo m = HoleInfo
   , hiHole :: Sugar.Hole m
   }
 
+pasteEventMap :: MonadF m => Sugar.Hole m -> Widget.EventHandlers (Transaction ViewTag m)
+pasteEventMap =
+  maybe mempty
+  (Widget.actionEventMapMovesCursor
+   Config.pasteKeys "Paste" .
+   liftM WidgetIds.fromGuid) .
+  Sugar.holePaste
+
 resultPickEventMap
   :: Result m -> Widget.EventHandlers (Transaction ViewTag m)
 resultPickEventMap =
@@ -327,4 +335,7 @@ make
   -> CTransaction ViewTag m
      (Maybe (ResultPicker m), Widget (Transaction ViewTag m))
 make hole =
-  BWidgets.wrapDelegatedWithKeys FocusDelegator.defaultKeys FocusDelegator.Delegating second . makeH hole
+  (fmap . liftM . second . Widget.weakerEvents) (pasteEventMap hole) .
+  BWidgets.wrapDelegatedWithKeys
+  FocusDelegator.defaultKeys FocusDelegator.Delegating second .
+  makeH hole

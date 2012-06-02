@@ -113,6 +113,7 @@ expressionEventMap sExpr holePicker =
     , replace
     , lambdaWrap
     , addWhereItem
+    , cut
     ]
   where
     giveAsArg =
@@ -138,6 +139,9 @@ expressionEventMap sExpr holePicker =
       -- Replace has the keys of Delete if delete is not available:
       mkEventMap Sugar.mDelete
       Config.delKeys "Delete" WidgetIds.fromGuid
+    cut =
+      mkEventMap Sugar.mCut 
+      Config.cutKeys "Cut" WidgetIds.fromGuid
     replace =
       mkEventMap Sugar.mReplace
       (Config.replaceKeys ++ Config.delKeys) "Replace" diveGuid

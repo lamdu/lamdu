@@ -2,6 +2,7 @@
 
 module Editor.Anchors
   ( panes, panesIRef
+  , clipboards, clipboardsIRef
   , cursor, cursorIRef, preCursor, postCursor, preJumps
   , branches, branchesIRef
   , view, viewIRef
@@ -56,6 +57,12 @@ panesIRef = IRef.anchor "panes"
 
 panes :: Monad m => Transaction.Property ViewTag m [Pane]
 panes = Transaction.fromIRef panesIRef
+
+clipboardsIRef :: IRef [IRef (Data.Expression IRef)]
+clipboardsIRef = IRef.anchor "clipboard"
+
+clipboards :: Monad m => Transaction.Property ViewTag m [IRef (Data.Expression IRef)]
+clipboards = Transaction.fromIRef clipboardsIRef
 
 branchesIRef :: IRef [(IRef String, Branch)]
 branchesIRef = IRef.anchor "branches"

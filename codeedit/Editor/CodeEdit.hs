@@ -1,10 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit
-  ( makePanesEdit
-  , SugarPane, makeSugarPanes )
+  ( makeCodeEdit
+  , SugarCache(..), makeSugarCache )
 where
 
-import Control.Monad (liftM)
+import Control.Monad (liftM, (<=<))
 import Data.List.Utils(enumerate, insertAt, removeAt)
 import Data.Maybe (fromMaybe)
 import Data.Monoid(Monoid(..))
@@ -13,6 +13,7 @@ import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (CTransaction, TWidget, assignCursor, readCursor, transaction)
 import Editor.MonadF (MonadF)
+import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
@@ -24,6 +25,7 @@ import qualified Editor.Config as Config
 import qualified Editor.Data.Typed as DataTyped
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
 -- This is not in Sugar because Sugar is for code
 data SugarPane m = SugarPane
@@ -31,6 +33,11 @@ data SugarPane m = SugarPane
   , mDelPane :: Maybe (Transaction ViewTag m Guid)
   , mMovePaneDown :: Maybe (Transaction ViewTag m ())
   , mMovePaneUp :: Maybe (Transaction ViewTag m ())
+  }
+
+data SugarCache m = SugarCache
+  { scPanes :: [SugarPane m]
+  , scClipboards :: [Sugar.ExpressionRef m]
   }
 
 makeNewDefinitionAction :: Monad m => CTransaction ViewTag m (Transaction ViewTag m Widget.Id)
@@ -41,6 +48,16 @@ makeNewDefinitionAction = do
     Anchors.newPane newDefI
     Anchors.savePreJumpPosition curCursor
     return $ WidgetIds.fromIRef newDefI
+
+makeSugarCache :: Monad m => Transaction ViewTag m (SugarCache m)
+makeSugarCache = do
+  sugarPanes <- makeSugarPanes
+  clipboards <- Property.get Anchors.clipboards
+  clipboardsExprs <- mapM (Sugar.convertExpression <=< DataTyped.loadInferExpression) clipboards
+  return SugarCache
+    { scPanes = sugarPanes
+    , scClipboards = clipboardsExprs
+    }
 
 makeSugarPanes :: Monad m => Transaction ViewTag m [SugarPane m]
 makeSugarPanes = do
@@ -74,6 +91,28 @@ makeSugarPanes = do
         , mMovePaneUp = mkMMovePaneUp i
         }
   mapM convertPane $ enumerate panes
+
+makeClipboardsEdit :: MonadF m => [Sugar.ExpressionRef m] -> TWidget ViewTag m
+makeClipboardsEdit clipboards = do
+  clipboardsEdits <- mapM ExpressionEdit.make clipboards
+  clipboardTitle <-
+    if null clipboardsEdits
+    then return BWidgets.empty
+    else BWidgets.makeTextView "Clipboards:" ["clipboards title"]
+  return .
+    BWidgets.vbox . (clipboardTitle :) . concat $ zipWith addLineBefore [0..] clipboardsEdits
+  where
+    addLineBefore i clipboardEdit =
+      [ Spacer.makeHorizLineWidget ["clipboard line:", BS8.pack (show (i :: Int))]
+      , clipboardEdit
+      ]
+
+
+makeCodeEdit :: MonadF m => SugarCache m -> TWidget ViewTag m
+makeCodeEdit cache = do
+  panesEdit <- makePanesEdit $ scPanes cache
+  clipboardsEdit <- makeClipboardsEdit $ scClipboards cache
+  return $ BWidgets.vbox [panesEdit, clipboardsEdit]
 
 makePanesEdit :: MonadF m => [SugarPane m] -> TWidget ViewTag m
 makePanesEdit panes = do

@@ -99,3 +99,6 @@ squareParensScaleFactor = 0.96
 
 foreignModuleColor = Draw.Color 1 0.3 0.35 1
 foreignVarColor = Draw.Color 1 0.65 0.25 1
+
+cutKeys = [ctrl 'x']
+pasteKeys = [ctrl 'v']

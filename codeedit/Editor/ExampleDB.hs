@@ -124,6 +124,7 @@ initDB store =
       masterNameIRef <- Transaction.newIRef "master"
       changes <- collectWrites Transaction.newKey $ do
         builtins <- createBuiltins
+        Property.set A.clipboards []
         Property.set A.globals builtins
         Property.set A.builtinsMap . Map.fromList . catMaybes =<< mapM builtinsMapEntry builtins
         defI <- A.makeDefinition "foo"

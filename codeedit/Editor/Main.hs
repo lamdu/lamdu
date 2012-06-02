@@ -99,36 +99,36 @@ runDbStore :: Draw.Font -> Transaction.Store DBTag IO -> IO a
 runDbStore font store = do
   ExampleDB.initDB store
   addHelp <- EventMapDoc.makeToggledHelpAdder Config.overlayDocKeys helpStyle
-  initPanes <- Transaction.run store $ do
+  initCache <- Transaction.run store $ do
     view <- Property.get Anchors.view
-    Transaction.run (Anchors.viewStore view) CodeEdit.makeSugarPanes
-  panesCacheRef <- newIORef initPanes
+    Transaction.run (Anchors.viewStore view) CodeEdit.makeSugarCache
+  cacheRef <- newIORef initCache
 
   let
     -- TODO: Move this logic to some more common place?
     makeWidget = do
-      panes <- readIORef panesCacheRef
+      cache <- readIORef cacheRef
       (invalidCursor, widget) <- widgetDownTransaction $ do
         cursor <- Property.get Anchors.cursor
-        candidateWidget <- fromCursor panes cursor
+        candidateWidget <- fromCursor cache cursor
         (invalidCursor, widget) <-
           if Widget.isFocused candidateWidget
           then return (Nothing, candidateWidget)
           else do
-            finalWidget <- fromCursor panes rootCursor
+            finalWidget <- fromCursor cache rootCursor
             Property.set Anchors.cursor rootCursor
             return (Just cursor, finalWidget)
         unless (Widget.isFocused widget) $
           fail "Root cursor did not match"
         return (invalidCursor, Widget.atEvents attachCursor widget)
       maybe (return ()) (putStrLn . ("Invalid cursor: " ++) . show) invalidCursor
-      return $ Widget.atEvents savePanes widget
+      return $ Widget.atEvents saveCache widget
 
-    savePanes (Compose.O action) = do
-      (mPanesCache, eventResult) <- action
-      case mPanesCache of
+    saveCache (Compose.O action) = do
+      (mCacheCache, eventResult) <- action
+      case mCacheCache of
         Nothing -> return ()
-        Just newPanes -> writeIORef panesCacheRef newPanes
+        Just newCache -> writeIORef cacheRef newCache
       return eventResult
 
   mainLoopDebugMode font makeWidget addHelp
@@ -153,16 +153,16 @@ runDbStore font store = do
       TextEdit.sEmptyString = "<empty>"
       }
 
-    fromCursor panes cursor =
+    fromCursor cache cursor =
       runCTransaction cursor style .
-      BranchGUI.makeRootWidget CodeEdit.makeSugarPanes $
-      CodeEdit.makePanesEdit panes
+      BranchGUI.makeRootWidget CodeEdit.makeSugarCache $
+      CodeEdit.makeCodeEdit cache
 
     widgetDownTransaction =
       Transaction.run store .
       (liftM . second . Widget.atEvents . Compose.inO) (Transaction.run store)
 
     attachCursor (Compose.O action) = Compose.O $ do
-      (panes, eventResult) <- action
+      (cache, eventResult) <- action
       maybe (return ()) (Property.set Anchors.cursor) $ Widget.eCursor eventResult
-      return (panes, eventResult)
+      return (cache, eventResult)

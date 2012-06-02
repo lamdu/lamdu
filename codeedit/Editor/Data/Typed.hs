@@ -5,6 +5,7 @@ module Editor.Data.Typed
   , Stored(..), EntityOrigin(..)
   , entityReplace
   , loadInferDefinition
+  , loadInferExpression
   , entityGuid, entityIRef
   , writeIRef, writeIRefVia
   , foldValues, mapTypes
@@ -307,10 +308,20 @@ inferDefinition (DataLoad.Entity iref mReplace value) =
   case value of
   Definition typeI bodyI -> do
     inferredType <- liftM uniqifyTypes . mapTypes canonicalize $ convertExpression typeI
-    inferredBody <- liftM uniqifyTypes . mapTypes canonicalize =<< inferExpression [] (convertExpression bodyI)
+    inferredBody <- inferRootExpression bodyI
     return $ Definition inferredType inferredBody
+
+inferRootExpression
+  :: Monad m => DataLoad.EntityT m Expression
+  -> Transaction ViewTag m (EntityT m Expression)
+inferRootExpression exprI = liftM uniqifyTypes . mapTypes canonicalize =<< inferExpression [] (convertExpression exprI)
 
 loadInferDefinition
   :: Monad m => IRef (Definition IRef)
   -> Transaction ViewTag m (EntityT m Definition)
 loadInferDefinition = inferDefinition <=< DataLoad.loadDefinition
+
+loadInferExpression
+  :: Monad m => IRef (Expression IRef)
+  -> Transaction ViewTag m (EntityT m Expression)
+loadInferExpression = inferRootExpression <=< flip DataLoad.loadExpression Nothing
