@@ -112,7 +112,11 @@ makeCodeEdit :: MonadF m => SugarCache m -> TWidget ViewTag m
 makeCodeEdit cache = do
   panesEdit <- makePanesEdit $ scPanes cache
   clipboardsEdit <- makeClipboardsEdit $ scClipboards cache
-  return $ BWidgets.vbox [panesEdit, clipboardsEdit]
+  return $
+    BWidgets.vbox
+    [ panesEdit
+    , Widget.liftView Spacer.makeVerticalExpanding
+    , clipboardsEdit]
 
 makePanesEdit :: MonadF m => [SugarPane m] -> TWidget ViewTag m
 makePanesEdit panes = do
