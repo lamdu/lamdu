@@ -1,3 +1,5 @@
+* Show type of where param
+
 * More type rules:
   * If its apply func its type is Pi
     * Any types of arg become types of Pi's paramType
