@@ -76,7 +76,7 @@ jumpToLhsKeys = [k '`']
 jumpToRhsKeys = [k '=', noMods E.KeyPadEqual]
 
 lambdaWrapKeys = [k '\\']
-addWhereItemKeys = [k 'w']
+addWhereItemKeys = [alt 'w']
 
 lambdaColor = Draw.Color 1 0.2 0.2 1
 lambdaTextSize = 30
