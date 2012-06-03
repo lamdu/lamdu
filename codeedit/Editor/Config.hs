@@ -76,7 +76,7 @@ jumpToLhsKeys = [k '`']
 jumpToRhsKeys = [k '=', noMods E.KeyPadEqual]
 
 lambdaWrapKeys = [k '\\']
-addWhereItemKeys = [alt 'w']
+addWhereItemKeys = [k 'w']
 
 lambdaColor = Draw.Color 1 0.2 0.2 1
 lambdaTextSize = 30
@@ -100,5 +100,5 @@ squareParensScaleFactor = 0.96
 foreignModuleColor = Draw.Color 1 0.3 0.35 1
 foreignVarColor = Draw.Color 1 0.65 0.25 1
 
-cutKeys = [ctrl 'x']
-pasteKeys = [ctrl 'v']
+cutKeys = [ctrl 'x', k 'x']
+pasteKeys = [ctrl 'v', k 'v']
