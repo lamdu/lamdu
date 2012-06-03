@@ -88,7 +88,19 @@ filterByKey p = Map.filterWithKey (const . p)
 
 overrides :: EventMap a -> EventMap a -> EventMap a
 EventMap x `overrides` EventMap y =
-  EventMap $ x `mappend` filterByKey (`Map.notMember` x) y
+  EventMap $ x `mappend` fy
+  where
+    fy
+      | CharEventType `Map.member` x = filterByKey (not . alsoCharEvent) y
+      | otherwise = y
+    alsoCharEvent
+      (KeyEventType
+       (ModState
+        { modCtrl = False
+        , modAlt = False
+        , modShift = _
+        }) (CharKey _)) = True
+    alsoCharEvent _ = False
 
 instance Monoid (EventMap a) where
   mempty = EventMap mempty
