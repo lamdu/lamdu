@@ -322,6 +322,12 @@ setAddArg :: Monad m => EntityExpr m -> EntityExpr m -> ExpressionRef m -> Expre
 setAddArg whereI exprI =
   atRActions . atAddNextArg . const $ addArg whereI exprI
 
+removeUninterestingType :: ExpressionRef m -> ExpressionRef m
+removeUninterestingType = atRType f
+  where
+    f [_] = []
+    f xs = xs
+
 convertApplyInfixFull
   :: Monad m
   => Data.Apply (Entity m)
@@ -336,7 +342,7 @@ convertApplyInfixFull (Data.Apply funcFuncI funcArgI) op (Data.Apply funcI argI)
     newLArgRef = addDelete funcArgI funcI funcFuncI $ addApplyChildParens lArgRef
     newRArgRef = addDelete argI exprI funcI $ addApplyChildParens rArgRef
     newOpRef =
-      (atRType . const) [] .
+      removeUninterestingType .
       addDelete funcFuncI funcI funcArgI $
       setAddArg exprI exprI opRef
   mkExpressionRef scope exprI . ExpressionSection DontHaveParens .
@@ -353,7 +359,7 @@ convertApplyInfixL op (Data.Apply opI argI) scope exprI = do
   opRef <- mkExpressionRef scope opI $ ExpressionGetVariable op
   let
     newOpRef =
-      (atRType . const) [] .
+      removeUninterestingType .
       addDelete opI exprI argI .
       setAddArg exprI exprI $
       opRef
@@ -378,7 +384,7 @@ convertApplyPrefix (Data.Apply funcI argI) scope exprI = do
       addDelete funcI exprI argI .
       setNextArg .
       addApplyChildParens .
-      (atRType . const) [] .
+      removeUninterestingType .
       (atRExpression . atEApply . atApplyArg) setNextArg .
       (atRExpression . atESection . atSectionOp) setNextArg $
       funcRef

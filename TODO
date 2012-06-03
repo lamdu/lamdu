@@ -1,5 +1,3 @@
-* Show func types if they're problematic
-
 * More type rules:
   * If its apply func its type is Pi
     * Any types of arg become types of Pi's paramType
