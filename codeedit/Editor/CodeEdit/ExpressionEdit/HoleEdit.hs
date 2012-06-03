@@ -204,7 +204,9 @@ makeSearchTermWidget
   :: MonadF m
   => HoleInfo m -> Widget.Id -> [Result m] -> TWidget ViewTag m
 makeSearchTermWidget holeInfo searchTermId firstResults =
-  (liftM . Widget.strongerEvents) searchTermEventMap $
+  liftM
+    (Widget.strongerEvents searchTermEventMap .
+     (Widget.atEventMap . E.filterChars) (`notElem` "[]")) $
     BWidgets.makeWordEdit (hiSearchTerm holeInfo) searchTermId
   where
     pickFirstResultEventMaps =

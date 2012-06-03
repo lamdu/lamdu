@@ -14,7 +14,7 @@ import Data.Char (isSpace)
 import Data.List (genericLength, minimumBy)
 import Data.List.Split (splitWhen)
 import Data.List.Utils (enumerate)
-import Data.Maybe (fromJust, mapMaybe)
+import Data.Maybe (mapMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Ord (comparing)
 import Data.Vector.Vector2 (Vector2(..))
@@ -300,7 +300,9 @@ makeFocused cursor style str myId =
           backDelete (length curLineBefore)
         | not . null $ curLineBefore ],
 
-        [ E.singleton E.CharEventType "Insert character" (insert . (: []) . fromJust . E.keyEventChar) ],
+        [ E.simpleCharsEventMap "Character" "Insert character" $
+          insert . (: [])
+        ],
 
         [ keys "Insert Newline" [specialKey E.KeyEnter] (insert "\n") ],
 
