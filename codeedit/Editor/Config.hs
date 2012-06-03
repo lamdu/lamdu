@@ -94,7 +94,7 @@ unfoldKeys = foldKeys
 helpTextSize = 10
 baseTextSize = 25
 
-typeScaleFactor = 0.6
+typeScaleFactor = 0.4
 squareParensScaleFactor = 0.96
 
 foreignModuleColor = Draw.Color 1 0.3 0.35 1
