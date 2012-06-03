@@ -238,14 +238,6 @@ uniqify symbolMap gen (Entity oldOrigin ts v) =
     (newGuid, newGen) = Random.random gen
     (genT, genV) = Random.split newGen
 
-uniqifyTypes :: EntityT m Expression -> EntityT m Expression
-uniqifyTypes =
-  Identity.runIdentity . foldValues f
-  where
-    f (Entity origin ts val) =
-      return $
-      Entity origin (uniqifyList Map.empty (guidToStdGen (entityOriginGuid origin)) ts) val
-
 foldValues
   :: Monad m
   => (EntityT f Expression -> m (EntityT f Expression))
@@ -288,6 +280,14 @@ uniqifyList
 uniqifyList symbolMap =
   zipWith (uniqify symbolMap) . map Random.mkStdGen . Random.randoms
 
+uniqifyTypes :: EntityT m Expression -> EntityT m Expression
+uniqifyTypes =
+  Identity.runIdentity . foldValues f
+  where
+    f (Entity origin ts val) =
+      return $
+      Entity origin (uniqifyList Map.empty (guidToStdGen (entityOriginGuid origin)) ts) val
+
 canonicalize :: Monad m => EntityT m Expression -> Transaction ViewTag m (EntityT m Expression)
 canonicalize expr = do
   globals <- Property.get Anchors.builtinsMap
@@ -299,6 +299,11 @@ canonicalize expr = do
     f entity = return entity
   foldValues f expr
 
+sanitize
+  :: Monad m => EntityT m Expression
+  -> Transaction ViewTag m (EntityT m Expression)
+sanitize = liftM uniqifyTypes . mapTypes canonicalize
+
 inferDefinition
   :: Monad m
   => DataLoad.EntityT m Definition
@@ -307,14 +312,14 @@ inferDefinition (DataLoad.Entity iref mReplace value) =
   liftM (Entity (OriginStored (Stored iref mReplace)) []) $
   case value of
   Definition typeI bodyI -> do
-    inferredType <- liftM uniqifyTypes . mapTypes canonicalize $ convertExpression typeI
+    inferredType <- sanitize $ convertExpression typeI
     inferredBody <- inferRootExpression bodyI
     return $ Definition inferredType inferredBody
 
 inferRootExpression
   :: Monad m => DataLoad.EntityT m Expression
   -> Transaction ViewTag m (EntityT m Expression)
-inferRootExpression exprI = liftM uniqifyTypes . mapTypes canonicalize =<< inferExpression [] (convertExpression exprI)
+inferRootExpression exprI = sanitize =<< inferExpression [] (convertExpression exprI)
 
 loadInferDefinition
   :: Monad m => IRef (Definition IRef)
