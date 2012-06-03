@@ -9,8 +9,7 @@ module Editor.Data.Typed
   , entityGuid, entityIRef
   , writeIRef, writeIRefVia
   , foldValues, mapTypes
-  )
-where
+  ) where
 
 import Control.Monad (liftM, liftM2, (<=<))
 import Data.Binary (Binary)
@@ -25,6 +24,7 @@ import Editor.Data (Definition(..), Expression(..), FFIName(..), Apply(..), Lamb
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
 import qualified Data.Functor.Identity as Identity
+import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
@@ -132,11 +132,10 @@ alphaEq e0 e1 =
     gen = Random.mkStdGen 0
 
 unify
-  :: EntityT m Expression
-  -> [EntityT m Expression] -> [EntityT m Expression]
-unify x xs
-  | any (alphaEq x) xs = xs
-  | otherwise = (x : xs)
+  :: [EntityT m Expression]
+  -> [EntityT m Expression]
+  -> [EntityT m Expression]
+unify xs ys = List.nubBy alphaEq $ xs ++ ys
 
 expand :: Monad m => EntityT m Expression -> Transaction ViewTag m (EntityT m Expression)
 expand =
@@ -182,7 +181,7 @@ inferExpression scope (Entity origin prevTypes value) =
       (applyType, modArg) = case entityType inferredFunc of
         Entity piOrigin _ (ExpressionPi (Lambda paramType resultType)) : _ ->
           ( [subst (entityOriginGuid piOrigin) (entityValue inferredArg) resultType]
-          , atEntityType (unify paramType) inferredArg)
+          , atEntityType (unify [paramType]) inferredArg)
         _ -> ([], inferredArg) -- TODO: Split to "bad type" and "missing type"
     return (applyType, ExpressionApply (Apply inferredFunc modArg))
   ExpressionGetVariable varRef -> do
@@ -200,7 +199,7 @@ inferExpression scope (Entity origin prevTypes value) =
   x -> return ([], x)
   where
     makeEntity (ts, expr) = do
-      expandedTs <- mapM expand $ ts ++ prevTypes
+      expandedTs <- mapM expand $ unify ts prevTypes
       return $ Entity origin expandedTs expr
     inferLambda (Lambda paramType body) = do
       inferredParamType <- inferExpression scope paramType
