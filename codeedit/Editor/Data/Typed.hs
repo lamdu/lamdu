@@ -202,17 +202,12 @@ inferExpression (Entity origin prevTypes value) scope =
   case value of
   ExpressionLambda lambda -> do
     inferredLambda@(Lambda paramType body) <- inferLambda lambda
-    let
-      lambdaType bodyType = do
-        piGuid <- nextGuid
-        return .
-          Entity (OriginGenerated piGuid) [] $
-          ExpressionPi (Lambda paramType bodyType)
+    let lambdaType = generateEntity [] . ExpressionPi . Lambda paramType
     pis <- mapM lambdaType $ entityType body
     return (pis, ExpressionLambda inferredLambda)
   ExpressionPi lambda -> do
-    inferredLambda <- inferLambda lambda
-    return ([], ExpressionPi inferredLambda)
+    inferredLambda@(Lambda _ resultType) <- inferLambda lambda
+    return (entityType resultType, ExpressionPi inferredLambda)
   ExpressionApply (Apply func arg) -> do
     inferredFunc <- inferExpression func scope
     inferredArg <- inferExpression arg scope
