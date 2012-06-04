@@ -418,7 +418,10 @@ inferDefinition (DataLoad.Entity iref mReplace value) =
   case value of
   Definition typeI bodyI -> do
     inferredType <- sanitize $ convertExpression typeI
-    inferredBody <- inferRootExpression bodyI
+    inferredBody <-
+      sanitize <=< inferExpression .
+      (atEntityType . unify) [inferredType] $
+      convertExpression bodyI
     return $ Definition inferredType inferredBody
 
 inferRootExpression
