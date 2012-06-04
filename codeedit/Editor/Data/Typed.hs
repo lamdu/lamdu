@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TypeFamilies, FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, FlexibleContexts, GeneralizedNewtypeDeriving #-}
 module Editor.Data.Typed
   ( Entity(..), atEntityType, atEntityValue
   , EntityM, EntityT
@@ -137,13 +137,21 @@ unify
   -> [EntityT m Expression]
 unify xs ys = List.nubBy alphaEq $ xs ++ ys
 
-expand :: Monad m => EntityT m Expression -> Transaction ViewTag m (EntityT m Expression)
+newtype Infer m a = Infer {
+  runInfer :: Transaction ViewTag m a
+  } deriving (Monad)
+
+transaction :: Transaction ViewTag m a -> Infer m a
+transaction = Infer
+
+expand :: Monad m => EntityT m Expression -> Infer m (EntityT m Expression)
 expand =
   foldValues f
   where
     f (Entity _ _ (ExpressionGetVariable (DefinitionRef defI))) = do
-      def <- Transaction.readIRef defI
-      liftM convertExpression $ DataLoad.loadExpression (defBody def) Nothing
+      def <- transaction $ Transaction.readIRef defI
+      liftM convertExpression . transaction $
+        DataLoad.loadExpression (defBody def) Nothing
     f (Entity _ _ (ExpressionApply (Apply (Entity lambdaOrigin _ (ExpressionLambda (Lambda _ body))) val))) =
       return $ subst (entityOriginGuid lambdaOrigin) (entityValue val) body
     f x = return x
@@ -168,7 +176,7 @@ inferExpression
   :: Monad m
   => EntityT m Expression
   -> Scope m
-  -> Transaction ViewTag m (EntityT m Expression)
+  -> Infer m (EntityT m Expression)
 inferExpression (Entity origin prevTypes value) scope =
   makeEntity =<<
   case value of
@@ -188,9 +196,10 @@ inferExpression (Entity origin prevTypes value) scope =
     types <- case varRef of
       ParameterRef guid -> return . maybeToList $ lookup guid scope
       DefinitionRef defI -> do
-        dType <- liftM defType $ Transaction.readIRef defI
+        dType <- liftM defType . transaction $ Transaction.readIRef defI
         inferredDType <-
-          liftM convertExpression $ DataLoad.loadExpression dType Nothing
+          liftM convertExpression . transaction $
+          DataLoad.loadExpression dType Nothing
         return [inferredDType]
     return (types, ExpressionGetVariable varRef)
   ExpressionLiteralInteger int ->
@@ -288,9 +297,9 @@ uniqifyTypes =
       return $
       Entity origin (uniqifyList Map.empty (guidToStdGen (entityOriginGuid origin)) ts) val
 
-canonicalize :: Monad m => EntityT m Expression -> Transaction ViewTag m (EntityT m Expression)
+canonicalize :: Monad m => EntityT m Expression -> Infer m (EntityT m Expression)
 canonicalize expr = do
-  globals <- Property.get Anchors.builtinsMap
+  globals <- transaction $ Property.get Anchors.builtinsMap
   let
     f entity@(Entity origin ts (ExpressionBuiltin name)) =
       return .
@@ -301,13 +310,13 @@ canonicalize expr = do
 
 sanitize
   :: Monad m => EntityT m Expression
-  -> Transaction ViewTag m (EntityT m Expression)
+  -> Infer m (EntityT m Expression)
 sanitize = liftM uniqifyTypes . mapTypes canonicalize
 
 inferDefinition
   :: Monad m
   => DataLoad.EntityT m Definition
-  -> Transaction ViewTag m (EntityT m Definition)
+  -> Infer m (EntityT m Definition)
 inferDefinition (DataLoad.Entity iref mReplace value) =
   liftM (Entity (OriginStored (Stored iref mReplace)) []) $
   case value of
@@ -318,15 +327,17 @@ inferDefinition (DataLoad.Entity iref mReplace value) =
 
 inferRootExpression
   :: Monad m => DataLoad.EntityT m Expression
-  -> Transaction ViewTag m (EntityT m Expression)
+  -> Infer m (EntityT m Expression)
 inferRootExpression exprI = sanitize =<< inferExpression (convertExpression exprI) []
 
 loadInferDefinition
   :: Monad m => IRef (Definition IRef)
   -> Transaction ViewTag m (EntityT m Definition)
-loadInferDefinition = inferDefinition <=< DataLoad.loadDefinition
+loadInferDefinition =
+  runInfer . inferDefinition <=< DataLoad.loadDefinition
 
 loadInferExpression
   :: Monad m => IRef (Expression IRef)
   -> Transaction ViewTag m (EntityT m Expression)
-loadInferExpression = inferRootExpression <=< flip DataLoad.loadExpression Nothing
+loadInferExpression =
+  runInfer . inferRootExpression <=< flip DataLoad.loadExpression Nothing
