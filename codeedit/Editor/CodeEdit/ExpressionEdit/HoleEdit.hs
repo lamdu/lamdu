@@ -206,7 +206,7 @@ makeSearchTermWidget
 makeSearchTermWidget holeInfo searchTermId firstResults =
   liftM
     (Widget.strongerEvents searchTermEventMap .
-     (Widget.atEventMap . E.filterChars) (`notElem` "[]")) $
+     (Widget.atEventMap . E.filterChars) (`notElem` "[]\\")) $
     BWidgets.makeWordEdit (hiSearchTerm holeInfo) searchTermId
   where
     pickFirstResultEventMaps =
