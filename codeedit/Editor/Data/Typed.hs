@@ -11,7 +11,7 @@ module Editor.Data.Typed
   , foldValues, mapTypes
   ) where
 
-import Control.Applicative (Applicative)
+import Control.Applicative (Applicative, liftA2)
 import Control.Monad (liftM, liftM2, (<=<))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Random (RandomT, nextRandom, runRandomT)
@@ -193,6 +193,10 @@ convertExpression (DataLoad.Entity iref mReplace value) =
   where
     convertLambda (Lambda paramType body) = Lambda (convertExpression paramType) (convertExpression body)
 
+holify :: Monad m => [EntityT m Expression] -> Infer m [EntityT m Expression]
+holify [] = liftM (:[]) $ generateEntity [] ExpressionHole
+holify xs = return xs
+
 inferExpression
   :: Monad m
   => EntityT m Expression
@@ -211,11 +215,16 @@ inferExpression (Entity origin prevTypes value) scope =
     inferredLambda@(Lambda _ resultType) <- inferLambda lambda
     return (entityType resultType, ExpressionPi inferredLambda)
   ExpressionApply (Apply func arg) -> do
-    inferredFunc <- inferExpression func scope
+    let
+      funcType selfType argType =
+        generateEntity [] . ExpressionPi $ Lambda argType selfType
+      argTypes = entityType arg
+    funcTypes <- sequence =<< (liftM2 . liftA2) funcType (holify prevTypes) (holify argTypes)
+    inferredFunc <- inferExpression ((atEntityType . unify) funcTypes func) scope
     (applyType, modArg) <-
       case entityType inferredFunc of
       Entity piOrigin _ (ExpressionPi (Lambda paramType resultType)) : _ -> do
-        inferredArg <- inferExpression (atEntityType (unify [paramType]) arg) scope
+        inferredArg <- inferExpression ((atEntityType . unify) [paramType] arg) scope
         return
           ( [subst (entityOriginGuid piOrigin) (entityValue inferredArg) resultType]
           , inferredArg )
