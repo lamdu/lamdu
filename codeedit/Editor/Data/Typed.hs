@@ -160,6 +160,14 @@ liftTransaction
   :: Monad m => Transaction ViewTag m a -> Infer m a
 liftTransaction = liftRandom . lift
 
+-- Writer "listen" operation cannot simply be lifted...
+listenUsedVarTypes :: Monad m => Infer m a -> Infer m (a, Scope m)
+listenUsedVarTypes = atInfer $ Reader.mapReaderT Writer.listen
+
+censorUsedVarTypes
+  :: Monad m => (Scope m -> Scope m) -> Infer m a -> Infer m a
+censorUsedVarTypes = atInfer . Reader.mapReaderT . Writer.censor
+
 -- Reader "local" operation cannot simply be lifted...
 localScope
   :: Monad m => (Scope m -> Scope m)
@@ -168,6 +176,20 @@ localScope = atInfer . Reader.local
 
 ----------------- Infer operations:
 
+untellUsedVar :: Monad m => Guid -> Infer m a -> Infer m a
+untellUsedVar guid = censorUsedVarTypes $ filter ((/= guid) . fst)
+
+lookupAll :: Eq k => k -> [(k, v)] -> [v]
+lookupAll x = map snd . filter ((== x) . fst)
+
+-- Get the usedVar from the given computation and remove it from the
+-- result computation
+popUsedVar
+  :: Monad m => Guid -> Infer m a -> Infer m (a, [EntityT m Expression])
+popUsedVar guid act = do
+  (result, allUsedVars) <- untellUsedVar guid $ listenUsedVarTypes act
+  return (result, lookupAll guid allUsedVars)
+
 runInfer :: Monad m => Infer m a -> Transaction ViewTag m a
 runInfer =
   runRandomT (Random.mkStdGen 0) .
@@ -175,8 +197,8 @@ runInfer =
   (`runReaderT` []) .
   unInfer
 
-usedVarTypes :: Monad m => Scope m -> Infer m ()
-usedVarTypes = liftUsedVarTypes . Writer.tell
+tellUsedVarTypes :: Monad m => Scope m -> Infer m ()
+tellUsedVarTypes = liftUsedVarTypes . Writer.tell
 
 putInScope
   :: Monad m => [(Guid, EntityT m Expression)]
@@ -244,10 +266,17 @@ inferExpression (Entity origin prevTypes value) =
   makeEntity =<<
   case value of
   ExpressionLambda lambda -> do
-    let (_, resultTypes) = unzip $ concatMap (extractPi . entityValue) prevTypes
-    inferredLambda@(Lambda paramType body) <- inferLambda $ (Data.atLambdaBody . atEntityType . unify) resultTypes lambda
-    let lambdaType = generateEntity [] . ExpressionPi . Lambda paramType
-    pis <- mapM lambdaType $ entityType body
+    let
+      lambdaGuid = entityOriginGuid origin
+      (_, resultTypes) =
+        unzip $ concatMap (extractPi . entityValue) prevTypes
+      lambdaType paramType resultType =
+        generateEntity [] . ExpressionPi $ Lambda paramType resultType
+    (inferredLambda@(Lambda paramType body), usedParamTypes) <-
+      popUsedVar lambdaGuid . inferLambda $
+      (Data.atLambdaBody . atEntityType . unify) resultTypes lambda
+    let allParamTypes = pruneSameTypes $ paramType : usedParamTypes
+    pis <- sequence $ liftA2 lambdaType allParamTypes (entityType body)
     return (pis, ExpressionLambda inferredLambda)
   ExpressionPi lambda -> do
     inferredLambda@(Lambda _ resultType) <- inferLambda lambda
@@ -279,10 +308,11 @@ inferExpression (Entity origin prevTypes value) =
   ExpressionGetVariable varRef -> do
     types <- case varRef of
       ParameterRef guid -> do
-        usedVarTypes $ map ((,) guid) prevTypes
+        tellUsedVarTypes $ map ((,) guid) prevTypes
         liftM maybeToList $ findInScope guid
       DefinitionRef defI -> do
-        dType <- liftM defType . liftTransaction $ Transaction.readIRef defI
+        dType <-
+          liftM defType . liftTransaction $ Transaction.readIRef defI
         inferredDType <-
           liftM convertExpression . liftTransaction $
           DataLoad.loadExpression dType Nothing
