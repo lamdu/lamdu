@@ -16,6 +16,7 @@ import Control.Monad (liftM, liftM2, (<=<))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Random (RandomT, nextRandom, runRandomT)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
+import Control.Monad.Trans.State (StateT)
 import Control.Monad.Trans.Writer (WriterT, runWriterT)
 import Data.Binary (Binary)
 import Data.Map (Map)
@@ -26,6 +27,7 @@ import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.Data (Definition(..), Expression(..), FFIName(..), Apply(..), Lambda(..), VariableRef(..))
 import qualified Control.Monad.Trans.Reader as Reader
+import qualified Control.Monad.Trans.State as State
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
@@ -374,12 +376,12 @@ alphaEq e0 e1 =
 unify
   :: EntityM m Expression
   -> EntityM m Expression
-  -> Maybe (EntityM m Expression)
+  -> StateT (Map Guid (EntityM m Expression)) Maybe (EntityM m Expression)
 unify (Entity origin0 types0 value0) (Entity _ _ value1) =
   fmap (Entity origin0 types0) $
   case (value0, value1) of
-  (ExpressionHole, _) -> Just value1
-  (_, ExpressionHole) -> Just value0
+  (ExpressionHole, _) -> return $ value1
+  (_, ExpressionHole) -> return $ value0
   (ExpressionLambda lambda0,
    ExpressionLambda lambda1) ->
     fmap ExpressionLambda $ unifyLambda lambda0 lambda1
@@ -390,11 +392,17 @@ unify (Entity origin0 types0 value0) (Entity _ _ value1) =
    ExpressionApply (Apply func1 arg1)) ->
     fmap ExpressionApply $
     liftA2 Apply (unify func0 func1) (unify arg0 arg1)
+  (ExpressionGetVariable (ParameterRef guid0),
+   other1) ->
+    inferVariable guid0 other1
+  (other0,
+   ExpressionGetVariable (ParameterRef guid1)) ->
+    inferVariable guid1 other0
   -- Only LiteralInteger, Builtin, Magic here. If any constructors are
   -- added, need to match them here
   (x, y)
-    | x == y -> Just x
-    | otherwise -> Nothing
+    | x == y -> return $ x
+    | otherwise -> lift $ Nothing
   where
     unifyLambda
       (Lambda paramType0 result0)
@@ -402,13 +410,25 @@ unify (Entity origin0 types0 value0) (Entity _ _ value1) =
         liftA2 Lambda
         (unify paramType0 paramType1)
         (unify result0 result1)
+    inferVariable guid value = do
+      mValue <- State.gets $ Map.lookup guid
+      case mValue of
+        Nothing -> do
+          State.modify $ Map.insert guid e
+          return value
+        Just prevValue -> do
+          newValue <- unify e prevValue
+          State.modify $ Map.insert guid newValue
+          return $ entityValue newValue
+      where
+        e = Entity origin0 types0 value
 
 unification :: [EntityM m Expression] -> [EntityM m Expression]
 unification = foldr add []
   where
     add x [] = [x]
     add x (y:ys) =
-      case unify x y of
+      case (`State.evalStateT` Map.empty) $ unify x y of
         Nothing -> y : add x ys
         Just new -> new : ys
 
