@@ -5,12 +5,12 @@ import Control.Arrow (first)
 import Control.Monad (liftM)
 import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
-import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, TWidget)
+import Editor.CTransaction (CTransaction)
+import Editor.CodeEdit.InferredTypes (addType)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
-import Graphics.UI.Bottle.Widget (Widget, EventHandlers)
+import Graphics.UI.Bottle.Widget (EventHandlers)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Editor.CodeEdit.ExpressionEdit.BuiltinEdit as BuiltinEdit
@@ -26,9 +26,7 @@ import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
 data HoleResultPicker m = NotAHole | IsAHole (Maybe (HoleEdit.ResultPicker m))
 foldHolePicker
@@ -75,29 +73,12 @@ make sExpr = do
       Sugar.ExpressionBuiltin builtin ->
         wrapNonHoleExpr $ BuiltinEdit.make builtin
 
-  (holePicker, exprWidget) <- makeEditor exprId
-  widget <- addType exprId (Sugar.rType sExpr) exprWidget
+  (holePicker, widget) <- makeEditor exprId
+  typeEdits <- mapM make $ Sugar.rType sExpr
   eventMap <- expressionEventMap sExpr holePicker
-  return $ Widget.weakerEvents eventMap widget
-
-addType
-  :: MonadF m
-  => Widget.Id -> [Sugar.ExpressionRef m]
-  -> Widget (Transaction ViewTag m)
-  -> TWidget ViewTag m
-addType _ [] widget = return widget
-addType exprId sTypes widget = do
-  typeEdits <- mapM make sTypes
-  let typeEdit = Widget.scale Config.typeScaleFactor $ BWidgets.vbox typeEdits
   return .
-    Box.toWidget $ Box.make Box.vertical
-    [ Widget.align (Vector2 0.5 0.5) widget
-      -- must not be aligned if space is to be used
-    , Spacer.makeHorizLineWidget underlineId
-    , Widget.align (Vector2 0.5 0.5) typeEdit
-    ]
-  where
-    underlineId = WidgetIds.underlineId $ Widget.toAnimId exprId
+    Widget.weakerEvents eventMap $
+    addType exprId typeEdits widget
 
 expressionEventMap
   :: MonadF m

@@ -11,6 +11,7 @@ import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (CTransaction, TWidget, readCursor)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
+import Editor.CodeEdit.InferredTypes(addType)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.List as List
@@ -23,8 +24,8 @@ import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 
 data Side = LHS | RHS
   deriving (Show, Eq)
@@ -142,12 +143,21 @@ makeParts makeExpressionEdit myId guid defBody defType = do
 make
   :: MonadF m
   => ExpressionEditMaker m
-  -> Guid -> Sugar.ExpressionRef m -> Sugar.ExpressionRef m
+  -> Guid
+  -> Sugar.ExpressionRef m
+  -> Sugar.ExpressionRef m
+  -> [Sugar.ExpressionRef m]
   -> TWidget ViewTag m
-make makeExpressionEdit guid defBody defType = do
+make makeExpressionEdit guid defBody defType inferredTypes = do
   cursor <- readCursor
-  parts <- makeParts makeExpressionEdit (WidgetIds.fromGuid guid) guid defBody defType
+  parts <-
+    makeParts makeExpressionEdit
+    (WidgetIds.fromGuid guid) guid defBody defType
+  inferredTypesEdits <- mapM makeExpressionEdit inferredTypes
+  let
+    exprId = WidgetIds.fromGuid . Sugar.guid . Sugar.rActions $ defBody
   return .
+    addType exprId inferredTypesEdits .
     Grid.toWidget .
     (Grid.atGridContent . fmap . map) (addJumps cursor) .
     Grid.makeKeyed .

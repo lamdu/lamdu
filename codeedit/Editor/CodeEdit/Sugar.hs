@@ -132,6 +132,7 @@ data DefinitionRef m = DefinitionRef
     -- either of them:
   , drDef :: ExpressionRef m
   , drType :: ExpressionRef m
+  , drInferredTypes :: [ExpressionRef m]
   }
 
 AtFieldTH.make ''Hole
@@ -481,8 +482,11 @@ convertDefinitionI defI =
   case DataTyped.entityValue defI of
   Data.Definition typeI bodyI -> do
     defType <- convertScopedExpression [] typeI
-    defBody <- convertScopedExpression [] bodyI
-    return $ DefinitionRef defGuid defBody defType
+    defBody <-
+      (liftM . atRType . const) [] $ convertScopedExpression [] bodyI
+    inferredTypes <-
+      mapM (convertScopedExpression []) $ DataTyped.entityType defI
+    return $ DefinitionRef defGuid defBody defType inferredTypes
 
   where
     defGuid = DataTyped.entityGuid defI
