@@ -424,8 +424,8 @@ inferDefinition (DataLoad.Entity iref mReplace value) =
 inferRootExpression
   :: Monad m => DataLoad.EntityT m Expression
   -> Infer m (EntityT m Expression)
-inferRootExpression exprI =
-  sanitize =<< inferExpression (convertExpression exprI)
+inferRootExpression =
+  sanitize <=< inferExpression . convertExpression
 
 loadInferDefinition
   :: Monad m => IRef (Definition IRef)
