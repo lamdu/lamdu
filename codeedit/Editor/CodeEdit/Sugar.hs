@@ -323,11 +323,9 @@ setAddArg :: Monad m => EntityExpr m -> EntityExpr m -> ExpressionRef m -> Expre
 setAddArg whereI exprI =
   atRActions . atAddNextArg . const $ addArg whereI exprI
 
-removeUninterestingType :: ExpressionRef m -> ExpressionRef m
-removeUninterestingType = atRType f
-  where
-    f [_] = []
-    f xs = xs
+removeUninterestingType :: [ExpressionRef m] -> [ExpressionRef m]
+removeUninterestingType [_] = []
+removeUninterestingType xs = xs
 
 convertApplyInfixFull
   :: Monad m
@@ -343,7 +341,7 @@ convertApplyInfixFull (Data.Apply funcFuncI funcArgI) op (Data.Apply funcI argI)
     newLArgRef = addDelete funcArgI funcI funcFuncI $ addApplyChildParens lArgRef
     newRArgRef = addDelete argI exprI funcI $ addApplyChildParens rArgRef
     newOpRef =
-      removeUninterestingType .
+      atRType removeUninterestingType .
       addDelete funcFuncI funcI funcArgI $
       setAddArg exprI exprI opRef
   mkExpressionRef scope exprI . ExpressionSection DontHaveParens .
@@ -360,7 +358,7 @@ convertApplyInfixL op (Data.Apply opI argI) scope exprI = do
   opRef <- mkExpressionRef scope opI $ ExpressionGetVariable op
   let
     newOpRef =
-      removeUninterestingType .
+      atRType removeUninterestingType .
       addDelete opI exprI argI .
       setAddArg exprI exprI $
       opRef
@@ -385,7 +383,7 @@ convertApplyPrefix (Data.Apply funcI argI) scope exprI = do
       addDelete funcI exprI argI .
       setNextArg .
       addApplyChildParens .
-      removeUninterestingType .
+      atRType removeUninterestingType .
       (atRExpression . atEApply . atApplyArg) setNextArg .
       (atRExpression . atESection . atSectionOp) setNextArg $
       funcRef
@@ -486,7 +484,9 @@ convertDefinitionI defI =
       (liftM . atRType . const) [] $ convertScopedExpression [] bodyI
     inferredTypes <-
       mapM (convertScopedExpression []) $ DataTyped.entityType defI
-    return $ DefinitionRef defGuid defBody defType inferredTypes
+    return .
+      DefinitionRef defGuid defBody defType $
+      removeUninterestingType inferredTypes
 
   where
     defGuid = DataTyped.entityGuid defI
