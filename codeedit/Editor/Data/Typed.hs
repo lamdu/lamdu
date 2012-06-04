@@ -274,7 +274,7 @@ inferExpression (Entity origin prevTypes value) =
         generateEntity [] . ExpressionPi $ Lambda paramType resultType
     (inferredLambda@(Lambda paramType body), usedParamTypes) <-
       popUsedVar lambdaGuid . inferLambda $
-      (Data.atLambdaBody . atEntityType . unify) resultTypes lambda
+      (Data.atLambdaBody . atEntityType . addTypes) resultTypes lambda
     let allParamTypes = pruneSameTypes $ paramType : usedParamTypes
     pis <- sequence $ liftA2 lambdaType allParamTypes (entityType body)
     return (pis, ExpressionLambda inferredLambda)
@@ -289,13 +289,13 @@ inferExpression (Entity origin prevTypes value) =
     funcTypes <-
       sequence =<<
       (liftM2 . liftA2) funcType (holify prevTypes) (holify argTypes)
-    inferredFunc <- inferExpression ((atEntityType . unify) funcTypes func)
+    inferredFunc <- inferExpression $ (atEntityType . addTypes) funcTypes func
     (applyType, modArg) <-
       case entityType inferredFunc of
       Entity piOrigin _
         (ExpressionPi (Lambda paramType resultType)) : _ -> do
           inferredArg <-
-            inferExpression ((atEntityType . unify) [paramType] arg)
+            inferExpression ((atEntityType . addTypes) [paramType] arg)
           return
             ( [subst (entityOriginGuid piOrigin)
                (entityValue inferredArg) resultType]
@@ -323,10 +323,9 @@ inferExpression (Entity origin prevTypes value) =
       generateEntity [] $
       ExpressionBuiltin (FFIName ["Prelude"] "Integer")
     return ([intType], ExpressionLiteralInteger int)
-  ExpressionHole ->
-    liftM (flip (,) ExpressionHole . (: [])) $
+  x ->
+    liftM (flip (,) x . (: [])) $
     generateEntity [] ExpressionHole
-  x -> return ([], x)
   where
     extractPi (ExpressionPi (Lambda paramType resultType)) = [(paramType, resultType)]
     extractPi _ = []
@@ -372,16 +371,57 @@ alphaEq e0 e1 =
   where
     gen = Random.mkStdGen 0
 
+unify
+  :: EntityM m Expression
+  -> EntityM m Expression
+  -> Maybe (EntityM m Expression)
+unify (Entity origin0 types0 value0) (Entity _ _ value1) =
+  fmap (Entity origin0 types0) $
+  case (value0, value1) of
+  (ExpressionHole, _) -> Just value1
+  (_, ExpressionHole) -> Just value0
+  (ExpressionLambda lambda0,
+   ExpressionLambda lambda1) ->
+    fmap ExpressionLambda $ unifyLambda lambda0 lambda1
+  (ExpressionPi lambda0,
+   ExpressionPi lambda1) ->
+    fmap ExpressionPi $ unifyLambda lambda0 lambda1
+  (ExpressionApply (Apply func0 arg0),
+   ExpressionApply (Apply func1 arg1)) ->
+    fmap ExpressionApply $
+    liftA2 Apply (unify func0 func1) (unify arg0 arg1)
+  -- Only LiteralInteger, Builtin, Magic here. If any constructors are
+  -- added, need to match them here
+  (x, y)
+    | x == y -> Just x
+    | otherwise -> Nothing
+  where
+    unifyLambda
+      (Lambda paramType0 result0)
+      (Lambda paramType1 result1) =
+        liftA2 Lambda
+        (unify paramType0 paramType1)
+        (unify result0 result1)
+
+unification :: [EntityM m Expression] -> [EntityM m Expression]
+unification = foldr add []
+  where
+    add x [] = [x]
+    add x (y:ys) =
+      case unify x y of
+        Nothing -> y : add x ys
+        Just new -> new : ys
+
 pruneSameTypes
   :: [EntityT m Expression]
   -> [EntityT m Expression]
-pruneSameTypes = List.nubBy alphaEq
+pruneSameTypes = unification . List.nubBy alphaEq
 
-unify
+addTypes
   :: [EntityT m Expression]
   -> [EntityT m Expression]
   -> [EntityT m Expression]
-unify xs ys = pruneSameTypes $ xs ++ ys
+addTypes xs ys = pruneSameTypes $ xs ++ ys
 
 foldValues
   :: Monad m
@@ -460,7 +500,7 @@ inferDefinition (DataLoad.Entity iref mReplace value) =
     inferredType <- sanitize $ convertExpression typeI
     inferredBody <-
       sanitize <=< inferExpression .
-      (atEntityType . unify) [inferredType] $
+      (atEntityType . addTypes) [inferredType] $
       convertExpression bodyI
     return (entityType inferredBody,
             Definition inferredType inferredBody)
