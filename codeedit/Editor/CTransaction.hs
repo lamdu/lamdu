@@ -48,7 +48,10 @@ liftUsedvars = liftEnv . lift
 transaction :: Monad m => Transaction t m a -> CTransaction t m a
 transaction = liftUsedvars . lift
 
-runCTransaction :: Monad m => Widget.Id -> TextEdit.Style -> CTransaction t m a -> Transaction t m a
+runCTransaction
+  :: Monad m
+  => Widget.Id -> TextEdit.Style
+  -> CTransaction t m a -> Transaction t m a
 runCTransaction cursor style =
   liftM fst . Writer.runWriterT .
   (`Reader.runReaderT` CTransactionEnv cursor style) .
