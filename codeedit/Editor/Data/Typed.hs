@@ -454,7 +454,7 @@ inferDefinition
   => DataLoad.EntityT m Definition
   -> Infer m (EntityT m Definition)
 inferDefinition (DataLoad.Entity iref mReplace value) =
-  liftM (Entity (OriginStored (Stored iref mReplace)) []) $
+  liftM mkEntity $
   case value of
   Definition typeI bodyI -> do
     inferredType <- sanitize $ convertExpression typeI
@@ -462,7 +462,11 @@ inferDefinition (DataLoad.Entity iref mReplace value) =
       sanitize <=< inferExpression .
       (atEntityType . unify) [inferredType] $
       convertExpression bodyI
-    return $ Definition inferredType inferredBody
+    return (entityType inferredBody,
+            Definition inferredType inferredBody)
+  where
+    mkEntity (ts, val) =
+      Entity (OriginStored (Stored iref mReplace)) ts val
 
 inferRootExpression
   :: Monad m => DataLoad.EntityT m Expression
