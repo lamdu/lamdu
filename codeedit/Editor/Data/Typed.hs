@@ -238,6 +238,9 @@ inferExpression (Entity origin prevTypes value) scope =
       generateEntity [] $
       ExpressionBuiltin (FFIName ["Prelude"] "Integer")
     return ([intType], ExpressionLiteralInteger int)
+  ExpressionHole ->
+    liftM (flip (,) ExpressionHole . (: [])) $
+    generateEntity [] ExpressionHole
   x -> return ([], x)
   where
     makeEntity (ts, expr) = do
