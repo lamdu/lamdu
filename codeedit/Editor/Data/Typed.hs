@@ -33,6 +33,7 @@ import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
+import qualified Editor.Data as Data
 import qualified Editor.Data.Load as DataLoad
 import qualified System.Random as Random
 
@@ -201,7 +202,8 @@ inferExpression (Entity origin prevTypes value) scope =
   makeEntity =<<
   case value of
   ExpressionLambda lambda -> do
-    inferredLambda@(Lambda paramType body) <- inferLambda lambda
+    let (_, resultTypes) = unzip $ concatMap (extractPi . entityValue) prevTypes
+    inferredLambda@(Lambda paramType body) <- inferLambda $ (Data.atLambdaBody . atEntityType . unify) resultTypes lambda
     let lambdaType = generateEntity [] . ExpressionPi . Lambda paramType
     pis <- mapM lambdaType $ entityType body
     return (pis, ExpressionLambda inferredLambda)
@@ -210,13 +212,16 @@ inferExpression (Entity origin prevTypes value) scope =
     return (entityType resultType, ExpressionPi inferredLambda)
   ExpressionApply (Apply func arg) -> do
     inferredFunc <- inferExpression func scope
-    inferredArg <- inferExpression arg scope
-    let
-      (applyType, modArg) = case entityType inferredFunc of
-        Entity piOrigin _ (ExpressionPi (Lambda paramType resultType)) : _ ->
+    (applyType, modArg) <-
+      case entityType inferredFunc of
+      Entity piOrigin _ (ExpressionPi (Lambda paramType resultType)) : _ -> do
+        inferredArg <- inferExpression (atEntityType (unify [paramType]) arg) scope
+        return
           ( [subst (entityOriginGuid piOrigin) (entityValue inferredArg) resultType]
-          , atEntityType (unify [paramType]) inferredArg)
-        _ -> ([], inferredArg) -- TODO: Split to "bad type" and "missing type"
+          , inferredArg )
+      _ -> do
+        inferredArg <- inferExpression arg scope
+        return ([], inferredArg) -- TODO: Split to "bad type" and "missing type"
     return (applyType, ExpressionApply (Apply inferredFunc modArg))
   ExpressionGetVariable varRef -> do
     types <- case varRef of
@@ -238,6 +243,8 @@ inferExpression (Entity origin prevTypes value) scope =
     generateEntity [] ExpressionHole
   x -> return ([], x)
   where
+    extractPi (ExpressionPi (Lambda paramType resultType)) = [(paramType, resultType)]
+    extractPi _ = []
     makeEntity (ts, expr) = do
       expandedTs <- mapM expand $ unify ts prevTypes
       return $ Entity origin expandedTs expr
