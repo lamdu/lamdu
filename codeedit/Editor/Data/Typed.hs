@@ -200,8 +200,19 @@ inferExpression
 inferExpression (Entity origin prevTypes value) scope =
   makeEntity =<<
   case value of
-  ExpressionLambda lambda -> liftM ((,) [] . ExpressionLambda) $ inferLambda lambda
-  ExpressionPi lambda -> liftM ((,) [] . ExpressionPi) $ inferLambda lambda
+  ExpressionLambda lambda -> do
+    inferredLambda@(Lambda paramType body) <- inferLambda lambda
+    let
+      lambdaType bodyType = do
+        piGuid <- nextGuid
+        return .
+          Entity (OriginGenerated piGuid) [] $
+          ExpressionPi (Lambda paramType bodyType)
+    pis <- mapM lambdaType $ entityType body
+    return (pis, ExpressionLambda inferredLambda)
+  ExpressionPi lambda -> do
+    inferredLambda <- inferLambda lambda
+    return ([], ExpressionPi inferredLambda)
   ExpressionApply (Apply func arg) -> do
     inferredFunc <- inferExpression func scope
     inferredArg <- inferExpression arg scope
