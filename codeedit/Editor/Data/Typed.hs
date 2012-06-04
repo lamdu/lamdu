@@ -136,11 +136,16 @@ alphaEq e0 e1 =
   where
     gen = Random.mkStdGen 0
 
+pruneSameTypes
+  :: [EntityT m Expression]
+  -> [EntityT m Expression]
+pruneSameTypes = List.nubBy alphaEq
+
 unify
   :: [EntityT m Expression]
   -> [EntityT m Expression]
   -> [EntityT m Expression]
-unify xs ys = List.nubBy alphaEq $ xs ++ ys
+unify xs ys = pruneSameTypes $ xs ++ ys
 
 --------------- Infer Stack boilerplate:
 
@@ -303,7 +308,7 @@ inferExpression (Entity origin prevTypes value) =
     extractPi (ExpressionPi (Lambda paramType resultType)) = [(paramType, resultType)]
     extractPi _ = []
     makeEntity (ts, expr) = do
-      expandedTs <- mapM expand $ unify ts prevTypes
+      expandedTs <- liftM pruneSameTypes . mapM expand $ ts ++ prevTypes
       return $ Entity origin expandedTs expr
     inferLambda (Lambda paramType body) = do
       inferredParamType <- inferExpression paramType
