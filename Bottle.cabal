@@ -15,7 +15,8 @@ Library
   hs-Source-Dirs:      bottlelib
 
                        -- Bottle:
-  Exposed-modules:     Graphics.UI.Bottle.Widgets.TextEdit,
+  Exposed-modules:     Control.Monad.Trans.Random,
+                       Graphics.UI.Bottle.Widgets.TextEdit,
                        Graphics.UI.Bottle.Widgets.TextView,
                        Graphics.UI.Bottle.Widgets.FocusDelegator,
                        Graphics.UI.Bottle.Widgets.Spacer,

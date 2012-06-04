@@ -11,7 +11,10 @@ module Editor.Data.Typed
   , foldValues, mapTypes
   ) where
 
+import Control.Applicative (Applicative)
 import Control.Monad (liftM, liftM2, (<=<))
+import Control.Monad.Trans.Class (MonadTrans(..))
+import Control.Monad.Trans.Random (RandomT, nextRandom, runRandomT)
 import Data.Binary (Binary)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe, maybeToList)
@@ -137,20 +140,29 @@ unify
   -> [EntityT m Expression]
 unify xs ys = List.nubBy alphaEq $ xs ++ ys
 
-newtype Infer m a = Infer {
-  runInfer :: Transaction ViewTag m a
-  } deriving (Monad)
+newtype Infer m a = Infer
+  { unInfer :: RandomT Random.StdGen (Transaction ViewTag m) a
+  } deriving (Functor, Applicative, Monad)
 
-transaction :: Transaction ViewTag m a -> Infer m a
-transaction = Infer
+runInfer :: Monad m => Infer m a -> Transaction ViewTag m a
+runInfer = runRandomT (Random.mkStdGen 0) . unInfer
+
+liftRandom :: RandomT Random.StdGen (Transaction ViewTag m) a -> Infer m a
+liftRandom = Infer
+
+liftTransaction :: Monad m => Transaction ViewTag m a -> Infer m a
+liftTransaction = liftRandom . lift
+
+_nextGuid :: Monad m => Infer m Guid
+_nextGuid = liftRandom nextRandom
 
 expand :: Monad m => EntityT m Expression -> Infer m (EntityT m Expression)
 expand =
   foldValues f
   where
     f (Entity _ _ (ExpressionGetVariable (DefinitionRef defI))) = do
-      def <- transaction $ Transaction.readIRef defI
-      liftM convertExpression . transaction $
+      def <- liftTransaction $ Transaction.readIRef defI
+      liftM convertExpression . liftTransaction $
         DataLoad.loadExpression (defBody def) Nothing
     f (Entity _ _ (ExpressionApply (Apply (Entity lambdaOrigin _ (ExpressionLambda (Lambda _ body))) val))) =
       return $ subst (entityOriginGuid lambdaOrigin) (entityValue val) body
@@ -196,9 +208,9 @@ inferExpression (Entity origin prevTypes value) scope =
     types <- case varRef of
       ParameterRef guid -> return . maybeToList $ lookup guid scope
       DefinitionRef defI -> do
-        dType <- liftM defType . transaction $ Transaction.readIRef defI
+        dType <- liftM defType . liftTransaction $ Transaction.readIRef defI
         inferredDType <-
-          liftM convertExpression . transaction $
+          liftM convertExpression . liftTransaction $
           DataLoad.loadExpression dType Nothing
         return [inferredDType]
     return (types, ExpressionGetVariable varRef)
@@ -299,7 +311,7 @@ uniqifyTypes =
 
 canonicalize :: Monad m => EntityT m Expression -> Infer m (EntityT m Expression)
 canonicalize expr = do
-  globals <- transaction $ Property.get Anchors.builtinsMap
+  globals <- liftTransaction $ Property.get Anchors.builtinsMap
   let
     f entity@(Entity origin ts (ExpressionBuiltin name)) =
       return .
