@@ -18,7 +18,6 @@ import Control.Monad.Trans.Random (RandomT, nextRandom, runRandomT)
 import Data.Binary (Binary)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe, maybeToList)
-import Data.Monoid (mempty)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
@@ -153,8 +152,8 @@ liftRandom = Infer
 liftTransaction :: Monad m => Transaction ViewTag m a -> Infer m a
 liftTransaction = liftRandom . lift
 
-_nextGuid :: Monad m => Infer m Guid
-_nextGuid = liftRandom nextRandom
+nextGuid :: Monad m => Infer m Guid
+nextGuid = liftRandom nextRandom
 
 expand :: Monad m => EntityT m Expression -> Infer m (EntityT m Expression)
 expand =
@@ -214,9 +213,13 @@ inferExpression (Entity origin prevTypes value) scope =
           DataLoad.loadExpression dType Nothing
         return [inferredDType]
     return (types, ExpressionGetVariable varRef)
-  ExpressionLiteralInteger int ->
-    let intType = Entity (OriginGenerated zeroGuid) [] $ ExpressionBuiltin (FFIName ["Prelude"] "Integer")
-    in return ([intType], ExpressionLiteralInteger int)
+  ExpressionLiteralInteger int -> do
+    g <- nextGuid
+    let
+      intType =
+        Entity (OriginGenerated g) [] $
+        ExpressionBuiltin (FFIName ["Prelude"] "Integer")
+    return ([intType], ExpressionLiteralInteger int)
   x -> return ([], x)
   where
     makeEntity (ts, expr) = do
@@ -227,10 +230,6 @@ inferExpression (Entity origin prevTypes value) scope =
       liftM (Lambda inferredParamType) $
         inferExpression body $
         (entityOriginGuid origin, inferredParamType) : scope
-
--- This is replaced in all use cases by uniqify:
-zeroGuid :: Guid
-zeroGuid = Guid.make mempty
 
 guidToStdGen :: Guid -> Random.StdGen
 guidToStdGen = Random.mkStdGen . BinaryUtils.decodeS . Guid.bs
