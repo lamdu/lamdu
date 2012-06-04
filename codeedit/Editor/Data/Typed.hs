@@ -155,6 +155,15 @@ liftTransaction = liftRandom . lift
 nextGuid :: Monad m => Infer m Guid
 nextGuid = liftRandom nextRandom
 
+generateEntity
+  :: Monad m
+  => [EntityT m Expression]
+  -> f (TypedEntity m)
+  -> Infer m (EntityT m f)
+generateEntity ts v = do
+  g <- nextGuid
+  return $ Entity (OriginGenerated g) ts v
+
 expand :: Monad m => EntityT m Expression -> Infer m (EntityT m Expression)
 expand =
   foldValues f
@@ -214,11 +223,9 @@ inferExpression (Entity origin prevTypes value) scope =
         return [inferredDType]
     return (types, ExpressionGetVariable varRef)
   ExpressionLiteralInteger int -> do
-    g <- nextGuid
-    let
-      intType =
-        Entity (OriginGenerated g) [] $
-        ExpressionBuiltin (FFIName ["Prelude"] "Integer")
+    intType <-
+      generateEntity [] $
+      ExpressionBuiltin (FFIName ["Prelude"] "Integer")
     return ([intType], ExpressionLiteralInteger int)
   x -> return ([], x)
   where
