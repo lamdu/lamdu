@@ -16,6 +16,7 @@ import Control.Monad (liftM, liftM2, (<=<))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Random (RandomT, nextRandom, runRandomT)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
+import Control.Monad.Trans.Writer (WriterT, runWriterT)
 import Data.Binary (Binary)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe, maybeToList)
@@ -25,6 +26,7 @@ import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.Data (Definition(..), Expression(..), FFIName(..), Apply(..), Lambda(..), VariableRef(..))
 import qualified Control.Monad.Trans.Reader as Reader
+import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
 import qualified Data.Functor.Identity as Identity
@@ -149,23 +151,34 @@ unify xs ys = pruneSameTypes $ xs ++ ys
 
 --------------- Infer Stack boilerplate:
 
-newtype Infer m a = Infer
-  { unInfer
-    :: ReaderT (Scope m) (RandomT Random.StdGen (Transaction ViewTag m)) a
-  } deriving (Functor, Applicative, Monad)
+type InInfer m a =
+  ReaderT (Scope m) (WriterT (Scope m) (RandomT Random.StdGen (Transaction ViewTag m))) a
+
+newtype Infer m a = Infer { unInfer :: InInfer m a }
+  deriving (Functor, Applicative, Monad)
 
 inInfer
-  :: (ReaderT (Scope m)
-      (RandomT Random.StdGen (Transaction ViewTag m)) a
-      -> ReaderT (Scope n)
-      (RandomT Random.StdGen (Transaction ViewTag n)) b)
+  :: (InInfer m a -> InInfer n b)
   -> Infer m a -> Infer n b
 inInfer f = Infer . f . unInfer
 
-liftScope
-  :: ReaderT (Scope m) (RandomT Random.StdGen (Transaction ViewTag m)) a
-  -> Infer m a
+liftScope :: InInfer m a -> Infer m a
 liftScope = Infer
+
+liftUsedVarTypes
+  :: Monad m
+  => WriterT (Scope m) (RandomT Random.StdGen (Transaction ViewTag m)) a
+  -> Infer m a
+liftUsedVarTypes = liftScope . lift
+
+liftRandom
+  :: Monad m
+  => RandomT Random.StdGen (Transaction ViewTag m) a -> Infer m a
+liftRandom = liftUsedVarTypes . lift
+
+liftTransaction
+  :: Monad m => Transaction ViewTag m a -> Infer m a
+liftTransaction = liftRandom . lift
 
 -- Reader "local" operation cannot simply be lifted...
 localScope
@@ -173,19 +186,17 @@ localScope
   -> Infer m a -> Infer m a
 localScope = inInfer . Reader.local
 
-liftRandom
-  :: Monad m
-  => RandomT Random.StdGen (Transaction ViewTag m) a -> Infer m a
-liftRandom = liftScope . lift
-
-liftTransaction
-  :: Monad m => Transaction ViewTag m a -> Infer m a
-liftTransaction = liftRandom . lift
-
 ----------------- Infer operations:
 
 runInfer :: Monad m => Infer m a -> Transaction ViewTag m a
-runInfer = runRandomT (Random.mkStdGen 0) . (`runReaderT` []) . unInfer
+runInfer =
+  runRandomT (Random.mkStdGen 0) .
+  liftM fst . runWriterT .
+  (`runReaderT` []) .
+  unInfer
+
+usedVarTypes :: Monad m => Scope m -> Infer m ()
+usedVarTypes = liftUsedVarTypes . Writer.tell
 
 putInScope
   :: Monad m => [(Guid, EntityT m Expression)]
@@ -287,7 +298,9 @@ inferExpression (Entity origin prevTypes value) =
     return (applyType, ExpressionApply (Apply inferredFunc modArg))
   ExpressionGetVariable varRef -> do
     types <- case varRef of
-      ParameterRef guid -> liftM maybeToList $ findInScope guid
+      ParameterRef guid -> do
+        usedVarTypes $ map ((,) guid) prevTypes
+        liftM maybeToList $ findInScope guid
       DefinitionRef defI -> do
         dType <- liftM defType . liftTransaction $ Transaction.readIRef defI
         inferredDType <-
