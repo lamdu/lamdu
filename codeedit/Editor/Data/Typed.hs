@@ -166,17 +166,17 @@ convertExpression (DataLoad.Entity iref mReplace value) =
 
 inferExpression
   :: Monad m
-  => Scope m
-  -> EntityT m Expression
+  => EntityT m Expression
+  -> Scope m
   -> Transaction ViewTag m (EntityT m Expression)
-inferExpression scope (Entity origin prevTypes value) =
+inferExpression (Entity origin prevTypes value) scope =
   makeEntity =<<
   case value of
   ExpressionLambda lambda -> liftM ((,) [] . ExpressionLambda) $ inferLambda lambda
   ExpressionPi lambda -> liftM ((,) [] . ExpressionPi) $ inferLambda lambda
   ExpressionApply (Apply func arg) -> do
-    inferredFunc <- inferExpression scope func
-    inferredArg <- inferExpression scope arg
+    inferredFunc <- inferExpression func scope
+    inferredArg <- inferExpression arg scope
     let
       (applyType, modArg) = case entityType inferredFunc of
         Entity piOrigin _ (ExpressionPi (Lambda paramType resultType)) : _ ->
@@ -202,9 +202,10 @@ inferExpression scope (Entity origin prevTypes value) =
       expandedTs <- mapM expand $ unify ts prevTypes
       return $ Entity origin expandedTs expr
     inferLambda (Lambda paramType body) = do
-      inferredParamType <- inferExpression scope paramType
+      inferredParamType <- inferExpression paramType scope
       liftM (Lambda inferredParamType) $
-        inferExpression ((entityOriginGuid origin, inferredParamType) : scope) body
+        inferExpression body $
+        (entityOriginGuid origin, inferredParamType) : scope
 
 -- This is replaced in all use cases by uniqify:
 zeroGuid :: Guid
@@ -318,7 +319,7 @@ inferDefinition (DataLoad.Entity iref mReplace value) =
 inferRootExpression
   :: Monad m => DataLoad.EntityT m Expression
   -> Transaction ViewTag m (EntityT m Expression)
-inferRootExpression exprI = sanitize =<< inferExpression [] (convertExpression exprI)
+inferRootExpression exprI = sanitize =<< inferExpression (convertExpression exprI) []
 
 loadInferDefinition
   :: Monad m => IRef (Definition IRef)
