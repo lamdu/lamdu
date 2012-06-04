@@ -1,3 +1,6 @@
+* ParamEdit needs to take the eventmap/actions of ExpressionEdit and
+  also add them to the param via the FuncParam actions
+
 * Maybe param type is a mistake?
 
 * More type rules:
