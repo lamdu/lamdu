@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.InferredTypes(addType) where
 
 import Data.Store.Transaction (Transaction)
@@ -21,7 +22,7 @@ addType
 addType _ [] widget = widget
 addType exprId typeEdits widget =
   Box.toWidget $ Box.make Box.vertical
-  [ Widget.align (Vector2 0.5 0.5) widget
+  [ addErrorBackground $ Widget.align (Vector2 0.5 0.5) widget
     -- must not be aligned if space is to be used
   , Spacer.makeHorizLineWidget underlineId
   , Widget.align (Vector2 0.5 0.5) typeEdit
@@ -29,4 +30,7 @@ addType exprId typeEdits widget =
   where
     typeEdit = Widget.scale Config.typeScaleFactor $ BWidgets.vbox typeEdits
     underlineId = WidgetIds.underlineId $ Widget.toAnimId exprId
-
+    isError = length typeEdits >= 2
+    addErrorBackground
+      | isError = Widget.backgroundColor (Widget.toAnimId exprId ++ ["type error background"]) Config.typeErrorBackgroundColor
+      | otherwise = id
