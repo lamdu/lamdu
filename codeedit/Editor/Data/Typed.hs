@@ -64,14 +64,14 @@ entityOriginGuid (OriginStored stored) = IRef.guid $ esIRef stored
 entityGuid :: Entity m a -> Guid
 entityGuid = entityOriginGuid . entityOrigin
 
-data Entity m a = Entity
-  { entityOrigin :: EntityOrigin m a
-  , entityType :: [Entity m (Expression (Entity m))] -- Inferred types
-  , entityValue :: a
-  } deriving Eq
-
 type EntityM m f = Entity m (f (Entity m))
 type EntityT m f = EntityM (Transaction ViewTag m) f
+
+data Entity m a = Entity
+  { entityOrigin :: EntityOrigin m a
+  , entityType :: [EntityM m Expression] -- Inferred types
+  , entityValue :: a
+  } deriving Eq
 
 AtFieldTH.make ''Entity
 
