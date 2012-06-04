@@ -132,23 +132,6 @@ subst guid newExpr (Entity origin mType value) =
     s = subst guid newExpr
     onLambda (Lambda paramType body) = Lambda (s paramType) (s body)
 
-alphaEq :: EntityT m Expression -> EntityT m Expression -> Bool
-alphaEq e0 e1 =
-  uniqify Map.empty gen e0 == uniqify Map.empty gen e1
-  where
-    gen = Random.mkStdGen 0
-
-pruneSameTypes
-  :: [EntityT m Expression]
-  -> [EntityT m Expression]
-pruneSameTypes = List.nubBy alphaEq
-
-unify
-  :: [EntityT m Expression]
-  -> [EntityT m Expression]
-  -> [EntityT m Expression]
-unify xs ys = pruneSameTypes $ xs ++ ys
-
 --------------- Infer Stack boilerplate:
 
 type InInfer m a =
@@ -157,10 +140,7 @@ type InInfer m a =
 newtype Infer m a = Infer { unInfer :: InInfer m a }
   deriving (Functor, Applicative, Monad)
 
-inInfer
-  :: (InInfer m a -> InInfer n b)
-  -> Infer m a -> Infer n b
-inInfer f = Infer . f . unInfer
+AtFieldTH.make ''Infer
 
 liftScope :: InInfer m a -> Infer m a
 liftScope = Infer
@@ -184,7 +164,7 @@ liftTransaction = liftRandom . lift
 localScope
   :: Monad m => (Scope m -> Scope m)
   -> Infer m a -> Infer m a
-localScope = inInfer . Reader.local
+localScope = atInfer . Reader.local
 
 ----------------- Infer operations:
 
@@ -355,6 +335,23 @@ uniqify symbolMap gen (Entity oldOrigin ts v) =
       (uniqify (Map.insert oldGuid newGuid symbolMap) genV1 body)
     (newGuid, newGen) = Random.random gen
     (genT, genV) = Random.split newGen
+
+alphaEq :: EntityT m Expression -> EntityT m Expression -> Bool
+alphaEq e0 e1 =
+  uniqify Map.empty gen e0 == uniqify Map.empty gen e1
+  where
+    gen = Random.mkStdGen 0
+
+pruneSameTypes
+  :: [EntityT m Expression]
+  -> [EntityT m Expression]
+pruneSameTypes = List.nubBy alphaEq
+
+unify
+  :: [EntityT m Expression]
+  -> [EntityT m Expression]
+  -> [EntityT m Expression]
+unify xs ys = pruneSameTypes $ xs ++ ys
 
 foldValues
   :: Monad m
