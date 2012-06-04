@@ -15,6 +15,7 @@ import Control.Applicative (Applicative, liftA2)
 import Control.Monad (liftM, liftM2, (<=<))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Random (RandomT, nextRandom, runRandomT)
+import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Data.Binary (Binary)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe, maybeToList)
@@ -23,6 +24,7 @@ import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.Data (Definition(..), Expression(..), FFIName(..), Apply(..), Lambda(..), VariableRef(..))
+import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
 import qualified Data.Functor.Identity as Identity
@@ -140,21 +142,62 @@ unify
   -> [EntityT m Expression]
 unify xs ys = List.nubBy alphaEq $ xs ++ ys
 
+--------------- Infer Stack boilerplate:
+
 newtype Infer m a = Infer
-  { unInfer :: RandomT Random.StdGen (Transaction ViewTag m) a
+  { unInfer
+    :: ReaderT (Scope m) (RandomT Random.StdGen (Transaction ViewTag m)) a
   } deriving (Functor, Applicative, Monad)
 
-runInfer :: Monad m => Infer m a -> Transaction ViewTag m a
-runInfer = runRandomT (Random.mkStdGen 0) . unInfer
+inInfer
+  :: (ReaderT (Scope m)
+      (RandomT Random.StdGen (Transaction ViewTag m)) a
+      -> ReaderT (Scope n)
+      (RandomT Random.StdGen (Transaction ViewTag n)) b)
+  -> Infer m a -> Infer n b
+inInfer f = Infer . f . unInfer
 
-liftRandom :: RandomT Random.StdGen (Transaction ViewTag m) a -> Infer m a
-liftRandom = Infer
+liftScope
+  :: ReaderT (Scope m) (RandomT Random.StdGen (Transaction ViewTag m)) a
+  -> Infer m a
+liftScope = Infer
 
-liftTransaction :: Monad m => Transaction ViewTag m a -> Infer m a
+-- Reader "local" operation cannot simply be lifted...
+localScope
+  :: Monad m => (Scope m -> Scope m)
+  -> Infer m a -> Infer m a
+localScope = inInfer . Reader.local
+
+liftRandom
+  :: Monad m
+  => RandomT Random.StdGen (Transaction ViewTag m) a -> Infer m a
+liftRandom = liftScope . lift
+
+liftTransaction
+  :: Monad m => Transaction ViewTag m a -> Infer m a
 liftTransaction = liftRandom . lift
+
+----------------- Infer operations:
+
+runInfer :: Monad m => Infer m a -> Transaction ViewTag m a
+runInfer = runRandomT (Random.mkStdGen 0) . (`runReaderT` []) . unInfer
+
+putInScope
+  :: Monad m => [(Guid, EntityT m Expression)]
+  -> Infer m a
+  -> Infer m a
+putInScope = localScope . (++)
+
+readScope :: Monad m => Infer m (Scope m)
+readScope = liftScope Reader.ask
 
 nextGuid :: Monad m => Infer m Guid
 nextGuid = liftRandom nextRandom
+
+--------------
+
+findInScope :: Monad m => Guid -> Infer m (Maybe (EntityT m Expression))
+findInScope guid = liftM (lookup guid) readScope
 
 generateEntity
   :: Monad m
@@ -200,9 +243,8 @@ holify xs = return xs
 inferExpression
   :: Monad m
   => EntityT m Expression
-  -> Scope m
   -> Infer m (EntityT m Expression)
-inferExpression (Entity origin prevTypes value) scope =
+inferExpression (Entity origin prevTypes value) =
   makeEntity =<<
   case value of
   ExpressionLambda lambda -> do
@@ -219,22 +261,28 @@ inferExpression (Entity origin prevTypes value) scope =
       funcType selfType argType =
         generateEntity [] . ExpressionPi $ Lambda argType selfType
       argTypes = entityType arg
-    funcTypes <- sequence =<< (liftM2 . liftA2) funcType (holify prevTypes) (holify argTypes)
-    inferredFunc <- inferExpression ((atEntityType . unify) funcTypes func) scope
+    funcTypes <-
+      sequence =<<
+      (liftM2 . liftA2) funcType (holify prevTypes) (holify argTypes)
+    inferredFunc <- inferExpression ((atEntityType . unify) funcTypes func)
     (applyType, modArg) <-
       case entityType inferredFunc of
-      Entity piOrigin _ (ExpressionPi (Lambda paramType resultType)) : _ -> do
-        inferredArg <- inferExpression ((atEntityType . unify) [paramType] arg) scope
-        return
-          ( [subst (entityOriginGuid piOrigin) (entityValue inferredArg) resultType]
-          , inferredArg )
+      Entity piOrigin _
+        (ExpressionPi (Lambda paramType resultType)) : _ -> do
+          inferredArg <-
+            inferExpression ((atEntityType . unify) [paramType] arg)
+          return
+            ( [subst (entityOriginGuid piOrigin)
+               (entityValue inferredArg) resultType]
+            , inferredArg )
       _ -> do
-        inferredArg <- inferExpression arg scope
-        return ([], inferredArg) -- TODO: Split to "bad type" and "missing type"
+        inferredArg <- inferExpression arg
+        -- TODO: Split to "bad type" and "missing type":
+        return ([], inferredArg)
     return (applyType, ExpressionApply (Apply inferredFunc modArg))
   ExpressionGetVariable varRef -> do
     types <- case varRef of
-      ParameterRef guid -> return . maybeToList $ lookup guid scope
+      ParameterRef guid -> liftM maybeToList $ findInScope guid
       DefinitionRef defI -> do
         dType <- liftM defType . liftTransaction $ Transaction.readIRef defI
         inferredDType <-
@@ -258,10 +306,10 @@ inferExpression (Entity origin prevTypes value) scope =
       expandedTs <- mapM expand $ unify ts prevTypes
       return $ Entity origin expandedTs expr
     inferLambda (Lambda paramType body) = do
-      inferredParamType <- inferExpression paramType scope
-      liftM (Lambda inferredParamType) $
-        inferExpression body $
-        (entityOriginGuid origin, inferredParamType) : scope
+      inferredParamType <- inferExpression paramType
+      liftM (Lambda inferredParamType) .
+        putInScope [(entityOriginGuid origin, inferredParamType)] $
+        inferExpression body
 
 guidToStdGen :: Guid -> Random.StdGen
 guidToStdGen = Random.mkStdGen . BinaryUtils.decodeS . Guid.bs
@@ -371,7 +419,8 @@ inferDefinition (DataLoad.Entity iref mReplace value) =
 inferRootExpression
   :: Monad m => DataLoad.EntityT m Expression
   -> Infer m (EntityT m Expression)
-inferRootExpression exprI = sanitize =<< inferExpression (convertExpression exprI) []
+inferRootExpression exprI =
+  sanitize =<< inferExpression (convertExpression exprI)
 
 loadInferDefinition
   :: Monad m => IRef (Definition IRef)
