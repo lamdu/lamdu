@@ -94,7 +94,7 @@ unfoldKeys = foldKeys
 helpTextSize = 10
 baseTextSize = 25
 
-typeErrorBackgroundColor = Draw.Color 1 0.3 0.2 0.6
+typeErrorBackgroundColor = Draw.Color 0.5 0.05 0.05 1
 
 typeScaleFactor = 0.4
 squareParensScaleFactor = 0.96
