@@ -254,10 +254,6 @@ convertExpression (DataLoad.Entity iref mReplace value) =
   where
     convertLambda (Lambda paramType body) = Lambda (convertExpression paramType) (convertExpression body)
 
-holify :: Monad m => [EntityT m Expression] -> Infer m [EntityT m Expression]
-holify [] = liftM (:[]) $ generateEntity [] ExpressionHole
-holify xs = return xs
-
 inferExpression
   :: Monad m
   => EntityT m Expression
@@ -286,9 +282,7 @@ inferExpression (Entity origin prevTypes value) =
       funcType selfType argType =
         generateEntity [] . ExpressionPi $ Lambda argType selfType
       argTypes = entityType arg
-    funcTypes <-
-      sequence =<<
-      (liftM2 . liftA2) funcType (holify prevTypes) (holify argTypes)
+    funcTypes <- sequence $ liftA2 funcType prevTypes argTypes
     inferredFunc <- inferExpression ((atEntityType . unify) funcTypes func)
     (applyType, modArg) <-
       case entityType inferredFunc of
@@ -323,9 +317,7 @@ inferExpression (Entity origin prevTypes value) =
       generateEntity [] $
       ExpressionBuiltin (FFIName ["Prelude"] "Integer")
     return ([intType], ExpressionLiteralInteger int)
-  ExpressionHole ->
-    liftM (flip (,) ExpressionHole . (: [])) $
-    generateEntity [] ExpressionHole
+  ExpressionHole -> return ([], ExpressionHole)
   x -> return ([], x)
   where
     extractPi (ExpressionPi (Lambda paramType resultType)) = [(paramType, resultType)]
