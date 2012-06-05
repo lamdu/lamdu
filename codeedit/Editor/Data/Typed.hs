@@ -118,14 +118,16 @@ subst guid newExpr (ExpressionEntity origin mType value) =
   case value of
   Data.ExpressionLambda lambda -> Data.ExpressionLambda $ onLambda lambda
   Data.ExpressionPi lambda -> Data.ExpressionPi $ onLambda lambda
-  Data.ExpressionApply (Data.Apply func arg) -> Data.ExpressionApply $ Data.Apply (s func) (s arg)
+  Data.ExpressionApply (Data.Apply func arg) ->
+    Data.ExpressionApply $ Data.Apply (s func) (s arg)
   var@(Data.ExpressionGetVariable (Data.ParameterRef guidRef))
     | guidRef == guid -> newExpr
     | otherwise -> var
   x -> x
   where
     s = subst guid newExpr
-    onLambda (Data.Lambda paramType body) = Data.Lambda (s paramType) (s body)
+    onLambda (Data.Lambda paramType body) =
+      Data.Lambda (s paramType) (s body)
 
 --------------- Infer Stack boilerplate:
 
@@ -221,35 +223,48 @@ generateEntity ts v = do
 
 --------------
 
-expand :: Monad m => ExpressionEntity (T m) -> Infer m (ExpressionEntity (T m))
+expand
+  :: Monad m => ExpressionEntity (T m) -> Infer m (ExpressionEntity (T m))
 expand =
   foldValues f
   where
-    f (ExpressionEntity _ _ (Data.ExpressionGetVariable (Data.DefinitionRef defI))) = do
-      def <- liftTransaction $ Transaction.readIRef defI
-      liftM convertExpression . liftTransaction $
-        DataLoad.loadExpression (Data.defBody def) Nothing
-    f (ExpressionEntity _ _ (Data.ExpressionApply (Data.Apply (ExpressionEntity lambdaOrigin _ (Data.ExpressionLambda (Data.Lambda _ body))) val))) =
+    f (ExpressionEntity _ _
+       (Data.ExpressionGetVariable (Data.DefinitionRef defI)))
+      = do
+        def <- liftTransaction $ Transaction.readIRef defI
+        liftM convertExpression . liftTransaction $
+          DataLoad.loadExpression (Data.defBody def) Nothing
+    f (ExpressionEntity _ _
+       (Data.ExpressionApply
+        (Data.Apply
+         (ExpressionEntity lambdaOrigin _
+          (Data.ExpressionLambda (Data.Lambda _ body))) val))) =
       return $ subst (originGuid lambdaOrigin) (eeValue val) body
     f x = return x
 
-convertExpression :: DataLoad.ExpressionEntity (T m) -> ExpressionEntity (T m)
+convertExpression
+  :: DataLoad.ExpressionEntity (T m) -> ExpressionEntity (T m)
 convertExpression (DataLoad.ExpressionEntity stored value) =
   ExpressionEntity (OriginStored stored) [] $
   case value of
-  Data.ExpressionLambda lambda -> Data.ExpressionLambda $ convertLambda lambda
+  Data.ExpressionLambda lambda ->
+    Data.ExpressionLambda $ convertLambda lambda
   Data.ExpressionPi lambda -> Data.ExpressionPi $ convertLambda lambda
   Data.ExpressionApply (Data.Apply func arg) ->
-    Data.ExpressionApply $ Data.Apply (convertExpression func) (convertExpression arg)
+    Data.ExpressionApply $
+    Data.Apply (convertExpression func) (convertExpression arg)
   Data.ExpressionGetVariable varRef -> Data.ExpressionGetVariable varRef
   Data.ExpressionLiteralInteger int -> Data.ExpressionLiteralInteger int
   Data.ExpressionBuiltin bi -> Data.ExpressionBuiltin bi
   Data.ExpressionHole -> Data.ExpressionHole
   Data.ExpressionMagic -> Data.ExpressionMagic
   where
-    convertLambda (Data.Lambda paramType body) = Data.Lambda (convertExpression paramType) (convertExpression body)
+    convertLambda (Data.Lambda paramType body) =
+      Data.Lambda (convertExpression paramType) (convertExpression body)
 
-holify :: Monad m => [ExpressionEntity (T m)] -> Infer m [ExpressionEntity (T m)]
+holify
+  :: Monad m
+  => [ExpressionEntity (T m)] -> Infer m [ExpressionEntity (T m)]
 holify [] = liftM (:[]) $ generateEntity [] Data.ExpressionHole
 holify xs = return xs
 
@@ -265,7 +280,8 @@ inferExpression (ExpressionEntity origin prevTypes value) =
       lambdaGuid = originGuid origin
       (_, resultTypes) = extractPis prevTypes
       lambdaType paramType resultType =
-        generateEntity [] . Data.ExpressionPi $ Data.Lambda paramType resultType
+        generateEntity [] . Data.ExpressionPi $
+        Data.Lambda paramType resultType
     (inferredLambda@(Data.Lambda paramType body), usedParamTypes) <-
       popUsedVar lambdaGuid . inferLambda $
       (Data.atLambdaBody . atEeInferredTypes . addTypes) resultTypes lambda
@@ -283,14 +299,20 @@ inferExpression (ExpressionEntity origin prevTypes value) =
     funcTypes <-
       sequence =<<
       (liftM2 . liftA2) funcType (holify prevTypes) (holify argTypes)
-    inferredFunc <- inferExpression $ (atEeInferredTypes . addTypes) funcTypes func
+    inferredFunc <-
+      inferExpression $ (atEeInferredTypes . addTypes) funcTypes func
     let
-      substArg (ExpressionEntity piOrigin piTs (Data.ExpressionPi (Data.Lambda paramType resultType))) =
-        ExpressionEntity piOrigin piTs . Data.ExpressionPi . Data.Lambda paramType $
+      substArg
+        (ExpressionEntity piOrigin piTs
+         (Data.ExpressionPi (Data.Lambda paramType resultType))) =
+        ExpressionEntity piOrigin piTs . Data.ExpressionPi .
+        Data.Lambda paramType $
         subst (originGuid piOrigin) (eeValue arg) resultType
       substArg x = x
-      (paramTypes, resultTypes) = extractPis . map substArg $ eeInferredTypes inferredFunc
-    inferredArg <- inferExpression $ (atEeInferredTypes . addTypes) paramTypes arg
+      (paramTypes, resultTypes) =
+        extractPis . map substArg $ eeInferredTypes inferredFunc
+    inferredArg <-
+      inferExpression $ (atEeInferredTypes . addTypes) paramTypes arg
     return
       (map substArg resultTypes,
        Data.ExpressionApply (Data.Apply inferredFunc inferredArg))
@@ -317,7 +339,8 @@ inferExpression (ExpressionEntity origin prevTypes value) =
     generateEntity [] Data.ExpressionHole
   where
     extractPis = unzip . concatMap (extractPi . eeValue)
-    extractPi (Data.ExpressionPi (Data.Lambda paramType resultType)) = [(paramType, resultType)]
+    extractPi (Data.ExpressionPi (Data.Lambda paramType resultType)) =
+      [(paramType, resultType)]
     extractPi _ = []
     makeEntity (ts, expr) = do
       expandedTs <- liftM pruneSameTypes . mapM expand $ ts ++ prevTypes
@@ -335,7 +358,8 @@ canonizeIdentifiers
   :: Map Guid Guid
   -> Random.StdGen -> ExpressionEntity (T m) -> ExpressionEntity (T m)
 canonizeIdentifiers symbolMap gen (ExpressionEntity oldOrigin ts v) =
-  ExpressionEntity (OriginGenerated newGuid) (canonizeIdentifiersList symbolMap genT ts) $
+  ExpressionEntity (OriginGenerated newGuid)
+  (canonizeIdentifiersList symbolMap genT ts) $
   case v of
   Data.ExpressionLambda lambda -> Data.ExpressionLambda $ onLambda lambda
   Data.ExpressionPi lambda -> Data.ExpressionPi $ onLambda lambda
@@ -350,8 +374,9 @@ canonizeIdentifiers symbolMap gen (ExpressionEntity oldOrigin ts v) =
     u = canonizeIdentifiers symbolMap
     (genV0, genV1) = Random.split genV
     onLambda (Data.Lambda paramType body) =
-      Data.Lambda (u genV0 paramType)
-      (canonizeIdentifiers (Map.insert oldGuid newGuid symbolMap) genV1 body)
+      Data.Lambda (u genV0 paramType) $
+      canonizeIdentifiers
+      (Map.insert oldGuid newGuid symbolMap) genV1 body
     (newGuid, newGen) = Random.random gen
     (genT, genV) = Random.split newGen
 
@@ -438,10 +463,12 @@ foldValues
 foldValues f (ExpressionEntity origin ts v) =
   f . ExpressionEntity origin ts =<<
   case v of
-  Data.ExpressionLambda lambda -> liftM Data.ExpressionLambda $ onLambda lambda
+  Data.ExpressionLambda lambda ->
+    liftM Data.ExpressionLambda $ onLambda lambda
   Data.ExpressionPi lambda -> liftM Data.ExpressionPi $ onLambda lambda
   Data.ExpressionApply (Data.Apply func arg) ->
-    liftM Data.ExpressionApply $ liftM2 Data.Apply (foldValues f func) (foldValues f arg)
+    liftM Data.ExpressionApply $
+    liftM2 Data.Apply (foldValues f func) (foldValues f arg)
   x -> return x
   where
     onLambda (Data.Lambda paramType body) =
@@ -460,8 +487,10 @@ mapTypes f =
       newTs <- mapM recurse ts
       liftM (ExpressionEntity origin newTs) $
         case v of
-        Data.ExpressionLambda lambda -> liftM Data.ExpressionLambda $ onLambda lambda
-        Data.ExpressionPi lambda -> liftM Data.ExpressionPi $ onLambda lambda
+        Data.ExpressionLambda lambda ->
+          liftM Data.ExpressionLambda $ onLambda lambda
+        Data.ExpressionPi lambda ->
+          liftM Data.ExpressionPi $ onLambda lambda
         x -> return x
     onLambda (Data.Lambda paramType body) = do
       newParamType <- recurse paramType
@@ -471,7 +500,8 @@ canonizeIdentifiersList
   :: Map Guid Guid -> Random.StdGen
   -> [ExpressionEntity (T m)] -> [ExpressionEntity (T m)]
 canonizeIdentifiersList symbolMap =
-  zipWith (canonizeIdentifiers symbolMap) . map Random.mkStdGen . Random.randoms
+  zipWith (canonizeIdentifiers symbolMap) .
+  map Random.mkStdGen . Random.randoms
 
 canonizeIdentifiersTypes :: ExpressionEntity (T m) -> ExpressionEntity (T m)
 canonizeIdentifiersTypes =
@@ -479,15 +509,19 @@ canonizeIdentifiersTypes =
   where
     f (ExpressionEntity origin ts val) =
       return $
-      ExpressionEntity origin (canonizeIdentifiersList Map.empty (guidToStdGen (originGuid origin)) ts) val
+      ExpressionEntity origin
+      (canonizeIdentifiersList Map.empty
+       (guidToStdGen (originGuid origin)) ts) val
 
-builtinsToGlobals :: Monad m => ExpressionEntity (T m) -> Infer m (ExpressionEntity (T m))
+builtinsToGlobals
+  :: Monad m => ExpressionEntity (T m) -> Infer m (ExpressionEntity (T m))
 builtinsToGlobals expr = do
   globals <- liftTransaction $ Property.get Anchors.builtinsMap
   let
     f entity@(ExpressionEntity origin ts (Data.ExpressionBuiltin name)) =
       return .
-      maybe entity (ExpressionEntity origin ts . Data.ExpressionGetVariable) $
+      maybe entity
+      (ExpressionEntity origin ts . Data.ExpressionGetVariable) $
       Map.lookup name globals
     f entity = return entity
   foldValues f expr
