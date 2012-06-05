@@ -56,7 +56,7 @@ addSquareParens parensId =
 
 highlightExpression :: Widget.Widget f -> Widget.Widget f
 highlightExpression =
-  Widget.backgroundColor WidgetIds.parenHighlightId Config.parenHighlightColor
+  Widget.backgroundColor 11 WidgetIds.parenHighlightId Config.parenHighlightColor
 
 addTextParens
   :: MonadF m

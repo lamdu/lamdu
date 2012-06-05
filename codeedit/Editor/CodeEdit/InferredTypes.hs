@@ -9,7 +9,6 @@ import Graphics.UI.Bottle.Widget (Widget)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.Config as Config
 import qualified Editor.WidgetIds as WidgetIds
-import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
@@ -34,5 +33,5 @@ addType exprId typeEdits widget =
     isError = length typeEdits >= 2
     typeErrorAnimId = Widget.toAnimId exprId ++ ["type error background"]
     addErrorBackground
-      | isError = Widget.atImageWithSize $ Anim.backgroundColor typeErrorAnimId 15 Config.typeErrorBackgroundColor
+      | isError = Widget.backgroundColor 15 typeErrorAnimId Config.typeErrorBackgroundColor
       | otherwise = id

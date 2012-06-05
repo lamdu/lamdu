@@ -123,7 +123,7 @@ lineHeightOfStyle style = sz * textHeight
 -- | given text...
 makeFocused :: Cursor -> Style -> String -> Widget.Id -> Widget ((,) String)
 makeFocused cursor style str myId =
-  Widget.backgroundColor (sBackgroundCursorId style) blue .
+  Widget.backgroundColor 10 (sBackgroundCursorId style) blue .
   Widget.atImage (`mappend` cursorFrame) .
   Widget.strongerEvents eventMap $
   widget

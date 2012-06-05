@@ -46,7 +46,7 @@ makeFocused delegating focusSelf keys backgroundCursorId =
     handleFocus Delegating    = addStopDelegatingEventMap
     handleFocus NotDelegating = blueify . useStartDelegatingEventMap
 
-    blueify = Widget.backgroundColor (mappend backgroundCursorId (Widget.toAnimId focusSelf)) blue
+    blueify = Widget.backgroundColor 10 (mappend backgroundCursorId (Widget.toAnimId focusSelf)) blue
 
     useStartDelegatingEventMap = Widget.atSizeDependentWidgetData setStartDelegatingEventMap
     setStartDelegatingEventMap userIO =

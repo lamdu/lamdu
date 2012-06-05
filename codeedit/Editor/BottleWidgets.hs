@@ -57,7 +57,7 @@ makeFocusableView myId widget = do
   hasFocus <- liftM (myId ==) readCursor
   let
     setBackground
-      | hasFocus = Widget.backgroundColor WidgetIds.backgroundCursorId blue
+      | hasFocus = Widget.backgroundColor 10 WidgetIds.backgroundCursorId blue
       | otherwise = id
   return .
     (Widget.atIsFocused . const) hasFocus . setBackground $
@@ -83,7 +83,7 @@ makeChoice selectionAnimId orientation children curChild =
     colorizedChildren =
       map (uncurry colorize . first (curChild ==)) children
     box = Box.make orientation colorizedChildren
-    colorize True = Widget.backgroundColor selectionAnimId selectedColor
+    colorize True = Widget.backgroundColor 10 selectionAnimId selectedColor
     colorize False = id
     selectedColor = Draw.Color 0 0.5 0 1
 

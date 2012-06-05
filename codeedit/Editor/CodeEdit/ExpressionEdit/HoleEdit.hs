@@ -326,7 +326,7 @@ makeH hole guid myId = do
       }
     canPickResult = isJust $ Sugar.holePickResult hole
     makeBackground =
-      Widget.backgroundColor $
+      Widget.backgroundColor 11 $
       mappend (Widget.toAnimId myId) ["hole background"]
 
 make
