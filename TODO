@@ -1,18 +1,8 @@
-* ParamEdit needs to take the eventmap/actions of ExpressionEdit and
-  also add them to the param via the FuncParam actions
+* Have a "destructive update" inference algorithm with an indirection
+  layer so that unify can cause two types to point to the same bucket
+  which is later updated by more inference
 
 * Maybe param type is a mistake?
-
-* More type rules:
-  * If its apply func its type is Pi
-    * Any types of arg become types of Pi's paramType
-  * Type of param to propagate out from its uses
-    * Writer of scope used with the types it was used?
-
-* Something type of its self -- causes loop/hang (Probably in
-  Typed.inferExpression. Keep around a Map DefinitionGuid Type?
-
-* Definition Type to propagate inside and to come from inside
 
 * Oops, if type of left-hand-side is hole, then read-only holes at
    right should NOT have their scope based on their location (They are
@@ -23,7 +13,8 @@
 
    * Maybe read-only hole should not show results at all?
 
-* Inferred types
+* ParamEdit needs to take the eventmap/actions of ExpressionEdit and
+  also add them to the param via the FuncParam actions
 
 * Widget framework:
   * Move "Cursor->" reader into widget
