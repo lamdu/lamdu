@@ -338,11 +338,11 @@ inferExpression (Entity origin prevTypes value) =
 guidToStdGen :: Guid -> Random.StdGen
 guidToStdGen = Random.mkStdGen . BinaryUtils.decodeS . Guid.bs
 
-uniqify
+canonizeIdentifiers
   :: Map Guid Guid
   -> Random.StdGen -> EntityT m Expression -> EntityT m Expression
-uniqify symbolMap gen (Entity oldOrigin ts v) =
-  Entity (OriginGenerated newGuid) (uniqifyList symbolMap genT ts) $
+canonizeIdentifiers symbolMap gen (Entity oldOrigin ts v) =
+  Entity (OriginGenerated newGuid) (canonizeIdentifiersList symbolMap genT ts) $
   case v of
   ExpressionLambda lambda -> ExpressionLambda $ onLambda lambda
   ExpressionPi lambda -> ExpressionPi $ onLambda lambda
@@ -354,17 +354,17 @@ uniqify symbolMap gen (Entity oldOrigin ts v) =
   x -> x
   where
     oldGuid = entityOriginGuid oldOrigin
-    u = uniqify symbolMap
+    u = canonizeIdentifiers symbolMap
     (genV0, genV1) = Random.split genV
     onLambda (Lambda paramType body) =
       Lambda (u genV0 paramType)
-      (uniqify (Map.insert oldGuid newGuid symbolMap) genV1 body)
+      (canonizeIdentifiers (Map.insert oldGuid newGuid symbolMap) genV1 body)
     (newGuid, newGen) = Random.random gen
     (genT, genV) = Random.split newGen
 
 alphaEq :: EntityT m Expression -> EntityT m Expression -> Bool
 alphaEq e0 e1 =
-  uniqify Map.empty gen e0 == uniqify Map.empty gen e1
+  canonizeIdentifiers Map.empty gen e0 == canonizeIdentifiers Map.empty gen e1
   where
     gen = Random.mkStdGen 0
 
@@ -474,22 +474,22 @@ mapTypes f =
       newParamType <- recurse paramType
       return $ Lambda newParamType body
 
-uniqifyList
+canonizeIdentifiersList
   :: Map Guid Guid -> Random.StdGen
   -> [EntityT m Expression] -> [EntityT m Expression]
-uniqifyList symbolMap =
-  zipWith (uniqify symbolMap) . map Random.mkStdGen . Random.randoms
+canonizeIdentifiersList symbolMap =
+  zipWith (canonizeIdentifiers symbolMap) . map Random.mkStdGen . Random.randoms
 
-uniqifyTypes :: EntityT m Expression -> EntityT m Expression
-uniqifyTypes =
+canonizeIdentifiersTypes :: EntityT m Expression -> EntityT m Expression
+canonizeIdentifiersTypes =
   Identity.runIdentity . foldValues f
   where
     f (Entity origin ts val) =
       return $
-      Entity origin (uniqifyList Map.empty (guidToStdGen (entityOriginGuid origin)) ts) val
+      Entity origin (canonizeIdentifiersList Map.empty (guidToStdGen (entityOriginGuid origin)) ts) val
 
-canonicalize :: Monad m => EntityT m Expression -> Infer m (EntityT m Expression)
-canonicalize expr = do
+builtinsToGlobals :: Monad m => EntityT m Expression -> Infer m (EntityT m Expression)
+builtinsToGlobals expr = do
   globals <- liftTransaction $ Property.get Anchors.builtinsMap
   let
     f entity@(Entity origin ts (ExpressionBuiltin name)) =
@@ -502,7 +502,7 @@ canonicalize expr = do
 sanitize
   :: Monad m => EntityT m Expression
   -> Infer m (EntityT m Expression)
-sanitize = liftM uniqifyTypes . mapTypes canonicalize
+sanitize = liftM canonizeIdentifiersTypes . mapTypes builtinsToGlobals
 
 inferDefinition
   :: Monad m
