@@ -2,7 +2,7 @@
 module Editor.Data.Typed
   ( Entity(..), atEntityType, atEntityValue
   , EntityM, EntityT
-  , Stored(..), EntityOrigin(..)
+  , EntityOrigin(..)
   , entityReplace
   , loadInferDefinition
   , loadInferExpression
@@ -35,7 +35,6 @@ import qualified Data.Functor.Identity as Identity
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
-import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
@@ -43,30 +42,16 @@ import qualified Editor.Data as Data
 import qualified Editor.Data.Load as DataLoad
 import qualified System.Random as Random
 
-{-# ANN module "HLint: ignore Use camelCase" #-}
-type family ReplaceArg_1_0 (i :: * -> *) (a :: *)
-type instance ReplaceArg_1_0 i (f k) = f i
-
-data Stored m a = Stored
-  { esIRef :: IRef a
-  , esReplace :: Maybe (IRef a -> m ())
-  }
-
--- TODO: explain..
--- How could we compare the esReplace field?
-instance Eq (Stored m a) where
-  Stored x _ == Stored y _ = x == y
-
 data EntityOrigin m a
   = OriginGenerated Guid
-  | OriginStored (Stored m (ReplaceArg_1_0 IRef a))
+  | OriginStored (DataLoad.EntityStored m a)
   deriving Eq
 
 type Scope m = [(Guid, EntityT m Expression)]
 
 entityOriginGuid :: EntityOrigin m a -> Guid
 entityOriginGuid (OriginGenerated guid) = guid
-entityOriginGuid (OriginStored stored) = IRef.guid $ esIRef stored
+entityOriginGuid (OriginStored stored) = DataLoad.esGuid stored
 
 entityGuid :: Entity m a -> Guid
 entityGuid = entityOriginGuid . entityOrigin
@@ -86,31 +71,31 @@ type TypedEntity m = Entity (Transaction ViewTag m)
 
 entityOriginStored
   :: EntityOrigin m a
-  -> Maybe (Stored m (ReplaceArg_1_0 IRef a))
+  -> Maybe (DataLoad.EntityStored m a)
 entityOriginStored (OriginGenerated _) = Nothing
 entityOriginStored (OriginStored x) = Just x
 
-entityStored :: Entity m a -> Maybe (Stored m (ReplaceArg_1_0 IRef a))
+entityStored :: Entity m a -> Maybe (DataLoad.EntityStored m a)
 entityStored = entityOriginStored . entityOrigin
 
-entityReplace :: Entity m a -> Maybe (IRef (ReplaceArg_1_0 IRef a) -> m ())
-entityReplace = esReplace <=< entityStored
+entityReplace :: Entity m a -> Maybe (IRef (DataLoad.ReplaceArg_1_0 IRef a) -> m ())
+entityReplace = DataLoad.esReplace <=< entityStored
 
-entityIRef :: Entity m a -> Maybe (IRef (ReplaceArg_1_0 IRef a))
-entityIRef = fmap esIRef . entityStored
+entityIRef :: Entity m a -> Maybe (IRef (DataLoad.ReplaceArg_1_0 IRef a))
+entityIRef = fmap DataLoad.esIRef . entityStored
 
 writeIRef
-  :: (Monad m, Binary (ReplaceArg_1_0 IRef a))
+  :: (Monad m, Binary (DataLoad.ReplaceArg_1_0 IRef a))
   => TypedEntity m a
-  -> Maybe (ReplaceArg_1_0 IRef a -> Transaction t m ())
+  -> Maybe (DataLoad.ReplaceArg_1_0 IRef a -> Transaction t m ())
 writeIRef = fmap Transaction.writeIRef . entityIRef
 
 argument :: (a -> b) -> (b -> c) -> a -> c
 argument = flip (.)
 
 writeIRefVia
-  :: (Monad m, Binary (ReplaceArg_1_0 IRef b))
-  => (a -> ReplaceArg_1_0 IRef b)
+  :: (Monad m, Binary (DataLoad.ReplaceArg_1_0 IRef b))
+  => (a -> DataLoad.ReplaceArg_1_0 IRef b)
   -> TypedEntity m b
   -> Maybe (a -> Transaction t m ())
 writeIRefVia f = (fmap . fmap . argument) f writeIRef
@@ -241,8 +226,8 @@ expand =
     f x = return x
 
 convertExpression :: DataLoad.EntityT m Expression -> EntityT m Expression
-convertExpression (DataLoad.Entity iref mReplace value) =
-  Entity (OriginStored (Stored iref mReplace)) [] $
+convertExpression (DataLoad.Entity stored value) =
+  Entity (OriginStored stored) [] $
   case value of
   ExpressionLambda lambda -> ExpressionLambda $ convertLambda lambda
   ExpressionPi lambda -> ExpressionPi $ convertLambda lambda
@@ -508,7 +493,7 @@ inferDefinition
   :: Monad m
   => DataLoad.EntityT m Definition
   -> Infer m (EntityT m Definition)
-inferDefinition (DataLoad.Entity iref mReplace value) =
+inferDefinition (DataLoad.Entity stored value) =
   liftM mkEntity $
   case value of
   Definition typeI bodyI -> do
@@ -521,7 +506,7 @@ inferDefinition (DataLoad.Entity iref mReplace value) =
             Definition inferredType inferredBody)
   where
     mkEntity (ts, val) =
-      Entity (OriginStored (Stored iref mReplace)) ts val
+      Entity (OriginStored stored) ts val
 
 inferRootExpression
   :: Monad m => DataLoad.EntityT m Expression

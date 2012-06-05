@@ -1,8 +1,8 @@
 {-# LANGUAGE TypeFamilies, FlexibleContexts #-}
 module Editor.Data.Load
-  ( Entity(..)
-  , EntityT
-  , guid
+  ( Entity(..), EntityT
+  , Stored(..), EntityStored, ReplaceArg_1_0
+  , guid, esGuid
   , loadDefinition
   , loadExpression
   )
@@ -23,18 +23,33 @@ import qualified Editor.Data.Ops as DataOps
 type family ReplaceArg_1_0 (i :: * -> *) (a :: *)
 type instance ReplaceArg_1_0 i (f k) = f i
 
+data Stored m a = Stored
+  { esIRef :: IRef a
+  , esReplace :: Maybe (IRef a -> m ())
+  }
+
+type EntityStored m a = Stored m (ReplaceArg_1_0 IRef a)
+
+-- TODO: explain..
+-- How could we compare the esReplace field?
+-- Do we really need this instance?
+instance Eq (Stored m a) where
+  Stored x _ == Stored y _ = x == y
+
 -- Pure alternative for IRef
 data Entity m a = Entity
-  { entityIRef :: IRef (ReplaceArg_1_0 IRef a)
-  , entityReplace :: Maybe (IRef (ReplaceArg_1_0 IRef a) -> m ())
+  { entityStored :: EntityStored m a
   , entityValue :: a
   }
 
 type EntityM m f = Entity m (f (Entity m))
 type EntityT m f = EntityM (Transaction ViewTag m) f
 
+esGuid :: Stored m a -> Guid
+esGuid = IRef.guid . esIRef
+
 guid :: Entity m a -> Guid
-guid = IRef.guid . entityIRef
+guid = esGuid . entityStored
 
 load
   :: (Monad m, Binary (f IRef))
@@ -44,7 +59,7 @@ load
   -> Transaction t m (EntityM (Transaction t m) f)
 load exprI f mSetter = do
   expr <- Transaction.readIRef exprI
-  liftM (Entity exprI mSetter) $ f expr
+  liftM (Entity (Stored exprI mSetter)) $ f expr
 
 loadExpression
   :: Monad m
