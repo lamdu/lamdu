@@ -214,8 +214,6 @@ readScope = liftScope Reader.ask
 nextGuid :: Monad m => Infer m Guid
 nextGuid = liftRandom nextRandom
 
---------------
-
 findInScope :: Monad m => Guid -> Infer m (Maybe (EntityT m Expression))
 findInScope guid = liftM (lookup guid) readScope
 
@@ -227,6 +225,8 @@ generateEntity
 generateEntity ts v = do
   g <- nextGuid
   return $ Entity (OriginGenerated g) ts v
+
+--------------
 
 expand :: Monad m => EntityT m Expression -> Infer m (EntityT m Expression)
 expand =
@@ -375,8 +375,8 @@ unify
 unify (Entity origin0 types0 value0) (Entity _ _ value1) =
   fmap (Entity origin0 types0) $
   case (value0, value1) of
-  (ExpressionHole, _) -> return $ value1
-  (_, ExpressionHole) -> return $ value0
+  (ExpressionHole, _) -> return value1
+  (_, ExpressionHole) -> return value0
   (ExpressionLambda lambda0,
    ExpressionLambda lambda1) ->
     fmap ExpressionLambda $ unifyLambda lambda0 lambda1
@@ -396,8 +396,8 @@ unify (Entity origin0 types0 value0) (Entity _ _ value1) =
   -- Only LiteralInteger, Builtin, Magic here. If any constructors are
   -- added, need to match them here
   (x, y)
-    | x == y -> return $ x
-    | otherwise -> lift $ Nothing
+    | x == y -> return x
+    | otherwise -> lift Nothing
   where
     unifyLambda
       (Lambda paramType0 result0)

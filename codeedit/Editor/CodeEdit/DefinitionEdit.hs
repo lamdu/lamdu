@@ -136,9 +136,7 @@ makeParts makeExpressionEdit myId guid defBody defType = do
       , (Just RHS, typeEdit)
       ]
   defBodyParts <- makeDefBodyParts makeExpressionEdit myId guid defBody
-  return $
-    [ typeLineParts
-    , defBodyParts ]
+  return [typeLineParts, defBodyParts]
 
 make
   :: MonadF m

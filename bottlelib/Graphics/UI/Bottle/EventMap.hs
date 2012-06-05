@@ -18,6 +18,7 @@ import Control.Monad(mplus)
 import Data.Char(toLower, toUpper)
 import Data.List(isPrefixOf)
 import Data.Map(Map)
+import Data.Maybe(isNothing)
 import Data.Monoid(Monoid(..))
 import Graphics.UI.GLFW (Key(..))
 import Graphics.UI.GLFW.Events (GLFWEvent(..), KeyEvent(..), IsPress(..))
@@ -143,7 +144,7 @@ EventMap xMap xMCharHandler `overrides` EventMap yMap yMCharHandler =
       maybe id (filterByKey . checkConflict) xMCharHandler yMap
     checkConflict charHandler (KeyEventType mods key)
       | isCharMods mods =
-        maybe True (const False) $
+        isNothing $
         chHandler charHandler =<< charOfKey key
       | otherwise = True
 
