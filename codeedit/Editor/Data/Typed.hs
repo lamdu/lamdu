@@ -270,8 +270,7 @@ inferExpression (Entity origin prevTypes value) =
   ExpressionLambda lambda -> do
     let
       lambdaGuid = entityOriginGuid origin
-      (_, resultTypes) =
-        unzip $ concatMap (extractPi . entityValue) prevTypes
+      (_, resultTypes) = extractPis prevTypes
       lambdaType paramType resultType =
         generateEntity [] . ExpressionPi $ Lambda paramType resultType
     (inferredLambda@(Lambda paramType body), usedParamTypes) <-
@@ -292,21 +291,16 @@ inferExpression (Entity origin prevTypes value) =
       sequence =<<
       (liftM2 . liftA2) funcType (holify prevTypes) (holify argTypes)
     inferredFunc <- inferExpression $ (atEntityType . addTypes) funcTypes func
-    (applyType, modArg) <-
-      case entityType inferredFunc of
-      Entity piOrigin _
-        (ExpressionPi (Lambda paramType resultType)) : _ -> do
-          inferredArg <-
-            inferExpression ((atEntityType . addTypes) [paramType] arg)
-          return
-            ( [subst (entityOriginGuid piOrigin)
-               (entityValue inferredArg) resultType]
-            , inferredArg )
-      _ -> do
-        inferredArg <- inferExpression arg
-        -- TODO: Split to "bad type" and "missing type":
-        return ([], inferredArg)
-    return (applyType, ExpressionApply (Apply inferredFunc modArg))
+    let
+      substArg (Entity piOrigin piTs (ExpressionPi (Lambda paramType resultType))) =
+        Entity piOrigin piTs . ExpressionPi . Lambda paramType $
+        subst (entityOriginGuid piOrigin) (entityValue arg) resultType
+      substArg x = x
+      (paramTypes, resultTypes) = extractPis . map substArg $ entityType inferredFunc
+    inferredArg <- inferExpression $ (atEntityType . addTypes) paramTypes arg
+    return
+      (map substArg resultTypes,
+       ExpressionApply (Apply inferredFunc inferredArg))
   ExpressionGetVariable varRef -> do
     types <- case varRef of
       ParameterRef guid -> do
@@ -329,6 +323,7 @@ inferExpression (Entity origin prevTypes value) =
     liftM (flip (,) x . (: [])) $
     generateEntity [] ExpressionHole
   where
+    extractPis = unzip . concatMap (extractPi . entityValue)
     extractPi (ExpressionPi (Lambda paramType resultType)) = [(paramType, resultType)]
     extractPi _ = []
     makeEntity (ts, expr) = do
