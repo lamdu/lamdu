@@ -1,106 +1,95 @@
 {-# LANGUAGE TypeFamilies, FlexibleContexts #-}
 module Editor.Data.Load
-  ( Entity(..), EntityT
-  , Stored(..), EntityStored, ReplaceArg_1_0
+  ( StoredExpression(..)
   , guid, esGuid
-  , loadDefinition
-  , loadExpression
+  , loadDefinition, DefinitionEntity(..)
+  , loadExpression, ExpressionEntity(..)
   )
 where
 
 import Control.Monad (liftM, liftM2)
-import Data.Binary (Binary)
 import Data.Store.Guid (Guid)
-import Data.Store.IRef (IRef)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.Data (Definition(..), Expression(..), Apply(..), Lambda(..))
+import qualified Editor.Data as Data
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Data.Ops as DataOps
 
-{-# ANN module "HLint: ignore Use camelCase" #-}
-type family ReplaceArg_1_0 (i :: * -> *) (a :: *)
-type instance ReplaceArg_1_0 i (f k) = f i
-
-data Stored m a = Stored
-  { esIRef :: IRef a
-  , esReplace :: Maybe (IRef a -> m ())
+data StoredExpression m = StoredExpression
+  { esIRef :: Data.ExpressionIRef
+  , esReplace :: Maybe (Data.ExpressionIRef -> m ())
   }
 
-type EntityStored m a = Stored m (ReplaceArg_1_0 IRef a)
+-- TODO: ExpressionEntity -> ExpressionEntity
+data ExpressionEntity m = ExpressionEntity
+  { entityStored :: StoredExpression m
+  , entityValue :: Data.Expression (ExpressionEntity m)
+  }
+
+data DefinitionEntity m = DefinitionEntity
+  { defEntityIRef :: Data.DefinitionIRef
+  , defEntityValue :: Data.Definition (ExpressionEntity m)
+  }
 
 -- TODO: explain..
 -- How could we compare the esReplace field?
 -- Do we really need this instance?
-instance Eq (Stored m a) where
-  Stored x _ == Stored y _ = x == y
+instance Eq (StoredExpression m) where
+  StoredExpression x _ == StoredExpression y _ = x == y
 
--- Pure alternative for IRef
-data Entity m a = Entity
-  { entityStored :: EntityStored m a
-  , entityValue :: a
-  }
+type T = Transaction ViewTag
 
-type EntityM m f = Entity m (f (Entity m))
-type EntityT m f = EntityM (Transaction ViewTag m) f
+esGuid :: StoredExpression m -> Guid
+esGuid = IRef.guid . Data.unExpressionIRef . esIRef
 
-esGuid :: Stored m a -> Guid
-esGuid = IRef.guid . esIRef
-
-guid :: Entity m a -> Guid
+guid :: ExpressionEntity m -> Guid
 guid = esGuid . entityStored
-
-load
-  :: (Monad m, Binary (f IRef))
-  => IRef (f IRef)
-  -> (f IRef -> Transaction t m (f (Entity (Transaction t m))))
-  -> Maybe (IRef (f IRef) -> Transaction t m ())
-  -> Transaction t m (EntityM (Transaction t m) f)
-load exprI f mSetter = do
-  expr <- Transaction.readIRef exprI
-  liftM (Entity (Stored exprI mSetter)) $ f expr
 
 loadExpression
   :: Monad m
-  => IRef (Expression IRef)
-  -> Maybe (IRef (Expression IRef) -> Transaction ViewTag m ())
-  -> Transaction ViewTag m (EntityT m Expression)
-loadExpression exprI = load exprI $ \expr -> case expr of
-  ExpressionLambda lambda ->
-    liftM ExpressionLambda $ loadLambda ExpressionLambda lambda
-  ExpressionPi lambda ->
-    liftM ExpressionPi $ loadLambda ExpressionPi lambda
-  ExpressionApply apply@(Apply funcI argI) ->
-    liftM ExpressionApply $
-    liftM2 Apply
-    (loadExpression funcI (Just (DataOps.applyFuncSetter exprI apply)))
-    (loadExpression argI (Just (DataOps.applyArgSetter exprI apply)))
-  ExpressionGetVariable x -> return $ ExpressionGetVariable x
-  ExpressionLiteralInteger x -> return $ ExpressionLiteralInteger x
-  ExpressionHole -> return ExpressionHole
-  ExpressionMagic -> return ExpressionMagic
-  ExpressionBuiltin bi -> return $ ExpressionBuiltin bi
-  where
-    loadLambda cons lambda@(Lambda argType body) =
-      liftM2 Lambda
-      (loadExpression argType
-       (Just (DataOps.lambdaTypeSetter cons exprI lambda)))
-      (loadExpression body
-       (Just (DataOps.lambdaBodySetter cons exprI lambda)))
+  => Data.ExpressionIRef
+  -> Maybe (Data.ExpressionIRef -> T m ())
+  -> T m (ExpressionEntity (T m))
+loadExpression exprI mSetter = do
+  expr <- Data.readExprIRef exprI
+  liftM (ExpressionEntity (StoredExpression exprI mSetter)) $
+    case expr of
+    Data.ExpressionLambda lambda ->
+      liftM Data.ExpressionLambda $ loadLambda Data.ExpressionLambda lambda
+    Data.ExpressionPi lambda ->
+      liftM Data.ExpressionPi $ loadLambda Data.ExpressionPi lambda
+    Data.ExpressionApply apply@(Data.Apply funcI argI) ->
+      liftM Data.ExpressionApply $
+      liftM2 Data.Apply
+      (loadExpression funcI (Just (DataOps.applyFuncSetter exprI apply)))
+      (loadExpression argI (Just (DataOps.applyArgSetter exprI apply)))
+    Data.ExpressionGetVariable x -> return $ Data.ExpressionGetVariable x
+    Data.ExpressionLiteralInteger x -> return $ Data.ExpressionLiteralInteger x
+    Data.ExpressionHole -> return Data.ExpressionHole
+    Data.ExpressionMagic -> return Data.ExpressionMagic
+    Data.ExpressionBuiltin bi -> return $ Data.ExpressionBuiltin bi
+    where
+      loadLambda cons lambda@(Data.Lambda argType body) =
+        liftM2 Data.Lambda
+        (loadExpression argType
+         (Just (DataOps.lambdaTypeSetter cons exprI lambda)))
+        (loadExpression body
+         (Just (DataOps.lambdaBodySetter cons exprI lambda)))
 
 loadDefinition
   :: Monad m
-  => IRef (Definition IRef)
-  -> Transaction ViewTag m (EntityT m Definition)
-loadDefinition defI =
-  flip (load defI) Nothing $ \def ->
-  case def of
-  Definition typeI bodyI -> do
-    loadedType <-
-      loadExpression typeI . Just $
-      Transaction.writeIRef defI . flip Definition bodyI
-    loadedExpr <-
-      loadExpression bodyI . Just $
-      Transaction.writeIRef defI . Definition typeI
-    return $ Definition loadedType loadedExpr
+  => Data.DefinitionIRef
+  -> T m (DefinitionEntity (T m))
+loadDefinition defI = do
+  def <- Transaction.readIRef defI
+  liftM (DefinitionEntity defI) $
+    case def of
+    Data.Definition typeI bodyI -> do
+      loadedType <-
+        loadExpression typeI . Just $
+        Transaction.writeIRef defI . flip Data.Definition bodyI
+      loadedExpr <-
+        loadExpression bodyI . Just $
+        Transaction.writeIRef defI . Data.Definition typeI
+      return $ Data.Definition loadedType loadedExpr

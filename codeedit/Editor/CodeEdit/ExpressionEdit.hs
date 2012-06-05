@@ -74,7 +74,7 @@ make sExpr = do
         wrapNonHoleExpr $ BuiltinEdit.make builtin
 
   (holePicker, widget) <- makeEditor exprId
-  typeEdits <- mapM make $ Sugar.rType sExpr
+  typeEdits <- mapM make $ Sugar.rInferredTypes sExpr
   eventMap <- expressionEventMap sExpr holePicker
   return .
     Widget.weakerEvents eventMap $

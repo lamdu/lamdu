@@ -8,7 +8,6 @@ import Data.List (isInfixOf, isPrefixOf)
 import Data.List.Utils (sortOn)
 import Data.Maybe (isJust, listToMaybe)
 import Data.Monoid (Monoid(..))
-import Data.Store.IRef (IRef)
 import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
@@ -126,8 +125,7 @@ mPickResult
   :: MonadF m
   => HoleInfo m
   -> Maybe
-     (Data.Expression IRef -> Transaction ViewTag m ()
-      -> ResultPicker m)
+     (Data.ExpressionI -> Transaction ViewTag m () -> ResultPicker m)
 mPickResult holeInfo =
   fmap picker . Sugar.holePickResult $ hiHole holeInfo
   where

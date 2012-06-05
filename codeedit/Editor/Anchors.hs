@@ -42,7 +42,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Data as Data
 import qualified Graphics.UI.Bottle.Widget as Widget
 
-type Pane = IRef (Data.Definition IRef)
+type Pane = Data.DefinitionIRef
 
 data DBTag
 dbStore :: Db -> Store DBTag IO
@@ -58,10 +58,10 @@ panesIRef = IRef.anchor "panes"
 panes :: Monad m => Transaction.Property ViewTag m [Pane]
 panes = Transaction.fromIRef panesIRef
 
-clipboardsIRef :: IRef [IRef (Data.Expression IRef)]
+clipboardsIRef :: IRef [Data.ExpressionIRef]
 clipboardsIRef = IRef.anchor "clipboard"
 
-clipboards :: Monad m => Transaction.Property ViewTag m [IRef (Data.Expression IRef)]
+clipboards :: Monad m => Transaction.Property ViewTag m [Data.ExpressionIRef]
 clipboards = Transaction.fromIRef clipboardsIRef
 
 branchesIRef :: IRef [(IRef String, Branch)]
@@ -112,16 +112,18 @@ redos = Transaction.fromIRef redosIRef
 view :: Monad m => Transaction.Property DBTag m View
 view = Transaction.fromIRef viewIRef
 
-makePane :: IRef (Data.Definition IRef) -> Pane
+makePane :: Data.DefinitionIRef -> Pane
 makePane = id
 
 makeDefinition
   :: Monad m => String
-  -> Transaction ViewTag m (IRef (Data.Definition IRef))
+  -> Transaction ViewTag m Data.DefinitionIRef
 makeDefinition newName = do
-  holeI <- Transaction.newIRef Data.ExpressionHole
-  typeI <- Transaction.newIRef Data.ExpressionHole
-  defI <- Transaction.newIRef $ Data.Definition typeI holeI
+  holeI <- Data.newExprIRef Data.ExpressionHole
+  typeI <- Data.newExprIRef Data.ExpressionHole
+  defI <-
+    Transaction.newIRef $
+    Data.Definition typeI holeI
   Property.pureModify globals (Data.DefinitionRef defI :)
   (Property.set . aNameRef . IRef.guid) defI newName
   return defI
@@ -148,7 +150,7 @@ variableNameRef
 variableNameRef = aNameRef . Data.variableRefGuid
 
 newPane
-  :: Monad m => IRef (Data.Definition IRef) -> Transaction ViewTag m ()
+  :: Monad m => Data.DefinitionIRef -> Transaction ViewTag m ()
 newPane defI = do
   ps <- Property.get panes
   when (defI `notElem` ps) $
@@ -171,11 +173,11 @@ jumpBack = do
 
 newBuiltin
   :: Monad m
-  => String -> IRef (Data.Expression IRef)
+  => String -> Data.ExpressionIRef
   -> Transaction t m Data.VariableRef
 newBuiltin fullyQualifiedName typeI = do
   builtinExprI <-
-    Transaction.newIRef . Data.ExpressionBuiltin $
+    Data.newExprIRef . Data.ExpressionBuiltin $
     Data.FFIName (init path) name
   builtinIRef <- Transaction.newIRef $ Data.Definition typeI builtinExprI
 

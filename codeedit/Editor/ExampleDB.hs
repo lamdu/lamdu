@@ -63,11 +63,11 @@ fixIRef createOuter = do
 createBuiltins :: Monad m => Transaction t m [Data.VariableRef]
 createBuiltins =
   Writer.execWriterT $ do
-    let magic = Transaction.newIRef Data.ExpressionMagic
+    let magic = Data.newExprIRef Data.ExpressionMagic
 
     set <- mkType . A.newBuiltin "Core.Set" =<< lift magic
     let
-      forAll name f = fixIRef $ \aI -> do
+      forAll name f = liftM Data.ExpressionIRef . fixIRef $ \aI -> do
         let aGuid = IRef.guid aI
         Property.set (A.aNameRef aGuid) name
         s <- set
@@ -77,7 +77,7 @@ createBuiltins =
     let
       listOf a = do
         l <- list
-        Transaction.newIRef . Data.ExpressionApply . Data.Apply l =<< a
+        Data.newExprIRef . Data.ExpressionApply . Data.Apply l =<< a
 
     integer <- mkType . A.newBuiltin "Prelude.Integer" =<< lift set
     bool <- mkType . A.newBuiltin "Prelude.Bool" =<< lift set
@@ -106,10 +106,10 @@ createBuiltins =
       ["==", "/=", "<=", ">=", "<", ">"]
   where
     tellift f = Writer.tell . (:[]) =<< lift f
-    getVar = Transaction.newIRef . Data.ExpressionGetVariable
+    getVar = Data.newExprIRef . Data.ExpressionGetVariable
     mkPi mkArgType mkResType = do
       argType <- mkArgType
-      Transaction.newIRef . Data.ExpressionPi . Data.Lambda argType =<< mkResType
+      Data.newExprIRef . Data.ExpressionPi . Data.Lambda argType =<< mkResType
     mkType f = do
       x <- lift f
       Writer.tell [x]
@@ -146,7 +146,7 @@ initDB store =
   where
     builtinsMapEntry (Data.ParameterRef _) = return Nothing
     builtinsMapEntry (Data.DefinitionRef defI) = do
-      expr <- Transaction.readIRef . Data.defBody =<< Transaction.readIRef defI
+      expr <- Data.readExprIRef . Data.defBody =<< Transaction.readIRef defI
       return $ case expr of
         Data.ExpressionBuiltin name -> Just (name, Data.DefinitionRef defI)
         _ -> Nothing
