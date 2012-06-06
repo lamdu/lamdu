@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 
 module Editor.CodeEdit.Sugar
   ( DefinitionRef(..)
@@ -14,17 +14,20 @@ module Editor.CodeEdit.Sugar
 
 import Control.Applicative((<$>), (<*>))
 import Control.Monad(liftM, (<=<))
+import Control.Monad.Trans.Class(MonadTrans(..))
+import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Data.Functor.Identity (Identity(..))
 import Data.Store.Guid(Guid)
 import Data.Store.Transaction(Transaction)
 import Editor.Anchors(ViewTag)
+import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
 import qualified Editor.CodeEdit.Infix as Infix
 import qualified Editor.Data as Data
-import qualified Editor.Data.Typed as DataTyped
 import qualified Editor.Data.Ops as DataOps
+import qualified Editor.Data.Typed as DataTyped
 
 type T = Transaction ViewTag
 
@@ -189,7 +192,25 @@ eeFromTypedExpression = runIdentity . Data.mapMExpression f
       , return . ExprEntity (DataTyped.eeGuid e) (Just (DataTyped.eeStored e)) (DataTyped.eeInferredTypes e)
       )
 
-type Convertor m = Scope -> ExprEntity m -> T m (ExpressionRef m)
+newtype Sugar m a = Sugar {
+  unSugar :: ReaderT Scope (T m) a
+  } deriving (Monad)
+
+AtFieldTH.make ''Sugar
+
+runSugar :: Sugar m a -> T m a
+runSugar = (`runReaderT` []) . unSugar
+
+putInScope :: Monad m => Data.VariableRef -> Sugar m a -> Sugar m a
+putInScope x = (atSugar . Reader.local) (x:)
+
+readScope :: Monad m => Sugar m Scope
+readScope = Sugar Reader.ask
+
+liftTransaction :: Monad m => T m a -> Sugar m a
+liftTransaction = Sugar . lift
+
+type Convertor m = ExprEntity m -> Sugar m (ExpressionRef m)
 
 addArg :: Monad m => ExprEntity m -> ExprEntity m -> MAction m
 addArg whereI exprI =
@@ -232,11 +253,11 @@ makeActionsGuid exprGuid exprI =
 
 mkExpressionRef
   :: Monad m
-  => Scope -> ExprEntity m
-  -> Expression m -> T m (ExpressionRef m)
-mkExpressionRef scope exprI expr = do
+  => ExprEntity m
+  -> Expression m -> Sugar m (ExpressionRef m)
+mkExpressionRef exprI expr = do
   typeRef <-
-    mapM (convertScopedExpression scope . eeFromITE) $
+    mapM (convertExpressionI . eeFromITE) $
     eeInferredTypes exprI
   return
     ExpressionRef
@@ -249,9 +270,9 @@ convertLambdaParam
   :: Monad m
   => Data.Lambda (ExprEntity m)
   -> ExpressionRef m
-  -> Scope -> ExprEntity m -> T m (FuncParam m)
-convertLambdaParam (Data.Lambda paramTypeI bodyI) bodyRef scope exprI = do
-  typeExpr <- convertScopedExpression scope paramTypeI
+  -> ExprEntity m -> Sugar m (FuncParam m)
+convertLambdaParam (Data.Lambda paramTypeI bodyI) bodyRef exprI = do
+  typeExpr <- convertExpressionI paramTypeI
   return FuncParam
     { fpActions =
         addDeleteAction exprI exprI bodyI $
@@ -264,11 +285,12 @@ convertLambda
   :: Monad m
   => Data.Lambda (ExprEntity m)
   -> Convertor m
-convertLambda lambda@(Data.Lambda _ bodyI) scope exprI = do
+convertLambda lambda@(Data.Lambda _ bodyI) exprI = do
   sBody <-
-    convertScopedExpression (Data.ParameterRef (eeGuid exprI) : scope) bodyI
-  param <- convertLambdaParam lambda sBody scope exprI
-  mkExpressionRef scope exprI .
+    putInScope (Data.ParameterRef (eeGuid exprI)) $
+    convertExpressionI bodyI
+  param <- convertLambdaParam lambda sBody exprI
+  mkExpressionRef exprI .
     ExpressionFunc DontHaveParens . atFParams (param :) $
     case rExpression sBody of
       ExpressionFunc _ x -> x
@@ -302,10 +324,12 @@ convertPi
   :: Monad m
   => Data.Lambda (ExprEntity m)
   -> Convertor m
-convertPi lambda@(Data.Lambda paramTypeI bodyI) scope exprI = do
-  sBody <- convertScopedExpression (Data.ParameterRef (eeGuid exprI) : scope) bodyI
-  param <- convertLambdaParam lambda sBody scope exprI
-  mkExpressionRef scope exprI $ ExpressionPi DontHaveParens
+convertPi lambda@(Data.Lambda paramTypeI bodyI) exprI = do
+  sBody <-
+    putInScope (Data.ParameterRef (eeGuid exprI)) $
+    convertExpressionI bodyI
+  param <- convertLambdaParam lambda sBody exprI
+  mkExpressionRef exprI $ ExpressionPi DontHaveParens
     Pi
     { pParam = atFpType addApplyChildParens param
     , pResultType = addDelete bodyI exprI paramTypeI sBody
@@ -317,10 +341,13 @@ convertWhere
   -> ExprEntity m
   -> Data.Lambda (ExprEntity m)
   -> Convertor m
-convertWhere valueRef lambdaI (Data.Lambda typeI bodyI) scope applyI = do
-  typeRef <- convertScopedExpression scope typeI
-  sBody <- convertScopedExpression (Data.ParameterRef (eeGuid lambdaI) : scope) bodyI
-  mkExpressionRef scope applyI . ExpressionWhere DontHaveParens . atWWheres (item typeRef :) $
+convertWhere valueRef lambdaI (Data.Lambda typeI bodyI) applyI = do
+  typeRef <- convertExpressionI typeI
+  sBody <-
+    putInScope (Data.ParameterRef (eeGuid lambdaI)) $
+    convertExpressionI bodyI
+  mkExpressionRef applyI .
+    ExpressionWhere DontHaveParens . atWWheres (item typeRef :) $
     case rExpression sBody of
       ExpressionWhere _ x -> x
       _ -> Where [] sBody
@@ -347,25 +374,25 @@ convertApply
   :: Monad m
   => Data.Apply (ExprEntity m)
   -> Convertor m
-convertApply apply@(Data.Apply funcI argI) scope exprI =
+convertApply apply@(Data.Apply funcI argI) exprI =
   case eeValue funcI of
     Data.ExpressionLambda lambda -> do
-      valueRef <- convertScopedExpression scope argI
-      convertWhere valueRef funcI lambda scope exprI
+      valueRef <- convertExpressionI argI
+      convertWhere valueRef funcI lambda exprI
     -- InfixR or ordinary prefix:
     Data.ExpressionApply funcApply@(Data.Apply funcFuncI _) -> do
-      mInfixOp <- infixOp funcFuncI
+      mInfixOp <- liftTransaction $ infixOp funcFuncI
       case mInfixOp of
-        Just op -> convertApplyInfixFull funcApply op apply scope exprI
+        Just op -> convertApplyInfixFull funcApply op apply exprI
         Nothing -> prefixApply
     -- InfixL or ordinary prefix:
     _ -> do
-      mInfixOp <- infixOp funcI
+      mInfixOp <- liftTransaction $ infixOp funcI
       case mInfixOp of
-        Just op -> convertApplyInfixL op apply scope exprI
+        Just op -> convertApplyInfixL op apply exprI
         Nothing -> prefixApply
   where
-    prefixApply = convertApplyPrefix apply scope exprI
+    prefixApply = convertApplyPrefix apply exprI
 
 setAddArg :: Monad m => ExprEntity m -> ExprEntity m -> ExpressionRef m -> ExpressionRef m
 setAddArg whereI exprI =
@@ -381,45 +408,49 @@ convertApplyInfixFull
   -> Data.VariableRef
   -> Data.Apply (ExprEntity m)
   -> Convertor m
-convertApplyInfixFull (Data.Apply funcFuncI funcArgI) op (Data.Apply funcI argI) scope exprI = do
-  rArgRef <- convertScopedExpression scope argI
-  lArgRef <- convertScopedExpression scope funcArgI
-  opRef <- mkExpressionRef scope funcFuncI $ ExpressionGetVariable op
-  let
-    newLArgRef = addDelete funcArgI funcI funcFuncI $ addApplyChildParens lArgRef
-    newRArgRef = addDelete argI exprI funcI $ addApplyChildParens rArgRef
-    newOpRef =
-      atRInferredTypes removeUninterestingType .
-      addDelete funcFuncI funcI funcArgI $
-      setAddArg exprI exprI opRef
-  mkExpressionRef scope exprI . ExpressionSection DontHaveParens .
-    Section (Just newLArgRef) newOpRef (Just newRArgRef) . Just $ eeGuid funcI
+convertApplyInfixFull
+  (Data.Apply funcFuncI funcArgI) op (Data.Apply funcI argI) exprI
+  = do
+    rArgRef <- convertExpressionI argI
+    lArgRef <- convertExpressionI funcArgI
+    opRef <- mkExpressionRef funcFuncI $ ExpressionGetVariable op
+    let
+      newLArgRef =
+        addDelete funcArgI funcI funcFuncI $ addApplyChildParens lArgRef
+      newRArgRef = addDelete argI exprI funcI $ addApplyChildParens rArgRef
+      newOpRef =
+        atRInferredTypes removeUninterestingType .
+        addDelete funcFuncI funcI funcArgI $
+        setAddArg exprI exprI opRef
+    mkExpressionRef exprI . ExpressionSection DontHaveParens .
+      Section (Just newLArgRef) newOpRef (Just newRArgRef) . Just $
+      eeGuid funcI
 
 convertApplyInfixL
   :: Monad m
   => Data.VariableRef
   -> Data.Apply (ExprEntity m)
   -> Convertor m
-convertApplyInfixL op (Data.Apply opI argI) scope exprI = do
-  argRef <- convertScopedExpression scope argI
+convertApplyInfixL op (Data.Apply opI argI) exprI = do
+  argRef <- convertExpressionI argI
   let newArgRef = addDelete argI exprI opI $ addApplyChildParens argRef
-  opRef <- mkExpressionRef scope opI $ ExpressionGetVariable op
+  opRef <- mkExpressionRef opI $ ExpressionGetVariable op
   let
     newOpRef =
       atRInferredTypes removeUninterestingType .
       addDelete opI exprI argI .
       setAddArg exprI exprI $
       opRef
-  mkExpressionRef scope exprI . ExpressionSection HaveParens $
+  mkExpressionRef exprI . ExpressionSection HaveParens $
     Section (Just newArgRef) newOpRef Nothing Nothing
 
 convertApplyPrefix
   :: Monad m
   => Data.Apply (ExprEntity m)
   -> Convertor m
-convertApplyPrefix (Data.Apply funcI argI) scope exprI = do
-  argRef <- convertScopedExpression scope argI
-  funcRef <- convertScopedExpression scope funcI
+convertApplyPrefix (Data.Apply funcI argI) exprI = do
+  argRef <- convertExpressionI argI
+  funcRef <- convertExpressionI funcI
   let
     newArgRef =
       addDelete argI exprI funcI .
@@ -435,7 +466,7 @@ convertApplyPrefix (Data.Apply funcI argI) scope exprI = do
       (atRExpression . atEApply . atApplyArg) setNextArg .
       (atRExpression . atESection . atSectionOp) setNextArg $
       funcRef
-  mkExpressionRef scope exprI . ExpressionApply DontHaveParens $
+  mkExpressionRef exprI . ExpressionApply DontHaveParens $
     Apply newFuncRef newArgRef
   where
     addFlipFuncArg = atRExpression . atEHole . atHoleMFlipFuncArg . const $ mSetFlippedApply
@@ -444,30 +475,31 @@ convertApplyPrefix (Data.Apply funcI argI) scope exprI = do
     addParens = atRExpression . atEHasParens . const $ HaveParens
 
 convertGetVariable :: Monad m => Data.VariableRef -> Convertor m
-convertGetVariable varRef scope exprI = do
-  name <- Property.get $ Anchors.variableNameRef varRef
+convertGetVariable varRef exprI = do
+  name <- liftTransaction . Property.get $ Anchors.variableNameRef varRef
   getVarExpr <-
-    mkExpressionRef scope exprI $
+    mkExpressionRef exprI $
     ExpressionGetVariable varRef
   if Infix.isInfixName name
     then
-      mkExpressionRef scope exprI .
+      mkExpressionRef exprI .
       ExpressionSection HaveParens $
       Section Nothing ((atRInferredTypes . const) [] getVarExpr) Nothing Nothing
     else return getVarExpr
 
 convertHole :: Monad m => Convertor m
-convertHole scope exprI = do
-  clipboardContent <- Property.get Anchors.clipboards
+convertHole exprI = do
+  clipboardContent <- liftTransaction $ Property.get Anchors.clipboards
   let
     mClipPop =
       case clipboardContent of
       [] -> Nothing
       (clip : clips) -> Just (clip, Property.set Anchors.clipboards clips)
+  scope <- readScope
   (liftM . atRActions)
     ((atMReplace . const) Nothing .
      (atMCut . const) Nothing) .
-    mkExpressionRef scope exprI . ExpressionHole $
+    mkExpressionRef exprI . ExpressionHole $
     Hole
     { holeScope = scope
     , holePickResult = pickResult <$> writeIRef exprI
@@ -484,32 +516,32 @@ convertHole scope exprI = do
       return $ eeGuid exprI
 
 convertLiteralInteger :: Monad m => Integer -> Convertor m
-convertLiteralInteger i scope exprI =
-  mkExpressionRef scope exprI . ExpressionLiteralInteger $
+convertLiteralInteger i exprI =
+  mkExpressionRef exprI . ExpressionLiteralInteger $
   LiteralInteger
   { liValue = i
   , liSetValue = writeIRefVia Data.ExpressionLiteralInteger exprI
   }
 
 convertBuiltin :: Monad m => Data.FFIName -> Convertor m
-convertBuiltin name scope exprI =
-  mkExpressionRef scope exprI . ExpressionBuiltin $
+convertBuiltin name exprI =
+  mkExpressionRef exprI . ExpressionBuiltin $
   Builtin
   { biName = name
   , biSetFFIName = writeIRefVia Data.ExpressionBuiltin exprI
   }
 
 convertMagic :: Monad m => Convertor m
-convertMagic scope exprI =
-  mkExpressionRef scope exprI . ExpressionBuiltin $
+convertMagic exprI =
+  mkExpressionRef exprI . ExpressionBuiltin $
   Builtin
   { biName = Data.FFIName ["Core"] "Magic"
   , biSetFFIName = Nothing
   }
 
-convertScopedExpression :: Monad m => Convertor m
-convertScopedExpression scope exprI =
-  convert (eeValue exprI) scope exprI
+convertExpressionI :: Monad m => Convertor m
+convertExpressionI exprI =
+  convert (eeValue exprI) exprI
   where
     convert (Data.ExpressionLambda x) = convertLambda x
     convert (Data.ExpressionPi x) = convertPi x
@@ -523,14 +555,14 @@ convertScopedExpression scope exprI =
 convertDefinitionI
   :: Monad m
   => DataTyped.DefinitionEntity (T m)
-  -> T m (DefinitionRef m)
+  -> Sugar m (DefinitionRef m)
 convertDefinitionI defI =
   case DataTyped.deValue defI of
   Data.Definition typeI bodyI -> do
-    defType <- convertScopedExpression [] $ eeFromTypedExpression typeI
+    defType <- convertExpressionI $ eeFromTypedExpression typeI
     defBody <-
       (liftM . atRInferredTypes . const) [] .
-      convertScopedExpression [] $ eeFromTypedExpression bodyI
+      convertExpressionI $ eeFromTypedExpression bodyI
     return .
       DefinitionRef defGuid defBody defType . removeUninterestingType $
       rInferredTypes defBody
@@ -541,9 +573,9 @@ convertDefinition
   :: Monad m
   => DataTyped.DefinitionEntity (T m)
   -> T m (DefinitionRef m)
-convertDefinition = convertDefinitionI
+convertDefinition = runSugar . convertDefinitionI
 
 convertExpression
   :: Monad m
   => DataTyped.ExpressionEntity (T m) -> T m (ExpressionRef m)
-convertExpression = convertScopedExpression [] . eeFromTypedExpression
+convertExpression = runSugar . convertExpressionI . eeFromTypedExpression
