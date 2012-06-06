@@ -1,6 +1,3 @@
-Typed should maybe have a different entity-type for types, that
-doesn't have types. Thus won't need "origin" crap.
-
 * Have a "destructive update" inference algorithm with an indirection
   layer so that unify can cause two types to point to the same bucket
   which is later updated by more inference
