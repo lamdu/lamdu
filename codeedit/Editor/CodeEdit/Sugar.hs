@@ -13,7 +13,7 @@ module Editor.CodeEdit.Sugar
   ) where
 
 import Control.Applicative((<$>), (<*>))
-import Control.Monad(liftM)
+import Control.Monad(liftM, (<=<))
 import Data.Functor.Identity (Identity(..))
 import Data.Store.Guid(Guid)
 import Data.Store.Transaction(Transaction)
@@ -145,7 +145,49 @@ AtFieldTH.make ''Apply
 AtFieldTH.make ''Section
 AtFieldTH.make ''Expression
 
-type ExprEntity m = DataTyped.ExpressionEntity (T m)
+data ExprEntity m = ExprEntity
+  { eeGuid :: Guid
+  , eeStored :: Maybe (DataTyped.StoredExpression (T m))
+  , eeInferredTypes :: [DataTyped.InferredTypeEntity]
+  , eeValue :: Data.Expression (ExprEntity m)
+  }
+
+eeFromITE :: DataTyped.InferredTypeEntity -> ExprEntity m
+eeFromITE = runIdentity . Data.mapMExpression f
+  where
+    f e =
+      ( return $ DataTyped.iteValue e
+      , return . ExprEntity (DataTyped.iteGuid e) Nothing []
+      )
+writeIRef
+  :: Monad m
+  => ExprEntity m
+  -> Maybe (Data.ExpressionI -> Transaction t m ())
+writeIRef = fmap Data.writeExprIRef . eeIRef
+
+argument :: (a -> b) -> (b -> c) -> a -> c
+argument = flip (.)
+
+writeIRefVia
+  :: Monad m
+  => (a -> Data.ExpressionI)
+  -> ExprEntity m
+  -> Maybe (a -> Transaction t m ())
+writeIRefVia f = (fmap . fmap . argument) f writeIRef
+
+eeIRef :: ExprEntity m -> Maybe Data.ExpressionIRef
+eeIRef = fmap DataTyped.esIRef . eeStored
+
+eeReplace :: ExprEntity m -> Maybe (Data.ExpressionIRef -> T m ())
+eeReplace = DataTyped.esReplace <=< eeStored
+
+eeFromTypedExpression :: DataTyped.ExpressionEntity (T m) -> ExprEntity m
+eeFromTypedExpression = runIdentity . Data.mapMExpression f
+  where
+    f e =
+      ( return $ DataTyped.eeValue e
+      , return . ExprEntity (DataTyped.eeGuid e) (Just (DataTyped.eeStored e)) (DataTyped.eeInferredTypes e)
+      )
 
 type Convertor m = Scope -> ExprEntity m -> T m (ExpressionRef m)
 
@@ -153,11 +195,11 @@ addArg :: Monad m => ExprEntity m -> ExprEntity m -> MAction m
 addArg whereI exprI =
   (fmap . liftM) Data.exprIRefGuid $
   DataOps.callWithArg <$>
-  DataTyped.eeIRef exprI <*>
-  DataTyped.eeReplace whereI
+  eeIRef exprI <*>
+  eeReplace whereI
 
 makeActions :: Monad m => ExprEntity m -> Actions m
-makeActions exprI = makeActionsGuid (DataTyped.eeGuid exprI) exprI
+makeActions exprI = makeActionsGuid (eeGuid exprI) exprI
 
 mkCutter :: Monad m => Data.ExpressionIRef -> T m Guid -> T m Guid
 mkCutter iref delete = do
@@ -177,23 +219,25 @@ makeActionsGuid exprGuid exprI =
   , mReplace = replace
     -- mDelete gets overridden by parent if it is an apply.
   , mDelete = Nothing
-  , mCut = mkCutter <$> DataTyped.eeIRef exprI <*> replace
+  , mCut = mkCutter <$> eeIRef exprI <*> replace
   , mNextArg = Nothing
   }
   where
     replace =
       fmap (liftM Data.exprIRefGuid . DataOps.replaceWithHole) setExprI
-    setExprI = DataTyped.eeReplace exprI
+    setExprI = eeReplace exprI
     withIRef f =
       (fmap . liftM) Data.exprIRefGuid $
-      f <$> DataTyped.eeIRef exprI <*> setExprI
+      f <$> eeIRef exprI <*> setExprI
 
 mkExpressionRef
   :: Monad m
   => Scope -> ExprEntity m
   -> Expression m -> T m (ExpressionRef m)
 mkExpressionRef scope exprI expr = do
-  typeRef <- mapM (convertScopedExpression scope) $ DataTyped.eeInferredTypes exprI
+  typeRef <-
+    mapM (convertScopedExpression scope . eeFromITE) $
+    eeInferredTypes exprI
   return
     ExpressionRef
     { rExpression = expr
@@ -222,7 +266,7 @@ convertLambda
   -> Convertor m
 convertLambda lambda@(Data.Lambda _ bodyI) scope exprI = do
   sBody <-
-    convertScopedExpression (Data.ParameterRef (DataTyped.eeGuid exprI) : scope) bodyI
+    convertScopedExpression (Data.ParameterRef (eeGuid exprI) : scope) bodyI
   param <- convertLambdaParam lambda sBody scope exprI
   mkExpressionRef scope exprI .
     ExpressionFunc DontHaveParens . atFParams (param :) $
@@ -241,9 +285,9 @@ addDeleteAction deletedI exprI replacerI actions =
   where
     mCutter = do
       _ <- mReplace actions -- mReplace as a guard here: if no replacer, no cutter either
-      mkCutter <$> DataTyped.eeIRef deletedI <*> mDeleter
+      mkCutter <$> eeIRef deletedI <*> mDeleter
     mDeleter =
-      mkDeleter <$> DataTyped.eeReplace exprI <*> DataTyped.eeIRef replacerI
+      mkDeleter <$> eeReplace exprI <*> eeIRef replacerI
     mkDeleter replacer val = do
       ~() <- replacer val
       return $ Data.exprIRefGuid val
@@ -259,7 +303,7 @@ convertPi
   => Data.Lambda (ExprEntity m)
   -> Convertor m
 convertPi lambda@(Data.Lambda paramTypeI bodyI) scope exprI = do
-  sBody <- convertScopedExpression (Data.ParameterRef (DataTyped.eeGuid exprI) : scope) bodyI
+  sBody <- convertScopedExpression (Data.ParameterRef (eeGuid exprI) : scope) bodyI
   param <- convertLambdaParam lambda sBody scope exprI
   mkExpressionRef scope exprI $ ExpressionPi DontHaveParens
     Pi
@@ -275,7 +319,7 @@ convertWhere
   -> Convertor m
 convertWhere valueRef lambdaI (Data.Lambda typeI bodyI) scope applyI = do
   typeRef <- convertScopedExpression scope typeI
-  sBody <- convertScopedExpression (Data.ParameterRef (DataTyped.eeGuid lambdaI) : scope) bodyI
+  sBody <- convertScopedExpression (Data.ParameterRef (eeGuid lambdaI) : scope) bodyI
   mkExpressionRef scope applyI . ExpressionWhere DontHaveParens . atWWheres (item typeRef :) $
     case rExpression sBody of
       ExpressionWhere _ x -> x
@@ -284,7 +328,7 @@ convertWhere valueRef lambdaI (Data.Lambda typeI bodyI) scope applyI = do
     item typeRef = WhereItem
       { wiActions =
           addDeleteAction applyI applyI bodyI $
-          makeActionsGuid (DataTyped.eeGuid lambdaI) applyI
+          makeActionsGuid (eeGuid lambdaI) applyI
       , wiValue = valueRef
       , wiType = typeRef
       }
@@ -297,14 +341,14 @@ addApplyChildParens =
     f x = (atEHasParens . const) HaveParens x
 
 infixOp :: Monad m => ExprEntity m -> T m (Maybe Data.VariableRef)
-infixOp = maybe (return Nothing) Infix.infixOp . DataTyped.eeIRef
+infixOp = maybe (return Nothing) Infix.infixOp . eeIRef
 
 convertApply
   :: Monad m
   => Data.Apply (ExprEntity m)
   -> Convertor m
 convertApply apply@(Data.Apply funcI argI) scope exprI =
-  case DataTyped.eeValue funcI of
+  case eeValue funcI of
     Data.ExpressionLambda lambda -> do
       valueRef <- convertScopedExpression scope argI
       convertWhere valueRef funcI lambda scope exprI
@@ -349,7 +393,7 @@ convertApplyInfixFull (Data.Apply funcFuncI funcArgI) op (Data.Apply funcI argI)
       addDelete funcFuncI funcI funcArgI $
       setAddArg exprI exprI opRef
   mkExpressionRef scope exprI . ExpressionSection DontHaveParens .
-    Section (Just newLArgRef) newOpRef (Just newRArgRef) . Just $ DataTyped.eeGuid funcI
+    Section (Just newLArgRef) newOpRef (Just newRArgRef) . Just $ eeGuid funcI
 
 convertApplyInfixL
   :: Monad m
@@ -395,8 +439,8 @@ convertApplyPrefix (Data.Apply funcI argI) scope exprI = do
     Apply newFuncRef newArgRef
   where
     addFlipFuncArg = atRExpression . atEHole . atHoleMFlipFuncArg . const $ mSetFlippedApply
-    mSetFlippedApply = DataTyped.writeIRef exprI <*> mFlippedApply
-    mFlippedApply = Data.ExpressionApply <$> (Data.Apply <$> DataTyped.eeIRef argI <*> DataTyped.eeIRef funcI)
+    mSetFlippedApply = writeIRef exprI <*> mFlippedApply
+    mFlippedApply = Data.ExpressionApply <$> (Data.Apply <$> eeIRef argI <*> eeIRef funcI)
     addParens = atRExpression . atEHasParens . const $ HaveParens
 
 convertGetVariable :: Monad m => Data.VariableRef -> Convertor m
@@ -426,25 +470,25 @@ convertHole scope exprI = do
     mkExpressionRef scope exprI . ExpressionHole $
     Hole
     { holeScope = scope
-    , holePickResult = pickResult <$> DataTyped.writeIRef exprI
+    , holePickResult = pickResult <$> writeIRef exprI
     , holeMFlipFuncArg = Nothing
-    , holePaste = paste <$> DataTyped.eeReplace exprI <*> mClipPop
+    , holePaste = paste <$> eeReplace exprI <*> mClipPop
     }
   where
     paste replacer (clip, popClip) = do
       ~() <- popClip
       ~() <- replacer clip
       return $ Data.exprIRefGuid clip
-    pickResult writeIRef result = do
-      ~() <- writeIRef result
-      return $ DataTyped.eeGuid exprI
+    pickResult write result = do
+      ~() <- write result
+      return $ eeGuid exprI
 
 convertLiteralInteger :: Monad m => Integer -> Convertor m
 convertLiteralInteger i scope exprI =
   mkExpressionRef scope exprI . ExpressionLiteralInteger $
   LiteralInteger
   { liValue = i
-  , liSetValue = DataTyped.writeIRefVia Data.ExpressionLiteralInteger exprI
+  , liSetValue = writeIRefVia Data.ExpressionLiteralInteger exprI
   }
 
 convertBuiltin :: Monad m => Data.FFIName -> Convertor m
@@ -452,7 +496,7 @@ convertBuiltin name scope exprI =
   mkExpressionRef scope exprI . ExpressionBuiltin $
   Builtin
   { biName = name
-  , biSetFFIName = DataTyped.writeIRefVia Data.ExpressionBuiltin exprI
+  , biSetFFIName = writeIRefVia Data.ExpressionBuiltin exprI
   }
 
 convertMagic :: Monad m => Convertor m
@@ -465,7 +509,7 @@ convertMagic scope exprI =
 
 convertScopedExpression :: Monad m => Convertor m
 convertScopedExpression scope exprI =
-  convert (DataTyped.eeValue exprI) scope exprI
+  convert (eeValue exprI) scope exprI
   where
     convert (Data.ExpressionLambda x) = convertLambda x
     convert (Data.ExpressionPi x) = convertPi x
@@ -483,10 +527,10 @@ convertDefinitionI
 convertDefinitionI defI =
   case DataTyped.deValue defI of
   Data.Definition typeI bodyI -> do
-    defType <- convertScopedExpression [] typeI
+    defType <- convertScopedExpression [] $ eeFromTypedExpression typeI
     defBody <-
-      (liftM . atRInferredTypes . const) [] $
-      convertScopedExpression [] bodyI
+      (liftM . atRInferredTypes . const) [] .
+      convertScopedExpression [] $ eeFromTypedExpression bodyI
     return .
       DefinitionRef defGuid defBody defType . removeUninterestingType $
       rInferredTypes defBody
@@ -497,20 +541,9 @@ convertDefinition
   :: Monad m
   => DataTyped.DefinitionEntity (T m)
   -> T m (DefinitionRef m)
-convertDefinition =
-  convertDefinitionI .
-  DataTyped.atDeValue
-  (Data.atDefBody removeTypesOfTypes .
-   Data.atDefType removeTypes)
-  where
-    removeTypesOfTypes =
-      runIdentity . DataTyped.mapTypes (Identity . removeTypes)
-    removeTypes =
-      runIdentity .
-      DataTyped.foldValues
-      (Identity . (DataTyped.atEeInferredTypes . const) [])
+convertDefinition = convertDefinitionI
 
 convertExpression
   :: Monad m
-  => ExprEntity m -> T m (ExpressionRef m)
-convertExpression = convertScopedExpression []
+  => DataTyped.ExpressionEntity (T m) -> T m (ExpressionRef m)
+convertExpression = convertScopedExpression [] . eeFromTypedExpression
