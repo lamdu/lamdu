@@ -16,6 +16,7 @@ Library
 
                        -- Bottle:
   Exposed-modules:     Control.Monad.Trans.Random,
+                       Control.Monad.Trans.UnionFind,
                        Graphics.UI.Bottle.Widgets.TextEdit,
                        Graphics.UI.Bottle.Widgets.TextView,
                        Graphics.UI.Bottle.Widgets.FocusDelegator,
@@ -40,6 +41,7 @@ Library
                        Data.List.Utils,
                        Data.Maybe.Utils,
                        Data.AtFieldTH,
+                       Data.UnionFind.IntMap,
 
                        -- DataStore:
                        Data.Random.Instances,
