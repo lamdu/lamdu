@@ -39,7 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 {-# LANGUAGE BangPatterns #-}
 {-# OPTIONS_GHC -funbox-strict-fields #-}
 module Data.UnionFind.IntMap 
-    ( newPointSupply, fresh, repr, descr, union, equivalent,
+    ( newPointSupply, fresh, repr, descr, setDescr, union, equivalent,
       PointSupply, Point ) where
 
 import qualified Data.IntMap as IM
@@ -99,6 +99,11 @@ union ps@(PointSupply next eqs) p1 p2 =
 
 descr :: PointSupply a -> Point a -> a
 descr ps p = reprInfo ps p (\_ _ a -> a)
+
+setDescr :: PointSupply a -> Point a -> a -> PointSupply a
+setDescr ps@(PointSupply next eqs) p val =
+  reprInfo ps p $ \i r _oldVal ->
+  PointSupply next $ IM.insert i (Info r val) eqs
 
 equivalent :: PointSupply a -> Point a -> Point a -> Bool
 equivalent ps p1 p2 =
