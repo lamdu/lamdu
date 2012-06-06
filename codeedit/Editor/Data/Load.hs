@@ -47,10 +47,10 @@ guid :: ExpressionEntity m -> Guid
 guid = esGuid . entityStored
 
 loadExpression
-  :: Monad m
+  :: (Monad m, Monad f)
   => Data.ExpressionIRef
-  -> Maybe (Data.ExpressionIRef -> T m ())
-  -> T m (ExpressionEntity (T m))
+  -> Maybe (Data.ExpressionIRef -> T f ())
+  -> T m (ExpressionEntity (T f))
 loadExpression exprI mSetter = do
   expr <- Data.readExprIRef exprI
   liftM (ExpressionEntity (StoredExpression exprI mSetter)) $
@@ -78,9 +78,9 @@ loadExpression exprI mSetter = do
          (Just (DataOps.lambdaBodySetter cons exprI lambda)))
 
 loadDefinition
-  :: Monad m
+  :: (Monad m, Monad f)
   => Data.DefinitionIRef
-  -> T m (DefinitionEntity (T m))
+  -> T m (DefinitionEntity (T f))
 loadDefinition defI = do
   def <- Transaction.readIRef defI
   liftM (DefinitionEntity defI) $

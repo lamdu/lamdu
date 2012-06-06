@@ -30,7 +30,7 @@ import qualified Data.Store.Transaction as Transaction
 
 newtype ExpressionIRef = ExpressionIRef {
   unExpressionIRef :: IRef (Expression ExpressionIRef)
-  } deriving (Eq, Ord, Read, Show)
+  } deriving (Eq, Ord, Show)
 
 exprIRefGuid :: ExpressionIRef -> Guid
 exprIRefGuid = IRef.guid . unExpressionIRef
@@ -53,24 +53,27 @@ writeExprIRef = Transaction.writeIRef . unExpressionIRef
 data Lambda expr = Lambda {
   lambdaParamType :: expr,
   lambdaBody :: expr
-  } deriving (Eq, Ord, Read, Show)
+  } deriving (Eq, Ord, Show)
 type LambdaI = Lambda ExpressionIRef
 
 data Apply expr = Apply {
   applyFunc :: expr,
   applyArg :: expr
-  } deriving (Eq, Ord, Read, Show)
+  } deriving (Eq, Ord, Show)
 type ApplyI = Apply ExpressionIRef
 
 data VariableRef
   = ParameterRef Guid -- of the lambda/pi
   | DefinitionRef DefinitionIRef
-  deriving (Eq, Ord, Read, Show)
+  deriving (Eq, Ord, Show)
 
 data FFIName = FFIName
   { fModule :: [String]
   , fName :: String
-  } deriving (Eq, Ord, Read, Show)
+  } deriving (Eq, Ord)
+
+instance Show FFIName where
+  show (FFIName path name) = concatMap (++".") path ++ name
 
 data Expression expr
   = ExpressionLambda (Lambda expr)
@@ -81,7 +84,7 @@ data Expression expr
   | ExpressionLiteralInteger Integer
   | ExpressionBuiltin FFIName
   | ExpressionMagic
-  deriving (Eq, Ord, Read, Show)
+  deriving (Eq, Ord, Show)
 type ExpressionI = Expression ExpressionIRef
 
 data FoldExpression m from to = FoldExpression
@@ -99,9 +102,9 @@ data FoldExpression m from to = FoldExpression
 data Definition expr = Definition
   { defType :: expr
   , defBody :: expr
-  } deriving (Eq, Ord, Read, Show)
+  } deriving (Eq, Ord, Show)
 type DefinitionI = Definition ExpressionIRef
-type DefinitionIRef = IRef (DefinitionI)
+type DefinitionIRef = IRef DefinitionI
 
 variableRefGuid :: VariableRef -> Guid
 variableRefGuid (ParameterRef i) = i
@@ -143,9 +146,9 @@ foldMExpression mkFolder exprI = do
 
 mapMExpression
   :: Monad m
-  => (from ->
-      ( m (Expression from)
-      , Expression to -> m to ))
+  => (from
+      -> ( m (Expression from)
+         , Expression to -> m to ))
   -> from -> m to
 mapMExpression f =
   foldMExpression mkFolder

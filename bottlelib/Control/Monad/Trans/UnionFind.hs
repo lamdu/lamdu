@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Control.Monad.Trans.UnionFind
-  ( UnionFindT, runUnionFindT
+  ( UnionFindT, runUnionFindT, evalUnionFindT
   , Point
   , new, findRepr
   , descr, setDescr
@@ -31,6 +31,9 @@ swap (x, y) = (y, x)
 
 runUnionFindT :: Monad m => UnionFindT p m a -> m (UnionFind p, a)
 runUnionFindT = liftM swap . (`runStateT` UF.newPointSupply) . unUnionFindT
+
+evalUnionFindT :: Monad m => UnionFindT p m a -> m a
+evalUnionFindT = liftM snd . runUnionFindT
 
 new :: Monad m => p -> UnionFindT p m (Point p)
 new x = UnionFindT . StateT $ return . swap . flip UF.fresh x

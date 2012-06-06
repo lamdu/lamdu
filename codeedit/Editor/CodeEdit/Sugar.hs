@@ -151,12 +151,12 @@ AtFieldTH.make ''Expression
 data ExprEntity m = ExprEntity
   { eeGuid :: Guid
   , eeStored :: Maybe (DataTyped.StoredExpression (T m))
-  , eeInferredTypes :: [DataTyped.InferredTypeEntity]
+  , eeInferredTypes :: [DataTyped.InferredType]
   , eeValue :: Data.Expression (ExprEntity m)
   }
 
-eeFromITE :: DataTyped.InferredTypeEntity -> ExprEntity m
-eeFromITE = runIdentity . Data.mapMExpression f
+eeFromITE :: DataTyped.InferredType -> ExprEntity m
+eeFromITE = runIdentity . Data.mapMExpression (f . DataTyped.unInferredType)
   where
     f e =
       ( return $ DataTyped.iteValue e
@@ -184,12 +184,12 @@ eeIRef = fmap DataTyped.esIRef . eeStored
 eeReplace :: ExprEntity m -> Maybe (Data.ExpressionIRef -> T m ())
 eeReplace = DataTyped.esReplace <=< eeStored
 
-eeFromTypedExpression :: DataTyped.ExpressionEntity (T m) -> ExprEntity m
+eeFromTypedExpression :: DataTyped.TypedExpressionEntity (T m) -> ExprEntity m
 eeFromTypedExpression = runIdentity . Data.mapMExpression f
   where
     f e =
       ( return $ DataTyped.eeValue e
-      , return . ExprEntity (DataTyped.eeGuid e) (Just (DataTyped.eeStored e)) (DataTyped.eeInferredTypes e)
+      , return . ExprEntity (DataTyped.eeGuid e) (Just (DataTyped.eeStored e)) (DataTyped.eeInferredType e)
       )
 
 newtype Sugar m a = Sugar {
@@ -398,9 +398,11 @@ setAddArg :: Monad m => ExprEntity m -> ExprEntity m -> ExpressionRef m -> Expre
 setAddArg whereI exprI =
   atRActions . atAddNextArg . const $ addArg whereI exprI
 
-removeUninterestingType :: [ExpressionRef m] -> [ExpressionRef m]
-removeUninterestingType [_] = []
-removeUninterestingType xs = xs
+removeUninterestingType :: ExpressionRef m -> ExpressionRef m
+removeUninterestingType exprRef =
+  case rExpression exprRef of
+    ExpressionHole {} -> exprRef -- Keep types on holes
+    _ -> (atRInferredTypes . const) [] exprRef
 
 convertApplyInfixFull
   :: Monad m
@@ -419,7 +421,7 @@ convertApplyInfixFull
         addDelete funcArgI funcI funcFuncI $ addApplyChildParens lArgRef
       newRArgRef = addDelete argI exprI funcI $ addApplyChildParens rArgRef
       newOpRef =
-        atRInferredTypes removeUninterestingType .
+        removeUninterestingType .
         addDelete funcFuncI funcI funcArgI $
         setAddArg exprI exprI opRef
     mkExpressionRef exprI . ExpressionSection DontHaveParens .
@@ -437,7 +439,7 @@ convertApplyInfixL op (Data.Apply opI argI) exprI = do
   opRef <- mkExpressionRef opI $ ExpressionGetVariable op
   let
     newOpRef =
-      atRInferredTypes removeUninterestingType .
+      removeUninterestingType .
       addDelete opI exprI argI .
       setAddArg exprI exprI $
       opRef
@@ -462,7 +464,7 @@ convertApplyPrefix (Data.Apply funcI argI) exprI = do
       addDelete funcI exprI argI .
       setNextArg .
       addApplyChildParens .
-      atRInferredTypes removeUninterestingType .
+      removeUninterestingType .
       (atRExpression . atEApply . atApplyArg) setNextArg .
       (atRExpression . atESection . atSectionOp) setNextArg $
       funcRef
@@ -554,7 +556,7 @@ convertExpressionI exprI =
 
 convertDefinitionI
   :: Monad m
-  => DataTyped.DefinitionEntity (T m)
+  => DataTyped.TypedDefinitionEntity (T m)
   -> Sugar m (DefinitionRef m)
 convertDefinitionI defI =
   case DataTyped.deValue defI of
@@ -563,18 +565,18 @@ convertDefinitionI defI =
     defBody <-
       convertExpressionI $ eeFromTypedExpression bodyI
     return .
-      DefinitionRef defGuid ((atRInferredTypes . const) [] defBody) defType . removeUninterestingType $
+      DefinitionRef defGuid ((atRInferredTypes . const) [] defBody) defType $
       rInferredTypes defBody
   where
     defGuid = DataTyped.deGuid defI
 
 convertDefinition
   :: Monad m
-  => DataTyped.DefinitionEntity (T m)
+  => DataTyped.TypedDefinitionEntity (T m)
   -> T m (DefinitionRef m)
 convertDefinition = runSugar . convertDefinitionI
 
 convertExpression
   :: Monad m
-  => DataTyped.ExpressionEntity (T m) -> T m (ExpressionRef m)
+  => DataTyped.TypedExpressionEntity (T m) -> T m (ExpressionRef m)
 convertExpression = runSugar . convertExpressionI . eeFromTypedExpression

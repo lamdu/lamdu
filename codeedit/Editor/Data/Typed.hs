@@ -1,43 +1,47 @@
-{-# LANGUAGE TemplateHaskell, TypeFamilies, FlexibleContexts, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE
+    TemplateHaskell,
+    GeneralizedNewtypeDeriving
+  #-}
 module Editor.Data.Typed
   ( ExpressionEntity(..)
   , ExpressionE
-  , atEeInferredTypes, atEeValue
+  , atEeInferredType, atEeValue
   , eeReplace, eeGuid, eeIRef
   , InferredTypeEntity(..)
-  , ExpressionIT
+  , InferredType(..)
   , DefinitionEntity(..)
   , atDeIRef, atDeValue
   , deGuid
   , loadInferDefinition
   , loadInferExpression
-  , mapExpressionEntities
+  , mapMExpressionEntities
   , StoredExpression(..), esGuid -- re-export from Data.Load
+  , TypeData, TypedExpressionEntity, TypedDefinitionEntity
   ) where
 
-import Control.Applicative (Applicative, liftA2)
-import Control.Monad (liftM, liftM2, (<=<))
+--import qualified Data.Store.Transaction as Transaction
+import Control.Applicative (Applicative)
+import Control.Monad (liftM, liftM2, (<=<), when, unless, filterM)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Random (RandomT, nextRandom, runRandomT)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
-import Control.Monad.Trans.State (StateT)
-import Data.Functor.Identity (runIdentity)
+import Control.Monad.Trans.UnionFind (UnionFindT, evalUnionFindT)
+import Data.Functor.Identity (Identity(..))
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
+import Data.Monoid (Any(..), mconcat)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.Data.Load (StoredExpression(..), esGuid)
 import qualified Control.Monad.Trans.Reader as Reader
-import qualified Control.Monad.Trans.State as State
+import qualified Control.Monad.Trans.UnionFind as UnionFind
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
-import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
-import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.Data as Data
 import qualified Editor.Data.Load as DataLoad
@@ -45,79 +49,72 @@ import qualified System.Random as Random
 
 type T = Transaction ViewTag
 
-type Scope = [(Guid, InferredTypeEntity)]
+type TypedExpressionEntity = ExpressionEntity [InferredType]
+type TypedDefinitionEntity = DefinitionEntity [InferredType]
 
-eeGuid :: ExpressionEntity m -> Guid
+eeGuid :: ExpressionEntity it m -> Guid
 eeGuid = esGuid . eeStored
 
-type ExpressionIT = Data.Expression InferredTypeEntity
-data InferredTypeEntity = InferredTypeEntity
+newtype TypeData = TypeData
+  { unTypeData :: [InferredTypeEntity TypeRef]
+  } deriving (Show)
+type TypeRef = UnionFind.Point TypeData
+
+newtype InferredType = InferredType
+  { unInferredType :: InferredTypeEntity InferredType
+  } deriving (Show, Eq)
+
+data InferredTypeEntity ref = InferredTypeEntity
   { iteGuid :: Guid
-  , iteValue :: ExpressionIT
-  } deriving (Eq)
+  , iteValue :: Data.Expression ref
+  } deriving (Show, Eq)
 
-type ExpressionE m = Data.Expression (ExpressionEntity m)
-data ExpressionEntity m = ExpressionEntity
+type ExpressionE it m = Data.Expression (ExpressionEntity it m)
+data ExpressionEntity it m = ExpressionEntity
   { eeStored :: DataLoad.StoredExpression m
-  , eeInferredTypes :: [InferredTypeEntity]
-  , eeValue :: ExpressionE m
+  , eeInferredType :: it
+  , eeValue :: ExpressionE it m
   } deriving (Eq)
 
-data DefinitionEntity m = DefinitionEntity
+data DefinitionEntity it m = DefinitionEntity
   { deIRef :: Data.DefinitionIRef
-  , deValue :: Data.Definition (ExpressionEntity m)
+  , deValue :: Data.Definition (ExpressionEntity it m)
   } deriving (Eq)
 
-deGuid :: DefinitionEntity m -> Guid
+deGuid :: DefinitionEntity it m -> Guid
 deGuid = IRef.guid . deIRef
 
+AtFieldTH.make ''InferredTypeEntity
 AtFieldTH.make ''ExpressionEntity
 AtFieldTH.make ''DefinitionEntity
 
-eeReplace :: ExpressionEntity m -> Maybe (Data.ExpressionIRef -> m ())
+eeReplace :: ExpressionEntity it m -> Maybe (Data.ExpressionIRef -> m ())
 eeReplace = esReplace . eeStored
 
-eeIRef :: ExpressionEntity m -> Data.ExpressionIRef
+eeIRef :: ExpressionEntity it m -> Data.ExpressionIRef
 eeIRef = esIRef . eeStored
-
-subst
-  :: Guid
-  -> ExpressionIT
-  -> InferredTypeEntity
-  -> InferredTypeEntity
-subst guid newExpr (InferredTypeEntity g value) =
-  InferredTypeEntity g $
-  case value of
-  Data.ExpressionLambda lambda -> Data.ExpressionLambda $ onLambda lambda
-  Data.ExpressionPi lambda -> Data.ExpressionPi $ onLambda lambda
-  Data.ExpressionApply (Data.Apply func arg) ->
-    Data.ExpressionApply $ Data.Apply (s func) (s arg)
-  var@(Data.ExpressionGetVariable (Data.ParameterRef guidRef))
-    | guidRef == guid -> newExpr
-    | otherwise -> var
-  x -> x
-  where
-    s = subst guid newExpr
-    onLambda (Data.Lambda paramType body) =
-      Data.Lambda (s paramType) (s body)
 
 --------------- Infer Stack boilerplate:
 
-type InInfer m a =
-  ReaderT Scope (RandomT Random.StdGen (T m)) a
+type Scope = [(Guid, TypeRef)]
 
-newtype Infer m a = Infer { unInfer :: InInfer m a }
+newtype Infer m a = Infer { unInfer :: ReaderT Scope (UnionFindT TypeData (RandomT Random.StdGen (T m))) a }
   deriving (Functor, Applicative, Monad)
 
 AtFieldTH.make ''Infer
 
-liftScope :: InInfer m a -> Infer m a
+liftScope :: ReaderT Scope (UnionFindT TypeData (RandomT Random.StdGen (T m))) a -> Infer m a
 liftScope = Infer
+
+liftTypeRef
+  :: Monad m
+  => UnionFindT TypeData (RandomT Random.StdGen (T m)) a -> Infer m a
+liftTypeRef = liftScope . lift
 
 liftRandom
   :: Monad m
   => RandomT Random.StdGen (T m) a -> Infer m a
-liftRandom = liftScope . lift
+liftRandom = liftTypeRef . lift
 
 liftTransaction
   :: Monad m => T m a -> Infer m a
@@ -131,129 +128,333 @@ localScope = atInfer . Reader.local
 
 ----------------- Infer operations:
 
-runInfer :: Monad m => Infer m a -> T m a
+makeTypeRef :: Monad m => [InferredTypeEntity TypeRef] -> Infer m TypeRef
+makeTypeRef = liftTypeRef . UnionFind.new . TypeData
+
+getTypeRef :: Monad m => TypeRef -> Infer m [InferredTypeEntity TypeRef]
+getTypeRef = liftM unTypeData . liftTypeRef . UnionFind.descr
+
+setTypeRef :: Monad m => TypeRef -> [InferredTypeEntity TypeRef] -> Infer m ()
+setTypeRef typeRef [] = do
+  g <- nextGuid
+  liftTypeRef . UnionFind.setDescr typeRef $
+    TypeData [InferredTypeEntity g Data.ExpressionHole]
+setTypeRef typeRef types =
+  liftTypeRef . UnionFind.setDescr typeRef $
+  TypeData types
+
+sanitize
+  :: Monad m => TypedExpressionEntity f
+  -> T m (TypedExpressionEntity f)
+sanitize =
+  liftM canonizeIdentifiersTypes .
+  (atInferredTypes . const . mapM) builtinsToGlobals
+
+runInfer
+  :: Monad m
+  => Infer m (TypedExpressionEntity f)
+  -> T m (TypedExpressionEntity f)
 runInfer =
+  sanitize <=<
   runRandomT (Random.mkStdGen 0) .
+  evalUnionFindT .
   (`runReaderT` []) .
   unInfer
 
 putInScope
-  :: Monad m => [(Guid, InferredTypeEntity)]
+  :: Monad m => [(Guid, TypeRef)]
   -> Infer m a
   -> Infer m a
 putInScope = localScope . (++)
 
-_readScope :: Monad m => Infer m Scope
-_readScope = liftScope Reader.ask
+readScope :: Monad m => Infer m Scope
+readScope = liftScope Reader.ask
 
-_nextGuid :: Monad m => Infer m Guid
-_nextGuid = liftRandom nextRandom
+nextGuid :: Monad m => Infer m Guid
+nextGuid = liftRandom nextRandom
 
-_findInScope :: Monad m => Guid -> Infer m (Maybe InferredTypeEntity)
-_findInScope guid = liftM (lookup guid) _readScope
+findInScope :: Monad m => Guid -> Infer m (Maybe TypeRef)
+findInScope guid = liftM (lookup guid) readScope
 
-_generateEntity
+generateEntity
   :: Monad m
-  => ExpressionIT
-  -> Infer m InferredTypeEntity
-_generateEntity v = do
-  g <- _nextGuid
-  return $ InferredTypeEntity g v
+  => Data.Expression TypeRef
+  -> Infer m TypeRef
+generateEntity v = do
+  g <- nextGuid
+  makeTypeRef [InferredTypeEntity g v]
 
 --------------
 
-mapInferredTypeEntities
+mapInferredTypes
   :: Monad m
-  => (InferredTypeEntity -> m InferredTypeEntity)
-  -> InferredTypeEntity -> m InferredTypeEntity
-mapInferredTypeEntities f =
+  => (InferredType -> m InferredType)
+  -> InferredType -> m InferredType
+mapInferredTypes f =
   Data.mapMExpression g
   where
-    g (InferredTypeEntity guid t) =
-      (return t, f . InferredTypeEntity guid)
+    g (InferredType (InferredTypeEntity guid t)) =
+      ( return t
+      , f . InferredType . InferredTypeEntity guid
+      )
 
-mapExpressionEntities
+mapMExpressionEntities
   :: Monad m
-  => (ExpressionEntity f -> m (ExpressionEntity f))
-  -> ExpressionEntity f -> m (ExpressionEntity f)
-mapExpressionEntities f =
+  => (StoredExpression f
+      -> a
+      -> ExpressionE b g
+      -> m (ExpressionEntity b g))
+  -> ExpressionEntity a f
+  -> m (ExpressionEntity b g)
+mapMExpressionEntities f =
   Data.mapMExpression g
   where
-    g (ExpressionEntity stored ts val) =
-      (return val, f . ExpressionEntity stored ts)
+    g (ExpressionEntity stored a val) =
+      (return val, f stored a)
 
-fromEntity :: ExpressionEntity m -> InferredTypeEntity
-fromEntity =
-  runIdentity . Data.mapMExpression f
+atInferredTypes
+  :: Monad m
+  => (StoredExpression f -> a -> m b)
+  -> ExpressionEntity a f
+  -> m (ExpressionEntity b f)
+atInferredTypes f =
+  mapMExpressionEntities g
+  where
+    g stored a v = do
+      b <- f stored a
+      return $ ExpressionEntity stored b v
+
+fromEntity
+  :: Monad m => (Guid -> Data.Expression ref -> m ref)
+  -> ExpressionEntity it f -> m ref
+fromEntity mk =
+  Data.mapMExpression f
   where
     f (ExpressionEntity stored _ val) =
-      (return val, return . InferredTypeEntity (esGuid stored))
+      ( return val
+      , mk $ esGuid stored
+      )
 
-fromLoaded :: DataLoad.ExpressionEntity m -> ExpressionEntity m
-fromLoaded =
+inferredTypeFromEntity
+  :: ExpressionEntity it f -> InferredType
+inferredTypeFromEntity =
+  fmap runIdentity $ fromEntity f
+  where
+    f guid = return . InferredType . InferredTypeEntity guid
+
+ignoreStoredMonad
+  :: ExpressionEntity it (T Identity)
+  -> ExpressionEntity it (T Identity)
+ignoreStoredMonad = id
+
+expand :: Monad m => ExpressionEntity it f -> T m InferredType
+expand =
+  (`runReaderT` Map.empty) . recurse . inferredTypeFromEntity
+  where
+    recurse e@(InferredType (InferredTypeEntity guid val)) =
+      case val of
+      Data.ExpressionGetVariable (Data.DefinitionRef defI) ->
+        -- TODO: expand the result recursively (with some recursive
+        -- constraint)
+        liftM
+        (inferredTypeFromEntity .
+         ignoreStoredMonad .
+         fromLoaded () . Data.defBody . DataLoad.defEntityValue) .
+        lift $ DataLoad.loadDefinition defI
+      Data.ExpressionGetVariable (Data.ParameterRef guidRef) -> do
+        mValueEntity <- Reader.asks (Map.lookup guidRef)
+        return $ fromMaybe e mValueEntity
+      Data.ExpressionApply
+        (Data.Apply
+         (InferredType
+          (InferredTypeEntity lamGuid
+           -- TODO: Don't ignore paramType, we do want to recursively
+           -- type-check this:
+           (Data.ExpressionLambda (Data.Lambda _paramType body))))
+         argEntity) -> do
+          newArgEntity <- recurse argEntity
+          newBody <-
+            Reader.local (Map.insert lamGuid newArgEntity) $
+            recurse body
+          return newBody
+      Data.ExpressionLambda (Data.Lambda paramType body) ->
+        recurseLambda Data.ExpressionLambda paramType body
+      Data.ExpressionPi (Data.Lambda paramType body) -> do
+        newParamType <- recurse paramType
+        recurseLambda Data.ExpressionPi newParamType body
+      _ -> return e
+      where
+        recurseLambda cons paramType body = do
+          newBody <- recurse body
+          return .
+            InferredType . InferredTypeEntity guid . cons $
+            Data.Lambda paramType newBody
+
+typeRefFromEntity
+  :: Monad m => ExpressionEntity it f
+  -> Infer m TypeRef
+typeRefFromEntity =
+  Data.mapMExpression f <=< liftTransaction . expand
+  where
+    f (InferredType (InferredTypeEntity guid val)) =
+      ( return val
+      , makeTypeRef . (: []) . InferredTypeEntity guid
+      )
+
+fromLoaded
+  :: it
+  -> DataLoad.ExpressionEntity f
+  -> ExpressionEntity it f
+fromLoaded it =
   runIdentity . Data.mapMExpression f
   where
     f (DataLoad.ExpressionEntity stored val) =
-      (return val, return . ExpressionEntity stored [])
+      (return val, makeEntity stored)
+    makeEntity stored newVal =
+      return $ ExpressionEntity stored it newVal
 
-expand :: Monad m => InferredTypeEntity -> Infer m InferredTypeEntity
-expand =
-  mapInferredTypeEntities f
-  where
-    f (InferredTypeEntity _
-       (Data.ExpressionGetVariable
-        (Data.DefinitionRef defI))) =
-      do
-        def <- liftTransaction $ Transaction.readIRef defI
-        liftM (fromEntity . fromLoaded) . liftTransaction $
-          DataLoad.loadExpression (Data.defBody def) Nothing
-    f (InferredTypeEntity _
-       (Data.ExpressionApply
-        (Data.Apply
-         (InferredTypeEntity lambdaGuid
-          (Data.ExpressionLambda
-           (Data.Lambda _ body))) val))) =
-      return $ subst lambdaGuid (iteValue val) body
-    f x = return x
-
-inferExpression
+addTypeRefs
   :: Monad m
-  => ExpressionEntity (T m)
-  -> Infer m (ExpressionEntity (T m))
-inferExpression (ExpressionEntity stored prevTypes value) =
-  makeEntity =<<
-  case value of
-  Data.ExpressionLambda lambda ->
-    liftM ((,) [] . Data.ExpressionLambda) $ inferLambda lambda
-  Data.ExpressionPi lambda -> do
-    liftM ((,) [] . Data.ExpressionPi) $ inferLambda lambda
-  Data.ExpressionApply (Data.Apply func arg) ->
-    liftM ((,) [] . Data.ExpressionApply) $
-    liftM2 Data.Apply (inferExpression func) (inferExpression arg)
-  x -> return ([], x)
+  => ExpressionEntity () f
+  -> Infer m (ExpressionEntity TypeRef f)
+addTypeRefs =
+  mapMExpressionEntities f
   where
-    makeEntity (ts, expr) = do
-      expandedTs <- liftM pruneSameTypes . mapM expand $ ts ++ prevTypes
-      return $ ExpressionEntity stored expandedTs expr
-    inferLambda (Data.Lambda paramType body) = do
-      inferredParamType <- inferExpression paramType
-      liftM (Data.Lambda inferredParamType) .
-        putInScope [(esGuid stored, fromEntity inferredParamType)] $
-        inferExpression body
+    f stored () val = do
+      typeRef <- generateEntity Data.ExpressionHole
+      return $ ExpressionEntity stored typeRef val
+
+-- TODO: Use ListT with ordinary Data.mapMExpression?
+mapTypeRef
+  :: Monad m
+  => (InferredTypeEntity to -> Infer m to)
+  -> TypeRef -> Infer m [to]
+mapTypeRef f typeRef = do
+  types <- getTypeRef typeRef
+  liftM concat $ mapM onType types
+  where
+    onType (InferredTypeEntity guid expr) =
+      mapM (f . InferredTypeEntity guid) =<<
+      case expr of
+      Data.ExpressionLambda lambda ->
+        map1 Data.ExpressionLambda $ onLambda lambda
+      Data.ExpressionPi lambda ->
+        map1 Data.ExpressionPi $ onLambda lambda
+      Data.ExpressionApply apply ->
+        map1 Data.ExpressionApply $ onApply apply
+      Data.ExpressionGetVariable varRef ->
+        map0 $ Data.ExpressionGetVariable varRef
+      Data.ExpressionHole ->
+        map0 Data.ExpressionHole
+      Data.ExpressionLiteralInteger int ->
+        map0 $ Data.ExpressionLiteralInteger int
+      Data.ExpressionBuiltin name ->
+        map0 $ Data.ExpressionBuiltin name
+      Data.ExpressionMagic ->
+        map0 Data.ExpressionMagic
+      where
+        recurse = mapTypeRef f
+        map0 = return . (: [])
+        map1 = liftM . map
+        map2 = liftM2 . liftM2
+        onApply (Data.Apply funcType argType) =
+          map2 Data.Apply
+          (recurse funcType)
+          (recurse argType)
+        onLambda (Data.Lambda paramType resultType) =
+          map2 Data.Lambda
+          (recurse paramType)
+          (recurse resultType)
+
+derefTypeRefs
+  :: Monad m
+  => ExpressionEntity TypeRef f
+  -> Infer m (ExpressionEntity [InferredType] f)
+derefTypeRefs =
+  mapMExpressionEntities f
+  where
+    isAHole Data.ExpressionHole = True
+    isAHole _ = False
+    f stored typeRef val = do
+      types <-
+        (liftM . filter) (not . isAHole . iteValue . unInferredType) $
+        mapTypeRef (return . InferredType) typeRef
+      return $ ExpressionEntity stored types val
+
+unifyOnTree
+  :: Monad m
+  => ExpressionEntity TypeRef (T f)
+  -> Infer m ()
+unifyOnTree (ExpressionEntity stored typeRef value) = do
+  setType =<< generateEntity Data.ExpressionHole
+  case value of
+    Data.ExpressionLambda lambda ->
+      handleLambda lambda
+    Data.ExpressionPi lambda@(Data.Lambda _ resultType) -> do
+      inferLambda lambda . const . return $ eeInferredType resultType
+    Data.ExpressionApply (Data.Apply func arg) -> do
+      unifyOnTree func
+      unifyOnTree arg
+      let
+        funcTypeRef = eeInferredType func
+        argTypeRef = eeInferredType arg
+        piType = Data.ExpressionPi $ Data.Lambda argTypeRef typeRef
+      unify funcTypeRef =<< generateEntity piType
+      funcTypes <- getTypeRef funcTypeRef
+      sequence_
+        [ subst piGuid (typeRefFromEntity arg) piResultTypeRef
+        | InferredTypeEntity piGuid
+          (Data.ExpressionPi
+           (Data.Lambda _ piResultTypeRef))
+          <- funcTypes
+        ]
+      return ()
+    Data.ExpressionGetVariable (Data.ParameterRef guid) -> do
+      mParamTypeRef <- findInScope guid
+      case mParamTypeRef of
+        -- TODO: Not in scope: Bad code,
+        -- add an OutOfScopeReference type error
+        Nothing -> return ()
+        Just paramTypeRef -> setType paramTypeRef
+    Data.ExpressionGetVariable (Data.DefinitionRef defI) -> do
+      defTypeEntity <-
+        liftM (fromLoaded [] . Data.defType . DataLoad.defEntityValue) .
+        liftTransaction $
+        DataLoad.loadDefinition defI
+      defTypeRef <- typeRefFromEntity $ ignoreStoredMonad defTypeEntity
+      setType defTypeRef
+    Data.ExpressionLiteralInteger _ ->
+      setType <=< generateEntity . Data.ExpressionBuiltin $ Data.FFIName ["Prelude"] "Integer"
+    _ -> return ()
+  where
+    setType = unify typeRef
+    handleLambda lambda@(Data.Lambda _ body) =
+      inferLambda lambda $ \paramTypeRef ->
+        generateEntity . Data.ExpressionPi .
+        Data.Lambda paramTypeRef $
+        eeInferredType body
+    inferLambda (Data.Lambda paramType result) mkType = do
+      paramTypeRef <- typeRefFromEntity paramType
+      setType =<< mkType paramTypeRef
+      putInScope [(esGuid stored, paramTypeRef)] $
+        unifyOnTree result
+
+tryRemap :: Ord k => k -> Map k k -> k
+tryRemap x = fromMaybe x . Map.lookup x
 
 canonizeIdentifiers
   :: Random.StdGen
-  -> InferredTypeEntity
-  -> InferredTypeEntity
+  -> InferredType
+  -> InferredType
 canonizeIdentifiers gen =
   runIdentity . runRandomT gen . (`runReaderT` Map.empty) . f
   where
     onLambda oldGuid newGuid (Data.Lambda paramType body) =
       liftM2 Data.Lambda (f paramType) .
       Reader.local (Map.insert oldGuid newGuid) $ f body
-    f (InferredTypeEntity oldGuid v) = do
+    f (InferredType (InferredTypeEntity oldGuid v)) = do
       newGuid <- lift nextRandom
-      liftM (InferredTypeEntity newGuid) $
+      liftM (InferredType . InferredTypeEntity newGuid) $
         case v of
         Data.ExpressionLambda lambda ->
           liftM Data.ExpressionLambda $ onLambda oldGuid newGuid lambda
@@ -264,119 +465,138 @@ canonizeIdentifiers gen =
           liftM2 Data.Apply (f func) (f arg)
         Data.ExpressionGetVariable (Data.ParameterRef guid) ->
           Reader.asks
-          (Data.ExpressionGetVariable . Data.ParameterRef . fromMaybe guid .
-           Map.lookup guid)
+          (Data.ExpressionGetVariable . Data.ParameterRef . tryRemap guid)
         x -> return x
 
-alphaEq :: InferredTypeEntity -> InferredTypeEntity -> Bool
-alphaEq e0 e1 =
-  canonizeIdentifiers gen e0 == canonizeIdentifiers gen e1
-  where
-    gen = Random.mkStdGen 0
-
 unify
-  :: InferredTypeEntity
-  -> InferredTypeEntity
-  -> StateT (Map Guid InferredTypeEntity) Maybe InferredTypeEntity
-unify
-  (InferredTypeEntity guid0 value0)
-  (InferredTypeEntity _ value1) =
-  fmap (InferredTypeEntity guid0) $
-  case (value0, value1) of
-  (Data.ExpressionHole, _) -> return value1
-  (_, Data.ExpressionHole) -> return value0
-  (Data.ExpressionLambda lambda0,
-   Data.ExpressionLambda lambda1) ->
-    fmap Data.ExpressionLambda $ unifyLambda lambda0 lambda1
-  (Data.ExpressionPi lambda0,
-   Data.ExpressionPi lambda1) ->
-    fmap Data.ExpressionPi $ unifyLambda lambda0 lambda1
-  (Data.ExpressionApply (Data.Apply func0 arg0),
-   Data.ExpressionApply (Data.Apply func1 arg1)) ->
-    fmap Data.ExpressionApply $
-    liftA2 Data.Apply (unify func0 func1) (unify arg0 arg1)
-  (Data.ExpressionGetVariable (Data.ParameterRef guidRef0),
-   other1) ->
-    inferVariable guidRef0 other1
-  (other0,
-   Data.ExpressionGetVariable (Data.ParameterRef guidRef1)) ->
-    inferVariable guidRef1 other0
-  -- Only LiteralInteger, Builtin, Magic here. If any constructors are
-  -- added, need to match them here
-  (x, y)
-    | x == y -> return x
-    | otherwise -> lift Nothing
-  where
-    unifyLambda
-      (Data.Lambda paramType0 result0)
-      (Data.Lambda paramType1 result1) =
-        liftA2 Data.Lambda
-        (unify paramType0 paramType1)
-        (unify result0 result1)
-    inferVariable guidRef value = do
-      mValue <- State.gets $ Map.lookup guidRef
-      case mValue of
-        Nothing -> do
-          State.modify $ Map.insert guidRef e
-          return value
-        Just prevValue -> do
-          newValue <- unify e prevValue
-          State.modify $ Map.insert guidRef newValue
-          return $ iteValue newValue
-      where
-        e = InferredTypeEntity guid0 value
-
-unification :: [InferredTypeEntity] -> [InferredTypeEntity]
-unification = foldr add []
-  where
-    add x [] = [x]
-    add x (y:ys) =
-      case (`State.evalStateT` Map.empty) $ unify x y of
-        Nothing -> y : add x ys
-        Just new -> new : ys
-
-pruneSameTypes
-  :: [InferredTypeEntity]
-  -> [InferredTypeEntity]
-pruneSameTypes = unification . List.nubBy alphaEq
-
-_addTypes
-  :: [InferredTypeEntity]
-  -> [InferredTypeEntity]
-  -> [InferredTypeEntity]
-_addTypes xs ys = pruneSameTypes $ xs ++ ys
-
--- | Execute on types in the Data.Expression tree
-onAllInferredTypes
   :: Monad m
-  => ([InferredTypeEntity] -> m [InferredTypeEntity])
-  -> ExpressionEntity f -> m (ExpressionEntity f)
-onAllInferredTypes f =
-  mapExpressionEntities g
-  where
-    g (ExpressionEntity stored ts v) = do
-      newTs <- f ts
-      return $ ExpressionEntity stored newTs v
+  => TypeRef
+  -> TypeRef
+  -> Infer m ()
+unify a b = do
+  e <- liftTypeRef $ UnionFind.equivalent a b
+  unless e $ do
+    as <- getTypeRef a
+    bs <- getTypeRef b
+    us <-
+      liftM (TypeData . concat) . sequence $
+      liftM2 unifyPair as bs
+    liftTypeRef $ do
+      UnionFind.union a b
+      UnionFind.setDescr a us
 
-canonizeIdentifiersTypes :: ExpressionEntity m -> ExpressionEntity m
-canonizeIdentifiersTypes =
-  runIdentity . mapExpressionEntities f
+unifyPair
+  :: Monad m
+  => InferredTypeEntity TypeRef
+  -> InferredTypeEntity TypeRef
+  -> Infer m [InferredTypeEntity TypeRef]
+unifyPair
+  a@(InferredTypeEntity aGuid aVal)
+  b@(InferredTypeEntity bGuid bVal)
+  = case (aVal, bVal) of
+    (Data.ExpressionHole, _) -> return [b]
+    (_, Data.ExpressionHole) -> return [a]
+    (Data.ExpressionPi l1,
+     Data.ExpressionPi l2) -> do
+      unifyLambdas l1 l2
+    (Data.ExpressionLambda l1,
+     Data.ExpressionLambda l2) -> do
+      unifyLambdas l1 l2
+    (Data.ExpressionApply (Data.Apply aFuncTypeRef aArgTypeRef),
+     Data.ExpressionApply (Data.Apply bFuncTypeRef bArgTypeRef)) -> do
+      unify aFuncTypeRef bFuncTypeRef
+      unify aArgTypeRef bArgTypeRef
+      return [a]
+    (Data.ExpressionGetVariable aVarRef,
+     Data.ExpressionGetVariable bVarRef)
+      | aVarRef == bVarRef -> return [a]
+      | otherwise -> return [a, b]
+    (Data.ExpressionLiteralInteger aInt,
+     Data.ExpressionLiteralInteger bInt)
+      | aInt == bInt -> return [a]
+      | otherwise -> return [a, b]
+    (Data.ExpressionBuiltin aName,
+     Data.ExpressionBuiltin bName)
+      | aName == bName -> return [a]
+      | otherwise -> return [a,b]
+    (Data.ExpressionMagic,
+     Data.ExpressionMagic) -> return [a]
+    (_, _) -> return [a,b]
   where
-    f (ExpressionEntity stored ts val) =
-      return $
-      ExpressionEntity stored (zipWith canonizeIdentifiers gens ts) val
-      where
-        guid = esGuid stored
-        gens =
-          map Random.mkStdGen . Random.randoms $
-          guidToStdGen guid
+    unifyLambdas
+      (Data.Lambda aParamTypeRef aResultTypeRef)
+      (Data.Lambda bParamTypeRef bResultTypeRef) = do
+      unify aParamTypeRef bParamTypeRef
+      -- Remap b's guid to a's guid and return a as the unification:
+      let
+        mkGetAGuidRef =
+          generateEntity . Data.ExpressionGetVariable . Data.ParameterRef $
+          aGuid
+      subst bGuid mkGetAGuidRef bResultTypeRef
+      unify aResultTypeRef bResultTypeRef
+      return [a]
+
+subst :: Monad m => Guid -> Infer m TypeRef -> TypeRef -> Infer m ()
+subst from mkTo rootRef = do
+  refs <- allUnder [] rootRef
+  relevant <- filterM remove refs
+  mapM_ ((mkTo >>=) . unify) relevant
+  where
+    removeFrom
+      a@(InferredTypeEntity _
+       (Data.ExpressionGetVariable (Data.ParameterRef guidRef)))
+      | guidRef == from = (Any True, [])
+      | otherwise = (Any False, [a])
+    removeFrom x = (Any False, [x])
+    remove typeRef = do
+      (Any removed, new) <- liftM (mconcat . map removeFrom) $ getTypeRef typeRef
+      when removed $
+        setTypeRef typeRef new
+      return removed
+
+allUnder :: Monad m => [TypeRef] -> TypeRef -> Infer m [TypeRef]
+allUnder visited typeRef = do
+  alreadySeen <-
+    liftTypeRef . liftM or $
+    mapM (UnionFind.equivalent typeRef) visited
+  if alreadySeen
+    then return visited
+    else do
+      types <- getTypeRef typeRef
+      liftM concat $ mapM (recurse (typeRef : visited)) types
+  where
+    recurse visited1 entity = do
+      let
+        mPair =
+          case iteValue entity of
+          Data.ExpressionPi (Data.Lambda p r) -> Just (p, r)
+          Data.ExpressionLambda (Data.Lambda p r) -> Just (p, r)
+          Data.ExpressionApply (Data.Apply f a) -> Just (f, a)
+          _ -> Nothing
+      case mPair of
+        Nothing -> return visited1
+        Just (a, b) -> do
+          visited2 <- allUnder visited1 a
+          allUnder visited2 b
+
+canonizeIdentifiersTypes
+  :: TypedExpressionEntity m
+  -> TypedExpressionEntity m
+canonizeIdentifiersTypes =
+  runIdentity . atInferredTypes canonizeTypes
+  where
+    canonizeTypes stored =
+      return . zipWith canonizeIdentifiers (gens (esGuid stored))
+    gens guid =
+      map Random.mkStdGen . Random.randoms $
+      guidToStdGen guid
     guidToStdGen = Random.mkStdGen . BinaryUtils.decodeS . Guid.bs
 
 builtinsToGlobals
   :: Monad m
-  => InferredTypeEntity -> Infer m InferredTypeEntity
+  => InferredType -> T m InferredType
 builtinsToGlobals expr = do
-  globals <- liftTransaction $ Property.get Anchors.builtinsMap
+  globals <- Property.get Anchors.builtinsMap
   let
     f entity@(InferredTypeEntity guid (Data.ExpressionBuiltin name)) =
       return .
@@ -384,41 +604,46 @@ builtinsToGlobals expr = do
       (InferredTypeEntity guid . Data.ExpressionGetVariable) $
       Map.lookup name globals
     f entity = return entity
-  mapInferredTypeEntities f expr
+  mapInferredTypes (liftM InferredType . f . unInferredType) expr
 
-sanitize
-  :: Monad m => ExpressionEntity f
-  -> Infer m (ExpressionEntity f)
-sanitize = liftM canonizeIdentifiersTypes . onAllInferredTypes (mapM builtinsToGlobals)
+inferExpression
+ :: Monad m
+ => Maybe TypeRef
+ -> ExpressionEntity () (T f)
+ -> Infer m (TypedExpressionEntity (T f))
+inferExpression mTypeRef expr = do
+  withTypeRefs <- addTypeRefs expr
+  case mTypeRef of
+    Nothing -> return ()
+    Just typeRef ->
+      unify typeRef $ eeInferredType withTypeRefs
+  unifyOnTree withTypeRefs
+  derefTypeRefs withTypeRefs
 
 inferDefinition
   :: Monad m
-  => DataLoad.DefinitionEntity (T m)
-  -> Infer m (DefinitionEntity (T m))
+  => DataLoad.DefinitionEntity (T f)
+  -> T m (TypedDefinitionEntity (T f))
 inferDefinition (DataLoad.DefinitionEntity iref value) =
   liftM (DefinitionEntity iref) $
   case value of
   Data.Definition typeI bodyI -> do
-    inferredType <- sanitize $ fromLoaded typeI
-    inferredBody <-
-      sanitize <=< inferExpression $
-      fromLoaded bodyI
-    return $ Data.Definition inferredType inferredBody
+    inferredType <- sanitize $ fromLoaded [] typeI
 
-inferRootExpression
-  :: Monad m => DataLoad.ExpressionEntity (T m)
-  -> Infer m (ExpressionEntity (T m))
-inferRootExpression =
-  sanitize <=< inferExpression . fromLoaded
+    inferredBody <- runInfer $ do
+      inferredTypeRef <- typeRefFromEntity inferredType
+      inferExpression (Just inferredTypeRef) $ fromLoaded () bodyI
+    return $ Data.Definition inferredType inferredBody
 
 loadInferDefinition
   :: Monad m => Data.DefinitionIRef
-  -> T m (DefinitionEntity (T m))
+  -> T m (TypedDefinitionEntity (T m))
 loadInferDefinition =
-  runInfer . inferDefinition <=< DataLoad.loadDefinition
+  inferDefinition <=< DataLoad.loadDefinition
 
 loadInferExpression
   :: Monad m => Data.ExpressionIRef
-  -> T m (ExpressionEntity (T m))
+  -> T m (TypedExpressionEntity (T m))
 loadInferExpression =
-  runInfer . inferRootExpression <=< flip DataLoad.loadExpression Nothing
+  runInfer . inferExpression Nothing . fromLoaded () <=<
+  flip DataLoad.loadExpression Nothing
