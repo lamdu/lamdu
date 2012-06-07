@@ -6,25 +6,31 @@ module Control.Monad.Trans.UnionFind
   , descr, setDescr
   , union, unionWith
   , equivalent
+  , UnionFind, (!)
   ) where
 
 import Control.Applicative (Applicative)
-import Control.Monad (unless)
+import Control.Monad (liftM, unless)
 import Control.Monad.Trans.Class (MonadTrans(..))
-import Control.Monad.Trans.State (StateT(..), evalStateT)
+import Control.Monad.Trans.State (StateT(..), runStateT)
 import Data.UnionFind.IntMap (Point)
 import qualified Control.Monad.Trans.State as State
 import qualified Data.UnionFind.IntMap as UF
+
+type UnionFind p = UF.PointSupply p
+
+(!) :: UnionFind p -> Point p -> p
+(!) = UF.descr
 
 newtype UnionFindT p m a = UnionFindT {
   unUnionFindT :: StateT (UF.PointSupply p) m a
   } deriving (Functor, Applicative, Monad, MonadTrans)
 
-runUnionFindT :: Monad m => UnionFindT p m a -> m a
-runUnionFindT = (`evalStateT` UF.newPointSupply) . unUnionFindT
-
 swap :: (a, b) -> (b, a)
 swap (x, y) = (y, x)
+
+runUnionFindT :: Monad m => UnionFindT p m a -> m (UnionFind p, a)
+runUnionFindT = liftM swap . (`runStateT` UF.newPointSupply) . unUnionFindT
 
 new :: Monad m => p -> UnionFindT p m (Point p)
 new x = UnionFindT . StateT $ return . swap . flip UF.fresh x
