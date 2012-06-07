@@ -56,6 +56,7 @@ data Link a
      deriving Show
 
 newtype Point a = Point Int
+  deriving (Show)
 
 newPointSupply :: PointSupply a
 newPointSupply = PointSupply 0 IM.empty
