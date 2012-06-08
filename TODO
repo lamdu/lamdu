@@ -1,9 +1,3 @@
-* Have a "destructive update" inference algorithm with an indirection
-  layer so that unify can cause two types to point to the same bucket
-  which is later updated by more inference
-
-* Maybe param type is a mistake?
-
 * Oops, if type of left-hand-side is hole, then read-only holes at
    right should NOT have their scope based on their location (They are
    copies!)
