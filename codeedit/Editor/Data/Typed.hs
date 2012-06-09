@@ -325,16 +325,15 @@ addTypeRefs =
       return $ ExpressionEntity stored typeRef val
 
 -- TODO: Use ListT with ordinary Data.mapMExpression?
-mapTypeRef
+derefTypeRef
   :: Monad m
-  => (InferredTypeEntity to -> Infer m to)
-  -> TypeRef -> Infer m [to]
-mapTypeRef f typeRef = do
+  => TypeRef -> Infer m [InferredType]
+derefTypeRef typeRef = do
   types <- getTypeRef typeRef
   liftM concat $ mapM onType types
   where
     onType (InferredTypeEntity guid expr) =
-      mapM (f . InferredTypeEntity guid) =<<
+      (liftM . map) (InferredType . InferredTypeEntity guid) $
       case expr of
       Data.ExpressionLambda lambda ->
         map1 Data.ExpressionLambda $ onLambda lambda
@@ -353,7 +352,7 @@ mapTypeRef f typeRef = do
       Data.ExpressionMagic ->
         map0 Data.ExpressionMagic
       where
-        recurse = mapTypeRef f
+        recurse = derefTypeRef
         map0 = return . (: [])
         map1 = liftM . map
         map2 = liftM2 . liftM2
@@ -378,7 +377,7 @@ derefTypeRefs =
     f stored typeRef val = do
       types <-
         (liftM . filter) (not . isAHole . iteValue . unInferredType) $
-        mapTypeRef (return . InferredType) typeRef
+        derefTypeRef typeRef
       return $ ExpressionEntity stored types val
 
 unifyOnTree
