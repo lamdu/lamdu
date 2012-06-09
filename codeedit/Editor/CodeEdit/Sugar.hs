@@ -162,6 +162,7 @@ eeFromITE = runIdentity . Data.mapMExpression (f . DataTyped.unInferredType)
       ( return $ DataTyped.geValue e
       , return . ExprEntity (DataTyped.geGuid e) Nothing []
       )
+
 writeIRef
   :: Monad m
   => ExprEntity m
@@ -401,7 +402,10 @@ removeUninterestingType :: ExpressionRef m -> ExpressionRef m
 removeUninterestingType exprRef =
   case rExpression exprRef of
     ExpressionHole {} -> exprRef -- Keep types on holes
-    _ -> (atRInferredTypes . const) [] exprRef
+    _ -> atRInferredTypes removeIfSingle exprRef
+  where
+    removeIfSingle [_] = []
+    removeIfSingle xs = xs
 
 convertApplyInfixFull
   :: Monad m
