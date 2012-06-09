@@ -12,14 +12,14 @@ modification, are permitted provided that the following conditions are met:
 
 - Redistributions of source code must retain the above copyright notice,
 this list of conditions and the following disclaimer.
- 
+
 - Redistributions in binary form must reproduce the above copyright notice,
 this list of conditions and the following disclaimer in the documentation
 and/or other materials provided with the distribution.
- 
+
 - Neither name of the author nor the names of its contributors may be
 used to endorse or promote products derived from this software without
-specific prior written permission. 
+specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) AND THE CONTRIBUTORS "AS
 IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -38,16 +38,27 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE BangPatterns #-}
 {-# OPTIONS_GHC -funbox-strict-fields #-}
-module Data.UnionFind.IntMap 
+module Data.UnionFind.IntMap
     ( newPointSupply, fresh, repr, descr, setDescr, union, equivalent,
-      PointSupply, Point ) where
+      PointSupply, Point, prettyUF ) where
 
+import Control.Arrow ((&&&))
 import qualified Data.IntMap as IM
 
 data PointSupply a = PointSupply !Int (IM.IntMap (Link a))
   deriving Show
 
-data Link a 
+prettyUF :: Show a => PointSupply a -> String
+prettyUF ps@(PointSupply _ im) =
+  unlines . ("UnionFind:":) $
+  map (\(r, keys) -> show keys ++ ":" ++ show (descr ps (Point r))) groups
+  where
+    groups =
+      IM.toList .
+      IM.fromListWith (++) . map ((unPoint . repr ps . Point) &&& (:[])) $
+      IM.keys im
+
+data Link a
     = Info {-# UNPACK #-} !Int a
       -- ^ This is the descriptive element of the equivalence class
       -- and its rank.
@@ -55,8 +66,10 @@ data Link a
       -- ^ Pointer to some other element of the equivalence class.
      deriving Show
 
-newtype Point a = Point Int
-  deriving (Show)
+newtype Point a = Point { unPoint :: Int }
+
+instance Show (Point a) where
+  show (Point x) = "P" ++ show x
 
 newPointSupply :: PointSupply a
 newPointSupply = PointSupply 0 IM.empty
@@ -66,7 +79,7 @@ fresh (PointSupply next eqs) a =
   (PointSupply (next + 1) (IM.insert next (Info 0 a) eqs), Point next)
 
 -- freshList :: PointSupply a -> [a] -> (PointSupply a, [Point a])
--- freshList 
+-- freshList
 
 repr :: PointSupply a -> Point a -> Point a
 repr ps p = reprInfo ps p (\n _rank _a -> Point n)
@@ -78,10 +91,10 @@ reprInfo (PointSupply _next eqs) (Point n) k = go n
       case eqs IM.! i of
         Link i' -> go i'
         Info r a -> k i r a
-  
+
 union :: PointSupply a -> Point a -> Point a -> PointSupply a
 union ps@(PointSupply next eqs) p1 p2 =
-  reprInfo ps p1 $ \i1 r1 _a1 -> 
+  reprInfo ps p1 $ \i1 r1 _a1 ->
   reprInfo ps p2 $ \i2 r2 a2 ->
   if i1 == i2 then ps else
     case r1 `compare` r2 of
@@ -137,4 +150,4 @@ tst2 = do
       bs0 = newPointSupply
       (bs, b1) = fresh bs0 "bar"
   print $ union as a1 b1
-  -}    
+  -}
