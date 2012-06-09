@@ -1,6 +1,6 @@
 module Graphics.DrawingCombinators.Utils (
   Image, square,
-  textHeight, textWidth, textSize,
+  textHeight, textSize,
   textLinesWidth, textLinesHeight, textLinesSize,
   drawText, drawTextLines, backgroundColor) where
 
@@ -9,15 +9,7 @@ import Data.List(genericLength)
 import Data.Monoid(Monoid(..))
 import Data.Vector.Vector2(Vector2(..))
 import Graphics.DrawingCombinators((%%))
-import qualified Codec.Binary.UTF8.String as UTF8
 import qualified Graphics.DrawingCombinators as Draw
-import qualified System.Info
-
-utf8Bugfix :: String -> String
-utf8Bugfix =
-  case System.Info.os of
-    "darwin" -> UTF8.encodeString
-    _ -> id
 
 type Image = Draw.Image ()
 
@@ -27,11 +19,8 @@ square = void $ Draw.convexPoly [ (0, 0), (1, 0), (1, 1), (0, 1) ]
 textHeight :: Draw.R
 textHeight = 2
 
-textWidth :: Draw.Font -> String -> Draw.R
-textWidth font = Draw.textWidth font . utf8Bugfix
-
 textSize :: Draw.Font -> String -> Vector2 Draw.R
-textSize font str = Vector2 (textWidth font str) textHeight
+textSize font str = Vector2 (Draw.textWidth font str) textHeight
 
 drawText :: Draw.Font -> String -> Image
 drawText font =
@@ -40,13 +29,13 @@ drawText font =
   (Draw.scale 1 (-1) %%) .
   -- Text is normally at height -1.5..0.5.  We move it to be -2..0
   (Draw.translate (0, -1.5) %%) .
-  void . Draw.text font . utf8Bugfix
+  void . Draw.text font
 
 textLinesHeight :: [String] -> Draw.R
 textLinesHeight = (textHeight *) . genericLength
 
 textLinesWidth :: Draw.Font -> [String] -> Draw.R
-textLinesWidth font = maximum . map (textWidth font)
+textLinesWidth font = maximum . map (Draw.textWidth font)
 
 textLinesSize :: Draw.Font -> [String] -> Vector2 Draw.R
 textLinesSize font textLines = Vector2 (textLinesWidth font textLines) (textLinesHeight textLines)
