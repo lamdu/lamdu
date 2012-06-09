@@ -561,10 +561,9 @@ convertDefinitionI defI =
   Data.Definition typeI bodyI -> do
     defType <- convertExpressionI $ eeFromTypedExpression typeI
     defBody <-
-      (liftM . atRInferredTypes . const) [] .
       convertExpressionI $ eeFromTypedExpression bodyI
     return .
-      DefinitionRef defGuid defBody defType . removeUninterestingType $
+      DefinitionRef defGuid ((atRInferredTypes . const) [] defBody) defType . removeUninterestingType $
       rInferredTypes defBody
   where
     defGuid = DataTyped.deGuid defI
