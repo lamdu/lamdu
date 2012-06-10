@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Editor.CodeEdit.InferredTypes(addType) where
+module Editor.CodeEdit.InferredTypes(addType, mkInferredTypesView) where
 
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
@@ -13,25 +13,41 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
+-- non-aligned vbox:
+vbox :: [Widget f] -> Widget f
+vbox = Box.toWidget . Box.make Box.vertical
+
+mkInferredTypesView
+  :: Widget.Id
+  -> [Widget (Transaction ViewTag m)]
+  -> Widget (Transaction ViewTag m)
+mkInferredTypesView _ [] = BWidgets.empty
+mkInferredTypesView exprId typeEdits =
+  vbox
+  [ -- must not be aligned (needs to take over all given space):
+    Spacer.makeHorizLineWidget underlineId
+  , Widget.align (Vector2 0.5 0.5) typeEdit
+  ]
+  where
+    typeEdit =
+      addErrorBackground .
+      Widget.scale Config.typeScaleFactor $
+      BWidgets.vbox typeEdits
+    isError = length typeEdits >= 2
+    typeErrorAnimId = Widget.toAnimId exprId ++ ["type error background"]
+    addErrorBackground
+      | isError = Widget.backgroundColor 15 typeErrorAnimId Config.typeErrorBackgroundColor
+      | otherwise = id
+    underlineId = WidgetIds.underlineId $ Widget.toAnimId exprId
+
 addType
   :: MonadF m
   => Widget.Id
   -> [Widget (Transaction ViewTag m)]
   -> Widget (Transaction ViewTag m)
   -> Widget (Transaction ViewTag m)
-addType _ [] widget = widget
 addType exprId typeEdits widget =
-  Box.toWidget $ Box.make Box.vertical
-  [ addErrorBackground $ Widget.align (Vector2 0.5 0.5) widget
-    -- must not be aligned if space is to be used
-  , Spacer.makeHorizLineWidget underlineId
-  , Widget.align (Vector2 0.5 0.5) typeEdit
+  BWidgets.vbox
+  [ widget
+  , mkInferredTypesView exprId typeEdits
   ]
-  where
-    typeEdit = Widget.scale Config.typeScaleFactor $ BWidgets.vbox typeEdits
-    underlineId = WidgetIds.underlineId $ Widget.toAnimId exprId
-    isError = length typeEdits >= 2
-    typeErrorAnimId = Widget.toAnimId exprId ++ ["type error background"]
-    addErrorBackground
-      | isError = Widget.backgroundColor 15 typeErrorAnimId Config.typeErrorBackgroundColor
-      | otherwise = id
