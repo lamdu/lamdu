@@ -159,8 +159,8 @@ eeFromITE :: DataTyped.InferredType -> ExprEntity m
 eeFromITE = runIdentity . Data.mapMExpression (f . DataTyped.unInferredType)
   where
     f e =
-      ( return $ DataTyped.iteValue e
-      , return . ExprEntity (DataTyped.iteGuid e) Nothing []
+      ( return $ DataTyped.geValue e
+      , return . ExprEntity (DataTyped.geGuid e) Nothing []
       )
 writeIRef
   :: Monad m
