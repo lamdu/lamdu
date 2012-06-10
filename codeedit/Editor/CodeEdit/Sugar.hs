@@ -151,7 +151,7 @@ AtFieldTH.make ''Expression
 data ExprEntity m = ExprEntity
   { eeGuid :: Guid
   , eeStored :: Maybe (DataTyped.StoredExpression (T m))
-  , eeInferredTypes :: [DataTyped.InferredType]
+  , eeInferredTypes :: [ExprEntity m]
   , eeValue :: Data.Expression (ExprEntity m)
   }
 
@@ -189,7 +189,7 @@ eeFromTypedExpression = runIdentity . Data.mapMExpression f
   where
     f e =
       ( return $ DataTyped.eeValue e
-      , return . ExprEntity (DataTyped.eeGuid e) (Just (DataTyped.eeStored e)) (DataTyped.eeInferredType e)
+      , return . ExprEntity (DataTyped.eeGuid e) (Just (DataTyped.eeStored e)) (map eeFromITE (DataTyped.eeInferredType e))
       )
 
 newtype Sugar m a = Sugar {
@@ -257,7 +257,7 @@ mkExpressionRef
   -> Expression m -> Sugar m (ExpressionRef m)
 mkExpressionRef exprI expr = do
   typeRef <-
-    mapM (convertExpressionI . eeFromITE) $
+    mapM convertExpressionI $
     eeInferredTypes exprI
   return
     ExpressionRef
