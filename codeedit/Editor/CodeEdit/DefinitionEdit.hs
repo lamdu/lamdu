@@ -152,8 +152,6 @@ make makeExpressionEdit guid defBody defType inferredTypes = do
     makeParts makeExpressionEdit
     (WidgetIds.fromGuid guid) guid defBody defType
   inferredTypesEdits <- mapM makeExpressionEdit inferredTypes
-  let
-    exprId = WidgetIds.fromGuid . Sugar.guid . Sugar.rActions $ defBody
   return .
     addType exprId inferredTypesEdits .
     Grid.toWidget .
@@ -161,3 +159,5 @@ make makeExpressionEdit guid defBody defType inferredTypes = do
     Grid.makeKeyed .
     (map . map . second) (Widget.align (Vector2 0 0.5)) $
     parts
+  where
+    exprId = WidgetIds.fromGuid . Sugar.guid . Sugar.rActions $ defBody
