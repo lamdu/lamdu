@@ -3,20 +3,20 @@
     GeneralizedNewtypeDeriving
   #-}
 module Editor.Data.Typed
-  ( ExpressionEntity(..)
+  ( StoredExpressionRef(..)
   , ExpressionE
   , atEeInferredType, atEeValue
   , eeReplace, eeGuid, eeIRef
   , InferredTypeEntity(..)
   , InferredType(..)
-  , DefinitionEntity(..)
+  , StoredDefinition(..)
   , atDeIRef, atDeValue
   , deGuid
   , loadInferDefinition
   , loadInferExpression
   , mapMExpressionEntities
   , StoredExpression(..), esGuid -- re-export from Data.Load
-  , TypeData, TypedExpressionEntity, TypedDefinitionEntity
+  , TypeData, TypedStoredExpression, TypedStoredDefinition
   ) where
 
 --import qualified Data.Store.Transaction as Transaction
@@ -33,7 +33,7 @@ import Data.Monoid (Any(..), mconcat)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.Data.Load (StoredExpression(..), esGuid)
+import Editor.Data.Load (StoredExpressionRef(..), esGuid)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.UnionFind as UnionFind
 import qualified Data.AtFieldTH as AtFieldTH
@@ -49,10 +49,10 @@ import qualified System.Random as Random
 
 type T = Transaction ViewTag
 
-type TypedExpressionEntity = ExpressionEntity [InferredType]
-type TypedDefinitionEntity = DefinitionEntity [InferredType]
+type TypedStoredExpression = StoredExpression [InferredType]
+type TypedStoredDefinition = StoredDefinition [InferredType]
 
-eeGuid :: ExpressionEntity it m -> Guid
+eeGuid :: StoredExpression it m -> Guid
 eeGuid = esGuid . eeStored
 
 newtype TypeData = TypeData
@@ -69,29 +69,29 @@ data InferredTypeEntity ref = InferredTypeEntity
   , iteValue :: Data.Expression ref
   } deriving (Show, Eq)
 
-type ExpressionE it m = Data.Expression (ExpressionEntity it m)
-data ExpressionEntity it m = ExpressionEntity
-  { eeStored :: DataLoad.StoredExpression m
+type ExpressionE it m = Data.Expression (StoredExpression it m)
+data StoredExpression it m = StoredExpression
+  { eeStored :: DataLoad.StoredExpressionRef m
   , eeInferredType :: it
   , eeValue :: ExpressionE it m
   } deriving (Eq)
 
-data DefinitionEntity it m = DefinitionEntity
+data StoredDefinition it m = StoredDefinition
   { deIRef :: Data.DefinitionIRef
-  , deValue :: Data.Definition (ExpressionEntity it m)
+  , deValue :: Data.Definition (StoredExpression it m)
   } deriving (Eq)
 
-deGuid :: DefinitionEntity it m -> Guid
+deGuid :: StoredDefinition it m -> Guid
 deGuid = IRef.guid . deIRef
 
 AtFieldTH.make ''InferredTypeEntity
-AtFieldTH.make ''ExpressionEntity
-AtFieldTH.make ''DefinitionEntity
+AtFieldTH.make ''StoredExpression
+AtFieldTH.make ''StoredDefinition
 
-eeReplace :: ExpressionEntity it m -> Maybe (Data.ExpressionIRef -> m ())
+eeReplace :: StoredExpression it m -> Maybe (Data.ExpressionIRef -> m ())
 eeReplace = esReplace . eeStored
 
-eeIRef :: ExpressionEntity it m -> Data.ExpressionIRef
+eeIRef :: StoredExpression it m -> Data.ExpressionIRef
 eeIRef = esIRef . eeStored
 
 --------------- Infer Stack boilerplate:
@@ -144,16 +144,16 @@ setTypeRef typeRef types =
   TypeData types
 
 sanitize
-  :: Monad m => TypedExpressionEntity f
-  -> T m (TypedExpressionEntity f)
+  :: Monad m => TypedStoredExpression f
+  -> T m (TypedStoredExpression f)
 sanitize =
   liftM canonizeIdentifiersTypes .
   (atInferredTypes . const . mapM) builtinsToGlobals
 
 runInfer
   :: Monad m
-  => Infer m (TypedExpressionEntity f)
-  -> T m (TypedExpressionEntity f)
+  => Infer m (TypedStoredExpression f)
+  -> T m (TypedStoredExpression f)
 runInfer =
   sanitize <=<
   runRandomT (Random.mkStdGen 0) .
@@ -200,54 +200,54 @@ mapInferredTypes f =
 
 mapMExpressionEntities
   :: Monad m
-  => (StoredExpression f
+  => (StoredExpressionRef f
       -> a
       -> ExpressionE b g
-      -> m (ExpressionEntity b g))
-  -> ExpressionEntity a f
-  -> m (ExpressionEntity b g)
+      -> m (StoredExpression b g))
+  -> StoredExpression a f
+  -> m (StoredExpression b g)
 mapMExpressionEntities f =
   Data.mapMExpression g
   where
-    g (ExpressionEntity stored a val) =
+    g (StoredExpression stored a val) =
       (return val, f stored a)
 
 atInferredTypes
   :: Monad m
-  => (StoredExpression f -> a -> m b)
-  -> ExpressionEntity a f
-  -> m (ExpressionEntity b f)
+  => (StoredExpressionRef f -> a -> m b)
+  -> StoredExpression a f
+  -> m (StoredExpression b f)
 atInferredTypes f =
   mapMExpressionEntities g
   where
     g stored a v = do
       b <- f stored a
-      return $ ExpressionEntity stored b v
+      return $ StoredExpression stored b v
 
 fromEntity
   :: Monad m => (Guid -> Data.Expression ref -> m ref)
-  -> ExpressionEntity it f -> m ref
+  -> StoredExpression it f -> m ref
 fromEntity mk =
   Data.mapMExpression f
   where
-    f (ExpressionEntity stored _ val) =
+    f (StoredExpression stored _ val) =
       ( return val
       , mk $ esGuid stored
       )
 
 inferredTypeFromEntity
-  :: ExpressionEntity it f -> InferredType
+  :: StoredExpression it f -> InferredType
 inferredTypeFromEntity =
   fmap runIdentity $ fromEntity f
   where
     f guid = return . InferredType . InferredTypeEntity guid
 
 ignoreStoredMonad
-  :: ExpressionEntity it (T Identity)
-  -> ExpressionEntity it (T Identity)
+  :: StoredExpression it (T Identity)
+  -> StoredExpression it (T Identity)
 ignoreStoredMonad = id
 
-expand :: Monad m => ExpressionEntity it f -> T m InferredType
+expand :: Monad m => StoredExpression it f -> T m InferredType
 expand =
   (`runReaderT` Map.empty) . recurse . inferredTypeFromEntity
   where
@@ -291,7 +291,7 @@ expand =
             Data.Lambda paramType newBody
 
 typeRefFromEntity
-  :: Monad m => ExpressionEntity it f
+  :: Monad m => StoredExpression it f
   -> Infer m TypeRef
 typeRefFromEntity =
   Data.mapMExpression f <=< liftTransaction . expand
@@ -304,25 +304,25 @@ typeRefFromEntity =
 fromLoaded
   :: it
   -> DataLoad.ExpressionEntity f
-  -> ExpressionEntity it f
+  -> StoredExpression it f
 fromLoaded it =
   runIdentity . Data.mapMExpression f
   where
     f (DataLoad.ExpressionEntity stored val) =
       (return val, makeEntity stored)
     makeEntity stored newVal =
-      return $ ExpressionEntity stored it newVal
+      return $ StoredExpression stored it newVal
 
 addTypeRefs
   :: Monad m
-  => ExpressionEntity () f
-  -> Infer m (ExpressionEntity TypeRef f)
+  => StoredExpression () f
+  -> Infer m (StoredExpression TypeRef f)
 addTypeRefs =
   mapMExpressionEntities f
   where
     f stored () val = do
       typeRef <- generateEntity Data.ExpressionHole
-      return $ ExpressionEntity stored typeRef val
+      return $ StoredExpression stored typeRef val
 
 -- TODO: Use ListT with ordinary Data.mapMExpression?
 derefTypeRef
@@ -367,8 +367,8 @@ derefTypeRef typeRef = do
 
 derefTypeRefs
   :: Monad m
-  => ExpressionEntity TypeRef f
-  -> Infer m (ExpressionEntity [InferredType] f)
+  => StoredExpression TypeRef f
+  -> Infer m (StoredExpression [InferredType] f)
 derefTypeRefs =
   mapMExpressionEntities f
   where
@@ -378,13 +378,13 @@ derefTypeRefs =
       types <-
         (liftM . filter) (not . isAHole . iteValue . unInferredType) $
         derefTypeRef typeRef
-      return $ ExpressionEntity stored types val
+      return $ StoredExpression stored types val
 
 unifyOnTree
   :: Monad m
-  => ExpressionEntity TypeRef (T f)
+  => StoredExpression TypeRef (T f)
   -> Infer m ()
-unifyOnTree (ExpressionEntity stored typeRef value) = do
+unifyOnTree (StoredExpression stored typeRef value) = do
   setType =<< generateEntity Data.ExpressionHole
   case value of
     Data.ExpressionLambda lambda ->
@@ -579,8 +579,8 @@ allUnder visited typeRef = do
           allUnder visited2 b
 
 canonizeIdentifiersTypes
-  :: TypedExpressionEntity m
-  -> TypedExpressionEntity m
+  :: TypedStoredExpression m
+  -> TypedStoredExpression m
 canonizeIdentifiersTypes =
   runIdentity . atInferredTypes canonizeTypes
   where
@@ -608,8 +608,8 @@ builtinsToGlobals expr = do
 inferExpression
  :: Monad m
  => Maybe TypeRef
- -> ExpressionEntity () (T f)
- -> Infer m (TypedExpressionEntity (T f))
+ -> StoredExpression () (T f)
+ -> Infer m (TypedStoredExpression (T f))
 inferExpression mTypeRef expr = do
   withTypeRefs <- addTypeRefs expr
   case mTypeRef of
@@ -622,9 +622,9 @@ inferExpression mTypeRef expr = do
 inferDefinition
   :: Monad m
   => DataLoad.DefinitionEntity (T f)
-  -> T m (TypedDefinitionEntity (T f))
+  -> T m (TypedStoredDefinition (T f))
 inferDefinition (DataLoad.DefinitionEntity iref value) =
-  liftM (DefinitionEntity iref) $
+  liftM (StoredDefinition iref) $
   case value of
   Data.Definition typeI bodyI -> do
     inferredType <- sanitize $ fromLoaded [] typeI
@@ -636,13 +636,13 @@ inferDefinition (DataLoad.DefinitionEntity iref value) =
 
 loadInferDefinition
   :: Monad m => Data.DefinitionIRef
-  -> T m (TypedDefinitionEntity (T m))
+  -> T m (TypedStoredDefinition (T m))
 loadInferDefinition =
   inferDefinition <=< DataLoad.loadDefinition
 
 loadInferExpression
   :: Monad m => Data.ExpressionIRef
-  -> T m (TypedExpressionEntity (T m))
+  -> T m (TypedStoredExpression (T m))
 loadInferExpression =
   runInfer . inferExpression Nothing . fromLoaded () <=<
   flip DataLoad.loadExpression Nothing

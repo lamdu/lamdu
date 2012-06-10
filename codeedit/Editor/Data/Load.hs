@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeFamilies, FlexibleContexts #-}
 module Editor.Data.Load
-  ( StoredExpression(..)
+  ( StoredExpressionRef(..)
   , guid, esGuid
   , loadDefinition, DefinitionEntity(..)
   , loadExpression, ExpressionEntity(..)
@@ -16,14 +16,14 @@ import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Data.Ops as DataOps
 
-data StoredExpression m = StoredExpression
+data StoredExpressionRef m = StoredExpressionRef
   { esIRef :: Data.ExpressionIRef
   , esReplace :: Maybe (Data.ExpressionIRef -> m ())
   }
 
 -- TODO: ExpressionEntity -> ExpressionEntity
 data ExpressionEntity m = ExpressionEntity
-  { entityStored :: StoredExpression m
+  { entityStored :: StoredExpressionRef m
   , entityValue :: Data.Expression (ExpressionEntity m)
   }
 
@@ -35,12 +35,12 @@ data DefinitionEntity m = DefinitionEntity
 -- TODO: explain..
 -- How could we compare the esReplace field?
 -- Do we really need this instance?
-instance Eq (StoredExpression m) where
-  StoredExpression x _ == StoredExpression y _ = x == y
+instance Eq (StoredExpressionRef m) where
+  StoredExpressionRef x _ == StoredExpressionRef y _ = x == y
 
 type T = Transaction ViewTag
 
-esGuid :: StoredExpression m -> Guid
+esGuid :: StoredExpressionRef m -> Guid
 esGuid = IRef.guid . Data.unExpressionIRef . esIRef
 
 guid :: ExpressionEntity m -> Guid
@@ -53,7 +53,7 @@ loadExpression
   -> T m (ExpressionEntity (T f))
 loadExpression exprI mSetter = do
   expr <- Data.readExprIRef exprI
-  liftM (ExpressionEntity (StoredExpression exprI mSetter)) $
+  liftM (ExpressionEntity (StoredExpressionRef exprI mSetter)) $
     case expr of
     Data.ExpressionLambda lambda ->
       liftM Data.ExpressionLambda $ loadLambda Data.ExpressionLambda lambda

@@ -150,7 +150,7 @@ AtFieldTH.make ''Expression
 
 data ExprEntity m = ExprEntity
   { eeGuid :: Guid
-  , eeStored :: Maybe (DataTyped.StoredExpression (T m))
+  , eeStored :: Maybe (DataTyped.StoredExpressionRef (T m))
   , eeInferredTypes :: [ExprEntity m]
   , eeValue :: Data.Expression (ExprEntity m)
   }
@@ -184,7 +184,7 @@ eeIRef = fmap DataTyped.esIRef . eeStored
 eeReplace :: ExprEntity m -> Maybe (Data.ExpressionIRef -> T m ())
 eeReplace = DataTyped.esReplace <=< eeStored
 
-eeFromTypedExpression :: DataTyped.TypedExpressionEntity (T m) -> ExprEntity m
+eeFromTypedExpression :: DataTyped.TypedStoredExpression (T m) -> ExprEntity m
 eeFromTypedExpression = runIdentity . Data.mapMExpression f
   where
     f e =
@@ -555,7 +555,7 @@ convertExpressionI exprI =
 
 convertDefinitionI
   :: Monad m
-  => DataTyped.TypedDefinitionEntity (T m)
+  => DataTyped.TypedStoredDefinition (T m)
   -> Sugar m (DefinitionRef m)
 convertDefinitionI defI =
   case DataTyped.deValue defI of
@@ -571,11 +571,11 @@ convertDefinitionI defI =
 
 convertDefinition
   :: Monad m
-  => DataTyped.TypedDefinitionEntity (T m)
+  => DataTyped.TypedStoredDefinition (T m)
   -> T m (DefinitionRef m)
 convertDefinition = runSugar . convertDefinitionI
 
 convertExpression
   :: Monad m
-  => DataTyped.TypedExpressionEntity (T m) -> T m (ExpressionRef m)
+  => DataTyped.TypedStoredExpression (T m) -> T m (ExpressionRef m)
 convertExpression = runSugar . convertExpressionI . eeFromTypedExpression
