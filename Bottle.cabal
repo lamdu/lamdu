@@ -60,26 +60,25 @@ Library
                        Data.Store.Db
 
   Build-depends:       base >= 4,
+                       BerkeleyDB >= 0.8,
                        GLFW-b >= 0.1.0,
-                       derive >= 2.5,
-                       graphics-drawingcombinators >= 1.4,
                        OpenGL,
                        StateVar,
-                       utf8-string >= 0.3,
-                       split >= 0.1,
-                       containers >= 0.4,
-                       binary >= 0.5,
-                       time >= 1.2,
-                       directory >= 1.0.1.1,
-                       bytestring,
-                       BerkeleyDB >= 0.8,
-                       random >= 1.0.0,
-                       utf8-string >= 0.3,
-                       transformers >= 0.2.1,
                        TraceUtils,
+                       binary >= 0.5,
+                       bytestring,
+                       containers >= 0.4,
+                       derive >= 2.5,
+                       directory >= 1.0.1.1,
                        filepath >= 1.1,
+                       graphics-drawingcombinators >= 1.4,
+                       random >= 1.0.0,
+                       safe,
+                       split >= 0.1,
                        template-haskell,
-                       safe
+                       time >= 1.2,
+                       transformers >= 0.2.1,
+                       utf8-string >= 0.3
 
   ghc-options:         -O2 -Wall
   ghc-prof-options:    -Wall -auto-all -caf-all -rtsopts
