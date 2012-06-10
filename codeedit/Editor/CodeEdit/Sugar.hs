@@ -256,13 +256,12 @@ mkExpressionRef
   => ExprEntity m
   -> Expression m -> Sugar m (ExpressionRef m)
 mkExpressionRef exprI expr = do
-  typeRef <-
-    mapM convertExpressionI $
-    eeInferredTypes exprI
+  inferredTypesRefs <-
+    mapM convertExpressionI $ eeInferredTypes exprI
   return
     ExpressionRef
     { rExpression = expr
-    , rInferredTypes = typeRef
+    , rInferredTypes = inferredTypesRefs
     , rActions = makeActions exprI
     }
 
