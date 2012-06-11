@@ -4,7 +4,6 @@
   #-}
 module Editor.Data.Typed
   ( StoredExpressionRef(..)
-  , ExpressionE
   , atEeInferredType, atEeValue
   , eeReplace, eeGuid, eeIRef
   , GuidExpression(..)
@@ -69,11 +68,10 @@ data GuidExpression ref = GuidExpression
   , geValue :: Data.Expression ref
   } deriving (Show, Eq)
 
-type ExpressionE it m = Data.Expression (StoredExpression it m)
 data StoredExpression it m = StoredExpression
   { eeStored :: DataLoad.StoredExpressionRef m
   , eeInferredType :: it
-  , eeValue :: ExpressionE it m
+  , eeValue :: Data.Expression (StoredExpression it m)
   } deriving (Eq)
 
 data StoredDefinition it m = StoredDefinition
@@ -202,7 +200,7 @@ mapMExpressionEntities
   :: Monad m
   => (StoredExpressionRef f
       -> a
-      -> ExpressionE b g
+      -> Data.Expression (StoredExpression b g)
       -> m (StoredExpression b g))
   -> StoredExpression a f
   -> m (StoredExpression b g)
