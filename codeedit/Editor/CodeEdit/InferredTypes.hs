@@ -17,16 +17,18 @@ import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 vbox :: [Widget f] -> Widget f
 vbox = Box.toWidget . Box.make Box.vertical
 
+center :: Widget f -> Widget f
+center = Widget.align (Vector2 0.5 0.5)
+
 mkInferredTypesView
   :: Widget.Id
   -> [Widget (Transaction ViewTag m)]
-  -> Widget (Transaction ViewTag m)
-mkInferredTypesView _ [] = BWidgets.empty
+  -> [Widget (Transaction ViewTag m)]
+mkInferredTypesView _ [] = []
 mkInferredTypesView exprId typeEdits =
-  vbox
   [ -- must not be aligned (needs to take over all given space):
     Spacer.makeHorizLineWidget underlineId
-  , Widget.align (Vector2 0.5 0.5) typeEdit
+  , center typeEdit
   ]
   where
     typeEdit =
@@ -47,7 +49,6 @@ addType
   -> Widget (Transaction ViewTag m)
   -> Widget (Transaction ViewTag m)
 addType exprId typeEdits widget =
-  BWidgets.vbox
-  [ widget
-  , mkInferredTypesView exprId typeEdits
-  ]
+  vbox $
+  center widget :
+  mkInferredTypesView exprId typeEdits
