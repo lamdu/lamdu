@@ -82,21 +82,21 @@ makeResultVariables ::
 makeResultVariables holeInfo varRef = do
   varName <- getP $ Anchors.variableNameRef varRef
   let
-    ordinary = result varName (return ()) resultId return
     parened =
       result
       (concat ["(", varName, ")"]) (return ()) resultIdAsPrefix .
       Parens.addTextParens $ Widget.toAnimId resultId
   return $
-    if Infix.isInfixName varName
-    then
-      case Sugar.holeMFlipFuncArg (hiHole holeInfo) of
-      Nothing -> [ordinary]
-      Just flipAct -> [result varName flipAct resultId return, parened]
-    else
-      [ordinary]
+    case (Infix.isInfixName varName,
+          Sugar.holeMFlipFuncArg (hiHole holeInfo)) of
+    (True, Just flipAct) ->
+      [result varName flipAct resultId return, parened]
+    _ ->
+      [result varName (return ()) resultId return]
   where
-    resultId = searchResultsPrefix (hiHoleId holeInfo) `mappend` WidgetIds.varId varRef
+    resultId =
+      searchResultsPrefix (hiHoleId holeInfo) `mappend`
+      WidgetIds.varId varRef
     resultIdAsPrefix = Widget.joinId resultId ["prefix"]
     result name flipAct wid addParens =
       Result
@@ -104,7 +104,8 @@ makeResultVariables holeInfo varRef = do
       , resultPick = fmap (pickGetVariable flipAct) $ mPickResult holeInfo
       , resultMakeWidget = addParens =<< VarEdit.makeView varRef wid
       }
-    pickGetVariable flipAct pickResult = pickResult (Data.ExpressionGetVariable varRef) flipAct
+    pickGetVariable flipAct pickResult =
+      pickResult (Data.ExpressionGetVariable varRef) flipAct
 
 renamePrefix :: AnimId -> AnimId -> AnimId -> AnimId
 renamePrefix srcPrefix destPrefix animId =
@@ -215,20 +216,23 @@ makeSearchTermWidget holeInfo searchTermId firstResults =
       case mPickResult holeInfo of
       Nothing -> []
       Just holePickResult ->
-        [ E.fromEventTypes Config.newDefinitionKeys "Add new as Definition" $ do
-            searchTerm <- Property.get $ hiSearchTerm holeInfo
-            let newName = concat . words $ searchTerm
-            newDefI <- Anchors.makeDefinition newName -- TODO: From Sugar
-            Anchors.newPane newDefI
-            let defRef = Data.ExpressionGetVariable $ Data.DefinitionRef newDefI
-            -- TODO: Can we use pickResult's animIdMapping?
-            eventResult <- holePickResult defRef $ return ()
-            maybe (return ()) Anchors.savePreJumpPosition $ Widget.eCursor eventResult
-            return Widget.EventResult {
-              Widget.eCursor = Just $ WidgetIds.fromIRef newDefI,
-              Widget.eAnimIdMapping = holeResultAnimMappingNoParens holeInfo searchTermId
-              }
+        [ E.fromEventTypes Config.newDefinitionKeys
+          "Add new as Definition" $ makeNewDefinition holePickResult
         ]
+
+    makeNewDefinition holePickResult = do
+      searchTerm <- Property.get $ hiSearchTerm holeInfo
+      let newName = concat . words $ searchTerm
+      newDefI <- Anchors.makeDefinition newName -- TODO: From Sugar
+      Anchors.newPane newDefI
+      let defRef = Data.ExpressionGetVariable $ Data.DefinitionRef newDefI
+      -- TODO: Can we use pickResult's animIdMapping?
+      eventResult <- holePickResult defRef $ return ()
+      maybe (return ()) Anchors.savePreJumpPosition $ Widget.eCursor eventResult
+      return Widget.EventResult {
+        Widget.eCursor = Just $ WidgetIds.fromIRef newDefI,
+        Widget.eAnimIdMapping = holeResultAnimMappingNoParens holeInfo searchTermId
+        }
 
 makeResultsWidget
   :: MonadF m
