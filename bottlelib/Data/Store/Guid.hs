@@ -1,17 +1,19 @@
 module Data.Store.Guid
-    (Guid, make, bs, length, new, combine, fromString)
+    (Guid, make, bs, length, new, combine, fromString, asHex)
 where
 
-import           Control.Arrow         (first)
-import           Prelude               hiding (length)
-import qualified Data.ByteString       as SBS
-import           Data.Monoid           (mappend)
-import qualified Data.ByteString.UTF8  as UTF8
-import           Data.ByteString.Utils (randomBS, xorBS)
-import           Data.Binary           (Binary(..))
-import           Data.Binary.Get       (getByteString)
-import           Data.Binary.Put       (putByteString)
-import           System.Random         (Random(..), split)
+import Control.Arrow (first)
+import Data.Binary (Binary(..))
+import Data.Binary.Get (getByteString)
+import Data.Binary.Put (putByteString)
+import Data.ByteString.Utils (randomBS, xorBS)
+import Data.Monoid (mappend)
+import Data.Word (Word8)
+import Numeric (showHex)
+import Prelude hiding (length)
+import System.Random (Random(..), split)
+import qualified Data.ByteString as SBS
+import qualified Data.ByteString.UTF8 as UTF8
 
 newtype Guid = Guid { bs :: SBS.ByteString }
   deriving (Eq, Ord, Read, Show)
@@ -20,6 +22,17 @@ inGuid f = Guid . f . bs
 inGuid2 :: (SBS.ByteString -> SBS.ByteString -> SBS.ByteString) ->
            Guid -> Guid -> Guid
 inGuid2 f = inGuid . f . bs
+
+word8Hex :: Word8 -> String
+word8Hex n
+  | n < 0x10 = '0' : showHex n ""
+  | otherwise = showHex n ""
+
+encodeHex :: SBS.ByteString -> String
+encodeHex = concatMap word8Hex . SBS.unpack
+
+asHex :: Guid -> String
+asHex = encodeHex . bs
 
 instance Random Guid where
   randomR = error "randomR: you nuts?"
