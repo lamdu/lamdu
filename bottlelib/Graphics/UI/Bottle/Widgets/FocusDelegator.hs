@@ -1,10 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.FocusDelegator
   ( IsDelegating(..)
-  , Keys(..)
+  , Config(..), defaultConfig
   , make
-  , defaultKeys
-  , wrapKeys
+  , wrapConfig
   , delegatingId, notDelegatingId
   )
 where
@@ -23,24 +22,29 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 
 data IsDelegating = Delegating | NotDelegating
 
-data Keys = Keys {
+data Config = Config {
   startDelegatingKey :: E.EventType,
-  stopDelegatingKey :: E.EventType
+  startDelegatingDoc :: E.Doc,
+  stopDelegatingKey :: E.EventType,
+  stopDelegatingDoc :: E.Doc
   }
 
-defaultKeys :: Keys
-defaultKeys = Keys {
-  startDelegatingKey = E.KeyEventType E.noMods E.KeyEnter,
-  stopDelegatingKey = E.KeyEventType E.noMods E.KeyEsc
+defaultConfig :: Config
+defaultConfig = Config
+  { startDelegatingKey = E.KeyEventType E.noMods E.KeyEnter
+  , startDelegatingDoc = "Enter child"
+  , stopDelegatingKey = E.KeyEventType E.noMods E.KeyEsc
+  , stopDelegatingDoc = "Leave child"
   }
 
 blue :: Draw.Color
 blue = Draw.Color 0 0 1 1
 
-makeFocused :: Applicative f =>
-  IsDelegating -> Widget.Id -> Keys -> AnimId ->
-  Widget f -> Widget f
-makeFocused delegating focusSelf keys backgroundCursorId =
+makeFocused
+  :: Applicative f
+  => IsDelegating -> Widget.Id -> Config -> AnimId
+  -> Widget f -> Widget f
+makeFocused delegating focusSelf config backgroundCursorId =
   handleFocus delegating
   where
     handleFocus Delegating    = addStopDelegatingEventMap
@@ -59,12 +63,12 @@ makeFocused delegating focusSelf keys backgroundCursorId =
       Widget.sdwdMaybeEnter userIO
 
     startDelegatingEventMap childEnter =
-      E.fromEventType (startDelegatingKey keys) "Enter child" .
+      E.fromEventType (startDelegatingKey config) (startDelegatingDoc config) .
       Widget.enterResultEvent $ childEnter Direction.Outside
 
     addStopDelegatingEventMap =
       Widget.weakerEvents .
-      E.fromEventType (stopDelegatingKey keys) "Exit child" .
+      E.fromEventType (stopDelegatingKey config) (stopDelegatingDoc config) .
       pure $ Widget.eventResultFromCursor focusSelf
 
 -- | Make a focus delegator
@@ -73,7 +77,7 @@ make
   => IsDelegating -- ^ Start state, enter from direction state
   -> Maybe IsDelegating -- ^ Current state
   -> Widget.Id -- ^ Enter/Stop delegating value
-  -> Keys -- ^ Keys configuration
+  -> Config -- ^ FocusDelegator configuration
   -> AnimId -- ^ Background Cursor Id
   -> Widget f -> Widget f
 make isDelegating Nothing focusSelf =
@@ -99,20 +103,21 @@ delegatingId = flip Widget.joinId ["delegating"]
 notDelegatingId :: Widget.Id -> Widget.Id
 notDelegatingId = flip Widget.joinId ["not delegating"]
 
-wrapKeys
+wrapConfig
   :: Applicative f
-  => Keys
+  => Config
   -> IsDelegating
   -> ((Widget f -> Widget f) -> Widget.Id -> Widget.Id -> a)
   -> AnimId
   -> Widget.Id
   -> Widget.Id -> a
-wrapKeys keys entryState mkResult backgroundCursorId myId cursor =
+wrapConfig config entryState mkResult backgroundCursorId myId cursor =
   mkResult atWidget innerId newCursor
   where
     atWidget innerWidget =
       (Widget.atIsFocused . const) (isJust mIsDelegating) $
-      make entryState mIsDelegating delegatorId keys backgroundCursorId innerWidget
+      make entryState mIsDelegating delegatorId
+      config backgroundCursorId innerWidget
       where
         mIsDelegating =
           case Widget.subId delegatorId newCursor of

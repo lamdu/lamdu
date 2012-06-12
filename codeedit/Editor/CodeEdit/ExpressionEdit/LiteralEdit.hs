@@ -60,5 +60,5 @@ makeInt
   -> Widget.Id
   -> TWidget ViewTag m
 makeInt integer =
-  BWidgets.wrapDelegatedWithKeys FocusDelegator.defaultKeys FocusDelegator.NotDelegating id
+  BWidgets.wrapDelegated FocusDelegator.NotDelegating
   (setColor . makeIntEdit integer)

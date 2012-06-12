@@ -1,7 +1,7 @@
 module Editor.BottleWidgets(
   makeTextView, makeLabel, makeChoice,
   makeFocusableView, makeFocusableTextView,
-  wrapDelegatedWithKeys, wrapDelegated,
+  wrapDelegatedWithConfig, wrapDelegated,
   makeTextEdit, makeWordEdit, makeNameEdit, getDisplayNameOf,
   hbox,  hboxAlign,  hboxSpaced,
   hboxK, hboxAlignK, hboxSpacedK,
@@ -96,16 +96,16 @@ makeChoice selectionAnimId orientation children curChild =
     selectedColor = Draw.Color 0 0.5 0 1
 
 -- TODO: This logic belongs in the FocusDelegator itself
-wrapDelegatedWithKeys
+wrapDelegatedWithConfig
   :: (Applicative f, Monad m)
-  => FocusDelegator.Keys
+  => FocusDelegator.Config
   -> FocusDelegator.IsDelegating
   -> ((Widget f -> Widget f) -> a -> b)
   -> (Widget.Id -> CTransaction t m a)
   -> Widget.Id -> CTransaction t m b
-wrapDelegatedWithKeys keys entryState aToB mkA myId = do
+wrapDelegatedWithConfig config entryState aToB mkA myId = do
   cursor <- readCursor
-  FocusDelegator.wrapKeys keys entryState mk
+  FocusDelegator.wrapConfig config entryState mk
     WidgetIds.backgroundCursorId myId cursor
   where
     mk f innerId newCursor =
@@ -117,7 +117,7 @@ wrapDelegated
   -> (Widget.Id -> CTransaction t m (Widget f))
   -> Widget.Id -> CTransaction t m (Widget f)
 wrapDelegated entryState =
-  wrapDelegatedWithKeys FocusDelegator.defaultKeys entryState id
+  wrapDelegatedWithConfig FocusDelegator.defaultConfig entryState id
 
 makeTextEdit
   :: Monad m

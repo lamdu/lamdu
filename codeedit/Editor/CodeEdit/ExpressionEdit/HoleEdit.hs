@@ -340,6 +340,6 @@ make
      (Maybe (ResultPicker m), Widget (Transaction ViewTag m))
 make hole =
   (fmap . liftM . second . Widget.weakerEvents) (pasteEventMap hole) .
-  BWidgets.wrapDelegatedWithKeys
-  FocusDelegator.defaultKeys FocusDelegator.Delegating second .
+  BWidgets.wrapDelegatedWithConfig
+  FocusDelegator.defaultConfig FocusDelegator.Delegating second .
   makeH hole

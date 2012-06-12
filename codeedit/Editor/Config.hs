@@ -51,9 +51,11 @@ callWithArgumentKeys = [k '[', shift '9']
 addNextArgumentKeys = [E.KeyEventType E.noMods E.KeySpace]
 debugModeKeys = [ctrlAlt 'd']
 
-exprFocusDelegatorKeys = FocusDelegator.Keys {
-  FocusDelegator.startDelegatingKey = mk E.shift E.KeyRight,
-  FocusDelegator.stopDelegatingKey = mk E.shift E.KeyLeft
+exprFocusDelegatorConfig = FocusDelegator.Config
+  { FocusDelegator.startDelegatingKey = mk E.shift E.KeyRight
+  , FocusDelegator.startDelegatingDoc = "Enter child expression"
+  , FocusDelegator.stopDelegatingKey = mk E.shift E.KeyLeft
+  , FocusDelegator.stopDelegatingDoc = "Leave child expression"
   }
 
 newDefinitionKeys = [alt 'n']
