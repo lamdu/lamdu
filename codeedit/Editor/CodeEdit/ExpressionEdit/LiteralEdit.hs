@@ -4,12 +4,13 @@ module Editor.CodeEdit.ExpressionEdit.LiteralEdit(makeInt, makeIntView) where
 
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors(ViewTag)
-import Editor.CTransaction (CTransaction, TWidget, readCursor, readTextStyle)
+import Editor.CTransaction (CTransaction, TWidget)
 import Editor.MonadF(MonadF)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Char as Char
 import qualified Editor.BottleWidgets as BWidgets
+import qualified Editor.CTransaction as CT
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -30,7 +31,7 @@ makeIntEdit
   :: Monad m
   => Sugar.LiteralInteger m -> Widget.Id -> TWidget ViewTag m
 makeIntEdit integer myId = do
-  cursor <- readCursor
+  cursor <- CT.readCursor
   let
     subCursor = Widget.subId myId cursor
     isEmpty = Sugar.liValue integer == 0 && subCursor == Just emptyZeroCursor
@@ -47,7 +48,7 @@ makeIntEdit integer myId = do
       | otherwise = do
         _ <- setValue $ read newText
         return eventRes
-  style <- readTextStyle
+  style <- CT.readTextStyle
   return .
     Widget.atEvents (lifter (Sugar.liSetValue integer)) $ TextEdit.make
     style { TextEdit.sEmptyFocusedString = "<0>" } textCursor text myId

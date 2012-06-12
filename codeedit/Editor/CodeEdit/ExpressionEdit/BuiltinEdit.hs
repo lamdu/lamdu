@@ -3,7 +3,8 @@ module Editor.CodeEdit.ExpressionEdit.BuiltinEdit(make) where
 import Data.List.Split (splitOn)
 import Data.Store.Property (Property(..))
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (TWidget, assignCursor)
+import Editor.CTransaction (TWidget)
+import qualified Editor.CTransaction as CT
 import Editor.MonadF (MonadF)
 import qualified Data.List as List
 import qualified Editor.BottleWidgets as BWidgets
@@ -20,7 +21,7 @@ make
   -> Widget.Id
   -> TWidget ViewTag m
 make (Sugar.Builtin (Data.FFIName modulePath name) setFFIName) myId =
-  assignCursor myId (WidgetIds.builtinFFIName myId) $ do
+  CT.assignCursor myId (WidgetIds.builtinFFIName myId) $ do
     moduleName <- makeNamePartEditor Config.foreignModuleColor modulePathStr modulePathSetter WidgetIds.builtinFFIPath
     varName <- makeNamePartEditor Config.foreignVarColor name nameSetter WidgetIds.builtinFFIName
     dot <- BWidgets.makeLabel "." $ Widget.toAnimId myId

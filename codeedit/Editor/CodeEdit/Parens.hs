@@ -9,10 +9,11 @@ import Control.Monad (void)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (TWidget, WidgetT, subCursor)
+import Editor.CTransaction (TWidget, WidgetT)
 import Editor.MonadF (MonadF)
 import Editor.WidgetIds (parensPrefix)
 import qualified Editor.BottleWidgets as BWidgets
+import qualified Editor.CTransaction as CT
 import qualified Editor.Config as Config
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
@@ -71,7 +72,7 @@ addHighlightedTextParens
   -> WidgetT ViewTag m
   -> TWidget ViewTag m
 addHighlightedTextParens myId widget = do
-  mInsideParenId <- subCursor rParenId
+  mInsideParenId <- CT.subCursor rParenId
   widgetWithParens <- addTextParensI id doHighlight (Widget.toAnimId myId) widget
   return $ maybe id (const highlightExpression) mInsideParenId widgetWithParens
   where

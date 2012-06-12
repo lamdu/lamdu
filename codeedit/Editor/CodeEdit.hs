@@ -10,13 +10,14 @@ import Data.Monoid(Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, TWidget, assignCursor, readCursor, transaction)
+import Editor.CTransaction (CTransaction, TWidget)
 import Editor.MonadF (MonadF)
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
+import qualified Editor.CTransaction as CT
 import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
 import qualified Editor.CodeEdit.ExpressionEdit as ExpressionEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
@@ -41,7 +42,7 @@ data SugarCache m = SugarCache
 
 makeNewDefinitionAction :: Monad m => CTransaction ViewTag m (Transaction ViewTag m Widget.Id)
 makeNewDefinitionAction = do
-  curCursor <- readCursor
+  curCursor <- CT.readCursor
   return $ do
     newDefI <- Anchors.makeDefinition ""
     Anchors.newPane newDefI
@@ -123,11 +124,11 @@ makePanesEdit panes = do
     case panes of
     [] -> BWidgets.makeFocusableTextView "<No panes>" myId
     (firstPane:_) ->
-      (assignCursor myId . WidgetIds.fromGuid . Sugar.drGuid . spDef) firstPane $ do
+      (CT.assignCursor myId . WidgetIds.fromGuid . Sugar.drGuid . spDef) firstPane $ do
         definitionEdits <- mapM makePaneWidget panes
         return $ BWidgets.vboxAlign 0 definitionEdits
 
-  mJumpBack <- transaction Anchors.jumpBack
+  mJumpBack <- CT.transaction Anchors.jumpBack
   newDefinition <- makeNewDefinitionAction
   let
     panesEventMap =

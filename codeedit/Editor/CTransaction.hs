@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Editor.CTransaction(
-  CTransaction, runCTransaction, runNestedCTransaction, TWidget, WidgetT,
+  CTransaction, runCTransaction, runNested, TWidget, WidgetT,
   readCursor, subCursor, readTextStyle, transaction, getP, atCursor, assignCursor,
   atTextStyle, atTextSizeColor, markVariablesAsUsed, usedVariables)
 where
@@ -63,11 +63,11 @@ markVariablesAsUsed = liftUsedvars . Writer.tell
 usedVariables :: Monad m => CTransaction t m a -> CTransaction t m (a, [Data.VariableRef])
 usedVariables = atCTransaction $ Reader.mapReaderT Writer.listen
 
-runNestedCTransaction ::
+runNested ::
   Monad m => Transaction.Store t0 (Transaction t1 m) ->
   CTransaction t0 (Transaction t1 m) a ->
   CTransaction t1 m a
-runNestedCTransaction store act = do
+runNested store act = do
   cursor <- readCursor
   style <- readTextStyle
   transaction . Transaction.run store $

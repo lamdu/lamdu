@@ -9,7 +9,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, TWidget, readCursor)
+import Editor.CTransaction (CTransaction, TWidget)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.CodeEdit.InferredTypes(addType)
 import Editor.MonadF (MonadF)
@@ -17,6 +17,7 @@ import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.List as List
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
+import qualified Editor.CTransaction as CT
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
@@ -147,7 +148,7 @@ make
   -> [Sugar.ExpressionRef m]
   -> TWidget ViewTag m
 make makeExpressionEdit guid defBody defType inferredTypes = do
-  cursor <- readCursor
+  cursor <- CT.readCursor
   parts <-
     makeParts makeExpressionEdit
     (WidgetIds.fromGuid guid) guid defBody defType

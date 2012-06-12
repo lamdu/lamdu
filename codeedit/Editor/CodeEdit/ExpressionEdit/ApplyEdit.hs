@@ -2,10 +2,11 @@
 module Editor.CodeEdit.ExpressionEdit.ApplyEdit(make) where
 
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (TWidget, assignCursor)
+import Editor.CTransaction (TWidget)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker (ExpressionEditMaker)
 import Editor.MonadF (MonadF)
 import qualified Editor.BottleWidgets as BWidgets
+import qualified Editor.CTransaction as CT
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -17,7 +18,7 @@ make
   -> Widget.Id
   -> TWidget ViewTag m
 make makeExpressionEdit (Sugar.Apply func arg) myId =
-  (assignCursor myId . WidgetIds.fromGuid . Sugar.guid . Sugar.rActions) arg $ do
+  (CT.assignCursor myId . WidgetIds.fromGuid . Sugar.guid . Sugar.rActions) arg $ do
     funcEdit <- makeExpressionEdit func
     argEdit <- makeExpressionEdit arg
     return $ BWidgets.hboxSpaced [funcEdit, argEdit]

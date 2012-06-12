@@ -2,15 +2,16 @@
 module Editor.CodeEdit.ExpressionEdit.PiEdit(make) where
 
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (TWidget, assignCursor, atCursor, atTextSizeColor, usedVariables)
+import Editor.CTransaction (TWidget)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker (ExpressionEditMaker)
 import Editor.MonadF (MonadF)
 import qualified Editor.BottleWidgets as BWidgets
+import qualified Editor.CTransaction as CT
+import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.WidgetIds as WidgetIds
-import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 make
@@ -20,9 +21,9 @@ make
   -> Widget.Id
   -> TWidget ViewTag m
 make makeExpressionEdit (Sugar.Pi param resultType) myId =
-  assignCursor myId typeId $ do
+  CT.assignCursor myId typeId $ do
     (resultTypeEdit, usedVars) <-
-      usedVariables $ makeExpressionEdit resultType
+      CT.usedVariables $ makeExpressionEdit resultType
     let
       paramGuid = Sugar.guid $ Sugar.fpActions param
       paramUsed = any ((== paramGuid) . Data.variableRefGuid) usedVars
@@ -32,11 +33,11 @@ make makeExpressionEdit (Sugar.Pi param resultType) myId =
           case Widget.subId (WidgetIds.paramId paramGuid) cursor of
           Nothing -> cursor
           Just _ -> typeId
-    atCursor redirectCursor $ do
+    CT.atCursor redirectCursor $ do
       (paramNameEdit, paramTypeEdit) <-
         FuncEdit.makeParamEdit makeExpressionEdit param
       rightArrowLabel <-
-        atTextSizeColor Config.rightArrowTextSize Config.rightArrowColor .
+        CT.atTextSizeColor Config.rightArrowTextSize Config.rightArrowColor .
         BWidgets.makeLabel "→" $ Widget.toAnimId myId
       let
         paramEdit

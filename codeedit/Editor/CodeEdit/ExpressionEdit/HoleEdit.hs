@@ -12,7 +12,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, getP, assignCursor, TWidget, readCursor, markVariablesAsUsed)
+import Editor.CTransaction (CTransaction, TWidget)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -21,6 +21,7 @@ import qualified Data.Function as Function
 import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
+import qualified Editor.CTransaction as CT
 import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
 import qualified Editor.CodeEdit.Infix as Infix
@@ -80,7 +81,7 @@ makeMoreResults myId =
 makeResultVariables ::
   MonadF m => HoleInfo m -> Data.VariableRef -> CTransaction ViewTag m [Result m]
 makeResultVariables holeInfo varRef = do
-  varName <- getP $ Anchors.variableNameRef varRef
+  varName <- CT.getP $ Anchors.variableNameRef varRef
   let
     parened =
       result
@@ -174,11 +175,11 @@ makeAllResults
   => HoleInfo m
   -> CTransaction ViewTag m [Result m]
 makeAllResults holeInfo = do
-  globals <- getP Anchors.globals
+  globals <- CT.getP Anchors.globals
   varResults <- liftM concat .
     mapM (makeResultVariables holeInfo) $
     params ++ globals
-  searchTerm <- getP $ hiSearchTerm holeInfo
+  searchTerm <- CT.getP $ hiSearchTerm holeInfo
   let
     literalResults = makeLiteralResults holeInfo searchTerm
     goodResult = Function.on isInfixOf (map Char.toLower) searchTerm . resultName
@@ -273,8 +274,8 @@ makeActiveHoleEdit
   -> CTransaction ViewTag m
      (Maybe (Result m), Widget (Transaction ViewTag m))
 makeActiveHoleEdit holeInfo =
-  assignCursor (hiHoleId holeInfo) searchTermId $ do
-    markVariablesAsUsed . Sugar.holeScope $ hiHole holeInfo
+  CT.assignCursor (hiHoleId holeInfo) searchTermId $ do
+    CT.markVariablesAsUsed . Sugar.holeScope $ hiHole holeInfo
 
     allResults <- makeAllResults holeInfo
 
@@ -299,8 +300,8 @@ makeH
   -> CTransaction ViewTag m
      (Maybe (ResultPicker m), Widget (Transaction ViewTag m))
 makeH hole guid myId = do
-  cursor <- readCursor
-  searchText <- getP $ hiSearchTerm holeInfo
+  cursor <- CT.readCursor
+  searchText <- CT.getP $ hiSearchTerm holeInfo
   let
     snippet
       | null searchText = "  "
