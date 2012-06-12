@@ -37,7 +37,7 @@ make makeExpressionEdit (Sugar.Pi param resultType) myId =
         FuncEdit.makeParamEdit makeExpressionEdit param
       rightArrowLabel <-
         atTextSizeColor Config.rightArrowTextSize Config.rightArrowColor .
-        BWidgets.makeFocusableTextView "→" $ Widget.joinId myId ["arrow"]
+        BWidgets.makeLabel "→" $ Widget.toAnimId myId
       let
         paramEdit
           | paramUsed = BWidgets.vbox [paramNameEdit, paramTypeEdit]
