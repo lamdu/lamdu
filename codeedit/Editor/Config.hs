@@ -58,6 +58,13 @@ exprFocusDelegatorConfig = FocusDelegator.Config
   , FocusDelegator.stopDelegatingDoc = "Leave child expression"
   }
 
+branchSelectionFocusDelegatorConfig = FocusDelegator.Config
+  { FocusDelegator.startDelegatingKey = noMods E.KeyEnter
+  , FocusDelegator.startDelegatingDoc = "Enter select branches mode"
+  , FocusDelegator.stopDelegatingKey = noMods E.KeyEsc
+  , FocusDelegator.stopDelegatingDoc = "Leave select branches mode"
+  }
+
 newDefinitionKeys = [alt 'n']
 
 definitionColor = Draw.Color 0.8 0.5 1 1

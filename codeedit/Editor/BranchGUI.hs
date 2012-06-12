@@ -115,7 +115,10 @@ makeRootWidget mkCache widget = do
         withNewCache . lift $ deleteCurrentBranch view
 
   branchSelector <-
-    flip (BWidgets.wrapDelegated FocusDelegator.NotDelegating)
+    flip
+    (BWidgets.wrapDelegatedWithConfig
+     Config.branchSelectionFocusDelegatorConfig
+     FocusDelegator.NotDelegating id)
     WidgetIds.branchSelection $ \innerId ->
     assignCursor innerId currentBranchWidgetId $ do
       branchNameEdits <- mapM makeBranchNameEdit namedBranches
