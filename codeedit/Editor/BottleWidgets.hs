@@ -140,7 +140,8 @@ makeWordEdit = (fmap . fmap . liftM . Widget.atEventMap) removeWordSeparators ma
 
 makeNameEdit :: Monad m => String -> Guid -> Widget.Id -> TWidget t m
 makeNameEdit emptyStr ident =
-  (atTextStyle . TextEdit.atSEmptyString . const) emptyStr . makeWordEdit (Anchors.aNameRef ident)
+  (atTextStyle . TextEdit.atSEmptyString . const) emptyStr .
+  makeWordEdit (Anchors.aNameRef ident)
 
 boxAlignK :: Vector2 Widget.R -> Box.Orientation -> [(key, Widget f)] -> KBox key f
 boxAlignK align orientation =
