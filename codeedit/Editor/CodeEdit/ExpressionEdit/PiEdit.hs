@@ -21,17 +21,20 @@ make
   -> TWidget ViewTag m
 make makeExpressionEdit (Sugar.Pi param resultType) myId =
   assignCursor myId typeId $ do
-    (resultTypeEdit, usedVars) <- usedVariables $ makeExpressionEdit resultType
+    (resultTypeEdit, usedVars) <-
+      usedVariables $ makeExpressionEdit resultType
     let
       paramGuid = Sugar.guid $ Sugar.fpActions param
       paramUsed = any ((== paramGuid) . Data.variableRefGuid) usedVars
       redirectCursor cursor
         | paramUsed = cursor
-        | otherwise = case Widget.subId (WidgetIds.paramId paramGuid) cursor of
+        | otherwise =
+          case Widget.subId (WidgetIds.paramId paramGuid) cursor of
           Nothing -> cursor
           Just _ -> typeId
     atCursor redirectCursor $ do
-      (paramNameEdit, paramTypeEdit) <- FuncEdit.makeParamEdit makeExpressionEdit param
+      (paramNameEdit, paramTypeEdit) <-
+        FuncEdit.makeParamEdit makeExpressionEdit param
       rightArrowLabel <-
         atTextSizeColor Config.rightArrowTextSize Config.rightArrowColor .
         BWidgets.makeFocusableTextView "→" $ Widget.joinId myId ["arrow"]
@@ -39,6 +42,9 @@ make makeExpressionEdit (Sugar.Pi param resultType) myId =
         paramEdit
           | paramUsed = BWidgets.vbox [paramNameEdit, paramTypeEdit]
           | otherwise = paramTypeEdit
-      return $ BWidgets.hboxSpaced [paramEdit, rightArrowLabel, resultTypeEdit]
+      return $
+        BWidgets.hboxSpaced [paramEdit, rightArrowLabel, resultTypeEdit]
   where
-    typeId = (WidgetIds.fromGuid . Sugar.guid . Sugar.rActions . Sugar.fpType) param
+    typeId =
+      WidgetIds.fromGuid . Sugar.guid . Sugar.rActions . Sugar.fpType $
+      param
