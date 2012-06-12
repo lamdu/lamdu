@@ -1,9 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit.VarEdit(make, makeView, colorOf) where
 
-import Control.Monad (liftM)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (TWidget, getP, markVariablesAsUsed)
+import Editor.CTransaction (TWidget, transaction, markVariablesAsUsed)
 import Editor.MonadF(MonadF)
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
@@ -17,15 +16,12 @@ colorOf :: Data.VariableRef -> Draw.Color
 colorOf (Data.DefinitionRef _) = Config.definitionColor
 colorOf (Data.ParameterRef _) = Config.parameterColor
 
-fixName :: String -> String
-fixName "" = Config.unnamedStr
-fixName x = x
-
 makeView
   :: MonadF m
   => Data.VariableRef -> Widget.Id -> TWidget t m
 makeView var myId = do
-  name <- liftM fixName . getP $ Anchors.variableNameRef var
+  name <-
+    transaction . BWidgets.getDisplayNameOf $ Data.variableRefGuid var
   BWidgets.setTextColor (colorOf var) $
     BWidgets.makeFocusableTextView name myId
 

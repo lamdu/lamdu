@@ -2,7 +2,7 @@ module Editor.BottleWidgets(
   makeTextView, makeLabel, makeChoice,
   makeFocusableView, makeFocusableTextView,
   wrapDelegatedWithKeys, wrapDelegated,
-  makeTextEdit, makeWordEdit, makeNameEdit,
+  makeTextEdit, makeWordEdit, makeNameEdit, getDisplayNameOf,
   hbox,  hboxAlign,  hboxSpaced,
   hboxK, hboxAlignK, hboxSpacedK,
   vbox,  vboxAlign,
@@ -27,6 +27,7 @@ import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Sized (Sized)
 import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Widgets.Box(KBox)
+import qualified Data.Store.Guid as Guid
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
@@ -138,9 +139,22 @@ makeWordEdit = (fmap . fmap . liftM . Widget.atEventMap) removeWordSeparators ma
     newlineKey = EventMap.KeyEventType EventMap.noMods EventMap.KeyEnter
     newwordKey = EventMap.KeyEventType EventMap.noMods EventMap.KeySpace
 
+anonName :: Guid -> String
+anonName guid = "<" ++ take 4 (Guid.asHex guid) ++ "..>"
+
+getDisplayNameOf
+  :: Monad m
+  => Guid -> Transaction t m String
+getDisplayNameOf guid = do
+  name <- Property.get $ Anchors.aNameRef guid
+  return $ if null name then anonName guid else name
+
 makeNameEdit :: Monad m => String -> Guid -> Widget.Id -> TWidget t m
-makeNameEdit emptyStr ident =
-  (atTextStyle . TextEdit.atSEmptyUnfocusedString . const) emptyStr .
+makeNameEdit editingEmptyStr ident =
+  (atTextStyle . TextEdit.atSEmptyUnfocusedString . const)
+    (anonName ident) .
+  (atTextStyle . TextEdit.atSEmptyFocusedString . const)
+    editingEmptyStr .
   makeWordEdit (Anchors.aNameRef ident)
 
 boxAlignK :: Vector2 Widget.R -> Box.Orientation -> [(key, Widget f)] -> KBox key f
