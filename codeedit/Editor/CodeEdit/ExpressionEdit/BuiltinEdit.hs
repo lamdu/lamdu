@@ -38,7 +38,7 @@ make (Sugar.Builtin (Data.FFIName modulePath name) setFFIName) myId =
   where
     makeNamePartEditor color namePartStr mSetter makeWidgetId =
       BWidgets.setTextColor color .
-      BWidgets.wrapDelegated builtinFDConfig FocusDelegator.NotDelegating
+      BWidgets.wrapDelegated builtinFDConfig FocusDelegator.NotDelegating id
       (maybe
        (BWidgets.makeTextView namePartStr . Widget.toAnimId)
        (BWidgets.makeWordEdit . Property (return namePartStr)) mSetter) $

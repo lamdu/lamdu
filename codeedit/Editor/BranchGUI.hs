@@ -100,7 +100,8 @@ makeRootWidget mkCache widget = do
     makeBranchNameEdit (textEditModelIRef, branch) = do
       let branchEditId = WidgetIds.fromIRef textEditModelIRef
       branchNameEdit <-
-        BWidgets.wrapDelegated branchNameFDConfig FocusDelegator.NotDelegating
+        BWidgets.wrapDelegated branchNameFDConfig
+        FocusDelegator.NotDelegating id
         (BWidgets.makeTextEdit (Transaction.fromIRef textEditModelIRef)) $
         branchEditId
       let
@@ -128,7 +129,7 @@ makeRootWidget mkCache widget = do
     liftM isJust $ CT.subCursor WidgetIds.branchSelection
   branchSelector <-
     flip
-    (BWidgets.wrapDelegatedWithConfig
+    (BWidgets.wrapDelegated
      Config.branchSelectionFocusDelegatorConfig
      FocusDelegator.NotDelegating id)
     WidgetIds.branchSelection $ \innerId ->

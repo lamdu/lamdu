@@ -47,7 +47,8 @@ make sExpr = do
     notAHole = (fmap . liftM) ((,) NotAHole)
     wrapNonHoleExpr =
       notAHole .
-      BWidgets.wrapDelegatedWithConfig Config.exprFocusDelegatorConfig FocusDelegator.Delegating id
+      BWidgets.wrapDelegated Config.exprFocusDelegatorConfig
+      FocusDelegator.Delegating id
     exprId = WidgetIds.fromGuid . Sugar.guid . Sugar.rActions $ sExpr
     textParenify = parenify Parens.addHighlightedTextParens
     squareParenify = parenify (Parens.addSquareParens . Widget.toAnimId)

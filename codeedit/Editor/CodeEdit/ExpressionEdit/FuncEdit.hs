@@ -33,7 +33,7 @@ makeParamNameEdit
   => Guid
   -> TWidget t m
 makeParamNameEdit ident =
-  BWidgets.wrapDelegated paramFDConfig FocusDelegator.NotDelegating
+  BWidgets.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
   (BWidgets.setTextColor Config.parameterColor .
    BWidgets.makeNameEdit "<unnamed param>" ident) $
   WidgetIds.paramId ident

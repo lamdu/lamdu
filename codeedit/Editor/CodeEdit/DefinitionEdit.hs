@@ -41,7 +41,7 @@ data Side = LHS | RHS
 
 makeNameEdit :: MonadF m => Widget.Id -> Guid -> TWidget t m
 makeNameEdit myId ident =
-  BWidgets.wrapDelegated paramFDConfig FocusDelegator.NotDelegating
+  BWidgets.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
   (BWidgets.setTextColor Config.definitionColor .
    BWidgets.makeNameEdit "<unnamed>" ident)
   myId
