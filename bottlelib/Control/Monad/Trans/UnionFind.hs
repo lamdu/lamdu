@@ -58,7 +58,7 @@ unionWith f p1 p2 = do
   unless isEq $ do
     v1 <- descr p1
     v2 <- descr p2
-    union p1 p2
+    p1 `union` p2
     setDescr p1 $ f v1 v2
 
 -- | findRepr x == findRepr y

@@ -285,10 +285,8 @@ expand =
            (Data.ExpressionLambda (Data.Lambda _paramType body))))
          argEntity) -> do
           newArgEntity <- recurse argEntity
-          newBody <-
-            Reader.local (Map.insert lamGuid newArgEntity) $
+          Reader.local (Map.insert lamGuid newArgEntity) $
             recurse body
-          return newBody
       Data.ExpressionLambda (Data.Lambda paramType body) ->
         recurseLambda Data.ExpressionLambda paramType body
       Data.ExpressionPi (Data.Lambda paramType body) -> do
@@ -404,7 +402,7 @@ unifyOnTree (StoredExpression stored typeRef value) = do
   case value of
     Data.ExpressionLambda lambda ->
       handleLambda lambda
-    Data.ExpressionPi lambda@(Data.Lambda _ resultType) -> do
+    Data.ExpressionPi lambda@(Data.Lambda _ resultType) ->
       inferLambda lambda . const . return $ eeInferredType resultType
     Data.ExpressionApply (Data.Apply func arg) -> do
       unifyOnTree func
@@ -471,7 +469,7 @@ unify a b = do
       liftM (TypeData . concat) . sequence $
       liftM2 unifyPair as bs
     liftTypeRef $ do
-      UnionFind.union a b
+      a `UnionFind.union` b
       UnionFind.setDescr a us
 
 unifyPair
@@ -486,10 +484,10 @@ unifyPair
     (Data.ExpressionHole, _) -> return [b]
     (_, Data.ExpressionHole) -> return [a]
     (Data.ExpressionPi l1,
-     Data.ExpressionPi l2) -> do
+     Data.ExpressionPi l2) ->
       unifyLambdas l1 l2
     (Data.ExpressionLambda l1,
-     Data.ExpressionLambda l2) -> do
+     Data.ExpressionLambda l2) ->
       unifyLambdas l1 l2
     (Data.ExpressionApply (Data.Apply aFuncTypeRef aArgTypeRef),
      Data.ExpressionApply (Data.Apply bFuncTypeRef bArgTypeRef)) -> do

@@ -69,7 +69,7 @@ data Link a
 newtype Point a = Point { unPoint :: Int }
 
 instance Show (Point a) where
-  show (Point x) = "P" ++ show x
+  show (Point x) = 'P' : show x
 
 newPointSupply :: PointSupply a
 newPointSupply = PointSupply 0 IM.empty
