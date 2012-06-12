@@ -152,16 +152,31 @@ data ExprEntity m = ExprEntity
   { eeGuid :: Guid
   , eeStored :: Maybe (DataTyped.StoredExpressionRef (T m))
   , eeInferredTypes :: [ExprEntity m]
-  , eeValue :: Data.Expression (ExprEntity m)
+  , eeMValue :: Maybe (Data.Expression (ExprEntity m))
   }
 
-eeFromITE :: DataTyped.InferredType -> ExprEntity m
-eeFromITE = runIdentity . Data.mapMExpression (f . DataTyped.unInferredType)
+eeFromITL :: DataTyped.InferredTypeLoop -> ExprEntity m
+eeFromITL (DataTyped.InferredTypeLoop itGuid) =
+  ExprEntity itGuid Nothing [] Nothing
+eeFromITL
+  (DataTyped.InferredTypeNoLoop
+   (DataTyped.GuidExpression itGuid val)) =
+     ExprEntity itGuid Nothing [] . Just $
+     case val of
+     Data.ExpressionLambda lambda ->
+       Data.ExpressionLambda $ eeFromLambda lambda
+     Data.ExpressionPi lambda ->
+       Data.ExpressionPi $ eeFromLambda lambda
+     Data.ExpressionApply (Data.Apply func arg) ->
+       Data.ExpressionApply $ Data.Apply (eeFromITL func) (eeFromITL arg)
+     Data.ExpressionGetVariable varRef -> Data.ExpressionGetVariable varRef
+     Data.ExpressionHole -> Data.ExpressionHole
+     Data.ExpressionLiteralInteger int -> Data.ExpressionLiteralInteger int
+     Data.ExpressionBuiltin name -> Data.ExpressionBuiltin name
+     Data.ExpressionMagic -> Data.ExpressionMagic
   where
-    f e =
-      ( return $ DataTyped.geValue e
-      , return . ExprEntity (DataTyped.geGuid e) Nothing []
-      )
+    eeFromLambda (Data.Lambda x y) =
+      Data.Lambda (eeFromITL x) (eeFromITL y)
 
 writeIRef
   :: Monad m
@@ -185,12 +200,17 @@ eeIRef = fmap DataTyped.esIRef . eeStored
 eeReplace :: ExprEntity m -> Maybe (Data.ExpressionIRef -> T m ())
 eeReplace = DataTyped.esReplace <=< eeStored
 
-eeFromTypedExpression :: DataTyped.TypedStoredExpression (T m) -> ExprEntity m
+eeFromTypedExpression
+  :: DataTyped.TypedStoredExpression (T m) -> ExprEntity m
 eeFromTypedExpression = runIdentity . Data.mapMExpression f
   where
     f e =
       ( return $ DataTyped.eeValue e
-      , return . ExprEntity (DataTyped.eeGuid e) (Just (DataTyped.eeStored e)) (map eeFromITE (DataTyped.eeInferredType e))
+      , return .
+        ExprEntity (DataTyped.eeGuid e)
+        (Just (DataTyped.eeStored e))
+        (map eeFromITL (DataTyped.eeInferredType e)) .
+        Just
       )
 
 newtype Sugar m a = Sugar {
@@ -221,7 +241,7 @@ addArg whereI exprI =
   eeReplace whereI
 
 makeActions :: Monad m => ExprEntity m -> Actions m
-makeActions exprI = makeActionsGuid (eeGuid exprI) exprI
+makeActions ee = makeActionsGuid (eeGuid ee) ee
 
 mkCutter :: Monad m => Data.ExpressionIRef -> T m Guid -> T m Guid
 mkCutter iref delete = do
@@ -256,15 +276,40 @@ mkExpressionRef
   :: Monad m
   => ExprEntity m
   -> Expression m -> Sugar m (ExpressionRef m)
-mkExpressionRef exprI expr = do
+mkExpressionRef ee expr = do
   inferredTypesRefs <-
-    mapM convertExpressionI $ eeInferredTypes exprI
+    mapM convertExpressionI $ eeInferredTypes ee
   return
     ExpressionRef
     { rExpression = expr
     , rInferredTypes = inferredTypesRefs
-    , rActions = makeActions exprI
+    , rActions = makeActions ee
     }
+
+addDeleteAction
+  :: Monad m
+  => ExprEntity m -> ExprEntity m -> ExprEntity m
+  -> Actions m -> Actions m
+addDeleteAction deletedI exprI replacerI actions =
+  (atMCut . const)    mCutter .
+  (atMDelete . const) mDeleter $
+  actions
+  where
+    mCutter = do
+      _ <- mReplace actions -- mReplace as a guard here: if no replacer, no cutter either
+      mkCutter <$> eeIRef deletedI <*> mDeleter
+    mDeleter =
+      mkDeleter <$> eeReplace exprI <*> eeIRef replacerI
+    mkDeleter replacer val = do
+      ~() <- replacer val
+      return $ Data.exprIRefGuid val
+
+addDelete
+  :: Monad m
+  => ExprEntity m -> ExprEntity m -> ExprEntity m
+  -> ExpressionRef m -> ExpressionRef m
+addDelete deletedI exprI replacerI =
+  atRActions $ addDeleteAction deletedI exprI replacerI
 
 convertLambdaParam
   :: Monad m
@@ -295,30 +340,6 @@ convertLambda lambda@(Data.Lambda _ bodyI) exprI = do
     case rExpression sBody of
       ExpressionFunc _ x -> x
       _ -> Func [] sBody
-
-addDeleteAction
-  :: Monad m
-  => ExprEntity m -> ExprEntity m -> ExprEntity m
-  -> Actions m -> Actions m
-addDeleteAction deletedI exprI replacerI actions =
-  (atMCut . const)    mCutter .
-  (atMDelete . const) mDeleter $
-  actions
-  where
-    mCutter = do
-      _ <- mReplace actions -- mReplace as a guard here: if no replacer, no cutter either
-      mkCutter <$> eeIRef deletedI <*> mDeleter
-    mDeleter =
-      mkDeleter <$> eeReplace exprI <*> eeIRef replacerI
-    mkDeleter replacer val = do
-      ~() <- replacer val
-      return $ Data.exprIRefGuid val
-
-addDelete
-  :: Monad m
-  => ExprEntity m -> ExprEntity m -> ExprEntity m
-  -> ExpressionRef m -> ExpressionRef m
-addDelete deletedI exprI replacerI = atRActions $ addDeleteAction deletedI exprI replacerI
 
 convertPi
   :: Monad m
@@ -375,12 +396,16 @@ convertApply
   => Data.Apply (ExprEntity m)
   -> Convertor m
 convertApply apply@(Data.Apply funcI argI) exprI =
-  case eeValue funcI of
-    Data.ExpressionLambda lambda -> do
+  case funcI of
+    ExprEntity
+      { eeMValue = Just (Data.ExpressionLambda lambda) } -> do
       valueRef <- convertExpressionI argI
       convertWhere valueRef funcI lambda exprI
     -- InfixR or ordinary prefix:
-    Data.ExpressionApply funcApply@(Data.Apply funcFuncI _) -> do
+    ExprEntity
+      { eeMValue =
+        Just (Data.ExpressionApply funcApply@(Data.Apply funcFuncI _))
+      } -> do
       mInfixOp <- liftTransaction $ infixOp funcFuncI
       case mInfixOp of
         Just op -> convertApplyInfixFull funcApply op apply exprI
@@ -536,17 +561,24 @@ convertBuiltin name exprI =
   , biSetFFIName = writeIRefVia Data.ExpressionBuiltin exprI
   }
 
-convertMagic :: Monad m => Convertor m
-convertMagic exprI =
-  mkExpressionRef exprI . ExpressionBuiltin $
+fakeBuiltin :: [String] -> String -> Expression m
+fakeBuiltin path name =
+  ExpressionBuiltin
   Builtin
-  { biName = Data.FFIName ["Core"] "Magic"
+  { biName = Data.FFIName path name
   , biSetFFIName = Nothing
   }
 
-convertExpressionI :: Monad m => Convertor m
-convertExpressionI exprI =
-  convert (eeValue exprI) exprI
+convertMagic :: Monad m => Convertor m
+convertMagic exprI =
+  mkExpressionRef exprI $ fakeBuiltin ["Core"] "Magic"
+
+convertLoop :: Monad m => Convertor m
+convertLoop ee = mkExpressionRef ee $ fakeBuiltin ["Loopy"] "Loop"
+
+convertExpressionI :: Monad m => ExprEntity m -> Sugar m (ExpressionRef m)
+convertExpressionI ee =
+  maybe convertLoop convert (eeMValue ee) ee
   where
     convert (Data.ExpressionLambda x) = convertLambda x
     convert (Data.ExpressionPi x) = convertPi x

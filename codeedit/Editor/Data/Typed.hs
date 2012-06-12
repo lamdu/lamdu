@@ -7,6 +7,7 @@ module Editor.Data.Typed
   , atEeInferredType, atEeValue
   , eeReplace, eeGuid, eeIRef
   , GuidExpression(..)
+  , InferredTypeLoop(..)
   , InferredType(..)
   , StoredDefinition(..)
   , atDeIRef, atDeValue
@@ -48,8 +49,8 @@ import qualified System.Random as Random
 
 type T = Transaction ViewTag
 
-type TypedStoredExpression = StoredExpression [InferredType]
-type TypedStoredDefinition = StoredDefinition [InferredType]
+type TypedStoredExpression = StoredExpression [InferredTypeLoop]
+type TypedStoredDefinition = StoredDefinition [InferredTypeLoop]
 
 eeGuid :: StoredExpression it m -> Guid
 eeGuid = esGuid . eeStored
@@ -73,6 +74,11 @@ data StoredExpression it m = StoredExpression
   , eeInferredType :: it
   , eeValue :: Data.Expression (StoredExpression it m)
   } deriving (Eq)
+
+data InferredTypeLoop
+  = InferredTypeNoLoop (GuidExpression InferredTypeLoop)
+  | InferredTypeLoop Guid
+  deriving (Show, Eq)
 
 data StoredDefinition it m = StoredDefinition
   { deIRef :: Data.DefinitionIRef
@@ -141,19 +147,12 @@ setTypeRef typeRef types =
   liftTypeRef . UnionFind.setDescr typeRef $
   TypeData types
 
-sanitize
-  :: Monad m => TypedStoredExpression f
-  -> T m (TypedStoredExpression f)
-sanitize =
-  liftM canonizeIdentifiersTypes .
-  (atInferredTypes . const . mapM) builtinsToGlobals
-
 runInfer
   :: Monad m
   => Infer m (TypedStoredExpression f)
   -> T m (TypedStoredExpression f)
 runInfer =
-  sanitize <=<
+  liftM canonizeIdentifiersTypes .
   runRandomT (Random.mkStdGen 0) .
   evalUnionFindT .
   (`runReaderT` []) .
@@ -291,8 +290,8 @@ expand =
 typeRefFromEntity
   :: Monad m => StoredExpression it f
   -> Infer m TypeRef
-typeRefFromEntity =
-  Data.mapMExpression f <=< liftTransaction . expand
+typeRefFromEntity entity =
+  Data.mapMExpression f <=< liftTransaction $ builtinsToGlobals =<< expand entity
   where
     f (InferredType (GuidExpression guid val)) =
       ( return val
@@ -325,13 +324,16 @@ addTypeRefs =
 -- TODO: Use ListT with ordinary Data.mapMExpression?
 derefTypeRef
   :: Monad m
-  => TypeRef -> Infer m [InferredType]
-derefTypeRef typeRef = do
-  types <- getTypeRef typeRef
-  liftM concat $ mapM onType types
+  => [TypeRef] -> TypeRef -> Infer m [InferredTypeLoop]
+derefTypeRef visited typeRef = do
+  isLoop <- liftTypeRef . liftM or $
+    mapM (UnionFind.equivalent typeRef) visited
+  if isLoop
+    then liftM ((:[]) . InferredTypeLoop) nextGuid
+    else liftM concat $ mapM onType =<< getTypeRef typeRef
   where
     onType (GuidExpression guid expr) =
-      (liftM . map) (InferredType . GuidExpression guid) $
+      (liftM . map) (InferredTypeNoLoop . GuidExpression guid) $
       case expr of
       Data.ExpressionLambda lambda ->
         map1 Data.ExpressionLambda $ onLambda lambda
@@ -350,7 +352,7 @@ derefTypeRef typeRef = do
       Data.ExpressionMagic ->
         map0 Data.ExpressionMagic
       where
-        recurse = derefTypeRef
+        recurse = derefTypeRef (typeRef : visited)
         map0 = return . (: [])
         map1 = liftM . map
         map2 = liftM2 . liftM2
@@ -366,16 +368,16 @@ derefTypeRef typeRef = do
 derefTypeRefs
   :: Monad m
   => StoredExpression TypeRef f
-  -> Infer m (StoredExpression [InferredType] f)
+  -> Infer m (StoredExpression [InferredTypeLoop] f)
 derefTypeRefs =
   mapMExpressionEntities f
   where
-    isAHole Data.ExpressionHole = True
-    isAHole _ = False
+    inferredTypeIsHole (InferredTypeNoLoop (GuidExpression _ Data.ExpressionHole)) = True
+    inferredTypeIsHole _ = False
     f stored typeRef val = do
       types <-
-        (liftM . filter) (not . isAHole . geValue . unInferredType) $
-        derefTypeRef typeRef
+        (liftM . filter) (not . inferredTypeIsHole) $
+        derefTypeRef [] typeRef
       return $ StoredExpression stored types val
 
 unifyOnTree
@@ -438,32 +440,6 @@ unifyOnTree (StoredExpression stored typeRef value) = do
 
 tryRemap :: Ord k => k -> Map k k -> k
 tryRemap x = fromMaybe x . Map.lookup x
-
-canonizeIdentifiers
-  :: Random.StdGen
-  -> InferredType
-  -> InferredType
-canonizeIdentifiers gen =
-  runIdentity . runRandomT gen . (`runReaderT` Map.empty) . f
-  where
-    onLambda oldGuid newGuid (Data.Lambda paramType body) =
-      liftM2 Data.Lambda (f paramType) .
-      Reader.local (Map.insert oldGuid newGuid) $ f body
-    f (InferredType (GuidExpression oldGuid v)) = do
-      newGuid <- lift nextRandom
-      liftM (InferredType . GuidExpression newGuid) $
-        case v of
-        Data.ExpressionLambda lambda ->
-          liftM Data.ExpressionLambda $ onLambda oldGuid newGuid lambda
-        Data.ExpressionPi lambda ->
-          liftM Data.ExpressionPi $ onLambda oldGuid newGuid lambda
-        Data.ExpressionApply (Data.Apply func arg) ->
-          liftM Data.ExpressionApply $
-          liftM2 Data.Apply (f func) (f arg)
-        Data.ExpressionGetVariable (Data.ParameterRef guid) ->
-          Reader.asks
-          (Data.ExpressionGetVariable . Data.ParameterRef . tryRemap guid)
-        x -> return x
 
 unify
   :: Monad m
@@ -588,20 +564,43 @@ canonizeIdentifiersTypes =
       map Random.mkStdGen . Random.randoms $
       guidToStdGen guid
     guidToStdGen = Random.mkStdGen . BinaryUtils.decodeS . Guid.bs
+    canonizeIdentifiers gen =
+      runIdentity . runRandomT gen . (`runReaderT` Map.empty) . f
+      where
+        onLambda oldGuid newGuid (Data.Lambda paramType body) =
+          liftM2 Data.Lambda (f paramType) .
+          Reader.local (Map.insert oldGuid newGuid) $ f body
+        f (InferredTypeLoop guid) = return $ InferredTypeLoop guid
+        f (InferredTypeNoLoop (GuidExpression oldGuid v)) = do
+          newGuid <- lift nextRandom
+          liftM (InferredTypeNoLoop . GuidExpression newGuid) $
+            case v of
+            Data.ExpressionLambda lambda ->
+              liftM Data.ExpressionLambda $ onLambda oldGuid newGuid lambda
+            Data.ExpressionPi lambda ->
+              liftM Data.ExpressionPi $ onLambda oldGuid newGuid lambda
+            Data.ExpressionApply (Data.Apply func arg) ->
+              liftM Data.ExpressionApply $
+              liftM2 Data.Apply (f func) (f arg)
+            Data.ExpressionGetVariable (Data.ParameterRef guid) ->
+              Reader.asks
+              (Data.ExpressionGetVariable . Data.ParameterRef . tryRemap guid)
+            x -> return x
 
+-- TODO: Do this on the GuidExpression TypeRef (no need to handle loops)
 builtinsToGlobals
   :: Monad m
   => InferredType -> T m InferredType
 builtinsToGlobals expr = do
   globals <- Property.get Anchors.builtinsMap
   let
-    f entity@(GuidExpression guid (Data.ExpressionBuiltin name)) =
-      return .
+    f (InferredType entity@(GuidExpression guid (Data.ExpressionBuiltin name))) =
+      return . InferredType .
       maybe entity
       (GuidExpression guid . Data.ExpressionGetVariable) $
       Map.lookup name globals
     f entity = return entity
-  mapInferredTypes (liftM InferredType . f . unInferredType) expr
+  mapInferredTypes f expr
 
 inferExpression
  :: Monad m
@@ -625,7 +624,7 @@ inferDefinition (DataLoad.DefinitionEntity iref value) =
   liftM (StoredDefinition iref) $
   case value of
   Data.Definition typeI bodyI -> do
-    inferredType <- sanitize $ fromLoaded [] typeI
+    let inferredType = canonizeIdentifiersTypes $ fromLoaded [] typeI
 
     inferredBody <- runInfer $ do
       inferredTypeRef <- typeRefFromEntity inferredType
