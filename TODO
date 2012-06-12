@@ -1,3 +1,7 @@
+* Jump back should be outside the source control. For this we need
+  transactions inside the source control to be able to result in
+  extra data outwards, beside the widget's event result.
+
 * Oops, if type of left-hand-side is hole, then read-only holes at
    right should NOT have their scope based on their location (They are
    copies!)
