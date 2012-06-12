@@ -3,9 +3,12 @@ module Main(main) where
 
 import Control.Arrow (second)
 import Control.Monad (liftM, unless)
+import Control.Monad.Trans.Writer (runWriterT)
+import Control.Monad.Trans.Class (lift)
 import Data.ByteString (unpack)
 import Data.IORef
 import Data.List(intercalate)
+import Data.Monoid(Last(..))
 import Data.Monoid(Monoid(..))
 import Data.Vector.Vector2(Vector2)
 import Data.Word(Word8)
@@ -16,7 +19,7 @@ import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Widget(Widget)
 import Numeric (showHex)
-import qualified Control.Compose as Compose
+import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Map as Map
 import qualified Data.Store.Db as Db
 import qualified Data.Store.Property as Property
@@ -120,15 +123,15 @@ runDbStore font store = do
             return (Just cursor, finalWidget)
         unless (Widget.isFocused widget) $
           fail "Root cursor did not match"
-        return (invalidCursor, Widget.atEvents attachCursor widget)
+        return (invalidCursor, Widget.atEvents (lift . attachCursor =<<) widget)
       maybe (return ()) (putStrLn . ("Invalid cursor: " ++) . show) invalidCursor
       return $ Widget.atEvents saveCache widget
 
-    saveCache (Compose.O action) = do
-      (mCacheCache, eventResult) <- action
+    saveCache action = do
+      (eventResult, mCacheCache) <- runWriterT action
       case mCacheCache of
-        Nothing -> return ()
-        Just newCache -> writeIORef cacheRef newCache
+        Last Nothing -> return ()
+        Last (Just newCache) -> writeIORef cacheRef newCache
       return eventResult
 
   mainLoopDebugMode font makeWidget addHelp
@@ -161,9 +164,8 @@ runDbStore font store = do
 
     widgetDownTransaction =
       Transaction.run store .
-      (liftM . second . Widget.atEvents . Compose.inO) (Transaction.run store)
+      (liftM . second . Widget.atEvents . Writer.mapWriterT) (Transaction.run store)
 
-    attachCursor (Compose.O action) = Compose.O $ do
-      (cache, eventResult) <- action
+    attachCursor eventResult = do
       maybe (return ()) (Property.set Anchors.cursor) $ Widget.eCursor eventResult
-      return (cache, eventResult)
+      return eventResult

@@ -34,8 +34,8 @@ fromGuid = Widget.Id . (: []) . bs
 collapserId :: Widget.Id -> Widget.Id
 collapserId = flip Widget.joinId ["collapser"]
 
-branchSelection :: AnimId
-branchSelection = ["selected branch"]
+branchSelection :: Widget.Id
+branchSelection = Widget.Id ["selected branch"]
 
 goUpId :: Widget.Id
 goUpId = Widget.Id ["go up"]

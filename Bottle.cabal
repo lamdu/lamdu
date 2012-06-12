@@ -92,7 +92,6 @@ Executable Editor
                        transformers,
                        split,
                        TraceUtils,
-                       TypeCompose,
                        bytestring,
                        derive,
                        bottle,

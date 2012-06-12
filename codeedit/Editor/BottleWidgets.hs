@@ -91,7 +91,7 @@ makeChoice selectionAnimId orientation children curChild =
     colorizedChildren =
       map (uncurry colorize . first (curChild ==)) children
     box = Box.make orientation colorizedChildren
-    colorize True = Widget.backgroundColor 10 selectionAnimId selectedColor
+    colorize True = Widget.backgroundColor 9 selectionAnimId selectedColor
     colorize False = id
     selectedColor = Draw.Color 0 0.5 0 1
 
