@@ -27,6 +27,8 @@ undoKeys          = [ctrl 'z']
 redoKeys          = [ctrl 'y']
 makeBranchKeys    = [ctrl 's']
 
+jumpToBranchesKeys = [mk E.ctrl E.KeyF10]
+
 -- moveToParentKeys  = [mk E.alt E.KeyLeft]
 
 overlayDocKeys    = [noMods E.KeyF1, alt 'h']

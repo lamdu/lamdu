@@ -3,7 +3,7 @@ module Editor.BranchGUI(makeRootWidget) where
 
 import Control.Compose ((:.))
 import Control.Monad (liftM, liftM2, unless)
-import Data.List (findIndex)
+import Data.List (find, findIndex)
 import Data.List.Utils (removeAt)
 import Data.Maybe (fromMaybe)
 import Data.Monoid(Monoid(..))
@@ -82,10 +82,11 @@ makeRootWidget mkCache widget = do
   let
     withNewCache = addNewCache mkCache view
     makeBranchNameEdit (textEditModelIRef, branch) = do
+      let branchEditId = WidgetIds.fromIRef textEditModelIRef
       branchNameEdit <-
         BWidgets.wrapDelegated FocusDelegator.NotDelegating
         (BWidgets.makeTextEdit (Transaction.fromIRef textEditModelIRef)) $
-        WidgetIds.fromIRef textEditModelIRef
+        branchEditId
       let
         setBranch (Compose.O action) = withNewCache $ do
           setCurrentBranch view branch
@@ -94,10 +95,16 @@ makeRootWidget mkCache widget = do
           -- in addNewCache:
           return result
       return
-        (branch,
-         (Widget.atMaybeEnter . fmap . fmap . Widget.atEnterResultEvent) setBranch .
-         Widget.atEvents (Compose.O . liftM ((,) Nothing)) $
-         branchNameEdit)
+        ( branch
+        , (Widget.atMaybeEnter . fmap . fmap . Widget.atEnterResultEvent) setBranch .
+          Widget.atEvents (Compose.O . liftM ((,) Nothing)) $
+          branchNameEdit
+        )
+  -- there must be an active branch:
+  let
+    Just currentBranchWidgetId =
+      fmap (WidgetIds.fromIRef . fst) $ find ((== currentBranch) . snd) namedBranches
+
   branchNameEdits <- mapM makeBranchNameEdit namedBranches
   let
     branchSelector =
@@ -109,15 +116,20 @@ makeRootWidget mkCache widget = do
         withNewCache $ deleteCurrentBranch view
   return .
     (Widget.strongerEvents . mconcat)
-      [Widget.actionEventMap Config.quitKeys "Quit" (error "Quit")
-      ,Widget.actionEventMap Config.makeBranchKeys "New Branch" . 
-       Compose.O . liftM ((,) Nothing) $ makeBranch view
+      [ Widget.actionEventMap Config.quitKeys "Quit" (error "Quit")
+      , Widget.actionEventMap Config.makeBranchKeys "New Branch" .
+        noCacheChange $ makeBranch view
+      , Widget.actionEventMapMovesCursor Config.jumpToBranchesKeys
+        "Jump to branches" . noCacheChange $
+        return currentBranchWidgetId
       ] .
     Box.toWidget . Box.make Box.horizontal $
     [viewEdit
     ,Widget.liftView Spacer.makeHorizontalExpanding
     ,Widget.strongerEvents delBranchEventMap branchSelector
     ]
+  where
+    noCacheChange = Compose.O . liftM ((,) Nothing)
 
 -- Apply the transactions to the given View and convert them to
 -- transactions on a DB
