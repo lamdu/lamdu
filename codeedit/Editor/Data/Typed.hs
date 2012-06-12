@@ -438,7 +438,8 @@ unifyOnTree (StoredExpression stored typeRef value) = do
       defTypeRef <- typeRefFromEntity $ ignoreStoredMonad defTypeEntity
       setType defTypeRef
     Data.ExpressionLiteralInteger _ ->
-      setType <=< generateEntity . {- XXX -} Data.ExpressionBuiltin $ Data.FFIName ["Prelude"] "Integer"
+      setType <=< generateEntity <=< builtinToGlobal .
+      Data.ExpressionBuiltin $ Data.FFIName ["Prelude"] "Integer"
     _ -> return ()
   where
     setType = unify typeRef
