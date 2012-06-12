@@ -53,9 +53,9 @@ debugModeKeys = [ctrlAlt 'd']
 
 exprFocusDelegatorConfig = FocusDelegator.Config
   { FocusDelegator.startDelegatingKey = mk E.shift E.KeyRight
-  , FocusDelegator.startDelegatingDoc = "Enter child expression"
+  , FocusDelegator.startDelegatingDoc = "Enter subexpression"
   , FocusDelegator.stopDelegatingKey = mk E.shift E.KeyLeft
-  , FocusDelegator.stopDelegatingDoc = "Leave child expression"
+  , FocusDelegator.stopDelegatingDoc = "Leave subexpression"
   }
 
 branchSelectionFocusDelegatorConfig = FocusDelegator.Config
