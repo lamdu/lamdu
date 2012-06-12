@@ -1,3 +1,5 @@
+* "Enter: insert newline" is wrong (e.g: in LiteralInt edit)
+
 * Jump back should be outside the source control. For this we need
   transactions inside the source control to be able to result in
   extra data outwards, beside the widget's event result.
