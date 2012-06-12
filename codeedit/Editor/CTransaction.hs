@@ -96,15 +96,17 @@ assignCursor src dest =
       | cursor == src = dest
       | otherwise = cursor
 
-atTextStyle :: (TextEdit.Style -> TextEdit.Style) -> TWidget t m -> TWidget t m
+atTextStyle
+  :: (TextEdit.Style -> TextEdit.Style)
+  -> CTransaction t m (Widget f) -> CTransaction t m (Widget f)
 atTextStyle = atCTransaction . Reader.withReaderT . atEnvTextStyle
 
 -- Todo: set, not at
 atTextSizeColor
   :: Int
   -> Draw.Color
-  -> TWidget t m
-  -> TWidget t m
+  -> CTransaction t m (Widget f)
+  -> CTransaction t m (Widget f)
 atTextSizeColor textSize textColor =
   (atTextStyle . TextEdit.atSTextViewStyle)
   ((TextView.atStyleFontSize . const) textSize .

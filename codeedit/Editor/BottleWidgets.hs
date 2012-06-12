@@ -13,6 +13,7 @@ module Editor.BottleWidgets(
   empty
 ) where
 
+import Control.Applicative (Applicative(..))
 import Control.Arrow (first, second)
 import Control.Monad (when, liftM)
 import Data.ByteString.Char8 (pack)
@@ -43,17 +44,20 @@ import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
-makeTextView :: MonadF m => String -> Anim.AnimId -> TWidget t m
+makeTextView :: MonadF m => String -> Anim.AnimId -> CTransaction t m (Widget f)
 makeTextView text myId = do
   style <- readTextStyle
   return $
     TextView.makeWidget (TextEdit.sTextViewStyle style) text myId
 
-makeLabel :: MonadF m => String -> Anim.AnimId -> TWidget t m
+makeLabel :: MonadF m => String -> Anim.AnimId -> CTransaction t m (Widget f)
 makeLabel text prefix =
   makeTextView text $ mappend prefix [pack text]
 
-makeFocusableView :: MonadF m => Widget.Id -> Widget (Transaction t m) -> TWidget t m
+makeFocusableView
+  :: (Applicative f, MonadF m)
+  => Widget.Id -> Widget f
+  -> CTransaction t m (Widget f)
 makeFocusableView myId widget = do
   hasFocus <- liftM (myId ==) readCursor
   let
@@ -62,11 +66,14 @@ makeFocusableView myId widget = do
       | otherwise = id
   return .
     (Widget.atIsFocused . const) hasFocus . setBackground $
-    Widget.takesFocus (const (return myId)) widget
+    Widget.takesFocus (const (pure myId)) widget
   where
     blue = Draw.Color 0 0 1 0.8
 
-makeFocusableTextView :: MonadF m => String -> Widget.Id -> TWidget t m
+makeFocusableTextView
+  :: (Applicative f, MonadF m)
+  => String -> Widget.Id
+  -> CTransaction t m (Widget f)
 makeFocusableTextView text myId = do
   textView <- makeTextView text $ Widget.toAnimId myId
   makeFocusableView myId textView
@@ -90,11 +97,10 @@ makeChoice selectionAnimId orientation children curChild =
 
 -- TODO: This logic belongs in the FocusDelegator itself
 wrapDelegatedWithKeys
-  :: MonadF m
+  :: (Applicative f, Monad m)
   => FocusDelegator.Keys
   -> FocusDelegator.IsDelegating
-  -> ((Widget (Transaction t m)
-       -> Widget (Transaction t m)) -> a -> b)
+  -> ((Widget f -> Widget f) -> a -> b)
   -> (Widget.Id -> CTransaction t m a)
   -> Widget.Id -> CTransaction t m b
 wrapDelegatedWithKeys keys entryState aToB mkA myId = do
@@ -105,10 +111,11 @@ wrapDelegatedWithKeys keys entryState aToB mkA myId = do
     mk f innerId newCursor =
       liftM (aToB f) . (atCursor . const) newCursor $ mkA innerId
 
-wrapDelegated ::
-  MonadF m => FocusDelegator.IsDelegating ->
-  (Widget.Id -> TWidget t m) ->
-  Widget.Id -> TWidget t m
+wrapDelegated
+  :: (Monad m, Applicative f)
+  => FocusDelegator.IsDelegating
+  -> (Widget.Id -> CTransaction t m (Widget f))
+  -> Widget.Id -> CTransaction t m (Widget f)
 wrapDelegated entryState =
   wrapDelegatedWithKeys FocusDelegator.defaultKeys entryState id
 
@@ -149,7 +156,8 @@ getDisplayNameOf guid = do
   name <- Property.get $ Anchors.aNameRef guid
   return $ if null name then anonName guid else name
 
-makeNameEdit :: Monad m => String -> Guid -> Widget.Id -> TWidget t m
+makeNameEdit
+  :: Monad m => String -> Guid -> Widget.Id -> TWidget t m
 makeNameEdit editingEmptyStr ident =
   (atTextStyle . TextEdit.atSEmptyUnfocusedString . const)
     (anonName ident) .
@@ -206,7 +214,7 @@ spaceView = Spacer.makeHorizontal 20
 spaceWidget :: Widget f
 spaceWidget = Widget.liftView spaceView
 
-setTextColor :: Draw.Color -> TWidget t m -> TWidget t m
+setTextColor :: Draw.Color -> CTransaction t m (Widget f) -> CTransaction t m (Widget f)
 setTextColor = atTextStyle . TextEdit.atSTextViewStyle . TextView.atStyleColor . const
 
 gridHSpaced :: [[Widget f]] -> Widget f
