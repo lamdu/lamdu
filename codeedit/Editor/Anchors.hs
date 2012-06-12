@@ -15,11 +15,11 @@ module Editor.Anchors
   , viewStore, ViewTag
   , aDataRef, aNameRef, variableNameRef
   , makePane, makeDefinition, newPane
-  , savePreJumpPosition, canJumpBack, jumpBack
+  , savePreJumpPosition, jumpBack
   )
 where
 
-import Control.Monad (when, liftM)
+import Control.Monad (when)
 import Data.Binary (Binary(..))
 import Data.List.Split (splitOn)
 import Data.Map (Map)
@@ -159,17 +159,15 @@ newPane defI = do
 savePreJumpPosition :: Monad m => Widget.Id -> Transaction ViewTag m ()
 savePreJumpPosition pos = Property.pureModify preJumps $ (pos :) . take 19
 
-canJumpBack :: Monad m => Transaction ViewTag m Bool
-canJumpBack = liftM (not . null) $ Property.get preJumps
-
-jumpBack :: Monad m => Transaction ViewTag m (Maybe Widget.Id)
+jumpBack :: Monad m => Transaction ViewTag m (Maybe (Transaction ViewTag m Widget.Id))
 jumpBack = do
   jumps <- Property.get preJumps
-  case jumps of
-    [] -> return Nothing
-    (j:js) -> do
+  return $
+    case jumps of
+    [] -> Nothing
+    (j:js) -> Just $ do
       Property.set preJumps js
-      return $ Just j
+      return j
 
 newBuiltin
   :: Monad m

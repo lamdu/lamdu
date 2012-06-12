@@ -6,7 +6,6 @@ where
 
 import Control.Monad (liftM, (<=<))
 import Data.List.Utils(enumerate, insertAt, removeAt)
-import Data.Maybe (fromMaybe)
 import Data.Monoid(Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
@@ -128,18 +127,16 @@ makePanesEdit panes = do
         definitionEdits <- mapM makePaneWidget panes
         return $ BWidgets.vboxAlign 0 definitionEdits
 
-  canJumpBack <- transaction Anchors.canJumpBack
+  mJumpBack <- transaction Anchors.jumpBack
   newDefinition <- makeNewDefinitionAction
   let
     panesEventMap =
-      mconcat . concat $
-      [[ Widget.actionEventMapMovesCursor Config.newDefinitionKeys
-         "New definition" newDefinition
-       ]
-      ,[ Widget.actionEventMapMovesCursor Config.previousCursorKeys
-         "Go to previous position" $ liftM (fromMaybe myId) Anchors.jumpBack
-       | canJumpBack
-       ]
+      mconcat
+      [ Widget.actionEventMapMovesCursor Config.newDefinitionKeys
+        "New definition" newDefinition
+      , maybe mempty
+        (Widget.actionEventMapMovesCursor Config.previousCursorKeys
+         "Go to previous position") mJumpBack
       ]
 
   return $ Widget.weakerEvents panesEventMap panesWidget
