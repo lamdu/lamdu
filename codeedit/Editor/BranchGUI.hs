@@ -27,6 +27,7 @@ import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CTransaction as CT
 import qualified Editor.Config as Config
 import qualified Editor.WidgetIds as WidgetIds
+import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -75,6 +76,14 @@ tellNewCache mkCache view act = do
   Writer.tell $ Last (Just newCache)
   return result
 
+branchNameFDConfig :: FocusDelegator.Config
+branchNameFDConfig = FocusDelegator.Config
+  { FocusDelegator.startDelegatingKey = E.KeyEventType E.noMods E.KeyEnter
+  , FocusDelegator.startDelegatingDoc = "Rename branch"
+  , FocusDelegator.stopDelegatingKey = E.KeyEventType E.noMods E.KeyEsc
+  , FocusDelegator.stopDelegatingDoc = "Stop renaming"
+  }
+
 makeRootWidget
   :: MonadF m
   => Transaction ViewTag (Transaction DBTag m) versionCache
@@ -91,7 +100,7 @@ makeRootWidget mkCache widget = do
     makeBranchNameEdit (textEditModelIRef, branch) = do
       let branchEditId = WidgetIds.fromIRef textEditModelIRef
       branchNameEdit <-
-        BWidgets.wrapDelegated FocusDelegator.NotDelegating
+        BWidgets.wrapDelegated branchNameFDConfig FocusDelegator.NotDelegating
         (BWidgets.makeTextEdit (Transaction.fromIRef textEditModelIRef)) $
         branchEditId
       let

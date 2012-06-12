@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.FocusDelegator
   ( IsDelegating(..)
-  , Config(..), defaultConfig
+  , Config(..)
   , make
   , wrapConfig
   , delegatingId, notDelegatingId
@@ -27,14 +27,6 @@ data Config = Config {
   startDelegatingDoc :: E.Doc,
   stopDelegatingKey :: E.EventType,
   stopDelegatingDoc :: E.Doc
-  }
-
-defaultConfig :: Config
-defaultConfig = Config
-  { startDelegatingKey = E.KeyEventType E.noMods E.KeyEnter
-  , startDelegatingDoc = "Enter child"
-  , stopDelegatingKey = E.KeyEventType E.noMods E.KeyEsc
-  , stopDelegatingDoc = "Leave child"
   }
 
 blue :: Draw.Color

@@ -124,11 +124,12 @@ wrapDelegatedWithConfig config entryState aToB mkA myId = do
 
 wrapDelegated
   :: (Monad m, Applicative f)
-  => FocusDelegator.IsDelegating
+  => FocusDelegator.Config
+  -> FocusDelegator.IsDelegating
   -> (Widget.Id -> CTransaction t m (Widget f))
   -> Widget.Id -> CTransaction t m (Widget f)
-wrapDelegated entryState =
-  wrapDelegatedWithConfig FocusDelegator.defaultConfig entryState id
+wrapDelegated config entryState =
+  wrapDelegatedWithConfig config entryState id
 
 makeTextEdit
   :: Monad m

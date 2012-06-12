@@ -28,12 +28,20 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 
+paramFDConfig :: FocusDelegator.Config
+paramFDConfig = FocusDelegator.Config
+  { FocusDelegator.startDelegatingKey = E.KeyEventType E.noMods E.KeyEnter
+  , FocusDelegator.startDelegatingDoc = "Change parameter name"
+  , FocusDelegator.stopDelegatingKey = E.KeyEventType E.noMods E.KeyEsc
+  , FocusDelegator.stopDelegatingDoc = "Stop changing name"
+  }
+
 data Side = LHS | RHS
   deriving (Show, Eq)
 
 makeNameEdit :: MonadF m => Widget.Id -> Guid -> TWidget t m
 makeNameEdit myId ident =
-  BWidgets.wrapDelegated FocusDelegator.NotDelegating
+  BWidgets.wrapDelegated paramFDConfig FocusDelegator.NotDelegating
   (BWidgets.setTextColor Config.definitionColor .
    BWidgets.makeNameEdit "<unnamed>" ident)
   myId

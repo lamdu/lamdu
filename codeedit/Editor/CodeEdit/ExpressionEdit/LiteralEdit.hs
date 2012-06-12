@@ -13,6 +13,7 @@ import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CTransaction as CT
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
+import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
@@ -55,11 +56,19 @@ makeIntEdit integer myId = do
   where
     emptyZeroCursor = ["empty-zero"]
 
+literalFDConfig :: FocusDelegator.Config
+literalFDConfig = FocusDelegator.Config
+  { FocusDelegator.startDelegatingKey = E.KeyEventType E.noMods E.KeyEnter
+  , FocusDelegator.startDelegatingDoc = "Change integer"
+  , FocusDelegator.stopDelegatingKey = E.KeyEventType E.noMods E.KeyEsc
+  , FocusDelegator.stopDelegatingDoc = "Stop changing integer"
+  }
+
 makeInt
   :: MonadF m
   => Sugar.LiteralInteger m
   -> Widget.Id
   -> TWidget ViewTag m
 makeInt integer =
-  BWidgets.wrapDelegated FocusDelegator.NotDelegating
+  BWidgets.wrapDelegated literalFDConfig FocusDelegator.NotDelegating
   (setColor . makeIntEdit integer)

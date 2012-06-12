@@ -332,6 +332,14 @@ makeH hole guid myId = do
       Widget.backgroundColor 11 $
       mappend (Widget.toAnimId myId) ["hole background"]
 
+holeFDConfig :: FocusDelegator.Config
+holeFDConfig = FocusDelegator.Config
+  { FocusDelegator.startDelegatingKey = E.KeyEventType E.noMods E.KeyEnter
+  , FocusDelegator.startDelegatingDoc = "Enter hole"
+  , FocusDelegator.stopDelegatingKey = E.KeyEventType E.noMods E.KeyEsc
+  , FocusDelegator.stopDelegatingDoc = "Leave hole"
+  }
+
 make
   :: MonadF m
   => Sugar.Hole m
@@ -341,6 +349,5 @@ make
      (Maybe (ResultPicker m), Widget (Transaction ViewTag m))
 make hole =
   (fmap . liftM . second . Widget.weakerEvents) (pasteEventMap hole) .
-  BWidgets.wrapDelegatedWithConfig
-  FocusDelegator.defaultConfig FocusDelegator.Delegating second .
-  makeH hole
+  BWidgets.wrapDelegatedWithConfig holeFDConfig FocusDelegator.Delegating
+  second . makeH hole

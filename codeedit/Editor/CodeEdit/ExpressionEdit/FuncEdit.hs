@@ -16,15 +16,24 @@ import qualified Editor.CTransaction as CT
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.WidgetIds as WidgetIds
+import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+
+paramFDConfig :: FocusDelegator.Config
+paramFDConfig = FocusDelegator.Config
+  { FocusDelegator.startDelegatingKey = E.KeyEventType E.noMods E.KeyEnter
+  , FocusDelegator.startDelegatingDoc = "Change parameter name"
+  , FocusDelegator.stopDelegatingKey = E.KeyEventType E.noMods E.KeyEsc
+  , FocusDelegator.stopDelegatingDoc = "Stop changing name"
+  }
 
 makeParamNameEdit
   :: MonadF m
   => Guid
   -> TWidget t m
 makeParamNameEdit ident =
-  BWidgets.wrapDelegated FocusDelegator.NotDelegating
+  BWidgets.wrapDelegated paramFDConfig FocusDelegator.NotDelegating
   (BWidgets.setTextColor Config.parameterColor .
    BWidgets.makeNameEdit "<unnamed param>" ident) $
   WidgetIds.paramId ident
