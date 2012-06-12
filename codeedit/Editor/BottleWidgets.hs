@@ -44,13 +44,13 @@ import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
-makeTextView :: MonadF m => String -> Anim.AnimId -> CTransaction t m (Widget f)
+makeTextView :: MonadF m => String -> AnimId -> CTransaction t m (Widget f)
 makeTextView text myId = do
   style <- readTextStyle
   return $
     TextView.makeWidget (TextEdit.sTextViewStyle style) text myId
 
-makeLabel :: MonadF m => String -> Anim.AnimId -> CTransaction t m (Widget f)
+makeLabel :: MonadF m => String -> AnimId -> CTransaction t m (Widget f)
 makeLabel text prefix =
   makeTextView text $ mappend prefix [pack text]
 
@@ -80,22 +80,29 @@ makeFocusableTextView text myId = do
 
 makeChoice
   :: Eq a
-  => AnimId
+  => Bool -> AnimId
   -> Box.Orientation
   -> [(a, Widget f)]
-  -> a -> Widget f
-makeChoice selectionAnimId orientation children curChild =
+  -> a
+  -> Widget f
+makeChoice forceExpand selectionAnimId orientation children curChild =
   maybe Box.toWidget Box.toWidgetBiased mCurChildIndex box
   where
+    childFocused = any (Widget.isFocused . snd) children
     pairs = (map . first) (curChild ==) children
-    mCurChildIndex = findIndex fst pairs
+    visiblePairs
+      | childFocused || forceExpand = pairs
+      | otherwise = filter fst pairs
+    mCurChildIndex = findIndex fst visiblePairs
     box = Box.make orientation colorizedPairs
     colorizedPairs
-      | any (Widget.isFocused . snd) pairs = map snd pairs
-      | otherwise = map (uncurry colorize) pairs
+      -- focus shows selection already
+      | childFocused = map snd visiblePairs
+      -- need to show selection even as focus is elsewhere
+      | otherwise = map colorize visiblePairs
       where
-        colorize True = Widget.backgroundColor 9 selectionAnimId selectedColor
-        colorize False = id
+        colorize (True, w) = Widget.backgroundColor 9 selectionAnimId selectedColor w
+        colorize (False, w) = w
         selectedColor = Draw.Color 0 0.5 0 1
 
 -- TODO: This logic belongs in the FocusDelegator itself

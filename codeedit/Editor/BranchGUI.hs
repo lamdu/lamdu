@@ -7,13 +7,13 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Writer (WriterT)
 import Data.List (find, findIndex)
 import Data.List.Utils (removeAt)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid(Monoid(..), Last(..))
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag, DBTag)
-import Editor.CTransaction (CTransaction, TWidget, runNestedCTransaction, transaction, getP, readCursor, assignCursor)
+import Editor.CTransaction (CTransaction, TWidget, runNestedCTransaction, transaction, getP, readCursor, assignCursor, subCursor)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Monad.Trans.Writer as Writer
@@ -114,6 +114,7 @@ makeRootWidget mkCache widget = do
         Widget.actionEventMapMovesCursor Config.delBranchKeys "Delete Branch" .
         withNewCache . lift $ deleteCurrentBranch view
 
+  branchSelectorFocused <- liftM isJust $ subCursor WidgetIds.branchSelection
   branchSelector <-
     flip
     (BWidgets.wrapDelegatedWithConfig
@@ -124,7 +125,8 @@ makeRootWidget mkCache widget = do
       branchNameEdits <- mapM makeBranchNameEdit namedBranches
       return .
         Widget.strongerEvents delBranchEventMap $
-        BWidgets.makeChoice (Widget.toAnimId WidgetIds.branchSelection)
+        BWidgets.makeChoice branchSelectorFocused
+        (Widget.toAnimId WidgetIds.branchSelection)
         Box.vertical branchNameEdits currentBranch
 
   let
