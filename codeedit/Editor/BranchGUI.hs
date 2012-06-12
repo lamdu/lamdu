@@ -1,6 +1,7 @@
 {-# LANGUAGE TypeOperators #-}
 module Editor.BranchGUI(makeRootWidget) where
 
+import Control.Arrow (second)
 import Control.Applicative (pure)
 import Control.Monad (liftM, liftM2, unless)
 import Control.Monad.Trans.Class (lift)
@@ -54,13 +55,14 @@ deleteCurrentBranch view = do
   setCurrentBranch view $ snd newCurrentBranch
   return . WidgetIds.fromIRef $ fst newCurrentBranch
 
-makeBranch :: Monad m => View -> Transaction DBTag m ()
+makeBranch :: Monad m => View -> Transaction DBTag m Widget.Id
 makeBranch view = do
   newBranch <- Branch.new =<< View.curVersion view
   textEditModelIRef <- Transaction.newIRef "New view"
   let viewPair = (textEditModelIRef, newBranch)
   Property.pureModify Anchors.branches (++ [viewPair])
   setCurrentBranch view newBranch
+  return $ WidgetIds.fromIRef textEditModelIRef
 
 type CacheUpdatingTransaction t versionCache m =
   WriterT (Last versionCache) (Transaction t m)
@@ -134,7 +136,7 @@ makeRootWidget mkCache widget = do
      FocusDelegator.NotDelegating id)
     WidgetIds.branchSelection $ \innerId ->
     CT.assignCursor innerId currentBranchWidgetId $ do
-      branchNameEdits <- mapM makeBranchNameEdit namedBranches
+      branchNameEdits <- mapM ((liftM . second) (Widget.align 0) . makeBranchNameEdit) namedBranches
       return .
         Widget.strongerEvents delBranchEventMap $
         BWidgets.makeChoice branchSelectorFocused
@@ -144,7 +146,7 @@ makeRootWidget mkCache widget = do
   let
     eventMap = mconcat
       [ Widget.actionEventMap Config.quitKeys "Quit" (error "Quit")
-      , Widget.actionEventMap Config.makeBranchKeys "New Branch" .
+      , Widget.actionEventMapMovesCursor Config.makeBranchKeys "New Branch" .
         lift $ makeBranch view
       , Widget.actionEventMapMovesCursor Config.jumpToBranchesKeys
         "Select current branch" $ pure currentBranchWidgetId

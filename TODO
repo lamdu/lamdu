@@ -1,3 +1,4 @@
+* Free-nav mode?
 * "Enter: insert newline" is wrong (e.g: in LiteralInt edit)
 
 * Jump back should be outside the source control. For this we need
