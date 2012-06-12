@@ -137,7 +137,7 @@ makeRootWidget mkCache widget = do
       , Widget.actionEventMap Config.makeBranchKeys "New Branch" .
         lift $ makeBranch view
       , Widget.actionEventMapMovesCursor Config.jumpToBranchesKeys
-        "Jump to branches" $ pure currentBranchWidgetId
+        "Select current branch" $ pure currentBranchWidgetId
       ]
   return .
     Widget.strongerEvents eventMap .
