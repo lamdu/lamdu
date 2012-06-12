@@ -6,7 +6,8 @@ module Graphics.UI.Bottle.Widgets.TextEdit(
   atSCursorWidth,
   atSTextCursorId,
   atSBackgroundCursorId,
-  atSEmptyString,
+  atSEmptyUnfocusedString,
+  atSEmptyFocusedString,
   atSTextViewStyle) where
 
 import Control.Arrow (first)
@@ -46,7 +47,8 @@ data Style = Style {
   sCursorWidth :: Widget.R,
   sTextCursorId :: Anim.AnimId,
   sBackgroundCursorId :: Anim.AnimId,
-  sEmptyString :: String,
+  sEmptyUnfocusedString :: String,
+  sEmptyFocusedString :: String,
   sTextViewStyle :: TextView.Style
   }
 AtFieldTH.make ''Style
@@ -63,8 +65,8 @@ tillEndOfWord xs = spaces ++ nonSpaces
     spaces = takeWhile isSpace xs
     nonSpaces = takeWhile (not . isSpace) . dropWhile isSpace $ xs
 
-makeDisplayStr :: Style -> String -> String
-makeDisplayStr style ""  = sEmptyString style
+makeDisplayStr :: String -> String -> String
+makeDisplayStr empty ""  = empty
 makeDisplayStr _     str = str
 
 cursorTranslate :: Style -> Anim.Frame -> Anim.Frame
@@ -100,9 +102,10 @@ makeUnfocused style str myId =
    ((SizeRange.atSrMinSize . Vector2.first) (+ sCursorWidth style) .
     (SizeRange.atSrMaxSize . Vector2.first . fmap) (+ sCursorWidth style)) .
   Widget.atImage (cursorTranslate style) .
-  TextView.makeWidget (sTextViewStyle style) str $
+  TextView.makeWidget (sTextViewStyle style) displayStr $
   Widget.toAnimId myId
   where
+    displayStr = makeDisplayStr (sEmptyUnfocusedString style) str
     enter dir =
       (,) str . makeTextEditCursor myId $
       Direction.fold (length str) rectToCursor dir
@@ -166,7 +169,7 @@ makeFocused cursor style str myId =
     (before, after) = splitAt cursor strWithIds
     textLength = length str
     lineCount = length $ splitWhen (== '\n') displayStr
-    displayStr = makeDisplayStr style str
+    displayStr = makeDisplayStr (sEmptyFocusedString style) str
 
     splitLines = splitWhen ((== '\n') . snd)
     linesBefore = reverse (splitLines before)

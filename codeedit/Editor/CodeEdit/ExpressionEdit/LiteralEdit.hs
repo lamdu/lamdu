@@ -49,8 +49,8 @@ makeIntEdit integer myId = do
         return eventRes
   style <- readTextStyle
   return .
-    Widget.atEvents (lifter (Sugar.liSetValue integer)) $
-    TextEdit.make style { TextEdit.sEmptyString = "<0>" } textCursor text myId
+    Widget.atEvents (lifter (Sugar.liSetValue integer)) $ TextEdit.make
+    style { TextEdit.sEmptyFocusedString = "<0>" } textCursor text myId
   where
     emptyZeroCursor = ["empty-zero"]
 

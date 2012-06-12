@@ -139,18 +139,19 @@ runDbStore font store = do
       TextView.styleFont = font,
       TextView.styleFontSize = Config.helpTextSize
       }
-    style = TextEdit.Style {
-      TextEdit.sTextViewStyle =
-        TextView.Style {
-          TextView.styleColor = Draw.Color 1 1 1 1,
-          TextView.styleFont = font,
-          TextView.styleFontSize = Config.baseTextSize
-          },
-      TextEdit.sCursorColor = TextEdit.defaultCursorColor,
-      TextEdit.sCursorWidth = TextEdit.defaultCursorWidth,
-      TextEdit.sTextCursorId = WidgetIds.textCursorId,
-      TextEdit.sBackgroundCursorId = WidgetIds.backgroundCursorId,
-      TextEdit.sEmptyString = "<empty>"
+    style = TextEdit.Style
+      { TextEdit.sTextViewStyle =
+        TextView.Style
+          { TextView.styleColor = Draw.Color 1 1 1 1
+          , TextView.styleFont = font
+          , TextView.styleFontSize = Config.baseTextSize
+          }
+      , TextEdit.sCursorColor = TextEdit.defaultCursorColor
+      , TextEdit.sCursorWidth = TextEdit.defaultCursorWidth
+      , TextEdit.sTextCursorId = WidgetIds.textCursorId
+      , TextEdit.sBackgroundCursorId = WidgetIds.backgroundCursorId
+      , TextEdit.sEmptyUnfocusedString = "<empty>"
+      , TextEdit.sEmptyFocusedString = ""
       }
 
     fromCursor cache cursor =
