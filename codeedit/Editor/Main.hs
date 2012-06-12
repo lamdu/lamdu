@@ -150,7 +150,7 @@ runDbStore font store = do
       , TextEdit.sCursorWidth = TextEdit.defaultCursorWidth
       , TextEdit.sTextCursorId = WidgetIds.textCursorId
       , TextEdit.sBackgroundCursorId = WidgetIds.backgroundCursorId
-      , TextEdit.sEmptyUnfocusedString = "<empty>"
+      , TextEdit.sEmptyUnfocusedString = ""
       , TextEdit.sEmptyFocusedString = ""
       }
 
