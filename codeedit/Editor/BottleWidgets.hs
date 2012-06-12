@@ -87,22 +87,16 @@ makeChoice
 makeChoice selectionAnimId orientation children curChild =
   maybe Box.toWidget Box.toWidgetBiased mCurChildIndex box
   where
-    mCurChildIndex = findIndex ((curChild ==) . fst) children
-    box =
-      Box.make orientation . colorizedIfUnfocused selectionAnimId $
-      map (first (curChild ==)) children
-
-colorizedIfUnfocused
-  :: AnimId
-  -> [(Bool, Widget f)]
-  -> [Widget f]
-colorizedIfUnfocused selectionAnimId children
-  | any (Widget.isFocused . snd) children = map snd children
-  | otherwise = map (uncurry colorize) children
-  where
-    colorize True = Widget.backgroundColor 9 selectionAnimId selectedColor
-    colorize False = id
-    selectedColor = Draw.Color 0 0.5 0 1
+    pairs = (map . first) (curChild ==) children
+    mCurChildIndex = findIndex fst pairs
+    box = Box.make orientation colorizedPairs
+    colorizedPairs
+      | any (Widget.isFocused . snd) pairs = map snd pairs
+      | otherwise = map (uncurry colorize) pairs
+      where
+        colorize True = Widget.backgroundColor 9 selectionAnimId selectedColor
+        colorize False = id
+        selectedColor = Draw.Color 0 0.5 0 1
 
 -- TODO: This logic belongs in the FocusDelegator itself
 wrapDelegatedWithConfig
