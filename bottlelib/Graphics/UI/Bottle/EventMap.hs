@@ -4,11 +4,12 @@ module Graphics.UI.Bottle.EventMap
   ( KeyEvent(..), IsPress(..), ModKey(..)
   , ModState(..), noMods, shift, ctrl, alt
   , Key(..), Doc
-  , EventMap, lookup
+  , EventMap, lookup, emTickHandlers
   , charEventMap, allChars, simpleChars
   , keyEventMap, keyPress, keyPresses
   , deleteKey, filterChars
   , charKey, eventMapDocs
+  , tickHandler
   ) where
 
 import Control.Arrow((***), (&&&))
@@ -77,13 +78,33 @@ data CharHandler a = CharHandler
   } deriving (Functor)
 
 data EventMap a = EventMap
-  { emMap :: Map KeyEvent (DocHandler a)
+  { emKeyMap :: Map KeyEvent (DocHandler a)
   , emCharHandler :: Maybe (CharHandler a)
+  , emTickHandlers :: [a]
   } deriving (Functor)
 
 AtFieldTH.make ''DocHandler
 AtFieldTH.make ''CharHandler
 AtFieldTH.make ''EventMap
+
+instance Monoid (EventMap a) where
+  mempty = EventMap Map.empty Nothing []
+  mappend = overrides
+
+overrides :: EventMap a -> EventMap a -> EventMap a
+EventMap xMap xMCharHandler xTicks `overrides` EventMap yMap yMCharHandler yTicks =
+  EventMap
+  (xMap `mappend` filteredYMap)
+  (xMCharHandler `mplus` yMCharHandler)
+  (xTicks ++ yTicks)
+  where
+    filteredYMap =
+      maybe id (filterByKey . checkConflict) xMCharHandler yMap
+    checkConflict charHandler (KeyEvent _ (ModKey mods key))
+      | isCharMods mods =
+        isNothing $
+        dhHandler (chDocHandler charHandler) =<< charOfKey key
+      | otherwise = True
 
 filterChars
   :: (Char -> Bool) -> EventMap a -> EventMap a
@@ -124,44 +145,19 @@ mkModKey ms k
   | isCharMods ms && k == CharKey ' ' = ModKey ms KeySpace
   | otherwise = ModKey ms k
 
-instance Show (EventMap a) where
-  show (EventMap m mc) =
-    "EventMap (keys = " ++ show (Map.keys m) ++
-    maybe "" showCharHandler mc ++ ")"
-    where
-      showCharHandler (CharHandler iDoc _) = ", handleChars " ++ iDoc
-
 eventMapDocs :: EventMap a -> [(String, Doc)]
-eventMapDocs (EventMap dict mCharHandler) =
+eventMapDocs (EventMap dict mCharHandler _) =
   maybe [] ((:[]) . (chInputDoc &&& dhDoc . chDocHandler)) mCharHandler ++
   map (prettyKeyEvent *** dhDoc) (Map.toList dict)
 
 filterByKey :: Ord k => (k -> Bool) -> Map k v -> Map k v
 filterByKey p = Map.filterWithKey (const . p)
 
-overrides :: EventMap a -> EventMap a -> EventMap a
-EventMap xMap xMCharHandler `overrides` EventMap yMap yMCharHandler =
-  EventMap
-  (xMap `mappend` filteredYMap)
-  (xMCharHandler `mplus` yMCharHandler)
-  where
-    filteredYMap =
-      maybe id (filterByKey . checkConflict) xMCharHandler yMap
-    checkConflict charHandler (KeyEvent _ (ModKey mods key))
-      | isCharMods mods =
-        isNothing $
-        dhHandler (chDocHandler charHandler) =<< charOfKey key
-      | otherwise = True
-
-instance Monoid (EventMap a) where
-  mempty = EventMap mempty Nothing
-  mappend = overrides
-
 deleteKey :: KeyEvent -> EventMap a -> EventMap a
-deleteKey = atEmMap . Map.delete
+deleteKey = atEmKeyMap . Map.delete
 
 lookup :: Events.KeyEvent -> EventMap a -> Maybe a
-lookup (Events.KeyEvent isPress ms mchar k) (EventMap dict mCharHandler) =
+lookup (Events.KeyEvent isPress ms mchar k) (EventMap dict mCharHandler _) =
   lookupEvent `mplus` (lookupChar isPress =<< mCharHandler)
   where
     modKey = mkModKey ms k
@@ -178,7 +174,10 @@ lookup (Events.KeyEvent isPress ms mchar k) (EventMap dict mCharHandler) =
 charEventMap
   :: String -> Doc -> (Char -> Maybe (IsShifted -> a)) -> EventMap a
 charEventMap iDoc oDoc handler =
-  EventMap mempty . Just $ CharHandler iDoc (DocHandler oDoc handler)
+  mempty
+  { emCharHandler =
+    Just $ CharHandler iDoc (DocHandler oDoc handler)
+  }
 
 allChars :: String -> Doc -> (Char -> IsShifted -> a) -> EventMap a
 allChars iDoc oDoc f = charEventMap iDoc oDoc $ Just . f
@@ -189,11 +188,14 @@ simpleChars iDoc oDoc f =
 
 keyEventMap :: KeyEvent -> Doc -> a -> EventMap a
 keyEventMap eventType doc handler =
-  flip EventMap Nothing . Map.singleton eventType $
-  DocHandler {
-    dhDoc = doc,
-    dhHandler = handler
+  mempty
+  { emKeyMap =
+    Map.singleton eventType $
+    DocHandler
+    { dhDoc = doc
+    , dhHandler = handler
     }
+  }
 
 keyPress :: ModKey -> Doc -> a -> EventMap a
 keyPress modKey doc =
@@ -201,3 +203,6 @@ keyPress modKey doc =
 
 keyPresses :: [ModKey] -> Doc -> a -> EventMap a
 keyPresses = mconcat . map keyPress
+
+tickHandler :: a -> EventMap a
+tickHandler x = mempty { emTickHandlers = [x] }
