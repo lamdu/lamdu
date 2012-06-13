@@ -98,3 +98,5 @@ foreignVarColor = Draw.Color 1 0.65 0.25 1
 
 cutKeys = [ctrl 'x', k 'x']
 pasteKeys = [ctrl 'v', k 'v']
+
+inactiveTintColor = Draw.Color 1 1 1 0.8

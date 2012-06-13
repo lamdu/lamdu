@@ -24,6 +24,8 @@ import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.Data.Typed as DataTyped
 import qualified Editor.WidgetIds as WidgetIds
+import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
@@ -148,8 +150,15 @@ makePanesEdit panes = do
       , maybe mempty (Widget.keysEventMap Config.movePaneDownKeys "Move pane down") $ mMovePaneDown pane
       , maybe mempty (Widget.keysEventMap Config.movePaneUpKeys "Move pane up") $ mMovePaneUp pane
       ]
+    onEachPane widget
+      | Widget.isFocused widget = onActivePane widget
+      | otherwise = onInactivePane widget
+    onActivePane = id
+    onInactivePane =
+      (Widget.atImage . Anim.onImages . Draw.tint)
+      Config.inactiveTintColor
     makePaneWidget pane =
-      liftM (Widget.weakerEvents (paneEventMap pane)) .
+      liftM (onEachPane . Widget.weakerEvents (paneEventMap pane)) .
       makeDefinitionEdit $ spDef pane
     makeDefinitionEdit (Sugar.DefinitionRef guid defBody defType inferredTypes) =
       DefinitionEdit.make ExpressionEdit.make guid defBody defType inferredTypes
