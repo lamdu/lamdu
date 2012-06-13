@@ -100,3 +100,4 @@ cutKeys = [ctrl 'x', k 'x']
 pasteKeys = [ctrl 'v', k 'v']
 
 inactiveTintColor = Draw.Color 1 1 1 0.8
+activeDefBGColor = Draw.Color 0 0 0.2 1

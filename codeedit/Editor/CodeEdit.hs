@@ -153,7 +153,8 @@ makePanesEdit panes = do
     onEachPane widget
       | Widget.isFocused widget = onActivePane widget
       | otherwise = onInactivePane widget
-    onActivePane = id
+    onActivePane =
+      Widget.backgroundColor 20 WidgetIds.activeDefBackground Config.activeDefBGColor
     onInactivePane =
       (Widget.atImage . Anim.onImages . Draw.tint)
       Config.inactiveTintColor

@@ -57,3 +57,6 @@ paramId x = Widget.joinId (fromGuid x) ["param"]
 
 underlineId :: AnimId -> AnimId
 underlineId = flip mappend ["underline"]
+
+activeDefBackground :: AnimId
+activeDefBackground = ["active def bg"]
