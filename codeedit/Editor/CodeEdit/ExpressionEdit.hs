@@ -7,8 +7,8 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.CTransaction (CTransaction)
-import Editor.CodeEdit.InferredTypes (addType)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
+import Editor.CodeEdit.InferredTypes (addType)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (EventHandlers)
 import qualified Editor.BottleWidgets as BWidgets
@@ -25,6 +25,7 @@ import qualified Editor.CodeEdit.Parens as Parens
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.WidgetIds as WidgetIds
+import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
@@ -34,6 +35,14 @@ foldHolePicker
   -> HoleResultPicker m -> r
 foldHolePicker notHole _isHole NotAHole = notHole
 foldHolePicker _notHole isHole (IsAHole x) = isHole x
+
+exprFocusDelegatorConfig :: FocusDelegator.Config
+exprFocusDelegatorConfig = FocusDelegator.Config
+  { FocusDelegator.startDelegatingKey = E.ModKey E.shift E.KeyRight
+  , FocusDelegator.startDelegatingDoc = "Enter subexpression"
+  , FocusDelegator.stopDelegatingKey = E.ModKey E.shift E.KeyLeft
+  , FocusDelegator.stopDelegatingDoc = "Leave subexpression"
+  }
 
 make :: MonadF m => ExpressionEditMaker m
 make sExpr = do
@@ -47,7 +56,7 @@ make sExpr = do
     notAHole = (fmap . liftM) ((,) NotAHole)
     wrapNonHoleExpr =
       notAHole .
-      BWidgets.wrapDelegated Config.exprFocusDelegatorConfig
+      BWidgets.wrapDelegated exprFocusDelegatorConfig
       FocusDelegator.Delegating id
     exprId = WidgetIds.fromGuid . Sugar.guid . Sugar.rActions $ sExpr
     textParenify = parenify Parens.addHighlightedTextParens

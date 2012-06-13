@@ -2,7 +2,7 @@ module Editor.BottleWidgets(
   makeTextView, makeLabel, makeChoice,
   makeFocusableView, makeFocusableTextView,
   wrapDelegated,
-  makeTextEdit, makeWordEdit, makeNameEdit, getDisplayNameOf,
+  makeTextEdit, makeLineEdit, makeWordEdit, makeNameEdit, getDisplayNameOf,
   hbox,  hboxAlign,  hboxSpaced,
   hboxK, hboxAlignK, hboxSpacedK,
   vbox,  vboxAlign,
@@ -138,19 +138,32 @@ makeTextEdit textRef myId = do
     Widget.atEvents lifter $
     TextEdit.make style cursor text myId
 
+makeTextEditWithout
+  :: Monad m
+  => EventMap.ModKey
+  -> Transaction.Property t m String
+  -> Widget.Id
+  -> TWidget t m
+makeTextEditWithout key =
+  (fmap . fmap . liftM . Widget.atEventMap)
+  (EventMap.delete (EventMap.KeyEventType EventMap.Press key))
+  makeTextEdit
+
+makeLineEdit ::
+  Monad m =>
+  Transaction.Property t m String ->
+  Widget.Id -> TWidget t m
+makeLineEdit =
+  makeTextEditWithout $
+  EventMap.ModKey EventMap.noMods EventMap.KeyEnter
+
 makeWordEdit ::
   Monad m =>
   Transaction.Property t m String ->
   Widget.Id -> TWidget t m
-makeWordEdit = (fmap . fmap . liftM . Widget.atEventMap) removeWordSeparators makeTextEdit
-  where
-    compose = foldr (.) id
-    removeWordSeparators =
-      compose $
-      map (EventMap.delete . EventMap.KeyEventType EventMap.Press)
-      [newlineKey, newwordKey]
-    newlineKey = EventMap.ModKey EventMap.noMods EventMap.KeyEnter
-    newwordKey = EventMap.ModKey EventMap.noMods EventMap.KeySpace
+makeWordEdit =
+  makeTextEditWithout $
+  EventMap.ModKey EventMap.noMods EventMap.KeySpace
 
 anonName :: Guid -> String
 anonName guid = "<" ++ take 4 (Guid.asHex guid) ++ "..>"

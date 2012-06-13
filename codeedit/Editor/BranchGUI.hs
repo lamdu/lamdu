@@ -62,7 +62,8 @@ makeBranch view = do
   let viewPair = (textEditModelIRef, newBranch)
   Property.pureModify Anchors.branches (++ [viewPair])
   setCurrentBranch view newBranch
-  return $ WidgetIds.fromIRef textEditModelIRef
+  return . FocusDelegator.delegatingId $
+    WidgetIds.fromIRef textEditModelIRef
 
 type CacheUpdatingTransaction t versionCache m =
   WriterT (Last versionCache) (Transaction t m)
@@ -80,10 +81,18 @@ tellNewCache mkCache view act = do
 
 branchNameFDConfig :: FocusDelegator.Config
 branchNameFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyEnter
+  { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyF2
   , FocusDelegator.startDelegatingDoc = "Rename branch"
-  , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEsc
+  , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEnter
   , FocusDelegator.stopDelegatingDoc = "Stop renaming"
+  }
+
+branchSelectionFocusDelegatorConfig :: FocusDelegator.Config
+branchSelectionFocusDelegatorConfig = FocusDelegator.Config
+  { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyEnter
+  , FocusDelegator.startDelegatingDoc = "Enter select branches mode"
+  , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEnter
+  , FocusDelegator.stopDelegatingDoc = "Select branch"
   }
 
 makeRootWidget
@@ -104,7 +113,7 @@ makeRootWidget mkCache widget = do
       branchNameEdit <-
         BWidgets.wrapDelegated branchNameFDConfig
         FocusDelegator.NotDelegating id
-        (BWidgets.makeTextEdit (Transaction.fromIRef textEditModelIRef)) $
+        (BWidgets.makeLineEdit (Transaction.fromIRef textEditModelIRef)) $
         branchEditId
       let
         setBranch action = withNewCache $ do
@@ -132,11 +141,13 @@ makeRootWidget mkCache widget = do
   branchSelector <-
     flip
     (BWidgets.wrapDelegated
-     Config.branchSelectionFocusDelegatorConfig
+     branchSelectionFocusDelegatorConfig
      FocusDelegator.NotDelegating id)
     WidgetIds.branchSelection $ \innerId ->
     CT.assignCursor innerId currentBranchWidgetId $ do
-      branchNameEdits <- mapM ((liftM . second) (Widget.align 0) . makeBranchNameEdit) namedBranches
+      branchNameEdits <-
+        mapM ((liftM . second) (Widget.align 0) . makeBranchNameEdit)
+        namedBranches
       return .
         Widget.strongerEvents delBranchEventMap $
         BWidgets.makeChoice branchSelectorFocused

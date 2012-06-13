@@ -5,7 +5,6 @@ module Editor.Config where
 
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 mk = E.ModKey
 
@@ -50,20 +49,6 @@ giveAsArgumentKeys = [k ']', shift '0']
 callWithArgumentKeys = [k '[', shift '9']
 addNextArgumentKeys = [E.ModKey E.noMods E.KeySpace]
 debugModeKeys = [ctrlAlt 'd']
-
-exprFocusDelegatorConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKey = mk E.shift E.KeyRight
-  , FocusDelegator.startDelegatingDoc = "Enter subexpression"
-  , FocusDelegator.stopDelegatingKey = mk E.shift E.KeyLeft
-  , FocusDelegator.stopDelegatingDoc = "Leave subexpression"
-  }
-
-branchSelectionFocusDelegatorConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKey = noMods E.KeyEnter
-  , FocusDelegator.startDelegatingDoc = "Enter select branches mode"
-  , FocusDelegator.stopDelegatingKey = noMods E.KeyEsc
-  , FocusDelegator.stopDelegatingDoc = "Leave select branches mode"
-  }
 
 newDefinitionKeys = [alt 'n']
 
