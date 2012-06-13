@@ -3,7 +3,7 @@
 module Graphics.UI.Bottle.EventMap
   ( EventMap
   , EventType(..)
-  , ModKey(..)
+  , IsPress(..), ModKey(..)
   , Event
   , module Graphics.UI.GLFW.ModState
   , module Graphics.UI.GLFW.Events
@@ -34,7 +34,7 @@ data IsShifted = Shifted | NotShifted
 data ModKey = ModKey ModState Key
   deriving (Show, Eq, Ord)
 
-data EventType = KeyEventType ModKey
+data EventType = KeyEventType IsPress ModKey
   deriving (Show, Eq, Ord)
 
 charOfKey :: Key -> Maybe Char
@@ -104,7 +104,9 @@ prettyModKey :: ModKey -> String
 prettyModKey (ModKey ms key) = prettyModState ms ++ prettyKey key
 
 prettyEventType :: EventType -> String
-prettyEventType (KeyEventType modKey) = prettyModKey modKey
+prettyEventType (KeyEventType Press modKey) = prettyModKey modKey
+prettyEventType (KeyEventType Release modKey) =
+  "Depress " ++ prettyModKey modKey
 
 prettyModState :: ModState -> String
 prettyModState ms = concat $
@@ -120,9 +122,9 @@ isShifted :: ModState -> IsShifted
 isShifted ModState { modShift = True } = Shifted
 isShifted ModState { modShift = False } = NotShifted
 
-eventTypeOf :: ModKey -> Maybe Char -> EventType
-eventTypeOf (ModKey ms k) mchar =
-  KeyEventType . ModKey ms $
+eventTypeOf :: IsPress -> ModKey -> Maybe Char -> EventType
+eventTypeOf isPress (ModKey ms k) mchar =
+  KeyEventType isPress . ModKey ms $
   if isCharMods ms && mchar == Just ' ' then KeySpace else k
 
 instance Show (EventMap a) where
@@ -148,7 +150,7 @@ EventMap xMap xMCharHandler `overrides` EventMap yMap yMCharHandler =
   where
     filteredYMap =
       maybe id (filterByKey . checkConflict) xMCharHandler yMap
-    checkConflict charHandler (KeyEventType (ModKey mods key))
+    checkConflict charHandler (KeyEventType _ (ModKey mods key))
       | isCharMods mods =
         isNothing $
         chHandler charHandler =<< charOfKey key
@@ -162,17 +164,17 @@ delete :: EventType -> EventMap a -> EventMap a
 delete = atEmMap . Map.delete
 
 lookup :: Event -> EventMap a -> Maybe a
-lookup (KeyEvent Release _ _ _) _ = Nothing
-lookup (KeyEvent Press ms mchar k) (EventMap dict mCharHandler) =
-  lookupEvent `mplus` (lookupChar =<< mCharHandler)
+lookup (KeyEvent isPress ms mchar k) (EventMap dict mCharHandler) =
+  lookupEvent `mplus` (lookupChar isPress =<< mCharHandler)
   where
     modKey = ModKey ms k
     lookupEvent =
       fmap (`ehHandler` modKey) $
-      eventTypeOf modKey mchar `Map.lookup` dict
-    lookupChar (CharHandler _ _ handler)
+      eventTypeOf isPress modKey mchar `Map.lookup` dict
+    lookupChar Press (CharHandler _ _ handler)
       | isCharMods ms = fmap ($ isShifted ms) $ handler =<< mchar
       | otherwise = Nothing
+    lookupChar _ _ = Nothing
 
 -- low-level "smart constructor" in case we need to enforce
 -- invariants:
@@ -198,7 +200,7 @@ singleton eventType doc handler =
     }
 
 keyPress :: ModKey -> Doc -> a -> EventMap a
-keyPress modKey doc = singleton (KeyEventType modKey) doc . const
+keyPress modKey doc = singleton (KeyEventType Press modKey) doc . const
 
 keyPresses :: [ModKey] -> Doc -> a -> EventMap a
 keyPresses = mconcat . map keyPress
