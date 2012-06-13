@@ -1,17 +1,14 @@
 {-# OPTIONS -fno-warn-orphans #-}
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, DeriveFunctor #-}
 module Graphics.UI.Bottle.EventMap
-  ( EventMap
-  , EventType(..)
-  , IsPress(..), ModKey(..)
-  , Event
-  , module Graphics.UI.GLFW.ModState
-  , module Graphics.UI.GLFW.Events
-  , lookup
-  , charEventMap, allCharsEventMap, simpleCharsEventMap
-  , singleton, keyPress, keyPresses
-  , delete, filterChars
-  , Key(..), charKey, Doc, eventMapDocs
+  ( KeyEvent(..), IsPress(..), ModKey(..)
+  , ModState(..), noMods, shift, ctrl, alt
+  , Key(..), Doc
+  , EventMap, lookup
+  , charEventMap, allChars, simpleChars
+  , keyEventMap, keyPress, keyPresses
+  , deleteKey, filterChars
+  , charKey, eventMapDocs
   ) where
 
 import Control.Arrow((***), (&&&))
@@ -22,19 +19,17 @@ import Data.Map(Map)
 import Data.Maybe(isNothing)
 import Data.Monoid(Monoid(..))
 import Graphics.UI.GLFW (Key(..))
-import Graphics.UI.GLFW.Events (GLFWEvent(..), KeyEvent(..), IsPress(..))
+import Graphics.UI.GLFW.Events (IsPress(..))
 import Graphics.UI.GLFW.ModState (ModState(..), noMods, shift, ctrl, alt)
 import Prelude hiding (lookup)
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Map as Map
-
-data IsShifted = Shifted | NotShifted
-  deriving (Eq, Ord, Show, Read)
+import qualified Graphics.UI.GLFW.Events as Events
 
 data ModKey = ModKey ModState Key
   deriving (Show, Eq, Ord)
 
-data EventType = KeyEventType IsPress ModKey
+data KeyEvent = KeyEvent Events.IsPress ModKey
   deriving (Show, Eq, Ord)
 
 charOfKey :: Key -> Maybe Char
@@ -63,35 +58,37 @@ charOfKey key =
 charKey :: Char -> Key
 charKey = CharKey . toUpper
 
-type Event = KeyEvent
-
 type Doc = String
 
-data EventHandler a = EventHandler {
-  ehDoc :: Doc,
-  ehHandler :: ModKey -> a
+data DocHandler a = DocHandler {
+  dhDoc :: Doc,
+  dhHandler :: a
   } deriving (Functor)
+
+data IsShifted = Shifted | NotShifted
+  deriving (Eq, Ord, Show, Read)
 
 -- CharHandlers always conflict with each other, but they may or may
 -- not conflict with shifted/unshifted key events (but not with
 -- alt'd/ctrl'd)
 data CharHandler a = CharHandler
   { chInputDoc :: String
-  , chDoc :: Doc
-  , chHandler :: Char -> Maybe (IsShifted -> a)
+  , chDocHandler :: DocHandler (Char -> Maybe (IsShifted -> a))
   } deriving (Functor)
-AtFieldTH.make ''CharHandler
 
 data EventMap a = EventMap
-  { emMap :: Map EventType (EventHandler a)
+  { emMap :: Map KeyEvent (DocHandler a)
   , emCharHandler :: Maybe (CharHandler a)
   } deriving (Functor)
+
+AtFieldTH.make ''DocHandler
+AtFieldTH.make ''CharHandler
 AtFieldTH.make ''EventMap
 
 filterChars
   :: (Char -> Bool) -> EventMap a -> EventMap a
 filterChars p =
-  atEmCharHandler . fmap . atChHandler $
+  atEmCharHandler . fmap . atChDocHandler . atDhHandler $
   \handler c -> if p c then handler c else Nothing
 
 prettyKey :: Key -> String
@@ -103,9 +100,9 @@ prettyKey k
 prettyModKey :: ModKey -> String
 prettyModKey (ModKey ms key) = prettyModState ms ++ prettyKey key
 
-prettyEventType :: EventType -> String
-prettyEventType (KeyEventType Press modKey) = prettyModKey modKey
-prettyEventType (KeyEventType Release modKey) =
+prettyKeyEvent :: KeyEvent -> String
+prettyKeyEvent (KeyEvent Press modKey) = prettyModKey modKey
+prettyKeyEvent (KeyEvent Release modKey) =
   "Depress " ++ prettyModKey modKey
 
 prettyModState :: ModState -> String
@@ -122,22 +119,22 @@ isShifted :: ModState -> IsShifted
 isShifted ModState { modShift = True } = Shifted
 isShifted ModState { modShift = False } = NotShifted
 
-eventTypeOf :: IsPress -> ModKey -> Maybe Char -> EventType
-eventTypeOf isPress (ModKey ms k) mchar =
-  KeyEventType isPress . ModKey ms $
-  if isCharMods ms && mchar == Just ' ' then KeySpace else k
+mkModKey :: ModState -> Key -> ModKey
+mkModKey ms k
+  | isCharMods ms && k == CharKey ' ' = ModKey ms KeySpace
+  | otherwise = ModKey ms k
 
 instance Show (EventMap a) where
   show (EventMap m mc) =
     "EventMap (keys = " ++ show (Map.keys m) ++
     maybe "" showCharHandler mc ++ ")"
     where
-      showCharHandler (CharHandler iDoc _ _) = ", handleChars " ++ iDoc
+      showCharHandler (CharHandler iDoc _) = ", handleChars " ++ iDoc
 
 eventMapDocs :: EventMap a -> [(String, Doc)]
 eventMapDocs (EventMap dict mCharHandler) =
-  maybe [] ((:[]) . (chInputDoc &&& chDoc)) mCharHandler ++
-  map (prettyEventType *** ehDoc) (Map.toList dict)
+  maybe [] ((:[]) . (chInputDoc &&& dhDoc . chDocHandler)) mCharHandler ++
+  map (prettyKeyEvent *** dhDoc) (Map.toList dict)
 
 filterByKey :: Ord k => (k -> Bool) -> Map k v -> Map k v
 filterByKey p = Map.filterWithKey (const . p)
@@ -150,29 +147,29 @@ EventMap xMap xMCharHandler `overrides` EventMap yMap yMCharHandler =
   where
     filteredYMap =
       maybe id (filterByKey . checkConflict) xMCharHandler yMap
-    checkConflict charHandler (KeyEventType _ (ModKey mods key))
+    checkConflict charHandler (KeyEvent _ (ModKey mods key))
       | isCharMods mods =
         isNothing $
-        chHandler charHandler =<< charOfKey key
+        dhHandler (chDocHandler charHandler) =<< charOfKey key
       | otherwise = True
 
 instance Monoid (EventMap a) where
   mempty = EventMap mempty Nothing
   mappend = overrides
 
-delete :: EventType -> EventMap a -> EventMap a
-delete = atEmMap . Map.delete
+deleteKey :: KeyEvent -> EventMap a -> EventMap a
+deleteKey = atEmMap . Map.delete
 
-lookup :: Event -> EventMap a -> Maybe a
-lookup (KeyEvent isPress ms mchar k) (EventMap dict mCharHandler) =
+lookup :: Events.KeyEvent -> EventMap a -> Maybe a
+lookup (Events.KeyEvent isPress ms mchar k) (EventMap dict mCharHandler) =
   lookupEvent `mplus` (lookupChar isPress =<< mCharHandler)
   where
-    modKey = ModKey ms k
+    modKey = mkModKey ms k
     lookupEvent =
-      fmap (`ehHandler` modKey) $
-      eventTypeOf isPress modKey mchar `Map.lookup` dict
-    lookupChar Press (CharHandler _ _ handler)
-      | isCharMods ms = fmap ($ isShifted ms) $ handler =<< mchar
+      fmap dhHandler $
+      KeyEvent isPress modKey `Map.lookup` dict
+    lookupChar Press (CharHandler _ handler)
+      | isCharMods ms = fmap ($ isShifted ms) $ dhHandler handler =<< mchar
       | otherwise = Nothing
     lookupChar _ _ = Nothing
 
@@ -180,27 +177,27 @@ lookup (KeyEvent isPress ms mchar k) (EventMap dict mCharHandler) =
 -- invariants:
 charEventMap
   :: String -> Doc -> (Char -> Maybe (IsShifted -> a)) -> EventMap a
-charEventMap = (fmap . fmap . fmap) (EventMap mempty . Just) CharHandler
+charEventMap iDoc oDoc handler =
+  EventMap mempty . Just $ CharHandler iDoc (DocHandler oDoc handler)
 
-allCharsEventMap
-  :: String -> Doc -> (Char -> IsShifted -> a) -> EventMap a
-allCharsEventMap iDoc oDoc f = charEventMap iDoc oDoc $ Just . f
+allChars :: String -> Doc -> (Char -> IsShifted -> a) -> EventMap a
+allChars iDoc oDoc f = charEventMap iDoc oDoc $ Just . f
 
-simpleCharsEventMap
-  :: String -> Doc -> (Char -> a) -> EventMap a
-simpleCharsEventMap iDoc oDoc f =
-  allCharsEventMap iDoc oDoc (const . f)
+simpleChars :: String -> Doc -> (Char -> a) -> EventMap a
+simpleChars iDoc oDoc f =
+  allChars iDoc oDoc (const . f)
 
-singleton :: EventType -> Doc -> (ModKey -> a) -> EventMap a
-singleton eventType doc handler =
+keyEventMap :: KeyEvent -> Doc -> a -> EventMap a
+keyEventMap eventType doc handler =
   flip EventMap Nothing . Map.singleton eventType $
-  EventHandler {
-    ehDoc = doc,
-    ehHandler = handler
+  DocHandler {
+    dhDoc = doc,
+    dhHandler = handler
     }
 
 keyPress :: ModKey -> Doc -> a -> EventMap a
-keyPress modKey doc = singleton (KeyEventType Press modKey) doc . const
+keyPress modKey doc =
+  keyEventMap (KeyEvent Press modKey) doc
 
 keyPresses :: [ModKey] -> Doc -> a -> EventMap a
 keyPresses = mconcat . map keyPress

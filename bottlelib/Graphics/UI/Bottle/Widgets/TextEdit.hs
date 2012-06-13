@@ -304,7 +304,7 @@ makeFocused cursor style str myId =
         | not . null $ curLineBefore ],
 
         [ E.filterChars (`notElem` " \n") .
-          E.simpleCharsEventMap "Character" "Insert character" $
+          E.simpleChars "Character" "Insert character" $
           insert . (: [])
         ],
 

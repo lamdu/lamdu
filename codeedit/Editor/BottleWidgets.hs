@@ -146,7 +146,7 @@ makeTextEditWithout
   -> TWidget t m
 makeTextEditWithout key =
   (fmap . fmap . liftM . Widget.atEventMap)
-  (EventMap.delete (EventMap.KeyEventType EventMap.Press key))
+  (EventMap.deleteKey (EventMap.KeyEvent EventMap.Press key))
   makeTextEdit
 
 makeLineEdit ::

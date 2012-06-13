@@ -10,11 +10,10 @@ import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators ((%%))
 import Graphics.DrawingCombinators.Utils (Image)
 import Graphics.UI.Bottle.Animation(AnimId)
-import Graphics.UI.Bottle.EventMap (Event)
 import Graphics.UI.Bottle.SizeRange (Size)
 import Graphics.UI.Bottle.Widget(Widget)
 import Graphics.UI.GLFW (defaultDisplayOptions, getWindowDimensions)
-import Graphics.UI.GLFW.Events (GLFWEvent(..), eventLoop)
+import Graphics.UI.GLFW.Events (KeyEvent, GLFWEvent(..), eventLoop)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.Rendering.OpenGL.GL as GL
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -22,7 +21,7 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 
-mainLoopImage :: (Size -> Event -> IO Bool) -> (Bool -> Size -> IO (Maybe Image)) -> IO a
+mainLoopImage :: (Size -> KeyEvent -> IO Bool) -> (Bool -> Size -> IO (Maybe Image)) -> IO a
 mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
   GLFWUtils.openWindow defaultDisplayOptions
 
@@ -54,7 +53,7 @@ mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
   eventLoop handleEvents
 
 mainLoopAnim ::
-  (Size -> Event -> IO (Maybe (AnimId -> AnimId))) -> (Size -> IO Anim.Frame) ->
+  (Size -> KeyEvent -> IO (Maybe (AnimId -> AnimId))) -> (Size -> IO Anim.Frame) ->
   IO Anim.R -> IO a
 mainLoopAnim eventHandler makeFrame getAnimationHalfLife = do
   frameStateVar <- newIORef Nothing
