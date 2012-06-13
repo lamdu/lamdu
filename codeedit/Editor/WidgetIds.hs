@@ -1,14 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Editor.WidgetIds(
-  backgroundCursorId, textCursorId, fromIRef, fromGuid,
-  collapserId, branchSelection, goUpId,
-  searchTermId,
-  parenHighlightId,
-  underlineId,
-  parensPrefix,
-  paramId, varId, diveIn,
-  builtinFFIName, builtinFFIPath)
-where
+module Editor.WidgetIds where
 
 import Data.ByteString.Char8() -- IsString instance
 import Data.Monoid(mappend)
