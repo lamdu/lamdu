@@ -113,13 +113,12 @@ makeRootWidget mkCache widget = do
       branchNameEdit <-
         BWidgets.wrapDelegated branchNameFDConfig
         FocusDelegator.NotDelegating id
-        (BWidgets.makeLineEdit (Transaction.fromIRef textEditModelIRef)) $
+        (BWidgets.makeLineEdit (Transaction.fromIRef textEditModelIRef))
         branchEditId
       let
         setBranch action = withNewCache $ do
           lift $ setCurrentBranch view branch
-          result <- action
-          return result
+          action
       return
         ( branch
         , (Widget.atMaybeEnter . fmap . fmap . Widget.atEnterResultEvent) setBranch .
