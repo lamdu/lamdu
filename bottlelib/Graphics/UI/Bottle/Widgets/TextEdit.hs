@@ -215,12 +215,12 @@ makeFocused cursor style str myId =
     backMoveWord = moveRelative . negate . length . tillEndOfWord . reverse $ map snd before
     moveWord = moveRelative . length . tillEndOfWord $ map snd after
 
-    keys doc = mconcat . map (`E.fromEventType` doc)
+    keys = flip E.keyPresses
 
-    specialKey = E.KeyEventType E.noMods
-    ctrlSpecialKey = E.KeyEventType E.ctrl
-    ctrlCharKey = E.KeyEventType E.ctrl . E.charKey
-    altCharKey = E.KeyEventType E.alt . E.charKey
+    specialKey = E.ModKey E.noMods
+    ctrlSpecialKey = E.ModKey E.ctrl
+    ctrlCharKey = E.ModKey E.ctrl . E.charKey
+    altCharKey = E.ModKey E.alt . E.charKey
     homeKeys = [specialKey E.KeyHome, ctrlCharKey 'A']
     endKeys = [specialKey E.KeyEnd, ctrlCharKey 'E']
 
@@ -310,7 +310,7 @@ makeFocused cursor style str myId =
 
         [ keys "Insert Newline" [specialKey E.KeyEnter] (insert "\n") ],
 
-        [ keys "Insert Space" [E.KeyEventType E.noMods E.KeySpace] (insert " ") ]
+        [ keys "Insert Space" [E.ModKey E.noMods E.KeySpace] (insert " ") ]
 
         ]
 

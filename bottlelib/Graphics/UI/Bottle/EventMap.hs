@@ -3,12 +3,13 @@
 module Graphics.UI.Bottle.EventMap
   ( EventMap
   , EventType(..)
+  , ModKey(..)
   , Event
   , module Graphics.UI.GLFW.ModState
   , module Graphics.UI.GLFW.Events
   , lookup
   , charEventMap, allCharsEventMap, simpleCharsEventMap
-  , singleton, fromEventType, fromEventTypes
+  , singleton, keyPress, keyPresses
   , delete, filterChars
   , Key(..), charKey, Doc, eventMapDocs
   ) where
@@ -30,7 +31,10 @@ import qualified Data.Map as Map
 data IsShifted = Shifted | NotShifted
   deriving (Eq, Ord, Show, Read)
 
-data EventType = KeyEventType ModState Key
+data ModKey = ModKey ModState Key
+  deriving (Show, Eq, Ord)
+
+data EventType = KeyEventType ModKey
   deriving (Show, Eq, Ord)
 
 charOfKey :: Key -> Maybe Char
@@ -65,7 +69,7 @@ type Doc = String
 
 data EventHandler a = EventHandler {
   ehDoc :: Doc,
-  ehHandler :: ModState -> Key -> a
+  ehHandler :: ModKey -> a
   } deriving (Functor)
 
 -- CharHandlers always conflict with each other, but they may or may
@@ -96,9 +100,11 @@ prettyKey k
   | "Key" `isPrefixOf` show k = drop 3 $ show k
   | otherwise = show k
 
+prettyModKey :: ModKey -> String
+prettyModKey (ModKey ms key) = prettyModState ms ++ prettyKey key
+
 prettyEventType :: EventType -> String
-prettyEventType (KeyEventType ms key) =
-  prettyModState ms ++ prettyKey key
+prettyEventType (KeyEventType modKey) = prettyModKey modKey
 
 prettyModState :: ModState -> String
 prettyModState ms = concat $
@@ -114,10 +120,10 @@ isShifted :: ModState -> IsShifted
 isShifted ModState { modShift = True } = Shifted
 isShifted ModState { modShift = False } = NotShifted
 
-eventTypeOf :: ModState -> Maybe Char -> Key -> EventType
-eventTypeOf ms mchar k
-  | isCharMods ms && mchar == Just ' ' = KeyEventType ms KeySpace
-  | otherwise = KeyEventType ms k
+eventTypeOf :: ModKey -> Maybe Char -> EventType
+eventTypeOf (ModKey ms k) mchar =
+  KeyEventType . ModKey ms $
+  if isCharMods ms && mchar == Just ' ' then KeySpace else k
 
 instance Show (EventMap a) where
   show (EventMap m mc) =
@@ -142,7 +148,7 @@ EventMap xMap xMCharHandler `overrides` EventMap yMap yMCharHandler =
   where
     filteredYMap =
       maybe id (filterByKey . checkConflict) xMCharHandler yMap
-    checkConflict charHandler (KeyEventType mods key)
+    checkConflict charHandler (KeyEventType (ModKey mods key))
       | isCharMods mods =
         isNothing $
         chHandler charHandler =<< charOfKey key
@@ -160,9 +166,10 @@ lookup (KeyEvent Release _ _ _) _ = Nothing
 lookup (KeyEvent Press ms mchar k) (EventMap dict mCharHandler) =
   lookupEvent `mplus` (lookupChar =<< mCharHandler)
   where
+    modKey = ModKey ms k
     lookupEvent =
-      fmap (\eh -> ehHandler eh ms k) $
-      eventTypeOf ms mchar k `Map.lookup` dict
+      fmap (`ehHandler` modKey) $
+      eventTypeOf modKey mchar `Map.lookup` dict
     lookupChar (CharHandler _ _ handler)
       | isCharMods ms = fmap ($ isShifted ms) $ handler =<< mchar
       | otherwise = Nothing
@@ -182,7 +189,7 @@ simpleCharsEventMap
 simpleCharsEventMap iDoc oDoc f =
   allCharsEventMap iDoc oDoc (const . f)
 
-singleton :: EventType -> Doc -> (ModState -> Key -> a) -> EventMap a
+singleton :: EventType -> Doc -> (ModKey -> a) -> EventMap a
 singleton eventType doc handler =
   flip EventMap Nothing . Map.singleton eventType $
   EventHandler {
@@ -190,9 +197,8 @@ singleton eventType doc handler =
     ehHandler = handler
     }
 
-fromEventType :: EventType -> Doc -> a -> EventMap a
-fromEventType eventType doc = singleton eventType doc . const . const
+keyPress :: ModKey -> Doc -> a -> EventMap a
+keyPress modKey doc = singleton (KeyEventType modKey) doc . const
 
-fromEventTypes :: [EventType] -> Doc -> a -> EventMap a
-fromEventTypes keys doc act =
-  mconcat $ map (flip (`fromEventType` doc) act) keys
+keyPresses :: [ModKey] -> Doc -> a -> EventMap a
+keyPresses = mconcat . map keyPress

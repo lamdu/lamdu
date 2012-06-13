@@ -30,9 +30,9 @@ import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 
 paramFDConfig :: FocusDelegator.Config
 paramFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKey = E.KeyEventType E.noMods E.KeyEnter
+  { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyEnter
   , FocusDelegator.startDelegatingDoc = "Change parameter name"
-  , FocusDelegator.stopDelegatingKey = E.KeyEventType E.noMods E.KeyEsc
+  , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEsc
   , FocusDelegator.stopDelegatingDoc = "Stop changing name"
   }
 
@@ -64,7 +64,7 @@ makeLHSEdit makeExpressionEdit myId ident mAddFirstParameter params = do
   where
     addFirstParamEventMap =
       maybe mempty
-      (Widget.actionEventMapMovesCursor Config.addNextParamKeys
+      (Widget.keysEventMapMovesCursor Config.addNextParamKeys
        "Add parameter" .
        liftM (FocusDelegator.delegatingId . WidgetIds.paramId))
       mAddFirstParameter
@@ -94,7 +94,7 @@ addJumps cursor defKGridElements =
       (makeJumpForEnter doc keys dir destElement) .
       Widget.sdwdMaybeEnter $ Grid.gridElementSdwd destElement
     makeJumpForEnter doc keys dir destElement enter =
-      E.fromEventTypes keys ("Jump to "++doc) .
+      E.keyPresses keys ("Jump to "++doc) .
       (Anchors.savePreJumpPosition cursor >>) .
       Widget.enterResultEvent . enter . dir $
       Grid.gridElementRect destElement

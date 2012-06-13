@@ -35,7 +35,7 @@ make varRef myId = do
   varRefView <- makeView varRef myId
   let
     jumpToDefinitionEventMap =
-      Widget.actionEventMapMovesCursor Config.jumpToDefinitionKeys "Jump to definition" jumpToDefinition
+      Widget.keysEventMapMovesCursor Config.jumpToDefinitionKeys "Jump to definition" jumpToDefinition
     jumpToDefinition =
       case varRef of
         Data.DefinitionRef defI -> do

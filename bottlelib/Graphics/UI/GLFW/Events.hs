@@ -25,10 +25,10 @@ data GLFWRawEvent = RawCharEvent IsPress Char
   deriving (Show, Eq)
 
 data KeyEvent = KeyEvent {
-  keyPress :: IsPress,
-  keyEventModState :: ModState,
-  keyEventChar :: Maybe Char,
-  keyEventKey :: GLFW.Key }
+  kePress :: IsPress,
+  keModState :: ModState,
+  keChar :: Maybe Char,
+  keKey :: GLFW.Key }
   deriving (Show, Eq)
 
 -- This is the final representation we expose of events:
@@ -116,7 +116,7 @@ typematicKeyHandlerWrap handler = do
         else
           return (state, timeFunc count - timeDiff)
     typematicIteration state@NoKey = return (state, timeFunc 0)
-    handleEvent event@(GLFWKeyEvent keyEvent@KeyEvent { keyPress=isPress }) = do
+    handleEvent event@(GLFWKeyEvent keyEvent@KeyEvent { kePress=isPress }) = do
       newValue <-
         case isPress of
           Press -> fmap (TypematicRepeat keyEvent 0) getCurrentTime

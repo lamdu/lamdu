@@ -99,11 +99,11 @@ mkNavEventmap navDests = (weakMap, strongMap)
       movement "leftmost"  (ctrlK GLFW.KeyHome) leftMostCursor,
       movement "rightmost" (ctrlK GLFW.KeyEnd)  rightMostCursor
       ]
-    k = EventMap.KeyEventType EventMap.noMods
-    ctrlK = EventMap.KeyEventType EventMap.ctrl
+    k = EventMap.ModKey EventMap.noMods
+    ctrlK = EventMap.ModKey EventMap.ctrl
     movement dirName event =
       fmap
-        (EventMap.fromEventType
+        (EventMap.keyPress
          event
          ("Move " ++ dirName) .
          Widget.enterResultEvent) .

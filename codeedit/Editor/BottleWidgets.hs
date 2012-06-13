@@ -145,9 +145,12 @@ makeWordEdit ::
 makeWordEdit = (fmap . fmap . liftM . Widget.atEventMap) removeWordSeparators makeTextEdit
   where
     compose = foldr (.) id
-    removeWordSeparators = compose $ map EventMap.delete [newlineKey, newwordKey]
-    newlineKey = EventMap.KeyEventType EventMap.noMods EventMap.KeyEnter
-    newwordKey = EventMap.KeyEventType EventMap.noMods EventMap.KeySpace
+    removeWordSeparators =
+      compose $
+      map (EventMap.delete . EventMap.KeyEventType)
+      [newlineKey, newwordKey]
+    newlineKey = EventMap.ModKey EventMap.noMods EventMap.KeyEnter
+    newwordKey = EventMap.ModKey EventMap.noMods EventMap.KeySpace
 
 anonName :: Guid -> String
 anonName guid = "<" ++ take 4 (Guid.asHex guid) ++ "..>"

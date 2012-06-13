@@ -101,13 +101,13 @@ expressionEventMap sExpr holePicker =
     giveAsArg =
       maybeMempty (Sugar.giveAsArg actions) $
       moveUnlessOnHole .
-      Widget.actionEventMapMovesCursor
+      Widget.keysEventMapMovesCursor
       Config.giveAsArgumentKeys "Give as argument" .
       liftM WidgetIds.fromGuid
     callWithArg =
       maybeMempty (Sugar.callWithArg actions) $
       moveUnlessOnHole .
-      Widget.actionEventMapMovesCursor
+      Widget.keysEventMapMovesCursor
       Config.callWithArgumentKeys "Call with argument" .
       liftM WidgetIds.fromGuid
     addArg =
@@ -138,13 +138,13 @@ expressionEventMap sExpr holePicker =
     diveParam = FocusDelegator.delegatingId . WidgetIds.paramId
     mkEventMap getAct keys doc f =
       maybeMempty (getAct actions) $
-      Widget.actionEventMapMovesCursor keys doc .
+      Widget.keysEventMapMovesCursor keys doc .
       liftM f
 
 
     withPickResultFirst keys doc action=
       ifHole pickResultFirst .
-      Widget.actionEventMapMovesCursor
+      Widget.keysEventMapMovesCursor
       keys (ifHole (const ("Pick result and " ++)) doc) $ action
     actions = Sugar.rActions sExpr
     moveUnlessOnHole = ifHole $ (const . fmap . liftM . Widget.atECursor . const) Nothing

@@ -54,14 +54,14 @@ addHelp style =
         eventMap = Widget.sdwdEventMap userIO
         userIO = mkSizeDependentWidgetData size
 
-makeToggledHelpAdder :: [E.EventType] -> TextView.Style -> IO (Widget IO -> IO (Widget IO))
+makeToggledHelpAdder :: [E.ModKey] -> TextView.Style -> IO (Widget IO -> IO (Widget IO))
 makeToggledHelpAdder overlayDocKeys style = do
   showingHelpVar <- newIORef True
   let
     toggle = modifyIORef showingHelpVar not
     addToggleEventMap doc =
       Widget.strongerEvents $
-      Widget.actionEventMap overlayDocKeys doc toggle
+      Widget.keysEventMap overlayDocKeys doc toggle
   return $ \widget -> do
     showingHelp <- readIORef showingHelpVar
     return $

@@ -23,9 +23,9 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 data IsDelegating = Delegating | NotDelegating
 
 data Config = Config {
-  startDelegatingKey :: E.EventType,
+  startDelegatingKey :: E.ModKey,
   startDelegatingDoc :: E.Doc,
-  stopDelegatingKey :: E.EventType,
+  stopDelegatingKey :: E.ModKey,
   stopDelegatingDoc :: E.Doc
   }
 
@@ -55,12 +55,12 @@ makeFocused delegating focusSelf config backgroundCursorId =
       Widget.sdwdMaybeEnter userIO
 
     startDelegatingEventMap childEnter =
-      E.fromEventType (startDelegatingKey config) (startDelegatingDoc config) .
+      E.keyPress (startDelegatingKey config) (startDelegatingDoc config) .
       Widget.enterResultEvent $ childEnter Direction.Outside
 
     addStopDelegatingEventMap =
       Widget.weakerEvents .
-      E.fromEventType (stopDelegatingKey config) (stopDelegatingDoc config) .
+      E.keyPress (stopDelegatingKey config) (stopDelegatingDoc config) .
       pure $ Widget.eventResultFromCursor focusSelf
 
 -- | Make a focus delegator

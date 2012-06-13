@@ -22,9 +22,9 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 paramFDConfig :: FocusDelegator.Config
 paramFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKey = E.KeyEventType E.noMods E.KeyEnter
+  { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyEnter
   , FocusDelegator.startDelegatingDoc = "Change parameter name"
-  , FocusDelegator.stopDelegatingKey = E.KeyEventType E.noMods E.KeyEsc
+  , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEsc
   , FocusDelegator.stopDelegatingDoc = "Stop changing name"
   }
 
@@ -65,12 +65,12 @@ makeParamEdit makeExpressionEdit param =
       ]
     paramAddNextEventMap =
       maybe mempty
-      (Widget.actionEventMapMovesCursor Config.addNextParamKeys "Add next parameter" .
+      (Widget.keysEventMapMovesCursor Config.addNextParamKeys "Add next parameter" .
        liftM (FocusDelegator.delegatingId . WidgetIds.paramId)) .
       Sugar.lambdaWrap . Sugar.rActions $ Sugar.fpBody param
     paramDeleteEventMap =
       maybe mempty
-      (Widget.actionEventMapMovesCursor Config.delKeys "Delete parameter" .
+      (Widget.keysEventMapMovesCursor Config.delKeys "Delete parameter" .
        liftM WidgetIds.fromGuid) .
       Sugar.mDelete $ Sugar.fpActions param
 

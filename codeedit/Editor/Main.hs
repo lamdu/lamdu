@@ -94,7 +94,7 @@ mainLoopDebugMode font makeWidget addHelp = do
         set = writeIORef debugModeRef (not isDebugMode)
       return .
         whenApply isDebugMode (Widget.atImage (addAnnotations font)) $
-        Widget.strongerEvents (Widget.actionEventMap Config.debugModeKeys doc set) widget
+        Widget.strongerEvents (Widget.keysEventMap Config.debugModeKeys doc set) widget
     makeDebugModeWidget = addHelp =<< addDebugMode =<< makeWidget
   mainLoopWidget makeDebugModeWidget getAnimHalfLife
 

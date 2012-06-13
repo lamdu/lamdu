@@ -80,9 +80,9 @@ tellNewCache mkCache view act = do
 
 branchNameFDConfig :: FocusDelegator.Config
 branchNameFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKey = E.KeyEventType E.noMods E.KeyEnter
+  { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyEnter
   , FocusDelegator.startDelegatingDoc = "Rename branch"
-  , FocusDelegator.stopDelegatingKey = E.KeyEventType E.noMods E.KeyEsc
+  , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEsc
   , FocusDelegator.stopDelegatingDoc = "Stop renaming"
   }
 
@@ -124,7 +124,7 @@ makeRootWidget mkCache widget = do
     delBranchEventMap
       | null (drop 1 namedBranches) = mempty
       | otherwise =
-        Widget.actionEventMapMovesCursor Config.delBranchKeys "Delete Branch" .
+        Widget.keysEventMapMovesCursor Config.delBranchKeys "Delete Branch" .
         withNewCache . lift $ deleteCurrentBranch view
 
   branchSelectorFocused <-
@@ -145,10 +145,10 @@ makeRootWidget mkCache widget = do
 
   let
     eventMap = mconcat
-      [ Widget.actionEventMap Config.quitKeys "Quit" (error "Quit")
-      , Widget.actionEventMapMovesCursor Config.makeBranchKeys "New Branch" .
+      [ Widget.keysEventMap Config.quitKeys "Quit" (error "Quit")
+      , Widget.keysEventMapMovesCursor Config.makeBranchKeys "New Branch" .
         lift $ makeBranch view
-      , Widget.actionEventMapMovesCursor Config.jumpToBranchesKeys
+      , Widget.keysEventMapMovesCursor Config.jumpToBranchesKeys
         "Select current branch" $ pure currentBranchWidgetId
       ]
   return .
@@ -186,11 +186,11 @@ makeWidgetForView mkCache view innerWidget = do
 
     redoEventMap [] = mempty
     redoEventMap (version:restRedos) =
-      Widget.actionEventMapMovesCursor Config.redoKeys "Redo" $
+      Widget.keysEventMapMovesCursor Config.redoKeys "Redo" $
       redo version restRedos
     undoEventMap =
       maybe mempty
-      (Widget.actionEventMapMovesCursor Config.undoKeys "Undo" .
+      (Widget.keysEventMapMovesCursor Config.undoKeys "Undo" .
        undo) $ Version.parent curVersionData
 
     eventMap = fmap (tellNewCache mkCache view . lift) $ mconcat [undoEventMap, redoEventMap redos]

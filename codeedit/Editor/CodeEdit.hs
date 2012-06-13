@@ -133,10 +133,10 @@ makePanesEdit panes = do
   let
     panesEventMap =
       mconcat
-      [ Widget.actionEventMapMovesCursor Config.newDefinitionKeys
+      [ Widget.keysEventMapMovesCursor Config.newDefinitionKeys
         "New definition" newDefinition
       , maybe mempty
-        (Widget.actionEventMapMovesCursor Config.previousCursorKeys
+        (Widget.keysEventMapMovesCursor Config.previousCursorKeys
          "Go to previous position") mJumpBack
       ]
 
@@ -144,9 +144,9 @@ makePanesEdit panes = do
   where
     myId = WidgetIds.fromIRef Anchors.panesIRef
     paneEventMap pane = mconcat
-      [ maybe mempty (Widget.actionEventMapMovesCursor Config.closePaneKeys "Close pane" . liftM WidgetIds.fromGuid) $ mDelPane pane
-      , maybe mempty (Widget.actionEventMap Config.movePaneDownKeys "Move pane down") $ mMovePaneDown pane
-      , maybe mempty (Widget.actionEventMap Config.movePaneUpKeys "Move pane up") $ mMovePaneUp pane
+      [ maybe mempty (Widget.keysEventMapMovesCursor Config.closePaneKeys "Close pane" . liftM WidgetIds.fromGuid) $ mDelPane pane
+      , maybe mempty (Widget.keysEventMap Config.movePaneDownKeys "Move pane down") $ mMovePaneDown pane
+      , maybe mempty (Widget.keysEventMap Config.movePaneUpKeys "Move pane up") $ mMovePaneUp pane
       ]
     makePaneWidget pane =
       liftM (Widget.weakerEvents (paneEventMap pane)) .

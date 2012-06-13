@@ -7,7 +7,7 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
-mk = E.KeyEventType
+mk = E.ModKey
 
 noMods = mk E.noMods
 ctrl = mk E.ctrl . E.charKey
@@ -33,7 +33,7 @@ jumpToBranchesKeys = [mk E.ctrl E.KeyF10]
 
 overlayDocKeys    = [noMods E.KeyF1, alt 'h']
 
-addNextParamKeys  = [E.KeyEventType E.noMods E.KeySpace]
+addNextParamKeys  = [E.ModKey E.noMods E.KeySpace]
 
 delBranchKeys     = [alt 'o']
 
@@ -48,7 +48,7 @@ jumpToDefinitionKeys  = [noMods E.KeyEnter]
 delKeys           = [noMods E.KeyBackspace, noMods E.KeyDel, mk E.alt E.KeyDel]
 giveAsArgumentKeys = [k ']', shift '0']
 callWithArgumentKeys = [k '[', shift '9']
-addNextArgumentKeys = [E.KeyEventType E.noMods E.KeySpace]
+addNextArgumentKeys = [E.ModKey E.noMods E.KeySpace]
 debugModeKeys = [ctrlAlt 'd']
 
 exprFocusDelegatorConfig = FocusDelegator.Config

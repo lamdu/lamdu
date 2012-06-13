@@ -53,7 +53,7 @@ data HoleInfo m = HoleInfo
 pasteEventMap :: MonadF m => Sugar.Hole m -> Widget.EventHandlers (Transaction ViewTag m)
 pasteEventMap =
   maybe mempty
-  (Widget.actionEventMapMovesCursor
+  (Widget.keysEventMapMovesCursor
    Config.pasteKeys "Paste" .
    liftM WidgetIds.fromGuid) .
   Sugar.holePaste
@@ -61,7 +61,7 @@ pasteEventMap =
 resultPickEventMap
   :: Result m -> Widget.EventHandlers (Transaction ViewTag m)
 resultPickEventMap =
-  maybe mempty (E.fromEventTypes Config.pickResultKeys "Pick this search result") .
+  maybe mempty (E.keyPresses Config.pickResultKeys "Pick this search result") .
   resultPick
 
 resultToWidget :: Monad m => Result m -> TWidget ViewTag m
@@ -217,7 +217,7 @@ makeSearchTermWidget holeInfo searchTermId firstResults =
       case mPickResult holeInfo of
       Nothing -> []
       Just holePickResult ->
-        [ E.fromEventTypes Config.newDefinitionKeys
+        [ E.keyPresses Config.newDefinitionKeys
           "Add new as Definition" $ makeNewDefinition holePickResult
         ]
 
@@ -264,8 +264,8 @@ makeResultsWidget firstResults moreResults myId = do
   where
     blockDownEvents =
       Widget.weakerEvents $
-      Widget.actionEventMap
-      [E.KeyEventType E.noMods E.KeyDown]
+      Widget.keysEventMap
+      [E.ModKey E.noMods E.KeyDown]
       "Nothing (at bottom)" (return ())
 
 makeActiveHoleEdit
@@ -334,9 +334,9 @@ makeH hole guid myId = do
 
 holeFDConfig :: FocusDelegator.Config
 holeFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKey = E.KeyEventType E.noMods E.KeyEnter
+  { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyEnter
   , FocusDelegator.startDelegatingDoc = "Enter hole"
-  , FocusDelegator.stopDelegatingKey = E.KeyEventType E.noMods E.KeyEsc
+  , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEsc
   , FocusDelegator.stopDelegatingDoc = "Leave hole"
   }
 

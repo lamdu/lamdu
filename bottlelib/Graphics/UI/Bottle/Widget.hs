@@ -7,7 +7,7 @@ module Graphics.UI.Bottle.Widget
   , atSdwdMaybeEnter, atSdwdEventMap, atSdwdFrame, atSdwdFocalArea
   , EventResult(..), atEAnimIdMapping, atECursor
   , emptyEventResult, eventResultFromCursor
-  , actionEventMap, actionEventMapMovesCursor
+  , keysEventMap, keysEventMapMovesCursor
   , EventHandlers, atContent, atIsFocused
   , userIO, image, eventMap
   , takesFocus, atMkSizeDependentWidgetData, atSizeDependentWidgetData
@@ -177,19 +177,19 @@ backgroundColor layer animId = atImageWithSize . Anim.backgroundColor animId lay
 tint :: Draw.Color -> Widget f -> Widget f
 tint = atImage . Anim.onImages . Draw.tint
 
-actionEventMap ::
-  Functor f => [EventMap.EventType] -> EventMap.Doc ->
+keysEventMap ::
+  Functor f => [EventMap.ModKey] -> EventMap.Doc ->
   f () -> EventHandlers f
-actionEventMap keys doc act =
+keysEventMap keys doc act =
   (fmap . fmap . const) emptyEventResult $
-  EventMap.fromEventTypes keys doc act
+  EventMap.keyPresses keys doc act
 
-actionEventMapMovesCursor ::
-  Functor f => [EventMap.EventType] -> EventMap.Doc ->
+keysEventMapMovesCursor ::
+  Functor f => [EventMap.ModKey] -> EventMap.Doc ->
   f Id -> EventHandlers f
-actionEventMapMovesCursor keys doc act =
+keysEventMapMovesCursor keys doc act =
   (fmap . fmap) eventResultFromCursor $
-  EventMap.fromEventTypes keys doc act
+  EventMap.keyPresses keys doc act
 
 translateSizeDependentWidgetData :: Vector2 R -> SizeDependentWidgetData f -> SizeDependentWidgetData f
 translateSizeDependentWidgetData pos =

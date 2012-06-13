@@ -50,7 +50,7 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
     guid = Sugar.guid . Sugar.wiActions
     whereItemDeleteEventMap whereItem =
       maybe mempty
-      (Widget.actionEventMapMovesCursor Config.delKeys "Delete variable" . liftM WidgetIds.fromGuid)
+      (Widget.keysEventMapMovesCursor Config.delKeys "Delete variable" . liftM WidgetIds.fromGuid)
       (Sugar.mDelete (Sugar.wiActions whereItem))
 
 makeWithBody
