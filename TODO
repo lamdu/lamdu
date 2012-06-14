@@ -1,3 +1,12 @@
+* Projected moves:
+  * Has old focal rect
+  * May have "projected focal rect"
+  * Gets a new "focal rect"
+  * Can generate a "projected focal rect" at the projected position of the direction of the movement
+    * This "projected focal rect" is to be used by same grid or any parent grid in future movements
+    * This "projected focal rect" is sort of a global thing all grids write to?
+    * Each grid can add a "delete my projected focal rect" thing before any child action
+
 * Free-nav mode?
 * "Enter: insert newline" is wrong (e.g: in LiteralInt edit)
 
