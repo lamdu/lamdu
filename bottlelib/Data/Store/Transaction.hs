@@ -1,19 +1,20 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Data.Store.Transaction
-    (Transaction, run, Property,
-     Store(..),
-     lookupBS, lookup,
-     insertBS, insert,
-     delete, deleteIRef,
-     readIRef, readIRefDef, writeIRef,
-     readGuid, writeGuid,
-     isEmpty,
-     guidExists, irefExists,
-     newIRef, newKey,
-     fromIRef, fromIRefDef,
-     followBy,
-     anchorRef, anchorRefDef)
+  ( Transaction, run, Property
+  , Store(..)
+  , lookupBS, lookup
+  , insertBS, insert
+  , delete, deleteIRef
+  , readIRef, readIRefDef, writeIRef
+  , readGuid, writeGuid
+  , isEmpty
+  , guidExists, irefExists
+  , newIRef, newKey
+  , fromIRef, fromIRefDef
+  , followBy
+  , anchorRef, anchorRefDef
+  )
 where
 
 import           Prelude                          hiding (lookup)
