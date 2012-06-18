@@ -35,11 +35,13 @@ import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.Data.Load (StoredExpressionRef(..), esGuid)
+import qualified Control.Monad.Trans.List.Funcs as ListFuncs
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.State as State
 import qualified Control.Monad.Trans.UnionFind as UnionFind
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
+import qualified Data.List.Class as ListCls
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
@@ -313,56 +315,29 @@ addTypeRefs =
       typeRef <- generateEmptyEntity
       return $ StoredExpression stored typeRef val
 
--- TODO: Use ListT with ordinary Data.mapMExpression?
 derefTypeRef
   :: Monad m
   => TypeRef -> Infer m [InferredTypeLoop]
 derefTypeRef =
-  (`runReaderT` []) . go
+  ListCls.toList . (`runReaderT` []) . go
   where
+    liftInfer = lift . lift
     go typeRef = do
       visited <- Reader.ask
-      isLoop <- lift . liftTypeRef . liftM or $
+      isLoop <- liftInfer . liftTypeRef . liftM or $
         mapM (UnionFind.equivalent typeRef) visited
       if isLoop
-        then liftM ((:[]) . InferredTypeLoop) $ lift nextGuid
-        else liftM concat . mapM (onType typeRef) =<< lift (getTypeRef typeRef)
+        then liftM InferredTypeLoop $ liftInfer nextGuid
+        else onType typeRef =<< lift . ListFuncs.fromList =<< liftInfer (getTypeRef typeRef)
     onType typeRef (GuidExpression guid expr) =
-      (liftM . map) (InferredTypeNoLoop . GuidExpression guid) $
-      case expr of
-      Data.ExpressionLambda lambda ->
-        map1 Data.ExpressionLambda $ onLambda lambda
-      Data.ExpressionPi lambda ->
-        map1 Data.ExpressionPi $ onLambda lambda
-      Data.ExpressionApply apply ->
-        map1 Data.ExpressionApply $ onApply apply
-      Data.ExpressionGetVariable varRef ->
-        map0 $ Data.ExpressionGetVariable varRef
-      Data.ExpressionHole ->
-        map0 Data.ExpressionHole
-      Data.ExpressionLiteralInteger int ->
-        map0 $ Data.ExpressionLiteralInteger int
-      Data.ExpressionBuiltin name ->
-        map0 $ Data.ExpressionBuiltin name
-      Data.ExpressionMagic ->
-        map0 Data.ExpressionMagic
+      liftM (InferredTypeNoLoop . GuidExpression guid) .
+      Data.sequenceExpression $ Data.mapExpression recurse expr
       where
-        recurse = holify <=< Reader.local (typeRef :) . go
+        recurse = Reader.mapReaderT (ListFuncs.fromList <=< lift . (holify <=< ListCls.toList)) . Reader.local (typeRef :) . go
         holify [] = do
-          g <- lift nextGuid
+          g <- nextGuid
           return [InferredTypeNoLoop (GuidExpression g Data.ExpressionHole)]
         holify xs = return xs
-        map0 = return . (: [])
-        map1 = liftM . map
-        map2 = liftM2 . liftM2
-        onApply (Data.Apply funcType argType) =
-          map2 Data.Apply
-          (recurse funcType)
-          (recurse argType)
-        onLambda (Data.Lambda paramType resultType) =
-          map2 Data.Lambda
-          (recurse paramType)
-          (recurse resultType)
 
 derefTypeRefs
   :: Monad m
