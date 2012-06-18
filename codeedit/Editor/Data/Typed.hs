@@ -565,15 +565,9 @@ builtinsToGlobals builtinsMap (InferredTypeNoLoop (GuidExpression guid expr)) =
 
 inferExpression
  :: Monad m
- => Maybe TypeRef
- -> StoredExpression () f
+ => StoredExpression TypeRef f
  -> Infer m (TypedStoredExpression f)
-inferExpression mTypeRef expr = do
-  withTypeRefs <- addTypeRefs expr
-  case mTypeRef of
-    Nothing -> return ()
-    Just typeRef ->
-      unify typeRef $ eeInferredType withTypeRefs
+inferExpression withTypeRefs = do
   unifyOnTree withTypeRefs
   builtinsMap <- liftTransaction $ Property.get Anchors.builtinsMap
   derefed <- derefTypeRefs withTypeRefs
@@ -591,7 +585,9 @@ inferDefinition (DataLoad.DefinitionEntity iref value) =
 
     inferredBody <- runInfer $ do
       inferredTypeRef <- typeRefFromEntity inferredType
-      inferExpression (Just inferredTypeRef) $ fromLoaded () bodyI
+      withTypeRefs <- addTypeRefs $ fromLoaded () bodyI
+      unify inferredTypeRef $ eeInferredType withTypeRefs
+      inferExpression withTypeRefs
     return $ Data.Definition inferredType inferredBody
 
 loadInferDefinition
@@ -604,5 +600,5 @@ loadInferExpression
   :: Monad m => Data.ExpressionIRef
   -> T m (TypedStoredExpression (T m))
 loadInferExpression =
-  runInfer . inferExpression Nothing . fromLoaded () <=<
+  runInfer . (inferExpression <=< addTypeRefs . fromLoaded ()) <=<
   flip DataLoad.loadExpression Nothing
