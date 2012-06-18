@@ -104,25 +104,15 @@ eeIRef = esIRef . eeStored
 
 --------------- Infer Stack boilerplate:
 
-type Scope = [(Guid, TypeRef)]
-
 newtype Infer m a = Infer
-  { unInfer
-    :: ReaderT Scope
-       (UnionFindT TypeData
-        (RandomT Random.StdGen (T m))) a
+  { unInfer :: UnionFindT TypeData (RandomT Random.StdGen (T m)) a
   } deriving (Functor, Applicative, Monad)
 AtFieldTH.make ''Infer
-
-liftScope
-  :: ReaderT Scope (UnionFindT TypeData (RandomT Random.StdGen (T m))) a
-  -> Infer m a
-liftScope = Infer
 
 liftTypeRef
   :: Monad m
   => UnionFindT TypeData (RandomT Random.StdGen (T m)) a -> Infer m a
-liftTypeRef = liftScope . lift
+liftTypeRef = Infer
 
 liftRandom
   :: Monad m
@@ -132,12 +122,6 @@ liftRandom = liftTypeRef . lift
 liftTransaction
   :: Monad m => T m a -> Infer m a
 liftTransaction = liftRandom . lift
-
--- Reader "local" operation cannot simply be lifted...
-localScope
-  :: Monad m => (Scope -> Scope)
-  -> Infer m a -> Infer m a
-localScope = atInfer . Reader.local
 
 ----------------- Infer operations:
 
@@ -159,24 +143,11 @@ runInfer
 runInfer action =
   liftM canonizeIdentifiersTypes .
     runRandomT (Random.mkStdGen 0) .
-    evalUnionFindT .
-    (`runReaderT` []) $
+    evalUnionFindT $
     unInfer action
-
-putInScope
-  :: Monad m => [(Guid, TypeRef)]
-  -> Infer m a
-  -> Infer m a
-putInScope = localScope . (++)
-
-readScope :: Monad m => Infer m Scope
-readScope = liftScope Reader.ask
 
 nextGuid :: Monad m => Infer m Guid
 nextGuid = liftRandom nextRandom
-
-findInScope :: Monad m => Guid -> Infer m (Maybe TypeRef)
-findInScope guid = liftM (lookup guid) readScope
 
 generateEntity
   :: Monad m
@@ -354,61 +325,61 @@ unifyOnTree
   :: Monad m
   => StoredExpression TypeRef f
   -> Infer m ()
-unifyOnTree (StoredExpression stored typeRef value) = do
-  setType =<< generateEmptyEntity
-  case value of
-    Data.ExpressionLambda lambda ->
-      handleLambda lambda
-    Data.ExpressionPi lambda@(Data.Lambda _ resultType) ->
-      inferLambda lambda . const . return $ eeInferredType resultType
-    Data.ExpressionApply (Data.Apply func arg) -> do
-      unifyOnTree func
-      unifyOnTree arg
-      let
-        funcTypeRef = eeInferredType func
-        argTypeRef = eeInferredType arg
-        piType = Data.ExpressionPi $ Data.Lambda argTypeRef typeRef
-      unify funcTypeRef =<< generateEntity piType
-      funcTypes <- getTypeRef funcTypeRef
-      sequence_
-        [ subst piGuid (typeRefFromEntity arg) piResultTypeRef
-        | GuidExpression piGuid
-          (Data.ExpressionPi
-           (Data.Lambda _ piResultTypeRef))
-          <- funcTypes
-        ]
-    Data.ExpressionGetVariable (Data.ParameterRef guid) -> do
-      mParamTypeRef <- findInScope guid
-      case mParamTypeRef of
-        -- TODO: Not in scope: Bad code,
-        -- add an OutOfScopeReference type error
-        Nothing -> return ()
-        Just paramTypeRef -> setType paramTypeRef
-    Data.ExpressionGetVariable (Data.DefinitionRef defI) -> do
-      defTypeEntity <-
-        liftM (fromLoaded [] . Data.defType . DataLoad.defEntityValue) .
-        liftTransaction $
-        DataLoad.loadDefinition defI
-      defTypeRef <- typeRefFromEntity $ ignoreStoredMonad defTypeEntity
-      setType defTypeRef
-    Data.ExpressionLiteralInteger _ ->
-      setType <=< generateEntity . Data.ExpressionBuiltin $ Data.FFIName ["Prelude"] "Integer"
-    _ -> return ()
+unifyOnTree = (`runReaderT` []) . go
   where
-    setType = unify typeRef
-    handleLambda lambda@(Data.Lambda _ body) =
-      inferLambda lambda $ \paramTypeRef ->
-        generateEntity . Data.ExpressionPi .
-        Data.Lambda paramTypeRef $
-        eeInferredType body
-    inferLambda (Data.Lambda paramType result) mkType = do
-      paramTypeRef <- typeRefFromEntity paramType
-      setType =<< mkType paramTypeRef
-      putInScope [(esGuid stored, paramTypeRef)] $
-        unifyOnTree result
-
-tryRemap :: Ord k => k -> Map k k -> k
-tryRemap x = fromMaybe x . Map.lookup x
+    go (StoredExpression stored typeRef value) = do
+      lift $ setType =<< generateEmptyEntity
+      case value of
+        Data.ExpressionLambda lambda ->
+          handleLambda lambda
+        Data.ExpressionPi lambda@(Data.Lambda _ resultType) ->
+          inferLambda lambda . const . return $ eeInferredType resultType
+        Data.ExpressionApply (Data.Apply func arg) -> do
+          go func
+          go arg
+          lift $ do
+            let
+              funcTypeRef = eeInferredType func
+              argTypeRef = eeInferredType arg
+              piType = Data.ExpressionPi $ Data.Lambda argTypeRef typeRef
+            unify funcTypeRef =<< generateEntity piType
+            funcTypes <- getTypeRef funcTypeRef
+            sequence_
+              [ subst piGuid (typeRefFromEntity arg) piResultTypeRef
+              | GuidExpression piGuid
+                (Data.ExpressionPi
+                 (Data.Lambda _ piResultTypeRef))
+                <- funcTypes
+              ]
+        Data.ExpressionGetVariable (Data.ParameterRef guid) -> do
+          mParamTypeRef <- Reader.asks $ lookup guid
+          lift $ case mParamTypeRef of
+            -- TODO: Not in scope: Bad code,
+            -- add an OutOfScopeReference type error
+            Nothing -> return ()
+            Just paramTypeRef -> setType paramTypeRef
+        Data.ExpressionGetVariable (Data.DefinitionRef defI) -> lift $ do
+          defTypeEntity <-
+            liftM (fromLoaded [] . Data.defType . DataLoad.defEntityValue) .
+            liftTransaction $
+            DataLoad.loadDefinition defI
+          defTypeRef <- typeRefFromEntity $ ignoreStoredMonad defTypeEntity
+          setType defTypeRef
+        Data.ExpressionLiteralInteger _ ->
+          lift $
+          setType <=< generateEntity . Data.ExpressionBuiltin $ Data.FFIName ["Prelude"] "Integer"
+        _ -> return ()
+      where
+        setType = unify typeRef
+        handleLambda lambda@(Data.Lambda _ body) =
+          inferLambda lambda $ \paramTypeRef ->
+            generateEntity . Data.ExpressionPi .
+            Data.Lambda paramTypeRef $
+            eeInferredType body
+        inferLambda (Data.Lambda paramType result) mkType = do
+          paramTypeRef <- lift $ typeRefFromEntity paramType
+          lift $ setType =<< mkType paramTypeRef
+          Reader.local ((esGuid stored, paramTypeRef):) $ go result
 
 unify
   :: Monad m
@@ -541,8 +512,10 @@ canonizeIdentifiersTypes =
               liftM2 Data.Apply (f func) (f arg)
             Data.ExpressionGetVariable (Data.ParameterRef guid) ->
               Reader.asks
-              (Data.ExpressionGetVariable . Data.ParameterRef . tryRemap guid)
+              (Data.ExpressionGetVariable . Data.ParameterRef .
+               tryRemap guid)
             x -> return x
+    tryRemap x = fromMaybe x . Map.lookup x
 
 builtinsToGlobals :: Map Data.FFIName Data.VariableRef -> InferredTypeLoop -> InferredTypeLoop
 builtinsToGlobals _ x@(InferredTypeLoop _) = x
