@@ -10,6 +10,8 @@ module Editor.Data
   , ApplyI
   , Expression(..)
   , ExpressionI, ExpressionIRef(..)
+  , GuidExpression(..), atGeGuid, atGeValue
+  , PureGuidExpression(..), atPureGuidExpression
   , newExprIRef, readExprIRef, writeExprIRef, exprIRefGuid
   , mapMExpression
   , mapExpression, sequenceExpression
@@ -93,6 +95,20 @@ data Definition expr = Definition
   } deriving (Eq, Ord, Show)
 type DefinitionI = Definition ExpressionIRef
 type DefinitionIRef = IRef DefinitionI
+
+
+newtype PureGuidExpression = PureGuidExpression
+  { unPureGuidExpression :: GuidExpression PureGuidExpression
+  } deriving (Show, Eq)
+
+data GuidExpression ref = GuidExpression
+  { geGuid :: Guid
+  , geValue :: Expression ref
+  } deriving (Show, Eq)
+
+AtFieldTH.make ''PureGuidExpression
+AtFieldTH.make ''GuidExpression
+
 
 variableRefGuid :: VariableRef -> Guid
 variableRefGuid (ParameterRef i) = i

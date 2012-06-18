@@ -160,7 +160,7 @@ eeFromITL (DataTyped.InferredTypeLoop itGuid) =
   ExprEntity itGuid Nothing [] Nothing
 eeFromITL
   (DataTyped.InferredTypeNoLoop
-   (DataTyped.GuidExpression itGuid val)) =
+   (Data.GuidExpression itGuid val)) =
      ExprEntity itGuid Nothing [] . Just $
      case val of
      Data.ExpressionLambda lambda ->
