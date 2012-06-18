@@ -104,29 +104,23 @@ eeIRef = esIRef . eeStored
 
 type Scope = [(Guid, TypeRef)]
 
-data InferEnv = InferEnv
-  { ieScope :: Scope
-  , ieBuiltinsMap :: Map Data.FFIName Data.VariableRef
-  }
-AtFieldTH.make ''InferEnv
-
 newtype Infer m a = Infer
   { unInfer
-    :: ReaderT InferEnv
+    :: ReaderT Scope
        (UnionFindT TypeData
         (RandomT Random.StdGen (T m))) a
   } deriving (Functor, Applicative, Monad)
 AtFieldTH.make ''Infer
 
-liftInferEnv
-  :: ReaderT InferEnv (UnionFindT TypeData (RandomT Random.StdGen (T m))) a
+liftScope
+  :: ReaderT Scope (UnionFindT TypeData (RandomT Random.StdGen (T m))) a
   -> Infer m a
-liftInferEnv = Infer
+liftScope = Infer
 
 liftTypeRef
   :: Monad m
   => UnionFindT TypeData (RandomT Random.StdGen (T m)) a -> Infer m a
-liftTypeRef = liftInferEnv . lift
+liftTypeRef = liftScope . lift
 
 liftRandom
   :: Monad m
@@ -141,7 +135,7 @@ liftTransaction = liftRandom . lift
 localScope
   :: Monad m => (Scope -> Scope)
   -> Infer m a -> Infer m a
-localScope = atInfer . Reader.local . atIeScope
+localScope = atInfer . Reader.local
 
 ----------------- Infer operations:
 
@@ -160,12 +154,11 @@ runInfer
   :: Monad m
   => Infer m (TypedStoredExpression f)
   -> T m (TypedStoredExpression f)
-runInfer action = do
-  builtinsMap <- Property.get Anchors.builtinsMap
+runInfer action =
   liftM canonizeIdentifiersTypes .
     runRandomT (Random.mkStdGen 0) .
     evalUnionFindT .
-    (`runReaderT` InferEnv [] builtinsMap) $
+    (`runReaderT` []) $
     unInfer action
 
 putInScope
@@ -174,11 +167,8 @@ putInScope
   -> Infer m a
 putInScope = localScope . (++)
 
-readBuiltinsMap :: Monad m => Infer m (Map Data.FFIName Data.VariableRef)
-readBuiltinsMap = liftInferEnv $ Reader.asks ieBuiltinsMap
-
 readScope :: Monad m => Infer m Scope
-readScope = liftInferEnv $ Reader.asks ieScope
+readScope = liftScope Reader.ask
 
 nextGuid :: Monad m => Infer m Guid
 nextGuid = liftRandom nextRandom
@@ -198,18 +188,6 @@ generateEmptyEntity :: Monad m => Infer m TypeRef
 generateEmptyEntity = makeTypeRef []
 
 --------------
-
-mapInferredTypes
-  :: Monad m
-  => (InferredType -> m InferredType)
-  -> InferredType -> m InferredType
-mapInferredTypes f =
-  Data.mapMExpression g
-  where
-    g (InferredType (GuidExpression guid t)) =
-      ( return t
-      , f . InferredType . GuidExpression guid
-      )
 
 mapMExpressionEntities
   :: Monad m
@@ -305,7 +283,7 @@ typeRefFromEntity
   :: Monad m => StoredExpression it f
   -> Infer m TypeRef
 typeRefFromEntity =
-  Data.mapMExpression f <=< builtinsToGlobals <=< liftTransaction . expand
+  Data.mapMExpression f <=< liftTransaction . expand
   where
     f (InferredType (GuidExpression guid val)) =
       ( return val
@@ -421,7 +399,6 @@ unifyOnTree (StoredExpression stored typeRef value) = do
            (Data.Lambda _ piResultTypeRef))
           <- funcTypes
         ]
-      return ()
     Data.ExpressionGetVariable (Data.ParameterRef guid) -> do
       mParamTypeRef <- findInScope guid
       case mParamTypeRef of
@@ -437,8 +414,7 @@ unifyOnTree (StoredExpression stored typeRef value) = do
       defTypeRef <- typeRefFromEntity $ ignoreStoredMonad defTypeEntity
       setType defTypeRef
     Data.ExpressionLiteralInteger _ ->
-      setType <=< generateEntity <=< builtinToGlobal .
-      Data.ExpressionBuiltin $ Data.FFIName ["Prelude"] "Integer"
+      setType <=< generateEntity . Data.ExpressionBuiltin $ Data.FFIName ["Prelude"] "Integer"
     _ -> return ()
   where
     setType = unify typeRef
@@ -590,20 +566,24 @@ canonizeIdentifiersTypes =
               (Data.ExpressionGetVariable . Data.ParameterRef . tryRemap guid)
             x -> return x
 
-builtinToGlobal
-  :: Monad m => Data.Expression t -> Infer m (Data.Expression t)
-builtinToGlobal builtin@(Data.ExpressionBuiltin name) =
-  liftM
+builtinsToGlobals :: Map Data.FFIName Data.VariableRef -> InferredTypeLoop -> InferredTypeLoop
+builtinsToGlobals _ x@(InferredTypeLoop _) = x
+builtinsToGlobals builtinsMap (InferredTypeNoLoop (GuidExpression guid expr)) =
+  InferredTypeNoLoop . GuidExpression guid $
+  case expr of
+  builtin@(Data.ExpressionBuiltin name) ->
     (maybe builtin Data.ExpressionGetVariable . Map.lookup name)
-    readBuiltinsMap
-builtinToGlobal x = return x
-
-builtinsToGlobals :: Monad m => InferredType -> Infer m InferredType
-builtinsToGlobals =
-  mapInferredTypes f
+    builtinsMap
+  Data.ExpressionApply (Data.Apply f a) ->
+    Data.ExpressionApply $ Data.Apply (go f) (go a)
+  Data.ExpressionLambda lambda ->
+    Data.ExpressionLambda $ onLambda lambda
+  Data.ExpressionPi lambda ->
+    Data.ExpressionPi $ onLambda lambda
+  _ -> expr
   where
-    f (InferredType (GuidExpression guid expr)) =
-      liftM (InferredType . GuidExpression guid) $ builtinToGlobal expr
+    go = builtinsToGlobals builtinsMap
+    onLambda (Data.Lambda p r) = Data.Lambda (go p) (go r)
 
 inferExpression
  :: Monad m
@@ -617,7 +597,9 @@ inferExpression mTypeRef expr = do
     Just typeRef ->
       unify typeRef $ eeInferredType withTypeRefs
   unifyOnTree withTypeRefs
-  derefTypeRefs withTypeRefs
+  builtinsMap <- liftTransaction $ Property.get Anchors.builtinsMap
+  derefed <- derefTypeRefs withTypeRefs
+  return . runIdentity . (atInferredTypes . const) (Identity . map (builtinsToGlobals builtinsMap)) $ derefed
 
 inferDefinition
   :: Monad m
