@@ -25,6 +25,7 @@ import Control.Monad (liftM, liftM2, (<=<), when, unless, filterM)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Random (RandomT, nextRandom, runRandomT)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
+import Control.Monad.Trans.State (execStateT)
 import Control.Monad.Trans.UnionFind (UnionFindT, evalUnionFindT)
 import Data.Functor.Identity (Identity(..))
 import Data.Map (Map)
@@ -35,6 +36,7 @@ import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.Data.Load (StoredExpressionRef(..), esGuid)
 import qualified Control.Monad.Trans.Reader as Reader
+import qualified Control.Monad.Trans.State as State
 import qualified Control.Monad.Trans.UnionFind as UnionFind
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
@@ -518,9 +520,8 @@ unifyPair
 
 subst :: Monad m => Guid -> Infer m TypeRef -> TypeRef -> Infer m ()
 subst from mkTo rootRef = do
-  refs <- allUnder [] rootRef
-  relevant <- filterM remove refs
-  mapM_ ((mkTo >>=) . unify) relevant
+  refs <- allUnder rootRef
+  mapM_ replace refs
   where
     removeFrom
       a@(GuidExpression _
@@ -528,36 +529,31 @@ subst from mkTo rootRef = do
       | guidRef == from = (Any True, [])
       | otherwise = (Any False, [a])
     removeFrom x = (Any False, [x])
-    remove typeRef = do
+    replace typeRef = do
       (Any removed, new) <- liftM (mconcat . map removeFrom) $ getTypeRef typeRef
-      when removed $
+      when removed $ do
         setTypeRef typeRef new
-      return removed
+        unify typeRef =<< mkTo
 
-allUnder :: Monad m => [TypeRef] -> TypeRef -> Infer m [TypeRef]
-allUnder visited typeRef = do
-  alreadySeen <-
-    liftTypeRef . liftM or $
-    mapM (UnionFind.equivalent typeRef) visited
-  if alreadySeen
-    then return visited
-    else do
-      types <- getTypeRef typeRef
-      liftM concat $ mapM (recurse (typeRef : visited)) types
+allUnder :: Monad m => TypeRef -> Infer m [TypeRef]
+allUnder =
+  (`execStateT` []) . recurse
   where
-    recurse visited1 entity = do
-      let
-        mPair =
-          case geValue entity of
-          Data.ExpressionPi (Data.Lambda p r) -> Just (p, r)
-          Data.ExpressionLambda (Data.Lambda p r) -> Just (p, r)
-          Data.ExpressionApply (Data.Apply f a) -> Just (f, a)
-          _ -> Nothing
-      case mPair of
-        Nothing -> return visited1
-        Just (a, b) -> do
-          visited2 <- allUnder visited1 a
-          allUnder visited2 b
+    recurse typeRef = do
+      visited <- State.get
+      alreadySeen <-
+        lift . liftTypeRef . liftM or $
+        mapM (UnionFind.equivalent typeRef) visited
+      unless alreadySeen $ do
+        State.modify (typeRef :)
+        types <- lift $ getTypeRef typeRef
+        mapM_ onType types
+    onType entity =
+      case geValue entity of
+      Data.ExpressionPi (Data.Lambda p r) -> recurse p >> recurse r
+      Data.ExpressionLambda (Data.Lambda p r) -> recurse p >> recurse r
+      Data.ExpressionApply (Data.Apply f a) -> recurse f >> recurse a
+      _ -> return ()
 
 canonizeIdentifiersTypes
   :: TypedStoredExpression m
