@@ -316,10 +316,19 @@ unifyOnTree = (`runReaderT` []) . go
     go (StoredExpression stored typeRef value) = do
       lift $ setType =<< generateEmptyEntity
       case value of
-        Data.ExpressionLambda lambda ->
-          handleLambda lambda
-        Data.ExpressionPi lambda@(Data.Lambda _ resultType) ->
-          inferLambda lambda . const . return $ eeInferredType resultType
+
+        Data.ExpressionLambda (Data.Lambda paramType body) -> do
+          paramTypeRef <- lift $ typeRefFromEntity paramType
+          lift $ setType <=< makePi .
+            Data.Lambda paramTypeRef $
+            eeInferredType body
+          Reader.local ((esGuid stored, paramTypeRef):) $ go body
+
+        Data.ExpressionPi (Data.Lambda paramType resultType) -> do
+          paramTypeRef <- lift $ typeRefFromEntity paramType
+          lift . setType $ eeInferredType resultType
+          Reader.local ((esGuid stored, paramTypeRef):) $ go resultType
+
         Data.ExpressionApply (Data.Apply func arg) -> do
           go func
           go arg
@@ -359,15 +368,6 @@ unifyOnTree = (`runReaderT` []) . go
         newPiGuid = Guid.fromString "Pi" `Guid.combine` esGuid stored
         makePi = makeSingletonTypeRef newPiGuid . Data.ExpressionPi
         setType = unify typeRef
-        handleLambda lambda@(Data.Lambda _ body) =
-          inferLambda lambda $ \paramTypeRef ->
-            makePi .
-            Data.Lambda paramTypeRef $
-            eeInferredType body
-        inferLambda (Data.Lambda paramType result) mkType = do
-          paramTypeRef <- lift $ typeRefFromEntity paramType
-          lift $ setType =<< mkType paramTypeRef
-          Reader.local ((esGuid stored, paramTypeRef):) $ go result
 
 unify
   :: Monad m
