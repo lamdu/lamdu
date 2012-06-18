@@ -23,7 +23,7 @@ module Editor.Data.Typed
 import Control.Applicative (Applicative)
 import Control.Monad (liftM, liftM2, (<=<), when, unless, filterM)
 import Control.Monad.Trans.Class (MonadTrans(..))
-import Control.Monad.Trans.Random (RandomT, nextRandom, runRandomT)
+import Control.Monad.Trans.Random (nextRandom, runRandomT)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (execStateT)
 import Control.Monad.Trans.UnionFind (UnionFindT, evalUnionFindT)
@@ -105,23 +105,18 @@ eeIRef = esIRef . eeStored
 --------------- Infer Stack boilerplate:
 
 newtype Infer m a = Infer
-  { unInfer :: UnionFindT TypeData (RandomT Random.StdGen (T m)) a
+  { unInfer :: UnionFindT TypeData (T m) a
   } deriving (Functor, Applicative, Monad)
 AtFieldTH.make ''Infer
 
 liftTypeRef
   :: Monad m
-  => UnionFindT TypeData (RandomT Random.StdGen (T m)) a -> Infer m a
+  => UnionFindT TypeData (T m) a -> Infer m a
 liftTypeRef = Infer
-
-liftRandom
-  :: Monad m
-  => RandomT Random.StdGen (T m) a -> Infer m a
-liftRandom = liftTypeRef . lift
 
 liftTransaction
   :: Monad m => T m a -> Infer m a
-liftTransaction = liftRandom . lift
+liftTransaction = liftTypeRef . lift
 
 ----------------- Infer operations:
 
@@ -140,27 +135,20 @@ runInfer
   :: Monad m
   => Infer m (TypedStoredExpression f)
   -> T m (TypedStoredExpression f)
-runInfer action =
-  liftM canonizeIdentifiersTypes .
-    runRandomT (Random.mkStdGen 0) .
-    evalUnionFindT $
-    unInfer action
+runInfer = liftM canonizeIdentifiersTypes . evalUnionFindT . unInfer
 
-nextGuid :: Monad m => Infer m Guid
-nextGuid = liftRandom nextRandom
-
-generateEntity
-  :: Monad m
-  => Data.Expression TypeRef
-  -> Infer m TypeRef
-generateEntity v = do
-  g <- nextGuid
-  makeTypeRef [GuidExpression g v]
+makeSingletonTypeRef :: Monad m => Guid -> Data.Expression TypeRef -> Infer m TypeRef
+makeSingletonTypeRef guid = makeTypeRef . (: []) . GuidExpression guid
 
 generateEmptyEntity :: Monad m => Infer m TypeRef
 generateEmptyEntity = makeTypeRef []
 
 --------------
+
+-- Entities whose Guid does not matter until canonization can just use
+-- a zero guid:
+zeroGuid :: Guid
+zeroGuid = Guid.fromString "ZeroGuid"
 
 mapMExpressionEntities
   :: Monad m
@@ -260,7 +248,7 @@ typeRefFromEntity =
   where
     f (InferredType (GuidExpression guid val)) =
       ( return val
-      , makeTypeRef . (: []) . GuidExpression guid
+      , makeSingletonTypeRef guid
       )
 
 fromLoaded
@@ -298,17 +286,15 @@ derefTypeRef =
       isLoop <- liftInfer . liftTypeRef . liftM or $
         mapM (UnionFind.equivalent typeRef) visited
       if isLoop
-        then liftM InferredTypeLoop $ liftInfer nextGuid
+        then return $ InferredTypeLoop zeroGuid
         else onType typeRef =<< lift . ListFuncs.fromList =<< liftInfer (getTypeRef typeRef)
     onType typeRef (GuidExpression guid expr) =
       liftM (InferredTypeNoLoop . GuidExpression guid) .
       Data.sequenceExpression $ Data.mapExpression recurse expr
       where
-        recurse = Reader.mapReaderT (ListFuncs.fromList <=< lift . (holify <=< ListCls.toList)) . Reader.local (typeRef :) . go
-        holify [] = do
-          g <- nextGuid
-          return [InferredTypeNoLoop (GuidExpression g Data.ExpressionHole)]
-        holify xs = return xs
+        recurse = Reader.mapReaderT (ListFuncs.fromList <=< lift . (liftM holify . ListCls.toList)) . Reader.local (typeRef :) . go
+        holify [] = [InferredTypeNoLoop (GuidExpression zeroGuid Data.ExpressionHole)]
+        holify xs = xs
 
 derefTypeRefs
   :: Monad m
@@ -341,8 +327,8 @@ unifyOnTree = (`runReaderT` []) . go
             let
               funcTypeRef = eeInferredType func
               argTypeRef = eeInferredType arg
-              piType = Data.ExpressionPi $ Data.Lambda argTypeRef typeRef
-            unify funcTypeRef =<< generateEntity piType
+            unify funcTypeRef <=< makePi $
+              Data.Lambda argTypeRef typeRef
             funcTypes <- getTypeRef funcTypeRef
             sequence_
               [ subst piGuid (typeRefFromEntity arg) piResultTypeRef
@@ -367,13 +353,15 @@ unifyOnTree = (`runReaderT` []) . go
           setType defTypeRef
         Data.ExpressionLiteralInteger _ ->
           lift $
-          setType <=< generateEntity . Data.ExpressionBuiltin $ Data.FFIName ["Prelude"] "Integer"
+          setType <=< makeSingletonTypeRef zeroGuid . Data.ExpressionBuiltin $ Data.FFIName ["Prelude"] "Integer"
         _ -> return ()
       where
+        newPiGuid = Guid.fromString "Pi" `Guid.combine` esGuid stored
+        makePi = makeSingletonTypeRef newPiGuid . Data.ExpressionPi
         setType = unify typeRef
         handleLambda lambda@(Data.Lambda _ body) =
           inferLambda lambda $ \paramTypeRef ->
-            generateEntity . Data.ExpressionPi .
+            makePi .
             Data.Lambda paramTypeRef $
             eeInferredType body
         inferLambda (Data.Lambda paramType result) mkType = do
@@ -437,8 +425,8 @@ unifyPair
       -- Remap b's guid to a's guid and return a as the unification:
       let
         mkGetAGuidRef =
-          generateEntity . Data.ExpressionGetVariable . Data.ParameterRef $
-          aGuid
+          makeSingletonTypeRef zeroGuid . Data.ExpressionGetVariable $
+          Data.ParameterRef aGuid
       subst bGuid mkGetAGuidRef bResultTypeRef
       unify aResultTypeRef bResultTypeRef
       return True
@@ -498,7 +486,8 @@ canonizeIdentifiersTypes =
         onLambda oldGuid newGuid (Data.Lambda paramType body) =
           liftM2 Data.Lambda (f paramType) .
           Reader.local (Map.insert oldGuid newGuid) $ f body
-        f (InferredTypeLoop guid) = return $ InferredTypeLoop guid
+        f (InferredTypeLoop _oldGuid) =
+          lift . liftM InferredTypeLoop $ nextRandom
         f (InferredTypeNoLoop (GuidExpression oldGuid v)) = do
           newGuid <- lift nextRandom
           liftM (InferredTypeNoLoop . GuidExpression newGuid) $
