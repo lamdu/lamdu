@@ -316,15 +316,18 @@ addTypeRefs =
 -- TODO: Use ListT with ordinary Data.mapMExpression?
 derefTypeRef
   :: Monad m
-  => [TypeRef] -> TypeRef -> Infer m [InferredTypeLoop]
-derefTypeRef visited typeRef = do
-  isLoop <- liftTypeRef . liftM or $
-    mapM (UnionFind.equivalent typeRef) visited
-  if isLoop
-    then liftM ((:[]) . InferredTypeLoop) nextGuid
-    else liftM concat . mapM onType =<< getTypeRef typeRef
+  => TypeRef -> Infer m [InferredTypeLoop]
+derefTypeRef =
+  (`runReaderT` []) . go
   where
-    onType (GuidExpression guid expr) =
+    go typeRef = do
+      visited <- Reader.ask
+      isLoop <- lift . liftTypeRef . liftM or $
+        mapM (UnionFind.equivalent typeRef) visited
+      if isLoop
+        then liftM ((:[]) . InferredTypeLoop) $ lift nextGuid
+        else liftM concat . mapM (onType typeRef) =<< lift (getTypeRef typeRef)
+    onType typeRef (GuidExpression guid expr) =
       (liftM . map) (InferredTypeNoLoop . GuidExpression guid) $
       case expr of
       Data.ExpressionLambda lambda ->
@@ -344,9 +347,9 @@ derefTypeRef visited typeRef = do
       Data.ExpressionMagic ->
         map0 Data.ExpressionMagic
       where
-        recurse = holify <=< derefTypeRef (typeRef : visited)
+        recurse = holify <=< Reader.local (typeRef :) . go
         holify [] = do
-          g <- nextGuid
+          g <- lift nextGuid
           return [InferredTypeNoLoop (GuidExpression g Data.ExpressionHole)]
         holify xs = return xs
         map0 = return . (: [])
@@ -369,7 +372,7 @@ derefTypeRefs =
   mapMExpressionEntities f
   where
     f stored typeRef val = do
-      types <- derefTypeRef [] typeRef
+      types <- derefTypeRef typeRef
       return $ StoredExpression stored types val
 
 unifyOnTree
