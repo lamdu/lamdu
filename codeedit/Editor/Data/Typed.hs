@@ -150,10 +150,6 @@ getTypeRef :: Monad m => TypeRef -> Infer m [GuidExpression TypeRef]
 getTypeRef = liftM unTypeData . liftTypeRef . UnionFind.descr
 
 setTypeRef :: Monad m => TypeRef -> [GuidExpression TypeRef] -> Infer m ()
-setTypeRef typeRef [] = do
-  g <- nextGuid
-  liftTypeRef . UnionFind.setDescr typeRef $
-    TypeData [GuidExpression g Data.ExpressionHole]
 setTypeRef typeRef types =
   liftTypeRef . UnionFind.setDescr typeRef $
   TypeData types
@@ -195,6 +191,9 @@ generateEntity
 generateEntity v = do
   g <- nextGuid
   makeTypeRef [GuidExpression g v]
+
+generateEmptyEntity :: Monad m => Infer m TypeRef
+generateEmptyEntity = makeTypeRef []
 
 --------------
 
@@ -331,7 +330,7 @@ addTypeRefs =
   mapMExpressionEntities f
   where
     f stored () val = do
-      typeRef <- generateEntity Data.ExpressionHole
+      typeRef <- generateEmptyEntity
       return $ StoredExpression stored typeRef val
 
 -- TODO: Use ListT with ordinary Data.mapMExpression?
@@ -343,7 +342,7 @@ derefTypeRef visited typeRef = do
     mapM (UnionFind.equivalent typeRef) visited
   if isLoop
     then liftM ((:[]) . InferredTypeLoop) nextGuid
-    else liftM concat $ mapM onType =<< getTypeRef typeRef
+    else liftM concat . mapM onType =<< getTypeRef typeRef
   where
     onType (GuidExpression guid expr) =
       (liftM . map) (InferredTypeNoLoop . GuidExpression guid) $
@@ -365,7 +364,11 @@ derefTypeRef visited typeRef = do
       Data.ExpressionMagic ->
         map0 Data.ExpressionMagic
       where
-        recurse = derefTypeRef (typeRef : visited)
+        recurse = holify <=< derefTypeRef (typeRef : visited)
+        holify [] = do
+          g <- nextGuid
+          return [InferredTypeNoLoop (GuidExpression g Data.ExpressionHole)]
+        holify xs = return xs
         map0 = return . (: [])
         map1 = liftM . map
         map2 = liftM2 . liftM2
@@ -385,12 +388,8 @@ derefTypeRefs
 derefTypeRefs =
   mapMExpressionEntities f
   where
-    inferredTypeIsHole (InferredTypeNoLoop (GuidExpression _ Data.ExpressionHole)) = True
-    inferredTypeIsHole _ = False
     f stored typeRef val = do
-      types <-
-        (liftM . filter) (not . inferredTypeIsHole) $
-        derefTypeRef [] typeRef
+      types <- derefTypeRef [] typeRef
       return $ StoredExpression stored types val
 
 unifyOnTree
@@ -398,7 +397,7 @@ unifyOnTree
   => StoredExpression TypeRef (T f)
   -> Infer m ()
 unifyOnTree (StoredExpression stored typeRef value) = do
-  setType =<< generateEntity Data.ExpressionHole
+  setType =<< generateEmptyEntity
   case value of
     Data.ExpressionLambda lambda ->
       handleLambda lambda
@@ -465,24 +464,24 @@ unify a b = do
   unless e $ do
     as <- getTypeRef a
     bs <- getTypeRef b
-    us <-
-      liftM (TypeData . concat) . sequence $
-      liftM2 unifyPair as bs
+    result <- liftM (as ++) $ filterM (liftM not . matches as) bs
     liftTypeRef $ do
       a `UnionFind.union` b
-      UnionFind.setDescr a us
+      UnionFind.setDescr a $ TypeData result
+  where
+    matches as y = liftM or $ mapM (`unifyPair` y) as
 
+-- biased towards left child (if unifying Pis,
+-- substs right child's guids to left)
 unifyPair
   :: Monad m
   => GuidExpression TypeRef
   -> GuidExpression TypeRef
-  -> Infer m [GuidExpression TypeRef]
+  -> Infer m Bool
 unifyPair
-  a@(GuidExpression aGuid aVal)
-  b@(GuidExpression bGuid bVal)
+  (GuidExpression aGuid aVal)
+  (GuidExpression bGuid bVal)
   = case (aVal, bVal) of
-    (Data.ExpressionHole, _) -> return [b]
-    (_, Data.ExpressionHole) -> return [a]
     (Data.ExpressionPi l1,
      Data.ExpressionPi l2) ->
       unifyLambdas l1 l2
@@ -493,22 +492,16 @@ unifyPair
      Data.ExpressionApply (Data.Apply bFuncTypeRef bArgTypeRef)) -> do
       unify aFuncTypeRef bFuncTypeRef
       unify aArgTypeRef bArgTypeRef
-      return [a]
-    (Data.ExpressionGetVariable aVarRef,
-     Data.ExpressionGetVariable bVarRef)
-      | aVarRef == bVarRef -> return [a]
-      | otherwise -> return [a, b]
-    (Data.ExpressionLiteralInteger aInt,
-     Data.ExpressionLiteralInteger bInt)
-      | aInt == bInt -> return [a]
-      | otherwise -> return [a, b]
-    (Data.ExpressionBuiltin aName,
-     Data.ExpressionBuiltin bName)
-      | aName == bName -> return [a]
-      | otherwise -> return [a,b]
+      return True
+    (Data.ExpressionBuiltin bi1,
+     Data.ExpressionBuiltin bi2) -> return $ bi1 == bi2
+    (Data.ExpressionGetVariable v1,
+     Data.ExpressionGetVariable v2) -> return $ v1 == v2
+    (Data.ExpressionLiteralInteger i1,
+     Data.ExpressionLiteralInteger i2) -> return $ i1 == i2
     (Data.ExpressionMagic,
-     Data.ExpressionMagic) -> return [a]
-    (_, _) -> return [a,b]
+     Data.ExpressionMagic) -> return True
+    _ -> return False
   where
     unifyLambdas
       (Data.Lambda aParamTypeRef aResultTypeRef)
@@ -521,7 +514,7 @@ unifyPair
           aGuid
       subst bGuid mkGetAGuidRef bResultTypeRef
       unify aResultTypeRef bResultTypeRef
-      return [a]
+      return True
 
 subst :: Monad m => Guid -> Infer m TypeRef -> TypeRef -> Infer m ()
 subst from mkTo rootRef = do
