@@ -352,7 +352,7 @@ derefTypeRefs =
 
 unifyOnTree
   :: Monad m
-  => StoredExpression TypeRef (T f)
+  => StoredExpression TypeRef f
   -> Infer m ()
 unifyOnTree (StoredExpression stored typeRef value) = do
   setType =<< generateEmptyEntity
@@ -566,8 +566,8 @@ builtinsToGlobals builtinsMap (InferredTypeNoLoop (GuidExpression guid expr)) =
 inferExpression
  :: Monad m
  => Maybe TypeRef
- -> StoredExpression () (T f)
- -> Infer m (TypedStoredExpression (T f))
+ -> StoredExpression () f
+ -> Infer m (TypedStoredExpression f)
 inferExpression mTypeRef expr = do
   withTypeRefs <- addTypeRefs expr
   case mTypeRef of
