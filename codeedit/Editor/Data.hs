@@ -11,8 +11,8 @@ module Editor.Data
   , Expression(..)
   , ExpressionI, ExpressionIRef(..)
   , newExprIRef, readExprIRef, writeExprIRef, exprIRefGuid
-  , foldMExpression
   , mapMExpression
+  , mapExpression, sequenceExpression
   ) where
 
 import Control.Monad (liftM, liftM2)
@@ -87,18 +87,6 @@ data Expression expr
   deriving (Eq, Ord, Show)
 type ExpressionI = Expression ExpressionIRef
 
-data FoldExpression m from to = FoldExpression
-  { feDeref :: m (Expression from)
-  , feLambda :: Lambda to -> m to
-  , fePi :: Lambda to -> m to
-  , feApply :: Apply to -> m to
-  , feGetVariable :: VariableRef -> m to
-  , feHole :: m to
-  , feLiteralInt :: Integer -> m to
-  , feBuiltin :: FFIName -> m to
-  , feMagic :: m to
-  }
-
 data Definition expr = Definition
   { defType :: expr
   , defBody :: expr
@@ -121,28 +109,25 @@ AtFieldTH.make ''Lambda
 AtFieldTH.make ''Apply
 AtFieldTH.make ''Definition
 
+mapExpression :: (a -> b) -> Expression a -> Expression b
+mapExpression f (ExpressionLambda (Lambda x y)) = ExpressionLambda $ Lambda (f x) (f y)
+mapExpression f (ExpressionPi (Lambda x y)) = ExpressionPi $ Lambda (f x) (f y)
+mapExpression f (ExpressionApply (Apply x y)) = ExpressionApply $ Apply (f x) (f y)
+mapExpression _ (ExpressionGetVariable var) = ExpressionGetVariable var
+mapExpression _ ExpressionHole = ExpressionHole
+mapExpression _ (ExpressionLiteralInteger int) = ExpressionLiteralInteger int
+mapExpression _ (ExpressionBuiltin name) = ExpressionBuiltin name
+mapExpression _ ExpressionMagic = ExpressionMagic
 
-foldMExpression
-  :: Monad m
-  => (from -> FoldExpression m from to)
-  -> from
-  -> m to
-foldMExpression mkFolder exprI = do
-  expr <- feDeref folder
-  case expr of
-    ExpressionLambda l -> feLambda folder =<< foldLambda l
-    ExpressionPi l -> fePi folder =<< foldLambda l
-    ExpressionApply (Apply func arg) ->
-      feApply folder =<< liftM2 Apply (recurse func) (recurse arg)
-    ExpressionGetVariable varRef -> feGetVariable folder varRef
-    ExpressionHole -> feHole folder
-    ExpressionLiteralInteger int -> feLiteralInt folder int
-    ExpressionBuiltin ffiName -> feBuiltin folder ffiName
-    ExpressionMagic -> feMagic folder
-  where
-    folder = mkFolder exprI
-    recurse = foldMExpression mkFolder
-    foldLambda (Lambda p b) = liftM2 Lambda (recurse p) (recurse b)
+sequenceExpression :: Monad f => Expression (f a) -> f (Expression a)
+sequenceExpression (ExpressionLambda (Lambda x y)) = liftM ExpressionLambda $ liftM2 Lambda x y
+sequenceExpression (ExpressionPi (Lambda x y)) = liftM ExpressionPi $ liftM2 Lambda x y
+sequenceExpression (ExpressionApply (Apply x y)) = liftM ExpressionApply $ liftM2 Apply x y
+sequenceExpression (ExpressionGetVariable var) = return $ ExpressionGetVariable var
+sequenceExpression ExpressionHole = return ExpressionHole
+sequenceExpression (ExpressionLiteralInteger int) = return $ ExpressionLiteralInteger int
+sequenceExpression (ExpressionBuiltin name) = return $ ExpressionBuiltin name
+sequenceExpression ExpressionMagic = return ExpressionMagic
 
 mapMExpression
   :: Monad m
@@ -150,19 +135,7 @@ mapMExpression
       -> ( m (Expression from)
          , Expression to -> m to ))
   -> from -> m to
-mapMExpression f =
-  foldMExpression mkFolder
+mapMExpression f src =
+  afterRecurse =<< sequenceExpression . mapExpression (mapMExpression f) =<< makeExpr
   where
-    mkFolder src = FoldExpression
-      { feDeref = deref
-      , feLambda = g . ExpressionLambda
-      , fePi = g . ExpressionPi
-      , feApply = g . ExpressionApply
-      , feGetVariable = g . ExpressionGetVariable
-      , feHole = g ExpressionHole
-      , feLiteralInt = g . ExpressionLiteralInteger
-      , feBuiltin = g . ExpressionBuiltin
-      , feMagic = g ExpressionMagic
-      }
-      where
-        (deref, g) = f src
+    (makeExpr, afterRecurse) = f src
