@@ -448,12 +448,8 @@ allUnder =
         State.modify (typeRef :)
         types <- lift $ getTypeRef typeRef
         mapM_ onType types
-    onType guidExpr =
-      case Data.geValue guidExpr of
-      Data.ExpressionPi (Data.Lambda p r) -> recurse p >> recurse r
-      Data.ExpressionLambda (Data.Lambda p r) -> recurse p >> recurse r
-      Data.ExpressionApply (Data.Apply f a) -> recurse f >> recurse a
-      _ -> return ()
+    onType =
+      Data.sequenceExpression . Data.mapExpression recurse . Data.geValue
 
 canonizeIdentifiersTypes
   :: TypedStoredExpression m
