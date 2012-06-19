@@ -486,31 +486,22 @@ canonizeIdentifiersTypes =
             Data.ExpressionApply (Data.Apply func arg) ->
               liftM Data.ExpressionApply $
               liftM2 Data.Apply (f func) (f arg)
-            Data.ExpressionGetVariable (Data.ParameterRef guid) ->
-              Reader.asks
-              (Data.ExpressionGetVariable . Data.ParameterRef .
-               tryRemap guid)
+            gv@(Data.ExpressionGetVariable (Data.ParameterRef guid)) ->
+              Reader.asks $
+              maybe gv (Data.ExpressionGetVariable . Data.ParameterRef) .
+              Map.lookup guid
             x -> return x
-    tryRemap x = fromMaybe x . Map.lookup x
 
 builtinsToGlobals :: Map Data.FFIName Data.VariableRef -> InferredTypeLoop -> InferredTypeLoop
 builtinsToGlobals _ x@(InferredTypeLoop _) = x
 builtinsToGlobals builtinsMap (InferredTypeNoLoop (Data.GuidExpression guid expr)) =
   InferredTypeNoLoop . Data.GuidExpression guid $
+  Data.mapExpression (builtinsToGlobals builtinsMap) $
   case expr of
   builtin@(Data.ExpressionBuiltin name) ->
     (maybe builtin Data.ExpressionGetVariable . Map.lookup name)
     builtinsMap
-  Data.ExpressionApply (Data.Apply f a) ->
-    Data.ExpressionApply $ Data.Apply (go f) (go a)
-  Data.ExpressionLambda lambda ->
-    Data.ExpressionLambda $ onLambda lambda
-  Data.ExpressionPi lambda ->
-    Data.ExpressionPi $ onLambda lambda
-  _ -> expr
-  where
-    go = builtinsToGlobals builtinsMap
-    onLambda (Data.Lambda p r) = Data.Lambda (go p) (go r)
+  other -> other
 
 inferExpression
  :: Monad m
