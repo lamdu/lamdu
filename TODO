@@ -1,4 +1,9 @@
-* Alt-left/go-back is somehow generating a new version?
+* Whenever prejumps is added/popped, we actually update in-version
+  data, so it actually creates a new, undo-able version. Need to have
+  the JumpBack stack actually be outside the version and in the DB to
+  fix this and to make navigation (potentially) nicer when switching
+  branches.
+
 * Projected moves:
   * Has old focal rect
   * May have "projected focal rect"
