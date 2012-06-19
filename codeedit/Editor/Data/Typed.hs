@@ -374,7 +374,9 @@ unify a b = do
   unless e $ do
     as <- getTypeRef a
     bs <- getTypeRef b
-    result <- liftM (as ++) $ filterM (liftM not . matches as) bs
+    bConflicts <- filterM (liftM not . matches as) bs
+    -- Need to re-get a after the side-effecting matches:
+    result <- liftM (++ bConflicts) $ getTypeRef a
     liftTypeRef $ do
       a `UnionFind.union` b
       UnionFind.setDescr a $ TypeData result
