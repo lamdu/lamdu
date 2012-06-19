@@ -2,17 +2,16 @@
 
 module Editor.CodeEdit.ExpressionEdit.LiteralEdit(makeInt, makeIntView) where
 
-import Data.Store.Transaction (Transaction)
 import Editor.Anchors(ViewTag)
-import Editor.OTransaction (OTransaction, TWidget)
 import Editor.MonadF(MonadF)
+import Editor.OTransaction (TWidget)
 import Graphics.UI.Bottle.Animation (AnimId)
-import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Char as Char
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.OTransaction as OT
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
+import qualified Editor.ITransaction as IT
+import qualified Editor.OTransaction as OT
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -24,7 +23,7 @@ setColor = BWidgets.setTextColor Config.literalIntColor
 makeIntView
   :: MonadF m
   => AnimId -> Integer
-  -> OTransaction ViewTag m (Widget (Transaction ViewTag m))
+  -> TWidget t m
 makeIntView myId integer =
   setColor $ BWidgets.makeTextView (show integer) myId
 
@@ -44,10 +43,10 @@ makeIntEdit integer myId = do
       | newText == text = return eventRes
       | not (all Char.isDigit newText) = return Widget.emptyEventResult
       | null newText = do
-        _ <- setValue 0
+        _ <- IT.transaction $ setValue 0
         return . Widget.eventResultFromCursor $ Widget.joinId myId emptyZeroCursor
       | otherwise = do
-        _ <- setValue $ read newText
+        _ <- IT.transaction $ setValue $ read newText
         return eventRes
   style <- OT.readTextStyle
   return .

@@ -10,19 +10,20 @@ import Data.Monoid(Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.OTransaction (OTransaction, TWidget)
 import Editor.MonadF (MonadF)
+import Editor.OTransaction (OTransaction, TWidget)
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.OTransaction as OT
 import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
 import qualified Editor.CodeEdit.ExpressionEdit as ExpressionEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.Data.Typed as DataTyped
+import qualified Editor.ITransaction as IT
+import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -134,6 +135,7 @@ makePanesEdit panes = do
   newDefinition <- makeNewDefinitionAction
   let
     panesEventMap =
+      fmap IT.transaction $
       mconcat
       [ Widget.keysEventMapMovesCursor Config.newDefinitionKeys
         "New definition" newDefinition
@@ -145,7 +147,7 @@ makePanesEdit panes = do
   return $ Widget.weakerEvents panesEventMap panesWidget
   where
     myId = WidgetIds.fromIRef Anchors.panesIRef
-    paneEventMap pane = mconcat
+    paneEventMap pane = fmap IT.transaction $ mconcat
       [ maybe mempty (Widget.keysEventMapMovesCursor Config.closePaneKeys "Close pane" . liftM WidgetIds.fromGuid) $ mDelPane pane
       , maybe mempty (Widget.keysEventMap Config.movePaneDownKeys "Move pane down") $ mMovePaneDown pane
       , maybe mempty (Widget.keysEventMap Config.movePaneUpKeys "Move pane up") $ mMovePaneUp pane

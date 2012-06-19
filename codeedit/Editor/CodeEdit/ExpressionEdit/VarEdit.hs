@@ -2,13 +2,14 @@
 module Editor.CodeEdit.ExpressionEdit.VarEdit(make, makeView, colorOf) where
 
 import Editor.Anchors (ViewTag)
-import Editor.OTransaction (TWidget)
 import Editor.MonadF(MonadF)
+import Editor.OTransaction (TWidget)
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.OTransaction as OT
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
+import qualified Editor.ITransaction as IT
+import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -38,11 +39,11 @@ make varRef myId = do
       Widget.keysEventMapMovesCursor Config.jumpToDefinitionKeys "Jump to definition" jumpToDefinition
     jumpToDefinition =
       case varRef of
-        Data.DefinitionRef defI -> do
+        Data.DefinitionRef defI -> IT.transaction $ do
           Anchors.newPane defI
           Anchors.savePreJumpPosition myId
           return $ WidgetIds.fromIRef defI
-        Data.ParameterRef paramGuid -> do
+        Data.ParameterRef paramGuid -> IT.transaction $ do
           Anchors.savePreJumpPosition myId
           return $ WidgetIds.paramId paramGuid
   return $ Widget.weakerEvents jumpToDefinitionEventMap varRefView

@@ -10,11 +10,13 @@ module Editor.OTransaction
   ) where
 
 {- Outer transaction -}
-  
+
+import Control.Applicative (Applicative)
 import Control.Monad (liftM)
 import Control.Monad.Trans.Class (lift)
 import Data.Store.Property(Property)
 import Data.Store.Transaction (Transaction)
+import Editor.ITransaction (ITransaction)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Monad.Trans.Reader as Reader
@@ -34,21 +36,28 @@ data OTransactionEnv = OTransactionEnv {
   }
 AtFieldTH.make ''OTransactionEnv
 
-type WidgetT t m = Widget (Transaction t m)
+type WidgetT t m = Widget (ITransaction t m)
 type TWidget t m = OTransaction t m (WidgetT t m)
 
 newtype OTransaction t m a = OTransaction {
-  unOTransaction :: Reader.ReaderT OTransactionEnv (Writer.WriterT [Data.VariableRef] (Transaction t m)) a
+  unOTransaction
+  :: Reader.ReaderT OTransactionEnv
+     (Writer.WriterT [Data.VariableRef]
+      (Transaction t m)) a
   }
-  deriving (Monad)
+  deriving (Functor, Applicative, Monad)
 AtFieldTH.make ''OTransaction
 
 liftEnv
-  :: Reader.ReaderT OTransactionEnv (Writer.WriterT [Data.VariableRef] (Transaction t m)) a
+  :: Reader.ReaderT OTransactionEnv
+     (Writer.WriterT [Data.VariableRef] (Transaction t m)) a
   -> OTransaction t m a
 liftEnv = OTransaction
 
-liftUsedvars :: Monad m => Writer.WriterT [Data.VariableRef] (Transaction t m) a -> OTransaction t m a
+liftUsedvars
+  :: Monad m
+  => Writer.WriterT [Data.VariableRef] (Transaction t m) a
+  -> OTransaction t m a
 liftUsedvars = liftEnv . lift
 
 transaction :: Monad m => Transaction t m a -> OTransaction t m a
@@ -66,7 +75,9 @@ runOTransaction cursor style =
 markVariablesAsUsed :: Monad m => [Data.VariableRef] -> OTransaction t m ()
 markVariablesAsUsed = liftUsedvars . Writer.tell
 
-usedVariables :: Monad m => OTransaction t m a -> OTransaction t m (a, [Data.VariableRef])
+usedVariables
+  :: Monad m
+  => OTransaction t m a -> OTransaction t m (a, [Data.VariableRef])
 usedVariables = atOTransaction $ Reader.mapReaderT Writer.listen
 
 runNested ::
@@ -91,10 +102,12 @@ readTextStyle = liftEnv $ Reader.asks envTextStyle
 getP :: Monad m => Property (Transaction t m) a -> OTransaction t m a
 getP = transaction . Property.get
 
-atCursor :: (Widget.Id -> Widget.Id) -> OTransaction t m a -> OTransaction t m a
+atCursor
+  :: (Widget.Id -> Widget.Id) -> OTransaction t m a -> OTransaction t m a
 atCursor = atOTransaction . Reader.withReaderT . atEnvCursor
 
-assignCursor :: Widget.Id -> Widget.Id -> OTransaction t m a -> OTransaction t m a
+assignCursor
+  :: Widget.Id -> Widget.Id -> OTransaction t m a -> OTransaction t m a
 assignCursor src dest =
   atCursor replace
   where

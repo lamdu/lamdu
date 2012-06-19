@@ -4,11 +4,10 @@ module Editor.CodeEdit.ExpressionEdit(make) where
 import Control.Arrow (first)
 import Control.Monad (liftM)
 import Data.Monoid (Monoid(..))
-import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.OTransaction (OTransaction)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.CodeEdit.InferredTypes (addType)
+import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (EventHandlers)
 import qualified Editor.BottleWidgets as BWidgets
@@ -24,6 +23,7 @@ import qualified Editor.CodeEdit.ExpressionEdit.WhereEdit as WhereEdit
 import qualified Editor.CodeEdit.Parens as Parens
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
+import qualified Editor.ITransaction as IT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -85,18 +85,17 @@ make sExpr = do
 
   (holePicker, widget) <- makeEditor exprId
   typeEdits <- mapM make $ Sugar.rInferredTypes sExpr
-  eventMap <- expressionEventMap sExpr holePicker
   return .
-    Widget.weakerEvents eventMap $
+    Widget.weakerEvents (expressionEventMap sExpr holePicker) $
     addType exprId typeEdits widget
 
 expressionEventMap
   :: MonadF m
   => Sugar.ExpressionRef m
   -> HoleResultPicker m
-  -> OTransaction ViewTag m (EventHandlers (Transaction ViewTag m))
+  -> EventHandlers (ITransaction ViewTag m)
 expressionEventMap sExpr holePicker =
-  return . mconcat $
+  mconcat $
     [ giveAsArg
     , callWithArg
     , addArg
@@ -107,25 +106,23 @@ expressionEventMap sExpr holePicker =
     , cut
     ]
   where
+    itrans = liftM WidgetIds.fromGuid . IT.transaction
     giveAsArg =
       maybeMempty (Sugar.giveAsArg actions) $
       moveUnlessOnHole .
       Widget.keysEventMapMovesCursor
-      Config.giveAsArgumentKeys "Give as argument" .
-      liftM WidgetIds.fromGuid
+      Config.giveAsArgumentKeys "Give as argument" . itrans
     callWithArg =
       maybeMempty (Sugar.callWithArg actions) $
       moveUnlessOnHole .
       Widget.keysEventMapMovesCursor
-      Config.callWithArgumentKeys "Call with argument" .
-      liftM WidgetIds.fromGuid
+      Config.callWithArgumentKeys "Call with argument" . itrans
     addArg =
       maybeMempty (Sugar.mNextArg actions) moveToIfHole
       -- Move to next arg overrides add arg's keys.
       `mappend`
       maybeMempty (Sugar.addNextArg actions)
-      (withPickResultFirst Config.addNextArgumentKeys "Add arg" .
-       liftM WidgetIds.fromGuid)
+      (withPickResultFirst Config.addNextArgumentKeys "Add arg" . itrans)
     delete =
       -- Replace has the keys of Delete if delete is not available:
       mkEventMap Sugar.mDelete
@@ -148,10 +145,9 @@ expressionEventMap sExpr holePicker =
     mkEventMap getAct keys doc f =
       maybeMempty (getAct actions) $
       Widget.keysEventMapMovesCursor keys doc .
-      liftM f
+      liftM f . IT.transaction
 
-
-    withPickResultFirst keys doc action=
+    withPickResultFirst keys doc action =
       ifHole pickResultFirst .
       Widget.keysEventMapMovesCursor
       keys (ifHole (const ("Pick result and " ++)) doc) $ action

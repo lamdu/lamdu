@@ -7,14 +7,15 @@ import Data.Monoid (mempty, mconcat)
 import Data.Store.Guid (Guid)
 import Data.Vector.Vector2 (Vector2(Vector2))
 import Editor.Anchors (ViewTag)
-import Editor.OTransaction (OTransaction, TWidget, WidgetT)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
+import Editor.OTransaction (OTransaction, TWidget, WidgetT)
 import qualified Data.List as List
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.OTransaction as OT
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
+import qualified Editor.ITransaction as IT
+import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -66,12 +67,15 @@ makeParamEdit makeExpressionEdit param =
     paramAddNextEventMap =
       maybe mempty
       (Widget.keysEventMapMovesCursor Config.addNextParamKeys "Add next parameter" .
-       liftM (FocusDelegator.delegatingId . WidgetIds.paramId)) .
-      Sugar.lambdaWrap . Sugar.rActions $ Sugar.fpBody param
+       liftM (FocusDelegator.delegatingId . WidgetIds.paramId) .
+       IT.transaction) .
+      Sugar.lambdaWrap . Sugar.rActions $
+      Sugar.fpBody param
     paramDeleteEventMap =
       maybe mempty
       (Widget.keysEventMapMovesCursor Config.delKeys "Delete parameter" .
-       liftM WidgetIds.fromGuid) .
+       liftM WidgetIds.fromGuid .
+       IT.transaction) .
       Sugar.mDelete $ Sugar.fpActions param
 
 makeParamsEdit

@@ -22,8 +22,8 @@ import Data.Monoid (mappend)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
-import Editor.OTransaction (TWidget, OTransaction)
 import Editor.MonadF (MonadF)
+import Editor.OTransaction (TWidget, OTransaction)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Sized (Sized)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -32,6 +32,7 @@ import qualified Data.Store.Guid as Guid
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
+import qualified Editor.ITransaction as IT
 import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
@@ -130,7 +131,7 @@ makeTextEdit textRef myId = do
   text <- OT.getP textRef
   let
     lifter (newText, eventRes) = do
-      when (newText /= text) $ Property.set textRef newText
+      when (newText /= text) $ IT.setP textRef newText
       return eventRes
   cursor <- OT.readCursor
   style <- OT.readTextStyle

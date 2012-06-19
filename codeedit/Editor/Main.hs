@@ -30,6 +30,7 @@ import qualified Editor.BranchGUI as BranchGUI
 import qualified Editor.CodeEdit as CodeEdit
 import qualified Editor.Config as Config
 import qualified Editor.ExampleDB as ExampleDB
+import qualified Editor.ITransaction as IT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
@@ -117,17 +118,20 @@ runDbStore font store = do
       cache <- readIORef cacheRef
       (invalidCursor, widget) <- widgetDownTransaction $ do
         cursor <- Property.get Anchors.cursor
-        candidateWidget <- fromCursor cache cursor
+        candidateWidget <- unwrap cache cursor
         (invalidCursor, widget) <-
           if Widget.isFocused candidateWidget
           then return (Nothing, candidateWidget)
           else do
-            finalWidget <- fromCursor cache rootCursor
+            finalWidget <- unwrap cache rootCursor
             Property.set Anchors.cursor rootCursor
             return (Just cursor, finalWidget)
         unless (Widget.isFocused widget) $
           fail "Root cursor did not match"
-        return (invalidCursor, Widget.atEvents (lift . attachCursor =<<) widget)
+        return
+          ( invalidCursor
+          , Widget.atEvents (lift . attachCursor =<<) widget
+          )
       maybe (return ()) (putStrLn . ("Invalid cursor: " ++) . show) invalidCursor
       return $ Widget.atEvents saveCache widget
 
@@ -161,14 +165,20 @@ runDbStore font store = do
       , TextEdit.sEmptyFocusedString = ""
       }
 
-    fromCursor cache cursor =
-      runOTransaction cursor style .
+    unwrap cache cursor =
+      -- Get rid of OTransaction/ITransaction wrappings
+      (liftM . Widget.atEvents . Writer.mapWriterT) IT.runITransaction .
+      runOTransaction cursor style $
+      makeCodeEdit cache
+
+    makeCodeEdit cache =
       BranchGUI.makeRootWidget CodeEdit.makeSugarCache $
       CodeEdit.makeCodeEdit cache
 
     widgetDownTransaction =
       Transaction.run store .
-      (liftM . second . Widget.atEvents . Writer.mapWriterT) (Transaction.run store)
+      (liftM . second . Widget.atEvents . Writer.mapWriterT)
+      (Transaction.run store)
 
     attachCursor eventResult = do
       maybe (return ()) (Property.set Anchors.cursor) $ Widget.eCursor eventResult

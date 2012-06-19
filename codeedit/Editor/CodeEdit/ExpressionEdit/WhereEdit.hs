@@ -6,14 +6,15 @@ import Control.Monad (liftM)
 import Data.Monoid (mempty)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
-import Editor.OTransaction (TWidget)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
+import Editor.OTransaction (TWidget)
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.OTransaction as OT
 import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
+import qualified Editor.ITransaction as IT
+import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
@@ -50,8 +51,9 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
     guid = Sugar.guid . Sugar.wiActions
     whereItemDeleteEventMap whereItem =
       maybe mempty
-      (Widget.keysEventMapMovesCursor Config.delKeys "Delete variable" . liftM WidgetIds.fromGuid)
-      (Sugar.mDelete (Sugar.wiActions whereItem))
+      (Widget.keysEventMapMovesCursor Config.delKeys "Delete variable" .
+       liftM WidgetIds.fromGuid . IT.transaction)
+      ((Sugar.mDelete . Sugar.wiActions) whereItem)
 
 makeWithBody
   :: MonadF m

@@ -9,18 +9,19 @@ import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
-import Editor.OTransaction (OTransaction, TWidget)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.CodeEdit.InferredTypes(addType)
+import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
-import Graphics.UI.Bottle.Widget (Widget)
+import Editor.OTransaction (OTransaction, TWidget, WidgetT)
 import qualified Data.List as List
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.OTransaction as OT
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
+import qualified Editor.ITransaction as IT
+import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -66,7 +67,8 @@ makeLHSEdit makeExpressionEdit myId ident mAddFirstParameter params = do
       maybe mempty
       (Widget.keysEventMapMovesCursor Config.addNextParamKeys
        "Add parameter" .
-       liftM (FocusDelegator.delegatingId . WidgetIds.paramId))
+       liftM (FocusDelegator.delegatingId . WidgetIds.paramId) .
+       IT.transaction)
       mAddFirstParameter
     scaleDownType = second $ Widget.scale Config.typeScaleFactor
     -- no type for def name (yet):
@@ -76,8 +78,8 @@ makeLHSEdit makeExpressionEdit myId ident mAddFirstParameter params = do
 addJumps
   :: Monad m
   => Widget.Id
-  -> [(Maybe Side, Grid.GridElement (Transaction ViewTag m))]
-  -> [(Maybe Side, Grid.GridElement (Transaction ViewTag m))]
+  -> [(Maybe Side, Grid.GridElement (ITransaction ViewTag m))]
+  -> [(Maybe Side, Grid.GridElement (ITransaction ViewTag m))]
 addJumps cursor defKGridElements =
   addEventMap LHS RHS "right-hand side" Config.jumpToRhsKeys Direction.fromLeft .
   addEventMap RHS LHS "left-hand side"  Config.jumpToLhsKeys Direction.fromRight $
@@ -95,7 +97,7 @@ addJumps cursor defKGridElements =
       Widget.sdwdMaybeEnter $ Grid.gridElementSdwd destElement
     makeJumpForEnter doc keys dir destElement enter =
       E.keyPresses keys ("Jump to "++doc) .
-      (Anchors.savePreJumpPosition cursor >>) .
+      (IT.transaction (Anchors.savePreJumpPosition cursor) >>) .
       Widget.enterResultEvent . enter . dir $
       Grid.gridElementRect destElement
 
@@ -105,7 +107,7 @@ makeDefBodyParts
   -> Widget.Id
   -> Guid
   -> Sugar.ExpressionRef m
-  -> OTransaction ViewTag m [(Maybe Side, Widget (Transaction ViewTag m))]
+  -> OTransaction ViewTag m [(Maybe Side, WidgetT ViewTag m)]
 makeDefBodyParts makeExpressionEdit myId guid exprRef = do
   let
     sExpr = Sugar.rExpression exprRef
@@ -115,7 +117,7 @@ makeDefBodyParts makeExpressionEdit myId guid exprRef = do
       _ -> Sugar.Func [] exprRef
   lhsEdit <-
     makeLHSEdit makeExpressionEdit myId guid
-    (Sugar.lambdaWrap (Sugar.rActions exprRef)) (Sugar.fParams func)
+    ((Sugar.lambdaWrap . Sugar.rActions) exprRef) (Sugar.fParams func)
   equals <- BWidgets.makeLabel "=" $ Widget.toAnimId myId
   rhsEdit <- makeExpressionEdit $ Sugar.fBody func
   return $
@@ -131,7 +133,7 @@ makeParts
   :: MonadF m
   => ExpressionEditMaker m
   -> Widget.Id -> Guid -> Sugar.ExpressionRef m -> Sugar.ExpressionRef m
-  -> OTransaction ViewTag m [[(Maybe Side, Widget (Transaction ViewTag m))]]
+  -> OTransaction ViewTag m [[(Maybe Side, WidgetT ViewTag m)]]
 makeParts makeExpressionEdit myId guid defBody defType = do
   typeEdit <- makeExpressionEdit defType
   colon <- BWidgets.makeLabel ":" $ Widget.toAnimId myId

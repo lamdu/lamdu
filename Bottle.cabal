@@ -104,6 +104,7 @@ Executable Editor
                        Editor.BottleWidgets,
                        Editor.BranchGUI,
                        Editor.OTransaction,
+                       Editor.ITransaction,
                        Editor.CodeEdit,
                        Editor.CodeEdit.InferredTypes,
                        Editor.CodeEdit.ExpressionEdit,

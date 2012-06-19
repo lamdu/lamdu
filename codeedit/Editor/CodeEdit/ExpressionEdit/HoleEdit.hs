@@ -12,16 +12,15 @@ import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.OTransaction (OTransaction, TWidget)
+import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
+import Editor.OTransaction (OTransaction, TWidget, WidgetT)
 import Graphics.UI.Bottle.Animation(AnimId)
-import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Char as Char
 import qualified Data.Function as Function
 import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.OTransaction as OT
 import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
 import qualified Editor.CodeEdit.Infix as Infix
@@ -30,13 +29,15 @@ import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.Data.Ops as DataOps
+import qualified Editor.ITransaction as IT
+import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
-type ResultPicker m = Transaction ViewTag m Widget.EventResult
+type ResultPicker m = ITransaction ViewTag m Widget.EventResult
 
 data Result m = Result {
   resultName :: String,
@@ -50,16 +51,17 @@ data HoleInfo m = HoleInfo
   , hiHole :: Sugar.Hole m
   }
 
-pasteEventMap :: MonadF m => Sugar.Hole m -> Widget.EventHandlers (Transaction ViewTag m)
+pasteEventMap :: MonadF m => Sugar.Hole m -> Widget.EventHandlers (ITransaction ViewTag m)
 pasteEventMap =
   maybe mempty
   (Widget.keysEventMapMovesCursor
    Config.pasteKeys "Paste" .
-   liftM WidgetIds.fromGuid) .
+   liftM WidgetIds.fromGuid .
+   IT.transaction) .
   Sugar.holePaste
 
 resultPickEventMap
-  :: Result m -> Widget.EventHandlers (Transaction ViewTag m)
+  :: Result m -> Widget.EventHandlers (ITransaction ViewTag m)
 resultPickEventMap =
   maybe mempty (E.keyPresses Config.pickResultKeys "Pick this search result") .
   resultPick
@@ -91,7 +93,7 @@ makeResultVariables holeInfo varRef = do
     case (Infix.isInfixName varName,
           Sugar.holeMFlipFuncArg (hiHole holeInfo)) of
     (True, Just flipAct) ->
-      [result varName flipAct resultId return, parened]
+      [result varName (IT.transaction flipAct) resultId return, parened]
     _ ->
       [result varName (return ()) resultId return]
   where
@@ -127,9 +129,9 @@ mPickResult
   :: MonadF m
   => HoleInfo m
   -> Maybe
-     (Data.ExpressionI -> Transaction ViewTag m () -> ResultPicker m)
+     (Data.ExpressionI -> ITransaction ViewTag m () -> ResultPicker m)
 mPickResult holeInfo =
-  fmap picker . Sugar.holePickResult $ hiHole holeInfo
+  fmap (picker . fmap IT.transaction) . Sugar.holePickResult $ hiHole holeInfo
   where
     picker holePickResult newExpr flipAct = do
       guid <- holePickResult newExpr
@@ -196,8 +198,8 @@ makeAllResults holeInfo = do
           BWidgets.makeFocusableTextView "→" $ searchResultId holeInfo "Pi result"
       }
     pickPiResult holePickResult = do
-      paramTypeI <- DataOps.newHole
-      resultTypeI <- DataOps.newHole
+      paramTypeI <- IT.transaction DataOps.newHole
+      resultTypeI <- IT.transaction DataOps.newHole
       holePickResult (Data.ExpressionPi (Data.Lambda paramTypeI resultTypeI)) (return ())
 
 makeSearchTermWidget
@@ -213,23 +215,21 @@ makeSearchTermWidget holeInfo searchTermId firstResults =
       map resultPickEventMap $ take 1 firstResults
 
     searchTermEventMap =
-      mconcat $ pickFirstResultEventMaps ++
-      case mPickResult holeInfo of
-      Nothing -> []
-      Just holePickResult ->
-        [ E.keyPresses Config.newDefinitionKeys
-          "Add new as Definition" $ makeNewDefinition holePickResult
-        ]
+      mconcat pickFirstResultEventMaps `mappend`
+      maybe mempty
+      (E.keyPresses Config.newDefinitionKeys
+       "Add new as Definition" . makeNewDefinition)
+      (mPickResult holeInfo)
 
     makeNewDefinition holePickResult = do
-      searchTerm <- Property.get $ hiSearchTerm holeInfo
+      searchTerm <- IT.transaction . Property.get $ hiSearchTerm holeInfo
       let newName = concat . words $ searchTerm
-      newDefI <- Anchors.makeDefinition newName -- TODO: From Sugar
-      Anchors.newPane newDefI
+      newDefI <- IT.transaction $ Anchors.makeDefinition newName -- TODO: From Sugar
+      IT.transaction $ Anchors.newPane newDefI
       let defRef = Data.ExpressionGetVariable $ Data.DefinitionRef newDefI
       -- TODO: Can we use pickResult's animIdMapping?
       eventResult <- holePickResult defRef $ return ()
-      maybe (return ()) Anchors.savePreJumpPosition $ Widget.eCursor eventResult
+      maybe (return ()) (IT.transaction . Anchors.savePreJumpPosition) $ Widget.eCursor eventResult
       return Widget.EventResult {
         Widget.eCursor = Just $ WidgetIds.fromIRef newDefI,
         Widget.eAnimIdMapping = holeResultAnimMappingNoParens holeInfo searchTermId
@@ -239,7 +239,7 @@ makeResultsWidget
   :: MonadF m
   => [Result m] -> [Result m] -> Widget.Id
   -> OTransaction ViewTag m
-     (Maybe (Result m), Widget (Transaction ViewTag m))
+     (Maybe (Result m), WidgetT ViewTag m)
 makeResultsWidget firstResults moreResults myId = do
   let
     resultAndWidget result =
@@ -272,7 +272,7 @@ makeActiveHoleEdit
   :: MonadF m
   => HoleInfo m
   -> OTransaction ViewTag m
-     (Maybe (Result m), Widget (Transaction ViewTag m))
+     (Maybe (Result m), WidgetT ViewTag m)
 makeActiveHoleEdit holeInfo =
   OT.assignCursor (hiHoleId holeInfo) searchTermId $ do
     OT.markVariablesAsUsed . Sugar.holeScope $ hiHole holeInfo
@@ -298,7 +298,7 @@ makeH
   -> Guid
   -> Widget.Id
   -> OTransaction ViewTag m
-     (Maybe (ResultPicker m), Widget (Transaction ViewTag m))
+     (Maybe (ResultPicker m), WidgetT ViewTag m)
 makeH hole guid myId = do
   cursor <- OT.readCursor
   searchText <- OT.getP $ hiSearchTerm holeInfo
@@ -346,7 +346,7 @@ make
   -> Guid
   -> Widget.Id
   -> OTransaction ViewTag m
-     (Maybe (ResultPicker m), Widget (Transaction ViewTag m))
+     (Maybe (ResultPicker m), WidgetT ViewTag m)
 make hole =
   (fmap . liftM . second . Widget.weakerEvents) (pasteEventMap hole) .
   BWidgets.wrapDelegated holeFDConfig FocusDelegator.Delegating

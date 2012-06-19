@@ -1,10 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.InferredTypes(addType, mkInferredTypesView) where
 
-import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
-import Editor.Anchors (ViewTag)
-import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.Config as Config
@@ -22,8 +19,8 @@ center = Widget.align (Vector2 0.5 0.5)
 
 mkInferredTypesView
   :: Widget.Id
-  -> [Widget (Transaction ViewTag m)]
-  -> [Widget (Transaction ViewTag m)]
+  -> [Widget f]
+  -> [Widget f]
 mkInferredTypesView _ [] = []
 mkInferredTypesView exprId typeEdits =
   [ -- must not be aligned (needs to take over all given space):
@@ -43,11 +40,10 @@ mkInferredTypesView exprId typeEdits =
     underlineId = WidgetIds.underlineId $ Widget.toAnimId exprId
 
 addType
-  :: MonadF m
-  => Widget.Id
-  -> [Widget (Transaction ViewTag m)]
-  -> Widget (Transaction ViewTag m)
-  -> Widget (Transaction ViewTag m)
+  :: Widget.Id
+  -> [Widget f]
+  -> Widget f
+  -> Widget f
 addType exprId typeEdits widget =
   vbox $
   center widget :
