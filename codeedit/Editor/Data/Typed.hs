@@ -301,9 +301,14 @@ unifyOnTree = (`runReaderT` []) . go
       case value of
         Data.ExpressionLambda (Data.Lambda paramType body) -> do
           paramTypeRef <- lift $ typeRefFromStored paramType
-          lift $ setType <=< makePi .
-            Data.Lambda paramTypeRef $
-            eeInferredType body
+          -- We use "flip unify typeRef" so that the new Pi will be
+          -- the official Pi guid due to the "left-bias" in
+          -- unify/unifyPair. Thus we can later assume that we got the
+          -- same guid in the pi and the lambda.
+          lift $ do
+            flip unify typeRef <=< makePi (esGuid stored) .
+              Data.Lambda paramTypeRef $
+              eeInferredType body
           Reader.local ((esGuid stored, paramTypeRef):) $ go body
         Data.ExpressionPi (Data.Lambda paramType resultType) -> do
           paramTypeRef <- lift $ typeRefFromStored paramType
@@ -316,7 +321,10 @@ unifyOnTree = (`runReaderT` []) . go
             let
               funcTypeRef = eeInferredType func
               argTypeRef = eeInferredType arg
-            unify funcTypeRef <=< makePi $
+            -- We give the new Pi the same Guid as the Apply. This is
+            -- fine because Apply's Guid is meaningless and the
+            -- canonicalization will fix it later anyway.
+            unify funcTypeRef <=< makePi (esGuid stored) $
               Data.Lambda argTypeRef typeRef
             funcTypes <- getTypeRef funcTypeRef
             sequence_
@@ -345,8 +353,7 @@ unifyOnTree = (`runReaderT` []) . go
           setType <=< makeSingletonTypeRef zeroGuid . Data.ExpressionBuiltin $ Data.FFIName ["Prelude"] "Integer"
         _ -> return ()
       where
-        newPiGuid = Guid.fromString "Pi" `Guid.combine` esGuid stored
-        makePi = makeSingletonTypeRef newPiGuid . Data.ExpressionPi
+        makePi guid = makeSingletonTypeRef guid . Data.ExpressionPi
         setType = unify typeRef
 
 unify
