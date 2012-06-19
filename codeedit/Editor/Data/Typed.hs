@@ -128,9 +128,6 @@ runInfer = liftM canonizeIdentifiersTypes . evalUnionFindT . unInfer
 makeSingletonTypeRef :: Monad m => Guid -> Data.Expression TypeRef -> Infer m TypeRef
 makeSingletonTypeRef guid = makeTypeRef . (: []) . Data.GuidExpression guid
 
-generateEmptyEntity :: Monad m => Infer m TypeRef
-generateEmptyEntity = makeTypeRef []
-
 --------------
 
 -- Entities whose Guid does not matter until canonization can just use
@@ -259,7 +256,7 @@ addTypeRefs =
   mapMExpressionEntities f
   where
     f stored () val = do
-      typeRef <- generateEmptyEntity
+      typeRef <- makeTypeRef []
       return $ StoredExpression stored typeRef val
 
 derefTypeRef
@@ -302,7 +299,6 @@ unifyOnTree
 unifyOnTree = (`runReaderT` []) . go
   where
     go (StoredExpression stored typeRef value) = do
-      lift $ setType =<< generateEmptyEntity
       case value of
 
         Data.ExpressionLambda (Data.Lambda paramType body) -> do
