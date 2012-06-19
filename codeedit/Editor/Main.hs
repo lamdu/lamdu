@@ -3,8 +3,8 @@ module Main(main) where
 
 import Control.Arrow (second)
 import Control.Monad (liftM, unless)
-import Control.Monad.Trans.Writer (runWriterT)
 import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Writer (runWriterT)
 import Data.ByteString (unpack)
 import Data.IORef
 import Data.List(intercalate)
@@ -18,6 +18,7 @@ import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Widget(Widget)
 import Numeric (showHex)
+import System.FilePath ((</>))
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Map as Map
 import qualified Data.Store.Db as Db
@@ -38,6 +39,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import qualified System.Directory as Directory
 import qualified System.Info
 
 defaultFont :: String -> FilePath
@@ -46,8 +48,11 @@ defaultFont _ = "/usr/share/fonts/truetype/freefont/FreeSerifBold.ttf"
 
 main :: IO ()
 main = do
+  home <- Directory.getHomeDirectory
+  let bottleDir = home </> "bottle"
+  Directory.createDirectoryIfMissing False bottleDir
   font <- Draw.openFont (defaultFont System.Info.os)
-  Db.withDb "/tmp/codeedit.db" $ runDbStore font . Anchors.dbStore
+  Db.withDb (bottleDir </> "codeedit.db") $ runDbStore font . Anchors.dbStore
 
 rjust :: Int -> a -> [a] -> [a]
 rjust len x xs = replicate (length xs - len) x ++ xs

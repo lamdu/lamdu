@@ -87,6 +87,8 @@ Executable Editor
   hs-Source-Dirs:      codeedit
   Build-Depends:       base >= 4,
                        containers,
+                       directory,
+                       filepath,
                        graphics-drawingcombinators >= 1.4,
                        binary >= 0.5,
                        transformers,
