@@ -16,19 +16,12 @@ ctrlAlt = mk (E.noMods {E.modCtrl = True, E.modAlt = True}) . E.charKey
 -- altShift = mk E.noMods { E.modAlt = True, E.modShift = True } . E.charKey
 k = noMods . E.charKey
 
--- pasteKeys         = [ctrl 'v']
--- cutKeys           = [ctrl 'x']
-
--- actionKeys        = [noMods E.KeyEnter]
-
 quitKeys          = [ctrl 'q']
 undoKeys          = [ctrl 'z']
 redoKeys          = [ctrl 'y']
 makeBranchKeys    = [ctrl 's']
 
 jumpToBranchesKeys = [mk E.ctrl E.KeyF10]
-
--- moveToParentKeys  = [mk E.alt E.KeyLeft]
 
 overlayDocKeys    = [noMods E.KeyF1, alt 'h']
 
