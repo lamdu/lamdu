@@ -271,13 +271,21 @@ derefTypeRef =
         mapM (UnionFind.equivalent typeRef) visited
       if isLoop
         then return $ InferredTypeLoop zeroGuid
-        else onType typeRef =<< lift . ListFuncs.fromList =<< liftInfer (getTypeRef typeRef)
+        else
+        onType typeRef =<<
+        lift . ListFuncs.fromList =<< liftInfer (getTypeRef typeRef)
     onType typeRef (Data.GuidExpression guid expr) =
       liftM (InferredTypeNoLoop . Data.GuidExpression guid) .
       Data.sequenceExpression $ Data.mapExpression recurse expr
       where
-        recurse = Reader.mapReaderT (ListFuncs.fromList <=< lift . (liftM holify . ListCls.toList)) . Reader.local (typeRef :) . go
-        holify [] = [InferredTypeNoLoop (Data.GuidExpression zeroGuid Data.ExpressionHole)]
+        recurse =
+          Reader.mapReaderT
+          (ListFuncs.fromList <=< lift . (liftM holify . ListCls.toList)) .
+          Reader.local (typeRef :) .
+          go
+        holify [] =
+          [InferredTypeNoLoop
+           (Data.GuidExpression zeroGuid Data.ExpressionHole)]
         holify xs = xs
 
 derefTypeRefs
