@@ -86,25 +86,25 @@ mkNavEventmap
 mkNavEventmap navDests = (weakMap, strongMap)
   where
     weakMap = mconcat . catMaybes $ [
-      movement "left"       (k GLFW.KeyLeft)  leftOfCursor,
-      movement "right"      (k GLFW.KeyRight) rightOfCursor,
-      movement "up"         (k GLFW.KeyUp)    aboveCursor,
-      movement "down"       (k GLFW.KeyDown)  belowCursor,
-      movement "more left"  (k GLFW.KeyHome)  leftMostCursor,
-      movement "more right" (k GLFW.KeyEnd)   rightMostCursor
+      movement "left"       [k GLFW.KeyLeft, k (EventMap.charKey 'h')]  leftOfCursor,
+      movement "right"      [k GLFW.KeyRight, k (EventMap.charKey 'l')] rightOfCursor,
+      movement "up"         [k GLFW.KeyUp, k (EventMap.charKey 'k')]    aboveCursor,
+      movement "down"       [k GLFW.KeyDown, k (EventMap.charKey 'j')]  belowCursor,
+      movement "more left"  [k GLFW.KeyHome]  leftMostCursor,
+      movement "more right" [k GLFW.KeyEnd]   rightMostCursor
       ]
     strongMap = mconcat . catMaybes $ [
-      movement "top"       (k GLFW.KeyPageup)   topCursor,
-      movement "bottom"    (k GLFW.KeyPagedown) bottomCursor,
-      movement "leftmost"  (ctrlK GLFW.KeyHome) leftMostCursor,
-      movement "rightmost" (ctrlK GLFW.KeyEnd)  rightMostCursor
+      movement "top"       [k GLFW.KeyPageup]   topCursor,
+      movement "bottom"    [k GLFW.KeyPagedown] bottomCursor,
+      movement "leftmost"  [ctrlK GLFW.KeyHome] leftMostCursor,
+      movement "rightmost" [ctrlK GLFW.KeyEnd]  rightMostCursor
       ]
     k = EventMap.ModKey EventMap.noMods
     ctrlK = EventMap.ModKey EventMap.ctrl
-    movement dirName event =
+    movement dirName events =
       fmap
-        (EventMap.keyPress
-         event
+        (EventMap.keyPresses
+         events
          ("Move " ++ dirName) .
          Widget.enterResultEvent) .
       ($ navDests)
