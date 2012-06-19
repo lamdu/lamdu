@@ -12,7 +12,7 @@ import Data.Monoid(Last(..), Monoid(..))
 import Data.Vector.Vector2(Vector2)
 import Data.Word(Word8)
 import Editor.Anchors (DBTag)
-import Editor.CTransaction (runCTransaction)
+import Editor.OTransaction (runOTransaction)
 import Graphics.DrawingCombinators((%%))
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
@@ -162,7 +162,7 @@ runDbStore font store = do
       }
 
     fromCursor cache cursor =
-      runCTransaction cursor style .
+      runOTransaction cursor style .
       BranchGUI.makeRootWidget CodeEdit.makeSugarCache $
       CodeEdit.makeCodeEdit cache
 

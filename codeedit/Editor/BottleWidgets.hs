@@ -22,7 +22,7 @@ import Data.Monoid (mappend)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
-import Editor.CTransaction (TWidget, CTransaction)
+import Editor.OTransaction (TWidget, OTransaction)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Sized (Sized)
@@ -32,7 +32,7 @@ import qualified Data.Store.Guid as Guid
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
-import qualified Editor.CTransaction as CT
+import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -45,22 +45,22 @@ import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
-makeTextView :: MonadF m => String -> AnimId -> CTransaction t m (Widget f)
+makeTextView :: MonadF m => String -> AnimId -> OTransaction t m (Widget f)
 makeTextView text myId = do
-  style <- CT.readTextStyle
+  style <- OT.readTextStyle
   return $
     TextView.makeWidget (TextEdit.sTextViewStyle style) text myId
 
-makeLabel :: MonadF m => String -> AnimId -> CTransaction t m (Widget f)
+makeLabel :: MonadF m => String -> AnimId -> OTransaction t m (Widget f)
 makeLabel text prefix =
   makeTextView text $ mappend prefix [pack text]
 
 makeFocusableView
   :: (Applicative f, MonadF m)
   => Widget.Id -> Widget f
-  -> CTransaction t m (Widget f)
+  -> OTransaction t m (Widget f)
 makeFocusableView myId widget = do
-  hasFocus <- liftM (myId ==) CT.readCursor
+  hasFocus <- liftM (myId ==) OT.readCursor
   let
     setBackground
       | hasFocus = Widget.backgroundColor 10 WidgetIds.backgroundCursorId blue
@@ -74,7 +74,7 @@ makeFocusableView myId widget = do
 makeFocusableTextView
   :: (Applicative f, MonadF m)
   => String -> Widget.Id
-  -> CTransaction t m (Widget f)
+  -> OTransaction t m (Widget f)
 makeFocusableTextView text myId = do
   textView <- makeTextView text $ Widget.toAnimId myId
   makeFocusableView myId textView
@@ -112,49 +112,48 @@ wrapDelegated
   => FocusDelegator.Config
   -> FocusDelegator.IsDelegating
   -> ((Widget f -> Widget f) -> a -> b)
-  -> (Widget.Id -> CTransaction t m a)
-  -> Widget.Id -> CTransaction t m b
+  -> (Widget.Id -> OTransaction t m a)
+  -> Widget.Id -> OTransaction t m b
 wrapDelegated config entryState aToB mkA myId = do
-  cursor <- CT.readCursor
+  cursor <- OT.readCursor
   FocusDelegator.wrapConfig config entryState mk
     WidgetIds.backgroundCursorId myId cursor
   where
     mk f innerId newCursor =
-      liftM (aToB f) . (CT.atCursor . const) newCursor $ mkA innerId
+      liftM (aToB f) . (OT.atCursor . const) newCursor $ mkA innerId
 
 makeTextEdit
   :: Monad m
   => Transaction.Property t m String
   -> Widget.Id -> TWidget t m
 makeTextEdit textRef myId = do
-  text <- CT.getP textRef
+  text <- OT.getP textRef
   let
     lifter (newText, eventRes) = do
       when (newText /= text) $ Property.set textRef newText
       return eventRes
-  cursor <- CT.readCursor
-  style <- CT.readTextStyle
+  cursor <- OT.readCursor
+  style <- OT.readTextStyle
   return .
     Widget.atEvents lifter $
     TextEdit.make style cursor text myId
 
-makeTextEditWithout
-  :: Monad m
-  => EventMap.ModKey
-  -> Transaction.Property t m String
-  -> Widget.Id
-  -> TWidget t m
-makeTextEditWithout key =
+removeKeys
+  :: (Monad m)
+  => (a -> b -> m (Widget f))
+  -> EventMap.ModKey
+  -> a -> b -> m (Widget f)
+removeKeys makeEdit key =
   (fmap . fmap . liftM . Widget.atEventMap)
   (EventMap.deleteKey (EventMap.KeyEvent EventMap.Press key))
-  makeTextEdit
+  makeEdit
 
 makeLineEdit ::
   Monad m =>
   Transaction.Property t m String ->
   Widget.Id -> TWidget t m
 makeLineEdit =
-  makeTextEditWithout $
+  removeKeys makeTextEdit $
   EventMap.ModKey EventMap.noMods EventMap.KeyEnter
 
 makeWordEdit ::
@@ -162,7 +161,7 @@ makeWordEdit ::
   Transaction.Property t m String ->
   Widget.Id -> TWidget t m
 makeWordEdit =
-  makeTextEditWithout $
+  removeKeys makeLineEdit $
   EventMap.ModKey EventMap.noMods EventMap.KeySpace
 
 anonName :: Guid -> String
@@ -178,9 +177,9 @@ getDisplayNameOf guid = do
 makeNameEdit
   :: Monad m => String -> Guid -> Widget.Id -> TWidget t m
 makeNameEdit editingEmptyStr ident =
-  (CT.atTextStyle . TextEdit.atSEmptyUnfocusedString . const)
+  (OT.atTextStyle . TextEdit.atSEmptyUnfocusedString . const)
     (anonName ident) .
-  (CT.atTextStyle . TextEdit.atSEmptyFocusedString . const)
+  (OT.atTextStyle . TextEdit.atSEmptyFocusedString . const)
     editingEmptyStr .
   makeWordEdit (Anchors.aNameRef ident)
 
@@ -233,8 +232,8 @@ spaceView = Spacer.makeHorizontal 20
 spaceWidget :: Widget f
 spaceWidget = Widget.liftView spaceView
 
-setTextColor :: Draw.Color -> CTransaction t m (Widget f) -> CTransaction t m (Widget f)
-setTextColor = CT.atTextStyle . TextEdit.atSTextViewStyle . TextView.atStyleColor . const
+setTextColor :: Draw.Color -> OTransaction t m (Widget f) -> OTransaction t m (Widget f)
+setTextColor = OT.atTextStyle . TextEdit.atSTextViewStyle . TextView.atStyleColor . const
 
 gridHSpaced :: [[Widget f]] -> Widget f
 gridHSpaced = Grid.toWidget . Grid.make . map (intersperse spaceWidget)

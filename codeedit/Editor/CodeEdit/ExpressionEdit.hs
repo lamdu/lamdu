@@ -6,7 +6,7 @@ import Control.Monad (liftM)
 import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction)
+import Editor.OTransaction (OTransaction)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.CodeEdit.InferredTypes (addType)
 import Editor.MonadF (MonadF)
@@ -94,7 +94,7 @@ expressionEventMap
   :: MonadF m
   => Sugar.ExpressionRef m
   -> HoleResultPicker m
-  -> CTransaction ViewTag m (EventHandlers (Transaction ViewTag m))
+  -> OTransaction ViewTag m (EventHandlers (Transaction ViewTag m))
 expressionEventMap sExpr holePicker =
   return . mconcat $
     [ giveAsArg

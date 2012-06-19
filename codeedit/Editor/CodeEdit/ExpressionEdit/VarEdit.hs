@@ -2,11 +2,11 @@
 module Editor.CodeEdit.ExpressionEdit.VarEdit(make, makeView, colorOf) where
 
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (TWidget)
+import Editor.OTransaction (TWidget)
 import Editor.MonadF(MonadF)
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.CTransaction as CT
+import qualified Editor.OTransaction as OT
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.WidgetIds as WidgetIds
@@ -22,7 +22,7 @@ makeView
   => Data.VariableRef -> Widget.Id -> TWidget t m
 makeView var myId = do
   name <-
-    CT.transaction . BWidgets.getDisplayNameOf $ Data.variableRefGuid var
+    OT.transaction . BWidgets.getDisplayNameOf $ Data.variableRefGuid var
   BWidgets.setTextColor (colorOf var) $
     BWidgets.makeFocusableTextView name myId
 
@@ -31,7 +31,7 @@ make
   => Data.VariableRef -> Widget.Id
   -> TWidget ViewTag m
 make varRef myId = do
-  CT.markVariablesAsUsed [varRef]
+  OT.markVariablesAsUsed [varRef]
   varRefView <- makeView varRef myId
   let
     jumpToDefinitionEventMap =

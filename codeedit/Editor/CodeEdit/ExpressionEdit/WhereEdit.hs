@@ -6,11 +6,11 @@ import Control.Monad (liftM)
 import Data.Monoid (mempty)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (TWidget)
+import Editor.OTransaction (TWidget)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.CTransaction as CT
+import qualified Editor.OTransaction as OT
 import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
@@ -24,9 +24,9 @@ make
   -> Sugar.Where m
   -> Widget.Id -> TWidget ViewTag m
 make makeExpressionEdit (Sugar.Where items _) myId = do
-  cursor <- CT.readCursor
+  cursor <- OT.readCursor
   whereLabel <-
-    CT.atTextSizeColor Config.whereTextSize Config.whereColor $
+    OT.atTextSizeColor Config.whereTextSize Config.whereColor $
     BWidgets.makeLabel "where" $ Widget.toAnimId myId
   let
     makeWhereItemsGrid =
@@ -60,7 +60,7 @@ makeWithBody
   -> Widget.Id -> TWidget ViewTag m
 makeWithBody makeExpressionEdit where_@(Sugar.Where _ body) myId = do
   whereEdit <- make makeExpressionEdit where_ myId
-  CT.assignCursor myId ((WidgetIds.fromGuid . Sugar.guid . Sugar.rActions) body) $ do
+  OT.assignCursor myId ((WidgetIds.fromGuid . Sugar.guid . Sugar.rActions) body) $ do
     bodyEdit <- makeExpressionEdit body
     return . BWidgets.vbox $
       [ bodyEdit

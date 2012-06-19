@@ -9,7 +9,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, TWidget)
+import Editor.OTransaction (OTransaction, TWidget)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.CodeEdit.InferredTypes(addType)
 import Editor.MonadF (MonadF)
@@ -17,7 +17,7 @@ import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.List as List
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.CTransaction as CT
+import qualified Editor.OTransaction as OT
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
@@ -105,7 +105,7 @@ makeDefBodyParts
   -> Widget.Id
   -> Guid
   -> Sugar.ExpressionRef m
-  -> CTransaction ViewTag m [(Maybe Side, Widget (Transaction ViewTag m))]
+  -> OTransaction ViewTag m [(Maybe Side, Widget (Transaction ViewTag m))]
 makeDefBodyParts makeExpressionEdit myId guid exprRef = do
   let
     sExpr = Sugar.rExpression exprRef
@@ -131,7 +131,7 @@ makeParts
   :: MonadF m
   => ExpressionEditMaker m
   -> Widget.Id -> Guid -> Sugar.ExpressionRef m -> Sugar.ExpressionRef m
-  -> CTransaction ViewTag m [[(Maybe Side, Widget (Transaction ViewTag m))]]
+  -> OTransaction ViewTag m [[(Maybe Side, Widget (Transaction ViewTag m))]]
 makeParts makeExpressionEdit myId guid defBody defType = do
   typeEdit <- makeExpressionEdit defType
   colon <- BWidgets.makeLabel ":" $ Widget.toAnimId myId
@@ -156,7 +156,7 @@ make
   -> [Sugar.ExpressionRef m]
   -> TWidget ViewTag m
 make makeExpressionEdit guid defBody defType inferredTypes = do
-  cursor <- CT.readCursor
+  cursor <- OT.readCursor
   parts <-
     makeParts makeExpressionEdit
     (WidgetIds.fromGuid guid) guid defBody defType

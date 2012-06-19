@@ -14,7 +14,7 @@ import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag, DBTag)
-import Editor.CTransaction (CTransaction, TWidget)
+import Editor.OTransaction (OTransaction, TWidget)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Monad.Trans.Writer as Writer
@@ -25,7 +25,7 @@ import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.CTransaction as CT
+import qualified Editor.OTransaction as OT
 import qualified Editor.Config as Config
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -99,12 +99,12 @@ makeRootWidget
   :: MonadF m
   => Transaction ViewTag (Transaction DBTag m) versionCache
   -> TWidget ViewTag (Transaction DBTag m)
-  -> CTransaction DBTag m (Widget (CacheUpdatingTransaction DBTag versionCache m))
+  -> OTransaction DBTag m (Widget (CacheUpdatingTransaction DBTag versionCache m))
 makeRootWidget mkCache widget = do
-  view <- CT.getP Anchors.view
-  namedBranches <- CT.getP Anchors.branches
+  view <- OT.getP Anchors.view
+  namedBranches <- OT.getP Anchors.branches
   viewEdit <- makeWidgetForView mkCache view widget
-  currentBranch <- CT.getP Anchors.currentBranch
+  currentBranch <- OT.getP Anchors.currentBranch
 
   let
     withNewCache = tellNewCache mkCache view
@@ -136,14 +136,14 @@ makeRootWidget mkCache widget = do
         withNewCache . lift $ deleteCurrentBranch view
 
   branchSelectorFocused <-
-    liftM isJust $ CT.subCursor WidgetIds.branchSelection
+    liftM isJust $ OT.subCursor WidgetIds.branchSelection
   branchSelector <-
     flip
     (BWidgets.wrapDelegated
      branchSelectionFocusDelegatorConfig
      FocusDelegator.NotDelegating id)
     WidgetIds.branchSelection $ \innerId ->
-    CT.assignCursor innerId currentBranchWidgetId $ do
+    OT.assignCursor innerId currentBranchWidgetId $ do
       branchNameEdits <-
         mapM ((liftM . second) (Widget.align 0) . makeBranchNameEdit)
         namedBranches
@@ -176,12 +176,12 @@ makeWidgetForView
   => Transaction ViewTag (Transaction DBTag m) versionCache
   -> View
   -> TWidget ViewTag (Transaction DBTag m)
-  -> CTransaction DBTag m (Widget (WriterT (Last versionCache) (Transaction DBTag m)))
+  -> OTransaction DBTag m (Widget (WriterT (Last versionCache) (Transaction DBTag m)))
 makeWidgetForView mkCache view innerWidget = do
-  curVersion <- CT.transaction $ View.curVersion view
-  curVersionData <- CT.transaction $ Version.versionData curVersion
-  redos <- CT.getP Anchors.redos
-  cursor <- CT.readCursor
+  curVersion <- OT.transaction $ View.curVersion view
+  curVersionData <- OT.transaction $ Version.versionData curVersion
+  redos <- OT.getP Anchors.redos
+  cursor <- OT.readCursor
 
   let
     redo version newRedos = do
@@ -221,7 +221,7 @@ makeWidgetForView mkCache view innerWidget = do
       return eventResult
 
   vWidget <-
-    CT.runNested store $
+    OT.runNested store $
     (liftM . Widget.atEvents) afterEvent innerWidget
 
   let

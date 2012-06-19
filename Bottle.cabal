@@ -103,7 +103,7 @@ Executable Editor
                        Editor.ExampleDB,
                        Editor.BottleWidgets,
                        Editor.BranchGUI,
-                       Editor.CTransaction,
+                       Editor.OTransaction,
                        Editor.CodeEdit,
                        Editor.CodeEdit.InferredTypes,
                        Editor.CodeEdit.ExpressionEdit,

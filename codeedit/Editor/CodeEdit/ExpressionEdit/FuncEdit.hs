@@ -7,12 +7,12 @@ import Data.Monoid (mempty, mconcat)
 import Data.Store.Guid (Guid)
 import Data.Vector.Vector2 (Vector2(Vector2))
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, TWidget, WidgetT)
+import Editor.OTransaction (OTransaction, TWidget, WidgetT)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
 import qualified Data.List as List
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.CTransaction as CT
+import qualified Editor.OTransaction as OT
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.WidgetIds as WidgetIds
@@ -46,9 +46,9 @@ makeParamEdit
   :: MonadF m
   => ExpressionEditMaker m
   -> Sugar.FuncParam m
-  -> CTransaction ViewTag m (WidgetT ViewTag m, WidgetT ViewTag m)
+  -> OTransaction ViewTag m (WidgetT ViewTag m, WidgetT ViewTag m)
 makeParamEdit makeExpressionEdit param =
-  CT.assignCursor (WidgetIds.fromGuid ident) (WidgetIds.paramId ident) .
+  OT.assignCursor (WidgetIds.fromGuid ident) (WidgetIds.paramId ident) .
     (liftM . both . Widget.weakerEvents) paramEventMap $ do
     paramNameEdit <- makeParamNameEdit ident
     paramTypeEdit <- makeExpressionEdit $ Sugar.fpType param
@@ -92,12 +92,12 @@ make
   -> Widget.Id
   -> TWidget ViewTag m
 make makeExpressionEdit (Sugar.Func params body) myId =
-  CT.assignCursor myId ((WidgetIds.fromGuid . Sugar.guid . Sugar.rActions) body) $ do
+  OT.assignCursor myId ((WidgetIds.fromGuid . Sugar.guid . Sugar.rActions) body) $ do
     lambdaLabel <-
-      CT.atTextSizeColor Config.lambdaTextSize Config.lambdaColor .
+      OT.atTextSizeColor Config.lambdaTextSize Config.lambdaColor .
       BWidgets.makeLabel "λ" $ Widget.toAnimId myId
     rightArrowLabel <-
-      CT.atTextSizeColor Config.rightArrowTextSize Config.rightArrowColor .
+      OT.atTextSizeColor Config.rightArrowTextSize Config.rightArrowColor .
       BWidgets.makeLabel "→" $ Widget.toAnimId myId
     bodyEdit <- makeExpressionEdit body
     paramsEdit <- makeParamsEdit makeExpressionEdit params

@@ -12,7 +12,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CTransaction (CTransaction, TWidget)
+import Editor.OTransaction (OTransaction, TWidget)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -21,7 +21,7 @@ import qualified Data.Function as Function
 import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.CTransaction as CT
+import qualified Editor.OTransaction as OT
 import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
 import qualified Editor.CodeEdit.Infix as Infix
@@ -79,9 +79,9 @@ makeMoreResults myId =
   BWidgets.makeTextView "..." $ mappend myId ["more results"]
 
 makeResultVariables ::
-  MonadF m => HoleInfo m -> Data.VariableRef -> CTransaction ViewTag m [Result m]
+  MonadF m => HoleInfo m -> Data.VariableRef -> OTransaction ViewTag m [Result m]
 makeResultVariables holeInfo varRef = do
-  varName <- CT.getP $ Anchors.variableNameRef varRef
+  varName <- OT.getP $ Anchors.variableNameRef varRef
   let
     parened =
       result
@@ -173,13 +173,13 @@ makeLiteralResults holeInfo searchTerm =
 makeAllResults
   :: MonadF m
   => HoleInfo m
-  -> CTransaction ViewTag m [Result m]
+  -> OTransaction ViewTag m [Result m]
 makeAllResults holeInfo = do
-  globals <- CT.getP Anchors.globals
+  globals <- OT.getP Anchors.globals
   varResults <- liftM concat .
     mapM (makeResultVariables holeInfo) $
     params ++ globals
-  searchTerm <- CT.getP $ hiSearchTerm holeInfo
+  searchTerm <- OT.getP $ hiSearchTerm holeInfo
   let
     literalResults = makeLiteralResults holeInfo searchTerm
     goodResult = Function.on isInfixOf (map Char.toLower) searchTerm . resultName
@@ -238,7 +238,7 @@ makeSearchTermWidget holeInfo searchTermId firstResults =
 makeResultsWidget
   :: MonadF m
   => [Result m] -> [Result m] -> Widget.Id
-  -> CTransaction ViewTag m
+  -> OTransaction ViewTag m
      (Maybe (Result m), Widget (Transaction ViewTag m))
 makeResultsWidget firstResults moreResults myId = do
   let
@@ -271,11 +271,11 @@ makeResultsWidget firstResults moreResults myId = do
 makeActiveHoleEdit
   :: MonadF m
   => HoleInfo m
-  -> CTransaction ViewTag m
+  -> OTransaction ViewTag m
      (Maybe (Result m), Widget (Transaction ViewTag m))
 makeActiveHoleEdit holeInfo =
-  CT.assignCursor (hiHoleId holeInfo) searchTermId $ do
-    CT.markVariablesAsUsed . Sugar.holeScope $ hiHole holeInfo
+  OT.assignCursor (hiHoleId holeInfo) searchTermId $ do
+    OT.markVariablesAsUsed . Sugar.holeScope $ hiHole holeInfo
 
     allResults <- makeAllResults holeInfo
 
@@ -297,11 +297,11 @@ makeH
   => Sugar.Hole m
   -> Guid
   -> Widget.Id
-  -> CTransaction ViewTag m
+  -> OTransaction ViewTag m
      (Maybe (ResultPicker m), Widget (Transaction ViewTag m))
 makeH hole guid myId = do
-  cursor <- CT.readCursor
-  searchText <- CT.getP $ hiSearchTerm holeInfo
+  cursor <- OT.readCursor
+  searchText <- OT.getP $ hiSearchTerm holeInfo
   let
     snippet
       | null searchText = "  "
@@ -345,7 +345,7 @@ make
   => Sugar.Hole m
   -> Guid
   -> Widget.Id
-  -> CTransaction ViewTag m
+  -> OTransaction ViewTag m
      (Maybe (ResultPicker m), Widget (Transaction ViewTag m))
 make hole =
   (fmap . liftM . second . Widget.weakerEvents) (pasteEventMap hole) .

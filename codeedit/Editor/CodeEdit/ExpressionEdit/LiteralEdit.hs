@@ -4,13 +4,13 @@ module Editor.CodeEdit.ExpressionEdit.LiteralEdit(makeInt, makeIntView) where
 
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors(ViewTag)
-import Editor.CTransaction (CTransaction, TWidget)
+import Editor.OTransaction (OTransaction, TWidget)
 import Editor.MonadF(MonadF)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Char as Char
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.CTransaction as CT
+import qualified Editor.OTransaction as OT
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -24,7 +24,7 @@ setColor = BWidgets.setTextColor Config.literalIntColor
 makeIntView
   :: MonadF m
   => AnimId -> Integer
-  -> CTransaction ViewTag m (Widget (Transaction ViewTag m))
+  -> OTransaction ViewTag m (Widget (Transaction ViewTag m))
 makeIntView myId integer =
   setColor $ BWidgets.makeTextView (show integer) myId
 
@@ -32,7 +32,7 @@ makeIntEdit
   :: Monad m
   => Sugar.LiteralInteger m -> Widget.Id -> TWidget ViewTag m
 makeIntEdit integer myId = do
-  cursor <- CT.readCursor
+  cursor <- OT.readCursor
   let
     subCursor = Widget.subId myId cursor
     isEmpty = Sugar.liValue integer == 0 && subCursor == Just emptyZeroCursor
@@ -49,7 +49,7 @@ makeIntEdit integer myId = do
       | otherwise = do
         _ <- setValue $ read newText
         return eventRes
-  style <- CT.readTextStyle
+  style <- OT.readTextStyle
   return .
     Widget.atEvents (lifter (Sugar.liSetValue integer)) $ TextEdit.make
     style { TextEdit.sEmptyFocusedString = "<0>" } textCursor text myId
