@@ -42,21 +42,37 @@ module Data.UnionFind.IntMap
     ( newPointSupply, fresh, repr, descr, setDescr, union, equivalent,
       PointSupply, Point, prettyUF ) where
 
-import Control.Arrow ((&&&))
+import Control.Arrow ((&&&), (***))
 import qualified Data.IntMap as IM
 
-data PointSupply a = PointSupply !Int (IM.IntMap (Link a))
-  deriving Show
+data PointSupply a = PointSupply
+  { _psNext :: !Int
+  , psEqs :: !(IM.IntMap (Link a))
+  } deriving (Show)
+
+atEqs :: PointSupply a -> (IM.IntMap (Link a) -> IM.IntMap (Link a)) -> PointSupply a
+atEqs (PointSupply next old) f = PointSupply next $ f old
+
+newtype Point a = Point { unPoint :: Int }
+instance Show (Point a) where
+  show (Point x) = 'P' : show x
+
+asPoint :: (Point a -> Point a) -> Int -> Int
+asPoint f = unPoint . f . Point
+
+getPoints :: PointSupply a -> [(Point a, [Point a])]
+getPoints ps =
+  map (Point *** map Point) .
+  IM.toList .
+  IM.fromListWith (++) . map (asPoint (repr ps) &&& (:[])) .
+  IM.keys $
+  psEqs ps
 
 prettyUF :: Show a => PointSupply a -> String
-prettyUF ps@(PointSupply _ im) =
-  unlines . ("UnionFind:":) $
-  map (\(r, keys) -> show keys ++ ":" ++ show (descr ps (Point r))) groups
-  where
-    groups =
-      IM.toList .
-      IM.fromListWith (++) . map ((unPoint . repr ps . Point) &&& (:[])) $
-      IM.keys im
+prettyUF ps =
+  unlines . ("UnionFind:":) .
+  map (\(r, keys) -> show keys ++ ":" ++ show (descr ps r)) $
+  getPoints ps
 
 data Link a
     = Info {-# UNPACK #-} !Int a
@@ -65,11 +81,6 @@ data Link a
     | Link {-# UNPACK #-} !Int
       -- ^ Pointer to some other element of the equivalence class.
      deriving Show
-
-newtype Point a = Point { unPoint :: Int }
-
-instance Show (Point a) where
-  show (Point x) = 'P' : show x
 
 newPointSupply :: PointSupply a
 newPointSupply = PointSupply 0 IM.empty
@@ -85,39 +96,37 @@ repr :: PointSupply a -> Point a -> Point a
 repr ps p = reprInfo ps p (\n _rank _a -> Point n)
 
 reprInfo :: PointSupply a -> Point a -> (Int -> Int -> a -> r) -> r
-reprInfo (PointSupply _next eqs) (Point n) k = go n
+reprInfo ps (Point n) k = go n
   where
     go !i =
-      case eqs IM.! i of
+      case psEqs ps IM.! i of
         Link i' -> go i'
         Info r a -> k i r a
 
 union :: PointSupply a -> Point a -> Point a -> PointSupply a
-union ps@(PointSupply next eqs) p1 p2 =
+union ps p1 p2 =
   reprInfo ps p1 $ \i1 r1 _a1 ->
   reprInfo ps p2 $ \i2 r2 a2 ->
-  if i1 == i2 then ps else
+  atEqs ps $
+  if i1 == i2 then id else
     case r1 `compare` r2 of
       LT ->
         -- No rank or descriptor update necessary
-        let !eqs1 = IM.insert i1 (Link i2) eqs in
-        PointSupply next eqs1
+        IM.insert i1 (Link i2)
       EQ ->
-        let !eqs1 = IM.insert i1 (Link i2) eqs
-            !eqs2 = IM.insert i2 (Info (r2 + 1) a2) eqs1 in
-        PointSupply next eqs2
+        IM.insert i1 (Link i2) .
+        IM.insert i2 (Info (r2 + 1) a2)
       GT ->
-        let !eqs1 = IM.insert i1 (Info r2 a2) eqs
-            !eqs2 = IM.insert i2 (Link i1) eqs1 in
-        PointSupply next eqs2
+        IM.insert i1 (Info r2 a2) .
+        IM.insert i2 (Link i1)
 
 descr :: PointSupply a -> Point a -> a
 descr ps p = reprInfo ps p (\_ _ a -> a)
 
 setDescr :: PointSupply a -> Point a -> a -> PointSupply a
-setDescr ps@(PointSupply next eqs) p val =
+setDescr ps p val =
   reprInfo ps p $ \i r _oldVal ->
-  PointSupply next $ IM.insert i (Info r val) eqs
+  atEqs ps $ IM.insert i (Info r val)
 
 equivalent :: PointSupply a -> Point a -> Point a -> Bool
 equivalent ps p1 p2 =
