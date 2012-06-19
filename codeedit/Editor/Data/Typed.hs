@@ -12,7 +12,6 @@ module Editor.Data.Typed
   , deGuid
   , loadInferDefinition
   , loadInferExpression
-  , mapMExpressionEntities
   , StoredExpression(..), esGuid -- re-export from Data.Load
   , TypeData, TypedStoredExpression, TypedStoredDefinition
   ) where
@@ -135,7 +134,7 @@ makeSingletonTypeRef guid = makeTypeRef . (: []) . Data.GuidExpression guid
 zeroGuid :: Guid
 zeroGuid = Guid.fromString "ZeroGuid"
 
-mapMExpressionEntities
+mapStoredExpression
   :: Monad m
   => (StoredExpressionRef f
       -> a
@@ -143,7 +142,7 @@ mapMExpressionEntities
       -> m (StoredExpression b g))
   -> StoredExpression a f
   -> m (StoredExpression b g)
-mapMExpressionEntities f =
+mapStoredExpression f =
   Data.mapMExpression g
   where
     g (StoredExpression stored a val) =
@@ -155,16 +154,16 @@ atInferredTypes
   -> StoredExpression a f
   -> m (StoredExpression b f)
 atInferredTypes f =
-  mapMExpressionEntities g
+  mapStoredExpression g
   where
     g stored a v = do
       b <- f stored a
       return $ StoredExpression stored b v
 
-fromEntity
+fromStoredExpression
   :: Monad m => (Guid -> Data.Expression ref -> m ref)
   -> StoredExpression it f -> m ref
-fromEntity mk =
+fromStoredExpression mk =
   Data.mapMExpression f
   where
     f (StoredExpression stored _ val) =
@@ -172,10 +171,10 @@ fromEntity mk =
       , mk $ esGuid stored
       )
 
-inferredTypeFromEntity
+pureExpressionFromStored
   :: StoredExpression it f -> Data.PureGuidExpression
-inferredTypeFromEntity =
-  fmap runIdentity $ fromEntity f
+pureExpressionFromStored =
+  fmap runIdentity $ fromStoredExpression f
   where
     f guid = return . Data.PureGuidExpression . Data.GuidExpression guid
 
@@ -184,9 +183,9 @@ ignoreStoredMonad
   -> StoredExpression it (T Identity)
 ignoreStoredMonad = id
 
-expand :: Monad m => StoredExpression it f -> T m Data.PureGuidExpression
-expand =
-  (`runReaderT` Map.empty) . recurse . inferredTypeFromEntity
+expandStoredToPure :: Monad m => StoredExpression it f -> T m Data.PureGuidExpression
+expandStoredToPure =
+  (`runReaderT` Map.empty) . recurse . pureExpressionFromStored
   where
     recurse e@(Data.PureGuidExpression (Data.GuidExpression guid val)) =
       case val of
@@ -194,13 +193,13 @@ expand =
         -- TODO: expand the result recursively (with some recursive
         -- constraint)
         liftM
-        (inferredTypeFromEntity .
+        (pureExpressionFromStored .
          ignoreStoredMonad .
-         fromLoaded () . Data.defBody . DataLoad.defEntityValue) .
+         storedFromLoaded () . Data.defBody . DataLoad.defEntityValue) .
         lift $ DataLoad.loadDefinition defI
       Data.ExpressionGetVariable (Data.ParameterRef guidRef) -> do
-        mValueEntity <- Reader.asks (Map.lookup guidRef)
-        return $ fromMaybe e mValueEntity
+        mValue <- Reader.asks (Map.lookup guidRef)
+        return $ fromMaybe e mValue
       Data.ExpressionApply
         (Data.Apply
          (Data.PureGuidExpression
@@ -208,9 +207,9 @@ expand =
            -- TODO: Don't ignore paramType, we do want to recursively
            -- type-check this:
            (Data.ExpressionLambda (Data.Lambda _paramType body))))
-         argEntity) -> do
-          newArgEntity <- recurse argEntity
-          Reader.local (Map.insert lamGuid newArgEntity) $
+         arg) -> do
+          newArg <- recurse arg
+          Reader.local (Map.insert lamGuid newArg) $
             recurse body
       Data.ExpressionLambda (Data.Lambda paramType body) ->
         recurseLambda Data.ExpressionLambda paramType body
@@ -225,27 +224,27 @@ expand =
             Data.PureGuidExpression . Data.GuidExpression guid . cons $
             Data.Lambda paramType newBody
 
-typeRefFromEntity
+typeRefFromStored
   :: Monad m => StoredExpression it f
   -> Infer m TypeRef
-typeRefFromEntity =
-  Data.mapMExpression f <=< liftTransaction . expand
+typeRefFromStored =
+  Data.mapMExpression f <=< liftTransaction . expandStoredToPure
   where
     f (Data.PureGuidExpression (Data.GuidExpression guid val)) =
       ( return val
       , makeSingletonTypeRef guid
       )
 
-fromLoaded
+storedFromLoaded
   :: it
   -> DataLoad.ExpressionEntity f
   -> StoredExpression it f
-fromLoaded it =
+storedFromLoaded it =
   runIdentity . Data.mapMExpression f
   where
     f (DataLoad.ExpressionEntity stored val) =
-      (return val, makeEntity stored)
-    makeEntity stored newVal =
+      (return val, makeStored stored)
+    makeStored stored newVal =
       return $ StoredExpression stored it newVal
 
 addTypeRefs
@@ -253,7 +252,7 @@ addTypeRefs
   => StoredExpression () f
   -> Infer m (StoredExpression TypeRef f)
 addTypeRefs =
-  mapMExpressionEntities f
+  mapStoredExpression f
   where
     f stored () val = do
       typeRef <- makeTypeRef []
@@ -286,7 +285,7 @@ derefTypeRefs
   => StoredExpression TypeRef f
   -> Infer m (StoredExpression [InferredTypeLoop] f)
 derefTypeRefs =
-  mapMExpressionEntities f
+  mapStoredExpression f
   where
     f stored typeRef val = do
       types <- derefTypeRef typeRef
@@ -300,19 +299,16 @@ unifyOnTree = (`runReaderT` []) . go
   where
     go (StoredExpression stored typeRef value) = do
       case value of
-
         Data.ExpressionLambda (Data.Lambda paramType body) -> do
-          paramTypeRef <- lift $ typeRefFromEntity paramType
+          paramTypeRef <- lift $ typeRefFromStored paramType
           lift $ setType <=< makePi .
             Data.Lambda paramTypeRef $
             eeInferredType body
           Reader.local ((esGuid stored, paramTypeRef):) $ go body
-
         Data.ExpressionPi (Data.Lambda paramType resultType) -> do
-          paramTypeRef <- lift $ typeRefFromEntity paramType
+          paramTypeRef <- lift $ typeRefFromStored paramType
           lift . setType $ eeInferredType resultType
           Reader.local ((esGuid stored, paramTypeRef):) $ go resultType
-
         Data.ExpressionApply (Data.Apply func arg) -> do
           go func
           go arg
@@ -324,7 +320,7 @@ unifyOnTree = (`runReaderT` []) . go
               Data.Lambda argTypeRef typeRef
             funcTypes <- getTypeRef funcTypeRef
             sequence_
-              [ subst piGuid (typeRefFromEntity arg) piResultTypeRef
+              [ subst piGuid (typeRefFromStored arg) piResultTypeRef
               | Data.GuidExpression piGuid
                 (Data.ExpressionPi
                  (Data.Lambda _ piResultTypeRef))
@@ -338,11 +334,11 @@ unifyOnTree = (`runReaderT` []) . go
             Nothing -> return ()
             Just paramTypeRef -> setType paramTypeRef
         Data.ExpressionGetVariable (Data.DefinitionRef defI) -> lift $ do
-          defTypeEntity <-
-            liftM (fromLoaded [] . Data.defType . DataLoad.defEntityValue) .
+          defTypeStored <-
+            liftM (storedFromLoaded [] . Data.defType . DataLoad.defEntityValue) .
             liftTransaction $
             DataLoad.loadDefinition defI
-          defTypeRef <- typeRefFromEntity $ ignoreStoredMonad defTypeEntity
+          defTypeRef <- typeRefFromStored $ ignoreStoredMonad defTypeStored
           setType defTypeRef
         Data.ExpressionLiteralInteger _ ->
           lift $
@@ -445,8 +441,8 @@ allUnder =
         State.modify (typeRef :)
         types <- lift $ getTypeRef typeRef
         mapM_ onType types
-    onType entity =
-      case Data.geValue entity of
+    onType guidExpr =
+      case Data.geValue guidExpr of
       Data.ExpressionPi (Data.Lambda p r) -> recurse p >> recurse r
       Data.ExpressionLambda (Data.Lambda p r) -> recurse p >> recurse r
       Data.ExpressionApply (Data.Apply f a) -> recurse f >> recurse a
@@ -527,11 +523,11 @@ inferDefinition (DataLoad.DefinitionEntity iref value) =
   liftM (StoredDefinition iref) $
   case value of
   Data.Definition typeI bodyI -> do
-    let inferredType = canonizeIdentifiersTypes $ fromLoaded [] typeI
+    let inferredType = canonizeIdentifiersTypes $ storedFromLoaded [] typeI
 
     inferredBody <- runInfer $ do
-      inferredTypeRef <- typeRefFromEntity inferredType
-      withTypeRefs <- addTypeRefs $ fromLoaded () bodyI
+      inferredTypeRef <- typeRefFromStored inferredType
+      withTypeRefs <- addTypeRefs $ storedFromLoaded () bodyI
       unify inferredTypeRef $ eeInferredType withTypeRefs
       inferExpression withTypeRefs
     return $ Data.Definition inferredType inferredBody
@@ -546,5 +542,5 @@ loadInferExpression
   :: Monad m => Data.ExpressionIRef
   -> T m (TypedStoredExpression (T m))
 loadInferExpression =
-  runInfer . (inferExpression <=< addTypeRefs . fromLoaded ()) <=<
+  runInfer . (inferExpression <=< addTypeRefs . storedFromLoaded ()) <=<
   flip DataLoad.loadExpression Nothing
