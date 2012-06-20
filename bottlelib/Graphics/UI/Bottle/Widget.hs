@@ -9,9 +9,9 @@ module Graphics.UI.Bottle.Widget
   , emptyEventResult, eventResultFromCursor
   , keysEventMap, keysEventMapMovesCursor
   , EventHandlers, atContent, atIsFocused
-  , userIO, image, eventMap
+  , userIO, frame, eventMap
   , takesFocus, atMkSizeDependentWidgetData, atSizeDependentWidgetData
-  , atImageWithSize, atImage, atMaybeEnter, atEventMap, atEvents
+  , atFrameWithSize, atFrame, atMaybeEnter, atEventMap, atEvents
   , backgroundColor, tint, liftView
   , strongerEvents, weakerEvents
   , translate, translateSizeDependentWidgetData
@@ -131,19 +131,19 @@ atSizeDependentWidgetData = atContent . fmap
 atMkSizeDependentWidgetData :: ((Size -> SizeDependentWidgetData f) -> Size -> SizeDependentWidgetData f) -> Widget f -> Widget f
 atMkSizeDependentWidgetData = atContent . Sized.atFromSize
 
-atImageWithSize :: (Size -> Anim.Frame -> Anim.Frame) -> Widget f -> Widget f
-atImageWithSize f = atMkSizeDependentWidgetData g
+atFrameWithSize :: (Size -> Anim.Frame -> Anim.Frame) -> Widget f -> Widget f
+atFrameWithSize f = atMkSizeDependentWidgetData g
   where
     g mkSizeDependentWidgetData size = atSdwdFrame (f size) (mkSizeDependentWidgetData size)
 
-atImage :: (Anim.Frame -> Anim.Frame) -> Widget f -> Widget f
-atImage = atSizeDependentWidgetData . atSdwdFrame
+atFrame :: (Anim.Frame -> Anim.Frame) -> Widget f -> Widget f
+atFrame = atSizeDependentWidgetData . atSdwdFrame
 
 userIO :: Widget f -> Size -> SizeDependentWidgetData f
 userIO = Sized.fromSize . content
 
-image :: Widget f -> Size -> Anim.Frame
-image = (fmap . fmap) sdwdFrame userIO
+frame :: Widget f -> Size -> Anim.Frame
+frame = (fmap . fmap) sdwdFrame userIO
 
 eventMap :: Widget f -> Size -> EventHandlers f
 eventMap = (fmap . fmap) sdwdEventMap userIO
@@ -172,10 +172,10 @@ weakerEvents :: EventHandlers f -> Widget f -> Widget f
 weakerEvents = atEventMap . flip mappend
 
 backgroundColor :: Int -> AnimId -> Draw.Color -> Widget f -> Widget f
-backgroundColor layer animId = atImageWithSize . Anim.backgroundColor animId layer
+backgroundColor layer animId = atFrameWithSize . Anim.backgroundColor animId layer
 
 tint :: Draw.Color -> Widget f -> Widget f
-tint = atImage . Anim.onImages . Draw.tint
+tint = atFrame . Anim.onImages . Draw.tint
 
 keysEventMap ::
   Functor f => [EventMap.ModKey] -> EventMap.Doc ->

@@ -49,7 +49,7 @@ squareFrame animId size =
 addSquareParens :: Monad m => Anim.AnimId -> WidgetT t m -> TWidget t m
 addSquareParens parensId =
   return .
-  Widget.atImageWithSize addSquareFrame .
+  Widget.atFrameWithSize addSquareFrame .
   Widget.translateBy (* ((1 - Config.squareParensScaleFactor) / Config.squareParensScaleFactor / 2)) .
   Widget.atSizeDependentWidgetData (Widget.scaleSizeDependentWidgetData Config.squareParensScaleFactor)
   where

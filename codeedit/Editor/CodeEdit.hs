@@ -158,7 +158,7 @@ makePanesEdit panes = do
     onActivePane =
       Widget.backgroundColor 20 WidgetIds.activeDefBackground Config.activeDefBGColor
     onInactivePane =
-      (Widget.atImage . Anim.onImages . Draw.tint)
+      (Widget.atFrame . Anim.onImages . Draw.tint)
       Config.inactiveTintColor
     makePaneWidget pane =
       liftM (onEachPane . Widget.weakerEvents (paneEventMap pane)) .

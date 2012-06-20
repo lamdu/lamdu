@@ -101,7 +101,7 @@ makeUnfocused style str myId =
   (Widget.atContent . Sized.atRequestedSize)
    ((SizeRange.atSrMinSize . Vector2.first) (+ sCursorWidth style) .
     (SizeRange.atSrMaxSize . Vector2.first . fmap) (+ sCursorWidth style)) .
-  Widget.atImage (cursorTranslate style) .
+  Widget.atFrame (cursorTranslate style) .
   TextView.makeWidget (sTextViewStyle style) displayStr $
   Widget.toAnimId myId
   where
@@ -127,7 +127,7 @@ lineHeightOfStyle style = sz * textHeight
 makeFocused :: Cursor -> Style -> String -> Widget.Id -> Widget ((,) String)
 makeFocused cursor style str myId =
   Widget.backgroundColor 10 (sBackgroundCursorId style) blue .
-  Widget.atImage (`mappend` cursorFrame) .
+  Widget.atFrame (`mappend` cursorFrame) .
   Widget.strongerEvents eventMap $
   widget
   where
