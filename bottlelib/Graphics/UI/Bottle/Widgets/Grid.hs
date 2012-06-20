@@ -184,7 +184,7 @@ helper combineEnters (KGrid mCursor sChildren) =
 
         makeSizeDependentWidgetData cursor@(Vector2 x y) = SizeDependentWidgetData
           { sdwdFrame = frame
-          , sdwdMaybeEnter = Nothing -- We're already entered
+          , sdwdMaybeEnter = mEnter
           , sdwdEventMap = makeEventMap sdwd navDests
           , sdwdFocalArea = sdwdFocalArea sdwd
           }

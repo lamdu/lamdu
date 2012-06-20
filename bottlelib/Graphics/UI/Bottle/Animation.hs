@@ -194,7 +194,8 @@ unitSquare animId = simpleFrame animId DrawUtils.square
 
 backgroundColor :: AnimId -> Layer -> Draw.Color -> Vector2 R -> Frame -> Frame
 backgroundColor animId layer color size =
-  flip mappend . onDepth (+layer) . scale size . onImages (Draw.tint color) $ unitSquare animId
+  flip mappend . onDepth (+layer) . scale size .
+  onImages (Draw.tint color) $ unitSquare animId
 
 translate :: Vector2 R -> Frame -> Frame
 translate pos =

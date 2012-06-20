@@ -38,6 +38,7 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Rect as Rect
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
+import qualified Graphics.UI.Bottle.Widgets.FlyNav as FlyNav
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified System.Directory as Directory
@@ -106,7 +107,9 @@ mainLoopDebugMode font makeWidget addHelp = do
 runDbStore :: Draw.Font -> Transaction.Store DBTag IO -> IO a
 runDbStore font store = do
   ExampleDB.initDB store
-  addHelp <- EventMapDoc.makeToggledHelpAdder Config.overlayDocKeys helpStyle
+  flyNavState <- newIORef FlyNav.initState
+  addHelp <-
+    EventMapDoc.makeToggledHelpAdder Config.overlayDocKeys helpStyle
   initCache <- Transaction.run store $ do
     view <- Property.get Anchors.view
     Transaction.run (Anchors.viewStore view) CodeEdit.makeSugarCache
@@ -132,8 +135,11 @@ runDbStore font store = do
           ( invalidCursor
           , Widget.atEvents (lift . attachCursor =<<) widget
           )
-      maybe (return ()) (putStrLn . ("Invalid cursor: " ++) . show) invalidCursor
-      return $ Widget.atEvents saveCache widget
+      maybe (return ()) (putStrLn . ("Invalid cursor: " ++) . show)
+        invalidCursor
+      fnState <- readIORef flyNavState
+      return $ FlyNav.make WidgetIds.flyNav fnState
+        (writeIORef flyNavState) $ Widget.atEvents saveCache widget
 
     saveCache action = do
       (eventResult, mCacheCache) <- runWriterT action

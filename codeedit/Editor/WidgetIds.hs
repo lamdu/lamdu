@@ -60,3 +60,6 @@ underlineId = flip mappend ["underline"]
 
 activeDefBackground :: AnimId
 activeDefBackground = ["active def bg"]
+
+flyNav :: AnimId
+flyNav = ["flyNav"]
