@@ -31,6 +31,17 @@ data ActiveState = ActiveState
 
 type State = Maybe ActiveState
 
+modifier :: EventMap.ModState
+modifier = EventMap.ctrl `mappend` EventMap.shift
+
+modifierKeys :: [EventMap.Key]
+modifierKeys =
+  [ EventMap.KeyLeftCtrl
+  , EventMap.KeyRightCtrl
+  , EventMap.KeyLeftShift
+  , EventMap.KeyRightShift
+  ]
+
 initState :: State
 initState = Nothing
 
@@ -123,8 +134,8 @@ make animId (Just (ActiveState pos movements)) setState =
     -- TODO: This is buggy, need to be able to be informed that the
     -- key combo was released, regardless of which mod/key was
     -- released first:
-      [ finishOn (EventMap.ModKey EventMap.shift shiftKey)
-      | shiftKey <- [EventMap.KeyLeftShift, EventMap.KeyRightShift]
+      [ finishOn (EventMap.ModKey modifier key)
+      | key <- modifierKeys
       ]
     stopMovement name modKey newMovements =
       mkKeyMap EventMap.Release modKey ("Stop FlyNav " ++ name) .
@@ -166,7 +177,7 @@ addMovement name key dir pos movements setState
     mkKeyMap EventMap.Press modKey ("Start FlyNav " ++ name) .
     setState . Just $ ActiveState pos (Movement name modKey dir : movements)
     where
-      modKey = EventMap.ModKey EventMap.shift key
+      modKey = EventMap.ModKey modifier key
 
 zipped :: [a] -> [(a, [a])]
 zipped [] = []

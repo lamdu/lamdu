@@ -3,9 +3,10 @@ module Graphics.UI.GLFW.ModState (
   Pos(..), ModType(..), Modkey(..),
   modStateFromModkeySet, asModkey, isModifierKey) where
 
-import Prelude hiding (Left, Right)
 import Data.Maybe(isJust)
+import Data.Monoid(Monoid(..))
 import Data.Set(Set)
+import Prelude hiding (Left, Right)
 import qualified Data.Set as Set
 import qualified Graphics.UI.GLFW as GLFW
 
@@ -15,6 +16,11 @@ data ModState = ModState {
   modShift :: Bool
   }
   deriving (Show, Read, Eq, Ord)
+
+instance Monoid ModState where
+  mempty = noMods
+  ModState c0 a0 s0 `mappend` ModState c1 a1 s1 =
+    ModState (c0 || c1) (a0 || a1) (s0 || s1)
 
 data Pos = Left | Right
   deriving (Enum, Bounded, Show, Read, Eq, Ord)
