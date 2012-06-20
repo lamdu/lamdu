@@ -138,8 +138,10 @@ runDbStore font store = do
       maybe (return ()) (putStrLn . ("Invalid cursor: " ++) . show)
         invalidCursor
       fnState <- readIORef flyNavState
-      return $ FlyNav.make WidgetIds.flyNav fnState
-        (writeIORef flyNavState) $ Widget.atEvents saveCache widget
+      return .
+        FlyNav.make WidgetIds.flyNav
+        fnState (writeIORef flyNavState) $
+        Widget.atEvents saveCache widget
 
     saveCache action = do
       (eventResult, mCacheCache) <- runWriterT action

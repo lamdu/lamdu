@@ -7,6 +7,7 @@ import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Rect (Rect(..))
+import Graphics.UI.Bottle.SizeRange (Size)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Graphics.DrawingCombinators as Draw
@@ -21,7 +22,6 @@ data Movement = Movement
   , _mModKey :: EventMap.ModKey
   , mDir :: Vector2 Widget.R
   }
-
 AtFieldTH.make ''Movement
 
 data ActiveState = ActiveState
@@ -59,13 +59,13 @@ mkKeyMap isPress key doc =
   (EventMap.KeyEvent isPress key) doc .
   withEmptyResult
 
-speed :: Vector2 Anim.R
+speed :: Vector2 Widget.R
 speed = 12
 
-accel :: Vector2 Anim.R
+accel :: Vector2 Widget.R
 accel = 1.02
 
-targetSize :: Vector2 Anim.R
+targetSize :: Size
 targetSize = Vector2 25 25
 
 targetColor :: Draw.Color
@@ -74,7 +74,7 @@ targetColor = Draw.Color 0.9 0.9 0 0.7
 highlightColor :: Draw.Color
 highlightColor = Draw.Color 0.4 0.4 1 0.4
 
-target :: AnimId -> Vector2 Anim.R -> Anim.Frame
+target :: AnimId -> Vector2 Widget.R -> Anim.Frame
 target animId pos =
   Anim.onDepth (subtract 100) .
   Anim.translate pos .
@@ -84,7 +84,7 @@ target animId pos =
   (fmap . const) () $
   Draw.circle
 
-cap :: Vector2 Anim.R -> Vector2 Anim.R -> Vector2 Anim.R
+cap :: Size -> Vector2 Widget.R -> Vector2 Widget.R
 cap size = liftA2 max 0 . liftA2 min size
 
 highlightRect :: AnimId -> Rect -> Anim.Frame
@@ -93,61 +93,6 @@ highlightRect animId (Rect pos size) =
   Anim.onDepth (subtract 50) .
   Anim.onImages (Draw.tint highlightColor) $
   Anim.unitSquare animId
-
-make
-  :: Applicative f => AnimId -> State -> (State -> f ()) -> Widget f -> Widget f
-make _ Nothing setState =
-  Widget.atSizeDependentWidgetData notActive
-  where
-    notActive sdwd =
-      (Widget.atSdwdEventMap . flip mappend)
-      (notActiveEvents (Rect.center (Widget.sdwdFocalArea sdwd))) sdwd
-    notActiveEvents pos = addMovements pos [] setState
-make animId (Just (ActiveState pos movements)) setState =
-  (Widget.atImage . mappend) (target (animId ++ ["target"]) pos) .
-  Widget.atMkSizeDependentWidgetData onSdwd
-  where
-    delta = sum $ map mDir movements
-    onSdwd mkSdwd size =
-      (Widget.atSdwdEventMap . const) (eventMap mEnteredChild size) .
-      maybe id (highlight . Widget.enterResultRect) mEnteredChild $
-      sdwd
-      where
-        highlight =
-          Widget.atSdwdFrame . mappend .
-          highlightRect (animId ++ ["highlight"])
-        mEnteredChild = fmap ($ targetPos) $ Widget.sdwdMaybeEnter sdwd
-        sdwd = mkSdwd size
-    targetPos =
-      Direction.RelativePos $ Rect (pos - targetSize/2) targetSize
-    nextState size =
-      ActiveState (cap (pos + delta*speed) size)
-      ((map . atMDir) (* accel) movements)
-    eventMap mEnteredChild size = mconcat $
-      (mkTickHandler . setState . Just . nextState) size :
-      addMovements pos movements setState :
-      finishMove mEnteredChild :
-      [ stopMovement name modKey lessMovements
-      | (Movement name modKey _, lessMovements) <- zipped movements
-      ]
-    finishMove = mconcat
-    -- TODO: This is buggy, need to be able to be informed that the
-    -- key combo was released, regardless of which mod/key was
-    -- released first:
-      [ finishOn (EventMap.ModKey modifier key)
-      | key <- modifierKeys
-      ]
-    stopMovement name modKey newMovements =
-      mkKeyMap EventMap.Release modKey ("Stop FlyNav " ++ name) .
-      setState . Just $ ActiveState pos newMovements
-    finishOn modKey mEnteredChild =
-      EventMap.keyEventMap (EventMap.KeyEvent EventMap.Release modKey)
-        "Stop FlyNav" $
-        setState Nothing *>
-        -- TODO: Just cancel FlyNav in any case if the MaybeEnter is
-        -- Nothing...
-        maybe (pure Widget.emptyEventResult) Widget.enterResultEvent
-          mEnteredChild
 
 addMovements
   :: Functor f
@@ -182,3 +127,60 @@ addMovement name key dir pos movements setState
 zipped :: [a] -> [(a, [a])]
 zipped [] = []
 zipped (x:xs) = (x, xs) : (map . second) (x:) (zipped xs)
+
+makeSdwd
+  :: Applicative f => AnimId -> State -> (State -> f ())
+  -> Size
+  -> Widget.SizeDependentWidgetData f
+  -> Widget.SizeDependentWidgetData f
+makeSdwd _ Nothing setState _ sdwd =
+  (Widget.atSdwdEventMap . flip mappend)
+  (addMovements (Rect.center (Widget.sdwdFocalArea sdwd)) [] setState)
+  sdwd
+makeSdwd animId (Just (ActiveState pos movements)) setState size sdwd =
+  (Widget.atSdwdFrame . mappend) frame .
+  (Widget.atSdwdEventMap . const) eventMap $ sdwd
+  where
+    delta = sum $ map mDir movements
+    highlight =
+      maybe mempty
+      (highlightRect (animId ++ ["highlight"]) . Widget.enterResultRect)
+      mEnteredChild
+    frame = target (animId ++ ["target"]) pos `mappend` highlight
+    mEnteredChild = fmap ($ targetPos) $ Widget.sdwdMaybeEnter sdwd
+    targetPos =
+      Direction.RelativePos $ Rect (pos - targetSize/2) targetSize
+    nextState =
+      ActiveState (cap (pos + delta*speed) size)
+      ((map . atMDir) (* accel) movements)
+    eventMap = mconcat $
+      (mkTickHandler . setState . Just) nextState :
+      addMovements pos movements setState :
+      finishMove :
+      [ stopMovement name modKey lessMovements
+      | (Movement name modKey _, lessMovements) <- zipped movements
+      ]
+    finishMove = mconcat
+    -- TODO: This is buggy, need to be able to be informed that the
+    -- key combo was released, regardless of which mod/key was
+    -- released first:
+      [ finishOn (EventMap.ModKey modifier key)
+      | key <- modifierKeys
+      ]
+    stopMovement name modKey newMovements =
+      mkKeyMap EventMap.Release modKey ("Stop FlyNav " ++ name) .
+      setState . Just $ ActiveState pos newMovements
+    finishOn modKey =
+      EventMap.keyEventMap (EventMap.KeyEvent EventMap.Release modKey)
+        "Stop FlyNav" $
+        setState Nothing *>
+        -- TODO: Just cancel FlyNav in any case if the MaybeEnter is
+        -- Nothing...
+        maybe (pure Widget.emptyEventResult) Widget.enterResultEvent
+          mEnteredChild
+
+make
+  :: Applicative f => AnimId -> State -> (State -> f ())
+  -> Widget f
+  -> Widget f
+make animId state setState = Widget.atMkSizeDependentWidgetData (makeSdwd animId state setState <*>)
