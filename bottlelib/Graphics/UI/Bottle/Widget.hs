@@ -9,7 +9,7 @@ module Graphics.UI.Bottle.Widget
   , emptyEventResult, eventResultFromCursor
   , keysEventMap, keysEventMapMovesCursor
   , EventHandlers, atContent, atIsFocused
-  , userIO, frame, eventMap
+  , getSdwd
   , takesFocus, atMkSizeDependentWidgetData, atSizeDependentWidgetData
   , atFrameWithSize, atFrame, atMaybeEnter, atEventMap, atEvents
   , backgroundColor, tint, liftView
@@ -139,14 +139,8 @@ atFrameWithSize f = atMkSizeDependentWidgetData g
 atFrame :: (Anim.Frame -> Anim.Frame) -> Widget f -> Widget f
 atFrame = atSizeDependentWidgetData . atSdwdFrame
 
-userIO :: Widget f -> Size -> SizeDependentWidgetData f
-userIO = Sized.fromSize . content
-
-frame :: Widget f -> Size -> Anim.Frame
-frame = (fmap . fmap) sdwdFrame userIO
-
-eventMap :: Widget f -> Size -> EventHandlers f
-eventMap = (fmap . fmap) sdwdEventMap userIO
+getSdwd :: Widget f -> Size -> SizeDependentWidgetData f
+getSdwd = Sized.fromSize . content
 
 -- TODO: Would be nicer as (Direction -> Id), but then TextEdit's "f" couldn't be ((,) String)..
 takesFocus :: Functor f => (Direction -> f Id) -> Widget f -> Widget f

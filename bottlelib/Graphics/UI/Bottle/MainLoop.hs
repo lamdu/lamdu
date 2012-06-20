@@ -126,7 +126,7 @@ mainLoopWidget mkWidget getAnimationHalfLife = do
     tickHandler size = do
       widget <- readIORef widgetRef
       tickResults <-
-        sequence . E.emTickHandlers $ Widget.eventMap widget size
+        sequence . E.emTickHandlers . Widget.sdwdEventMap $ Widget.getSdwd widget size
       case tickResults of
         [] -> return Nothing
         _ -> do
@@ -136,7 +136,7 @@ mainLoopWidget mkWidget getAnimationHalfLife = do
       widget <- readIORef widgetRef
       mAnimIdMapping <-
         maybe (return Nothing) (liftM (Just . Widget.eAnimIdMapping)) .
-        E.lookup event $ Widget.eventMap widget size
+        E.lookup event . Widget.sdwdEventMap $ Widget.getSdwd widget size
       case mAnimIdMapping of
         Nothing -> return ()
         Just _ -> newWidget
@@ -146,7 +146,7 @@ mainLoopWidget mkWidget getAnimationHalfLife = do
       let
         calcFrame = do
           widget <- readIORef widgetRef
-          return $ Widget.frame widget size
+          return . Widget.sdwdFrame $ Widget.getSdwd widget size
       frame <-
         case mPrevFrame of
         Nothing -> calcFrame
