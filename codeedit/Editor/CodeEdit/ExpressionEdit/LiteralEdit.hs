@@ -2,6 +2,7 @@
 
 module Editor.CodeEdit.ExpressionEdit.LiteralEdit(makeInt, makeIntView) where
 
+import Data.Store.Transaction (Transaction)
 import Editor.Anchors(ViewTag)
 import Editor.MonadF(MonadF)
 import Editor.OTransaction (TWidget)
@@ -21,7 +22,7 @@ setColor :: TWidget t m -> TWidget t m
 setColor = BWidgets.setTextColor Config.literalIntColor
 
 makeIntView
-  :: MonadF m
+  :: Monad m
   => AnimId -> Integer
   -> TWidget t m
 makeIntView myId integer =
@@ -29,8 +30,19 @@ makeIntView myId integer =
 
 makeIntEdit
   :: Monad m
-  => Sugar.LiteralInteger m -> Widget.Id -> TWidget ViewTag m
-makeIntEdit integer myId = do
+  => Sugar.LiteralInteger m -> Widget.Id
+  -> TWidget ViewTag m
+makeIntEdit integer myId =
+  case Sugar.liSetValue integer of
+    Nothing -> makeIntView (Widget.toAnimId myId) (Sugar.liValue integer)
+    Just setValue -> makeIntEditI integer myId setValue
+
+makeIntEditI
+  :: Monad m
+  => Sugar.LiteralInteger m -> Widget.Id
+  -> (Integer -> Transaction ViewTag m ())
+  -> TWidget ViewTag m
+makeIntEditI integer myId setValue = do
   cursor <- OT.readCursor
   let
     subCursor = Widget.subId myId cursor
@@ -38,8 +50,7 @@ makeIntEdit integer myId = do
     (text, textCursor)
       | isEmpty = ("", TextEdit.makeTextEditCursor myId 0)
       | otherwise = (show (Sugar.liValue integer), cursor)
-    lifter Nothing (_newText, eventRes) = return eventRes
-    lifter (Just setValue) (newText, eventRes)
+    setter (newText, eventRes)
       | newText == text = return eventRes
       | not (all Char.isDigit newText) = return Widget.emptyEventResult
       | null newText = do
@@ -50,7 +61,7 @@ makeIntEdit integer myId = do
         return eventRes
   style <- OT.readTextStyle
   return .
-    Widget.atEvents (lifter (Sugar.liSetValue integer)) $ TextEdit.make
+    Widget.atEvents setter $ TextEdit.make
     style { TextEdit.sEmptyFocusedString = "<0>" } textCursor text myId
   where
     emptyZeroCursor = ["empty-zero"]

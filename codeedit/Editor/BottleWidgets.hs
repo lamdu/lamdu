@@ -46,7 +46,7 @@ import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
-makeTextView :: MonadF m => String -> AnimId -> OTransaction t m (Widget f)
+makeTextView :: Monad m => String -> AnimId -> OTransaction t m (Widget f)
 makeTextView text myId = do
   style <- OT.readTextStyle
   return $
