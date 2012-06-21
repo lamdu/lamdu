@@ -44,9 +44,9 @@ makeIntEditI
   -> TWidget ViewTag m
 makeIntEditI integer myId setValue = do
   cursor <- OT.readCursor
+  suffix <- OT.subCursor myId
   let
-    subCursor = Widget.subId myId cursor
-    isEmpty = Sugar.liValue integer == 0 && subCursor == Just emptyZeroCursor
+    isEmpty = Sugar.liValue integer == 0 && suffix == Just emptyZeroCursor
     (text, textCursor)
       | isEmpty = ("", TextEdit.makeTextEditCursor myId 0)
       | otherwise = (show (Sugar.liValue integer), cursor)
