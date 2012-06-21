@@ -181,8 +181,8 @@ makeAllResults holeInfo = do
   varResults <- liftM concat .
     mapM (makeResultVariables holeInfo) $
     params ++ globals
-  searchTerm <- OT.getP $ hiSearchTerm holeInfo
   let
+    searchTerm = Property.value $ hiSearchTerm holeInfo
     literalResults = makeLiteralResults holeInfo searchTerm
     goodResult = Function.on isInfixOf (map Char.toLower) searchTerm . resultName
   return .
@@ -222,8 +222,9 @@ makeSearchTermWidget holeInfo searchTermId firstResults =
       (mPickResult holeInfo)
 
     makeNewDefinition holePickResult = do
-      searchTerm <- IT.transaction . Property.get $ hiSearchTerm holeInfo
-      let newName = concat . words $ searchTerm
+      let
+        searchTerm = Property.value $ hiSearchTerm holeInfo
+        newName = concat . words $ searchTerm
       newDefI <- IT.transaction $ Anchors.makeDefinition newName -- TODO: From Sugar
       IT.transaction $ Anchors.newPane newDefI
       let defRef = Data.ExpressionGetVariable $ Data.DefinitionRef newDefI
@@ -301,8 +302,14 @@ makeH
      (Maybe (ResultPicker m), WidgetT ViewTag m)
 makeH hole guid myId = do
   cursor <- OT.readCursor
-  searchText <- OT.getP $ hiSearchTerm holeInfo
+  searchTermProp <- OT.transaction $ Anchors.aDataRef "searchTerm" "" guid
   let
+    holeInfo = HoleInfo
+      { hiHoleId = myId
+      , hiSearchTerm = searchTermProp
+      , hiHole = hole
+      }
+    searchText = Property.value searchTermProp
     snippet
       | null searchText = "  "
       | otherwise = searchText
@@ -322,11 +329,6 @@ makeH hole guid myId = do
     unfocusedColor
       | canPickResult = Config.unfocusedHoleBackgroundColor
       | otherwise = Config.unfocusedReadOnlyHoleBackgroundColor
-    holeInfo = HoleInfo
-      { hiHoleId = myId
-      , hiSearchTerm = Anchors.aDataRef "searchTerm" "" guid
-      , hiHole = hole
-      }
     canPickResult = isJust $ Sugar.holePickResult hole
     makeBackground =
       Widget.backgroundColor 11 $

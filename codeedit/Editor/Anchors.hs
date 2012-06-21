@@ -16,14 +16,14 @@ module Editor.Anchors
   , aDataRef, aNameRef, variableNameRef
   , makePane, makeDefinition, newPane
   , savePreJumpPosition, jumpBack
+  , MkProperty, getP, setP, modP
   )
 where
 
-import Control.Monad (when)
+import Control.Monad (liftM, when)
 import Data.Binary (Binary(..))
 import Data.List.Split (splitOn)
 import Data.Map (Map)
-import Data.Maybe (fromMaybe)
 import Data.Store.Db (Db)
 import Data.Store.Guid(Guid)
 import Data.Store.IRef (IRef)
@@ -55,49 +55,51 @@ viewStore = View.store
 panesIRef :: IRef [Pane]
 panesIRef = IRef.anchor "panes"
 
-panes :: Monad m => Transaction.Property ViewTag m [Pane]
+type MkProperty t m a = Transaction t m (Transaction.Property t m a)
+
+panes :: Monad m => MkProperty ViewTag m [Pane]
 panes = Transaction.fromIRef panesIRef
 
 clipboardsIRef :: IRef [Data.ExpressionIRef]
 clipboardsIRef = IRef.anchor "clipboard"
 
-clipboards :: Monad m => Transaction.Property ViewTag m [Data.ExpressionIRef]
+clipboards :: Monad m => MkProperty ViewTag m [Data.ExpressionIRef]
 clipboards = Transaction.fromIRef clipboardsIRef
 
 branchesIRef :: IRef [(IRef String, Branch)]
 branchesIRef = IRef.anchor "branches"
 
-branches :: Monad m => Transaction.Property DBTag m [(IRef String, Branch)]
+branches :: Monad m => MkProperty DBTag m [(IRef String, Branch)]
 branches = Transaction.fromIRef branchesIRef
 
 currentBranchIRef :: IRef Branch
 currentBranchIRef = IRef.anchor "currentBranch"
 
-currentBranch :: Monad m => Transaction.Property DBTag m Branch
+currentBranch :: Monad m => MkProperty DBTag m Branch
 currentBranch = Transaction.fromIRef currentBranchIRef
 
 cursorIRef :: IRef Widget.Id
 cursorIRef = IRef.anchor "cursor"
 
 -- TODO: This should be an index
-globals :: Monad m => Transaction.Property ViewTag m [Data.VariableRef]
+globals :: Monad m => MkProperty ViewTag m [Data.VariableRef]
 globals = Transaction.fromIRef $ IRef.anchor "globals"
 
-builtinsMap :: Monad m => Transaction.Property ViewTag m (Map Data.FFIName Data.VariableRef)
+builtinsMap :: Monad m => MkProperty ViewTag m (Map Data.FFIName Data.VariableRef)
 builtinsMap = Transaction.fromIRef $ IRef.anchor "builtinsMap"
 
 -- Cursor is untagged because it is both saved globally and per-revision.
 -- Cursor movement without any revisioned changes are not saved per-revision.
-cursor :: Monad m => Transaction.Property DBTag m Widget.Id
+cursor :: Monad m => MkProperty DBTag m Widget.Id
 cursor = Transaction.fromIRef cursorIRef
 
-preJumps :: Monad m => Transaction.Property ViewTag m [Widget.Id]
+preJumps :: Monad m => MkProperty ViewTag m [Widget.Id]
 preJumps = Transaction.fromIRef $ IRef.anchor "prejumps"
 
-preCursor :: Monad m => Transaction.Property ViewTag m Widget.Id
+preCursor :: Monad m => MkProperty ViewTag m Widget.Id
 preCursor = Transaction.fromIRef $ IRef.anchor "precursor"
 
-postCursor :: Monad m => Transaction.Property ViewTag m Widget.Id
+postCursor :: Monad m => MkProperty ViewTag m Widget.Id
 postCursor = Transaction.fromIRef $ IRef.anchor "postcursor"
 
 viewIRef :: IRef View
@@ -106,10 +108,10 @@ viewIRef = IRef.anchor "HEAD"
 redosIRef :: IRef [Version]
 redosIRef = IRef.anchor "redos"
 
-redos :: Monad m => Transaction.Property DBTag m [Version]
+redos :: Monad m => MkProperty DBTag m [Version]
 redos = Transaction.fromIRef redosIRef
 
-view :: Monad m => Transaction.Property DBTag m View
+view :: Monad m => MkProperty DBTag m View
 view = Transaction.fromIRef viewIRef
 
 makePane :: Data.DefinitionIRef -> Pane
@@ -121,52 +123,47 @@ makeDefinition
 makeDefinition newName = do
   holeI <- Data.newExprIRef Data.ExpressionHole
   typeI <- Data.newExprIRef Data.ExpressionHole
-  defI <-
-    Transaction.newIRef $
-    Data.Definition typeI holeI
-  Property.pureModify globals (Data.DefinitionRef defI :)
-  (Property.set . aNameRef . IRef.guid) defI newName
+  defI <- Transaction.newIRef $ Data.Definition typeI holeI
+  modP globals (Data.DefinitionRef defI :)
+  setP (aNameRef (IRef.guid defI)) newName
   return defI
 
 aDataRef
-  :: (Binary b, Monad m) => SBS.ByteString -> b -> Guid
-  -> Property (Transaction t m) b
-aDataRef str def = Property.pureCompose (fromMaybe def) Just . combineGuid
+  :: (Binary b, Monad m)
+  => SBS.ByteString -> b -> Guid
+  -> MkProperty t m b
+aDataRef str def guid = do
+  val <- Transaction.readGuidDef def cGuid
+  return $ Property val (Transaction.writeGuid cGuid)
   where
-    combineGuid guid =
-      Property getter setter
-      where
-        getter = Transaction.lookup aGuid
-        setter (Just val) = Transaction.writeGuid aGuid val
-        setter Nothing = Transaction.delete aGuid
-        aGuid = Guid.combine guid $ Guid.make str
+    cGuid = Guid.combine guid $ Guid.make str
 
 -- Get an associated name from the given IRef
-aNameRef :: Monad m => Guid -> Property (Transaction t m) String
+aNameRef :: Monad m => Guid -> MkProperty t m String
 aNameRef = aDataRef "Name" ""
 
 variableNameRef
-  :: Monad m => Data.VariableRef -> Property (Transaction t m) String
+  :: Monad m => Data.VariableRef -> MkProperty t m String
 variableNameRef = aNameRef . Data.variableRefGuid
 
 newPane
   :: Monad m => Data.DefinitionIRef -> Transaction ViewTag m ()
 newPane defI = do
-  ps <- Property.get panes
-  when (defI `notElem` ps) $
-    Property.set panes $ makePane defI : ps
+  panesP <- panes
+  when (defI `notElem` Property.value panesP) $
+    Property.set panesP $ makePane defI : Property.value panesP
 
 savePreJumpPosition :: Monad m => Widget.Id -> Transaction ViewTag m ()
-savePreJumpPosition pos = Property.pureModify preJumps $ (pos :) . take 19
+savePreJumpPosition pos = modP preJumps $ (pos :) . take 19
 
 jumpBack :: Monad m => Transaction ViewTag m (Maybe (Transaction ViewTag m Widget.Id))
 jumpBack = do
-  jumps <- Property.get preJumps
+  preJumpsP <- preJumps
   return $
-    case jumps of
+    case Property.value preJumpsP of
     [] -> Nothing
     (j:js) -> Just $ do
-      Property.set preJumps js
+      Property.set preJumpsP js
       return j
 
 newBuiltin
@@ -179,8 +176,21 @@ newBuiltin fullyQualifiedName typeI = do
     Data.FFIName (init path) name
   builtinIRef <- Transaction.newIRef $ Data.Definition typeI builtinExprI
 
-  Property.set (aNameRef (IRef.guid builtinIRef)) name
+  setP (aNameRef (IRef.guid builtinIRef)) name
   return $ Data.DefinitionRef builtinIRef
   where
     name = last path
     path = splitOn "." fullyQualifiedName
+
+getP :: Monad m => MkProperty t m a -> Transaction t m a
+getP = liftM Property.value
+
+setP :: Monad m => MkProperty t m a -> a -> Transaction t m ()
+setP mkProp val = do
+  prop <- mkProp
+  Property.set prop val
+
+modP :: Monad m => MkProperty t m a -> (a -> a) -> Transaction t m ()
+modP mkProp f = do
+  prop <- mkProp
+  Property.pureModify prop f

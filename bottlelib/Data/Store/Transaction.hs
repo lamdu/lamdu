@@ -7,7 +7,7 @@ module Data.Store.Transaction
   , insertBS, insert
   , delete, deleteIRef
   , readIRef, readIRefDef, writeIRef
-  , readGuid, writeGuid
+  , readGuid, readGuidDef, writeGuid
   , isEmpty
   , guidExists, irefExists
   , newIRef, newKey
@@ -116,11 +116,11 @@ irefExists = guidExists . IRef.guid
 writeIRef :: (Monad m, Binary a) => IRef a -> a -> Transaction t m ()
 writeIRef = writeGuid . IRef.guid
 
-fromIRef :: (Monad m, Binary a) => IRef a -> Property t m a
-fromIRef iref = Property.Property (readIRef iref) (writeIRef iref)
+fromIRef :: (Monad m, Binary a) => IRef a -> Transaction t m (Property t m a)
+fromIRef iref = liftM (flip Property.Property (writeIRef iref)) $ readIRef iref
 
-fromIRefDef :: (Monad m, Binary a) => IRef a -> a -> Property t m a
-fromIRefDef iref def = Property.Property (readIRefDef def iref) (writeIRef iref)
+fromIRefDef :: (Monad m, Binary a) => IRef a -> a -> Transaction t m (Property t m a)
+fromIRefDef iref def = liftM (flip Property.Property (writeIRef iref)) $ readIRefDef def iref
 
 newKey :: Monad m => Transaction t m Key
 newKey = liftInner . storeNewKey =<< liftReaderT ask
@@ -137,13 +137,13 @@ followBy :: (Monad m, Binary a) =>
             (b -> IRef a) ->
             Property t m b ->
             Transaction t m (Property t m a)
-followBy conv = liftM (fromIRef . conv) . Property.get
+followBy conv = fromIRef . conv . Property.value
 
-anchorRef :: (Monad m, Binary a) => String -> Property t m a
+anchorRef :: (Monad m, Binary a) => String -> Transaction t m (Property t m a)
 anchorRef = fromIRef . IRef.anchor
 
-anchorRefDef :: (Monad m, Binary a) => String -> a -> Property t m a
-anchorRefDef name def = flip fromIRefDef def . IRef.anchor $ name
+anchorRefDef :: (Monad m, Binary a) => String -> a -> Transaction t m (Property t m a)
+anchorRefDef name def = flip fromIRefDef def $ IRef.anchor name
 
 run :: Monad m => Store t m -> Transaction t m a -> m a
 run store transaction = do

@@ -4,7 +4,6 @@ where
 import Control.Monad (liftM)
 import Data.Store.Transaction (Transaction)
 import qualified Data.Char as Char
-import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
 import qualified Editor.Data as Data
 
@@ -13,7 +12,7 @@ isInfixName "" = False
 isInfixName name = all (not . Char.isAlphaNum) name
 
 isInfixVar :: Monad m => Data.VariableRef -> Transaction t m Bool
-isInfixVar = liftM isInfixName . Property.get . Anchors.variableNameRef
+isInfixVar = liftM isInfixName . Anchors.getP . Anchors.variableNameRef
 
 infixOp
   :: Monad m

@@ -19,7 +19,6 @@ import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Monad.Trans.Writer as Writer
-import qualified Data.Store.Property as Property
 import qualified Data.Store.Rev.Branch as Branch
 import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Rev.View as View
@@ -38,19 +37,19 @@ import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
 setCurrentBranch :: Monad m => View -> Branch -> Transaction DBTag m ()
 setCurrentBranch view branch = do
-  Property.set Anchors.currentBranch branch
+  Anchors.setP Anchors.currentBranch branch
   View.setBranch view branch
 
 deleteCurrentBranch :: Monad m => View -> Transaction DBTag m Widget.Id
 deleteCurrentBranch view = do
-  branch <- Property.get Anchors.currentBranch
-  branches <- Property.get Anchors.branches
+  branch <- Anchors.getP Anchors.currentBranch
+  branches <- Anchors.getP Anchors.branches
   let
     index =
       fromMaybe (error "Invalid current branch!") $
       findIndex ((branch ==) . snd) branches
     newBranches = removeAt index branches
-  Property.set Anchors.branches newBranches
+  Anchors.setP Anchors.branches newBranches
   let
     newCurrentBranch =
       newBranches !! min (length newBranches - 1) index
@@ -62,7 +61,7 @@ makeBranch view = do
   newBranch <- Branch.new =<< View.curVersion view
   textEditModelIRef <- Transaction.newIRef "New view"
   let viewPair = (textEditModelIRef, newBranch)
-  Property.pureModify Anchors.branches (++ [viewPair])
+  Anchors.modP Anchors.branches (++ [viewPair])
   setCurrentBranch view newBranch
   return . FocusDelegator.delegatingId $
     WidgetIds.fromIRef textEditModelIRef
@@ -115,10 +114,11 @@ makeRootWidget mkCache widget = do
     withNewCache = tellNewCache mkCache view
     makeBranchNameEdit (textEditModelIRef, branch) = do
       let branchEditId = WidgetIds.fromIRef textEditModelIRef
+      nameProp <- OT.transaction $ Transaction.fromIRef textEditModelIRef
       branchNameEdit <-
         BWidgets.wrapDelegated branchNameFDConfig
         FocusDelegator.NotDelegating id
-        (BWidgets.makeLineEdit (Transaction.fromIRef textEditModelIRef))
+        (BWidgets.makeLineEdit nameProp)
         branchEditId
       let
         setBranch action = withNewCache $ do
@@ -190,13 +190,13 @@ makeWidgetForView mkCache view innerWidget = do
 
   let
     redo version newRedos = do
-      Property.set Anchors.redos newRedos
+      Anchors.setP Anchors.redos newRedos
       View.move view version
-      Transaction.run store $ Property.get Anchors.postCursor
+      Transaction.run store $ Anchors.getP Anchors.postCursor
     undo parentVersion = do
-      preCursor <- Transaction.run store $ Property.get Anchors.preCursor
+      preCursor <- Transaction.run store $ Anchors.getP Anchors.preCursor
       View.move view parentVersion
-      Property.pureModify Anchors.redos (curVersion:)
+      Anchors.modP Anchors.redos (curVersion:)
       return preCursor
 
     redoEventMap [] = mempty
@@ -219,8 +219,8 @@ makeWidgetForView mkCache view innerWidget = do
             if isEmpty
             then return Nothing
             else do
-              Property.set Anchors.preCursor cursor
-              Property.set Anchors.postCursor . fromMaybe cursor $ Widget.eCursor eventResult
+              Anchors.setP Anchors.preCursor cursor
+              Anchors.setP Anchors.postCursor . fromMaybe cursor $ Widget.eCursor eventResult
               liftM Just mkCache
           return (eventResult, mCache)
       Writer.tell $ Last mCache
@@ -236,7 +236,7 @@ makeWidgetForView mkCache view innerWidget = do
       (r, isEmpty) <-
         Writer.mapWriterT runTrans .
         liftM2 (,) act $ itrans Transaction.isEmpty
-      itrans . unless isEmpty $ Property.set Anchors.redos []
+      itrans . unless isEmpty $ Anchors.setP Anchors.redos []
       return r
 
   return .

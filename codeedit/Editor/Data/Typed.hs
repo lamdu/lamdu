@@ -42,7 +42,6 @@ import qualified Data.List.Class as ListCls
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
-import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
 import qualified Editor.Data as Data
 import qualified Editor.Data.Load as DataLoad
@@ -515,7 +514,7 @@ inferExpression
  -> Infer m (TypedStoredExpression f)
 inferExpression withTypeRefs = do
   unifyOnTree withTypeRefs
-  builtinsMap <- liftTransaction $ Property.get Anchors.builtinsMap
+  builtinsMap <- liftTransaction $ Anchors.getP Anchors.builtinsMap
   derefed <- derefTypeRefs withTypeRefs
   return . runIdentity . (atInferredTypes . const) (Identity . map (builtinsToGlobals builtinsMap)) $ derefed
 

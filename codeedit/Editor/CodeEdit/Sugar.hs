@@ -245,7 +245,7 @@ makeActions ee = makeActionsGuid (eeGuid ee) ee
 
 mkCutter :: Monad m => Data.ExpressionIRef -> T m Guid -> T m Guid
 mkCutter iref delete = do
-  Property.pureModify Anchors.clipboards (iref:)
+  Anchors.modP Anchors.clipboards (iref:)
   delete
 
 makeActionsGuid :: Monad m => Guid -> ExprEntity m -> Actions m
@@ -506,7 +506,7 @@ convertApplyPrefix (Data.Apply funcI argI) exprI = do
 
 convertGetVariable :: Monad m => Data.VariableRef -> Convertor m
 convertGetVariable varRef exprI = do
-  name <- liftTransaction . Property.get $ Anchors.variableNameRef varRef
+  name <- liftTransaction . Anchors.getP $ Anchors.variableNameRef varRef
   getVarExpr <-
     mkExpressionRef exprI $
     ExpressionGetVariable varRef
@@ -517,14 +517,24 @@ convertGetVariable varRef exprI = do
       Section Nothing ((atRInferredTypes . const) [] getVarExpr) Nothing Nothing
     else return getVarExpr
 
-convertHole :: Monad m => Convertor m
-convertHole exprI = do
-  clipboardContent <- liftTransaction $ Property.get Anchors.clipboards
+mkPaste :: Monad m => ExprEntity m -> Sugar m (Maybe (T m Guid))
+mkPaste exprI = do
+  clipboardsP <- liftTransaction $ Anchors.clipboards
   let
     mClipPop =
-      case clipboardContent of
+      case Property.value clipboardsP of
       [] -> Nothing
-      (clip : clips) -> Just (clip, Property.set Anchors.clipboards clips)
+      (clip : clips) -> Just (clip, Property.set clipboardsP clips)
+  return $ doPaste <$> eeReplace exprI <*> mClipPop
+  where
+    doPaste replacer (clip, popClip) = do
+      ~() <- popClip
+      ~() <- replacer clip
+      return $ Data.exprIRefGuid clip
+
+convertHole :: Monad m => Convertor m
+convertHole exprI = do
+  paste <- mkPaste exprI
   scope <- readScope
   (liftM . atRActions)
     ((atMReplace . const) Nothing .
@@ -534,13 +544,9 @@ convertHole exprI = do
     { holeScope = scope
     , holePickResult = pickResult <$> writeIRef exprI
     , holeMFlipFuncArg = Nothing
-    , holePaste = paste <$> eeReplace exprI <*> mClipPop
+    , holePaste = paste
     }
   where
-    paste replacer (clip, popClip) = do
-      ~() <- popClip
-      ~() <- replacer clip
-      return $ Data.exprIRefGuid clip
     pickResult write result = do
       ~() <- write result
       return $ eeGuid exprI

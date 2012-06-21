@@ -41,7 +41,7 @@ make (Sugar.Builtin (Data.FFIName modulePath name) setFFIName) myId =
       BWidgets.wrapDelegated builtinFDConfig FocusDelegator.NotDelegating id
       (maybe
        (BWidgets.makeTextView namePartStr . Widget.toAnimId)
-       (BWidgets.makeWordEdit . Property (return namePartStr)) mSetter) $
+       (BWidgets.makeWordEdit . Property namePartStr) mSetter) $
       makeWidgetId myId
     maybeSetter f = fmap f setFFIName
     modulePathStr = List.intercalate "." modulePath

@@ -4,9 +4,10 @@ module Editor.OTransaction
   , runNested
   , TWidget, WidgetT
   , readCursor, subCursor, atCursor, assignCursor
-  , readTextStyle, transaction, getP
+  , readTextStyle, transaction
   , atTextStyle, atTextSizeColor
   , markVariablesAsUsed, usedVariables
+  , getP
   ) where
 
 {- Outer transaction -}
@@ -14,8 +15,8 @@ module Editor.OTransaction
 import Control.Applicative (Applicative)
 import Control.Monad (liftM)
 import Control.Monad.Trans.Class (lift)
-import Data.Store.Property(Property)
 import Data.Store.Transaction (Transaction)
+import Editor.Anchors (MkProperty)
 import Editor.ITransaction (ITransaction)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -99,9 +100,6 @@ subCursor folder = liftM (Widget.subId folder) readCursor
 readTextStyle :: Monad m => OTransaction t m TextEdit.Style
 readTextStyle = liftEnv $ Reader.asks envTextStyle
 
-getP :: Monad m => Property (Transaction t m) a -> OTransaction t m a
-getP = transaction . Property.get
-
 atCursor
   :: (Widget.Id -> Widget.Id) -> OTransaction t m a -> OTransaction t m a
 atCursor = atOTransaction . Reader.withReaderT . atEnvCursor
@@ -130,3 +128,6 @@ atTextSizeColor textSize textColor =
   (atTextStyle . TextEdit.atSTextViewStyle)
   ((TextView.atStyleFontSize . const) textSize .
    (TextView.atStyleColor . const) textColor)
+
+getP :: Monad m => MkProperty t m a -> OTransaction t m a
+getP = transaction . liftM Property.value

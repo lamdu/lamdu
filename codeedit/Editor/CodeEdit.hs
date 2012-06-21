@@ -14,7 +14,6 @@ import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget)
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Store.IRef as IRef
-import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
@@ -55,7 +54,7 @@ makeNewDefinitionAction = do
 makeSugarCache :: Monad m => Transaction ViewTag m (SugarCache m)
 makeSugarCache = do
   sugarPanes <- makeSugarPanes
-  clipboards <- Property.get Anchors.clipboards
+  clipboards <- Anchors.getP Anchors.clipboards
   clipboardsExprs <- mapM (Sugar.convertExpression <=< DataTyped.loadInferExpression) clipboards
   return SugarCache
     { scPanes = sugarPanes
@@ -64,12 +63,12 @@ makeSugarCache = do
 
 makeSugarPanes :: Monad m => Transaction ViewTag m [SugarPane m]
 makeSugarPanes = do
-  panes <- Property.get Anchors.panes
+  panes <- Anchors.getP Anchors.panes
   let
     mkMDelPane i
       | length panes > 1 = Just $ do
         let newPanes = removeAt i panes
-        Property.set Anchors.panes newPanes
+        Anchors.setP Anchors.panes newPanes
         return . IRef.guid . last $
           take (i+1) newPanes
       | otherwise = Nothing
@@ -77,7 +76,7 @@ makeSugarPanes = do
       let
         (before, item:after) = splitAt oldIndex panes
         newPanes = insertAt newIndex item $ before ++ after
-      Property.set Anchors.panes newPanes
+      Anchors.setP Anchors.panes newPanes
     mkMMovePaneDown i
       | i+1 < length panes = Just $ movePane i (i+1)
       | otherwise = Nothing

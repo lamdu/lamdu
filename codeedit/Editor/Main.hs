@@ -22,7 +22,6 @@ import System.FilePath ((</>))
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Map as Map
 import qualified Data.Store.Db as Db
-import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Editor.Anchors as Anchors
@@ -111,7 +110,7 @@ runDbStore font store = do
   addHelp <-
     EventMapDoc.makeToggledHelpAdder Config.overlayDocKeys helpStyle
   initCache <- Transaction.run store $ do
-    view <- Property.get Anchors.view
+    view <- Anchors.getP Anchors.view
     Transaction.run (Anchors.viewStore view) CodeEdit.makeSugarCache
   cacheRef <- newIORef initCache
 
@@ -120,14 +119,14 @@ runDbStore font store = do
     makeWidget = do
       cache <- readIORef cacheRef
       (invalidCursor, widget) <- widgetDownTransaction $ do
-        cursor <- Property.get Anchors.cursor
+        cursor <- Anchors.getP Anchors.cursor
         candidateWidget <- unwrap cache cursor
         (invalidCursor, widget) <-
           if Widget.isFocused candidateWidget
           then return (Nothing, candidateWidget)
           else do
             finalWidget <- unwrap cache rootCursor
-            Property.set Anchors.cursor rootCursor
+            Anchors.setP Anchors.cursor rootCursor
             return (Just cursor, finalWidget)
         unless (Widget.isFocused widget) $
           fail "Root cursor did not match"
@@ -189,5 +188,5 @@ runDbStore font store = do
       (Transaction.run store)
 
     attachCursor eventResult = do
-      maybe (return ()) (Property.set Anchors.cursor) $ Widget.eCursor eventResult
+      maybe (return ()) (Anchors.setP Anchors.cursor) $ Widget.eCursor eventResult
       return eventResult

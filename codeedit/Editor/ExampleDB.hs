@@ -46,10 +46,8 @@ collectWrites newGuid =
 initRef :: (Binary a, Monad m) => IRef a -> Transaction t m a -> Transaction t m a
 initRef iref act = do
   exists <- Transaction.irefExists iref
-  unless exists (Property.set p =<< act)
-  Property.get p
-  where
-    p = Transaction.fromIRef iref
+  unless exists (Transaction.writeIRef iref =<< act)
+  Transaction.readIRef iref
 
 newTodoIRef :: Monad m => Transaction t m (IRef a)
 newTodoIRef = liftM IRef.unsafeFromGuid Transaction.newKey
@@ -69,7 +67,8 @@ createBuiltins =
     let
       forAll name f = liftM Data.ExpressionIRef . fixIRef $ \aI -> do
         let aGuid = IRef.guid aI
-        Property.set (A.aNameRef aGuid) name
+        nameRef <- A.aNameRef aGuid
+        Property.set nameRef name
         s <- set
         return . Data.ExpressionPi . Data.Lambda s =<< f ((getVar . Data.ParameterRef) aGuid)
       setToSet = mkPi set set
@@ -117,6 +116,13 @@ createBuiltins =
     makeWithType builtinName typeMaker =
       tellift (A.newBuiltin builtinName =<< typeMaker)
 
+setMkProp
+  :: Monad m
+  => m (Property.Property m a) -> a -> m ()
+setMkProp mkProp val = do
+  prop <- mkProp
+  Property.set prop val
+
 initDB :: Store DBTag IO -> IO ()
 initDB store =
   Transaction.run store $ do
@@ -124,14 +130,14 @@ initDB store =
       masterNameIRef <- Transaction.newIRef "master"
       changes <- collectWrites Transaction.newKey $ do
         builtins <- createBuiltins
-        Property.set A.clipboards []
-        Property.set A.globals builtins
-        Property.set A.builtinsMap . Map.fromList . catMaybes =<< mapM builtinsMapEntry builtins
+        setMkProp A.clipboards []
+        setMkProp A.globals builtins
+        setMkProp A.builtinsMap . Map.fromList . catMaybes =<< mapM builtinsMapEntry builtins
         defI <- A.makeDefinition "foo"
-        Property.set A.panes [A.makePane defI]
-        Property.set A.preJumps []
-        Property.set A.preCursor $ WidgetIds.fromIRef defI
-        Property.set A.postCursor $ WidgetIds.fromIRef defI
+        setMkProp A.panes [A.makePane defI]
+        setMkProp A.preJumps []
+        setMkProp A.preCursor $ WidgetIds.fromIRef defI
+        setMkProp A.postCursor $ WidgetIds.fromIRef defI
       initialVersionIRef <- Version.makeInitialVersion changes
       master <- Branch.new initialVersionIRef
       return [(masterNameIRef, master)]
@@ -140,7 +146,7 @@ initDB store =
     _ <- initRef A.currentBranchIRef (return branch)
     _ <- initRef A.redosIRef $ return []
     _ <- initRef A.cursorIRef . Transaction.run (View.store view) $ do
-      (defI : _) <- Property.get A.panes
+      (defI : _) <- A.getP A.panes
       return $ WidgetIds.fromIRef defI
     return ()
   where

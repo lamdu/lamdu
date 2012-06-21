@@ -128,16 +128,15 @@ makeTextEdit
   => Transaction.Property t m String
   -> Widget.Id -> TWidget t m
 makeTextEdit textRef myId = do
-  text <- OT.getP textRef
-  let
-    lifter (newText, eventRes) = do
-      when (newText /= text) $ IT.setP textRef newText
-      return eventRes
   cursor <- OT.readCursor
   style <- OT.readTextStyle
   return .
-    Widget.atEvents lifter $
-    TextEdit.make style cursor text myId
+    Widget.atEvents setter $
+    TextEdit.make style cursor (Property.value textRef) myId
+  where
+    setter (newText, eventRes) = IT.transaction $ do
+      when (newText /= Property.value textRef) $ Property.set textRef newText
+      return eventRes
 
 removeKeys
   :: (Monad m)
@@ -172,17 +171,18 @@ getDisplayNameOf
   :: Monad m
   => Guid -> Transaction t m String
 getDisplayNameOf guid = do
-  name <- Property.get $ Anchors.aNameRef guid
+  name <- Anchors.getP $ Anchors.aNameRef guid
   return $ if null name then anonName guid else name
 
 makeNameEdit
   :: Monad m => String -> Guid -> Widget.Id -> TWidget t m
-makeNameEdit editingEmptyStr ident =
+makeNameEdit editingEmptyStr ident myId =
   (OT.atTextStyle . TextEdit.atSEmptyUnfocusedString . const)
     (anonName ident) .
   (OT.atTextStyle . TextEdit.atSEmptyFocusedString . const)
-    editingEmptyStr .
-  makeWordEdit (Anchors.aNameRef ident)
+    editingEmptyStr $
+    OT.transaction (Anchors.aNameRef ident) >>=
+    flip makeWordEdit myId
 
 boxAlignK :: Vector2 Widget.R -> Box.Orientation -> [(key, Widget f)] -> KBox key f
 boxAlignK align orientation =
