@@ -31,6 +31,7 @@ Library
                        Graphics.UI.Bottle.SizeRange,
                        Graphics.UI.Bottle.Sized,
                        Graphics.UI.Bottle.Widget,
+                       Graphics.UI.Bottle.WidgetId,
                        Graphics.UI.Bottle.Widgets.Box,
                        Graphics.UI.Bottle.Widgets.EventMapDoc,
                        Graphics.UI.Bottle.Widgets.FlyNav,

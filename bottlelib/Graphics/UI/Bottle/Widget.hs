@@ -1,8 +1,8 @@
 {-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Graphics.UI.Bottle.Widget
-  ( Widget(..), MEnter, R
+  ( module Graphics.UI.Bottle.WidgetId
+  , Widget(..), MEnter, R
   , EnterResult(..), atEnterResultEvent, atEnterResultRect
-  , Id(..), atId, joinId, subId
   , SizeDependentWidgetData(..)
   , atSdwdMaybeEnter, atSdwdEventMap, atSdwdFrame, atSdwdFocalArea
   , EventResult(..), atEAnimIdMapping, atECursor
@@ -20,8 +20,6 @@ module Graphics.UI.Bottle.Widget
   , align
   ) where
 
-import Data.Binary (Binary)
-import Data.List(isPrefixOf)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2)
 import Graphics.UI.Bottle.Animation (AnimId, R)
@@ -30,6 +28,7 @@ import Graphics.UI.Bottle.EventMap (EventMap)
 import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.SizeRange (Size)
 import Graphics.UI.Bottle.Sized (Sized)
+import Graphics.UI.Bottle.WidgetId (Id(..), atId, joinId, subId)
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -41,20 +40,6 @@ import qualified Graphics.UI.Bottle.Sized as Sized
 
 argument :: (a -> b) -> (b -> c) -> a -> c
 argument = flip (.)
-
-newtype Id = Id {
-  toAnimId :: AnimId
-  }
-  deriving (Eq, Ord, Show, Read, Binary, Monoid)
-
-joinId :: Id -> AnimId -> Id
-joinId (Id x) y = Id $ x ++ y
-
-subId :: Id -> Id -> Maybe AnimId
-subId (Id folder) (Id path)
-  | folder `isPrefixOf` path = Just $ drop (length folder) path
-  | otherwise = Nothing
-
 
 data EventResult = EventResult {
   eCursor :: Maybe Id,
@@ -82,7 +67,6 @@ data Widget f = Widget {
   }
 
 AtFieldTH.make ''EnterResult
-AtFieldTH.make ''Id
 AtFieldTH.make ''EventResult
 AtFieldTH.make ''SizeDependentWidgetData
 AtFieldTH.make ''Widget
