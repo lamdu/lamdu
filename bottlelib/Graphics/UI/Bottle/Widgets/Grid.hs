@@ -21,7 +21,7 @@ import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators(R)
 import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.SizeRange (Size)
-import Graphics.UI.Bottle.Sized (Sized(..))
+import Graphics.UI.Bottle.Sized (Sized)
 import Graphics.UI.Bottle.Widget (Widget(..), SizeDependentWidgetData(..))
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Graphics.UI.Bottle.Direction as Direction

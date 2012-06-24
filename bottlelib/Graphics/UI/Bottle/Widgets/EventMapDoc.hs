@@ -6,7 +6,7 @@ import Data.List.Utils (groupOn, sortOn)
 import Data.Monoid (mappend)
 import Graphics.UI.Bottle.EventMap (EventMap)
 import Graphics.UI.Bottle.SizeRange (srMinSize)
-import Graphics.UI.Bottle.Sized (Sized(..))
+import Graphics.UI.Bottle.Sized (Sized, requestedSize)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.ByteString.Char8 as SBS8
 import qualified Data.Tuple as Tuple
@@ -42,7 +42,7 @@ addHelp style =
   where
     f mkSizeDependentWidgetData size = Widget.atSdwdFrame (mappend docFrame) userIO
       where
-        rSize = srMinSize (requestedSize eventMapDoc)
+        rSize = srMinSize $ requestedSize eventMapDoc
         eventMapDoc = make eventMap style ["help box"]
         transparency = Draw.Color 1 1 1
         docFrame =
