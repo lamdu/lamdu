@@ -20,6 +20,7 @@ Library
                        Data.AtFieldTH,
                        Data.List.Utils,
                        Data.Maybe.Utils,
+                       Data.MRUMemo,
                        Data.UnionFind.IntMap,
                        Data.Vector.Vector2,
                        Graphics.DrawingCombinators.Utils,
