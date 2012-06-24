@@ -118,11 +118,9 @@ compose = foldr (.) id
 mainLoopWidget :: IO (Widget IO) -> IO Anim.R -> IO a
 mainLoopWidget mkWidget getAnimationHalfLife = do
   widgetRef <- newIORef =<< mkWidget
-  destFrameRef <- newIORef Nothing
   let
     newWidget = do
       writeIORef widgetRef =<< mkWidget
-      writeIORef destFrameRef Nothing
     tickHandler size = do
       widget <- readIORef widgetRef
       tickResults <-
@@ -141,19 +139,7 @@ mainLoopWidget mkWidget getAnimationHalfLife = do
         Nothing -> return ()
         Just _ -> newWidget
       return mAnimIdMapping
-    mkFrame size = do
-      mPrevFrame <- readIORef destFrameRef
-      let
-        calcFrame = do
-          widget <- readIORef widgetRef
-          return . Widget.sdwdFrame $ Widget.getSdwd widget size
-      frame <-
-        case mPrevFrame of
-        Nothing -> calcFrame
-        Just (prevSize, prevFrame) ->
-          if prevSize == size
-          then return prevFrame
-          else calcFrame
-      writeIORef destFrameRef $ Just (size, frame)
-      return frame
+    mkFrame size =
+      return . Widget.sdwdFrame . (`Widget.getSdwd` size) =<<
+      readIORef widgetRef
   mainLoopAnim tickHandler eventHandler mkFrame getAnimationHalfLife
