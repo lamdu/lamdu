@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Editor.OTransaction
   ( OTransaction, runOTransaction
-  , runNested
+  , unWrapInner
   , TWidget, WidgetT
   , readCursor, subCursor, atCursor, assignCursor
   , readTextStyle, transaction
@@ -24,7 +24,6 @@ import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Store.Property as Property
-import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Data as Data
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -81,15 +80,15 @@ usedVariables
   => OTransaction t m a -> OTransaction t m (a, [Data.VariableRef])
 usedVariables = atOTransaction $ Reader.mapReaderT Writer.listen
 
-runNested ::
-  Monad m => Transaction.Store t0 (Transaction t1 m) ->
-  OTransaction t0 (Transaction t1 m) a ->
-  OTransaction t1 m a
-runNested store act = do
+unWrapInner
+  :: Monad m
+  => (Transaction t0 (Transaction t1 m) a -> Transaction t1 m a)
+  -> OTransaction t0 (Transaction t1 m) a
+  -> OTransaction t1 m a
+unWrapInner unwrap act = do
   cursor <- readCursor
   style <- readTextStyle
-  transaction . Transaction.run store $
-    runOTransaction cursor style act
+  transaction . unwrap $ runOTransaction cursor style act
 
 readCursor :: Monad m => OTransaction t m Widget.Id
 readCursor = liftEnv $ Reader.asks envCursor

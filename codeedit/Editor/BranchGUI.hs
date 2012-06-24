@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeOperators #-}
 module Editor.BranchGUI(makeRootWidget) where
 
-import Control.Applicative (pure)
+import Control.Applicative (pure, (<*))
 import Control.Arrow (second)
 import Control.Monad (liftM, liftM2, unless)
 import Control.Monad.Trans.Class (lift)
@@ -66,23 +66,6 @@ makeBranch view = do
   return . FocusDelegator.delegatingId $
     WidgetIds.fromIRef textEditModelIRef
 
-type CacheUpdatingTransaction t versionCache m =
-  WriterT (Last versionCache) (ITransaction t m)
-
-itrans :: Monad m => Transaction t m a -> CacheUpdatingTransaction t versionCache m a
-itrans = lift . IT.transaction
-
-tellNewCache
-  :: Monad m
-  => Transaction ViewTag (Transaction DBTag m) versionCache
-  -> View -> CacheUpdatingTransaction DBTag versionCache m a
-  -> CacheUpdatingTransaction DBTag versionCache m a
-tellNewCache mkCache view act = do
-  result <- act
-  newCache <- itrans $ Transaction.run (Anchors.viewStore view) mkCache
-  Writer.tell $ Last (Just newCache)
-  return result
-
 branchNameFDConfig :: FocusDelegator.Config
 branchNameFDConfig = FocusDelegator.Config
   { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyF2
@@ -99,19 +82,43 @@ branchSelectionFocusDelegatorConfig = FocusDelegator.Config
   , FocusDelegator.stopDelegatingDoc = "Select branch"
   }
 
+viewToDb
+  :: Monad m => View
+  -> Transaction ViewTag (Transaction DBTag m) a
+  -> Transaction DBTag m a
+viewToDb = Transaction.run . Anchors.viewStore
+
+type CachedITrans t versionCache m =
+  WriterT (Last versionCache) (ITransaction t m)
+
+itrans :: Monad m => Transaction t m a -> CachedITrans t versionCache m a
+itrans = lift . IT.transaction
+
+tellNewCache
+  :: MonadF m
+  => Transaction DBTag m versionCache
+  -> CachedITrans DBTag versionCache m a
+  -> CachedITrans DBTag versionCache m a
+tellNewCache mkCache act = act <* do
+  newCache <- itrans mkCache
+  Writer.tell $ Last (Just newCache)
+
 makeRootWidget
   :: MonadF m
   => Transaction ViewTag (Transaction DBTag m) versionCache
   -> TWidget ViewTag (Transaction DBTag m)
-  -> OTransaction DBTag m (Widget (CacheUpdatingTransaction DBTag versionCache m))
-makeRootWidget mkCache widget = do
+  -> OTransaction DBTag m (Widget (CachedITrans DBTag versionCache m))
+makeRootWidget mkCacheInView widget = do
   view <- OT.getP Anchors.view
+  let
+    toDb = viewToDb view
+    mkCache = toDb mkCacheInView
   namedBranches <- OT.getP Anchors.branches
   viewEdit <- makeWidgetForView mkCache view widget
   currentBranch <- OT.getP Anchors.currentBranch
 
   let
-    withNewCache = tellNewCache mkCache view
+    withNewCache = tellNewCache mkCache
     makeBranchNameEdit (textEditModelIRef, branch) = do
       let branchEditId = WidgetIds.fromIRef textEditModelIRef
       nameProp <- OT.transaction $ Transaction.fromIRef textEditModelIRef
@@ -178,10 +185,10 @@ makeRootWidget mkCache widget = do
 -- transactions on a DB
 makeWidgetForView
   :: MonadF m
-  => Transaction ViewTag (Transaction DBTag m) versionCache
+  => Transaction DBTag m versionCache
   -> View
   -> TWidget ViewTag (Transaction DBTag m)
-  -> OTransaction DBTag m (Widget (CacheUpdatingTransaction DBTag versionCache m))
+  -> OTransaction DBTag m (Widget (CachedITrans DBTag versionCache m))
 makeWidgetForView mkCache view innerWidget = do
   curVersion <- OT.transaction $ View.curVersion view
   curVersionData <- OT.transaction $ Version.versionData curVersion
@@ -192,12 +199,38 @@ makeWidgetForView mkCache view innerWidget = do
     redo version newRedos = do
       Anchors.setP Anchors.redos newRedos
       View.move view version
-      Transaction.run store $ Anchors.getP Anchors.postCursor
+      toDb $ Anchors.getP Anchors.postCursor
     undo parentVersion = do
-      preCursor <- Transaction.run store $ Anchors.getP Anchors.preCursor
+      preCursor <- toDb $ Anchors.getP Anchors.preCursor
       View.move view parentVersion
       Anchors.modP Anchors.redos (curVersion:)
       return preCursor
+
+    afterEvent action = do
+      eventResult <- action
+      IT.transaction $ do
+        isEmpty <- Transaction.isEmpty
+        unless isEmpty $ do
+          Anchors.setP Anchors.preCursor cursor
+          Anchors.setP Anchors.postCursor . fromMaybe cursor $ Widget.eCursor eventResult
+      return eventResult
+
+  vWidget <-
+    OT.unWrapInner toDb $
+    (liftM . Widget.atEvents) afterEvent innerWidget
+
+  let
+    runTrans = itrans . toDb . IT.runITransaction
+    lowerWTransaction act = do
+      (r, isEmpty) <- runTrans . liftM2 (,) act $ IT.transaction Transaction.isEmpty
+      newCache <-
+        if isEmpty
+        then return Nothing
+        else liftM Just . itrans $ do
+          Anchors.setP Anchors.redos []
+          mkCache
+      Writer.tell $ Last newCache
+      return r
 
     redoEventMap [] = mempty
     redoEventMap (version:restRedos) =
@@ -208,39 +241,10 @@ makeWidgetForView mkCache view innerWidget = do
       (Widget.keysEventMapMovesCursor Config.undoKeys "Undo" .
        undo) $ Version.parent curVersionData
 
-    eventMap = fmap (tellNewCache mkCache view . itrans) $ mconcat [undoEventMap, redoEventMap redos]
-
-    afterEvent action = do
-      (eventResult, mCache) <- lift $ do
-        eventResult <- action
-        IT.transaction $ do
-          isEmpty <- Transaction.isEmpty
-          mCache <-
-            if isEmpty
-            then return Nothing
-            else do
-              Anchors.setP Anchors.preCursor cursor
-              Anchors.setP Anchors.postCursor . fromMaybe cursor $ Widget.eCursor eventResult
-              liftM Just mkCache
-          return (eventResult, mCache)
-      Writer.tell $ Last mCache
-      return eventResult
-
-  vWidget <-
-    OT.runNested store $
-    (liftM . Widget.atEvents) afterEvent innerWidget
-
-  let
-    runTrans = IT.transaction . Transaction.run store . IT.runITransaction
-    lowerWTransaction act = do
-      (r, isEmpty) <-
-        Writer.mapWriterT runTrans .
-        liftM2 (,) act $ itrans Transaction.isEmpty
-      itrans . unless isEmpty $ Anchors.setP Anchors.redos []
-      return r
+    eventMap = fmap (tellNewCache mkCache . itrans) $ mconcat [undoEventMap, redoEventMap redos]
 
   return .
     Widget.strongerEvents eventMap $
     Widget.atEvents lowerWTransaction vWidget
   where
-    store = Anchors.viewStore view
+    toDb = viewToDb view
