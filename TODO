@@ -1,41 +1,17 @@
-* UIT is not a good idea (for size):
-  * Everything will have to take UIT (Widget ...)
-  * so might as well put a (Maybe Cursor->) along the (Size->)
+* Oops! Performance problem in FlyNav!! Generating the SDWD lots and
+  lots of times, and then entering lots of times... Probably could be
+  OK if we had cached the size... Maybe flyNav should simply be on the
+  cached sdwd rather than on the Widget?
 
-* Can remove the sdwd/frame cache from mainLoop if it is done outside
-
-  * What I have: Widget IO = Size -> (pure stuff with some nested IO actions)
-
-  * What I need: Size -> IO (pure stuff...)
-
-  * Widget cannot do any actions after getting size, but this is
-    wrong... What if a scroller gets size and then decides what it
-    needs to actually display?
-
-  * Possible solution: Have (Size->) as an extra parameter for some
-    widgets, just like (Cursor->) should be --
-
-    * Using a reader monad transformer for (Size->) and (Cursor->)
-
-* Step A: Use a UIT monad transformer for the cursor
-* Step B: Move (Size->) to the UIT too
-
-* sdwd should be cached.. How?
-  * FlyNav wrapper could be:
-    IO Widget -> IO Widget
-
-    and then it could cache the inner sdwd until any inner action
-    happens and then it can regenerate the inner sdwd
+  * Make of root widget makes the widget over and over from the branch
+    list, but should also be cached.
+    The cache of the outer widget could actually be a cache of the
+    widget itself, rather than a cache of the sugar panes or such
 
 * Unselectable inferred types(?):
   * Sugar: Replace Maybe wrapper of various actions with a single Maybe
     around the whole actions indicating entity isn't stored
   * In the CodeEdit, make it unselectable when there's no Actions
-
-* Oops! Performance problem in FlyNav!! Generating the SDWD lots and
-  lots of times, and then entering lots of times... Probably could be
-  OK if we had cached the size... Maybe flyNav should simply be on the
-  cached sdwd rather than on the Widget?
 
 * Whenever prejumps is added/popped, we actually update in-version
   data, so it actually creates a new, undo-able version. Need to have
