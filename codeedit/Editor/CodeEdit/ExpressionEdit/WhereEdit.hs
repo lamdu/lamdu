@@ -48,12 +48,12 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
       DefinitionEdit.makeParts makeExpressionEdit
       (paramId item) (guid item) (Sugar.wiValue item) (Sugar.wiType item)
     paramId = WidgetIds.paramId . guid
-    guid = Sugar.guid . Sugar.wiActions
+    guid = Sugar.guid . Sugar.wiEntity
     whereItemDeleteEventMap whereItem =
       maybe mempty
       (Widget.keysEventMapMovesCursor Config.delKeys "Delete variable" .
        liftM WidgetIds.fromGuid . IT.transaction)
-      ((Sugar.mDelete . Sugar.wiActions) whereItem)
+      ((Sugar.mDelete . Sugar.wiEntity) whereItem)
 
 makeWithBody
   :: MonadF m
@@ -62,7 +62,7 @@ makeWithBody
   -> Widget.Id -> TWidget ViewTag m
 makeWithBody makeExpressionEdit where_@(Sugar.Where _ body) myId = do
   whereEdit <- make makeExpressionEdit where_ myId
-  OT.assignCursor myId ((WidgetIds.fromGuid . Sugar.guid . Sugar.rActions) body) $ do
+  OT.assignCursor myId ((WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity) body) $ do
     bodyEdit <- makeExpressionEdit body
     return . BWidgets.vbox $
       [ bodyEdit

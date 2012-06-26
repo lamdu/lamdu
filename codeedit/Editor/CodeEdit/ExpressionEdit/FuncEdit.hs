@@ -57,7 +57,7 @@ makeParamEdit makeExpressionEdit param =
       (Widget.align down paramNameEdit,
        Widget.align up paramTypeEdit)
   where
-    ident = Sugar.guid $ Sugar.fpActions param
+    ident = Sugar.guid $ Sugar.fpEntity param
     up = Vector2 0.5 0
     down = Vector2 0.5 1
     paramEventMap = mconcat
@@ -69,14 +69,14 @@ makeParamEdit makeExpressionEdit param =
       (Widget.keysEventMapMovesCursor Config.addNextParamKeys "Add next parameter" .
        liftM (FocusDelegator.delegatingId . WidgetIds.paramId) .
        IT.transaction) .
-      Sugar.lambdaWrap . Sugar.rActions $
+      Sugar.lambdaWrap . Sugar.rEntity $
       Sugar.fpBody param
     paramDeleteEventMap =
       maybe mempty
       (Widget.keysEventMapMovesCursor Config.delKeys "Delete parameter" .
        liftM WidgetIds.fromGuid .
        IT.transaction) .
-      Sugar.mDelete $ Sugar.fpActions param
+      Sugar.mDelete $ Sugar.fpEntity param
 
 makeParamsEdit
   :: MonadF m
@@ -96,7 +96,7 @@ make
   -> Widget.Id
   -> TWidget ViewTag m
 make makeExpressionEdit (Sugar.Func params body) myId =
-  OT.assignCursor myId ((WidgetIds.fromGuid . Sugar.guid . Sugar.rActions) body) $ do
+  OT.assignCursor myId ((WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity) body) $ do
     lambdaLabel <-
       OT.atTextSizeColor Config.lambdaTextSize Config.lambdaColor .
       BWidgets.makeLabel "λ" $ Widget.toAnimId myId

@@ -3,7 +3,7 @@
 module Editor.CodeEdit.Sugar
   ( DefinitionRef(..)
   , Builtin(..)
-  , Expression(..), Actions(..), ExpressionRef(..)
+  , Expression(..), Entity(..), ExpressionRef(..)
   , Where(..), WhereItem(..)
   , Func(..), FuncParam(..)
   , Pi(..), Apply(..), Section(..), Hole(..), LiteralInteger(..)
@@ -33,7 +33,7 @@ type T = Transaction ViewTag
 
 type MAction m = Maybe (T m Guid)
 
-data Actions m = Actions
+data Entity m = Entity
   { guid         :: Guid
   , addNextArg   :: MAction m
   , giveAsArg    :: MAction m
@@ -54,11 +54,11 @@ data HasParens = HaveParens | DontHaveParens
 data ExpressionRef m = ExpressionRef
   { rExpression :: Expression m
   , rInferredTypes :: [ExpressionRef m]
-  , rActions :: Actions m
+  , rEntity :: Entity m
   }
 
 data WhereItem m = WhereItem
-  { wiActions :: Actions m
+  { wiEntity :: Entity m
   , wiValue :: ExpressionRef m
   , wiType :: ExpressionRef m
   }
@@ -69,7 +69,7 @@ data Where m = Where
   }
 
 data FuncParam m = FuncParam
-  { fpActions :: Actions m
+  { fpEntity :: Entity m
   , fpType :: ExpressionRef m
   , fpBody :: ExpressionRef m
   }
@@ -143,7 +143,7 @@ AtFieldTH.make ''Where
 AtFieldTH.make ''FuncParam
 AtFieldTH.make ''Func
 AtFieldTH.make ''ExpressionRef
-AtFieldTH.make ''Actions
+AtFieldTH.make ''Entity
 AtFieldTH.make ''Apply
 AtFieldTH.make ''Section
 AtFieldTH.make ''Expression
@@ -240,17 +240,17 @@ addArg whereI exprI =
   eeIRef exprI <*>
   eeReplace whereI
 
-makeActions :: Monad m => ExprEntity m -> Actions m
-makeActions ee = makeActionsGuid (eeGuid ee) ee
+makeEntity :: Monad m => ExprEntity m -> Entity m
+makeEntity ee = makeEntityGuid (eeGuid ee) ee
 
 mkCutter :: Monad m => Data.ExpressionIRef -> T m Guid -> T m Guid
 mkCutter iref delete = do
   Anchors.modP Anchors.clipboards (iref:)
   delete
 
-makeActionsGuid :: Monad m => Guid -> ExprEntity m -> Actions m
-makeActionsGuid exprGuid exprI =
-  Actions
+makeEntityGuid :: Monad m => Guid -> ExprEntity m -> Entity m
+makeEntityGuid exprGuid exprI =
+  Entity
   { guid = exprGuid
   , addNextArg = addArg exprI exprI
   , callWithArg = addArg exprI exprI
@@ -283,13 +283,13 @@ mkExpressionRef ee expr = do
     ExpressionRef
     { rExpression = expr
     , rInferredTypes = inferredTypesRefs
-    , rActions = makeActions ee
+    , rEntity = makeEntity ee
     }
 
 addDeleteAction
   :: Monad m
   => ExprEntity m -> ExprEntity m -> ExprEntity m
-  -> Actions m -> Actions m
+  -> Entity m -> Entity m
 addDeleteAction deletedI exprI replacerI actions =
   (atMCut . const)    mCutter .
   (atMDelete . const) mDeleter $
@@ -309,7 +309,7 @@ addDelete
   => ExprEntity m -> ExprEntity m -> ExprEntity m
   -> ExpressionRef m -> ExpressionRef m
 addDelete deletedI exprI replacerI =
-  atRActions $ addDeleteAction deletedI exprI replacerI
+  atREntity $ addDeleteAction deletedI exprI replacerI
 
 convertLambdaParam
   :: Monad m
@@ -319,9 +319,9 @@ convertLambdaParam
 convertLambdaParam (Data.Lambda paramTypeI bodyI) bodyRef exprI = do
   typeExpr <- convertExpressionI paramTypeI
   return FuncParam
-    { fpActions =
+    { fpEntity =
         addDeleteAction exprI exprI bodyI $
-        makeActions exprI
+        makeEntity exprI
     , fpType = typeExpr
     , fpBody = bodyRef
     }
@@ -374,9 +374,9 @@ convertWhere valueRef lambdaI (Data.Lambda typeI bodyI) applyI = do
       _ -> Where [] sBody
   where
     item typeRef = WhereItem
-      { wiActions =
+      { wiEntity =
           addDeleteAction applyI applyI bodyI $
-          makeActionsGuid (eeGuid lambdaI) applyI
+          makeEntityGuid (eeGuid lambdaI) applyI
       , wiValue = valueRef
       , wiType = typeRef
       }
@@ -421,7 +421,7 @@ convertApply apply@(Data.Apply funcI argI) exprI =
 
 setAddArg :: Monad m => ExprEntity m -> ExprEntity m -> ExpressionRef m -> ExpressionRef m
 setAddArg whereI exprI =
-  atRActions . atAddNextArg . const $ addArg whereI exprI
+  atREntity . atAddNextArg . const $ addArg whereI exprI
 
 atFunctionType :: ExpressionRef m -> ExpressionRef m
 atFunctionType exprRef =
@@ -490,7 +490,7 @@ convertApplyPrefix (Data.Apply funcI argI) exprI = do
       setAddArg exprI exprI .
       addFlipFuncArg $
       addParens argRef
-    setNextArg = atRActions . atMNextArg . const . Just $ newArgRef
+    setNextArg = atREntity . atMNextArg . const . Just $ newArgRef
     newFuncRef =
       addDelete funcI exprI argI .
       setNextArg .
@@ -539,7 +539,7 @@ convertHole :: Monad m => Convertor m
 convertHole exprI = do
   paste <- mkPaste exprI
   scope <- readScope
-  (liftM . atRActions)
+  (liftM . atREntity)
     ((atMReplace . const) Nothing .
      (atMCut . const) Nothing) .
     mkExpressionRef exprI . ExpressionHole $

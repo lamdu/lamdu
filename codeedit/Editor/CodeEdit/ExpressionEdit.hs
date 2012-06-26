@@ -58,7 +58,7 @@ make sExpr = do
       notAHole .
       BWidgets.wrapDelegated exprFocusDelegatorConfig
       FocusDelegator.Delegating id
-    exprId = WidgetIds.fromGuid . Sugar.guid . Sugar.rActions $ sExpr
+    exprId = WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity $ sExpr
     textParenify = parenify Parens.addHighlightedTextParens
     squareParenify = parenify (Parens.addSquareParens . Widget.toAnimId)
     makeEditor =
@@ -69,7 +69,7 @@ make sExpr = do
       Sugar.ExpressionFunc hasParens f ->
         wrapNonHoleExpr . textParenify hasParens $ FuncEdit.make make f
       Sugar.ExpressionHole hole ->
-        isAHole . HoleEdit.make hole . Sugar.guid $ Sugar.rActions sExpr
+        isAHole . HoleEdit.make hole . Sugar.guid $ Sugar.rEntity sExpr
       Sugar.ExpressionGetVariable varRef ->
         notAHole {- TODO: May need parenification -} $ VarEdit.make varRef
       Sugar.ExpressionApply hasParens apply ->
@@ -151,7 +151,7 @@ expressionEventMap sExpr holePicker =
       ifHole pickResultFirst .
       Widget.keysEventMapMovesCursor
       keys (ifHole (const ("Pick result and " ++)) doc) $ action
-    actions = Sugar.rActions sExpr
+    actions = Sugar.rEntity sExpr
     moveUnlessOnHole = ifHole $ (const . fmap . liftM . Widget.atECursor . const) Nothing
     pickResultFirst = maybe id (fmap . joinEvents)
     ifHole whenHole = foldHolePicker id whenHole holePicker
@@ -163,5 +163,5 @@ expressionEventMap sExpr holePicker =
       case Sugar.rExpression nextArg of
       Sugar.ExpressionHole{} ->
         withPickResultFirst Config.addNextArgumentKeys "Move to next arg" .
-        return . WidgetIds.fromGuid . Sugar.guid . Sugar.rActions $ nextArg
+        return . WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity $ nextArg
       _ -> mempty

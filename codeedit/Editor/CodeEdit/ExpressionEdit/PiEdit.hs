@@ -25,7 +25,7 @@ make makeExpressionEdit (Sugar.Pi param resultType) myId =
     (resultTypeEdit, usedVars) <-
       OT.usedVariables $ makeExpressionEdit resultType
     let
-      paramGuid = Sugar.guid $ Sugar.fpActions param
+      paramGuid = Sugar.guid $ Sugar.fpEntity param
       paramUsed = any ((== paramGuid) . Data.variableRefGuid) usedVars
       redirectCursor cursor
         | paramUsed = cursor
@@ -47,5 +47,5 @@ make makeExpressionEdit (Sugar.Pi param resultType) myId =
         BWidgets.hboxSpaced [paramEdit, rightArrowLabel, resultTypeEdit]
   where
     typeId =
-      WidgetIds.fromGuid . Sugar.guid . Sugar.rActions . Sugar.fpType $
+      WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity . Sugar.fpType $
       param
