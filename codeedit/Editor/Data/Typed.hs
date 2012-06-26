@@ -3,7 +3,7 @@
     GeneralizedNewtypeDeriving
   #-}
 module Editor.Data.Typed
-  ( StoredExpressionRef(..)
+  ( StoredExpressionRef
   , atEeInferredType, atEeValue
   , storedGuid
   , InferredTypeLoop(..)
@@ -31,7 +31,7 @@ import Data.Monoid (Any(..), mconcat)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.Data.Load (StoredExpressionRef(..), esGuid)
+import Editor.Data.Load (StoredExpressionRef, esGuid)
 import qualified Control.Monad.Trans.List.Funcs as ListFuncs
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.State as State
@@ -536,8 +536,9 @@ loadInferDefinition =
   inferDefinition <=< DataLoad.loadDefinition
 
 loadInferExpression
-  :: Monad m => Data.ExpressionIRef
+  :: Monad m
+  => StoredExpressionRef (T m)
   -> T m (TypedStoredExpression (T m))
 loadInferExpression =
   runInfer . (inferExpression <=< addTypeRefs . storedFromLoaded ()) <=<
-  flip DataLoad.loadExpression Nothing
+  DataLoad.loadExpression

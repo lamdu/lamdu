@@ -14,6 +14,7 @@ import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget)
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Store.IRef as IRef
+import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
@@ -54,8 +55,8 @@ makeNewDefinitionAction = do
 makeSugarCache :: Monad m => Transaction ViewTag m (SugarCache m)
 makeSugarCache = do
   sugarPanes <- makeSugarPanes
-  clipboards <- Anchors.getP Anchors.clipboards
-  clipboardsExprs <- mapM (Sugar.convertExpression <=< DataTyped.loadInferExpression) clipboards
+  clipboardsP <- Anchors.clipboards
+  clipboardsExprs <- mapM (Sugar.convertExpression <=< DataTyped.loadInferExpression) $ Property.list clipboardsP
   return SugarCache
     { scPanes = sugarPanes
     , scClipboards = clipboardsExprs

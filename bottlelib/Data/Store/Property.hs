@@ -2,6 +2,7 @@ module Data.Store.Property
   ( Property(..)
   , composeLabel, compose, pureCompose
   , modify, modify_, pureModify
+  , list
   ) where
 
 import Control.Monad ((<=<))
@@ -46,3 +47,12 @@ composeLabel getField setField (Property val setter) =
   where
     getter' = getField val
     setter' = setter . flip setField val
+
+list :: Property m [a] -> [Property m a]
+list (Property vals setter) =
+  zipWith mkProp vals [0..]
+  where
+    mkProp val i =
+      Property val (setter . (pre ++) . (: post))
+      where
+        (pre, _: post) = splitAt i vals

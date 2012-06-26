@@ -14,7 +14,7 @@ module Editor.CodeEdit.Sugar
   ) where
 
 import Control.Applicative((<$>), (<*>))
-import Control.Monad(liftM, (<=<))
+import Control.Monad(liftM)
 import Control.Monad.Trans.Class(MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Data.Functor.Identity (Identity(..))
@@ -204,10 +204,10 @@ writeIRefVia
 writeIRefVia f = (fmap . fmap . argument) f writeIRef
 
 eeIRef :: ExprEntity m -> Maybe Data.ExpressionIRef
-eeIRef = fmap DataTyped.esIRef . eeStored
+eeIRef = fmap Property.value . eeStored
 
 eeReplace :: ExprEntity m -> Maybe (Data.ExpressionIRef -> T m ())
-eeReplace = DataTyped.esReplace <=< eeStored
+eeReplace = fmap Property.set . eeStored
 
 eeFromTypedExpression
   :: DataTyped.TypedStoredExpression (T m) -> ExprEntity m
