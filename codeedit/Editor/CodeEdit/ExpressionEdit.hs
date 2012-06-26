@@ -86,7 +86,7 @@ make sExpr = do
   (holePicker, widget) <- makeEditor exprId
   typeEdits <- mapM make $ Sugar.rInferredTypes sExpr
   return .
-    maybe id
+    maybe Widget.doesn'tTakeFocus
     (Widget.weakerEvents . expressionEventMap holePicker) mActions $
     addType exprId typeEdits widget
   where
