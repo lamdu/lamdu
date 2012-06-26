@@ -155,20 +155,22 @@ AtFieldTH.make ''Expression
 AtFieldTH.make ''Entity
 AtFieldTH.make ''Actions
 
+data Loopable a = Loop | NonLoop a
+
 data ExprEntity m = ExprEntity
   { eeGuid :: Guid
   , eeStored :: Maybe (DataTyped.StoredExpressionRef (T m))
   , eeInferredTypes :: [ExprEntity m]
-  , eeMValue :: Maybe (Data.Expression (ExprEntity m))
+  , eeValue :: Loopable (Data.Expression (ExprEntity m))
   }
 
 eeFromITL :: DataTyped.InferredTypeLoop -> ExprEntity m
 eeFromITL (DataTyped.InferredTypeLoop itGuid) =
-  ExprEntity itGuid Nothing [] Nothing
+  ExprEntity itGuid Nothing [] Loop
 eeFromITL
   (DataTyped.InferredTypeNoLoop
    (Data.GuidExpression itGuid val)) =
-     ExprEntity itGuid Nothing [] . Just $
+     ExprEntity itGuid Nothing [] . NonLoop $
      case val of
      Data.ExpressionLambda lambda ->
        Data.ExpressionLambda $ eeFromLambda lambda
@@ -217,7 +219,7 @@ eeFromTypedExpression = runIdentity . Data.mapMExpression f
         ExprEntity (DataTyped.eeGuid e)
         (Just (DataTyped.eeStored e))
         (map eeFromITL (DataTyped.eeInferredType e)) .
-        Just
+        NonLoop
       )
 
 newtype Sugar m a = Sugar {
@@ -409,13 +411,13 @@ convertApply
 convertApply apply@(Data.Apply funcI argI) exprI =
   case funcI of
     ExprEntity
-      { eeMValue = Just (Data.ExpressionLambda lambda) } -> do
+      { eeValue = NonLoop (Data.ExpressionLambda lambda) } -> do
       valueRef <- convertExpressionI argI
       convertWhere valueRef funcI lambda exprI
     -- InfixR or ordinary prefix:
     ExprEntity
-      { eeMValue =
-        Just (Data.ExpressionApply funcApply@(Data.Apply funcFuncI _))
+      { eeValue =
+        NonLoop (Data.ExpressionApply funcApply@(Data.Apply funcFuncI _))
       } -> do
       mInfixOp <- liftTransaction $ infixOp funcFuncI
       case mInfixOp of
@@ -598,7 +600,10 @@ convertLoop ee = mkExpressionRef ee $ fakeBuiltin ["Loopy"] "Loop"
 
 convertExpressionI :: Monad m => ExprEntity m -> Sugar m (ExpressionRef m)
 convertExpressionI ee =
-  maybe convertLoop convert (eeMValue ee) ee
+  ($ ee) $
+  case eeValue ee of
+    NonLoop x -> convert x
+    Loop -> convertLoop
   where
     convert (Data.ExpressionLambda x) = convertLambda x
     convert (Data.ExpressionPi x) = convertPi x
