@@ -15,7 +15,6 @@ import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Data as Data
-import qualified Editor.Data.Ops as DataOps
 
 -- TODO: ExpressionEntity -> ExpressionEntity
 data ExpressionEntity m = ExpressionEntity
@@ -45,11 +44,11 @@ loadExpression exprP = do
       liftM Data.ExpressionLambda $ loadLambda Data.ExpressionLambda lambda
     Data.ExpressionPi lambda ->
       liftM Data.ExpressionPi $ loadLambda Data.ExpressionPi lambda
-    Data.ExpressionApply apply@(Data.Apply funcI argI) ->
+    Data.ExpressionApply apply ->
       liftM Data.ExpressionApply $
       liftM2 Data.Apply
-      (loadExpression (Property funcI (DataOps.applyFuncSetter exprI apply)))
-      (loadExpression (Property argI (DataOps.applyArgSetter exprI apply)))
+      (loadExpression (applyFuncProp exprI apply))
+      (loadExpression (applyArgProp exprI apply))
     Data.ExpressionGetVariable x -> return $ Data.ExpressionGetVariable x
     Data.ExpressionLiteralInteger x -> return $ Data.ExpressionLiteralInteger x
     Data.ExpressionHole -> return Data.ExpressionHole
@@ -57,12 +56,10 @@ loadExpression exprP = do
     Data.ExpressionBuiltin bi -> return $ Data.ExpressionBuiltin bi
   where
     exprI = Property.value exprP
-    loadLambda cons lambda@(Data.Lambda argType body) =
+    loadLambda cons lambda =
       liftM2 Data.Lambda
-      (loadExpression
-       (Property argType (DataOps.lambdaTypeSetter cons exprI lambda)))
-      (loadExpression
-       (Property body (DataOps.lambdaBodySetter cons exprI lambda)))
+      (loadExpression (lambdaTypeProp cons exprI lambda))
+      (loadExpression (lambdaBodyProp cons exprI lambda))
 
 loadDefinition
   :: (Monad m, Monad f)
@@ -80,3 +77,37 @@ loadDefinition defI = do
         loadExpression . Property bodyI $
         Transaction.writeIRef defI . Data.Definition typeI
       return $ Data.Definition loadedType loadedExpr
+
+lambdaTypeProp
+  :: Monad m
+  => (Data.LambdaI -> Data.ExpressionI)
+  -> Data.ExpressionIRef -> Data.LambdaI
+  -> Data.ExpressionIRefProperty (T m)
+lambdaTypeProp cons lambdaI (Data.Lambda paramTypeI bodyI) =
+  Property paramTypeI
+  (Data.writeExprIRef lambdaI . cons . flip Data.Lambda bodyI)
+
+lambdaBodyProp
+  :: Monad m
+  => (Data.LambdaI -> Data.ExpressionI)
+  -> Data.ExpressionIRef -> Data.LambdaI
+  -> Data.ExpressionIRefProperty (T m)
+lambdaBodyProp cons lambdaI (Data.Lambda paramTypeI bodyI) =
+  Property bodyI
+  (Data.writeExprIRef lambdaI . cons . Data.Lambda paramTypeI)
+
+applyFuncProp
+  :: Monad m
+  => Data.ExpressionIRef
+  -> Data.ApplyI -> Data.ExpressionIRefProperty (T m)
+applyFuncProp applyI (Data.Apply funcI argI) =
+  Property funcI
+  (Data.writeExprIRef applyI . Data.ExpressionApply . (`Data.Apply` argI))
+
+applyArgProp
+  :: Monad m
+  => Data.ExpressionIRef
+  -> Data.ApplyI -> Data.ExpressionIRefProperty (T m)
+applyArgProp applyI (Data.Apply funcI argI) =
+  Property argI
+  (Data.writeExprIRef applyI . Data.ExpressionApply . Data.Apply funcI)

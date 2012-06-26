@@ -242,12 +242,11 @@ liftTransaction = Sugar . lift
 
 type Convertor m = ExprEntity m -> Sugar m (ExpressionRef m)
 
-addArg :: Monad m => ExprEntity m -> MAction m
-addArg exprI =
-  (fmap . liftM) Data.exprIRefGuid $
-  DataOps.callWithArg <$>
-  eeIRef exprI <*>
-  eeReplace exprI
+withProp
+  :: Monad m
+  => (Data.ExpressionIRefProperty (T m)
+  -> T m Data.ExpressionIRef) -> ExprEntity m -> MAction m
+withProp f = fmap (liftM Data.exprIRefGuid . f) . eeStored
 
 makeEntity :: Monad m => ExprEntity m -> Entity m
 makeEntity ee = makeEntityGuid (eeGuid ee) ee
@@ -263,11 +262,11 @@ makeEntityGuid exprGuid exprI =
   { guid = exprGuid
   , eActions =
     Actions
-    { addNextArg = addArg exprI
-    , callWithArg = addArg exprI
-    , giveAsArg = withIRef DataOps.giveAsArg
-    , lambdaWrap = withIRef DataOps.lambdaWrap
-    , addWhereItem = withIRef DataOps.redexWrap
+    { addNextArg = withProp DataOps.callWithArg exprI
+    , callWithArg = withProp DataOps.callWithArg exprI
+    , giveAsArg = withProp DataOps.giveAsArg exprI
+    , lambdaWrap = withProp DataOps.lambdaWrap exprI
+    , addWhereItem = withProp DataOps.redexWrap exprI
       -- Hole will remove mReplace because no point replacing hole with hole.
     , mReplace = replace
       -- mDelete gets overridden by parent if it is an apply.
@@ -277,12 +276,7 @@ makeEntityGuid exprGuid exprI =
     }
   }
   where
-    replace =
-      fmap (liftM Data.exprIRefGuid . DataOps.replaceWithHole) setExprI
-    setExprI = eeReplace exprI
-    withIRef f =
-      (fmap . liftM) Data.exprIRefGuid $
-      f <$> eeIRef exprI <*> setExprI
+    replace = withProp DataOps.replaceWithHole exprI
 
 mkExpressionRef
   :: Monad m
@@ -434,7 +428,7 @@ convertApply apply@(Data.Apply funcI argI) exprI =
 
 setAddArg :: Monad m => ExprEntity m -> ExpressionRef m -> ExpressionRef m
 setAddArg exprI =
-  atREntity . atEActions . atAddNextArg . const $ addArg exprI
+  atREntity . atEActions . atAddNextArg . const $ withProp DataOps.callWithArg exprI
 
 atFunctionType :: ExpressionRef m -> ExpressionRef m
 atFunctionType exprRef =
