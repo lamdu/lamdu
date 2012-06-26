@@ -423,14 +423,17 @@ setAddArg :: Monad m => ExprEntity m -> ExprEntity m -> ExpressionRef m -> Expre
 setAddArg whereI exprI =
   atRActions . atAddNextArg . const $ addArg whereI exprI
 
-removeUninterestingType :: ExpressionRef m -> ExpressionRef m
-removeUninterestingType exprRef =
+atFunctionType :: ExpressionRef m -> ExpressionRef m
+atFunctionType exprRef =
   case rExpression exprRef of
     ExpressionHole {} -> exprRef -- Keep types on holes
-    _ -> atRInferredTypes removeIfSingle exprRef
+    _ -> atRInferredTypes removeIfOnlyPis exprRef
   where
-    removeIfSingle [_] = []
-    removeIfSingle xs = xs
+    removeIfOnlyPis xs
+      | all (isPi . rExpression) xs = []
+      | otherwise = xs
+    isPi (ExpressionPi {}) = True
+    isPi _ = False
 
 convertApplyInfixFull
   :: Monad m
@@ -449,7 +452,7 @@ convertApplyInfixFull
         addDelete funcArgI funcI funcFuncI $ addApplyChildParens lArgRef
       newRArgRef = addDelete argI exprI funcI $ addApplyChildParens rArgRef
       newOpRef =
-        removeUninterestingType .
+        atFunctionType .
         addDelete funcFuncI funcI funcArgI $
         setAddArg exprI exprI opRef
     mkExpressionRef exprI . ExpressionSection DontHaveParens .
@@ -467,7 +470,7 @@ convertApplyInfixL op (Data.Apply opI argI) exprI = do
   opRef <- mkExpressionRef opI $ ExpressionGetVariable op
   let
     newOpRef =
-      removeUninterestingType .
+      atFunctionType .
       addDelete opI exprI argI .
       setAddArg exprI exprI $
       opRef
@@ -492,7 +495,7 @@ convertApplyPrefix (Data.Apply funcI argI) exprI = do
       addDelete funcI exprI argI .
       setNextArg .
       addApplyChildParens .
-      removeUninterestingType .
+      atFunctionType .
       (atRExpression . atEApply . atApplyArg) setNextArg .
       (atRExpression . atESection . atSectionOp) setNextArg $
       funcRef
