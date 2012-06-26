@@ -53,7 +53,7 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
       maybe mempty
       (Widget.keysEventMapMovesCursor Config.delKeys "Delete variable" .
        liftM WidgetIds.fromGuid . IT.transaction)
-      ((Sugar.mDelete . Sugar.wiEntity) whereItem)
+      ((Sugar.mDelete . Sugar.eActions . Sugar.wiEntity) whereItem)
 
 makeWithBody
   :: MonadF m

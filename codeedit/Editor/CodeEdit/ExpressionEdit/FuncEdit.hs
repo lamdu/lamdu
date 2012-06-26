@@ -69,14 +69,14 @@ makeParamEdit makeExpressionEdit param =
       (Widget.keysEventMapMovesCursor Config.addNextParamKeys "Add next parameter" .
        liftM (FocusDelegator.delegatingId . WidgetIds.paramId) .
        IT.transaction) .
-      Sugar.lambdaWrap . Sugar.rEntity $
+      Sugar.lambdaWrap . Sugar.eActions . Sugar.rEntity $
       Sugar.fpBody param
     paramDeleteEventMap =
       maybe mempty
       (Widget.keysEventMapMovesCursor Config.delKeys "Delete parameter" .
        liftM WidgetIds.fromGuid .
        IT.transaction) .
-      Sugar.mDelete $ Sugar.fpEntity param
+      Sugar.mDelete . Sugar.eActions $ Sugar.fpEntity param
 
 makeParamsEdit
   :: MonadF m

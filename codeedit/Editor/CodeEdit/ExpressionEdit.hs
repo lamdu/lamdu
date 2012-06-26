@@ -151,7 +151,7 @@ expressionEventMap sExpr holePicker =
       ifHole pickResultFirst .
       Widget.keysEventMapMovesCursor
       keys (ifHole (const ("Pick result and " ++)) doc) $ action
-    actions = Sugar.rEntity sExpr
+    actions = Sugar.eActions $ Sugar.rEntity sExpr
     moveUnlessOnHole = ifHole $ (const . fmap . liftM . Widget.atECursor . const) Nothing
     pickResultFirst = maybe id (fmap . joinEvents)
     ifHole whenHole = foldHolePicker id whenHole holePicker

@@ -3,7 +3,8 @@
 module Editor.CodeEdit.Sugar
   ( DefinitionRef(..)
   , Builtin(..)
-  , Expression(..), Entity(..), ExpressionRef(..)
+  , Entity(..), Actions(..)
+  , Expression(..), ExpressionRef(..)
   , Where(..), WhereItem(..)
   , Func(..), FuncParam(..)
   , Pi(..), Apply(..), Section(..), Hole(..), LiteralInteger(..)
@@ -33,9 +34,8 @@ type T = Transaction ViewTag
 
 type MAction m = Maybe (T m Guid)
 
-data Entity m = Entity
-  { guid         :: Guid
-  , addNextArg   :: MAction m
+data Actions m = Actions
+  { addNextArg   :: MAction m
   , giveAsArg    :: MAction m
   , callWithArg  :: MAction m
   , lambdaWrap   :: MAction m
@@ -44,6 +44,11 @@ data Entity m = Entity
   , mDelete      :: MAction m
   , mCut         :: MAction m
   , mNextArg     :: Maybe (ExpressionRef m)
+  }
+
+data Entity m = Entity
+  { guid         :: Guid
+  , eActions     :: Actions m
   }
 
 -- TODO: Only Expression types that CAN be wrapped with () should be,
@@ -143,10 +148,12 @@ AtFieldTH.make ''Where
 AtFieldTH.make ''FuncParam
 AtFieldTH.make ''Func
 AtFieldTH.make ''ExpressionRef
-AtFieldTH.make ''Entity
 AtFieldTH.make ''Apply
 AtFieldTH.make ''Section
 AtFieldTH.make ''Expression
+
+AtFieldTH.make ''Entity
+AtFieldTH.make ''Actions
 
 data ExprEntity m = ExprEntity
   { eeGuid :: Guid
@@ -252,17 +259,20 @@ makeEntityGuid :: Monad m => Guid -> ExprEntity m -> Entity m
 makeEntityGuid exprGuid exprI =
   Entity
   { guid = exprGuid
-  , addNextArg = addArg exprI exprI
-  , callWithArg = addArg exprI exprI
-  , giveAsArg = withIRef DataOps.giveAsArg
-  , lambdaWrap = withIRef DataOps.lambdaWrap
-  , addWhereItem = withIRef DataOps.redexWrap
-    -- Hole will remove mReplace because no point replacing hole with hole.
-  , mReplace = replace
-    -- mDelete gets overridden by parent if it is an apply.
-  , mDelete = Nothing
-  , mCut = mkCutter <$> eeIRef exprI <*> replace
-  , mNextArg = Nothing
+  , eActions =
+    Actions
+    { addNextArg = addArg exprI exprI
+    , callWithArg = addArg exprI exprI
+    , giveAsArg = withIRef DataOps.giveAsArg
+    , lambdaWrap = withIRef DataOps.lambdaWrap
+    , addWhereItem = withIRef DataOps.redexWrap
+      -- Hole will remove mReplace because no point replacing hole with hole.
+    , mReplace = replace
+      -- mDelete gets overridden by parent if it is an apply.
+    , mDelete = Nothing
+    , mCut = mkCutter <$> eeIRef exprI <*> replace
+    , mNextArg = Nothing
+    }
   }
   where
     replace =
@@ -290,13 +300,14 @@ addDeleteAction
   :: Monad m
   => ExprEntity m -> ExprEntity m -> ExprEntity m
   -> Entity m -> Entity m
-addDeleteAction deletedI exprI replacerI actions =
-  (atMCut . const)    mCutter .
-  (atMDelete . const) mDeleter $
-  actions
+addDeleteAction deletedI exprI replacerI entity =
+  atEActions
+  ((atMCut . const) mCutter .
+   (atMDelete . const) mDeleter)
+  entity
   where
     mCutter = do
-      _ <- mReplace actions -- mReplace as a guard here: if no replacer, no cutter either
+      _ <- mReplace $ eActions entity -- mReplace as a guard here: if no replacer, no cutter either
       mkCutter <$> eeIRef deletedI <*> mDeleter
     mDeleter =
       mkDeleter <$> eeReplace exprI <*> eeIRef replacerI
@@ -421,7 +432,7 @@ convertApply apply@(Data.Apply funcI argI) exprI =
 
 setAddArg :: Monad m => ExprEntity m -> ExprEntity m -> ExpressionRef m -> ExpressionRef m
 setAddArg whereI exprI =
-  atREntity . atAddNextArg . const $ addArg whereI exprI
+  atREntity . atEActions . atAddNextArg . const $ addArg whereI exprI
 
 atFunctionType :: ExpressionRef m -> ExpressionRef m
 atFunctionType exprRef =
@@ -490,7 +501,7 @@ convertApplyPrefix (Data.Apply funcI argI) exprI = do
       setAddArg exprI exprI .
       addFlipFuncArg $
       addParens argRef
-    setNextArg = atREntity . atMNextArg . const . Just $ newArgRef
+    setNextArg = atREntity . atEActions . atMNextArg . const . Just $ newArgRef
     newFuncRef =
       addDelete funcI exprI argI .
       setNextArg .
@@ -539,7 +550,7 @@ convertHole :: Monad m => Convertor m
 convertHole exprI = do
   paste <- mkPaste exprI
   scope <- readScope
-  (liftM . atREntity)
+  (liftM . atREntity . atEActions)
     ((atMReplace . const) Nothing .
      (atMCut . const) Nothing) .
     mkExpressionRef exprI . ExpressionHole $
