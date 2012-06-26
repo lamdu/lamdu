@@ -242,12 +242,12 @@ liftTransaction = Sugar . lift
 
 type Convertor m = ExprEntity m -> Sugar m (ExpressionRef m)
 
-addArg :: Monad m => ExprEntity m -> ExprEntity m -> MAction m
-addArg whereI exprI =
+addArg :: Monad m => ExprEntity m -> MAction m
+addArg exprI =
   (fmap . liftM) Data.exprIRefGuid $
   DataOps.callWithArg <$>
   eeIRef exprI <*>
-  eeReplace whereI
+  eeReplace exprI
 
 makeEntity :: Monad m => ExprEntity m -> Entity m
 makeEntity ee = makeEntityGuid (eeGuid ee) ee
@@ -263,8 +263,8 @@ makeEntityGuid exprGuid exprI =
   { guid = exprGuid
   , eActions =
     Actions
-    { addNextArg = addArg exprI exprI
-    , callWithArg = addArg exprI exprI
+    { addNextArg = addArg exprI
+    , callWithArg = addArg exprI
     , giveAsArg = withIRef DataOps.giveAsArg
     , lambdaWrap = withIRef DataOps.lambdaWrap
     , addWhereItem = withIRef DataOps.redexWrap
@@ -432,9 +432,9 @@ convertApply apply@(Data.Apply funcI argI) exprI =
   where
     prefixApply = convertApplyPrefix apply exprI
 
-setAddArg :: Monad m => ExprEntity m -> ExprEntity m -> ExpressionRef m -> ExpressionRef m
-setAddArg whereI exprI =
-  atREntity . atEActions . atAddNextArg . const $ addArg whereI exprI
+setAddArg :: Monad m => ExprEntity m -> ExpressionRef m -> ExpressionRef m
+setAddArg exprI =
+  atREntity . atEActions . atAddNextArg . const $ addArg exprI
 
 atFunctionType :: ExpressionRef m -> ExpressionRef m
 atFunctionType exprRef =
@@ -467,7 +467,7 @@ convertApplyInfixFull
       newOpRef =
         atFunctionType .
         addDelete funcFuncI funcI funcArgI $
-        setAddArg exprI exprI opRef
+        setAddArg exprI opRef
     mkExpressionRef exprI . ExpressionSection DontHaveParens .
       Section (Just newLArgRef) newOpRef (Just newRArgRef) . Just $
       eeGuid funcI
@@ -485,7 +485,7 @@ convertApplyInfixL op (Data.Apply opI argI) exprI = do
     newOpRef =
       atFunctionType .
       addDelete opI exprI argI .
-      setAddArg exprI exprI $
+      setAddArg exprI $
       opRef
   mkExpressionRef exprI . ExpressionSection HaveParens $
     Section (Just newArgRef) newOpRef Nothing Nothing
@@ -500,7 +500,7 @@ convertApplyPrefix (Data.Apply funcI argI) exprI = do
   let
     newArgRef =
       addDelete argI exprI funcI .
-      setAddArg exprI exprI .
+      setAddArg exprI .
       addFlipFuncArg $
       addParens argRef
     setNextArg = atREntity . atEActions . atMNextArg . const . Just $ newArgRef
