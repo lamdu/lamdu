@@ -64,7 +64,7 @@ data StoredExpression it m = StoredExpression
   { eeStored :: DataLoad.StoredExpressionRef m
   , eeInferredType :: it
   , eeValue :: Data.Expression (StoredExpression it m)
-  } deriving (Eq)
+  }
 
 data InferredTypeLoop
   = InferredTypeNoLoop (Data.GuidExpression InferredTypeLoop)
@@ -74,7 +74,7 @@ data InferredTypeLoop
 data StoredDefinition it m = StoredDefinition
   { deIRef :: Data.DefinitionIRef
   , deValue :: Data.Definition (StoredExpression it m)
-  } deriving (Eq)
+  }
 
 deGuid :: StoredDefinition it m -> Guid
 deGuid = IRef.guid . deIRef

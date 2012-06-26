@@ -32,12 +32,6 @@ data DefinitionEntity m = DefinitionEntity
   , defEntityValue :: Data.Definition (ExpressionEntity m)
   }
 
--- TODO: explain..
--- How could we compare the esReplace field?
--- Do we really need this instance?
-instance Eq (StoredExpressionRef m) where
-  StoredExpressionRef x _ == StoredExpressionRef y _ = x == y
-
 type T = Transaction ViewTag
 
 esGuid :: StoredExpressionRef m -> Guid
