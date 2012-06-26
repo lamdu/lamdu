@@ -1,7 +1,6 @@
 {-# LANGUAGE TypeFamilies, FlexibleContexts #-}
 module Editor.Data.Load
-  ( StoredExpressionRef
-  , guid, esGuid
+  ( guid
   , loadDefinition, DefinitionEntity(..)
   , loadExpression, ExpressionEntity(..)
   )
@@ -18,11 +17,9 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Data as Data
 import qualified Editor.Data.Ops as DataOps
 
-type StoredExpressionRef m = Property m Data.ExpressionIRef
-
 -- TODO: ExpressionEntity -> ExpressionEntity
 data ExpressionEntity m = ExpressionEntity
-  { entityStored :: StoredExpressionRef m
+  { entityStored :: Data.ExpressionIRefProperty m
   , entityValue :: Data.Expression (ExpressionEntity m)
   }
 
@@ -33,11 +30,8 @@ data DefinitionEntity m = DefinitionEntity
 
 type T = Transaction ViewTag
 
-esGuid :: StoredExpressionRef m -> Guid
-esGuid = IRef.guid . Data.unExpressionIRef . Property.value
-
 guid :: ExpressionEntity m -> Guid
-guid = esGuid . entityStored
+guid = IRef.guid . Data.unExpressionIRef . Property.value . entityStored
 
 loadExpression
   :: (Monad m, Monad f)

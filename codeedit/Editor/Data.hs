@@ -9,6 +9,7 @@ module Editor.Data
   , Apply(..), atApplyFunc, atApplyArg
   , ApplyI
   , Expression(..)
+  , ExpressionIRefProperty
   , ExpressionI, ExpressionIRef(..)
   , GuidExpression(..), atGeGuid, atGeValue
   , PureGuidExpression(..), atPureGuidExpression
@@ -25,10 +26,13 @@ import Data.Derive.Binary(makeBinary)
 import Data.DeriveTH(derive)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef(IRef)
+import Data.Store.Property (Property)
 import Data.Store.Transaction (Transaction)
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Transaction as Transaction
+
+type ExpressionIRefProperty m = Property m ExpressionIRef
 
 newtype ExpressionIRef = ExpressionIRef {
   unExpressionIRef :: IRef (Expression ExpressionIRef)

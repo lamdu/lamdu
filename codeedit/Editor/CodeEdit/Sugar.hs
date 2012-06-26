@@ -159,7 +159,7 @@ data Loopable a = Loop | NonLoop a
 
 data ExprEntity m = ExprEntity
   { eeGuid :: Guid
-  , eeStored :: Maybe (DataTyped.StoredExpressionRef (T m))
+  , eeStored :: Maybe (Data.ExpressionIRefProperty (T m))
   , eeInferredTypes :: [ExprEntity m]
   , eeValue :: Loopable (Data.Expression (ExprEntity m))
   }
