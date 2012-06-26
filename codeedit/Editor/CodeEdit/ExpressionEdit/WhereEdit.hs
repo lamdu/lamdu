@@ -2,7 +2,7 @@
 module Editor.CodeEdit.ExpressionEdit.WhereEdit(make, makeWithBody) where
 
 import Control.Arrow (second)
-import Control.Monad (liftM)
+import Control.Monad (liftM, (<=<))
 import Data.Monoid (mempty)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
@@ -53,7 +53,7 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
       maybe mempty
       (Widget.keysEventMapMovesCursor Config.delKeys "Delete variable" .
        liftM WidgetIds.fromGuid . IT.transaction)
-      ((Sugar.mDelete . Sugar.eActions . Sugar.wiEntity) whereItem)
+      ((Sugar.mDelete <=< Sugar.eActions . Sugar.wiEntity) whereItem)
 
 makeWithBody
   :: MonadF m

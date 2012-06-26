@@ -1,7 +1,7 @@
 module Editor.CodeEdit.ExpressionEdit.FuncEdit(make, makeParamEdit) where
 
 import Control.Arrow (second)
-import Control.Monad (liftM)
+import Control.Monad (liftM, (<=<))
 import Data.List.Utils (pairList)
 import Data.Monoid (mempty, mconcat)
 import Data.Store.Guid (Guid)
@@ -68,15 +68,15 @@ makeParamEdit makeExpressionEdit param =
       maybe mempty
       (Widget.keysEventMapMovesCursor Config.addNextParamKeys "Add next parameter" .
        liftM (FocusDelegator.delegatingId . WidgetIds.paramId) .
-       IT.transaction) .
-      Sugar.lambdaWrap . Sugar.eActions . Sugar.rEntity $
+       IT.transaction . Sugar.lambdaWrap) .
+      Sugar.eActions . Sugar.rEntity $
       Sugar.fpBody param
     paramDeleteEventMap =
       maybe mempty
       (Widget.keysEventMapMovesCursor Config.delKeys "Delete parameter" .
        liftM WidgetIds.fromGuid .
        IT.transaction) .
-      Sugar.mDelete . Sugar.eActions $ Sugar.fpEntity param
+      (Sugar.mDelete <=< Sugar.eActions) $ Sugar.fpEntity param
 
 makeParamsEdit
   :: MonadF m

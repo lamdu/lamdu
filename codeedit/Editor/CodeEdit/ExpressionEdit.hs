@@ -86,15 +86,18 @@ make sExpr = do
   (holePicker, widget) <- makeEditor exprId
   typeEdits <- mapM make $ Sugar.rInferredTypes sExpr
   return .
-    Widget.weakerEvents (expressionEventMap sExpr holePicker) $
+    maybe id
+    (Widget.weakerEvents . expressionEventMap holePicker) mActions $
     addType exprId typeEdits widget
+  where
+    mActions = Sugar.eActions $ Sugar.rEntity sExpr
 
 expressionEventMap
   :: MonadF m
-  => Sugar.ExpressionRef m
-  -> HoleResultPicker m
+  => HoleResultPicker m
+  -> Sugar.Actions m
   -> EventHandlers (ITransaction ViewTag m)
-expressionEventMap sExpr holePicker =
+expressionEventMap holePicker actions =
   mconcat $
     [ giveAsArg
     , callWithArg
@@ -108,42 +111,43 @@ expressionEventMap sExpr holePicker =
   where
     itrans = liftM WidgetIds.fromGuid . IT.transaction
     giveAsArg =
-      maybeMempty (Sugar.giveAsArg actions) $
       moveUnlessOnHole .
       Widget.keysEventMapMovesCursor
-      Config.giveAsArgumentKeys "Give as argument" . itrans
+      Config.giveAsArgumentKeys "Give as argument" . itrans $
+      Sugar.giveAsArg actions
     callWithArg =
-      maybeMempty (Sugar.callWithArg actions) $
       moveUnlessOnHole .
       Widget.keysEventMapMovesCursor
-      Config.callWithArgumentKeys "Call with argument" . itrans
+      Config.callWithArgumentKeys "Call with argument" . itrans $
+      Sugar.callWithArg actions
     addArg =
       maybeMempty (Sugar.mNextArg actions) moveToIfHole
       -- Move to next arg overrides add arg's keys.
       `mappend`
-      maybeMempty (Sugar.addNextArg actions)
-      (withPickResultFirst Config.addNextArgumentKeys "Add arg" . itrans)
+      (withPickResultFirst Config.addNextArgumentKeys "Add arg" . itrans $
+       Sugar.addNextArg actions)
     delete =
       -- Replace has the keys of Delete if delete is not available:
-      mkEventMap Sugar.mDelete
+      mkMEventMap Sugar.mDelete
       Config.delKeys "Delete" WidgetIds.fromGuid
     cut =
-      mkEventMap Sugar.mCut 
+      mkMEventMap Sugar.mCut
       Config.cutKeys "Cut" WidgetIds.fromGuid
     replace =
-      mkEventMap Sugar.mReplace
+      mkMEventMap Sugar.mReplace
       (Config.replaceKeys ++ Config.delKeys) "Replace" diveGuid
     lambdaWrap =
-      mkEventMap Sugar.lambdaWrap
-      Config.lambdaWrapKeys "Lambda wrap" diveParam
+      mkEventMap Config.lambdaWrapKeys "Lambda wrap" diveParam $
+      Sugar.lambdaWrap actions
     addWhereItem =
-      mkEventMap Sugar.addWhereItem
-      Config.addWhereItemKeys "Add where item" diveParam
+      mkEventMap Config.addWhereItemKeys "Add where item" diveParam $
+      Sugar.addWhereItem actions
 
     diveGuid = FocusDelegator.delegatingId . WidgetIds.fromGuid
     diveParam = FocusDelegator.delegatingId . WidgetIds.paramId
-    mkEventMap getAct keys doc f =
-      maybeMempty (getAct actions) $
+    mkMEventMap getAct keys doc f =
+      maybeMempty (getAct actions) $ mkEventMap keys doc f
+    mkEventMap keys doc f =
       Widget.keysEventMapMovesCursor keys doc .
       liftM f . IT.transaction
 
@@ -151,7 +155,6 @@ expressionEventMap sExpr holePicker =
       ifHole pickResultFirst .
       Widget.keysEventMapMovesCursor
       keys (ifHole (const ("Pick result and " ++)) doc) $ action
-    actions = Sugar.eActions $ Sugar.rEntity sExpr
     moveUnlessOnHole = ifHole $ (const . fmap . liftM . Widget.atECursor . const) Nothing
     pickResultFirst = maybe id (fmap . joinEvents)
     ifHole whenHole = foldHolePicker id whenHole holePicker

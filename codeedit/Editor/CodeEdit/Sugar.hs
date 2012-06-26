@@ -17,6 +17,7 @@ import Control.Applicative((<$>), (<*>))
 import Control.Monad(liftM)
 import Control.Monad.Trans.Class(MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
+import Data.Maybe (fromMaybe)
 import Data.Functor.Identity (Identity(..))
 import Data.Store.Guid(Guid)
 import Data.Store.Transaction(Transaction)
@@ -35,11 +36,11 @@ type T = Transaction ViewTag
 type MAction m = Maybe (T m Guid)
 
 data Actions m = Actions
-  { addNextArg   :: MAction m
-  , giveAsArg    :: MAction m
-  , callWithArg  :: MAction m
-  , lambdaWrap   :: MAction m
-  , addWhereItem :: MAction m
+  { addNextArg   :: T m Guid
+  , giveAsArg    :: T m Guid
+  , callWithArg  :: T m Guid
+  , lambdaWrap   :: T m Guid
+  , addWhereItem :: T m Guid
   , mReplace     :: MAction m
   , mDelete      :: MAction m
   , mCut         :: MAction m
@@ -47,8 +48,8 @@ data Actions m = Actions
   }
 
 data Entity m = Entity
-  { guid         :: Guid
-  , eActions     :: Actions m
+  { guid     :: Guid
+  , eActions :: Maybe (Actions m)
   }
 
 -- TODO: Only Expression types that CAN be wrapped with () should be,
@@ -187,27 +188,21 @@ eeFromITL
     eeFromLambda (Data.Lambda x y) =
       Data.Lambda (eeFromITL x) (eeFromITL y)
 
-writeIRef
-  :: Monad m
-  => ExprEntity m
-  -> Maybe (Data.ExpressionI -> Transaction t m ())
-writeIRef = fmap Data.writeExprIRef . eeIRef
-
 argument :: (a -> b) -> (b -> c) -> a -> c
 argument = flip (.)
+
+writeIRef
+  :: Monad m => Data.ExpressionIRefProperty (T m)
+  -> Data.Expression Data.ExpressionIRef 
+  -> Transaction t m ()
+writeIRef = Data.writeExprIRef . Property.value
 
 writeIRefVia
   :: Monad m
   => (a -> Data.ExpressionI)
-  -> ExprEntity m
-  -> Maybe (a -> Transaction t m ())
-writeIRefVia f = (fmap . fmap . argument) f writeIRef
-
-eeIRef :: ExprEntity m -> Maybe Data.ExpressionIRef
-eeIRef = fmap Property.value . eeStored
-
-eeReplace :: ExprEntity m -> Maybe (Data.ExpressionIRef -> T m ())
-eeReplace = fmap Property.set . eeStored
+  -> Data.ExpressionIRefProperty (T m)
+  -> a -> Transaction t m ()
+writeIRefVia f = (fmap . argument) f writeIRef
 
 eeFromTypedExpression
   :: DataTyped.TypedStoredExpression (T m) -> ExprEntity m
@@ -242,41 +237,39 @@ liftTransaction = Sugar . lift
 
 type Convertor m = ExprEntity m -> Sugar m (ExpressionRef m)
 
-withProp
-  :: Monad m
-  => (Data.ExpressionIRefProperty (T m)
-  -> T m Data.ExpressionIRef) -> ExprEntity m -> MAction m
-withProp f = fmap (liftM Data.exprIRefGuid . f) . eeStored
-
 makeEntity :: Monad m => ExprEntity m -> Entity m
 makeEntity ee = makeEntityGuid (eeGuid ee) ee
 
 mkCutter :: Monad m => Data.ExpressionIRef -> T m Guid -> T m Guid
-mkCutter iref delete = do
+mkCutter iref replaceWithHole = do
   Anchors.modP Anchors.clipboards (iref:)
-  delete
+  replaceWithHole
+
+mkActions :: Monad m => Data.ExpressionIRefProperty (T m) -> Actions m
+mkActions stored =
+  Actions
+  { addNextArg = guidify $ DataOps.callWithArg stored
+  , callWithArg = guidify $ DataOps.callWithArg stored
+  , giveAsArg = guidify $ DataOps.giveAsArg stored
+  , lambdaWrap = guidify $ DataOps.lambdaWrap stored
+  , addWhereItem = guidify $ DataOps.redexWrap stored
+    -- Hole will remove mReplace because no point replacing hole with hole.
+  , mReplace = Just replace
+    -- mDelete gets overridden by parent if it is an apply.
+  , mDelete = Nothing
+  , mCut = Just $ mkCutter (Property.value stored) replace
+  , mNextArg = Nothing
+  }
+  where
+    guidify = liftM Data.exprIRefGuid
+    replace = guidify $ DataOps.replaceWithHole stored
 
 makeEntityGuid :: Monad m => Guid -> ExprEntity m -> Entity m
 makeEntityGuid exprGuid exprI =
   Entity
   { guid = exprGuid
-  , eActions =
-    Actions
-    { addNextArg = withProp DataOps.callWithArg exprI
-    , callWithArg = withProp DataOps.callWithArg exprI
-    , giveAsArg = withProp DataOps.giveAsArg exprI
-    , lambdaWrap = withProp DataOps.lambdaWrap exprI
-    , addWhereItem = withProp DataOps.redexWrap exprI
-      -- Hole will remove mReplace because no point replacing hole with hole.
-    , mReplace = replace
-      -- mDelete gets overridden by parent if it is an apply.
-    , mDelete = Nothing
-    , mCut = mkCutter <$> eeIRef exprI <*> replace
-    , mNextArg = Nothing
-    }
+  , eActions = fmap mkActions $ eeStored exprI
   }
-  where
-    replace = withProp DataOps.replaceWithHole exprI
 
 mkExpressionRef
   :: Monad m
@@ -292,31 +285,39 @@ mkExpressionRef ee expr = do
     , rEntity = makeEntity ee
     }
 
-addDeleteAction
+addStoredDeleteCutActions
+  :: Monad m
+  => Data.ExpressionIRefProperty (T m)
+  -> Data.ExpressionIRefProperty (T m)
+  -> Data.ExpressionIRefProperty (T m)
+  -> Entity m -> Entity m
+addStoredDeleteCutActions deletedP parentP replacerP =
+  (atEActions . fmap)
+  (setCutter .
+   (atMDelete . const) (Just replaceWithHole))
+  where
+    setCutter actions = (atMCut . const) (mCutter actions) actions
+    mCutter actions = do
+      _ <- mReplace actions -- mReplace as a guard here: if no replacer, no cutter either
+      Just $ mkCutter (Property.value deletedP) replaceWithHole
+    replaceWithHole = do
+      Property.set parentP $ Property.value replacerP
+      return . Data.exprIRefGuid $ Property.value replacerP
+
+addDeleteCutActions
   :: Monad m
   => ExprEntity m -> ExprEntity m -> ExprEntity m
   -> Entity m -> Entity m
-addDeleteAction deletedI exprI replacerI entity =
-  atEActions
-  ((atMCut . const) mCutter .
-   (atMDelete . const) mDeleter)
-  entity
-  where
-    mCutter = do
-      _ <- mReplace $ eActions entity -- mReplace as a guard here: if no replacer, no cutter either
-      mkCutter <$> eeIRef deletedI <*> mDeleter
-    mDeleter =
-      mkDeleter <$> eeReplace exprI <*> eeIRef replacerI
-    mkDeleter replacer val = do
-      ~() <- replacer val
-      return $ Data.exprIRefGuid val
+addDeleteCutActions deletedI parentI replacerI =
+  fromMaybe id $
+  addStoredDeleteCutActions <$> eeStored deletedI <*> eeStored parentI <*> eeStored replacerI
 
-addDelete
+addDeleteCut
   :: Monad m
   => ExprEntity m -> ExprEntity m -> ExprEntity m
   -> ExpressionRef m -> ExpressionRef m
-addDelete deletedI exprI replacerI =
-  atREntity $ addDeleteAction deletedI exprI replacerI
+addDeleteCut deletedI exprI replacerI =
+  atREntity $ addDeleteCutActions deletedI exprI replacerI
 
 convertLambdaParam
   :: Monad m
@@ -327,7 +328,7 @@ convertLambdaParam (Data.Lambda paramTypeI bodyI) bodyRef exprI = do
   typeExpr <- convertExpressionI paramTypeI
   return FuncParam
     { fpEntity =
-        addDeleteAction exprI exprI bodyI $
+        addDeleteCutActions exprI exprI bodyI $
         makeEntity exprI
     , fpType = typeExpr
     , fpBody = bodyRef
@@ -360,7 +361,7 @@ convertPi lambda@(Data.Lambda paramTypeI bodyI) exprI = do
   mkExpressionRef exprI $ ExpressionPi DontHaveParens
     Pi
     { pParam = atFpType addApplyChildParens param
-    , pResultType = addDelete bodyI exprI paramTypeI sBody
+    , pResultType = addDeleteCut bodyI exprI paramTypeI sBody
     }
 
 convertWhere
@@ -382,7 +383,7 @@ convertWhere valueRef lambdaI (Data.Lambda typeI bodyI) applyI = do
   where
     item typeRef = WhereItem
       { wiEntity =
-          addDeleteAction applyI applyI bodyI $
+          addDeleteCutActions applyI applyI bodyI $
           makeEntityGuid (eeGuid lambdaI) applyI
       , wiValue = valueRef
       , wiType = typeRef
@@ -396,7 +397,7 @@ addApplyChildParens =
     f x = (atEHasParens . const) HaveParens x
 
 infixOp :: Monad m => ExprEntity m -> T m (Maybe Data.VariableRef)
-infixOp = maybe (return Nothing) Infix.infixOp . eeIRef
+infixOp = maybe (return Nothing) (Infix.infixOp . Property.value) . eeStored
 
 convertApply
   :: Monad m
@@ -428,7 +429,11 @@ convertApply apply@(Data.Apply funcI argI) exprI =
 
 setAddArg :: Monad m => ExprEntity m -> ExpressionRef m -> ExpressionRef m
 setAddArg exprI =
-  atREntity . atEActions . atAddNextArg . const $ withProp DataOps.callWithArg exprI
+  maybe id f $ eeStored exprI
+  where
+    f stored =
+      atREntity . atEActions . fmap . atAddNextArg . const .
+      liftM Data.exprIRefGuid $ DataOps.callWithArg stored
 
 atFunctionType :: ExpressionRef m -> ExpressionRef m
 atFunctionType exprRef =
@@ -456,11 +461,11 @@ convertApplyInfixFull
     opRef <- mkExpressionRef funcFuncI $ ExpressionGetVariable op
     let
       newLArgRef =
-        addDelete funcArgI funcI funcFuncI $ addApplyChildParens lArgRef
-      newRArgRef = addDelete argI exprI funcI $ addApplyChildParens rArgRef
+        addDeleteCut funcArgI funcI funcFuncI $ addApplyChildParens lArgRef
+      newRArgRef = addDeleteCut argI exprI funcI $ addApplyChildParens rArgRef
       newOpRef =
         atFunctionType .
-        addDelete funcFuncI funcI funcArgI $
+        addDeleteCut funcFuncI funcI funcArgI $
         setAddArg exprI opRef
     mkExpressionRef exprI . ExpressionSection DontHaveParens .
       Section (Just newLArgRef) newOpRef (Just newRArgRef) . Just $
@@ -473,12 +478,12 @@ convertApplyInfixL
   -> Convertor m
 convertApplyInfixL op (Data.Apply opI argI) exprI = do
   argRef <- convertExpressionI argI
-  let newArgRef = addDelete argI exprI opI $ addApplyChildParens argRef
+  let newArgRef = addDeleteCut argI exprI opI $ addApplyChildParens argRef
   opRef <- mkExpressionRef opI $ ExpressionGetVariable op
   let
     newOpRef =
       atFunctionType .
-      addDelete opI exprI argI .
+      addDeleteCut opI exprI argI .
       setAddArg exprI $
       opRef
   mkExpressionRef exprI . ExpressionSection HaveParens $
@@ -493,13 +498,13 @@ convertApplyPrefix (Data.Apply funcI argI) exprI = do
   funcRef <- convertExpressionI funcI
   let
     newArgRef =
-      addDelete argI exprI funcI .
+      addDeleteCut argI exprI funcI .
       setAddArg exprI .
       addFlipFuncArg $
       addParens argRef
-    setNextArg = atREntity . atEActions . atMNextArg . const . Just $ newArgRef
+    setNextArg = atREntity . atEActions . fmap . atMNextArg . const $ Just newArgRef
     newFuncRef =
-      addDelete funcI exprI argI .
+      addDeleteCut funcI exprI argI .
       setNextArg .
       addApplyChildParens .
       atFunctionType .
@@ -509,9 +514,11 @@ convertApplyPrefix (Data.Apply funcI argI) exprI = do
   mkExpressionRef exprI . ExpressionApply DontHaveParens $
     Apply newFuncRef newArgRef
   where
-    addFlipFuncArg = atRExpression . atEHole . atHoleMFlipFuncArg . const $ mSetFlippedApply
-    mSetFlippedApply = writeIRef exprI <*> mFlippedApply
-    mFlippedApply = Data.ExpressionApply <$> (Data.Apply <$> eeIRef argI <*> eeIRef funcI)
+    addFlipFuncArg =
+      atRExpression . atEHole . atHoleMFlipFuncArg . const $
+      setFlippedApply <$> eeStored exprI <*> eeStored funcI <*> eeStored argI
+    setFlippedApply exprP funcP argP =
+      writeIRef exprP . Data.ExpressionApply $ Data.Apply (Property.value argP) (Property.value funcP)
     addParens = atRExpression . atEHasParens . const $ HaveParens
 
 convertGetVariable :: Monad m => Data.VariableRef -> Convertor m
@@ -527,15 +534,15 @@ convertGetVariable varRef exprI = do
       Section Nothing ((atRInferredTypes . const) [] getVarExpr) Nothing Nothing
     else return getVarExpr
 
-mkPaste :: Monad m => ExprEntity m -> Sugar m (Maybe (T m Guid))
-mkPaste exprI = do
-  clipboardsP <- liftTransaction $ Anchors.clipboards
+mkPaste :: Monad m => Data.ExpressionIRefProperty (T m) -> Sugar m (Maybe (T m Guid))
+mkPaste exprP = do
+  clipboardsP <- liftTransaction Anchors.clipboards
   let
     mClipPop =
       case Property.value clipboardsP of
       [] -> Nothing
       (clip : clips) -> Just (clip, Property.set clipboardsP clips)
-  return $ doPaste <$> eeReplace exprI <*> mClipPop
+  return $ fmap (doPaste (Property.set exprP)) mClipPop
   where
     doPaste replacer (clip, popClip) = do
       ~() <- popClip
@@ -544,17 +551,17 @@ mkPaste exprI = do
 
 convertHole :: Monad m => Convertor m
 convertHole exprI = do
-  paste <- mkPaste exprI
+  mPaste <- maybe (return Nothing) mkPaste $ eeStored exprI
   scope <- readScope
-  (liftM . atREntity . atEActions)
+  (liftM . atREntity . atEActions . fmap)
     ((atMReplace . const) Nothing .
      (atMCut . const) Nothing) .
     mkExpressionRef exprI . ExpressionHole $
     Hole
     { holeScope = scope
-    , holePickResult = pickResult <$> writeIRef exprI
+    , holePickResult = fmap (pickResult . writeIRef) $ eeStored exprI
     , holeMFlipFuncArg = Nothing
-    , holePaste = paste
+    , holePaste = mPaste
     }
   where
     pickResult write result = do
@@ -566,7 +573,7 @@ convertLiteralInteger i exprI =
   mkExpressionRef exprI . ExpressionLiteralInteger $
   LiteralInteger
   { liValue = i
-  , liSetValue = writeIRefVia Data.ExpressionLiteralInteger exprI
+  , liSetValue = fmap (writeIRefVia Data.ExpressionLiteralInteger) $ eeStored exprI
   }
 
 convertBuiltin :: Monad m => Data.FFIName -> Convertor m
@@ -574,7 +581,7 @@ convertBuiltin name exprI =
   mkExpressionRef exprI . ExpressionBuiltin $
   Builtin
   { biName = name
-  , biSetFFIName = writeIRefVia Data.ExpressionBuiltin exprI
+  , biSetFFIName = fmap (writeIRefVia Data.ExpressionBuiltin) $ eeStored exprI
   }
 
 fakeBuiltin :: [String] -> String -> Expression m
