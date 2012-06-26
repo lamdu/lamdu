@@ -5,7 +5,7 @@
 module Editor.Data.Typed
   ( StoredExpressionRef(..)
   , atEeInferredType, atEeValue
-  , eeReplace, eeGuid, eeIRef
+  , storedGuid
   , InferredTypeLoop(..)
   , StoredDefinition(..)
   , atDeIRef, atDeValue
@@ -52,8 +52,8 @@ type T = Transaction ViewTag
 type TypedStoredExpression = StoredExpression [InferredTypeLoop]
 type TypedStoredDefinition = StoredDefinition [InferredTypeLoop]
 
-eeGuid :: StoredExpression it m -> Guid
-eeGuid = esGuid . eeStored
+storedGuid :: StoredExpression it m -> Guid
+storedGuid = esGuid . eeStored
 
 newtype TypeData = TypeData
   { unTypeData :: [Data.GuidExpression TypeRef]
@@ -81,12 +81,6 @@ deGuid = IRef.guid . deIRef
 
 AtFieldTH.make ''StoredExpression
 AtFieldTH.make ''StoredDefinition
-
-eeReplace :: StoredExpression it m -> Maybe (Data.ExpressionIRef -> m ())
-eeReplace = esReplace . eeStored
-
-eeIRef :: StoredExpression it m -> Data.ExpressionIRef
-eeIRef = esIRef . eeStored
 
 --------------- Infer Stack boilerplate:
 

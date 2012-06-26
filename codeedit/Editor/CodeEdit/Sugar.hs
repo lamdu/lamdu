@@ -216,7 +216,7 @@ eeFromTypedExpression = runIdentity . Data.mapMExpression f
     f e =
       ( return $ DataTyped.eeValue e
       , return .
-        ExprEntity (DataTyped.eeGuid e)
+        ExprEntity (DataTyped.storedGuid e)
         (Just (DataTyped.eeStored e))
         (map eeFromITL (DataTyped.eeInferredType e)) .
         NonLoop
