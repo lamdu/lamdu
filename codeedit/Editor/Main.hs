@@ -112,31 +112,32 @@ runDbStore font store = do
     EventMapDoc.makeToggledHelpAdder Config.overlayDocKeys helpStyle
   initCache <- Transaction.run store $ do
     view <- Anchors.getP Anchors.view
-    Transaction.run (Anchors.viewStore view) CodeEdit.makeSugarCache
+    liftM fromCacheCursor $
+      Transaction.run (Anchors.viewStore view) CodeEdit.makeSugarCache
+  initCursor <- Transaction.run store $ Anchors.getP Anchors.cursor
   cacheRef <- newIORef initCache
 
   let
+    mkWidgetFromCursor fromCursor cursor = do
+      candidateWidget <- fromCursor cursor
+      (invalidCursor, widget) <-
+        if Widget.isFocused candidateWidget
+        then return (Nothing, candidateWidget)
+        else do
+          finalWidget <- fromCursor rootCursor
+          Anchors.setP Anchors.cursor rootCursor
+          return (Just cursor, finalWidget)
+      unless (Widget.isFocused widget) $
+        fail "Root cursor did not match"
+      return (invalidCursor, widget)
+  widgetCacheRef <-
+    newIORef . (,) initCursor . snd =<<
+    Transaction.run store (mkWidgetFromCursor initCache initCursor)
+  let
     -- TODO: Move this logic to some more common place?
     makeWidget = do
-      cache <- readIORef cacheRef
-      (invalidCursor, widget) <- widgetDownTransaction $ do
-        cursor <- Anchors.getP Anchors.cursor
-        candidateWidget <- unwrap cache cursor
-        (invalidCursor, widget) <-
-          if Widget.isFocused candidateWidget
-          then return (Nothing, candidateWidget)
-          else do
-            finalWidget <- unwrap cache rootCursor
-            Anchors.setP Anchors.cursor rootCursor
-            return (Just cursor, finalWidget)
-        unless (Widget.isFocused widget) $
-          fail "Root cursor did not match"
-        return
-          ( invalidCursor
-          , Widget.atEvents (lift . attachCursor =<<) widget
-          )
-      maybe (return ()) (putStrLn . ("Invalid cursor: " ++) . show)
-        invalidCursor
+      fromCursor <- readIORef cacheRef
+      widget <- mkCacheDependentWidget fromCursor
       fnState <- readIORef flyNavState
       return .
         Widget.atMkSizeDependentWidgetData memo .
@@ -144,11 +145,26 @@ runDbStore font store = do
         fnState (writeIORef flyNavState) $
         Widget.atEvents saveCache widget
 
+    mkCacheDependentWidget fromCursor = do
+      (oldCursor, oldResult) <- readIORef widgetCacheRef
+      (cursor, (invalidCursor, widget)) <- Transaction.run store $ do
+        cursor <- Anchors.getP Anchors.cursor
+        result <-
+          if oldCursor == cursor
+          then return (Nothing, oldResult)
+          else mkWidgetFromCursor fromCursor cursor
+        return (cursor, result)
+      maybe (return ()) (putStrLn . ("Invalid cursor: " ++) . show)
+        invalidCursor
+      writeIORef widgetCacheRef (cursor, widget)
+      return widget
+
     saveCache action = do
       (eventResult, mCacheCache) <- runWriterT action
       case mCacheCache of
         Last Nothing -> return ()
-        Last (Just newCache) -> writeIORef cacheRef newCache
+        Last (Just newCache) ->
+          writeIORef cacheRef $ fromCacheCursor newCache
       return eventResult
 
   mainLoopDebugMode font makeWidget addHelp
@@ -174,21 +190,20 @@ runDbStore font store = do
       , TextEdit.sEmptyFocusedString = ""
       }
 
-    unwrap cache cursor =
+    fromCacheCursor cache = memo $ \cursor ->
       -- Get rid of OTransaction/ITransaction wrappings
-      (liftM . Widget.atEvents . Writer.mapWriterT) IT.runITransaction .
-      runOTransaction cursor style $
-      makeCodeEdit cache
+      liftM
+        (Widget.atMkSizeDependentWidgetData memo .
+         Widget.atEvents
+         ((Writer.mapWriterT (Transaction.run store . IT.runITransaction)) .
+          (lift . attachCursor =<<))) .
+        runOTransaction cursor style $
+        makeCodeEdit cache
 
     makeCodeEdit cache =
       BranchGUI.makeRootWidget CodeEdit.makeSugarCache $
       CodeEdit.makeCodeEdit cache
 
-    widgetDownTransaction =
-      Transaction.run store .
-      (liftM . second . Widget.atEvents . Writer.mapWriterT)
-      (Transaction.run store)
-
     attachCursor eventResult = do
-      maybe (return ()) (Anchors.setP Anchors.cursor) $ Widget.eCursor eventResult
+      maybe (return ()) (IT.transaction . Anchors.setP Anchors.cursor) $ Widget.eCursor eventResult
       return eventResult

@@ -7,7 +7,7 @@ import Control.Concurrent.MVar
 import System.IO.Unsafe(unsafePerformIO)
 
 -- | Memoize the given function with a single most-recently-used value
-memoIO :: (Eq a)
+memoIO :: (Show a, Eq a)
        => (a -> b)           -- ^Function to memoize
        -> IO (a -> IO b)
 memoIO f = do
@@ -22,11 +22,12 @@ memoIO f = do
       case m of
         Nothing -> callOrig
         Just (key, val)
-          | key == x  -> return val
+          | key == x  -> do
+            return val
           | otherwise -> callOrig
 
 -- | The pure version of 'memoIO'.
-memo :: (Eq a)
+memo :: (Show a, Eq a)
      => (a -> b)           -- ^Function to memoize
      -> (a -> b)
 memo f = let f' = unsafePerformIO (memoIO f) in \ x -> unsafePerformIO (f' x)
