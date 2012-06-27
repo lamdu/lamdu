@@ -161,6 +161,8 @@ makeWordEdit ::
   Transaction.Property t m String ->
   Widget.Id -> TWidget t m
 makeWordEdit =
+  (fmap . fmap . liftM . Widget.atEventMap)
+  (EventMap.filterChars (`notElem` "=`[]")) .
   removeKeys makeLineEdit $
   EventMap.ModKey EventMap.noMods EventMap.KeySpace
 
