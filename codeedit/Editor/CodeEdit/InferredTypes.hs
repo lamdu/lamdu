@@ -6,6 +6,8 @@ import Graphics.UI.Bottle.Widget (Widget)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.Config as Config
 import qualified Editor.WidgetIds as WidgetIds
+import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
@@ -29,13 +31,16 @@ mkInferredTypesView exprId typeEdits =
   ]
   where
     typeEdit =
-      addErrorBackground .
+      addTint . addBackground .
       Widget.scale Config.typeScaleFactor $
       BWidgets.vbox typeEdits
     isError = length typeEdits >= 2
     typeErrorAnimId = Widget.toAnimId exprId ++ ["type error background"]
-    addErrorBackground
-      | isError = Widget.backgroundColor 15 typeErrorAnimId Config.typeErrorBackgroundColor
+    addTint = (Widget.atFrame . Anim.onImages . Draw.tint) Config.inferredTypeTint
+    addBackground
+      | isError =
+        Widget.backgroundColor 15 typeErrorAnimId
+        Config.inferredTypeErrorBGColor
       | otherwise = id
     underlineId = WidgetIds.underlineId $ Widget.toAnimId exprId
 

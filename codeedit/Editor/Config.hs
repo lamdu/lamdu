@@ -81,8 +81,6 @@ unfoldKeys = foldKeys
 helpTextSize = 10
 baseTextSize = 25
 
-typeErrorBackgroundColor = Draw.Color 0.5 0.05 0.05 1
-
 typeScaleFactor = 0.4
 squareParensScaleFactor = 0.96
 
@@ -94,3 +92,6 @@ pasteKeys = [ctrl 'v', k 'v']
 
 inactiveTintColor = Draw.Color 1 1 1 0.8
 activeDefBGColor = Draw.Color 0 0 0.2 1
+
+inferredTypeTint = Draw.Color 0.7 0.7 0.7 1
+inferredTypeErrorBGColor = Draw.Color 0.5 0.05 0.05 1
