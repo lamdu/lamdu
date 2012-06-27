@@ -8,6 +8,7 @@ import Control.Monad.Trans.Writer (runWriterT)
 import Data.ByteString (unpack)
 import Data.IORef
 import Data.List(intercalate)
+import Data.MRUMemo (memo)
 import Data.Monoid(Last(..), Monoid(..))
 import Data.Vector.Vector2(Vector2)
 import Data.Word(Word8)
@@ -138,6 +139,7 @@ runDbStore font store = do
         invalidCursor
       fnState <- readIORef flyNavState
       return .
+        Widget.atMkSizeDependentWidgetData memo .
         FlyNav.make WidgetIds.flyNav
         fnState (writeIORef flyNavState) $
         Widget.atEvents saveCache widget
