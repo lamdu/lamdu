@@ -171,7 +171,7 @@ getDisplayNameOf
   :: Monad m
   => Guid -> Transaction t m String
 getDisplayNameOf guid = do
-  name <- Anchors.getP $ Anchors.aNameRef guid
+  name <- Anchors.getP $ Anchors.assocNameRef guid
   return $ if null name then anonName guid else name
 
 makeNameEdit
@@ -181,7 +181,7 @@ makeNameEdit editingEmptyStr ident myId =
     (anonName ident) .
   (OT.atTextStyle . TextEdit.atSEmptyFocusedString . const)
     editingEmptyStr $
-    OT.transaction (Anchors.aNameRef ident) >>=
+    OT.transaction (Anchors.assocNameRef ident) >>=
     flip makeWordEdit myId
 
 boxAlignK :: Vector2 Widget.R -> Box.Orientation -> [(key, Widget f)] -> KBox key f

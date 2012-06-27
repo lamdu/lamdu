@@ -28,7 +28,8 @@ writeCollectorStore ::
   Monad m => m Guid -> Store t (WriteCollector m)
 writeCollectorStore newKey = Store {
   storeNewKey = lift newKey,
-  storeLookup = fail "Cannot lookup when collecting writes!",
+  -- TODO: Eww! Hack! Remove collectWrites?
+  storeLookup = \k -> return . Just . error $ "Attempt to use key: " ++ show k,
   storeAtomicWrite = Writer.tell <=< mapM makeChange
   }
   where
@@ -67,8 +68,7 @@ createBuiltins =
     let
       forAll name f = liftM Data.ExpressionIRef . fixIRef $ \aI -> do
         let aGuid = IRef.guid aI
-        nameRef <- A.aNameRef aGuid
-        Property.set nameRef name
+        A.setP (A.assocNameRef aGuid) name
         s <- set
         return . Data.ExpressionPi . Data.Lambda s =<< f ((getVar . Data.ParameterRef) aGuid)
       setToSet = mkPi set set
@@ -133,7 +133,8 @@ initDB store =
         setMkProp A.clipboards []
         setMkProp A.globals builtins
         setMkProp A.builtinsMap . Map.fromList . catMaybes =<< mapM builtinsMapEntry builtins
-        defI <- A.makeDefinition "foo"
+        defI <- A.makeDefinition
+        A.setP (A.assocNameRef (IRef.guid defI)) "foo"
         setMkProp A.panes [A.makePane defI]
         setMkProp A.preJumps []
         setMkProp A.preCursor $ WidgetIds.fromIRef defI

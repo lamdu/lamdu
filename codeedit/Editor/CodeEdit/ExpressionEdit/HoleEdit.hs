@@ -18,6 +18,7 @@ import Editor.OTransaction (OTransaction, TWidget, WidgetT)
 import Graphics.UI.Bottle.Animation(AnimId)
 import qualified Data.Char as Char
 import qualified Data.Function as Function
+import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
@@ -222,11 +223,14 @@ makeSearchTermWidget holeInfo searchTermId firstResults =
       (mPickResult holeInfo)
 
     makeNewDefinition holePickResult = do
-      let
-        searchTerm = Property.value $ hiSearchTerm holeInfo
-        newName = concat . words $ searchTerm
-      newDefI <- IT.transaction $ Anchors.makeDefinition newName -- TODO: From Sugar
-      IT.transaction $ Anchors.newPane newDefI
+      newDefI <- IT.transaction $ do
+        newDefI <- Anchors.makeDefinition -- TODO: From Sugar
+        let
+          searchTerm = Property.value $ hiSearchTerm holeInfo
+          newName = concat . words $ searchTerm
+        Anchors.setP (Anchors.assocNameRef (IRef.guid newDefI)) newName
+        Anchors.newPane newDefI
+        return newDefI
       let defRef = Data.ExpressionGetVariable $ Data.DefinitionRef newDefI
       -- TODO: Can we use pickResult's animIdMapping?
       eventResult <- holePickResult defRef $ return ()
@@ -302,7 +306,7 @@ makeH
      (Maybe (ResultPicker m), WidgetT ViewTag m)
 makeH hole guid myId = do
   cursor <- OT.readCursor
-  searchTermProp <- OT.transaction $ Anchors.aDataRef "searchTerm" "" guid
+  searchTermProp <- OT.transaction $ Anchors.assocDataRef "searchTerm" "" guid
   let
     holeInfo = HoleInfo
       { hiHoleId = myId

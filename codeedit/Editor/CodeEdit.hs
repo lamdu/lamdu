@@ -47,7 +47,7 @@ makeNewDefinitionAction :: Monad m => OTransaction ViewTag m (Transaction ViewTa
 makeNewDefinitionAction = do
   curCursor <- OT.readCursor
   return $ do
-    newDefI <- Anchors.makeDefinition ""
+    newDefI <- Anchors.makeDefinition
     Anchors.newPane newDefI
     Anchors.savePreJumpPosition curCursor
     return $ WidgetIds.fromIRef newDefI

@@ -13,7 +13,7 @@ module Editor.Anchors
   , Pane
   , dbStore, DBTag
   , viewStore, ViewTag
-  , aDataRef, aNameRef, variableNameRef
+  , assocDataRef, assocNameRef, variableNameRef
   , makePane, makeDefinition, newPane
   , savePreJumpPosition, jumpBack
   , MkProperty, getP, setP, modP
@@ -118,33 +118,32 @@ makePane :: Data.DefinitionIRef -> Pane
 makePane = id
 
 makeDefinition
-  :: Monad m => String
-  -> Transaction ViewTag m Data.DefinitionIRef
-makeDefinition newName = do
+  :: Monad m
+  => Transaction ViewTag m Data.DefinitionIRef
+makeDefinition = do
   holeI <- Data.newExprIRef Data.ExpressionHole
   typeI <- Data.newExprIRef Data.ExpressionHole
   defI <- Transaction.newIRef $ Data.Definition typeI holeI
   modP globals (Data.DefinitionRef defI :)
-  setP (aNameRef (IRef.guid defI)) newName
   return defI
 
-aDataRef
+dataGuid :: SBS.ByteString -> Guid -> Guid
+dataGuid str guid = Guid.combine guid $ Guid.make str
+
+assocDataRef
   :: (Binary b, Monad m)
   => SBS.ByteString -> b -> Guid
   -> MkProperty t m b
-aDataRef str def guid = do
-  val <- Transaction.readGuidDef def cGuid
-  return $ Property val (Transaction.writeGuid cGuid)
-  where
-    cGuid = Guid.combine guid $ Guid.make str
+assocDataRef str def guid = do
+  val <- Transaction.readGuidDef def $ dataGuid str guid
+  return . Property val $ Transaction.writeGuid $ dataGuid str guid
 
--- Get an associated name from the given IRef
-aNameRef :: Monad m => Guid -> MkProperty t m String
-aNameRef = aDataRef "Name" ""
+assocNameRef :: Monad m => Guid -> MkProperty t m String
+assocNameRef = assocDataRef "Name" ""
 
 variableNameRef
   :: Monad m => Data.VariableRef -> MkProperty t m String
-variableNameRef = aNameRef . Data.variableRefGuid
+variableNameRef = assocNameRef . Data.variableRefGuid
 
 newPane
   :: Monad m => Data.DefinitionIRef -> Transaction ViewTag m ()
@@ -176,7 +175,7 @@ newBuiltin fullyQualifiedName typeI = do
     Data.FFIName (init path) name
   builtinIRef <- Transaction.newIRef $ Data.Definition typeI builtinExprI
 
-  setP (aNameRef (IRef.guid builtinIRef)) name
+  setP (assocNameRef (IRef.guid builtinIRef)) name
   return $ Data.DefinitionRef builtinIRef
   where
     name = last path
