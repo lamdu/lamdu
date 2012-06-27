@@ -15,7 +15,7 @@ import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators((%%))
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.SizeRange (Size, fixedSize)
-import Graphics.UI.Bottle.Sized (Sized, mkSized)
+import Graphics.UI.Bottle.Sized (Sized(..))
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.ByteString.Char8 as SBS8
@@ -106,7 +106,7 @@ drawTextAsLines style text =
   enumerate $ splitWhen (== '\n') text
 
 make :: Style -> String -> AnimId -> Sized Anim.Frame
-make style text animId = mkSized (fixedSize textSize) . const $ frame animId
+make style text animId = Sized (fixedSize textSize) . const $ frame animId
   where
     (frame, textSize) = drawTextAsLines style text
 

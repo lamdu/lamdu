@@ -21,7 +21,7 @@ import Data.Ord (comparing)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators.Utils (square, textHeight)
 import Graphics.UI.Bottle.Rect (Rect(..))
-import Graphics.UI.Bottle.Sized (mkSized)
+import Graphics.UI.Bottle.Sized (Sized(..))
 import Graphics.UI.Bottle.Widget (Widget(..))
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinUtils
@@ -134,7 +134,7 @@ makeFocused cursor style str myId =
     widget = Widget {
       isFocused = True,
       content =
-        mkSized reqSize . const $
+        Sized reqSize . const $
         Widget.SizeDependentWidgetData {
           Widget.sdwdFrame = img,
           Widget.sdwdEventMap = mempty,

@@ -10,7 +10,7 @@ module Graphics.UI.Bottle.Widgets.Box(
 import Data.Maybe (fromMaybe)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Rect (Rect(..))
-import Graphics.UI.Bottle.Sized (Sized)
+import Graphics.UI.Bottle.Sized (Sized(..))
 import Graphics.UI.Bottle.Widget (Widget, SizeDependentWidgetData)
 import Graphics.UI.Bottle.Widgets.Grid (KGrid(..))
 import qualified Data.AtFieldTH as AtFieldTH

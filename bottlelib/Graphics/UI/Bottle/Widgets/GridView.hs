@@ -8,7 +8,7 @@ import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.SizeRange (fixedSize, SizeRange(..), Size)
-import Graphics.UI.Bottle.Sized (Sized, mkSized, requestedSize, fromSize)
+import Graphics.UI.Bottle.Sized (Sized(..))
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Rect as Rect
@@ -71,11 +71,11 @@ makeGeneric :: (Rect -> a -> b) -> [[Sized a]] -> Sized [[b]]
 -- Special case to preserve shape to avoid handling it above in
 -- "maximum", "transpose", etc
 makeGeneric _ [] =
-  mkSized (fixedSize 0) (const [])
+  Sized (fixedSize 0) (const [])
 makeGeneric _ [[]] =
-  mkSized (fixedSize 0) (const [[]])
+  Sized (fixedSize 0) (const [[]])
 makeGeneric translate rows =
-  mkSized reqSize mkRes
+  Sized reqSize mkRes
   where
     (reqSize, mkPlacements) = makePlacements $ (map . map) requestedSize rows
     mkRes givenSize = (zipWith . zipWith) locate (mkPlacements givenSize) rows
