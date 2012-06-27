@@ -41,11 +41,11 @@ data Actions m = Actions
   , callWithArg  :: T m Guid
   , lambdaWrap   :: T m Guid
   , addWhereItem :: T m Guid
-  , mReplace     :: MAction m
+  , replace      :: T m Guid
+  , cut          :: T m Guid
   , mDelete      :: MAction m
-  -- invariant: mCut includes the action of mDelete if one exists, or
-  -- mReplace if one doesn't
-  , mCut         :: MAction m
+  -- invariant: cut includes the action of mDelete if one exists, or
+  -- replace if one doesn't
   , mNextArg     :: Maybe (ExpressionRef m)
   }
 
@@ -255,16 +255,15 @@ mkActions stored =
   , giveAsArg = guidify $ DataOps.giveAsArg stored
   , lambdaWrap = guidify $ DataOps.lambdaWrap stored
   , addWhereItem = guidify $ DataOps.redexWrap stored
-    -- Hole will remove mReplace because no point replacing hole with hole.
-  , mReplace = Just replace
+  , replace = doReplace
     -- mDelete gets overridden by parent if it is an apply.
   , mDelete = Nothing
-  , mCut = Just $ mkCutter (Property.value stored) replace
+  , cut = mkCutter (Property.value stored) doReplace
   , mNextArg = Nothing
   }
   where
     guidify = liftM Data.exprIRefGuid
-    replace = guidify $ DataOps.replaceWithHole stored
+    doReplace = guidify $ DataOps.replaceWithHole stored
 
 makeEntityGuid :: Monad m => Guid -> ExprEntity m -> Entity m
 makeEntityGuid exprGuid exprI =
@@ -295,13 +294,10 @@ addStoredDeleteCutActions
   -> Entity m -> Entity m
 addStoredDeleteCutActions deletedP parentP replacerP =
   (atEActions . fmap)
-  (setCutter .
+  ((atCut . const) cutter .
    (atMDelete . const) (Just delete))
   where
-    setCutter actions = (atMCut . const) (mCutter actions) actions
-    mCutter actions = do
-      _ <- mReplace actions -- mReplace as a guard here: if no replacer, no cutter either
-      Just $ mkCutter (Property.value deletedP) delete
+    cutter = mkCutter (Property.value deletedP) delete
     delete = do
       Property.set parentP $ Property.value replacerP
       return . Data.exprIRefGuid $ Property.value replacerP
@@ -555,10 +551,7 @@ convertHole :: Monad m => Convertor m
 convertHole exprI = do
   mPaste <- maybe (return Nothing) mkPaste $ eeStored exprI
   scope <- readScope
-  (liftM . atREntity . atEActions . fmap)
-    ((atMReplace . const) Nothing .
-     (atMCut . const) Nothing) .
-    mkExpressionRef exprI . ExpressionHole $
+  mkExpressionRef exprI . ExpressionHole $
     Hole
     { holeScope = scope
     , holePickResult = fmap (pickResult . writeIRef) $ eeStored exprI

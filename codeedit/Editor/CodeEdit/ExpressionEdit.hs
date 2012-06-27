@@ -128,14 +128,16 @@ expressionEventMap holePicker actions =
        Sugar.addNextArg actions)
     delete =
       -- Replace has the keys of Delete if delete is not available:
-      mkMEventMap Sugar.mDelete
-      Config.delKeys "Delete" WidgetIds.fromGuid
+      maybeMempty (Sugar.mDelete actions) $
+      mkEventMap Config.delKeys "Delete" WidgetIds.fromGuid
     cut =
-      mkMEventMap Sugar.mCut
-      Config.cutKeys "Cut" WidgetIds.fromGuid
+      if isHole then mempty else
+      mkEventMap Config.cutKeys "Cut" WidgetIds.fromGuid $
+      Sugar.cut actions
     replace =
-      mkMEventMap Sugar.mReplace
-      (Config.replaceKeys ++ Config.delKeys) "Replace" diveGuid
+      if isHole then mempty else
+      mkEventMap (Config.replaceKeys ++ Config.delKeys) "Replace" diveGuid $
+      Sugar.replace actions
     lambdaWrap =
       mkEventMap Config.lambdaWrapKeys "Lambda wrap" diveParam $
       Sugar.lambdaWrap actions
@@ -145,8 +147,6 @@ expressionEventMap holePicker actions =
 
     diveGuid = FocusDelegator.delegatingId . WidgetIds.fromGuid
     diveParam = FocusDelegator.delegatingId . WidgetIds.paramId
-    mkMEventMap getAct keys doc f =
-      maybeMempty (getAct actions) $ mkEventMap keys doc f
     mkEventMap keys doc f =
       Widget.keysEventMapMovesCursor keys doc .
       liftM f . IT.transaction
@@ -157,6 +157,7 @@ expressionEventMap holePicker actions =
       keys (ifHole (const ("Pick result and " ++)) doc) $ action
     moveUnlessOnHole = ifHole $ (const . fmap . liftM . Widget.atECursor . const) Nothing
     pickResultFirst = maybe id (fmap . joinEvents)
+    isHole = foldHolePicker False (const True) holePicker
     ifHole whenHole = foldHolePicker id whenHole holePicker
     joinEvents x y = do
       r <- liftM Widget.eAnimIdMapping x
