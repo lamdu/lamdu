@@ -43,6 +43,8 @@ data Actions m = Actions
   , addWhereItem :: T m Guid
   , mReplace     :: MAction m
   , mDelete      :: MAction m
+  -- invariant: mCut includes the action of mDelete if one exists, or
+  -- mReplace if one doesn't
   , mCut         :: MAction m
   , mNextArg     :: Maybe (ExpressionRef m)
   }
@@ -294,13 +296,13 @@ addStoredDeleteCutActions
 addStoredDeleteCutActions deletedP parentP replacerP =
   (atEActions . fmap)
   (setCutter .
-   (atMDelete . const) (Just replaceWithHole))
+   (atMDelete . const) (Just delete))
   where
     setCutter actions = (atMCut . const) (mCutter actions) actions
     mCutter actions = do
       _ <- mReplace actions -- mReplace as a guard here: if no replacer, no cutter either
-      Just $ mkCutter (Property.value deletedP) replaceWithHole
-    replaceWithHole = do
+      Just $ mkCutter (Property.value deletedP) delete
+    delete = do
       Property.set parentP $ Property.value replacerP
       return . Data.exprIRefGuid $ Property.value replacerP
 
