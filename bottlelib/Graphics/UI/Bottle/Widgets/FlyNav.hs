@@ -9,6 +9,7 @@ import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.SizeRange (Size)
 import Graphics.UI.Bottle.Widget (Widget)
+import Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys)
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -101,28 +102,30 @@ addMovements
   -> (Maybe ActiveState -> f ())
   -> Widget.EventHandlers f
 addMovements = mconcat
-  [ addMovement "Down"  EventMap.KeyDown  (Vector2   0    1)
-  , addMovement "Up"    EventMap.KeyUp    (Vector2   0  (-1))
-  , addMovement "Right" EventMap.KeyRight (Vector2   1    0)
-  , addMovement "Left"  EventMap.KeyLeft  (Vector2 (-1)   0)
+  [ addMovement "Down"  (keysDown  stdDirKeys) (Vector2   0    1)
+  , addMovement "Up"    (keysUp    stdDirKeys) (Vector2   0  (-1))
+  , addMovement "Right" (keysRight stdDirKeys) (Vector2   1    0)
+  , addMovement "Left"  (keysLeft  stdDirKeys) (Vector2 (-1)   0)
   ]
 
 addMovement
   :: Functor f
   => [Char]
-  -> EventMap.Key
+  -> [EventMap.Key]
   -> Vector2 Widget.R
   -> Vector2 Widget.R
   -> [Movement]
   -> (Maybe ActiveState -> f ())
   -> Widget.EventHandlers f
-addMovement name key dir pos movements setState
+addMovement name keys dir pos movements setState
   | name `elem` map mName movements = mempty
   | otherwise =
-    mkKeyMap EventMap.Press modKey ("Start FlyNav " ++ name) .
-    setState . Just $ ActiveState pos (Movement name modKey dir : movements)
-    where
-      modKey = EventMap.ModKey modifier key
+    mconcat
+    [ mkKeyMap EventMap.Press modKey ("Start FlyNav " ++ name) .
+      setState . Just $ ActiveState pos (Movement name modKey dir : movements)
+    | key <- keys
+    , let modKey = EventMap.ModKey modifier key
+    ]
 
 zipped :: [a] -> [(a, [a])]
 zipped [] = []
