@@ -161,8 +161,6 @@ makeWordEdit ::
   Transaction.Property t m String ->
   Widget.Id -> TWidget t m
 makeWordEdit =
-  (fmap . fmap . liftM . Widget.atEventMap)
-  (EventMap.filterChars (`notElem` "=`[]")) .
   removeKeys makeLineEdit $
   EventMap.ModKey EventMap.noMods EventMap.KeySpace
 
@@ -184,7 +182,12 @@ makeNameEdit editingEmptyStr ident myId =
   (OT.atTextStyle . TextEdit.atSEmptyFocusedString . const)
     editingEmptyStr $
     OT.transaction (Anchors.assocNameRef ident) >>=
-    flip makeWordEdit myId
+    flip makeEditor myId
+  where
+    makeEditor =
+      (fmap . fmap . liftM . Widget.atEventMap)
+      (EventMap.filterChars (`notElem` "=[]\\"))
+      makeWordEdit
 
 boxAlignK :: Vector2 Widget.R -> Box.Orientation -> [(key, Widget f)] -> KBox key f
 boxAlignK align orientation =
