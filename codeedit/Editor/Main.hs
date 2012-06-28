@@ -41,7 +41,6 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
 import qualified Graphics.UI.Bottle.Widgets.FlyNav as FlyNav
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
-import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified System.Directory as Directory
 import qualified System.Info
 
@@ -141,7 +140,8 @@ runDbStore font store = do
   ExampleDB.initDB store
   flyNavMake <- makeFlyNav
   addHelp <-
-    EventMapDoc.makeToggledHelpAdder Config.overlayDocKeys helpStyle
+    EventMapDoc.makeToggledHelpAdder Config.overlayDocKeys
+    (Config.helpStyle font)
   initCache <-
     dbToIO . liftM useCache $
     viewToDb CodeEdit.makeSugarCache
@@ -177,18 +177,13 @@ runDbStore font store = do
 
   mainLoopDebugMode font makeWidget addHelp
   where
-    useCache = fromCacheCursor font dbToIO
+    useCache = fromCacheCursor (Config.baseStyle font) dbToIO
     mkWidgetWarnInvalidCursor fromCursor cursor = do
       (isValid, newCursor, widget) <-
         dbToIO $ mkWidgetRootFallback fromCursor cursor
       unless isValid . putStrLn $ "Invalid cursor: " ++ show cursor
       return (newCursor, widget)
 
-    helpStyle = TextView.Style {
-      TextView.styleColor = Draw.Color 1 1 1 1,
-      TextView.styleFont = font,
-      TextView.styleFontSize = Config.helpTextSize
-      }
 
     dbToIO = Transaction.run store
     viewToDb act = do
@@ -198,13 +193,13 @@ runDbStore font store = do
 type VersionCache = CodeEdit.SugarCache (Transaction DBTag IO)
 
 fromCacheCursor
-  :: Draw.Font
+  :: TextEdit.Style
   -> (Transaction DBTag IO (Widget.EventResult, Last VersionCache)
       -> IO (Widget.EventResult, Last VersionCache))
   -> CodeEdit.SugarCache (Transaction DBTag IO)
   -> Widget.Id
   -> Transaction DBTag IO (Widget (Writer.WriterT (Last VersionCache) IO))
-fromCacheCursor font dbToIO cache = memo $ \cursor ->
+fromCacheCursor style dbToIO cache = memo $ \cursor ->
   -- Get rid of OTransaction/ITransaction wrappings
   liftM
     (Widget.atEvents
@@ -217,20 +212,6 @@ fromCacheCursor font dbToIO cache = memo $ \cursor ->
       maybe (return ()) (IT.transaction . Anchors.setP Anchors.cursor) $
         Widget.eCursor eventResult
       return eventResult
-    style = TextEdit.Style
-      { TextEdit.sTextViewStyle =
-        TextView.Style
-          { TextView.styleColor = Draw.Color 1 1 1 1
-          , TextView.styleFont = font
-          , TextView.styleFontSize = Config.baseTextSize
-          }
-      , TextEdit.sCursorColor = TextEdit.defaultCursorColor
-      , TextEdit.sCursorWidth = TextEdit.defaultCursorWidth
-      , TextEdit.sTextCursorId = WidgetIds.textCursorId
-      , TextEdit.sBackgroundCursorId = WidgetIds.backgroundCursorId
-      , TextEdit.sEmptyUnfocusedString = ""
-      , TextEdit.sEmptyFocusedString = ""
-      }
     makeCodeEdit =
       BranchGUI.makeRootWidget CodeEdit.makeSugarCache .
       CodeEdit.makeCodeEdit

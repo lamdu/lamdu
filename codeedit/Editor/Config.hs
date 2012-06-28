@@ -3,8 +3,11 @@
 
 module Editor.Config where
 
+import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
+import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
 mk = E.ModKey
 
@@ -78,9 +81,6 @@ whereScaleFactor = 0.85
 foldKeys = [k '-']
 unfoldKeys = foldKeys
 
-helpTextSize = 10
-baseTextSize = 25
-
 typeScaleFactor = 0.4
 squareParensScaleFactor = 0.96
 
@@ -95,3 +95,24 @@ activeDefBGColor = Draw.Color 0 0 0.2 1
 
 inferredTypeTint = Draw.Color 0.7 0.7 0.7 1
 inferredTypeErrorBGColor = Draw.Color 0.5 0.05 0.05 1
+
+helpStyle font = TextView.Style {
+  TextView.styleColor = Draw.Color 1 1 1 1,
+  TextView.styleFont = font,
+  TextView.styleFontSize = 10
+  }
+
+baseStyle font = TextEdit.Style
+  { TextEdit.sTextViewStyle =
+    TextView.Style
+      { TextView.styleColor = Draw.Color 1 1 1 1
+      , TextView.styleFont = font
+      , TextView.styleFontSize = 25
+      }
+  , TextEdit.sCursorColor = TextEdit.defaultCursorColor
+  , TextEdit.sCursorWidth = TextEdit.defaultCursorWidth
+  , TextEdit.sTextCursorId = WidgetIds.textCursorId
+  , TextEdit.sBackgroundCursorId = WidgetIds.backgroundCursorId
+  , TextEdit.sEmptyUnfocusedString = ""
+  , TextEdit.sEmptyFocusedString = ""
+  }
