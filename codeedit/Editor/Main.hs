@@ -100,7 +100,9 @@ mainLoopDebugMode font makeWidget addHelp = do
         set = writeIORef debugModeRef (not isDebugMode)
       return .
         whenApply isDebugMode (Widget.atFrame (addAnnotations font)) $
-        Widget.strongerEvents (Widget.keysEventMap Config.debugModeKeys doc set) widget
+        Widget.strongerEvents
+        (Widget.keysEventMap Config.debugModeKeys doc set)
+        widget
     makeDebugModeWidget = addHelp =<< addDebugMode =<< makeWidget
   mainLoopWidget makeDebugModeWidget getAnimHalfLife
 
@@ -140,7 +142,6 @@ runDbStore font store = do
       widget <- mkCacheDependentWidget fromCursor
       fnState <- readIORef flyNavState
       return .
-        Widget.atMkSizeDependentWidgetData memo .
         FlyNav.make WidgetIds.flyNav
         fnState (writeIORef flyNavState) $
         Widget.atEvents saveCache widget
@@ -205,5 +206,6 @@ runDbStore font store = do
       CodeEdit.makeCodeEdit cache
 
     attachCursor eventResult = do
-      maybe (return ()) (IT.transaction . Anchors.setP Anchors.cursor) $ Widget.eCursor eventResult
+      maybe (return ()) (IT.transaction . Anchors.setP Anchors.cursor) $
+        Widget.eCursor eventResult
       return eventResult

@@ -4,6 +4,7 @@ import Control.Arrow(first, second)
 import Control.Concurrent(threadDelay)
 import Control.Monad (liftM, when)
 import Data.IORef
+import Data.MRUMemo (memo)
 import Data.StateVar (($=))
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
 import Data.Vector.Vector2 (Vector2(..))
@@ -115,8 +116,8 @@ mainLoopAnim tickHandler eventHandler makeFrame getAnimationHalfLife = do
 compose :: [a -> a] -> a -> a
 compose = foldr (.) id
 
-mainLoopWidget :: IO (Widget IO) -> IO Anim.R -> IO a
-mainLoopWidget mkWidget getAnimationHalfLife = do
+mainLoopWidgetI :: IO (Widget IO) -> IO Anim.R -> IO a
+mainLoopWidgetI mkWidget getAnimationHalfLife = do
   widgetRef <- newIORef =<< mkWidget
   let
     newWidget = writeIORef widgetRef =<< mkWidget
@@ -143,3 +144,12 @@ mainLoopWidget mkWidget getAnimationHalfLife = do
       return . Widget.sdwdFrame . (`Widget.getSdwd` size) =<<
       readIORef widgetRef
   mainLoopAnim tickHandler eventHandler mkFrame getAnimationHalfLife
+
+argument :: (a -> b) -> (b -> c) -> a -> c
+argument = flip (.)
+
+mainLoopWidget :: IO (Widget IO) -> IO Anim.R -> IO a
+mainLoopWidget =
+  -- Always memoize the (Size->) function of the top-level widget
+  (argument . liftM . Widget.atMkSizeDependentWidgetData) memo
+  mainLoopWidgetI
