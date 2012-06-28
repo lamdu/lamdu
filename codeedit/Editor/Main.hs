@@ -194,8 +194,7 @@ runDbStore font store = do
     fromCacheCursor cache = memo $ \cursor ->
       -- Get rid of OTransaction/ITransaction wrappings
       liftM
-        (Widget.atMkSizeDependentWidgetData memo .
-         Widget.atEvents
+        (Widget.atEvents
          (Writer.mapWriterT (Transaction.run store . IT.runITransaction) .
           (lift . attachCursor =<<))) .
         runOTransaction cursor style $
