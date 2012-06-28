@@ -1,5 +1,8 @@
 {-# LANGUAGE TypeOperators #-}
-module Editor.BranchGUI(makeRootWidget) where
+module Editor.BranchGUI
+  ( makeRootWidget
+  , CachedITrans, CachedTWidget
+  ) where
 
 import Control.Applicative (pure, (<*))
 import Control.Arrow (second)
@@ -91,6 +94,9 @@ viewToDb = Transaction.run . Anchors.viewStore
 type CachedITrans t versionCache m =
   WriterT (Last versionCache) (ITransaction t m)
 
+type CachedTWidget t versionCache m =
+  OTransaction DBTag m (Widget (CachedITrans DBTag versionCache m))
+
 itrans :: Monad m => Transaction t m a -> CachedITrans t versionCache m a
 itrans = lift . IT.transaction
 
@@ -107,7 +113,7 @@ makeRootWidget
   :: MonadF m
   => Transaction ViewTag (Transaction DBTag m) versionCache
   -> TWidget ViewTag (Transaction DBTag m)
-  -> OTransaction DBTag m (Widget (CachedITrans DBTag versionCache m))
+  -> CachedTWidget DBTag versionCache m
 makeRootWidget mkCacheInView widget = do
   view <- OT.getP Anchors.view
   let
@@ -188,7 +194,7 @@ makeWidgetForView
   => Transaction DBTag m versionCache
   -> View
   -> TWidget ViewTag (Transaction DBTag m)
-  -> OTransaction DBTag m (Widget (CachedITrans DBTag versionCache m))
+  -> CachedTWidget t versionCache m
 makeWidgetForView mkCache view innerWidget = do
   curVersion <- OT.transaction $ View.curVersion view
   curVersionData <- OT.transaction $ Version.versionData curVersion

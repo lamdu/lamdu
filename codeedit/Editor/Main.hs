@@ -10,6 +10,7 @@ import Data.IORef
 import Data.List(intercalate)
 import Data.MRUMemo (memo)
 import Data.Monoid(Last(..), Monoid(..))
+import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2(Vector2)
 import Data.Word(Word8)
 import Editor.Anchors (DBTag)
@@ -106,35 +107,39 @@ mainLoopDebugMode font makeWidget addHelp = do
     makeDebugModeWidget = addHelp =<< addDebugMode =<< makeWidget
   mainLoopWidget makeDebugModeWidget getAnimHalfLife
 
+mkWidgetRootFallback
+  :: Monad m
+  => (Widget.Id -> Transaction DBTag m (Widget f))
+  -> Widget.Id -> Transaction DBTag m (Bool, Widget.Id, Widget f)
+mkWidgetRootFallback fromCursor cursor = do
+  candidateWidget <- fromCursor cursor
+  (isValid, newCursor, widget) <-
+    if Widget.isFocused candidateWidget
+    then return (True, cursor, candidateWidget)
+    else do
+      finalWidget <- fromCursor rootCursor
+      Anchors.setP Anchors.cursor rootCursor
+      return (False, rootCursor, finalWidget)
+  unless (Widget.isFocused widget) $
+    fail "Root cursor did not match"
+  return (isValid, newCursor, widget)
+  where
+    rootCursor = WidgetIds.fromIRef Anchors.panesIRef
+
 runDbStore :: Draw.Font -> Transaction.Store DBTag IO -> IO a
 runDbStore font store = do
   ExampleDB.initDB store
   flyNavState <- newIORef FlyNav.initState
   addHelp <-
     EventMapDoc.makeToggledHelpAdder Config.overlayDocKeys helpStyle
-  initCache <- Transaction.run store $ do
-    view <- Anchors.getP Anchors.view
-    liftM fromCacheCursor $
-      Transaction.run (Anchors.viewStore view) CodeEdit.makeSugarCache
-  initCursor <- Transaction.run store $ Anchors.getP Anchors.cursor
+  initCache <-
+    dbToIO . liftM fromCacheCursor $ viewToDb CodeEdit.makeSugarCache
+  initCursor <- dbToIO $ Anchors.getP Anchors.cursor
   cacheRef <- newIORef initCache
 
-  let
-    mkWidgetFromCursor fromCursor cursor = do
-      candidateWidget <- fromCursor cursor
-      (invalidCursor, widget) <-
-        if Widget.isFocused candidateWidget
-        then return (Nothing, candidateWidget)
-        else do
-          finalWidget <- fromCursor rootCursor
-          Anchors.setP Anchors.cursor rootCursor
-          return (Just cursor, finalWidget)
-      unless (Widget.isFocused widget) $
-        fail "Root cursor did not match"
-      return (invalidCursor, widget)
   widgetCacheRef <-
     newIORef . (,) initCursor . snd =<<
-    Transaction.run store (mkWidgetFromCursor initCache initCursor)
+    mkWidgetWarnInvalidCursor initCache initCursor
   let
     -- TODO: Move this logic to some more common place?
     makeWidget = do
@@ -147,17 +152,12 @@ runDbStore font store = do
         Widget.atEvents saveCache widget
 
     mkCacheDependentWidget fromCursor = do
-      (oldCursor, oldResult) <- readIORef widgetCacheRef
-      (cursor, (invalidCursor, widget)) <- Transaction.run store $ do
-        cursor <- Anchors.getP Anchors.cursor
-        result <-
-          if oldCursor == cursor
-          then return (Nothing, oldResult)
-          else mkWidgetFromCursor fromCursor cursor
-        return (cursor, result)
-      maybe (return ()) (putStrLn . ("Invalid cursor: " ++) . show)
-        invalidCursor
-      writeIORef widgetCacheRef (cursor, widget)
+      old@(oldCursor, _) <- readIORef widgetCacheRef
+      cursor <- dbToIO $ Anchors.getP Anchors.cursor
+      (newCursor, widget) <- if oldCursor == cursor
+         then return old
+         else mkWidgetWarnInvalidCursor fromCursor cursor
+      writeIORef widgetCacheRef (newCursor, widget)
       return widget
 
     saveCache action = do
@@ -170,7 +170,11 @@ runDbStore font store = do
 
   mainLoopDebugMode font makeWidget addHelp
   where
-    rootCursor = WidgetIds.fromIRef Anchors.panesIRef
+    mkWidgetWarnInvalidCursor fromCursor cursor = do
+      (isValid, newCursor, widget) <- dbToIO $ mkWidgetRootFallback fromCursor cursor
+      unless isValid . putStrLn $ "Invalid cursor: " ++ show cursor
+      return (newCursor, widget)
+
     helpStyle = TextView.Style {
       TextView.styleColor = Draw.Color 1 1 1 1,
       TextView.styleFont = font,
@@ -191,20 +195,30 @@ runDbStore font store = do
       , TextEdit.sEmptyFocusedString = ""
       }
 
+    dbToIO = Transaction.run store
+    viewToDb act = do
+      view <- Anchors.getP Anchors.view
+      Transaction.run (Anchors.viewStore view) act
+
     fromCacheCursor cache = memo $ \cursor ->
       -- Get rid of OTransaction/ITransaction wrappings
       liftM
         (Widget.atEvents
-         (Writer.mapWriterT (Transaction.run store . IT.runITransaction) .
+         (Writer.mapWriterT (dbToIO . IT.runITransaction) .
           (lift . attachCursor =<<))) .
         runOTransaction cursor style $
         makeCodeEdit cache
-
-    makeCodeEdit cache =
-      BranchGUI.makeRootWidget CodeEdit.makeSugarCache $
-      CodeEdit.makeCodeEdit cache
 
     attachCursor eventResult = do
       maybe (return ()) (IT.transaction . Anchors.setP Anchors.cursor) $
         Widget.eCursor eventResult
       return eventResult
+
+type VersionCache = CodeEdit.SugarCache (Transaction DBTag IO)
+
+makeCodeEdit
+  :: CodeEdit.SugarCache (Transaction DBTag IO)
+  -> BranchGUI.CachedTWidget DBTag VersionCache IO
+makeCodeEdit =
+  BranchGUI.makeRootWidget CodeEdit.makeSugarCache .
+  CodeEdit.makeCodeEdit
