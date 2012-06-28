@@ -3,7 +3,7 @@
  -}
 module Data.MRUMemo(memoIO, memo) where
 
-import Control.Concurrent.MVar
+import Data.IORef
 import System.IO.Unsafe(unsafePerformIO)
 
 -- | Memoize the given function with a single most-recently-used value
@@ -11,20 +11,17 @@ memoIO :: (Show a, Eq a)
        => (a -> b)           -- ^Function to memoize
        -> IO (a -> IO b)
 memoIO f = do
-    lastResultRef <- newMVar Nothing
+    lastResultRef <- newIORef Nothing
     return $ \x -> do
-      m <- readMVar lastResultRef
-      let
-        callOrig = do
-          let r = f x
-          modifyMVar_ lastResultRef . const . return $ Just (x, r)
-          return r
-      case m of
-        Nothing -> callOrig
-        Just (key, val)
-          | key == x  -> do
-            return val
-          | otherwise -> callOrig
+      atomicModifyIORef lastResultRef $ \m ->
+        let
+          r = f x
+          callOrig = (Just (x, r), r)
+        in case m of
+          Nothing -> callOrig
+          Just (key, val)
+            | key == x  -> (m, val)
+            | otherwise -> callOrig
 
 -- | The pure version of 'memoIO'.
 memo :: (Show a, Eq a)
