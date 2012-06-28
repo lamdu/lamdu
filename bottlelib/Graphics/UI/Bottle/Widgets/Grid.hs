@@ -12,19 +12,21 @@ where
 import Control.Applicative (liftA2)
 import Control.Arrow (first, second)
 import Control.Monad (msum, (>=>))
-import Data.List (foldl', transpose, find, minimumBy)
+import Data.Function (on)
+import Data.List (foldl', transpose, find, minimumBy, sortBy, groupBy)
 import Data.List.Utils (index, enumerate2d)
-import Data.Maybe (isJust, fromMaybe, mapMaybe, catMaybes)
+import Data.MRUMemo (memo)
+import Data.Maybe (isJust, fromMaybe, catMaybes, mapMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Ord (comparing)
 import Data.Vector.Vector2 (Vector2(..))
-import Graphics.DrawingCombinators(R)
 import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.SizeRange (Size)
 import Graphics.UI.Bottle.Sized (Sized(..))
-import Graphics.UI.Bottle.Widget (Widget(..), SizeDependentWidgetData(..))
+import Graphics.UI.Bottle.Widget (Widget(..), SizeDependentWidgetData(..), R)
 import Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys)
 import qualified Data.AtFieldTH as AtFieldTH
+import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Rect as Rect
@@ -199,39 +201,61 @@ helper combineEnters (KGrid mCursor sChildren) =
           where
             (weakMap, strongMap) = mkNavEventmap navDests
 
+tupleToVector2 :: (a, a) -> Vector2 a
+tupleToVector2 (y, x) = Vector2 x y
+
+minimumOn :: Ord b => (a -> b) -> [a] -> a
+minimumOn = minimumBy . comparing
+
+sortOn :: Ord b => (a -> b) -> [a] -> [a]
+sortOn = sortBy . comparing
+
+groupOn :: Eq b => (a -> b) -> [a] -> [[a]]
+groupOn = groupBy . ((==) `on`)
+
+groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
+groupSortOn f = groupOn f . sortOn f
+
 toWidget :: KGrid key f -> Widget f
 toWidget =
   helper makeMEnter
   where
-    makeMEnter size children =
-      search . mapMaybe indexIntoMaybe .
-      (concatMap . map . first) tupleToVector2 $
-      enumerate2d children
+    makeMEnter size children = chooseClosest childEnters
       where
+        childEnters =
+          mapMaybe indexIntoMaybe .
+          (concatMap . map . first) tupleToVector2 $
+          enumerate2d children
+
+        chooseClosest [] = Nothing
+        chooseClosest _ = Just byDirection
+
+        byDirection dir =
+          minimumOn (Rect.distance dirRect . Widget.enterResultRect) .
+          map ($ dir) $ filteredByEdge edge
+          where
+            dirRect = Direction.fold (Rect 0 0) id dir
+            edge = asEdge size dirRect
+
+        filteredByEdge = memo $ \(Vector2 hEdge vEdge) ->
+          map snd .
+          concat . take 1 . groupSortOn ((* (-hEdge)) . Vector2.fst . fst) .
+          concat . take 1 . groupSortOn ((* (-vEdge)) . Vector2.snd . fst) $
+          childEnters
         indexIntoMaybe (i, m) = fmap ((,) i) m
-        search [] = Nothing
-        search childEnters = Just $ byDirection childEnters
-        byDirection childEnters dir =
-          (snd . minimumOn fst .
-           (map . scoredEnter dir .
-            Direction.fold (Rect 0 0) id) dir) childEnters dir
 
-        scoredEnter dir entryRect (i, childEnter) =
-          ((rectScore size entryRect i . Widget.enterResultRect . childEnter) dir, childEnter)
-
-        minimumOn = minimumBy . comparing
-
-        tupleToVector2 (x, y) = Vector2 x y
-
-rectScore :: Vector2 R -> Rect -> Vector2 Int -> Rect -> ([Int], R)
-rectScore size entryRect (Vector2 row col) enterResultRect =
-  (borderScore, Rect.distance entryRect enterResultRect)
-    where
-      borderScore =
-        concat [[col | fromLeft], [-col | fromRight],
-                [row | fromTop], [-row | fromBottom]]
-      Vector2 fromLeft fromTop = fmap (<= 0) (Rect.bottomRight entryRect)
-      Vector2 fromRight fromBottom = liftA2 (>=) (Rect.rectTopLeft entryRect) size
+asEdge :: Vector2 R -> Rect -> Vector2 Int
+asEdge size rect =
+  Vector2 hEdge vEdge
+  where
+    hEdge = boolToInt rightEdge - boolToInt leftEdge
+    vEdge = boolToInt bottomEdge - boolToInt topEdge
+    boolToInt False = 0
+    boolToInt True = 1
+    Vector2 leftEdge topEdge =
+      fmap (<= 0) (Rect.bottomRight rect)
+    Vector2 rightEdge bottomEdge =
+      liftA2 (>=) (Rect.rectTopLeft rect) size
 
 -- ^ If unfocused, will enters the given child when entered
 toWidgetBiased :: Cursor -> KGrid key f -> Widget f
