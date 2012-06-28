@@ -62,10 +62,10 @@ mkKeyMap isPress key doc =
   withEmptyResult
 
 speed :: Vector2 Widget.R
-speed = 12
+speed = 8
 
 accel :: Vector2 Widget.R
-accel = 1.02
+accel = 1.05
 
 targetSize :: Size
 targetSize = Vector2 25 25
