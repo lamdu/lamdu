@@ -12,19 +12,19 @@ memoIO :: (Show a, Eq a)
        -> IO (a -> IO b)
 memoIO f = do
     lastResultRef <- newIORef Nothing
-    return $ \x -> do
-      atomicModifyIORef lastResultRef $ \m ->
-        let
-          r = f x
-          callOrig = (Just (x, r), r)
-        in case m of
-          Nothing -> callOrig
-          Just (key, val)
-            | key == x  -> (m, val)
-            | otherwise -> callOrig
+    return $ \x -> atomicModifyIORef lastResultRef $ \m ->
+      let
+        r = f x
+        callOrig = (Just (x, r), r)
+      in case m of
+        Nothing -> callOrig
+        Just (key, val)
+          | key == x  -> (m, val)
+          | otherwise -> callOrig
 
 -- | The pure version of 'memoIO'.
 memo :: (Show a, Eq a)
      => (a -> b)           -- ^Function to memoize
-     -> (a -> b)
-memo f = let f' = unsafePerformIO (memoIO f) in \ x -> unsafePerformIO (f' x)
+     -> a -> b
+memo f = let f' = unsafePerformIO (memoIO f)
+         in unsafePerformIO . f'

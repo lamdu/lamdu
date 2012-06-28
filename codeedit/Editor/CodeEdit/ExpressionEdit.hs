@@ -86,7 +86,7 @@ make sExpr = do
   (holePicker, widget) <- makeEditor exprId
   typeEdits <- mapM make $ Sugar.rInferredTypes sExpr
   let
-    onReadOnly = Widget.doesn'tTakeFocus
+    onReadOnly = Widget.doesntTakeFocus
   return .
     maybe onReadOnly
     (Widget.weakerEvents . expressionEventMap holePicker)
@@ -99,7 +99,7 @@ expressionEventMap
   -> Sugar.Actions m
   -> EventHandlers (ITransaction ViewTag m)
 expressionEventMap holePicker actions =
-  mconcat $
+  mconcat
     [ giveAsArg
     , callWithArg
     , addArg

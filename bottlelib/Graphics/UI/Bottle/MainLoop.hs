@@ -119,12 +119,12 @@ mainLoopWidget :: IO (Widget IO) -> IO Anim.R -> IO a
 mainLoopWidget mkWidget getAnimationHalfLife = do
   widgetRef <- newIORef =<< mkWidget
   let
-    newWidget = do
-      writeIORef widgetRef =<< mkWidget
+    newWidget = writeIORef widgetRef =<< mkWidget
     tickHandler size = do
       widget <- readIORef widgetRef
       tickResults <-
-        sequence . E.emTickHandlers . Widget.sdwdEventMap $ Widget.getSdwd widget size
+        sequence . E.emTickHandlers . Widget.sdwdEventMap $
+        Widget.getSdwd widget size
       case tickResults of
         [] -> return Nothing
         _ -> do

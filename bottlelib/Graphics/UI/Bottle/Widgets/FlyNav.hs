@@ -3,6 +3,7 @@ module Graphics.UI.Bottle.Widgets.FlyNav(make, State, initState) where
 
 import Control.Applicative (Applicative(..), liftA2, (*>))
 import Control.Arrow (second)
+import Control.Monad (void)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Animation (AnimId)
@@ -82,8 +83,7 @@ target animId pos =
   Anim.scale targetSize .
   Anim.onImages (Draw.tint targetColor) .
   Anim.simpleFrame animId .
-  (fmap . const) () $
-  Draw.circle
+  void $ Draw.circle
 
 cap :: Size -> Vector2 Widget.R -> Vector2 Widget.R
 cap size = liftA2 max 0 . liftA2 min size
@@ -110,7 +110,7 @@ addMovements = mconcat
 
 addMovement
   :: Functor f
-  => [Char]
+  => String
   -> [EventMap.Key]
   -> Vector2 Widget.R
   -> Vector2 Widget.R

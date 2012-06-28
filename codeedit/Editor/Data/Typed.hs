@@ -274,7 +274,7 @@ derefTypeRef =
       where
         recurse =
           Reader.mapReaderT
-          (ListFuncs.fromList <=< lift . (liftM holify . ListCls.toList)) .
+          (ListFuncs.fromList <=< lift . liftM holify . ListCls.toList) .
           Reader.local (typeRef :) .
           go
         holify [] =
@@ -299,61 +299,61 @@ unifyOnTree
   -> Infer m ()
 unifyOnTree = (`runReaderT` []) . go
   where
-    go (StoredExpression stored typeRef value) = do
+    go (StoredExpression stored typeRef value) =
       case value of
-        Data.ExpressionLambda (Data.Lambda paramType body) -> do
-          paramTypeRef <- lift $ typeRefFromStored paramType
-          -- We use "flip unify typeRef" so that the new Pi will be
-          -- the official Pi guid due to the "left-bias" in
-          -- unify/unifyPair. Thus we can later assume that we got the
-          -- same guid in the pi and the lambda.
-          lift $ do
-            flip unify typeRef <=< makePi (eipGuid stored) .
-              Data.Lambda paramTypeRef $
-              eeInferredType body
-          Reader.local ((eipGuid stored, paramTypeRef):) $ go body
-        Data.ExpressionPi (Data.Lambda paramType resultType) -> do
-          paramTypeRef <- lift $ typeRefFromStored paramType
-          lift . setType $ eeInferredType resultType
-          Reader.local ((eipGuid stored, paramTypeRef):) $ go resultType
-        Data.ExpressionApply (Data.Apply func arg) -> do
-          go func
-          go arg
-          lift $ do
-            let
-              funcTypeRef = eeInferredType func
-              argTypeRef = eeInferredType arg
-            -- We give the new Pi the same Guid as the Apply. This is
-            -- fine because Apply's Guid is meaningless and the
-            -- canonicalization will fix it later anyway.
-            unify funcTypeRef <=< makePi (eipGuid stored) $
-              Data.Lambda argTypeRef typeRef
-            funcTypes <- getTypeRef funcTypeRef
-            sequence_
-              [ subst piGuid (typeRefFromStored arg) piResultTypeRef
-              | Data.GuidExpression piGuid
-                (Data.ExpressionPi
-                 (Data.Lambda _ piResultTypeRef))
-                <- funcTypes
-              ]
-        Data.ExpressionGetVariable (Data.ParameterRef guid) -> do
-          mParamTypeRef <- Reader.asks $ lookup guid
-          lift $ case mParamTypeRef of
-            -- TODO: Not in scope: Bad code,
-            -- add an OutOfScopeReference type error
-            Nothing -> return ()
-            Just paramTypeRef -> setType paramTypeRef
-        Data.ExpressionGetVariable (Data.DefinitionRef defI) -> lift $ do
-          defTypeStored <-
-            liftM (storedFromLoaded [] . Data.defType . DataLoad.defEntityValue) .
-            liftTransaction $
-            DataLoad.loadDefinition defI
-          defTypeRef <- typeRefFromStored $ ignoreStoredMonad defTypeStored
-          setType defTypeRef
-        Data.ExpressionLiteralInteger _ ->
-          lift $
-          setType <=< makeSingletonTypeRef zeroGuid . Data.ExpressionBuiltin $ Data.FFIName ["Prelude"] "Integer"
-        _ -> return ()
+      Data.ExpressionLambda (Data.Lambda paramType body) -> do
+        paramTypeRef <- lift $ typeRefFromStored paramType
+        -- We use "flip unify typeRef" so that the new Pi will be
+        -- the official Pi guid due to the "left-bias" in
+        -- unify/unifyPair. Thus we can later assume that we got the
+        -- same guid in the pi and the lambda.
+        lift $ flip unify typeRef <=< makePi (eipGuid stored) .
+          Data.Lambda paramTypeRef $ eeInferredType body
+        Reader.local ((eipGuid stored, paramTypeRef):) $ go body
+      Data.ExpressionPi (Data.Lambda paramType resultType) -> do
+        paramTypeRef <- lift $ typeRefFromStored paramType
+        lift . setType $ eeInferredType resultType
+        Reader.local ((eipGuid stored, paramTypeRef):) $ go resultType
+      Data.ExpressionApply (Data.Apply func arg) -> do
+        go func
+        go arg
+        lift $ do
+          let
+            funcTypeRef = eeInferredType func
+            argTypeRef = eeInferredType arg
+          -- We give the new Pi the same Guid as the Apply. This is
+          -- fine because Apply's Guid is meaningless and the
+          -- canonicalization will fix it later anyway.
+          unify funcTypeRef <=< makePi (eipGuid stored) $
+            Data.Lambda argTypeRef typeRef
+          funcTypes <- getTypeRef funcTypeRef
+          sequence_
+            [ subst piGuid (typeRefFromStored arg) piResultTypeRef
+            | Data.GuidExpression piGuid
+              (Data.ExpressionPi
+               (Data.Lambda _ piResultTypeRef))
+              <- funcTypes
+            ]
+      Data.ExpressionGetVariable (Data.ParameterRef guid) -> do
+        mParamTypeRef <- Reader.asks $ lookup guid
+        lift $ case mParamTypeRef of
+          -- TODO: Not in scope: Bad code,
+          -- add an OutOfScopeReference type error
+          Nothing -> return ()
+          Just paramTypeRef -> setType paramTypeRef
+      Data.ExpressionGetVariable (Data.DefinitionRef defI) -> lift $ do
+        defTypeStored <-
+          liftM
+          (storedFromLoaded [] . Data.defType . DataLoad.defEntityValue) .
+          liftTransaction $
+          DataLoad.loadDefinition defI
+        defTypeRef <- typeRefFromStored $ ignoreStoredMonad defTypeStored
+        setType defTypeRef
+      Data.ExpressionLiteralInteger _ ->
+        lift $
+        setType <=< makeSingletonTypeRef zeroGuid .
+        Data.ExpressionBuiltin $ Data.FFIName ["Prelude"] "Integer"
+      _ -> return ()
       where
         makePi guid = makeSingletonTypeRef guid . Data.ExpressionPi
         setType = unify typeRef

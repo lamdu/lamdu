@@ -10,7 +10,7 @@ module Graphics.UI.Bottle.Widget
   , keysEventMap, keysEventMapMovesCursor
   , EventHandlers, atContent, atIsFocused
   , getSdwd
-  , takesFocus, doesn'tTakeFocus
+  , takesFocus, doesntTakeFocus
   , atMkSizeDependentWidgetData, atSizeDependentWidgetData
   , atFrameWithSize, atFrame, atMaybeEnter, atEventMap, atEvents
   , backgroundColor, tint, liftView
@@ -136,8 +136,8 @@ takesFocus enter = atSizeDependentWidgetData f
         mEnter = Just $ fmap (EnterResult focalArea . fmap eventResultFromCursor) enter
         focalArea = sdwdFocalArea sdwd
 
-doesn'tTakeFocus :: Widget f -> Widget f
-doesn'tTakeFocus = (atMaybeEnter . const) Nothing
+doesntTakeFocus :: Widget f -> Widget f
+doesntTakeFocus = (atMaybeEnter . const) Nothing
 
 atMaybeEnter :: (MEnter f -> MEnter f) -> Widget f -> Widget f
 atMaybeEnter = atSizeDependentWidgetData . atSdwdMaybeEnter

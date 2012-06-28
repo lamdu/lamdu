@@ -190,7 +190,7 @@ keyEventMap :: KeyEvent -> Doc -> a -> EventMap a
 keyEventMap eventType doc handler =
   mempty
   { emKeyMap =
-    Map.singleton eventType $
+    Map.singleton eventType
     DocHandler
     { dhDoc = doc
     , dhHandler = handler
@@ -198,8 +198,8 @@ keyEventMap eventType doc handler =
   }
 
 keyPress :: ModKey -> Doc -> a -> EventMap a
-keyPress modKey doc =
-  keyEventMap (KeyEvent Press modKey) doc
+keyPress =
+  keyEventMap . KeyEvent Press
 
 keyPresses :: [ModKey] -> Doc -> a -> EventMap a
 keyPresses = mconcat . map keyPress

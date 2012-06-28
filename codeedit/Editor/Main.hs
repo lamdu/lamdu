@@ -195,7 +195,7 @@ runDbStore font store = do
       liftM
         (Widget.atMkSizeDependentWidgetData memo .
          Widget.atEvents
-         ((Writer.mapWriterT (Transaction.run store . IT.runITransaction)) .
+         (Writer.mapWriterT (Transaction.run store . IT.runITransaction) .
           (lift . attachCursor =<<))) .
         runOTransaction cursor style $
         makeCodeEdit cache
