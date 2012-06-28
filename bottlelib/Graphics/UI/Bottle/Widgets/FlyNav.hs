@@ -152,7 +152,7 @@ makeSdwd animId (Just (ActiveState pos movements)) setState size sdwd =
     frame = target (animId ++ ["target"]) pos `mappend` highlight
     mEnteredChild = fmap ($ targetPos) $ Widget.sdwdMaybeEnter sdwd
     targetPos =
-      Direction.RelativePos $ Rect (pos - targetSize/2) targetSize
+      Direction.RelativePos $ Rect pos 0
     nextState =
       ActiveState (cap (pos + delta*speed) size)
       ((map . atMDir) (* accel) movements)
