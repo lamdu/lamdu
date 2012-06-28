@@ -172,13 +172,15 @@ runDbStore font store = do
       case mCacheCache of
         Last Nothing -> return ()
         Last (Just newCache) ->
-          writeIORef cacheRef $ fromCacheCursor newCache
+          writeIORef cacheRef $ useCache newCache
       return eventResult
 
   mainLoopDebugMode font makeWidget addHelp
   where
+    useCache = fromCacheCursor font dbToIO
     mkWidgetWarnInvalidCursor fromCursor cursor = do
-      (isValid, newCursor, widget) <- dbToIO $ mkWidgetRootFallback fromCursor cursor
+      (isValid, newCursor, widget) <-
+        dbToIO $ mkWidgetRootFallback fromCursor cursor
       unless isValid . putStrLn $ "Invalid cursor: " ++ show cursor
       return (newCursor, widget)
 
@@ -187,6 +189,34 @@ runDbStore font store = do
       TextView.styleFont = font,
       TextView.styleFontSize = Config.helpTextSize
       }
+
+    dbToIO = Transaction.run store
+    viewToDb act = do
+      view <- Anchors.getP Anchors.view
+      Transaction.run (Anchors.viewStore view) act
+
+type VersionCache = CodeEdit.SugarCache (Transaction DBTag IO)
+
+fromCacheCursor
+  :: Draw.Font
+  -> (Transaction DBTag IO (Widget.EventResult, Last VersionCache)
+      -> IO (Widget.EventResult, Last VersionCache))
+  -> CodeEdit.SugarCache (Transaction DBTag IO)
+  -> Widget.Id
+  -> Transaction DBTag IO (Widget (Writer.WriterT (Last VersionCache) IO))
+fromCacheCursor font dbToIO cache = memo $ \cursor ->
+  -- Get rid of OTransaction/ITransaction wrappings
+  liftM
+    (Widget.atEvents
+     (Writer.mapWriterT (dbToIO . IT.runITransaction) .
+      (lift . attachCursor =<<))) .
+    runOTransaction cursor style $
+    makeCodeEdit cache
+  where
+    attachCursor eventResult = do
+      maybe (return ()) (IT.transaction . Anchors.setP Anchors.cursor) $
+        Widget.eCursor eventResult
+      return eventResult
     style = TextEdit.Style
       { TextEdit.sTextViewStyle =
         TextView.Style
@@ -201,31 +231,6 @@ runDbStore font store = do
       , TextEdit.sEmptyUnfocusedString = ""
       , TextEdit.sEmptyFocusedString = ""
       }
-
-    dbToIO = Transaction.run store
-    viewToDb act = do
-      view <- Anchors.getP Anchors.view
-      Transaction.run (Anchors.viewStore view) act
-
-    fromCacheCursor cache = memo $ \cursor ->
-      -- Get rid of OTransaction/ITransaction wrappings
-      liftM
-        (Widget.atEvents
-         (Writer.mapWriterT (dbToIO . IT.runITransaction) .
-          (lift . attachCursor =<<))) .
-        runOTransaction cursor style $
-        makeCodeEdit cache
-
-    attachCursor eventResult = do
-      maybe (return ()) (IT.transaction . Anchors.setP Anchors.cursor) $
-        Widget.eCursor eventResult
-      return eventResult
-
-type VersionCache = CodeEdit.SugarCache (Transaction DBTag IO)
-
-makeCodeEdit
-  :: CodeEdit.SugarCache (Transaction DBTag IO)
-  -> BranchGUI.CachedTWidget DBTag VersionCache IO
-makeCodeEdit =
-  BranchGUI.makeRootWidget CodeEdit.makeSugarCache .
-  CodeEdit.makeCodeEdit
+    makeCodeEdit =
+      BranchGUI.makeRootWidget CodeEdit.makeSugarCache .
+      CodeEdit.makeCodeEdit
