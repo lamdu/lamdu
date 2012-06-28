@@ -126,14 +126,25 @@ mkWidgetRootFallback fromCursor cursor = do
   where
     rootCursor = WidgetIds.fromIRef Anchors.panesIRef
 
+makeFlyNav :: IO (Widget IO -> IO (Widget IO))
+makeFlyNav = do
+  flyNavState <- newIORef FlyNav.initState
+  return $ \widget -> do
+    fnState <- readIORef flyNavState
+    return .
+      FlyNav.make WidgetIds.flyNav
+      fnState (writeIORef flyNavState) $
+      widget
+
 runDbStore :: Draw.Font -> Transaction.Store DBTag IO -> IO a
 runDbStore font store = do
   ExampleDB.initDB store
-  flyNavState <- newIORef FlyNav.initState
+  flyNavMake <- makeFlyNav
   addHelp <-
     EventMapDoc.makeToggledHelpAdder Config.overlayDocKeys helpStyle
   initCache <-
-    dbToIO . liftM fromCacheCursor $ viewToDb CodeEdit.makeSugarCache
+    dbToIO . liftM useCache $
+    viewToDb CodeEdit.makeSugarCache
   initCursor <- dbToIO $ Anchors.getP Anchors.cursor
   cacheRef <- newIORef initCache
 
@@ -145,11 +156,7 @@ runDbStore font store = do
     makeWidget = do
       fromCursor <- readIORef cacheRef
       widget <- mkCacheDependentWidget fromCursor
-      fnState <- readIORef flyNavState
-      return .
-        FlyNav.make WidgetIds.flyNav
-        fnState (writeIORef flyNavState) $
-        Widget.atEvents saveCache widget
+      flyNavMake $ Widget.atEvents saveCache widget
 
     mkCacheDependentWidget fromCursor = do
       old@(oldCursor, _) <- readIORef widgetCacheRef
