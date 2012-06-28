@@ -4,7 +4,6 @@ module Graphics.UI.Bottle.Widgets.FlyNav(make, State, initState) where
 import Control.Applicative (Applicative(..), liftA2, (*>))
 import Control.Arrow (second)
 import Control.Monad (void)
-import Data.MRUMemo (memo)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Animation (AnimId)
@@ -188,4 +187,4 @@ make
   -> Widget f
   -> Widget f
 make animId state setState =
-  Widget.atMkSizeDependentWidgetData ((makeSdwd animId state setState <*>) . memo)
+  Widget.atMkSizeDependentWidgetData (makeSdwd animId state setState <*>)

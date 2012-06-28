@@ -1,14 +1,14 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, Rank2Types#-}
 module Main(main) where
 
 import Control.Arrow (second)
-import Control.Monad (liftM, unless)
+import Control.Monad (liftM, unless, (<=<))
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Writer (runWriterT)
+import Control.Monad.Trans.Writer (WriterT, runWriterT)
 import Data.ByteString (unpack)
 import Data.IORef
 import Data.List(intercalate)
-import Data.MRUMemo (memo)
+import Data.MRUMemo (memo, memoIO)
 import Data.Monoid(Last(..), Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2(Vector2)
@@ -106,25 +106,6 @@ mainLoopDebugMode font makeWidget addHelp = do
     makeDebugModeWidget = addHelp =<< addDebugMode =<< makeWidget
   mainLoopWidget makeDebugModeWidget getAnimHalfLife
 
-mkWidgetRootFallback
-  :: Monad m
-  => (Widget.Id -> Transaction DBTag m (Widget f))
-  -> Widget.Id -> Transaction DBTag m (Bool, Widget.Id, Widget f)
-mkWidgetRootFallback fromCursor cursor = do
-  candidateWidget <- fromCursor cursor
-  (isValid, newCursor, widget) <-
-    if Widget.isFocused candidateWidget
-    then return (True, cursor, candidateWidget)
-    else do
-      finalWidget <- fromCursor rootCursor
-      Anchors.setP Anchors.cursor rootCursor
-      return (False, rootCursor, finalWidget)
-  unless (Widget.isFocused widget) $
-    fail "Root cursor did not match"
-  return (isValid, newCursor, widget)
-  where
-    rootCursor = WidgetIds.fromIRef Anchors.panesIRef
-
 makeFlyNav :: IO (Widget IO -> IO (Widget IO))
 makeFlyNav = do
   flyNavState <- newIORef FlyNav.initState
@@ -135,6 +116,14 @@ makeFlyNav = do
       fnState (writeIORef flyNavState) $
       widget
 
+-- Safely make an IORef whose initial value needs to refer to the same
+-- IORef (for writes)
+fixIORef :: ((a -> IO ()) -> IO a) -> IO (IORef a)
+fixIORef mkInitial = do
+  var <- newIORef undefined
+  writeIORef var =<< mkInitial (writeIORef var)
+  return var
+
 runDbStore :: Draw.Font -> Transaction.Store DBTag IO -> IO a
 runDbStore font store = do
   ExampleDB.initDB store
@@ -142,64 +131,74 @@ runDbStore font store = do
   addHelp <-
     EventMapDoc.makeToggledHelpAdder Config.overlayDocKeys
     (Config.helpStyle font)
-  initCache <-
-    dbToIO . liftM useCache $
-    viewToDb CodeEdit.makeSugarCache
-  initCursor <- dbToIO $ Anchors.getP Anchors.cursor
-  cacheRef <- newIORef initCache
+  let
+    updateCacheWith _             (Last Nothing) = return ()
+    updateCacheWith writeNewCache (Last (Just newCache)) =
+      writeNewCache newCache
 
-  widgetCacheRef <-
-    newIORef . (,) initCursor . snd =<<
-    mkWidgetWarnInvalidCursor initCache initCursor
+    newMemoFromCache writeMemo sugarCache =
+      memoIO .
+      (fmap . liftM . Widget.atMkSizeDependentWidgetData) memo $
+      mkWidgetWithFallback (Config.baseStyle font) dbToIO
+      (updateCacheWith writeNewCache) sugarCache
+      where
+        writeNewCache = writeMemo <=< newMemoFromCache writeMemo
+
+  initSugarCache <- dbToIO $ viewToDb CodeEdit.makeSugarCache
+  memoRef <- fixIORef $ \writeMemo -> newMemoFromCache writeMemo initSugarCache
+
   let
     -- TODO: Move this logic to some more common place?
     makeWidget = do
-      fromCursor <- readIORef cacheRef
-      widget <- mkCacheDependentWidget fromCursor
-      flyNavMake $ Widget.atEvents saveCache widget
-
-    mkCacheDependentWidget fromCursor = do
-      old@(oldCursor, _) <- readIORef widgetCacheRef
-      cursor <- dbToIO $ Anchors.getP Anchors.cursor
-      (newCursor, widget) <- if oldCursor == cursor
-         then return old
-         else mkWidgetWarnInvalidCursor fromCursor cursor
-      writeIORef widgetCacheRef (newCursor, widget)
-      return widget
-
-    saveCache action = do
-      (eventResult, mCacheCache) <- runWriterT action
-      case mCacheCache of
-        Last Nothing -> return ()
-        Last (Just newCache) ->
-          writeIORef cacheRef $ useCache newCache
-      return eventResult
+      mkWidget <- readIORef memoRef
+      flyNavMake =<< mkWidget =<< dbToIO (Anchors.getP Anchors.cursor)
 
   mainLoopDebugMode font makeWidget addHelp
   where
-    useCache = fromCacheCursor (Config.baseStyle font) dbToIO
-    mkWidgetWarnInvalidCursor fromCursor cursor = do
-      (isValid, newCursor, widget) <-
-        dbToIO $ mkWidgetRootFallback fromCursor cursor
-      unless isValid . putStrLn $ "Invalid cursor: " ++ show cursor
-      return (newCursor, widget)
-
-
     dbToIO = Transaction.run store
     viewToDb act = do
       view <- Anchors.getP Anchors.view
       Transaction.run (Anchors.viewStore view) act
 
-type VersionCache = CodeEdit.SugarCache (Transaction DBTag IO)
+type SugarCache = CodeEdit.SugarCache (Transaction DBTag IO)
 
-fromCacheCursor
+mkWidgetWithFallback
   :: TextEdit.Style
-  -> (Transaction DBTag IO (Widget.EventResult, Last VersionCache)
-      -> IO (Widget.EventResult, Last VersionCache))
-  -> CodeEdit.SugarCache (Transaction DBTag IO)
+  -> (forall a. Transaction DBTag IO a -> IO a)
+  -> (Last SugarCache -> IO ())
+  -> SugarCache
   -> Widget.Id
-  -> Transaction DBTag IO (Widget (Writer.WriterT (Last VersionCache) IO))
-fromCacheCursor style dbToIO cache = memo $ \cursor ->
+  -> IO (Widget IO)
+mkWidgetWithFallback style dbToIO updateCache sugarCache cursor = do
+  (isValid, widget) <-
+    dbToIO $ do
+      candidateWidget <- fromCursor cursor
+      (isValid, widget) <-
+        if Widget.isFocused candidateWidget
+        then return (True, candidateWidget)
+        else do
+          finalWidget <- fromCursor rootCursor
+          Anchors.setP Anchors.cursor rootCursor
+          return (False, finalWidget)
+      unless (Widget.isFocused widget) $
+        fail "Root cursor did not match"
+      return (isValid, widget)
+  unless isValid . putStrLn $ "Invalid cursor: " ++ show cursor
+  return $ Widget.atEvents (saveCache <=< runWriterT) widget
+  where
+    fromCursor = makeRootWidget style dbToIO sugarCache
+    saveCache (eventResult, mCacheCache) = do
+      ~() <- updateCache mCacheCache
+      return eventResult
+    rootCursor = WidgetIds.fromIRef Anchors.panesIRef
+
+makeRootWidget
+  :: TextEdit.Style
+  -> (forall a. Transaction DBTag IO a -> IO a)
+  -> SugarCache
+  -> Widget.Id
+  -> Transaction DBTag IO (Widget (WriterT (Last SugarCache) IO))
+makeRootWidget style dbToIO cache cursor =
   -- Get rid of OTransaction/ITransaction wrappings
   liftM
     (Widget.atEvents
