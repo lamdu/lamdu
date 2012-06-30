@@ -9,12 +9,7 @@ import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
-
--- non-aligned vbox:
-vbox :: [Widget f] -> Widget f
-vbox = Box.toWidget . Box.make Box.vertical
 
 center :: Widget f -> Widget f
 center = Widget.align (Vector2 0.5 0.5)
@@ -50,6 +45,6 @@ addType
   -> Widget f
   -> Widget f
 addType exprId typeEdits widget =
-  vbox $
+  BWidgets.vbox $
   center widget :
   mkInferredTypesView exprId typeEdits
