@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Editor.CodeEdit.InferredTypes(addType, mkInferredTypesView) where
+module Editor.CodeEdit.InferredTypes(addType) where
 
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Widget (Widget)
@@ -14,13 +14,16 @@ import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 center :: Widget f -> Widget f
 center = Widget.align (Vector2 0.5 0.5)
 
-mkInferredTypesView
+addType
   :: Widget.Id
   -> [Widget f]
-  -> [Widget f]
-mkInferredTypesView _ [] = []
-mkInferredTypesView exprId typeEdits =
-  [ -- must not be aligned (needs to take over all given space):
+  -> Widget f
+  -> Widget f
+addType _ [] widget = widget
+addType exprId typeEdits widget =
+  BWidgets.vbox $
+  [ center widget
+  , -- must not be aligned (needs to take over all given space):
     Spacer.makeHorizLineWidget underlineId
   , center typeEdit
   ]
@@ -38,13 +41,3 @@ mkInferredTypesView exprId typeEdits =
         Config.inferredTypeErrorBGColor
       | otherwise = id
     underlineId = WidgetIds.underlineId $ Widget.toAnimId exprId
-
-addType
-  :: Widget.Id
-  -> [Widget f]
-  -> Widget f
-  -> Widget f
-addType exprId typeEdits widget =
-  BWidgets.vbox $
-  center widget :
-  mkInferredTypesView exprId typeEdits
