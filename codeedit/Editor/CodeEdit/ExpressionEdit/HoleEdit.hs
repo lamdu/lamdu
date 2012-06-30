@@ -246,16 +246,13 @@ makeResultsWidget
   -> OTransaction ViewTag m
      (Maybe (Result m), WidgetT ViewTag m)
 makeResultsWidget firstResults moreResults myId = do
-  let
-    resultAndWidget result =
-      liftM ((,) result) $ resultToWidget result
   firstResultsAndWidgets <- mapM resultAndWidget firstResults
   (mResult, firstResultsWidget) <-
     case firstResultsAndWidgets of
       [] -> liftM ((,) Nothing) . makeNoResults $ Widget.toAnimId myId
       xs -> do
         let
-          widget = blockDownEvents . BWidgets.vboxCentered $ map snd xs
+          widget = blockDownEvents . BWidgets.vboxAlign 0 $ map snd xs
           mResult =
             listToMaybe . map fst $
             filter (Widget.isFocused . snd) xs
@@ -265,8 +262,14 @@ makeResultsWidget firstResults moreResults myId = do
     makeMoreResultWidgets _ = liftM (: []) $ makeMoreResults $ Widget.toAnimId myId
   moreResultsWidgets <- makeMoreResultWidgets moreResults
 
-  return (mResult, BWidgets.vboxCentered (firstResultsWidget : moreResultsWidgets))
+  return
+    ( mResult
+    , Widget.scale Config.holeResultScaleFactor $
+      BWidgets.vboxCentered (firstResultsWidget : moreResultsWidgets)
+    )
   where
+    resultAndWidget result =
+      liftM ((,) result) $ resultToWidget result
     blockDownEvents =
       Widget.weakerEvents $
       Widget.keysEventMap
@@ -284,7 +287,7 @@ makeActiveHoleEdit holeInfo =
 
     allResults <- makeAllResults holeInfo
 
-    let (firstResults, moreResults) = splitAt 3 allResults
+    let (firstResults, moreResults) = splitAt Config.holeResultCount allResults
 
     searchTermWidget <-
       makeSearchTermWidget holeInfo searchTermId firstResults
