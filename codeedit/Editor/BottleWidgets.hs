@@ -1,17 +1,17 @@
-module Editor.BottleWidgets(
-  makeTextView, makeLabel, makeChoice,
-  makeFocusableView, makeFocusableTextView,
-  wrapDelegated,
-  makeTextEdit, makeLineEdit, makeWordEdit, makeNameEdit, getDisplayNameOf,
-  hbox,  hboxAlign,  hboxSpaced,
-  hboxK, hboxAlignK, hboxSpacedK,
-  vbox,  vboxAlign,
-  vboxK, vboxAlignK,
-  gridHSpaced,
-  spaceView, spaceWidget,
-  setTextColor,
-  empty
-) where
+module Editor.BottleWidgets
+  ( makeTextView, makeLabel, makeChoice
+  , makeFocusableView, makeFocusableTextView
+  , wrapDelegated
+  , makeTextEdit, makeLineEdit, makeWordEdit, makeNameEdit, getDisplayNameOf
+  , hbox,  hboxAlign,  hboxSpaced
+  , hboxK, hboxAlignK, hboxSpacedK
+  , vbox,  vboxAlign
+  , vboxK, vboxAlignK
+  , gridHSpaced
+  , spaceView, spaceWidget
+  , setTextColor
+  , empty
+  ) where
 
 import Control.Applicative (Applicative(..))
 import Control.Arrow (first, second)
