@@ -518,7 +518,7 @@ convertApplyPrefix (Data.Apply funcI argI) exprI = do
     ExpressionApply DontHaveParens $
     case rExpression newFuncRef of
     ExpressionApply DontHaveParens (Apply deepFuncRef args) ->
-      (Apply deepFuncRef (args ++ [newArgRef]))
+      Apply deepFuncRef (args ++ [newArgRef])
     _ ->
       Apply newFuncRef [newArgRef]
   where
