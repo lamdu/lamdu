@@ -41,10 +41,10 @@ make makeExpressionEdit (Sugar.Pi param resultType) myId =
         BWidgets.makeLabel "→" $ Widget.toAnimId myId
       let
         paramEdit
-          | paramUsed = BWidgets.vbox [paramNameEdit, paramTypeEdit]
+          | paramUsed = BWidgets.vboxCentered [paramNameEdit, paramTypeEdit]
           | otherwise = paramTypeEdit
       return $
-        BWidgets.hboxSpaced [paramEdit, rightArrowLabel, resultTypeEdit]
+        BWidgets.hboxCenteredSpaced [paramEdit, rightArrowLabel, resultTypeEdit]
   where
     typeId =
       WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity . Sugar.fpType $

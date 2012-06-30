@@ -255,7 +255,7 @@ makeResultsWidget firstResults moreResults myId = do
       [] -> liftM ((,) Nothing) . makeNoResults $ Widget.toAnimId myId
       xs -> do
         let
-          widget = blockDownEvents . BWidgets.vbox $ map snd xs
+          widget = blockDownEvents . BWidgets.vboxCentered $ map snd xs
           mResult =
             listToMaybe . map fst $
             filter (Widget.isFocused . snd) xs
@@ -265,7 +265,7 @@ makeResultsWidget firstResults moreResults myId = do
     makeMoreResultWidgets _ = liftM (: []) $ makeMoreResults $ Widget.toAnimId myId
   moreResultsWidgets <- makeMoreResultWidgets moreResults
 
-  return (mResult, BWidgets.vbox (firstResultsWidget : moreResultsWidgets))
+  return (mResult, BWidgets.vboxCentered (firstResultsWidget : moreResultsWidgets))
   where
     blockDownEvents =
       Widget.weakerEvents $
@@ -293,7 +293,7 @@ makeActiveHoleEdit holeInfo =
       makeResultsWidget firstResults moreResults $ hiHoleId holeInfo
     return
       ( mplus mResult (listToMaybe $ take 1 firstResults)
-      , BWidgets.vbox [searchTermWidget, resultsWidget] )
+      , BWidgets.vboxCentered [searchTermWidget, resultsWidget] )
   where
     searchTermId = WidgetIds.searchTermId $ hiHoleId holeInfo
 

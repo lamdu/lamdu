@@ -25,7 +25,7 @@ make makeExpressionEdit (Sugar.Section mLArg op mRArg innerApplyGuid) myId =
       lArgEdits <- fromMArg mLArg
       opEdits <- makeExpressionsEdit op
       rArgEdits <- fromMArg mRArg
-      return . BWidgets.hboxSpaced $ lArgEdits ++ opEdits ++ rArgEdits
+      return . BWidgets.hboxCenteredSpaced $ lArgEdits ++ opEdits ++ rArgEdits
   where
     destId = WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity $ fromMaybe op mRArg
     makeExpressionsEdit = liftM (:[]) . makeExpressionEdit

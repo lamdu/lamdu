@@ -33,7 +33,7 @@ mkInferredTypesView exprId typeEdits =
     typeEdit =
       addTint . addBackground .
       Widget.scale Config.typeScaleFactor $
-      BWidgets.vbox typeEdits
+      BWidgets.vboxCentered typeEdits
     isError = length typeEdits >= 2
     typeErrorAnimId = Widget.toAnimId exprId ++ ["type error background"]
     addTint = (Widget.atFrame . Anim.onImages . Draw.tint) Config.inferredTypeTint

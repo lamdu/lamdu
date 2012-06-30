@@ -30,7 +30,7 @@ addTextParensI
 addTextParensI onLParen onRParen parenId widget = do
   beforeParen <- onLParen $ label "("
   afterParen <- onRParen $ label ")"
-  return $ BWidgets.hbox [ beforeParen, widget, afterParen ]
+  return $ BWidgets.hboxCentered [ beforeParen, widget, afterParen ]
   where
     label str = BWidgets.makeLabel str $ parensPrefix parenId
 

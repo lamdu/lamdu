@@ -105,4 +105,4 @@ make makeExpressionEdit (Sugar.Func params body) myId =
       BWidgets.makeLabel "→" $ Widget.toAnimId myId
     bodyEdit <- makeExpressionEdit body
     paramsEdit <- makeParamsEdit makeExpressionEdit params
-    return $ BWidgets.hbox [lambdaLabel, paramsEdit, rightArrowLabel, bodyEdit]
+    return $ BWidgets.hboxCentered [lambdaLabel, paramsEdit, rightArrowLabel, bodyEdit]

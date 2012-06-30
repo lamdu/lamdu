@@ -34,7 +34,7 @@ make (Sugar.Builtin (Data.FFIName modulePath name) setFFIName) myId =
     moduleName <- makeNamePartEditor Config.foreignModuleColor modulePathStr modulePathSetter WidgetIds.builtinFFIPath
     varName <- makeNamePartEditor Config.foreignVarColor name nameSetter WidgetIds.builtinFFIName
     dot <- BWidgets.makeLabel "." $ Widget.toAnimId myId
-    return $ BWidgets.hbox [moduleName, dot, varName]
+    return $ BWidgets.hboxCentered [moduleName, dot, varName]
   where
     makeNamePartEditor color namePartStr mSetter makeWidgetId =
       BWidgets.setTextColor color .

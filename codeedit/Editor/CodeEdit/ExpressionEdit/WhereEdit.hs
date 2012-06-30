@@ -35,7 +35,7 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
       mapM makeWhereItemEdits items
     addJumps = (Grid.atGridContent . fmap . map) (DefinitionEdit.addJumps cursor)
   whereEdits <- makeWhereItemsGrid
-  return . BWidgets.vbox $
+  return . BWidgets.vboxCentered $
     [ whereLabel
     , Widget.scale Config.whereScaleFactor whereEdits
     ]
@@ -64,7 +64,7 @@ makeWithBody makeExpressionEdit where_@(Sugar.Where _ body) myId = do
   whereEdit <- make makeExpressionEdit where_ myId
   OT.assignCursor myId ((WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity) body) $ do
     bodyEdit <- makeExpressionEdit body
-    return . BWidgets.vbox $
+    return . BWidgets.vboxCentered $
       [ bodyEdit
       , whereEdit
       ]

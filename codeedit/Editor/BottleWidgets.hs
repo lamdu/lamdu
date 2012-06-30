@@ -3,10 +3,10 @@ module Editor.BottleWidgets
   , makeFocusableView, makeFocusableTextView
   , wrapDelegated
   , makeTextEdit, makeLineEdit, makeWordEdit, makeNameEdit, getDisplayNameOf
-  , hbox,  hboxAlign,  hboxSpaced
-  , hboxK, hboxAlignK, hboxSpacedK
-  , vbox,  vboxAlign
-  , vboxK, vboxAlignK
+  , hboxAlign, vboxAlign
+  , hboxCenteredSpaced
+  , hboxCentered, vboxCentered
+  , hbox, vbox
   , gridHSpaced
   , spaceView, spaceWidget
   , setTextColor
@@ -14,7 +14,7 @@ module Editor.BottleWidgets
   ) where
 
 import Control.Applicative (Applicative(..))
-import Control.Arrow (first, second)
+import Control.Arrow (first)
 import Control.Monad (when, liftM)
 import Data.ByteString.Char8 (pack)
 import Data.List (findIndex, intersperse)
@@ -27,7 +27,6 @@ import Editor.OTransaction (TWidget, OTransaction)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Sized (Sized)
 import Graphics.UI.Bottle.Widget (Widget)
-import Graphics.UI.Bottle.Widgets.Box(KBox)
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -189,54 +188,38 @@ makeNameEdit editingEmptyStr ident myId =
       (EventMap.filterChars (`notElem` "=[]\\"))
       makeWordEdit
 
-boxAlignK :: Vector2 Widget.R -> Box.Orientation -> [(key, Widget f)] -> KBox key f
-boxAlignK align orientation =
-  Box.makeKeyed orientation .
-  (map . second) (Widget.align align)
+boxAlign :: Box.Orientation -> Vector2 Widget.R -> [Widget f] -> Widget f
+boxAlign orientation align =
+  Box.toWidget .
+  Box.make orientation .
+  map (Widget.align align)
 
-hboxAlignK :: Widget.R -> [(key, Widget f)] -> KBox key f
-hboxAlignK align = boxAlignK (Vector2 0 align) Box.horizontal
+hboxAlign :: Widget.R -> [Widget f] -> Widget f
+hboxAlign align = boxAlign Box.horizontal $ Vector2 0 align
 
-vboxAlignK :: Widget.R -> [(key, Widget f)] -> KBox key f
-vboxAlignK align = boxAlignK (Vector2 align 0) Box.vertical
+vboxAlign :: Widget.R -> [Widget f] -> Widget f
+vboxAlign align = boxAlign Box.vertical $ Vector2 align 0
 
-hboxK :: [(key, Widget f)] -> KBox key f
-hboxK = hboxAlignK 0.5
+vboxCentered :: [Widget f] -> Widget f
+vboxCentered = vboxAlign 0.5
 
-vboxK :: [(key, Widget f)] -> KBox key f
-vboxK = vboxAlignK 0.5
-
-unK
-  :: ([((), Widget f1)]
-  -> KBox key f)
-  -> [Widget f1] -> Widget f
-unK f = Box.toWidget . f . Box.unkey
-
-hboxAlign
-  :: Widget.R -> [Widget f] -> Widget f
-hboxAlign = unK . hboxAlignK
-
-vboxAlign
-  :: Widget.R -> [Widget f] -> Widget f
-vboxAlign = unK . vboxAlignK
+hboxCentered :: [Widget f] -> Widget f
+hboxCentered = hboxAlign 0.5
 
 hbox :: [Widget f] -> Widget f
-hbox = unK hboxK
+hbox = Box.toWidget . Box.make Box.horizontal
 
 vbox :: [Widget f] -> Widget f
-vbox = unK vboxK
-
-hboxSpacedK :: key -> [(key, Widget f)] -> KBox key f
-hboxSpacedK spaceKey = hboxK . intersperse (spaceKey, spaceWidget)
-
-hboxSpaced :: [Widget f] -> Widget f
-hboxSpaced = unK (hboxSpacedK ())
-
-spaceView :: Sized Anim.Frame
-spaceView = Spacer.makeHorizontal 20
+vbox = Box.toWidget . Box.make Box.vertical
 
 spaceWidget :: Widget f
 spaceWidget = Widget.liftView spaceView
+
+hboxCenteredSpaced :: [Widget f] -> Widget f
+hboxCenteredSpaced = hboxAlign 0.5 . intersperse spaceWidget
+
+spaceView :: Sized Anim.Frame
+spaceView = Spacer.makeHorizontal 20
 
 setTextColor :: Draw.Color -> OTransaction t m (Widget f) -> OTransaction t m (Widget f)
 setTextColor = OT.atTextStyle . TextEdit.atSTextViewStyle . TextView.atStyleColor . const

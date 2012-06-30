@@ -103,7 +103,7 @@ makeClipboardsEdit clipboards = do
     then return BWidgets.empty
     else BWidgets.makeTextView "Clipboards:" ["clipboards title"]
   return .
-    BWidgets.vbox . (clipboardTitle :) . concat $ zipWith addLineBefore [0..] clipboardsEdits
+    BWidgets.vboxCentered . (clipboardTitle :) . concat $ zipWith addLineBefore [0..] clipboardsEdits
   where
     addLineBefore i clipboardEdit =
       [ Spacer.makeHorizLineWidget ["clipboard line:", BS8.pack (show (i :: Int))]
@@ -116,7 +116,7 @@ makeCodeEdit cache = do
   panesEdit <- makePanesEdit $ scPanes cache
   clipboardsEdit <- makeClipboardsEdit $ scClipboards cache
   return $
-    BWidgets.vbox
+    BWidgets.vboxCentered
     [ panesEdit
     , Widget.liftView Spacer.makeVerticalExpanding
     , clipboardsEdit]
