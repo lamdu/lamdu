@@ -46,7 +46,15 @@ exprFocusDelegatorConfig = FocusDelegator.Config
 
 make :: MonadF m => ExpressionEditMaker m
 make sExpr = do
-  let
+  (holePicker, widget) <- makeEditor exprId
+  typeEdits <- mapM make $ Sugar.rInferredTypes sExpr
+  let onReadOnly = Widget.doesntTakeFocus
+  return .
+    maybe onReadOnly
+    (Widget.weakerEvents . expressionEventMap holePicker)
+    (Sugar.eActions (Sugar.rEntity sExpr)) $
+    addType exprId typeEdits widget
+  where
     parenify mkParens hasParens mkWidget myId =
       mkWidget myId >>=
       case hasParens of
@@ -82,16 +90,6 @@ make sExpr = do
         notAHole $ LiteralEdit.makeInt integer
       Sugar.ExpressionBuiltin builtin ->
         wrapNonHoleExpr $ BuiltinEdit.make builtin
-
-  (holePicker, widget) <- makeEditor exprId
-  typeEdits <- mapM make $ Sugar.rInferredTypes sExpr
-  let
-    onReadOnly = Widget.doesntTakeFocus
-  return .
-    maybe onReadOnly
-    (Widget.weakerEvents . expressionEventMap holePicker)
-    (Sugar.eActions (Sugar.rEntity sExpr)) $
-    addType exprId typeEdits widget
 
 expressionEventMap
   :: MonadF m
