@@ -9,6 +9,7 @@ import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.CodeEdit.InferredTypes (addType)
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
+import Editor.OTransaction (OTransaction, WidgetT)
 import Graphics.UI.Bottle.Widget (EventHandlers)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
@@ -46,7 +47,7 @@ exprFocusDelegatorConfig = FocusDelegator.Config
 
 make :: MonadF m => ExpressionEditMaker m
 make sExpr = do
-  (holePicker, widget) <- makeEditor exprId
+  (holePicker, widget) <- makeEditor sExpr exprId
   typeEdits <- mapM make $ Sugar.rInferredTypes sExpr
   let onReadOnly = Widget.doesntTakeFocus
   return .
@@ -54,6 +55,35 @@ make sExpr = do
     (Widget.weakerEvents . expressionEventMap holePicker)
     (Sugar.eActions (Sugar.rEntity sExpr)) $
     addType exprId typeEdits widget
+  where
+    exprId = WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity $ sExpr
+
+makeEditor
+  :: MonadF m
+  => Sugar.ExpressionRef m
+  -> Widget.Id
+  -> OTransaction ViewTag m (HoleResultPicker m, WidgetT ViewTag m)
+makeEditor sExpr =
+  case Sugar.rExpression sExpr of
+  Sugar.ExpressionWhere hasParens w ->
+    wrapNonHoleExpr . squareParenify hasParens $
+      WhereEdit.makeWithBody make w
+  Sugar.ExpressionFunc hasParens f ->
+    wrapNonHoleExpr . textParenify hasParens $ FuncEdit.make make f
+  Sugar.ExpressionHole hole ->
+    isAHole . HoleEdit.make hole . Sugar.guid $ Sugar.rEntity sExpr
+  Sugar.ExpressionGetVariable varRef ->
+    notAHole {- TODO: May need parenification -} $ VarEdit.make varRef
+  Sugar.ExpressionApply hasParens apply ->
+    wrapNonHoleExpr . textParenify hasParens $ ApplyEdit.make make apply
+  Sugar.ExpressionPi hasParens funcType ->
+    wrapNonHoleExpr . textParenify hasParens $ PiEdit.make make funcType
+  Sugar.ExpressionSection hasParens section ->
+    wrapNonHoleExpr . textParenify hasParens $ SectionEdit.make make section
+  Sugar.ExpressionLiteralInteger integer ->
+    notAHole $ LiteralEdit.makeInt integer
+  Sugar.ExpressionBuiltin builtin ->
+    wrapNonHoleExpr $ BuiltinEdit.make builtin
   where
     parenify mkParens hasParens mkWidget myId =
       mkWidget myId >>=
@@ -66,30 +96,8 @@ make sExpr = do
       notAHole .
       BWidgets.wrapDelegated exprFocusDelegatorConfig
       FocusDelegator.Delegating id
-    exprId = WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity $ sExpr
     textParenify = parenify Parens.addHighlightedTextParens
     squareParenify = parenify (Parens.addSquareParens . Widget.toAnimId)
-    makeEditor =
-      case Sugar.rExpression sExpr of
-      Sugar.ExpressionWhere hasParens w ->
-        wrapNonHoleExpr . squareParenify hasParens $
-          WhereEdit.makeWithBody make w
-      Sugar.ExpressionFunc hasParens f ->
-        wrapNonHoleExpr . textParenify hasParens $ FuncEdit.make make f
-      Sugar.ExpressionHole hole ->
-        isAHole . HoleEdit.make hole . Sugar.guid $ Sugar.rEntity sExpr
-      Sugar.ExpressionGetVariable varRef ->
-        notAHole {- TODO: May need parenification -} $ VarEdit.make varRef
-      Sugar.ExpressionApply hasParens apply ->
-        wrapNonHoleExpr . textParenify hasParens $ ApplyEdit.make make apply
-      Sugar.ExpressionPi hasParens funcType ->
-        wrapNonHoleExpr . textParenify hasParens $ PiEdit.make make funcType
-      Sugar.ExpressionSection hasParens section ->
-        wrapNonHoleExpr . textParenify hasParens $ SectionEdit.make make section
-      Sugar.ExpressionLiteralInteger integer ->
-        notAHole $ LiteralEdit.makeInt integer
-      Sugar.ExpressionBuiltin builtin ->
-        wrapNonHoleExpr $ BuiltinEdit.make builtin
 
 expressionEventMap
   :: MonadF m
