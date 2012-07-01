@@ -64,7 +64,7 @@ Library
                        Data.Store.Db
 
   Build-depends:       base >= 4,
-                       BerkeleyDB >= 0.8,
+                       keyvaluehash,
                        GLFW-b >= 0.1.0,
                        OpenGL,
                        StateVar,

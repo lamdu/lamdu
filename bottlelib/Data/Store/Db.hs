@@ -1,71 +1,42 @@
 module Data.Store.Db
-    (Db, withDb,
-     nextKeyBS, nextKey, lookup, transaction, store)
+    (Db, withDb, lookup, transaction, store)
 where
 
-import           Control.Arrow          (second)
-import           Control.Exception      (bracket)
+import qualified Control.Exception      as Exc
 import           Prelude                hiding (lookup)
-import qualified Database.Berkeley.Db   as Berkeley
+import qualified Database.KeyValueHash  as HashDB
 import           Data.ByteString        (ByteString)
-import           Data.Binary            (Binary)
-import           Data.Binary.Utils      (decodeS)
 import           Data.Store.Guid        (Guid)
 import qualified Data.Store.Guid        as Guid
 import           Data.Store.Transaction (Store(..))
-import           System.Directory       (createDirectoryIfMissing)
 
-data Db = Db {
-  dbBerkeley :: Berkeley.Db,
-  _dbEnv :: Berkeley.DbEnv
-  }
+type Db = HashDB.Database
 
-type Cursor = Berkeley.DbCursor
+-- TODO: this should be automatic in HashDB
+hashSize :: HashDB.Size
+hashSize = HashDB.mkSize $ 2 ^ (17::Int)
 
 open :: FilePath -> IO Db
-open fileName = do
-  createDirectoryIfMissing False envDir
-  env <- Berkeley.dbEnv_create []
-  Berkeley.dbEnv_open [Berkeley.DB_CREATE, Berkeley.DB_INIT_MPOOL,
-                       -- Berkeley.DB_INIT_TXN,
-                       Berkeley.DB_INIT_LOCK,
-                       Berkeley.DB_INIT_LOG] 0 env envDir
-  db <- Berkeley.db_create [] env
---  Berkeley.dbEnv_withTxn [] [] env Nothing $ \txn ->
-  Berkeley.db_open [Berkeley.DB_CREATE] Berkeley.DB_BTREE 0 db
-              Nothing --(Just txn)
-              fileName (Just "DB title")
-  return $ Db db env
-  where
-    envDir = fileName ++ ".env"
+open fileName =
+  HashDB.openDatabase fileName HashDB.stdHash hashSize
+  `Exc.catch`
+  (\(Exc.SomeException _) ->
+    HashDB.createDatabase fileName HashDB.stdHash hashSize)
 
 close :: Db -> IO ()
-close (Db db env) = do
-  Berkeley.db_close [] db
-  -- TODO: waitForEmptyMap m
-  Berkeley.dbEnv_close [] env
-
-nextKeyBS :: Cursor -> IO (Maybe (ByteString, ByteString))
-nextKeyBS = Berkeley.dbCursor_get [Berkeley.DB_NEXT]
-
-nextKey :: Binary a => Cursor -> IO (Maybe (ByteString, a))
-nextKey cursor = (fmap . fmap . second) decodeS (nextKeyBS cursor)
+close _ = return ()
 
 withDb :: FilePath -> (Db -> IO a) -> IO a
-withDb filePath = bracket (open filePath) close
+withDb filePath = Exc.bracket (open filePath) close
 
 lookup :: Db -> Guid -> IO (Maybe ByteString)
-lookup db = Berkeley.db_get [] (dbBerkeley db) Nothing . Guid.bs
+lookup db = HashDB.readKey db . Guid.bs
 
 transaction :: Db -> [(Guid, Maybe ByteString)] -> IO ()
-transaction db = -- . Berkeley.dbEnv_withTxn [] [] (dbEnv db) Nothing $ \txn ->
-  mapM_ (uncurry (applyChange
-                  -- (Just txn)
-                  Nothing
-                 ))
+transaction db = mapM_ applyChange
   where
-    applyChange txn key Nothing = Berkeley.db_del [] (dbBerkeley db) txn (Guid.bs key)
-    applyChange txn key (Just value) = Berkeley.db_put [] (dbBerkeley db) txn (Guid.bs key) value
+    applyChange (key, Nothing) = HashDB.deleteKey db (Guid.bs key)
+    applyChange (key, Just value) = HashDB.writeKey db (Guid.bs key) value
 
 -- You get a Store tagged however you like...
 store :: Db -> Store t IO
