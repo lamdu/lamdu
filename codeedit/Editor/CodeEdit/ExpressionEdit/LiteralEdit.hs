@@ -61,9 +61,16 @@ makeIntEditI integer myId setValue = do
         return eventRes
   style <- OT.readTextStyle
   return .
-    Widget.atEvents setter $ TextEdit.make
+    Widget.atEvents setter .
+    Widget.atEventMap removeKeys $ TextEdit.make
     style { TextEdit.sEmptyFocusedString = "<0>" } textCursor text myId
   where
+    removeKeys =
+      E.filterChars Char.isDigit .
+      foldr (.) id
+      [ E.deleteKey (E.KeyEvent E.Press (E.ModKey E.noMods key))
+      | key <- [E.KeyEnter, E.KeySpace]
+      ]
     emptyZeroCursor = ["empty-zero"]
 
 literalFDConfig :: FocusDelegator.Config
