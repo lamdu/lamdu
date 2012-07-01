@@ -95,7 +95,7 @@ data Pi m = Pi
 
 data Apply m = Apply
   { applyFunc :: ExpressionRef m
-  , applyArgs :: [ExpressionRef m]
+  , applyArg :: ExpressionRef m
   }
 
 -- Infix Sections include: (+), (1+), (+1), (1+2). Last is really just
@@ -487,11 +487,6 @@ convertApplyInfixL op (Data.Apply opI argI) exprI = do
   mkExpressionRef exprI . ExpressionSection HaveParens $
     Section (Just newArgRef) newOpRef Nothing Nothing
 
-atLast :: (a -> a) -> [a] -> [a]
-atLast _ [] = []
-atLast f [x] = [f x]
-atLast f (x:xs) = x : atLast f xs
-
 convertApplyPrefix
   :: Monad m
   => Data.Apply (ExprEntity m)
@@ -511,16 +506,11 @@ convertApplyPrefix (Data.Apply funcI argI) exprI = do
       setNextArg .
       addApplyChildParens .
       atFunctionType .
-      (atRExpression . atEApply . atApplyArgs . atLast) setNextArg .
+      (atRExpression . atEApply . atApplyArg) setNextArg .
       (atRExpression . atESection . atSectionOp) setNextArg $
       funcRef
-  mkExpressionRef exprI .
-    ExpressionApply DontHaveParens $
-    case rExpression newFuncRef of
-    ExpressionApply DontHaveParens (Apply deepFuncRef args) ->
-      Apply deepFuncRef (args ++ [newArgRef])
-    _ ->
-      Apply newFuncRef [newArgRef]
+  mkExpressionRef exprI . ExpressionApply DontHaveParens $
+    Apply newFuncRef newArgRef
   where
     addFlipFuncArg =
       atRExpression . atEHole . atHoleMFlipFuncArg . const $
