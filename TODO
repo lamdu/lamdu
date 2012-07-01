@@ -1,18 +1,12 @@
-* Oops! Performance problem in FlyNav!! Generating the SDWD lots and
-  lots of times, and then entering lots of times... Probably could be
-  OK if we had cached the size... Maybe flyNav should simply be on the
-  cached sdwd rather than on the Widget?
-
-  * Make of root widget makes the widget over and over from the branch
-    list, but should also be cached.
-    The cache of the outer widget could actually be a cache of the
-    widget itself, rather than a cache of the sugar panes or such
-
 * Whenever prejumps is added/popped, we actually update in-version
   data, so it actually creates a new, undo-able version. Need to have
   the JumpBack stack actually be outside the version and in the DB to
   fix this and to make navigation (potentially) nicer when switching
   branches.
+
+  * Jump back should be outside the source control. For this we need
+    transactions inside the source control to be able to result in
+    extra data outwards, beside the widget's event result.
 
 * Projected moves:
   * Has old focal rect
@@ -22,22 +16,6 @@
     * This "projected focal rect" is to be used by same grid or any parent grid in future movements
     * This "projected focal rect" is sort of a global thing all grids write to?
     * Each grid can add a "delete my projected focal rect" thing before any child action
-
-* Free-nav mode?
-* "Enter: insert newline" is wrong (e.g: in LiteralInt edit)
-
-* Jump back should be outside the source control. For this we need
-  transactions inside the source control to be able to result in
-  extra data outwards, beside the widget's event result.
-
-* Oops, if type of left-hand-side is hole, then read-only holes at
-   right should NOT have their scope based on their location (They are
-   copies!)
-
-   * In fact, maybe type annotations in general should not have all
-   the surrounding values in scope? Is that too much free dependency?
-
-   * Maybe read-only hole should not show results at all?
 
 * ParamEdit needs to take the eventmap/actions of ExpressionEdit and
   also add them to the param via the FuncParam actions
