@@ -12,7 +12,6 @@ import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget)
-import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
@@ -102,13 +101,7 @@ makeClipboardsEdit clipboards = do
     if null clipboardsEdits
     then return BWidgets.empty
     else BWidgets.makeTextView "Clipboards:" ["clipboards title"]
-  return .
-    BWidgets.vboxCentered . (clipboardTitle :) . concat $ zipWith addLineBefore [0..] clipboardsEdits
-  where
-    addLineBefore i clipboardEdit =
-      [ Spacer.makeHorizLineWidget ["clipboard line:", BS8.pack (show (i :: Int))]
-      , clipboardEdit
-      ]
+  return . BWidgets.vboxAlign 0 $ clipboardTitle : clipboardsEdits
 
 
 makeCodeEdit :: MonadF m => SugarCache m -> TWidget ViewTag m
