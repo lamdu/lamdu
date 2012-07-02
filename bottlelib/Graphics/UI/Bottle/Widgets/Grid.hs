@@ -239,10 +239,13 @@ toWidget =
 
         filteredByEdge = memo $ \(Vector2 hEdge vEdge) ->
           map snd .
-          concat . take 1 . groupSortOn ((* (-hEdge)) . Vector2.fst . fst) .
-          concat . take 1 . groupSortOn ((* (-vEdge)) . Vector2.snd . fst) $
+          safeHead . groupSortOn ((* (-hEdge)) . Vector2.fst . fst) .
+          safeHead . groupSortOn ((* (-vEdge)) . Vector2.snd . fst) $
           childEnters
         indexIntoMaybe (i, m) = fmap ((,) i) m
+
+safeHead :: Monoid a => [a] -> a
+safeHead = mconcat . take 1
 
 asEdge :: Vector2 R -> Rect -> Vector2 Int
 asEdge size rect =
