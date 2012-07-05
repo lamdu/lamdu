@@ -9,28 +9,19 @@ import           Data.ByteString        (ByteString)
 import           Data.Store.Guid        (Guid)
 import qualified Data.Store.Guid        as Guid
 import           Data.Store.Transaction (Store(..))
-import qualified Data.Map               as Map
-import           Data.Map               (Map)
-import           Data.IORef
 
-data Db = Db
-  { dbKeyValueStore :: HashDB.Database
-  , dbCache :: IORef (Map HashDB.Key (Maybe HashDB.Value))
-  }
+type Db = HashDB.Database
 
 -- TODO: this should be automatic in HashDB
 hashSize :: HashDB.Size
 hashSize = HashDB.mkSize $ 2 ^ (17::Int)
 
 open :: FilePath -> IO Db
-open fileName = do
-  db <-
-    HashDB.openDatabase fileName HashDB.stdHash hashSize
-    `Exc.catch`
-    (\(Exc.SomeException _) ->
-      HashDB.createDatabase fileName HashDB.stdHash hashSize)
-  cacheRef <- newIORef Map.empty
-  return $ Db db cacheRef
+open fileName =
+  HashDB.openDatabase fileName HashDB.stdHash hashSize
+  `Exc.catch`
+  (\(Exc.SomeException _) ->
+    HashDB.createDatabase fileName HashDB.stdHash hashSize)
 
 close :: Db -> IO ()
 close _ = return ()
@@ -38,32 +29,14 @@ close _ = return ()
 withDb :: FilePath -> (Db -> IO a) -> IO a
 withDb filePath = Exc.bracket (open filePath) close
 
-modifyIORef_ :: IORef a -> (a -> a) -> IO ()
-modifyIORef_ v f = atomicModifyIORef v (flip (,) () . f)
-
 lookup :: Db -> Guid -> IO (Maybe ByteString)
-lookup db guid = do
-  cache <- readIORef $ dbCache db
-  let inCache = Map.lookup bs cache
-  case inCache of
-    Nothing -> do
-      result <- HashDB.readKey (dbKeyValueStore db) bs
-      modifyIORef_ (dbCache db) $ Map.insert bs result
-      return result
-    Just result -> return result
-  where
-    bs = Guid.bs guid
+lookup db = HashDB.readKey db . Guid.bs
 
 transaction :: Db -> [(Guid, Maybe ByteString)] -> IO ()
-transaction db = mapM_ modification
+transaction db = mapM_ applyChange
   where
-    modification (key, mValue) = do
-      modifyIORef_ (dbCache db) $ Map.insert bs mValue
-      applyChange mValue
-      where
-        bs = Guid.bs key
-        applyChange Nothing = HashDB.deleteKey (dbKeyValueStore db) bs
-        applyChange (Just value) = HashDB.writeKey (dbKeyValueStore db) bs value
+    applyChange (key, Nothing) = HashDB.deleteKey db (Guid.bs key)
+    applyChange (key, Just value) = HashDB.writeKey db (Guid.bs key) value
 
 -- You get a Store tagged however you like...
 store :: Db -> Store t IO
