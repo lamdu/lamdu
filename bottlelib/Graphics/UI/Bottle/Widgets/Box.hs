@@ -2,15 +2,15 @@
 module Graphics.UI.Bottle.Widgets.Box(
   Box, KBox(..), make, makeKeyed, unkey, getElement,
   atBoxMCursor, atBoxContent, atBoxOrientation,
-  BoxElement, mkBoxElement, boxElementRect, boxElementSdwd,
-  atBoxElementRect, atBoxElementSdwd,
+  BoxElement, mkBoxElement, boxElementRect, boxElementW,
+  atBoxElementRect, atBoxElementW,
   Cursor, toWidget, toWidgetBiased,
   Orientation, horizontal, vertical) where
 
 import Data.Maybe (fromMaybe)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Rect (Rect(..))
-import Graphics.UI.Bottle.Widget (Widget, SizeDependentWidgetData, Size)
+import Graphics.UI.Bottle.Widget (Widget, Size)
 import Graphics.UI.Bottle.Widgets.Grid (KGrid(..))
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Vector.Vector2 as Vector2
@@ -47,22 +47,22 @@ vertical = Orientation {
 
 type BoxElement f = Grid.GridElement f
 
-mkBoxElement :: Rect -> SizeDependentWidgetData f -> BoxElement f
+mkBoxElement :: Rect -> Widget f -> BoxElement f
 mkBoxElement = Grid.GridElement
 
 boxElementRect :: Grid.GridElement f -> Rect
 boxElementRect = Grid.gridElementRect
 
-boxElementSdwd :: Grid.GridElement f -> SizeDependentWidgetData f
-boxElementSdwd = Grid.gridElementSdwd
+boxElementW :: Grid.GridElement f -> Widget f
+boxElementW = Grid.gridElementW
 
 atBoxElementRect :: (Rect -> Rect) -> Grid.GridElement f0 -> Grid.GridElement f0
 atBoxElementRect = Grid.atGridElementRect
 
-atBoxElementSdwd
-  :: (SizeDependentWidgetData a -> SizeDependentWidgetData b)
+atBoxElementW
+  :: (Widget a -> Widget b)
   -> Grid.GridElement a -> Grid.GridElement b
-atBoxElementSdwd = Grid.atGridElementSdwd
+atBoxElementW = Grid.atGridElementW
 
 data KBox key f = KBox
   { boxOrientation :: Orientation

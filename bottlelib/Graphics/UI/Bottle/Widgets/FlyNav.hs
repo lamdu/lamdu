@@ -130,18 +130,16 @@ zipped :: [a] -> [(a, [a])]
 zipped [] = []
 zipped (x:xs) = (x, xs) : (map . second) (x:) (zipped xs)
 
-makeSdwd
+make
   :: Applicative f => AnimId -> State -> (State -> f ())
-  -> Size
-  -> Widget.SizeDependentWidgetData f
-  -> Widget.SizeDependentWidgetData f
-makeSdwd _ Nothing setState _ sdwd =
-  (Widget.atSdwdEventMap . flip mappend)
-  (addMovements (Rect.center (Widget.sdwdFocalArea sdwd)) [] setState)
-  sdwd
-makeSdwd animId (Just (ActiveState pos movements)) setState size sdwd =
-  (Widget.atSdwdFrame . mappend) frame .
-  (Widget.atSdwdEventMap . const) eventMap $ sdwd
+  -> Widget f -> Widget f
+make _ Nothing setState w =
+  (Widget.atWEventMap . flip mappend)
+  (addMovements (Rect.center (Widget.wFocalArea w)) [] setState)
+  w
+make animId (Just (ActiveState pos movements)) setState w =
+  (Widget.atWFrame . mappend) frame .
+  (Widget.atWEventMap . const) eventMap $ w
   where
     delta = sum $ map mDir movements
     highlight =
@@ -149,11 +147,11 @@ makeSdwd animId (Just (ActiveState pos movements)) setState size sdwd =
       (highlightRect (animId ++ ["highlight"]) . Widget.enterResultRect)
       mEnteredChild
     frame = target (animId ++ ["target"]) pos `mappend` highlight
-    mEnteredChild = fmap ($ targetPos) $ Widget.sdwdMaybeEnter sdwd
+    mEnteredChild = fmap ($ targetPos) $ Widget.wMaybeEnter w
     targetPos =
       Direction.RelativePos $ Rect pos 0
     nextState =
-      ActiveState (cap (pos + delta*speed) size)
+      ActiveState (cap (pos + delta*speed) (Widget.wSize w))
       ((map . atMDir) (* accel) movements)
     eventMap = mconcat $
       (mkTickHandler . setState . Just) nextState :
@@ -180,10 +178,3 @@ makeSdwd animId (Just (ActiveState pos movements)) setState size sdwd =
         -- Nothing...
         maybe (pure Widget.emptyEventResult) Widget.enterResultEvent
           mEnteredChild
-
-make
-  :: Applicative f => AnimId -> State -> (State -> f ())
-  -> Widget f
-  -> Widget f
-make animId state setState =
-  Widget.atWContentWithSize (makeSdwd animId state setState)

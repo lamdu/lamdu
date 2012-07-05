@@ -88,12 +88,12 @@ addJumps cursor defKGridElements =
       atPred (== Just srcSide)
       (addJumpsTo doc keys dir $ Grid.getElement (Just destSide) defKGridElements)
     addJumpsTo doc keys dir =
-      Grid.atGridElementSdwd . Widget.atSdwdEventMap . flip mappend .
+      Grid.atGridElementW . Widget.atWEventMap . flip mappend .
       jumpToExpressionEventMap doc keys dir
     jumpToExpressionEventMap doc keys dir destElement =
       maybe mempty
       (makeJumpForEnter doc keys dir destElement) .
-      Widget.sdwdMaybeEnter $ Grid.gridElementSdwd destElement
+      Widget.wMaybeEnter $ Grid.gridElementW destElement
     makeJumpForEnter doc keys dir destElement enter =
       E.keyPresses keys ("Jump to "++doc) .
       (IT.transaction (Anchors.savePreJumpPosition cursor) >>) .

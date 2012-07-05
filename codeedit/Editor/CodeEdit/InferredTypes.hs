@@ -34,7 +34,7 @@ addType exprId typeEdits widget =
       BWidgets.vboxCentered typeEdits
     isError = length typeEdits >= 2
     typeErrorAnimId = Widget.toAnimId exprId ++ ["type error background"]
-    addTint = (Widget.atFrame . Anim.onImages . Draw.tint) Config.inferredTypeTint
+    addTint = (Widget.atWFrame . Anim.onImages . Draw.tint) Config.inferredTypeTint
     addBackground
       | isError =
         Widget.backgroundColor 15 typeErrorAnimId

@@ -3,21 +3,17 @@ module Graphics.UI.Bottle.Widget
   ( module Graphics.UI.Bottle.WidgetId
   , Widget(..), MEnter, R, Size
   , EnterResult(..), atEnterResultEvent, atEnterResultRect
-  , SizeDependentWidgetData(..)
   , EventHandlers
   , EventResult(..), emptyEventResult, eventResultFromCursor
   , keysEventMap, keysEventMapMovesCursor
   , atEAnimIdMapping, atECursor
-  , atSdwdMaybeEnter, atSdwdEventMap, atSdwdFrame, atSdwdFocalArea
-  , atWIsFocused, atWContent, atWSize
-  , atWContentWithSize
-  , atFrame, atFrameWithSize, atMaybeEnter, atEventMap, atEvents
+  , atWMaybeEnter, atWEventMap, atWFrame, atWFocalArea
+  , atWIsFocused, atWSize
+  , atWFrameWithSize, atEvents
   , takesFocus, doesntTakeFocus
   , backgroundColor, tint, liftView
   , strongerEvents, weakerEvents
-  , translate, translateSizeDependentWidgetData
-  , translateBy
-  , scale, scaleSizeDependentWidgetData
+  , translate, translateBy, scale
   ) where
 
 import Data.Monoid (Monoid(..))
@@ -50,22 +46,17 @@ data EnterResult f = EnterResult {
 type MEnter f = Maybe (Direction -> EnterResult f)
 type EventHandlers f = EventMap (f EventResult)
 
-data SizeDependentWidgetData f = SizeDependentWidgetData {
-  sdwdFrame :: Anim.Frame,
-  sdwdMaybeEnter :: MEnter f, -- Nothing if we're not enterable
-  sdwdEventMap :: EventHandlers f,
-  sdwdFocalArea :: Rect
-  }
-
 data Widget f = Widget
   { wIsFocused :: Bool
   , wSize :: Size
-  , wContent :: SizeDependentWidgetData f
+  , wFrame :: Anim.Frame
+  , wMaybeEnter :: MEnter f -- Nothing if we're not enterable
+  , wEventMap :: EventHandlers f
+  , wFocalArea :: Rect
   }
 
 AtFieldTH.make ''EnterResult
 AtFieldTH.make ''EventResult
-AtFieldTH.make ''SizeDependentWidgetData
 AtFieldTH.make ''Widget
 
 emptyEventResult :: EventResult
@@ -81,71 +72,50 @@ eventResultFromCursor cursor = EventResult {
   }
 
 atEvents :: (f EventResult -> g EventResult) -> Widget f -> Widget g
-atEvents func =
-  atWContent chg
-  where
-    chg userIo = userIo {
-      sdwdMaybeEnter =
-        (fmap . fmap . atEnterResultEvent) func $
-        sdwdMaybeEnter userIo,
-      sdwdEventMap = fmap func $ sdwdEventMap userIo
-      }
+atEvents func w = w {
+  wMaybeEnter =
+     (fmap . fmap . atEnterResultEvent) func $
+     wMaybeEnter w,
+  wEventMap = fmap func $ wEventMap w
+  }
 
 liftView :: Anim.Size -> Anim.Frame -> Widget f
 liftView sz frame =
   Widget
     { wIsFocused = False
     , wSize = sz
-    , wContent = SizeDependentWidgetData
-      { sdwdFocalArea = Rect 0 sz
-      , sdwdFrame = frame
-      , sdwdEventMap = mempty
-      , sdwdMaybeEnter = Nothing
-      }
+    , wFocalArea = Rect 0 sz
+    , wFrame = frame
+    , wEventMap = mempty
+    , wMaybeEnter = Nothing
     }
 
-atWContentWithSize
-  :: (Size -> SizeDependentWidgetData f -> SizeDependentWidgetData g)
-  -> Widget f -> Widget g
-atWContentWithSize f w = atWContent (f (wSize w)) w
-
-atFrameWithSize :: (Size -> Anim.Frame -> Anim.Frame) -> Widget f -> Widget f
-atFrameWithSize f w = (atWContent . atSdwdFrame) (f (wSize w)) w
-
-atFrame :: (Anim.Frame -> Anim.Frame) -> Widget f -> Widget f
-atFrame = atWContent . atSdwdFrame
+atWFrameWithSize :: (Size -> Anim.Frame -> Anim.Frame) -> Widget f -> Widget f
+atWFrameWithSize f w = atWFrame (f (wSize w)) w
 
 -- TODO: Would be nicer as (Direction -> Id), but then TextEdit's "f" couldn't be ((,) String)..
 takesFocus :: Functor f => (Direction -> f Id) -> Widget f -> Widget f
-takesFocus enter = atWContent f
+takesFocus enter w = (atWMaybeEnter . const) mEnter w
   where
-    f sdwd = (atSdwdMaybeEnter . const) mEnter sdwd
-      where
-        mEnter = Just $ fmap (EnterResult focalArea . fmap eventResultFromCursor) enter
-        focalArea = sdwdFocalArea sdwd
+    mEnter = Just $ fmap (EnterResult focalArea . fmap eventResultFromCursor) enter
+    focalArea = wFocalArea w
 
 doesntTakeFocus :: Widget f -> Widget f
-doesntTakeFocus = (atMaybeEnter . const) Nothing
-
-atMaybeEnter :: (MEnter f -> MEnter f) -> Widget f -> Widget f
-atMaybeEnter = atWContent . atSdwdMaybeEnter
-
-atEventMap :: (EventHandlers f -> EventHandlers f) -> Widget f -> Widget f
-atEventMap = atWContent . atSdwdEventMap
+doesntTakeFocus = (atWMaybeEnter . const) Nothing
 
 -- ^ If doesn't take focus, event map is ignored
 strongerEvents :: EventHandlers f -> Widget f -> Widget f
-strongerEvents = atEventMap . mappend
+strongerEvents = atWEventMap . mappend
 
 -- ^ If doesn't take focus, event map is ignored
 weakerEvents :: EventHandlers f -> Widget f -> Widget f
-weakerEvents = atEventMap . flip mappend
+weakerEvents = atWEventMap . flip mappend
 
 backgroundColor :: Int -> AnimId -> Draw.Color -> Widget f -> Widget f
-backgroundColor layer animId = atFrameWithSize . Anim.backgroundColor animId layer
+backgroundColor layer animId = atWFrameWithSize . Anim.backgroundColor animId layer
 
 tint :: Draw.Color -> Widget f -> Widget f
-tint = atFrame . Anim.onImages . Draw.tint
+tint = atWFrame . Anim.onImages . Draw.tint
 
 keysEventMap ::
   Functor f => [EventMap.ModKey] -> EventMap.Doc ->
@@ -161,31 +131,25 @@ keysEventMapMovesCursor keys doc act =
   (fmap . fmap) eventResultFromCursor $
   EventMap.keyPresses keys doc act
 
-translateSizeDependentWidgetData :: Vector2 R -> SizeDependentWidgetData f -> SizeDependentWidgetData f
-translateSizeDependentWidgetData pos =
-  (atSdwdFrame . Anim.translate) pos .
-  (atSdwdFocalArea . Rect.atRectTopLeft) (+pos) .
-  (atSdwdMaybeEnter . fmap . fmap . atEnterResultRect . Rect.atRectTopLeft) (+pos) .
-  (atSdwdMaybeEnter . fmap . argument . Direction.inRelativePos . Rect.atRectTopLeft) (subtract pos)
-
 -- TODO: This actually makes an incorrect widget because its size
 -- remains same, but it is now translated away from 0..size
 translate :: Vector2 R -> Widget f -> Widget f
-translate = atWContent . translateSizeDependentWidgetData
+translate pos =
+  (atWFrame . Anim.translate) pos .
+  (atWFocalArea . Rect.atRectTopLeft) (+pos) .
+  (atWMaybeEnter . fmap)
+    ((fmap . atEnterResultRect . Rect.atRectTopLeft) (+pos) .
+     (argument . Direction.inRelativePos . Rect.atRectTopLeft) (subtract pos))
 
 translateBy :: (Vector2 R -> Vector2 R) -> Widget f -> Widget f
 translateBy mkPos w =
-  (atWContent . translateSizeDependentWidgetData . mkPos . wSize) w w
-
-scaleSizeDependentWidgetData :: Vector2 R -> SizeDependentWidgetData f -> SizeDependentWidgetData f
-scaleSizeDependentWidgetData mult =
-  (atSdwdFrame . Anim.scale) mult .
-  (atSdwdFocalArea . Rect.atTopLeftAndSize) (* mult) .
-  (atSdwdMaybeEnter . fmap)
-    ((fmap . atEnterResultRect . Rect.atTopLeftAndSize) (*mult) .
-     (argument . Direction.inRelativePos . Rect.atTopLeftAndSize) (/mult))
+  (translate . mkPos . wSize) w w
 
 scale :: Vector2 R -> Widget f -> Widget f
 scale mult =
-  (atWContent . scaleSizeDependentWidgetData) mult .
+  (atWFrame . Anim.scale) mult .
+  (atWFocalArea . Rect.atTopLeftAndSize) (* mult) .
+  (atWMaybeEnter . fmap)
+    ((fmap . atEnterResultRect . Rect.atTopLeftAndSize) (*mult) .
+     (argument . Direction.inRelativePos . Rect.atTopLeftAndSize) (/mult)) .
   (atWSize (* mult))

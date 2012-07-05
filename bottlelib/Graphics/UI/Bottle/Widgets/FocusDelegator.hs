@@ -44,15 +44,14 @@ makeFocused delegating focusSelf config backgroundCursorId =
 
     blueify = Widget.backgroundColor 10 (mappend backgroundCursorId (Widget.toAnimId focusSelf)) blue
 
-    useStartDelegatingEventMap = Widget.atWContent setStartDelegatingEventMap
-    setStartDelegatingEventMap userIO =
-      ($ userIO) .
+    useStartDelegatingEventMap w =
+      ($ w) .
       -- We're not delegating, so replace the child eventmap with an
       -- event map to either delegate to it (if it is enterable) or to
       -- nothing (if it is not):
-      Widget.atSdwdEventMap . const .
+      Widget.atWEventMap . const .
       maybe mempty startDelegatingEventMap $
-      Widget.sdwdMaybeEnter userIO
+      Widget.wMaybeEnter w
 
     startDelegatingEventMap childEnter =
       E.keyPress (startDelegatingKey config) (startDelegatingDoc config) .
@@ -73,9 +72,9 @@ make
   -> AnimId -- ^ Background Cursor Id
   -> Widget f -> Widget f
 make isDelegating Nothing focusSelf =
-  const . const $ Widget.atWContentWithSize f
+  const . const $ \w -> f (Widget.wSize w) w
   where
-    f size sdwd = Widget.atSdwdMaybeEnter (mEnter isDelegating size) $ sdwd
+    f size w = Widget.atWMaybeEnter (mEnter isDelegating size) w
 
     mEnter NotDelegating wholeSize _ = Just . const $ takeFocus wholeSize
     mEnter _ _ Nothing = Nothing

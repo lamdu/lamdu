@@ -5,7 +5,7 @@ module Graphics.UI.Bottle.Widgets.Grid(
   atGridContent,
   GridElement(..),
   atGridElementRect,
-  atGridElementSdwd,
+  atGridElementW,
   Cursor, toWidget, toWidgetBiased)
 where
 
@@ -21,7 +21,7 @@ import Data.Monoid (Monoid(..))
 import Data.Ord (comparing)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Rect (Rect(..))
-import Graphics.UI.Bottle.Widget (Widget(..), SizeDependentWidgetData(..), R)
+import Graphics.UI.Bottle.Widget (Widget(..), R)
 import Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys)
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Vector.Vector2 as Vector2
@@ -118,7 +118,7 @@ getCursor =
 
 data GridElement f = GridElement
   { gridElementRect :: Rect
-  , gridElementSdwd :: SizeDependentWidgetData f
+  , gridElementW :: Widget f
   }
 
 data KGrid key f = KGrid
@@ -143,10 +143,10 @@ makeKeyed children = KGrid
       GridView.makeGeneric (second . translate) $
       (map . map) mkSizedKeyedContent children
     mkSizedKeyedContent (key, widget) =
-      (Widget.wSize widget, (key, Widget.wContent widget))
+      (Widget.wSize widget, (key, widget))
     translate rect =
       GridElement rect .
-      Widget.translateSizeDependentWidgetData (Rect.rectTopLeft rect)
+      Widget.translate (Rect.rectTopLeft rect)
 
 unkey :: [[Widget f]] -> [[((), Widget f)]]
 unkey = (map . map) ((,) ())
@@ -164,41 +164,39 @@ helper ::
   (Widget.Size -> [[Widget.MEnter f]] -> Widget.MEnter f) ->
   KGrid key f -> Widget f
 helper combineEnters (KGrid mCursor size sChildren) =
-  Widget
-    { wIsFocused = isJust mCursor
-    , wSize = size
-    , wContent =
-      combineSizeDependentWidgetDatas $
-      (map . map) (gridElementSdwd . snd) sChildren
-    }
+  combineWs $ (map . map) (gridElementW . snd) sChildren
   where
-    combineSizeDependentWidgetDatas sdwdss =
-      maybe unselectedSizeDependentWidgetData makeSizeDependentWidgetData mCursor
+    combineWs wss =
+      maybe unselectedW makeW mCursor
       where
-        framess = (map . map) sdwdFrame sdwdss
-        mEnterss = (map . map) sdwdMaybeEnter sdwdss
+        framess = (map . map) wFrame wss
+        mEnterss = (map . map) wMaybeEnter wss
         frame = mconcat $ concat framess
         mEnter = combineEnters size mEnterss
 
-        unselectedSizeDependentWidgetData = SizeDependentWidgetData
-          { sdwdFrame = frame
-          , sdwdMaybeEnter = mEnter
-          , sdwdEventMap = mempty
-          , sdwdFocalArea = Rect 0 size
+        unselectedW = Widget
+          { wIsFocused = isJust mCursor
+          , wSize = size
+          , wFrame = frame
+          , wMaybeEnter = mEnter
+          , wEventMap = mempty
+          , wFocalArea = Rect 0 size
           }
 
-        makeSizeDependentWidgetData cursor@(Vector2 x y) = SizeDependentWidgetData
-          { sdwdFrame = frame
-          , sdwdMaybeEnter = mEnter
-          , sdwdEventMap = makeEventMap sdwd navDests
-          , sdwdFocalArea = sdwdFocalArea sdwd
+        makeW cursor@(Vector2 x y) = Widget
+          { wIsFocused = isJust mCursor
+          , wSize = size
+          , wFrame = frame
+          , wMaybeEnter = mEnter
+          , wEventMap = makeEventMap w navDests
+          , wFocalArea = wFocalArea w
           }
           where
-            navDests = mkNavDests size (sdwdFocalArea sdwd) mEnterss cursor
-            sdwd = sdwdss !! y !! x
+            navDests = mkNavDests size (wFocalArea w) mEnterss cursor
+            w = wss !! y !! x
 
-        makeEventMap sdwd navDests =
-          mconcat [strongMap, sdwdEventMap sdwd, weakMap]
+        makeEventMap w navDests =
+          mconcat [strongMap, wEventMap w, weakMap]
           where
             (weakMap, strongMap) = mkNavEventmap navDests
 

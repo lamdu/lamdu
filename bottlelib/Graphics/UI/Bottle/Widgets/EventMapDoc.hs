@@ -35,21 +35,20 @@ make eventMap style animId =
       , textView "doc" eventDoc]
 
 addHelp :: TextView.Style -> Widget f -> Widget f
-addHelp style =
-  Widget.atWContentWithSize f
+addHelp style w =
+  Widget.atWFrame (mappend docFrame) w
   where
-    f size sdwd = Widget.atSdwdFrame (mappend docFrame) sdwd
-      where
-        (eventMapSize, eventMapDoc) = make eventMap style ["help box"]
-        transparency = Draw.Color 1 1 1
-        docFrame =
-          (Anim.onImages . Draw.tint . transparency) 0.8 .
-          Anim.onDepth (subtract 10) .
-          Anim.translate (size - eventMapSize) .
-          Anim.backgroundColor
-          ["help doc background"] 1 (Draw.Color 0.3 0.2 0.1 1) eventMapSize $
-          eventMapDoc
-        eventMap = Widget.sdwdEventMap sdwd
+    size = Widget.wSize w
+    (eventMapSize, eventMapDoc) = make eventMap style ["help box"]
+    transparency = Draw.Color 1 1 1
+    docFrame =
+      (Anim.onImages . Draw.tint . transparency) 0.8 .
+      Anim.onDepth (subtract 10) .
+      Anim.translate (size - eventMapSize) .
+      Anim.backgroundColor
+      ["help doc background"] 1 (Draw.Color 0.3 0.2 0.1 1) eventMapSize $
+      eventMapDoc
+    eventMap = Widget.wEventMap w
 
 makeToggledHelpAdder :: [E.ModKey] -> TextView.Style -> IO (Widget IO -> IO (Widget IO))
 makeToggledHelpAdder overlayDocKeys style = do

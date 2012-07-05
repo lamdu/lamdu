@@ -62,7 +62,7 @@ makeIntEditI integer myId setValue = do
   style <- OT.readTextStyle
   return .
     Widget.atEvents setter .
-    Widget.atEventMap removeKeys $ TextEdit.make
+    Widget.atWEventMap removeKeys $ TextEdit.make
     style { TextEdit.sEmptyFocusedString = "<0>" } textCursor text myId
   where
     removeKeys =

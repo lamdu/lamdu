@@ -139,7 +139,7 @@ makeRootWidget mkCacheInView widget = do
           action
       return
         ( branch
-        , (Widget.atMaybeEnter . fmap . fmap . Widget.atEnterResultEvent) setBranch .
+        , (Widget.atWMaybeEnter . fmap . fmap . Widget.atEnterResultEvent) setBranch .
           Widget.atEvents lift $ branchNameEdit
         )
     -- there must be an active branch:

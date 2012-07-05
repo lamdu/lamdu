@@ -21,7 +21,7 @@ import Data.Ord (comparing)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators.Utils (square, textHeight)
 import Graphics.UI.Bottle.Rect (Rect(..))
-import Graphics.UI.Bottle.Widget (Widget(..), SizeDependentWidgetData(..))
+import Graphics.UI.Bottle.Widget (Widget(..))
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.ByteString.Char8 as SBS8
@@ -96,7 +96,7 @@ makeUnfocused :: Style -> String -> Widget.Id -> Widget ((,) String)
 makeUnfocused style str myId =
   Widget.takesFocus enter .
   (Widget.atWSize . Vector2.first) (+ sCursorWidth style) .
-  Widget.atFrame (cursorTranslate style) .
+  Widget.atWFrame (cursorTranslate style) .
   TextView.makeWidget (sTextViewStyle style) displayStr $
   Widget.toAnimId myId
   where
@@ -122,19 +122,17 @@ lineHeightOfStyle style = sz * textHeight
 makeFocused :: Cursor -> Style -> String -> Widget.Id -> Widget ((,) String)
 makeFocused cursor style str myId =
   Widget.backgroundColor 10 (sBackgroundCursorId style) blue .
-  Widget.atFrame (`mappend` cursorFrame) .
+  Widget.atWFrame (`mappend` cursorFrame) .
   Widget.strongerEvents eventMap $
   widget
   where
     widget = Widget
       { wIsFocused = True
       , wSize = reqSize
-      , wContent = SizeDependentWidgetData
-          { sdwdFrame = img
-          , sdwdEventMap = mempty
-          , sdwdMaybeEnter = Nothing
-          , sdwdFocalArea = cursorRect
-          }
+      , wFrame = img
+      , wEventMap = mempty
+      , wMaybeEnter = Nothing
+      , wFocalArea = cursorRect
       }
     reqSize = Vector2 (sCursorWidth style + tlWidth) tlHeight
     myAnimId = Widget.toAnimId myId

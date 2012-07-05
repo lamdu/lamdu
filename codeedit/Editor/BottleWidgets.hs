@@ -142,7 +142,7 @@ removeKeys
   -> EventMap.ModKey
   -> a -> b -> m (Widget f)
 removeKeys makeEdit key =
-  (fmap . fmap . liftM . Widget.atEventMap)
+  (fmap . fmap . liftM . Widget.atWEventMap)
   (EventMap.deleteKey (EventMap.KeyEvent EventMap.Press key))
   makeEdit
 
@@ -183,7 +183,7 @@ makeNameEdit editingEmptyStr ident myId =
     flip makeEditor myId
   where
     makeEditor =
-      (fmap . fmap . liftM . Widget.atEventMap)
+      (fmap . fmap . liftM . Widget.atWEventMap)
       (EventMap.filterChars (`notElem` "=[]\\"))
       makeWordEdit
 
