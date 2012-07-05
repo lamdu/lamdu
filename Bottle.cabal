@@ -64,7 +64,7 @@ Library
                        Data.Store.Db
 
   Build-depends:       base >= 4,
-                       keyvaluehash,
+                       keyvaluehash >= 0.3,
                        GLFW-b >= 0.1.0,
                        OpenGL,
                        StateVar,
