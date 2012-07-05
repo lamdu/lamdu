@@ -8,8 +8,7 @@ import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Rect (Rect(..))
-import Graphics.UI.Bottle.SizeRange (Size)
-import Graphics.UI.Bottle.Widget (Widget)
+import Graphics.UI.Bottle.Widget (Widget, Size)
 import Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys)
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Graphics.DrawingCombinators as Draw
@@ -187,4 +186,4 @@ make
   -> Widget f
   -> Widget f
 make animId state setState =
-  Widget.atMkSizeDependentWidgetData (makeSdwd animId state setState <*>)
+  Widget.atWContentWithSize (makeSdwd animId state setState)

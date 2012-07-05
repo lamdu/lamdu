@@ -10,8 +10,7 @@ module Graphics.UI.Bottle.Widgets.Box(
 import Data.Maybe (fromMaybe)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Rect (Rect(..))
-import Graphics.UI.Bottle.Sized (Sized(..))
-import Graphics.UI.Bottle.Widget (Widget, SizeDependentWidgetData)
+import Graphics.UI.Bottle.Widget (Widget, SizeDependentWidgetData, Size)
 import Graphics.UI.Bottle.Widgets.Grid (KGrid(..))
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Vector.Vector2 as Vector2
@@ -65,10 +64,11 @@ atBoxElementSdwd
   -> Grid.GridElement a -> Grid.GridElement b
 atBoxElementSdwd = Grid.atGridElementSdwd
 
-data KBox key f = KBox {
-  boxOrientation :: Orientation,
-  boxMCursor :: Maybe Cursor,
-  boxContent :: Sized [(key, BoxElement f)]
+data KBox key f = KBox
+  { boxOrientation :: Orientation
+  , boxMCursor :: Maybe Cursor
+  , boxSize :: Size
+  , boxContent :: [(key, BoxElement f)]
   }
 
 AtFieldTH.make ''KBox
@@ -76,12 +76,11 @@ AtFieldTH.make ''KBox
 type Box = KBox ()
 
 makeKeyed :: Orientation -> [(key, Widget f)] -> KBox key f
-makeKeyed orientation children = KBox {
-  boxOrientation = orientation,
-  boxMCursor =
-    fmap (oFromGridCursor orientation) $ Grid.gridMCursor grid,
-  boxContent =
-    fmap (oFromGridChildren orientation) $ Grid.gridContent grid
+makeKeyed orientation children = KBox
+  { boxOrientation = orientation
+  , boxMCursor = fmap (oFromGridCursor orientation) $ Grid.gridMCursor grid
+  , boxSize = Grid.gridSize grid
+  , boxContent = oFromGridChildren orientation $ Grid.gridContent grid
   }
   where
     grid = Grid.makeKeyed (oToGridChildren orientation children)
@@ -99,9 +98,10 @@ make :: Orientation -> [Widget f] -> Box f
 make orientation = makeKeyed orientation . unkey
 
 toGrid :: KBox key f -> KGrid key f
-toGrid (KBox orientation mCursor content) = KGrid {
-  gridMCursor = fmap (oToGridCursor orientation) mCursor,
-  gridContent = fmap (oToGridChildren orientation) content
+toGrid (KBox orientation mCursor size content) = KGrid
+  { gridMCursor = fmap (oToGridCursor orientation) mCursor
+  , gridSize = size
+  , gridContent = oToGridChildren orientation content
   }
 
 toWidget :: KBox key f -> Widget f

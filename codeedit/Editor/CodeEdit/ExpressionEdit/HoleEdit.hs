@@ -255,7 +255,7 @@ makeResultsWidget firstResults moreResults myId = do
           widget = blockDownEvents . BWidgets.vboxAlign 0 $ map snd xs
           mResult =
             listToMaybe . map fst $
-            filter (Widget.isFocused . snd) xs
+            filter (Widget.wIsFocused . snd) xs
         return (mResult, widget)
   let
     makeMoreResultWidgets [] = return []

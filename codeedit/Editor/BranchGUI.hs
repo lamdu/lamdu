@@ -5,7 +5,6 @@ module Editor.BranchGUI
   ) where
 
 import Control.Applicative (pure, (<*))
-import Control.Arrow (second)
 import Control.Monad (liftM, liftM2, unless)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Writer (WriterT)
@@ -16,6 +15,7 @@ import Data.Monoid(Monoid(..), Last(..))
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
+import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag, DBTag)
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
@@ -163,7 +163,7 @@ makeRootWidget mkCacheInView widget = do
     WidgetIds.branchSelection $ \innerId ->
     OT.assignCursor innerId currentBranchWidgetId $ do
       branchNameEdits <-
-        mapM ((liftM . second) (Widget.align 0) . makeBranchNameEdit)
+        mapM (alignLeft . makeBranchNameEdit)
         namedBranches
       return .
         Widget.strongerEvents delBranchEventMap $
@@ -183,9 +183,11 @@ makeRootWidget mkCacheInView widget = do
     Widget.strongerEvents eventMap .
     BWidgets.vboxAlign 0 $
     [viewEdit
-    ,Widget.liftView Spacer.makeVerticalExpanding
+    ,Spacer.makeWidget $ Vector2 0 100 -- TODO: Widget.liftView Spacer.makeVerticalExpanding
     ,branchSelector
     ]
+  where
+    alignLeft = id -- TODO: (liftM . second) (Widget.align 0)
 
 -- Apply the transactions to the given View and convert them to
 -- transactions on a DB

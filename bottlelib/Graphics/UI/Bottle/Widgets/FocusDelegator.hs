@@ -44,7 +44,7 @@ makeFocused delegating focusSelf config backgroundCursorId =
 
     blueify = Widget.backgroundColor 10 (mappend backgroundCursorId (Widget.toAnimId focusSelf)) blue
 
-    useStartDelegatingEventMap = Widget.atSizeDependentWidgetData setStartDelegatingEventMap
+    useStartDelegatingEventMap = Widget.atWContent setStartDelegatingEventMap
     setStartDelegatingEventMap userIO =
       ($ userIO) .
       -- We're not delegating, so replace the child eventmap with an
@@ -73,9 +73,9 @@ make
   -> AnimId -- ^ Background Cursor Id
   -> Widget f -> Widget f
 make isDelegating Nothing focusSelf =
-  const . const $ Widget.atMkSizeDependentWidgetData f
+  const . const $ Widget.atWContentWithSize f
   where
-    f mkSizeDependentWidgetData size = Widget.atSdwdMaybeEnter (mEnter isDelegating size) $ mkSizeDependentWidgetData size
+    f size sdwd = Widget.atSdwdMaybeEnter (mEnter isDelegating size) $ sdwd
 
     mEnter NotDelegating wholeSize _ = Just . const $ takeFocus wholeSize
     mEnter _ _ Nothing = Nothing
@@ -107,14 +107,14 @@ wrapConfig config entryState mkResult backgroundCursorId myId cursor =
   mkResult atWidget innerId newCursor
   where
     atWidget innerWidget =
-      (Widget.atIsFocused . const) (isJust mIsDelegating) $
+      (Widget.atWIsFocused . const) (isJust mIsDelegating) $
       make entryState mIsDelegating delegatorId
       config backgroundCursorId innerWidget
       where
         mIsDelegating =
           case Widget.subId delegatorId newCursor of
             Nothing
-              | Widget.isFocused innerWidget -> Just Delegating
+              | Widget.wIsFocused innerWidget -> Just Delegating
               | otherwise -> Nothing
             Just _ -> Just NotDelegating
     newCursor

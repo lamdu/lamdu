@@ -9,6 +9,7 @@ import Data.List.Utils(enumerate, insertAt, removeAt)
 import Data.Monoid(Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
+import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget)
@@ -111,7 +112,7 @@ makeCodeEdit cache = do
   return $
     BWidgets.vboxCentered
     [ panesEdit
-    , Widget.liftView Spacer.makeVerticalExpanding
+    , Spacer.makeWidget $ Vector2 0 50
     , clipboardsEdit]
 
 makePanesEdit :: MonadF m => [SugarPane m] -> TWidget ViewTag m
@@ -146,7 +147,7 @@ makePanesEdit panes = do
       , maybe mempty (Widget.keysEventMap Config.movePaneUpKeys "Move pane up") $ mMovePaneUp pane
       ]
     onEachPane widget
-      | Widget.isFocused widget = onActivePane widget
+      | Widget.wIsFocused widget = onActivePane widget
       | otherwise = onInactivePane widget
     onActivePane =
       Widget.backgroundColor 20 WidgetIds.activeDefBackground Config.activeDefBGColor

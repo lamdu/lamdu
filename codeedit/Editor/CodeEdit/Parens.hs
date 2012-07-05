@@ -51,7 +51,7 @@ addSquareParens parensId =
   return .
   Widget.atFrameWithSize addSquareFrame .
   Widget.translateBy (* ((1 - Config.squareParensScaleFactor) / Config.squareParensScaleFactor / 2)) .
-  Widget.atSizeDependentWidgetData (Widget.scaleSizeDependentWidgetData Config.squareParensScaleFactor)
+  Widget.atWContent (Widget.scaleSizeDependentWidgetData Config.squareParensScaleFactor)
   where
     addSquareFrame size = mappend $ squareFrame parensId size
 

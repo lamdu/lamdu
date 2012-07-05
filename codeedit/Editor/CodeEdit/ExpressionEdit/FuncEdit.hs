@@ -5,7 +5,6 @@ import Control.Monad (liftM, (<=<))
 import Data.List.Utils (pairList)
 import Data.Monoid (mempty, mconcat)
 import Data.Store.Guid (Guid)
-import Data.Vector.Vector2 (Vector2(Vector2))
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
@@ -54,12 +53,14 @@ makeParamEdit makeExpressionEdit param =
     paramNameEdit <- makeParamNameEdit ident
     paramTypeEdit <- makeExpressionEdit $ Sugar.fpType param
     return
-      (Widget.align down paramNameEdit,
-       Widget.align up paramTypeEdit)
+      (-- TODO: Widget.align down
+       paramNameEdit,
+       -- TODO: Widget.align up
+       paramTypeEdit)
   where
     ident = Sugar.guid $ Sugar.fpEntity param
-    up = Vector2 0.5 0
-    down = Vector2 0.5 1
+    -- up = Vector2 0.5 0
+    -- down = Vector2 0.5 1
     paramEventMap = mconcat
       [ paramDeleteEventMap
       , paramAddNextEventMap

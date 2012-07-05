@@ -7,7 +7,6 @@ import Data.List.Utils (atPred, pairList)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
-import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.CodeEdit.InferredTypes(addType)
@@ -121,7 +120,7 @@ makeDefBodyParts makeExpressionEdit myId guid exprRef = do
   equals <- BWidgets.makeLabel "=" $ Widget.toAnimId myId
   rhsEdit <- makeExpressionEdit $ Sugar.fBody func
   return $
-    zipWith (second . Widget.align . (`Vector2` 0.5)) [1, 0.5, 0.5, 0.5, 0]
+    -- TODO: zipWith (second . Widget.align . (`Vector2` 0.5)) [1, 0.5, 0.5, 0.5, 0]
     [(Just LHS, lhsEdit)
     ,(Nothing, BWidgets.spaceWidget)
     ,(Nothing, equals)
@@ -166,9 +165,9 @@ make makeExpressionEdit guid defBody defType inferredTypes = do
   return .
     addType exprId inferredTypesEdits .
     Grid.toWidget .
-    (Grid.atGridContent . fmap . map) (addJumps cursor) .
+    (Grid.atGridContent . map) (addJumps cursor) .
     Grid.makeKeyed .
-    (map . map . second) (Widget.align (Vector2 0 0.5)) $
+    id $ -- TODO: (map . map . second) (Widget.align (Vector2 0 0.5)) $
     parts
   where
     exprId = WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity $ defBody

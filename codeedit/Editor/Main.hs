@@ -8,7 +8,7 @@ import Control.Monad.Trans.Writer (WriterT, runWriterT)
 import Data.ByteString (unpack)
 import Data.IORef
 import Data.List(intercalate)
-import Data.MRUMemo (memo, memoIO)
+import Data.MRUMemo (memoIO)
 import Data.Monoid(Last(..), Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2(Vector2)
@@ -137,8 +137,7 @@ runDbStore font store = do
       writeNewCache newCache
 
     newMemoFromCache writeMemo sugarCache =
-      memoIO .
-      (fmap . liftM . Widget.atMkSizeDependentWidgetData) memo $
+      memoIO $
       mkWidgetWithFallback (Config.baseStyle font) dbToIO
       (updateCacheWith writeNewCache) sugarCache
       where
@@ -174,13 +173,13 @@ mkWidgetWithFallback style dbToIO updateCache sugarCache cursor = do
     dbToIO $ do
       candidateWidget <- fromCursor cursor
       (isValid, widget) <-
-        if Widget.isFocused candidateWidget
+        if Widget.wIsFocused candidateWidget
         then return (True, candidateWidget)
         else do
           finalWidget <- fromCursor rootCursor
           Anchors.setP Anchors.cursor rootCursor
           return (False, finalWidget)
-      unless (Widget.isFocused widget) $
+      unless (Widget.wIsFocused widget) $
         fail "Root cursor did not match"
       return (isValid, widget)
   unless isValid . putStrLn $ "Invalid cursor: " ++ show cursor

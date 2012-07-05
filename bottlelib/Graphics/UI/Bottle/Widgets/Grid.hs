@@ -21,8 +21,6 @@ import Data.Monoid (Monoid(..))
 import Data.Ord (comparing)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Rect (Rect(..))
-import Graphics.UI.Bottle.SizeRange (Size)
-import Graphics.UI.Bottle.Sized (Sized(..))
 import Graphics.UI.Bottle.Widget (Widget(..), SizeDependentWidgetData(..), R)
 import Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys)
 import qualified Data.AtFieldTH as AtFieldTH
@@ -30,7 +28,6 @@ import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Rect as Rect
-import qualified Graphics.UI.Bottle.Sized as Sized
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.GLFW as GLFW
@@ -54,7 +51,7 @@ data NavDests f = NavDests
   , rightMostCursor :: Maybe (Widget.EnterResult f)
   }
 
-mkNavDests :: Size -> Rect -> [[Widget.MEnter f]] -> Cursor -> NavDests f
+mkNavDests :: Widget.Size -> Rect -> [[Widget.MEnter f]] -> Cursor -> NavDests f
 mkNavDests widgetSize selfRect mEnterss cursor@(Vector2 cursorX cursorY) = NavDests
   { leftOfCursor    = giveSelf . reverse $ take cursorX curRow
   , aboveCursor     = giveSelf . reverse $ take cursorY curColumn
@@ -115,7 +112,7 @@ mkNavEventmap navDests = (weakMap, strongMap)
 
 getCursor :: [[Widget k]] -> Maybe Cursor
 getCursor =
-  fmap cursorOf . find (isFocused . snd) . concat . enumerate2d
+  fmap cursorOf . find (wIsFocused . snd) . concat . enumerate2d
   where
     cursorOf ((row, column), _) = Vector2 column row
 
@@ -124,9 +121,10 @@ data GridElement f = GridElement
   , gridElementSdwd :: SizeDependentWidgetData f
   }
 
-data KGrid key f = KGrid {
-  gridMCursor :: Maybe Cursor,
-  gridContent :: Sized [[(key, GridElement f)]]
+data KGrid key f = KGrid
+  { gridMCursor :: Maybe Cursor
+  , gridSize :: Widget.Size
+  , gridContent :: [[(key, GridElement f)]]
   }
 
 AtFieldTH.make ''GridElement
@@ -135,14 +133,17 @@ AtFieldTH.make ''KGrid
 type Grid = KGrid ()
 
 makeKeyed :: [[(key, Widget f)]] -> KGrid key f
-makeKeyed children = KGrid {
-  gridMCursor = getCursor $ (map . map) snd children,
-  gridContent =
-   GridView.makeGeneric (second . translate) $
-   (map . map) (keyIntoSized . second Widget.content) children
+makeKeyed children = KGrid
+  { gridMCursor = getCursor $ (map . map) snd children
+  , gridSize = size
+  , gridContent = content
   }
   where
-    keyIntoSized (key, sized) = fmap ((,) key) sized
+    (size, content) =
+      GridView.makeGeneric (second . translate) $
+      (map . map) mkSizedKeyedContent children
+    mkSizedKeyedContent (key, widget) =
+      (Widget.wSize widget, (key, Widget.wContent widget))
     translate rect =
       GridElement rect .
       Widget.translateSizeDependentWidgetData (Rect.rectTopLeft rect)
@@ -160,20 +161,20 @@ make :: [[Widget f]] -> Grid f
 make = makeKeyed . unkey
 
 helper ::
-  (Size -> [[Widget.MEnter f]] -> Widget.MEnter f) ->
+  (Widget.Size -> [[Widget.MEnter f]] -> Widget.MEnter f) ->
   KGrid key f -> Widget f
-helper combineEnters (KGrid mCursor sChildren) =
+helper combineEnters (KGrid mCursor size sChildren) =
   Widget
-    { isFocused = isJust mCursor
-    , content =
-      Sized.atFromSize combineSizeDependentWidgetDatas $
-      (fmap . map . map) snd sChildren
+    { wIsFocused = isJust mCursor
+    , wSize = size
+    , wContent =
+      combineSizeDependentWidgetDatas $
+      (map . map) (gridElementSdwd . snd) sChildren
     }
   where
-    combineSizeDependentWidgetDatas mkGridElementss size =
+    combineSizeDependentWidgetDatas sdwdss =
       maybe unselectedSizeDependentWidgetData makeSizeDependentWidgetData mCursor
       where
-        sdwdss = (map . map) gridElementSdwd $ mkGridElementss size
         framess = (map . map) sdwdFrame sdwdss
         mEnterss = (map . map) sdwdMaybeEnter sdwdss
         frame = mconcat $ concat framess

@@ -21,8 +21,7 @@ import Data.Ord (comparing)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators.Utils (square, textHeight)
 import Graphics.UI.Bottle.Rect (Rect(..))
-import Graphics.UI.Bottle.Sized (Sized(..))
-import Graphics.UI.Bottle.Widget (Widget(..))
+import Graphics.UI.Bottle.Widget (Widget(..), SizeDependentWidgetData(..))
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.ByteString.Char8 as SBS8
@@ -34,8 +33,6 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Rect as Rect
-import qualified Graphics.UI.Bottle.SizeRange as SizeRange
-import qualified Graphics.UI.Bottle.Sized as Sized
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Safe
@@ -98,9 +95,7 @@ cursorRects style str =
 makeUnfocused :: Style -> String -> Widget.Id -> Widget ((,) String)
 makeUnfocused style str myId =
   Widget.takesFocus enter .
-  (Widget.atContent . Sized.atRequestedSize)
-   ((SizeRange.atSrMinSize . Vector2.first) (+ sCursorWidth style) .
-    (SizeRange.atSrMaxSize . Vector2.first . fmap) (+ sCursorWidth style)) .
+  (Widget.atWSize . Vector2.first) (+ sCursorWidth style) .
   Widget.atFrame (cursorTranslate style) .
   TextView.makeWidget (sTextViewStyle style) displayStr $
   Widget.toAnimId myId
@@ -131,18 +126,17 @@ makeFocused cursor style str myId =
   Widget.strongerEvents eventMap $
   widget
   where
-    widget = Widget {
-      isFocused = True,
-      content =
-        Sized reqSize . const $
-        Widget.SizeDependentWidgetData {
-          Widget.sdwdFrame = img,
-          Widget.sdwdEventMap = mempty,
-          Widget.sdwdMaybeEnter = Nothing,
-          Widget.sdwdFocalArea = cursorRect
+    widget = Widget
+      { wIsFocused = True
+      , wSize = reqSize
+      , wContent = SizeDependentWidgetData
+          { sdwdFrame = img
+          , sdwdEventMap = mempty
+          , sdwdMaybeEnter = Nothing
+          , sdwdFocalArea = cursorRect
           }
       }
-    reqSize = SizeRange.fixedSize $ Vector2 (sCursorWidth style + tlWidth) tlHeight
+    reqSize = Vector2 (sCursorWidth style + tlWidth) tlHeight
     myAnimId = Widget.toAnimId myId
     img = cursorTranslate style $ frameGen myAnimId
     drawText = TextView.drawTextAsSingleLetters (sTextViewStyle style)

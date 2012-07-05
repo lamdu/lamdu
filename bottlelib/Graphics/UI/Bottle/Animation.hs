@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses #-}
 
 module Graphics.UI.Bottle.Animation
-  ( R, AnimId
+  ( R, AnimId, Size
   , PositionedImage(..), atPiImage, atPiRect
   , Frame(..), atFSubImages, onImages
   , draw, nextFrame, mapIdentities
@@ -34,6 +34,7 @@ import qualified Graphics.UI.Bottle.Rect as Rect
 
 type AnimId = [SBS.ByteString]
 type Layer = Int
+type Size = Vector2 R
 
 data PositionedImage = PositionedImage {
   piImage :: Draw.Image (), -- Image always occupies (0,0)..(1,1), the translation/scaling occurs when drawing
@@ -58,7 +59,7 @@ simpleFrame :: AnimId -> Draw.Image () -> Frame
 simpleFrame animId image =
   Frame $ Map.singleton animId [(0, PositionedImage image (Rect 0 1))]
 
-simpleFrameDownscale :: AnimId -> Vector2 R -> Draw.Image () -> Frame
+simpleFrameDownscale :: AnimId -> Size -> Draw.Image () -> Frame
 simpleFrameDownscale animId size@(Vector2 w h) =
   scale size .
   simpleFrame animId .

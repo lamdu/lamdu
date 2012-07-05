@@ -25,7 +25,6 @@ import Data.Vector.Vector2 (Vector2(..))
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (TWidget, OTransaction)
 import Graphics.UI.Bottle.Animation (AnimId)
-import Graphics.UI.Bottle.Sized (Sized)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.Property as Property
@@ -66,7 +65,7 @@ makeFocusableView myId widget = do
       | hasFocus = Widget.backgroundColor 10 WidgetIds.backgroundCursorId blue
       | otherwise = id
   return .
-    (Widget.atIsFocused . const) hasFocus . setBackground $
+    (Widget.atWIsFocused . const) hasFocus . setBackground $
     Widget.takesFocus (const (pure myId)) widget
   where
     blue = Draw.Color 0 0 1 0.8
@@ -89,7 +88,7 @@ makeChoice
 makeChoice forceExpand selectionAnimId orientation children curChild =
   maybe Box.toWidget Box.toWidgetBiased mCurChildIndex box
   where
-    childFocused = any (Widget.isFocused . snd) children
+    childFocused = any (Widget.wIsFocused . snd) children
     pairs = (map . first) (curChild ==) children
     visiblePairs
       | childFocused || forceExpand = pairs
@@ -189,10 +188,10 @@ makeNameEdit editingEmptyStr ident myId =
       makeWordEdit
 
 boxAlign :: Box.Orientation -> Vector2 Widget.R -> [Widget f] -> Widget f
-boxAlign orientation align =
+boxAlign orientation _align =
   Box.toWidget .
   Box.make orientation .
-  map (Widget.align align)
+  id -- map (Widget.align align)  TODO:
 
 hboxAlign :: Widget.R -> [Widget f] -> Widget f
 hboxAlign align = boxAlign Box.horizontal $ Vector2 0 align
@@ -213,12 +212,12 @@ vbox :: [Widget f] -> Widget f
 vbox = Box.toWidget . Box.make Box.vertical
 
 spaceWidget :: Widget f
-spaceWidget = Widget.liftView spaceView
+spaceWidget = uncurry Widget.liftView spaceView
 
 hboxCenteredSpaced :: [Widget f] -> Widget f
 hboxCenteredSpaced = hboxAlign 0.5 . intersperse spaceWidget
 
-spaceView :: Sized Anim.Frame
+spaceView :: (Anim.Size, Anim.Frame)
 spaceView = Spacer.makeHorizontal 20
 
 setTextColor :: Draw.Color -> OTransaction t m (Widget f) -> OTransaction t m (Widget f)

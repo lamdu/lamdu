@@ -13,9 +13,8 @@ import Data.List.Utils (enumerate)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators((%%))
-import Graphics.UI.Bottle.Animation(AnimId)
-import Graphics.UI.Bottle.SizeRange (Size, fixedSize)
-import Graphics.UI.Bottle.Sized (Sized(..))
+import Graphics.UI.Bottle.Animation(AnimId, Size)
+import Graphics.UI.Bottle.Rect as Rect
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.ByteString.Char8 as SBS8
@@ -24,7 +23,6 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
-import Graphics.UI.Bottle.Rect as Rect
 
 data Style = Style {
   styleColor :: Draw.Color,
@@ -105,10 +103,10 @@ drawTextAsLines style text =
   map (nestedFrame . second (fontRender style) . first ((,) "Line")) .
   enumerate $ splitWhen (== '\n') text
 
-make :: Style -> String -> AnimId -> Sized Anim.Frame
-make style text animId = Sized (fixedSize textSize) . const $ frame animId
+make :: Style -> String -> AnimId -> (Size, Anim.Frame)
+make style text animId = (textSize, frame animId)
   where
     (frame, textSize) = drawTextAsLines style text
 
 makeWidget :: Style -> String -> AnimId -> Widget a
-makeWidget style text = Widget.liftView . make style text
+makeWidget style text = uncurry Widget.liftView . make style text

@@ -4,14 +4,12 @@ import Control.Arrow(first, second)
 import Control.Concurrent(threadDelay)
 import Control.Monad (liftM, when)
 import Data.IORef
-import Data.MRUMemo (memo)
 import Data.StateVar (($=))
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators ((%%))
 import Graphics.DrawingCombinators.Utils (Image)
 import Graphics.UI.Bottle.Animation(AnimId)
-import Graphics.UI.Bottle.SizeRange (Size)
 import Graphics.UI.Bottle.Widget(Widget)
 import Graphics.UI.GLFW (defaultDisplayOptions, getWindowDimensions)
 import Graphics.UI.GLFW.Events (KeyEvent, GLFWEvent(..), eventLoop)
@@ -22,7 +20,9 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 
-mainLoopImage :: (Size -> KeyEvent -> IO Bool) -> (Bool -> Size -> IO (Maybe Image)) -> IO a
+mainLoopImage
+  :: (Widget.Size -> KeyEvent -> IO Bool)
+  -> (Bool -> Widget.Size -> IO (Maybe Image)) -> IO a
 mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
   GLFWUtils.openWindow defaultDisplayOptions
 
@@ -57,9 +57,9 @@ mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
   eventLoop handleEvents
 
 mainLoopAnim
-  :: (Size -> IO (Maybe (AnimId -> AnimId)))
-  -> (Size -> KeyEvent -> IO (Maybe (AnimId -> AnimId)))
-  -> (Size -> IO Anim.Frame)
+  :: (Widget.Size -> IO (Maybe (AnimId -> AnimId)))
+  -> (Widget.Size -> KeyEvent -> IO (Maybe (AnimId -> AnimId)))
+  -> (Widget.Size -> IO Anim.Frame)
   -> IO Anim.R -> IO a
 mainLoopAnim tickHandler eventHandler makeFrame getAnimationHalfLife = do
   frameStateVar <- newIORef Nothing
@@ -116,40 +116,30 @@ mainLoopAnim tickHandler eventHandler makeFrame getAnimationHalfLife = do
 compose :: [a -> a] -> a -> a
 compose = foldr (.) id
 
-mainLoopWidgetI :: IO (Widget IO) -> IO Anim.R -> IO a
-mainLoopWidgetI mkWidget getAnimationHalfLife = do
+mainLoopWidget :: IO (Widget IO) -> IO Anim.R -> IO a
+mainLoopWidget mkWidget getAnimationHalfLife = do
   widgetRef <- newIORef =<< mkWidget
   let
     newWidget = writeIORef widgetRef =<< mkWidget
-    tickHandler size = do
+    tickHandler _size = do
       widget <- readIORef widgetRef
       tickResults <-
-        sequence . E.emTickHandlers . Widget.sdwdEventMap $
-        Widget.getSdwd widget size
+        sequence . E.emTickHandlers . Widget.sdwdEventMap $ Widget.wContent widget
       case tickResults of
         [] -> return Nothing
         _ -> do
           newWidget
           return . Just . compose . map Widget.eAnimIdMapping $ tickResults
-    eventHandler size event = do
+    eventHandler _size event = do
       widget <- readIORef widgetRef
       mAnimIdMapping <-
         maybe (return Nothing) (liftM (Just . Widget.eAnimIdMapping)) .
-        E.lookup event . Widget.sdwdEventMap $ Widget.getSdwd widget size
+        E.lookup event . Widget.sdwdEventMap $ Widget.wContent widget
       case mAnimIdMapping of
         Nothing -> return ()
         Just _ -> newWidget
       return mAnimIdMapping
-    mkFrame size =
-      return . Widget.sdwdFrame . (`Widget.getSdwd` size) =<<
+    mkFrame _size =
+      return . Widget.sdwdFrame . Widget.wContent =<<
       readIORef widgetRef
   mainLoopAnim tickHandler eventHandler mkFrame getAnimationHalfLife
-
-argument :: (a -> b) -> (b -> c) -> a -> c
-argument = flip (.)
-
-mainLoopWidget :: IO (Widget IO) -> IO Anim.R -> IO a
-mainLoopWidget =
-  -- Always memoize the (Size->) function of the top-level widget
-  (argument . liftM . Widget.atMkSizeDependentWidgetData) memo
-  mainLoopWidgetI
