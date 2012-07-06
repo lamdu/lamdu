@@ -24,7 +24,7 @@ addType exprId typeEdits widget =
   BWidgets.vbox $
   [ center widget
   , -- must not be aligned (needs to take over all given space):
-    Spacer.makeHorizLine underlineId (Vector2 50 0) -- TODO: HACK HACK
+    Spacer.makeHorizLine underlineId (Vector2 50 1) -- TODO: HACK HACK
   , center typeEdit
   ]
   where
