@@ -39,11 +39,9 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
     , Widget.scale Config.whereScaleFactor whereEdits
     ]
   where
-    onAllWidgets item =
-      Widget.weakerEvents (whereItemDeleteEventMap item) .
-      id -- TODO: Widget.align (Vector2 0 0.5)
     makeWhereItemEdits item =
-      (liftM . map . map . second . onAllWidgets) item $
+      (liftM . map . map . second . second . Widget.weakerEvents)
+        (whereItemDeleteEventMap item) $
       DefinitionEdit.makeParts makeExpressionEdit
       (paramId item) (guid item) (Sugar.wiValue item) (Sugar.wiType item)
     paramId = WidgetIds.paramId . guid

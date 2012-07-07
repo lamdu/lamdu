@@ -7,7 +7,7 @@ module Editor.BottleWidgets
   , hboxCenteredSpaced
   , hboxCentered, vboxCentered
   , hbox, vbox
-  , gridHSpaced
+  , gridHSpaced, gridHSpacedCentered
   , spaceView, spaceWidget
   , setTextColor
   , empty
@@ -21,7 +21,6 @@ import Data.List (findIndex, intersperse)
 import Data.Monoid (mappend)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
-import Data.Vector.Vector2 (Vector2(..))
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (TWidget, OTransaction)
 import Graphics.UI.Bottle.Animation (AnimId)
@@ -94,7 +93,7 @@ makeChoice forceExpand selectionAnimId orientation children curChild =
       | childFocused || forceExpand = pairs
       | otherwise = filter fst pairs
     mCurChildIndex = findIndex fst visiblePairs
-    box = Box.make orientation colorizedPairs
+    box = Box.makeAlign 0 orientation colorizedPairs
     colorizedPairs
       -- focus shows selection already
       | childFocused = map snd visiblePairs
@@ -187,17 +186,16 @@ makeNameEdit editingEmptyStr ident myId =
       (EventMap.filterChars (`notElem` "=[]\\"))
       makeWordEdit
 
-boxAlign :: Box.Orientation -> Vector2 Widget.R -> [Widget f] -> Widget f
-boxAlign orientation _align =
+boxAlign :: Box.Orientation -> Box.Alignment -> [Widget f] -> Widget f
+boxAlign orientation align =
   Box.toWidget .
-  Box.make orientation .
-  id -- map (Widget.align align)  TODO:
+  Box.makeAlign align orientation
 
-hboxAlign :: Widget.R -> [Widget f] -> Widget f
-hboxAlign align = boxAlign Box.horizontal $ Vector2 0 align
+hboxAlign :: Box.Alignment -> [Widget f] -> Widget f
+hboxAlign align = boxAlign Box.horizontal align
 
-vboxAlign :: Widget.R -> [Widget f] -> Widget f
-vboxAlign align = boxAlign Box.vertical $ Vector2 align 0
+vboxAlign :: Box.Alignment -> [Widget f] -> Widget f
+vboxAlign align = boxAlign Box.vertical align
 
 vboxCentered :: [Widget f] -> Widget f
 vboxCentered = vboxAlign 0.5
@@ -205,10 +203,10 @@ vboxCentered = vboxAlign 0.5
 hboxCentered :: [Widget f] -> Widget f
 hboxCentered = hboxAlign 0.5
 
-hbox :: [Widget f] -> Widget f
+hbox :: [(Box.Alignment, Widget f)] -> Widget f
 hbox = Box.toWidget . Box.make Box.horizontal
 
-vbox :: [Widget f] -> Widget f
+vbox :: [(Box.Alignment, Widget f)] -> Widget f
 vbox = Box.toWidget . Box.make Box.vertical
 
 spaceWidget :: Widget f
@@ -223,8 +221,11 @@ spaceView = Spacer.makeHorizontal 20
 setTextColor :: Draw.Color -> OTransaction t m (Widget f) -> OTransaction t m (Widget f)
 setTextColor = OT.atTextStyle . TextEdit.atSTextViewStyle . TextView.atStyleColor . const
 
-gridHSpaced :: [[Widget f]] -> Widget f
-gridHSpaced = Grid.toWidget . Grid.make . map (intersperse spaceWidget)
+gridHSpaced :: [[(Grid.Alignment, Widget f)]] -> Widget f
+gridHSpaced = Grid.toWidget . Grid.make . map (intersperse (0, spaceWidget))
+
+gridHSpacedCentered :: [[Widget f]] -> Widget f
+gridHSpacedCentered = gridHSpaced . (map . map) ((,) 0.5)
 
 empty :: Widget f
 empty = Spacer.makeWidget 0

@@ -24,13 +24,16 @@ groupByKey f =
 
 make :: EventMap a -> TextView.Style -> Anim.AnimId -> (Anim.Size, Anim.Frame)
 make eventMap style animId =
-  GridView.make . map toRow . groupByKey Tuple.swap . sortOn snd $ E.eventMapDocs eventMap
+  GridView.makeAlign 0 .
+  map toRow .
+  groupByKey Tuple.swap .
+  sortOn snd $ E.eventMapDocs eventMap
   where
     textView uniq str =
       TextView.make style str $
       Anim.joinId animId (map SBS8.pack [str, uniq])
     toRow (eventDoc, eventKeys) =
-      [ GridView.make
+      [ GridView.makeAlign 0
         [concatMap ((: [Spacer.makeHorizontal 8]) . textView "key") eventKeys]
       , textView "doc" eventDoc]
 

@@ -1,6 +1,9 @@
 {-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.Grid(
-  Grid, KGrid(..), make, makeKeyed, unkey, getElement,
+  Grid, KGrid(..),
+  make, makeKeyed, makeAlign, makeCentered,
+  unkey, getElement,
+  Alignment,
   atGridMCursor,
   atGridContent,
   GridElement(..),
@@ -22,6 +25,7 @@ import Data.Ord (comparing)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.Widget (Widget(..), R)
+import Graphics.UI.Bottle.Widgets.GridView (Alignment)
 import Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys)
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Vector.Vector2 as Vector2
@@ -132,9 +136,9 @@ AtFieldTH.make ''KGrid
 
 type Grid = KGrid ()
 
-makeKeyed :: [[(key, Widget f)]] -> KGrid key f
+makeKeyed :: [[(key, (Alignment, Widget f))]] -> KGrid key f
 makeKeyed children = KGrid
-  { gridMCursor = getCursor $ (map . map) snd children
+  { gridMCursor = getCursor $ (map . map) (snd . snd) children
   , gridSize = size
   , gridContent = content
   }
@@ -142,13 +146,13 @@ makeKeyed children = KGrid
     (size, content) =
       GridView.makeGeneric (second . translate) $
       (map . map) mkSizedKeyedContent children
-    mkSizedKeyedContent (key, widget) =
-      (Widget.wSize widget, (key, widget))
+    mkSizedKeyedContent (key, (alignment, widget)) =
+      ((Widget.wSize widget, alignment), (key, widget))
     translate rect =
       GridElement rect .
       Widget.translate (Rect.rectTopLeft rect)
 
-unkey :: [[Widget f]] -> [[((), Widget f)]]
+unkey :: [[(Alignment, Widget f)]] -> [[((), (Alignment, Widget f))]]
 unkey = (map . map) ((,) ())
 
 getElement :: (Show key, Eq key) => key -> [(key, GridElement f)] -> GridElement f
@@ -157,8 +161,15 @@ getElement key =
   where
     errorMsg = "getElement: " ++ show key ++ " not found in Grid!"
 
-make :: [[Widget f]] -> Grid f
+make :: [[(Alignment, Widget f)]] -> Grid f
 make = makeKeyed . unkey
+
+makeAlign :: Alignment -> [[Widget f]] -> Grid f
+makeAlign alignment = make . (map . map) ((,) alignment)
+
+makeCentered :: [[Widget f]] -> Grid f
+makeCentered = makeAlign 0.5
+
 
 helper ::
   (Widget.Size -> [[Widget.MEnter f]] -> Widget.MEnter f) ->

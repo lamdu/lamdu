@@ -85,7 +85,9 @@ makeParamsEdit
   -> [Sugar.FuncParam m]
   -> TWidget ViewTag m
 makeParamsEdit makeExpressionEdit =
-  liftM (BWidgets.gridHSpaced . List.transpose . map (pairList . scaleDownType)) .
+  liftM
+  (BWidgets.gridHSpacedCentered . List.transpose .
+   map (pairList . scaleDownType)) .
   mapM (makeParamEdit makeExpressionEdit)
   where
     scaleDownType = second $ Widget.scale Config.typeScaleFactor

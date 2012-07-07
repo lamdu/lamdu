@@ -1,16 +1,19 @@
 {-# LANGUAGE Rank2Types, TemplateHaskell #-}
 module Graphics.UI.Bottle.Widgets.Box(
-  Box, KBox(..), make, makeKeyed, unkey, getElement,
+  Box, KBox(..), Alignment,
+  make, makeKeyed, makeAlign, makeCentered,
+  unkey, getElement,
   atBoxMCursor, atBoxContent, atBoxOrientation,
   BoxElement, mkBoxElement, boxElementRect, boxElementW,
   atBoxElementRect, atBoxElementW,
   Cursor, toWidget, toWidgetBiased,
   Orientation, horizontal, vertical) where
 
+import Control.Arrow (first, second)
 import Data.Maybe (fromMaybe)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Rect (Rect(..))
-import Graphics.UI.Bottle.Widget (Widget, Size)
+import Graphics.UI.Bottle.Widget (Widget, Size, R)
 import Graphics.UI.Bottle.Widgets.Grid (KGrid(..))
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Vector.Vector2 as Vector2
@@ -22,11 +25,14 @@ eHead :: [a] -> a
 eHead (x:_) = x
 eHead [] = error "Grid returned invalid list without any elements, instead of list Box handed it"
 
+type Alignment = R -- 0..1
+
 data Orientation = Orientation {
   oToGridCursor :: Cursor -> Grid.Cursor,
   oToGridChildren :: forall a. [a] -> [[a]],
   oFromGridCursor :: Grid.Cursor -> Cursor,
-  oFromGridChildren :: forall a. [[a]] -> [a]
+  oFromGridChildren :: forall a. [[a]] -> [a],
+  oToGridAlignment :: Alignment -> Grid.Alignment
   }
 
 horizontal :: Orientation
@@ -34,7 +40,8 @@ horizontal = Orientation {
   oToGridCursor = (`Vector2` 0),
   oToGridChildren = (: []),
   oFromGridCursor = Vector2.fst,
-  oFromGridChildren = eHead
+  oFromGridChildren = eHead,
+  oToGridAlignment = Vector2 0
   }
 
 vertical :: Orientation
@@ -42,7 +49,8 @@ vertical = Orientation {
   oToGridCursor = (0 `Vector2`),
   oToGridChildren = map (: []),
   oFromGridCursor = Vector2.snd,
-  oFromGridChildren = map eHead
+  oFromGridChildren = map eHead,
+  oToGridAlignment = flip Vector2 0
   }
 
 type BoxElement f = Grid.GridElement f
@@ -75,7 +83,7 @@ AtFieldTH.make ''KBox
 
 type Box = KBox ()
 
-makeKeyed :: Orientation -> [(key, Widget f)] -> KBox key f
+makeKeyed :: Orientation -> [(key, (Alignment, Widget f))] -> KBox key f
 makeKeyed orientation children = KBox
   { boxOrientation = orientation
   , boxMCursor = fmap (oFromGridCursor orientation) $ Grid.gridMCursor grid
@@ -83,9 +91,13 @@ makeKeyed orientation children = KBox
   , boxContent = oFromGridChildren orientation $ Grid.gridContent grid
   }
   where
-    grid = Grid.makeKeyed (oToGridChildren orientation children)
+    grid =
+      Grid.makeKeyed .
+      oToGridChildren orientation .
+      (map . second . first) (oToGridAlignment orientation) $
+      children
 
-unkey :: [Widget f] -> [((), Widget f)]
+unkey :: [(Alignment, Widget f)] -> [((), (Alignment, Widget f))]
 unkey = map ((,) ())
 
 getElement :: (Show key, Eq key) => key -> [(key, BoxElement f)] -> BoxElement f
@@ -94,8 +106,14 @@ getElement key =
   where
     errorMsg = "getElement: " ++ show key ++ " not found in Box!"
 
-make :: Orientation -> [Widget f] -> Box f
+make :: Orientation -> [(Alignment, Widget f)] -> Box f
 make orientation = makeKeyed orientation . unkey
+
+makeAlign :: Alignment -> Orientation -> [Widget f] -> Box f
+makeAlign alignment orientation = make orientation . map ((,) alignment)
+
+makeCentered :: Orientation -> [Widget f] -> Box f
+makeCentered = makeAlign 0.5
 
 toGrid :: KBox key f -> KGrid key f
 toGrid (KBox orientation mCursor size content) = KGrid

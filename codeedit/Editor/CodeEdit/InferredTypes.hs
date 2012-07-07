@@ -11,9 +11,6 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
-center :: Widget f -> Widget f
-center = id -- TODO: Widget.align (Vector2 0.5 0.5)
-
 addType
   :: Widget.Id
   -> [Widget f]
@@ -21,11 +18,10 @@ addType
   -> Widget f
 addType _ [] widget = widget
 addType exprId typeEdits widget =
-  BWidgets.vbox $
-  [ center widget
-  , -- must not be aligned (needs to take over all given space):
-    Spacer.makeHorizLine underlineId (Vector2 50 1) -- TODO: HACK HACK
-  , center typeEdit
+  BWidgets.vboxCentered $
+  [ widget
+  , Spacer.makeHorizLine underlineId (Vector2 50 1) -- TODO: HACK HACK
+  , typeEdit
   ]
   where
     typeEdit =
