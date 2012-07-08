@@ -121,7 +121,6 @@ makeDefBodyParts makeExpressionEdit myId guid exprRef = do
   equals <- BWidgets.makeLabel "=" $ Widget.toAnimId myId
   rhsEdit <- makeExpressionEdit $ Sugar.fBody func
   return $
-    -- TODO: zipWith (second . Widget.align . (`Vector2` 0.5)) [1, 0.5, 0.5, 0.5, 0]
     [(Just LHS, (Vector2 1 0.5, lhsEdit))
     ,(Nothing, (0, BWidgets.spaceWidget))
     ,(Nothing, (0.5, equals))

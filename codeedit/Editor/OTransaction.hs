@@ -5,7 +5,7 @@ module Editor.OTransaction
   , TWidget, WidgetT
   , readCursor, subCursor, atCursor, assignCursor
   , readTextStyle, transaction
-  , atTextStyle, atTextSizeColor
+  , atTextStyle, setTextSizeColor
   , markVariablesAsUsed, usedVariables
   , getP
   ) where
@@ -117,13 +117,12 @@ atTextStyle
   -> OTransaction t m (Widget f) -> OTransaction t m (Widget f)
 atTextStyle = atOTransaction . Reader.withReaderT . atEnvTextStyle
 
--- Todo: set, not at
-atTextSizeColor
+setTextSizeColor
   :: Int
   -> Draw.Color
   -> OTransaction t m (Widget f)
   -> OTransaction t m (Widget f)
-atTextSizeColor textSize textColor =
+setTextSizeColor textSize textColor =
   (atTextStyle . TextEdit.atSTextViewStyle)
   ((TextView.atStyleFontSize . const) textSize .
    (TextView.atStyleColor . const) textColor)

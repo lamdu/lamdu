@@ -16,7 +16,6 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Data as Data
 
--- TODO: ExpressionEntity -> ExpressionEntity
 data ExpressionEntity m = ExpressionEntity
   { entityStored :: Data.ExpressionIRefProperty m
   , entityValue :: Data.Expression (ExpressionEntity m)

@@ -54,9 +54,6 @@ data Entity m = Entity
   , eActions :: Maybe (Actions m)
   }
 
--- TODO: Only Expression types that CAN be wrapped with () should be,
--- as prerequisite of sections which will not have HasParens in
--- them...
 data HasParens = HaveParens | DontHaveParens
 
 data ExpressionRef m = ExpressionRef

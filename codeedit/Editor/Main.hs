@@ -150,7 +150,6 @@ runDbStore font store = do
   memoRef <- fixIORef $ \writeMemo -> newMemoFromCache writeMemo initSugarCache
 
   let
-    -- TODO: Move this logic to some more common place?
     makeWidget size = do
       mkWidget <- readIORef memoRef
       cursor <- dbToIO $ Anchors.getP Anchors.cursor

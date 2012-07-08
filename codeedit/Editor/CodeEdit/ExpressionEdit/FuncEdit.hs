@@ -101,10 +101,10 @@ make
 make makeExpressionEdit (Sugar.Func params body) myId =
   OT.assignCursor myId ((WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity) body) $ do
     lambdaLabel <-
-      OT.atTextSizeColor Config.lambdaTextSize Config.lambdaColor .
+      OT.setTextSizeColor Config.lambdaTextSize Config.lambdaColor .
       BWidgets.makeLabel "λ" $ Widget.toAnimId myId
     rightArrowLabel <-
-      OT.atTextSizeColor Config.rightArrowTextSize Config.rightArrowColor .
+      OT.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor .
       BWidgets.makeLabel "→" $ Widget.toAnimId myId
     bodyEdit <- makeExpressionEdit body
     paramsEdit <- makeParamsEdit makeExpressionEdit params
