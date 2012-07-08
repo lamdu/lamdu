@@ -1,16 +1,16 @@
 {-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
-module Graphics.UI.Bottle.Widgets.Grid(
-  Grid, KGrid(..),
-  make, makeKeyed, makeAlign, makeCentered,
-  unkey,
-  Alignment,
-  atGridMCursor,
-  atGridContent,
-  GridElement(..),
-  atGridElementRect,
-  atGridElementW,
-  Cursor, toWidget, toWidgetBiased)
-where
+module Graphics.UI.Bottle.Widgets.Grid
+  ( Grid, KGrid(..)
+  , make, makeKeyed, makeAlign, makeCentered
+  , unkey
+  , Alignment
+  , atGridMCursor
+  , atGridContent
+  , GridElement(..)
+  , atGridElementRect
+  , atGridElementW
+  , Cursor, toWidget, toWidgetBiased
+  ) where
 
 import Control.Applicative (liftA2)
 import Control.Arrow (first, second)

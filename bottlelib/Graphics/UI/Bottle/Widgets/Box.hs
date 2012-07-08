@@ -1,13 +1,14 @@
 {-# LANGUAGE Rank2Types, TemplateHaskell #-}
-module Graphics.UI.Bottle.Widgets.Box(
-  Box, KBox(..), Alignment,
-  make, makeKeyed, makeAlign, makeCentered,
-  unkey,
-  atBoxMCursor, atBoxContent, atBoxOrientation,
-  BoxElement, mkBoxElement, boxElementRect, boxElementW,
-  atBoxElementRect, atBoxElementW,
-  Cursor, toWidget, toWidgetBiased,
-  Orientation, horizontal, vertical) where
+module Graphics.UI.Bottle.Widgets.Box
+  ( Box, KBox(..), Alignment
+  , make, makeKeyed, makeAlign, makeCentered
+  , unkey
+  , atBoxMCursor, atBoxContent, atBoxOrientation
+  , BoxElement, mkBoxElement, boxElementRect, boxElementW
+  , atBoxElementRect, atBoxElementW
+  , Cursor, toWidget, toWidgetBiased
+  , Orientation, horizontal, vertical
+  ) where
 
 import Control.Arrow (first, second)
 import Data.Vector.Vector2 (Vector2(..))
