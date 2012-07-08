@@ -4,6 +4,7 @@ module Editor.CodeEdit.DefinitionEdit(make, makeParts, addJumps) where
 import Control.Arrow (second)
 import Control.Monad (liftM)
 import Data.List.Utils (atPred, pairList)
+import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
@@ -87,7 +88,10 @@ addJumps cursor defKGridElements =
   where
     addEventMap srcSide destSide doc keys dir =
       atPred (== Just srcSide)
-      (addJumpsTo doc keys dir $ Grid.getElement (Just destSide) defKGridElements)
+      (addJumpsTo doc keys dir .
+       fromMaybe (error "Missing destSide after gridifying?") $
+       lookup (Just destSide)
+       defKGridElements)
     addJumpsTo doc keys dir =
       Grid.atGridElementW . Widget.atWEventMap . flip mappend .
       jumpToExpressionEventMap doc keys dir

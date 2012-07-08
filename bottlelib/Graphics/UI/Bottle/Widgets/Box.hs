@@ -2,7 +2,7 @@
 module Graphics.UI.Bottle.Widgets.Box(
   Box, KBox(..), Alignment,
   make, makeKeyed, makeAlign, makeCentered,
-  unkey, getElement,
+  unkey,
   atBoxMCursor, atBoxContent, atBoxOrientation,
   BoxElement, mkBoxElement, boxElementRect, boxElementW,
   atBoxElementRect, atBoxElementW,
@@ -10,7 +10,6 @@ module Graphics.UI.Bottle.Widgets.Box(
   Orientation, horizontal, vertical) where
 
 import Control.Arrow (first, second)
-import Data.Maybe (fromMaybe)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.Widget (Widget, Size, R)
@@ -99,12 +98,6 @@ makeKeyed orientation children = KBox
 
 unkey :: [(Alignment, Widget f)] -> [((), (Alignment, Widget f))]
 unkey = map ((,) ())
-
-getElement :: (Show key, Eq key) => key -> [(key, BoxElement f)] -> BoxElement f
-getElement key =
-  fromMaybe (error errorMsg) . lookup key
-  where
-    errorMsg = "getElement: " ++ show key ++ " not found in Box!"
 
 make :: Orientation -> [(Alignment, Widget f)] -> Box f
 make orientation = makeKeyed orientation . unkey

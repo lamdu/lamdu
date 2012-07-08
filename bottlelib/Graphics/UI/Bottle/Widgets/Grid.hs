@@ -2,7 +2,7 @@
 module Graphics.UI.Bottle.Widgets.Grid(
   Grid, KGrid(..),
   make, makeKeyed, makeAlign, makeCentered,
-  unkey, getElement,
+  unkey,
   Alignment,
   atGridMCursor,
   atGridContent,
@@ -154,12 +154,6 @@ makeKeyed children = KGrid
 
 unkey :: [[(Alignment, Widget f)]] -> [[((), (Alignment, Widget f))]]
 unkey = (map . map) ((,) ())
-
-getElement :: (Show key, Eq key) => key -> [(key, GridElement f)] -> GridElement f
-getElement key =
-  fromMaybe (error errorMsg) . lookup key
-  where
-    errorMsg = "getElement: " ++ show key ++ " not found in Grid!"
 
 make :: [[(Alignment, Widget f)]] -> Grid f
 make = makeKeyed . unkey
