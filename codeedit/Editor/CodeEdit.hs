@@ -108,7 +108,7 @@ makeCodeEdit cache = do
   panesEdit <- makePanesEdit $ scPanes cache
   clipboardsEdit <- makeClipboardsEdit $ scClipboards cache
   return $
-    BWidgets.vboxCentered
+    BWidgets.vboxAlign 0
     [ panesEdit
     , clipboardsEdit]
 
