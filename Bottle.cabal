@@ -36,6 +36,7 @@ Library
                        Graphics.UI.Bottle.Widgets.EventMapDoc,
                        Graphics.UI.Bottle.Widgets.FlyNav,
                        Graphics.UI.Bottle.Widgets.FocusDelegator,
+                       Graphics.UI.Bottle.Widgets.Edges,
                        Graphics.UI.Bottle.Widgets.Grid,
                        Graphics.UI.Bottle.Widgets.GridView,
                        Graphics.UI.Bottle.Widgets.Spacer,

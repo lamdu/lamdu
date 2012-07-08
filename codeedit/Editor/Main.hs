@@ -151,9 +151,10 @@ runDbStore font store = do
 
   let
     -- TODO: Move this logic to some more common place?
-    makeWidget _size = do
+    makeWidget size = do
       mkWidget <- readIORef memoRef
-      flyNavMake =<< mkWidget =<< dbToIO (Anchors.getP Anchors.cursor)
+      cursor <- dbToIO $ Anchors.getP Anchors.cursor
+      flyNavMake =<< mkWidget (size, cursor)
 
   mainLoopDebugMode font makeWidget addHelp
   where
@@ -169,9 +170,9 @@ mkWidgetWithFallback
   -> (forall a. Transaction DBTag IO a -> IO a)
   -> (Last SugarCache -> IO ())
   -> SugarCache
-  -> Widget.Id
+  -> (Widget.Size, Widget.Id)
   -> IO (Widget IO)
-mkWidgetWithFallback style dbToIO updateCache sugarCache cursor = do
+mkWidgetWithFallback style dbToIO updateCache sugarCache (size, cursor) = do
   (isValid, widget) <-
     dbToIO $ do
       candidateWidget <- fromCursor cursor
@@ -188,7 +189,7 @@ mkWidgetWithFallback style dbToIO updateCache sugarCache cursor = do
   unless isValid . putStrLn $ "Invalid cursor: " ++ show cursor
   return $ Widget.atEvents (saveCache <=< runWriterT) widget
   where
-    fromCursor = makeRootWidget style dbToIO sugarCache
+    fromCursor = makeRootWidget style dbToIO sugarCache size
     saveCache (eventResult, mCacheCache) = do
       ~() <- updateCache mCacheCache
       return eventResult
@@ -198,9 +199,10 @@ makeRootWidget
   :: TextEdit.Style
   -> (forall a. Transaction DBTag IO a -> IO a)
   -> SugarCache
+  -> Widget.Size
   -> Widget.Id
   -> Transaction DBTag IO (Widget (WriterT (Last SugarCache) IO))
-makeRootWidget style dbToIO cache cursor =
+makeRootWidget style dbToIO cache size cursor =
   -- Get rid of OTransaction/ITransaction wrappings
   liftM
     (Widget.atEvents
@@ -214,5 +216,5 @@ makeRootWidget style dbToIO cache cursor =
         Widget.eCursor eventResult
       return eventResult
     makeCodeEdit =
-      BranchGUI.makeRootWidget CodeEdit.makeSugarCache .
+      BranchGUI.makeRootWidget size CodeEdit.makeSugarCache .
       CodeEdit.makeCodeEdit

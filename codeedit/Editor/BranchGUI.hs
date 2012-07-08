@@ -15,7 +15,6 @@ import Data.Monoid(Monoid(..), Last(..))
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
-import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag, DBTag)
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
@@ -35,8 +34,8 @@ import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import qualified Graphics.UI.Bottle.Widgets.Edges as Edges
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
 setCurrentBranch :: Monad m => View -> Branch -> Transaction DBTag m ()
 setCurrentBranch view branch = do
@@ -111,10 +110,10 @@ tellNewCache mkCache act = act <* do
 
 makeRootWidget
   :: MonadF m
-  => Transaction ViewTag (Transaction DBTag m) versionCache
+  => Widget.Size -> Transaction ViewTag (Transaction DBTag m) versionCache
   -> TWidget ViewTag (Transaction DBTag m)
   -> CachedTWidget DBTag versionCache m
-makeRootWidget mkCacheInView widget = do
+makeRootWidget size mkCacheInView widget = do
   view <- OT.getP Anchors.view
   let
     toDb = viewToDb view
@@ -180,12 +179,8 @@ makeRootWidget mkCacheInView widget = do
         "Select current branch" $ pure currentBranchWidgetId
       ]
   return .
-    Widget.strongerEvents eventMap .
-    BWidgets.vboxAlign 0 $
-    [viewEdit
-    ,Spacer.makeWidget $ Vector2 0 100 -- TODO: Widget.liftView Spacer.makeVerticalExpanding
-    ,branchSelector
-    ]
+    Widget.strongerEvents eventMap $
+    Edges.makeVertical size viewEdit branchSelector
   where
     alignLeft = id -- TODO: (liftM . second) (Widget.align 0)
 
