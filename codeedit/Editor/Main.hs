@@ -86,7 +86,10 @@ whenApply :: Bool -> (a -> a) -> a -> a
 whenApply False _ = id
 whenApply True f = f
 
-mainLoopDebugMode :: Draw.Font -> IO (Widget IO) -> (Widget IO -> IO (Widget IO)) -> IO a
+mainLoopDebugMode
+  :: Draw.Font
+  -> (Widget.Size -> IO (Widget IO))
+  -> (Widget.Size -> Widget IO -> IO (Widget IO)) -> IO a
 mainLoopDebugMode font makeWidget addHelp = do
   debugModeRef <- newIORef False
   let
@@ -103,7 +106,7 @@ mainLoopDebugMode font makeWidget addHelp = do
         Widget.strongerEvents
         (Widget.keysEventMap Config.debugModeKeys doc set)
         widget
-    makeDebugModeWidget = addHelp =<< addDebugMode =<< makeWidget
+    makeDebugModeWidget size = addHelp size =<< addDebugMode =<< makeWidget size
   mainLoopWidget makeDebugModeWidget getAnimHalfLife
 
 makeFlyNav :: IO (Widget IO -> IO (Widget IO))
@@ -148,7 +151,7 @@ runDbStore font store = do
 
   let
     -- TODO: Move this logic to some more common place?
-    makeWidget = do
+    makeWidget _size = do
       mkWidget <- readIORef memoRef
       flyNavMake =<< mkWidget =<< dbToIO (Anchors.getP Anchors.cursor)
 

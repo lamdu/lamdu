@@ -4,6 +4,7 @@ import Control.Arrow(first, second)
 import Control.Concurrent(threadDelay)
 import Control.Monad (liftM, when)
 import Data.IORef
+import Data.MRUMemo (memoIO)
 import Data.StateVar (($=))
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
 import Data.Vector.Vector2 (Vector2(..))
@@ -116,13 +117,14 @@ mainLoopAnim tickHandler eventHandler makeFrame getAnimationHalfLife = do
 compose :: [a -> a] -> a -> a
 compose = foldr (.) id
 
-mainLoopWidget :: IO (Widget IO) -> IO Anim.R -> IO a
-mainLoopWidget mkWidget getAnimationHalfLife = do
-  widgetRef <- newIORef =<< mkWidget
+mainLoopWidget :: (Widget.Size -> IO (Widget IO)) -> IO Anim.R -> IO a
+mainLoopWidget mkWidgetUnmemod getAnimationHalfLife = do
+  mkWidgetRef <- newIORef =<< memoIO mkWidgetUnmemod
   let
-    newWidget = writeIORef widgetRef =<< mkWidget
-    tickHandler _size = do
-      widget <- readIORef widgetRef
+    newWidget = writeIORef mkWidgetRef =<< memoIO mkWidgetUnmemod
+    getWidget size = ($ size) =<< readIORef mkWidgetRef
+    tickHandler size = do
+      widget <- getWidget size
       tickResults <-
         sequence . E.emTickHandlers $ Widget.wEventMap widget
       case tickResults of
@@ -130,8 +132,8 @@ mainLoopWidget mkWidget getAnimationHalfLife = do
         _ -> do
           newWidget
           return . Just . compose . map Widget.eAnimIdMapping $ tickResults
-    eventHandler _size event = do
-      widget <- readIORef widgetRef
+    eventHandler size event = do
+      widget <- getWidget size
       mAnimIdMapping <-
         maybe (return Nothing) (liftM (Just . Widget.eAnimIdMapping)) .
         E.lookup event $ Widget.wEventMap widget
@@ -139,5 +141,5 @@ mainLoopWidget mkWidget getAnimationHalfLife = do
         Nothing -> return ()
         Just _ -> newWidget
       return mAnimIdMapping
-    mkFrame _size = liftM Widget.wFrame $ readIORef widgetRef
+    mkFrame size = liftM Widget.wFrame $ getWidget size
   mainLoopAnim tickHandler eventHandler mkFrame getAnimationHalfLife

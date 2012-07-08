@@ -37,11 +37,10 @@ make eventMap style animId =
         [concatMap ((: [Spacer.makeHorizontal 8]) . textView "key") eventKeys]
       , textView "doc" eventDoc]
 
-addHelp :: TextView.Style -> Widget f -> Widget f
-addHelp style w =
+addHelp :: Widget.Size -> TextView.Style -> Widget f -> Widget f
+addHelp size style w =
   Widget.atWFrame (mappend docFrame) w
   where
-    size = Widget.wSize w
     (eventMapSize, eventMapDoc) = make eventMap style ["help box"]
     transparency = Draw.Color 1 1 1
     docFrame =
@@ -53,7 +52,8 @@ addHelp style w =
       eventMapDoc
     eventMap = Widget.wEventMap w
 
-makeToggledHelpAdder :: [E.ModKey] -> TextView.Style -> IO (Widget IO -> IO (Widget IO))
+makeToggledHelpAdder
+  :: [E.ModKey] -> TextView.Style -> IO (Widget.Size -> Widget IO -> IO (Widget IO))
 makeToggledHelpAdder overlayDocKeys style = do
   showingHelpVar <- newIORef True
   let
@@ -61,9 +61,9 @@ makeToggledHelpAdder overlayDocKeys style = do
     addToggleEventMap doc =
       Widget.strongerEvents $
       Widget.keysEventMap overlayDocKeys doc toggle
-  return $ \widget -> do
+  return $ \size widget -> do
     showingHelp <- readIORef showingHelpVar
     return $
       if showingHelp
-      then addHelp style $ addToggleEventMap "Hide Key Bindings" widget
+      then addHelp size style $ addToggleEventMap "Hide Key Bindings" widget
       else addToggleEventMap "Show Key Bindings" widget
