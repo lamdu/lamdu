@@ -9,7 +9,6 @@ import Data.List.Utils(enumerate, insertAt, removeAt)
 import Data.Monoid(Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
-import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget)
@@ -28,7 +27,6 @@ import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
 -- This is not in Sugar because Sugar is for code
 data SugarPane m = SugarPane
@@ -112,7 +110,6 @@ makeCodeEdit cache = do
   return $
     BWidgets.vboxCentered
     [ panesEdit
-    , Spacer.makeWidget $ Vector2 0 50
     , clipboardsEdit]
 
 makePanesEdit :: MonadF m => [SugarPane m] -> TWidget ViewTag m
