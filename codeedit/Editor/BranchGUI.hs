@@ -5,6 +5,7 @@ module Editor.BranchGUI
   ) where
 
 import Control.Applicative (pure, (<*))
+import Control.Arrow (first)
 import Control.Monad (liftM, liftM2, unless)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Writer (WriterT)
@@ -19,6 +20,7 @@ import Editor.Anchors (ViewTag, DBTag)
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget)
+import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Store.Rev.Branch as Branch
@@ -161,12 +163,10 @@ makeRootWidget size mkCacheInView widget = do
      FocusDelegator.NotDelegating id)
     WidgetIds.branchSelection $ \innerId ->
     OT.assignCursor innerId currentBranchWidgetId $ do
-      branchNameEdits <-
-        mapM (alignLeft . makeBranchNameEdit)
-        namedBranches
+      branchNameEdits <- mapM makeBranchNameEdit namedBranches
       return .
         Widget.strongerEvents delBranchEventMap $
-        BWidgets.makeChoice branchSelectorFocused
+        makeBranchChoice branchSelectorFocused
         (Widget.toAnimId WidgetIds.branchSelection)
         Box.vertical branchNameEdits currentBranch
 
@@ -181,8 +181,33 @@ makeRootWidget size mkCacheInView widget = do
   return .
     Widget.strongerEvents eventMap $
     Edges.makeVertical size viewEdit branchSelector
+
+makeBranchChoice
+  :: Eq a
+  => Bool -> AnimId
+  -> Box.Orientation
+  -> [(a, Widget f)]
+  -> a
+  -> Widget f
+makeBranchChoice forceExpand selectionAnimId orientation children curChild =
+  maybe Box.toWidget Box.toWidgetBiased mCurChildIndex box
   where
-    alignLeft = id -- TODO: (liftM . second) (Widget.align 0)
+    childFocused = any (Widget.wIsFocused . snd) children
+    pairs = (map . first) (curChild ==) children
+    visiblePairs
+      | childFocused || forceExpand = pairs
+      | otherwise = filter fst pairs
+    mCurChildIndex = findIndex fst visiblePairs
+    box = Box.makeAlign 0 orientation colorizedPairs
+    colorizedPairs
+      -- focus shows selection already
+      | childFocused = map snd visiblePairs
+      -- need to show selection even as focus is elsewhere
+      | otherwise = map colorize visiblePairs
+      where
+        colorize (True, w) = Widget.backgroundColor 9 selectionAnimId selectedColor w
+        colorize (False, w) = w
+        selectedColor = Config.selectedBranchColor
 
 -- Apply the transactions to the given View and convert them to
 -- transactions on a DB

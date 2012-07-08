@@ -1,5 +1,5 @@
 module Editor.BottleWidgets
-  ( makeTextView, makeLabel, makeChoice
+  ( makeTextView, makeLabel
   , makeFocusableView, makeFocusableTextView
   , wrapDelegated
   , makeTextEdit, makeLineEdit, makeWordEdit, makeNameEdit, getDisplayNameOf
@@ -14,10 +14,9 @@ module Editor.BottleWidgets
   ) where
 
 import Control.Applicative (Applicative(..))
-import Control.Arrow (first)
 import Control.Monad (when, liftM)
 import Data.ByteString.Char8 (pack)
-import Data.List (findIndex, intersperse)
+import Data.List (intersperse)
 import Data.Monoid (mappend)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
@@ -76,33 +75,6 @@ makeFocusableTextView
 makeFocusableTextView text myId = do
   textView <- makeTextView text $ Widget.toAnimId myId
   makeFocusableView myId textView
-
-makeChoice
-  :: Eq a
-  => Bool -> AnimId
-  -> Box.Orientation
-  -> [(a, Widget f)]
-  -> a
-  -> Widget f
-makeChoice forceExpand selectionAnimId orientation children curChild =
-  maybe Box.toWidget Box.toWidgetBiased mCurChildIndex box
-  where
-    childFocused = any (Widget.wIsFocused . snd) children
-    pairs = (map . first) (curChild ==) children
-    visiblePairs
-      | childFocused || forceExpand = pairs
-      | otherwise = filter fst pairs
-    mCurChildIndex = findIndex fst visiblePairs
-    box = Box.makeAlign 0 orientation colorizedPairs
-    colorizedPairs
-      -- focus shows selection already
-      | childFocused = map snd visiblePairs
-      -- need to show selection even as focus is elsewhere
-      | otherwise = map colorize visiblePairs
-      where
-        colorize (True, w) = Widget.backgroundColor 9 selectionAnimId selectedColor w
-        colorize (False, w) = w
-        selectedColor = Draw.Color 0 0.5 0 1
 
 -- TODO: This logic belongs in the FocusDelegator itself
 wrapDelegated
