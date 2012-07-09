@@ -30,7 +30,7 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
     BWidgets.makeLabel "where" $ Widget.toAnimId myId
   let
     makeWhereItemsGrid =
-      liftM (Grid.toWidget . addJumps . Grid.makeKeyed . concat) $
+      liftM (Grid.toWidget . addJumps . Grid.makeKeyed . (map . map . second) ((,) 0) . concat) $
       mapM makeWhereItemEdits items
     addJumps = (Grid.atGridContent . map) (DefinitionEdit.addJumps cursor)
   whereEdits <- makeWhereItemsGrid
@@ -40,7 +40,7 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
     ]
   where
     makeWhereItemEdits item =
-      (liftM . map . map . second . second . Widget.weakerEvents)
+      (liftM . map . map . second . Widget.weakerEvents)
         (whereItemDeleteEventMap item) $
       DefinitionEdit.makeParts makeExpressionEdit
       (paramId item) (guid item) (Sugar.wiValue item) (Sugar.wiType item)
