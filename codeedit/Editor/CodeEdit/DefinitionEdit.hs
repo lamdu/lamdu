@@ -79,8 +79,8 @@ makeLHSEdit makeExpressionEdit myId ident mAddFirstParameter params = do
 addJumps
   :: Monad m
   => Widget.Id
-  -> [(Maybe Side, Grid.GridElement (ITransaction ViewTag m))]
-  -> [(Maybe Side, Grid.GridElement (ITransaction ViewTag m))]
+  -> [(Maybe Side, Grid.Element (ITransaction ViewTag m))]
+  -> [(Maybe Side, Grid.Element (ITransaction ViewTag m))]
 addJumps cursor defKGridElements =
   addEventMap LHS RHS "right-hand side" Config.jumpToRhsKeys Direction.fromLeft .
   addEventMap RHS LHS "left-hand side"  Config.jumpToLhsKeys Direction.fromRight $
@@ -93,17 +93,17 @@ addJumps cursor defKGridElements =
        lookup (Just destSide)
        defKGridElements)
     addJumpsTo doc keys dir =
-      Grid.atGridElementW . Widget.atWEventMap . flip mappend .
+      Grid.atElementW . Widget.atWEventMap . flip mappend .
       jumpToExpressionEventMap doc keys dir
     jumpToExpressionEventMap doc keys dir destElement =
       maybe mempty
       (makeJumpForEnter doc keys dir destElement) .
-      Widget.wMaybeEnter $ Grid.gridElementW destElement
+      Widget.wMaybeEnter $ Grid.elementW destElement
     makeJumpForEnter doc keys dir destElement enter =
       E.keyPresses keys ("Jump to "++doc) .
       (IT.transaction (Anchors.savePreJumpPosition cursor) >>) .
       Widget.enterResultEvent . enter . dir $
-      Grid.gridElementRect destElement
+      Grid.elementRect destElement
 
 makeDefBodyParts
   :: MonadF m

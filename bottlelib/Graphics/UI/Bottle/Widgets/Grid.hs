@@ -6,9 +6,9 @@ module Graphics.UI.Bottle.Widgets.Grid
   , Alignment
   , atGridMCursor
   , atGridContent
-  , GridElement(..)
-  , atGridElementRect
-  , atGridElementW
+  , Element(..)
+  , atElementRect
+  , atElementW
   , Cursor, toWidget, toWidgetBiased
   ) where
 
@@ -120,19 +120,19 @@ getCursor =
   where
     cursorOf ((row, column), _) = Vector2 column row
 
-data GridElement f = GridElement
-  { gridElementAlign :: Alignment
-  , gridElementRect :: Rect
-  , gridElementW :: Widget f
+data Element f = Element
+  { elementAlign :: Alignment
+  , elementRect :: Rect
+  , elementW :: Widget f
   }
 
 data KGrid key f = KGrid
   { gridMCursor :: Maybe Cursor
   , gridSize :: Widget.Size
-  , gridContent :: [[(key, GridElement f)]]
+  , gridContent :: [[(key, Element f)]]
   }
 
-AtFieldTH.make ''GridElement
+AtFieldTH.make ''Element
 AtFieldTH.make ''KGrid
 
 type Grid = KGrid ()
@@ -150,7 +150,7 @@ makeKeyed children = KGrid
     mkSizedKeyedContent (key, (alignment, widget)) =
       ((Widget.wSize widget, alignment), (key, widget))
     translate align rect =
-      second (GridElement align rect . Widget.translate (Rect.rectTopLeft rect))
+      second (Element align rect . Widget.translate (Rect.rectTopLeft rect))
 
 unkey :: [[(Alignment, Widget f)]] -> [[((), (Alignment, Widget f))]]
 unkey = (map . map) ((,) ())
@@ -169,7 +169,7 @@ helper ::
   (Widget.Size -> [[Widget.MEnter f]] -> Widget.MEnter f) ->
   KGrid key f -> Widget f
 helper combineEnters (KGrid mCursor size sChildren) =
-  combineWs $ (map . map) (gridElementW . snd) sChildren
+  combineWs $ (map . map) (elementW . snd) sChildren
   where
     combineWs wss =
       maybe unselectedW makeW mCursor

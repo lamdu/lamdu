@@ -4,8 +4,8 @@ module Graphics.UI.Bottle.Widgets.Box
   , make, makeKeyed, makeAlign, makeCentered
   , unkey
   , atBoxMCursor, atBoxContent, atBoxOrientation
-  , BoxElement, boxElementRect, boxElementW
-  , atBoxElementRect, atBoxElementW
+  , Element, elementRect, elementW
+  , atElementRect, atElementW
   , Cursor, toWidget, toWidgetBiased
   , Orientation, horizontal, vertical
   ) where
@@ -53,27 +53,26 @@ vertical = Orientation {
   oToGridAlignment = flip Vector2 0
   }
 
-type BoxElement f = Grid.GridElement f
+type Element = Grid.Element
 
-boxElementRect :: Grid.GridElement f -> Rect
-boxElementRect = Grid.gridElementRect
+elementRect :: Element f -> Rect
+elementRect = Grid.elementRect
 
-boxElementW :: Grid.GridElement f -> Widget f
-boxElementW = Grid.gridElementW
+elementW :: Element f -> Widget f
+elementW = Grid.elementW
 
-atBoxElementRect :: (Rect -> Rect) -> Grid.GridElement f0 -> Grid.GridElement f0
-atBoxElementRect = Grid.atGridElementRect
+atElementRect :: (Rect -> Rect) -> Element f -> Element f
+atElementRect = Grid.atElementRect
 
-atBoxElementW
-  :: (Widget a -> Widget b)
-  -> Grid.GridElement a -> Grid.GridElement b
-atBoxElementW = Grid.atGridElementW
+atElementW
+  :: (Widget a -> Widget b) -> Element a -> Element b
+atElementW = Grid.atElementW
 
 data KBox key f = KBox
   { boxOrientation :: Orientation
   , boxMCursor :: Maybe Cursor
   , boxSize :: Size
-  , boxContent :: [(key, BoxElement f)]
+  , boxContent :: [(key, Element f)]
   }
 
 AtFieldTH.make ''KBox
