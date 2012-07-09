@@ -6,7 +6,6 @@ import Control.Monad (liftM)
 import Data.Monoid (Monoid(..))
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
-import Editor.CodeEdit.InferredTypes (addType)
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction)
@@ -61,7 +60,8 @@ make sExpr = do
     -- various expression edit makers, and not here?
     (case map ExpressionGui.egWidget typeEdits of
        [] -> id
-       typeEditWidgets -> addType exprId typeEditWidgets . ExpressionGui.egWidget) $
+       typeEditWidgets ->
+         ExpressionGui.addType exprId typeEditWidgets . ExpressionGui.egWidget) $
     widget
   where
     exprId = WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity $ sExpr

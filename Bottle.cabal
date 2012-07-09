@@ -109,7 +109,6 @@ Executable Editor
                        Editor.OTransaction,
                        Editor.ITransaction,
                        Editor.CodeEdit,
-                       Editor.CodeEdit.InferredTypes,
                        Editor.CodeEdit.ExpressionEdit,
                        Editor.CodeEdit.ExpressionEdit.ApplyEdit,
                        Editor.CodeEdit.ExpressionEdit.BuiltinEdit,

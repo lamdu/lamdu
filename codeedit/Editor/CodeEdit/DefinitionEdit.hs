@@ -8,7 +8,6 @@ import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
-import Editor.CodeEdit.InferredTypes (addType)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget)
 import qualified Data.List as List
@@ -128,7 +127,7 @@ make makeExpressionEdit guid defBody defType inferredTypes = do
   inferredTypesEdits <- mapM makeExpressionEdit inferredTypes
   return .
     ExpressionGui.egWidget .
-    addType exprId (map ExpressionGui.egWidget inferredTypesEdits) .
+    ExpressionGui.addType exprId (map ExpressionGui.egWidget inferredTypesEdits) .
     BWidgets.vboxAlign 0 .
     map (ExpressionGui.egWidget . ExpressionGui.hbox) $
     parts
