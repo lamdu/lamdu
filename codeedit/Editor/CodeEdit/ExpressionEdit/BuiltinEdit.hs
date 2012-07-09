@@ -3,11 +3,12 @@ module Editor.CodeEdit.ExpressionEdit.BuiltinEdit(make) where
 import Data.List.Split (splitOn)
 import Data.Store.Property (Property(..))
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction)
 import qualified Data.List as List
 import qualified Editor.BottleWidgets as BWidgets
+import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
@@ -35,7 +36,7 @@ make (Sugar.Builtin (Data.FFIName modulePath name) setFFIName) myId =
     moduleName <- makeNamePartEditor Config.foreignModuleColor modulePathStr modulePathSetter WidgetIds.builtinFFIPath
     varName <- makeNamePartEditor Config.foreignVarColor name nameSetter WidgetIds.builtinFFIName
     dot <- BWidgets.makeLabel "." $ Widget.toAnimId myId
-    return . ExpressionGui $ BWidgets.hboxCentered [moduleName, dot, varName]
+    return . ExpressionGui.fromValueWidget $ BWidgets.hboxCentered [moduleName, dot, varName]
   where
     makeNamePartEditor color namePartStr mSetter makeWidgetId =
       BWidgets.setTextColor color .

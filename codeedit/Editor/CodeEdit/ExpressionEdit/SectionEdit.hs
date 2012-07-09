@@ -4,7 +4,7 @@ module Editor.CodeEdit.ExpressionEdit.SectionEdit(make) where
 import Control.Monad (liftM)
 import Data.Maybe (fromMaybe)
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction)
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui

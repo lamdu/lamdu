@@ -9,7 +9,7 @@ import Control.Monad (void)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget)
 import Editor.WidgetIds (parensPrefix)
@@ -32,7 +32,7 @@ addTextParensI
 addTextParensI onLParen onRParen parenId widget = do
   beforeParen <- onLParen $ label "("
   afterParen <- onRParen $ label ")"
-  return $ ExpressionGui.hbox [ ExpressionGui beforeParen, widget, ExpressionGui afterParen ]
+  return $ ExpressionGui.hbox [ ExpressionGui.fromValueWidget beforeParen, widget, ExpressionGui.fromValueWidget afterParen ]
   where
     label str = BWidgets.makeLabel str $ parensPrefix parenId
 

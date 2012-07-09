@@ -5,7 +5,7 @@ module Editor.CodeEdit.ExpressionEdit.LiteralEdit(makeInt, makeIntView) where
 import Control.Monad (liftM)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors(ViewTag)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.MonadF(MonadF)
 import Editor.OTransaction (OTransaction)
 import Graphics.UI.Bottle.Animation (AnimId)
@@ -29,7 +29,7 @@ makeIntView
   => AnimId -> Integer
   -> OTransaction ViewTag m (ExpressionGui m)
 makeIntView myId integer =
-  liftM ExpressionGui .
+  liftM ExpressionGui.fromValueWidget .
   setColor $ BWidgets.makeTextView (show integer) myId
 
 makeIntEdit
@@ -65,7 +65,7 @@ makeIntEditI integer myId setValue = do
         return eventRes
   style <- OT.readTextStyle
   return .
-    ExpressionGui .
+    ExpressionGui.fromValueWidget .
     Widget.atEvents setter .
     Widget.atWEventMap removeKeys $ TextEdit.make
     style { TextEdit.sEmptyFocusedString = "<0>" } textCursor text myId

@@ -4,7 +4,7 @@ module Editor.CodeEdit.ExpressionEdit.WhereEdit(make, makeWithBody) where
 import Control.Monad (liftM, (<=<))
 import Data.Monoid (mempty)
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget)
 import qualified Editor.BottleWidgets as BWidgets
@@ -61,7 +61,7 @@ makeWithBody makeExpressionEdit where_@(Sugar.Where _ body) myId = do
   whereEdit <- make makeExpressionEdit where_ myId
   OT.assignCursor myId ((WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity) body) $ do
     bodyEdit <- makeExpressionEdit body
-    return . ExpressionGui . BWidgets.vboxCentered $
+    return . ExpressionGui.fromValueWidget . BWidgets.vboxCentered $
       [ ExpressionGui.egWidget bodyEdit
       , whereEdit
       ]

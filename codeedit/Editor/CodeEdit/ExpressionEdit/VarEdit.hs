@@ -3,7 +3,7 @@ module Editor.CodeEdit.ExpressionEdit.VarEdit(make, makeView, colorOf) where
 
 import Control.Monad (liftM)
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction)
 import qualified Editor.Anchors as Anchors
@@ -29,7 +29,7 @@ makeView
 makeView var myId = do
   name <-
     OT.transaction . BWidgets.getDisplayNameOf $ Data.variableRefGuid var
-  liftM ExpressionGui .
+  liftM ExpressionGui.fromValueWidget .
     BWidgets.setTextColor (colorOf var) $
     BWidgets.makeFocusableTextView name myId
 

@@ -6,7 +6,7 @@ import Data.List.Utils (pairList)
 import Data.Monoid (mempty, mconcat)
 import Data.Store.Guid (Guid)
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget, WidgetT)
 import qualified Data.List as List
@@ -87,7 +87,7 @@ makeParamsEdit
   -> OTransaction ViewTag m (ExpressionGui m)
 makeParamsEdit makeExpressionEdit =
   liftM
-  (ExpressionGui . BWidgets.gridHSpacedCentered . List.transpose .
+  (ExpressionGui.fromValueWidget . BWidgets.gridHSpacedCentered . List.transpose .
    map (pairList . scaleDownType)) .
   mapM (makeParamEdit makeExpressionEdit)
   where
@@ -102,11 +102,11 @@ make
 make makeExpressionEdit (Sugar.Func params body) myId =
   OT.assignCursor myId ((WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity) body) $ do
     lambdaLabel <-
-      liftM ExpressionGui .
+      liftM ExpressionGui.fromValueWidget .
       OT.setTextSizeColor Config.lambdaTextSize Config.lambdaColor .
       BWidgets.makeLabel "λ" $ Widget.toAnimId myId
     rightArrowLabel <-
-      liftM ExpressionGui .
+      liftM ExpressionGui.fromValueWidget .
       OT.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor .
       BWidgets.makeLabel "→" $ Widget.toAnimId myId
     bodyEdit <- makeExpressionEdit body

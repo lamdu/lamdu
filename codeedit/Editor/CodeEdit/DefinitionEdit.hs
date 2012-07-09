@@ -7,7 +7,7 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.InferredTypes (addType)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget)
@@ -86,10 +86,10 @@ makeDefBodyParts makeExpressionEdit myId guid exprRef = do
   equals <- BWidgets.makeLabel "=" $ Widget.toAnimId myId
   rhsEdit <- makeExpressionEdit $ Sugar.fBody func
   return $
-    [ ExpressionGui lhsEdit
-    , ExpressionGui BWidgets.spaceWidget
-    , ExpressionGui equals
-    , ExpressionGui BWidgets.spaceWidget
+    [ ExpressionGui.fromValueWidget lhsEdit
+    , ExpressionGui.fromValueWidget BWidgets.spaceWidget
+    , ExpressionGui.fromValueWidget equals
+    , ExpressionGui.fromValueWidget BWidgets.spaceWidget
     , rhsEdit
     ]
 
@@ -104,10 +104,10 @@ makeParts makeExpressionEdit myId guid defBody defType = do
   name <- makeNameEdit (Widget.joinId myId ["typeDeclName"]) guid
   let
     typeLineParts =
-      [ ExpressionGui name
-      , ExpressionGui BWidgets.spaceWidget
-      , ExpressionGui colon
-      , ExpressionGui BWidgets.spaceWidget
+      [ ExpressionGui.fromValueWidget name
+      , ExpressionGui.fromValueWidget BWidgets.spaceWidget
+      , ExpressionGui.fromValueWidget colon
+      , ExpressionGui.fromValueWidget BWidgets.spaceWidget
       , typeEdit
       ]
   defBodyParts <- makeDefBodyParts makeExpressionEdit myId guid defBody

@@ -12,7 +12,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget, WidgetT)
@@ -362,6 +362,6 @@ make
   -> OTransaction ViewTag m
      (Maybe (ResultPicker m), ExpressionGui m)
 make hole =
-  (fmap . liftM . second) (ExpressionGui . Widget.weakerEvents (pasteEventMap hole)) .
+  (fmap . liftM . second) (ExpressionGui.fromValueWidget . Widget.weakerEvents (pasteEventMap hole)) .
   BWidgets.wrapDelegated holeFDConfig FocusDelegator.Delegating
   second . makeH hole
