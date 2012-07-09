@@ -5,8 +5,7 @@ module Graphics.UI.Bottle.Widgets.GridView
   , Alignment
   ) where
 
-import Control.Applicative (liftA2)
-import Control.Arrow (first, second, (***))
+import Control.Arrow (first, second)
 import Data.List (transpose)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
@@ -15,39 +14,30 @@ import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Rect as Rect
 
-data ComputedSizes = ComputedSizes
-  { columnSizes :: [Anim.R]
-  , rowSizes :: [Anim.R]
-  }
-
-totalSize :: ComputedSizes -> Anim.Size
-totalSize = liftA2 Vector2 (sum . columnSizes) (sum . rowSizes)
-
-computeSizes :: [[Anim.Size]] -> ComputedSizes
-computeSizes rows = ComputedSizes
-  { columnSizes = map (maximum . map Vector2.fst) columns
-  , rowSizes = map (maximum . map Vector2.snd) rows
-  }
-  where
-    columns = transpose rows
-
---- Placables:
-
 type Alignment = Vector2 Anim.R -- ^ 0..1
 
 makePlacements :: [[(Anim.Size, Alignment)]] -> (Anim.Size, [[Rect]])
-makePlacements szAlignments =
-  (totalSize cSizes, (zipWith . zipWith) mkRect allPlacements szAlignments)
+makePlacements rows =
+  (Vector2 width height, zipWith rowResult (zipWith alignPos rowPos rowSizes) posRows)
   where
-    mkRect (pos, cellSize) (size, alignment) =
-      Rect (pos + alignment * (cellSize - size)) size
-    cSizes = computeSizes $ (map . map) fst szAlignments
-    allPlacements = map placeColumnsInRow rowPlacements
-    placeColumnsInRow (y, height) =
-      map ((`Vector2` y) *** (`Vector2` height)) columnPlacements
-    pairs sizes = zip (scanl (+) 0 sizes) sizes
-    rowPlacements = pairs $ rowSizes cSizes
-    columnPlacements = pairs $ columnSizes cSizes
+    width = last colPos
+    height = last rowPos
+    rowPos = groupPos rowSizes
+    colPos = groupPos colSizes
+    alignPos pos (_, align) = pos + align
+    groupPos = scanl (+) 0 . map fst
+    rowResult rowSize = zipWith (itemResult rowSize) (zipWith alignPos colPos colSizes)
+    itemResult alignY alignX (itemSize, (Vector2 preX preY, _)) =
+      Rect (Vector2 (alignX - preX) (alignY - preY)) itemSize
+    colSizes = map (groupSize Vector2.fst) $ transpose posRows
+    rowSizes = map (groupSize Vector2.snd) posRows
+    groupSize dim group =
+      (alignmentPos + maxSize snd, alignmentPos)
+      where
+        alignmentPos = maxSize fst
+        maxSize f = maximum $ map (dim . f . snd) group
+    posRows = (map . map) calcPos rows
+    calcPos (size, alignment) = (size, (alignment * size, (1 - alignment) * size))
 
 --- Displays:
 
@@ -55,7 +45,8 @@ makePlacements szAlignments =
 makeGeneric :: (Rect -> a -> b) -> [[((Anim.Size, Alignment), a)]] -> (Anim.Size, [[b]])
 -- Special case to preserve shape to avoid handling it above in
 -- "maximum", "transpose", etc
-makeGeneric translate rows = second place $ makePlacements szAlignments
+makeGeneric translate rows =
+  second place $ makePlacements szAlignments
   where
     szAlignments = (map . map) fst rows
     items = (map . map) snd rows
