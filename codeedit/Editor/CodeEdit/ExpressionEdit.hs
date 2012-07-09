@@ -55,9 +55,14 @@ make sExpr = do
     ExpressionGui.atEgWidget
     ( maybe onReadOnly
       (Widget.weakerEvents . expressionEventMap holePicker)
-      (Sugar.eActions (Sugar.rEntity sExpr)) .
-      addType exprId (map ExpressionGui.egWidget typeEdits)
-    ) $ widget
+      (Sugar.eActions (Sugar.rEntity sExpr))
+    ) .
+    -- TODO: Hack hack hack: Probably need to move the addType to the
+    -- various expression edit makers, and not here?
+    (case map ExpressionGui.egWidget typeEdits of
+       [] -> id
+       typeEditWidgets -> addType exprId typeEditWidgets . ExpressionGui.egWidget) $
+    widget
   where
     exprId = WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity $ sExpr
 

@@ -54,14 +54,10 @@ makeParamEdit makeExpressionEdit param =
     paramNameEdit <- makeParamNameEdit ident
     paramTypeEdit <- makeExpressionEdit $ Sugar.fpType param
     return
-      (-- TODO: Widget.align down
-       paramNameEdit,
-       -- TODO: Widget.align up
+      (paramNameEdit,
        ExpressionGui.egWidget paramTypeEdit)
   where
     ident = Sugar.guid $ Sugar.fpEntity param
-    -- up = Vector2 0.5 0
-    -- down = Vector2 0.5 1
     paramEventMap = mconcat
       [ paramDeleteEventMap
       , paramAddNextEventMap

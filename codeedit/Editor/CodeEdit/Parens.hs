@@ -32,7 +32,11 @@ addTextParensI
 addTextParensI onLParen onRParen parenId widget = do
   beforeParen <- onLParen $ label "("
   afterParen <- onRParen $ label ")"
-  return $ ExpressionGui.hbox [ ExpressionGui.fromValueWidget beforeParen, widget, ExpressionGui.fromValueWidget afterParen ]
+  return $ ExpressionGui.hbox
+    [ ExpressionGui.fromValueWidget beforeParen
+    , widget
+    , ExpressionGui.fromValueWidget afterParen
+    ]
   where
     label str = BWidgets.makeLabel str $ parensPrefix parenId
 
