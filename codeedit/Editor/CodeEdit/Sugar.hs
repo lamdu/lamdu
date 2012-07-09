@@ -377,7 +377,8 @@ addApplyChildParens =
     f x = (atEHasParens . const) HaveParens x
 
 infixOp :: Monad m => ExprEntity m -> T m (Maybe Data.VariableRef)
-infixOp = maybe (return Nothing) (Infix.infixOp . Property.value) . eeStored
+infixOp ExprEntity { eeValue = NonLoop x } = Infix.infixOp x
+infixOp _ = return Nothing
 
 convertApply
   :: Monad m

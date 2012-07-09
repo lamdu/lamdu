@@ -16,12 +16,9 @@ isInfixVar = liftM isInfixName . Anchors.getP . Anchors.variableNameRef
 
 infixOp
   :: Monad m
-  => Data.ExpressionIRef
+  => Data.Expression ref
   -> Transaction t m (Maybe Data.VariableRef)
-infixOp funcI = do
-  expr <- Data.readExprIRef funcI
-  case expr of
-    Data.ExpressionGetVariable var -> do
-      isInfix <- isInfixVar var
-      return $ if isInfix then Just var else Nothing
-    _ -> return Nothing
+infixOp (Data.ExpressionGetVariable var) = do
+  isInfix <- isInfixVar var
+  return $ if isInfix then Just var else Nothing
+infixOp _ = return Nothing
