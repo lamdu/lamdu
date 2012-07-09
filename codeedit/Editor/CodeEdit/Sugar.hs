@@ -168,24 +168,9 @@ eeFromITL :: DataTyped.InferredTypeLoop -> ExprEntity m
 eeFromITL (DataTyped.InferredTypeLoop itGuid) =
   ExprEntity itGuid Nothing [] Loop
 eeFromITL
-  (DataTyped.InferredTypeNoLoop
-   (Data.GuidExpression itGuid val)) =
-     ExprEntity itGuid Nothing [] . NonLoop $
-     case val of
-     Data.ExpressionLambda lambda ->
-       Data.ExpressionLambda $ eeFromLambda lambda
-     Data.ExpressionPi lambda ->
-       Data.ExpressionPi $ eeFromLambda lambda
-     Data.ExpressionApply (Data.Apply func arg) ->
-       Data.ExpressionApply $ Data.Apply (eeFromITL func) (eeFromITL arg)
-     Data.ExpressionGetVariable varRef -> Data.ExpressionGetVariable varRef
-     Data.ExpressionHole -> Data.ExpressionHole
-     Data.ExpressionLiteralInteger int -> Data.ExpressionLiteralInteger int
-     Data.ExpressionBuiltin name -> Data.ExpressionBuiltin name
-     Data.ExpressionMagic -> Data.ExpressionMagic
-  where
-    eeFromLambda (Data.Lambda x y) =
-      Data.Lambda (eeFromITL x) (eeFromITL y)
+  (DataTyped.InferredTypeNoLoop (Data.GuidExpression itGuid val)) =
+    ExprEntity itGuid Nothing [] . NonLoop $
+    Data.mapExpression eeFromITL val
 
 argument :: (a -> b) -> (b -> c) -> a -> c
 argument = flip (.)
