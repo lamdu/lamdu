@@ -18,6 +18,7 @@ import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
 import qualified Editor.CodeEdit.ExpressionEdit as ExpressionEdit
+import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.Data.Typed as DataTyped
@@ -95,13 +96,12 @@ makeSugarPanes = do
 
 makeClipboardsEdit :: MonadF m => [Sugar.ExpressionRef m] -> TWidget ViewTag m
 makeClipboardsEdit clipboards = do
-  clipboardsEdits <- mapM ExpressionEdit.make clipboards
+  clipboardsEdits <- mapM (liftM ExpressionGui.egWidget . ExpressionEdit.make) clipboards
   clipboardTitle <-
     if null clipboardsEdits
     then return BWidgets.empty
     else BWidgets.makeTextView "Clipboards:" ["clipboards title"]
   return . BWidgets.vboxAlign 0 $ clipboardTitle : clipboardsEdits
-
 
 makeCodeEdit :: MonadF m => SugarCache m -> TWidget ViewTag m
 makeCodeEdit cache = do

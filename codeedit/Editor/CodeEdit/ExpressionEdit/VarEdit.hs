@@ -1,11 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit.VarEdit(make, makeView, colorOf) where
 
+import Control.Monad (liftM)
 import Editor.Anchors (ViewTag)
-import Editor.MonadF(MonadF)
-import Editor.OTransaction (TWidget)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
+import Editor.MonadF (MonadF)
+import Editor.OTransaction (OTransaction)
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
+import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.ITransaction as IT
@@ -20,17 +23,21 @@ colorOf (Data.ParameterRef _) = Config.parameterColor
 
 makeView
   :: MonadF m
-  => Data.VariableRef -> Widget.Id -> TWidget t m
+  => Data.VariableRef
+  -> Widget.Id
+  -> OTransaction ViewTag m (ExpressionGui m)
 makeView var myId = do
   name <-
     OT.transaction . BWidgets.getDisplayNameOf $ Data.variableRefGuid var
-  BWidgets.setTextColor (colorOf var) $
+  liftM ExpressionGui .
+    BWidgets.setTextColor (colorOf var) $
     BWidgets.makeFocusableTextView name myId
 
 make
   :: MonadF m
-  => Data.VariableRef -> Widget.Id
-  -> TWidget ViewTag m
+  => Data.VariableRef
+  -> Widget.Id
+  -> OTransaction ViewTag m (ExpressionGui m)
 make varRef myId = do
   OT.markVariablesAsUsed [varRef]
   varRefView <- makeView varRef myId
@@ -46,4 +53,4 @@ make varRef myId = do
         Data.ParameterRef paramGuid -> IT.transaction $ do
           Anchors.savePreJumpPosition myId
           return $ WidgetIds.paramId paramGuid
-  return $ Widget.weakerEvents jumpToDefinitionEventMap varRefView
+  return $ ExpressionGui.atEgWidget (Widget.weakerEvents jumpToDefinitionEventMap) varRefView

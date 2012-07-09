@@ -2,8 +2,9 @@
 module Editor.CodeEdit.ExpressionEdit.PiEdit(make) where
 
 import Editor.Anchors (ViewTag)
-import Editor.OTransaction (TWidget)
+import Editor.OTransaction (OTransaction)
 import Editor.MonadF (MonadF)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.OTransaction as OT
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -19,7 +20,7 @@ make
   => ExpressionGui.Maker m
   -> Sugar.Pi m
   -> Widget.Id
-  -> TWidget ViewTag m
+  -> OTransaction ViewTag m (ExpressionGui m)
 make makeExpressionEdit (Sugar.Pi param resultType) myId =
   OT.assignCursor myId typeId $ do
     (resultTypeEdit, usedVars) <-
@@ -41,10 +42,10 @@ make makeExpressionEdit (Sugar.Pi param resultType) myId =
         BWidgets.makeLabel "→" $ Widget.toAnimId myId
       let
         paramEdit
-          | paramUsed = BWidgets.vboxCentered [paramNameEdit, paramTypeEdit]
-          | otherwise = paramTypeEdit
+          | paramUsed = ExpressionGui $ BWidgets.vboxCentered [paramNameEdit, paramTypeEdit]
+          | otherwise = ExpressionGui paramTypeEdit
       return $
-        BWidgets.hboxCenteredSpaced [paramEdit, rightArrowLabel, resultTypeEdit]
+        ExpressionGui.hboxSpaced [paramEdit, ExpressionGui rightArrowLabel, resultTypeEdit]
   where
     typeId =
       WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity . Sugar.fpType $

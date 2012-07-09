@@ -5,10 +5,11 @@ import Control.Arrow (first)
 import Control.Monad (liftM)
 import Data.Monoid (Monoid(..))
 import Editor.Anchors (ViewTag)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
 import Editor.CodeEdit.InferredTypes (addType)
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
-import Editor.OTransaction (OTransaction, WidgetT)
+import Editor.OTransaction (OTransaction)
 import Graphics.UI.Bottle.Widget (EventHandlers)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
@@ -51,10 +52,12 @@ make sExpr = do
   typeEdits <- mapM make $ Sugar.rInferredTypes sExpr
   let onReadOnly = Widget.doesntTakeFocus
   return .
-    maybe onReadOnly
-    (Widget.weakerEvents . expressionEventMap holePicker)
-    (Sugar.eActions (Sugar.rEntity sExpr)) $
-    addType exprId typeEdits widget
+    ExpressionGui.atEgWidget
+    ( maybe onReadOnly
+      (Widget.weakerEvents . expressionEventMap holePicker)
+      (Sugar.eActions (Sugar.rEntity sExpr)) .
+      addType exprId (map ExpressionGui.egWidget typeEdits)
+    ) $ widget
   where
     exprId = WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity $ sExpr
 
@@ -62,7 +65,7 @@ makeEditor
   :: MonadF m
   => Sugar.ExpressionRef m
   -> Widget.Id
-  -> OTransaction ViewTag m (HoleResultPicker m, WidgetT ViewTag m)
+  -> OTransaction ViewTag m (HoleResultPicker m, ExpressionGui m)
 makeEditor sExpr =
   case Sugar.rExpression sExpr of
   Sugar.ExpressionWhere hasParens w ->
@@ -95,7 +98,7 @@ makeEditor sExpr =
     wrapNonHoleExpr =
       notAHole .
       BWidgets.wrapDelegated exprFocusDelegatorConfig
-      FocusDelegator.Delegating id
+      FocusDelegator.Delegating ExpressionGui.atEgWidget
     textParenify = parenify Parens.addHighlightedTextParens
     squareParenify = parenify (Parens.addSquareParens . Widget.toAnimId)
 

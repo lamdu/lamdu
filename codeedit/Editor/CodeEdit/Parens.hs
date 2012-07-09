@@ -9,12 +9,14 @@ import Control.Monad (void)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
-import Editor.OTransaction (TWidget, WidgetT)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
 import Editor.MonadF (MonadF)
+import Editor.OTransaction (OTransaction, TWidget)
 import Editor.WidgetIds (parensPrefix)
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.OTransaction as OT
+import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.Config as Config
+import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -22,15 +24,15 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 
 addTextParensI
   :: MonadF m
-  => (TWidget t m -> TWidget t m)
-  -> (TWidget t m -> TWidget t m)
+  => (TWidget ViewTag m -> TWidget ViewTag m)
+  -> (TWidget ViewTag m -> TWidget ViewTag m)
   -> Anim.AnimId
-  -> WidgetT t m
-  -> TWidget t m
+  -> ExpressionGui m
+  -> OTransaction ViewTag m (ExpressionGui m)
 addTextParensI onLParen onRParen parenId widget = do
   beforeParen <- onLParen $ label "("
   afterParen <- onRParen $ label ")"
-  return $ BWidgets.hboxCentered [ beforeParen, widget, afterParen ]
+  return $ ExpressionGui.hbox [ ExpressionGui beforeParen, widget, ExpressionGui afterParen ]
   where
     label str = BWidgets.makeLabel str $ parensPrefix parenId
 
@@ -46,12 +48,16 @@ squareFrame :: Anim.AnimId -> Vector2 Widget.R -> Anim.Frame
 squareFrame animId size =
   Anim.simpleFrameDownscale animId size . void $ squareDraw size
 
-addSquareParens :: Monad m => Anim.AnimId -> WidgetT t m -> TWidget t m
+addSquareParens
+  :: Monad m
+  => Anim.AnimId
+  -> ExpressionGui m
+  -> OTransaction ViewTag m (ExpressionGui m)
 addSquareParens parensId =
-  return .
-  Widget.atWFrameWithSize addSquareFrame .
-  Widget.translateBy (* ((1 - Config.squareParensScaleFactor) / Config.squareParensScaleFactor / 2)) .
-  Widget.scale Config.squareParensScaleFactor
+  return . ExpressionGui.atEgWidget
+  (Widget.atWFrameWithSize addSquareFrame .
+   Widget.translateBy (* ((1 - Config.squareParensScaleFactor) / Config.squareParensScaleFactor / 2)) .
+   Widget.scale Config.squareParensScaleFactor)
   where
     addSquareFrame size = mappend $ squareFrame parensId size
 
@@ -62,19 +68,19 @@ highlightExpression =
 addTextParens
   :: MonadF m
   => Anim.AnimId
-  -> WidgetT t m
-  -> TWidget t m
+  -> ExpressionGui m
+  -> OTransaction ViewTag m (ExpressionGui m)
 addTextParens = addTextParensI id id
 
 addHighlightedTextParens
   :: (MonadF m)
   => Widget.Id
-  -> WidgetT ViewTag m
-  -> TWidget ViewTag m
+  -> ExpressionGui m
+  -> OTransaction ViewTag m (ExpressionGui m)
 addHighlightedTextParens myId widget = do
   mInsideParenId <- OT.subCursor rParenId
   widgetWithParens <- addTextParensI id doHighlight (Widget.toAnimId myId) widget
-  return $ maybe id (const highlightExpression) mInsideParenId widgetWithParens
+  return $ maybe id (const (ExpressionGui.atEgWidget highlightExpression)) mInsideParenId widgetWithParens
   where
     rParenId = Widget.joinId myId [")"]
     doHighlight = (>>= BWidgets.makeFocusableView rParenId)

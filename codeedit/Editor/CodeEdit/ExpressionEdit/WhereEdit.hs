@@ -4,8 +4,9 @@ module Editor.CodeEdit.ExpressionEdit.WhereEdit(make, makeWithBody) where
 import Control.Monad (liftM, (<=<))
 import Data.Monoid (mempty)
 import Editor.Anchors (ViewTag)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
 import Editor.MonadF (MonadF)
-import Editor.OTransaction (TWidget)
+import Editor.OTransaction (OTransaction, TWidget)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -21,7 +22,8 @@ make
   :: MonadF m
   => ExpressionGui.Maker m
   -> Sugar.Where m
-  -> Widget.Id -> TWidget ViewTag m
+  -> Widget.Id
+  -> TWidget ViewTag m
 make makeExpressionEdit (Sugar.Where items _) myId = do
   whereLabel <-
     OT.setTextSizeColor Config.whereTextSize Config.whereColor $
@@ -37,8 +39,8 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
     ]
   where
     makeWhereItemEdits item =
-      (liftM . map . map . Widget.weakerEvents)
-        (whereItemDeleteEventMap item) $
+      (liftM . map . map)
+        (Widget.weakerEvents (whereItemDeleteEventMap item) . ExpressionGui.egWidget) $
       DefinitionEdit.makeParts makeExpressionEdit
       (paramId item) (guid item) (Sugar.wiValue item) (Sugar.wiType item)
     paramId = WidgetIds.paramId . guid
@@ -53,12 +55,13 @@ makeWithBody
   :: MonadF m
   => ExpressionGui.Maker m
   -> Sugar.Where m
-  -> Widget.Id -> TWidget ViewTag m
+  -> Widget.Id
+  -> OTransaction ViewTag m (ExpressionGui m)
 makeWithBody makeExpressionEdit where_@(Sugar.Where _ body) myId = do
   whereEdit <- make makeExpressionEdit where_ myId
   OT.assignCursor myId ((WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity) body) $ do
     bodyEdit <- makeExpressionEdit body
-    return . BWidgets.vboxCentered $
-      [ bodyEdit
+    return . ExpressionGui . BWidgets.vboxCentered $
+      [ ExpressionGui.egWidget bodyEdit
       , whereEdit
       ]

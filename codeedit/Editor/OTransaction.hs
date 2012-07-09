@@ -114,7 +114,7 @@ assignCursor src dest =
 
 atTextStyle
   :: (TextEdit.Style -> TextEdit.Style)
-  -> OTransaction t m (Widget f) -> OTransaction t m (Widget f)
+  -> OTransaction t m a -> OTransaction t m a
 atTextStyle = atOTransaction . Reader.withReaderT . atEnvTextStyle
 
 setTextSizeColor

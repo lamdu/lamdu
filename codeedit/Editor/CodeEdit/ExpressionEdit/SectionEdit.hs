@@ -4,9 +4,9 @@ module Editor.CodeEdit.ExpressionEdit.SectionEdit(make) where
 import Control.Monad (liftM)
 import Data.Maybe (fromMaybe)
 import Editor.Anchors (ViewTag)
-import Editor.OTransaction (TWidget)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
 import Editor.MonadF (MonadF)
-import qualified Editor.BottleWidgets as BWidgets
+import Editor.OTransaction (OTransaction)
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.OTransaction as OT
 import qualified Editor.CodeEdit.Sugar as Sugar
@@ -18,14 +18,14 @@ make
   => ExpressionGui.Maker m
   -> Sugar.Section m
   -> Widget.Id
-  -> TWidget ViewTag m
+  -> OTransaction ViewTag m (ExpressionGui m)
 make makeExpressionEdit (Sugar.Section mLArg op mRArg innerApplyGuid) myId =
   OT.assignCursor myId destId .
     maybe id ((`OT.assignCursor` destId) . WidgetIds.fromGuid) innerApplyGuid $ do
       lArgEdits <- fromMArg mLArg
       opEdits <- makeExpressionsEdit op
       rArgEdits <- fromMArg mRArg
-      return . BWidgets.hboxCenteredSpaced $ lArgEdits ++ opEdits ++ rArgEdits
+      return . ExpressionGui.hboxSpaced $ lArgEdits ++ opEdits ++ rArgEdits
   where
     destId = WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity $ fromMaybe op mRArg
     makeExpressionsEdit = liftM (:[]) . makeExpressionEdit

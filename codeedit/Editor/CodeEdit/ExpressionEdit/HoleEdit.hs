@@ -12,6 +12,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget, WidgetT)
@@ -22,6 +23,7 @@ import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
+import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
 import qualified Editor.CodeEdit.Infix as Infix
@@ -106,7 +108,9 @@ makeResultVariables holeInfo varRef = do
       Result
       { resultName = name
       , resultPick = fmap (pickGetVariable flipAct) $ mPickResult holeInfo
-      , resultMakeWidget = addParens =<< VarEdit.makeView varRef wid
+      , resultMakeWidget =
+          liftM ExpressionGui.egWidget $
+          addParens =<< VarEdit.makeView varRef wid
       }
     pickGetVariable flipAct pickResult =
       pickResult (Data.ExpressionGetVariable varRef) flipAct
@@ -169,7 +173,8 @@ makeLiteralResults holeInfo searchTerm =
       , resultPick = fmap (pickLiteralInt integer) $ mPickResult holeInfo
       , resultMakeWidget =
           BWidgets.makeFocusableView literalIntId =<<
-          LiteralEdit.makeIntView (Widget.toAnimId literalIntId) integer
+          liftM ExpressionGui.egWidget
+          (LiteralEdit.makeIntView (Widget.toAnimId literalIntId) integer)
       }
     pickLiteralInt integer holePickResult = holePickResult (Data.ExpressionLiteralInteger integer) (return ())
 
@@ -355,8 +360,8 @@ make
   -> Guid
   -> Widget.Id
   -> OTransaction ViewTag m
-     (Maybe (ResultPicker m), WidgetT ViewTag m)
+     (Maybe (ResultPicker m), ExpressionGui m)
 make hole =
-  (fmap . liftM . second . Widget.weakerEvents) (pasteEventMap hole) .
+  (fmap . liftM . second) (ExpressionGui . Widget.weakerEvents (pasteEventMap hole)) .
   BWidgets.wrapDelegated holeFDConfig FocusDelegator.Delegating
   second . makeH hole
