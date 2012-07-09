@@ -16,7 +16,7 @@ import qualified Graphics.UI.Bottle.Rect as Rect
 
 type Alignment = Vector2 Anim.R -- ^ 0..1
 
-makePlacements :: [[(Anim.Size, Alignment)]] -> (Anim.Size, [[Rect]])
+makePlacements :: [[(Anim.Size, Alignment)]] -> (Anim.Size, [[(Alignment, Rect)]])
 makePlacements rows =
   (Vector2 width height, zipWith rowResult (zipWith alignPos rowPos rowSizes) posRows)
   where
@@ -28,7 +28,9 @@ makePlacements rows =
     groupPos = scanl (+) 0 . map fst
     rowResult rowSize = zipWith (itemResult rowSize) (zipWith alignPos colPos colSizes)
     itemResult alignY alignX (itemSize, (Vector2 preX preY, _)) =
-      Rect (Vector2 (alignX - preX) (alignY - preY)) itemSize
+      ( Vector2 (alignX / width) (alignY / height)
+      , Rect (Vector2 (alignX - preX) (alignY - preY)) itemSize
+      )
     colSizes = map (groupSize Vector2.fst) $ transpose posRows
     rowSizes = map (groupSize Vector2.snd) posRows
     groupSize dim group =
@@ -42,7 +44,7 @@ makePlacements rows =
 --- Displays:
 
 -- Used by both make and Grid's make.
-makeGeneric :: (Rect -> a -> b) -> [[((Anim.Size, Alignment), a)]] -> (Anim.Size, [[b]])
+makeGeneric :: (Alignment -> Rect -> a -> b) -> [[((Anim.Size, Alignment), a)]] -> (Anim.Size, [[b]])
 -- Special case to preserve shape to avoid handling it above in
 -- "maximum", "transpose", etc
 makeGeneric translate rows =
@@ -50,10 +52,10 @@ makeGeneric translate rows =
   where
     szAlignments = (map . map) fst rows
     items = (map . map) snd rows
-    place rects = (zipWith . zipWith) translate rects items
+    place aRects = (zipWith . zipWith) (uncurry translate) aRects items
 
 make :: [[((Anim.Size, Alignment), Anim.Frame)]] -> (Anim.Size, Anim.Frame)
-make = second (mconcat . concat) . makeGeneric (Anim.translate . Rect.rectTopLeft)
+make = second (mconcat . concat) . makeGeneric (const (Anim.translate . Rect.rectTopLeft))
 
 makeAlign :: Alignment -> [[(Anim.Size, Anim.Frame)]] -> (Anim.Size, Anim.Frame)
 makeAlign alignment = make . (map . map . first) (flip (,) alignment)

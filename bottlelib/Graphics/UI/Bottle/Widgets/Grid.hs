@@ -121,7 +121,8 @@ getCursor =
     cursorOf ((row, column), _) = Vector2 column row
 
 data GridElement f = GridElement
-  { gridElementRect :: Rect
+  { gridElementAlign :: Alignment
+  , gridElementRect :: Rect
   , gridElementW :: Widget f
   }
 
@@ -144,13 +145,12 @@ makeKeyed children = KGrid
   }
   where
     (size, content) =
-      GridView.makeGeneric (second . translate) $
+      GridView.makeGeneric translate $
       (map . map) mkSizedKeyedContent children
     mkSizedKeyedContent (key, (alignment, widget)) =
       ((Widget.wSize widget, alignment), (key, widget))
-    translate rect =
-      GridElement rect .
-      Widget.translate (Rect.rectTopLeft rect)
+    translate align rect =
+      second (GridElement align rect . Widget.translate (Rect.rectTopLeft rect))
 
 unkey :: [[(Alignment, Widget f)]] -> [[((), (Alignment, Widget f))]]
 unkey = (map . map) ((,) ())

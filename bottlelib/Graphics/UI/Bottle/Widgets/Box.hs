@@ -4,7 +4,7 @@ module Graphics.UI.Bottle.Widgets.Box
   , make, makeKeyed, makeAlign, makeCentered
   , unkey
   , atBoxMCursor, atBoxContent, atBoxOrientation
-  , BoxElement, mkBoxElement, boxElementRect, boxElementW
+  , BoxElement, boxElementRect, boxElementW
   , atBoxElementRect, atBoxElementW
   , Cursor, toWidget, toWidgetBiased
   , Orientation, horizontal, vertical
@@ -54,9 +54,6 @@ vertical = Orientation {
   }
 
 type BoxElement f = Grid.GridElement f
-
-mkBoxElement :: Rect -> Widget f -> BoxElement f
-mkBoxElement = Grid.GridElement
 
 boxElementRect :: Grid.GridElement f -> Rect
 boxElementRect = Grid.gridElementRect
