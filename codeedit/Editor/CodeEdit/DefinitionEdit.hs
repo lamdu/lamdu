@@ -1,29 +1,24 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Editor.CodeEdit.DefinitionEdit(make, makeParts, addJumps) where
+module Editor.CodeEdit.DefinitionEdit(make, makeParts) where
 
 import Control.Arrow (second)
 import Control.Monad (liftM)
-import Data.List.Utils (atPred, pairList)
-import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.InferredTypes(addType)
-import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget, WidgetT)
 import qualified Data.List as List
-import qualified Editor.Anchors as Anchors
+import qualified Data.List.Utils as ListUtils
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
-import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
-import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -36,9 +31,6 @@ paramFDConfig = FocusDelegator.Config
   , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEsc
   , FocusDelegator.stopDelegatingDoc = "Stop changing name"
   }
-
-data Side = LHS | RHS
-  deriving (Show, Eq)
 
 makeNameEdit :: MonadF m => Widget.Id -> Guid -> TWidget t m
 makeNameEdit myId ident =
@@ -60,7 +52,7 @@ makeLHSEdit makeExpressionEdit myId ident mAddFirstParameter params = do
     (liftM . Widget.weakerEvents) addFirstParamEventMap $
     makeNameEdit myId ident
   liftM (BWidgets.gridHSpacedCentered . List.transpose .
-         map pairList . ((nameEdit, nameTypeFiller) :) . map scaleDownType) .
+         map ListUtils.pairList . ((nameEdit, nameTypeFiller) :) . map scaleDownType) .
     mapM (FuncEdit.makeParamEdit makeExpressionEdit) $ params
   where
     addFirstParamEventMap =
@@ -74,43 +66,13 @@ makeLHSEdit makeExpressionEdit myId ident mAddFirstParameter params = do
     -- no type for def name (yet):
     nameTypeFiller = BWidgets.spaceWidget
 
--- from lhs->rhs and vice-versa:
-addJumps
-  :: Monad m
-  => Widget.Id
-  -> [(Maybe Side, Grid.Element (ITransaction ViewTag m))]
-  -> [(Maybe Side, Grid.Element (ITransaction ViewTag m))]
-addJumps cursor defKGridElements =
-  addEventMap LHS RHS "right-hand side" Config.jumpToRhsKeys Direction.fromLeft .
-  addEventMap RHS LHS "left-hand side"  Config.jumpToLhsKeys Direction.fromRight $
-  defKGridElements
-  where
-    addEventMap srcSide destSide doc keys dir =
-      atPred (== Just srcSide)
-      (addJumpsTo doc keys dir .
-       fromMaybe (error "Missing destSide after gridifying?") $
-       lookup (Just destSide)
-       defKGridElements)
-    addJumpsTo doc keys dir =
-      Grid.atElementW . Widget.atWEventMap . flip mappend .
-      jumpToExpressionEventMap doc keys dir
-    jumpToExpressionEventMap doc keys dir destElement =
-      maybe mempty
-      (makeJumpForEnter doc keys dir destElement) .
-      Widget.wMaybeEnter $ Grid.elementW destElement
-    makeJumpForEnter doc keys dir destElement enter =
-      E.keyPresses keys ("Jump to "++doc) .
-      (IT.transaction (Anchors.savePreJumpPosition cursor) >>) .
-      Widget.enterResultEvent . enter . dir $
-      Grid.elementRect destElement
-
 makeDefBodyParts
   :: MonadF m
   => ExpressionGui.Maker m
   -> Widget.Id
   -> Guid
   -> Sugar.ExpressionRef m
-  -> OTransaction ViewTag m [(Maybe Side, WidgetT ViewTag m)]
+  -> OTransaction ViewTag m [WidgetT ViewTag m]
 makeDefBodyParts makeExpressionEdit myId guid exprRef = do
   let
     sExpr = Sugar.rExpression exprRef
@@ -124,29 +86,29 @@ makeDefBodyParts makeExpressionEdit myId guid exprRef = do
   equals <- BWidgets.makeLabel "=" $ Widget.toAnimId myId
   rhsEdit <- makeExpressionEdit $ Sugar.fBody func
   return $
-    [(Just LHS, lhsEdit)
-    ,(Nothing, BWidgets.spaceWidget)
-    ,(Nothing, equals)
-    ,(Nothing, BWidgets.spaceWidget)
-    ,(Just RHS, rhsEdit)
+    [ lhsEdit
+    , BWidgets.spaceWidget
+    , equals
+    , BWidgets.spaceWidget
+    , rhsEdit
     ]
 
 makeParts
   :: MonadF m
   => ExpressionGui.Maker m
   -> Widget.Id -> Guid -> Sugar.ExpressionRef m -> Sugar.ExpressionRef m
-  -> OTransaction ViewTag m [[(Maybe Side, WidgetT ViewTag m)]]
+  -> OTransaction ViewTag m [[WidgetT ViewTag m]]
 makeParts makeExpressionEdit myId guid defBody defType = do
   typeEdit <- makeExpressionEdit defType
   colon <- BWidgets.makeLabel ":" $ Widget.toAnimId myId
   name <- makeNameEdit (Widget.joinId myId ["typeDeclName"]) guid
   let
     typeLineParts =
-      [ (Just LHS, name)
-      , (Nothing, BWidgets.spaceWidget)
-      , (Nothing, colon)
-      , (Nothing, BWidgets.spaceWidget)
-      , (Just RHS, typeEdit)
+      [ name
+      , BWidgets.spaceWidget
+      , colon
+      , BWidgets.spaceWidget
+      , typeEdit
       ]
   defBodyParts <- makeDefBodyParts makeExpressionEdit myId guid defBody
   return [typeLineParts, defBodyParts]
@@ -160,16 +122,13 @@ make
   -> [Sugar.ExpressionRef m]
   -> TWidget ViewTag m
 make makeExpressionEdit guid defBody defType inferredTypes = do
-  cursor <- OT.readCursor
   parts <-
     makeParts makeExpressionEdit
     (WidgetIds.fromGuid guid) guid defBody defType
   inferredTypesEdits <- mapM makeExpressionEdit inferredTypes
   return .
     addType exprId inferredTypesEdits .
-    Grid.toWidget .
-    (Grid.atGridContent . map) (addJumps cursor) .
-    Grid.makeKeyed $
-    (map . map . second) ((,) 0) parts
+    Grid.toWidget $
+    Grid.makeAlign 0 parts
   where
     exprId = WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity $ defBody

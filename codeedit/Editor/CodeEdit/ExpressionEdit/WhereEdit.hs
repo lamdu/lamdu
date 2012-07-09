@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit.WhereEdit(make, makeWithBody) where
 
-import Control.Arrow (second)
 import Control.Monad (liftM, (<=<))
 import Data.Monoid (mempty)
 import Editor.Anchors (ViewTag)
@@ -24,15 +23,13 @@ make
   -> Sugar.Where m
   -> Widget.Id -> TWidget ViewTag m
 make makeExpressionEdit (Sugar.Where items _) myId = do
-  cursor <- OT.readCursor
   whereLabel <-
     OT.setTextSizeColor Config.whereTextSize Config.whereColor $
     BWidgets.makeLabel "where" $ Widget.toAnimId myId
   let
     makeWhereItemsGrid =
-      liftM (Grid.toWidget . addJumps . Grid.makeKeyed . (map . map . second) ((,) 0) . concat) $
+      liftM (Grid.toWidget . Grid.makeAlign 0 . concat) $
       mapM makeWhereItemEdits items
-    addJumps = (Grid.atGridContent . map) (DefinitionEdit.addJumps cursor)
   whereEdits <- makeWhereItemsGrid
   return . BWidgets.vboxCentered $
     [ whereLabel
@@ -40,7 +37,7 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
     ]
   where
     makeWhereItemEdits item =
-      (liftM . map . map . second . Widget.weakerEvents)
+      (liftM . map . map . Widget.weakerEvents)
         (whereItemDeleteEventMap item) $
       DefinitionEdit.makeParts makeExpressionEdit
       (paramId item) (guid item) (Sugar.wiValue item) (Sugar.wiType item)

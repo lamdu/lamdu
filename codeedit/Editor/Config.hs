@@ -65,9 +65,6 @@ unfocusedReadOnlyHoleBackgroundColor = Draw.Color 0.7 0.3 0.3 1
 
 parenHighlightColor = Draw.Color 0.3 0 1 0.25
 
-jumpToLhsKeys = [k '`']
-jumpToRhsKeys = [k '=', noMods E.KeyPadEqual]
-
 lambdaWrapKeys = [k '\\']
 addWhereItemKeys = [k 'w']
 
