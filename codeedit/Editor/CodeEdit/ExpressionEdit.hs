@@ -5,7 +5,6 @@ import Control.Arrow (first)
 import Control.Monad (liftM)
 import Data.Monoid (Monoid(..))
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.CodeEdit.InferredTypes (addType)
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
@@ -14,6 +13,7 @@ import Graphics.UI.Bottle.Widget (EventHandlers)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Editor.CodeEdit.ExpressionEdit.BuiltinEdit as BuiltinEdit
+import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
@@ -45,7 +45,7 @@ exprFocusDelegatorConfig = FocusDelegator.Config
   , FocusDelegator.stopDelegatingDoc = "Leave subexpression"
   }
 
-make :: MonadF m => ExpressionEditMaker m
+make :: MonadF m => ExpressionGui.Maker m
 make sExpr = do
   (holePicker, widget) <- makeEditor sExpr exprId
   typeEdits <- mapM make $ Sugar.rInferredTypes sExpr

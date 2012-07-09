@@ -6,11 +6,11 @@ import Data.List.Utils (pairList)
 import Data.Monoid (mempty, mconcat)
 import Data.Store.Guid (Guid)
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget, WidgetT)
 import qualified Data.List as List
 import qualified Editor.BottleWidgets as BWidgets
+import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
@@ -44,7 +44,7 @@ both f (x, y) = (f x, f y)
 -- exported for use in definition sugaring.
 makeParamEdit
   :: MonadF m
-  => ExpressionEditMaker m
+  => ExpressionGui.Maker m
   -> Sugar.FuncParam m
   -> OTransaction ViewTag m (WidgetT ViewTag m, WidgetT ViewTag m)
 makeParamEdit makeExpressionEdit param =
@@ -81,7 +81,7 @@ makeParamEdit makeExpressionEdit param =
 
 makeParamsEdit
   :: MonadF m
-  => ExpressionEditMaker m
+  => ExpressionGui.Maker m
   -> [Sugar.FuncParam m]
   -> TWidget ViewTag m
 makeParamsEdit makeExpressionEdit =
@@ -94,7 +94,7 @@ makeParamsEdit makeExpressionEdit =
 
 make
   :: MonadF m
-  => ExpressionEditMaker m
+  => ExpressionGui.Maker m
   -> Sugar.Func m
   -> Widget.Id
   -> TWidget ViewTag m

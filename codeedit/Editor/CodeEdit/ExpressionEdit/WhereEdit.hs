@@ -5,11 +5,11 @@ import Control.Arrow (second)
 import Control.Monad (liftM, (<=<))
 import Data.Monoid (mempty)
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (TWidget)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
+import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
@@ -20,7 +20,7 @@ import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 
 make
   :: MonadF m
-  => ExpressionEditMaker m
+  => ExpressionGui.Maker m
   -> Sugar.Where m
   -> Widget.Id -> TWidget ViewTag m
 make makeExpressionEdit (Sugar.Where items _) myId = do
@@ -54,7 +54,7 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
 
 makeWithBody
   :: MonadF m
-  => ExpressionEditMaker m
+  => ExpressionGui.Maker m
   -> Sugar.Where m
   -> Widget.Id -> TWidget ViewTag m
 makeWithBody makeExpressionEdit where_@(Sugar.Where _ body) myId = do

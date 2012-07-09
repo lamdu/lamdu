@@ -10,7 +10,6 @@ import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.ExpressionEdit.ExpressionMaker(ExpressionEditMaker)
 import Editor.CodeEdit.InferredTypes(addType)
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
@@ -18,6 +17,7 @@ import Editor.OTransaction (OTransaction, TWidget, WidgetT)
 import qualified Data.List as List
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
+import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
@@ -50,7 +50,7 @@ makeNameEdit myId ident =
 
 makeLHSEdit
   :: MonadF m
-  => ExpressionEditMaker m
+  => ExpressionGui.Maker m
   -> Widget.Id
   -> Guid
   -> Maybe (Transaction ViewTag m Guid)
@@ -107,7 +107,7 @@ addJumps cursor defKGridElements =
 
 makeDefBodyParts
   :: MonadF m
-  => ExpressionEditMaker m
+  => ExpressionGui.Maker m
   -> Widget.Id
   -> Guid
   -> Sugar.ExpressionRef m
@@ -134,7 +134,7 @@ makeDefBodyParts makeExpressionEdit myId guid exprRef = do
 
 makeParts
   :: MonadF m
-  => ExpressionEditMaker m
+  => ExpressionGui.Maker m
   -> Widget.Id -> Guid -> Sugar.ExpressionRef m -> Sugar.ExpressionRef m
   -> OTransaction ViewTag m [[(Maybe Side, (Grid.Alignment, WidgetT ViewTag m))]]
 makeParts makeExpressionEdit myId guid defBody defType = do
@@ -154,7 +154,7 @@ makeParts makeExpressionEdit myId guid defBody defType = do
 
 make
   :: MonadF m
-  => ExpressionEditMaker m
+  => ExpressionGui.Maker m
   -> Guid
   -> Sugar.ExpressionRef m
   -> Sugar.ExpressionRef m
