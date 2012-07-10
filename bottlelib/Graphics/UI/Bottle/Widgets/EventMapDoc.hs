@@ -53,15 +53,15 @@ addHelp size style w =
     eventMap = Widget.wEventMap w
 
 makeToggledHelpAdder
-  :: [E.ModKey] -> TextView.Style -> IO (Widget.Size -> Widget IO -> IO (Widget IO))
-makeToggledHelpAdder overlayDocKeys style = do
+  :: [E.ModKey] -> IO (TextView.Style -> Widget.Size -> Widget IO -> IO (Widget IO))
+makeToggledHelpAdder overlayDocKeys = do
   showingHelpVar <- newIORef True
   let
     toggle = modifyIORef showingHelpVar not
     addToggleEventMap doc =
       Widget.strongerEvents $
       Widget.keysEventMap overlayDocKeys doc toggle
-  return $ \size widget -> do
+  return $ \style size widget -> do
     showingHelp <- readIORef showingHelpVar
     return $
       if showingHelp

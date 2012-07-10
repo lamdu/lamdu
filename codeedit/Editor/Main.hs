@@ -131,10 +131,9 @@ runDbStore :: Draw.Font -> Transaction.Store DBTag IO -> IO a
 runDbStore font store = do
   ExampleDB.initDB store
   flyNavMake <- makeFlyNav
-  addHelp <-
-    EventMapDoc.makeToggledHelpAdder Config.overlayDocKeys
-    (Config.helpStyle font)
+  addHelpWithStyle <- EventMapDoc.makeToggledHelpAdder Config.overlayDocKeys
   let
+    addHelp = addHelpWithStyle $ Config.helpStyle font
     updateCacheWith _             (Last Nothing) = return ()
     updateCacheWith writeNewCache (Last (Just newCache)) =
       writeNewCache newCache
