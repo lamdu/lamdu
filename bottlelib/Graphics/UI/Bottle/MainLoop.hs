@@ -25,8 +25,11 @@ mainLoopImage
   :: (Widget.Size -> KeyEvent -> IO Bool)
   -> (Bool -> Widget.Size -> IO (Maybe Image)) -> IO a
 mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
+  Vector2 displayWidth displayHeight <- GLFWUtils.getVideoModeSize
   GLFWUtils.openWindow GLFW.defaultDisplayOptions
-
+    { GLFW.displayOptions_width = displayWidth
+    , GLFW.displayOptions_height = displayHeight
+    }
   let
     windowSize = do
       (x, y) <- GLFW.getWindowDimensions
