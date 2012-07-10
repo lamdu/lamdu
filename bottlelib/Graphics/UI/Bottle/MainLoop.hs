@@ -12,24 +12,24 @@ import Graphics.DrawingCombinators ((%%))
 import Graphics.DrawingCombinators.Utils (Image)
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget(Widget)
-import Graphics.UI.GLFW (defaultDisplayOptions, getWindowDimensions)
 import Graphics.UI.GLFW.Events (KeyEvent, GLFWEvent(..), eventLoop)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.Rendering.OpenGL.GL as GL
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 
 mainLoopImage
   :: (Widget.Size -> KeyEvent -> IO Bool)
   -> (Bool -> Widget.Size -> IO (Maybe Image)) -> IO a
 mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
-  GLFWUtils.openWindow defaultDisplayOptions
+  GLFWUtils.openWindow GLFW.defaultDisplayOptions
 
   let
     windowSize = do
-      (x, y) <- getWindowDimensions
+      (x, y) <- GLFW.getWindowDimensions
       return $ Vector2 (fromIntegral x) (fromIntegral y)
 
     handleEvent size (GLFWKeyEvent keyEvent) =
