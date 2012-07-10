@@ -69,13 +69,13 @@ lambdaWrapKeys = [k '\\']
 addWhereItemKeys = [k 'w']
 
 lambdaColor = Draw.Color 1 0.2 0.2 1
-lambdaTextSize = 30
+lambdaTextSizeFactor = 1.0
 
 rightArrowColor = Draw.Color 1 0.2 0.2 1
-rightArrowTextSize = 30
+rightArrowTextSizeFactor = 1.0
 
 whereColor = Draw.Color 0.8 0.6 0.1 1
-whereTextSize = 16
+whereTextSizeFactor = 0.5
 whereScaleFactor = 0.85
 
 foldKeys = [k '-']
@@ -121,3 +121,9 @@ selectedBranchColor = Draw.Color 0 0.5 0 1
 
 jumpLHStoRHSKeys = [k '`']
 jumpRHStoLHSKeys = [k '`']
+
+shrinkBaseFontKeys = [ctrl '-']
+enlargeBaseFontKeys = [ctrl '=']
+
+enlargeFactor = 1.1
+shrinkFactor = 1.1

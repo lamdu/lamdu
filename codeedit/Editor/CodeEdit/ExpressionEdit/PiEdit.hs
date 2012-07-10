@@ -39,7 +39,7 @@ make makeExpressionEdit (Sugar.Pi param resultType) myId =
       (paramNameEdit, paramTypeEdit) <-
         FuncEdit.makeParamEdit makeExpressionEdit ("Result Type", resultType) param
       rightArrowLabel <-
-        OT.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor .
+        OT.setTextSizeColor (* Config.rightArrowTextSizeFactor) Config.rightArrowColor .
         BWidgets.makeLabel "→" $ Widget.toAnimId myId
       let
         paramEdit

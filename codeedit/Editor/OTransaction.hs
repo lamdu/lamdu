@@ -118,13 +118,13 @@ atTextStyle
 atTextStyle = atOTransaction . Reader.withReaderT . atEnvTextStyle
 
 setTextSizeColor
-  :: Int
+  :: (Double -> Double)
   -> Draw.Color
   -> OTransaction t m (Widget f)
   -> OTransaction t m (Widget f)
-setTextSizeColor textSize textColor =
+setTextSizeColor onTextSize textColor =
   (atTextStyle . TextEdit.atSTextViewStyle)
-  ((TextView.atStyleFontSize . const) textSize .
+  (TextView.atStyleFontSize (truncate . onTextSize . fromIntegral) .
    (TextView.atStyleColor . const) textColor)
 
 getP :: Monad m => MkProperty t m a -> OTransaction t m a

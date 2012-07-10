@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings, Rank2Types#-}
 module Main(main) where
 
+import Control.Applicative ((<*))
 import Control.Arrow (second)
 import Control.Monad (liftM, unless, (<=<))
 import Control.Monad.Trans.Class (lift)
@@ -41,6 +42,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
 import qualified Graphics.UI.Bottle.Widgets.FlyNav as FlyNav
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
+import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified System.Directory as Directory
 import qualified System.Info
 
@@ -127,23 +129,48 @@ fixIORef mkInitial = do
   writeIORef var =<< mkInitial (writeIORef var)
   return var
 
+makeFontSizeFactor :: IO (IORef Double, Widget.EventHandlers IO)
+makeFontSizeFactor = do
+  factor <- newIORef 1.0
+  let
+    eventMap = mconcat
+      [ Widget.keysEventMap Config.enlargeBaseFontKeys "Enlarge text" $
+        modifyIORef factor (* Config.enlargeFactor)
+      , Widget.keysEventMap Config.shrinkBaseFontKeys "Shrink text" $
+        modifyIORef factor (/ Config.shrinkFactor)
+      ]
+  return (factor, eventMap)
+
 runDbStore :: Draw.Font -> Transaction.Store DBTag IO -> IO a
 runDbStore font store = do
   ExampleDB.initDB store
+  (fontFactor, fontFactorEvents) <- makeFontSizeFactor
   flyNavMake <- makeFlyNav
   addHelpWithStyle <- EventMapDoc.makeToggledHelpAdder Config.overlayDocKeys
   let
-    addHelp = addHelpWithStyle $ Config.helpStyle font
+    fontFactorAsFunc = do
+      fontSizeFactor <- readIORef fontFactor
+      return $ truncate . (fontSizeFactor *) . fromIntegral
+    addHelp size widget = do
+      fontFactorFunc <- fontFactorAsFunc
+      let helpStyle = TextView.atStyleFontSize fontFactorFunc (Config.helpStyle font)
+      addHelpWithStyle helpStyle size widget
     updateCacheWith _             (Last Nothing) = return ()
     updateCacheWith writeNewCache (Last (Just newCache)) =
       writeNewCache newCache
 
-    newMemoFromCache writeMemo sugarCache =
-      memoIO $
-      mkWidgetWithFallback (Config.baseStyle font) dbToIO
-      (updateCacheWith writeNewCache) sugarCache
+    newMemoFromCache writeMemo sugarCache = do
+      fontFactorFunc <- fontFactorAsFunc
+      let
+        baseStyle =
+          (TextEdit.atSTextViewStyle . TextView.atStyleFontSize) fontFactorFunc $
+          Config.baseStyle font
+      memoIO .
+        (liftM . fmap . Widget.weakerEvents)
+        (fmap (<* writeCache sugarCache) fontFactorEvents) $
+        mkWidgetWithFallback baseStyle dbToIO (updateCacheWith writeCache) sugarCache
       where
-        writeNewCache = writeMemo <=< newMemoFromCache writeMemo
+        writeCache = writeMemo <=< newMemoFromCache writeMemo
 
   initSugarCache <- dbToIO $ viewToDb CodeEdit.makeSugarCache
   memoRef <- fixIORef $ \writeMemo -> newMemoFromCache writeMemo initSugarCache

@@ -26,7 +26,7 @@ make
   -> TWidget ViewTag m
 make makeExpressionEdit (Sugar.Where items _) myId = do
   whereLabel <-
-    OT.setTextSizeColor Config.whereTextSize Config.whereColor $
+    OT.setTextSizeColor (* Config.whereTextSizeFactor) Config.whereColor $
     BWidgets.makeLabel "where" $ Widget.toAnimId myId
   let
     makeWhereItemsGrid =
