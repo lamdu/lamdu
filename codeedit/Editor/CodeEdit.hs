@@ -154,5 +154,5 @@ makePanesEdit panes = do
     makePaneWidget pane =
       liftM (onEachPane . Widget.weakerEvents (paneEventMap pane)) .
       makeDefinitionEdit $ spDef pane
-    makeDefinitionEdit (Sugar.DefinitionRef guid defBody defType _inferredTypes) =
-      DefinitionEdit.make ExpressionEdit.make guid defBody defType
+    makeDefinitionEdit (Sugar.DefinitionRef guid defBody defType inferredTypes) =
+      DefinitionEdit.make ExpressionEdit.make guid defBody defType inferredTypes

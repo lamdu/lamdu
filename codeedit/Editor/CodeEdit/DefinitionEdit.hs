@@ -123,12 +123,18 @@ make
   -> Guid
   -> Sugar.ExpressionRef m
   -> Sugar.ExpressionRef m
+  -> [Sugar.ExpressionRef m]
   -> TWidget ViewTag m
-make makeExpressionEdit guid defBody defType = do
+make makeExpressionEdit guid defBody defType inferredTypes = do
   parts <-
     makeParts makeExpressionEdit
     (WidgetIds.fromGuid guid) guid defBody defType
+  inferredTypesEdits <- mapM makeExpressionEdit inferredTypes
   return .
+    ExpressionGui.egWidget .
+    ExpressionGui.addType exprId (map ExpressionGui.egWidget inferredTypesEdits) .
     BWidgets.vboxAlign 0 .
     map (ExpressionGui.egWidget . ExpressionGui.hbox) $
     parts
+  where
+    exprId = WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity $ defBody
