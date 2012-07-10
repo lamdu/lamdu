@@ -64,7 +64,9 @@ addType exprId typeEdits widget =
     alignment =
       maybe (error "True disappeared from box list?!") (Vector2.snd . Grid.elementAlign) .
       lookup True $ Box.boxContent box
-    box = Box.makeKeyed Box.vertical . (map . second) ((,) 0.5) $
+    box =
+      Box.makeKeyed Box.vertical .
+      (map . second) ((,) 0.5) $
       [ (False, widget)
       , (True,  Spacer.makeHorizLine underlineId (Vector2 underLineWidth 1))
       , (False, typeEdit)
