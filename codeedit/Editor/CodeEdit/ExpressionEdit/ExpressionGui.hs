@@ -47,7 +47,7 @@ hbox guis =
   _ -> error "hbox must not get empty list :("
   where
     box = Box.make Box.horizontal $ map f guis
-    f (ExpressionGui widget alignment) = (alignment, widget)
+    f (ExpressionGui widget _alignment) = (0, widget)
 
 hboxSpaced :: [ExpressionGui m] -> ExpressionGui m
 hboxSpaced = hbox . List.intersperse (fromValueWidget BWidgets.spaceWidget)
