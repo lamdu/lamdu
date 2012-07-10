@@ -132,9 +132,12 @@ make makeExpressionEdit guid defBody defType inferredTypes = do
   inferredTypesEdits <- mapM makeExpressionEdit inferredTypes
   return .
     ExpressionGui.egWidget .
-    ExpressionGui.addType exprId (map ExpressionGui.egWidget inferredTypesEdits) .
+    addTypes inferredTypesEdits .
     BWidgets.vboxAlign 0 .
     map (ExpressionGui.egWidget . ExpressionGui.hbox) $
     parts
   where
+    addTypes inferredTypesEdits@(_:_:_) =
+      ExpressionGui.addType exprId $ map ExpressionGui.egWidget inferredTypesEdits
+    addTypes _ = ExpressionGui.fromValueWidget
     exprId = WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity $ defBody
