@@ -155,7 +155,7 @@ makeNameEdit editingEmptyStr ident myId =
   where
     makeEditor =
       (fmap . fmap . liftM . Widget.atWEventMap)
-      (EventMap.filterChars (`notElem` "=[]\\"))
+      (EventMap.filterChars (`notElem` "[]\\"))
       makeWordEdit
 
 boxAlign :: Box.Orientation -> Box.Alignment -> [Widget f] -> Widget f
