@@ -118,3 +118,6 @@ baseStyle font = TextEdit.Style
   }
 
 selectedBranchColor = Draw.Color 0 0.5 0 1
+
+jumpLHStoRHSKeys = [k '`']
+jumpRHStoLHSKeys = [k '`']

@@ -1,4 +1,5 @@
-module Editor.CodeEdit.ExpressionEdit.FuncEdit(make, makeParamEdit) where
+module Editor.CodeEdit.ExpressionEdit.FuncEdit
+  (make, makeParamEdit, makeBodyEdit, addJumpToRHS) where
 
 import Control.Arrow (second)
 import Control.Monad (liftM, (<=<))
@@ -42,20 +43,30 @@ makeParamNameEdit ident =
 both :: (a -> b) -> (a, a) -> (b, b)
 both f (x, y) = (f x, f y)
 
+addJumpToRHS
+  :: MonadF m => (E.Doc, Sugar.ExpressionRef m) -> WidgetT ViewTag m -> WidgetT ViewTag m
+addJumpToRHS (rhsDoc, rhs) =
+  Widget.weakerEvents .
+  Widget.keysEventMapMovesCursor Config.jumpLHStoRHSKeys ("Jump to " ++ rhsDoc) $
+  return rhsId
+  where
+    rhsId = WidgetIds.fromGuid . Sugar.guid $ Sugar.rEntity rhs
+
 -- exported for use in definition sugaring.
 makeParamEdit
   :: MonadF m
   => ExpressionGui.Maker m
+  -> (E.Doc, Sugar.ExpressionRef m)
   -> Sugar.FuncParam m
   -> OTransaction ViewTag m (WidgetT ViewTag m, WidgetT ViewTag m)
-makeParamEdit makeExpressionEdit param =
+makeParamEdit makeExpressionEdit rhs param =
   OT.assignCursor (WidgetIds.fromGuid ident) (WidgetIds.paramId ident) .
     (liftM . both . Widget.weakerEvents) paramEventMap $ do
     paramNameEdit <- makeParamNameEdit ident
     paramTypeEdit <- makeExpressionEdit $ Sugar.fpType param
     return
-      (paramNameEdit,
-       ExpressionGui.egWidget paramTypeEdit)
+      (addJumpToRHS rhs paramNameEdit,
+       addJumpToRHS rhs (ExpressionGui.egWidget paramTypeEdit))
   where
     ident = Sugar.guid $ Sugar.fpEntity param
     paramEventMap = mconcat
@@ -79,15 +90,33 @@ makeParamEdit makeExpressionEdit param =
 makeParamsEdit
   :: MonadF m
   => ExpressionGui.Maker m
+  -> (E.Doc, Sugar.ExpressionRef m)
   -> [Sugar.FuncParam m]
   -> OTransaction ViewTag m (ExpressionGui m)
-makeParamsEdit makeExpressionEdit =
+makeParamsEdit makeExpressionEdit rhs =
   liftM
   (ExpressionGui.fromValueWidget . BWidgets.gridHSpacedCentered . List.transpose .
    map (pairList . scaleDownType)) .
-  mapM (makeParamEdit makeExpressionEdit)
+  mapM (makeParamEdit makeExpressionEdit rhs)
   where
     scaleDownType = second $ Widget.scale Config.typeScaleFactor
+
+makeBodyEdit
+  :: MonadF m
+  => ExpressionGui.Maker m
+  -> [Widget.Id]
+  -> Sugar.ExpressionRef m
+  -> OTransaction ViewTag m (ExpressionGui m)
+makeBodyEdit makeExpressionEdit lhs body =
+  liftM ((ExpressionGui.atEgWidget . Widget.weakerEvents) jumpToLhsEventMap) $
+  makeExpressionEdit body
+  where
+    lastParam = case lhs of
+      [] -> error "BodyEdit given empty LHS"
+      xs -> last xs
+    jumpToLhsEventMap =
+      Widget.keysEventMapMovesCursor Config.jumpRHStoLHSKeys "Jump to last param" $
+      return lastParam
 
 make
   :: MonadF m
@@ -96,7 +125,7 @@ make
   -> Widget.Id
   -> OTransaction ViewTag m (ExpressionGui m)
 make makeExpressionEdit (Sugar.Func params body) myId =
-  OT.assignCursor myId ((WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity) body) $ do
+  OT.assignCursor myId bodyId $ do
     lambdaLabel <-
       liftM ExpressionGui.fromValueWidget .
       OT.setTextSizeColor Config.lambdaTextSize Config.lambdaColor .
@@ -105,6 +134,9 @@ make makeExpressionEdit (Sugar.Func params body) myId =
       liftM ExpressionGui.fromValueWidget .
       OT.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor .
       BWidgets.makeLabel "→" $ Widget.toAnimId myId
-    bodyEdit <- makeExpressionEdit body
-    paramsEdit <- makeParamsEdit makeExpressionEdit params
-    return $ ExpressionGui.hboxSpaced [lambdaLabel, paramsEdit, rightArrowLabel, bodyEdit]
+    bodyEdit <- makeBodyEdit makeExpressionEdit lhs body
+    paramsEdit <- makeParamsEdit makeExpressionEdit ("Func Body", body) params
+    return $ ExpressionGui.hboxSpaced [ lambdaLabel, paramsEdit, rightArrowLabel, bodyEdit ]
+  where
+    lhs = map (WidgetIds.paramId . Sugar.guid . Sugar.fpEntity) params
+    bodyId = WidgetIds.fromGuid . Sugar.guid $ Sugar.rEntity body

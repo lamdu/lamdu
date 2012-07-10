@@ -44,15 +44,16 @@ makeLHSEdit
   -> Widget.Id
   -> Guid
   -> Maybe (Transaction ViewTag m Guid)
+  -> (E.Doc, Sugar.ExpressionRef m)
   -> [Sugar.FuncParam m]
   -> TWidget ViewTag m
-makeLHSEdit makeExpressionEdit myId ident mAddFirstParameter params = do
+makeLHSEdit makeExpressionEdit myId ident mAddFirstParameter rhs params = do
   nameEdit <-
-    (liftM . Widget.weakerEvents) addFirstParamEventMap $
+    liftM (FuncEdit.addJumpToRHS rhs . Widget.weakerEvents addFirstParamEventMap) $
     makeNameEdit myId ident
   liftM (BWidgets.gridHSpacedCentered . List.transpose .
          map ListUtils.pairList . ((nameEdit, nameTypeFiller) :) . map scaleDownType) .
-    mapM (FuncEdit.makeParamEdit makeExpressionEdit) $ params
+    mapM (FuncEdit.makeParamEdit makeExpressionEdit rhs) $ params
   where
     addFirstParamEventMap =
       maybe mempty
@@ -81,9 +82,13 @@ makeDefBodyParts makeExpressionEdit myId guid exprRef = do
       _ -> Sugar.Func [] exprRef
   lhsEdit <-
     makeLHSEdit makeExpressionEdit myId guid
-    ((fmap Sugar.lambdaWrap . Sugar.eActions . Sugar.rEntity) exprRef) (Sugar.fParams func)
+    ((fmap Sugar.lambdaWrap . Sugar.eActions . Sugar.rEntity) exprRef)
+    ("Def Body", Sugar.fBody func) $ Sugar.fParams func
   equals <- BWidgets.makeLabel "=" $ Widget.toAnimId myId
-  rhsEdit <- makeExpressionEdit $ Sugar.fBody func
+  let
+    lhs = myId : map (WidgetIds.paramId . Sugar.guid . Sugar.fpEntity) (Sugar.fParams func)
+  rhsEdit <-
+    FuncEdit.makeBodyEdit makeExpressionEdit lhs $ Sugar.fBody func
   return $
     [ ExpressionGui.fromValueWidget lhsEdit
     , ExpressionGui.fromValueWidget BWidgets.spaceWidget

@@ -24,7 +24,8 @@ make
 make makeExpressionEdit (Sugar.Pi param resultType) myId =
   OT.assignCursor myId typeId $ do
     (resultTypeEdit, usedVars) <-
-      OT.usedVariables $ makeExpressionEdit resultType
+      OT.usedVariables $ FuncEdit.makeBodyEdit makeExpressionEdit
+      [WidgetIds.paramId . Sugar.guid $ Sugar.fpEntity param] resultType
     let
       paramGuid = Sugar.guid $ Sugar.fpEntity param
       paramUsed = any ((== paramGuid) . Data.variableRefGuid) usedVars
@@ -36,7 +37,7 @@ make makeExpressionEdit (Sugar.Pi param resultType) myId =
           Just _ -> typeId
     OT.atCursor redirectCursor $ do
       (paramNameEdit, paramTypeEdit) <-
-        FuncEdit.makeParamEdit makeExpressionEdit param
+        FuncEdit.makeParamEdit makeExpressionEdit ("Result Type", resultType) param
       rightArrowLabel <-
         OT.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor .
         BWidgets.makeLabel "→" $ Widget.toAnimId myId
