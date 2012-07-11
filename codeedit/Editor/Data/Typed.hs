@@ -349,7 +349,7 @@ unifyOnTree = (`runReaderT` []) . go
         cachedDefType <-
           liftTransaction .
           liftM (fromMaybe Data.UnknownType) .
-          Anchors.getP . Anchors.assocCachedDefinitionTypeRef $ IRef.guid defI
+          Anchors.getP $ Anchors.assocCachedDefinitionTypeRef defI
         defTypeRef <-
           case cachedDefType of
           Data.UnknownType -> makeSingletonTypeRef zeroGuid Data.ExpressionHole

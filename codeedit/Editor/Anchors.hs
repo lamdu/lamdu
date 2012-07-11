@@ -152,8 +152,9 @@ assocNameRef =
     f "" = Nothing
     f x = Just x
 
-assocCachedDefinitionTypeRef :: Monad m => Guid -> MkProperty t m (Maybe Data.DefinitionType)
-assocCachedDefinitionTypeRef = assocDataRef "CachedDefType"
+assocCachedDefinitionTypeRef
+  :: Monad m => Data.DefinitionIRef -> MkProperty t m (Maybe Data.DefinitionType)
+assocCachedDefinitionTypeRef = assocDataRef "CachedDefType" . IRef.guid
 
 variableNameRef
   :: Monad m => Data.VariableRef -> MkProperty t m String
@@ -198,7 +199,7 @@ newBuiltin fullyQualifiedName typeI = do
     Transaction.newIRef . Data.Definition =<<
     newBuiltinExpression fullyQualifiedName typeI
   setP (assocNameRef (IRef.guid builtinIRef)) name
-  setP (assocCachedDefinitionTypeRef (IRef.guid builtinIRef)) .
+  setP (assocCachedDefinitionTypeRef builtinIRef) .
     Just . Data.InferredType =<<
     Data.loadPureExpression typeI
   return $ Data.DefinitionRef builtinIRef
