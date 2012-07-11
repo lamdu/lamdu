@@ -14,6 +14,7 @@ module Editor.Anchors
   , dbStore, DBTag
   , viewStore, ViewTag
   , assocDataRef, assocNameRef, variableNameRef
+  , assocCachedDefinitionTypeRef
   , makePane, makeDefinition, newPane
   , savePreJumpPosition, jumpBack
   , MkProperty, getP, setP, modP
@@ -125,9 +126,7 @@ makeDefinition
   :: Monad m
   => Transaction ViewTag m Data.DefinitionIRef
 makeDefinition = do
-  holeI <- Data.newExprIRef Data.ExpressionHole
-  typeI <- Data.newExprIRef Data.ExpressionHole
-  defI <- Transaction.newIRef $ Data.Definition typeI holeI
+  defI <- Transaction.newIRef . Data.Definition =<< Data.newExprIRef Data.ExpressionHole
   modP globals (Data.DefinitionRef defI :)
   return defI
 
@@ -152,6 +151,9 @@ assocNameRef =
   where
     f "" = Nothing
     f x = Just x
+
+assocCachedDefinitionTypeRef :: Monad m => Guid -> MkProperty t m (Maybe Data.DefinitionType)
+assocCachedDefinitionTypeRef = assocDataRef "CachedDefType"
 
 variableNameRef
   :: Monad m => Data.VariableRef -> MkProperty t m String
@@ -192,9 +194,13 @@ newBuiltin
   => String -> Data.ExpressionIRef
   -> Transaction t m Data.VariableRef
 newBuiltin fullyQualifiedName typeI = do
-  builtinExprI <- newBuiltinExpression fullyQualifiedName typeI
-  builtinIRef <- Transaction.newIRef $ Data.Definition typeI builtinExprI
+  builtinIRef <-
+    Transaction.newIRef . Data.Definition =<<
+    newBuiltinExpression fullyQualifiedName typeI
   setP (assocNameRef (IRef.guid builtinIRef)) name
+  setP (assocCachedDefinitionTypeRef (IRef.guid builtinIRef)) .
+    Just . Data.InferredType =<<
+    Data.loadPureExpression typeI
   return $ Data.DefinitionRef builtinIRef
   where
     name = last $ splitOn "." fullyQualifiedName

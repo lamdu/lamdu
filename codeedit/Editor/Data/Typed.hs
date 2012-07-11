@@ -218,16 +218,20 @@ expandStoredToPure =
             Data.PureGuidExpression . Data.GuidExpression guid . cons $
             Data.Lambda paramType newBody
 
-typeRefFromStored
-  :: Monad m => StoredExpression it f
-  -> Infer m TypeRef
-typeRefFromStored =
-  Data.mapMExpression f <=< liftTransaction . expandStoredToPure
+typeRefFromPure :: Monad m => Data.PureGuidExpression -> Infer m TypeRef
+typeRefFromPure =
+  Data.mapMExpression f
   where
     f (Data.PureGuidExpression (Data.GuidExpression guid val)) =
       ( return val
       , makeSingletonTypeRef guid
       )
+
+typeRefFromStored
+  :: Monad m => StoredExpression it f
+  -> Infer m TypeRef
+typeRefFromStored =
+  typeRefFromPure <=< liftTransaction . expandStoredToPure
 
 storedFromLoaded
   :: it
@@ -342,12 +346,14 @@ unifyOnTree = (`runReaderT` []) . go
           Nothing -> return ()
           Just paramTypeRef -> setType paramTypeRef
       Data.ExpressionGetVariable (Data.DefinitionRef defI) -> lift $ do
-        defTypeStored <-
-          liftM
-          (storedFromLoaded [] . Data.defType . DataLoad.defEntityValue) .
-          liftTransaction $
-          DataLoad.loadDefinition defI
-        defTypeRef <- typeRefFromStored $ ignoreStoredMonad defTypeStored
+        cachedDefType <-
+          liftTransaction .
+          liftM (fromMaybe Data.UnknownType) .
+          Anchors.getP . Anchors.assocCachedDefinitionTypeRef $ IRef.guid defI
+        defTypeRef <-
+          case cachedDefType of
+          Data.UnknownType -> makeSingletonTypeRef zeroGuid Data.ExpressionHole
+          Data.InferredType x -> typeRefFromPure x
         setType defTypeRef
       Data.ExpressionLiteralInteger _ ->
         lift $
@@ -521,15 +527,9 @@ inferDefinition
 inferDefinition (DataLoad.DefinitionEntity iref value) =
   liftM (StoredDefinition iref) $
   case value of
-  Data.Definition typeI bodyI -> do
-    let inferredType = canonizeIdentifiersTypes $ storedFromLoaded [] typeI
-
-    inferredBody <- runInfer $ do
-      inferredTypeRef <- typeRefFromStored inferredType
-      withTypeRefs <- addTypeRefs $ storedFromLoaded () bodyI
-      unify inferredTypeRef $ eeInferredType withTypeRefs
-      inferExpression withTypeRefs
-    return $ Data.Definition inferredType inferredBody
+  Data.Definition bodyI ->
+    liftM Data.Definition . runInfer $
+      inferExpression =<< addTypeRefs (storedFromLoaded () bodyI)
 
 loadInferDefinition
   :: Monad m => Data.DefinitionIRef

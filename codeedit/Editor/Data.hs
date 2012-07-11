@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Editor.Data
-  ( Definition(..), atDefBody, atDefType
+  ( Definition(..), atDefBody
   , DefinitionI, DefinitionIRef
   , FFIName(..)
   , VariableRef(..), variableRefGuid
@@ -14,9 +14,11 @@ module Editor.Data
   , ExpressionI, ExpressionIRef(..)
   , GuidExpression(..), atGeGuid, atGeValue
   , PureGuidExpression(..), atPureGuidExpression
+  , DefinitionType(..)
   , newExprIRef, readExprIRef, writeExprIRef, exprIRefGuid
   , mapMExpression
   , mapExpression, sequenceExpression
+  , loadPureExpression
   ) where
 
 import Control.Monad (liftM, liftM2)
@@ -99,9 +101,8 @@ data Expression expr
   deriving (Eq, Ord, Show)
 type ExpressionI = Expression ExpressionIRef
 
-data Definition expr = Definition
-  { defType :: expr
-  , defBody :: expr
+newtype Definition expr = Definition
+  { defBody :: expr
   } deriving (Eq, Ord, Show)
 type DefinitionI = Definition ExpressionIRef
 type DefinitionIRef = IRef DefinitionI
@@ -118,7 +119,8 @@ data GuidExpression ref = GuidExpression
 
 AtFieldTH.make ''PureGuidExpression
 AtFieldTH.make ''GuidExpression
-
+derive makeBinary ''PureGuidExpression
+derive makeBinary ''GuidExpression
 
 variableRefGuid :: VariableRef -> Guid
 variableRefGuid (ParameterRef i) = i
@@ -166,3 +168,15 @@ mapMExpression f src =
   afterRecurse =<< sequenceExpression . mapExpression (mapMExpression f) =<< makeExpr
   where
     (makeExpr, afterRecurse) = f src
+
+loadPureExpression :: Monad m => ExpressionIRef -> Transaction t m PureGuidExpression
+loadPureExpression =
+  mapMExpression f
+  where
+    f (ExpressionIRef exprI) =
+      ( Transaction.readIRef exprI
+      , return . PureGuidExpression . GuidExpression (IRef.guid exprI)
+      )
+
+data DefinitionType = UnknownType | InferredType PureGuidExpression
+derive makeBinary ''DefinitionType
