@@ -1,17 +1,14 @@
 {-# LANGUAGE TypeFamilies, FlexibleContexts #-}
 module Editor.Data.Load
-  ( guid
-  , loadDefinition, DefinitionEntity(..)
+  ( loadDefinition, DefinitionEntity(..)
   , loadExpression, ExpressionEntity(..)
   )
 where
 
 import Control.Monad (liftM, liftM2)
-import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Data as Data
@@ -27,9 +24,6 @@ data DefinitionEntity m = DefinitionEntity
   }
 
 type T = Transaction ViewTag
-
-guid :: ExpressionEntity m -> Guid
-guid = IRef.guid . Data.unExpressionIRef . Property.value . entityStored
 
 loadExpression
   :: (Monad m, Monad f)
