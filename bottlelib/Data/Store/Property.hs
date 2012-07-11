@@ -1,16 +1,19 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Data.Store.Property
-  ( Property(..)
+  ( Property(..), atValue, atSet
   , composeLabel, compose, pureCompose
   , modify, modify_, pureModify
   , list
   ) where
 
 import Control.Monad ((<=<))
+import qualified Data.AtFieldTH as AtFieldTH
 
 data Property m a = Property {
   value :: a,
   set :: a -> m ()
   }
+AtFieldTH.make ''Property
 
 modify :: Monad m => Property m a -> (a -> m (a, b)) -> m b
 modify prop f = do
