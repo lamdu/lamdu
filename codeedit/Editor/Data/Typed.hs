@@ -351,8 +351,9 @@ unifyOnTree = (`runReaderT` []) . go
         setType defTypeRef
       Data.ExpressionLiteralInteger _ ->
         lift $
-        setType <=< makeSingletonTypeRef zeroGuid .
-        Data.ExpressionBuiltin $ Data.FFIName ["Prelude"] "Integer"
+        setType =<<
+        typeRefFromStored . storedFromLoaded () =<<
+        liftTransaction (DataLoad.loadExpression =<< Anchors.integerType)
       _ -> return ()
       where
         makePi guid = makeSingletonTypeRef guid . Data.ExpressionPi
@@ -399,8 +400,8 @@ unifyPair
       unify aFuncTypeRef bFuncTypeRef
       unify aArgTypeRef bArgTypeRef
       return True
-    (Data.ExpressionBuiltin bi1,
-     Data.ExpressionBuiltin bi2) -> return $ bi1 == bi2
+    (Data.ExpressionBuiltin (Data.Builtin name1 _),
+     Data.ExpressionBuiltin (Data.Builtin name2 _)) -> return $ name1 == name2
     (Data.ExpressionGetVariable v1,
      Data.ExpressionGetVariable v2) -> return $ v1 == v2
     (Data.ExpressionLiteralInteger i1,
@@ -498,7 +499,7 @@ builtinsToGlobals builtinsMap (InferredTypeNoLoop (Data.GuidExpression guid expr
   InferredTypeNoLoop . Data.GuidExpression guid $
   Data.mapExpression (builtinsToGlobals builtinsMap) $
   case expr of
-  builtin@(Data.ExpressionBuiltin name) ->
+  builtin@(Data.ExpressionBuiltin (Data.Builtin name _)) ->
     (maybe builtin Data.ExpressionGetVariable . Map.lookup name)
     builtinsMap
   other -> other

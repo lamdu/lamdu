@@ -48,11 +48,13 @@ loadExpression exprP = do
       liftM2 Data.Apply
       (loadExpression (applyFuncProp exprI apply))
       (loadExpression (applyArgProp exprI apply))
+    Data.ExpressionBuiltin bi ->
+      liftM (Data.ExpressionBuiltin . Data.Builtin (Data.bName bi)) .
+      loadExpression $ builtinTypeProp exprI bi
     Data.ExpressionGetVariable x -> return $ Data.ExpressionGetVariable x
     Data.ExpressionLiteralInteger x -> return $ Data.ExpressionLiteralInteger x
     Data.ExpressionHole -> return Data.ExpressionHole
     Data.ExpressionMagic -> return Data.ExpressionMagic
-    Data.ExpressionBuiltin bi -> return $ Data.ExpressionBuiltin bi
   where
     exprI = Property.value exprP
     loadLambda cons lambda =
@@ -110,3 +112,11 @@ applyArgProp
 applyArgProp applyI (Data.Apply funcI argI) =
   Property argI
   (Data.writeExprIRef applyI . Data.ExpressionApply . Data.Apply funcI)
+
+builtinTypeProp
+  :: Monad m
+  => Data.ExpressionIRef
+  -> Data.Builtin Data.ExpressionIRef -> Data.ExpressionIRefProperty (T m)
+builtinTypeProp builtinI (Data.Builtin name t) =
+  Property t
+  (Data.writeExprIRef builtinI . Data.ExpressionBuiltin . Data.Builtin name)

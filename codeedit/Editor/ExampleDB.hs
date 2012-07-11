@@ -59,7 +59,7 @@ fixIRef createOuter = do
   Transaction.writeIRef x =<< createOuter x
   return x
 
-createBuiltins :: Monad m => Transaction t m [Data.VariableRef]
+createBuiltins :: Monad m => Transaction A.ViewTag m [Data.VariableRef]
 createBuiltins =
   Writer.execWriterT $ do
     let magic = Data.newExprIRef Data.ExpressionMagic
@@ -78,6 +78,7 @@ createBuiltins =
         l <- list
         Data.newExprIRef . Data.ExpressionApply . Data.Apply l =<< a
 
+    lift $ A.setP A.integerType =<< A.newBuiltinExpression "Prelude.Integer" =<< set
     integer <- mkType . A.newBuiltin "Prelude.Integer" =<< lift set
     bool <- mkType . A.newBuiltin "Prelude.Bool" =<< lift set
 
@@ -155,5 +156,5 @@ initDB store =
     builtinsMapEntry (Data.DefinitionRef defI) = do
       expr <- Data.readExprIRef . Data.defBody =<< Transaction.readIRef defI
       return $ case expr of
-        Data.ExpressionBuiltin name -> Just (name, Data.DefinitionRef defI)
+        Data.ExpressionBuiltin (Data.Builtin name _) -> Just (name, Data.DefinitionRef defI)
         _ -> Nothing

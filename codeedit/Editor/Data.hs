@@ -8,6 +8,7 @@ module Editor.Data
   , LambdaI
   , Apply(..), atApplyFunc, atApplyArg
   , ApplyI
+  , Builtin(..)
   , Expression(..)
   , ExpressionIRefProperty
   , ExpressionI, ExpressionIRef(..)
@@ -81,6 +82,11 @@ data FFIName = FFIName
 instance Show FFIName where
   show (FFIName path name) = concatMap (++".") path ++ name
 
+data Builtin expr = Builtin
+  { bName :: FFIName
+  , bType :: expr
+  } deriving (Eq, Ord, Show)
+
 data Expression expr
   = ExpressionLambda (Lambda expr)
   | ExpressionPi (Lambda expr)
@@ -88,7 +94,7 @@ data Expression expr
   | ExpressionGetVariable VariableRef
   | ExpressionHole
   | ExpressionLiteralInteger Integer
-  | ExpressionBuiltin FFIName
+  | ExpressionBuiltin (Builtin expr)
   | ExpressionMagic
   deriving (Eq, Ord, Show)
 type ExpressionI = Expression ExpressionIRef
@@ -123,6 +129,7 @@ derive makeBinary ''FFIName
 derive makeBinary ''VariableRef
 derive makeBinary ''Lambda
 derive makeBinary ''Apply
+derive makeBinary ''Builtin
 derive makeBinary ''Expression
 derive makeBinary ''Definition
 AtFieldTH.make ''Lambda
@@ -133,20 +140,20 @@ mapExpression :: (a -> b) -> Expression a -> Expression b
 mapExpression f (ExpressionLambda (Lambda x y)) = ExpressionLambda $ Lambda (f x) (f y)
 mapExpression f (ExpressionPi (Lambda x y)) = ExpressionPi $ Lambda (f x) (f y)
 mapExpression f (ExpressionApply (Apply x y)) = ExpressionApply $ Apply (f x) (f y)
+mapExpression f (ExpressionBuiltin (Builtin name t)) = ExpressionBuiltin . Builtin name $ f t
 mapExpression _ (ExpressionGetVariable var) = ExpressionGetVariable var
 mapExpression _ ExpressionHole = ExpressionHole
 mapExpression _ (ExpressionLiteralInteger int) = ExpressionLiteralInteger int
-mapExpression _ (ExpressionBuiltin name) = ExpressionBuiltin name
 mapExpression _ ExpressionMagic = ExpressionMagic
 
 sequenceExpression :: Monad f => Expression (f a) -> f (Expression a)
 sequenceExpression (ExpressionLambda (Lambda x y)) = liftM ExpressionLambda $ liftM2 Lambda x y
 sequenceExpression (ExpressionPi (Lambda x y)) = liftM ExpressionPi $ liftM2 Lambda x y
 sequenceExpression (ExpressionApply (Apply x y)) = liftM ExpressionApply $ liftM2 Apply x y
+sequenceExpression (ExpressionBuiltin (Builtin name t)) = liftM (ExpressionBuiltin . Builtin name) t
 sequenceExpression (ExpressionGetVariable var) = return $ ExpressionGetVariable var
 sequenceExpression ExpressionHole = return ExpressionHole
 sequenceExpression (ExpressionLiteralInteger int) = return $ ExpressionLiteralInteger int
-sequenceExpression (ExpressionBuiltin name) = return $ ExpressionBuiltin name
 sequenceExpression ExpressionMagic = return ExpressionMagic
 
 mapMExpression

@@ -8,8 +8,8 @@ module Editor.Anchors
   , view, viewIRef
   , redos, redosIRef
   , currentBranchIRef, currentBranch
-  , globals, builtinsMap
-  , newBuiltin
+  , globals, builtinsMap, integerType
+  , newBuiltin, newBuiltinExpression
   , Pane
   , dbStore, DBTag
   , viewStore, ViewTag
@@ -88,6 +88,9 @@ globals = Transaction.fromIRef $ IRef.anchor "globals"
 builtinsMap :: Monad m => MkProperty ViewTag m (Map Data.FFIName Data.VariableRef)
 builtinsMap = Transaction.fromIRef $ IRef.anchor "builtinsMap"
 
+integerType :: Monad m => MkProperty ViewTag m Data.ExpressionIRef
+integerType = Transaction.fromIRef $ IRef.anchor "integerType"
+
 -- Cursor is untagged because it is both saved globally and per-revision.
 -- Cursor movement without any revisioned changes are not saved per-revision.
 cursor :: Monad m => MkProperty DBTag m Widget.Id
@@ -165,21 +168,27 @@ jumpBack = do
       Property.set preJumpsP js
       return j
 
+newBuiltinExpression
+  :: Monad m
+  => String -> Data.ExpressionIRef
+  -> Transaction t m Data.ExpressionIRef
+newBuiltinExpression fullyQualifiedName typeI =
+  Data.newExprIRef . Data.ExpressionBuiltin $
+  Data.Builtin (Data.FFIName (init path) (last path)) typeI
+  where
+    path = splitOn "." fullyQualifiedName
+
 newBuiltin
   :: Monad m
   => String -> Data.ExpressionIRef
   -> Transaction t m Data.VariableRef
 newBuiltin fullyQualifiedName typeI = do
-  builtinExprI <-
-    Data.newExprIRef . Data.ExpressionBuiltin $
-    Data.FFIName (init path) name
+  builtinExprI <- newBuiltinExpression fullyQualifiedName typeI
   builtinIRef <- Transaction.newIRef $ Data.Definition typeI builtinExprI
-
   setP (assocNameRef (IRef.guid builtinIRef)) name
   return $ Data.DefinitionRef builtinIRef
   where
-    name = last path
-    path = splitOn "." fullyQualifiedName
+    name = last $ splitOn "." fullyQualifiedName
 
 getP :: Monad m => MkProperty t m a -> Transaction t m a
 getP = liftM Property.value

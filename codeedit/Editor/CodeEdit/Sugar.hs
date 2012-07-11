@@ -554,12 +554,14 @@ convertLiteralInteger i exprI =
   , liSetValue = fmap (writeIRefVia Data.ExpressionLiteralInteger) $ eeStored exprI
   }
 
-convertBuiltin :: Monad m => Data.FFIName -> Convertor m
-convertBuiltin name exprI =
+convertBuiltin :: Monad m => Data.Builtin (ExprEntity m) -> Convertor m
+convertBuiltin (Data.Builtin name t) exprI =
   mkExpressionRef exprI . ExpressionBuiltin $
   Builtin
   { biName = name
-  , biSetFFIName = fmap (writeIRefVia Data.ExpressionBuiltin) $ eeStored exprI
+  , biSetFFIName = do
+      tProp <- eeStored t
+      fmap (writeIRefVia (Data.ExpressionBuiltin . (`Data.Builtin` Property.value tProp))) $ eeStored exprI
   }
 
 fakeBuiltin :: [String] -> String -> Expression m
