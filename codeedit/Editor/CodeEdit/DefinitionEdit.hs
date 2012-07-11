@@ -90,7 +90,7 @@ makeParts makeExpressionEdit myId guid exprRef = do
   rhsEdit <-
     FuncEdit.makeBodyEdit makeExpressionEdit lhs $ Sugar.fBody func
   space <- BWidgets.spaceWidget
-  return $
+  return
     [ ExpressionGui.fromValueWidget lhsEdit
     , ExpressionGui.fromValueWidget space
     , ExpressionGui.fromValueWidget equals

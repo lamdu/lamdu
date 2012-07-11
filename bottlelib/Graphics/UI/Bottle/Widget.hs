@@ -152,4 +152,4 @@ scale mult =
   (atWMaybeEnter . fmap)
     ((fmap . atEnterResultRect . Rect.atTopLeftAndSize) (*mult) .
      (argument . Direction.inRelativePos . Rect.atTopLeftAndSize) (/mult)) .
-  (atWSize (* mult))
+  atWSize (* mult)

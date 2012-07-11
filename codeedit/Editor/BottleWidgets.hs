@@ -164,10 +164,10 @@ boxAlign orientation align =
   Box.makeAlign align orientation
 
 hboxAlign :: Box.Alignment -> [Widget f] -> Widget f
-hboxAlign align = boxAlign Box.horizontal align
+hboxAlign = boxAlign Box.horizontal
 
 vboxAlign :: Box.Alignment -> [Widget f] -> Widget f
-vboxAlign align = boxAlign Box.vertical align
+vboxAlign = boxAlign Box.vertical
 
 vboxCentered :: [Widget f] -> Widget f
 vboxCentered = vboxAlign 0.5

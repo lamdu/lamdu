@@ -71,11 +71,9 @@ make
   -> Config -- ^ FocusDelegator configuration
   -> AnimId -- ^ Background Cursor Id
   -> Widget f -> Widget f
-make isDelegating Nothing focusSelf =
-  const . const $ \w -> f (Widget.wSize w) w
+make isDelegating Nothing focusSelf _ _ w =
+  Widget.atWMaybeEnter (mEnter isDelegating (Widget.wSize w)) w
   where
-    f size w = Widget.atWMaybeEnter (mEnter isDelegating size) w
-
     mEnter NotDelegating wholeSize _ = Just . const $ takeFocus wholeSize
     mEnter _ _ Nothing = Nothing
     mEnter Delegating wholeSize (Just enterChild) = Just $ handleDir enterChild wholeSize
@@ -85,8 +83,8 @@ make isDelegating Nothing focusSelf =
 
     takeFocus wholeSize = Widget.EnterResult (Rect 0 wholeSize) . pure $ Widget.eventResultFromCursor focusSelf
 
-make _ (Just cursor) focusSelf =
-  makeFocused cursor focusSelf
+make _ (Just cursor) focusSelf config backgroundCursorId w =
+  makeFocused cursor focusSelf config backgroundCursorId w
 
 delegatingId :: Widget.Id -> Widget.Id
 delegatingId = flip Widget.joinId ["delegating"]
