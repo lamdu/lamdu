@@ -139,8 +139,6 @@ data DefinitionRef m = DefinitionRef
     -- TODO: This is the opposite order of the data model, reverse
     -- either of them:
   , drDef :: ExpressionRef m
-  , drType :: ExpressionRef m
-  , drInferredTypes :: [ExpressionRef m]
   }
 
 AtFieldTH.make ''Hole
@@ -601,13 +599,9 @@ convertDefinitionI
   -> Sugar m (DefinitionRef m)
 convertDefinitionI defI =
   case DataTyped.deValue defI of
-  Data.Definition typeI bodyI -> do
-    defType <- convertExpressionI $ eeFromTypedExpression typeI
-    defBody <-
+  Data.Definition _typeI bodyI ->
+    liftM (DefinitionRef defGuid) .
       convertExpressionI $ eeFromTypedExpression bodyI
-    return .
-      DefinitionRef defGuid ((atRInferredTypes . const) [] defBody) defType $
-      rInferredTypes defBody
   where
     defGuid = DataTyped.deGuid defI
 

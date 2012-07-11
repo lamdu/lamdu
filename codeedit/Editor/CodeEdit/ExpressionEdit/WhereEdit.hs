@@ -30,7 +30,7 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
     BWidgets.makeLabel "where" $ Widget.toAnimId myId
   let
     makeWhereItemsGrid =
-      liftM (Grid.toWidget . Grid.makeAlign 0 . concat) $
+      liftM (Grid.toWidget . Grid.makeAlign 0) $
       mapM makeWhereItemEdits items
   whereEdits <- makeWhereItemsGrid
   return . BWidgets.vboxCentered $
@@ -39,10 +39,10 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
     ]
   where
     makeWhereItemEdits item =
-      (liftM . map . map)
+      (liftM . map)
         (Widget.weakerEvents (whereItemDeleteEventMap item) . ExpressionGui.egWidget) $
       DefinitionEdit.makeParts makeExpressionEdit
-      (paramId item) (guid item) (Sugar.wiValue item) (Sugar.wiType item)
+      (paramId item) (guid item) (Sugar.wiValue item)
     paramId = WidgetIds.paramId . guid
     guid = Sugar.guid . Sugar.wiEntity
     whereItemDeleteEventMap whereItem =

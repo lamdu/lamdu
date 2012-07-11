@@ -66,14 +66,14 @@ makeLHSEdit makeExpressionEdit myId ident mAddFirstParameter rhs params = do
       mAddFirstParameter
     scaleDownType = second $ Widget.scale Config.typeScaleFactor
 
-makeDefBodyParts
+makeParts
   :: MonadF m
   => ExpressionGui.Maker m
   -> Widget.Id
   -> Guid
   -> Sugar.ExpressionRef m
   -> OTransaction ViewTag m [ExpressionGui m]
-makeDefBodyParts makeExpressionEdit myId guid exprRef = do
+makeParts makeExpressionEdit myId guid exprRef = do
   let
     sExpr = Sugar.rExpression exprRef
     func =
@@ -98,48 +98,13 @@ makeDefBodyParts makeExpressionEdit myId guid exprRef = do
     , rhsEdit
     ]
 
-makeParts
-  :: MonadF m
-  => ExpressionGui.Maker m
-  -> Widget.Id -> Guid -> Sugar.ExpressionRef m -> Sugar.ExpressionRef m
-  -> OTransaction ViewTag m [[ExpressionGui m]]
-makeParts makeExpressionEdit myId guid defBody defType = do
-  typeEdit <- makeExpressionEdit defType
-  colon <- BWidgets.makeLabel ":" $ Widget.toAnimId myId
-  name <- makeNameEdit (Widget.joinId myId ["typeDeclName"]) guid
-  space <- BWidgets.spaceWidget
-  let
-    typeLineParts =
-      [ ExpressionGui.fromValueWidget name
-      , ExpressionGui.fromValueWidget space
-      , ExpressionGui.fromValueWidget colon
-      , ExpressionGui.fromValueWidget space
-      , typeEdit
-      ]
-  defBodyParts <- makeDefBodyParts makeExpressionEdit myId guid defBody
-  return [typeLineParts, defBodyParts]
-
 make
   :: MonadF m
   => ExpressionGui.Maker m
   -> Guid
   -> Sugar.ExpressionRef m
-  -> Sugar.ExpressionRef m
-  -> [Sugar.ExpressionRef m]
   -> TWidget ViewTag m
-make makeExpressionEdit guid defBody defType inferredTypes = do
-  parts <-
+make makeExpressionEdit guid defBody =
+  liftM (ExpressionGui.egWidget . ExpressionGui.hbox) $
     makeParts makeExpressionEdit
-    (WidgetIds.fromGuid guid) guid defBody defType
-  inferredTypesEdits <- mapM makeExpressionEdit inferredTypes
-  return .
-    ExpressionGui.egWidget .
-    addTypes inferredTypesEdits .
-    BWidgets.vboxAlign 0 .
-    map (ExpressionGui.egWidget . ExpressionGui.hbox) $
-    parts
-  where
-    addTypes inferredTypesEdits@(_:_:_) =
-      ExpressionGui.addType exprId $ map ExpressionGui.egWidget inferredTypesEdits
-    addTypes _ = ExpressionGui.fromValueWidget
-    exprId = WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity $ defBody
+    (WidgetIds.fromGuid guid) guid defBody
