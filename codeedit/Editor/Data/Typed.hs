@@ -518,7 +518,8 @@ inferExpression withTypeRefs = do
   unifyOnTree withTypeRefs
   builtinsMap <- liftTransaction $ Anchors.getP Anchors.builtinsMap
   derefed <- derefTypeRefs withTypeRefs
-  return . runIdentity . (atInferredTypes . const) (Identity . map (builtinsToGlobals builtinsMap)) $ derefed
+  return . runIdentity $
+    (atInferredTypes . const) (Identity . map (builtinsToGlobals builtinsMap)) derefed
 
 inferDefinition
   :: Monad m
