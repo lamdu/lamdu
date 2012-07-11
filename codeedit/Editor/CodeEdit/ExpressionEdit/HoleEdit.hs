@@ -6,7 +6,7 @@ import Control.Monad (liftM, mplus)
 import Data.ByteString (ByteString)
 import Data.List (isInfixOf, isPrefixOf)
 import Data.List.Utils (sortOn)
-import Data.Maybe (isJust, listToMaybe)
+import Data.Maybe (fromMaybe, isJust, listToMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
@@ -314,7 +314,9 @@ makeH
      (Maybe (ResultPicker m), WidgetT ViewTag m)
 makeH hole guid myId = do
   cursor <- OT.readCursor
-  searchTermProp <- OT.transaction $ Anchors.assocDataRef "searchTerm" "" guid
+  searchTermProp <-
+    liftM (Property.pureCompose (fromMaybe "") Just) . OT.transaction $
+    Anchors.assocDataRef "searchTerm" guid
   let
     holeInfo = HoleInfo
       { hiHoleId = myId

@@ -24,6 +24,7 @@ import Control.Monad (liftM, when)
 import Data.Binary (Binary(..))
 import Data.List.Split (splitOn)
 import Data.Map (Map)
+import Data.Maybe (fromMaybe)
 import Data.Store.Db (Db)
 import Data.Store.Guid(Guid)
 import Data.Store.IRef (IRef)
@@ -135,14 +136,22 @@ dataGuid str guid = Guid.combine guid $ Guid.make str
 
 assocDataRef
   :: (Binary b, Monad m)
-  => SBS.ByteString -> b -> Guid
-  -> MkProperty t m b
-assocDataRef str def guid = do
-  val <- Transaction.readGuidDef def $ dataGuid str guid
-  return . Property val $ Transaction.writeGuid $ dataGuid str guid
+  => SBS.ByteString -> Guid
+  -> MkProperty t m (Maybe b)
+assocDataRef str guid = do
+  val <- Transaction.lookup assocGuid
+  return $ Property val set
+  where
+    assocGuid = dataGuid str guid
+    set Nothing = Transaction.delete assocGuid
+    set (Just x) = Transaction.writeGuid assocGuid x
 
 assocNameRef :: Monad m => Guid -> MkProperty t m String
-assocNameRef = assocDataRef "Name" ""
+assocNameRef =
+  liftM (Property.pureCompose (fromMaybe "") f) . assocDataRef "Name"
+  where
+    f "" = Nothing
+    f x = Just x
 
 variableNameRef
   :: Monad m => Data.VariableRef -> MkProperty t m String
