@@ -101,10 +101,9 @@ makeParts makeExpressionEdit myId guid exprRef = do
 make
   :: MonadF m
   => ExpressionGui.Maker m
-  -> Guid
-  -> Sugar.ExpressionRef m
+  -> Sugar.DefinitionRef m
   -> TWidget ViewTag m
-make makeExpressionEdit guid defBody =
+make makeExpressionEdit (Sugar.DefinitionRef guid defBody) =
   liftM (ExpressionGui.egWidget . ExpressionGui.hbox) $
     makeParts makeExpressionEdit
     (WidgetIds.fromGuid guid) guid defBody
