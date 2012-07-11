@@ -94,9 +94,8 @@ makeParamsEdit
   -> [Sugar.FuncParam m]
   -> OTransaction ViewTag m (ExpressionGui m)
 makeParamsEdit makeExpressionEdit rhs =
-  liftM
-  (ExpressionGui.fromValueWidget . BWidgets.gridHSpacedCentered . List.transpose .
-   map (pairList . scaleDownType)) .
+  liftM ExpressionGui.fromValueWidget .
+    BWidgets.gridHSpacedCentered . List.transpose . map (pairList . scaleDownType) <=<
   mapM (makeParamEdit makeExpressionEdit rhs)
   where
     scaleDownType = second $ Widget.scale Config.typeScaleFactor
@@ -136,7 +135,7 @@ make makeExpressionEdit (Sugar.Func params body) myId =
       BWidgets.makeLabel "→" $ Widget.toAnimId myId
     bodyEdit <- makeBodyEdit makeExpressionEdit lhs body
     paramsEdit <- makeParamsEdit makeExpressionEdit ("Func Body", body) params
-    return $ ExpressionGui.hboxSpaced [ lambdaLabel, paramsEdit, rightArrowLabel, bodyEdit ]
+    ExpressionGui.hboxSpaced [ lambdaLabel, paramsEdit, rightArrowLabel, bodyEdit ]
   where
     lhs = map (WidgetIds.paramId . Sugar.guid . Sugar.fpEntity) params
     bodyId = WidgetIds.fromGuid . Sugar.guid $ Sugar.rEntity body

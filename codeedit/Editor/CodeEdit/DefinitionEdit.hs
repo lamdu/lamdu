@@ -51,9 +51,11 @@ makeLHSEdit makeExpressionEdit myId ident mAddFirstParameter rhs params = do
   nameEdit <-
     liftM (FuncEdit.addJumpToRHS rhs . Widget.weakerEvents addFirstParamEventMap) $
     makeNameEdit myId ident
-  liftM (BWidgets.gridHSpacedCentered . List.transpose .
-         map ListUtils.pairList . ((nameEdit, nameTypeFiller) :) . map scaleDownType) .
-    mapM (FuncEdit.makeParamEdit makeExpressionEdit rhs) $ params
+  -- no type for def name (yet):
+  nameTypeFiller <- BWidgets.spaceWidget
+  BWidgets.gridHSpacedCentered . List.transpose .
+    map ListUtils.pairList . ((nameEdit, nameTypeFiller) :) . map scaleDownType =<<
+    mapM (FuncEdit.makeParamEdit makeExpressionEdit rhs) params
   where
     addFirstParamEventMap =
       maybe mempty
@@ -63,8 +65,6 @@ makeLHSEdit makeExpressionEdit myId ident mAddFirstParameter rhs params = do
        IT.transaction)
       mAddFirstParameter
     scaleDownType = second $ Widget.scale Config.typeScaleFactor
-    -- no type for def name (yet):
-    nameTypeFiller = BWidgets.spaceWidget
 
 makeDefBodyParts
   :: MonadF m
@@ -89,11 +89,12 @@ makeDefBodyParts makeExpressionEdit myId guid exprRef = do
     lhs = myId : map (WidgetIds.paramId . Sugar.guid . Sugar.fpEntity) (Sugar.fParams func)
   rhsEdit <-
     FuncEdit.makeBodyEdit makeExpressionEdit lhs $ Sugar.fBody func
+  space <- BWidgets.spaceWidget
   return $
     [ ExpressionGui.fromValueWidget lhsEdit
-    , ExpressionGui.fromValueWidget BWidgets.spaceWidget
+    , ExpressionGui.fromValueWidget space
     , ExpressionGui.fromValueWidget equals
-    , ExpressionGui.fromValueWidget BWidgets.spaceWidget
+    , ExpressionGui.fromValueWidget space
     , rhsEdit
     ]
 
@@ -106,12 +107,13 @@ makeParts makeExpressionEdit myId guid defBody defType = do
   typeEdit <- makeExpressionEdit defType
   colon <- BWidgets.makeLabel ":" $ Widget.toAnimId myId
   name <- makeNameEdit (Widget.joinId myId ["typeDeclName"]) guid
+  space <- BWidgets.spaceWidget
   let
     typeLineParts =
       [ ExpressionGui.fromValueWidget name
-      , ExpressionGui.fromValueWidget BWidgets.spaceWidget
+      , ExpressionGui.fromValueWidget space
       , ExpressionGui.fromValueWidget colon
-      , ExpressionGui.fromValueWidget BWidgets.spaceWidget
+      , ExpressionGui.fromValueWidget space
       , typeEdit
       ]
   defBodyParts <- makeDefBodyParts makeExpressionEdit myId guid defBody

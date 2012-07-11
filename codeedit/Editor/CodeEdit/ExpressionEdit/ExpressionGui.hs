@@ -49,8 +49,10 @@ hbox guis =
     box = Box.make Box.horizontal $ map f guis
     f (ExpressionGui widget _alignment) = (0, widget)
 
-hboxSpaced :: [ExpressionGui m] -> ExpressionGui m
-hboxSpaced = hbox . List.intersperse (fromValueWidget BWidgets.spaceWidget)
+hboxSpaced :: Monad m => [ExpressionGui m] -> OTransaction ViewTag m (ExpressionGui m)
+hboxSpaced eguis = do
+  space <- BWidgets.spaceWidget
+  return . hbox $ List.intersperse (fromValueWidget space) eguis
 
 addType
   :: Widget.Id
