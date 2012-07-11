@@ -177,9 +177,9 @@ ignoreStoredMonad
   -> StoredExpression it (T Identity)
 ignoreStoredMonad = id
 
-expandStoredToPure :: Monad m => StoredExpression it f -> T m Data.PureGuidExpression
-expandStoredToPure =
-  (`runReaderT` Map.empty) . recurse . pureExpressionFromStored
+expand :: Monad m => Data.PureGuidExpression -> T m Data.PureGuidExpression
+expand =
+  (`runReaderT` Map.empty) . recurse
   where
     recurse e@(Data.PureGuidExpression (Data.GuidExpression guid val)) =
       case val of
@@ -231,7 +231,7 @@ typeRefFromStored
   :: Monad m => StoredExpression it f
   -> Infer m TypeRef
 typeRefFromStored =
-  typeRefFromPure <=< liftTransaction . expandStoredToPure
+  typeRefFromPure <=< liftTransaction . expand . pureExpressionFromStored
 
 storedFromLoaded
   :: it
@@ -353,7 +353,7 @@ unifyOnTree = (`runReaderT` []) . go
         defTypeRef <-
           case cachedDefType of
           Data.UnknownType -> makeSingletonTypeRef zeroGuid Data.ExpressionHole
-          Data.InferredType x -> typeRefFromPure x
+          Data.InferredType x -> typeRefFromPure =<< liftTransaction (expand x)
         setType defTypeRef
       Data.ExpressionLiteralInteger _ ->
         lift $
