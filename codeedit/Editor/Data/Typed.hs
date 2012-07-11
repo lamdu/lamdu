@@ -128,7 +128,7 @@ makeSingletonTypeRef guid = makeTypeRef . (: []) . Data.GuidExpression guid
 zeroGuid :: Guid
 zeroGuid = Guid.fromString "ZeroGuid"
 
-mapStoredExpression
+mapMStoredExpression
   :: Monad m
   => (Data.ExpressionIRefProperty f
       -> a
@@ -136,7 +136,7 @@ mapStoredExpression
       -> m (StoredExpression b g))
   -> StoredExpression a f
   -> m (StoredExpression b g)
-mapStoredExpression f =
+mapMStoredExpression f =
   Data.mapMExpression g
   where
     g (StoredExpression stored a val) =
@@ -148,7 +148,7 @@ atInferredTypes
   -> StoredExpression a f
   -> m (StoredExpression b f)
 atInferredTypes f =
-  mapStoredExpression g
+  mapMStoredExpression g
   where
     g stored a v = do
       b <- f stored a
@@ -250,7 +250,7 @@ addTypeRefs
   => StoredExpression () f
   -> Infer m (StoredExpression TypeRef f)
 addTypeRefs =
-  mapStoredExpression f
+  mapMStoredExpression f
   where
     f stored () val = do
       typeRef <- makeTypeRef []
@@ -291,7 +291,7 @@ derefTypeRefs
   => StoredExpression TypeRef f
   -> Infer m (StoredExpression [InferredTypeLoop] f)
 derefTypeRefs =
-  mapStoredExpression f
+  mapMStoredExpression f
   where
     f stored typeRef val = do
       types <- derefTypeRef typeRef
