@@ -21,4 +21,4 @@ make makeExpressionEdit (Sugar.Apply func arg) myId =
   (OT.assignCursor myId . WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity) arg $ do
     funcEdit <- makeExpressionEdit func
     argEdit <- makeExpressionEdit arg
-    ExpressionGui.hboxSpaced [funcEdit, argEdit]
+    return $ ExpressionGui.hboxSpaced [funcEdit, argEdit]

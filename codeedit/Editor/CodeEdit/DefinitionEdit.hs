@@ -51,11 +51,9 @@ makeLHSEdit makeExpressionEdit myId ident mAddFirstParameter rhs params = do
   nameEdit <-
     liftM (FuncEdit.addJumpToRHS rhs . Widget.weakerEvents addFirstParamEventMap) $
     makeNameEdit myId ident
-  -- no type for def name (yet):
-  nameTypeFiller <- BWidgets.spaceWidget
-  BWidgets.gridHSpacedCentered . List.transpose .
-    map ListUtils.pairList . ((nameEdit, nameTypeFiller) :) . map scaleDownType =<<
-    mapM (FuncEdit.makeParamEdit makeExpressionEdit rhs) params
+  liftM (BWidgets.gridHSpacedCentered . List.transpose .
+         map ListUtils.pairList . ((nameEdit, nameTypeFiller) :) . map scaleDownType) .
+    mapM (FuncEdit.makeParamEdit makeExpressionEdit rhs) $ params
   where
     addFirstParamEventMap =
       maybe mempty
@@ -65,6 +63,8 @@ makeLHSEdit makeExpressionEdit myId ident mAddFirstParameter rhs params = do
        IT.transaction)
       mAddFirstParameter
     scaleDownType = second $ Widget.scale Config.typeScaleFactor
+    -- no type for def name (yet):
+    nameTypeFiller = BWidgets.spaceWidget
 
 makeParts
   :: MonadF m
@@ -89,12 +89,11 @@ makeParts makeExpressionEdit myId guid exprRef = do
     lhs = myId : map (WidgetIds.paramId . Sugar.guid . Sugar.fpEntity) (Sugar.fParams func)
   rhsEdit <-
     FuncEdit.makeBodyEdit makeExpressionEdit lhs $ Sugar.fBody func
-  space <- BWidgets.spaceWidget
   return
     [ ExpressionGui.fromValueWidget lhsEdit
-    , ExpressionGui.fromValueWidget space
+    , ExpressionGui.fromValueWidget BWidgets.spaceWidget
     , ExpressionGui.fromValueWidget equals
-    , ExpressionGui.fromValueWidget space
+    , ExpressionGui.fromValueWidget BWidgets.spaceWidget
     , rhsEdit
     ]
 

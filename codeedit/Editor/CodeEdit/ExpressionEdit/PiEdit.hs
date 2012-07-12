@@ -45,7 +45,8 @@ make makeExpressionEdit (Sugar.Pi param resultType) myId =
         paramEdit
           | paramUsed = ExpressionGui.fromValueWidget $ BWidgets.vboxCentered [paramNameEdit, paramTypeEdit]
           | otherwise = ExpressionGui.fromValueWidget paramTypeEdit
-      ExpressionGui.hboxSpaced [paramEdit, ExpressionGui.fromValueWidget rightArrowLabel, resultTypeEdit]
+      return $
+        ExpressionGui.hboxSpaced [paramEdit, ExpressionGui.fromValueWidget rightArrowLabel, resultTypeEdit]
   where
     typeId =
       WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity . Sugar.fpType $

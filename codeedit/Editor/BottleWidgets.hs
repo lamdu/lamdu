@@ -181,29 +181,22 @@ hbox = Box.toWidget . Box.make Box.horizontal
 vbox :: [(Box.Alignment, Widget f)] -> Widget f
 vbox = Box.toWidget . Box.make Box.vertical
 
-spaceWidget :: Monad m => OTransaction t m (Widget f)
-spaceWidget = liftM (uncurry Widget.liftView) spaceView
+spaceWidget :: Widget f
+spaceWidget = uncurry Widget.liftView spaceView
 
-hboxCenteredSpaced :: Monad m => [Widget f] -> OTransaction t m (Widget f)
-hboxCenteredSpaced widgets = do
-  space <- spaceWidget
-  return . hboxAlign 0.5 $ intersperse space widgets
+hboxCenteredSpaced :: [Widget f] -> Widget f
+hboxCenteredSpaced = hboxAlign 0.5 . intersperse spaceWidget
 
-spaceView :: Monad m => OTransaction t m (Anim.Size, Anim.Frame)
-spaceView =
-  liftM
-  (Spacer.makeHorizontal . (* 0.8) . fromIntegral . TextView.styleFontSize . TextEdit.sTextViewStyle)
-  OT.readTextStyle
+spaceView :: (Anim.Size, Anim.Frame)
+spaceView = Spacer.makeHorizontal 20
 
 setTextColor :: Draw.Color -> OTransaction t m a -> OTransaction t m a
 setTextColor = OT.atTextStyle . TextEdit.atSTextViewStyle . TextView.atStyleColor . const
 
-gridHSpaced :: Monad m => [[(Grid.Alignment, Widget f)]] -> OTransaction t m (Widget f)
-gridHSpaced gridElems = do
-  space <- spaceWidget
-  return . Grid.toWidget . Grid.make $ map (intersperse (0, space)) gridElems
+gridHSpaced :: [[(Grid.Alignment, Widget f)]] -> Widget f
+gridHSpaced = Grid.toWidget . Grid.make . map (intersperse (0, spaceWidget))
 
-gridHSpacedCentered :: Monad m => [[Widget f]] -> OTransaction t m (Widget f)
+gridHSpacedCentered :: [[Widget f]] -> Widget f
 gridHSpacedCentered = gridHSpaced . (map . map) ((,) 0.5)
 
 empty :: Widget f
