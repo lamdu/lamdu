@@ -142,17 +142,6 @@ mapMStoredExpression f =
     g (StoredExpression stored a val) =
       (return val, f stored a)
 
-mapStoredExpression
-  :: (Data.ExpressionIRefProperty f
-      -> a
-      -> Data.Expression (StoredExpression b g)
-      -> StoredExpression b g)
-  -> StoredExpression a f
-  -> StoredExpression b g
-mapStoredExpression f = runIdentity . mapMStoredExpression g
-  where
-    g stored a val = Identity $ f stored a val
-
 atInferredTypes
   :: Monad m
   => (Data.ExpressionIRefProperty f -> a -> m b)
@@ -175,14 +164,6 @@ fromStoredExpression mk =
       ( return val
       , mk $ eipGuid stored
       )
-
-pureGuidFromITL :: InferredTypeLoop -> Maybe Data.PureGuidExpression
-pureGuidFromITL =
-  Data.mapMExpression f
-  where
-    f InferredTypeLoop {} = ( Nothing, const Nothing )
-    f (InferredTypeNoLoop (Data.GuidExpression guid itlExpr)) =
-      ( Just itlExpr, Just . Data.PureGuidExpression . Data.GuidExpression guid )
 
 pureExpressionFromStored
   :: StoredExpression it f -> Data.PureGuidExpression
@@ -540,23 +521,6 @@ inferExpression withTypeRefs = do
   return . runIdentity $
     (atInferredTypes . const) (Identity . map (builtinsToGlobals builtinsMap)) derefed
 
-updateCacheWhenModified
-  :: Monad m
-  => Data.DefinitionIRef
-  -> StoredExpression it (T m)
-  -> StoredExpression it (T m)
-updateCacheWhenModified defI =
-  mapStoredExpression (StoredExpression . Property.atSet ((>> newDefType) .))
-  where
-    newDefType = do
-      defInferredType <-
-        liftM (map pureGuidFromITL . eeInferredType . Data.defBody . deValue) $
-        loadInferDefinition defI
-      writeCache . Just $ case defInferredType of
-        [Just it] -> Data.InferredType it
-        _ -> Data.UnknownType
-    writeCache = Anchors.setP $ Anchors.assocCachedDefinitionTypeRef defI
-
 inferDefinition
   :: (Monad m, Monad f)
   => DataLoad.DefinitionEntity (T f)
@@ -566,8 +530,7 @@ inferDefinition (DataLoad.DefinitionEntity defI value) =
   case value of
   Data.Definition bodyI ->
     liftM Data.Definition . runInfer $
-      inferExpression <=< addTypeRefs .
-      updateCacheWhenModified defI $ storedFromLoaded () bodyI
+      inferExpression <=< addTypeRefs $ storedFromLoaded () bodyI
 
 loadInferDefinition
   :: Monad m => Data.DefinitionIRef
