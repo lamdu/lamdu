@@ -5,35 +5,42 @@ module Editor.Data.Ops
   )
 where
 
+import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
-import Editor.Anchors(ViewTag)
+import Editor.Anchors (ViewTag)
 import qualified Data.Store.Property as Property
 import qualified Editor.Data as Data
+import qualified Editor.Data.Typed as DataTyped
 
 type T = Transaction ViewTag
 
-giveAsArg ::
-  Monad m =>
-  Data.ExpressionIRefProperty (T m) ->
-  T m Data.ExpressionIRef
+toI :: DataTyped.ExpressionRef (Transaction ViewTag m) -> DataTyped.ExpressionIRef
+toI = DataTyped.exprIRefFromExpressionRef
+
+giveAsArg
+  :: Monad m
+  => DataTyped.ExpressionRef (T m)
+  -> T m Guid
 giveAsArg exprP = do
   newFuncI <- newHole
-  Property.set exprP =<< (Data.newExprIRef . Data.ExpressionApply) (Data.Apply newFuncI (Property.value exprP))
-  return newFuncI
+  _ <-
+    DataTyped.erReplaceWithVal exprP . Data.ExpressionApply $
+    Data.Apply newFuncI (toI exprP)
+  return $ DataTyped.eiGuid newFuncI
 
-callWithArg ::
-  Monad m =>
-  Data.ExpressionIRefProperty (T m) ->
-  T m Data.ExpressionIRef
+callWithArg
+  :: Monad m
+  => DataTyped.ExpressionRef (T m)
+  -> T m Guid
 callWithArg exprP = do
   argI <- newHole
-  Property.set exprP =<<
-    (Data.newExprIRef . Data.ExpressionApply)
-    (Data.Apply (Property.value exprP) argI)
-  return argI
+  _ <-
+    DataTyped.erReplaceWithVal exprP . Data.ExpressionApply $
+    Data.Apply (toI exprP) argI
+  return $ DataTyped.eiGuid argI
 
-newHole :: Monad m => T m Data.ExpressionIRef
-newHole = Data.newExprIRef Data.ExpressionHole
+newHole :: Monad m => T m DataTyped.ExpressionIRef
+newHole = DataTyped.exprIRefFromVal Data.ExpressionHole
 
 replace
   :: Monad m
@@ -46,34 +53,28 @@ replace exprP newExprI = do
 
 replaceWithHole
   :: Monad m
-  => Data.ExpressionIRefProperty (T m)
-  -> T m Data.ExpressionIRef
-replaceWithHole exprP = replace exprP =<< newHole
+  => DataTyped.ExpressionRef (T m)
+  -> T m Guid
+replaceWithHole exprP = DataTyped.erReplaceWithVal exprP Data.ExpressionHole
 
 lambdaWrap
   :: Monad m
-  => Data.ExpressionIRefProperty (T m)
-  -> T m Data.ExpressionIRef
-lambdaWrap exprP = do
-  newParamTypeI <- newHole
-  newExprI <-
-    Data.newExprIRef . Data.ExpressionLambda .
-    Data.Lambda newParamTypeI $ Property.value exprP
-  Property.set exprP newExprI
-  return newExprI
+  => DataTyped.ExpressionRef (T m)
+  -> T m Guid
+lambdaWrap exprP =
+  newHole >>=
+  DataTyped.erReplaceWithVal exprP . Data.ExpressionLambda .
+  (`Data.Lambda` toI exprP)
 
 redexWrap
   :: Monad m
-  => Data.ExpressionIRefProperty (T m)
-  -> T m Data.ExpressionIRef
+  => DataTyped.ExpressionRef (T m)
+  -> T m Guid
 redexWrap exprP = do
-  newParamTypeI <- newHole
   newLambdaI <-
-    Data.newExprIRef . Data.ExpressionLambda .
-    Data.Lambda newParamTypeI $ Property.value exprP
-  newValueI <- newHole
-  newApplyI <-
-    Data.newExprIRef . Data.ExpressionApply $
-    Data.Apply newLambdaI newValueI
-  Property.set exprP newApplyI
-  return newLambdaI
+    DataTyped.exprIRefFromVal . Data.ExpressionLambda .
+    (`Data.Lambda` toI exprP) =<< newHole
+  _ <-
+    DataTyped.erReplaceWithVal exprP . Data.ExpressionApply .
+    Data.Apply newLambdaI =<< newHole
+  return $ DataTyped.eiGuid newLambdaI

@@ -32,6 +32,7 @@ import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.Data.Ops as DataOps
+import qualified Editor.Data.Typed as DataTyped
 import qualified Editor.ITransaction as IT
 import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
@@ -134,7 +135,7 @@ mPickResult
   :: MonadF m
   => HoleInfo m
   -> Maybe
-     (Data.ExpressionI -> ITransaction ViewTag m () -> ResultPicker m)
+     (Data.Expression DataTyped.ExpressionIRef -> ITransaction ViewTag m () -> ResultPicker m)
 mPickResult holeInfo =
   fmap (picker . fmap IT.transaction) . Sugar.holePickResult $ hiHole holeInfo
   where
