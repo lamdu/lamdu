@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings, Rank2Types#-}
 module Main(main) where
 
+import Control.Applicative ((<*))
 import Control.Arrow (second)
 import Control.Monad (liftM, unless, (<=<))
 import Control.Monad.Trans.Class (lift)
@@ -127,9 +128,22 @@ fixIORef mkInitial = do
   writeIORef var =<< mkInitial (writeIORef var)
   return var
 
+makeSizeFactor :: IO (IORef (Vector2 Widget.R), Widget.EventHandlers IO)
+makeSizeFactor = do
+  factor <- newIORef 1
+  let
+    eventMap = mconcat
+      [ Widget.keysEventMap Config.enlargeBaseFontKeys "Enlarge text" $
+        modifyIORef factor (* Config.enlargeFactor)
+      , Widget.keysEventMap Config.shrinkBaseFontKeys "Shrink text" $
+        modifyIORef factor (/ Config.shrinkFactor)
+      ]
+  return (factor, eventMap)
+
 runDbStore :: Draw.Font -> Transaction.Store DBTag IO -> IO a
 runDbStore font store = do
   ExampleDB.initDB store
+  (sizeFactorRef, sizeFactorEvents) <- makeSizeFactor
   flyNavMake <- makeFlyNav
   addHelpWithStyle <- EventMapDoc.makeToggledHelpAdder Config.overlayDocKeys
   let
@@ -139,11 +153,12 @@ runDbStore font store = do
       writeNewCache newCache
 
     newMemoFromCache writeMemo sugarCache =
-      memoIO $
-      mkWidgetWithFallback (Config.baseStyle font) dbToIO
-      (updateCacheWith writeNewCache) sugarCache
+      memoIO .
+      (liftM . fmap . Widget.weakerEvents)
+      (fmap (<* writeCache sugarCache) sizeFactorEvents) $
+      mkWidgetWithFallback (Config.baseStyle font) dbToIO (updateCacheWith writeCache) sugarCache
       where
-        writeNewCache = writeMemo <=< newMemoFromCache writeMemo
+        writeCache = writeMemo <=< newMemoFromCache writeMemo
 
   initSugarCache <- dbToIO $ viewToDb CodeEdit.makeSugarCache
   memoRef <- fixIORef $ \writeMemo -> newMemoFromCache writeMemo initSugarCache
@@ -152,7 +167,8 @@ runDbStore font store = do
     makeWidget size = do
       mkWidget <- readIORef memoRef
       cursor <- dbToIO $ Anchors.getP Anchors.cursor
-      flyNavMake =<< mkWidget (size, cursor)
+      sizeFactor <- readIORef sizeFactorRef
+      flyNavMake =<< liftM (Widget.scale sizeFactor) (mkWidget (size / sizeFactor, cursor))
 
   mainLoopDebugMode font makeWidget addHelp
   where

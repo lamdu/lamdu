@@ -121,3 +121,9 @@ selectedBranchColor = Draw.Color 0 0.5 0 1
 
 jumpLHStoRHSKeys = [k '`']
 jumpRHStoLHSKeys = [k '`']
+
+shrinkBaseFontKeys = [ctrl '-']
+enlargeBaseFontKeys = [ctrl '=']
+
+enlargeFactor = 1.1
+shrinkFactor = 1.1
