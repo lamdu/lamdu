@@ -63,11 +63,25 @@ loadDefinition
 loadDefinition defI = do
   def <- Transaction.readIRef defI
   liftM (DefinitionEntity defI) $
-    case def of
-    Data.Definition bodyI ->
-      liftM Data.Definition .
-      loadExpression . Property bodyI $
-      Transaction.writeIRef defI . Data.Definition
+    liftM2 Data.Definition
+    (loadExpression (defBodyProp defI def))
+    (loadExpression (defTypeProp defI def))
+
+defTypeProp
+  :: Monad m
+  => Data.DefinitionIRef -> Data.DefinitionI
+  -> Data.ExpressionIRefProperty (T m)
+defTypeProp defI (Data.Definition bodyI typeI) =
+  Property typeI
+  (Transaction.writeIRef defI . Data.Definition bodyI)
+
+defBodyProp
+  :: Monad m
+  => Data.DefinitionIRef -> Data.DefinitionI
+  -> Data.ExpressionIRefProperty (T m)
+defBodyProp defI (Data.Definition bodyI typeI) =
+  Property bodyI
+  (Transaction.writeIRef defI . flip Data.Definition typeI)
 
 lambdaTypeProp
   :: Monad m

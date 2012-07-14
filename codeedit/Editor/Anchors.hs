@@ -21,7 +21,7 @@ module Editor.Anchors
   )
 where
 
-import Control.Monad (liftM, when)
+import Control.Monad (liftM, liftM2, when)
 import Data.Binary (Binary(..))
 import Data.List.Split (splitOn)
 import Data.Map (Map)
@@ -126,7 +126,8 @@ makeDefinition
   :: Monad m
   => Transaction ViewTag m Data.DefinitionIRef
 makeDefinition = do
-  defI <- Transaction.newIRef . Data.Definition =<< Data.newExprIRef Data.ExpressionHole
+  let newHole = Data.newExprIRef Data.ExpressionHole
+  defI <- Transaction.newIRef =<< liftM2 Data.Definition newHole newHole
   modP globals (Data.DefinitionRef defI :)
   return defI
 
@@ -196,8 +197,8 @@ newBuiltin
   -> Transaction t m Data.VariableRef
 newBuiltin fullyQualifiedName typeI = do
   builtinIRef <-
-    Transaction.newIRef . Data.Definition =<<
-    newBuiltinExpression fullyQualifiedName typeI
+    Transaction.newIRef . (`Data.Definition` typeI) =<<
+    (newBuiltinExpression fullyQualifiedName typeI)
   setP (assocNameRef (IRef.guid builtinIRef)) name
   setP (assocCachedDefinitionTypeRef builtinIRef) .
     Just . Data.InferredType =<<

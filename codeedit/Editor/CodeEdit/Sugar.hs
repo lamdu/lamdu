@@ -599,7 +599,7 @@ convertDefinitionI
   -> Sugar m (DefinitionRef m)
 convertDefinitionI defI =
   case DataTyped.deValue defI of
-  Data.Definition bodyI ->
+  Data.Definition bodyI _typeI ->
     liftM (DefinitionRef defGuid) .
     convertExpressionI $ eeFromTypedExpression bodyI
   where

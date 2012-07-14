@@ -101,8 +101,9 @@ data Expression expr
   deriving (Eq, Ord, Show)
 type ExpressionI = Expression ExpressionIRef
 
-newtype Definition expr = Definition
+data Definition expr = Definition
   { defBody :: expr
+  , defType :: expr
   } deriving (Eq, Ord, Show)
 type DefinitionI = Definition ExpressionIRef
 type DefinitionIRef = IRef DefinitionI
