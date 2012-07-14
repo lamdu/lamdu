@@ -206,8 +206,6 @@ newBuiltin fullyQualifiedName typeI = do
   where
     name = last $ splitOn "." fullyQualifiedName
 
--- TODO: MkProperty code should be moved to Property or its own module
-
 getP :: Monad m => MkProperty t m a -> Transaction t m a
 getP = liftM Property.value
 

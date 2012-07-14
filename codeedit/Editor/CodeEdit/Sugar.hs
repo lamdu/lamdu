@@ -108,7 +108,7 @@ type Scope = [Data.VariableRef]
 
 data Hole m = Hole
   { holeScope :: Scope
-  , holePickResult :: Maybe (Data.Expression DataTyped.ExpressionIRef -> T m Guid)
+  , holePickResult :: Maybe (Data.ExpressionI -> T m Guid)
   , holeMFlipFuncArg :: Maybe (T m ())
   , holePaste :: Maybe (T m Guid)
   }
@@ -157,7 +157,7 @@ data Loopable a = Loop | NonLoop a
 
 data ExprEntity m = ExprEntity
   { eeGuid :: Guid
-  , eeStored :: Maybe (DataTyped.ExpressionRef (T m))
+  , eeStored :: Maybe (Data.ExpressionIRefProperty (T m))
   , eeInferredTypes :: [ExprEntity m]
   , eeValue :: Loopable (Data.Expression (ExprEntity m))
   }
@@ -173,12 +173,18 @@ eeFromITL
 argument :: (a -> b) -> (b -> c) -> a -> c
 argument = flip (.)
 
+writeIRef
+  :: Monad m => Data.ExpressionIRefProperty (T m)
+  -> Data.Expression Data.ExpressionIRef
+  -> Transaction t m ()
+writeIRef = Data.writeExprIRef . Property.value
+
 writeIRefVia
   :: Monad m
-  => (a -> Data.Expression DataTyped.ExpressionIRef)
-  -> DataTyped.ExpressionRef (T m)
-  -> a -> T m ()
-writeIRefVia f = (fmap . argument) f DataTyped.erSetContents
+  => (a -> Data.ExpressionI)
+  -> Data.ExpressionIRefProperty (T m)
+  -> a -> Transaction t m ()
+writeIRefVia f = (fmap . argument) f writeIRef
 
 eeFromTypedExpression
   :: DataTyped.TypedStoredExpression (T m) -> ExprEntity m
@@ -216,27 +222,28 @@ type Convertor m = ExprEntity m -> Sugar m (ExpressionRef m)
 makeEntity :: Monad m => ExprEntity m -> Entity m
 makeEntity ee = makeEntityGuid (eeGuid ee) ee
 
-mkCutter :: Monad m => DataTyped.ExpressionIRef -> T m Guid -> T m Guid
-mkCutter iref delete = do
-  Anchors.modP DataTyped.clipboards (iref:)
-  delete
+mkCutter :: Monad m => Data.ExpressionIRef -> T m Guid -> T m Guid
+mkCutter iref replaceWithHole = do
+  Anchors.modP Anchors.clipboards (iref:)
+  replaceWithHole
 
-mkActions :: Monad m => DataTyped.ExpressionRef (T m) -> Actions m
+mkActions :: Monad m => Data.ExpressionIRefProperty (T m) -> Actions m
 mkActions stored =
   Actions
-  { addNextArg = DataOps.callWithArg stored
-  , callWithArg = DataOps.callWithArg stored
-  , giveAsArg = DataOps.giveAsArg stored
-  , lambdaWrap = DataOps.lambdaWrap stored
-  , addWhereItem = DataOps.redexWrap stored
+  { addNextArg = guidify $ DataOps.callWithArg stored
+  , callWithArg = guidify $ DataOps.callWithArg stored
+  , giveAsArg = guidify $ DataOps.giveAsArg stored
+  , lambdaWrap = guidify $ DataOps.lambdaWrap stored
+  , addWhereItem = guidify $ DataOps.redexWrap stored
   , replace = doReplace
     -- mDelete gets overridden by parent if it is an apply.
   , mDelete = Nothing
-  , cut = mkCutter (DataTyped.exprIRefFromExpressionRef stored) doReplace
+  , cut = mkCutter (Property.value stored) doReplace
   , mNextArg = Nothing
   }
   where
-    doReplace = DataOps.replaceWithHole stored
+    guidify = liftM Data.exprIRefGuid
+    doReplace = guidify $ DataOps.replaceWithHole stored
 
 makeEntityGuid :: Monad m => Guid -> ExprEntity m -> Entity m
 makeEntityGuid exprGuid exprI =
@@ -261,19 +268,19 @@ mkExpressionRef ee expr = do
 
 addStoredDeleteCutActions
   :: Monad m
-  => DataTyped.ExpressionRef (T m)
-  -> DataTyped.ExpressionRef (T m)
-  -> DataTyped.ExpressionRef (T m)
+  => Data.ExpressionIRefProperty (T m)
+  -> Data.ExpressionIRefProperty (T m)
+  -> Data.ExpressionIRefProperty (T m)
   -> Entity m -> Entity m
 addStoredDeleteCutActions deletedP parentP replacerP =
   (atEActions . fmap)
   ((atCut . const) cutter .
    (atMDelete . const) (Just delete))
   where
-    cutter = mkCutter (DataTyped.exprIRefFromExpressionRef deletedP) delete
+    cutter = mkCutter (Property.value deletedP) delete
     delete = do
-      DataTyped.erReplace parentP replacerP
-      return $ DataTyped.erGuid replacerP
+      Property.set parentP $ Property.value replacerP
+      return . Data.exprIRefGuid $ Property.value replacerP
 
 addDeleteCutActions
   :: Monad m
@@ -404,8 +411,8 @@ setAddArg exprI =
   maybe id f $ eeStored exprI
   where
     f stored =
-      atREntity . atEActions . fmap . atAddNextArg . const $
-      DataOps.callWithArg stored
+      atREntity . atEActions . fmap . atAddNextArg . const .
+      liftM Data.exprIRefGuid $ DataOps.callWithArg stored
 
 atFunctionType :: ExpressionRef m -> ExpressionRef m
 atFunctionType exprRef =
@@ -490,9 +497,8 @@ convertApplyPrefix (Data.Apply funcI argI) exprI = do
       atRExpression . atEHole . atHoleMFlipFuncArg . const $
       setFlippedApply <$> eeStored exprI <*> eeStored funcI <*> eeStored argI
     setFlippedApply exprP funcP argP =
-      DataTyped.erSetContents exprP . Data.ExpressionApply $ Data.Apply (toI argP) (toI funcP)
+      writeIRef exprP . Data.ExpressionApply $ Data.Apply (Property.value argP) (Property.value funcP)
     addParens = atRExpression . atEHasParens . const $ HaveParens
-    toI = DataTyped.exprIRefFromExpressionRef
 
 convertGetVariable :: Monad m => Data.VariableRef -> Convertor m
 convertGetVariable varRef exprI = do
@@ -507,21 +513,20 @@ convertGetVariable varRef exprI = do
       Section Nothing ((atRInferredTypes . const) [] getVarExpr) Nothing Nothing
     else return getVarExpr
 
-mkPaste
-  :: Monad m => DataTyped.ExpressionRef (T m) -> Sugar m (Maybe (T m Guid))
+mkPaste :: Monad m => Data.ExpressionIRefProperty (T m) -> Sugar m (Maybe (T m Guid))
 mkPaste exprP = do
-  clipboardsP <- liftTransaction DataTyped.clipboards
+  clipboardsP <- liftTransaction Anchors.clipboards
   let
     mClipPop =
       case Property.value clipboardsP of
       [] -> Nothing
       (clip : clips) -> Just (clip, Property.set clipboardsP clips)
-  return $ fmap (doPaste (DataTyped.erReplaceWithIRef exprP)) mClipPop
+  return $ fmap (doPaste (Property.set exprP)) mClipPop
   where
     doPaste replacer (clip, popClip) = do
       ~() <- popClip
       ~() <- replacer clip
-      return $ DataTyped.eiGuid clip
+      return $ Data.exprIRefGuid clip
 
 convertHole :: Monad m => Convertor m
 convertHole exprI = do
@@ -530,7 +535,7 @@ convertHole exprI = do
   mkExpressionRef exprI . ExpressionHole $
     Hole
     { holeScope = scope
-    , holePickResult = fmap (pickResult . DataTyped.erSetContents) $ eeStored exprI
+    , holePickResult = fmap (pickResult . writeIRef) $ eeStored exprI
     , holeMFlipFuncArg = Nothing
     , holePaste = mPaste
     }
@@ -554,7 +559,7 @@ convertBuiltin (Data.Builtin name t) exprI =
   { biName = name
   , biSetFFIName = do
       tProp <- eeStored t
-      fmap (writeIRefVia (Data.ExpressionBuiltin . (`Data.Builtin` DataTyped.exprIRefFromExpressionRef tProp))) $ eeStored exprI
+      fmap (writeIRefVia (Data.ExpressionBuiltin . (`Data.Builtin` Property.value tProp))) $ eeStored exprI
   }
 
 fakeBuiltin :: [String] -> String -> Expression m
