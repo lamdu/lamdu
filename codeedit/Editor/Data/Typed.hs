@@ -299,10 +299,9 @@ derefTypeRefs =
 
 unifyOnTree
   :: Monad m
-  => (Data.DefinitionIRef -> Infer m TypeRef)
-  -> StoredExpression TypeRef f
+  => StoredExpression TypeRef f
   -> Infer m ()
-unifyOnTree defTypeRef = (`runReaderT` []) . go
+unifyOnTree = (`runReaderT` []) . go
   where
     go (StoredExpression stored typeRef value) =
       case value of
@@ -346,7 +345,16 @@ unifyOnTree defTypeRef = (`runReaderT` []) . go
           -- add an OutOfScopeReference type error
           Nothing -> return ()
           Just paramTypeRef -> setType paramTypeRef
-      Data.ExpressionGetVariable (Data.DefinitionRef defI) -> lift $ setType =<< defTypeRef defI
+      Data.ExpressionGetVariable (Data.DefinitionRef defI) -> lift $ do
+        cachedDefType <-
+          liftTransaction .
+          liftM (fromMaybe Data.UnknownType) .
+          Anchors.getP $ Anchors.assocCachedDefinitionTypeRef defI
+        defTypeRef <-
+          case cachedDefType of
+          Data.UnknownType -> makeSingletonTypeRef zeroGuid Data.ExpressionHole
+          Data.InferredType x -> typeRefFromPure =<< liftTransaction (expand x)
+        setType defTypeRef
       Data.ExpressionLiteralInteger _ ->
         lift $
         setType =<<
@@ -504,25 +512,14 @@ builtinsToGlobals builtinsMap (InferredTypeNoLoop (Data.GuidExpression guid expr
 
 inferExpression
  :: Monad m
- => (Data.DefinitionIRef -> Infer m TypeRef)
- -> StoredExpression TypeRef f
+ => StoredExpression TypeRef f
  -> Infer m (TypedStoredExpression f)
-inferExpression defTypeRef withTypeRefs = do
-  unifyOnTree defTypeRef withTypeRefs
+inferExpression withTypeRefs = do
+  unifyOnTree withTypeRefs
   builtinsMap <- liftTransaction $ Anchors.getP Anchors.builtinsMap
   derefed <- derefTypeRefs withTypeRefs
   return . runIdentity $
     (atInferredTypes . const) (Identity . map (builtinsToGlobals builtinsMap)) derefed
-
-defTypeRefFromCache :: Monad m => Data.DefinitionIRef -> Infer m TypeRef
-defTypeRefFromCache defI = do
-  cachedDefType <-
-    liftTransaction .
-    liftM (fromMaybe Data.UnknownType) .
-    Anchors.getP $ Anchors.assocCachedDefinitionTypeRef defI
-  case cachedDefType of
-    Data.UnknownType -> makeSingletonTypeRef zeroGuid Data.ExpressionHole
-    Data.InferredType x -> typeRefFromPure =<< liftTransaction (expand x)
 
 inferDefinition
   :: (Monad m, Monad f)
@@ -532,13 +529,8 @@ inferDefinition (DataLoad.DefinitionEntity defI value) =
   liftM (StoredDefinition defI) $
   case value of
   Data.Definition bodyI ->
-    liftM Data.Definition . runInfer $ do
-      withTypeRefs <- addTypeRefs $ storedFromLoaded () bodyI
-      let
-        typeRefFrom innerDefI
-          | defI == innerDefI = return $ eeInferredType withTypeRefs
-          | otherwise = defTypeRefFromCache innerDefI
-      inferExpression typeRefFrom withTypeRefs
+    liftM Data.Definition . runInfer $
+      inferExpression <=< addTypeRefs $ storedFromLoaded () bodyI
 
 loadInferDefinition
   :: Monad m => Data.DefinitionIRef
@@ -551,5 +543,5 @@ loadInferExpression
   => Data.ExpressionIRefProperty (T m)
   -> T m (TypedStoredExpression (T m))
 loadInferExpression =
-  runInfer . (inferExpression defTypeRefFromCache <=< addTypeRefs . storedFromLoaded ()) <=<
+  runInfer . (inferExpression <=< addTypeRefs . storedFromLoaded ()) <=<
   DataLoad.loadExpression
