@@ -36,15 +36,16 @@ make makeExpressionEdit (Sugar.Pi param resultType) myId =
           Nothing -> cursor
           Just _ -> typeId
     OT.atCursor redirectCursor $ do
-      (paramNameEdit, paramTypeEdit) <-
-        FuncEdit.makeParamEdit makeExpressionEdit ("Result Type", resultType) param
+      paramEdit <-
+        if paramUsed
+        then do
+          (paramNameEdit, paramTypeEdit) <-
+            FuncEdit.makeParamEdit makeExpressionEdit ("Result Type", resultType) param
+          return . ExpressionGui.fromValueWidget $ BWidgets.vboxCentered [paramNameEdit, paramTypeEdit]
+        else makeExpressionEdit $ Sugar.fpType param
       rightArrowLabel <-
         OT.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor .
         BWidgets.makeLabel "→" $ Widget.toAnimId myId
-      let
-        paramEdit
-          | paramUsed = ExpressionGui.fromValueWidget $ BWidgets.vboxCentered [paramNameEdit, paramTypeEdit]
-          | otherwise = ExpressionGui.fromValueWidget paramTypeEdit
       return $
         ExpressionGui.hboxSpaced [paramEdit, ExpressionGui.fromValueWidget rightArrowLabel, resultTypeEdit]
   where
