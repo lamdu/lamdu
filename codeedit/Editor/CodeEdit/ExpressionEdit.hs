@@ -61,8 +61,8 @@ make sExpr = do
     (case map ExpressionGui.egWidget typeEdits of
        [] -> id
        typeEditWidgets ->
-         ExpressionGui.addType exprId typeEditWidgets . ExpressionGui.egWidget) $
-    widget
+         ExpressionGui.addType exprId typeEditWidgets
+    ) $ widget
   where
     exprId = WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity $ sExpr
 

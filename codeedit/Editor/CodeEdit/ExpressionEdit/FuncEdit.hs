@@ -1,16 +1,15 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Editor.CodeEdit.ExpressionEdit.FuncEdit
   (make, makeParamEdit, makeBodyEdit, addJumpToRHS) where
 
-import Control.Arrow (second)
 import Control.Monad (liftM, (<=<))
-import Data.List.Utils (pairList)
 import Data.Monoid (mempty, mconcat)
 import Data.Store.Guid (Guid)
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget, WidgetT)
-import qualified Data.List as List
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.Sugar as Sugar
@@ -40,9 +39,6 @@ makeParamNameEdit ident =
    BWidgets.makeNameEdit "<unnamed param>" ident) $
   WidgetIds.paramId ident
 
-both :: (a -> b) -> (a, a) -> (b, b)
-both f (x, y) = (f x, f y)
-
 addJumpToRHS
   :: MonadF m => (E.Doc, Sugar.ExpressionRef m) -> WidgetT ViewTag m -> WidgetT ViewTag m
 addJumpToRHS (rhsDoc, rhs) =
@@ -58,16 +54,18 @@ makeParamEdit
   => ExpressionGui.Maker m
   -> (E.Doc, Sugar.ExpressionRef m)
   -> Sugar.FuncParam m
-  -> OTransaction ViewTag m (WidgetT ViewTag m, WidgetT ViewTag m)
+  -> OTransaction ViewTag m (ExpressionGui m)
 makeParamEdit makeExpressionEdit rhs param =
-  OT.assignCursor (WidgetIds.fromGuid ident) (WidgetIds.paramId ident) .
-    (liftM . both . Widget.weakerEvents) paramEventMap $ do
+  OT.assignCursor myId (WidgetIds.paramId ident) .
+  (liftM . ExpressionGui.atEgWidget)
+  (addJumpToRHS rhs . Widget.weakerEvents paramEventMap) $ do
     paramNameEdit <- makeParamNameEdit ident
     paramTypeEdit <- makeExpressionEdit $ Sugar.fpType param
-    return
-      (addJumpToRHS rhs paramNameEdit,
-       addJumpToRHS rhs (ExpressionGui.egWidget paramTypeEdit))
+    return . ExpressionGui.addType myId
+      [ExpressionGui.egWidget paramTypeEdit] $
+      ExpressionGui.fromValueWidget paramNameEdit
   where
+    myId = Widget.joinId (WidgetIds.fromGuid ident) ["param"]
     ident = Sugar.guid $ Sugar.fpEntity param
     paramEventMap = mconcat
       [ paramDeleteEventMap
@@ -94,12 +92,8 @@ makeParamsEdit
   -> [Sugar.FuncParam m]
   -> OTransaction ViewTag m (ExpressionGui m)
 makeParamsEdit makeExpressionEdit rhs =
-  liftM
-  (ExpressionGui.fromValueWidget . BWidgets.gridHSpacedCentered . List.transpose .
-   map (pairList . scaleDownType)) .
+  liftM ExpressionGui.hboxSpaced .
   mapM (makeParamEdit makeExpressionEdit rhs)
-  where
-    scaleDownType = second $ Widget.scale Config.typeScaleFactor
 
 makeBodyEdit
   :: MonadF m

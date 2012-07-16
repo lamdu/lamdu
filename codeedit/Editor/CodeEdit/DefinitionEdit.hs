@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.DefinitionEdit(make, makeParts) where
 
-import Control.Arrow (second)
 import Control.Monad (liftM)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
@@ -10,8 +9,6 @@ import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget)
-import qualified Data.List as List
-import qualified Data.List.Utils as ListUtils
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
@@ -47,13 +44,12 @@ makeLHSEdit
   -> Maybe (Transaction ViewTag m Guid)
   -> (E.Doc, Sugar.ExpressionRef m)
   -> [Sugar.FuncParam m]
-  -> TWidget ViewTag m
+  -> OTransaction ViewTag m (ExpressionGui m)
 makeLHSEdit makeExpressionEdit myId ident mAddFirstParameter rhs params = do
   nameEdit <-
     liftM (FuncEdit.addJumpToRHS rhs . Widget.weakerEvents addFirstParamEventMap) $
     makeNameEdit myId ident
-  liftM (BWidgets.gridHSpacedCentered . List.transpose .
-         map ListUtils.pairList . ((nameEdit, nameTypeFiller) :) . map scaleDownType) .
+  liftM (ExpressionGui.hboxSpaced . (ExpressionGui.fromValueWidget nameEdit :)) .
     mapM (FuncEdit.makeParamEdit makeExpressionEdit rhs) $ params
   where
     addFirstParamEventMap =
@@ -63,9 +59,6 @@ makeLHSEdit makeExpressionEdit myId ident mAddFirstParameter rhs params = do
        liftM (FocusDelegator.delegatingId . WidgetIds.paramId) .
        IT.transaction)
       mAddFirstParameter
-    scaleDownType = second $ Widget.scale Config.typeScaleFactor
-    -- no type for def name (yet):
-    nameTypeFiller = BWidgets.spaceWidget
 
 makeParts
   :: MonadF m
@@ -91,7 +84,7 @@ makeParts makeExpressionEdit myId guid exprRef = do
   rhsEdit <-
     FuncEdit.makeBodyEdit makeExpressionEdit lhs $ Sugar.fBody func
   return
-    [ ExpressionGui.fromValueWidget lhsEdit
+    [ lhsEdit
     , ExpressionGui.fromValueWidget BWidgets.spaceWidget
     , ExpressionGui.fromValueWidget equals
     , ExpressionGui.fromValueWidget BWidgets.spaceWidget

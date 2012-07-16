@@ -10,10 +10,9 @@ module Graphics.UI.Bottle.Widgets.Box
   , Orientation, horizontal, vertical
   ) where
 
-import Control.Arrow (first, second)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Rect (Rect(..))
-import Graphics.UI.Bottle.Widget (Widget, Size, R)
+import Graphics.UI.Bottle.Widget (Widget, Size)
 import Graphics.UI.Bottle.Widgets.Grid (KGrid(..))
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Vector.Vector2 as Vector2
@@ -25,32 +24,29 @@ eHead :: [a] -> a
 eHead (x:_) = x
 eHead [] = error "Grid returned invalid list without any elements, instead of list Box handed it"
 
-type Alignment = R -- 0..1
+type Alignment = Grid.Alignment
 
-data Orientation = Orientation {
-  oToGridCursor :: Cursor -> Grid.Cursor,
-  oToGridChildren :: forall a. [a] -> [[a]],
-  oFromGridCursor :: Grid.Cursor -> Cursor,
-  oFromGridChildren :: forall a. [[a]] -> [a],
-  oToGridAlignment :: Alignment -> Grid.Alignment
+data Orientation = Orientation
+  { oToGridCursor :: Cursor -> Grid.Cursor
+  , oToGridChildren :: forall a. [a] -> [[a]]
+  , oFromGridCursor :: Grid.Cursor -> Cursor
+  , oFromGridChildren :: forall a. [[a]] -> [a]
   }
 
 horizontal :: Orientation
-horizontal = Orientation {
-  oToGridCursor = (`Vector2` 0),
-  oToGridChildren = (: []),
-  oFromGridCursor = Vector2.fst,
-  oFromGridChildren = eHead,
-  oToGridAlignment = Vector2 0
+horizontal = Orientation
+  { oToGridCursor = (`Vector2` 0)
+  , oToGridChildren = (: [])
+  , oFromGridCursor = Vector2.fst
+  , oFromGridChildren = eHead
   }
 
 vertical :: Orientation
-vertical = Orientation {
-  oToGridCursor = (0 `Vector2`),
-  oToGridChildren = map (: []),
-  oFromGridCursor = Vector2.snd,
-  oFromGridChildren = map eHead,
-  oToGridAlignment = flip Vector2 0
+vertical = Orientation
+  { oToGridCursor = (0 `Vector2`)
+  , oToGridChildren = map (: [])
+  , oFromGridCursor = Vector2.snd
+  , oFromGridChildren = map eHead
   }
 
 type Element = Grid.Element
@@ -87,11 +83,7 @@ makeKeyed orientation children = KBox
   , boxContent = oFromGridChildren orientation $ Grid.gridContent grid
   }
   where
-    grid =
-      Grid.makeKeyed .
-      oToGridChildren orientation .
-      (map . second . first) (oToGridAlignment orientation) $
-      children
+    grid = Grid.makeKeyed $ oToGridChildren orientation children
 
 unkey :: [(Alignment, Widget f)] -> [((), (Alignment, Widget f))]
 unkey = map ((,) ())

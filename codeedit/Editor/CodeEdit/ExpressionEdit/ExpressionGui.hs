@@ -8,7 +8,6 @@ module Editor.CodeEdit.ExpressionEdit.ExpressionGui
   , addType
   ) where
 
-import Control.Arrow (second)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
 import Editor.OTransaction (OTransaction, WidgetT)
@@ -37,7 +36,7 @@ AtFieldTH.make ''ExpressionGui
 type Maker m = Sugar.ExpressionRef m -> OTransaction ViewTag m (ExpressionGui m)
 
 fromValueWidget :: WidgetT ViewTag m -> ExpressionGui m
-fromValueWidget widget = ExpressionGui widget 1
+fromValueWidget widget = ExpressionGui widget 0.5
 
 hbox :: [ExpressionGui m] -> ExpressionGui m
 hbox guis =
@@ -47,7 +46,7 @@ hbox guis =
   _ -> error "hbox must not get empty list :("
   where
     box = Box.make Box.horizontal $ map f guis
-    f (ExpressionGui widget _alignment) = (0, widget)
+    f (ExpressionGui widget alignment) = (Vector2 0.5 alignment, widget)
 
 hboxSpaced :: [ExpressionGui m] -> ExpressionGui m
 hboxSpaced = hbox . List.intersperse (fromValueWidget BWidgets.spaceWidget)
@@ -55,20 +54,21 @@ hboxSpaced = hbox . List.intersperse (fromValueWidget BWidgets.spaceWidget)
 addType
   :: Widget.Id
   -> [WidgetT ViewTag m]
-  -> WidgetT ViewTag m
   -> ExpressionGui m
-addType _ [] widget = fromValueWidget widget
-addType exprId typeEdits widget =
+  -> ExpressionGui m
+addType _ [] eg = eg
+addType exprId typeEdits eg =
   ExpressionGui (Box.toWidget box) alignment
   where
     alignment =
       maybe (error "True disappeared from box list?!") (Vector2.snd . Grid.elementAlign) .
       lookup True $ Box.boxContent box
-    box = Box.makeKeyed Box.vertical . (map . second) ((,) 0.5) $
-      [ (False, widget)
-      , (True,  Spacer.makeHorizLine underlineId (Vector2 underLineWidth 1))
-      , (False, typeEdit)
+    box = Box.makeKeyed Box.vertical $
+      [ (True, (Vector2 0.5 (egAlignment eg), widget))
+      , (False, (0.5, Spacer.makeHorizLine underlineId (Vector2 underLineWidth 1)))
+      , (False, (0.5, typeEdit))
       ]
+    widget = egWidget eg
     width = Vector2.fst . Widget.wSize
     underLineWidth = max (width widget) (width typeEdit)
     typeEdit =
