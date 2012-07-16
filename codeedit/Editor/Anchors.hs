@@ -198,7 +198,7 @@ newBuiltin
 newBuiltin fullyQualifiedName typeI = do
   builtinIRef <-
     Transaction.newIRef . (`Data.Definition` typeI) =<<
-    (newBuiltinExpression fullyQualifiedName typeI)
+    newBuiltinExpression fullyQualifiedName typeI
   setP (assocNameRef (IRef.guid builtinIRef)) name
   setP (assocCachedDefinitionTypeRef builtinIRef) .
     Just . Data.InferredType =<<

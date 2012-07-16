@@ -162,11 +162,11 @@ data ExprEntity m = ExprEntity
   , eeValue :: Loopable (Data.Expression (ExprEntity m))
   }
 
-eeFromITL :: DataTyped.InferredTypeLoop -> ExprEntity m
-eeFromITL (DataTyped.InferredTypeLoop itGuid) =
+eeFromITL :: DataTyped.LoopGuidExpression -> ExprEntity m
+eeFromITL (DataTyped.Loop itGuid) =
   ExprEntity itGuid Nothing [] Loop
 eeFromITL
-  (DataTyped.InferredTypeNoLoop (Data.GuidExpression itGuid val)) =
+  (DataTyped.NoLoop (Data.GuidExpression itGuid val)) =
     ExprEntity itGuid Nothing [] . NonLoop $
     Data.mapExpression eeFromITL val
 
