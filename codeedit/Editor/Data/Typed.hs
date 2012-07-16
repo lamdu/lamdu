@@ -11,6 +11,7 @@ module Editor.Data.Typed
   , deGuid
   , loadInferDefinition
   , loadInferExpression
+  , alphaEq
   , StoredExpression(..)
   , TypeData, TypedStoredExpression, TypedStoredDefinition
   ) where
@@ -22,6 +23,7 @@ import Control.Monad.Trans.Random (nextRandom, runRandomT)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (execStateT)
 import Control.Monad.Trans.UnionFind (UnionFindT, evalUnionFindT)
+import Data.Function (on)
 import Data.Functor.Identity (Identity(..))
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
@@ -496,6 +498,16 @@ canonizeIdentifiers gen =
           maybe gv (Data.ExpressionGetVariable . Data.ParameterRef) .
           Map.lookup guid
         x -> return x
+
+alphaEq :: Data.PureGuidExpression -> Data.PureGuidExpression -> Bool
+alphaEq =
+  on (==) (canonizeIdentifiers (Random.mkStdGen 0) . toLoop)
+  where
+    toLoop = runIdentity . Data.mapMExpression f
+    f (Data.PureGuidExpression (Data.GuidExpression guid expr)) =
+      ( Identity expr
+      , Identity . NoLoop . Data.GuidExpression guid
+      )
 
 builtinsToGlobals :: Map Data.FFIName Data.VariableRef -> LoopGuidExpression -> LoopGuidExpression
 builtinsToGlobals _ x@(Loop _) = x
