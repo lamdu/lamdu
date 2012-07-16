@@ -2,6 +2,7 @@
 
 module Editor.CodeEdit.Sugar
   ( DefinitionRef(..)
+  , DefinitionTypeAction(..)
   , Builtin(..)
   , Entity(..), Actions(..)
   , Expression(..), ExpressionRef(..)
@@ -13,15 +14,16 @@ module Editor.CodeEdit.Sugar
   , convertExpression
   ) where
 
-import Control.Applicative((<$>), (<*>))
-import Control.Monad(liftM)
-import Control.Monad.Trans.Class(MonadTrans(..))
+import Control.Applicative ((<$>), (<*>))
+import Control.Monad (guard, liftM)
+import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
+import Control.Monad.Trans.Maybe (MaybeT(..))
 import Data.Maybe (fromMaybe)
 import Data.Functor.Identity (Identity(..))
-import Data.Store.Guid(Guid)
-import Data.Store.Transaction(Transaction)
-import Editor.Anchors(ViewTag)
+import Data.Store.Guid (Guid)
+import Data.Store.Transaction (Transaction)
+import Editor.Anchors (ViewTag)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Store.Property as Property
@@ -33,8 +35,6 @@ import qualified Editor.Data.Typed as DataTyped
 
 type T = Transaction ViewTag
 
-type MAction m = Maybe (T m Guid)
-
 data Actions m = Actions
   { addNextArg   :: T m Guid
   , giveAsArg    :: T m Guid
@@ -43,7 +43,7 @@ data Actions m = Actions
   , addWhereItem :: T m Guid
   , replace      :: T m Guid
   , cut          :: T m Guid
-  , mDelete      :: MAction m
+  , mDelete      :: Maybe (T m Guid)
   -- invariant: cut includes the action of mDelete if one exists, or
   -- replace if one doesn't
   , mNextArg     :: Maybe (ExpressionRef m)
@@ -134,11 +134,18 @@ data Builtin m = Builtin
   , biSetFFIName :: Maybe (Data.FFIName -> T m ())
   }
 
+data DefinitionTypeAction m = DefinitionTypeAction
+  { dtaNewType :: ExpressionRef m
+  , dtaAcceptNewType :: T m ()
+  }
+
 data DefinitionRef m = DefinitionRef
   { drGuid :: Guid
     -- TODO: This is the opposite order of the data model, reverse
     -- either of them:
-  , drDef :: ExpressionRef m
+  , drBody :: ExpressionRef m
+  , drType :: ExpressionRef m
+  , drMAcceptInferredType :: Maybe (DefinitionTypeAction m)
   }
 
 AtFieldTH.make ''Hole
@@ -599,11 +606,31 @@ convertDefinitionI
   -> Sugar m (DefinitionRef m)
 convertDefinitionI defI =
   case DataTyped.deValue defI of
-  Data.Definition bodyI _typeI ->
-    liftM (DefinitionRef defGuid) .
-    convertExpressionI $ eeFromTypedExpression bodyI
+  Data.Definition bodyI typeI -> do
+    let bodyEntity = eeFromTypedExpression bodyI
+    bodyS <- convertExpressionI bodyEntity
+    typeS <- convertExpressionI $ eeFromTypedExpression typeI
+    inferredTypeAction <- runMaybeT $ do
+      inferredTypeEntity <- toMaybeT . theOne $ DataTyped.deInferredType defI
+      inferredType <- toMaybeT $ DataTyped.pureGuidFromLoop inferredTypeEntity
+      let defType = DataTyped.pureExpressionFromStored typeI
+      guard . not $ DataTyped.alphaEq inferredType defType
+      inferredTypeS <- lift . convertExpressionI $ eeFromITL inferredTypeEntity
+      return DefinitionTypeAction
+        { dtaNewType = inferredTypeS
+        , dtaAcceptNewType = return ()
+        }
+    return DefinitionRef
+      { drGuid = defGuid
+      , drBody = bodyS
+      , drType = typeS
+      , drMAcceptInferredType = inferredTypeAction
+      }
   where
+    toMaybeT = MaybeT . return
     defGuid = DataTyped.deGuid defI
+    theOne [x] = Just x
+    theOne _ = Nothing
 
 convertDefinition
   :: Monad m

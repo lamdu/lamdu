@@ -11,6 +11,8 @@ module Editor.Data.Typed
   , deGuid
   , loadInferDefinition
   , loadInferExpression
+  , pureExpressionFromStored
+  , pureGuidFromLoop
   , alphaEq
   , StoredExpression(..)
   , TypeData, TypedStoredExpression, TypedStoredDefinition
@@ -76,6 +78,7 @@ data LoopGuidExpression
 
 data StoredDefinition it m = StoredDefinition
   { deIRef :: Data.DefinitionIRef
+  , deInferredType :: it
   , deValue :: Data.Definition (StoredExpression it m)
   }
 
@@ -164,6 +167,14 @@ fromStoredExpression mk =
       ( return val
       , mk $ eipGuid stored
       )
+
+pureGuidFromLoop :: LoopGuidExpression -> Maybe Data.PureGuidExpression
+pureGuidFromLoop =
+  Data.mapMExpression f
+  where
+    f Loop {} = ( Nothing, const Nothing )
+    f (NoLoop (Data.GuidExpression guid itlExpr)) =
+      ( Just itlExpr, Just . Data.PureGuidExpression . Data.GuidExpression guid )
 
 pureExpressionFromStored
   :: StoredExpression it f -> Data.PureGuidExpression
@@ -466,10 +477,12 @@ canonizeIdentifiersTypes
   :: TypedStoredExpression m
   -> TypedStoredExpression m
 canonizeIdentifiersTypes =
-  atInferredTypes (canonizeTypes . guidToStdGen . eipGuid)
+  atInferredTypes (canonizeTypes . eipGuid)
+
+canonizeTypes :: Guid -> [LoopGuidExpression] -> [LoopGuidExpression]
+canonizeTypes =
+  zipWith canonizeIdentifiers . map Random.mkStdGen . Random.randoms . guidToStdGen
   where
-    canonizeTypes =
-      zipWith canonizeIdentifiers . map Random.mkStdGen . Random.randoms
     guidToStdGen = Random.mkStdGen . BinaryUtils.decodeS . Guid.bs
 
 canonizeIdentifiers
@@ -535,14 +548,12 @@ inferDefinition
   :: (Monad m, Monad f)
   => DataLoad.DefinitionEntity (T f)
   -> T m (TypedStoredDefinition (T f))
-inferDefinition (DataLoad.DefinitionEntity defI value) =
-  liftM (StoredDefinition defI) $
-  case value of
-  Data.Definition bodyI typeI -> do
-    bodyStored <- runInfer $
-      inferExpression =<< addTypeRefs (storedFromLoaded () bodyI)
-    return . Data.Definition bodyStored .
-      canonizeIdentifiersTypes $ storedFromLoaded [] typeI
+inferDefinition (DataLoad.DefinitionEntity defI (Data.Definition bodyI typeI)) = do
+  bodyStored <- runInfer $
+    inferExpression =<< addTypeRefs (storedFromLoaded () bodyI)
+  let types = canonizeTypes (IRef.guid defI) $ eeInferredType bodyStored
+  return . StoredDefinition defI types . Data.Definition bodyStored .
+    canonizeIdentifiersTypes $ storedFromLoaded [] typeI
 
 loadInferDefinition
   :: Monad m => Data.DefinitionIRef

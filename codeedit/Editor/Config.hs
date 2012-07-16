@@ -127,3 +127,8 @@ enlargeBaseFontKeys = [ctrl '=']
 
 enlargeFactor = 1.1
 shrinkFactor = 1.1
+
+defTypeLabelTextSize = 16
+defTypeLabelColor = Draw.Color 0.6 0.7 1 1
+
+defTypeBoxSizeFactor = 0.6

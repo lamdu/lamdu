@@ -18,6 +18,7 @@ import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
+import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -102,7 +103,29 @@ make
   => ExpressionGui.Maker m
   -> Sugar.DefinitionRef m
   -> TWidget ViewTag m
-make makeExpressionEdit (Sugar.DefinitionRef guid defBody) =
-  liftM (ExpressionGui.egWidget . ExpressionGui.hbox) $
-    makeParts makeExpressionEdit
-    (WidgetIds.fromGuid guid) guid defBody
+make makeExpressionEdit def = do
+  bodyWidget <-
+    liftM (ExpressionGui.egWidget . ExpressionGui.hbox) .
+    makeParts makeExpressionEdit (WidgetIds.fromGuid guid) guid $
+    Sugar.drBody def
+  case Sugar.drMAcceptInferredType def of
+    Nothing -> return bodyWidget
+    Just (Sugar.DefinitionTypeAction inferredType _) -> do
+      inferredLabel <-
+        labelStyle $ BWidgets.makeLabel "Inferred type:" $ Widget.toAnimId myId
+      inferredTypeWidget <- liftM ExpressionGui.egWidget $ makeExpressionEdit inferredType
+      acceptedLabel <-
+        labelStyle $ BWidgets.makeLabel "Accepted type:" $ Widget.toAnimId myId
+      acceptedTypeWidget <- liftM ExpressionGui.egWidget . makeExpressionEdit $ Sugar.drType def
+      return $ BWidgets.vboxCentered
+        [ bodyWidget
+        , Widget.scale Config.defTypeBoxSizeFactor $
+          BWidgets.gridHSpacedCentered
+          [ [ inferredLabel, inferredTypeWidget ]
+          , [ acceptedLabel, acceptedTypeWidget ]
+          ]
+        ]
+  where
+    guid = Sugar.drGuid def
+    myId = WidgetIds.fromGuid guid
+    labelStyle = OT.setTextSizeColor Config.defTypeLabelTextSize Config.defTypeLabelColor
