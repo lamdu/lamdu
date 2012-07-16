@@ -529,13 +529,10 @@ inferDefinition (DataLoad.DefinitionEntity defI value) =
   liftM (StoredDefinition defI) $
   case value of
   Data.Definition bodyI typeI -> do
-    let typeIStored = canonizeIdentifiersTypes $ storedFromLoaded [] typeI
-    bodyStored <- runInfer $ do
-      typeITypeRef <- typeRefFromStored typeIStored
-      withTypeRefs <- addTypeRefs $ storedFromLoaded () bodyI
-      unify typeITypeRef $ eeInferredType withTypeRefs
-      inferExpression withTypeRefs
-    return $ Data.Definition bodyStored typeIStored
+    bodyStored <- runInfer $
+      inferExpression =<< addTypeRefs (storedFromLoaded () bodyI)
+    return . Data.Definition bodyStored .
+      canonizeIdentifiersTypes $ storedFromLoaded [] typeI
 
 loadInferDefinition
   :: Monad m => Data.DefinitionIRef
