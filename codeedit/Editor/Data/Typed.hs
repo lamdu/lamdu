@@ -311,9 +311,10 @@ derefTypeRefs =
 
 unifyOnTree
   :: Monad m
-  => StoredExpression TypeRef f
+  => (Data.DefinitionIRef -> Infer m TypeRef)
+  -> StoredExpression TypeRef f
   -> Infer m ()
-unifyOnTree = (`runReaderT` []) . go
+unifyOnTree defTypeRef = (`runReaderT` []) . go
   where
     go (StoredExpression stored typeRef value) =
       case value of
@@ -358,13 +359,9 @@ unifyOnTree = (`runReaderT` []) . go
           Nothing -> return ()
           Just paramTypeRef -> setType paramTypeRef
       Data.ExpressionGetVariable (Data.DefinitionRef defI) ->
-        lift $
-          setType =<< typeRefFromPure =<<
-          liftTransaction . DataLoad.loadPureExpression . Data.defType =<<
-          liftTransaction (Transaction.readIRef defI)
+        lift $ setType =<< defTypeRef defI
       Data.ExpressionLiteralInteger _ ->
-        lift $
-        setType =<<
+        lift $ setType =<<
         typeRefFromStored . storedFromLoaded () =<<
         liftTransaction (DataLoad.loadExpression =<< Anchors.integerType)
       Data.ExpressionBuiltin (Data.Builtin _ bType) ->
@@ -533,22 +530,34 @@ builtinsToGlobals builtinsMap (NoLoop (Data.GuidExpression guid expr)) =
 
 inferExpression
  :: Monad m
- => StoredExpression TypeRef f
+ => (Data.DefinitionIRef -> Infer m TypeRef)
+ -> StoredExpression TypeRef f
  -> Infer m (TypedStoredExpression f)
-inferExpression withTypeRefs = do
-  unifyOnTree withTypeRefs
+inferExpression defTypeRef withTypeRefs = do
+  unifyOnTree defTypeRef withTypeRefs
   builtinsMap <- liftTransaction $ Anchors.getP Anchors.builtinsMap
   derefed <- derefTypeRefs withTypeRefs
   return $
     (atInferredTypes . const) (map (builtinsToGlobals builtinsMap)) derefed
+
+defTypeAsTypeRef :: Monad m => Data.DefinitionIRef -> Infer m TypeRef
+defTypeAsTypeRef defI =
+  typeRefFromPure =<<
+  liftTransaction . DataLoad.loadPureExpression . Data.defType =<<
+  liftTransaction (Transaction.readIRef defI)
 
 inferDefinition
   :: (Monad m, Monad f)
   => DataLoad.DefinitionEntity (T f)
   -> T m (TypedStoredDefinition (T f))
 inferDefinition (DataLoad.DefinitionEntity defI (Data.Definition bodyI typeI)) = do
-  bodyStored <- runInfer $
-    inferExpression =<< addTypeRefs (storedFromLoaded () bodyI)
+  bodyStored <- runInfer $ do
+    withTypeRefs <- addTypeRefs (storedFromLoaded () bodyI)
+    let
+      getDefTypeRef getDefI
+        | getDefI == defI = return $ eeInferredType withTypeRefs
+        | otherwise = defTypeAsTypeRef getDefI
+    inferExpression getDefTypeRef withTypeRefs
   let types = canonizeTypes (IRef.guid defI) $ eeInferredType bodyStored
   return . StoredDefinition defI types . Data.Definition bodyStored .
     canonizeIdentifiersTypes $ storedFromLoaded [] typeI
@@ -564,5 +573,7 @@ loadInferExpression
   => Data.ExpressionIRefProperty (T m)
   -> T m (TypedStoredExpression (T m))
 loadInferExpression =
-  runInfer . (inferExpression <=< addTypeRefs . storedFromLoaded ()) <=<
+  runInfer .
+  (inferExpression defTypeAsTypeRef <=<
+   addTypeRefs . storedFromLoaded ()) <=<
   DataLoad.loadExpression
