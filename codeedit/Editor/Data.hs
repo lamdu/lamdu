@@ -14,11 +14,9 @@ module Editor.Data
   , ExpressionI, ExpressionIRef(..)
   , GuidExpression(..), atGeGuid, atGeValue
   , PureGuidExpression(..), atPureGuidExpression
-  , DefinitionType(..)
   , newExprIRef, readExprIRef, writeExprIRef, exprIRefGuid
   , mapMExpression
   , mapExpression, sequenceExpression
-  , loadPureExpression
   ) where
 
 import Control.Monad (liftM, liftM2)
@@ -169,15 +167,3 @@ mapMExpression f src =
   afterRecurse =<< sequenceExpression . mapExpression (mapMExpression f) =<< makeExpr
   where
     (makeExpr, afterRecurse) = f src
-
-loadPureExpression :: Monad m => ExpressionIRef -> Transaction t m PureGuidExpression
-loadPureExpression =
-  mapMExpression f
-  where
-    f (ExpressionIRef exprI) =
-      ( Transaction.readIRef exprI
-      , return . PureGuidExpression . GuidExpression (IRef.guid exprI)
-      )
-
-data DefinitionType = UnknownType | InferredType PureGuidExpression
-derive makeBinary ''DefinitionType

@@ -44,6 +44,7 @@ import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
+import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.Data as Data
 import qualified Editor.Data.Load as DataLoad
@@ -231,7 +232,7 @@ expand =
 
 typeRefFromPure :: Monad m => Data.PureGuidExpression -> Infer m TypeRef
 typeRefFromPure =
-  Data.mapMExpression f
+  Data.mapMExpression f <=< liftTransaction . expand
   where
     f (Data.PureGuidExpression (Data.GuidExpression guid val)) =
       ( return val
@@ -242,7 +243,7 @@ typeRefFromStored
   :: Monad m => StoredExpression it f
   -> Infer m TypeRef
 typeRefFromStored =
-  typeRefFromPure <=< liftTransaction . expand . pureExpressionFromStored
+  typeRefFromPure . pureExpressionFromStored
 
 storedFromLoaded
   :: it
@@ -356,16 +357,11 @@ unifyOnTree = (`runReaderT` []) . go
           -- add an OutOfScopeReference type error
           Nothing -> return ()
           Just paramTypeRef -> setType paramTypeRef
-      Data.ExpressionGetVariable (Data.DefinitionRef defI) -> lift $ do
-        cachedDefType <-
-          liftTransaction .
-          liftM (fromMaybe Data.UnknownType) .
-          Anchors.getP $ Anchors.assocCachedDefinitionTypeRef defI
-        defTypeRef <-
-          case cachedDefType of
-          Data.UnknownType -> makeSingletonTypeRef zeroGuid Data.ExpressionHole
-          Data.InferredType x -> typeRefFromPure =<< liftTransaction (expand x)
-        setType defTypeRef
+      Data.ExpressionGetVariable (Data.DefinitionRef defI) ->
+        lift $
+          setType =<< typeRefFromPure =<<
+          liftTransaction . DataLoad.loadPureExpression . Data.defType =<<
+          liftTransaction (Transaction.readIRef defI)
       Data.ExpressionLiteralInteger _ ->
         lift $
         setType =<<
