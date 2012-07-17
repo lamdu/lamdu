@@ -391,16 +391,13 @@ convertApply
   => Data.Apply (ExprEntity m)
   -> Convertor m
 convertApply apply@(Data.Apply funcI argI) exprI =
-  case funcI of
-    ExprEntity
-      { eeValue = NonLoop (Data.ExpressionLambda lambda) } -> do
+  case eeValue funcI of
+    NonLoop (Data.ExpressionLambda lambda@(
+      Data.Lambda (ExprEntity { eeValue = NonLoop Data.ExpressionHole }) _)) -> do
       valueRef <- convertExpressionI argI
       convertWhere valueRef funcI lambda exprI
     -- InfixR or ordinary prefix:
-    ExprEntity
-      { eeValue =
-        NonLoop (Data.ExpressionApply funcApply@(Data.Apply funcFuncI _))
-      } -> do
+    NonLoop (Data.ExpressionApply funcApply@(Data.Apply funcFuncI _)) -> do
       mInfixOp <- liftTransaction $ infixOp funcFuncI
       case mInfixOp of
         Just op -> convertApplyInfixFull funcApply op apply exprI
