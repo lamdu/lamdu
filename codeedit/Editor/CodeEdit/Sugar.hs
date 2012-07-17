@@ -196,7 +196,8 @@ writeIRefVia f = (fmap . argument) f writeIRef
 
 eeFromTypedExpression
   :: DataTyped.TypedStoredExpression (T m) -> ExprEntity m
-eeFromTypedExpression = runIdentity . Data.mapMExpression f
+eeFromTypedExpression =
+  runIdentity . Data.mapMExpression f
   where
     f e =
       ( return $ DataTyped.eeValue e
@@ -598,6 +599,18 @@ convertExpressionI ee =
     convert Data.ExpressionMagic = convertMagic
     convert Data.ExpressionHole = convertHole
 
+-- Check no holes
+isCompleteType :: Data.PureGuidExpression -> Bool
+isCompleteType =
+  isJust . Data.mapMExpression f
+  where
+    f (Data.PureGuidExpression (Data.GuidExpression g e)) =
+      ( case e of
+        Data.ExpressionHole -> Nothing
+        _ -> Just e
+      , Just . Data.PureGuidExpression . Data.GuidExpression g
+      )
+
 convertDefinitionI
   :: Monad m
   => DataTyped.TypedStoredDefinition (T m)
@@ -609,8 +622,10 @@ convertDefinitionI defI =
     bodyS <- convertExpressionI bodyEntity
     typeS <- convertExpressionI $ eeFromTypedExpression typeI
     let mInferredTypeEntity = theOne $ DataTyped.deInferredType defI
-    mInferredType <- runMaybeT $
-      toMaybeT . DataTyped.pureGuidFromLoop =<< toMaybeT mInferredTypeEntity
+    mInferredType <- runMaybeT $ do
+      inferredType <- toMaybeT . DataTyped.pureGuidFromLoop =<< toMaybeT mInferredTypeEntity
+      guard $ isCompleteType inferredType
+      return inferredType
     inferredTypeAction <- runMaybeT $ do
       inferredTypeEntity <- toMaybeT mInferredTypeEntity
       inferredType <- toMaybeT mInferredType
