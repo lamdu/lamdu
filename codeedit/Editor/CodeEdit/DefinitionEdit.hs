@@ -101,24 +101,31 @@ make makeExpressionEdit def = do
     liftM (ExpressionGui.egWidget . ExpressionGui.hbox) .
     makeParts makeExpressionEdit (WidgetIds.fromGuid guid) guid $
     Sugar.drBody def
+  let
+    mkResult typeWidget =
+      BWidgets.vboxCentered
+      [ bodyWidget
+      , Widget.scale Config.defTypeBoxSizeFactor typeWidget
+      ]
   case Sugar.drMAcceptInferredType def of
-    Nothing -> return bodyWidget
+    Nothing ->
+      if Sugar.drIsTypeRedundant def
+      then return bodyWidget
+      else liftM (mkResult . BWidgets.hboxCenteredSpaced) mkAcceptedWidgets
     Just (Sugar.DefinitionTypeAction inferredType _) -> do
       inferredLabel <-
         labelStyle $ BWidgets.makeLabel "Inferred type:" $ Widget.toAnimId myId
       inferredTypeWidget <- liftM ExpressionGui.egWidget $ makeExpressionEdit inferredType
+      acceptedWidgets <- mkAcceptedWidgets
+      return . mkResult $
+        BWidgets.gridHSpacedCentered
+        [[inferredLabel, inferredTypeWidget], acceptedWidgets]
+  where
+    mkAcceptedWidgets = do
       acceptedLabel <-
         labelStyle $ BWidgets.makeLabel "Accepted type:" $ Widget.toAnimId myId
       acceptedTypeWidget <- liftM ExpressionGui.egWidget . makeExpressionEdit $ Sugar.drType def
-      return $ BWidgets.vboxCentered
-        [ bodyWidget
-        , Widget.scale Config.defTypeBoxSizeFactor $
-          BWidgets.gridHSpacedCentered
-          [ [ inferredLabel, inferredTypeWidget ]
-          , [ acceptedLabel, acceptedTypeWidget ]
-          ]
-        ]
-  where
+      return [acceptedLabel, acceptedTypeWidget]
     guid = Sugar.drGuid def
     myId = WidgetIds.fromGuid guid
     labelStyle = OT.setTextSizeColor Config.defTypeLabelTextSize Config.defTypeLabelColor

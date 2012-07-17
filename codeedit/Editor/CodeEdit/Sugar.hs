@@ -19,7 +19,7 @@ import Control.Monad (guard, liftM)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.Maybe (MaybeT(..))
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust)
 import Data.Functor.Identity (Identity(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
@@ -145,6 +145,7 @@ data DefinitionRef m = DefinitionRef
     -- either of them:
   , drBody :: ExpressionRef m
   , drType :: ExpressionRef m
+  , drIsTypeRedundant :: Bool
   , drMAcceptInferredType :: Maybe (DefinitionTypeAction m)
   }
 
@@ -610,9 +611,12 @@ convertDefinitionI defI =
     let bodyEntity = eeFromTypedExpression bodyI
     bodyS <- convertExpressionI bodyEntity
     typeS <- convertExpressionI $ eeFromTypedExpression typeI
+    let mInferredTypeEntity = theOne $ DataTyped.deInferredType defI
+    mInferredType <- runMaybeT $
+      toMaybeT . DataTyped.pureGuidFromLoop =<< toMaybeT mInferredTypeEntity
     inferredTypeAction <- runMaybeT $ do
-      inferredTypeEntity <- toMaybeT . theOne $ DataTyped.deInferredType defI
-      inferredType <- toMaybeT $ DataTyped.pureGuidFromLoop inferredTypeEntity
+      inferredTypeEntity <- toMaybeT mInferredTypeEntity
+      inferredType <- toMaybeT mInferredType
       let defType = DataTyped.pureExpressionFromStored typeI
       guard . not $ DataTyped.alphaEq inferredType defType
       inferredTypeS <- lift . convertExpressionI $ eeFromITL inferredTypeEntity
@@ -624,6 +628,7 @@ convertDefinitionI defI =
       { drGuid = defGuid
       , drBody = bodyS
       , drType = typeS
+      , drIsTypeRedundant = isJust mInferredType
       , drMAcceptInferredType = inferredTypeAction
       }
   where
