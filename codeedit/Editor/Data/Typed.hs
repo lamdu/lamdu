@@ -371,6 +371,8 @@ unifyOnTree = (`runReaderT` []) . go
         setType =<<
         typeRefFromStored . storedFromLoaded () =<<
         liftTransaction (DataLoad.loadExpression =<< Anchors.integerType)
+      Data.ExpressionBuiltin (Data.Builtin _ bType) ->
+        lift $ setType =<< typeRefFromStored bType
       _ -> return ()
       where
         makePi guid = makeSingletonTypeRef guid . Data.ExpressionPi
