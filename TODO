@@ -1,5 +1,3 @@
-* Space on inactive hole documented as "Pick result and add arg"
-
 * Add JumpTo which gives a hole-like search -- that can sit in a "tab" in place of a DefinitionEdit
 
 * LHS needs to be in infix form too

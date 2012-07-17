@@ -167,16 +167,22 @@ expressionEventMap holePicker actions =
       liftM f . IT.transaction
 
     withPickResultFirst keys doc action =
-      ifHole pickResultFirst .
-      Widget.keysEventMapMovesCursor
-      keys (ifHole (const ("Pick result and " ++)) doc) $ action
+      case holePicker of
+        IsAHole (Just pickResult) ->
+          E.keyPresses keys ("Pick result and " ++ doc) $
+          combineActions pickResult action
+        _ ->
+          Widget.keysEventMapMovesCursor keys doc action
+    combineActions pickResult action = do
+      eventResult <- pickResult
+      cursorId <- action
+      return $
+        (Widget.atECursor . const . Just) cursorId
+        eventResult
+
     moveUnlessOnHole = ifHole $ (const . fmap . liftM . Widget.atECursor . const) Nothing
-    pickResultFirst = maybe id (fmap . joinEvents)
     isHole = foldHolePicker False (const True) holePicker
     ifHole whenHole = foldHolePicker id whenHole holePicker
-    joinEvents x y = do
-      r <- liftM Widget.eAnimIdMapping x
-      (liftM . Widget.atEAnimIdMapping) (. r) y
     maybeMempty x f = maybe mempty f x
     moveToIfHole nextArg =
       case Sugar.rExpression nextArg of
