@@ -63,7 +63,7 @@ addType exprId typeEdits eg =
     alignment =
       maybe (error "True disappeared from box list?!") (Vector2.snd . Grid.elementAlign) .
       lookup True $ Box.boxContent box
-    box = Box.makeKeyed Box.vertical $
+    box = Box.makeKeyed Box.vertical
       [ (True, (Vector2 0.5 (egAlignment eg), widget))
       , (False, (0.5, Spacer.makeHorizLine underlineId (Vector2 underLineWidth 1)))
       , (False, (0.5, typeEdit))
