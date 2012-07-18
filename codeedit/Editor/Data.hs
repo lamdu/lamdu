@@ -18,22 +18,30 @@ module Editor.Data
   , newIRefExpressionFromPure, writeIRefExpressionFromPure
   , mapMExpression
   , mapExpression, sequenceExpression
+  , canonizeIdentifiers
   ) where
 
 import Control.Monad (liftM, liftM2, (<=<))
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Random (nextRandom, runRandomT)
+import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Data.Binary (Binary(..))
 import Data.Binary.Get (getWord8)
 import Data.Binary.Put (putWord8)
 import Data.Derive.Binary(makeBinary)
 import Data.DeriveTH(derive)
+import Data.Functor.Identity (Identity(..))
 import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef(IRef)
 import Data.Store.Property (Property)
 import Data.Store.Transaction (Transaction)
+import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
+import qualified Data.Map as Map
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Transaction as Transaction
+import qualified System.Random as Random
 
 type ExpressionIRefProperty m = Property m ExpressionIRef
 
@@ -205,3 +213,28 @@ expressionIFromPure scope newGuid (PureGuidExpression (GuidExpression oldGuid ex
         ExpressionGetVariable . ParameterRef .
         fromMaybe parGuid $ lookup parGuid newScope
       x -> x
+
+canonizeIdentifiers
+  :: Random.RandomGen g => g -> PureGuidExpression -> PureGuidExpression
+canonizeIdentifiers gen =
+  runIdentity . runRandomT gen . (`runReaderT` Map.empty) . go
+  where
+    onLambda oldGuid newGuid (Lambda paramType body) =
+      liftM2 Lambda (go paramType) .
+      Reader.local (Map.insert oldGuid newGuid) $ go body
+    go (PureGuidExpression (GuidExpression oldGuid v)) = do
+      newGuid <- lift nextRandom
+      liftM (PureGuidExpression . GuidExpression newGuid) $
+        case v of
+        ExpressionLambda lambda ->
+          liftM ExpressionLambda $ onLambda oldGuid newGuid lambda
+        ExpressionPi lambda ->
+          liftM ExpressionPi $ onLambda oldGuid newGuid lambda
+        ExpressionApply (Apply func arg) ->
+          liftM ExpressionApply $
+          liftM2 Apply (go func) (go arg)
+        gv@(ExpressionGetVariable (ParameterRef guid)) ->
+          Reader.asks $
+          maybe gv (ExpressionGetVariable . ParameterRef) .
+          Map.lookup guid
+        x -> return x

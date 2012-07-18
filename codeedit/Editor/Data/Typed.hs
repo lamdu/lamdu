@@ -20,7 +20,7 @@ module Editor.Data.Typed
 
 import Control.Applicative (Applicative)
 import Control.Monad (liftM, liftM2, (<=<), when, unless, filterM)
-import Control.Monad.Trans.Class (MonadTrans(..))
+import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Random (nextRandom, runRandomT)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (execStateT)
