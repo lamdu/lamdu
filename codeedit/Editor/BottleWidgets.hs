@@ -4,7 +4,7 @@ module Editor.BottleWidgets
   , wrapDelegated
   , makeTextEdit, makeLineEdit, makeWordEdit, makeNameEdit, getDisplayNameOf
   , hboxAlign, vboxAlign
-  , hboxCenteredSpaced
+  , hboxSpaced, hboxCenteredSpaced
   , hboxCentered, vboxCentered
   , hbox, vbox
   , gridHSpaced, gridHSpacedCentered
@@ -183,6 +183,9 @@ vbox = Box.toWidget . Box.make Box.vertical
 
 spaceWidget :: Widget f
 spaceWidget = uncurry Widget.liftView spaceView
+
+hboxSpaced :: [(Box.Alignment, Widget f)] -> Widget f
+hboxSpaced = hbox . intersperse (0.5, spaceWidget)
 
 hboxCenteredSpaced :: [Widget f] -> Widget f
 hboxCenteredSpaced = hboxAlign 0.5 . intersperse spaceWidget

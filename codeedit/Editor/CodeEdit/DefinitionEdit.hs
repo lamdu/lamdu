@@ -5,6 +5,7 @@ import Control.Monad (liftM)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
+import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.MonadF (MonadF)
@@ -104,28 +105,30 @@ make makeExpressionEdit def = do
   let
     mkResult typeWidget =
       BWidgets.vboxCentered
-      [ bodyWidget
-      , Widget.scale Config.defTypeBoxSizeFactor typeWidget
+      [ Widget.scale Config.defTypeBoxSizeFactor typeWidget
+      , bodyWidget
       ]
   case Sugar.drMAcceptInferredType def of
     Nothing ->
       if Sugar.drIsTypeRedundant def
       then return bodyWidget
-      else liftM (mkResult . BWidgets.hboxCenteredSpaced) mkAcceptedWidgets
+      else liftM (mkResult . BWidgets.hboxSpaced) mkAcceptedWidgets
     Just (Sugar.DefinitionTypeAction inferredType _) -> do
       inferredLabel <-
         labelStyle $ BWidgets.makeLabel "Inferred type:" $ Widget.toAnimId myId
       inferredTypeWidget <- liftM ExpressionGui.egWidget $ makeExpressionEdit inferredType
       acceptedWidgets <- mkAcceptedWidgets
       return . mkResult $
-        BWidgets.gridHSpacedCentered
-        [[inferredLabel, inferredTypeWidget], acceptedWidgets]
+        BWidgets.gridHSpaced
+        [acceptedWidgets, [(right, inferredLabel), (center, inferredTypeWidget)]]
   where
+    right = Vector2 1 0.5
+    center = 0.5
     mkAcceptedWidgets = do
       acceptedLabel <-
-        labelStyle $ BWidgets.makeLabel "Accepted type:" $ Widget.toAnimId myId
+        labelStyle $ BWidgets.makeLabel "Type:" $ Widget.toAnimId myId
       acceptedTypeWidget <- liftM ExpressionGui.egWidget . makeExpressionEdit $ Sugar.drType def
-      return [acceptedLabel, acceptedTypeWidget]
+      return [(right, acceptedLabel), (center, acceptedTypeWidget)]
     guid = Sugar.drGuid def
     myId = WidgetIds.fromGuid guid
     labelStyle = OT.setTextSizeColor Config.defTypeLabelTextSize Config.defTypeLabelColor
