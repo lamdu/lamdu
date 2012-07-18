@@ -10,7 +10,7 @@ module Data.Store.Transaction
   , readGuid, readGuidDef, writeGuid
   , isEmpty
   , guidExists, irefExists
-  , newIRef, newKey
+  , newIRef, newKey, newIRefWithGuid
   , fromIRef, fromIRefDef
   , followBy
   , anchorRef, anchorRefDef
@@ -130,6 +130,13 @@ newIRef val = do
   newGuid <- newKey
   insert newGuid val
   return $ IRef.unsafeFromGuid newGuid
+
+newIRefWithGuid :: (Binary a, Monad m) => (Guid -> Transaction t m a) -> Transaction t m (IRef a)
+newIRefWithGuid f = do
+  newGuid <- newKey
+  let iref = IRef.unsafeFromGuid newGuid
+  writeIRef iref =<< f newGuid
+  return iref
 
 -- Dereference the *current* value of the IRef (Will not track new
 -- values of IRef, by-value and not by-name)

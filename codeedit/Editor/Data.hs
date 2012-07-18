@@ -15,6 +15,7 @@ module Editor.Data
   , GuidExpression(..), atGeGuid, atGeValue
   , PureGuidExpression(..), atPureGuidExpression
   , newExprIRef, readExprIRef, writeExprIRef, exprIRefGuid
+  , newIRefExpressionFromPure
   , mapMExpression
   , mapExpression, sequenceExpression
   ) where
@@ -25,6 +26,7 @@ import Data.Binary.Get (getWord8)
 import Data.Binary.Put (putWord8)
 import Data.Derive.Binary(makeBinary)
 import Data.DeriveTH(derive)
+import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef(IRef)
 import Data.Store.Property (Property)
@@ -167,3 +169,28 @@ mapMExpression f src =
   afterRecurse =<< sequenceExpression . mapExpression (mapMExpression f) =<< makeExpr
   where
     (makeExpr, afterRecurse) = f src
+
+hasLambda :: Expression expr -> Bool
+hasLambda ExpressionPi {} = True
+hasLambda ExpressionLambda {} = True
+hasLambda _ = False
+
+newIRefExpressionFromPure
+  :: Monad m => PureGuidExpression -> Transaction t m ExpressionIRef
+newIRefExpressionFromPure =
+  go []
+  where
+    go scope (PureGuidExpression (GuidExpression oldGuid expr)) =
+      liftM ExpressionIRef . Transaction.newIRefWithGuid $
+      f scope expr oldGuid
+    f scope expr oldGuid newGuid =
+      sequenceExpression $ mapExpression (go newScope) newExpr
+      where
+        newScope
+          | hasLambda expr = (oldGuid, newGuid) : scope
+          | otherwise = scope
+        newExpr = case expr of
+          ExpressionGetVariable (ParameterRef parGuid) ->
+            ExpressionGetVariable . ParameterRef .
+            fromMaybe parGuid $ lookup parGuid newScope
+          x -> x

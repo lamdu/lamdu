@@ -17,16 +17,18 @@ module Editor.CodeEdit.Sugar
 import Control.Applicative ((<$>), (<*>))
 import Control.Monad (guard, liftM)
 import Control.Monad.Trans.Class (MonadTrans(..))
-import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.Maybe (MaybeT(..))
-import Data.Maybe (fromMaybe, isJust)
+import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Data.Functor.Identity (Identity(..))
+import Data.Maybe (fromMaybe, isJust)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Store.Property as Property
+import qualified Data.Store.Transaction as Transaction
+import qualified Data.Store.IRef as IRef
 import qualified Editor.Anchors as Anchors
 import qualified Editor.CodeEdit.Infix as Infix
 import qualified Editor.Data as Data
@@ -619,36 +621,37 @@ convertDefinitionI
   :: Monad m
   => DataTyped.TypedStoredDefinition (T m)
   -> Sugar m (DefinitionRef m)
-convertDefinitionI defI =
-  case DataTyped.deValue defI of
-  Data.Definition bodyI typeI -> do
-    let bodyEntity = eeFromTypedExpression bodyI
-    bodyS <- convertExpressionI bodyEntity
-    typeS <- convertExpressionI $ eeFromTypedExpression typeI
-    mInferredTypePure <- runMaybeT $ do
-      inferredType <-
-        toMaybeT $ DataTyped.pureGuidFromLoop =<< theOne (DataTyped.deInferredType defI)
-      guard $ isCompleteType inferredType
-      return inferredType
-    defNewType <- runMaybeT $ do
-      inferredTypePure <- toMaybeT mInferredTypePure
-      let defType = DataTyped.pureExpressionFromStored typeI
-      guard . not $ DataTyped.alphaEq inferredTypePure defType
-      inferredTypeS <- lift . convertExpressionI $ eeFromPure inferredTypePure
-      return DefinitionNewType
-        { dntNewType = inferredTypeS
-        , dntAcceptNewType = return ()
-        }
-    return DefinitionRef
-      { drGuid = defGuid
-      , drBody = bodyS
-      , drType = typeS
-      , drIsTypeRedundant = isJust mInferredTypePure
-      , drMNewType = defNewType
+convertDefinitionI (DataTyped.StoredDefinition defI defInferredType (Data.Definition bodyI typeI)) = do
+  bodyS <- convertExpressionI bodyEntity
+  typeS <- convertExpressionI $ eeFromTypedExpression typeI
+  mInferredTypePure <- runMaybeT $ do
+    inferredType <-
+      toMaybeT $ DataTyped.pureGuidFromLoop =<< theOne defInferredType
+    guard $ isCompleteType inferredType
+    return inferredType
+  defNewType <- runMaybeT $ do
+    inferredTypePure <- toMaybeT mInferredTypePure
+    let defType = DataTyped.pureExpressionFromStored typeI
+    guard . not $ DataTyped.alphaEq inferredTypePure defType
+    inferredTypeS <- lift . convertExpressionI $ eeFromPure inferredTypePure
+    return DefinitionNewType
+      { dntNewType = inferredTypeS
+      , dntAcceptNewType =
+        Transaction.writeIRef defI .
+        (Data.Definition . Property.value . DataTyped.eeStored) bodyI =<<
+        Data.newIRefExpressionFromPure inferredTypePure
       }
+  return DefinitionRef
+    { drGuid = defGuid
+    , drBody = bodyS
+    , drType = typeS
+    , drIsTypeRedundant = isJust mInferredTypePure
+    , drMNewType = defNewType
+    }
   where
+    bodyEntity = eeFromTypedExpression bodyI
     toMaybeT = MaybeT . return
-    defGuid = DataTyped.deGuid defI
+    defGuid = IRef.guid defI
     theOne [x] = Just x
     theOne _ = Nothing
 
