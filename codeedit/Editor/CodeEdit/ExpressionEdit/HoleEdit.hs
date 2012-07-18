@@ -42,7 +42,7 @@ type ResultPicker m = ITransaction ViewTag m Widget.EventResult
 
 data Result m = Result {
   resultName :: String,
-  resultPick :: Maybe (ResultPicker m),
+  resultPick :: ResultPicker m,
   resultMakeWidget :: TWidget ViewTag m
   }
 
@@ -50,6 +50,7 @@ data HoleInfo m = HoleInfo
   { hiHoleId :: Widget.Id
   , hiSearchTerm :: Property (Transaction ViewTag m) String
   , hiHole :: Sugar.Hole m
+  , hiPickResult :: Data.PureGuidExpression -> Transaction ViewTag m Guid
   }
 
 pasteEventMap :: MonadF m => Sugar.Hole m -> Widget.EventHandlers (ITransaction ViewTag m)
@@ -64,7 +65,7 @@ pasteEventMap =
 resultPickEventMap
   :: Result m -> Widget.EventHandlers (ITransaction ViewTag m)
 resultPickEventMap =
-  maybe mempty (E.keyPresses Config.pickResultKeys "Pick this search result") .
+  E.keyPresses Config.pickResultKeys "Pick this search result" .
   resultPick
 
 resultToWidget :: Monad m => Result m -> TWidget ViewTag m
@@ -87,7 +88,7 @@ makeResultVariable holeInfo varRef = do
   varName <- OT.getP $ Anchors.variableNameRef varRef
   return Result
       { resultName = varName
-      , resultPick = fmap pickGetVariable $ mPickResult holeInfo
+      , resultPick = pickResult holeInfo . toPureGuidExpr $ Data.ExpressionGetVariable varRef
       , resultMakeWidget =
           liftM ExpressionGui.egWidget $ VarEdit.makeView varRef resultId
       }
@@ -95,8 +96,6 @@ makeResultVariable holeInfo varRef = do
     resultId =
       searchResultsPrefix (hiHoleId holeInfo) `mappend`
       WidgetIds.varId varRef
-    pickGetVariable pickResult =
-      (pickResult . toPureGuidExpr . Data.ExpressionGetVariable) varRef
 
 toPureGuidExpr :: Data.Expression Data.PureGuidExpression -> Data.PureGuidExpression
 toPureGuidExpr = Data.PureGuidExpression . Data.GuidExpression zeroGuid
@@ -119,20 +118,14 @@ holeResultAnimMappingNoParens holeInfo resultId =
   where
     myId = Widget.toAnimId $ hiHoleId holeInfo
 
-mPickResult
-  :: MonadF m
-  => HoleInfo m
-  -> Maybe
-     (Data.PureGuidExpression -> ResultPicker m)
-mPickResult holeInfo =
-  fmap (picker . fmap IT.transaction) . Sugar.holePickResult $ hiHole holeInfo
-  where
-    picker holePickResult newExpr = do
-      guid <- holePickResult newExpr
-      return Widget.EventResult {
-        Widget.eCursor = Just $ WidgetIds.fromGuid guid,
-        Widget.eAnimIdMapping = id -- TODO: Need to fix the parens id
-        }
+pickResult
+  :: MonadF m => HoleInfo m -> Data.PureGuidExpression -> ResultPicker m
+pickResult holeInfo newExpr = do
+  guid <- IT.transaction $ hiPickResult holeInfo newExpr
+  return Widget.EventResult
+    { Widget.eCursor = Just $ WidgetIds.fromGuid guid
+    , Widget.eAnimIdMapping = id -- TODO: Need to fix the parens id
+    }
 
 resultOrdering :: String -> Result m -> [Bool]
 resultOrdering searchTerm result =
@@ -158,7 +151,7 @@ makeLiteralResults holeInfo searchTerm =
     makeLiteralIntResult integer =
       Result
       { resultName = show integer
-      , resultPick = fmap (pickLiteralInt integer) $ mPickResult holeInfo
+      , resultPick = pickLiteralInt integer $ pickResult holeInfo
       , resultMakeWidget =
           BWidgets.makeFocusableView literalIntId =<<
           liftM ExpressionGui.egWidget
@@ -186,7 +179,7 @@ makeAllResults holeInfo = do
     piResult =
       Result
       { resultName = "->"
-      , resultPick = fmap pickPiResult $ mPickResult holeInfo
+      , resultPick = pickPiResult $ pickResult holeInfo
       , resultMakeWidget =
           BWidgets.makeFocusableTextView "→" $ searchResultId holeInfo "Pi result"
       }
@@ -211,10 +204,9 @@ makeSearchTermWidget holeInfo searchTermId firstResults =
 
     searchTermEventMap =
       mconcat pickFirstResultEventMaps `mappend`
-      maybe mempty
       (E.keyPresses Config.newDefinitionKeys
        "Add new as Definition" . makeNewDefinition)
-      (mPickResult holeInfo)
+      (pickResult holeInfo)
 
     makeNewDefinition holePickResult = do
       newDefI <- IT.transaction $ do
@@ -309,22 +301,22 @@ makeH hole guid myId = do
     liftM (Property.pureCompose (fromMaybe "") Just) . OT.transaction $
     Anchors.assocDataRef "searchTerm" guid
   let
-    holeInfo = HoleInfo
-      { hiHoleId = myId
-      , hiSearchTerm = searchTermProp
-      , hiHole = hole
-      }
     searchText = Property.value searchTermProp
     snippet
       | null searchText = "  "
       | otherwise = searchText
-  if isJust (Widget.subId myId cursor) && canPickResult
-    then
+  case (Sugar.holePickResult hole, Widget.subId myId cursor) of
+    (Just holePickResult, Just _) ->
       liftM
-      (first (>>= resultPick) .
+      ((first . fmap) resultPick .
        second (makeBackground Config.focusedHoleBackgroundColor)) $
-      makeActiveHoleEdit holeInfo
-    else
+      makeActiveHoleEdit HoleInfo
+      { hiHoleId = myId
+      , hiSearchTerm = searchTermProp
+      , hiHole = hole
+      , hiPickResult = holePickResult
+      }
+    _ ->
       liftM
       ((,) Nothing .
        makeBackground unfocusedColor) .
