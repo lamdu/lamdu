@@ -319,12 +319,12 @@ makeH makeExpressionEdit hole guid myId = do
       in
         liftM
         ((first . fmap) (resultPick holeInfo) .
-         second (makeBackground Config.focusedHoleBackgroundColor)) $
+         second (makeBackground 11 Config.focusedHoleBackgroundColor)) $
         makeActiveHoleEdit makeExpressionEdit holeInfo
     _ ->
       liftM
       ((,) Nothing .
-       makeBackground unfocusedColor) .
+       makeBackground 12 unfocusedColor) .
       BWidgets.makeFocusableTextView snippet $
       WidgetIds.searchTermId myId
   where
@@ -332,8 +332,8 @@ makeH makeExpressionEdit hole guid myId = do
       | canPickResult = Config.unfocusedHoleBackgroundColor
       | otherwise = Config.unfocusedReadOnlyHoleBackgroundColor
     canPickResult = isJust $ Sugar.holePickResult hole
-    makeBackground =
-      Widget.backgroundColor 11 $
+    makeBackground level =
+      Widget.backgroundColor level $
       mappend (Widget.toAnimId myId) ["hole background"]
 
 holeFDConfig :: FocusDelegator.Config
