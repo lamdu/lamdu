@@ -82,13 +82,18 @@ resultPickEventMap holeInfo =
   resultPick holeInfo
 
 resultToWidget
-  :: Monad m
+  :: MonadF m
   => ExpressionGui.Maker m -> HoleInfo m -> Result -> TWidget ViewTag m
 resultToWidget makeExpressionEdit holeInfo result =
-  liftM
-  (Widget.strongerEvents (resultPickEventMap holeInfo result) .
-   ExpressionGui.egWidget) . makeExpressionEdit =<<
-  (OT.transaction . Sugar.convertExpressionPure . resultExpr) result
+  BWidgets.makeFocusableView myId .
+  Widget.strongerEvents (resultPickEventMap holeInfo result) .
+  ExpressionGui.egWidget =<< makeExpressionEdit =<<
+  (OT.transaction . Sugar.convertExpressionPure) expr
+  where
+    myId =
+      hiHoleId holeInfo `mappend`
+      (WidgetIds.fromGuid . Data.geGuid . Data.unPureGuidExpression) expr
+    expr = resultExpr result
 
 makeNoResults :: MonadF m => AnimId -> TWidget t m
 makeNoResults myId =
@@ -201,13 +206,16 @@ makeSearchTermWidget holeInfo searchTermId firstResults =
         return newDefI
       let
         defRef =
-          toPureGuidExpr . Data.ExpressionGetVariable $ Data.DefinitionRef newDefI
+          toPureGuidExpr . Data.ExpressionGetVariable $
+          Data.DefinitionRef newDefI
       -- TODO: Can we use pickResult's animIdMapping?
       eventResult <- holePickResult defRef
-      maybe (return ()) (IT.transaction . Anchors.savePreJumpPosition) $ Widget.eCursor eventResult
+      maybe (return ()) (IT.transaction . Anchors.savePreJumpPosition) $
+        Widget.eCursor eventResult
       return Widget.EventResult {
         Widget.eCursor = Just $ WidgetIds.fromIRef newDefI,
-        Widget.eAnimIdMapping = holeResultAnimMappingNoParens holeInfo searchTermId
+        Widget.eAnimIdMapping =
+          holeResultAnimMappingNoParens holeInfo searchTermId
         }
 
 makeResultsWidget
@@ -252,7 +260,7 @@ canonizeResultExprs :: HoleInfo m -> [Result] -> [Result]
 canonizeResultExprs =
   zipWith (atResultExpr . Data.canonizeIdentifiers) .
   map Random.mkStdGen . Random.randoms . Random.mkStdGen .
-  BinaryUtils.decodeS . Guid.bs . hiGuid
+  BinaryUtils.decodeS . mappend "HoleResult:" . Guid.bs . hiGuid
 
 makeActiveHoleEdit
   :: MonadF m
