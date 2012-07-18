@@ -2,10 +2,6 @@
   then our cursor is invalid... Maybe cursor should include cur-def
   and go to it rather than root if disappears?
 
-* When entering Grid from some direction, only consider the other axis
-  for closeness. i.e: If entering grid from left, use center height(y)
-  of the src rect.  If entering from top, use center width(x) only.
-
 * Add JumpTo which gives a hole-like search -- that can sit in a "tab" in place of a DefinitionEdit
 
 * LHS needs to be in infix form too

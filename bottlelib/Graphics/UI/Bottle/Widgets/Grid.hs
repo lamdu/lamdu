@@ -235,11 +235,15 @@ toWidget =
         chooseClosest _ = Just byDirection
 
         byDirection dir =
-          minimumOn (Rect.distance dirRect . Widget.enterResultRect) .
+          minimumOn
+          (abs . ((1 - abs (fmap fromIntegral edge)) *) . distance dirRect .
+           Widget.enterResultRect) .
           map ($ dir) $ filteredByEdge edge
           where
             dirRect = Direction.fold (Rect 0 0) id dir
             edge = asEdge size dirRect
+
+        distance = (-) `on` Rect.center
 
         filteredByEdge = memo $ \(Vector2 hEdge vEdge) ->
           map snd .
