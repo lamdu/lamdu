@@ -79,7 +79,7 @@ makeEditor sExpr =
   Sugar.ExpressionFunc hasParens f ->
     wrapNonHoleExpr . textParenify hasParens $ FuncEdit.make make f
   Sugar.ExpressionHole hole ->
-    isAHole . HoleEdit.make hole . Sugar.guid $ Sugar.rEntity sExpr
+    isAHole . HoleEdit.make make hole . Sugar.guid $ Sugar.rEntity sExpr
   Sugar.ExpressionGetVariable varRef ->
     notAHole {- TODO: May need parenification -} $ VarEdit.make varRef
   Sugar.ExpressionApply hasParens apply ->

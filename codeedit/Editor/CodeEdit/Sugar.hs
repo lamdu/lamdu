@@ -11,7 +11,7 @@ module Editor.CodeEdit.Sugar
   , Pi(..), Apply(..), Section(..), Hole(..), LiteralInteger(..)
   , HasParens(..)
   , convertDefinition
-  , convertExpression
+  , convertExpression, convertExpressionPure
   ) where
 
 import Control.Applicative ((<$>), (<*>))
@@ -649,9 +649,12 @@ convertDefinitionI (DataTyped.StoredDefinition defI defInferredType (Data.Defini
 
 convertDefinition
   :: Monad m
-  => DataTyped.TypedStoredDefinition (T m)
-  -> T m (DefinitionRef m)
+  => DataTyped.TypedStoredDefinition (T m) -> T m (DefinitionRef m)
 convertDefinition = runSugar . convertDefinitionI
+
+convertExpressionPure
+  :: Monad m => Data.PureGuidExpression -> T m (ExpressionRef m)
+convertExpressionPure = runSugar . convertExpressionI . eeFromPure
 
 convertExpression
   :: Monad m
