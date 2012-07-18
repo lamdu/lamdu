@@ -60,7 +60,9 @@ Library
                        Data.Store.Rev.View,
                        Data.Store.Transaction,
                        Data.Store.Property,
-                       Data.Store.Db
+                       Data.Store.Db,
+
+                       System.Random.Utils
 
   Build-depends:       base >= 4,
                        keyvaluehash >= 0.3,

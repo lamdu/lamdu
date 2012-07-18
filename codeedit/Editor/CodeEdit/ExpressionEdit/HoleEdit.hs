@@ -37,6 +37,7 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified System.Random as Random
+import qualified System.Random.Utils as RandomUtils
 
 type ResultPicker m = ITransaction ViewTag m Widget.EventResult
 
@@ -259,7 +260,7 @@ makeResultsWidget makeExpressionEdit holeInfo firstResults moreResults = do
 canonizeResultExprs :: HoleInfo m -> [Result] -> [Result]
 canonizeResultExprs =
   zipWith (atResultExpr . Data.canonizeIdentifiers) .
-  map Random.mkStdGen . Random.randoms . Random.mkStdGen .
+  RandomUtils.splits . Random.mkStdGen .
   BinaryUtils.decodeS . mappend "HoleResult:" . Guid.bs . hiGuid
 
 makeActiveHoleEdit

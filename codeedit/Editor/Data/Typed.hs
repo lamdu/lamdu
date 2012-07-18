@@ -49,6 +49,7 @@ import qualified Editor.Anchors as Anchors
 import qualified Editor.Data as Data
 import qualified Editor.Data.Load as DataLoad
 import qualified System.Random as Random
+import qualified System.Random.Utils as RandomUtils
 
 type T = Transaction ViewTag
 
@@ -483,7 +484,7 @@ canonizeIdentifiersTypes =
 
 canonizeTypes :: Guid -> [LoopGuidExpression] -> [LoopGuidExpression]
 canonizeTypes =
-  zipWith canonizeIdentifiers . map Random.mkStdGen . Random.randoms . guidToStdGen
+  zipWith canonizeIdentifiers . RandomUtils.splits . guidToStdGen
   where
     guidToStdGen = Random.mkStdGen . BinaryUtils.decodeS . Guid.bs
 
