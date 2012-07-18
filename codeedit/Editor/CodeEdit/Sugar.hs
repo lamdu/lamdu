@@ -2,7 +2,7 @@
 
 module Editor.CodeEdit.Sugar
   ( DefinitionRef(..)
-  , DefinitionTypeAction(..)
+  , DefinitionNewType(..)
   , Builtin(..)
   , Entity(..), Actions(..)
   , Expression(..), ExpressionRef(..)
@@ -134,9 +134,9 @@ data Builtin m = Builtin
   , biSetFFIName :: Maybe (Data.FFIName -> T m ())
   }
 
-data DefinitionTypeAction m = DefinitionTypeAction
-  { dtaNewType :: ExpressionRef m
-  , dtaAcceptNewType :: T m ()
+data DefinitionNewType m = DefinitionNewType
+  { dntNewType :: ExpressionRef m
+  , dntAcceptNewType :: T m ()
   }
 
 data DefinitionRef m = DefinitionRef
@@ -146,7 +146,7 @@ data DefinitionRef m = DefinitionRef
   , drBody :: ExpressionRef m
   , drType :: ExpressionRef m
   , drIsTypeRedundant :: Bool
-  , drMAcceptInferredType :: Maybe (DefinitionTypeAction m)
+  , drMNewType :: Maybe (DefinitionNewType m)
   }
 
 AtFieldTH.make ''Hole
@@ -177,6 +177,10 @@ eeFromITL
   (DataTyped.NoLoop (Data.GuidExpression itGuid val)) =
     ExprEntity itGuid Nothing [] . NonLoop $
     Data.mapExpression eeFromITL val
+
+eeFromPure :: Data.PureGuidExpression -> ExprEntity m
+eeFromPure (Data.PureGuidExpression (Data.GuidExpression g expr)) =
+  ExprEntity g Nothing [] . NonLoop $ Data.mapExpression eeFromPure expr
 
 argument :: (a -> b) -> (b -> c) -> a -> c
 argument = flip (.)
@@ -621,27 +625,26 @@ convertDefinitionI defI =
     let bodyEntity = eeFromTypedExpression bodyI
     bodyS <- convertExpressionI bodyEntity
     typeS <- convertExpressionI $ eeFromTypedExpression typeI
-    let mInferredTypeEntity = theOne $ DataTyped.deInferredType defI
-    mInferredType <- runMaybeT $ do
-      inferredType <- toMaybeT . DataTyped.pureGuidFromLoop =<< toMaybeT mInferredTypeEntity
+    mInferredTypePure <- runMaybeT $ do
+      inferredType <-
+        toMaybeT $ DataTyped.pureGuidFromLoop =<< theOne (DataTyped.deInferredType defI)
       guard $ isCompleteType inferredType
       return inferredType
-    inferredTypeAction <- runMaybeT $ do
-      inferredTypeEntity <- toMaybeT mInferredTypeEntity
-      inferredType <- toMaybeT mInferredType
+    defNewType <- runMaybeT $ do
+      inferredTypePure <- toMaybeT mInferredTypePure
       let defType = DataTyped.pureExpressionFromStored typeI
-      guard . not $ DataTyped.alphaEq inferredType defType
-      inferredTypeS <- lift . convertExpressionI $ eeFromITL inferredTypeEntity
-      return DefinitionTypeAction
-        { dtaNewType = inferredTypeS
-        , dtaAcceptNewType = return ()
+      guard . not $ DataTyped.alphaEq inferredTypePure defType
+      inferredTypeS <- lift . convertExpressionI $ eeFromPure inferredTypePure
+      return DefinitionNewType
+        { dntNewType = inferredTypeS
+        , dntAcceptNewType = return ()
         }
     return DefinitionRef
       { drGuid = defGuid
       , drBody = bodyS
       , drType = typeS
-      , drIsTypeRedundant = isJust mInferredType
-      , drMAcceptInferredType = inferredTypeAction
+      , drIsTypeRedundant = isJust mInferredTypePure
+      , drMNewType = defNewType
       }
   where
     toMaybeT = MaybeT . return

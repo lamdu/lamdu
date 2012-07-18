@@ -108,24 +108,34 @@ make makeExpressionEdit def = do
       [ Widget.scale Config.defTypeBoxSizeFactor typeWidget
       , bodyWidget
       ]
-  case Sugar.drMAcceptInferredType def of
+  case Sugar.drMNewType def of
     Nothing
       | Sugar.drIsTypeRedundant def -> return bodyWidget
-      | otherwise -> liftM (mkResult . BWidgets.hboxSpaced) mkAcceptedWidgets
-    Just (Sugar.DefinitionTypeAction inferredType _) ->
-      liftM (mkResult . BWidgets.gridHSpaced) $
-        sequence
-        [ mkAcceptedWidgets
-        , mkTypeRow "Inferred type:" inferredType
-        ]
+      | otherwise -> liftM (mkResult . BWidgets.hboxSpaced) (mkAcceptedRow id)
+    Just (Sugar.DefinitionNewType inferredType acceptInferredType) ->
+      liftM (mkResult . BWidgets.gridHSpaced) $ sequence
+      [ mkAcceptedRow (>>= addAcceptanceArrow acceptInferredType)
+      , mkTypeRow id "Inferred type:" inferredType
+      ]
   where
+    addAcceptanceArrow acceptInferredType label = do
+      acceptanceLabel <-
+        (liftM . Widget.weakerEvents)
+        (Widget.keysEventMapMovesCursor Config.acceptInferredTypeKeys
+         "Accept inferred type"
+         (IT.transaction acceptInferredType >> return myId)) .
+        BWidgets.makeFocusableTextView "↱" $ Widget.joinId myId ["accept type"]
+      return $ BWidgets.hboxCenteredSpaced [acceptanceLabel, label]
     right = Vector2 1 0.5
     center = 0.5
-    mkTypeRow labelText typeExpr = do
-      label <- labelStyle $ BWidgets.makeLabel labelText $ Widget.toAnimId myId
-      typeWidget <- liftM ExpressionGui.egWidget $ makeExpressionEdit typeExpr
-      return [(right, label), (center, typeWidget)]
-    mkAcceptedWidgets = mkTypeRow "Type:" $ Sugar.drType def
+    mkTypeRow onLabel labelText typeExpr = do
+      label <- onLabel . labelStyle . BWidgets.makeLabel labelText $ Widget.toAnimId myId
+      typeGui <- makeExpressionEdit typeExpr
+      return
+        [ (right, label)
+        , (center, (Widget.doesntTakeFocus . ExpressionGui.egWidget) typeGui)
+        ]
+    mkAcceptedRow onLabel = mkTypeRow onLabel "Type:" $ Sugar.drType def
     guid = Sugar.drGuid def
     myId = WidgetIds.fromGuid guid
     labelStyle = OT.setTextSizeColor Config.defTypeLabelTextSize Config.defTypeLabelColor
