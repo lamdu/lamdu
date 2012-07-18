@@ -1,3 +1,6 @@
+* Hole result to have multiple result search terms (Pi to have "->"
+  and unicode arrows, and "pi")
+
 * When modifying explicit def type, it may make it disappear -- and
   then our cursor is invalid... Maybe cursor should include cur-def
   and go to it rather than root if disappears?
