@@ -47,7 +47,7 @@ import qualified System.Info
 
 defaultFont :: String -> FilePath
 defaultFont "darwin" = "/Library/Fonts/Arial.ttf"
-defaultFont _ = "/usr/share/fonts/truetype/freefont/FreeSerifBold.ttf"
+defaultFont _ = "/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf"
 
 main :: IO ()
 main = do
