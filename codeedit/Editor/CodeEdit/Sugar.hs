@@ -110,7 +110,7 @@ type Scope = [Data.VariableRef]
 
 data Hole m = Hole
   { holeScope :: Scope
-  , holePickResult :: Maybe (Data.ExpressionI -> T m Guid)
+  , holePickResult :: Maybe (Data.PureGuidExpression -> T m Guid)
   , holeMFlipFuncArg :: Maybe (T m ())
   , holePaste :: Maybe (T m Guid)
   }
@@ -547,13 +547,13 @@ convertHole exprI = do
   mkExpressionRef exprI . ExpressionHole $
     Hole
     { holeScope = scope
-    , holePickResult = fmap (pickResult . writeIRef) $ eeStored exprI
+    , holePickResult = fmap pickResult $ eeStored exprI
     , holeMFlipFuncArg = Nothing
     , holePaste = mPaste
     }
   where
-    pickResult write result = do
-      ~() <- write result
+    pickResult irefP result = do
+      ~() <- Data.writeIRefExpressionFromPure (Property.value irefP) result
       return $ eeGuid exprI
 
 convertLiteralInteger :: Monad m => Integer -> Convertor m

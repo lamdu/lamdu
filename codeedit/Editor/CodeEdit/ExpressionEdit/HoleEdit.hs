@@ -19,6 +19,7 @@ import Editor.OTransaction (OTransaction, TWidget, WidgetT)
 import Graphics.UI.Bottle.Animation(AnimId)
 import qualified Data.Char as Char
 import qualified Data.Function as Function
+import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
@@ -31,7 +32,6 @@ import qualified Editor.CodeEdit.Parens as Parens
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
-import qualified Editor.Data.Ops as DataOps
 import qualified Editor.ITransaction as IT
 import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
@@ -113,7 +113,13 @@ makeResultVariables holeInfo varRef = do
           addParens =<< VarEdit.makeView varRef wid
       }
     pickGetVariable flipAct pickResult =
-      pickResult (Data.ExpressionGetVariable varRef) flipAct
+      (pickResult . toPureGuidExpr . Data.ExpressionGetVariable) varRef flipAct
+
+toPureGuidExpr :: Data.Expression Data.PureGuidExpression -> Data.PureGuidExpression
+toPureGuidExpr = Data.PureGuidExpression . Data.GuidExpression zeroGuid
+
+zeroGuid :: Guid
+zeroGuid = Guid.fromString "ZeroGuid"
 
 renamePrefix :: AnimId -> AnimId -> AnimId -> AnimId
 renamePrefix srcPrefix destPrefix animId =
@@ -134,7 +140,7 @@ mPickResult
   :: MonadF m
   => HoleInfo m
   -> Maybe
-     (Data.ExpressionI -> ITransaction ViewTag m () -> ResultPicker m)
+     (Data.PureGuidExpression -> ITransaction ViewTag m () -> ResultPicker m)
 mPickResult holeInfo =
   fmap (picker . fmap IT.transaction) . Sugar.holePickResult $ hiHole holeInfo
   where
@@ -176,7 +182,8 @@ makeLiteralResults holeInfo searchTerm =
           liftM ExpressionGui.egWidget
           (LiteralEdit.makeIntView (Widget.toAnimId literalIntId) integer)
       }
-    pickLiteralInt integer holePickResult = holePickResult (Data.ExpressionLiteralInteger integer) (return ())
+    pickLiteralInt integer holePickResult =
+      holePickResult (toPureGuidExpr (Data.ExpressionLiteralInteger integer)) (return ())
 
 makeAllResults
   :: MonadF m
@@ -203,10 +210,12 @@ makeAllResults holeInfo = do
       , resultMakeWidget =
           BWidgets.makeFocusableTextView "→" $ searchResultId holeInfo "Pi result"
       }
-    pickPiResult holePickResult = do
-      paramTypeI <- IT.transaction DataOps.newHole
-      resultTypeI <- IT.transaction DataOps.newHole
-      holePickResult (Data.ExpressionPi (Data.Lambda paramTypeI resultTypeI)) (return ())
+    pickPiResult holePickResult =
+      (holePickResult . toPureGuidExpr . Data.ExpressionPi)
+      (Data.Lambda holeExpr holeExpr) (return ())
+
+holeExpr :: Data.PureGuidExpression
+holeExpr = toPureGuidExpr Data.ExpressionHole
 
 makeSearchTermWidget
   :: MonadF m
@@ -236,7 +245,9 @@ makeSearchTermWidget holeInfo searchTermId firstResults =
         Anchors.setP (Anchors.assocNameRef (IRef.guid newDefI)) newName
         Anchors.newPane newDefI
         return newDefI
-      let defRef = Data.ExpressionGetVariable $ Data.DefinitionRef newDefI
+      let
+        defRef =
+          toPureGuidExpr . Data.ExpressionGetVariable $ Data.DefinitionRef newDefI
       -- TODO: Can we use pickResult's animIdMapping?
       eventResult <- holePickResult defRef $ return ()
       maybe (return ()) (IT.transaction . Anchors.savePreJumpPosition) $ Widget.eCursor eventResult

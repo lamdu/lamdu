@@ -15,12 +15,12 @@ module Editor.Data
   , GuidExpression(..), atGeGuid, atGeValue
   , PureGuidExpression(..), atPureGuidExpression
   , newExprIRef, readExprIRef, writeExprIRef, exprIRefGuid
-  , newIRefExpressionFromPure
+  , newIRefExpressionFromPure, writeIRefExpressionFromPure
   , mapMExpression
   , mapExpression, sequenceExpression
   ) where
 
-import Control.Monad (liftM, liftM2)
+import Control.Monad (liftM, liftM2, (<=<))
 import Data.Binary (Binary(..))
 import Data.Binary.Get (getWord8)
 import Data.Binary.Put (putWord8)
@@ -175,22 +175,33 @@ hasLambda ExpressionPi {} = True
 hasLambda ExpressionLambda {} = True
 hasLambda _ = False
 
+type Scope = [(Guid, Guid)]
+
 newIRefExpressionFromPure
   :: Monad m => PureGuidExpression -> Transaction t m ExpressionIRef
 newIRefExpressionFromPure =
-  go []
+  newIRefExpressionFromPureH []
+
+newIRefExpressionFromPureH :: Monad m => Scope -> PureGuidExpression -> Transaction t m ExpressionIRef
+newIRefExpressionFromPureH scope =
+  liftM ExpressionIRef . Transaction.newIRefWithGuid .
+  flip (expressionIFromPure scope)
+
+writeIRefExpressionFromPure
+  :: Monad m => ExpressionIRef -> PureGuidExpression -> Transaction t m ()
+writeIRefExpressionFromPure (ExpressionIRef iref) =
+  Transaction.writeIRef iref <=< expressionIFromPure [] (IRef.guid iref)
+
+expressionIFromPure
+  :: Monad m => Scope -> Guid -> PureGuidExpression -> Transaction t m ExpressionI
+expressionIFromPure scope newGuid (PureGuidExpression (GuidExpression oldGuid expr)) =
+  sequenceExpression $ mapExpression (newIRefExpressionFromPureH newScope) newExpr
   where
-    go scope (PureGuidExpression (GuidExpression oldGuid expr)) =
-      liftM ExpressionIRef . Transaction.newIRefWithGuid $
-      f scope expr oldGuid
-    f scope expr oldGuid newGuid =
-      sequenceExpression $ mapExpression (go newScope) newExpr
-      where
-        newScope
-          | hasLambda expr = (oldGuid, newGuid) : scope
-          | otherwise = scope
-        newExpr = case expr of
-          ExpressionGetVariable (ParameterRef parGuid) ->
-            ExpressionGetVariable . ParameterRef .
-            fromMaybe parGuid $ lookup parGuid newScope
-          x -> x
+    newScope
+      | hasLambda expr = (oldGuid, newGuid) : scope
+      | otherwise = scope
+    newExpr = case expr of
+      ExpressionGetVariable (ParameterRef parGuid) ->
+        ExpressionGetVariable . ParameterRef .
+        fromMaybe parGuid $ lookup parGuid newScope
+      x -> x
