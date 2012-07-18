@@ -111,7 +111,6 @@ type Scope = [Data.VariableRef]
 data Hole m = Hole
   { holeScope :: Scope
   , holePickResult :: Maybe (Data.PureGuidExpression -> T m Guid)
-  , holeMFlipFuncArg :: Maybe (T m ())
   , holePaste :: Maybe (T m Guid)
   }
 
@@ -490,8 +489,7 @@ convertApplyPrefix (Data.Apply funcI argI) exprI = do
   let
     newArgRef =
       addDeleteCut argI exprI funcI .
-      setAddArg exprI .
-      addFlipFuncArg $
+      setAddArg exprI $
       addParens argRef
     setNextArg = atREntity . atEActions . fmap . atMNextArg . const $ Just newArgRef
     newFuncRef =
@@ -505,11 +503,6 @@ convertApplyPrefix (Data.Apply funcI argI) exprI = do
   mkExpressionRef exprI . ExpressionApply DontHaveParens $
     Apply newFuncRef newArgRef
   where
-    addFlipFuncArg =
-      atRExpression . atEHole . atHoleMFlipFuncArg . const $
-      setFlippedApply <$> eeStored exprI <*> eeStored funcI <*> eeStored argI
-    setFlippedApply exprP funcP argP =
-      writeIRef exprP . Data.ExpressionApply $ Data.Apply (Property.value argP) (Property.value funcP)
     addParens = atRExpression . atEHasParens . const $ HaveParens
 
 convertGetVariable :: Monad m => Data.VariableRef -> Convertor m
@@ -548,7 +541,6 @@ convertHole exprI = do
     Hole
     { holeScope = scope
     , holePickResult = fmap pickResult $ eeStored exprI
-    , holeMFlipFuncArg = Nothing
     , holePaste = mPaste
     }
   where

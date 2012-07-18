@@ -27,8 +27,6 @@ import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
-import qualified Editor.CodeEdit.Infix as Infix
-import qualified Editor.CodeEdit.Parens as Parens
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
@@ -83,37 +81,22 @@ makeMoreResults :: MonadF m => AnimId -> TWidget t m
 makeMoreResults myId =
   BWidgets.makeTextView "..." $ mappend myId ["more results"]
 
-makeResultVariables ::
-  MonadF m => HoleInfo m -> Data.VariableRef -> OTransaction ViewTag m [Result m]
-makeResultVariables holeInfo varRef = do
+makeResultVariable ::
+  MonadF m => HoleInfo m -> Data.VariableRef -> OTransaction ViewTag m (Result m)
+makeResultVariable holeInfo varRef = do
   varName <- OT.getP $ Anchors.variableNameRef varRef
-  let
-    parened =
-      result
-      (concat ["(", varName, ")"]) (return ()) resultIdAsPrefix .
-      Parens.addTextParens $ Widget.toAnimId resultId
-  return $
-    case (Infix.isInfixName varName,
-          Sugar.holeMFlipFuncArg (hiHole holeInfo)) of
-    (True, Just flipAct) ->
-      [result varName (IT.transaction flipAct) resultId return, parened]
-    _ ->
-      [result varName (return ()) resultId return]
+  return Result
+      { resultName = varName
+      , resultPick = fmap pickGetVariable $ mPickResult holeInfo
+      , resultMakeWidget =
+          liftM ExpressionGui.egWidget $ VarEdit.makeView varRef resultId
+      }
   where
     resultId =
       searchResultsPrefix (hiHoleId holeInfo) `mappend`
       WidgetIds.varId varRef
-    resultIdAsPrefix = Widget.joinId resultId ["prefix"]
-    result name flipAct wid addParens =
-      Result
-      { resultName = name
-      , resultPick = fmap (pickGetVariable flipAct) $ mPickResult holeInfo
-      , resultMakeWidget =
-          liftM ExpressionGui.egWidget $
-          addParens =<< VarEdit.makeView varRef wid
-      }
-    pickGetVariable flipAct pickResult =
-      (pickResult . toPureGuidExpr . Data.ExpressionGetVariable) varRef flipAct
+    pickGetVariable pickResult =
+      (pickResult . toPureGuidExpr . Data.ExpressionGetVariable) varRef
 
 toPureGuidExpr :: Data.Expression Data.PureGuidExpression -> Data.PureGuidExpression
 toPureGuidExpr = Data.PureGuidExpression . Data.GuidExpression zeroGuid
@@ -140,13 +123,12 @@ mPickResult
   :: MonadF m
   => HoleInfo m
   -> Maybe
-     (Data.PureGuidExpression -> ITransaction ViewTag m () -> ResultPicker m)
+     (Data.PureGuidExpression -> ResultPicker m)
 mPickResult holeInfo =
   fmap (picker . fmap IT.transaction) . Sugar.holePickResult $ hiHole holeInfo
   where
-    picker holePickResult newExpr flipAct = do
+    picker holePickResult newExpr = do
       guid <- holePickResult newExpr
-      ~() <- flipAct
       return Widget.EventResult {
         Widget.eCursor = Just $ WidgetIds.fromGuid guid,
         Widget.eAnimIdMapping = id -- TODO: Need to fix the parens id
@@ -183,7 +165,7 @@ makeLiteralResults holeInfo searchTerm =
           (LiteralEdit.makeIntView (Widget.toAnimId literalIntId) integer)
       }
     pickLiteralInt integer holePickResult =
-      holePickResult (toPureGuidExpr (Data.ExpressionLiteralInteger integer)) (return ())
+      holePickResult (toPureGuidExpr (Data.ExpressionLiteralInteger integer))
 
 makeAllResults
   :: MonadF m
@@ -191,9 +173,7 @@ makeAllResults
   -> OTransaction ViewTag m [Result m]
 makeAllResults holeInfo = do
   globals <- OT.getP Anchors.globals
-  varResults <- liftM concat .
-    mapM (makeResultVariables holeInfo) $
-    params ++ globals
+  varResults <- mapM (makeResultVariable holeInfo) $ params ++ globals
   let
     searchTerm = Property.value $ hiSearchTerm holeInfo
     literalResults = makeLiteralResults holeInfo searchTerm
@@ -212,7 +192,7 @@ makeAllResults holeInfo = do
       }
     pickPiResult holePickResult =
       (holePickResult . toPureGuidExpr . Data.ExpressionPi)
-      (Data.Lambda holeExpr holeExpr) (return ())
+      (Data.Lambda holeExpr holeExpr)
 
 holeExpr :: Data.PureGuidExpression
 holeExpr = toPureGuidExpr Data.ExpressionHole
@@ -249,7 +229,7 @@ makeSearchTermWidget holeInfo searchTermId firstResults =
         defRef =
           toPureGuidExpr . Data.ExpressionGetVariable $ Data.DefinitionRef newDefI
       -- TODO: Can we use pickResult's animIdMapping?
-      eventResult <- holePickResult defRef $ return ()
+      eventResult <- holePickResult defRef
       maybe (return ()) (IT.transaction . Anchors.savePreJumpPosition) $ Widget.eCursor eventResult
       return Widget.EventResult {
         Widget.eCursor = Just $ WidgetIds.fromIRef newDefI,
