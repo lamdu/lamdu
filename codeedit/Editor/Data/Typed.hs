@@ -114,17 +114,10 @@ makeTypeRef = liftTypeRef . UnionFind.new . TypeData
 getTypeRef :: Monad m => TypeRef -> Infer m [Data.GuidExpression TypeRef]
 getTypeRef = liftM unTypeData . liftTypeRef . UnionFind.descr
 
-isHole :: Data.Expression a -> Bool
-isHole Data.ExpressionHole = True
-isHole _ = False
-
-mkTypeData :: [Data.GuidExpression TypeRef] -> TypeData
-mkTypeData = TypeData . filter (not . isHole . Data.geValue)
-
 setTypeRef :: Monad m => TypeRef -> [Data.GuidExpression TypeRef] -> Infer m ()
 setTypeRef typeRef types =
   liftTypeRef . UnionFind.setDescr typeRef $
-  mkTypeData types
+  TypeData types
 
 runInfer
   :: Monad m
@@ -393,7 +386,7 @@ unify a b = do
     result <- liftM (++ bConflicts) $ getTypeRef a
     liftTypeRef $ do
       a `UnionFind.union` b
-      UnionFind.setDescr a $ mkTypeData result
+      UnionFind.setDescr a $ TypeData result
   where
     matches as y = liftM or $ mapM (`unifyPair` y) as
 
