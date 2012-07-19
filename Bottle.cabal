@@ -91,6 +91,7 @@ Library
 Executable Editor
   hs-Source-Dirs:      codeedit
   Build-Depends:       base >= 4,
+                       hashable,
                        containers,
                        directory,
                        filepath,

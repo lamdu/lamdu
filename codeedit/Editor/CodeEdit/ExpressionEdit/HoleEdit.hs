@@ -4,6 +4,7 @@ module Editor.CodeEdit.ExpressionEdit.HoleEdit(make, ResultPicker) where
 import Control.Arrow (first, second)
 import Control.Monad (liftM, mplus)
 import Data.Function (on)
+import Data.Hashable(hash)
 import Data.List (isInfixOf, isPrefixOf)
 import Data.List.Utils (sortOn)
 import Data.Maybe (fromMaybe, isJust, listToMaybe)
@@ -18,7 +19,6 @@ import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget, WidgetT)
 import Graphics.UI.Bottle.Animation(AnimId)
 import qualified Data.AtFieldTH as AtFieldTH
-import qualified Data.Binary.Utils as BinaryUtils
 import qualified Data.Char as Char
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
@@ -37,7 +37,6 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified System.Random as Random
-import qualified System.Random.Utils as RandomUtils
 
 type ResultPicker m = ITransaction ViewTag m Widget.EventResult
 
@@ -267,10 +266,12 @@ makeResultsWidget makeExpressionEdit holeInfo firstResults moreResults = do
       "Nothing (at bottom)" (return ())
 
 canonizeResultExprs :: HoleInfo m -> [Result] -> [Result]
-canonizeResultExprs =
-  zipWith (atResultExpr . Data.canonizeIdentifiers) .
-  RandomUtils.splits . Random.mkStdGen .
-  BinaryUtils.decodeS . mappend "HoleResult:" . Guid.bs . hiGuid
+canonizeResultExprs holeInfo =
+  (map . atResultExpr) f
+  where
+    f expr =
+      flip Data.canonizeIdentifiers expr . Random.mkStdGen $
+      hash (show expr, Guid.bs (hiGuid holeInfo))
 
 makeActiveHoleEdit
   :: MonadF m
