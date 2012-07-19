@@ -42,7 +42,7 @@ import qualified System.Random.Utils as RandomUtils
 type ResultPicker m = ITransaction ViewTag m Widget.EventResult
 
 data Result = Result
-  { resultName :: String
+  { resultNames :: [String]
   , resultExpr :: Data.PureGuidExpression
   }
 AtFieldTH.make ''Result
@@ -112,7 +112,7 @@ makeResultVariable ::
 makeResultVariable varRef = do
   varName <- OT.getP $ Anchors.variableNameRef varRef
   return Result
-      { resultName = varName
+      { resultNames = [varName]
       , resultExpr = toPureGuidExpr $ Data.ExpressionGetVariable varRef
       }
 
@@ -138,13 +138,17 @@ holeResultAnimMappingNoParens holeInfo resultId =
 resultOrdering :: String -> Result -> [Bool]
 resultOrdering searchTerm result =
   map not
-  [ searchTerm == name
-  , searchTerm `isPrefixOf` name
-  , (isPrefixOf `on` map Char.toLower) searchTerm name
-  , searchTerm `isInfixOf` name
+  [ match (==)
+  , match isPrefixOf
+  , match insensitivePrefixOf
+  , match isInfixOf
   ]
   where
-    name = resultName result
+    match f = any (f searchTerm) names
+    names = resultNames result
+
+insensitivePrefixOf :: String -> String -> Bool
+insensitivePrefixOf = isPrefixOf `on` map Char.toLower
 
 makeLiteralResults :: String -> [Result]
 makeLiteralResults searchTerm =
@@ -153,7 +157,7 @@ makeLiteralResults searchTerm =
   where
     makeLiteralIntResult integer =
       Result
-      { resultName = show integer
+      { resultNames = [show integer]
       , resultExpr = toPureGuidExpr $ Data.ExpressionLiteralInteger integer
       }
 
@@ -168,7 +172,7 @@ makeAllResults holeInfo = do
     searchTerm = Property.value $ hiSearchTerm holeInfo
     literalResults = makeLiteralResults searchTerm
     goodResult =
-      (isInfixOf `on` map Char.toLower) searchTerm . resultName
+      any (insensitivePrefixOf searchTerm) . resultNames
   return .
     sortOn (resultOrdering searchTerm) $
     literalResults ++ filter goodResult (piResult : varResults)
@@ -176,7 +180,7 @@ makeAllResults holeInfo = do
     params = Sugar.holeScope $ hiHole holeInfo
     piResult =
       Result
-      { resultName = "->"
+      { resultNames = ["->", "Pi", "→", "→", "Π", "π"]
       , resultExpr =
         toPureGuidExpr . Data.ExpressionPi $ Data.Lambda holeExpr holeExpr
       }
