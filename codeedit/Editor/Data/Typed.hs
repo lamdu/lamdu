@@ -19,7 +19,7 @@ module Editor.Data.Typed
   ) where
 
 import Control.Applicative (Applicative)
-import Control.Monad (liftM, liftM2, (<=<), when, unless, filterM)
+import Control.Monad (liftM, liftM2, (<=<), when, unless, filterM, forM_)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Random (nextRandom, runRandomT)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -352,13 +352,12 @@ unifyOnTree defTypeRef = (`runReaderT` []) . go
           unify funcTypeRef <=< makePi (eipGuid stored) $
             Data.Lambda argTypeRef typeRef
           funcTypes <- getTypeRef funcTypeRef
-          sequence_
-            [ subst piGuid (typeRefFromStored arg) piResultTypeRef
-            | Data.GuidExpression piGuid
-              (Data.ExpressionPi
-               (Data.Lambda _ piResultTypeRef))
-              <- funcTypes
-            ]
+          argValRef <- typeRefFromStored arg
+          forM_ funcTypes $ \(Data.GuidExpression piGuid expr) ->
+            case expr of
+            Data.ExpressionPi (Data.Lambda _ piResultTypeRef) ->
+              subst piGuid (return argValRef) piResultTypeRef
+            _ -> return ()
       Data.ExpressionGetVariable (Data.ParameterRef guid) -> do
         mParamTypeRef <- Reader.asks $ lookup guid
         lift $ case mParamTypeRef of
