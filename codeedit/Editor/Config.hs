@@ -63,6 +63,8 @@ unfocusedHoleBackgroundColor = Draw.Color 1 0 0 1
 
 unfocusedReadOnlyHoleBackgroundColor = Draw.Color 0.7 0.3 0.3 1
 
+inferredHoleBackgroundColor = Draw.Color 0.2 1 0.2 0.5
+
 parenHighlightColor = Draw.Color 0.3 0 1 0.25
 
 lambdaWrapKeys = [k '\\']

@@ -112,6 +112,7 @@ data Hole m = Hole
   { holeScope :: Scope
   , holePickResult :: Maybe (Data.PureGuidExpression -> T m Guid)
   , holePaste :: Maybe (T m Guid)
+  , holeInferredValues :: [ExpressionRef m]
   }
 
 data LiteralInteger m = LiteralInteger
@@ -168,20 +169,21 @@ data ExprEntity m = ExprEntity
   { eeGuid :: Guid
   , eeStored :: Maybe (Data.ExpressionIRefProperty (T m))
   , eeInferredTypes :: [ExprEntity m]
+  , eeInferredValues :: [ExprEntity m]
   , eeValue :: Loopable (Data.Expression (ExprEntity m))
   }
 
 eeFromITL :: DataTyped.LoopGuidExpression -> ExprEntity m
 eeFromITL (DataTyped.Loop itGuid) =
-  ExprEntity itGuid Nothing [] Loop
+  ExprEntity itGuid Nothing [] [] Loop
 eeFromITL
   (DataTyped.NoLoop (Data.GuidExpression itGuid val)) =
-    ExprEntity itGuid Nothing [] . NonLoop $
+    ExprEntity itGuid Nothing [] [] . NonLoop $
     Data.mapExpression eeFromITL val
 
 eeFromPure :: Data.PureGuidExpression -> ExprEntity m
 eeFromPure (Data.PureGuidExpression (Data.GuidExpression g expr)) =
-  ExprEntity g Nothing [] . NonLoop $ Data.mapExpression eeFromPure expr
+  ExprEntity g Nothing [] [] . NonLoop $ Data.mapExpression eeFromPure expr
 
 argument :: (a -> b) -> (b -> c) -> a -> c
 argument = flip (.)
@@ -209,7 +211,8 @@ eeFromTypedExpression =
       , return .
         ExprEntity (DataTyped.storedGuid e)
         (Just (DataTyped.eeStored e))
-        (map eeFromITL (DataTyped.eeInferredType e)) .
+        (map eeFromITL (DataTyped.eeInferredType e))
+        (map eeFromITL (DataTyped.eeInferredValue e)) .
         NonLoop
       )
 
@@ -537,11 +540,12 @@ convertHole :: Monad m => Convertor m
 convertHole exprI = do
   mPaste <- maybe (return Nothing) mkPaste $ eeStored exprI
   scope <- readScope
-  mkExpressionRef exprI . ExpressionHole $
-    Hole
+  inferredValues <- mapM convertExpressionI $ eeInferredValues exprI
+  mkExpressionRef exprI $ ExpressionHole Hole
     { holeScope = scope
     , holePickResult = fmap pickResult $ eeStored exprI
     , holePaste = mPaste
+    , holeInferredValues = inferredValues
     }
   where
     pickResult irefP result = do

@@ -316,8 +316,8 @@ makeH makeExpressionEdit hole guid myId = do
     snippet
       | null searchText = "  "
       | otherwise = searchText
-  case (Sugar.holePickResult hole, Widget.subId myId cursor) of
-    (Just holePickResult, Just _) ->
+  case (Sugar.holePickResult hole, Widget.subId myId cursor, Sugar.holeInferredValues hole) of
+    (Just holePickResult, Just _, _) ->
       let
         holeInfo = HoleInfo
           { hiHoleId = myId
@@ -331,13 +331,16 @@ makeH makeExpressionEdit hole guid myId = do
         ((first . fmap) (resultPick holeInfo) .
          second (makeBackground 11 Config.focusedHoleBackgroundColor)) $
         makeActiveHoleEdit makeExpressionEdit holeInfo
+    (_, _, [inferredValue]) ->
+      liftM ((,) Nothing . makeBackground 12 Config.inferredHoleBackgroundColor) .
+      BWidgets.makeFocusableView unfocusedId . ExpressionGui.egWidget =<<
+      makeExpressionEdit inferredValue
     _ ->
       liftM
-      ((,) Nothing .
-       makeBackground 12 unfocusedColor) .
-      BWidgets.makeFocusableTextView snippet $
-      WidgetIds.searchTermId myId
+      ((,) Nothing . makeBackground 12 unfocusedColor) $
+      BWidgets.makeFocusableTextView snippet unfocusedId
   where
+    unfocusedId = WidgetIds.searchTermId myId
     unfocusedColor
       | canPickResult = Config.unfocusedHoleBackgroundColor
       | otherwise = Config.unfocusedReadOnlyHoleBackgroundColor
