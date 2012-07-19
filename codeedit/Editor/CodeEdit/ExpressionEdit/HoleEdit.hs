@@ -143,11 +143,9 @@ resultOrdering searchTerm result =
   , match isInfixOf
   ]
   where
+    insensitivePrefixOf = isPrefixOf `on` map Char.toLower
     match f = any (f searchTerm) names
     names = resultNames result
-
-insensitivePrefixOf :: String -> String -> Bool
-insensitivePrefixOf = isPrefixOf `on` map Char.toLower
 
 makeLiteralResults :: String -> [Result]
 makeLiteralResults searchTerm =
@@ -171,11 +169,12 @@ makeAllResults holeInfo = do
     searchTerm = Property.value $ hiSearchTerm holeInfo
     literalResults = makeLiteralResults searchTerm
     goodResult =
-      any (insensitivePrefixOf searchTerm) . resultNames
+      any (insensitiveInfixOf searchTerm) . resultNames
   return .
     sortOn (resultOrdering searchTerm) $
     literalResults ++ filter goodResult (piResult : varResults)
   where
+    insensitiveInfixOf = isInfixOf `on` map Char.toLower
     params = Sugar.holeScope $ hiHole holeInfo
     piResult =
       Result
