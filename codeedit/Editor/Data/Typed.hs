@@ -70,6 +70,7 @@ type TypeRef = UnionFind.Point TypeData
 data StoredExpression it m = StoredExpression
   { eeStored :: Data.ExpressionIRefProperty m
   , eeInferredType :: it
+  , eeInferredValue :: it
   , eeValue :: Data.Expression (StoredExpression it m)
   }
 
@@ -140,6 +141,7 @@ mapMStoredExpression
   :: Monad m
   => (Data.ExpressionIRefProperty f
       -> a
+      -> a
       -> Data.Expression (StoredExpression b g)
       -> m (StoredExpression b g))
   -> StoredExpression a f
@@ -147,18 +149,22 @@ mapMStoredExpression
 mapMStoredExpression f =
   Data.mapMExpression g
   where
-    g (StoredExpression stored a val) =
-      (return val, f stored a)
+    g (StoredExpression stored a iVal val) =
+      (return val, f stored a iVal)
 
-atInferredTypes
-  :: (Data.ExpressionIRefProperty f -> a -> b)
+data InferredRole =
+  InferredType | InferredValue
+  deriving Enum
+
+atInferred
+  :: (Data.ExpressionIRefProperty f -> InferredRole -> a -> b)
   -> StoredExpression a f
   -> StoredExpression b f
-atInferredTypes f =
+atInferred f =
   runIdentity . mapMStoredExpression g
   where
-    g stored a =
-      Identity . StoredExpression stored (f stored a)
+    g stored iType iVal =
+      Identity . StoredExpression stored (f stored InferredType iType) (f stored InferredValue iVal)
 
 fromStoredExpression
   :: Monad m => (Guid -> Data.Expression ref -> m ref)
@@ -166,7 +172,7 @@ fromStoredExpression
 fromStoredExpression mk =
   Data.mapMExpression f
   where
-    f (StoredExpression stored _ val) =
+    f (StoredExpression stored _ _ val) =
       ( return val
       , mk $ eipGuid stored
       )
@@ -257,18 +263,22 @@ storedFromLoaded it =
     f (DataLoad.ExpressionEntity stored val) =
       (return val, makeStored stored)
     makeStored stored newVal =
-      return $ StoredExpression stored it newVal
+      return $ StoredExpression stored it it newVal
 
 addTypeRefs
   :: Monad m
   => StoredExpression () f
   -> Infer m (StoredExpression TypeRef f)
 addTypeRefs =
-  mapMStoredExpression f
+  Data.mapMExpression f
   where
-    f stored () val = do
-      typeRef <- makeTypeRef []
-      return $ StoredExpression stored typeRef val
+    f stored@(StoredExpression irefProp () () val) =
+      ( return val
+      , \newVal -> do
+          typeRef <- makeTypeRef []
+          valRef <- typeRefFromStored stored
+          return $ StoredExpression irefProp typeRef valRef newVal
+      )
 
 derefTypeRef
   :: Monad m
@@ -307,9 +317,10 @@ derefTypeRefs
 derefTypeRefs =
   mapMStoredExpression f
   where
-    f stored typeRef val = do
+    f stored typeRef iValRef val = do
       types <- derefTypeRef typeRef
-      return $ StoredExpression stored types val
+      iVals <- derefTypeRef iValRef
+      return $ StoredExpression stored types iVals val
 
 unifyOnTree
   :: Monad m
@@ -318,7 +329,7 @@ unifyOnTree
   -> Infer m ()
 unifyOnTree defTypeRef = (`runReaderT` []) . go
   where
-    go (StoredExpression stored typeRef value) =
+    go (StoredExpression stored typeRef _ value) =
       case value of
       Data.ExpressionLambda (Data.Lambda paramType body) -> do
         paramTypeRef <- lift $ typeRefFromStored paramType
@@ -340,13 +351,13 @@ unifyOnTree defTypeRef = (`runReaderT` []) . go
           let
             funcTypeRef = eeInferredType func
             argTypeRef = eeInferredType arg
+            argValRef = eeInferredValue arg
           -- We give the new Pi the same Guid as the Apply. This is
           -- fine because Apply's Guid is meaningless and the
           -- canonization will fix it later anyway.
           unify funcTypeRef <=< makePi (eipGuid stored) $
             Data.Lambda argTypeRef typeRef
           funcTypes <- getTypeRef funcTypeRef
-          argValRef <- typeRefFromStored arg
           forM_ funcTypes $ \(Data.GuidExpression piGuid expr) ->
             case expr of
             Data.ExpressionPi (Data.Lambda _ piResultTypeRef) ->
@@ -473,13 +484,15 @@ canonizeIdentifiersTypes
   :: TypedStoredExpression m
   -> TypedStoredExpression m
 canonizeIdentifiersTypes =
-  atInferredTypes (canonizeTypes . eipGuid)
+  atInferred (flip f)
+  where
+    f role = canonizeInferredExpression role . eipGuid
 
-canonizeTypes :: Guid -> [LoopGuidExpression] -> [LoopGuidExpression]
-canonizeTypes =
+canonizeInferredExpression :: InferredRole -> Guid -> [LoopGuidExpression] -> [LoopGuidExpression]
+canonizeInferredExpression role =
   zipWith canonizeIdentifiers . RandomUtils.splits . guidToStdGen
   where
-    guidToStdGen = Random.mkStdGen . BinaryUtils.decodeS . Guid.bs
+    guidToStdGen = Random.mkStdGen . (+ fromEnum role) . (*2) . BinaryUtils.decodeS . Guid.bs
 
 canonizeIdentifiers
   :: Random.RandomGen g => g -> LoopGuidExpression -> LoopGuidExpression
@@ -539,7 +552,7 @@ inferExpression defTypeRef withTypeRefs = do
   builtinsMap <- liftTransaction $ Anchors.getP Anchors.builtinsMap
   derefed <- derefTypeRefs withTypeRefs
   return $
-    (atInferredTypes . const) (map (builtinsToGlobals builtinsMap)) derefed
+    (atInferred . const . const) (map (builtinsToGlobals builtinsMap)) derefed
 
 defTypeAsTypeRef :: Monad m => Data.DefinitionIRef -> Infer m TypeRef
 defTypeAsTypeRef defI =
@@ -559,7 +572,7 @@ inferDefinition (DataLoad.DefinitionEntity defI (Data.Definition bodyI typeI)) =
         | getDefI == defI = return $ eeInferredType withTypeRefs
         | otherwise = defTypeAsTypeRef getDefI
     inferExpression getDefTypeRef withTypeRefs
-  let types = canonizeTypes (IRef.guid defI) $ eeInferredType bodyStored
+  let types = canonizeInferredExpression InferredType (IRef.guid defI) $ eeInferredType bodyStored
   return . StoredDefinition defI types . Data.Definition bodyStored .
     canonizeIdentifiersTypes $ storedFromLoaded [] typeI
 
