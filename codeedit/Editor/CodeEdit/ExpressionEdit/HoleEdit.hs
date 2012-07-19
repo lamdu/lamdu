@@ -3,6 +3,7 @@ module Editor.CodeEdit.ExpressionEdit.HoleEdit(make, ResultPicker) where
 
 import Control.Arrow (first, second)
 import Control.Monad (liftM, mplus)
+import Data.Function (on)
 import Data.List (isInfixOf, isPrefixOf)
 import Data.List.Utils (sortOn)
 import Data.Maybe (fromMaybe, isJust, listToMaybe)
@@ -19,7 +20,6 @@ import Graphics.UI.Bottle.Animation(AnimId)
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
 import qualified Data.Char as Char
-import qualified Data.Function as Function
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -55,7 +55,8 @@ data HoleInfo m = HoleInfo
   , hiGuid :: Guid
   }
 
-pickExpr :: Monad m => HoleInfo m -> Data.PureGuidExpression -> ResultPicker m
+pickExpr
+  :: Monad m => HoleInfo m -> Data.PureGuidExpression -> ResultPicker m
 pickExpr holeInfo expr = do
   guid <- IT.transaction $ hiPickResult holeInfo expr
   return Widget.EventResult
@@ -66,7 +67,9 @@ pickExpr holeInfo expr = do
 resultPick :: Monad m => HoleInfo m -> Result -> ResultPicker m
 resultPick holeInfo = pickExpr holeInfo . resultExpr
 
-pasteEventMap :: MonadF m => Sugar.Hole m -> Widget.EventHandlers (ITransaction ViewTag m)
+pasteEventMap
+  :: MonadF m
+  => Sugar.Hole m -> Widget.EventHandlers (ITransaction ViewTag m)
 pasteEventMap =
   maybe mempty
   (Widget.keysEventMapMovesCursor
@@ -113,7 +116,8 @@ makeResultVariable varRef = do
       , resultExpr = toPureGuidExpr $ Data.ExpressionGetVariable varRef
       }
 
-toPureGuidExpr :: Data.Expression Data.PureGuidExpression -> Data.PureGuidExpression
+toPureGuidExpr
+  :: Data.Expression Data.PureGuidExpression -> Data.PureGuidExpression
 toPureGuidExpr = Data.PureGuidExpression . Data.GuidExpression zeroGuid
 
 zeroGuid :: Guid
@@ -136,7 +140,7 @@ resultOrdering searchTerm result =
   map not
   [ searchTerm == name
   , searchTerm `isPrefixOf` name
-  , Function.on isPrefixOf (map Char.toLower) searchTerm name
+  , (isPrefixOf `on` map Char.toLower) searchTerm name
   , searchTerm `isInfixOf` name
   ]
   where
@@ -163,7 +167,8 @@ makeAllResults holeInfo = do
   let
     searchTerm = Property.value $ hiSearchTerm holeInfo
     literalResults = makeLiteralResults searchTerm
-    goodResult = Function.on isInfixOf (map Char.toLower) searchTerm . resultName
+    goodResult =
+      (isInfixOf `on` map Char.toLower) searchTerm . resultName
   return .
     sortOn (resultOrdering searchTerm) $
     literalResults ++ filter goodResult (piResult : varResults)
@@ -172,7 +177,8 @@ makeAllResults holeInfo = do
     piResult =
       Result
       { resultName = "->"
-      , resultExpr = toPureGuidExpr . Data.ExpressionPi $ Data.Lambda holeExpr holeExpr
+      , resultExpr =
+        toPureGuidExpr . Data.ExpressionPi $ Data.Lambda holeExpr holeExpr
       }
 
 holeExpr :: Data.PureGuidExpression
@@ -234,8 +240,7 @@ makeResultsWidget makeExpressionEdit holeInfo firstResults moreResults = do
         let
           widget = blockDownEvents . BWidgets.vboxAlign 0 $ map snd xs
           mResult =
-            listToMaybe . map fst $
-            filter (Widget.wIsFocused . snd) xs
+            listToMaybe . map fst $ filter (Widget.wIsFocused . snd) xs
         return (mResult, widget)
   moreResultsWidgets <-
     if moreResults
@@ -283,7 +288,8 @@ makeActiveHoleEdit makeExpressionEdit holeInfo =
       makeSearchTermWidget holeInfo searchTermId firstResults
 
     (mResult, resultsWidget) <-
-      makeResultsWidget makeExpressionEdit holeInfo firstResults . not $ null moreResults
+      makeResultsWidget makeExpressionEdit holeInfo firstResults . not $
+      null moreResults
     return
       ( mplus mResult (listToMaybe $ take 1 firstResults)
       , BWidgets.vboxCentered [searchTermWidget, resultsWidget] )
@@ -351,6 +357,8 @@ make
   -> OTransaction ViewTag m
      (Maybe (ResultPicker m), ExpressionGui m)
 make makeExpressionEdit hole =
-  (fmap . liftM . second) (ExpressionGui.fromValueWidget . Widget.weakerEvents (pasteEventMap hole)) .
+  (fmap . liftM . second)
+  (ExpressionGui.fromValueWidget .
+   Widget.weakerEvents (pasteEventMap hole)) .
   BWidgets.wrapDelegated holeFDConfig FocusDelegator.Delegating
   second . makeH makeExpressionEdit hole
