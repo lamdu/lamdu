@@ -126,7 +126,8 @@ runInfer
 runInfer = liftM canonizeIdentifiersTypes . evalUnionFindT . unInfer
 
 makeSingletonTypeRef :: Monad m => Guid -> Data.Expression TypeRef -> Infer m TypeRef
-makeSingletonTypeRef guid = makeTypeRef . (: []) . Data.GuidExpression guid
+makeSingletonTypeRef _ Data.ExpressionHole = makeTypeRef []
+makeSingletonTypeRef guid expr = makeTypeRef [Data.GuidExpression guid expr]
 
 --------------
 
