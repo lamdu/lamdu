@@ -332,7 +332,7 @@ unifyOnTree defTypeRef = (`runReaderT` []) . go
     go (StoredExpression stored typeRef _ value) =
       case value of
       Data.ExpressionLambda (Data.Lambda paramType body) -> do
-        paramTypeRef <- lift $ typeRefFromStored paramType
+        let paramTypeRef = eeInferredValue paramType
         -- We use "flip unify typeRef" so that the new Pi will be
         -- the official Pi guid due to the "left-bias" in
         -- unify/unifyPair. Thus we can later assume that we got the
@@ -341,7 +341,7 @@ unifyOnTree defTypeRef = (`runReaderT` []) . go
           Data.Lambda paramTypeRef $ eeInferredType body
         Reader.local ((eipGuid stored, paramTypeRef):) $ go body
       Data.ExpressionPi (Data.Lambda paramType resultType) -> do
-        paramTypeRef <- lift $ typeRefFromStored paramType
+        let paramTypeRef = eeInferredValue paramType
         lift . setType $ eeInferredType resultType
         Reader.local ((eipGuid stored, paramTypeRef):) $ go resultType
       Data.ExpressionApply (Data.Apply func arg) -> do
