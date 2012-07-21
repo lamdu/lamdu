@@ -1,6 +1,6 @@
-* When modifying explicit def type, it may make it disappear -- and
-  then our cursor is invalid... Maybe cursor should include cur-def
-  and go to it rather than root if disappears?
+* Inferred value widget should only turn to a hole widget after a key press (enter)
+
+* Holes should suggest inferred values first.
 
 * Add JumpTo which gives a hole-like search -- that can sit in a "tab" in place of a DefinitionEdit
 
