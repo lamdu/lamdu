@@ -167,12 +167,13 @@ makeAllResults holeInfo = do
   varResults <- mapM makeResultVariable $ params ++ globals
   let
     searchTerm = Property.value $ hiSearchTerm holeInfo
+    inferredResults = map (Result [""]) $ Sugar.holeInferredValues (hiHole holeInfo)
     literalResults = makeLiteralResults searchTerm
     goodResult =
       any (insensitiveInfixOf searchTerm) . resultNames
   return .
     sortOn (resultOrdering searchTerm) $
-    literalResults ++ filter goodResult (piResult : varResults)
+    literalResults ++ filter goodResult (inferredResults ++ piResult : varResults)
   where
     insensitiveInfixOf = isInfixOf `on` map Char.toLower
     params = Sugar.holeScope $ hiHole holeInfo
