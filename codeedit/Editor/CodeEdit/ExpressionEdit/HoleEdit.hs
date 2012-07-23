@@ -368,5 +368,10 @@ make makeExpressionEdit hole =
   (fmap . liftM . second)
   (ExpressionGui.fromValueWidget .
    Widget.weakerEvents (pasteEventMap hole)) .
-  BWidgets.wrapDelegated holeFDConfig FocusDelegator.Delegating
+  BWidgets.wrapDelegated holeFDConfig delegateMode
   second . makeH makeExpressionEdit hole
+  where
+    delegateMode =
+      case Sugar.holeInferredValues hole of
+      [_] -> FocusDelegator.NotDelegating
+      _ -> FocusDelegator.Delegating
