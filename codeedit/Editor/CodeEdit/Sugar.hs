@@ -27,9 +27,10 @@ import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
+import qualified Data.Store.Guid as Guid
+import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
-import qualified Data.Store.IRef as IRef
 import qualified Editor.Anchors as Anchors
 import qualified Editor.CodeEdit.Infix as Infix
 import qualified Editor.Data as Data
@@ -233,10 +234,15 @@ AtFieldTH.make ''Sugar
 runSugar :: Maybe (DataTyped.TypedStoredDefinition (T m)) -> Sugar m a -> T m a
 runSugar def = (`runReaderT` (def, [])) . unSugar
 
+zeroGuid :: Guid
+zeroGuid = Guid.fromString "ZeroGuid"
+
 putInScope :: Monad m => ExprEntity m -> Data.VariableRef -> Sugar m a -> Sugar m a
 putInScope typeE x =
+  atSugar . Reader.local . second $
   case map DataTyped.pureGuidFromLoop $ eeInferredValues typeE of
-  [Just t] -> (atSugar . Reader.local . second) ((x, t):)
+  [] -> ((x, Data.PureGuidExpression (Data.GuidExpression zeroGuid Data.ExpressionHole)) :)
+  [Just t] -> ((x, t) :)
   _ -> id
 
 readScope :: Monad m => Sugar m Scope
