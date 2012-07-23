@@ -332,8 +332,9 @@ makeH makeExpressionEdit hole guid myId = do
          second (makeBackground 11 Config.focusedHoleBackgroundColor)) $
         makeActiveHoleEdit makeExpressionEdit holeInfo
     (_, _, [inferredValue]) ->
-      liftM ((,) Nothing . makeBackground 12 Config.inferredHoleBackgroundColor) .
-      BWidgets.makeFocusableView unfocusedId . ExpressionGui.egWidget =<<
+      liftM ((,) Nothing) .
+      BWidgets.makeFocusableView unfocusedId .
+        Widget.tint Config.inferredHoleColor . ExpressionGui.egWidget =<<
       makeExpressionEdit inferredValue
     _ ->
       liftM
