@@ -303,10 +303,12 @@ makeActiveHoleEdit makeExpressionEdit holeInfo =
 make
   :: MonadF m
   => ExpressionGui.Maker m
-  -> Sugar.Hole m -> Guid -> Widget.Id
+  -> Sugar.Hole m -> Guid
+  -> [Sugar.ExpressionRef m]
+  -> Widget.Id
   -> OTransaction ViewTag m
      (Maybe (ResultPicker m), ExpressionGui m)
-make makeExpressionEdit hole guid myId = do
+make makeExpressionEdit hole guid _inferredTypes myId = do
   cursor <- OT.readCursor
   searchTermProp <-
     liftM (Property.pureCompose (fromMaybe "") Just) . OT.transaction $

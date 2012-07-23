@@ -18,10 +18,11 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 make
   :: MonadF m
   => ExpressionGui.Maker m -> Sugar.Inferred m -> Guid
+  -> [Sugar.ExpressionRef m]
   -> Widget.Id
   -> OTransaction ViewTag m
      (Maybe (HoleEdit.ResultPicker m), ExpressionGui m)
-make makeExpressionEdit inferred guid myId = do
+make makeExpressionEdit inferred guid inferredTypes myId = do
   mInnerCursor <- OT.subCursor myId
   case mInnerCursor of
     Nothing ->
@@ -32,4 +33,4 @@ make makeExpressionEdit inferred guid myId = do
       ) =<<
       makeExpressionEdit (Sugar.iValue inferred)
     Just _ ->
-      HoleEdit.make makeExpressionEdit (Sugar.iHole inferred) guid myId
+      HoleEdit.make makeExpressionEdit (Sugar.iHole inferred) guid inferredTypes myId
