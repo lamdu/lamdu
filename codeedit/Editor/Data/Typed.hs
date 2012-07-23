@@ -197,6 +197,15 @@ ignoreStoredMonad
   -> StoredExpression it (T Identity)
 ignoreStoredMonad = id
 
+loadDefinitionBodyPure ::
+  Monad m => Data.DefinitionIRef -> T m Data.PureGuidExpression
+loadDefinitionBodyPure =
+  liftM
+  (pureExpressionFromStored .
+   ignoreStoredMonad .
+   storedFromLoaded () . Data.defBody . DataLoad.defEntityValue) .
+  DataLoad.loadDefinition
+
 expand :: Monad m => Data.PureGuidExpression -> T m Data.PureGuidExpression
 expand =
   (`runReaderT` Map.empty) . recurse
@@ -206,11 +215,7 @@ expand =
       Data.ExpressionGetVariable (Data.DefinitionRef defI) ->
         -- TODO: expand the result recursively (with some recursive
         -- constraint)
-        liftM
-        (pureExpressionFromStored .
-         ignoreStoredMonad .
-         storedFromLoaded () . Data.defBody . DataLoad.defEntityValue) .
-        lift $ DataLoad.loadDefinition defI
+        lift $ loadDefinitionBodyPure defI
       Data.ExpressionGetVariable (Data.ParameterRef guidRef) -> do
         mValue <- Reader.asks (Map.lookup guidRef)
         return $ fromMaybe e mValue
@@ -279,7 +284,11 @@ addTypeRefs =
       ( return val
       , \newVal -> do
           typeRef <- makeTypeRef []
-          valRef <- makeSingletonTypeRef (eipGuid irefProp) $ Data.mapExpression eeInferredValue newVal
+          valRef <-
+            case newVal of
+            Data.ExpressionGetVariable (Data.DefinitionRef ref) ->
+               typeRefFromPure =<< liftTransaction (loadDefinitionBodyPure ref)
+            _ -> makeSingletonTypeRef (eipGuid irefProp) $ Data.mapExpression eeInferredValue newVal
           return $ StoredExpression irefProp typeRef valRef newVal
       )
 
