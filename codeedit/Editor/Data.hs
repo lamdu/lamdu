@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, DeriveFunctor #-}
 module Editor.Data
   ( Definition(..), atDefBody
   , DefinitionI, DefinitionIRef
@@ -17,7 +17,7 @@ module Editor.Data
   , newExprIRef, readExprIRef, writeExprIRef, exprIRefGuid
   , newIRefExpressionFromPure, writeIRefExpressionFromPure
   , mapMExpression
-  , mapExpression, sequenceExpression
+  , sequenceExpression
   , canonizeIdentifiers
   ) where
 
@@ -70,13 +70,13 @@ writeExprIRef = Transaction.writeIRef . unExpressionIRef
 data Lambda expr = Lambda {
   lambdaParamType :: expr,
   lambdaBody :: expr
-  } deriving (Eq, Ord, Show)
+  } deriving (Eq, Ord, Show, Functor)
 type LambdaI = Lambda ExpressionIRef
 
 data Apply expr = Apply {
   applyFunc :: expr,
   applyArg :: expr
-  } deriving (Eq, Ord, Show)
+  } deriving (Eq, Ord, Show, Functor)
 type ApplyI = Apply ExpressionIRef
 
 data VariableRef
@@ -95,7 +95,7 @@ instance Show FFIName where
 data Builtin expr = Builtin
   { bName :: FFIName
   , bType :: expr
-  } deriving (Eq, Ord, Show)
+  } deriving (Eq, Ord, Show, Functor)
 
 data Expression expr
   = ExpressionLambda (Lambda expr)
@@ -106,7 +106,7 @@ data Expression expr
   | ExpressionLiteralInteger Integer
   | ExpressionBuiltin (Builtin expr)
   | ExpressionMagic
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Functor)
 type ExpressionI = Expression ExpressionIRef
 
 data Definition expr = Definition
@@ -147,16 +147,6 @@ AtFieldTH.make ''Lambda
 AtFieldTH.make ''Apply
 AtFieldTH.make ''Definition
 
-mapExpression :: (a -> b) -> Expression a -> Expression b
-mapExpression f (ExpressionLambda (Lambda x y)) = ExpressionLambda $ Lambda (f x) (f y)
-mapExpression f (ExpressionPi (Lambda x y)) = ExpressionPi $ Lambda (f x) (f y)
-mapExpression f (ExpressionApply (Apply x y)) = ExpressionApply $ Apply (f x) (f y)
-mapExpression f (ExpressionBuiltin (Builtin name t)) = ExpressionBuiltin . Builtin name $ f t
-mapExpression _ (ExpressionGetVariable var) = ExpressionGetVariable var
-mapExpression _ ExpressionHole = ExpressionHole
-mapExpression _ (ExpressionLiteralInteger int) = ExpressionLiteralInteger int
-mapExpression _ ExpressionMagic = ExpressionMagic
-
 sequenceExpression :: Monad f => Expression (f a) -> f (Expression a)
 sequenceExpression (ExpressionLambda (Lambda x y)) = liftM ExpressionLambda $ liftM2 Lambda x y
 sequenceExpression (ExpressionPi (Lambda x y)) = liftM ExpressionPi $ liftM2 Lambda x y
@@ -174,7 +164,7 @@ mapMExpression
          , Expression to -> m to ))
   -> from -> m to
 mapMExpression f src =
-  afterRecurse =<< sequenceExpression . mapExpression (mapMExpression f) =<< makeExpr
+  afterRecurse =<< sequenceExpression . fmap (mapMExpression f) =<< makeExpr
   where
     (makeExpr, afterRecurse) = f src
 
@@ -203,7 +193,7 @@ writeIRefExpressionFromPure (ExpressionIRef iref) =
 expressionIFromPure
   :: Monad m => Scope -> Guid -> PureGuidExpression -> Transaction t m ExpressionI
 expressionIFromPure scope newGuid (PureGuidExpression (GuidExpression oldGuid expr)) =
-  sequenceExpression $ mapExpression (newIRefExpressionFromPureH newScope) newExpr
+  sequenceExpression $ fmap (newIRefExpressionFromPureH newScope) newExpr
   where
     newScope
       | hasLambda expr = (oldGuid, newGuid) : scope

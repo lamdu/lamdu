@@ -286,7 +286,7 @@ addTypeRefs =
             case newVal of
             Data.ExpressionGetVariable (Data.DefinitionRef ref) ->
                typeRefFromPure =<< liftTransaction (loadDefinitionBodyPure ref)
-            _ -> makeSingletonTypeRef (eipGuid irefProp) $ Data.mapExpression eeInferredValue newVal
+            _ -> makeSingletonTypeRef (eipGuid irefProp) $ fmap eeInferredValue newVal
           return $ StoredExpression irefProp typeRef valRef newVal
       )
 
@@ -308,7 +308,7 @@ derefTypeRef =
         lift . ListFuncs.fromList =<< liftInfer (getTypeRef typeRef)
     onType typeRef (Data.GuidExpression guid expr) =
       liftM (NoLoop . Data.GuidExpression guid) .
-      Data.sequenceExpression $ Data.mapExpression recurse expr
+      Data.sequenceExpression $ fmap recurse expr
       where
         recurse =
           Reader.mapReaderT
@@ -489,7 +489,7 @@ allUnder =
         types <- lift $ getTypeRef typeRef
         mapM_ onType types
     onType =
-      Data.sequenceExpression . Data.mapExpression recurse . Data.geValue
+      Data.sequenceExpression . fmap recurse . Data.geValue
 
 canonizeIdentifiersTypes
   :: TypedStoredExpression m
@@ -546,7 +546,7 @@ builtinsToGlobals :: Map Data.FFIName Data.VariableRef -> LoopGuidExpression -> 
 builtinsToGlobals _ x@(Loop _) = x
 builtinsToGlobals builtinsMap (NoLoop (Data.GuidExpression guid expr)) =
   NoLoop . Data.GuidExpression guid $
-  Data.mapExpression (builtinsToGlobals builtinsMap) $
+  fmap (builtinsToGlobals builtinsMap) $
   case expr of
   builtin@(Data.ExpressionBuiltin (Data.Builtin name _)) ->
     (maybe builtin Data.ExpressionGetVariable . Map.lookup name)

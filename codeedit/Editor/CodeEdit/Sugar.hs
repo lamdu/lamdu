@@ -187,11 +187,11 @@ eeFromITL (DataTyped.Loop itGuid) =
 eeFromITL
   (DataTyped.NoLoop (Data.GuidExpression itGuid val)) =
     ExprEntity itGuid Nothing [] [] . NonLoop $
-    Data.mapExpression eeFromITL val
+    fmap eeFromITL val
 
 eeFromPure :: Data.PureGuidExpression -> ExprEntity m
 eeFromPure (Data.PureGuidExpression (Data.GuidExpression g expr)) =
-  ExprEntity g Nothing [] [] . NonLoop $ Data.mapExpression eeFromPure expr
+  ExprEntity g Nothing [] [] . NonLoop $ fmap eeFromPure expr
 
 argument :: (a -> b) -> (b -> c) -> a -> c
 argument = flip (.)
