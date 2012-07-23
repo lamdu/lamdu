@@ -35,7 +35,6 @@ import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified System.Random as Random
 
 type ResultPicker m = ITransaction ViewTag m Widget.EventResult
@@ -65,17 +64,6 @@ pickExpr holeInfo expr = do
 
 resultPick :: Monad m => HoleInfo m -> Result -> ResultPicker m
 resultPick holeInfo = pickExpr holeInfo . resultExpr
-
-pasteEventMap
-  :: MonadF m
-  => Sugar.Hole m -> Widget.EventHandlers (ITransaction ViewTag m)
-pasteEventMap =
-  maybe mempty
-  (Widget.keysEventMapMovesCursor
-   Config.pasteKeys "Paste" .
-   liftM WidgetIds.fromGuid .
-   IT.transaction) .
-  Sugar.holePaste
 
 resultPickEventMap
   :: Monad m
@@ -301,13 +289,13 @@ makeActiveHoleEdit makeExpressionEdit holeInfo =
   where
     searchTermId = WidgetIds.searchTermId $ hiHoleId holeInfo
 
-makeH
+make
   :: MonadF m
   => ExpressionGui.Maker m
   -> Sugar.Hole m -> Guid -> Widget.Id
   -> OTransaction ViewTag m
-     (Maybe (ResultPicker m), WidgetT ViewTag m)
-makeH makeExpressionEdit hole guid myId = do
+     (Maybe (ResultPicker m), ExpressionGui m)
+make makeExpressionEdit hole guid myId = do
   cursor <- OT.readCursor
   searchTermProp <-
     liftM (Property.pureCompose (fromMaybe "") Just) . OT.transaction $
@@ -317,8 +305,9 @@ makeH makeExpressionEdit hole guid myId = do
     snippet
       | null searchText = "  "
       | otherwise = searchText
-  case (Sugar.holePickResult hole, Widget.subId myId cursor, Sugar.holeInferredValues hole) of
-    (Just holePickResult, Just _, _) ->
+  (liftM . second) ExpressionGui.fromValueWidget $
+    case (Sugar.holePickResult hole, Widget.subId myId cursor) of
+    (Just holePickResult, Just _) ->
       let
         holeInfo = HoleInfo
           { hiHoleId = myId
@@ -332,18 +321,12 @@ makeH makeExpressionEdit hole guid myId = do
         ((first . fmap) (resultPick holeInfo) .
          second (makeBackground 11 Config.focusedHoleBackgroundColor)) $
         makeActiveHoleEdit makeExpressionEdit holeInfo
-    (_, _, [inferredValue]) ->
-      liftM ((,) Nothing) .
-      BWidgets.makeFocusableView unfocusedId .
-        Widget.tint Config.inferredHoleColor . ExpressionGui.egWidget =<<
-      makeExpressionEdit =<<
-      (OT.transaction . Sugar.convertExpressionPure) inferredValue
     _ ->
       liftM
-      ((,) Nothing . makeBackground 12 unfocusedColor) $
-      BWidgets.makeFocusableTextView snippet unfocusedId
+      ((,) Nothing . makeBackground 12 unfocusedColor) .
+      BWidgets.makeFocusableTextView snippet $
+      WidgetIds.searchTermId myId
   where
-    unfocusedId = WidgetIds.searchTermId myId
     unfocusedColor
       | canPickResult = Config.unfocusedHoleBackgroundColor
       | otherwise = Config.unfocusedReadOnlyHoleBackgroundColor
@@ -351,29 +334,3 @@ makeH makeExpressionEdit hole guid myId = do
     makeBackground level =
       Widget.backgroundColor level $
       mappend (Widget.toAnimId myId) ["hole background"]
-
-holeFDConfig :: FocusDelegator.Config
-holeFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyEnter
-  , FocusDelegator.startDelegatingDoc = "Enter hole"
-  , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEsc
-  , FocusDelegator.stopDelegatingDoc = "Leave hole"
-  }
-
-make
-  :: MonadF m
-  => ExpressionGui.Maker m -> Sugar.Hole m -> Guid
-  -> Widget.Id
-  -> OTransaction ViewTag m
-     (Maybe (ResultPicker m), ExpressionGui m)
-make makeExpressionEdit hole =
-  (fmap . liftM . second)
-  (ExpressionGui.fromValueWidget .
-   Widget.weakerEvents (pasteEventMap hole)) .
-  BWidgets.wrapDelegated holeFDConfig delegateMode
-  second . makeH makeExpressionEdit hole
-  where
-    delegateMode =
-      case Sugar.holeInferredValues hole of
-      [_] -> FocusDelegator.NotDelegating
-      _ -> FocusDelegator.Delegating

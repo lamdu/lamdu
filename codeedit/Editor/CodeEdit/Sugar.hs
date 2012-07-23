@@ -8,7 +8,7 @@ module Editor.CodeEdit.Sugar
   , Expression(..), ExpressionRef(..)
   , Where(..), WhereItem(..)
   , Func(..), FuncParam(..)
-  , Pi(..), Apply(..), Section(..), Hole(..), LiteralInteger(..)
+  , Pi(..), Apply(..), Section(..), Hole(..), LiteralInteger(..), Inferred(..)
   , HasParens(..)
   , convertDefinition
   , convertExpression, convertExpressionPure
@@ -20,7 +20,7 @@ import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Data.Functor.Identity (Identity(..))
-import Data.Maybe (fromMaybe, isJust)
+import Data.Maybe (catMaybes, fromMaybe, isJust)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
@@ -120,6 +120,11 @@ data LiteralInteger m = LiteralInteger
   , liSetValue :: Maybe (Integer -> T m ())
   }
 
+data Inferred m = Inferred
+  { iValue :: ExpressionRef m
+  , iHole :: Hole m
+  }
+
 data Expression m
   = ExpressionApply   { eHasParens :: HasParens, eApply :: Apply m }
   | ExpressionSection { eHasParens :: HasParens, eSection :: Section m }
@@ -128,6 +133,7 @@ data Expression m
   | ExpressionPi      { eHasParens :: HasParens, ePi :: Pi m }
   | ExpressionGetVariable { _eGetVar :: Data.VariableRef }
   | ExpressionHole { eHole :: Hole m }
+  | ExpressionInferred { eInferred :: Inferred m }
   | ExpressionLiteralInteger { _eLit :: LiteralInteger m }
   | ExpressionBuiltin { eBuiltin :: Builtin m }
 
@@ -384,12 +390,17 @@ convertWhere valueRef lambdaI (Data.Lambda typeI bodyI) applyI = do
       , wiType = typeRef
       }
 
+addParens :: Expression m -> Expression m
+addParens (ExpressionInferred (Inferred val hole)) =
+  ExpressionInferred $ Inferred (atRExpression addParens val) hole
+addParens x = (atEHasParens . const) HaveParens x
+
 addApplyChildParens :: ExpressionRef m -> ExpressionRef m
 addApplyChildParens =
   atRExpression f
   where
     f x@(ExpressionApply _ _) = x
-    f x = (atEHasParens . const) HaveParens x
+    f x = addParens x
 
 infixOp :: Monad m => ExprEntity m -> T m (Maybe Data.VariableRef)
 infixOp ExprEntity { eeValue = NonLoop x } = Infix.infixOp x
@@ -493,7 +504,7 @@ convertApplyPrefix (Data.Apply funcI argI) exprI = do
     newArgRef =
       addDeleteCut argI exprI funcI .
       setAddArg exprI $
-      addParens argRef
+      atRExpression addParens argRef
     setNextArg = atREntity . atEActions . fmap . atMNextArg . const $ Just newArgRef
     newFuncRef =
       addDeleteCut funcI exprI argI .
@@ -505,8 +516,6 @@ convertApplyPrefix (Data.Apply funcI argI) exprI = do
       funcRef
   mkExpressionRef exprI . ExpressionApply DontHaveParens $
     Apply newFuncRef newArgRef
-  where
-    addParens = atRExpression . atEHasParens . const $ HaveParens
 
 convertGetVariable :: Monad m => Data.VariableRef -> Convertor m
 convertGetVariable varRef exprI = do
@@ -540,13 +549,21 @@ convertHole :: Monad m => Convertor m
 convertHole exprI = do
   mPaste <- maybe (return Nothing) mkPaste $ eeStored exprI
   scope <- readScope
-  mkExpressionRef exprI $ ExpressionHole Hole
-    { holeScope = scope
-    , holePickResult = fmap pickResult $ eeStored exprI
-    , holePaste = mPaste
-    , holeInferredValues = fromMaybe [] . mapM DataTyped.pureGuidFromLoop $ eeInferredValues exprI
-    }
+  let
+    hole = Hole
+      { holeScope = scope
+      , holePickResult = fmap pickResult $ eeStored exprI
+      , holePaste = mPaste
+      , holeInferredValues = catMaybes maybeInferredValues
+      }
+  mkExpressionRef exprI =<<
+    case maybeInferredValues of
+    [Just x] ->
+      liftM (ExpressionInferred . (`Inferred` hole)) .
+      convertExpressionI $ eeFromPure x
+    _ -> return $ ExpressionHole hole
   where
+    maybeInferredValues = map DataTyped.pureGuidFromLoop $ eeInferredValues exprI
     pickResult irefP result = do
       ~() <- Data.writeIRefExpressionFromPure (Property.value irefP) result
       return $ eeGuid exprI

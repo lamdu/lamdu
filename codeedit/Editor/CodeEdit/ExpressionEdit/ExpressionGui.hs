@@ -1,13 +1,14 @@
 {-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
 
 module Editor.CodeEdit.ExpressionEdit.ExpressionGui
-  ( ExpressionGui(..), atEgWidget
+  ( ExpressionGui(..), atEgWidget, atEgWidgetM
   , Maker
   , fromValueWidget
   , hbox, hboxSpaced
   , addType
   ) where
 
+import Control.Monad (liftM)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
 import Editor.OTransaction (OTransaction, WidgetT)
@@ -32,6 +33,13 @@ data ExpressionGui m = ExpressionGui
   }
 
 AtFieldTH.make ''ExpressionGui
+
+atEgWidgetM ::
+  Monad m =>
+  (WidgetT ViewTag f -> m (WidgetT ViewTag f)) ->
+  ExpressionGui f -> m (ExpressionGui f)
+atEgWidgetM conv (ExpressionGui w a) =
+  liftM (`ExpressionGui` a) $ conv w
 
 type Maker m = Sugar.ExpressionRef m -> OTransaction ViewTag m (ExpressionGui m)
 

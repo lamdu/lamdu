@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit(make) where
 
-import Control.Arrow (first)
+import Control.Arrow (first, second)
 import Control.Monad (liftM)
 import Data.Monoid (Monoid(..))
 import Editor.Anchors (ViewTag)
@@ -16,6 +16,7 @@ import qualified Editor.CodeEdit.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
+import qualified Editor.CodeEdit.ExpressionEdit.InferredEdit as InferredEdit
 import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Editor.CodeEdit.ExpressionEdit.PiEdit as PiEdit
 import qualified Editor.CodeEdit.ExpressionEdit.SectionEdit as SectionEdit
@@ -44,6 +45,25 @@ exprFocusDelegatorConfig = FocusDelegator.Config
   , FocusDelegator.stopDelegatingKey = E.ModKey E.shift E.KeyLeft
   , FocusDelegator.stopDelegatingDoc = "Leave subexpression"
   }
+
+holeFDConfig :: FocusDelegator.Config
+holeFDConfig = FocusDelegator.Config
+  { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyEnter
+  , FocusDelegator.startDelegatingDoc = "Enter hole"
+  , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEsc
+  , FocusDelegator.stopDelegatingDoc = "Leave hole"
+  }
+
+pasteEventMap
+  :: MonadF m
+  => Sugar.Hole m -> Widget.EventHandlers (ITransaction ViewTag m)
+pasteEventMap =
+  maybe mempty
+  (Widget.keysEventMapMovesCursor
+   Config.pasteKeys "Paste" .
+   liftM WidgetIds.fromGuid .
+   IT.transaction) .
+  Sugar.holePaste
 
 make :: MonadF m => ExpressionGui.Maker m
 make sExpr = do
@@ -78,8 +98,12 @@ makeEditor sExpr =
       WhereEdit.makeWithBody make w
   Sugar.ExpressionFunc hasParens f ->
     wrapNonHoleExpr . textParenify hasParens $ FuncEdit.make make f
+  Sugar.ExpressionInferred i ->
+    isAHole (Sugar.iHole i) FocusDelegator.NotDelegating .
+    InferredEdit.make make i . Sugar.guid $ Sugar.rEntity sExpr
   Sugar.ExpressionHole hole ->
-    isAHole . HoleEdit.make make hole . Sugar.guid $ Sugar.rEntity sExpr
+    isAHole hole FocusDelegator.Delegating .
+    HoleEdit.make make hole . Sugar.guid $ Sugar.rEntity sExpr
   Sugar.ExpressionGetVariable varRef ->
     notAHole {- TODO: May need parenification -} $ VarEdit.make varRef
   Sugar.ExpressionApply hasParens apply ->
@@ -98,7 +122,13 @@ makeEditor sExpr =
       case hasParens of
       Sugar.HaveParens -> mkParens myId
       Sugar.DontHaveParens -> return
-    isAHole = (fmap . liftM . first) IsAHole
+    isAHole hole delegating =
+      (fmap . liftM)
+      (first IsAHole .
+       (second . ExpressionGui.atEgWidget . Widget.weakerEvents) (pasteEventMap hole)) .
+      BWidgets.wrapDelegated holeFDConfig delegating
+      (second . ExpressionGui.atEgWidget)
+
     notAHole = (fmap . liftM) ((,) NotAHole)
     wrapNonHoleExpr =
       notAHole .
