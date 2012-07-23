@@ -95,8 +95,8 @@ makeMoreResults myId =
   BWidgets.makeTextView "..." $ mappend myId ["more results"]
 
 makeResultVariable ::
-  MonadF m => Data.VariableRef -> OTransaction ViewTag m Result
-makeResultVariable varRef = do
+  MonadF m => Data.VariableRef -> a -> OTransaction ViewTag m Result
+makeResultVariable varRef _ = do
   varName <- OT.getP $ Anchors.variableNameRef varRef
   return Result
       { resultNames = [varName]
@@ -146,13 +146,24 @@ makeLiteralResults searchTerm =
       , resultExpr = toPureGuidExpr $ Data.ExpressionLiteralInteger integer
       }
 
+addDefType ::
+  Monad m => HoleInfo m -> Data.VariableRef ->
+  Transaction ViewTag m [(Data.VariableRef, Data.PureGuidExpression)]
+addDefType holeInfo (Data.DefinitionRef x) =
+  liftM (maybe [] ((:[]) . (,) (Data.DefinitionRef x))) $
+  Sugar.holeDefinitionType (hiHole holeInfo) x
+addDefType _ _ = do
+  return []
+
 makeAllResults
   :: MonadF m
   => HoleInfo m
   -> OTransaction ViewTag m [Result]
 makeAllResults holeInfo = do
   globals <- OT.getP Anchors.globals
-  varResults <- mapM makeResultVariable $ params ++ globals
+  varResults <-
+    mapM (uncurry makeResultVariable) . (params ++) . concat =<<
+    OT.transaction (mapM (addDefType holeInfo) globals)
   let
     searchTerm = Property.value $ hiSearchTerm holeInfo
     inferredResults = map (Result [""]) $ Sugar.holeInferredValues (hiHole holeInfo)
@@ -268,7 +279,7 @@ makeActiveHoleEdit
      (Maybe Result, WidgetT ViewTag m)
 makeActiveHoleEdit makeExpressionEdit holeInfo =
   OT.assignCursor (hiHoleId holeInfo) searchTermId $ do
-    OT.markVariablesAsUsed . Sugar.holeScope $ hiHole holeInfo
+    OT.markVariablesAsUsed . map fst . Sugar.holeScope $ hiHole holeInfo
 
     allResults <- makeAllResults holeInfo
 

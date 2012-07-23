@@ -15,6 +15,7 @@ module Editor.CodeEdit.Sugar
   ) where
 
 import Control.Applicative ((<$>), (<*>))
+import Control.Arrow (second)
 import Control.Monad (guard, liftM)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Maybe (MaybeT(..))
@@ -106,13 +107,14 @@ data Section m = Section
   , sectionInnerApplyGuid :: Maybe Guid
   }
 
-type Scope = [Data.VariableRef]
+type Scope = [(Data.VariableRef, Data.PureGuidExpression)]
 
 data Hole m = Hole
   { holeScope :: Scope
   , holePickResult :: Maybe (Data.PureGuidExpression -> T m Guid)
   , holePaste :: Maybe (T m Guid)
   , holeInferredValues :: [Data.PureGuidExpression]
+  , holeDefinitionType :: Data.DefinitionIRef -> T m (Maybe Data.PureGuidExpression)
   }
 
 data LiteralInteger m = LiteralInteger
@@ -223,19 +225,25 @@ eeFromTypedExpression =
       )
 
 newtype Sugar m a = Sugar {
-  unSugar :: ReaderT Scope (T m) a
+  unSugar :: ReaderT (Maybe (DataTyped.TypedStoredDefinition (T m)), Scope) (T m) a
   } deriving (Monad)
 
 AtFieldTH.make ''Sugar
 
-runSugar :: Sugar m a -> T m a
-runSugar = (`runReaderT` []) . unSugar
+runSugar :: Maybe (DataTyped.TypedStoredDefinition (T m)) -> Sugar m a -> T m a
+runSugar def = (`runReaderT` (def, [])) . unSugar
 
-putInScope :: Monad m => Data.VariableRef -> Sugar m a -> Sugar m a
-putInScope x = (atSugar . Reader.local) (x:)
+putInScope :: Monad m => ExprEntity m -> Data.VariableRef -> Sugar m a -> Sugar m a
+putInScope typeE x =
+  case map DataTyped.pureGuidFromLoop $ eeInferredValues typeE of
+  [Just t] -> (atSugar . Reader.local . second) ((x, t):)
+  _ -> id
 
 readScope :: Monad m => Sugar m Scope
-readScope = Sugar Reader.ask
+readScope = Sugar $ Reader.asks snd
+
+readDefinition :: Monad m => Sugar m (Maybe (DataTyped.TypedStoredDefinition (T m)))
+readDefinition = Sugar $ Reader.asks fst
 
 liftTransaction :: Monad m => T m a -> Sugar m a
 liftTransaction = Sugar . lift
@@ -339,9 +347,9 @@ convertLambda
   :: Monad m
   => Data.Lambda (ExprEntity m)
   -> Convertor m
-convertLambda lambda@(Data.Lambda _ bodyI) exprI = do
+convertLambda lambda@(Data.Lambda paramTypeI bodyI) exprI = do
   sBody <-
-    putInScope (Data.ParameterRef (eeGuid exprI)) $
+    putInScope paramTypeI (Data.ParameterRef (eeGuid exprI)) $
     convertExpressionI bodyI
   param <- convertLambdaParam lambda sBody exprI
   mkExpressionRef exprI .
@@ -356,7 +364,7 @@ convertPi
   -> Convertor m
 convertPi lambda@(Data.Lambda paramTypeI bodyI) exprI = do
   sBody <-
-    putInScope (Data.ParameterRef (eeGuid exprI)) $
+    putInScope paramTypeI (Data.ParameterRef (eeGuid exprI)) $
     convertExpressionI bodyI
   param <- convertLambdaParam lambda sBody exprI
   mkExpressionRef exprI $ ExpressionPi DontHaveParens
@@ -374,7 +382,7 @@ convertWhere
 convertWhere valueRef lambdaI (Data.Lambda typeI bodyI) applyI = do
   typeRef <- convertExpressionI typeI
   sBody <-
-    putInScope (Data.ParameterRef (eeGuid lambdaI)) $
+    putInScope typeI (Data.ParameterRef (eeGuid lambdaI)) $
     convertExpressionI bodyI
   mkExpressionRef applyI .
     ExpressionWhere DontHaveParens . atWWheres (item typeRef :) $
@@ -549,12 +557,14 @@ convertHole :: Monad m => Convertor m
 convertHole exprI = do
   mPaste <- maybe (return Nothing) mkPaste $ eeStored exprI
   scope <- readScope
+  def <- readDefinition
   let
     hole = Hole
       { holeScope = scope
       , holePickResult = fmap pickResult $ eeStored exprI
       , holePaste = mPaste
       , holeInferredValues = catMaybes maybeInferredValues
+      , holeDefinitionType = (maybe . const . return) Nothing DataTyped.loadDefTypeWithinContext def
       }
   mkExpressionRef exprI =<<
     case maybeInferredValues of
@@ -670,13 +680,13 @@ convertDefinitionI (DataTyped.StoredDefinition defI defInferredType (Data.Defini
 convertDefinition
   :: Monad m
   => DataTyped.TypedStoredDefinition (T m) -> T m (DefinitionRef m)
-convertDefinition = runSugar . convertDefinitionI
+convertDefinition def = runSugar (Just def) $ convertDefinitionI def
 
 convertExpressionPure
   :: Monad m => Data.PureGuidExpression -> T m (ExpressionRef m)
-convertExpressionPure = runSugar . convertExpressionI . eeFromPure
+convertExpressionPure = runSugar Nothing . convertExpressionI . eeFromPure
 
 convertExpression
   :: Monad m
   => DataTyped.TypedStoredExpression (T m) -> T m (ExpressionRef m)
-convertExpression = runSugar . convertExpressionI . eeFromTypedExpression
+convertExpression = runSugar Nothing . convertExpressionI . eeFromTypedExpression

@@ -14,6 +14,7 @@ module Editor.Data.Typed
   , pureExpressionFromStored
   , pureGuidFromLoop
   , alphaEq
+  , loadDefTypeWithinContext
   , StoredExpression(..)
   , TypeData, TypedStoredExpression, TypedStoredDefinition
   ) where
@@ -564,11 +565,20 @@ inferExpression defTypeRef withTypeRefs = do
   return $
     (atInferred . const . const) (map (builtinsToGlobals builtinsMap)) derefed
 
+loadDefType :: Monad m => Data.DefinitionIRef -> T m Data.PureGuidExpression
+loadDefType = DataLoad.loadPureExpression . Data.defType <=< Transaction.readIRef
+
 defTypeAsTypeRef :: Monad m => Data.DefinitionIRef -> Infer m TypeRef
-defTypeAsTypeRef defI =
-  typeRefFromPure =<<
-  liftTransaction . DataLoad.loadPureExpression . Data.defType =<<
-  liftTransaction (Transaction.readIRef defI)
+defTypeAsTypeRef = typeRefFromPure <=< liftTransaction . loadDefType
+
+loadDefTypeWithinContext
+  :: Monad m => TypedStoredDefinition (T m) -> Data.DefinitionIRef -> T m (Maybe Data.PureGuidExpression)
+loadDefTypeWithinContext contextDef defI
+  | defI == deIRef contextDef =
+    return $ case deInferredType contextDef of
+    [x] -> pureGuidFromLoop x
+    _ -> Nothing
+  | otherwise = liftM Just $ loadDefType defI
 
 inferDefinition
   :: (Monad m, Monad f)
