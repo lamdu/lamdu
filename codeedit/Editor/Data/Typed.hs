@@ -219,20 +219,17 @@ expand =
       Data.ExpressionGetVariable (Data.ParameterRef guidRef) -> do
         mValue <- Reader.asks (Map.lookup guidRef)
         return $ fromMaybe e mValue
-      Data.ExpressionApply (Data.Apply func arg) -> do
-        newFunc <- recurse func
-        newArg <- recurse arg
-        case newFunc of
-          Data.PureGuidExpression
-            (Data.GuidExpression lamGuid
-            -- TODO: Don't ignore paramType, we do want to recursively
-            -- type-check this:
-            (Data.ExpressionLambda (Data.Lambda _paramType body))) ->
-            Reader.local (Map.insert lamGuid newArg) $
+      Data.ExpressionApply
+        (Data.Apply
+         (Data.PureGuidExpression
+          (Data.GuidExpression lamGuid
+           -- TODO: Don't ignore paramType, we do want to recursively
+           -- type-check this:
+           (Data.ExpressionLambda (Data.Lambda _paramType body))))
+         arg) -> do
+          newArg <- recurse arg
+          Reader.local (Map.insert lamGuid newArg) $
             recurse body
-          _ ->
-            return . Data.PureGuidExpression . Data.GuidExpression guid .
-            Data.ExpressionApply $ Data.Apply newFunc newArg
       Data.ExpressionLambda (Data.Lambda paramType body) ->
         recurseLambda Data.ExpressionLambda paramType body
       Data.ExpressionPi (Data.Lambda paramType body) -> do
