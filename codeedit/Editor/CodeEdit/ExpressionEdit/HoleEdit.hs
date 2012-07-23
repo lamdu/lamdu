@@ -152,7 +152,7 @@ addDefType ::
 addDefType holeInfo (Data.DefinitionRef x) =
   liftM (maybe [] ((:[]) . (,) (Data.DefinitionRef x))) $
   Sugar.holeDefinitionType (hiHole holeInfo) x
-addDefType _ _ = do
+addDefType _ _ =
   return []
 
 makeAllResults
