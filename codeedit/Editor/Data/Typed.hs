@@ -272,11 +272,11 @@ addTypeRefs
 addTypeRefs =
   Data.mapMExpression f
   where
-    f stored@(StoredExpression irefProp () () val) =
+    f (StoredExpression irefProp () () val) =
       ( return val
       , \newVal -> do
           typeRef <- makeTypeRef []
-          valRef <- typeRefFromStored stored
+          valRef <- makeSingletonTypeRef (eipGuid irefProp) $ Data.mapExpression eeInferredValue newVal
           return $ StoredExpression irefProp typeRef valRef newVal
       )
 
