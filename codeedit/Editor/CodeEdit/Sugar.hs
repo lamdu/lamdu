@@ -112,7 +112,7 @@ data Hole m = Hole
   { holeScope :: Scope
   , holePickResult :: Maybe (Data.PureGuidExpression -> T m Guid)
   , holePaste :: Maybe (T m Guid)
-  , holeInferredValues :: [ExpressionRef m]
+  , holeInferredValues :: [Data.PureGuidExpression]
   }
 
 data LiteralInteger m = LiteralInteger
@@ -169,7 +169,7 @@ data ExprEntity m = ExprEntity
   { eeGuid :: Guid
   , eeStored :: Maybe (Data.ExpressionIRefProperty (T m))
   , eeInferredTypes :: [ExprEntity m]
-  , eeInferredValues :: [ExprEntity m]
+  , eeInferredValues :: [DataTyped.LoopGuidExpression]
   , eeValue :: Loopable (Data.Expression (ExprEntity m))
   }
 
@@ -212,7 +212,7 @@ eeFromTypedExpression =
         ExprEntity (DataTyped.storedGuid e)
         (Just (DataTyped.eeStored e))
         (map eeFromITL (DataTyped.eeInferredType e))
-        (map eeFromITL (DataTyped.eeInferredValue e)) .
+        (DataTyped.eeInferredValue e) .
         NonLoop
       )
 
@@ -540,12 +540,11 @@ convertHole :: Monad m => Convertor m
 convertHole exprI = do
   mPaste <- maybe (return Nothing) mkPaste $ eeStored exprI
   scope <- readScope
-  inferredValues <- mapM convertExpressionI $ eeInferredValues exprI
   mkExpressionRef exprI $ ExpressionHole Hole
     { holeScope = scope
     , holePickResult = fmap pickResult $ eeStored exprI
     , holePaste = mPaste
-    , holeInferredValues = inferredValues
+    , holeInferredValues = fromMaybe [] . mapM DataTyped.pureGuidFromLoop $ eeInferredValues exprI
     }
   where
     pickResult irefP result = do

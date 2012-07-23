@@ -335,7 +335,8 @@ makeH makeExpressionEdit hole guid myId = do
       liftM ((,) Nothing) .
       BWidgets.makeFocusableView unfocusedId .
         Widget.tint Config.inferredHoleColor . ExpressionGui.egWidget =<<
-      makeExpressionEdit inferredValue
+      makeExpressionEdit =<<
+      (OT.transaction . Sugar.convertExpressionPure) inferredValue
     _ ->
       liftM
       ((,) Nothing . makeBackground 12 unfocusedColor) $
