@@ -234,16 +234,17 @@ AtFieldTH.make ''Sugar
 runSugar :: Maybe (DataTyped.TypedStoredDefinition (T m)) -> Sugar m a -> T m a
 runSugar def = (`runReaderT` (def, [])) . unSugar
 
-zeroGuid :: Guid
-zeroGuid = Guid.fromString "ZeroGuid"
-
 putInScope :: Monad m => ExprEntity m -> Data.VariableRef -> Sugar m a -> Sugar m a
-putInScope typeE x =
+putInScope _typeE x =
   atSugar . Reader.local . second $
-  case map DataTyped.pureGuidFromLoop $ eeInferredValues typeE of
-  [] -> ((x, Data.PureGuidExpression (Data.GuidExpression zeroGuid Data.ExpressionHole)) :)
-  [Just t] -> ((x, t) :)
-  _ -> id
+  ((x, holeType) :) -- <-- temporary hack
+  -- case map DataTyped.pureGuidFromLoop $ eeInferredValues typeE of
+  -- [] -> ((x, holeType) :)
+  -- [Just t] -> ((x, t) :)
+  -- _ -> id
+  where
+    holeType = Data.PureGuidExpression $ Data.GuidExpression zeroGuid Data.ExpressionHole
+    zeroGuid = Guid.fromString "ZeroGuid"
 
 readScope :: Monad m => Sugar m Scope
 readScope = Sugar $ Reader.asks snd
