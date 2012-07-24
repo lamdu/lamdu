@@ -23,6 +23,7 @@ import Data.Functor.Identity (Identity(..))
 import Data.Maybe (catMaybes, fromMaybe, isJust)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
+import Data.UnionFind.IntMap (newUnionFind)
 import Editor.Anchors (ViewTag)
 import System.Random (RandomGen)
 import qualified Control.Monad.Trans.Reader as Reader
@@ -119,7 +120,7 @@ data Hole m = Hole
   , holePaste :: Maybe (T m Guid)
   , holeInferredValues :: [Data.PureGuidExpression]
   , holeDefinitionType :: Data.DefinitionIRef -> DataTyped.Infer (T m) DataTyped.TypeRef
-  , holeInferredType :: Maybe DataTyped.TypeRef
+  , holeCheckInfer :: DataTyped.Infer (T m) DataTyped.TypeRef -> T m Bool
   }
 
 data LiteralInteger m = LiteralInteger
@@ -618,19 +619,29 @@ convertHole exprI = do
   mPaste <- maybe (return Nothing) mkPaste $ eeProp exprI
   scope <- readScope
   deref <- derefTypeRef
+  builtinsMap <- readBuiltinsMap
   mDef <- readDefinition
   let
     maybeInferredValues =
       map DataTyped.pureGuidFromLoop .
       maybe [] (deref gen . eeInferredValues) $ eeStored exprI
-    gen = Random.mkStdGen . (+1) . (*2) . BinaryUtils.decodeS $ Guid.bs eGuid
+    gen =
+      Random.mkStdGen . (+1) . (*2) . BinaryUtils.decodeS $ Guid.bs eGuid
+    checkInfer holeType otherType =
+      liftM (isJust . fromInferred) .
+      DataTyped.derefResumedInfer (Random.mkStdGen 0) builtinsMap
+      (maybe newUnionFind DataTyped.deTypeContext mDef) $ do
+        DataTyped.unify holeType =<< otherType
+        return holeType
     hole = Hole
       { holeScope = scope
       , holePickResult = fmap pickResult $ eeProp exprI
       , holePaste = mPaste
       , holeInferredValues = catMaybes maybeInferredValues
       , holeDefinitionType = DataTyped.loadDefTypeWithinContext mDef
-      , holeInferredType = fmap eeInferredTypes $ eeStored exprI
+      , holeCheckInfer =
+        (maybe . const . return) True (checkInfer . eeInferredTypes) $
+        eeStored exprI
       }
   mkExpressionRef exprI =<<
     case maybeInferredValues of

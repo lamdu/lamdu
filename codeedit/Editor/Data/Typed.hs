@@ -11,12 +11,14 @@ module Editor.Data.Typed
   , pureExpressionFromStored
   , pureGuidFromLoop
   , alphaEq
+  , unify
   , loadDefTypeWithinContext
   , StoredExpression(..)
   , TypeRef, TypeContext
   , TypedStoredExpression
   , resumeInfer, Infer
   , derefTypeRef, derefResumedInfer
+  , makeSingletonTypeRef
   ) where
 
 import Control.Applicative (Applicative)
