@@ -653,7 +653,7 @@ convertDefinitionI
   :: Monad m
   => DataTyped.TypedStoredDefinition (T m)
   -> Sugar m (DefinitionRef m)
-convertDefinitionI (DataTyped.StoredDefinition defI defInferredType (Data.Definition bodyI typeI)) = do
+convertDefinitionI (DataTyped.TypedStoredDefinition defI defInferredType (Data.Definition bodyI typeI)) = do
   bodyS <- convertExpressionI bodyEntity
   typeS <- convertExpressionI $ eeFromTypedExpression typeI
   mInferredTypePure <- runMaybeT $ do

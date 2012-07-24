@@ -6,7 +6,7 @@ module Editor.Data.Typed
   ( atEeInferredType, atEeValue
   , storedGuid
   , LoopGuidExpression(..)
-  , StoredDefinition(..)
+  , TypedStoredDefinition(..)
   , atDeIRef, atDeValue
   , deGuid
   , loadInferDefinition
@@ -16,7 +16,7 @@ module Editor.Data.Typed
   , alphaEq
   , loadDefTypeWithinContext
   , StoredExpression(..)
-  , TypeData, TypedStoredExpression, TypedStoredDefinition
+  , TypeData, TypedStoredExpression
   ) where
 
 import Control.Applicative (Applicative)
@@ -55,7 +55,6 @@ import qualified System.Random.Utils as RandomUtils
 type T = Transaction ViewTag
 
 type TypedStoredExpression = StoredExpression [LoopGuidExpression]
-type TypedStoredDefinition = StoredDefinition [LoopGuidExpression]
 
 eipGuid :: Data.ExpressionIRefProperty m -> Guid
 eipGuid = IRef.guid . Data.unExpressionIRef . Property.value
@@ -80,17 +79,17 @@ data LoopGuidExpression
   | Loop Guid
   deriving (Show, Eq)
 
-data StoredDefinition it m = StoredDefinition
+data TypedStoredDefinition m = TypedStoredDefinition
   { deIRef :: Data.DefinitionIRef
-  , deInferredType :: it
-  , deValue :: Data.Definition (StoredExpression it m)
+  , deInferredType :: [LoopGuidExpression]
+  , deValue :: Data.Definition (TypedStoredExpression m)
   }
 
-deGuid :: StoredDefinition it m -> Guid
+deGuid :: TypedStoredDefinition m -> Guid
 deGuid = IRef.guid . deIRef
 
 AtFieldTH.make ''StoredExpression
-AtFieldTH.make ''StoredDefinition
+AtFieldTH.make ''TypedStoredDefinition
 
 --------------- Infer Stack boilerplate:
 
@@ -593,8 +592,13 @@ inferDefinition (DataLoad.DefinitionEntity defI (Data.Definition bodyI typeI)) =
         | otherwise = defTypeAsTypeRef getDefI
     inferExpression getDefTypeRef withTypeRefs
   let types = canonizeInferredExpression InferredType (IRef.guid defI) $ eeInferredType bodyStored
-  return . StoredDefinition defI types . Data.Definition bodyStored .
-    canonizeIdentifiersTypes $ storedFromLoaded [] typeI
+  return TypedStoredDefinition
+    { deIRef = defI
+    , deInferredType = types
+    , deValue =
+        Data.Definition bodyStored .
+        canonizeIdentifiersTypes $ storedFromLoaded [] typeI
+    }
 
 loadInferDefinition
   :: Monad m => Data.DefinitionIRef
