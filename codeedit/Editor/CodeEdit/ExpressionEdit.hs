@@ -100,10 +100,10 @@ makeEditor sExpr =
     wrapNonHoleExpr . textParenify hasParens $ FuncEdit.make make f
   Sugar.ExpressionInferred i ->
     isAHole (Sugar.iHole i) FocusDelegator.NotDelegating .
-    InferredEdit.make make i guid $ Sugar.rInferredTypes sExpr
+    InferredEdit.make make i . Sugar.guid $ Sugar.rEntity sExpr
   Sugar.ExpressionHole hole ->
     isAHole hole FocusDelegator.Delegating .
-    HoleEdit.make make hole guid $ Sugar.rInferredTypes sExpr
+    HoleEdit.make make hole . Sugar.guid $ Sugar.rEntity sExpr
   Sugar.ExpressionGetVariable varRef ->
     notAHole {- TODO: May need parenification -} $ VarEdit.make varRef
   Sugar.ExpressionApply hasParens apply ->
@@ -117,7 +117,6 @@ makeEditor sExpr =
   Sugar.ExpressionBuiltin builtin ->
     wrapNonHoleExpr $ BuiltinEdit.make builtin
   where
-    guid = Sugar.guid $ Sugar.rEntity sExpr
     parenify mkParens hasParens mkWidget myId =
       mkWidget myId >>=
       case hasParens of
