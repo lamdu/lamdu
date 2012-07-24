@@ -16,7 +16,7 @@ module Editor.CodeEdit.Sugar
 
 import Control.Applicative ((<$>), (<*>))
 import Control.Arrow (second)
-import Control.Monad (guard, liftM)
+import Control.Monad (guard, join, liftM)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -27,6 +27,7 @@ import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
+import qualified Data.List.Utils as ListUtils
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -116,6 +117,7 @@ data Hole m = Hole
   , holePaste :: Maybe (T m Guid)
   , holeInferredValues :: [Data.PureGuidExpression]
   , holeDefinitionType :: Data.DefinitionIRef -> T m (Maybe Data.PureGuidExpression)
+  , holeInferredType :: Maybe Data.PureGuidExpression
   }
 
 data LiteralInteger m = LiteralInteger
@@ -177,7 +179,7 @@ data Loopable a = Loop | NonLoop a
 data ExprEntity m = ExprEntity
   { eeGuid :: Guid
   , eeStored :: Maybe (Data.ExpressionIRefProperty (T m))
-  , eeInferredTypes :: [ExprEntity m]
+  , eeInferredTypes :: [DataTyped.LoopGuidExpression]
   , eeInferredValues :: [DataTyped.LoopGuidExpression]
   , eeValue :: Loopable (Data.Expression (ExprEntity m))
   }
@@ -220,7 +222,7 @@ eeFromTypedExpression =
       , return .
         ExprEntity (DataTyped.storedGuid e)
         (Just (DataTyped.eeStored e))
-        (map eeFromITL (DataTyped.eeInferredType e))
+        (DataTyped.eeInferredType e)
         (DataTyped.eeInferredValue e) .
         NonLoop
       )
@@ -295,7 +297,7 @@ mkExpressionRef
   -> Expression m -> Sugar m (ExpressionRef m)
 mkExpressionRef ee expr = do
   inferredTypesRefs <-
-    mapM convertExpressionI $ eeInferredTypes ee
+    mapM (convertExpressionI . eeFromITL) $ eeInferredTypes ee
   return
     ExpressionRef
     { rExpression = expr
@@ -571,6 +573,8 @@ convertHole exprI = do
       , holePaste = mPaste
       , holeInferredValues = catMaybes maybeInferredValues
       , holeDefinitionType = (maybe . const . return) Nothing DataTyped.loadDefTypeWithinContext def
+      , holeInferredType =
+          join . fmap DataTyped.pureGuidFromLoop . ListUtils.theOne $ eeInferredTypes exprI
       }
   mkExpressionRef exprI =<<
     case maybeInferredValues of
@@ -654,7 +658,7 @@ convertDefinitionI (DataTyped.StoredDefinition defI defInferredType (Data.Defini
   typeS <- convertExpressionI $ eeFromTypedExpression typeI
   mInferredTypePure <- runMaybeT $ do
     inferredType <-
-      toMaybeT $ DataTyped.pureGuidFromLoop =<< theOne defInferredType
+      toMaybeT $ DataTyped.pureGuidFromLoop =<< ListUtils.theOne defInferredType
     guard $ isCompleteType inferredType
     return inferredType
   defNewType <- runMaybeT $ do
@@ -680,8 +684,6 @@ convertDefinitionI (DataTyped.StoredDefinition defI defInferredType (Data.Defini
     bodyEntity = eeFromTypedExpression bodyI
     toMaybeT = MaybeT . return
     defGuid = IRef.guid defI
-    theOne [x] = Just x
-    theOne _ = Nothing
 
 convertDefinition
   :: Monad m

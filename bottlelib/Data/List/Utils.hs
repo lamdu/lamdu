@@ -1,5 +1,5 @@
 module Data.List.Utils
-	( groupOn, sortOn, enumerate, enumerate2d, nth, index, insertAt, removeAt, atPred, pairList
+	( groupOn, sortOn, enumerate, enumerate2d, nth, index, insertAt, removeAt, atPred, pairList, theOne
 	) where
 
 import Data.Function (on)
@@ -47,3 +47,7 @@ atPred p f xs =
 
 pairList :: (a, a) -> [a]
 pairList (x, y) = [x, y]
+
+theOne :: [a] -> Maybe a
+theOne [x] = Just x
+theOne _ = Nothing
