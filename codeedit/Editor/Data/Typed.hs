@@ -596,8 +596,7 @@ inferDefinition (DataLoad.DefinitionEntity defI (Data.Definition bodyI typeI)) =
     { deIRef = defI
     , deInferredType = types
     , deValue =
-        Data.Definition bodyStored .
-        canonizeIdentifiersTypes $ storedFromLoaded [] typeI
+        Data.Definition bodyStored $ storedFromLoaded [] typeI
     }
 
 loadInferDefinition
