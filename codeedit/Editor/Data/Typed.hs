@@ -21,7 +21,7 @@ module Editor.Data.Typed
 
 import Control.Applicative (Applicative)
 import Control.Monad (liftM, liftM2, (<=<), when, unless, filterM)
-import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Random (nextRandom, runRandomT)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (execStateT)
@@ -96,36 +96,27 @@ AtFieldTH.make ''TypedStoredDefinition
 --------------- Infer Stack boilerplate:
 
 newtype Infer m a = Infer
-  { unInfer :: UnionFindT TypeData (T m) a
-  } deriving (Functor, Applicative, Monad)
+  { unInfer :: UnionFindT TypeData m a
+  } deriving (Functor, Applicative, Monad, MonadTrans)
 AtFieldTH.make ''Infer
-
-liftTypeRef
-  :: Monad m
-  => UnionFindT TypeData (T m) a -> Infer m a
-liftTypeRef = Infer
-
-liftTransaction
-  :: Monad m => T m a -> Infer m a
-liftTransaction = liftTypeRef . lift
 
 ----------------- Infer operations:
 
 makeTypeRef :: Monad m => [Data.GuidExpression TypeRef] -> Infer m TypeRef
-makeTypeRef = liftTypeRef . UnionFindT.new . TypeData
+makeTypeRef = Infer . UnionFindT.new . TypeData
 
 getTypeRef :: Monad m => TypeRef -> Infer m [Data.GuidExpression TypeRef]
-getTypeRef = liftM unTypeData . liftTypeRef . UnionFindT.descr
+getTypeRef = liftM unTypeData . Infer . UnionFindT.descr
 
 setTypeRef :: Monad m => TypeRef -> [Data.GuidExpression TypeRef] -> Infer m ()
 setTypeRef typeRef types =
-  liftTypeRef . UnionFindT.setDescr typeRef $
+  Infer . UnionFindT.setDescr typeRef $
   TypeData types
 
-runInfer :: Monad m => Infer m a -> T m (TypeContext, a)
+runInfer :: Monad m => Infer m a -> m (TypeContext, a)
 runInfer = resumeInfer newUnionFind
 
-resumeInfer :: Monad m => TypeContext -> Infer m a -> T m (TypeContext, a)
+resumeInfer :: Monad m => TypeContext -> Infer m a -> m (TypeContext, a)
 resumeInfer typeContext = resumeUnionFindT typeContext . unInfer
 
 makeSingletonTypeRef :: Monad m => Guid -> Data.Expression TypeRef -> Infer m TypeRef
@@ -216,9 +207,9 @@ expand =
             Data.PureGuidExpression . Data.GuidExpression guid . cons $
             Data.Lambda paramType newBody
 
-typeRefFromPure :: Monad m => Data.PureGuidExpression -> Infer m TypeRef
+typeRefFromPure :: Monad m => Data.PureGuidExpression -> Infer (T m) TypeRef
 typeRefFromPure =
-  Data.mapMExpression f <=< liftTransaction . expand
+  Data.mapMExpression f <=< lift . expand
   where
     f (Data.PureGuidExpression (Data.GuidExpression guid val)) =
       ( return val
@@ -227,7 +218,7 @@ typeRefFromPure =
 
 typeRefFromStored
   :: Monad m => StoredExpression it f
-  -> Infer m TypeRef
+  -> Infer (T m) TypeRef
 typeRefFromStored =
   typeRefFromPure . pureExpressionFromStored
 
@@ -246,7 +237,7 @@ storedFromLoaded it =
 addTypeRefs
   :: Monad m
   => DataLoad.ExpressionEntity f
-  -> Infer m (StoredExpression TypeRef f)
+  -> Infer (T m) (StoredExpression TypeRef f)
 addTypeRefs =
   Data.mapMExpression f . storedFromLoaded ()
   where
@@ -257,7 +248,7 @@ addTypeRefs =
           valRef <-
             case newVal of
             Data.ExpressionGetVariable (Data.DefinitionRef ref) ->
-               typeRefFromPure =<< liftTransaction (loadDefinitionBodyPure ref)
+               typeRefFromPure =<< lift (loadDefinitionBodyPure ref)
             _ -> makeSingletonTypeRef (eipGuid irefProp) $ fmap eeInferredValue newVal
           return $ StoredExpression irefProp typeRef valRef newVal
       )
@@ -265,7 +256,7 @@ addTypeRefs =
 derefResumedInfer
   :: (Monad m, RandomGen g)
   => g -> Anchors.BuiltinsMap -> TypeContext
-  -> Infer m TypeRef -> T m [LoopGuidExpression]
+  -> Infer m TypeRef -> m [LoopGuidExpression]
 derefResumedInfer gen builtinsMap typeContext action = do
   (newTypeContext, typeRef) <- resumeInfer typeContext action
   return $ derefTypeRef gen builtinsMap newTypeContext typeRef
@@ -303,9 +294,9 @@ derefTypeRef stdGen builtinsMap typeContext rootTypeRef =
 
 unifyOnTree
   :: Monad m
-  => (Data.DefinitionIRef -> Infer m TypeRef)
+  => (Data.DefinitionIRef -> Infer (T m) TypeRef)
   -> StoredExpression TypeRef f
-  -> Infer m ()
+  -> Infer (T m) ()
 unifyOnTree defTypeRef = (`runReaderT` []) . go
   where
     go (StoredExpression stored typeRef _ value) =
@@ -355,7 +346,7 @@ unifyOnTree defTypeRef = (`runReaderT` []) . go
       Data.ExpressionLiteralInteger _ ->
         lift $ setType =<<
         typeRefFromStored . storedFromLoaded () =<<
-        liftTransaction (DataLoad.loadExpression =<< Anchors.integerType)
+        lift (DataLoad.loadExpression =<< Anchors.integerType)
       Data.ExpressionBuiltin (Data.Builtin _ bType) ->
         lift $ setType =<< typeRefFromStored bType
       _ -> return ()
@@ -369,14 +360,14 @@ unify
   -> TypeRef
   -> Infer m ()
 unify a b = do
-  e <- liftTypeRef $ UnionFindT.equivalent a b
+  e <- Infer $ UnionFindT.equivalent a b
   unless e $ do
     as <- getTypeRef a
     bs <- getTypeRef b
     bConflicts <- filterM (liftM not . matches as) bs
     -- Need to re-get a after the side-effecting matches:
     result <- liftM (++ bConflicts) $ getTypeRef a
-    liftTypeRef $ do
+    Infer $ do
       a `UnionFindT.union` b
       UnionFindT.setDescr a $ TypeData result
   where
@@ -451,7 +442,7 @@ allUnder =
     recurse typeRef = do
       visited <- State.get
       alreadySeen <-
-        lift . liftTypeRef . liftM or $
+        lift . Infer . liftM or $
         mapM (UnionFindT.equivalent typeRef) visited
       unless alreadySeen $ do
         State.modify (typeRef :)
@@ -511,17 +502,17 @@ builtinsToGlobals builtinsMap (NoLoop (Data.GuidExpression guid expr)) =
 loadDefTypePure :: Monad m => Data.DefinitionIRef -> T m Data.PureGuidExpression
 loadDefTypePure = DataLoad.loadPureExpression . Data.defType <=< Transaction.readIRef
 
-loadDefTypeToTypeRef :: Monad m => Data.DefinitionIRef -> Infer m TypeRef
-loadDefTypeToTypeRef = typeRefFromPure <=< liftTransaction . loadDefTypePure
+loadDefTypeToTypeRef :: Monad m => Data.DefinitionIRef -> Infer (T m) TypeRef
+loadDefTypeToTypeRef = typeRefFromPure <=< lift . loadDefTypePure
 
 loadDefTypeWithinContext
   :: Monad m
-  => Maybe (TypedStoredDefinition (T m)) -> Data.DefinitionIRef -> Infer m TypeRef
+  => Maybe (TypedStoredDefinition (T m)) -> Data.DefinitionIRef -> Infer (T m) TypeRef
 loadDefTypeWithinContext Nothing = loadDefTypeToTypeRef
 loadDefTypeWithinContext (Just def) = getDefTypeRef (deInferredType def) (deIRef def)
 
 getDefTypeRef
-  :: Monad m => TypeRef -> Data.DefinitionIRef -> Data.DefinitionIRef -> Infer m TypeRef
+  :: Monad m => TypeRef -> Data.DefinitionIRef -> Data.DefinitionIRef -> Infer (T m) TypeRef
 getDefTypeRef defTypeRef defI getDefI
   | getDefI == defI = return defTypeRef
   | otherwise = loadDefTypeToTypeRef getDefI

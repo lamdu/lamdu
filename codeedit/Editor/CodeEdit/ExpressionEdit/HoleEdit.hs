@@ -46,11 +46,13 @@ data Result = Result
   }
 AtFieldTH.make ''Result
 
+type T = Transaction ViewTag
+
 data HoleInfo m = HoleInfo
   { hiHoleId :: Widget.Id
-  , hiSearchTerm :: Property (Transaction ViewTag m) String
+  , hiSearchTerm :: Property (T m) String
   , hiHole :: Sugar.Hole m
-  , hiPickResult :: Data.PureGuidExpression -> Transaction ViewTag m Guid
+  , hiPickResult :: Data.PureGuidExpression -> T m Guid
   , hiGuid :: Guid
   }
 
@@ -149,7 +151,7 @@ makeLiteralResults searchTerm =
 
 addDefType ::
   Monad m => HoleInfo m -> Data.VariableRef ->
-  Maybe (Data.VariableRef, DataTyped.Infer m DataTyped.TypeRef)
+  Maybe (Data.VariableRef, DataTyped.Infer (T m) DataTyped.TypeRef)
 addDefType holeInfo (Data.DefinitionRef x) =
   Just (Data.DefinitionRef x, Sugar.holeDefinitionType (hiHole holeInfo) x)
 addDefType _ _ =

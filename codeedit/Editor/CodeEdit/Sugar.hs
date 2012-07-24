@@ -118,7 +118,7 @@ data Hole m = Hole
   , holePickResult :: Maybe (Data.PureGuidExpression -> T m Guid)
   , holePaste :: Maybe (T m Guid)
   , holeInferredValues :: [Data.PureGuidExpression]
-  , holeDefinitionType :: Data.DefinitionIRef -> DataTyped.Infer m DataTyped.TypeRef
+  , holeDefinitionType :: Data.DefinitionIRef -> DataTyped.Infer (T m) DataTyped.TypeRef
   , holeInferredType :: Maybe DataTyped.TypeRef
   }
 
