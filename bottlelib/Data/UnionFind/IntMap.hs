@@ -39,19 +39,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 {-# LANGUAGE BangPatterns #-}
 {-# OPTIONS_GHC -funbox-strict-fields #-}
 module Data.UnionFind.IntMap
-    ( newPointSupply, fresh, repr, descr, setDescr, union, equivalent,
-      PointSupply, Point, prettyUF ) where
+    ( newUnionFind, fresh, repr, descr, setDescr, union, equivalent,
+      UnionFind, Point, prettyUF ) where
 
 import Control.Arrow ((&&&), (***))
 import qualified Data.IntMap as IM
 
-data PointSupply a = PointSupply
+data UnionFind a = UnionFind
   { _psNext :: !Int
   , psEqs :: !(IM.IntMap (Link a))
   } deriving (Show)
 
-atEqs :: PointSupply a -> (IM.IntMap (Link a) -> IM.IntMap (Link a)) -> PointSupply a
-atEqs (PointSupply next old) f = PointSupply next $ f old
+atEqs :: UnionFind a -> (IM.IntMap (Link a) -> IM.IntMap (Link a)) -> UnionFind a
+atEqs (UnionFind next old) f = UnionFind next $ f old
 
 newtype Point a = Point { unPoint :: Int }
 instance Show (Point a) where
@@ -60,7 +60,7 @@ instance Show (Point a) where
 asPoint :: (Point a -> Point a) -> Int -> Int
 asPoint f = unPoint . f . Point
 
-getPoints :: PointSupply a -> [(Point a, [Point a])]
+getPoints :: UnionFind a -> [(Point a, [Point a])]
 getPoints ps =
   map (Point *** map Point) .
   IM.toList .
@@ -68,7 +68,7 @@ getPoints ps =
   IM.keys $
   psEqs ps
 
-prettyUF :: Show a => PointSupply a -> String
+prettyUF :: Show a => UnionFind a -> String
 prettyUF ps =
   unlines . ("UnionFind:":) .
   map (\(r, keys) -> show keys ++ ":" ++ show (descr ps r)) $
@@ -82,20 +82,20 @@ data Link a
       -- ^ Pointer to some other element of the equivalence class.
      deriving Show
 
-newPointSupply :: PointSupply a
-newPointSupply = PointSupply 0 IM.empty
+newUnionFind :: UnionFind a
+newUnionFind = UnionFind 0 IM.empty
 
-fresh :: PointSupply a -> a -> (PointSupply a, Point a)
-fresh (PointSupply next eqs) a =
-  (PointSupply (next + 1) (IM.insert next (Info 0 a) eqs), Point next)
+fresh :: UnionFind a -> a -> (UnionFind a, Point a)
+fresh (UnionFind next eqs) a =
+  (UnionFind (next + 1) (IM.insert next (Info 0 a) eqs), Point next)
 
--- freshList :: PointSupply a -> [a] -> (PointSupply a, [Point a])
+-- freshList :: UnionFind a -> [a] -> (UnionFind a, [Point a])
 -- freshList
 
-repr :: PointSupply a -> Point a -> Point a
+repr :: UnionFind a -> Point a -> Point a
 repr ps p = reprInfo ps p (\n _rank _a -> Point n)
 
-reprInfo :: PointSupply a -> Point a -> (Int -> Int -> a -> r) -> r
+reprInfo :: UnionFind a -> Point a -> (Int -> Int -> a -> r) -> r
 reprInfo ps (Point n) k = go n
   where
     go !i =
@@ -103,7 +103,7 @@ reprInfo ps (Point n) k = go n
         Link i' -> go i'
         Info r a -> k i r a
 
-union :: PointSupply a -> Point a -> Point a -> PointSupply a
+union :: UnionFind a -> Point a -> Point a -> UnionFind a
 union ps p1 p2 =
   reprInfo ps p1 $ \i1 r1 _a1 ->
   reprInfo ps p2 $ \i2 r2 a2 ->
@@ -120,15 +120,15 @@ union ps p1 p2 =
         IM.insert i1 (Info r2 a2) .
         IM.insert i2 (Link i1)
 
-descr :: PointSupply a -> Point a -> a
+descr :: UnionFind a -> Point a -> a
 descr ps p = reprInfo ps p (\_ _ a -> a)
 
-setDescr :: PointSupply a -> Point a -> a -> PointSupply a
+setDescr :: UnionFind a -> Point a -> a -> UnionFind a
 setDescr ps p val =
   reprInfo ps p $ \i r _oldVal ->
   atEqs ps $ IM.insert i (Info r val)
 
-equivalent :: PointSupply a -> Point a -> Point a -> Bool
+equivalent :: UnionFind a -> Point a -> Point a -> Bool
 equivalent ps p1 p2 =
   reprInfo ps p1 $ \i1 _ _ ->
   reprInfo ps p2 $ \i2 _ _ ->
@@ -137,7 +137,7 @@ equivalent ps p1 p2 =
 {-
 tst1 :: IO ()
 tst1 = do
-  let ps0 = newPointSupply
+  let ps0 = newUnionFind
       (ps1, p1) = fresh ps0 "hello"
       (ps2, p2) = fresh ps1 "world"
       (ps3, p3) = fresh ps2 "you"
@@ -154,9 +154,9 @@ tst1 = do
 {-
 tst2 :: IO ()
 tst2 = do
-  let as0 = newPointSupply
+  let as0 = newUnionFind
       (as, a1) = fresh as0 "foo"
-      bs0 = newPointSupply
+      bs0 = newUnionFind
       (bs, b1) = fresh bs0 "bar"
   print $ union as a1 b1
   -}

@@ -8,7 +8,9 @@ module Editor.Anchors
   , view, viewIRef
   , redos, redosIRef
   , currentBranchIRef, currentBranch
-  , globals, builtinsMap, integerType
+  , globals
+  , BuiltinsMap, builtinsMap
+  , integerType
   , newBuiltin, newBuiltinExpression
   , Pane
   , dbStore, DBTag
@@ -86,7 +88,8 @@ cursorIRef = IRef.anchor "cursor"
 globals :: Monad m => MkProperty ViewTag m [Data.VariableRef]
 globals = Transaction.fromIRef $ IRef.anchor "globals"
 
-builtinsMap :: Monad m => MkProperty ViewTag m (Map Data.FFIName Data.VariableRef)
+type BuiltinsMap = Map Data.FFIName Data.VariableRef
+builtinsMap :: Monad m => MkProperty ViewTag m BuiltinsMap
 builtinsMap = Transaction.fromIRef $ IRef.anchor "builtinsMap"
 
 integerType :: Monad m => MkProperty ViewTag m Data.ExpressionIRef

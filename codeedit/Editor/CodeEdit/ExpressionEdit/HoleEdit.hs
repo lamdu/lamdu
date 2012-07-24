@@ -7,7 +7,7 @@ import Data.Function (on)
 import Data.Hashable(hash)
 import Data.List (isInfixOf, isPrefixOf)
 import Data.List.Utils (sortOn)
-import Data.Maybe (fromMaybe, isJust, listToMaybe)
+import Data.Maybe (fromMaybe, isJust, listToMaybe, catMaybes)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
@@ -29,6 +29,7 @@ import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
+import qualified Editor.Data.Typed as DataTyped
 import qualified Editor.ITransaction as IT
 import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
@@ -148,12 +149,11 @@ makeLiteralResults searchTerm =
 
 addDefType ::
   Monad m => HoleInfo m -> Data.VariableRef ->
-  Transaction ViewTag m [(Data.VariableRef, Data.PureGuidExpression)]
+  Maybe (Data.VariableRef, DataTyped.Infer m DataTyped.TypeRef)
 addDefType holeInfo (Data.DefinitionRef x) =
-  liftM (maybe [] ((:[]) . (,) (Data.DefinitionRef x))) $
-  Sugar.holeDefinitionType (hiHole holeInfo) x
+  Just (Data.DefinitionRef x, Sugar.holeDefinitionType (hiHole holeInfo) x)
 addDefType _ _ =
-  return []
+  Nothing
 
 makeAllResults
   :: MonadF m
@@ -162,8 +162,8 @@ makeAllResults
 makeAllResults holeInfo = do
   globals <- OT.getP Anchors.globals
   varResults <-
-    mapM (uncurry makeResultVariable) . (params ++) . concat =<<
-    OT.transaction (mapM (addDefType holeInfo) globals)
+    mapM (uncurry makeResultVariable) . (params ++) . catMaybes $
+    map (addDefType holeInfo) globals
   let
     searchTerm = Property.value $ hiSearchTerm holeInfo
     inferredResults = map (Result [""]) $ Sugar.holeInferredValues (hiHole holeInfo)
@@ -175,7 +175,7 @@ makeAllResults holeInfo = do
     literalResults ++ filter goodResult (inferredResults ++ piResult : varResults)
   where
     insensitiveInfixOf = isInfixOf `on` map Char.toLower
-    params = Sugar.holeScope $ hiHole holeInfo
+    params = (map . second) return . Sugar.holeScope $ hiHole holeInfo
     piResult =
       Result
       { resultNames = ["->", "Pi", "→", "→", "Π", "π"]

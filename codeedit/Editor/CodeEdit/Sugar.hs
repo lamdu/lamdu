@@ -15,8 +15,7 @@ module Editor.CodeEdit.Sugar
   ) where
 
 import Control.Applicative ((<$>), (<*>))
-import Control.Arrow (second)
-import Control.Monad (guard, join, liftM)
+import Control.Monad (guard, liftM, (<=<))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -25,8 +24,10 @@ import Data.Maybe (catMaybes, fromMaybe, isJust)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
+import System.Random (RandomGen)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
+import qualified Data.Binary.Utils as BinaryUtils
 import qualified Data.List.Utils as ListUtils
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
@@ -37,6 +38,7 @@ import qualified Editor.CodeEdit.Infix as Infix
 import qualified Editor.Data as Data
 import qualified Editor.Data.Ops as DataOps
 import qualified Editor.Data.Typed as DataTyped
+import qualified System.Random as Random
 
 type T = Transaction ViewTag
 
@@ -109,15 +111,15 @@ data Section m = Section
   , sectionInnerApplyGuid :: Maybe Guid
   }
 
-type Scope = [(Data.VariableRef, Data.PureGuidExpression)]
+type Scope = [(Data.VariableRef, DataTyped.TypeRef)]
 
 data Hole m = Hole
   { holeScope :: Scope
   , holePickResult :: Maybe (Data.PureGuidExpression -> T m Guid)
   , holePaste :: Maybe (T m Guid)
   , holeInferredValues :: [Data.PureGuidExpression]
-  , holeDefinitionType :: Data.DefinitionIRef -> T m (Maybe Data.PureGuidExpression)
-  , holeInferredType :: Maybe Data.PureGuidExpression
+  , holeDefinitionType :: Data.DefinitionIRef -> DataTyped.Infer m DataTyped.TypeRef
+  , holeInferredType :: Maybe DataTyped.TypeRef
   }
 
 data LiteralInteger m = LiteralInteger
@@ -176,25 +178,32 @@ AtFieldTH.make ''Actions
 
 data Loopable a = Loop | NonLoop a
 
+data ExprEntityStored m = ExprEntityStored
+  { eesProp :: Data.ExpressionIRefProperty (T m)
+  , eeInferredTypes :: DataTyped.TypeRef -- TODO: name
+  , eeInferredValues :: DataTyped.TypeRef
+  }
+
 data ExprEntity m = ExprEntity
   { eeGuid :: Guid
-  , eeStored :: Maybe (Data.ExpressionIRefProperty (T m))
-  , eeInferredTypes :: [DataTyped.LoopGuidExpression]
-  , eeInferredValues :: [DataTyped.LoopGuidExpression]
+  , eeStored :: Maybe (ExprEntityStored m)
   , eeValue :: Loopable (Data.Expression (ExprEntity m))
   }
 
+eeProp :: ExprEntity m -> Maybe (Data.ExpressionIRefProperty (T m))
+eeProp = fmap eesProp . eeStored
+
 eeFromITL :: DataTyped.LoopGuidExpression -> ExprEntity m
 eeFromITL (DataTyped.Loop itGuid) =
-  ExprEntity itGuid Nothing [] [] Loop
+  ExprEntity itGuid Nothing Loop
 eeFromITL
   (DataTyped.NoLoop (Data.GuidExpression itGuid val)) =
-    ExprEntity itGuid Nothing [] [] . NonLoop $
+    ExprEntity itGuid Nothing . NonLoop $
     fmap eeFromITL val
 
 eeFromPure :: Data.PureGuidExpression -> ExprEntity m
 eeFromPure (Data.PureGuidExpression (Data.GuidExpression g expr)) =
-  ExprEntity g Nothing [] [] . NonLoop $ fmap eeFromPure expr
+  ExprEntity g Nothing . NonLoop $ fmap eeFromPure expr
 
 argument :: (a -> b) -> (b -> c) -> a -> c
 argument = flip (.)
@@ -221,37 +230,46 @@ eeFromTypedExpression =
       ( return $ DataTyped.eeValue e
       , return .
         ExprEntity (DataTyped.storedGuid e)
-        (Just (DataTyped.eeStored e))
-        (DataTyped.eeInferredType e)
-        (DataTyped.eeInferredValue e) .
+        (Just
+         (ExprEntityStored
+          (DataTyped.eeStored e)
+          (DataTyped.eeInferredType e)
+          (DataTyped.eeInferredValue e))) .
         NonLoop
       )
 
-newtype Sugar m a = Sugar {
-  unSugar :: ReaderT (Maybe (DataTyped.TypedStoredDefinition (T m)), Scope) (T m) a
-  } deriving (Monad)
+data SugarContext m = SugarContext
+  { scScope :: Scope
+  , scDef :: Maybe (DataTyped.TypedStoredDefinition (T m))
+  , scBuiltinsMap :: Anchors.BuiltinsMap
+  }
+AtFieldTH.make ''SugarContext
 
+newtype Sugar m a = Sugar {
+  unSugar :: ReaderT (SugarContext m) (T m) a
+  } deriving (Monad)
 AtFieldTH.make ''Sugar
 
-runSugar :: Maybe (DataTyped.TypedStoredDefinition (T m)) -> Sugar m a -> T m a
-runSugar def = (`runReaderT` (def, [])) . unSugar
+runSugar :: Monad m => Maybe (DataTyped.TypedStoredDefinition (T m)) -> Sugar m a -> T m a
+runSugar def (Sugar action) = do
+  builtinsMap <- Anchors.getP Anchors.builtinsMap
+  runReaderT action SugarContext 
+    { scScope = []
+    , scDef = def
+    , scBuiltinsMap = builtinsMap
+    }
 
-zeroGuid :: Guid
-zeroGuid = Guid.fromString "ZeroGuid"
-
-putInScope :: Monad m => ExprEntity m -> Data.VariableRef -> Sugar m a -> Sugar m a
-putInScope typeE x =
-  atSugar . Reader.local . second $
-  case map DataTyped.pureGuidFromLoop $ eeInferredValues typeE of
-  [] -> ((x, Data.PureGuidExpression (Data.GuidExpression zeroGuid Data.ExpressionHole)) :)
-  [Just t] -> ((x, t) :)
-  _ -> id
+putInScope :: Monad m => DataTyped.TypeRef -> Data.VariableRef -> Sugar m a -> Sugar m a
+putInScope typeRef x = atSugar . Reader.local . atScScope $ ((x, typeRef) :)
 
 readScope :: Monad m => Sugar m Scope
-readScope = Sugar $ Reader.asks snd
+readScope = Sugar $ Reader.asks scScope
 
 readDefinition :: Monad m => Sugar m (Maybe (DataTyped.TypedStoredDefinition (T m)))
-readDefinition = Sugar $ Reader.asks fst
+readDefinition = Sugar $ Reader.asks scDef
+
+readBuiltinsMap :: Monad m => Sugar m Anchors.BuiltinsMap
+readBuiltinsMap = Sugar $ Reader.asks scBuiltinsMap
 
 liftTransaction :: Monad m => T m a -> Sugar m a
 liftTransaction = Sugar . lift
@@ -288,22 +306,37 @@ makeEntityGuid :: Monad m => Guid -> ExprEntity m -> Entity m
 makeEntityGuid exprGuid exprI =
   Entity
   { guid = exprGuid
-  , eActions = fmap mkActions $ eeStored exprI
+  , eActions = fmap mkActions $ eeProp exprI
   }
+
+derefTypeRef
+  :: (Monad m, RandomGen g)
+  => Sugar m (g -> DataTyped.TypeRef -> [DataTyped.LoopGuidExpression])
+derefTypeRef = do
+  builtinsMap <- readBuiltinsMap
+  mDefinition <- readDefinition
+  let f def gen = DataTyped.derefTypeRef gen builtinsMap $ DataTyped.deTypeContext def
+  return $ maybe ((const . const) []) f mDefinition
 
 mkExpressionRef
   :: Monad m
   => ExprEntity m
   -> Expression m -> Sugar m (ExpressionRef m)
 mkExpressionRef ee expr = do
+  deref <- derefTypeRef
+  let types = maybe [] (deref gen . eeInferredTypes) $ eeStored ee
   inferredTypesRefs <-
-    mapM (convertExpressionI . eeFromITL) $ eeInferredTypes ee
+    mapM (convertExpressionI . eeFromITL) types
   return
     ExpressionRef
     { rExpression = expr
     , rInferredTypes = inferredTypesRefs
     , rEntity = makeEntity ee
     }
+  where
+    gen =
+      Random.mkStdGen . (*2) . BinaryUtils.decodeS . Guid.bs $
+      eeGuid ee
 
 addStoredDeleteCutActions
   :: Monad m
@@ -327,7 +360,7 @@ addDeleteCutActions
   -> Entity m -> Entity m
 addDeleteCutActions deletedI parentI replacerI =
   fromMaybe id $
-  addStoredDeleteCutActions <$> eeStored deletedI <*> eeStored parentI <*> eeStored replacerI
+  addStoredDeleteCutActions <$> eeProp deletedI <*> eeProp parentI <*> eeProp replacerI
 
 addDeleteCut
   :: Monad m
@@ -351,30 +384,48 @@ convertLambdaParam (Data.Lambda paramTypeI bodyI) bodyRef exprI = do
     , fpBody = bodyRef
     }
 
-convertLambda
+convertLambdaBody
   :: Monad m
   => Data.Lambda (ExprEntity m)
   -> Convertor m
-convertLambda lambda@(Data.Lambda paramTypeI bodyI) exprI = do
-  sBody <-
-    putInScope paramTypeI (Data.ParameterRef (eeGuid exprI)) $
-    convertExpressionI bodyI
+convertLambdaBody (Data.Lambda paramTypeI bodyI) exprI =
+  enhanceScope $ convertExpressionI bodyI
+  where
+    enhanceScope =
+      case eeStored paramTypeI of
+      Nothing -> id
+      Just stored ->
+        putInScope (eeInferredValues stored) . Data.ParameterRef $
+        eeGuid exprI
+
+convertLambda
+  :: Monad m
+  => Data.Lambda (ExprEntity m)
+  -> ExprEntity m -> Sugar m (FuncParam m, ExpressionRef m)
+convertLambda lambda exprI = do
+  sBody <- convertLambdaBody lambda exprI
   param <- convertLambdaParam lambda sBody exprI
+  return (param, sBody)
+
+convertFunc
+  :: Monad m
+  => Data.Lambda (ExprEntity m)
+  -> Convertor m
+convertFunc lambda exprI = do
+  (param, sBody) <- convertLambda lambda exprI
   mkExpressionRef exprI .
     ExpressionFunc DontHaveParens . atFParams (param :) $
     case rExpression sBody of
       ExpressionFunc _ x -> x
       _ -> Func [] sBody
 
+
 convertPi
   :: Monad m
   => Data.Lambda (ExprEntity m)
   -> Convertor m
 convertPi lambda@(Data.Lambda paramTypeI bodyI) exprI = do
-  sBody <-
-    putInScope paramTypeI (Data.ParameterRef (eeGuid exprI)) $
-    convertExpressionI bodyI
-  param <- convertLambdaParam lambda sBody exprI
+  (param, sBody) <- convertLambda lambda exprI
   mkExpressionRef exprI $ ExpressionPi DontHaveParens
     Pi
     { pParam = atFpType addApplyChildParens param
@@ -387,11 +438,9 @@ convertWhere
   -> ExprEntity m
   -> Data.Lambda (ExprEntity m)
   -> Convertor m
-convertWhere valueRef lambdaI (Data.Lambda typeI bodyI) applyI = do
+convertWhere valueRef lambdaI lambda@(Data.Lambda typeI bodyI) applyI = do
   typeRef <- convertExpressionI typeI
-  sBody <-
-    putInScope typeI (Data.ParameterRef (eeGuid lambdaI)) $
-    convertExpressionI bodyI
+  sBody <- convertLambdaBody lambda lambdaI
   mkExpressionRef applyI .
     ExpressionWhere DontHaveParens . atWWheres (item typeRef :) $
     case rExpression sBody of
@@ -449,7 +498,7 @@ convertApply apply@(Data.Apply funcI argI) exprI =
 
 setAddArg :: Monad m => ExprEntity m -> ExpressionRef m -> ExpressionRef m
 setAddArg exprI =
-  maybe id f $ eeStored exprI
+  maybe id f $ eeProp exprI
   where
     f stored =
       atREntity . atEActions . fmap . atAddNextArg . const .
@@ -561,20 +610,27 @@ mkPaste exprP = do
       ~() <- replacer clip
       return $ Data.exprIRefGuid clip
 
+fromInferred :: [DataTyped.LoopGuidExpression] -> Maybe Data.PureGuidExpression
+fromInferred = DataTyped.pureGuidFromLoop <=< ListUtils.theOne
+
 convertHole :: Monad m => Convertor m
 convertHole exprI = do
-  mPaste <- maybe (return Nothing) mkPaste $ eeStored exprI
+  mPaste <- maybe (return Nothing) mkPaste $ eeProp exprI
   scope <- readScope
-  def <- readDefinition
+  deref <- derefTypeRef
+  mDef <- readDefinition
   let
+    maybeInferredValues =
+      map DataTyped.pureGuidFromLoop .
+      maybe [] (deref gen . eeInferredValues) $ eeStored exprI
+    gen = Random.mkStdGen . (+1) . (*2) . BinaryUtils.decodeS $ Guid.bs eGuid
     hole = Hole
       { holeScope = scope
-      , holePickResult = fmap pickResult $ eeStored exprI
+      , holePickResult = fmap pickResult $ eeProp exprI
       , holePaste = mPaste
       , holeInferredValues = catMaybes maybeInferredValues
-      , holeDefinitionType = (maybe . const . return) Nothing DataTyped.loadDefTypeWithinContext def
-      , holeInferredType =
-          join . fmap DataTyped.pureGuidFromLoop . ListUtils.theOne $ eeInferredTypes exprI
+      , holeDefinitionType = DataTyped.loadDefTypeWithinContext mDef
+      , holeInferredType = fmap eeInferredTypes $ eeStored exprI
       }
   mkExpressionRef exprI =<<
     case maybeInferredValues of
@@ -583,17 +639,17 @@ convertHole exprI = do
       convertExpressionI $ eeFromPure x
     _ -> return $ ExpressionHole hole
   where
-    maybeInferredValues = map DataTyped.pureGuidFromLoop $ eeInferredValues exprI
+    eGuid = eeGuid exprI
     pickResult irefP result = do
       ~() <- Data.writeIRefExpressionFromPure (Property.value irefP) result
-      return $ eeGuid exprI
+      return eGuid
 
 convertLiteralInteger :: Monad m => Integer -> Convertor m
 convertLiteralInteger i exprI =
   mkExpressionRef exprI . ExpressionLiteralInteger $
   LiteralInteger
   { liValue = i
-  , liSetValue = fmap (writeIRefVia Data.ExpressionLiteralInteger) $ eeStored exprI
+  , liSetValue = fmap (writeIRefVia Data.ExpressionLiteralInteger) $ eeProp exprI
   }
 
 convertBuiltin :: Monad m => Data.Builtin (ExprEntity m) -> Convertor m
@@ -602,8 +658,8 @@ convertBuiltin (Data.Builtin name t) exprI =
   Builtin
   { biName = name
   , biSetFFIName = do
-      tProp <- eeStored t
-      fmap (writeIRefVia (Data.ExpressionBuiltin . (`Data.Builtin` Property.value tProp))) $ eeStored exprI
+      tProp <- eeProp t
+      fmap (writeIRefVia (Data.ExpressionBuiltin . (`Data.Builtin` Property.value tProp))) $ eeProp exprI
   }
 
 fakeBuiltin :: [String] -> String -> Expression m
@@ -628,7 +684,7 @@ convertExpressionI ee =
     NonLoop x -> convert x
     Loop -> convertLoop
   where
-    convert (Data.ExpressionLambda x) = convertLambda x
+    convert (Data.ExpressionLambda x) = convertFunc x
     convert (Data.ExpressionPi x) = convertPi x
     convert (Data.ExpressionApply x) = convertApply x
     convert (Data.ExpressionGetVariable x) = convertGetVariable x
@@ -653,12 +709,12 @@ convertDefinitionI
   :: Monad m
   => DataTyped.TypedStoredDefinition (T m)
   -> Sugar m (DefinitionRef m)
-convertDefinitionI (DataTyped.TypedStoredDefinition defI defInferredType (Data.Definition bodyI typeI)) = do
+convertDefinitionI (DataTyped.TypedStoredDefinition defI defInferredType (Data.Definition bodyI typeI) _) = do
   bodyS <- convertExpressionI bodyEntity
   typeS <- convertExpressionI $ eeFromTypedExpression typeI
+  deref <- derefTypeRef
   mInferredTypePure <- runMaybeT $ do
-    inferredType <-
-      toMaybeT $ DataTyped.pureGuidFromLoop =<< ListUtils.theOne defInferredType
+    inferredType <- toMaybeT . fromInferred $ deref (Random.mkStdGen 0) defInferredType
     guard $ isCompleteType inferredType
     return inferredType
   defNewType <- runMaybeT $ do

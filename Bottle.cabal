@@ -103,8 +103,7 @@ Executable Editor
                        bytestring,
                        derive,
                        bottle,
-                       random,
-                       List
+                       random
   Other-Modules:       Editor.Anchors,
                        Editor.ExampleDB,
                        Editor.BottleWidgets,
