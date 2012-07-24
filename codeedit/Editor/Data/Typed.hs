@@ -1,7 +1,4 @@
-{-# LANGUAGE
-    TemplateHaskell,
-    GeneralizedNewtypeDeriving
-  #-}
+{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Editor.Data.Typed
   ( atEeInferredType, atEeValue
   , storedGuid
@@ -122,9 +119,9 @@ setTypeRef typeRef types =
 
 runInfer
   :: Monad m
-  => Infer m (TypedStoredExpression f)
-  -> T m (TypedStoredExpression f)
-runInfer = liftM canonizeIdentifiersTypes . evalUnionFindT . unInfer
+  => Infer m a
+  -> T m a
+runInfer = evalUnionFindT . unInfer
 
 makeSingletonTypeRef :: Monad m => Guid -> Data.Expression TypeRef -> Infer m TypeRef
 makeSingletonTypeRef _ Data.ExpressionHole = makeTypeRef []
@@ -322,14 +319,16 @@ derefTypeRef =
 derefTypeRefs
   :: Monad m
   => StoredExpression TypeRef f
-  -> Infer m (StoredExpression [LoopGuidExpression] f)
+  -> Infer m (TypedStoredExpression f)
 derefTypeRefs =
   mapMStoredExpression f
   where
     f stored typeRef iValRef val = do
-      types <- derefTypeRef typeRef
-      iVals <- derefTypeRef iValRef
+      types <- liftM (canonizeInferredExpression InferredType guid) $ derefTypeRef typeRef
+      iVals <- liftM (canonizeInferredExpression InferredValue guid) $ derefTypeRef iValRef
       return $ StoredExpression stored types iVals val
+      where
+        guid = eipGuid stored
 
 unifyOnTree
   :: Monad m
@@ -489,14 +488,6 @@ allUnder =
         mapM_ onType types
     onType =
       Data.sequenceExpression . fmap recurse . Data.geValue
-
-canonizeIdentifiersTypes
-  :: TypedStoredExpression m
-  -> TypedStoredExpression m
-canonizeIdentifiersTypes =
-  atInferred (flip f)
-  where
-    f role = canonizeInferredExpression role . eipGuid
 
 canonizeInferredExpression :: InferredRole -> Guid -> [LoopGuidExpression] -> [LoopGuidExpression]
 canonizeInferredExpression role =
