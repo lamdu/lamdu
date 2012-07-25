@@ -729,7 +729,7 @@ convertDefinitionI (DataTyped.StoredDefinition defI defInferredType (Data.Defini
     return inferredType
   defNewType <- runMaybeT $ do
     inferredTypePure <- toMaybeT mInferredTypePure
-    let defType = DataTyped.pureExpressionFromStored typeI
+    let defType = DataTyped.toPureExpression typeI
     guard . not $ DataTyped.alphaEq inferredTypePure defType
     inferredTypeS <- lift . convertExpressionI $ eeFromPure inferredTypePure
     return DefinitionNewType

@@ -8,7 +8,7 @@ module Editor.Data.Typed
   , deGuid
   , loadInferDefinition
   , loadInferExpression, inferExpression
-  , pureExpressionFromStored
+  , toPureExpression
   , pureGuidFromLoop
   , alphaEq
   , unify
@@ -144,8 +144,8 @@ pureGuidFromLoop =
     f (NoLoop (Data.GuidExpression guid itlExpr)) =
       ( Just itlExpr, Just . Data.PureGuidExpression . Data.GuidExpression guid )
 
-pureExpressionFromStored :: Expression s -> Data.PureGuidExpression
-pureExpressionFromStored =
+toPureExpression :: Expression s -> Data.PureGuidExpression
+toPureExpression =
   fmap runIdentity $ fromExpression f
   where
     f guid = return . Data.PureGuidExpression . Data.GuidExpression guid
@@ -312,7 +312,7 @@ inferExpression defTypeRef = (`runReaderT` []) . go
         (DataLoad.loadPureExpression . Property.value =<<
          Anchors.integerType)
       Data.ExpressionBuiltin (Data.Builtin _ bType) ->
-        lift $ setType =<< typeRefFromPure (pureExpressionFromStored bType)
+        lift $ setType =<< typeRefFromPure (toPureExpression bType)
       _ -> return ()
       where
         makePi guid = makeSingletonTypeRef guid . Data.ExpressionPi
@@ -486,15 +486,15 @@ inferDefinition
   => DataLoad.DefinitionEntity (T f)
   -> T m (StoredDefinition (T f))
 inferDefinition (DataLoad.DefinitionEntity defI (Data.Definition bodyI typeI)) = do
-  (typeContext, (bodyStored, typeStored)) <- runInfer $ do
-    bodyStored <- addTypeRefs bodyI
-    typeStored <- addTypeRefs typeI
-    inferExpression (getDefTypeRef (eeInferredType bodyStored) defI) bodyStored
-    return (bodyStored, typeStored)
+  (typeContext, (bodyExpr, typeExpr)) <- runInfer $ do
+    bodyExpr <- addTypeRefs bodyI
+    typeExpr <- addTypeRefs typeI
+    inferExpression (getDefTypeRef (eeInferredType bodyExpr) defI) bodyExpr
+    return (bodyExpr, typeExpr)
   return StoredDefinition
     { deIRef = defI
-    , deInferredType = eeInferredType bodyStored
-    , deValue = Data.Definition bodyStored typeStored
+    , deInferredType = eeInferredType bodyExpr
+    , deValue = Data.Definition bodyExpr typeExpr
     , deTypeContext = typeContext
     }
 
@@ -511,6 +511,6 @@ loadInferExpression
 loadInferExpression exprProp = do
   expr <- DataLoad.loadExpression exprProp
   liftM snd . runInfer $ do
-    exprStored <- addTypeRefs expr
-    inferExpression loadDefTypeToTypeRef exprStored
-    return exprStored
+    tExpr <- addTypeRefs expr
+    inferExpression loadDefTypeToTypeRef tExpr
+    return tExpr
