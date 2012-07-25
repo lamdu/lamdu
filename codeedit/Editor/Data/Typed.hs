@@ -7,7 +7,7 @@ module Editor.Data.Typed
   , atDeIRef, atDeValue
   , deGuid
   , loadInferDefinition
-  , loadInferExpression
+  , loadInferExpression, inferExpression
   , pureExpressionFromStored
   , pureGuidFromLoop
   , alphaEq
@@ -254,12 +254,12 @@ derefTypeRef stdGen builtinsMap typeContext rootTypeRef =
            (Data.GuidExpression zeroGuid Data.ExpressionHole)]
         holify xs = xs
 
-unifyOnTree
+inferExpression
   :: Monad m
   => (Data.DefinitionIRef -> Infer (T m) TypeRef)
   -> Expression s
   -> Infer (T m) ()
-unifyOnTree defTypeRef = (`runReaderT` []) . go
+inferExpression defTypeRef = (`runReaderT` []) . go
   where
     go (Expression _ g typeRef _ value) =
       case value of
@@ -489,7 +489,7 @@ inferDefinition (DataLoad.DefinitionEntity defI (Data.Definition bodyI typeI)) =
   (typeContext, (bodyStored, typeStored)) <- runInfer $ do
     bodyStored <- addTypeRefs bodyI
     typeStored <- addTypeRefs typeI
-    unifyOnTree (getDefTypeRef (eeInferredType bodyStored) defI) bodyStored
+    inferExpression (getDefTypeRef (eeInferredType bodyStored) defI) bodyStored
     return (bodyStored, typeStored)
   return StoredDefinition
     { deIRef = defI
@@ -512,5 +512,5 @@ loadInferExpression exprProp = do
   expr <- DataLoad.loadExpression exprProp
   liftM snd . runInfer $ do
     exprStored <- addTypeRefs expr
-    unifyOnTree loadDefTypeToTypeRef exprStored
+    inferExpression loadDefTypeToTypeRef exprStored
     return exprStored
