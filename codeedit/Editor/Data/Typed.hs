@@ -469,6 +469,8 @@ canonizeIdentifiers gen =
           Map.lookup guid
         x -> return x
 
+-- TODO: This should not go through LoopGuidExpression and should
+-- probably be in Data.Ops or such along with canonize*
 alphaEq :: Data.PureGuidExpression -> Data.PureGuidExpression -> Bool
 alphaEq =
   on (==) (canonizeIdentifiers (Random.mkStdGen 0) . toLoop)
