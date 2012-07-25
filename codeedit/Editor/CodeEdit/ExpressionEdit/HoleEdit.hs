@@ -160,7 +160,7 @@ makeAllResults holeInfo = do
       map (Result [""]) $ Sugar.holeInferredValues hole
     literalResults = makeLiteralResults searchTerm
     nameMatch = any (insensitiveInfixOf searchTerm) . resultNames
-    typeMatches = Sugar.holeCheckInfer hole . resultExpr
+    typeMatches = Sugar.holeInferResults hole . resultExpr
   liftM concat .
     mapM (OT.transaction . typeMatches) .
     sortOn (resultOrdering searchTerm) .

@@ -117,7 +117,7 @@ data Hole m = Hole
   , holePaste :: Maybe (T m Guid)
   , holeInferredValues :: [Data.PureGuidExpression]
   , holeDefinitionType :: Data.DefinitionIRef -> DataTyped.Infer (T m) DataTyped.TypeRef
-  , holeCheckInfer :: Data.PureGuidExpression -> T m [Data.PureGuidExpression]
+  , holeInferResults :: Data.PureGuidExpression -> T m [Data.PureGuidExpression]
   }
 
 data LiteralInteger m = LiteralInteger
@@ -649,7 +649,7 @@ convertHole exprI = do
       liftM fromInferred .
       DataTyped.derefResumedInfer (Random.mkStdGen 0) builtinsMap
       (maybe newUnionFind DataTyped.deTypeContext mDef)
-    checkInfer holeType expr = do
+    inferResults holeType expr = do
       mExprType <-
         runInfer . liftM DataTyped.eeInferredType $
         DataTyped.pureInferExpressionWithinContext scope mDef expr
@@ -673,9 +673,9 @@ convertHole exprI = do
       , holePaste = mPaste
       , holeInferredValues = catMaybes maybeInferredValues
       , holeDefinitionType = DataTyped.loadDefTypeWithinContext mDef
-      , holeCheckInfer =
+      , holeInferResults =
         (maybe . const . return) []
-        (checkInfer . eeInferredTypes) $ eeStored exprI
+        (inferResults . eeInferredTypes) $ eeStored exprI
       }
   mkExpressionRef exprI =<<
     case maybeInferredValues of
