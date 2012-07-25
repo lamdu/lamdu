@@ -15,7 +15,7 @@ module Editor.CodeEdit.Sugar
   ) where
 
 import Control.Applicative ((<$>), (<*>))
-import Control.Monad (guard, liftM, (<=<))
+import Control.Monad (guard, liftM, forM)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -29,7 +29,6 @@ import System.Random (RandomGen)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
-import qualified Data.List.Utils as ListUtils
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -251,7 +250,7 @@ AtFieldTH.make ''Sugar
 runSugar :: Monad m => Maybe (DataTyped.StoredDefinition (T m)) -> Sugar m a -> T m a
 runSugar def (Sugar action) = do
   builtinsMap <- Anchors.getP Anchors.builtinsMap
-  runReaderT action SugarContext 
+  runReaderT action SugarContext
     { scScope = []
     , scDef = def
     , scBuiltinsMap = builtinsMap
@@ -608,8 +607,30 @@ mkPaste exprP = do
       ~() <- replacer clip
       return $ Data.exprIRefGuid clip
 
-fromInferred :: [DataTyped.LoopGuidExpression] -> Maybe Data.PureGuidExpression
-fromInferred = DataTyped.pureGuidFromLoop <=< ListUtils.theOne
+zeroGuid :: Guid
+zeroGuid = Guid.fromString "applyZero"
+
+pureHole :: Data.PureGuidExpression
+pureHole =
+  Data.PureGuidExpression $
+  Data.GuidExpression zeroGuid Data.ExpressionHole
+
+fromInferred
+  :: [DataTyped.LoopGuidExpression] -> Maybe Data.PureGuidExpression
+fromInferred [] = Just pureHole
+fromInferred [x] = DataTyped.pureGuidFromLoop x
+fromInferred _ = Nothing
+
+countPis :: Data.PureGuidExpression -> Int
+countPis (Data.PureGuidExpression (Data.GuidExpression _ expr)) =
+  case expr of
+  Data.ExpressionPi (Data.Lambda _ resultType) -> 1 + countPis resultType
+  _ -> 0
+
+addApply :: Data.PureGuidExpression -> Data.PureGuidExpression
+addApply =
+  Data.PureGuidExpression . Data.GuidExpression zeroGuid .
+  Data.ExpressionApply . (`Data.Apply` pureHole)
 
 convertHole :: Monad m => Convertor m
 convertHole exprI = do
@@ -624,15 +645,28 @@ convertHole exprI = do
       maybe [] (deref gen . eeInferredValues) $ eeStored exprI
     gen =
       Random.mkStdGen . (+1) . (*2) . BinaryUtils.decodeS $ Guid.bs eGuid
-    checkInfer holeType expr =
-      liftM (maybe [] (const [expr]) . fromInferred) .
+    runInfer =
+      liftM fromInferred .
       DataTyped.derefResumedInfer (Random.mkStdGen 0) builtinsMap
-      (maybe newUnionFind DataTyped.deTypeContext mDef) $ do
-        typedExpr <-
-          DataTyped.pureInferExpressionWithinContext scope mDef expr
-        DataTyped.unify holeType $
-          DataTyped.eeInferredType typedExpr
-        return holeType
+      (maybe newUnionFind DataTyped.deTypeContext mDef)
+    checkInfer holeType expr = do
+      mExprType <-
+        runInfer . liftM DataTyped.eeInferredType $
+        DataTyped.pureInferExpressionWithinContext scope mDef expr
+      case mExprType of
+        Nothing -> return []
+        Just exprType ->
+          liftM concat .
+          forM (take (1 + countPis exprType) (iterate addApply expr)) $
+          \applyExpr ->
+            liftM (maybe [] (const [applyExpr])) .
+            runInfer $ do
+              typedExpr <-
+                DataTyped.pureInferExpressionWithinContext
+                scope mDef applyExpr
+              DataTyped.unify holeType $
+                DataTyped.eeInferredType typedExpr
+              return holeType
     hole = Hole
       { holeScope = map fst scope
       , holePickResult = fmap pickResult $ eeProp exprI
