@@ -39,7 +39,9 @@ make
   -> Widget.Id
   -> OTransaction ViewTag m (ExpressionGui m)
 make varRef myId = do
-  OT.markVariablesAsUsed [varRef]
+  case varRef of
+    Data.ParameterRef paramGuid -> OT.markVariablesAsUsed [paramGuid]
+    _ -> return ()
   varRefView <- makeView varRef myId
   let
     jumpToDefinitionEventMap =

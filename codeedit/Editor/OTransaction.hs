@@ -15,6 +15,7 @@ module Editor.OTransaction
 import Control.Applicative (Applicative)
 import Control.Monad (liftM)
 import Control.Monad.Trans.Class (lift)
+import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (MkProperty)
 import Editor.ITransaction (ITransaction)
@@ -24,7 +25,6 @@ import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Store.Property as Property
-import qualified Editor.Data as Data
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
@@ -42,7 +42,7 @@ type TWidget t m = OTransaction t m (WidgetT t m)
 newtype OTransaction t m a = OTransaction {
   unOTransaction
   :: Reader.ReaderT OTransactionEnv
-     (Writer.WriterT [Data.VariableRef]
+     (Writer.WriterT [Guid]
       (Transaction t m)) a
   }
   deriving (Functor, Applicative, Monad)
@@ -50,13 +50,13 @@ AtFieldTH.make ''OTransaction
 
 liftEnv
   :: Reader.ReaderT OTransactionEnv
-     (Writer.WriterT [Data.VariableRef] (Transaction t m)) a
+     (Writer.WriterT [Guid] (Transaction t m)) a
   -> OTransaction t m a
 liftEnv = OTransaction
 
 liftUsedvars
   :: Monad m
-  => Writer.WriterT [Data.VariableRef] (Transaction t m) a
+  => Writer.WriterT [Guid] (Transaction t m) a
   -> OTransaction t m a
 liftUsedvars = liftEnv . lift
 
@@ -72,12 +72,12 @@ runOTransaction cursor style =
   (`Reader.runReaderT` OTransactionEnv cursor style) .
   unOTransaction
 
-markVariablesAsUsed :: Monad m => [Data.VariableRef] -> OTransaction t m ()
+markVariablesAsUsed :: Monad m => [Guid] -> OTransaction t m ()
 markVariablesAsUsed = liftUsedvars . Writer.tell
 
 usedVariables
   :: Monad m
-  => OTransaction t m a -> OTransaction t m (a, [Data.VariableRef])
+  => OTransaction t m a -> OTransaction t m (a, [Guid])
 usedVariables = atOTransaction $ Reader.mapReaderT Writer.listen
 
 unWrapInner

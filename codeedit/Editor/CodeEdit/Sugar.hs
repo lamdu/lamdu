@@ -15,7 +15,6 @@ module Editor.CodeEdit.Sugar
   ) where
 
 import Control.Applicative ((<$>), (<*>))
-import Control.Arrow (first)
 import Control.Monad (guard, liftM, (<=<))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Maybe (MaybeT(..))
@@ -114,7 +113,7 @@ data Section m = Section
   }
 
 data Hole m = Hole
-  { holeScope :: [Data.VariableRef]
+  { holeScope :: [Guid]
   , holePickResult :: Maybe (Data.PureGuidExpression -> T m Guid)
   , holePaste :: Maybe (T m Guid)
   , holeInferredValues :: [Data.PureGuidExpression]
@@ -238,7 +237,7 @@ eeFromTypedExpression =
       )
 
 data SugarContext m = SugarContext
-  { scScope :: [(Data.VariableRef, DataTyped.TypeRef)]
+  { scScope :: [(Guid, DataTyped.TypeRef)]
   , scDef :: Maybe (DataTyped.StoredDefinition (T m))
   , scBuiltinsMap :: Anchors.BuiltinsMap
   }
@@ -258,10 +257,10 @@ runSugar def (Sugar action) = do
     , scBuiltinsMap = builtinsMap
     }
 
-putInScope :: Monad m => DataTyped.TypeRef -> Data.VariableRef -> Sugar m a -> Sugar m a
+putInScope :: Monad m => DataTyped.TypeRef -> Guid -> Sugar m a -> Sugar m a
 putInScope typeRef x = atSugar . Reader.local . atScScope $ ((x, typeRef) :)
 
-readScope :: Monad m => Sugar m [(Data.VariableRef, DataTyped.TypeRef)]
+readScope :: Monad m => Sugar m [(Guid, DataTyped.TypeRef)]
 readScope = Sugar $ Reader.asks scScope
 
 readDefinition :: Monad m => Sugar m (Maybe (DataTyped.StoredDefinition (T m)))
@@ -394,7 +393,7 @@ convertLambdaBody (Data.Lambda paramTypeI bodyI) exprI =
       case eeStored paramTypeI of
       Nothing -> id
       Just stored ->
-        putInScope (eeInferredValues stored) . Data.ParameterRef $
+        putInScope (eeInferredValues stored) $
         eeGuid exprI
 
 convertLambda
@@ -630,8 +629,7 @@ convertHole exprI = do
       DataTyped.derefResumedInfer (Random.mkStdGen 0) builtinsMap
       (maybe newUnionFind DataTyped.deTypeContext mDef) $ do
         typedExpr <-
-          DataTyped.pureInferExpressionWithinContext
-          ((map . first) Data.variableRefGuid scope) mDef expr
+          DataTyped.pureInferExpressionWithinContext scope mDef expr
         DataTyped.unify holeType $
           DataTyped.eeInferredType typedExpr
         return holeType

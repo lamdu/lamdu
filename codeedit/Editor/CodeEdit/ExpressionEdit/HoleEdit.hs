@@ -151,7 +151,9 @@ makeAllResults
 makeAllResults holeInfo = do
   globals <- OT.getP Anchors.globals
   varResults <-
-    mapM makeResultVariable $ Sugar.holeScope hole ++ globals
+    mapM makeResultVariable $
+    map Data.ParameterRef (Sugar.holeScope hole) ++
+    globals
   let
     searchTerm = Property.value $ hiSearchTerm holeInfo
     inferredResults =

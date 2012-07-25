@@ -11,7 +11,6 @@ import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
-import qualified Editor.Data as Data
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 
@@ -28,7 +27,7 @@ make makeExpressionEdit (Sugar.Pi param resultType) myId =
       [WidgetIds.paramId . Sugar.guid $ Sugar.fpEntity param] resultType
     let
       paramGuid = Sugar.guid $ Sugar.fpEntity param
-      paramUsed = any ((== paramGuid) . Data.variableRefGuid) usedVars
+      paramUsed = any (== paramGuid) usedVars
       redirectCursor cursor
         | paramUsed = cursor
         | otherwise =
