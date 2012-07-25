@@ -627,11 +627,6 @@ countPis (Data.PureGuidExpression (Data.GuidExpression _ expr)) =
   Data.ExpressionPi (Data.Lambda _ resultType) -> 1 + countPis resultType
   _ -> 0
 
-addApply :: Data.PureGuidExpression -> Data.PureGuidExpression
-addApply =
-  Data.PureGuidExpression . Data.GuidExpression zeroGuid .
-  Data.ExpressionApply . (`Data.Apply` pureHole)
-
 expandHoles
   :: (DataTyped.TypeRef -> Maybe Data.PureGuidExpression)
   -> DataTyped.Expression s -> Data.PureGuidExpression
@@ -645,6 +640,16 @@ expandHoles deref =
         Data.ExpressionHole -> fromMaybe pureHole . deref $ DataTyped.eeInferredValue expr
         _ -> Data.PureGuidExpression $ Data.GuidExpression (DataTyped.eeGuid expr) newVal
       )
+
+applyForms
+  :: Data.PureGuidExpression
+  -> Data.PureGuidExpression -> [Data.PureGuidExpression]
+applyForms exprType =
+  reverse . take (1 + countPis exprType) . iterate addApply
+  where
+    addApply =
+      Data.PureGuidExpression . Data.GuidExpression zeroGuid .
+      Data.ExpressionApply . (`Data.Apply` pureHole)
 
 convertHole :: Monad m => Convertor m
 convertHole exprI = do
@@ -663,10 +668,9 @@ convertHole exprI = do
       (liftM . first . fmap) fromInferred .
       DataTyped.derefResumedInfer (Random.mkStdGen 0) builtinsMap
       (maybe newUnionFind DataTyped.deTypeContext mDef)
-    mkResults (derefIt, typedExpr) =
-      case derefIt (DataTyped.eeInferredType typedExpr) of
-      Just _ -> [expandHoles derefIt typedExpr]
-      _ -> []
+    mkResults (derefIt, typedExpr) = do
+      _ <- derefIt $ DataTyped.eeInferredType typedExpr
+      return $ expandHoles derefIt typedExpr
     inferResults holeType expr = do
       mExprType <-
         liftM (uncurry ($)) .
@@ -675,8 +679,7 @@ convertHole exprI = do
       case mExprType of
         Nothing -> return []
         Just exprType ->
-          liftM concat .
-          forM (take (1 + countPis exprType) (iterate addApply expr)) $
+          liftM catMaybes . forM (applyForms exprType expr) $
           \applyExpr ->
             liftM mkResults .
             runInfer $ do
