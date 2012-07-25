@@ -117,7 +117,6 @@ data Hole m = Hole
   , holePickResult :: Maybe (Data.PureGuidExpression -> T m Guid)
   , holePaste :: Maybe (T m Guid)
   , holeInferredValues :: [Data.PureGuidExpression]
-  , holeDefinitionType :: Data.DefinitionIRef -> DataTyped.Infer (T m) DataTyped.TypeRef
   , holeInferResults :: Data.PureGuidExpression -> T m [Data.PureGuidExpression]
   }
 
@@ -680,7 +679,6 @@ convertHole exprI = do
       , holePickResult = fmap pickResult $ eeProp exprI
       , holePaste = mPaste
       , holeInferredValues = catMaybes maybeInferredValues
-      , holeDefinitionType = DataTyped.loadDefTypeWithinContext mDef
       , holeInferResults =
         (maybe . const . return) []
         (inferResults . eeInferredTypes) $ eeStored exprI
