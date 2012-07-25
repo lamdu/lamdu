@@ -15,6 +15,7 @@ module Editor.CodeEdit.Sugar
   ) where
 
 import Control.Applicative ((<$>), (<*>))
+import Control.Arrow (first)
 import Control.Monad (guard, liftM, (<=<))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Maybe (MaybeT(..))
@@ -112,15 +113,13 @@ data Section m = Section
   , sectionInnerApplyGuid :: Maybe Guid
   }
 
-type Scope = [(Data.VariableRef, DataTyped.TypeRef)]
-
 data Hole m = Hole
-  { holeScope :: Scope
+  { holeScope :: [Data.VariableRef]
   , holePickResult :: Maybe (Data.PureGuidExpression -> T m Guid)
   , holePaste :: Maybe (T m Guid)
   , holeInferredValues :: [Data.PureGuidExpression]
   , holeDefinitionType :: Data.DefinitionIRef -> DataTyped.Infer (T m) DataTyped.TypeRef
-  , holeCheckInfer :: DataTyped.Infer (T m) DataTyped.TypeRef -> T m Bool
+  , holeCheckInfer :: Data.PureGuidExpression -> T m [Data.PureGuidExpression]
   }
 
 data LiteralInteger m = LiteralInteger
@@ -239,7 +238,7 @@ eeFromTypedExpression =
       )
 
 data SugarContext m = SugarContext
-  { scScope :: Scope
+  { scScope :: [(Data.VariableRef, DataTyped.TypeRef)]
   , scDef :: Maybe (DataTyped.StoredDefinition (T m))
   , scBuiltinsMap :: Anchors.BuiltinsMap
   }
@@ -262,7 +261,7 @@ runSugar def (Sugar action) = do
 putInScope :: Monad m => DataTyped.TypeRef -> Data.VariableRef -> Sugar m a -> Sugar m a
 putInScope typeRef x = atSugar . Reader.local . atScScope $ ((x, typeRef) :)
 
-readScope :: Monad m => Sugar m Scope
+readScope :: Monad m => Sugar m [(Data.VariableRef, DataTyped.TypeRef)]
 readScope = Sugar $ Reader.asks scScope
 
 readDefinition :: Monad m => Sugar m (Maybe (DataTyped.StoredDefinition (T m)))
@@ -626,21 +625,25 @@ convertHole exprI = do
       maybe [] (deref gen . eeInferredValues) $ eeStored exprI
     gen =
       Random.mkStdGen . (+1) . (*2) . BinaryUtils.decodeS $ Guid.bs eGuid
-    checkInfer holeType otherType =
-      liftM (isJust . fromInferred) .
+    checkInfer holeType expr =
+      liftM (maybe [] (const [expr]) . fromInferred) .
       DataTyped.derefResumedInfer (Random.mkStdGen 0) builtinsMap
       (maybe newUnionFind DataTyped.deTypeContext mDef) $ do
-        DataTyped.unify holeType =<< otherType
+        typedExpr <-
+          DataTyped.pureInferExpressionWithinContext
+          ((map . first) Data.variableRefGuid scope) mDef expr
+        DataTyped.unify holeType $
+          DataTyped.eeInferredType typedExpr
         return holeType
     hole = Hole
-      { holeScope = scope
+      { holeScope = map fst scope
       , holePickResult = fmap pickResult $ eeProp exprI
       , holePaste = mPaste
       , holeInferredValues = catMaybes maybeInferredValues
       , holeDefinitionType = DataTyped.loadDefTypeWithinContext mDef
       , holeCheckInfer =
-        (maybe . const . return) True (checkInfer . eeInferredTypes) $
-        eeStored exprI
+        (maybe . const . return) []
+        (checkInfer . eeInferredTypes) $ eeStored exprI
       }
   mkExpressionRef exprI =<<
     case maybeInferredValues of

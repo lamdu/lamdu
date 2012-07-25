@@ -279,66 +279,71 @@ derefTypeRef stdGen builtinsMap typeContext rootTypeRef =
 
 inferExpression
   :: Monad m
-  => (Data.DefinitionIRef -> Infer (T m) TypeRef)
+  => [(Guid, TypeRef)]
+  -> (Data.DefinitionIRef -> Infer (T m) TypeRef)
   -> Expression s
   -> Infer (T m) ()
-inferExpression defTypeRef = (`runReaderT` []) . go
+inferExpression scope defTypeRef (Expression _ g typeRef _ value) =
+  case value of
+  Data.ExpressionLambda (Data.Lambda paramType body) -> do
+    let paramTypeRef = eeInferredValue paramType
+    -- We use "flip unify typeRef" so that the new Pi will be
+    -- the official Pi guid due to the "left-bias" in
+    -- unify/unifyPair. Thus we can later assume that we got the
+    -- same guid in the pi and the lambda.
+    unify (eeInferredType paramType) =<< mkSet
+    flip unify typeRef <=< makePi g .
+      Data.Lambda paramTypeRef $ eeInferredType body
+    go [(g, paramTypeRef)] body
+  Data.ExpressionPi (Data.Lambda paramType resultType) -> do
+    let paramTypeRef = eeInferredValue paramType
+    -- TODO: Is Set:Set a good idea? Agda uses "eeInferredType
+    -- resultType" as the type
+    setType =<< mkSet
+    unify (eeInferredType paramType) =<< mkSet
+    unify (eeInferredType resultType) =<< mkSet
+    go [(g, paramTypeRef)] resultType
+  Data.ExpressionApply (Data.Apply func arg) -> do
+    go [] func
+    go [] arg
+    let
+      funcTypeRef = eeInferredType func
+      argTypeRef = eeInferredType arg
+      argValRef = eeInferredValue arg
+    -- We give the new Pi the same Guid as the Apply. This is
+    -- fine because Apply's Guid is meaningless and the
+    -- canonization will fix it later anyway.
+    unify funcTypeRef <=< makePi g $
+      Data.Lambda argTypeRef typeRef
+    funcTypes <- getTypeRef funcTypeRef
+    sequence_
+      [ subst piGuid (return argValRef) piResultTypeRef
+      | Data.GuidExpression piGuid
+        (Data.ExpressionPi (Data.Lambda _ piResultTypeRef))
+        <- funcTypes
+      ]
+  Data.ExpressionGetVariable (Data.ParameterRef guid) ->
+    case lookup guid scope of
+      -- TODO: Not in scope: Bad code,
+      -- add an OutOfScopeReference type error
+      Nothing -> return ()
+      Just paramTypeRef -> setType paramTypeRef
+  Data.ExpressionGetVariable (Data.DefinitionRef defI) ->
+    setType =<< defTypeRef defI
+  Data.ExpressionLiteralInteger _ ->
+    setType =<< mkBuiltin ["Prelude"] "Integer"
+  Data.ExpressionBuiltin (Data.Builtin _ bType) ->
+    setType =<< typeRefFromPure (toPureExpression bType)
+  _ -> return ()
   where
-    go (Expression _ g typeRef _ value) =
-      case value of
-      Data.ExpressionLambda (Data.Lambda paramType body) -> do
-        let paramTypeRef = eeInferredValue paramType
-        -- We use "flip unify typeRef" so that the new Pi will be
-        -- the official Pi guid due to the "left-bias" in
-        -- unify/unifyPair. Thus we can later assume that we got the
-        -- same guid in the pi and the lambda.
-        lift $ flip unify typeRef <=< makePi g .
-          Data.Lambda paramTypeRef $ eeInferredType body
-        Reader.local ((g, paramTypeRef):) $ go body
-      Data.ExpressionPi (Data.Lambda paramType resultType) -> do
-        let paramTypeRef = eeInferredValue paramType
-        lift . setType $ eeInferredType resultType
-        Reader.local ((g, paramTypeRef):) $ go resultType
-      Data.ExpressionApply (Data.Apply func arg) -> do
-        go func
-        go arg
-        lift $ do
-          let
-            funcTypeRef = eeInferredType func
-            argTypeRef = eeInferredType arg
-            argValRef = eeInferredValue arg
-          -- We give the new Pi the same Guid as the Apply. This is
-          -- fine because Apply's Guid is meaningless and the
-          -- canonization will fix it later anyway.
-          unify funcTypeRef <=< makePi g $
-            Data.Lambda argTypeRef typeRef
-          funcTypes <- getTypeRef funcTypeRef
-          sequence_
-            [ subst piGuid (return argValRef) piResultTypeRef
-            | Data.GuidExpression piGuid
-              (Data.ExpressionPi (Data.Lambda _ piResultTypeRef))
-              <- funcTypes
-            ]
-      Data.ExpressionGetVariable (Data.ParameterRef guid) -> do
-        mParamTypeRef <- Reader.asks $ lookup guid
-        lift $ case mParamTypeRef of
-          -- TODO: Not in scope: Bad code,
-          -- add an OutOfScopeReference type error
-          Nothing -> return ()
-          Just paramTypeRef -> setType paramTypeRef
-      Data.ExpressionGetVariable (Data.DefinitionRef defI) ->
-        lift $ setType =<< defTypeRef defI
-      Data.ExpressionLiteralInteger _ ->
-        lift $ setType =<<
-        makeSingletonTypeRef zeroGuid . Data.ExpressionBuiltin .
-        Data.Builtin (Data.FFIName ["Prelude"] "Integer") =<<
-        makeTypeRef []
-      Data.ExpressionBuiltin (Data.Builtin _ bType) ->
-        lift $ setType =<< typeRefFromPure (toPureExpression bType)
-      _ -> return ()
-      where
-        makePi guid = makeSingletonTypeRef guid . Data.ExpressionPi
-        setType = unify typeRef
+    mkSet = mkBuiltin ["Core"] "Set"
+    mkBuiltin path name =
+      makeSingletonTypeRef zeroGuid . Data.ExpressionBuiltin .
+      Data.Builtin (Data.FFIName path name) =<<
+      makeTypeRef []
+    makePi guid = makeSingletonTypeRef guid . Data.ExpressionPi
+    setType = unify typeRef
+    go newVars = inferExpression (newVars ++ scope) defTypeRef
 
 unify
   :: Monad m
@@ -499,11 +504,12 @@ loadDefTypeWithinContext (Just def) = getDefTypeRef (deInferredType def) (deIRef
 
 pureInferExpressionWithinContext
   :: Monad m
-  => Maybe (StoredDefinition (T m))
+  => [(Guid, TypeRef)]
+  -> Maybe (StoredDefinition (T m))
   -> Data.PureGuidExpression -> Infer (T m) (Expression ())
-pureInferExpressionWithinContext mDef pureExpr = do
+pureInferExpressionWithinContext scope mDef pureExpr = do
   expr <- fromPure pureExpr
-  inferExpression (loadDefTypeWithinContext mDef) expr
+  inferExpression scope (loadDefTypeWithinContext mDef) expr
   return expr
 
 getDefTypeRef
@@ -520,7 +526,7 @@ inferDefinition (DataLoad.DefinitionEntity defI (Data.Definition bodyI typeI)) =
   (typeContext, (bodyExpr, typeExpr)) <- runInfer $ do
     bodyExpr <- fromLoaded bodyI
     typeExpr <- fromLoaded typeI
-    inferExpression (getDefTypeRef (eeInferredType bodyExpr) defI) bodyExpr
+    inferExpression [] (getDefTypeRef (eeInferredType bodyExpr) defI) bodyExpr
     return (bodyExpr, typeExpr)
   return StoredDefinition
     { deIRef = defI
@@ -543,5 +549,5 @@ loadInferExpression exprProp = do
   expr <- DataLoad.loadExpression exprProp
   liftM snd . runInfer $ do
     tExpr <- fromLoaded expr
-    inferExpression loadDefTypeToTypeRef tExpr
+    inferExpression [] loadDefTypeToTypeRef tExpr
     return tExpr
