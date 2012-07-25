@@ -330,10 +330,9 @@ inferExpression defTypeRef = (`runReaderT` []) . go
         lift $ setType =<< defTypeRef defI
       Data.ExpressionLiteralInteger _ ->
         lift $ setType =<<
-        typeRefFromPure =<<
-        lift
-        (DataLoad.loadPureExpression . Property.value =<<
-         Anchors.integerType)
+        makeSingletonTypeRef zeroGuid . Data.ExpressionBuiltin .
+        Data.Builtin (Data.FFIName ["Prelude"] "Integer") =<<
+        makeTypeRef []
       Data.ExpressionBuiltin (Data.Builtin _ bType) ->
         lift $ setType =<< typeRefFromPure (toPureExpression bType)
       _ -> return ()

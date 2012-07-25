@@ -10,7 +10,6 @@ module Editor.Anchors
   , currentBranchIRef, currentBranch
   , globals
   , BuiltinsMap, builtinsMap
-  , integerType
   , newBuiltin, newBuiltinExpression
   , Pane
   , dbStore, DBTag
@@ -91,9 +90,6 @@ globals = Transaction.fromIRef $ IRef.anchor "globals"
 type BuiltinsMap = Map Data.FFIName Data.VariableRef
 builtinsMap :: Monad m => MkProperty ViewTag m BuiltinsMap
 builtinsMap = Transaction.fromIRef $ IRef.anchor "builtinsMap"
-
-integerType :: Monad m => MkProperty ViewTag m Data.ExpressionIRef
-integerType = Transaction.fromIRef $ IRef.anchor "integerType"
 
 -- Cursor is untagged because it is both saved globally and per-revision.
 -- Cursor movement without any revisioned changes are not saved per-revision.

@@ -78,7 +78,6 @@ createBuiltins =
         l <- list
         Data.newExprIRef . Data.ExpressionApply . Data.Apply l =<< a
 
-    lift $ A.setP A.integerType =<< A.newBuiltinExpression "Prelude.Integer" =<< set
     integer <- mkType . A.newBuiltin "Prelude.Integer" =<< lift set
     bool <- mkType . A.newBuiltin "Prelude.Bool" =<< lift set
 
