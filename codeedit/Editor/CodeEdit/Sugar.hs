@@ -765,7 +765,7 @@ convertDefinitionI (DataTyped.StoredDefinition defI defInferredType (Data.Defini
   typeS <- convertExpressionI $ eeFromTypedExpression typeI
   deref <- derefTypeRef
   mInferredTypePure <- runMaybeT $ do
-    inferredType <- toMaybeT . fromInferred $ deref (Random.mkStdGen 0) defInferredType
+    inferredType <- toMaybeT . fromInferred $ deref gen defInferredType
     guard $ isCompleteType inferredType
     return inferredType
   defNewType <- runMaybeT $ do
@@ -788,6 +788,9 @@ convertDefinitionI (DataTyped.StoredDefinition defI defInferredType (Data.Defini
     , drMNewType = defNewType
     }
   where
+    gen =
+      Random.mkStdGen . BinaryUtils.decodeS . Guid.bs $
+      IRef.guid defI
     bodyEntity = eeFromTypedExpression bodyI
     toMaybeT = MaybeT . return
     defGuid = IRef.guid defI
