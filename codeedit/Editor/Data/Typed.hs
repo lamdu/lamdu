@@ -184,11 +184,11 @@ expand =
         recurseLambda Data.ExpressionPi newParamType body
       _ -> return e
       where
-        recurseLambda cons paramType body = do
-          newBody <- recurse body
-          return .
-            Data.PureGuidExpression . Data.GuidExpression guid . cons $
-            Data.Lambda paramType newBody
+        recurseLambda cons paramType =
+          liftM
+          (Data.PureGuidExpression . Data.GuidExpression guid . cons .
+           Data.Lambda paramType) .
+          recurse
 
 typeRefFromPure :: Monad m => Data.PureGuidExpression -> Infer (T m) TypeRef
 typeRefFromPure =

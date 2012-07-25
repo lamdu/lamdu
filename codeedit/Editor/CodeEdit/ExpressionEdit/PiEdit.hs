@@ -27,7 +27,7 @@ make makeExpressionEdit (Sugar.Pi param resultType) myId =
       [WidgetIds.paramId . Sugar.guid $ Sugar.fpEntity param] resultType
     let
       paramGuid = Sugar.guid $ Sugar.fpEntity param
-      paramUsed = any (== paramGuid) usedVars
+      paramUsed = paramGuid `elem` usedVars
       redirectCursor cursor
         | paramUsed = cursor
         | otherwise =
