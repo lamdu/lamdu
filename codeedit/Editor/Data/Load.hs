@@ -2,11 +2,12 @@
 module Editor.Data.Load
   ( loadDefinition, DefinitionEntity(..)
   , loadExpression, ExpressionEntity(..)
-  , loadPureExpression
+  , loadPureExpression, loadPureDefinition
+  , loadPureDefinitionBody
   )
 where
 
-import Control.Monad (liftM, liftM2)
+import Control.Monad (liftM, liftM2, (<=<))
 import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
@@ -38,6 +39,21 @@ loadPureExpression =
       , return . Data.PureGuidExpression .
         Data.GuidExpression (IRef.guid exprI)
       )
+
+loadPureDefinition
+  :: Monad m
+  => Data.DefinitionIRef
+  -> T m (Data.Definition Data.PureGuidExpression)
+loadPureDefinition defI = do
+  def <- Transaction.readIRef defI
+  liftM2 Data.Definition
+    (loadPureExpression (Data.defBody def))
+    (loadPureExpression (Data.defType def))
+
+loadPureDefinitionBody ::
+  Monad m => Data.DefinitionIRef -> T m Data.PureGuidExpression
+loadPureDefinitionBody =
+  loadPureExpression . Data.defBody <=< Transaction.readIRef
 
 loadExpression
   :: (Monad m, Monad f)

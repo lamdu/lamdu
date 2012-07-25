@@ -158,20 +158,6 @@ pureExpressionFromStored =
   where
     f guid = return . Data.PureGuidExpression . Data.GuidExpression guid
 
-ignoreStoredMonad
-  :: StoredExpression it (T Identity)
-  -> StoredExpression it (T Identity)
-ignoreStoredMonad = id
-
-loadDefinitionBodyPure ::
-  Monad m => Data.DefinitionIRef -> T m Data.PureGuidExpression
-loadDefinitionBodyPure =
-  liftM
-  (pureExpressionFromStored .
-   ignoreStoredMonad .
-   storedFromLoaded () . Data.defBody . DataLoad.defEntityValue) .
-  DataLoad.loadDefinition
-
 expand :: Monad m => Data.PureGuidExpression -> T m Data.PureGuidExpression
 expand =
   (`runReaderT` Map.empty) . recurse
@@ -181,7 +167,7 @@ expand =
       Data.ExpressionGetVariable (Data.DefinitionRef defI) ->
         -- TODO: expand the result recursively (with some recursive
         -- constraint)
-        lift $ loadDefinitionBodyPure defI
+        lift $ DataLoad.loadPureDefinitionBody defI
       Data.ExpressionGetVariable (Data.ParameterRef guidRef) -> do
         mValue <- Reader.asks (Map.lookup guidRef)
         return $ fromMaybe e mValue
@@ -250,7 +236,7 @@ addTypeRefs =
           valRef <-
             case newVal of
             Data.ExpressionGetVariable (Data.DefinitionRef ref) ->
-               typeRefFromPure =<< lift (loadDefinitionBodyPure ref)
+               typeRefFromPure =<< lift (DataLoad.loadPureDefinitionBody ref)
             _ -> makeSingletonTypeRef (eipGuid irefProp) $ fmap eeInferredValue newVal
           return $ StoredExpression irefProp typeRef valRef newVal
       )
@@ -347,8 +333,10 @@ unifyOnTree defTypeRef = (`runReaderT` []) . go
         lift $ setType =<< defTypeRef defI
       Data.ExpressionLiteralInteger _ ->
         lift $ setType =<<
-        typeRefFromStored . storedFromLoaded () =<<
-        lift (DataLoad.loadExpression =<< Anchors.integerType)
+        typeRefFromPure =<<
+        lift
+        (DataLoad.loadPureExpression . Property.value =<<
+         Anchors.integerType)
       Data.ExpressionBuiltin (Data.Builtin _ bType) ->
         lift $ setType =<< typeRefFromStored bType
       _ -> return ()
