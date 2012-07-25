@@ -1,21 +1,24 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Editor.Data.Typed
-  ( atEeInferredType, atEeValue
-  , LoopGuidExpression(..)
-  , StoredDefinition(..)
+  ( LoopGuidExpression(..)
+  , pureGuidFromLoop
+
   , Expression(..), StoredExpression
+  , pureInferExpressionWithinContext
+  , atEeInferredType, atEeValue
+  , loadInferExpression, inferExpression
+  , toPureExpression
+  , alphaEq
+
+  , StoredDefinition(..)
   , atDeIRef, atDeValue
   , deGuid
   , loadInferDefinition
-  , loadInferExpression, inferExpression
-  , toPureExpression
-  , pureGuidFromLoop
-  , alphaEq
-  , unify
   , loadDefTypeWithinContext
+
   , TypeRef, TypeContext
-  , resumeInfer, Infer
-  , derefTypeRef, derefResumedInfer
+  , Infer, resumeInfer
+  , unify, derefTypeRef, derefResumedInfer
   , makeSingletonTypeRef
   ) where
 
@@ -196,24 +199,44 @@ typeRefFromPure =
       , makeSingletonTypeRef guid
       )
 
-addTypeRefs
+toExpr
   :: Monad m
-  => DataLoad.ExpressionEntity f
-  -> Infer (T m) (StoredExpression f)
-addTypeRefs =
+  => (expr -> (Guid, Data.Expression expr, s))
+  -> expr
+  -> Infer (T m) (Expression s)
+toExpr extract =
   Data.mapMExpression f
   where
-    f (DataLoad.ExpressionEntity irefProp val) =
-      ( return val
+    f wrapped =
+      ( return expr
       , \newVal -> do
           typeRef <- makeTypeRef []
           valRef <-
             case newVal of
             Data.ExpressionGetVariable (Data.DefinitionRef ref) ->
                typeRefFromPure =<< lift (DataLoad.loadPureDefinitionBody ref)
-            _ -> makeSingletonTypeRef (eipGuid irefProp) $ fmap eeInferredValue newVal
-          return $ Expression irefProp (eipGuid irefProp) typeRef valRef newVal
+            _ -> makeSingletonTypeRef g $ fmap eeInferredValue newVal
+          return $ Expression prop g typeRef valRef newVal
       )
+      where
+        (g, expr, prop) = extract wrapped
+
+fromPure :: Monad m => Data.PureGuidExpression -> Infer (T m) (Expression ())
+fromPure =
+  toExpr extract
+  where
+    extract (Data.PureGuidExpression (Data.GuidExpression g expr)) =
+      ( g, expr, () )
+
+fromLoaded
+  :: Monad m
+  => DataLoad.ExpressionEntity f
+  -> Infer (T m) (StoredExpression f)
+fromLoaded =
+  toExpr extract
+  where
+    extract (DataLoad.ExpressionEntity irefProp val) =
+      ( eipGuid irefProp, val, irefProp )
 
 derefResumedInfer
   :: (Monad m, RandomGen g)
@@ -475,6 +498,15 @@ loadDefTypeWithinContext
 loadDefTypeWithinContext Nothing = loadDefTypeToTypeRef
 loadDefTypeWithinContext (Just def) = getDefTypeRef (deInferredType def) (deIRef def)
 
+pureInferExpressionWithinContext
+  :: Monad m
+  => Maybe (StoredDefinition (T m))
+  -> Data.PureGuidExpression -> Infer (T m) (Expression ())
+pureInferExpressionWithinContext mDef pureExpr = do
+  expr <- fromPure pureExpr
+  inferExpression (loadDefTypeWithinContext mDef) expr
+  return expr
+
 getDefTypeRef
   :: Monad m => TypeRef -> Data.DefinitionIRef -> Data.DefinitionIRef -> Infer (T m) TypeRef
 getDefTypeRef defTypeRef defI getDefI
@@ -487,8 +519,8 @@ inferDefinition
   -> T m (StoredDefinition (T f))
 inferDefinition (DataLoad.DefinitionEntity defI (Data.Definition bodyI typeI)) = do
   (typeContext, (bodyExpr, typeExpr)) <- runInfer $ do
-    bodyExpr <- addTypeRefs bodyI
-    typeExpr <- addTypeRefs typeI
+    bodyExpr <- fromLoaded bodyI
+    typeExpr <- fromLoaded typeI
     inferExpression (getDefTypeRef (eeInferredType bodyExpr) defI) bodyExpr
     return (bodyExpr, typeExpr)
   return StoredDefinition
@@ -511,6 +543,6 @@ loadInferExpression
 loadInferExpression exprProp = do
   expr <- DataLoad.loadExpression exprProp
   liftM snd . runInfer $ do
-    tExpr <- addTypeRefs expr
+    tExpr <- fromLoaded expr
     inferExpression loadDefTypeToTypeRef tExpr
     return tExpr
