@@ -241,10 +241,10 @@ fromLoaded =
 derefResumedInfer
   :: (Monad m, RandomGen g)
   => g -> Anchors.BuiltinsMap -> TypeContext
-  -> Infer m TypeRef -> m [LoopGuidExpression]
+  -> Infer m a -> m (TypeRef -> [LoopGuidExpression], a)
 derefResumedInfer gen builtinsMap typeContext action = do
-  (newTypeContext, typeRef) <- resumeInfer typeContext action
-  return $ derefTypeRef gen builtinsMap newTypeContext typeRef
+  (newTypeContext, x) <- resumeInfer typeContext action
+  return (derefTypeRef gen builtinsMap newTypeContext, x)
 
 derefTypeRef
   :: RandomGen g

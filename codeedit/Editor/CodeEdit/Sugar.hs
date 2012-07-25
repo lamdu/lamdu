@@ -15,6 +15,7 @@ module Editor.CodeEdit.Sugar
   ) where
 
 import Control.Applicative ((<$>), (<*>))
+import Control.Arrow (first)
 import Control.Monad (guard, liftM, forM)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Maybe (MaybeT(..))
@@ -646,11 +647,18 @@ convertHole exprI = do
     gen =
       Random.mkStdGen . (+1) . (*2) . BinaryUtils.decodeS $ Guid.bs eGuid
     runInfer =
-      liftM fromInferred .
+      (liftM . first . fmap) fromInferred .
       DataTyped.derefResumedInfer (Random.mkStdGen 0) builtinsMap
       (maybe newUnionFind DataTyped.deTypeContext mDef)
+    mkResults (derefIt, expr) =
+      case
+        (derefIt (DataTyped.eeInferredType expr),
+         derefIt (DataTyped.eeInferredValue expr)) of
+      (Just _, Just val) -> [val]
+      _ -> []
     inferResults holeType expr = do
       mExprType <-
+        liftM (uncurry ($)) .
         runInfer . liftM DataTyped.eeInferredType $
         DataTyped.pureInferExpressionWithinContext scope mDef expr
       case mExprType of
@@ -659,14 +667,14 @@ convertHole exprI = do
           liftM concat .
           forM (take (1 + countPis exprType) (iterate addApply expr)) $
           \applyExpr ->
-            liftM (maybe [] (const [applyExpr])) .
+            liftM mkResults .
             runInfer $ do
               typedExpr <-
                 DataTyped.pureInferExpressionWithinContext
                 scope mDef applyExpr
               DataTyped.unify holeType $
                 DataTyped.eeInferredType typedExpr
-              return holeType
+              return typedExpr
     hole = Hole
       { holeScope = map fst scope
       , holePickResult = fmap pickResult $ eeProp exprI
