@@ -222,18 +222,17 @@ writeIRefVia
   -> a -> Transaction t m ()
 writeIRefVia f = (fmap . argument) f writeIRef
 
-eeFromTypedExpression
-  :: DataTyped.StoredExpression (T m) -> ExprEntity m
+eeFromTypedExpression :: DataTyped.StoredExpression (T m) -> ExprEntity m
 eeFromTypedExpression =
   runIdentity . Data.mapMExpression f
   where
     f e =
       ( return $ DataTyped.eeValue e
       , return .
-        ExprEntity (DataTyped.storedGuid e)
+        ExprEntity (DataTyped.eeGuid e)
         (Just
          (ExprEntityStored
-          (DataTyped.eeStored e)
+          (DataTyped.eeRef e)
           (DataTyped.eeInferredType e)
           (DataTyped.eeInferredValue e))) .
         NonLoop
@@ -737,7 +736,7 @@ convertDefinitionI (DataTyped.StoredDefinition defI defInferredType (Data.Defini
       { dntNewType = inferredTypeS
       , dntAcceptNewType =
         Transaction.writeIRef defI .
-        (Data.Definition . Property.value . DataTyped.eeStored) bodyI =<<
+        (Data.Definition . Property.value . DataTyped.eeRef) bodyI =<<
         Data.newIRefExpressionFromPure inferredTypePure
       }
   return DefinitionRef
