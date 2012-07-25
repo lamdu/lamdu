@@ -632,6 +632,20 @@ addApply =
   Data.PureGuidExpression . Data.GuidExpression zeroGuid .
   Data.ExpressionApply . (`Data.Apply` pureHole)
 
+expandHoles
+  :: (DataTyped.TypeRef -> Maybe Data.PureGuidExpression)
+  -> DataTyped.Expression s -> Data.PureGuidExpression
+expandHoles deref =
+  runIdentity . Data.mapMExpression f
+  where
+    f expr =
+      ( Identity $ DataTyped.eeValue expr
+      , \newVal ->
+        Identity $ case newVal of
+        Data.ExpressionHole -> fromMaybe pureHole . deref $ DataTyped.eeInferredValue expr
+        _ -> Data.PureGuidExpression $ Data.GuidExpression (DataTyped.eeGuid expr) newVal
+      )
+
 convertHole :: Monad m => Convertor m
 convertHole exprI = do
   mPaste <- maybe (return Nothing) mkPaste $ eeProp exprI
@@ -649,11 +663,9 @@ convertHole exprI = do
       (liftM . first . fmap) fromInferred .
       DataTyped.derefResumedInfer (Random.mkStdGen 0) builtinsMap
       (maybe newUnionFind DataTyped.deTypeContext mDef)
-    mkResults (derefIt, expr) =
-      case
-        (derefIt (DataTyped.eeInferredType expr),
-         derefIt (DataTyped.eeInferredValue expr)) of
-      (Just _, Just val) -> [val]
+    mkResults (derefIt, typedExpr) =
+      case derefIt (DataTyped.eeInferredType typedExpr) of
+      Just _ -> [expandHoles derefIt typedExpr]
       _ -> []
     inferResults holeType expr = do
       mExprType <-
