@@ -3,7 +3,8 @@ module Editor.Data.Typed
   ( atEeInferredType, atEeValue
   , storedGuid
   , LoopGuidExpression(..)
-  , TypedStoredDefinition(..)
+  , StoredDefinition(..)
+  , StoredExpression(..)
   , atDeIRef, atDeValue
   , deGuid
   , loadInferDefinition
@@ -13,9 +14,7 @@ module Editor.Data.Typed
   , alphaEq
   , unify
   , loadDefTypeWithinContext
-  , StoredExpression(..)
   , TypeRef, TypeContext
-  , TypedStoredExpression
   , resumeInfer, Infer
   , derefTypeRef, derefResumedInfer
   , makeSingletonTypeRef
@@ -55,12 +54,10 @@ import qualified System.Random.Utils as RandomUtils
 
 type T = Transaction ViewTag
 
-type TypedStoredExpression = StoredExpression TypeRef
-
 eipGuid :: Data.ExpressionIRefProperty m -> Guid
 eipGuid = IRef.guid . Data.unExpressionIRef . Property.value
 
-storedGuid :: StoredExpression it m -> Guid
+storedGuid :: StoredExpression m -> Guid
 storedGuid = eipGuid . eeStored
 
 newtype TypeData = TypeData
@@ -68,11 +65,11 @@ newtype TypeData = TypeData
   } deriving (Show)
 type TypeRef = UnionFindT.Point TypeData
 
-data StoredExpression it m = StoredExpression
+data StoredExpression m = StoredExpression
   { eeStored :: Data.ExpressionIRefProperty m
-  , eeInferredType :: it
-  , eeInferredValue :: it
-  , eeValue :: Data.Expression (StoredExpression it m)
+  , eeInferredType :: TypeRef
+  , eeInferredValue :: TypeRef
+  , eeValue :: Data.Expression (StoredExpression m)
   }
 
 data LoopGuidExpression
@@ -82,18 +79,18 @@ data LoopGuidExpression
 
 type TypeContext = UnionFind TypeData
 
-data TypedStoredDefinition m = TypedStoredDefinition
+data StoredDefinition m = StoredDefinition
   { deIRef :: Data.DefinitionIRef
   , deInferredType :: TypeRef
-  , deValue :: Data.Definition (TypedStoredExpression m)
+  , deValue :: Data.Definition (StoredExpression m)
   , deTypeContext :: TypeContext
   }
 
-deGuid :: TypedStoredDefinition m -> Guid
+deGuid :: StoredDefinition m -> Guid
 deGuid = IRef.guid . deIRef
 
 AtFieldTH.make ''StoredExpression
-AtFieldTH.make ''TypedStoredDefinition
+AtFieldTH.make ''StoredDefinition
 
 --------------- Infer Stack boilerplate:
 
@@ -134,7 +131,7 @@ zeroGuid = Guid.fromString "ZeroGuid"
 
 fromStoredExpression
   :: Monad m => (Guid -> Data.Expression ref -> m ref)
-  -> StoredExpression it f -> m ref
+  -> StoredExpression f -> m ref
 fromStoredExpression mk =
   Data.mapMExpression f
   where
@@ -152,7 +149,7 @@ pureGuidFromLoop =
       ( Just itlExpr, Just . Data.PureGuidExpression . Data.GuidExpression guid )
 
 pureExpressionFromStored
-  :: StoredExpression it f -> Data.PureGuidExpression
+  :: StoredExpression f -> Data.PureGuidExpression
 pureExpressionFromStored =
   fmap runIdentity $ fromStoredExpression f
   where
@@ -205,31 +202,19 @@ typeRefFromPure =
       )
 
 typeRefFromStored
-  :: Monad m => StoredExpression it f
+  :: Monad m => StoredExpression f
   -> Infer (T m) TypeRef
 typeRefFromStored =
   typeRefFromPure . pureExpressionFromStored
 
-storedFromLoaded
-  :: it
-  -> DataLoad.ExpressionEntity f
-  -> StoredExpression it f
-storedFromLoaded it =
-  runIdentity . Data.mapMExpression f
-  where
-    f (DataLoad.ExpressionEntity stored val) =
-      (return val, makeStored stored)
-    makeStored stored newVal =
-      return $ StoredExpression stored it it newVal
-
 addTypeRefs
   :: Monad m
   => DataLoad.ExpressionEntity f
-  -> Infer (T m) (StoredExpression TypeRef f)
+  -> Infer (T m) (StoredExpression f)
 addTypeRefs =
-  Data.mapMExpression f . storedFromLoaded ()
+  Data.mapMExpression f
   where
-    f (StoredExpression irefProp () () val) =
+    f (DataLoad.ExpressionEntity irefProp val) =
       ( return val
       , \newVal -> do
           typeRef <- makeTypeRef []
@@ -283,7 +268,7 @@ derefTypeRef stdGen builtinsMap typeContext rootTypeRef =
 unifyOnTree
   :: Monad m
   => (Data.DefinitionIRef -> Infer (T m) TypeRef)
-  -> StoredExpression TypeRef f
+  -> StoredExpression f
   -> Infer (T m) ()
 unifyOnTree defTypeRef = (`runReaderT` []) . go
   where
@@ -497,7 +482,7 @@ loadDefTypeToTypeRef = typeRefFromPure <=< lift . loadDefTypePure
 
 loadDefTypeWithinContext
   :: Monad m
-  => Maybe (TypedStoredDefinition (T m)) -> Data.DefinitionIRef -> Infer (T m) TypeRef
+  => Maybe (StoredDefinition (T m)) -> Data.DefinitionIRef -> Infer (T m) TypeRef
 loadDefTypeWithinContext Nothing = loadDefTypeToTypeRef
 loadDefTypeWithinContext (Just def) = getDefTypeRef (deInferredType def) (deIRef def)
 
@@ -510,14 +495,14 @@ getDefTypeRef defTypeRef defI getDefI
 inferDefinition
   :: (Monad m, Monad f)
   => DataLoad.DefinitionEntity (T f)
-  -> T m (TypedStoredDefinition (T f))
+  -> T m (StoredDefinition (T f))
 inferDefinition (DataLoad.DefinitionEntity defI (Data.Definition bodyI typeI)) = do
   (typeContext, (bodyStored, typeStored)) <- runInfer $ do
     bodyStored <- addTypeRefs bodyI
     typeStored <- addTypeRefs typeI
     unifyOnTree (getDefTypeRef (eeInferredType bodyStored) defI) bodyStored
     return (bodyStored, typeStored)
-  return TypedStoredDefinition
+  return StoredDefinition
     { deIRef = defI
     , deInferredType = eeInferredType bodyStored
     , deValue = Data.Definition bodyStored typeStored
@@ -526,14 +511,14 @@ inferDefinition (DataLoad.DefinitionEntity defI (Data.Definition bodyI typeI)) =
 
 loadInferDefinition
   :: Monad m => Data.DefinitionIRef
-  -> T m (TypedStoredDefinition (T m))
+  -> T m (StoredDefinition (T m))
 loadInferDefinition =
   inferDefinition <=< DataLoad.loadDefinition
 
 loadInferExpression
   :: Monad m
   => Data.ExpressionIRefProperty (T m)
-  -> T m (TypedStoredExpression (T m))
+  -> T m (StoredExpression (T m))
 loadInferExpression exprProp = do
   expr <- DataLoad.loadExpression exprProp
   liftM snd . runInfer $ do

@@ -223,7 +223,7 @@ writeIRefVia
 writeIRefVia f = (fmap . argument) f writeIRef
 
 eeFromTypedExpression
-  :: DataTyped.TypedStoredExpression (T m) -> ExprEntity m
+  :: DataTyped.StoredExpression (T m) -> ExprEntity m
 eeFromTypedExpression =
   runIdentity . Data.mapMExpression f
   where
@@ -241,7 +241,7 @@ eeFromTypedExpression =
 
 data SugarContext m = SugarContext
   { scScope :: Scope
-  , scDef :: Maybe (DataTyped.TypedStoredDefinition (T m))
+  , scDef :: Maybe (DataTyped.StoredDefinition (T m))
   , scBuiltinsMap :: Anchors.BuiltinsMap
   }
 AtFieldTH.make ''SugarContext
@@ -251,7 +251,7 @@ newtype Sugar m a = Sugar {
   } deriving (Monad)
 AtFieldTH.make ''Sugar
 
-runSugar :: Monad m => Maybe (DataTyped.TypedStoredDefinition (T m)) -> Sugar m a -> T m a
+runSugar :: Monad m => Maybe (DataTyped.StoredDefinition (T m)) -> Sugar m a -> T m a
 runSugar def (Sugar action) = do
   builtinsMap <- Anchors.getP Anchors.builtinsMap
   runReaderT action SugarContext 
@@ -266,7 +266,7 @@ putInScope typeRef x = atSugar . Reader.local . atScScope $ ((x, typeRef) :)
 readScope :: Monad m => Sugar m Scope
 readScope = Sugar $ Reader.asks scScope
 
-readDefinition :: Monad m => Sugar m (Maybe (DataTyped.TypedStoredDefinition (T m)))
+readDefinition :: Monad m => Sugar m (Maybe (DataTyped.StoredDefinition (T m)))
 readDefinition = Sugar $ Reader.asks scDef
 
 readBuiltinsMap :: Monad m => Sugar m Anchors.BuiltinsMap
@@ -718,9 +718,9 @@ isCompleteType =
 
 convertDefinitionI
   :: Monad m
-  => DataTyped.TypedStoredDefinition (T m)
+  => DataTyped.StoredDefinition (T m)
   -> Sugar m (DefinitionRef m)
-convertDefinitionI (DataTyped.TypedStoredDefinition defI defInferredType (Data.Definition bodyI typeI) _) = do
+convertDefinitionI (DataTyped.StoredDefinition defI defInferredType (Data.Definition bodyI typeI) _) = do
   bodyS <- convertExpressionI bodyEntity
   typeS <- convertExpressionI $ eeFromTypedExpression typeI
   deref <- derefTypeRef
@@ -754,7 +754,7 @@ convertDefinitionI (DataTyped.TypedStoredDefinition defI defInferredType (Data.D
 
 convertDefinition
   :: Monad m
-  => DataTyped.TypedStoredDefinition (T m) -> T m (DefinitionRef m)
+  => DataTyped.StoredDefinition (T m) -> T m (DefinitionRef m)
 convertDefinition def = runSugar (Just def) $ convertDefinitionI def
 
 convertExpressionPure
@@ -763,5 +763,5 @@ convertExpressionPure = runSugar Nothing . convertExpressionI . eeFromPure
 
 convertExpression
   :: Monad m
-  => DataTyped.TypedStoredExpression (T m) -> T m (ExpressionRef m)
+  => DataTyped.StoredExpression (T m) -> T m (ExpressionRef m)
 convertExpression = runSugar Nothing . convertExpressionI . eeFromTypedExpression
