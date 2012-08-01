@@ -610,8 +610,12 @@ expandHoles deref =
 applyForms
   :: Data.PureGuidExpression
   -> Data.PureGuidExpression -> [Data.PureGuidExpression]
-applyForms exprType =
-  reverse . take (1 + countPis exprType) . iterate addApply
+applyForms _ e@(
+  Data.PureGuidExpression (Data.GuidExpression _ (
+  Data.ExpressionLambda _))) =
+  [e]
+applyForms exprType expr =
+  reverse . take (1 + countPis exprType) $ iterate addApply expr
   where
     addApply =
       Data.PureGuidExpression . Data.GuidExpression zeroGuid .

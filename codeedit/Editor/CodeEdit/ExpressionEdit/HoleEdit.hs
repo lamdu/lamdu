@@ -165,7 +165,7 @@ makeAllResults holeInfo = do
     alphaEq = DataTyped.alphaEq `on` resultExpr
     (redundantResults, uninferredResults) =
       partition ((`any` inferredResults) . alphaEq) $
-      literalResults ++ piResult : varResults
+      literalResults ++ primitiveResults ++ varResults
     addRedundantData inferredResult =
       (atResultNames . (++) . concatMap resultNames .
        filter (alphaEq inferredResult))
@@ -179,13 +179,20 @@ makeAllResults holeInfo = do
   where
     insensitiveInfixOf = isInfixOf `on` map Char.toLower
     hole = hiHole holeInfo
-    piResult =
-      Result
-      { resultNames = ["->", "Pi", "→", "→", "Π", "π"]
-      , resultExpr =
-        toPureGuidExpr . Data.ExpressionPi $
-        Data.Lambda holeExpr holeExpr
-      }
+    primitiveResults =
+      [ Result
+        { resultNames = ["->", "Pi", "→", "→", "Π", "π"]
+        , resultExpr =
+          toPureGuidExpr . Data.ExpressionPi $
+          Data.Lambda holeExpr holeExpr
+        }
+      , Result
+        { resultNames = ["\\", "Lambda", "Λ", "λ"]
+        , resultExpr =
+          toPureGuidExpr . Data.ExpressionLambda $
+          Data.Lambda holeExpr holeExpr
+        }
+      ]
 
 holeExpr :: Data.PureGuidExpression
 holeExpr = toPureGuidExpr Data.ExpressionHole
