@@ -395,7 +395,7 @@ convertPi
   :: Monad m
   => Data.Lambda (ExprEntity m)
   -> Convertor m
-convertPi lambda@(Data.Lambda paramTypeI bodyI) exprI = do
+convertPi lambda exprI = do
   (param, sBody) <- convertLambda lambda exprI
   mkExpressionRef exprI $ ExpressionPi DontHaveParens
     Pi
