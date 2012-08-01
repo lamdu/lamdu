@@ -3,7 +3,7 @@
 module Editor.CodeEdit.ExpressionEdit.FuncEdit
   (make, makeParamEdit, makeBodyEdit, addJumpToRHS) where
 
-import Control.Monad (liftM, (<=<))
+import Control.Monad (liftM)
 import Data.Monoid (mempty, mconcat)
 import Data.Store.Guid (Guid)
 import Editor.Anchors (ViewTag)
@@ -66,7 +66,7 @@ makeParamEdit makeExpressionEdit rhs param =
       ExpressionGui.fromValueWidget paramNameEdit
   where
     myId = Widget.joinId (WidgetIds.fromGuid ident) ["param"]
-    ident = Sugar.guid $ Sugar.fpEntity param
+    ident = Sugar.fpGuid param
     paramEventMap = mconcat
       [ paramDeleteEventMap
       , paramAddNextEventMap
@@ -82,8 +82,8 @@ makeParamEdit makeExpressionEdit rhs param =
       maybe mempty
       (Widget.keysEventMapMovesCursor Config.delKeys "Delete parameter" .
        liftM WidgetIds.fromGuid .
-       IT.transaction) .
-      (Sugar.mDelete <=< Sugar.eActions) $ Sugar.fpEntity param
+       IT.transaction) $
+      Sugar.fpMDelete param
 
 makeParamsEdit
   :: MonadF m
@@ -132,5 +132,5 @@ make makeExpressionEdit (Sugar.Func params body) myId =
     paramsEdit <- makeParamsEdit makeExpressionEdit ("Func Body", body) params
     return $ ExpressionGui.hboxSpaced [ lambdaLabel, paramsEdit, rightArrowLabel, bodyEdit ]
   where
-    lhs = map (WidgetIds.paramId . Sugar.guid . Sugar.fpEntity) params
+    lhs = map (WidgetIds.paramId . Sugar.fpGuid) params
     bodyId = WidgetIds.fromGuid . Sugar.guid $ Sugar.rEntity body

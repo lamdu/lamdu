@@ -14,7 +14,7 @@ module Editor.CodeEdit.Sugar
   , convertExpression, convertExpressionPure
   ) where
 
-import Control.Applicative ((<$>), (<*>))
+import Control.Applicative (liftA2)
 import Control.Arrow (first)
 import Control.Monad (guard, liftM, forM)
 import Control.Monad.Trans.Class (MonadTrans(..))
@@ -51,9 +51,6 @@ data Actions m = Actions
   , addWhereItem :: T m Guid
   , replace      :: T m Guid
   , cut          :: T m Guid
-  , mDelete      :: Maybe (T m Guid)
-  -- invariant: cut includes the action of mDelete if one exists, or
-  -- replace if one doesn't
   , mNextArg     :: Maybe (ExpressionRef m)
   }
 
@@ -71,7 +68,8 @@ data ExpressionRef m = ExpressionRef
   }
 
 data WhereItem m = WhereItem
-  { wiEntity :: Entity m
+  { wiGuid :: Guid
+  , wiMDelete :: Maybe (T m Guid)
   , wiValue :: ExpressionRef m
   , wiType :: ExpressionRef m
   }
@@ -82,7 +80,8 @@ data Where m = Where
   }
 
 data FuncParam m = FuncParam
-  { fpEntity :: Entity m
+  { fpGuid :: Guid
+  , fpMDelete :: Maybe (T m Guid)
   , fpType :: ExpressionRef m
   , fpBody :: ExpressionRef m
   }
@@ -290,8 +289,6 @@ mkActions stored =
   , lambdaWrap = guidify $ DataOps.lambdaWrap stored
   , addWhereItem = guidify $ DataOps.redexWrap stored
   , replace = doReplace
-    -- mDelete gets overridden by parent if it is an apply.
-  , mDelete = Nothing
   , cut = mkCutter (Property.value stored) doReplace
   , mNextArg = Nothing
   }
@@ -335,36 +332,14 @@ mkExpressionRef ee expr = do
       Random.mkStdGen . (*2) . BinaryUtils.decodeS . Guid.bs $
       eeGuid ee
 
-addStoredDeleteCutActions
-  :: Monad m
-  => Data.ExpressionIRefProperty (T m)
-  -> Data.ExpressionIRefProperty (T m)
-  -> Data.ExpressionIRefProperty (T m)
-  -> Entity m -> Entity m
-addStoredDeleteCutActions deletedP parentP replacerP =
-  (atEActions . fmap)
-  ((atCut . const) cutter .
-   (atMDelete . const) (Just delete))
+mkMDelete :: Monad m => ExprEntity m -> ExprEntity m -> Maybe (T m Guid)
+mkMDelete parent replacer =
+  liftA2 mkDelete (eeProp parent) (eeProp replacer)
   where
-    cutter = mkCutter (Property.value deletedP) delete
-    delete = do
-      Property.set parentP $ Property.value replacerP
-      return . Data.exprIRefGuid $ Property.value replacerP
-
-addDeleteCutActions
-  :: Monad m
-  => ExprEntity m -> ExprEntity m -> ExprEntity m
-  -> Entity m -> Entity m
-addDeleteCutActions deletedI parentI replacerI =
-  fromMaybe id $
-  addStoredDeleteCutActions <$> eeProp deletedI <*> eeProp parentI <*> eeProp replacerI
-
-addDeleteCut
-  :: Monad m
-  => ExprEntity m -> ExprEntity m -> ExprEntity m
-  -> ExpressionRef m -> ExpressionRef m
-addDeleteCut deletedI exprI replacerI =
-  atREntity $ addDeleteCutActions deletedI exprI replacerI
+    mkDelete parentP replacerP = do
+      let replacerI = Property.value replacerP
+      Property.set parentP replacerI
+      return $ Data.exprIRefGuid replacerI
 
 convertLambdaParam
   :: Monad m
@@ -374,9 +349,8 @@ convertLambdaParam
 convertLambdaParam (Data.Lambda paramTypeI bodyI) bodyRef exprI = do
   typeExpr <- convertExpressionI paramTypeI
   return FuncParam
-    { fpEntity =
-        addDeleteCutActions exprI exprI bodyI $
-        makeEntity exprI
+    { fpGuid = eeGuid exprI
+    , fpMDelete = mkMDelete exprI bodyI
     , fpType = typeExpr
     , fpBody = bodyRef
     }
@@ -426,7 +400,7 @@ convertPi lambda@(Data.Lambda paramTypeI bodyI) exprI = do
   mkExpressionRef exprI $ ExpressionPi DontHaveParens
     Pi
     { pParam = atFpType addApplyChildParens param
-    , pResultType = addDeleteCut bodyI exprI paramTypeI sBody
+    , pResultType = sBody
     }
 
 convertWhere
@@ -445,9 +419,8 @@ convertWhere valueRef lambdaI lambda@(Data.Lambda typeI bodyI) applyI = do
       _ -> Where [] sBody
   where
     item typeRef = WhereItem
-      { wiEntity =
-          addDeleteCutActions applyI applyI bodyI $
-          makeEntityGuid (eeGuid lambdaI) applyI
+      { wiGuid = eeGuid lambdaI
+      , wiMDelete = mkMDelete applyI bodyI
       , wiValue = valueRef
       , wiType = typeRef
       }
@@ -526,13 +499,9 @@ convertApplyInfixFull
     lArgRef <- convertExpressionI funcArgI
     opRef <- mkExpressionRef funcFuncI $ ExpressionGetVariable op
     let
-      newLArgRef =
-        addDeleteCut funcArgI funcI funcFuncI $ addApplyChildParens lArgRef
-      newRArgRef = addDeleteCut argI exprI funcI $ addApplyChildParens rArgRef
-      newOpRef =
-        atFunctionType .
-        addDeleteCut funcFuncI funcI funcArgI $
-        setAddArg exprI opRef
+      newLArgRef = addApplyChildParens lArgRef
+      newRArgRef = addApplyChildParens rArgRef
+      newOpRef = atFunctionType $ setAddArg exprI opRef
     mkExpressionRef exprI . ExpressionSection DontHaveParens .
       Section (Just newLArgRef) newOpRef (Just newRArgRef) . Just $
       eeGuid funcI
@@ -544,12 +513,11 @@ convertApplyInfixL
   -> Convertor m
 convertApplyInfixL op (Data.Apply opI argI) exprI = do
   argRef <- convertExpressionI argI
-  let newArgRef = addDeleteCut argI exprI opI $ addApplyChildParens argRef
+  let newArgRef = addApplyChildParens argRef
   opRef <- mkExpressionRef opI $ ExpressionGetVariable op
   let
     newOpRef =
       atFunctionType .
-      addDeleteCut opI exprI argI .
       setAddArg exprI $
       opRef
   mkExpressionRef exprI . ExpressionSection HaveParens $
@@ -564,12 +532,10 @@ convertApplyPrefix (Data.Apply funcI argI) exprI = do
   funcRef <- convertExpressionI funcI
   let
     newArgRef =
-      addDeleteCut argI exprI funcI .
       setAddArg exprI $
       atRExpression addParens argRef
     setNextArg = atREntity . atEActions . fmap . atMNextArg . const $ Just newArgRef
     newFuncRef =
-      addDeleteCut funcI exprI argI .
       setNextArg .
       addApplyChildParens .
       atFunctionType .

@@ -24,14 +24,13 @@ make makeExpressionEdit (Sugar.Pi param resultType) myId =
   OT.assignCursor myId typeId $ do
     (resultTypeEdit, usedVars) <-
       OT.usedVariables $ FuncEdit.makeBodyEdit makeExpressionEdit
-      [WidgetIds.paramId . Sugar.guid $ Sugar.fpEntity param] resultType
+      [paramId] resultType
     let
-      paramGuid = Sugar.guid $ Sugar.fpEntity param
       paramUsed = paramGuid `elem` usedVars
       redirectCursor cursor
         | paramUsed = cursor
         | otherwise =
-          case Widget.subId (WidgetIds.paramId paramGuid) cursor of
+          case Widget.subId paramId cursor of
           Nothing -> cursor
           Just _ -> typeId
     OT.atCursor redirectCursor $ do
@@ -45,6 +44,8 @@ make makeExpressionEdit (Sugar.Pi param resultType) myId =
       return $
         ExpressionGui.hboxSpaced [paramEdit, ExpressionGui.fromValueWidget rightArrowLabel, resultTypeEdit]
   where
+    paramGuid = Sugar.fpGuid param
+    paramId = WidgetIds.paramId paramGuid
     typeId =
       WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity . Sugar.fpType $
       param

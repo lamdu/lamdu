@@ -147,7 +147,6 @@ expressionEventMap holePicker actions =
     [ giveAsArg
     , callWithArg
     , addArg
-    , delete
     , replace
     , lambdaWrap
     , addWhereItem
@@ -171,17 +170,13 @@ expressionEventMap holePicker actions =
       `mappend`
       (withPickResultFirst Config.addNextArgumentKeys "Add arg" . itrans $
        Sugar.addNextArg actions)
-    delete =
-      -- Replace has the keys of Delete if delete is not available:
-      maybeMempty (Sugar.mDelete actions) $
-      mkEventMap Config.delKeys "Delete" WidgetIds.fromGuid
     cut =
       if isHole then mempty else
       mkEventMap Config.cutKeys "Cut" WidgetIds.fromGuid $
       Sugar.cut actions
     replace =
       if isHole then mempty else
-      mkEventMap (Config.replaceKeys ++ Config.delKeys) "Replace" diveGuid $
+      mkEventMap Config.replaceKeys "Replace" diveGuid $
       Sugar.replace actions
     lambdaWrap =
       mkEventMap Config.lambdaWrapKeys "Lambda wrap" diveParam $

@@ -36,7 +36,7 @@ closePaneKeys     = [alt 'w']
 movePaneDownKeys  = [mk E.alt E.KeyDown]
 movePaneUpKeys    = [mk E.alt E.KeyUp]
 
-replaceKeys       = [alt 'r']
+replaceKeys       = alt 'r' : delKeys
 
 pickResultKeys    = [noMods E.KeyEnter]
 jumpToDefinitionKeys  = [noMods E.KeyEnter]
