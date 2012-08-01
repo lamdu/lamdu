@@ -94,6 +94,9 @@ createBuiltins =
     makeWithType "Data.List.length" . forAll "a" $ \a ->
       mkPi (listOf a) integer
 
+    makeWithType "Data.List.foldl" . forAll "a" $ \a -> forAll "b" $ \b ->
+      mkPi (mkPi a (mkPi b a)) . mkPi a $ mkPi (listOf b) a
+
     makeWithType "Data.List.zipWith" . forAll "a" $ \a -> forAll "b" $ \b -> forAll "c" $ \c ->
       mkPi (mkPi a (mkPi b c)) . mkPi (listOf a) . mkPi (listOf b) $ listOf c
 
@@ -103,6 +106,8 @@ createBuiltins =
     let intToIntToBool = mkPi integer $ mkPi integer bool
     mapM_ ((`makeWithType` intToIntToBool) . ("Prelude." ++))
       ["==", "/=", "<=", ">=", "<", ">"]
+
+    makeWithType "Prelude.enumFromTo" . mkPi integer . mkPi integer $ listOf integer
   where
     tellift f = Writer.tell . (:[]) =<< lift f
     getVar = Data.newExprIRef . Data.ExpressionGetVariable
