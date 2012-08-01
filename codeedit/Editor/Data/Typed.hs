@@ -388,12 +388,14 @@ unifyPair
       return True
     (Data.ExpressionBuiltin (Data.Builtin name1 _),
      Data.ExpressionBuiltin (Data.Builtin name2 _)) -> return $ name1 == name2
-    (Data.ExpressionGetVariable v1,
-     Data.ExpressionGetVariable v2) -> return $ v1 == v2
     (Data.ExpressionLiteralInteger i1,
      Data.ExpressionLiteralInteger i2) -> return $ i1 == i2
     (Data.ExpressionMagic,
      Data.ExpressionMagic) -> return True
+    (Data.ExpressionGetVariable _,
+     _) -> return True
+    (_,
+     Data.ExpressionGetVariable _) -> return True
     _ -> return False
   where
     unifyLambdas
