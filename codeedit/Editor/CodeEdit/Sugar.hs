@@ -24,7 +24,6 @@ import Data.Functor.Identity (Identity(..))
 import Data.Maybe (catMaybes, fromMaybe, isJust)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
-import Data.UnionFind.IntMap (newUnionFind)
 import Editor.Anchors (ViewTag)
 import System.Random (RandomGen)
 import qualified Control.Monad.Trans.Reader as Reader
@@ -637,7 +636,7 @@ convertHole exprI = do
     runInfer =
       (liftM . first . fmap) fromInferred .
       DataTyped.derefResumedInfer (Random.mkStdGen 0) builtinsMap
-      (maybe newUnionFind DataTyped.deTypeContext mDef)
+      (maybe DataTyped.emptyTypeContext DataTyped.deTypeContext mDef)
     mkResults (derefIt, typedExpr) = do
       _ <- derefIt $ DataTyped.eeInferredType typedExpr
       return $ expandHoles derefIt typedExpr
