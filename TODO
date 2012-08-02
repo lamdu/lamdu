@@ -1,3 +1,12 @@
+* Currently, Set : Magic, so we don't support param type=Set, or
+  type variables at all.
+
+* Yair: You sure unifyPair of getvariables should just return yes, and
+  without unifying anything? What if you supposedly take two different
+  type variables and use them as though they were the same one? That
+  should be a type error. What if you take a type variable but then
+  use it as though it was an Int?
+
 * Add JumpTo which gives a hole-like search -- that can sit in a "tab" in place of a DefinitionEdit
 
 * LHS needs to be in infix form too
