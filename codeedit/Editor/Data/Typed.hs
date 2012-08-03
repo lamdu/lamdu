@@ -124,7 +124,7 @@ setTypeRef typeRef types =
   TypeData types
 
 runInfer :: Monad m => Infer m a -> m (TypeContext, a)
-runInfer = resumeInfer $ TypeContext newUnionFind []
+runInfer = resumeInfer emptyTypeContext
 
 resumeInfer :: Monad m => TypeContext -> Infer m a -> m (TypeContext, a)
 resumeInfer (TypeContext uf rt) =
