@@ -9,6 +9,7 @@ module Graphics.UI.Bottle.Rect(
 where
 
 import Control.Applicative (liftA2)
+import Control.Lens (view, (%~))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators(R)
 import qualified Data.AtFieldTH as AtFieldTH
@@ -24,34 +25,34 @@ atTopLeftAndSize :: (Vector2 R -> Vector2 R) -> Rect -> Rect
 atTopLeftAndSize f = atRectTopLeft f . atRectSize f
 
 left :: Rect -> R
-left = Vector2.fst . rectTopLeft
+left = view Vector2.first . rectTopLeft
 
 top :: Rect -> R
-top = Vector2.snd . rectTopLeft
+top = view Vector2.second . rectTopLeft
 
 right :: Rect -> R
-right = Vector2.fst . bottomRight
+right = view Vector2.first . bottomRight
 
 bottom :: Rect -> R
-bottom = Vector2.snd . bottomRight
+bottom = view Vector2.second . bottomRight
 
 width :: Rect -> R
-width = Vector2.fst . rectSize
+width = view Vector2.first . rectSize
 
 height :: Rect -> R
-height = Vector2.snd . rectSize
+height = view Vector2.second . rectSize
 
 atLeft :: (R -> R) -> Rect -> Rect
-atLeft = atRectTopLeft . Vector2.first
+atLeft = atRectTopLeft . (Vector2.first %~)
 
 atTop :: (R -> R) -> Rect -> Rect
-atTop = atRectTopLeft . Vector2.second
+atTop = atRectTopLeft . (Vector2.second %~)
 
 atWidth :: (R -> R) -> Rect -> Rect
-atWidth = atRectSize . Vector2.first
+atWidth = atRectSize . (Vector2.first %~)
 
 atHeight :: (R -> R) -> Rect -> Rect
-atHeight = atRectSize . Vector2.second
+atHeight = atRectSize . (Vector2.second %~)
 
 center :: Rect -> Vector2 R
 center (Rect tl size) = tl + size / 2

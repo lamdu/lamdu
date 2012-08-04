@@ -1,22 +1,29 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Data.Vector.Vector2
-    (Vector2(..)
-    ,first,second,(***),both,zip
-    ,fst,snd,swap
-    ,curry,uncurry,sqrNorm
+    ( Vector2(Vector2)
+    , (***),both,zip
+    , first,second,swap
+    , curry,uncurry,sqrNorm
     )
 where
 
-import           Prelude             hiding (fst, snd, curry, uncurry, zip)
-import           Control.Applicative (Applicative(..), liftA2)
-import           Control.Monad       (join, liftM2)
-import           Data.Binary         (Binary(..))
 -- import Test.QuickCheck.Arbitrary(Arbitrary(..))
+--import Control.Lens (Lens)
+import Control.Lens.TH (makeLenses)
+import Control.Applicative (Applicative(..), liftA2)
+import Control.Monad (join, liftM2)
+import Data.Binary (Binary(..))
+import Prelude hiding (curry, uncurry, zip)
 
-data Vector2 a = Vector2 !a !a
+data Vector2 a = Vector2
+  { _first :: !a
+  , _second :: !a
+  }
   -- Note the Ord instance is obviously not a mathematical one
   -- (Vectors aren't ordinals!). Useful to have in a binary search
   -- tree though.
   deriving (Eq, Ord, Show, Read)
+makeLenses ''Vector2
 
 instance Binary a => Binary (Vector2 a) where
   get = liftM2 Vector2 get get
@@ -43,22 +50,8 @@ instance Binary a => Binary (Vector2 a) where
 --   where
 --     vectors = range r
 
-fst :: Vector2 a -> a
-fst (Vector2 x _) = x
-
-snd :: Vector2 a -> a
-snd (Vector2 _ y) = y
-
 swap :: Vector2 a -> Vector2 a
 swap (Vector2 x y) = Vector2 y x
-
-type Endo a = a -> a
-
-first :: Endo a -> Endo (Vector2 a)
-first f (Vector2 x y) = Vector2 (f x) y
-
-second :: Endo a -> Endo (Vector2 a)
-second f (Vector2 x y) = Vector2 x (f y)
 
 infixr 3 ***
 (***) :: (a -> b) -> (a -> b) -> Vector2 a -> Vector2 b

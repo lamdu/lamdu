@@ -10,6 +10,7 @@ module Graphics.UI.Bottle.Widgets.Box
   , Orientation, horizontal, vertical
   ) where
 
+import Control.Lens (view)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.Widget (Widget, Size)
@@ -37,7 +38,7 @@ horizontal :: Orientation
 horizontal = Orientation
   { oToGridCursor = (`Vector2` 0)
   , oToGridChildren = (: [])
-  , oFromGridCursor = Vector2.fst
+  , oFromGridCursor = view Vector2.first
   , oFromGridChildren = eHead
   }
 
@@ -45,7 +46,7 @@ vertical :: Orientation
 vertical = Orientation
   { oToGridCursor = (0 `Vector2`)
   , oToGridChildren = map (: [])
-  , oFromGridCursor = Vector2.snd
+  , oFromGridCursor = view Vector2.second
   , oFromGridChildren = map eHead
   }
 

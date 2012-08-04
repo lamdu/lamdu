@@ -11,6 +11,7 @@ module Graphics.UI.Bottle.Widgets.TextEdit(
   atSTextViewStyle) where
 
 import Control.Arrow (first)
+import Control.Lens ((%~), sets, view)
 import Data.Char (isSpace)
 import Data.List (genericLength, minimumBy)
 import Data.List.Split (splitWhen)
@@ -95,7 +96,7 @@ cursorRects style str =
 makeUnfocused :: Style -> String -> Widget.Id -> Widget ((,) String)
 makeUnfocused style str myId =
   Widget.takesFocus enter .
-  (Widget.atWSize . Vector2.first) (+ sCursorWidth style) .
+  (sets Widget.atWSize . Vector2.first %~ (+ sCursorWidth style)) .
   Widget.atWFrame (cursorTranslate style) .
   TextView.makeWidget (sTextViewStyle style) displayStr $
   Widget.toAnimId myId
@@ -142,7 +143,7 @@ makeFocused cursor style str myId =
 
     blue = Draw.Color 0 0 0.8 0.8
 
-    textLinesWidth = Vector2.fst . snd . drawText
+    textLinesWidth = view Vector2.first . snd . drawText
     lineHeight = lineHeightOfStyle style
     strWithIds = map (first Just) $ enumerate str
     beforeCursor = take cursor strWithIds

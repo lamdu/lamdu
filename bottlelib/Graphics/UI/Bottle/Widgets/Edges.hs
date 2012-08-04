@@ -2,6 +2,7 @@ module Graphics.UI.Bottle.Widgets.Edges(
   makeVertical
   ) where
 
+import Control.Lens ((^.))
 import Control.Monad (mplus)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
@@ -37,6 +38,6 @@ makeVertical size top unTranslatedBottom = Widget
       EventMap.keyPresses keys doc . Widget.enterResultEvent . enterOther .
       Direction.RelativePos $ wFocalArea me
     bottom = Widget.translate (Vector2 0 (max topHeight bottomsTop)) unTranslatedBottom
-    topHeight = Vector2.snd $ wSize top
-    bottomHeight = Vector2.snd $ wSize unTranslatedBottom
-    bottomsTop = Vector2.snd size - bottomHeight
+    topHeight = wSize top ^. Vector2.second
+    bottomHeight = wSize unTranslatedBottom ^. Vector2.second
+    bottomsTop = size ^. Vector2.second - bottomHeight

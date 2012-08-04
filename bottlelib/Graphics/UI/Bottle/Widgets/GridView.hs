@@ -6,6 +6,7 @@ module Graphics.UI.Bottle.Widgets.GridView
   ) where
 
 import Control.Arrow (first, second)
+import Control.Lens (view)
 import Data.List (transpose)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
@@ -31,13 +32,13 @@ makePlacements rows =
       ( Vector2 (alignX / width) (alignY / height)
       , Rect (Vector2 (alignX - preX) (alignY - preY)) itemSize
       )
-    colSizes = map (groupSize Vector2.fst) $ transpose posRows
-    rowSizes = map (groupSize Vector2.snd) posRows
+    colSizes = map (groupSize Vector2.first) $ transpose posRows
+    rowSizes = map (groupSize Vector2.second) posRows
     groupSize dim group =
       (alignmentPos + maxSize snd, alignmentPos)
       where
         alignmentPos = maxSize fst
-        maxSize f = maximum $ map (dim . f . snd) group
+        maxSize f = maximum $ map (view dim . f . snd) group
     posRows = (map . map) calcPos rows
     calcPos (size, alignment) = (size, (alignment * size, (1 - alignment) * size))
 

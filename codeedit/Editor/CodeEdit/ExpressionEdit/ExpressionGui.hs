@@ -8,6 +8,7 @@ module Editor.CodeEdit.ExpressionEdit.ExpressionGui
   , addType
   ) where
 
+import Control.Lens ((^.), view)
 import Control.Monad (liftM)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
@@ -50,7 +51,7 @@ hbox :: [ExpressionGui m] -> ExpressionGui m
 hbox guis =
   ExpressionGui (Box.toWidget box) $
   case Box.boxContent box of
-  ((_, x) : _) -> Vector2.snd $ Grid.elementAlign x
+  ((_, x) : _) -> Grid.elementAlign x ^. Vector2.second
   _ -> error "hbox must not get empty list :("
   where
     box = Box.make Box.horizontal $ map f guis
@@ -69,7 +70,7 @@ addType exprId typeEdits eg =
   ExpressionGui (Box.toWidget box) alignment
   where
     alignment =
-      maybe (error "True disappeared from box list?!") (Vector2.snd . Grid.elementAlign) .
+      maybe (error "True disappeared from box list?!") (view Vector2.second . Grid.elementAlign) .
       lookup True $ Box.boxContent box
     box = Box.makeKeyed Box.vertical
       [ (True, (Vector2 0.5 (egAlignment eg), widget))
@@ -77,7 +78,7 @@ addType exprId typeEdits eg =
       , (False, (0.5, typeEdit))
       ]
     widget = egWidget eg
-    width = Vector2.fst . Widget.wSize
+    width = view Vector2.first . Widget.wSize
     underLineWidth = max (width widget) (width typeEdit)
     typeEdit =
       addTint . addBackground .

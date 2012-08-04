@@ -14,6 +14,7 @@ module Graphics.UI.Bottle.Widgets.Grid
 
 import Control.Applicative (liftA2)
 import Control.Arrow (first, second)
+import Control.Lens (view)
 import Control.Monad (msum, (>=>))
 import Data.Function (on)
 import Data.List (foldl', transpose, find, minimumBy, sortBy, groupBy)
@@ -247,8 +248,8 @@ toWidget =
 
         filteredByEdge = memo $ \(Vector2 hEdge vEdge) ->
           map snd .
-          safeHead . groupSortOn ((* (-hEdge)) . Vector2.fst . fst) .
-          safeHead . groupSortOn ((* (-vEdge)) . Vector2.snd . fst) $
+          safeHead . groupSortOn ((* (-hEdge)) . view Vector2.first . fst) .
+          safeHead . groupSortOn ((* (-vEdge)) . view Vector2.second . fst) $
           childEnters
         indexIntoMaybe (i, m) = fmap ((,) i) m
 

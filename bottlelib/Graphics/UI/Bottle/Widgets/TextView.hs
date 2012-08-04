@@ -7,6 +7,7 @@ module Graphics.UI.Bottle.Widgets.TextView (
 
 import Control.Applicative (liftA2)
 import Control.Arrow (first, second, (&&&))
+import Control.Lens (view, set)
 import Data.List (foldl')
 import Data.List.Split (splitWhen)
 import Data.List.Utils (enumerate)
@@ -61,7 +62,7 @@ joinLines ::
 joinLines =
   drawMany vertical
   where
-    vertical = Vector2.first (const 0)
+    vertical = set Vector2.first 0
 
 nestedFrame ::
   Show a => (a, (Draw.Image (), Size)) -> (AnimId -> Anim.Frame, Size)
@@ -81,7 +82,7 @@ drawTextAsSingleLetters style text =
   splitWhen ((== '\n') . snd) $ enumerate text
   where
     (_, minLineSize) = fontRender style ""
-    horizontal = Vector2.second (const 0)
+    horizontal = set Vector2.second 0
 
 letterRects :: Style -> String -> [[Rect]]
 letterRects style text =
@@ -91,7 +92,7 @@ letterRects style text =
     locateLineHeight y = (map . Rect.atTop) (+y)
     (_, Vector2 _ lineHeight) = fontRender style ""
     makeLine textLine =
-      zipWith makeLetterRect sizes . scanl (+) 0 . map Vector2.fst $ sizes
+      zipWith makeLetterRect sizes . scanl (+) 0 . map (view Vector2.first) $ sizes
       where
         sizes = map toSize textLine
         toSize = snd . fontRender style . (:[])
