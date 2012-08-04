@@ -52,7 +52,6 @@ Library
                        Data.Binary.Utils,
                        Data.Store.Guid,
                        Data.Store.IRef,
-                       Data.Store.IRef.Tree,
                        Data.Store.Rev.Change,
                        Data.Store.Rev.Version,
                        Data.Store.Rev.Branch,
