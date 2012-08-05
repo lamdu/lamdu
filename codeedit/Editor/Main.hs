@@ -3,6 +3,7 @@ module Main(main) where
 
 import Control.Applicative ((<*))
 import Control.Arrow (second)
+import Control.Lens ((^.))
 import Control.Monad (liftM, unless, (<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Writer (WriterT, runWriterT)
@@ -81,7 +82,9 @@ addAnnotations font = Anim.atFSubImages $ Map.mapWithKey annotateItem
       where
         -- Cancel out on the scaling done in Anim so
         -- that our annotation is always the same size
-        antiScale = annotationSize / fmap (max 1) (Rect.rectSize (Anim.piRect posImage))
+        antiScale =
+          annotationSize /
+          fmap (max 1) (Anim.piRect posImage ^. Rect.size)
 
 whenApply :: Bool -> (a -> a) -> a -> a
 whenApply False _ = id

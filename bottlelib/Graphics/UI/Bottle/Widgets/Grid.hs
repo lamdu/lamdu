@@ -14,7 +14,7 @@ module Graphics.UI.Bottle.Widgets.Grid
 
 import Control.Applicative (liftA2)
 import Control.Arrow (first, second)
-import Control.Lens (view)
+import Control.Lens ((^.))
 import Control.Monad (msum, (>=>))
 import Data.Function (on)
 import Data.List (foldl', transpose, find, minimumBy, sortBy, groupBy)
@@ -28,6 +28,7 @@ import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.Widget (Widget(..), R)
 import Graphics.UI.Bottle.Widgets.GridView (Alignment)
 import Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys)
+import qualified Control.Lens as Lens
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.UI.Bottle.Direction as Direction
@@ -77,11 +78,11 @@ mkNavDests widgetSize selfRect mEnterss cursor@(Vector2 cursorX cursorY) = NavDe
     give dir = fmap ($ Direction.RelativePos dir) . msum
     giveSelf = give selfRect
     giveEdge edge = give Rect
-      { Rect.rectTopLeft =
-          liftA2 fromMaybe (Rect.rectTopLeft selfRect) $
+      { Rect._topLeft =
+          liftA2 fromMaybe (Rect._topLeft selfRect) $
           liftA2 (fmap . (*)) widgetSize edge
-      , Rect.rectSize =
-          liftA2 fromMaybe (Rect.rectSize selfRect) $
+      , Rect._size =
+          liftA2 fromMaybe (Rect._size selfRect) $
           (fmap . fmap) (const 0) edge
       }
 
@@ -151,7 +152,9 @@ makeKeyed children = KGrid
     mkSizedKeyedContent (key, (alignment, widget)) =
       ((Widget.wSize widget, alignment), (key, widget))
     translate align rect =
-      second (Element align rect . Widget.translate (Rect.rectTopLeft rect))
+      second
+      (Element align rect .
+       Widget.translate (rect ^. Rect.topLeft))
 
 unkey :: [[(Alignment, Widget f)]] -> [[((), (Alignment, Widget f))]]
 unkey = (map . map) ((,) ())
@@ -237,19 +240,19 @@ toWidget =
 
         byDirection dir =
           minimumOn
-          (abs . ((1 - abs (fmap fromIntegral edge)) *) . distance dirRect .
-           Widget.enterResultRect) .
+          (abs . ((1 - abs (fmap fromIntegral edge)) *) .
+           distance dirRect . Widget.enterResultRect) .
           map ($ dir) $ filteredByEdge edge
           where
             dirRect = Direction.fold (Rect 0 0) id dir
             edge = asEdge size dirRect
 
-        distance = (-) `on` Rect.center
+        distance = (-) `on` Lens.view Rect.center
 
         filteredByEdge = memo $ \(Vector2 hEdge vEdge) ->
           map snd .
-          safeHead . groupSortOn ((* (-hEdge)) . view Vector2.first . fst) .
-          safeHead . groupSortOn ((* (-vEdge)) . view Vector2.second . fst) $
+          safeHead . groupSortOn ((* (-hEdge)) . Lens.view Vector2.first . fst) .
+          safeHead . groupSortOn ((* (-vEdge)) . Lens.view Vector2.second . fst) $
           childEnters
         indexIntoMaybe (i, m) = fmap ((,) i) m
 
@@ -265,9 +268,9 @@ asEdge size rect =
     boolToInt False = 0
     boolToInt True = 1
     Vector2 leftEdge topEdge =
-      fmap (<= 0) (Rect.bottomRight rect)
+      fmap (<= 0) (rect ^. Rect.bottomRight)
     Vector2 rightEdge bottomEdge =
-      liftA2 (>=) (Rect.rectTopLeft rect) size
+      liftA2 (>=) (rect ^. Rect.topLeft) size
 
 -- ^ If unfocused, will enters the given child when entered
 toWidgetBiased :: Cursor -> KGrid key f -> Widget f

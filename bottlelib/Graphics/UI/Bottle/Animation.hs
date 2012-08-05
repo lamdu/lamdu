@@ -9,11 +9,12 @@ module Graphics.UI.Bottle.Animation
   , translate, scale, onDepth
   , simpleFrame, simpleFrameDownscale
   , joinId, subId
-  , weaker, stronger)
-where
+  , weaker, stronger
+  ) where
 
 import Control.Applicative(Applicative(..), liftA2)
 import Control.Arrow(first, second)
+import Control.Lens ((^.))
 import Control.Monad(void)
 import Data.List(isPrefixOf)
 import Data.List.Utils(groupOn, sortOn)
@@ -22,7 +23,7 @@ import Data.Maybe(isJust)
 import Data.Monoid(Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators(R, (%%))
-import Graphics.UI.Bottle.Rect(Rect(..))
+import Graphics.UI.Bottle.Rect(Rect(Rect))
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.ByteString as SBS
 import qualified Data.List as List
@@ -97,7 +98,12 @@ draw = mconcat . map (posImages . map snd) . sortOn (fst . head) . Map.elems . f
     putXOn (PositionedImage img r) = PositionedImage (mappend (Draw.tint red unitX) img) r
     posImages [x] = posImage x
     posImages xs = mconcat $ map (posImage . putXOn) xs
-    posImage (PositionedImage img (Rect { rectTopLeft = Vector2 t l, rectSize = Vector2 w h })) =
+    posImage
+      (PositionedImage img
+       (Rect
+        { Rect._topLeft = Vector2 t l
+        , Rect._size = Vector2 w h
+        })) =
       Draw.translate (t, l) %% Draw.scale w h %% img
 
 prefixRects :: Map AnimId (Layer, PositionedImage) -> Map AnimId Rect
@@ -112,12 +118,14 @@ prefixRects src =
       return (prefix, rect)
     joinRects a b =
       Rect {
-        rectTopLeft = tl,
-        rectSize = br - tl
+        Rect._topLeft = tl,
+        Rect._size = br - tl
       }
       where
-        tl = liftA2 min (Rect.rectTopLeft a) (Rect.rectTopLeft b)
-        br = liftA2 max (Rect.bottomRight a) (Rect.bottomRight b)
+        tl =
+          liftA2 min (a ^. Rect.topLeft) (b ^. Rect.topLeft)
+        br =
+          liftA2 max (a ^. Rect.bottomRight) (b ^. Rect.bottomRight)
 
 findPrefix :: Ord a => [a] -> Map [a] b -> Maybe [a]
 findPrefix key dict =
@@ -126,11 +134,17 @@ findPrefix key dict =
 relocateSubRect :: Rect -> Rect -> Rect -> Rect
 relocateSubRect srcSubRect srcSuperRect dstSuperRect =
   Rect {
-    rectTopLeft = rectTopLeft dstSuperRect + sizeRatio * (rectTopLeft srcSubRect - rectTopLeft srcSuperRect),
-    rectSize = sizeRatio * rectSize srcSubRect
+    Rect._topLeft =
+       dstSuperRect ^. Rect.topLeft +
+       sizeRatio *
+       (srcSubRect ^. Rect.topLeft -
+        srcSuperRect ^. Rect.topLeft),
+    Rect._size = sizeRatio * srcSubRect ^. Rect.size
   }
   where
-    sizeRatio = rectSize dstSuperRect / fmap (max 1) (rectSize srcSuperRect)
+    sizeRatio =
+      dstSuperRect ^. Rect.size /
+      fmap (max 1) (srcSuperRect ^. Rect.size)
 
 isVirtuallySame :: Frame -> Frame -> Bool
 isVirtuallySame (Frame a) (Frame b) =
@@ -145,8 +159,8 @@ isVirtuallySame (Frame a) (Frame b) =
     subtractRect ra rb =
       Vector2.uncurry max $
       liftA2 max
-        (fmap abs (Rect.rectTopLeft ra - Rect.rectTopLeft rb))
-        (fmap abs (Rect.bottomRight ra - Rect.bottomRight rb))
+        (fmap abs (ra ^. Rect.topLeft - rb ^. Rect.topLeft))
+        (fmap abs (ra ^. Rect.bottomRight -  rb ^. Rect.bottomRight))
     rectMap = Map.map (piRect . snd . head)
 
 mapIdentities :: (AnimId -> AnimId) -> Frame -> Frame
@@ -174,7 +188,9 @@ makeNextFrame movement (Frame dests) (Frame curs) =
     add key (layer, PositionedImage img r) =
       Just (layer, PositionedImage img rect)
       where
-        rect = maybe (Rect (Rect.center r) 0) genRect $ findPrefix key curPrefixMap
+        rect =
+          maybe (Rect (r ^. Rect.center) 0) genRect $
+          findPrefix key curPrefixMap
         genRect prefix = relocateSubRect r (destPrefixMap ! prefix) (curPrefixMap ! prefix)
     del key (layer, PositionedImage img (Rect pos size))
       | isJust (findPrefix key destPrefixMap)

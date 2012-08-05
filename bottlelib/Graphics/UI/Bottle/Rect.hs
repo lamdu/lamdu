@@ -1,71 +1,67 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Graphics.UI.Bottle.Rect(
-  R, Rect(..),
-  atTopLeftAndSize,
-  left, top, right, bottom,
-  atRectTopLeft, atLeft, atTop,
-  atRectSize, atWidth, atHeight, width, height,
-  bottomRight, center, distance)
-where
+module Graphics.UI.Bottle.Rect
+  ( R, Rect(..), topLeft, size
+  , topLeftAndSize
+  , left, top, right, bottom
+  , width, height
+  , bottomRight, center, distance
+  ) where
 
 import Control.Applicative (liftA2)
-import Control.Lens (view, adjust)
+import Control.Lens (Simple, Traversal, Lens, (^.))
+import Control.Lens.TH (makeLenses)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators(R)
-import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Vector.Vector2 as Vector2
 
 data Rect = Rect {
-  rectTopLeft :: Vector2 R,
-  rectSize :: Vector2 R
+  _topLeft :: Vector2 R,
+  _size :: Vector2 R
   } deriving Show
-AtFieldTH.make ''Rect
+makeLenses ''Rect
 
-atTopLeftAndSize :: (Vector2 R -> Vector2 R) -> Rect -> Rect
-atTopLeftAndSize f = atRectTopLeft f . atRectSize f
+topLeftAndSize :: Simple Traversal Rect (Vector2 R)
+topLeftAndSize f (Rect tl s) = liftA2 Rect (f tl) (f s)
 
-left :: Rect -> R
-left = view Vector2.first . rectTopLeft
+bottomRight :: Simple Lens Rect (Vector2 R)
+bottomRight f (Rect tl s) =
+  fmap withNew $ f (tl + s)
+  where
+    withNew newBottomRight =
+      Rect tl (newBottomRight - tl)
 
-top :: Rect -> R
-top = view Vector2.second . rectTopLeft
+center :: Simple Lens Rect (Vector2 R)
+center f (Rect tl s) =
+  fmap withNew $ f centerVal
+  where
+    centerVal = tl + s / 2
+    withNew newCenter =
+      Rect (tl + newCenter - centerVal) s
 
-right :: Rect -> R
-right = view Vector2.first . bottomRight
+left :: Simple Lens Rect R
+left = topLeft . Vector2.first
 
-bottom :: Rect -> R
-bottom = view Vector2.second . bottomRight
+top :: Simple Lens Rect R
+top = topLeft . Vector2.second
 
-width :: Rect -> R
-width = view Vector2.first . rectSize
+right :: Simple Lens Rect R
+right = bottomRight . Vector2.first
 
-height :: Rect -> R
-height = view Vector2.second . rectSize
+bottom :: Simple Lens Rect R
+bottom = bottomRight . Vector2.second
 
-atLeft :: (R -> R) -> Rect -> Rect
-atLeft = atRectTopLeft . adjust Vector2.first
+width :: Simple Lens Rect R
+width = size . Vector2.first
 
-atTop :: (R -> R) -> Rect -> Rect
-atTop = atRectTopLeft . adjust Vector2.second
-
-atWidth :: (R -> R) -> Rect -> Rect
-atWidth = atRectSize . adjust Vector2.first
-
-atHeight :: (R -> R) -> Rect -> Rect
-atHeight = atRectSize . adjust Vector2.second
-
-center :: Rect -> Vector2 R
-center (Rect tl size) = tl + size / 2
-
-bottomRight :: Rect -> Vector2 R
-bottomRight (Rect tl size) = tl + size
+height :: Simple Lens Rect R
+height = size . Vector2.second
 
 distance :: Rect -> Rect -> R
 distance r1 r2 = Vector2.sqrNorm dist2
   where
     max2 = liftA2 max
     dist2 = max2 (max2 0 (tl2 - br1)) (max2 0 (tl1 - br2))
-    tl1 = rectTopLeft r1
-    tl2 = rectTopLeft r2
-    br1 = bottomRight r1
-    br2 = bottomRight r2
+    tl1 = r1 ^. topLeft
+    tl2 = r2 ^. topLeft
+    br1 = r1 ^. bottomRight
+    br2 = r2 ^. bottomRight

@@ -23,6 +23,7 @@ import Graphics.UI.Bottle.Direction (Direction)
 import Graphics.UI.Bottle.EventMap (EventMap)
 import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.WidgetId (Id(..), atId, joinId, subId)
+import qualified Control.Lens as Lens
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -136,10 +137,10 @@ keysEventMapMovesCursor keys doc act =
 translate :: Vector2 R -> Widget f -> Widget f
 translate pos =
   (atWFrame . Anim.translate) pos .
-  (atWFocalArea . Rect.atRectTopLeft) (+pos) .
+  (atWFocalArea . Lens.adjust Rect.topLeft) (+pos) .
   (atWMaybeEnter . fmap)
-    ((fmap . atEnterResultRect . Rect.atRectTopLeft) (+pos) .
-     (argument . Direction.inRelativePos . Rect.atRectTopLeft) (subtract pos))
+    ((fmap . atEnterResultRect . Lens.adjust Rect.topLeft) (+pos) .
+     (argument . Direction.inRelativePos . Lens.adjust Rect.topLeft) (subtract pos))
 
 translateBy :: (Vector2 R -> Vector2 R) -> Widget f -> Widget f
 translateBy mkPos w =
@@ -148,8 +149,8 @@ translateBy mkPos w =
 scale :: Vector2 R -> Widget f -> Widget f
 scale mult =
   (atWFrame . Anim.scale) mult .
-  (atWFocalArea . Rect.atTopLeftAndSize) (* mult) .
+  (atWFocalArea . Lens.adjust Rect.topLeftAndSize) (* mult) .
   (atWMaybeEnter . fmap)
-    ((fmap . atEnterResultRect . Rect.atTopLeftAndSize) (*mult) .
-     (argument . Direction.inRelativePos . Rect.atTopLeftAndSize) (/mult)) .
+    ((fmap . atEnterResultRect . Lens.adjust Rect.topLeftAndSize) (*mult) .
+     (argument . Direction.inRelativePos . Lens.adjust Rect.topLeftAndSize) (/mult)) .
   atWSize (* mult)

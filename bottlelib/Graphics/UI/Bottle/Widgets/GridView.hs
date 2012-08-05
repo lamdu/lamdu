@@ -6,11 +6,11 @@ module Graphics.UI.Bottle.Widgets.GridView
   ) where
 
 import Control.Arrow (first, second)
-import Control.Lens (view)
 import Data.List (transpose)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Rect (Rect(..))
+import qualified Control.Lens as Lens
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Rect as Rect
@@ -38,7 +38,7 @@ makePlacements rows =
       (alignmentPos + maxSize snd, alignmentPos)
       where
         alignmentPos = maxSize fst
-        maxSize f = maximum $ map (view dim . f . snd) group
+        maxSize f = maximum $ map (Lens.view dim . f . snd) group
     posRows = (map . map) calcPos rows
     calcPos (size, alignment) = (size, (alignment * size, (1 - alignment) * size))
 
@@ -56,7 +56,7 @@ makeGeneric translate rows =
     place aRects = (zipWith . zipWith) (uncurry translate) aRects items
 
 make :: [[((Anim.Size, Alignment), Anim.Frame)]] -> (Anim.Size, Anim.Frame)
-make = second (mconcat . concat) . makeGeneric (const (Anim.translate . Rect.rectTopLeft))
+make = second (mconcat . concat) . makeGeneric (const (Anim.translate . Lens.view Rect.topLeft))
 
 makeAlign :: Alignment -> [[(Anim.Size, Anim.Frame)]] -> (Anim.Size, Anim.Frame)
 makeAlign alignment = make . (map . map . first) (flip (,) alignment)

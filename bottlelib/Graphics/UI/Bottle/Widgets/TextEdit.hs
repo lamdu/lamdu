@@ -11,7 +11,7 @@ module Graphics.UI.Bottle.Widgets.TextEdit(
   atSTextViewStyle) where
 
 import Control.Arrow (first)
-import Control.Lens ((%~), sets, view)
+import Control.Lens ((%~), (^.))
 import Data.Char (isSpace)
 import Data.List (genericLength, minimumBy)
 import Data.List.Split (splitWhen)
@@ -23,6 +23,7 @@ import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators.Utils (square, textHeight)
 import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.Widget (Widget(..))
+import qualified Control.Lens as Lens
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.ByteString.Char8 as SBS8
@@ -75,8 +76,8 @@ makeTextEditCursor myId = Widget.joinId myId . (:[]) . BinUtils.encodeS
 
 rightSideOfRect :: Rect -> Rect
 rightSideOfRect rect =
-  (Rect.atLeft . const) (Rect.right rect) .
-  (Rect.atWidth . const) 0 $ rect
+  (Lens.set Rect.left) (rect ^. Rect.right) .
+  (Lens.set Rect.width) 0 $ rect
 
 cursorRects :: Style -> String -> [Rect]
 cursorRects style str =
@@ -96,7 +97,7 @@ cursorRects style str =
 makeUnfocused :: Style -> String -> Widget.Id -> Widget ((,) String)
 makeUnfocused style str myId =
   Widget.takesFocus enter .
-  (sets Widget.atWSize . Vector2.first %~ (+ sCursorWidth style)) .
+  (Lens.sets Widget.atWSize . Vector2.first %~ (+ sCursorWidth style)) .
   Widget.atWFrame (cursorTranslate style) .
   TextView.makeWidget (sTextViewStyle style) displayStr $
   Widget.toAnimId myId
@@ -143,7 +144,7 @@ makeFocused cursor style str myId =
 
     blue = Draw.Color 0 0 0.8 0.8
 
-    textLinesWidth = view Vector2.first . snd . drawText
+    textLinesWidth = Lens.view Vector2.first . snd . drawText
     lineHeight = lineHeightOfStyle style
     strWithIds = map (first Just) $ enumerate str
     beforeCursor = take cursor strWithIds

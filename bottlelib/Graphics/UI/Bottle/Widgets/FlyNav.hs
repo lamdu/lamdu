@@ -3,6 +3,7 @@ module Graphics.UI.Bottle.Widgets.FlyNav(make, State, initState) where
 
 import Control.Applicative (Applicative(..), liftA2, (*>))
 import Control.Arrow (second)
+import Control.Lens ((^.))
 import Control.Monad (void)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
@@ -135,7 +136,7 @@ make
   -> Widget f -> Widget f
 make _ Nothing setState w =
   (Widget.atWEventMap . flip mappend)
-  (addMovements (Rect.center (Widget.wFocalArea w)) [] setState)
+  (addMovements (Widget.wFocalArea w ^. Rect.center) [] setState)
   w
 make animId (Just (ActiveState pos movements)) setState w =
   (Widget.atWFrame . mappend) frame .
