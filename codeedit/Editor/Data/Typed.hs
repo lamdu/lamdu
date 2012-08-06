@@ -23,7 +23,7 @@ module Editor.Data.Typed
   , makeSingletonRef
   ) where
 
-import Control.Applicative (Applicative)
+import Control.Applicative (Applicative, liftA2)
 import Control.Monad (liftM, liftM2, (<=<), when, unless, filterM)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Random (nextRandom, runRandomT)
@@ -60,9 +60,43 @@ type T = Transaction ViewTag
 eipGuid :: Data.ExpressionIRefProperty m -> Guid
 eipGuid = IRef.guid . Data.unExpressionIRef . Property.value
 
-newtype Constraints = Constraints
-  { tcExprs :: [Data.GuidExpression Ref]
+-- Rules about inferring apply type/value relationships:
+--
+-- If you have:
+--
+-- func:funcT  arg:argT
+-- --------------------
+--     apply:applyT
+--
+-- then:
+--
+-- resultT <=> new independent typeref
+-- funcT <=> Pi (x:argT) -> resultT
+-- applyT <= foreach Pi in funcT, result of the Pi: subst: (x => arg)
+-- apply <= foreach Lam in func, result(body) subst'd: (x => arg)
+--
+-- Whenever a Pi result component is a hole, it can be polymorphic,
+-- which means it can refer to the Pi arg[s] before it, in which case
+-- it would not be valid to infer its type as monomorphic (unify into
+-- it).
+
+data ArrowType = Pi | Lam
+  deriving (Show, Eq)
+
+data UnifyRule = UnifyRule
+  { urArrowType :: ArrowType
+  , urDest :: Ref
+  , urArg :: Ref
   } deriving (Show)
+
+data Constraints = Constraints
+  { tcExprs :: [Data.GuidExpression Ref]
+  , tcRules :: [UnifyRule]
+  } deriving (Show)
+
+emptyConstraints :: Constraints
+emptyConstraints = Constraints [] []
+
 type Ref = UnionFindT.Point Constraints
 
 data Expression s = Expression
@@ -107,14 +141,11 @@ AtFieldTH.make ''Infer
 
 ----------------- Infer operations:
 
-makeRef :: Monad m => [Data.GuidExpression Ref] -> Infer m Ref
-makeRef = Infer . UnionFindT.new . Constraints
+makeRef :: Monad m => Constraints -> Infer m Ref
+makeRef = Infer . UnionFindT.new
 
-getRef :: Monad m => Ref -> Infer m [Data.GuidExpression Ref]
-getRef = liftM tcExprs . Infer . UnionFindT.descr
-
-setRef :: Monad m => Ref -> [Data.GuidExpression Ref] -> Infer m ()
-setRef ref = Infer . UnionFindT.setDescr ref . Constraints
+getRef :: Monad m => Ref -> Infer m Constraints
+getRef = Infer . UnionFindT.descr
 
 runInfer :: Monad m => Infer m a -> m (TypeContext, a)
 runInfer = resumeInfer emptyTypeContext
@@ -122,9 +153,17 @@ runInfer = resumeInfer emptyTypeContext
 resumeInfer :: Monad m => TypeContext -> Infer m a -> m (TypeContext, a)
 resumeInfer typeContext = resumeUnionFindT typeContext . unInfer
 
+makeNoConstraints :: Monad m => Infer m Ref
+makeNoConstraints = makeRef emptyConstraints
+
+makeRuleRef :: Monad m => UnifyRule -> Infer m Ref
+makeRuleRef rule = makeRef emptyConstraints { tcRules = [rule] }
+
 makeSingletonRef :: Monad m => Guid -> Data.Expression Ref -> Infer m Ref
-makeSingletonRef _ Data.ExpressionHole = makeRef []
-makeSingletonRef guid expr = makeRef [Data.GuidExpression guid expr]
+makeSingletonRef _ Data.ExpressionHole = makeNoConstraints
+makeSingletonRef guid expr =
+  makeRef emptyConstraints
+  { tcExprs = [Data.GuidExpression guid expr] }
 
 --------------
 
@@ -212,7 +251,7 @@ toExpr extract =
     f wrapped =
       ( return expr
       , \newVal -> do
-          typeRef <- makeRef []
+          typeRef <- makeNoConstraints
           valRef <-
             case newVal of
             Data.ExpressionGetVariable (Data.DefinitionRef ref) ->
@@ -285,7 +324,7 @@ inferExpression
   -> (Data.DefinitionIRef -> Infer (T m) Ref)
   -> Expression s
   -> Infer (T m) ()
-inferExpression scope defRef (Expression _ g typeRef _ value) =
+inferExpression scope defRef (Expression _ g typeRef valueRef value) =
   case value of
   Data.ExpressionLambda (Data.Lambda paramType body) -> do
     let paramRef = eeInferredValue paramType
@@ -309,21 +348,27 @@ inferExpression scope defRef (Expression _ g typeRef _ value) =
     go [] func
     go [] arg
     let
-      funcRef = eeInferredType func
-      argRef = eeInferredType arg
+      funcValRef = eeInferredValue func
+      funcTypeRef = eeInferredType func
       argValRef = eeInferredValue arg
+      argTypeRef = eeInferredType arg
     -- We give the new Pi the same Guid as the Apply. This is
     -- fine because Apply's Guid is meaningless and the
     -- canonization will fix it later anyway.
-    unify funcRef <=< makePi g $
-      Data.Lambda argRef typeRef
-    funcTypes <- getRef funcRef
-    sequence_
-      [ subst piGuid (return argValRef) piResultRef
-      | Data.GuidExpression piGuid
-        (Data.ExpressionPi (Data.Lambda _ piResultRef))
-        <- funcTypes
-      ]
+    unify funcTypeRef =<<
+      makePi g . Data.Lambda argTypeRef =<< makeNoConstraints
+    unify funcTypeRef =<<
+      makeRuleRef UnifyRule
+        { urArrowType = Pi
+        , urDest = typeRef
+        , urArg = argValRef
+        }
+    unify funcValRef =<<
+      makeRuleRef UnifyRule
+        { urArrowType = Lam
+        , urDest = valueRef
+        , urArg = argValRef
+        }
   Data.ExpressionGetVariable (Data.ParameterRef guid) ->
     case lookup guid scope of
       -- TODO: Not in scope: Bad code,
@@ -342,10 +387,21 @@ inferExpression scope defRef (Expression _ g typeRef _ value) =
     mkBuiltin path name =
       makeSingletonRef zeroGuid . Data.ExpressionBuiltin .
       Data.Builtin (Data.FFIName path name) =<<
-      makeRef []
+      makeNoConstraints
     makePi guid = makeSingletonRef guid . Data.ExpressionPi
     setType = unify typeRef
     go newVars = inferExpression (newVars ++ scope) defRef
+
+-- New Ref tree has tcRules=[] everywhere
+dupRefTreeExprs :: Monad m => Ref -> Infer m Ref
+dupRefTreeExprs ref = do
+  origExprs <- liftM tcExprs $ getRef ref
+  exprs <- mapM recurse origExprs
+  makeRef emptyConstraints { tcExprs = exprs }
+  where
+    recurse (Data.GuidExpression guid expr) =
+      liftM (Data.GuidExpression guid) .
+      Data.sequenceExpression $ fmap dupRefTreeExprs expr
 
 unify
   :: Monad m
@@ -355,15 +411,38 @@ unify
 unify a b = do
   e <- Infer $ UnionFindT.equivalent a b
   unless e $ do
-    as <- getRef a
-    bs <- getRef b
-    bConflicts <- filterM (liftM not . matches as) bs
-    -- Need to re-get a after the side-effecting matches:
-    result <- liftM (++ bConflicts) $ getRef a
-    Infer $ do
-      a `UnionFindT.union` b
-      UnionFindT.setDescr a $ Constraints result
+    applyRulesRef a b
+    applyRulesRef b a
+    unifyConstraints
   where
+    applyRulesRef x y = do
+      xConstraints <- getRef x
+      yConstraints <- getRef y
+      sequence_ $
+        liftA2 applyRule (tcRules xConstraints) (tcExprs yConstraints)
+    applyRule
+      (UnifyRule arrowType destRef argRef)
+      (Data.GuidExpression guid expr) =
+        case (arrowType, expr) of
+        (Lam, Data.ExpressionLambda (Data.Lambda _ body)) ->
+          subst guid (return argRef) body
+        (Pi, Data.ExpressionPi (Data.Lambda _ resultType)) -> do
+          newResultType <- dupRefTreeExprs resultType
+          subst guid (return argRef) newResultType
+          unify destRef newResultType
+        _ -> return ()
+    unifyConstraints = do
+      aConstraints <- getRef a
+      bConstraints <- getRef b
+      bConflicts <-
+        filterM (liftM not . matches (tcExprs aConstraints)) $
+        tcExprs bConstraints
+      -- Need to re-get a after the side-effecting matches:
+      allExprs <- liftM ((++ bConflicts) . tcExprs) $ getRef a
+      let allRules = tcRules aConstraints ++ tcRules bConstraints
+      Infer $ do
+        a `UnionFindT.union` b
+        UnionFindT.setDescr a $ Constraints allExprs allRules
     matches as y = liftM or $ mapM (`unifyPair` y) as
 
 -- biased towards left child (if unifying Pis,
@@ -423,9 +502,13 @@ subst from mkTo rootRef = do
       | otherwise = (Any False, [a])
     removeFrom x = (Any False, [x])
     replace ref = do
-      (Any removed, new) <- liftM (mconcat . map removeFrom) $ getRef ref
+      oldConstraints <- getRef ref
+      let
+        (Any removed, exprsWOGetVar) =
+          mconcat . map removeFrom $ tcExprs oldConstraints
       when removed $ do
-        setRef ref new
+        Infer . UnionFindT.setDescr ref $
+          oldConstraints { tcExprs = exprsWOGetVar }
         unify ref =<< mkTo
 
 allUnder :: Monad m => Ref -> Infer m [Ref]
@@ -439,7 +522,7 @@ allUnder =
         mapM (UnionFindT.equivalent ref) visited
       unless alreadySeen $ do
         State.modify (ref :)
-        types <- lift $ getRef ref
+        types <- liftM tcExprs . lift $ getRef ref
         mapM_ onType types
     onType =
       Data.sequenceExpression . fmap recurse . Data.geValue
