@@ -16,7 +16,8 @@ module Editor.Data.Typed
   , loadInferDefinition
   , loadDefTypeWithinContext
 
-  , TypeRef, TypeContext, emptyTypeContext
+  , TypeRef
+  , TypeContext, emptyTypeContext
   , Infer, resumeInfer
   , unify, derefTypeRef, derefResumedInfer
   , makeSingletonTypeRef
@@ -27,7 +28,7 @@ import Control.Monad (liftM, liftM2, (<=<), when, unless, filterM)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Random (nextRandom, runRandomT)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
-import Control.Monad.Trans.State (StateT, runStateT, execStateT)
+import Control.Monad.Trans.State (execStateT)
 import Control.Monad.Trans.UnionFind (UnionFindT, resumeUnionFindT)
 import Data.Function (on)
 import Data.Functor.Identity (Identity(..))
@@ -79,13 +80,10 @@ data LoopGuidExpression
   | Loop Guid
   deriving (Show, Eq)
 
-data TypeContext = TypeContext
-  { tcUnionFind :: UnionFind TypeData
-  , _tcRigidTypeVars :: [Guid]
-  }
+type TypeContext = UnionFind TypeData
 
 emptyTypeContext :: TypeContext
-emptyTypeContext = TypeContext newUnionFind []
+emptyTypeContext = newUnionFind
 
 data StoredDefinition m = StoredDefinition
   { deIRef :: Data.DefinitionIRef
@@ -103,12 +101,9 @@ AtFieldTH.make ''StoredDefinition
 --------------- Infer Stack boilerplate:
 
 newtype Infer m a = Infer
-  { unInfer :: UnionFindT TypeData (StateT [Guid] m) a
-  } deriving (Functor, Applicative, Monad)
+  { unInfer :: UnionFindT TypeData m a
+  } deriving (Functor, Applicative, Monad, MonadTrans)
 AtFieldTH.make ''Infer
-
-instance MonadTrans Infer where
-  lift = Infer . lift . lift
 
 ----------------- Infer operations:
 
@@ -127,16 +122,7 @@ runInfer :: Monad m => Infer m a -> m (TypeContext, a)
 runInfer = resumeInfer emptyTypeContext
 
 resumeInfer :: Monad m => TypeContext -> Infer m a -> m (TypeContext, a)
-resumeInfer (TypeContext uf rt) =
-  liftM f . (`runStateT` rt) . resumeUnionFindT uf . unInfer
-  where
-    f ((ufN, r), rtN) = (TypeContext ufN rtN, r)
-
-markRigidTypeVar :: Monad m => Guid -> Infer m ()
-markRigidTypeVar = Infer . lift . State.modify . (:)
-
-isRigidTypeVar :: Monad m => Guid -> Infer m Bool
-isRigidTypeVar = Infer . lift . State.gets . elem
+resumeInfer typeContext = resumeUnionFindT typeContext . unInfer
 
 makeSingletonTypeRef :: Monad m => Guid -> Data.Expression TypeRef -> Infer m TypeRef
 makeSingletonTypeRef _ Data.ExpressionHole = makeTypeRef []
@@ -273,16 +259,15 @@ derefTypeRef stdGen builtinsMap typeContext rootTypeRef =
    map (builtinsToGlobals builtinsMap)) .
   (`runReaderT` []) $ go rootTypeRef
   where
-    unionFind = tcUnionFind typeContext
     canonizeInferredExpression = zipWith canonizeIdentifiers . RandomUtils.splits
     go typeRef = do
       visited <- Reader.ask
-      if any (UnionFind.equivalent unionFind typeRef) visited
+      if any (UnionFind.equivalent typeContext typeRef) visited
         then return $ Loop zeroGuid
         else
         onType typeRef <=<
         lift . unTypeData $
-        UnionFind.descr unionFind typeRef
+        UnionFind.descr typeContext typeRef
     onType typeRef (Data.GuidExpression guid expr) =
       liftM (NoLoop . Data.GuidExpression guid) .
       Data.sequenceExpression $ fmap recurse expr
@@ -305,7 +290,6 @@ inferExpression
 inferExpression scope defTypeRef (Expression _ g typeRef _ value) =
   case value of
   Data.ExpressionLambda (Data.Lambda paramType body) -> do
-    markRigidTypeVar g
     let paramTypeRef = eeInferredValue paramType
     -- We use "flip unify typeRef" so that the new Pi will be
     -- the official Pi guid due to the "left-bias" in
@@ -316,7 +300,6 @@ inferExpression scope defTypeRef (Expression _ g typeRef _ value) =
       Data.Lambda paramTypeRef $ eeInferredType body
     go [(g, paramTypeRef)] body
   Data.ExpressionPi (Data.Lambda paramType resultType) -> do
-    markRigidTypeVar g
     let paramTypeRef = eeInferredValue paramType
     -- TODO: Is Set:Set a good idea? Agda uses "eeInferredType
     -- resultType" as the type
@@ -413,17 +396,12 @@ unifyPair
      Data.ExpressionLiteralInteger i2) -> return $ i1 == i2
     (Data.ExpressionMagic,
      Data.ExpressionMagic) -> return True
-    (Data.ExpressionGetVariable v0, Data.ExpressionGetVariable v1)
-      | v0 == v1 -> return True
-    (Data.ExpressionGetVariable v, _) -> onGetVar v
-    (_, Data.ExpressionGetVariable v) -> onGetVar v
+    (Data.ExpressionGetVariable _,
+     _) -> return True
+    (_,
+     Data.ExpressionGetVariable _) -> return True
     _ -> return False
   where
-    onGetVar (Data.ParameterRef p) = liftM not $ isRigidTypeVar p
-    -- TODO:
-    -- Is it fine to unify get-var of definition ref?
-    -- Do they get auto-expanded?
-    onGetVar (Data.DefinitionRef _) = return True
     unifyLambdas
       (Data.Lambda aParamTypeRef aResultTypeRef)
       (Data.Lambda bParamTypeRef bResultTypeRef) = do
