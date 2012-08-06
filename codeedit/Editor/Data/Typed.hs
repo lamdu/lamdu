@@ -16,11 +16,11 @@ module Editor.Data.Typed
   , loadInferDefinition
   , loadDefTypeWithinContext
 
-  , TypeRef
+  , Ref
   , TypeContext, emptyTypeContext
   , Infer, resumeInfer
-  , unify, derefTypeRef, derefResumedInfer
-  , makeSingletonTypeRef
+  , unify, derefRef, derefResumedInfer
+  , makeSingletonRef
   ) where
 
 import Control.Applicative (Applicative)
@@ -60,16 +60,16 @@ type T = Transaction ViewTag
 eipGuid :: Data.ExpressionIRefProperty m -> Guid
 eipGuid = IRef.guid . Data.unExpressionIRef . Property.value
 
-newtype TypeData = TypeData
-  { unTypeData :: [Data.GuidExpression TypeRef]
+newtype Constraints = Constraints
+  { tcExprs :: [Data.GuidExpression Ref]
   } deriving (Show)
-type TypeRef = UnionFindT.Point TypeData
+type Ref = UnionFindT.Point Constraints
 
 data Expression s = Expression
   { eeRef :: s
   , eeGuid :: Guid
-  , eeInferredType :: TypeRef
-  , eeInferredValue :: TypeRef
+  , eeInferredType :: Ref
+  , eeInferredValue :: Ref
   , eeValue :: Data.Expression (Expression s)
   }
 
@@ -80,14 +80,14 @@ data LoopGuidExpression
   | Loop Guid
   deriving (Show, Eq)
 
-type TypeContext = UnionFind TypeData
+type TypeContext = UnionFind Constraints
 
 emptyTypeContext :: TypeContext
 emptyTypeContext = newUnionFind
 
 data StoredDefinition m = StoredDefinition
   { deIRef :: Data.DefinitionIRef
-  , deInferredType :: TypeRef
+  , deInferredType :: Ref
   , deValue :: Data.Definition (StoredExpression m)
   , deTypeContext :: TypeContext
   }
@@ -101,22 +101,20 @@ AtFieldTH.make ''StoredDefinition
 --------------- Infer Stack boilerplate:
 
 newtype Infer m a = Infer
-  { unInfer :: UnionFindT TypeData m a
+  { unInfer :: UnionFindT Constraints m a
   } deriving (Functor, Applicative, Monad, MonadTrans)
 AtFieldTH.make ''Infer
 
 ----------------- Infer operations:
 
-makeTypeRef :: Monad m => [Data.GuidExpression TypeRef] -> Infer m TypeRef
-makeTypeRef = Infer . UnionFindT.new . TypeData
+makeRef :: Monad m => [Data.GuidExpression Ref] -> Infer m Ref
+makeRef = Infer . UnionFindT.new . Constraints
 
-getTypeRef :: Monad m => TypeRef -> Infer m [Data.GuidExpression TypeRef]
-getTypeRef = liftM unTypeData . Infer . UnionFindT.descr
+getRef :: Monad m => Ref -> Infer m [Data.GuidExpression Ref]
+getRef = liftM tcExprs . Infer . UnionFindT.descr
 
-setTypeRef :: Monad m => TypeRef -> [Data.GuidExpression TypeRef] -> Infer m ()
-setTypeRef typeRef types =
-  Infer . UnionFindT.setDescr typeRef $
-  TypeData types
+setRef :: Monad m => Ref -> [Data.GuidExpression Ref] -> Infer m ()
+setRef ref = Infer . UnionFindT.setDescr ref . Constraints
 
 runInfer :: Monad m => Infer m a -> m (TypeContext, a)
 runInfer = resumeInfer emptyTypeContext
@@ -124,9 +122,9 @@ runInfer = resumeInfer emptyTypeContext
 resumeInfer :: Monad m => TypeContext -> Infer m a -> m (TypeContext, a)
 resumeInfer typeContext = resumeUnionFindT typeContext . unInfer
 
-makeSingletonTypeRef :: Monad m => Guid -> Data.Expression TypeRef -> Infer m TypeRef
-makeSingletonTypeRef _ Data.ExpressionHole = makeTypeRef []
-makeSingletonTypeRef guid expr = makeTypeRef [Data.GuidExpression guid expr]
+makeSingletonRef :: Monad m => Guid -> Data.Expression Ref -> Infer m Ref
+makeSingletonRef _ Data.ExpressionHole = makeRef []
+makeSingletonRef guid expr = makeRef [Data.GuidExpression guid expr]
 
 --------------
 
@@ -194,13 +192,13 @@ expand =
            Data.Lambda paramType) .
           recurse
 
-typeRefFromPure :: Monad m => Data.PureGuidExpression -> Infer (T m) TypeRef
-typeRefFromPure =
+refFromPure :: Monad m => Data.PureGuidExpression -> Infer (T m) Ref
+refFromPure =
   Data.mapMExpression f <=< lift . expand
   where
     f (Data.PureGuidExpression (Data.GuidExpression guid val)) =
       ( return val
-      , makeSingletonTypeRef guid
+      , makeSingletonRef guid
       )
 
 toExpr
@@ -214,12 +212,12 @@ toExpr extract =
     f wrapped =
       ( return expr
       , \newVal -> do
-          typeRef <- makeTypeRef []
+          typeRef <- makeRef []
           valRef <-
             case newVal of
             Data.ExpressionGetVariable (Data.DefinitionRef ref) ->
-               typeRefFromPure =<< lift (DataLoad.loadPureDefinitionBody ref)
-            _ -> makeSingletonTypeRef g $ fmap eeInferredValue newVal
+               refFromPure =<< lift (DataLoad.loadPureDefinitionBody ref)
+            _ -> makeSingletonRef g $ fmap eeInferredValue newVal
           return $ Expression prop g typeRef valRef newVal
       )
       where
@@ -245,36 +243,36 @@ fromLoaded =
 derefResumedInfer
   :: (Monad m, RandomGen g)
   => g -> Anchors.BuiltinsMap -> TypeContext
-  -> Infer m a -> m (TypeRef -> [LoopGuidExpression], a)
+  -> Infer m a -> m (Ref -> [LoopGuidExpression], a)
 derefResumedInfer gen builtinsMap typeContext action = do
   (newTypeContext, x) <- resumeInfer typeContext action
-  return (derefTypeRef gen builtinsMap newTypeContext, x)
+  return (derefRef gen builtinsMap newTypeContext, x)
 
-derefTypeRef
+derefRef
   :: RandomGen g
   => g -> Anchors.BuiltinsMap
-  -> TypeContext -> TypeRef -> [LoopGuidExpression]
-derefTypeRef stdGen builtinsMap typeContext rootTypeRef =
+  -> TypeContext -> Ref -> [LoopGuidExpression]
+derefRef stdGen builtinsMap typeContext rootRef =
   (canonizeInferredExpression stdGen .
    map (builtinsToGlobals builtinsMap)) .
-  (`runReaderT` []) $ go rootTypeRef
+  (`runReaderT` []) $ go rootRef
   where
     canonizeInferredExpression = zipWith canonizeIdentifiers . RandomUtils.splits
-    go typeRef = do
+    go ref = do
       visited <- Reader.ask
-      if any (UnionFind.equivalent typeContext typeRef) visited
+      if any (UnionFind.equivalent typeContext ref) visited
         then return $ Loop zeroGuid
         else
-        onType typeRef <=<
-        lift . unTypeData $
-        UnionFind.descr typeContext typeRef
-    onType typeRef (Data.GuidExpression guid expr) =
+        onType ref <=<
+        lift . tcExprs $
+        UnionFind.descr typeContext ref
+    onType ref (Data.GuidExpression guid expr) =
       liftM (NoLoop . Data.GuidExpression guid) .
       Data.sequenceExpression $ fmap recurse expr
       where
         recurse =
           Reader.mapReaderT holify .
-          Reader.local (typeRef :) .
+          Reader.local (ref :) .
           go
         holify [] =
           [NoLoop
@@ -283,47 +281,47 @@ derefTypeRef stdGen builtinsMap typeContext rootTypeRef =
 
 inferExpression
   :: Monad m
-  => [(Guid, TypeRef)]
-  -> (Data.DefinitionIRef -> Infer (T m) TypeRef)
+  => [(Guid, Ref)]
+  -> (Data.DefinitionIRef -> Infer (T m) Ref)
   -> Expression s
   -> Infer (T m) ()
-inferExpression scope defTypeRef (Expression _ g typeRef _ value) =
+inferExpression scope defRef (Expression _ g typeRef _ value) =
   case value of
   Data.ExpressionLambda (Data.Lambda paramType body) -> do
-    let paramTypeRef = eeInferredValue paramType
+    let paramRef = eeInferredValue paramType
     -- We use "flip unify typeRef" so that the new Pi will be
     -- the official Pi guid due to the "left-bias" in
     -- unify/unifyPair. Thus we can later assume that we got the
     -- same guid in the pi and the lambda.
     unify (eeInferredType paramType) =<< mkSet
     flip unify typeRef <=< makePi g .
-      Data.Lambda paramTypeRef $ eeInferredType body
-    go [(g, paramTypeRef)] body
+      Data.Lambda paramRef $ eeInferredType body
+    go [(g, paramRef)] body
   Data.ExpressionPi (Data.Lambda paramType resultType) -> do
-    let paramTypeRef = eeInferredValue paramType
+    let paramRef = eeInferredValue paramType
     -- TODO: Is Set:Set a good idea? Agda uses "eeInferredType
     -- resultType" as the type
     setType =<< mkSet
     unify (eeInferredType paramType) =<< mkSet
     unify (eeInferredType resultType) =<< mkSet
-    go [(g, paramTypeRef)] resultType
+    go [(g, paramRef)] resultType
   Data.ExpressionApply (Data.Apply func arg) -> do
     go [] func
     go [] arg
     let
-      funcTypeRef = eeInferredType func
-      argTypeRef = eeInferredType arg
+      funcRef = eeInferredType func
+      argRef = eeInferredType arg
       argValRef = eeInferredValue arg
     -- We give the new Pi the same Guid as the Apply. This is
     -- fine because Apply's Guid is meaningless and the
     -- canonization will fix it later anyway.
-    unify funcTypeRef <=< makePi g $
-      Data.Lambda argTypeRef typeRef
-    funcTypes <- getTypeRef funcTypeRef
+    unify funcRef <=< makePi g $
+      Data.Lambda argRef typeRef
+    funcTypes <- getRef funcRef
     sequence_
-      [ subst piGuid (return argValRef) piResultTypeRef
+      [ subst piGuid (return argValRef) piResultRef
       | Data.GuidExpression piGuid
-        (Data.ExpressionPi (Data.Lambda _ piResultTypeRef))
+        (Data.ExpressionPi (Data.Lambda _ piResultRef))
         <- funcTypes
       ]
   Data.ExpressionGetVariable (Data.ParameterRef guid) ->
@@ -331,40 +329,40 @@ inferExpression scope defTypeRef (Expression _ g typeRef _ value) =
       -- TODO: Not in scope: Bad code,
       -- add an OutOfScopeReference type error
       Nothing -> return ()
-      Just paramTypeRef -> setType paramTypeRef
+      Just paramRef -> setType paramRef
   Data.ExpressionGetVariable (Data.DefinitionRef defI) ->
-    setType =<< defTypeRef defI
+    setType =<< defRef defI
   Data.ExpressionLiteralInteger _ ->
     setType =<< mkBuiltin ["Prelude"] "Integer"
   Data.ExpressionBuiltin (Data.Builtin _ bType) ->
-    setType =<< typeRefFromPure (toPureExpression bType)
+    setType =<< refFromPure (toPureExpression bType)
   _ -> return ()
   where
     mkSet = mkBuiltin ["Core"] "Set"
     mkBuiltin path name =
-      makeSingletonTypeRef zeroGuid . Data.ExpressionBuiltin .
+      makeSingletonRef zeroGuid . Data.ExpressionBuiltin .
       Data.Builtin (Data.FFIName path name) =<<
-      makeTypeRef []
-    makePi guid = makeSingletonTypeRef guid . Data.ExpressionPi
+      makeRef []
+    makePi guid = makeSingletonRef guid . Data.ExpressionPi
     setType = unify typeRef
-    go newVars = inferExpression (newVars ++ scope) defTypeRef
+    go newVars = inferExpression (newVars ++ scope) defRef
 
 unify
   :: Monad m
-  => TypeRef
-  -> TypeRef
+  => Ref
+  -> Ref
   -> Infer m ()
 unify a b = do
   e <- Infer $ UnionFindT.equivalent a b
   unless e $ do
-    as <- getTypeRef a
-    bs <- getTypeRef b
+    as <- getRef a
+    bs <- getRef b
     bConflicts <- filterM (liftM not . matches as) bs
     -- Need to re-get a after the side-effecting matches:
-    result <- liftM (++ bConflicts) $ getTypeRef a
+    result <- liftM (++ bConflicts) $ getRef a
     Infer $ do
       a `UnionFindT.union` b
-      UnionFindT.setDescr a $ TypeData result
+      UnionFindT.setDescr a $ Constraints result
   where
     matches as y = liftM or $ mapM (`unifyPair` y) as
 
@@ -372,8 +370,8 @@ unify a b = do
 -- substs right child's guids to left)
 unifyPair
   :: Monad m
-  => Data.GuidExpression TypeRef
-  -> Data.GuidExpression TypeRef
+  => Data.GuidExpression Ref
+  -> Data.GuidExpression Ref
   -> Infer m Bool
 unifyPair
   (Data.GuidExpression aGuid aVal)
@@ -385,10 +383,10 @@ unifyPair
     (Data.ExpressionLambda l1,
      Data.ExpressionLambda l2) ->
       unifyLambdas l1 l2
-    (Data.ExpressionApply (Data.Apply aFuncTypeRef aArgTypeRef),
-     Data.ExpressionApply (Data.Apply bFuncTypeRef bArgTypeRef)) -> do
-      unify aFuncTypeRef bFuncTypeRef
-      unify aArgTypeRef bArgTypeRef
+    (Data.ExpressionApply (Data.Apply aFuncRef aArgRef),
+     Data.ExpressionApply (Data.Apply bFuncRef bArgRef)) -> do
+      unify aFuncRef bFuncRef
+      unify aArgRef bArgRef
       return True
     (Data.ExpressionBuiltin (Data.Builtin name1 _),
      Data.ExpressionBuiltin (Data.Builtin name2 _)) -> return $ name1 == name2
@@ -401,19 +399,19 @@ unifyPair
     _ -> return False
   where
     unifyLambdas
-      (Data.Lambda aParamTypeRef aResultTypeRef)
-      (Data.Lambda bParamTypeRef bResultTypeRef) = do
-      unify aParamTypeRef bParamTypeRef
+      (Data.Lambda aParamRef aResultRef)
+      (Data.Lambda bParamRef bResultRef) = do
+      unify aParamRef bParamRef
       -- Remap b's guid to a's guid and return a as the unification:
       let
         mkGetAGuidRef =
-          makeSingletonTypeRef zeroGuid . Data.ExpressionGetVariable $
+          makeSingletonRef zeroGuid . Data.ExpressionGetVariable $
           Data.ParameterRef aGuid
-      subst bGuid mkGetAGuidRef bResultTypeRef
-      unify aResultTypeRef bResultTypeRef
+      subst bGuid mkGetAGuidRef bResultRef
+      unify aResultRef bResultRef
       return True
 
-subst :: Monad m => Guid -> Infer m TypeRef -> TypeRef -> Infer m ()
+subst :: Monad m => Guid -> Infer m Ref -> Ref -> Infer m ()
 subst from mkTo rootRef = do
   refs <- allUnder rootRef
   mapM_ replace refs
@@ -424,24 +422,24 @@ subst from mkTo rootRef = do
       | guidRef == from = (Any True, [])
       | otherwise = (Any False, [a])
     removeFrom x = (Any False, [x])
-    replace typeRef = do
-      (Any removed, new) <- liftM (mconcat . map removeFrom) $ getTypeRef typeRef
+    replace ref = do
+      (Any removed, new) <- liftM (mconcat . map removeFrom) $ getRef ref
       when removed $ do
-        setTypeRef typeRef new
-        unify typeRef =<< mkTo
+        setRef ref new
+        unify ref =<< mkTo
 
-allUnder :: Monad m => TypeRef -> Infer m [TypeRef]
+allUnder :: Monad m => Ref -> Infer m [Ref]
 allUnder =
   (`execStateT` []) . recurse
   where
-    recurse typeRef = do
+    recurse ref = do
       visited <- State.get
       alreadySeen <-
         lift . Infer . liftM or $
-        mapM (UnionFindT.equivalent typeRef) visited
+        mapM (UnionFindT.equivalent ref) visited
       unless alreadySeen $ do
-        State.modify (typeRef :)
-        types <- lift $ getTypeRef typeRef
+        State.modify (ref :)
+        types <- lift $ getRef ref
         mapM_ onType types
     onType =
       Data.sequenceExpression . fmap recurse . Data.geValue
@@ -499,18 +497,18 @@ builtinsToGlobals builtinsMap (NoLoop (Data.GuidExpression guid expr)) =
 loadDefTypePure :: Monad m => Data.DefinitionIRef -> T m Data.PureGuidExpression
 loadDefTypePure = DataLoad.loadPureExpression . Data.defType <=< Transaction.readIRef
 
-loadDefTypeToTypeRef :: Monad m => Data.DefinitionIRef -> Infer (T m) TypeRef
-loadDefTypeToTypeRef = typeRefFromPure <=< lift . loadDefTypePure
+loadDefTypeToRef :: Monad m => Data.DefinitionIRef -> Infer (T m) Ref
+loadDefTypeToRef = refFromPure <=< lift . loadDefTypePure
 
 loadDefTypeWithinContext
   :: Monad m
-  => Maybe (StoredDefinition (T m)) -> Data.DefinitionIRef -> Infer (T m) TypeRef
-loadDefTypeWithinContext Nothing = loadDefTypeToTypeRef
-loadDefTypeWithinContext (Just def) = getDefTypeRef (deInferredType def) (deIRef def)
+  => Maybe (StoredDefinition (T m)) -> Data.DefinitionIRef -> Infer (T m) Ref
+loadDefTypeWithinContext Nothing = loadDefTypeToRef
+loadDefTypeWithinContext (Just def) = getDefRef (deInferredType def) (deIRef def)
 
 pureInferExpressionWithinContext
   :: Monad m
-  => [(Guid, TypeRef)]
+  => [(Guid, Ref)]
   -> Maybe (StoredDefinition (T m))
   -> Data.PureGuidExpression -> Infer (T m) (Expression ())
 pureInferExpressionWithinContext scope mDef pureExpr = do
@@ -518,11 +516,11 @@ pureInferExpressionWithinContext scope mDef pureExpr = do
   inferExpression scope (loadDefTypeWithinContext mDef) expr
   return expr
 
-getDefTypeRef
-  :: Monad m => TypeRef -> Data.DefinitionIRef -> Data.DefinitionIRef -> Infer (T m) TypeRef
-getDefTypeRef defTypeRef defI getDefI
-  | getDefI == defI = return defTypeRef
-  | otherwise = loadDefTypeToTypeRef getDefI
+getDefRef
+  :: Monad m => Ref -> Data.DefinitionIRef -> Data.DefinitionIRef -> Infer (T m) Ref
+getDefRef defRef defI getDefI
+  | getDefI == defI = return defRef
+  | otherwise = loadDefTypeToRef getDefI
 
 inferDefinition
   :: (Monad m, Monad f)
@@ -532,7 +530,7 @@ inferDefinition (DataLoad.DefinitionEntity defI (Data.Definition bodyI typeI)) =
   (typeContext, (bodyExpr, typeExpr)) <- runInfer $ do
     bodyExpr <- fromLoaded bodyI
     typeExpr <- fromLoaded typeI
-    inferExpression [] (getDefTypeRef (eeInferredType bodyExpr) defI) bodyExpr
+    inferExpression [] (getDefRef (eeInferredType bodyExpr) defI) bodyExpr
     return (bodyExpr, typeExpr)
   return StoredDefinition
     { deIRef = defI
@@ -555,5 +553,5 @@ loadInferExpression exprProp = do
   expr <- DataLoad.loadExpression exprProp
   liftM snd . runInfer $ do
     tExpr <- fromLoaded expr
-    inferExpression [] loadDefTypeToTypeRef tExpr
+    inferExpression [] loadDefTypeToRef tExpr
     return tExpr

@@ -176,8 +176,8 @@ data Loopable a = Loop | NonLoop a
 
 data ExprEntityStored m = ExprEntityStored
   { eesProp :: Data.ExpressionIRefProperty (T m)
-  , eeInferredTypes :: DataTyped.TypeRef -- TODO: name
-  , eeInferredValues :: DataTyped.TypeRef
+  , eeInferredTypes :: DataTyped.Ref -- TODO: name
+  , eeInferredValues :: DataTyped.Ref
   }
 
 data ExprEntity m = ExprEntity
@@ -234,7 +234,7 @@ eeFromTypedExpression =
       )
 
 data SugarContext m = SugarContext
-  { scScope :: [(Guid, DataTyped.TypeRef)]
+  { scScope :: [(Guid, DataTyped.Ref)]
   , scDef :: Maybe (DataTyped.StoredDefinition (T m))
   , scBuiltinsMap :: Anchors.BuiltinsMap
   }
@@ -254,10 +254,10 @@ runSugar def (Sugar action) = do
     , scBuiltinsMap = builtinsMap
     }
 
-putInScope :: Monad m => DataTyped.TypeRef -> Guid -> Sugar m a -> Sugar m a
+putInScope :: Monad m => DataTyped.Ref -> Guid -> Sugar m a -> Sugar m a
 putInScope typeRef x = atSugar . Reader.local . atScScope $ ((x, typeRef) :)
 
-readScope :: Monad m => Sugar m [(Guid, DataTyped.TypeRef)]
+readScope :: Monad m => Sugar m [(Guid, DataTyped.Ref)]
 readScope = Sugar $ Reader.asks scScope
 
 readDefinition :: Monad m => Sugar m (Maybe (DataTyped.StoredDefinition (T m)))
@@ -302,13 +302,13 @@ makeEntityGuid exprGuid exprI =
   , eActions = fmap mkActions $ eeProp exprI
   }
 
-derefTypeRef
+derefRef
   :: (Monad m, RandomGen g)
-  => Sugar m (g -> DataTyped.TypeRef -> [DataTyped.LoopGuidExpression])
-derefTypeRef = do
+  => Sugar m (g -> DataTyped.Ref -> [DataTyped.LoopGuidExpression])
+derefRef = do
   builtinsMap <- readBuiltinsMap
   mDefinition <- readDefinition
-  let f def gen = DataTyped.derefTypeRef gen builtinsMap $ DataTyped.deTypeContext def
+  let f def gen = DataTyped.derefRef gen builtinsMap $ DataTyped.deTypeContext def
   return $ maybe ((const . const) []) f mDefinition
 
 mkExpressionRef
@@ -316,7 +316,7 @@ mkExpressionRef
   => ExprEntity m
   -> Expression m -> Sugar m (ExpressionRef m)
 mkExpressionRef ee expr = do
-  deref <- derefTypeRef
+  deref <- derefRef
   let types = maybe [] (deref gen . eeInferredTypes) $ eeStored ee
   inferredTypesRefs <-
     mapM (convertExpressionI . eeFromITL) types
@@ -364,8 +364,8 @@ convertLambdaBody (Data.Lambda paramTypeI bodyI) exprI =
     enhanceScope =
       case eeStored paramTypeI of
       Nothing -> id
-      Just stored ->
-        putInScope (eeInferredValues stored) $
+      Just paramTypeStored ->
+        putInScope (eeInferredValues paramTypeStored) $
         eeGuid exprI
 
 convertLambda
@@ -593,7 +593,7 @@ countPis (Data.PureGuidExpression (Data.GuidExpression _ expr)) =
   _ -> 0
 
 expandHoles
-  :: (DataTyped.TypeRef -> Maybe Data.PureGuidExpression)
+  :: (DataTyped.Ref -> Maybe Data.PureGuidExpression)
   -> DataTyped.Expression s -> Data.PureGuidExpression
 expandHoles deref =
   runIdentity . Data.mapMExpression f
@@ -624,7 +624,7 @@ convertHole :: Monad m => Convertor m
 convertHole exprI = do
   mPaste <- maybe (return Nothing) mkPaste $ eeProp exprI
   scope <- readScope
-  deref <- derefTypeRef
+  deref <- derefRef
   builtinsMap <- readBuiltinsMap
   mDef <- readDefinition
   let
@@ -747,7 +747,7 @@ convertDefinitionI
 convertDefinitionI (DataTyped.StoredDefinition defI defInferredType (Data.Definition bodyI typeI) _) = do
   bodyS <- convertExpressionI bodyEntity
   typeS <- convertExpressionI $ eeFromTypedExpression typeI
-  deref <- derefTypeRef
+  deref <- derefRef
   mInferredTypePure <- runMaybeT $ do
     inferredType <- toMaybeT . fromInferred $ deref gen defInferredType
     guard $ isCompleteType inferredType
