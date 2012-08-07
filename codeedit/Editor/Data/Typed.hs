@@ -88,11 +88,11 @@ eipGuid = IRef.guid . Data.unExpressionIRef . Property.value
 -- refer to previous Pi args, therefore they are monomorphic and can
 -- be unified into.
 
-data ArrowType = Pi | Lam
+data ApplyPos = ApplyFuncType | ApplyFuncValue
   deriving (Show, Eq)
 
 data UnifyRule = UnifyRule
-  { urArrowType :: ArrowType
+  { urApplyPos :: ApplyPos
   , urDest :: Ref
   , urArg :: Ref
   } deriving (Show)
@@ -377,13 +377,13 @@ inferExpression scope defRef (Expression _ g typeRef valueRef value) =
       makePi g . Data.Lambda argTypeRef =<< makeNoConstraints
     unify funcTypeRef =<<
       makeRuleRef UnifyRule
-        { urArrowType = Pi
+        { urApplyPos = ApplyFuncType
         , urDest = typeRef
         , urArg = argValRef
         }
     unify funcValRef =<<
       makeRuleRef UnifyRule
-        { urArrowType = Lam
+        { urApplyPos = ApplyFuncValue
         , urDest = valueRef
         , urArg = argValRef
         }
@@ -476,16 +476,16 @@ unifyConstraints exprRef aConstraints bConstraints =
       (UnifyRule arrowType destRef argRef)
       (Data.GuidExpression guid expr) =
         case (arrowType, expr) of
-        (Lam, Data.ExpressionLambda (Data.Lambda _ body)) -> do
+        (ApplyFuncValue, Data.ExpressionLambda (Data.Lambda _ body)) -> do
           subst guid (return argRef) body
           unify body destRef
         -- We now know our Apply parent is not a redex, unify the
         -- Apply into the value
-        (Lam, _) -> do
+        (ApplyFuncValue, _) -> do
           unify destRef =<<
             makeSingletonRef zeroGuid
             (Data.ExpressionApply (Data.Apply exprRef argRef))
-        (Pi, Data.ExpressionPi (Data.Lambda _ resultType)) -> do
+        (ApplyFuncType, Data.ExpressionPi (Data.Lambda _ resultType)) -> do
           newResultType <- dupRefTreeExprs resultType
           unify argRef =<<
             makeRef emptyConstraints { tcForceMonomorphic = True }
