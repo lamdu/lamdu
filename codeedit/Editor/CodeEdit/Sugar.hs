@@ -648,7 +648,7 @@ convertHole exprI = do
     mkResults (derefIt, typedExpr) = do
       _ <- derefIt $ DataTyped.eeInferredType typedExpr
       return $ expandHoles derefIt typedExpr
-    inferResults holeType expr = do
+    inferResults holeStored expr = do
       mExprType <-
         liftM (uncurry ($)) .
         runInfer . liftM DataTyped.eeInferredType $
@@ -663,8 +663,10 @@ convertHole exprI = do
               typedExpr <-
                 DataTyped.pureInferExpressionWithinContext
                 scope mDef applyExpr
-              DataTyped.unify holeType $
+              DataTyped.unify (eeInferredTypes holeStored) $
                 DataTyped.eeInferredType typedExpr
+              DataTyped.unify (eeInferredValues holeStored) $
+                DataTyped.eeInferredValue typedExpr
               return typedExpr
     hole = Hole
       { holeScope = map fst scope
@@ -673,7 +675,7 @@ convertHole exprI = do
       , holeInferredValues = catMaybes maybeInferredValues
       , holeInferResults =
         (maybe . const . return) []
-        (inferResults . eeInferredTypes) $ eeStored exprI
+        inferResults $ eeStored exprI
       }
   mkExpressionRef exprI =<<
     case maybeInferredValues of
