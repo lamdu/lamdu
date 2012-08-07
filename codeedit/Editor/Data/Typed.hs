@@ -25,15 +25,18 @@ module Editor.Data.Typed
   ) where
 
 import Control.Applicative (Applicative, liftA2)
-import Control.Monad (liftM, liftM2, (<=<), when, unless, filterM)
+import Control.Arrow (second)
+import Control.Monad (liftM, liftM2, (<=<), when, unless)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Random (nextRandom, runRandomT)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.Writer (WriterT, runWriterT)
 import Control.Monad.Trans.State (execStateT)
 import Control.Monad.Trans.UnionFind (UnionFindT, resumeUnionFindT)
+import Data.Either (partitionEithers)
 import Data.Function (on)
 import Data.Functor.Identity (Identity(..))
+import Data.Maybe (mapMaybe)
 import Data.Monoid (Any(..), mconcat)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
@@ -273,6 +276,12 @@ toExpr extract =
             case newVal of
             Data.ExpressionGetVariable (Data.DefinitionRef ref) ->
                refFromPure =<< lift (DataLoad.loadPureDefinitionBody ref)
+            -- Apply might be of lambda (can be detected much later)
+            -- and in that case, it's a redex we want to peel off the
+            -- Apply-of-Lambda wrapper. So we defer the insertion of
+            -- the Apply into the constraints until later when it is
+            -- known whether it is a redex or not.
+            Data.ExpressionApply _ -> makeNoConstraints
             _ -> makeSingletonRef g $ fmap eeInferredValue newVal
           return $ Expression prop g typeRef valRef newVal
       )
@@ -424,21 +433,58 @@ unify
 unify a b = do
   e <- liftUnionFind $ UnionFindT.equivalent a b
   unless e $ do
-    applyRulesRef a b
-    applyRulesRef b a
-    unifyConstraints
+    -- Mark as unified immediately so recursive unifications hitting
+    -- this pair will know it's being done...
+    aConstraints <- getRef a
+    bConstraints <- getRef b
+    liftUnionFind $ a `UnionFindT.union` b
+    let
+      (unifiedConstraints, postAction) =
+        unifyConstraints a aConstraints bConstraints
+    liftUnionFind $ UnionFindT.setDescr a unifiedConstraints
+    postAction
+
+unifyConstraints
+  :: Monad m => Ref -> Constraints -> Constraints -> (Constraints, Infer m ())
+unifyConstraints exprRef aConstraints bConstraints =
+  (unifiedConstraints, postAction)
   where
-    applyRulesRef x y = do
-      xConstraints <- getRef x
-      yConstraints <- getRef y
+    aExprs = tcExprs aConstraints
+    unifiedConstraints = Constraints
+      { tcExprs = aExprs ++ bUnunified
+      , tcRules = tcRules aConstraints ++ tcRules bConstraints
+      , tcForceMonomorphic =
+        on (||) tcForceMonomorphic aConstraints bConstraints
+      }
+    postAction = do
+      when (all (not . null) [aExprs, bUnunified]) $
+        addConflict exprRef
+      applyRulesRef aConstraints bConstraints
+      applyRulesRef bConstraints aConstraints
+      recursivePostAction
+    (bUnunified, recursivePostAction) =
+      second sequence_ . partitionEithers .
+      map (matches aExprs) $ tcExprs bConstraints
+    matches as y = f y $ mapMaybe (`unifyPair` y) as
+    f y [] = Left y -- Keep y as a conflict
+    f _ xs = Right $ sequence_ xs -- y matched existing stuff
+    applyRulesRef xConstraints yConstraints =
       sequence_ $
-        liftA2 applyRule (tcRules xConstraints) (tcExprs yConstraints)
+        liftA2 applyRule
+        (tcRules xConstraints) (tcExprs yConstraints)
     applyRule
       (UnifyRule arrowType destRef argRef)
       (Data.GuidExpression guid expr) =
         case (arrowType, expr) of
-        (Lam, Data.ExpressionLambda (Data.Lambda _ body)) ->
+        (Lam, Data.ExpressionLambda (Data.Lambda _ body)) -> do
           subst guid (return argRef) body
+          unify body destRef
+        -- We now know our Apply parent is not a redex, unify the
+        -- Apply into the value
+        (Lam, _) -> do
+          unify destRef =<<
+            makeSingletonRef zeroGuid
+            (Data.ExpressionApply (Data.Apply exprRef argRef))
         (Pi, Data.ExpressionPi (Data.Lambda _ resultType)) -> do
           newResultType <- dupRefTreeExprs resultType
           unify argRef =<<
@@ -446,26 +492,6 @@ unify a b = do
           subst guid (return argRef) newResultType
           unify destRef newResultType
         _ -> return ()
-    unifyConstraints = do
-      aConstraints <- getRef a
-      bConstraints <- getRef b
-      bUnunified <-
-        filterM (liftM not . matches (tcExprs aConstraints)) $
-        tcExprs bConstraints
-      -- Need to re-get a after the side-effecting matches:
-      prevExprs <- liftM tcExprs $ getRef a
-      when (all (not . null) [bUnunified, prevExprs]) $
-        addConflict a
-      let
-        allExprs = prevExprs ++ bUnunified
-        allRules = tcRules aConstraints ++ tcRules bConstraints
-      liftUnionFind $ do
-        a `UnionFindT.union` b
-        UnionFindT.setDescr a .
-          Constraints allExprs allRules $
-          on (||) tcForceMonomorphic
-          aConstraints bConstraints
-    matches as y = liftM or $ mapM (`unifyPair` y) as
 
 -- biased towards left child (if unifying Pis,
 -- substs right child's guids to left)
@@ -473,7 +499,7 @@ unifyPair
   :: Monad m
   => Data.GuidExpression Ref
   -> Data.GuidExpression Ref
-  -> Infer m Bool
+  -> Maybe (Infer m ())
 unifyPair
   (Data.GuidExpression aGuid aVal)
   (Data.GuidExpression bGuid bVal)
@@ -485,23 +511,26 @@ unifyPair
      Data.ExpressionLambda l2) ->
       unifyLambdas l1 l2
     (Data.ExpressionApply (Data.Apply aFuncRef aArgRef),
-     Data.ExpressionApply (Data.Apply bFuncRef bArgRef)) -> do
+     Data.ExpressionApply (Data.Apply bFuncRef bArgRef)) -> Just $ do
       unify aFuncRef bFuncRef
       unify aArgRef bArgRef
-      return True
     (Data.ExpressionBuiltin (Data.Builtin name1 _),
-     Data.ExpressionBuiltin (Data.Builtin name2 _)) -> return $ name1 == name2
+     Data.ExpressionBuiltin (Data.Builtin name2 _)) ->
+      cond $ name1 == name2
     (Data.ExpressionGetVariable v1,
-     Data.ExpressionGetVariable v2) -> return $ v1 == v2
+     Data.ExpressionGetVariable v2) -> cond $ v1 == v2
     (Data.ExpressionLiteralInteger i1,
-     Data.ExpressionLiteralInteger i2) -> return $ i1 == i2
+     Data.ExpressionLiteralInteger i2) -> cond $ i1 == i2
     (Data.ExpressionMagic,
-     Data.ExpressionMagic) -> return True
-    _ -> return False
+     Data.ExpressionMagic) -> good
+    _ -> Nothing
   where
+    good = Just $ return ()
+    cond True = good
+    cond False = Nothing
     unifyLambdas
       (Data.Lambda aParamRef aResultRef)
-      (Data.Lambda bParamRef bResultRef) = do
+      (Data.Lambda bParamRef bResultRef) = Just $ do
       unify aParamRef bParamRef
       -- Remap b's guid to a's guid and return a as the unification:
       let
@@ -510,7 +539,6 @@ unifyPair
           Data.ParameterRef aGuid
       subst bGuid mkGetAGuidRef bResultRef
       unify aResultRef bResultRef
-      return True
 
 subst :: Monad m => Guid -> Infer m Ref -> Ref -> Infer m ()
 subst from mkTo rootRef = do
