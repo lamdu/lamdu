@@ -250,6 +250,9 @@ expand =
           newArg <- recurse arg
           Reader.local (Map.insert lamGuid newArg) $
             recurse body
+      Data.ExpressionApply (Data.Apply func arg) ->
+        liftM (makePureGuidExpr . Data.ExpressionApply) $
+        liftM2 Data.Apply (recurse func) (recurse arg)
       Data.ExpressionLambda (Data.Lambda paramType body) ->
         recurseLambda Data.ExpressionLambda paramType body
       Data.ExpressionPi (Data.Lambda paramType body) -> do
@@ -257,10 +260,10 @@ expand =
         recurseLambda Data.ExpressionPi newParamType body
       _ -> return e
       where
+        makePureGuidExpr =
+          Data.PureGuidExpression . Data.GuidExpression guid
         recurseLambda cons paramType =
-          liftM
-          (Data.PureGuidExpression . Data.GuidExpression guid . cons .
-           Data.Lambda paramType) .
+          liftM (makePureGuidExpr . cons . Data.Lambda paramType) .
           recurse
 
 refFromPure :: Monad m => Data.PureGuidExpression -> Infer (T m) Ref
