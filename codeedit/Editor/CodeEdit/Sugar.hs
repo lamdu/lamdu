@@ -15,7 +15,6 @@ module Editor.CodeEdit.Sugar
   ) where
 
 import Control.Applicative (liftA2)
-import Control.Arrow (first)
 import Control.Monad (guard, liftM, forM)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Maybe (MaybeT(..))
@@ -633,10 +632,19 @@ convertHole exprI = do
       maybe [] (deref gen . eeInferredValues) $ eeStored exprI
     gen =
       Random.mkStdGen . (+1) . (*2) . BinaryUtils.decodeS $ Guid.bs eGuid
-    runInfer =
-      (liftM . first . fmap) fromInferred .
-      DataTyped.derefResumedInfer (Random.mkStdGen 0) builtinsMap
-      (maybe DataTyped.emptyTypeContext DataTyped.deTypeContext mDef)
+    runInfer action = do
+      let
+        typeContext =
+          maybe DataTyped.emptyTypeContext DataTyped.deTypeContext
+          mDef
+      (inferResult, x) <- DataTyped.resumeInfer typeContext action
+      let
+        derefIt [] =
+          fromInferred .
+          DataTyped.derefRef (Random.mkStdGen 0) builtinsMap
+          (DataTyped.irNewContext inferResult)
+        derefIt _ = const Nothing
+      return (derefIt (DataTyped.irNewConflicts inferResult), x)
     mkResults (derefIt, typedExpr) = do
       _ <- derefIt $ DataTyped.eeInferredType typedExpr
       return $ expandHoles derefIt typedExpr

@@ -19,7 +19,8 @@ module Editor.Data.Typed
   , Ref
   , TypeContext, emptyTypeContext
   , Infer, resumeInfer
-  , unify, derefRef, derefResumedInfer
+  , InferResult(..)
+  , unify, derefRef
   , makeSingletonRef
   ) where
 
@@ -28,6 +29,7 @@ import Control.Monad (liftM, liftM2, (<=<), when, unless, filterM)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Random (nextRandom, runRandomT)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
+import Control.Monad.Trans.Writer (WriterT, runWriterT)
 import Control.Monad.Trans.State (execStateT)
 import Control.Monad.Trans.UnionFind (UnionFindT, resumeUnionFindT)
 import Data.Function (on)
@@ -42,6 +44,7 @@ import System.Random (RandomGen)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.State as State
 import qualified Control.Monad.Trans.UnionFind as UnionFindT
+import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
@@ -139,23 +142,45 @@ AtFieldTH.make ''StoredDefinition
 --------------- Infer Stack boilerplate:
 
 newtype Infer m a = Infer
-  { unInfer :: UnionFindT Constraints m a
-  } deriving (Functor, Applicative, Monad, MonadTrans)
+  { unInfer :: WriterT [Ref] (UnionFindT Constraints m) a
+  } deriving (Functor, Applicative, Monad)
 AtFieldTH.make ''Infer
 
 ----------------- Infer operations:
 
+liftConflictList :: WriterT [Ref] (UnionFindT Constraints m) a -> Infer m a
+liftConflictList = Infer
+
+liftUnionFind :: Monad m => UnionFindT Constraints m a -> Infer m a
+liftUnionFind = liftConflictList . lift
+
+instance MonadTrans Infer where
+  lift = liftUnionFind . lift
+
 makeRef :: Monad m => Constraints -> Infer m Ref
-makeRef = Infer . UnionFindT.new
+makeRef = liftUnionFind . UnionFindT.new
 
 getRef :: Monad m => Ref -> Infer m Constraints
-getRef = Infer . UnionFindT.descr
+getRef = liftUnionFind . UnionFindT.descr
 
-runInfer :: Monad m => Infer m a -> m (TypeContext, a)
+data InferResult = InferResult
+  { irNewContext :: TypeContext
+  , irNewConflicts :: [Ref]
+  }
+
+runInfer :: Monad m => Infer m a -> m (InferResult, a)
 runInfer = resumeInfer emptyTypeContext
 
-resumeInfer :: Monad m => TypeContext -> Infer m a -> m (TypeContext, a)
-resumeInfer typeContext = resumeUnionFindT typeContext . unInfer
+resumeInfer
+  :: Monad m => TypeContext -> Infer m a -> m (InferResult, a)
+resumeInfer typeContext =
+  liftM toInferResult . resumeUnionFindT typeContext .
+  runWriterT . unInfer
+  where
+    toInferResult (context, (x, conflicts)) = flip (,) x InferResult
+      { irNewContext = context
+      , irNewConflicts = conflicts
+      }
 
 makeNoConstraints :: Monad m => Infer m Ref
 makeNoConstraints = makeRef emptyConstraints
@@ -168,6 +193,9 @@ makeSingletonRef _ Data.ExpressionHole = makeNoConstraints
 makeSingletonRef guid expr =
   makeRef emptyConstraints
   { tcExprs = [Data.GuidExpression guid expr] }
+
+addConflict :: Monad m => Ref -> Infer m ()
+addConflict = liftConflictList . Writer.tell . (: [])
 
 --------------
 
@@ -282,14 +310,6 @@ fromLoaded =
   where
     extract (DataLoad.ExpressionEntity irefProp val) =
       ( eipGuid irefProp, val, irefProp )
-
-derefResumedInfer
-  :: (Monad m, RandomGen g)
-  => g -> Anchors.BuiltinsMap -> TypeContext
-  -> Infer m a -> m (Ref -> [LoopGuidExpression], a)
-derefResumedInfer gen builtinsMap typeContext action = do
-  (newTypeContext, x) <- resumeInfer typeContext action
-  return (derefRef gen builtinsMap newTypeContext, x)
 
 derefRef
   :: RandomGen g
@@ -417,7 +437,7 @@ unify
   -> Ref
   -> Infer m ()
 unify a b = do
-  e <- Infer $ UnionFindT.equivalent a b
+  e <- liftUnionFind $ UnionFindT.equivalent a b
   unless e $ do
     applyRulesRef a b
     applyRulesRef b a
@@ -444,13 +464,17 @@ unify a b = do
     unifyConstraints = do
       aConstraints <- getRef a
       bConstraints <- getRef b
-      bConflicts <-
+      bUnunified <-
         filterM (liftM not . matches (tcExprs aConstraints)) $
         tcExprs bConstraints
       -- Need to re-get a after the side-effecting matches:
-      allExprs <- liftM ((++ bConflicts) . tcExprs) $ getRef a
-      let allRules = tcRules aConstraints ++ tcRules bConstraints
-      Infer $ do
+      prevExprs <- liftM tcExprs $ getRef a
+      when (all (not . null) [bUnunified, prevExprs]) $
+        addConflict a
+      let
+        allExprs = prevExprs ++ bUnunified
+        allRules = tcRules aConstraints ++ tcRules bConstraints
+      liftUnionFind $ do
         a `UnionFindT.union` b
         UnionFindT.setDescr a .
           Constraints allExprs allRules $
@@ -520,7 +544,7 @@ subst from mkTo rootRef = do
         (Any removed, exprsWOGetVar) =
           mconcat . map removeFrom $ tcExprs oldConstraints
       when removed $ do
-        Infer . UnionFindT.setDescr ref $
+        liftUnionFind . UnionFindT.setDescr ref $
           oldConstraints { tcExprs = exprsWOGetVar }
         unify ref =<< mkTo
 
@@ -531,7 +555,7 @@ allUnder =
     recurse ref = do
       visited <- State.get
       alreadySeen <-
-        lift . Infer . liftM or $
+        liftM or . lift . liftUnionFind $
         mapM (UnionFindT.equivalent ref) visited
       unless alreadySeen $ do
         State.modify (ref :)
@@ -623,7 +647,7 @@ inferDefinition
   => DataLoad.DefinitionEntity (T f)
   -> T m (StoredDefinition (T f))
 inferDefinition (DataLoad.DefinitionEntity defI (Data.Definition bodyI typeI)) = do
-  (typeContext, (bodyExpr, typeExpr)) <- runInfer $ do
+  (inferResult, (bodyExpr, typeExpr)) <- runInfer $ do
     bodyExpr <- fromLoaded bodyI
     typeExpr <- fromLoaded typeI
     inferExpression [] (getDefRef (eeInferredType bodyExpr) defI) bodyExpr
@@ -632,7 +656,7 @@ inferDefinition (DataLoad.DefinitionEntity defI (Data.Definition bodyI typeI)) =
     { deIRef = defI
     , deInferredType = eeInferredType bodyExpr
     , deValue = Data.Definition bodyExpr typeExpr
-    , deTypeContext = typeContext
+    , deTypeContext = irNewContext inferResult
     }
 
 loadInferDefinition
