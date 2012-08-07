@@ -78,7 +78,10 @@ eipGuid = IRef.guid . Data.unExpressionIRef . Property.value
 -- Whenever a Pi result component is a hole, it can be polymorphic,
 -- which means it can refer to the Pi arg[s] before it, in which case
 -- it would not be valid to infer its type as monomorphic (unify into
--- it).
+-- it). After a "subst" replaces GetVariable's in a Pi result with
+-- anything (including holes), we know they can no longer possibly
+-- refer to previous Pi args, therefore they are monomorphic and can
+-- be unified into.
 
 data ArrowType = Pi | Lam
   deriving (Show, Eq)
@@ -92,10 +95,11 @@ data UnifyRule = UnifyRule
 data Constraints = Constraints
   { tcExprs :: [Data.GuidExpression Ref]
   , tcRules :: [UnifyRule]
+  , tcForceMonomorphic :: Bool
   } deriving (Show)
 
 emptyConstraints :: Constraints
-emptyConstraints = Constraints [] []
+emptyConstraints = Constraints [] [] False
 
 type Ref = UnionFindT.Point Constraints
 
@@ -395,9 +399,13 @@ inferExpression scope defRef (Expression _ g typeRef valueRef value) =
 -- New Ref tree has tcRules=[] everywhere
 dupRefTreeExprs :: Monad m => Ref -> Infer m Ref
 dupRefTreeExprs ref = do
-  origExprs <- liftM tcExprs $ getRef ref
-  exprs <- mapM recurse origExprs
-  makeRef emptyConstraints { tcExprs = exprs }
+  constraints <- getRef ref
+  if tcForceMonomorphic constraints
+    then return ref
+    else do
+      let origExprs = tcExprs constraints
+      exprs <- mapM recurse origExprs
+      makeRef emptyConstraints { tcExprs = exprs }
   where
     recurse (Data.GuidExpression guid expr) =
       liftM (Data.GuidExpression guid) .
@@ -428,6 +436,8 @@ unify a b = do
           subst guid (return argRef) body
         (Pi, Data.ExpressionPi (Data.Lambda _ resultType)) -> do
           newResultType <- dupRefTreeExprs resultType
+          unify argRef =<<
+            makeRef emptyConstraints { tcForceMonomorphic = True }
           subst guid (return argRef) newResultType
           unify destRef newResultType
         _ -> return ()
@@ -442,7 +452,10 @@ unify a b = do
       let allRules = tcRules aConstraints ++ tcRules bConstraints
       Infer $ do
         a `UnionFindT.union` b
-        UnionFindT.setDescr a $ Constraints allExprs allRules
+        UnionFindT.setDescr a .
+          Constraints allExprs allRules $
+          on (||) tcForceMonomorphic
+          aConstraints bConstraints
     matches as y = liftM or $ mapM (`unifyPair` y) as
 
 -- biased towards left child (if unifying Pis,
