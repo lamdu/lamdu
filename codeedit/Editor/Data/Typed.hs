@@ -34,7 +34,6 @@ import Control.Monad.Trans.State (execStateT)
 import Control.Monad.Trans.UnionFind (UnionFindT, resumeUnionFindT)
 import Data.Function (on)
 import Data.Functor.Identity (Identity(..))
-import Data.Maybe (fromMaybe)
 import Data.Monoid (Any(..), mconcat)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
@@ -227,44 +226,27 @@ toPureExpression =
     f guid = return . Data.PureGuidExpression . Data.GuidExpression guid
 
 expand :: Monad m => Data.PureGuidExpression -> T m Data.PureGuidExpression
-expand =
-  (`runReaderT` Map.empty) . recurse
+expand e@(Data.PureGuidExpression (Data.GuidExpression guid val)) =
+  case val of
+  Data.ExpressionGetVariable (Data.DefinitionRef defI) ->
+    -- TODO: expand the result recursively (with some recursive
+    -- constraint)
+    DataLoad.loadPureDefinitionBody defI
+  Data.ExpressionApply (Data.Apply func arg) ->
+    liftM (makePureGuidExpr . Data.ExpressionApply) $
+    liftM2 Data.Apply (expand func) (expand arg)
+  Data.ExpressionLambda (Data.Lambda paramType body) ->
+    recurseLambda Data.ExpressionLambda paramType body
+  Data.ExpressionPi (Data.Lambda paramType body) -> do
+    newParamType <- expand paramType
+    recurseLambda Data.ExpressionPi newParamType body
+  _ -> return e
   where
-    recurse e@(Data.PureGuidExpression (Data.GuidExpression guid val)) =
-      case val of
-      Data.ExpressionGetVariable (Data.DefinitionRef defI) ->
-        -- TODO: expand the result recursively (with some recursive
-        -- constraint)
-        lift $ DataLoad.loadPureDefinitionBody defI
-      Data.ExpressionGetVariable (Data.ParameterRef guidRef) -> do
-        mValue <- Reader.asks (Map.lookup guidRef)
-        return $ fromMaybe e mValue
-      Data.ExpressionApply
-        (Data.Apply
-         (Data.PureGuidExpression
-          (Data.GuidExpression lamGuid
-           -- TODO: Don't ignore paramType, we do want to recursively
-           -- type-check this:
-           (Data.ExpressionLambda (Data.Lambda _paramType body))))
-         arg) -> do
-          newArg <- recurse arg
-          Reader.local (Map.insert lamGuid newArg) $
-            recurse body
-      Data.ExpressionApply (Data.Apply func arg) ->
-        liftM (makePureGuidExpr . Data.ExpressionApply) $
-        liftM2 Data.Apply (recurse func) (recurse arg)
-      Data.ExpressionLambda (Data.Lambda paramType body) ->
-        recurseLambda Data.ExpressionLambda paramType body
-      Data.ExpressionPi (Data.Lambda paramType body) -> do
-        newParamType <- recurse paramType
-        recurseLambda Data.ExpressionPi newParamType body
-      _ -> return e
-      where
-        makePureGuidExpr =
-          Data.PureGuidExpression . Data.GuidExpression guid
-        recurseLambda cons paramType =
-          liftM (makePureGuidExpr . cons . Data.Lambda paramType) .
-          recurse
+    makePureGuidExpr =
+      Data.PureGuidExpression . Data.GuidExpression guid
+    recurseLambda cons paramType =
+      liftM (makePureGuidExpr . cons . Data.Lambda paramType) .
+      expand
 
 refFromPure :: Monad m => Data.PureGuidExpression -> Infer (T m) Ref
 refFromPure =
