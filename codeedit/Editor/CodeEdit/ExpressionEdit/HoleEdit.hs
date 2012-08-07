@@ -5,7 +5,7 @@ import Control.Arrow (first, second)
 import Control.Monad (liftM, mplus)
 import Data.Function (on)
 import Data.Hashable(hash)
-import Data.List (isInfixOf, isPrefixOf, partition)
+import Data.List (isInfixOf, isPrefixOf)
 import Data.List.Utils (sortOn)
 import Data.Maybe (fromMaybe, isJust, listToMaybe)
 import Data.Monoid (Monoid(..))
@@ -29,7 +29,6 @@ import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
-import qualified Editor.Data.Typed as DataTyped
 import qualified Editor.ITransaction as IT
 import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
@@ -157,25 +156,14 @@ makeAllResults holeInfo = do
     globals
   let
     searchTerm = Property.value $ hiSearchTerm holeInfo
-    inferredResults =
-      map (Result [""]) $ Sugar.holeInferredValues hole
     literalResults = makeLiteralResults searchTerm
     nameMatch = any (insensitiveInfixOf searchTerm) . resultNames
     typeMatches = Sugar.holeInferResults hole . resultExpr
-    alphaEq = DataTyped.alphaEq `on` resultExpr
-    (redundantResults, uninferredResults) =
-      partition ((`any` inferredResults) . alphaEq) $
-      literalResults ++ primitiveResults ++ varResults
-    addRedundantData inferredResult =
-      (atResultNames . (++) . concatMap resultNames .
-       filter (alphaEq inferredResult))
-      redundantResults
-      inferredResult
   liftM concat .
     mapM (OT.transaction . typeMatches) .
     sortOn (resultOrdering searchTerm) .
     filter nameMatch $
-    map addRedundantData inferredResults ++ uninferredResults
+    literalResults ++ primitiveResults ++ varResults
   where
     insensitiveInfixOf = isInfixOf `on` map Char.toLower
     hole = hiHole holeInfo

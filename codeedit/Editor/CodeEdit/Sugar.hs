@@ -113,7 +113,6 @@ data Hole m = Hole
   { holeScope :: [Guid]
   , holePickResult :: Maybe (Data.PureGuidExpression -> T m Guid)
   , holePaste :: Maybe (T m Guid)
-  , holeInferredValues :: [Data.PureGuidExpression]
   , holeInferResults :: Data.PureGuidExpression -> T m [Data.PureGuidExpression]
   }
 
@@ -672,7 +671,6 @@ convertHole exprI = do
       { holeScope = map fst scope
       , holePickResult = fmap pickResult $ eeProp exprI
       , holePaste = mPaste
-      , holeInferredValues = catMaybes maybeInferredValues
       , holeInferResults =
         (maybe . const . return) []
         inferResults $ eeStored exprI
