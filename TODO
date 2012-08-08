@@ -1,3 +1,7 @@
+* Auto-name generation ignores manually chosen names that overlap
+  * Should show auto-names with different color to disambguiate and
+    make it clear they're auto-gen.
+
 * Currently, Set : Magic, so we don't support param type=Set, or
   type variables at all.
 
