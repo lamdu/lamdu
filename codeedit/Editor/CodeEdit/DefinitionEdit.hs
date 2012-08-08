@@ -64,17 +64,10 @@ makeLHSEdit makeExpressionEdit myId ident mAddFirstParameter rhs params = do
 makeParts
   :: MonadF m
   => ExpressionGui.Maker m
-  -> Widget.Id
   -> Guid
   -> Sugar.ExpressionRef m
   -> OTransaction ViewTag m [ExpressionGui m]
-makeParts makeExpressionEdit myId guid exprRef = do
-  let
-    sExpr = Sugar.rExpression exprRef
-    func =
-      case sExpr of
-      Sugar.ExpressionFunc _ x -> x
-      _ -> Sugar.Func [] exprRef
+makeParts makeExpressionEdit guid exprRef = do
   lhsEdit <-
     makeLHSEdit makeExpressionEdit myId guid
     ((fmap Sugar.lambdaWrap . Sugar.rActions) exprRef)
@@ -91,6 +84,13 @@ makeParts makeExpressionEdit myId guid exprRef = do
     , ExpressionGui.fromValueWidget BWidgets.spaceWidget
     , rhsEdit
     ]
+  where
+    myId = WidgetIds.fromGuid guid
+    sExpr = Sugar.rExpression exprRef
+    func =
+      case sExpr of
+      Sugar.ExpressionFunc _ x -> x
+      _ -> Sugar.Func [] exprRef
 
 make
   :: MonadF m
@@ -100,8 +100,7 @@ make
 make makeExpressionEdit def = do
   bodyWidget <-
     liftM (ExpressionGui.egWidget . ExpressionGui.hbox) .
-    makeParts makeExpressionEdit (WidgetIds.fromGuid guid) guid $
-    Sugar.drBody def
+    makeParts makeExpressionEdit guid $ Sugar.drBody def
   let
     mkResult typeWidget =
       BWidgets.vboxCentered

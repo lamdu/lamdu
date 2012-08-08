@@ -42,8 +42,7 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
       (liftM . map)
         (Widget.weakerEvents (whereItemDeleteEventMap item) . ExpressionGui.egWidget) $
       DefinitionEdit.makeParts makeExpressionEdit
-      (paramId item) (Sugar.wiGuid item) (Sugar.wiValue item)
-    paramId = WidgetIds.fromGuid . Sugar.wiGuid
+      (Sugar.wiGuid item) (Sugar.wiValue item)
     whereItemDeleteEventMap whereItem =
       maybe mempty
       (Widget.keysEventMapMovesCursor Config.delKeys "Delete variable" .
