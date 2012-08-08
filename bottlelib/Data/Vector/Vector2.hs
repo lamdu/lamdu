@@ -9,11 +9,11 @@ where
 
 -- import Test.QuickCheck.Arbitrary(Arbitrary(..))
 --import Control.Lens (Lens)
-import Control.Lens.TH (makeLenses)
 import Control.Applicative (Applicative(..), liftA2)
 import Control.Monad (join, liftM2)
 import Data.Binary (Binary(..))
 import Prelude hiding (curry, uncurry, zip)
+import qualified Control.Lens.TH as LensTH
 
 data Vector2 a = Vector2
   { _first :: !a
@@ -23,7 +23,7 @@ data Vector2 a = Vector2
   -- (Vectors aren't ordinals!). Useful to have in a binary search
   -- tree though.
   deriving (Eq, Ord, Show, Read)
-makeLenses ''Vector2
+LensTH.makeLenses ''Vector2
 
 instance Binary a => Binary (Vector2 a) where
   get = liftM2 Vector2 get get

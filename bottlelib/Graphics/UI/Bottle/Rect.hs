@@ -9,16 +9,16 @@ module Graphics.UI.Bottle.Rect
 
 import Control.Applicative (liftA2)
 import Control.Lens (Simple, Traversal, Lens, (^.))
-import Control.Lens.TH (makeLenses)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators(R)
+import qualified Control.Lens.TH as LensTH
 import qualified Data.Vector.Vector2 as Vector2
 
 data Rect = Rect {
   _topLeft :: Vector2 R,
   _size :: Vector2 R
   } deriving Show
-makeLenses ''Rect
+LensTH.makeLenses ''Rect
 
 topLeftAndSize :: Simple Traversal Rect (Vector2 R)
 topLeftAndSize f (Rect tl s) = liftA2 Rect (f tl) (f s)
