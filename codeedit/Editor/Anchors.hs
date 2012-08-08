@@ -189,7 +189,7 @@ newBuiltin
   :: Monad m
   => String -> Data.ExpressionIRef
   -> Transaction t m Data.VariableRef
-newBuiltin fullyQualifiedName typeI = do
+newBuiltin fullyQualifiedName typeI =
   newDefinition name . (`Data.Definition` typeI) =<<
     newBuiltinExpression fullyQualifiedName typeI
   where
