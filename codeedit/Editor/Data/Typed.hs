@@ -52,7 +52,6 @@ import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
-import qualified Data.Store.Transaction as Transaction
 import qualified Data.UnionFind.IntMap as UnionFind
 import qualified Editor.Anchors as Anchors
 import qualified Editor.Data as Data
@@ -627,11 +626,8 @@ builtinsToGlobals builtinsMap (NoLoop (Data.GuidExpression guid expr)) =
     builtinsMap
   other -> other
 
-loadDefTypePure :: Monad m => Data.DefinitionIRef -> T m Data.PureGuidExpression
-loadDefTypePure = DataLoad.loadPureExpression . Data.defType <=< Transaction.readIRef
-
 loadDefTypeToRef :: Monad m => Data.DefinitionIRef -> Infer (T m) Ref
-loadDefTypeToRef = refFromPure <=< lift . loadDefTypePure
+loadDefTypeToRef = refFromPure <=< lift . DataLoad.loadPureDefinitionType
 
 loadDefTypeWithinContext
   :: Monad m

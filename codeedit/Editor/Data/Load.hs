@@ -3,7 +3,7 @@ module Editor.Data.Load
   ( loadDefinition, DefinitionEntity(..)
   , loadExpression, ExpressionEntity(..)
   , loadPureExpression, loadPureDefinition
-  , loadPureDefinitionBody
+  , loadPureDefinitionBody, loadPureDefinitionType
   )
 where
 
@@ -54,6 +54,10 @@ loadPureDefinitionBody ::
   Monad m => Data.DefinitionIRef -> T m Data.PureGuidExpression
 loadPureDefinitionBody =
   loadPureExpression . Data.defBody <=< Transaction.readIRef
+
+loadPureDefinitionType :: Monad m => Data.DefinitionIRef -> T m Data.PureGuidExpression
+loadPureDefinitionType =
+  loadPureExpression . Data.defType <=< Transaction.readIRef
 
 loadExpression
   :: (Monad m, Monad f)
