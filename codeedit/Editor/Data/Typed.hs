@@ -347,24 +347,20 @@ inferExpression
   -> Infer m ()
 inferExpression scope defRef (Expression _ g typeRef valueRef value) =
   case value of
-  Data.ExpressionLambda (Data.Lambda paramType body) -> do
-    let paramRef = eeInferredValue paramType
+  Data.ExpressionLambda lambda@(Data.Lambda paramType body) -> do
+    onLambda lambda
     -- We use "flip unify typeRef" so that the new Pi will be
     -- the official Pi guid due to the "left-bias" in
     -- unify/unifyPair. Thus we can later assume that we got the
     -- same guid in the pi and the lambda.
-    unify (eeInferredType paramType) =<< mkSet
     flip unify typeRef <=< makePi g .
-      Data.Lambda paramRef $ eeInferredType body
-    go [(g, paramRef)] body
-  Data.ExpressionPi (Data.Lambda paramType resultType) -> do
-    let paramRef = eeInferredValue paramType
+      Data.Lambda (eeInferredValue paramType) $ eeInferredType body
+  Data.ExpressionPi lambda@(Data.Lambda _ resultType) -> do
+    onLambda lambda
     -- TODO: Is Set:Set a good idea? Agda uses "eeInferredType
     -- resultType" as the type
     setType =<< mkSet
-    unify (eeInferredType paramType) =<< mkSet
     unify (eeInferredType resultType) =<< mkSet
-    go [(g, paramRef)] resultType
   Data.ExpressionApply (Data.Apply func arg) -> do
     go [] func
     go [] arg
@@ -412,6 +408,10 @@ inferExpression scope defRef (Expression _ g typeRef valueRef value) =
     makePi guid = makeSingletonRef guid . Data.ExpressionPi
     setType = unify typeRef
     go newVars = inferExpression (newVars ++ scope) defRef
+    onLambda (Data.Lambda paramType result) = do
+      go [] paramType
+      go [(g, eeInferredValue paramType)] result
+      unify (eeInferredType paramType) =<< mkSet
 
 -- New Ref tree has tcRules=[] everywhere
 dupRefTreeExprs :: Monad m => Ref -> Infer m Ref
