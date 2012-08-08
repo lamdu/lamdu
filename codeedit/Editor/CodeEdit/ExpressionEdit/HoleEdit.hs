@@ -3,6 +3,7 @@ module Editor.CodeEdit.ExpressionEdit.HoleEdit(make, ResultPicker) where
 
 import Control.Arrow (first, second)
 import Control.Monad (liftM, mplus)
+import Control.Monad.ListT (ListT)
 import Data.Function (on)
 import Data.Hashable(hash)
 import Data.List (isInfixOf, isPrefixOf)
@@ -20,6 +21,7 @@ import Editor.OTransaction (OTransaction, TWidget, WidgetT)
 import Graphics.UI.Bottle.Animation(AnimId)
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Char as Char
+import qualified Data.List.Class as List
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -147,7 +149,7 @@ makeLiteralResults searchTerm =
 makeAllResults
   :: MonadF m
   => HoleInfo m
-  -> OTransaction ViewTag m [Data.PureGuidExpression]
+  -> OTransaction ViewTag m (ListT (T m) Data.PureGuidExpression)
 makeAllResults holeInfo = do
   globals <- OT.getP Anchors.globals
   varResults <-
@@ -159,8 +161,7 @@ makeAllResults holeInfo = do
     literalResults = makeLiteralResults searchTerm
     nameMatch = any (insensitiveInfixOf searchTerm) . resultNames
     typeMatches = Sugar.holeInferResults hole . resultExpr
-  liftM concat .
-    mapM (OT.transaction . typeMatches) .
+  return . (>>= typeMatches) . List.fromList .
     sortOn (resultOrdering searchTerm) .
     filter nameMatch $
     literalResults ++ primitiveResults ++ varResults
@@ -264,15 +265,12 @@ makeResultsWidget makeExpressionEdit holeInfo firstResults moreResults = do
       [E.ModKey E.noMods E.KeyDown]
       "Nothing (at bottom)" (return ())
 
-canonizeResultExprs
+canonizeResultExpr
   :: HoleInfo m
-  -> [Data.PureGuidExpression] -> [Data.PureGuidExpression]
-canonizeResultExprs holeInfo =
-  map f
-  where
-    f expr =
-      flip Data.canonizeIdentifiers expr . Random.mkStdGen $
-      hash (show expr, Guid.bs (hiGuid holeInfo))
+  -> Data.PureGuidExpression -> Data.PureGuidExpression
+canonizeResultExpr holeInfo expr =
+  flip Data.canonizeIdentifiers expr . Random.mkStdGen $
+  hash (show expr, Guid.bs (hiGuid holeInfo))
 
 makeActiveHoleEdit
   :: MonadF m
@@ -285,17 +283,18 @@ makeActiveHoleEdit makeExpressionEdit holeInfo =
 
     allResults <- makeAllResults holeInfo
 
-    let
-      (firstResults, moreResults) =
-        splitAt Config.holeResultCount $
-        canonizeResultExprs holeInfo allResults
+    (firstResults, moreResults) <-
+      OT.transaction . List.splitAtM Config.holeResultCount $
+      liftM (canonizeResultExpr holeInfo) allResults
 
     searchTermWidget <-
       makeSearchTermWidget holeInfo searchTermId firstResults
 
+    hasMoreResults <- liftM null . OT.transaction . List.toList $ List.take 1 moreResults
+
     (mResult, resultsWidget) <-
-      makeResultsWidget makeExpressionEdit holeInfo firstResults . not $
-      null moreResults
+      makeResultsWidget makeExpressionEdit holeInfo firstResults $
+      not hasMoreResults
     return
       ( mplus mResult (listToMaybe $ take 1 firstResults)
       , BWidgets.vboxCentered [searchTermWidget, resultsWidget] )

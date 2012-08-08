@@ -15,12 +15,14 @@ module Editor.CodeEdit.Sugar
   ) where
 
 import Control.Applicative (liftA2)
-import Control.Monad (guard, liftM, forM)
+import Control.Monad (guard, liftM)
+import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Data.Functor.Identity (Identity(..))
-import Data.Maybe (catMaybes, fromMaybe, isJust)
+import Data.Maybe (fromMaybe, isJust)
+import Data.Monoid (mempty)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
@@ -28,6 +30,7 @@ import System.Random (RandomGen)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
+import qualified Data.List.Class as List
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -113,7 +116,7 @@ data Hole m = Hole
   { holeScope :: [Guid]
   , holePickResult :: Maybe (Data.PureGuidExpression -> T m Guid)
   , holePaste :: Maybe (T m Guid)
-  , holeInferResults :: Data.PureGuidExpression -> T m [Data.PureGuidExpression]
+  , holeInferResults :: Data.PureGuidExpression -> ListT (T m) Data.PureGuidExpression
   }
 
 data LiteralInteger m = LiteralInteger
@@ -644,35 +647,34 @@ convertHole exprI = do
           (DataTyped.irNewContext inferResult)
         derefIt _ = const Nothing
       return (derefIt (DataTyped.irNewConflicts inferResult), x)
-    mkResults (derefIt, typedExpr) = do
-      _ <- derefIt $ DataTyped.eeInferredType typedExpr
-      return $ expandHoles derefIt typedExpr
-    inferResults holeStored expr = do
+    inferResults holeStored expr = List.joinL $ do
       mExprType <-
         liftM (uncurry ($)) .
         runInfer . liftM DataTyped.eeInferredType $
         DataTyped.pureInferExpressionWithinContext scope mDef expr
-      case mExprType of
-        Nothing -> return []
+      return $ case mExprType of
+        Nothing -> mempty
         Just exprType ->
-          liftM catMaybes . forM (applyForms exprType expr) $
-          \applyExpr ->
-            liftM mkResults .
-            runInfer $ do
-              typedExpr <-
-                DataTyped.pureInferExpressionWithinContext
-                scope mDef applyExpr
-              DataTyped.unify (eeInferredTypes holeStored) $
-                DataTyped.eeInferredType typedExpr
-              DataTyped.unify (eeInferredValues holeStored) $
-                DataTyped.eeInferredValue typedExpr
-              return typedExpr
+          List.catMaybes . List.mapL (mkResult holeStored) . List.fromList $ applyForms exprType expr
+    mkResult holeStored applyExpr = do
+      (derefIt, typedExpr) <- runInfer $ do
+        typedExpr <-
+          DataTyped.pureInferExpressionWithinContext
+          scope mDef applyExpr
+        DataTyped.unify (eeInferredTypes holeStored) $
+          DataTyped.eeInferredType typedExpr
+        DataTyped.unify (eeInferredValues holeStored) $
+          DataTyped.eeInferredValue typedExpr
+        return typedExpr
+      return $ do
+        _ <- derefIt $ DataTyped.eeInferredType typedExpr
+        return $ expandHoles derefIt typedExpr
     hole = Hole
       { holeScope = map fst scope
       , holePickResult = fmap pickResult $ eeProp exprI
       , holePaste = mPaste
       , holeInferResults =
-        (maybe . const . return) []
+        (maybe . const) mempty
         inferResults $ eeStored exprI
       }
   mkExpressionRef exprI =<<
