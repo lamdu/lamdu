@@ -1,12 +1,12 @@
 {-# LANGUAGE TupleSections #-}
 module Graphics.UI.GLFW.Events(GLFWEvent(..), KeyEvent(..), IsPress(..), eventLoop) where
 
-import Control.Concurrent (threadDelay, forkIO)
+import Control.Concurrent(threadDelay, forkIO)
 import Control.Concurrent.MVar
-import Control.Monad (join, forever, (<=<))
+import Control.Monad(forever, (<=<))
 import Data.IORef
 import Data.Time.Clock (UTCTime, getCurrentTime, diffUTCTime)
-import Graphics.UI.GLFW.ModState (ModState, isModifierKey, asModkey, modStateFromModkeySet)
+import Graphics.UI.GLFW.ModState(ModState, isModifierKey, asModkey, modStateFromModkeySet)
 import qualified Data.Set as Set
 import qualified Graphics.UI.GLFW as GLFW
 
@@ -87,12 +87,11 @@ rawEventLoop eventsHandler = do
 
 data TypematicState =
   NoKey |
-  TypematicRepeat
-  { _tsEvent :: KeyEvent
-  , _tsCount :: Int
-  , _tsStartTime :: UTCTime
-  , tsPrevTick :: UTCTime
-  }
+  TypematicRepeat {
+    _tsEvent :: KeyEvent,
+    _tsCount :: Int,
+    _tsStartTime :: UTCTime
+    }
 
 pureModifyMVar :: MVar a -> (a -> a) -> IO ()
 pureModifyMVar mvar f = modifyMVar_ mvar (return . f)
@@ -106,21 +105,21 @@ typematicKeyHandlerWrap handler = do
 
   let
     addEvent = pureModifyMVar accumulatedVar . (:)
-    typematicIteration state@(TypematicRepeat keyEvent count startTime prevTick) = do
+    typematicIteration state@(TypematicRepeat keyEvent count startTime) = do
       now <- getCurrentTime
-      let timeDiff = diffUTCTime prevTick startTime
+      let timeDiff = diffUTCTime now startTime
       if timeDiff >= timeFunc count
         then do
           addEvent $ GLFWKeyEvent keyEvent
-          return (TypematicRepeat keyEvent (count + 1) startTime now,
+          return (TypematicRepeat keyEvent (count + 1) startTime,
                   timeFunc (count + 1) - timeDiff)
         else
-          return (state { tsPrevTick = now }, timeFunc count - timeDiff)
+          return (state, timeFunc count - timeDiff)
     typematicIteration state@NoKey = return (state, timeFunc 0)
     handleEvent event@(GLFWKeyEvent keyEvent@KeyEvent { kePress=isPress }) = do
       newValue <-
         case isPress of
-          Press -> fmap (join (TypematicRepeat keyEvent 0)) getCurrentTime
+          Press -> fmap (TypematicRepeat keyEvent 0) getCurrentTime
           Release -> return NoKey
 
       _ <- swapMVar stateVar newValue
