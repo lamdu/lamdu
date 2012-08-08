@@ -32,6 +32,7 @@ import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
 import qualified Data.List.Class as List
+import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -236,7 +237,7 @@ eeFromTypedExpression =
       )
 
 data SugarContext m = SugarContext
-  { scScope :: [(Guid, DataTyped.Ref)]
+  { scScope :: DataTyped.Scope
   , scDef :: Maybe (DataTyped.StoredDefinition (T m))
   , scBuiltinsMap :: Anchors.BuiltinsMap
   }
@@ -251,15 +252,15 @@ runSugar :: Monad m => Maybe (DataTyped.StoredDefinition (T m)) -> Sugar m a -> 
 runSugar def (Sugar action) = do
   builtinsMap <- Anchors.getP Anchors.builtinsMap
   runReaderT action SugarContext
-    { scScope = []
+    { scScope = Map.empty
     , scDef = def
     , scBuiltinsMap = builtinsMap
     }
 
 putInScope :: Monad m => DataTyped.Ref -> Guid -> Sugar m a -> Sugar m a
-putInScope typeRef x = atSugar . Reader.local . atScScope $ ((x, typeRef) :)
+putInScope typeRef x = atSugar . Reader.local . atScScope $ Map.insert x typeRef
 
-readScope :: Monad m => Sugar m [(Guid, DataTyped.Ref)]
+readScope :: Monad m => Sugar m DataTyped.Scope
 readScope = Sugar $ Reader.asks scScope
 
 readDefinition :: Monad m => Sugar m (Maybe (DataTyped.StoredDefinition (T m)))
@@ -625,7 +626,7 @@ applyForms exprType expr =
 inferResults ::
   (Monad m, Monad f) =>
   Anchors.BuiltinsMap ->
-  [(Guid, DataTyped.Ref)] ->
+  DataTyped.Scope ->
   Maybe (DataTyped.StoredDefinition (T f)) ->
   ExprEntityStored f ->
   Data.PureGuidExpression ->
@@ -682,7 +683,7 @@ convertHole exprI = do
     gen =
       Random.mkStdGen . (+1) . (*2) . BinaryUtils.decodeS $ Guid.bs eGuid
     hole = Hole
-      { holeScope = map fst scope
+      { holeScope = Map.keys scope
       , holePickResult = fmap pickResult $ eeProp exprI
       , holePaste = mPaste
       , holeInferResults =

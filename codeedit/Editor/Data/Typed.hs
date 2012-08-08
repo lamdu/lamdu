@@ -16,7 +16,7 @@ module Editor.Data.Typed
   , loadInferDefinition
   , loadDefTypeWithinContext
 
-  , Ref
+  , Ref, Scope
   , TypeContext, emptyTypeContext
   , Infer, resumeInfer
   , InferActions(..), inferActions, liftInferActions
@@ -35,6 +35,7 @@ import Control.Monad.Trans.UnionFind (UnionFindT, resumeUnionFindT)
 import Data.Either (partitionEithers)
 import Data.Function (on)
 import Data.Functor.Identity (Identity(..))
+import Data.Map (Map)
 import Data.Maybe (mapMaybe)
 import Data.Monoid (Any(..), mconcat)
 import Data.Store.Guid (Guid)
@@ -338,9 +339,11 @@ derefRef stdGen builtinsMap typeContext rootRef =
            (Data.GuidExpression zeroGuid Data.ExpressionHole)]
         holify xs = xs
 
+type Scope = Map Guid Ref
+
 inferExpression
   :: Monad m
-  => [(Guid, Ref)]
+  => Scope
   -> (Data.DefinitionIRef -> Infer m Ref)
   -> Expression s
   -> Infer m ()
@@ -386,7 +389,7 @@ inferExpression scope defRef (Expression _ g typeRef valueRef value) =
         , urArg = argValRef
         }
   Data.ExpressionGetVariable (Data.ParameterRef guid) ->
-    case lookup guid scope of
+    case Map.lookup guid scope of
       -- TODO: Not in scope: Bad code,
       -- add an OutOfScopeReference type error
       Nothing -> return ()
@@ -406,7 +409,7 @@ inferExpression scope defRef (Expression _ g typeRef valueRef value) =
       makeNoConstraints
     makePi guid = makeSingletonRef guid . Data.ExpressionPi
     setType = unify typeRef
-    go newVars = inferExpression (newVars ++ scope) defRef
+    go newVars = inferExpression (Map.union (Map.fromList newVars) scope) defRef
     onLambda (Data.Lambda paramType result) = do
       go [] paramType
       go [(g, eeInferredValue paramType)] result
@@ -642,7 +645,7 @@ loadDefTypeWithinContext (Just def) = getDefRef (deInferredType def) (deIRef def
 
 pureInferExpressionWithinContext
   :: Monad m
-  => [(Guid, Ref)]
+  => Scope
   -> Maybe (StoredDefinition (T f))
   -> Data.PureGuidExpression -> Infer m (Expression ())
 pureInferExpressionWithinContext scope mDef pureExpr = do
@@ -664,7 +667,7 @@ inferDefinition (DataLoad.DefinitionEntity defI (Data.Definition bodyI typeI)) =
   (typeContext, (bodyExpr, typeExpr)) <- runInfer inferActions $ do
     bodyExpr <- fromLoaded bodyI
     typeExpr <- fromLoaded typeI
-    inferExpression [] (getDefRef (eeInferredType bodyExpr) defI) bodyExpr
+    inferExpression Map.empty (getDefRef (eeInferredType bodyExpr) defI) bodyExpr
     return (bodyExpr, typeExpr)
   return StoredDefinition
     { deIRef = defI
@@ -687,5 +690,5 @@ loadInferExpression exprProp = do
   expr <- DataLoad.loadExpression exprProp
   liftM snd . runInfer inferActions $ do
     tExpr <- fromLoaded expr
-    inferExpression [] loadDefTypeToRef tExpr
+    inferExpression Map.empty loadDefTypeToRef tExpr
     return tExpr
