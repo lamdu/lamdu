@@ -19,7 +19,7 @@ module Editor.Data.Typed
   , Ref
   , TypeContext, emptyTypeContext
   , Infer, resumeInfer
-  , InferResult(..)
+  , InferActions(..), inferActions, liftInferActions
   , unify, derefRef
   , makeSingletonRef
   ) where
@@ -30,7 +30,6 @@ import Control.Monad (liftM, liftM2, (<=<), when, unless)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Random (nextRandom, runRandomT)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
-import Control.Monad.Trans.Writer (WriterT, runWriterT)
 import Control.Monad.Trans.State (execStateT)
 import Control.Monad.Trans.UnionFind (UnionFindT, resumeUnionFindT)
 import Data.Either (partitionEithers)
@@ -46,7 +45,6 @@ import System.Random (RandomGen)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.State as State
 import qualified Control.Monad.Trans.UnionFind as UnionFindT
-import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
@@ -142,18 +140,35 @@ AtFieldTH.make ''StoredDefinition
 
 --------------- Infer Stack boilerplate:
 
+data InferActions m = InferActions
+  { onConflict :: m ()
+  , loadPureDefinitionBody :: Data.DefinitionIRef -> m Data.PureGuidExpression
+  , loadPureDefinitionType :: Data.DefinitionIRef -> m Data.PureGuidExpression
+  }
+
+inferActions :: Monad m => InferActions (T m)
+inferActions = InferActions
+  { onConflict = return ()
+  , loadPureDefinitionBody = DataLoad.loadPureDefinitionBody
+  , loadPureDefinitionType = DataLoad.loadPureDefinitionType
+  }
+
+liftInferActions :: (MonadTrans t, Monad m) => InferActions m -> InferActions (t m)
+liftInferActions (InferActions a b c) =
+  InferActions (lift a) (fmap lift b) (fmap lift c)
+
 newtype Infer m a = Infer
-  { unInfer :: WriterT [Ref] (UnionFindT Constraints m) a
+  { unInfer :: ReaderT (InferActions m) (UnionFindT Constraints m) a
   } deriving (Functor, Applicative, Monad)
 AtFieldTH.make ''Infer
 
 ----------------- Infer operations:
 
-liftConflictList :: WriterT [Ref] (UnionFindT Constraints m) a -> Infer m a
-liftConflictList = Infer
+liftConflictActionReader :: ReaderT (InferActions m) (UnionFindT Constraints m) a -> Infer m a
+liftConflictActionReader = Infer
 
 liftUnionFind :: Monad m => UnionFindT Constraints m a -> Infer m a
-liftUnionFind = liftConflictList . lift
+liftUnionFind = liftConflictActionReader . lift
 
 instance MonadTrans Infer where
   lift = liftUnionFind . lift
@@ -164,24 +179,16 @@ makeRef = liftUnionFind . UnionFindT.new
 getRef :: Monad m => Ref -> Infer m Constraints
 getRef = liftUnionFind . UnionFindT.descr
 
-data InferResult = InferResult
-  { irNewContext :: TypeContext
-  , irNewConflicts :: [Ref]
-  }
+getActions :: Monad m => Infer m (InferActions (Infer m))
+getActions = liftConflictActionReader $ Reader.asks liftInferActions
 
-runInfer :: Monad m => Infer m a -> m (InferResult, a)
-runInfer = resumeInfer emptyTypeContext
+runInfer :: Monad m => InferActions m -> Infer m a -> m (TypeContext, a)
+runInfer actions = resumeInfer actions emptyTypeContext
 
 resumeInfer
-  :: Monad m => TypeContext -> Infer m a -> m (InferResult, a)
-resumeInfer typeContext =
-  liftM toInferResult . resumeUnionFindT typeContext .
-  runWriterT . unInfer
-  where
-    toInferResult (context, (x, conflicts)) = flip (,) x InferResult
-      { irNewContext = context
-      , irNewConflicts = conflicts
-      }
+  :: Monad m => InferActions m -> TypeContext -> Infer m a -> m (TypeContext, a)
+resumeInfer actions typeContext =
+  resumeUnionFindT typeContext . (`runReaderT` actions) . unInfer
 
 makeNoConstraints :: Monad m => Infer m Ref
 makeNoConstraints = makeRef emptyConstraints
@@ -194,9 +201,6 @@ makeSingletonRef _ Data.ExpressionHole = makeNoConstraints
 makeSingletonRef guid expr =
   makeRef emptyConstraints
   { tcExprs = [Data.GuidExpression guid expr] }
-
-addConflict :: Monad m => Ref -> Infer m ()
-addConflict = liftConflictList . Writer.tell . (: [])
 
 --------------
 
@@ -227,13 +231,13 @@ toPureExpression =
   where
     f guid = return . Data.PureGuidExpression . Data.GuidExpression guid
 
-expand :: Monad m => Data.PureGuidExpression -> T m Data.PureGuidExpression
+expand :: Monad m => Data.PureGuidExpression -> Infer m Data.PureGuidExpression
 expand e@(Data.PureGuidExpression (Data.GuidExpression guid val)) =
   case val of
   Data.ExpressionGetVariable (Data.DefinitionRef defI) ->
     -- TODO: expand the result recursively (with some recursive
     -- constraint)
-    DataLoad.loadPureDefinitionBody defI
+    (`loadPureDefinitionBody` defI) =<< getActions
   Data.ExpressionApply (Data.Apply func arg) ->
     liftM (makePureGuidExpr . Data.ExpressionApply) $
     liftM2 Data.Apply (expand func) (expand arg)
@@ -250,9 +254,9 @@ expand e@(Data.PureGuidExpression (Data.GuidExpression guid val)) =
       liftM (makePureGuidExpr . cons . Data.Lambda paramType) .
       expand
 
-refFromPure :: Monad m => Data.PureGuidExpression -> Infer (T m) Ref
+refFromPure :: Monad m => Data.PureGuidExpression -> Infer m Ref
 refFromPure =
-  Data.mapMExpression f <=< lift . expand
+  Data.mapMExpression f <=< expand
   where
     f (Data.PureGuidExpression (Data.GuidExpression guid val)) =
       ( return val
@@ -263,7 +267,7 @@ toExpr
   :: Monad m
   => (expr -> (Guid, Data.Expression expr, s))
   -> expr
-  -> Infer (T m) (Expression s)
+  -> Infer m (Expression s)
 toExpr extract =
   Data.mapMExpression f
   where
@@ -274,7 +278,7 @@ toExpr extract =
           valRef <-
             case newVal of
             Data.ExpressionGetVariable (Data.DefinitionRef ref) ->
-               refFromPure =<< lift (DataLoad.loadPureDefinitionBody ref)
+               refFromPure =<< (`loadPureDefinitionBody` ref) =<< getActions
             -- Apply might be of lambda (can be detected much later)
             -- and in that case, it's a redex we want to peel off the
             -- Apply-of-Lambda wrapper. So we defer the insertion of
@@ -287,7 +291,7 @@ toExpr extract =
       where
         (g, expr, prop) = extract wrapped
 
-fromPure :: Monad m => Data.PureGuidExpression -> Infer (T m) (Expression ())
+fromPure :: Monad m => Data.PureGuidExpression -> Infer m (Expression ())
 fromPure =
   toExpr extract
   where
@@ -297,7 +301,7 @@ fromPure =
 fromLoaded
   :: Monad m
   => DataLoad.ExpressionEntity f
-  -> Infer (T m) (StoredExpression f)
+  -> Infer m (StoredExpression f)
 fromLoaded =
   toExpr extract
   where
@@ -338,9 +342,9 @@ derefRef stdGen builtinsMap typeContext rootRef =
 inferExpression
   :: Monad m
   => [(Guid, Ref)]
-  -> (Data.DefinitionIRef -> Infer (T m) Ref)
+  -> (Data.DefinitionIRef -> Infer m Ref)
   -> Expression s
-  -> Infer (T m) ()
+  -> Infer m ()
 inferExpression scope defRef (Expression _ g typeRef valueRef value) =
   case value of
   Data.ExpressionLambda (Data.Lambda paramType body) -> do
@@ -456,8 +460,7 @@ unifyConstraints exprRef aConstraints bConstraints =
         on (||) tcForceMonomorphic aConstraints bConstraints
       }
     postAction = do
-      when (all (not . null) [aExprs, bUnunified]) $
-        addConflict exprRef
+      when (all (not . null) [aExprs, bUnunified]) $ onConflict =<< getActions
       applyRulesRef aConstraints bConstraints
       applyRulesRef bConstraints aConstraints
       recursivePostAction
@@ -626,27 +629,28 @@ builtinsToGlobals builtinsMap (NoLoop (Data.GuidExpression guid expr)) =
     builtinsMap
   other -> other
 
-loadDefTypeToRef :: Monad m => Data.DefinitionIRef -> Infer (T m) Ref
-loadDefTypeToRef = refFromPure <=< lift . DataLoad.loadPureDefinitionType
+loadDefTypeToRef :: Monad m => Data.DefinitionIRef -> Infer m Ref
+loadDefTypeToRef def =
+  refFromPure =<< (`loadPureDefinitionType` def) =<< getActions
 
 loadDefTypeWithinContext
   :: Monad m
-  => Maybe (StoredDefinition (T m)) -> Data.DefinitionIRef -> Infer (T m) Ref
+  => Maybe (StoredDefinition (T f)) -> Data.DefinitionIRef -> Infer m Ref
 loadDefTypeWithinContext Nothing = loadDefTypeToRef
 loadDefTypeWithinContext (Just def) = getDefRef (deInferredType def) (deIRef def)
 
 pureInferExpressionWithinContext
   :: Monad m
   => [(Guid, Ref)]
-  -> Maybe (StoredDefinition (T m))
-  -> Data.PureGuidExpression -> Infer (T m) (Expression ())
+  -> Maybe (StoredDefinition (T f))
+  -> Data.PureGuidExpression -> Infer m (Expression ())
 pureInferExpressionWithinContext scope mDef pureExpr = do
   expr <- fromPure pureExpr
   inferExpression scope (loadDefTypeWithinContext mDef) expr
   return expr
 
 getDefRef
-  :: Monad m => Ref -> Data.DefinitionIRef -> Data.DefinitionIRef -> Infer (T m) Ref
+  :: Monad m => Ref -> Data.DefinitionIRef -> Data.DefinitionIRef -> Infer m Ref
 getDefRef defRef defI getDefI
   | getDefI == defI = return defRef
   | otherwise = loadDefTypeToRef getDefI
@@ -656,7 +660,7 @@ inferDefinition
   => DataLoad.DefinitionEntity (T f)
   -> T m (StoredDefinition (T f))
 inferDefinition (DataLoad.DefinitionEntity defI (Data.Definition bodyI typeI)) = do
-  (inferResult, (bodyExpr, typeExpr)) <- runInfer $ do
+  (typeContext, (bodyExpr, typeExpr)) <- runInfer inferActions $ do
     bodyExpr <- fromLoaded bodyI
     typeExpr <- fromLoaded typeI
     inferExpression [] (getDefRef (eeInferredType bodyExpr) defI) bodyExpr
@@ -665,7 +669,7 @@ inferDefinition (DataLoad.DefinitionEntity defI (Data.Definition bodyI typeI)) =
     { deIRef = defI
     , deInferredType = eeInferredType bodyExpr
     , deValue = Data.Definition bodyExpr typeExpr
-    , deTypeContext = irNewContext inferResult
+    , deTypeContext = typeContext
     }
 
 loadInferDefinition
@@ -680,7 +684,7 @@ loadInferExpression
   -> T m (Expression (Data.ExpressionIRefProperty (T m)))
 loadInferExpression exprProp = do
   expr <- DataLoad.loadExpression exprProp
-  liftM snd . runInfer $ do
+  liftM snd . runInfer inferActions $ do
     tExpr <- fromLoaded expr
     inferExpression [] loadDefTypeToRef tExpr
     return tExpr
