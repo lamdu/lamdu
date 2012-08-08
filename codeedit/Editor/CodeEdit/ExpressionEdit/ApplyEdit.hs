@@ -18,7 +18,7 @@ make
   -> Widget.Id
   -> OTransaction ViewTag m (ExpressionGui m)
 make makeExpressionEdit (Sugar.Apply func arg) myId =
-  (OT.assignCursor myId . WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity) arg $ do
+  (OT.assignCursor myId . WidgetIds.fromGuid . Sugar.rGuid) arg $ do
     funcEdit <- makeExpressionEdit func
     argEdit <- makeExpressionEdit arg
     return $ ExpressionGui.hboxSpaced [funcEdit, argEdit]

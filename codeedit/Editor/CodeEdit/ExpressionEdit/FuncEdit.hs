@@ -45,7 +45,7 @@ addJumpToRHS (rhsDoc, rhs) =
   Widget.keysEventMapMovesCursor Config.jumpLHStoRHSKeys ("Jump to " ++ rhsDoc) $
   return rhsId
   where
-    rhsId = WidgetIds.fromGuid . Sugar.guid $ Sugar.rEntity rhs
+    rhsId = WidgetIds.fromGuid $ Sugar.rGuid rhs
 
 -- exported for use in definition sugaring.
 makeParamEdit
@@ -72,8 +72,7 @@ makeParamEdit makeExpressionEdit rhs param =
       maybe mempty
       (Widget.keysEventMapMovesCursor Config.addNextParamKeys "Add next parameter" .
        liftM (FocusDelegator.delegatingId . WidgetIds.fromGuid) .
-       IT.transaction . Sugar.lambdaWrap) .
-      Sugar.eActions . Sugar.rEntity $
+       IT.transaction . Sugar.lambdaWrap) . Sugar.rActions $
       Sugar.fpBody param
     paramDeleteEventMap =
       maybe mempty
@@ -130,4 +129,4 @@ make makeExpressionEdit (Sugar.Func params body) myId =
     return $ ExpressionGui.hboxSpaced [ lambdaLabel, paramsEdit, rightArrowLabel, bodyEdit ]
   where
     lhs = map (WidgetIds.fromGuid . Sugar.fpGuid) params
-    bodyId = WidgetIds.fromGuid . Sugar.guid $ Sugar.rEntity body
+    bodyId = WidgetIds.fromGuid $ Sugar.rGuid body

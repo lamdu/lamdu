@@ -58,7 +58,7 @@ makeWithBody
   -> OTransaction ViewTag m (ExpressionGui m)
 makeWithBody makeExpressionEdit where_@(Sugar.Where _ body) myId = do
   whereEdit <- make makeExpressionEdit where_ myId
-  OT.assignCursor myId ((WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity) body) $ do
+  OT.assignCursor myId ((WidgetIds.fromGuid . Sugar.rGuid) body) $ do
     bodyEdit <- makeExpressionEdit body
     return . ExpressionGui.fromValueWidget . BWidgets.vboxCentered $
       [ ExpressionGui.egWidget bodyEdit

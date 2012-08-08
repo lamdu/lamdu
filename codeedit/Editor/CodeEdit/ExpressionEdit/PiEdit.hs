@@ -47,5 +47,5 @@ make makeExpressionEdit (Sugar.Pi param resultType) myId =
     paramGuid = Sugar.fpGuid param
     paramId = WidgetIds.fromGuid paramGuid
     typeId =
-      WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity . Sugar.fpType $
+      WidgetIds.fromGuid . Sugar.rGuid . Sugar.fpType $
       param

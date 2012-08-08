@@ -77,7 +77,7 @@ makeParts makeExpressionEdit myId guid exprRef = do
       _ -> Sugar.Func [] exprRef
   lhsEdit <-
     makeLHSEdit makeExpressionEdit myId guid
-    ((fmap Sugar.lambdaWrap . Sugar.eActions . Sugar.rEntity) exprRef)
+    ((fmap Sugar.lambdaWrap . Sugar.rActions) exprRef)
     ("Def Body", Sugar.fBody func) $ Sugar.fParams func
   equals <- BWidgets.makeLabel "=" $ Widget.toAnimId myId
   let

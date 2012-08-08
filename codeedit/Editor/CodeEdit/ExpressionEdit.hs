@@ -74,13 +74,13 @@ make sExpr = do
     ExpressionGui.atEgWidget
     ( maybe onReadOnly
       (Widget.weakerEvents . expressionEventMap holePicker)
-      (Sugar.eActions (Sugar.rEntity sExpr))
+      (Sugar.rActions sExpr)
     ) .
     ExpressionGui.addType exprId
     (map (Widget.scale Config.typeScaleFactor . ExpressionGui.egWidget) typeEdits) $
     widget
   where
-    exprId = WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity $ sExpr
+    exprId = WidgetIds.fromGuid $ Sugar.rGuid sExpr
 
 makeEditor
   :: MonadF m
@@ -96,10 +96,10 @@ makeEditor sExpr =
     wrapNonHoleExpr . textParenify hasParens $ FuncEdit.make make f
   Sugar.ExpressionInferred i ->
     isAHole (Sugar.iHole i) FocusDelegator.NotDelegating .
-    InferredEdit.make make i . Sugar.guid $ Sugar.rEntity sExpr
+    InferredEdit.make make i $ Sugar.rGuid sExpr
   Sugar.ExpressionHole hole ->
     isAHole hole FocusDelegator.Delegating .
-    HoleEdit.make make hole . Sugar.guid $ Sugar.rEntity sExpr
+    HoleEdit.make make hole $ Sugar.rGuid sExpr
   Sugar.ExpressionGetVariable varRef ->
     notAHole {- TODO: May need parenification -} $ VarEdit.make varRef
   Sugar.ExpressionApply hasParens apply ->
@@ -207,5 +207,5 @@ expressionEventMap holePicker actions =
       case Sugar.rExpression nextArg of
       Sugar.ExpressionHole{} ->
         withPickResultFirst Config.addNextArgumentKeys "Move to next arg" .
-        return . WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity $ nextArg
+        return . WidgetIds.fromGuid $ Sugar.rGuid nextArg
       _ -> mempty

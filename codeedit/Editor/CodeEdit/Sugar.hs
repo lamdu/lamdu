@@ -4,7 +4,7 @@ module Editor.CodeEdit.Sugar
   ( DefinitionRef(..)
   , DefinitionNewType(..)
   , Builtin(..)
-  , Entity(..), Actions(..)
+  , Actions(..)
   , Expression(..), ExpressionRef(..)
   , Where(..), WhereItem(..)
   , Func(..), FuncParam(..)
@@ -57,17 +57,13 @@ data Actions m = Actions
   , mNextArg     :: Maybe (ExpressionRef m)
   }
 
-data Entity m = Entity
-  { guid     :: Guid
-  , eActions :: Maybe (Actions m)
-  }
-
 data HasParens = HaveParens | DontHaveParens
 
 data ExpressionRef m = ExpressionRef
   { rExpression :: Expression m
   , rInferredTypes :: [ExpressionRef m]
-  , rEntity :: Entity m
+  , rGuid :: Guid
+  , rActions :: Maybe (Actions m)
   }
 
 data WhereItem m = WhereItem
@@ -172,7 +168,6 @@ AtFieldTH.make ''Apply
 AtFieldTH.make ''Section
 AtFieldTH.make ''Expression
 
-AtFieldTH.make ''Entity
 AtFieldTH.make ''Actions
 
 data Loopable a = Loop | NonLoop a
@@ -274,9 +269,6 @@ liftTransaction = Sugar . lift
 
 type Convertor m = ExprEntity m -> Sugar m (ExpressionRef m)
 
-makeEntity :: Monad m => ExprEntity m -> Entity m
-makeEntity ee = makeEntityGuid (eeGuid ee) ee
-
 mkCutter :: Monad m => Data.ExpressionIRef -> T m Guid -> T m Guid
 mkCutter iref replaceWithHole = do
   Anchors.modP Anchors.clipboards (iref:)
@@ -297,13 +289,6 @@ mkActions stored =
   where
     guidify = liftM Data.exprIRefGuid
     doReplace = guidify $ DataOps.replaceWithHole stored
-
-makeEntityGuid :: Monad m => Guid -> ExprEntity m -> Entity m
-makeEntityGuid exprGuid exprI =
-  Entity
-  { guid = exprGuid
-  , eActions = fmap mkActions $ eeProp exprI
-  }
 
 derefRef
   :: (Monad m, RandomGen g)
@@ -327,7 +312,8 @@ mkExpressionRef ee expr = do
     ExpressionRef
     { rExpression = expr
     , rInferredTypes = inferredTypesRefs
-    , rEntity = makeEntity ee
+    , rGuid = eeGuid ee
+    , rActions = fmap mkActions $ eeProp ee
     }
   where
     gen =
@@ -479,7 +465,7 @@ setAddArg exprI =
   maybe id f $ eeProp exprI
   where
     f stored =
-      atREntity . atEActions . fmap . atAddNextArg . const .
+      atRActions . fmap . atAddNextArg . const .
       liftM Data.exprIRefGuid $ DataOps.callWithArg stored
 
 atFunctionType :: ExpressionRef m -> ExpressionRef m
@@ -542,7 +528,7 @@ convertApplyPrefix (Data.Apply funcI argI) exprI = do
     newArgRef =
       setAddArg exprI $
       atRExpression addParens argRef
-    setNextArg = atREntity . atEActions . fmap . atMNextArg . const $ Just newArgRef
+    setNextArg = atRActions . fmap . atMNextArg . const $ Just newArgRef
     newFuncRef =
       setNextArg .
       addApplyChildParens .
