@@ -23,8 +23,8 @@ make
 make makeExpressionEdit (Sugar.Pi param resultType) myId =
   OT.assignCursor myId typeId $ do
     (resultTypeEdit, usedVars) <-
-      OT.usedVariables $ FuncEdit.makeBodyEdit makeExpressionEdit
-      [paramId] resultType
+      OT.usedVariables $
+      FuncEdit.makeBodyEdit makeExpressionEdit [paramId] resultType
     let
       paramUsed = paramGuid `elem` usedVars
       redirectCursor cursor
