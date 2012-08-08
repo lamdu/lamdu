@@ -27,6 +27,8 @@
 * ParamEdit needs to take the eventmap/actions of ExpressionEdit and
   also add them to the param via the FuncParam actions
 
+* Fix typematic. It now triggers when things are stuck even though user unpressed the button.
+
 -------
 
 * 1-use wheres to Sugar as "Titled Expressions"
