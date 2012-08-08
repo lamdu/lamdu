@@ -14,7 +14,9 @@ module Editor.Anchors
   , Pane
   , dbStore, DBTag
   , viewStore, ViewTag
-  , assocDataRef, assocNameRef, variableNameRef
+  , assocDataRef
+  , assocNameRef, assocSearchTermRef
+  , variableNameRef
   , makePane, makeDefinition, newPane
   , savePreJumpPosition, jumpBack
   , MkProperty, getP, setP, modP
@@ -144,12 +146,22 @@ assocDataRef str guid = do
     set Nothing = Transaction.delete assocGuid
     set (Just x) = Transaction.writeGuid assocGuid x
 
-assocNameRef :: Monad m => Guid -> MkProperty t m String
-assocNameRef =
-  liftM (Property.pureCompose (fromMaybe "") f) . assocDataRef "Name"
+assocDataRefDef
+  :: (Eq def, Binary def, Monad m)
+  => def -> SBS.ByteString
+  -> Guid -> MkProperty t m def
+assocDataRefDef def name =
+  liftM (Property.pureCompose (fromMaybe def) f) . assocDataRef name
   where
-    f "" = Nothing
-    f x = Just x
+    f x
+      | x == def = Nothing
+      | otherwise = Just x
+
+assocNameRef :: Monad m => Guid -> MkProperty t m String
+assocNameRef = assocDataRefDef "" "Name"
+
+assocSearchTermRef :: Monad m => Guid -> MkProperty t m String
+assocSearchTermRef = assocDataRefDef "" "searchTerm"
 
 variableNameRef
   :: Monad m => Data.VariableRef -> MkProperty t m String

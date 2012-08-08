@@ -8,7 +8,7 @@ import Data.Function (on)
 import Data.Hashable(hash)
 import Data.List (isInfixOf, isPrefixOf)
 import Data.List.Utils (sortOn)
-import Data.Maybe (fromMaybe, isJust, listToMaybe)
+import Data.Maybe (isJust, listToMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
@@ -309,9 +309,7 @@ make
      (Maybe (ResultPicker m), ExpressionGui m)
 make makeExpressionEdit hole guid myId = do
   cursor <- OT.readCursor
-  searchTermProp <-
-    liftM (Property.pureCompose (fromMaybe "") Just) . OT.transaction $
-    Anchors.assocDataRef "searchTerm" guid
+  searchTermProp <- OT.transaction $ Anchors.assocSearchTermRef guid
   let
     searchText = Property.value searchTermProp
     snippet
