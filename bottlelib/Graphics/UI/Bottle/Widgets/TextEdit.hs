@@ -76,8 +76,8 @@ makeTextEditCursor myId = Widget.joinId myId . (:[]) . BinUtils.encodeS
 
 rightSideOfRect :: Rect -> Rect
 rightSideOfRect rect =
-  (Lens.set Rect.left) (rect ^. Rect.right) .
-  (Lens.set Rect.width) 0 $ rect
+  Lens.set Rect.left (rect ^. Rect.right) .
+  Lens.set Rect.width 0 $ rect
 
 cursorRects :: Style -> String -> [Rect]
 cursorRects style str =

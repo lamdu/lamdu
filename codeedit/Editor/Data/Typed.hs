@@ -483,7 +483,7 @@ unifyConstraints exprRef aConstraints bConstraints =
           unify body destRef
         -- We now know our Apply parent is not a redex, unify the
         -- Apply into the value
-        (ApplyFuncValue, _) -> do
+        (ApplyFuncValue, _) ->
           unify destRef =<<
             makeSingletonRef zeroGuid
             (Data.ExpressionApply (Data.Apply exprRef argRef))
