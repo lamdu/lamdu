@@ -7,14 +7,14 @@ module Editor.CodeEdit.Sugar
   , Actions(..)
   , Expression(..), ExpressionRef(..)
   , Where(..), WhereItem(..)
-  , Func(..), FuncParam(..)
+  , Func(..), FuncParam(..), FuncParamActions(..)
   , Pi(..), Apply(..), Section(..), Hole(..), LiteralInteger(..), Inferred(..)
   , HasParens(..)
   , convertDefinition
   , convertExpression, convertExpressionPure
   ) where
 
-import Control.Applicative (liftA2)
+import Control.Applicative ((<$>), (<*>))
 import Control.Arrow (second)
 import Control.Monad (join, guard, liftM, mzero)
 import Control.Monad.ListT (ListT)
@@ -78,11 +78,15 @@ data Where m = Where
   , wBody :: ExpressionRef m
   }
 
+data FuncParamActions m = FuncParamActions
+  { fpaAddNextParam :: T m Guid
+  , fpaDelete :: T m Guid
+  }
+
 data FuncParam m = FuncParam
   { fpGuid :: Guid
-  , fpMDelete :: Maybe (T m Guid)
   , fpType :: ExpressionRef m
-  , fpBody :: ExpressionRef m
+  , fpMActions :: Maybe (FuncParamActions m)
   }
 
 -- Multi-param Lambda
@@ -169,6 +173,7 @@ AtFieldTH.make ''Section
 AtFieldTH.make ''Expression
 
 AtFieldTH.make ''Actions
+AtFieldTH.make ''FuncParamActions
 
 data Loopable a = Loop | NonLoop a
 
@@ -274,13 +279,17 @@ mkCutter iref replaceWithHole = do
   Anchors.modP Anchors.clipboards (iref:)
   replaceWithHole
 
+lambdaGuidToParamGuid :: Guid -> Guid
+lambdaGuidToParamGuid = Guid.combine $ Guid.fromString "param"
+
 mkActions :: Monad m => Data.ExpressionIRefProperty (T m) -> Actions m
 mkActions stored =
   Actions
   { addNextArg = guidify $ DataOps.callWithArg stored
   , callWithArg = guidify $ DataOps.callWithArg stored
   , giveAsArg = guidify $ DataOps.giveAsArg stored
-  , lambdaWrap = guidify $ DataOps.lambdaWrap stored
+  , lambdaWrap =
+    liftM lambdaGuidToParamGuid . guidify $ DataOps.lambdaWrap stored
   , addWhereItem = guidify $ DataOps.redexWrap stored
   , replace = doReplace
   , cut = mkCutter (Property.value stored) doReplace
@@ -320,17 +329,27 @@ mkExpressionRef ee expr = do
       Random.mkStdGen . (*2) . BinaryUtils.decodeS . Guid.bs $
       eeGuid ee
 
-mkMDelete :: Monad m => ExprEntity m -> ExprEntity m -> Maybe (T m Guid)
-mkMDelete parent replacer =
-  liftA2 mkDelete (eeProp parent) (eeProp replacer)
+mkDelete
+  :: Monad m
+  => Data.ExpressionIRefProperty (T m)
+  -> Data.ExpressionIRefProperty (T m)
+  -> T m Guid
+mkDelete parentP replacerP = do
+  Property.set parentP replacerI
+  return $ Data.exprIRefGuid replacerI
   where
-    mkDelete parentP replacerP = do
-      let replacerI = Property.value replacerP
-      Property.set parentP replacerI
-      return $ Data.exprIRefGuid replacerI
+    replacerI = Property.value replacerP
 
-lambdaGuidToParamGuid :: Guid -> Guid
-lambdaGuidToParamGuid = Guid.combine $ Guid.fromString "param"
+mkFuncParamActions
+  :: Monad m
+  => Data.ExpressionIRefProperty (T m)
+  -> Data.ExpressionIRefProperty (T m)
+  -> Actions m
+  -> FuncParamActions m
+mkFuncParamActions parentP replacerP bodyActions = FuncParamActions
+  { fpaDelete = mkDelete parentP replacerP
+  , fpaAddNextParam = lambdaWrap bodyActions
+  }
 
 convertLambdaParam
   :: Monad m
@@ -341,9 +360,12 @@ convertLambdaParam (Data.Lambda paramTypeI bodyI) bodyRef exprI = do
   typeExpr <- convertExpressionI paramTypeI
   return FuncParam
     { fpGuid = lambdaGuidToParamGuid $ eeGuid exprI
-    , fpMDelete = mkMDelete exprI bodyI
     , fpType = typeExpr
-    , fpBody = bodyRef
+    , fpMActions =
+      mkFuncParamActions <$>
+      eeProp exprI <*>
+      eeProp bodyI <*>
+      rActions bodyRef
     }
 
 convertLambdaBody
@@ -378,11 +400,12 @@ convertFunc lambda exprI = do
   mkExpressionRef exprI .
     ExpressionFunc DontHaveParens $
     case rExpression sBody of
-      ExpressionFunc _ (Func params x) ->
-        Func (deleteToNextParam param : params) x
+      ExpressionFunc _ (Func params body) ->
+        Func (deleteToNextParam param : params) body
       _ -> Func [param] sBody
   where
-    deleteToNextParam = atFpMDelete . fmap . liftM $ lambdaGuidToParamGuid
+    deleteToNextParam =
+      atFpMActions . fmap . atFpaDelete . liftM $ lambdaGuidToParamGuid
 
 
 convertPi
@@ -414,7 +437,7 @@ convertWhere valueRef lambdaI lambda@(Data.Lambda typeI bodyI) applyI = do
   where
     item typeRef = WhereItem
       { wiGuid = eeGuid lambdaI
-      , wiMDelete = mkMDelete applyI bodyI
+      , wiMDelete = mkDelete <$> eeProp applyI <*> eeProp bodyI
       , wiValue = valueRef
       , wiType = typeRef
       }
