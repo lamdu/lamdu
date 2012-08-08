@@ -12,7 +12,9 @@ isInfixName "" = False
 isInfixName name = all (not . Char.isAlphaNum) name
 
 isInfixVar :: Monad m => Data.VariableRef -> Transaction t m Bool
-isInfixVar = liftM isInfixName . Anchors.getP . Anchors.variableNameRef
+isInfixVar =
+  liftM isInfixName . Anchors.getP .
+  Anchors.assocNameRef . Data.variableRefGuid
 
 infixOp
   :: Monad m

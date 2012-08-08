@@ -16,7 +16,6 @@ module Editor.Anchors
   , viewStore, ViewTag
   , assocDataRef
   , assocNameRef, assocSearchTermRef
-  , variableNameRef
   , makePane, makeDefinition, newPane
   , savePreJumpPosition, jumpBack
   , MkProperty, getP, setP, modP
@@ -162,10 +161,6 @@ assocNameRef = assocDataRefDef "" "Name"
 
 assocSearchTermRef :: Monad m => Guid -> MkProperty t m String
 assocSearchTermRef = assocDataRefDef "" "searchTerm"
-
-variableNameRef
-  :: Monad m => Data.VariableRef -> MkProperty t m String
-variableNameRef = assocNameRef . Data.variableRefGuid
 
 newPane
   :: Monad m => Data.DefinitionIRef -> Transaction ViewTag m ()

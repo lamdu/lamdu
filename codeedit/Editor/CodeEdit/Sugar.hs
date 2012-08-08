@@ -580,11 +580,11 @@ convertApplyPrefix (Data.Apply funcI argI) exprI = do
 
 convertGetVariable :: Monad m => Data.VariableRef -> Convertor m
 convertGetVariable varRef exprI = do
-  name <- liftTransaction . Anchors.getP $ Anchors.variableNameRef varRef
+  isInfix <- liftTransaction $ Infix.isInfixVar varRef
   getVarExpr <-
     mkExpressionRef exprI $
     mkExpressionGetVariable varRef
-  if Infix.isInfixName name
+  if isInfix
     then
       mkExpressionRef exprI .
       ExpressionSection HaveParens $
