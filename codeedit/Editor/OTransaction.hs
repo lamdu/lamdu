@@ -21,8 +21,8 @@ import Editor.Anchors (MkProperty)
 import Editor.ITransaction (ITransaction)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
-import qualified Control.Monad.Trans.Reader as Reader
-import qualified Control.Monad.Trans.Writer as Writer
+import Control.Monad.Trans.RWS (RWST, runRWST)
+import qualified Control.Monad.Trans.RWS as RWS
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Store.Property as Property
 import qualified Graphics.DrawingCombinators as Draw
@@ -39,46 +39,31 @@ AtFieldTH.make ''OTransactionEnv
 type WidgetT t m = Widget (ITransaction t m)
 type TWidget t m = OTransaction t m (WidgetT t m)
 
-newtype OTransaction t m a = OTransaction {
-  unOTransaction
-  :: Reader.ReaderT OTransactionEnv
-     (Writer.WriterT [Guid]
-      (Transaction t m)) a
+newtype OTransaction t m a = OTransaction
+  { unOTransaction :: RWST OTransactionEnv [Guid] () (Transaction t m) a
   }
   deriving (Functor, Applicative, Monad)
 AtFieldTH.make ''OTransaction
 
-liftEnv
-  :: Reader.ReaderT OTransactionEnv
-     (Writer.WriterT [Guid] (Transaction t m)) a
-  -> OTransaction t m a
-liftEnv = OTransaction
-
-liftUsedvars
-  :: Monad m
-  => Writer.WriterT [Guid] (Transaction t m) a
-  -> OTransaction t m a
-liftUsedvars = liftEnv . lift
-
 transaction :: Monad m => Transaction t m a -> OTransaction t m a
-transaction = liftUsedvars . lift
+transaction = OTransaction . lift
 
 runOTransaction
   :: Monad m
   => Widget.Id -> TextEdit.Style
   -> OTransaction t m a -> Transaction t m a
-runOTransaction cursor style =
-  liftM fst . Writer.runWriterT .
-  (`Reader.runReaderT` OTransactionEnv cursor style) .
-  unOTransaction
+runOTransaction cursor style (OTransaction action) =
+  liftM f $ runRWST action (OTransactionEnv cursor style) ()
+  where
+    f (x, _, _) = x
 
 markVariablesAsUsed :: Monad m => [Guid] -> OTransaction t m ()
-markVariablesAsUsed = liftUsedvars . Writer.tell
+markVariablesAsUsed = OTransaction . RWS.tell
 
 usedVariables
   :: Monad m
   => OTransaction t m a -> OTransaction t m (a, [Guid])
-usedVariables = atOTransaction $ Reader.mapReaderT Writer.listen
+usedVariables = atOTransaction RWS.listen
 
 unWrapInner
   :: Monad m
@@ -91,20 +76,20 @@ unWrapInner unwrap act = do
   transaction . unwrap $ runOTransaction cursor style act
 
 readCursor :: Monad m => OTransaction t m Widget.Id
-readCursor = liftEnv $ Reader.asks envCursor
+readCursor = OTransaction $ RWS.asks envCursor
 
 subCursor :: Monad m => Widget.Id -> OTransaction t m (Maybe AnimId)
 subCursor folder = liftM (Widget.subId folder) readCursor
 
 readTextStyle :: Monad m => OTransaction t m TextEdit.Style
-readTextStyle = liftEnv $ Reader.asks envTextStyle
+readTextStyle = OTransaction $ RWS.asks envTextStyle
 
 atCursor
-  :: (Widget.Id -> Widget.Id) -> OTransaction t m a -> OTransaction t m a
-atCursor = atOTransaction . Reader.withReaderT . atEnvCursor
+  :: Monad m => (Widget.Id -> Widget.Id) -> OTransaction t m a -> OTransaction t m a
+atCursor = atOTransaction . RWS.local . atEnvCursor
 
 assignCursor
-  :: Widget.Id -> Widget.Id -> OTransaction t m a -> OTransaction t m a
+  :: Monad m => Widget.Id -> Widget.Id -> OTransaction t m a -> OTransaction t m a
 assignCursor src dest =
   atCursor replace
   where
@@ -113,12 +98,14 @@ assignCursor src dest =
       | otherwise = cursor
 
 atTextStyle
-  :: (TextEdit.Style -> TextEdit.Style)
+  :: Monad m
+  => (TextEdit.Style -> TextEdit.Style)
   -> OTransaction t m a -> OTransaction t m a
-atTextStyle = atOTransaction . Reader.withReaderT . atEnvTextStyle
+atTextStyle = atOTransaction . RWS.local . atEnvTextStyle
 
 setTextSizeColor
-  :: Int
+  :: Monad m
+  => Int
   -> Draw.Color
   -> OTransaction t m (Widget f)
   -> OTransaction t m (Widget f)

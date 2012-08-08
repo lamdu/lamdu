@@ -21,7 +21,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 
-setColor :: OTransaction t m a -> OTransaction t m a
+setColor :: Monad m => OTransaction t m a -> OTransaction t m a
 setColor = BWidgets.setTextColor Config.literalIntColor
 
 makeIntView

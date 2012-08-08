@@ -193,7 +193,7 @@ hboxCenteredSpaced = hboxAlign 0.5 . intersperse spaceWidget
 spaceView :: (Anim.Size, Anim.Frame)
 spaceView = Spacer.makeHorizontal 20
 
-setTextColor :: Draw.Color -> OTransaction t m a -> OTransaction t m a
+setTextColor :: Monad m => Draw.Color -> OTransaction t m a -> OTransaction t m a
 setTextColor = OT.atTextStyle . TextEdit.atSTextViewStyle . TextView.atStyleColor . const
 
 gridHSpaced :: [[(Grid.Alignment, Widget f)]] -> Widget f
