@@ -97,7 +97,7 @@ makeMoreResults myId =
 makeResultVariable ::
   MonadF m => Data.VariableRef -> OTransaction ViewTag m Result
 makeResultVariable varRef = do
-  varName <- OT.getP $ Anchors.variableNameRef varRef
+  varName <- OT.getName $ Data.variableRefGuid varRef
   return Result
     { resultNames = [varName]
     , resultExpr = toPureGuidExpr $ Data.ExpressionGetVariable varRef

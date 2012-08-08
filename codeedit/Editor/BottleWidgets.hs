@@ -2,7 +2,7 @@ module Editor.BottleWidgets
   ( makeTextView, makeLabel
   , makeFocusableView, makeFocusableTextView
   , wrapDelegated
-  , makeTextEdit, makeLineEdit, makeWordEdit, makeNameEdit, getDisplayNameOf
+  , makeTextEdit, makeLineEdit, makeWordEdit, makeNameEdit
   , hboxAlign, vboxAlign
   , hboxSpaced, hboxCenteredSpaced
   , hboxCentered, vboxCentered
@@ -19,12 +19,10 @@ import Data.ByteString.Char8 (pack)
 import Data.List (intersperse)
 import Data.Monoid (mappend)
 import Data.Store.Guid (Guid)
-import Data.Store.Transaction (Transaction)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (TWidget, OTransaction)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
-import qualified Data.Store.Guid as Guid
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
@@ -133,23 +131,13 @@ makeWordEdit =
   removeKeys makeLineEdit $
   EventMap.ModKey EventMap.noMods EventMap.KeySpace
 
-anonName :: Guid -> String
-anonName guid = "<" ++ take 4 (Guid.asHex guid) ++ "..>"
-
-getDisplayNameOf
-  :: Monad m
-  => Guid -> Transaction t m String
-getDisplayNameOf guid = do
-  name <- Anchors.getP $ Anchors.assocNameRef guid
-  return $ if null name then anonName guid else name
-
 makeNameEdit
-  :: Monad m => String -> Guid -> Widget.Id -> TWidget t m
-makeNameEdit editingEmptyStr ident myId =
-  (OT.atTextStyle . TextEdit.atSEmptyUnfocusedString . const)
-    (anonName ident) .
-  (OT.atTextStyle . TextEdit.atSEmptyFocusedString . const)
-    editingEmptyStr $
+  :: Monad m => Guid -> Widget.Id -> TWidget t m
+makeNameEdit ident myId = do
+  name <- OT.getName ident
+  (OT.atTextStyle . TextEdit.atSEmptyUnfocusedString . const) name .
+    (OT.atTextStyle . TextEdit.atSEmptyFocusedString . const)
+    (concat ["<", name, ">"]) $
     OT.transaction (Anchors.assocNameRef ident) >>=
     flip makeEditor myId
   where

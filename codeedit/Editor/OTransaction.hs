@@ -8,23 +8,27 @@ module Editor.OTransaction
   , atTextStyle, setTextSizeColor
   , markVariablesAsUsed, usedVariables
   , getP
+  , getName
   ) where
 
 {- Outer transaction -}
 
-import Control.Applicative (Applicative)
+import Control.Applicative (Applicative, liftA2)
 import Control.Monad (liftM)
 import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.RWS (RWST, runRWST)
+import Data.Map (Map)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (MkProperty)
 import Editor.ITransaction (ITransaction)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
-import Control.Monad.Trans.RWS (RWST, runRWST)
 import qualified Control.Monad.Trans.RWS as RWS
 import qualified Data.AtFieldTH as AtFieldTH
+import qualified Data.Map as Map
 import qualified Data.Store.Property as Property
+import qualified Editor.Anchors as Anchors
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
@@ -39,8 +43,20 @@ AtFieldTH.make ''OTransactionEnv
 type WidgetT t m = Widget (ITransaction t m)
 type TWidget t m = OTransaction t m (WidgetT t m)
 
+data NameGenState = NameGenState
+  { ngUnusedNames :: [String]
+  , ngUsedNames :: Map Guid String
+  }
+
+initialNameGenState :: NameGenState
+initialNameGenState =
+  NameGenState names Map.empty
+  where
+    alphabet = map (:[]) ['a'..'z']
+    names = alphabet ++ liftA2 (++) names alphabet
+
 newtype OTransaction t m a = OTransaction
-  { unOTransaction :: RWST OTransactionEnv [Guid] () (Transaction t m) a
+  { unOTransaction :: RWST OTransactionEnv [Guid] NameGenState (Transaction t m) a
   }
   deriving (Functor, Applicative, Monad)
 AtFieldTH.make ''OTransaction
@@ -53,9 +69,27 @@ runOTransaction
   => Widget.Id -> TextEdit.Style
   -> OTransaction t m a -> Transaction t m a
 runOTransaction cursor style (OTransaction action) =
-  liftM f $ runRWST action (OTransactionEnv cursor style) ()
+  liftM f $ runRWST action (OTransactionEnv cursor style) initialNameGenState
   where
     f (x, _, _) = x
+
+getName :: Monad m => Guid -> OTransaction t m String
+getName guid = do
+  storedName <- transaction . Anchors.getP $ Anchors.assocNameRef guid
+  -- TODO: maybe use Maybe?
+  if null storedName
+    then do
+      nameGen <- OTransaction RWS.get
+      case Map.lookup guid (ngUsedNames nameGen) of
+        Just x -> return x
+        Nothing -> do
+          let (name : nextNames) = ngUnusedNames nameGen
+          OTransaction $ RWS.put nameGen
+            { ngUnusedNames = nextNames
+            , ngUsedNames = Map.insert guid name $ ngUsedNames nameGen
+            }
+          return name
+    else return storedName
 
 markVariablesAsUsed :: Monad m => [Guid] -> OTransaction t m ()
 markVariablesAsUsed = OTransaction . RWS.tell

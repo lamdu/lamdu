@@ -36,7 +36,7 @@ makeParamNameEdit
 makeParamNameEdit ident =
   BWidgets.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
   (BWidgets.setTextColor Config.parameterColor .
-   BWidgets.makeNameEdit "<unnamed param>" ident) $
+   BWidgets.makeNameEdit ident) $
   WidgetIds.paramId ident
 
 addJumpToRHS

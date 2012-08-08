@@ -27,8 +27,7 @@ makeView
   -> Widget.Id
   -> OTransaction ViewTag m (ExpressionGui m)
 makeView var myId = do
-  name <-
-    OT.transaction . BWidgets.getDisplayNameOf $ Data.variableRefGuid var
+  name <- OT.getName $ Data.variableRefGuid var
   liftM ExpressionGui.fromValueWidget .
     BWidgets.setTextColor (colorOf var) $
     BWidgets.makeFocusableTextView name myId
