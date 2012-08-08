@@ -168,24 +168,22 @@ expressionEventMap holePicker actions =
        Sugar.addNextArg actions)
     cut =
       if isHole then mempty else
-      mkEventMap Config.cutKeys "Cut" WidgetIds.fromGuid $
+      mkEventMap Config.cutKeys "Cut" id $
       Sugar.cut actions
     replace =
       if isHole then mempty else
-      mkEventMap Config.replaceKeys "Replace" diveGuid $
+      mkEventMap Config.replaceKeys "Replace" FocusDelegator.delegatingId $
       Sugar.replace actions
     lambdaWrap =
-      mkEventMap Config.lambdaWrapKeys "Lambda wrap" diveParam $
+      mkEventMap Config.lambdaWrapKeys "Lambda wrap" FocusDelegator.delegatingId $
       Sugar.lambdaWrap actions
     addWhereItem =
-      mkEventMap Config.addWhereItemKeys "Add where item" diveParam $
+      mkEventMap Config.addWhereItemKeys "Add where item" FocusDelegator.delegatingId $
       Sugar.addWhereItem actions
 
-    diveGuid = FocusDelegator.delegatingId . WidgetIds.fromGuid
-    diveParam = FocusDelegator.delegatingId . WidgetIds.paramId
     mkEventMap keys doc f =
       Widget.keysEventMapMovesCursor keys doc .
-      liftM f . IT.transaction
+      liftM (f . WidgetIds.fromGuid) . IT.transaction
 
     withPickResultFirst keys doc action =
       case holePicker of

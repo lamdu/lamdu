@@ -52,9 +52,6 @@ varId = fromGuid . Data.variableRefGuid
 diveIn :: Functor f => f (IRef a) -> f Widget.Id
 diveIn = fmap $ FocusDelegator.delegatingId . fromIRef
 
-paramId :: Guid -> Widget.Id
-paramId x = Widget.joinId (fromGuid x) ["param"]
-
 underlineId :: AnimId -> AnimId
 underlineId = flip mappend ["underline"]
 

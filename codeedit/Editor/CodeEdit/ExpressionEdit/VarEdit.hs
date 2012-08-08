@@ -44,7 +44,8 @@ make varRef myId = do
   varRefView <- makeView varRef myId
   let
     jumpToDefinitionEventMap =
-      Widget.keysEventMapMovesCursor Config.jumpToDefinitionKeys "Jump to definition" jumpToDefinition
+      Widget.keysEventMapMovesCursor Config.jumpToDefinitionKeys "Jump to definition"
+      jumpToDefinition
     jumpToDefinition =
       case varRef of
         Data.DefinitionRef defI -> IT.transaction $ do
@@ -53,5 +54,5 @@ make varRef myId = do
           return $ WidgetIds.fromIRef defI
         Data.ParameterRef paramGuid -> IT.transaction $ do
           Anchors.savePreJumpPosition myId
-          return $ WidgetIds.paramId paramGuid
+          return $ WidgetIds.fromGuid paramGuid
   return $ ExpressionGui.atEgWidget (Widget.weakerEvents jumpToDefinitionEventMap) varRefView

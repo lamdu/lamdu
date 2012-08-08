@@ -45,7 +45,7 @@ make makeExpressionEdit (Sugar.Pi param resultType) myId =
         ExpressionGui.hboxSpaced [paramEdit, ExpressionGui.fromValueWidget rightArrowLabel, resultTypeEdit]
   where
     paramGuid = Sugar.fpGuid param
-    paramId = WidgetIds.paramId paramGuid
+    paramId = WidgetIds.fromGuid paramGuid
     typeId =
       WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity . Sugar.fpType $
       param

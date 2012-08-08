@@ -36,8 +36,7 @@ makeParamNameEdit
 makeParamNameEdit ident =
   BWidgets.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
   (BWidgets.setTextColor Config.parameterColor .
-   BWidgets.makeNameEdit ident) $
-  WidgetIds.paramId ident
+   BWidgets.makeNameEdit ident) $ WidgetIds.fromGuid ident
 
 addJumpToRHS
   :: MonadF m => (E.Doc, Sugar.ExpressionRef m) -> WidgetT ViewTag m -> WidgetT ViewTag m
@@ -56,16 +55,14 @@ makeParamEdit
   -> Sugar.FuncParam m
   -> OTransaction ViewTag m (ExpressionGui m)
 makeParamEdit makeExpressionEdit rhs param =
-  OT.assignCursor myId (WidgetIds.paramId ident) .
   (liftM . ExpressionGui.atEgWidget)
   (addJumpToRHS rhs . Widget.weakerEvents paramEventMap) $ do
     paramNameEdit <- makeParamNameEdit ident
     paramTypeEdit <- makeExpressionEdit $ Sugar.fpType param
-    return . ExpressionGui.addType myId
+    return . ExpressionGui.addType (WidgetIds.fromGuid ident)
       [ExpressionGui.egWidget paramTypeEdit] $
       ExpressionGui.fromValueWidget paramNameEdit
   where
-    myId = Widget.joinId (WidgetIds.fromGuid ident) ["param"]
     ident = Sugar.fpGuid param
     paramEventMap = mconcat
       [ paramDeleteEventMap
@@ -74,7 +71,7 @@ makeParamEdit makeExpressionEdit rhs param =
     paramAddNextEventMap =
       maybe mempty
       (Widget.keysEventMapMovesCursor Config.addNextParamKeys "Add next parameter" .
-       liftM (FocusDelegator.delegatingId . WidgetIds.paramId) .
+       liftM (FocusDelegator.delegatingId . WidgetIds.fromGuid) .
        IT.transaction . Sugar.lambdaWrap) .
       Sugar.eActions . Sugar.rEntity $
       Sugar.fpBody param
@@ -132,5 +129,5 @@ make makeExpressionEdit (Sugar.Func params body) myId =
     paramsEdit <- makeParamsEdit makeExpressionEdit ("Func Body", body) params
     return $ ExpressionGui.hboxSpaced [ lambdaLabel, paramsEdit, rightArrowLabel, bodyEdit ]
   where
-    lhs = map (WidgetIds.paramId . Sugar.fpGuid) params
+    lhs = map (WidgetIds.fromGuid . Sugar.fpGuid) params
     bodyId = WidgetIds.fromGuid . Sugar.guid $ Sugar.rEntity body

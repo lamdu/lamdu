@@ -57,7 +57,7 @@ makeLHSEdit makeExpressionEdit myId ident mAddFirstParameter rhs params = do
       maybe mempty
       (Widget.keysEventMapMovesCursor Config.addNextParamKeys
        "Add parameter" .
-       liftM (FocusDelegator.delegatingId . WidgetIds.paramId) .
+       liftM (FocusDelegator.delegatingId . WidgetIds.fromGuid) .
        IT.transaction)
       mAddFirstParameter
 
@@ -81,7 +81,7 @@ makeParts makeExpressionEdit myId guid exprRef = do
     ("Def Body", Sugar.fBody func) $ Sugar.fParams func
   equals <- BWidgets.makeLabel "=" $ Widget.toAnimId myId
   let
-    lhs = myId : map (WidgetIds.paramId . Sugar.fpGuid) (Sugar.fParams func)
+    lhs = myId : map (WidgetIds.fromGuid . Sugar.fpGuid) (Sugar.fParams func)
   rhsEdit <-
     FuncEdit.makeBodyEdit makeExpressionEdit lhs $ Sugar.fBody func
   return

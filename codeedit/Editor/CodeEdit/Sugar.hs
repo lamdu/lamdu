@@ -343,6 +343,9 @@ mkMDelete parent replacer =
       Property.set parentP replacerI
       return $ Data.exprIRefGuid replacerI
 
+lambdaGuidToParamGuid :: Guid -> Guid
+lambdaGuidToParamGuid = Guid.combine $ Guid.fromString "param"
+
 convertLambdaParam
   :: Monad m
   => Data.Lambda (ExprEntity m)
@@ -351,7 +354,7 @@ convertLambdaParam
 convertLambdaParam (Data.Lambda paramTypeI bodyI) bodyRef exprI = do
   typeExpr <- convertExpressionI paramTypeI
   return FuncParam
-    { fpGuid = eeGuid exprI
+    { fpGuid = lambdaGuidToParamGuid $ eeGuid exprI
     , fpMDelete = mkMDelete exprI bodyI
     , fpType = typeExpr
     , fpBody = bodyRef
@@ -387,10 +390,13 @@ convertFunc
 convertFunc lambda exprI = do
   (param, sBody) <- convertLambda lambda exprI
   mkExpressionRef exprI .
-    ExpressionFunc DontHaveParens . atFParams (param :) $
+    ExpressionFunc DontHaveParens $
     case rExpression sBody of
-      ExpressionFunc _ x -> x
-      _ -> Func [] sBody
+      ExpressionFunc _ (Func params x) ->
+        Func (deleteToNextParam param : params) x
+      _ -> Func [param] sBody
+  where
+    deleteToNextParam = atFpMDelete . fmap . liftM $ lambdaGuidToParamGuid
 
 
 convertPi
