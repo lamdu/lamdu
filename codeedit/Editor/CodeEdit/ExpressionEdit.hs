@@ -76,7 +76,8 @@ make sExpr = do
       (Widget.weakerEvents . expressionEventMap holePicker)
       (Sugar.eActions (Sugar.rEntity sExpr))
     ) .
-    ExpressionGui.addType exprId (map ExpressionGui.egWidget typeEdits) $
+    ExpressionGui.addType exprId
+    (map (Widget.scale Config.typeScaleFactor . ExpressionGui.egWidget) typeEdits) $
     widget
   where
     exprId = WidgetIds.fromGuid . Sugar.guid . Sugar.rEntity $ sExpr

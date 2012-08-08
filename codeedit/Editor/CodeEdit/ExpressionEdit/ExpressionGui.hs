@@ -80,10 +80,7 @@ addType exprId typeEdits eg =
     widget = egWidget eg
     width = view Vector2.first . Widget.wSize
     underLineWidth = max (width widget) (width typeEdit)
-    typeEdit =
-      addTint . addBackground .
-      Widget.scale Config.typeScaleFactor $
-      BWidgets.vboxCentered typeEdits
+    typeEdit = addTint . addBackground $ BWidgets.vboxCentered typeEdits
     isError = length typeEdits >= 2
     typeErrorAnimId = Widget.toAnimId exprId ++ ["type error background"]
     addTint = (Widget.atWFrame . Anim.onImages . Draw.tint) Config.inferredTypeTint
