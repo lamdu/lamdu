@@ -9,50 +9,50 @@ import Editor.OTransaction (OTransaction)
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
+import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
-import qualified Editor.Data as Data
 import qualified Editor.ITransaction as IT
 import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Widget as Widget
 
-colorOf :: Data.VariableRef -> Draw.Color
-colorOf (Data.DefinitionRef _) = Config.definitionColor
-colorOf (Data.ParameterRef _) = Config.parameterColor
+colorOf :: Sugar.GetVariable -> Draw.Color
+colorOf (Sugar.GetDefinition _) = Config.definitionColor
+colorOf (Sugar.GetParameter _) = Config.parameterColor
 
 makeView
   :: MonadF m
-  => Data.VariableRef
+  => Sugar.GetVariable
   -> Widget.Id
   -> OTransaction ViewTag m (ExpressionGui m)
 makeView var myId = do
-  name <- OT.getName $ Data.variableRefGuid var
+  name <- OT.getName $ Sugar.gvGuid var
   liftM ExpressionGui.fromValueWidget .
     BWidgets.setTextColor (colorOf var) $
     BWidgets.makeFocusableTextView name myId
 
 make
   :: MonadF m
-  => Data.VariableRef
+  => Sugar.GetVariable
   -> Widget.Id
   -> OTransaction ViewTag m (ExpressionGui m)
-make varRef myId = do
-  case varRef of
-    Data.ParameterRef paramGuid -> OT.markVariablesAsUsed [paramGuid]
+make getVar myId = do
+  case getVar of
+    Sugar.GetParameter guid -> OT.markVariablesAsUsed [guid]
     _ -> return ()
-  varRefView <- makeView varRef myId
+  getVarView <- makeView getVar myId
   let
     jumpToDefinitionEventMap =
       Widget.keysEventMapMovesCursor Config.jumpToDefinitionKeys "Jump to definition"
       jumpToDefinition
     jumpToDefinition =
-      case varRef of
-        Data.DefinitionRef defI -> IT.transaction $ do
+      case getVar of
+        Sugar.GetDefinition defI -> IT.transaction $ do
           Anchors.newPane defI
           Anchors.savePreJumpPosition myId
           return $ WidgetIds.fromIRef defI
-        Data.ParameterRef paramGuid -> IT.transaction $ do
+        Sugar.GetParameter paramGuid -> IT.transaction $ do
           Anchors.savePreJumpPosition myId
           return $ WidgetIds.fromGuid paramGuid
-  return $ ExpressionGui.atEgWidget (Widget.weakerEvents jumpToDefinitionEventMap) varRefView
+  return $ ExpressionGui.atEgWidget (Widget.weakerEvents jumpToDefinitionEventMap) getVarView

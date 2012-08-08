@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
 module Editor.CodeEdit.ExpressionEdit.HoleEdit(make, ResultPicker) where
 
-import Control.Arrow (first, second)
+import Control.Arrow (first, second, (&&&))
 import Control.Monad (liftM, mplus)
 import Control.Monad.ListT (ListT)
 import Data.Function (on)
@@ -95,9 +95,9 @@ makeMoreResults myId =
   BWidgets.makeTextView "..." $ mappend myId ["more results"]
 
 makeResultVariable ::
-  MonadF m => Data.VariableRef -> OTransaction ViewTag m Result
-makeResultVariable varRef = do
-  varName <- OT.getName $ Data.variableRefGuid varRef
+  MonadF m => (Guid, Data.VariableRef) -> OTransaction ViewTag m Result
+makeResultVariable (guid, varRef) = do
+  varName <- OT.getName guid
   return Result
     { resultNames = [varName]
     , resultExpr = toPureGuidExpr $ Data.ExpressionGetVariable varRef
@@ -154,8 +154,8 @@ makeAllResults holeInfo = do
   globals <- OT.getP Anchors.globals
   varResults <-
     mapM makeResultVariable $
-    map Data.ParameterRef (Sugar.holeScope hole) ++
-    globals
+    Sugar.holeScope hole ++
+    map (Data.variableRefGuid &&& id) globals
   let
     searchTerm = Property.value $ hiSearchTerm holeInfo
     literalResults = makeLiteralResults searchTerm
@@ -279,7 +279,7 @@ makeActiveHoleEdit
      (Maybe Data.PureGuidExpression, WidgetT ViewTag m)
 makeActiveHoleEdit makeExpressionEdit holeInfo =
   OT.assignCursor (hiHoleId holeInfo) searchTermId $ do
-    OT.markVariablesAsUsed . Sugar.holeScope $ hiHole holeInfo
+    OT.markVariablesAsUsed . map fst . Sugar.holeScope $ hiHole holeInfo
 
     allResults <- makeAllResults holeInfo
 

@@ -8,14 +8,16 @@ module Editor.CodeEdit.Sugar
   , Expression(..), ExpressionRef(..)
   , Where(..), WhereItem(..)
   , Func(..), FuncParam(..), FuncParamActions(..)
-  , Pi(..), Apply(..), Section(..), Hole(..), LiteralInteger(..), Inferred(..)
+  , Pi(..), Apply(..), Section(..), Hole(..)
+  , LiteralInteger(..), Inferred(..)
+  , GetVariable(..), gvGuid
   , HasParens(..)
   , convertDefinition
   , convertExpression, convertExpressionPure
   ) where
 
 import Control.Applicative ((<$>), (<*>))
-import Control.Arrow (second)
+import Control.Arrow (second, (&&&))
 import Control.Monad (join, guard, liftM, mzero)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (MonadTrans(..))
@@ -115,7 +117,7 @@ data Section m = Section
   }
 
 data Hole m = Hole
-  { holeScope :: [Guid]
+  { holeScope :: [(Guid, Data.VariableRef)]
   , holePickResult :: Maybe (Data.PureGuidExpression -> T m Guid)
   , holePaste :: Maybe (T m Guid)
   , holeInferResults :: Data.PureGuidExpression -> ListT (T m) Data.PureGuidExpression
@@ -131,13 +133,20 @@ data Inferred m = Inferred
   , iHole :: Hole m
   }
 
+data GetVariable
+  = GetParameter Guid | GetDefinition Data.DefinitionIRef
+
+gvGuid :: GetVariable -> Guid
+gvGuid (GetParameter g) = g
+gvGuid (GetDefinition defI) = IRef.guid defI
+
 data Expression m
   = ExpressionApply   { eHasParens :: HasParens, eApply :: Apply m }
   | ExpressionSection { eHasParens :: HasParens, eSection :: Section m }
   | ExpressionWhere   { eHasParens :: HasParens, eWhere :: Where m }
   | ExpressionFunc    { eHasParens :: HasParens, eFunc :: Func m }
   | ExpressionPi      { eHasParens :: HasParens, ePi :: Pi m }
-  | ExpressionGetVariable { _eGetVar :: Data.VariableRef }
+  | ExpressionGetVariable { _getVariable :: GetVariable }
   | ExpressionHole { eHole :: Hole m }
   | ExpressionInferred { eInferred :: Inferred m }
   | ExpressionLiteralInteger { _eLit :: LiteralInteger m }
@@ -379,8 +388,7 @@ convertLambdaBody (Data.Lambda paramTypeI bodyI) exprI =
       case eeStored paramTypeI of
       Nothing -> id
       Just paramTypeStored ->
-        putInScope (eeInferredValues paramTypeStored) $
-        eeGuid exprI
+        putInScope (eeInferredValues paramTypeStored) $ eeGuid exprI
 
 convertLambda
   :: Monad m
@@ -503,6 +511,14 @@ atFunctionType exprRef =
     isPi (ExpressionPi {}) = True
     isPi _ = False
 
+mkExpressionGetVariable :: Data.VariableRef -> Expression m
+mkExpressionGetVariable = ExpressionGetVariable . mkGetVariable
+  where
+    mkGetVariable (Data.ParameterRef lambdaGuid) =
+      GetParameter $ lambdaGuidToParamGuid lambdaGuid
+    mkGetVariable (Data.DefinitionRef defI) =
+      GetDefinition defI
+
 convertApplyInfixFull
   :: Monad m
   => Data.Apply (ExprEntity m)
@@ -514,7 +530,7 @@ convertApplyInfixFull
   = do
     rArgRef <- convertExpressionI argI
     lArgRef <- convertExpressionI funcArgI
-    opRef <- mkExpressionRef funcFuncI $ ExpressionGetVariable op
+    opRef <- mkExpressionRef funcFuncI $ mkExpressionGetVariable op
     let
       newLArgRef = addApplyChildParens lArgRef
       newRArgRef = addApplyChildParens rArgRef
@@ -531,7 +547,7 @@ convertApplyInfixL
 convertApplyInfixL op (Data.Apply opI argI) exprI = do
   argRef <- convertExpressionI argI
   let newArgRef = addApplyChildParens argRef
-  opRef <- mkExpressionRef opI $ ExpressionGetVariable op
+  opRef <- mkExpressionRef opI $ mkExpressionGetVariable op
   let
     newOpRef =
       atFunctionType .
@@ -567,7 +583,7 @@ convertGetVariable varRef exprI = do
   name <- liftTransaction . Anchors.getP $ Anchors.variableNameRef varRef
   getVarExpr <-
     mkExpressionRef exprI $
-    ExpressionGetVariable varRef
+    mkExpressionGetVariable varRef
   if Infix.isInfixName name
     then
       mkExpressionRef exprI .
@@ -698,7 +714,9 @@ convertHole exprI = do
     gen =
       Random.mkStdGen . (+1) . (*2) . BinaryUtils.decodeS $ Guid.bs eGuid
     hole = Hole
-      { holeScope = Map.keys scope
+      { holeScope =
+        map (lambdaGuidToParamGuid &&& Data.ParameterRef) $
+        Map.keys scope
       , holePickResult = fmap pickResult $ eeProp exprI
       , holePaste = mPaste
       , holeInferResults =
