@@ -82,7 +82,7 @@ loadExpression exprP = do
     Data.ExpressionGetVariable x -> return $ Data.ExpressionGetVariable x
     Data.ExpressionLiteralInteger x -> return $ Data.ExpressionLiteralInteger x
     Data.ExpressionHole -> return Data.ExpressionHole
-    Data.ExpressionMagic -> return Data.ExpressionMagic
+    Data.ExpressionSet -> return Data.ExpressionSet
   where
     exprI = Property.value exprP
     loadLambda cons lambda =

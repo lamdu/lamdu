@@ -727,9 +727,9 @@ fakeBuiltin path name =
   , biSetFFIName = Nothing
   }
 
-convertMagic :: Monad m => Convertor m
-convertMagic exprI =
-  mkExpressionRef exprI $ fakeBuiltin ["Core"] "Magic"
+convertSet :: Monad m => Convertor m
+convertSet exprI =
+  mkExpressionRef exprI $ fakeBuiltin ["Core"] "Set"
 
 convertLoop :: Monad m => Convertor m
 convertLoop ee = mkExpressionRef ee $ fakeBuiltin ["Loopy"] "Loop"
@@ -747,7 +747,7 @@ convertExpressionI ee =
     convert (Data.ExpressionGetVariable x) = convertGetVariable x
     convert (Data.ExpressionLiteralInteger x) = convertLiteralInteger x
     convert (Data.ExpressionBuiltin x) = convertBuiltin x
-    convert Data.ExpressionMagic = convertMagic
+    convert Data.ExpressionSet = convertSet
     convert Data.ExpressionHole = convertHole
 
 -- Check no holes

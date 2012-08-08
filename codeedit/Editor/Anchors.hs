@@ -10,7 +10,7 @@ module Editor.Anchors
   , currentBranchIRef, currentBranch
   , globals
   , BuiltinsMap, builtinsMap
-  , newBuiltin, newBuiltinExpression
+  , newBuiltin, newBuiltinExpression, newDefinition
   , Pane
   , dbStore, DBTag
   , viewStore, ViewTag
@@ -190,13 +190,17 @@ newBuiltin
   => String -> Data.ExpressionIRef
   -> Transaction t m Data.VariableRef
 newBuiltin fullyQualifiedName typeI = do
-  builtinIRef <-
-    Transaction.newIRef . (`Data.Definition` typeI) =<<
+  newDefinition name . (`Data.Definition` typeI) =<<
     newBuiltinExpression fullyQualifiedName typeI
-  setP (assocNameRef (IRef.guid builtinIRef)) name
-  return $ Data.DefinitionRef builtinIRef
   where
     name = last $ splitOn "." fullyQualifiedName
+
+newDefinition :: Monad m => String -> Data.DefinitionI -> Transaction t m Data.VariableRef
+newDefinition name defI = do
+  res <- Transaction.newIRef defI
+  setP (assocNameRef (IRef.guid res)) name
+  return $ Data.DefinitionRef res
+
 
 getP :: Monad m => MkProperty t m a -> Transaction t m a
 getP = liftM Property.value

@@ -1,6 +1,6 @@
 module Editor.ExampleDB(initDB) where
 
-import Control.Monad (liftM, unless, (<=<))
+import Control.Monad (liftM, liftM2, unless, (<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Writer (WriterT)
 import Data.Binary (Binary(..))
@@ -62,9 +62,9 @@ fixIRef createOuter = do
 createBuiltins :: Monad m => Transaction A.ViewTag m [Data.VariableRef]
 createBuiltins =
   Writer.execWriterT $ do
-    let magic = Data.newExprIRef Data.ExpressionMagic
-
-    set <- mkType . A.newBuiltin "Core.Set" =<< lift magic
+    let
+      setExpr = Data.newExprIRef Data.ExpressionSet
+    set <- mkType $ A.newDefinition "Set" =<< liftM2 Data.Definition setExpr setExpr
     let
       forAll name f = liftM Data.ExpressionIRef . fixIRef $ \aI -> do
         let aGuid = IRef.guid aI
@@ -161,4 +161,5 @@ initDB store =
       expr <- Data.readExprIRef . Data.defBody =<< Transaction.readIRef defI
       return $ case expr of
         Data.ExpressionBuiltin (Data.Builtin name _) -> Just (name, Data.DefinitionRef defI)
+        Data.ExpressionSet -> Just (Data.FFIName ["Core"] "Set", Data.DefinitionRef defI)
         _ -> Nothing

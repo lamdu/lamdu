@@ -105,7 +105,7 @@ data Expression expr
   | ExpressionHole
   | ExpressionLiteralInteger Integer
   | ExpressionBuiltin (Builtin expr)
-  | ExpressionMagic
+  | ExpressionSet
   deriving (Eq, Ord, Show, Functor)
 type ExpressionI = Expression ExpressionIRef
 
@@ -155,7 +155,7 @@ sequenceExpression (ExpressionBuiltin (Builtin name t)) = liftM (ExpressionBuilt
 sequenceExpression (ExpressionGetVariable var) = return $ ExpressionGetVariable var
 sequenceExpression ExpressionHole = return ExpressionHole
 sequenceExpression (ExpressionLiteralInteger int) = return $ ExpressionLiteralInteger int
-sequenceExpression ExpressionMagic = return ExpressionMagic
+sequenceExpression ExpressionSet = return ExpressionSet
 
 mapMExpression
   :: Monad m

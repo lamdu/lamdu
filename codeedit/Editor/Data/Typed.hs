@@ -241,18 +241,17 @@ expand e@(Data.PureGuidExpression (Data.GuidExpression guid val)) =
   Data.ExpressionApply (Data.Apply func arg) ->
     liftM (makePureGuidExpr . Data.ExpressionApply) $
     liftM2 Data.Apply (expand func) (expand arg)
-  Data.ExpressionLambda (Data.Lambda paramType body) ->
-    recurseLambda Data.ExpressionLambda paramType body
-  Data.ExpressionPi (Data.Lambda paramType body) -> do
-    newParamType <- expand paramType
-    recurseLambda Data.ExpressionPi newParamType body
+  Data.ExpressionLambda lambda ->
+    recurseLambda Data.ExpressionLambda lambda
+  Data.ExpressionPi lambda ->
+    recurseLambda Data.ExpressionPi lambda
   _ -> return e
   where
     makePureGuidExpr =
       Data.PureGuidExpression . Data.GuidExpression guid
-    recurseLambda cons paramType =
-      liftM (makePureGuidExpr . cons . Data.Lambda paramType) .
-      expand
+    recurseLambda cons (Data.Lambda paramType body) =
+      liftM (makePureGuidExpr . cons) $
+      liftM2 Data.Lambda (expand paramType) (expand body)
 
 refFromPure :: Monad m => Data.PureGuidExpression -> Infer m Ref
 refFromPure =
@@ -400,7 +399,7 @@ inferExpression scope defRef (Expression _ g typeRef valueRef value) =
     setType =<< refFromPure (toPureExpression bType)
   _ -> return ()
   where
-    mkSet = mkBuiltin ["Core"] "Set"
+    mkSet = makeSingletonRef zeroGuid Data.ExpressionSet
     mkBuiltin path name =
       makeSingletonRef zeroGuid . Data.ExpressionBuiltin .
       Data.Builtin (Data.FFIName path name) =<<
@@ -523,8 +522,8 @@ unifyPair
      Data.ExpressionGetVariable v2) -> cond $ v1 == v2
     (Data.ExpressionLiteralInteger i1,
      Data.ExpressionLiteralInteger i2) -> cond $ i1 == i2
-    (Data.ExpressionMagic,
-     Data.ExpressionMagic) -> good
+    (Data.ExpressionSet,
+     Data.ExpressionSet) -> good
     _ -> Nothing
   where
     good = Just $ return ()
@@ -624,10 +623,12 @@ builtinsToGlobals builtinsMap (NoLoop (Data.GuidExpression guid expr)) =
   NoLoop . Data.GuidExpression guid $
   fmap (builtinsToGlobals builtinsMap) $
   case expr of
-  builtin@(Data.ExpressionBuiltin (Data.Builtin name _)) ->
-    (maybe builtin Data.ExpressionGetVariable . Map.lookup name)
-    builtinsMap
+  Data.ExpressionBuiltin (Data.Builtin name _) -> res name
+  Data.ExpressionSet -> res $ Data.FFIName ["Core"] "Set"
   other -> other
+  where
+    res name =
+      maybe expr Data.ExpressionGetVariable $ Map.lookup name builtinsMap
 
 loadDefTypeToRef :: Monad m => Data.DefinitionIRef -> Infer m Ref
 loadDefTypeToRef def =
