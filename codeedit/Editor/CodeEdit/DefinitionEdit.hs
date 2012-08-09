@@ -103,7 +103,7 @@ make makeExpressionEdit def = do
     makeParts makeExpressionEdit guid $ Sugar.drBody def
   let
     mkResult typeWidget =
-      BWidgets.vboxCentered
+      BWidgets.vboxAlign 0
       [ Widget.scale Config.defTypeBoxSizeFactor typeWidget
       , bodyWidget
       ]
