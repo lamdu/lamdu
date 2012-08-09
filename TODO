@@ -1,3 +1,5 @@
+* Bug: When esc on hole, cannot see cursor
+
 * Ideas for type inference:
 
   * Get rid of in-place "subst":
