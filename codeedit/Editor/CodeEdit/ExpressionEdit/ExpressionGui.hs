@@ -21,8 +21,6 @@ import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.WidgetIds as WidgetIds
-import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
@@ -80,10 +78,9 @@ addType exprId typeEdits eg =
     widget = egWidget eg
     width = view Vector2.first . Widget.wSize
     underLineWidth = max (width widget) (width typeEdit)
-    typeEdit = addTint . addBackground $ BWidgets.vboxCentered typeEdits
+    typeEdit = addBackground $ BWidgets.vboxCentered typeEdits
     isError = length typeEdits >= 2
     typeErrorAnimId = Widget.toAnimId exprId ++ ["type error background"]
-    addTint = (Widget.atWFrame . Anim.onImages . Draw.tint) Config.inferredTypeTint
     addBackground
       | isError =
         Widget.backgroundColor 15 typeErrorAnimId
