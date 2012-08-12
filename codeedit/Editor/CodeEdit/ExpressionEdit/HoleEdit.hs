@@ -241,10 +241,11 @@ makeResultsWidget makeExpressionEdit holeInfo firstResults moreResults = do
       [] -> liftM ((,) Nothing) . makeNoResults $ Widget.toAnimId myId
       xs -> do
         let
-          widget = blockDownEvents . BWidgets.vboxAlign 0 $ map snd xs
+          firstResultsWidget =
+            blockDownEvents . BWidgets.vboxAlign 0 $ map snd xs
           mResult =
             listToMaybe . map fst $ filter (Widget.wIsFocused . snd) xs
-        return (mResult, widget)
+        return (mResult, firstResultsWidget)
   moreResultsWidgets <-
     if moreResults
     then liftM (: []) . makeMoreResults $ Widget.toAnimId myId
