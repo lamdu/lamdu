@@ -72,7 +72,6 @@ data WhereItem m = WhereItem
   { wiGuid :: Guid
   , wiMDelete :: Maybe (T m Guid)
   , wiValue :: ExpressionRef m
-  , wiType :: ExpressionRef m
   }
 
 data Where m = Where
@@ -434,20 +433,18 @@ convertWhere
   -> ExprEntity m
   -> Data.Lambda (ExprEntity m)
   -> Convertor m
-convertWhere valueRef lambdaI lambda@(Data.Lambda typeI bodyI) applyI = do
-  typeRef <- convertExpressionI typeI
+convertWhere valueRef lambdaI lambda@(Data.Lambda _ bodyI) applyI = do
   sBody <- convertLambdaBody lambda lambdaI
   mkExpressionRef applyI .
-    ExpressionWhere DontHaveParens . atWWheres (item typeRef :) $
+    ExpressionWhere DontHaveParens . atWWheres (item :) $
     case rExpression sBody of
       ExpressionWhere _ x -> x
       _ -> Where [] sBody
   where
-    item typeRef = WhereItem
+    item = WhereItem
       { wiGuid = eeGuid lambdaI
       , wiMDelete = mkDelete <$> eeProp applyI <*> eeProp bodyI
       , wiValue = valueRef
-      , wiType = typeRef
       }
 
 addParens :: Expression m -> Expression m
@@ -475,6 +472,8 @@ convertApply apply@(Data.Apply funcI argI) exprI =
     NonLoop (Data.ExpressionLambda lambda@(
       Data.Lambda (ExprEntity { eeValue = NonLoop Data.ExpressionHole }) _)) -> do
       valueRef <- convertExpressionI argI
+      -- TODO: Should we pass the lambda with the hole in its type,
+      -- and not just the body?
       convertWhere valueRef funcI lambda exprI
     -- InfixR or ordinary prefix:
     NonLoop (Data.ExpressionApply funcApply@(Data.Apply funcFuncI _)) -> do
