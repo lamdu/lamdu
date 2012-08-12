@@ -106,8 +106,25 @@ data Expression expr
   | ExpressionLiteralInteger Integer
   | ExpressionBuiltin (Builtin expr)
   | ExpressionSet
-  deriving (Eq, Ord, Show, Functor)
+  deriving (Eq, Ord, Functor)
 type ExpressionI = Expression ExpressionIRef
+
+instance Show expr => Show (Expression expr) where
+  show (ExpressionLambda (Lambda paramType body)) = concat ["\\:", showP paramType, "==>", showP body]
+  show (ExpressionPi (Lambda paramType body)) = concat [showP paramType, "->", showP body]
+  show (ExpressionApply (Apply func arg)) = unwords [showP func, showP arg]
+  show (ExpressionGetVariable (ParameterRef guid)) = "par:" ++ show guid
+  show (ExpressionGetVariable (DefinitionRef defI)) = "def:" ++ show (IRef.guid defI)
+  show (ExpressionLiteralInteger int) = show int
+  show (ExpressionBuiltin (Builtin name _)) = show name
+  show ExpressionHole = "Hole"
+  show ExpressionSet = "Set"
+
+showP :: Show a => a -> String
+showP = parenify . show
+
+parenify :: String -> String
+parenify x = concat ["(", x, ")"]
 
 data Definition expr = Definition
   { defBody :: expr
@@ -119,12 +136,18 @@ type DefinitionIRef = IRef DefinitionI
 
 newtype PureGuidExpression = PureGuidExpression
   { unPureGuidExpression :: GuidExpression PureGuidExpression
-  } deriving (Show, Eq)
+  } deriving (Eq)
+
+instance Show PureGuidExpression where
+  show = show . unPureGuidExpression
 
 data GuidExpression ref = GuidExpression
   { geGuid :: Guid
   , geValue :: Expression ref
-  } deriving (Show, Eq)
+  } deriving (Eq)
+
+instance Show ref => Show (GuidExpression ref) where
+  show (GuidExpression guid value) = show guid ++ ":" ++ show value
 
 AtFieldTH.make ''PureGuidExpression
 AtFieldTH.make ''GuidExpression

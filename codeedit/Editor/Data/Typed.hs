@@ -99,7 +99,15 @@ data Constraints = Constraints
   { tcExprs :: [Data.GuidExpression Ref]
   , tcRules :: [UnifyRule]
   , tcForceMonomorphic :: Bool
-  } deriving (Show)
+  }
+
+instance Show Constraints where
+  show (Constraints exprs rules force) =
+    unwords
+    [ if force then "M" else "-"
+    , show exprs
+    , show rules
+    ]
 
 emptyConstraints :: Constraints
 emptyConstraints = Constraints [] [] False
@@ -113,6 +121,9 @@ data Expression s = Expression
   , eeInferredValue :: Ref
   , eeValue :: Data.Expression (Expression s)
   }
+instance Show (Expression s) where
+  show (Expression _ guid it iv value) =
+    unwords ["(", show guid, show value, "(=", show iv, ") :", show it, ")"]
 
 type StoredExpression f = Expression (Data.ExpressionIRefProperty f)
 
