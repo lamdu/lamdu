@@ -83,7 +83,7 @@ whereScaleFactor = 0.85
 foldKeys = [k '-']
 unfoldKeys = foldKeys
 
-typeScaleFactor = 0.4
+typeScaleFactor = 0.6
 squareParensScaleFactor = 0.96
 
 foreignModuleColor = Draw.Color 1 0.3 0.35 1
