@@ -60,8 +60,8 @@ addSquareParens
 addSquareParens parensId =
   return . ExpressionGui.atEgWidget
   (Widget.atWFrameWithSize addSquareFrame .
-   Widget.translateBy (* ((1 - Config.squareParensScaleFactor) / Config.squareParensScaleFactor / 2)) .
-   Widget.scale Config.squareParensScaleFactor)
+   Widget.translateBy (* ((1 - Config.squareParensScaleFactor) / 2)) .
+   (Widget.atWFrame . Anim.scale) Config.squareParensScaleFactor)
   where
     addSquareFrame size = mappend $ squareFrame parensId size
 
