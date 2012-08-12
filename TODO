@@ -1,3 +1,5 @@
+* Bug: <Del> on branch name does not work
+
 * Bug: When esc on hole, cannot see cursor
 
 * Ideas for type inference:
