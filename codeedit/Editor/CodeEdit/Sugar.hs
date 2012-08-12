@@ -70,6 +70,7 @@ data ExpressionRef m = ExpressionRef
 
 data WhereItem m = WhereItem
   { wiGuid :: Guid
+  , wiTypeGuid :: Guid
   , wiMDelete :: Maybe (T m Guid)
   , wiValue :: ExpressionRef m
   }
@@ -433,7 +434,7 @@ convertWhere
   -> ExprEntity m
   -> Data.Lambda (ExprEntity m)
   -> Convertor m
-convertWhere valueRef lambdaI lambda@(Data.Lambda _ bodyI) applyI = do
+convertWhere valueRef lambdaI lambda@(Data.Lambda typeI bodyI) applyI = do
   sBody <- convertLambdaBody lambda lambdaI
   mkExpressionRef applyI .
     ExpressionWhere DontHaveParens . atWWheres (item :) $
@@ -443,6 +444,7 @@ convertWhere valueRef lambdaI lambda@(Data.Lambda _ bodyI) applyI = do
   where
     item = WhereItem
       { wiGuid = lambdaGuidToParamGuid (eeGuid lambdaI)
+      , wiTypeGuid = eeGuid typeI
       , wiMDelete = mkDelete <$> eeProp applyI <*> eeProp bodyI
       , wiValue = valueRef
       }

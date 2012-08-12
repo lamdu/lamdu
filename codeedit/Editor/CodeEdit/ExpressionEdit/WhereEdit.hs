@@ -2,6 +2,7 @@
 module Editor.CodeEdit.ExpressionEdit.WhereEdit(make, makeWithBody) where
 
 import Control.Monad (liftM)
+import Data.Function (on)
 import Data.Monoid (mempty)
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
@@ -39,6 +40,8 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
     ]
   where
     makeWhereItemEdits item =
+      on OT.assignCursorPrefix WidgetIds.fromGuid
+      (Sugar.wiTypeGuid item) (Sugar.wiGuid item) .
       (liftM . map)
         (Widget.weakerEvents (whereItemDeleteEventMap item) . ExpressionGui.egWidget) $
       DefinitionEdit.makeParts makeExpressionEdit

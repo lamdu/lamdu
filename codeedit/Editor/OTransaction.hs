@@ -3,7 +3,7 @@ module Editor.OTransaction
   ( OTransaction, runOTransaction
   , unWrapInner
   , TWidget, WidgetT
-  , readCursor, subCursor, atCursor, assignCursor
+  , readCursor, subCursor, atCursor, assignCursor, assignCursorPrefix
   , readTextStyle, transaction
   , atTextStyle, setTextSizeColor
   , markVariablesAsUsed, usedVariables
@@ -130,6 +130,16 @@ assignCursor src dest =
     replace cursor
       | cursor == src = dest
       | otherwise = cursor
+
+assignCursorPrefix
+  :: Monad m => Widget.Id -> Widget.Id -> OTransaction t m a -> OTransaction t m a
+assignCursorPrefix srcFolder dest =
+  atCursor replace
+  where
+    replace cursor =
+      case Widget.subId srcFolder cursor of
+      Nothing -> cursor
+      Just _ -> dest
 
 atTextStyle
   :: Monad m
