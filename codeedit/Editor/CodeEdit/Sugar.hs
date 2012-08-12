@@ -685,15 +685,15 @@ inferResults builtinsMap scope mDef holeStored expr = List.joinL $ do
         return typedExpr
       _ <- MaybeT . return . derefIt $ DataTyped.eeInferredType typedExpr
       return $ expandHoles derefIt typedExpr
+    typeContext =
+      maybe DataTyped.emptyTypeContext DataTyped.deTypeContext
+      mDef
+    inferActions =
+      (DataTyped.liftInferActions DataTyped.inferActions)
+      { DataTyped.onConflict = mzero }
     runInfer action = do
-      let
-        typeContext =
-          maybe DataTyped.emptyTypeContext DataTyped.deTypeContext
-          mDef
-        inferActions =
-          (DataTyped.liftInferActions DataTyped.inferActions)
-          { DataTyped.onConflict = mzero }
-      (newTypeContext, x) <- DataTyped.resumeInfer inferActions typeContext action
+      (newTypeContext, x) <-
+        DataTyped.resumeInfer inferActions typeContext action
       let
         derefIt =
           fromInferred .

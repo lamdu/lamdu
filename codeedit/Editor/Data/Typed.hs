@@ -198,7 +198,8 @@ runInfer :: Monad m => InferActions m -> Infer m a -> m (TypeContext, a)
 runInfer actions = resumeInfer actions emptyTypeContext
 
 resumeInfer
-  :: Monad m => InferActions m -> TypeContext -> Infer m a -> m (TypeContext, a)
+  :: Monad m
+  => InferActions m -> TypeContext -> Infer m a -> m (TypeContext, a)
 resumeInfer actions typeContext =
   resumeUnionFindT typeContext . (`runReaderT` actions) . unInfer
 
