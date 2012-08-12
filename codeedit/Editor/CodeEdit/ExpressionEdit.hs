@@ -135,7 +135,7 @@ makeEditor sExpr =
       BWidgets.wrapDelegated exprFocusDelegatorConfig
       FocusDelegator.Delegating ExpressionGui.atEgWidget
     textParenify = parenify Parens.addHighlightedTextParens
-    squareParenify = parenify (Parens.addSquareParens . Widget.toAnimId)
+    squareParenify = parenify (fmap return . ExpressionGui.atEgWidget . Parens.addSquareParens . Widget.toAnimId)
 
 expressionEventMap
   :: MonadF m

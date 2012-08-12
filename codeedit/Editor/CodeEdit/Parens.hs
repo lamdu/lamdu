@@ -13,6 +13,7 @@ import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget)
 import Editor.WidgetIds (parensPrefix)
+import Graphics.UI.Bottle.Widget (Widget)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.Config as Config
@@ -53,17 +54,15 @@ squareFrame animId size =
   Anim.simpleFrameDownscale animId size . void $ squareDraw size
 
 addSquareParens
-  :: Monad m
-  => Anim.AnimId
-  -> ExpressionGui m
-  -> OTransaction ViewTag m (ExpressionGui m)
+  :: Anim.AnimId
+  -> Widget f
+  -> Widget f
 addSquareParens parensId =
-  return . ExpressionGui.atEgWidget
-  (Widget.atWFrameWithSize addSquareFrame .
-   Widget.translateBy (* ((1 - Config.squareParensScaleFactor) / 2)) .
-   (Widget.atWFrame . Anim.scale) Config.squareParensScaleFactor)
+  Widget.atWFrameWithSize addSquareFrame .
+  Widget.translateBy (* ((1 - Config.squareParensScaleFactor) / 2)) .
+  (Widget.atWFrame . Anim.scale) Config.squareParensScaleFactor
   where
-    addSquareFrame size = mappend $ squareFrame parensId size
+    addSquareFrame size = mappend $ squareFrame (parensId ++ ["square parens"]) size
 
 highlightExpression :: Widget.Widget f -> Widget.Widget f
 highlightExpression =
