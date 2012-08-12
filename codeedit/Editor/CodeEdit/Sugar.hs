@@ -297,14 +297,14 @@ mkActions stored =
   { addNextArg = guidify $ DataOps.callWithArg stored
   , callWithArg = guidify $ DataOps.callWithArg stored
   , giveAsArg = guidify $ DataOps.giveAsArg stored
-  , lambdaWrap =
-    liftM lambdaGuidToParamGuid . guidify $ DataOps.lambdaWrap stored
-  , addWhereItem = guidify $ DataOps.redexWrap stored
+  , lambdaWrap = paramGuidify $ DataOps.lambdaWrap stored
+  , addWhereItem = paramGuidify $ DataOps.redexWrap stored
   , replace = doReplace
   , cut = mkCutter (Property.value stored) doReplace
   , mNextArg = Nothing
   }
   where
+    paramGuidify = liftM lambdaGuidToParamGuid . guidify
     guidify = liftM Data.exprIRefGuid
     doReplace = guidify $ DataOps.replaceWithHole stored
 
