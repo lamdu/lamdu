@@ -442,7 +442,7 @@ convertWhere valueRef lambdaI lambda@(Data.Lambda _ bodyI) applyI = do
       _ -> Where [] sBody
   where
     item = WhereItem
-      { wiGuid = eeGuid lambdaI
+      { wiGuid = lambdaGuidToParamGuid (eeGuid lambdaI)
       , wiMDelete = mkDelete <$> eeProp applyI <*> eeProp bodyI
       , wiValue = valueRef
       }
