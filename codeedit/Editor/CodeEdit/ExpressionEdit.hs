@@ -27,8 +27,6 @@ import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
 import qualified Editor.WidgetIds as WidgetIds
-import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -80,7 +78,7 @@ make sExpr = do
     ) .
     ExpressionGui.addType exprId
     (map
-      ( (Widget.atWFrame . Anim.onImages . Draw.tint) Config.inferredTypeTint
+      ( Widget.tint Config.inferredTypeTint
       . Widget.scale Config.typeScaleFactor
       . ExpressionGui.egWidget
       ) typeEdits) $
