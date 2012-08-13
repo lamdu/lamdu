@@ -503,12 +503,9 @@ unifyConstraints exprRef aConstraints bConstraints =
             (Data.ExpressionApply (Data.Apply exprRef argRef))
         (ApplyFuncType, Data.ExpressionPi (Data.Lambda _ resultType)) -> do
           newResultType <- dupRefTreeExprs resultType
-          let
-            monoArgRef = do
-              unify argRef =<<
-                makeRef emptyConstraints { tcForceMonomorphic = True }
-              return argRef
-          subst guid monoArgRef newResultType
+          subst guid (return argRef) newResultType
+          unify argRef =<<
+            makeRef emptyConstraints { tcForceMonomorphic = True }
           unify destRef newResultType
         _ -> return ()
 
