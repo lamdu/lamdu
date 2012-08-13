@@ -141,10 +141,14 @@ data LoopGuidExpression
   | Loop Guid
   deriving (Show, Eq)
 
-type TypeContext = UnionFind Constraints
+data TypeContext = TypeContext
+  { tcConstraints :: UnionFind Constraints
+  , tcParamGuidMap :: Map Guid Guid
+  }
+AtFieldTH.make ''TypeContext
 
 emptyTypeContext :: TypeContext
-emptyTypeContext = UnionFind.empty
+emptyTypeContext = TypeContext UnionFind.empty Map.empty
 
 data StoredDefinition m = StoredDefinition
   { deIRef :: Data.DefinitionIRef
@@ -194,11 +198,23 @@ liftTypeContext = liftConflictActionReader . lift
 instance MonadTrans Infer where
   lift = liftTypeContext . lift
 
+getsConstraints :: Monad m => (UnionFind Constraints -> a) -> Infer m a
+getsConstraints f = liftTypeContext $ State.gets (f . tcConstraints)
+
+getsParamGuidMap :: Monad m => (Map Guid Guid -> a) -> Infer m a
+getsParamGuidMap f = liftTypeContext $ State.gets (f . tcParamGuidMap)
+
 makeRef :: Monad m => Constraints -> Infer m Ref
-makeRef = liftTypeContext . StateT . fmap return . UnionFind.fresh
+makeRef x =
+  liftTypeContext $ StateT f
+  where
+    f state =
+      return (result, state { tcConstraints = newConstraints} )
+      where
+        (result, newConstraints) = UnionFind.fresh x $ tcConstraints state
 
 getRef :: Monad m => Ref -> Infer m Constraints
-getRef = liftTypeContext . State.gets . UnionFind.descr
+getRef = getsConstraints . UnionFind.descr
 
 getActions :: Monad m => Infer m (InferActions (Infer m))
 getActions = liftConflictActionReader $ Reader.asks liftInferActions
@@ -346,11 +362,11 @@ derefRef stdGen builtinsMap typeContext rootRef =
     canonizeInferredExpression = zipWith canonizeIdentifiers . RandomUtils.splits
     go ref = do
       visited <- Reader.asks fst
-      if Set.member (UnionFind.repr ref typeContext) visited
+      if Set.member (UnionFind.repr ref (tcConstraints typeContext)) visited
         then return $ Loop zeroGuid
         else do
           let
-            constraints = UnionFind.descr ref typeContext
+            constraints = UnionFind.descr ref $ tcConstraints typeContext
             (guid, mapping) =
               case Set.toList (tcLambdaGuids constraints) of
               [] -> (zeroGuid, Map.empty)
@@ -358,7 +374,7 @@ derefRef stdGen builtinsMap typeContext rootRef =
           expr <- lift $ tcExprs constraints
           liftM (NoLoop . Data.GuidExpression guid) .
             Reader.local
-            ( (first . Set.insert) (UnionFind.repr ref typeContext)
+            ( (first . Set.insert) (UnionFind.repr ref (tcConstraints typeContext))
             . (second . Map.union) mapping
             ) $ recurse expr
     recurse (Data.ExpressionGetVariable (Data.ParameterRef p)) =
@@ -470,28 +486,39 @@ subst from to (FatRef ref False) = do
       | Set.member p from = Nothing
     foo expr = Just . Data.sequenceExpression $ fmap (subst from to) expr
 
-unify
-  :: Monad m
-  => Ref
-  -> Ref
-  -> Infer m ()
+unify :: Monad m => Ref -> Ref -> Infer m ()
 unify a b = do
-  e <- liftTypeContext . State.gets $ UnionFind.equivalent a b
+  e <- getsConstraints $ UnionFind.equivalent a b
   unless e $ do
     -- Mark as unified immediately so recursive unifications hitting
     -- this pair will know it's being done...
     aConstraints <- getRef a
     bConstraints <- getRef b
-    liftTypeContext . State.modify $ a `UnionFind.union` b
+    liftTypeContext . State.modify . atTcConstraints $ a `UnionFind.union` b
+    paramGuidMapping <- getsParamGuidMap id
     let
       (unifiedConstraints, postAction) =
-        unifyConstraints a aConstraints bConstraints
-    liftTypeContext . State.modify $ UnionFind.setDescr a unifiedConstraints
+        unifyConstraints paramGuidMapping a aConstraints bConstraints
+      mSomeAGuid = fmap fst . Set.minView $ tcLambdaGuids aConstraints
+      mReprGuid = fmap (`lookupDefToKey` paramGuidMapping) mSomeAGuid
+    let
+      mapUpdates =
+        case mReprGuid of
+        Nothing -> Map.empty
+        Just reprGuid ->
+          Map.fromList . map (flip (,) reprGuid) . Set.toList $ tcLambdaGuids bConstraints
+    liftTypeContext $ State.modify
+      ( atTcConstraints (UnionFind.setDescr a unifiedConstraints)
+      . atTcParamGuidMap (Map.union mapUpdates)
+      )
     postAction
 
+lookupDefToKey :: Ord k => k -> Map k k -> k
+lookupDefToKey key = fromMaybe key . Map.lookup key
+
 unifyConstraints
-  :: Monad m => Ref -> Constraints -> Constraints -> (Constraints, Infer m ())
-unifyConstraints exprRef aConstraints bConstraints =
+  :: Monad m => Map Guid Guid -> Ref -> Constraints -> Constraints -> (Constraints, Infer m ())
+unifyConstraints paramGuidMapping exprRef aConstraints bConstraints =
   (unifiedConstraints, postAction)
   where
     aExprs = tcExprs aConstraints
@@ -514,7 +541,7 @@ unifyConstraints exprRef aConstraints bConstraints =
         (otherExprs, isCon, xsAction) = go xs finalBadYs
         (final, finalBadYs, finalAction) = foldl step (x, [], return ()) ys
         step (current, badYs, action) y =
-          case unifyPair current y of
+          case unifyPair paramGuidMapping current y of
           Nothing -> (current, y : badYs, action)
           Just (expr, act) -> (expr, badYs, action >> act)
     applyRulesRef xConstraints yConstraints =
@@ -539,10 +566,11 @@ unifyConstraints exprRef aConstraints bConstraints =
 -- substs right child's guids to left)
 unifyPair
   :: Monad m
-  => Data.Expression FatRef
+  => Map Guid Guid
+  -> Data.Expression FatRef
   -> Data.Expression FatRef
   -> Maybe (Data.Expression FatRef, Infer m ())
-unifyPair aVal bVal =
+unifyPair paramGuidMapping aVal bVal =
   case (aVal, bVal) of
   (Data.ExpressionPi l1,
    Data.ExpressionPi l2) ->
@@ -557,8 +585,12 @@ unifyPair aVal bVal =
   (Data.ExpressionBuiltin (Data.Builtin name1 _),
    Data.ExpressionBuiltin (Data.Builtin name2 _)) ->
     cond $ name1 == name2
-  (Data.ExpressionGetVariable v1,
-   Data.ExpressionGetVariable v2) -> cond $ v1 == v2
+  (Data.ExpressionGetVariable (Data.ParameterRef p0),
+   Data.ExpressionGetVariable (Data.ParameterRef p1)) ->
+    cond $ on (==) (`lookupDefToKey` paramGuidMapping) p0 p1
+  (Data.ExpressionGetVariable (Data.DefinitionRef d0),
+   Data.ExpressionGetVariable (Data.DefinitionRef d1)) ->
+    cond $ d0 == d1
   (Data.ExpressionLiteralInteger i1,
    Data.ExpressionLiteralInteger i2) -> cond $ i1 == i2
   (Data.ExpressionSet,
