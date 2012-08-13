@@ -34,9 +34,9 @@ fromTop = horizontalRelativePos
 fromRight :: Rect -> Direction
 fromRight rect =
   verticalRelativePos $
-  Lens.adjust Rect.left (+ rect ^. Rect.width) rect
+  Lens.over Rect.left (+ rect ^. Rect.width) rect
 
 fromBottom :: Rect -> Direction
 fromBottom rect =
   horizontalRelativePos $
-  Lens.adjust Rect.top (+ rect ^. Rect.height) rect
+  Lens.over Rect.top (+ rect ^. Rect.height) rect

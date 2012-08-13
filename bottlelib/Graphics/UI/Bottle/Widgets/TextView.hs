@@ -91,7 +91,7 @@ letterRects style text =
   zipWith locateLineHeight (iterate (+ lineHeight) 0) textLines
   where
     textLines = map makeLine $ splitWhen (== '\n') text
-    locateLineHeight y = (map . Lens.adjust Rect.top) (+y)
+    locateLineHeight y = (map . Lens.over Rect.top) (+y)
     (_, Vector2 _ lineHeight) = fontRender style ""
     makeLine textLine =
       zipWith makeLetterRect sizes . scanl (+) 0 .

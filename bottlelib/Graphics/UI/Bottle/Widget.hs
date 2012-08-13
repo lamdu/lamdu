@@ -137,10 +137,10 @@ keysEventMapMovesCursor keys doc act =
 translate :: Vector2 R -> Widget f -> Widget f
 translate pos =
   (atWFrame . Anim.translate) pos .
-  (atWFocalArea . Lens.adjust Rect.topLeft) (+pos) .
+  (atWFocalArea . Lens.over Rect.topLeft) (+pos) .
   (atWMaybeEnter . fmap)
-    ((fmap . atEnterResultRect . Lens.adjust Rect.topLeft) (+pos) .
-     (argument . Direction.inRelativePos . Lens.adjust Rect.topLeft) (subtract pos))
+    ((fmap . atEnterResultRect . Lens.over Rect.topLeft) (+pos) .
+     (argument . Direction.inRelativePos . Lens.over Rect.topLeft) (subtract pos))
 
 translateBy :: (Vector2 R -> Vector2 R) -> Widget f -> Widget f
 translateBy mkPos w =
@@ -149,8 +149,8 @@ translateBy mkPos w =
 scale :: Vector2 R -> Widget f -> Widget f
 scale mult =
   (atWFrame . Anim.scale) mult .
-  (atWFocalArea . Lens.adjust Rect.topLeftAndSize) (* mult) .
+  (atWFocalArea . Lens.over Rect.topLeftAndSize) (* mult) .
   (atWMaybeEnter . fmap)
-    ((fmap . atEnterResultRect . Lens.adjust Rect.topLeftAndSize) (*mult) .
-     (argument . Direction.inRelativePos . Lens.adjust Rect.topLeftAndSize) (/mult)) .
+    ((fmap . atEnterResultRect . Lens.over Rect.topLeftAndSize) (*mult) .
+     (argument . Direction.inRelativePos . Lens.over Rect.topLeftAndSize) (/mult)) .
   atWSize (* mult)

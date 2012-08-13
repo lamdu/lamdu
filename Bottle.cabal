@@ -68,7 +68,7 @@ Library
                        OpenGL,
                        StateVar,
                        TraceUtils,
-                       lens >= 1.4.1,
+                       lens >= 2.1,
                        binary >= 0.5,
                        bytestring,
                        containers >= 0.4,
