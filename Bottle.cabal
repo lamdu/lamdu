@@ -16,7 +16,6 @@ Library
 
                        -- Bottle:
   Exposed-modules:     Control.Monad.Trans.Random,
-                       Control.Monad.Trans.UnionFind,
                        Data.AtFieldTH,
                        Data.List.Utils,
                        Data.Maybe.Utils,

@@ -39,7 +39,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 {-# LANGUAGE BangPatterns #-}
 {-# OPTIONS_GHC -funbox-strict-fields #-}
 module Data.UnionFind.IntMap
-    ( newUnionFind, fresh, repr, descr, setDescr, union, equivalent,
+    ( empty, fresh, repr, descr, setDescr, union, equivalent,
       UnionFind, Point, prettyUF ) where
 
 import Control.Arrow ((&&&), (***))
@@ -83,12 +83,12 @@ data Link a
       -- ^ Pointer to some other element of the equivalence class.
      deriving Show
 
-newUnionFind :: UnionFind a
-newUnionFind = UnionFind 0 IM.empty
+empty :: UnionFind a
+empty = UnionFind 0 IM.empty
 
-fresh :: UnionFind a -> a -> (UnionFind a, Point a)
-fresh (UnionFind next eqs) a =
-  (UnionFind (next + 1) (IM.insert next (Info 0 a) eqs), Point next)
+fresh :: a -> UnionFind a -> (Point a, UnionFind a)
+fresh a (UnionFind next eqs) =
+  (Point next, UnionFind (next + 1) (IM.insert next (Info 0 a) eqs))
 
 -- freshList :: UnionFind a -> [a] -> (UnionFind a, [Point a])
 -- freshList

@@ -30,7 +30,7 @@ import Control.Monad (liftM, liftM2, (<=<), when, unless)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Random (nextRandom, runRandomT)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
-import Control.Monad.Trans.UnionFind (UnionFindT, resumeUnionFindT)
+import Control.Monad.Trans.State (StateT(..))
 import Data.Function (on)
 import Data.Functor.Identity (Identity(..))
 import Data.Map (Map)
@@ -38,17 +38,18 @@ import Data.Maybe (fromMaybe, catMaybes, isNothing)
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
-import Data.UnionFind.IntMap (UnionFind, newUnionFind)
+import Data.UnionFind.IntMap (UnionFind)
 import Editor.Anchors (ViewTag)
 import System.Random (RandomGen)
 import qualified Control.Monad.Trans.Reader as Reader
-import qualified Control.Monad.Trans.UnionFind as UnionFindT
+import qualified Control.Monad.Trans.State as State
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
+import qualified Data.Tuple as Tuple
 import qualified Data.UnionFind.IntMap as UnionFind
 import qualified Editor.Anchors as Anchors
 import qualified Editor.Data as Data
@@ -110,7 +111,7 @@ instance Show Constraints where
 emptyConstraints :: Constraints
 emptyConstraints = Constraints Set.empty [] []
 
-type Ref = UnionFindT.Point Constraints
+type Ref = UnionFind.Point Constraints
 data FatRef = FatRef
   { frPoint :: Ref
   , _frIsSubst :: Bool
@@ -143,7 +144,7 @@ data LoopGuidExpression
 type TypeContext = UnionFind Constraints
 
 emptyTypeContext :: TypeContext
-emptyTypeContext = newUnionFind
+emptyTypeContext = UnionFind.empty
 
 data StoredDefinition m = StoredDefinition
   { deIRef :: Data.DefinitionIRef
@@ -178,26 +179,26 @@ liftInferActions (InferActions a b c) =
   InferActions (lift a) (fmap lift b) (fmap lift c)
 
 newtype Infer m a = Infer
-  { unInfer :: ReaderT (InferActions m) (UnionFindT Constraints m) a
+  { unInfer :: ReaderT (InferActions m) (StateT TypeContext m) a
   } deriving (Functor, Applicative, Monad)
 AtFieldTH.make ''Infer
 
 ----------------- Infer operations:
 
-liftConflictActionReader :: ReaderT (InferActions m) (UnionFindT Constraints m) a -> Infer m a
+liftConflictActionReader :: ReaderT (InferActions m) (StateT TypeContext m) a -> Infer m a
 liftConflictActionReader = Infer
 
-liftUnionFind :: Monad m => UnionFindT Constraints m a -> Infer m a
-liftUnionFind = liftConflictActionReader . lift
+liftTypeContext :: Monad m => StateT TypeContext m a -> Infer m a
+liftTypeContext = liftConflictActionReader . lift
 
 instance MonadTrans Infer where
-  lift = liftUnionFind . lift
+  lift = liftTypeContext . lift
 
 makeRef :: Monad m => Constraints -> Infer m Ref
-makeRef = liftUnionFind . UnionFindT.new
+makeRef = liftTypeContext . StateT . fmap return . UnionFind.fresh
 
 getRef :: Monad m => Ref -> Infer m Constraints
-getRef = liftUnionFind . UnionFindT.descr
+getRef = liftTypeContext . State.gets . UnionFind.descr
 
 getActions :: Monad m => Infer m (InferActions (Infer m))
 getActions = liftConflictActionReader $ Reader.asks liftInferActions
@@ -209,7 +210,7 @@ resumeInfer
   :: Monad m
   => InferActions m -> TypeContext -> Infer m a -> m (TypeContext, a)
 resumeInfer actions typeContext =
-  resumeUnionFindT typeContext . (`runReaderT` actions) . unInfer
+  liftM Tuple.swap . (`runStateT` typeContext) . (`runReaderT` actions) . unInfer
 
 makeNoConstraints :: Monad m => Infer m Ref
 makeNoConstraints = makeRef emptyConstraints
@@ -475,17 +476,17 @@ unify
   -> Ref
   -> Infer m ()
 unify a b = do
-  e <- liftUnionFind $ UnionFindT.equivalent a b
+  e <- liftTypeContext . State.gets $ UnionFind.equivalent a b
   unless e $ do
     -- Mark as unified immediately so recursive unifications hitting
     -- this pair will know it's being done...
     aConstraints <- getRef a
     bConstraints <- getRef b
-    liftUnionFind $ a `UnionFindT.union` b
+    liftTypeContext . State.modify $ a `UnionFind.union` b
     let
       (unifiedConstraints, postAction) =
         unifyConstraints a aConstraints bConstraints
-    liftUnionFind $ UnionFindT.setDescr a unifiedConstraints
+    liftTypeContext . State.modify $ UnionFind.setDescr a unifiedConstraints
     postAction
 
 unifyConstraints
