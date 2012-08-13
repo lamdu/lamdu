@@ -421,7 +421,7 @@ inferExpression scope defRef (Expression _ g typeRef valueRef value) =
       makeNoConstraints
     makePi guid = makeSingletonRef guid . Data.ExpressionPi
     setType = unify typeRef
-    go newVars = inferExpression (Map.union (Map.fromList newVars) scope) defRef
+    go newVars = inferExpression (Map.fromList newVars `Map.union` scope) defRef
     onLambda (Data.Lambda paramType result) = do
       go [] paramType
       go [(g, eeInferredValue paramType)] result
