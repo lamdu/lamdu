@@ -53,7 +53,8 @@ data UnionFind a = UnionFind
 atEqs :: UnionFind a -> (IM.IntMap (Link a) -> IM.IntMap (Link a)) -> UnionFind a
 atEqs (UnionFind next old) f = UnionFind next $ f old
 
-newtype Point a = Point { unPoint :: Int }
+-- (/=) does not mean points are not equivalent.
+newtype Point a = Point { unPoint :: Int } deriving (Eq, Ord)
 instance Show (Point a) where
   show (Point x) = 'P' : show x
 

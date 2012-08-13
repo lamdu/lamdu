@@ -25,7 +25,7 @@ module Editor.Data.Typed
   ) where
 
 import Control.Applicative (Applicative, liftA2)
-import Control.Arrow (second)
+import Control.Arrow (first, second)
 import Control.Monad (liftM, liftM2, (<=<), when, unless)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Random (nextRandom, runRandomT)
@@ -36,8 +36,9 @@ import Data.Either (partitionEithers)
 import Data.Function (on)
 import Data.Functor.Identity (Identity(..))
 import Data.Map (Map)
-import Data.Maybe (mapMaybe)
+import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Monoid (Any(..), mconcat)
+import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.UnionFind.IntMap (UnionFind, newUnionFind)
@@ -48,6 +49,7 @@ import qualified Control.Monad.Trans.State as State
 import qualified Control.Monad.Trans.UnionFind as UnionFindT
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -96,21 +98,23 @@ data UnifyRule = UnifyRule
   } deriving (Show)
 
 data Constraints = Constraints
-  { tcExprs :: [Data.GuidExpression Ref]
+  { tcLambdaGuids :: Set Guid
+  , tcExprs :: [Data.Expression Ref]
   , tcRules :: [UnifyRule]
   , tcForceMonomorphic :: Bool
   }
 
 instance Show Constraints where
-  show (Constraints exprs rules force) =
+  show (Constraints guids exprs rules force) =
     unwords
     [ if force then "M" else "-"
+    , Set.toList guids >>= ((++ ":") . show)
     , show exprs
     , show rules
     ]
 
 emptyConstraints :: Constraints
-emptyConstraints = Constraints [] [] False
+emptyConstraints = Constraints Set.empty [] [] False
 
 type Ref = UnionFindT.Point Constraints
 
@@ -209,11 +213,16 @@ makeNoConstraints = makeRef emptyConstraints
 makeRuleRef :: Monad m => UnifyRule -> Infer m Ref
 makeRuleRef rule = makeRef emptyConstraints { tcRules = [rule] }
 
-makeSingletonRef :: Monad m => Guid -> Data.Expression Ref -> Infer m Ref
-makeSingletonRef _ Data.ExpressionHole = makeNoConstraints
-makeSingletonRef guid expr =
-  makeRef emptyConstraints
-  { tcExprs = [Data.GuidExpression guid expr] }
+makeSingletonRef :: Monad m => [Guid] -> Data.Expression Ref -> Infer m Ref
+makeSingletonRef guids expr =
+  case expr of
+  Data.ExpressionHole -> makeNoConstraints
+  Data.ExpressionLambda _ -> makeLambda
+  Data.ExpressionPi _ -> makeLambda
+  _ -> makeRef emptyConstraints { tcLambdaGuids = Set.empty, tcExprs = [expr] }
+  where
+    makeLambda =
+      makeRef emptyConstraints { tcLambdaGuids = Set.fromList guids, tcExprs = [expr] }
 
 --------------
 
@@ -272,7 +281,7 @@ refFromPure =
   where
     f (Data.PureGuidExpression (Data.GuidExpression guid val)) =
       ( return val
-      , makeSingletonRef guid
+      , makeSingletonRef [guid]
       )
 
 toExpr
@@ -297,7 +306,7 @@ toExpr extract =
             -- the Apply into the constraints until later when it is
             -- known whether it is a redex or not.
             Data.ExpressionApply _ -> makeNoConstraints
-            _ -> makeSingletonRef g $ fmap eeInferredValue newVal
+            _ -> makeSingletonRef [g] $ fmap eeInferredValue newVal
           return $ Expression prop g typeRef valRef newVal
       )
       where
@@ -327,29 +336,37 @@ derefRef
 derefRef stdGen builtinsMap typeContext rootRef =
   (canonizeInferredExpression stdGen .
    map (builtinsToGlobals builtinsMap)) .
-  (`runReaderT` []) $ go rootRef
+  (`runReaderT` (Set.empty, Map.empty)) $ go rootRef
   where
     canonizeInferredExpression = zipWith canonizeIdentifiers . RandomUtils.splits
     go ref = do
-      visited <- Reader.ask
-      if any (UnionFind.equivalent typeContext ref) visited
+      visited <- Reader.asks fst
+      if Set.member (UnionFind.repr typeContext ref) visited
         then return $ Loop zeroGuid
-        else
-        onType ref <=<
-        lift . tcExprs $
-        UnionFind.descr typeContext ref
-    onType ref (Data.GuidExpression guid expr) =
-      liftM (NoLoop . Data.GuidExpression guid) .
-      Data.sequenceExpression $ fmap recurse expr
-      where
-        recurse =
-          Reader.mapReaderT holify .
-          Reader.local (ref :) .
-          go
-        holify [] =
-          [NoLoop
-           (Data.GuidExpression zeroGuid Data.ExpressionHole)]
-        holify xs = xs
+        else do
+          let
+            constraints = UnionFind.descr typeContext ref
+            (guid, mapping) =
+              case Set.toList (tcLambdaGuids constraints) of
+              [] -> (zeroGuid, Map.empty)
+              (x : xs) -> (x, Map.fromList (map (flip (,) x) xs))
+          expr <- lift $ tcExprs constraints
+          liftM (NoLoop . Data.GuidExpression guid) .
+            Reader.local
+            ( (first . Set.insert) (UnionFind.repr typeContext ref)
+            . (second . Map.union) mapping
+            ) $ recurse expr
+    recurse (Data.ExpressionGetVariable (Data.ParameterRef p)) =
+      Reader.asks
+      ( Data.ExpressionGetVariable . Data.ParameterRef
+      . fromMaybe p . Map.lookup p . snd
+      )
+    recurse expr =
+      Data.sequenceExpression $ fmap (Reader.mapReaderT holify . go) expr
+    holify [] =
+      [NoLoop
+       (Data.GuidExpression zeroGuid Data.ExpressionHole)]
+    holify xs = xs
 
 type Scope = Map Guid Ref
 
@@ -414,12 +431,12 @@ inferExpression scope defRef (Expression _ g typeRef valueRef value) =
     setType =<< refFromPure (toPureExpression bType)
   _ -> return ()
   where
-    mkSet = makeSingletonRef zeroGuid Data.ExpressionSet
+    mkSet = makeSingletonRef [] Data.ExpressionSet
     mkBuiltin path name =
-      makeSingletonRef zeroGuid . Data.ExpressionBuiltin .
+      makeSingletonRef [] . Data.ExpressionBuiltin .
       Data.Builtin (Data.FFIName path name) =<<
       makeNoConstraints
-    makePi guid = makeSingletonRef guid . Data.ExpressionPi
+    makePi guid = makeSingletonRef [guid] . Data.ExpressionPi
     setType = unify typeRef
     go newVars = inferExpression (Map.fromList newVars `Map.union` scope) defRef
     onLambda (Data.Lambda paramType result) = do
@@ -434,13 +451,8 @@ dupRefTreeExprs ref = do
   if tcForceMonomorphic constraints
     then return ref
     else do
-      let origExprs = tcExprs constraints
-      exprs <- mapM recurse origExprs
-      makeRef emptyConstraints { tcExprs = exprs }
-  where
-    recurse (Data.GuidExpression guid expr) =
-      liftM (Data.GuidExpression guid) .
-      Data.sequenceExpression $ fmap dupRefTreeExprs expr
+      exprs <- mapM (Data.sequenceExpression . fmap dupRefTreeExprs) $ tcExprs constraints
+      makeRef emptyConstraints { tcLambdaGuids = tcLambdaGuids constraints, tcExprs = exprs }
 
 unify
   :: Monad m
@@ -469,9 +481,10 @@ unifyConstraints exprRef aConstraints bConstraints =
     aExprs = tcExprs aConstraints
     unifiedConstraints = Constraints
       { tcExprs = aExprs ++ bUnunified
-      , tcRules = tcRules aConstraints ++ tcRules bConstraints
+      , tcRules = on (++) tcRules aConstraints bConstraints
       , tcForceMonomorphic =
-        on (||) tcForceMonomorphic aConstraints bConstraints
+          on (||) tcForceMonomorphic aConstraints bConstraints
+      , tcLambdaGuids = on Set.union tcLambdaGuids aConstraints bConstraints
       }
     postAction = do
       when (all (not . null) [aExprs, bUnunified]) $ onConflict =<< getActions
@@ -486,60 +499,56 @@ unifyConstraints exprRef aConstraints bConstraints =
     f _ xs = Right $ sequence_ xs -- y matched existing stuff
     applyRulesRef xConstraints yConstraints =
       sequence_ $
-        liftA2 applyRule
+        liftA2 (applyRule (tcLambdaGuids yConstraints))
         (tcRules xConstraints) (tcExprs yConstraints)
-    applyRule
-      (UnifyRule arrowType destRef argRef)
-      (Data.GuidExpression guid expr) =
-        case (arrowType, expr) of
-        (ApplyFuncValue, Data.ExpressionLambda (Data.Lambda _ body)) -> do
-          subst guid (return argRef) body
-          unify body destRef
-        -- We now know our Apply parent is not a redex, unify the
-        -- Apply into the value
-        (ApplyFuncValue, _) ->
-          unify destRef =<<
-            makeSingletonRef zeroGuid
-            (Data.ExpressionApply (Data.Apply exprRef argRef))
-        (ApplyFuncType, Data.ExpressionPi (Data.Lambda _ resultType)) -> do
-          newResultType <- dupRefTreeExprs resultType
-          subst guid (return argRef) newResultType
-          unify argRef =<<
-            makeRef emptyConstraints { tcForceMonomorphic = True }
-          unify destRef newResultType
-        _ -> return ()
+    applyRule guids (UnifyRule arrowType destRef argRef) expr =
+      case (arrowType, expr) of
+      (ApplyFuncValue, Data.ExpressionLambda (Data.Lambda _ body)) -> do
+        subst guids (return argRef) body
+        unify body destRef
+      -- We now know our Apply parent is not a redex, unify the
+      -- Apply into the value
+      (ApplyFuncValue, _) ->
+        unify destRef =<<
+          makeSingletonRef []
+          (Data.ExpressionApply (Data.Apply exprRef argRef))
+      (ApplyFuncType, Data.ExpressionPi (Data.Lambda _ resultType)) -> do
+        newResultType <- dupRefTreeExprs resultType
+        subst guids (return argRef) newResultType
+        unify argRef =<<
+          makeRef emptyConstraints { tcForceMonomorphic = True }
+        unify destRef newResultType
+      _ -> return ()
 
 -- biased towards left child (if unifying Pis,
 -- substs right child's guids to left)
 unifyPair
   :: Monad m
-  => Data.GuidExpression Ref
-  -> Data.GuidExpression Ref
+  => Data.Expression Ref
+  -> Data.Expression Ref
   -> Maybe (Infer m ())
-unifyPair
-  (Data.GuidExpression aGuid aVal)
-  (Data.GuidExpression bGuid bVal)
-  = case (aVal, bVal) of
-    (Data.ExpressionPi l1,
-     Data.ExpressionPi l2) ->
-      unifyLambdas l1 l2
-    (Data.ExpressionLambda l1,
-     Data.ExpressionLambda l2) ->
-      unifyLambdas l1 l2
-    (Data.ExpressionApply (Data.Apply aFuncRef aArgRef),
-     Data.ExpressionApply (Data.Apply bFuncRef bArgRef)) -> Just $ do
-      unify aFuncRef bFuncRef
-      unify aArgRef bArgRef
-    (Data.ExpressionBuiltin (Data.Builtin name1 _),
-     Data.ExpressionBuiltin (Data.Builtin name2 _)) ->
-      cond $ name1 == name2
-    (Data.ExpressionGetVariable v1,
-     Data.ExpressionGetVariable v2) -> cond $ v1 == v2
-    (Data.ExpressionLiteralInteger i1,
-     Data.ExpressionLiteralInteger i2) -> cond $ i1 == i2
-    (Data.ExpressionSet,
-     Data.ExpressionSet) -> good
-    _ -> Nothing
+unifyPair aVal bVal =
+  case (aVal, bVal) of
+  (Data.ExpressionPi l1,
+   Data.ExpressionPi l2) ->
+    unifyLambdas l1 l2
+  (Data.ExpressionLambda l1,
+   Data.ExpressionLambda l2) ->
+    unifyLambdas l1 l2
+  (Data.ExpressionApply (Data.Apply aFuncRef aArgRef),
+   Data.ExpressionApply (Data.Apply bFuncRef bArgRef)) -> Just $ do
+    unify aFuncRef bFuncRef
+    unify aArgRef bArgRef
+  (Data.ExpressionBuiltin (Data.Builtin name1 _),
+   Data.ExpressionBuiltin (Data.Builtin name2 _)) ->
+    cond $ name1 == name2
+  (Data.ExpressionGetVariable v1,
+   Data.ExpressionGetVariable v2) -> cond $ v1 == v2
+  (Data.ExpressionLiteralInteger i1,
+   Data.ExpressionLiteralInteger i2) -> cond $ i1 == i2
+  (Data.ExpressionSet,
+   Data.ExpressionSet) -> good
+  _ -> Nothing
   where
     good = Just $ return ()
     cond True = good
@@ -548,24 +557,17 @@ unifyPair
       (Data.Lambda aParamRef aResultRef)
       (Data.Lambda bParamRef bResultRef) = Just $ do
       unify aParamRef bParamRef
-      -- Remap b's guid to a's guid and return a as the unification:
-      let
-        mkGetAGuidRef =
-          makeSingletonRef zeroGuid . Data.ExpressionGetVariable $
-          Data.ParameterRef aGuid
-      subst bGuid mkGetAGuidRef bResultRef
       unify aResultRef bResultRef
 
-subst :: Monad m => Guid -> Infer m Ref -> Ref -> Infer m ()
+subst :: Monad m => Set Guid -> Infer m Ref -> Ref -> Infer m ()
 subst from mkTo rootRef = do
   refs <- allUnder rootRef
   mapM_ replace refs
   where
     removeFrom
-      a@(Data.GuidExpression _
-       (Data.ExpressionGetVariable (Data.ParameterRef guidRef)))
-      | guidRef == from = (Any True, [])
-      | otherwise = (Any False, [a])
+      expr@(Data.ExpressionGetVariable (Data.ParameterRef guidRef))
+      | Set.member guidRef from = (Any True, [])
+      | otherwise = (Any False, [expr])
     removeFrom x = (Any False, [x])
     replace ref = do
       oldConstraints <- getRef ref
@@ -589,9 +591,7 @@ allUnder =
       unless alreadySeen $ do
         State.modify (ref :)
         types <- liftM tcExprs . lift $ getRef ref
-        mapM_ onType types
-    onType =
-      Data.sequenceExpression . fmap recurse . Data.geValue
+        mapM_ (Data.sequenceExpression . fmap recurse) types
 
 canonizeIdentifiers
   :: RandomGen g => g -> LoopGuidExpression -> LoopGuidExpression
