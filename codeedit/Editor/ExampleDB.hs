@@ -81,6 +81,9 @@ createBuiltins =
     integer <- mkType . A.newBuiltin "Prelude.Integer" =<< lift set
     bool <- mkType . A.newBuiltin "Prelude.Bool" =<< lift set
 
+    makeWithType "Prelude.True" bool
+    makeWithType "Prelude.False" bool
+
     makeWithType "Prelude.if" . forAll "a" $ \a ->
       mkPi bool . mkPi a $ mkPi a a
 
