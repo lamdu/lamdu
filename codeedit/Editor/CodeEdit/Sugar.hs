@@ -18,6 +18,7 @@ module Editor.CodeEdit.Sugar
 
 import Control.Applicative ((<$>), (<*>))
 import Control.Arrow (second, (&&&))
+import Control.Lens ((^.))
 import Control.Monad (join, guard, liftM, mzero)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (MonadTrans(..))
@@ -30,6 +31,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import System.Random (RandomGen)
+import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
@@ -234,14 +236,14 @@ eeFromTypedExpression =
   runIdentity . Data.mapMExpression f
   where
     f e =
-      ( return $ DataTyped.eeValue e
+      ( return $ e ^. DataTyped.eeValue
       , return .
-        ExprEntity (DataTyped.eeGuid e)
+        ExprEntity (e ^. DataTyped.eeGuid)
         (Just
          (ExprEntityStored
-          (DataTyped.eeRef e)
-          (DataTyped.eeInferredType e)
-          (DataTyped.eeInferredValue e))) .
+          (e ^. DataTyped.eeRef)
+          (e ^. DataTyped.eeInferredType)
+          (e ^. DataTyped.eeInferredValue))) .
         NonLoop
       )
 
@@ -314,7 +316,7 @@ derefRef
 derefRef = do
   builtinsMap <- readBuiltinsMap
   mDefinition <- readDefinition
-  let f def gen = DataTyped.derefRef gen builtinsMap $ DataTyped.deTypeContext def
+  let f def gen = DataTyped.derefRef gen builtinsMap $ def ^. DataTyped.deTypeContext
   return $ maybe ((const . const) []) f mDefinition
 
 mkExpressionRef
@@ -634,11 +636,11 @@ expandHoles deref =
   runIdentity . Data.mapMExpression f
   where
     f expr =
-      ( Identity $ DataTyped.eeValue expr
+      ( Identity $ expr ^. DataTyped.eeValue
       , \newVal ->
         Identity $ case newVal of
-        Data.ExpressionHole -> fromMaybe pureHole . deref $ DataTyped.eeInferredValue expr
-        _ -> Data.PureGuidExpression $ Data.GuidExpression (DataTyped.eeGuid expr) newVal
+        Data.ExpressionHole -> fromMaybe pureHole . deref $ expr ^. DataTyped.eeInferredValue
+        _ -> Data.PureGuidExpression $ Data.GuidExpression (expr ^. DataTyped.eeGuid) newVal
       )
 
 applyForms
@@ -666,7 +668,7 @@ inferResults ::
 inferResults builtinsMap scope mDef holeStored expr = List.joinL $ do
   mExprType <-
     liftM join . runMaybeT .
-    liftM (uncurry ($) . second DataTyped.eeInferredType) .
+    liftM (uncurry ($) . second (Lens.view DataTyped.eeInferredType)) .
     runInfer $ DataTyped.pureInferExpressionWithinContext scope mDef expr
   return $ case mExprType of
     Nothing -> mempty
@@ -679,14 +681,14 @@ inferResults builtinsMap scope mDef holeStored expr = List.joinL $ do
           DataTyped.pureInferExpressionWithinContext
           scope mDef applyExpr
         DataTyped.unify (eeInferredTypes holeStored) $
-          DataTyped.eeInferredType typedExpr
+          typedExpr ^. DataTyped.eeInferredType
         DataTyped.unify (eeInferredValues holeStored) $
-          DataTyped.eeInferredValue typedExpr
+          typedExpr ^. DataTyped.eeInferredValue
         return typedExpr
-      _ <- MaybeT . return . derefIt $ DataTyped.eeInferredType typedExpr
+      _ <- MaybeT . return . derefIt $ typedExpr ^. DataTyped.eeInferredType
       return $ expandHoles derefIt typedExpr
     typeContext =
-      maybe DataTyped.emptyTypeContext DataTyped.deTypeContext
+      maybe DataTyped.emptyTypeContext (Lens.view DataTyped.deTypeContext)
       mDef
     inferActions =
       (DataTyped.liftInferActions DataTyped.inferActions)
@@ -818,7 +820,7 @@ convertDefinitionI (DataTyped.StoredDefinition defI defInferredType (Data.Defini
       { dntNewType = inferredTypeS
       , dntAcceptNewType =
         Transaction.writeIRef defI .
-        (Data.Definition . Property.value . DataTyped.eeRef) bodyI =<<
+        (Data.Definition . Property.value . Lens.view DataTyped.eeRef) bodyI =<<
         Data.newIRefExpressionFromPure inferredTypePure
       }
   return DefinitionRef

@@ -5,13 +5,13 @@ module Editor.Data.Typed
 
   , Expression(..), StoredExpression
   , pureInferExpressionWithinContext
-  , atEeInferredType, atEeValue
+  , eeInferredType, eeInferredValue, eeValue, eeRef, eeGuid
   , loadInferExpression, inferExpression
   , toPureExpression
   , alphaEq
 
   , StoredDefinition(..)
-  , atDeIRef, atDeValue
+  , deIRef, deValue, deTypeContext
   , deGuid
   , loadInferDefinition
   , loadDefTypeWithinContext
@@ -25,6 +25,7 @@ module Editor.Data.Typed
   ) where
 
 import Control.Applicative (Applicative, liftA2)
+import Control.Lens ((.~), (^.))
 import Control.Monad (liftM, liftM2, (<=<), when, unless)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Random (nextRandom, runRandomT)
@@ -40,9 +41,10 @@ import Data.Store.Transaction (Transaction)
 import Data.UnionFind.IntMap (UnionFind)
 import Editor.Anchors (ViewTag)
 import System.Random (RandomGen)
+import qualified Control.Lens as Lens
+import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.State as State
-import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
@@ -123,11 +125,11 @@ fatten :: Ref -> FatRef
 fatten r = FatRef r False
 
 data Expression s = Expression
-  { eeRef :: s
-  , eeGuid :: Guid
-  , eeInferredType :: Ref
-  , eeInferredValue :: Ref
-  , eeValue :: Data.Expression (Expression s)
+  { _eeRef :: s
+  , _eeGuid :: Guid
+  , _eeInferredType :: Ref
+  , _eeInferredValue :: Ref
+  , _eeValue :: Data.Expression (Expression s)
   }
 instance Show (Expression s) where
   show (Expression _ guid it iv value) =
@@ -141,26 +143,26 @@ data LoopGuidExpression
   deriving (Show, Eq)
 
 data TypeContext = TypeContext
-  { tcConstraints :: UnionFind Constraints
-  , tcParamGuidMap :: Map Guid Guid
+  { _tcConstraints :: UnionFind Constraints
+  , _tcParamGuidMap :: Map Guid Guid
   }
-AtFieldTH.make ''TypeContext
+LensTH.makeLenses ''TypeContext
 
 emptyTypeContext :: TypeContext
 emptyTypeContext = TypeContext UnionFind.empty Map.empty
 
 data StoredDefinition m = StoredDefinition
-  { deIRef :: Data.DefinitionIRef
-  , deInferredType :: Ref
-  , deValue :: Data.Definition (StoredExpression m)
-  , deTypeContext :: TypeContext
+  { _deIRef :: Data.DefinitionIRef
+  , _deInferredType :: Ref
+  , _deValue :: Data.Definition (StoredExpression m)
+  , _deTypeContext :: TypeContext
   }
 
-deGuid :: StoredDefinition m -> Guid
-deGuid = IRef.guid . deIRef
+LensTH.makeLenses ''Expression
+LensTH.makeLenses ''StoredDefinition
 
-AtFieldTH.make ''Expression
-AtFieldTH.make ''StoredDefinition
+deGuid :: StoredDefinition m -> Guid
+deGuid = IRef.guid . Lens.view deIRef
 
 --------------- Infer Stack boilerplate:
 
@@ -182,9 +184,9 @@ liftInferActions (InferActions a b c) =
   InferActions (lift a) (fmap lift b) (fmap lift c)
 
 newtype Infer m a = Infer
-  { unInfer :: ReaderT (InferActions m) (StateT TypeContext m) a
+  { _infer :: ReaderT (InferActions m) (StateT TypeContext m) a
   } deriving (Functor, Applicative, Monad)
-AtFieldTH.make ''Infer
+LensTH.makeLenses ''Infer
 
 ----------------- Infer operations:
 
@@ -198,19 +200,19 @@ instance MonadTrans Infer where
   lift = liftTypeContext . lift
 
 getsConstraints :: Monad m => (UnionFind Constraints -> a) -> Infer m a
-getsConstraints f = liftTypeContext $ State.gets (f . tcConstraints)
+getsConstraints f = liftTypeContext $ State.gets (f . Lens.view tcConstraints)
 
 getsParamGuidMap :: Monad m => (Map Guid Guid -> a) -> Infer m a
-getsParamGuidMap f = liftTypeContext $ State.gets (f . tcParamGuidMap)
+getsParamGuidMap f = liftTypeContext $ State.gets (f . Lens.view tcParamGuidMap)
 
 makeRef :: Monad m => Constraints -> Infer m Ref
 makeRef x =
   liftTypeContext $ StateT f
   where
     f state =
-      return (result, state { tcConstraints = newConstraints} )
+      return (result, tcConstraints .~ newConstraints $ state )
       where
-        (result, newConstraints) = UnionFind.fresh x $ tcConstraints state
+        (result, newConstraints) = UnionFind.fresh x $ state ^. tcConstraints
 
 getRef :: Monad m => Ref -> Infer m Constraints
 getRef = getsConstraints . UnionFind.descr
@@ -225,7 +227,7 @@ resumeInfer
   :: Monad m
   => InferActions m -> TypeContext -> Infer m a -> m (TypeContext, a)
 resumeInfer actions typeContext =
-  liftM Tuple.swap . (`runStateT` typeContext) . (`runReaderT` actions) . unInfer
+  liftM Tuple.swap . (`runStateT` typeContext) . (`runReaderT` actions) . Lens.view infer
 
 makeNoConstraints :: Monad m => Infer m Ref
 makeNoConstraints = makeRef emptyConstraints
@@ -326,7 +328,7 @@ toExpr extract =
             -- the Apply into the constraints until later when it is
             -- known whether it is a redex or not.
             Data.ExpressionApply _ -> makeNoConstraints
-            _ -> makeSingletonRef [g] $ fmap (fatten . eeInferredValue) newVal
+            _ -> makeSingletonRef [g] $ fmap (fatten . Lens.view eeInferredValue) newVal
           return $ Expression prop g typeRef valRef newVal
       )
       where
@@ -358,16 +360,17 @@ derefRef stdGen builtinsMap typeContext rootRef =
    map (builtinsToGlobals builtinsMap)) .
   (`runReaderT` Set.empty) $ go rootRef
   where
-    mapGuid = flip lookupDefToKey $ tcParamGuidMap typeContext
+    constraintsUF = typeContext ^. tcConstraints
+    mapGuid = flip lookupDefToKey $ typeContext ^. tcParamGuidMap
     canonizeInferredExpression =
       zipWith canonizeIdentifiers . RandomUtils.splits
     go ref = do
       visited <- Reader.ask
-      if Set.member (UnionFind.repr ref (tcConstraints typeContext)) visited
+      if Set.member (UnionFind.repr ref constraintsUF) visited
         then return $ Loop zeroGuid
         else do
           let
-            constraints = UnionFind.descr ref $ tcConstraints typeContext
+            constraints = UnionFind.descr ref constraintsUF
             guid =
               case Set.toList (tcLambdaGuids constraints) of
               [] -> zeroGuid
@@ -375,7 +378,7 @@ derefRef stdGen builtinsMap typeContext rootRef =
           expr <- lift $ tcExprs constraints
           liftM (NoLoop . Data.GuidExpression guid) .
             (Reader.local . Set.insert)
-            (UnionFind.repr ref (tcConstraints typeContext)) $
+            (UnionFind.repr ref constraintsUF) $
             recurse expr
     recurse (Data.ExpressionGetVariable (Data.ParameterRef p)) =
       return . Data.ExpressionGetVariable . Data.ParameterRef $ mapGuid p
@@ -403,21 +406,21 @@ inferExpression scope defRef (Expression _ g typeRef valueRef value) =
     -- unify/unifyPair. Thus we can later assume that we got the
     -- same guid in the pi and the lambda.
     flip unify typeRef <=< makePi g .
-      wrapCons Data.Lambda (eeInferredValue paramType) $ eeInferredType body
+      wrapCons Data.Lambda (paramType ^. eeInferredValue) $ body ^. eeInferredType
   Data.ExpressionPi lambda@(Data.Lambda _ resultType) -> do
     onLambda lambda
     -- TODO: Is Set:Set a good idea? Agda uses "eeInferredType
     -- resultType" as the type
     setType =<< mkSet
-    unify (eeInferredType resultType) =<< mkSet
+    unify (resultType ^. eeInferredType) =<< mkSet
   Data.ExpressionApply (Data.Apply func arg) -> do
     go [] func
     go [] arg
     let
-      funcValRef = eeInferredValue func
-      funcTypeRef = eeInferredType func
-      argValRef = eeInferredValue arg
-      argTypeRef = eeInferredType arg
+      funcValRef = func ^. eeInferredValue
+      funcTypeRef = func ^. eeInferredType
+      argValRef = arg ^. eeInferredValue
+      argTypeRef = arg ^. eeInferredType
     -- We give the new Pi the same Guid as the Apply. This is
     -- fine because Apply's Guid is meaningless and the
     -- canonization will fix it later anyway.
@@ -460,8 +463,8 @@ inferExpression scope defRef (Expression _ g typeRef valueRef value) =
     go newVars = inferExpression (Map.fromList newVars `Map.union` scope) defRef
     onLambda (Data.Lambda paramType result) = do
       go [] paramType
-      go [(g, eeInferredValue paramType)] result
-      unify (eeInferredType paramType) =<< mkSet
+      go [(g, paramType ^. eeInferredValue)] result
+      unify (paramType ^. eeInferredType) =<< mkSet
 
 -- New Ref tree has tcRules=[] everywhere
 subst :: Monad m => Set Guid -> Ref -> FatRef -> Infer m FatRef
@@ -491,7 +494,7 @@ unify a b = do
     -- this pair will know it's being done...
     aConstraints <- getRef a
     bConstraints <- getRef b
-    liftTypeContext . State.modify . atTcConstraints $ a `UnionFind.union` b
+    liftTypeContext . State.modify . Lens.over tcConstraints $ a `UnionFind.union` b
     paramGuidMapping <- getsParamGuidMap id
     let
       (unifiedConstraints, postAction) =
@@ -506,8 +509,8 @@ unify a b = do
           Map.fromList . map (flip (,) reprGuid) . Set.toList $
           tcLambdaGuids bConstraints
     liftTypeContext $ State.modify
-      ( atTcConstraints (UnionFind.setDescr a unifiedConstraints)
-      . atTcParamGuidMap (Map.union mapUpdates)
+      ( Lens.over tcConstraints (UnionFind.setDescr a unifiedConstraints)
+      . Lens.over tcParamGuidMap (Map.union mapUpdates)
       )
     postAction
 
@@ -672,7 +675,7 @@ loadDefTypeWithinContext
   :: Monad m
   => Maybe (StoredDefinition (T f)) -> Data.DefinitionIRef -> Infer m Ref
 loadDefTypeWithinContext Nothing = loadDefTypeToRef
-loadDefTypeWithinContext (Just def) = getDefRef (deInferredType def) (deIRef def)
+loadDefTypeWithinContext (Just def) = getDefRef (def ^. deInferredType) (def ^. deIRef)
 
 pureInferExpressionWithinContext
   :: Monad m
@@ -698,13 +701,13 @@ inferDefinition (DataLoad.DefinitionEntity defI (Data.Definition bodyI typeI)) =
   (typeContext, (bodyExpr, typeExpr)) <- runInfer inferActions $ do
     bodyExpr <- fromLoaded bodyI
     typeExpr <- fromLoaded typeI
-    inferExpression Map.empty (getDefRef (eeInferredType bodyExpr) defI) bodyExpr
+    inferExpression Map.empty (getDefRef (bodyExpr ^. eeInferredType) defI) bodyExpr
     return (bodyExpr, typeExpr)
   return StoredDefinition
-    { deIRef = defI
-    , deInferredType = eeInferredType bodyExpr
-    , deValue = Data.Definition bodyExpr typeExpr
-    , deTypeContext = typeContext
+    { _deIRef = defI
+    , _deInferredType = bodyExpr ^. eeInferredType
+    , _deValue = Data.Definition bodyExpr typeExpr
+    , _deTypeContext = typeContext
     }
 
 loadInferDefinition
