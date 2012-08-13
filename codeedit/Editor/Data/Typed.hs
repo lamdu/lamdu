@@ -345,11 +345,11 @@ derefRef stdGen builtinsMap typeContext rootRef =
     canonizeInferredExpression = zipWith canonizeIdentifiers . RandomUtils.splits
     go ref = do
       visited <- Reader.asks fst
-      if Set.member (UnionFind.repr typeContext ref) visited
+      if Set.member (UnionFind.repr ref typeContext) visited
         then return $ Loop zeroGuid
         else do
           let
-            constraints = UnionFind.descr typeContext ref
+            constraints = UnionFind.descr ref typeContext
             (guid, mapping) =
               case Set.toList (tcLambdaGuids constraints) of
               [] -> (zeroGuid, Map.empty)
@@ -357,7 +357,7 @@ derefRef stdGen builtinsMap typeContext rootRef =
           expr <- lift $ tcExprs constraints
           liftM (NoLoop . Data.GuidExpression guid) .
             Reader.local
-            ( (first . Set.insert) (UnionFind.repr typeContext ref)
+            ( (first . Set.insert) (UnionFind.repr ref typeContext)
             . (second . Map.union) mapping
             ) $ recurse expr
     recurse (Data.ExpressionGetVariable (Data.ParameterRef p)) =

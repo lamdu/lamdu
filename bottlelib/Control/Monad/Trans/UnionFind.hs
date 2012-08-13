@@ -36,16 +36,16 @@ new :: Monad m => p -> UnionFindT p m (Point p)
 new x = UnionFindT . StateT $ return . swap . flip UF.fresh x
 
 findRepr :: Monad m => Point p -> UnionFindT p m (Point p)
-findRepr = UnionFindT . State.gets . flip UF.repr
+findRepr = UnionFindT . State.gets . UF.repr
 
 descr :: Monad m => Point p -> UnionFindT p m p
-descr = UnionFindT . State.gets . flip UF.descr
+descr = UnionFindT . State.gets . UF.descr
 
 setDescr :: Monad m => Point p -> p -> UnionFindT p m ()
-setDescr p val = UnionFindT . State.modify $ \ps -> UF.setDescr ps p val
+setDescr p = UnionFindT . State.modify . UF.setDescr p
 
 union :: Monad m => Point p -> Point p -> UnionFindT p m ()
-union p1 p2 = UnionFindT . State.modify $ \x -> UF.union x p1 p2
+union p = UnionFindT . State.modify . UF.union p
 
 -- | Convenience function to handle a potential unification
 unionWith
@@ -60,4 +60,4 @@ unionWith f p1 p2 = do
 
 -- | findRepr x == findRepr y
 equivalent :: Monad m => Point p -> Point p -> UnionFindT p m Bool
-equivalent p1 p2 = UnionFindT . State.gets $ \x -> UF.equivalent x p1 p2
+equivalent p = UnionFindT . State.gets . UF.equivalent p

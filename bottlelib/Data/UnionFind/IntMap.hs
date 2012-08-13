@@ -65,14 +65,14 @@ getPoints :: UnionFind a -> [(Point a, [Point a])]
 getPoints ps =
   map (Point *** map Point) .
   IM.toList .
-  IM.fromListWith (++) . map (asPoint (repr ps) &&& (:[])) .
+  IM.fromListWith (++) . map (asPoint (`repr` ps) &&& (:[])) .
   IM.keys $
   psEqs ps
 
 prettyUF :: Show a => UnionFind a -> String
 prettyUF ps =
   unlines . ("UnionFind:":) .
-  map (\(r, keys) -> show keys ++ ":" ++ show (descr ps r)) $
+  map (\(r, keys) -> show keys ++ ":" ++ show (descr r ps)) $
   getPoints ps
 
 data Link a
@@ -93,8 +93,8 @@ fresh (UnionFind next eqs) a =
 -- freshList :: UnionFind a -> [a] -> (UnionFind a, [Point a])
 -- freshList
 
-repr :: UnionFind a -> Point a -> Point a
-repr ps p = reprInfo ps p (\n _rank _a -> Point n)
+repr :: Point a -> UnionFind a -> Point a
+repr p ps = reprInfo ps p (\n _rank _a -> Point n)
 
 reprInfo :: UnionFind a -> Point a -> (Int -> Int -> a -> r) -> r
 reprInfo ps (Point n) k = go n
@@ -104,8 +104,8 @@ reprInfo ps (Point n) k = go n
         Link i' -> go i'
         Info r a -> k i r a
 
-union :: UnionFind a -> Point a -> Point a -> UnionFind a
-union ps p1 p2 =
+union :: Point a -> Point a -> UnionFind a -> UnionFind a
+union p1 p2 ps =
   reprInfo ps p1 $ \i1 r1 _a1 ->
   reprInfo ps p2 $ \i2 r2 a2 ->
   atEqs ps $
@@ -121,16 +121,16 @@ union ps p1 p2 =
         IM.insert i1 (Info r2 a2) .
         IM.insert i2 (Link i1)
 
-descr :: UnionFind a -> Point a -> a
-descr ps p = reprInfo ps p (\_ _ a -> a)
+descr :: Point a -> UnionFind a -> a
+descr p ps = reprInfo ps p (\_ _ a -> a)
 
-setDescr :: UnionFind a -> Point a -> a -> UnionFind a
-setDescr ps p val =
+setDescr :: Point a -> a -> UnionFind a -> UnionFind a
+setDescr p val ps =
   reprInfo ps p $ \i r _oldVal ->
   atEqs ps $ IM.insert i (Info r val)
 
-equivalent :: UnionFind a -> Point a -> Point a -> Bool
-equivalent ps p1 p2 =
+equivalent :: Point a -> Point a -> UnionFind a -> Bool
+equivalent p1 p2 ps =
   reprInfo ps p1 $ \i1 _ _ ->
   reprInfo ps p2 $ \i2 _ _ ->
   i1 == i2
