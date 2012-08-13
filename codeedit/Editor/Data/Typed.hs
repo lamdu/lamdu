@@ -472,9 +472,9 @@ subst _ _ src@(FatRef _ True) = return src
 subst from to (FatRef ref False) = do
   constraints <- getRef ref
   let
-    fooResults = map foo $ tcExprs constraints
-    isSubst = any isNothing fooResults
-  exprs <- sequence $ catMaybes fooResults
+    exprResults = map processExpr $ tcExprs constraints
+    isSubst = any isNothing exprResults
+  exprs <- sequence $ catMaybes exprResults
   newRef <- makeRef emptyConstraints
     { tcLambdaGuids = tcLambdaGuids constraints
     , tcExprs = exprs
@@ -482,9 +482,9 @@ subst from to (FatRef ref False) = do
   when isSubst $ unify newRef to
   return $ FatRef newRef isSubst
   where
-    foo (Data.ExpressionGetVariable (Data.ParameterRef p))
+    processExpr (Data.ExpressionGetVariable (Data.ParameterRef p))
       | Set.member p from = Nothing
-    foo expr = Just . Data.sequenceExpression $ fmap (subst from to) expr
+    processExpr expr = Just . Data.sequenceExpression $ fmap (subst from to) expr
 
 unify :: Monad m => Ref -> Ref -> Infer m ()
 unify a b = do
