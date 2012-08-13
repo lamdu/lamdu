@@ -25,7 +25,6 @@ module Editor.Data.Typed
   ) where
 
 import Control.Applicative (Applicative, liftA2)
-import Control.Arrow (first, second)
 import Control.Monad (liftM, liftM2, (<=<), when, unless)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Random (nextRandom, runRandomT)
@@ -357,31 +356,29 @@ derefRef
 derefRef stdGen builtinsMap typeContext rootRef =
   (canonizeInferredExpression stdGen .
    map (builtinsToGlobals builtinsMap)) .
-  (`runReaderT` (Set.empty, Map.empty)) $ go rootRef
+  (`runReaderT` Set.empty) $ go rootRef
   where
-    canonizeInferredExpression = zipWith canonizeIdentifiers . RandomUtils.splits
+    mapGuid = flip lookupDefToKey $ tcParamGuidMap typeContext
+    canonizeInferredExpression =
+      zipWith canonizeIdentifiers . RandomUtils.splits
     go ref = do
-      visited <- Reader.asks fst
+      visited <- Reader.ask
       if Set.member (UnionFind.repr ref (tcConstraints typeContext)) visited
         then return $ Loop zeroGuid
         else do
           let
             constraints = UnionFind.descr ref $ tcConstraints typeContext
-            (guid, mapping) =
+            guid =
               case Set.toList (tcLambdaGuids constraints) of
-              [] -> (zeroGuid, Map.empty)
-              (x : xs) -> (x, Map.fromList (map (flip (,) x) xs))
+              [] -> zeroGuid
+              (g : _) -> mapGuid g
           expr <- lift $ tcExprs constraints
           liftM (NoLoop . Data.GuidExpression guid) .
-            Reader.local
-            ( (first . Set.insert) (UnionFind.repr ref (tcConstraints typeContext))
-            . (second . Map.union) mapping
-            ) $ recurse expr
+            (Reader.local . Set.insert)
+            (UnionFind.repr ref (tcConstraints typeContext)) $
+            recurse expr
     recurse (Data.ExpressionGetVariable (Data.ParameterRef p)) =
-      Reader.asks
-      ( Data.ExpressionGetVariable . Data.ParameterRef
-      . fromMaybe p . Map.lookup p . snd
-      )
+      return . Data.ExpressionGetVariable . Data.ParameterRef $ mapGuid p
     recurse expr =
       Data.sequenceExpression $ fmap (Reader.mapReaderT holify . go . frPoint) expr
     holify [] =
@@ -506,7 +503,8 @@ unify a b = do
         case mReprGuid of
         Nothing -> Map.empty
         Just reprGuid ->
-          Map.fromList . map (flip (,) reprGuid) . Set.toList $ tcLambdaGuids bConstraints
+          Map.fromList . map (flip (,) reprGuid) . Set.toList $
+          tcLambdaGuids bConstraints
     liftTypeContext $ State.modify
       ( atTcConstraints (UnionFind.setDescr a unifiedConstraints)
       . atTcParamGuidMap (Map.union mapUpdates)
