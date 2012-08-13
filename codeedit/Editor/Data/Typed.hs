@@ -118,7 +118,7 @@ data FatRef = FatRef
   }
 instance Show FatRef where
   show (FatRef point False) = show point
-  show (FatRef point True) = "F" ++ show point
+  show (FatRef point True) = 'F' : show point
 
 fatten :: Ref -> FatRef
 fatten r = FatRef r False
