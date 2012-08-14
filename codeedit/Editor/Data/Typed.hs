@@ -501,7 +501,6 @@ unify a b = do
         unifyConstraints paramGuidMapping a aConstraints bConstraints
       mSomeAGuid = fmap fst . Set.minView $ tcLambdaGuids aConstraints
       mReprGuid = fmap (`lookupDefToKey` paramGuidMapping) mSomeAGuid
-    let
       mapUpdates =
         case mReprGuid of
         Nothing -> Map.empty
@@ -547,8 +546,8 @@ unifyConstraints paramGuidMapping exprRef aConstraints bConstraints =
           Just (expr, act) -> (expr, badYs, action >> act)
     applyRulesRef xConstraints yConstraints =
       sequence_ $
-        liftA2 (applyRule (tcLambdaGuids yConstraints))
-        (tcRules xConstraints) (tcExprs yConstraints)
+      liftA2 (applyRule (tcLambdaGuids yConstraints))
+      (tcRules xConstraints) (tcExprs yConstraints)
     applyRule guids (UnifyRule arrowType destRef argRef) expr =
       case (arrowType, expr) of
       (ApplyFuncValue, Data.ExpressionLambda (Data.Lambda _ body)) ->
