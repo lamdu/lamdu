@@ -86,11 +86,11 @@ eipGuid = IRef.guid . Data.unExpressionIRef . Property.value
 -- refer to previous Pi args, therefore they are monomorphic and can
 -- be unified into.
 
-data ApplyPos = ApplyFuncType | ApplyFuncValue
+data UnifyRuleType = ApplyFuncType | ApplyFuncValue
   deriving (Show, Eq)
 
 data UnifyRule = UnifyRule
-  { urApplyPos :: ApplyPos
+  { urType :: UnifyRuleType
   , urDest :: Ref
   , urArg :: Ref
   } deriving (Show)
@@ -428,13 +428,13 @@ inferExpression scope defRef (Expression _ g typeRef valueRef value) =
       makePi g . wrapCons Data.Lambda argTypeRef =<< makeNoConstraints
     unify funcTypeRef =<<
       makeRuleRef UnifyRule
-        { urApplyPos = ApplyFuncType
+        { urType = ApplyFuncType
         , urDest = typeRef
         , urArg = argValRef
         }
     unify funcValRef =<<
       makeRuleRef UnifyRule
-        { urApplyPos = ApplyFuncValue
+        { urType = ApplyFuncValue
         , urDest = valueRef
         , urArg = argValRef
         }
