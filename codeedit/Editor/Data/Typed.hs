@@ -283,8 +283,8 @@ expand e@(Data.PureGuidExpression (Data.GuidExpression guid val)) =
     -- constraint)
     (`loadPureDefinitionBody` defI) =<< getActions
   Data.ExpressionApply (Data.Apply func arg) ->
-    liftM (makePureGuidExpr . Data.ExpressionApply) $
-    liftM2 Data.Apply (expand func) (expand arg)
+    liftM makePureGuidExpr $
+    liftM2 Data.makeApply (expand func) (expand arg)
   Data.ExpressionLambda lambda ->
     recurseLambda Data.ExpressionLambda lambda
   Data.ExpressionPi lambda ->
@@ -557,7 +557,7 @@ unifyConstraints paramGuidMapping exprRef aConstraints bConstraints =
       (ApplyFuncValue, _) ->
         unify destRef =<<
           makeSingletonRef []
-          (Data.ExpressionApply (Data.Apply (fatten exprRef) (fatten argRef)))
+          (Data.makeApply (fatten exprRef) (fatten argRef))
       (ApplyFuncType, Data.ExpressionPi (Data.Lambda _ resultType)) ->
         unify destRef . frPoint =<< subst guids argRef resultType
       _ -> return ()
@@ -580,7 +580,7 @@ unifyPair paramGuidMapping aVal bVal =
     unifyLambdas Data.ExpressionLambda l1 l2
   (Data.ExpressionApply (Data.Apply aFuncRef aArgRef),
    Data.ExpressionApply (Data.Apply bFuncRef bArgRef)) ->
-    mkStructuralResult (fmap Data.ExpressionApply . Data.Apply)
+    mkStructuralResult Data.makeApply
     (aFuncRef, aArgRef) (bFuncRef, bArgRef)
   (Data.ExpressionBuiltin (Data.Builtin name1 _),
    Data.ExpressionBuiltin (Data.Builtin name2 _)) ->
@@ -633,8 +633,7 @@ canonizeIdentifiers gen =
         Data.ExpressionPi lambda ->
           liftM Data.ExpressionPi $ onLambda oldGuid newGuid lambda
         Data.ExpressionApply (Data.Apply func arg) ->
-          liftM Data.ExpressionApply $
-          liftM2 Data.Apply (f func) (f arg)
+          liftM2 Data.makeApply (f func) (f arg)
         gv@(Data.ExpressionGetVariable (Data.ParameterRef guid)) ->
           Reader.asks $
           maybe gv (Data.ExpressionGetVariable . Data.ParameterRef) .

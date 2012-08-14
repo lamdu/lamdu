@@ -72,8 +72,7 @@ loadExpression exprP = do
     Data.ExpressionPi lambda ->
       liftM Data.ExpressionPi $ loadLambda Data.ExpressionPi lambda
     Data.ExpressionApply apply ->
-      liftM Data.ExpressionApply $
-      liftM2 Data.Apply
+      liftM2 Data.makeApply
       (loadExpression (applyFuncProp exprI apply))
       (loadExpression (applyArgProp exprI apply))
     Data.ExpressionBuiltin bi ->
@@ -141,7 +140,7 @@ applyFuncProp
   -> Data.ApplyI -> Data.ExpressionIRefProperty (T m)
 applyFuncProp applyI (Data.Apply funcI argI) =
   Property funcI
-  (Data.writeExprIRef applyI . Data.ExpressionApply . (`Data.Apply` argI))
+  (Data.writeExprIRef applyI . (`Data.makeApply` argI))
 
 applyArgProp
   :: Monad m
@@ -149,7 +148,7 @@ applyArgProp
   -> Data.ApplyI -> Data.ExpressionIRefProperty (T m)
 applyArgProp applyI (Data.Apply funcI argI) =
   Property argI
-  (Data.writeExprIRef applyI . Data.ExpressionApply . Data.Apply funcI)
+  (Data.writeExprIRef applyI . Data.makeApply funcI)
 
 builtinTypeProp
   :: Monad m

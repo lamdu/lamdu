@@ -70,13 +70,13 @@ createBuiltins =
         let aGuid = IRef.guid aI
         A.setP (A.assocNameRef aGuid) name
         s <- set
-        return . Data.ExpressionPi . Data.Lambda s =<< f ((getVar . Data.ParameterRef) aGuid)
+        return . Data.makePi s =<< f ((getVar . Data.ParameterRef) aGuid)
       setToSet = mkPi set set
     list <- mkType . A.newBuiltin "Data.List.List" =<< lift setToSet
     let
       listOf a = do
         l <- list
-        Data.newExprIRef . Data.ExpressionApply . Data.Apply l =<< a
+        Data.newExprIRef . Data.makeApply l =<< a
 
     integer <- mkType . A.newBuiltin "Prelude.Integer" =<< lift set
     bool <- mkType . A.newBuiltin "Prelude.Bool" =<< lift set
@@ -116,7 +116,7 @@ createBuiltins =
     getVar = Data.newExprIRef . Data.ExpressionGetVariable
     mkPi mkArgType mkResType = do
       argType <- mkArgType
-      Data.newExprIRef . Data.ExpressionPi . Data.Lambda argType =<< mkResType
+      Data.newExprIRef . Data.makePi argType =<< mkResType
     mkType f = do
       x <- lift f
       Writer.tell [x]

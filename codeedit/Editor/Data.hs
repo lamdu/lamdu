@@ -9,7 +9,7 @@ module Editor.Data
   , Apply(..), atApplyFunc, atApplyArg
   , ApplyI
   , Builtin(..)
-  , Expression(..)
+  , Expression(..), makeApply, makePi, makeLambda
   , ExpressionIRefProperty
   , ExpressionI, ExpressionIRef(..)
   , GuidExpression(..), atGeGuid, atGeValue
@@ -109,6 +109,15 @@ data Expression expr
   deriving (Eq, Ord, Functor)
 type ExpressionI = Expression ExpressionIRef
 
+makeApply :: expr -> expr -> Expression expr
+makeApply func arg = ExpressionApply $ Apply func arg
+
+makePi :: expr -> expr -> Expression expr
+makePi argType resultType = ExpressionPi $ Lambda argType resultType
+
+makeLambda :: expr -> expr -> Expression expr
+makeLambda argType body = ExpressionLambda $ Lambda argType body
+
 instance Show expr => Show (Expression expr) where
   show (ExpressionLambda (Lambda paramType body)) = concat ["\\:", showP paramType, "==>", showP body]
   show (ExpressionPi (Lambda paramType body)) = concat [showP paramType, "->", showP body]
@@ -171,9 +180,9 @@ AtFieldTH.make ''Apply
 AtFieldTH.make ''Definition
 
 sequenceExpression :: Monad f => Expression (f a) -> f (Expression a)
-sequenceExpression (ExpressionLambda (Lambda x y)) = liftM ExpressionLambda $ liftM2 Lambda x y
-sequenceExpression (ExpressionPi (Lambda x y)) = liftM ExpressionPi $ liftM2 Lambda x y
-sequenceExpression (ExpressionApply (Apply x y)) = liftM ExpressionApply $ liftM2 Apply x y
+sequenceExpression (ExpressionLambda (Lambda x y)) = liftM2 makeLambda x y
+sequenceExpression (ExpressionPi (Lambda x y)) = liftM2 makePi x y
+sequenceExpression (ExpressionApply (Apply x y)) = liftM2 makeApply x y
 sequenceExpression (ExpressionBuiltin (Builtin name t)) = liftM (ExpressionBuiltin . Builtin name) t
 sequenceExpression (ExpressionGetVariable var) = return $ ExpressionGetVariable var
 sequenceExpression ExpressionHole = return ExpressionHole
@@ -244,8 +253,7 @@ canonizeIdentifiers gen =
         ExpressionPi lambda ->
           liftM ExpressionPi $ onLambda oldGuid newGuid lambda
         ExpressionApply (Apply func arg) ->
-          liftM ExpressionApply $
-          liftM2 Apply (go func) (go arg)
+          liftM2 makeApply (go func) (go arg)
         gv@(ExpressionGetVariable (ParameterRef guid)) ->
           Reader.asks $
           maybe gv (ExpressionGetVariable . ParameterRef) .

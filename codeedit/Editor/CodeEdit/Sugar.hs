@@ -655,7 +655,7 @@ applyForms exprType expr =
   where
     addApply =
       Data.PureGuidExpression . Data.GuidExpression zeroGuid .
-      Data.ExpressionApply . (`Data.Apply` pureHole)
+      (`Data.makeApply` pureHole)
 
 inferResults ::
   (Monad m, Monad f) =>
