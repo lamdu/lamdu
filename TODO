@@ -1,3 +1,8 @@
+* Typed: Maybe rewrite type inference to use PureGuidExpression rather
+  than Data.Expression Ref with declarative inference laws application
+  loop. Infinite types are prevented/disallowed via detection of
+  some Guid as child of itself.
+
 * Bug: <Del> on branch name does not work
   * Cursor does not move, so GUI is not regenerated, apparently. Need
     to rewrite main loop.

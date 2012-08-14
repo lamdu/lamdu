@@ -316,7 +316,7 @@ derefRef
 derefRef = do
   builtinsMap <- readBuiltinsMap
   mDefinition <- readDefinition
-  let f def gen = DataTyped.derefRef gen builtinsMap $ def ^. DataTyped.deTypeContext
+  let f def gen = DataTyped.derefRef gen builtinsMap $ def ^. DataTyped.deFinalTypeContext
   return $ maybe ((const . const) []) f mDefinition
 
 mkExpressionRef
@@ -691,16 +691,22 @@ inferResults builtinsMap scope mDef holeStored expr = List.joinL $ do
       maybe DataTyped.emptyTypeContext (Lens.view DataTyped.deTypeContext)
       mDef
     inferActions =
-      (DataTyped.liftInferActions DataTyped.inferActions)
-      { DataTyped.onConflict = mzero }
+      Lens.set DataTyped.onConflict mzero $
+      DataTyped.inferActions lift
+    refPair =
+      Lens.view DataTyped.deInferredType &&&
+      Lens.view DataTyped.deRecursiveInferredType
     runInfer action = do
       (newTypeContext, x) <-
         DataTyped.resumeInfer inferActions typeContext action
+      finalTypeContext <-
+        DataTyped.finalizeTypeContext (fmap refPair mDef)
+        inferActions newTypeContext
       let
         derefIt =
           fromInferred .
           DataTyped.derefRef (Random.mkStdGen 0) builtinsMap
-          newTypeContext
+          finalTypeContext
       return (derefIt, x)
 
 convertHole :: Monad m => Convertor m
@@ -803,7 +809,7 @@ convertDefinitionI
   :: Monad m
   => DataTyped.StoredDefinition (T m)
   -> Sugar m (DefinitionRef m)
-convertDefinitionI (DataTyped.StoredDefinition defI defInferredType (Data.Definition bodyI typeI) _) = do
+convertDefinitionI (DataTyped.StoredDefinition defI defInferredType _ (Data.Definition bodyI typeI) _ _) = do
   bodyS <- convertExpressionI bodyEntity
   typeS <- convertExpressionI $ eeFromTypedExpression typeI
   deref <- derefRef

@@ -11,22 +11,23 @@ module Editor.Data.Typed
   , alphaEq
 
   , StoredDefinition(..)
-  , deIRef, deValue, deTypeContext
+  , deIRef, deValue, deTypeContext, deInferredType
+  , deRecursiveInferredType, deFinalTypeContext
   , deGuid
   , loadInferDefinition
-  , loadDefTypeWithinContext
 
   , Ref, Scope
   , TypeContext, emptyTypeContext
+  , FinalTypeContext, finalizeTypeContext
   , Infer, resumeInfer
-  , InferActions(..), inferActions, liftInferActions
+  , InferActions(..), onConflict
+  , inferActions
   , unify, derefRef
   , makeSingletonRef
   ) where
 
-import Control.Applicative (Applicative, liftA2)
 import Control.Lens ((.~), (^.))
-import Control.Monad (liftM, liftM2, (<=<), when, unless)
+import Control.Monad (liftM, liftM2, (<=<), when, unless, forM_)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Random (nextRandom, runRandomT)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -34,7 +35,7 @@ import Control.Monad.Trans.State (StateT(..))
 import Data.Function (on)
 import Data.Functor.Identity (Identity(..))
 import Data.Map (Map)
-import Data.Maybe (fromMaybe, catMaybes, isNothing)
+import Data.Maybe (fromMaybe)
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
@@ -86,7 +87,15 @@ eipGuid = IRef.guid . Data.unExpressionIRef . Property.value
 -- refer to previous Pi args, therefore they are monomorphic and can
 -- be unified into.
 
-data UnifyRuleType = ApplyFuncType | ApplyFuncValue
+data SubstRule = SubstRule
+  { _srFromGuids :: Set Guid
+  , _srSubstitutedRefs :: [Ref]
+  } deriving (Show, Eq)
+
+data ApplyFuncRole = ApplyFuncType | ApplyFuncValue
+  deriving (Show, Eq)
+
+data UnifyRuleType = ApplyFuncRule ApplyFuncRole | CopySubst SubstRule
   deriving (Show, Eq)
 
 data UnifyRule = UnifyRule
@@ -97,32 +106,24 @@ data UnifyRule = UnifyRule
 
 data Constraints = Constraints
   { tcLambdaGuids :: Set Guid
-  , tcExprs :: [Data.Expression FatRef]
+  , tcExprs :: [Data.Expression Ref]
   , tcRules :: [UnifyRule]
+  , tcSubstitutedRefs :: [Ref]
   }
 
 instance Show Constraints where
-  show (Constraints guids exprs rules) =
+  show (Constraints guids exprs rules substRefs) =
     unwords
     [ Set.toList guids >>= ((++ ":") . show)
     , show exprs
     , show rules
+    , show substRefs
     ]
 
 emptyConstraints :: Constraints
-emptyConstraints = Constraints Set.empty [] []
+emptyConstraints = Constraints Set.empty [] [] []
 
 type Ref = UnionFind.Point Constraints
-data FatRef = FatRef
-  { frPoint :: Ref
-  , _frIsSubst :: Bool
-  }
-instance Show FatRef where
-  show (FatRef point False) = show point
-  show (FatRef point True) = 'F' : show point
-
-fatten :: Ref -> FatRef
-fatten r = FatRef r False
 
 data Expression s = Expression
   { _eeRef :: s
@@ -148,14 +149,22 @@ data TypeContext = TypeContext
   }
 LensTH.makeLenses ''TypeContext
 
+-- After the polymorphic recursion phase
+newtype FinalTypeContext = FinalTypeContext {
+  _finalTypeContext :: TypeContext
+  }
+-- LensTH.makeLenses ''FinalTypeContext
+
 emptyTypeContext :: TypeContext
 emptyTypeContext = TypeContext UnionFind.empty Map.empty
 
 data StoredDefinition m = StoredDefinition
   { _deIRef :: Data.DefinitionIRef
   , _deInferredType :: Ref
+  , _deRecursiveInferredType :: Ref
   , _deValue :: Data.Definition (StoredExpression m)
   , _deTypeContext :: TypeContext
+  , _deFinalTypeContext :: FinalTypeContext
   }
 
 LensTH.makeLenses ''Expression
@@ -167,34 +176,47 @@ deGuid = IRef.guid . Lens.view deIRef
 --------------- Infer Stack boilerplate:
 
 data InferActions m = InferActions
-  { onConflict :: m ()
-  , loadPureDefinitionBody :: Data.DefinitionIRef -> m Data.PureGuidExpression
-  , loadPureDefinitionType :: Data.DefinitionIRef -> m Data.PureGuidExpression
+  { _onConflict :: m ()
+  , _loadPureDefinitionBody ::
+      Data.DefinitionIRef -> m Data.PureGuidExpression
+  , _aGetDefTypeRef :: Data.DefinitionIRef -> Infer m Ref
+  , _allowCopy :: Bool
   }
-
-inferActions :: Monad m => InferActions (T m)
-inferActions = InferActions
-  { onConflict = return ()
-  , loadPureDefinitionBody = DataLoad.loadPureDefinitionBody
-  , loadPureDefinitionType = DataLoad.loadPureDefinitionType
-  }
-
-liftInferActions :: (MonadTrans t, Monad m) => InferActions m -> InferActions (t m)
-liftInferActions (InferActions a b c) =
-  InferActions (lift a) (fmap lift b) (fmap lift c)
 
 newtype Infer m a = Infer
   { _infer :: ReaderT (InferActions m) (StateT TypeContext m) a
-  } deriving (Functor, Applicative, Monad)
+  } deriving (Functor, Monad)
+
+LensTH.makeLenses ''InferActions
 LensTH.makeLenses ''Infer
+
+inferActions ::
+  (Monad m, Monad f) =>
+  (T f Data.PureGuidExpression -> m Data.PureGuidExpression) ->
+  InferActions m
+inferActions liftTransaction = InferActions
+  { _onConflict = return ()
+  , _loadPureDefinitionBody =
+    liftTransaction . DataLoad.loadPureDefinitionBody
+  , _aGetDefTypeRef =
+    refFromPure <=< lift . liftTransaction . DataLoad.loadPureDefinitionType
+  , _allowCopy = True
+  }
+
+getDefBodyRef :: Monad m => Data.DefinitionIRef -> Infer m Ref
+getDefBodyRef def =
+  refFromPure =<< lift . (flip (Lens.view loadPureDefinitionBody) def) =<< getActions
+
+getDefTypeRef :: Monad m => Data.DefinitionIRef -> Infer m Ref
+getDefTypeRef def = flip (Lens.view aGetDefTypeRef) def =<< getActions
 
 ----------------- Infer operations:
 
-liftConflictActionReader :: ReaderT (InferActions m) (StateT TypeContext m) a -> Infer m a
-liftConflictActionReader = Infer
+liftActionsReader :: ReaderT (InferActions m) (StateT TypeContext m) a -> Infer m a
+liftActionsReader = Infer
 
 liftTypeContext :: Monad m => StateT TypeContext m a -> Infer m a
-liftTypeContext = liftConflictActionReader . lift
+liftTypeContext = liftActionsReader . lift
 
 instance MonadTrans Infer where
   lift = liftTypeContext . lift
@@ -217,8 +239,11 @@ makeRef x =
 getRef :: Monad m => Ref -> Infer m Constraints
 getRef = getsConstraints . UnionFind.descr
 
-getActions :: Monad m => Infer m (InferActions (Infer m))
-getActions = liftConflictActionReader $ Reader.asks liftInferActions
+getActions :: Monad m => Infer m (InferActions m)
+getActions = liftActionsReader Reader.ask
+
+localActions :: Monad m => (InferActions m -> InferActions m) -> Infer m a -> Infer m a
+localActions = Lens.over infer . Reader.local
 
 runInfer :: Monad m => InferActions m -> Infer m a -> m (TypeContext, a)
 runInfer actions = resumeInfer actions emptyTypeContext
@@ -229,13 +254,21 @@ resumeInfer
 resumeInfer actions typeContext =
   liftM Tuple.swap . (`runStateT` typeContext) . (`runReaderT` actions) . Lens.view infer
 
+finalizeTypeContext :: Monad m => Maybe (Ref, Ref) -> InferActions m -> TypeContext -> m FinalTypeContext
+finalizeTypeContext Nothing _ ctx = return (FinalTypeContext ctx)
+finalizeTypeContext (Just (defTypeRef, recursiveDefTypeRef)) actions
+  typeContext =
+  liftM (FinalTypeContext . fst) .
+  resumeInfer (Lens.set allowCopy False actions) typeContext $
+  unify defTypeRef recursiveDefTypeRef
+
 makeNoConstraints :: Monad m => Infer m Ref
 makeNoConstraints = makeRef emptyConstraints
 
 makeRuleRef :: Monad m => UnifyRule -> Infer m Ref
 makeRuleRef rule = makeRef emptyConstraints { tcRules = [rule] }
 
-makeSingletonRef :: Monad m => [Guid] -> Data.Expression FatRef -> Infer m Ref
+makeSingletonRef :: Monad m => [Guid] -> Data.Expression Ref -> Infer m Ref
 makeSingletonRef guids expr =
   case expr of
   Data.ExpressionHole -> makeNoConstraints
@@ -281,7 +314,7 @@ expand e@(Data.PureGuidExpression (Data.GuidExpression guid val)) =
   Data.ExpressionGetVariable (Data.DefinitionRef defI) ->
     -- TODO: expand the result recursively (with some recursive
     -- constraint)
-    (`loadPureDefinitionBody` defI) =<< getActions
+    lift . (flip (Lens.view loadPureDefinitionBody) defI) =<< getActions
   Data.ExpressionApply (Data.Apply func arg) ->
     liftM makePureGuidExpr $
     liftM2 Data.makeApply (expand func) (expand arg)
@@ -299,11 +332,11 @@ expand e@(Data.PureGuidExpression (Data.GuidExpression guid val)) =
 
 refFromPure :: Monad m => Data.PureGuidExpression -> Infer m Ref
 refFromPure =
-  liftM frPoint . Data.mapMExpression f <=< expand
+  Data.mapMExpression f <=< expand
   where
     f (Data.PureGuidExpression (Data.GuidExpression guid val)) =
       ( return val
-      , liftM fatten . makeSingletonRef [guid]
+      , makeSingletonRef [guid]
       )
 
 toExpr
@@ -321,14 +354,14 @@ toExpr extract =
           valRef <-
             case newVal of
             Data.ExpressionGetVariable (Data.DefinitionRef ref) ->
-               refFromPure =<< (`loadPureDefinitionBody` ref) =<< getActions
+               getDefBodyRef ref
             -- Apply might be of lambda (can be detected much later)
             -- and in that case, it's a redex we want to peel off the
             -- Apply-of-Lambda wrapper. So we defer the insertion of
             -- the Apply into the constraints until later when it is
             -- known whether it is a redex or not.
             Data.ExpressionApply _ -> makeNoConstraints
-            _ -> makeSingletonRef [g] $ fmap (fatten . Lens.view eeInferredValue) newVal
+            _ -> makeSingletonRef [g] $ fmap (Lens.view eeInferredValue) newVal
           return $ Expression prop g typeRef valRef newVal
       )
       where
@@ -354,8 +387,8 @@ fromLoaded =
 derefRef
   :: RandomGen g
   => g -> Anchors.BuiltinsMap
-  -> TypeContext -> Ref -> [LoopGuidExpression]
-derefRef stdGen builtinsMap typeContext rootRef =
+  -> FinalTypeContext -> Ref -> [LoopGuidExpression]
+derefRef stdGen builtinsMap (FinalTypeContext typeContext) rootRef =
   (canonizeInferredExpression stdGen .
    map (builtinsToGlobals builtinsMap)) .
   (`runReaderT` Set.empty) $ go rootRef
@@ -383,7 +416,7 @@ derefRef stdGen builtinsMap typeContext rootRef =
     recurse (Data.ExpressionGetVariable (Data.ParameterRef p)) =
       return . Data.ExpressionGetVariable . Data.ParameterRef $ mapGuid p
     recurse expr =
-      Data.sequenceExpression $ fmap (Reader.mapReaderT holify . go . frPoint) expr
+      Data.sequenceExpression $ fmap (Reader.mapReaderT holify . go) expr
     holify [] =
       [NoLoop
        (Data.GuidExpression zeroGuid Data.ExpressionHole)]
@@ -394,10 +427,9 @@ type Scope = Map Guid Ref
 inferExpression
   :: Monad m
   => Scope
-  -> (Data.DefinitionIRef -> Infer m Ref)
   -> Expression s
   -> Infer m ()
-inferExpression scope defRef (Expression _ g typeRef valueRef value) =
+inferExpression scope (Expression _ g typeRef valueRef value) =
   case value of
   Data.ExpressionLambda lambda@(Data.Lambda paramType body) -> do
     onLambda lambda
@@ -405,8 +437,8 @@ inferExpression scope defRef (Expression _ g typeRef valueRef value) =
     -- the official Pi guid due to the "left-bias" in
     -- unify/unifyPair. Thus we can later assume that we got the
     -- same guid in the pi and the lambda.
-    flip unify typeRef <=< makePi g .
-      wrapCons Data.Lambda (paramType ^. eeInferredValue) $ body ^. eeInferredType
+    flip unify typeRef <=< makeSingletonRef [g] .
+      Data.makePi (paramType ^. eeInferredValue) $ body ^. eeInferredType
   Data.ExpressionPi lambda@(Data.Lambda _ resultType) -> do
     onLambda lambda
     -- TODO: Is Set:Set a good idea? Agda uses "eeInferredType
@@ -425,16 +457,16 @@ inferExpression scope defRef (Expression _ g typeRef valueRef value) =
     -- fine because Apply's Guid is meaningless and the
     -- canonization will fix it later anyway.
     unify funcTypeRef =<<
-      makePi g . wrapCons Data.Lambda argTypeRef =<< makeNoConstraints
+      makeSingletonRef [g] . Data.makePi argTypeRef =<< makeNoConstraints
     unify funcTypeRef =<<
       makeRuleRef UnifyRule
-        { urType = ApplyFuncType
+        { urType = ApplyFuncRule ApplyFuncType
         , urDest = typeRef
         , urArg = argValRef
         }
     unify funcValRef =<<
       makeRuleRef UnifyRule
-        { urType = ApplyFuncValue
+        { urType = ApplyFuncRule ApplyFuncValue
         , urDest = valueRef
         , urArg = argValRef
         }
@@ -445,46 +477,24 @@ inferExpression scope defRef (Expression _ g typeRef valueRef value) =
       Nothing -> return ()
       Just paramRef -> setType paramRef
   Data.ExpressionGetVariable (Data.DefinitionRef defI) ->
-    setType =<< defRef defI
+    setType =<< getDefTypeRef defI
   Data.ExpressionLiteralInteger _ ->
     setType =<< mkBuiltin ["Prelude"] "Integer"
   Data.ExpressionBuiltin (Data.Builtin _ bType) ->
     setType =<< refFromPure (toPureExpression bType)
   _ -> return ()
   where
-    wrapCons = (`on` fatten)
     mkSet = makeSingletonRef [] Data.ExpressionSet
     mkBuiltin path name =
       makeSingletonRef [] . Data.ExpressionBuiltin .
-      Data.Builtin (Data.FFIName path name) . fatten =<<
+      Data.Builtin (Data.FFIName path name) =<<
       makeNoConstraints
-    makePi guid = makeSingletonRef [guid] . Data.ExpressionPi
     setType = unify typeRef
-    go newVars = inferExpression (Map.fromList newVars `Map.union` scope) defRef
+    go newVars = inferExpression $ Map.fromList newVars `Map.union` scope
     onLambda (Data.Lambda paramType result) = do
       go [] paramType
       go [(g, paramType ^. eeInferredValue)] result
       unify (paramType ^. eeInferredType) =<< mkSet
-
--- New Ref tree has tcRules=[] everywhere
-subst :: Monad m => Set Guid -> Ref -> FatRef -> Infer m FatRef
-subst _ _ src@(FatRef _ True) = return src
-subst from to (FatRef ref False) = do
-  constraints <- getRef ref
-  let
-    exprResults = map processExpr $ tcExprs constraints
-    isSubst = any isNothing exprResults
-  exprs <- sequence $ catMaybes exprResults
-  newRef <- makeRef emptyConstraints
-    { tcLambdaGuids = tcLambdaGuids constraints
-    , tcExprs = exprs
-    }
-  when isSubst $ unify newRef to
-  return $ FatRef newRef isSubst
-  where
-    processExpr (Data.ExpressionGetVariable (Data.ParameterRef p))
-      | Set.member p from = Nothing
-    processExpr expr = Just . Data.sequenceExpression $ fmap (subst from to) expr
 
 unify :: Monad m => Ref -> Ref -> Infer m ()
 unify a b = do
@@ -526,9 +536,10 @@ unifyConstraints paramGuidMapping exprRef aConstraints bConstraints =
       { tcExprs = newExprs
       , tcRules = on (++) tcRules aConstraints bConstraints
       , tcLambdaGuids = on Set.union tcLambdaGuids aConstraints bConstraints
+      , tcSubstitutedRefs = on (++) tcSubstitutedRefs aConstraints bConstraints
       }
     postAction = do
-      when isNewConflict $ onConflict =<< getActions
+      when isNewConflict $ lift . Lens.view onConflict =<< getActions
       applyRulesRef aConstraints bConstraints
       applyRulesRef bConstraints aConstraints
       recursivePostAction
@@ -545,31 +556,88 @@ unifyConstraints paramGuidMapping exprRef aConstraints bConstraints =
           Nothing -> (current, y : badYs, action)
           Just (expr, act) -> (expr, badYs, action >> act)
     applyRulesRef xConstraints yConstraints =
-      sequence_ $
-      liftA2 (applyRule (tcLambdaGuids yConstraints))
-      (tcRules xConstraints) (tcExprs yConstraints)
-    applyRule guids (UnifyRule arrowType destRef argRef) expr =
-      case (arrowType, expr) of
-      (ApplyFuncValue, Data.ExpressionLambda (Data.Lambda _ body)) ->
-        unify destRef . frPoint =<< subst guids argRef body
-      -- We now know our Apply parent is not a redex, unify the
-      -- Apply into the value
-      (ApplyFuncValue, _) ->
-        unify destRef =<<
-          makeSingletonRef []
-          (Data.makeApply (fatten exprRef) (fatten argRef))
-      (ApplyFuncType, Data.ExpressionPi (Data.Lambda _ resultType)) ->
-        unify destRef . frPoint =<< subst guids argRef resultType
-      _ -> return ()
+      mapM_ (applyRule yConstraints) (tcRules xConstraints)
+    applyRule exprConstraints (UnifyRule ruleType destRef argRef) =
+      case ruleType of
+      CopySubst subst ->
+        applySubstRule subst exprRef exprConstraints destRef argRef
+      ApplyFuncRule role ->
+        forM_ (tcExprs exprConstraints) $ \expr ->
+          case (role, expr) of
+          (ApplyFuncValue, Data.ExpressionLambda (Data.Lambda _ body)) ->
+            -- TODO: Remove this rule
+            addSubstRule body destRef
+            (SubstRule (tcLambdaGuids exprConstraints) (tcSubstitutedRefs exprConstraints))
+            argRef
+          -- We now know our Apply parent is not a redex, unify the
+          -- Apply into the value
+          (ApplyFuncValue, _) ->
+            unify destRef =<<
+              makeSingletonRef []
+              (Data.makeApply exprRef argRef)
+          (ApplyFuncType, Data.ExpressionPi (Data.Lambda _ resultType)) ->
+            -- TODO: Remove this rule
+            addSubstRule resultType destRef
+            (SubstRule (tcLambdaGuids exprConstraints) (tcSubstitutedRefs exprConstraints))
+            argRef
+          _ -> return ()
+
+addSubstRule ::
+  Monad m =>
+  Ref -> Ref -> SubstRule -> Ref ->
+  Infer m ()
+addSubstRule ruleNode copyDest rule substArg =
+  unify ruleNode =<< makeRef emptyConstraints
+  { tcRules = [UnifyRule
+    { urType = CopySubst rule
+    , urArg = substArg
+    , urDest = copyDest
+    }
+  ]}
+
+applySubstRule ::
+  Monad m =>
+  SubstRule -> Ref -> Constraints -> Ref -> Ref ->
+  Infer m ()
+applySubstRule (SubstRule fromGuids substitutedRefs) srcRef srcConstraints copyDest substArg = do
+  isSame <- getsConstraints $ UnionFind.equivalent srcRef copyDest
+  unless isSame $ do
+    isSubstituted <- liftM or $ mapM (getsConstraints . UnionFind.equivalent srcRef) substitutedRefs
+    actions <- getActions
+    if isSubstituted || not (Lens.view allowCopy actions)
+      then unify copyDest srcRef
+      else mapM_ (unify copyDest <=< processExpr) (tcExprs srcConstraints)
+  where
+    processExpr (Data.ExpressionGetVariable (Data.ParameterRef p))
+      | Set.member p fromGuids = return substArg
+    processExpr (Data.ExpressionPi (Data.Lambda paramType resultType)) =
+      makeResult Data.makePi paramType resultType
+    processExpr (Data.ExpressionLambda (Data.Lambda paramType result)) =
+      makeResult Data.makeLambda paramType result
+    processExpr (Data.ExpressionApply (Data.Apply func arg)) =
+      makeResult Data.makeApply func arg
+    processExpr expr = makeNode expr -- Leaf Node
+    makeResult cons x y = do
+      makeNode =<< on (liftM2 cons) makeDstChild x y
+    makeNode expr =
+      makeRef emptyConstraints
+      { tcExprs = [expr]
+      , tcSubstitutedRefs = (substArg : substitutedRefs)
+      , tcLambdaGuids = tcLambdaGuids srcConstraints
+      }
+    makeDstChild src = do
+      dst <- makeNoConstraints
+      addSubstRule src dst (SubstRule fromGuids (tcSubstitutedRefs srcConstraints)) substArg
+      return dst
 
 -- biased towards left child (if unifying Pis,
 -- substs right child's guids to left)
 unifyPair
   :: Monad m
   => Map Guid Guid
-  -> Data.Expression FatRef
-  -> Data.Expression FatRef
-  -> Maybe (Data.Expression FatRef, Infer m ())
+  -> Data.Expression Ref
+  -> Data.Expression Ref
+  -> Maybe (Data.Expression Ref, Infer m ())
 unifyPair paramGuidMapping aVal bVal =
   case (aVal, bVal) of
   (Data.ExpressionPi l1,
@@ -598,12 +666,7 @@ unifyPair paramGuidMapping aVal bVal =
   _ -> Nothing
   where
     mkStructuralResult cons (x0, x1) (y0, y1) =
-      Just (cons r0 r1, u0 >> u1)
-      where
-        (r0, u0) = unifyFatRef x0 y0
-        (r1, u1) = unifyFatRef x1 y1
-    unifyFatRef (FatRef pointA fA) (FatRef pointB fB) =
-      (FatRef pointA (fA || fB), unify pointA pointB)
+      Just (cons x0 x1, unify x0 y0 >> unify x1 y1)
     good = Just (aVal, return ())
     cond True = good
     cond False = Nothing
@@ -665,15 +728,11 @@ builtinsToGlobals builtinsMap (NoLoop (Data.GuidExpression guid expr)) =
     res name =
       maybe expr Data.ExpressionGetVariable $ Map.lookup name builtinsMap
 
-loadDefTypeToRef :: Monad m => Data.DefinitionIRef -> Infer m Ref
-loadDefTypeToRef def =
-  refFromPure =<< (`loadPureDefinitionType` def) =<< getActions
-
-loadDefTypeWithinContext
-  :: Monad m
-  => Maybe (StoredDefinition (T f)) -> Data.DefinitionIRef -> Infer m Ref
-loadDefTypeWithinContext Nothing = loadDefTypeToRef
-loadDefTypeWithinContext (Just def) = getDefRef (def ^. deInferredType) (def ^. deIRef)
+addRecursiveDefRefGetter ::
+  Monad m => Data.DefinitionIRef -> Ref -> Infer m a -> Infer m a
+addRecursiveDefRefGetter defI =
+  localActions . Lens.over aGetDefTypeRef .
+  overrideInput defI . return
 
 pureInferExpressionWithinContext
   :: Monad m
@@ -682,30 +741,44 @@ pureInferExpressionWithinContext
   -> Data.PureGuidExpression -> Infer m (Expression ())
 pureInferExpressionWithinContext scope mDef pureExpr = do
   expr <- fromPure pureExpr
-  inferExpression scope (loadDefTypeWithinContext mDef) expr
+  loadDefTypeWithinContext mDef $ inferExpression scope expr
   return expr
+  where
+    loadDefTypeWithinContext Nothing = id
+    loadDefTypeWithinContext (Just def) =
+      addRecursiveDefRefGetter (def ^. deIRef) (def ^. deRecursiveInferredType)
 
-getDefRef
-  :: Monad m => Ref -> Data.DefinitionIRef -> Data.DefinitionIRef -> Infer m Ref
-getDefRef defRef defI getDefI
-  | getDefI == defI = return defRef
-  | otherwise = loadDefTypeToRef getDefI
+overrideInput
+  :: Eq a => a -> b -> (a -> b) -> a -> b
+overrideInput k v f x
+  | x == k = v
+  | otherwise = f x
 
 inferDefinition
   :: (Monad m, Monad f)
   => DataLoad.DefinitionEntity (T f)
   -> T m (StoredDefinition (T f))
 inferDefinition (DataLoad.DefinitionEntity defI (Data.Definition bodyI typeI)) = do
-  (typeContext, (bodyExpr, typeExpr)) <- runInfer inferActions $ do
-    bodyExpr <- fromLoaded bodyI
-    typeExpr <- fromLoaded typeI
-    inferExpression Map.empty (getDefRef (bodyExpr ^. eeInferredType) defI) bodyExpr
-    return (bodyExpr, typeExpr)
+  (typeContext, (bodyExpr, typeExpr, recursiveDefTypeRef)) <-
+    runInfer (inferActions id) $ do
+      bodyExpr <- fromLoaded bodyI
+      typeExpr <- fromLoaded typeI
+      -- Will be handled by finalizeTypeContext
+      recursiveDefTypeRef <- makeNoConstraints
+      addRecursiveDefRefGetter defI recursiveDefTypeRef $
+        inferExpression Map.empty bodyExpr
+      return (bodyExpr, typeExpr, recursiveDefTypeRef)
+  let inferredType = bodyExpr ^. eeInferredType
+  finalTypeContext <-
+    finalizeTypeContext (Just (inferredType, recursiveDefTypeRef))
+    (inferActions id) typeContext
   return StoredDefinition
     { _deIRef = defI
-    , _deInferredType = bodyExpr ^. eeInferredType
+    , _deInferredType = inferredType
+    , _deRecursiveInferredType = recursiveDefTypeRef
     , _deValue = Data.Definition bodyExpr typeExpr
     , _deTypeContext = typeContext
+    , _deFinalTypeContext = finalTypeContext
     }
 
 loadInferDefinition
@@ -720,7 +793,7 @@ loadInferExpression
   -> T m (Expression (Data.ExpressionIRefProperty (T m)))
 loadInferExpression exprProp = do
   expr <- DataLoad.loadExpression exprProp
-  liftM snd . runInfer inferActions $ do
+  liftM snd . runInfer (inferActions id) $ do
     tExpr <- fromLoaded expr
-    inferExpression Map.empty loadDefTypeToRef tExpr
+    inferExpression Map.empty tExpr
     return tExpr
