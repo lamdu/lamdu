@@ -2,13 +2,13 @@
 module Editor.CodeEdit.ExpressionEdit.HoleEdit(make, ResultPicker) where
 
 import Control.Arrow (first, second, (&&&))
-import Control.Monad (liftM, mplus)
+import Control.Monad (liftM, mplus, msum)
 import Control.Monad.ListT (ListT)
 import Data.Function (on)
 import Data.Hashable(hash)
 import Data.List (isInfixOf, isPrefixOf)
 import Data.List.Utils (sortOn)
-import Data.Maybe (isJust, listToMaybe)
+import Data.Maybe (isJust, listToMaybe, maybeToList, mapMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
@@ -38,6 +38,12 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified System.Random as Random
+
+moreSymbol :: String
+moreSymbol = "▷"
+
+moreSymbolSizeFactor :: Fractional a => a
+moreSymbolSizeFactor = 0.5
 
 type ResultPicker m = ITransaction ViewTag m Widget.EventResult
 
@@ -73,26 +79,79 @@ resultPickEventMap holeInfo =
   E.keyPresses Config.pickResultKeys "Pick this search result" .
   pickExpr holeInfo
 
+data ApplyForms m = ApplyForms
+  { afMain :: Data.PureGuidExpression
+  , afMore :: Maybe (Data.PureGuidExpression, ListT m Data.PureGuidExpression)
+  }
+
+canonizeResultExpr
+  :: HoleInfo m
+  -> Data.PureGuidExpression -> Data.PureGuidExpression
+canonizeResultExpr holeInfo expr =
+  flip Data.canonizeIdentifiers expr . Random.mkStdGen $
+  hash (show expr, Guid.bs (hiGuid holeInfo))
+
 resultToWidget
   :: MonadF m
-  => ExpressionGui.Maker m -> HoleInfo m -> Data.PureGuidExpression -> TWidget ViewTag m
-resultToWidget makeExpressionEdit holeInfo expr =
-  BWidgets.makeFocusableView myId .
-  Widget.strongerEvents (resultPickEventMap holeInfo expr) .
-  ExpressionGui.egWidget =<< makeExpressionEdit =<<
-  (OT.transaction . Sugar.convertExpressionPure) expr
+  => ExpressionGui.Maker m -> HoleInfo m -> ApplyForms (T m)
+  -> OTransaction ViewTag m
+     ( WidgetT ViewTag m
+     , Maybe (Data.PureGuidExpression, Maybe (WidgetT ViewTag m))
+     )
+resultToWidget makeExpressionEdit holeInfo applyForms = do
+  cursorOnMain <- liftM isJust $ OT.subCursor myId
+  extra <-
+    if cursorOnMain
+    then liftM (Just . (,) canonizedExpr . fmap fst) makeExtra
+    else do
+      cursorOnExtra <- liftM isJust $ OT.subCursor moreResultsPrefix
+      if cursorOnExtra
+        then do
+          extra <- makeExtra
+          return $ do
+            (widget, mResult) <- extra
+            result <- mResult
+            return (result, Just widget)
+        else return Nothing
+  liftM (flip (,) extra) .
+    maybe return (const addMoreSymbol) (afMore applyForms) =<<
+    toWidget myId canonizedExpr
   where
-    myId =
-      hiHoleId holeInfo `mappend`
-      (WidgetIds.fromGuid . Data.geGuid . Data.unPureGuidExpression) expr
+    makeExtra = maybe (return Nothing) (liftM Just . makeMoreResults) $ afMore applyForms
+    makeMoreResults (firstResult, moreResults) = do
+      pairs <-
+        mapM moreResult . (firstResult :) =<<
+        OT.transaction (List.toList moreResults)
+      return
+        ( BWidgets.vboxAlign 0 $ map fst pairs
+        , msum $ map snd pairs
+        )
+    moreResult expr = do
+      mResult <- (liftM . fmap . const) cExpr $ OT.subCursor ident
+      widget <- toWidget ident cExpr
+      return (widget, mResult)
+      where
+        ident = mappend moreResultsPrefix $ pureGuidId cExpr
+        cExpr = canonizeResultExpr holeInfo expr
+    toWidget ident expr =
+      BWidgets.makeFocusableView ident .
+      Widget.strongerEvents (resultPickEventMap holeInfo expr) .
+      ExpressionGui.egWidget =<< makeExpressionEdit =<<
+      (OT.transaction . Sugar.convertExpressionPure) expr
+    moreResultsPrefix = mconcat [hiHoleId holeInfo, Widget.Id ["more results"], canonizedExprId]
+    addMoreSymbol w = do
+      moreSymbolLabel <-
+        liftM (Widget.scale moreSymbolSizeFactor) .
+        BWidgets.makeLabel moreSymbol $ Widget.toAnimId myId
+      return $ BWidgets.hboxCenteredSpaced [w, moreSymbolLabel]
+    canonizedExpr = canonizeResultExpr holeInfo $ afMain applyForms
+    canonizedExprId = pureGuidId canonizedExpr
+    myId = mappend (hiHoleId holeInfo) canonizedExprId
+    pureGuidId = WidgetIds.fromGuid . Data.geGuid . Data.unPureGuidExpression
 
 makeNoResults :: MonadF m => AnimId -> TWidget t m
 makeNoResults myId =
   BWidgets.makeTextView "(No results)" $ mappend myId ["no results"]
-
-makeMoreResults :: MonadF m => AnimId -> TWidget t m
-makeMoreResults myId =
-  BWidgets.makeTextView "..." $ mappend myId ["more results"]
 
 makeResultVariable ::
   MonadF m => (Guid, Data.VariableRef) -> OTransaction ViewTag m Result
@@ -146,10 +205,26 @@ makeLiteralResults searchTerm =
       , resultExpr = toPureGuidExpr $ Data.ExpressionLiteralInteger integer
       }
 
+makeApplyForms ::
+  Monad m => ListT m Data.PureGuidExpression -> m (Maybe (ApplyForms m))
+makeApplyForms applyForms = do
+  -- We always want the first, and we want to know if there's more, so
+  -- take 2:
+  (firstTwo, rest) <- List.splitAtM 2 applyForms
+  return $ case firstTwo of
+    [] -> Nothing
+    (x:xs) -> Just ApplyForms
+      { afMain = x
+      , afMore = case xs of
+        [] -> Nothing
+        [y] -> Just (y, rest)
+        _ -> error "We took 2, got more!"
+      }
+
 makeAllResults
   :: MonadF m
   => HoleInfo m
-  -> OTransaction ViewTag m (ListT (T m) Data.PureGuidExpression)
+  -> OTransaction ViewTag m (ListT (T m) (ApplyForms (T m)))
 makeAllResults holeInfo = do
   globals <- OT.getP Anchors.globals
   varResults <-
@@ -160,8 +235,11 @@ makeAllResults holeInfo = do
     searchTerm = Property.value $ hiSearchTerm holeInfo
     literalResults = makeLiteralResults searchTerm
     nameMatch = any (insensitiveInfixOf searchTerm) . resultNames
-    typeMatches = Sugar.holeInferResults hole . resultExpr
-  return . (>>= typeMatches) . List.fromList .
+  return .
+    List.catMaybes .
+    List.mapL
+      (makeApplyForms . Sugar.holeInferResults hole . resultExpr) .
+    List.fromList .
     sortOn (resultOrdering searchTerm) .
     filter nameMatch $
     literalResults ++ primitiveResults ++ varResults
@@ -189,18 +267,18 @@ holeExpr = toPureGuidExpr Data.ExpressionHole
 makeSearchTermWidget
   :: MonadF m
   => HoleInfo m -> Widget.Id
-  -> [Data.PureGuidExpression] -> TWidget ViewTag m
-makeSearchTermWidget holeInfo searchTermId firstResults =
+  -> Maybe Data.PureGuidExpression -> TWidget ViewTag m
+makeSearchTermWidget holeInfo searchTermId mFirstResult =
   liftM
     (Widget.strongerEvents searchTermEventMap .
      (Widget.atWEventMap . E.filterChars) (`notElem` "`[]\\")) $
     BWidgets.makeWordEdit (hiSearchTerm holeInfo) searchTermId
   where
-    pickFirstResultEventMaps =
-      map (resultPickEventMap holeInfo) $ take 1 firstResults
+    pickFirstResultEventMap =
+      maybe mempty (resultPickEventMap holeInfo) mFirstResult
 
     searchTermEventMap =
-      mconcat pickFirstResultEventMaps `mappend`
+      pickFirstResultEventMap `mappend`
       (E.keyPresses Config.newDefinitionKeys
        "Add new as Definition" . makeNewDefinition)
       (pickExpr holeInfo)
@@ -231,47 +309,38 @@ makeSearchTermWidget holeInfo searchTermId firstResults =
 makeResultsWidget
   :: MonadF m
   => ExpressionGui.Maker m -> HoleInfo m
-  -> [Data.PureGuidExpression] -> Bool
+  -> [ApplyForms (T m)] -> Bool
   -> OTransaction ViewTag m
      (Maybe Data.PureGuidExpression, WidgetT ViewTag m)
 makeResultsWidget makeExpressionEdit holeInfo firstResults moreResults = do
-  firstResultsAndWidgets <- mapM resultAndWidget firstResults
+  firstResultsAndWidgets <-
+    mapM (resultToWidget makeExpressionEdit holeInfo) firstResults
   (mResult, firstResultsWidget) <-
     case firstResultsAndWidgets of
       [] -> liftM ((,) Nothing) . makeNoResults $ Widget.toAnimId myId
-      xs -> do
-        let
-          firstResultsWidget =
-            blockDownEvents . BWidgets.vboxAlign 0 $ map snd xs
-          mResult =
-            listToMaybe . map fst $ filter (Widget.wIsFocused . snd) xs
-        return (mResult, firstResultsWidget)
+      xs -> return
+        ( listToMaybe $ mapMaybe snd xs
+        , blockDownEvents . BWidgets.vboxAlign 0 $ map fst xs
+        )
+  let extraWidgets = maybeToList $ snd =<< mResult
   moreResultsWidgets <-
     if moreResults
-    then liftM (: []) . makeMoreResults $ Widget.toAnimId myId
+    then liftM (: []) . BWidgets.makeLabel "..." $ Widget.toAnimId myId
     else return []
-
   return
-    ( mResult
-    , Widget.scale Config.holeResultScaleFactor $
-      BWidgets.vboxCentered (firstResultsWidget : moreResultsWidgets)
+    ( fmap fst mResult
+    , Widget.scale Config.holeResultScaleFactor .
+      BWidgets.hboxCenteredSpaced $
+      BWidgets.vboxCentered (firstResultsWidget : moreResultsWidgets) :
+      extraWidgets
     )
   where
     myId = hiHoleId holeInfo
-    resultAndWidget result =
-      liftM ((,) result) $ resultToWidget makeExpressionEdit holeInfo result
     blockDownEvents =
       Widget.weakerEvents $
       Widget.keysEventMap
       [E.ModKey E.noMods E.KeyDown]
       "Nothing (at bottom)" (return ())
-
-canonizeResultExpr
-  :: HoleInfo m
-  -> Data.PureGuidExpression -> Data.PureGuidExpression
-canonizeResultExpr holeInfo expr =
-  flip Data.canonizeIdentifiers expr . Random.mkStdGen $
-  hash (show expr, Guid.bs (hiGuid holeInfo))
 
 makeActiveHoleEdit
   :: MonadF m
@@ -285,20 +354,22 @@ makeActiveHoleEdit makeExpressionEdit holeInfo =
     allResults <- makeAllResults holeInfo
 
     (firstResults, moreResults) <-
-      OT.transaction . List.splitAtM Config.holeResultCount $
-      liftM (canonizeResultExpr holeInfo) allResults
+      OT.transaction $ List.splitAtM Config.holeResultCount allResults
 
+    let defaultResult = fmap afMain $ listToMaybe firstResults
     searchTermWidget <-
-      makeSearchTermWidget holeInfo searchTermId firstResults
+      makeSearchTermWidget holeInfo searchTermId defaultResult
 
-    hasMoreResults <- liftM null . OT.transaction . List.toList $ List.take 1 moreResults
+    hasMoreResults <-
+      liftM null . OT.transaction . List.toList $ List.take 1 moreResults
 
     (mResult, resultsWidget) <-
       makeResultsWidget makeExpressionEdit holeInfo firstResults $
       not hasMoreResults
     return
-      ( mplus mResult (listToMaybe $ take 1 firstResults)
-      , BWidgets.vboxCentered [searchTermWidget, resultsWidget] )
+      ( mplus mResult defaultResult
+      , BWidgets.vboxCentered [searchTermWidget, resultsWidget]
+      )
   where
     searchTermId = WidgetIds.searchTermId $ hiHoleId holeInfo
 

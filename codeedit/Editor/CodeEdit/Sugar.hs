@@ -651,7 +651,7 @@ applyForms _ e@(
   Data.ExpressionLambda _))) =
   [e]
 applyForms exprType expr =
-  reverse . take (1 + countPis exprType) $ iterate addApply expr
+  take (1 + countPis exprType) $ iterate addApply expr
   where
     addApply =
       Data.PureGuidExpression . Data.GuidExpression zeroGuid .

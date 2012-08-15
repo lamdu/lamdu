@@ -17,6 +17,7 @@ import Control.Applicative (Applicative(..))
 import Control.Monad (when, liftM)
 import Data.ByteString.Char8 (pack)
 import Data.List (intersperse)
+import Data.Maybe (isJust)
 import Data.Monoid (mappend)
 import Data.Store.Guid (Guid)
 import Editor.MonadF (MonadF)
@@ -55,7 +56,7 @@ makeFocusableView
   => Widget.Id -> Widget f
   -> OTransaction t m (Widget f)
 makeFocusableView myId widget = do
-  hasFocus <- liftM (myId ==) OT.readCursor
+  hasFocus <- liftM isJust $ OT.subCursor myId
   let
     setBackground
       | hasFocus = Widget.backgroundColor 10 WidgetIds.backgroundCursorId blue
