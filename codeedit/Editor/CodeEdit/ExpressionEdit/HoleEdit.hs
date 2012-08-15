@@ -330,11 +330,11 @@ make makeExpressionEdit hole guid myId = do
       in
         liftM
         (first (fmap (pickExpr holeInfo) . maybeRemovePicker searchText) .
-         second (makeBackground 9 Config.holeBackgroundColor)) $
+         second (makeBackground 8 Config.holeBackgroundColor)) $
         makeActiveHoleEdit makeExpressionEdit holeInfo
     _ ->
       liftM
-      ((,) Nothing . makeBackground 10 unfocusedColor) .
+      ((,) Nothing . makeBackground 9 unfocusedColor) .
       BWidgets.makeFocusableTextView snippet $
       WidgetIds.searchTermId myId
   where

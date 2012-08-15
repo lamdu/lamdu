@@ -59,7 +59,7 @@ holeResultCount = 8
 holeResultScaleFactor = 0.7
 holeBackgroundColor = Draw.Color 1 0 0 0.3
 
-unfocusedReadOnlyHoleBackgroundColor = Draw.Color 0.7 0.3 0.3 1
+unfocusedReadOnlyHoleBackgroundColor = Draw.Color 1 0.5 0.5 0.5
 
 inferredHoleColor = Draw.Color 0.2 1 0.2 1
 
