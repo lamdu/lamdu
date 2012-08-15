@@ -19,6 +19,7 @@ import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget, WidgetT)
 import Graphics.UI.Bottle.Animation(AnimId)
+import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Char as Char
 import qualified Data.List.Class as List
@@ -37,6 +38,7 @@ import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified System.Random as Random
 
 moreSymbol :: String
@@ -306,6 +308,12 @@ makeSearchTermWidget holeInfo searchTermId mFirstResult =
           holeResultAnimMappingNoParens holeInfo searchTermId
         }
 
+vboxMBiasedAlign ::
+  Maybe Box.Cursor -> Box.Alignment -> [Widget f] -> Widget f
+vboxMBiasedAlign mChildIndex align =
+  maybe Box.toWidget Box.toWidgetBiased mChildIndex .
+  Box.makeAlign align Box.vertical
+
 makeResultsWidget
   :: MonadF m
   => ExpressionGui.Maker m -> HoleInfo m
@@ -318,17 +326,23 @@ makeResultsWidget makeExpressionEdit holeInfo firstResults moreResults = do
   (mResult, firstResultsWidget) <-
     case firstResultsAndWidgets of
       [] -> liftM ((,) Nothing) . makeNoResults $ Widget.toAnimId myId
-      xs -> return
-        ( listToMaybe $ mapMaybe snd xs
-        , blockDownEvents . BWidgets.vboxAlign 0 $ map fst xs
-        )
-  let extraWidgets = maybeToList $ snd =<< mResult
+      xs -> do
+        let
+          mResult =
+            listToMaybe . mapMaybe snd $
+            zipWith (second . fmap . (,)) [0..] xs
+        return
+          ( mResult
+          , blockDownEvents . vboxMBiasedAlign (fmap fst mResult) 0 $
+            map fst xs
+          )
+  let extraWidgets = maybeToList $ snd . snd =<< mResult
   moreResultsWidgets <-
     if moreResults
     then liftM (: []) . BWidgets.makeLabel "..." $ Widget.toAnimId myId
     else return []
   return
-    ( fmap fst mResult
+    ( fmap (fst . snd) mResult
     , Widget.scale Config.holeResultScaleFactor .
       BWidgets.hboxCenteredSpaced $
       BWidgets.vboxCentered (firstResultsWidget : moreResultsWidgets) :

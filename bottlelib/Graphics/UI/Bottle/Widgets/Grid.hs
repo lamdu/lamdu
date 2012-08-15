@@ -274,5 +274,4 @@ asEdge size rect =
 
 -- ^ If unfocused, will enters the given child when entered
 toWidgetBiased :: Cursor -> KGrid key f -> Widget f
-toWidgetBiased (Vector2 x y) =
-  helper . const $ index y >=> index x >=> id
+toWidgetBiased (Vector2 x y) = helper . const $ index y >=> index x >=> id
