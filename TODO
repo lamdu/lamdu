@@ -7,27 +7,6 @@
   * Cursor does not move, so GUI is not regenerated, apparently. Need
     to rewrite main loop.
 
-* Ideas for type inference:
-
-  * Get rid of in-place "subst":
-
-    1. For the "right becomes left" (in unify) case: Replace the use
-       of "subst" with Guid aliasing (Keep a list of guids in the
-       Constraints)
-
-    2. For the redex case, and the Pi case, we need to duplicate anyway.
-
-    3. Then, we can do a fused subst/dup that does the subst on a dup safely
-
-  * Add "declareSubtype"
-
-    1. Adds one-way links from Ref to Refs that are copied to
-       sub-expressions. This means the unify recursion needs to pass
-       around any one-way links that must be added
-
-    2. expr constraints are copied along the one way links whenever
-    they're added
-
 * DEL should probably allow lambda-unwrap (Remove lambda wrapper)
 
 * Auto-name generation ignores manually chosen names that overlap
