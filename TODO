@@ -1,3 +1,7 @@
+* Holes can have same IDs for same results emphasizing sameness
+
+* Auto-name generation to be localized
+
 * Typed: Maybe rewrite type inference to use PureGuidExpression rather
   than Data.Expression Ref with declarative inference laws application
   loop. Infinite types are prevented/disallowed via detection of
