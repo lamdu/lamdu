@@ -1,17 +1,15 @@
 module Editor.ExampleDB(initDB) where
 
-import Control.Monad (liftM, liftM2, unless, (<=<))
+import Control.Monad (liftM, unless, (<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Writer (WriterT)
 import Data.Binary (Binary(..))
-import Data.Maybe (catMaybes)
 import Data.Store.Guid(Guid)
 import Data.Store.IRef (IRef)
 import Data.Store.Rev.Change (Key, Value)
 import Data.Store.Transaction (Transaction, Store(..))
 import Editor.Anchors (DBTag)
 import qualified Control.Monad.Trans.Writer as Writer
-import qualified Data.Map as Map
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Rev.Branch as Branch
@@ -62,23 +60,11 @@ fixIRef createOuter = do
 createBuiltins :: Monad m => Transaction A.ViewTag m [Data.VariableRef]
 createBuiltins =
   Writer.execWriterT $ do
-    let
-      setExpr = Data.newExprIRef Data.ExpressionSet
-    set <- mkType $ A.newDefinition "Set" =<< liftM2 Data.Definition setExpr setExpr
-    let
-      forAll name f = liftM Data.ExpressionIRef . fixIRef $ \aI -> do
-        let aGuid = IRef.guid aI
-        A.setP (A.assocNameRef aGuid) name
-        s <- set
-        return . Data.makePi s =<< f ((getVar . Data.ParameterRef) aGuid)
-      setToSet = mkPi set set
     list <- mkType . A.newBuiltin "Data.List.List" =<< lift setToSet
     let
       listOf a = do
         l <- list
         Data.newExprIRef . Data.makeApply l =<< a
-
-    integer <- mkType . A.newBuiltin "Prelude.Integer" =<< lift set
     bool <- mkType . A.newBuiltin "Prelude.Bool" =<< lift set
 
     makeWithType "Prelude.True" bool
@@ -86,6 +72,9 @@ createBuiltins =
 
     makeWithType "Prelude.if" . forAll "a" $ \a ->
       mkPi bool . mkPi a $ mkPi a a
+
+    makeWithType "Prelude.id" . forAll "a" $ \a ->
+      mkPi a a
 
     makeWithType "Prelude.const" . forAll "a" $ \a -> forAll "b" $ \b ->
       mkPi a $ mkPi b a
@@ -112,8 +101,16 @@ createBuiltins =
 
     makeWithType "Prelude.enumFromTo" . mkPi integer . mkPi integer $ listOf integer
   where
+    set = Data.newExprIRef $ Data.ExpressionLeaf Data.Set
+    integer = Data.newExprIRef $ Data.ExpressionLeaf Data.IntegerType
+    forAll name f = liftM Data.ExpressionIRef . fixIRef $ \aI -> do
+      let aGuid = IRef.guid aI
+      A.setP (A.assocNameRef aGuid) name
+      s <- set
+      return . Data.makePi s =<< f ((getVar . Data.ParameterRef) aGuid)
+    setToSet = mkPi set set
     tellift f = Writer.tell . (:[]) =<< lift f
-    getVar = Data.newExprIRef . Data.ExpressionGetVariable
+    getVar = Data.newExprIRef . Data.ExpressionLeaf . Data.GetVariable
     mkPi mkArgType mkResType = do
       argType <- mkArgType
       Data.newExprIRef . Data.makePi argType =<< mkResType
@@ -140,7 +137,6 @@ initDB store =
         builtins <- createBuiltins
         setMkProp A.clipboards []
         setMkProp A.globals builtins
-        setMkProp A.builtinsMap . Map.fromList . catMaybes =<< mapM builtinsMapEntry builtins
         defI <- A.makeDefinition
         A.setP (A.assocNameRef (IRef.guid defI)) "foo"
         setMkProp A.panes [A.makePane defI]
@@ -158,11 +154,3 @@ initDB store =
       (defI : _) <- A.getP A.panes
       return $ WidgetIds.fromIRef defI
     return ()
-  where
-    builtinsMapEntry (Data.ParameterRef _) = return Nothing
-    builtinsMapEntry (Data.DefinitionRef defI) = do
-      expr <- Data.readExprIRef . Data.defBody =<< Transaction.readIRef defI
-      return $ case expr of
-        Data.ExpressionBuiltin (Data.Builtin name _) -> Just (name, Data.DefinitionRef defI)
-        Data.ExpressionSet -> Just (Data.FFIName ["Core"] "Set", Data.DefinitionRef defI)
-        _ -> Nothing

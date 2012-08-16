@@ -1,11 +1,10 @@
 {-# LANGUAGE TypeFamilies, FlexibleContexts #-}
 module Editor.Data.Load
-  ( loadDefinition, DefinitionEntity(..)
-  , loadExpression, ExpressionEntity(..)
+  ( loadDefinition, DefinitionEntity
+  , loadExpression, ExpressionEntity
   , loadPureExpression, loadPureDefinition
-  , loadPureDefinitionBody, loadPureDefinitionType
-  )
-where
+  , loadPureDefinitionType
+  ) where
 
 import Control.Monad (liftM, liftM2, (<=<))
 import Data.Store.Property (Property(Property))
@@ -16,41 +15,26 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
 
-data ExpressionEntity m = ExpressionEntity
-  { entityStored :: Data.ExpressionIRefProperty m
-  , entityValue :: Data.Expression (ExpressionEntity m)
-  }
-
-data DefinitionEntity m = DefinitionEntity
-  { defEntityIRef :: Data.DefinitionIRef
-  , defEntityValue :: Data.Definition (ExpressionEntity m)
-  }
+type ExpressionEntity m = Data.Expression (Data.ExpressionIRefProperty m)
+type DefinitionEntity m = Data.Definition (ExpressionEntity m)
 
 type T = Transaction ViewTag
 
 loadPureExpression
   :: Monad m
-  => Data.ExpressionIRef -> Transaction t m Data.PureGuidExpression
+  => Data.ExpressionIRef -> Transaction t m Data.PureExpression
 loadPureExpression exprI =
-  liftM (Data.pureGuidExpression (Data.exprIRefGuid exprI)) .
+  liftM (Data.pureExpression (Data.exprIRefGuid exprI)) .
   Traversable.mapM loadPureExpression =<< Data.readExprIRef exprI
 
 loadPureDefinition
   :: Monad m
   => Data.DefinitionIRef
-  -> T m (Data.Definition Data.PureGuidExpression)
-loadPureDefinition defI = do
-  def <- Transaction.readIRef defI
-  liftM2 Data.Definition
-    (loadPureExpression (Data.defBody def))
-    (loadPureExpression (Data.defType def))
+  -> T m (Data.Definition Data.PureExpression)
+loadPureDefinition defI =
+  Traversable.mapM loadPureExpression =<< Transaction.readIRef defI
 
-loadPureDefinitionBody ::
-  Monad m => Data.DefinitionIRef -> T m Data.PureGuidExpression
-loadPureDefinitionBody =
-  loadPureExpression . Data.defBody <=< Transaction.readIRef
-
-loadPureDefinitionType :: Monad m => Data.DefinitionIRef -> T m Data.PureGuidExpression
+loadPureDefinitionType :: Monad m => Data.DefinitionIRef -> T m Data.PureExpression
 loadPureDefinitionType =
   loadPureExpression . Data.defType <=< Transaction.readIRef
 
@@ -60,7 +44,7 @@ loadExpression
   -> T m (ExpressionEntity (T f))
 loadExpression exprP = do
   expr <- Data.readExprIRef exprI
-  liftM (ExpressionEntity exprP) $
+  liftM (flip (Data.Expression (Data.exprIRefGuid exprI)) exprP) $
     case expr of
     Data.ExpressionLambda lambda ->
       liftM Data.ExpressionLambda $ loadLambda Data.ExpressionLambda lambda
@@ -70,13 +54,7 @@ loadExpression exprP = do
       liftM2 Data.makeApply
       (loadExpression (applyFuncProp exprI apply))
       (loadExpression (applyArgProp exprI apply))
-    Data.ExpressionBuiltin bi ->
-      liftM (Data.ExpressionBuiltin . Data.Builtin (Data.bName bi)) .
-      loadExpression $ builtinTypeProp exprI bi
-    Data.ExpressionGetVariable x -> return $ Data.ExpressionGetVariable x
-    Data.ExpressionLiteralInteger x -> return $ Data.ExpressionLiteralInteger x
-    Data.ExpressionHole -> return Data.ExpressionHole
-    Data.ExpressionSet -> return Data.ExpressionSet
+    Data.ExpressionLeaf x -> return $ Data.ExpressionLeaf x
   where
     exprI = Property.value exprP
     loadLambda cons lambda =
@@ -89,27 +67,20 @@ loadDefinition
   => Data.DefinitionIRef
   -> T m (DefinitionEntity (T f))
 loadDefinition defI = do
-  def <- Transaction.readIRef defI
-  liftM (DefinitionEntity defI) $
-    liftM2 Data.Definition
-    (loadExpression (defBodyProp defI def))
-    (loadExpression (defTypeProp defI def))
-
-defTypeProp
-  :: Monad m
-  => Data.DefinitionIRef -> Data.DefinitionI
-  -> Data.ExpressionIRefProperty (T m)
-defTypeProp defI (Data.Definition bodyI typeI) =
-  Property typeI
-  (Transaction.writeIRef defI . Data.Definition bodyI)
-
-defBodyProp
-  :: Monad m
-  => Data.DefinitionIRef -> Data.DefinitionI
-  -> Data.ExpressionIRefProperty (T m)
-defBodyProp defI (Data.Definition bodyI typeI) =
-  Property bodyI
-  (Transaction.writeIRef defI . flip Data.Definition typeI)
+  Data.Definition body typeExprI <- Transaction.readIRef defI
+  let writeBack = Transaction.writeIRef defI
+  defType <-
+    loadExpression $
+    Property typeExprI (writeBack . Data.Definition body)
+  liftM (`Data.Definition` defType) $
+    case body of
+    Data.DefinitionExpression exprI ->
+      liftM Data.DefinitionExpression . loadExpression $
+      Property exprI
+      (writeBack .
+       (`Data.Definition` typeExprI) . Data.DefinitionExpression)
+    Data.DefinitionBuiltin (Data.Builtin name) ->
+      return . Data.DefinitionBuiltin $ Data.Builtin name
 
 lambdaTypeProp
   :: Monad m
@@ -144,11 +115,3 @@ applyArgProp
 applyArgProp applyI (Data.Apply funcI argI) =
   Property argI
   (Data.writeExprIRef applyI . Data.makeApply funcI)
-
-builtinTypeProp
-  :: Monad m
-  => Data.ExpressionIRef
-  -> Data.Builtin Data.ExpressionIRef -> Data.ExpressionIRefProperty (T m)
-builtinTypeProp builtinI (Data.Builtin name t) =
-  Property t
-  (Data.writeExprIRef builtinI . Data.ExpressionBuiltin . Data.Builtin name)

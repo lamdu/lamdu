@@ -4,7 +4,7 @@ module Editor.CodeEdit
   , SugarCache(..), makeSugarCache )
 where
 
-import Control.Monad (liftM, (<=<))
+import Control.Monad (liftM)
 import Data.List.Utils(enumerate, insertAt, removeAt)
 import Data.Monoid(Monoid(..))
 import Data.Store.Guid (Guid)
@@ -21,7 +21,6 @@ import qualified Editor.CodeEdit.ExpressionEdit as ExpressionEdit
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
-import qualified Editor.Data.Typed as DataTyped
 import qualified Editor.ITransaction as IT
 import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
@@ -55,7 +54,8 @@ makeSugarCache :: Monad m => Transaction ViewTag m (SugarCache m)
 makeSugarCache = do
   sugarPanes <- makeSugarPanes
   clipboardsP <- Anchors.clipboards
-  clipboardsExprs <- mapM (Sugar.convertExpression <=< DataTyped.loadInferExpression) $ Property.list clipboardsP
+  clipboardsExprs <-
+    mapM Sugar.loadConvertExpression $ Property.list clipboardsP
   return SugarCache
     { scPanes = sugarPanes
     , scClipboards = clipboardsExprs
@@ -84,10 +84,9 @@ makeSugarPanes = do
       | i-1 >= 0 = Just $ movePane i (i-1)
       | otherwise = Nothing
     convertPane (i, defI) = do
-      typedDef <- DataTyped.loadInferDefinition defI
-      def <- Sugar.convertDefinition typedDef
+      sDef <- Sugar.loadConvertDefinition defI
       return SugarPane
-        { spDef = def
+        { spDef = sDef
         , mDelPane = mkMDelPane i
         , mMovePaneDown = mkMMovePaneDown i
         , mMovePaneUp = mkMMovePaneUp i
@@ -110,7 +109,8 @@ makeCodeEdit cache = do
   return $
     BWidgets.vboxAlign 0
     [ panesEdit
-    , clipboardsEdit]
+    , clipboardsEdit
+    ]
 
 makePanesEdit :: MonadF m => [SugarPane m] -> TWidget ViewTag m
 makePanesEdit panes = do

@@ -20,7 +20,9 @@ infixOp
   :: Monad m
   => Data.Expression ref
   -> Transaction t m (Maybe Data.VariableRef)
-infixOp (Data.ExpressionGetVariable var) = do
-  isInfix <- isInfixVar var
-  return $ if isInfix then Just var else Nothing
-infixOp _ = return Nothing
+infixOp expr =
+  case Data.eValue expr of
+  Data.ExpressionLeaf (Data.GetVariable var) -> do
+    isInfix <- isInfixVar var
+    return $ if isInfix then Just var else Nothing
+  _ -> return Nothing

@@ -1,11 +1,17 @@
+* Type synonyms/expansions
+
+* Rename Data* to Expression*.
+
+* Move all IRef stuff out of the module defining the data types,
+  data.stored module?
+  Except DefinitionRefs really using IRefs?
+
+* Builtins should be special definitions rather than expressions.
+  This will remove duplication in inferred stuff and make tests more sane.
+
 * Holes can have same IDs for same results emphasizing sameness
 
 * Auto-name generation to be localized
-
-* Typed: Maybe rewrite type inference to use PureGuidExpression rather
-  than Data.Expression Ref with declarative inference laws application
-  loop. Infinite types are prevented/disallowed via detection of
-  some Guid as child of itself.
 
 * Bug: <Del> on branch name does not work
   * Cursor does not move, so GUI is not regenerated, apparently. Need

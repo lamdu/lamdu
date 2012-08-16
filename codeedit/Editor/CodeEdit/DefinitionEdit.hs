@@ -10,7 +10,9 @@ import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget)
+import Graphics.UI.Bottle.Widget (Widget)
 import qualified Editor.BottleWidgets as BWidgets
+import qualified Editor.CodeEdit.BuiltinEdit as BuiltinEdit
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
@@ -61,6 +63,9 @@ makeLHSEdit makeExpressionEdit myId ident mAddFirstParameter rhs params = do
        IT.transaction)
       mAddFirstParameter
 
+makeEquals :: MonadF m => Widget.Id -> OTransaction ViewTag m (Widget f)
+makeEquals = BWidgets.makeLabel "=" . Widget.toAnimId
+
 makeParts
   :: MonadF m
   => ExpressionGui.Maker m
@@ -72,7 +77,7 @@ makeParts makeExpressionEdit guid exprRef = do
     makeLHSEdit makeExpressionEdit myId guid
     ((fmap Sugar.lambdaWrap . Sugar.rActions) exprRef)
     ("Def Body", Sugar.fBody func) $ Sugar.fParams func
-  equals <- BWidgets.makeLabel "=" $ Widget.toAnimId myId
+  equals <- makeEquals myId
   let
     lhs = myId : map (WidgetIds.fromGuid . Sugar.fpGuid) (Sugar.fParams func)
   rhsEdit <-
@@ -97,19 +102,55 @@ make
   => ExpressionGui.Maker m
   -> Sugar.DefinitionRef m
   -> TWidget ViewTag m
-make makeExpressionEdit def = do
+make makeExpressionEdit def =
+  case Sugar.drBody def of
+  Sugar.DefinitionBodyExpression bodyExpr ->
+    makeExprDefinition makeExpressionEdit def bodyExpr
+  Sugar.DefinitionBodyBuiltin builtin ->
+    makeBuiltinDefinition makeExpressionEdit def builtin
+
+makeBuiltinDefinition
+  :: MonadF m
+  => ExpressionGui.Maker m
+  -> Sugar.DefinitionRef m
+  -> Sugar.DefinitionBuiltin m
+  -> TWidget ViewTag m
+makeBuiltinDefinition makeExpressionEdit def builtin =
+  liftM (BWidgets.vboxAlign 0) $ sequence
+  [ liftM BWidgets.hboxCenteredSpaced $ sequence
+    [ makeNameEdit (Widget.joinId myId ["name"]) guid
+    , makeEquals myId
+    , BuiltinEdit.make builtin myId
+    ]
+  , liftM (defTypeScale . ExpressionGui.egWidget) . makeExpressionEdit $
+    Sugar.drType def
+  ]
+  where
+    guid = Sugar.drGuid def
+    myId = WidgetIds.fromGuid guid
+
+defTypeScale :: Widget f -> Widget f
+defTypeScale = Widget.scale Config.defTypeBoxSizeFactor
+
+makeExprDefinition ::
+  MonadF m =>
+  (Sugar.ExpressionRef m -> OTransaction ViewTag m (ExpressionGui m)) ->
+  Sugar.DefinitionRef m ->
+  Sugar.DefinitionExpression m ->
+  OTransaction ViewTag m (OT.WidgetT ViewTag m)
+makeExprDefinition makeExpressionEdit def bodyExpr = do
   bodyWidget <-
     liftM (ExpressionGui.egWidget . ExpressionGui.hbox) .
-    makeParts makeExpressionEdit guid $ Sugar.drBody def
+    makeParts makeExpressionEdit guid . Sugar.deExprRef $ bodyExpr
   let
     mkResult typeWidget =
       BWidgets.vboxAlign 0
-      [ Widget.scale Config.defTypeBoxSizeFactor typeWidget
+      [ defTypeScale typeWidget
       , bodyWidget
       ]
-  case Sugar.drMNewType def of
+  case Sugar.deMNewType bodyExpr of
     Nothing
-      | Sugar.drIsTypeRedundant def -> return bodyWidget
+      | Sugar.deIsTypeRedundant bodyExpr -> return bodyWidget
       | otherwise -> liftM (mkResult . BWidgets.hboxSpaced) (mkAcceptedRow id)
     Just (Sugar.DefinitionNewType inferredType acceptInferredType) ->
       liftM (mkResult . BWidgets.gridHSpaced) $ sequence
