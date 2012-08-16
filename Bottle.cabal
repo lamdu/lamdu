@@ -98,6 +98,7 @@ Executable Editor
                        graphics-drawingcombinators >= 1.4,
                        binary >= 0.5,
                        transformers,
+                       mtl,
                        split,
                        TraceUtils,
                        bytestring,
