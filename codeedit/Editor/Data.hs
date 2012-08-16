@@ -10,10 +10,10 @@ module Editor.Data
   , ApplyI
   , Builtin(..)
   , Expression(..), makeApply, makePi, makeLambda
-  , ExpressionIRefProperty
+  , ExpressionIRefProperty, eipGuid
   , ExpressionI, ExpressionIRef(..)
   , GuidExpression(..), atGeGuid, atGeValue
-  , PureGuidExpression(..), atPureGuidExpression
+  , PureGuidExpression(..), pureGuidExpression, atPureGuidExpression
   , newExprIRef, readExprIRef, writeExprIRef, exprIRefGuid
   , newIRefExpressionFromPure, writeIRefExpressionFromPure
   , mapMExpression
@@ -36,7 +36,7 @@ import Data.Foldable (Foldable(..))
 import Data.Functor.Identity (Identity(..))
 import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
-import Data.Store.IRef(IRef)
+import Data.Store.IRef (IRef)
 import Data.Store.Property (Property)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (Traversable(..))
@@ -45,10 +45,14 @@ import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Map as Map
 import qualified Data.Store.IRef as IRef
+import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified System.Random as Random
 
 type ExpressionIRefProperty m = Property m ExpressionIRef
+
+eipGuid :: ExpressionIRefProperty m -> Guid
+eipGuid = IRef.guid . unExpressionIRef . Property.value
 
 newtype ExpressionIRef = ExpressionIRef {
   unExpressionIRef :: IRef (Expression ExpressionIRef)
@@ -165,6 +169,9 @@ instance Show ref => Show (GuidExpression ref) where
 AtFieldTH.make ''PureGuidExpression
 AtFieldTH.make ''GuidExpression
 
+pureGuidExpression :: Guid -> Expression PureGuidExpression -> PureGuidExpression
+pureGuidExpression guid = PureGuidExpression . GuidExpression guid
+
 variableRefGuid :: VariableRef -> Guid
 variableRefGuid (ParameterRef i) = i
 variableRefGuid (DefinitionRef i) = IRef.guid i
@@ -226,7 +233,7 @@ canonizeIdentifiers gen =
       Reader.local (Map.insert oldGuid newGuid) $ go body
     go (PureGuidExpression (GuidExpression oldGuid v)) = do
       newGuid <- lift nextRandom
-      liftM (PureGuidExpression . GuidExpression newGuid) $
+      liftM (pureGuidExpression newGuid) $
         case v of
         ExpressionLambda lambda ->
           liftM ExpressionLambda $ onLambda oldGuid newGuid lambda

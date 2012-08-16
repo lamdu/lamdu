@@ -32,7 +32,7 @@ loadPureExpression
   :: Monad m
   => Data.ExpressionIRef -> Transaction t m Data.PureGuidExpression
 loadPureExpression exprI =
-  liftM (Data.PureGuidExpression . Data.GuidExpression (Data.exprIRefGuid exprI)) .
+  liftM (Data.pureGuidExpression (Data.exprIRefGuid exprI)) .
   Traversable.mapM loadPureExpression =<< Data.readExprIRef exprI
 
 loadPureDefinition

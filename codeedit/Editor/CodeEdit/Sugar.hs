@@ -608,9 +608,7 @@ zeroGuid :: Guid
 zeroGuid = Guid.fromString "applyZero"
 
 pureHole :: Data.PureGuidExpression
-pureHole =
-  Data.PureGuidExpression $
-  Data.GuidExpression zeroGuid Data.ExpressionHole
+pureHole = Data.pureGuidExpression zeroGuid Data.ExpressionHole
 
 fromInferred
   :: [DataTyped.LoopGuidExpression] -> Maybe Data.PureGuidExpression
@@ -636,8 +634,7 @@ expandHoles deref DataTyped.Expression
   { DataTyped._eeValue = val
   , DataTyped._eeGuid = g
   } =
-    Data.PureGuidExpression . Data.GuidExpression g $
-    fmap (expandHoles deref) val
+    Data.pureGuidExpression g $ fmap (expandHoles deref) val
 
 applyForms
   :: Data.PureGuidExpression
@@ -650,7 +647,7 @@ applyForms exprType expr =
   take (1 + countPis exprType) $ iterate addApply expr
   where
     addApply =
-      Data.PureGuidExpression . Data.GuidExpression zeroGuid .
+      Data.pureGuidExpression zeroGuid .
       (`Data.makeApply` pureHole)
 
 inferResults ::

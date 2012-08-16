@@ -166,10 +166,7 @@ makeResultVariable (guid, varRef) = do
 
 toPureGuidExpr
   :: Data.Expression Data.PureGuidExpression -> Data.PureGuidExpression
-toPureGuidExpr = Data.PureGuidExpression . Data.GuidExpression zeroGuid
-
-zeroGuid :: Guid
-zeroGuid = Guid.fromString "ZeroGuid"
+toPureGuidExpr = Data.pureGuidExpression $ Guid.fromString "ZeroGuid"
 
 renamePrefix :: AnimId -> AnimId -> AnimId -> AnimId
 renamePrefix srcPrefix destPrefix animId =

@@ -50,7 +50,6 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
-import qualified Data.Store.Property as Property
 import qualified Data.Traversable as Traversable
 import qualified Data.Tuple as Tuple
 import qualified Data.UnionFind.IntMap as UnionFind
@@ -61,9 +60,6 @@ import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
 
 type T = Transaction ViewTag
-
-eipGuid :: Data.ExpressionIRefProperty m -> Guid
-eipGuid = IRef.guid . Data.unExpressionIRef . Property.value
 
 -- Rules about inferring apply type/value relationships:
 --
@@ -383,7 +379,7 @@ fromLoaded =
   toExpr extract
   where
     extract (DataLoad.ExpressionEntity irefProp val) =
-      ( eipGuid irefProp, val, irefProp )
+      ( Data.eipGuid irefProp, val, irefProp )
 
 derefRef
   :: RandomGen g
