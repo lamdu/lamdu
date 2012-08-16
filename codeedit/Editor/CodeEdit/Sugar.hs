@@ -24,7 +24,6 @@ import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
-import Data.Functor.Identity (Identity(..))
 import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid (mempty)
 import Data.Store.Guid (Guid)
@@ -41,6 +40,7 @@ import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
+import qualified Data.Traversable as Traversable
 import qualified Editor.Anchors as Anchors
 import qualified Editor.CodeEdit.Infix as Infix
 import qualified Editor.Data as Data
@@ -232,20 +232,15 @@ writeIRefVia
 writeIRefVia f = (fmap . argument) f writeIRef
 
 eeFromTypedExpression :: DataTyped.StoredExpression (T m) -> ExprEntity m
-eeFromTypedExpression =
-  runIdentity . Data.mapMExpression f
-  where
-    f e =
-      ( return $ e ^. DataTyped.eeValue
-      , return .
-        ExprEntity (e ^. DataTyped.eeGuid)
-        (Just
-         (ExprEntityStored
-          (e ^. DataTyped.eeRef)
-          (e ^. DataTyped.eeInferredType)
-          (e ^. DataTyped.eeInferredValue))) .
-        NonLoop
-      )
+eeFromTypedExpression e =
+  ExprEntity (e ^. DataTyped.eeGuid)
+  (Just
+   (ExprEntityStored
+    (e ^. DataTyped.eeRef)
+    (e ^. DataTyped.eeInferredType)
+    (e ^. DataTyped.eeInferredValue))) .
+  NonLoop .
+  fmap eeFromTypedExpression $ e ^. DataTyped.eeValue
 
 data SugarContext m = SugarContext
   { scScope :: DataTyped.Scope
@@ -632,16 +627,17 @@ countPis (Data.PureGuidExpression (Data.GuidExpression _ expr)) =
 expandHoles
   :: (DataTyped.Ref -> Maybe Data.PureGuidExpression)
   -> DataTyped.Expression s -> Data.PureGuidExpression
-expandHoles deref =
-  runIdentity . Data.mapMExpression f
-  where
-    f expr =
-      ( Identity $ expr ^. DataTyped.eeValue
-      , \newVal ->
-        Identity $ case newVal of
-        Data.ExpressionHole -> fromMaybe pureHole . deref $ expr ^. DataTyped.eeInferredValue
-        _ -> Data.PureGuidExpression $ Data.GuidExpression (expr ^. DataTyped.eeGuid) newVal
-      )
+expandHoles deref DataTyped.Expression
+  { DataTyped._eeValue = Data.ExpressionHole
+  , DataTyped._eeInferredValue = val
+  } =
+    fromMaybe pureHole $ deref val
+expandHoles deref DataTyped.Expression
+  { DataTyped._eeValue = val
+  , DataTyped._eeGuid = g
+  } =
+    Data.PureGuidExpression . Data.GuidExpression g $
+    fmap (expandHoles deref) val
 
 applyForms
   :: Data.PureGuidExpression
@@ -796,14 +792,12 @@ convertExpressionI ee =
 -- Check no holes
 isCompleteType :: Data.PureGuidExpression -> Bool
 isCompleteType =
-  isJust . Data.mapMExpression f
+  isJust . toMaybe
   where
-    f (Data.PureGuidExpression (Data.GuidExpression g e)) =
-      ( case e of
-        Data.ExpressionHole -> Nothing
-        _ -> Just e
-      , Just . Data.PureGuidExpression . Data.GuidExpression g
-      )
+    toMaybe = f . Data.geValue . Data.unPureGuidExpression
+    f Data.ExpressionHole = Nothing
+    f e = tMapM_ toMaybe e
+    tMapM_ = (fmap . liftM . const) () . Traversable.mapM
 
 convertDefinitionI
   :: Monad m

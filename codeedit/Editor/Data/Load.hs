@@ -11,9 +11,9 @@ import Control.Monad (liftM, liftM2, (<=<))
 import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
+import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
 
 data ExpressionEntity m = ExpressionEntity
@@ -31,14 +31,9 @@ type T = Transaction ViewTag
 loadPureExpression
   :: Monad m
   => Data.ExpressionIRef -> Transaction t m Data.PureGuidExpression
-loadPureExpression =
-  Data.mapMExpression f
-  where
-    f (Data.ExpressionIRef exprI) =
-      ( Transaction.readIRef exprI
-      , return . Data.PureGuidExpression .
-        Data.GuidExpression (IRef.guid exprI)
-      )
+loadPureExpression exprI =
+  liftM (Data.PureGuidExpression . Data.GuidExpression (Data.exprIRefGuid exprI)) .
+  Traversable.mapM loadPureExpression =<< Data.readExprIRef exprI
 
 loadPureDefinition
   :: Monad m

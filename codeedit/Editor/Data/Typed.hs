@@ -39,10 +39,8 @@ import Data.Maybe (fromMaybe)
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
-import Data.Traversable (Traversable(..))
 import Data.UnionFind.IntMap (UnionFind)
 import Editor.Anchors (ViewTag)
-import Prelude hiding (mapM)
 import System.Random (RandomGen)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
@@ -53,6 +51,7 @@ import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
+import qualified Data.Traversable as Traversable
 import qualified Data.Tuple as Tuple
 import qualified Data.UnionFind.IntMap as UnionFind
 import qualified Editor.Anchors as Anchors
@@ -418,7 +417,7 @@ derefRef stdGen builtinsMap (FinalTypeContext typeContext) rootRef =
     recurse (Data.ExpressionGetVariable (Data.ParameterRef p)) =
       return . Data.ExpressionGetVariable . Data.ParameterRef $ mapGuid p
     recurse expr =
-      mapM (Reader.mapReaderT holify . go) expr
+      Traversable.mapM (Reader.mapReaderT holify . go) expr
     holify [] =
       [NoLoop
        (Data.GuidExpression zeroGuid Data.ExpressionHole)]
