@@ -230,11 +230,12 @@ setRefExpr ::
   Data.PureGuidExpression -> Ref -> m ()
 setRefExpr newExpr ref = do
   curExpr <- Lens.use $ refMapMod ref . rExpression
-  when (newExpr /= curExpr) $ do
-    sTouchedRefs . IntSetLens.contains (unRef ref) .= True
-    case mergeExprs curExpr newExpr of
-      Just mergedExpr -> refMapMod ref . rExpression .= mergedExpr
-      Nothing -> refMapMod ref . rErrors %= (newExpr :)
+  case mergeExprs curExpr newExpr of
+    Just mergedExpr ->
+      when (mergedExpr /= curExpr) $ do
+        sTouchedRefs . IntSetLens.contains (unRef ref) .= True
+        refMapMod ref . rExpression .= mergedExpr
+    Nothing -> refMapMod ref . rErrors %= (newExpr :)
 
 fromLoaded ::
   Monad m =>
