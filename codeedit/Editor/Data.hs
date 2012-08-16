@@ -17,10 +17,10 @@ module Editor.Data
   , newExprIRef, readExprIRef, writeExprIRef, exprIRefGuid
   , newIRefExpressionFromPure, writeIRefExpressionFromPure
   , mapMExpression
-  , sequenceExpression
   , canonizeIdentifiers
   ) where
 
+import Control.Applicative (Applicative(..))
 import Control.Monad (liftM, liftM2, (<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Random (nextRandom, runRandomT)
@@ -29,13 +29,18 @@ import Data.Binary (Binary(..))
 import Data.Binary.Get (getWord8)
 import Data.Binary.Put (putWord8)
 import Data.Derive.Binary(makeBinary)
-import Data.DeriveTH(derive)
+import Data.Derive.Foldable (makeFoldable)
+import Data.Derive.Traversable (makeTraversable)
+import Data.DeriveTH (derive)
+import Data.Foldable (Foldable(..))
 import Data.Functor.Identity (Identity(..))
 import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef(IRef)
 import Data.Store.Property (Property)
 import Data.Store.Transaction (Transaction)
+import Data.Traversable (Traversable(..))
+import Prelude hiding (mapM)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Map as Map
@@ -142,7 +147,6 @@ data Definition expr = Definition
 type DefinitionI = Definition ExpressionIRef
 type DefinitionIRef = IRef DefinitionI
 
-
 newtype PureGuidExpression = PureGuidExpression
   { unPureGuidExpression :: GuidExpression PureGuidExpression
   } deriving (Eq)
@@ -160,34 +164,10 @@ instance Show ref => Show (GuidExpression ref) where
 
 AtFieldTH.make ''PureGuidExpression
 AtFieldTH.make ''GuidExpression
-derive makeBinary ''PureGuidExpression
-derive makeBinary ''GuidExpression
 
 variableRefGuid :: VariableRef -> Guid
 variableRefGuid (ParameterRef i) = i
 variableRefGuid (DefinitionRef i) = IRef.guid i
-
-derive makeBinary ''ExpressionIRef
-derive makeBinary ''FFIName
-derive makeBinary ''VariableRef
-derive makeBinary ''Lambda
-derive makeBinary ''Apply
-derive makeBinary ''Builtin
-derive makeBinary ''Expression
-derive makeBinary ''Definition
-AtFieldTH.make ''Lambda
-AtFieldTH.make ''Apply
-AtFieldTH.make ''Definition
-
-sequenceExpression :: Monad f => Expression (f a) -> f (Expression a)
-sequenceExpression (ExpressionLambda (Lambda x y)) = liftM2 makeLambda x y
-sequenceExpression (ExpressionPi (Lambda x y)) = liftM2 makePi x y
-sequenceExpression (ExpressionApply (Apply x y)) = liftM2 makeApply x y
-sequenceExpression (ExpressionBuiltin (Builtin name t)) = liftM (ExpressionBuiltin . Builtin name) t
-sequenceExpression (ExpressionGetVariable var) = return $ ExpressionGetVariable var
-sequenceExpression ExpressionHole = return ExpressionHole
-sequenceExpression (ExpressionLiteralInteger int) = return $ ExpressionLiteralInteger int
-sequenceExpression ExpressionSet = return ExpressionSet
 
 mapMExpression
   :: Monad m
@@ -196,7 +176,7 @@ mapMExpression
          , Expression to -> m to ))
   -> from -> m to
 mapMExpression f src =
-  afterRecurse =<< sequenceExpression . fmap (mapMExpression f) =<< makeExpr
+  afterRecurse =<< mapM (mapMExpression f) =<< makeExpr
   where
     (makeExpr, afterRecurse) = f src
 
@@ -225,7 +205,7 @@ writeIRefExpressionFromPure (ExpressionIRef iref) =
 expressionIFromPure
   :: Monad m => Scope -> Guid -> PureGuidExpression -> Transaction t m ExpressionI
 expressionIFromPure scope newGuid (PureGuidExpression (GuidExpression oldGuid expr)) =
-  sequenceExpression $ fmap (newIRefExpressionFromPureH newScope) newExpr
+  mapM (newIRefExpressionFromPureH newScope) newExpr
   where
     newScope
       | hasLambda expr = (oldGuid, newGuid) : scope
@@ -259,3 +239,25 @@ canonizeIdentifiers gen =
           maybe gv (ExpressionGetVariable . ParameterRef) .
           Map.lookup guid
         x -> return x
+
+derive makeFoldable ''Builtin
+derive makeFoldable ''Apply
+derive makeFoldable ''Lambda
+derive makeFoldable ''Expression
+derive makeTraversable ''Builtin
+derive makeTraversable ''Apply
+derive makeTraversable ''Lambda
+derive makeTraversable ''Expression
+derive makeBinary ''PureGuidExpression
+derive makeBinary ''GuidExpression
+derive makeBinary ''ExpressionIRef
+derive makeBinary ''FFIName
+derive makeBinary ''VariableRef
+derive makeBinary ''Lambda
+derive makeBinary ''Apply
+derive makeBinary ''Builtin
+derive makeBinary ''Expression
+derive makeBinary ''Definition
+AtFieldTH.make ''Lambda
+AtFieldTH.make ''Apply
+AtFieldTH.make ''Definition
