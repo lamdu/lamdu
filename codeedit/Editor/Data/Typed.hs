@@ -282,10 +282,7 @@ addRules typedVal expr = do
 -- For use in loading phase only!
 -- We don't create additional Refs afterwards!
 createTypedVal :: MonadState InferState m => m TypedValue
-createTypedVal = do
-  valRef <- createRef
-  typeRef <- createRef
-  return $ TypedValue valRef typeRef
+createTypedVal = liftM2 TypedValue createRef createRef
   where
     createRef = do
       key <- liftM IntMap.size $ Lens.use sRefMap
