@@ -172,20 +172,6 @@ toPureExpression expr =
 
 type T = Transaction ViewTag
 
--- Initial Pass:
--- Get Definitions expand to their types and values.
--- Use expression's structures except for Apply.
---   (because an Apply can result in something else
---    but for example an Int or Lambda stays the same)
--- Add SimpleType, Apply, LambdaOrPi, Union rules
--- Param types of Lambdas and Pis are of type Set
--- Pi result type is of type Set
-
-type ExpressionTop = Data.Expression ()
-
-makeExpressionTop :: Data.Expression a -> ExpressionTop
-makeExpressionTop = fmap $ const ()
-
 -- Map from params to their Param type,
 -- also including the recursive ref to the definition.
 -- (hence not just parameters)
@@ -313,15 +299,6 @@ loadNode entity typedValue = do
   withChildrenTvs <-
     Traversable.mapM addTypedVal $ DataLoad.entityValue entity
   addRules typedValue $ fmap snd withChildrenTvs
-  let
-    onLambda (Data.Lambda paramType@(_, paramTypeTv) result) = do
-      setRefExpr (tvType paramTypeTv) setExpr
-      paramTypeR <- go paramType
-      let paramRef = Data.ParameterRef $ DataLoad.entityGuid entity
-      resultR <-
-        Reader.local (Map.insert paramRef (tvVal paramTypeTv)) $
-        go result
-      return $ Data.Lambda paramTypeR resultR
   expr <-
     case withChildrenTvs of
     Data.ExpressionLambda lambda ->
@@ -332,6 +309,14 @@ loadNode entity typedValue = do
     _ -> Traversable.mapM go withChildrenTvs
   return $ StoredExpression (DataLoad.entityStored entity) expr typedValue
   where
+    onLambda (Data.Lambda paramType@(_, paramTypeTv) result) = do
+      setRefExpr (tvType paramTypeTv) setExpr
+      paramTypeR <- go paramType
+      let paramRef = Data.ParameterRef $ DataLoad.entityGuid entity
+      resultR <-
+        Reader.local (Map.insert paramRef (tvVal paramTypeTv)) $
+        go result
+      return $ Data.Lambda paramTypeR resultR
     go = uncurry loadNode
     addTypedVal x =
       liftM ((,) x) createTypedVal
@@ -350,10 +335,9 @@ fromLoaded mRecursiveIRef rootEntity =
   (`runStateT` InferState mempty mempty) .
   (`runReaderT` mempty) $ do
     rootTv <- createTypedVal
-    Reader.local
-      ( case mRecursiveIRef of
+    ( case mRecursiveIRef of
         Nothing -> id
-        Just iref -> Map.insert (Data.DefinitionRef iref) (tvType rootTv)
+        Just iref -> Reader.local $ Map.insert (Data.DefinitionRef iref) (tvType rootTv)
       ) $
       loadNode rootEntity rootTv
 
