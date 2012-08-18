@@ -8,7 +8,7 @@ module Editor.Data.Typed
 import Control.Applicative ((<*>), liftA2)
 import Control.Arrow (first)
 import Control.Lens ((%=), (.=), (^.))
-import Control.Monad (liftM, liftM2, when)
+import Control.Monad (mzero, liftM, liftM2, when)
 import Control.Monad.Reader.Class (MonadReader)
 import Control.Monad.State.Class (MonadState)
 import Control.Monad.Trans.Class (lift)
@@ -218,32 +218,48 @@ intMapMod k =
 refMapAt :: Functor f => Ref -> (RefData -> f RefData) -> (InferState -> f InferState)
 refMapAt k = sRefMap . intMapMod (unRef k)
 
--- TODO: Forgot to tranlate param guids!
+lookupDefToKey :: Ord a => a -> Map a a -> a
+lookupDefToKey x = fromMaybe x . Map.lookup x
+
+-- Merge two expressions:
+-- If they do not match, return Nothing.
+-- Holes match with anything, expand to the other expr.
+-- Results with the Guids of the first expression (where available).
 mergeExprs ::
   Data.PureGuidExpression ->
   Data.PureGuidExpression ->
   Maybe Data.PureGuidExpression
-mergeExprs
-  (Data.PureGuidExpression (Data.GuidExpression g e0))
-  (Data.PureGuidExpression (Data.GuidExpression _ e1)) =
-  fmap (Data.pureGuidExpression g) $
-  case (e0, e1) of
-  (Data.ExpressionHole, _) -> Just e1
-  (_, Data.ExpressionHole) -> Just e0
-  (Data.ExpressionApply (Data.Apply f0 a0),
-   Data.ExpressionApply (Data.Apply f1 a1)) ->
-    fmap Data.ExpressionApply $ liftA2 Data.Apply
-    (mergeExprs f0 f1) (mergeExprs a0 a1)
-  (Data.ExpressionLambda l0, Data.ExpressionLambda l1) ->
-    fmap Data.ExpressionLambda $ onLambda l0 l1
-  (Data.ExpressionPi l0, Data.ExpressionPi l1) ->
-    fmap Data.ExpressionPi $ onLambda l0 l1
-  _
-    | e0 == e1 -> Just e0
-    | otherwise -> Nothing
+mergeExprs p0 p1 =
+  runReaderT (go p0 p1) Map.empty
   where
+    go
+      (Data.PureGuidExpression (Data.GuidExpression g0 e0))
+      (Data.PureGuidExpression (Data.GuidExpression g1 e1)) =
+      fmap (Data.pureGuidExpression g0) .
+      Reader.local (Map.insert g1 g0) $
+      case (e0, e1) of
+      (_, Data.ExpressionHole) -> return e0
+      (Data.ExpressionHole, _) ->
+        -- Map Guids to those of first expression
+        Traversable.mapM (go hole) e1
+      (Data.ExpressionGetVariable (Data.ParameterRef p0),
+       Data.ExpressionGetVariable (Data.ParameterRef p1)) -> do
+        p1Mapped <- Reader.asks $ lookupDefToKey p1
+        if p0 == p1Mapped
+          then return e0
+          else mzero
+      (Data.ExpressionApply (Data.Apply f0 a0),
+       Data.ExpressionApply (Data.Apply f1 a1)) ->
+        fmap Data.ExpressionApply $ liftA2 Data.Apply (go f0 f1) (go a0 a1)
+      (Data.ExpressionLambda l0, Data.ExpressionLambda l1) ->
+        fmap Data.ExpressionLambda $ onLambda l0 l1
+      (Data.ExpressionPi l0, Data.ExpressionPi l1) ->
+        fmap Data.ExpressionPi $ onLambda l0 l1
+      _
+        | e0 == e1 -> return e0
+        | otherwise -> mzero
     onLambda (Data.Lambda p0 r0) (Data.Lambda p1 r1) =
-      liftA2 Data.Lambda (mergeExprs p0 p1) (mergeExprs r0 r1)
+      liftA2 Data.Lambda (go p0 p1) (go r0 r1)
 
 setRefExpr ::
   MonadState InferState m =>
