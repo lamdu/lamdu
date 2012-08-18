@@ -12,8 +12,8 @@ import Control.Monad (mzero, liftM, liftM2, when)
 import Control.Monad.Reader.Class (MonadReader)
 import Control.Monad.State.Class (MonadState)
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Reader (runReaderT)
-import Control.Monad.Trans.State (execState, runStateT)
+import Control.Monad.Trans.Reader (ReaderT, runReaderT)
+import Control.Monad.Trans.State (StateT, execState, runStateT)
 import Data.IntMap (IntMap)
 import Data.IntSet (IntSet)
 import Data.Map (Map)
@@ -301,6 +301,57 @@ addRules typedVal expr = do
       addRuleToMany [tvVal typedVal, tvVal paramType, tvVal result] .
       cons $ LambdaComponents (tvVal typedVal) (tvVal paramType) (tvVal result)
 
+-- For use in loading phase only!
+-- We don't create additional Refs afterwards!
+createTypedVal :: MonadState InferState m => m TypedValue
+createTypedVal = do
+  valRef <- createRef
+  typeRef <- createRef
+  return $ TypedValue valRef typeRef
+  where
+    createRef = do
+      key <- liftM IntMap.size $ Lens.use sRefMap
+      sRefMap . IntMapLens.at key .= Just emptyRefData
+      return $ Ref key
+
+loadNode ::
+  Monad m =>
+  DataLoad.ExpressionEntity (T m) -> TypedValue ->
+  ReaderT (Map Data.VariableRef Ref) (StateT InferState (T m)) (StoredExpression (T m))
+loadNode entity typedValue = do
+  setInitialValues entity typedValue
+  withChildrenTvs <-
+    Traversable.mapM addTypedVal $ DataLoad.entityValue entity
+  addRules typedValue $ fmap snd withChildrenTvs
+  let
+    onLambda (Data.Lambda paramType@(_, paramTypeTv) result) = do
+      setRefExpr (tvType paramTypeTv) setExpr
+      paramTypeR <- go paramType
+      let paramRef = Data.ParameterRef $ DataLoad.entityGuid entity
+      resultR <-
+        Reader.local (Map.insert paramRef (tvVal paramTypeTv)) $
+        go result
+      return $ Data.Lambda paramTypeR resultR
+  expr <-
+    case withChildrenTvs of
+    Data.ExpressionLambda lambda ->
+      liftM Data.ExpressionLambda $ onLambda lambda
+    Data.ExpressionPi lambda@(Data.Lambda _ (_, resultTypeTv)) -> do
+      setRefExpr (tvType resultTypeTv) setExpr
+      liftM Data.ExpressionPi $ onLambda lambda
+    _ -> Traversable.mapM go withChildrenTvs
+  return $ StoredExpression (DataLoad.entityStored entity) expr typedValue
+  where
+    go = uncurry loadNode
+    addTypedVal x =
+      liftM ((,) x) createTypedVal
+    transaction = lift . lift
+    setInitialValues entity typedValue = do
+      scope <- Reader.ask
+      (initialVal, initialType) <- transaction $ initialExprs scope entity
+      setRefExpr (tvVal typedValue) initialVal
+      setRefExpr (tvType typedValue) initialType
+
 fromLoaded ::
   Monad m =>
   Maybe Data.DefinitionIRef ->
@@ -314,49 +365,7 @@ fromLoaded mRecursiveIRef rootEntity =
         Nothing -> id
         Just iref -> Map.insert (Data.DefinitionRef iref) (tvType rootTv)
       ) $
-      processNode rootEntity rootTv
-  where
-    createTypedVal = do
-      valRef <- createRef
-      typeRef <- createRef
-      return $ TypedValue valRef typeRef
-    createRef = do
-      key <- liftM IntMap.size $ Lens.use sRefMap
-      sRefMap . IntMapLens.at key .= Just emptyRefData
-      return $ Ref key
-    transaction = lift . lift
-    addTypedVal x =
-      liftM ((,) x) createTypedVal
-    setInitialValues entity typedValue = do
-      (initialVal, initialType) <- do
-        scope <- Reader.ask
-        transaction $ initialExprs scope entity
-      setRefExpr (tvVal typedValue) initialVal
-      setRefExpr (tvType typedValue) initialType
-    processNode entity typedValue = do
-      setInitialValues entity typedValue
-      withChildrenTvs <-
-        Traversable.mapM addTypedVal $ DataLoad.entityValue entity
-      addRules typedValue $ fmap snd withChildrenTvs
-      let
-        onLambda (Data.Lambda paramType@(_, paramTypeTv) result) = do
-          setRefExpr (tvType paramTypeTv) setExpr
-          paramTypeR <- uncurry processNode paramType
-          let paramRef = Data.ParameterRef $ DataLoad.entityGuid entity
-          resultR <-
-            Reader.local (Map.insert paramRef (tvVal paramTypeTv)) $
-            uncurry processNode result
-          return $ Data.Lambda paramTypeR resultR
-      expr <-
-        case withChildrenTvs of
-        Data.ExpressionLambda lambda ->
-          liftM Data.ExpressionLambda $ onLambda lambda
-        Data.ExpressionPi lambda@(Data.Lambda _ (_, resultTypeTv)) -> do
-          setRefExpr (tvType resultTypeTv) setExpr
-          liftM Data.ExpressionPi $ onLambda lambda
-        _ ->
-          Traversable.mapM (uncurry processNode) withChildrenTvs
-      return $ StoredExpression (DataLoad.entityStored entity) expr typedValue
+      loadNode rootEntity rootTv
 
 popTouchedRef :: MonadState InferState m => m (Maybe Ref)
 popTouchedRef = do
