@@ -5,15 +5,15 @@ module Editor.Data.Typed
   , RefMap
   ) where
 
-import Control.Applicative ((<*>))
+import Control.Applicative ((<*>), liftA2)
 import Control.Arrow (first)
 import Control.Lens ((%=), (.=), (^.))
-import Control.Monad (guard, liftM, mapM_, when)
+import Control.Monad (liftM, liftM2, when)
 import Control.Monad.Reader.Class (MonadReader)
 import Control.Monad.State.Class (MonadState)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (runReaderT)
-import Control.Monad.Trans.State (runStateT)
+import Control.Monad.Trans.State (execState, runStateT)
 import Data.IntMap (IntMap)
 import Data.IntSet (IntSet)
 import Data.Map (Map)
@@ -24,7 +24,6 @@ import Editor.Anchors (ViewTag)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Reader.Class as Reader
-import qualified Control.Monad.State.Class as State
 import qualified Data.IntMap as IntMap
 import qualified Data.IntMap.Lens as IntMapLens
 import qualified Data.IntSet as IntSet
@@ -216,39 +215,53 @@ intMapMod k =
   where
     from = fromMaybe . error $ unwords ["intMapMod: key", show k, "not in map"]
 
-refMapMod :: Functor f => Ref -> (RefData -> f RefData) -> (InferState -> f InferState)
-refMapMod k = sRefMap . intMapMod (unRef k)
+refMapAt :: Functor f => Ref -> (RefData -> f RefData) -> (InferState -> f InferState)
+refMapAt k = sRefMap . intMapMod (unRef k)
 
+-- TODO: Forgot to tranlate param guids!
 mergeExprs ::
   Data.PureGuidExpression ->
   Data.PureGuidExpression ->
   Maybe Data.PureGuidExpression
 mergeExprs
-  p0@(Data.PureGuidExpression (Data.GuidExpression _ e0))
-  p1@(Data.PureGuidExpression (Data.GuidExpression _ e1)) =
+  (Data.PureGuidExpression (Data.GuidExpression g e0))
+  (Data.PureGuidExpression (Data.GuidExpression _ e1)) =
+  fmap (Data.pureGuidExpression g) $
   case (e0, e1) of
-  (Data.ExpressionHole, _) -> Just p1
-  (_, Data.ExpressionHole) -> Just p0
-  -- TODO
-  _ -> undefined
+  (Data.ExpressionHole, _) -> Just e1
+  (_, Data.ExpressionHole) -> Just e0
+  (Data.ExpressionApply (Data.Apply f0 a0),
+   Data.ExpressionApply (Data.Apply f1 a1)) ->
+    fmap Data.ExpressionApply $ liftA2 Data.Apply
+    (mergeExprs f0 f1) (mergeExprs a0 a1)
+  (Data.ExpressionLambda l0, Data.ExpressionLambda l1) ->
+    fmap Data.ExpressionLambda $ onLambda l0 l1
+  (Data.ExpressionPi l0, Data.ExpressionPi l1) ->
+    fmap Data.ExpressionPi $ onLambda l0 l1
+  _
+    | e0 == e1 -> Just e0
+    | otherwise -> Nothing
+  where
+    onLambda (Data.Lambda p0 r0) (Data.Lambda p1 r1) =
+      liftA2 Data.Lambda (mergeExprs p0 p1) (mergeExprs r0 r1)
 
 setRefExpr ::
   MonadState InferState m =>
-  Data.PureGuidExpression -> Ref -> m ()
-setRefExpr newExpr ref = do
-  curExpr <- Lens.use $ refMapMod ref . rExpression
+  Ref -> Data.PureGuidExpression -> m ()
+setRefExpr ref newExpr = do
+  curExpr <- Lens.use $ refMapAt ref . rExpression
   case mergeExprs curExpr newExpr of
     Just mergedExpr ->
       when (mergedExpr /= curExpr) $ do
         sTouchedRefs . IntSetLens.contains (unRef ref) .= True
-        refMapMod ref . rExpression .= mergedExpr
-    Nothing -> refMapMod ref . rErrors %= (newExpr :)
+        refMapAt ref . rExpression .= mergedExpr
+    Nothing -> refMapAt ref . rErrors %= (newExpr :)
 
 addRules ::
   (MonadState InferState m, MonadReader Scope m) =>
   TypedValue -> Data.Expression TypedValue -> m ()
 addRules typedVal expr = do
-  refMapMod (tvVal typedVal) . rRules %= (RuleSimpleType typedVal :)
+  refMapAt (tvVal typedVal) . rRules %= (RuleSimpleType typedVal :)
   case expr of
     Data.ExpressionPi lambda@(Data.Lambda _ resultType) ->
       onLambda RulePiStructure lambda
@@ -262,11 +275,11 @@ addRules typedVal expr = do
       case mTypeRef of
         Nothing -> return ()
         Just ref ->
-          refMapMod ref . rRules %= (RuleUnion ref (tvType typedVal) :)
+          refMapAt ref . rRules %= (RuleUnion ref (tvType typedVal) :)
     _ -> return ()
   where
     addRule rule ref =
-      refMapMod ref . rRules %= (rule :)
+      refMapAt ref . rRules %= (rule :)
     addRuleToMany refs rule = mapM_ (addRule rule) refs
     onLambda cons lambda@(Data.Lambda paramType result) =
       addRuleToMany [tvVal typedVal, tvVal paramType, tvVal result] .
@@ -298,18 +311,20 @@ fromLoaded mRecursiveIRef rootEntity =
     transaction = lift . lift
     addTypedVal x =
       liftM ((,) x) createTypedVal
-    processNode entity typedValue = do
+    setInitialValues entity typedValue = do
       (initialVal, initialType) <- do
         scope <- Reader.ask
         transaction $ initialExprs scope entity
-      setRefExpr initialVal $ tvVal typedValue
-      setRefExpr initialType $ tvType typedValue
+      setRefExpr (tvVal typedValue) initialVal
+      setRefExpr (tvType typedValue) initialType
+    processNode entity typedValue = do
+      setInitialValues entity typedValue
       withChildrenTvs <-
         Traversable.mapM addTypedVal $ DataLoad.entityValue entity
       addRules typedValue $ fmap snd withChildrenTvs
       let
         onLambda (Data.Lambda paramType@(_, paramTypeTv) result) = do
-          setRefExpr setExpr $ tvType paramTypeTv
+          setRefExpr (tvType paramTypeTv) setExpr
           paramTypeR <- uncurry processNode paramType
           let paramRef = Data.ParameterRef $ DataLoad.entityGuid entity
           resultR <-
@@ -321,8 +336,75 @@ fromLoaded mRecursiveIRef rootEntity =
         Data.ExpressionLambda lambda ->
           liftM Data.ExpressionLambda $ onLambda lambda
         Data.ExpressionPi lambda@(Data.Lambda _ (_, resultTypeTv)) -> do
-          setRefExpr setExpr $ tvType resultTypeTv
+          setRefExpr (tvType resultTypeTv) setExpr
           liftM Data.ExpressionPi $ onLambda lambda
         _ ->
           Traversable.mapM (uncurry processNode) withChildrenTvs
       return $ StoredExpression (DataLoad.entityStored entity) expr typedValue
+
+popTouchedRef :: MonadState InferState m => m (Maybe Ref)
+popTouchedRef = do
+  touched <- Lens.use sTouchedRefs
+  case IntSet.minView touched of
+    Nothing -> return Nothing
+    Just (key, newTouchedRefs) -> do
+      sTouchedRefs .= newTouchedRefs
+      return . Just $ Ref key
+
+infer :: InferState -> InferState
+infer =
+  execState go
+  where
+    go = maybe (return ()) goOn =<< popTouchedRef
+    goOn ref = do
+      mapM_ applyRule =<< Lens.use (refMapAt ref . rRules)
+      go
+
+getRefExpr :: MonadState InferState m => Ref -> m Data.PureGuidExpression
+getRefExpr ref = Lens.use (refMapAt ref . rExpression)
+
+applyStructureRule ::
+  MonadState InferState m =>
+  (Data.Lambda Data.PureGuidExpression -> Data.Expression Data.PureGuidExpression) ->
+  (Data.Expression Data.PureGuidExpression -> Maybe (Data.Lambda Data.PureGuidExpression)) ->
+  LambdaComponents ->
+  m ()
+applyStructureRule cons uncons (LambdaComponents parentRef paramTypeRef resultRef) = do
+  pExpr <- getRefExpr parentRef
+  let Data.GuidExpression g expr = Data.unPureGuidExpression pExpr
+  case uncons expr of
+    Nothing -> return ()
+    Just (Data.Lambda paramType result) -> do
+      setRefExpr paramTypeRef paramType
+      setRefExpr resultRef result
+  setRefExpr parentRef . Data.pureGuidExpression g . cons =<<
+    liftM2 Data.Lambda (getRefExpr paramTypeRef) (getRefExpr resultRef)
+
+maybeLambda :: Data.Expression a -> Maybe (Data.Lambda a)
+maybeLambda (Data.ExpressionLambda x) = Just x
+maybeLambda _ = Nothing
+
+maybePi :: Data.Expression a -> Maybe (Data.Lambda a)
+maybePi (Data.ExpressionPi x) = Just x
+maybePi _ = Nothing
+
+applyRule :: MonadState InferState m => Rule -> m ()
+applyRule (RuleUnion r0 r1) = do
+  setRefExpr r0 =<< getRefExpr r1
+  setRefExpr r1 =<< getRefExpr r0
+applyRule (RuleLambdaStructure lambda) =
+  applyStructureRule Data.ExpressionLambda maybeLambda lambda
+applyRule (RulePiStructure lambda) =
+  applyStructureRule Data.ExpressionPi maybePi lambda
+applyRule (RuleSimpleType (TypedValue val typ)) = do
+  valGExpr <- getRefExpr val
+  let Data.GuidExpression g valExpr = Data.unPureGuidExpression valGExpr
+  case valExpr of
+    Data.ExpressionSet -> setRefExpr typ setExpr
+    Data.ExpressionPi _ -> setRefExpr typ setExpr
+    Data.ExpressionBuiltin b -> setRefExpr typ $ Data.bType b
+    Data.ExpressionLambda (Data.Lambda paramType _) ->
+      setRefExpr typ . Data.pureGuidExpression g .
+      Data.ExpressionPi $ Data.Lambda paramType hole
+    _ -> return ()
+applyRule _ = undefined
