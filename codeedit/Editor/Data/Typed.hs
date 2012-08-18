@@ -4,6 +4,7 @@ module Editor.Data.Typed
   , Ref
   , RefMap
   , infer
+  , Loader(..)
   , fromLoaded
   , toPureExpression
   ) where
@@ -23,8 +24,6 @@ import Data.Map (Map)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (mempty)
 import Data.Store.Guid (Guid)
-import Data.Store.Transaction (Transaction)
-import Editor.Anchors (ViewTag)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Reader.Class as Reader
@@ -173,27 +172,30 @@ toPureExpression expr =
   (Data.eipGuid (expr ^. eProp)) .
   fmap toPureExpression $ expr ^. eValue
 
-type T = Transaction ViewTag
-
 -- Map from params to their Param type,
 -- also including the recursive ref to the definition.
 -- (hence not just parameters)
 type Scope = Map Data.VariableRef Ref
 
+data Loader m = Loader
+  { loadPureDefinitionType :: Data.DefinitionIRef -> m Data.PureGuidExpression
+  }
+
 -- Initial expression for inferred value and type of a stored entity.
 -- Types are returned only in cases of expanding definitions.
 initialExprs ::
   Monad m =>
-  Scope -> DataLoad.ExpressionEntity (T m) ->
-  T m (Data.PureGuidExpression, Data.PureGuidExpression)
-initialExprs scope entity =
+  Loader m ->
+  Scope -> DataLoad.ExpressionEntity m ->
+  m (Data.PureGuidExpression, Data.PureGuidExpression)
+initialExprs loader scope entity =
   (liftM . first)
   (Data.pureGuidExpression (DataLoad.entityGuid entity)) $
   case exprStructure of
   Data.ExpressionApply _ -> return (Data.ExpressionHole, hole)
   Data.ExpressionGetVariable var@(Data.DefinitionRef ref)
     | not (Map.member var scope) ->
-      liftM ((,) exprStructure) $ DataLoad.loadPureDefinitionType ref
+      liftM ((,) exprStructure) $ loadPureDefinitionType loader ref
   _ -> return (exprStructure, hole)
   where
     exprStructure = fmap (const hole) $ DataLoad.entityValue entity
@@ -291,9 +293,10 @@ createTypedVal = liftM2 TypedValue createRef createRef
 
 loadNode ::
   Monad m =>
-  DataLoad.ExpressionEntity (T m) -> TypedValue ->
-  ReaderT (Map Data.VariableRef Ref) (StateT InferState (T m)) (StoredExpression (T m))
-loadNode entity typedValue = do
+  Loader m ->
+  DataLoad.ExpressionEntity m -> TypedValue ->
+  ReaderT (Map Data.VariableRef Ref) (StateT InferState m) (StoredExpression m)
+loadNode loader entity typedValue = do
   setInitialValues
   withChildrenTvs <-
     Traversable.mapM addTypedVal $ DataLoad.entityValue entity
@@ -316,21 +319,22 @@ loadNode entity typedValue = do
         Reader.local (Map.insert paramRef (tvVal paramTypeTv)) $
         go result
       return $ Data.Lambda paramTypeR resultR
-    go = uncurry loadNode
+    go = uncurry (loadNode loader)
     addTypedVal x =
       liftM ((,) x) createTypedVal
     transaction = lift . lift
     setInitialValues = do
       scope <- Reader.ask
-      (initialVal, initialType) <- transaction $ initialExprs scope entity
+      (initialVal, initialType) <- transaction $ initialExprs loader scope entity
       setRefExpr (tvVal typedValue) initialVal
       setRefExpr (tvType typedValue) initialType
 
 fromLoaded ::
   Monad m =>
+  Loader m ->
   Maybe Data.DefinitionIRef ->
-  DataLoad.ExpressionEntity (T m) -> T m (StoredExpression (T m), InferState)
-fromLoaded mRecursiveIRef rootEntity =
+  DataLoad.ExpressionEntity m -> m (StoredExpression m, InferState)
+fromLoaded loader mRecursiveIRef rootEntity =
   (`runStateT` InferState mempty mempty) .
   (`runReaderT` mempty) $ do
     rootTv <- createTypedVal
@@ -338,7 +342,7 @@ fromLoaded mRecursiveIRef rootEntity =
         Nothing -> id
         Just iref -> Reader.local $ Map.insert (Data.DefinitionRef iref) (tvType rootTv)
       ) $
-      loadNode rootEntity rootTv
+      loadNode loader rootEntity rootTv
 
 popTouchedRef :: MonadState InferState m => m (Maybe Ref)
 popTouchedRef = do
