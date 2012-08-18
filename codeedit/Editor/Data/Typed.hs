@@ -19,6 +19,7 @@ import Data.IntSet (IntSet)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (mempty)
+import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import qualified Control.Lens as Lens
@@ -75,7 +76,7 @@ instance Show TypedValue where
 -- ParamT <=> ArgT
 -- Recurse-Subst ResultT ApplyT Arg
 -- If Arg is Get Param:
---   ArgT <=> ResultT
+--   ApplyT <=> ResultT
 -- Case Func of
 --   Hole -> Do Nothing
 --   \LParamT -> Body : BodyT:
@@ -218,9 +219,6 @@ intMapMod k =
 refMapAt :: Functor f => Ref -> (RefData -> f RefData) -> (InferState -> f InferState)
 refMapAt k = sRefMap . intMapMod (unRef k)
 
-lookupDefToKey :: Ord a => a -> Map a a -> a
-lookupDefToKey x = fromMaybe x . Map.lookup x
-
 -- Merge two expressions:
 -- If they do not match, return Nothing.
 -- Holes match with anything, expand to the other expr.
@@ -237,29 +235,21 @@ mergeExprs p0 p1 =
       (Data.PureGuidExpression (Data.GuidExpression g1 e1)) =
       fmap (Data.pureGuidExpression g0) .
       Reader.local (Map.insert g1 g0) $
-      case (e0, e1) of
-      (_, Data.ExpressionHole) -> return e0
-      (Data.ExpressionHole, _) ->
-        -- Map Guids to those of first expression
-        Traversable.mapM (go hole) e1
-      (Data.ExpressionGetVariable (Data.ParameterRef p0),
-       Data.ExpressionGetVariable (Data.ParameterRef p1)) -> do
-        p1Mapped <- Reader.asks $ lookupDefToKey p1
-        if p0 == p1Mapped
-          then return e0
-          else mzero
-      (Data.ExpressionApply (Data.Apply f0 a0),
-       Data.ExpressionApply (Data.Apply f1 a1)) ->
-        fmap Data.ExpressionApply $ liftA2 Data.Apply (go f0 f1) (go a0 a1)
-      (Data.ExpressionLambda l0, Data.ExpressionLambda l1) ->
-        fmap Data.ExpressionLambda $ onLambda l0 l1
-      (Data.ExpressionPi l0, Data.ExpressionPi l1) ->
-        fmap Data.ExpressionPi $ onLambda l0 l1
-      _
-        | e0 == e1 -> return e0
-        | otherwise -> mzero
-    onLambda (Data.Lambda p0 r0) (Data.Lambda p1 r1) =
-      liftA2 Data.Lambda (go p0 p1) (go r0 r1)
+      case Data.matchExprsTopLevel go e0 e1 of
+      Just x -> Traversable.sequence x
+      Nothing ->
+        case (e0, e1) of
+        (_, Data.ExpressionHole) -> return e0
+        (Data.ExpressionHole, _) ->
+          -- Map Guids to those of first expression
+          Traversable.mapM (go hole) e1
+        (Data.ExpressionGetVariable (Data.ParameterRef p0),
+         Data.ExpressionGetVariable (Data.ParameterRef p1)) -> do
+          p1Mapped <- Reader.asks $ Map.lookup p1
+          if Just p0 == p1Mapped
+            then return e0
+            else mzero
+        _ -> mzero
 
 setRefExpr ::
   MonadState InferState m =>
@@ -405,6 +395,11 @@ applyStructureRule cons uncons (LambdaComponents parentRef paramTypeRef resultRe
   setRefExpr parentRef . Data.pureGuidExpression g . cons =<<
     liftM2 Data.Lambda (getRefExpr paramTypeRef) (getRefExpr resultRef)
 
+recurseSubst ::
+  MonadState InferState m =>
+  Data.PureGuidExpression -> Guid -> Ref -> Ref -> m Data.PureGuidExpression
+recurseSubst preSubstExpr paramGuid argRef postSubstRef = undefined
+
 maybeLambda :: Data.Expression a -> Maybe (Data.Lambda a)
 maybeLambda (Data.ExpressionLambda x) = Just x
 maybeLambda _ = Nothing
@@ -412,6 +407,9 @@ maybeLambda _ = Nothing
 maybePi :: Data.Expression a -> Maybe (Data.Lambda a)
 maybePi (Data.ExpressionPi x) = Just x
 maybePi _ = Nothing
+
+pgeExpr :: Data.PureGuidExpression -> Data.Expression Data.PureGuidExpression
+pgeExpr = Data.geValue . Data.unPureGuidExpression
 
 applyRule :: MonadState InferState m => Rule -> m ()
 applyRule (RuleUnion r0 r1) = do
@@ -432,4 +430,53 @@ applyRule (RuleSimpleType (TypedValue val typ)) = do
       setRefExpr typ . Data.pureGuidExpression g .
       Data.ExpressionPi $ Data.Lambda paramType hole
     _ -> return ()
-applyRule _ = undefined
+applyRule (RuleApply (ApplyComponents apply func arg)) = do
+  -- ArgT => ParamT
+  setRefExpr (tvType func) . Data.pureGuidExpression someGuid .
+    Data.ExpressionPi . (`Data.Lambda` hole) =<< getRefExpr (tvType arg)
+  -- If Arg is GetParam, ApplyT <=> ResultT
+  argExpr <- getRefExpr $ tvVal arg
+  case pgeExpr argExpr of
+    Data.ExpressionGetVariable (Data.ParameterRef _) -> do
+      setRefExpr (tvType func) . Data.pureGuidExpression someGuid .
+        Data.ExpressionPi . Data.Lambda hole =<< getRefExpr (tvType apply)
+      funcTExpr <- getRefExpr $ tvType func
+      case pgeExpr funcTExpr of
+        Data.ExpressionPi (Data.Lambda _ resultT) ->
+          setRefExpr (tvType apply) resultT
+        _ -> return ()
+    _ -> return ()
+
+  Data.PureGuidExpression
+    (Data.GuidExpression funcTGuid funcTExpr) <-
+    getRefExpr $ tvType func
+  case funcTExpr of
+    Data.ExpressionPi (Data.Lambda paramT resultT) -> do
+      -- ParamT => ArgT
+      setRefExpr (tvType arg) paramT
+      -- Recurse-Subst ResultT ApplyT Arg
+      setRefExpr (tvType func) . Data.pureGuidExpression funcTGuid .
+        Data.ExpressionPi . Data.Lambda paramT =<<
+        recurseSubst resultT funcTGuid (tvVal arg) (tvType apply)
+    _ -> return ()
+
+  funcPge@(Data.PureGuidExpression
+    (Data.GuidExpression funcGuid funcExpr)) <-
+    getRefExpr $ tvVal func
+  case funcExpr of
+    Data.ExpressionLambda (Data.Lambda paramT body) -> do
+      -- ParamT => ArgT
+      setRefExpr (tvType arg) paramT
+      -- ArgT => ParamT
+      setRefExpr (tvVal func) . Data.pureGuidExpression someGuid .
+        Data.ExpressionLambda . (`Data.Lambda` hole) =<< getRefExpr (tvType arg)
+      -- Recurse-Subst Body Apply Arg
+      setRefExpr (tvVal func) . Data.pureGuidExpression funcGuid .
+        Data.ExpressionLambda . Data.Lambda paramT =<<
+        recurseSubst body funcGuid (tvVal arg) (tvVal apply)
+    Data.ExpressionHole -> return ()
+    _ ->
+      setRefExpr (tvVal apply) . Data.pureGuidExpression someGuid .
+        Data.ExpressionApply $ Data.Apply funcPge argExpr
+  where
+    someGuid = Guid.fromString "Arbitrary"

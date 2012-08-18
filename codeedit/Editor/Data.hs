@@ -18,9 +18,10 @@ module Editor.Data
   , newIRefExpressionFromPure, writeIRefExpressionFromPure
   , mapMExpression
   , canonizeIdentifiers
+  , matchExprsTopLevel
   ) where
 
-import Control.Applicative (Applicative(..))
+import Control.Applicative (Applicative(..), liftA2)
 import Control.Monad (liftM, liftM2, (<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Random (nextRandom, runRandomT)
@@ -80,12 +81,18 @@ data Lambda expr = Lambda {
   lambdaParamType :: expr,
   lambdaBody :: expr
   } deriving (Eq, Ord, Show, Functor)
+instance Applicative Lambda where
+  pure x = Lambda x x
+  Lambda p0 b0 <*> Lambda p1 b1 = Lambda (p0 p1) (b0 b1)
 type LambdaI = Lambda ExpressionIRef
 
 data Apply expr = Apply {
   applyFunc :: expr,
   applyArg :: expr
   } deriving (Eq, Ord, Show, Functor)
+instance Applicative Apply where
+  pure x = Apply x x
+  Apply f0 a0 <*> Apply f1 a1 = Apply (f0 f1) (a0 a1)
 type ApplyI = Apply ExpressionIRef
 
 data VariableRef
@@ -246,6 +253,32 @@ canonizeIdentifiers gen =
           maybe gv (ExpressionGetVariable . ParameterRef) .
           Map.lookup guid
         x -> return x
+
+matchExprsTopLevel ::
+  (a -> b -> c) -> Expression a -> Expression b -> Maybe (Expression c)
+matchExprsTopLevel f (ExpressionLambda l0) (ExpressionLambda l1) =
+  Just . ExpressionLambda $ liftA2 f l0 l1
+matchExprsTopLevel f (ExpressionPi l0) (ExpressionPi l1) =
+  Just . ExpressionPi $ liftA2 f l0 l1
+matchExprsTopLevel f (ExpressionApply a0) (ExpressionApply a1) =
+  Just . ExpressionApply $ liftA2 f a0 a1
+matchExprsTopLevel _
+  (ExpressionGetVariable v0)
+  (ExpressionGetVariable v1)
+  | v0 == v1 = Just $ ExpressionGetVariable v0
+matchExprsTopLevel _ ExpressionHole ExpressionHole =
+  Just ExpressionHole
+matchExprsTopLevel _
+  (ExpressionLiteralInteger i0)
+  (ExpressionLiteralInteger i1)
+  | i0 == i1 = Just $ ExpressionLiteralInteger i0
+matchExprsTopLevel f
+  (ExpressionBuiltin (Builtin n0 t0))
+  (ExpressionBuiltin (Builtin n1 t1))
+  | n0 == n1 = Just . ExpressionBuiltin . Builtin n0 $ f t0 t1
+matchExprsTopLevel _ ExpressionSet ExpressionSet =
+  Just ExpressionSet
+matchExprsTopLevel _ _ _ = Nothing
 
 derive makeFoldable ''Builtin
 derive makeFoldable ''Apply
