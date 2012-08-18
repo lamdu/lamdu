@@ -24,6 +24,7 @@ where
 
 import Control.Monad (liftM, liftM2, when)
 import Data.Binary (Binary(..))
+import Data.ByteString.Char8 ()
 import Data.List.Split (splitOn)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
