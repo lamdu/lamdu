@@ -18,7 +18,7 @@ module Editor.Data
   , newIRefExpressionFromPure, writeIRefExpressionFromPure
   , mapMExpression
   , canonizeIdentifiers
-  , matchExprsTopLevel
+  , matchExpression
   ) where
 
 import Control.Applicative (Applicative(..), liftA2)
@@ -254,31 +254,31 @@ canonizeIdentifiers gen =
           Map.lookup guid
         x -> return x
 
-matchExprsTopLevel ::
+matchExpression ::
   (a -> b -> c) -> Expression a -> Expression b -> Maybe (Expression c)
-matchExprsTopLevel f (ExpressionLambda l0) (ExpressionLambda l1) =
+matchExpression f (ExpressionLambda l0) (ExpressionLambda l1) =
   Just . ExpressionLambda $ liftA2 f l0 l1
-matchExprsTopLevel f (ExpressionPi l0) (ExpressionPi l1) =
+matchExpression f (ExpressionPi l0) (ExpressionPi l1) =
   Just . ExpressionPi $ liftA2 f l0 l1
-matchExprsTopLevel f (ExpressionApply a0) (ExpressionApply a1) =
+matchExpression f (ExpressionApply a0) (ExpressionApply a1) =
   Just . ExpressionApply $ liftA2 f a0 a1
-matchExprsTopLevel _
+matchExpression _
   (ExpressionGetVariable v0)
   (ExpressionGetVariable v1)
   | v0 == v1 = Just $ ExpressionGetVariable v0
-matchExprsTopLevel _ ExpressionHole ExpressionHole =
+matchExpression _ ExpressionHole ExpressionHole =
   Just ExpressionHole
-matchExprsTopLevel _
+matchExpression _
   (ExpressionLiteralInteger i0)
   (ExpressionLiteralInteger i1)
   | i0 == i1 = Just $ ExpressionLiteralInteger i0
-matchExprsTopLevel f
+matchExpression f
   (ExpressionBuiltin (Builtin n0 t0))
   (ExpressionBuiltin (Builtin n1 t1))
   | n0 == n1 = Just . ExpressionBuiltin . Builtin n0 $ f t0 t1
-matchExprsTopLevel _ ExpressionSet ExpressionSet =
+matchExpression _ ExpressionSet ExpressionSet =
   Just ExpressionSet
-matchExprsTopLevel _ _ _ = Nothing
+matchExpression _ _ _ = Nothing
 
 derive makeFoldable ''Builtin
 derive makeFoldable ''Apply

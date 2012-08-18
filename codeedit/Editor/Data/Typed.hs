@@ -221,7 +221,7 @@ mergeExprs p0 p1 =
       (Data.PureGuidExpression (Data.GuidExpression g1 e1)) =
       fmap (Data.pureGuidExpression g0) .
       Reader.local (Map.insert g1 g0) $
-      case Data.matchExprsTopLevel go e0 e1 of
+      case Data.matchExpression go e0 e1 of
       Just x -> Traversable.sequence x
       Nothing ->
         case (e0, e1) of
