@@ -1,14 +1,17 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleContexts, TemplateHaskell #-}
 module Editor.Data.Typed
-  ( StoredExpression(..)
+  ( StoredExpression(..), eProp, eValue, eInferred
   , Ref
   , RefMap
+  , infer
+  , fromLoaded
+  , toPureExpression
   ) where
 
-import Control.Applicative ((<*>), liftA2)
+import Control.Applicative ((<*>))
 import Control.Arrow (first)
 import Control.Lens ((%=), (.=), (^.))
-import Control.Monad (mzero, liftM, liftM2, when)
+import Control.Monad (mzero, liftM, liftM2, when, guard)
 import Control.Monad.Reader.Class (MonadReader)
 import Control.Monad.State.Class (MonadState)
 import Control.Monad.Trans.Class (lift)
@@ -229,12 +232,11 @@ mergeExprs p0 p1 =
         (Data.ExpressionHole, _) ->
           -- Map Guids to those of first expression
           Traversable.mapM (go hole) e1
-        (Data.ExpressionGetVariable (Data.ParameterRef p0),
-         Data.ExpressionGetVariable (Data.ParameterRef p1)) -> do
-          p1Mapped <- Reader.asks $ Map.lookup p1
-          if Just p0 == p1Mapped
-            then return e0
-            else mzero
+        (Data.ExpressionGetVariable (Data.ParameterRef par0),
+         Data.ExpressionGetVariable (Data.ParameterRef par1)) -> do
+          par1Mapped <- Reader.asks $ Map.lookup par1
+          guard $ Just par0 == par1Mapped
+          return e0
         _ -> mzero
 
 setRefExpr ::
@@ -255,7 +257,7 @@ addRules ::
 addRules typedVal expr = do
   refMapAt (tvVal typedVal) . rRules %= (RuleSimpleType typedVal :)
   case expr of
-    Data.ExpressionPi lambda@(Data.Lambda _ resultType) ->
+    Data.ExpressionPi lambda ->
       onLambda RulePiStructure lambda
     Data.ExpressionLambda lambda ->
       onLambda RuleLambdaStructure lambda
@@ -273,7 +275,7 @@ addRules typedVal expr = do
     addRule rule ref =
       refMapAt ref . rRules %= (rule :)
     addRuleToMany refs rule = mapM_ (addRule rule) refs
-    onLambda cons lambda@(Data.Lambda paramType result) =
+    onLambda cons (Data.Lambda paramType result) =
       addRuleToMany [tvVal typedVal, tvVal paramType, tvVal result] .
       cons $ LambdaComponents (tvVal typedVal) (tvVal paramType) (tvVal result)
 
@@ -295,7 +297,7 @@ loadNode ::
   DataLoad.ExpressionEntity (T m) -> TypedValue ->
   ReaderT (Map Data.VariableRef Ref) (StateT InferState (T m)) (StoredExpression (T m))
 loadNode entity typedValue = do
-  setInitialValues entity typedValue
+  setInitialValues
   withChildrenTvs <-
     Traversable.mapM addTypedVal $ DataLoad.entityValue entity
   addRules typedValue $ fmap snd withChildrenTvs
@@ -321,7 +323,7 @@ loadNode entity typedValue = do
     addTypedVal x =
       liftM ((,) x) createTypedVal
     transaction = lift . lift
-    setInitialValues entity typedValue = do
+    setInitialValues = do
       scope <- Reader.ask
       (initialVal, initialType) <- transaction $ initialExprs scope entity
       setRefExpr (tvVal typedValue) initialVal
@@ -382,7 +384,7 @@ applyStructureRule cons uncons (LambdaComponents parentRef paramTypeRef resultRe
 recurseSubst ::
   MonadState InferState m =>
   Data.PureGuidExpression -> Guid -> Ref -> Ref -> m Data.PureGuidExpression
-recurseSubst preSubstExpr paramGuid argRef postSubstRef = undefined
+recurseSubst _preSubstExpr _paramGuid _argRef _postSubstRef = undefined
 
 maybeLambda :: Data.Expression a -> Maybe (Data.Lambda a)
 maybeLambda (Data.ExpressionLambda x) = Just x
