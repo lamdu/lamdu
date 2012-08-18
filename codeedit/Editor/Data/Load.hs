@@ -1,13 +1,14 @@
 {-# LANGUAGE TypeFamilies, FlexibleContexts #-}
 module Editor.Data.Load
   ( loadDefinition, DefinitionEntity(..)
-  , loadExpression, ExpressionEntity(..)
+  , loadExpression, ExpressionEntity(..), entityGuid
   , loadPureExpression, loadPureDefinition
   , loadPureDefinitionBody, loadPureDefinitionType
   )
 where
 
 import Control.Monad (liftM, liftM2, (<=<))
+import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
@@ -20,6 +21,9 @@ data ExpressionEntity m = ExpressionEntity
   { entityStored :: Data.ExpressionIRefProperty m
   , entityValue :: Data.Expression (ExpressionEntity m)
   }
+
+entityGuid :: ExpressionEntity m -> Guid
+entityGuid = Data.eipGuid . entityStored
 
 data DefinitionEntity m = DefinitionEntity
   { defEntityIRef :: Data.DefinitionIRef
