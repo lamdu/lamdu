@@ -1,6 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleContexts, TemplateHaskell #-}
 module Editor.Data.Typed
   ( Expression(..), eStored, eValue, eInferred
+  , ExpressionEntity(..)
   , Ref
   , RefMap
   , infer
@@ -35,7 +36,6 @@ import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
-import qualified Editor.Data.Load as DataLoad
 
 newtype Ref = Ref { unRef :: Int }
 instance Show Ref where
@@ -176,20 +176,31 @@ toPureExpression expr =
 -- (hence not just parameters)
 type Scope = Map Data.VariableRef Ref
 
-data Loader m = Loader
+newtype Loader m = Loader
   { loadPureDefinitionType :: Data.DefinitionIRef -> m Data.PureGuidExpression
   }
+
+data ExpressionEntity s = ExpressionEntity
+  { eeStored :: s
+  , eeGuidExpr :: Data.GuidExpression (ExpressionEntity s)
+  }
+
+eeGuid :: ExpressionEntity s -> Guid
+eeGuid = Data.geGuid . eeGuidExpr
+
+eeValue :: ExpressionEntity s -> Data.Expression (ExpressionEntity s)
+eeValue = Data.geValue . eeGuidExpr
 
 -- Initial expression for inferred value and type of a stored entity.
 -- Types are returned only in cases of expanding definitions.
 initialExprs ::
   Monad m =>
   Loader m ->
-  Scope -> DataLoad.ExpressionEntity m ->
+  Scope -> ExpressionEntity s ->
   m (Data.PureGuidExpression, Data.PureGuidExpression)
 initialExprs loader scope entity =
   (liftM . first)
-  (Data.pureGuidExpression (DataLoad.entityGuid entity)) $
+  (Data.pureGuidExpression (eeGuid entity)) $
   case exprStructure of
   Data.ExpressionApply _ -> return (Data.ExpressionHole, hole)
   Data.ExpressionGetVariable var@(Data.DefinitionRef ref)
@@ -197,7 +208,7 @@ initialExprs loader scope entity =
       liftM ((,) exprStructure) $ loadPureDefinitionType loader ref
   _ -> return (exprStructure, hole)
   where
-    exprStructure = fmap (const hole) $ DataLoad.entityValue entity
+    exprStructure = fmap (const hole) $ eeValue entity
 
 intMapMod :: Functor f => Int -> (v -> f v) -> (IntMap v -> f (IntMap v))
 intMapMod k =
@@ -293,13 +304,13 @@ createTypedVal = liftM2 TypedValue createRef createRef
 loadNode ::
   Monad m =>
   Loader m ->
-  DataLoad.ExpressionEntity m -> TypedValue ->
+  ExpressionEntity s -> TypedValue ->
   ReaderT (Map Data.VariableRef Ref) (StateT InferState m)
-    (Expression (Data.ExpressionIRefProperty m))
+    (Expression s)
 loadNode loader entity typedValue = do
   setInitialValues
   withChildrenTvs <-
-    Traversable.mapM addTypedVal $ DataLoad.entityValue entity
+    Traversable.mapM addTypedVal $ eeValue entity
   addRules typedValue $ fmap snd withChildrenTvs
   expr <-
     case withChildrenTvs of
@@ -309,13 +320,12 @@ loadNode loader entity typedValue = do
       setRefExpr (tvType resultTypeTv) setExpr
       liftM Data.ExpressionPi $ onLambda lambda
     _ -> Traversable.mapM go withChildrenTvs
-  let stored = DataLoad.entityStored entity
-  return $ Expression stored (Data.GuidExpression (Data.eipGuid stored) expr) typedValue
+  return $ Expression (eeStored entity) (Data.GuidExpression (eeGuid entity) expr) typedValue
   where
     onLambda (Data.Lambda paramType@(_, paramTypeTv) result) = do
       setRefExpr (tvType paramTypeTv) setExpr
       paramTypeR <- go paramType
-      let paramRef = Data.ParameterRef $ DataLoad.entityGuid entity
+      let paramRef = Data.ParameterRef $ eeGuid entity
       resultR <-
         Reader.local (Map.insert paramRef (tvVal paramTypeTv)) $
         go result
@@ -334,8 +344,8 @@ fromLoaded ::
   Monad m =>
   Loader m ->
   Maybe Data.DefinitionIRef ->
-  DataLoad.ExpressionEntity m ->
-  m (Expression (Data.ExpressionIRefProperty m), InferState)
+  ExpressionEntity s ->
+  m (Expression s, InferState)
 fromLoaded loader mRecursiveIRef rootEntity =
   (`runStateT` InferState mempty mempty) .
   (`runReaderT` mempty) $ do
