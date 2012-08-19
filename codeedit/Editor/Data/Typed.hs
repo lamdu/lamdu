@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleContexts, TemplateHaskell #-}
 module Editor.Data.Typed
-  ( StoredExpression(..), eProp, eValue, eInferred
+  ( Expression(..), eStored, eValue, eInferred
   , Ref
   , RefMap
   , infer
@@ -148,29 +148,28 @@ data InferState = InferState
   }
 LensTH.makeLenses ''InferState
 
-data StoredExpression m = StoredExpression
-  { _eProp :: Data.ExpressionIRefProperty m
-  , _eValue :: Data.Expression (StoredExpression m)
+data Expression s = Expression
+  { _eStored :: s
+  , _eValue :: Data.GuidExpression (Expression s)
   , _eInferred :: TypedValue
   }
-LensTH.makeLenses ''StoredExpression
+LensTH.makeLenses ''Expression
 
-instance Show (StoredExpression s) where
-  show (StoredExpression prop value inferred) =
+instance Show (Expression s) where
+  show (Expression _ value inferred) =
     unwords
     [ "("
-    , show (Data.eipGuid prop), ":"
+    , show (Data.geGuid value), ":"
     , show value, "="
     , show inferred
     , ")"
     ]
 
-toPureExpression ::
-  Monad m => StoredExpression m -> Data.PureGuidExpression
+toPureExpression :: Expression s -> Data.PureGuidExpression
 toPureExpression expr =
   Data.pureGuidExpression
-  (Data.eipGuid (expr ^. eProp)) .
-  fmap toPureExpression $ expr ^. eValue
+  (Data.geGuid (expr ^. eValue)) .
+  fmap toPureExpression . Data.geValue $ expr ^. eValue
 
 -- Map from params to their Param type,
 -- also including the recursive ref to the definition.
@@ -295,7 +294,8 @@ loadNode ::
   Monad m =>
   Loader m ->
   DataLoad.ExpressionEntity m -> TypedValue ->
-  ReaderT (Map Data.VariableRef Ref) (StateT InferState m) (StoredExpression m)
+  ReaderT (Map Data.VariableRef Ref) (StateT InferState m)
+    (Expression (Data.ExpressionIRefProperty m))
 loadNode loader entity typedValue = do
   setInitialValues
   withChildrenTvs <-
@@ -309,7 +309,8 @@ loadNode loader entity typedValue = do
       setRefExpr (tvType resultTypeTv) setExpr
       liftM Data.ExpressionPi $ onLambda lambda
     _ -> Traversable.mapM go withChildrenTvs
-  return $ StoredExpression (DataLoad.entityStored entity) expr typedValue
+  let stored = DataLoad.entityStored entity
+  return $ Expression stored (Data.GuidExpression (Data.eipGuid stored) expr) typedValue
   where
     onLambda (Data.Lambda paramType@(_, paramTypeTv) result) = do
       setRefExpr (tvType paramTypeTv) setExpr
@@ -333,7 +334,8 @@ fromLoaded ::
   Monad m =>
   Loader m ->
   Maybe Data.DefinitionIRef ->
-  DataLoad.ExpressionEntity m -> m (StoredExpression m, InferState)
+  DataLoad.ExpressionEntity m ->
+  m (Expression (Data.ExpressionIRefProperty m), InferState)
 fromLoaded loader mRecursiveIRef rootEntity =
   (`runStateT` InferState mempty mempty) .
   (`runReaderT` mempty) $ do
