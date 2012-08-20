@@ -1,10 +1,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleContexts, TemplateHaskell, DeriveFunctor #-}
 module Editor.Data.Typed
   ( Expression(..), TypedValue(..)
-  , RefMap, deref
+  , RefMap, Ref, deref, Conflict
   , ExpressionEntity(..)
   , Loader(..)
   , inferFromEntity
+  , alphaEq
   ) where
 
 import Control.Applicative ((<*>))
@@ -231,7 +232,7 @@ refMapAt k = sRefMap . refMap . intMapMod (unRef k)
 -- Merge two expressions:
 -- If they do not match, return Nothing.
 -- Holes match with anything, expand to the other expr.
--- Results with the Guids of the first expression (where available).
+-- Guids come from the first expression (where available).
 mergeExprs ::
   Data.PureGuidExpression ->
   Data.PureGuidExpression ->
@@ -258,6 +259,9 @@ mergeExprs p0 p1 =
           guard $ Just par0 == par1Mapped
           return e0
         _ -> mzero
+
+alphaEq :: Data.PureGuidExpression -> Data.PureGuidExpression -> Bool
+alphaEq x y = mergeExprs x y == Just x
 
 setRefExpr ::
   MonadState InferState m =>

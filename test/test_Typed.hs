@@ -1,16 +1,19 @@
 {-# OPTIONS -Wall #-}
--- import Control.Monad (void)
 import Control.Monad.Identity (runIdentity)
+import Test.Framework.Providers.HUnit (testCase)
+import Test.HUnit (assertBool)
 import qualified Data.Foldable as Foldable
+import qualified Data.List as List
 import qualified Data.Store.Guid as Guid
 import qualified Editor.Data as Data
 import qualified Editor.Data.Typed as Typed
--- import qualified Test.HUnit as HUnit
+import qualified Test.Framework as TestFramework
 
 type Entity = Typed.ExpressionEntity ()
 
-mkEntity :: String -> Data.Expression Entity -> Entity
-mkEntity s = Typed.ExpressionEntity () . Data.GuidExpression (Guid.fromString s)
+mkEntity :: Data.PureGuidExpression -> Entity
+mkEntity =
+  Typed.ExpressionEntity () . fmap mkEntity . Data.unPureGuidExpression
 
 errorLoader :: Typed.Loader m
 errorLoader = Typed.Loader $ error . show
@@ -21,44 +24,79 @@ withoutLoader ::
 withoutLoader = runIdentity . Typed.inferFromEntity errorLoader Nothing
 
 toExpression ::
-  String -> Data.Expression Entity ->
-  (Typed.Expression (), Typed.RefMap)
-toExpression s = withoutLoader . mkEntity s
+  Data.PureGuidExpression -> (Typed.Expression (), Typed.RefMap)
+toExpression = withoutLoader . mkEntity
 
-showExpressionWithInferred ::
-  Typed.RefMap -> Typed.Expression () -> [String]
-showExpressionWithInferred refMap typedExpr =
-  [ "Expr: " ++ show (fmap (const ()) expr)
-  , "  IVal:  " ++ showDeref val
-  , "  IType: " ++ showDeref typ
-  ] ++
-  (map ("  " ++) . Foldable.concat .
-   fmap (showExpressionWithInferred refMap)) expr
+showExpressionWithInferred :: Typed.RefMap -> Typed.Expression () -> String
+showExpressionWithInferred refMap =
+  List.intercalate "\n" . go
   where
-    expr = Typed.eValue typedExpr
     showDeref x =
       case Typed.deref refMap x of
       ([], pureExpr) -> show pureExpr
       other -> "ERROR: " ++ show other
-    Typed.TypedValue val typ = Typed.eInferred typedExpr
+    go typedExpr =
+      [ "Expr: " ++ show (fmap (const ()) expr)
+      , "  IVal:  " ++ showDeref val
+      , "  IType: " ++ showDeref typ
+      ] ++
+      (map ("  " ++) . Foldable.concat .
+       fmap go) expr
+      where
+        expr = Typed.eValue typedExpr
+        Typed.TypedValue val typ = Typed.eInferred typedExpr
 
-printInferExpression :: String -> Data.Expression Entity -> IO ()
-printInferExpression s exprEntity = do
-  putStrLn . unlines $ showExpressionWithInferred inferred typedExpr
-  where
-    (typedExpr, inferred) = toExpression s exprEntity
+mkExpr ::
+  String -> Data.Expression Data.PureGuidExpression ->
+  Data.PureGuidExpression
+mkExpr = Data.pureGuidExpression . Guid.fromString
 
-hole :: Entity
-hole = mkEntity "hole" Data.ExpressionHole
+hole :: Data.PureGuidExpression
+hole = mkExpr "hole" Data.ExpressionHole
 
--- testLabel :: String -> HUnit.Assertion -> HUnit.Test
--- testLabel name = HUnit.TestLabel name . HUnit.TestCase
+setType :: Data.PureGuidExpression
+setType = mkExpr "set" Data.ExpressionSet
+
+intType :: Data.PureGuidExpression
+intType =
+  mkExpr "int" . Data.ExpressionBuiltin $
+  Data.Builtin (Data.FFIName ["Prelude"] "Integer") setType
+
+zipMatch :: (a -> b -> Bool) -> [a] -> [b] -> Bool
+zipMatch _ [] [] = True
+zipMatch f (x:xs) (y:ys) = f x y && zipMatch f xs ys
+zipMatch _ _ _ = False
+
+compareDeref ::
+  ([Typed.Conflict], Data.PureGuidExpression) ->
+  ([Typed.Conflict], Data.PureGuidExpression) ->
+  Bool
+compareDeref (acs, aexpr) (bcs, bexpr) =
+  zipMatch Typed.alphaEq acs bcs && Typed.alphaEq aexpr bexpr
 
 main :: IO ()
-main = do
-  -- void . HUnit.runTestTT $ HUnit.TestList
-  -- [ testLabel "Test literal int" $
-    printInferExpression "int5" $ Data.ExpressionLiteralInteger 5
-  -- , testLabel "Test simple application" $
-    printInferExpression "apply" $ Data.makeApply hole hole
-  -- ]
+main = TestFramework.defaultMain
+  [ testSuccessfulInfer "literal int"
+    (mkExpr "5" (Data.ExpressionLiteralInteger 5))
+    [ intType ]
+  , testSuccessfulInfer "simple application"
+    (mkExpr "apply" (Data.makeApply hole hole)) []
+  ]
+  where
+    testSuccessfulInfer name pureExpr =
+      testInfer name pureExpr . map ((,) []) . (pureExpr :)
+    testInfer name pureExpr result =
+      testCase name .
+      assertBool
+        (unlines
+         [ "Unexpected result expr:"
+         , showExpressionWithInferred refMap typedExpr
+         ]) $ zipMatch compareDeref (derefAll typedExpr) result
+      where
+        (typedExpr, refMap) = toExpression pureExpr
+        derefAll = map (Typed.deref refMap) . allRefs
+    allRefs typedExpr =
+      ([val, typ] ++) . Foldable.concat . fmap allRefs $
+      Typed.eValue typedExpr
+      where
+        Typed.TypedValue val typ = Typed.eInferred typedExpr
