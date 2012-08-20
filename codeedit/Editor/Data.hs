@@ -168,7 +168,7 @@ instance Show PureGuidExpression where
 data GuidExpression ref = GuidExpression
   { geGuid :: Guid
   , geValue :: Expression ref
-  } deriving (Eq)
+  } deriving (Functor, Eq)
 
 instance Show ref => Show (GuidExpression ref) where
   show (GuidExpression guid value) = show guid ++ ":" ++ show value
@@ -284,10 +284,12 @@ derive makeFoldable ''Builtin
 derive makeFoldable ''Apply
 derive makeFoldable ''Lambda
 derive makeFoldable ''Expression
+derive makeFoldable ''GuidExpression
 derive makeTraversable ''Builtin
 derive makeTraversable ''Apply
 derive makeTraversable ''Lambda
 derive makeTraversable ''Expression
+derive makeTraversable ''GuidExpression
 derive makeBinary ''PureGuidExpression
 derive makeBinary ''GuidExpression
 derive makeBinary ''ExpressionIRef

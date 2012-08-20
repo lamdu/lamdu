@@ -1,18 +1,14 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleContexts, TemplateHaskell #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleContexts, TemplateHaskell, DeriveFunctor #-}
 module Editor.Data.Typed
-  ( Expression(..), eStored, eValue, eInferred
+  ( Expression(..), TypedValue(..)
+  , RefMap, deref
   , ExpressionEntity(..)
-  , InferState
-  , Ref
-  , RefMap
-  , infer
   , Loader(..)
-  , fromLoaded
-  , toPureExpression
+  , inferFromEntity
   ) where
 
 import Control.Applicative ((<*>))
-import Control.Arrow (first)
+import Control.Arrow (first, second)
 import Control.Lens ((%=), (.=), (^.))
 import Control.Monad (mzero, liftM, liftM2, when, guard)
 import Control.Monad.Reader.Class (MonadReader)
@@ -20,7 +16,7 @@ import Control.Monad.State.Class (MonadState)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (StateT, execState, runStateT)
-import Data.IntMap (IntMap)
+import Data.IntMap (IntMap, (!))
 import Data.IntSet (IntSet)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
@@ -41,7 +37,7 @@ import qualified Editor.Data as Data
 
 newtype Ref = Ref { unRef :: Int }
 instance Show Ref where
-  show = ('P' :) . show . unRef
+  show = ('R' :) . show . unRef
 
 data TypedValue = TypedValue
   { tvVal :: Ref
@@ -154,7 +150,9 @@ data InferState = InferState
 LensTH.makeLenses ''InferState
 
 instance Show RefMap where
-  show = List.intercalate ", " . map (showPair . first Ref) . IntMap.toList . Lens.view refMap
+  show =
+    List.intercalate ", " . map (showPair . first Ref) .
+    IntMap.toList . Lens.view refMap
     where
       showPair (x, y) = show x ++ "=>" ++ show y
 
@@ -166,11 +164,11 @@ showTouchedRefs :: IntSet -> String
 showTouchedRefs = unwords . map (show . Ref) . IntSet.toList
 
 data Expression s = Expression
-  { _eStored :: s
-  , _eValue :: Data.GuidExpression (Expression s)
-  , _eInferred :: TypedValue
-  }
-LensTH.makeLenses ''Expression
+  { eStored :: s
+  , eValue :: Data.GuidExpression (Expression s)
+  , eInferred :: TypedValue
+  } deriving (Functor)
+
 
 instance Show (Expression s) where
   show (Expression _ value inferred) =
@@ -180,12 +178,6 @@ instance Show (Expression s) where
     , show inferred
     , ")"
     ]
-
-toPureExpression :: Expression s -> Data.PureGuidExpression
-toPureExpression expr =
-  Data.pureGuidExpression
-  (Data.geGuid (expr ^. eValue)) .
-  fmap toPureExpression . Data.geValue $ expr ^. eValue
 
 -- Map from params to their Param type,
 -- also including the recursive ref to the definition.
@@ -317,13 +309,13 @@ createTypedVal = liftM2 TypedValue createRef createRef
       sRefMap . refMap . IntMapLens.at key .= Just emptyRefData
       return $ Ref key
 
-loadNode ::
+nodeFromEntity ::
   Monad m =>
   Loader m ->
   ExpressionEntity s -> TypedValue ->
   ReaderT (Map Data.VariableRef Ref) (StateT InferState m)
     (Expression s)
-loadNode loader entity typedValue = do
+nodeFromEntity loader entity typedValue = do
   setInitialValues
   withChildrenTvs <-
     Traversable.mapM addTypedVal $ eeValue entity
@@ -346,7 +338,7 @@ loadNode loader entity typedValue = do
         Reader.local (Map.insert paramRef (tvVal paramTypeTv)) $
         go result
       return $ Data.Lambda paramTypeR resultR
-    go = uncurry (loadNode loader)
+    go = uncurry (nodeFromEntity loader)
     addTypedVal x =
       liftM ((,) x) createTypedVal
     transaction = lift . lift
@@ -356,13 +348,13 @@ loadNode loader entity typedValue = do
       setRefExpr (tvVal typedValue) initialVal
       setRefExpr (tvType typedValue) initialType
 
-fromLoaded ::
+fromEntity ::
   Monad m =>
   Loader m ->
   Maybe Data.DefinitionIRef ->
   ExpressionEntity s ->
   m (Expression s, InferState)
-fromLoaded loader mRecursiveIRef rootEntity =
+fromEntity loader mRecursiveIRef rootEntity =
   (`runStateT` InferState (RefMap mempty) mempty) .
   (`runReaderT` mempty) $ do
     rootTv <- createTypedVal
@@ -370,7 +362,7 @@ fromLoaded loader mRecursiveIRef rootEntity =
         Nothing -> id
         Just iref -> Reader.local $ Map.insert (Data.DefinitionRef iref) (tvType rootTv)
       ) $
-      loadNode loader rootEntity rootTv
+      nodeFromEntity loader rootEntity rootTv
 
 popTouchedRef :: MonadState InferState m => m (Maybe Ref)
 popTouchedRef = do
@@ -495,3 +487,20 @@ applyRule (RuleApply (ApplyComponents apply func arg)) = do
         Data.ExpressionApply $ Data.Apply funcPge argExpr
   where
     someGuid = Guid.fromString "Arbitrary"
+
+inferFromEntity ::
+  Monad m =>
+  Loader m ->
+  Maybe Data.DefinitionIRef ->
+  ExpressionEntity s ->
+  m (Expression s, RefMap)
+inferFromEntity loader mRecursiveDef =
+  (liftM . second) infer . fromEntity loader mRecursiveDef
+
+deref :: RefMap -> Ref -> ([Conflict], Data.PureGuidExpression)
+deref (RefMap m) (Ref x) =
+  ( refData ^. rErrors
+  , refData ^. rExpression
+  )
+  where
+    refData = m ! x

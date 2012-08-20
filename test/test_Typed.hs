@@ -1,44 +1,58 @@
 {-# OPTIONS -Wall #-}
-import Control.Monad (void)
+-- import Control.Monad (void)
 import Control.Monad.Identity (runIdentity)
+import qualified Data.Foldable as Foldable
 import qualified Data.Store.Guid as Guid
 import qualified Editor.Data as Data
 import qualified Editor.Data.Typed as Typed
-import qualified Test.HUnit as HUnit
+-- import qualified Test.HUnit as HUnit
 
-type Entity = Typed.ExpressionEntity String
+type Entity = Typed.ExpressionEntity ()
 
 mkEntity :: String -> Data.Expression Entity -> Entity
-mkEntity s = Typed.ExpressionEntity s . Data.GuidExpression (Guid.fromString s)
+mkEntity s = Typed.ExpressionEntity () . Data.GuidExpression (Guid.fromString s)
 
 errorLoader :: Typed.Loader m
 errorLoader = Typed.Loader $ error . show
 
-loadWithoutLoader ::
+withoutLoader ::
   Typed.ExpressionEntity s ->
-  (Typed.Expression s, Typed.InferState)
-loadWithoutLoader = runIdentity . Typed.fromLoaded errorLoader Nothing
+  (Typed.Expression s, Typed.RefMap)
+withoutLoader = runIdentity . Typed.inferFromEntity errorLoader Nothing
 
-loadExpression ::
+toExpression ::
   String -> Data.Expression Entity ->
-  (Typed.Expression String, Typed.InferState, Typed.RefMap)
-loadExpression s expr = (loaded, uninferredState, inferredState)
+  (Typed.Expression (), Typed.RefMap)
+toExpression s = withoutLoader . mkEntity s
+
+showExpressionWithInferred ::
+  Typed.RefMap -> Typed.Expression () -> [String]
+showExpressionWithInferred refMap typedExpr =
+  [ "Expr: " ++ show (fmap (const ()) expr)
+  , "  IVal:  " ++ showDeref val
+  , "  IType: " ++ showDeref typ
+  ] ++
+  (map ("  " ++) . Foldable.concat .
+   fmap (showExpressionWithInferred refMap)) expr
   where
-    inferredState = Typed.infer uninferredState
-    (loaded, uninferredState) = loadWithoutLoader $ mkEntity s expr
+    expr = Typed.eValue typedExpr
+    showDeref x =
+      case Typed.deref refMap x of
+      ([], pureExpr) -> show pureExpr
+      other -> "ERROR: " ++ show other
+    Typed.TypedValue val typ = Typed.eInferred typedExpr
 
 printInferExpression :: String -> Data.Expression Entity -> IO ()
-printInferExpression s expr = do
-  print loaded
-  print inferredState
+printInferExpression s exprEntity = do
+  putStrLn . unlines $ showExpressionWithInferred inferred typedExpr
   where
-    (loaded, _uninferredState, inferredState) = loadExpression s expr
+    (typedExpr, inferred) = toExpression s exprEntity
 
 hole :: Entity
 hole = mkEntity "hole" Data.ExpressionHole
 
-testLabel :: String -> HUnit.Assertion -> HUnit.Test
-testLabel name = HUnit.TestLabel name . HUnit.TestCase
+-- testLabel :: String -> HUnit.Assertion -> HUnit.Test
+-- testLabel name = HUnit.TestLabel name . HUnit.TestCase
 
 main :: IO ()
 main = do
