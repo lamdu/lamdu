@@ -32,6 +32,7 @@ import qualified Data.IntMap as IntMap
 import qualified Data.IntMap.Lens as IntMapLens
 import qualified Data.IntSet as IntSet
 import qualified Data.IntSet.Lens as IntSetLens
+import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Traversable as Traversable
@@ -46,7 +47,7 @@ data TypedValue = TypedValue
   , tvType :: Ref
   }
 instance Show TypedValue where
-  show (TypedValue v t) = concat [show v, ":", show t]
+  show (TypedValue v t) = unwords [show v, ":", show t]
 
 -- Initial Pass:
 -- Get Definitions' types expand.
@@ -98,7 +99,7 @@ data ApplyComponents = ApplyComponents
   { _acApply :: TypedValue
   , _acFunc :: TypedValue
   , _acArg :: TypedValue
-  }
+  } deriving (Show)
 
 -- LambdaOrPi Rule:
 -- Each of expr parts:
@@ -108,7 +109,7 @@ data LambdaComponents = LambdaComponents
   { _lcParent :: Ref
   , _lcParamType :: Ref
   , _lcResult :: Ref
-  }
+  } deriving (Show)
 
 -- Union rule (type of get param, but also for recursive type)
 
@@ -118,6 +119,7 @@ data Rule
   | RuleLambdaStructure LambdaComponents
   | RulePiStructure LambdaComponents
   | RuleApply ApplyComponents
+  deriving (Show)
 
 type Conflict = Data.PureGuidExpression
 
@@ -127,6 +129,10 @@ data RefData = RefData
   , _rErrors :: [Conflict]
   }
 LensTH.makeLenses ''RefData
+
+instance Show RefData where
+  show (RefData expr rules []) = show expr ++ concatMap ((' ':) . show) rules
+  show (RefData _ _ errors) = "(ERRORS: " ++ show errors ++ ")"
 
 hole :: Data.PureGuidExpression
 hole = Data.pureGuidExpression (Guid.fromString "HoleyHole") Data.ExpressionHole
@@ -148,6 +154,18 @@ data InferState = InferState
   }
 LensTH.makeLenses ''InferState
 
+instance Show InferState where
+  show (InferState refMap touched) =
+    "InferState refMap=(" ++ showRefMap refMap ++ "), touched=(" ++ showTouchedRefs touched ++ ")"
+
+showRefMap :: RefMap -> String
+showRefMap = List.intercalate ", " . map (showPair . first Ref) . IntMap.toList
+  where
+    showPair (x, y) = show x ++ "=>" ++ show y
+
+showTouchedRefs :: IntSet -> String
+showTouchedRefs = unwords . map (show . Ref) . IntSet.toList
+
 data Expression s = Expression
   { _eStored :: s
   , _eValue :: Data.GuidExpression (Expression s)
@@ -159,7 +177,6 @@ instance Show (Expression s) where
   show (Expression _ value inferred) =
     unwords
     [ "("
-    , show (Data.geGuid value), ":"
     , show value, "="
     , show inferred
     , ")"
