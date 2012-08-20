@@ -1,3 +1,4 @@
+import Control.Arrow (second)
 import Control.Monad.Identity (runIdentity)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit (assertBool)
@@ -61,6 +62,11 @@ intType =
   mkExpr "int" . Data.ExpressionBuiltin $
   Data.Builtin (Data.FFIName ["Prelude"] "Integer") setType
 
+boolType :: Data.PureGuidExpression
+boolType =
+  mkExpr "bool" . Data.ExpressionBuiltin $
+  Data.Builtin (Data.FFIName ["Prelude"] "Bool") setType
+
 zipMatch :: (a -> b -> Bool) -> [a] -> [b] -> Bool
 zipMatch _ [] [] = True
 zipMatch f (x:xs) (y:ys) = f x y && zipMatch f xs ys
@@ -73,6 +79,14 @@ compareDeref ::
 compareDeref (acs, aexpr) (bcs, bexpr) =
   zipMatch Typed.alphaEq acs bcs && Typed.alphaEq aexpr bexpr
 
+removeBuiltinTypes :: Data.PureGuidExpression -> Data.PureGuidExpression
+removeBuiltinTypes =
+  Data.atPureGuidExpression $ Data.atGeValue f
+  where
+    f (Data.ExpressionBuiltin (Data.Builtin name _)) =
+      Data.ExpressionBuiltin $ Data.Builtin name hole
+    f x = fmap removeBuiltinTypes x
+
 main :: IO ()
 main = TestFramework.defaultMain
   [ testSuccessfulInferSame "literal int"
@@ -80,15 +94,25 @@ main = TestFramework.defaultMain
     [ intType ]
   , testSuccessfulInfer "simple application"
     (mkExpr "apply" (Data.makeApply hole hole))
-    [ hole
-    , hole
-    , hole
-    , mkExpr "pi" . Data.ExpressionPi $ Data.Lambda hole hole
-    , hole
-    , hole
+    [ hole, hole, hole
+    , mkExpr "" $ Data.makePi hole hole
+    , hole, hole
+    ]
+  , testSuccessfulInferSame "application"
+    (mkExpr "apply" (Data.makeApply funnyFunc hole))
+    [ boolType
+    , funnyFunc, funnyFuncType
+    , funnyFuncType, setType
+    , intType, setType, setType, setType
+    , boolType, setType, setType, setType
+    , hole, intType
     ]
   ]
   where
+    funnyFunc =
+      mkExpr "funnyFunc" . Data.ExpressionBuiltin $
+      Data.Builtin (Data.FFIName ["Test"] "funnyFunc") funnyFuncType
+    funnyFuncType = mkExpr "funcT" $ Data.makePi intType boolType
     testSuccessfulInferSame name pureExpr =
       testSuccessfulInfer name pureExpr . (pureExpr :)
     testSuccessfulInfer name pureExpr =
@@ -99,8 +123,11 @@ main = TestFramework.defaultMain
         (unlines
          [ "Unexpected result expr:"
          , showExpressionWithInferred refMap typedExpr
-         ]) $ zipMatch compareDeref (derefAll typedExpr) result
+         , show d
+         , show result
+         ]) . zipMatch compareDeref d $ (map . second) removeBuiltinTypes result
       where
+        d = derefAll typedExpr
         (typedExpr, refMap) = toExpression pureExpr
         derefAll = map (Typed.deref refMap) . allRefs
     allRefs typedExpr =

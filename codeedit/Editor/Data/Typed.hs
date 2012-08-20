@@ -290,14 +290,16 @@ addRules typedVal expr = do
     Data.ExpressionApply (Data.Apply func arg) ->
       addRuleToMany ([tvVal, tvType] <*> [typedVal, func, arg]) .
         RuleApply $ ApplyComponents typedVal func arg
+    Data.ExpressionBuiltin (Data.Builtin _ typ) ->
+      addUnionRule (tvVal typ) $ tvType typedVal
     Data.ExpressionGetVariable var -> do
       mTypeRef <- Reader.asks $ Map.lookup var
       case mTypeRef of
         Nothing -> return ()
-        Just ref ->
-          refMapAt ref . rRules %= (RuleUnion ref (tvType typedVal) :)
+        Just ref -> addUnionRule ref $ tvType typedVal
     _ -> return ()
   where
+    addUnionRule x y = addRuleToMany [x, y] $ RuleUnion x y
     addRule rule ref =
       refMapAt ref . rRules %= (rule :)
     addRuleToMany refs rule = mapM_ (addRule rule) refs
