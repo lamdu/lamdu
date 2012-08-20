@@ -17,5 +17,8 @@ loader = Typed.Loader $ error . show
 
 main :: IO ()
 main = do
-  print . runIdentity $ Typed.fromLoaded loader Nothing example
+  print loaded
+  print $ Typed.infer uninferredState
   return ()
+  where
+    (loaded, uninferredState) = runIdentity $ Typed.fromLoaded loader Nothing example

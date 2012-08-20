@@ -382,9 +382,9 @@ popTouchedRef = do
       sTouchedRefs .= newTouchedRefs
       return . Just $ Ref key
 
-infer :: InferState -> InferState
+infer :: InferState -> RefMap
 infer =
-  execState go
+  Lens.view sRefMap . execState go
   where
     go = maybe (return ()) goOn =<< popTouchedRef
     goOn ref = do
