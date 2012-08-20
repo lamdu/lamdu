@@ -178,17 +178,9 @@ data Expression s = Expression
   { eStored :: s
   , eValue :: Data.GuidExpression (Expression s)
   , eInferred :: TypedValue
+  -- Used to resume inference in holes.
+  , eScope :: Scope
   } deriving (Functor)
-
-
-instance Show (Expression s) where
-  show (Expression _ value inferred) =
-    unwords
-    [ "("
-    , show value, "="
-    , show inferred
-    , ")"
-    ]
 
 -- Map from params to their Param type,
 -- also including the recursive ref to the definition.
@@ -350,7 +342,7 @@ nodeFromEntity loader entity typedValue = do
       setRefExpr (tvType resultTypeTv) setExpr
       onLambda Data.ExpressionPi lambda
     _ -> Traversable.mapM go withChildrenTvs
-  return $ Expression (eeStored entity) expr typedValue
+  liftM (Expression (eeStored entity) expr typedValue) Reader.ask
   where
     onLambda cons (Data.Lambda paramType@(_, paramTypeTv) result) = do
       setRefExpr (tvType paramTypeTv) setExpr
