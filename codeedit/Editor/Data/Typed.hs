@@ -166,13 +166,6 @@ instance Show RefMap where
     where
       showPair (x, y) = show x ++ "=>" ++ show y
 
-instance Show InferState where
-  show (InferState refMap touched) =
-    "InferState refMap=(" ++ show refMap ++ "), touched=(" ++ showTouchedRefs touched ++ ")"
-
-showTouchedRefs :: IntSet -> String
-showTouchedRefs = unwords . map (show . Ref) . IntSet.toList
-
 data Expression s = Expression
   { eStored :: s
   , eValue :: Data.GuidExpression (Expression s)
@@ -215,16 +208,17 @@ initialExprs ::
   Monad m =>
   Loader m ->
   Scope -> ExpressionEntity s ->
-  m (Data.PureGuidExpression, Data.PureGuidExpression)
+  m (Bool, (Data.PureGuidExpression, Data.PureGuidExpression))
 initialExprs loader scope entity =
-  (liftM . first)
+  (liftM . second . first)
   (Data.pureGuidExpression (eeGuid entity)) $
   case exprStructure of
-  Data.ExpressionApply _ -> return (Data.ExpressionHole, hole)
+  Data.ExpressionApply _ -> return (True, (Data.ExpressionHole, hole))
   Data.ExpressionGetVariable var@(Data.DefinitionRef ref)
     | not (Map.member var scope) ->
-      liftM ((,) exprStructure) $ loadPureDefinitionType loader ref
-  _ -> return (exprStructure, hole)
+      liftM ((,) False . (,) exprStructure) $
+      loadPureDefinitionType loader ref
+  _ -> return (False, (exprStructure, hole))
   where
     exprStructure = fmap (const hole) $ eeValue entity
 
@@ -272,6 +266,9 @@ mergeExprs p0 p1 =
 alphaEq :: Data.PureGuidExpression -> Data.PureGuidExpression -> Bool
 alphaEq x y = mergeExprs x y == Just x
 
+touch :: MonadState InferState m => Ref -> m ()
+touch ref = sTouchedRefs . IntSetLens.contains (unRef ref) .= True
+
 setRefExpr ::
   MonadState InferState m =>
   Ref -> Data.PureGuidExpression -> m ()
@@ -280,7 +277,7 @@ setRefExpr ref newExpr = do
   case mergeExprs curExpr newExpr of
     Just mergedExpr ->
       when (mergedExpr /= curExpr) $ do
-        sTouchedRefs . IntSetLens.contains (unRef ref) .= True
+        touch ref
         refMapAt ref . rExpression .= mergedExpr
     Nothing -> refMapAt ref . rErrors %= (newExpr :)
 
@@ -357,7 +354,9 @@ nodeFromEntity loader entity typedValue = do
     transaction = lift . lift
     setInitialValues = do
       scope <- Reader.ask
-      (initialVal, initialType) <- transaction $ initialExprs loader scope entity
+      (isTouched, (initialVal, initialType)) <-
+        transaction $ initialExprs loader scope entity
+      when isTouched . touch $ tvVal typedValue
       setRefExpr (tvVal typedValue) initialVal
       setRefExpr (tvType typedValue) initialType
 

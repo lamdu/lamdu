@@ -1,4 +1,3 @@
-{-# OPTIONS -Wall #-}
 import Control.Monad.Identity (runIdentity)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit (assertBool)
