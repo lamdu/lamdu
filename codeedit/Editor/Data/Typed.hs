@@ -11,7 +11,7 @@ module Editor.Data.Typed
 import Control.Applicative ((<*>))
 import Control.Arrow (first, second)
 import Control.Lens ((%=), (.=), (^.))
-import Control.Monad (mzero, liftM, liftM2, when, guard)
+import Control.Monad (guard, liftM, liftM2, mzero, when)
 import Control.Monad.Reader.Class (MonadReader)
 import Control.Monad.State.Class (MonadState)
 import Control.Monad.Trans.Class (lift)
@@ -88,11 +88,7 @@ instance Show TypedValue where
 --   Other -> Copy (Func Arg) to Apply
 --
 -- Where Recurse-Subst PreSubst Arg PostSubst
---   Recurse over PreSubst and PostSubst together:
---     When PostSubst part is hole:
---       Replace it with structure from PreSubst and resume recursion
---     When PreSubst part refers to its param:
---       PostSubst part <=> Arg
+-- TODO
 
 data ApplyComponents = ApplyComponents
   { _acApply :: TypedValue
@@ -414,39 +410,42 @@ applyStructureRule cons uncons (LambdaComponents parentRef paramTypeRef resultRe
   setRefExpr parentRef . Data.pureGuidExpression g . cons =<<
     liftM2 Data.Lambda (getRefExpr paramTypeRef) (getRefExpr resultRef)
 
--- Where Recurse-Subst PreSubst Arg PostSubst
---   Recurse over PreSubst and PostSubst together:
---     When PostSubst part is hole:
---       Replace it with structure from PreSubst and resume recursion
---     When PreSubst part refers to its param:
---       PostSubst part <=> Arg
+subst ::
+  Guid -> Data.PureGuidExpression ->
+  Data.PureGuidExpression -> Data.PureGuidExpression
+subst from to expr =
+  case pgeExpr expr of
+  Data.ExpressionGetVariable (Data.ParameterRef g)
+    | g == from -> to
+  _ ->
+    (Data.atPureGuidExpression . Data.atGeValue . fmap)
+    (subst from to) expr
+
 recurseSubst ::
   MonadState InferState m =>
   Data.PureGuidExpression -> Guid -> Ref -> Ref -> m Data.PureGuidExpression
 recurseSubst preSubstExpr paramGuid argRef postSubstRef = do
-  postSubstExpr <- getRefExpr postSubstRef
-  (newPreSubstExpr, newPostSubstExpr) <-
-    runReaderT (go preSubstExpr postSubstRef) Map.empty
+  -- PreSubst with Subst => PostSubst
+  -- TODO: Mark substituted holes..
+  setRefExpr postSubstRef . flip (subst paramGuid) preSubstExpr =<<
+    getRefExpr argRef
+  -- Recurse over PreSubst and PostSubst together
+  --   When PreSubst part refers to its param:
+  --     PostSubst part <=> arg
+  mergeToArg preSubstExpr =<< getRefExpr postSubstRef
+  -- TODO: In some cases, we should merge into preSubstExpr
+  return preSubstExpr
   where
-    go
-      (Data.PureGuidExpression (Data.GuidExpression g0 e0))
-      (Data.PureGuidExpression (Data.GuidExpression g1 e1)) =
-      fmap (Data.pureGuidExpression g0) .
-      Reader.local (Map.insert g1 g0) $
-      case Data.matchExpression go e0 e1 of
-      Just x -> Traversable.sequence x
-      Nothing ->
-        case (e0, e1) of
-        (_, Data.ExpressionHole) -> return e0
-        (Data.ExpressionHole, _) ->
-          -- Map Guids to those of first expression
-          Traversable.mapM (go hole) e1
-        (Data.ExpressionGetVariable (Data.ParameterRef par0),
-         Data.ExpressionGetVariable (Data.ParameterRef par1)) -> do
-          par1Mapped <- Reader.asks $ Map.lookup par1
-          guard $ Just par0 == par1Mapped
-          return e0
-        _ -> mzero
+    mergeToArg pre post =
+      case pgeExpr pre of
+      Data.ExpressionGetVariable (Data.ParameterRef g)
+        | g == paramGuid -> setRefExpr argRef post
+      preExpr ->
+        case Data.matchExpression mergeToArg preExpr (pgeExpr post) of
+        Just x -> do
+          _ <- Traversable.sequence x
+          return ()
+        Nothing -> return ()
 
 maybeLambda :: Data.Expression a -> Maybe (Data.Lambda a)
 maybeLambda (Data.ExpressionLambda x) = Just x

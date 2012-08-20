@@ -75,15 +75,24 @@ compareDeref (acs, aexpr) (bcs, bexpr) =
 
 main :: IO ()
 main = TestFramework.defaultMain
-  [ testSuccessfulInfer "literal int"
+  [ testSuccessfulInferSame "literal int"
     (mkExpr "5" (Data.ExpressionLiteralInteger 5))
     [ intType ]
   , testSuccessfulInfer "simple application"
-    (mkExpr "apply" (Data.makeApply hole hole)) []
+    (mkExpr "apply" (Data.makeApply hole hole))
+    [ hole
+    , hole
+    , hole
+    , mkExpr "pi" . Data.ExpressionPi $ Data.Lambda hole hole
+    , hole
+    , hole
+    ]
   ]
   where
+    testSuccessfulInferSame name pureExpr =
+      testSuccessfulInfer name pureExpr . (pureExpr :)
     testSuccessfulInfer name pureExpr =
-      testInfer name pureExpr . map ((,) []) . (pureExpr :)
+      testInfer name pureExpr . map ((,) [])
     testInfer name pureExpr result =
       testCase name .
       assertBool
