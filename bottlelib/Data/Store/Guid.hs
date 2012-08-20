@@ -19,7 +19,7 @@ newtype Guid = Guid { bs :: SBS.ByteString }
   deriving (Eq, Ord, Read)
 
 instance Show Guid where
-  show = take 3 . asHex
+  show = ('G':) . take 3 . asHex
 
 inGuid :: (SBS.ByteString -> SBS.ByteString) -> Guid -> Guid
 inGuid f = Guid . f . bs
