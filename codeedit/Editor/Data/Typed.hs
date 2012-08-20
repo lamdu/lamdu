@@ -64,6 +64,7 @@ instance Show TypedValue where
 -- Type of a Pi is Set
 -- Type of Set is Set
 -- Type of Builtin is what's stored in it
+-- Type of a LiteralInteger is Integer
 
 -- Apply Rule:
 --
@@ -129,10 +130,18 @@ data RefData = RefData
 LensTH.makeLenses ''RefData
 
 hole :: Data.PureGuidExpression
-hole = Data.pureGuidExpression (Guid.fromString "HoleyHole") Data.ExpressionHole
+hole =
+  Data.pureGuidExpression (Guid.fromString "HoleyHole") Data.ExpressionHole
 
 setExpr :: Data.PureGuidExpression
-setExpr = Data.pureGuidExpression (Guid.fromString "SettySet") Data.ExpressionSet
+setExpr =
+  Data.pureGuidExpression (Guid.fromString "SettySet") Data.ExpressionSet
+
+intTypeExpr :: Data.PureGuidExpression
+intTypeExpr =
+  Data.pureGuidExpression (Guid.fromString "IntyInt") .
+  Data.ExpressionBuiltin $
+  Data.Builtin (Data.FFIName ["Prelude"] "Integer") setExpr
 
 emptyRefData :: RefData
 emptyRefData = RefData
@@ -437,6 +446,7 @@ applyRule (RuleSimpleType (TypedValue val typ)) = do
     Data.ExpressionSet -> setRefExpr typ setExpr
     Data.ExpressionPi _ -> setRefExpr typ setExpr
     Data.ExpressionBuiltin b -> setRefExpr typ $ Data.bType b
+    Data.ExpressionLiteralInteger _ -> setRefExpr typ intTypeExpr
     Data.ExpressionLambda (Data.Lambda paramType _) ->
       setRefExpr typ . Data.pureGuidExpression g .
       Data.ExpressionPi $ Data.Lambda paramType hole
