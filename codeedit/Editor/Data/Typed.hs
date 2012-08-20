@@ -128,12 +128,8 @@ data RefData = RefData
   { _rExpression :: Data.PureGuidExpression
   , _rRules :: [Rule]
   , _rErrors :: [Conflict]
-  }
+  } deriving (Show)
 LensTH.makeLenses ''RefData
-
-instance Show RefData where
-  show (RefData expr rules []) = show expr ++ concatMap ((' ':) . show) rules
-  show (RefData _ _ errors) = "(ERRORS: " ++ show errors ++ ")"
 
 hole :: Data.PureGuidExpression
 hole = Data.pureGuidExpression (Guid.fromString "HoleyHole") Data.ExpressionHole
@@ -232,8 +228,7 @@ initialExprs loader scope entity =
 
 intMapMod :: Functor f => Int -> (v -> f v) -> (IntMap v -> f (IntMap v))
 intMapMod k =
-  IntMapLens.at k .
-  Lens.iso from Just
+  IntMapLens.at k . Lens.iso from Just
   where
     from = fromMaybe . error $ unwords ["intMapMod: key", show k, "not in map"]
 
@@ -318,7 +313,7 @@ createTypedVal :: MonadState InferState m => m TypedValue
 createTypedVal = liftM2 TypedValue createRef createRef
   where
     createRef = do
-      key <- liftM IntMap.size $ Lens.use (sRefMap . refMap)
+      key <- Lens.uses (sRefMap . refMap) IntMap.size
       sRefMap . refMap . IntMapLens.at key .= Just emptyRefData
       return $ Ref key
 
