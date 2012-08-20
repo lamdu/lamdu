@@ -52,7 +52,7 @@ instance Show TypedValue where
 -- Use expression's structures except for Apply.
 --   (because an Apply can result in something else
 --    but for example an Int or Lambda stays the same)
--- Add SimpleType, Apply, LambdaOrPi, Union rules
+-- Add SimpleType, Union, LambdaOrPi, LambdaBodyType, Apply rules
 -- Param types of Lambdas and Pis are of type Set
 -- Pi result type is of type Set
 
@@ -106,11 +106,23 @@ data LambdaComponents = LambdaComponents
   , _lcResult :: Ref
   } deriving (Show)
 
+-- LambdaBodyType Rule:
+--
+-- (? -> Body Type) => LambdaT
+-- Result Type of LambdaT => Body Type
+
+data LambdaBodyType = LambdaBodyType
+  { _ltLambdaGuid :: Guid
+  , _ltLambdaType :: Ref
+  , _ltBodyType :: Ref
+  } deriving Show
+
 -- Union rule (type of get param, but also for recursive type)
 
 data Rule
   = RuleSimpleType TypedValue
   | RuleUnion Ref Ref
+  | RuleLambdaBodyType LambdaBodyType
   | RuleLambdaStructure LambdaComponents
   | RulePiStructure LambdaComponents
   | RuleApply ApplyComponents
@@ -279,13 +291,16 @@ setRefExpr ref newExpr = do
 
 addRules ::
   (MonadState InferState m, MonadReader Scope m) =>
-  TypedValue -> Data.Expression TypedValue -> m ()
+  TypedValue -> Data.GuidExpression TypedValue -> m ()
 addRules typedVal expr = do
   refMapAt (tvVal typedVal) . rRules %= (RuleSimpleType typedVal :)
-  case expr of
+  case Data.geValue expr of
     Data.ExpressionPi lambda ->
       onLambda RulePiStructure lambda
-    Data.ExpressionLambda lambda ->
+    Data.ExpressionLambda lambda@(Data.Lambda _ body) -> do
+      addRuleToMany [tvType typedVal, tvType body] .
+        RuleLambdaBodyType $
+        LambdaBodyType (Data.geGuid expr) (tvType typedVal) (tvType body)
       onLambda RuleLambdaStructure lambda
     Data.ExpressionApply (Data.Apply func arg) ->
       addRuleToMany ([tvVal, tvType] <*> [typedVal, func, arg]) .
@@ -325,27 +340,27 @@ nodeFromEntity ::
     (Expression s)
 nodeFromEntity loader entity typedValue = do
   setInitialValues
-  withChildrenTvs <-
-    Traversable.mapM addTypedVal $ eeValue entity
+  withChildrenTvs <- Traversable.mapM addTypedVal $ eeGuidExpr entity
   addRules typedValue $ fmap snd withChildrenTvs
   expr <-
-    case withChildrenTvs of
+    case Data.geValue withChildrenTvs of
     Data.ExpressionLambda lambda ->
-      liftM Data.ExpressionLambda $ onLambda lambda
+      onLambda Data.ExpressionLambda lambda
     Data.ExpressionPi lambda@(Data.Lambda _ (_, resultTypeTv)) -> do
       setRefExpr (tvType resultTypeTv) setExpr
-      liftM Data.ExpressionPi $ onLambda lambda
+      onLambda Data.ExpressionPi lambda
     _ -> Traversable.mapM go withChildrenTvs
-  return $ Expression (eeStored entity) (Data.GuidExpression (eeGuid entity) expr) typedValue
+  return $ Expression (eeStored entity) expr typedValue
   where
-    onLambda (Data.Lambda paramType@(_, paramTypeTv) result) = do
+    onLambda cons (Data.Lambda paramType@(_, paramTypeTv) result) = do
       setRefExpr (tvType paramTypeTv) setExpr
       paramTypeR <- go paramType
       let paramRef = Data.ParameterRef $ eeGuid entity
       resultR <-
         Reader.local (Map.insert paramRef (tvVal paramTypeTv)) $
         go result
-      return $ Data.Lambda paramTypeR resultR
+      return . Data.GuidExpression (eeGuid entity) . cons $
+        Data.Lambda paramTypeR resultR
     go = uncurry (nodeFromEntity loader)
     addTypedVal x =
       liftM ((,) x) createTypedVal
@@ -477,19 +492,32 @@ applyRule (RuleSimpleType (TypedValue val typ)) = do
     Data.ExpressionBuiltin b -> setRefExpr typ $ Data.bType b
     Data.ExpressionLiteralInteger _ -> setRefExpr typ intTypeExpr
     Data.ExpressionLambda (Data.Lambda paramType _) ->
-      setRefExpr typ . Data.pureGuidExpression g .
-      Data.ExpressionPi $ Data.Lambda paramType hole
+      setRefExpr typ . Data.pureGuidExpression g $
+      Data.makePi paramType hole
+    _ -> return ()
+applyRule (RuleLambdaBodyType (LambdaBodyType lambdaG lambdaType bodyType)) = do
+  setRefExpr lambdaType . Data.pureGuidExpression lambdaG .
+    Data.makePi hole =<< getRefExpr bodyType
+  lambdaTGExpr <- getRefExpr lambdaType
+  let Data.GuidExpression piG lambdaTExpr = Data.unPureGuidExpression lambdaTGExpr
+  case lambdaTExpr of
+    Data.ExpressionPi (Data.Lambda _ resultType) ->
+      setRefExpr bodyType $ subst piG
+      ( Data.pureGuidExpression (Guid.fromString "getVar")
+        (Data.ExpressionGetVariable (Data.ParameterRef lambdaG))
+      )
+      resultType
     _ -> return ()
 applyRule (RuleApply (ApplyComponents apply func arg)) = do
   -- ArgT => ParamT
   setRefExpr (tvType func) . Data.pureGuidExpression someGuid .
-    Data.ExpressionPi . (`Data.Lambda` hole) =<< getRefExpr (tvType arg)
+    (`Data.makePi` hole) =<< getRefExpr (tvType arg)
   -- If Arg is GetParam, ApplyT <=> ResultT
   argExpr <- getRefExpr $ tvVal arg
   case pgeExpr argExpr of
     Data.ExpressionGetVariable (Data.ParameterRef _) -> do
       setRefExpr (tvType func) . Data.pureGuidExpression someGuid .
-        Data.ExpressionPi . Data.Lambda hole =<< getRefExpr (tvType apply)
+        Data.makePi hole =<< getRefExpr (tvType apply)
       funcTExpr <- getRefExpr $ tvType func
       case pgeExpr funcTExpr of
         Data.ExpressionPi (Data.Lambda _ resultT) ->
@@ -506,7 +534,7 @@ applyRule (RuleApply (ApplyComponents apply func arg)) = do
       setRefExpr (tvType arg) paramT
       -- Recurse-Subst ResultT Arg ApplyT
       setRefExpr (tvType func) . Data.pureGuidExpression funcTGuid .
-        Data.ExpressionPi . Data.Lambda paramT =<<
+        Data.makePi paramT =<<
         recurseSubst resultT funcTGuid (tvVal arg) (tvType apply)
     _ -> return ()
 
@@ -519,15 +547,15 @@ applyRule (RuleApply (ApplyComponents apply func arg)) = do
       setRefExpr (tvType arg) paramT
       -- ArgT => ParamT
       setRefExpr (tvVal func) . Data.pureGuidExpression someGuid .
-        Data.ExpressionLambda . (`Data.Lambda` hole) =<< getRefExpr (tvType arg)
+        (`Data.makeLambda` hole) =<< getRefExpr (tvType arg)
       -- Recurse-Subst Body Arg Apply
       setRefExpr (tvVal func) . Data.pureGuidExpression funcGuid .
-        Data.ExpressionLambda . Data.Lambda paramT =<<
+        Data.makeLambda paramT =<<
         recurseSubst body funcGuid (tvVal arg) (tvVal apply)
     Data.ExpressionHole -> return ()
     _ ->
-      setRefExpr (tvVal apply) . Data.pureGuidExpression someGuid .
-        Data.ExpressionApply $ Data.Apply funcPge argExpr
+      setRefExpr (tvVal apply) . Data.pureGuidExpression someGuid $
+        Data.makeApply funcPge argExpr
   where
     someGuid = Guid.fromString "Arbitrary"
 

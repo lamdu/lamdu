@@ -94,21 +94,42 @@ main = TestFramework.defaultMain
     [ intType ]
   , testSuccessfulInfer "simple application"
     (mkExpr "apply" (Data.makeApply hole hole))
-    [ hole, hole, hole
-    , mkExpr "" $ Data.makePi hole hole
+    [ hole, hole
+    , hole, mkExpr "" $ Data.makePi hole hole
     , hole, hole
     ]
   , testSuccessfulInferSame "application"
     (mkExpr "apply" (Data.makeApply funnyFunc hole))
     [ boolType
     , funnyFunc, funnyFuncType
-    , funnyFuncType, setType
-    , intType, setType, setType, setType
-    , boolType, setType, setType, setType
+    , funnyFuncType, setType, intType, setType, setType, setType, boolType, setType, setType, setType
     , hole, intType
+    ]
+  , testSuccessfulInfer "apply on var"
+    (makeFunnyLambda "lambda"
+      (mkExpr "applyInner" (Data.makeApply hole
+        (mkExpr "var" (Data.ExpressionGetVariable (
+          Data.ParameterRef (Guid.fromString "lambda"))
+        ))
+      ))
+    )
+    [ makeFunnyLambda "" hole
+    , mkExpr "" $ Data.makePi hole boolType
+    , hole, setType
+    , mkExpr "" $ Data.makeApply funnyFunc hole, boolType
+    , funnyFunc, funnyFuncType
+    , funnyFuncType, setType, intType, setType, setType, setType, boolType, setType, setType, setType
+    , hole, intType
+    , hole, mkExpr "" $ Data.makePi hole intType
+    , mkExpr "" . Data.ExpressionGetVariable . Data.ParameterRef $ Guid.fromString "lambda", hole
     ]
   ]
   where
+    makeFunnyLambda g =
+      mkExpr g .
+      Data.makeLambda hole .
+      mkExpr "applyFunny" .
+      Data.makeApply funnyFunc
     funnyFunc =
       mkExpr "funnyFunc" . Data.ExpressionBuiltin $
       Data.Builtin (Data.FFIName ["Test"] "funnyFunc") funnyFuncType
