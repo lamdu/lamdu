@@ -2,6 +2,7 @@
 module Editor.Data.Typed
   ( Expression(..), eStored, eValue, eInferred
   , ExpressionEntity(..)
+  , InferState
   , Ref
   , RefMap
   , infer
@@ -147,21 +148,23 @@ emptyRefData = RefData
   , _rErrors = []
   }
 
-type RefMap = IntMap RefData
+newtype RefMap = RefMap { _refMap :: IntMap RefData }
+LensTH.makeLenses ''RefMap
+
 data InferState = InferState
   { _sRefMap :: RefMap
   , _sTouchedRefs :: IntSet
   }
 LensTH.makeLenses ''InferState
 
+instance Show RefMap where
+  show = List.intercalate ", " . map (showPair . first Ref) . IntMap.toList . Lens.view refMap
+    where
+      showPair (x, y) = show x ++ "=>" ++ show y
+
 instance Show InferState where
   show (InferState refMap touched) =
-    "InferState refMap=(" ++ showRefMap refMap ++ "), touched=(" ++ showTouchedRefs touched ++ ")"
-
-showRefMap :: RefMap -> String
-showRefMap = List.intercalate ", " . map (showPair . first Ref) . IntMap.toList
-  where
-    showPair (x, y) = show x ++ "=>" ++ show y
+    "InferState refMap=(" ++ show refMap ++ "), touched=(" ++ showTouchedRefs touched ++ ")"
 
 showTouchedRefs :: IntSet -> String
 showTouchedRefs = unwords . map (show . Ref) . IntSet.toList
@@ -234,8 +237,9 @@ intMapMod k =
   where
     from = fromMaybe . error $ unwords ["intMapMod: key", show k, "not in map"]
 
-refMapAt :: Functor f => Ref -> (RefData -> f RefData) -> (InferState -> f InferState)
-refMapAt k = sRefMap . intMapMod (unRef k)
+refMapAt ::
+  Functor f => Ref -> (RefData -> f RefData) -> (InferState -> f InferState)
+refMapAt k = sRefMap . refMap . intMapMod (unRef k)
 
 -- Merge two expressions:
 -- If they do not match, return Nothing.
@@ -314,8 +318,8 @@ createTypedVal :: MonadState InferState m => m TypedValue
 createTypedVal = liftM2 TypedValue createRef createRef
   where
     createRef = do
-      key <- liftM IntMap.size $ Lens.use sRefMap
-      sRefMap . IntMapLens.at key .= Just emptyRefData
+      key <- liftM IntMap.size $ Lens.use (sRefMap . refMap)
+      sRefMap . refMap . IntMapLens.at key .= Just emptyRefData
       return $ Ref key
 
 loadNode ::
@@ -364,7 +368,7 @@ fromLoaded ::
   ExpressionEntity s ->
   m (Expression s, InferState)
 fromLoaded loader mRecursiveIRef rootEntity =
-  (`runStateT` InferState mempty mempty) .
+  (`runStateT` InferState (RefMap mempty) mempty) .
   (`runReaderT` mempty) $ do
     rootTv <- createTypedVal
     ( case mRecursiveIRef of
