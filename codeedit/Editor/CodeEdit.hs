@@ -21,6 +21,7 @@ import qualified Editor.CodeEdit.ExpressionEdit as ExpressionEdit
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
+import qualified Editor.Data as Data
 import qualified Editor.Data.Typed as DataTyped
 import qualified Editor.ITransaction as IT
 import qualified Editor.OTransaction as OT
@@ -55,11 +56,17 @@ makeSugarCache :: Monad m => Transaction ViewTag m (SugarCache m)
 makeSugarCache = do
   sugarPanes <- makeSugarPanes
   clipboardsP <- Anchors.clipboards
-  clipboardsExprs <- mapM (Sugar.convertExpression <=< DataTyped.loadInferExpression) $ Property.list clipboardsP
+  -- clipboardsExprs <- mapM (Sugar.convertExpression <=< DataTyped.loadInferExpression) $ Property.list clipboardsP
   return SugarCache
     { scPanes = sugarPanes
-    , scClipboards = clipboardsExprs
+    , scClipboards = [] -- clipboardsExprs
     }
+
+loadInferDefinition ::
+  Monad m =>
+  Data.DefinitionIRef ->
+  Transaction ViewTag m (DataTyped.Expression (Data.ExpressionIRefProperty (Transaction ViewTag m)))
+loadInferDefinition defI = undefined
 
 makeSugarPanes :: Monad m => Transaction ViewTag m [SugarPane m]
 makeSugarPanes = do
@@ -84,8 +91,8 @@ makeSugarPanes = do
       | i-1 >= 0 = Just $ movePane i (i-1)
       | otherwise = Nothing
     convertPane (i, defI) = do
-      typedDef <- DataTyped.loadInferDefinition defI
-      def <- Sugar.convertDefinition typedDef
+      typedDef <- loadInferDefinition defI
+      def <- undefined -- Sugar.convertDefinition typedDef
       return SugarPane
         { spDef = def
         , mDelPane = mkMDelPane i
