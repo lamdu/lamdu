@@ -35,7 +35,7 @@ callWithArg exprP = do
   return argI
 
 newHole :: Monad m => T m Data.ExpressionIRef
-newHole = Data.newExprIRef Data.ExpressionHole
+newHole = Data.newExprIRef $ Data.ExpressionLeaf Data.Hole
 
 replace
   :: Monad m

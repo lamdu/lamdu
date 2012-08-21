@@ -1,5 +1,4 @@
 import Control.Applicative (liftA2)
-import Control.Arrow (first, second)
 import Control.Monad (guard)
 import Control.Monad.Identity (runIdentity)
 import Data.Maybe (isJust)
@@ -27,10 +26,10 @@ mkExpr ::
 mkExpr = Data.pureExpression . Guid.fromString
 
 hole :: Data.PureExpression
-hole = mkExpr "hole" Data.ExpressionHole
+hole = mkExpr "hole" $ Data.ExpressionLeaf Data.Hole
 
 setType :: Data.PureExpression
-setType = mkExpr "set" Data.ExpressionSet
+setType = mkExpr "set" $ Data.ExpressionLeaf Data.Set
 
 intType :: Data.PureExpression
 intType =
@@ -113,14 +112,14 @@ mkInferredNode g iVal iType body =
 main :: IO ()
 main = TestFramework.defaultMain
   [ testInfer "literal int"
-    (mkExpr "5" (Data.ExpressionLiteralInteger 5))
-    (mkInferredLeaf (Data.ExpressionLiteralInteger 5) intType)
+    (mkExpr "5" (Data.ExpressionLeaf (Data.LiteralInteger 5)))
+    (mkInferredLeaf (Data.ExpressionLeaf (Data.LiteralInteger 5)) intType)
   , testInfer "simple apply"
     (mkExpr "apply" (Data.makeApply hole hole))
     (mkInferredNode "" hole hole
       (Data.makeApply
-        (mkInferredLeaf Data.ExpressionHole (mkExpr "" (Data.makePi hole hole)))
-        (mkInferredLeaf Data.ExpressionHole hole)
+        (mkInferredLeaf (Data.ExpressionLeaf Data.Hole) (mkExpr "" (Data.makePi hole hole)))
+        (mkInferredLeaf (Data.ExpressionLeaf Data.Hole) hole)
       )
     )
   , testInfer "apply"
@@ -141,16 +140,16 @@ main = TestFramework.defaultMain
                   (removeBuiltinTypes intType)
                   setType
                   (Data.ExpressionBuiltin . Data.Builtin (Data.FFIName ["Prelude"] "Integer") $
-                    mkInferredLeaf Data.ExpressionSet setType
+                    mkInferredLeaf (Data.ExpressionLeaf Data.Set) setType
                   )
                 )
                 (mkInferredNode ""
                   (removeBuiltinTypes boolType)
                   setType
                   (Data.ExpressionBuiltin . Data.Builtin (Data.FFIName ["Prelude"] "Bool") $
-                    mkInferredLeaf Data.ExpressionSet setType
+                    mkInferredLeaf (Data.ExpressionLeaf Data.Set) setType
         ) ) ) ) ) )
-        (mkInferredLeaf Data.ExpressionHole (removeBuiltinTypes intType))
+        (mkInferredLeaf (Data.ExpressionLeaf Data.Hole) (removeBuiltinTypes intType))
       )
     )
   --, testInfer "apply on var"

@@ -63,7 +63,7 @@ createBuiltins :: Monad m => Transaction A.ViewTag m [Data.VariableRef]
 createBuiltins =
   Writer.execWriterT $ do
     let
-      setExpr = Data.newExprIRef Data.ExpressionSet
+      setExpr = Data.newExprIRef $ Data.ExpressionLeaf Data.Set
     set <- mkType $ A.newDefinition "Set" =<< liftM2 Data.Definition setExpr setExpr
     let
       forAll name f = liftM Data.ExpressionIRef . fixIRef $ \aI -> do
@@ -113,7 +113,7 @@ createBuiltins =
     makeWithType "Prelude.enumFromTo" . mkPi integer . mkPi integer $ listOf integer
   where
     tellift f = Writer.tell . (:[]) =<< lift f
-    getVar = Data.newExprIRef . Data.ExpressionGetVariable
+    getVar = Data.newExprIRef . Data.ExpressionLeaf . Data.GetVariable
     mkPi mkArgType mkResType = do
       argType <- mkArgType
       Data.newExprIRef . Data.makePi argType =<< mkResType
@@ -164,5 +164,5 @@ initDB store =
       expr <- Data.readExprIRef . Data.defBody =<< Transaction.readIRef defI
       return $ case expr of
         Data.ExpressionBuiltin (Data.Builtin name _) -> Just (name, Data.DefinitionRef defI)
-        Data.ExpressionSet -> Just (Data.FFIName ["Core"] "Set", Data.DefinitionRef defI)
+        Data.ExpressionLeaf Data.Set -> Just (Data.FFIName ["Core"] "Set", Data.DefinitionRef defI)
         _ -> Nothing

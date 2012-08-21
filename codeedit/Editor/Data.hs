@@ -9,7 +9,9 @@ module Editor.Data
   , Apply(..), atApplyFunc, atApplyArg
   , ApplyI
   , Builtin(..)
-  , ExpressionBody(..), makeApply, makePi, makeLambda
+  , Leaf(..)
+  , ExpressionBody(..)
+  , makeApply, makePi, makeLambda, makeParameterRef
   , ExpressionIRefProperty, eipGuid
   , ExpressionI, ExpressionIRef(..)
   , Expression(..), atEGuid, atEValue, atEPayload
@@ -113,15 +115,19 @@ data Builtin expr = Builtin
   , bType :: expr
   } deriving (Eq, Ord, Show, Functor)
 
+data Leaf
+  = GetVariable VariableRef
+  | LiteralInteger Integer
+  | Set
+  | Hole
+  deriving (Eq, Ord)
+
 data ExpressionBody expr
   = ExpressionLambda (Lambda expr)
   | ExpressionPi (Lambda expr)
   | ExpressionApply (Apply expr)
-  | ExpressionGetVariable VariableRef
-  | ExpressionHole
-  | ExpressionLiteralInteger Integer
   | ExpressionBuiltin (Builtin expr)
-  | ExpressionSet
+  | ExpressionLeaf Leaf
   deriving (Eq, Ord, Functor)
 type ExpressionI = ExpressionBody ExpressionIRef
 
@@ -134,16 +140,19 @@ makePi argType resultType = ExpressionPi $ Lambda argType resultType
 makeLambda :: expr -> expr -> ExpressionBody expr
 makeLambda argType body = ExpressionLambda $ Lambda argType body
 
+makeParameterRef :: Guid -> ExpressionBody a
+makeParameterRef = ExpressionLeaf . GetVariable . ParameterRef
+
 instance Show expr => Show (ExpressionBody expr) where
   show (ExpressionLambda (Lambda paramType body)) = concat ["\\:", showP paramType, "==>", showP body]
   show (ExpressionPi (Lambda paramType body)) = concat [showP paramType, "->", showP body]
   show (ExpressionApply (Apply func arg)) = unwords [showP func, showP arg]
-  show (ExpressionGetVariable (ParameterRef guid)) = "par:" ++ show guid
-  show (ExpressionGetVariable (DefinitionRef defI)) = "def:" ++ show (IRef.guid defI)
-  show (ExpressionLiteralInteger int) = show int
   show (ExpressionBuiltin (Builtin name typ)) = show name ++ ":" ++ show typ
-  show ExpressionHole = "Hole"
-  show ExpressionSet = "Set"
+  show (ExpressionLeaf (GetVariable (ParameterRef guid))) = "par:" ++ show guid
+  show (ExpressionLeaf (GetVariable (DefinitionRef defI))) = "def:" ++ show (IRef.guid defI)
+  show (ExpressionLeaf (LiteralInteger int)) = show int
+  show (ExpressionLeaf Set) = "Set"
+  show (ExpressionLeaf Hole) = "Hole"
 
 showP :: Show a => a -> String
 showP = parenify . show
@@ -209,9 +218,8 @@ expressionIFromPure scope newGuid (Expression oldGuid expr ()) =
       | hasLambda expr = (oldGuid, newGuid) : scope
       | otherwise = scope
     newExpr = case expr of
-      ExpressionGetVariable (ParameterRef parGuid) ->
-        ExpressionGetVariable . ParameterRef .
-        fromMaybe parGuid $ lookup parGuid newScope
+      ExpressionLeaf (GetVariable (ParameterRef parGuid)) ->
+        makeParameterRef . fromMaybe parGuid $ lookup parGuid newScope
       x -> x
 
 canonizeIdentifiers
@@ -232,9 +240,9 @@ canonizeIdentifiers gen =
           liftM ExpressionPi $ onLambda oldGuid newGuid lambda
         ExpressionApply (Apply func arg) ->
           liftM2 makeApply (go func) (go arg)
-        gv@(ExpressionGetVariable (ParameterRef guid)) ->
+        gv@(ExpressionLeaf (GetVariable (ParameterRef guid))) ->
           Reader.asks $
-          maybe gv (ExpressionGetVariable . ParameterRef) .
+          maybe gv makeParameterRef .
           Map.lookup guid
         x -> return x
 
@@ -246,22 +254,12 @@ matchExpressionBody f (ExpressionPi l0) (ExpressionPi l1) =
   Just . ExpressionPi $ liftA2 f l0 l1
 matchExpressionBody f (ExpressionApply a0) (ExpressionApply a1) =
   Just . ExpressionApply $ liftA2 f a0 a1
-matchExpressionBody _
-  (ExpressionGetVariable v0)
-  (ExpressionGetVariable v1)
-  | v0 == v1 = Just $ ExpressionGetVariable v0
-matchExpressionBody _ ExpressionHole ExpressionHole =
-  Just ExpressionHole
-matchExpressionBody _
-  (ExpressionLiteralInteger i0)
-  (ExpressionLiteralInteger i1)
-  | i0 == i1 = Just $ ExpressionLiteralInteger i0
 matchExpressionBody f
   (ExpressionBuiltin (Builtin n0 t0))
   (ExpressionBuiltin (Builtin n1 t1))
   | n0 == n1 = Just . ExpressionBuiltin . Builtin n0 $ f t0 t1
-matchExpressionBody _ ExpressionSet ExpressionSet =
-  Just ExpressionSet
+matchExpressionBody _ (ExpressionLeaf v0) (ExpressionLeaf v1)
+  | v0 == v1 = Just $ ExpressionLeaf v0
 matchExpressionBody _ _ _ = Nothing
 
 matchExpression ::
@@ -276,10 +274,10 @@ matchExpression f e0 e1 =
       Just x -> sequence x
       Nothing ->
         case (body0, body1) of
-        (ExpressionGetVariable (ParameterRef par0),
-         ExpressionGetVariable (ParameterRef par1)) -> do
+        (ExpressionLeaf l@(GetVariable (ParameterRef par0)),
+         ExpressionLeaf (GetVariable (ParameterRef par1))) -> do
           guard . (par0 ==) =<< lift =<< Reader.asks (Map.lookup par1)
-          return . ExpressionGetVariable $ ParameterRef par0
+          return $ ExpressionLeaf l
         _ -> mzero
 
 derive makeFoldable ''Builtin
@@ -299,6 +297,7 @@ derive makeBinary ''VariableRef
 derive makeBinary ''Lambda
 derive makeBinary ''Apply
 derive makeBinary ''Builtin
+derive makeBinary ''Leaf
 derive makeBinary ''ExpressionBody
 derive makeBinary ''Definition
 AtFieldTH.make ''Lambda

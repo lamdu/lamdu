@@ -137,11 +137,11 @@ LensTH.makeLenses ''RefData
 
 hole :: Data.PureExpression
 hole =
-  Data.pureExpression (Guid.fromString "HoleyHole") Data.ExpressionHole
+  Data.pureExpression (Guid.fromString "HoleyHole") $ Data.ExpressionLeaf Data.Hole
 
 setExpr :: Data.PureExpression
 setExpr =
-  Data.pureExpression (Guid.fromString "SettySet") Data.ExpressionSet
+  Data.pureExpression (Guid.fromString "SettySet") $ Data.ExpressionLeaf Data.Set
 
 intTypeExpr :: Data.PureExpression
 intTypeExpr =
@@ -207,8 +207,8 @@ initialExprs loader scope entity =
   (liftM . second . first)
   (Data.pureExpression (Data.eGuid entity)) $
   case exprStructure of
-  Data.ExpressionApply _ -> return (True, (Data.ExpressionHole, hole))
-  Data.ExpressionGetVariable var@(Data.DefinitionRef ref)
+  Data.ExpressionApply _ -> return (True, (Data.ExpressionLeaf Data.Hole, hole))
+  Data.ExpressionLeaf (Data.GetVariable var@(Data.DefinitionRef ref))
     | not (Map.member var scope) ->
       liftM ((,) False . (,) exprStructure) $
       loadPureDefinitionType loader ref
@@ -246,14 +246,13 @@ mergeExprs p0 p1 =
       Just x -> Traversable.sequence x
       Nothing ->
         case (e0, e1) of
-        (_, Data.ExpressionHole) -> return e0
-        (Data.ExpressionHole, _) ->
+        (_, Data.ExpressionLeaf Data.Hole) -> return e0
+        (Data.ExpressionLeaf Data.Hole, _) ->
           -- Map Guids to those of first expression
           Traversable.mapM (go hole) e1
-        (Data.ExpressionGetVariable (Data.ParameterRef par0),
-         Data.ExpressionGetVariable (Data.ParameterRef par1)) -> do
-          par1Mapped <- Reader.asks $ Map.lookup par1
-          guard $ Just par0 == par1Mapped
+        (Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par0)),
+         Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par1))) -> do
+          guard . (par0 ==) =<< lift =<< Reader.asks (Map.lookup par1)
           return e0
         _ -> mzero
 
@@ -290,7 +289,7 @@ addRules typedVal g exprBody = do
         RuleApply $ ApplyComponents typedVal func arg
     Data.ExpressionBuiltin (Data.Builtin _ typ) ->
       addUnionRule (tvVal typ) $ tvType typedVal
-    Data.ExpressionGetVariable var -> do
+    Data.ExpressionLeaf (Data.GetVariable var) -> do
       mTypeRef <- Reader.asks $ Map.lookup var
       case mTypeRef of
         Nothing -> return ()
@@ -412,7 +411,7 @@ subst ::
   Data.PureExpression -> Data.PureExpression
 subst from to expr =
   case Data.eValue expr of
-  Data.ExpressionGetVariable (Data.ParameterRef g)
+  Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef g))
     | g == from -> to
   _ ->
     (Data.atEValue . fmap)
@@ -435,7 +434,7 @@ recurseSubst preSubstExpr paramGuid argRef postSubstRef = do
   where
     mergeToArg pre post =
       case Data.eValue pre of
-      Data.ExpressionGetVariable (Data.ParameterRef g)
+      Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef g))
         | g == paramGuid -> setRefExpr argRef post
       preExpr ->
         case Data.matchExpressionBody mergeToArg preExpr (Data.eValue post) of
@@ -463,10 +462,10 @@ applyRule (RulePiStructure lambda) =
 applyRule (RuleSimpleType (TypedValue val typ)) = do
   Data.Expression g valExpr () <- getRefExpr val
   case valExpr of
-    Data.ExpressionSet -> setRefExpr typ setExpr
+    Data.ExpressionLeaf Data.Set -> setRefExpr typ setExpr
+    Data.ExpressionLeaf (Data.LiteralInteger _) -> setRefExpr typ intTypeExpr
     Data.ExpressionPi _ -> setRefExpr typ setExpr
     Data.ExpressionBuiltin b -> setRefExpr typ $ Data.bType b
-    Data.ExpressionLiteralInteger _ -> setRefExpr typ intTypeExpr
     Data.ExpressionLambda (Data.Lambda paramType _) ->
       setRefExpr typ . Data.pureExpression g $
       Data.makePi paramType hole
@@ -479,7 +478,7 @@ applyRule (RuleLambdaBodyType (LambdaBodyType lambdaG lambdaType bodyType)) = do
     Data.ExpressionPi (Data.Lambda _ resultType) ->
       setRefExpr bodyType $ subst piG
       ( Data.pureExpression (Guid.fromString "getVar")
-        (Data.ExpressionGetVariable (Data.ParameterRef lambdaG))
+        (Data.makeParameterRef lambdaG)
       )
       resultType
     _ -> return ()
@@ -490,7 +489,7 @@ applyRule (RuleApply (ApplyComponents apply func arg)) = do
   -- If Arg is GetParam, ApplyT <=> ResultT
   argExpr <- getRefExpr $ tvVal arg
   case Data.eValue argExpr of
-    Data.ExpressionGetVariable (Data.ParameterRef _) -> do
+    Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef _)) -> do
       setRefExpr (tvType func) . Data.pureExpression someGuid .
         Data.makePi hole =<< getRefExpr (tvType apply)
       funcTExpr <- getRefExpr $ tvType func
@@ -525,7 +524,7 @@ applyRule (RuleApply (ApplyComponents apply func arg)) = do
       setRefExpr (tvVal func) . Data.pureExpression funcGuid .
         Data.makeLambda paramT =<<
         recurseSubst body funcGuid (tvVal arg) (tvVal apply)
-    Data.ExpressionHole -> return ()
+    Data.ExpressionLeaf Data.Hole -> return ()
     _ ->
       setRefExpr (tvVal apply) . Data.pureExpression someGuid $
         Data.makeApply funcPge argExpr
