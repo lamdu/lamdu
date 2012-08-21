@@ -145,9 +145,7 @@ setExpr =
 
 intTypeExpr :: Data.PureExpression
 intTypeExpr =
-  Data.pureExpression (Guid.fromString "IntyInt") .
-  Data.ExpressionBuiltin $
-  Data.Builtin (Data.FFIName ["Prelude"] "Integer") setExpr
+  Data.pureExpression (Guid.fromString "IntyInt") $ Data.ExpressionLeaf Data.IntegerType
 
 emptyRefData :: RefData
 emptyRefData = RefData
@@ -463,6 +461,7 @@ applyRule (RuleSimpleType (TypedValue val typ)) = do
   Data.Expression g valExpr () <- getRefExpr val
   case valExpr of
     Data.ExpressionLeaf Data.Set -> setRefExpr typ setExpr
+    Data.ExpressionLeaf Data.IntegerType -> setRefExpr typ setExpr
     Data.ExpressionLeaf (Data.LiteralInteger _) -> setRefExpr typ intTypeExpr
     Data.ExpressionPi _ -> setRefExpr typ setExpr
     Data.ExpressionBuiltin b -> setRefExpr typ $ Data.bType b

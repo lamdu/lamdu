@@ -78,7 +78,9 @@ createBuiltins =
         l <- list
         Data.newExprIRef . Data.makeApply l =<< a
 
-    integer <- mkType . A.newBuiltin "Prelude.Integer" =<< lift set
+    let
+      integerExpr = Data.newExprIRef $ Data.ExpressionLeaf Data.IntegerType
+    integer <- mkType $ A.newDefinition "Integer" =<< liftM2 Data.Definition integerExpr setExpr
     bool <- mkType . A.newBuiltin "Prelude.Bool" =<< lift set
 
     makeWithType "Prelude.True" bool

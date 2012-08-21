@@ -119,8 +119,9 @@ data Leaf
   = GetVariable VariableRef
   | LiteralInteger Integer
   | Set
+  | IntegerType
   | Hole
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Show)
 
 data ExpressionBody expr
   = ExpressionLambda (Lambda expr)
@@ -151,8 +152,7 @@ instance Show expr => Show (ExpressionBody expr) where
   show (ExpressionLeaf (GetVariable (ParameterRef guid))) = "par:" ++ show guid
   show (ExpressionLeaf (GetVariable (DefinitionRef defI))) = "def:" ++ show (IRef.guid defI)
   show (ExpressionLeaf (LiteralInteger int)) = show int
-  show (ExpressionLeaf Set) = "Set"
-  show (ExpressionLeaf Hole) = "Hole"
+  show (ExpressionLeaf x) = show x
 
 showP :: Show a => a -> String
 showP = parenify . show

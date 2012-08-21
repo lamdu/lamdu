@@ -33,8 +33,7 @@ setType = mkExpr "set" $ Data.ExpressionLeaf Data.Set
 
 intType :: Data.PureExpression
 intType =
-  mkExpr "int" . Data.ExpressionBuiltin $
-  Data.Builtin (Data.FFIName ["Prelude"] "Integer") setType
+  mkExpr "int" $ Data.ExpressionLeaf Data.IntegerType
 
 boolType :: Data.PureExpression
 boolType =
@@ -136,20 +135,14 @@ main = TestFramework.defaultMain
               (removeBuiltinTypes funnyFuncType)
               setType
               (Data.makePi
-                (mkInferredNode ""
-                  (removeBuiltinTypes intType)
-                  setType
-                  (Data.ExpressionBuiltin . Data.Builtin (Data.FFIName ["Prelude"] "Integer") $
-                    mkInferredLeaf (Data.ExpressionLeaf Data.Set) setType
-                  )
-                )
+                (mkInferredLeaf (Data.ExpressionLeaf Data.IntegerType) setType)
                 (mkInferredNode ""
                   (removeBuiltinTypes boolType)
                   setType
                   (Data.ExpressionBuiltin . Data.Builtin (Data.FFIName ["Prelude"] "Bool") $
                     mkInferredLeaf (Data.ExpressionLeaf Data.Set) setType
         ) ) ) ) ) )
-        (mkInferredLeaf (Data.ExpressionLeaf Data.Hole) (removeBuiltinTypes intType))
+        (mkInferredLeaf (Data.ExpressionLeaf Data.Hole) intType)
       )
     )
   --, testInfer "apply on var"
