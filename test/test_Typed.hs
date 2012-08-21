@@ -1,32 +1,21 @@
 import Control.Applicative (liftA2)
+import Control.Arrow (first)
 import Control.Monad (guard)
-import Control.Monad.Identity (runIdentity)
+import Control.Monad.Identity (Identity(..))
+import Data.Map (Map, (!))
 import Data.Maybe (isJust)
+import Data.Store.Guid (Guid)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit (assertBool)
 import qualified Data.Foldable as Foldable
 import qualified Data.List as List
+import qualified Data.Map as Map
+import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Guid as Guid
 import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
 import qualified Editor.Data.Typed as Typed
 import qualified Test.Framework as TestFramework
-
-errorLoader :: Typed.Loader m
-errorLoader = Typed.Loader $ error . show
-
-toExpression ::
-  Data.PureExpression ->
-  (Typed.Expression (), Typed.RefMap)
-toExpression = runIdentity . Typed.inferFromEntity errorLoader Nothing
-
-mkExpr ::
-  String -> Data.ExpressionBody Data.PureExpression ->
-  Data.PureExpression
-mkExpr = Data.pureExpression . Guid.fromString
-
-hole :: Data.PureExpression
-hole = mkExpr "hole" $ Data.ExpressionLeaf Data.Hole
 
 setType :: Data.PureExpression
 setType = mkExpr "set" $ Data.ExpressionLeaf Data.Set
@@ -35,18 +24,45 @@ intType :: Data.PureExpression
 intType =
   mkExpr "int" $ Data.ExpressionLeaf Data.IntegerType
 
-boolType :: Data.PureExpression
-boolType =
-  mkExpr "bool" . Data.ExpressionBuiltin $
-  Data.Builtin (Data.FFIName ["Prelude"] "Bool") setType
+makeDefinitionRef :: Guid -> Data.ExpressionBody a
+makeDefinitionRef = Data.ExpressionLeaf . Data.GetVariable . Data.DefinitionRef . IRef.unsafeFromGuid
 
-removeBuiltinTypes :: Data.PureExpression -> Data.PureExpression
-removeBuiltinTypes =
-  Data.atEValue f
+boolType :: Data.PureExpression
+boolType = mkExpr "bool" . makeDefinitionRef $ Guid.fromString "Bool"
+
+intToBool :: Data.PureExpression
+intToBool = mkExpr "intToBool" $ Data.makePi intType boolType
+
+intToBoolFuncGetVar :: Data.Leaf
+intToBoolFuncGetVar =
+  Data.GetVariable . Data.DefinitionRef . IRef.unsafeFromGuid $
+  Guid.fromString "IntToBoolFunc"
+
+intToBoolFunc :: Data.PureExpression
+intToBoolFunc = mkExpr "bool" $ Data.ExpressionLeaf intToBoolFuncGetVar
+
+definitionTypes :: Map Guid Data.PureExpression
+definitionTypes =
+  Map.fromList $ (map . first) Guid.fromString
+  [ ("Bool", setType)
+  , ("IntToBoolFunc", intToBool)
+  ]
+
+toExpression ::
+  Data.PureExpression ->
+  (Typed.Expression (), Typed.RefMap)
+toExpression =
+  runIdentity . Typed.inferFromEntity loader Nothing
   where
-    f (Data.ExpressionBuiltin (Data.Builtin name _)) =
-      Data.ExpressionBuiltin $ Data.Builtin name hole
-    f x = fmap removeBuiltinTypes x
+    loader = Typed.Loader (Identity . (definitionTypes !) . IRef.guid)
+
+mkExpr ::
+  String -> Data.ExpressionBody Data.PureExpression ->
+  Data.PureExpression
+mkExpr = Data.pureExpression . Guid.fromString
+
+hole :: Data.PureExpression
+hole = mkExpr "hole" $ Data.ExpressionLeaf Data.Hole
 
 type InferredExpr = ([Typed.Conflict], Data.PureExpression)
 type InferResults = Data.Expression (InferredExpr, InferredExpr)
@@ -88,18 +104,17 @@ compareInferred x y =
     matchPure = Data.matchExpression nop
     nop () () = ()
 
-mkInferredLeaf :: Data.ExpressionBody () -> Data.PureExpression -> InferResults
+mkInferredLeaf :: Data.Leaf -> Data.PureExpression -> InferResults
 mkInferredLeaf leaf typ =
   Data.Expression
   { Data.eGuid = Guid.fromString "leaf"
-  , Data.eValue = fmap (error errMsg) leaf
+  , Data.eValue = Data.ExpressionLeaf leaf
   , Data.ePayload =
-      ( ([], Data.pureExpression g (fmap (error errMsg) leaf))
+      ( ([], Data.pureExpression g (Data.ExpressionLeaf leaf))
       , ([], typ)
       )
   }
   where
-    errMsg = "leaf shouldn't have children"
     g = Guid.fromString "leaf"
 
 mkInferredNode ::
@@ -112,69 +127,69 @@ main :: IO ()
 main = TestFramework.defaultMain
   [ testInfer "literal int"
     (mkExpr "5" (Data.ExpressionLeaf (Data.LiteralInteger 5)))
-    (mkInferredLeaf (Data.ExpressionLeaf (Data.LiteralInteger 5)) intType)
+    (mkInferredLeaf (Data.LiteralInteger 5) intType)
   , testInfer "simple apply"
     (mkExpr "apply" (Data.makeApply hole hole))
     (mkInferredNode "" hole hole
       (Data.makeApply
-        (mkInferredLeaf (Data.ExpressionLeaf Data.Hole) (mkExpr "" (Data.makePi hole hole)))
-        (mkInferredLeaf (Data.ExpressionLeaf Data.Hole) hole)
+        (mkInferredLeaf Data.Hole (mkExpr "" (Data.makePi hole hole)))
+        (mkInferredLeaf Data.Hole hole)
       )
     )
   , testInfer "apply"
-    (mkExpr "apply" (Data.makeApply funnyFunc hole))
+    (mkExpr "apply" (Data.makeApply intToBoolFunc hole))
     (mkInferredNode ""
-      (mkExpr "" (Data.makeApply (removeBuiltinTypes funnyFunc) hole))
-      (removeBuiltinTypes boolType)
+      (mkExpr "" (Data.makeApply intToBoolFunc hole))
+      boolType
       (Data.makeApply
-        (mkInferredNode ""
-          (removeBuiltinTypes funnyFunc)
-          (removeBuiltinTypes funnyFuncType)
-          (Data.ExpressionBuiltin $ Data.Builtin funnyFuncName
-            (mkInferredNode ""
-              (removeBuiltinTypes funnyFuncType)
-              setType
-              (Data.makePi
-                (mkInferredLeaf (Data.ExpressionLeaf Data.IntegerType) setType)
-                (mkInferredNode ""
-                  (removeBuiltinTypes boolType)
-                  setType
-                  (Data.ExpressionBuiltin . Data.Builtin (Data.FFIName ["Prelude"] "Bool") $
-                    mkInferredLeaf (Data.ExpressionLeaf Data.Set) setType
-        ) ) ) ) ) )
-        (mkInferredLeaf (Data.ExpressionLeaf Data.Hole) intType)
+        (mkInferredLeaf intToBoolFuncGetVar intToBool)
+        (mkInferredLeaf Data.Hole intType)
       )
     )
-  --, testInfer "apply on var"
-  --  (makeFunnyLambda "lambda"
-  --    (mkExpr "applyInner" (Data.makeApply hole
-  --      (mkExpr "var" (Data.ExpressionGetVariable (
-  --        Data.ParameterRef (Guid.fromString "lambda"))
-  --      ))
-  --    ))
-  --  )
-  --  [ makeFunnyLambda "" hole
-  --  , mkExpr "" $ Data.makePi hole boolType
-  --  , hole, setType
-  --  , mkExpr "" $ Data.makeApply funnyFunc hole, boolType
-  --  , funnyFunc, funnyFuncType
-  --  , funnyFuncType, setType, intType, setType, setType, setType, boolType, setType, setType, setType
-  --  , hole, intType
-  --  , hole, mkExpr "" $ Data.makePi hole intType
-  --  , mkExpr "" . Data.ExpressionGetVariable . Data.ParameterRef $ Guid.fromString "lambda", hole
-  --  ]
+  , testInfer "apply on var"
+    (makeFunnyLambda "lambda"
+      (mkExpr "applyInner"
+        (Data.makeApply
+          hole
+          (mkExpr "var" (Data.makeParameterRef (Guid.fromString "lambda")))
+        )
+      )
+    )
+    (mkInferredNode "lambda"
+      (makeFunnyLambda "" hole)
+      (mkExpr "" (Data.makePi hole boolType))
+      (Data.makeLambda
+        (mkInferredLeaf Data.Hole setType)
+        (mkInferredNode ""
+          (mkExpr "" (Data.makeApply intToBoolFunc hole))
+          boolType
+          (Data.makeApply
+            (mkInferredLeaf intToBoolFuncGetVar intToBool)
+            (mkInferredNode ""
+              hole
+              intType
+              (Data.makeApply
+                (mkInferredLeaf
+                  Data.Hole
+                  (mkExpr "" (Data.makePi hole intType))
+                )
+                (mkInferredLeaf
+                  (Data.GetVariable (Data.ParameterRef (Guid.fromString "lambda")))
+                  hole
+                )
+              )
+            )
+          )
+        )
+      )
+    )
   ]
   where
     makeFunnyLambda g =
       mkExpr g .
       Data.makeLambda hole .
       mkExpr "applyFunny" .
-      Data.makeApply funnyFunc
-    funnyFunc =
-      mkExpr "funnyFunc" . Data.ExpressionBuiltin $
-      Data.Builtin funnyFuncName funnyFuncType
-    funnyFuncName = Data.FFIName ["Test"] "funnyFunc"
-    funnyFuncType = mkExpr "funcT" $ Data.makePi intType boolType
+      Data.makeApply intToBoolFunc
     testInfer name pureExpr result =
       testCase name .
       assertBool

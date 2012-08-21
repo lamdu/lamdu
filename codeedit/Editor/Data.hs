@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor #-}
 module Editor.Data
-  ( Definition(..), atDefBody
+  ( Definition(..), DefinitionBody(..)
   , DefinitionI, DefinitionIRef
   , FFIName(..)
   , VariableRef(..), variableRefGuid
@@ -11,7 +11,8 @@ module Editor.Data
   , Builtin(..)
   , Leaf(..)
   , ExpressionBody(..)
-  , makeApply, makePi, makeLambda, makeParameterRef
+  , makeApply, makePi, makeLambda
+  , makeParameterRef
   , ExpressionIRefProperty, eipGuid
   , ExpressionI, ExpressionIRef(..)
   , Expression(..), atEGuid, atEValue, atEPayload
@@ -110,11 +111,6 @@ data FFIName = FFIName
 instance Show FFIName where
   show (FFIName path name) = concatMap (++".") path ++ name
 
-data Builtin expr = Builtin
-  { bName :: FFIName
-  , bType :: expr
-  } deriving (Eq, Ord, Show, Functor)
-
 data Leaf
   = GetVariable VariableRef
   | LiteralInteger Integer
@@ -127,7 +123,6 @@ data ExpressionBody expr
   = ExpressionLambda (Lambda expr)
   | ExpressionPi (Lambda expr)
   | ExpressionApply (Apply expr)
-  | ExpressionBuiltin (Builtin expr)
   | ExpressionLeaf Leaf
   deriving (Eq, Ord, Functor)
 type ExpressionI = ExpressionBody ExpressionIRef
@@ -148,7 +143,6 @@ instance Show expr => Show (ExpressionBody expr) where
   show (ExpressionLambda (Lambda paramType body)) = concat ["\\:", showP paramType, "==>", showP body]
   show (ExpressionPi (Lambda paramType body)) = concat [showP paramType, "->", showP body]
   show (ExpressionApply (Apply func arg)) = unwords [showP func, showP arg]
-  show (ExpressionBuiltin (Builtin name typ)) = show name ++ ":" ++ show typ
   show (ExpressionLeaf (GetVariable (ParameterRef guid))) = "par:" ++ show guid
   show (ExpressionLeaf (GetVariable (DefinitionRef defI))) = "def:" ++ show (IRef.guid defI)
   show (ExpressionLeaf (LiteralInteger int)) = show int
@@ -160,8 +154,18 @@ showP = parenify . show
 parenify :: String -> String
 parenify x = concat ["(", x, ")"]
 
+data Builtin expr = Builtin
+  { bName :: FFIName
+  , bType :: expr
+  } deriving (Eq, Ord, Show)
+
+data DefinitionBody expr
+  = DefinitionExpression expr
+  | DefinitionBuiltin (Builtin expr)
+  deriving (Eq, Ord, Show)
+
 data Definition expr = Definition
-  { defBody :: expr
+  { defBody :: DefinitionBody expr
   , defType :: expr
   } deriving (Eq, Ord, Show)
 type DefinitionI = Definition ExpressionIRef
@@ -254,10 +258,6 @@ matchExpressionBody f (ExpressionPi l0) (ExpressionPi l1) =
   Just . ExpressionPi $ liftA2 f l0 l1
 matchExpressionBody f (ExpressionApply a0) (ExpressionApply a1) =
   Just . ExpressionApply $ liftA2 f a0 a1
-matchExpressionBody f
-  (ExpressionBuiltin (Builtin n0 t0))
-  (ExpressionBuiltin (Builtin n1 t1))
-  | n0 == n1 = Just . ExpressionBuiltin . Builtin n0 $ f t0 t1
 matchExpressionBody _ (ExpressionLeaf v0) (ExpressionLeaf v1)
   | v0 == v1 = Just $ ExpressionLeaf v0
 matchExpressionBody _ _ _ = Nothing
@@ -280,25 +280,24 @@ matchExpression f e0 e1 =
           return $ ExpressionLeaf l
         _ -> mzero
 
-derive makeFoldable ''Builtin
 derive makeFoldable ''Apply
 derive makeFoldable ''Lambda
 derive makeFoldable ''ExpressionBody
 derive makeFoldable ''Expression
-derive makeTraversable ''Builtin
 derive makeTraversable ''Apply
 derive makeTraversable ''Lambda
 derive makeTraversable ''ExpressionBody
 derive makeTraversable ''Expression
-derive makeBinary ''Expression
 derive makeBinary ''ExpressionIRef
 derive makeBinary ''FFIName
 derive makeBinary ''VariableRef
 derive makeBinary ''Lambda
 derive makeBinary ''Apply
-derive makeBinary ''Builtin
 derive makeBinary ''Leaf
 derive makeBinary ''ExpressionBody
+derive makeBinary ''Expression
+derive makeBinary ''Builtin
+derive makeBinary ''DefinitionBody
 derive makeBinary ''Definition
 AtFieldTH.make ''Lambda
 AtFieldTH.make ''Apply

@@ -285,8 +285,6 @@ addRules typedVal g exprBody = do
     Data.ExpressionApply (Data.Apply func arg) ->
       addRuleToMany ([tvVal, tvType] <*> [typedVal, func, arg]) .
         RuleApply $ ApplyComponents typedVal func arg
-    Data.ExpressionBuiltin (Data.Builtin _ typ) ->
-      addUnionRule (tvVal typ) $ tvType typedVal
     Data.ExpressionLeaf (Data.GetVariable var) -> do
       mTypeRef <- Reader.asks $ Map.lookup var
       case mTypeRef of
@@ -464,7 +462,6 @@ applyRule (RuleSimpleType (TypedValue val typ)) = do
     Data.ExpressionLeaf Data.IntegerType -> setRefExpr typ setExpr
     Data.ExpressionLeaf (Data.LiteralInteger _) -> setRefExpr typ intTypeExpr
     Data.ExpressionPi _ -> setRefExpr typ setExpr
-    Data.ExpressionBuiltin b -> setRefExpr typ $ Data.bType b
     Data.ExpressionLambda (Data.Lambda paramType _) ->
       setRefExpr typ . Data.pureExpression g $
       Data.makePi paramType hole

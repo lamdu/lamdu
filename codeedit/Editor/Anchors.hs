@@ -9,8 +9,7 @@ module Editor.Anchors
   , redos, redosIRef
   , currentBranchIRef, currentBranch
   , globals
-  , BuiltinsMap, builtinsMap
-  , newBuiltin, newBuiltinExpression, newDefinition
+  , newBuiltin, newDefinition
   , Pane
   , dbStore, DBTag
   , viewStore, ViewTag
@@ -26,7 +25,6 @@ import Control.Monad (liftM, liftM2, when)
 import Data.Binary (Binary(..))
 import Data.ByteString.Char8 ()
 import Data.List.Split (splitOn)
-import Data.Map (Map)
 import Data.Maybe (fromMaybe)
 import Data.Store.Db (Db)
 import Data.Store.Guid(Guid)
@@ -89,10 +87,6 @@ cursorIRef = IRef.anchor "cursor"
 globals :: Monad m => MkProperty ViewTag m [Data.VariableRef]
 globals = Transaction.fromIRef $ IRef.anchor "globals"
 
-type BuiltinsMap = Map Data.FFIName Data.VariableRef
-builtinsMap :: Monad m => MkProperty ViewTag m BuiltinsMap
-builtinsMap = Transaction.fromIRef $ IRef.anchor "builtinsMap"
-
 -- Cursor is untagged because it is both saved globally and per-revision.
 -- Cursor movement without any revisioned changes are not saved per-revision.
 cursor :: Monad m => MkProperty DBTag m Widget.Id
@@ -127,7 +121,9 @@ makeDefinition
   => Transaction ViewTag m Data.DefinitionIRef
 makeDefinition = do
   let newHole = Data.newExprIRef $ Data.ExpressionLeaf Data.Hole
-  defI <- Transaction.newIRef =<< liftM2 Data.Definition newHole newHole
+  defI <-
+    Transaction.newIRef =<<
+    liftM2 (Data.Definition . Data.DefinitionExpression) newHole newHole
   modP globals (Data.DefinitionRef defI :)
   return defI
 
@@ -183,25 +179,16 @@ jumpBack = do
       Property.set preJumpsP js
       return j
 
-newBuiltinExpression
-  :: Monad m
-  => String -> Data.ExpressionIRef
-  -> Transaction t m Data.ExpressionIRef
-newBuiltinExpression fullyQualifiedName typeI =
-  Data.newExprIRef . Data.ExpressionBuiltin $
-  Data.Builtin (Data.FFIName (init path) (last path)) typeI
-  where
-    path = splitOn "." fullyQualifiedName
-
 newBuiltin
   :: Monad m
   => String -> Data.ExpressionIRef
   -> Transaction t m Data.VariableRef
 newBuiltin fullyQualifiedName typeI =
-  newDefinition name . (`Data.Definition` typeI) =<<
-    newBuiltinExpression fullyQualifiedName typeI
+  newDefinition name . (`Data.Definition` typeI) . Data.DefinitionBuiltin $
+  Data.Builtin (Data.FFIName (init path) name) typeI
   where
-    name = last $ splitOn "." fullyQualifiedName
+    name = last path
+    path = splitOn "." fullyQualifiedName
 
 newDefinition :: Monad m => String -> Data.DefinitionI -> Transaction t m Data.VariableRef
 newDefinition name defI = do

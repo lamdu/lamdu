@@ -4,14 +4,12 @@ import Control.Monad (liftM, liftM2, unless, (<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Writer (WriterT)
 import Data.Binary (Binary(..))
-import Data.Maybe (catMaybes)
 import Data.Store.Guid(Guid)
 import Data.Store.IRef (IRef)
 import Data.Store.Rev.Change (Key, Value)
 import Data.Store.Transaction (Transaction, Store(..))
 import Editor.Anchors (DBTag)
 import qualified Control.Monad.Trans.Writer as Writer
-import qualified Data.Map as Map
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Rev.Branch as Branch
@@ -64,7 +62,9 @@ createBuiltins =
   Writer.execWriterT $ do
     let
       setExpr = Data.newExprIRef $ Data.ExpressionLeaf Data.Set
-    set <- mkType $ A.newDefinition "Set" =<< liftM2 Data.Definition setExpr setExpr
+    set <-
+      mkType $ A.newDefinition "Set" =<<
+      liftM2 (Data.Definition . Data.DefinitionExpression) setExpr setExpr
     let
       forAll name f = liftM Data.ExpressionIRef . fixIRef $ \aI -> do
         let aGuid = IRef.guid aI
@@ -80,7 +80,9 @@ createBuiltins =
 
     let
       integerExpr = Data.newExprIRef $ Data.ExpressionLeaf Data.IntegerType
-    integer <- mkType $ A.newDefinition "Integer" =<< liftM2 Data.Definition integerExpr setExpr
+    integer <-
+      mkType $ A.newDefinition "Integer" =<<
+      liftM2 (Data.Definition . Data.DefinitionExpression) integerExpr setExpr
     bool <- mkType . A.newBuiltin "Prelude.Bool" =<< lift set
 
     makeWithType "Prelude.True" bool
@@ -142,7 +144,6 @@ initDB store =
         builtins <- createBuiltins
         setMkProp A.clipboards []
         setMkProp A.globals builtins
-        setMkProp A.builtinsMap . Map.fromList . catMaybes =<< mapM builtinsMapEntry builtins
         defI <- A.makeDefinition
         A.setP (A.assocNameRef (IRef.guid defI)) "foo"
         setMkProp A.panes [A.makePane defI]
@@ -160,11 +161,3 @@ initDB store =
       (defI : _) <- A.getP A.panes
       return $ WidgetIds.fromIRef defI
     return ()
-  where
-    builtinsMapEntry (Data.ParameterRef _) = return Nothing
-    builtinsMapEntry (Data.DefinitionRef defI) = do
-      expr <- Data.readExprIRef . Data.defBody =<< Transaction.readIRef defI
-      return $ case expr of
-        Data.ExpressionBuiltin (Data.Builtin name _) -> Just (name, Data.DefinitionRef defI)
-        Data.ExpressionLeaf Data.Set -> Just (Data.FFIName ["Core"] "Set", Data.DefinitionRef defI)
-        _ -> Nothing
