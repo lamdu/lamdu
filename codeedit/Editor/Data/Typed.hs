@@ -1,8 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleContexts, TemplateHaskell, DeriveFunctor #-}
 module Editor.Data.Typed
-  ( Expression(..), TypedValue(..)
+  ( Expression, Inferred(..), TypedValue(..)
   , RefMap, Ref, deref, Conflict
-  , ExpressionEntity(..)
   , Loader(..)
   , inferFromEntity
   , alphaEq
@@ -128,26 +127,26 @@ data Rule
   | RuleApply ApplyComponents
   deriving (Show)
 
-type Conflict = Data.PureGuidExpression
+type Conflict = Data.PureExpression
 
 data RefData = RefData
-  { _rExpression :: Data.PureGuidExpression
+  { _rExpression :: Data.PureExpression
   , _rRules :: [Rule]
   , _rErrors :: [Conflict]
   } deriving (Show)
 LensTH.makeLenses ''RefData
 
-hole :: Data.PureGuidExpression
+hole :: Data.PureExpression
 hole =
-  Data.pureGuidExpression (Guid.fromString "HoleyHole") Data.ExpressionHole
+  Data.pureExpression (Guid.fromString "HoleyHole") Data.ExpressionHole
 
-setExpr :: Data.PureGuidExpression
+setExpr :: Data.PureExpression
 setExpr =
-  Data.pureGuidExpression (Guid.fromString "SettySet") Data.ExpressionSet
+  Data.pureExpression (Guid.fromString "SettySet") Data.ExpressionSet
 
-intTypeExpr :: Data.PureGuidExpression
+intTypeExpr :: Data.PureExpression
 intTypeExpr =
-  Data.pureGuidExpression (Guid.fromString "IntyInt") .
+  Data.pureExpression (Guid.fromString "IntyInt") .
   Data.ExpressionBuiltin $
   Data.Builtin (Data.FFIName ["Prelude"] "Integer") setExpr
 
@@ -174,13 +173,16 @@ instance Show RefMap where
     where
       showPair (x, y) = show x ++ "=>" ++ show y
 
-data Expression s = Expression
-  { eStored :: s
-  , eValue :: Data.GuidExpression (Expression s)
-  , eInferred :: TypedValue
+data Inferred s = Inferred
+  { iStored :: s
+  , iValue :: Data.PureExpression
+  , iType :: Data.PureExpression
   -- Used to resume inference in holes.
-  , eScope :: Scope
-  } deriving (Functor)
+  , iRefs :: TypedValue
+  , iScope :: Scope
+  }
+
+type Expression s = Data.Expression (Inferred s)
 
 -- Map from params to their Param type,
 -- also including the recursive ref to the definition.
@@ -188,30 +190,19 @@ data Expression s = Expression
 type Scope = Map Data.VariableRef Ref
 
 newtype Loader m = Loader
-  { loadPureDefinitionType :: Data.DefinitionIRef -> m Data.PureGuidExpression
+  { loadPureDefinitionType :: Data.DefinitionIRef -> m Data.PureExpression
   }
-
-data ExpressionEntity s = ExpressionEntity
-  { eeStored :: s
-  , eeGuidExpr :: Data.GuidExpression (ExpressionEntity s)
-  }
-
-eeGuid :: ExpressionEntity s -> Guid
-eeGuid = Data.geGuid . eeGuidExpr
-
-eeValue :: ExpressionEntity s -> Data.Expression (ExpressionEntity s)
-eeValue = Data.geValue . eeGuidExpr
 
 -- Initial expression for inferred value and type of a stored entity.
 -- Types are returned only in cases of expanding definitions.
 initialExprs ::
   Monad m =>
   Loader m ->
-  Scope -> ExpressionEntity s ->
-  m (Bool, (Data.PureGuidExpression, Data.PureGuidExpression))
+  Scope -> Data.Expression s ->
+  m (Bool, (Data.PureExpression, Data.PureExpression))
 initialExprs loader scope entity =
   (liftM . second . first)
-  (Data.pureGuidExpression (eeGuid entity)) $
+  (Data.pureExpression (Data.eGuid entity)) $
   case exprStructure of
   Data.ExpressionApply _ -> return (True, (Data.ExpressionHole, hole))
   Data.ExpressionGetVariable var@(Data.DefinitionRef ref)
@@ -220,7 +211,7 @@ initialExprs loader scope entity =
       loadPureDefinitionType loader ref
   _ -> return (False, (exprStructure, hole))
   where
-    exprStructure = fmap (const hole) $ eeValue entity
+    exprStructure = fmap (const hole) $ Data.eValue entity
 
 intMapMod :: Functor f => Int -> (v -> f v) -> (IntMap v -> f (IntMap v))
 intMapMod k =
@@ -237,18 +228,18 @@ refMapAt k = sRefMap . refMap . intMapMod (unRef k)
 -- Holes match with anything, expand to the other expr.
 -- Guids come from the first expression (where available).
 mergeExprs ::
-  Data.PureGuidExpression ->
-  Data.PureGuidExpression ->
-  Maybe Data.PureGuidExpression
+  Data.PureExpression ->
+  Data.PureExpression ->
+  Maybe Data.PureExpression
 mergeExprs p0 p1 =
   runReaderT (go p0 p1) Map.empty
   where
     go
-      (Data.PureGuidExpression (Data.GuidExpression g0 e0))
-      (Data.PureGuidExpression (Data.GuidExpression g1 e1)) =
-      fmap (Data.pureGuidExpression g0) .
+      (Data.Expression g0 e0 ())
+      (Data.Expression g1 e1 ()) =
+      fmap (Data.pureExpression g0) .
       Reader.local (Map.insert g1 g0) $
-      case Data.matchExpression go e0 e1 of
+      case Data.matchExpressionBody go e0 e1 of
       Just x -> Traversable.sequence x
       Nothing ->
         case (e0, e1) of
@@ -263,7 +254,7 @@ mergeExprs p0 p1 =
           return e0
         _ -> mzero
 
-alphaEq :: Data.PureGuidExpression -> Data.PureGuidExpression -> Bool
+alphaEq :: Data.PureExpression -> Data.PureExpression -> Bool
 alphaEq x y = mergeExprs x y == Just x
 
 touch :: MonadState InferState m => Ref -> m ()
@@ -271,7 +262,7 @@ touch ref = sTouchedRefs . IntSetLens.contains (unRef ref) .= True
 
 setRefExpr ::
   MonadState InferState m =>
-  Ref -> Data.PureGuidExpression -> m ()
+  Ref -> Data.PureExpression -> m ()
 setRefExpr ref newExpr = do
   curExpr <- Lens.use $ refMapAt ref . rExpression
   case mergeExprs curExpr newExpr of
@@ -283,16 +274,16 @@ setRefExpr ref newExpr = do
 
 addRules ::
   (MonadState InferState m, MonadReader Scope m) =>
-  TypedValue -> Data.GuidExpression TypedValue -> m ()
-addRules typedVal expr = do
+  TypedValue -> Guid -> Data.ExpressionBody TypedValue -> m ()
+addRules typedVal g exprBody = do
   refMapAt (tvVal typedVal) . rRules %= (RuleSimpleType typedVal :)
-  case Data.geValue expr of
+  case exprBody of
     Data.ExpressionPi lambda ->
       onLambda RulePiStructure lambda
     Data.ExpressionLambda lambda@(Data.Lambda _ body) -> do
       addRuleToMany [tvType typedVal, tvType body] .
         RuleLambdaBodyType $
-        LambdaBodyType (Data.geGuid expr) (tvType typedVal) (tvType body)
+        LambdaBodyType g (tvType typedVal) (tvType body)
       onLambda RuleLambdaStructure lambda
     Data.ExpressionApply (Data.Apply func arg) ->
       addRuleToMany ([tvVal, tvType] <*> [typedVal, func, arg]) .
@@ -327,32 +318,30 @@ createTypedVal = liftM2 TypedValue createRef createRef
 nodeFromEntity ::
   Monad m =>
   Loader m ->
-  ExpressionEntity s -> TypedValue ->
+  Data.Expression s -> TypedValue ->
   ReaderT (Map Data.VariableRef Ref) (StateT InferState m)
     (Expression s)
 nodeFromEntity loader entity typedValue = do
   setInitialValues
-  withChildrenTvs <- Traversable.mapM addTypedVal $ eeGuidExpr entity
-  addRules typedValue $ fmap snd withChildrenTvs
-  expr <-
-    case Data.geValue withChildrenTvs of
+  bodyWithChildrenTvs <- Traversable.mapM addTypedVal $ Data.eValue entity
+  addRules typedValue (Data.eGuid entity) $ fmap snd bodyWithChildrenTvs
+  exprBody <-
+    case bodyWithChildrenTvs of
     Data.ExpressionLambda lambda ->
       onLambda Data.ExpressionLambda lambda
     Data.ExpressionPi lambda@(Data.Lambda _ (_, resultTypeTv)) -> do
       setRefExpr (tvType resultTypeTv) setExpr
       onLambda Data.ExpressionPi lambda
-    _ -> Traversable.mapM go withChildrenTvs
-  liftM (Expression (eeStored entity) expr typedValue) Reader.ask
+    _ -> Traversable.mapM go bodyWithChildrenTvs
+  liftM (Data.Expression (Data.eGuid entity) exprBody . Inferred (Data.ePayload entity) hole hole typedValue) Reader.ask
   where
     onLambda cons (Data.Lambda paramType@(_, paramTypeTv) result) = do
       setRefExpr (tvType paramTypeTv) setExpr
       paramTypeR <- go paramType
-      let paramRef = Data.ParameterRef $ eeGuid entity
-      resultR <-
+      let paramRef = Data.ParameterRef $ Data.eGuid entity
+      liftM (cons . Data.Lambda paramTypeR) .
         Reader.local (Map.insert paramRef (tvVal paramTypeTv)) $
         go result
-      return . Data.GuidExpression (eeGuid entity) . cons $
-        Data.Lambda paramTypeR resultR
     go = uncurry (nodeFromEntity loader)
     addTypedVal x =
       liftM ((,) x) createTypedVal
@@ -369,7 +358,7 @@ fromEntity ::
   Monad m =>
   Loader m ->
   Maybe Data.DefinitionIRef ->
-  ExpressionEntity s ->
+  Data.Expression s ->
   m (Expression s, InferState)
 fromEntity loader mRecursiveIRef rootEntity =
   (`runStateT` InferState (RefMap mempty) mempty) .
@@ -399,40 +388,39 @@ infer =
       mapM_ applyRule =<< Lens.use (refMapAt ref . rRules)
       go
 
-getRefExpr :: MonadState InferState m => Ref -> m Data.PureGuidExpression
+getRefExpr :: MonadState InferState m => Ref -> m Data.PureExpression
 getRefExpr ref = Lens.use (refMapAt ref . rExpression)
 
 applyStructureRule ::
   MonadState InferState m =>
-  (Data.Lambda Data.PureGuidExpression -> Data.Expression Data.PureGuidExpression) ->
-  (Data.Expression Data.PureGuidExpression -> Maybe (Data.Lambda Data.PureGuidExpression)) ->
+  (Data.Lambda Data.PureExpression -> Data.ExpressionBody Data.PureExpression) ->
+  (Data.ExpressionBody Data.PureExpression -> Maybe (Data.Lambda Data.PureExpression)) ->
   LambdaComponents ->
   m ()
 applyStructureRule cons uncons (LambdaComponents parentRef paramTypeRef resultRef) = do
-  pExpr <- getRefExpr parentRef
-  let Data.GuidExpression g expr = Data.unPureGuidExpression pExpr
+  Data.Expression g expr () <- getRefExpr parentRef
   case uncons expr of
     Nothing -> return ()
     Just (Data.Lambda paramType result) -> do
       setRefExpr paramTypeRef paramType
       setRefExpr resultRef result
-  setRefExpr parentRef . Data.pureGuidExpression g . cons =<<
+  setRefExpr parentRef . Data.pureExpression g . cons =<<
     liftM2 Data.Lambda (getRefExpr paramTypeRef) (getRefExpr resultRef)
 
 subst ::
-  Guid -> Data.PureGuidExpression ->
-  Data.PureGuidExpression -> Data.PureGuidExpression
+  Guid -> Data.PureExpression ->
+  Data.PureExpression -> Data.PureExpression
 subst from to expr =
-  case pgeExpr expr of
+  case Data.eValue expr of
   Data.ExpressionGetVariable (Data.ParameterRef g)
     | g == from -> to
   _ ->
-    (Data.atPureGuidExpression . Data.atGeValue . fmap)
+    (Data.atEValue . fmap)
     (subst from to) expr
 
 recurseSubst ::
   MonadState InferState m =>
-  Data.PureGuidExpression -> Guid -> Ref -> Ref -> m Data.PureGuidExpression
+  Data.PureExpression -> Guid -> Ref -> Ref -> m Data.PureExpression
 recurseSubst preSubstExpr paramGuid argRef postSubstRef = do
   -- PreSubst with Subst => PostSubst
   -- TODO: Mark substituted holes..
@@ -446,26 +434,23 @@ recurseSubst preSubstExpr paramGuid argRef postSubstRef = do
   return preSubstExpr
   where
     mergeToArg pre post =
-      case pgeExpr pre of
+      case Data.eValue pre of
       Data.ExpressionGetVariable (Data.ParameterRef g)
         | g == paramGuid -> setRefExpr argRef post
       preExpr ->
-        case Data.matchExpression mergeToArg preExpr (pgeExpr post) of
+        case Data.matchExpressionBody mergeToArg preExpr (Data.eValue post) of
         Just x -> do
           _ <- Traversable.sequence x
           return ()
         Nothing -> return ()
 
-maybeLambda :: Data.Expression a -> Maybe (Data.Lambda a)
+maybeLambda :: Data.ExpressionBody a -> Maybe (Data.Lambda a)
 maybeLambda (Data.ExpressionLambda x) = Just x
 maybeLambda _ = Nothing
 
-maybePi :: Data.Expression a -> Maybe (Data.Lambda a)
+maybePi :: Data.ExpressionBody a -> Maybe (Data.Lambda a)
 maybePi (Data.ExpressionPi x) = Just x
 maybePi _ = Nothing
-
-pgeExpr :: Data.PureGuidExpression -> Data.Expression Data.PureGuidExpression
-pgeExpr = Data.geValue . Data.unPureGuidExpression
 
 applyRule :: MonadState InferState m => Rule -> m ()
 applyRule (RuleUnion r0 r1) = do
@@ -476,77 +461,73 @@ applyRule (RuleLambdaStructure lambda) =
 applyRule (RulePiStructure lambda) =
   applyStructureRule Data.ExpressionPi maybePi lambda
 applyRule (RuleSimpleType (TypedValue val typ)) = do
-  valGExpr <- getRefExpr val
-  let Data.GuidExpression g valExpr = Data.unPureGuidExpression valGExpr
+  Data.Expression g valExpr () <- getRefExpr val
   case valExpr of
     Data.ExpressionSet -> setRefExpr typ setExpr
     Data.ExpressionPi _ -> setRefExpr typ setExpr
     Data.ExpressionBuiltin b -> setRefExpr typ $ Data.bType b
     Data.ExpressionLiteralInteger _ -> setRefExpr typ intTypeExpr
     Data.ExpressionLambda (Data.Lambda paramType _) ->
-      setRefExpr typ . Data.pureGuidExpression g $
+      setRefExpr typ . Data.pureExpression g $
       Data.makePi paramType hole
     _ -> return ()
 applyRule (RuleLambdaBodyType (LambdaBodyType lambdaG lambdaType bodyType)) = do
-  setRefExpr lambdaType . Data.pureGuidExpression lambdaG .
+  setRefExpr lambdaType . Data.pureExpression lambdaG .
     Data.makePi hole =<< getRefExpr bodyType
-  lambdaTGExpr <- getRefExpr lambdaType
-  let Data.GuidExpression piG lambdaTExpr = Data.unPureGuidExpression lambdaTGExpr
+  Data.Expression piG lambdaTExpr () <- getRefExpr lambdaType
   case lambdaTExpr of
     Data.ExpressionPi (Data.Lambda _ resultType) ->
       setRefExpr bodyType $ subst piG
-      ( Data.pureGuidExpression (Guid.fromString "getVar")
+      ( Data.pureExpression (Guid.fromString "getVar")
         (Data.ExpressionGetVariable (Data.ParameterRef lambdaG))
       )
       resultType
     _ -> return ()
 applyRule (RuleApply (ApplyComponents apply func arg)) = do
   -- ArgT => ParamT
-  setRefExpr (tvType func) . Data.pureGuidExpression someGuid .
+  setRefExpr (tvType func) . Data.pureExpression someGuid .
     (`Data.makePi` hole) =<< getRefExpr (tvType arg)
   -- If Arg is GetParam, ApplyT <=> ResultT
   argExpr <- getRefExpr $ tvVal arg
-  case pgeExpr argExpr of
+  case Data.eValue argExpr of
     Data.ExpressionGetVariable (Data.ParameterRef _) -> do
-      setRefExpr (tvType func) . Data.pureGuidExpression someGuid .
+      setRefExpr (tvType func) . Data.pureExpression someGuid .
         Data.makePi hole =<< getRefExpr (tvType apply)
       funcTExpr <- getRefExpr $ tvType func
-      case pgeExpr funcTExpr of
+      case Data.eValue funcTExpr of
         Data.ExpressionPi (Data.Lambda _ resultT) ->
           setRefExpr (tvType apply) resultT
         _ -> return ()
     _ -> return ()
 
-  Data.PureGuidExpression
-    (Data.GuidExpression funcTGuid funcTExpr) <-
+  Data.Expression funcTGuid funcTExpr () <-
     getRefExpr $ tvType func
   case funcTExpr of
     Data.ExpressionPi (Data.Lambda paramT resultT) -> do
       -- ParamT => ArgT
       setRefExpr (tvType arg) paramT
       -- Recurse-Subst ResultT Arg ApplyT
-      setRefExpr (tvType func) . Data.pureGuidExpression funcTGuid .
+      setRefExpr (tvType func) . Data.pureExpression funcTGuid .
         Data.makePi paramT =<<
         recurseSubst resultT funcTGuid (tvVal arg) (tvType apply)
     _ -> return ()
 
-  funcPge@(Data.PureGuidExpression
-    (Data.GuidExpression funcGuid funcExpr)) <-
+  funcPge@(Data.Expression funcGuid funcExpr ()) <-
     getRefExpr $ tvVal func
   case funcExpr of
     Data.ExpressionLambda (Data.Lambda paramT body) -> do
       -- ParamT => ArgT
       setRefExpr (tvType arg) paramT
       -- ArgT => ParamT
-      setRefExpr (tvVal func) . Data.pureGuidExpression someGuid .
+      setRefExpr (tvVal func) . Data.pureExpression someGuid .
         (`Data.makeLambda` hole) =<< getRefExpr (tvType arg)
       -- Recurse-Subst Body Arg Apply
-      setRefExpr (tvVal func) . Data.pureGuidExpression funcGuid .
+      setRefExpr (tvVal func) . Data.pureExpression funcGuid .
         Data.makeLambda paramT =<<
         recurseSubst body funcGuid (tvVal arg) (tvVal apply)
     Data.ExpressionHole -> return ()
     _ ->
-      setRefExpr (tvVal apply) . Data.pureGuidExpression someGuid $
+      setRefExpr (tvVal apply) . Data.pureExpression someGuid $
         Data.makeApply funcPge argExpr
   where
     someGuid = Guid.fromString "Arbitrary"
@@ -555,12 +536,12 @@ inferFromEntity ::
   Monad m =>
   Loader m ->
   Maybe Data.DefinitionIRef ->
-  ExpressionEntity s ->
+  Data.Expression s ->
   m (Expression s, RefMap)
 inferFromEntity loader mRecursiveDef =
   (liftM . second) infer . fromEntity loader mRecursiveDef
 
-deref :: RefMap -> Ref -> ([Conflict], Data.PureGuidExpression)
+deref :: RefMap -> Ref -> ([Conflict], Data.PureExpression)
 deref (RefMap m) (Ref x) =
   ( refData ^. rErrors
   , refData ^. rExpression

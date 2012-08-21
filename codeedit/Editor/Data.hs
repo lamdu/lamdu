@@ -9,16 +9,15 @@ module Editor.Data
   , Apply(..), atApplyFunc, atApplyArg
   , ApplyI
   , Builtin(..)
-  , Expression(..), makeApply, makePi, makeLambda
+  , ExpressionBody(..), makeApply, makePi, makeLambda
   , ExpressionIRefProperty, eipGuid
   , ExpressionI, ExpressionIRef(..)
-  , GuidExpression(..), atGeGuid, atGeValue
-  , PureGuidExpression(..), pureGuidExpression, atPureGuidExpression
+  , Expression(..), atEGuid, atEValue, atEPayload
+  , PureExpression, pureExpression
   , newExprIRef, readExprIRef, writeExprIRef, exprIRefGuid
   , newIRefExpressionFromPure, writeIRefExpressionFromPure
-  , mapMExpression
   , canonizeIdentifiers
-  , matchExpression
+  , matchExpressionBody
   ) where
 
 import Control.Applicative (Applicative(..), liftA2)
@@ -56,7 +55,7 @@ eipGuid :: ExpressionIRefProperty m -> Guid
 eipGuid = IRef.guid . unExpressionIRef . Property.value
 
 newtype ExpressionIRef = ExpressionIRef {
-  unExpressionIRef :: IRef (Expression ExpressionIRef)
+  unExpressionIRef :: IRef (ExpressionBody ExpressionIRef)
   } deriving (Eq, Ord, Show)
 
 exprIRefGuid :: ExpressionIRef -> Guid
@@ -64,17 +63,17 @@ exprIRefGuid = IRef.guid . unExpressionIRef
 
 newExprIRef
   :: Monad m
-  => Expression ExpressionIRef -> Transaction t m ExpressionIRef
+  => ExpressionBody ExpressionIRef -> Transaction t m ExpressionIRef
 newExprIRef = liftM ExpressionIRef . Transaction.newIRef
 
 readExprIRef
   :: Monad m
-  => ExpressionIRef -> Transaction t m (Expression ExpressionIRef)
+  => ExpressionIRef -> Transaction t m (ExpressionBody ExpressionIRef)
 readExprIRef = Transaction.readIRef . unExpressionIRef
 
 writeExprIRef
   :: Monad m
-  => ExpressionIRef -> Expression ExpressionIRef -> Transaction t m ()
+  => ExpressionIRef -> ExpressionBody ExpressionIRef -> Transaction t m ()
 writeExprIRef = Transaction.writeIRef . unExpressionIRef
 
 data Lambda expr = Lambda {
@@ -113,7 +112,7 @@ data Builtin expr = Builtin
   , bType :: expr
   } deriving (Eq, Ord, Show, Functor)
 
-data Expression expr
+data ExpressionBody expr
   = ExpressionLambda (Lambda expr)
   | ExpressionPi (Lambda expr)
   | ExpressionApply (Apply expr)
@@ -123,18 +122,18 @@ data Expression expr
   | ExpressionBuiltin (Builtin expr)
   | ExpressionSet
   deriving (Eq, Ord, Functor)
-type ExpressionI = Expression ExpressionIRef
+type ExpressionI = ExpressionBody ExpressionIRef
 
-makeApply :: expr -> expr -> Expression expr
+makeApply :: expr -> expr -> ExpressionBody expr
 makeApply func arg = ExpressionApply $ Apply func arg
 
-makePi :: expr -> expr -> Expression expr
+makePi :: expr -> expr -> ExpressionBody expr
 makePi argType resultType = ExpressionPi $ Lambda argType resultType
 
-makeLambda :: expr -> expr -> Expression expr
+makeLambda :: expr -> expr -> ExpressionBody expr
 makeLambda argType body = ExpressionLambda $ Lambda argType body
 
-instance Show expr => Show (Expression expr) where
+instance Show expr => Show (ExpressionBody expr) where
   show (ExpressionLambda (Lambda paramType body)) = concat ["\\:", showP paramType, "==>", showP body]
   show (ExpressionPi (Lambda paramType body)) = concat [showP paramType, "->", showP body]
   show (ExpressionApply (Apply func arg)) = unwords [showP func, showP arg]
@@ -158,43 +157,27 @@ data Definition expr = Definition
 type DefinitionI = Definition ExpressionIRef
 type DefinitionIRef = IRef DefinitionI
 
-newtype PureGuidExpression = PureGuidExpression
-  { unPureGuidExpression :: GuidExpression PureGuidExpression
-  } deriving (Eq)
+type PureExpression = Expression ()
 
-instance Show PureGuidExpression where
-  show = show . unPureGuidExpression
-
-data GuidExpression ref = GuidExpression
-  { geGuid :: Guid
-  , geValue :: Expression ref
+data Expression a = Expression
+  { eGuid :: Guid
+  , eValue :: ExpressionBody (Expression a)
+  , ePayload :: a
   } deriving (Functor, Eq)
 
-instance Show ref => Show (GuidExpression ref) where
-  show (GuidExpression guid value) = show guid ++ ":" ++ show value
+instance Show a => Show (Expression a) where
+  show (Expression guid value payload) = show guid ++ ":" ++ show value ++ "{" ++ show payload ++ "}"
 
-AtFieldTH.make ''PureGuidExpression
-AtFieldTH.make ''GuidExpression
+AtFieldTH.make ''Expression
 
-pureGuidExpression :: Guid -> Expression PureGuidExpression -> PureGuidExpression
-pureGuidExpression guid = PureGuidExpression . GuidExpression guid
+pureExpression :: Guid -> ExpressionBody PureExpression -> PureExpression
+pureExpression guid body = Expression guid body ()
 
 variableRefGuid :: VariableRef -> Guid
 variableRefGuid (ParameterRef i) = i
 variableRefGuid (DefinitionRef i) = IRef.guid i
 
-mapMExpression
-  :: Monad m
-  => (from
-      -> ( m (Expression from)
-         , Expression to -> m to ))
-  -> from -> m to
-mapMExpression f src =
-  afterRecurse =<< mapM (mapMExpression f) =<< makeExpr
-  where
-    (makeExpr, afterRecurse) = f src
-
-hasLambda :: Expression expr -> Bool
+hasLambda :: ExpressionBody expr -> Bool
 hasLambda ExpressionPi {} = True
 hasLambda ExpressionLambda {} = True
 hasLambda _ = False
@@ -202,23 +185,23 @@ hasLambda _ = False
 type Scope = [(Guid, Guid)]
 
 newIRefExpressionFromPure
-  :: Monad m => PureGuidExpression -> Transaction t m ExpressionIRef
+  :: Monad m => PureExpression -> Transaction t m ExpressionIRef
 newIRefExpressionFromPure =
   newIRefExpressionFromPureH []
 
-newIRefExpressionFromPureH :: Monad m => Scope -> PureGuidExpression -> Transaction t m ExpressionIRef
+newIRefExpressionFromPureH :: Monad m => Scope -> PureExpression -> Transaction t m ExpressionIRef
 newIRefExpressionFromPureH scope =
   liftM ExpressionIRef . Transaction.newIRefWithGuid .
   flip (expressionIFromPure scope)
 
 writeIRefExpressionFromPure
-  :: Monad m => ExpressionIRef -> PureGuidExpression -> Transaction t m ()
+  :: Monad m => ExpressionIRef -> PureExpression -> Transaction t m ()
 writeIRefExpressionFromPure (ExpressionIRef iref) =
   Transaction.writeIRef iref <=< expressionIFromPure [] (IRef.guid iref)
 
 expressionIFromPure
-  :: Monad m => Scope -> Guid -> PureGuidExpression -> Transaction t m ExpressionI
-expressionIFromPure scope newGuid (PureGuidExpression (GuidExpression oldGuid expr)) =
+  :: Monad m => Scope -> Guid -> PureExpression -> Transaction t m ExpressionI
+expressionIFromPure scope newGuid (Expression oldGuid expr ()) =
   mapM (newIRefExpressionFromPureH newScope) newExpr
   where
     newScope
@@ -231,16 +214,16 @@ expressionIFromPure scope newGuid (PureGuidExpression (GuidExpression oldGuid ex
       x -> x
 
 canonizeIdentifiers
-  :: Random.RandomGen g => g -> PureGuidExpression -> PureGuidExpression
+  :: Random.RandomGen g => g -> PureExpression -> PureExpression
 canonizeIdentifiers gen =
   runIdentity . runRandomT gen . (`runReaderT` Map.empty) . go
   where
     onLambda oldGuid newGuid (Lambda paramType body) =
       liftM2 Lambda (go paramType) .
       Reader.local (Map.insert oldGuid newGuid) $ go body
-    go (PureGuidExpression (GuidExpression oldGuid v)) = do
+    go (Expression oldGuid v ()) = do
       newGuid <- lift nextRandom
-      liftM (pureGuidExpression newGuid) $
+      liftM (pureExpression newGuid) $
         case v of
         ExpressionLambda lambda ->
           liftM ExpressionLambda $ onLambda oldGuid newGuid lambda
@@ -254,51 +237,48 @@ canonizeIdentifiers gen =
           Map.lookup guid
         x -> return x
 
-matchExpression ::
-  (a -> b -> c) -> Expression a -> Expression b -> Maybe (Expression c)
-matchExpression f (ExpressionLambda l0) (ExpressionLambda l1) =
+matchExpressionBody ::
+  (a -> b -> c) -> ExpressionBody a -> ExpressionBody b -> Maybe (ExpressionBody c)
+matchExpressionBody f (ExpressionLambda l0) (ExpressionLambda l1) =
   Just . ExpressionLambda $ liftA2 f l0 l1
-matchExpression f (ExpressionPi l0) (ExpressionPi l1) =
+matchExpressionBody f (ExpressionPi l0) (ExpressionPi l1) =
   Just . ExpressionPi $ liftA2 f l0 l1
-matchExpression f (ExpressionApply a0) (ExpressionApply a1) =
+matchExpressionBody f (ExpressionApply a0) (ExpressionApply a1) =
   Just . ExpressionApply $ liftA2 f a0 a1
-matchExpression _
+matchExpressionBody _
   (ExpressionGetVariable v0)
   (ExpressionGetVariable v1)
   | v0 == v1 = Just $ ExpressionGetVariable v0
-matchExpression _ ExpressionHole ExpressionHole =
+matchExpressionBody _ ExpressionHole ExpressionHole =
   Just ExpressionHole
-matchExpression _
+matchExpressionBody _
   (ExpressionLiteralInteger i0)
   (ExpressionLiteralInteger i1)
   | i0 == i1 = Just $ ExpressionLiteralInteger i0
-matchExpression f
+matchExpressionBody f
   (ExpressionBuiltin (Builtin n0 t0))
   (ExpressionBuiltin (Builtin n1 t1))
   | n0 == n1 = Just . ExpressionBuiltin . Builtin n0 $ f t0 t1
-matchExpression _ ExpressionSet ExpressionSet =
+matchExpressionBody _ ExpressionSet ExpressionSet =
   Just ExpressionSet
-matchExpression _ _ _ = Nothing
+matchExpressionBody _ _ _ = Nothing
 
 derive makeFoldable ''Builtin
 derive makeFoldable ''Apply
 derive makeFoldable ''Lambda
-derive makeFoldable ''Expression
-derive makeFoldable ''GuidExpression
+derive makeFoldable ''ExpressionBody
 derive makeTraversable ''Builtin
 derive makeTraversable ''Apply
 derive makeTraversable ''Lambda
-derive makeTraversable ''Expression
-derive makeTraversable ''GuidExpression
-derive makeBinary ''PureGuidExpression
-derive makeBinary ''GuidExpression
+derive makeTraversable ''ExpressionBody
+derive makeBinary ''Expression
 derive makeBinary ''ExpressionIRef
 derive makeBinary ''FFIName
 derive makeBinary ''VariableRef
 derive makeBinary ''Lambda
 derive makeBinary ''Apply
 derive makeBinary ''Builtin
-derive makeBinary ''Expression
+derive makeBinary ''ExpressionBody
 derive makeBinary ''Definition
 AtFieldTH.make ''Lambda
 AtFieldTH.make ''Apply

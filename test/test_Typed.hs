@@ -9,23 +9,13 @@ import qualified Editor.Data as Data
 import qualified Editor.Data.Typed as Typed
 import qualified Test.Framework as TestFramework
 
-type Entity = Typed.ExpressionEntity ()
-
-mkEntity :: Data.PureGuidExpression -> Entity
-mkEntity =
-  Typed.ExpressionEntity () . fmap mkEntity . Data.unPureGuidExpression
-
 errorLoader :: Typed.Loader m
 errorLoader = Typed.Loader $ error . show
 
-withoutLoader ::
-  Typed.ExpressionEntity s ->
-  (Typed.Expression s, Typed.RefMap)
-withoutLoader = runIdentity . Typed.inferFromEntity errorLoader Nothing
-
 toExpression ::
-  Data.PureGuidExpression -> (Typed.Expression (), Typed.RefMap)
-toExpression = withoutLoader . mkEntity
+  Data.PureExpression ->
+  (Typed.Expression (), Typed.RefMap)
+toExpression = runIdentity . Typed.inferFromEntity errorLoader Nothing
 
 showExpressionWithInferred :: Typed.RefMap -> Typed.Expression () -> String
 showExpressionWithInferred refMap =
@@ -43,26 +33,26 @@ showExpressionWithInferred refMap =
       (map ("  " ++) . Foldable.concat .
        fmap go) expr
       where
-        expr = Typed.eValue typedExpr
-        Typed.TypedValue val typ = Typed.eInferred typedExpr
+        expr = Data.eValue typedExpr
+        Typed.TypedValue val typ = Typed.iRefs $ Data.ePayload typedExpr
 
 mkExpr ::
-  String -> Data.Expression Data.PureGuidExpression ->
-  Data.PureGuidExpression
-mkExpr = Data.pureGuidExpression . Guid.fromString
+  String -> Data.ExpressionBody Data.PureExpression ->
+  Data.PureExpression
+mkExpr = Data.pureExpression . Guid.fromString
 
-hole :: Data.PureGuidExpression
+hole :: Data.PureExpression
 hole = mkExpr "hole" Data.ExpressionHole
 
-setType :: Data.PureGuidExpression
+setType :: Data.PureExpression
 setType = mkExpr "set" Data.ExpressionSet
 
-intType :: Data.PureGuidExpression
+intType :: Data.PureExpression
 intType =
   mkExpr "int" . Data.ExpressionBuiltin $
   Data.Builtin (Data.FFIName ["Prelude"] "Integer") setType
 
-boolType :: Data.PureGuidExpression
+boolType :: Data.PureExpression
 boolType =
   mkExpr "bool" . Data.ExpressionBuiltin $
   Data.Builtin (Data.FFIName ["Prelude"] "Bool") setType
@@ -73,15 +63,15 @@ zipMatch f (x:xs) (y:ys) = f x y && zipMatch f xs ys
 zipMatch _ _ _ = False
 
 compareDeref ::
-  ([Typed.Conflict], Data.PureGuidExpression) ->
-  ([Typed.Conflict], Data.PureGuidExpression) ->
+  ([Typed.Conflict], Data.PureExpression) ->
+  ([Typed.Conflict], Data.PureExpression) ->
   Bool
 compareDeref (acs, aexpr) (bcs, bexpr) =
   zipMatch Typed.alphaEq acs bcs && Typed.alphaEq aexpr bexpr
 
-removeBuiltinTypes :: Data.PureGuidExpression -> Data.PureGuidExpression
+removeBuiltinTypes :: Data.PureExpression -> Data.PureExpression
 removeBuiltinTypes =
-  Data.atPureGuidExpression $ Data.atGeValue f
+  Data.atEValue f
   where
     f (Data.ExpressionBuiltin (Data.Builtin name _)) =
       Data.ExpressionBuiltin $ Data.Builtin name hole
@@ -153,6 +143,6 @@ main = TestFramework.defaultMain
         derefAll = map (Typed.deref refMap) . allRefs
     allRefs typedExpr =
       ([val, typ] ++) . Foldable.concat . fmap allRefs $
-      Typed.eValue typedExpr
+      Data.eValue typedExpr
       where
-        Typed.TypedValue val typ = Typed.eInferred typedExpr
+        Typed.TypedValue val typ = Typed.iRefs $ Data.ePayload typedExpr
