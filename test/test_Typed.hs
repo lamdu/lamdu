@@ -126,26 +126,22 @@ mkInferredNode g iVal iType body =
 main :: IO ()
 main = TestFramework.defaultMain
   [ testInfer "literal int"
-    (mkExpr "5" (Data.ExpressionLeaf (Data.LiteralInteger 5)))
-    (mkInferredLeaf (Data.LiteralInteger 5) intType)
+    (mkExpr "5" (Data.ExpressionLeaf (Data.LiteralInteger 5))) $
+    mkInferredLeaf (Data.LiteralInteger 5) intType
   , testInfer "simple apply"
-    (mkExpr "apply" (Data.makeApply hole hole))
-    (mkInferredNode "" hole hole
-      (Data.makeApply
-        (mkInferredLeaf Data.Hole (mkExpr "" (Data.makePi hole hole)))
-        (mkInferredLeaf Data.Hole hole)
-      )
-    )
+    (mkExpr "apply" (Data.makeApply hole hole)) $
+    mkInferredNode "" hole hole $
+    Data.makeApply
+      (mkInferredLeaf Data.Hole (mkExpr "" (Data.makePi hole hole)))
+      (mkInferredLeaf Data.Hole hole)
   , testInfer "apply"
-    (mkExpr "apply" (Data.makeApply intToBoolFunc hole))
-    (mkInferredNode ""
+    (mkExpr "apply" (Data.makeApply intToBoolFunc hole)) $
+    mkInferredNode ""
       (mkExpr "" (Data.makeApply intToBoolFunc hole))
-      boolType
-      (Data.makeApply
-        (mkInferredLeaf intToBoolFuncGetVar intToBool)
-        (mkInferredLeaf Data.Hole intType)
-      )
-    )
+      boolType $
+    Data.makeApply
+      (mkInferredLeaf intToBoolFuncGetVar intToBool)
+      (mkInferredLeaf Data.Hole intType)
   , testInfer "apply on var"
     (makeFunnyLambda "lambda"
       (mkExpr "applyInner"
@@ -154,35 +150,23 @@ main = TestFramework.defaultMain
           (mkExpr "var" (Data.makeParameterRef (Guid.fromString "lambda")))
         )
       )
-    )
-    (mkInferredNode "lambda"
+    ) $
+    mkInferredNode "lambda"
       (makeFunnyLambda "" hole)
-      (mkExpr "" (Data.makePi hole boolType))
-      (Data.makeLambda
-        (mkInferredLeaf Data.Hole setType)
-        (mkInferredNode ""
-          (mkExpr "" (Data.makeApply intToBoolFunc hole))
-          boolType
-          (Data.makeApply
-            (mkInferredLeaf intToBoolFuncGetVar intToBool)
-            (mkInferredNode ""
-              hole
-              intType
-              (Data.makeApply
-                (mkInferredLeaf
-                  Data.Hole
-                  (mkExpr "" (Data.makePi hole intType))
-                )
-                (mkInferredLeaf
-                  (Data.GetVariable (Data.ParameterRef (Guid.fromString "lambda")))
-                  hole
-                )
-              )
-            )
-          )
-        )
-      )
-    )
+      (mkExpr "" (Data.makePi hole boolType)) $
+    Data.makeLambda (mkInferredLeaf Data.Hole setType) $
+    mkInferredNode ""
+      (mkExpr "" (Data.makeApply intToBoolFunc hole))
+      boolType $
+    Data.makeApply (mkInferredLeaf intToBoolFuncGetVar intToBool) $
+    mkInferredNode ""
+      hole
+      intType $
+    Data.makeApply
+      (mkInferredLeaf Data.Hole (mkExpr "" (Data.makePi hole intType))) $
+    mkInferredLeaf
+      (Data.GetVariable (Data.ParameterRef (Guid.fromString "lambda")))
+      hole
   ]
   where
     makeFunnyLambda g =
