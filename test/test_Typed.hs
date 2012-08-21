@@ -1,10 +1,14 @@
-import Control.Arrow (second)
+import Control.Applicative (liftA2)
+import Control.Arrow (first, second)
+import Control.Monad (guard)
 import Control.Monad.Identity (runIdentity)
+import Data.Maybe (isJust)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit (assertBool)
 import qualified Data.Foldable as Foldable
 import qualified Data.List as List
 import qualified Data.Store.Guid as Guid
+import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
 import qualified Editor.Data.Typed as Typed
 import qualified Test.Framework as TestFramework
@@ -16,25 +20,6 @@ toExpression ::
   Data.PureExpression ->
   (Typed.Expression (), Typed.RefMap)
 toExpression = runIdentity . Typed.inferFromEntity errorLoader Nothing
-
-showExpressionWithInferred :: Typed.RefMap -> Typed.Expression () -> String
-showExpressionWithInferred refMap =
-  List.intercalate "\n" . go
-  where
-    showDeref x =
-      case Typed.deref refMap x of
-      ([], pureExpr) -> show pureExpr
-      other -> "ERROR: " ++ show other
-    go typedExpr =
-      [ "Expr: " ++ show (fmap (const ()) expr)
-      , "  IVal:  " ++ showDeref val
-      , "  IType: " ++ showDeref typ
-      ] ++
-      (map ("  " ++) . Foldable.concat .
-       fmap go) expr
-      where
-        expr = Data.eValue typedExpr
-        Typed.TypedValue val typ = Typed.iRefs $ Data.ePayload typedExpr
 
 mkExpr ::
   String -> Data.ExpressionBody Data.PureExpression ->
@@ -57,18 +42,6 @@ boolType =
   mkExpr "bool" . Data.ExpressionBuiltin $
   Data.Builtin (Data.FFIName ["Prelude"] "Bool") setType
 
-zipMatch :: (a -> b -> Bool) -> [a] -> [b] -> Bool
-zipMatch _ [] [] = True
-zipMatch f (x:xs) (y:ys) = f x y && zipMatch f xs ys
-zipMatch _ _ _ = False
-
-compareDeref ::
-  ([Typed.Conflict], Data.PureExpression) ->
-  ([Typed.Conflict], Data.PureExpression) ->
-  Bool
-compareDeref (acs, aexpr) (bcs, bexpr) =
-  zipMatch Typed.alphaEq acs bcs && Typed.alphaEq aexpr bexpr
-
 removeBuiltinTypes :: Data.PureExpression -> Data.PureExpression
 removeBuiltinTypes =
   Data.atEValue f
@@ -77,42 +50,127 @@ removeBuiltinTypes =
       Data.ExpressionBuiltin $ Data.Builtin name hole
     f x = fmap removeBuiltinTypes x
 
+type InferredExpr = ([Typed.Conflict], Data.PureExpression)
+type InferResults = Data.Expression (InferredExpr, InferredExpr)
+
+inferResults :: Typed.Expression s -> InferResults
+inferResults =
+  fmap f
+  where
+    f inferred = (Typed.iValue inferred, Typed.iType inferred)
+
+showExpressionWithInferred :: InferResults -> String
+showExpressionWithInferred =
+  List.intercalate "\n" . go
+  where
+    showInferred ([], pureExpr) = show pureExpr
+    showInferred x = "ERROR: " ++ show x
+    go typedExpr =
+      [ "Expr: " ++ show (fmap (const ()) expr)
+      , "  IVal:  " ++ showInferred val
+      , "  IType: " ++ showInferred typ
+      ] ++
+      (map ("  " ++) . Foldable.concat .
+       fmap go) expr
+      where
+        expr = Data.eValue typedExpr
+        (val, typ) = Data.ePayload typedExpr
+
+compareInferred :: InferResults -> InferResults -> Bool
+compareInferred x y =
+  isJust $ Traversable.sequence =<< Data.matchExpression f x y
+  where
+    f (v0, t0) (v1, t1) =
+      liftA2 (,) (matchI v0 v1) (matchI t0 t1)
+    matchI (c0, r0) (c1, r1) = do
+      guard $ length c0 == length c1
+      liftA2 (,)
+        (sequence (zipWith matchPure c0 c1))
+        (matchPure r0 r1)
+    matchPure = Data.matchExpression nop
+    nop () () = ()
+
+mkInferredLeaf :: Data.ExpressionBody () -> Data.PureExpression -> InferResults
+mkInferredLeaf leaf typ =
+  Data.Expression
+  { Data.eGuid = Guid.fromString "leaf"
+  , Data.eValue = fmap (error errMsg) leaf
+  , Data.ePayload =
+      ( ([], Data.pureExpression g (fmap (error errMsg) leaf))
+      , ([], typ)
+      )
+  }
+  where
+    errMsg = "leaf shouldn't have children"
+    g = Guid.fromString "leaf"
+
+mkInferredNode ::
+  String -> Data.PureExpression -> Data.PureExpression ->
+  Data.ExpressionBody InferResults -> InferResults
+mkInferredNode g iVal iType body =
+  Data.Expression (Guid.fromString g) body (([], iVal), ([], iType))
+
 main :: IO ()
 main = TestFramework.defaultMain
-  [ testSuccessfulInferSame "literal int"
+  [ testInfer "literal int"
     (mkExpr "5" (Data.ExpressionLiteralInteger 5))
-    [ intType ]
-  , testSuccessfulInfer "simple application"
+    (mkInferredLeaf (Data.ExpressionLiteralInteger 5) intType)
+  , testInfer "simple apply"
     (mkExpr "apply" (Data.makeApply hole hole))
-    [ hole, hole
-    , hole, mkExpr "" $ Data.makePi hole hole
-    , hole, hole
-    ]
-  , testSuccessfulInferSame "application"
-    (mkExpr "apply" (Data.makeApply funnyFunc hole))
-    [ boolType
-    , funnyFunc, funnyFuncType
-    , funnyFuncType, setType, intType, setType, setType, setType, boolType, setType, setType, setType
-    , hole, intType
-    ]
-  , testSuccessfulInfer "apply on var"
-    (makeFunnyLambda "lambda"
-      (mkExpr "applyInner" (Data.makeApply hole
-        (mkExpr "var" (Data.ExpressionGetVariable (
-          Data.ParameterRef (Guid.fromString "lambda"))
-        ))
-      ))
+    (mkInferredNode "" hole hole
+      (Data.makeApply
+        (mkInferredLeaf Data.ExpressionHole (mkExpr "" (Data.makePi hole hole)))
+        (mkInferredLeaf Data.ExpressionHole hole)
+      )
     )
-    [ makeFunnyLambda "" hole
-    , mkExpr "" $ Data.makePi hole boolType
-    , hole, setType
-    , mkExpr "" $ Data.makeApply funnyFunc hole, boolType
-    , funnyFunc, funnyFuncType
-    , funnyFuncType, setType, intType, setType, setType, setType, boolType, setType, setType, setType
-    , hole, intType
-    , hole, mkExpr "" $ Data.makePi hole intType
-    , mkExpr "" . Data.ExpressionGetVariable . Data.ParameterRef $ Guid.fromString "lambda", hole
-    ]
+  , testInfer "apply"
+    (mkExpr "apply" (Data.makeApply funnyFunc hole))
+    (mkInferredNode ""
+      (mkExpr "" (Data.makeApply (removeBuiltinTypes funnyFunc) hole))
+      (removeBuiltinTypes boolType)
+      (Data.makeApply
+        (mkInferredNode ""
+          (removeBuiltinTypes funnyFunc)
+          (removeBuiltinTypes funnyFuncType)
+          (Data.ExpressionBuiltin $ Data.Builtin funnyFuncName
+            (mkInferredNode ""
+              (removeBuiltinTypes funnyFuncType)
+              setType
+              (Data.makePi
+                (mkInferredNode ""
+                  (removeBuiltinTypes intType)
+                  setType
+                  (Data.ExpressionBuiltin . Data.Builtin (Data.FFIName ["Prelude"] "Integer") $
+                    mkInferredLeaf Data.ExpressionSet setType
+                  )
+                )
+                (mkInferredNode ""
+                  (removeBuiltinTypes boolType)
+                  setType
+                  (Data.ExpressionBuiltin . Data.Builtin (Data.FFIName ["Prelude"] "Bool") $
+                    mkInferredLeaf Data.ExpressionSet setType
+        ) ) ) ) ) )
+        (mkInferredLeaf Data.ExpressionHole (removeBuiltinTypes intType))
+      )
+    )
+  --, testInfer "apply on var"
+  --  (makeFunnyLambda "lambda"
+  --    (mkExpr "applyInner" (Data.makeApply hole
+  --      (mkExpr "var" (Data.ExpressionGetVariable (
+  --        Data.ParameterRef (Guid.fromString "lambda"))
+  --      ))
+  --    ))
+  --  )
+  --  [ makeFunnyLambda "" hole
+  --  , mkExpr "" $ Data.makePi hole boolType
+  --  , hole, setType
+  --  , mkExpr "" $ Data.makeApply funnyFunc hole, boolType
+  --  , funnyFunc, funnyFuncType
+  --  , funnyFuncType, setType, intType, setType, setType, setType, boolType, setType, setType, setType
+  --  , hole, intType
+  --  , hole, mkExpr "" $ Data.makePi hole intType
+  --  , mkExpr "" . Data.ExpressionGetVariable . Data.ParameterRef $ Guid.fromString "lambda", hole
+  --  ]
   ]
   where
     makeFunnyLambda g =
@@ -122,27 +180,16 @@ main = TestFramework.defaultMain
       Data.makeApply funnyFunc
     funnyFunc =
       mkExpr "funnyFunc" . Data.ExpressionBuiltin $
-      Data.Builtin (Data.FFIName ["Test"] "funnyFunc") funnyFuncType
+      Data.Builtin funnyFuncName funnyFuncType
+    funnyFuncName = Data.FFIName ["Test"] "funnyFunc"
     funnyFuncType = mkExpr "funcT" $ Data.makePi intType boolType
-    testSuccessfulInferSame name pureExpr =
-      testSuccessfulInfer name pureExpr . (pureExpr :)
-    testSuccessfulInfer name pureExpr =
-      testInfer name pureExpr . map ((,) [])
     testInfer name pureExpr result =
       testCase name .
       assertBool
         (unlines
          [ "Unexpected result expr:"
-         , showExpressionWithInferred refMap typedExpr
-         , show d
-         , show result
-         ]) . zipMatch compareDeref d $ (map . second) removeBuiltinTypes result
+         , showExpressionWithInferred typedExpr
+         , showExpressionWithInferred result
+         ]) $ compareInferred typedExpr result
       where
-        d = derefAll typedExpr
-        (typedExpr, refMap) = toExpression pureExpr
-        derefAll = map (Typed.deref refMap) . allRefs
-    allRefs typedExpr =
-      ([val, typ] ++) . Foldable.concat . fmap allRefs $
-      Data.eValue typedExpr
-      where
-        Typed.TypedValue val typ = Typed.iRefs $ Data.ePayload typedExpr
+        typedExpr = inferResults . fst $ toExpression pureExpr

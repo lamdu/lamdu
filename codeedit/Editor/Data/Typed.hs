@@ -1,10 +1,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleContexts, TemplateHaskell, DeriveFunctor #-}
 module Editor.Data.Typed
   ( Expression, Inferred(..), TypedValue(..)
-  , RefMap, Ref, deref, Conflict
+  , RefMap, Conflict
   , Loader(..)
   , inferFromEntity
-  , alphaEq
   ) where
 
 import Control.Applicative ((<*>))
@@ -173,13 +172,17 @@ instance Show RefMap where
     where
       showPair (x, y) = show x ++ "=>" ++ show y
 
+-- Used to refer to expressions in the inference state and resume inference.
+data InferNode = InferNode
+  { nRefs :: TypedValue
+  , _nScope :: Scope
+  }
+
 data Inferred s = Inferred
   { iStored :: s
-  , iValue :: Data.PureExpression
-  , iType :: Data.PureExpression
-  -- Used to resume inference in holes.
-  , iRefs :: TypedValue
-  , iScope :: Scope
+  , iValue :: ([Conflict], Data.PureExpression)
+  , iType :: ([Conflict], Data.PureExpression)
+  , iInferNode :: InferNode
   }
 
 type Expression s = Data.Expression (Inferred s)
@@ -254,9 +257,6 @@ mergeExprs p0 p1 =
           return e0
         _ -> mzero
 
-alphaEq :: Data.PureExpression -> Data.PureExpression -> Bool
-alphaEq x y = mergeExprs x y == Just x
-
 touch :: MonadState InferState m => Ref -> m ()
 touch ref = sTouchedRefs . IntSetLens.contains (unRef ref) .= True
 
@@ -320,7 +320,7 @@ nodeFromEntity ::
   Loader m ->
   Data.Expression s -> TypedValue ->
   ReaderT (Map Data.VariableRef Ref) (StateT InferState m)
-    (Expression s)
+    (Data.Expression (s, InferNode))
 nodeFromEntity loader entity typedValue = do
   setInitialValues
   bodyWithChildrenTvs <- Traversable.mapM addTypedVal $ Data.eValue entity
@@ -333,7 +333,7 @@ nodeFromEntity loader entity typedValue = do
       setRefExpr (tvType resultTypeTv) setExpr
       onLambda Data.ExpressionPi lambda
     _ -> Traversable.mapM go bodyWithChildrenTvs
-  liftM (Data.Expression (Data.eGuid entity) exprBody . Inferred (Data.ePayload entity) hole hole typedValue) Reader.ask
+  liftM (Data.Expression (Data.eGuid entity) exprBody . (,) (Data.ePayload entity) . InferNode typedValue) Reader.ask
   where
     onLambda cons (Data.Lambda paramType@(_, paramTypeTv) result) = do
       setRefExpr (tvType paramTypeTv) setExpr
@@ -359,7 +359,7 @@ fromEntity ::
   Loader m ->
   Maybe Data.DefinitionIRef ->
   Data.Expression s ->
-  m (Expression s, InferState)
+  m (Data.Expression (s, InferNode), InferState)
 fromEntity loader mRecursiveIRef rootEntity =
   (`runStateT` InferState (RefMap mempty) mempty) .
   (`runReaderT` mempty) $ do
@@ -539,7 +539,17 @@ inferFromEntity ::
   Data.Expression s ->
   m (Expression s, RefMap)
 inferFromEntity loader mRecursiveDef =
-  (liftM . second) infer . fromEntity loader mRecursiveDef
+  liftM (derefNodes . second infer) . fromEntity loader mRecursiveDef
+  where
+    derefNodes (expr, state) =
+      (fmap (derefNode state) expr, state)
+    derefNode state (s, inferNode) =
+      Inferred
+      { iStored = s
+      , iValue = deref state . tvVal $ nRefs inferNode
+      , iType = deref state . tvType $ nRefs inferNode
+      , iInferNode = inferNode
+      }
 
 deref :: RefMap -> Ref -> ([Conflict], Data.PureExpression)
 deref (RefMap m) (Ref x) =

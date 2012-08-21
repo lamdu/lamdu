@@ -18,10 +18,11 @@ module Editor.Data
   , newIRefExpressionFromPure, writeIRefExpressionFromPure
   , canonizeIdentifiers
   , matchExpressionBody
+  , matchExpression
   ) where
 
 import Control.Applicative (Applicative(..), liftA2)
-import Control.Monad (liftM, liftM2, (<=<))
+import Control.Monad ((<=<), guard, liftM, liftM2, mzero)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Random (nextRandom, runRandomT)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -40,7 +41,7 @@ import Data.Store.IRef (IRef)
 import Data.Store.Property (Property)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (Traversable(..))
-import Prelude hiding (mapM)
+import Prelude hiding (mapM, sequence)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Map as Map
@@ -140,7 +141,7 @@ instance Show expr => Show (ExpressionBody expr) where
   show (ExpressionGetVariable (ParameterRef guid)) = "par:" ++ show guid
   show (ExpressionGetVariable (DefinitionRef defI)) = "def:" ++ show (IRef.guid defI)
   show (ExpressionLiteralInteger int) = show int
-  show (ExpressionBuiltin (Builtin name _)) = show name
+  show (ExpressionBuiltin (Builtin name typ)) = show name ++ ":" ++ show typ
   show ExpressionHole = "Hole"
   show ExpressionSet = "Set"
 
@@ -263,14 +264,34 @@ matchExpressionBody _ ExpressionSet ExpressionSet =
   Just ExpressionSet
 matchExpressionBody _ _ _ = Nothing
 
+matchExpression ::
+  (a -> b -> c) -> Expression a -> Expression b -> Maybe (Expression c)
+matchExpression f e0 e1 =
+  runReaderT (go e0 e1) (Map.empty)
+  where
+    go (Expression g0 body0 val0) (Expression g1 body1 val1) =
+      fmap (flip (Expression g0) (f val0 val1)) .
+      Reader.local (Map.insert g1 g0) $
+      case matchExpressionBody go body0 body1 of
+      Just x -> sequence x
+      Nothing ->
+        case (body0, body1) of
+        (ExpressionGetVariable (ParameterRef par0),
+         ExpressionGetVariable (ParameterRef par1)) -> do
+          guard . (par0 ==) =<< lift =<< Reader.asks (Map.lookup par1)
+          return . ExpressionGetVariable $ ParameterRef par0
+        _ -> mzero
+
 derive makeFoldable ''Builtin
 derive makeFoldable ''Apply
 derive makeFoldable ''Lambda
 derive makeFoldable ''ExpressionBody
+derive makeFoldable ''Expression
 derive makeTraversable ''Builtin
 derive makeTraversable ''Apply
 derive makeTraversable ''Lambda
 derive makeTraversable ''ExpressionBody
+derive makeTraversable ''Expression
 derive makeBinary ''Expression
 derive makeBinary ''ExpressionIRef
 derive makeBinary ''FFIName

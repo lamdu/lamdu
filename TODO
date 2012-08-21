@@ -2,7 +2,7 @@
   Except DefinitionRefs really using IRefs?
 
 * Builtins should be special definitions rather than expressions.
-  This will remove duplication in inferred stuff.
+  This will remove duplication in inferred stuff and make tests more sane.
 
 * Holes can have same IDs for same results emphasizing sameness
 
