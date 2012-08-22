@@ -7,6 +7,7 @@ import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
+import qualified Editor.Config as Config
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 make
@@ -16,4 +17,5 @@ make
   -> OTransaction ViewTag m (ExpressionGui m)
 make name =
   liftM ExpressionGui.fromValueWidget .
-  BWidgets.makeLabel name . Widget.toAnimId
+    BWidgets.setTextColor Config.atomColor .
+    BWidgets.makeFocusableTextView name
