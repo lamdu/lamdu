@@ -16,10 +16,12 @@ module Editor.CodeEdit.Sugar
 
 import Control.Applicative ((<$>), (<*>))
 import Control.Lens ((^.))
-import Control.Monad (liftM, mzero)
+import Control.Monad (liftM, liftM2, mzero)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
+import Control.Monad.Trans.Random (runRandomT, nextRandom)
+import Control.Monad.Identity (runIdentity)
 import Data.Maybe (isJust)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
@@ -28,6 +30,7 @@ import System.Random (RandomGen)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
+import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -38,6 +41,7 @@ import qualified Editor.Data as Data
 import qualified Editor.Data.Ops as DataOps
 import qualified Editor.Data.Typed as DataTyped
 import qualified System.Random as Random
+import qualified System.Random.Utils as RandomUtils
 
 type T = Transaction ViewTag
 
@@ -271,6 +275,28 @@ mkActions stored =
     guidify = liftM Data.exprIRefGuid
     doReplace = guidify $ DataOps.replaceWithHole stored
 
+canonizeIdentifiers ::
+  RandomGen g => g -> Data.Expression a -> Data.Expression a
+canonizeIdentifiers gen =
+  runIdentity . runRandomT gen . (`runReaderT` Map.empty) . f
+  where
+    onLambda oldGuid newGuid (Data.Lambda paramType body) =
+      liftM2 Data.Lambda (f paramType) .
+      Reader.local (Map.insert oldGuid newGuid) $ f body
+    f (Data.Expression oldGuid v x) = do
+      newGuid <- lift nextRandom
+      liftM (flip (Data.Expression newGuid) x) $
+        case v of
+        Data.ExpressionLambda lambda ->
+          liftM Data.ExpressionLambda $ onLambda oldGuid newGuid lambda
+        Data.ExpressionPi lambda ->
+          liftM Data.ExpressionPi $ onLambda oldGuid newGuid lambda
+        Data.ExpressionApply (Data.Apply func arg) ->
+          liftM2 Data.makeApply (f func) (f arg)
+        gv@(Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef guid))) ->
+          Reader.asks (maybe gv Data.makeParameterRef . Map.lookup guid)
+        x -> return x
+
 mkExpressionRef ::
   Monad m =>
   ExprEntity m ->
@@ -285,7 +311,9 @@ mkExpressionRef ee expr = do
     , rActions = fmap mkActions $ eeProp ee
     }
   where
-    types = maybe [] (addConflicts . eeInferredTypes) $ Data.ePayload ee
+    types =
+      zipWith canonizeIdentifiers (RandomUtils.splits gen) .
+      maybe [] (addConflicts . eeInferredTypes) $ Data.ePayload ee
     addConflicts r = (r ^. DataTyped.rExpression) : (r ^. DataTyped.rErrors)
     gen =
       Random.mkStdGen . (*2) . BinaryUtils.decodeS . Guid.bs $
