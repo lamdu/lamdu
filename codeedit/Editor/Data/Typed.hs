@@ -19,7 +19,7 @@ import Control.Monad.Trans.State (StateT, execState, runStateT)
 import Data.IntMap (IntMap, (!))
 import Data.IntSet (IntSet)
 import Data.Map (Map)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid (mempty)
 import Data.Store.Guid (Guid)
 import qualified Control.Lens as Lens
@@ -266,6 +266,14 @@ mergeExprs p0 p1 =
 touch :: MonadState InferState m => Ref -> m ()
 touch ref = sTouchedRefs . IntSetLens.contains (unRef ref) .= True
 
+addIfNotMatch :: (a -> a -> Bool) -> a -> [a] -> [a]
+addIfNotMatch f x xs
+  | any (f x) xs = xs
+  | otherwise = x : xs
+
+alphaEq :: Data.Expression a -> Data.Expression b -> Bool
+alphaEq x = isJust . Data.matchExpression ((const . const) ()) x
+
 setRefExpr ::
   MonadState InferState m =>
   Ref -> Data.PureExpression -> m ()
@@ -276,7 +284,7 @@ setRefExpr ref newExpr = do
       when (mergedExpr /= curExpr) $ do
         touch ref
         refMapAt ref . rResult . rExpression .= mergedExpr
-    Nothing -> refMapAt ref . rResult . rErrors %= (newExpr :)
+    Nothing -> refMapAt ref . rResult . rErrors %= addIfNotMatch alphaEq newExpr
 
 addRules ::
   (MonadState InferState m, MonadReader Scope m) =>

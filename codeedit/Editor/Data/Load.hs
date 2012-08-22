@@ -4,8 +4,7 @@ module Editor.Data.Load
   , loadExpression, ExpressionEntity
   , loadPureExpression, loadPureDefinition
   , loadPureDefinitionBody, loadPureDefinitionType
-  )
-where
+  ) where
 
 import Control.Monad (liftM, liftM2, (<=<))
 import Data.Store.Property (Property(Property))
