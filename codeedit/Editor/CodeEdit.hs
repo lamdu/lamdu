@@ -91,7 +91,10 @@ makeSugarPanes = do
       let
         Data.Definition (Data.DefinitionExpression exprL) typeL =
           DataLoad.defEntityValue defLoad
-      (exprInferred, _) <- DataTyped.inferFromEntity undefined (Just defI) exprL
+      (exprInferred, _) <-
+        DataTyped.inferFromEntity
+        (DataTyped.Loader DataLoad.loadPureDefinitionType)
+        (Just defI) exprL
       exprS <- Sugar.convertExpression exprInferred
       return SugarPane
         { spDef = Sugar.DefinitionRef
