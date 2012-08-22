@@ -12,7 +12,7 @@ import Editor.OTransaction (OTransaction)
 import Graphics.UI.Bottle.Widget (EventHandlers)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
-import qualified Editor.CodeEdit.ExpressionEdit.BuiltinEdit as BuiltinEdit
+import qualified Editor.CodeEdit.ExpressionEdit.AtomEdit as AtomEdit
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
@@ -114,8 +114,8 @@ makeEditor sExpr =
     wrapNonHoleExpr . textParenify hasParens $ SectionEdit.make make section
   Sugar.ExpressionLiteralInteger integer ->
     notAHole $ LiteralEdit.makeInt integer
-  Sugar.ExpressionBuiltin builtin ->
-    wrapNonHoleExpr $ BuiltinEdit.make builtin
+  Sugar.ExpressionAtom atom ->
+    wrapNonHoleExpr $ AtomEdit.make atom
   where
     parenify mkParens hasParens mkWidget myId =
       mkWidget myId >>=

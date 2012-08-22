@@ -14,6 +14,7 @@ import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
+import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
@@ -22,6 +23,7 @@ import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
+import qualified Editor.Data.Load as DataLoad
 import qualified Editor.Data.Typed as DataTyped
 import qualified Editor.ITransaction as IT
 import qualified Editor.OTransaction as OT
@@ -62,12 +64,6 @@ makeSugarCache = do
     , scClipboards = [] -- clipboardsExprs
     }
 
-loadInferDefinition ::
-  Monad m =>
-  Data.DefinitionIRef ->
-  Transaction ViewTag m (DataTyped.Expression (Data.ExpressionIRefProperty (Transaction ViewTag m)))
-loadInferDefinition defI = undefined
-
 makeSugarPanes :: Monad m => Transaction ViewTag m [SugarPane m]
 makeSugarPanes = do
   panes <- Anchors.getP Anchors.panes
@@ -91,10 +87,20 @@ makeSugarPanes = do
       | i-1 >= 0 = Just $ movePane i (i-1)
       | otherwise = Nothing
     convertPane (i, defI) = do
-      typedDef <- loadInferDefinition defI
-      def <- undefined -- Sugar.convertDefinition typedDef
+      defLoad <- DataLoad.loadDefinition defI
+      let
+        Data.Definition (Data.DefinitionExpression exprL) typeL =
+          DataLoad.defEntityValue defLoad
+      (exprInferred, _) <- DataTyped.inferFromEntity undefined (Just defI) exprL
+      exprS <- Sugar.convertExpression exprInferred
       return SugarPane
-        { spDef = def
+        { spDef = Sugar.DefinitionRef
+            { Sugar.drGuid = IRef.guid defI
+            , Sugar.drBody = exprS
+            , Sugar.drType = undefined
+            , Sugar.drIsTypeRedundant = True
+            , Sugar.drMNewType = Nothing
+            }
         , mDelPane = mkMDelPane i
         , mMovePaneDown = mkMMovePaneDown i
         , mMovePaneUp = mkMMovePaneUp i

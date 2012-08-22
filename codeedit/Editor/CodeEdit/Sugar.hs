@@ -3,7 +3,6 @@
 module Editor.CodeEdit.Sugar
   ( DefinitionRef(..)
   , DefinitionNewType(..)
-  , Builtin(..)
   , Actions(..)
   , Expression(..), ExpressionRef(..)
   , Where(..), WhereItem(..)
@@ -16,29 +15,22 @@ module Editor.CodeEdit.Sugar
   ) where
 
 import Control.Applicative ((<$>), (<*>))
-import Control.Arrow (second, (&&&))
 import Control.Lens ((^.))
-import Control.Monad (join, guard, liftM, mzero)
+import Control.Monad (liftM)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (MonadTrans(..))
-import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
-import Data.Maybe (fromMaybe, isJust)
-import Data.Monoid (mempty)
+import Data.Maybe (isJust)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import System.Random (RandomGen)
-import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
-import qualified Data.List.Class as List
-import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
-import qualified Data.Store.Transaction as Transaction
 import qualified Data.Traversable as Traversable
 import qualified Editor.Anchors as Anchors
 import qualified Editor.CodeEdit.Infix as Infix
@@ -151,12 +143,7 @@ data Expression m
   | ExpressionHole { eHole :: Hole m }
   | ExpressionInferred { eInferred :: Inferred m }
   | ExpressionLiteralInteger { _eLit :: LiteralInteger m }
-  | ExpressionBuiltin { eBuiltin :: Builtin m }
-
-data Builtin m = Builtin
-  { biName :: Data.FFIName
-  , biSetFFIName :: Maybe (Data.FFIName -> T m ())
-  }
+  | ExpressionAtom { _eAtom :: String }
 
 data DefinitionNewType m = DefinitionNewType
   { dntNewType :: ExpressionRef m
@@ -199,6 +186,19 @@ eeProp = fmap eesProp . Data.ePayload
 eeFromPure :: Data.PureExpression -> ExprEntity m
 eeFromPure = fmap $ const Nothing
 
+type StoredInferred m = DataTyped.Expression (Data.ExpressionIRefProperty (T m))
+
+eeFromStoredInferred :: StoredInferred m -> ExprEntity m
+eeFromStoredInferred =
+  fmap f
+  where
+    f x =
+      Just $ ExprEntityStored
+      { eesProp = DataTyped.iStored x
+      , eeInferredValues = DataTyped.iValue x
+      , eeInferredTypes = DataTyped.iType x
+      }
+
 argument :: (a -> b) -> (b -> c) -> a -> c
 argument = flip (.)
 
@@ -214,8 +214,6 @@ writeIRefVia
   -> Data.ExpressionIRefProperty (T m)
   -> a -> Transaction t m ()
 writeIRefVia f = (fmap . argument) f writeIRef
-
-type StoredInferred m = DataTyped.Expression (Data.ExpressionIRefProperty (T m))
 
 type Scope = [Guid]
 
@@ -273,10 +271,10 @@ mkActions stored =
     guidify = liftM Data.exprIRefGuid
     doReplace = guidify $ DataOps.replaceWithHole stored
 
-mkExpressionRef
-  :: Monad m
-  => ExprEntity m
-  -> Expression m -> Sugar m (ExpressionRef m)
+mkExpressionRef ::
+  Monad m =>
+  ExprEntity m ->
+  Expression m -> Sugar m (ExpressionRef m)
 mkExpressionRef ee expr = do
   inferredTypesRefs <- mapM (convertExpressionI . eeFromPure) types
   return
@@ -592,18 +590,16 @@ convertHole :: Monad m => Convertor m
 convertHole exprI = do
   mPaste <- maybe (return Nothing) mkPaste $ eeProp exprI
   scope <- readScope
-  deref <- undefined --derefRef
   mDef <- readDefinition
   let
     gen =
       Random.mkStdGen . (+1) . (*2) . BinaryUtils.decodeS $ Guid.bs eGuid
-    hole = Hole
-      { holeScope = undefined
-      , holePickResult = fmap pickResult $ eeProp exprI
-      , holePaste = mPaste
-      , holeInferResults = undefined
-      }
-  mkExpressionRef exprI undefined
+  mkExpressionRef exprI $ ExpressionHole Hole
+    { holeScope = error "holeScope"
+    , holePickResult = fmap pickResult $ eeProp exprI
+    , holePaste = mPaste
+    , holeInferResults = error "holeInferResults"
+    }
   where
     eGuid = Data.eGuid exprI
     pickResult irefP result = do
@@ -620,6 +616,10 @@ convertLiteralInteger i exprI =
       eeProp exprI
   }
 
+convertAtom :: Monad m => String -> Convertor m
+convertAtom name exprI =
+  mkExpressionRef exprI $ ExpressionAtom name
+
 convertExpressionI :: Monad m => ExprEntity m -> Sugar m (ExpressionRef m)
 convertExpressionI ee =
   ($ ee) $
@@ -632,8 +632,6 @@ convertExpressionI ee =
   Data.ExpressionLeaf (Data.Hole) -> convertHole
   Data.ExpressionLeaf (Data.Set) -> convertAtom "Set"
   Data.ExpressionLeaf (Data.IntegerType) -> convertAtom "Integer"
-  where
-    convertAtom = undefined
 
 -- Check no holes
 isCompleteType :: Data.PureExpression -> Bool
@@ -645,11 +643,10 @@ isCompleteType =
     f e = tMapM_ toMaybe e
     tMapM_ = (fmap . liftM . const) () . Traversable.mapM
 
-convertExpressionPure
-  :: Monad m => Data.PureExpression -> T m (ExpressionRef m)
+convertExpressionPure ::
+  Monad m => Data.PureExpression -> T m (ExpressionRef m)
 convertExpressionPure = runSugar Nothing . convertExpressionI . eeFromPure
 
-convertExpression
-  :: Monad m
-  => StoredInferred m -> T m (ExpressionRef m)
-convertExpression = undefined
+convertExpression ::
+  Monad m => StoredInferred m -> T m (ExpressionRef m)
+convertExpression = runSugar Nothing . convertExpressionI . eeFromStoredInferred

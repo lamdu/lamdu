@@ -160,7 +160,7 @@ data Builtin expr = Builtin
   } deriving (Eq, Ord, Show)
 
 data DefinitionBody expr
-  = DefinitionExpression expr
+  = DefinitionExpression { defExpression :: expr }
   | DefinitionBuiltin (Builtin expr)
   deriving (Eq, Ord, Show)
 
