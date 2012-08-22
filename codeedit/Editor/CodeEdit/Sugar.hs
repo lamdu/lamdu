@@ -16,7 +16,7 @@ module Editor.CodeEdit.Sugar
 
 import Control.Applicative ((<$>), (<*>))
 import Control.Lens ((^.))
-import Control.Monad (liftM)
+import Control.Monad (liftM, mzero)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -285,7 +285,7 @@ mkExpressionRef ee expr = do
     , rActions = fmap mkActions $ eeProp ee
     }
   where
-    types = maybe [] (addConflicts . eeInferredValues) $ Data.ePayload ee
+    types = maybe [] (addConflicts . eeInferredTypes) $ Data.ePayload ee
     addConflicts r = (r ^. DataTyped.rExpression) : (r ^. DataTyped.rErrors)
     gen =
       Random.mkStdGen . (*2) . BinaryUtils.decodeS . Guid.bs $
@@ -595,10 +595,10 @@ convertHole exprI = do
     gen =
       Random.mkStdGen . (+1) . (*2) . BinaryUtils.decodeS $ Guid.bs eGuid
   mkExpressionRef exprI $ ExpressionHole Hole
-    { holeScope = error "holeScope"
+    { holeScope = []
     , holePickResult = fmap pickResult $ eeProp exprI
     , holePaste = mPaste
-    , holeInferResults = error "holeInferResults"
+    , holeInferResults = const mzero
     }
   where
     eGuid = Data.eGuid exprI
