@@ -51,7 +51,7 @@ type ResultPicker m = ITransaction ViewTag m Widget.EventResult
 
 data Result = Result
   { resultNames :: [String]
-  , resultExpr :: Data.PureGuidExpression
+  , resultExpr :: Data.PureExpression
   }
 AtFieldTH.make ''Result
 
@@ -61,12 +61,12 @@ data HoleInfo m = HoleInfo
   { hiHoleId :: Widget.Id
   , hiSearchTerm :: Property (T m) String
   , hiHole :: Sugar.Hole m
-  , hiPickResult :: Data.PureGuidExpression -> T m Guid
+  , hiPickResult :: Data.PureExpression -> T m Guid
   , hiGuid :: Guid
   }
 
 pickExpr
-  :: Monad m => HoleInfo m -> Data.PureGuidExpression -> ResultPicker m
+  :: Monad m => HoleInfo m -> Data.PureExpression -> ResultPicker m
 pickExpr holeInfo expr = do
   guid <- IT.transaction $ hiPickResult holeInfo expr
   return Widget.EventResult
@@ -76,19 +76,19 @@ pickExpr holeInfo expr = do
 
 resultPickEventMap
   :: Monad m
-  => HoleInfo m -> Data.PureGuidExpression -> Widget.EventHandlers (ITransaction ViewTag m)
+  => HoleInfo m -> Data.PureExpression -> Widget.EventHandlers (ITransaction ViewTag m)
 resultPickEventMap holeInfo =
   E.keyPresses Config.pickResultKeys "Pick this search result" .
   pickExpr holeInfo
 
 data ApplyForms m = ApplyForms
-  { afMain :: Data.PureGuidExpression
-  , afMore :: Maybe (Data.PureGuidExpression, ListT m Data.PureGuidExpression)
+  { afMain :: Data.PureExpression
+  , afMore :: Maybe (Data.PureExpression, ListT m Data.PureExpression)
   }
 
 canonizeResultExpr
   :: HoleInfo m
-  -> Data.PureGuidExpression -> Data.PureGuidExpression
+  -> Data.PureExpression -> Data.PureExpression
 canonizeResultExpr holeInfo expr =
   flip Data.canonizeIdentifiers expr . Random.mkStdGen $
   hash (show expr, Guid.bs (hiGuid holeInfo))
@@ -98,7 +98,7 @@ resultToWidget
   => ExpressionGui.Maker m -> HoleInfo m -> ApplyForms (T m)
   -> OTransaction ViewTag m
      ( WidgetT ViewTag m
-     , Maybe (Data.PureGuidExpression, Maybe (WidgetT ViewTag m))
+     , Maybe (Data.PureExpression, Maybe (WidgetT ViewTag m))
      )
 resultToWidget makeExpressionEdit holeInfo applyForms = do
   cursorOnMain <- liftM isJust $ OT.subCursor myId
@@ -149,7 +149,7 @@ resultToWidget makeExpressionEdit holeInfo applyForms = do
     canonizedExpr = canonizeResultExpr holeInfo $ afMain applyForms
     canonizedExprId = pureGuidId canonizedExpr
     myId = mappend (hiHoleId holeInfo) canonizedExprId
-    pureGuidId = WidgetIds.fromGuid . Data.geGuid . Data.unPureGuidExpression
+    pureGuidId = WidgetIds.fromGuid . Data.eGuid
 
 makeNoResults :: MonadF m => AnimId -> TWidget t m
 makeNoResults myId =
@@ -161,12 +161,12 @@ makeResultVariable (guid, varRef) = do
   varName <- OT.getName guid
   return Result
     { resultNames = [varName]
-    , resultExpr = toPureGuidExpr $ Data.ExpressionGetVariable varRef
+    , resultExpr = toPureExpr . Data.ExpressionLeaf $ Data.GetVariable varRef
     }
 
-toPureGuidExpr
-  :: Data.Expression Data.PureGuidExpression -> Data.PureGuidExpression
-toPureGuidExpr = Data.pureGuidExpression $ Guid.fromString "ZeroGuid"
+toPureExpr
+  :: Data.ExpressionBody Data.PureExpression -> Data.PureExpression
+toPureExpr = Data.pureExpression $ Guid.fromString "ZeroGuid"
 
 renamePrefix :: AnimId -> AnimId -> AnimId -> AnimId
 renamePrefix srcPrefix destPrefix animId =
@@ -201,11 +201,11 @@ makeLiteralResults searchTerm =
     makeLiteralIntResult integer =
       Result
       { resultNames = [show integer]
-      , resultExpr = toPureGuidExpr $ Data.ExpressionLiteralInteger integer
+      , resultExpr = toPureExpr . Data.ExpressionLeaf $ Data.LiteralInteger integer
       }
 
 makeApplyForms ::
-  Monad m => ListT m Data.PureGuidExpression -> m (Maybe (ApplyForms m))
+  Monad m => ListT m Data.PureExpression -> m (Maybe (ApplyForms m))
 makeApplyForms applyForms = do
   -- We always want the first, and we want to know if there's more, so
   -- take 2:
@@ -249,24 +249,24 @@ makeAllResults holeInfo = do
       [ Result
         { resultNames = ["->", "Pi", "→", "→", "Π", "π"]
         , resultExpr =
-          toPureGuidExpr . Data.ExpressionPi $
+          toPureExpr . Data.ExpressionPi $
           Data.Lambda holeExpr holeExpr
         }
       , Result
         { resultNames = ["\\", "Lambda", "Λ", "λ"]
         , resultExpr =
-          toPureGuidExpr . Data.ExpressionLambda $
+          toPureExpr . Data.ExpressionLambda $
           Data.Lambda holeExpr holeExpr
         }
       ]
 
-holeExpr :: Data.PureGuidExpression
-holeExpr = toPureGuidExpr Data.ExpressionHole
+holeExpr :: Data.PureExpression
+holeExpr = toPureExpr $ Data.ExpressionLeaf Data.Hole
 
 makeSearchTermWidget
   :: MonadF m
   => HoleInfo m -> Widget.Id
-  -> Maybe Data.PureGuidExpression -> TWidget ViewTag m
+  -> Maybe Data.PureExpression -> TWidget ViewTag m
 makeSearchTermWidget holeInfo searchTermId mFirstResult =
   liftM
     (Widget.strongerEvents searchTermEventMap .
@@ -293,7 +293,7 @@ makeSearchTermWidget holeInfo searchTermId mFirstResult =
         return newDefI
       let
         defRef =
-          toPureGuidExpr . Data.ExpressionGetVariable $
+          toPureExpr . Data.ExpressionLeaf . Data.GetVariable $
           Data.DefinitionRef newDefI
       -- TODO: Can we use pickResult's animIdMapping?
       eventResult <- holePickResult defRef
@@ -316,7 +316,7 @@ makeResultsWidget
   => ExpressionGui.Maker m -> HoleInfo m
   -> [ApplyForms (T m)] -> Bool
   -> OTransaction ViewTag m
-     (Maybe Data.PureGuidExpression, WidgetT ViewTag m)
+     (Maybe Data.PureExpression, WidgetT ViewTag m)
 makeResultsWidget makeExpressionEdit holeInfo firstResults moreResults = do
   firstResultsAndWidgets <-
     mapM (resultToWidget makeExpressionEdit holeInfo) firstResults
@@ -357,7 +357,7 @@ makeActiveHoleEdit
   :: MonadF m
   => ExpressionGui.Maker m -> HoleInfo m
   -> OTransaction ViewTag m
-     (Maybe Data.PureGuidExpression, WidgetT ViewTag m)
+     (Maybe Data.PureExpression, WidgetT ViewTag m)
 makeActiveHoleEdit makeExpressionEdit holeInfo =
   OT.assignCursor (hiHoleId holeInfo) searchTermId $ do
     OT.markVariablesAsUsed . map fst . Sugar.holeScope $ hiHole holeInfo
