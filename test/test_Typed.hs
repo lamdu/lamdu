@@ -1,7 +1,9 @@
 import Control.Applicative (liftA2)
 import Control.Arrow (first)
+import Control.Lens ((^.))
 import Control.Monad (guard)
 import Control.Monad.Identity (Identity(..))
+import Data.Function (on)
 import Data.Map (Map, (!))
 import Data.Maybe (isJust)
 import Data.Store.Guid (Guid)
@@ -64,8 +66,7 @@ mkExpr = Data.pureExpression . Guid.fromString
 hole :: Data.PureExpression
 hole = mkExpr "hole" $ Data.ExpressionLeaf Data.Hole
 
-type InferredExpr = ([Typed.Conflict], Data.PureExpression)
-type InferResults = Data.Expression (InferredExpr, InferredExpr)
+type InferResults = Data.Expression (Typed.InferredExpr, Typed.InferredExpr)
 
 inferResults :: Typed.Expression s -> InferResults
 inferResults =
@@ -77,8 +78,10 @@ showExpressionWithInferred :: InferResults -> String
 showExpressionWithInferred =
   List.intercalate "\n" . go
   where
-    showInferred ([], pureExpr) = show pureExpr
-    showInferred x = "ERROR: " ++ show x
+    showInferred x =
+      case x ^. Typed.rErrors of
+      [] -> show $ x ^. Typed.rExpression
+      _ -> "ERROR: " ++ show x
     go typedExpr =
       [ "Expr: " ++ show (fmap (const ()) expr)
       , "  IVal:  " ++ showInferred val
@@ -96,11 +99,11 @@ compareInferred x y =
   where
     f (v0, t0) (v1, t1) =
       liftA2 (,) (matchI v0 v1) (matchI t0 t1)
-    matchI (c0, r0) (c1, r1) = do
-      guard $ length c0 == length c1
+    matchI r0 r1 = do
+      guard $ on (==) (length . (^. Typed.rErrors)) r0 r1
       liftA2 (,)
-        (sequence (zipWith matchPure c0 c1))
-        (matchPure r0 r1)
+        (sequence (on (zipWith matchPure) (^. Typed.rErrors) r0 r1))
+        (on matchPure (^. Typed.rExpression) r0 r1)
     matchPure = Data.matchExpression nop
     nop () () = ()
 
@@ -110,18 +113,21 @@ mkInferredLeaf leaf typ =
   { Data.eGuid = Guid.fromString "leaf"
   , Data.eValue = Data.ExpressionLeaf leaf
   , Data.ePayload =
-      ( ([], Data.pureExpression g (Data.ExpressionLeaf leaf))
-      , ([], typ)
+      ( mkInferredExpr . Data.pureExpression g $ Data.ExpressionLeaf leaf
+      , mkInferredExpr typ
       )
   }
   where
     g = Guid.fromString "leaf"
 
+mkInferredExpr :: Data.PureExpression -> Typed.InferredExpr
+mkInferredExpr = (`Typed.InferredExpr` [])
+
 mkInferredNode ::
   String -> Data.PureExpression -> Data.PureExpression ->
   Data.ExpressionBody InferResults -> InferResults
 mkInferredNode g iVal iType body =
-  Data.Expression (Guid.fromString g) body (([], iVal), ([], iType))
+  Data.Expression (Guid.fromString g) body (mkInferredExpr iVal, mkInferredExpr iType)
 
 main :: IO ()
 main = TestFramework.defaultMain

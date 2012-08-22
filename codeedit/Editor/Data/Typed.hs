@@ -1,8 +1,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleContexts, TemplateHaskell, DeriveFunctor #-}
 module Editor.Data.Typed
-  ( Expression, Inferred(..), TypedValue(..)
-  , RefMap, Conflict
-  , Loader(..)
+  ( Expression, Inferred(..)
+  , InferredExpr(..), rExpression, rErrors
+  , Conflict
+  , RefMap, Loader(..)
   , inferFromEntity
   ) where
 
@@ -128,10 +129,15 @@ data Rule
 
 type Conflict = Data.PureExpression
 
-data RefData = RefData
+data InferredExpr = InferredExpr
   { _rExpression :: Data.PureExpression
-  , _rRules :: [Rule]
   , _rErrors :: [Conflict]
+  } deriving Show
+LensTH.makeLenses ''InferredExpr
+
+data RefData = RefData
+  { _rResult :: InferredExpr
+  , _rRules :: [Rule]
   } deriving (Show)
 LensTH.makeLenses ''RefData
 
@@ -149,9 +155,12 @@ intTypeExpr =
 
 emptyRefData :: RefData
 emptyRefData = RefData
-  { _rExpression = hole
-  , _rRules = []
-  , _rErrors = []
+  { _rRules = []
+  , _rResult =
+      InferredExpr
+      { _rExpression = hole
+      , _rErrors = []
+      }
   }
 
 newtype RefMap = RefMap { _refMap :: IntMap RefData }
@@ -178,8 +187,8 @@ data InferNode = InferNode
 
 data Inferred s = Inferred
   { iStored :: s
-  , iValue :: ([Conflict], Data.PureExpression)
-  , iType :: ([Conflict], Data.PureExpression)
+  , iValue :: InferredExpr
+  , iType :: InferredExpr
   , iInferNode :: InferNode
   }
 
@@ -261,13 +270,13 @@ setRefExpr ::
   MonadState InferState m =>
   Ref -> Data.PureExpression -> m ()
 setRefExpr ref newExpr = do
-  curExpr <- Lens.use $ refMapAt ref . rExpression
+  curExpr <- Lens.use $ refMapAt ref . rResult . rExpression
   case mergeExprs curExpr newExpr of
     Just mergedExpr ->
       when (mergedExpr /= curExpr) $ do
         touch ref
-        refMapAt ref . rExpression .= mergedExpr
-    Nothing -> refMapAt ref . rErrors %= (newExpr :)
+        refMapAt ref . rResult . rExpression .= mergedExpr
+    Nothing -> refMapAt ref . rResult . rErrors %= (newExpr :)
 
 addRules ::
   (MonadState InferState m, MonadReader Scope m) =>
@@ -384,7 +393,7 @@ infer =
       go
 
 getRefExpr :: MonadState InferState m => Ref -> m Data.PureExpression
-getRefExpr ref = Lens.use (refMapAt ref . rExpression)
+getRefExpr ref = Lens.use (refMapAt ref . rResult . rExpression)
 
 applyStructureRule ::
   MonadState InferState m =>
@@ -546,10 +555,5 @@ inferFromEntity loader mRecursiveDef =
       , iInferNode = inferNode
       }
 
-deref :: RefMap -> Ref -> ([Conflict], Data.PureExpression)
-deref (RefMap m) (Ref x) =
-  ( refData ^. rErrors
-  , refData ^. rExpression
-  )
-  where
-    refData = m ! x
+deref :: RefMap -> Ref -> InferredExpr
+deref (RefMap m) (Ref x) = (m ! x) ^. rResult
