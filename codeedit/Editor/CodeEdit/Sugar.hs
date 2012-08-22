@@ -16,7 +16,7 @@ module Editor.CodeEdit.Sugar
 
 import Control.Applicative ((<$>), (<*>))
 import Control.Lens ((^.))
-import Control.Monad (liftM, liftM2, mzero)
+import Control.Monad (liftM, liftM2)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -295,7 +295,7 @@ canonizeIdentifiers gen =
           liftM2 Data.makeApply (f func) (f arg)
         gv@(Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef guid))) ->
           Reader.asks (maybe gv Data.makeParameterRef . Map.lookup guid)
-        x -> return x
+        _ -> return v
 
 mkExpressionRef ::
   Monad m =>
@@ -362,13 +362,13 @@ convertLambdaBody
   :: Monad m
   => Data.Lambda (ExprEntity m)
   -> Convertor m
-convertLambdaBody (Data.Lambda paramTypeI bodyI) exprI =
+convertLambdaBody (Data.Lambda paramTypeI bodyI) _exprI =
   enhanceScope $ convertExpressionI bodyI
   where
     enhanceScope =
       case Data.ePayload paramTypeI of
       Nothing -> id
-      Just paramTypeStored ->
+      Just _paramTypeStored ->
         id -- putInScope (eeInferredValues paramTypeStored) $ Data.eGuid exprI
 
 convertLambda
@@ -626,7 +626,7 @@ convertHole exprI = do
     { holeScope = []
     , holePickResult = fmap pickResult $ eeProp exprI
     , holePaste = mPaste
-    , holeInferResults = const mzero
+    , holeInferResults = return
     }
   where
     eGuid = Data.eGuid exprI
