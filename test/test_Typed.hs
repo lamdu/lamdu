@@ -144,26 +144,25 @@ main = TestFramework.defaultMain
     (mkExpr "5" (Data.ExpressionLeaf (Data.LiteralInteger 5))) $
     mkInferredLeaf (Data.LiteralInteger 5) intType
   , testInfer "simple apply"
-    (mkExpr "apply" (Data.makeApply hole hole)) $
+    (makeApply [hole, hole]) $
     mkInferredNode "" hole hole $
     Data.makeApply
       (mkInferredLeaf Data.Hole (mkExpr "" (Data.makePi hole hole)))
       (mkInferredLeaf Data.Hole hole)
   , testInfer "apply"
-    (mkExpr "apply" (Data.makeApply (getDefExpr "IntToBoolFunc") hole)) $
+    (makeApply [getDefExpr "IntToBoolFunc", hole]) $
     mkInferredNode ""
-      (mkExpr "" (Data.makeApply (getDefExpr "IntToBoolFunc") hole))
+      (makeApply [getDefExpr "IntToBoolFunc", hole])
       boolType $
     Data.makeApply
       (mkInferredGetDef "IntToBoolFunc")
       (mkInferredLeaf Data.Hole intType)
   , testInfer "apply on var"
     (makeFunnyLambda "lambda"
-      (mkExpr "applyInner"
-        (Data.makeApply
-          hole
-          (mkExpr "var" (Data.makeParameterRef (Guid.fromString "lambda")))
-        )
+      (makeApply
+        [ hole
+        , mkExpr "var" . Data.makeParameterRef $ Guid.fromString "lambda"
+        ]
       )
     ) $
     mkInferredNode "lambda"
@@ -171,7 +170,7 @@ main = TestFramework.defaultMain
       (mkExpr "" (Data.makePi hole boolType)) $
     Data.makeLambda (mkInferredLeaf Data.Hole setType) $
     mkInferredNode ""
-      (mkExpr "" (Data.makeApply (getDefExpr "IntToBoolFunc") hole))
+      (makeApply [getDefExpr "IntToBoolFunc", hole])
       boolType $
     Data.makeApply (mkInferredGetDef "IntToBoolFunc") $
     mkInferredNode ""
@@ -180,7 +179,7 @@ main = TestFramework.defaultMain
     Data.makeApply
       (mkInferredLeaf Data.Hole (mkExpr "" (Data.makePi hole intType))) $
     mkInferredLeaf
-      (Data.GetVariable (Data.ParameterRef (Guid.fromString "lambda")))
+      ((Data.GetVariable . Data.ParameterRef . Guid.fromString) "lambda")
       hole
   , testInfer "id test"
     applyIdInt $
@@ -190,8 +189,46 @@ main = TestFramework.defaultMain
     Data.makeApply
       (mkInferredGetDef "id") $
     mkInferredLeaf Data.IntegerType setType
+  , testInfer "arg type goes to pi"
+    (makeApply
+      [ hole
+      , mkExpr "" . Data.ExpressionLeaf $ Data.LiteralInteger 5
+      ]
+    ) $
+    mkInferredNode ""
+      hole
+      hole $
+    Data.makeApply
+      (mkInferredLeaf Data.Hole (mkExpr "" (Data.makePi intType hole))) $
+    mkInferredLeaf (Data.LiteralInteger 5) intType
+  , testInfer "id on an int"
+    (makeApply
+      [ getDefExpr "id"
+      , hole
+      , mkExpr "" . Data.ExpressionLeaf $ Data.LiteralInteger 5
+      ]
+    ) $
+    mkInferredNode ""
+      (makeApply
+        [ getDefExpr "id"
+        , intType
+        , mkExpr "" . Data.ExpressionLeaf $ Data.LiteralInteger 5
+        ]
+      )
+      intType $
+    Data.makeApply
+      (mkInferredNode ""
+        (makeApply [getDefExpr "id", intType])
+        (mkExpr "" (Data.makePi intType intType))
+        (Data.makeApply
+          (mkInferredGetDef "id")
+          ((mkInferredNode "" intType setType . Data.ExpressionLeaf) Data.Hole)
+        )
+      ) $
+    mkInferredLeaf (Data.LiteralInteger 5) intType
   ]
   where
+    makeApply = foldl1 (fmap (mkExpr "") . Data.makeApply)
     applyIdInt =
       mkExpr ""
       (Data.makeApply
