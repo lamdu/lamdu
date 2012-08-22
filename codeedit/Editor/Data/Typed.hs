@@ -10,7 +10,7 @@ module Editor.Data.Typed
 import Control.Applicative ((<*>))
 import Control.Arrow (first, second)
 import Control.Lens ((%=), (.=), (^.))
-import Control.Monad (guard, liftM, liftM2, mzero, when)
+import Control.Monad (guard, liftM, liftM2, when)
 import Control.Monad.Reader.Class (MonadReader)
 import Control.Monad.State.Class (MonadState)
 import Control.Monad.Trans.Class (lift)
@@ -244,24 +244,25 @@ mergeExprs ::
 mergeExprs p0 p1 =
   runReaderT (go p0 p1) Map.empty
   where
+    go e (Data.Expression _ (Data.ExpressionLeaf Data.Hole) ()) = return e
+    -- When first is hole, we take Guids from second expr
+    go
+      (Data.Expression _ (Data.ExpressionLeaf Data.Hole) ())
+      (Data.Expression g e ()) =
+      fmap (Data.pureExpression g) $
+      -- Map Param Guids to those of first expression
+      Traversable.mapM (go hole) e
+    go
+      e0@(Data.Expression _ (Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par0))) ())
+      (Data.Expression _ (Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par1))) ()) = do
+      guard . (par0 ==) =<< lift =<< Reader.asks (Map.lookup par1)
+      return e0
     go
       (Data.Expression g0 e0 ())
       (Data.Expression g1 e1 ()) =
       fmap (Data.pureExpression g0) .
       Reader.local (Map.insert g1 g0) $
-      case Data.matchExpressionBody go e0 e1 of
-      Just x -> Traversable.sequence x
-      Nothing ->
-        case (e0, e1) of
-        (_, Data.ExpressionLeaf Data.Hole) -> return e0
-        (Data.ExpressionLeaf Data.Hole, _) ->
-          -- Map Guids to those of first expression
-          Traversable.mapM (go hole) e1
-        (Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par0)),
-         Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par1))) -> do
-          guard . (par0 ==) =<< lift =<< Reader.asks (Map.lookup par1)
-          return e0
-        _ -> mzero
+      Traversable.sequence =<< lift (Data.matchExpressionBody go e0 e1)
 
 touch :: MonadState InferState m => Ref -> m ()
 touch ref = sTouchedRefs . IntSetLens.contains (unRef ref) .= True
