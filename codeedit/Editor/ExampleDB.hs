@@ -1,6 +1,6 @@
 module Editor.ExampleDB(initDB) where
 
-import Control.Monad (liftM, liftM2, unless, (<=<))
+import Control.Monad (liftM, unless, (<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Writer (WriterT)
 import Data.Binary (Binary(..))
@@ -60,29 +60,11 @@ fixIRef createOuter = do
 createBuiltins :: Monad m => Transaction A.ViewTag m [Data.VariableRef]
 createBuiltins =
   Writer.execWriterT $ do
-    let
-      setExpr = Data.newExprIRef $ Data.ExpressionLeaf Data.Set
-    set <-
-      mkType $ A.newDefinition "Set" =<<
-      liftM2 (Data.Definition . Data.DefinitionExpression) setExpr setExpr
-    let
-      forAll name f = liftM Data.ExpressionIRef . fixIRef $ \aI -> do
-        let aGuid = IRef.guid aI
-        A.setP (A.assocNameRef aGuid) name
-        s <- set
-        return . Data.makePi s =<< f ((getVar . Data.ParameterRef) aGuid)
-      setToSet = mkPi set set
     list <- mkType . A.newBuiltin "Data.List.List" =<< lift setToSet
     let
       listOf a = do
         l <- list
         Data.newExprIRef . Data.makeApply l =<< a
-
-    let
-      integerExpr = Data.newExprIRef $ Data.ExpressionLeaf Data.IntegerType
-    integer <-
-      mkType $ A.newDefinition "Integer" =<<
-      liftM2 (Data.Definition . Data.DefinitionExpression) integerExpr setExpr
     bool <- mkType . A.newBuiltin "Prelude.Bool" =<< lift set
 
     makeWithType "Prelude.True" bool
@@ -116,6 +98,14 @@ createBuiltins =
 
     makeWithType "Prelude.enumFromTo" . mkPi integer . mkPi integer $ listOf integer
   where
+    set = Data.newExprIRef $ Data.ExpressionLeaf Data.Set
+    integer = Data.newExprIRef $ Data.ExpressionLeaf Data.IntegerType
+    forAll name f = liftM Data.ExpressionIRef . fixIRef $ \aI -> do
+      let aGuid = IRef.guid aI
+      A.setP (A.assocNameRef aGuid) name
+      s <- set
+      return . Data.makePi s =<< f ((getVar . Data.ParameterRef) aGuid)
+    setToSet = mkPi set set
     tellift f = Writer.tell . (:[]) =<< lift f
     getVar = Data.newExprIRef . Data.ExpressionLeaf . Data.GetVariable
     mkPi mkArgType mkResType = do

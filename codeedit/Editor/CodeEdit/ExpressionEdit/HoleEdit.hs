@@ -247,6 +247,14 @@ makeAllResults holeInfo = do
     hole = hiHole holeInfo
     primitiveResults =
       [ Result
+        { resultNames = ["Set", "Type"]
+        , resultExpr = toPureExpr $ Data.ExpressionLeaf Data.Set
+        }
+      , Result
+        { resultNames = ["Integer", "ℤ", "Z"]
+        , resultExpr = toPureExpr $ Data.ExpressionLeaf Data.IntegerType
+        }
+      , Result
         { resultNames = ["->", "Pi", "→", "→", "Π", "π"]
         , resultExpr =
           toPureExpr . Data.ExpressionPi $
