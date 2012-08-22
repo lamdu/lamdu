@@ -32,9 +32,6 @@ makeDefinitionRef = Data.ExpressionLeaf . Data.GetVariable . Data.DefinitionRef 
 boolType :: Data.PureExpression
 boolType = mkExpr "bool" . makeDefinitionRef $ Guid.fromString "Bool"
 
-intToBool :: Data.PureExpression
-intToBool = mkExpr "intToBool" $ Data.makePi intType boolType
-
 getDefExpr :: String -> Data.PureExpression
 getDefExpr name =
   mkExpr name . Data.ExpressionLeaf .
@@ -45,8 +42,14 @@ definitionTypes :: Map Guid Data.PureExpression
 definitionTypes =
   Map.fromList $ (map . first) Guid.fromString
   [ ("Bool", setType)
-  , ("IntToBoolFunc", intToBool)
+  , ("IntToBoolFunc", mkExpr "intToBool" $ Data.makePi intType boolType)
+  , ( "id"
+    , mkExpr "idType" . Data.makePi setType .
+      mkExpr "idGivenType" $ Data.makePi idTypeParam idTypeParam
+    )
   ]
+  where
+    idTypeParam = mkExpr "idTypeParam" . Data.makeParameterRef $ Guid.fromString "idType"
 
 toExpression ::
   Data.PureExpression ->
@@ -179,8 +182,22 @@ main = TestFramework.defaultMain
     mkInferredLeaf
       (Data.GetVariable (Data.ParameterRef (Guid.fromString "lambda")))
       hole
+  , testInfer "id test"
+    applyIdInt $
+    mkInferredNode ""
+      applyIdInt
+      (mkExpr "" (Data.makePi intType intType)) $
+    Data.makeApply
+      (mkInferredGetDef "id") $
+    mkInferredLeaf Data.IntegerType setType
   ]
   where
+    applyIdInt =
+      mkExpr ""
+      (Data.makeApply
+        (getDefExpr "id")
+        intType
+      )
     makeFunnyLambda g =
       mkExpr g .
       Data.makeLambda hole .
