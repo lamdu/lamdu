@@ -314,7 +314,7 @@ mkExpressionRef ee expr = do
     types =
       zipWith canonizeIdentifiers (RandomUtils.splits gen) .
       maybe [] (addConflicts . eeInferredTypes) $ Data.ePayload ee
-    addConflicts r = (r ^. DataTyped.rExpression) : (r ^. DataTyped.rErrors)
+    addConflicts r = DataTyped.ieExpression r : DataTyped.ieErrors r
     gen =
       Random.mkStdGen . (*2) . BinaryUtils.decodeS . Guid.bs $
       Data.eGuid ee

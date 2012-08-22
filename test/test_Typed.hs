@@ -1,6 +1,5 @@
 import Control.Applicative (liftA2)
 import Control.Arrow (first)
-import Control.Lens ((^.))
 import Control.Monad (guard)
 import Control.Monad.Identity (Identity(..))
 import Data.Function (on)
@@ -80,8 +79,8 @@ showExpressionWithInferred =
   List.intercalate "\n" . go
   where
     showInferred x =
-      case x ^. Typed.rErrors of
-      [] -> show $ x ^. Typed.rExpression
+      case Typed.ieErrors x of
+      [] -> show $ Typed.ieExpression x
       _ -> "ERROR: " ++ show x
     go typedExpr =
       [ "Expr: " ++ show (fmap (const ()) expr)
@@ -101,10 +100,10 @@ compareInferred x y =
     f (v0, t0) (v1, t1) =
       liftA2 (,) (matchI v0 v1) (matchI t0 t1)
     matchI r0 r1 = do
-      guard $ on (==) (length . (^. Typed.rErrors)) r0 r1
+      guard $ on (==) (length . Typed.ieErrors) r0 r1
       liftA2 (,)
-        (sequence (on (zipWith matchPure) (^. Typed.rErrors) r0 r1))
-        (on matchPure (^. Typed.rExpression) r0 r1)
+        (sequence (on (zipWith matchPure) Typed.ieErrors r0 r1))
+        (on matchPure Typed.ieExpression r0 r1)
     matchPure = Data.matchExpression nop
     nop () () = ()
 
