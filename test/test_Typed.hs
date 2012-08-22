@@ -35,13 +35,11 @@ boolType = mkExpr "bool" . makeDefinitionRef $ Guid.fromString "Bool"
 intToBool :: Data.PureExpression
 intToBool = mkExpr "intToBool" $ Data.makePi intType boolType
 
-intToBoolFuncGetVar :: Data.Leaf
-intToBoolFuncGetVar =
+getDefExpr :: String -> Data.PureExpression
+getDefExpr name =
+  mkExpr name . Data.ExpressionLeaf .
   Data.GetVariable . Data.DefinitionRef . IRef.unsafeFromGuid $
-  Guid.fromString "IntToBoolFunc"
-
-intToBoolFunc :: Data.PureExpression
-intToBoolFunc = mkExpr "bool" $ Data.ExpressionLeaf intToBoolFuncGetVar
+  Guid.fromString name
 
 definitionTypes :: Map Guid Data.PureExpression
 definitionTypes =
@@ -120,6 +118,14 @@ mkInferredLeaf leaf typ =
   where
     g = Guid.fromString "leaf"
 
+mkInferredGetDef :: String -> InferResults
+mkInferredGetDef name =
+  mkInferredLeaf
+  (Data.GetVariable . Data.DefinitionRef $ IRef.unsafeFromGuid g)
+  (definitionTypes ! g)
+  where
+    g = Guid.fromString name
+
 mkInferredExpr :: Data.PureExpression -> Typed.InferredExpr
 mkInferredExpr = (`Typed.InferredExpr` [])
 
@@ -141,12 +147,12 @@ main = TestFramework.defaultMain
       (mkInferredLeaf Data.Hole (mkExpr "" (Data.makePi hole hole)))
       (mkInferredLeaf Data.Hole hole)
   , testInfer "apply"
-    (mkExpr "apply" (Data.makeApply intToBoolFunc hole)) $
+    (mkExpr "apply" (Data.makeApply (getDefExpr "IntToBoolFunc") hole)) $
     mkInferredNode ""
-      (mkExpr "" (Data.makeApply intToBoolFunc hole))
+      (mkExpr "" (Data.makeApply (getDefExpr "IntToBoolFunc") hole))
       boolType $
     Data.makeApply
-      (mkInferredLeaf intToBoolFuncGetVar intToBool)
+      (mkInferredGetDef "IntToBoolFunc")
       (mkInferredLeaf Data.Hole intType)
   , testInfer "apply on var"
     (makeFunnyLambda "lambda"
@@ -162,9 +168,9 @@ main = TestFramework.defaultMain
       (mkExpr "" (Data.makePi hole boolType)) $
     Data.makeLambda (mkInferredLeaf Data.Hole setType) $
     mkInferredNode ""
-      (mkExpr "" (Data.makeApply intToBoolFunc hole))
+      (mkExpr "" (Data.makeApply (getDefExpr "IntToBoolFunc") hole))
       boolType $
-    Data.makeApply (mkInferredLeaf intToBoolFuncGetVar intToBool) $
+    Data.makeApply (mkInferredGetDef "IntToBoolFunc") $
     mkInferredNode ""
       hole
       intType $
@@ -179,7 +185,7 @@ main = TestFramework.defaultMain
       mkExpr g .
       Data.makeLambda hole .
       mkExpr "applyFunny" .
-      Data.makeApply intToBoolFunc
+      Data.makeApply (getDefExpr "IntToBoolFunc")
     testInfer name pureExpr result =
       testCase name .
       assertBool
