@@ -481,13 +481,10 @@ atFunctionType :: ExpressionRef m -> ExpressionRef m
 atFunctionType exprRef =
   case rExpression exprRef of
     ExpressionHole {} -> exprRef -- Keep types on holes
-    _ -> atRInferredTypes removeIfOnlyPis exprRef
+    _ -> atRInferredTypes removeIfNoErrors exprRef
   where
-    removeIfOnlyPis xs
-      | all (isPi . rExpression) xs = []
-      | otherwise = xs
-    isPi (ExpressionPi {}) = True
-    isPi _ = False
+    removeIfNoErrors [x] = []
+    removeIfNoErrors xs = xs
 
 mkExpressionGetVariable :: Data.VariableRef -> Expression m
 mkExpressionGetVariable = ExpressionGetVariable . mkGetVariable
