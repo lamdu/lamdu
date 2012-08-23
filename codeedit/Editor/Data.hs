@@ -19,7 +19,7 @@ module Editor.Data
   , PureExpression, pureExpression, toPureExpression
   , newExprIRef, readExprIRef, writeExprIRef, exprIRefGuid
   , newIRefExpressionFromPure, writeIRefExpressionFromPure
-  , canonizeIdentifiers
+  , canonizeGuids
   , matchExpressionBody
   , matchExpression
   ) where
@@ -27,8 +27,8 @@ module Editor.Data
 import Control.Applicative (Applicative(..), liftA2)
 import Control.Monad ((<=<), guard, liftM, liftM2, mzero)
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Random (nextRandom, runRandomT)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
+import Control.Monad.Trans.State (evalState, state)
 import Data.Binary (Binary(..))
 import Data.Binary.Get (getWord8)
 import Data.Binary.Put (putWord8)
@@ -37,13 +37,13 @@ import Data.Derive.Foldable (makeFoldable)
 import Data.Derive.Traversable (makeTraversable)
 import Data.DeriveTH (derive)
 import Data.Foldable (Foldable(..))
-import Data.Functor.Identity (Identity(..))
 import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
 import Data.Store.Property (Property)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (Traversable(..))
+import System.Random (RandomGen, random)
 import Prelude hiding (mapM, sequence)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
@@ -51,7 +51,6 @@ import qualified Data.Map as Map
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
-import qualified System.Random as Random
 
 type ExpressionIRefProperty m = Property m ExpressionIRef
 
@@ -229,16 +228,16 @@ expressionIFromPure scope newGuid (Expression oldGuid expr ()) =
         makeParameterRef . fromMaybe parGuid $ lookup parGuid newScope
       x -> x
 
-canonizeIdentifiers
-  :: Random.RandomGen g => g -> PureExpression -> PureExpression
-canonizeIdentifiers gen =
-  runIdentity . runRandomT gen . (`runReaderT` Map.empty) . go
+canonizeGuids ::
+  RandomGen g => g -> PureExpression -> PureExpression
+canonizeGuids gen =
+  (`evalState` gen) . (`runReaderT` Map.empty) . go
   where
     onLambda oldGuid newGuid (Lambda paramType body) =
       liftM2 Lambda (go paramType) .
       Reader.local (Map.insert oldGuid newGuid) $ go body
     go (Expression oldGuid v ()) = do
-      newGuid <- lift nextRandom
+      newGuid <- lift $ state random
       liftM (pureExpression newGuid) $
         case v of
         ExpressionLambda lambda ->

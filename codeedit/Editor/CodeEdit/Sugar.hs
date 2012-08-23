@@ -20,13 +20,10 @@ import Control.Monad (liftM, liftM2)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
-import Control.Monad.Trans.Random (runRandomT, nextRandom)
-import Control.Monad.Identity (runIdentity)
 import Data.Maybe (isJust)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import System.Random (RandomGen)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
@@ -275,28 +272,6 @@ mkActions stored =
     guidify = liftM Data.exprIRefGuid
     doReplace = guidify $ DataOps.replaceWithHole stored
 
-canonizeIdentifiers ::
-  RandomGen g => g -> Data.Expression a -> Data.Expression a
-canonizeIdentifiers gen =
-  runIdentity . runRandomT gen . (`runReaderT` Map.empty) . f
-  where
-    onLambda oldGuid newGuid (Data.Lambda paramType body) =
-      liftM2 Data.Lambda (f paramType) .
-      Reader.local (Map.insert oldGuid newGuid) $ f body
-    f (Data.Expression oldGuid v x) = do
-      newGuid <- lift nextRandom
-      liftM (flip (Data.Expression newGuid) x) $
-        case v of
-        Data.ExpressionLambda lambda ->
-          liftM Data.ExpressionLambda $ onLambda oldGuid newGuid lambda
-        Data.ExpressionPi lambda ->
-          liftM Data.ExpressionPi $ onLambda oldGuid newGuid lambda
-        Data.ExpressionApply (Data.Apply func arg) ->
-          liftM2 Data.makeApply (f func) (f arg)
-        gv@(Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef guid))) ->
-          Reader.asks (maybe gv Data.makeParameterRef . Map.lookup guid)
-        _ -> return v
-
 mkExpressionRef ::
   Monad m =>
   ExprEntity m ->
@@ -312,7 +287,7 @@ mkExpressionRef ee expr = do
     }
   where
     types =
-      zipWith canonizeIdentifiers (RandomUtils.splits gen) .
+      zipWith Data.canonizeGuids (RandomUtils.splits gen) .
       maybe [] (addConflicts . eeInferredTypes) $ Data.ePayload ee
     addConflicts r = DataTyped.ieExpression r : DataTyped.ieErrors r
     gen =

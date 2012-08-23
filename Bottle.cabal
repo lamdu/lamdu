@@ -15,8 +15,7 @@ Library
   hs-Source-Dirs:      bottlelib
 
                        -- Bottle:
-  Exposed-modules:     Control.Monad.Trans.Random,
-                       Data.AtFieldTH,
+  Exposed-modules:     Data.AtFieldTH,
                        Data.List.Utils,
                        Data.Maybe.Utils,
                        Data.MRUMemo,
