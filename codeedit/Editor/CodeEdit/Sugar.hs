@@ -622,12 +622,20 @@ convertHole exprI = do
   let
     gen =
       Random.mkStdGen . (+1) . (*2) . BinaryUtils.decodeS $ Guid.bs eGuid
-  mkExpressionRef exprI $ ExpressionHole Hole
-    { holeScope = []
-    , holePickResult = fmap pickResult $ eeProp exprI
-    , holePaste = mPaste
-    , holeInferResults = return
-    }
+    hole = Hole
+      { holeScope = []
+      , holePickResult = fmap pickResult $ eeProp exprI
+      , holePaste = mPaste
+      , holeInferResults = return
+      }
+  mkExpressionRef exprI =<<
+    case fmap eeInferredValues (Data.ePayload exprI) of
+    Just (DataTyped.InferredExpr (Data.Expression _ (Data.ExpressionLeaf Data.Hole) _) _) ->
+      return $ ExpressionHole hole
+    Just (DataTyped.InferredExpr x []) ->
+      liftM (ExpressionInferred . (`Inferred` hole)) .
+      convertExpressionI $ eeFromPure x
+    _ -> return $ ExpressionHole hole
   where
     eGuid = Data.eGuid exprI
     pickResult irefP result = do
