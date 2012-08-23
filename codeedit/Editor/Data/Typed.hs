@@ -287,7 +287,7 @@ mergeExprs p0 p1 =
     f
       e0@(Data.Expression _ (Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par0))) _)
       (Data.Expression _ (Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par1))) _) = do
-      guard . (par0 ==) =<< lift =<< Reader.asks (Map.lookup par1)
+      guard . (par0 ==) . fromMaybe par1 =<< Reader.asks (Map.lookup par1)
       return e0
     f
       (Data.Expression g0 e0 _)

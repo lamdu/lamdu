@@ -227,7 +227,7 @@ main = TestFramework.defaultMain
         (tExpr, refMap) = doInfer $ makeApply [hole, hole]
         Data.ExpressionApply (Data.Apply firstHole _) = Data.eValue tExpr
       in
-        assertBool "conflict on resumed infer" . isJust $
+        assertBool (showExpressionWithInferred (inferResults tExpr)) . isJust $
           doInferEx refMap ((Typed.iPoint . Data.ePayload) firstHole) $ getDefExpr "id"
   ]
   where

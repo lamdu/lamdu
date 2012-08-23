@@ -279,7 +279,7 @@ matchExpression f e0 e1 =
         case (body0, body1) of
         (ExpressionLeaf l@(GetVariable (ParameterRef par0)),
          ExpressionLeaf (GetVariable (ParameterRef par1))) -> do
-          guard . (par0 ==) =<< lift =<< Reader.asks (Map.lookup par1)
+          guard . (par0 ==) . fromMaybe par1 =<< Reader.asks (Map.lookup par1)
           return $ ExpressionLeaf l
         _ -> mzero
 
