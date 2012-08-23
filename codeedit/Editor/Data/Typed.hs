@@ -1,9 +1,9 @@
 {-# LANGUAGE DeriveFunctor, GeneralizedNewtypeDeriving, TemplateHaskell #-}
 module Editor.Data.Typed
-  ( Expression, Inferred(..)
-  , InferredExpr(..), rExpression, rErrors
+  ( Expression, Inferred(..), rExpression
   , Conflict
-  , RefMap, Loader(..)
+  , RefMap, Ref
+  , Loader(..), InferActions(..)
   , inferFromEntity
   ) where
 
@@ -13,13 +13,12 @@ import Control.Lens ((%=), (.=), (^.))
 import Control.Monad (guard, liftM, liftM2, void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
-import Control.Monad.Trans.State (StateT, execState, runStateT)
+import Control.Monad.Trans.State (StateT, runStateT)
 import Data.IntMap (IntMap, (!))
 import Data.IntSet (IntSet)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (mempty, mappend)
-import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
@@ -30,12 +29,11 @@ import qualified Data.IntSet as IntSet
 import qualified Data.IntSet.Lens as IntSetLens
 import qualified Data.List as List
 import qualified Data.Map as Map
-import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
 import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
 
-newtype Ref = Ref { unRef :: Int }
+newtype Ref = Ref { unRef :: Int } deriving (Eq, Ord)
 instance Show Ref where
   show = ('R' :) . show . unRef
 
@@ -129,11 +127,6 @@ data Rule
 
 type Conflict = Data.PureExpression
 
-data InferredExpr = InferredExpr
-  { ieExpression :: Data.PureExpression
-  , ieErrors :: [Conflict]
-  } deriving Show
-
 -- Each node has set of refs to substituted args.
 type RefExpression = Data.Expression IntSet
 
@@ -142,7 +135,6 @@ refExprFromPure = fmap $ const mempty
 
 data RefData = RefData
   { _rExpression :: RefExpression
-  , _rErrors :: Set Conflict
   , _rRules :: [Rule]
   } deriving (Show)
 LensTH.makeLenses ''RefData
@@ -166,7 +158,6 @@ emptyRefData :: RefData
 emptyRefData = RefData
   { _rRules = []
   , _rExpression = holeRefExpr
-  , _rErrors = mempty
   }
 
 newtype RefMap = RefMap { _refMap :: IntMap RefData }
@@ -188,14 +179,16 @@ instance Show RefMap where
 -- Used to refer to expressions in the inference state and resume inference.
 data InferNode = InferNode
   { nRefs :: TypedValue
-  , _nScope :: Scope
+  , nScope :: Scope
   }
 
 data Inferred s = Inferred
   { iStored :: s
-  , iValue :: InferredExpr
-  , iType :: InferredExpr
-  , iInferNode :: InferNode
+  -- Refs used to match with conflicts
+  , iValue :: (Ref, Data.PureExpression)
+  , iType :: (Ref, Data.PureExpression)
+  -- Used to resume inference.
+  , iScope :: Scope
   }
 
 type Expression s = Data.Expression (Inferred s)
@@ -278,12 +271,28 @@ mergeExprs p0 p1 =
       Reader.local (Map.insert g1 g0) $
       Traversable.sequence =<< lift (Data.matchExpressionBody go e0 e1)
 
-newtype InferT m a =
-  InferT { runInferT :: StateT InferState m a }
-  deriving (MonadTrans, Monad)
+newtype InferActions m = InferActions
+  { reportConflict :: Ref -> Data.PureExpression -> m ()
+  }
 
-liftState :: StateT InferState m a -> InferT m a
-liftState = InferT
+newtype InferT m a =
+  InferT { unInferT :: ReaderT (InferActions m) (StateT InferState m) a }
+  deriving (Monad)
+
+runInferT ::
+  InferActions m -> InferState ->
+  InferT m a -> m (a, InferState)
+runInferT actions state =
+  (`runStateT` state) . (`runReaderT` actions) . unInferT
+
+liftActions :: ReaderT (InferActions m) (StateT InferState m) a -> InferT m a
+liftActions = InferT
+
+liftState :: Monad m => StateT InferState m a -> InferT m a
+liftState = liftActions . lift
+
+instance MonadTrans InferT where
+  lift = liftState . lift
 
 touch :: Monad m => Ref -> InferT m ()
 touch ref =
@@ -298,10 +307,9 @@ setRefExpr ref newExpr = do
       when (mergedExpr /= curExpr) $ do
         touch ref
         liftState $ refMapAt ref . rExpression .= mergedExpr
-    Nothing ->
-      liftState $
-      refMapAt ref . rErrors %=
-      (Set.insert . Data.canonizeGuids . void) newExpr
+    Nothing -> do
+      report <- liftActions $ Reader.asks reportConflict
+      lift . report ref . Data.canonizeGuids $ void newExpr
 
 setRefExprPure :: Monad m => Ref -> Data.PureExpression -> InferT m ()
 setRefExprPure ref = setRefExpr ref . refExprFromPure
@@ -385,22 +393,6 @@ nodeFromEntity loader scope entity typedValue = do
       setRefExprPure (tvVal typedValue) initialVal
       setRefExprPure (tvType typedValue) initialType
 
-fromEntity ::
-  Monad m =>
-  Loader m ->
-  Maybe Data.DefinitionIRef ->
-  Data.Expression s ->
-  m (Data.Expression (s, InferNode), InferState)
-fromEntity loader mRecursiveIRef rootEntity =
-  (`runStateT` InferState (RefMap mempty) mempty) . runInferT $ do
-    rootTv <- createTypedVal
-    let
-      scope =
-        case mRecursiveIRef of
-        Nothing -> mempty
-        Just iref -> Map.singleton (Data.DefinitionRef iref) (tvType rootTv)
-    nodeFromEntity loader scope rootEntity rootTv
-
 popTouchedRef :: Monad m => InferT m (Maybe Ref)
 popTouchedRef = do
   touched <- liftState $ Lens.use sTouchedRefs
@@ -410,9 +402,9 @@ popTouchedRef = do
       liftState $ sTouchedRefs .= newTouchedRefs
       return . Just $ Ref key
 
-infer :: InferState -> RefMap
-infer =
-  Lens.view sRefMap . execState (runInferT go)
+infer :: Monad m => InferActions m -> InferState -> m RefMap
+infer actions state =
+  liftM (Lens.view sRefMap . snd) $ runInferT actions state go
   where
     go = maybe (return ()) goOn =<< popTouchedRef
     goOn ref = do
@@ -583,28 +575,28 @@ applyRule (RuleApply (ApplyComponents apply func arg)) = do
 
 inferFromEntity ::
   Monad m =>
-  Loader m ->
+  Loader m -> InferActions m ->
   Maybe Data.DefinitionIRef ->
   Data.Expression s ->
   m (Expression s, RefMap)
-inferFromEntity loader mRecursiveDef =
-  liftM (derefNodes . second infer) . fromEntity loader mRecursiveDef
-  where
-    derefNodes (expr, state) =
-      (fmap (derefNode state) expr, state)
-    derefNode state (s, inferNode) =
+inferFromEntity loader actions mRecursiveDef expression = do
+  (node, loadState) <- runInferT actions (InferState (RefMap mempty) mempty) $ do
+    rootTv <- createTypedVal
+    let
+      scope =
+        case mRecursiveDef of
+        Nothing -> mempty
+        Just iref -> Map.singleton (Data.DefinitionRef iref) (tvType rootTv)
+    nodeFromEntity loader scope expression rootTv
+  resultRefMap <- infer actions loadState
+  let
+    derefNode (s, inferNode) =
       Inferred
       { iStored = s
-      , iValue = deref state . tvVal $ nRefs inferNode
-      , iType = deref state . tvType $ nRefs inferNode
-      , iInferNode = inferNode
+      , iValue = withDeref . tvVal $ nRefs inferNode
+      , iType = withDeref . tvType $ nRefs inferNode
+      , iScope = nScope inferNode
       }
-
-deref :: RefMap -> Ref -> InferredExpr
-deref (RefMap m) (Ref x) =
-  InferredExpr
-  { ieExpression = void $ refState ^. rExpression
-  , ieErrors = Set.toList $ refState ^. rErrors
-  }
-  where
-    refState = m ! x
+    withDeref ref = (ref, deref ref)
+    deref (Ref x) = void $ ((resultRefMap ^. refMap) ! x) ^. rExpression
+  return (fmap derefNode node, resultRefMap)

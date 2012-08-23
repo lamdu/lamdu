@@ -11,7 +11,7 @@ module Editor.CodeEdit.Sugar
   , LiteralInteger(..), Inferred(..)
   , GetVariable(..), gvGuid
   , HasParens(..)
-  , convertExpression, convertExpressionPure
+  , convertExpressionPure
   , loadConvertDefinition
   ) where
 
@@ -20,13 +20,20 @@ import Control.Monad (liftM, void)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
+import Control.Monad.Trans.Writer (WriterT(..))
+import Data.Map (Map)
 import Data.Maybe (isJust)
+import Data.Monoid (Monoid(..))
+import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import qualified Control.Monad.Trans.Reader as Reader
+import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
+import qualified Data.Map as Map
+import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -175,8 +182,8 @@ AtFieldTH.make ''FuncParamActions
 
 data ExprEntityStored m = ExprEntityStored
   { eesProp :: Data.ExpressionIRefProperty (T m)
-  , eeInferredTypes :: DataTyped.InferredExpr
-  , eeInferredValues :: DataTyped.InferredExpr
+  , eeInferredTypes :: [Data.PureExpression]
+  , eeInferredValues :: [Data.PureExpression]
   }
 
 type ExprEntity m = Data.Expression (Maybe (ExprEntityStored m))
@@ -189,16 +196,16 @@ eeFromPure = fmap $ const Nothing
 
 type StoredInferred m = DataTyped.Expression (Data.ExpressionIRefProperty (T m))
 
-eeFromStoredInferred :: StoredInferred m -> ExprEntity m
-eeFromStoredInferred =
-  fmap f
-  where
-    f x =
-      Just $ ExprEntityStored
-      { eesProp = DataTyped.iStored x
-      , eeInferredValues = DataTyped.iValue x
-      , eeInferredTypes = DataTyped.iType x
-      }
+newtype ConflictMap =
+  ConflictMap { unConflictMap :: Map DataTyped.Ref (Set Data.PureExpression) }
+
+instance Monoid ConflictMap where
+  mempty = ConflictMap mempty
+  mappend (ConflictMap x) (ConflictMap y) =
+    ConflictMap $ Map.unionWith mappend x y
+
+getConflicts :: DataTyped.Ref -> ConflictMap -> [Data.PureExpression]
+getConflicts ref = maybe [] Set.toList . Map.lookup ref . unConflictMap
 
 argument :: (a -> b) -> (b -> c) -> a -> c
 argument = flip (.)
@@ -288,8 +295,7 @@ mkExpressionRef ee expr = do
   where
     types =
       zipWith Data.randomizeGuids (RandomUtils.splits gen) .
-      maybe [] (addConflicts . eeInferredTypes) $ Data.ePayload ee
-    addConflicts r = DataTyped.ieExpression r : DataTyped.ieErrors r
+      maybe [] eeInferredTypes $ Data.ePayload ee
     gen =
       Random.mkStdGen . (*2) . BinaryUtils.decodeS . Guid.bs $
       Data.eGuid ee
@@ -602,9 +608,9 @@ convertHole exprI = do
       }
   mkExpressionRef exprI =<<
     case fmap eeInferredValues (Data.ePayload exprI) of
-    Just (DataTyped.InferredExpr (Data.Expression _ (Data.ExpressionLeaf Data.Hole) _) _) ->
+    Just [Data.Expression { Data.eValue = Data.ExpressionLeaf Data.Hole }] ->
       return $ ExpressionHole hole
-    Just (DataTyped.InferredExpr x []) ->
+    Just [x] ->
       liftM (ExpressionInferred . (`Inferred` hole)) .
       convertExpressionI $ eeFromPure x
     _ -> return $ ExpressionHole hole
@@ -655,9 +661,12 @@ convertExpressionPure ::
   Monad m => Data.PureExpression -> T m (ExpressionRef m)
 convertExpressionPure = runSugar Nothing . convertExpressionI . eeFromPure
 
-convertExpression ::
-  Monad m => StoredInferred m -> T m (ExpressionRef m)
-convertExpression = runSugar Nothing . convertExpressionI . eeFromStoredInferred
+addConflict ::
+  Monad m =>
+  DataTyped.Ref -> Data.PureExpression -> WriterT ConflictMap m ()
+addConflict ref =
+  Writer.tell . ConflictMap .
+  Map.singleton ref . Set.singleton
 
 loadConvertDefinition ::
   Monad m => Data.DefinitionIRef -> T m (DefinitionRef m)
@@ -666,11 +675,21 @@ loadConvertDefinition defI = do
   let
     Data.Definition (Data.DefinitionExpression exprL) typeL =
       DataLoad.defEntityValue defLoad
-  (exprInferred, _) <-
+  ((exprInferred, _), conflictsMap) <-
+    runWriterT $
     DataTyped.inferFromEntity
-    (DataTyped.Loader DataLoad.loadPureDefinitionType)
+    (DataTyped.Loader (lift . DataLoad.loadPureDefinitionType))
+    (DataTyped.InferActions addConflict)
     (Just defI) exprL
-  exprS <- convertExpression exprInferred
+  let
+    toExprEntity x =
+      Just $ ExprEntityStored
+      { eesProp = DataTyped.iStored x
+      , eeInferredValues = g $ DataTyped.iValue x
+      , eeInferredTypes = g $ DataTyped.iType x
+      }
+    g (ref, expr) = expr : getConflicts ref conflictsMap
+  exprS <- runSugar Nothing . convertExpressionI $ fmap toExprEntity exprInferred
   typeS <- convertExpressionPure $ void typeL
   return DefinitionRef
     { drGuid = IRef.guid defI
