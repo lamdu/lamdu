@@ -1,8 +1,6 @@
 import Control.Applicative (liftA2)
 import Control.Arrow (first)
-import Control.Monad (guard)
 import Control.Monad.Identity (Identity(..))
-import Data.Function (on)
 import Data.Map (Map, (!))
 import Data.Maybe (isJust)
 import Data.Store.Guid (Guid)
@@ -54,7 +52,8 @@ toExpression ::
   Data.PureExpression ->
   (Typed.Expression (), Typed.RefMap)
 toExpression =
-  runIdentity . Typed.inferFromEntity loader Nothing
+  runIdentity .
+  uncurry (Typed.inferFromEntity loader (error "conflict!")) Typed.initial Nothing
   where
     loader = Typed.Loader (Identity . (definitionTypes !) . IRef.guid)
 
@@ -66,9 +65,9 @@ mkExpr = Data.pureExpression . Guid.fromString
 hole :: Data.PureExpression
 hole = mkExpr "hole" $ Data.ExpressionLeaf Data.Hole
 
-type InferResults = Data.Expression (Typed.InferredExpr, Typed.InferredExpr)
+type InferResults = Data.Expression (Data.PureExpression, Data.PureExpression)
 
-inferResults :: Typed.Expression s -> InferResults
+inferResults :: Typed.Expression a -> InferResults
 inferResults =
   fmap f
   where
@@ -78,14 +77,10 @@ showExpressionWithInferred :: InferResults -> String
 showExpressionWithInferred =
   List.intercalate "\n" . go
   where
-    showInferred x =
-      case Typed.ieErrors x of
-      [] -> show $ Typed.ieExpression x
-      _ -> "ERROR: " ++ show x
     go typedExpr =
       [ "Expr: " ++ show (fmap (const ()) expr)
-      , "  IVal:  " ++ showInferred val
-      , "  IType: " ++ showInferred typ
+      , "  IVal:  " ++ show val
+      , "  IType: " ++ show typ
       ] ++
       (map ("  " ++) . Foldable.concat .
        fmap go) expr
@@ -99,12 +94,7 @@ compareInferred x y =
   where
     f (v0, t0) (v1, t1) =
       liftA2 (,) (matchI v0 v1) (matchI t0 t1)
-    matchI r0 r1 = do
-      guard $ on (==) (length . Typed.ieErrors) r0 r1
-      liftA2 (,)
-        (sequence (on (zipWith matchPure) Typed.ieErrors r0 r1))
-        (on matchPure Typed.ieExpression r0 r1)
-    matchPure = Data.matchExpression nop
+    matchI = Data.matchExpression nop
     nop () () = ()
 
 mkInferredLeaf :: Data.Leaf -> Data.PureExpression -> InferResults
@@ -113,9 +103,7 @@ mkInferredLeaf leaf typ =
   { Data.eGuid = Guid.fromString "leaf"
   , Data.eValue = Data.ExpressionLeaf leaf
   , Data.ePayload =
-      ( mkInferredExpr . Data.pureExpression g $ Data.ExpressionLeaf leaf
-      , mkInferredExpr typ
-      )
+      (Data.pureExpression g (Data.ExpressionLeaf leaf), typ)
   }
   where
     g = Guid.fromString "leaf"
@@ -128,14 +116,11 @@ mkInferredGetDef name =
   where
     g = Guid.fromString name
 
-mkInferredExpr :: Data.PureExpression -> Typed.InferredExpr
-mkInferredExpr = (`Typed.InferredExpr` [])
-
 mkInferredNode ::
   String -> Data.PureExpression -> Data.PureExpression ->
   Data.ExpressionBody InferResults -> InferResults
 mkInferredNode g iVal iType body =
-  Data.Expression (Guid.fromString g) body (mkInferredExpr iVal, mkInferredExpr iType)
+  Data.Expression (Guid.fromString g) body (iVal, iType)
 
 main :: IO ()
 main = TestFramework.defaultMain
