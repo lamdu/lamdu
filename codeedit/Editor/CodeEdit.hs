@@ -4,7 +4,7 @@ module Editor.CodeEdit
   , SugarCache(..), makeSugarCache )
 where
 
-import Control.Monad (liftM, (<=<))
+import Control.Monad (liftM)
 import Data.List.Utils(enumerate, insertAt, removeAt)
 import Data.Monoid(Monoid(..))
 import Data.Store.Guid (Guid)
@@ -13,8 +13,6 @@ import Editor.Anchors (ViewTag)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget)
 import qualified Data.Store.IRef as IRef
-import qualified Data.Store.Property as Property
-import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
@@ -22,9 +20,6 @@ import qualified Editor.CodeEdit.ExpressionEdit as ExpressionEdit
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
-import qualified Editor.Data as Data
-import qualified Editor.Data.Load as DataLoad
-import qualified Editor.Data.Typed as DataTyped
 import qualified Editor.ITransaction as IT
 import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
@@ -87,23 +82,9 @@ makeSugarPanes = do
       | i-1 >= 0 = Just $ movePane i (i-1)
       | otherwise = Nothing
     convertPane (i, defI) = do
-      defLoad <- DataLoad.loadDefinition defI
-      let
-        Data.Definition (Data.DefinitionExpression exprL) typeL =
-          DataLoad.defEntityValue defLoad
-      (exprInferred, _) <-
-        DataTyped.inferFromEntity
-        (DataTyped.Loader DataLoad.loadPureDefinitionType)
-        (Just defI) exprL
-      exprS <- Sugar.convertExpression exprInferred
+      sDef <- Sugar.loadConvertDefinition defI
       return SugarPane
-        { spDef = Sugar.DefinitionRef
-            { Sugar.drGuid = IRef.guid defI
-            , Sugar.drBody = exprS
-            , Sugar.drType = undefined
-            , Sugar.drIsTypeRedundant = True
-            , Sugar.drMNewType = Nothing
-            }
+        { spDef = sDef
         , mDelPane = mkMDelPane i
         , mMovePaneDown = mkMMovePaneDown i
         , mMovePaneUp = mkMMovePaneUp i

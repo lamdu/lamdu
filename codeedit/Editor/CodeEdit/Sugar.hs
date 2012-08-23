@@ -12,10 +12,11 @@ module Editor.CodeEdit.Sugar
   , GetVariable(..), gvGuid
   , HasParens(..)
   , convertExpression, convertExpressionPure
+  , loadConvertDefinition
   ) where
 
 import Control.Applicative ((<$>), (<*>))
-import Control.Monad (liftM)
+import Control.Monad (liftM, void)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -33,6 +34,7 @@ import qualified Data.Traversable as Traversable
 import qualified Editor.Anchors as Anchors
 import qualified Editor.CodeEdit.Infix as Infix
 import qualified Editor.Data as Data
+import qualified Editor.Data.Load as DataLoad
 import qualified Editor.Data.Ops as DataOps
 import qualified Editor.Data.Typed as DataTyped
 import qualified System.Random as Random
@@ -656,3 +658,24 @@ convertExpressionPure = runSugar Nothing . convertExpressionI . eeFromPure
 convertExpression ::
   Monad m => StoredInferred m -> T m (ExpressionRef m)
 convertExpression = runSugar Nothing . convertExpressionI . eeFromStoredInferred
+
+loadConvertDefinition ::
+  Monad m => Data.DefinitionIRef -> T m (DefinitionRef m)
+loadConvertDefinition defI = do
+  defLoad <- DataLoad.loadDefinition defI
+  let
+    Data.Definition (Data.DefinitionExpression exprL) typeL =
+      DataLoad.defEntityValue defLoad
+  (exprInferred, _) <-
+    DataTyped.inferFromEntity
+    (DataTyped.Loader DataLoad.loadPureDefinitionType)
+    (Just defI) exprL
+  exprS <- convertExpression exprInferred
+  typeS <- convertExpressionPure $ void typeL
+  return DefinitionRef
+    { drGuid = IRef.guid defI
+    , drBody = exprS
+    , drType = typeS
+    , drIsTypeRedundant = True
+    , drMNewType = Nothing
+    }

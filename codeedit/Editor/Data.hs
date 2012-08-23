@@ -16,7 +16,7 @@ module Editor.Data
   , ExpressionIRefProperty, eipGuid
   , ExpressionI, ExpressionIRef(..)
   , Expression(..), atEGuid, atEValue, atEPayload
-  , PureExpression, pureExpression, toPureExpression
+  , PureExpression, pureExpression
   , newExprIRef, readExprIRef, writeExprIRef, exprIRefGuid
   , newIRefExpressionFromPure, writeIRefExpressionFromPure
   , canonizeGuids, randomizeGuids
@@ -186,9 +186,6 @@ AtFieldTH.make ''Expression
 
 pureExpression :: Guid -> ExpressionBody PureExpression -> PureExpression
 pureExpression guid body = Expression guid body ()
-
-toPureExpression :: Expression a -> PureExpression
-toPureExpression = fmap $ const ()
 
 variableRefGuid :: VariableRef -> Guid
 variableRefGuid (ParameterRef i) = i

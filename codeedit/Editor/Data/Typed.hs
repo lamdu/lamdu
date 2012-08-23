@@ -10,7 +10,7 @@ module Editor.Data.Typed
 import Control.Applicative ((<*>))
 import Control.Arrow (first, second)
 import Control.Lens ((%=), (.=), (^.))
-import Control.Monad (guard, liftM, liftM2, when)
+import Control.Monad (guard, liftM, liftM2, void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (StateT, execState, runStateT)
@@ -301,7 +301,7 @@ setRefExpr ref newExpr = do
     Nothing ->
       liftState $
       refMapAt ref . rErrors %=
-      (Set.insert . Data.canonizeGuids . Data.toPureExpression) newExpr
+      (Set.insert . Data.canonizeGuids . void) newExpr
 
 setRefExprPure :: Monad m => Ref -> Data.PureExpression -> InferT m ()
 setRefExprPure ref = setRefExpr ref . refExprFromPure
@@ -603,7 +603,7 @@ inferFromEntity loader mRecursiveDef =
 deref :: RefMap -> Ref -> InferredExpr
 deref (RefMap m) (Ref x) =
   InferredExpr
-  { ieExpression = Data.toPureExpression $ refState ^. rExpression
+  { ieExpression = void $ refState ^. rExpression
   , ieErrors = Set.toList $ refState ^. rErrors
   }
   where
