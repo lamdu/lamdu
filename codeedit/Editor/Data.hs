@@ -19,7 +19,7 @@ module Editor.Data
   , PureExpression, pureExpression, toPureExpression
   , newExprIRef, readExprIRef, writeExprIRef, exprIRefGuid
   , newIRefExpressionFromPure, writeIRefExpressionFromPure
-  , canonizeGuids
+  , canonizeGuids, randomizeGuids
   , matchExpressionBody
   , matchExpression
   ) where
@@ -51,6 +51,7 @@ import qualified Data.Map as Map
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
+import qualified System.Random as Random
 
 type ExpressionIRefProperty m = Property m ExpressionIRef
 
@@ -102,14 +103,6 @@ data VariableRef
   | DefinitionRef DefinitionIRef
   deriving (Eq, Ord, Show)
 
-data FFIName = FFIName
-  { fModule :: [String]
-  , fName :: String
-  } deriving (Eq, Ord)
-
-instance Show FFIName where
-  show (FFIName path name) = concatMap (++".") path ++ name
-
 data Leaf
   = GetVariable VariableRef
   | LiteralInteger Integer
@@ -153,6 +146,14 @@ showP = parenify . show
 parenify :: String -> String
 parenify x = concat ["(", x, ")"]
 
+data FFIName = FFIName
+  { fModule :: [String]
+  , fName :: String
+  } deriving (Eq, Ord)
+
+instance Show FFIName where
+  show (FFIName path name) = concatMap (++".") path ++ name
+
 data Builtin expr = Builtin
   { bName :: FFIName
   , bType :: expr
@@ -176,7 +177,7 @@ data Expression a = Expression
   { eGuid :: Guid
   , eValue :: ExpressionBody (Expression a)
   , ePayload :: a
-  } deriving (Functor, Eq)
+  } deriving (Functor, Eq, Ord)
 
 instance Show a => Show (Expression a) where
   show (Expression guid value payload) = show guid ++ ":" ++ show value ++ "{" ++ show payload ++ "}"
@@ -228,17 +229,17 @@ expressionIFromPure scope newGuid (Expression oldGuid expr ()) =
         makeParameterRef . fromMaybe parGuid $ lookup parGuid newScope
       x -> x
 
-canonizeGuids ::
-  RandomGen g => g -> PureExpression -> PureExpression
-canonizeGuids gen =
+randomizeGuids ::
+  RandomGen g => g -> Expression a -> Expression a
+randomizeGuids gen =
   (`evalState` gen) . (`runReaderT` Map.empty) . go
   where
     onLambda oldGuid newGuid (Lambda paramType body) =
       liftM2 Lambda (go paramType) .
       Reader.local (Map.insert oldGuid newGuid) $ go body
-    go (Expression oldGuid v ()) = do
+    go (Expression oldGuid v s) = do
       newGuid <- lift $ state random
-      liftM (pureExpression newGuid) $
+      liftM (flip (Expression newGuid) s) $
         case v of
         ExpressionLambda lambda ->
           liftM ExpressionLambda $ onLambda oldGuid newGuid lambda
@@ -250,7 +251,10 @@ canonizeGuids gen =
           Reader.asks $
           maybe gv makeParameterRef .
           Map.lookup guid
-        x -> return x
+        _ -> return v
+
+canonizeGuids :: Expression a -> Expression a
+canonizeGuids = randomizeGuids $ Random.mkStdGen 0
 
 matchExpressionBody ::
   (a -> b -> c) -> ExpressionBody a -> ExpressionBody b -> Maybe (ExpressionBody c)

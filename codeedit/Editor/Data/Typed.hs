@@ -19,8 +19,9 @@ import Control.Monad.Trans.State (StateT, execState, runStateT)
 import Data.IntMap (IntMap, (!))
 import Data.IntSet (IntSet)
 import Data.Map (Map)
-import Data.Maybe (fromMaybe, isJust)
+import Data.Maybe (fromMaybe)
 import Data.Monoid (mempty, mappend)
+import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
@@ -31,6 +32,7 @@ import qualified Data.IntSet as IntSet
 import qualified Data.IntSet.Lens as IntSetLens
 import qualified Data.List as List
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
 import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
@@ -142,7 +144,7 @@ refExprFromPure = fmap $ const mempty
 
 data RefData = RefData
   { _rExpression :: RefExpression
-  , _rErrors :: [Conflict]
+  , _rErrors :: Set Conflict
   , _rRules :: [Rule]
   } deriving (Show)
 LensTH.makeLenses ''RefData
@@ -166,7 +168,7 @@ emptyRefData :: RefData
 emptyRefData = RefData
   { _rRules = []
   , _rExpression = holeRefExpr
-  , _rErrors = []
+  , _rErrors = mempty
   }
 
 newtype RefMap = RefMap { _refMap :: IntMap RefData }
@@ -281,14 +283,6 @@ mergeExprs p0 p1 =
 touch :: MonadState InferState m => Ref -> m ()
 touch ref = sTouchedRefs . IntSetLens.contains (unRef ref) .= True
 
-addIfNotMatch :: (a -> a -> Bool) -> a -> [a] -> [a]
-addIfNotMatch f x xs
-  | any (f x) xs = xs
-  | otherwise = x : xs
-
-alphaEq :: Data.Expression a -> Data.Expression b -> Bool
-alphaEq x = isJust . Data.matchExpression ((const . const) ()) x
-
 setRefExpr ::
   MonadState InferState m =>
   Ref -> RefExpression -> m ()
@@ -299,7 +293,9 @@ setRefExpr ref newExpr = do
       when (mergedExpr /= curExpr) $ do
         touch ref
         refMapAt ref . rExpression .= mergedExpr
-    Nothing -> refMapAt ref . rErrors %= addIfNotMatch alphaEq (Data.toPureExpression newExpr)
+    Nothing ->
+      refMapAt ref . rErrors %=
+        (Set.insert . Data.canonizeGuids . Data.toPureExpression) newExpr
 
 setRefExprPure ::
   MonadState InferState m =>
@@ -604,7 +600,7 @@ deref :: RefMap -> Ref -> InferredExpr
 deref (RefMap m) (Ref x) =
   InferredExpr
   { ieExpression = Data.toPureExpression $ refState ^. rExpression
-  , ieErrors = refState ^. rErrors
+  , ieErrors = Set.toList $ refState ^. rErrors
   }
   where
     refState = m ! x

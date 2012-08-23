@@ -90,7 +90,7 @@ canonizeResultExpr
   :: HoleInfo m
   -> Data.PureExpression -> Data.PureExpression
 canonizeResultExpr holeInfo expr =
-  flip Data.canonizeIdentifiers expr . Random.mkStdGen $
+  flip Data.randomizeGuids expr . Random.mkStdGen $
   hash (show expr, Guid.bs (hiGuid holeInfo))
 
 resultToWidget

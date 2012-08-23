@@ -15,8 +15,7 @@ module Editor.CodeEdit.Sugar
   ) where
 
 import Control.Applicative ((<$>), (<*>))
-import Control.Lens ((^.))
-import Control.Monad (liftM, liftM2)
+import Control.Monad (liftM)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -27,7 +26,6 @@ import Editor.Anchors (ViewTag)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
-import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -287,7 +285,7 @@ mkExpressionRef ee expr = do
     }
   where
     types =
-      zipWith Data.canonizeGuids (RandomUtils.splits gen) .
+      zipWith Data.randomizeGuids (RandomUtils.splits gen) .
       maybe [] (addConflicts . eeInferredTypes) $ Data.ePayload ee
     addConflicts r = DataTyped.ieExpression r : DataTyped.ieErrors r
     gen =
@@ -458,7 +456,7 @@ atFunctionType exprRef =
     ExpressionHole {} -> exprRef -- Keep types on holes
     _ -> atRInferredTypes removeIfNoErrors exprRef
   where
-    removeIfNoErrors [x] = []
+    removeIfNoErrors [_] = []
     removeIfNoErrors xs = xs
 
 mkExpressionGetVariable :: Data.VariableRef -> Expression m
