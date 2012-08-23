@@ -609,7 +609,11 @@ convertHole exprI = do
         inferExpr expr (scInferState context) $ eeInferPoint stored
     inferResults expr =
       List.joinL . liftM (fromMaybe mzero) . runMaybeT $ do
-        inferred <- uncurry (inferExpr expr) . DataTyped.newNode $ scInferState context
+        stored <- MaybeT . return $ Data.ePayload exprI
+        inferred <-
+          uncurry (inferExpr expr) .
+          DataTyped.newNodeWithScope ((DataTyped.nScope . eeInferPoint) stored) $
+          scInferState context
         let typ = DataTyped.iType (Data.ePayload inferred)
         return . List.filterL check . List.fromList $ applyForms typ expr
     hole = Hole

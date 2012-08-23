@@ -235,16 +235,23 @@ main = TestFramework.defaultMain
   , testCase "ref to the def on the side" $
     let
       defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
-      Just (_, refMap) =
+      Just (exprD, refMap) =
         uncurry doInferEx Typed.initial (Just defI) .
         mkExpr "" $ Data.makeLambda hole hole
-      Just (tExpr, _) =
-        uncurry doInferEx (Typed.newNode refMap) (Just defI) .
+      Data.ExpressionLambda (Data.Lambda _ body) = Data.eValue exprD
+      scope = Typed.nScope . Typed.iPoint $ Data.ePayload body
+      Just (exprR, _) =
+        uncurry doInferEx (Typed.newNodeWithScope scope refMap) Nothing .
         mkExpr "" . Data.ExpressionLeaf . Data.GetVariable $ Data.DefinitionRef defI
-      result = inferResults tExpr
+      resultD = inferResults exprD
+      resultR = inferResults exprR
     in
-      assertBool (showExpressionWithInferred result) .
-      compareInferred result .
+      assertBool (unlines
+        [ showExpressionWithInferred resultD
+        , show scope
+        , showExpressionWithInferred resultR
+        ]) .
+      compareInferred resultR .
       mkInferredLeaf (Data.GetVariable (Data.DefinitionRef defI)) $
       mkExpr "" $ Data.makePi hole hole
   ]

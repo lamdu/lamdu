@@ -5,7 +5,7 @@ module Editor.Data.Typed
   , Conflict
   , RefMap, Ref
   , Loader(..), InferActions(..)
-  , inferFromEntity, initial, newNode
+  , inferFromEntity, initial, newNodeWithScope
   ) where
 
 import Control.Applicative ((<*>))
@@ -165,18 +165,18 @@ emptyRefData = RefData
 newtype RefMap = RefMap { _refMap :: IntMap RefData }
 LensTH.makeLenses ''RefMap
 
-data InferState = InferState
-  { _sRefMap :: RefMap
-  , _sTouchedRefs :: IntSet
-  }
-LensTH.makeLenses ''InferState
-
 instance Show RefMap where
   show =
     List.intercalate ", " . map (showPair . first Ref) .
     IntMap.toList . Lens.view refMap
     where
       showPair (x, y) = show x ++ "=>" ++ show y
+
+data InferState = InferState
+  { _sRefMap :: RefMap
+  , _sTouchedRefs :: IntSet
+  } deriving Show
+LensTH.makeLenses ''InferState
 
 -- Used to refer to expressions in the inference state and resume inference.
 data InferNode = InferNode
@@ -205,10 +205,10 @@ createTypedVal =
       sRefMap . refMap . IntMapLens.at key .= Just emptyRefData
       return $ Ref key
 
-newNode :: RefMap -> (RefMap, InferNode)
-newNode prevRefMap =
+newNodeWithScope :: Scope -> RefMap -> (RefMap, InferNode)
+newNodeWithScope scope prevRefMap =
   ( resultRefMap
-  , InferNode tv mempty
+  , InferNode tv scope
   )
   where
     Identity (tv, InferState resultRefMap _) =
@@ -216,7 +216,7 @@ newNode prevRefMap =
       (InferState prevRefMap mempty) createTypedVal
 
 initial :: (RefMap, InferNode)
-initial = newNode $ RefMap mempty
+initial = newNodeWithScope mempty $ RefMap mempty
 
 -- Map from params to their Param type,
 -- also including the recursive ref to the definition.
@@ -359,7 +359,10 @@ addRules scope typedVal g exprBody = do
     Data.ExpressionLeaf (Data.GetVariable var) ->
       case Map.lookup var scope of
       Nothing -> return ()
-      Just ref -> addUnionRule ref $ tvType typedVal
+      Just ref -> do
+        addUnionRule ref $ tvType typedVal
+        -- make sure we always invoke this rule.
+        touch $ tvType typedVal
     _ -> return ()
   where
     addUnionRule x y = addRuleToMany [x, y] $ RuleUnion x y
