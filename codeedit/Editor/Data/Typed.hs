@@ -5,7 +5,7 @@ module Editor.Data.Typed
   , Conflict
   , RefMap, Ref
   , Loader(..), InferActions(..)
-  , inferFromEntity, initial
+  , inferFromEntity, initial, newNode
   ) where
 
 import Control.Applicative ((<*>))
@@ -193,15 +193,30 @@ data Inferred a = Inferred
 
 type Expression a = Data.Expression (Inferred a)
 
-initial :: (RefMap, InferNode)
-initial =
+-- TODO: createTypeVal should use newNode, not vice versa.
+-- For use in loading phase only!
+-- We don't create additional Refs afterwards!
+createTypedVal :: Monad m => InferT m TypedValue
+createTypedVal =
+  liftM2 TypedValue createRef createRef
+  where
+    createRef = liftState $ do
+      key <- Lens.uses (sRefMap . refMap) IntMap.size
+      sRefMap . refMap . IntMapLens.at key .= Just emptyRefData
+      return $ Ref key
+
+newNode :: RefMap -> (RefMap, InferNode)
+newNode prevRefMap =
   ( resultRefMap
   , InferNode tv mempty
   )
   where
     Identity (tv, InferState resultRefMap _) =
       runInferT (error "not expecting use of actions")
-      (InferState (RefMap mempty) mempty) createTypedVal
+      (InferState prevRefMap mempty) createTypedVal
+
+initial :: (RefMap, InferNode)
+initial = newNode $ RefMap mempty
 
 -- Map from params to their Param type,
 -- also including the recursive ref to the definition.
@@ -354,17 +369,6 @@ addRules scope typedVal g exprBody = do
     onLambda cons (Data.Lambda paramType result) =
       addRuleToMany [tvVal typedVal, tvVal paramType, tvVal result] .
       cons $ LambdaComponents (tvVal typedVal) (tvVal paramType) (tvVal result)
-
--- For use in loading phase only!
--- We don't create additional Refs afterwards!
-createTypedVal :: Monad m => InferT m TypedValue
-createTypedVal =
-  liftM2 TypedValue createRef createRef
-  where
-    createRef = liftState $ do
-      key <- Lens.uses (sRefMap . refMap) IntMap.size
-      sRefMap . refMap . IntMapLens.at key .= Just emptyRefData
-      return $ Ref key
 
 nodeFromEntity ::
   Monad m =>

@@ -16,13 +16,14 @@ module Editor.CodeEdit.Sugar
   ) where
 
 import Control.Applicative ((<$>), (<*>))
-import Control.Monad (liftM, void)
+import Control.Monad (liftM, mzero, void)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (MonadTrans(..))
+import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.Writer (WriterT(..))
 import Data.Map (Map)
-import Data.Maybe (isJust)
+import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid (Monoid(..))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
@@ -32,6 +33,7 @@ import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
+import qualified Data.List.Class as List
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
@@ -184,6 +186,7 @@ data ExprEntityStored m = ExprEntityStored
   { eesProp :: Data.ExpressionIRefProperty (T m)
   , eeInferredTypes :: [Data.PureExpression]
   , eeInferredValues :: [Data.PureExpression]
+  , eeInferPoint :: DataTyped.InferNode
   }
 
 type ExprEntity m = Data.Expression (Maybe (ExprEntityStored m))
@@ -225,29 +228,22 @@ writeIRefVia f = (fmap . argument) f writeIRef
 
 type Scope = [Guid]
 
-data SugarContext m = SugarContext
+data SugarContext = SugarContext
   { scScope :: Scope
-  , scDef :: Maybe (StoredInferred m)
+  , scInferState :: DataTyped.RefMap
   }
 AtFieldTH.make ''SugarContext
 
 newtype Sugar m a = Sugar {
-  unSugar :: ReaderT (SugarContext m) (T m) a
+  unSugar :: ReaderT SugarContext (T m) a
   } deriving (Monad)
 AtFieldTH.make ''Sugar
 
-runSugar :: Monad m => Maybe (StoredInferred m) -> Sugar m a -> T m a
-runSugar def (Sugar action) = do
-  runReaderT action SugarContext
-    { scScope = []
-    , scDef = def
-    }
+runSugar :: Monad m => SugarContext -> Sugar m a -> T m a
+runSugar ctx (Sugar action) = runReaderT action ctx
 
-readScope :: Monad m => Sugar m Scope
-readScope = Sugar $ Reader.asks scScope
-
-readDefinition :: Monad m => Sugar m (Maybe (StoredInferred m))
-readDefinition = Sugar $ Reader.asks scDef
+readContext :: Monad m => Sugar m SugarContext
+readContext = Sugar Reader.ask
 
 liftTransaction :: Monad m => T m a -> Sugar m a
 liftTransaction = Sugar . lift
@@ -595,16 +591,26 @@ applyForms exprType expr =
 convertHole :: Monad m => Convertor m
 convertHole exprI = do
   mPaste <- maybe (return Nothing) mkPaste $ eeProp exprI
-  scope <- readScope
-  mDef <- readDefinition
+  context <- readContext
   let
-    gen =
-      Random.mkStdGen . (+1) . (*2) . BinaryUtils.decodeS $ Guid.bs eGuid
+    inferResults expr =
+      List.joinL . liftM (fromMaybe mzero) . runMaybeT $ do
+        stored <- MaybeT . return $ Data.ePayload exprI
+        (inferred, _) <-
+          uncurry
+          (DataTyped.inferFromEntity
+            (DataTyped.Loader (lift . DataLoad.loadPureDefinitionType))
+            ((DataTyped.InferActions . const . const) mzero))
+          ((DataTyped.newNode . scInferState) context)
+          Nothing
+          expr
+        let typ = DataTyped.iType (Data.ePayload inferred)
+        return . List.fromList $ applyForms typ expr
     hole = Hole
       { holeScope = []
       , holePickResult = fmap pickResult $ eeProp exprI
       , holePaste = mPaste
-      , holeInferResults = return
+      , holeInferResults = inferResults
       }
   mkExpressionRef exprI =<<
     case fmap eeInferredValues (Data.ePayload exprI) of
@@ -616,6 +622,9 @@ convertHole exprI = do
     _ -> return $ ExpressionHole hole
   where
     eGuid = Data.eGuid exprI
+    gen =
+      Random.mkStdGen . (+1) . (*2) . BinaryUtils.decodeS $
+      Guid.bs eGuid
     pickResult irefP result = do
       ~() <- Data.writeIRefExpressionFromPure (Property.value irefP) result
       return eGuid
@@ -659,7 +668,14 @@ isCompleteType =
 
 convertExpressionPure ::
   Monad m => Data.PureExpression -> T m (ExpressionRef m)
-convertExpressionPure = runSugar Nothing . convertExpressionI . eeFromPure
+convertExpressionPure =
+  runSugar ctx . convertExpressionI . eeFromPure
+  where
+    ctx =
+      SugarContext
+      { scScope = []
+      , scInferState = error "pure expression doesnt have infer state"
+      }
 
 addConflict ::
   Monad m =>
@@ -675,7 +691,7 @@ loadConvertDefinition defI = do
   let
     Data.Definition (Data.DefinitionExpression exprL) typeL =
       DataLoad.defEntityValue defLoad
-  ((exprInferred, _), conflictsMap) <-
+  ((exprInferred, refMap), conflictsMap) <-
     runWriterT $
     uncurry
     (DataTyped.inferFromEntity
@@ -689,11 +705,17 @@ loadConvertDefinition defI = do
       { eesProp = DataTyped.iStored x
       , eeInferredValues = exprs DataTyped.iValue DataTyped.tvVal x
       , eeInferredTypes = exprs DataTyped.iType DataTyped.tvType x
+      , eeInferPoint = DataTyped.iPoint x
       }
     exprs getExpr getRef x =
       getExpr x :
       getConflicts ((getRef . DataTyped.nRefs . DataTyped.iPoint) x) conflictsMap
-  exprS <- runSugar Nothing . convertExpressionI $ fmap toExprEntity exprInferred
+    sugarContext =
+      SugarContext
+      { scScope = []
+      , scInferState = refMap
+      }
+  exprS <- runSugar sugarContext . convertExpressionI $ fmap toExprEntity exprInferred
   typeS <- convertExpressionPure $ void typeL
   return DefinitionRef
     { drGuid = IRef.guid defI
