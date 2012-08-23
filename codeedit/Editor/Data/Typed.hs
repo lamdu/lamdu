@@ -1,10 +1,11 @@
 {-# LANGUAGE DeriveFunctor, GeneralizedNewtypeDeriving, TemplateHaskell #-}
 module Editor.Data.Typed
   ( Expression, Inferred(..), rExpression
+  , InferNode(..), TypedValue(..)
   , Conflict
   , RefMap, Ref
   , Loader(..), InferActions(..)
-  , inferFromEntity
+  , inferFromEntity, initial
   ) where
 
 import Control.Applicative ((<*>))
@@ -14,6 +15,7 @@ import Control.Monad (guard, liftM, liftM2, void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (StateT, runStateT)
+import Data.Functor.Identity (Identity(..))
 import Data.IntMap (IntMap, (!))
 import Data.IntSet (IntSet)
 import Data.Map (Map)
@@ -182,16 +184,24 @@ data InferNode = InferNode
   , nScope :: Scope
   }
 
-data Inferred s = Inferred
-  { iStored :: s
-  -- Refs used to match with conflicts
-  , iValue :: (Ref, Data.PureExpression)
-  , iType :: (Ref, Data.PureExpression)
-  -- Used to resume inference.
-  , iScope :: Scope
-  }
+data Inferred a = Inferred
+  { iStored :: a
+  , iValue :: Data.PureExpression
+  , iType :: Data.PureExpression
+  , iPoint :: InferNode
+  } deriving Functor
 
-type Expression s = Data.Expression (Inferred s)
+type Expression a = Data.Expression (Inferred a)
+
+initial :: (RefMap, InferNode)
+initial =
+  ( resultRefMap
+  , InferNode tv mempty
+  )
+  where
+    Identity (tv, InferState resultRefMap _) =
+      runInferT (error "not expecting use of actions")
+      (InferState (RefMap mempty) mempty) createTypedVal
 
 -- Map from params to their Param type,
 -- also including the recursive ref to the definition.
@@ -576,27 +586,27 @@ applyRule (RuleApply (ApplyComponents apply func arg)) = do
 inferFromEntity ::
   Monad m =>
   Loader m -> InferActions m ->
+  RefMap -> InferNode ->
   Maybe Data.DefinitionIRef ->
-  Data.Expression s ->
-  m (Expression s, RefMap)
-inferFromEntity loader actions mRecursiveDef expression = do
-  (node, loadState) <- runInferT actions (InferState (RefMap mempty) mempty) $ do
-    rootTv <- createTypedVal
-    let
-      scope =
-        case mRecursiveDef of
-        Nothing -> mempty
-        Just iref -> Map.singleton (Data.DefinitionRef iref) (tvType rootTv)
+  Data.Expression a ->
+  m (Expression a, RefMap)
+inferFromEntity loader actions initialRefMap (InferNode rootTv rootScope) mRecursiveDef expression = do
+  (node, loadState) <- runInferT actions (InferState initialRefMap mempty) $
     nodeFromEntity loader scope expression rootTv
   resultRefMap <- infer actions loadState
   let
     derefNode (s, inferNode) =
       Inferred
       { iStored = s
-      , iValue = withDeref . tvVal $ nRefs inferNode
-      , iType = withDeref . tvType $ nRefs inferNode
-      , iScope = nScope inferNode
+      , iValue = deref . tvVal $ nRefs inferNode
+      , iType = deref . tvType $ nRefs inferNode
+      , iPoint = inferNode
       }
-    withDeref ref = (ref, deref ref)
     deref (Ref x) = void $ ((resultRefMap ^. refMap) ! x) ^. rExpression
   return (fmap derefNode node, resultRefMap)
+  where
+    scope =
+      case mRecursiveDef of
+      Nothing -> rootScope
+      Just iref ->
+        Map.insert (Data.DefinitionRef iref) (tvType rootTv) rootScope

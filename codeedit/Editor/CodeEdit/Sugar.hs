@@ -677,18 +677,22 @@ loadConvertDefinition defI = do
       DataLoad.defEntityValue defLoad
   ((exprInferred, _), conflictsMap) <-
     runWriterT $
-    DataTyped.inferFromEntity
-    (DataTyped.Loader (lift . DataLoad.loadPureDefinitionType))
-    (DataTyped.InferActions addConflict)
+    uncurry
+    (DataTyped.inferFromEntity
+      (DataTyped.Loader (lift . DataLoad.loadPureDefinitionType))
+      (DataTyped.InferActions addConflict))
+    DataTyped.initial
     (Just defI) exprL
   let
     toExprEntity x =
       Just $ ExprEntityStored
       { eesProp = DataTyped.iStored x
-      , eeInferredValues = g $ DataTyped.iValue x
-      , eeInferredTypes = g $ DataTyped.iType x
+      , eeInferredValues = exprs DataTyped.iValue DataTyped.tvVal x
+      , eeInferredTypes = exprs DataTyped.iType DataTyped.tvType x
       }
-    g (ref, expr) = expr : getConflicts ref conflictsMap
+    exprs getExpr getRef x =
+      getExpr x :
+      getConflicts ((getRef . DataTyped.nRefs . DataTyped.iPoint) x) conflictsMap
   exprS <- runSugar Nothing . convertExpressionI $ fmap toExprEntity exprInferred
   typeS <- convertExpressionPure $ void typeL
   return DefinitionRef
