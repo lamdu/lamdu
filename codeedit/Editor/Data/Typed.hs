@@ -450,6 +450,17 @@ subst from to expr =
     (Data.atEValue . fmap)
     (subst from to) expr
 
+mergeToPiResult ::
+  RefExpression -> RefExpression -> RefExpression
+mergeToPiResult e0@(Data.Expression _ (Data.ExpressionLeaf Data.Hole) s) e1
+  | IntSet.null s = e0
+  -- do not propagate subst markings on the way up
+  | otherwise = fmap (const mempty) e1
+mergeToPiResult e0@(Data.Expression g b s) e1 =
+  case Data.matchExpressionBody mergeToPiResult b (Data.eValue e1) of
+  Nothing -> e0
+  Just newB -> Data.Expression g newB s
+
 recurseSubst ::
   MonadState InferState m =>
   RefExpression -> Guid -> Ref -> Ref -> m RefExpression
@@ -460,12 +471,14 @@ recurseSubst preSubstExpr paramGuid argRef postSubstRef = do
     flip (subst paramGuid) preSubstExpr .
     (fmap . mappend . IntSet.singleton . unRef) argRef =<<
     getRefExpr argRef
+
+  postSubstExpr <- getRefExpr postSubstRef
   -- Recurse over PreSubst and PostSubst together
   --   When PreSubst part refers to its param:
   --     PostSubst part <=> arg
-  mergeToArg preSubstExpr =<< getRefExpr postSubstRef
-  -- TODO: In some cases, we should merge into preSubstExpr
-  return preSubstExpr
+  mergeToArg preSubstExpr postSubstExpr
+
+  return $ mergeToPiResult preSubstExpr postSubstExpr
   where
     mergeToArg pre post =
       case Data.eValue pre of
