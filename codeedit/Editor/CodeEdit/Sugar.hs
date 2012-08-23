@@ -593,19 +593,25 @@ convertHole exprI = do
   mPaste <- maybe (return Nothing) mkPaste $ eeProp exprI
   context <- readContext
   let
+    inferExpr expr inferContext inferPoint = do
+      stored <- MaybeT . return $ Data.ePayload exprI
+      (inferred, _) <-
+        DataTyped.inferFromEntity
+        (DataTyped.Loader (lift . DataLoad.loadPureDefinitionType))
+        ((DataTyped.InferActions . const . const) mzero)
+        inferContext inferPoint
+        Nothing
+        expr
+      return inferred
+    check expr =
+      liftM isJust . runMaybeT $ do
+        stored <- MaybeT . return $ Data.ePayload exprI
+        inferExpr expr (scInferState context) $ eeInferPoint stored
     inferResults expr =
       List.joinL . liftM (fromMaybe mzero) . runMaybeT $ do
-        stored <- MaybeT . return $ Data.ePayload exprI
-        (inferred, _) <-
-          uncurry
-          (DataTyped.inferFromEntity
-            (DataTyped.Loader (lift . DataLoad.loadPureDefinitionType))
-            ((DataTyped.InferActions . const . const) mzero))
-          ((DataTyped.newNode . scInferState) context)
-          Nothing
-          expr
+        inferred <- uncurry (inferExpr expr) . DataTyped.newNode $ scInferState context
         let typ = DataTyped.iType (Data.ePayload inferred)
-        return . List.fromList $ applyForms typ expr
+        return . List.filterL check . List.fromList $ applyForms typ expr
     hole = Hole
       { holeScope = []
       , holePickResult = fmap pickResult $ eeProp exprI
