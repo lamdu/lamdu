@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleContexts, TemplateHaskell, DeriveFunctor #-}
+{-# LANGUAGE DeriveFunctor, GeneralizedNewtypeDeriving, TemplateHaskell #-}
 module Editor.Data.Typed
   ( Expression, Inferred(..)
   , InferredExpr(..), rExpression, rErrors
@@ -11,9 +11,7 @@ import Control.Applicative ((<*>))
 import Control.Arrow (first, second)
 import Control.Lens ((%=), (.=), (^.))
 import Control.Monad (guard, liftM, liftM2, when)
-import Control.Monad.Reader.Class (MonadReader)
-import Control.Monad.State.Class (MonadState)
-import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (StateT, execState, runStateT)
 import Data.IntMap (IntMap, (!))
@@ -25,7 +23,7 @@ import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
-import qualified Control.Monad.Reader.Class as Reader
+import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.IntMap as IntMap
 import qualified Data.IntMap.Lens as IntMapLens
 import qualified Data.IntSet as IntSet
@@ -280,33 +278,40 @@ mergeExprs p0 p1 =
       Reader.local (Map.insert g1 g0) $
       Traversable.sequence =<< lift (Data.matchExpressionBody go e0 e1)
 
-touch :: MonadState InferState m => Ref -> m ()
-touch ref = sTouchedRefs . IntSetLens.contains (unRef ref) .= True
+newtype InferT m a =
+  InferT { runInferT :: StateT InferState m a }
+  deriving (MonadTrans, Monad)
 
-setRefExpr ::
-  MonadState InferState m =>
-  Ref -> RefExpression -> m ()
+liftState :: StateT InferState m a -> InferT m a
+liftState = InferT
+
+touch :: Monad m => Ref -> InferT m ()
+touch ref =
+  liftState $
+  sTouchedRefs . IntSetLens.contains (unRef ref) .= True
+
+setRefExpr :: Monad m => Ref -> RefExpression -> InferT m ()
 setRefExpr ref newExpr = do
-  curExpr <- Lens.use $ refMapAt ref . rExpression
+  curExpr <- liftState $ Lens.use (refMapAt ref . rExpression)
   case mergeExprs curExpr newExpr of
     Just mergedExpr ->
       when (mergedExpr /= curExpr) $ do
         touch ref
-        refMapAt ref . rExpression .= mergedExpr
+        liftState $ refMapAt ref . rExpression .= mergedExpr
     Nothing ->
+      liftState $
       refMapAt ref . rErrors %=
-        (Set.insert . Data.canonizeGuids . Data.toPureExpression) newExpr
+      (Set.insert . Data.canonizeGuids . Data.toPureExpression) newExpr
 
-setRefExprPure ::
-  MonadState InferState m =>
-  Ref -> Data.PureExpression -> m ()
+setRefExprPure :: Monad m => Ref -> Data.PureExpression -> InferT m ()
 setRefExprPure ref = setRefExpr ref . refExprFromPure
 
 addRules ::
-  (MonadState InferState m, MonadReader Scope m) =>
-  TypedValue -> Guid -> Data.ExpressionBody TypedValue -> m ()
-addRules typedVal g exprBody = do
-  refMapAt (tvVal typedVal) . rRules %= (RuleSimpleType typedVal :)
+  Monad m =>
+  Scope -> TypedValue -> Guid -> Data.ExpressionBody TypedValue ->
+  InferT m ()
+addRules scope typedVal g exprBody = do
+  liftState $ refMapAt (tvVal typedVal) . rRules %= (RuleSimpleType typedVal :)
   case exprBody of
     Data.ExpressionPi lambda ->
       onLambda RulePiStructure lambda
@@ -318,16 +323,15 @@ addRules typedVal g exprBody = do
     Data.ExpressionApply (Data.Apply func arg) ->
       addRuleToMany ([tvVal, tvType] <*> [typedVal, func, arg]) .
         RuleApply $ ApplyComponents typedVal func arg
-    Data.ExpressionLeaf (Data.GetVariable var) -> do
-      mTypeRef <- Reader.asks $ Map.lookup var
-      case mTypeRef of
-        Nothing -> return ()
-        Just ref -> addUnionRule ref $ tvType typedVal
+    Data.ExpressionLeaf (Data.GetVariable var) ->
+      case Map.lookup var scope of
+      Nothing -> return ()
+      Just ref -> addUnionRule ref $ tvType typedVal
     _ -> return ()
   where
     addUnionRule x y = addRuleToMany [x, y] $ RuleUnion x y
     addRule rule ref =
-      refMapAt ref . rRules %= (rule :)
+      liftState $ refMapAt ref . rRules %= (rule :)
     addRuleToMany refs rule = mapM_ (addRule rule) refs
     onLambda cons (Data.Lambda paramType result) =
       addRuleToMany [tvVal typedVal, tvVal paramType, tvVal result] .
@@ -335,24 +339,24 @@ addRules typedVal g exprBody = do
 
 -- For use in loading phase only!
 -- We don't create additional Refs afterwards!
-createTypedVal :: MonadState InferState m => m TypedValue
-createTypedVal = liftM2 TypedValue createRef createRef
+createTypedVal :: Monad m => InferT m TypedValue
+createTypedVal =
+  liftM2 TypedValue createRef createRef
   where
-    createRef = do
+    createRef = liftState $ do
       key <- Lens.uses (sRefMap . refMap) IntMap.size
       sRefMap . refMap . IntMapLens.at key .= Just emptyRefData
       return $ Ref key
 
 nodeFromEntity ::
   Monad m =>
-  Loader m ->
+  Loader m -> Scope ->
   Data.Expression s -> TypedValue ->
-  ReaderT (Map Data.VariableRef Ref) (StateT InferState m)
-    (Data.Expression (s, InferNode))
-nodeFromEntity loader entity typedValue = do
+  InferT m (Data.Expression (s, InferNode))
+nodeFromEntity loader scope entity typedValue = do
   setInitialValues
   bodyWithChildrenTvs <- Traversable.mapM addTypedVal $ Data.eValue entity
-  addRules typedValue (Data.eGuid entity) $ fmap snd bodyWithChildrenTvs
+  addRules scope typedValue (Data.eGuid entity) $ fmap snd bodyWithChildrenTvs
   exprBody <-
     case bodyWithChildrenTvs of
     Data.ExpressionLambda lambda ->
@@ -360,24 +364,23 @@ nodeFromEntity loader entity typedValue = do
     Data.ExpressionPi lambda@(Data.Lambda _ (_, resultTypeTv)) -> do
       setRefExprPure (tvType resultTypeTv) setExpr
       onLambda Data.ExpressionPi lambda
-    _ -> Traversable.mapM go bodyWithChildrenTvs
-  liftM (Data.Expression (Data.eGuid entity) exprBody . (,) (Data.ePayload entity) . InferNode typedValue) Reader.ask
+    _ -> Traversable.mapM (go id) bodyWithChildrenTvs
+  return $
+    Data.Expression (Data.eGuid entity) exprBody
+    (Data.ePayload entity, InferNode typedValue scope)
   where
     onLambda cons (Data.Lambda paramType@(_, paramTypeTv) result) = do
       setRefExprPure (tvType paramTypeTv) setExpr
-      paramTypeR <- go paramType
+      paramTypeR <- go id paramType
       let paramRef = Data.ParameterRef $ Data.eGuid entity
-      liftM (cons . Data.Lambda paramTypeR) .
-        Reader.local (Map.insert paramRef (tvVal paramTypeTv)) $
-        go result
-    go = uncurry (nodeFromEntity loader)
+      liftM (cons . Data.Lambda paramTypeR) $
+        go (Map.insert paramRef (tvVal paramTypeTv)) result
+    go onScope = uncurry . nodeFromEntity loader $ onScope scope
     addTypedVal x =
       liftM ((,) x) createTypedVal
-    transaction = lift . lift
     setInitialValues = do
-      scope <- Reader.ask
       (isTouched, (initialVal, initialType)) <-
-        transaction $ initialExprs loader scope entity
+        lift $ initialExprs loader scope entity
       when isTouched . touch $ tvVal typedValue
       setRefExprPure (tvVal typedValue) initialVal
       setRefExprPure (tvType typedValue) initialType
@@ -389,42 +392,42 @@ fromEntity ::
   Data.Expression s ->
   m (Data.Expression (s, InferNode), InferState)
 fromEntity loader mRecursiveIRef rootEntity =
-  (`runStateT` InferState (RefMap mempty) mempty) .
-  (`runReaderT` mempty) $ do
+  (`runStateT` InferState (RefMap mempty) mempty) . runInferT $ do
     rootTv <- createTypedVal
-    ( case mRecursiveIRef of
-        Nothing -> id
-        Just iref -> Reader.local $ Map.insert (Data.DefinitionRef iref) (tvType rootTv)
-      ) $
-      nodeFromEntity loader rootEntity rootTv
+    let
+      scope =
+        case mRecursiveIRef of
+        Nothing -> mempty
+        Just iref -> Map.singleton (Data.DefinitionRef iref) (tvType rootTv)
+    nodeFromEntity loader scope rootEntity rootTv
 
-popTouchedRef :: MonadState InferState m => m (Maybe Ref)
+popTouchedRef :: Monad m => InferT m (Maybe Ref)
 popTouchedRef = do
-  touched <- Lens.use sTouchedRefs
+  touched <- liftState $ Lens.use sTouchedRefs
   case IntSet.minView touched of
     Nothing -> return Nothing
     Just (key, newTouchedRefs) -> do
-      sTouchedRefs .= newTouchedRefs
+      liftState $ sTouchedRefs .= newTouchedRefs
       return . Just $ Ref key
 
 infer :: InferState -> RefMap
 infer =
-  Lens.view sRefMap . execState go
+  Lens.view sRefMap . execState (runInferT go)
   where
     go = maybe (return ()) goOn =<< popTouchedRef
     goOn ref = do
-      mapM_ applyRule =<< Lens.use (refMapAt ref . rRules)
+      mapM_ applyRule =<< (liftState . Lens.use) (refMapAt ref . rRules)
       go
 
-getRefExpr :: MonadState InferState m => Ref -> m RefExpression
-getRefExpr ref = Lens.use (refMapAt ref . rExpression)
+getRefExpr :: Monad m => Ref -> InferT m RefExpression
+getRefExpr ref = liftState $ Lens.use (refMapAt ref . rExpression)
 
 applyStructureRule ::
-  MonadState InferState m =>
+  Monad m =>
   (Data.Lambda RefExpression -> Data.ExpressionBody RefExpression) ->
   (Data.ExpressionBody RefExpression -> Maybe (Data.Lambda RefExpression)) ->
   LambdaComponents ->
-  m ()
+  InferT m ()
 applyStructureRule cons uncons (LambdaComponents parentRef paramTypeRef resultRef) = do
   Data.Expression g expr _ <- getRefExpr parentRef
   case uncons expr of
@@ -458,8 +461,9 @@ mergeToPiResult e0@(Data.Expression g b s) e1 =
   Just newB -> Data.Expression g newB s
 
 recurseSubst ::
-  MonadState InferState m =>
-  RefExpression -> Guid -> Ref -> Ref -> m RefExpression
+  Monad m =>
+  RefExpression -> Guid -> Ref -> Ref ->
+  InferT m RefExpression
 recurseSubst preSubstExpr paramGuid argRef postSubstRef = do
   -- PreSubst with Subst => PostSubst
   -- TODO: Mark substituted holes..
@@ -497,7 +501,7 @@ maybePi :: Data.ExpressionBody a -> Maybe (Data.Lambda a)
 maybePi (Data.ExpressionPi x) = Just x
 maybePi _ = Nothing
 
-applyRule :: MonadState InferState m => Rule -> m ()
+applyRule :: Monad m => Rule -> InferT m ()
 applyRule (RuleUnion r0 r1) = do
   setRefExpr r0 =<< getRefExpr r1
   setRefExpr r1 =<< getRefExpr r0
