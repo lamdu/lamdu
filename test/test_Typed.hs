@@ -49,17 +49,20 @@ definitionTypes =
     idTypeParam = mkExpr "idTypeParam" . Data.makeParameterRef $ Guid.fromString "idType"
 
 doInferEx ::
-  Typed.RefMap -> Typed.InferNode -> Data.PureExpression ->
+  Typed.RefMap -> Typed.InferNode -> Maybe (Data.DefinitionIRef) ->
+  Data.PureExpression ->
   Maybe (Typed.Expression (), Typed.RefMap)
-doInferEx refMap node =
-  Typed.inferFromEntity loader (Typed.InferActions mempty) refMap node Nothing
+doInferEx =
+  Typed.inferFromEntity loader (Typed.InferActions mempty)
   where
     loader = Typed.Loader (return . (definitionTypes !) . IRef.guid)
 
 doInfer ::
   Data.PureExpression ->
   (Typed.Expression (), Typed.RefMap)
-doInfer = fromMaybe (error "doInfer failed!") . uncurry doInferEx Typed.initial
+doInfer =
+  fromMaybe (error "doInfer failed!") .
+  uncurry doInferEx Typed.initial Nothing
 
 mkExpr ::
   String -> Data.ExpressionBody Data.PureExpression ->
@@ -223,12 +226,27 @@ main = TestFramework.defaultMain
       (mkInferredGetDef "id") $
     mkInferredLeaf Data.Hole setType
   , testCase "resume infer" $
-      let
-        (tExpr, refMap) = doInfer $ makeApply [hole, hole]
-        Data.ExpressionApply (Data.Apply firstHole _) = Data.eValue tExpr
-      in
-        assertBool (showExpressionWithInferred (inferResults tExpr)) . isJust $
-          doInferEx refMap ((Typed.iPoint . Data.ePayload) firstHole) $ getDefExpr "id"
+    let
+      (tExpr, refMap) = doInfer $ makeApply [hole, hole]
+      Data.ExpressionApply (Data.Apply firstHole _) = Data.eValue tExpr
+    in
+      assertBool (showExpressionWithInferred (inferResults tExpr)) . isJust $
+        doInferEx refMap ((Typed.iPoint . Data.ePayload) firstHole) Nothing $ getDefExpr "id"
+  , testCase "ref to the def on the side" $
+    let
+      defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
+      Just (_, refMap) =
+        uncurry doInferEx Typed.initial (Just defI) .
+        mkExpr "" $ Data.makeLambda hole hole
+      Just (tExpr, _) =
+        uncurry doInferEx (Typed.newNode refMap) (Just defI) .
+        mkExpr "" . Data.ExpressionLeaf . Data.GetVariable $ Data.DefinitionRef defI
+      result = inferResults tExpr
+    in
+      assertBool (showExpressionWithInferred result) .
+      compareInferred result .
+      mkInferredLeaf (Data.GetVariable (Data.DefinitionRef defI)) $
+      mkExpr "" $ Data.makePi hole hole
   ]
   where
     makeApply = foldl1 (fmap (mkExpr "") . Data.makeApply)
