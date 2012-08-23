@@ -1,8 +1,8 @@
 import Control.Applicative (liftA2)
 import Control.Arrow (first)
-import Control.Monad.Identity (Identity(..))
 import Data.Map (Map, (!))
-import Data.Maybe (isJust)
+import Data.Maybe (fromMaybe, isJust)
+import Data.Monoid (mempty)
 import Data.Store.Guid (Guid)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit (assertBool)
@@ -48,14 +48,18 @@ definitionTypes =
   where
     idTypeParam = mkExpr "idTypeParam" . Data.makeParameterRef $ Guid.fromString "idType"
 
-toExpression ::
+doInferEx ::
+  Typed.RefMap -> Typed.InferNode -> Data.PureExpression ->
+  Maybe (Typed.Expression (), Typed.RefMap)
+doInferEx refMap node =
+  Typed.inferFromEntity loader (Typed.InferActions mempty) refMap node Nothing
+  where
+    loader = Typed.Loader (return . (definitionTypes !) . IRef.guid)
+
+doInfer ::
   Data.PureExpression ->
   (Typed.Expression (), Typed.RefMap)
-toExpression =
-  runIdentity .
-  uncurry (Typed.inferFromEntity loader (error "conflict!")) Typed.initial Nothing
-  where
-    loader = Typed.Loader (Identity . (definitionTypes !) . IRef.guid)
+doInfer = fromMaybe (error "doInfer failed!") . uncurry doInferEx Typed.initial
 
 mkExpr ::
   String -> Data.ExpressionBody Data.PureExpression ->
@@ -218,6 +222,13 @@ main = TestFramework.defaultMain
     Data.makeApply
       (mkInferredGetDef "id") $
     mkInferredLeaf Data.Hole setType
+  , testCase "resume infer" $
+      let
+        (tExpr, refMap) = doInfer $ makeApply [hole, hole]
+        Data.ExpressionApply (Data.Apply firstHole _) = Data.eValue tExpr
+      in
+        assertBool "conflict on resumed infer" . isJust $
+          doInferEx refMap ((Typed.iPoint . Data.ePayload) firstHole) $ getDefExpr "id"
   ]
   where
     makeApply = foldl1 (fmap (mkExpr "") . Data.makeApply)
@@ -241,4 +252,4 @@ main = TestFramework.defaultMain
          , showExpressionWithInferred result
          ]) $ compareInferred typedExpr result
       where
-        typedExpr = inferResults . fst $ toExpression pureExpr
+        typedExpr = inferResults . fst $ doInfer pureExpr
