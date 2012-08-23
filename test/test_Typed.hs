@@ -210,6 +210,14 @@ main = TestFramework.defaultMain
         )
       ) $
     mkInferredLeaf (Data.LiteralInteger 5) intType
+  , testInfer "id hole"
+    (makeApply [getDefExpr "id", hole]) $
+    mkInferredNode ""
+      (makeApply [getDefExpr "id", hole])
+      (mkExpr "" (Data.makePi hole hole)) $
+    Data.makeApply
+      (mkInferredGetDef "id") $
+    mkInferredLeaf Data.Hole setType
   ]
   where
     makeApply = foldl1 (fmap (mkExpr "") . Data.makeApply)

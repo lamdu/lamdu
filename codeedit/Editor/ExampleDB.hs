@@ -73,6 +73,9 @@ createBuiltins =
     makeWithType "Prelude.if" . forAll "a" $ \a ->
       mkPi bool . mkPi a $ mkPi a a
 
+    makeWithType "Prelude.id" . forAll "a" $ \a ->
+      mkPi a a
+
     makeWithType "Prelude.const" . forAll "a" $ \a -> forAll "b" $ \b ->
       mkPi a $ mkPi b a
 
