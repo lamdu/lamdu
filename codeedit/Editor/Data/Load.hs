@@ -83,12 +83,8 @@ loadDefinition defI = do
       Property exprI
       (writeBack .
        (`Data.Definition` typeExprI) . Data.DefinitionExpression)
-    Data.DefinitionBuiltin (Data.Builtin name biTypeExprI) ->
-      liftM (Data.DefinitionBuiltin . Data.Builtin name) . loadExpression $
-      Property biTypeExprI
-      (writeBack .
-       (`Data.Definition` biTypeExprI) . Data.DefinitionBuiltin .
-       Data.Builtin name)
+    Data.DefinitionBuiltin (Data.Builtin name) ->
+      return . Data.DefinitionBuiltin $ Data.Builtin name
 
 lambdaTypeProp
   :: Monad m

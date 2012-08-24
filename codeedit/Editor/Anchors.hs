@@ -184,8 +184,8 @@ newBuiltin
   => String -> Data.ExpressionIRef
   -> Transaction t m Data.VariableRef
 newBuiltin fullyQualifiedName typeI =
-  newDefinition name . (`Data.Definition` typeI) . Data.DefinitionBuiltin $
-  Data.Builtin (Data.FFIName (init path) name) typeI
+  newDefinition name . (`Data.Definition` typeI) . Data.DefinitionBuiltin .
+  Data.Builtin $ Data.FFIName (init path) name
   where
     name = last path
     path = splitOn "." fullyQualifiedName

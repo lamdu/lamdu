@@ -156,7 +156,6 @@ instance Show FFIName where
 
 data Builtin expr = Builtin
   { bName :: FFIName
-  , bType :: expr
   } deriving (Eq, Ord, Show, Functor)
 
 data DefinitionBody expr
