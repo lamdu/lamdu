@@ -154,13 +154,13 @@ data FFIName = FFIName
 instance Show FFIName where
   show (FFIName path name) = concatMap (++".") path ++ name
 
-data Builtin expr = Builtin
+data Builtin = Builtin
   { bName :: FFIName
-  } deriving (Eq, Ord, Show, Functor)
+  } deriving (Eq, Ord, Show)
 
 data DefinitionBody expr
   = DefinitionExpression expr
-  | DefinitionBuiltin (Builtin expr)
+  | DefinitionBuiltin Builtin
   deriving (Eq, Ord, Show, Functor)
 
 data Definition expr = Definition
@@ -286,14 +286,12 @@ derive makeFoldable ''Apply
 derive makeFoldable ''Lambda
 derive makeFoldable ''ExpressionBody
 derive makeFoldable ''Expression
-derive makeFoldable ''Builtin
 derive makeFoldable ''DefinitionBody
 derive makeFoldable ''Definition
 derive makeTraversable ''Apply
 derive makeTraversable ''Lambda
 derive makeTraversable ''ExpressionBody
 derive makeTraversable ''Expression
-derive makeTraversable ''Builtin
 derive makeTraversable ''DefinitionBody
 derive makeTraversable ''Definition
 derive makeBinary ''ExpressionIRef
