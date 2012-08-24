@@ -39,7 +39,6 @@ import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
-import qualified Data.Traversable as Traversable
 import qualified Editor.Anchors as Anchors
 import qualified Editor.CodeEdit.Infix as Infix
 import qualified Editor.Data as Data
@@ -548,11 +547,11 @@ zeroGuid = Guid.fromString "applyZero"
 pureHole :: Data.PureExpression
 pureHole = Data.pureExpression zeroGuid $ Data.ExpressionLeaf Data.Hole
 
-fromInferred
-  :: [Data.PureExpression] -> Maybe Data.PureExpression
-fromInferred [] = Just pureHole
-fromInferred [x] = Just x
-fromInferred _ = Nothing
+-- fromInferred
+--   :: [Data.PureExpression] -> Maybe Data.PureExpression
+-- fromInferred [] = Just pureHole
+-- fromInferred [x] = Just x
+-- fromInferred _ = Nothing
 
 countPis :: Data.PureExpression -> Int
 countPis e =
@@ -673,15 +672,15 @@ convertExpressionI ee =
   Data.ExpressionLeaf Data.Set -> convertAtom "Set"
   Data.ExpressionLeaf Data.IntegerType -> convertAtom "Integer"
 
--- Check no holes
-isCompleteType :: Data.PureExpression -> Bool
-isCompleteType =
-  isJust . toMaybe
-  where
-    toMaybe = f . Data.eValue
-    f (Data.ExpressionLeaf Data.Hole) = Nothing
-    f e = tMapM_ toMaybe e
-    tMapM_ = (fmap . liftM . const) () . Traversable.mapM
+-- -- Check no holes
+-- isCompleteType :: Data.PureExpression -> Bool
+-- isCompleteType =
+--   isJust . toMaybe
+--   where
+--     toMaybe = f . Data.eValue
+--     f (Data.ExpressionLeaf Data.Hole) = Nothing
+--     f e = tMapM_ toMaybe e
+--     tMapM_ = (fmap . liftM . const) () . Traversable.mapM
 
 convertExpressionPure ::
   Monad m => Data.PureExpression -> T m (ExpressionRef m)
