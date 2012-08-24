@@ -1,5 +1,6 @@
 import Control.Applicative (liftA2)
 import Control.Arrow (first)
+import Control.Monad (void)
 import Data.Map (Map, (!))
 import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid (mempty)
@@ -49,7 +50,7 @@ definitionTypes =
     idTypeParam = mkExpr "idTypeParam" . Data.makeParameterRef $ Guid.fromString "idType"
 
 doInferEx ::
-  Typed.RefMap -> Typed.InferNode -> Maybe (Data.DefinitionIRef) ->
+  Typed.RefMap -> Typed.InferNode -> Maybe Data.DefinitionIRef ->
   Data.PureExpression ->
   Maybe (Typed.Expression (), Typed.RefMap)
 doInferEx =
@@ -85,7 +86,7 @@ showExpressionWithInferred =
   List.intercalate "\n" . go
   where
     go typedExpr =
-      [ "Expr: " ++ show (Data.eGuid typedExpr) ++ ":" ++ show (fmap (const ()) expr)
+      [ "Expr: " ++ show (Data.eGuid typedExpr) ++ ":" ++ show (void expr)
       , "  IVal:  " ++ show val
       , "  IType: " ++ show typ
       ] ++

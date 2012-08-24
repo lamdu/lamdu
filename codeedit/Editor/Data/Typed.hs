@@ -259,14 +259,14 @@ initialExprs loader scope entity =
       Data.pureExpression (augmentGuid "type" (Data.eGuid entity)) $
       Data.ExpressionLeaf Data.Hole
 
-intMapMod :: Functor f => Int -> (v -> f v) -> (IntMap v -> f (IntMap v))
+intMapMod :: Functor f => Int -> (v -> f v) -> IntMap v -> f (IntMap v)
 intMapMod k =
   IntMapLens.at k . Lens.iso from Just
   where
     from = fromMaybe . error $ unwords ["intMapMod: key", show k, "not in map"]
 
 refMapAt ::
-  Functor f => Ref -> (RefData -> f RefData) -> (InferState -> f InferState)
+  Functor f => Ref -> (RefData -> f RefData) -> InferState -> f InferState
 refMapAt k = sRefMap . refMap . intMapMod (unRef k)
 
 -- Merge two expressions:
@@ -605,7 +605,7 @@ applyRule (RuleApply (ApplyComponents apply func arg)) = do
       setRefExpr (tvType arg) paramT
       -- ArgT => ParamT
       setRefExpr (tvVal func) . makeRefExpression someGuid .
-        (`Data.makeLambda` (makeHole "ar2" baseGuid)) =<< getRefExpr (tvType arg)
+        (`Data.makeLambda` makeHole "ar2" baseGuid) =<< getRefExpr (tvType arg)
       -- Recurse-Subst Body Arg Apply
       setRefExpr (tvVal func) . makeRefExpression funcGuid .
         Data.makeLambda paramT =<<

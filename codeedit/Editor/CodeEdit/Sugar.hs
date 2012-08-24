@@ -648,9 +648,9 @@ convertExpressionI ee =
   Data.ExpressionApply x -> convertApply x
   Data.ExpressionLeaf (Data.GetVariable x) -> convertGetVariable x
   Data.ExpressionLeaf (Data.LiteralInteger x) -> convertLiteralInteger x
-  Data.ExpressionLeaf (Data.Hole) -> convertHole
-  Data.ExpressionLeaf (Data.Set) -> convertAtom "Set"
-  Data.ExpressionLeaf (Data.IntegerType) -> convertAtom "Integer"
+  Data.ExpressionLeaf Data.Hole -> convertHole
+  Data.ExpressionLeaf Data.Set -> convertAtom "Set"
+  Data.ExpressionLeaf Data.IntegerType -> convertAtom "Integer"
 
 -- Check no holes
 isCompleteType :: Data.PureExpression -> Bool
@@ -693,7 +693,7 @@ loadConvertDefinition defI = do
     (Just defI) exprL
   let
     toExprEntity x =
-      Just $ ExprEntityStored
+      Just ExprEntityStored
       { eesInferred = x
       , eesValueConflicts = conflicts DataTyped.tvVal x
       , eesTypeConflicts = conflicts DataTyped.tvType x
