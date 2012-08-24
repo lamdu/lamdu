@@ -183,21 +183,18 @@ AtFieldTH.make ''Actions
 AtFieldTH.make ''FuncParamActions
 
 data ExprEntityStored m = ExprEntityStored
-  { eesProp :: Data.ExpressionIRefProperty (T m)
-  , eeInferredTypes :: [Data.PureExpression]
-  , eeInferredValues :: [Data.PureExpression]
-  , eeInferPoint :: DataTyped.InferNode
+  { eesInferred :: DataTyped.Inferred (Data.ExpressionIRefProperty (T m))
+  , eesTypeConflicts :: [Data.PureExpression]
+  , eesValueConflicts :: [Data.PureExpression]
   }
 
 type ExprEntity m = Data.Expression (Maybe (ExprEntityStored m))
 
 eeProp :: ExprEntity m -> Maybe (Data.ExpressionIRefProperty (T m))
-eeProp = fmap eesProp . Data.ePayload
+eeProp = fmap (DataTyped.iStored . eesInferred) . Data.ePayload
 
 eeFromPure :: Data.PureExpression -> ExprEntity m
 eeFromPure = fmap $ const Nothing
-
-type StoredInferred m = DataTyped.Expression (Data.ExpressionIRefProperty (T m))
 
 newtype ConflictMap =
   ConflictMap { unConflictMap :: Map DataTyped.Ref (Set Data.PureExpression) }
@@ -226,11 +223,8 @@ writeIRefVia
   -> a -> Transaction t m ()
 writeIRefVia f = (fmap . argument) f writeIRef
 
-type Scope = [Guid]
-
-data SugarContext = SugarContext
-  { scScope :: Scope
-  , scInferState :: DataTyped.RefMap
+newtype SugarContext = SugarContext
+  { scInferState :: DataTyped.RefMap
   }
 AtFieldTH.make ''SugarContext
 
@@ -291,7 +285,7 @@ mkExpressionRef ee expr = do
   where
     types =
       zipWith Data.randomizeGuids (RandomUtils.splits gen) .
-      maybe [] eeInferredTypes $ Data.ePayload ee
+      maybe [] eesInferredTypes $ Data.ePayload ee
     gen =
       Random.mkStdGen . (*2) . BinaryUtils.decodeS . Guid.bs $
       Data.eGuid ee
@@ -318,43 +312,23 @@ mkFuncParamActions parentP replacerP bodyActions = FuncParamActions
   , fpaAddNextParam = lambdaWrap bodyActions
   }
 
-convertLambdaParam
-  :: Monad m
-  => Data.Lambda (ExprEntity m)
-  -> ExpressionRef m
-  -> ExprEntity m -> Sugar m (FuncParam m)
-convertLambdaParam (Data.Lambda paramTypeI bodyI) bodyRef exprI = do
-  typeExpr <- convertExpressionI paramTypeI
-  return FuncParam
-    { fpGuid = lambdaGuidToParamGuid $ Data.eGuid exprI
-    , fpType = typeExpr
-    , fpMActions =
-      mkFuncParamActions <$>
-      eeProp exprI <*>
-      eeProp bodyI <*>
-      rActions bodyRef
-    }
-
-convertLambdaBody
-  :: Monad m
-  => Data.Lambda (ExprEntity m)
-  -> Convertor m
-convertLambdaBody (Data.Lambda paramTypeI bodyI) _exprI =
-  enhanceScope $ convertExpressionI bodyI
-  where
-    enhanceScope =
-      case Data.ePayload paramTypeI of
-      Nothing -> id
-      Just _paramTypeStored ->
-        id -- putInScope (eeInferredValues paramTypeStored) $ Data.eGuid exprI
-
 convertLambda
   :: Monad m
   => Data.Lambda (ExprEntity m)
   -> ExprEntity m -> Sugar m (FuncParam m, ExpressionRef m)
-convertLambda lambda exprI = do
-  sBody <- convertLambdaBody lambda exprI
-  param <- convertLambdaParam lambda sBody exprI
+convertLambda (Data.Lambda paramTypeI bodyI) exprI = do
+  sBody <- convertExpressionI bodyI
+  typeExpr <- convertExpressionI paramTypeI
+  let
+    param = FuncParam
+      { fpGuid = lambdaGuidToParamGuid $ Data.eGuid exprI
+      , fpType = typeExpr
+      , fpMActions =
+        mkFuncParamActions <$>
+        eeProp exprI <*>
+        eeProp bodyI <*>
+        rActions sBody
+      }
   return (param, sBody)
 
 convertFunc
@@ -392,8 +366,8 @@ convertWhere
   -> ExprEntity m
   -> Data.Lambda (ExprEntity m)
   -> Convertor m
-convertWhere valueRef lambdaI lambda@(Data.Lambda typeI bodyI) applyI = do
-  sBody <- convertLambdaBody lambda lambdaI
+convertWhere valueRef lambdaI (Data.Lambda typeI bodyI) applyI = do
+  sBody <- convertExpressionI bodyI
   mkExpressionRef applyI .
     ExpressionWhere DontHaveParens . atWWheres (item :) $
     case rExpression sBody of
@@ -606,24 +580,24 @@ convertHole exprI = do
     check expr =
       liftM isJust . runMaybeT $ do
         stored <- MaybeT . return $ Data.ePayload exprI
-        inferExpr expr (scInferState context) $ eeInferPoint stored
+        inferExpr expr (scInferState context) . DataTyped.iPoint $ eesInferred stored
     inferResults expr =
       List.joinL . liftM (fromMaybe mzero) . runMaybeT $ do
         stored <- MaybeT . return $ Data.ePayload exprI
         inferred <-
           uncurry (inferExpr expr) .
-          DataTyped.newNodeWithScope ((DataTyped.nScope . eeInferPoint) stored) $
+          DataTyped.newNodeWithScope ((DataTyped.nScope . DataTyped.iPoint . eesInferred) stored) $
           scInferState context
         let typ = DataTyped.iType (Data.ePayload inferred)
         return . List.filterL check . List.fromList $ applyForms typ expr
     hole = Hole
-      { holeScope = []
+      { holeScope = [] -- DataTyped.iScope $ eesInferred exprI
       , holePickResult = fmap pickResult $ eeProp exprI
       , holePaste = mPaste
       , holeInferResults = inferResults
       }
   mkExpressionRef exprI =<<
-    case fmap eeInferredValues (Data.ePayload exprI) of
+    case fmap eesInferredValues (Data.ePayload exprI) of
     Just [Data.Expression { Data.eValue = Data.ExpressionLeaf Data.Hole }] ->
       return $ ExpressionHole hole
     Just [x] ->
@@ -681,11 +655,7 @@ convertExpressionPure ::
 convertExpressionPure =
   runSugar ctx . convertExpressionI . eeFromPure
   where
-    ctx =
-      SugarContext
-      { scScope = []
-      , scInferState = error "pure expression doesnt have infer state"
-      }
+    ctx = SugarContext $ error "pure expression doesnt have infer state"
 
 addConflict ::
   Monad m =>
@@ -712,19 +682,13 @@ loadConvertDefinition defI = do
   let
     toExprEntity x =
       Just $ ExprEntityStored
-      { eesProp = DataTyped.iStored x
-      , eeInferredValues = exprs DataTyped.iValue DataTyped.tvVal x
-      , eeInferredTypes = exprs DataTyped.iType DataTyped.tvType x
-      , eeInferPoint = DataTyped.iPoint x
+      { eesInferred = x
+      , eesValueConflicts = conflicts DataTyped.tvVal x
+      , eesTypeConflicts = conflicts DataTyped.tvType x
       }
-    exprs getExpr getRef x =
-      getExpr x :
+    conflicts getRef x =
       getConflicts ((getRef . DataTyped.nRefs . DataTyped.iPoint) x) conflictsMap
-    sugarContext =
-      SugarContext
-      { scScope = []
-      , scInferState = refMap
-      }
+    sugarContext = SugarContext refMap
   exprS <- runSugar sugarContext . convertExpressionI $ fmap toExprEntity exprInferred
   typeS <- convertExpressionPure $ void typeL
   return DefinitionRef
@@ -734,3 +698,14 @@ loadConvertDefinition defI = do
     , drIsTypeRedundant = True
     , drMNewType = Nothing
     }
+
+eesInferredExprs ::
+  (DataTyped.Inferred (Data.ExpressionIRefProperty (T m)) -> a)
+  -> (ExprEntityStored m -> [a]) -> ExprEntityStored m -> [a]
+eesInferredExprs getVal eeConflicts ee = getVal (eesInferred ee) : eeConflicts ee
+
+eesInferredTypes :: ExprEntityStored m -> [Data.PureExpression]
+eesInferredTypes = eesInferredExprs DataTyped.iType eesTypeConflicts
+
+eesInferredValues :: ExprEntityStored m -> [Data.PureExpression]
+eesInferredValues = eesInferredExprs DataTyped.iValue eesValueConflicts
