@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeFamilies, FlexibleContexts #-}
 module Editor.Data.Load
-  ( loadDefinition, DefinitionEntity(..)
+  ( loadDefinition, DefinitionEntity
   , loadExpression, ExpressionEntity
   , loadPureExpression, loadPureDefinition
   , loadPureDefinitionType
@@ -16,11 +16,7 @@ import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
 
 type ExpressionEntity m = Data.Expression (Data.ExpressionIRefProperty m)
-
-data DefinitionEntity m = DefinitionEntity
-  { defEntityIRef :: Data.DefinitionIRef
-  , defEntityValue :: Data.Definition (ExpressionEntity m)
-  }
+type DefinitionEntity m = Data.Definition (ExpressionEntity m)
 
 type T = Transaction ViewTag
 
@@ -76,7 +72,7 @@ loadDefinition defI = do
   defType <-
     loadExpression $
     Property typeExprI (writeBack . Data.Definition body)
-  liftM (DefinitionEntity defI . (`Data.Definition` defType)) $
+  liftM (`Data.Definition` defType) $
     case body of
     Data.DefinitionExpression exprI ->
       liftM Data.DefinitionExpression . loadExpression $

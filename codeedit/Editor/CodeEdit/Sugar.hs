@@ -571,6 +571,19 @@ convertReadOnlyHole exprI =
   , holeInferResults = mempty
   }
 
+inferFromEntity ::
+  (Monad m, Monad f) =>
+  (T f Data.PureExpression -> m Data.PureExpression) ->
+  DataTyped.InferActions m ->
+  DataTyped.RefMap ->
+  DataTyped.InferNode ->
+  Maybe Data.DefinitionIRef ->
+  Data.Expression a ->
+  m (DataTyped.Expression a, DataTyped.RefMap)
+inferFromEntity f =
+  DataTyped.inferFromEntity
+  (DataTyped.Loader (f . DataLoad.loadPureDefinitionType))
+
 convertWritableHole :: Monad m => ExprEntityStored m -> Convertor m
 convertWritableHole stored exprI = do
   inferState <- liftM scInferState readContext
@@ -606,9 +619,7 @@ convertWritableHole stored exprI = do
     _ -> return $ ExpressionHole hole
   where
     inferExpr expr inferContext inferPoint =
-      liftM fst $
-      DataTyped.inferFromEntity
-      (DataTyped.Loader (lift . DataLoad.loadPureDefinitionType))
+      liftM fst $ inferFromEntity lift
       ((DataTyped.InferActions . const . const) mzero)
       inferContext inferPoint
       Nothing
@@ -679,37 +690,35 @@ addConflict ref =
 loadConvertDefinition ::
   Monad m => Data.DefinitionIRef -> T m (DefinitionRef m)
 loadConvertDefinition defI = do
-  defLoad <- DataLoad.loadDefinition defI
-  let
-    Data.Definition (Data.DefinitionExpression exprL) typeL =
-      DataLoad.defEntityValue defLoad
-  ((exprInferred, refMap), conflictsMap) <-
-    runWriterT $
-    uncurry
-    (DataTyped.inferFromEntity
-      (DataTyped.Loader (lift . DataLoad.loadPureDefinitionType))
-      (DataTyped.InferActions addConflict))
-    DataTyped.initial
-    (Just defI) exprL
-  let
-    toExprEntity x =
-      Just ExprEntityStored
-      { eesInferred = x
-      , eesValueConflicts = conflicts DataTyped.tvVal x
-      , eesTypeConflicts = conflicts DataTyped.tvType x
-      }
-    conflicts getRef x =
-      getConflicts ((getRef . DataTyped.nRefs . DataTyped.iPoint) x) conflictsMap
-    sugarContext = SugarContext refMap
-  exprS <- runSugar sugarContext . convertExpressionI $ fmap toExprEntity exprInferred
-  typeS <- convertExpressionPure $ void typeL
-  return DefinitionRef
-    { drGuid = IRef.guid defI
-    , drBody = exprS
-    , drType = typeS
-    , drIsTypeRedundant = True
-    , drMNewType = Nothing
-    }
+  Data.Definition defBody typeL <- DataLoad.loadDefinition defI
+  case defBody of
+    Data.DefinitionExpression exprL -> do
+      ((exprInferred, refMap), conflictsMap) <-
+        runWriterT $
+        uncurry (inferFromEntity lift (DataTyped.InferActions addConflict))
+        DataTyped.initial (Just defI) exprL
+      let
+        toExprEntity x =
+          Just ExprEntityStored
+          { eesInferred = x
+          , eesValueConflicts = conflicts DataTyped.tvVal x
+          , eesTypeConflicts = conflicts DataTyped.tvType x
+          }
+        conflicts getRef x =
+          getConflicts ((getRef . DataTyped.nRefs . DataTyped.iPoint) x)
+          conflictsMap
+        sugarContext = SugarContext refMap
+      exprS <-
+        runSugar sugarContext . convertExpressionI $
+        fmap toExprEntity exprInferred
+      typeS <- convertExpressionPure $ void typeL
+      return DefinitionRef
+        { drGuid = IRef.guid defI
+        , drBody = exprS
+        , drType = typeS
+        , drIsTypeRedundant = True
+        , drMNewType = Nothing
+        }
 
 eesInferredExprs ::
   (DataTyped.Inferred (Data.ExpressionIRefProperty (T m)) -> a)
