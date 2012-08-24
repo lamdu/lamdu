@@ -135,7 +135,7 @@ main = TestFramework.defaultMain
     (mkExpr "5" (Data.ExpressionLeaf (Data.LiteralInteger 5))) $
     mkInferredLeaf (Data.LiteralInteger 5) intType
   , testInfer "simple apply"
-    (makeApply [hole, hole]) $
+    ((Data.canonizeGuids . makeApply) [hole, hole]) $
     mkInferredNode "" hole hole $
     Data.makeApply
       (mkInferredLeaf Data.Hole (mkExpr "" (Data.makePi hole hole)))
@@ -193,7 +193,7 @@ main = TestFramework.defaultMain
       (mkInferredLeaf Data.Hole (mkExpr "" (Data.makePi intType hole))) $
     mkInferredLeaf (Data.LiteralInteger 5) intType
   , testInfer "id on an int"
-    (makeApply
+    ((Data.canonizeGuids . makeApply)
       [ getDefExpr "id"
       , hole
       , mkExpr "" . Data.ExpressionLeaf $ Data.LiteralInteger 5
@@ -227,7 +227,7 @@ main = TestFramework.defaultMain
     mkInferredLeaf Data.Hole setType
   , testCase "resume infer" $
     let
-      (tExpr, refMap) = doInfer $ makeApply [hole, hole]
+      (tExpr, refMap) = doInfer . Data.canonizeGuids $ makeApply [hole, hole]
       Data.ExpressionApply (Data.Apply firstHole _) = Data.eValue tExpr
     in
       assertBool (showExpressionWithInferred (inferResults tExpr)) . isJust $
