@@ -11,6 +11,7 @@ import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget)
 import qualified Editor.BottleWidgets as BWidgets
+import qualified Editor.CodeEdit.BuiltinEdit as BuiltinEdit
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
@@ -101,6 +102,21 @@ make makeExpressionEdit def =
   case Sugar.drBody def of
   Sugar.DefinitionExpression bodyExpr ->
     makeExprDefinition makeExpressionEdit def bodyExpr
+  Sugar.DefinitionBuiltin builtin ->
+    makeBuiltinDefinition makeExpressionEdit def builtin
+
+makeBuiltinDefinition
+  :: MonadF m
+  => ExpressionGui.Maker m
+  -> Sugar.DefinitionRef m
+  -> Sugar.Builtin m
+  -> TWidget ViewTag m
+makeBuiltinDefinition _makeExpressionEdit def builtin =
+  -- TODO: Show or allow editing type (?) via _makeExpressionEdit
+  BuiltinEdit.make builtin myId
+  where
+    guid = Sugar.drGuid def
+    myId = WidgetIds.fromGuid guid
 
 makeExprDefinition ::
   MonadF m =>

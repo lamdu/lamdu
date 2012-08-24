@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 
 module Editor.CodeEdit.Sugar
-  ( DefinitionRef(..), DefinitionBody(..)
+  ( DefinitionRef(..), DefinitionBody(..), Builtin(..)
   , DefinitionNewType(..)
   , Actions(..)
   , Expression(..), ExpressionRef(..)
@@ -160,9 +160,15 @@ data DefinitionNewType m = DefinitionNewType
   , dntAcceptNewType :: T m ()
   }
 
+data Builtin m = Builtin
+  { biName :: Data.FFIName
+  -- Consider removing Maybe'ness here
+  , biMSetName :: Maybe (Data.FFIName -> T m ())
+  }
+
 data DefinitionBody m
   = DefinitionExpression (ExpressionRef m)
-  -- | DefinitionBuiltin ...
+  | DefinitionBuiltin (Builtin m)
 
 data DefinitionRef m = DefinitionRef
   { drGuid :: Guid
