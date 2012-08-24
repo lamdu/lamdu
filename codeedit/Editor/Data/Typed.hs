@@ -9,7 +9,7 @@ module Editor.Data.Typed
   ) where
 
 import Control.Applicative ((<*>))
-import Control.Arrow (first, second)
+import Control.Arrow (first)
 import Control.Lens ((%=), (.=), (^.))
 import Control.Monad (guard, liftM, liftM2, void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
@@ -31,6 +31,7 @@ import qualified Data.IntSet as IntSet
 import qualified Data.IntSet.Lens as IntSetLens
 import qualified Data.List as List
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
 import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
@@ -233,17 +234,17 @@ initialExprs ::
   Monad m =>
   Loader m ->
   Scope -> Data.Expression s ->
-  m (Bool, (Data.PureExpression, Data.PureExpression))
+  m (Data.PureExpression, Data.PureExpression)
 initialExprs loader scope entity =
-  (liftM . second . first)
+  (liftM . first)
   (Data.pureExpression (Data.eGuid entity)) $
   case exprStructure of
-  Data.ExpressionApply _ -> return (True, (Data.ExpressionLeaf Data.Hole, hole))
+  Data.ExpressionApply _ -> return (Data.ExpressionLeaf Data.Hole, hole)
   Data.ExpressionLeaf (Data.GetVariable var@(Data.DefinitionRef ref))
     | not (Map.member var scope) ->
-      liftM ((,) False . (,) exprStructure) $
+      liftM ((,) exprStructure) $
       loadPureDefinitionType loader ref
-  _ -> return (False, (exprStructure, hole))
+  _ -> return (exprStructure, hole)
   where
     exprStructure = fmap (const hole) $ Data.eValue entity
 
@@ -264,37 +265,42 @@ makeRefExpression g expr = Data.Expression g expr mempty
 -- If they do not match, return Nothing.
 -- Holes match with anything, expand to the other expr.
 -- Guids come from the first expression (where available).
+-- If guids repeat, fail.
 mergeExprs ::
   RefExpression ->
   RefExpression ->
   Maybe RefExpression
 mergeExprs p0 p1 =
-  runReaderT (go p0 p1) Map.empty
+  runReaderT (go Set.empty p0 p1) Map.empty
   where
-    go e0 e1 =
-      (fmap . Data.atEPayload . const)
-      (mappend (Data.ePayload e0) (Data.ePayload e1)) $
-      f e0 e1
-    f e (Data.Expression _ (Data.ExpressionLeaf Data.Hole) _) =
-      return e
+    go guids e0@(Data.Expression g _ s) e1 =
+      fmap
+      (flip (Data.Expression g) (mappend s (Data.ePayload e1))) $
+      f guids e0 e1
+    f _ e (Data.Expression _ (Data.ExpressionLeaf Data.Hole) _) =
+      return $ Data.eValue e
     -- When first is hole, we take Guids from second expr
-    f
+    f guids
       (Data.Expression _ (Data.ExpressionLeaf Data.Hole) _)
-      (Data.Expression g e _) =
-      fmap (makeRefExpression g) $
-      -- Map Param Guids to those of first expression
-      Traversable.mapM (go holeRefExpr) e
-    f
-      e0@(Data.Expression _ (Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par0))) _)
+      (Data.Expression _ e _) =
+      Traversable.mapM (mapParamGuids guids) e
+    f _
+      (Data.Expression _ (Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par0))) _)
       (Data.Expression _ (Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par1))) _) = do
       guard . (par0 ==) . fromMaybe par1 =<< Reader.asks (Map.lookup par1)
-      return e0
-    f
+      return $ Data.makeParameterRef par0
+    f guids
       (Data.Expression g0 e0 _)
       (Data.Expression g1 e1 _) =
-      fmap (makeRefExpression g0) .
       Reader.local (Map.insert g1 g0) $
-      Traversable.sequence =<< lift (Data.matchExpressionBody go e0 e1)
+      Traversable.sequence =<<
+      lift (Data.matchExpressionBody (go (Set.insert g0 guids)) e0 e1)
+    mapParamGuids forbiddenGuids (Data.Expression g e s) = do
+      guard . not $ Set.member g forbiddenGuids
+      fmap (flip (Data.Expression g) s) $ case e of
+        Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef p)) ->
+          return . Data.makeParameterRef . fromMaybe p =<< Reader.asks (Map.lookup p)
+        _ -> Traversable.mapM (mapParamGuids forbiddenGuids) e
 
 newtype InferActions m = InferActions
   { reportConflict :: Ref -> Data.PureExpression -> m ()
@@ -346,22 +352,25 @@ addRules ::
 addRules scope typedVal g exprBody = do
   liftState $ refMapAt (tvVal typedVal) . rRules %= (RuleSimpleType typedVal :)
   case exprBody of
-    Data.ExpressionPi lambda ->
+    Data.ExpressionPi lambda@(Data.Lambda _ resultType) -> do
+      setRefExprPure (tvType resultType) setExpr
       onLambda RulePiStructure lambda
     Data.ExpressionLambda lambda@(Data.Lambda _ body) -> do
       addRuleToMany [tvType typedVal, tvType body] .
         RuleLambdaBodyType $
         LambdaBodyType g (tvType typedVal) (tvType body)
       onLambda RuleLambdaStructure lambda
-    Data.ExpressionApply (Data.Apply func arg) ->
+    Data.ExpressionApply (Data.Apply func arg) -> do
       addRuleToMany ([tvVal, tvType] <*> [typedVal, func, arg]) .
         RuleApply $ ApplyComponents typedVal func arg
+      -- make sure we invoke this rule
+      touch $ tvVal typedVal
     Data.ExpressionLeaf (Data.GetVariable var) ->
       case Map.lookup var scope of
       Nothing -> return ()
       Just ref -> do
         addUnionRule ref $ tvType typedVal
-        -- make sure we always invoke this rule.
+        -- make sure we invoke this rule.
         touch $ tvType typedVal
     _ -> return ()
   where
@@ -369,9 +378,10 @@ addRules scope typedVal g exprBody = do
     addRule rule ref =
       liftState $ refMapAt ref . rRules %= (rule :)
     addRuleToMany refs rule = mapM_ (addRule rule) refs
-    onLambda cons (Data.Lambda paramType result) =
+    onLambda cons (Data.Lambda paramType result) = do
+      setRefExprPure (tvType paramType) setExpr
       addRuleToMany [tvVal typedVal, tvVal paramType, tvVal result] .
-      cons $ LambdaComponents (tvVal typedVal) (tvVal paramType) (tvVal result)
+        cons $ LambdaComponents (tvVal typedVal) (tvVal paramType) (tvVal result)
 
 nodeFromEntity ::
   Monad m =>
@@ -381,21 +391,19 @@ nodeFromEntity ::
 nodeFromEntity loader scope entity typedValue = do
   setInitialValues
   bodyWithChildrenTvs <- Traversable.mapM addTypedVal $ Data.eValue entity
-  addRules scope typedValue (Data.eGuid entity) $ fmap snd bodyWithChildrenTvs
   exprBody <-
     case bodyWithChildrenTvs of
     Data.ExpressionLambda lambda ->
       onLambda Data.ExpressionLambda lambda
-    Data.ExpressionPi lambda@(Data.Lambda _ (_, resultTypeTv)) -> do
-      setRefExprPure (tvType resultTypeTv) setExpr
+    Data.ExpressionPi lambda ->
       onLambda Data.ExpressionPi lambda
     _ -> Traversable.mapM (go id) bodyWithChildrenTvs
+  addRules scope typedValue (Data.eGuid entity) $ fmap snd bodyWithChildrenTvs
   return $
     Data.Expression (Data.eGuid entity) exprBody
     (Data.ePayload entity, InferNode typedValue scope)
   where
     onLambda cons (Data.Lambda paramType@(_, paramTypeTv) result) = do
-      setRefExprPure (tvType paramTypeTv) setExpr
       paramTypeR <- go id paramType
       let paramRef = Data.ParameterRef $ Data.eGuid entity
       liftM (cons . Data.Lambda paramTypeR) $
@@ -404,11 +412,16 @@ nodeFromEntity loader scope entity typedValue = do
     addTypedVal x =
       liftM ((,) x) createTypedVal
     setInitialValues = do
-      (isTouched, (initialVal, initialType)) <-
+      (initialVal, initialType) <-
         lift $ initialExprs loader scope entity
-      when isTouched . touch $ tvVal typedValue
-      setRefExprPure (tvVal typedValue) initialVal
-      setRefExprPure (tvType typedValue) initialType
+      -- use override value so we take guids from initial values
+      overrideValue (tvVal typedValue) initialVal
+      overrideValue (tvType typedValue) initialType
+    overrideValue ref expr = do
+      liftState $ refMapAt ref . rExpression .= refExprFromPure expr
+      case Data.eValue expr of
+        Data.ExpressionLeaf Data.Hole -> return ()
+        _ -> touch ref
 
 popTouchedRef :: Monad m => InferT m (Maybe Ref)
 popTouchedRef = do
