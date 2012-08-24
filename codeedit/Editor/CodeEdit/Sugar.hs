@@ -602,7 +602,7 @@ convertWritableHole stored exprI = do
       return $ ExpressionHole hole
     [x] ->
       liftM (ExpressionInferred . (`Inferred` hole)) .
-      convertExpressionI $ eeFromPure x
+      convertExpressionI . eeFromPure $ Data.randomizeGuids gen x
     _ -> return $ ExpressionHole hole
   where
     inferExpr expr inferContext inferPoint =
