@@ -10,6 +10,7 @@ import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget)
+import Graphics.UI.Bottle.Widget (Widget)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.BuiltinEdit as BuiltinEdit
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -111,12 +112,18 @@ makeBuiltinDefinition
   -> Sugar.DefinitionRef m
   -> Sugar.DefinitionBuiltin m
   -> TWidget ViewTag m
-makeBuiltinDefinition _makeExpressionEdit def builtin =
-  -- TODO: Show or allow editing type (?) via _makeExpressionEdit
-  BuiltinEdit.make builtin myId
+makeBuiltinDefinition makeExpressionEdit def builtin =
+  liftM (BWidgets.vboxAlign 0) $ sequence
+  [ BuiltinEdit.make builtin myId
+  , liftM (defTypeScale . ExpressionGui.egWidget) . makeExpressionEdit $
+    Sugar.drType def
+  ]
   where
     guid = Sugar.drGuid def
     myId = WidgetIds.fromGuid guid
+
+defTypeScale :: Widget f -> Widget f
+defTypeScale = Widget.scale Config.defTypeBoxSizeFactor
 
 makeExprDefinition ::
   MonadF m =>
@@ -131,7 +138,7 @@ makeExprDefinition makeExpressionEdit def bodyExpr = do
   let
     mkResult typeWidget =
       BWidgets.vboxAlign 0
-      [ Widget.scale Config.defTypeBoxSizeFactor typeWidget
+      [ defTypeScale typeWidget
       , bodyWidget
       ]
   case Sugar.deMNewType bodyExpr of

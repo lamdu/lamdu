@@ -712,32 +712,15 @@ loadConvertDefinition defI = do
         setName =
           Transaction.writeIRef defI . (`Data.Definition` typeI) .
           Data.DefinitionBuiltin . Data.Builtin
-      return $
-        DefinitionBodyBuiltin DefinitionBuiltin
+      -- TODO: If we want editable builtin types:
+      -- typeS <- convertExpressionStored Nothing typeL
+      return $ DefinitionBodyBuiltin DefinitionBuiltin
         { biName = name
         , biMSetName = Just setName
         }
     Data.DefinitionExpression exprL -> do
-      ((exprInferred, refMap), conflictsMap) <-
-        runWriterT $
-        uncurry (inferFromEntity lift (DataTyped.InferActions addConflict))
-        DataTyped.initial (Just defI) exprL
-      let
-        toExprEntity x =
-          Just ExprEntityStored
-          { eesInferred = x
-          , eesValueConflicts = conflicts DataTyped.tvVal x
-          , eesTypeConflicts = conflicts DataTyped.tvType x
-          }
-        conflicts getRef x =
-          getConflicts ((getRef . DataTyped.nRefs . DataTyped.iPoint) x)
-          conflictsMap
-        sugarContext = SugarContext refMap
-      exprS <-
-        runSugar sugarContext . convertExpressionI $
-        fmap toExprEntity exprInferred
-      return $
-        DefinitionBodyExpression DefinitionExpression
+      exprS <- convertExpressionStored (Just defI) exprL
+      return $ DefinitionBodyExpression DefinitionExpression
         { deExprRef = exprS
         , deMNewType = Nothing -- TODO
         , deIsTypeRedundant = True -- TODO
@@ -748,6 +731,30 @@ loadConvertDefinition defI = do
     , drBody = body
     , drType = typeS
     }
+
+convertExpressionStored ::
+  Monad m =>
+  Maybe Data.DefinitionIRef ->
+  Data.Expression (Data.ExpressionIRefProperty (T m)) ->
+  T m (ExpressionRef m)
+convertExpressionStored mDefI exprL = do
+  ((exprInferred, refMap), conflictsMap) <-
+    runWriterT $
+    uncurry (inferFromEntity lift (DataTyped.InferActions addConflict))
+    DataTyped.initial mDefI exprL
+  let
+    toExprEntity x =
+      Just ExprEntityStored
+      { eesInferred = x
+      , eesValueConflicts = conflicts DataTyped.tvVal x
+      , eesTypeConflicts = conflicts DataTyped.tvType x
+      }
+    conflicts getRef x =
+      getConflicts ((getRef . DataTyped.nRefs . DataTyped.iPoint) x)
+      conflictsMap
+    sugarContext = SugarContext refMap
+  runSugar sugarContext . convertExpressionI $
+    fmap toExprEntity exprInferred
 
 eesInferredExprs ::
   (DataTyped.Inferred (Data.ExpressionIRefProperty (T m)) -> a)
