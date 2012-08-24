@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 
 module Editor.CodeEdit.Sugar
-  ( DefinitionRef(..)
+  ( DefinitionRef(..), DefinitionBody(..)
   , DefinitionNewType(..)
   , Actions(..)
   , Expression(..), ExpressionRef(..)
@@ -160,11 +160,15 @@ data DefinitionNewType m = DefinitionNewType
   , dntAcceptNewType :: T m ()
   }
 
+data DefinitionBody m
+  = DefinitionExpression (ExpressionRef m)
+  -- | DefinitionBuiltin ...
+
 data DefinitionRef m = DefinitionRef
   { drGuid :: Guid
     -- TODO: This is the opposite order of the data model, reverse
     -- either of them:
-  , drBody :: ExpressionRef m
+  , drBody :: DefinitionBody m
   , drType :: ExpressionRef m
   , drIsTypeRedundant :: Bool
   , drMNewType :: Maybe (DefinitionNewType m)
@@ -714,7 +718,7 @@ loadConvertDefinition defI = do
       typeS <- convertExpressionPure $ void typeL
       return DefinitionRef
         { drGuid = IRef.guid defI
-        , drBody = exprS
+        , drBody = DefinitionExpression exprS
         , drType = typeS
         , drIsTypeRedundant = True
         , drMNewType = Nothing

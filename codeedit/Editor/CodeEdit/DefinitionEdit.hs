@@ -97,10 +97,21 @@ make
   => ExpressionGui.Maker m
   -> Sugar.DefinitionRef m
   -> TWidget ViewTag m
-make makeExpressionEdit def = do
+make makeExpressionEdit def =
+  case Sugar.drBody def of
+  Sugar.DefinitionExpression bodyExpr ->
+    makeExprDefinition makeExpressionEdit def bodyExpr
+
+makeExprDefinition ::
+  MonadF m =>
+  (Sugar.ExpressionRef m -> OTransaction ViewTag m (ExpressionGui m)) ->
+  Sugar.DefinitionRef m ->
+  Sugar.ExpressionRef m ->
+  OTransaction ViewTag m (OT.WidgetT ViewTag m)
+makeExprDefinition makeExpressionEdit def bodyExpr = do
   bodyWidget <-
-    liftM (ExpressionGui.egWidget . ExpressionGui.hbox) .
-    makeParts makeExpressionEdit guid $ Sugar.drBody def
+    liftM (ExpressionGui.egWidget . ExpressionGui.hbox) $
+    makeParts makeExpressionEdit guid bodyExpr
   let
     mkResult typeWidget =
       BWidgets.vboxAlign 0
