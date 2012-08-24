@@ -71,27 +71,24 @@ loadDefinition
   => Data.DefinitionIRef
   -> T m (DefinitionEntity (T f))
 loadDefinition defI = do
-  def <- Transaction.readIRef defI
-  liftM (DefinitionEntity defI) $
-    liftM2 (Data.Definition . Data.DefinitionExpression)
-    (loadExpression (defBodyProp defI def))
-    (loadExpression (defTypeProp defI def))
-
-defTypeProp
-  :: Monad m
-  => Data.DefinitionIRef -> Data.DefinitionI
-  -> Data.ExpressionIRefProperty (T m)
-defTypeProp defI (Data.Definition bodyI typeI) =
-  Property typeI
-  (Transaction.writeIRef defI . Data.Definition bodyI)
-
-defBodyProp
-  :: Monad m
-  => Data.DefinitionIRef -> Data.DefinitionI
-  -> Data.ExpressionIRefProperty (T m)
-defBodyProp defI (Data.Definition (Data.DefinitionExpression bodyI) typeI) =
-  Property bodyI
-  (Transaction.writeIRef defI . flip Data.Definition typeI . Data.DefinitionExpression)
+  Data.Definition body typeExprI <- Transaction.readIRef defI
+  let writeBack = Transaction.writeIRef defI
+  defType <-
+    loadExpression $
+    Property typeExprI (writeBack . Data.Definition body)
+  liftM (DefinitionEntity defI . (`Data.Definition` defType)) $
+    case body of
+    Data.DefinitionExpression exprI ->
+      liftM Data.DefinitionExpression . loadExpression $
+      Property exprI
+      (writeBack .
+       (`Data.Definition` typeExprI) . Data.DefinitionExpression)
+    Data.DefinitionBuiltin (Data.Builtin name biTypeExprI) ->
+      liftM (Data.DefinitionBuiltin . Data.Builtin name) . loadExpression $
+      Property biTypeExprI
+      (writeBack .
+       (`Data.Definition` biTypeExprI) . Data.DefinitionBuiltin .
+       Data.Builtin name)
 
 lambdaTypeProp
   :: Monad m
