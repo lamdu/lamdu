@@ -40,6 +40,7 @@ import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
+import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.CodeEdit.Infix as Infix
 import qualified Editor.Data as Data
@@ -703,7 +704,19 @@ loadConvertDefinition ::
   Monad m => Data.DefinitionIRef -> T m (DefinitionRef m)
 loadConvertDefinition defI = do
   Data.Definition defBody typeL <- DataLoad.loadDefinition defI
-  case defBody of
+  body <-
+    case defBody of
+    Data.DefinitionBuiltin (Data.Builtin name) -> do
+      let
+        typeI = Property.value $ Data.ePayload typeL
+        setName =
+          Transaction.writeIRef defI . (`Data.Definition` typeI) .
+          Data.DefinitionBuiltin . Data.Builtin
+      return $
+        DefinitionBodyBuiltin DefinitionBuiltin
+        { biName = name
+        , biMSetName = Just setName
+        }
     Data.DefinitionExpression exprL -> do
       ((exprInferred, refMap), conflictsMap) <-
         runWriterT $
@@ -723,16 +736,18 @@ loadConvertDefinition defI = do
       exprS <-
         runSugar sugarContext . convertExpressionI $
         fmap toExprEntity exprInferred
-      typeS <- convertExpressionPure $ void typeL
-      return DefinitionRef
-        { drGuid = IRef.guid defI
-        , drBody = DefinitionBodyExpression DefinitionExpression
-          { deExprRef = exprS
-          , deMNewType = Nothing -- TODO
-          , deIsTypeRedundant = True -- TODO
-          }
-        , drType = typeS
+      return $
+        DefinitionBodyExpression DefinitionExpression
+        { deExprRef = exprS
+        , deMNewType = Nothing -- TODO
+        , deIsTypeRedundant = True -- TODO
         }
+  typeS <- convertExpressionPure $ void typeL
+  return DefinitionRef
+    { drGuid = IRef.guid defI
+    , drBody = body
+    , drType = typeS
+    }
 
 eesInferredExprs ::
   (DataTyped.Inferred (Data.ExpressionIRefProperty (T m)) -> a)
