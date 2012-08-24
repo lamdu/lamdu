@@ -157,17 +157,17 @@ instance Show FFIName where
 data Builtin expr = Builtin
   { bName :: FFIName
   , bType :: expr
-  } deriving (Eq, Ord, Show)
+  } deriving (Eq, Ord, Show, Functor)
 
 data DefinitionBody expr
   = DefinitionExpression expr
   | DefinitionBuiltin (Builtin expr)
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Functor)
 
 data Definition expr = Definition
   { defBody :: DefinitionBody expr
   , defType :: expr
-  } deriving (Eq, Ord, Show)
+  } deriving (Eq, Ord, Show, Functor)
 type DefinitionI = Definition ExpressionIRef
 type DefinitionIRef = IRef DefinitionI
 
@@ -287,10 +287,16 @@ derive makeFoldable ''Apply
 derive makeFoldable ''Lambda
 derive makeFoldable ''ExpressionBody
 derive makeFoldable ''Expression
+derive makeFoldable ''Builtin
+derive makeFoldable ''DefinitionBody
+derive makeFoldable ''Definition
 derive makeTraversable ''Apply
 derive makeTraversable ''Lambda
 derive makeTraversable ''ExpressionBody
 derive makeTraversable ''Expression
+derive makeTraversable ''Builtin
+derive makeTraversable ''DefinitionBody
+derive makeTraversable ''Definition
 derive makeBinary ''ExpressionIRef
 derive makeBinary ''FFIName
 derive makeBinary ''VariableRef
