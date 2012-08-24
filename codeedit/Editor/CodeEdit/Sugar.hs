@@ -588,8 +588,10 @@ convertWritableHole stored exprI = do
         return . List.filterL check . List.fromList $ applyForms typ expr
   mPaste <- mkPaste . DataTyped.iStored $ eesInferred stored
   let
+    onScopeElement (lambdaGuid, _typeExpr) =
+      (lambdaGuidToParamGuid lambdaGuid, Data.ParameterRef lambdaGuid)
     hole = Hole
-      { holeScope = [] -- DataTyped.iScope $ eesInferred stored
+      { holeScope = map onScopeElement . Map.toList . DataTyped.iScope $ eesInferred stored
       , holePickResult = Just . pickResult . DataTyped.iStored $ eesInferred stored
       , holePaste = mPaste
       , holeInferResults = inferResults
