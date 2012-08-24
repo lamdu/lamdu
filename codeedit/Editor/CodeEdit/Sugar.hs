@@ -562,56 +562,66 @@ applyForms exprType expr =
       Data.pureExpression zeroGuid .
       (`Data.makeApply` pureHole)
 
-convertHole :: Monad m => Convertor m
-convertHole exprI = do
-  mPaste <- maybe (return Nothing) mkPaste $ eeProp exprI
-  context <- readContext
+convertReadOnlyHole :: Monad m => Convertor m
+convertReadOnlyHole exprI =
+  mkExpressionRef exprI $ ExpressionHole Hole
+  { holeScope = []
+  , holePickResult = Nothing
+  , holePaste = Nothing
+  , holeInferResults = mempty
+  }
+
+convertWritableHole :: Monad m => ExprEntityStored m -> Convertor m
+convertWritableHole stored exprI = do
+  inferState <- liftM scInferState readContext
   let
-    inferExpr expr inferContext inferPoint = do
-      stored <- MaybeT . return $ Data.ePayload exprI
-      (inferred, _) <-
-        DataTyped.inferFromEntity
-        (DataTyped.Loader (lift . DataLoad.loadPureDefinitionType))
-        ((DataTyped.InferActions . const . const) mzero)
-        inferContext inferPoint
-        Nothing
-        expr
-      return inferred
     check expr =
-      liftM isJust . runMaybeT $ do
-        stored <- MaybeT . return $ Data.ePayload exprI
-        inferExpr expr (scInferState context) . DataTyped.iPoint $ eesInferred stored
+      liftM isJust . runMaybeT . inferExpr expr inferState .
+      DataTyped.iPoint $ eesInferred stored
     inferResults expr =
       List.joinL . liftM (fromMaybe mzero) . runMaybeT $ do
-        stored <- MaybeT . return $ Data.ePayload exprI
         inferred <-
           uncurry (inferExpr expr) .
           DataTyped.newNodeWithScope ((DataTyped.nScope . DataTyped.iPoint . eesInferred) stored) $
-          scInferState context
+          inferState
         let typ = DataTyped.iType (Data.ePayload inferred)
         return . List.filterL check . List.fromList $ applyForms typ expr
+  mPaste <- mkPaste . DataTyped.iStored $ eesInferred stored
+  let
     hole = Hole
-      { holeScope = [] -- DataTyped.iScope $ eesInferred exprI
-      , holePickResult = fmap pickResult $ eeProp exprI
+      { holeScope = [] -- DataTyped.iScope $ eesInferred stored
+      , holePickResult = Just . pickResult . DataTyped.iStored $ eesInferred stored
       , holePaste = mPaste
       , holeInferResults = inferResults
       }
   mkExpressionRef exprI =<<
-    case fmap eesInferredValues (Data.ePayload exprI) of
-    Just [Data.Expression { Data.eValue = Data.ExpressionLeaf Data.Hole }] ->
+    case eesInferredValues stored of
+    [Data.Expression { Data.eValue = Data.ExpressionLeaf Data.Hole }] ->
       return $ ExpressionHole hole
-    Just [x] ->
+    [x] ->
       liftM (ExpressionInferred . (`Inferred` hole)) .
       convertExpressionI $ eeFromPure x
     _ -> return $ ExpressionHole hole
   where
+    inferExpr expr inferContext inferPoint =
+      liftM fst $
+      DataTyped.inferFromEntity
+      (DataTyped.Loader (lift . DataLoad.loadPureDefinitionType))
+      ((DataTyped.InferActions . const . const) mzero)
+      inferContext inferPoint
+      Nothing
+      expr
+    pickResult irefP result = do
+      ~() <- Data.writeIRefExpressionFromPure (Property.value irefP) result
+      return eGuid
     eGuid = Data.eGuid exprI
     gen =
       Random.mkStdGen . (+1) . (*2) . BinaryUtils.decodeS $
       Guid.bs eGuid
-    pickResult irefP result = do
-      ~() <- Data.writeIRefExpressionFromPure (Property.value irefP) result
-      return eGuid
+
+convertHole :: Monad m => Convertor m
+convertHole exprI =
+  maybe convertReadOnlyHole convertWritableHole (Data.ePayload exprI) exprI
 
 convertLiteralInteger :: Monad m => Integer -> Convertor m
 convertLiteralInteger i exprI =
