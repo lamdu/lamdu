@@ -36,13 +36,7 @@ loadPureDefinition
   => Data.DefinitionIRef
   -> T m (Data.Definition Data.PureExpression)
 loadPureDefinition defI = do
-  def <- Transaction.readIRef defI
-  defType <- loadPureExpression $ Data.defType def
-  liftM (`Data.Definition` defType) $
-    case Data.defBody def of
-    Data.DefinitionExpression expr ->
-      liftM Data.DefinitionExpression (loadPureExpression expr)
-
+  Traversable.mapM loadPureExpression =<< Transaction.readIRef defI
 
 loadPureDefinitionType :: Monad m => Data.DefinitionIRef -> T m Data.PureExpression
 loadPureDefinitionType =
