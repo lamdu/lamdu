@@ -3,7 +3,7 @@ module Editor.Data.Load
   ( loadDefinition, DefinitionEntity(..)
   , loadExpression, ExpressionEntity
   , loadPureExpression, loadPureDefinition
-  , loadPureDefinitionBody, loadPureDefinitionType
+  , loadPureDefinitionType
   ) where
 
 import Control.Monad (liftM, liftM2, (<=<))
@@ -37,14 +37,12 @@ loadPureDefinition
   -> T m (Data.Definition Data.PureExpression)
 loadPureDefinition defI = do
   def <- Transaction.readIRef defI
-  liftM2 (Data.Definition . Data.DefinitionExpression)
-    (loadPureExpression ((Data.defExpression . Data.defBody) def))
-    (loadPureExpression (Data.defType def))
+  defType <- loadPureExpression $ Data.defType def
+  liftM (`Data.Definition` defType) $
+    case Data.defBody def of
+    Data.DefinitionExpression expr ->
+      liftM Data.DefinitionExpression (loadPureExpression expr)
 
-loadPureDefinitionBody ::
-  Monad m => Data.DefinitionIRef -> T m Data.PureExpression
-loadPureDefinitionBody =
-  loadPureExpression . Data.defExpression . Data.defBody <=< Transaction.readIRef
 
 loadPureDefinitionType :: Monad m => Data.DefinitionIRef -> T m Data.PureExpression
 loadPureDefinitionType =
