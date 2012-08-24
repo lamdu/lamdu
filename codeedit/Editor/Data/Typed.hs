@@ -19,7 +19,7 @@ import Data.Functor.Identity (Identity(..))
 import Data.IntMap (IntMap, (!))
 import Data.IntSet (IntSet)
 import Data.Map (Map)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Monoid (mempty, mappend)
 import Data.Store.Guid (Guid)
 import qualified Control.Lens as Lens
@@ -179,6 +179,11 @@ data InferState = InferState
   } deriving Show
 LensTH.makeLenses ''InferState
 
+-- Map from params to their Param type,
+-- also including the recursive ref to the definition.
+-- (hence not just parameters)
+type Scope = Map Data.VariableRef Ref
+
 -- Used to refer to expressions in the inference state and resume inference.
 data InferNode = InferNode
   { nRefs :: TypedValue
@@ -189,6 +194,7 @@ data Inferred a = Inferred
   { iStored :: a
   , iValue :: Data.PureExpression
   , iType :: Data.PureExpression
+  , iScope :: Map Guid Data.PureExpression
   , iPoint :: InferNode
   } deriving Functor
 
@@ -218,11 +224,6 @@ newNodeWithScope scope prevRefMap =
 
 initial :: (RefMap, InferNode)
 initial = newNodeWithScope mempty $ RefMap mempty
-
--- Map from params to their Param type,
--- also including the recursive ref to the definition.
--- (hence not just parameters)
-type Scope = Map Data.VariableRef Ref
 
 newtype Loader m = Loader
   { loadPureDefinitionType :: Data.DefinitionIRef -> m Data.PureExpression
@@ -620,8 +621,11 @@ inferFromEntity loader actions initialRefMap (InferNode rootTv rootScope) mRecur
       { iStored = s
       , iValue = deref . tvVal $ nRefs inferNode
       , iType = deref . tvType $ nRefs inferNode
+      , iScope = Map.fromList . mapMaybe onScopeElement . Map.toList $ nScope inferNode
       , iPoint = inferNode
       }
+    onScopeElement (Data.ParameterRef guid, ref) = Just (guid, deref ref)
+    onScopeElement _ = Nothing
     deref (Ref x) = void $ ((resultRefMap ^. refMap) ! x) ^. rExpression
   return (fmap derefNode node, resultRefMap)
   where
