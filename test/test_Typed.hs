@@ -232,6 +232,14 @@ main = TestFramework.defaultMain
     in
       assertBool (showExpressionWithInferred (inferResults tExpr)) . isJust $
         doInferEx refMap ((Typed.iPoint . Data.ePayload) firstHole) Nothing $ getDefExpr "id"
+  , testCase "resume infer in func body" $
+    let
+      (tExpr, refMap) =
+        doInfer . mkExpr "lambda" $ Data.makeLambda hole hole
+      Data.ExpressionLambda (Data.Lambda _ bodyHole) = Data.eValue tExpr
+    in
+      assertBool (showExpressionWithInferred (inferResults tExpr)) . isJust $
+        doInferEx refMap ((Typed.iPoint . Data.ePayload) bodyHole) Nothing $ getDefExpr "id"
   , testCase "ref to the def on the side" $
     let
       defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
