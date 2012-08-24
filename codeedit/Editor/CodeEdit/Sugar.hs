@@ -1,7 +1,8 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 
 module Editor.CodeEdit.Sugar
-  ( DefinitionRef(..), DefinitionBody(..), Builtin(..)
+  ( DefinitionRef(..), DefinitionBody(..)
+  , DefinitionExpression(..), DefinitionBuiltin(..)
   , DefinitionNewType(..)
   , Actions(..)
   , Expression(..), ExpressionRef(..)
@@ -159,24 +160,26 @@ data DefinitionNewType m = DefinitionNewType
   , dntAcceptNewType :: T m ()
   }
 
-data Builtin m = Builtin
+data DefinitionExpression m = DefinitionExpression
+  { deExprRef :: ExpressionRef m
+  , deIsTypeRedundant :: Bool
+  , deMNewType :: Maybe (DefinitionNewType m)
+  }
+
+data DefinitionBuiltin m = DefinitionBuiltin
   { biName :: Data.FFIName
   -- Consider removing Maybe'ness here
   , biMSetName :: Maybe (Data.FFIName -> T m ())
   }
 
 data DefinitionBody m
-  = DefinitionExpression (ExpressionRef m)
-  | DefinitionBuiltin (Builtin m)
+  = DefinitionBodyExpression (DefinitionExpression m)
+  | DefinitionBodyBuiltin (DefinitionBuiltin m)
 
 data DefinitionRef m = DefinitionRef
   { drGuid :: Guid
-    -- TODO: This is the opposite order of the data model, reverse
-    -- either of them:
-  , drBody :: DefinitionBody m
   , drType :: ExpressionRef m
-  , drIsTypeRedundant :: Bool
-  , drMNewType :: Maybe (DefinitionNewType m)
+  , drBody :: DefinitionBody m
   }
 
 AtFieldTH.make ''Hole
@@ -723,10 +726,12 @@ loadConvertDefinition defI = do
       typeS <- convertExpressionPure $ void typeL
       return DefinitionRef
         { drGuid = IRef.guid defI
-        , drBody = DefinitionExpression exprS
+        , drBody = DefinitionBodyExpression DefinitionExpression
+          { deExprRef = exprS
+          , deMNewType = Nothing -- TODO
+          , deIsTypeRedundant = True -- TODO
+          }
         , drType = typeS
-        , drIsTypeRedundant = True
-        , drMNewType = Nothing
         }
 
 eesInferredExprs ::

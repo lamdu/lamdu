@@ -3,12 +3,10 @@ module Editor.CodeEdit.BuiltinEdit(make) where
 import Data.List.Split (splitOn)
 import Data.Store.Property (Property(..))
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (TWidget)
 import qualified Data.List as List
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
@@ -28,10 +26,10 @@ builtinFDConfig = FocusDelegator.Config
 
 make
   :: MonadF m
-  => Sugar.Builtin m
+  => Sugar.DefinitionBuiltin m
   -> Widget.Id
   -> TWidget ViewTag m
-make (Sugar.Builtin (Data.FFIName modulePath name) setFFIName) myId =
+make (Sugar.DefinitionBuiltin (Data.FFIName modulePath name) setFFIName) myId =
   OT.assignCursor myId (WidgetIds.builtinFFIName myId) $ do
     moduleName <-
       makeNamePartEditor Config.foreignModuleColor

@@ -100,16 +100,16 @@ make
   -> TWidget ViewTag m
 make makeExpressionEdit def =
   case Sugar.drBody def of
-  Sugar.DefinitionExpression bodyExpr ->
+  Sugar.DefinitionBodyExpression bodyExpr ->
     makeExprDefinition makeExpressionEdit def bodyExpr
-  Sugar.DefinitionBuiltin builtin ->
+  Sugar.DefinitionBodyBuiltin builtin ->
     makeBuiltinDefinition makeExpressionEdit def builtin
 
 makeBuiltinDefinition
   :: MonadF m
   => ExpressionGui.Maker m
   -> Sugar.DefinitionRef m
-  -> Sugar.Builtin m
+  -> Sugar.DefinitionBuiltin m
   -> TWidget ViewTag m
 makeBuiltinDefinition _makeExpressionEdit def builtin =
   -- TODO: Show or allow editing type (?) via _makeExpressionEdit
@@ -122,21 +122,21 @@ makeExprDefinition ::
   MonadF m =>
   (Sugar.ExpressionRef m -> OTransaction ViewTag m (ExpressionGui m)) ->
   Sugar.DefinitionRef m ->
-  Sugar.ExpressionRef m ->
+  Sugar.DefinitionExpression m ->
   OTransaction ViewTag m (OT.WidgetT ViewTag m)
 makeExprDefinition makeExpressionEdit def bodyExpr = do
   bodyWidget <-
-    liftM (ExpressionGui.egWidget . ExpressionGui.hbox) $
-    makeParts makeExpressionEdit guid bodyExpr
+    liftM (ExpressionGui.egWidget . ExpressionGui.hbox) .
+    makeParts makeExpressionEdit guid . Sugar.deExprRef $ bodyExpr
   let
     mkResult typeWidget =
       BWidgets.vboxAlign 0
       [ Widget.scale Config.defTypeBoxSizeFactor typeWidget
       , bodyWidget
       ]
-  case Sugar.drMNewType def of
+  case Sugar.deMNewType bodyExpr of
     Nothing
-      | Sugar.drIsTypeRedundant def -> return bodyWidget
+      | Sugar.deIsTypeRedundant bodyExpr -> return bodyWidget
       | otherwise -> liftM (mkResult . BWidgets.hboxSpaced) (mkAcceptedRow id)
     Just (Sugar.DefinitionNewType inferredType acceptInferredType) ->
       liftM (mkResult . BWidgets.gridHSpaced) $ sequence
