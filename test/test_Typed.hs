@@ -85,7 +85,7 @@ showExpressionWithInferred =
   List.intercalate "\n" . go
   where
     go typedExpr =
-      [ "Expr: " ++ show (fmap (const ()) expr)
+      [ "Expr: " ++ show (Data.eGuid typedExpr) ++ ":" ++ show (fmap (const ()) expr)
       , "  IVal:  " ++ show val
       , "  IType: " ++ show typ
       ] ++

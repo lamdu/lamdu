@@ -142,12 +142,15 @@ data RefData = RefData
   } deriving (Show)
 LensTH.makeLenses ''RefData
 
-hole :: Data.PureExpression
-hole =
-  Data.pureExpression (Guid.fromString "HoleyHole") $ Data.ExpressionLeaf Data.Hole
+makeRefExpression :: Guid -> Data.ExpressionBody RefExpression -> RefExpression
+makeRefExpression g expr = Data.Expression g expr mempty
 
-holeRefExpr :: RefExpression
-holeRefExpr = refExprFromPure hole
+augmentGuid :: String -> Guid -> Guid
+augmentGuid = Guid.combine . Guid.fromString
+
+makeHole :: String -> Guid -> RefExpression
+makeHole s g =
+  makeRefExpression (augmentGuid s g) $ Data.ExpressionLeaf Data.Hole
 
 setExpr :: Data.PureExpression
 setExpr =
@@ -160,7 +163,8 @@ intTypeExpr =
 emptyRefData :: RefData
 emptyRefData = RefData
   { _rRules = []
-  , _rExpression = holeRefExpr
+  , _rExpression =
+      makeRefExpression (Guid.fromString "NotYetInit") $ Data.ExpressionLeaf Data.Hole
   }
 
 newtype RefMap = RefMap { _refMap :: IntMap RefData }
@@ -240,14 +244,20 @@ initialExprs loader scope entity =
   (liftM . first)
   (Data.pureExpression (Data.eGuid entity)) $
   case exprStructure of
-  Data.ExpressionApply _ -> return (Data.ExpressionLeaf Data.Hole, hole)
+  Data.ExpressionApply _ -> return (Data.ExpressionLeaf Data.Hole, holeType)
   Data.ExpressionLeaf (Data.GetVariable var@(Data.DefinitionRef ref))
     | not (Map.member var scope) ->
       liftM ((,) exprStructure) $
       loadPureDefinitionType loader ref
-  _ -> return (exprStructure, hole)
+  _ -> return (exprStructure, holeType)
   where
-    exprStructure = fmap (const hole) $ Data.eValue entity
+    innerHole =
+      Data.pureExpression (augmentGuid "innerHole" (Data.eGuid entity)) $
+      Data.ExpressionLeaf Data.Hole
+    exprStructure = fmap (const innerHole) $ Data.eValue entity
+    holeType =
+      Data.pureExpression (augmentGuid "type" (Data.eGuid entity)) $
+      Data.ExpressionLeaf Data.Hole
 
 intMapMod :: Functor f => Int -> (v -> f v) -> (IntMap v -> f (IntMap v))
 intMapMod k =
@@ -258,9 +268,6 @@ intMapMod k =
 refMapAt ::
   Functor f => Ref -> (RefData -> f RefData) -> (InferState -> f InferState)
 refMapAt k = sRefMap . refMap . intMapMod (unRef k)
-
-makeRefExpression :: Guid -> Data.ExpressionBody RefExpression -> RefExpression
-makeRefExpression g expr = Data.Expression g expr mempty
 
 -- Merge two expressions:
 -- If they do not match, return Nothing.
@@ -277,13 +284,14 @@ mergeExprs p0 p1 =
     go guids e0@(Data.Expression g _ s) e1 =
       fmap
       (flip (Data.Expression g) (mappend s (Data.ePayload e1))) $
-      f guids e0 e1
+      f (Set.insert g guids) e0 e1
     f _ e (Data.Expression _ (Data.ExpressionLeaf Data.Hole) _) =
       return $ Data.eValue e
     -- When first is hole, we take Guids from second expr
     f guids
-      (Data.Expression _ (Data.ExpressionLeaf Data.Hole) _)
-      (Data.Expression _ e _) =
+      (Data.Expression g0 (Data.ExpressionLeaf Data.Hole) _)
+      (Data.Expression g1 e _) =
+      Reader.local (Map.insert g1 g0) $
       Traversable.mapM (mapParamGuids guids) e
     f _
       (Data.Expression _ (Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par0))) _)
@@ -295,7 +303,7 @@ mergeExprs p0 p1 =
       (Data.Expression g1 e1 _) =
       Reader.local (Map.insert g1 g0) $
       Traversable.sequence =<<
-      lift (Data.matchExpressionBody (go (Set.insert g0 guids)) e0 e1)
+      lift (Data.matchExpressionBody (go guids) e0 e1)
     mapParamGuids forbiddenGuids (Data.Expression g e s) = do
       guard . not $ Set.member g forbiddenGuids
       fmap (flip (Data.Expression g) s) $ case e of
@@ -540,13 +548,15 @@ applyRule (RuleSimpleType (TypedValue val typ)) = do
     Data.ExpressionLeaf (Data.LiteralInteger _) -> setRefExprPure typ intTypeExpr
     Data.ExpressionPi _ -> setRefExprPure typ setExpr
     Data.ExpressionLambda (Data.Lambda paramType _) ->
-      setRefExpr typ . makeRefExpression g $
-      Data.makePi paramType holeRefExpr
+      setRefExpr typ . makeRefExpression g .
+      Data.makePi paramType $ makeHole "lambdaBody" g
     _ -> return ()
 applyRule (RuleLambdaBodyType (LambdaBodyType lambdaG lambdaType bodyType)) = do
-  setRefExpr lambdaType . makeRefExpression lambdaG .
-    Data.makePi holeRefExpr =<< getRefExpr bodyType
   Data.Expression piG lambdaTExpr _ <- getRefExpr lambdaType
+
+  setRefExpr lambdaType . makeRefExpression lambdaG .
+    Data.makePi (makeHole "paramType" piG) =<< getRefExpr bodyType
+
   case lambdaTExpr of
     Data.ExpressionPi (Data.Lambda _ resultType) ->
       setRefExpr bodyType $ subst piG
@@ -556,15 +566,18 @@ applyRule (RuleLambdaBodyType (LambdaBodyType lambdaG lambdaType bodyType)) = do
       resultType
     _ -> return ()
 applyRule (RuleApply (ApplyComponents apply func arg)) = do
+  applyTypeExpr <- getRefExpr $ tvType apply
+  let baseGuid = Data.eGuid applyTypeExpr
+
   -- ArgT => ParamT
   setRefExpr (tvType func) . makeRefExpression someGuid .
-    (`Data.makePi` holeRefExpr) =<< getRefExpr (tvType arg)
+    (`Data.makePi` makeHole "ar0" baseGuid) =<< getRefExpr (tvType arg)
   -- If Arg is GetParam, ApplyT <=> ResultT
   argExpr <- getRefExpr $ tvVal arg
   case Data.eValue argExpr of
     Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef _)) -> do
-      setRefExpr (tvType func) . makeRefExpression someGuid .
-        Data.makePi holeRefExpr =<< getRefExpr (tvType apply)
+      setRefExpr (tvType func) . makeRefExpression someGuid $
+        Data.makePi (makeHole "ar1" baseGuid) applyTypeExpr
       funcTExpr <- getRefExpr $ tvType func
       case Data.eValue funcTExpr of
         Data.ExpressionPi (Data.Lambda _ resultT) ->
@@ -592,7 +605,7 @@ applyRule (RuleApply (ApplyComponents apply func arg)) = do
       setRefExpr (tvType arg) paramT
       -- ArgT => ParamT
       setRefExpr (tvVal func) . makeRefExpression someGuid .
-        (`Data.makeLambda` holeRefExpr) =<< getRefExpr (tvType arg)
+        (`Data.makeLambda` (makeHole "ar2" baseGuid)) =<< getRefExpr (tvType arg)
       -- Recurse-Subst Body Arg Apply
       setRefExpr (tvVal func) . makeRefExpression funcGuid .
         Data.makeLambda paramT =<<
