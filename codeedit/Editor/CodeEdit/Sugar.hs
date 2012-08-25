@@ -42,6 +42,7 @@ import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
+import qualified Data.Traversable as Traversable
 import qualified Editor.Anchors as Anchors
 import qualified Editor.CodeEdit.Infix as Infix
 import qualified Editor.Data as Data
@@ -671,15 +672,15 @@ convertExpressionI ee =
   Data.ExpressionLeaf Data.Set -> convertAtom "Set"
   Data.ExpressionLeaf Data.IntegerType -> convertAtom "Integer"
 
--- -- Check no holes
--- isCompleteType :: Data.PureExpression -> Bool
--- isCompleteType =
---   isJust . toMaybe
---   where
---     toMaybe = f . Data.eValue
---     f (Data.ExpressionLeaf Data.Hole) = Nothing
---     f e = tMapM_ toMaybe e
---     tMapM_ = (fmap . liftM . const) () . Traversable.mapM
+-- Check no holes
+isCompleteType :: Data.PureExpression -> Bool
+isCompleteType =
+  isJust . toMaybe
+  where
+    toMaybe = f . Data.eValue
+    f (Data.ExpressionLeaf Data.Hole) = Nothing
+    f e = tMapM_ toMaybe e
+    tMapM_ = (fmap . liftM . const) () . Traversable.mapM
 
 convertExpressionPure ::
   Monad m => Data.PureExpression -> T m (ExpressionRef m)
@@ -720,14 +721,29 @@ loadConvertDefinition defI = do
         , biMSetName = Just setName
         }
     Data.DefinitionExpression exprL -> do
-      (isSuccess, sugarContext, exprStored) <- inferLoadedExpression (Just defI) exprL
+      (isSuccess, sugarContext, exprStored) <-
+        inferLoadedExpression (Just defI) exprL
       exprS <- convertStoredExpression sugarContext exprStored
       let
-        inferredTypeP = DataTyped.iType . eesInferred $ Data.ePayload exprStored
+        inferredTypeP =
+          DataTyped.iType . eesInferred $ Data.ePayload exprStored
         typesMatch = on (==) Data.canonizeGuids typeP inferredTypeP
+        mkNewType = do
+          inferredTypeS <- convertExpressionPure inferredTypeP
+          return DefinitionNewType
+            { dntNewType = inferredTypeS
+            , dntAcceptNewType =
+              Property.set (Data.ePayload typeL) =<<
+              Data.newIRefExpressionFromPure inferredTypeP
+            }
+      mNewType <-
+        if isSuccess && not typesMatch && isCompleteType inferredTypeP
+        then liftM Just mkNewType
+        else return Nothing
+
       return $ DefinitionBodyExpression DefinitionExpression
         { deExprRef = exprS
-        , deMNewType = Nothing -- TODO
+        , deMNewType = mNewType
         , deIsTypeRedundant = isSuccess && typesMatch
         }
   typeS <- convertExpressionPure typeP
