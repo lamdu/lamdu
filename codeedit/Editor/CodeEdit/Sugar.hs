@@ -23,6 +23,7 @@ import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.Writer (WriterT(..))
+import Data.Function (on)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid (Monoid(..))
@@ -697,12 +698,13 @@ addConflict ref =
 loadConvertExpression ::
   Monad m => Data.ExpressionIRefProperty (T m) -> T m (ExpressionRef m)
 loadConvertExpression exprP =
-  convertExpressionStored Nothing =<< DataLoad.loadExpression exprP
+  convertLoadedExpression Nothing =<< DataLoad.loadExpression exprP
 
 loadConvertDefinition ::
   Monad m => Data.DefinitionIRef -> T m (DefinitionRef m)
 loadConvertDefinition defI = do
   Data.Definition defBody typeL <- DataLoad.loadDefinition defI
+  let typeP = void typeL
   body <-
     case defBody of
     Data.DefinitionBuiltin (Data.Builtin name) -> do
@@ -712,38 +714,45 @@ loadConvertDefinition defI = do
           Transaction.writeIRef defI . (`Data.Definition` typeI) .
           Data.DefinitionBuiltin . Data.Builtin
       -- TODO: If we want editable builtin types:
-      -- typeS <- convertExpressionStored Nothing typeL
+      -- typeS <- convertLoadedExpression Nothing typeL
       return $ DefinitionBodyBuiltin DefinitionBuiltin
         { biName = name
         , biMSetName = Just setName
         }
     Data.DefinitionExpression exprL -> do
-      exprS <- convertExpressionStored (Just defI) exprL
+      (isSuccess, sugarContext, exprStored) <- inferLoadedExpression (Just defI) exprL
+      exprS <- convertStoredExpression sugarContext exprStored
+      let
+        inferredTypeP = DataTyped.iType . eesInferred $ Data.ePayload exprStored
+        typesMatch = on (==) Data.canonizeGuids typeP inferredTypeP
       return $ DefinitionBodyExpression DefinitionExpression
         { deExprRef = exprS
         , deMNewType = Nothing -- TODO
-        , deIsTypeRedundant = True -- TODO
+        , deIsTypeRedundant = isSuccess && typesMatch
         }
-  typeS <- convertExpressionPure $ void typeL
+  typeS <- convertExpressionPure typeP
   return DefinitionRef
     { drGuid = IRef.guid defI
     , drBody = body
     , drType = typeS
     }
 
-convertExpressionStored ::
-  Monad m =>
+inferLoadedExpression ::
+  Monad f =>
   Maybe Data.DefinitionIRef ->
   Data.Expression (Data.ExpressionIRefProperty (T m)) ->
-  T m (ExpressionRef m)
-convertExpressionStored mDefI exprL = do
+  T f
+  (Bool,
+   SugarContext,
+   Data.Expression (ExprEntityStored m))
+inferLoadedExpression mDefI exprL = do
   ((exprInferred, refMap), conflictsMap) <-
     runWriterT $
     uncurry (inferFromEntity lift (DataTyped.InferActions addConflict))
     DataTyped.initial mDefI exprL
   let
     toExprEntity x =
-      Just ExprEntityStored
+      ExprEntityStored
       { eesInferred = x
       , eesValueConflicts = conflicts DataTyped.tvVal x
       , eesTypeConflicts = conflicts DataTyped.tvType x
@@ -751,9 +760,27 @@ convertExpressionStored mDefI exprL = do
     conflicts getRef x =
       getConflicts ((getRef . DataTyped.nRefs . DataTyped.iPoint) x)
       conflictsMap
-    sugarContext = SugarContext refMap
+  return
+    ( Map.null $ unConflictMap conflictsMap
+    , SugarContext refMap, fmap toExprEntity exprInferred
+    )
+
+convertLoadedExpression ::
+  Monad m =>
+  Maybe Data.DefinitionIRef ->
+  Data.Expression (Data.ExpressionIRefProperty (T m)) ->
+  T m (ExpressionRef m)
+convertLoadedExpression mDefI exprL = do
+  (_, sugarContext, exprStored) <- inferLoadedExpression mDefI exprL
+  convertStoredExpression sugarContext exprStored
+
+convertStoredExpression ::
+  Monad m =>
+  SugarContext -> Data.Expression (ExprEntityStored m) ->
+  T m (ExpressionRef m)
+convertStoredExpression sugarContext exprStored = do
   runSugar sugarContext . convertExpressionI $
-    fmap toExprEntity exprInferred
+    fmap Just exprStored
 
 eesInferredExprs ::
   (DataTyped.Inferred (Data.ExpressionIRefProperty (T m)) -> a)
