@@ -241,8 +241,8 @@ main = TestFramework.defaultMain
     ((mkExpr "a" . Data.makeLambda hole . mkExpr "b" . Data.makeLambda hole) hole)
     (getLambdaBody . Data.eValue . getLambdaBody)
   , testResume "resume infer to get param 2 of 2"
-    (mkExpr "newExpr" (getParamExpr "a"))
-    ((mkExpr "b" . Data.makeLambda hole . mkExpr "b" . Data.makeLambda hole) hole)
+    (mkExpr "newExpr" (getParamExpr "b"))
+    ((mkExpr "a" . Data.makeLambda hole . mkExpr "b" . Data.makeLambda hole) hole)
     (getLambdaBody . Data.eValue . getLambdaBody)
   , testCase "ref to the def on the side" $
     let
