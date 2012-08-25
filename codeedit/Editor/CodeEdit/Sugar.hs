@@ -13,7 +13,7 @@ module Editor.CodeEdit.Sugar
   , GetVariable(..), gvGuid
   , HasParens(..)
   , convertExpressionPure
-  , loadConvertDefinition
+  , loadConvertDefinition, loadConvertExpression
   ) where
 
 import Control.Applicative ((<$>), (<*>))
@@ -693,6 +693,11 @@ addConflict ::
 addConflict ref =
   Writer.tell . ConflictMap .
   Map.singleton ref . Set.singleton
+
+loadConvertExpression ::
+  Monad m => Data.ExpressionIRefProperty (T m) -> T m (ExpressionRef m)
+loadConvertExpression exprP =
+  convertExpressionStored Nothing =<< DataLoad.loadExpression exprP
 
 loadConvertDefinition ::
   Monad m => Data.DefinitionIRef -> T m (DefinitionRef m)

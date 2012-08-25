@@ -13,6 +13,7 @@ import Editor.Anchors (ViewTag)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction, TWidget)
 import qualified Data.Store.IRef as IRef
+import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
@@ -53,10 +54,11 @@ makeSugarCache :: Monad m => Transaction ViewTag m (SugarCache m)
 makeSugarCache = do
   sugarPanes <- makeSugarPanes
   clipboardsP <- Anchors.clipboards
-  -- clipboardsExprs <- mapM (Sugar.convertExpression <=< DataTyped.loadInferExpression) $ Property.list clipboardsP
+  clipboardsExprs <-
+    mapM Sugar.loadConvertExpression $ Property.list clipboardsP
   return SugarCache
     { scPanes = sugarPanes
-    , scClipboards = [] -- clipboardsExprs
+    , scClipboards = clipboardsExprs
     }
 
 makeSugarPanes :: Monad m => Transaction ViewTag m [SugarPane m]
@@ -107,7 +109,8 @@ makeCodeEdit cache = do
   return $
     BWidgets.vboxAlign 0
     [ panesEdit
-    , clipboardsEdit]
+    , clipboardsEdit
+    ]
 
 makePanesEdit :: MonadF m => [SugarPane m] -> TWidget ViewTag m
 makePanesEdit panes = do
