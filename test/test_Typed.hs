@@ -36,6 +36,11 @@ getDefExpr name =
   Data.GetVariable . Data.DefinitionRef . IRef.unsafeFromGuid $
   Guid.fromString name
 
+getParamExpr :: String -> Data.ExpressionBody a
+getParamExpr =
+  Data.ExpressionLeaf .
+  Data.GetVariable . Data.ParameterRef . Guid.fromString
+
 definitionTypes :: Map Guid Data.PureExpression
 definitionTypes =
   Map.fromList $ (map . first) Guid.fromString
@@ -227,11 +232,18 @@ main = TestFramework.defaultMain
       (mkInferredGetDef "id") $
     mkInferredLeaf Data.Hole setType
   , testResume "resume infer in apply func"
-    (makeApply [hole, hole]) $
+    (getDefExpr "id") (Data.canonizeGuids (makeApply [hole, hole])) $
     \(Data.ExpressionApply (Data.Apply x _)) -> x
   , testResume "resume infer in lambda body"
-    (mkExpr "" (Data.makeLambda hole hole)) $
-    \(Data.ExpressionLambda (Data.Lambda _ x)) -> x
+    (getDefExpr "id") (mkExpr "" (Data.makeLambda hole hole)) getLambdaBody
+  , testResume "resume infer to get param 1 of 2"
+    (mkExpr "newExpr" (getParamExpr "a"))
+    ((mkExpr "a" . Data.makeLambda hole . mkExpr "b" . Data.makeLambda hole) hole)
+    (getLambdaBody . Data.eValue . getLambdaBody)
+  , testResume "resume infer to get param 2 of 2"
+    (mkExpr "newExpr" (getParamExpr "a"))
+    ((mkExpr "b" . Data.makeLambda hole . mkExpr "b" . Data.makeLambda hole) hole)
+    (getLambdaBody . Data.eValue . getLambdaBody)
   , testCase "ref to the def on the side" $
     let
       defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
@@ -256,13 +268,14 @@ main = TestFramework.defaultMain
       mkExpr "" $ Data.makePi hole hole
   ]
   where
-    testResume name testExpr extract =
+    getLambdaBody ~(Data.ExpressionLambda (Data.Lambda _ x)) = x
+    testResume name newExpr testExpr extract =
       testCase name $
       let
-        (tExpr, refMap) = doInfer $ Data.canonizeGuids testExpr
+        (tExpr, refMap) = doInfer testExpr
       in
         assertBool (showExpressionWithInferred (inferResults tExpr)) . isJust $
-          doInferEx refMap ((Typed.iPoint . Data.ePayload . extract . Data.eValue) tExpr) Nothing $ getDefExpr "id"
+          doInferEx refMap ((Typed.iPoint . Data.ePayload . extract . Data.eValue) tExpr) Nothing $ newExpr
     makeApply = foldl1 (fmap (mkExpr "") . Data.makeApply)
     applyIdInt =
       mkExpr ""
