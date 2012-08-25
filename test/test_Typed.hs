@@ -226,21 +226,12 @@ main = TestFramework.defaultMain
     Data.makeApply
       (mkInferredGetDef "id") $
     mkInferredLeaf Data.Hole setType
-  , testCase "resume infer" $
-    let
-      (tExpr, refMap) = doInfer . Data.canonizeGuids $ makeApply [hole, hole]
-      Data.ExpressionApply (Data.Apply firstHole _) = Data.eValue tExpr
-    in
-      assertBool (showExpressionWithInferred (inferResults tExpr)) . isJust $
-        doInferEx refMap ((Typed.iPoint . Data.ePayload) firstHole) Nothing $ getDefExpr "id"
-  , testCase "resume infer in func body" $
-    let
-      (tExpr, refMap) =
-        doInfer . mkExpr "lambda" $ Data.makeLambda hole hole
-      Data.ExpressionLambda (Data.Lambda _ bodyHole) = Data.eValue tExpr
-    in
-      assertBool (showExpressionWithInferred (inferResults tExpr)) . isJust $
-        doInferEx refMap ((Typed.iPoint . Data.ePayload) bodyHole) Nothing $ getDefExpr "id"
+  , testResume "resume infer in apply func"
+    (makeApply [hole, hole]) $
+    \(Data.ExpressionApply (Data.Apply x _)) -> x
+  , testResume "resume infer in lambda body"
+    (mkExpr "" (Data.makeLambda hole hole)) $
+    \(Data.ExpressionLambda (Data.Lambda _ x)) -> x
   , testCase "ref to the def on the side" $
     let
       defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
@@ -265,6 +256,13 @@ main = TestFramework.defaultMain
       mkExpr "" $ Data.makePi hole hole
   ]
   where
+    testResume name testExpr extract =
+      testCase name $
+      let
+        (tExpr, refMap) = doInfer $ Data.canonizeGuids testExpr
+      in
+        assertBool (showExpressionWithInferred (inferResults tExpr)) . isJust $
+          doInferEx refMap ((Typed.iPoint . Data.ePayload . extract . Data.eValue) tExpr) Nothing $ getDefExpr "id"
     makeApply = foldl1 (fmap (mkExpr "") . Data.makeApply)
     applyIdInt =
       mkExpr ""
