@@ -63,6 +63,9 @@ makeLHSEdit makeExpressionEdit myId ident mAddFirstParameter rhs params = do
        IT.transaction)
       mAddFirstParameter
 
+makeEquals :: MonadF m => Widget.Id -> OTransaction ViewTag m (Widget f)
+makeEquals = BWidgets.makeLabel "=" . Widget.toAnimId
+
 makeParts
   :: MonadF m
   => ExpressionGui.Maker m
@@ -74,7 +77,7 @@ makeParts makeExpressionEdit guid exprRef = do
     makeLHSEdit makeExpressionEdit myId guid
     ((fmap Sugar.lambdaWrap . Sugar.rActions) exprRef)
     ("Def Body", Sugar.fBody func) $ Sugar.fParams func
-  equals <- BWidgets.makeLabel "=" $ Widget.toAnimId myId
+  equals <- makeEquals myId
   let
     lhs = myId : map (WidgetIds.fromGuid . Sugar.fpGuid) (Sugar.fParams func)
   rhsEdit <-
@@ -114,7 +117,11 @@ makeBuiltinDefinition
   -> TWidget ViewTag m
 makeBuiltinDefinition makeExpressionEdit def builtin =
   liftM (BWidgets.vboxAlign 0) $ sequence
-  [ BuiltinEdit.make builtin myId
+  [ liftM BWidgets.hboxCenteredSpaced $ sequence
+    [ makeNameEdit (Widget.joinId myId ["name"]) guid
+    , makeEquals myId
+    , BuiltinEdit.make builtin myId
+    ]
   , liftM (defTypeScale . ExpressionGui.egWidget) . makeExpressionEdit $
     Sugar.drType def
   ]
