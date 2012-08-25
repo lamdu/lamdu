@@ -551,12 +551,6 @@ zeroGuid = Guid.fromString "applyZero"
 pureHole :: Data.PureExpression
 pureHole = Data.pureExpression zeroGuid $ Data.ExpressionLeaf Data.Hole
 
--- fromInferred
---   :: [Data.PureExpression] -> Maybe Data.PureExpression
--- fromInferred [] = Just pureHole
--- fromInferred [x] = Just x
--- fromInferred _ = Nothing
-
 countPis :: Data.PureExpression -> Int
 countPis e =
   case Data.eValue e of
