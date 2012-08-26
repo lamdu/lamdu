@@ -444,14 +444,8 @@ nodeFromEntity loader scope entity typedValue = do
     setInitialValues = do
       (initialVal, initialType) <-
         lift $ initialExprs loader scope entity
-      -- use override value so we take guids from initial values
-      overrideValue (tvVal typedValue) initialVal
-      overrideValue (tvType typedValue) initialType
-    overrideValue ref expr = do
-      liftState $ refMapAt ref . rExpression .= refExprFromPure expr
-      case Data.eValue expr of
-        Data.ExpressionLeaf Data.Hole -> return ()
-        _ -> touch ref
+      setRefExpr (tvVal typedValue) $ refExprFromPure initialVal
+      setRefExpr (tvType typedValue) $ refExprFromPure initialType
 
 popTouchedRef :: Monad m => InferT m (Maybe Ref)
 popTouchedRef = do
