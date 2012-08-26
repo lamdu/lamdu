@@ -135,8 +135,8 @@ mkInferredNode ::
 mkInferredNode g iVal iType body =
   Data.Expression (Guid.fromString g) body (iVal, iType)
 
-main :: IO ()
-main = TestFramework.defaultMain
+simpleTests :: [TestFramework.Test]
+simpleTests =
   [ testInfer "literal int"
     (mkExpr "5" (Data.ExpressionLeaf (Data.LiteralInteger 5))) $
     mkInferredLeaf (Data.LiteralInteger 5) intType
@@ -154,92 +154,126 @@ main = TestFramework.defaultMain
     Data.makePi
       (mkInferredLeaf Data.Hole setType)
       (mkInferredLeaf Data.Hole setType)
-  , testInfer "apply"
-    (makeApply [getDefExpr "IntToBoolFunc", hole]) $
-    mkInferredNode ""
-      (makeApply [getDefExpr "IntToBoolFunc", hole])
-      boolType $
-    Data.makeApply
-      (mkInferredGetDef "IntToBoolFunc")
-      (mkInferredLeaf Data.Hole intType)
-  , testInfer "apply on var"
-    (makeFunnyLambda "lambda"
-      (makeApply
-        [ hole
-        , mkExpr "var" . Data.makeParameterRef $ Guid.fromString "lambda"
-        ]
-      )
-    ) $
-    mkInferredNode "lambda"
-      (makeFunnyLambda "" hole)
-      (mkExpr "" (Data.makePi hole boolType)) $
-    Data.makeLambda (mkInferredLeaf Data.Hole setType) $
-    mkInferredNode ""
-      (makeApply [getDefExpr "IntToBoolFunc", hole])
-      boolType $
-    Data.makeApply (mkInferredGetDef "IntToBoolFunc") $
-    mkInferredNode ""
-      hole
-      intType $
-    Data.makeApply
-      (mkInferredLeaf Data.Hole (mkExpr "" (Data.makePi hole intType))) $
-    mkInferredLeaf
-      ((Data.GetVariable . Data.ParameterRef . Guid.fromString) "lambda")
-      hole
-  , testInfer "id test"
-    applyIdInt $
-    mkInferredNode ""
-      applyIdInt
-      (mkExpr "" (Data.makePi intType intType)) $
-    Data.makeApply
-      (mkInferredGetDef "id") $
-    mkInferredLeaf Data.IntegerType setType
-  , testInfer "arg type goes to pi"
+  ]
+
+applyIntToBoolFuncWithHole :: TestFramework.Test
+applyIntToBoolFuncWithHole =
+  testInfer "apply"
+  (makeApply [getDefExpr "IntToBoolFunc", hole]) $
+  mkInferredNode ""
+    (makeApply [getDefExpr "IntToBoolFunc", hole])
+    boolType $
+  Data.makeApply
+    (mkInferredGetDef "IntToBoolFunc")
+    (mkInferredLeaf Data.Hole intType)
+
+applyOnVar :: TestFramework.Test
+applyOnVar =
+  testInfer "apply on var"
+  (makeFunnyLambda "lambda"
     (makeApply
       [ hole
-      , mkExpr "" . Data.ExpressionLeaf $ Data.LiteralInteger 5
+      , mkExpr "var" . Data.makeParameterRef $ Guid.fromString "lambda"
       ]
-    ) $
-    mkInferredNode ""
-      hole
-      hole $
-    Data.makeApply
-      (mkInferredLeaf Data.Hole (mkExpr "" (Data.makePi intType hole))) $
-    mkInferredLeaf (Data.LiteralInteger 5) intType
-  , testInfer "id on an int"
-    ((Data.canonizeGuids . makeApply)
+    )
+  ) $
+  mkInferredNode "lambda"
+    (makeFunnyLambda "" hole)
+    (mkExpr "" (Data.makePi hole boolType)) $
+  Data.makeLambda (mkInferredLeaf Data.Hole setType) $
+  mkInferredNode ""
+    (makeApply [getDefExpr "IntToBoolFunc", hole])
+    boolType $
+  Data.makeApply (mkInferredGetDef "IntToBoolFunc") $
+  mkInferredNode ""
+    hole
+    intType $
+  Data.makeApply
+    (mkInferredLeaf Data.Hole (mkExpr "" (Data.makePi hole intType))) $
+  mkInferredLeaf
+    ((Data.GetVariable . Data.ParameterRef . Guid.fromString) "lambda")
+    hole
+
+idTest :: TestFramework.Test
+idTest =
+  testInfer "id test"
+  applyIdInt $
+  mkInferredNode ""
+    applyIdInt
+    (mkExpr "" (Data.makePi intType intType)) $
+  Data.makeApply
+    (mkInferredGetDef "id") $
+  mkInferredLeaf Data.IntegerType setType
+
+argTypeGoesToPi :: TestFramework.Test
+argTypeGoesToPi =
+  testInfer "arg type goes to pi"
+  (makeApply
+    [ hole
+    , mkExpr "" . Data.ExpressionLeaf $ Data.LiteralInteger 5
+    ]
+  ) $
+  mkInferredNode ""
+    hole
+    hole $
+  Data.makeApply
+    (mkInferredLeaf Data.Hole (mkExpr "" (Data.makePi intType hole))) $
+  mkInferredLeaf (Data.LiteralInteger 5) intType
+
+idOnAnInt :: TestFramework.Test
+idOnAnInt =
+  testInfer "id on an int"
+  ((Data.canonizeGuids . makeApply)
+    [ getDefExpr "id"
+    , hole
+    , mkExpr "" . Data.ExpressionLeaf $ Data.LiteralInteger 5
+    ]
+  ) $
+  mkInferredNode ""
+    (makeApply
       [ getDefExpr "id"
-      , hole
+      , intType
       , mkExpr "" . Data.ExpressionLeaf $ Data.LiteralInteger 5
       ]
-    ) $
-    mkInferredNode ""
-      (makeApply
-        [ getDefExpr "id"
-        , intType
-        , mkExpr "" . Data.ExpressionLeaf $ Data.LiteralInteger 5
-        ]
+    )
+    intType $
+  Data.makeApply
+    (mkInferredNode ""
+      (makeApply [getDefExpr "id", intType])
+      (mkExpr "" (Data.makePi intType intType))
+      (Data.makeApply
+        (mkInferredGetDef "id")
+        ((mkInferredNode "" intType setType . Data.ExpressionLeaf) Data.Hole)
       )
-      intType $
-    Data.makeApply
-      (mkInferredNode ""
-        (makeApply [getDefExpr "id", intType])
-        (mkExpr "" (Data.makePi intType intType))
-        (Data.makeApply
-          (mkInferredGetDef "id")
-          ((mkInferredNode "" intType setType . Data.ExpressionLeaf) Data.Hole)
-        )
-      ) $
-    mkInferredLeaf (Data.LiteralInteger 5) intType
-  , testInfer "id hole"
-    (makeApply [getDefExpr "id", hole]) $
-    mkInferredNode ""
-      (makeApply [getDefExpr "id", hole])
-      (mkExpr "" (Data.makePi hole hole)) $
-    Data.makeApply
-      (mkInferredGetDef "id") $
-    mkInferredLeaf Data.Hole setType
-  , testResume "resume with pi"
+    ) $
+  mkInferredLeaf (Data.LiteralInteger 5) intType
+
+idOnHole :: TestFramework.Test
+idOnHole =
+  testInfer "id hole"
+  (makeApply [getDefExpr "id", hole]) $
+  mkInferredNode ""
+    (makeApply [getDefExpr "id", hole])
+    (mkExpr "" (Data.makePi hole hole)) $
+  Data.makeApply
+    (mkInferredGetDef "id") $
+  mkInferredLeaf Data.Hole setType
+
+main :: IO ()
+main = TestFramework.defaultMain $
+  simpleTests ++
+  [ applyIntToBoolFuncWithHole
+  , applyOnVar
+  , idTest
+  , argTypeGoesToPi
+  , idOnAnInt
+  , idOnHole
+  ] ++
+  resumptionTests
+
+resumptionTests :: [TestFramework.Test]
+resumptionTests =
+  [ testResume "resume with pi"
     (mkExpr "" (Data.makePi hole hole)) hole id
   , testResume "resume infer in apply func"
     (getDefExpr "id") (Data.canonizeGuids (makeApply [hole, hole])) getApplyFunc
@@ -276,41 +310,59 @@ main = TestFramework.defaultMain
       mkInferredLeaf (Data.GetVariable (Data.DefinitionRef defI)) $
       mkExpr "" $ Data.makePi hole hole
   ]
+
+getLambdaBody :: Data.Expression a -> Data.Expression a
+getLambdaBody e =
+  x
   where
-    getLambdaBody e =
-      x
-      where
-        Data.ExpressionLambda (Data.Lambda _ x) = Data.eValue e
-    getApplyFunc e =
-      x
-      where
-        Data.ExpressionApply (Data.Apply x _) = Data.eValue e
-    testResume name newExpr testExpr extract =
-      testCase name $
-      let
-        (tExpr, refMap) = doInfer testExpr
-      in
-        assertBool (showExpressionWithInferred (inferResults tExpr)) . isJust $
-          doInferEx refMap ((Typed.iPoint . Data.ePayload . extract) tExpr) Nothing $ newExpr
-    makeApply = foldl1 (fmap (mkExpr "") . Data.makeApply)
-    applyIdInt =
-      mkExpr ""
-      (Data.makeApply
-        (getDefExpr "id")
-        intType
-      )
-    makeFunnyLambda g =
-      mkExpr g .
-      Data.makeLambda hole .
-      mkExpr "applyFunny" .
-      Data.makeApply (getDefExpr "IntToBoolFunc")
-    testInfer name pureExpr result =
-      testCase name .
-      assertBool
-        (unlines
-         [ "Unexpected result expr:"
-         , showExpressionWithInferred typedExpr
-         , showExpressionWithInferred result
-         ]) $ compareInferred typedExpr result
-      where
-        typedExpr = inferResults . fst $ doInfer pureExpr
+    Data.ExpressionLambda (Data.Lambda _ x) = Data.eValue e
+
+getApplyFunc :: Data.Expression a -> Data.Expression a
+getApplyFunc e =
+  x
+  where
+    Data.ExpressionApply (Data.Apply x _) = Data.eValue e
+
+testResume ::
+  TestFramework.TestName -> Data.PureExpression -> Data.PureExpression ->
+  (Typed.Expression () -> Data.Expression (Typed.Inferred a)) ->
+  TestFramework.Test
+testResume name newExpr testExpr extract =
+  testCase name $
+  let
+    (tExpr, refMap) = doInfer testExpr
+  in
+    assertBool (showExpressionWithInferred (inferResults tExpr)) . isJust $
+      doInferEx refMap ((Typed.iPoint . Data.ePayload . extract) tExpr) Nothing $ newExpr
+
+makeApply :: [Data.PureExpression] -> Data.PureExpression
+makeApply = foldl1 (fmap (mkExpr "") . Data.makeApply)
+
+applyIdInt :: Data.PureExpression
+applyIdInt =
+  mkExpr ""
+  (Data.makeApply
+    (getDefExpr "id")
+    intType
+  )
+
+makeFunnyLambda :: String -> Data.PureExpression -> Data.PureExpression
+makeFunnyLambda g =
+  mkExpr g .
+  Data.makeLambda hole .
+  mkExpr "applyFunny" .
+  Data.makeApply (getDefExpr "IntToBoolFunc")
+
+testInfer ::
+  TestFramework.TestName -> Data.PureExpression ->
+  InferResults -> TestFramework.Test
+testInfer name pureExpr result =
+  testCase name .
+  assertBool
+    (unlines
+     [ "Unexpected result expr:"
+     , showExpressionWithInferred typedExpr
+     , showExpressionWithInferred result
+     ]) $ compareInferred typedExpr result
+  where
+    typedExpr = inferResults . fst $ doInfer pureExpr
