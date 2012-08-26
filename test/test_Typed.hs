@@ -36,10 +36,10 @@ getDefExpr name =
   Data.GetVariable . Data.DefinitionRef . IRef.unsafeFromGuid $
   Guid.fromString name
 
-getParamExpr :: String -> Data.ExpressionBody a
-getParamExpr =
-  Data.ExpressionLeaf .
-  Data.GetVariable . Data.ParameterRef . Guid.fromString
+getParamExpr :: String -> Data.PureExpression
+getParamExpr name =
+  mkExpr ("GetParam: " ++ name) . Data.ExpressionLeaf .
+  Data.GetVariable . Data.ParameterRef $ Guid.fromString name
 
 definitionTypes :: Map Guid Data.PureExpression
 definitionTypes =
@@ -280,11 +280,11 @@ resumptionTests =
   , testResume "resume infer in lambda body"
     (getDefExpr "id") (mkExpr "" (Data.makeLambda hole hole)) getLambdaBody
   , testResume "resume infer to get param 1 of 2"
-    (mkExpr "newExpr" (getParamExpr "a"))
+    (getParamExpr "a")
     ((mkExpr "a" . Data.makeLambda hole . mkExpr "b" . Data.makeLambda hole) hole)
     (getLambdaBody . getLambdaBody)
   , testResume "resume infer to get param 2 of 2"
-    (mkExpr "newExpr" (getParamExpr "b"))
+    (getParamExpr "b")
     ((mkExpr "a" . Data.makeLambda hole . mkExpr "b" . Data.makeLambda hole) hole)
     (getLambdaBody . getLambdaBody)
   , testCase "ref to the def on the side" $
