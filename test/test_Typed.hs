@@ -146,6 +146,14 @@ main = TestFramework.defaultMain
     Data.makeApply
       (mkInferredLeaf Data.Hole (mkExpr "" (Data.makePi hole hole)))
       (mkInferredLeaf Data.Hole hole)
+  , testInfer "simple pi"
+    (mkExpr "pi" (Data.makePi hole hole)) $
+    mkInferredNode ""
+      (mkExpr "pi" (Data.makePi hole hole))
+      setType $
+    Data.makePi
+      (mkInferredLeaf Data.Hole setType)
+      (mkInferredLeaf Data.Hole setType)
   , testInfer "apply"
     (makeApply [getDefExpr "IntToBoolFunc", hole]) $
     mkInferredNode ""
@@ -231,19 +239,20 @@ main = TestFramework.defaultMain
     Data.makeApply
       (mkInferredGetDef "id") $
     mkInferredLeaf Data.Hole setType
+  , testResume "resume with pi"
+    (mkExpr "" (Data.makePi hole hole)) hole id
   , testResume "resume infer in apply func"
-    (getDefExpr "id") (Data.canonizeGuids (makeApply [hole, hole])) $
-    \(Data.ExpressionApply (Data.Apply x _)) -> x
+    (getDefExpr "id") (Data.canonizeGuids (makeApply [hole, hole])) getApplyFunc
   , testResume "resume infer in lambda body"
     (getDefExpr "id") (mkExpr "" (Data.makeLambda hole hole)) getLambdaBody
   , testResume "resume infer to get param 1 of 2"
     (mkExpr "newExpr" (getParamExpr "a"))
     ((mkExpr "a" . Data.makeLambda hole . mkExpr "b" . Data.makeLambda hole) hole)
-    (getLambdaBody . Data.eValue . getLambdaBody)
+    (getLambdaBody . getLambdaBody)
   , testResume "resume infer to get param 2 of 2"
     (mkExpr "newExpr" (getParamExpr "b"))
     ((mkExpr "a" . Data.makeLambda hole . mkExpr "b" . Data.makeLambda hole) hole)
-    (getLambdaBody . Data.eValue . getLambdaBody)
+    (getLambdaBody . getLambdaBody)
   , testCase "ref to the def on the side" $
     let
       defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
@@ -268,14 +277,21 @@ main = TestFramework.defaultMain
       mkExpr "" $ Data.makePi hole hole
   ]
   where
-    getLambdaBody ~(Data.ExpressionLambda (Data.Lambda _ x)) = x
+    getLambdaBody e =
+      x
+      where
+        Data.ExpressionLambda (Data.Lambda _ x) = Data.eValue e
+    getApplyFunc e =
+      x
+      where
+        Data.ExpressionApply (Data.Apply x _) = Data.eValue e
     testResume name newExpr testExpr extract =
       testCase name $
       let
         (tExpr, refMap) = doInfer testExpr
       in
         assertBool (showExpressionWithInferred (inferResults tExpr)) . isJust $
-          doInferEx refMap ((Typed.iPoint . Data.ePayload . extract . Data.eValue) tExpr) Nothing $ newExpr
+          doInferEx refMap ((Typed.iPoint . Data.ePayload . extract) tExpr) Nothing $ newExpr
     makeApply = foldl1 (fmap (mkExpr "") . Data.makeApply)
     applyIdInt =
       mkExpr ""

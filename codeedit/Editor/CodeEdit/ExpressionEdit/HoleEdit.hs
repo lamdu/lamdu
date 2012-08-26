@@ -257,13 +257,13 @@ makeAllResults holeInfo = do
       , Result
         { resultNames = ["->", "Pi", "→", "→", "Π", "π"]
         , resultExpr =
-          toPureExpr . Data.ExpressionPi $
+          Data.canonizeGuids . toPureExpr . Data.ExpressionPi $
           Data.Lambda holeExpr holeExpr
         }
       , Result
         { resultNames = ["\\", "Lambda", "Λ", "λ"]
         , resultExpr =
-          toPureExpr . Data.ExpressionLambda $
+          Data.canonizeGuids . toPureExpr . Data.ExpressionLambda $
           Data.Lambda holeExpr holeExpr
         }
       ]
