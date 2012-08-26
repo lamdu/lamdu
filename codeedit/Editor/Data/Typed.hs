@@ -362,9 +362,15 @@ setRefExpr :: Monad m => Ref -> RefExpression -> InferT m ()
 setRefExpr ref newExpr = do
   curExpr <- liftState $ Lens.use (refMapAt ref . rExpression)
   case mergeExprs curExpr newExpr of
-    Just mergedExpr ->
-      (when . not) (alphaEq (void mergedExpr) (void curExpr)) $ do
-        touch ref
+    Just mergedExpr -> do
+      let
+        isChange = not $ alphaEq (void mergedExpr) (void curExpr)
+        isHole =
+          case Data.eValue mergedExpr of
+          Data.ExpressionLeaf Data.Hole -> True
+          _ -> False
+      when isChange $ touch ref
+      when (isChange || isHole) $
         liftState $ refMapAt ref . rExpression .= mergedExpr
     Nothing -> do
       report <- liftActions $ Reader.asks reportConflict
