@@ -284,6 +284,10 @@ mkActions stored =
     guidify = liftM Data.exprIRefGuid
     doReplace = guidify $ DataOps.replaceWithHole stored
 
+mkGen :: Int -> Int -> Guid -> Random.StdGen
+mkGen select count =
+  Random.mkStdGen . (+select) . (*count) . BinaryUtils.decodeS . Guid.bs
+
 mkExpressionRef ::
   Monad m =>
   ExprEntity m ->
@@ -299,11 +303,9 @@ mkExpressionRef ee expr = do
     }
   where
     types =
-      zipWith Data.randomizeGuids (RandomUtils.splits gen) .
+      zipWith Data.randomizeGuids
+      (RandomUtils.splits (mkGen 0 2 (Data.eGuid ee))) .
       maybe [] eesInferredTypes $ Data.ePayload ee
-    gen =
-      Random.mkStdGen . (*2) . BinaryUtils.decodeS . Guid.bs $
-      Data.eGuid ee
 
 mkDelete
   :: Monad m
@@ -624,7 +626,7 @@ convertWritableHole stored exprI = do
       return $ ExpressionHole hole
     [x] ->
       liftM (ExpressionInferred . (`Inferred` hole)) .
-      convertExpressionI . eeFromPure $ Data.randomizeGuids gen x
+      convertExpressionI . eeFromPure $ Data.randomizeGuids (mkGen 1 2 eGuid) x
     _ -> return $ ExpressionHole hole
   where
     inferExpr expr inferContext inferPoint =
@@ -637,9 +639,6 @@ convertWritableHole stored exprI = do
       ~() <- Data.writeIRefExpressionFromPure (Property.value irefP) result
       return eGuid
     eGuid = Data.eGuid exprI
-    gen =
-      Random.mkStdGen . (+1) . (*2) . BinaryUtils.decodeS $
-      Guid.bs eGuid
 
 convertHole :: Monad m => Convertor m
 convertHole exprI =
@@ -729,7 +728,9 @@ loadConvertDefinition defI = do
           DataTyped.iType . eesInferred $ Data.ePayload exprStored
         typesMatch = on (==) Data.canonizeGuids typeP inferredTypeP
         mkNewType = do
-          inferredTypeS <- convertExpressionPure inferredTypeP
+          inferredTypeS <-
+            convertExpressionPure $
+            Data.randomizeGuids (mkGen 0 1 (IRef.guid defI)) inferredTypeP
           return DefinitionNewType
             { dntNewType = inferredTypeS
             , dntAcceptNewType =
