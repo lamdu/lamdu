@@ -1,17 +1,19 @@
 import Control.Applicative (liftA2)
 import Control.Arrow (first, (***))
+import Control.Exception (evaluate, onException)
 import Control.Monad (void)
 import Data.Map (Map, (!))
 import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid (mempty)
 import Data.Store.Guid (Guid)
+import System.IO (stderr, hPutStrLn)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit (assertBool)
 import qualified Data.Foldable as Foldable
 import qualified Data.List as List
 import qualified Data.Map as Map
-import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Guid as Guid
+import qualified Data.Store.IRef as IRef
 import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
 import qualified Editor.Data.Typed as Typed
@@ -67,21 +69,18 @@ definitionTypes =
   where
     idTypeParam = mkExpr "idTypeParam" . Data.makeParameterRef $ Guid.fromString "idType"
 
-doInferEx ::
+doInferM ::
   Typed.RefMap -> Typed.InferNode -> Maybe Data.DefinitionIRef ->
   Data.PureExpression ->
-  Maybe (Typed.Expression (), Typed.RefMap)
-doInferEx =
-  Typed.inferFromEntity loader (Typed.InferActions mempty)
+  (Typed.Expression (), Typed.RefMap)
+doInferM refMap inferNode mDefRef =
+  fromMaybe (error "Infer failed!") .
+  Typed.inferFromEntity loader (Typed.InferActions mempty) refMap inferNode mDefRef
   where
     loader = Typed.Loader (return . (definitionTypes !) . IRef.guid)
 
-doInfer ::
-  Data.PureExpression ->
-  (Typed.Expression (), Typed.RefMap)
-doInfer =
-  fromMaybe (error "doInfer failed!") .
-  uncurry doInferEx Typed.initial Nothing
+doInfer :: Data.PureExpression -> (Typed.Expression (), Typed.RefMap)
+doInfer = uncurry doInferM Typed.initial Nothing
 
 mkExpr ::
   String -> Data.ExpressionBody Data.PureExpression ->
@@ -346,13 +345,13 @@ resumptionTests =
   , testCase "ref to the def on the side" $
     let
       defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
-      Just (exprD, refMap) =
-        uncurry doInferEx Typed.initial (Just defI) $
+      (exprD, refMap) =
+        uncurry doInferM Typed.initial (Just defI) $
         makeLambda "" hole hole
       Data.ExpressionLambda (Data.Lambda _ body) = Data.eValue exprD
       scope = Typed.nScope . Typed.iPoint $ Data.ePayload body
-      Just (exprR, _) =
-        uncurry doInferEx (Typed.newNodeWithScope scope refMap) Nothing .
+      (exprR, _) =
+        uncurry doInferM (Typed.newNodeWithScope scope refMap) Nothing .
         mkExpr "" . Data.ExpressionLeaf . Data.GetVariable $ Data.DefinitionRef defI
       resultD = inferResults exprD
       resultR = inferResults exprR
@@ -379,6 +378,11 @@ getApplyFunc e =
   where
     Data.ExpressionApply (Data.Apply x _) = Data.eValue e
 
+evaluateMsg :: String -> a -> IO ()
+evaluateMsg msg x = do
+  _ <- evaluate x `onException` hPutStrLn stderr msg
+  return ()
+
 testResume ::
   TestFramework.TestName -> Data.PureExpression -> Data.PureExpression ->
   (Typed.Expression () -> Data.Expression (Typed.Inferred a)) ->
@@ -388,8 +392,8 @@ testResume name newExpr testExpr extract =
   let
     (tExpr, refMap) = doInfer testExpr
   in
-    assertBool (showExpressionWithInferred (inferResults tExpr)) . isJust $
-      doInferEx refMap ((Typed.iPoint . Data.ePayload . extract) tExpr) Nothing $ newExpr
+    evaluateMsg (showExpressionWithInferred (inferResults tExpr)) $
+    doInferM refMap ((Typed.iPoint . Data.ePayload . extract) tExpr) Nothing newExpr
 
 makeApply :: [Data.PureExpression] -> Data.PureExpression
 makeApply = foldl1 (fmap (mkExpr "") . Data.makeApply)
