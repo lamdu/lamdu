@@ -535,9 +535,10 @@ subst from to expr =
 mergeToPiResult ::
   RefExpression -> RefExpression -> RefExpression
 mergeToPiResult e0@(Data.Expression _ (Data.ExpressionLeaf Data.Hole) s) e1
-  | IntSet.null (s ^. pSubstitutedArgs) = e0
-  -- do not propagate subst markings on the way up
-  | otherwise = fmap (const mempty) e1
+  | IntSet.null substs = e0
+  | otherwise = fmap (Lens.set pSubstitutedArgs substs) e1
+  where
+    substs = s ^. pSubstitutedArgs
 mergeToPiResult e0@(Data.Expression g b s) e1 =
   case Data.matchExpressionBody mergeToPiResult b (Data.eValue e1) of
   Nothing -> e0
