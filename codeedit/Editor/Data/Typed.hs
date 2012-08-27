@@ -518,7 +518,6 @@ recurseSubst ::
   InferT m RefExpression
 recurseSubst preSubstExpr paramGuid argRef postSubstRef = do
   -- PreSubst with Subst => PostSubst
-  -- TODO: Mark substituted holes..
   setRefExpr postSubstRef .
     flip (subst paramGuid) preSubstExpr .
     (fmap . Lens.over pSubstitutedArgs . IntSet.insert . unRef) argRef =<<
@@ -593,17 +592,23 @@ applyRule (RuleApply (ApplyComponents apply func arg)) = do
   -- ArgT => ParamT
   setRefExpr (tvType func) . makeRefExpression (augmentGuid "ar0" baseGuid) .
     (`Data.makePi` makeHole "ar1" baseGuid) =<< getRefExpr (tvType arg)
-  -- If Arg is GetParam, ApplyT <=> ResultT
+
+  -- If Arg is GetParam (X)
+  -- Define: FuncT = Y -> ResultT Y
+  -- ApplyT X => ResultT Y
+  -- The other direction is handled anyhow below
+
   argExpr <- getRefExpr $ tvVal arg
   case Data.eValue argExpr of
-    Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef _)) -> do
-      setRefExpr (tvType func) . makeRefExpression (augmentGuid "ar2" baseGuid) $
-        Data.makePi (makeHole "ar3" baseGuid) applyTypeExpr
-      funcTExpr <- getRefExpr $ tvType func
-      case Data.eValue funcTExpr of
-        Data.ExpressionPi (Data.Lambda _ resultT) ->
-          setRefExpr (tvType apply) resultT
-        _ -> return ()
+    Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par)) ->
+      let
+        funcTGuid = augmentGuid "ar2" baseGuid
+        getFuncParam =
+          makeRefExpression (Data.eGuid argExpr) (Data.makeParameterRef funcTGuid)
+      in
+        setRefExpr (tvType func) . makeRefExpression funcTGuid .
+        Data.makePi (makeHole "ar3" baseGuid) $
+        subst par getFuncParam applyTypeExpr
     _ -> return ()
 
   Data.Expression funcTGuid funcTExpr _ <-
@@ -633,7 +638,7 @@ applyRule (RuleApply (ApplyComponents apply func arg)) = do
         recurseSubst body funcGuid (tvVal arg) (tvVal apply)
     Data.ExpressionLeaf Data.Hole -> return ()
     _ ->
-      setRefExpr (tvVal apply) . makeRefExpression (augmentGuid "ar5" baseGuid) $
+      setRefExpr (tvVal apply) . makeRefExpression (augmentGuid "ar6" baseGuid) $
         Data.makeApply funcPge argExpr
 
 inferFromEntity ::

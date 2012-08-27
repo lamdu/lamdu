@@ -23,7 +23,7 @@ newtype Guid = Guid { bs :: SBS.ByteString }
 
 instance Show Guid where
   show g =
-    fromMaybe ((('G':) . take 3 . asHex) g) $
+    fromMaybe ((('G':) . take 6 . asHex) g) $
     decodeDebugGuid g
 
 decodeDebugGuid :: Guid -> Maybe String
