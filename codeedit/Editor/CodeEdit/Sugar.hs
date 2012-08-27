@@ -449,7 +449,7 @@ atFunctionType :: ExpressionRef m -> ExpressionRef m
 atFunctionType exprRef =
   case rExpression exprRef of
     ExpressionHole {} -> exprRef -- Keep types on holes
-    _ -> exprRef --atRInferredTypes removeIfNoErrors exprRef
+    _ -> atRInferredTypes removeIfNoErrors exprRef
   where
     removeIfNoErrors [_] = []
     removeIfNoErrors xs = xs
