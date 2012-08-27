@@ -29,13 +29,14 @@ instance Show Guid where
 decodeDebugGuid :: Guid -> Maybe String
 decodeDebugGuid (Guid g) = do
   guard $ all (== '\x00') shouldBeZeros
-  guard $ all Char.isAlphaNum preZeros
+  guard $ all isOkChar preZeros
   return $
     if null preZeros
     then "\"\""
     else preZeros
   where
     (preZeros, shouldBeZeros) = break (== '\x00') $ UTF8.toString g
+    isOkChar x = Char.isAlphaNum x || elem x " _"
 
 inGuid :: (SBS.ByteString -> SBS.ByteString) -> Guid -> Guid
 inGuid f = Guid . f . bs

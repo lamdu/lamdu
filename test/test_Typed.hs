@@ -1,7 +1,9 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE FlexibleInstances, OverlappingInstances #-}
+
 import Control.Applicative (liftA2)
-import Control.Arrow (first, second, (***))
+import Control.Arrow (first, second)
 import Control.Exception (evaluate, onException)
-import Control.Monad (void)
 import Data.Map (Map, (!))
 import Data.Maybe (isJust)
 import Data.Store.Guid (Guid)
@@ -18,6 +20,15 @@ import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
 import qualified Editor.Data.Typed as Typed
 import qualified Test.Framework as TestFramework
+
+data Invisible = Invisible
+instance Show Invisible where
+  show = const ""
+showStructure :: Data.ExpressionBody a -> String
+showStructure = show . (fmap . const) Invisible
+
+instance Show (Data.Expression ()) where
+  show (Data.Expression guid value ()) = show guid ++ ":" ++ show value
 
 setType :: Data.PureExpression
 setType = mkExpr "set" $ Data.ExpressionLeaf Data.Set
@@ -40,7 +51,7 @@ getDefExpr name =
 
 getParamExpr :: String -> Data.PureExpression
 getParamExpr name =
-  mkExpr ("GetParam: " ++ name) . Data.ExpressionLeaf .
+  mkExpr ("GetParam_" ++ name) . Data.ExpressionLeaf .
   Data.GetVariable . Data.ParameterRef $ Guid.fromString name
 
 mkInferredGetDef :: String -> InferResults
@@ -74,16 +85,8 @@ definitionTypes =
 lookupMany :: Eq a => a -> [(a, b)] -> [b]
 lookupMany x = map snd . filter ((== x) . fst)
 
-data ConflictsAnnotation a
-  = ConflictsAnnotation [a] [a]
-instance Show a => Show (ConflictsAnnotation a) where
-  show (ConflictsAnnotation vals typs) =
-    List.intercalate " " $
-    annotate "BADVALS" vals ++
-    annotate "BADTYPES" typs
-    where
-      annotate _ [] = []
-      annotate prefix xs = [prefix ++ concatMap ((' ':) . show) xs]
+data ConflictsAnnotation
+  = ConflictsAnnotation [Data.PureExpression] [Data.PureExpression]
 
 doInferM ::
   Typed.RefMap -> Typed.InferNode -> Maybe Data.DefinitionIRef ->
@@ -94,13 +97,13 @@ doInferM refMap inferNode mDefRef expr =
     [] -> result
     _ -> error $ unlines
       [ "Result with conflicts:"
-      , show $ fmap addConflicts inferredExpr
+      , showExpressionWithConflicts $ fmap addConflicts inferredExpr
       ]
   where
     addConflicts inferred =
       ConflictsAnnotation
-      (lookupMany valRef conflicts)
-      (lookupMany typRef conflicts)
+      (Typed.iValue inferred : lookupMany valRef conflicts)
+      (Typed.iType inferred : lookupMany typRef conflicts)
       where
         Typed.TypedValue valRef typRef = Typed.nRefs $ Typed.iPoint inferred
     (result@(inferredExpr, _), conflicts) =
@@ -135,7 +138,7 @@ showExpressionWithInferred =
   List.intercalate "\n" . go
   where
     go typedExpr =
-      [ "Expr: " ++ show (Data.eGuid typedExpr) ++ ":" ++ show (void expr)
+      [ "Expr: " ++ show (Data.eGuid typedExpr) ++ ":" ++ showStructure expr
       , "  IVal:  " ++ show val
       , "  IType: " ++ show typ
       ] ++
@@ -144,6 +147,22 @@ showExpressionWithInferred =
       where
         expr = Data.eValue typedExpr
         (val, typ) = Data.ePayload typedExpr
+
+showExpressionWithConflicts :: Data.Expression ConflictsAnnotation -> String
+showExpressionWithConflicts =
+  List.intercalate "\n" . go
+  where
+    go typedExpr =
+      [ "Expr: " ++ show (Data.eGuid typedExpr) ++ ":" ++ showStructure expr
+      , "  IVal:  " ++ show val
+      ] ++ map (("    Conflict: " ++) . show) vConflicts ++
+      [ "  IType: " ++ show typ
+      ] ++ map (("    Conflict: " ++) . show) tConflicts ++
+      (map ("  " ++) . Foldable.concat . fmap go) expr
+      where
+        expr = Data.eValue typedExpr
+        ConflictsAnnotation (val : vConflicts) (typ : tConflicts) =
+          Data.ePayload typedExpr
 
 compareInferred :: InferResults -> InferResults -> Bool
 compareInferred x y =
@@ -457,12 +476,8 @@ testInfer name pureExpr result =
   testCase name .
   assertBool
     (unlines
-     [ "result expr:"  , showCanonized typedExpr
-     , "expected expr:", showCanonized result
+     [ "result expr:"  , showExpressionWithInferred typedExpr
+     , "expected expr:", showExpressionWithInferred result
      ]) $ compareInferred typedExpr result
   where
-    showCanonized =
-      showExpressionWithInferred .
-      fmap (Data.canonizeGuids *** Data.canonizeGuids) .
-      Data.canonizeGuids
     typedExpr = inferResults . fst $ doInfer pureExpr
