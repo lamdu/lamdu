@@ -624,22 +624,16 @@ applyRule (RuleApply (ApplyComponents apply func arg)) = do
   setRefExpr (tvType func) . makeRefExpression (augmentGuid "ar0" baseGuid) .
     (`Data.makePi` makeHole "ar1" baseGuid) =<< getRefExpr (tvType arg)
 
-  -- If Arg is GetParam (X)
-  -- Define: FuncT = Y -> ResultT Y
-  -- ApplyT X => ResultT Y
+  -- If Arg is GetParam
+  -- ApplyT (Susbt Arg with Hole) => ResultT
   -- The other direction is handled anyhow below
 
   argExpr <- getRefExpr $ tvVal arg
   case Data.eValue argExpr of
     Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par)) ->
-      let
-        funcTGuid = augmentGuid "ar2" baseGuid
-        getFuncParam =
-          makeRefExpression (Data.eGuid argExpr) (Data.makeParameterRef funcTGuid)
-      in
-        setRefExpr (tvType func) . makeRefExpression funcTGuid .
-        Data.makePi (makeHole "ar3" baseGuid) $
-        subst par getFuncParam applyTypeExpr
+      setRefExpr (tvType func) . makeRefExpression (augmentGuid "ar2" baseGuid) .
+      Data.makePi (makeHole "ar3" baseGuid) $
+      subst par (makeHole "ar7" baseGuid) applyTypeExpr
     _ -> return ()
 
   Data.Expression funcTGuid funcTExpr _ <-
