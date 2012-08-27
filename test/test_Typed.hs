@@ -1,14 +1,14 @@
 import Control.Applicative (liftA2)
-import Control.Arrow (first, (***))
+import Control.Arrow (first, second, (***))
 import Control.Exception (evaluate, onException)
 import Control.Monad (void)
 import Data.Map (Map, (!))
-import Data.Maybe (fromMaybe, isJust)
-import Data.Monoid (mempty)
+import Data.Maybe (isJust)
 import Data.Store.Guid (Guid)
 import System.IO (stderr, hPutStrLn)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit (assertBool)
+import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Foldable as Foldable
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -67,16 +67,48 @@ definitionTypes =
     )
   ]
   where
-    idTypeParam = mkExpr "idTypeParam" . Data.makeParameterRef $ Guid.fromString "idType"
+    idTypeParam =
+      mkExpr "idTypeParam" . Data.makeParameterRef $
+      Guid.fromString "idType"
+
+lookupMany :: Eq a => a -> [(a, b)] -> [b]
+lookupMany x = map snd . filter ((== x) . fst)
+
+data ConflictsAnnotation a
+  = ConflictsAnnotation [a] [a]
+instance Show a => Show (ConflictsAnnotation a) where
+  show (ConflictsAnnotation vals typs) =
+    List.intercalate " " $
+    annotate "BADVALS" vals ++
+    annotate "BADTYPES" typs
+    where
+      annotate _ [] = []
+      annotate prefix xs = [prefix ++ concatMap ((' ':) . show) xs]
 
 doInferM ::
   Typed.RefMap -> Typed.InferNode -> Maybe Data.DefinitionIRef ->
   Data.PureExpression ->
   (Typed.Expression (), Typed.RefMap)
-doInferM refMap inferNode mDefRef =
-  fromMaybe (error "Infer failed!") .
-  Typed.inferFromEntity loader (Typed.InferActions mempty) refMap inferNode mDefRef
+doInferM refMap inferNode mDefRef expr =
+  case conflicts of
+    [] -> result
+    _ -> error $ unlines
+      [ "Result with conflicts:"
+      , show $ fmap addConflicts inferredExpr
+      ]
   where
+    addConflicts inferred =
+      ConflictsAnnotation
+      (lookupMany valRef conflicts)
+      (lookupMany typRef conflicts)
+      where
+        Typed.TypedValue valRef typRef = Typed.nRefs $ Typed.iPoint inferred
+    (result@(inferredExpr, _), conflicts) =
+      second List.nub .
+      Writer.runWriter $
+      Typed.inferFromEntity loader (Typed.InferActions reportConflict)
+      refMap inferNode mDefRef expr
+    reportConflict ref conflictExpr = Writer.tell [(ref, conflictExpr)]
     loader = Typed.Loader (return . (definitionTypes !) . IRef.guid)
 
 doInfer :: Data.PureExpression -> (Typed.Expression (), Typed.RefMap)
