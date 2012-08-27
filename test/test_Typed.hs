@@ -3,11 +3,11 @@
 
 import Control.Applicative (liftA2)
 import Control.Arrow (first, second)
-import Control.Exception (evaluate, onException)
+import Control.Exception (evaluate)
+import Control.Monad (void)
 import Data.Map (Map, (!))
-import Data.Maybe (isJust)
+import Data.Maybe (fromMaybe, isJust)
 import Data.Store.Guid (Guid)
-import System.IO (stderr, hPutStrLn)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit (assertBool)
 import qualified Control.Monad.Trans.Writer as Writer
@@ -90,14 +90,15 @@ data ConflictsAnnotation
 
 doInferM ::
   Typed.RefMap -> Typed.InferNode -> Maybe Data.DefinitionIRef ->
+  Maybe (Typed.Expression ()) ->
   Data.PureExpression ->
   (Typed.Expression (), Typed.RefMap)
-doInferM refMap inferNode mDefRef expr =
+doInferM refMap inferNode mDefRef mResumedRoot expr =
   case conflicts of
     [] -> result
     _ -> error $ unlines
       [ "Result with conflicts:"
-      , showExpressionWithConflicts $ fmap addConflicts inferredExpr
+      , showExpressionWithConflicts $ fmap addConflicts root
       ]
   where
     addConflicts inferred =
@@ -106,6 +107,7 @@ doInferM refMap inferNode mDefRef expr =
       (Typed.iType inferred : lookupMany typRef conflicts)
       where
         Typed.TypedValue valRef typRef = Typed.nRefs $ Typed.iPoint inferred
+    root = fromMaybe inferredExpr mResumedRoot
     (result@(inferredExpr, _), conflicts) =
       second List.nub .
       Writer.runWriter $
@@ -115,7 +117,7 @@ doInferM refMap inferNode mDefRef expr =
     loader = Typed.Loader (return . (definitionTypes !) . IRef.guid)
 
 doInfer :: Data.PureExpression -> (Typed.Expression (), Typed.RefMap)
-doInfer = uncurry doInferM Typed.initial Nothing
+doInfer = uncurry doInferM Typed.initial Nothing Nothing
 
 mkExpr ::
   String -> Data.ExpressionBody Data.PureExpression ->
@@ -364,59 +366,6 @@ depApply =
     rtAppliedTo name =
       mkExpr "" . Data.makeApply (getParamExpr "rt") $ getParamExpr name
 
-main :: IO ()
-main = TestFramework.defaultMain $
-  simpleTests ++
-  [ applyIntToBoolFuncWithHole
-  , applyOnVar
-  , idTest
-  , argTypeGoesToPi
-  , idOnAnInt
-  , idOnHole
-  , depApply
-  ] ++
-  resumptionTests
-
-resumptionTests :: [TestFramework.Test]
-resumptionTests =
-  [ testResume "resume with pi"
-    (makePi "" hole hole) hole id
-  , testResume "resume infer in apply func"
-    (getDefExpr "id") (Data.canonizeGuids (makeApply [hole, hole])) getApplyFunc
-  , testResume "resume infer in lambda body"
-    (getDefExpr "id") (makeLambda "" hole hole) getLambdaBody
-  , testResume "resume infer to get param 1 of 2"
-    (getParamExpr "a")
-    ((makeLambda "a" hole . makeLambda "b" hole) hole)
-    (getLambdaBody . getLambdaBody)
-  , testResume "resume infer to get param 2 of 2"
-    (getParamExpr "b")
-    ((makeLambda "a" hole . makeLambda "b" hole) hole)
-    (getLambdaBody . getLambdaBody)
-  , testCase "ref to the def on the side" $
-    let
-      defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
-      (exprD, refMap) =
-        uncurry doInferM Typed.initial (Just defI) $
-        makeLambda "" hole hole
-      Data.ExpressionLambda (Data.Lambda _ body) = Data.eValue exprD
-      scope = Typed.nScope . Typed.iPoint $ Data.ePayload body
-      (exprR, _) =
-        uncurry doInferM (Typed.newNodeWithScope scope refMap) Nothing .
-        mkExpr "" . Data.ExpressionLeaf . Data.GetVariable $ Data.DefinitionRef defI
-      resultD = inferResults exprD
-      resultR = inferResults exprR
-    in
-      assertBool (unlines
-        [ showExpressionWithInferred resultD
-        , show scope
-        , showExpressionWithInferred resultR
-        ]) .
-      compareInferred resultR .
-      mkInferredLeafSimple (Data.GetVariable (Data.DefinitionRef defI)) $
-      makePi "" hole hole
-  ]
-
 getLambdaBody :: Data.Expression a -> Data.Expression a
 getLambdaBody e =
   x
@@ -429,10 +378,11 @@ getApplyFunc e =
   where
     Data.ExpressionApply (Data.Apply x _) = Data.eValue e
 
-evaluateMsg :: String -> a -> IO ()
-evaluateMsg msg x = do
-  _ <- evaluate x `onException` hPutStrLn stderr msg
-  return ()
+getApplyArg :: Data.Expression a -> Data.Expression a
+getApplyArg e =
+  x
+  where
+    Data.ExpressionApply (Data.Apply _ x) = Data.eValue e
 
 testResume ::
   TestFramework.TestName -> Data.PureExpression -> Data.PureExpression ->
@@ -443,8 +393,8 @@ testResume name newExpr testExpr extract =
   let
     (tExpr, refMap) = doInfer testExpr
   in
-    evaluateMsg (showExpressionWithInferred (inferResults tExpr)) $
-    doInferM refMap ((Typed.iPoint . Data.ePayload . extract) tExpr) Nothing newExpr
+    void . evaluate $
+    doInferM refMap ((Typed.iPoint . Data.ePayload . extract) tExpr) Nothing (Just tExpr) newExpr
 
 makeApply :: [Data.PureExpression] -> Data.PureExpression
 makeApply = foldl1 (fmap (mkExpr "") . Data.makeApply)
@@ -481,3 +431,63 @@ testInfer name pureExpr result =
      ]) $ compareInferred typedExpr result
   where
     typedExpr = inferResults . fst $ doInfer pureExpr
+
+resumptionTests :: [TestFramework.Test]
+resumptionTests =
+  [ testResume "resume with pi"
+    (makePi "" hole hole) hole id
+  , testResume "resume infer in apply func"
+    (getDefExpr "id") (Data.canonizeGuids (makeApply [hole, hole])) getApplyFunc
+  , testResume "resume infer in lambda body"
+    (getDefExpr "id") (makeLambda "" hole hole) getLambdaBody
+  , testResume "resume infer to get param 1 of 2"
+    (getParamExpr "a")
+    ((makeLambda "a" hole . makeLambda "b" hole) hole)
+    (getLambdaBody . getLambdaBody)
+  , testResume "resume infer to get param 2 of 2"
+    (getParamExpr "b")
+    ((makeLambda "a" hole . makeLambda "b" hole) hole)
+    (getLambdaBody . getLambdaBody)
+  , testResume "bad a b:Set f = f a {b}"
+    (getParamExpr "b")
+    ((makeLambda "a" hole .
+      makeLambda "b" setType .
+      makeLambda "f" hole)
+     (Data.canonizeGuids (makeApply [getParamExpr "f", getParamExpr "a", hole])))
+    (getApplyArg . getLambdaBody . getLambdaBody . getLambdaBody)
+  , testCase "ref to the def on the side" $
+    let
+      defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
+      (exprD, refMap) =
+        uncurry doInferM Typed.initial (Just defI) Nothing $
+        makeLambda "" hole hole
+      Data.ExpressionLambda (Data.Lambda _ body) = Data.eValue exprD
+      scope = Typed.nScope . Typed.iPoint $ Data.ePayload body
+      (exprR, _) =
+        uncurry doInferM (Typed.newNodeWithScope scope refMap) Nothing Nothing .
+        mkExpr "" . Data.ExpressionLeaf . Data.GetVariable $ Data.DefinitionRef defI
+      resultD = inferResults exprD
+      resultR = inferResults exprR
+    in
+      assertBool (unlines
+        [ showExpressionWithInferred resultD
+        , show scope
+        , showExpressionWithInferred resultR
+        ]) .
+      compareInferred resultR .
+      mkInferredLeafSimple (Data.GetVariable (Data.DefinitionRef defI)) $
+      makePi "" hole hole
+  ]
+
+main :: IO ()
+main = TestFramework.defaultMain $
+  simpleTests ++
+  [ applyIntToBoolFuncWithHole
+  , applyOnVar
+  , idTest
+  , argTypeGoesToPi
+  , idOnAnInt
+  , idOnHole
+  , depApply
+  ] ++
+  resumptionTests
