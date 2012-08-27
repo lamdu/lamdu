@@ -322,29 +322,31 @@ idOnHole =
 
 forceMono :: TestFramework.Test
 forceMono =
-  testInfer "id (id _ _)" expr .
+  testInfer "id (id _ _)"
+  (makeApply [getDefExpr "id", idHoleHole]) .
   mkInferredNode ""
-    expr
-    (makePi "" idHoleHole idHoleHole) $
+    (makeApply [getDefExpr "id", idSetHole])
+    (makePi "" idSetHole idSetHole) $
   Data.makeApply
     (mkInferredGetDef "id") $
   mkInferredNode ""
-    idHoleHole
+    idSetHole
     setType $
   Data.makeApply
     (mkInferredNode ""
-      idHole
+      idSet
       (makePi "" setType setType)
       (Data.makeApply
         (mkInferredGetDef "id")
-        (mkInferredLeafSimple Data.Set setType)
+        (mkInferredLeaf Data.Hole setType setType)
       )
     ) $
   mkInferredLeafSimple Data.Hole setType
   where
     idHole = makeApply [getDefExpr "id", hole]
     idHoleHole = Data.canonizeGuids $ makeApply [idHole, hole]
-    expr = makeApply [getDefExpr "id", idHoleHole]
+    idSet = makeApply [getDefExpr "id", setType]
+    idSetHole = Data.canonizeGuids $ makeApply [idSet, hole]
 
 inferredHole :: Data.PureExpression -> InferResults
 inferredHole = mkInferredLeafSimple Data.Hole

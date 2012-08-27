@@ -11,7 +11,7 @@ module Editor.Data.Typed
 import Control.Applicative ((<*>))
 import Control.Arrow (first)
 import Control.Lens ((%=), (.=), (^.))
-import Control.Monad (liftM, liftM2, void, when)
+import Control.Monad (guard, liftM, liftM2, void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -391,7 +391,7 @@ setRefExpr ref newExpr = do
   case mergeExprs curExpr newExpr of
     Right mergedExpr -> do
       let
-        isChange = not $ alphaEq (void mergedExpr) (void curExpr)
+        isChange = not $ equiv mergedExpr curExpr
         isHole =
           case Data.eValue mergedExpr of
           Data.ExpressionLeaf Data.Hole -> True
@@ -407,7 +407,9 @@ setRefExpr ref newExpr = do
         , errDetails = details
         }
   where
-    alphaEq x y = isJust $ Data.matchExpression ((const . const) ()) x y
+    equiv x y =
+      isJust $ Traversable.sequence =<< Data.matchExpression compareSubsts x y
+    compareSubsts x y = guard $ (x ^. pSubstitutedArgs) == (y ^. pSubstitutedArgs)
 
 setRefExprPure :: Monad m => Ref -> Data.PureExpression -> InferT m ()
 setRefExprPure ref = setRefExpr ref . refExprFromPure
