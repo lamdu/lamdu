@@ -599,8 +599,10 @@ convertWritableHole :: Monad m => ExprEntityStored m -> Convertor m
 convertWritableHole stored exprI = do
   inferState <- liftM scInferState readContext
   let
-    check expr =
-      liftM isJust . runMaybeT . inferExpr expr inferState .
+    checkAndFillHoles expr =
+      runMaybeT .
+      liftM (DataTyped.iValue . Data.ePayload) .
+      inferExpr expr inferState .
       DataTyped.iPoint $ eesInferred stored
     inferResults expr =
       List.joinL . liftM (fromMaybe mzero) . runMaybeT $ do
@@ -609,7 +611,7 @@ convertWritableHole stored exprI = do
           DataTyped.newNodeWithScope ((DataTyped.nScope . DataTyped.iPoint . eesInferred) stored) $
           inferState
         let typ = DataTyped.iType (Data.ePayload inferred)
-        return . List.filterL check . List.fromList $ applyForms typ expr
+        return . List.catMaybes . List.mapL checkAndFillHoles . List.fromList $ applyForms typ expr
   mPaste <- mkPaste . DataTyped.iStored $ eesInferred stored
   let
     onScopeElement (lambdaGuid, _typeExpr) =
