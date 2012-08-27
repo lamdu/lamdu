@@ -2,7 +2,7 @@
 module Editor.Data.Typed
   ( Expression, Inferred(..), rExpression
   , InferNode(..), TypedValue(..)
-  , Conflict
+  , Error(..), ErrorDetails(..)
   , RefMap, Ref
   , Loader(..), InferActions(..)
   , inferFromEntity, initial, newNodeWithScope
@@ -11,8 +11,9 @@ module Editor.Data.Typed
 import Control.Applicative ((<*>))
 import Control.Arrow (first)
 import Control.Lens ((%=), (.=), (^.))
-import Control.Monad (guard, liftM, liftM2, void, when)
+import Control.Monad (liftM, liftM2, void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
+import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (StateT, runStateT)
 import Data.Derive.Monoid (makeMonoid)
@@ -27,6 +28,7 @@ import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
+import qualified Control.Monad.Trans.Either as Either
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.IntMap as IntMap
 import qualified Data.IntMap.Lens as IntMapLens
@@ -131,8 +133,6 @@ data Rule
   | RuleApply ApplyComponents
   deriving (Show)
 
-type Conflict = Data.PureExpression
-
 data RefExprPayload = RefExprPayload
   { _pSubstitutedArgs :: IntSet
   , _pGuids :: Set Guid
@@ -215,8 +215,19 @@ data Inferred a = Inferred
 
 type Expression a = Data.Expression (Inferred a)
 
+data ErrorDetails
+  = MismatchIn Data.PureExpression Data.PureExpression
+  | InfiniteExpression Data.PureExpression
+  deriving Show
+
+data Error = Error
+  { errRef :: Ref
+  , errMismatch :: (Data.PureExpression, Data.PureExpression)
+  , errDetails :: ErrorDetails
+  } deriving Show
+
 newtype InferActions m = InferActions
-  { reportConflict :: Ref -> Data.PureExpression -> m ()
+  { reportError :: Error -> m ()
   }
 
 newtype InferT m a =
@@ -309,6 +320,14 @@ data MergeExprState = MergeExprState
   }
 LensTH.makeLenses ''MergeExprState
 
+-- This is because platform's Either's Monad instance sucks
+runEither :: EitherT l Identity a -> Either l a
+runEither = runIdentity . runEitherT
+
+guardEither :: Monad m => l -> Bool -> EitherT l m ()
+guardEither err False = Either.left err
+guardEither _ True = return ()
+
 -- Merge two expressions:
 -- If they do not match, return Nothing.
 -- Holes match with anything, expand to the other expr.
@@ -317,9 +336,9 @@ LensTH.makeLenses ''MergeExprState
 mergeExprs ::
   RefExpression ->
   RefExpression ->
-  Maybe RefExpression
+  Either ErrorDetails RefExpression
 mergeExprs p0 p1 =
-  runReaderT (go p0 p1) $ MergeExprState mempty mempty
+  runEither . runReaderT (go p0 p1) $ MergeExprState mempty mempty
   where
     -- When first is hole, we take Guids from second expr
     go
@@ -332,26 +351,34 @@ mergeExprs p0 p1 =
       ( (Lens.over mForbiddenGuids . Set.insert) g0
       . (Lens.over mGuidMapping . mappend . Map.fromList . map (flip (,) g0) . Set.toList)
         (s ^. pGuids)
-      ) $ f e0 e1
+      ) $ f (g0, g1) e0 e1
       where
         s = Lens.over pGuids (Set.insert g1) $ mappend s0 s1
-    f e (Data.ExpressionLeaf Data.Hole) =
+    f _ e (Data.ExpressionLeaf Data.Hole) =
       return e
-    f
-      (Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par0)))
-      (Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par1))) = do
-      guard . (par0 ==) . fromMaybe par1
+    f gs
+      e0@(Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par0)))
+      e1@(Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par1))) = do
+      lift . guardEither (mismatchIn gs e0 e1) .
+        (par0 ==) . fromMaybe par1
         =<< Reader.asks (Map.lookup par1 . Lens.view mGuidMapping)
       return $ Data.makeParameterRef par0
-    f e0 e1 =
-      Traversable.sequence =<< lift (Data.matchExpressionBody go e0 e1)
-    mapParamGuids (Data.Expression g e s) = do
-      guard . not . Set.member g =<< Reader.asks (Lens.view mForbiddenGuids)
-      fmap (flip (Data.Expression g) s) $ case e of
+    f gs e0 e1 =
+      case Data.matchExpressionBody go e0 e1 of
+      Nothing -> lift . Either.left $ mismatchIn gs e0 e1
+      Just body -> Traversable.sequence body
+    mismatchIn (g0, g1) e0 e1 =
+      MismatchIn
+      (Data.pureExpression g0 (fmap void e0))
+      (Data.pureExpression g1 (fmap void e1))
+    mapParamGuids e@(Data.Expression g body s) = do
+      lift . guardEither (InfiniteExpression (void e)) .
+        not . Set.member g =<< Reader.asks (Lens.view mForbiddenGuids)
+      fmap (flip (Data.Expression g) s) $ case body of
         Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef p)) ->
           liftM (Data.makeParameterRef . fromMaybe p) $
           Reader.asks (Map.lookup p . Lens.view mGuidMapping)
-        _ -> Traversable.mapM mapParamGuids e
+        _ -> Traversable.mapM mapParamGuids body
 
 touch :: Monad m => Ref -> InferT m ()
 touch ref =
@@ -362,7 +389,7 @@ setRefExpr :: Monad m => Ref -> RefExpression -> InferT m ()
 setRefExpr ref newExpr = do
   curExpr <- liftState $ Lens.use (refMapAt ref . rExpression)
   case mergeExprs curExpr newExpr of
-    Just mergedExpr -> do
+    Right mergedExpr -> do
       let
         isChange = not $ alphaEq (void mergedExpr) (void curExpr)
         isHole =
@@ -372,9 +399,13 @@ setRefExpr ref newExpr = do
       when isChange $ touch ref
       when (isChange || isHole) $
         liftState $ refMapAt ref . rExpression .= mergedExpr
-    Nothing -> do
-      report <- liftActions $ Reader.asks reportConflict
-      lift . report ref . Data.canonizeGuids $ void newExpr
+    Left details -> do
+      report <- liftActions $ Reader.asks reportError
+      lift $ report Error
+        { errRef = ref
+        , errMismatch = (void curExpr, void newExpr)
+        , errDetails = details
+        }
   where
     alphaEq x y = isJust $ Data.matchExpression ((const . const) ()) x y
 

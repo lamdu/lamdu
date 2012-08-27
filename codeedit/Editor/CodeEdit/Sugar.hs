@@ -631,7 +631,7 @@ convertWritableHole stored exprI = do
   where
     inferExpr expr inferContext inferPoint =
       liftM fst $ inferFromEntity lift
-      ((DataTyped.InferActions . const . const) mzero)
+      ((DataTyped.InferActions . const) mzero)
       inferContext inferPoint
       Nothing
       expr
@@ -688,12 +688,14 @@ convertExpressionPure =
   where
     ctx = SugarContext $ error "pure expression doesnt have infer state"
 
-addConflict ::
+reportError ::
   Monad m =>
-  DataTyped.Ref -> Data.PureExpression -> WriterT ConflictMap m ()
-addConflict ref =
+  DataTyped.Error -> WriterT ConflictMap m ()
+reportError err =
   Writer.tell . ConflictMap .
-  Map.singleton ref . Set.singleton
+  Map.singleton (DataTyped.errRef err) .
+  Set.singleton . Data.canonizeGuids .
+  snd $ DataTyped.errMismatch err
 
 loadConvertExpression ::
   Monad m => Data.ExpressionIRefProperty (T m) -> T m (ExpressionRef m)
@@ -765,7 +767,7 @@ inferLoadedExpression ::
 inferLoadedExpression mDefI exprL = do
   ((exprInferred, refMap), conflictsMap) <-
     runWriterT $
-    uncurry (inferFromEntity lift (DataTyped.InferActions addConflict))
+    uncurry (inferFromEntity lift (DataTyped.InferActions reportError))
     DataTyped.initial mDefI exprL
   let
     toExprEntity x =

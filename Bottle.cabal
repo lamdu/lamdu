@@ -67,6 +67,7 @@ Library
                        OpenGL,
                        StateVar,
                        TraceUtils,
+                       hashable,
                        lens >= 2.2,
                        binary >= 0.5,
                        bytestring,
@@ -103,7 +104,8 @@ Executable Editor
                        derive,
                        bottle,
                        random,
-                       List >= 0.4.3
+                       List >= 0.5.0,
+                       either
   Other-Modules:       Editor.Anchors,
                        Editor.ExampleDB,
                        Editor.BottleWidgets,

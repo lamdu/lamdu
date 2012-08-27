@@ -8,6 +8,7 @@ import Data.Binary (Binary(..))
 import Data.Binary.Get (getByteString)
 import Data.Binary.Put (putByteString)
 import Data.ByteString.Utils (randomBS, xorBS)
+import Data.Hashable (hash)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (mappend)
 import Data.Word (Word8)
@@ -17,6 +18,7 @@ import System.Random (Random(..), split)
 import qualified Data.ByteString as SBS
 import qualified Data.ByteString.UTF8 as UTF8
 import qualified Data.Char as Char
+import qualified System.Random as Random
 
 newtype Guid = Guid { bs :: SBS.ByteString }
   deriving (Eq, Ord, Read)
@@ -82,4 +84,9 @@ new :: IO Guid
 new = Guid `fmap` randomBS length
 
 combine :: Guid -> Guid -> Guid
-combine = inGuid2 xorBS
+combine x y =
+  inGuid (rbs x . rbs y) xorGuid
+  where
+    rbs = xorBS . SBS.pack . take length . Random.randoms . toStdGen
+    xorGuid = inGuid2 xorBS x y
+    toStdGen = Random.mkStdGen . hash . bs

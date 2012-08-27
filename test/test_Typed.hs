@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleInstances, OverlappingInstances #-}
 
 import Control.Applicative (liftA2)
-import Control.Arrow (first, second)
+import Control.Arrow (first)
 import Control.Exception (evaluate)
 import Control.Monad (void)
 import Data.Map (Map, (!))
@@ -85,8 +85,10 @@ definitionTypes =
 lookupMany :: Eq a => a -> [(a, b)] -> [b]
 lookupMany x = map snd . filter ((== x) . fst)
 
-data ConflictsAnnotation
-  = ConflictsAnnotation [Data.PureExpression] [Data.PureExpression]
+data ConflictsAnnotation =
+  ConflictsAnnotation
+  (Data.PureExpression, [Typed.Error])
+  (Data.PureExpression, [Typed.Error])
 
 doInferM ::
   Typed.RefMap -> Typed.InferNode -> Maybe Data.DefinitionIRef ->
@@ -103,17 +105,16 @@ doInferM refMap inferNode mDefRef mResumedRoot expr =
   where
     addConflicts inferred =
       ConflictsAnnotation
-      (Typed.iValue inferred : lookupMany valRef conflicts)
-      (Typed.iType inferred : lookupMany typRef conflicts)
+      (Typed.iValue inferred, lookupMany valRef conflicts)
+      (Typed.iType inferred, lookupMany typRef conflicts)
       where
         Typed.TypedValue valRef typRef = Typed.nRefs $ Typed.iPoint inferred
     root = fromMaybe inferredExpr mResumedRoot
     (result@(inferredExpr, _), conflicts) =
-      second List.nub .
       Writer.runWriter $
-      Typed.inferFromEntity loader (Typed.InferActions reportConflict)
+      Typed.inferFromEntity loader (Typed.InferActions reportError)
       refMap inferNode mDefRef expr
-    reportConflict ref conflictExpr = Writer.tell [(ref, conflictExpr)]
+    reportError err = Writer.tell [(Typed.errRef err, err)]
     loader = Typed.Loader (return . (definitionTypes !) . IRef.guid)
 
 doInfer :: Data.PureExpression -> (Typed.Expression (), Typed.RefMap)
@@ -157,13 +158,13 @@ showExpressionWithConflicts =
     go typedExpr =
       [ "Expr: " ++ show (Data.eGuid typedExpr) ++ ":" ++ showStructure expr
       , "  IVal:  " ++ show val
-      ] ++ map (("    Conflict: " ++) . show) vConflicts ++
+      ] ++ map (("    Conflict: " ++) . show) vErrors ++
       [ "  IType: " ++ show typ
-      ] ++ map (("    Conflict: " ++) . show) tConflicts ++
+      ] ++ map (("    Conflict: " ++) . show) tErrors ++
       (map ("  " ++) . Foldable.concat . fmap go) expr
       where
         expr = Data.eValue typedExpr
-        ConflictsAnnotation (val : vConflicts) (typ : tConflicts) =
+        ConflictsAnnotation (val, vErrors) (typ, tErrors) =
           Data.ePayload typedExpr
 
 compareInferred :: InferResults -> InferResults -> Bool
