@@ -16,8 +16,6 @@ import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (StateT, runStateT)
-import Data.Derive.Monoid (makeMonoid)
-import Data.DeriveTH (derive)
 import Data.Functor.Identity (Identity(..))
 import Data.IntMap (IntMap, (!))
 import Data.IntSet (IntSet)
@@ -133,13 +131,10 @@ data Rule
   | RuleApply ApplyComponents
   deriving (Show)
 
-data RefExprPayload = RefExprPayload
+newtype RefExprPayload = RefExprPayload
   { _pSubstitutedArgs :: IntSet
-  , _pGuids :: Set Guid
-  } deriving Show
+  } deriving (Show, Monoid)
 LensTH.makeLenses ''RefExprPayload
-
-derive makeMonoid ''RefExprPayload
 
 type RefExpression = Data.Expression RefExprPayload
 
@@ -349,11 +344,10 @@ mergeExprs p0 p1 =
       fmap (flip (Data.Expression g0) s) .
       Reader.local
       ( (Lens.over mForbiddenGuids . Set.insert) g0
-      . (Lens.over mGuidMapping . mappend . Map.fromList . map (flip (,) g0) . Set.toList)
-        (s ^. pGuids)
+      . Lens.over mGuidMapping (Map.insert g1 g0)
       ) $ f (g0, g1) e0 e1
       where
-        s = Lens.over pGuids (Set.insert g1) $ mappend s0 s1
+        s = mappend s0 s1
     f _ e (Data.ExpressionLeaf Data.Hole) =
       return e
     f gs
