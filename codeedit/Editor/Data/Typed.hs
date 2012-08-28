@@ -439,9 +439,12 @@ addRules scope typedVal g exprBody = do
     addRuleId ruleId ref = liftState $ refMapAt ref . rRules %= (ruleId :)
     onLambda cons uncons (Data.Lambda paramType result) = do
       setRefExprPure (tvType paramType) setExpr
-      addRule [tvVal typedVal, tvVal paramType, tvVal result] .
-        structureRule cons uncons $
+      addRule [tvVal typedVal] .
+        structureRule uncons $
         LambdaComponents (tvVal typedVal) (tvVal paramType) (tvVal result)
+      addRule [tvVal paramType, tvVal result] $ Rule $
+        setRefExpr (tvVal typedVal) . makeRefExpression g . cons =<<
+        liftM2 Data.Lambda (getRefExpr (tvVal paramType)) (getRefExpr (tvVal result))
 
 nodeFromEntity ::
   Monad m =>
@@ -500,19 +503,16 @@ getRefExpr :: Monad m => Ref -> InferT m RefExpression
 getRefExpr ref = liftState $ Lens.use (refMapAt ref . rExpression)
 
 structureRule ::
-  (Data.Lambda RefExpression -> Data.ExpressionBody RefExpression) ->
   (Data.ExpressionBody RefExpression -> Maybe (Data.Lambda RefExpression)) ->
   LambdaComponents ->
   Rule
-structureRule cons uncons (LambdaComponents parentRef paramTypeRef resultRef) = Rule $ do
-  Data.Expression g expr _ <- getRefExpr parentRef
-  case uncons expr of
+structureRule uncons (LambdaComponents parentRef paramTypeRef resultRef) = Rule $ do
+  expr <- getRefExpr parentRef
+  case uncons (Data.eValue expr) of
     Nothing -> return ()
     Just (Data.Lambda paramType result) -> do
       setRefExpr paramTypeRef paramType
       setRefExpr resultRef result
-  setRefExpr parentRef . makeRefExpression g . cons =<<
-    liftM2 Data.Lambda (getRefExpr paramTypeRef) (getRefExpr resultRef)
 
 subst ::
   Guid -> Data.Expression a ->
