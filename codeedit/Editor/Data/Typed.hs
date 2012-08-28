@@ -10,7 +10,7 @@ module Editor.Data.Typed
 
 import Control.Applicative ((<*>))
 import Control.Arrow (first)
-import Control.Lens ((%=), (.=), (^.))
+import Control.Lens ((%=), (.=), (^.), (+=))
 import Control.Monad (guard, liftM, liftM2, void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either (EitherT(..))
@@ -28,7 +28,6 @@ import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Either as Either
 import qualified Control.Monad.Trans.Reader as Reader
-import qualified Data.IntMap as IntMap
 import qualified Data.IntMap.Lens as IntMapLens
 import qualified Data.IntSet as IntSet
 import qualified Data.IntSet.Lens as IntSetLens
@@ -163,7 +162,10 @@ emptyRefData = RefData
       makeRefExpression (Guid.fromString "NotYetInit") $ Data.ExpressionLeaf Data.Hole
   }
 
-newtype RefMap = RefMap { _refMap :: IntMap RefData }
+data RefMap = RefMap
+  { _refMap :: IntMap RefData
+  , _nextInt :: Int
+  }
 
 data InferState = InferState
   { _sRefMap :: RefMap
@@ -238,7 +240,8 @@ createTypedVal =
   liftM2 TypedValue createRef createRef
   where
     createRef = liftState $ do
-      key <- Lens.uses (sRefMap . refMap) IntMap.size
+      key <- Lens.use (sRefMap . nextInt)
+      sRefMap . nextInt += 1
       sRefMap . refMap . IntMapLens.at key .= Just emptyRefData
       return $ Ref key
 
@@ -253,7 +256,7 @@ newNodeWithScope scope prevRefMap =
       (InferState prevRefMap mempty) createTypedVal
 
 initial :: (RefMap, InferNode)
-initial = newNodeWithScope mempty $ RefMap mempty
+initial = newNodeWithScope mempty $ RefMap mempty 0
 
 newtype Loader m = Loader
   { loadPureDefinitionType :: Data.DefinitionIRef -> m Data.PureExpression
