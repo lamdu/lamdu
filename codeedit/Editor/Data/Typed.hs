@@ -98,19 +98,6 @@ data ApplyComponents = ApplyComponents
   , _acArg :: TypedValue
   } deriving (Show)
 
--- LambdaBodyType Rule:
---
--- (? -> Body Type) => LambdaT
--- Result Type of LambdaT => Body Type
-
-data LambdaBodyType = LambdaBodyType
-  { _ltLambdaGuid :: Guid
-  , _ltLambdaType :: Ref
-  , _ltBodyType :: Ref
-  } deriving Show
-
--- Union rule (type of get param, but also for recursive type)
-
 newtype RefExprPayload = RefExprPayload
   { _pSubstitutedArgs :: IntSet
   } deriving (Show, Monoid)
@@ -397,8 +384,21 @@ addRules scope typedVal g exprBody = do
       setRefExprPure (tvType resultType) setExpr
       onLambda Data.ExpressionPi maybePi lambda
     Data.ExpressionLambda lambda@(Data.Lambda _ body) -> do
-      addRule [tvType typedVal, tvType body] .
-        ruleLambdaBodyType $ LambdaBodyType g (tvType typedVal) (tvType body)
+      -- Lambda body type -> Lambda type (result)
+      addRule [tvType body] $ Rule $
+        setRefExpr (tvType typedVal) . makeRefExpression g .
+        Data.makePi (makeHole "paramType" g) =<< getRefExpr (tvType body)
+      -- Lambda Type (result) -> Body Type
+      addRule [tvType typedVal] $ Rule $ do
+        Data.Expression piG lambdaTExpr _ <- getRefExpr $ tvType typedVal
+        case lambdaTExpr of
+          Data.ExpressionPi (Data.Lambda _ resultType) ->
+            setRefExpr (tvType body) $ subst piG
+            ( makeRefExpression (Guid.fromString "getVar")
+              (Data.makeParameterRef g)
+            )
+            resultType
+          _ -> return ()
       onLambda Data.ExpressionLambda maybeLambda lambda
     Data.ExpressionApply (Data.Apply func arg) -> do
       addRule ([tvVal, tvType] <*> [typedVal, func, arg]) .
@@ -573,22 +573,6 @@ ruleSimpleType (TypedValue val typ) = Rule $ do
     Data.ExpressionLambda (Data.Lambda paramType _) ->
       setRefExpr typ . makeRefExpression g .
       Data.makePi paramType $ makeHole "lambdaBody" g
-    _ -> return ()
-
-ruleLambdaBodyType :: LambdaBodyType -> Rule
-ruleLambdaBodyType (LambdaBodyType lambdaG lambdaType bodyType) = Rule $ do
-  Data.Expression piG lambdaTExpr _ <- getRefExpr lambdaType
-
-  setRefExpr lambdaType . makeRefExpression lambdaG .
-    Data.makePi (makeHole "paramType" piG) =<< getRefExpr bodyType
-
-  case lambdaTExpr of
-    Data.ExpressionPi (Data.Lambda _ resultType) ->
-      setRefExpr bodyType $ subst piG
-      ( makeRefExpression (Guid.fromString "getVar")
-        (Data.makeParameterRef lambdaG)
-      )
-      resultType
     _ -> return ()
 
 ruleApply :: ApplyComponents -> Rule
