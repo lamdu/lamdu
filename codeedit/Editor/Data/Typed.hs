@@ -529,38 +529,6 @@ mergeToPiResult e0@(Data.Expression g b s) e1 =
   Nothing -> e0
   Just newB -> Data.Expression g newB s
 
-recurseSubst ::
-  Monad m =>
-  RefExpression -> Guid -> Ref -> Ref ->
-  InferT m RefExpression
-recurseSubst preSubstExpr paramGuid argRef postSubstRef = do
-  -- PreSubst with Subst => PostSubst
-  setRefExpr postSubstRef .
-    flip (subst paramGuid) preSubstExpr .
-    (fmap . Lens.over pSubstitutedArgs . IntSet.insert . unRef) argRef =<<
-    getRefExpr argRef
-
-  postSubstExpr <- getRefExpr postSubstRef
-  -- Recurse over PreSubst and PostSubst together
-  --   When PreSubst part refers to its param:
-  --     PostSubst part <=> arg
-  mergeToArg preSubstExpr postSubstExpr
-
-  return $ mergeToPiResult preSubstExpr postSubstExpr
-  where
-    mergeToArg pre post =
-      case Data.eValue pre of
-      Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef g))
-        | g == paramGuid ->
-          setRefExpr argRef $
-          (fmap . Lens.over pSubstitutedArgs . IntSet.delete . unRef) argRef post
-      preExpr ->
-        case Data.matchExpressionBody mergeToArg preExpr (Data.eValue post) of
-        Just x -> do
-          _ <- Traversable.sequence x
-          return ()
-        Nothing -> return ()
-
 maybeLambda :: Data.ExpressionBody a -> Maybe (Data.Lambda a)
 maybeLambda (Data.ExpressionLambda x) = Just x
 maybeLambda _ = Nothing
@@ -582,6 +550,58 @@ ruleSimpleType (TypedValue val typ) = Rule $ do
       Data.makePi paramType $ makeHole "lambdaBody" g
     _ -> return ()
 
+addRecurseSubstRules ::
+  Monad m =>
+  (Data.Lambda RefExpression -> Data.ExpressionBody RefExpression) ->
+  (Data.ExpressionBody RefExpression -> Maybe (Data.Lambda RefExpression)) ->
+  Ref -> Data.Apply Ref -> InferT m ()
+addRecurseSubstRules cons uncons apply (Data.Apply func arg) = do
+  -- PreSubst with Subst => PostSubst
+  addRule [func, arg] $ Rule $ do
+    Data.Expression funcGuid funcExpr _ <- getRefExpr func
+    case uncons funcExpr of
+      Just (Data.Lambda _ result) ->
+        setRefExpr apply .
+        flip (subst funcGuid) result .
+        (fmap . Lens.over pSubstitutedArgs . IntSet.insert . unRef) arg =<<
+        getRefExpr arg
+      Nothing -> return ()
+
+  -- Recurse over PreSubst and PostSubst together
+  --   When PreSubst part refers to its param:
+  --     PostSubst part <=> arg
+  addRule [apply, func] $ Rule $ do
+    Data.Expression funcGuid funcExpr _ <- getRefExpr func
+    case uncons funcExpr of
+      Just (Data.Lambda _ result) ->
+        mergeToArg funcGuid result =<< getRefExpr apply
+      Nothing -> return ()
+
+  -- Propagate data from Apply's to the Func where appropriate.
+  -- (Not on non-substituted holes)
+  addRule [apply, func] $ Rule $ do
+    Data.Expression funcGuid funcExpr _ <- getRefExpr func
+    case uncons funcExpr of
+      Just (Data.Lambda paramT result) ->
+        setRefExpr func . makeRefExpression funcGuid .
+        cons . Data.Lambda paramT .
+        mergeToPiResult result =<<
+        getRefExpr apply
+      Nothing -> return ()
+  where
+    mergeToArg paramGuid pre post =
+      case Data.eValue pre of
+      Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef g))
+        | g == paramGuid ->
+          setRefExpr arg $
+          (fmap . Lens.over pSubstitutedArgs . IntSet.delete . unRef) arg post
+      preExpr ->
+        case Data.matchExpressionBody (mergeToArg paramGuid) preExpr (Data.eValue post) of
+        Just x -> do
+          _ <- Traversable.sequence x
+          return ()
+        Nothing -> return ()
+
 addApplyRules :: Monad m => Guid -> TypedValue -> Data.Apply TypedValue -> InferT m ()
 addApplyRules baseGuid typedVal (Data.Apply func arg) = do
   -- ArgT => ParamT
@@ -591,8 +611,6 @@ addApplyRules baseGuid typedVal (Data.Apply func arg) = do
 
   -- If Arg is GetParam
   -- ApplyT (Susbt Arg with Hole) => ResultT
-  -- The other direction is handled anyhow below
-
   addRule [tvType typedVal, tvVal arg] $ Rule $ do
     applyTypeExpr <- getRefExpr $ tvType typedVal
     argExpr <- getRefExpr $ tvVal arg
@@ -603,19 +621,17 @@ addApplyRules baseGuid typedVal (Data.Apply func arg) = do
         subst par (makeHole "ar7" baseGuid) applyTypeExpr
       _ -> return ()
 
-  addRule [tvType func, tvVal arg, tvType typedVal] $ Rule $ do
-    Data.Expression funcTGuid funcTExpr _ <- getRefExpr $ tvType func
+  -- If func type is Pi
+  -- Pi's ParamT => ArgT
+  addRule [tvType func] $ Rule $ do
+    Data.Expression _ funcTExpr _ <- getRefExpr $ tvType func
     case funcTExpr of
-      Data.ExpressionPi (Data.Lambda paramT resultT) -> do
-        -- ParamT => ArgT
+      Data.ExpressionPi (Data.Lambda paramT _) ->
         setRefExpr (tvType arg) paramT
-        -- Recurse-Subst ResultT Arg ApplyT
-        setRefExpr (tvType func) . makeRefExpression funcTGuid .
-          Data.makePi paramT =<<
-          recurseSubst resultT funcTGuid (tvVal arg) (tvType typedVal)
       _ -> return ()
 
-  -- ParamT => ArgT
+  -- If func is Lambda
+  -- Lambda's ParamT => ArgT
   addRule [tvVal func] $ Rule $ do
     Data.Expression _ funcExpr _ <- getRefExpr $ tvVal func
     case funcExpr of
@@ -623,8 +639,9 @@ addApplyRules baseGuid typedVal (Data.Apply func arg) = do
         setRefExpr (tvType arg) paramT
       _ -> return ()
 
-  -- ArgT => ParamT
-  addRule [tvType arg] $ Rule $ do
+  -- If func is Lambda,
+  -- ArgT => Lambda's ParamT
+  addRule [tvVal func, tvType arg] $ Rule $ do
     Data.Expression funcGuid funcExpr _ <- getRefExpr $ tvVal func
     case funcExpr of
       Data.ExpressionLambda _ ->
@@ -643,15 +660,10 @@ addApplyRules baseGuid typedVal (Data.Apply func arg) = do
         setRefExpr (tvVal typedVal) . makeRefExpression (augmentGuid "ar6" baseGuid) .
         Data.makeApply funcE =<< getRefExpr (tvVal arg)
 
-  addRule [tvVal func, tvVal arg, tvVal typedVal] $ Rule $ do
-    Data.Expression funcGuid funcExpr _ <- getRefExpr $ tvVal func
-    case funcExpr of
-      Data.ExpressionLambda (Data.Lambda paramT body) -> do
-        -- Recurse-Subst Body Arg Apply
-        setRefExpr (tvVal func) . makeRefExpression funcGuid .
-          Data.makeLambda paramT =<<
-          recurseSubst body funcGuid (tvVal arg) (tvVal typedVal)
-      _ -> return ()
+  addRecurseSubstRules Data.ExpressionPi maybePi
+    (tvType typedVal) (Data.Apply (tvType func) (tvVal arg))
+  addRecurseSubstRules Data.ExpressionLambda maybeLambda
+    (tvVal typedVal) (Data.Apply (tvVal func) (tvVal arg))
 
 inferFromEntity ::
   Monad m =>
