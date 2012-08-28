@@ -31,7 +31,6 @@ import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Foldable as Foldable
 import qualified Data.IntMap.Lens as IntMapLens
 import qualified Data.IntSet as IntSet
-import qualified Data.IntSet.Lens as IntSetLens
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
@@ -130,11 +129,11 @@ type RefExpression = Data.Expression RefExprPayload
 refExprFromPure :: Data.PureExpression -> RefExpression
 refExprFromPure = fmap $ const mempty
 
-newtype Rule = Rule { unRule :: forall m. Monad m => InferT m () }
+newtype Rule = Rule (forall m. Monad m => InferT m ())
 
 data RefData = RefData
   { _rExpression :: RefExpression
-  , _rRules :: [Rule]
+  , _rRules :: [Int] -- Rule id
   }
 
 makeRefExpression :: Guid -> Data.ExpressionBody RefExpression -> RefExpression
@@ -158,12 +157,14 @@ intTypeExpr =
 
 data RefMap = RefMap
   { _refMap :: IntMap RefData
-  , _nextInt :: Int
+  , _nextRef :: Int
+  , _rules :: IntMap Rule
+  , _nextRule :: Int
   }
 
 data InferState = InferState
   { _sRefMap :: RefMap
-  , _sTouchedRefs :: IntSet
+  , _sRulesQueue :: IntSet
   }
 
 -- Map from params to their Param type,
@@ -234,8 +235,8 @@ createTypedVal =
   liftM2 TypedValue createRef createRef
   where
     createRef = liftState $ do
-      key <- Lens.use (sRefMap . nextInt)
-      sRefMap . nextInt += 1
+      key <- Lens.use (sRefMap . nextRef)
+      sRefMap . nextRef += 1
       return $ Ref key
 
 newNodeWithScope :: Scope -> RefMap -> (RefMap, InferNode)
@@ -249,7 +250,7 @@ newNodeWithScope scope prevRefMap =
       (InferState prevRefMap mempty) createTypedVal
 
 initial :: (RefMap, InferNode)
-initial = newNodeWithScope mempty $ RefMap mempty 0
+initial = newNodeWithScope mempty $ RefMap mempty 0 mempty 0
 
 newtype Loader m = Loader
   { loadPureDefinitionType :: Data.DefinitionIRef -> m Data.PureExpression
@@ -359,7 +360,7 @@ mergeExprs p0 p1 =
 touch :: Monad m => Ref -> InferT m ()
 touch ref =
   liftState $
-  sTouchedRefs . IntSetLens.contains (unRef ref) .= True
+  (sRulesQueue %=) . mappend . IntSet.fromList =<< Lens.use (refMapAt ref . rRules)
 
 setRefExpr :: Monad m => Ref -> RefExpression -> InferT m ()
 setRefExpr ref newExpr = do
@@ -395,17 +396,17 @@ addRules ::
   Scope -> TypedValue -> Guid -> Data.ExpressionBody TypedValue ->
   InferT m ()
 addRules scope typedVal g exprBody = do
-  liftState $ refMapAt (tvVal typedVal) . rRules %= (Rule (applyRuleSimpleType typedVal) :)
+  addRule [tvVal typedVal] $ Rule (applyRuleSimpleType typedVal)
   case exprBody of
     Data.ExpressionPi lambda@(Data.Lambda _ resultType) -> do
       setRefExprPure (tvType resultType) setExpr
       onLambda Data.ExpressionPi maybePi lambda
     Data.ExpressionLambda lambda@(Data.Lambda _ body) -> do
-      addRuleToMany [tvType typedVal, tvType body] .
+      addRule [tvType typedVal, tvType body] .
         ruleLambdaBodyType $ LambdaBodyType g (tvType typedVal) (tvType body)
       onLambda Data.ExpressionLambda maybeLambda lambda
     Data.ExpressionApply (Data.Apply func arg) -> do
-      addRuleToMany ([tvVal, tvType] <*> [typedVal, func, arg]) .
+      addRule ([tvVal, tvType] <*> [typedVal, func, arg]) .
         ruleApply $ ApplyComponents typedVal func arg
       -- make sure we invoke this rule
       touch $ tvVal typedVal
@@ -418,13 +419,19 @@ addRules scope typedVal g exprBody = do
         touch $ tvType typedVal
     _ -> return ()
   where
-    addUnionRule x y = addRuleToMany [x, y] $ ruleUnion x y
-    addRule rule ref =
-      liftState $ refMapAt ref . rRules %= (rule :)
-    addRuleToMany refs rule = mapM_ (addRule rule) refs
+    addUnionRule x y = addRule [x, y] $ ruleUnion x y
+    makeRule rule = liftState $ do
+      ruleId <- Lens.use (sRefMap . nextRule)
+      sRefMap . nextRule += 1
+      sRefMap . rules . IntMapLens.at ruleId .= Just rule
+      return ruleId
+    addRule refs rule = do
+      ruleId <- makeRule rule
+      mapM_ (addRuleId ruleId) refs
+    addRuleId ruleId ref = liftState $ refMapAt ref . rRules %= (ruleId :)
     onLambda cons uncons (Data.Lambda paramType result) = do
       setRefExprPure (tvType paramType) setExpr
-      addRuleToMany [tvVal typedVal, tvVal paramType, tvVal result] .
+      addRule [tvVal typedVal, tvVal paramType, tvVal result] .
         structureRule cons uncons $
         LambdaComponents (tvVal typedVal) (tvVal paramType) (tvVal result)
 
@@ -464,23 +471,22 @@ nodeFromEntity loader scope entity typedValue = do
       initializeRefData (tvVal typedValue) initialVal
       initializeRefData (tvType typedValue) initialType
 
-popTouchedRef :: Monad m => InferT m (Maybe Ref)
-popTouchedRef = do
-  touched <- liftState $ Lens.use sTouchedRefs
-  case IntSet.minView touched of
+popRuleFromQueue :: Monad m => InferT m (Maybe Rule)
+popRuleFromQueue = do
+  rulesQueue <- liftState $ Lens.use sRulesQueue
+  case IntSet.minView rulesQueue of
     Nothing -> return Nothing
-    Just (key, newTouchedRefs) -> do
-      liftState $ sTouchedRefs .= newTouchedRefs
-      return . Just $ Ref key
+    Just (ruleKey, newRulesQueue) ->
+      liftState $ do
+        sRulesQueue .= newRulesQueue
+        Lens.use (sRefMap . rules . IntMapLens.at ruleKey)
 
 infer :: Monad m => InferActions m -> InferState -> m RefMap
 infer actions state =
   liftM (Lens.view sRefMap . snd) $ runInferT actions state go
   where
-    go = maybe (return ()) goOn =<< popTouchedRef
-    goOn ref = do
-      mapM_ unRule =<< (liftState . Lens.use) (refMapAt ref . rRules)
-      go
+    go = maybe (return ()) goOn =<< popRuleFromQueue
+    goOn (Rule ruleAction) = ruleAction >> go
 
 getRefExpr :: Monad m => Ref -> InferT m RefExpression
 getRefExpr ref = liftState $ Lens.use (refMapAt ref . rExpression)
