@@ -6,6 +6,7 @@ import Control.Applicative (liftA2)
 import Control.Arrow (first)
 import Control.Exception (evaluate)
 import Control.Monad (void)
+import Data.Hashable (hash)
 import Data.Map (Map, (!))
 import Data.Maybe (fromMaybe, isJust)
 import Data.Store.Guid (Guid)
@@ -19,6 +20,7 @@ import qualified Data.Store.IRef as IRef
 import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
 import qualified Editor.Data.Typed as Typed
+import qualified System.Random as Random
 import qualified Test.HUnit as HUnit
 
 data Invisible = Invisible
@@ -34,25 +36,20 @@ setType :: Data.PureExpression
 setType = mkExpr "set" $ Data.ExpressionLeaf Data.Set
 
 intType :: Data.PureExpression
-intType =
-  mkExpr "int" $ Data.ExpressionLeaf Data.IntegerType
+intType = mkExpr "int" $ Data.ExpressionLeaf Data.IntegerType
 
-makeDefinitionRef :: Guid -> Data.ExpressionBody a
-makeDefinitionRef = Data.ExpressionLeaf . Data.GetVariable . Data.DefinitionRef . IRef.unsafeFromGuid
-
-boolType :: Data.PureExpression
-boolType = mkExpr "bool" . makeDefinitionRef $ Guid.fromString "Bool"
+literalInt :: Integer -> Data.PureExpression
+literalInt i = mkExpr ("lit" ++ show i) $ Data.makeLiteralInteger i
 
 getDefExpr :: String -> Data.PureExpression
 getDefExpr name =
-  mkExpr name . Data.ExpressionLeaf .
-  Data.GetVariable . Data.DefinitionRef . IRef.unsafeFromGuid $
+  mkExpr name . Data.makeDefinitionRef . IRef.unsafeFromGuid $
   Guid.fromString name
 
 getParamExpr :: String -> Data.PureExpression
 getParamExpr name =
-  mkExpr ("GetParam_" ++ name) . Data.ExpressionLeaf .
-  Data.GetVariable . Data.ParameterRef $ Guid.fromString name
+  mkExpr ("GetParam_" ++ name) . Data.makeParameterRef $
+  Guid.fromString name
 
 mkInferredGetDef :: String -> InferResults
 mkInferredGetDef name =
@@ -69,18 +66,31 @@ mkInferredGetParam name = mkInferredLeafSimple gv
 
 definitionTypes :: Map Guid Data.PureExpression
 definitionTypes =
-  Map.fromList $ (map . first) Guid.fromString
+  Map.fromList $ map (first Guid.fromString . randomizeGuids)
   [ ("Bool", setType)
-  , ("IntToBoolFunc", makePi "intToBool" intType boolType)
+  , ("IntToBoolFunc", makePi "intToBool" intType (getDefExpr "bool"))
+  , ("*", intToIntToInt)
+  , ("-", intToIntToInt)
+  , ( "if"
+    , makePi "a" setType .
+      makePi "ifboolarg" (getDefExpr "bool") .
+      makePi "iftarg" (getParamExpr "a") .
+      makePi "iffarg" (getParamExpr "a") $
+      getParamExpr "a"
+    )
+  , ( "=="
+    , makePi "==0" intType .
+      makePi "==1" intType $
+      getDefExpr "bool"
+    )
   , ( "id"
-    , makePi "idType" setType $
-      makePi "idGivenType" idTypeParam idTypeParam
+    , makePi "a" setType $
+      makePi "idGivenType" (getParamExpr "a") (getParamExpr "a")
     )
   ]
   where
-    idTypeParam =
-      mkExpr "idTypeParam" . Data.makeParameterRef $
-      Guid.fromString "idType"
+    randomizeGuids (name, expr) = (name, Data.randomizeGuids (Random.mkStdGen (hash name)) expr)
+    intToIntToInt = makePi "iii0" intType $ makePi "iii1" intType intType
 
 lookupMany :: Eq a => a -> [(a, b)] -> [b]
 lookupMany x = map snd . filter ((== x) . fst)
@@ -151,6 +161,11 @@ showExpressionWithInferred =
         expr = Data.eValue typedExpr
         (val, typ) = Data.ePayload typedExpr
 
+ansiRed :: String
+ansiRed = "\ESC[31m"
+ansiReset :: String
+ansiReset = "\ESC[0m"
+
 showExpressionWithConflicts :: Data.Expression ConflictsAnnotation -> String
 showExpressionWithConflicts =
   List.intercalate "\n" . go
@@ -158,9 +173,9 @@ showExpressionWithConflicts =
     go typedExpr =
       [ "Expr: " ++ show (Data.eGuid typedExpr) ++ ":" ++ showStructure expr
       , "  IVal:  " ++ show val
-      ] ++ map (("    Conflict: " ++) . show) vErrors ++
+      ] ++ map ((("    " ++ ansiRed ++ "Conflict: ") ++) . (++ ansiReset) . show) vErrors ++
       [ "  IType: " ++ show typ
-      ] ++ map (("    Conflict: " ++) . show) tErrors ++
+      ] ++ map ((("    " ++ ansiRed ++ "Conflict: ") ++) . (++ ansiReset) . show) tErrors ++
       (map ("  " ++) . Foldable.concat . fmap go) expr
       where
         expr = Data.eValue typedExpr
@@ -223,7 +238,7 @@ applyIntToBoolFuncWithHole =
   (makeApply [getDefExpr "IntToBoolFunc", hole]) $
   mkInferredNode ""
     (makeApply [getDefExpr "IntToBoolFunc", hole])
-    boolType $
+    (getDefExpr "bool") $
   Data.makeApply
     (mkInferredGetDef "IntToBoolFunc")
     (inferredHole intType)
@@ -240,11 +255,11 @@ applyOnVar =
   ) $
   mkInferredNode "lambda"
     (makeFunnyLambda "" hole)
-    (makePi "" hole boolType) $
+    (makePi "" hole (getDefExpr "bool")) $
   Data.makeLambda (inferredHole setType) $
   mkInferredNode ""
     (makeApply [getDefExpr "IntToBoolFunc", hole])
-    boolType $
+    (getDefExpr "bool") $
   Data.makeApply (mkInferredGetDef "IntToBoolFunc") $
   mkInferredNode ""
     hole
@@ -511,6 +526,28 @@ resumptionTests =
       makePi "" hole hole
   ]
 
+factorial :: HUnit.Test
+factorial =
+  testCase "factorial" . void . evaluate .
+  uncurry doInferM Typed.initial (Just factorialDefI) Nothing .
+  makeLambda "x" hole $
+  makeApply
+  [ getDefExpr "if"
+  , hole
+  , makeApply [getDefExpr "==", getParamExpr "x", literalInt 0]
+  , literalInt 1
+  , makeApply
+    [ getDefExpr "*"
+    , getParamExpr "x"
+    , makeApply
+      [ mkExpr "recurse" $ Data.makeDefinitionRef factorialDefI
+      , makeApply [getDefExpr "-", getParamExpr "x", literalInt 1]
+      ]
+    ]
+  ]
+  where
+    factorialDefI = IRef.unsafeFromGuid $ Guid.fromString "factorial"
+
 allTests :: HUnit.Test
 allTests =
   HUnit.TestList $
@@ -523,5 +560,6 @@ allTests =
   , idOnHole
   , depApply
   , forceMono
+  , factorial
   ] ++
   resumptionTests

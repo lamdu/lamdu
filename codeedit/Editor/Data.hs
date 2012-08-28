@@ -12,7 +12,7 @@ module Editor.Data
   , Leaf(..)
   , ExpressionBody(..)
   , makeApply, makePi, makeLambda
-  , makeParameterRef
+  , makeParameterRef, makeDefinitionRef, makeLiteralInteger
   , ExpressionIRefProperty, eipGuid
   , ExpressionI, ExpressionIRef(..)
   , Expression(..), atEGuid, atEValue, atEPayload
@@ -130,6 +130,12 @@ makeLambda argType body = ExpressionLambda $ Lambda argType body
 
 makeParameterRef :: Guid -> ExpressionBody a
 makeParameterRef = ExpressionLeaf . GetVariable . ParameterRef
+
+makeDefinitionRef :: DefinitionIRef -> ExpressionBody a
+makeDefinitionRef = ExpressionLeaf . GetVariable . DefinitionRef
+
+makeLiteralInteger :: Integer -> ExpressionBody a
+makeLiteralInteger = ExpressionLeaf . LiteralInteger
 
 instance Show expr => Show (ExpressionBody expr) where
   show (ExpressionLambda (Lambda paramType body)) = concat ["\\:", showP paramType, "==>", showP body]

@@ -38,7 +38,7 @@ decodeDebugGuid (Guid g) = do
     else preZeros
   where
     (preZeros, shouldBeZeros) = break (== '\x00') $ UTF8.toString g
-    isOkChar x = Char.isAlphaNum x || elem x " _"
+    isOkChar x = Char.isAlphaNum x || elem x " *+/<>-=_"
 
 inGuid :: (SBS.ByteString -> SBS.ByteString) -> Guid -> Guid
 inGuid f = Guid . f . bs
