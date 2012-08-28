@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFunctor, GeneralizedNewtypeDeriving, TemplateHaskell #-}
+{-# LANGUAGE DeriveFunctor, GeneralizedNewtypeDeriving, TemplateHaskell, Rank2Types #-}
 module Editor.Data.Typed
   ( Expression, Inferred(..), rExpression
   , InferNode(..), TypedValue(..)
@@ -32,7 +32,6 @@ import qualified Data.IntMap as IntMap
 import qualified Data.IntMap.Lens as IntMapLens
 import qualified Data.IntSet as IntSet
 import qualified Data.IntSet.Lens as IntSetLens
-import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
@@ -122,30 +121,21 @@ data LambdaBodyType = LambdaBodyType
 
 -- Union rule (type of get param, but also for recursive type)
 
-data Rule
-  = RuleSimpleType TypedValue
-  | RuleUnion Ref Ref
-  | RuleLambdaBodyType LambdaBodyType
-  | RuleLambdaStructure LambdaComponents
-  | RulePiStructure LambdaComponents
-  | RuleApply ApplyComponents
-  deriving (Show)
-
 newtype RefExprPayload = RefExprPayload
   { _pSubstitutedArgs :: IntSet
   } deriving (Show, Monoid)
-LensTH.makeLenses ''RefExprPayload
 
 type RefExpression = Data.Expression RefExprPayload
 
 refExprFromPure :: Data.PureExpression -> RefExpression
 refExprFromPure = fmap $ const mempty
 
+newtype Rule = Rule { unRule :: forall m. Monad m => InferT m () }
+
 data RefData = RefData
   { _rExpression :: RefExpression
   , _rRules :: [Rule]
-  } deriving (Show)
-LensTH.makeLenses ''RefData
+  }
 
 makeRefExpression :: Guid -> Data.ExpressionBody RefExpression -> RefExpression
 makeRefExpression g expr =
@@ -174,20 +164,11 @@ emptyRefData = RefData
   }
 
 newtype RefMap = RefMap { _refMap :: IntMap RefData }
-LensTH.makeLenses ''RefMap
-
-instance Show RefMap where
-  show =
-    List.intercalate ", " . map (showPair . first Ref) .
-    IntMap.toList . Lens.view refMap
-    where
-      showPair (x, y) = show x ++ "=>" ++ show y
 
 data InferState = InferState
   { _sRefMap :: RefMap
   , _sTouchedRefs :: IntSet
-  } deriving Show
-LensTH.makeLenses ''InferState
+  }
 
 -- Map from params to their Param type,
 -- also including the recursive ref to the definition.
@@ -228,6 +209,11 @@ newtype InferActions m = InferActions
 newtype InferT m a =
   InferT { unInferT :: ReaderT (InferActions m) (StateT InferState m) a }
   deriving (Monad)
+
+LensTH.makeLenses ''RefExprPayload
+LensTH.makeLenses ''RefData
+LensTH.makeLenses ''RefMap
+LensTH.makeLenses ''InferState
 
 runInferT ::
   InferActions m -> InferState ->
@@ -413,19 +399,18 @@ addRules ::
   Scope -> TypedValue -> Guid -> Data.ExpressionBody TypedValue ->
   InferT m ()
 addRules scope typedVal g exprBody = do
-  liftState $ refMapAt (tvVal typedVal) . rRules %= (RuleSimpleType typedVal :)
+  liftState $ refMapAt (tvVal typedVal) . rRules %= (Rule (applyRuleSimpleType typedVal) :)
   case exprBody of
     Data.ExpressionPi lambda@(Data.Lambda _ resultType) -> do
       setRefExprPure (tvType resultType) setExpr
-      onLambda RulePiStructure lambda
+      onLambda Data.ExpressionPi maybePi lambda
     Data.ExpressionLambda lambda@(Data.Lambda _ body) -> do
       addRuleToMany [tvType typedVal, tvType body] .
-        RuleLambdaBodyType $
-        LambdaBodyType g (tvType typedVal) (tvType body)
-      onLambda RuleLambdaStructure lambda
+        ruleLambdaBodyType $ LambdaBodyType g (tvType typedVal) (tvType body)
+      onLambda Data.ExpressionLambda maybeLambda lambda
     Data.ExpressionApply (Data.Apply func arg) -> do
       addRuleToMany ([tvVal, tvType] <*> [typedVal, func, arg]) .
-        RuleApply $ ApplyComponents typedVal func arg
+        ruleApply $ ApplyComponents typedVal func arg
       -- make sure we invoke this rule
       touch $ tvVal typedVal
     Data.ExpressionLeaf (Data.GetVariable var) ->
@@ -437,14 +422,15 @@ addRules scope typedVal g exprBody = do
         touch $ tvType typedVal
     _ -> return ()
   where
-    addUnionRule x y = addRuleToMany [x, y] $ RuleUnion x y
+    addUnionRule x y = addRuleToMany [x, y] $ ruleUnion x y
     addRule rule ref =
       liftState $ refMapAt ref . rRules %= (rule :)
     addRuleToMany refs rule = mapM_ (addRule rule) refs
-    onLambda cons (Data.Lambda paramType result) = do
+    onLambda cons uncons (Data.Lambda paramType result) = do
       setRefExprPure (tvType paramType) setExpr
       addRuleToMany [tvVal typedVal, tvVal paramType, tvVal result] .
-        cons $ LambdaComponents (tvVal typedVal) (tvVal paramType) (tvVal result)
+        structureRule cons uncons $
+        LambdaComponents (tvVal typedVal) (tvVal paramType) (tvVal result)
 
 nodeFromEntity ::
   Monad m =>
@@ -495,19 +481,18 @@ infer actions state =
   where
     go = maybe (return ()) goOn =<< popTouchedRef
     goOn ref = do
-      mapM_ applyRule =<< (liftState . Lens.use) (refMapAt ref . rRules)
+      mapM_ unRule =<< (liftState . Lens.use) (refMapAt ref . rRules)
       go
 
 getRefExpr :: Monad m => Ref -> InferT m RefExpression
 getRefExpr ref = liftState $ Lens.use (refMapAt ref . rExpression)
 
-applyStructureRule ::
-  Monad m =>
+structureRule ::
   (Data.Lambda RefExpression -> Data.ExpressionBody RefExpression) ->
   (Data.ExpressionBody RefExpression -> Maybe (Data.Lambda RefExpression)) ->
   LambdaComponents ->
-  InferT m ()
-applyStructureRule cons uncons (LambdaComponents parentRef paramTypeRef resultRef) = do
+  Rule
+structureRule cons uncons (LambdaComponents parentRef paramTypeRef resultRef) = Rule $ do
   Data.Expression g expr _ <- getRefExpr parentRef
   case uncons expr of
     Nothing -> return ()
@@ -580,8 +565,8 @@ maybePi :: Data.ExpressionBody a -> Maybe (Data.Lambda a)
 maybePi (Data.ExpressionPi x) = Just x
 maybePi _ = Nothing
 
-applyRuleUnion :: Monad m => Ref -> Ref -> InferT m ()
-applyRuleUnion r0 r1 = do
+ruleUnion :: Ref -> Ref -> Rule
+ruleUnion r0 r1 = Rule $ do
   setRefExpr r0 =<< getRefExpr r1
   setRefExpr r1 =<< getRefExpr r0
 
@@ -598,8 +583,8 @@ applyRuleSimpleType (TypedValue val typ) = do
       Data.makePi paramType $ makeHole "lambdaBody" g
     _ -> return ()
 
-applyRuleLambdaBodyType :: Monad m => LambdaBodyType -> InferT m ()
-applyRuleLambdaBodyType (LambdaBodyType lambdaG lambdaType bodyType) = do
+ruleLambdaBodyType :: LambdaBodyType -> Rule
+ruleLambdaBodyType (LambdaBodyType lambdaG lambdaType bodyType) = Rule $ do
   Data.Expression piG lambdaTExpr _ <- getRefExpr lambdaType
 
   setRefExpr lambdaType . makeRefExpression lambdaG .
@@ -614,8 +599,8 @@ applyRuleLambdaBodyType (LambdaBodyType lambdaG lambdaType bodyType) = do
       resultType
     _ -> return ()
 
-applyRuleApply :: Monad m => ApplyComponents -> InferT m ()
-applyRuleApply (ApplyComponents apply func arg) = do
+ruleApply :: ApplyComponents -> Rule
+ruleApply (ApplyComponents apply func arg) = Rule $ do
   applyTypeExpr <- getRefExpr $ tvType apply
   let baseGuid = Data.eGuid applyTypeExpr
 
@@ -664,14 +649,6 @@ applyRuleApply (ApplyComponents apply func arg) = do
     _ ->
       setRefExpr (tvVal apply) . makeRefExpression (augmentGuid "ar6" baseGuid) $
         Data.makeApply funcPge argExpr
-
-applyRule :: Monad m => Rule -> InferT m ()
-applyRule (RuleUnion r0 r1) = applyRuleUnion r0 r1
-applyRule (RuleLambdaStructure lambda) = applyStructureRule Data.ExpressionLambda maybeLambda lambda
-applyRule (RulePiStructure lambda) = applyStructureRule Data.ExpressionPi maybePi lambda
-applyRule (RuleSimpleType tv) = applyRuleSimpleType tv
-applyRule (RuleLambdaBodyType lbt) = applyRuleLambdaBodyType lbt
-applyRule (RuleApply applyComponents) = applyRuleApply applyComponents
 
 inferFromEntity ::
   Monad m =>
