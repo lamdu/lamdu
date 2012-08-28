@@ -662,8 +662,13 @@ inferFromEntity ::
   m (Expression a, RefMap)
 inferFromEntity loader actions initialRefMap (InferNode rootTv rootScope) mRecursiveDef expression = do
   (node, loadState) <-
-    runInferT actions (InferState initialRefMap mempty) $
-    nodeFromEntity loader scope expression rootTv
+    runInferT actions (InferState initialRefMap mempty) $ do
+      r <- nodeFromEntity loader scope expression rootTv
+      -- when we resume load,
+      -- we want to trigger the existing rules for the loaded root
+      touch $ tvVal rootTv
+      touch $ tvType rootTv
+      return r
   resultRefMap <- infer actions loadState
   let
     derefNode (s, inferNode) =
