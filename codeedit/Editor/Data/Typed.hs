@@ -391,7 +391,7 @@ addRules ::
   Scope -> TypedValue -> Guid -> Data.ExpressionBody TypedValue ->
   InferT m ()
 addRules scope typedVal g exprBody = do
-  addRule [tvVal typedVal] $ Rule (applyRuleSimpleType typedVal)
+  addRule [tvVal typedVal] $ ruleSimpleType typedVal
   case exprBody of
     Data.ExpressionPi lambda@(Data.Lambda _ resultType) -> do
       setRefExprPure (tvType resultType) setExpr
@@ -562,8 +562,8 @@ maybePi :: Data.ExpressionBody a -> Maybe (Data.Lambda a)
 maybePi (Data.ExpressionPi x) = Just x
 maybePi _ = Nothing
 
-applyRuleSimpleType :: Monad m => TypedValue -> InferT m ()
-applyRuleSimpleType (TypedValue val typ) = do
+ruleSimpleType :: TypedValue -> Rule
+ruleSimpleType (TypedValue val typ) = Rule $ do
   Data.Expression g valExpr _ <- getRefExpr val
   case valExpr of
     Data.ExpressionLeaf Data.Set -> setRefExprPure typ setExpr
