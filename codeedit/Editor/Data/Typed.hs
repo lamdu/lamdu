@@ -370,7 +370,7 @@ addRules ::
   Scope -> TypedValue -> Guid -> Data.ExpressionBody TypedValue ->
   InferT m ()
 addRules scope typedVal g exprBody = do
-  addRule [tvVal typedVal] $ ruleSimpleType typedVal
+  addSimpleTypeRule
   case exprBody of
     Data.ExpressionPi lambda@(Data.Lambda _ resultType) -> do
       setRefExprPure (tvType resultType) setExpr
@@ -400,6 +400,13 @@ addRules scope typedVal g exprBody = do
         addUnionRule ref $ tvType typedVal
     _ -> return ()
   where
+    addSimpleTypeRule = do
+      -- All value nodes have this rule.
+      -- To see whether it already has it,
+      -- check if it has any rules at all.
+      refData <- liftState . Lens.use . refMapAt $ tvVal typedVal
+      (when . null) (Lens.view rRules refData) .
+        addRule [tvVal typedVal] $ ruleSimpleType typedVal
     addUnionRule x y = do
       addRule [x] $ Rule $ setRefExpr y =<< getRefExpr x
       addRule [y] $ Rule $ setRefExpr x =<< getRefExpr y
@@ -460,8 +467,19 @@ nodeFromEntity loader scope entity typedValue = do
     go onScope = uncurry . nodeFromEntity loader $ onScope scope
     addTypedVal x =
       liftM ((,) x) createTypedVal
-    initializeRefData (Ref key) expr =
-      liftState $ sRefMap . refMap . IntMapLens.at key .= Just (RefData (refExprFromPure expr) [])
+    initializeRefData ref@(Ref key) expr = do
+      mRefData <- liftState $ Lens.use (sRefMap . refMap . IntMapLens.at key)
+      let refExpr = refExprFromPure expr
+      case mRefData of
+        Nothing ->
+          liftState $
+          sRefMap . refMap . IntMapLens.at key .=
+          Just (RefData refExpr [])
+        Just refData -> do
+          liftState $
+            sRefMap . refMap . IntMapLens.at key .=
+            Just (Lens.set rExpression refExpr refData)
+          setRefExpr ref $ Lens.view rExpression refData
     setInitialValues = do
       (initialVal, initialType) <-
         lift $ initialExprs loader scope entity
