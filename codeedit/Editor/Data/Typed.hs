@@ -580,15 +580,13 @@ maybePi :: Data.ExpressionBody a -> Maybe (Data.Lambda a)
 maybePi (Data.ExpressionPi x) = Just x
 maybePi _ = Nothing
 
-applyRule :: Monad m => Rule -> InferT m ()
-applyRule (RuleUnion r0 r1) = do
+applyRuleUnion :: Monad m => Ref -> Ref -> InferT m ()
+applyRuleUnion r0 r1 = do
   setRefExpr r0 =<< getRefExpr r1
   setRefExpr r1 =<< getRefExpr r0
-applyRule (RuleLambdaStructure lambda) =
-  applyStructureRule Data.ExpressionLambda maybeLambda lambda
-applyRule (RulePiStructure lambda) =
-  applyStructureRule Data.ExpressionPi maybePi lambda
-applyRule (RuleSimpleType (TypedValue val typ)) = do
+
+applyRuleSimpleType :: Monad m => TypedValue -> InferT m ()
+applyRuleSimpleType (TypedValue val typ) = do
   Data.Expression g valExpr _ <- getRefExpr val
   case valExpr of
     Data.ExpressionLeaf Data.Set -> setRefExprPure typ setExpr
@@ -599,7 +597,9 @@ applyRule (RuleSimpleType (TypedValue val typ)) = do
       setRefExpr typ . makeRefExpression g .
       Data.makePi paramType $ makeHole "lambdaBody" g
     _ -> return ()
-applyRule (RuleLambdaBodyType (LambdaBodyType lambdaG lambdaType bodyType)) = do
+
+applyRuleLambdaBodyType :: Monad m => LambdaBodyType -> InferT m ()
+applyRuleLambdaBodyType (LambdaBodyType lambdaG lambdaType bodyType) = do
   Data.Expression piG lambdaTExpr _ <- getRefExpr lambdaType
 
   setRefExpr lambdaType . makeRefExpression lambdaG .
@@ -613,7 +613,9 @@ applyRule (RuleLambdaBodyType (LambdaBodyType lambdaG lambdaType bodyType)) = do
       )
       resultType
     _ -> return ()
-applyRule (RuleApply (ApplyComponents apply func arg)) = do
+
+applyRuleApply :: Monad m => ApplyComponents -> InferT m ()
+applyRuleApply (ApplyComponents apply func arg) = do
   applyTypeExpr <- getRefExpr $ tvType apply
   let baseGuid = Data.eGuid applyTypeExpr
 
@@ -662,6 +664,14 @@ applyRule (RuleApply (ApplyComponents apply func arg)) = do
     _ ->
       setRefExpr (tvVal apply) . makeRefExpression (augmentGuid "ar6" baseGuid) $
         Data.makeApply funcPge argExpr
+
+applyRule :: Monad m => Rule -> InferT m ()
+applyRule (RuleUnion r0 r1) = applyRuleUnion r0 r1
+applyRule (RuleLambdaStructure lambda) = applyStructureRule Data.ExpressionLambda maybeLambda lambda
+applyRule (RulePiStructure lambda) = applyStructureRule Data.ExpressionPi maybePi lambda
+applyRule (RuleSimpleType tv) = applyRuleSimpleType tv
+applyRule (RuleLambdaBodyType lbt) = applyRuleLambdaBodyType lbt
+applyRule (RuleApply applyComponents) = applyRuleApply applyComponents
 
 inferFromEntity ::
   Monad m =>
