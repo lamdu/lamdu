@@ -1,11 +1,8 @@
 {-# LANGUAGE TupleSections #-}
 module Graphics.UI.GLFW.Events(GLFWEvent(..), KeyEvent(..), IsPress(..), eventLoop) where
 
-import Control.Concurrent(threadDelay, forkIO)
-import Control.Concurrent.MVar
 import Control.Monad(forever, (<=<))
 import Data.IORef
-import Data.Time.Clock (UTCTime, getCurrentTime, diffUTCTime)
 import Graphics.UI.GLFW.ModState(ModState, isModifierKey, asModkey, modStateFromModkeySet)
 import qualified Data.Set as Set
 import qualified Graphics.UI.GLFW as GLFW
@@ -85,59 +82,6 @@ rawEventLoop eventsHandler = do
     eventsHandler events
     GLFW.swapBuffers
 
-data TypematicState =
-  NoKey |
-  TypematicRepeat {
-    _tsEvent :: KeyEvent,
-    _tsCount :: Int,
-    _tsStartTime :: UTCTime
-    }
-
-pureModifyMVar :: MVar a -> (a -> a) -> IO ()
-pureModifyMVar mvar f = modifyMVar_ mvar (return . f)
-
--- Calls handler from multiple threads!
-typematicKeyHandlerWrap ::
-  ([GLFWEvent] -> IO ()) -> IO ([GLFWEvent] -> IO ())
-typematicKeyHandlerWrap handler = do
-  stateVar <- newMVar NoKey
-  accumulatedVar <- newMVar []
-
-  let
-    addEvent = pureModifyMVar accumulatedVar . (:)
-    typematicIteration state@(TypematicRepeat keyEvent count startTime) = do
-      now <- getCurrentTime
-      let timeDiff = diffUTCTime now startTime
-      if timeDiff >= timeFunc count
-        then do
-          addEvent $ GLFWKeyEvent keyEvent
-          return (TypematicRepeat keyEvent (count + 1) startTime,
-                  timeFunc (count + 1) - timeDiff)
-        else
-          return (state, timeFunc count - timeDiff)
-    typematicIteration state@NoKey = return (state, timeFunc 0)
-    handleEvent event@(GLFWKeyEvent keyEvent@KeyEvent { kePress=isPress }) = do
-      newValue <-
-        case isPress of
-          Press -> fmap (TypematicRepeat keyEvent 0) getCurrentTime
-          Release -> return NoKey
-
-      _ <- swapMVar stateVar newValue
-      addEvent event
-    handleEvent event = addEvent event
-
-  _ <- forkIO . forever $ do
-    sleepTime <- modifyMVar stateVar typematicIteration
-    threadDelay . max 0 $ round (1000000 * sleepTime)
-
-  return $ \events -> do
-    mapM_ handleEvent events
-    accumulated <- swapMVar accumulatedVar []
-    handler $ reverse accumulated
-
-  where
-    timeFunc = (0.5 +) . (0.025 *) . fromIntegral
-
 modKeyHandlerWrap ::
   ([(ModState, GLFWRawEvent)] -> IO ()) ->
   IO ([GLFWRawEvent] -> IO ())
@@ -161,6 +105,5 @@ modKeyHandlerWrap handler = do
 
 eventLoop :: ([GLFWEvent] -> IO ()) -> IO a
 eventLoop handler = do
-  tHandler <- typematicKeyHandlerWrap handler
-  mRawHandler <- modKeyHandlerWrap (tHandler . translate)
+  mRawHandler <- modKeyHandlerWrap (handler . translate)
   rawEventLoop mRawHandler
