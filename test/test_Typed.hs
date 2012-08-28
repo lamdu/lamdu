@@ -4,4 +4,3 @@ import qualified Test.Framework as TestFramework
 
 main :: IO ()
 main = TestFramework.defaultMain $ hUnitTestToTests allTests
-
