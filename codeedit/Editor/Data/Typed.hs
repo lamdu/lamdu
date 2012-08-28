@@ -8,7 +8,6 @@ module Editor.Data.Typed
   , inferFromEntity, initial, newNodeWithScope
   ) where
 
-import Control.Applicative ((<*>))
 import Control.Arrow (first)
 import Control.Lens ((%=), (.=), (^.), (+=))
 import Control.Monad (guard, liftM, liftM2, void, when)
@@ -90,12 +89,6 @@ instance Show TypedValue where
 --
 -- Where Recurse-Subst PreSubst Arg PostSubst
 -- TODO
-
-data ApplyComponents = ApplyComponents
-  { _acApply :: TypedValue
-  , _acFunc :: TypedValue
-  , _acArg :: TypedValue
-  } deriving (Show)
 
 newtype RefExprPayload = RefExprPayload
   { _pSubstitutedArgs :: IntSet
@@ -399,9 +392,7 @@ addRules scope typedVal g exprBody = do
             resultType
           _ -> return ()
       onLambda Data.ExpressionLambda maybeLambda lambda
-    Data.ExpressionApply (Data.Apply func arg) ->
-      addRule ([tvVal, tvType] <*> [typedVal, func, arg]) .
-        ruleApply $ ApplyComponents typedVal func arg
+    Data.ExpressionApply apply -> addApplyRules g typedVal apply
     Data.ExpressionLeaf (Data.GetVariable var) ->
       case Map.lookup var scope of
       Nothing -> return ()
@@ -412,16 +403,6 @@ addRules scope typedVal g exprBody = do
     addUnionRule x y = do
       addRule [x] $ Rule $ setRefExpr y =<< getRefExpr x
       addRule [y] $ Rule $ setRefExpr x =<< getRefExpr y
-    makeRule rule = liftState $ do
-      ruleId <- Lens.use (sRefMap . nextRule)
-      sRefMap . nextRule += 1
-      sRefMap . rules . IntMapLens.at ruleId .= Just rule
-      return ruleId
-    addRule refs rule = do
-      ruleId <- makeRule rule
-      mapM_ (addRuleId ruleId) refs
-      liftState $ sRulesQueue . IntSetLens.contains ruleId .= True
-    addRuleId ruleId ref = liftState $ refMapAt ref . rRules %= (ruleId :)
     onLambda cons uncons (Data.Lambda paramType result) = do
       setRefExprPure (tvType paramType) setExpr
       -- Copy the structure from the parent to the paramType and
@@ -437,6 +418,19 @@ addRules scope typedVal g exprBody = do
       addRule [tvVal paramType, tvVal result] $ Rule $
         setRefExpr (tvVal typedVal) . makeRefExpression g . cons =<<
         liftM2 Data.Lambda (getRefExpr (tvVal paramType)) (getRefExpr (tvVal result))
+
+addRule :: Monad m => [Ref] -> Rule -> InferT m ()
+addRule refs rule = do
+  ruleId <- makeRule
+  mapM_ (addRuleId ruleId) refs
+  liftState $ sRulesQueue . IntSetLens.contains ruleId .= True
+  where
+    makeRule = liftState $ do
+      ruleId <- Lens.use (sRefMap . nextRule)
+      sRefMap . nextRule += 1
+      sRefMap . rules . IntMapLens.at ruleId .= Just rule
+      return ruleId
+    addRuleId ruleId ref = liftState $ refMapAt ref . rRules %= (ruleId :)
 
 nodeFromEntity ::
   Monad m =>
@@ -570,56 +564,57 @@ ruleSimpleType (TypedValue val typ) = Rule $ do
       Data.makePi paramType $ makeHole "lambdaBody" g
     _ -> return ()
 
-ruleApply :: ApplyComponents -> Rule
-ruleApply (ApplyComponents apply func arg) = Rule $ do
-  applyTypeExpr <- getRefExpr $ tvType apply
-  let baseGuid = Data.eGuid applyTypeExpr
-
+addApplyRules :: Monad m => Guid -> TypedValue -> Data.Apply TypedValue -> InferT m ()
+addApplyRules baseGuid typedVal (Data.Apply func arg) = do
   -- ArgT => ParamT
-  setRefExpr (tvType func) . makeRefExpression (augmentGuid "ar0" baseGuid) .
+  addRule [tvType arg] $ Rule $
+    setRefExpr (tvType func) . makeRefExpression (augmentGuid "ar0" baseGuid) .
     (`Data.makePi` makeHole "ar1" baseGuid) =<< getRefExpr (tvType arg)
 
   -- If Arg is GetParam
   -- ApplyT (Susbt Arg with Hole) => ResultT
   -- The other direction is handled anyhow below
 
-  argExpr <- getRefExpr $ tvVal arg
-  case Data.eValue argExpr of
-    Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par)) ->
-      setRefExpr (tvType func) . makeRefExpression (augmentGuid "ar2" baseGuid) .
-      Data.makePi (makeHole "ar3" baseGuid) $
-      subst par (makeHole "ar7" baseGuid) applyTypeExpr
-    _ -> return ()
+  addRule [tvType typedVal, tvVal arg] $ Rule $ do
+    applyTypeExpr <- getRefExpr $ tvType typedVal
+    argExpr <- getRefExpr $ tvVal arg
+    case Data.eValue argExpr of
+      Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par)) ->
+        setRefExpr (tvType func) . makeRefExpression (augmentGuid "ar2" baseGuid) .
+        Data.makePi (makeHole "ar3" baseGuid) $
+        subst par (makeHole "ar7" baseGuid) applyTypeExpr
+      _ -> return ()
 
-  Data.Expression funcTGuid funcTExpr _ <-
-    getRefExpr $ tvType func
-  case funcTExpr of
-    Data.ExpressionPi (Data.Lambda paramT resultT) -> do
-      -- ParamT => ArgT
-      setRefExpr (tvType arg) paramT
-      -- Recurse-Subst ResultT Arg ApplyT
-      setRefExpr (tvType func) . makeRefExpression funcTGuid .
-        Data.makePi paramT =<<
-        recurseSubst resultT funcTGuid (tvVal arg) (tvType apply)
-    _ -> return ()
+  addRule [tvType func, tvVal arg, tvType typedVal] $ Rule $ do
+    Data.Expression funcTGuid funcTExpr _ <- getRefExpr $ tvType func
+    case funcTExpr of
+      Data.ExpressionPi (Data.Lambda paramT resultT) -> do
+        -- ParamT => ArgT
+        setRefExpr (tvType arg) paramT
+        -- Recurse-Subst ResultT Arg ApplyT
+        setRefExpr (tvType func) . makeRefExpression funcTGuid .
+          Data.makePi paramT =<<
+          recurseSubst resultT funcTGuid (tvVal arg) (tvType typedVal)
+      _ -> return ()
 
-  funcPge@(Data.Expression funcGuid funcExpr _) <-
-    getRefExpr $ tvVal func
-  case funcExpr of
-    Data.ExpressionLambda (Data.Lambda paramT body) -> do
-      -- ParamT => ArgT
-      setRefExpr (tvType arg) paramT
-      -- ArgT => ParamT
-      setRefExpr (tvVal func) . makeRefExpression (augmentGuid "ar4" baseGuid) .
-        (`Data.makeLambda` makeHole "ar5" baseGuid) =<< getRefExpr (tvType arg)
-      -- Recurse-Subst Body Arg Apply
-      setRefExpr (tvVal func) . makeRefExpression funcGuid .
-        Data.makeLambda paramT =<<
-        recurseSubst body funcGuid (tvVal arg) (tvVal apply)
-    Data.ExpressionLeaf Data.Hole -> return ()
-    _ ->
-      setRefExpr (tvVal apply) . makeRefExpression (augmentGuid "ar6" baseGuid) $
-        Data.makeApply funcPge argExpr
+  addRule [tvVal func, tvType arg, tvVal arg, tvVal typedVal] $ Rule $ do
+    funcPge@(Data.Expression funcGuid funcExpr _) <- getRefExpr $ tvVal func
+    case funcExpr of
+      Data.ExpressionLambda (Data.Lambda paramT body) -> do
+        -- ParamT => ArgT
+        setRefExpr (tvType arg) paramT
+        -- ArgT => ParamT
+        setRefExpr (tvVal func) . makeRefExpression (augmentGuid "ar4" baseGuid) .
+          (`Data.makeLambda` makeHole "ar5" baseGuid) =<< getRefExpr (tvType arg)
+        -- Recurse-Subst Body Arg Apply
+        setRefExpr (tvVal func) . makeRefExpression funcGuid .
+          Data.makeLambda paramT =<<
+          recurseSubst body funcGuid (tvVal arg) (tvVal typedVal)
+      Data.ExpressionLeaf Data.Hole -> return ()
+      _ -> do
+        argExpr <- getRefExpr $ tvVal arg
+        setRefExpr (tvVal typedVal) . makeRefExpression (augmentGuid "ar6" baseGuid) $
+          Data.makeApply funcPge argExpr
 
 inferFromEntity ::
   Monad m =>
