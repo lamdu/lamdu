@@ -28,6 +28,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Either as Either
 import qualified Control.Monad.Trans.Reader as Reader
+import qualified Data.Foldable as Foldable
 import qualified Data.IntMap.Lens as IntMapLens
 import qualified Data.IntSet as IntSet
 import qualified Data.IntSet.Lens as IntSetLens
@@ -155,13 +156,6 @@ intTypeExpr :: Data.PureExpression
 intTypeExpr =
   Data.pureExpression (Guid.fromString "IntyInt") $ Data.ExpressionLeaf Data.IntegerType
 
-emptyRefData :: RefData
-emptyRefData = RefData
-  { _rRules = []
-  , _rExpression =
-      makeRefExpression (Guid.fromString "NotYetInit") $ Data.ExpressionLeaf Data.Hole
-  }
-
 data RefMap = RefMap
   { _refMap :: IntMap RefData
   , _nextInt :: Int
@@ -242,7 +236,6 @@ createTypedVal =
     createRef = liftState $ do
       key <- Lens.use (sRefMap . nextInt)
       sRefMap . nextInt += 1
-      sRefMap . refMap . IntMapLens.at key .= Just emptyRefData
       return $ Ref key
 
 newNodeWithScope :: Scope -> RefMap -> (RefMap, InferNode)
@@ -463,11 +456,13 @@ nodeFromEntity loader scope entity typedValue = do
     go onScope = uncurry . nodeFromEntity loader $ onScope scope
     addTypedVal x =
       liftM ((,) x) createTypedVal
+    initializeRefData (Ref key) expr =
+      liftState $ sRefMap . refMap . IntMapLens.at key .= Just (RefData (refExprFromPure expr) [])
     setInitialValues = do
       (initialVal, initialType) <-
         lift $ initialExprs loader scope entity
-      setRefExpr (tvVal typedValue) $ refExprFromPure initialVal
-      setRefExpr (tvType typedValue) $ refExprFromPure initialType
+      initializeRefData (tvVal typedValue) initialVal
+      initializeRefData (tvType typedValue) initialType
 
 popTouchedRef :: Monad m => InferT m (Maybe Ref)
 popTouchedRef = do
@@ -653,6 +648,19 @@ ruleApply (ApplyComponents apply func arg) = Rule $ do
       setRefExpr (tvVal apply) . makeRefExpression (augmentGuid "ar6" baseGuid) $
         Data.makeApply funcPge argExpr
 
+-- Runs after load
+touchNonHoles :: Monad m => Data.Expression InferNode -> InferT m ()
+touchNonHoles rootExpr =
+  mapM_ touchNonHole refs
+  where
+    touchNonHole ref = do
+      refExpr <- getRefExpr ref
+      case Data.eValue refExpr of
+        Data.ExpressionLeaf Data.Hole -> return ()
+        _ -> touch ref
+    refPair (InferNode { nRefs = TypedValue t v }) = [t, v]
+    refs = concatMap refPair $ Foldable.toList rootExpr
+
 inferFromEntity ::
   Monad m =>
   Loader m -> InferActions m ->
@@ -661,8 +669,10 @@ inferFromEntity ::
   Data.Expression a ->
   m (Expression a, RefMap)
 inferFromEntity loader actions initialRefMap (InferNode rootTv rootScope) mRecursiveDef expression = do
-  (node, loadState) <- runInferT actions (InferState initialRefMap mempty) $
-    nodeFromEntity loader scope expression rootTv
+  (node, loadState) <- runInferT actions (InferState initialRefMap mempty) $ do
+    node <- nodeFromEntity loader scope expression rootTv
+    touchNonHoles $ fmap snd node
+    return node
   resultRefMap <- infer actions loadState
   let
     derefNode (s, inferNode) =
