@@ -30,6 +30,7 @@ import qualified Control.Monad.Trans.Either as Either
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Foldable as Foldable
 import qualified Data.IntMap.Lens as IntMapLens
+import qualified Data.IntSet.Lens as IntSetLens
 import qualified Data.IntSet as IntSet
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -321,6 +322,10 @@ mergeExprs p0 p1 =
     -- When first is hole, we take Guids from second expr
     go
       (Data.Expression _ (Data.ExpressionLeaf Data.Hole) s0) e =
+      -- TODO: Yair says Data.atEPayload should be fmap.
+      -- The hole-on-right case should be handled in the same
+      -- way by "go" and not in "f" without mappending anything
+      -- Make tests that reproduce a problem...
       mapParamGuids $ Data.atEPayload (mappend s0) e
     -- In all other cases guid comes from first expr
     go (Data.Expression g0 e0 s0) (Data.Expression g1 e1 s1) =
@@ -419,7 +424,9 @@ addRules scope typedVal g exprBody = do
         touch $ tvType typedVal
     _ -> return ()
   where
-    addUnionRule x y = addRule [x, y] $ ruleUnion x y
+    addUnionRule x y = do
+      addRule [x] $ Rule $ setRefExpr y =<< getRefExpr x
+      addRule [y] $ Rule $ setRefExpr x =<< getRefExpr y
     makeRule rule = liftState $ do
       ruleId <- Lens.use (sRefMap . nextRule)
       sRefMap . nextRule += 1
@@ -428,6 +435,7 @@ addRules scope typedVal g exprBody = do
     addRule refs rule = do
       ruleId <- makeRule rule
       mapM_ (addRuleId ruleId) refs
+      liftState $ sRulesQueue . IntSetLens.contains ruleId .= True
     addRuleId ruleId ref = liftState $ refMapAt ref . rRules %= (ruleId :)
     onLambda cons uncons (Data.Lambda paramType result) = do
       setRefExprPure (tvType paramType) setExpr
@@ -568,11 +576,6 @@ maybeLambda _ = Nothing
 maybePi :: Data.ExpressionBody a -> Maybe (Data.Lambda a)
 maybePi (Data.ExpressionPi x) = Just x
 maybePi _ = Nothing
-
-ruleUnion :: Ref -> Ref -> Rule
-ruleUnion r0 r1 = Rule $ do
-  setRefExpr r0 =<< getRefExpr r1
-  setRefExpr r1 =<< getRefExpr r0
 
 applyRuleSimpleType :: Monad m => TypedValue -> InferT m ()
 applyRuleSimpleType (TypedValue val typ) = do
