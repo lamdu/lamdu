@@ -28,7 +28,6 @@ import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Either as Either
 import qualified Control.Monad.Trans.Reader as Reader
-import qualified Data.Foldable as Foldable
 import qualified Data.IntMap.Lens as IntMapLens
 import qualified Data.IntSet.Lens as IntSetLens
 import qualified Data.IntSet as IntSet
@@ -400,18 +399,14 @@ addRules scope typedVal g exprBody = do
             resultType
           _ -> return ()
       onLambda Data.ExpressionLambda maybeLambda lambda
-    Data.ExpressionApply (Data.Apply func arg) -> do
+    Data.ExpressionApply (Data.Apply func arg) ->
       addRule ([tvVal, tvType] <*> [typedVal, func, arg]) .
         ruleApply $ ApplyComponents typedVal func arg
-      -- make sure we invoke this rule
-      touch $ tvVal typedVal
     Data.ExpressionLeaf (Data.GetVariable var) ->
       case Map.lookup var scope of
       Nothing -> return ()
       Just ref -> do
         addUnionRule ref $ tvType typedVal
-        -- make sure we invoke this rule.
-        touch $ tvType typedVal
     _ -> return ()
   where
     addUnionRule x y = do
@@ -626,19 +621,6 @@ ruleApply (ApplyComponents apply func arg) = Rule $ do
       setRefExpr (tvVal apply) . makeRefExpression (augmentGuid "ar6" baseGuid) $
         Data.makeApply funcPge argExpr
 
--- Runs after load
-touchNonHoles :: Monad m => Data.Expression InferNode -> InferT m ()
-touchNonHoles rootExpr =
-  mapM_ touchNonHole refs
-  where
-    touchNonHole ref = do
-      refExpr <- getRefExpr ref
-      case Data.eValue refExpr of
-        Data.ExpressionLeaf Data.Hole -> return ()
-        _ -> touch ref
-    refPair (InferNode { nRefs = TypedValue t v }) = [t, v]
-    refs = concatMap refPair $ Foldable.toList rootExpr
-
 inferFromEntity ::
   Monad m =>
   Loader m -> InferActions m ->
@@ -647,10 +629,9 @@ inferFromEntity ::
   Data.Expression a ->
   m (Expression a, RefMap)
 inferFromEntity loader actions initialRefMap (InferNode rootTv rootScope) mRecursiveDef expression = do
-  (node, loadState) <- runInferT actions (InferState initialRefMap mempty) $ do
-    node <- nodeFromEntity loader scope expression rootTv
-    touchNonHoles $ fmap snd node
-    return node
+  (node, loadState) <-
+    runInferT actions (InferState initialRefMap mempty) $
+    nodeFromEntity loader scope expression rootTv
   resultRefMap <- infer actions loadState
   let
     derefNode (s, inferNode) =
