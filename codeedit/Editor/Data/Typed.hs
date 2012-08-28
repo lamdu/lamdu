@@ -615,24 +615,43 @@ addApplyRules baseGuid typedVal (Data.Apply func arg) = do
           recurseSubst resultT funcTGuid (tvVal arg) (tvType typedVal)
       _ -> return ()
 
-  addRule [tvVal func, tvType arg, tvVal arg, tvVal typedVal] $ Rule $ do
-    funcPge@(Data.Expression funcGuid funcExpr _) <- getRefExpr $ tvVal func
+  -- ParamT => ArgT
+  addRule [tvVal func] $ Rule $ do
+    Data.Expression _ funcExpr _ <- getRefExpr $ tvVal func
+    case funcExpr of
+      Data.ExpressionLambda (Data.Lambda paramT _) ->
+        setRefExpr (tvType arg) paramT
+      _ -> return ()
+
+  -- ArgT => ParamT
+  addRule [tvType arg] $ Rule $ do
+    Data.Expression funcGuid funcExpr _ <- getRefExpr $ tvVal func
+    case funcExpr of
+      Data.ExpressionLambda _ ->
+        setRefExpr (tvVal func) . makeRefExpression funcGuid .
+        (`Data.makeLambda` makeHole "ar5" baseGuid) =<< getRefExpr (tvType arg)
+      _ -> return ()
+
+  -- If func isn't lambda (a hole too could be a lambda),
+  -- Func Arg => Outer
+  addRule [tvVal func, tvVal arg] $ Rule $ do
+    funcE@(Data.Expression _ funcBody _) <- getRefExpr $ tvVal func
+    case funcBody of
+      Data.ExpressionLambda _ -> return ()
+      Data.ExpressionLeaf Data.Hole -> return ()
+      _ ->
+        setRefExpr (tvVal typedVal) . makeRefExpression (augmentGuid "ar6" baseGuid) .
+        Data.makeApply funcE =<< getRefExpr (tvVal arg)
+
+  addRule [tvVal func, tvVal arg, tvVal typedVal] $ Rule $ do
+    Data.Expression funcGuid funcExpr _ <- getRefExpr $ tvVal func
     case funcExpr of
       Data.ExpressionLambda (Data.Lambda paramT body) -> do
-        -- ParamT => ArgT
-        setRefExpr (tvType arg) paramT
-        -- ArgT => ParamT
-        setRefExpr (tvVal func) . makeRefExpression (augmentGuid "ar4" baseGuid) .
-          (`Data.makeLambda` makeHole "ar5" baseGuid) =<< getRefExpr (tvType arg)
         -- Recurse-Subst Body Arg Apply
         setRefExpr (tvVal func) . makeRefExpression funcGuid .
           Data.makeLambda paramT =<<
           recurseSubst body funcGuid (tvVal arg) (tvVal typedVal)
-      Data.ExpressionLeaf Data.Hole -> return ()
-      _ -> do
-        argExpr <- getRefExpr $ tvVal arg
-        setRefExpr (tvVal typedVal) . makeRefExpression (augmentGuid "ar6" baseGuid) $
-          Data.makeApply funcPge argExpr
+      _ -> return ()
 
 inferFromEntity ::
   Monad m =>
