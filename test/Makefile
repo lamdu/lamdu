@@ -15,7 +15,7 @@ build_benchmark_typed:
 	ghc -O2 -Wall --make benchmark_Typed -i../codeedit -i../bottlelib
 
 run_profile_typed: build_profile_typed
-	./profile_Typed
+	./profile_Typed +RTS -p
 
-build_profile_typed:
-	ghc -Wall -auto-all -caf-all -rtsopts --make benchmark_Typed -i../codeedit -i../bottlelib
+build_profile_typed: build_benchmark_typed
+	ghc -prof -hisuf p_hi -osuf p_o -Wall -auto-all -caf-all -rtsopts -o profile_Typed --make benchmark_Typed -i../codeedit -i../bottlelib
