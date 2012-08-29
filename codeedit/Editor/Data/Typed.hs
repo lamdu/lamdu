@@ -369,13 +369,9 @@ setRefExpr ref newExpr = do
 setRefExprPure :: Monad m => Ref -> Data.PureExpression -> InferT m ()
 setRefExprPure ref = setRefExpr ref . refExprFromPure
 
-addRules ::
-  Monad m =>
-  Scope -> TypedValue -> Guid -> Data.ExpressionBody TypedValue ->
-  InferT m ()
-addRules scope typedVal g exprBody = do
-  addSimpleTypeRule
-  case exprBody of
+addNodeRules :: Monad m => Data.Expression InferNode -> InferT m ()
+addNodeRules (Data.Expression g exprBody (InferNode typedVal scope)) = do
+  case fmap (nRefs . Data.ePayload) exprBody of
     Data.ExpressionPi lambda@(Data.Lambda _ resultType) -> do
       setRefExprPure (tvType resultType) setExpr
       onLambda Data.ExpressionPi maybePi lambda
@@ -405,13 +401,6 @@ addRules scope typedVal g exprBody = do
       Just ref -> addUnionRule ref $ tvType typedVal
     _ -> return ()
   where
-    addSimpleTypeRule = do
-      -- All value nodes have this rule.
-      -- To see whether it already has it,
-      -- check if it has any rules at all.
-      refData <- liftState . Lens.use . refMapAt $ tvVal typedVal
-      (when . null) (Lens.view rRules refData) .
-        addRule $ ruleSimpleType typedVal
     addUnionRule x y = do
       addRule . Rule [x] $ \[xExpr] -> [(y, xExpr)]
       addRule . Rule [y] $ \[yExpr] -> [(x, yExpr)]
@@ -432,6 +421,14 @@ addRules scope typedVal g exprBody = do
         [( tvVal typedVal
          , makeRefExpression g . cons $ Data.Lambda paramTypeExpr resultExpr
          )]
+
+addRules :: Monad m => Bool -> Data.Expression InferNode -> InferT m ()
+addRules resumption expr = do
+  when (not resumption) . addRule .
+    ruleSimpleType . nRefs $ Data.ePayload expr
+  addNodeRules expr
+  _ <- Traversable.mapM (addRules False) $ Data.eValue expr
+  return ()
 
 addRule :: Monad m => Rule -> InferT m ()
 addRule rule = do
@@ -461,7 +458,6 @@ nodeFromEntity loader scope entity typedValue = do
     Data.ExpressionPi lambda ->
       onLambda Data.ExpressionPi lambda
     _ -> Traversable.mapM (go id) bodyWithChildrenTvs
-  addRules scope typedValue (Data.eGuid entity) $ fmap snd bodyWithChildrenTvs
   return $
     Data.Expression (Data.eGuid entity) exprBody
     (Data.ePayload entity, InferNode typedValue scope)
@@ -474,19 +470,9 @@ nodeFromEntity loader scope entity typedValue = do
     go onScope = uncurry . nodeFromEntity loader $ onScope scope
     addTypedVal x =
       liftM ((,) x) createTypedVal
-    initializeRefData ref@(Ref key) expr = do
-      mRefData <- liftState $ Lens.use (sRefMap . refMap . IntMapLens.at key)
-      let refExpr = refExprFromPure expr
-      case mRefData of
-        Nothing ->
-          liftState $
-          sRefMap . refMap . IntMapLens.at key .=
-          Just (RefData refExpr [])
-        Just refData -> do
-          liftState $
-            sRefMap . refMap . IntMapLens.at key .=
-            Just (Lens.set rExpression refExpr refData)
-          setRefExpr ref $ Lens.view rExpression refData
+    initializeRefData ref expr = liftState $
+      sRefMap . refMap . IntMapLens.at (unRef ref) .=
+      Just (RefData (refExprFromPure expr) [])
     setInitialValues = do
       (initialVal, initialType) <-
         lift $ initialExprs loader scope entity
@@ -677,30 +663,45 @@ inferFromEntity ::
   Maybe Data.DefinitionIRef ->
   Data.Expression a ->
   m (Expression a, RefMap)
-inferFromEntity loader actions initialRefMap (InferNode rootTv rootScope) mRecursiveDef expression = do
-  (node, loadState) <-
-    runInferT actions (InferState initialRefMap mempty) $ do
-      r <- nodeFromEntity loader scope expression rootTv
-      -- when we resume load,
-      -- we want to trigger the existing rules for the loaded root
-      touch $ tvVal rootTv
-      touch $ tvType rootTv
-      return r
-  resultRefMap <- infer actions loadState
-  let
-    derefNode (s, inferNode) =
-      Inferred
-      { iStored = s
-      , iValue = deref . tvVal $ nRefs inferNode
-      , iType = deref . tvType $ nRefs inferNode
-      , iScope = Map.fromList . mapMaybe onScopeElement . Map.toList $ nScope inferNode
-      , iPoint = inferNode
-      }
-    onScopeElement (Data.ParameterRef guid, ref) = Just (guid, deref ref)
-    onScopeElement _ = Nothing
-    deref (Ref x) = void $ ((resultRefMap ^. refMap) ! x) ^. rExpression
-  return (fmap derefNode node, resultRefMap)
+inferFromEntity
+  loader actions initialRefMap
+  (InferNode rootTv@(TypedValue rootValR rootTypR) rootScope)
+  mRecursiveDef expression = do
+    (node, loadState) <-
+      runInferT actions (InferState initialRefMap mempty) $ do
+        let
+          getMRefData k =
+            liftState $ Lens.use (sRefMap . refMap . IntMapLens.at (unRef k))
+        rootValMRefData <- getMRefData rootValR
+        rootTypMRefData <- getMRefData rootTypR
+        node <- nodeFromEntity loader scope expression rootTv
+        restoreRoot rootValR rootValMRefData
+        restoreRoot rootTypR rootTypMRefData
+        addRules (isJust rootValMRefData) $ fmap snd node
+        -- when we resume load,
+        -- we want to trigger the existing rules for the loaded root
+        touch $ tvVal rootTv
+        touch $ tvType rootTv
+        return node
+    resultRefMap <- infer actions loadState
+    let
+      derefNode (s, inferNode) =
+        Inferred
+        { iStored = s
+        , iValue = deref . tvVal $ nRefs inferNode
+        , iType = deref . tvType $ nRefs inferNode
+        , iScope = Map.fromList . mapMaybe onScopeElement . Map.toList $ nScope inferNode
+        , iPoint = inferNode
+        }
+      onScopeElement (Data.ParameterRef guid, ref) = Just (guid, deref ref)
+      onScopeElement _ = Nothing
+      deref (Ref x) = void $ ((resultRefMap ^. refMap) ! x) ^. rExpression
+    return (fmap derefNode node, resultRefMap)
   where
+    restoreRoot _ Nothing = return ()
+    restoreRoot ref (Just (RefData refExpr refRules)) = do
+      liftState $ refMapAt ref . rRules %= (refRules ++)
+      setRefExpr ref refExpr
     scope =
       case mRecursiveDef of
       Nothing -> rootScope
