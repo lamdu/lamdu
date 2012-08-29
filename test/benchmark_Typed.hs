@@ -1,15 +1,14 @@
+import Control.Monad (void)
 import Criterion.Main
 import Utils
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Editor.Data as Data
 import qualified Editor.Data.Typed as Typed
-import qualified System.Random as Random
 
-factorial :: Int -> (Typed.Expression (), Typed.RefMap)
-factorial gen =
-  uncurry doInferM Typed.initial (Just factorialDefI) Nothing .
-  Data.randomizeGuids (Random.mkStdGen gen) .
+expr :: Data.PureExpression
+expr =
+  Data.canonizeGuids .
   makeLambda "x" hole $
   makeApply
   [ getDefExpr "if"
@@ -25,8 +24,14 @@ factorial gen =
       ]
     ]
   ]
-  where
-    factorialDefI = IRef.unsafeFromGuid $ Guid.fromString "factorial"
+
+factorialDefI :: Data.DefinitionIRef
+factorialDefI = IRef.unsafeFromGuid $ Guid.fromString "factorial"
+
+factorial :: Int -> (Typed.Expression (), Typed.RefMap)
+factorial gen =
+  uncurry doInferM Typed.initial (Just factorialDefI) Nothing .
+  void $ fmap (const gen) expr
 
 main :: IO ()
 main =
