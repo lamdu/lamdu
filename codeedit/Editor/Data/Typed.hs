@@ -11,7 +11,7 @@ module Editor.Data.Typed
 
 import Control.Arrow (first)
 import Control.Lens ((%=), (.=), (^.), (+=))
-import Control.Monad (guard, liftM, liftM2, void, when)
+import Control.Monad (guard, liftM, liftM2, unless, void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -674,8 +674,8 @@ infer actions (Loaded expr loadedRefMap (rootValMRefData, rootTypMRefData)) =
     restoreRoot rootTypR rootTypMRefData
     -- when we resume load,
     -- we want to trigger the existing rules for the loaded root
-    touch $ rootValR
-    touch $ rootTypR
+    touch rootValR
+    touch rootTypR
     go
     return expr
   where
@@ -692,7 +692,7 @@ infer actions (Loaded expr loadedRefMap (rootValMRefData, rootTypMRefData)) =
       curLayer <- liftState $ Lens.use sBfsNextLayer
       liftState $ sBfsCurLayer .= curLayer
       liftState $ sBfsNextLayer .= IntSet.empty
-      (when . not) (IntSet.null curLayer) $ do
+      unless (IntSet.null curLayer) $ do
         mapM_ processRule $ IntSet.toList curLayer
         go
     processRule key = do

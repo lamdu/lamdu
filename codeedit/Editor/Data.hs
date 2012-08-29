@@ -272,8 +272,8 @@ matchExpressionBody _ _ _ = Nothing
 
 matchExpression ::
   (a -> b -> c) -> Expression a -> Expression b -> Maybe (Expression c)
-matchExpression f e0 e1 =
-  go Map.empty e0 e1
+matchExpression f =
+  go Map.empty
   where
     go scope (Expression g0 body0 val0) (Expression g1 body1 val1) =
       fmap (flip (Expression g0) (f val0 val1)) $
