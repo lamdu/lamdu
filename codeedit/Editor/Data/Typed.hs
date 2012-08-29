@@ -678,11 +678,6 @@ inferFromEntity
   mRecursiveDef expression = do
     (node, loadState) <-
       runInferT actions (InferState initialRefMap mempty) $ do
-        let
-          getMRefData k =
-            liftState $ Lens.use (sRefMap . refMap . IntMapLens.at (unRef k))
-        rootValMRefData <- getMRefData rootValR
-        rootTypMRefData <- getMRefData rootTypR
         node <- loadNode loader scope expression rootTv
         restoreRoot rootValR rootValMRefData
         restoreRoot rootTypR rootTypMRefData
@@ -707,6 +702,10 @@ inferFromEntity
       deref (Ref x) = void $ ((resultRefMap ^. refMap) ! x) ^. rExpression
     return (fmap derefNode node, resultRefMap)
   where
+    rootValMRefData = initialMRefData rootValR
+    rootTypMRefData = initialMRefData rootTypR
+    initialMRefData k =
+      Lens.view (refMap . IntMapLens.at (unRef k)) initialRefMap
     restoreRoot _ Nothing = return ()
     restoreRoot ref (Just (RefData refExpr refRules)) = do
       liftState $ refMapAt ref . rRules %= (refRules ++)
