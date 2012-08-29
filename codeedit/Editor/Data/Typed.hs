@@ -16,7 +16,7 @@ import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.Writer (Writer)
-import Control.Monad.Trans.State (StateT, runStateT, runState)
+import Control.Monad.Trans.State (StateT(..), State, runState, execState)
 import Data.Functor.Identity (Identity(..))
 import Data.IntMap (IntMap, (!))
 import Data.IntSet (IntSet)
@@ -628,6 +628,19 @@ postProcess (expr, InferState resultRefMap _) =
     onScopeElement _ = Nothing
     deref (Ref x) = void $ ((resultRefMap ^. refMap) ! x) ^. rExpression
 
+addRule :: Rule -> State InferState ()
+addRule rule = do
+  ruleId <- makeRule
+  mapM_ (addRuleId ruleId) $ ruleInputs rule
+  sRulesQueue . IntSetLens.contains ruleId .= True
+  where
+    makeRule = do
+      ruleId <- Lens.use (sRefMap . nextRule)
+      sRefMap . nextRule += 1
+      sRefMap . rules . IntMapLens.at ruleId .= Just rule
+      return ruleId
+    addRuleId ruleId ref = refMapAt ref . rRules %= (ruleId :)
+
 --- InferT:
 
 newtype InferT m a =
@@ -655,10 +668,9 @@ instance MonadTrans InferT where
 infer :: Monad m => InferActions m -> Loaded a -> m (Expression a, RefMap)
 infer actions (Loaded expr loadedRefMap (rootValMRefData, rootTypMRefData)) =
   liftM postProcess .
-  runInferT actions (InferState loadedRefMap mempty) $ do
+  runInferT actions ruleInferState $ do
     restoreRoot rootValR rootValMRefData
     restoreRoot rootTypR rootTypMRefData
-    mapM_ addRule . makeRules (isJust rootValMRefData) $ fmap snd expr
     -- when we resume load,
     -- we want to trigger the existing rules for the loaded root
     touch $ rootValR
@@ -666,6 +678,9 @@ infer actions (Loaded expr loadedRefMap (rootValMRefData, rootTypMRefData)) =
     go
     return expr
   where
+    ruleInferState =
+      (`execState` InferState loadedRefMap mempty) . mapM_ addRule .
+      makeRules (isJust rootValMRefData) $ fmap snd expr
     TypedValue rootValR rootTypR = nRefs . snd $ Data.ePayload expr
     restoreRoot _ Nothing = return ()
     restoreRoot ref (Just (RefData refExpr refRules)) = do
@@ -729,22 +744,6 @@ popRuleFromQueue = do
 
 {-# SPECIALIZE popRuleFromQueue :: InferT Maybe (Maybe Rule) #-}
 {-# SPECIALIZE popRuleFromQueue :: Monoid w => InferT (Writer w) (Maybe Rule) #-}
-
-addRule :: Monad m => Rule -> InferT m ()
-addRule rule = do
-  ruleId <- makeRule
-  mapM_ (addRuleId ruleId) $ ruleInputs rule
-  liftState $ sRulesQueue . IntSetLens.contains ruleId .= True
-  where
-    makeRule = liftState $ do
-      ruleId <- Lens.use (sRefMap . nextRule)
-      sRefMap . nextRule += 1
-      sRefMap . rules . IntMapLens.at ruleId .= Just rule
-      return ruleId
-    addRuleId ruleId ref = liftState $ refMapAt ref . rRules %= (ruleId :)
-
-{-# SPECIALIZE addRule :: Rule -> InferT Maybe () #-}
-{-# SPECIALIZE addRule :: Monoid w => Rule -> InferT (Writer w) () #-}
 
 touch :: Monad m => Ref -> InferT m ()
 touch ref =
