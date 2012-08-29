@@ -1,6 +1,6 @@
 all: run_test_typed
 
-build: build_test_typed build_benchmark_typed
+build: build_test_typed build_benchmark_typed build_profile_typed
 
 run_test_typed: build_test_typed
 	./test_Typed

@@ -20,12 +20,11 @@ import Control.Applicative ((<$>), (<*>))
 import Control.Monad (liftM, mzero, void)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (MonadTrans(..))
-import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
-import Control.Monad.Trans.Writer (WriterT(..))
+import Control.Monad.Trans.Writer (Writer, runWriter)
 import Data.Function (on)
 import Data.Map (Map)
-import Data.Maybe (fromMaybe, isJust)
+import Data.Maybe (isJust)
 import Data.Monoid (Monoid(..))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
@@ -582,36 +581,29 @@ convertReadOnlyHole exprI =
   , holeInferResults = mempty
   }
 
-inferFromEntity ::
-  (Monad m, Monad f) =>
-  (T f Data.PureExpression -> m Data.PureExpression) ->
-  DataTyped.InferActions m ->
-  DataTyped.RefMap ->
-  DataTyped.InferNode ->
-  Maybe Data.DefinitionIRef ->
-  Data.Expression a ->
-  m (DataTyped.Expression a, DataTyped.RefMap)
-inferFromEntity f =
-  DataTyped.inferFromEntity
-  (DataTyped.Loader (f . DataLoad.loadPureDefinitionType))
+loader :: Monad m => DataTyped.Loader (T m)
+loader = DataTyped.Loader DataLoad.loadPureDefinitionType
 
 convertWritableHole :: Monad m => ExprEntityStored m -> Convertor m
 convertWritableHole stored exprI = do
   inferState <- liftM scInferState readContext
   let
     checkAndFillHoles expr =
-      runMaybeT .
-      liftM (DataTyped.iValue . Data.ePayload) .
+      (liftM . fmap) (DataTyped.iValue . Data.ePayload) .
       inferExpr expr inferState .
       DataTyped.iPoint $ eesInferred stored
+
+    filledHolesApplyForms _ Nothing = mzero
+    filledHolesApplyForms expr (Just inferred) =
+      List.catMaybes . List.mapL checkAndFillHoles . List.fromList $
+      applyForms (DataTyped.iType (Data.ePayload inferred)) expr
+
     inferResults expr =
-      List.joinL . liftM (fromMaybe mzero) . runMaybeT $ do
-        inferred <-
-          uncurry (inferExpr expr) .
-          DataTyped.newNodeWithScope ((DataTyped.nScope . DataTyped.iPoint . eesInferred) stored) $
-          inferState
-        let typ = DataTyped.iType (Data.ePayload inferred)
-        return . List.catMaybes . List.mapL checkAndFillHoles . List.fromList $ applyForms typ expr
+      List.joinL . liftM (filledHolesApplyForms expr) $
+      uncurry (inferExpr expr) .
+      DataTyped.newNodeWithScope
+      ((DataTyped.nScope . DataTyped.iPoint . eesInferred) stored) $
+      inferState
   mPaste <- mkPaste . DataTyped.iStored $ eesInferred stored
   let
     onScopeElement (lambdaGuid, _typeExpr) =
@@ -631,12 +623,10 @@ convertWritableHole stored exprI = do
       convertExpressionI . eeFromPure $ Data.randomizeGuids (mkGen 1 2 eGuid) x
     _ -> return $ ExpressionHole hole
   where
+    actions = DataTyped.InferActions $ const Nothing
     inferExpr expr inferContext inferPoint =
-      liftM fst $ inferFromEntity lift
-      ((DataTyped.InferActions . const) mzero)
-      inferContext inferPoint
-      Nothing
-      expr
+      liftM (fmap fst . DataTyped.infer actions) $
+      DataTyped.load loader inferContext inferPoint Nothing expr
     pickResult irefP result = do
       ~() <- Data.writeIRefExpressionFromPure (Property.value irefP) result
       return eGuid
@@ -690,9 +680,7 @@ convertExpressionPure =
   where
     ctx = SugarContext $ error "pure expression doesnt have infer state"
 
-reportError ::
-  Monad m =>
-  DataTyped.Error -> WriterT ConflictMap m ()
+reportError :: DataTyped.Error -> Writer ConflictMap ()
 reportError err =
   Writer.tell . ConflictMap .
   Map.singleton (DataTyped.errRef err) .
@@ -767,11 +755,10 @@ inferLoadedExpression ::
    SugarContext,
    Data.Expression (ExprEntityStored m))
 inferLoadedExpression mDefI exprL = do
-  ((exprInferred, refMap), conflictsMap) <-
-    runWriterT $
-    uncurry (inferFromEntity lift (DataTyped.InferActions reportError))
-    DataTyped.initial mDefI exprL
+  loaded <- uncurry (DataTyped.load loader) DataTyped.initial mDefI exprL
   let
+    ((exprInferred, inferContext), conflictsMap) =
+      runWriter $ DataTyped.infer actions loaded
     toExprEntity x =
       ExprEntityStored
       { eesInferred = x
@@ -783,8 +770,10 @@ inferLoadedExpression mDefI exprL = do
       conflictsMap
   return
     ( Map.null $ unConflictMap conflictsMap
-    , SugarContext refMap, fmap toExprEntity exprInferred
+    , SugarContext inferContext, fmap toExprEntity exprInferred
     )
+  where
+    actions = DataTyped.InferActions reportError
 
 convertLoadedExpression ::
   Monad m =>

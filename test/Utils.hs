@@ -4,6 +4,7 @@ module Utils where
 
 import Control.Arrow (first)
 import Control.Monad (void)
+import Data.Functor.Identity (Identity(..))
 import Data.Hashable (hash)
 import Data.Map (Map, (!))
 import Data.Maybe (fromMaybe)
@@ -140,10 +141,10 @@ doInferM refMap inferNode mDefRef mResumedRoot expr =
       where
         Typed.TypedValue valRef typRef = Typed.nRefs $ Typed.iPoint inferred
     root = fromMaybe inferredExpr mResumedRoot
+    actions = Typed.InferActions reportError
+    loaded = runIdentity $ Typed.load loader refMap inferNode mDefRef expr
     (result@(inferredExpr, _), conflicts) =
-      Writer.runWriter $
-      Typed.inferFromEntity loader (Typed.InferActions reportError)
-      refMap inferNode mDefRef expr
+      Writer.runWriter $ Typed.infer actions loaded
     reportError err = Writer.tell [(Typed.errRef err, err)]
 
 loader :: Monad m => Typed.Loader m
@@ -176,7 +177,10 @@ factorialDefI = IRef.unsafeFromGuid $ Guid.fromString "factorial"
 
 factorial :: Int -> (Typed.Expression (), Typed.RefMap)
 factorial gen =
-  fromMaybe (error "Conflicts in factorial infer") .
-  uncurry (Typed.inferFromEntity loader (Typed.InferActions (const Nothing)))
-  Typed.initial (Just factorialDefI) . void $
-  fmap (const gen) factorialExpr
+  fromMaybe (error "Conflicts in factorial infer") $
+  Typed.infer (Typed.InferActions (const Nothing)) loaded
+  where
+    loaded =
+      runIdentity .
+      uncurry (Typed.load loader) Typed.initial (Just factorialDefI) .
+      void $ fmap (const gen) factorialExpr
