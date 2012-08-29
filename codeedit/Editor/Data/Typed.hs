@@ -15,6 +15,7 @@ import Control.Monad (guard, liftM, liftM2, void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
+import Control.Monad.Trans.Writer (Writer)
 import Control.Monad.Trans.State (StateT, runStateT, runState)
 import Data.Functor.Identity (Identity(..))
 import Data.IntMap (IntMap, (!))
@@ -180,29 +181,10 @@ newtype InferActions m = InferActions
   { reportError :: Error -> m ()
   }
 
-newtype InferT m a =
-  InferT { unInferT :: ReaderT (InferActions m) (StateT InferState m) a }
-  deriving (Monad)
-
 LensTH.makeLenses ''RefExprPayload
 LensTH.makeLenses ''RefData
 LensTH.makeLenses ''RefMap
 LensTH.makeLenses ''InferState
-
-runInferT ::
-  InferActions m -> InferState ->
-  InferT m a -> m (a, InferState)
-runInferT actions state =
-  (`runStateT` state) . (`runReaderT` actions) . unInferT
-
-liftActions :: ReaderT (InferActions m) (StateT InferState m) a -> InferT m a
-liftActions = InferT
-
-liftState :: Monad m => StateT InferState m a -> InferT m a
-liftState = liftActions . lift
-
-instance MonadTrans InferT where
-  lift = liftState . lift
 
 -- TODO: createTypeVal should use newNode, not vice versa.
 -- For use in loading phase only!
@@ -334,37 +316,6 @@ mergeExprs p0 p1 =
           Reader.asks (Map.lookup p . Lens.view mGuidMapping)
         _ -> Traversable.mapM mapParamGuids body
 
-touch :: Monad m => Ref -> InferT m ()
-touch ref =
-  liftState $
-  (sRulesQueue %=) . mappend . IntSet.fromList =<< Lens.use (refMapAt ref . rRules)
-
-setRefExpr :: Monad m => Ref -> RefExpression -> InferT m ()
-setRefExpr ref newExpr = do
-  curExpr <- liftState $ Lens.use (refMapAt ref . rExpression)
-  case mergeExprs curExpr newExpr of
-    Right mergedExpr -> do
-      let
-        isChange = not $ equiv mergedExpr curExpr
-        isHole =
-          case Data.eValue mergedExpr of
-          Data.ExpressionLeaf Data.Hole -> True
-          _ -> False
-      when isChange $ touch ref
-      when (isChange || isHole) $
-        liftState $ refMapAt ref . rExpression .= mergedExpr
-    Left details -> do
-      report <- liftActions $ Reader.asks reportError
-      lift $ report Error
-        { errRef = ref
-        , errMismatch = (void curExpr, void newExpr)
-        , errDetails = details
-        }
-  where
-    equiv x y =
-      isJust $ Traversable.sequence =<< Data.matchExpression compareSubsts x y
-    compareSubsts x y = guard $ (x ^. pSubstitutedArgs) == (y ^. pSubstitutedArgs)
-
 lambdaBodyTypeRules :: Guid -> Ref -> Ref -> [Rule]
 lambdaBodyTypeRules g bodyTypeRef lambdaTypeRef =
   [ -- Lambda body type -> Lambda type (result)
@@ -435,19 +386,6 @@ makeRules resumption expr =
   makeNodeRules expr ++
   (Foldable.concat . fmap (makeRules False)) (Data.eValue expr)
 
-addRule :: Monad m => Rule -> InferT m ()
-addRule rule = do
-  ruleId <- makeRule
-  mapM_ (addRuleId ruleId) $ ruleInputs rule
-  liftState $ sRulesQueue . IntSetLens.contains ruleId .= True
-  where
-    makeRule = liftState $ do
-      ruleId <- Lens.use (sRefMap . nextRule)
-      sRefMap . nextRule += 1
-      sRefMap . rules . IntMapLens.at ruleId .= Just rule
-      return ruleId
-    addRuleId ruleId ref = liftState $ refMapAt ref . rRules %= (ruleId :)
-
 loadNode ::
   Monad m =>
   Loader m -> Scope ->
@@ -483,19 +421,6 @@ loadNode loader scope entity typedValue = do
         lift $ initialExprs loader scope entity
       initializeRefData (tvVal typedValue) initialVal
       initializeRefData (tvType typedValue) initialType
-
-popRuleFromQueue :: Monad m => InferT m (Maybe Rule)
-popRuleFromQueue = do
-  rulesQueue <- liftState $ Lens.use sRulesQueue
-  case IntSet.minView rulesQueue of
-    Nothing -> return Nothing
-    Just (ruleKey, newRulesQueue) ->
-      liftState $ do
-        sRulesQueue .= newRulesQueue
-        Lens.use (sRefMap . rules . IntMapLens.at ruleKey)
-
-getRefExpr :: Monad m => Ref -> InferT m RefExpression
-getRefExpr ref = liftState $ Lens.use (refMapAt ref . rExpression)
 
 subst ::
   Guid -> Data.Expression a ->
@@ -703,6 +628,30 @@ postProcess (expr, InferState resultRefMap _) =
     onScopeElement _ = Nothing
     deref (Ref x) = void $ ((resultRefMap ^. refMap) ! x) ^. rExpression
 
+--- InferT:
+
+newtype InferT m a =
+  InferT { unInferT :: ReaderT (InferActions m) (StateT InferState m) a }
+  deriving (Monad)
+
+runInferT ::
+  InferActions m -> InferState ->
+  InferT m a -> m (a, InferState)
+runInferT actions state =
+  (`runStateT` state) . (`runReaderT` actions) . unInferT
+
+liftActions :: ReaderT (InferActions m) (StateT InferState m) a -> InferT m a
+liftActions = InferT
+
+liftState :: Monad m => StateT InferState m a -> InferT m a
+liftState = liftActions . lift
+
+{-# SPECIALIZE liftState :: StateT InferState Maybe a -> InferT Maybe a #-}
+{-# SPECIALIZE liftState :: Monoid w => StateT InferState (Writer w) a -> InferT (Writer w) a #-}
+
+instance MonadTrans InferT where
+  lift = liftState . lift
+
 infer :: Monad m => InferActions m -> Loaded a -> m (Expression a, RefMap)
 infer actions (Loaded expr loadedRefMap (rootValMRefData, rootTypMRefData)) =
   liftM postProcess .
@@ -727,3 +676,80 @@ infer actions (Loaded expr loadedRefMap (rootValMRefData, rootTypMRefData)) =
       refExps <- mapM getRefExpr deps
       mapM_ (uncurry setRefExpr) $ ruleAction refExps
       go
+
+{-# SPECIALIZE
+  infer :: InferActions Maybe -> Loaded a -> Maybe (Expression a, RefMap) #-}
+{-# SPECIALIZE
+  infer :: Monoid w => InferActions (Writer w) -> Loaded a -> Writer w (Expression a, RefMap) #-}
+
+getRefExpr :: Monad m => Ref -> InferT m RefExpression
+getRefExpr ref = liftState $ Lens.use (refMapAt ref . rExpression)
+
+{-# SPECIALIZE getRefExpr :: Ref -> InferT Maybe RefExpression #-}
+{-# SPECIALIZE getRefExpr :: Monoid w => Ref -> InferT (Writer w) RefExpression #-}
+
+setRefExpr :: Monad m => Ref -> RefExpression -> InferT m ()
+setRefExpr ref newExpr = do
+  curExpr <- liftState $ Lens.use (refMapAt ref . rExpression)
+  case mergeExprs curExpr newExpr of
+    Right mergedExpr -> do
+      let
+        isChange = not $ equiv mergedExpr curExpr
+        isHole =
+          case Data.eValue mergedExpr of
+          Data.ExpressionLeaf Data.Hole -> True
+          _ -> False
+      when isChange $ touch ref
+      when (isChange || isHole) $
+        liftState $ refMapAt ref . rExpression .= mergedExpr
+    Left details -> do
+      report <- liftActions $ Reader.asks reportError
+      lift $ report Error
+        { errRef = ref
+        , errMismatch = (void curExpr, void newExpr)
+        , errDetails = details
+        }
+  where
+    equiv x y =
+      isJust $ Traversable.sequence =<< Data.matchExpression compareSubsts x y
+    compareSubsts x y = guard $ (x ^. pSubstitutedArgs) == (y ^. pSubstitutedArgs)
+
+{-# SPECIALIZE setRefExpr :: Ref -> RefExpression -> InferT Maybe () #-}
+{-# SPECIALIZE setRefExpr :: Monoid w => Ref -> RefExpression -> InferT (Writer w) () #-}
+
+popRuleFromQueue :: Monad m => InferT m (Maybe Rule)
+popRuleFromQueue = do
+  rulesQueue <- liftState $ Lens.use sRulesQueue
+  case IntSet.minView rulesQueue of
+    Nothing -> return Nothing
+    Just (ruleKey, newRulesQueue) ->
+      liftState $ do
+        sRulesQueue .= newRulesQueue
+        Lens.use (sRefMap . rules . IntMapLens.at ruleKey)
+
+{-# SPECIALIZE popRuleFromQueue :: InferT Maybe (Maybe Rule) #-}
+{-# SPECIALIZE popRuleFromQueue :: Monoid w => InferT (Writer w) (Maybe Rule) #-}
+
+addRule :: Monad m => Rule -> InferT m ()
+addRule rule = do
+  ruleId <- makeRule
+  mapM_ (addRuleId ruleId) $ ruleInputs rule
+  liftState $ sRulesQueue . IntSetLens.contains ruleId .= True
+  where
+    makeRule = liftState $ do
+      ruleId <- Lens.use (sRefMap . nextRule)
+      sRefMap . nextRule += 1
+      sRefMap . rules . IntMapLens.at ruleId .= Just rule
+      return ruleId
+    addRuleId ruleId ref = liftState $ refMapAt ref . rRules %= (ruleId :)
+
+{-# SPECIALIZE addRule :: Rule -> InferT Maybe () #-}
+{-# SPECIALIZE addRule :: Monoid w => Rule -> InferT (Writer w) () #-}
+
+touch :: Monad m => Ref -> InferT m ()
+touch ref =
+  liftState $
+  (sRulesQueue %=) . mappend . IntSet.fromList =<< Lens.use (refMapAt ref . rRules)
+
+{-# SPECIALIZE touch :: Ref -> InferT Maybe () #-}
+{-# SPECIALIZE touch :: Monoid w => Ref -> InferT (Writer w) () #-}
