@@ -381,12 +381,12 @@ addRules scope typedVal g exprBody = do
       onLambda Data.ExpressionPi maybePi lambda
     Data.ExpressionLambda lambda@(Data.Lambda _ body) -> do
       -- Lambda body type -> Lambda type (result)
-      addRule $ Rule [tvType body] $ \[bodyType] ->
+      addRule . Rule [tvType body] $ \[bodyType] ->
         [( tvType typedVal
          , makeRefExpression g $ Data.makePi (makeHole "paramType" g) bodyType
          )]
       -- Lambda Type (result) -> Body Type
-      addRule $ Rule [tvType typedVal] $ \[lamType] -> case lamType of
+      addRule . Rule [tvType typedVal] $ \[lamType] -> case lamType of
         Data.Expression piG
           (Data.ExpressionPi (Data.Lambda _ resultType)) _ ->
             [(tvType body
@@ -413,13 +413,13 @@ addRules scope typedVal g exprBody = do
       (when . null) (Lens.view rRules refData) .
         addRule $ ruleSimpleType typedVal
     addUnionRule x y = do
-      addRule $ Rule [x] $ \[xExpr] -> [(y, xExpr)]
-      addRule $ Rule [y] $ \[yExpr] -> [(x, yExpr)]
+      addRule . Rule [x] $ \[xExpr] -> [(y, xExpr)]
+      addRule . Rule [y] $ \[yExpr] -> [(x, yExpr)]
     onLambda cons uncons (Data.Lambda paramType result) = do
       setRefExprPure (tvType paramType) setExpr
       -- Copy the structure from the parent to the paramType and
       -- result
-      addRule $ Rule [tvVal typedVal] $ \[expr] ->
+      addRule . Rule [tvVal typedVal] $ \[expr] ->
         case uncons (Data.eValue expr) of
           Nothing -> []
           Just (Data.Lambda paramTypeE resultE) ->
@@ -427,7 +427,7 @@ addRules scope typedVal g exprBody = do
             , (tvVal result, resultE)
             ]
       -- Copy the structure from the children to the parent
-      addRule $ Rule [tvVal paramType, tvVal result] $
+      addRule . Rule [tvVal paramType, tvVal result] $
         \[paramTypeExpr, resultExpr] ->
         [( tvVal typedVal
          , makeRefExpression g . cons $ Data.Lambda paramTypeExpr resultExpr
@@ -610,7 +610,7 @@ addRecurseSubstRules cons uncons apply (Data.Apply func arg) = do
 addApplyRules :: Monad m => Guid -> TypedValue -> Data.Apply TypedValue -> InferT m ()
 addApplyRules baseGuid typedVal (Data.Apply func arg) = do
   -- ArgT => Pi ParamT
-  addRule $ Rule [tvType arg] $
+  addRule . Rule [tvType arg] $
     \[argTypeExpr] ->
     [( tvType func
      , makeRefExpression (augmentGuid "ar0" baseGuid) .
