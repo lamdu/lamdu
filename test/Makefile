@@ -1,9 +1,15 @@
 all: run_test_typed
 
-run_test_typed:
-	ghc -Wall --make test_Typed -i../codeedit -i../bottlelib
+build: build_test_typed build_benchmark_typed
+
+run_test_typed: build_test_typed
 	./test_Typed
 
-run_benchmark_typed:
-	ghc -Wall --make benchmark_Typed -i../codeedit -i../bottlelib
+build_test_typed:
+	ghc -Wall --make test_Typed -i../codeedit -i../bottlelib
+
+run_benchmark_typed: build_benchmark_typed
 	./benchmark_Typed
+
+build_benchmark_typed:
+	ghc -Wall --make benchmark_Typed -i../codeedit -i../bottlelib
