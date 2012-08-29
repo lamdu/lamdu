@@ -273,18 +273,17 @@ matchExpressionBody _ _ _ = Nothing
 matchExpression ::
   (a -> b -> c) -> Expression a -> Expression b -> Maybe (Expression c)
 matchExpression f e0 e1 =
-  runReaderT (go e0 e1) Map.empty
+  go Map.empty e0 e1
   where
-    go (Expression g0 body0 val0) (Expression g1 body1 val1) =
-      fmap (flip (Expression g0) (f val0 val1)) .
-      Reader.local (Map.insert g1 g0) $
-      case matchExpressionBody go body0 body1 of
+    go scope (Expression g0 body0 val0) (Expression g1 body1 val1) =
+      fmap (flip (Expression g0) (f val0 val1)) $
+      case matchExpressionBody (go (Map.insert g1 g0 scope)) body0 body1 of
       Just x -> sequence x
       Nothing ->
         case (body0, body1) of
         (ExpressionLeaf l@(GetVariable (ParameterRef par0)),
          ExpressionLeaf (GetVariable (ParameterRef par1))) -> do
-          guard . (par0 ==) . fromMaybe par1 =<< Reader.asks (Map.lookup par1)
+          guard . (par0 ==) . fromMaybe par1 $ Map.lookup par1 scope
           return $ ExpressionLeaf l
         _ -> mzero
 
