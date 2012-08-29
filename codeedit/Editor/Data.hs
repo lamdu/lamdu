@@ -99,23 +99,23 @@ instance Applicative Apply where
 type ApplyI = Apply ExpressionIRef
 
 data VariableRef
-  = ParameterRef Guid -- of the lambda/pi
-  | DefinitionRef DefinitionIRef
+  = ParameterRef {-# UNPACK #-} !Guid -- of the lambda/pi
+  | DefinitionRef {-# UNPACK #-} !DefinitionIRef
   deriving (Eq, Ord, Show)
 
 data Leaf
-  = GetVariable VariableRef
-  | LiteralInteger Integer
+  = GetVariable !VariableRef
+  | LiteralInteger !Integer
   | Set
   | IntegerType
   | Hole
   deriving (Eq, Ord, Show)
 
 data ExpressionBody expr
-  = ExpressionLambda (Lambda expr)
-  | ExpressionPi (Lambda expr)
-  | ExpressionApply (Apply expr)
-  | ExpressionLeaf Leaf
+  = ExpressionLambda {-# UNPACK #-} !(Lambda expr)
+  | ExpressionPi {-# UNPACK #-} !(Lambda expr)
+  | ExpressionApply {-# UNPACK #-} !(Apply expr)
+  | ExpressionLeaf !Leaf
   deriving (Eq, Ord, Functor)
 type ExpressionI = ExpressionBody ExpressionIRef
 
