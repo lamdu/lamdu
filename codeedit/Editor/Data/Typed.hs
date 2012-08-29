@@ -257,7 +257,7 @@ LensTH.makeLenses ''MergeExprState
 runEither :: EitherT l Identity a -> Either l a
 runEither = runIdentity . runEitherT
 
-guardEither :: Monad m => l -> Bool -> EitherT l m ()
+guardEither :: l -> Bool -> EitherT l Identity ()
 guardEither err False = Either.left err
 guardEither _ True = return ()
 
