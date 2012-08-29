@@ -370,36 +370,36 @@ setRefExprPure :: Monad m => Ref -> Data.PureExpression -> InferT m ()
 setRefExprPure ref = setRefExpr ref . refExprFromPure
 
 addNodeRules :: Monad m => Data.Expression InferNode -> InferT m ()
-addNodeRules (Data.Expression g exprBody (InferNode typedVal scope)) = do
+addNodeRules (Data.Expression g exprBody (InferNode typedVal scope)) =
   case fmap (nRefs . Data.ePayload) exprBody of
-    Data.ExpressionPi lambda@(Data.Lambda _ resultType) -> do
-      setRefExprPure (tvType resultType) setExpr
-      onLambda Data.ExpressionPi maybePi lambda
-    Data.ExpressionLambda lambda@(Data.Lambda _ body) -> do
-      -- Lambda body type -> Lambda type (result)
-      addRule . Rule [tvType body] $ \[bodyType] ->
-        [( tvType typedVal
-         , makeRefExpression g $ Data.makePi (makeHole "paramType" g) bodyType
-         )]
-      -- Lambda Type (result) -> Body Type
-      addRule . Rule [tvType typedVal] $ \[lamType] -> case lamType of
-        Data.Expression piG
-          (Data.ExpressionPi (Data.Lambda _ resultType)) _ ->
-            [(tvType body
-             , subst piG
-               ( makeRefExpression (Guid.fromString "getVar")
-                 (Data.makeParameterRef g)
-               )
-               resultType
-             )]
-        _ -> []
-      onLambda Data.ExpressionLambda maybeLambda lambda
-    Data.ExpressionApply apply -> addApplyRules g typedVal apply
-    Data.ExpressionLeaf (Data.GetVariable var) ->
-      case Map.lookup var scope of
-      Nothing -> return ()
-      Just ref -> addUnionRule ref $ tvType typedVal
-    _ -> return ()
+  Data.ExpressionPi lambda@(Data.Lambda _ resultType) -> do
+    setRefExprPure (tvType resultType) setExpr
+    onLambda Data.ExpressionPi maybePi lambda
+  Data.ExpressionLambda lambda@(Data.Lambda _ body) -> do
+    -- Lambda body type -> Lambda type (result)
+    addRule . Rule [tvType body] $ \[bodyType] ->
+      [( tvType typedVal
+       , makeRefExpression g $ Data.makePi (makeHole "paramType" g) bodyType
+       )]
+    -- Lambda Type (result) -> Body Type
+    addRule . Rule [tvType typedVal] $ \[lamType] -> case lamType of
+      Data.Expression piG
+        (Data.ExpressionPi (Data.Lambda _ resultType)) _ ->
+          [(tvType body
+           , subst piG
+             ( makeRefExpression (Guid.fromString "getVar")
+               (Data.makeParameterRef g)
+             )
+             resultType
+           )]
+      _ -> []
+    onLambda Data.ExpressionLambda maybeLambda lambda
+  Data.ExpressionApply apply -> addApplyRules g typedVal apply
+  Data.ExpressionLeaf (Data.GetVariable var) ->
+    case Map.lookup var scope of
+    Nothing -> return ()
+    Just ref -> addUnionRule ref $ tvType typedVal
+  _ -> return ()
   where
     addUnionRule x y = do
       addRule . Rule [x] $ \[xExpr] -> [(y, xExpr)]
@@ -443,12 +443,12 @@ addRule rule = do
       return ruleId
     addRuleId ruleId ref = liftState $ refMapAt ref . rRules %= (ruleId :)
 
-nodeFromEntity ::
+loadNode ::
   Monad m =>
   Loader m -> Scope ->
   Data.Expression s -> TypedValue ->
   InferT m (Data.Expression (s, InferNode))
-nodeFromEntity loader scope entity typedValue = do
+loadNode loader scope entity typedValue = do
   setInitialValues
   bodyWithChildrenTvs <- Traversable.mapM addTypedVal $ Data.eValue entity
   exprBody <-
@@ -467,7 +467,7 @@ nodeFromEntity loader scope entity typedValue = do
       let paramRef = Data.ParameterRef $ Data.eGuid entity
       liftM (cons . Data.Lambda paramTypeR) $
         go (Map.insert paramRef (tvVal paramTypeTv)) result
-    go onScope = uncurry . nodeFromEntity loader $ onScope scope
+    go onScope = uncurry . loadNode loader $ onScope scope
     addTypedVal x =
       liftM ((,) x) createTypedVal
     initializeRefData ref expr = liftState $
@@ -674,7 +674,7 @@ inferFromEntity
             liftState $ Lens.use (sRefMap . refMap . IntMapLens.at (unRef k))
         rootValMRefData <- getMRefData rootValR
         rootTypMRefData <- getMRefData rootTypR
-        node <- nodeFromEntity loader scope expression rootTv
+        node <- loadNode loader scope expression rootTv
         restoreRoot rootValR rootValMRefData
         restoreRoot rootTypR rootTypMRefData
         addRules (isJust rootValMRefData) $ fmap snd node
