@@ -31,7 +31,7 @@ loadPureDefinition
   :: Monad m
   => Data.DefinitionIRef
   -> T m (Data.Definition Data.PureExpression)
-loadPureDefinition defI = do
+loadPureDefinition defI =
   Traversable.mapM loadPureExpression =<< Transaction.readIRef defI
 
 loadPureDefinitionType :: Monad m => Data.DefinitionIRef -> T m Data.PureExpression

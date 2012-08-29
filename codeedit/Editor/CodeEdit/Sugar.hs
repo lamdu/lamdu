@@ -799,7 +799,7 @@ convertStoredExpression ::
   Monad m =>
   SugarContext -> Data.Expression (ExprEntityStored m) ->
   T m (ExpressionRef m)
-convertStoredExpression sugarContext exprStored = do
+convertStoredExpression sugarContext exprStored =
   runSugar sugarContext . convertExpressionI $
     fmap Just exprStored
 
