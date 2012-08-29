@@ -7,6 +7,7 @@ import Control.Monad (guard)
 import Data.Binary (Binary(..))
 import Data.Binary.Get (getByteString)
 import Data.Binary.Put (putByteString)
+import Data.Binary.Utils (encodeS)
 import Data.ByteString.Utils (randomBS, xorBS)
 import Data.Hashable (hash)
 import Data.Maybe (fromMaybe)
@@ -18,7 +19,6 @@ import System.Random (Random(..), split)
 import qualified Data.ByteString as SBS
 import qualified Data.ByteString.UTF8 as UTF8
 import qualified Data.Char as Char
-import qualified System.Random as Random
 
 newtype Guid = Guid { bs :: SBS.ByteString }
   deriving (Eq, Ord, Read)
@@ -87,6 +87,5 @@ combine :: Guid -> Guid -> Guid
 combine x y =
   inGuid (rbs x . rbs y) xorGuid
   where
-    rbs = xorBS . SBS.pack . take length . Random.randoms . toStdGen
+    rbs = xorBS . encodeS . hash . bs
     xorGuid = inGuid2 xorBS x y
-    toStdGen = Random.mkStdGen . hash . bs
