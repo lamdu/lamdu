@@ -121,13 +121,15 @@ makeHole :: String -> Guid -> RefExpression
 makeHole s g =
   makeRefExpression (augmentGuid s g) $ Data.ExpressionLeaf Data.Hole
 
-setExpr :: Data.PureExpression
+setExpr :: RefExpression
 setExpr =
-  Data.pureExpression (Guid.fromString "SettySet") $ Data.ExpressionLeaf Data.Set
+  makeRefExpression (Guid.fromString "SettySet") $
+  Data.ExpressionLeaf Data.Set
 
-intTypeExpr :: Data.PureExpression
+intTypeExpr :: RefExpression
 intTypeExpr =
-  Data.pureExpression (Guid.fromString "IntyInt") $ Data.ExpressionLeaf Data.IntegerType
+  makeRefExpression (Guid.fromString "IntyInt") $
+  Data.ExpressionLeaf Data.IntegerType
 
 data RefMap = RefMap
   { _refMap :: IntMap RefData
@@ -366,14 +368,11 @@ setRefExpr ref newExpr = do
       isJust $ Traversable.sequence =<< Data.matchExpression compareSubsts x y
     compareSubsts x y = guard $ (x ^. pSubstitutedArgs) == (y ^. pSubstitutedArgs)
 
-setRefExprPure :: Monad m => Ref -> Data.PureExpression -> InferT m ()
-setRefExprPure ref = setRefExpr ref . refExprFromPure
-
 addNodeRules :: Monad m => Data.Expression InferNode -> InferT m ()
 addNodeRules (Data.Expression g exprBody (InferNode typedVal scope)) =
   case fmap (nRefs . Data.ePayload) exprBody of
   Data.ExpressionPi lambda@(Data.Lambda _ resultType) -> do
-    setRefExprPure (tvType resultType) setExpr
+    addSetRule $ tvType resultType
     onLambda Data.ExpressionPi maybePi lambda
   Data.ExpressionLambda lambda@(Data.Lambda _ body) -> do
     -- Lambda body type -> Lambda type (result)
@@ -401,11 +400,12 @@ addNodeRules (Data.Expression g exprBody (InferNode typedVal scope)) =
     Just ref -> addUnionRule ref $ tvType typedVal
   _ -> return ()
   where
+    addSetRule ref = addRule . Rule [] $ \[] -> [(ref, setExpr)]
     addUnionRule x y = do
       addRule . Rule [x] $ \[xExpr] -> [(y, xExpr)]
       addRule . Rule [y] $ \[yExpr] -> [(x, yExpr)]
     onLambda cons uncons (Data.Lambda paramType result) = do
-      setRefExprPure (tvType paramType) setExpr
+      addSetRule $ tvType paramType
       -- Copy the structure from the parent to the paramType and
       -- result
       addRule . Rule [tvVal typedVal] $ \[expr] ->
@@ -537,10 +537,10 @@ ruleSimpleType :: TypedValue -> Rule
 ruleSimpleType (TypedValue val typ) =
   Rule [val] $ \[valExpr] -> case valExpr of
     Data.Expression g valExprBody _ -> case valExprBody of
-      Data.ExpressionLeaf Data.Set -> [(typ, refExprFromPure setExpr)]
-      Data.ExpressionLeaf Data.IntegerType -> [(typ, refExprFromPure setExpr)]
-      Data.ExpressionLeaf (Data.LiteralInteger _) -> [(typ, refExprFromPure intTypeExpr)]
-      Data.ExpressionPi _ -> [(typ, refExprFromPure setExpr)]
+      Data.ExpressionLeaf Data.Set -> [(typ, setExpr)]
+      Data.ExpressionLeaf Data.IntegerType -> [(typ, setExpr)]
+      Data.ExpressionLeaf (Data.LiteralInteger _) -> [(typ, intTypeExpr)]
+      Data.ExpressionPi _ -> [(typ, setExpr)]
       Data.ExpressionLambda (Data.Lambda paramType _) ->
         [( typ
          , makeRefExpression g . Data.makePi paramType $
