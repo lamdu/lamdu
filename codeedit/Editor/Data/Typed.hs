@@ -142,7 +142,8 @@ data RefMap = RefMap
 
 data InferState = InferState
   { _sRefMap :: RefMap
-  , _sRulesQueue :: IntSet
+  , _sBfsNextLayer :: IntSet
+  , _sBfsCurLayer :: IntSet
   }
 
 -- Map from params to their Param type,
@@ -612,7 +613,7 @@ load
 
 postProcess ::
   (Data.Expression (a, InferNode), InferState) -> (Expression a, RefMap)
-postProcess (expr, InferState resultRefMap _) =
+postProcess (expr, InferState resultRefMap _ _) =
   (fmap derefNode expr, resultRefMap)
   where
     derefNode (s, inferNode) =
@@ -632,7 +633,7 @@ addRule :: Rule -> State InferState ()
 addRule rule = do
   ruleId <- makeRule
   mapM_ (addRuleId ruleId) $ ruleInputs rule
-  sRulesQueue . IntSetLens.contains ruleId .= True
+  sBfsNextLayer . IntSetLens.contains ruleId .= True
   where
     makeRule = do
       ruleId <- Lens.use (sRefMap . nextRule)
@@ -679,18 +680,27 @@ infer actions (Loaded expr loadedRefMap (rootValMRefData, rootTypMRefData)) =
     return expr
   where
     ruleInferState =
-      (`execState` InferState loadedRefMap mempty) . mapM_ addRule .
+      (`execState` InferState loadedRefMap mempty mempty) .
+      mapM_ addRule .
       makeRules (isJust rootValMRefData) $ fmap snd expr
     TypedValue rootValR rootTypR = nRefs . snd $ Data.ePayload expr
     restoreRoot _ Nothing = return ()
     restoreRoot ref (Just (RefData refExpr refRules)) = do
       liftState $ refMapAt ref . rRules %= (refRules ++)
       setRefExpr ref refExpr
-    go = maybe (return ()) goOn =<< popRuleFromQueue
-    goOn (Rule deps ruleAction) = do
+    go = do
+      curLayer <- liftState $ Lens.use sBfsNextLayer
+      liftState $ sBfsCurLayer .= curLayer
+      liftState $ sBfsNextLayer .= IntSet.empty
+      (when . not) (IntSet.null curLayer) $ do
+        mapM_ processRule $ IntSet.toList curLayer
+        go
+    processRule key = do
+      liftState $ sBfsCurLayer . IntSetLens.contains key .= False
+      Just (Rule deps ruleAction) <-
+        liftState $ Lens.use (sRefMap . rules . IntMapLens.at key)
       refExps <- mapM getRefExpr deps
       mapM_ (uncurry setRefExpr) $ ruleAction refExps
-      go
 
 {-# SPECIALIZE
   infer :: InferActions Maybe -> Loaded a -> Maybe (Expression a, RefMap) #-}
@@ -732,23 +742,15 @@ setRefExpr ref newExpr = do
 {-# SPECIALIZE setRefExpr :: Ref -> RefExpression -> InferT Maybe () #-}
 {-# SPECIALIZE setRefExpr :: Monoid w => Ref -> RefExpression -> InferT (Writer w) () #-}
 
-popRuleFromQueue :: Monad m => InferT m (Maybe Rule)
-popRuleFromQueue = do
-  rulesQueue <- liftState $ Lens.use sRulesQueue
-  case IntSet.minView rulesQueue of
-    Nothing -> return Nothing
-    Just (ruleKey, newRulesQueue) ->
-      liftState $ do
-        sRulesQueue .= newRulesQueue
-        Lens.use (sRefMap . rules . IntMapLens.at ruleKey)
-
-{-# SPECIALIZE popRuleFromQueue :: InferT Maybe (Maybe Rule) #-}
-{-# SPECIALIZE popRuleFromQueue :: Monoid w => InferT (Writer w) (Maybe Rule) #-}
-
 touch :: Monad m => Ref -> InferT m ()
 touch ref =
-  liftState $
-  (sRulesQueue %=) . mappend . IntSet.fromList =<< Lens.use (refMapAt ref . rRules)
+  liftState $ do
+    nodeRules <- Lens.use (refMapAt ref . rRules)
+    curLayer <- Lens.use sBfsCurLayer
+    sBfsNextLayer %=
+      ( mappend . IntSet.fromList
+      . filter (not . (`IntSet.member` curLayer))
+      ) nodeRules
 
 {-# SPECIALIZE touch :: Ref -> InferT Maybe () #-}
 {-# SPECIALIZE touch :: Monoid w => Ref -> InferT (Writer w) () #-}
