@@ -3,6 +3,7 @@
 module Utils where
 
 import Control.Arrow (first)
+import Control.Monad (void)
 import Data.Hashable (hash)
 import Data.Map (Map, (!))
 import Data.Maybe (fromMaybe)
@@ -144,7 +145,38 @@ doInferM refMap inferNode mDefRef mResumedRoot expr =
       Typed.inferFromEntity loader (Typed.InferActions reportError)
       refMap inferNode mDefRef expr
     reportError err = Writer.tell [(Typed.errRef err, err)]
-    loader = Typed.Loader (return . (definitionTypes !) . IRef.guid)
+
+loader :: Monad m => Typed.Loader m
+loader = Typed.Loader (return . (definitionTypes !) . IRef.guid)
 
 doInfer :: Data.PureExpression -> (Typed.Expression (), Typed.RefMap)
 doInfer = uncurry doInferM Typed.initial Nothing Nothing
+
+factorialExpr :: Data.PureExpression
+factorialExpr =
+  Data.canonizeGuids .
+  makeLambda "x" hole $
+  makeApply
+  [ getDefExpr "if"
+  , hole
+  , makeApply [getDefExpr "==", getParamExpr "x", literalInt 0]
+  , literalInt 1
+  , makeApply
+    [ getDefExpr "*"
+    , getParamExpr "x"
+    , makeApply
+      [ mkExpr "recurse" $ Data.makeDefinitionRef factorialDefI
+      , makeApply [getDefExpr "-", getParamExpr "x", literalInt 1]
+      ]
+    ]
+  ]
+
+factorialDefI :: Data.DefinitionIRef
+factorialDefI = IRef.unsafeFromGuid $ Guid.fromString "factorial"
+
+factorial :: Int -> (Typed.Expression (), Typed.RefMap)
+factorial gen =
+  fromMaybe (error "Conflicts in factorial infer") .
+  uncurry (Typed.inferFromEntity loader (Typed.InferActions (const Nothing)))
+  Typed.initial (Just factorialDefI) . void $
+  fmap (const gen) factorialExpr
