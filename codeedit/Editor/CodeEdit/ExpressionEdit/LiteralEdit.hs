@@ -9,6 +9,7 @@ import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.MonadF(MonadF)
 import Editor.OTransaction (OTransaction)
 import Graphics.UI.Bottle.Animation (AnimId)
+import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Char as Char
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -21,16 +22,16 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 
-setColor :: Monad m => OTransaction t m a -> OTransaction t m a
-setColor = BWidgets.setTextColor Config.literalIntColor
+setColor :: Widget f -> Widget f
+setColor = Widget.tint Config.literalIntColor
 
 makeIntView
   :: Monad m
   => AnimId -> Integer
   -> OTransaction ViewTag m (ExpressionGui m)
 makeIntView myId integer =
-  liftM ExpressionGui.fromValueWidget .
-  setColor $ BWidgets.makeTextView (show integer) myId
+  liftM (ExpressionGui.fromValueWidget . setColor) $
+  BWidgets.makeTextView (show integer) myId
 
 makeIntEdit
   :: Monad m
@@ -92,5 +93,7 @@ makeInt
   -> Widget.Id
   -> OTransaction ViewTag m (ExpressionGui m)
 makeInt integer =
-  BWidgets.wrapDelegated literalFDConfig FocusDelegator.NotDelegating ExpressionGui.atEgWidget
-  (setColor . makeIntEdit integer)
+  BWidgets.wrapDelegated literalFDConfig
+  FocusDelegator.NotDelegating ExpressionGui.atEgWidget
+  ((liftM . ExpressionGui.atEgWidget) setColor .
+   makeIntEdit integer)

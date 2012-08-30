@@ -35,7 +35,7 @@ makeParamNameEdit
   -> OTransaction t m (WidgetT t m)
 makeParamNameEdit ident =
   BWidgets.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
-  (BWidgets.setTextColor Config.parameterColor .
+  (liftM (Widget.tint Config.parameterColor) .
    BWidgets.makeNameEdit ident) $ WidgetIds.fromGuid ident
 
 addJumpToRHS

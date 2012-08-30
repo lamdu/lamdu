@@ -10,7 +10,6 @@ module Editor.BottleWidgets
   , hbox, vbox
   , gridHSpaced, gridHSpacedCentered
   , spaceView, spaceWidget
-  , setTextColor
   , empty
   ) where
 
@@ -191,9 +190,6 @@ hboxCenteredSpaced = hboxAlign 0.5 . intersperse spaceWidget
 
 spaceView :: (Anim.Size, Anim.Frame)
 spaceView = Spacer.makeHorizontal 20
-
-setTextColor :: Monad m => Draw.Color -> OTransaction t m a -> OTransaction t m a
-setTextColor = OT.atTextStyle . TextEdit.atSTextViewStyle . TextView.atStyleColor . const
 
 gridHSpaced :: [[(Grid.Alignment, Widget f)]] -> Widget f
 gridHSpaced = Grid.toWidget . Grid.make . map (intersperse (0, spaceWidget))

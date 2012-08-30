@@ -1,5 +1,6 @@
 module Editor.CodeEdit.BuiltinEdit(make) where
 
+import Control.Monad (liftM)
 import Data.List.Split (splitOn)
 import Data.Store.Property (Property(..))
 import Editor.Anchors (ViewTag)
@@ -39,7 +40,7 @@ make (Sugar.DefinitionBuiltin (Data.FFIName modulePath name) setFFIName) myId =
     return $ BWidgets.hboxCentered [moduleName, dot, varName]
   where
     makeNamePartEditor color namePartStr mSetter makeWidgetId =
-      BWidgets.setTextColor color .
+      liftM (Widget.tint color) .
       BWidgets.wrapDelegated builtinFDConfig FocusDelegator.NotDelegating id
       (maybe
        (BWidgets.makeTextView namePartStr . Widget.toAnimId)
