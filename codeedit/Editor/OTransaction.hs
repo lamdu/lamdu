@@ -73,22 +73,24 @@ runOTransaction cursor style (OTransaction action) =
   where
     f (x, _, _) = x
 
+generateNewName :: Monad m => Guid -> OTransaction t m String
+generateNewName guid = do
+  nameGen <- OTransaction RWS.get
+  let (name : nextNames) = ngUnusedNames nameGen
+  OTransaction $ RWS.put nameGen
+    { ngUnusedNames = nextNames
+    , ngUsedNames = Map.insert guid name $ ngUsedNames nameGen
+    }
+  return name
+
 getName :: Monad m => Guid -> OTransaction t m String
 getName guid = do
   storedName <- transaction . Anchors.getP $ Anchors.assocNameRef guid
   -- TODO: maybe use Maybe?
   if null storedName
-    then do
-      nameGen <- OTransaction RWS.get
-      case Map.lookup guid (ngUsedNames nameGen) of
-        Just x -> return x
-        Nothing -> do
-          let (name : nextNames) = ngUnusedNames nameGen
-          OTransaction $ RWS.put nameGen
-            { ngUnusedNames = nextNames
-            , ngUsedNames = Map.insert guid name $ ngUsedNames nameGen
-            }
-          return name
+    then
+      maybe (generateNewName guid) return =<<
+      (OTransaction . RWS.gets) (Map.lookup guid . ngUsedNames)
     else return storedName
 
 markVariablesAsUsed :: Monad m => [Guid] -> OTransaction t m ()
