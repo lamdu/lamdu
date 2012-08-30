@@ -158,7 +158,7 @@ makeNoResults myId =
 makeResultVariable ::
   MonadF m => (Guid, Data.VariableRef) -> OTransaction ViewTag m Result
 makeResultVariable (guid, varRef) = do
-  varName <- OT.getName guid
+  varName <- liftM snd $ OT.getName guid
   return Result
     { resultNames = [varName]
     , resultExpr = toPureExpr . Data.ExpressionLeaf $ Data.GetVariable varRef

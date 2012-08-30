@@ -27,8 +27,10 @@ makeView
   -> Widget.Id
   -> OTransaction ViewTag m (ExpressionGui m)
 makeView var myId = do
-  name <- OT.getName $ Sugar.gvGuid var
-  liftM ExpressionGui.fromValueWidget .
+  (nameSrc, name) <- OT.getName $ Sugar.gvGuid var
+  liftM
+    (ExpressionGui.fromValueWidget .
+     BWidgets.nameSrcTint nameSrc) .
     BWidgets.setTextColor (colorOf var) $
     BWidgets.makeFocusableTextView name myId
 
