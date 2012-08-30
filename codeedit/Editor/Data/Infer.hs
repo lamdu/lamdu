@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveFunctor, GeneralizedNewtypeDeriving, TemplateHaskell #-}
-module Editor.Data.Typed
+module Editor.Data.Infer
   ( Expression, Inferred(..), rExpression
   , Loaded, load, infer
   , InferNode(..), TypedValue(..)

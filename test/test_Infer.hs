@@ -1,5 +1,5 @@
 import Test.Framework.Providers.HUnit (hUnitTestToTests)
-import TypedTests (allTests)
+import InferTests (allTests)
 import qualified Test.Framework as TestFramework
 
 main :: IO ()

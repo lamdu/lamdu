@@ -47,9 +47,9 @@ import qualified Editor.Anchors as Anchors
 import qualified Editor.CodeEdit.Infix as Infix
 import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
-import qualified Editor.Data.Load as DataLoad
+import qualified Editor.Data.Load as Load
 import qualified Editor.Data.Ops as DataOps
-import qualified Editor.Data.Typed as DataTyped
+import qualified Editor.Data.Infer as Infer
 import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
 
@@ -199,7 +199,7 @@ AtFieldTH.make ''Actions
 AtFieldTH.make ''FuncParamActions
 
 data ExprEntityStored m = ExprEntityStored
-  { eesInferred :: DataTyped.Inferred (DataIRef.ExpressionProperty (T m))
+  { eesInferred :: Infer.Inferred (DataIRef.ExpressionProperty (T m))
   , eesTypeConflicts :: [Data.PureExpression]
   , eesValueConflicts :: [Data.PureExpression]
   }
@@ -207,20 +207,20 @@ data ExprEntityStored m = ExprEntityStored
 type ExprEntity m = Data.Expression (Maybe (ExprEntityStored m))
 
 eeProp :: ExprEntity m -> Maybe (DataIRef.ExpressionProperty (T m))
-eeProp = fmap (DataTyped.iStored . eesInferred) . Data.ePayload
+eeProp = fmap (Infer.iStored . eesInferred) . Data.ePayload
 
 eeFromPure :: Data.PureExpression -> ExprEntity m
 eeFromPure = fmap $ const Nothing
 
 newtype ConflictMap =
-  ConflictMap { unConflictMap :: Map DataTyped.Ref (Set Data.PureExpression) }
+  ConflictMap { unConflictMap :: Map Infer.Ref (Set Data.PureExpression) }
 
 instance Monoid ConflictMap where
   mempty = ConflictMap mempty
   mappend (ConflictMap x) (ConflictMap y) =
     ConflictMap $ Map.unionWith mappend x y
 
-getConflicts :: DataTyped.Ref -> ConflictMap -> [Data.PureExpression]
+getConflicts :: Infer.Ref -> ConflictMap -> [Data.PureExpression]
 getConflicts ref = maybe [] Set.toList . Map.lookup ref . unConflictMap
 
 argument :: (a -> b) -> (b -> c) -> a -> c
@@ -240,7 +240,7 @@ writeIRefVia
 writeIRefVia f = (fmap . argument) f writeIRef
 
 newtype SugarContext = SugarContext
-  { scInferState :: DataTyped.RefMap
+  { scInferState :: Infer.RefMap
   }
 AtFieldTH.make ''SugarContext
 
@@ -583,36 +583,36 @@ convertReadOnlyHole exprI =
   , holeInferResults = mempty
   }
 
-loader :: Monad m => DataTyped.Loader (T m)
-loader = DataTyped.Loader DataLoad.loadPureDefinitionType
+loader :: Monad m => Infer.Loader (T m)
+loader = Infer.Loader Load.loadPureDefinitionType
 
 convertWritableHole :: Monad m => ExprEntityStored m -> Convertor m
 convertWritableHole stored exprI = do
   inferState <- liftM scInferState readContext
   let
     checkAndFillHoles expr =
-      (liftM . fmap) (DataTyped.iValue . Data.ePayload) .
+      (liftM . fmap) (Infer.iValue . Data.ePayload) .
       inferExpr expr inferState .
-      DataTyped.iPoint $ eesInferred stored
+      Infer.iPoint $ eesInferred stored
 
     filledHolesApplyForms _ Nothing = mzero
     filledHolesApplyForms expr (Just inferred) =
       List.catMaybes . List.mapL checkAndFillHoles . List.fromList $
-      applyForms (DataTyped.iType (Data.ePayload inferred)) expr
+      applyForms (Infer.iType (Data.ePayload inferred)) expr
 
     inferResults expr =
       List.joinL . liftM (filledHolesApplyForms expr) $
       uncurry (inferExpr expr) .
-      DataTyped.newNodeWithScope
-      ((DataTyped.nScope . DataTyped.iPoint . eesInferred) stored) $
+      Infer.newNodeWithScope
+      ((Infer.nScope . Infer.iPoint . eesInferred) stored) $
       inferState
-  mPaste <- mkPaste . DataTyped.iStored $ eesInferred stored
+  mPaste <- mkPaste . Infer.iStored $ eesInferred stored
   let
     onScopeElement (lambdaGuid, _typeExpr) =
       (lambdaGuidToParamGuid lambdaGuid, Data.ParameterRef lambdaGuid)
     hole = Hole
-      { holeScope = map onScopeElement . Map.toList . DataTyped.iScope $ eesInferred stored
-      , holePickResult = Just . pickResult . DataTyped.iStored $ eesInferred stored
+      { holeScope = map onScopeElement . Map.toList . Infer.iScope $ eesInferred stored
+      , holePickResult = Just . pickResult . Infer.iStored $ eesInferred stored
       , holePaste = mPaste
       , holeInferResults = inferResults
       }
@@ -625,10 +625,10 @@ convertWritableHole stored exprI = do
       convertExpressionI . eeFromPure $ Data.randomizeGuids (mkGen 1 2 eGuid) x
     _ -> return $ ExpressionHole hole
   where
-    actions = DataTyped.InferActions $ const Nothing
+    actions = Infer.InferActions $ const Nothing
     inferExpr expr inferContext inferPoint =
-      liftM (fmap fst . DataTyped.infer actions) $
-      DataTyped.load loader inferContext inferPoint Nothing expr
+      liftM (fmap fst . Infer.infer actions) $
+      Infer.load loader inferContext inferPoint Nothing expr
     pickResult irefP =
       liftM (maybe eGuid Data.eGuid . listToMaybe . holes) .
       DataIRef.writeExpressionFromPure (Property.value irefP)
@@ -688,22 +688,22 @@ convertExpressionPure =
   where
     ctx = SugarContext $ error "pure expression doesnt have infer state"
 
-reportError :: DataTyped.Error -> Writer ConflictMap ()
+reportError :: Infer.Error -> Writer ConflictMap ()
 reportError err =
   Writer.tell . ConflictMap .
-  Map.singleton (DataTyped.errRef err) .
+  Map.singleton (Infer.errRef err) .
   Set.singleton . Data.canonizeGuids .
-  snd $ DataTyped.errMismatch err
+  snd $ Infer.errMismatch err
 
 loadConvertExpression ::
   Monad m => DataIRef.ExpressionProperty (T m) -> T m (ExpressionRef m)
 loadConvertExpression exprP =
-  convertLoadedExpression Nothing =<< DataLoad.loadExpression exprP
+  convertLoadedExpression Nothing =<< Load.loadExpression exprP
 
 loadConvertDefinition ::
   Monad m => Data.DefinitionIRef -> T m (DefinitionRef m)
 loadConvertDefinition defI = do
-  Data.Definition defBody typeL <- DataLoad.loadDefinition defI
+  Data.Definition defBody typeL <- Load.loadDefinition defI
   let typeP = void typeL
   body <-
     case defBody of
@@ -725,7 +725,7 @@ loadConvertDefinition defI = do
       exprS <- convertStoredExpression sugarContext exprStored
       let
         inferredTypeP =
-          DataTyped.iType . eesInferred $ Data.ePayload exprStored
+          Infer.iType . eesInferred $ Data.ePayload exprStored
         typesMatch = on (==) Data.canonizeGuids typeP inferredTypeP
         mkNewType = do
           inferredTypeS <-
@@ -763,25 +763,25 @@ inferLoadedExpression ::
    SugarContext,
    Data.Expression (ExprEntityStored m))
 inferLoadedExpression mDefI exprL = do
-  loaded <- uncurry (DataTyped.load loader) DataTyped.initial mDefI exprL
+  loaded <- uncurry (Infer.load loader) Infer.initial mDefI exprL
   let
     ((exprInferred, inferContext), conflictsMap) =
-      runWriter $ DataTyped.infer actions loaded
+      runWriter $ Infer.infer actions loaded
     toExprEntity x =
       ExprEntityStored
       { eesInferred = x
-      , eesValueConflicts = conflicts DataTyped.tvVal x
-      , eesTypeConflicts = conflicts DataTyped.tvType x
+      , eesValueConflicts = conflicts Infer.tvVal x
+      , eesTypeConflicts = conflicts Infer.tvType x
       }
     conflicts getRef x =
-      getConflicts ((getRef . DataTyped.nRefs . DataTyped.iPoint) x)
+      getConflicts ((getRef . Infer.nRefs . Infer.iPoint) x)
       conflictsMap
   return
     ( Map.null $ unConflictMap conflictsMap
     , SugarContext inferContext, fmap toExprEntity exprInferred
     )
   where
-    actions = DataTyped.InferActions reportError
+    actions = Infer.InferActions reportError
 
 convertLoadedExpression ::
   Monad m =>
@@ -801,12 +801,12 @@ convertStoredExpression sugarContext exprStored =
     fmap Just exprStored
 
 eesInferredExprs ::
-  (DataTyped.Inferred (DataIRef.ExpressionProperty (T m)) -> a)
+  (Infer.Inferred (DataIRef.ExpressionProperty (T m)) -> a)
   -> (ExprEntityStored m -> [a]) -> ExprEntityStored m -> [a]
 eesInferredExprs getVal eeConflicts ee = getVal (eesInferred ee) : eeConflicts ee
 
 eesInferredTypes :: ExprEntityStored m -> [Data.PureExpression]
-eesInferredTypes = eesInferredExprs DataTyped.iType eesTypeConflicts
+eesInferredTypes = eesInferredExprs Infer.iType eesTypeConflicts
 
 eesInferredValues :: ExprEntityStored m -> [Data.PureExpression]
-eesInferredValues = eesInferredExprs DataTyped.iValue eesValueConflicts
+eesInferredValues = eesInferredExprs Infer.iValue eesValueConflicts

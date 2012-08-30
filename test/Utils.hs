@@ -16,7 +16,7 @@ import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Editor.Data as Data
-import qualified Editor.Data.Typed as Typed
+import qualified Editor.Data.Infer as Infer
 import qualified System.Random as Random
 
 data Invisible = Invisible
@@ -66,8 +66,8 @@ getParamExpr name =
 
 data ConflictsAnnotation =
   ConflictsAnnotation
-  (Data.PureExpression, [Typed.Error])
-  (Data.PureExpression, [Typed.Error])
+  (Data.PureExpression, [Infer.Error])
+  (Data.PureExpression, [Infer.Error])
 
 ansiRed :: String
 ansiRed = "\ESC[31m"
@@ -78,17 +78,17 @@ showExpressionWithConflicts :: Data.Expression ConflictsAnnotation -> String
 showExpressionWithConflicts =
   List.intercalate "\n" . go
   where
-    go typedExpr =
-      [ "Expr: " ++ show (Data.eGuid typedExpr) ++ ":" ++ showStructure expr
+    go inferredExpr =
+      [ "Expr: " ++ show (Data.eGuid inferredExpr) ++ ":" ++ showStructure expr
       , "  IVal:  " ++ show val
       ] ++ map ((("    " ++ ansiRed ++ "Conflict: ") ++) . (++ ansiReset) . show) vErrors ++
       [ "  IType: " ++ show typ
       ] ++ map ((("    " ++ ansiRed ++ "Conflict: ") ++) . (++ ansiReset) . show) tErrors ++
       (map ("  " ++) . Foldable.concat . fmap go) expr
       where
-        expr = Data.eValue typedExpr
+        expr = Data.eValue inferredExpr
         ConflictsAnnotation (val, vErrors) (typ, tErrors) =
-          Data.ePayload typedExpr
+          Data.ePayload inferredExpr
 
 definitionTypes :: Map Guid Data.PureExpression
 definitionTypes =
@@ -122,10 +122,10 @@ lookupMany :: Eq a => a -> [(a, b)] -> [b]
 lookupMany x = map snd . filter ((== x) . fst)
 
 doInferM ::
-  Typed.RefMap -> Typed.InferNode -> Maybe Data.DefinitionIRef ->
-  Maybe (Typed.Expression ()) ->
+  Infer.RefMap -> Infer.InferNode -> Maybe Data.DefinitionIRef ->
+  Maybe (Infer.Expression ()) ->
   Data.PureExpression ->
-  (Typed.Expression (), Typed.RefMap)
+  (Infer.Expression (), Infer.RefMap)
 doInferM refMap inferNode mDefRef mResumedRoot expr =
   case conflicts of
     [] -> result
@@ -136,22 +136,22 @@ doInferM refMap inferNode mDefRef mResumedRoot expr =
   where
     addConflicts inferred =
       ConflictsAnnotation
-      (Typed.iValue inferred, lookupMany valRef conflicts)
-      (Typed.iType inferred, lookupMany typRef conflicts)
+      (Infer.iValue inferred, lookupMany valRef conflicts)
+      (Infer.iType inferred, lookupMany typRef conflicts)
       where
-        Typed.TypedValue valRef typRef = Typed.nRefs $ Typed.iPoint inferred
+        Infer.TypedValue valRef typRef = Infer.nRefs $ Infer.iPoint inferred
     root = fromMaybe inferredExpr mResumedRoot
-    actions = Typed.InferActions reportError
-    loaded = runIdentity $ Typed.load loader refMap inferNode mDefRef expr
+    actions = Infer.InferActions reportError
+    loaded = runIdentity $ Infer.load loader refMap inferNode mDefRef expr
     (result@(inferredExpr, _), conflicts) =
-      Writer.runWriter $ Typed.infer actions loaded
-    reportError err = Writer.tell [(Typed.errRef err, err)]
+      Writer.runWriter $ Infer.infer actions loaded
+    reportError err = Writer.tell [(Infer.errRef err, err)]
 
-loader :: Monad m => Typed.Loader m
-loader = Typed.Loader (return . (definitionTypes !) . IRef.guid)
+loader :: Monad m => Infer.Loader m
+loader = Infer.Loader (return . (definitionTypes !) . IRef.guid)
 
-doInfer :: Data.PureExpression -> (Typed.Expression (), Typed.RefMap)
-doInfer = uncurry doInferM Typed.initial Nothing Nothing
+doInfer :: Data.PureExpression -> (Infer.Expression (), Infer.RefMap)
+doInfer = uncurry doInferM Infer.initial Nothing Nothing
 
 factorialExpr :: Data.PureExpression
 factorialExpr =
@@ -175,12 +175,12 @@ factorialExpr =
 factorialDefI :: Data.DefinitionIRef
 factorialDefI = IRef.unsafeFromGuid $ Guid.fromString "factorial"
 
-factorial :: Int -> (Typed.Expression (), Typed.RefMap)
+factorial :: Int -> (Infer.Expression (), Infer.RefMap)
 factorial gen =
   fromMaybe (error "Conflicts in factorial infer") $
-  Typed.infer (Typed.InferActions (const Nothing)) loaded
+  Infer.infer (Infer.InferActions (const Nothing)) loaded
   where
     loaded =
       runIdentity .
-      uncurry (Typed.load loader) Typed.initial (Just factorialDefI) .
+      uncurry (Infer.load loader) Infer.initial (Just factorialDefI) .
       void $ fmap (const gen) factorialExpr

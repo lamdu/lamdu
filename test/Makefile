@@ -1,21 +1,21 @@
-all: run_test_typed
+all: run_test_infer
 
-build: build_test_typed build_benchmark_typed build_profile_typed
+build: build_test_infer build_benchmark_infer build_profile_infer
 
-run_test_typed: build_test_typed
-	./test_Typed
+run_test_infer: build_test_infer
+	./test_Infer
 
-build_test_typed:
-	ghc -O2 -Wall --make test_Typed -i../codeedit -i../bottlelib
+build_test_infer:
+	ghc -O2 -Wall --make test_Infer -i../codeedit -i../bottlelib
 
-run_benchmark_typed: build_benchmark_typed
-	./benchmark_Typed
+run_benchmark_infer: build_benchmark_infer
+	./benchmark_Infer
 
-build_benchmark_typed:
-	ghc -O2 -Wall --make benchmark_Typed -i../codeedit -i../bottlelib
+build_benchmark_infer:
+	ghc -O2 -Wall --make benchmark_Infer -i../codeedit -i../bottlelib
 
-run_profile_typed: build_profile_typed
-	time ./profile_Typed +RTS -p
+run_profile_infer: build_profile_infer
+	time ./profile_Infer +RTS -p
 
-build_profile_typed: build_benchmark_typed
-	ghc -O2 -prof -hisuf p_hi -osuf p_o -Wall -auto-all -caf-all -rtsopts --make profile_Typed -i../codeedit -i../bottlelib
+build_profile_infer: build_benchmark_infer
+	ghc -O2 -prof -hisuf p_hi -osuf p_o -Wall -auto-all -caf-all -rtsopts --make profile_Infer -i../codeedit -i../bottlelib

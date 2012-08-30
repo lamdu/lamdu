@@ -1,4 +1,4 @@
-module TypedTests (allTests) where
+module InferTests (allTests) where
 
 import Control.Applicative (liftA2)
 import Control.Exception (evaluate)
@@ -13,7 +13,7 @@ import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
-import qualified Editor.Data.Typed as Typed
+import qualified Editor.Data.Infer as Infer
 import qualified Test.HUnit as HUnit
 
 mkInferredGetDef :: String -> InferResults
@@ -31,26 +31,26 @@ mkInferredGetParam name = mkInferredLeafSimple gv
 
 type InferResults = Data.Expression (Data.PureExpression, Data.PureExpression)
 
-inferResults :: Typed.Expression a -> InferResults
+inferResults :: Infer.Expression a -> InferResults
 inferResults =
   fmap f
   where
-    f inferred = (Typed.iValue inferred, Typed.iType inferred)
+    f inferred = (Infer.iValue inferred, Infer.iType inferred)
 
 showExpressionWithInferred :: InferResults -> String
 showExpressionWithInferred =
   List.intercalate "\n" . go
   where
-    go typedExpr =
-      [ "Expr: " ++ show (Data.eGuid typedExpr) ++ ":" ++ showStructure expr
+    go inferredExpr =
+      [ "Expr: " ++ show (Data.eGuid inferredExpr) ++ ":" ++ showStructure expr
       , "  IVal:  " ++ show val
       , "  IType: " ++ show typ
       ] ++
       (map ("  " ++) . Foldable.concat .
        fmap go) expr
       where
-        expr = Data.eValue typedExpr
-        (val, typ) = Data.ePayload typedExpr
+        expr = Data.eValue inferredExpr
+        (val, typ) = Data.ePayload inferredExpr
 
 compareInferred :: InferResults -> InferResults -> Bool
 compareInferred x y =
@@ -303,7 +303,7 @@ testCase name = HUnit.TestLabel name . HUnit.TestCase
 
 testResume ::
   String -> Data.PureExpression -> Data.PureExpression ->
-  (Typed.Expression () -> Data.Expression (Typed.Inferred a)) ->
+  (Infer.Expression () -> Data.Expression (Infer.Inferred a)) ->
   HUnit.Test
 testResume name newExpr testExpr extract =
   testCase name $
@@ -311,7 +311,7 @@ testResume name newExpr testExpr extract =
     (tExpr, refMap) = doInfer testExpr
   in
     void . evaluate $
-    doInferM refMap ((Typed.iPoint . Data.ePayload . extract) tExpr) Nothing (Just tExpr) newExpr
+    doInferM refMap ((Infer.iPoint . Data.ePayload . extract) tExpr) Nothing (Just tExpr) newExpr
 
 applyIdInt :: Data.PureExpression
 applyIdInt =
@@ -334,11 +334,11 @@ testInfer name pureExpr result =
   testCase name .
   assertBool
     (unlines
-     [ "result expr:"  , showExpressionWithInferred typedExpr
+     [ "result expr:"  , showExpressionWithInferred inferredExpr
      , "expected expr:", showExpressionWithInferred result
-     ]) $ compareInferred typedExpr result
+     ]) $ compareInferred inferredExpr result
   where
-    typedExpr = inferResults . fst $ doInfer pureExpr
+    inferredExpr = inferResults . fst $ doInfer pureExpr
 
 resumptionTests :: [HUnit.Test]
 resumptionTests =
@@ -367,12 +367,12 @@ resumptionTests =
     let
       defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
       (exprD, refMap) =
-        uncurry doInferM Typed.initial (Just defI) Nothing $
+        uncurry doInferM Infer.initial (Just defI) Nothing $
         makeLambda "" hole hole
       Data.ExpressionLambda (Data.Lambda _ body) = Data.eValue exprD
-      scope = Typed.nScope . Typed.iPoint $ Data.ePayload body
+      scope = Infer.nScope . Infer.iPoint $ Data.ePayload body
       (exprR, _) =
-        uncurry doInferM (Typed.newNodeWithScope scope refMap) Nothing Nothing .
+        uncurry doInferM (Infer.newNodeWithScope scope refMap) Nothing Nothing .
         mkExpr "" . Data.ExpressionLeaf . Data.GetVariable $ Data.DefinitionRef defI
       resultD = inferResults exprD
       resultR = inferResults exprR

@@ -130,7 +130,7 @@ Executable Editor
                        Editor.Data,
                        Editor.Data.IRef,
                        Editor.Data.Load,
-                       Editor.Data.Typed,
+                       Editor.Data.Infer,
                        Editor.Data.Ops,
                        Editor.MonadF,
                        Editor.WidgetIds
