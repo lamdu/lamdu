@@ -1,31 +1,25 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor #-}
 module Editor.Data
   ( Definition(..), DefinitionBody(..)
-  , DefinitionI, DefinitionIRef
+  , DefinitionIRef, DefinitionI, ExpressionIRef(..)
   , FFIName(..)
   , VariableRef(..), variableRefGuid
   , Lambda(..), atLambdaParamType, atLambdaBody
-  , LambdaI
   , Apply(..), atApplyFunc, atApplyArg
-  , ApplyI
   , Builtin(..)
   , Leaf(..)
   , ExpressionBody(..)
   , makeApply, makePi, makeLambda
   , makeParameterRef, makeDefinitionRef, makeLiteralInteger
-  , ExpressionIRefProperty, eipGuid
-  , ExpressionI, ExpressionIRef(..)
   , Expression(..), atEGuid, atEValue, atEPayload
   , PureExpression, pureExpression
-  , newExprIRef, readExprIRef, writeExprIRef, exprIRefGuid
-  , newIRefExpressionFromPure, writeIRefExpressionFromPure
   , canonizeGuids, randomizeGuids
   , matchExpressionBody
   , matchExpression
   ) where
 
 import Control.Applicative (Applicative(..), liftA2)
-import Control.Monad ((<=<), guard, liftM, liftM2, mzero)
+import Control.Monad (guard, liftM, liftM2, mzero)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (evalState, state)
@@ -40,8 +34,6 @@ import Data.Foldable (Foldable(..))
 import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
-import Data.Store.Property (Property)
-import Data.Store.Transaction (Transaction)
 import Data.Traversable (Traversable(..))
 import System.Random (RandomGen, random)
 import Prelude hiding (mapM, sequence)
@@ -49,36 +41,7 @@ import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Map as Map
 import qualified Data.Store.IRef as IRef
-import qualified Data.Store.Property as Property
-import qualified Data.Store.Transaction as Transaction
 import qualified System.Random as Random
-
-type ExpressionIRefProperty m = Property m ExpressionIRef
-
-eipGuid :: ExpressionIRefProperty m -> Guid
-eipGuid = IRef.guid . unExpressionIRef . Property.value
-
-newtype ExpressionIRef = ExpressionIRef {
-  unExpressionIRef :: IRef (ExpressionBody ExpressionIRef)
-  } deriving (Eq, Ord, Show)
-
-exprIRefGuid :: ExpressionIRef -> Guid
-exprIRefGuid = IRef.guid . unExpressionIRef
-
-newExprIRef
-  :: Monad m
-  => ExpressionBody ExpressionIRef -> Transaction t m ExpressionIRef
-newExprIRef = liftM ExpressionIRef . Transaction.newIRef
-
-readExprIRef
-  :: Monad m
-  => ExpressionIRef -> Transaction t m (ExpressionBody ExpressionIRef)
-readExprIRef = Transaction.readIRef . unExpressionIRef
-
-writeExprIRef
-  :: Monad m
-  => ExpressionIRef -> ExpressionBody ExpressionIRef -> Transaction t m ()
-writeExprIRef = Transaction.writeIRef . unExpressionIRef
 
 data Lambda expr = Lambda {
   lambdaParamType :: expr,
@@ -87,7 +50,6 @@ data Lambda expr = Lambda {
 instance Applicative Lambda where
   pure x = Lambda x x
   Lambda p0 b0 <*> Lambda p1 b1 = Lambda (p0 p1) (b0 b1)
-type LambdaI = Lambda ExpressionIRef
 
 data Apply expr = Apply {
   applyFunc :: expr,
@@ -96,7 +58,13 @@ data Apply expr = Apply {
 instance Applicative Apply where
   pure x = Apply x x
   Apply f0 a0 <*> Apply f1 a1 = Apply (f0 f1) (a0 a1)
-type ApplyI = Apply ExpressionIRef
+
+newtype ExpressionIRef = ExpressionIRef {
+  unExpressionIRef :: IRef (ExpressionBody ExpressionIRef)
+  } deriving (Eq, Ord, Show)
+
+type DefinitionI = Definition ExpressionIRef
+type DefinitionIRef = IRef DefinitionI
 
 data VariableRef
   = ParameterRef {-# UNPACK #-} !Guid -- of the lambda/pi
@@ -117,7 +85,6 @@ data ExpressionBody expr
   | ExpressionApply {-# UNPACK #-} !(Apply expr)
   | ExpressionLeaf !Leaf
   deriving (Eq, Ord, Functor)
-type ExpressionI = ExpressionBody ExpressionIRef
 
 makeApply :: expr -> expr -> ExpressionBody expr
 makeApply func arg = ExpressionApply $ Apply func arg
@@ -173,8 +140,6 @@ data Definition expr = Definition
   { defBody :: DefinitionBody expr
   , defType :: expr
   } deriving (Eq, Ord, Show, Functor)
-type DefinitionI = Definition ExpressionIRef
-type DefinitionIRef = IRef DefinitionI
 
 type PureExpression = Expression ()
 
@@ -195,41 +160,6 @@ pureExpression guid body = Expression guid body ()
 variableRefGuid :: VariableRef -> Guid
 variableRefGuid (ParameterRef i) = i
 variableRefGuid (DefinitionRef i) = IRef.guid i
-
-hasLambda :: ExpressionBody expr -> Bool
-hasLambda ExpressionPi {} = True
-hasLambda ExpressionLambda {} = True
-hasLambda _ = False
-
-type Scope = [(Guid, Guid)]
-
-newIRefExpressionFromPure
-  :: Monad m => PureExpression -> Transaction t m ExpressionIRef
-newIRefExpressionFromPure =
-  newIRefExpressionFromPureH []
-
-newIRefExpressionFromPureH :: Monad m => Scope -> PureExpression -> Transaction t m ExpressionIRef
-newIRefExpressionFromPureH scope =
-  liftM ExpressionIRef . Transaction.newIRefWithGuid .
-  flip (expressionIFromPure scope)
-
-writeIRefExpressionFromPure
-  :: Monad m => ExpressionIRef -> PureExpression -> Transaction t m ()
-writeIRefExpressionFromPure (ExpressionIRef iref) =
-  Transaction.writeIRef iref <=< expressionIFromPure [] (IRef.guid iref)
-
-expressionIFromPure
-  :: Monad m => Scope -> Guid -> PureExpression -> Transaction t m ExpressionI
-expressionIFromPure scope newGuid (Expression oldGuid expr ()) =
-  mapM (newIRefExpressionFromPureH newScope) newExpr
-  where
-    newScope
-      | hasLambda expr = (oldGuid, newGuid) : scope
-      | otherwise = scope
-    newExpr = case expr of
-      ExpressionLeaf (GetVariable (ParameterRef parGuid)) ->
-        makeParameterRef . fromMaybe parGuid $ lookup parGuid newScope
-      x -> x
 
 randomizeGuids ::
   RandomGen g => g -> Expression a -> Expression a
