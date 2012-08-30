@@ -6,6 +6,7 @@ where
 
 import Control.Monad (liftM)
 import Data.List.Utils(enumerate, insertAt, removeAt)
+import Data.Maybe (listToMaybe)
 import Data.Monoid(Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
@@ -66,10 +67,10 @@ makeSugarPanes = do
   panes <- Anchors.getP Anchors.panes
   let
     mkMDelPane i
-      | length panes > 1 = Just $ do
+      | length panes >= 1 = Just $ do
         let newPanes = removeAt i panes
         Anchors.setP Anchors.panes newPanes
-        return . IRef.guid . last $
+        return . maybe panesGuid IRef.guid . listToMaybe . reverse $
           take (i+1) newPanes
       | otherwise = Nothing
     movePane oldIndex newIndex = do
@@ -112,6 +113,9 @@ makeCodeEdit cache = do
     , clipboardsEdit
     ]
 
+panesGuid :: Guid
+panesGuid = IRef.guid Anchors.panesIRef
+
 makePanesEdit :: MonadF m => [SugarPane m] -> TWidget ViewTag m
 makePanesEdit panes = do
   panesWidget <-
@@ -137,7 +141,7 @@ makePanesEdit panes = do
 
   return $ Widget.weakerEvents panesEventMap panesWidget
   where
-    myId = WidgetIds.fromIRef Anchors.panesIRef
+    myId = WidgetIds.fromGuid panesGuid
     paneEventMap pane = fmap IT.transaction $ mconcat
       [ maybe mempty (Widget.keysEventMapMovesCursor Config.closePaneKeys "Close pane" . liftM WidgetIds.fromGuid) $ mDelPane pane
       , maybe mempty (Widget.keysEventMap Config.movePaneDownKeys "Move pane down") $ mMovePaneDown pane
