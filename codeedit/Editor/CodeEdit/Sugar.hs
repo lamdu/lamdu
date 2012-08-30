@@ -45,6 +45,7 @@ import qualified Data.Traversable as Traversable
 import qualified Editor.Anchors as Anchors
 import qualified Editor.CodeEdit.Infix as Infix
 import qualified Editor.Data as Data
+import qualified Editor.Data.IRef as DataIRef
 import qualified Editor.Data.Load as DataLoad
 import qualified Editor.Data.Ops as DataOps
 import qualified Editor.Data.Typed as DataTyped
@@ -197,14 +198,14 @@ AtFieldTH.make ''Actions
 AtFieldTH.make ''FuncParamActions
 
 data ExprEntityStored m = ExprEntityStored
-  { eesInferred :: DataTyped.Inferred (Data.ExpressionIRefProperty (T m))
+  { eesInferred :: DataTyped.Inferred (DataIRef.ExpressionProperty (T m))
   , eesTypeConflicts :: [Data.PureExpression]
   , eesValueConflicts :: [Data.PureExpression]
   }
 
 type ExprEntity m = Data.Expression (Maybe (ExprEntityStored m))
 
-eeProp :: ExprEntity m -> Maybe (Data.ExpressionIRefProperty (T m))
+eeProp :: ExprEntity m -> Maybe (DataIRef.ExpressionProperty (T m))
 eeProp = fmap (DataTyped.iStored . eesInferred) . Data.ePayload
 
 eeFromPure :: Data.PureExpression -> ExprEntity m
@@ -225,15 +226,15 @@ argument :: (a -> b) -> (b -> c) -> a -> c
 argument = flip (.)
 
 writeIRef
-  :: Monad m => Data.ExpressionIRefProperty (T m)
+  :: Monad m => DataIRef.ExpressionProperty (T m)
   -> Data.ExpressionBody Data.ExpressionIRef
   -> Transaction t m ()
-writeIRef = Data.writeExprIRef . Property.value
+writeIRef = DataIRef.writeExpr . Property.value
 
 writeIRefVia
   :: Monad m
-  => (a -> Data.ExpressionI)
-  -> Data.ExpressionIRefProperty (T m)
+  => (a -> DataIRef.ExpressionBody)
+  -> DataIRef.ExpressionProperty (T m)
   -> a -> Transaction t m ()
 writeIRefVia f = (fmap . argument) f writeIRef
 
@@ -266,7 +267,7 @@ mkCutter iref replaceWithHole = do
 lambdaGuidToParamGuid :: Guid -> Guid
 lambdaGuidToParamGuid = Guid.combine $ Guid.fromString "param"
 
-mkActions :: Monad m => Data.ExpressionIRefProperty (T m) -> Actions m
+mkActions :: Monad m => DataIRef.ExpressionProperty (T m) -> Actions m
 mkActions stored =
   Actions
   { addNextArg = guidify $ DataOps.callWithArg stored
@@ -280,7 +281,7 @@ mkActions stored =
   }
   where
     paramGuidify = liftM lambdaGuidToParamGuid . guidify
-    guidify = liftM Data.exprIRefGuid
+    guidify = liftM DataIRef.exprGuid
     doReplace = guidify $ DataOps.replaceWithHole stored
 
 mkGen :: Int -> Int -> Guid -> Random.StdGen
@@ -308,19 +309,19 @@ mkExpressionRef ee expr = do
 
 mkDelete
   :: Monad m
-  => Data.ExpressionIRefProperty (T m)
-  -> Data.ExpressionIRefProperty (T m)
+  => DataIRef.ExpressionProperty (T m)
+  -> DataIRef.ExpressionProperty (T m)
   -> T m Guid
 mkDelete parentP replacerP = do
   Property.set parentP replacerI
-  return $ Data.exprIRefGuid replacerI
+  return $ DataIRef.exprGuid replacerI
   where
     replacerI = Property.value replacerP
 
 mkFuncParamActions
   :: Monad m
-  => Data.ExpressionIRefProperty (T m)
-  -> Data.ExpressionIRefProperty (T m)
+  => DataIRef.ExpressionProperty (T m)
+  -> DataIRef.ExpressionProperty (T m)
   -> Actions m
   -> FuncParamActions m
 mkFuncParamActions parentP replacerP bodyActions = FuncParamActions
@@ -442,7 +443,7 @@ setAddArg exprI =
   where
     f stored =
       atRActions . fmap . atAddNextArg . const .
-      liftM Data.exprIRefGuid $ DataOps.callWithArg stored
+      liftM DataIRef.exprGuid $ DataOps.callWithArg stored
 
 atFunctionType :: ExpressionRef m -> ExpressionRef m
 atFunctionType exprRef =
@@ -533,7 +534,7 @@ convertGetVariable varRef exprI = do
       Section Nothing ((atRInferredTypes . const) [] getVarExpr) Nothing Nothing
     else return getVarExpr
 
-mkPaste :: Monad m => Data.ExpressionIRefProperty (T m) -> Sugar m (Maybe (T m Guid))
+mkPaste :: Monad m => DataIRef.ExpressionProperty (T m) -> Sugar m (Maybe (T m Guid))
 mkPaste exprP = do
   clipboardsP <- liftTransaction Anchors.clipboards
   let
@@ -546,7 +547,7 @@ mkPaste exprP = do
     doPaste replacer (clip, popClip) = do
       ~() <- popClip
       ~() <- replacer clip
-      return $ Data.exprIRefGuid clip
+      return $ DataIRef.exprGuid clip
 
 zeroGuid :: Guid
 zeroGuid = Guid.fromString "applyZero"
@@ -628,7 +629,7 @@ convertWritableHole stored exprI = do
       liftM (fmap fst . DataTyped.infer actions) $
       DataTyped.load loader inferContext inferPoint Nothing expr
     pickResult irefP result = do
-      ~() <- Data.writeIRefExpressionFromPure (Property.value irefP) result
+      DataIRef.writeExpressionFromPure (Property.value irefP) result
       return eGuid
     eGuid = Data.eGuid exprI
 
@@ -688,7 +689,7 @@ reportError err =
   snd $ DataTyped.errMismatch err
 
 loadConvertExpression ::
-  Monad m => Data.ExpressionIRefProperty (T m) -> T m (ExpressionRef m)
+  Monad m => DataIRef.ExpressionProperty (T m) -> T m (ExpressionRef m)
 loadConvertExpression exprP =
   convertLoadedExpression Nothing =<< DataLoad.loadExpression exprP
 
@@ -727,7 +728,7 @@ loadConvertDefinition defI = do
             { dntNewType = inferredTypeS
             , dntAcceptNewType =
               Property.set (Data.ePayload typeL) =<<
-              Data.newIRefExpressionFromPure inferredTypeP
+              DataIRef.newExpressionFromPure inferredTypeP
             }
       mNewType <-
         if isSuccess && not typesMatch && isCompleteType inferredTypeP
@@ -749,7 +750,7 @@ loadConvertDefinition defI = do
 inferLoadedExpression ::
   Monad f =>
   Maybe Data.DefinitionIRef ->
-  Data.Expression (Data.ExpressionIRefProperty (T m)) ->
+  Data.Expression (DataIRef.ExpressionProperty (T m)) ->
   T f
   (Bool,
    SugarContext,
@@ -778,7 +779,7 @@ inferLoadedExpression mDefI exprL = do
 convertLoadedExpression ::
   Monad m =>
   Maybe Data.DefinitionIRef ->
-  Data.Expression (Data.ExpressionIRefProperty (T m)) ->
+  Data.Expression (DataIRef.ExpressionProperty (T m)) ->
   T m (ExpressionRef m)
 convertLoadedExpression mDefI exprL = do
   (_, sugarContext, exprStored) <- inferLoadedExpression mDefI exprL
@@ -793,7 +794,7 @@ convertStoredExpression sugarContext exprStored =
     fmap Just exprStored
 
 eesInferredExprs ::
-  (DataTyped.Inferred (Data.ExpressionIRefProperty (T m)) -> a)
+  (DataTyped.Inferred (DataIRef.ExpressionProperty (T m)) -> a)
   -> (ExprEntityStored m -> [a]) -> ExprEntityStored m -> [a]
 eesInferredExprs getVal eeConflicts ee = getVal (eesInferred ee) : eeConflicts ee
 

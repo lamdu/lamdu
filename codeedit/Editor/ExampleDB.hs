@@ -18,6 +18,7 @@ import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as A
 import qualified Editor.Data as Data
+import qualified Editor.Data.IRef as DataIRef
 import qualified Editor.WidgetIds as WidgetIds
 
 type WriteCollector m = WriterT [(Key, Value)] m
@@ -64,7 +65,7 @@ createBuiltins =
     let
       listOf a = do
         l <- list
-        Data.newExprIRef . Data.makeApply l =<< a
+        DataIRef.newExpr . Data.makeApply l =<< a
     bool <- mkType . A.newBuiltin "Prelude.Bool" =<< lift set
 
     makeWithType "Prelude.True" bool
@@ -101,8 +102,8 @@ createBuiltins =
 
     makeWithType "Prelude.enumFromTo" . mkPi integer . mkPi integer $ listOf integer
   where
-    set = Data.newExprIRef $ Data.ExpressionLeaf Data.Set
-    integer = Data.newExprIRef $ Data.ExpressionLeaf Data.IntegerType
+    set = DataIRef.newExpr $ Data.ExpressionLeaf Data.Set
+    integer = DataIRef.newExpr $ Data.ExpressionLeaf Data.IntegerType
     forAll name f = liftM Data.ExpressionIRef . fixIRef $ \aI -> do
       let aGuid = IRef.guid aI
       A.setP (A.assocNameRef aGuid) name
@@ -110,10 +111,10 @@ createBuiltins =
       return . Data.makePi s =<< f ((getVar . Data.ParameterRef) aGuid)
     setToSet = mkPi set set
     tellift f = Writer.tell . (:[]) =<< lift f
-    getVar = Data.newExprIRef . Data.ExpressionLeaf . Data.GetVariable
+    getVar = DataIRef.newExpr . Data.ExpressionLeaf . Data.GetVariable
     mkPi mkArgType mkResType = do
       argType <- mkArgType
-      Data.newExprIRef . Data.makePi argType =<< mkResType
+      DataIRef.newExpr . Data.makePi argType =<< mkResType
     mkType f = do
       x <- lift f
       Writer.tell [x]

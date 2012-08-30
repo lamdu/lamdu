@@ -42,6 +42,7 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Data as Data
+import qualified Editor.Data.IRef as DataIRef
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 type Pane = Data.DefinitionIRef
@@ -120,7 +121,7 @@ makeDefinition
   :: Monad m
   => Transaction ViewTag m Data.DefinitionIRef
 makeDefinition = do
-  let newHole = Data.newExprIRef $ Data.ExpressionLeaf Data.Hole
+  let newHole = DataIRef.newExpr $ Data.ExpressionLeaf Data.Hole
   defI <-
     Transaction.newIRef =<<
     liftM2 (Data.Definition . Data.DefinitionExpression) newHole newHole
