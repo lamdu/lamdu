@@ -6,7 +6,8 @@ module Editor.Data.IRef
   , newExpressionFromPure, writeExpressionFromPure
   ) where
 
-import Control.Monad ((<=<), liftM)
+import Control.Arrow (first)
+import Control.Monad (liftM)
 import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
@@ -49,24 +50,25 @@ type Scope = [(Guid, Guid)]
 newExpressionFromPure ::
   Monad m => Data.PureExpression -> Transaction t m Expression
 newExpressionFromPure =
-  newExpressionFromPureH []
+  liftM fst . newExpressionFromPureH []
 
-newExpressionFromPureH ::
-  Monad m => Scope -> Data.PureExpression -> Transaction t m Expression
-newExpressionFromPureH scope =
-  liftM Data.ExpressionIRef . Transaction.newIRefWithGuid .
-  flip (expressionBodyFromPure scope)
-
+-- Returns expression with new Guids
 writeExpressionFromPure
-  :: Monad m => Expression -> Data.PureExpression -> Transaction t m ()
-writeExpressionFromPure (Data.ExpressionIRef iref) =
-  Transaction.writeIRef iref <=< expressionBodyFromPure [] (IRef.guid iref)
+  :: Monad m => Expression -> Data.PureExpression
+  -> Transaction t m Data.PureExpression
+writeExpressionFromPure (Data.ExpressionIRef iref) expr = do
+  (exprBodyI, exprBodyP) <- expressionBodyFromPure [] g expr
+  Transaction.writeIRef iref exprBodyI
+  return $ Data.pureExpression g exprBodyP
+  where
+    g = IRef.guid iref
 
 expressionBodyFromPure ::
   Monad m =>
   Scope -> Guid -> Data.PureExpression ->
-  Transaction t m ExpressionBody
+  Transaction t m (ExpressionBody, Data.ExpressionBody Data.PureExpression)
 expressionBodyFromPure scope newGuid (Data.Expression oldGuid expr ()) =
+  liftM f .
   Traversable.mapM (newExpressionFromPureH newScope) $
   case expr of
   Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef parGuid)) ->
@@ -76,6 +78,17 @@ expressionBodyFromPure scope newGuid (Data.Expression oldGuid expr ()) =
     newScope
       | hasLambda expr = (oldGuid, newGuid) : scope
       | otherwise = scope
+    f body = (fmap fst body, fmap snd body)
+
+newExpressionFromPureH ::
+  Monad m =>
+  Scope -> Data.PureExpression ->
+  Transaction t m (Expression, Data.PureExpression)
+newExpressionFromPureH scope =
+  liftM (f . first Data.ExpressionIRef) . Transaction.newIRefWithGuid .
+  flip (expressionBodyFromPure scope)
+  where
+    f (exprI, body) = (exprI, Data.pureExpression (exprGuid exprI) body)
 
 hasLambda :: Data.ExpressionBody a -> Bool
 hasLambda Data.ExpressionPi {} = True
