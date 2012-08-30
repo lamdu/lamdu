@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Editor.CodeEdit.ExpressionEdit.FuncEdit
-  (make, makeParamEdit, makeBodyEdit, addJumpToRHS) where
+  (make, makeParamEdit, makeParamNameEdit, makeBodyEdit, addJumpToRHS) where
 
 import Control.Monad (liftM)
 import Data.Monoid (mempty, mconcat)
