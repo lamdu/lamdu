@@ -24,7 +24,7 @@ import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.Writer (Writer, runWriter)
 import Data.Function (on)
 import Data.Map (Map)
-import Data.Maybe (isJust)
+import Data.Maybe (isJust, listToMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
@@ -34,6 +34,7 @@ import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
+import qualified Data.Foldable as Foldable
 import qualified Data.List.Class as List
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -628,10 +629,16 @@ convertWritableHole stored exprI = do
     inferExpr expr inferContext inferPoint =
       liftM (fmap fst . DataTyped.infer actions) $
       DataTyped.load loader inferContext inferPoint Nothing expr
-    pickResult irefP result = do
-      DataIRef.writeExpressionFromPure (Property.value irefP) result
-      return eGuid
+    pickResult irefP =
+      liftM (maybe eGuid Data.eGuid . listToMaybe . holes) .
+      DataIRef.writeExpressionFromPure (Property.value irefP)
     eGuid = Data.eGuid exprI
+
+holes :: Data.PureExpression -> [Data.PureExpression]
+holes e =
+  case Data.eValue e of
+  Data.ExpressionLeaf Data.Hole -> [e]
+  body -> Foldable.concatMap holes body
 
 convertHole :: Monad m => Convertor m
 convertHole exprI =
