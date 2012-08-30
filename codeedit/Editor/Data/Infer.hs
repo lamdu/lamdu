@@ -381,9 +381,22 @@ makeNodeRules (Data.Expression g exprBody (InferNode typedVal scope)) =
       setRule (tvType paramType) :
       lambdaStructureRules cons uncons g (tvVal typedVal) (fmap tvVal lam)
 
+commonRules :: Data.Expression InferNode -> [Rule]
+commonRules expr =
+  [ ruleSimpleType . nRefs $ Data.ePayload expr
+  -- TODO:
+  -- If a value is complete (has no holes),
+  -- and it's value contains parameters that the value does not,
+  -- this must be a type error.
+  -- Useful for checking on definitions with unknown types.
+  -- This would require rules to be able to report errors.
+  -- Example:
+  --   f a = id a someDef
+  ]
+
 makeRules :: Bool -> Data.Expression InferNode -> [Rule]
 makeRules resumption expr =
-  [ruleSimpleType . nRefs $ Data.ePayload expr | not resumption] ++
+  (if resumption then [] else commonRules expr) ++
   makeNodeRules expr ++
   (Foldable.concat . fmap (makeRules False)) (Data.eValue expr)
 
