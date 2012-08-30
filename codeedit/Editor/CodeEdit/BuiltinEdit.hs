@@ -4,7 +4,7 @@ import Data.List.Split (splitOn)
 import Data.Store.Property (Property(..))
 import Editor.Anchors (ViewTag)
 import Editor.MonadF (MonadF)
-import Editor.OTransaction (TWidget)
+import Editor.OTransaction (OTransaction, WidgetT)
 import qualified Data.List as List
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.Sugar as Sugar
@@ -28,7 +28,7 @@ make
   :: MonadF m
   => Sugar.DefinitionBuiltin m
   -> Widget.Id
-  -> TWidget ViewTag m
+  -> OTransaction ViewTag m (WidgetT ViewTag m)
 make (Sugar.DefinitionBuiltin (Data.FFIName modulePath name) setFFIName) myId =
   OT.assignCursor myId (WidgetIds.builtinFFIName myId) $ do
     moduleName <-

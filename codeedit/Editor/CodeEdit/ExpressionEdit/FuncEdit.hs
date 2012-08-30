@@ -9,7 +9,7 @@ import Data.Store.Guid (Guid)
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.MonadF (MonadF)
-import Editor.OTransaction (OTransaction, TWidget, WidgetT)
+import Editor.OTransaction (OTransaction, WidgetT)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.Sugar as Sugar
@@ -32,7 +32,7 @@ paramFDConfig = FocusDelegator.Config
 makeParamNameEdit
   :: MonadF m
   => Guid
-  -> TWidget t m
+  -> OTransaction t m (WidgetT t m)
 makeParamNameEdit ident =
   BWidgets.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
   (BWidgets.setTextColor Config.parameterColor .

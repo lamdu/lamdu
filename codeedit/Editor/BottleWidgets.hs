@@ -22,7 +22,7 @@ import Data.Maybe (isJust)
 import Data.Monoid (mappend)
 import Data.Store.Guid (Guid)
 import Editor.MonadF (MonadF)
-import Editor.OTransaction (TWidget, OTransaction)
+import Editor.OTransaction (OTransaction, WidgetT)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Store.Property as Property
@@ -96,7 +96,8 @@ wrapDelegated config entryState aToB mkA myId = do
 makeTextEdit
   :: Monad m
   => Transaction.Property t m String
-  -> Widget.Id -> TWidget t m
+  -> Widget.Id
+  -> OTransaction t m (WidgetT t m)
 makeTextEdit textRef myId = do
   cursor <- OT.readCursor
   style <- OT.readTextStyle
@@ -121,7 +122,8 @@ removeKeys makeEdit key =
 makeLineEdit ::
   Monad m =>
   Transaction.Property t m String ->
-  Widget.Id -> TWidget t m
+  Widget.Id ->
+  OTransaction t m (WidgetT t m)
 makeLineEdit =
   removeKeys makeTextEdit $
   EventMap.ModKey EventMap.noMods EventMap.KeyEnter
@@ -129,12 +131,14 @@ makeLineEdit =
 makeWordEdit ::
   Monad m =>
   Transaction.Property t m String ->
-  Widget.Id -> TWidget t m
+  Widget.Id ->
+  OTransaction t m (WidgetT t m)
 makeWordEdit =
   removeKeys makeLineEdit $
   EventMap.ModKey EventMap.noMods EventMap.KeySpace
 
-makeNameEdit :: Monad m => Guid -> Widget.Id -> TWidget t m
+makeNameEdit ::
+  Monad m => Guid -> Widget.Id -> OTransaction t m (WidgetT t m)
 makeNameEdit ident myId = do
   (nameSrc, name) <- OT.getName ident
   liftM (nameSrcTint nameSrc) .

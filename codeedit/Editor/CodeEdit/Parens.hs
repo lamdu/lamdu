@@ -11,7 +11,7 @@ import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.MonadF (MonadF)
-import Editor.OTransaction (OTransaction, TWidget)
+import Editor.OTransaction (OTransaction, WidgetT)
 import Editor.WidgetIds (parensPrefix)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Editor.BottleWidgets as BWidgets
@@ -23,10 +23,12 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
 
+type WidgetMaker m = OTransaction ViewTag m (WidgetT ViewTag m)
+
 addTextParensI
   :: MonadF m
-  => (TWidget ViewTag m -> TWidget ViewTag m)
-  -> (TWidget ViewTag m -> TWidget ViewTag m)
+  => (WidgetMaker m -> WidgetMaker m)
+  -> (WidgetMaker m -> WidgetMaker m)
   -> Anim.AnimId
   -> ExpressionGui m
   -> OTransaction ViewTag m (ExpressionGui m)

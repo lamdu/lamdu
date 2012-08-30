@@ -12,7 +12,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.MonadF (MonadF)
-import Editor.OTransaction (OTransaction, TWidget)
+import Editor.OTransaction (OTransaction, WidgetT)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
@@ -94,7 +94,9 @@ makeSugarPanes = do
         }
   mapM convertPane $ enumerate panes
 
-makeClipboardsEdit :: MonadF m => [Sugar.ExpressionRef m] -> TWidget ViewTag m
+makeClipboardsEdit ::
+  MonadF m => [Sugar.ExpressionRef m] ->
+  OTransaction ViewTag m (WidgetT ViewTag m)
 makeClipboardsEdit clipboards = do
   clipboardsEdits <- mapM (liftM ExpressionGui.egWidget . ExpressionEdit.make) clipboards
   clipboardTitle <-
@@ -103,7 +105,7 @@ makeClipboardsEdit clipboards = do
     else BWidgets.makeTextView "Clipboards:" ["clipboards title"]
   return . BWidgets.vboxAlign 0 $ clipboardTitle : clipboardsEdits
 
-makeCodeEdit :: MonadF m => SugarCache m -> TWidget ViewTag m
+makeCodeEdit :: MonadF m => SugarCache m -> OTransaction ViewTag m (WidgetT ViewTag m)
 makeCodeEdit cache = do
   panesEdit <- makePanesEdit $ scPanes cache
   clipboardsEdit <- makeClipboardsEdit $ scClipboards cache
@@ -116,7 +118,7 @@ makeCodeEdit cache = do
 panesGuid :: Guid
 panesGuid = IRef.guid Anchors.panesIRef
 
-makePanesEdit :: MonadF m => [SugarPane m] -> TWidget ViewTag m
+makePanesEdit :: MonadF m => [SugarPane m] -> OTransaction ViewTag m (WidgetT ViewTag m)
 makePanesEdit panes = do
   panesWidget <-
     case panes of

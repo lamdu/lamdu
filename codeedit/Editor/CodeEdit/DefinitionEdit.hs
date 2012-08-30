@@ -9,7 +9,7 @@ import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.MonadF (MonadF)
-import Editor.OTransaction (OTransaction, TWidget)
+import Editor.OTransaction (OTransaction, WidgetT)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.BuiltinEdit as BuiltinEdit
@@ -32,7 +32,7 @@ paramFDConfig = FocusDelegator.Config
   , FocusDelegator.stopDelegatingDoc = "Stop changing name"
   }
 
-makeNameEdit :: MonadF m => Widget.Id -> Guid -> TWidget t m
+makeNameEdit :: MonadF m => Widget.Id -> Guid -> OTransaction t m (WidgetT t m)
 makeNameEdit myId ident =
   BWidgets.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
   (BWidgets.setTextColor Config.definitionColor .
@@ -101,7 +101,7 @@ make
   :: MonadF m
   => ExpressionGui.Maker m
   -> Sugar.DefinitionRef m
-  -> TWidget ViewTag m
+  -> OTransaction ViewTag m (WidgetT ViewTag m)
 make makeExpressionEdit def =
   case Sugar.drBody def of
   Sugar.DefinitionBodyExpression bodyExpr ->
@@ -114,7 +114,7 @@ makeBuiltinDefinition
   => ExpressionGui.Maker m
   -> Sugar.DefinitionRef m
   -> Sugar.DefinitionBuiltin m
-  -> TWidget ViewTag m
+  -> OTransaction ViewTag m (WidgetT ViewTag m)
 makeBuiltinDefinition makeExpressionEdit def builtin =
   liftM (BWidgets.vboxAlign 0) $ sequence
   [ liftM BWidgets.hboxCenteredSpaced $ sequence

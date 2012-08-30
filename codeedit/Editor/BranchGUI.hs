@@ -19,7 +19,7 @@ import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag, DBTag)
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
-import Editor.OTransaction (OTransaction, TWidget)
+import Editor.OTransaction (OTransaction, WidgetT)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Monad.Trans.Writer as Writer
@@ -113,7 +113,7 @@ tellNewCache mkCache act = act <* do
 makeRootWidget
   :: MonadF m
   => Widget.Size -> Transaction ViewTag (Transaction DBTag m) versionCache
-  -> TWidget ViewTag (Transaction DBTag m)
+  -> OTransaction ViewTag (Transaction DBTag m) (WidgetT ViewTag (Transaction DBTag m))
   -> CachedTWidget DBTag versionCache m
 makeRootWidget size mkCacheInView widget = do
   view <- OT.getP Anchors.view
@@ -215,7 +215,7 @@ makeWidgetForView
   :: MonadF m
   => Transaction DBTag m versionCache
   -> View
-  -> TWidget ViewTag (Transaction DBTag m)
+  -> OTransaction ViewTag (Transaction DBTag m) (WidgetT ViewTag (Transaction DBTag m))
   -> CachedTWidget t versionCache m
 makeWidgetForView mkCache view innerWidget = do
   curVersion <- OT.transaction $ View.curVersion view

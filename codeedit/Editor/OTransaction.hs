@@ -2,7 +2,7 @@
 module Editor.OTransaction
   ( OTransaction, runOTransaction
   , unWrapInner
-  , TWidget, WidgetT
+  , WidgetT
   , readCursor, subCursor, atCursor, assignCursor, assignCursorPrefix
   , readTextStyle, transaction
   , atTextStyle, setTextSizeColor
@@ -41,7 +41,6 @@ data OTransactionEnv = OTransactionEnv {
 AtFieldTH.make ''OTransactionEnv
 
 type WidgetT t m = Widget (ITransaction t m)
-type TWidget t m = OTransaction t m (WidgetT t m)
 
 data NameGenState = NameGenState
   { ngUnusedNames :: [String]

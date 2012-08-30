@@ -17,7 +17,7 @@ import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
-import Editor.OTransaction (OTransaction, TWidget, WidgetT)
+import Editor.OTransaction (OTransaction, WidgetT)
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.AtFieldTH as AtFieldTH
@@ -151,7 +151,7 @@ resultToWidget makeExpressionEdit holeInfo applyForms = do
     myId = mappend (hiHoleId holeInfo) canonizedExprId
     pureGuidId = WidgetIds.fromGuid . Data.eGuid
 
-makeNoResults :: MonadF m => AnimId -> TWidget t m
+makeNoResults :: MonadF m => AnimId -> OTransaction t m (WidgetT t m)
 makeNoResults myId =
   BWidgets.makeTextView "(No results)" $ mappend myId ["no results"]
 
@@ -274,7 +274,8 @@ holeExpr = toPureExpr $ Data.ExpressionLeaf Data.Hole
 makeSearchTermWidget
   :: MonadF m
   => HoleInfo m -> Widget.Id
-  -> Maybe Data.PureExpression -> TWidget ViewTag m
+  -> Maybe Data.PureExpression
+  -> OTransaction ViewTag m (WidgetT ViewTag m)
 makeSearchTermWidget holeInfo searchTermId mFirstResult =
   liftM
     (Widget.strongerEvents searchTermEventMap .

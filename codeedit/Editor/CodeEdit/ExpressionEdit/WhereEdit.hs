@@ -7,7 +7,7 @@ import Data.Monoid (mempty)
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.MonadF (MonadF)
-import Editor.OTransaction (OTransaction, TWidget)
+import Editor.OTransaction (OTransaction, WidgetT)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -24,7 +24,7 @@ make
   => ExpressionGui.Maker m
   -> Sugar.Where m
   -> Widget.Id
-  -> TWidget ViewTag m
+  -> OTransaction ViewTag m (WidgetT ViewTag m)
 make makeExpressionEdit (Sugar.Where items _) myId = do
   whereLabel <-
     OT.setTextSizeColor Config.whereTextSize Config.whereColor $
