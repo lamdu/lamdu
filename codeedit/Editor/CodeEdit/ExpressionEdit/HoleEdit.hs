@@ -2,11 +2,12 @@
 module Editor.CodeEdit.ExpressionEdit.HoleEdit(make, ResultPicker) where
 
 import Control.Arrow (first, second, (&&&))
-import Control.Monad (liftM, mplus, msum, void)
+import Control.Monad (liftM, mplus, msum, void, filterM)
 import Control.Monad.ListT (ListT)
 import Data.Function (on)
 import Data.Hashable(hash)
 import Data.List (isInfixOf, isPrefixOf)
+import Data.List.Class (List)
 import Data.List.Utils (sortOn)
 import Data.Maybe (isJust, listToMaybe, maybeToList, mapMaybe, fromMaybe)
 import Data.Monoid (Monoid(..))
@@ -366,6 +367,9 @@ makeResultsWidget makeExpressionEdit holeInfo firstResults moreResults = do
       [E.ModKey E.noMods E.KeyDown]
       "Nothing (at bottom)" (return ())
 
+genericNull :: List l => l a -> List.ItemM l Bool
+genericNull = liftM null . List.toList . List.take 1
+
 makeActiveHoleEdit
   :: MonadF m
   => ExpressionGui.Maker m -> HoleInfo m
@@ -373,7 +377,12 @@ makeActiveHoleEdit
      (Maybe Sugar.HoleResult, WidgetT ViewTag m)
 makeActiveHoleEdit makeExpressionEdit holeInfo =
   OT.assignCursor (hiHoleId holeInfo) searchTermId $ do
-    OT.markVariablesAsUsed . map fst . Sugar.holeScope $ hiHole holeInfo
+    OT.markVariablesAsUsed . map fst =<<
+      (filterM
+       (OT.transaction . checkInfer . toPureExpr .
+        Data.ExpressionLeaf . Data.GetVariable . snd) .
+       Sugar.holeScope . hiHole)
+      holeInfo
 
     allResults <- makeAllResults holeInfo
 
@@ -384,8 +393,7 @@ makeActiveHoleEdit makeExpressionEdit holeInfo =
     searchTermWidget <-
       makeSearchTermWidget holeInfo searchTermId defaultResult
 
-    hasMoreResults <-
-      liftM null . OT.transaction . List.toList $ List.take 1 moreResults
+    hasMoreResults <- OT.transaction $ genericNull moreResults
 
     (mResult, resultsWidget) <-
       makeResultsWidget makeExpressionEdit holeInfo firstResults $
@@ -395,6 +403,7 @@ makeActiveHoleEdit makeExpressionEdit holeInfo =
       , BWidgets.vboxCentered [searchTermWidget, resultsWidget]
       )
   where
+    checkInfer = liftM not . genericNull . Sugar.holeInferResults (hiHole holeInfo)
     searchTermId = WidgetIds.searchTermId $ hiHoleId holeInfo
 
 make
