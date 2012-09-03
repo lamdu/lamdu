@@ -340,7 +340,7 @@ convertLambda (Data.Lambda paramTypeI bodyI) exprI = do
   let
     param = FuncParam
       { fpGuid = lambdaGuidToParamGuid $ Data.eGuid exprI
-      , fpType = typeExpr
+      , fpType = removeRedundantTypes typeExpr
       , fpMActions =
         mkFuncParamActions <$>
         eeProp exprI <*>
@@ -375,7 +375,7 @@ convertPi lambda exprI = do
   mkExpressionRef exprI $ ExpressionPi DontHaveParens
     Pi
     { pParam = atFpType addApplyChildParens param
-    , pResultType = sBody
+    , pResultType = removeRedundantTypes sBody
     }
 
 convertWhere
@@ -446,8 +446,8 @@ setAddArg exprI =
       atRActions . fmap . atAddNextArg . const .
       liftM DataIRef.exprGuid $ DataOps.callWithArg stored
 
-atFunctionType :: ExpressionRef m -> ExpressionRef m
-atFunctionType exprRef =
+removeRedundantTypes :: ExpressionRef m -> ExpressionRef m
+removeRedundantTypes exprRef =
   case rExpression exprRef of
     ExpressionHole {} -> exprRef -- Keep types on holes
     _ -> atRInferredTypes removeIfNoErrors exprRef
@@ -478,7 +478,7 @@ convertApplyInfixFull
     let
       newLArgRef = addApplyChildParens lArgRef
       newRArgRef = addApplyChildParens rArgRef
-      newOpRef = atFunctionType $ setAddArg exprI opRef
+      newOpRef = removeRedundantTypes $ setAddArg exprI opRef
     mkExpressionRef exprI . ExpressionSection DontHaveParens .
       Section (Just newLArgRef) newOpRef (Just newRArgRef) . Just $
       Data.eGuid funcI
@@ -494,7 +494,7 @@ convertApplyInfixL op (Data.Apply opI argI) exprI = do
   opRef <- mkExpressionRef opI $ mkExpressionGetVariable op
   let
     newOpRef =
-      atFunctionType .
+      removeRedundantTypes .
       setAddArg exprI $
       opRef
   mkExpressionRef exprI . ExpressionSection HaveParens $
@@ -515,7 +515,7 @@ convertApplyPrefix (Data.Apply funcI argI) exprI = do
     newFuncRef =
       setNextArg .
       addApplyChildParens .
-      atFunctionType .
+      removeRedundantTypes .
       (atRExpression . atEApply . atApplyArg) setNextArg .
       (atRExpression . atESection . atSectionOp) setNextArg $
       funcRef

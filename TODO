@@ -1,3 +1,7 @@
+* BUG/missing-feature:
+    a x = a 5
+  Does not infer type of x.
+
 * Type synonyms/expansions
 
 * Rename Data* to Expression*.
