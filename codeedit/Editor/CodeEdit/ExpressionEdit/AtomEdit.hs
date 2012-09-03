@@ -16,5 +16,6 @@ make
   -> Widget.Id
   -> OTransaction ViewTag m (ExpressionGui m)
 make name =
-  liftM (ExpressionGui.fromValueWidget . Widget.tint Config.atomColor) .
-  BWidgets.makeFocusableTextView name
+  liftM ExpressionGui.fromValueWidget .
+    BWidgets.setTextColor Config.atomColor .
+    BWidgets.makeFocusableTextView name
