@@ -68,6 +68,8 @@ unfocusedReadOnlyHoleBackgroundColor = Draw.Color 1 0.5 0.5 0.5
 inferredValueScaleFactor = 0.7
 inferredValueTint = Draw.Color 1 1 1 0.6
 
+polymorphicCompactTint = Draw.Color 1 0.7 0.5 1
+
 parenHighlightColor = Draw.Color 0.3 0 1 0.25
 
 lambdaWrapKeys = [k '\\']

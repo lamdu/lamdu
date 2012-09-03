@@ -9,7 +9,7 @@ module Editor.CodeEdit.Sugar
   , Where(..), WhereItem(..)
   , Func(..), FuncParam(..), FuncParamActions(..)
   , Pi(..), Apply(..), Section(..), Hole(..)
-  , LiteralInteger(..), Inferred(..)
+  , LiteralInteger(..), Inferred(..), Polymorphic(..)
   , GetVariable(..), gvGuid
   , HasParens(..)
   , convertExpressionPure
@@ -140,6 +140,11 @@ data Inferred m = Inferred
   , iHole :: Hole m
   }
 
+data Polymorphic m = Polymorphic
+  { pCompact :: ExpressionRef m
+  , pFullExpression :: ExpressionRef m
+  }
+
 data GetVariable
   = GetParameter Guid | GetDefinition Data.DefinitionIRef
 
@@ -150,12 +155,13 @@ gvGuid (GetDefinition defI) = IRef.guid defI
 data Expression m
   = ExpressionApply   { eHasParens :: HasParens, eApply :: Apply m }
   | ExpressionSection { eHasParens :: HasParens, eSection :: Section m }
-  | ExpressionWhere   { eHasParens :: HasParens, eWhere :: Where m }
-  | ExpressionFunc    { eHasParens :: HasParens, eFunc :: Func m }
-  | ExpressionPi      { eHasParens :: HasParens, ePi :: Pi m }
+  | ExpressionWhere   { eHasParens :: HasParens, _eWhere :: Where m }
+  | ExpressionFunc    { eHasParens :: HasParens, _eFunc :: Func m }
+  | ExpressionPi      { eHasParens :: HasParens, _ePi :: Pi m }
   | ExpressionGetVariable { _getVariable :: GetVariable }
-  | ExpressionHole { eHole :: Hole m }
-  | ExpressionInferred { eInferred :: Inferred m }
+  | ExpressionHole { _eHole :: Hole m }
+  | ExpressionInferred { _eInferred :: Inferred m }
+  | ExpressionPolymorphic { _ePolymorphic :: Polymorphic m }
   | ExpressionLiteralInteger { _eLit :: LiteralInteger m }
   | ExpressionAtom { _eAtom :: String }
 
@@ -365,7 +371,6 @@ convertFunc lambda exprI = do
     deleteToNextParam =
       atFpMActions . fmap . atFpaDelete . liftM $ lambdaGuidToParamGuid
 
-
 convertPi
   :: Monad m
   => Data.Lambda (ExprEntity m)
@@ -402,13 +407,17 @@ convertWhere valueRef lambdaI (Data.Lambda typeI bodyI) applyI = do
 addParens :: Expression m -> Expression m
 addParens (ExpressionInferred (Inferred val hole)) =
   ExpressionInferred $ Inferred (atRExpression addParens val) hole
+addParens (ExpressionPolymorphic (Polymorphic compact full)) =
+  ExpressionPolymorphic $
+  on Polymorphic (atRExpression addParens) compact full
 addParens x = (atEHasParens . const) HaveParens x
 
 addApplyChildParens :: ExpressionRef m -> ExpressionRef m
 addApplyChildParens =
   atRExpression f
   where
-    f x@(ExpressionApply _ _) = x
+    f x@ExpressionApply{} = x
+    f x@ExpressionPolymorphic{} = x
     f x = addParens x
 
 convertApply
@@ -519,8 +528,19 @@ convertApplyPrefix (Data.Apply funcI argI) exprI = do
       (atRExpression . atEApply . atApplyArg) setNextArg .
       (atRExpression . atESection . atSectionOp) setNextArg $
       funcRef
-  mkExpressionRef exprI . ExpressionApply DontHaveParens $
-    Apply newFuncRef newArgRef
+    makeFullApply =
+      mkExpressionRef exprI . ExpressionApply DontHaveParens $
+      Apply newFuncRef newArgRef
+    makePolymorphic x =
+      (liftM . atRGuid . Guid.combine . Guid.fromString) "polymorphic" .
+      mkExpressionRef exprI . ExpressionPolymorphic . Polymorphic x
+  case (rExpression funcRef, rExpression argRef) of
+    (ExpressionPolymorphic (Polymorphic compact full), ExpressionInferred _) ->
+      makePolymorphic compact . removeRedundantTypes =<<
+      (mkExpressionRef exprI . ExpressionApply DontHaveParens) (Apply full newArgRef)
+    (_, ExpressionInferred _) ->
+      on makePolymorphic removeRedundantTypes funcRef =<< makeFullApply
+    _ -> makeFullApply
 
 convertGetVariable :: Monad m => Data.VariableRef -> Convertor m
 convertGetVariable varRef exprI = do

@@ -22,6 +22,8 @@ make
   -> OTransaction ViewTag m
      (Maybe (HoleEdit.ResultPicker m), ExpressionGui m)
 make makeExpressionEdit inferred guid myId = do
+  -- We are inside a non-delegating focus delegator made by makeExpressionEdit,
+  -- so if the cursor is on us it means user enterred our widget.
   mInnerCursor <- OT.subCursor myId
   case mInnerCursor of
     Nothing ->

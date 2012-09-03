@@ -19,6 +19,7 @@ import qualified Editor.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Editor.CodeEdit.ExpressionEdit.InferredEdit as InferredEdit
 import qualified Editor.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Editor.CodeEdit.ExpressionEdit.PiEdit as PiEdit
+import qualified Editor.CodeEdit.ExpressionEdit.PolymorphicEdit as PolymorphicEdit
 import qualified Editor.CodeEdit.ExpressionEdit.SectionEdit as SectionEdit
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
 import qualified Editor.CodeEdit.ExpressionEdit.WhereEdit as WhereEdit
@@ -52,6 +53,14 @@ holeFDConfig = FocusDelegator.Config
   , FocusDelegator.startDelegatingDoc = "Enter hole"
   , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEsc
   , FocusDelegator.stopDelegatingDoc = "Leave hole"
+  }
+
+polymorphicFDConfig :: FocusDelegator.Config
+polymorphicFDConfig = FocusDelegator.Config
+  { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyEnter
+  , FocusDelegator.startDelegatingDoc = "Expand polymorphic"
+  , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEsc
+  , FocusDelegator.stopDelegatingDoc = "Collapse polymorphic"
   }
 
 pasteEventMap
@@ -94,28 +103,31 @@ makeEditor
 makeEditor sExpr =
   case Sugar.rExpression sExpr of
   Sugar.ExpressionWhere hasParens w ->
-    wrapNonHoleExpr . squareParenify hasParens $
+    wrapCommon . squareParenify hasParens $
       WhereEdit.makeWithBody make w
   Sugar.ExpressionFunc hasParens f ->
-    wrapNonHoleExpr . textParenify hasParens $ FuncEdit.make make f
+    wrapCommon . textParenify hasParens $ FuncEdit.make make f
   Sugar.ExpressionInferred i ->
     isAHole (Sugar.iHole i) FocusDelegator.NotDelegating .
     InferredEdit.make make i $ Sugar.rGuid sExpr
+  Sugar.ExpressionPolymorphic poly ->
+    wrapNonHoleExpr FocusDelegator.NotDelegating polymorphicFDConfig $
+    PolymorphicEdit.make make poly
   Sugar.ExpressionHole hole ->
     isAHole hole FocusDelegator.Delegating .
     HoleEdit.make make hole $ Sugar.rGuid sExpr
   Sugar.ExpressionGetVariable varRef ->
     notAHole {- TODO: May need parenification -} $ VarEdit.make varRef
   Sugar.ExpressionApply hasParens apply ->
-    wrapNonHoleExpr . textParenify hasParens $ ApplyEdit.make make apply
+    wrapCommon . textParenify hasParens $ ApplyEdit.make make apply
   Sugar.ExpressionPi hasParens funcType ->
-    wrapNonHoleExpr . textParenify hasParens $ PiEdit.make make funcType
+    wrapCommon . textParenify hasParens $ PiEdit.make make funcType
   Sugar.ExpressionSection hasParens section ->
-    wrapNonHoleExpr . textParenify hasParens $ SectionEdit.make make section
+    wrapCommon . textParenify hasParens $ SectionEdit.make make section
   Sugar.ExpressionLiteralInteger integer ->
     notAHole $ LiteralEdit.makeInt integer
   Sugar.ExpressionAtom atom ->
-    wrapNonHoleExpr $ AtomEdit.make atom
+    wrapCommon $ AtomEdit.make atom
   where
     parenify mkParens hasParens mkWidget myId =
       mkWidget myId >>=
@@ -128,12 +140,12 @@ makeEditor sExpr =
        (second . ExpressionGui.atEgWidget . Widget.weakerEvents) (pasteEventMap hole)) .
       BWidgets.wrapDelegated holeFDConfig delegating
       (second . ExpressionGui.atEgWidget)
-
     notAHole = (fmap . liftM) ((,) NotAHole)
-    wrapNonHoleExpr =
+    wrapCommon = wrapNonHoleExpr FocusDelegator.Delegating exprFocusDelegatorConfig
+    wrapNonHoleExpr delegating config =
       notAHole .
-      BWidgets.wrapDelegated exprFocusDelegatorConfig
-      FocusDelegator.Delegating ExpressionGui.atEgWidget
+      BWidgets.wrapDelegated config
+      delegating ExpressionGui.atEgWidget
     textParenify = parenify Parens.addHighlightedTextParens
     squareParenify = parenify (fmap return . ExpressionGui.atEgWidget . Parens.addSquareParens . Widget.toAnimId)
 
