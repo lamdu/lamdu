@@ -19,6 +19,7 @@ module Editor.CodeEdit.Sugar
   ) where
 
 import Control.Applicative ((<$>), (<*>))
+import Control.Arrow (second)
 import Control.Monad ((<=<), liftM, mzero, void)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (MonadTrans(..))
@@ -26,8 +27,8 @@ import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.Writer (Writer, runWriter)
 import Data.Function (on)
 import Data.Map (Map)
-import Data.Maybe (isJust, listToMaybe)
-import Data.Monoid (Monoid(..))
+import Data.Maybe (listToMaybe)
+import Data.Monoid (Monoid(..), Any(..))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
@@ -571,8 +572,10 @@ convertApplyPrefix (Data.Apply funcI argI) exprI = do
     isPolymorphic =
       isHole (Data.eValue argI) &&
       maybe False (Data.isDependentPi . Infer.iType . eesInferred) (Data.ePayload funcI)
-    isHole (Data.ExpressionLeaf Data.Hole) = True
-    isHole _ = False
+
+isHole :: Data.ExpressionBody a -> Bool
+isHole (Data.ExpressionLeaf Data.Hole) = True
+isHole _ = False
 
 convertGetVariable :: Monad m => Data.VariableRef -> Convertor m
 convertGetVariable varRef exprI = do
@@ -638,39 +641,62 @@ convertReadOnlyHole exprI =
 loader :: Monad m => Infer.Loader (T m)
 loader = Infer.Loader Load.loadPureDefinitionType
 
+-- Fill partial holes in an expression. Parital holes are those whose
+-- inferred (filler) value itself is not complete, so will not be a
+-- useful auto-inferred value. By auto-filling those, we allow the
+-- user a chance to access all the partiality that needs filling more
+-- easily.
+fillPartialHolesInExpression :: Data.Expression (Infer.Inferred a) -> (Data.Expression (), Bool)
+fillPartialHolesInExpression = second getAny . runWriter . fillHoleExpr
+  where
+    fillHoleExpr expr@(Data.Expression _ (Data.ExpressionLeaf Data.Hole) hInferred) =
+      if isCompleteType $ Infer.iValue hInferred
+      then return $ void expr
+      else do
+        -- Hole inferred value has holes to fill, no use leaving it as
+        -- auto-inferred, just fill it:
+        Writer.tell $ Any True
+        return $ Infer.iValue hInferred
+    fillHoleExpr (Data.Expression g body _) =
+      liftM (Data.pureExpression g) $ Traversable.mapM fillHoleExpr body
+
 convertWritableHole ::
   Monad m =>
   ExprEntityInferred (DataIRef.ExpressionProperty (T m)) -> Convertor m
-convertWritableHole inferred exprI = do
+convertWritableHole eeInferred exprI = do
   inferState <- liftM scInferState readContext
   let
     check expr =
-      inferExpr expr inferState .
-      Infer.iPoint $ eesInferred inferred
+      inferExpr expr inferState . Infer.iPoint $ eesInferred eeInferred
+
+    recheck _ (filledExpr, True) = check filledExpr
+    recheck iExpr (_, False) = return $ Just iExpr -- no holes filled
+    fillPartialHoles Nothing = return Nothing
+    fillPartialHoles (Just iExpr) = recheck iExpr $ fillPartialHolesInExpression iExpr
 
     makeApplyForms _ Nothing = mzero
     makeApplyForms expr (Just i) =
-      List.catMaybes . List.mapL check . List.fromList $
+      List.catMaybes . List.mapL (fillPartialHoles <=< check) . List.fromList $
       applyForms (Infer.iType (Data.ePayload i)) expr
 
     inferResults expr =
       List.joinL . liftM (makeApplyForms expr) $
       uncurry (inferExpr expr) .
       Infer.newNodeWithScope
-      ((Infer.nScope . Infer.iPoint . eesInferred) inferred) $
+      ((Infer.nScope . Infer.iPoint . eesInferred) eeInferred) $
       inferState
-  mPaste <- mkPaste . Infer.iStored $ eesInferred inferred
+  mPaste <- mkPaste . Infer.iStored $ eesInferred eeInferred
   let
     onScopeElement (lambdaGuid, _typeExpr) =
       (lambdaGuidToParamGuid lambdaGuid, Data.ParameterRef lambdaGuid)
     hole = Hole
-      { holeScope = map onScopeElement . Map.toList . Infer.iScope $ eesInferred inferred
-      , holePickResult = Just . pickResult . Infer.iStored $ eesInferred inferred
+      { holeScope = map onScopeElement . Map.toList . Infer.iScope $ eesInferred eeInferred
+      , holePickResult = Just . pickResult . Infer.iStored $ eesInferred eeInferred
       , holePaste = mPaste
       , holeInferResults = inferResults
       }
   mkExpressionRef exprI =<<
-    case eesInferredValues inferred of
+    case eesInferredValues eeInferred of
     [Data.Expression { Data.eValue = Data.ExpressionLeaf Data.Hole }] ->
       return $ ExpressionHole hole
     [x] ->
@@ -678,9 +704,8 @@ convertWritableHole inferred exprI = do
       convertExpressionI . eeFromPure $ Data.randomizeGuids (mkGen 1 2 eGuid) x
     _ -> return $ ExpressionHole hole
   where
-    actions = Infer.InferActions $ const Nothing
     inferExpr expr inferContext inferPoint =
-      liftM (fmap fst . Infer.infer actions) $
+      liftM (fmap fst . Infer.infer (Infer.InferActions (const Nothing))) $
       Infer.load loader inferContext inferPoint Nothing expr
     pickResult irefP =
       liftM (maybe eGuid Data.eGuid . listToMaybe . uninferredHoles) .
@@ -737,13 +762,7 @@ convertExpressionI ee =
 
 -- Check no holes
 isCompleteType :: Data.PureExpression -> Bool
-isCompleteType =
-  isJust . toMaybe
-  where
-    toMaybe = f . Data.eValue
-    f (Data.ExpressionLeaf Data.Hole) = Nothing
-    f e = tMapM_ toMaybe e
-    tMapM_ = (fmap . liftM . const) () . Traversable.mapM
+isCompleteType = not . any (isHole . Data.eValue) . Data.subExpressions
 
 convertHoleResult ::
   Monad m => HoleResult -> T m (ExpressionRef m)
