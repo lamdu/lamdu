@@ -390,7 +390,7 @@ resumptionTests =
       Data.ExpressionLambda (Data.Lambda _ body) = Data.eValue exprD
       scope = Infer.nScope . Infer.iPoint $ Data.ePayload body
       (exprR, _) =
-        uncurry doInferM (Infer.newNodeWithScope scope refMap) Nothing Nothing $
+        uncurry doInferM (Infer.newNodeWithScope scope refMap) Nothing Nothing
         getRecursiveDef
       resultD = inferResults exprD
       resultR = inferResults exprR
