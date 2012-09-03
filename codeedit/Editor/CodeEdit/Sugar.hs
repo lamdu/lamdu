@@ -714,12 +714,21 @@ convertWritableHole eeInferred exprI = do
 
 -- TODO: This is a DRY violation, implementing isPolymorphic logic
 -- here again
+
+-- Also skip param types, those can usually be inferred later, so less
+-- useful to fill immediately
 uninferredHoles :: HoleResult -> [HoleResult]
 uninferredHoles Data.Expression { Data.eValue = Data.ExpressionApply (Data.Apply func arg) } =
   if (Data.isDependentPi . Infer.iType . Data.ePayload) func
   then uninferredHoles func
   else uninferredHoles func ++ uninferredHoles arg
 uninferredHoles e@Data.Expression { Data.eValue = Data.ExpressionLeaf Data.Hole } = [e]
+uninferredHoles Data.Expression
+  { Data.eValue = Data.ExpressionPi (Data.Lambda paramType resultType) } =
+    uninferredHoles resultType ++ uninferredHoles paramType
+uninferredHoles Data.Expression
+  { Data.eValue = Data.ExpressionLambda (Data.Lambda paramType result) } =
+    uninferredHoles result ++ uninferredHoles paramType
 uninferredHoles Data.Expression { Data.eValue = body } =
   Foldable.concatMap uninferredHoles body
 
