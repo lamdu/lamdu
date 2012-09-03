@@ -138,12 +138,10 @@ initDB store =
         builtins <- createBuiltins
         setMkProp A.clipboards []
         setMkProp A.globals builtins
-        defI <- A.makeDefinition
-        A.setP (A.assocNameRef (IRef.guid defI)) "foo"
-        setMkProp A.panes [A.makePane defI]
+        setMkProp A.panes []
         setMkProp A.preJumps []
-        setMkProp A.preCursor $ WidgetIds.fromIRef defI
-        setMkProp A.postCursor $ WidgetIds.fromIRef defI
+        setMkProp A.preCursor $ WidgetIds.fromIRef A.panesIRef
+        setMkProp A.postCursor $ WidgetIds.fromIRef A.panesIRef
       initialVersionIRef <- Version.makeInitialVersion changes
       master <- Branch.new initialVersionIRef
       return [(masterNameIRef, master)]
@@ -151,7 +149,7 @@ initDB store =
     view <- initRef A.viewIRef $ View.new branch
     _ <- initRef A.currentBranchIRef (return branch)
     _ <- initRef A.redosIRef $ return []
-    _ <- initRef A.cursorIRef . Transaction.run (View.store view) $ do
-      (defI : _) <- A.getP A.panes
-      return $ WidgetIds.fromIRef defI
+    _ <-
+      initRef A.cursorIRef . Transaction.run (View.store view) .
+      return $ WidgetIds.fromIRef A.panesIRef
     return ()
