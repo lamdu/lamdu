@@ -83,7 +83,7 @@ resultPickEventMap holeInfo =
   E.keyPresses Config.pickResultKeys "Pick this search result" .
   pickExpr holeInfo
 
-data ApplyForms m = ApplyForms
+data ResultsList m = ResultsList
   { afMain :: Sugar.HoleResult
   , afMore :: Maybe (Sugar.HoleResult, ListT m Sugar.HoleResult)
   }
@@ -97,7 +97,7 @@ canonizeResultExpr holeInfo expr =
 
 resultToWidget
   :: MonadF m
-  => ExpressionGui.Maker m -> HoleInfo m -> ApplyForms (T m)
+  => ExpressionGui.Maker m -> HoleInfo m -> ResultsList (T m)
   -> OTransaction ViewTag m
      ( WidgetT ViewTag m
      , Maybe (Sugar.HoleResult, Maybe (WidgetT ViewTag m))
@@ -207,15 +207,15 @@ makeLiteralResults searchTerm =
       , resultExpr = toPureExpr . Data.ExpressionLeaf $ Data.LiteralInteger integer
       }
 
-makeApplyForms ::
-  Monad m => ListT m Sugar.HoleResult -> m (Maybe (ApplyForms m))
-makeApplyForms applyForms = do
+makeResultsList ::
+  Monad m => ListT m Sugar.HoleResult -> m (Maybe (ResultsList m))
+makeResultsList applyForms = do
   -- We always want the first, and we want to know if there's more, so
   -- take 2:
   (firstTwo, rest) <- List.splitAtM 2 applyForms
   return $ case firstTwo of
     [] -> Nothing
-    (x:xs) -> Just ApplyForms
+    (x:xs) -> Just ResultsList
       { afMain = x
       , afMore = case xs of
         [] -> Nothing
@@ -226,7 +226,7 @@ makeApplyForms applyForms = do
 makeAllResults
   :: MonadF m
   => HoleInfo m
-  -> OTransaction ViewTag m (ListT (T m) (ApplyForms (T m)))
+  -> OTransaction ViewTag m (ListT (T m) (ResultsList (T m)))
 makeAllResults holeInfo = do
   globals <- OT.getP Anchors.globals
   varResults <-
@@ -240,7 +240,7 @@ makeAllResults holeInfo = do
   return .
     List.catMaybes .
     List.mapL
-      (makeApplyForms . Sugar.holeInferResults hole . resultExpr) .
+      (makeResultsList . Sugar.holeInferResults hole . resultExpr) .
     List.fromList .
     sortOn (resultOrdering searchTerm) .
     filter nameMatch $
@@ -327,7 +327,7 @@ vboxMBiasedAlign mChildIndex align =
 makeResultsWidget
   :: MonadF m
   => ExpressionGui.Maker m -> HoleInfo m
-  -> [ApplyForms (T m)] -> Bool
+  -> [ResultsList (T m)] -> Bool
   -> OTransaction ViewTag m
      (Maybe Sugar.HoleResult, WidgetT ViewTag m)
 makeResultsWidget makeExpressionEdit holeInfo firstResults moreResults = do
