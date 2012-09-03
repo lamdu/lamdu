@@ -151,14 +151,31 @@ idTest =
     (mkInferredGetDef "id") $
   mkInferredLeafSimple Data.IntegerType setType
 
+fOfXIsFOf5 :: HUnit.Test
+fOfXIsFOf5 =
+  testInfer "f x = f 5"
+  (makeLambda "x" hole (makeApply [getRecursiveDef, five])) $
+  mkInferredNode "x"
+    (makeLambda "" intType (makeApply [getRecursiveDef, five]))
+    (makePi "" intType hole) $
+  Data.makeLambda
+    (mkInferredLeafSimple Data.IntegerType setType) $
+  mkInferredNode ""
+    (makeApply [getRecursiveDef, five])
+    hole $
+  Data.makeApply
+    (mkInferredLeafSimple
+      (Data.GetVariable (Data.DefinitionRef defI))
+      (makePi "" intType hole)) $
+  mkInferredLeafSimple (Data.LiteralInteger 5) intType
+
+five :: Data.PureExpression
+five = mkExpr "five" . Data.ExpressionLeaf $ Data.LiteralInteger 5
+
 argTypeGoesToPi :: HUnit.Test
 argTypeGoesToPi =
   testInfer "arg type goes to pi"
-  (makeApply
-    [ hole
-    , mkExpr "" . Data.ExpressionLeaf $ Data.LiteralInteger 5
-    ]
-  ) $
+  (makeApply [hole, five]) $
   mkInferredNode ""
     hole
     hole $
@@ -340,6 +357,10 @@ testInfer name pureExpr result =
   where
     inferredExpr = inferResults . fst $ doInfer pureExpr
 
+getRecursiveDef :: Data.PureExpression
+getRecursiveDef =
+  mkExpr "getRecursiveDef" . Data.ExpressionLeaf . Data.GetVariable $ Data.DefinitionRef defI
+
 resumptionTests :: [HUnit.Test]
 resumptionTests =
   [ testResume "resume with pi"
@@ -369,8 +390,8 @@ resumptionTests =
       Data.ExpressionLambda (Data.Lambda _ body) = Data.eValue exprD
       scope = Infer.nScope . Infer.iPoint $ Data.ePayload body
       (exprR, _) =
-        uncurry doInferM (Infer.newNodeWithScope scope refMap) Nothing Nothing .
-        mkExpr "" . Data.ExpressionLeaf . Data.GetVariable $ Data.DefinitionRef defI
+        uncurry doInferM (Infer.newNodeWithScope scope refMap) Nothing Nothing $
+        getRecursiveDef
       resultD = inferResults exprD
       resultR = inferResults exprR
     in
@@ -396,5 +417,6 @@ allTests =
   , idOnHole
   , depApply
   , forceMono
+  , fOfXIsFOf5
   ] ++
   resumptionTests
