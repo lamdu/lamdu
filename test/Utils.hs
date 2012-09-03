@@ -150,8 +150,11 @@ doInferM refMap inferNode mDefRef mResumedRoot expr =
 loader :: Monad m => Infer.Loader m
 loader = Infer.Loader (return . (definitionTypes !) . IRef.guid)
 
+defI :: Data.DefinitionIRef
+defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
+
 doInfer :: Data.PureExpression -> (Infer.Expression (), Infer.RefMap)
-doInfer = uncurry doInferM Infer.initial Nothing Nothing
+doInfer = uncurry doInferM Infer.initial (Just defI) Nothing
 
 factorialExpr :: Data.PureExpression
 factorialExpr =

@@ -365,10 +365,7 @@ resumptionTests =
     (getApplyArg . getLambdaBody . getLambdaBody . getLambdaBody)
   , testCase "ref to the def on the side" $
     let
-      defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
-      (exprD, refMap) =
-        uncurry doInferM Infer.initial (Just defI) Nothing $
-        makeLambda "" hole hole
+      (exprD, refMap) = doInfer $ makeLambda "" hole hole
       Data.ExpressionLambda (Data.Lambda _ body) = Data.eValue exprD
       scope = Infer.nScope . Infer.iPoint $ Data.ePayload body
       (exprR, _) =
