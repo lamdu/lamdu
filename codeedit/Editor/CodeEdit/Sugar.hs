@@ -534,13 +534,21 @@ convertApplyPrefix (Data.Apply funcI argI) exprI = do
     makePolymorphic x =
       (liftM . atRGuid . Guid.combine . Guid.fromString) "polymorphic" .
       mkExpressionRef exprI . ExpressionPolymorphic . Polymorphic x
-  case (rExpression funcRef, rExpression argRef) of
-    (ExpressionPolymorphic (Polymorphic compact full), ExpressionInferred _) ->
-      makePolymorphic compact . removeRedundantTypes =<<
-      (mkExpressionRef exprI . ExpressionApply DontHaveParens) (Apply full newArgRef)
-    (_, ExpressionInferred _) ->
-      on makePolymorphic removeRedundantTypes funcRef =<< makeFullApply
-    _ -> makeFullApply
+  if isPolymorphic
+    then
+      case rExpression funcRef of
+      ExpressionPolymorphic (Polymorphic compact full) ->
+        makePolymorphic compact . removeRedundantTypes =<<
+        (mkExpressionRef exprI . ExpressionApply DontHaveParens) (Apply full newArgRef)
+      _ ->
+        on makePolymorphic removeRedundantTypes funcRef =<< makeFullApply
+    else makeFullApply
+  where
+    isPolymorphic =
+      isHole (Data.eValue argI) &&
+      maybe False (Data.isDependentPi . Infer.iType . eesInferred) (Data.ePayload funcI)
+    isHole (Data.ExpressionLeaf Data.Hole) = True
+    isHole _ = False
 
 convertGetVariable :: Monad m => Data.VariableRef -> Convertor m
 convertGetVariable varRef exprI = do
@@ -610,18 +618,17 @@ convertWritableHole :: Monad m => ExprEntityStored m -> Convertor m
 convertWritableHole stored exprI = do
   inferState <- liftM scInferState readContext
   let
-    checkAndFillHoles expr =
-      (liftM . fmap) (Infer.iValue . Data.ePayload) .
-      inferExpr expr inferState .
+    check expr =
+      (liftM . fmap) void . inferExpr expr inferState .
       Infer.iPoint $ eesInferred stored
 
-    filledHolesApplyForms _ Nothing = mzero
-    filledHolesApplyForms expr (Just inferred) =
-      List.catMaybes . List.mapL checkAndFillHoles . List.fromList $
+    makeApplyForms _ Nothing = mzero
+    makeApplyForms expr (Just inferred) =
+      List.catMaybes . List.mapL check . List.fromList $
       applyForms (Infer.iType (Data.ePayload inferred)) expr
 
     inferResults expr =
-      List.joinL . liftM (filledHolesApplyForms expr) $
+      List.joinL . liftM (makeApplyForms expr) $
       uncurry (inferExpr expr) .
       Infer.newNodeWithScope
       ((Infer.nScope . Infer.iPoint . eesInferred) stored) $
