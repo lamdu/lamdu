@@ -159,7 +159,7 @@ fOfXIsFOf5 =
     (makeLambda "" intType (makeApply [getRecursiveDef, five]))
     (makePi "" intType hole) $
   Data.makeLambda
-    (mkInferredLeafSimple Data.IntegerType setType) $
+    (mkInferredLeaf Data.Hole intType setType) $
   mkInferredNode ""
     (makeApply [getRecursiveDef, five])
     hole $

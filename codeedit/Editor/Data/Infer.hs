@@ -317,17 +317,16 @@ mergeExprs p0 p1 =
           Reader.asks (Map.lookup p . Lens.view mGuidMapping)
         _ -> Traversable.mapM mapParamGuids body
 
-lambdaBodyTypeRules :: Guid -> Ref -> Ref -> [Rule]
-lambdaBodyTypeRules g bodyTypeRef lambdaTypeRef =
-  [ -- Lambda body type -> Lambda type (result)
+lambdaRules :: Guid -> TypedValue -> Ref -> [Rule]
+lambdaRules g (TypedValue lambdaValueRef lambdaTypeRef) bodyTypeRef =
+  [ -- Lambda body type -> Pi result type
     Rule [bodyTypeRef] $ \[bodyTypeExpr] ->
     [( lambdaTypeRef
      , makeRefExpression g $ Data.makePi (makeHole "paramType" g) bodyTypeExpr
      )]
-  , -- Lambda Type (result) -> Body Type
-    Rule [lambdaTypeRef] $ \[Data.Expression piG body _] -> do
-      Data.Lambda _ resultType <- maybeToList $ maybePi body
-      return
+  , Rule [lambdaTypeRef] $ \[Data.Expression piG body _] -> do
+      Data.Lambda paramType resultType <- maybeToList $ maybePi body
+      [ -- Pi result type -> Body type
         ( bodyTypeRef
         , subst piG
           ( makeRefExpression (Guid.fromString "getVar")
@@ -335,6 +334,11 @@ lambdaBodyTypeRules g bodyTypeRef lambdaTypeRef =
           )
           resultType
         )
+        , -- Pi param type -> Lambda param type
+        ( lambdaValueRef
+        , makeRefExpression g . Data.makeLambda paramType $ makeHole "body" g
+        )
+        ]
   ]
 
 unionRules :: Ref -> Ref -> [Rule]
@@ -368,7 +372,7 @@ makeNodeRules (Data.Expression g exprBody (InferNode typedVal scope)) =
     setRule (tvType resultType) :
     onLambda Data.ExpressionPi maybePi lambda
   Data.ExpressionLambda lambda@(Data.Lambda _ body) ->
-    lambdaBodyTypeRules g (tvType body) (tvType typedVal) ++
+    lambdaRules g typedVal (tvType body) ++
     onLambda Data.ExpressionLambda maybeLambda lambda
   Data.ExpressionApply apply -> applyRules g typedVal apply
   Data.ExpressionLeaf (Data.GetVariable var) -> do
