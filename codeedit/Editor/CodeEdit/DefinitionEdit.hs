@@ -35,7 +35,7 @@ paramFDConfig = FocusDelegator.Config
 makeNameEdit :: MonadF m => Widget.Id -> Guid -> OTransaction t m (WidgetT t m)
 makeNameEdit myId ident =
   BWidgets.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
-  (liftM (Widget.tint Config.definitionColor) .
+  (liftM (Widget.tint Config.definitionOriginColor) .
    BWidgets.makeNameEdit ident)
   myId
 
