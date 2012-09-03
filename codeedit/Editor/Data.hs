@@ -16,6 +16,8 @@ module Editor.Data
   , canonizeGuids, randomizeGuids
   , matchExpressionBody
   , matchExpression
+  , subExpressions
+  , isDependentPi
   ) where
 
 import Control.Applicative (Applicative(..), liftA2)
@@ -36,11 +38,12 @@ import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
 import Data.Traversable (Traversable(..))
 import System.Random (RandomGen, random)
-import Prelude hiding (mapM, sequence)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
+import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
 import qualified Data.Store.IRef as IRef
+import qualified Data.Traversable as Traversable
 import qualified System.Random as Random
 
 data Lambda expr = Lambda {
@@ -208,7 +211,7 @@ matchExpression f =
     go scope (Expression g0 body0 val0) (Expression g1 body1 val1) =
       fmap (flip (Expression g0) (f val0 val1)) $
       case matchExpressionBody (go (Map.insert g1 g0 scope)) body0 body1 of
-      Just x -> sequence x
+      Just x -> Traversable.sequence x
       Nothing ->
         case (body0, body1) of
         (ExpressionLeaf l@(GetVariable (ParameterRef par0)),
@@ -216,6 +219,19 @@ matchExpression f =
           guard . (par0 ==) . fromMaybe par1 $ Map.lookup par1 scope
           return $ ExpressionLeaf l
         _ -> mzero
+
+subExpressions :: Expression a -> [Expression a]
+subExpressions x =
+  x : Foldable.concatMap subExpressions (eValue x)
+
+isDependentPi ::
+  Expression a -> Bool
+isDependentPi (Expression g (ExpressionPi (Lambda _ resultType)) _) =
+  any (isGet . eValue) $ subExpressions resultType
+  where
+    isGet (ExpressionLeaf (GetVariable (ParameterRef p))) = p == g
+    isGet _ = False
+isDependentPi _ = False
 
 derive makeFoldable ''Apply
 derive makeFoldable ''Lambda
