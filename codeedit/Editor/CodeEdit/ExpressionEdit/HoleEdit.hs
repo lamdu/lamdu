@@ -2,7 +2,7 @@
 module Editor.CodeEdit.ExpressionEdit.HoleEdit(make, ResultPicker) where
 
 import Control.Arrow (first, second, (&&&))
-import Control.Monad (liftM, mplus, msum)
+import Control.Monad (liftM, mplus, msum, void)
 import Control.Monad.ListT (ListT)
 import Data.Function (on)
 import Data.Hashable(hash)
@@ -76,29 +76,29 @@ pickExpr holeInfo expr = do
 
 resultPickEventMap
   :: Monad m
-  => HoleInfo m -> Data.PureExpression -> Widget.EventHandlers (ITransaction ViewTag m)
+  => HoleInfo m -> Sugar.HoleResult -> Widget.EventHandlers (ITransaction ViewTag m)
 resultPickEventMap holeInfo =
   E.keyPresses Config.pickResultKeys "Pick this search result" .
-  pickExpr holeInfo
+  pickExpr holeInfo . void
 
 data ApplyForms m = ApplyForms
-  { afMain :: Data.PureExpression
-  , afMore :: Maybe (Data.PureExpression, ListT m Data.PureExpression)
+  { afMain :: Sugar.HoleResult
+  , afMore :: Maybe (Sugar.HoleResult, ListT m Sugar.HoleResult)
   }
 
 canonizeResultExpr
   :: HoleInfo m
-  -> Data.PureExpression -> Data.PureExpression
+  -> Data.Expression a -> Data.Expression a
 canonizeResultExpr holeInfo expr =
   flip Data.randomizeGuids expr . Random.mkStdGen $
-  hash (show expr, Guid.bs (hiGuid holeInfo))
+  hash (show (void expr), Guid.bs (hiGuid holeInfo))
 
 resultToWidget
   :: MonadF m
   => ExpressionGui.Maker m -> HoleInfo m -> ApplyForms (T m)
   -> OTransaction ViewTag m
      ( WidgetT ViewTag m
-     , Maybe (Data.PureExpression, Maybe (WidgetT ViewTag m))
+     , Maybe (Sugar.HoleResult, Maybe (WidgetT ViewTag m))
      )
 resultToWidget makeExpressionEdit holeInfo applyForms = do
   cursorOnMain <- liftM isJust $ OT.subCursor myId
@@ -138,8 +138,9 @@ resultToWidget makeExpressionEdit holeInfo applyForms = do
     toWidget ident expr =
       BWidgets.makeFocusableView ident .
       Widget.strongerEvents (resultPickEventMap holeInfo expr) .
-      ExpressionGui.egWidget =<< makeExpressionEdit =<<
-      (OT.transaction . Sugar.convertExpressionPure) expr
+      ExpressionGui.egWidget =<<
+      makeExpressionEdit . Sugar.removeTypes =<<
+      (OT.transaction . Sugar.convertHoleResult) expr
     moreResultsPrefix = mconcat [hiHoleId holeInfo, Widget.Id ["more results"], canonizedExprId]
     addMoreSymbol w = do
       moreSymbolLabel <-
@@ -205,7 +206,7 @@ makeLiteralResults searchTerm =
       }
 
 makeApplyForms ::
-  Monad m => ListT m Data.PureExpression -> m (Maybe (ApplyForms m))
+  Monad m => ListT m Sugar.HoleResult -> m (Maybe (ApplyForms m))
 makeApplyForms applyForms = do
   -- We always want the first, and we want to know if there's more, so
   -- take 2:
@@ -274,7 +275,7 @@ holeExpr = toPureExpr $ Data.ExpressionLeaf Data.Hole
 makeSearchTermWidget
   :: MonadF m
   => HoleInfo m -> Widget.Id
-  -> Maybe Data.PureExpression
+  -> Maybe Sugar.HoleResult
   -> OTransaction ViewTag m (WidgetT ViewTag m)
 makeSearchTermWidget holeInfo searchTermId mFirstResult =
   liftM
@@ -325,7 +326,7 @@ makeResultsWidget
   => ExpressionGui.Maker m -> HoleInfo m
   -> [ApplyForms (T m)] -> Bool
   -> OTransaction ViewTag m
-     (Maybe Data.PureExpression, WidgetT ViewTag m)
+     (Maybe Sugar.HoleResult, WidgetT ViewTag m)
 makeResultsWidget makeExpressionEdit holeInfo firstResults moreResults = do
   firstResultsAndWidgets <-
     mapM (resultToWidget makeExpressionEdit holeInfo) firstResults
@@ -366,7 +367,7 @@ makeActiveHoleEdit
   :: MonadF m
   => ExpressionGui.Maker m -> HoleInfo m
   -> OTransaction ViewTag m
-     (Maybe Data.PureExpression, WidgetT ViewTag m)
+     (Maybe Sugar.HoleResult, WidgetT ViewTag m)
 makeActiveHoleEdit makeExpressionEdit holeInfo =
   OT.assignCursor (hiHoleId holeInfo) searchTermId $ do
     OT.markVariablesAsUsed . map fst . Sugar.holeScope $ hiHole holeInfo
@@ -420,7 +421,7 @@ make makeExpressionEdit hole guid myId = do
           }
       in
         liftM
-        (first (fmap (pickExpr holeInfo) . maybeRemovePicker searchText) .
+        (first (fmap (pickExpr holeInfo . void) . maybeRemovePicker searchText) .
          second (makeBackground 8 Config.holeBackgroundColor)) $
         makeActiveHoleEdit makeExpressionEdit holeInfo
     _ ->
