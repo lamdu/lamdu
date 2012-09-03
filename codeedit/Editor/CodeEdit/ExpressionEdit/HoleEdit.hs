@@ -8,7 +8,7 @@ import Data.Function (on)
 import Data.Hashable(hash)
 import Data.List (isInfixOf, isPrefixOf)
 import Data.List.Utils (sortOn)
-import Data.Maybe (isJust, listToMaybe, maybeToList, mapMaybe)
+import Data.Maybe (isJust, listToMaybe, maybeToList, mapMaybe, fromMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
@@ -49,6 +49,8 @@ moreSymbolSizeFactor = 0.5
 
 type ResultPicker m = ITransaction ViewTag m Widget.EventResult
 
+-- TODO: Rename this (to "Choice"?). Results are the post-apply-form inferred
+-- expansions of this
 data Result = Result
   { resultNames :: [String]
   , resultExpr :: Data.PureExpression
@@ -61,12 +63,12 @@ data HoleInfo m = HoleInfo
   { hiHoleId :: Widget.Id
   , hiSearchTerm :: Property (T m) String
   , hiHole :: Sugar.Hole m
-  , hiPickResult :: Data.PureExpression -> T m Guid
+  , hiPickResult :: Sugar.HoleResult -> T m Guid
   , hiGuid :: Guid
   }
 
 pickExpr
-  :: Monad m => HoleInfo m -> Data.PureExpression -> ResultPicker m
+  :: Monad m => HoleInfo m -> Sugar.HoleResult -> ResultPicker m
 pickExpr holeInfo expr = do
   guid <- IT.transaction $ hiPickResult holeInfo expr
   return Widget.EventResult
@@ -79,7 +81,7 @@ resultPickEventMap
   => HoleInfo m -> Sugar.HoleResult -> Widget.EventHandlers (ITransaction ViewTag m)
 resultPickEventMap holeInfo =
   E.keyPresses Config.pickResultKeys "Pick this search result" .
-  pickExpr holeInfo . void
+  pickExpr holeInfo
 
 data ApplyForms m = ApplyForms
   { afMain :: Sugar.HoleResult
@@ -268,9 +270,8 @@ makeAllResults holeInfo = do
           Data.Lambda holeExpr holeExpr
         }
       ]
+    holeExpr = toPureExpr $ Data.ExpressionLeaf Data.Hole
 
-holeExpr :: Data.PureExpression
-holeExpr = toPureExpr $ Data.ExpressionLeaf Data.Hole
 
 makeSearchTermWidget
   :: MonadF m
@@ -301,10 +302,12 @@ makeSearchTermWidget holeInfo searchTermId mFirstResult =
         Anchors.setP (Anchors.assocNameRef (IRef.guid newDefI)) newName
         Anchors.newPane newDefI
         return newDefI
-      let
-        defRef =
-          toPureExpr . Data.ExpressionLeaf . Data.GetVariable $
-          Data.DefinitionRef newDefI
+      defRef <-
+        liftM (fromMaybe (error "GetDef should always type-check") . listToMaybe) .
+        IT.transaction . List.toList .
+        Sugar.holeInferResults (hiHole holeInfo) .
+        toPureExpr . Data.ExpressionLeaf . Data.GetVariable $
+        Data.DefinitionRef newDefI
       -- TODO: Can we use pickResult's animIdMapping?
       eventResult <- holePickResult defRef
       maybe (return ()) (IT.transaction . Anchors.savePreJumpPosition) $
@@ -421,7 +424,7 @@ make makeExpressionEdit hole guid myId = do
           }
       in
         liftM
-        (first (fmap (pickExpr holeInfo . void) . maybeRemovePicker searchText) .
+        (first (fmap (pickExpr holeInfo) . maybeRemovePicker searchText) .
          second (makeBackground 8 Config.holeBackgroundColor)) $
         makeActiveHoleEdit makeExpressionEdit holeInfo
     _ ->

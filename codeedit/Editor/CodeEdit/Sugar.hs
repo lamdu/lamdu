@@ -129,7 +129,7 @@ type HoleResult = Infer.Expression ()
 
 data Hole m = Hole
   { holeScope :: [(Guid, Data.VariableRef)]
-  , holePickResult :: Maybe (Data.PureExpression -> T m Guid)
+  , holePickResult :: Maybe (HoleResult -> T m Guid)
   , holePaste :: Maybe (T m Guid)
   , holeInferResults :: Data.PureExpression -> ListT (T m) HoleResult
   }
@@ -683,16 +683,20 @@ convertWritableHole inferred exprI = do
       liftM (fmap fst . Infer.infer actions) $
       Infer.load loader inferContext inferPoint Nothing expr
     pickResult irefP =
-      liftM (maybe eGuid Data.eGuid . listToMaybe . holes) .
-      DataIRef.writeExpression (Property.value irefP) .
-      void
+      liftM (maybe eGuid Data.eGuid . listToMaybe . uninferredHoles) .
+      DataIRef.writeExpression (Property.value irefP)
     eGuid = Data.eGuid exprI
 
-holes :: Data.PureExpression -> [Data.PureExpression]
-holes e =
-  case Data.eValue e of
-  Data.ExpressionLeaf Data.Hole -> [e]
-  body -> Foldable.concatMap holes body
+-- TODO: This is a DRY violation, implementing isPolymorphic logic
+-- here again
+uninferredHoles :: HoleResult -> [HoleResult]
+uninferredHoles Data.Expression { Data.eValue = Data.ExpressionApply (Data.Apply func arg) } =
+  if (Data.isDependentPi . Infer.iType . Data.ePayload) func
+  then uninferredHoles func
+  else uninferredHoles func ++ uninferredHoles arg
+uninferredHoles e@Data.Expression { Data.eValue = Data.ExpressionLeaf Data.Hole } = [e]
+uninferredHoles Data.Expression { Data.eValue = body } =
+  Foldable.concatMap uninferredHoles body
 
 convertHole :: Monad m => Convertor m
 convertHole exprI =
