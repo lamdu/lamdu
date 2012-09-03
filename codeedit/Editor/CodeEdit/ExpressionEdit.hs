@@ -76,7 +76,7 @@ make sExpr = do
       (Widget.weakerEvents . expressionEventMap holePicker)
       (Sugar.rActions sExpr)
     ) .
-    ExpressionGui.addType exprId
+    ExpressionGui.addType ExpressionGui.Background exprId
     (map
       ( Widget.tint Config.inferredTypeTint
       . Widget.scale Config.typeScaleFactor

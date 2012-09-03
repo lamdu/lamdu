@@ -6,14 +6,16 @@ module Editor.CodeEdit.ExpressionEdit.ExpressionGui
   , fromValueWidget
   , hbox, hboxSpaced
   , addType
+  , TypeStyle(..)
   ) where
 
-import Control.Lens ((^.), view)
+import Control.Lens ((^.))
 import Control.Monad (liftM)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
 import Editor.OTransaction (OTransaction, WidgetT)
 import Graphics.UI.Bottle.Widget (R)
+import qualified Control.Lens as Lens
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.List as List
 import qualified Data.Vector.Vector2 as Vector2
@@ -58,32 +60,43 @@ hbox guis =
 hboxSpaced :: [ExpressionGui m] -> ExpressionGui m
 hboxSpaced = hbox . List.intersperse (fromValueWidget BWidgets.spaceWidget)
 
-addType
-  :: Widget.Id
-  -> [WidgetT ViewTag m]
-  -> ExpressionGui m
-  -> ExpressionGui m
-addType _ [] eg = eg
-addType exprId typeEdits eg =
+data TypeStyle = HorizLine | Background
+
+addType ::
+  TypeStyle ->
+  Widget.Id ->
+  [WidgetT ViewTag m] ->
+  ExpressionGui m ->
+  ExpressionGui m
+addType _ _ [] eg = eg
+addType style exprId typeEdits eg =
   ExpressionGui (Box.toWidget box) alignment
   where
     alignment =
-      maybe (error "True disappeared from box list?!") (view Vector2.second . Grid.elementAlign) .
+      maybe (error "True disappeared from box list?!") (Lens.view Vector2.second . Grid.elementAlign) .
       lookup True $ Box.boxContent box
-    box = Box.makeKeyed Box.vertical
-      [ (True, (Vector2 0.5 (egAlignment eg), widget))
-      , (False, (0.5, Spacer.makeHorizLine underlineId (Vector2 underLineWidth 1)))
-      , (False, (0.5, typeEdit))
-      ]
+    box = Box.makeKeyed Box.vertical $
+      (True, (Vector2 0.5 (egAlignment eg), widget)) :
+      middleElement : [(False, (0.5, typeEdit))]
+    middleElement =
+      case style of
+      HorizLine -> (False, (0.5, Spacer.makeHorizLine underlineId (Vector2 width 1)))
+      Background -> (False, (0.5, Spacer.makeWidget 5))
     widget = egWidget eg
-    width = view Vector2.first . Widget.wSize
-    underLineWidth = max (width widget) (width typeEdit)
-    typeEdit = addBackground $ BWidgets.vboxCentered typeEdits
+    getWidth = Lens.view Vector2.first . Widget.wSize
+    width = max (getWidth widget) rawTypeWidth
+    rawTypeWidth = getWidth rawTypeEdit
+    rawTypeEdit = BWidgets.vboxCentered typeEdits
+    typeEdit =
+      addBackground .
+      (Widget.atWSize . Lens.over Vector2.first . const) width .
+      Widget.translate (Vector2 ((width - rawTypeWidth)/2) 0) $ rawTypeEdit
     isError = length typeEdits >= 2
-    typeErrorAnimId = Widget.toAnimId exprId ++ ["type error background"]
-    addBackground
-      | isError =
-        Widget.backgroundColor 15 typeErrorAnimId
-        Config.inferredTypeErrorBGColor
-      | otherwise = id
+    bgAnimId = Widget.toAnimId exprId ++ ["type background"]
+    addBackground = maybe id (Widget.backgroundColor 15 bgAnimId) bgColor
+    bgColor
+      | isError = Just Config.inferredTypeErrorBGColor
+      | otherwise = do
+        Background <- Just style
+        return Config.inferredTypeBGColor
     underlineId = WidgetIds.underlineId $ Widget.toAnimId exprId

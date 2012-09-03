@@ -59,7 +59,7 @@ makeParamEdit makeExpressionEdit rhs param =
   (addJumpToRHS rhs . Widget.weakerEvents paramEventMap) $ do
     paramNameEdit <- makeParamNameEdit ident
     paramTypeEdit <- makeExpressionEdit $ Sugar.fpType param
-    return . ExpressionGui.addType (WidgetIds.fromGuid ident)
+    return . ExpressionGui.addType ExpressionGui.HorizLine (WidgetIds.fromGuid ident)
       [ExpressionGui.egWidget paramTypeEdit] $
       ExpressionGui.fromValueWidget paramNameEdit
   where

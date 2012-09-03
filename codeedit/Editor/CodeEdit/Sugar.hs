@@ -669,7 +669,7 @@ convertExpressionI ee =
   Data.ExpressionLeaf (Data.LiteralInteger x) -> convertLiteralInteger x
   Data.ExpressionLeaf Data.Hole -> convertHole
   Data.ExpressionLeaf Data.Set -> convertAtom "Set"
-  Data.ExpressionLeaf Data.IntegerType -> convertAtom "Integer"
+  Data.ExpressionLeaf Data.IntegerType -> convertAtom "Int"
 
 -- Check no holes
 isCompleteType :: Data.PureExpression -> Bool

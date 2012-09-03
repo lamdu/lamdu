@@ -65,7 +65,8 @@ holeBackgroundColor = Draw.Color 1 0 0 0.3
 
 unfocusedReadOnlyHoleBackgroundColor = Draw.Color 1 0.5 0.5 0.5
 
-inferredHoleColor = Draw.Color 0.2 1 0.2 1
+inferredValueScaleFactor = 0.7
+inferredValueTint = Draw.Color 1 1 1 0.6
 
 parenHighlightColor = Draw.Color 0.3 0 1 0.25
 
@@ -97,8 +98,9 @@ pasteKeys = [ctrl 'v', k 'v']
 inactiveTintColor = Draw.Color 1 1 1 0.8
 activeDefBGColor = Draw.Color 0 0 0.2 1
 
-inferredTypeTint = Draw.Color 0.7 0.7 0.7 1
+inferredTypeTint = inferredValueTint
 inferredTypeErrorBGColor = Draw.Color 0.5 0.05 0.05 1
+inferredTypeBGColor = Draw.Color 0.3 0.7 0.3 0.2
 
 helpStyle font = TextView.Style {
   TextView.styleColor = Draw.Color 1 1 1 1,

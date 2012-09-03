@@ -28,7 +28,8 @@ make makeExpressionEdit inferred guid myId = do
       liftM ((,) Nothing) .
       ExpressionGui.atEgWidgetM
       ( BWidgets.makeFocusableView (WidgetIds.searchTermId myId)
-      . Widget.tint Config.inferredHoleColor
+      . Widget.tint Config.inferredValueTint
+      . Widget.scale Config.inferredValueScaleFactor
       ) =<<
       makeExpressionEdit (Sugar.iValue inferred)
     Just _ ->
