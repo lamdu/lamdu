@@ -26,7 +26,7 @@ loadPureExpression
   => Data.ExpressionIRef -> Transaction t m Data.PureExpression
 loadPureExpression exprI =
   liftM (Data.pureExpression (DataIRef.exprGuid exprI)) .
-  Traversable.mapM loadPureExpression =<< DataIRef.readExpr exprI
+  Traversable.mapM loadPureExpression =<< DataIRef.readExprBody exprI
 
 loadPureDefinition
   :: Monad m
@@ -44,7 +44,7 @@ loadExpression
   => Property (T f) Data.ExpressionIRef
   -> T m (ExpressionEntity (T f))
 loadExpression exprP = do
-  expr <- DataIRef.readExpr exprI
+  expr <- DataIRef.readExprBody exprI
   liftM (flip (Data.Expression (DataIRef.exprGuid exprI)) exprP) $
     case expr of
     Data.ExpressionLambda lambda ->
@@ -90,7 +90,7 @@ lambdaTypeProp
   -> DataIRef.ExpressionProperty (T m)
 lambdaTypeProp cons lambdaI (Data.Lambda paramTypeI bodyI) =
   Property paramTypeI
-  (DataIRef.writeExpr lambdaI . cons . flip Data.Lambda bodyI)
+  (DataIRef.writeExprBody lambdaI . cons . flip Data.Lambda bodyI)
 
 lambdaBodyProp
   :: Monad m
@@ -99,7 +99,7 @@ lambdaBodyProp
   -> DataIRef.ExpressionProperty (T m)
 lambdaBodyProp cons lambdaI (Data.Lambda paramTypeI bodyI) =
   Property bodyI
-  (DataIRef.writeExpr lambdaI . cons . Data.Lambda paramTypeI)
+  (DataIRef.writeExprBody lambdaI . cons . Data.Lambda paramTypeI)
 
 applyFuncProp
   :: Monad m
@@ -107,7 +107,7 @@ applyFuncProp
   -> DataIRef.Apply -> DataIRef.ExpressionProperty (T m)
 applyFuncProp applyI (Data.Apply funcI argI) =
   Property funcI
-  (DataIRef.writeExpr applyI . (`Data.makeApply` argI))
+  (DataIRef.writeExprBody applyI . (`Data.makeApply` argI))
 
 applyArgProp
   :: Monad m
@@ -115,4 +115,4 @@ applyArgProp
   -> DataIRef.Apply -> DataIRef.ExpressionProperty (T m)
 applyArgProp applyI (Data.Apply funcI argI) =
   Property argI
-  (DataIRef.writeExpr applyI . Data.makeApply funcI)
+  (DataIRef.writeExprBody applyI . Data.makeApply funcI)

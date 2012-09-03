@@ -121,7 +121,7 @@ makeDefinition
   :: Monad m
   => Transaction ViewTag m Data.DefinitionIRef
 makeDefinition = do
-  let newHole = DataIRef.newExpr $ Data.ExpressionLeaf Data.Hole
+  let newHole = DataIRef.newExprBody $ Data.ExpressionLeaf Data.Hole
   defI <-
     Transaction.newIRef =<<
     liftM2 (Data.Definition . Data.DefinitionExpression) newHole newHole

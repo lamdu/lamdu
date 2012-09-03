@@ -260,7 +260,7 @@ writeIRef
   :: Monad m => DataIRef.ExpressionProperty (T m)
   -> Data.ExpressionBody Data.ExpressionIRef
   -> Transaction t m ()
-writeIRef = DataIRef.writeExpr . Property.value
+writeIRef = DataIRef.writeExprBody . Property.value
 
 writeIRefVia
   :: Monad m
@@ -684,7 +684,7 @@ convertWritableHole inferred exprI = do
       Infer.load loader inferContext inferPoint Nothing expr
     pickResult irefP =
       liftM (maybe eGuid Data.eGuid . listToMaybe . holes) .
-      DataIRef.writeExpressionFromPure (Property.value irefP) .
+      DataIRef.writeExpression (Property.value irefP) .
       void
     eGuid = Data.eGuid exprI
 
@@ -808,7 +808,7 @@ loadConvertDefinition defI = do
             { dntNewType = inferredTypeS
             , dntAcceptNewType =
               Property.set (Data.ePayload typeL) =<<
-              DataIRef.newExpressionFromPure inferredTypeP
+              DataIRef.newExpression inferredTypeP
             }
       mNewType <-
         if isSuccess && not typesMatch && isCompleteType inferredTypeP

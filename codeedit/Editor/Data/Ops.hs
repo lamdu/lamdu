@@ -20,7 +20,7 @@ giveAsArg ::
 giveAsArg exprP = do
   newFuncI <- newHole
   Property.set exprP =<<
-    DataIRef.newExpr
+    DataIRef.newExprBody
     (Data.makeApply newFuncI (Property.value exprP))
   return newFuncI
 
@@ -31,12 +31,12 @@ callWithArg ::
 callWithArg exprP = do
   argI <- newHole
   Property.set exprP =<<
-    DataIRef.newExpr
+    DataIRef.newExprBody
     (Data.makeApply (Property.value exprP) argI)
   return argI
 
 newHole :: Monad m => T m Data.ExpressionIRef
-newHole = DataIRef.newExpr $ Data.ExpressionLeaf Data.Hole
+newHole = DataIRef.newExprBody $ Data.ExpressionLeaf Data.Hole
 
 replace
   :: Monad m
@@ -60,7 +60,7 @@ lambdaWrap
 lambdaWrap exprP = do
   newParamTypeI <- newHole
   newExprI <-
-    DataIRef.newExpr .
+    DataIRef.newExprBody .
     Data.makeLambda newParamTypeI $ Property.value exprP
   Property.set exprP newExprI
   return newExprI
@@ -72,10 +72,10 @@ redexWrap
 redexWrap exprP = do
   newParamTypeI <- newHole
   newLambdaI <-
-    DataIRef.newExpr .
+    DataIRef.newExprBody .
     Data.makeLambda newParamTypeI $ Property.value exprP
   newValueI <- newHole
   newApplyI <-
-    DataIRef.newExpr $ Data.makeApply newLambdaI newValueI
+    DataIRef.newExprBody $ Data.makeApply newLambdaI newValueI
   Property.set exprP newApplyI
   return newLambdaI

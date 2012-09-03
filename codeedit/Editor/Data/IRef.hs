@@ -2,8 +2,8 @@ module Editor.Data.IRef
   ( ExpressionBody
   , ExpressionProperty, epGuid
   , Lambda, Apply
-  , newExpr, readExpr, writeExpr, exprGuid
-  , newExpressionFromPure, writeExpressionFromPure
+  , newExprBody, readExprBody, writeExprBody, exprGuid
+  , newExpression, writeExpression
   ) where
 
 import Control.Arrow (first)
@@ -36,27 +36,27 @@ type Apply = Data.Apply Expression
 exprGuid :: Expression -> Guid
 exprGuid = IRef.guid . unExpression
 
-newExpr :: Monad m => ExpressionBody -> Transaction t m Expression
-newExpr = liftM Data.ExpressionIRef . Transaction.newIRef
+newExprBody :: Monad m => ExpressionBody -> Transaction t m Expression
+newExprBody = liftM Data.ExpressionIRef . Transaction.newIRef
 
-readExpr :: Monad m => Expression -> Transaction t m ExpressionBody
-readExpr = Transaction.readIRef . unExpression
+readExprBody :: Monad m => Expression -> Transaction t m ExpressionBody
+readExprBody = Transaction.readIRef . unExpression
 
-writeExpr :: Monad m => Expression -> ExpressionBody -> Transaction t m ()
-writeExpr = Transaction.writeIRef . unExpression
+writeExprBody :: Monad m => Expression -> ExpressionBody -> Transaction t m ()
+writeExprBody = Transaction.writeIRef . unExpression
 
 type Scope = [(Guid, Guid)]
 
-newExpressionFromPure ::
+newExpression ::
   Monad m => Data.PureExpression -> Transaction t m Expression
-newExpressionFromPure =
+newExpression =
   liftM fst . newExpressionFromPureH []
 
 -- Returns expression with new Guids
-writeExpressionFromPure
+writeExpression
   :: Monad m => Expression -> Data.PureExpression
   -> Transaction t m Data.PureExpression
-writeExpressionFromPure (Data.ExpressionIRef iref) expr = do
+writeExpression (Data.ExpressionIRef iref) expr = do
   (exprBodyI, exprBodyP) <- expressionBodyFromPure [] g expr
   Transaction.writeIRef iref exprBodyI
   return $ Data.pureExpression g exprBodyP
