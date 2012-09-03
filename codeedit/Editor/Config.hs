@@ -68,7 +68,8 @@ unfocusedReadOnlyHoleBackgroundColor = Draw.Color 1 0.5 0.5 0.5
 inferredValueScaleFactor = 0.7
 inferredValueTint = Draw.Color 1 1 1 0.6
 
-polymorphicCompactTint = Draw.Color 1 0.7 0.5 1
+polymorphicCompactBGColor = Draw.Color 0.4 0.2 0.6 0.5
+polymorphicFullBGColor = Draw.Color 0.2 0.5 0.4 0.2
 
 parenHighlightColor = Draw.Color 0.3 0 1 0.25
 

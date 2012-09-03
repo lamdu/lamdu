@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit.PolymorphicEdit(make) where
 
 import Control.Monad (liftM)
@@ -26,10 +27,11 @@ make makeExpressionEdit poly myId =
     -- We are inside a non-delegating focus delegator made by makeExpressionEdit,
     -- so if the cursor is on us it means user enterred our widget.
     if Widget.wIsFocused $ ExpressionGui.egWidget fullExprEdit
-      then return fullExprEdit
+      then return $ bg Config.polymorphicFullBGColor fullExprEdit
       else
-        (liftM . ExpressionGui.atEgWidget . Widget.tint) Config.polymorphicCompactTint .
+        (liftM . bg) Config.polymorphicCompactBGColor .
         ExpressionGui.atEgWidgetM (BWidgets.makeFocusableView myId) =<<
         makeExpressionEdit (Sugar.pCompact poly)
   where
+    bg = ExpressionGui.atEgWidget . Widget.backgroundColor 13 (Widget.toAnimId myId ++ ["bg"])
     compactId = WidgetIds.fromGuid . Sugar.rGuid $ Sugar.pCompact poly
