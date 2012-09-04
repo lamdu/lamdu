@@ -35,7 +35,7 @@ paramFDConfig = FocusDelegator.Config
 makeNameEdit :: MonadF m => Widget.Id -> Guid -> OTransaction t m (WidgetT t m)
 makeNameEdit myId ident =
   BWidgets.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
-  (BWidgets.setTextColor Config.definitionOriginColor .
+  (OT.atEnv (BWidgets.setTextColor Config.definitionOriginColor) .
    BWidgets.makeNameEdit ident)
   myId
 
@@ -178,4 +178,4 @@ makeExprDefinition makeExpressionEdit def bodyExpr = do
     mkAcceptedRow onLabel = mkTypeRow onLabel "Type:" $ Sugar.drType def
     guid = Sugar.drGuid def
     myId = WidgetIds.fromGuid guid
-    labelStyle = OT.setTextSizeColor Config.defTypeLabelTextSize Config.defTypeLabelColor
+    labelStyle = OT.atEnv $ OT.setTextSizeColor Config.defTypeLabelTextSize Config.defTypeLabelColor

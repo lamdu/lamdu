@@ -31,7 +31,7 @@ makeView var myId = do
   liftM
     (ExpressionGui.fromValueWidget .
      BWidgets.nameSrcTint nameSrc) .
-    BWidgets.setTextColor (colorOf var) $
+    OT.atEnv (BWidgets.setTextColor (colorOf var)) $
     BWidgets.makeFocusableTextView name myId
 
 make

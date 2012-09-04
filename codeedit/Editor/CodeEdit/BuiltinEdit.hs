@@ -39,7 +39,7 @@ make (Sugar.DefinitionBuiltin (Data.FFIName modulePath name) setFFIName) myId =
     return $ BWidgets.hboxCentered [moduleName, dot, varName]
   where
     makeNamePartEditor color namePartStr mSetter makeWidgetId =
-      BWidgets.setTextColor color .
+      OT.atEnv (BWidgets.setTextColor color) .
       BWidgets.wrapDelegated builtinFDConfig FocusDelegator.NotDelegating id
       (maybe
        (BWidgets.makeTextView namePartStr . Widget.toAnimId)

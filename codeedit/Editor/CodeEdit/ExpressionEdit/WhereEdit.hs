@@ -28,7 +28,7 @@ make
   -> OTransaction ViewTag m (WidgetT ViewTag m)
 make makeExpressionEdit (Sugar.Where items _) myId = do
   whereLabel <-
-    OT.setTextSizeColor Config.whereTextSize Config.whereColor $
+    OT.atEnv (OT.setTextSizeColor Config.whereTextSize Config.whereColor) $
     BWidgets.makeLabel "where" $ Widget.toAnimId myId
   whereEdits <- mapM makeWhereItemEdits items
   return $ BWidgets.vboxCentered

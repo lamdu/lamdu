@@ -91,7 +91,7 @@ wrapDelegated config entryState aToB mkA myId = do
     WidgetIds.backgroundCursorId myId cursor
   where
     mk f innerId newCursor =
-      liftM (aToB f) . (OT.atCursor . const) newCursor $ mkA innerId
+      liftM (aToB f) . (OT.atEnv . OT.atEnvCursor . const) newCursor $ mkA innerId
 
 makeTextEdit
   :: Monad m
@@ -142,9 +142,9 @@ makeNameEdit ::
 makeNameEdit ident myId = do
   (nameSrc, name) <- OT.getName ident
   liftM (nameSrcTint nameSrc) .
-    (OT.atTextStyle . TextEdit.atSEmptyUnfocusedString . const) name .
-    (OT.atTextStyle . TextEdit.atSEmptyFocusedString . const)
-    (concat ["<", name, ">"]) $
+    (OT.atEnv . OT.atEnvTextStyle)
+    ((TextEdit.atSEmptyUnfocusedString . const) name .
+     (TextEdit.atSEmptyFocusedString . const) (concat ["<", name, ">"])) $
     OT.transaction (Anchors.assocNameRef ident) >>=
     flip makeEditor myId
   where
@@ -192,8 +192,8 @@ hboxCenteredSpaced = hboxAlign 0.5 . intersperse spaceWidget
 spaceView :: (Anim.Size, Anim.Frame)
 spaceView = Spacer.makeHorizontal 20
 
-setTextColor :: Monad m => Draw.Color -> OTransaction t m a -> OTransaction t m a
-setTextColor = OT.atTextStyle . TextEdit.atSTextViewStyle . TextView.atStyleColor . const
+setTextColor :: Draw.Color -> OT.Env -> OT.Env
+setTextColor = OT.atEnvTextStyle . TextEdit.atSTextViewStyle . TextView.atStyleColor . const
 
 gridHSpaced :: [[(Grid.Alignment, Widget f)]] -> Widget f
 gridHSpaced = Grid.toWidget . Grid.make . map (intersperse (0, spaceWidget))

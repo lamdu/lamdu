@@ -3,9 +3,13 @@ module Editor.OTransaction
   ( OTransaction, runOTransaction
   , unWrapInner
   , WidgetT
-  , readCursor, subCursor, atCursor, assignCursor, assignCursorPrefix
+  , readCursor, subCursor
+  , Env(..)
+  , atEnv, atEnvCursor
+  , envAssignCursor, envAssignCursorPrefix
+  , assignCursor, assignCursorPrefix
   , readTextStyle, transaction
-  , atTextStyle, setTextSizeColor
+  , atEnvTextStyle, setTextSizeColor
   , markVariablesAsUsed, usedVariables
   , getP
   , getName, NameSource(..)
@@ -34,11 +38,11 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
-data OTransactionEnv = OTransactionEnv {
+data Env = Env {
   envCursor :: Widget.Id,
   envTextStyle :: TextEdit.Style
   }
-AtFieldTH.make ''OTransactionEnv
+AtFieldTH.make ''Env
 
 type WidgetT t m = Widget (ITransaction t m)
 
@@ -55,7 +59,7 @@ initialNameGenState =
     names = alphabet ++ liftA2 (++) names alphabet
 
 newtype OTransaction t m a = OTransaction
-  { unOTransaction :: RWST OTransactionEnv [Guid] NameGenState (Transaction t m) a
+  { unOTransaction :: RWST Env [Guid] NameGenState (Transaction t m) a
   }
   deriving (Functor, Applicative, Monad)
 AtFieldTH.make ''OTransaction
@@ -63,12 +67,15 @@ AtFieldTH.make ''OTransaction
 transaction :: Monad m => Transaction t m a -> OTransaction t m a
 transaction = OTransaction . lift
 
+getP :: Monad m => MkProperty t m a -> OTransaction t m a
+getP = transaction . liftM Property.value
+
 runOTransaction
   :: Monad m
   => Widget.Id -> TextEdit.Style
   -> OTransaction t m a -> Transaction t m a
 runOTransaction cursor style (OTransaction action) =
-  liftM f $ runRWST action (OTransactionEnv cursor style) initialNameGenState
+  liftM f $ runRWST action (Env cursor style) initialNameGenState
   where
     f (x, _, _) = x
 
@@ -122,45 +129,40 @@ subCursor folder = liftM (Widget.subId folder) readCursor
 readTextStyle :: Monad m => OTransaction t m TextEdit.Style
 readTextStyle = OTransaction $ RWS.asks envTextStyle
 
-atCursor
-  :: Monad m => (Widget.Id -> Widget.Id) -> OTransaction t m a -> OTransaction t m a
-atCursor = atOTransaction . RWS.local . atEnvCursor
-
-assignCursor
-  :: Monad m => Widget.Id -> Widget.Id -> OTransaction t m a -> OTransaction t m a
-assignCursor src dest =
-  atCursor replace
+envAssignCursor
+  :: Widget.Id -> Widget.Id -> Env -> Env
+envAssignCursor src dest =
+  atEnvCursor replace
   where
     replace cursor
       | cursor == src = dest
       | otherwise = cursor
 
-assignCursorPrefix
-  :: Monad m => Widget.Id -> Widget.Id -> OTransaction t m a -> OTransaction t m a
-assignCursorPrefix srcFolder dest =
-  atCursor replace
+envAssignCursorPrefix
+  :: Widget.Id -> Widget.Id -> Env -> Env
+envAssignCursorPrefix srcFolder dest =
+  atEnvCursor replace
   where
     replace cursor =
       case Widget.subId srcFolder cursor of
       Nothing -> cursor
       Just _ -> dest
 
-atTextStyle
-  :: Monad m
-  => (TextEdit.Style -> TextEdit.Style)
-  -> OTransaction t m a -> OTransaction t m a
-atTextStyle = atOTransaction . RWS.local . atEnvTextStyle
+assignCursor :: Monad m => Widget.Id -> Widget.Id -> OTransaction t m a -> OTransaction t m a
+assignCursor x y = atEnv $ envAssignCursor x y
+
+assignCursorPrefix :: Monad m => Widget.Id -> Widget.Id -> OTransaction t m a -> OTransaction t m a
+assignCursorPrefix x y = atEnv $ envAssignCursorPrefix x y
 
 setTextSizeColor
-  :: Monad m
-  => Int
+  :: Int
   -> Draw.Color
-  -> OTransaction t m (Widget f)
-  -> OTransaction t m (Widget f)
+  -> Env
+  -> Env
 setTextSizeColor textSize textColor =
-  (atTextStyle . TextEdit.atSTextViewStyle)
+  (atEnvTextStyle . TextEdit.atSTextViewStyle)
   ((TextView.atStyleFontSize . const) textSize .
    (TextView.atStyleColor . const) textColor)
 
-getP :: Monad m => MkProperty t m a -> OTransaction t m a
-getP = transaction . liftM Property.value
+atEnv :: Monad m => (Env -> Env) -> OTransaction t m a -> OTransaction t m a
+atEnv = atOTransaction . RWS.local

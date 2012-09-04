@@ -35,7 +35,7 @@ makeParamNameEdit
   -> OTransaction t m (WidgetT t m)
 makeParamNameEdit ident =
   BWidgets.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
-  (BWidgets.setTextColor Config.paramOriginColor .
+  (OT.atEnv (BWidgets.setTextColor Config.paramOriginColor) .
    BWidgets.makeNameEdit ident) $ WidgetIds.fromGuid ident
 
 addJumpToRHS
@@ -118,11 +118,11 @@ make makeExpressionEdit (Sugar.Func params body) myId =
   OT.assignCursor myId bodyId $ do
     lambdaLabel <-
       liftM ExpressionGui.fromValueWidget .
-      OT.setTextSizeColor Config.lambdaTextSize Config.lambdaColor .
+      OT.atEnv (OT.setTextSizeColor Config.lambdaTextSize Config.lambdaColor) .
       BWidgets.makeLabel "λ" $ Widget.toAnimId myId
     rightArrowLabel <-
       liftM ExpressionGui.fromValueWidget .
-      OT.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor .
+      OT.atEnv (OT.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor) .
       BWidgets.makeLabel "→" $ Widget.toAnimId myId
     bodyEdit <- makeBodyEdit makeExpressionEdit lhs body
     paramsEdit <- makeParamsEdit makeExpressionEdit ("Func Body", body) params

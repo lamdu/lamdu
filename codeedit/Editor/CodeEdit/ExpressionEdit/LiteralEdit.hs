@@ -22,7 +22,7 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 
 setColor :: Monad m => OTransaction t m a -> OTransaction t m a
-setColor = BWidgets.setTextColor Config.literalIntColor
+setColor = OT.atEnv $ BWidgets.setTextColor Config.literalIntColor
 
 makeIntView
   :: Monad m
