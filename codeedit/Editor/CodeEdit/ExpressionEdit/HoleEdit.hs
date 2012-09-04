@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
-module Editor.CodeEdit.ExpressionEdit.HoleEdit(make, ResultPicker) where
+module Editor.CodeEdit.ExpressionEdit.HoleEdit(make, makeUnwrapped, ResultPicker) where
 
 import Control.Arrow (first, second, (&&&))
 import Control.Monad (liftM, mplus, msum, void, filterM)

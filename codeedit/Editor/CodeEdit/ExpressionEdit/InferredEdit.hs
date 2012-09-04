@@ -13,7 +13,6 @@ import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.CodeEdit.VarAccess as VarAccess
 import qualified Editor.Config as Config
 import qualified Editor.OTransaction as OT
-import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
@@ -41,18 +40,16 @@ makeUnwrapped
   -> Widget.Id
   -> VarAccess m (Maybe (HoleEdit.ResultPicker m), ExpressionGui m)
 makeUnwrapped makeExpressionEdit inferred guid myId = do
-  -- We are inside a non-delegating focus delegator made by makeExpressionEdit,
-  -- so if the cursor is on us it means user enterred our widget.
   mInnerCursor <- VarAccess.otransaction $ OT.subCursor myId
   case mInnerCursor of
     Nothing ->
       liftM ((,) Nothing) .
       ExpressionGui.atEgWidgetM
       ( VarAccess.otransaction
-      . BWidgets.makeFocusableView (WidgetIds.searchTermId myId)
+      . BWidgets.makeFocusableView myId
       . Widget.tint Config.inferredValueTint
       . Widget.scale Config.inferredValueScaleFactor
       ) =<<
       makeExpressionEdit (Sugar.iValue inferred)
     Just _ ->
-      HoleEdit.make makeExpressionEdit (Sugar.iHole inferred) guid myId
+      HoleEdit.makeUnwrapped makeExpressionEdit (Sugar.iHole inferred) guid myId
