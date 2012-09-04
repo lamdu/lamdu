@@ -6,13 +6,14 @@ import Control.Monad (liftM)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors(ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Editor.CodeEdit.VarAccess (VarAccess)
 import Editor.MonadF(MonadF)
-import Editor.OTransaction (OTransaction)
 import Graphics.UI.Bottle.Animation (AnimId)
 import qualified Data.Char as Char
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.Sugar as Sugar
+import qualified Editor.CodeEdit.VarAccess as VarAccess
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
 import qualified Editor.OTransaction as OT
@@ -21,21 +22,22 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 
-setColor :: Monad m => OTransaction t m a -> OTransaction t m a
-setColor = OT.atEnv $ BWidgets.setTextColor Config.literalIntColor
+setColor :: Monad m => VarAccess m a -> VarAccess m a
+setColor = VarAccess.atEnv $ BWidgets.setTextColor Config.literalIntColor
 
 makeIntView
   :: Monad m
   => AnimId -> Integer
-  -> OTransaction ViewTag m (ExpressionGui m)
+  -> VarAccess m (ExpressionGui m)
 makeIntView myId integer =
   liftM ExpressionGui.fromValueWidget .
-  setColor $ BWidgets.makeTextView (show integer) myId
+  setColor . VarAccess.otransaction $
+  BWidgets.makeTextView (show integer) myId
 
 makeIntEdit
   :: Monad m
   => Sugar.LiteralInteger m -> Widget.Id
-  -> OTransaction ViewTag m (ExpressionGui m)
+  -> VarAccess m (ExpressionGui m)
 makeIntEdit integer myId =
   case Sugar.liSetValue integer of
     Nothing -> makeIntView (Widget.toAnimId myId) (Sugar.liValue integer)
@@ -45,11 +47,11 @@ makeIntEditI
   :: Monad m
   => Sugar.LiteralInteger m -> Widget.Id
   -> (Integer -> Transaction ViewTag m ())
-  -> OTransaction ViewTag m (ExpressionGui m)
+  -> VarAccess m (ExpressionGui m)
 makeIntEditI integer myId setValue = do
-  cursor <- OT.readCursor
-  suffix <- OT.subCursor myId
+  cursor <- VarAccess.otransaction OT.readCursor
   let
+    suffix = Widget.subId myId cursor
     isEmpty = Sugar.liValue integer == 0 && suffix == Just emptyZeroCursor
     (text, textCursor)
       | isEmpty = ("", TextEdit.makeTextEditCursor myId 0)
@@ -63,7 +65,7 @@ makeIntEditI integer myId setValue = do
       | otherwise = do
         _ <- IT.transaction $ setValue $ read newText
         return eventRes
-  style <- OT.readTextStyle
+  style <- VarAccess.otransaction OT.readTextStyle
   return .
     ExpressionGui.fromValueWidget .
     Widget.atEvents setter .
@@ -90,7 +92,7 @@ makeInt
   :: MonadF m
   => Sugar.LiteralInteger m
   -> Widget.Id
-  -> OTransaction ViewTag m (ExpressionGui m)
+  -> VarAccess m (ExpressionGui m)
 makeInt integer =
-  BWidgets.wrapDelegated literalFDConfig FocusDelegator.NotDelegating ExpressionGui.atEgWidget
+  BWidgets.wrapDelegatedVA literalFDConfig FocusDelegator.NotDelegating ExpressionGui.atEgWidget
   (setColor . makeIntEdit integer)

@@ -1,16 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit.PiEdit(make) where
 
-import Editor.Anchors (ViewTag)
-import Editor.OTransaction (OTransaction)
-import Editor.MonadF (MonadF)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Editor.CodeEdit.VarAccess (VarAccess)
+import Editor.MonadF (MonadF)
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.OTransaction as OT
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
+import qualified Editor.CodeEdit.VarAccess as VarAccess
 import qualified Editor.Config as Config
+import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 
@@ -19,11 +19,11 @@ make
   => ExpressionGui.Maker m
   -> Sugar.Pi m
   -> Widget.Id
-  -> OTransaction ViewTag m (ExpressionGui m)
+  -> VarAccess m (ExpressionGui m)
 make makeExpressionEdit (Sugar.Pi param resultType) myId =
-  OT.assignCursor myId typeId $ do
+  VarAccess.assignCursor myId typeId $ do
     (resultTypeEdit, usedVars) <-
-      OT.usedVariables $
+      VarAccess.usedVariables $
       FuncEdit.makeBodyEdit makeExpressionEdit [paramId] resultType
     let
       paramUsed = paramGuid `elem` usedVars
@@ -33,13 +33,13 @@ make makeExpressionEdit (Sugar.Pi param resultType) myId =
           case Widget.subId paramId cursor of
           Nothing -> cursor
           Just _ -> typeId
-    OT.atEnv (OT.atEnvCursor redirectCursor) $ do
+    VarAccess.atEnv (OT.atEnvCursor redirectCursor) $ do
       paramTypeEdit <- makeExpressionEdit $ Sugar.fpType param
       paramEdit <-
         if paramUsed
         then do
           paramNameEdit <- FuncEdit.makeParamNameEdit $ Sugar.fpGuid param
-          colonLabel <- BWidgets.makeLabel ":" $ Widget.toAnimId paramId
+          colonLabel <- VarAccess.otransaction . BWidgets.makeLabel ":" $ Widget.toAnimId paramId
           return $ ExpressionGui.hbox
             [ ExpressionGui.fromValueWidget paramNameEdit
             , ExpressionGui.fromValueWidget colonLabel
@@ -47,8 +47,8 @@ make makeExpressionEdit (Sugar.Pi param resultType) myId =
             ]
         else return paramTypeEdit
       rightArrowLabel <-
-        OT.atEnv (OT.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor) .
-        BWidgets.makeLabel "→" $ Widget.toAnimId myId
+        VarAccess.atEnv (OT.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor) .
+        VarAccess.otransaction . BWidgets.makeLabel "→" $ Widget.toAnimId myId
       return $
         ExpressionGui.hboxSpaced [paramEdit, ExpressionGui.fromValueWidget rightArrowLabel, resultTypeEdit]
   where

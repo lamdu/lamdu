@@ -6,9 +6,9 @@ import Control.Monad (liftM)
 import Data.Monoid (Monoid(..))
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Editor.CodeEdit.VarAccess (VarAccess)
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
-import Editor.OTransaction (OTransaction)
 import Graphics.UI.Bottle.Widget (EventHandlers)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
@@ -99,7 +99,7 @@ makeEditor
   :: MonadF m
   => Sugar.ExpressionRef m
   -> Widget.Id
-  -> OTransaction ViewTag m (HoleResultPicker m, ExpressionGui m)
+  -> VarAccess m (HoleResultPicker m, ExpressionGui m)
 makeEditor sExpr =
   case Sugar.rExpression sExpr of
   Sugar.ExpressionWhere hasParens w ->
@@ -137,13 +137,13 @@ makeEditor sExpr =
       (fmap . liftM)
       (first IsAHole .
        (second . ExpressionGui.atEgWidget . Widget.weakerEvents) (pasteEventMap hole)) .
-      BWidgets.wrapDelegated holeFDConfig delegating
+      BWidgets.wrapDelegatedVA holeFDConfig delegating
       (second . ExpressionGui.atEgWidget)
     notAHole = (fmap . liftM) ((,) NotAHole)
     wrapCommon = wrapNonHoleExpr FocusDelegator.Delegating exprFocusDelegatorConfig
     wrapNonHoleExpr delegating config =
       notAHole .
-      BWidgets.wrapDelegated config
+      BWidgets.wrapDelegatedVA config
       delegating ExpressionGui.atEgWidget
     textParenify = parenify Parens.addHighlightedTextParens
 

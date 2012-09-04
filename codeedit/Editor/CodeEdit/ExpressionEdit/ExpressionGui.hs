@@ -12,8 +12,7 @@ module Editor.CodeEdit.ExpressionEdit.ExpressionGui
 import Control.Lens ((^.))
 import Control.Monad (liftM)
 import Data.Vector.Vector2 (Vector2(..))
-import Editor.Anchors (ViewTag)
-import Editor.OTransaction (OTransaction, WidgetT)
+import Editor.CodeEdit.VarAccess (VarAccess, WidgetT)
 import Graphics.UI.Bottle.Widget (R)
 import qualified Control.Lens as Lens
 import qualified Data.AtFieldTH as AtFieldTH
@@ -29,7 +28,7 @@ import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
 data ExpressionGui m = ExpressionGui
-  { egWidget :: WidgetT ViewTag m
+  { egWidget :: WidgetT m
   , egAlignment :: R
   }
 
@@ -37,14 +36,14 @@ AtFieldTH.make ''ExpressionGui
 
 atEgWidgetM ::
   Monad m =>
-  (WidgetT ViewTag f -> m (WidgetT ViewTag f)) ->
+  (WidgetT f -> m (WidgetT f)) ->
   ExpressionGui f -> m (ExpressionGui f)
 atEgWidgetM conv (ExpressionGui w a) =
   liftM (`ExpressionGui` a) $ conv w
 
-type Maker m = Sugar.ExpressionRef m -> OTransaction ViewTag m (ExpressionGui m)
+type Maker m = Sugar.ExpressionRef m -> VarAccess m (ExpressionGui m)
 
-fromValueWidget :: WidgetT ViewTag m -> ExpressionGui m
+fromValueWidget :: WidgetT m -> ExpressionGui m
 fromValueWidget widget = ExpressionGui widget 0.5
 
 hbox :: [ExpressionGui m] -> ExpressionGui m
@@ -65,7 +64,7 @@ data TypeStyle = HorizLine | Background
 addType ::
   TypeStyle ->
   Widget.Id ->
-  [WidgetT ViewTag m] ->
+  [WidgetT m] ->
   ExpressionGui m ->
   ExpressionGui m
 addType _ _ [] eg = eg

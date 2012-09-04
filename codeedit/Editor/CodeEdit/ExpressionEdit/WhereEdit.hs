@@ -4,15 +4,15 @@ module Editor.CodeEdit.ExpressionEdit.WhereEdit(make, makeWithBody) where
 import Control.Monad (liftM)
 import Data.Function (on)
 import Data.Monoid (mempty)
-import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Editor.CodeEdit.VarAccess (VarAccess, WidgetT)
 import Editor.MonadF (MonadF)
-import Editor.OTransaction (OTransaction, WidgetT)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.Parens as Parens
 import qualified Editor.CodeEdit.Sugar as Sugar
+import qualified Editor.CodeEdit.VarAccess as VarAccess
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
 import qualified Editor.OTransaction as OT
@@ -25,11 +25,11 @@ make
   => ExpressionGui.Maker m
   -> Sugar.Where m
   -> Widget.Id
-  -> OTransaction ViewTag m (WidgetT ViewTag m)
+  -> VarAccess m (WidgetT m)
 make makeExpressionEdit (Sugar.Where items _) myId = do
   whereLabel <-
-    OT.atEnv (OT.setTextSizeColor Config.whereTextSize Config.whereColor) $
-    BWidgets.makeLabel "where" $ Widget.toAnimId myId
+    VarAccess.atEnv (OT.setTextSizeColor Config.whereTextSize Config.whereColor) .
+    VarAccess.otransaction $ BWidgets.makeLabel "where" $ Widget.toAnimId myId
   whereEdits <- mapM makeWhereItemEdits items
   return $ BWidgets.vboxCentered
     [ whereLabel
@@ -38,7 +38,7 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
     ]
   where
     makeWhereItemEdits item =
-      on OT.assignCursorPrefix WidgetIds.fromGuid
+      on VarAccess.assignCursorPrefix WidgetIds.fromGuid
       (Sugar.wiTypeGuid item) (Sugar.wiGuid item) .
       (liftM . map)
         (Widget.weakerEvents (whereItemDeleteEventMap item) . ExpressionGui.egWidget) $
@@ -56,11 +56,11 @@ makeWithBody
   -> Sugar.HasParens
   -> Sugar.Where m
   -> Widget.Id
-  -> OTransaction ViewTag m (ExpressionGui m)
+  -> VarAccess m (ExpressionGui m)
 makeWithBody makeExpressionEdit hasParens where_@(Sugar.Where _ body) myId = do
   whereEdit <- make makeExpressionEdit where_ myId
   bodyEdit <-
-    OT.assignCursor myId ((WidgetIds.fromGuid . Sugar.rGuid) body) $
+    VarAccess.assignCursor myId ((WidgetIds.fromGuid . Sugar.rGuid) body) $
     makeExpressionEdit body
   let
     res =

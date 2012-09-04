@@ -2,17 +2,16 @@
 module Editor.CodeEdit.ExpressionEdit.VarEdit(make, makeView, colorOf) where
 
 import Control.Monad (liftM)
-import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Editor.CodeEdit.VarAccess (VarAccess)
 import Editor.MonadF (MonadF)
-import Editor.OTransaction (OTransaction)
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.Sugar as Sugar
+import qualified Editor.CodeEdit.VarAccess as VarAccess
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
-import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -25,23 +24,24 @@ makeView
   :: MonadF m
   => Sugar.GetVariable
   -> Widget.Id
-  -> OTransaction ViewTag m (ExpressionGui m)
+  -> VarAccess m (ExpressionGui m)
 makeView var myId = do
-  (nameSrc, name) <- OT.getName $ Sugar.gvGuid var
+  (nameSrc, name) <- VarAccess.getName $ Sugar.gvGuid var
   liftM
     (ExpressionGui.fromValueWidget .
      BWidgets.nameSrcTint nameSrc) .
-    OT.atEnv (BWidgets.setTextColor (colorOf var)) $
+    VarAccess.atEnv (BWidgets.setTextColor (colorOf var)) .
+    VarAccess.otransaction $
     BWidgets.makeFocusableTextView name myId
 
 make
   :: MonadF m
   => Sugar.GetVariable
   -> Widget.Id
-  -> OTransaction ViewTag m (ExpressionGui m)
+  -> VarAccess m (ExpressionGui m)
 make getVar myId = do
   case getVar of
-    Sugar.GetParameter guid -> OT.markVariablesAsUsed [guid]
+    Sugar.GetParameter guid -> VarAccess.markVariablesAsUsed [guid]
     _ -> return ()
   getVarView <- makeView getVar myId
   let

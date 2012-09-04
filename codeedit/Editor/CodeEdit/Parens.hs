@@ -8,14 +8,14 @@ where
 import Control.Monad (void)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
-import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Editor.CodeEdit.VarAccess (VarAccess, WidgetT)
 import Editor.MonadF (MonadF)
-import Editor.OTransaction (OTransaction, WidgetT)
 import Editor.WidgetIds (parensPrefix)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
+import qualified Editor.CodeEdit.VarAccess as VarAccess
 import qualified Editor.Config as Config
 import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
@@ -23,7 +23,7 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
 
-type WidgetMaker m = OTransaction ViewTag m (WidgetT ViewTag m)
+type WidgetMaker m = VarAccess m (WidgetT m)
 
 addTextParensI
   :: MonadF m
@@ -31,7 +31,7 @@ addTextParensI
   -> (WidgetMaker m -> WidgetMaker m)
   -> Anim.AnimId
   -> ExpressionGui m
-  -> OTransaction ViewTag m (ExpressionGui m)
+  -> VarAccess m (ExpressionGui m)
 addTextParensI onLParen onRParen parenId widget = do
   beforeParen <- onLParen $ label "("
   afterParen <- onRParen $ label ")"
@@ -41,7 +41,8 @@ addTextParensI onLParen onRParen parenId widget = do
     , ExpressionGui.fromValueWidget afterParen
     ]
   where
-    label str = BWidgets.makeLabel str $ parensPrefix parenId
+    label str =
+      VarAccess.otransaction . BWidgets.makeLabel str $ parensPrefix parenId
 
 squareDraw :: Vector2 Widget.R -> Draw.Image Draw.Any
 squareDraw (Vector2 w h) = mconcat
@@ -74,18 +75,18 @@ addTextParens
   :: MonadF m
   => Anim.AnimId
   -> ExpressionGui m
-  -> OTransaction ViewTag m (ExpressionGui m)
+  -> VarAccess m (ExpressionGui m)
 addTextParens = addTextParensI id id
 
 addHighlightedTextParens
   :: (MonadF m)
   => Widget.Id
   -> ExpressionGui m
-  -> OTransaction ViewTag m (ExpressionGui m)
+  -> VarAccess m (ExpressionGui m)
 addHighlightedTextParens myId widget = do
-  mInsideParenId <- OT.subCursor rParenId
+  mInsideParenId <- VarAccess.otransaction $ OT.subCursor rParenId
   widgetWithParens <- addTextParensI id doHighlight (Widget.toAnimId myId) widget
   return $ maybe id (const (ExpressionGui.atEgWidget highlightExpression)) mInsideParenId widgetWithParens
   where
     rParenId = Widget.joinId myId [")"]
-    doHighlight = (>>= BWidgets.makeFocusableView rParenId)
+    doHighlight = (VarAccess.otransaction . BWidgets.makeFocusableView rParenId =<<)

@@ -6,13 +6,13 @@ module Editor.CodeEdit.ExpressionEdit.FuncEdit
 import Control.Monad (liftM)
 import Data.Monoid (mempty, mconcat)
 import Data.Store.Guid (Guid)
-import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Editor.CodeEdit.VarAccess (VarAccess, WidgetT)
 import Editor.MonadF (MonadF)
-import Editor.OTransaction (OTransaction, WidgetT)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.Sugar as Sugar
+import qualified Editor.CodeEdit.VarAccess as VarAccess
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
 import qualified Editor.OTransaction as OT
@@ -32,14 +32,14 @@ paramFDConfig = FocusDelegator.Config
 makeParamNameEdit
   :: MonadF m
   => Guid
-  -> OTransaction t m (WidgetT t m)
+  -> VarAccess m (WidgetT m)
 makeParamNameEdit ident =
-  BWidgets.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
-  (OT.atEnv (BWidgets.setTextColor Config.paramOriginColor) .
+  BWidgets.wrapDelegatedVA paramFDConfig FocusDelegator.NotDelegating id
+  (VarAccess.atEnv (BWidgets.setTextColor Config.paramOriginColor) .
    BWidgets.makeNameEdit ident) $ WidgetIds.fromGuid ident
 
 addJumpToRHS
-  :: MonadF m => (E.Doc, Sugar.ExpressionRef m) -> WidgetT ViewTag m -> WidgetT ViewTag m
+  :: MonadF m => (E.Doc, Sugar.ExpressionRef m) -> WidgetT m -> WidgetT m
 addJumpToRHS (rhsDoc, rhs) =
   Widget.weakerEvents .
   Widget.keysEventMapMovesCursor Config.jumpLHStoRHSKeys ("Jump to " ++ rhsDoc) $
@@ -53,7 +53,7 @@ makeParamEdit
   => ExpressionGui.Maker m
   -> (E.Doc, Sugar.ExpressionRef m)
   -> Sugar.FuncParam m
-  -> OTransaction ViewTag m (ExpressionGui m)
+  -> VarAccess m (ExpressionGui m)
 makeParamEdit makeExpressionEdit rhs param =
   (liftM . ExpressionGui.atEgWidget)
   (addJumpToRHS rhs . Widget.weakerEvents paramEventMap) $ do
@@ -86,7 +86,7 @@ makeParamsEdit
   => ExpressionGui.Maker m
   -> (E.Doc, Sugar.ExpressionRef m)
   -> [Sugar.FuncParam m]
-  -> OTransaction ViewTag m (ExpressionGui m)
+  -> VarAccess m (ExpressionGui m)
 makeParamsEdit makeExpressionEdit rhs =
   liftM ExpressionGui.hboxSpaced .
   mapM (makeParamEdit makeExpressionEdit rhs)
@@ -96,7 +96,7 @@ makeBodyEdit
   => ExpressionGui.Maker m
   -> [Widget.Id]
   -> Sugar.ExpressionRef m
-  -> OTransaction ViewTag m (ExpressionGui m)
+  -> VarAccess m (ExpressionGui m)
 makeBodyEdit makeExpressionEdit lhs body =
   liftM ((ExpressionGui.atEgWidget . Widget.weakerEvents) jumpToLhsEventMap) $
   makeExpressionEdit body
@@ -113,17 +113,17 @@ make
   => ExpressionGui.Maker m
   -> Sugar.Func m
   -> Widget.Id
-  -> OTransaction ViewTag m (ExpressionGui m)
+  -> VarAccess m (ExpressionGui m)
 make makeExpressionEdit (Sugar.Func params body) myId =
-  OT.assignCursor myId bodyId $ do
+  VarAccess.assignCursor myId bodyId $ do
     lambdaLabel <-
       liftM ExpressionGui.fromValueWidget .
-      OT.atEnv (OT.setTextSizeColor Config.lambdaTextSize Config.lambdaColor) .
-      BWidgets.makeLabel "λ" $ Widget.toAnimId myId
+      VarAccess.atEnv (OT.setTextSizeColor Config.lambdaTextSize Config.lambdaColor) .
+      VarAccess.otransaction . BWidgets.makeLabel "λ" $ Widget.toAnimId myId
     rightArrowLabel <-
       liftM ExpressionGui.fromValueWidget .
-      OT.atEnv (OT.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor) .
-      BWidgets.makeLabel "→" $ Widget.toAnimId myId
+      VarAccess.atEnv (OT.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor) .
+      VarAccess.otransaction . BWidgets.makeLabel "→" $ Widget.toAnimId myId
     bodyEdit <- makeBodyEdit makeExpressionEdit lhs body
     paramsEdit <- makeParamsEdit makeExpressionEdit ("Func Body", body) params
     return $ ExpressionGui.hboxSpaced [ lambdaLabel, paramsEdit, rightArrowLabel, bodyEdit ]

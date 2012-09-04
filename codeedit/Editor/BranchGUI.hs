@@ -130,7 +130,7 @@ makeRootWidget size mkCacheInView widget = do
       let branchEditId = WidgetIds.fromIRef textEditModelIRef
       nameProp <- OT.transaction $ Transaction.fromIRef textEditModelIRef
       branchNameEdit <-
-        BWidgets.wrapDelegated branchNameFDConfig
+        BWidgets.wrapDelegatedOT branchNameFDConfig
         FocusDelegator.NotDelegating id
         (BWidgets.makeLineEdit nameProp)
         branchEditId
@@ -158,7 +158,7 @@ makeRootWidget size mkCacheInView widget = do
     liftM isJust $ OT.subCursor WidgetIds.branchSelection
   branchSelector <-
     flip
-    (BWidgets.wrapDelegated
+    (BWidgets.wrapDelegatedOT
      branchSelectionFocusDelegatorConfig
      FocusDelegator.NotDelegating id)
     WidgetIds.branchSelection $ \innerId ->

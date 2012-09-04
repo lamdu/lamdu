@@ -8,14 +8,15 @@ import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Editor.CodeEdit.VarAccess (VarAccess, WidgetT)
 import Editor.MonadF (MonadF)
-import Editor.OTransaction (OTransaction, WidgetT)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.BuiltinEdit as BuiltinEdit
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
+import qualified Editor.CodeEdit.VarAccess as VarAccess
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
 import qualified Editor.OTransaction as OT
@@ -32,10 +33,10 @@ paramFDConfig = FocusDelegator.Config
   , FocusDelegator.stopDelegatingDoc = "Stop changing name"
   }
 
-makeNameEdit :: MonadF m => Widget.Id -> Guid -> OTransaction t m (WidgetT t m)
+makeNameEdit :: MonadF m => Widget.Id -> Guid -> VarAccess m (WidgetT m)
 makeNameEdit myId ident =
-  BWidgets.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
-  (OT.atEnv (BWidgets.setTextColor Config.definitionOriginColor) .
+  BWidgets.wrapDelegatedVA paramFDConfig FocusDelegator.NotDelegating id
+  (VarAccess.atEnv (BWidgets.setTextColor Config.definitionOriginColor) .
    BWidgets.makeNameEdit ident)
   myId
 
@@ -47,7 +48,7 @@ makeLHSEdit
   -> Maybe (Transaction ViewTag m Guid)
   -> (E.Doc, Sugar.ExpressionRef m)
   -> [Sugar.FuncParam m]
-  -> OTransaction ViewTag m (ExpressionGui m)
+  -> VarAccess m (ExpressionGui m)
 makeLHSEdit makeExpressionEdit myId ident mAddFirstParameter rhs params = do
   nameEdit <-
     liftM (FuncEdit.addJumpToRHS rhs . Widget.weakerEvents addFirstParamEventMap) $
@@ -63,15 +64,15 @@ makeLHSEdit makeExpressionEdit myId ident mAddFirstParameter rhs params = do
        IT.transaction)
       mAddFirstParameter
 
-makeEquals :: MonadF m => Widget.Id -> OTransaction ViewTag m (Widget f)
-makeEquals = BWidgets.makeLabel "=" . Widget.toAnimId
+makeEquals :: MonadF m => Widget.Id -> VarAccess m (Widget f)
+makeEquals = VarAccess.otransaction . BWidgets.makeLabel "=" . Widget.toAnimId
 
 makeParts
   :: MonadF m
   => ExpressionGui.Maker m
   -> Guid
   -> Sugar.ExpressionRef m
-  -> OTransaction ViewTag m [ExpressionGui m]
+  -> VarAccess m [ExpressionGui m]
 makeParts makeExpressionEdit guid exprRef = do
   lhsEdit <-
     makeLHSEdit makeExpressionEdit myId guid
@@ -101,7 +102,7 @@ make
   :: MonadF m
   => ExpressionGui.Maker m
   -> Sugar.DefinitionRef m
-  -> OTransaction ViewTag m (WidgetT ViewTag m)
+  -> VarAccess m (WidgetT m)
 make makeExpressionEdit def =
   case Sugar.drBody def of
   Sugar.DefinitionBodyExpression bodyExpr ->
@@ -114,7 +115,7 @@ makeBuiltinDefinition
   => ExpressionGui.Maker m
   -> Sugar.DefinitionRef m
   -> Sugar.DefinitionBuiltin m
-  -> OTransaction ViewTag m (WidgetT ViewTag m)
+  -> VarAccess m (WidgetT m)
 makeBuiltinDefinition makeExpressionEdit def builtin =
   liftM (BWidgets.vboxAlign 0) $ sequence
   [ liftM BWidgets.hboxCenteredSpaced $ sequence
@@ -134,10 +135,10 @@ defTypeScale = Widget.scale Config.defTypeBoxSizeFactor
 
 makeExprDefinition ::
   MonadF m =>
-  (Sugar.ExpressionRef m -> OTransaction ViewTag m (ExpressionGui m)) ->
+  (Sugar.ExpressionRef m -> VarAccess m (ExpressionGui m)) ->
   Sugar.DefinitionRef m ->
   Sugar.DefinitionExpression m ->
-  OTransaction ViewTag m (OT.WidgetT ViewTag m)
+  VarAccess m (WidgetT m)
 makeExprDefinition makeExpressionEdit def bodyExpr = do
   bodyWidget <-
     liftM (ExpressionGui.egWidget . ExpressionGui.hbox) .
@@ -164,12 +165,15 @@ makeExprDefinition makeExpressionEdit def bodyExpr = do
         (Widget.keysEventMapMovesCursor Config.acceptInferredTypeKeys
          "Accept inferred type"
          (IT.transaction acceptInferredType >> return myId)) .
+        VarAccess.otransaction .
         BWidgets.makeFocusableTextView "↱" $ Widget.joinId myId ["accept type"]
       return $ BWidgets.hboxCenteredSpaced [acceptanceLabel, label]
     right = Vector2 1 0.5
     center = 0.5
     mkTypeRow onLabel labelText typeExpr = do
-      label <- onLabel . labelStyle . BWidgets.makeLabel labelText $ Widget.toAnimId myId
+      label <-
+        onLabel . labelStyle . VarAccess.otransaction .
+        BWidgets.makeLabel labelText $ Widget.toAnimId myId
       typeGui <- makeExpressionEdit typeExpr
       return
         [ (right, label)
@@ -178,4 +182,5 @@ makeExprDefinition makeExpressionEdit def bodyExpr = do
     mkAcceptedRow onLabel = mkTypeRow onLabel "Type:" $ Sugar.drType def
     guid = Sugar.drGuid def
     myId = WidgetIds.fromGuid guid
-    labelStyle = OT.atEnv $ OT.setTextSizeColor Config.defTypeLabelTextSize Config.defTypeLabelColor
+    labelStyle =
+      VarAccess.atEnv $ OT.setTextSizeColor Config.defTypeLabelTextSize Config.defTypeLabelColor

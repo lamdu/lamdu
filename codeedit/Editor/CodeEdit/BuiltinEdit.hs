@@ -2,15 +2,14 @@ module Editor.CodeEdit.BuiltinEdit(make) where
 
 import Data.List.Split (splitOn)
 import Data.Store.Property (Property(..))
-import Editor.Anchors (ViewTag)
+import Editor.CodeEdit.VarAccess (VarAccess, WidgetT)
 import Editor.MonadF (MonadF)
-import Editor.OTransaction (OTransaction, WidgetT)
 import qualified Data.List as List
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.Sugar as Sugar
+import qualified Editor.CodeEdit.VarAccess as VarAccess
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
-import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -28,20 +27,20 @@ make
   :: MonadF m
   => Sugar.DefinitionBuiltin m
   -> Widget.Id
-  -> OTransaction ViewTag m (WidgetT ViewTag m)
+  -> VarAccess m (WidgetT m)
 make (Sugar.DefinitionBuiltin (Data.FFIName modulePath name) setFFIName) myId =
-  OT.assignCursor myId (WidgetIds.builtinFFIName myId) $ do
+  VarAccess.assignCursor myId (WidgetIds.builtinFFIName myId) $ do
     moduleName <-
       makeNamePartEditor Config.foreignModuleColor
       modulePathStr modulePathSetter WidgetIds.builtinFFIPath
     varName <- makeNamePartEditor Config.foreignVarColor name nameSetter WidgetIds.builtinFFIName
-    dot <- BWidgets.makeLabel "." $ Widget.toAnimId myId
+    dot <- VarAccess.otransaction . BWidgets.makeLabel "." $ Widget.toAnimId myId
     return $ BWidgets.hboxCentered [moduleName, dot, varName]
   where
     makeNamePartEditor color namePartStr mSetter makeWidgetId =
-      OT.atEnv (BWidgets.setTextColor color) .
-      BWidgets.wrapDelegated builtinFDConfig FocusDelegator.NotDelegating id
-      (maybe
+      VarAccess.atEnv (BWidgets.setTextColor color) .
+      BWidgets.wrapDelegatedVA builtinFDConfig FocusDelegator.NotDelegating id
+      (VarAccess.otransaction . maybe
        (BWidgets.makeTextView namePartStr . Widget.toAnimId)
        (BWidgets.makeWordEdit . Property namePartStr) mSetter) $
       makeWidgetId myId
