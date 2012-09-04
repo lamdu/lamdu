@@ -165,8 +165,7 @@ makeNoResults myId =
 
 makeResultVariable ::
   MonadF m => (Guid, Data.VariableRef) -> VarAccess m Result
-makeResultVariable (guid, varRef) = do
-  varName <- liftM snd $ VarAccess.getName guid
+makeResultVariable (guid, varRef) = VarAccess.withName guid $ \(_, varName) ->
   return Result
     { resultNames = [varName]
     , resultExpr = toPureExpr . Data.ExpressionLeaf $ Data.GetVariable varRef

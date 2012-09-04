@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Editor.CodeEdit.ExpressionEdit.FuncEdit
-  (make, makeParamEdit, makeParamNameEdit, makeBodyEdit, addJumpToRHS) where
+  (make, makeParamNameEdit, addJumpToRHS, makeResultEdit, makeParamsAndResultEdit) where
 
 import Control.Monad (liftM)
 import Data.Monoid (mempty, mconcat)
@@ -31,12 +31,12 @@ paramFDConfig = FocusDelegator.Config
 
 makeParamNameEdit
   :: MonadF m
-  => Guid
+  => (VarAccess.NameSource, String) -> Guid
   -> VarAccess m (WidgetT m)
-makeParamNameEdit ident =
+makeParamNameEdit name ident =
   BWidgets.wrapDelegatedVA paramFDConfig FocusDelegator.NotDelegating id
   (VarAccess.atEnv (BWidgets.setTextColor Config.paramOriginColor) .
-   BWidgets.makeNameEdit ident) $ WidgetIds.fromGuid ident
+   BWidgets.makeNameEdit name ident) $ WidgetIds.fromGuid ident
 
 addJumpToRHS
   :: MonadF m => (E.Doc, Sugar.ExpressionRef m) -> WidgetT m -> WidgetT m
@@ -52,13 +52,14 @@ makeParamEdit
   :: MonadF m
   => ExpressionGui.Maker m
   -> (E.Doc, Sugar.ExpressionRef m)
+  -> (VarAccess.NameSource, String)
   -> Sugar.FuncParam m
   -> VarAccess m (ExpressionGui m)
-makeParamEdit makeExpressionEdit rhs param =
+makeParamEdit makeExpressionEdit rhs name param =
   (liftM . ExpressionGui.atEgWidget)
   (addJumpToRHS rhs . Widget.weakerEvents paramEventMap) $ do
-    paramNameEdit <- makeParamNameEdit ident
     paramTypeEdit <- makeExpressionEdit $ Sugar.fpType param
+    paramNameEdit <- makeParamNameEdit name ident
     return . ExpressionGui.addType ExpressionGui.HorizLine (WidgetIds.fromGuid ident)
       [ExpressionGui.egWidget paramTypeEdit] $
       ExpressionGui.fromValueWidget paramNameEdit
@@ -81,28 +82,18 @@ makeParamEdit makeExpressionEdit rhs param =
        IT.transaction . Sugar.fpaDelete) $
       Sugar.fpMActions param
 
-makeParamsEdit
-  :: MonadF m
-  => ExpressionGui.Maker m
-  -> (E.Doc, Sugar.ExpressionRef m)
-  -> [Sugar.FuncParam m]
-  -> VarAccess m (ExpressionGui m)
-makeParamsEdit makeExpressionEdit rhs =
-  liftM ExpressionGui.hboxSpaced .
-  mapM (makeParamEdit makeExpressionEdit rhs)
-
-makeBodyEdit
+makeResultEdit
   :: MonadF m
   => ExpressionGui.Maker m
   -> [Widget.Id]
   -> Sugar.ExpressionRef m
   -> VarAccess m (ExpressionGui m)
-makeBodyEdit makeExpressionEdit lhs body =
+makeResultEdit makeExpressionEdit lhs result =
   liftM ((ExpressionGui.atEgWidget . Widget.weakerEvents) jumpToLhsEventMap) $
-  makeExpressionEdit body
+  makeExpressionEdit result
   where
     lastParam = case lhs of
-      [] -> error "BodyEdit given empty LHS"
+      [] -> error "makeResultEdit given empty LHS"
       xs -> last xs
     jumpToLhsEventMap =
       Widget.keysEventMapMovesCursor Config.jumpRHStoLHSKeys "Jump to last param" $
@@ -124,9 +115,27 @@ make makeExpressionEdit (Sugar.Func params body) myId =
       liftM ExpressionGui.fromValueWidget .
       VarAccess.atEnv (OT.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor) .
       VarAccess.otransaction . BWidgets.makeLabel "→" $ Widget.toAnimId myId
-    bodyEdit <- makeBodyEdit makeExpressionEdit lhs body
-    paramsEdit <- makeParamsEdit makeExpressionEdit ("Func Body", body) params
-    return $ ExpressionGui.hboxSpaced [ lambdaLabel, paramsEdit, rightArrowLabel, bodyEdit ]
+    (paramsEdits, bodyEdit) <-
+      makeParamsAndResultEdit makeExpressionEdit lhs ("Func Body", body) params
+    return .
+      ExpressionGui.hboxSpaced $
+      lambdaLabel : paramsEdits ++ [ rightArrowLabel, bodyEdit ]
   where
-    lhs = map (WidgetIds.fromGuid . Sugar.fpGuid) params
     bodyId = WidgetIds.fromGuid $ Sugar.rGuid body
+    lhs = map (WidgetIds.fromGuid . Sugar.fpGuid) params
+
+makeParamsAndResultEdit ::
+  MonadF m =>
+  ExpressionGui.Maker m ->
+  [Widget.Id] ->
+  (E.Doc, Sugar.ExpressionRef m) ->
+  [Sugar.FuncParam m] ->
+  VarAccess m ([ExpressionGui m], ExpressionGui m)
+makeParamsAndResultEdit makeExpressionEdit lhs rhs@(_, result) ps = go ps
+  where
+    go [] = liftM ((,) []) $ makeResultEdit makeExpressionEdit lhs result
+    go (param:params) = do
+      (name, (paramEdits, resultEdit)) <-
+        VarAccess.withName (Sugar.fpGuid param) $ \name -> liftM ((,) name) $ go params
+      paramEdit <- makeParamEdit makeExpressionEdit rhs name param
+      return (paramEdit : paramEdits, resultEdit)

@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit.PiEdit(make) where
 
+import Control.Monad (liftM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.VarAccess (VarAccess)
 import Editor.MonadF (MonadF)
@@ -22,9 +23,13 @@ make
   -> VarAccess m (ExpressionGui m)
 make makeExpressionEdit (Sugar.Pi param resultType) myId =
   VarAccess.assignCursor myId typeId $ do
-    (resultTypeEdit, usedVars) <-
-      VarAccess.usedVariables $
-      FuncEdit.makeBodyEdit makeExpressionEdit [paramId] resultType
+    -- TODO: We pollute the resultTypeEdit with our generated name
+    -- (which it will skip) even if we end up non-dependent and don't
+    -- have a name
+    (name, (resultTypeEdit, usedVars)) <-
+      VarAccess.withName paramGuid $ \name ->
+      liftM ((,) name) . VarAccess.usedVariables $
+      FuncEdit.makeResultEdit makeExpressionEdit [paramId] resultType
     let
       paramUsed = paramGuid `elem` usedVars
       redirectCursor cursor
@@ -38,7 +43,7 @@ make makeExpressionEdit (Sugar.Pi param resultType) myId =
       paramEdit <-
         if paramUsed
         then do
-          paramNameEdit <- FuncEdit.makeParamNameEdit $ Sugar.fpGuid param
+          paramNameEdit <- FuncEdit.makeParamNameEdit name paramGuid
           colonLabel <- VarAccess.otransaction . BWidgets.makeLabel ":" $ Widget.toAnimId paramId
           return $ ExpressionGui.hbox
             [ ExpressionGui.fromValueWidget paramNameEdit

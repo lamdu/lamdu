@@ -25,14 +25,13 @@ makeView
   => Sugar.GetVariable
   -> Widget.Id
   -> VarAccess m (ExpressionGui m)
-makeView var myId = do
-  (nameSrc, name) <- VarAccess.getName $ Sugar.gvGuid var
+makeView var myId = VarAccess.withName (Sugar.gvGuid var) $ \(nameSrc, name) ->
   liftM
-    (ExpressionGui.fromValueWidget .
-     BWidgets.nameSrcTint nameSrc) .
-    VarAccess.atEnv (BWidgets.setTextColor (colorOf var)) .
-    VarAccess.otransaction $
-    BWidgets.makeFocusableTextView name myId
+  (ExpressionGui.fromValueWidget .
+   BWidgets.nameSrcTint nameSrc) .
+  VarAccess.atEnv (BWidgets.setTextColor (colorOf var)) .
+  VarAccess.otransaction $
+  BWidgets.makeFocusableTextView name myId
 
 make
   :: MonadF m

@@ -1,3 +1,9 @@
+* Maybe the right place to detect/error about out-of-scope is
+   VarAccess.withName. Can withNewName that errorizes if we have a
+   Guid shadowing (should it ever happen?) and a withOldName that
+   returns an OutOfScopeError-annotated name if it wasn't generated
+   already.
+
 * BUG/missing-feature:
     a x = a 5
   Does not infer type of x.

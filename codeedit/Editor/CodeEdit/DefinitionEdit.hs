@@ -4,13 +4,12 @@ module Editor.CodeEdit.DefinitionEdit(make, makeParts) where
 import Control.Monad (liftM)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
-import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
-import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.VarAccess (VarAccess, WidgetT)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
+import qualified Data.List as List
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.BuiltinEdit as BuiltinEdit
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -33,36 +32,13 @@ paramFDConfig = FocusDelegator.Config
   , FocusDelegator.stopDelegatingDoc = "Stop changing name"
   }
 
-makeNameEdit :: MonadF m => Widget.Id -> Guid -> VarAccess m (WidgetT m)
-makeNameEdit myId ident =
+makeNameEdit ::
+  MonadF m => (VarAccess.NameSource, String) -> Widget.Id -> Guid -> VarAccess m (WidgetT m)
+makeNameEdit name myId ident =
   BWidgets.wrapDelegatedVA paramFDConfig FocusDelegator.NotDelegating id
   (VarAccess.atEnv (BWidgets.setTextColor Config.definitionOriginColor) .
-   BWidgets.makeNameEdit ident)
+   BWidgets.makeNameEdit name ident)
   myId
-
-makeLHSEdit
-  :: MonadF m
-  => ExpressionGui.Maker m
-  -> Widget.Id
-  -> Guid
-  -> Maybe (Transaction ViewTag m Guid)
-  -> (E.Doc, Sugar.ExpressionRef m)
-  -> [Sugar.FuncParam m]
-  -> VarAccess m (ExpressionGui m)
-makeLHSEdit makeExpressionEdit myId ident mAddFirstParameter rhs params = do
-  nameEdit <-
-    liftM (FuncEdit.addJumpToRHS rhs . Widget.weakerEvents addFirstParamEventMap) $
-    makeNameEdit myId ident
-  liftM (ExpressionGui.hboxSpaced . (ExpressionGui.fromValueWidget nameEdit :)) .
-    mapM (FuncEdit.makeParamEdit makeExpressionEdit rhs) $ params
-  where
-    addFirstParamEventMap =
-      maybe mempty
-      (Widget.keysEventMapMovesCursor Config.addNextParamKeys
-       "Add parameter" .
-       liftM (FocusDelegator.delegatingId . WidgetIds.fromGuid) .
-       IT.transaction)
-      mAddFirstParameter
 
 makeEquals :: MonadF m => Widget.Id -> VarAccess m (Widget f)
 makeEquals = VarAccess.otransaction . BWidgets.makeLabel "=" . Widget.toAnimId
@@ -73,24 +49,31 @@ makeParts
   -> Guid
   -> Sugar.ExpressionRef m
   -> VarAccess m [ExpressionGui m]
-makeParts makeExpressionEdit guid exprRef = do
-  lhsEdit <-
-    makeLHSEdit makeExpressionEdit myId guid
-    ((fmap Sugar.lambdaWrap . Sugar.rActions) exprRef)
-    ("Def Body", Sugar.fBody func) $ Sugar.fParams func
+makeParts makeExpressionEdit guid exprRef = VarAccess.withName guid $ \name -> do
+  nameEdit <-
+    liftM (FuncEdit.addJumpToRHS rhs . Widget.weakerEvents addFirstParamEventMap) $
+    makeNameEdit name myId guid
   equals <- makeEquals myId
-  let
-    lhs = myId : map (WidgetIds.fromGuid . Sugar.fpGuid) (Sugar.fParams func)
-  rhsEdit <-
-    FuncEdit.makeBodyEdit makeExpressionEdit lhs $ Sugar.fBody func
-  return
-    [ lhsEdit
-    , ExpressionGui.fromValueWidget BWidgets.spaceWidget
-    , ExpressionGui.fromValueWidget equals
-    , ExpressionGui.fromValueWidget BWidgets.spaceWidget
-    , rhsEdit
+  (paramsEdits, bodyEdit) <-
+    FuncEdit.makeParamsAndResultEdit makeExpressionEdit lhs rhs params
+  return .
+    List.intersperse (ExpressionGui.fromValueWidget BWidgets.spaceWidget) $
+    ExpressionGui.fromValueWidget nameEdit :
+    paramsEdits ++
+    [ ExpressionGui.fromValueWidget equals
+    , bodyEdit
     ]
   where
+    lhs = myId : map (WidgetIds.fromGuid . Sugar.fpGuid) params
+    rhs = ("Def Body", Sugar.fBody func)
+    params = Sugar.fParams func
+    addFirstParamEventMap =
+      maybe mempty
+      ( Widget.keysEventMapMovesCursor Config.addNextParamKeys "Add parameter"
+      . liftM (FocusDelegator.delegatingId . WidgetIds.fromGuid)
+      . IT.transaction
+      . Sugar.lambdaWrap
+      ) $ Sugar.rActions exprRef
     myId = WidgetIds.fromGuid guid
     sExpr = Sugar.rExpression exprRef
     func =
@@ -119,7 +102,7 @@ makeBuiltinDefinition
 makeBuiltinDefinition makeExpressionEdit def builtin =
   liftM (BWidgets.vboxAlign 0) $ sequence
   [ liftM BWidgets.hboxCenteredSpaced $ sequence
-    [ makeNameEdit (Widget.joinId myId ["name"]) guid
+    [ VarAccess.withName guid $ \name -> makeNameEdit name (Widget.joinId myId ["name"]) guid
     , makeEquals myId
     , BuiltinEdit.make builtin myId
     ]

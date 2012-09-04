@@ -161,15 +161,14 @@ makeWordEdit =
   EventMap.ModKey EventMap.noMods EventMap.KeySpace
 
 makeNameEdit ::
-  Monad m => Guid -> Widget.Id -> VarAccess m (WidgetT m)
-makeNameEdit ident myId = do
-  (nameSrc, name) <- VarAccess.getName ident
+  Monad m => (VarAccess.NameSource, String) -> Guid -> Widget.Id -> VarAccess m (WidgetT m)
+makeNameEdit (nameSrc, name) ident myId =
   liftM (nameSrcTint nameSrc) .
-    (VarAccess.atEnv . OT.atEnvTextStyle)
-    ((TextEdit.atSEmptyUnfocusedString . const) name .
-     (TextEdit.atSEmptyFocusedString . const) (concat ["<", name, ">"])) $
-    VarAccess.otransaction . flip makeEditor myId =<<
-    VarAccess.transaction (Anchors.assocNameRef ident)
+  (VarAccess.atEnv . OT.atEnvTextStyle)
+  ((TextEdit.atSEmptyUnfocusedString . const) name .
+   (TextEdit.atSEmptyFocusedString . const) (concat ["<", name, ">"])) $
+  VarAccess.otransaction . flip makeEditor myId =<<
+  VarAccess.transaction (Anchors.assocNameRef ident)
   where
     makeEditor =
       (fmap . fmap . liftM . Widget.atWEventMap)
