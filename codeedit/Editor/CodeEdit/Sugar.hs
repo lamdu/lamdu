@@ -19,7 +19,7 @@ module Editor.CodeEdit.Sugar
   ) where
 
 import Control.Applicative ((<$>), (<*>))
-import Control.Arrow (first, second)
+import Control.Arrow (second)
 import Control.Monad ((<=<), liftM, mzero, void)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (MonadTrans(..))
@@ -499,13 +499,10 @@ mkExpressionGetVariable =
 applyOnSection ::
   Monad m =>
   Section m -> Data.Apply (ExpressionRef m, ExprEntity m) -> Convertor m
-applyOnSection (Section Nothing op Nothing g) apply@(Data.Apply (_, funcI) (argRef, _)) exprI
+applyOnSection (Section Nothing op Nothing g) (Data.Apply (_, funcI) arg@(argRef, _)) exprI
   | isPolymorphicFunc funcI = do
     newOpRef <-
-      convertApplyPrefix
-      ( (Data.atApplyFunc . first . atRExpression . atEHasParens . const)
-        DontHaveParens apply)
-      exprI
+      convertApplyPrefix (Data.Apply (op, funcI) arg) exprI
     mkExpressionRef exprI . ExpressionSection DontHaveParens $
       Section Nothing (removeRedundantTypes newOpRef) Nothing g
   | otherwise =
