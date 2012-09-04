@@ -41,6 +41,7 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified System.Random as Random
 
 moreSymbol :: String
@@ -411,13 +412,30 @@ makeActiveHoleEdit makeExpressionEdit holeInfo =
     checkInfer = liftM not . genericNull . Sugar.holeInferResults (hiHole holeInfo)
     searchTermId = WidgetIds.searchTermId $ hiHoleId holeInfo
 
+holeFDConfig :: FocusDelegator.Config
+holeFDConfig = FocusDelegator.Config
+  { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyEnter
+  , FocusDelegator.startDelegatingDoc = "Enter hole"
+  , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEsc
+  , FocusDelegator.stopDelegatingDoc = "Leave hole"
+  }
+
 make
   :: MonadF m
   => ExpressionGui.Maker m
   -> Sugar.Hole m -> Guid -> Widget.Id
   -> VarAccess m
      (Maybe (ResultPicker m), ExpressionGui m)
-make makeExpressionEdit hole guid myId = do
+make makeExpressionEdit hole guid =
+  BWidgets.wrapDelegatedVA holeFDConfig FocusDelegator.Delegating (second . ExpressionGui.atEgWidget) $
+  makeUnwrapped makeExpressionEdit hole guid
+
+makeUnwrapped ::
+  MonadF m =>
+  ExpressionGui.Maker m ->
+  Sugar.Hole m -> Guid -> Widget.Id ->
+  VarAccess m (Maybe (ResultPicker m), ExpressionGui m)
+makeUnwrapped makeExpressionEdit hole guid myId = do
   cursor <- VarAccess.otransaction OT.readCursor
   searchTermProp <- VarAccess.transaction $ Anchors.assocSearchTermRef guid
   let

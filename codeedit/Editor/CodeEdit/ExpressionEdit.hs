@@ -10,7 +10,6 @@ import Editor.CodeEdit.VarAccess (VarAccess)
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (EventHandlers)
-import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Editor.CodeEdit.ExpressionEdit.AtomEdit as AtomEdit
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -32,14 +31,6 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 data HoleResultPicker m = NotAHole | IsAHole (Maybe (HoleEdit.ResultPicker m))
-
-holeFDConfig :: FocusDelegator.Config
-holeFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyEnter
-  , FocusDelegator.startDelegatingDoc = "Enter hole"
-  , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEsc
-  , FocusDelegator.stopDelegatingDoc = "Leave hole"
-  }
 
 pasteEventMap
   :: MonadF m
@@ -85,15 +76,13 @@ makeEditor sExpr =
   Sugar.ExpressionFunc hasParens f ->
     notAHole $ FuncEdit.make make hasParens f
   Sugar.ExpressionInferred i ->
-    isAHole (Sugar.iHole i) FocusDelegator.NotDelegating .
-    InferredEdit.make make i $ Sugar.rGuid sExpr
+    isAHole (Sugar.iHole i) . InferredEdit.make make i $ Sugar.rGuid sExpr
   Sugar.ExpressionPolymorphic poly ->
     notAHole $ PolymorphicEdit.make make poly
   Sugar.ExpressionHole hole ->
-    isAHole hole FocusDelegator.Delegating .
-    HoleEdit.make make hole $ Sugar.rGuid sExpr
+    isAHole hole . HoleEdit.make make hole $ Sugar.rGuid sExpr
   Sugar.ExpressionGetVariable varRef ->
-    notAHole {- TODO: May need parenification -} $ VarEdit.make varRef
+    notAHole $ VarEdit.make varRef
   Sugar.ExpressionApply hasParens apply ->
     notAHole $ ApplyEdit.make make hasParens apply
   Sugar.ExpressionPi hasParens funcType ->
@@ -105,12 +94,10 @@ makeEditor sExpr =
   Sugar.ExpressionAtom atom ->
     notAHole $ AtomEdit.make atom
   where
-    isAHole hole delegating =
+    isAHole hole =
       (fmap . liftM)
       (first IsAHole .
-       (second . ExpressionGui.atEgWidget . Widget.weakerEvents) (pasteEventMap hole)) .
-      BWidgets.wrapDelegatedVA holeFDConfig delegating
-      (second . ExpressionGui.atEgWidget)
+       (second . ExpressionGui.atEgWidget . Widget.weakerEvents) (pasteEventMap hole))
     notAHole = (fmap . liftM) ((,) NotAHole)
 
 expressionEventMap

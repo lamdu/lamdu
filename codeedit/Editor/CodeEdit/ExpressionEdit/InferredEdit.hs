@@ -1,5 +1,6 @@
 module Editor.CodeEdit.ExpressionEdit.InferredEdit(make) where
 
+import Control.Arrow (second)
 import Control.Monad (liftM)
 import Data.Store.Guid (Guid)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
@@ -14,13 +15,32 @@ import qualified Editor.Config as Config
 import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+
+fDConfig :: FocusDelegator.Config
+fDConfig = FocusDelegator.Config
+  { FocusDelegator.startDelegatingKey = Config.replaceInferredValueKey
+  , FocusDelegator.startDelegatingDoc = "Replace inferred value"
+  , FocusDelegator.stopDelegatingKey = Config.keepInferredValueKey
+  , FocusDelegator.stopDelegatingDoc = "Keep inferred value"
+  }
 
 make
   :: MonadF m
   => ExpressionGui.Maker m -> Sugar.Inferred m -> Guid
   -> Widget.Id
   -> VarAccess m (Maybe (HoleEdit.ResultPicker m), ExpressionGui m)
-make makeExpressionEdit inferred guid myId = do
+make makeExpressionEdit inferred guid =
+  BWidgets.wrapDelegatedVA fDConfig FocusDelegator.NotDelegating
+  (second . ExpressionGui.atEgWidget) $
+  makeUnwrapped makeExpressionEdit inferred guid
+
+makeUnwrapped
+  :: MonadF m
+  => ExpressionGui.Maker m -> Sugar.Inferred m -> Guid
+  -> Widget.Id
+  -> VarAccess m (Maybe (HoleEdit.ResultPicker m), ExpressionGui m)
+makeUnwrapped makeExpressionEdit inferred guid myId = do
   -- We are inside a non-delegating focus delegator made by makeExpressionEdit,
   -- so if the cursor is on us it means user enterred our widget.
   mInnerCursor <- VarAccess.otransaction $ OT.subCursor myId
