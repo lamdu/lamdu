@@ -54,14 +54,6 @@ holeFDConfig = FocusDelegator.Config
   , FocusDelegator.stopDelegatingDoc = "Leave hole"
   }
 
-polymorphicFDConfig :: FocusDelegator.Config
-polymorphicFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyEnter
-  , FocusDelegator.startDelegatingDoc = "Expand polymorphic"
-  , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEsc
-  , FocusDelegator.stopDelegatingDoc = "Collapse polymorphic"
-  }
-
 pasteEventMap
   :: MonadF m
   => Sugar.Hole m -> Widget.EventHandlers (ITransaction ViewTag m)
@@ -109,8 +101,7 @@ makeEditor sExpr =
     isAHole (Sugar.iHole i) FocusDelegator.NotDelegating .
     InferredEdit.make make i $ Sugar.rGuid sExpr
   Sugar.ExpressionPolymorphic poly ->
-    wrapNonHoleExpr FocusDelegator.NotDelegating polymorphicFDConfig $
-    PolymorphicEdit.make make poly
+    notAHole $ PolymorphicEdit.make make poly
   Sugar.ExpressionHole hole ->
     isAHole hole FocusDelegator.Delegating .
     HoleEdit.make make hole $ Sugar.rGuid sExpr
