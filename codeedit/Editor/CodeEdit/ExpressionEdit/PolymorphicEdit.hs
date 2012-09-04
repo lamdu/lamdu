@@ -39,6 +39,14 @@ makeInner makeExpressionEdit poly myId =
       maybe id (VarAccess.assignCursor myId . WidgetIds.fromGuid . Sugar.rGuid) $
       Sugar.pCompact poly
 
+polymorphicFDConfig :: FocusDelegator.Config
+polymorphicFDConfig = FocusDelegator.Config
+  { FocusDelegator.startDelegatingKey = Config.expandPolymorphic
+  , FocusDelegator.startDelegatingDoc = "Expand polymorphic"
+  , FocusDelegator.stopDelegatingKey = Config.collapsePolymorphic
+  , FocusDelegator.stopDelegatingDoc = "Collapse polymorphic"
+  }
+
 make ::
   MonadF m =>
   ExpressionGui.Maker m -> Sugar.Polymorphic m ->
@@ -50,5 +58,5 @@ make makeExpressionEdit poly =
       case Sugar.pCompact poly of
       Nothing -> id
       Just _ ->
-        BWidgets.wrapDelegatedVA Config.polymorphicFDConfig
+        BWidgets.wrapDelegatedVA polymorphicFDConfig
         FocusDelegator.NotDelegating ExpressionGui.atEgWidget
