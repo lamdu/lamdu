@@ -23,7 +23,6 @@ import qualified Editor.CodeEdit.ExpressionEdit.PolymorphicEdit as PolymorphicEd
 import qualified Editor.CodeEdit.ExpressionEdit.SectionEdit as SectionEdit
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
 import qualified Editor.CodeEdit.ExpressionEdit.WhereEdit as WhereEdit
-import qualified Editor.CodeEdit.Parens as Parens
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
@@ -105,7 +104,7 @@ makeEditor sExpr =
   Sugar.ExpressionWhere hasParens w ->
     wrapCommon $ WhereEdit.makeWithBody make hasParens w
   Sugar.ExpressionFunc hasParens f ->
-    wrapCommon . textParenify hasParens $ FuncEdit.make make f
+    wrapCommon $ FuncEdit.make make hasParens f
   Sugar.ExpressionInferred i ->
     isAHole (Sugar.iHole i) FocusDelegator.NotDelegating .
     InferredEdit.make make i $ Sugar.rGuid sExpr
@@ -118,21 +117,16 @@ makeEditor sExpr =
   Sugar.ExpressionGetVariable varRef ->
     notAHole {- TODO: May need parenification -} $ VarEdit.make varRef
   Sugar.ExpressionApply hasParens apply ->
-    wrapCommon . textParenify hasParens $ ApplyEdit.make make apply
+    wrapCommon $ ApplyEdit.make make hasParens apply
   Sugar.ExpressionPi hasParens funcType ->
-    wrapCommon . textParenify hasParens $ PiEdit.make make funcType
+    wrapCommon $ PiEdit.make make hasParens funcType
   Sugar.ExpressionSection hasParens section ->
-    wrapCommon . textParenify hasParens $ SectionEdit.make make section
+    wrapCommon $ SectionEdit.make make hasParens section
   Sugar.ExpressionLiteralInteger integer ->
     notAHole $ LiteralEdit.makeInt integer
   Sugar.ExpressionAtom atom ->
     notAHole $ AtomEdit.make atom
   where
-    parenify mkParens hasParens mkWidget myId =
-      mkWidget myId >>=
-      case hasParens of
-      Sugar.HaveParens -> mkParens myId
-      Sugar.DontHaveParens -> return
     isAHole hole delegating =
       (fmap . liftM)
       (first IsAHole .
@@ -145,7 +139,6 @@ makeEditor sExpr =
       notAHole .
       BWidgets.wrapDelegatedVA config
       delegating ExpressionGui.atEgWidget
-    textParenify = parenify Parens.addHighlightedTextParens
 
 expressionEventMap
   :: MonadF m

@@ -11,20 +11,23 @@ import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.CodeEdit.VarAccess as VarAccess
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Editor.CodeEdit.Parens as Parens
 
 make
   :: MonadF m
   => ExpressionGui.Maker m
+  -> Sugar.HasParens
   -> Sugar.Section m
   -> Widget.Id
   -> VarAccess m (ExpressionGui m)
-make makeExpressionEdit (Sugar.Section mLArg op mRArg innerApplyGuid) myId =
+make makeExpressionEdit hasParens (Sugar.Section mLArg op mRArg innerApplyGuid) myId =
   VarAccess.assignCursor myId destId .
     maybe id ((`VarAccess.assignCursor` destId) . WidgetIds.fromGuid) innerApplyGuid $ do
       lArgEdits <- fromMArg mLArg
       opEdits <- makeExpressionsEdit op
       rArgEdits <- fromMArg mRArg
-      return . ExpressionGui.hboxSpaced $ lArgEdits ++ opEdits ++ rArgEdits
+      ExpressionGui.parenify hasParens Parens.addHighlightedTextParens myId .
+        ExpressionGui.hboxSpaced $ lArgEdits ++ opEdits ++ rArgEdits
   where
     destId = WidgetIds.fromGuid . Sugar.rGuid $ fromMaybe op mRArg
     makeExpressionsEdit = liftM (:[]) . makeExpressionEdit

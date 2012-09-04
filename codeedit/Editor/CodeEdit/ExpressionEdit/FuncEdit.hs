@@ -11,6 +11,7 @@ import Editor.CodeEdit.VarAccess (VarAccess, WidgetT)
 import Editor.MonadF (MonadF)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
+import qualified Editor.CodeEdit.Parens as Parens
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.CodeEdit.VarAccess as VarAccess
 import qualified Editor.Config as Config
@@ -102,10 +103,11 @@ makeResultEdit makeExpressionEdit lhs result =
 make
   :: MonadF m
   => ExpressionGui.Maker m
+  -> Sugar.HasParens
   -> Sugar.Func m
   -> Widget.Id
   -> VarAccess m (ExpressionGui m)
-make makeExpressionEdit (Sugar.Func params body) myId =
+make makeExpressionEdit hasParens (Sugar.Func params body) myId =
   VarAccess.assignCursor myId bodyId $ do
     lambdaLabel <-
       liftM ExpressionGui.fromValueWidget .
@@ -117,7 +119,7 @@ make makeExpressionEdit (Sugar.Func params body) myId =
       VarAccess.otransaction . BWidgets.makeLabel "→" $ Widget.toAnimId myId
     (paramsEdits, bodyEdit) <-
       makeParamsAndResultEdit makeExpressionEdit lhs ("Func Body", body) params
-    return .
+    ExpressionGui.parenify hasParens Parens.addHighlightedTextParens myId .
       ExpressionGui.hboxSpaced $
       lambdaLabel : paramsEdits ++ [ rightArrowLabel, bodyEdit ]
   where

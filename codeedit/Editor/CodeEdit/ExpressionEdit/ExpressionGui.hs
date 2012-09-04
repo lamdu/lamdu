@@ -7,6 +7,7 @@ module Editor.CodeEdit.ExpressionEdit.ExpressionGui
   , hbox, hboxSpaced
   , addType
   , TypeStyle(..)
+  , parenify
   ) where
 
 import Control.Lens ((^.))
@@ -99,3 +100,11 @@ addType style exprId typeEdits eg =
         Background <- Just style
         return Config.inferredTypeBGColor
     underlineId = WidgetIds.underlineId $ Widget.toAnimId exprId
+
+parenify ::
+  Monad m =>
+  Sugar.HasParens ->
+  (Widget.Id -> ExpressionGui m -> VarAccess m (ExpressionGui m)) ->
+  Widget.Id -> ExpressionGui m -> VarAccess m (ExpressionGui m)
+parenify Sugar.DontHaveParens _ _ x = return x
+parenify Sugar.HaveParens addParens myId x = addParens myId x

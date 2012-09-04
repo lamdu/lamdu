@@ -63,15 +63,11 @@ makeWithBody makeExpressionEdit hasParens where_@(Sugar.Where _ body) myId = do
   bodyEdit <-
     VarAccess.assignCursor myId ((WidgetIds.fromGuid . Sugar.rGuid) body) $
     makeExpressionEdit body
-  let
-    res =
-      ExpressionGui.fromValueWidget $ BWidgets.vboxCentered
-      [ ExpressionGui.egWidget bodyEdit
-      , whereEdit
-      ]
-  return $ case hasParens of
-    Sugar.DontHaveParens -> res
-    Sugar.HaveParens ->
-      ExpressionGui.atEgWidget
-      (Parens.addSquareParens (Widget.toAnimId myId))
-      res
+  ExpressionGui.parenify hasParens addSquareParens myId .
+    ExpressionGui.fromValueWidget $ BWidgets.vboxCentered
+    [ ExpressionGui.egWidget bodyEdit
+    , whereEdit
+    ]
+  where
+    addSquareParens animId =
+      return . (ExpressionGui.atEgWidget . Parens.addSquareParens . Widget.toAnimId) animId
