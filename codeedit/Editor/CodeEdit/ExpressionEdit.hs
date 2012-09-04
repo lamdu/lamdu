@@ -32,11 +32,6 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 data HoleResultPicker m = NotAHole | IsAHole (Maybe (HoleEdit.ResultPicker m))
-foldHolePicker
-  :: r -> (Maybe (HoleEdit.ResultPicker m) -> r)
-  -> HoleResultPicker m -> r
-foldHolePicker notHole _isHole NotAHole = notHole
-foldHolePicker _notHole isHole (IsAHole x) = isHole x
 
 holeFDConfig :: FocusDelegator.Config
 holeFDConfig = FocusDelegator.Config
@@ -185,8 +180,12 @@ expressionEventMap holePicker actions =
         eventResult
 
     moveUnlessOnHole = ifHole $ (const . fmap . liftM . Widget.atECursor . const) Nothing
-    isHole = foldHolePicker False (const True) holePicker
-    ifHole whenHole = foldHolePicker id whenHole holePicker
+    isHole = case holePicker of
+      NotAHole -> False
+      IsAHole _ -> True
+    ifHole whenHole = case holePicker of
+      NotAHole -> id
+      IsAHole x -> whenHole x
     maybeMempty x f = maybe mempty f x
     moveToIfHole nextArg =
       case Sugar.rExpression nextArg of
