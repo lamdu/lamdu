@@ -107,7 +107,8 @@ make
   -> Sugar.Func m
   -> Widget.Id
   -> VarAccess m (ExpressionGui m)
-make makeExpressionEdit hasParens (Sugar.Func params body) myId =
+make makeExpressionEdit hasParens (Sugar.Func params body) =
+  ExpressionGui.wrapParenify hasParens Parens.addHighlightedTextParens $ \myId ->
   VarAccess.assignCursor myId bodyId $ do
     lambdaLabel <-
       liftM ExpressionGui.fromValueWidget .
@@ -119,8 +120,7 @@ make makeExpressionEdit hasParens (Sugar.Func params body) myId =
       VarAccess.otransaction . BWidgets.makeLabel "→" $ Widget.toAnimId myId
     (paramsEdits, bodyEdit) <-
       makeParamsAndResultEdit makeExpressionEdit lhs ("Func Body", body) params
-    ExpressionGui.parenify hasParens Parens.addHighlightedTextParens myId .
-      ExpressionGui.hboxSpaced $
+    return . ExpressionGui.hboxSpaced $
       lambdaLabel : paramsEdits ++ [ rightArrowLabel, bodyEdit ]
   where
     bodyId = WidgetIds.fromGuid $ Sugar.rGuid body
@@ -133,7 +133,8 @@ makeParamsAndResultEdit ::
   (E.Doc, Sugar.ExpressionRef m) ->
   [Sugar.FuncParam m] ->
   VarAccess m ([ExpressionGui m], ExpressionGui m)
-makeParamsAndResultEdit makeExpressionEdit lhs rhs@(_, result) ps = go ps
+makeParamsAndResultEdit makeExpressionEdit lhs rhs@(_, result) ps =
+  go ps
   where
     go [] = liftM ((,) []) $ makeResultEdit makeExpressionEdit lhs result
     go (param:params) = do

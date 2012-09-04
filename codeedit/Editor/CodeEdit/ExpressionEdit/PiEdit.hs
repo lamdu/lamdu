@@ -23,7 +23,8 @@ make
   -> Sugar.Pi m
   -> Widget.Id
   -> VarAccess m (ExpressionGui m)
-make makeExpressionEdit hasParens (Sugar.Pi param resultType) myId =
+make makeExpressionEdit hasParens (Sugar.Pi param resultType) =
+  ExpressionGui.wrapParenify hasParens Parens.addHighlightedTextParens $ \myId ->
   VarAccess.assignCursor myId typeId $ do
     -- TODO: We pollute the resultTypeEdit with our generated name
     -- (which it will skip) even if we end up non-dependent and don't
@@ -56,8 +57,8 @@ make makeExpressionEdit hasParens (Sugar.Pi param resultType) myId =
       rightArrowLabel <-
         VarAccess.atEnv (OT.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor) .
         VarAccess.otransaction . BWidgets.makeLabel "→" $ Widget.toAnimId myId
-      ExpressionGui.parenify hasParens Parens.addHighlightedTextParens myId $
-        ExpressionGui.hboxSpaced [paramEdit, ExpressionGui.fromValueWidget rightArrowLabel, resultTypeEdit]
+      return $ ExpressionGui.hboxSpaced
+        [paramEdit, ExpressionGui.fromValueWidget rightArrowLabel, resultTypeEdit]
   where
     paramGuid = Sugar.fpGuid param
     paramId = WidgetIds.fromGuid paramGuid

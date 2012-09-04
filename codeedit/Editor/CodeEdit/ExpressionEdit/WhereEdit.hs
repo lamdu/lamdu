@@ -58,16 +58,16 @@ makeWithBody
   -> Sugar.Where m
   -> Widget.Id
   -> VarAccess m (ExpressionGui m)
-makeWithBody makeExpressionEdit hasParens where_@(Sugar.Where _ body) myId = do
-  whereEdit <- make makeExpressionEdit where_ myId
-  bodyEdit <-
-    VarAccess.assignCursor myId ((WidgetIds.fromGuid . Sugar.rGuid) body) $
-    makeExpressionEdit body
-  ExpressionGui.parenify hasParens addSquareParens myId .
-    ExpressionGui.fromValueWidget $ BWidgets.vboxCentered
-    [ ExpressionGui.egWidget bodyEdit
-    , whereEdit
-    ]
+makeWithBody makeExpressionEdit hasParens where_@(Sugar.Where _ body) =
+  ExpressionGui.wrapParenify hasParens addSquareParens $ \myId -> do
+    whereEdit <- make makeExpressionEdit where_ myId
+    bodyEdit <-
+      VarAccess.assignCursor myId ((WidgetIds.fromGuid . Sugar.rGuid) body) $
+      makeExpressionEdit body
+    return . ExpressionGui.fromValueWidget $ BWidgets.vboxCentered
+      [ ExpressionGui.egWidget bodyEdit
+      , whereEdit
+      ]
   where
     addSquareParens animId =
       return . (ExpressionGui.atEgWidget . Parens.addSquareParens . Widget.toAnimId) animId

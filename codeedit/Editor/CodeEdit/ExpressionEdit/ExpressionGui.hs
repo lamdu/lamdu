@@ -7,13 +7,14 @@ module Editor.CodeEdit.ExpressionEdit.ExpressionGui
   , hbox, hboxSpaced
   , addType
   , TypeStyle(..)
-  , parenify
+  , parenify, wrapExpression, wrapParenify
   ) where
 
 import Control.Lens ((^.))
 import Control.Monad (liftM)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.CodeEdit.VarAccess (VarAccess, WidgetT)
+import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (R)
 import qualified Control.Lens as Lens
 import qualified Data.AtFieldTH as AtFieldTH
@@ -25,6 +26,7 @@ import qualified Editor.Config as Config
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
@@ -104,7 +106,33 @@ addType style exprId typeEdits eg =
 parenify ::
   Monad m =>
   Sugar.HasParens ->
-  (Widget.Id -> ExpressionGui m -> VarAccess m (ExpressionGui m)) ->
-  Widget.Id -> ExpressionGui m -> VarAccess m (ExpressionGui m)
+  (Widget.Id -> ExpressionGui f -> VarAccess m (ExpressionGui f)) ->
+  Widget.Id -> ExpressionGui f -> VarAccess m (ExpressionGui f)
 parenify Sugar.DontHaveParens _ _ x = return x
 parenify Sugar.HaveParens addParens myId x = addParens myId x
+
+exprFocusDelegatorConfig :: FocusDelegator.Config
+exprFocusDelegatorConfig = FocusDelegator.Config
+  { FocusDelegator.startDelegatingKey = Config.enterSubexpressionKey
+  , FocusDelegator.startDelegatingDoc = "Enter subexpression"
+  , FocusDelegator.stopDelegatingKey = Config.leaveSubexpressionKey
+  , FocusDelegator.stopDelegatingDoc = "Leave subexpression"
+  }
+
+wrapExpression ::
+  (Monad m, MonadF f) =>
+  (Widget.Id -> VarAccess m (ExpressionGui f)) ->
+  Widget.Id -> VarAccess m (ExpressionGui f)
+wrapExpression =
+  BWidgets.wrapDelegatedVA exprFocusDelegatorConfig FocusDelegator.Delegating atEgWidget
+
+wrapParenify ::
+  (MonadF f, Monad m) =>
+  Sugar.HasParens ->
+  (Widget.Id -> ExpressionGui f -> VarAccess m (ExpressionGui f)) ->
+  (Widget.Id -> VarAccess m (ExpressionGui f)) ->
+  Widget.Id ->
+  VarAccess m (ExpressionGui f)
+wrapParenify hasParens addParens f =
+  wrapExpression $ \myId ->
+  parenify hasParens addParens myId =<< f myId

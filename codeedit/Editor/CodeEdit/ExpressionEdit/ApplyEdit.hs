@@ -18,9 +18,9 @@ make
   -> Sugar.Apply m
   -> Widget.Id
   -> VarAccess m (ExpressionGui m)
-make makeExpressionEdit hasParens (Sugar.Apply func arg) myId =
+make makeExpressionEdit hasParens (Sugar.Apply func arg) =
+  ExpressionGui.wrapParenify hasParens Parens.addHighlightedTextParens $ \myId ->
   (VarAccess.assignCursor myId . WidgetIds.fromGuid . Sugar.rGuid) arg $ do
     funcEdit <- makeExpressionEdit func
     argEdit <- makeExpressionEdit arg
-    ExpressionGui.parenify hasParens Parens.addHighlightedTextParens myId $
-      ExpressionGui.hboxSpaced [funcEdit, argEdit]
+    return $ ExpressionGui.hboxSpaced [funcEdit, argEdit]

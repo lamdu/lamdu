@@ -38,14 +38,6 @@ foldHolePicker
 foldHolePicker notHole _isHole NotAHole = notHole
 foldHolePicker _notHole isHole (IsAHole x) = isHole x
 
-exprFocusDelegatorConfig :: FocusDelegator.Config
-exprFocusDelegatorConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKey = E.ModKey E.shift E.KeyRight
-  , FocusDelegator.startDelegatingDoc = "Enter subexpression"
-  , FocusDelegator.stopDelegatingKey = E.ModKey E.shift E.KeyLeft
-  , FocusDelegator.stopDelegatingDoc = "Leave subexpression"
-  }
-
 holeFDConfig :: FocusDelegator.Config
 holeFDConfig = FocusDelegator.Config
   { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyEnter
@@ -94,9 +86,9 @@ makeEditor
 makeEditor sExpr =
   case Sugar.rExpression sExpr of
   Sugar.ExpressionWhere hasParens w ->
-    wrapCommon $ WhereEdit.makeWithBody make hasParens w
+    notAHole $ WhereEdit.makeWithBody make hasParens w
   Sugar.ExpressionFunc hasParens f ->
-    wrapCommon $ FuncEdit.make make hasParens f
+    notAHole $ FuncEdit.make make hasParens f
   Sugar.ExpressionInferred i ->
     isAHole (Sugar.iHole i) FocusDelegator.NotDelegating .
     InferredEdit.make make i $ Sugar.rGuid sExpr
@@ -108,11 +100,11 @@ makeEditor sExpr =
   Sugar.ExpressionGetVariable varRef ->
     notAHole {- TODO: May need parenification -} $ VarEdit.make varRef
   Sugar.ExpressionApply hasParens apply ->
-    wrapCommon $ ApplyEdit.make make hasParens apply
+    notAHole $ ApplyEdit.make make hasParens apply
   Sugar.ExpressionPi hasParens funcType ->
-    wrapCommon $ PiEdit.make make hasParens funcType
+    notAHole $ PiEdit.make make hasParens funcType
   Sugar.ExpressionSection hasParens section ->
-    wrapCommon $ SectionEdit.make make hasParens section
+    notAHole $ SectionEdit.make make hasParens section
   Sugar.ExpressionLiteralInteger integer ->
     notAHole $ LiteralEdit.makeInt integer
   Sugar.ExpressionAtom atom ->
@@ -125,11 +117,6 @@ makeEditor sExpr =
       BWidgets.wrapDelegatedVA holeFDConfig delegating
       (second . ExpressionGui.atEgWidget)
     notAHole = (fmap . liftM) ((,) NotAHole)
-    wrapCommon = wrapNonHoleExpr FocusDelegator.Delegating exprFocusDelegatorConfig
-    wrapNonHoleExpr delegating config =
-      notAHole .
-      BWidgets.wrapDelegatedVA config
-      delegating ExpressionGui.atEgWidget
 
 expressionEventMap
   :: MonadF m

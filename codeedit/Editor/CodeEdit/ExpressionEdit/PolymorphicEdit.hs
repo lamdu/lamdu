@@ -41,9 +41,9 @@ makeInner makeExpressionEdit poly myId =
 
 polymorphicFDConfig :: FocusDelegator.Config
 polymorphicFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKey = Config.expandPolymorphic
+  { FocusDelegator.startDelegatingKey = Config.expandPolymorphicKey
   , FocusDelegator.startDelegatingDoc = "Expand polymorphic"
-  , FocusDelegator.stopDelegatingKey = Config.collapsePolymorphic
+  , FocusDelegator.stopDelegatingKey = Config.collapsePolymorphicKey
   , FocusDelegator.stopDelegatingDoc = "Collapse polymorphic"
   }
 
