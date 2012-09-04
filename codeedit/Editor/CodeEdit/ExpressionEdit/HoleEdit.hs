@@ -433,7 +433,7 @@ make makeExpressionEdit hole guid myId = do
           }
       in
         liftM
-        (first (fmap (pickExpr holeInfo) . maybeRemovePicker searchText) .
+        ((first . fmap) (pickExpr holeInfo) .
          second (makeBackground 8 Config.holeBackgroundColor)) $
         makeActiveHoleEdit makeExpressionEdit holeInfo
     _ ->
@@ -442,10 +442,6 @@ make makeExpressionEdit hole guid myId = do
       BWidgets.makeFocusableTextView snippet $
       WidgetIds.searchTermId myId
   where
-    -- TODO: If just one possible result due to type, ignore the
-    -- search string
-    maybeRemovePicker "" = const Nothing
-    maybeRemovePicker _ = id
     unfocusedColor
       | canPickResult = Config.holeBackgroundColor
       | otherwise = Config.unfocusedReadOnlyHoleBackgroundColor

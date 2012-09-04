@@ -11,6 +11,7 @@ import Editor.OTransaction (OTransaction, WidgetT)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
+import qualified Editor.CodeEdit.Parens as Parens
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
@@ -29,14 +30,11 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
   whereLabel <-
     OT.setTextSizeColor Config.whereTextSize Config.whereColor $
     BWidgets.makeLabel "where" $ Widget.toAnimId myId
-  let
-    makeWhereItemsGrid =
-      liftM (Grid.toWidget . Grid.makeAlign 0) $
-      mapM makeWhereItemEdits items
-  whereEdits <- makeWhereItemsGrid
-  return . BWidgets.vboxCentered $
+  whereEdits <- mapM makeWhereItemEdits items
+  return $ BWidgets.vboxCentered
     [ whereLabel
-    , Widget.scale Config.whereScaleFactor whereEdits
+    , Widget.scale Config.whereScaleFactor . Grid.toWidget $
+      Grid.makeAlign 0 whereEdits
     ]
   where
     makeWhereItemEdits item =
@@ -55,14 +53,24 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
 makeWithBody
   :: MonadF m
   => ExpressionGui.Maker m
+  -> Sugar.HasParens
   -> Sugar.Where m
   -> Widget.Id
   -> OTransaction ViewTag m (ExpressionGui m)
-makeWithBody makeExpressionEdit where_@(Sugar.Where _ body) myId = do
+makeWithBody makeExpressionEdit hasParens where_@(Sugar.Where _ body) myId = do
   whereEdit <- make makeExpressionEdit where_ myId
-  OT.assignCursor myId ((WidgetIds.fromGuid . Sugar.rGuid) body) $ do
-    bodyEdit <- makeExpressionEdit body
-    return . ExpressionGui.fromValueWidget . BWidgets.vboxCentered $
+  bodyEdit <-
+    OT.assignCursor myId ((WidgetIds.fromGuid . Sugar.rGuid) body) $
+    makeExpressionEdit body
+  let
+    res =
+      ExpressionGui.fromValueWidget $ BWidgets.vboxCentered
       [ ExpressionGui.egWidget bodyEdit
       , whereEdit
       ]
+  return $ case hasParens of
+    Sugar.DontHaveParens -> res
+    Sugar.HaveParens ->
+      ExpressionGui.atEgWidget
+      (Parens.addSquareParens (Widget.toAnimId myId))
+      res

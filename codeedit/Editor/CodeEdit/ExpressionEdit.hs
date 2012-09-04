@@ -103,8 +103,7 @@ makeEditor
 makeEditor sExpr =
   case Sugar.rExpression sExpr of
   Sugar.ExpressionWhere hasParens w ->
-    wrapCommon . squareParenify hasParens $
-      WhereEdit.makeWithBody make w
+    wrapCommon $ WhereEdit.makeWithBody make hasParens w
   Sugar.ExpressionFunc hasParens f ->
     wrapCommon . textParenify hasParens $ FuncEdit.make make f
   Sugar.ExpressionInferred i ->
@@ -127,7 +126,7 @@ makeEditor sExpr =
   Sugar.ExpressionLiteralInteger integer ->
     notAHole $ LiteralEdit.makeInt integer
   Sugar.ExpressionAtom atom ->
-    wrapCommon $ AtomEdit.make atom
+    notAHole $ AtomEdit.make atom
   where
     parenify mkParens hasParens mkWidget myId =
       mkWidget myId >>=
@@ -147,7 +146,6 @@ makeEditor sExpr =
       BWidgets.wrapDelegated config
       delegating ExpressionGui.atEgWidget
     textParenify = parenify Parens.addHighlightedTextParens
-    squareParenify = parenify (fmap return . ExpressionGui.atEgWidget . Parens.addSquareParens . Widget.toAnimId)
 
 expressionEventMap
   :: MonadF m
