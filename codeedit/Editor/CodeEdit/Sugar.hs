@@ -11,7 +11,7 @@ module Editor.CodeEdit.Sugar
   , Pi(..), Apply(..), Section(..)
   , Hole(..), HoleResult
   , LiteralInteger(..), Inferred(..), Polymorphic(..)
-  , GetVariable(..), gvGuid
+  , GetVariable(..)
   , HasParens(..)
   , convertExpressionPure, convertHoleResult
   , loadConvertDefinition, loadConvertExpression
@@ -152,10 +152,6 @@ data Polymorphic m = Polymorphic
 
 data GetVariable
   = GetParameter Guid | GetDefinition Data.DefinitionIRef
-
-gvGuid :: GetVariable -> Guid
-gvGuid (GetParameter g) = g
-gvGuid (GetDefinition defI) = IRef.guid defI
 
 data Expression m
   = ExpressionApply   { eHasParens :: HasParens, eApply :: Apply m }

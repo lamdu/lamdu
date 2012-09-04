@@ -46,10 +46,11 @@ makeEquals = VarAccess.otransaction . BWidgets.makeLabel "=" . Widget.toAnimId
 makeParts
   :: MonadF m
   => ExpressionGui.Maker m
+  -> (VarAccess.NameSource, String)
   -> Guid
   -> Sugar.ExpressionRef m
   -> VarAccess m [ExpressionGui m]
-makeParts makeExpressionEdit guid exprRef = VarAccess.withName guid $ \name -> do
+makeParts makeExpressionEdit name guid exprRef = do
   nameEdit <-
     liftM (FuncEdit.addJumpToRHS rhs . Widget.weakerEvents addFirstParamEventMap) $
     makeNameEdit name myId guid
@@ -123,9 +124,10 @@ makeExprDefinition ::
   Sugar.DefinitionExpression m ->
   VarAccess m (WidgetT m)
 makeExprDefinition makeExpressionEdit def bodyExpr = do
+  name <- VarAccess.getDefName guid
   bodyWidget <-
     liftM (ExpressionGui.egWidget . ExpressionGui.hbox) .
-    makeParts makeExpressionEdit guid . Sugar.deExprRef $ bodyExpr
+    makeParts makeExpressionEdit name guid . Sugar.deExprRef $ bodyExpr
   let
     mkResult typeWidget =
       BWidgets.vboxAlign 0

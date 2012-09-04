@@ -41,8 +41,9 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
       on VarAccess.assignCursorPrefix WidgetIds.fromGuid
       (Sugar.wiTypeGuid item) (Sugar.wiGuid item) .
       (liftM . map)
-        (Widget.weakerEvents (whereItemDeleteEventMap item) . ExpressionGui.egWidget) $
-      DefinitionEdit.makeParts makeExpressionEdit
+        (Widget.weakerEvents (whereItemDeleteEventMap item) . ExpressionGui.egWidget) .
+      VarAccess.withName (Sugar.wiGuid item) $ \name ->
+      DefinitionEdit.makeParts makeExpressionEdit name
       (Sugar.wiGuid item) (Sugar.wiValue item)
     whereItemDeleteEventMap whereItem =
       maybe mempty

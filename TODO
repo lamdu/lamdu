@@ -1,3 +1,7 @@
+* Instead of (VarAccess.NameSource, String) and Guid of name
+  seperately, generate a Property for the name of that type? or give
+  a setter instead of Guid
+
 * Maybe the right place to detect/error about out-of-scope is
    VarAccess.withName. Can withNewName that errorizes if we have a
    Guid shadowing (should it ever happen?) and a withOldName that
