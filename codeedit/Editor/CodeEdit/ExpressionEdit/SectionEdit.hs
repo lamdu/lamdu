@@ -26,9 +26,12 @@ make makeExpressionEdit hasParens (Sugar.Section mLArg op mRArg innerApplyGuid) 
       lArgEdits <- fromMArg mLArg
       opEdits <- makeExpressionsEdit op
       rArgEdits <- fromMArg mRArg
-      ExpressionGui.parenify hasParens Parens.addHighlightedTextParens myId .
+      ExpressionGui.parenify hasParens parenAdder myId .
         ExpressionGui.hboxSpaced $ lArgEdits ++ opEdits ++ rArgEdits
   where
+    parenAdder = case (mLArg, mRArg) of
+      (Nothing, Nothing) -> Parens.addTextParens . Widget.toAnimId
+      _ -> Parens.addHighlightedTextParens
     destId = WidgetIds.fromGuid . Sugar.rGuid $ fromMaybe op mRArg
     makeExpressionsEdit = liftM (:[]) . makeExpressionEdit
     fromMArg = maybe (return []) makeExpressionsEdit
