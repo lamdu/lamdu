@@ -19,7 +19,7 @@ module Editor.CodeEdit.Sugar
   ) where
 
 import Control.Applicative ((<$>), (<*>))
-import Control.Arrow (second)
+import Control.Arrow (first, second)
 import Control.Monad ((<=<), liftM, mzero, void)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (MonadTrans(..))
@@ -445,11 +445,18 @@ addApplyChildParens =
     f x@ExpressionPolymorphic{} = x
     f x = addParens x
 
+isPolymorphicApply :: Data.Apply (ExprEntity m) -> Bool
+isPolymorphicApply (Data.Apply funcI argI) =
+  isHole (Data.eValue argI) &&
+  maybe False
+  (Data.isDependentPi . Infer.iType . eesInferred)
+  (Data.ePayload funcI)
+
 convertApply
   :: Monad m
   => Data.Apply (ExprEntity m)
   -> Convertor m
-convertApply apply@(Data.Apply funcI argI) exprI =
+convertApply (Data.Apply funcI argI) exprI =
   case Data.eValue funcI of
     Data.ExpressionLambda lambda@(
       Data.Lambda (Data.Expression { Data.eValue = Data.ExpressionLeaf Data.Hole }) _) -> do
@@ -457,20 +464,15 @@ convertApply apply@(Data.Apply funcI argI) exprI =
       -- TODO: Should we pass the lambda with the hole in its type,
       -- and not just the body?
       convertWhere valueRef funcI lambda exprI
-    -- InfixR or ordinary prefix:
-    Data.ExpressionApply funcApply@(Data.Apply funcFuncI _) -> do
-      mInfixOp <- liftTransaction $ Infix.infixOp funcFuncI
-      case mInfixOp of
-        Just op -> convertApplyInfixFull funcApply op apply exprI
-        Nothing -> prefixApply
-    -- InfixL or ordinary prefix:
     _ -> do
-      mInfixOp <- liftTransaction $ Infix.infixOp funcI
-      case mInfixOp of
-        Just op -> convertApplyInfixL op apply exprI
-        Nothing -> prefixApply
-  where
-    prefixApply = convertApplyPrefix apply exprI
+      funcS <- convertExpressionI funcI
+      argS <- convertExpressionI argI
+      let applyS = Data.Apply (funcS, funcI) (argS, argI)
+      case rExpression funcS of
+        ExpressionSection _ section ->
+          applyOnSection section applyS exprI
+        _ ->
+          convertApplyPrefix applyS exprI
 
 setAddArg :: Monad m => ExprEntity m -> ExpressionRef m -> ExpressionRef m
 setAddArg exprI =
@@ -490,58 +492,48 @@ removeRedundantTypes exprRef =
     removeIfNoErrors xs = xs
 
 mkExpressionGetVariable :: Data.VariableRef -> Expression m
-mkExpressionGetVariable = ExpressionGetVariable . mkGetVariable
+mkExpressionGetVariable =
+  ExpressionGetVariable . mkGetVariable
   where
     mkGetVariable (Data.ParameterRef lambdaGuid) =
       GetParameter $ lambdaGuidToParamGuid lambdaGuid
     mkGetVariable (Data.DefinitionRef defI) =
       GetDefinition defI
 
-convertApplyInfixFull
-  :: Monad m
-  => Data.Apply (ExprEntity m)
-  -> Data.VariableRef
-  -> Data.Apply (ExprEntity m)
-  -> Convertor m
-convertApplyInfixFull
-  (Data.Apply funcFuncI funcArgI) op (Data.Apply funcI argI) exprI
-  = do
-    rArgRef <- convertExpressionI argI
-    lArgRef <- convertExpressionI funcArgI
-    opRef <- mkExpressionRef funcFuncI $ mkExpressionGetVariable op
-    let
-      newLArgRef = addApplyChildParens lArgRef
-      newRArgRef = addApplyChildParens rArgRef
-      newOpRef = removeRedundantTypes $ setAddArg exprI opRef
-    mkExpressionRef exprI . ExpressionSection DontHaveParens .
-      Section (Just newLArgRef) newOpRef (Just newRArgRef) . Just $
-      Data.eGuid funcI
+applyOnSection ::
+  Monad m =>
+  Section m -> Data.Apply (ExpressionRef m, ExprEntity m) -> Convertor m
+applyOnSection (Section Nothing op Nothing g) apply@(Data.Apply _ (argRef, _)) exprI
+  | isPolymorphicApply (fmap snd apply) = do
+    newOpRef <-
+      convertApplyPrefix
+      ( (Data.atApplyFunc . first . atRExpression . atEHasParens . const)
+        DontHaveParens apply)
+      exprI
+    mkExpressionRef exprI . ExpressionSection DontHaveParens $
+      Section Nothing (removeRedundantTypes newOpRef) Nothing g
+  | otherwise =
+    mkExpressionRef exprI . ExpressionSection DontHaveParens $
+      Section (Just argRef) op Nothing g
+applyOnSection (Section (Just left) op Nothing g) (Data.Apply _ (argRef, _)) exprI =
+  mkExpressionRef exprI . ExpressionSection DontHaveParens $
+    Section (Just left) op (Just argRef) g
+applyOnSection _ apply exprI = convertApplyPrefix apply exprI
 
-convertApplyInfixL
-  :: Monad m
-  => Data.VariableRef
-  -> Data.Apply (ExprEntity m)
-  -> Convertor m
-convertApplyInfixL op (Data.Apply opI argI) exprI = do
-  argRef <- convertExpressionI argI
-  let newArgRef = addApplyChildParens argRef
-  opRef <- mkExpressionRef opI $ mkExpressionGetVariable op
-  let
-    newOpRef =
-      removeRedundantTypes .
-      setAddArg exprI $
-      opRef
-  mkExpressionRef exprI . ExpressionSection HaveParens $
-    Section (Just newArgRef) newOpRef Nothing Nothing
-
-convertApplyPrefix
-  :: Monad m
-  => Data.Apply (ExprEntity m)
-  -> Convertor m
-convertApplyPrefix (Data.Apply funcI argI) exprI = do
-  argRef <- convertExpressionI argI
-  funcRef <- convertExpressionI funcI
-  let
+convertApplyPrefix ::
+  Monad m =>
+  Data.Apply (ExpressionRef m, ExprEntity m) -> Convertor m
+convertApplyPrefix apply@(Data.Apply (funcRef, _) (argRef, _)) exprI =
+  if isPolymorphicApply (fmap snd apply)
+  then
+    case rExpression funcRef of
+    ExpressionPolymorphic (Polymorphic compact full) ->
+      makePolymorphic compact . removeRedundantTypes =<<
+      (mkExpressionRef exprI . ExpressionApply DontHaveParens) (Apply full newArgRef)
+    _ ->
+      on makePolymorphic removeRedundantTypes funcRef =<< makeFullApply
+  else makeFullApply
+  where
     newArgRef =
       setAddArg exprI $
       atRExpression addParens argRef
@@ -559,19 +551,6 @@ convertApplyPrefix (Data.Apply funcI argI) exprI = do
     makePolymorphic x =
       (liftM . atRGuid . Guid.combine . Guid.fromString) "polymorphic" .
       mkExpressionRef exprI . ExpressionPolymorphic . Polymorphic x
-  if isPolymorphic
-    then
-      case rExpression funcRef of
-      ExpressionPolymorphic (Polymorphic compact full) ->
-        makePolymorphic compact . removeRedundantTypes =<<
-        (mkExpressionRef exprI . ExpressionApply DontHaveParens) (Apply full newArgRef)
-      _ ->
-        on makePolymorphic removeRedundantTypes funcRef =<< makeFullApply
-    else makeFullApply
-  where
-    isPolymorphic =
-      isHole (Data.eValue argI) &&
-      maybe False (Data.isDependentPi . Infer.iType . eesInferred) (Data.ePayload funcI)
 
 isHole :: Data.ExpressionBody a -> Bool
 isHole (Data.ExpressionLeaf Data.Hole) = True

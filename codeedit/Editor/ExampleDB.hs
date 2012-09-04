@@ -93,11 +93,11 @@ createBuiltins =
     makeWithType "Data.List.zipWith" . forAll "a" $ \a -> forAll "b" $ \b -> forAll "c" $ \c ->
       mkPi (mkPi a (mkPi b c)) . mkPi (listOf a) . mkPi (listOf b) $ listOf c
 
-    let intToIntToInt = mkPi integer $ mkPi integer integer
-    mapM_ ((`makeWithType` intToIntToInt) . ("Prelude." ++) . (:[])) "+-*/^"
+    let aToAToA = forAll "a" $ \a -> mkPi a $ mkPi a a
+    mapM_ ((`makeWithType` aToAToA) . ("Prelude." ++) . (:[])) "+-*/^"
 
-    let intToIntToBool = mkPi integer $ mkPi integer bool
-    mapM_ ((`makeWithType` intToIntToBool) . ("Prelude." ++))
+    let aToAToBool = forAll "a" $ \a -> mkPi a $ mkPi a bool
+    mapM_ ((`makeWithType` aToAToBool) . ("Prelude." ++))
       ["==", "/=", "<=", ">=", "<", ">"]
 
     makeWithType "Prelude.enumFromTo" . mkPi integer . mkPi integer $ listOf integer
