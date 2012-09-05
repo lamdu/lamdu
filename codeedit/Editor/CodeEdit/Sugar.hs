@@ -455,27 +455,23 @@ isPolymorphicFunc funcI =
   (Data.isDependentPi . Infer.iType . eesInferred)
   (Data.ePayload funcI)
 
-convertApply
-  :: Monad m
-  => Data.Apply (ExprEntity m)
-  -> Convertor m
-convertApply (Data.Apply funcI argI) exprI =
+convertApply :: Monad m => Data.Apply (ExprEntity m) -> Convertor m
+convertApply (Data.Apply funcI argI) exprI = do
+  argS <- convertExpressionI argI
   case Data.eValue funcI of
     Data.ExpressionLambda lambda@(
       Data.Lambda (Data.Expression { Data.eValue = Data.ExpressionLeaf Data.Hole }) _) -> do
-      valueRef <- convertExpressionI argI
       -- TODO: Should we pass the lambda with the hole in its type,
       -- and not just the body?
-      convertWhere valueRef funcI lambda exprI
+      convertWhere argS funcI lambda exprI
     _ -> do
       funcS <- convertExpressionI funcI
-      argS <- convertExpressionI argI
-      let applyS = Data.Apply (funcS, funcI) (argS, argI)
+      let apply = Data.Apply (funcS, funcI) (argS, argI)
       case rExpression funcS of
         ExpressionSection _ section ->
-          applyOnSection section applyS exprI
+          applyOnSection section apply exprI
         _ ->
-          convertApplyPrefix applyS exprI
+          convertApplyPrefix apply exprI
 
 setAddArg :: Monad m => ExprEntity m -> ExpressionRef m -> ExpressionRef m
 setAddArg exprI =
@@ -514,10 +510,10 @@ applyOnSection (Section Nothing op Nothing) (Data.Apply (_, funcI) arg@(argRef, 
       Section Nothing (removeRedundantTypes newOpRef) Nothing
   | otherwise =
     mkExpressionRef exprI . ExpressionSection DontHaveParens $
-      Section (Just argRef) op Nothing
+      Section (Just (addApplyChildParens argRef)) op Nothing
 applyOnSection (Section (Just left) op Nothing) (Data.Apply _ (argRef, _)) exprI =
   mkExpressionRef exprI . ExpressionSection DontHaveParens $
-    Section (Just left) op (Just argRef)
+    Section (Just left) op (Just (addApplyChildParens argRef))
 applyOnSection _ apply exprI = convertApplyPrefix apply exprI
 
 convertApplyPrefix ::

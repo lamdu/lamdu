@@ -1,7 +1,6 @@
 * FlyNav bug with multiple panes open
 * When using '[' or ']' to add applies, it can type-filter out the
   result we're on and lose the cursor
-* Infix inside infix bug
 * Allow delete when type-checks in some cases
 * Hole allows bad results with hole to convert
 * Fix the default apply form
