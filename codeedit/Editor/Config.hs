@@ -96,14 +96,14 @@ cutKeys = [ctrl 'x', k 'x']
 pasteKeys = [ctrl 'v', k 'v']
 
 inactiveTintColor = Draw.Color 1 1 1 0.8
-activeDefBGColor = Draw.Color 0 0 0.2 1
+activeDefBGColor = Draw.Color 0.04 0.04 0.04 1
 
 inferredTypeTint = inferredValueTint
 inferredTypeErrorBGColor = Draw.Color 0.5 0.05 0.05 1
 inferredTypeBGColor = Draw.Color 0.05 0.15 0.2 1
 
-polymorphicCompactBGColor = Draw.Color 0.25 0.1 0.25 1
-polymorphicFullBGColor = Draw.Color 0.25 0.1 0.25 1
+polymorphicCompactBGColor = Draw.Color 0.15 0.05 0.15 1
+polymorphicFullBGColor = Draw.Color 0.1 0.05 0.1 1
 
 cursorBGColor = Draw.Color 0 0 1 0.3
 
