@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
 module Editor.CodeEdit.ExpressionEdit.HoleEdit(make, makeUnwrapped, ResultPicker) where
 
+import Control.Applicative ((<*>))
 import Control.Arrow (first, second, (&&&))
 import Control.Monad (liftM, mplus, msum, void, filterM)
 import Control.Monad.ListT (ListT)
@@ -86,7 +87,9 @@ resultPickEventMap holeInfo =
   pickExpr holeInfo
 
 data ResultsList m = ResultsList
-  { rlFirst :: Sugar.HoleResult
+  { rlFirstId :: Widget.Id
+  , rlMoreResultsPrefixId :: Widget.Id
+  , rlFirst :: Sugar.HoleResult
   , rlMore :: Maybe (Sugar.HoleResult, ListT m Sugar.HoleResult)
   }
 
@@ -110,7 +113,7 @@ resultsToWidgets makeExpressionEdit holeInfo results = do
     if cursorOnMain
     then liftM (Just . (,) canonizedExpr . fmap fst) makeExtra
     else do
-      cursorOnExtra <- VarAccess.otransaction $ OT.isSubCursor moreResultsPrefix
+      cursorOnExtra <- VarAccess.otransaction $ OT.isSubCursor moreResultsPrefixId
       if cursorOnExtra
         then do
           extra <- makeExtra
@@ -137,7 +140,7 @@ resultsToWidgets makeExpressionEdit holeInfo results = do
       widget <- toWidget resultId cExpr
       return (widget, mResult)
       where
-        resultId = mappend moreResultsPrefix $ pureGuidId cExpr
+        resultId = mappend moreResultsPrefixId $ pureGuidId cExpr
         cExpr = canonizeResultExpr holeInfo expr
     toWidget resultId expr = do
       isResultSelected <- VarAccess.otransaction $ OT.isSubCursor resultId
@@ -146,16 +149,15 @@ resultsToWidgets makeExpressionEdit holeInfo results = do
         ExpressionGui.egWidget =<<
         makeExpressionEdit . (if isResultSelected then id else Sugar.removeTypes) =<<
         (VarAccess.transaction . Sugar.convertHoleResult) expr
-    moreResultsPrefix = mconcat [hiHoleId holeInfo, Widget.Id ["more results"], canonizedExprId]
+    moreResultsPrefixId = rlMoreResultsPrefixId results
     addMoreSymbol w = do
       moreSymbolLabel <-
         liftM (Widget.scale moreSymbolSizeFactor) .
         VarAccess.otransaction .
         BWidgets.makeLabel moreSymbol $ Widget.toAnimId myId
       return $ BWidgets.hboxCenteredSpaced [w, moreSymbolLabel]
-    canonizedExpr = canonizeResultExpr holeInfo $ rlFirst results
-    canonizedExprId = pureGuidId canonizedExpr
-    myId = mappend (hiHoleId holeInfo) canonizedExprId
+    canonizedExpr = rlFirst results
+    myId = rlFirstId results
     pureGuidId = WidgetIds.fromGuid . Data.eGuid
 
 makeNoResults :: MonadF m => AnimId -> VarAccess m (WidgetT m)
@@ -211,16 +213,25 @@ makeLiteralGroup searchTerm =
       , groupBaseExpr = toPureExpr . Data.ExpressionLeaf $ Data.LiteralInteger integer
       }
 
+resultsPrefixId :: HoleInfo m -> Widget.Id
+resultsPrefixId holeInfo = mconcat [hiHoleId holeInfo, Widget.Id ["results"]]
+
 makeResultsList ::
-  Monad m => ListT m Sugar.HoleResult -> m (Maybe (ResultsList m))
-makeResultsList results = do
+  Monad m => HoleInfo m -> ListT (T m) Sugar.HoleResult -> T m (Maybe (ResultsList (T m)))
+makeResultsList holeInfo results = do
   -- We always want the first, and we want to know if there's more, so
   -- take 2:
   (firstTwo, rest) <- List.splitAtM 2 results
   return $ case firstTwo of
     [] -> Nothing
-    (x:xs) -> Just ResultsList
-      { rlFirst = x
+    (x:xs) ->
+      let
+        canonizedExprId = WidgetIds.fromGuid $ Data.eGuid canonizedExpr
+        canonizedExpr = canonizeResultExpr holeInfo x
+      in Just ResultsList
+      { rlFirstId = mconcat [resultsPrefixId holeInfo, canonizedExprId]
+      , rlMoreResultsPrefixId = mconcat [resultsPrefixId holeInfo, Widget.Id ["more results"], canonizedExprId]
+      , rlFirst = canonizedExpr
       , rlMore = case xs of
         [] -> Nothing
         [y] -> Just (y, rest)
@@ -245,7 +256,7 @@ makeAllResults holeInfo = do
   return .
     List.catMaybes .
     List.mapL
-      (makeResultsList . Sugar.holeInferResults hole . groupBaseExpr) .
+      (makeResultsList holeInfo . Sugar.holeInferResults hole . groupBaseExpr) .
     List.fromList .
     sortOn (groupOrdering searchTerm) .
     filter nameMatch $
@@ -378,36 +389,67 @@ makeResultsWidget makeExpressionEdit holeInfo firstResults moreResults = do
 genericNull :: List l => l a -> List.ItemM l Bool
 genericNull = liftM null . List.toList . List.take 1
 
+adHocTextEditEventMap :: Monad m => Property m String -> Widget.EventHandlers m
+adHocTextEditEventMap textProp =
+  mconcat . concat $
+  [ [ E.filterChars (`notElem` " \n") .
+      E.simpleChars "Character" "Append search term character" $
+      changeText . flip (++) . (: [])
+    ]
+  , [ E.keyPresses (map (E.ModKey E.noMods) [E.KeyBackspace, E.KeyDel]) "Delete backwards" $
+      changeText init
+    | (not . null . Property.value) textProp
+    ]
+  ]
+  where
+    changeText f = do
+      Property.pureModify textProp f
+      return Widget.emptyEventResult
+
 makeActiveHoleEdit
   :: MonadF m
   => ExpressionGui.Maker m -> HoleInfo m
   -> VarAccess m
      (Maybe Sugar.HoleResult, WidgetT m)
-makeActiveHoleEdit makeExpressionEdit holeInfo =
-  VarAccess.assignCursor (hiHoleId holeInfo) searchTermId $ do
-    VarAccess.markVariablesAsUsed . map fst =<<
-      (filterM
-       (VarAccess.transaction . checkInfer . toPureExpr .
-        Data.ExpressionLeaf . Data.GetVariable . snd) .
-       Sugar.holeScope . hiHole)
-      holeInfo
+makeActiveHoleEdit makeExpressionEdit holeInfo = do
+  VarAccess.markVariablesAsUsed . map fst =<<
+    (filterM
+     (VarAccess.transaction . checkInfer . toPureExpr .
+      Data.ExpressionLeaf . Data.GetVariable . snd) .
+     Sugar.holeScope . hiHole)
+    holeInfo
 
-    allResults <- makeAllResults holeInfo
+  allResults <- makeAllResults holeInfo
 
-    (firstResults, moreResults) <-
-      VarAccess.transaction $ List.splitAtM Config.holeResultCount allResults
+  (firstResults, moreResults) <-
+    VarAccess.transaction $ List.splitAtM Config.holeResultCount allResults
+  hasMoreResults <- VarAccess.transaction $ genericNull moreResults
 
-    let defaultResult = fmap rlFirst $ listToMaybe firstResults
+  cursor <- VarAccess.otransaction OT.readCursor
+  let
+    sub = isJust . flip Widget.subId cursor
+    shouldBeOnResult = sub $ resultsPrefixId holeInfo
+    isOnResult = any sub $ [rlFirstId, rlMoreResultsPrefixId] <*> firstResults
+    assignSource
+      | shouldBeOnResult && not isOnResult = cursor
+      | otherwise = hiHoleId holeInfo
+    destId = head (map rlFirstId firstResults ++ [searchTermId])
+  VarAccess.assignCursor assignSource destId $ do
     searchTermWidget <- makeSearchTermWidget holeInfo searchTermId
-
-    hasMoreResults <- VarAccess.transaction $ genericNull moreResults
-
     (mResult, resultsWidget) <-
       makeResultsWidget makeExpressionEdit holeInfo firstResults $
       not hasMoreResults
+    let
+      defaultResult = fmap rlFirst $ listToMaybe firstResults
+      adHocEditor =
+        fmap IT.transaction . adHocTextEditEventMap $
+        hiSearchTerm holeInfo
     return
       ( mplus mResult defaultResult
-      , BWidgets.vboxCentered [searchTermWidget, resultsWidget]
+      , BWidgets.vboxCentered
+        [ searchTermWidget
+        , Widget.weakerEvents adHocEditor resultsWidget
+        ]
       )
   where
     checkInfer = liftM not . genericNull . Sugar.holeInferResults (hiHole holeInfo)
@@ -460,9 +502,7 @@ makeUnwrapped makeExpressionEdit hole guid myId = do
     _ ->
       liftM
       ((,) Nothing . makeBackground Layers.inactiveHole unfocusedColor) .
-      VarAccess.otransaction .
-      BWidgets.makeFocusableTextView "  " $
-      WidgetIds.searchTermId myId
+      VarAccess.otransaction $ BWidgets.makeFocusableTextView "  " myId
   where
     unfocusedColor
       | canPickResult = Config.holeBackgroundColor
