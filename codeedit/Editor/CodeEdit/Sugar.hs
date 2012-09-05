@@ -202,11 +202,13 @@ AtFieldTH.make ''ExpressionRef
 AtFieldTH.make ''Apply
 AtFieldTH.make ''Section
 AtFieldTH.make ''Expression
+AtFieldTH.make ''Inferred
 
 AtFieldTH.make ''Actions
 AtFieldTH.make ''FuncParamActions
 
 -- TODO: Use Functor like Data.ExpressionBody?
+-- Not recursive!
 atSubExpressions ::
   (ExpressionRef m -> ExpressionRef m) ->
   Expression m -> Expression m
@@ -220,7 +222,13 @@ atSubExpressions f (ExpressionFunc p (Func params body)) =
   ExpressionFunc p $ Func ((map . atFpType) f params) (f body)
 atSubExpressions f (ExpressionPi p (Pi param body)) =
   ExpressionPi p $ Pi (atFpType f param) (f body)
-atSubExpressions _ x = x
+atSubExpressions f (ExpressionInferred i) = ExpressionInferred $ atIValue f i
+atSubExpressions f (ExpressionPolymorphic (Polymorphic mCompact full)) =
+  ExpressionPolymorphic $ Polymorphic (fmap f mCompact) (f full)
+atSubExpressions _ x@(ExpressionGetVariable _) = x
+atSubExpressions _ x@(ExpressionHole _) = x
+atSubExpressions _ x@(ExpressionLiteralInteger _) = x
+atSubExpressions _ x@(ExpressionAtom _) = x
 
 data ExprEntityInferred a = ExprEntityInferred
   { eesInferred :: Infer.Inferred a
