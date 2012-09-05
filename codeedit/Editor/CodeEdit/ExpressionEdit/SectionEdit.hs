@@ -21,7 +21,7 @@ make
   -> Widget.Id
   -> VarAccess m (ExpressionGui m)
 make makeExpressionEdit hasParens (Sugar.Section mLArg op mRArg innerApplyGuid) =
-  ExpressionGui.wrapParenify hasParens parenAdder $ \myId ->
+  wrap $ \myId ->
   VarAccess.assignCursor myId destId .
     maybe id ((`VarAccess.assignCursor` destId) . WidgetIds.fromGuid) innerApplyGuid $ do
       lArgEdits <- fromMArg mLArg
@@ -29,9 +29,11 @@ make makeExpressionEdit hasParens (Sugar.Section mLArg op mRArg innerApplyGuid) 
       rArgEdits <- fromMArg mRArg
       return . ExpressionGui.hboxSpaced $ lArgEdits ++ opEdits ++ rArgEdits
   where
-    parenAdder = case (mLArg, mRArg) of
-      (Nothing, Nothing) -> Parens.addTextParens . Widget.toAnimId
-      _ -> Parens.addHighlightedTextParens
+    wrap = case (mLArg, mRArg) of
+      (Nothing, Nothing) ->
+        ExpressionGui.parenify hasParens (Parens.addTextParens . Widget.toAnimId)
+      _ ->
+        ExpressionGui.wrapParenify hasParens Parens.addHighlightedTextParens
     destId = WidgetIds.fromGuid . Sugar.rGuid $ fromMaybe op mRArg
     makeExpressionsEdit = liftM (:[]) . makeExpressionEdit
     fromMArg = maybe (return []) makeExpressionsEdit

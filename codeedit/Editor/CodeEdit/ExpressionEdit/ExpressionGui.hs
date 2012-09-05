@@ -103,14 +103,6 @@ addType style exprId typeEdits eg =
         return Config.inferredTypeBGColor
     underlineId = WidgetIds.underlineId $ Widget.toAnimId exprId
 
-parenify ::
-  Monad m =>
-  Sugar.HasParens ->
-  (Widget.Id -> ExpressionGui f -> VarAccess m (ExpressionGui f)) ->
-  Widget.Id -> ExpressionGui f -> VarAccess m (ExpressionGui f)
-parenify Sugar.DontHaveParens _ _ x = return x
-parenify Sugar.HaveParens addParens myId x = addParens myId x
-
 exprFocusDelegatorConfig :: FocusDelegator.Config
 exprFocusDelegatorConfig = FocusDelegator.Config
   { FocusDelegator.startDelegatingKey = Config.enterSubexpressionKey
@@ -126,13 +118,20 @@ wrapExpression ::
 wrapExpression =
   BWidgets.wrapDelegatedVA exprFocusDelegatorConfig FocusDelegator.Delegating atEgWidget
 
+parenify ::
+  Monad m =>
+  Sugar.HasParens ->
+  (Widget.Id -> ExpressionGui f -> VarAccess m (ExpressionGui f)) ->
+  (Widget.Id -> VarAccess m (ExpressionGui f)) ->
+  Widget.Id -> VarAccess m (ExpressionGui f)
+parenify Sugar.DontHaveParens _ mkWidget myId = mkWidget myId
+parenify Sugar.HaveParens addParens mkWidget myId = addParens myId =<< mkWidget myId
+
 wrapParenify ::
   (MonadF f, Monad m) =>
   Sugar.HasParens ->
   (Widget.Id -> ExpressionGui f -> VarAccess m (ExpressionGui f)) ->
   (Widget.Id -> VarAccess m (ExpressionGui f)) ->
-  Widget.Id ->
-  VarAccess m (ExpressionGui f)
-wrapParenify hasParens addParens f =
-  wrapExpression $ \myId ->
-  parenify hasParens addParens myId =<< f myId
+  Widget.Id -> VarAccess m (ExpressionGui f)
+wrapParenify hasParens addParens =
+  wrapExpression . parenify hasParens addParens
