@@ -1,3 +1,5 @@
+* Avoid name clashes in auto-names
+
 * Instead of (VarAccess.NameSource, String) and Guid of name
   seperately, generate a Property for the name of that type? or give
   a setter instead of Guid
@@ -18,17 +20,11 @@
 
 * Holes can have same IDs for same results emphasizing sameness
 
-* Auto-name generation to be localized
-
 * Bug: <Del> on branch name does not work
   * Cursor does not move, so GUI is not regenerated, apparently. Need
     to rewrite main loop.
 
 * DEL should probably allow lambda-unwrap (Remove lambda wrapper)
-
-* Auto-name generation ignores manually chosen names that overlap
-  * Should show auto-names with different color to disambguiate and
-    make it clear they're auto-gen.
 
 * Add JumpTo which gives a hole-like search -- that can sit in a "tab" in place of a DefinitionEdit
 
