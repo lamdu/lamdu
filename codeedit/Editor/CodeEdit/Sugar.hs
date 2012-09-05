@@ -123,7 +123,6 @@ data Section m = Section
   { sectionLArg :: Maybe (ExpressionRef m)
   , sectionOp :: ExpressionRef m -- Always a GetVariable
   , sectionRArg :: Maybe (ExpressionRef m)
-  , sectionInnerApplyGuid :: Maybe Guid
   }
 
 type HoleResult = Infer.Expression ()
@@ -213,8 +212,8 @@ atSubExpressions ::
   Expression m -> Expression m
 atSubExpressions f (ExpressionApply p (Apply func arg)) =
   ExpressionApply p $ on Apply f func arg
-atSubExpressions f (ExpressionSection p (Section l o r g)) =
-  ExpressionSection p $ Section (fmap f l) (f o) (fmap f r) g
+atSubExpressions f (ExpressionSection p (Section l o r)) =
+  ExpressionSection p $ Section (fmap f l) (f o) (fmap f r)
 atSubExpressions f (ExpressionWhere p (Where items body)) =
   ExpressionWhere p $ Where ((map . atWiValue) f items) (f body)
 atSubExpressions f (ExpressionFunc p (Func params body)) =
@@ -499,18 +498,18 @@ mkExpressionGetVariable =
 applyOnSection ::
   Monad m =>
   Section m -> Data.Apply (ExpressionRef m, ExprEntity m) -> Convertor m
-applyOnSection (Section Nothing op Nothing g) (Data.Apply (_, funcI) arg@(argRef, _)) exprI
+applyOnSection (Section Nothing op Nothing) (Data.Apply (_, funcI) arg@(argRef, _)) exprI
   | isPolymorphicFunc funcI = do
     newOpRef <-
       convertApplyPrefix (Data.Apply (op, funcI) arg) exprI
     mkExpressionRef exprI . ExpressionSection DontHaveParens $
-      Section Nothing (removeRedundantTypes newOpRef) Nothing g
+      Section Nothing (removeRedundantTypes newOpRef) Nothing
   | otherwise =
     mkExpressionRef exprI . ExpressionSection DontHaveParens $
-      Section (Just argRef) op Nothing g
-applyOnSection (Section (Just left) op Nothing g) (Data.Apply _ (argRef, _)) exprI =
+      Section (Just argRef) op Nothing
+applyOnSection (Section (Just left) op Nothing) (Data.Apply _ (argRef, _)) exprI =
   mkExpressionRef exprI . ExpressionSection DontHaveParens $
-    Section (Just left) op (Just argRef) g
+    Section (Just left) op (Just argRef)
 applyOnSection _ apply exprI = convertApplyPrefix apply exprI
 
 convertApplyPrefix ::
@@ -560,7 +559,7 @@ convertGetVariable varRef exprI = do
     then
       mkExpressionRef exprI .
       ExpressionSection HaveParens $
-      Section Nothing ((atRInferredTypes . const) [] getVarExpr) Nothing Nothing
+      Section Nothing ((atRInferredTypes . const) [] getVarExpr) Nothing
     else return getVarExpr
 
 mkPaste :: Monad m => DataIRef.ExpressionProperty (T m) -> Sugar m (Maybe (T m Guid))
