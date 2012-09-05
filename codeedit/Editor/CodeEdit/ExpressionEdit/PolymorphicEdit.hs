@@ -10,6 +10,7 @@ import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.CodeEdit.VarAccess as VarAccess
 import qualified Editor.Config as Config
+import qualified Editor.Layers as Layers
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -34,7 +35,7 @@ makeInner makeExpressionEdit poly myId =
         makeExpressionEdit compact
       _ -> return $ bg Config.polymorphicFullBGColor fullExprEdit
   where
-    bg = ExpressionGui.atEgWidget . Widget.backgroundColor 25 (Widget.toAnimId myId ++ ["bg"])
+    bg = ExpressionGui.atEgWidget . Widget.backgroundColor Layers.polymorphicBG (Widget.toAnimId myId ++ ["bg"])
     assignCursor =
       maybe id (VarAccess.assignCursor myId . WidgetIds.fromGuid . Sugar.rGuid) $
       Sugar.pCompact poly

@@ -25,6 +25,7 @@ import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.CodeEdit.VarAccess as VarAccess
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
+import qualified Editor.Layers as Layers
 import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
@@ -155,7 +156,7 @@ makePanesEdit panes = do
       | Widget.wIsFocused widget = onActivePane widget
       | otherwise = onInactivePane widget
     onActivePane =
-      Widget.backgroundColor 30 WidgetIds.activeDefBackground Config.activeDefBGColor
+      Widget.backgroundColor Layers.activePane WidgetIds.activeDefBackground Config.activeDefBGColor
     onInactivePane =
       (Widget.atWFrame . Anim.onImages . Draw.tint)
       Config.inactiveTintColor

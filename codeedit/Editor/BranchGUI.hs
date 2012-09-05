@@ -31,6 +31,7 @@ import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
+import qualified Editor.Layers as Layers
 import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -205,7 +206,7 @@ makeBranchChoice forceExpand selectionAnimId orientation children curChild =
       -- need to show selection even as focus is elsewhere
       | otherwise = map colorize visiblePairs
       where
-        colorize (True, w) = Widget.backgroundColor 9 selectionAnimId selectedColor w
+        colorize (True, w) = Widget.backgroundColor Layers.branchChoice selectionAnimId selectedColor w
         colorize (False, w) = w
         selectedColor = Config.selectedBranchColor
 

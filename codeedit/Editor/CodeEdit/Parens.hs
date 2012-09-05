@@ -17,6 +17,7 @@ import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.VarAccess as VarAccess
 import qualified Editor.Config as Config
+import qualified Editor.Layers as Layers
 import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
@@ -69,7 +70,7 @@ addSquareParens parensId =
 
 highlightExpression :: Widget.Widget f -> Widget.Widget f
 highlightExpression =
-  Widget.backgroundColor 11 WidgetIds.parenHighlightId Config.parenHighlightColor
+  Widget.backgroundColor Layers.parensHighlightBG WidgetIds.parenHighlightId Config.parenHighlightColor
 
 addTextParens
   :: MonadF m

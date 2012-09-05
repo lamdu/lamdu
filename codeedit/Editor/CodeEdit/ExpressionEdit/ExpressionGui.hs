@@ -23,6 +23,7 @@ import qualified Data.Vector.Vector2 as Vector2
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
+import qualified Editor.Layers as Layers
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -95,7 +96,7 @@ addType style exprId typeEdits eg =
       Widget.translate (Vector2 ((width - rawTypeWidth)/2) 0) $ rawTypeEdit
     isError = length typeEdits >= 2
     bgAnimId = Widget.toAnimId exprId ++ ["type background"]
-    addBackground = maybe id (Widget.backgroundColor 15 bgAnimId) bgColor
+    addBackground = maybe id (Widget.backgroundColor Layers.types bgAnimId) bgColor
     bgColor
       | isError = Just Config.inferredTypeErrorBGColor
       | otherwise = do

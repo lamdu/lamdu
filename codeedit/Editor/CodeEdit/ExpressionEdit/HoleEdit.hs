@@ -35,6 +35,7 @@ import qualified Editor.CodeEdit.VarAccess as VarAccess
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.ITransaction as IT
+import qualified Editor.Layers as Layers
 import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -457,11 +458,11 @@ makeUnwrapped makeExpressionEdit hole guid myId = do
       in
         liftM
         ((first . fmap) (pickExpr holeInfo) .
-         second (makeBackground 8 Config.holeBackgroundColor)) $
+         second (makeBackground Layers.activeHoleBG Config.holeBackgroundColor)) $
         makeActiveHoleEdit makeExpressionEdit holeInfo
     _ ->
       liftM
-      ((,) Nothing . makeBackground 9 unfocusedColor) .
+      ((,) Nothing . makeBackground Layers.inactiveHole unfocusedColor) .
       VarAccess.otransaction .
       BWidgets.makeFocusableTextView snippet $
       WidgetIds.searchTermId myId

@@ -32,6 +32,7 @@ import qualified Editor.Anchors as Anchors
 import qualified Editor.CodeEdit.VarAccess as VarAccess
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
+import qualified Editor.Layers as Layers
 import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
@@ -63,7 +64,7 @@ makeFocusableView myId widget = do
   hasFocus <- liftM isJust $ OT.subCursor myId
   let
     setBackground
-      | hasFocus = Widget.backgroundColor 10 WidgetIds.backgroundCursorId blue
+      | hasFocus = Widget.backgroundColor Layers.cursorBG WidgetIds.backgroundCursorId blue
       | otherwise = id
   return .
     (Widget.atWIsFocused . const) hasFocus . setBackground $
