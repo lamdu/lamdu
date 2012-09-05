@@ -78,6 +78,13 @@ makeFocusableTextView text myId = do
   textView <- makeTextView text $ Widget.toAnimId myId
   makeFocusableView myId textView
 
+fdStyle :: FocusDelegator.Style
+fdStyle = FocusDelegator.Style
+  { FocusDelegator.color = Config.cursorBGColor
+  , FocusDelegator.layer = Layers.cursorBG
+  , FocusDelegator.cursorBGAnimId = WidgetIds.backgroundCursorId
+  }
+
 wrapDelegatedWith
   :: (Applicative f, Monad m)
   => m Widget.Id
@@ -89,8 +96,7 @@ wrapDelegatedWith
   -> Widget.Id -> m b
 wrapDelegatedWith readCursor atCursor config entryState aToB mkA myId = do
   cursor <- readCursor
-  FocusDelegator.wrapConfig config entryState mk
-    WidgetIds.backgroundCursorId myId cursor
+  FocusDelegator.wrapEnv (FocusDelegator.Env config fdStyle) entryState mk myId cursor
   where
     mk f innerId newCursor =
       liftM (aToB f) . (atCursor . const) newCursor $ mkA innerId

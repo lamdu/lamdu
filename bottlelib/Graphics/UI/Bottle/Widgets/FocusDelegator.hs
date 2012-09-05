@@ -1,9 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.FocusDelegator
   ( IsDelegating(..)
-  , Config(..)
+  , Config(..), Style(..), Env(..)
   , make
-  , wrapConfig
+  , wrapEnv
   , delegatingId, notDelegatingId
   )
 where
@@ -22,27 +22,37 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 
 data IsDelegating = Delegating | NotDelegating
 
-data Config = Config {
-  startDelegatingKey :: E.ModKey,
-  startDelegatingDoc :: E.Doc,
-  stopDelegatingKey :: E.ModKey,
-  stopDelegatingDoc :: E.Doc
+data Style = Style
+  { color :: Draw.Color
+  , layer :: Int
+  , cursorBGAnimId :: AnimId
   }
 
-blue :: Draw.Color
-blue = Draw.Color 0 0 1 1
+data Config = Config
+  { startDelegatingKey :: E.ModKey
+  , startDelegatingDoc :: E.Doc
+  , stopDelegatingKey :: E.ModKey
+  , stopDelegatingDoc :: E.Doc
+  }
+
+data Env = Env
+  { config :: Config
+  , style :: Style
+  }
 
 makeFocused
   :: Applicative f
-  => IsDelegating -> Widget.Id -> Config -> AnimId
+  => IsDelegating -> Widget.Id -> Env
   -> Widget f -> Widget f
-makeFocused delegating focusSelf config backgroundCursorId =
+makeFocused delegating focusSelf env =
   handleFocus delegating
   where
     handleFocus Delegating    = addStopDelegatingEventMap
-    handleFocus NotDelegating = blueify . useStartDelegatingEventMap
+    handleFocus NotDelegating = colorize . useStartDelegatingEventMap
 
-    blueify = Widget.backgroundColor 20 (mappend backgroundCursorId (Widget.toAnimId focusSelf)) blue
+    ourConfig = config env
+    ourStyle = style env
+    colorize = Widget.backgroundColor (layer ourStyle) (mappend (cursorBGAnimId ourStyle) (Widget.toAnimId focusSelf)) $ color ourStyle
 
     useStartDelegatingEventMap w =
       ($ w) .
@@ -54,12 +64,12 @@ makeFocused delegating focusSelf config backgroundCursorId =
       Widget.wMaybeEnter w
 
     startDelegatingEventMap childEnter =
-      E.keyPress (startDelegatingKey config) (startDelegatingDoc config) .
+      E.keyPress (startDelegatingKey ourConfig) (startDelegatingDoc ourConfig) .
       Widget.enterResultEvent $ childEnter Direction.Outside
 
     addStopDelegatingEventMap =
       Widget.weakerEvents .
-      E.keyPress (stopDelegatingKey config) (stopDelegatingDoc config) .
+      E.keyPress (stopDelegatingKey ourConfig) (stopDelegatingDoc ourConfig) .
       pure $ Widget.eventResultFromCursor focusSelf
 
 -- | Make a focus delegator
@@ -68,10 +78,9 @@ make
   => IsDelegating -- ^ Start state, enter from direction state
   -> Maybe IsDelegating -- ^ Current state
   -> Widget.Id -- ^ Enter/Stop delegating value
-  -> Config -- ^ FocusDelegator configuration
-  -> AnimId -- ^ Background Cursor Id
+  -> Env -- ^ FocusDelegator configuration
   -> Widget f -> Widget f
-make isDelegating Nothing focusSelf _ _ w =
+make isDelegating Nothing focusSelf _ w =
   Widget.atWMaybeEnter (mEnter isDelegating (Widget.wSize w)) w
   where
     mEnter NotDelegating wholeSize _ = Just . const $ takeFocus wholeSize
@@ -83,8 +92,8 @@ make isDelegating Nothing focusSelf _ _ w =
 
     takeFocus wholeSize = Widget.EnterResult (Rect 0 wholeSize) . pure $ Widget.eventResultFromCursor focusSelf
 
-make _ (Just cursor) focusSelf config backgroundCursorId w =
-  makeFocused cursor focusSelf config backgroundCursorId w
+make _ (Just cursor) focusSelf env w =
+  makeFocused cursor focusSelf env w
 
 delegatingId :: Widget.Id -> Widget.Id
 delegatingId = flip Widget.joinId ["delegating"]
@@ -92,21 +101,19 @@ delegatingId = flip Widget.joinId ["delegating"]
 notDelegatingId :: Widget.Id -> Widget.Id
 notDelegatingId = flip Widget.joinId ["not delegating"]
 
-wrapConfig
+wrapEnv
   :: Applicative f
-  => Config
+  => Env
   -> IsDelegating
   -> ((Widget f -> Widget f) -> Widget.Id -> Widget.Id -> a)
-  -> AnimId
   -> Widget.Id
   -> Widget.Id -> a
-wrapConfig config entryState mkResult backgroundCursorId myId cursor =
+wrapEnv env entryState mkResult myId cursor =
   mkResult atWidget innerId newCursor
   where
     atWidget innerWidget =
       (Widget.atWIsFocused . const) (isJust mIsDelegating) $
-      make entryState mIsDelegating delegatorId
-      config backgroundCursorId innerWidget
+      make entryState mIsDelegating delegatorId env innerWidget
       where
         mIsDelegating =
           case Widget.subId delegatorId newCursor of
