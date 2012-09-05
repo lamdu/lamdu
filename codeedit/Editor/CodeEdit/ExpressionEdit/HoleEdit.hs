@@ -53,13 +53,11 @@ moreSymbolSizeFactor = 0.5
 
 type ResultPicker m = ITransaction ViewTag m Widget.EventResult
 
--- TODO: Rename this (to "Choice"?). Results are the post-apply-form inferred
--- expansions of this
-data Result = Result
-  { resultNames :: [String]
-  , resultExpr :: Data.PureExpression
+data Group = Group
+  { groupNames :: [String]
+  , groupBaseExpr :: Data.PureExpression
   }
-AtFieldTH.make ''Result
+AtFieldTH.make ''Group
 
 type T = Transaction ViewTag
 
@@ -88,8 +86,8 @@ resultPickEventMap holeInfo =
   pickExpr holeInfo
 
 data ResultsList m = ResultsList
-  { afMain :: Sugar.HoleResult
-  , afMore :: Maybe (Sugar.HoleResult, ListT m Sugar.HoleResult)
+  { rlFirst :: Sugar.HoleResult
+  , rlMore :: Maybe (Sugar.HoleResult, ListT m Sugar.HoleResult)
   }
 
 canonizeResultExpr
@@ -99,14 +97,14 @@ canonizeResultExpr holeInfo expr =
   flip Data.randomizeGuids expr . Random.mkStdGen $
   hash (show (void expr), Guid.bs (hiGuid holeInfo))
 
-resultToWidget
+resultsToWidgets
   :: MonadF m
   => ExpressionGui.Maker m -> HoleInfo m -> ResultsList (T m)
   -> VarAccess m
      ( WidgetT m
      , Maybe (Sugar.HoleResult, Maybe (WidgetT m))
      )
-resultToWidget makeExpressionEdit holeInfo applyForms = do
+resultsToWidgets makeExpressionEdit holeInfo results = do
   cursorOnMain <- VarAccess.otransaction $ OT.isSubCursor myId
   extra <-
     if cursorOnMain
@@ -122,10 +120,10 @@ resultToWidget makeExpressionEdit holeInfo applyForms = do
             return (result, Just widget)
         else return Nothing
   liftM (flip (,) extra) .
-    maybe return (const addMoreSymbol) (afMore applyForms) =<<
+    maybe return (const addMoreSymbol) (rlMore results) =<<
     toWidget myId canonizedExpr
   where
-    makeExtra = maybe (return Nothing) (liftM Just . makeMoreResults) $ afMore applyForms
+    makeExtra = maybe (return Nothing) (liftM Just . makeMoreResults) $ rlMore results
     makeMoreResults (firstResult, moreResults) = do
       pairs <-
         mapM moreResult . (firstResult :) =<<
@@ -155,7 +153,7 @@ resultToWidget makeExpressionEdit holeInfo applyForms = do
         VarAccess.otransaction .
         BWidgets.makeLabel moreSymbol $ Widget.toAnimId myId
       return $ BWidgets.hboxCenteredSpaced [w, moreSymbolLabel]
-    canonizedExpr = canonizeResultExpr holeInfo $ afMain applyForms
+    canonizedExpr = canonizeResultExpr holeInfo $ rlFirst results
     canonizedExprId = pureGuidId canonizedExpr
     myId = mappend (hiHoleId holeInfo) canonizedExprId
     pureGuidId = WidgetIds.fromGuid . Data.eGuid
@@ -165,12 +163,12 @@ makeNoResults myId =
   VarAccess.otransaction .
   BWidgets.makeTextView "(No results)" $ mappend myId ["no results"]
 
-makeResultVariable ::
-  MonadF m => (Guid, Data.VariableRef) -> VarAccess m Result
-makeResultVariable (guid, varRef) = VarAccess.withName guid $ \(_, varName) ->
-  return Result
-    { resultNames = [varName]
-    , resultExpr = toPureExpr . Data.ExpressionLeaf $ Data.GetVariable varRef
+makeVariableGroup ::
+  MonadF m => (Guid, Data.VariableRef) -> VarAccess m Group
+makeVariableGroup (guid, varRef) = VarAccess.withName guid $ \(_, varName) ->
+  return Group
+    { groupNames = [varName]
+    , groupBaseExpr = toPureExpr . Data.ExpressionLeaf $ Data.GetVariable varRef
     }
 
 toPureExpr
@@ -189,8 +187,8 @@ holeResultAnimMappingNoParens holeInfo resultId =
   where
     myId = Widget.toAnimId $ hiHoleId holeInfo
 
-resultOrdering :: String -> Result -> [Bool]
-resultOrdering searchTerm result =
+groupOrdering :: String -> Group -> [Bool]
+groupOrdering searchTerm result =
   map not
   [ match (==)
   , match isPrefixOf
@@ -200,30 +198,30 @@ resultOrdering searchTerm result =
   where
     insensitivePrefixOf = isPrefixOf `on` map Char.toLower
     match f = any (f searchTerm) names
-    names = resultNames result
+    names = groupNames result
 
-makeLiteralResults :: String -> [Result]
-makeLiteralResults searchTerm =
+makeLiteralGroup :: String -> [Group]
+makeLiteralGroup searchTerm =
   [ makeLiteralIntResult (read searchTerm)
   | not (null searchTerm) && all Char.isDigit searchTerm]
   where
     makeLiteralIntResult integer =
-      Result
-      { resultNames = [show integer]
-      , resultExpr = toPureExpr . Data.ExpressionLeaf $ Data.LiteralInteger integer
+      Group
+      { groupNames = [show integer]
+      , groupBaseExpr = toPureExpr . Data.ExpressionLeaf $ Data.LiteralInteger integer
       }
 
 makeResultsList ::
   Monad m => ListT m Sugar.HoleResult -> m (Maybe (ResultsList m))
-makeResultsList applyForms = do
+makeResultsList results = do
   -- We always want the first, and we want to know if there's more, so
   -- take 2:
-  (firstTwo, rest) <- List.splitAtM 2 applyForms
+  (firstTwo, rest) <- List.splitAtM 2 results
   return $ case firstTwo of
     [] -> Nothing
     (x:xs) -> Just ResultsList
-      { afMain = x
-      , afMore = case xs of
+      { rlFirst = x
+      , rlMore = case xs of
         [] -> Nothing
         [y] -> Just (y, rest)
         _ -> error "We took 2, got more!"
@@ -235,21 +233,21 @@ makeAllResults
   -> VarAccess m (ListT (T m) (ResultsList (T m)))
 makeAllResults holeInfo = do
   paramResults <-
-    mapM makeResultVariable $
+    mapM makeVariableGroup $
     Sugar.holeScope hole
   globalResults <-
-    mapM (makeResultVariable . (Data.variableRefGuid &&& id)) =<<
+    mapM (makeVariableGroup . (Data.variableRefGuid &&& id)) =<<
     VarAccess.getP Anchors.globals
   let
     searchTerm = Property.value $ hiSearchTerm holeInfo
-    literalResults = makeLiteralResults searchTerm
-    nameMatch = any (insensitiveInfixOf searchTerm) . resultNames
+    literalResults = makeLiteralGroup searchTerm
+    nameMatch = any (insensitiveInfixOf searchTerm) . groupNames
   return .
     List.catMaybes .
     List.mapL
-      (makeResultsList . Sugar.holeInferResults hole . resultExpr) .
+      (makeResultsList . Sugar.holeInferResults hole . groupBaseExpr) .
     List.fromList .
-    sortOn (resultOrdering searchTerm) .
+    sortOn (groupOrdering searchTerm) .
     filter nameMatch $
     literalResults ++
     paramResults ++
@@ -259,23 +257,23 @@ makeAllResults holeInfo = do
     insensitiveInfixOf = isInfixOf `on` map Char.toLower
     hole = hiHole holeInfo
     primitiveResults =
-      [ Result
-        { resultNames = ["Set", "Type"]
-        , resultExpr = toPureExpr $ Data.ExpressionLeaf Data.Set
+      [ Group
+        { groupNames = ["Set", "Type"]
+        , groupBaseExpr = toPureExpr $ Data.ExpressionLeaf Data.Set
         }
-      , Result
-        { resultNames = ["Integer", "ℤ", "Z"]
-        , resultExpr = toPureExpr $ Data.ExpressionLeaf Data.IntegerType
+      , Group
+        { groupNames = ["Integer", "ℤ", "Z"]
+        , groupBaseExpr = toPureExpr $ Data.ExpressionLeaf Data.IntegerType
         }
-      , Result
-        { resultNames = ["->", "Pi", "→", "→", "Π", "π"]
-        , resultExpr =
+      , Group
+        { groupNames = ["->", "Pi", "→", "→", "Π", "π"]
+        , groupBaseExpr =
           Data.canonizeGuids . toPureExpr . Data.ExpressionPi $
           Data.Lambda holeExpr holeExpr
         }
-      , Result
-        { resultNames = ["\\", "Lambda", "Λ", "λ"]
-        , resultExpr =
+      , Group
+        { groupNames = ["\\", "Lambda", "Λ", "λ"]
+        , groupBaseExpr =
           Data.canonizeGuids . toPureExpr . Data.ExpressionLambda $
           Data.Lambda holeExpr holeExpr
         }
@@ -343,7 +341,7 @@ makeResultsWidget
      (Maybe Sugar.HoleResult, WidgetT m)
 makeResultsWidget makeExpressionEdit holeInfo firstResults moreResults = do
   firstResultsAndWidgets <-
-    mapM (resultToWidget makeExpressionEdit holeInfo) firstResults
+    mapM (resultsToWidgets makeExpressionEdit holeInfo) firstResults
   (mResult, firstResultsWidget) <-
     case firstResultsAndWidgets of
       [] -> liftM ((,) Nothing) . makeNoResults $ Widget.toAnimId myId
@@ -400,7 +398,7 @@ makeActiveHoleEdit makeExpressionEdit holeInfo =
     (firstResults, moreResults) <-
       VarAccess.transaction $ List.splitAtM Config.holeResultCount allResults
 
-    let defaultResult = fmap afMain $ listToMaybe firstResults
+    let defaultResult = fmap rlFirst $ listToMaybe firstResults
     searchTermWidget <-
       makeSearchTermWidget holeInfo searchTermId defaultResult
 
