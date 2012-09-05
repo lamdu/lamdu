@@ -599,7 +599,7 @@ applyForms
 applyForms _ e@Data.Expression{ Data.eValue = Data.ExpressionLambda {} } =
   [e]
 applyForms exprType expr =
-  map Data.canonizeGuids . take (1 + countPis exprType) $ iterate addApply expr
+  map Data.canonizeGuids . reverse . take (1 + countPis exprType) $ iterate addApply expr
   where
     addApply =
       Data.pureExpression zeroGuid .
