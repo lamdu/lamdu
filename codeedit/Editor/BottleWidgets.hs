@@ -64,13 +64,11 @@ makeFocusableView myId widget = do
   hasFocus <- liftM isJust $ OT.subCursor myId
   let
     setBackground
-      | hasFocus = Widget.backgroundColor Layers.cursorBG WidgetIds.backgroundCursorId blue
+      | hasFocus = Widget.backgroundColor Layers.cursorBG WidgetIds.backgroundCursorId Config.cursorBGColor
       | otherwise = id
   return .
     (Widget.atWIsFocused . const) hasFocus . setBackground $
     Widget.takesFocus (const (pure myId)) widget
-  where
-    blue = Draw.Color 0 0 1 0.8
 
 makeFocusableTextView
   :: (Applicative f, MonadF m)

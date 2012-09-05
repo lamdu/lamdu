@@ -3,7 +3,7 @@ module Editor.OTransaction
   ( OTransaction, runOTransaction
   , unWrapInner
   , WidgetT
-  , readCursor, subCursor
+  , readCursor, subCursor, isSubCursor
   , Env(..)
   , atEnv, atEnvCursor
   , envAssignCursor, envAssignCursorPrefix
@@ -19,6 +19,7 @@ import Control.Applicative (Applicative)
 import Control.Monad (liftM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
+import Data.Maybe (isJust)
 import Data.Store.Transaction (Transaction)
 import Editor.ITransaction (ITransaction)
 import Graphics.UI.Bottle.Animation (AnimId)
@@ -73,6 +74,9 @@ readCursor = OTransaction $ Reader.asks envCursor
 
 subCursor :: Monad m => Widget.Id -> OTransaction t m (Maybe AnimId)
 subCursor folder = liftM (Widget.subId folder) readCursor
+
+isSubCursor :: Monad m => Widget.Id -> OTransaction t m Bool
+isSubCursor = liftM isJust . subCursor
 
 readTextStyle :: Monad m => OTransaction t m TextEdit.Style
 readTextStyle = OTransaction $ Reader.asks envTextStyle

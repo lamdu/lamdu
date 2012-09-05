@@ -1,3 +1,9 @@
+* Infix inside infix bug
+* Scoped params are first
+* Allow delete when type-checks in some cases
+* Hole allows bad results with hole to convert
+* Fix the default apply form
+
 * Avoid name clashes in auto-names
 
 * Instead of (VarAccess.NameSource, String) and Guid of name

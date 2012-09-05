@@ -61,15 +61,12 @@ previousCursorKeys = [mk E.alt E.KeyLeft]
 
 holeResultCount = 8
 holeResultScaleFactor = 0.7
-holeBackgroundColor = Draw.Color 1 0 0 0.3
 
-unfocusedReadOnlyHoleBackgroundColor = Draw.Color 1 0.5 0.5 0.5
+holeBackgroundColor = Draw.Color 0.3 0 0 1
+unfocusedReadOnlyHoleBackgroundColor = Draw.Color 0.5 0.25 0.25 1
 
 inferredValueScaleFactor = 0.7
 inferredValueTint = Draw.Color 1 1 1 0.6
-
-polymorphicCompactBGColor = Draw.Color 0.4 0.2 0.6 0.5
-polymorphicFullBGColor = Draw.Color 0.2 0.5 0.4 0.2
 
 parenHighlightColor = Draw.Color 0.3 0 1 0.25
 
@@ -104,6 +101,11 @@ activeDefBGColor = Draw.Color 0 0 0.2 1
 inferredTypeTint = inferredValueTint
 inferredTypeErrorBGColor = Draw.Color 0.5 0.05 0.05 1
 inferredTypeBGColor = Draw.Color 0.05 0.15 0.2 1
+
+polymorphicCompactBGColor = Draw.Color 0.25 0.1 0.25 1
+polymorphicFullBGColor = Draw.Color 0.25 0.1 0.25 1
+
+cursorBGColor = Draw.Color 0 0 1 0.3
 
 helpStyle font = TextView.Style {
   TextView.styleColor = Draw.Color 1 1 1 1,

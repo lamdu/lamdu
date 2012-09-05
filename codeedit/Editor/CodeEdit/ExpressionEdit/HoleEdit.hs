@@ -107,12 +107,12 @@ resultToWidget
      , Maybe (Sugar.HoleResult, Maybe (WidgetT m))
      )
 resultToWidget makeExpressionEdit holeInfo applyForms = do
-  cursorOnMain <- liftM isJust . VarAccess.otransaction $ OT.subCursor myId
+  cursorOnMain <- VarAccess.otransaction $ OT.isSubCursor myId
   extra <-
     if cursorOnMain
     then liftM (Just . (,) canonizedExpr . fmap fst) makeExtra
     else do
-      cursorOnExtra <- liftM isJust . VarAccess.otransaction $ OT.subCursor moreResultsPrefix
+      cursorOnExtra <- VarAccess.otransaction $ OT.isSubCursor moreResultsPrefix
       if cursorOnExtra
         then do
           extra <- makeExtra
@@ -135,19 +135,19 @@ resultToWidget makeExpressionEdit holeInfo applyForms = do
         , msum $ map snd pairs
         )
     moreResult expr = do
-      mResult <- (liftM . fmap . const) cExpr . VarAccess.otransaction $ OT.subCursor ident
-      widget <- toWidget ident cExpr
+      mResult <- (liftM . fmap . const) cExpr . VarAccess.otransaction $ OT.subCursor resultId
+      widget <- toWidget resultId cExpr
       return (widget, mResult)
       where
-        ident = mappend moreResultsPrefix $ pureGuidId cExpr
+        resultId = mappend moreResultsPrefix $ pureGuidId cExpr
         cExpr = canonizeResultExpr holeInfo expr
-    toWidget ident expr =
-      VarAccess.otransaction .
-      BWidgets.makeFocusableView ident .
-      Widget.strongerEvents (resultPickEventMap holeInfo expr) .
-      ExpressionGui.egWidget =<<
-      makeExpressionEdit . Sugar.removeTypes =<<
-      (VarAccess.transaction . Sugar.convertHoleResult) expr
+    toWidget resultId expr = do
+      isResultSelected <- VarAccess.otransaction $ OT.isSubCursor resultId
+      VarAccess.otransaction . BWidgets.makeFocusableView resultId .
+        Widget.strongerEvents (resultPickEventMap holeInfo expr) .
+        ExpressionGui.egWidget =<<
+        makeExpressionEdit . (if isResultSelected then id else Sugar.removeTypes) =<<
+        (VarAccess.transaction . Sugar.convertHoleResult) expr
     moreResultsPrefix = mconcat [hiHoleId holeInfo, Widget.Id ["more results"], canonizedExprId]
     addMoreSymbol w = do
       moreSymbolLabel <-

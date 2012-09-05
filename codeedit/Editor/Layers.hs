@@ -2,11 +2,14 @@
 {-# OPTIONS -fno-warn-missing-signatures #-}
 module Editor.Layers where
 
-activeHoleBG = 8
-inactiveHole = 9
-branchChoice = 9
-cursorBG = 10
-parensHighlightBG = 11
-types = 15
-polymorphicBG = 25
-activePane = 30
+-- FocusDelegator BG is 20
+cursorBG = 25
+inactiveHole = 26
+types = 27
+polymorphicBG = 28
+activeHoleBG = 31
+parensHighlightBG = 31
+activePane = 40
+
+
+branchChoice = 30
