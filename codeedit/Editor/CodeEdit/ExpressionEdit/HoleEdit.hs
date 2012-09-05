@@ -234,11 +234,12 @@ makeAllResults
   => HoleInfo m
   -> VarAccess m (ListT (T m) (ResultsList (T m)))
 makeAllResults holeInfo = do
-  globals <- VarAccess.getP Anchors.globals
-  varResults <-
+  paramResults <-
     mapM makeResultVariable $
-    Sugar.holeScope hole ++
-    map (Data.variableRefGuid &&& id) globals
+    Sugar.holeScope hole
+  globalResults <-
+    mapM (makeResultVariable . (Data.variableRefGuid &&& id)) =<<
+    VarAccess.getP Anchors.globals
   let
     searchTerm = Property.value $ hiSearchTerm holeInfo
     literalResults = makeLiteralResults searchTerm
@@ -250,7 +251,10 @@ makeAllResults holeInfo = do
     List.fromList .
     sortOn (resultOrdering searchTerm) .
     filter nameMatch $
-    literalResults ++ primitiveResults ++ varResults
+    literalResults ++
+    paramResults ++
+    primitiveResults ++
+    globalResults
   where
     insensitiveInfixOf = isInfixOf `on` map Char.toLower
     hole = hiHole holeInfo
