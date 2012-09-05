@@ -443,11 +443,6 @@ makeUnwrapped ::
 makeUnwrapped makeExpressionEdit hole guid myId = do
   cursor <- VarAccess.otransaction OT.readCursor
   searchTermProp <- VarAccess.transaction $ Anchors.assocSearchTermRef guid
-  let
-    searchText = Property.value searchTermProp
-    snippet
-      | null searchText = "  "
-      | otherwise = searchText
   (liftM . second) ExpressionGui.fromValueWidget $
     case (Sugar.holePickResult hole, Widget.subId myId cursor) of
     (Just holePickResult, Just _) ->
@@ -468,7 +463,7 @@ makeUnwrapped makeExpressionEdit hole guid myId = do
       liftM
       ((,) Nothing . makeBackground Layers.inactiveHole unfocusedColor) .
       VarAccess.otransaction .
-      BWidgets.makeFocusableTextView snippet $
+      BWidgets.makeFocusableTextView "  " $
       WidgetIds.searchTermId myId
   where
     unfocusedColor
