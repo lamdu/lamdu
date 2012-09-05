@@ -280,28 +280,15 @@ makeAllResults holeInfo = do
       ]
     holeExpr = toPureExpr $ Data.ExpressionLeaf Data.Hole
 
-
-makeSearchTermWidget
-  :: MonadF m
-  => HoleInfo m -> Widget.Id
-  -> Maybe Sugar.HoleResult
-  -> VarAccess m (WidgetT m)
-makeSearchTermWidget holeInfo searchTermId mFirstResult =
-  VarAccess.otransaction .
-  liftM
-  (Widget.strongerEvents searchTermEventMap .
-   (Widget.atWEventMap . E.filterChars) (`notElem` "`[]\\")) $
-  BWidgets.makeWordEdit (hiSearchTerm holeInfo) searchTermId
+addNewDefinitionEventMap ::
+  Monad m =>
+  HoleInfo m ->
+  E.EventMap (ITransaction ViewTag m Widget.EventResult)
+addNewDefinitionEventMap holeInfo =
+  E.keyPresses Config.newDefinitionKeys
+  "Add as new Definition" . makeNewDefinition $
+  pickExpr holeInfo
   where
-    pickFirstResultEventMap =
-      maybe mempty (resultPickEventMap holeInfo) mFirstResult
-
-    searchTermEventMap =
-      pickFirstResultEventMap `mappend`
-      (E.keyPresses Config.newDefinitionKeys
-       "Add new as Definition" . makeNewDefinition)
-      (pickExpr holeInfo)
-
     makeNewDefinition holePickResult = do
       newDefI <- IT.transaction $ do
         newDefI <- Anchors.makeDefinition -- TODO: From Sugar
@@ -326,6 +313,18 @@ makeSearchTermWidget holeInfo searchTermId mFirstResult =
         Widget.eAnimIdMapping =
           holeResultAnimMappingNoParens holeInfo searchTermId
         }
+    searchTermId = WidgetIds.searchTermId $ hiHoleId holeInfo
+
+makeSearchTermWidget
+  :: MonadF m
+  => HoleInfo m -> Widget.Id
+  -> VarAccess m (WidgetT m)
+makeSearchTermWidget holeInfo searchTermId =
+  VarAccess.otransaction .
+  liftM
+  (Widget.scale Config.holeSearchTermScaleFactor .
+   (Widget.atWEventMap . E.filterChars) (`notElem` "`[]\\")) $
+  BWidgets.makeWordEdit (hiSearchTerm holeInfo) searchTermId
 
 vboxMBiasedAlign ::
   Maybe Box.Cursor -> Box.Alignment -> [Widget f] -> Widget f
@@ -399,8 +398,7 @@ makeActiveHoleEdit makeExpressionEdit holeInfo =
       VarAccess.transaction $ List.splitAtM Config.holeResultCount allResults
 
     let defaultResult = fmap rlFirst $ listToMaybe firstResults
-    searchTermWidget <-
-      makeSearchTermWidget holeInfo searchTermId defaultResult
+    searchTermWidget <- makeSearchTermWidget holeInfo searchTermId
 
     hasMoreResults <- VarAccess.transaction $ genericNull moreResults
 
@@ -455,7 +453,9 @@ makeUnwrapped makeExpressionEdit hole guid myId = do
       in
         liftM
         ((first . fmap) (pickExpr holeInfo) .
-         second (makeBackground Layers.activeHoleBG Config.holeBackgroundColor)) $
+         second
+         (makeBackground Layers.activeHoleBG Config.holeBackgroundColor .
+          Widget.strongerEvents (addNewDefinitionEventMap holeInfo))) $
         makeActiveHoleEdit makeExpressionEdit holeInfo
     _ ->
       liftM

@@ -60,7 +60,8 @@ literalIntColor = Draw.Color 0 1 0 1
 previousCursorKeys = [mk E.alt E.KeyLeft]
 
 holeResultCount = 8
-holeResultScaleFactor = 0.7
+holeResultScaleFactor = 0.75
+holeSearchTermScaleFactor = 0.6
 
 holeBackgroundColor = Draw.Color 0.3 0 0 1
 unfocusedReadOnlyHoleBackgroundColor = Draw.Color 0.5 0.25 0.25 1
