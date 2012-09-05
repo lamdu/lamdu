@@ -1,6 +1,15 @@
+* Hole selection is immediately on first, and you can type whereever
+  it is
+* When anything is selected, show all the stuff that refer/define that
+  same symbol
+* When hole result is selected, show (with some different
+  visualization) the inferred types and values due to the hole result
+  are shown
 * Hole allows bad results with hole to convert
 * Allow delete when type-checks in some cases
 * Fix the default apply form
+
+* Layout
 
 * Bug: <Del> on branch name does not work
   * Cursor does not move, so GUI is not regenerated, apparently. Need
