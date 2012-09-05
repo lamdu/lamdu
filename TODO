@@ -1,9 +1,11 @@
 * FlyNav bug with multiple panes open
-* When using '[' or ']' to add applies, it can type-filter out the
-  result we're on and lose the cursor
-* Allow delete when type-checks in some cases
 * Hole allows bad results with hole to convert
+* Allow delete when type-checks in some cases
 * Fix the default apply form
+
+* Bug: <Del> on branch name does not work
+  * Cursor does not move, so GUI is not regenerated, apparently. Need
+    to rewrite main loop.
 
 * Avoid name clashes in auto-names
 
@@ -17,19 +19,14 @@
    returns an OutOfScopeError-annotated name if it wasn't generated
    already.
 
-* BUG/missing-feature:
-    a x = a 5
-  Does not infer type of x.
-
 * Type synonyms/expansions
+
+* When using '[' or ']' to add applies, it can type-filter out the
+  result we're on and lose the cursor
 
 * Rename Data* to Expression*.
 
 * Holes can have same IDs for same results emphasizing sameness
-
-* Bug: <Del> on branch name does not work
-  * Cursor does not move, so GUI is not regenerated, apparently. Need
-    to rewrite main loop.
 
 * DEL should probably allow lambda-unwrap (Remove lambda wrapper)
 
