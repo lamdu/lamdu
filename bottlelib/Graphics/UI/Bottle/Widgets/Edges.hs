@@ -36,7 +36,7 @@ makeVertical size top unTranslatedBottom = Widget
       (wMaybeEnter other) me
     mkEventMap me doc keys enterOther =
       EventMap.keyPresses keys doc . Widget.enterResultEvent . enterOther .
-      Direction.RelativePos $ wFocalArea me
+      Direction.PrevFocalArea $ wFocalArea me
     bottom = Widget.translate (Vector2 0 (max topHeight bottomsTop)) unTranslatedBottom
     topHeight = wSize top ^. Vector2.second
     bottomHeight = wSize unTranslatedBottom ^. Vector2.second

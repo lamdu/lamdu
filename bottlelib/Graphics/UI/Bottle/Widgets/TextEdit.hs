@@ -107,7 +107,8 @@ makeUnfocused style str myId =
       (,) str . makeTextEditCursor myId $
       case dir of
         Direction.Outside -> length str
-        Direction.RelativePos rect -> rectToCursor rect
+        Direction.PrevFocalArea rect -> rectToCursor rect
+        Direction.Point x -> rectToCursor $ Rect x 0
       where
         minimumOn = minimumBy . comparing
         rectToCursor fromRect =

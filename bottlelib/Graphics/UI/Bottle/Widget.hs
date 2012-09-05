@@ -140,7 +140,7 @@ translate pos =
   (atWFocalArea . Lens.over Rect.topLeft) (+pos) .
   (atWMaybeEnter . fmap)
     ((fmap . atEnterResultRect . Lens.over Rect.topLeft) (+pos) .
-     (argument . Direction.inRelativePos . Lens.over Rect.topLeft) (subtract pos))
+     (argument . Direction.atCoordinates . Lens.over Rect.topLeft) (subtract pos))
 
 translateBy :: (Vector2 R -> Vector2 R) -> Widget f -> Widget f
 translateBy mkPos w =
@@ -152,5 +152,5 @@ scale mult =
   (atWFocalArea . Lens.over Rect.topLeftAndSize) (* mult) .
   (atWMaybeEnter . fmap)
     ((fmap . atEnterResultRect . Lens.over Rect.topLeftAndSize) (*mult) .
-     (argument . Direction.inRelativePos . Lens.over Rect.topLeftAndSize) (/mult)) .
+     (argument . Direction.atCoordinates . Lens.over Rect.topLeftAndSize) (/mult)) .
   atWSize (* mult)

@@ -58,11 +58,11 @@ data NavDests f = NavDests
   }
 
 mkNavDests :: Widget.Size -> Rect -> [[Widget.MEnter f]] -> Cursor -> NavDests f
-mkNavDests widgetSize selfRect mEnterss cursor@(Vector2 cursorX cursorY) = NavDests
-  { leftOfCursor    = giveSelf . reverse $ take cursorX curRow
-  , aboveCursor     = giveSelf . reverse $ take cursorY curColumn
-  , rightOfCursor   = giveSelf $ drop (cursorX+1) curRow
-  , belowCursor     = giveSelf $ drop (cursorY+1) curColumn
+mkNavDests widgetSize prevFocalArea mEnterss cursor@(Vector2 cursorX cursorY) = NavDests
+  { leftOfCursor    = givePrevFocalArea . reverse $ take cursorX curRow
+  , aboveCursor     = givePrevFocalArea . reverse $ take cursorY curColumn
+  , rightOfCursor   = givePrevFocalArea $ drop (cursorX+1) curRow
+  , belowCursor     = givePrevFocalArea $ drop (cursorY+1) curColumn
 
   , topCursor       = giveEdge (Vector2 Nothing (Just 0)) $ take (min 1 cursorY) curColumn
   , leftMostCursor  = giveEdge (Vector2 (Just 0) Nothing) $ take (min 1 cursorX) curRow
@@ -75,14 +75,14 @@ mkNavDests widgetSize selfRect mEnterss cursor@(Vector2 cursorX cursorY) = NavDe
     Vector2 cappedX cappedY = capCursor size cursor
     size = length2d mEnterss
 
-    give dir = fmap ($ Direction.RelativePos dir) . msum
-    giveSelf = give selfRect
+    give rect = fmap ($ Direction.PrevFocalArea rect) . msum
+    givePrevFocalArea = give prevFocalArea
     giveEdge edge = give Rect
       { Rect._topLeft =
-          liftA2 fromMaybe (Rect._topLeft selfRect) $
+          liftA2 fromMaybe (Rect._topLeft prevFocalArea) $
           liftA2 (fmap . (*)) widgetSize edge
       , Rect._size =
-          liftA2 fromMaybe (Rect._size selfRect) $
+          liftA2 fromMaybe (Rect._size prevFocalArea) $
           (fmap . fmap) (const 0) edge
       }
 
@@ -240,13 +240,15 @@ toWidget =
 
         byDirection dir =
           minimumOn
-          (abs . ((1 - abs (fmap fromIntegral edge)) *) .
+          (Vector2.uncurry (+) . abs . modifyDistance .
            distance dirRect . Widget.enterResultRect) .
           map ($ dir) $ filteredByEdge edge
           where
-            dirRect = case dir of
-              Direction.Outside -> Rect 0 0
-              Direction.RelativePos x -> x
+            removeUninterestingAxis = ((1 - abs (fmap fromIntegral edge)) *)
+            (modifyDistance, dirRect) = case dir of
+              Direction.Outside -> (id, Rect 0 0)
+              Direction.PrevFocalArea x -> (removeUninterestingAxis, x)
+              Direction.Point x -> (id, Rect x 0)
             edge = asEdge size dirRect
 
         distance = (-) `on` Lens.view Rect.center

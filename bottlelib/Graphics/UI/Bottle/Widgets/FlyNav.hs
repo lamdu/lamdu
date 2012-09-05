@@ -149,8 +149,7 @@ make animId (Just (ActiveState pos movements)) setState w =
       mEnteredChild
     frame = target (animId ++ ["target"]) pos `mappend` highlight
     mEnteredChild = fmap ($ targetPos) $ Widget.wMaybeEnter w
-    targetPos =
-      Direction.RelativePos $ Rect pos 0
+    targetPos = Direction.Point pos
     nextState =
       ActiveState (cap (pos + delta*speed) (Widget.wSize w))
       ((map . atMDir) (* accel) movements)
