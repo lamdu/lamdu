@@ -105,7 +105,9 @@ makeUnfocused style str myId =
     displayStr = makeDisplayStr (sEmptyUnfocusedString style) str
     enter dir =
       (,) str . makeTextEditCursor myId $
-      Direction.fold (length str) rectToCursor dir
+      case dir of
+        Direction.Outside -> length str
+        Direction.RelativePos rect -> rectToCursor rect
       where
         minimumOn = minimumBy . comparing
         rectToCursor fromRect =

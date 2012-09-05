@@ -87,8 +87,8 @@ make isDelegating Nothing focusSelf _ w =
     mEnter _ _ Nothing = Nothing
     mEnter Delegating wholeSize (Just enterChild) = Just $ handleDir enterChild wholeSize
 
-    handleDir enterChild wholeSize dir =
-      Direction.fold (takeFocus wholeSize) (const (enterChild dir)) dir
+    handleDir _ wholeSize Direction.Outside = takeFocus wholeSize
+    handleDir enterChild _ dir@(Direction.RelativePos _) = enterChild dir
 
     takeFocus wholeSize = Widget.EnterResult (Rect 0 wholeSize) . pure $ Widget.eventResultFromCursor focusSelf
 

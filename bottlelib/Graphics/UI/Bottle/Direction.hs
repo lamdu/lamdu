@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveFunctor, FlexibleInstances, MultiParamTypeClasses, GeneralizedNewtypeDeriving #-}
 module Graphics.UI.Bottle.Direction
-  ( Direction(..), fold, inRelativePos
+  ( Direction(..), inRelativePos
   , fromLeft, fromTop, fromRight, fromBottom
   ) where
 
@@ -12,12 +12,9 @@ import qualified Graphics.UI.Bottle.Rect as Rect
 -- RelativePos pos is relative to the top-left of the widget
 data Direction = Outside | RelativePos Rect
 
-fold :: r -> (Rect -> r) -> Direction -> r
-fold outside _ Outside = outside
-fold _ relativePos (RelativePos v) = relativePos v
-
 inRelativePos :: (Rect -> Rect) -> Direction -> Direction
-inRelativePos f = fold Outside (RelativePos . f)
+inRelativePos _ Outside = Outside
+inRelativePos f (RelativePos x) = RelativePos (f x)
 
 verticalRelativePos :: Rect -> Direction
 verticalRelativePos = RelativePos . Lens.set Rect.width 0

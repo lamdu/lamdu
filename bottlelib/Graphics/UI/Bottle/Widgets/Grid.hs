@@ -244,7 +244,9 @@ toWidget =
            distance dirRect . Widget.enterResultRect) .
           map ($ dir) $ filteredByEdge edge
           where
-            dirRect = Direction.fold (Rect 0 0) id dir
+            dirRect = case dir of
+              Direction.Outside -> Rect 0 0
+              Direction.RelativePos x -> x
             edge = asEdge size dirRect
 
         distance = (-) `on` Lens.view Rect.center
