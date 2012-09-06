@@ -1,11 +1,33 @@
-* Sugar.Expression to be in Data.Expression style
+* Type errors still allowed:
+  * When changing the exported type
+  * When adding/deleting parameters
+  * With space/call-with-arg
+  * Need to:
+    * Allow delete when type-checks in some cases
+    * Other manipulations?
+
+* Avoid name clashes in auto-names
+
+* Hole allows bad results with hole to convert
+
+* When defining Haskell's "flip" you have to work harder than in
+  Haskell
+  * Can add a "generalize" action that adds rank-1 type variables for
+    everything HM-style
+  * Maybe other way to infer the type of flip?
+
+* When moving to hole text, can no longer press enter.. Maybe we
+  should just replace the text edit with a simple unfocusable text
+  view?
+
 * When anything is selected, show all the stuff that refer/define that
   same symbol
+
+* Sugar.Expression to be in Data.Expression style
+
 * When hole result is selected, show (with some different
   visualization) the inferred types and values due to the hole result
   are shown
-* Hole allows bad results with hole to convert
-* Allow delete when type-checks in some cases
 
 * Layout
 
@@ -13,17 +35,9 @@
   * Cursor does not move, so GUI is not regenerated, apparently. Need
     to rewrite main loop.
 
-* Avoid name clashes in auto-names
-
 * Instead of (VarAccess.NameSource, String) and Guid of name
   seperately, generate a Property for the name of that type? or give
   a setter instead of Guid
-
-* Maybe the right place to detect/error about out-of-scope is
-   VarAccess.withName. Can withNewName that errorizes if we have a
-   Guid shadowing (should it ever happen?) and a withOldName that
-   returns an OutOfScopeError-annotated name if it wasn't generated
-   already.
 
 * Type synonyms/expansions
 
@@ -32,13 +46,11 @@
 
 * Rename Data* to Expression*.
 
-* Holes can have same IDs for same results emphasizing sameness
-
-* DEL should probably allow lambda-unwrap (Remove lambda wrapper)
-
 * Add JumpTo which gives a hole-like search -- that can sit in a "tab" in place of a DefinitionEdit
 
-* LHS needs to be in infix form too
+* Nice to haves:
+  * Holes can have same IDs for same results emphasizing sameness
+  * LHS needs to be in infix form too
 
 * Whenever prejumps is added/popped, we actually update in-version
   data, so it actually creates a new, undo-able version. Need to have
