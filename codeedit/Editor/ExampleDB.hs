@@ -1,10 +1,10 @@
 module Editor.ExampleDB(initDB) where
 
-import Control.Monad (liftM, unless, (<=<))
+import Control.Monad (join, liftM, liftM2, unless, (<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Writer (WriterT)
 import Data.Binary (Binary(..))
-import Data.Store.Guid(Guid)
+import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
 import Data.Store.Rev.Change (Key, Value)
 import Data.Store.Transaction (Transaction, Store(..))
@@ -62,27 +62,22 @@ createBuiltins :: Monad m => Transaction A.ViewTag m [Data.VariableRef]
 createBuiltins =
   Writer.execWriterT $ do
     list <- mkType . A.newBuiltin "Data.List.List" =<< lift setToSet
-    let
-      listOf a = do
-        l <- list
-        DataIRef.newExprBody . Data.makeApply l =<< a
+    let listOf = mkApply list
     bool <- mkType . A.newBuiltin "Prelude.Bool" =<< lift set
 
     makeWithType "Prelude.True" bool
     makeWithType "Prelude.False" bool
 
     makeWithType "Prelude.if" . forAll "a" $ \a ->
-      mkPi bool . mkPi a $ mkPi a a
+      mkPi bool . mkPi a $ endo a
 
-    makeWithType "Prelude.id" . forAll "a" $ \a ->
-      mkPi a a
+    makeWithType "Prelude.id" $ forAll "a" endo
 
-    makeWithType "Prelude.const" . forAll "a" $ \a -> forAll "b" $ \b ->
-      mkPi a $ mkPi b a
+    makeWithType "Prelude.const" .
+      forAll "a" $ \a -> forAll "b" $ \b -> mkPi a $ mkPi b a
 
-    let endoListOfA = forAll "a" $ \a -> mkPi (listOf a) (listOf a)
-    makeWithType "Data.List.reverse" endoListOfA
-    makeWithType "Data.List.tail" endoListOfA
+    makeWithType "Data.List.reverse" $ forAll "a" (endo . listOf)
+    makeWithType "Data.List.tail" $ forAll "a" (endo . listOf)
 
     makeWithType "Data.List.length" . forAll "a" $ \a ->
       mkPi (listOf a) integer
@@ -93,15 +88,33 @@ createBuiltins =
     makeWithType "Data.List.zipWith" . forAll "a" $ \a -> forAll "b" $ \b -> forAll "c" $ \c ->
       mkPi (mkPi a (mkPi b c)) . mkPi (listOf a) . mkPi (listOf b) $ listOf c
 
-    let aToAToA = forAll "a" $ \a -> mkPi a $ mkPi a a
-    mapM_ ((`makeWithType` aToAToA) . ("Prelude." ++) . (:[])) "+-*/^"
+    let aToAToA = forAll "a" $ \a -> mkPi a $ endo a
+    mapM_ ((`makeWithType` aToAToA) . ("Prelude." ++))
+      ["+", "-", "*", "/", "^", "++"]
+    makeWithType "Prelude.negate" $ forAll "a" endo
 
     let aToAToBool = forAll "a" $ \a -> mkPi a $ mkPi a bool
     mapM_ ((`makeWithType` aToAToBool) . ("Prelude." ++))
       ["==", "/=", "<=", ">=", "<", ">"]
 
     makeWithType "Prelude.enumFromTo" . mkPi integer . mkPi integer $ listOf integer
+
+    makeWithType "Data.Functor.fmap" .
+      forAll "f" $ \f ->
+      forAll "a" $ \a ->
+      forAll "b" $ \b ->
+      mkPi (mkPi a b) . mkPi (mkApply f a) $ mkApply f b
+
+    makeWithType "Data.List.iterate" .
+      forAll "a" $ \a -> mkPi (mkPi a a) . mkPi a $ listOf a
+
+    makeWithType "Control.Monad.return" .
+      forAll "m" $ \m -> forAll "a" $ \a -> mkPi a $ mkApply m a
+
+    makeWithType "Prelude.:" .
+      forAll "a" $ \a -> mkPi a . endo $ listOf a
   where
+    endo = join mkPi
     set = DataIRef.newExprBody $ Data.ExpressionLeaf Data.Set
     integer = DataIRef.newExprBody $ Data.ExpressionLeaf Data.IntegerType
     forAll name f = liftM Data.ExpressionIRef . fixIRef $ \aI -> do
@@ -112,9 +125,10 @@ createBuiltins =
     setToSet = mkPi set set
     tellift f = Writer.tell . (:[]) =<< lift f
     getVar = DataIRef.newExprBody . Data.ExpressionLeaf . Data.GetVariable
-    mkPi mkArgType mkResType = do
-      argType <- mkArgType
-      DataIRef.newExprBody . Data.makePi argType =<< mkResType
+    mkPi mkArgType mkResType =
+      DataIRef.newExprBody =<< liftM2 Data.makePi mkArgType mkResType
+    mkApply mkFunc mkArg =
+      DataIRef.newExprBody =<< liftM2 Data.makeApply mkFunc mkArg
     mkType f = do
       x <- lift f
       Writer.tell [x]
