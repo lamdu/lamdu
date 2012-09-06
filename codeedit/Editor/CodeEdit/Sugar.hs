@@ -5,7 +5,7 @@ module Editor.CodeEdit.Sugar
   , DefinitionExpression(..), DefinitionBuiltin(..)
   , DefinitionNewType(..)
   , Actions(..)
-  , ExpressionBody(..), ExpressionRef(..)
+  , ExpressionBody(..), Expression(..)
   , Where(..), WhereItem(..)
   , Func(..), FuncParam(..), FuncParamActions(..)
   , Pi(..), Apply(..), Section(..)
@@ -66,14 +66,14 @@ data Actions m = Actions
   , addWhereItem :: T m Guid
   , replace      :: T m Guid
   , cut          :: T m Guid
-  , mNextArg     :: Maybe (ExpressionRef m)
+  , mNextArg     :: Maybe (Expression m)
   }
 
 data HasParens = HaveParens | DontHaveParens
 
-data ExpressionRef m = ExpressionRef
+data Expression m = Expression
   { rExpression :: ExpressionBody m
-  , rInferredTypes :: [ExpressionRef m]
+  , rInferredTypes :: [Expression m]
   , rGuid :: Guid
   , rActions :: Maybe (Actions m)
   }
@@ -82,12 +82,12 @@ data WhereItem m = WhereItem
   { wiGuid :: Guid
   , wiTypeGuid :: Guid
   , wiMDelete :: Maybe (T m Guid)
-  , wiValue :: ExpressionRef m
+  , wiValue :: Expression m
   }
 
 data Where m = Where
   { wWheres :: [WhereItem m]
-  , wBody :: ExpressionRef m
+  , wBody :: Expression m
   }
 
 data FuncParamActions m = FuncParamActions
@@ -97,32 +97,32 @@ data FuncParamActions m = FuncParamActions
 
 data FuncParam m = FuncParam
   { fpGuid :: Guid
-  , fpType :: ExpressionRef m
+  , fpType :: Expression m
   , fpMActions :: Maybe (FuncParamActions m)
   }
 
 -- Multi-param Lambda
 data Func m = Func
   { fParams :: [FuncParam m]
-  , fBody :: ExpressionRef m
+  , fBody :: Expression m
   }
 
 data Pi m = Pi
   { pParam :: FuncParam m
-  , pResultType :: ExpressionRef m
+  , pResultType :: Expression m
   }
 
 data Apply m = Apply
-  { applyFunc :: ExpressionRef m
-  , applyArg :: ExpressionRef m
+  { applyFunc :: Expression m
+  , applyArg :: Expression m
   }
 
 -- Infix Sections include: (+), (1+), (+1), (1+2). Last is really just
 -- infix application, but considered an infix section too.
 data Section m = Section
-  { sectionLArg :: Maybe (ExpressionRef m)
-  , sectionOp :: ExpressionRef m -- Always a GetVariable
-  , sectionRArg :: Maybe (ExpressionRef m)
+  { sectionLArg :: Maybe (Expression m)
+  , sectionOp :: Expression m -- Always a GetVariable
+  , sectionRArg :: Maybe (Expression m)
   }
 
 type HoleResult = Infer.Expression ()
@@ -140,13 +140,13 @@ data LiteralInteger m = LiteralInteger
   }
 
 data Inferred m = Inferred
-  { iValue :: ExpressionRef m
+  { iValue :: Expression m
   , iHole :: Hole m
   }
 
 data Polymorphic m = Polymorphic
-  { pCompact :: Maybe (ExpressionRef m)
-  , pFullExpression :: ExpressionRef m
+  { pCompact :: Maybe (Expression m)
+  , pFullExpression :: Expression m
   }
 
 data GetVariable
@@ -166,12 +166,12 @@ data ExpressionBody m
   | ExpressionAtom { _eAtom :: String }
 
 data DefinitionNewType m = DefinitionNewType
-  { dntNewType :: ExpressionRef m
+  { dntNewType :: Expression m
   , dntAcceptNewType :: T m ()
   }
 
 data DefinitionExpression m = DefinitionExpression
-  { deExprRef :: ExpressionRef m
+  { deExprRef :: Expression m
   , deIsTypeRedundant :: Bool
   , deMNewType :: Maybe (DefinitionNewType m)
   }
@@ -188,7 +188,7 @@ data DefinitionBody m
 
 data DefinitionRef m = DefinitionRef
   { drGuid :: Guid
-  , drType :: ExpressionRef m
+  , drType :: Expression m
   , drBody :: DefinitionBody m
   }
 
@@ -198,7 +198,7 @@ AtFieldTH.make ''Where
 AtFieldTH.make ''FuncParam
 AtFieldTH.make ''Func
 AtFieldTH.make ''Pi
-AtFieldTH.make ''ExpressionRef
+AtFieldTH.make ''Expression
 AtFieldTH.make ''Apply
 AtFieldTH.make ''Section
 AtFieldTH.make ''ExpressionBody
@@ -210,7 +210,7 @@ AtFieldTH.make ''FuncParamActions
 -- TODO: Use Functor like Data.ExpressionBody?
 -- Not recursive!
 atSubExpressions ::
-  (ExpressionRef m -> ExpressionRef m) ->
+  (Expression m -> Expression m) ->
   ExpressionBody m -> ExpressionBody m
 atSubExpressions f (ExpressionApply p (Apply func arg)) =
   ExpressionApply p $ on Apply f func arg
@@ -292,7 +292,7 @@ readContext = Sugar Reader.ask
 liftTransaction :: Monad m => T m a -> Sugar m a
 liftTransaction = Sugar . lift
 
-type Convertor m = ExprEntity m -> Sugar m (ExpressionRef m)
+type Convertor m = ExprEntity m -> Sugar m (Expression m)
 
 mkCutter :: Monad m => Data.ExpressionIRef -> T m Guid -> T m Guid
 mkCutter iref replaceWithHole = do
@@ -323,14 +323,14 @@ mkGen :: Int -> Int -> Guid -> Random.StdGen
 mkGen select count =
   Random.mkStdGen . (+select) . (*count) . BinaryUtils.decodeS . Guid.bs
 
-mkExpressionRef ::
+mkExpression ::
   Monad m =>
   ExprEntity m ->
-  ExpressionBody m -> Sugar m (ExpressionRef m)
-mkExpressionRef ee expr = do
+  ExpressionBody m -> Sugar m (Expression m)
+mkExpression ee expr = do
   inferredTypesRefs <- mapM (convertExpressionI . eeFromPure) types
   return
-    ExpressionRef
+    Expression
     { rExpression = expr
     , rInferredTypes = inferredTypesRefs
     , rGuid = Data.eGuid ee
@@ -367,7 +367,7 @@ mkFuncParamActions parentP replacerP bodyActions = FuncParamActions
 convertLambda
   :: Monad m
   => Data.Lambda (ExprEntity m)
-  -> ExprEntity m -> Sugar m (FuncParam m, ExpressionRef m)
+  -> ExprEntity m -> Sugar m (FuncParam m, Expression m)
 convertLambda (Data.Lambda paramTypeI bodyI) exprI = do
   sBody <- convertExpressionI bodyI
   typeExpr <- convertExpressionI paramTypeI
@@ -389,7 +389,7 @@ convertFunc
   -> Convertor m
 convertFunc lambda exprI = do
   (param, sBody) <- convertLambda lambda exprI
-  mkExpressionRef exprI .
+  mkExpression exprI .
     ExpressionFunc DontHaveParens $
     case rExpression sBody of
       ExpressionFunc _ (Func params body) ->
@@ -405,7 +405,7 @@ convertPi
   -> Convertor m
 convertPi lambda exprI = do
   (param, sBody) <- convertLambda lambda exprI
-  mkExpressionRef exprI $ ExpressionPi DontHaveParens
+  mkExpression exprI $ ExpressionPi DontHaveParens
     Pi
     { pParam = atFpType addApplyChildParens param
     , pResultType = removeRedundantTypes sBody
@@ -413,13 +413,13 @@ convertPi lambda exprI = do
 
 convertWhere
   :: Monad m
-  => ExpressionRef m
+  => Expression m
   -> ExprEntity m
   -> Data.Lambda (ExprEntity m)
   -> Convertor m
 convertWhere valueRef lambdaI (Data.Lambda typeI bodyI) applyI = do
   sBody <- convertExpressionI bodyI
-  mkExpressionRef applyI .
+  mkExpression applyI .
     ExpressionWhere DontHaveParens . atWWheres (item :) $
     case rExpression sBody of
       ExpressionWhere _ x -> x
@@ -441,7 +441,7 @@ addParens (ExpressionPolymorphic (Polymorphic compact full)) =
   atRExpression addParens full
 addParens x = (atEHasParens . const) HaveParens x
 
-addApplyChildParens :: ExpressionRef m -> ExpressionRef m
+addApplyChildParens :: Expression m -> Expression m
 addApplyChildParens =
   atRExpression f
   where
@@ -473,7 +473,7 @@ convertApply (Data.Apply funcI argI) exprI = do
         _ ->
           convertApplyPrefix apply exprI
 
-setAddArg :: Monad m => ExprEntity m -> ExpressionRef m -> ExpressionRef m
+setAddArg :: Monad m => ExprEntity m -> Expression m -> Expression m
 setAddArg exprI =
   maybe id f $ eeProp exprI
   where
@@ -481,7 +481,7 @@ setAddArg exprI =
       atRActions . fmap . atAddNextArg . const .
       liftM DataIRef.exprGuid $ DataOps.callWithArg stored
 
-removeRedundantTypes :: ExpressionRef m -> ExpressionRef m
+removeRedundantTypes :: Expression m -> Expression m
 removeRedundantTypes exprRef =
   case rExpression exprRef of
     ExpressionHole {} -> exprRef -- Keep types on holes
@@ -501,31 +501,31 @@ mkExpressionGetVariable =
 
 applyOnSection ::
   Monad m =>
-  Section m -> Data.Apply (ExpressionRef m, ExprEntity m) -> Convertor m
+  Section m -> Data.Apply (Expression m, ExprEntity m) -> Convertor m
 applyOnSection (Section Nothing op Nothing) (Data.Apply (_, funcI) arg@(argRef, _)) exprI
   | isPolymorphicFunc funcI = do
     newOpRef <-
       convertApplyPrefix (Data.Apply (op, funcI) arg) exprI
-    mkExpressionRef exprI . ExpressionSection DontHaveParens $
+    mkExpression exprI . ExpressionSection DontHaveParens $
       Section Nothing (removeRedundantTypes newOpRef) Nothing
   | otherwise =
-    mkExpressionRef exprI . ExpressionSection DontHaveParens $
+    mkExpression exprI . ExpressionSection DontHaveParens $
       Section (Just (addApplyChildParens argRef)) op Nothing
 applyOnSection (Section (Just left) op Nothing) (Data.Apply _ (argRef, _)) exprI =
-  mkExpressionRef exprI . ExpressionSection DontHaveParens $
+  mkExpression exprI . ExpressionSection DontHaveParens $
     Section (Just left) op (Just (addApplyChildParens argRef))
 applyOnSection _ apply exprI = convertApplyPrefix apply exprI
 
 convertApplyPrefix ::
   Monad m =>
-  Data.Apply (ExpressionRef m, ExprEntity m) -> Convertor m
+  Data.Apply (Expression m, ExprEntity m) -> Convertor m
 convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, argI)) exprI =
   if isPolymorphicFunc funcI
   then
     case rExpression funcRef of
     ExpressionPolymorphic (Polymorphic compact full) ->
       makePolymorphic compact . removeRedundantTypes =<<
-      (mkExpressionRef exprI . ExpressionApply DontHaveParens) (Apply full newArgRef)
+      (mkExpression exprI . ExpressionApply DontHaveParens) (Apply full newArgRef)
     _ ->
       on (makePolymorphic . Just) removeRedundantTypes funcRef =<< makeFullApply
   else makeFullApply
@@ -542,11 +542,11 @@ convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, argI)) exprI =
       (atRExpression . atESection . atSectionOp) setNextArg $
       funcRef
     makeFullApply =
-      mkExpressionRef exprI . ExpressionApply DontHaveParens $
+      mkExpression exprI . ExpressionApply DontHaveParens $
       Apply newFuncRef newArgRef
     makePolymorphic x =
       (liftM . atRGuid . Guid.combine . Guid.fromString) "polymorphic" .
-      mkExpressionRef exprI . ExpressionPolymorphic . Polymorphic
+      mkExpression exprI . ExpressionPolymorphic . Polymorphic
       (if isHole (Data.eValue argI) then x else Nothing)
 
 isHole :: Data.ExpressionBody a -> Bool
@@ -557,11 +557,11 @@ convertGetVariable :: Monad m => Data.VariableRef -> Convertor m
 convertGetVariable varRef exprI = do
   isInfix <- liftTransaction $ Infix.isInfixVar varRef
   getVarExpr <-
-    mkExpressionRef exprI $
+    mkExpression exprI $
     mkExpressionGetVariable varRef
   if isInfix
     then
-      mkExpressionRef exprI .
+      mkExpression exprI .
       ExpressionSection HaveParens $
       Section Nothing ((atRInferredTypes . const) [] getVarExpr) Nothing
     else return getVarExpr
@@ -607,7 +607,7 @@ applyForms exprType expr =
 
 convertReadOnlyHole :: Monad m => Convertor m
 convertReadOnlyHole exprI =
-  mkExpressionRef exprI $ ExpressionHole Hole
+  mkExpression exprI $ ExpressionHole Hole
   { holeScope = []
   , holePickResult = Nothing
   , holePaste = Nothing
@@ -671,7 +671,7 @@ convertWritableHole eeInferred exprI = do
       , holePaste = mPaste
       , holeInferResults = inferResults
       }
-  mkExpressionRef exprI =<<
+  mkExpression exprI =<<
     case eesInferredValues eeInferred of
     [Data.Expression { Data.eValue = Data.ExpressionLeaf Data.Hole }] ->
       return $ ExpressionHole hole
@@ -720,7 +720,7 @@ convertHole exprI =
 
 convertLiteralInteger :: Monad m => Integer -> Convertor m
 convertLiteralInteger i exprI =
-  mkExpressionRef exprI . ExpressionLiteralInteger $
+  mkExpression exprI . ExpressionLiteralInteger $
   LiteralInteger
   { liValue = i
   , liSetValue =
@@ -730,9 +730,9 @@ convertLiteralInteger i exprI =
 
 convertAtom :: Monad m => String -> Convertor m
 convertAtom name exprI =
-  mkExpressionRef exprI $ ExpressionAtom name
+  mkExpression exprI $ ExpressionAtom name
 
-convertExpressionI :: Monad m => ExprEntity m -> Sugar m (ExpressionRef m)
+convertExpressionI :: Monad m => ExprEntity m -> Sugar m (Expression m)
 convertExpressionI ee =
   ($ ee) $
   case Data.eValue ee of
@@ -750,7 +750,7 @@ isCompleteType :: Data.PureExpression -> Bool
 isCompleteType = not . any (isHole . Data.eValue) . Data.subExpressions
 
 convertHoleResult ::
-  Monad m => HoleResult -> T m (ExpressionRef m)
+  Monad m => HoleResult -> T m (Expression m)
 convertHoleResult =
   runSugar ctx . convertExpressionI . fmap toExprEntity
   where
@@ -763,7 +763,7 @@ convertHoleResult =
     ctx = SugarContext $ error "pure expression doesnt have infer state"
 
 convertExpressionPure ::
-  Monad m => Data.PureExpression -> T m (ExpressionRef m)
+  Monad m => Data.PureExpression -> T m (Expression m)
 convertExpressionPure =
   runSugar ctx . convertExpressionI . eeFromPure
   where
@@ -777,7 +777,7 @@ reportError err =
   snd $ Infer.errMismatch err
 
 loadConvertExpression ::
-  Monad m => DataIRef.ExpressionProperty (T m) -> T m (ExpressionRef m)
+  Monad m => DataIRef.ExpressionProperty (T m) -> T m (Expression m)
 loadConvertExpression exprP =
   convertLoadedExpression Nothing =<< Load.loadExpression exprP
 
@@ -868,7 +868,7 @@ convertLoadedExpression ::
   Monad m =>
   Maybe Data.DefinitionIRef ->
   Data.Expression (DataIRef.ExpressionProperty (T m)) ->
-  T m (ExpressionRef m)
+  T m (Expression m)
 convertLoadedExpression mDefI exprL = do
   (_, sugarContext, exprStored) <- inferLoadedExpression mDefI exprL
   convertStoredExpression sugarContext exprStored
@@ -876,11 +876,11 @@ convertLoadedExpression mDefI exprL = do
 convertStoredExpression ::
   Monad m =>
   SugarContext -> Data.Expression (ExprEntityMStored m) ->
-  T m (ExpressionRef m)
+  T m (Expression m)
 convertStoredExpression sugarContext =
   runSugar sugarContext . convertExpressionI . fmap Just
 
-removeTypes :: ExpressionRef m -> ExpressionRef m
+removeTypes :: Expression m -> Expression m
 removeTypes =
   (atRInferredTypes . const) [] .
   (atRExpression . atSubExpressions) removeTypes

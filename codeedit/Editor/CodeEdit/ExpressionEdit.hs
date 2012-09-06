@@ -66,7 +66,7 @@ make sExpr = do
 
 makeEditor
   :: MonadF m
-  => Sugar.ExpressionRef m
+  => Sugar.Expression m
   -> Widget.Id
   -> VarAccess m (HoleResultPicker m, ExpressionGui m)
 makeEditor sExpr =

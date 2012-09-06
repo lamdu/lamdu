@@ -42,7 +42,7 @@ data SugarPane m = SugarPane
 
 data SugarCache m = SugarCache
   { scPanes :: [SugarPane m]
-  , scClipboards :: [Sugar.ExpressionRef m]
+  , scClipboards :: [Sugar.Expression m]
   }
 
 makeNewDefinitionAction :: Monad m => VarAccess m (Transaction ViewTag m Widget.Id)
@@ -98,7 +98,7 @@ makeSugarPanes = do
   mapM convertPane $ enumerate panes
 
 makeClipboardsEdit ::
-  MonadF m => [Sugar.ExpressionRef m] -> VarAccess m (WidgetT m)
+  MonadF m => [Sugar.Expression m] -> VarAccess m (WidgetT m)
 makeClipboardsEdit clipboards = do
   clipboardsEdits <-
     mapM (liftM ExpressionGui.egWidget . ExpressionEdit.make) clipboards

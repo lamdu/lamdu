@@ -48,7 +48,7 @@ makeParts
   => ExpressionGui.Maker m
   -> (VarAccess.NameSource, String)
   -> Guid
-  -> Sugar.ExpressionRef m
+  -> Sugar.Expression m
   -> VarAccess m [ExpressionGui m]
 makeParts makeExpressionEdit name guid exprRef = do
   nameEdit <-
@@ -119,7 +119,7 @@ defTypeScale = Widget.scale Config.defTypeBoxSizeFactor
 
 makeExprDefinition ::
   MonadF m =>
-  (Sugar.ExpressionRef m -> VarAccess m (ExpressionGui m)) ->
+  (Sugar.Expression m -> VarAccess m (ExpressionGui m)) ->
   Sugar.DefinitionRef m ->
   Sugar.DefinitionExpression m ->
   VarAccess m (WidgetT m)

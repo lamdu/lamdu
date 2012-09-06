@@ -45,7 +45,7 @@ atEgWidgetM ::
 atEgWidgetM conv (ExpressionGui w a) =
   liftM (`ExpressionGui` a) $ conv w
 
-type Maker m = Sugar.ExpressionRef m -> VarAccess m (ExpressionGui m)
+type Maker m = Sugar.Expression m -> VarAccess m (ExpressionGui m)
 
 fromValueWidget :: WidgetT m -> ExpressionGui m
 fromValueWidget widget = ExpressionGui widget 0.5

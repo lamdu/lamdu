@@ -40,7 +40,7 @@ makeParamNameEdit name ident =
    BWidgets.makeNameEdit name ident) $ WidgetIds.fromGuid ident
 
 addJumpToRHS
-  :: MonadF m => (E.Doc, Sugar.ExpressionRef m) -> WidgetT m -> WidgetT m
+  :: MonadF m => (E.Doc, Sugar.Expression m) -> WidgetT m -> WidgetT m
 addJumpToRHS (rhsDoc, rhs) =
   Widget.weakerEvents .
   Widget.keysEventMapMovesCursor Config.jumpLHStoRHSKeys ("Jump to " ++ rhsDoc) $
@@ -52,7 +52,7 @@ addJumpToRHS (rhsDoc, rhs) =
 makeParamEdit
   :: MonadF m
   => ExpressionGui.Maker m
-  -> (E.Doc, Sugar.ExpressionRef m)
+  -> (E.Doc, Sugar.Expression m)
   -> (VarAccess.NameSource, String)
   -> Sugar.FuncParam m
   -> VarAccess m (ExpressionGui m)
@@ -87,7 +87,7 @@ makeResultEdit
   :: MonadF m
   => ExpressionGui.Maker m
   -> [Widget.Id]
-  -> Sugar.ExpressionRef m
+  -> Sugar.Expression m
   -> VarAccess m (ExpressionGui m)
 makeResultEdit makeExpressionEdit lhs result =
   liftM ((ExpressionGui.atEgWidget . Widget.weakerEvents) jumpToLhsEventMap) $
@@ -130,7 +130,7 @@ makeParamsAndResultEdit ::
   MonadF m =>
   ExpressionGui.Maker m ->
   [Widget.Id] ->
-  (E.Doc, Sugar.ExpressionRef m) ->
+  (E.Doc, Sugar.Expression m) ->
   [Sugar.FuncParam m] ->
   VarAccess m ([ExpressionGui m], ExpressionGui m)
 makeParamsAndResultEdit makeExpressionEdit lhs rhs@(_, result) ps =
