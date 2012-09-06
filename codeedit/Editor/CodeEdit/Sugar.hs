@@ -5,7 +5,7 @@ module Editor.CodeEdit.Sugar
   , DefinitionExpression(..), DefinitionBuiltin(..)
   , DefinitionNewType(..)
   , Actions(..)
-  , Expression(..), ExpressionRef(..)
+  , ExpressionBody(..), ExpressionRef(..)
   , Where(..), WhereItem(..)
   , Func(..), FuncParam(..), FuncParamActions(..)
   , Pi(..), Apply(..), Section(..)
@@ -72,7 +72,7 @@ data Actions m = Actions
 data HasParens = HaveParens | DontHaveParens
 
 data ExpressionRef m = ExpressionRef
-  { rExpression :: Expression m
+  { rExpression :: ExpressionBody m
   , rInferredTypes :: [ExpressionRef m]
   , rGuid :: Guid
   , rActions :: Maybe (Actions m)
@@ -152,7 +152,7 @@ data Polymorphic m = Polymorphic
 data GetVariable
   = GetParameter Guid | GetDefinition Data.DefinitionIRef
 
-data Expression m
+data ExpressionBody m
   = ExpressionApply   { eHasParens :: HasParens, eApply :: Apply m }
   | ExpressionSection { eHasParens :: HasParens, eSection :: Section m }
   | ExpressionWhere   { eHasParens :: HasParens, _eWhere :: Where m }
@@ -201,7 +201,7 @@ AtFieldTH.make ''Pi
 AtFieldTH.make ''ExpressionRef
 AtFieldTH.make ''Apply
 AtFieldTH.make ''Section
-AtFieldTH.make ''Expression
+AtFieldTH.make ''ExpressionBody
 AtFieldTH.make ''Inferred
 
 AtFieldTH.make ''Actions
@@ -211,7 +211,7 @@ AtFieldTH.make ''FuncParamActions
 -- Not recursive!
 atSubExpressions ::
   (ExpressionRef m -> ExpressionRef m) ->
-  Expression m -> Expression m
+  ExpressionBody m -> ExpressionBody m
 atSubExpressions f (ExpressionApply p (Apply func arg)) =
   ExpressionApply p $ on Apply f func arg
 atSubExpressions f (ExpressionSection p (Section l o r)) =
@@ -326,7 +326,7 @@ mkGen select count =
 mkExpressionRef ::
   Monad m =>
   ExprEntity m ->
-  Expression m -> Sugar m (ExpressionRef m)
+  ExpressionBody m -> Sugar m (ExpressionRef m)
 mkExpressionRef ee expr = do
   inferredTypesRefs <- mapM (convertExpressionI . eeFromPure) types
   return
@@ -432,7 +432,7 @@ convertWhere valueRef lambdaI (Data.Lambda typeI bodyI) applyI = do
       , wiValue = valueRef
       }
 
-addParens :: Expression m -> Expression m
+addParens :: ExpressionBody m -> ExpressionBody m
 addParens (ExpressionInferred (Inferred val hole)) =
   ExpressionInferred $ Inferred (atRExpression addParens val) hole
 addParens (ExpressionPolymorphic (Polymorphic compact full)) =
@@ -490,7 +490,7 @@ removeRedundantTypes exprRef =
     removeIfNoErrors [_] = []
     removeIfNoErrors xs = xs
 
-mkExpressionGetVariable :: Data.VariableRef -> Expression m
+mkExpressionGetVariable :: Data.VariableRef -> ExpressionBody m
 mkExpressionGetVariable =
   ExpressionGetVariable . mkGetVariable
   where
