@@ -144,10 +144,14 @@ resultsToWidgets makeExpressionEdit holeInfo results = do
         cExpr = canonizeResultExpr holeInfo expr
     toWidget resultId expr = do
       isResultSelected <- VarAccess.otransaction $ OT.isSubCursor resultId
+      let
+        maybeRemoveTypes
+          | isResultSelected = id
+          | otherwise = Sugar.removeTypes
       VarAccess.otransaction . BWidgets.makeFocusableView resultId .
         Widget.strongerEvents (resultPickEventMap holeInfo expr) .
         ExpressionGui.egWidget =<<
-        makeExpressionEdit . (if isResultSelected then id else Sugar.removeTypes) =<<
+        makeExpressionEdit . maybeRemoveTypes =<<
         (VarAccess.transaction . Sugar.convertHoleResult) expr
     moreResultsPrefixId = rlMoreResultsPrefixId results
     addMoreSymbol w = do
