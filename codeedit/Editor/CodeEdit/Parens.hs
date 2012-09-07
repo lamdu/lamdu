@@ -61,12 +61,15 @@ addSquareParens
   :: Anim.AnimId
   -> Widget f
   -> Widget f
-addSquareParens parensId =
-  Widget.atWFrameWithSize addSquareFrame .
-  Widget.translateBy (* ((1 - Config.squareParensScaleFactor) / 2)) .
-  (Widget.atWFrame . Anim.scale) Config.squareParensScaleFactor
+addSquareParens parensId w =
+  Widget.atWFrame addSquareFrame .
+  (Widget.atWSize . const) size .
+  Widget.translate (size * ((1 - Config.squareParensScaleFactor) / 2)) .
+  Widget.scale Config.squareParensScaleFactor $
+  w
   where
-    addSquareFrame size = mappend $ squareFrame (parensId ++ ["square parens"]) size
+    size = Widget.wSize w
+    addSquareFrame = mappend $ squareFrame (parensId ++ ["square parens"]) size
 
 highlightExpression :: Widget.Widget f -> Widget.Widget f
 highlightExpression =
