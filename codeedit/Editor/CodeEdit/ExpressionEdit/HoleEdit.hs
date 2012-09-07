@@ -16,7 +16,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
 import Editor.CodeEdit.VarAccess (VarAccess, WidgetT)
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
@@ -330,11 +330,12 @@ makeSearchTermWidget
   :: MonadF m
   => HoleInfo m -> Widget.Id
   -> Maybe Sugar.HoleResult
-  -> VarAccess m (WidgetT m)
+  -> VarAccess m (ExpressionGui m)
 makeSearchTermWidget holeInfo searchTermId mFirstResult =
   VarAccess.otransaction .
   liftM
-  (Widget.scale Config.holeSearchTermScaleFactor .
+  (flip ExpressionGui (0.5/Config.holeSearchTermScaleFactor) .
+   Widget.scale Config.holeSearchTermScaleFactor .
    Widget.strongerEvents pickFirstResultEventMap .
    (Widget.atWEventMap . E.filterChars) (`notElem` "`[]\\")) $
   BWidgets.makeWordEdit (hiSearchTerm holeInfo) searchTermId
@@ -415,7 +416,7 @@ makeActiveHoleEdit
   :: MonadF m
   => ExpressionGui.Maker m -> HoleInfo m
   -> VarAccess m
-     (Maybe Sugar.HoleResult, WidgetT m)
+     (Maybe Sugar.HoleResult, ExpressionGui m)
 makeActiveHoleEdit makeExpressionEdit holeInfo = do
   VarAccess.markVariablesAsUsed . map fst =<<
     (filterM
@@ -451,10 +452,10 @@ makeActiveHoleEdit makeExpressionEdit holeInfo = do
         hiSearchTerm holeInfo
     return
       ( mplus mResult defaultResult
-      , BWidgets.vboxCentered
-        [ searchTermWidget
-        , Widget.weakerEvents adHocEditor resultsWidget
+      , ExpressionGui.addBelow
+        [ (0.5, Widget.weakerEvents adHocEditor resultsWidget)
         ]
+        searchTermWidget
       )
   where
     checkInfer = liftM not . genericNull . Sugar.holeInferResults (hiHole holeInfo)
@@ -486,8 +487,7 @@ makeUnwrapped ::
 makeUnwrapped makeExpressionEdit hole guid myId = do
   cursor <- VarAccess.otransaction OT.readCursor
   searchTermProp <- VarAccess.transaction $ Anchors.assocSearchTermRef guid
-  (liftM . second) ExpressionGui.fromValueWidget $
-    case (Sugar.holePickResult hole, Widget.subId myId cursor) of
+  case (Sugar.holePickResult hole, Widget.subId myId cursor) of
     (Just holePickResult, Just _) ->
       let
         holeInfo = HoleInfo
@@ -500,13 +500,14 @@ makeUnwrapped makeExpressionEdit hole guid myId = do
       in
         liftM
         ((first . fmap) (pickExpr holeInfo) .
-         second
+         (second . ExpressionGui.atEgWidget)
          (makeBackground Layers.activeHoleBG Config.holeBackgroundColor .
           Widget.strongerEvents (addNewDefinitionEventMap holeInfo))) $
         makeActiveHoleEdit makeExpressionEdit holeInfo
     _ ->
       liftM
-      ((,) Nothing . makeBackground Layers.inactiveHole unfocusedColor) .
+      ((,) Nothing . ExpressionGui.fromValueWidget .
+       makeBackground Layers.inactiveHole unfocusedColor) .
       VarAccess.otransaction $ BWidgets.makeFocusableTextView "  " myId
   where
     unfocusedColor

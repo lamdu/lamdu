@@ -39,7 +39,6 @@ data ExpressionGui m = ExpressionGui
   { egWidget :: WidgetT m
   , egAlignment :: R
   }
-
 AtFieldTH.make ''ExpressionGui
 
 atEgWidgetM ::
