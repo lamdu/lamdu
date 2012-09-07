@@ -1,4 +1,4 @@
-* Bug: Flynav doesn't always navigate between hole results
+* Bug: Flynav does not work between same-grid items
 
 * Sugar.Expression to be in Data.Expression style
 * When anything is selected, show all the stuff that refer/define that
