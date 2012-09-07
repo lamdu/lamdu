@@ -4,7 +4,7 @@ module Editor.CodeEdit.ExpressionEdit.ExpressionGui
   ( ExpressionGui(..), atEgWidget, atEgWidgetM
   , Maker
   , fromValueWidget
-  , hbox, hboxSpaced
+  , hbox, hboxSpaced, addBelow
   , addType
   , TypeStyle(..)
   , parenify, wrapExpression, wrapParenify
@@ -12,10 +12,14 @@ module Editor.CodeEdit.ExpressionEdit.ExpressionGui
 
 import Control.Lens ((^.))
 import Control.Monad (liftM)
+import Data.Function (on)
 import Data.Vector.Vector2 (Vector2(..))
+import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.VarAccess (VarAccess, WidgetT)
+import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (R)
+import Graphics.UI.Bottle.Widgets.Box (KBox)
 import qualified Control.Lens as Lens
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.List as List
@@ -63,6 +67,24 @@ hbox guis =
 hboxSpaced :: [ExpressionGui m] -> ExpressionGui m
 hboxSpaced = hbox . List.intersperse (fromValueWidget BWidgets.spaceWidget)
 
+fromBox :: KBox Bool (ITransaction ViewTag m) -> ExpressionGui m
+fromBox box =
+  ExpressionGui (Box.toWidget box) alignment
+  where
+    alignment =
+      maybe (error "True disappeared from box list?!")
+        (Lens.view Vector2.second . Grid.elementAlign) .
+      lookup True $ Box.boxContent box
+
+addBelow ::
+  [(Box.Alignment, WidgetT m)] ->
+  ExpressionGui m ->
+  ExpressionGui m
+addBelow ws eg =
+  fromBox . Box.makeKeyed Box.vertical $
+  (True, (Vector2 0.5 (egAlignment eg), egWidget eg)) :
+  map ((,) False) ws
+
 data TypeStyle = HorizLine | Background
 
 addType ::
@@ -73,27 +95,20 @@ addType ::
   ExpressionGui m
 addType _ _ [] eg = eg
 addType style exprId typeEdits eg =
-  ExpressionGui (Box.toWidget box) alignment
+  addBelow items eg
   where
-    alignment =
-      maybe (error "True disappeared from box list?!") (Lens.view Vector2.second . Grid.elementAlign) .
-      lookup True $ Box.boxContent box
-    box = Box.makeKeyed Box.vertical $
-      (True, (Vector2 0.5 (egAlignment eg), widget)) :
-      middleElement : [(False, (0.5, typeEdit))]
+    items = middleElement : [(0.5, annotatedTypes)]
     middleElement =
       case style of
-      HorizLine -> (False, (0.5, Spacer.makeHorizLine underlineId (Vector2 width 1)))
-      Background -> (False, (0.5, Spacer.makeWidget 5))
-    widget = egWidget eg
-    getWidth = Lens.view Vector2.first . Widget.wSize
-    width = max (getWidth widget) rawTypeWidth
-    rawTypeWidth = getWidth rawTypeEdit
-    rawTypeEdit = BWidgets.vboxCentered typeEdits
-    typeEdit =
+      HorizLine -> (0.5, Spacer.makeHorizLine underlineId (Vector2 width 1))
+      Background -> (0.5, Spacer.makeWidget 5)
+    annotatedTypes =
       addBackground .
-      (Widget.atWSize . Lens.over Vector2.first . const) width .
-      Widget.translate (Vector2 ((width - rawTypeWidth)/2) 0) $ rawTypeEdit
+      (Widget.atWSize . Lens.over Vector2.first . const) width $
+      Widget.translate (Vector2 ((width - getWidth typesBox)/2) 0) typesBox
+    getWidth = Lens.view Vector2.first . Widget.wSize
+    width = on max getWidth (egWidget eg) typesBox
+    typesBox = BWidgets.vboxCentered typeEdits
     isError = length typeEdits >= 2
     bgAnimId = Widget.toAnimId exprId ++ ["type background"]
     addBackground = maybe id (Widget.backgroundColor Layers.types bgAnimId) bgColor
