@@ -13,7 +13,7 @@ module Graphics.UI.Bottle.Widget
   , takesFocus, doesntTakeFocus
   , backgroundColor, tint, liftView
   , strongerEvents, weakerEvents
-  , translate, translateBy, scale
+  , translate, translateBy, scale, scaleDownContent
   ) where
 
 import Data.Monoid (Monoid(..))
@@ -154,3 +154,11 @@ scale mult =
     ((fmap . atEnterResultRect . Lens.over Rect.topLeftAndSize) (*mult) .
      (argument . Direction.atCoordinates . Lens.over Rect.topLeftAndSize) (/mult)) .
   atWSize (* mult)
+
+-- | Scale down a widget without affecting its exported size
+scaleDownContent :: Vector2 R -> Vector2 R -> Widget f -> Widget f
+scaleDownContent factor align w =
+  (atWSize . const) (wSize w) .
+  translate (wSize w * align * (1 - factor)) .
+  scale factor $
+  w
