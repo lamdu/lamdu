@@ -8,8 +8,10 @@ module Graphics.UI.Bottle.Widgets.TextEdit(
   atSBackgroundCursorId,
   atSEmptyUnfocusedString,
   atSEmptyFocusedString,
-  atSTextViewStyle) where
+  atSTextViewStyle
+  ) where
 
+import Control.Applicative (liftA2)
 import Control.Arrow (first)
 import Control.Lens ((%~), (^.))
 import Data.Char (isSpace)
@@ -97,11 +99,14 @@ cursorRects style str =
 makeUnfocused :: Style -> String -> Widget.Id -> Widget ((,) String)
 makeUnfocused style str myId =
   Widget.takesFocus enter .
-  (Lens.sets Widget.atWSize . Vector2.first %~ (+ sCursorWidth style)) .
+  (Lens.sets Widget.atWSize . Vector2.first %~ (+ cursorWidth)) .
+  (Lens.sets Widget.atWFocalArea . Rect.size %~ liftA2 max cursorSize) .
   Widget.atWFrame (cursorTranslate style) .
   TextView.makeWidget (sTextViewStyle style) displayStr $
   Widget.toAnimId myId
   where
+    cursorWidth = sCursorWidth style
+    cursorSize = Vector2 cursorWidth $ lineHeightOfStyle style
     displayStr = makeDisplayStr (sEmptyUnfocusedString style) str
     enter dir =
       (,) str . makeTextEditCursor myId $
