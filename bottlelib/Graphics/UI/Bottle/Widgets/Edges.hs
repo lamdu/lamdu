@@ -4,26 +4,46 @@ module Graphics.UI.Bottle.Widgets.Edges(
 
 import Control.Lens ((^.))
 import Control.Monad (mplus)
+import Data.List (minimumBy)
 import Data.Monoid (Monoid(..))
+import Data.Ord (comparing)
 import Data.Vector.Vector2 (Vector2(..))
+import Graphics.UI.Bottle.Direction (Direction)
 import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.Widget (Widget(..))
 import Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys)
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as EventMap
+import qualified Graphics.UI.Bottle.Rect as Rect
 import qualified Graphics.UI.Bottle.Widget as Widget
+
+choose ::
+  Widget.EnterResult f -> Widget.EnterResult f ->
+  Direction -> Widget.EnterResult f
+choose x _ Direction.Outside = x
+choose x y (Direction.PrevFocalArea rect) = chooseRect x y rect
+choose x y (Direction.Point pt) = chooseRect x y $ Rect pt 0
+
+chooseRect :: Widget.EnterResult f -> Widget.EnterResult f -> Rect -> Widget.EnterResult f
+chooseRect x y rect =
+  minimumOn (Rect.distance rect . Widget.enterResultRect) [x, y]
+  where
+    minimumOn = minimumBy . comparing
 
 makeVertical :: Widget.Size -> Widget f -> Widget f -> Widget f
 makeVertical size top unTranslatedBottom = Widget
   { wIsFocused = wIsFocused top || wIsFocused bottom
   , wSize = size
   , wFrame = wFrame top `mappend` wFrame bottom
-  , wMaybeEnter = wMaybeEnter top `mplus` wMaybeEnter bottom
+  , wMaybeEnter = mEnter (wMaybeEnter top) (wMaybeEnter bottom)
   , wEventMap = eventMap
   , wFocalArea = maybe (Rect 0 0) wFocalArea selectedWidget
   }
   where
+    mEnter (Just enterTop) (Just enterBottom) =
+      Just $ \dir -> choose (enterTop dir) (enterBottom dir) dir
+    mEnter x y = x `mplus` y
     selectedWidget
       | wIsFocused top = Just $ addTo "down" (keysDown stdDirKeys) bottom top
       | wIsFocused bottom = Just $ addTo "up" (keysUp stdDirKeys) top bottom
