@@ -329,13 +329,18 @@ addNewDefinitionEventMap holeInfo =
 makeSearchTermWidget
   :: MonadF m
   => HoleInfo m -> Widget.Id
+  -> Maybe Sugar.HoleResult
   -> VarAccess m (WidgetT m)
-makeSearchTermWidget holeInfo searchTermId =
+makeSearchTermWidget holeInfo searchTermId mFirstResult =
   VarAccess.otransaction .
   liftM
   (Widget.scale Config.holeSearchTermScaleFactor .
+   Widget.strongerEvents pickFirstResultEventMap .
    (Widget.atWEventMap . E.filterChars) (`notElem` "`[]\\")) $
   BWidgets.makeWordEdit (hiSearchTerm holeInfo) searchTermId
+  where
+    pickFirstResultEventMap =
+      maybe mempty (resultPickEventMap holeInfo) mFirstResult
 
 vboxMBiasedAlign ::
   Maybe Box.Cursor -> Box.Alignment -> [Widget f] -> Widget f
@@ -435,12 +440,12 @@ makeActiveHoleEdit makeExpressionEdit holeInfo = do
       | otherwise = hiHoleId holeInfo
     destId = head (map rlFirstId firstResults ++ [searchTermId])
   VarAccess.assignCursor assignSource destId $ do
-    searchTermWidget <- makeSearchTermWidget holeInfo searchTermId
+    let defaultResult = fmap rlFirst $ listToMaybe firstResults
+    searchTermWidget <- makeSearchTermWidget holeInfo searchTermId defaultResult
     (mResult, resultsWidget) <-
       makeResultsWidget makeExpressionEdit holeInfo firstResults $
       not hasMoreResults
     let
-      defaultResult = fmap rlFirst $ listToMaybe firstResults
       adHocEditor =
         fmap IT.transaction . adHocTextEditEventMap $
         hiSearchTerm holeInfo
