@@ -44,7 +44,7 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
         (Widget.weakerEvents (whereItemDeleteEventMap item) . ExpressionGui.egWidget) .
       VarAccess.withName (Sugar.wiGuid item) $ \name ->
       DefinitionEdit.makeParts makeExpressionEdit name
-      (Sugar.wiGuid item) $
+      (Sugar.wiGuid item)
       Sugar.DefinitionExpression
       { Sugar.deExprRef = Sugar.wiValue item
       , Sugar.deParameters = []

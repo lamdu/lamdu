@@ -139,8 +139,8 @@ makeParamsAndResultEdit ::
   (E.Doc, Sugar.Expression m) ->
   [Sugar.FuncParam m] ->
   VarAccess m ([ExpressionGui m], ExpressionGui m)
-makeParamsAndResultEdit makeExpressionEdit lhs rhs@(_, result) ps =
-  go ps
+makeParamsAndResultEdit makeExpressionEdit lhs rhs@(_, result) =
+  go
   where
     go [] = liftM ((,) []) $ makeResultEdit makeExpressionEdit lhs result
     go (param:params) = do

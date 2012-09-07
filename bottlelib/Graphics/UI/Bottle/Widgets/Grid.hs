@@ -15,7 +15,7 @@ module Graphics.UI.Bottle.Widgets.Grid
 import Control.Applicative (liftA2)
 import Control.Arrow (first, second)
 import Control.Lens ((^.))
-import Control.Monad (msum)
+import Control.Monad (join, msum)
 import Data.Function (on)
 import Data.List (foldl', transpose, find, minimumBy, sortBy, groupBy)
 import Data.List.Utils (index, enumerate2d)
@@ -236,7 +236,7 @@ toWidgetBiased (Vector2 x y) =
       Direction.Point _ -> unbiased
       where
         unbiased = enter dir
-        biased = maybe unbiased ($ dir) $ index y children >>= index x >>= id
+        biased = maybe unbiased ($ dir) . join $ index y children >>= index x
 
 
 toWidget :: KGrid key f -> Widget f

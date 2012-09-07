@@ -463,7 +463,7 @@ convertApply (Data.Apply funcI argI) exprI = do
   argS <- convertExpressionI argI
   case Data.eValue funcI of
     Data.ExpressionLambda lambda@(
-      Data.Lambda (Data.Expression { Data.eValue = Data.ExpressionLeaf Data.Hole }) _) -> do
+      Data.Lambda (Data.Expression { Data.eValue = Data.ExpressionLeaf Data.Hole }) _) ->
       -- TODO: Should we pass the lambda with the hole in its type,
       -- and not just the body?
       convertWhere argS funcI lambda exprI
