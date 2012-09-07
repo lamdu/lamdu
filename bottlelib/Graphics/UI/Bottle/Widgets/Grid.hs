@@ -15,7 +15,7 @@ module Graphics.UI.Bottle.Widgets.Grid
 import Control.Applicative (liftA2)
 import Control.Arrow (first, second)
 import Control.Lens ((^.))
-import Control.Monad (msum, (>=>))
+import Control.Monad (msum)
 import Data.Function (on)
 import Data.List (foldl', transpose, find, minimumBy, sortBy, groupBy)
 import Data.List.Utils (index, enumerate2d)
@@ -168,7 +168,6 @@ makeAlign alignment = make . (map . map) ((,) alignment)
 makeCentered :: [[Widget f]] -> Grid f
 makeCentered = makeAlign 0.5
 
-
 helper ::
   (Widget.Size -> [[Widget.MEnter f]] -> Widget.MEnter f) ->
   KGrid key f -> Widget f
@@ -224,41 +223,57 @@ groupOn = groupBy . ((==) `on`)
 groupSortOn :: Ord b => (a -> b) -> [a] -> [[a]]
 groupSortOn f = groupOn f . sortOn f
 
-toWidget :: KGrid key f -> Widget f
-toWidget =
-  helper makeMEnter
+-- ^ If unfocused, will enters the given child when entered
+toWidgetBiased :: Cursor -> KGrid key f -> Widget f
+toWidgetBiased (Vector2 x y) =
+  helper $ \size children ->
+  fmap (maybeOverride children) $ combineMEnters size children
   where
-    makeMEnter size children = chooseClosest childEnters
+    maybeOverride children enter dir =
+      case dir of
+      Direction.Outside -> biased
+      Direction.PrevFocalArea _ -> biased
+      Direction.Point _ -> unbiased
       where
-        childEnters =
-          mapMaybe indexIntoMaybe .
-          (concatMap . map . first) tupleToVector2 $
-          enumerate2d children
+        unbiased = enter dir
+        biased = maybe unbiased ($ dir) $ index y children >>= index x >>= id
 
-        chooseClosest [] = Nothing
-        chooseClosest _ = Just byDirection
 
-        byDirection dir =
-          minimumOn
-          (Vector2.uncurry (+) . abs . modifyDistance .
-           distance dirRect . Widget.enterResultRect) .
-          map ($ dir) $ filteredByEdge edge
-          where
-            removeUninterestingAxis = ((1 - abs (fmap fromIntegral edge)) *)
-            (modifyDistance, dirRect) = case dir of
-              Direction.Outside -> (id, Rect 0 0)
-              Direction.PrevFocalArea x -> (removeUninterestingAxis, x)
-              Direction.Point x -> (id, Rect x 0)
-            edge = asEdge size dirRect
+toWidget :: KGrid key f -> Widget f
+toWidget = helper combineMEnters
 
-        distance = (-) `on` Lens.view Rect.center
+combineMEnters :: Widget.Size -> [[Widget.MEnter f]] -> Widget.MEnter f
+combineMEnters size children = chooseClosest childEnters
+  where
+    childEnters =
+      mapMaybe indexIntoMaybe .
+      (concatMap . map . first) tupleToVector2 $
+      enumerate2d children
 
-        filteredByEdge = memo $ \(Vector2 hEdge vEdge) ->
-          map snd .
-          safeHead . groupSortOn ((* (-hEdge)) . Lens.view Vector2.first . fst) .
-          safeHead . groupSortOn ((* (-vEdge)) . Lens.view Vector2.second . fst) $
-          childEnters
-        indexIntoMaybe (i, m) = fmap ((,) i) m
+    chooseClosest [] = Nothing
+    chooseClosest _ = Just byDirection
+
+    byDirection dir =
+      minimumOn
+      (Vector2.uncurry (+) . abs . modifyDistance .
+       distance dirRect . Widget.enterResultRect) .
+      map ($ dir) $ filteredByEdge edge
+      where
+        removeUninterestingAxis = ((1 - abs (fmap fromIntegral edge)) *)
+        (modifyDistance, dirRect) = case dir of
+          Direction.Outside -> (id, Rect 0 0)
+          Direction.PrevFocalArea x -> (removeUninterestingAxis, x)
+          Direction.Point x -> (id, Rect x 0)
+        edge = asEdge size dirRect
+
+    distance = (-) `on` Lens.view Rect.center
+
+    filteredByEdge = memo $ \(Vector2 hEdge vEdge) ->
+      map snd .
+      safeHead . groupSortOn ((* (-hEdge)) . Lens.view Vector2.first . fst) .
+      safeHead . groupSortOn ((* (-vEdge)) . Lens.view Vector2.second . fst) $
+      childEnters
+    indexIntoMaybe (i, m) = fmap ((,) i) m
 
 safeHead :: Monoid a => [a] -> a
 safeHead = mconcat . take 1
@@ -275,7 +290,3 @@ asEdge size rect =
       fmap (<= 0) (rect ^. Rect.bottomRight)
     Vector2 rightEdge bottomEdge =
       liftA2 (>=) (rect ^. Rect.topLeft) size
-
--- ^ If unfocused, will enters the given child when entered
-toWidgetBiased :: Cursor -> KGrid key f -> Widget f
-toWidgetBiased (Vector2 x y) = helper . const $ index y >=> index x >=> id
