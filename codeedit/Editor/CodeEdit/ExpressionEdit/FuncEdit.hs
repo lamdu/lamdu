@@ -58,13 +58,19 @@ makeParamEdit
   -> VarAccess m (ExpressionGui m)
 makeParamEdit makeExpressionEdit rhs name param =
   (liftM . ExpressionGui.atEgWidget)
-  (addJumpToRHS rhs . Widget.weakerEvents paramEventMap) $ do
+  (addJumpToRHS rhs . Widget.weakerEvents paramEventMap) .
+  assignCursor $ do
     paramTypeEdit <- makeExpressionEdit $ Sugar.fpType param
     paramNameEdit <- makeParamNameEdit name ident
     return . ExpressionGui.addType ExpressionGui.HorizLine (WidgetIds.fromGuid ident)
       [ExpressionGui.egWidget paramTypeEdit] $
       ExpressionGui.fromValueWidget paramNameEdit
   where
+    assignCursor =
+      case Sugar.fpHiddenLambdaGuid param of
+      Nothing -> id
+      Just g ->
+        VarAccess.assignCursor (WidgetIds.fromGuid g) $ WidgetIds.fromGuid ident
     ident = Sugar.fpGuid param
     paramEventMap = mconcat
       [ paramDeleteEventMap

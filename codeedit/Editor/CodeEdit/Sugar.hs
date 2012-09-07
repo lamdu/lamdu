@@ -92,11 +92,13 @@ data Where m = Where
 
 data FuncParamActions m = FuncParamActions
   { fpaAddNextParam :: T m Guid
+  , fpaAddPrevParam :: T m Guid
   , fpaDelete :: T m Guid
   }
 
 data FuncParam m = FuncParam
   { fpGuid :: Guid
+  , fpHiddenLambdaGuid :: Maybe Guid
   , fpType :: Expression m
   , fpMActions :: Maybe (FuncParamActions m)
   }
@@ -172,6 +174,7 @@ data DefinitionNewType m = DefinitionNewType
 
 data DefinitionExpression m = DefinitionExpression
   { deExprRef :: Expression m
+  , deParameters :: [FuncParam m]
   , deIsTypeRedundant :: Bool
   , deMNewType :: Maybe (DefinitionNewType m)
   }
@@ -357,12 +360,15 @@ mkFuncParamActions
   :: Monad m
   => DataIRef.ExpressionProperty (T m)
   -> DataIRef.ExpressionProperty (T m)
-  -> Actions m
   -> FuncParamActions m
-mkFuncParamActions parentP replacerP bodyActions = FuncParamActions
+mkFuncParamActions parentP replacerP = FuncParamActions
   { fpaDelete = mkDelete parentP replacerP
-  , fpaAddNextParam = lambdaWrap bodyActions
+  , fpaAddNextParam = addParam replacerP
+  , fpaAddPrevParam = addParam parentP
   }
+  where
+    addParam =
+      liftM (lambdaGuidToParamGuid . DataIRef.exprGuid) . DataOps.lambdaWrap
 
 convertLambda
   :: Monad m
@@ -374,12 +380,9 @@ convertLambda (Data.Lambda paramTypeI bodyI) exprI = do
   let
     param = FuncParam
       { fpGuid = lambdaGuidToParamGuid $ Data.eGuid exprI
+      , fpHiddenLambdaGuid = Nothing
       , fpType = removeRedundantTypes typeExpr
-      , fpMActions =
-        mkFuncParamActions <$>
-        eeProp exprI <*>
-        eeProp bodyI <*>
-        rActions sBody
+      , fpMActions = mkFuncParamActions <$> eeProp exprI <*> eeProp bodyI
       }
   return (param, sBody)
 
@@ -781,6 +784,27 @@ loadConvertExpression ::
 loadConvertExpression exprP =
   convertLoadedExpression Nothing =<< Load.loadExpression exprP
 
+convertParams ::
+  Monad m =>
+  SugarContext -> Data.Expression (ExprEntityMStored m) ->
+  T m ([FuncParam m], Data.Expression (ExprEntityMStored m))
+convertParams ctx expr =
+  case Data.eValue expr of
+  Data.ExpressionLambda (Data.Lambda paramType body) -> do
+    paramTypeS <- convertStoredExpression ctx paramType
+    let
+      param = FuncParam
+        { fpGuid = lambdaGuidToParamGuid $ Data.eGuid expr
+        , fpHiddenLambdaGuid = Just $ Data.eGuid expr
+        , fpType = paramTypeS
+        , fpMActions = mkFuncParamActions <$> prop expr <*> prop body
+        }
+    (nextParams, funcBody) <- convertParams ctx body
+    return (param : nextParams, funcBody)
+  _ -> return ([], expr)
+  where
+    prop = Infer.iStored . eesInferred . Data.ePayload
+
 loadConvertDefinition ::
   Monad m => Data.DefinitionIRef -> T m (DefinitionRef m)
 loadConvertDefinition defI = do
@@ -803,7 +827,8 @@ loadConvertDefinition defI = do
     Data.DefinitionExpression exprL -> do
       (isSuccess, sugarContext, exprStored) <-
         inferLoadedExpression (Just defI) exprL
-      exprS <- convertStoredExpression sugarContext exprStored
+      (params, funcBody) <- convertParams sugarContext exprStored
+      exprS <- convertStoredExpression sugarContext funcBody
       let
         inferredTypeP =
           Infer.iType . eesInferred $ Data.ePayload exprStored
@@ -825,6 +850,7 @@ loadConvertDefinition defI = do
 
       return $ DefinitionBodyExpression DefinitionExpression
         { deExprRef = exprS
+        , deParameters = params
         , deMNewType = mNewType
         , deIsTypeRedundant = isSuccess && typesMatch
         }

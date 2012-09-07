@@ -48,9 +48,9 @@ makeParts
   => ExpressionGui.Maker m
   -> (VarAccess.NameSource, String)
   -> Guid
-  -> Sugar.Expression m
+  -> Sugar.DefinitionExpression m
   -> VarAccess m [ExpressionGui m]
-makeParts makeExpressionEdit name guid exprRef = do
+makeParts makeExpressionEdit name guid def = do
   nameEdit <-
     liftM (FuncEdit.addJumpToRHS rhs . Widget.weakerEvents addFirstParamEventMap) $
     makeNameEdit name myId guid
@@ -66,21 +66,18 @@ makeParts makeExpressionEdit name guid exprRef = do
     ]
   where
     lhs = myId : map (WidgetIds.fromGuid . Sugar.fpGuid) params
-    rhs = ("Def Body", Sugar.fBody func)
-    params = Sugar.fParams func
+    rhs = ("Def Body", exprRef)
+    params = Sugar.deParameters def
     addFirstParamEventMap =
       maybe mempty
       ( Widget.keysEventMapMovesCursor Config.addNextParamKeys "Add parameter"
       . liftM (FocusDelegator.delegatingId . WidgetIds.fromGuid)
       . IT.transaction
-      . Sugar.lambdaWrap
-      ) $ Sugar.rActions exprRef
+      ) $ case params of
+      (p : _) -> fmap Sugar.fpaAddPrevParam $ Sugar.fpMActions p
+      _ -> fmap Sugar.lambdaWrap $ Sugar.rActions exprRef
+    exprRef = Sugar.deExprRef def
     myId = WidgetIds.fromGuid guid
-    sExpr = Sugar.rExpression exprRef
-    func =
-      case sExpr of
-      Sugar.ExpressionFunc _ x -> x
-      _ -> Sugar.Func [] exprRef
 
 make
   :: MonadF m
@@ -126,8 +123,8 @@ makeExprDefinition ::
 makeExprDefinition makeExpressionEdit def bodyExpr = do
   name <- VarAccess.getDefName guid
   bodyWidget <-
-    liftM (ExpressionGui.egWidget . ExpressionGui.hbox) .
-    makeParts makeExpressionEdit name guid . Sugar.deExprRef $ bodyExpr
+    liftM (ExpressionGui.egWidget . ExpressionGui.hbox) $
+    makeParts makeExpressionEdit name guid bodyExpr
   let
     mkResult typeWidget =
       BWidgets.vboxAlign 0
