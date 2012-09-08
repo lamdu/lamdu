@@ -125,6 +125,7 @@ baseStyle font = TextEdit.Style
   , TextEdit.sCursorWidth = TextEdit.defaultCursorWidth
   , TextEdit.sTextCursorId = WidgetIds.textCursorId
   , TextEdit.sBackgroundCursorId = WidgetIds.backgroundCursorId
+  , TextEdit.sBackgroundColor = cursorBGColor
   , TextEdit.sEmptyUnfocusedString = ""
   , TextEdit.sEmptyFocusedString = ""
   }

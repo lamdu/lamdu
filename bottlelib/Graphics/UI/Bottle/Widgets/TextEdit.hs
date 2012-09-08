@@ -43,14 +43,15 @@ import qualified Safe
 
 type Cursor = Int
 
-data Style = Style {
-  sCursorColor :: Draw.Color,
-  sCursorWidth :: Widget.R,
-  sTextCursorId :: Anim.AnimId,
-  sBackgroundCursorId :: Anim.AnimId,
-  sEmptyUnfocusedString :: String,
-  sEmptyFocusedString :: String,
-  sTextViewStyle :: TextView.Style
+data Style = Style
+  { sCursorColor :: Draw.Color
+  , sCursorWidth :: Widget.R
+  , sTextCursorId :: Anim.AnimId
+  , sBackgroundCursorId :: Anim.AnimId
+  , sBackgroundColor :: Draw.Color
+  , sEmptyUnfocusedString :: String
+  , sEmptyFocusedString :: String
+  , sTextViewStyle :: TextView.Style
   }
 AtFieldTH.make ''Style
 
@@ -137,7 +138,7 @@ lineHeightOfStyle style = sz * textHeight
 makeFocused :: Cursor -> Style -> String -> Widget.Id -> Widget ((,) String)
 makeFocused cursor style str myId =
   makeFocusable style str myId .
-  Widget.backgroundColor 10 (sBackgroundCursorId style) blue $
+  Widget.backgroundColor 10 (sBackgroundCursorId style) (sBackgroundColor style) $
   widget
   where
     widget = Widget
@@ -153,8 +154,6 @@ makeFocused cursor style str myId =
     img = cursorTranslate style $ frameGen myAnimId
     drawText = TextView.drawTextAsSingleLetters (sTextViewStyle style)
     (frameGen, Vector2 tlWidth tlHeight) = drawText displayStr
-
-    blue = Draw.Color 0 0 0.8 0.8
 
     textLinesWidth = Lens.view Vector2.first . snd . drawText
     lineHeight = lineHeightOfStyle style
