@@ -82,7 +82,7 @@ makeParts makeExpressionEdit name guid def = do
 make
   :: MonadF m
   => ExpressionGui.Maker m
-  -> Sugar.DefinitionRef m
+  -> Sugar.Definition m
   -> VarAccess m (WidgetT m)
 make makeExpressionEdit def =
   case Sugar.drBody def of
@@ -94,7 +94,7 @@ make makeExpressionEdit def =
 makeBuiltinDefinition
   :: MonadF m
   => ExpressionGui.Maker m
-  -> Sugar.DefinitionRef m
+  -> Sugar.Definition m
   -> Sugar.DefinitionBuiltin m
   -> VarAccess m (WidgetT m)
 makeBuiltinDefinition makeExpressionEdit def builtin =
@@ -117,7 +117,7 @@ defTypeScale = Widget.scale Config.defTypeBoxSizeFactor
 makeExprDefinition ::
   MonadF m =>
   (Sugar.Expression m -> VarAccess m (ExpressionGui m)) ->
-  Sugar.DefinitionRef m ->
+  Sugar.Definition m ->
   Sugar.DefinitionExpression m ->
   VarAccess m (WidgetT m)
 makeExprDefinition makeExpressionEdit def bodyExpr = do

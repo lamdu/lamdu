@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, DeriveFunctor #-}
 
 module Editor.CodeEdit.Sugar
-  ( DefinitionRef(..), DefinitionBody(..)
+  ( Definition(..), DefinitionBody(..)
   , DefinitionExpression(..), DefinitionBuiltin(..)
   , DefinitionNewType(..)
   , Actions(..)
@@ -197,7 +197,7 @@ data DefinitionBody m
   = DefinitionBodyExpression (DefinitionExpression m)
   | DefinitionBodyBuiltin (DefinitionBuiltin m)
 
-data DefinitionRef m = DefinitionRef
+data Definition m = Definition
   { drGuid :: Guid
   , drType :: Expression m
   , drBody :: DefinitionBody m
@@ -791,7 +791,7 @@ convertParams ctx expr =
     prop = Infer.iStored . eesInferred . Data.ePayload
 
 loadConvertDefinition ::
-  Monad m => Data.DefinitionIRef -> T m (DefinitionRef m)
+  Monad m => Data.DefinitionIRef -> T m (Definition m)
 loadConvertDefinition defI = do
   Data.Definition defBody typeL <- Load.loadDefinition defI
   let typeP = void typeL
@@ -840,7 +840,7 @@ loadConvertDefinition defI = do
         , deIsTypeRedundant = isSuccess && typesMatch
         }
   typeS <- convertExpressionPure typeP
-  return DefinitionRef
+  return Definition
     { drGuid = IRef.guid defI
     , drBody = body
     , drType = typeS

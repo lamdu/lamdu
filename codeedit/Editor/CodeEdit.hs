@@ -34,7 +34,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 
 -- This is not in Sugar because Sugar is for code
 data SugarPane m = SugarPane
-  { spDef :: Sugar.DefinitionRef m
+  { spDef :: Sugar.Definition m
   , mDelPane :: Maybe (Transaction ViewTag m Guid)
   , mMovePaneDown :: Maybe (Transaction ViewTag m ())
   , mMovePaneUp :: Maybe (Transaction ViewTag m ())
