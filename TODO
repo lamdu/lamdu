@@ -1,3 +1,7 @@
+* Hole allows bad results with hole to convert
+
+* HM/rank-1 automatic inference
+
 * Type errors still allowed:
   * When changing the exported type
   * When adding/deleting parameters
@@ -5,20 +9,10 @@
   * Need to:
     * Allow delete when type-checks in some cases
     * Other manipulations?
+* When using '[' or ']' to add applies, it can type-filter out the
+  result we're on and lose the cursor
 
 * Avoid name clashes in auto-names
-
-* Hole allows bad results with hole to convert
-
-* When defining Haskell's "flip" you have to work harder than in
-  Haskell
-  * Can add a "generalize" action that adds rank-1 type variables for
-    everything HM-style
-  * Maybe other way to infer the type of flip?
-
-* When moving to hole text, can no longer press enter.. Maybe we
-  should just replace the text edit with a simple unfocusable text
-  view?
 
 * When anything is selected, show all the stuff that refer/define that
   same symbol
@@ -33,22 +27,13 @@
   * Cursor does not move, so GUI is not regenerated, apparently. Need
     to rewrite main loop.
 
-* Instead of (VarAccess.NameSource, String) and Guid of name
-  seperately, generate a Property for the name of that type? or give
-  a setter instead of Guid
+* Cleanups:
+  * Instead of (VarAccess.NameSource, String) and Guid of name
+    seperately, generate a Property for the name of that type? or give
+    a setter instead of Guid
+  * Rename Data* to Expression*.
 
 * Type synonyms/expansions
-
-* When using '[' or ']' to add applies, it can type-filter out the
-  result we're on and lose the cursor
-
-* Rename Data* to Expression*.
-
-* Add JumpTo which gives a hole-like search -- that can sit in a "tab" in place of a DefinitionEdit
-
-* Nice to haves:
-  * Holes can have same IDs for same results emphasizing sameness
-  * LHS needs to be in infix form too
 
 * Whenever prejumps is added/popped, we actually update in-version
   data, so it actually creates a new, undo-able version. Need to have
@@ -60,31 +45,23 @@
     transactions inside the source control to be able to result in
     extra data outwards, beside the widget's event result.
 
-* Projected moves:
-  * Has old focal rect
-  * May have "projected focal rect"
-  * Gets a new "focal rect"
-  * Can generate a "projected focal rect" at the projected position of the direction of the movement
-    * This "projected focal rect" is to be used by same grid or any parent grid in future movements
-    * This "projected focal rect" is sort of a global thing all grids write to?
-    * Each grid can add a "delete my projected focal rect" thing before any child action
-
-* ParamEdit needs to take the eventmap/actions of ExpressionEdit and
-  also add them to the param via the FuncParam actions
-
-* Fix typematic. It now triggers when things are stuck even though user unpressed the button.
-
--------
-
-* 1-use wheres to Sugar as "Titled Expressions"
+* Lambda actions not bound to eventmap by Sugar.Func
 
 * Associated comment for any expression to title it? Otherwise we're
   modifying the model to add a comment
 
-* Dapaot:
-  * Add anim-id-remappings to sugar changes
-  * Multi-ids
+* Add JumpTo which gives a hole-like search -- that can sit in a "tab" in place of a DefinitionEdit
 
--------
+* GUI:
+  * Projected moves:
+    * Has old focal rect
+    * May have "projected focal rect"
+    * Gets a new "focal rect"
+    * Can generate a "projected focal rect" at the projected position of the direction of the movement
+      * This "projected focal rect" is to be used by same grid or any parent grid in future movements
+      * This "projected focal rect" is sort of a global thing all grids write to?
+      * Each grid can add a "delete my projected focal rect" thing before any child action
 
-* Lambda unwrap invalidates params
+* Nice to haves:
+  * Holes can have same IDs for same results emphasizing sameness
+  * LHS needs to be in infix form too
