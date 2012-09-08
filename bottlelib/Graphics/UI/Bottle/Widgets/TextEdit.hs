@@ -204,7 +204,7 @@ mkCursorRect style cursor str = Rect cursorPos cursorSize
     cursorPosY = (lineHeight *) . subtract 1 $ genericLength beforeCursorLines
 
 eventMap ::
-  Int -> [Char] -> [Char] -> Widget.Id ->
+  Int -> String -> String -> Widget.Id ->
   Widget.EventHandlers ((,) String)
 eventMap cursor str displayStr myId =
   mconcat . concat $ [

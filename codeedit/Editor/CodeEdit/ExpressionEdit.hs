@@ -166,8 +166,8 @@ actionsEventMap holePicker actions =
       Config.callWithArgumentKeys "Call with argument" . itrans $
       Sugar.callWithArg actions
     addArg =
-      (withPickResultFirst holePicker Config.addNextArgumentKeys "Add arg" . itrans $
-       Sugar.addNextArg actions)
+      withPickResultFirst holePicker Config.addNextArgumentKeys "Add arg" . itrans $
+      Sugar.addNextArg actions
     cut =
       if isHole then mempty else
       mkEventMap Config.cutKeys "Cut" id $
