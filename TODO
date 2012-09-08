@@ -23,8 +23,6 @@
 * When anything is selected, show all the stuff that refer/define that
   same symbol
 
-* Sugar.Expression to be in Data.Expression style
-
 * When hole result is selected, show (with some different
   visualization) the inferred types and values due to the hole result
   are shown

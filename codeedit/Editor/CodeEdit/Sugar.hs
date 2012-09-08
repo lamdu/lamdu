@@ -7,7 +7,8 @@ module Editor.CodeEdit.Sugar
   , Actions(..)
   , ExpressionBody(..)
   , Payload(..)
-  , Expression(..)
+  , ExpressionP(..)
+  , Expression
   , Where(..)
   , WhereItem(..)
   , Func(..), FuncParam(..), FuncParamActions(..)
@@ -83,11 +84,13 @@ data Payload m = Payload
   , plNextArg :: Maybe (Expression m)
   }
 
-data Expression m = Expression
+data ExpressionP m pl = Expression
   { rGuid :: Guid
-  , rExpressionBody :: ExpressionBody m (Expression m)
-  , rPayload :: Payload m
-  }
+  , rExpressionBody :: ExpressionBody m (ExpressionP m pl)
+  , rPayload :: pl
+  } deriving (Functor)
+
+type Expression m = ExpressionP m (Payload m)
 
 data WhereItem m expr = WhereItem
   { wiGuid :: Guid
@@ -221,7 +224,7 @@ AtFieldTH.make ''Inferred
 AtFieldTH.make ''Actions
 AtFieldTH.make ''FuncParamActions
 AtFieldTH.make ''Payload
-AtFieldTH.make ''Expression
+AtFieldTH.make ''ExpressionP
 
 data ExprEntityInferred a = ExprEntityInferred
   { eesInferred :: Infer.Inferred a
