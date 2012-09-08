@@ -64,7 +64,7 @@ import qualified System.Random.Utils as RandomUtils
 
 type T = Transaction ViewTag
 
-data Actions m expr = Actions
+data Actions m = Actions
   { addNextArg   :: T m Guid
   , giveAsArg    :: T m Guid
   , callWithArg  :: T m Guid
@@ -72,16 +72,16 @@ data Actions m expr = Actions
   , addWhereItem :: T m Guid
   , replace      :: T m Guid
   , cut          :: T m Guid
-  , mNextArg     :: Maybe expr
   }
 
 data HasParens = HaveParens | DontHaveParens
 
 data Expression m = Expression
-  { rExpression :: ExpressionBody m (Expression m)
+  { rGuid :: Guid
+  , rExpression :: ExpressionBody m (Expression m)
   , rInferredTypes :: [Expression m]
-  , rGuid :: Guid
-  , rActions :: Maybe (Actions m (Expression m))
+  , rActions :: Maybe (Actions m)
+  , rNextArg :: Maybe (Expression m)
   }
 
 data WhereItem m expr = WhereItem
@@ -290,7 +290,7 @@ mkCutter iref replaceWithHole = do
 lambdaGuidToParamGuid :: Guid -> Guid
 lambdaGuidToParamGuid = Guid.combine $ Guid.fromString "param"
 
-mkActions :: Monad m => DataIRef.ExpressionProperty (T m) -> Actions m (Expression m)
+mkActions :: Monad m => DataIRef.ExpressionProperty (T m) -> Actions m
 mkActions stored =
   Actions
   { addNextArg = guidify $ DataOps.callWithArg stored
@@ -300,7 +300,6 @@ mkActions stored =
   , addWhereItem = paramGuidify $ DataOps.redexWrap stored
   , replace = doReplace
   , cut = mkCutter (Property.value stored) doReplace
-  , mNextArg = Nothing
   }
   where
     paramGuidify = liftM lambdaGuidToParamGuid . guidify
@@ -323,6 +322,7 @@ mkExpression ee expr = do
     , rInferredTypes = inferredTypesRefs
     , rGuid = Data.eGuid ee
     , rActions = fmap mkActions $ eeProp ee
+    , rNextArg = Nothing
     }
   where
     types =
@@ -521,7 +521,7 @@ convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, argI)) exprI =
     newArgRef =
       setAddArg exprI $
       atRExpression addParens argRef
-    setNextArg = atRActions . fmap . atMNextArg . const $ Just newArgRef
+    setNextArg = atRNextArg . const $ Just newArgRef
     newFuncRef =
       setNextArg .
       addApplyChildParens .

@@ -50,9 +50,8 @@ make sExpr = do
   let onReadOnly = Widget.doesntTakeFocus
   return .
     ExpressionGui.atEgWidget
-    ( maybe onReadOnly
-      (Widget.weakerEvents . expressionEventMap holePicker)
-      (Sugar.rActions sExpr)
+    ( maybe onReadOnly (const id) (Sugar.rActions sExpr) .
+      Widget.weakerEvents (expressionEventMap holePicker sExpr)
     ) .
     ExpressionGui.addType ExpressionGui.Background exprId
     (map
@@ -100,12 +99,50 @@ makeEditor sExpr =
        (second . ExpressionGui.atEgWidget . Widget.weakerEvents) (pasteEventMap hole))
     notAHole = (fmap . liftM) ((,) NotAHole)
 
-expressionEventMap
-  :: MonadF m
-  => HoleResultPicker m
-  -> Sugar.Actions m (Sugar.Expression m)
-  -> EventHandlers (ITransaction ViewTag m)
-expressionEventMap holePicker actions =
+withPickResultFirst ::
+  MonadF m =>
+  HoleResultPicker m -> [E.ModKey] -> E.Doc ->
+  ITransaction ViewTag m Widget.Id ->
+  Widget.EventHandlers (ITransaction ViewTag m)
+withPickResultFirst holePicker keys doc action =
+  case holePicker of
+    IsAHole (Just pickResult) ->
+      E.keyPresses keys ("Pick result and " ++ doc) $
+      prependAction pickResult
+    _ ->
+      Widget.keysEventMapMovesCursor keys doc action
+  where
+    prependAction pickResult = do
+      eventResult <- pickResult
+      cursorId <- action
+      return $
+        (Widget.atECursor . const . Just) cursorId
+        eventResult
+
+expressionEventMap ::
+  MonadF m =>
+  HoleResultPicker m ->
+  Sugar.Expression m ->
+  EventHandlers (ITransaction ViewTag m)
+expressionEventMap holePicker sExpr =
+  mconcat
+  [ maybe mempty moveToIfHole $ Sugar.rNextArg sExpr
+    -- Move to next arg overrides add arg's keys.
+  , maybe mempty (actionsEventMap holePicker) $ Sugar.rActions sExpr
+  ]
+  where
+    moveToIfHole nextArg =
+      case Sugar.rExpression nextArg of
+      Sugar.ExpressionHole{} ->
+        withPickResultFirst holePicker Config.addNextArgumentKeys "Move to next arg" .
+        return . WidgetIds.fromGuid $ Sugar.rGuid nextArg
+      _ -> mempty
+
+actionsEventMap ::
+  MonadF m =>
+  HoleResultPicker m -> Sugar.Actions m ->
+  EventHandlers (ITransaction ViewTag m)
+actionsEventMap holePicker actions =
   mconcat
     [ giveAsArg
     , callWithArg
@@ -128,10 +165,7 @@ expressionEventMap holePicker actions =
       Config.callWithArgumentKeys "Call with argument" . itrans $
       Sugar.callWithArg actions
     addArg =
-      maybeMempty (Sugar.mNextArg actions) moveToIfHole
-      -- Move to next arg overrides add arg's keys.
-      `mappend`
-      (withPickResultFirst Config.addNextArgumentKeys "Add arg" . itrans $
+      (withPickResultFirst holePicker Config.addNextArgumentKeys "Add arg" . itrans $
        Sugar.addNextArg actions)
     cut =
       if isHole then mempty else
@@ -152,20 +186,6 @@ expressionEventMap holePicker actions =
       Widget.keysEventMapMovesCursor keys doc .
       liftM (f . WidgetIds.fromGuid) . IT.transaction
 
-    withPickResultFirst keys doc action =
-      case holePicker of
-        IsAHole (Just pickResult) ->
-          E.keyPresses keys ("Pick result and " ++ doc) $
-          combineActions pickResult action
-        _ ->
-          Widget.keysEventMapMovesCursor keys doc action
-    combineActions pickResult action = do
-      eventResult <- pickResult
-      cursorId <- action
-      return $
-        (Widget.atECursor . const . Just) cursorId
-        eventResult
-
     moveUnlessOnHole = ifHole $ (const . fmap . liftM . Widget.atECursor . const) Nothing
     isHole = case holePicker of
       NotAHole -> False
@@ -173,10 +193,3 @@ expressionEventMap holePicker actions =
     ifHole whenHole = case holePicker of
       NotAHole -> id
       IsAHole x -> whenHole x
-    maybeMempty x f = maybe mempty f x
-    moveToIfHole nextArg =
-      case Sugar.rExpression nextArg of
-      Sugar.ExpressionHole{} ->
-        withPickResultFirst Config.addNextArgumentKeys "Move to next arg" .
-        return . WidgetIds.fromGuid $ Sugar.rGuid nextArg
-      _ -> mempty
