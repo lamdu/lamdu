@@ -98,7 +98,7 @@ cursorRects style str =
 
 makeUnfocused :: Style -> String -> Widget.Id -> Widget ((,) String)
 makeUnfocused style str myId =
-  Widget.takesFocus enter .
+  makeFocusable style str myId .
   (Lens.sets Widget.atWSize . Vector2.first %~ (+ cursorWidth)) .
   (Lens.sets Widget.atWFocalArea . Rect.size %~ liftA2 max cursorSize) .
   Widget.atWFrame (cursorTranslate style) .
@@ -108,17 +108,22 @@ makeUnfocused style str myId =
     cursorWidth = sCursorWidth style
     cursorSize = Vector2 cursorWidth $ lineHeightOfStyle style
     displayStr = makeDisplayStr (sEmptyUnfocusedString style) str
-    enter dir =
-      (,) str . makeTextEditCursor myId $
-      case dir of
-        Direction.Outside -> length str
-        Direction.PrevFocalArea rect -> rectToCursor rect
-        Direction.Point x -> rectToCursor $ Rect x 0
-      where
-        minimumOn = minimumBy . comparing
-        rectToCursor fromRect =
-          fst . minimumOn snd . enumerate . map (Rect.distance fromRect) $
-          cursorRects style str
+
+makeFocusable ::
+  Style -> String -> Widget.Id ->
+  Widget ((,) String) -> Widget ((,) String)
+makeFocusable style str myId =
+  Widget.takesFocus $ \dir ->
+  (,) str . makeTextEditCursor myId $
+  case dir of
+    Direction.Outside -> length str
+    Direction.PrevFocalArea rect -> rectToCursor rect
+    Direction.Point x -> rectToCursor $ Rect x 0
+  where
+    minimumOn = minimumBy . comparing
+    rectToCursor fromRect =
+      fst . minimumOn snd . enumerate . map (Rect.distance fromRect) $
+      cursorRects style str
 
 lineHeightOfStyle :: Style -> Widget.R
 lineHeightOfStyle style = sz * textHeight
@@ -131,6 +136,7 @@ lineHeightOfStyle style = sz * textHeight
 -- | given text...
 makeFocused :: Cursor -> Style -> String -> Widget.Id -> Widget ((,) String)
 makeFocused cursor style str myId =
+  makeFocusable style str myId .
   Widget.backgroundColor 10 (sBackgroundCursorId style) blue .
   Widget.atWFrame (`mappend` cursorFrame) .
   Widget.strongerEvents eventMap $
