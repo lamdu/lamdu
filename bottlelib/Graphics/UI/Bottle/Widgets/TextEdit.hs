@@ -137,16 +137,14 @@ lineHeightOfStyle style = sz * textHeight
 makeFocused :: Cursor -> Style -> String -> Widget.Id -> Widget ((,) String)
 makeFocused cursor style str myId =
   makeFocusable style str myId .
-  Widget.backgroundColor 10 (sBackgroundCursorId style) blue .
-  Widget.atWFrame (`mappend` cursorFrame) .
-  Widget.strongerEvents eventMap $
+  Widget.backgroundColor 10 (sBackgroundCursorId style) blue $
   widget
   where
     widget = Widget
       { wIsFocused = True
       , wSize = reqSize
-      , wFrame = img
-      , wEventMap = mempty
+      , wFrame = img `mappend` cursorFrame
+      , wEventMap = eventMap
       , wMaybeEnter = Nothing
       , wFocalArea = cursorRect
       }
@@ -161,12 +159,12 @@ makeFocused cursor style str myId =
     textLinesWidth = Lens.view Vector2.first . snd . drawText
     lineHeight = lineHeightOfStyle style
     strWithIds = map (first Just) $ enumerate str
-    beforeCursor = take cursor strWithIds
+    beforeCursorLines = splitWhen (== '\n') $ take cursor str
     cursorRect = Rect cursorPos cursorSize
     cursorPos = Vector2 cursorPosX cursorPosY
     cursorSize = Vector2 (sCursorWidth style) lineHeight
-    cursorPosX = textLinesWidth . map snd . last $ splitLines beforeCursor
-    cursorPosY = (lineHeight *) . subtract 1 . genericLength . splitLines $ beforeCursor
+    cursorPosX = textLinesWidth $ last beforeCursorLines
+    cursorPosY = (lineHeight *) . subtract 1 $ genericLength beforeCursorLines
     cursorFrame =
       Anim.onDepth (+2) .
       Anim.translate cursorPos .
