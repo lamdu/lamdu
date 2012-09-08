@@ -131,6 +131,29 @@ lineHeightOfStyle style = sz * textHeight
   where
     sz = fromIntegral . TextView.styleFontSize $ sTextViewStyle style
 
+eventResult ::
+  Widget.Id -> [(Maybe Int, Char)] -> [(Maybe Int, Char)] ->
+  Int -> (String, Widget.EventResult)
+eventResult myId strWithIds newText newCursor =
+  (map snd newText,
+    Widget.EventResult {
+      Widget.eCursor = Just $ makeTextEditCursor myId newCursor,
+      Widget.eAnimIdMapping = mapping
+    })
+  where
+    myAnimId = Widget.toAnimId myId
+    mapping animId = maybe animId (Anim.joinId myAnimId . translateId) $ Anim.subId myAnimId animId
+    translateId [subId] = (:[]) . maybe subId (SBS8.pack . show) $ (`Map.lookup` dict) =<< Safe.readMay (SBS8.unpack subId)
+    translateId x = x
+    dict = mappend movedDict deletedDict
+    movedDict = Map.fromList . mapMaybe posMapping . enumerate $ map fst newText
+    deletedDict = Map.fromList . map (flip (,) (-1)) $ Set.toList deletedKeys
+    posMapping (_, Nothing) = Nothing
+    posMapping (newPos, Just oldPos) = Just (oldPos, newPos)
+    deletedKeys =
+      Set.fromList (mapMaybe fst strWithIds) `Set.difference`
+      Set.fromList (mapMaybe fst newText)
+
 -- TODO: Instead of font + ptSize, let's pass a text-drawer (that's
 -- what "Font" should be)
 -- | Note: maxLines prevents the *user* from exceeding it, not the
@@ -186,30 +209,12 @@ makeFocused cursor style str myId =
     cursorX = length curLineBefore
     cursorY = length linesBefore - 1
 
-    eventResult newText newCursor =
-      (map snd newText,
-        Widget.EventResult {
-          Widget.eCursor = Just $ makeTextEditCursor myId newCursor,
-          Widget.eAnimIdMapping = mapping
-        })
-      where
-        mapping animId = maybe animId (Anim.joinId myAnimId . translateId) $ Anim.subId myAnimId animId
-        translateId [subId] = (:[]) . maybe subId (SBS8.pack . show) $ (`Map.lookup` dict) =<< Safe.readMay (SBS8.unpack subId)
-        translateId x = x
-        dict = mappend movedDict deletedDict
-        movedDict = Map.fromList . mapMaybe posMapping . enumerate $ map fst newText
-        deletedDict = Map.fromList . map (flip (,) (-1)) $ Set.toList deletedKeys
-        posMapping (_, Nothing) = Nothing
-        posMapping (newPos, Just oldPos) = Just (oldPos, newPos)
-        deletedKeys =
-          Set.fromList (mapMaybe fst strWithIds) `Set.difference`
-          Set.fromList (mapMaybe fst newText)
-
-    moveAbsolute a = eventResult strWithIds . max 0 $ min (length str) a
+    eventRes = eventResult myId strWithIds
+    moveAbsolute a = eventRes strWithIds . max 0 $ min (length str) a
     moveRelative d = moveAbsolute (cursor + d)
-    backDelete n = eventResult (take (cursor-n) strWithIds ++ drop cursor strWithIds) (cursor-n)
-    delete n = eventResult (before ++ drop n after) cursor
-    insert l = eventResult str' cursor'
+    backDelete n = eventRes (take (cursor-n) strWithIds ++ drop cursor strWithIds) (cursor-n)
+    delete n = eventRes (before ++ drop n after) cursor
+    insert l = eventRes str' cursor'
       where
         cursor' = cursor + length l
         str' = concat [before, map ((,) Nothing) l, after]
@@ -280,7 +285,7 @@ makeFocused cursor style str myId =
 
         let swapPoint = min (textLength - 2) (cursor - 1)
             (beforeSwap, x:y:afterSwap) = splitAt swapPoint strWithIds
-            swapLetters = eventResult (beforeSwap ++ y:x:afterSwap) $ min textLength (cursor + 1)
+            swapLetters = eventRes (beforeSwap ++ y:x:afterSwap) $ min textLength (cursor + 1)
 
         in
 
