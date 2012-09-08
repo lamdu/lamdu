@@ -11,7 +11,6 @@ module Graphics.UI.Bottle.Widgets.TextEdit(
   atSTextViewStyle
   ) where
 
-import Control.Applicative (liftA2)
 import Control.Arrow (first)
 import Control.Lens ((%~), (^.))
 import Data.Char (isSpace)
@@ -101,30 +100,34 @@ makeUnfocused :: Style -> String -> Widget.Id -> Widget ((,) String)
 makeUnfocused style str myId =
   makeFocusable style str myId .
   (Lens.sets Widget.atWSize . Vector2.first %~ (+ cursorWidth)) .
-  (Lens.sets Widget.atWFocalArea . Rect.size %~ liftA2 max cursorSize) .
   Widget.atWFrame (cursorTranslate style) .
   TextView.makeWidget (sTextViewStyle style) displayStr $
   Widget.toAnimId myId
   where
     cursorWidth = sCursorWidth style
-    cursorSize = Vector2 cursorWidth $ lineHeightOfStyle style
     displayStr = makeDisplayStr (sEmptyUnfocusedString style) str
 
 makeFocusable ::
   Style -> String -> Widget.Id ->
   Widget ((,) String) -> Widget ((,) String)
 makeFocusable style str myId =
-  Widget.takesFocus $ \dir ->
-  (,) str . makeTextEditCursor myId $
-  case dir of
-    Direction.Outside -> length str
-    Direction.PrevFocalArea rect -> rectToCursor rect
-    Direction.Point x -> rectToCursor $ Rect x 0
+  Widget.atWMaybeEnter . const $ Just mEnter
   where
     minimumOn = minimumBy . comparing
     rectToCursor fromRect =
       fst . minimumOn snd . enumerate . map (Rect.distance fromRect) $
       cursorRects style str
+    mEnter dir =
+      Widget.EnterResult cursorRect .
+      (,) str . Widget.eventResultFromCursor $
+      makeTextEditCursor myId cursor
+      where
+        cursor =
+          case dir of
+          Direction.Outside -> length str
+          Direction.PrevFocalArea rect -> rectToCursor rect
+          Direction.Point x -> rectToCursor $ Rect x 0
+        cursorRect = mkCursorRect style cursor str
 
 lineHeightOfStyle :: Style -> Widget.R
 lineHeightOfStyle style = sz * textHeight
