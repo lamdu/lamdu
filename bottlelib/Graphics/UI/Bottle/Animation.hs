@@ -7,6 +7,7 @@ module Graphics.UI.Bottle.Animation
   , draw, nextFrame, mapIdentities
   , unitSquare, backgroundColor
   , translate, scale, onDepth
+  , unitIntoRect
   , simpleFrame, simpleFrameDownscale
   , joinId, subId
   , weaker, stronger
@@ -227,6 +228,12 @@ scale factor =
   where
     scaleImage (PositionedImage img (Rect tl size)) =
       PositionedImage img (Rect (tl * factor) (size * factor))
+
+-- Scale/translate a Unit-sized frame into a given rect
+unitIntoRect :: Rect -> Frame -> Frame
+unitIntoRect r =
+  translate (r ^. Rect.topLeft) .
+  scale (r ^. Rect.size)
 
 onDepth :: (Int -> Int) -> Frame -> Frame
 onDepth = atFSubImages . Map.map . map . first

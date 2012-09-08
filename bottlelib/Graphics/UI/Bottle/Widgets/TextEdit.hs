@@ -179,18 +179,17 @@ makeFocused cursor style str myId =
     displayStr = makeDisplayStr (sEmptyFocusedString style) str
     (frameGen, Vector2 tlWidth tlHeight) = drawText displayStr
 
-    textLinesWidth = Lens.view Vector2.first . snd . drawText
     lineHeight = lineHeightOfStyle style
     beforeCursorLines = splitWhen (== '\n') $ take cursor str
     cursorRect = Rect cursorPos cursorSize
     cursorPos = Vector2 cursorPosX cursorPosY
     cursorSize = Vector2 (sCursorWidth style) lineHeight
-    cursorPosX = textLinesWidth $ last beforeCursorLines
+    cursorPosX =
+      Lens.view Vector2.first . snd . drawText $ last beforeCursorLines
     cursorPosY = (lineHeight *) . subtract 1 $ genericLength beforeCursorLines
     cursorFrame =
       Anim.onDepth (+2) .
-      Anim.translate cursorPos .
-      Anim.scale cursorSize .
+      Anim.unitIntoRect cursorRect .
       (Anim.simpleFrame . sTextCursorId) style $
       Draw.tint (sCursorColor style) square
 
