@@ -26,7 +26,7 @@ fDConfig = FocusDelegator.Config
 
 make
   :: MonadF m
-  => ExpressionGui.Maker m -> Sugar.Inferred m -> Guid
+  => ExpressionGui.Maker m -> Sugar.Inferred m (Sugar.Expression m) -> Guid
   -> Widget.Id
   -> VarAccess m (Maybe (HoleEdit.ResultPicker m), ExpressionGui m)
 make makeExpressionEdit inferred guid =
@@ -36,7 +36,7 @@ make makeExpressionEdit inferred guid =
 
 makeUnwrapped
   :: MonadF m
-  => ExpressionGui.Maker m -> Sugar.Inferred m -> Guid
+  => ExpressionGui.Maker m -> Sugar.Inferred m (Sugar.Expression m) -> Guid
   -> Widget.Id
   -> VarAccess m (Maybe (HoleEdit.ResultPicker m), ExpressionGui m)
 makeUnwrapped makeExpressionEdit inferred guid myId = do

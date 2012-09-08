@@ -20,7 +20,7 @@ make
   :: MonadF m
   => ExpressionGui.Maker m
   -> Sugar.HasParens
-  -> Sugar.Pi m
+  -> Sugar.Pi m (Sugar.Expression m)
   -> Widget.Id
   -> VarAccess m (ExpressionGui m)
 make makeExpressionEdit hasParens (Sugar.Pi param resultType) =

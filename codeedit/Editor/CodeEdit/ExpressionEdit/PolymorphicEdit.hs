@@ -18,7 +18,7 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 -- make without the focus delegator
 makeInner ::
   MonadF m =>
-  ExpressionGui.Maker m -> Sugar.Polymorphic m ->
+  ExpressionGui.Maker m -> Sugar.Polymorphic (Sugar.Expression m) ->
   Widget.Id -> VarAccess m (ExpressionGui m)
 makeInner makeExpressionEdit poly myId =
   assignCursor $ do
@@ -50,7 +50,7 @@ polymorphicFDConfig = FocusDelegator.Config
 
 make ::
   MonadF m =>
-  ExpressionGui.Maker m -> Sugar.Polymorphic m ->
+  ExpressionGui.Maker m -> Sugar.Polymorphic (Sugar.Expression m) ->
   Widget.Id -> VarAccess m (ExpressionGui m)
 make makeExpressionEdit poly =
   focusDelegate $ makeInner makeExpressionEdit poly

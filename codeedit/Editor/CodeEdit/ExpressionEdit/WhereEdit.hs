@@ -23,7 +23,7 @@ import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 make
   :: MonadF m
   => ExpressionGui.Maker m
-  -> Sugar.Where m
+  -> Sugar.Where m (Sugar.Expression m)
   -> Widget.Id
   -> VarAccess m (WidgetT m)
 make makeExpressionEdit (Sugar.Where items _) myId = do
@@ -61,7 +61,7 @@ makeWithBody
   :: MonadF m
   => ExpressionGui.Maker m
   -> Sugar.HasParens
-  -> Sugar.Where m
+  -> Sugar.Where m (Sugar.Expression m)
   -> Widget.Id
   -> VarAccess m (ExpressionGui m)
 makeWithBody makeExpressionEdit hasParens where_@(Sugar.Where _ body) =

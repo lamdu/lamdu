@@ -103,7 +103,7 @@ makeEditor sExpr =
 expressionEventMap
   :: MonadF m
   => HoleResultPicker m
-  -> Sugar.Actions m
+  -> Sugar.Actions m (Sugar.Expression m)
   -> EventHandlers (ITransaction ViewTag m)
 expressionEventMap holePicker actions =
   mconcat

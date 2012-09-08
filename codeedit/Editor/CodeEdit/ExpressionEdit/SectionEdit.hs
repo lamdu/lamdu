@@ -17,7 +17,7 @@ make
   :: MonadF m
   => ExpressionGui.Maker m
   -> Sugar.HasParens
-  -> Sugar.Section m
+  -> Sugar.Section (Sugar.Expression m)
   -> Widget.Id
   -> VarAccess m (ExpressionGui m)
 make makeExpressionEdit hasParens (Sugar.Section mLArg op mRArg) =

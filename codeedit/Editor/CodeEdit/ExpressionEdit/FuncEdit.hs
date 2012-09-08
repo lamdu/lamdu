@@ -54,7 +54,7 @@ makeParamEdit
   => ExpressionGui.Maker m
   -> (E.Doc, Sugar.Expression m)
   -> (VarAccess.NameSource, String)
-  -> Sugar.FuncParam m
+  -> Sugar.FuncParam m (Sugar.Expression m)
   -> VarAccess m (ExpressionGui m)
 makeParamEdit makeExpressionEdit rhs name param =
   (liftM . ExpressionGui.atEgWidget)
@@ -110,7 +110,7 @@ make
   :: MonadF m
   => ExpressionGui.Maker m
   -> Sugar.HasParens
-  -> Sugar.Func m
+  -> Sugar.Func m (Sugar.Expression m)
   -> Widget.Id
   -> VarAccess m (ExpressionGui m)
 make makeExpressionEdit hasParens (Sugar.Func params body) =
@@ -137,7 +137,7 @@ makeParamsAndResultEdit ::
   ExpressionGui.Maker m ->
   [Widget.Id] ->
   (E.Doc, Sugar.Expression m) ->
-  [Sugar.FuncParam m] ->
+  [Sugar.FuncParam m (Sugar.Expression m)] ->
   VarAccess m ([ExpressionGui m], ExpressionGui m)
 makeParamsAndResultEdit makeExpressionEdit lhs rhs@(_, result) =
   go
