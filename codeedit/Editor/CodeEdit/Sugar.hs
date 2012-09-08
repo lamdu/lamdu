@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, DeriveFunctor #-}
 
 module Editor.CodeEdit.Sugar
   ( DefinitionRef(..), DefinitionBody(..)
@@ -89,12 +89,12 @@ data WhereItem m expr = WhereItem
   , wiTypeGuid :: Guid
   , wiMDelete :: Maybe (T m Guid)
   , wiValue :: expr
-  }
+  } deriving (Functor)
 
 data Where m expr = Where
   { wWheres :: [WhereItem m expr]
   , wBody :: expr
-  }
+  } deriving (Functor)
 
 data FuncParamActions m = FuncParamActions
   { fpaAddNextParam :: T m Guid
@@ -107,23 +107,23 @@ data FuncParam m expr = FuncParam
   , fpHiddenLambdaGuid :: Maybe Guid
   , fpType :: expr
   , fpMActions :: Maybe (FuncParamActions m)
-  }
+  } deriving (Functor)
 
 -- Multi-param Lambda
 data Func m expr = Func
   { fParams :: [FuncParam m expr]
   , fBody :: expr
-  }
+  } deriving (Functor)
 
 data Pi m expr = Pi
   { pParam :: FuncParam m expr
   , pResultType :: expr
-  }
+  } deriving (Functor)
 
 data Apply expr = Apply
   { applyFunc :: expr
   , applyArg :: expr
-  }
+  } deriving (Functor)
 
 
 -- Infix Sections include: (+), (1+), (+1), (1+2). Last is really just
@@ -132,7 +132,7 @@ data Section expr = Section
   { sectionLArg :: Maybe expr
   , sectionOp :: expr -- TODO: Always a GetVariable, use a more specific type
   , sectionRArg :: Maybe expr
-  }
+  } deriving (Functor)
 
 type HoleResult = Infer.Expression ()
 
@@ -151,12 +151,12 @@ data LiteralInteger m = LiteralInteger
 data Inferred m expr = Inferred
   { iValue :: expr
   , iHole :: Hole m
-  }
+  } deriving (Functor)
 
 data Polymorphic expr = Polymorphic
   { pCompact :: Maybe expr
   , pFullExpression :: expr
-  }
+  } deriving (Functor)
 
 data GetVariable
   = GetParameter Guid | GetDefinition Data.DefinitionIRef
@@ -173,6 +173,7 @@ data ExpressionBody m expr
   | ExpressionPolymorphic { _ePolymorphic :: Polymorphic expr }
   | ExpressionLiteralInteger { _eLit :: LiteralInteger m }
   | ExpressionAtom { _eAtom :: String }
+  deriving (Functor)
 
 data DefinitionNewType m = DefinitionNewType
   { dntNewType :: Expression m
@@ -216,29 +217,6 @@ AtFieldTH.make ''Inferred
 
 AtFieldTH.make ''Actions
 AtFieldTH.make ''FuncParamActions
-
--- TODO: Use Functor like Data.ExpressionBody?
--- Not recursive!
-atSubExpressions ::
-  (Expression m -> Expression m) ->
-  ExpressionBody m (Expression m) -> ExpressionBody m (Expression m)
-atSubExpressions f (ExpressionApply p (Apply func arg)) =
-  ExpressionApply p $ on Apply f func arg
-atSubExpressions f (ExpressionSection p (Section l o r)) =
-  ExpressionSection p $ Section (fmap f l) (f o) (fmap f r)
-atSubExpressions f (ExpressionWhere p (Where items body)) =
-  ExpressionWhere p $ Where ((map . atWiValue) f items) (f body)
-atSubExpressions f (ExpressionFunc p (Func params body)) =
-  ExpressionFunc p $ Func ((map . atFpType) f params) (f body)
-atSubExpressions f (ExpressionPi p (Pi param body)) =
-  ExpressionPi p $ Pi (atFpType f param) (f body)
-atSubExpressions f (ExpressionInferred i) = ExpressionInferred $ atIValue f i
-atSubExpressions f (ExpressionPolymorphic (Polymorphic mCompact full)) =
-  ExpressionPolymorphic $ Polymorphic (fmap f mCompact) (f full)
-atSubExpressions _ x@(ExpressionGetVariable _) = x
-atSubExpressions _ x@(ExpressionHole _) = x
-atSubExpressions _ x@(ExpressionLiteralInteger _) = x
-atSubExpressions _ x@(ExpressionAtom _) = x
 
 data ExprEntityInferred a = ExprEntityInferred
   { eesInferred :: Infer.Inferred a
@@ -916,7 +894,7 @@ convertStoredExpression sugarContext =
 removeTypes :: Expression m -> Expression m
 removeTypes =
   (atRInferredTypes . const) [] .
-  (atRExpression . atSubExpressions) removeTypes
+  (atRExpression . fmap) removeTypes
 
 eesInferredExprs ::
   (Infer.Inferred a -> b) ->
