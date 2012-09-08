@@ -46,12 +46,12 @@ pasteEventMap =
 make :: MonadF m => ExpressionGui.Maker m
 make sExpr = do
   (holePicker, widget) <- makeEditor sExpr exprId
-  typeEdits <- mapM make $ Sugar.rInferredTypes sExpr
+  typeEdits <- mapM make $ Sugar.plInferredTypes payload
   let onReadOnly = Widget.doesntTakeFocus
   return .
     ExpressionGui.atEgWidget
-    ( maybe onReadOnly (const id) (Sugar.rActions sExpr) .
-      Widget.weakerEvents (expressionEventMap holePicker sExpr)
+    ( maybe onReadOnly (const id) (Sugar.plActions payload) .
+      (Widget.weakerEvents . expressionEventMap holePicker . Sugar.rPayload) sExpr
     ) .
     ExpressionGui.addType ExpressionGui.Background exprId
     (map
@@ -61,6 +61,7 @@ make sExpr = do
       ) typeEdits) $
     widget
   where
+    payload = Sugar.rPayload sExpr
     exprId = WidgetIds.fromGuid $ Sugar.rGuid sExpr
 
 makeEditor
@@ -69,7 +70,7 @@ makeEditor
   -> Widget.Id
   -> VarAccess m (HoleResultPicker m, ExpressionGui m)
 makeEditor sExpr =
-  case Sugar.rExpression sExpr of
+  case Sugar.rExpressionBody sExpr of
   Sugar.ExpressionWhere hasParens w ->
     notAHole $ WhereEdit.makeWithBody make hasParens w
   Sugar.ExpressionFunc hasParens f ->
@@ -122,17 +123,17 @@ withPickResultFirst holePicker keys doc action =
 expressionEventMap ::
   MonadF m =>
   HoleResultPicker m ->
-  Sugar.Expression m ->
+  Sugar.Payload m ->
   EventHandlers (ITransaction ViewTag m)
-expressionEventMap holePicker sExpr =
+expressionEventMap holePicker payload =
   mconcat
-  [ maybe mempty moveToIfHole $ Sugar.rNextArg sExpr
+  [ maybe mempty moveToIfHole $ Sugar.plNextArg payload
     -- Move to next arg overrides add arg's keys.
-  , maybe mempty (actionsEventMap holePicker) $ Sugar.rActions sExpr
+  , maybe mempty (actionsEventMap holePicker) $ Sugar.plActions payload
   ]
   where
     moveToIfHole nextArg =
-      case Sugar.rExpression nextArg of
+      case Sugar.rExpressionBody nextArg of
       Sugar.ExpressionHole{} ->
         withPickResultFirst holePicker Config.addNextArgumentKeys "Move to next arg" .
         return . WidgetIds.fromGuid $ Sugar.rGuid nextArg

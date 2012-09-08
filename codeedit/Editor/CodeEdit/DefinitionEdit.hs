@@ -75,7 +75,7 @@ makeParts makeExpressionEdit name guid def = do
       . IT.transaction
       ) $ case params of
       (p : _) -> fmap Sugar.fpaAddPrevParam $ Sugar.fpMActions p
-      _ -> fmap Sugar.lambdaWrap $ Sugar.rActions exprRef
+      _ -> fmap Sugar.lambdaWrap . Sugar.plActions $ Sugar.rPayload exprRef
     exprRef = Sugar.deExprRef def
     myId = WidgetIds.fromGuid guid
 

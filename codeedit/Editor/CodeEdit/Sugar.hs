@@ -6,6 +6,7 @@ module Editor.CodeEdit.Sugar
   , DefinitionNewType(..)
   , Actions(..)
   , ExpressionBody(..)
+  , Payload(..)
   , Expression(..)
   , Where(..)
   , WhereItem(..)
@@ -76,12 +77,16 @@ data Actions m = Actions
 
 data HasParens = HaveParens | DontHaveParens
 
+data Payload m = Payload
+  { plInferredTypes :: [Expression m]
+  , plActions :: Maybe (Actions m)
+  , plNextArg :: Maybe (Expression m)
+  }
+
 data Expression m = Expression
   { rGuid :: Guid
-  , rExpression :: ExpressionBody m (Expression m)
-  , rInferredTypes :: [Expression m]
-  , rActions :: Maybe (Actions m)
-  , rNextArg :: Maybe (Expression m)
+  , rExpressionBody :: ExpressionBody m (Expression m)
+  , rPayload :: Payload m
   }
 
 data WhereItem m expr = WhereItem
@@ -209,14 +214,14 @@ AtFieldTH.make ''Where
 AtFieldTH.make ''FuncParam
 AtFieldTH.make ''Func
 AtFieldTH.make ''Pi
-AtFieldTH.make ''Expression
 AtFieldTH.make ''Apply
 AtFieldTH.make ''Section
 AtFieldTH.make ''ExpressionBody
 AtFieldTH.make ''Inferred
-
 AtFieldTH.make ''Actions
 AtFieldTH.make ''FuncParamActions
+AtFieldTH.make ''Payload
+AtFieldTH.make ''Expression
 
 data ExprEntityInferred a = ExprEntityInferred
   { eesInferred :: Infer.Inferred a
@@ -318,11 +323,13 @@ mkExpression ee expr = do
   inferredTypesRefs <- mapM (convertExpressionI . eeFromPure) types
   return
     Expression
-    { rExpression = expr
-    , rInferredTypes = inferredTypesRefs
-    , rGuid = Data.eGuid ee
-    , rActions = fmap mkActions $ eeProp ee
-    , rNextArg = Nothing
+    { rGuid = Data.eGuid ee
+    , rExpressionBody = expr
+    , rPayload = Payload
+      { plInferredTypes = inferredTypesRefs
+      , plActions = fmap mkActions $ eeProp ee
+      , plNextArg = Nothing
+      }
     }
   where
     types =
@@ -379,7 +386,7 @@ convertFunc lambda exprI = do
   (param, sBody) <- convertLambda lambda exprI
   mkExpression exprI .
     ExpressionFunc DontHaveParens $
-    case rExpression sBody of
+    case rExpressionBody sBody of
       ExpressionFunc _ (Func params body) ->
         Func (deleteToNextParam param : params) body
       _ -> Func [param] sBody
@@ -409,7 +416,7 @@ convertWhere valueRef lambdaI (Data.Lambda typeI bodyI) applyI = do
   sBody <- convertExpressionI bodyI
   mkExpression applyI .
     ExpressionWhere DontHaveParens . atWWheres (item :) $
-    case rExpression sBody of
+    case rExpressionBody sBody of
       ExpressionWhere _ x -> x
       _ -> Where [] sBody
   where
@@ -422,16 +429,16 @@ convertWhere valueRef lambdaI (Data.Lambda typeI bodyI) applyI = do
 
 addParens :: ExpressionBody m (Expression m) -> ExpressionBody m (Expression m)
 addParens (ExpressionInferred (Inferred val hole)) =
-  ExpressionInferred $ Inferred (atRExpression addParens val) hole
+  ExpressionInferred $ Inferred (atRExpressionBody addParens val) hole
 addParens (ExpressionPolymorphic (Polymorphic compact full)) =
   ExpressionPolymorphic .
-  Polymorphic ((fmap . atRExpression) addParens compact) $
-  atRExpression addParens full
+  Polymorphic ((fmap . atRExpressionBody) addParens compact) $
+  atRExpressionBody addParens full
 addParens x = (atEHasParens . const) HaveParens x
 
 addApplyChildParens :: Expression m -> Expression m
 addApplyChildParens =
-  atRExpression f
+  atRExpressionBody f
   where
     f x@ExpressionApply{} = x
     f x@ExpressionPolymorphic{} = x
@@ -455,7 +462,7 @@ convertApply (Data.Apply funcI argI) exprI = do
     _ -> do
       funcS <- convertExpressionI funcI
       let apply = Data.Apply (funcS, funcI) (argS, argI)
-      case rExpression funcS of
+      case rExpressionBody funcS of
         ExpressionSection _ section ->
           applyOnSection section apply exprI
         _ ->
@@ -466,14 +473,14 @@ setAddArg exprI =
   maybe id f $ eeProp exprI
   where
     f stored =
-      atRActions . fmap . atAddNextArg . const .
+      atRPayload . atPlActions . fmap . atAddNextArg . const .
       liftM DataIRef.exprGuid $ DataOps.callWithArg stored
 
 removeRedundantTypes :: Expression m -> Expression m
 removeRedundantTypes exprRef =
-  case rExpression exprRef of
+  case rExpressionBody exprRef of
     ExpressionHole {} -> exprRef -- Keep types on holes
-    _ -> atRInferredTypes removeIfNoErrors exprRef
+    _ -> (atRPayload . atPlInferredTypes) removeIfNoErrors exprRef
   where
     removeIfNoErrors [_] = []
     removeIfNoErrors xs = xs
@@ -510,7 +517,7 @@ convertApplyPrefix ::
 convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, argI)) exprI =
   if isPolymorphicFunc funcI
   then
-    case rExpression funcRef of
+    case rExpressionBody funcRef of
     ExpressionPolymorphic (Polymorphic compact full) ->
       makePolymorphic compact . removeRedundantTypes =<<
       (mkExpression exprI . ExpressionApply DontHaveParens) (Apply full newArgRef)
@@ -520,14 +527,14 @@ convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, argI)) exprI =
   where
     newArgRef =
       setAddArg exprI $
-      atRExpression addParens argRef
-    setNextArg = atRNextArg . const $ Just newArgRef
+      atRExpressionBody addParens argRef
+    setNextArg = atRPayload . atPlNextArg . const $ Just newArgRef
     newFuncRef =
       setNextArg .
       addApplyChildParens .
       removeRedundantTypes .
-      (atRExpression . atEApply . atApplyArg) setNextArg .
-      (atRExpression . atESection . atSectionOp) setNextArg $
+      (atRExpressionBody . atEApply . atApplyArg) setNextArg .
+      (atRExpressionBody . atESection . atSectionOp) setNextArg $
       funcRef
     makeFullApply =
       mkExpression exprI . ExpressionApply DontHaveParens $
@@ -551,7 +558,7 @@ convertGetVariable varRef exprI = do
     then
       mkExpression exprI .
       ExpressionSection HaveParens $
-      Section Nothing ((atRInferredTypes . const) [] getVarExpr) Nothing
+      Section Nothing ((atRPayload . atPlInferredTypes . const) [] getVarExpr) Nothing
     else return getVarExpr
 
 mkPaste :: Monad m => DataIRef.ExpressionProperty (T m) -> Sugar m (Maybe (T m Guid))
@@ -893,8 +900,8 @@ convertStoredExpression sugarContext =
 
 removeTypes :: Expression m -> Expression m
 removeTypes =
-  (atRInferredTypes . const) [] .
-  (atRExpression . fmap) removeTypes
+  (atRPayload . atPlInferredTypes . const) [] .
+  (atRExpressionBody . fmap) removeTypes
 
 eesInferredExprs ::
   (Infer.Inferred a -> b) ->
