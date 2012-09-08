@@ -168,7 +168,7 @@ makeFocused cursor style str myId =
       { wIsFocused = True
       , wSize = reqSize
       , wFrame = img `mappend` cursorFrame
-      , wEventMap = eventMap
+      , wEventMap = eventMap cursor str displayStr myId
       , wMaybeEnter = Nothing
       , wFocalArea = cursorRect
       }
@@ -176,11 +176,11 @@ makeFocused cursor style str myId =
     myAnimId = Widget.toAnimId myId
     img = cursorTranslate style $ frameGen myAnimId
     drawText = TextView.drawTextAsSingleLetters (sTextViewStyle style)
+    displayStr = makeDisplayStr (sEmptyFocusedString style) str
     (frameGen, Vector2 tlWidth tlHeight) = drawText displayStr
 
     textLinesWidth = Lens.view Vector2.first . snd . drawText
     lineHeight = lineHeightOfStyle style
-    strWithIds = map (first Just) $ enumerate str
     beforeCursorLines = splitWhen (== '\n') $ take cursor str
     cursorRect = Rect cursorPos cursorSize
     cursorPos = Vector2 cursorPosX cursorPosY
@@ -194,11 +194,99 @@ makeFocused cursor style str myId =
       (Anim.simpleFrame . sTextCursorId) style $
       Draw.tint (sCursorColor style) square
 
-    (before, after) = splitAt cursor strWithIds
-    textLength = length str
-    lineCount = length $ splitWhen (== '\n') displayStr
-    displayStr = makeDisplayStr (sEmptyFocusedString style) str
+eventMap ::
+  Int -> [Char] -> [Char] -> Widget.Id ->
+  Widget.EventHandlers ((,) String)
+eventMap cursor str displayStr myId =
+  mconcat . concat $ [
+    [ keys "Move left" [specialKey E.KeyLeft] $
+      moveRelative (-1)
+    | cursor > 0 ],
 
+    [ keys "Move right" [specialKey E.KeyRight] $
+      moveRelative 1
+    | cursor < textLength ],
+
+    [ keys "Move word left" [ctrlSpecialKey E.KeyLeft]
+      backMoveWord
+    | cursor > 0 ],
+
+    [ keys "Move word right" [ctrlSpecialKey E.KeyRight] moveWord
+    | cursor < textLength ],
+
+    [ keys "Move up" [specialKey E.KeyUp] $
+      moveRelative (- cursorX - 1 - length (drop cursorX prevLine))
+    | cursorY > 0 ],
+
+    [ keys "Move down" [specialKey E.KeyDown] $
+      moveRelative (length curLineAfter + 1 + min cursorX (length nextLine))
+    | cursorY < lineCount - 1 ],
+
+    [ keys "Move to beginning of line" homeKeys $
+      moveRelative (-cursorX)
+    | cursorX > 0 ],
+
+    [ keys "Move to end of line" endKeys $
+      moveRelative (length curLineAfter)
+    | not . null $ curLineAfter ],
+
+    [ keys "Move to beginning of text" homeKeys $
+      moveAbsolute 0
+    | cursorX == 0 && cursor > 0 ],
+
+    [ keys "Move to end of text" endKeys $
+      moveAbsolute textLength
+    | null curLineAfter && cursor < textLength ],
+
+    [ keys "Delete backwards" [specialKey E.KeyBackspace] $
+      backDelete 1
+    | cursor > 0 ],
+
+    [ keys "Delete word backwards" [ctrlCharKey 'w']
+      backDeleteWord
+    | cursor > 0 ],
+
+    let swapPoint = min (textLength - 2) (cursor - 1)
+        (beforeSwap, x:y:afterSwap) = splitAt swapPoint strWithIds
+        swapLetters = eventRes (beforeSwap ++ y:x:afterSwap) $ min textLength (cursor + 1)
+
+    in
+
+    [ keys "Swap letters" [ctrlCharKey 't']
+      swapLetters
+    | cursor > 0 && textLength >= 2 ],
+
+    [ keys "Delete forward" [specialKey E.KeyDel] $
+      delete 1
+    | cursor < textLength ],
+
+    [ keys "Delete word forward" [altCharKey 'd']
+      deleteWord
+    | cursor < textLength ],
+
+    [ keys "Delete rest of line" [ctrlCharKey 'k'] $
+      delete (length curLineAfter)
+    | not . null $ curLineAfter ],
+
+    [ keys "Delete newline" [ctrlCharKey 'k'] $
+      delete 1
+    | null curLineAfter && cursor < textLength ],
+
+    [ keys "Delete till beginning of line" [ctrlCharKey 'u'] $
+      backDelete (length curLineBefore)
+    | not . null $ curLineBefore ],
+
+    [ E.filterChars (`notElem` " \n") .
+      E.simpleChars "Character" "Insert character" $
+      insert . (: [])
+    ],
+
+    [ keys "Insert Newline" [specialKey E.KeyEnter] (insert "\n") ],
+
+    [ keys "Insert Space" [E.ModKey E.noMods E.KeySpace] (insert " ") ]
+
+    ]
+  where
     splitLines = splitWhen ((== '\n') . snd)
     linesBefore = reverse (splitLines before)
     linesAfter = splitLines after
@@ -233,96 +321,10 @@ makeFocused cursor style str myId =
     altCharKey = E.ModKey E.alt . E.charKey
     homeKeys = [specialKey E.KeyHome, ctrlCharKey 'A']
     endKeys = [specialKey E.KeyEnd, ctrlCharKey 'E']
-
-    eventMap =
-      mconcat . concat $ [
-        [ keys "Move left" [specialKey E.KeyLeft] $
-          moveRelative (-1)
-        | cursor > 0 ],
-
-        [ keys "Move right" [specialKey E.KeyRight] $
-          moveRelative 1
-        | cursor < textLength ],
-
-        [ keys "Move word left" [ctrlSpecialKey E.KeyLeft]
-          backMoveWord
-        | cursor > 0 ],
-
-        [ keys "Move word right" [ctrlSpecialKey E.KeyRight] moveWord
-        | cursor < textLength ],
-
-        [ keys "Move up" [specialKey E.KeyUp] $
-          moveRelative (- cursorX - 1 - length (drop cursorX prevLine))
-        | cursorY > 0 ],
-
-        [ keys "Move down" [specialKey E.KeyDown] $
-          moveRelative (length curLineAfter + 1 + min cursorX (length nextLine))
-        | cursorY < lineCount - 1 ],
-
-        [ keys "Move to beginning of line" homeKeys $
-          moveRelative (-cursorX)
-        | cursorX > 0 ],
-
-        [ keys "Move to end of line" endKeys $
-          moveRelative (length curLineAfter)
-        | not . null $ curLineAfter ],
-
-        [ keys "Move to beginning of text" homeKeys $
-          moveAbsolute 0
-        | cursorX == 0 && cursor > 0 ],
-
-        [ keys "Move to end of text" endKeys $
-          moveAbsolute textLength
-        | null curLineAfter && cursor < textLength ],
-
-        [ keys "Delete backwards" [specialKey E.KeyBackspace] $
-          backDelete 1
-        | cursor > 0 ],
-
-        [ keys "Delete word backwards" [ctrlCharKey 'w']
-          backDeleteWord
-        | cursor > 0 ],
-
-        let swapPoint = min (textLength - 2) (cursor - 1)
-            (beforeSwap, x:y:afterSwap) = splitAt swapPoint strWithIds
-            swapLetters = eventRes (beforeSwap ++ y:x:afterSwap) $ min textLength (cursor + 1)
-
-        in
-
-        [ keys "Swap letters" [ctrlCharKey 't']
-          swapLetters
-        | cursor > 0 && textLength >= 2 ],
-
-        [ keys "Delete forward" [specialKey E.KeyDel] $
-          delete 1
-        | cursor < textLength ],
-
-        [ keys "Delete word forward" [altCharKey 'd']
-          deleteWord
-        | cursor < textLength ],
-
-        [ keys "Delete rest of line" [ctrlCharKey 'k'] $
-          delete (length curLineAfter)
-        | not . null $ curLineAfter ],
-
-        [ keys "Delete newline" [ctrlCharKey 'k'] $
-          delete 1
-        | null curLineAfter && cursor < textLength ],
-
-        [ keys "Delete till beginning of line" [ctrlCharKey 'u'] $
-          backDelete (length curLineBefore)
-        | not . null $ curLineBefore ],
-
-        [ E.filterChars (`notElem` " \n") .
-          E.simpleChars "Character" "Insert character" $
-          insert . (: [])
-        ],
-
-        [ keys "Insert Newline" [specialKey E.KeyEnter] (insert "\n") ],
-
-        [ keys "Insert Space" [E.ModKey E.noMods E.KeySpace] (insert " ") ]
-
-        ]
+    textLength = length str
+    lineCount = length $ splitWhen (== '\n') displayStr
+    strWithIds = map (first Just) $ enumerate str
+    (before, after) = splitAt cursor strWithIds
 
 make :: Style -> Widget.Id -> String -> Widget.Id -> Widget ((,) String)
 make style cursor str myId =
