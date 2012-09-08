@@ -175,23 +175,30 @@ makeFocused cursor style str myId =
     reqSize = Vector2 (sCursorWidth style + tlWidth) tlHeight
     myAnimId = Widget.toAnimId myId
     img = cursorTranslate style $ frameGen myAnimId
-    drawText = TextView.drawTextAsSingleLetters (sTextViewStyle style)
     displayStr = makeDisplayStr (sEmptyFocusedString style) str
-    (frameGen, Vector2 tlWidth tlHeight) = drawText displayStr
+    (frameGen, Vector2 tlWidth tlHeight) = textViewDraw style displayStr
 
-    lineHeight = lineHeightOfStyle style
-    beforeCursorLines = splitWhen (== '\n') $ take cursor str
-    cursorRect = Rect cursorPos cursorSize
-    cursorPos = Vector2 cursorPosX cursorPosY
-    cursorSize = Vector2 (sCursorWidth style) lineHeight
-    cursorPosX =
-      Lens.view Vector2.first . snd . drawText $ last beforeCursorLines
-    cursorPosY = (lineHeight *) . subtract 1 $ genericLength beforeCursorLines
+    cursorRect = mkCursorRect style cursor str
     cursorFrame =
       Anim.onDepth (+2) .
       Anim.unitIntoRect cursorRect .
       (Anim.simpleFrame . sTextCursorId) style $
       Draw.tint (sCursorColor style) square
+
+textViewDraw ::
+  Style -> String -> (Anim.AnimId -> Anim.Frame, Widget.Size)
+textViewDraw = TextView.drawTextAsSingleLetters . sTextViewStyle
+
+mkCursorRect :: Style -> Int -> String -> Rect
+mkCursorRect style cursor str = Rect cursorPos cursorSize
+  where
+    beforeCursorLines = splitWhen (== '\n') $ take cursor str
+    lineHeight = lineHeightOfStyle style
+    cursorPos = Vector2 cursorPosX cursorPosY
+    cursorSize = Vector2 (sCursorWidth style) lineHeight
+    cursorPosX =
+      Lens.view Vector2.first . snd . textViewDraw style $ last beforeCursorLines
+    cursorPosY = (lineHeight *) . subtract 1 $ genericLength beforeCursorLines
 
 eventMap ::
   Int -> [Char] -> [Char] -> Widget.Id ->
