@@ -10,6 +10,7 @@ Category:            Graphics
 Build-type:          Simple
 -- Extra-source-files:
 Cabal-version:       >= 1.8
+Data-files:          fonts/DejaVuSans.ttf
 Library
   -- Modules exported by the library.
   hs-Source-Dirs:      bottlelib
@@ -134,7 +135,8 @@ Executable Editor
                        Editor.Data.Ops,
                        Editor.MonadF,
                        Editor.WidgetIds,
-                       Editor.Layers
+                       Editor.Layers,
+                       Paths_bottle
   ghc-options:         -O2 -Wall
   ghc-prof-options:    -Wall -auto-all -caf-all -rtsopts
   main-is:             Editor/Main.hs

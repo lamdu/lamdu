@@ -22,7 +22,9 @@ import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Widget(Widget)
 import Numeric (showHex)
+import Paths_bottle (getDataFileName)
 import System.FilePath ((</>))
+import qualified Control.Exception as E
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Map as Map
 import qualified Data.Store.Db as Db
@@ -44,18 +46,16 @@ import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
 import qualified Graphics.UI.Bottle.Widgets.FlyNav as FlyNav
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified System.Directory as Directory
-import qualified System.Info
-
-defaultFont :: String -> FilePath
-defaultFont "darwin" = "/Library/Fonts/Arial.ttf"
-defaultFont _ = "/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf"
 
 main :: IO ()
 main = do
   home <- Directory.getHomeDirectory
   let bottleDir = home </> "bottle"
   Directory.createDirectoryIfMissing False bottleDir
-  font <- Draw.openFont (defaultFont System.Info.os)
+  font <-
+    (Draw.openFont =<< getDataFileName "fonts/DejaVuSans.ttf")
+    `E.catch` \(E.SomeException _) ->
+    Draw.openFont "fonts/DejaVuSans.ttf"
   Db.withDb (bottleDir </> "codeedit.db") $ runDbStore font . Anchors.dbStore
 
 rjust :: Int -> a -> [a] -> [a]
