@@ -48,7 +48,7 @@ makeParts
   => ExpressionGui.Maker m
   -> (VarAccess.NameSource, String)
   -> Guid
-  -> Sugar.DefinitionExpression m
+  -> Sugar.DefinitionContent m
   -> VarAccess m [ExpressionGui m]
 makeParts makeExpressionEdit name guid def = do
   nameEdit <-
@@ -66,8 +66,8 @@ makeParts makeExpressionEdit name guid def = do
     ]
   where
     lhs = myId : map (WidgetIds.fromGuid . Sugar.fpGuid) params
-    rhs = ("Def Body", exprRef)
-    params = Sugar.deParameters def
+    rhs = ("Def Body", body)
+    params = Sugar.dParameters def
     addFirstParamEventMap =
       maybe mempty
       ( Widget.keysEventMapMovesCursor Config.addNextParamKeys "Add parameter"
@@ -75,8 +75,8 @@ makeParts makeExpressionEdit name guid def = do
       . IT.transaction
       ) $ case params of
       (p : _) -> fmap Sugar.fpaAddPrevParam $ Sugar.fpMActions p
-      _ -> fmap Sugar.lambdaWrap . Sugar.plActions $ Sugar.rPayload exprRef
-    exprRef = Sugar.deExprRef def
+      _ -> fmap Sugar.lambdaWrap . Sugar.plActions $ Sugar.rPayload body
+    body = Sugar.dBody def
     myId = WidgetIds.fromGuid guid
 
 make
@@ -123,8 +123,8 @@ makeExprDefinition ::
 makeExprDefinition makeExpressionEdit def bodyExpr = do
   name <- VarAccess.getDefName guid
   bodyWidget <-
-    liftM (ExpressionGui.egWidget . ExpressionGui.hbox) $
-    makeParts makeExpressionEdit name guid bodyExpr
+    liftM (ExpressionGui.egWidget . ExpressionGui.hbox) .
+    makeParts makeExpressionEdit name guid $ Sugar.deContent bodyExpr
   let
     mkResult typeWidget =
       BWidgets.vboxAlign 0

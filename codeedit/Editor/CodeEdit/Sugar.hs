@@ -2,8 +2,8 @@
 
 module Editor.CodeEdit.Sugar
   ( Definition(..), DefinitionBody(..)
-  , DefinitionExpression(..), DefinitionBuiltin(..)
-  , DefinitionNewType(..)
+  , DefinitionExpression(..), DefinitionContent(..), DefinitionNewType(..)
+  , DefinitionBuiltin(..)
   , Actions(..)
   , ExpressionBody(..)
   , Payload(..)
@@ -181,9 +181,14 @@ data DefinitionNewType m = DefinitionNewType
   , dntAcceptNewType :: T m ()
   }
 
+-- Common data for definitions and where-items
+data DefinitionContent m = DefinitionContent
+  { dBody :: Expression m
+  , dParameters :: [FuncParam m (Expression m)]
+  }
+
 data DefinitionExpression m = DefinitionExpression
-  { deExprRef :: Expression m
-  , deParameters :: [FuncParam m (Expression m)]
+  { deContent :: DefinitionContent m
   , deIsTypeRedundant :: Bool
   , deMNewType :: Maybe (DefinitionNewType m)
   }
@@ -836,8 +841,11 @@ loadConvertDefinition defI = do
         else return Nothing
 
       return $ DefinitionBodyExpression DefinitionExpression
-        { deExprRef = exprS
-        , deParameters = params
+        { deContent =
+            DefinitionContent
+            { dBody = exprS
+            , dParameters = params
+            }
         , deMNewType = mNewType
         , deIsTypeRedundant = isSuccess && typesMatch
         }

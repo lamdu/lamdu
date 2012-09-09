@@ -45,11 +45,9 @@ make makeExpressionEdit (Sugar.Where items _) myId = do
       VarAccess.withName (Sugar.wiGuid item) $ \name ->
       DefinitionEdit.makeParts makeExpressionEdit name
       (Sugar.wiGuid item)
-      Sugar.DefinitionExpression
-      { Sugar.deExprRef = Sugar.wiValue item
-      , Sugar.deParameters = []
-      , Sugar.deIsTypeRedundant = True
-      , Sugar.deMNewType = Nothing
+      Sugar.DefinitionContent
+      { Sugar.dBody = Sugar.wiValue item
+      , Sugar.dParameters = []
       }
     whereItemDeleteEventMap whereItem =
       maybe mempty
