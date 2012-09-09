@@ -4,7 +4,7 @@ module Main(main) where
 import Control.Applicative ((<*))
 import Control.Arrow (second)
 import Control.Lens ((^.))
-import Control.Monad (liftM, unless, (<=<))
+import Control.Monad (liftM, unless, (<=<), when)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Writer (WriterT, runWriterT)
 import Data.ByteString (unpack)
@@ -52,10 +52,15 @@ main = do
   home <- Directory.getHomeDirectory
   let bottleDir = home </> "bottle"
   Directory.createDirectoryIfMissing False bottleDir
+  let
+    getFont path = do
+      exists <- Directory.doesFileExist path
+      when (not exists) . ioError . userError $ path ++ " does not exist!"
+      Draw.openFont path
   font <-
-    (Draw.openFont =<< getDataFileName "fonts/DejaVuSans.ttf")
+    (getFont =<< getDataFileName "fonts/DejaVuSans.ttf")
     `E.catch` \(E.SomeException _) ->
-    Draw.openFont "fonts/DejaVuSans.ttf"
+    getFont "fonts/DejaVuSans.ttf"
   Db.withDb (bottleDir </> "codeedit.db") $ runDbStore font . Anchors.dbStore
 
 rjust :: Int -> a -> [a] -> [a]
