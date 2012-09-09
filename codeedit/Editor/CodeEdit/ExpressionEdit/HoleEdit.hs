@@ -301,7 +301,7 @@ listToMaybeL = liftM listToMaybe . List.toList . List.take 1
 addNewDefinitionEventMap ::
   Monad m =>
   HoleInfo m ->
-  E.EventMap (ITransaction ViewTag m Widget.EventResult)
+  Widget.EventHandlers (ITransaction ViewTag m)
 addNewDefinitionEventMap holeInfo =
   E.keyPresses Config.newDefinitionKeys
   "Add as new Definition" . makeNewDefinition $
