@@ -3,7 +3,7 @@ module Editor.CodeEdit.ExpressionEdit.HoleEdit(make, makeUnwrapped, ResultPicker
 
 import Control.Applicative ((<*>))
 import Control.Arrow (first, second, (&&&))
-import Control.Monad (liftM, mplus, msum, void, filterM)
+import Control.Monad ((<=<), liftM, mplus, msum, void, filterM)
 import Control.Monad.ListT (ListT)
 import Data.Function (on)
 import Data.Hashable(hash)
@@ -93,10 +93,10 @@ data ResultsList m = ResultsList
   , rlMore :: Maybe (Sugar.HoleResult, ListT m Sugar.HoleResult)
   }
 
-canonizeResultExpr
+randomizeResultExpr
   :: HoleInfo m
   -> Data.Expression a -> Data.Expression a
-canonizeResultExpr holeInfo expr =
+randomizeResultExpr holeInfo expr =
   flip Data.randomizeGuids expr . Random.mkStdGen $
   hash (show (void expr), Guid.bs (hiGuid holeInfo))
 
@@ -141,7 +141,7 @@ resultsToWidgets makeExpressionEdit holeInfo results = do
       return (widget, mResult)
       where
         resultId = mappend moreResultsPrefixId $ pureGuidId cExpr
-        cExpr = canonizeResultExpr holeInfo expr
+        cExpr = randomizeResultExpr holeInfo expr
     toWidget resultId expr = do
       isResultSelected <- VarAccess.otransaction $ OT.isSubCursor resultId
       let
@@ -220,32 +220,54 @@ makeLiteralGroup searchTerm =
 resultsPrefixId :: HoleInfo m -> Widget.Id
 resultsPrefixId holeInfo = mconcat [hiHoleId holeInfo, Widget.Id ["results"]]
 
-makeResultsList ::
-  Monad m => HoleInfo m -> ListT (T m) Sugar.HoleResult -> T m (Maybe (ResultsList (T m)))
-makeResultsList holeInfo results = do
-  -- We always want the first, and we want to know if there's more, so
-  -- take 2:
+toResultsList ::
+  Monad m =>
+  HoleInfo m -> Data.PureExpression ->
+  T m (Maybe (ResultsList (T m)))
+toResultsList holeInfo baseExpr = do
   (firstTwo, rest) <- List.splitAtM 2 results
-  return $ case firstTwo of
+  return $
+    case firstTwo of
     [] -> Nothing
     (x:xs) ->
       let
+        canonizedExpr = randomizeResultExpr holeInfo x
         canonizedExprId = WidgetIds.fromGuid $ Data.eGuid canonizedExpr
-        canonizedExpr = canonizeResultExpr holeInfo x
       in Just ResultsList
-      { rlFirstId = mconcat [resultsPrefixId holeInfo, canonizedExprId]
-      , rlMoreResultsPrefixId = mconcat [resultsPrefixId holeInfo, Widget.Id ["more results"], canonizedExprId]
-      , rlFirst = canonizedExpr
-      , rlMore = case xs of
-        [] -> Nothing
-        [y] -> Just (y, rest)
-        _ -> error "We took 2, got more!"
-      }
+        { rlFirstId = mconcat [resultsPrefixId holeInfo, canonizedExprId]
+        , rlMoreResultsPrefixId = mconcat [resultsPrefixId holeInfo, Widget.Id ["more results"], canonizedExprId]
+        , rlFirst = canonizedExpr
+        , rlMore =
+          case xs of
+          [] -> Nothing
+          [y] -> Just (y, rest)
+          _ -> error "We took two, got more!"
+        }
+  where
+    results = Sugar.holeInferResults (hiHole holeInfo) baseExpr
+
+data ResultType = GoodResult | BadResult
+
+makeResultsList ::
+  Monad m => HoleInfo m -> Data.PureExpression ->
+  T m (Maybe (ResultType, ResultsList (T m)))
+makeResultsList holeInfo baseExpr = do
+  -- We always want the first, and we want to know if there's more, so
+  -- take 2:
+  mRes <- toResultsList holeInfo baseExpr
+  case mRes of
+    Just res -> return . Just $ (GoodResult, res)
+    Nothing ->
+      (liftM . fmap) ((,) BadResult) . toResultsList holeInfo $ holeApply baseExpr
+  where
+    holeApply =
+      toPureExpr .
+      (Data.makeApply . toPureExpr . Data.ExpressionLeaf) Data.Hole
 
 makeAllResults
   :: MonadF m
   => HoleInfo m
-  -> VarAccess m (ListT (T m) (ResultsList (T m)))
+  -> VarAccess m (ListT (T m) (ResultType, ResultsList (T m)))
 makeAllResults holeInfo = do
   paramResults <-
     mapM makeVariableGroup $
@@ -260,7 +282,7 @@ makeAllResults holeInfo = do
   return .
     List.catMaybes .
     List.mapL
-      (makeResultsList holeInfo . Sugar.holeInferResults hole . groupBaseExpr) .
+      (makeResultsList holeInfo . groupBaseExpr) .
     List.fromList .
     sortOn (groupOrdering searchTerm) .
     filter nameMatch $
@@ -415,6 +437,25 @@ adHocTextEditEventMap textProp =
       Property.pureModify textProp f
       return Widget.emptyEventResult
 
+collectResults :: List l => l (ResultType, a) -> List.ItemM l ([a], Bool)
+collectResults =
+  conclude <=<
+  List.splitWhenM (return . (>= Config.holeResultCount) . length . fst) .
+  List.scanl step ([], [])
+  where
+    conclude (notEnoughResults, enoughResultsM) =
+      liftM
+      ( second (not . null) . splitAt Config.holeResultCount
+      . uncurry (on (++) reverse) . last . mappend notEnoughResults
+      ) .
+      List.toList $
+      List.take 2 enoughResultsM
+    step results (tag, x) =
+      ( case tag of
+        GoodResult -> first
+        BadResult -> second
+      ) (x :) results
+
 makeActiveHoleEdit
   :: MonadF m
   => ExpressionGui.Maker m -> HoleInfo m
@@ -430,9 +471,7 @@ makeActiveHoleEdit makeExpressionEdit holeInfo = do
 
   allResults <- makeAllResults holeInfo
 
-  (firstResults, moreResults) <-
-    VarAccess.transaction $ List.splitAtM Config.holeResultCount allResults
-  hasMoreResults <- liftM isJust . VarAccess.transaction $ listToMaybeL moreResults
+  (firstResults, hasMoreResults) <- VarAccess.transaction $ collectResults allResults
 
   cursor <- VarAccess.otransaction OT.readCursor
   let
