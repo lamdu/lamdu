@@ -1,6 +1,19 @@
+* Apply-forms should apply all dependent pis.
+
+* Foreground color for polymorphic
+
 * Hole allows bad results with hole to convert
 
-* HM/rank-1 automatic inference
+* Make up type variables implicitly.
+  Happens via inference, but as a separate step, so that hole results are unaffected by it.
+
+* Don't show active hole result type - it's too much noise.
+
+* Don't show type of hole which is a function - it's too much noise
+  or
+  Quasi-Monomorphic inference
+
+* Delete on hole does not delete parent but rather selects it
 
 * Type errors still allowed:
   * When changing the exported type
@@ -9,8 +22,18 @@
   * Need to:
     * Allow delete when type-checks in some cases
     * Other manipulations?
-* When using '[' or ']' to add applies, it can type-filter out the
+* BUG: When using '[' or ']' to add applies, it can type-filter out the
   result we're on and lose the cursor
+
+* Inference not inferring enough on:
+  foo xs = 0 : xs
+  when explicit type of xs is not hole
+
+* For inferred holes the results should have the full inferred value as an option
+
+* Holes should not fill results inner holes.
+
+
 
 * Avoid name clashes in auto-names
 
