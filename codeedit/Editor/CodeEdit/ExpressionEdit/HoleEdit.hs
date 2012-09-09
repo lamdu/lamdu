@@ -295,6 +295,9 @@ makeAllResults holeInfo = do
       ]
     holeExpr = toPureExpr $ Data.ExpressionLeaf Data.Hole
 
+listToMaybeL :: List l => l a -> List.ItemM l (Maybe a)
+listToMaybeL = liftM listToMaybe . List.toList . List.take 1
+
 addNewDefinitionEventMap ::
   Monad m =>
   HoleInfo m ->
@@ -314,9 +317,8 @@ addNewDefinitionEventMap holeInfo =
         Anchors.newPane newDefI
         return newDefI
       defRef <-
-        liftM (fromMaybe (error "GetDef should always type-check") . listToMaybe) .
-        IT.transaction . List.toList .
-        Sugar.holeInferResults (hiHole holeInfo) .
+        liftM (fromMaybe (error "GetDef should always type-check")) .
+        IT.transaction . listToMaybeL . Sugar.holeInferResults (hiHole holeInfo) .
         toPureExpr . Data.ExpressionLeaf . Data.GetVariable $
         Data.DefinitionRef newDefI
       -- TODO: Can we use pickResult's animIdMapping?
@@ -396,9 +398,6 @@ makeResultsWidget makeExpressionEdit holeInfo firstResults moreResults = do
       [E.ModKey E.noMods E.KeyDown]
       "Nothing (at bottom)" (return ())
 
-genericNull :: List l => l a -> List.ItemM l Bool
-genericNull = liftM null . List.toList . List.take 1
-
 adHocTextEditEventMap :: Monad m => Property m String -> Widget.EventHandlers m
 adHocTextEditEventMap textProp =
   mconcat . concat $
@@ -424,7 +423,7 @@ makeActiveHoleEdit
 makeActiveHoleEdit makeExpressionEdit holeInfo = do
   VarAccess.markVariablesAsUsed . map fst =<<
     (filterM
-     (VarAccess.transaction . checkInfer . toPureExpr .
+     (checkInfer . toPureExpr .
       Data.ExpressionLeaf . Data.GetVariable . snd) .
      Sugar.holeScope . hiHole)
     holeInfo
@@ -433,7 +432,7 @@ makeActiveHoleEdit makeExpressionEdit holeInfo = do
 
   (firstResults, moreResults) <-
     VarAccess.transaction $ List.splitAtM Config.holeResultCount allResults
-  hasMoreResults <- VarAccess.transaction $ genericNull moreResults
+  hasMoreResults <- liftM isJust . VarAccess.transaction $ listToMaybeL moreResults
 
   cursor <- VarAccess.otransaction OT.readCursor
   let
@@ -462,7 +461,9 @@ makeActiveHoleEdit makeExpressionEdit holeInfo = do
         searchTermWidget
       )
   where
-    checkInfer = liftM not . genericNull . Sugar.holeInferResults (hiHole holeInfo)
+    checkInfer =
+      liftM isJust . VarAccess.transaction . listToMaybeL .
+      Sugar.holeInferResults (hiHole holeInfo)
     searchTermId = WidgetIds.searchTermId $ hiHoleId holeInfo
 
 holeFDConfig :: FocusDelegator.Config
