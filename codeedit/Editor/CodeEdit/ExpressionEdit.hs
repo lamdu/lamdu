@@ -21,7 +21,6 @@ import qualified Editor.CodeEdit.ExpressionEdit.PiEdit as PiEdit
 import qualified Editor.CodeEdit.ExpressionEdit.PolymorphicEdit as PolymorphicEdit
 import qualified Editor.CodeEdit.ExpressionEdit.SectionEdit as SectionEdit
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
-import qualified Editor.CodeEdit.ExpressionEdit.WhereEdit as WhereEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
@@ -71,8 +70,6 @@ makeEditor
   -> VarAccess m (HoleResultPicker m, ExpressionGui m)
 makeEditor sExpr =
   case Sugar.rExpressionBody sExpr of
-  Sugar.ExpressionWhere hasParens w ->
-    notAHole $ WhereEdit.makeWithBody make hasParens w
   Sugar.ExpressionFunc hasParens f ->
     notAHole $ FuncEdit.make make hasParens f
   Sugar.ExpressionInferred i ->

@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Editor.CodeEdit.DefinitionEdit(make, makeParts) where
+module Editor.CodeEdit.DefinitionEdit(make) where
 
 import Control.Monad (liftM)
 import Data.Monoid (Monoid(..))
@@ -114,6 +114,52 @@ makeBuiltinDefinition makeExpressionEdit def builtin =
 defTypeScale :: Widget f -> Widget f
 defTypeScale = Widget.scale Config.defTypeBoxSizeFactor
 
+makeWhereItemEdit ::
+  MonadF m =>
+  ExpressionGui.Maker m ->
+  Sugar.WhereItem m -> VarAccess m (WidgetT m)
+makeWhereItemEdit makeExpressionEdit item =
+  liftM (Widget.weakerEvents deleteEventMap) . assignCursor $
+  makeDefBodyEdit makeExpressionEdit (Sugar.wiGuid item) (Sugar.wiValue item)
+  where
+    assignCursor =
+      foldr (.) id .
+      map ((`VarAccess.assignCursor` myId) . WidgetIds.fromGuid) $
+      Sugar.wiHiddenGuids item
+    myId = WidgetIds.fromGuid $ Sugar.wiGuid item
+    deleteEventMap =
+      Widget.keysEventMapMovesCursor Config.delKeys
+      "Delete where item" .
+      liftM WidgetIds.fromGuid .
+      IT.transaction $ Sugar.wiDelete item
+
+makeDefBodyEdit ::
+  MonadF m =>
+  ExpressionGui.Maker m ->
+  Guid -> Sugar.DefinitionContent m ->
+  VarAccess m (WidgetT m)
+makeDefBodyEdit makeExpressionEdit guid content = do
+  name <- VarAccess.getDefName guid
+  body <- liftM (ExpressionGui.egWidget . ExpressionGui.hbox) $
+    makeParts makeExpressionEdit name guid content
+  wheres <-
+    case Sugar.dWhereItems content of
+    [] -> return []
+    whereItems -> do
+      whereLabel <-
+        (liftM . Widget.scale) Config.whereLabelScaleFactor .
+        VarAccess.otransaction . BWidgets.makeLabel "where" $ Widget.toAnimId myId
+      itemEdits <- mapM (makeWhereItemEdit makeExpressionEdit) $ reverse whereItems
+      return
+        [ BWidgets.hboxSpaced
+          [ (0, whereLabel)
+          , (0, Widget.scale Config.whereScaleFactor $ BWidgets.vboxAlign 0 itemEdits)
+          ]
+        ]
+  return . BWidgets.vboxAlign 0 $ body : wheres
+  where
+    myId = WidgetIds.fromGuid guid
+
 makeExprDefinition ::
   MonadF m =>
   (Sugar.Expression m -> VarAccess m (ExpressionGui m)) ->
@@ -121,25 +167,19 @@ makeExprDefinition ::
   Sugar.DefinitionExpression m ->
   VarAccess m (WidgetT m)
 makeExprDefinition makeExpressionEdit def bodyExpr = do
-  name <- VarAccess.getDefName guid
-  bodyWidget <-
-    liftM (ExpressionGui.egWidget . ExpressionGui.hbox) .
-    makeParts makeExpressionEdit name guid $ Sugar.deContent bodyExpr
-  let
-    mkResult typeWidget =
-      BWidgets.vboxAlign 0
-      [ defTypeScale typeWidget
-      , bodyWidget
-      ]
-  case Sugar.deMNewType bodyExpr of
+  typeWidgets <-
+    case Sugar.deMNewType bodyExpr of
     Nothing
-      | Sugar.deIsTypeRedundant bodyExpr -> return bodyWidget
-      | otherwise -> liftM (mkResult . BWidgets.hboxSpaced) (mkAcceptedRow id)
+      | Sugar.deIsTypeRedundant bodyExpr -> return []
+      | otherwise -> liftM ((:[]) . defTypeScale . BWidgets.hboxSpaced) (mkAcceptedRow id)
     Just (Sugar.DefinitionNewType inferredType acceptInferredType) ->
-      liftM (mkResult . BWidgets.gridHSpaced) $ sequence
+      liftM ((:[]) . defTypeScale . BWidgets.gridHSpaced) $ sequence
       [ mkAcceptedRow (>>= addAcceptanceArrow acceptInferredType)
       , mkTypeRow id "Inferred type:" inferredType
       ]
+  bodyWidget <-
+    makeDefBodyEdit makeExpressionEdit guid $ Sugar.deContent bodyExpr
+  return . BWidgets.vboxAlign 0 $ typeWidgets ++ [bodyWidget]
   where
     addAcceptanceArrow acceptInferredType label = do
       acceptanceLabel <-

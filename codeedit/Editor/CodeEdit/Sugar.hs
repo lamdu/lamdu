@@ -9,7 +9,6 @@ module Editor.CodeEdit.Sugar
   , Payload(..)
   , ExpressionP(..)
   , Expression
-  , Where(..)
   , WhereItem(..)
   , Func(..), FuncParam(..), FuncParamActions(..)
   , Pi(..)
@@ -91,18 +90,6 @@ data ExpressionP m pl = Expression
 
 type Expression m = ExpressionP m (Payload m)
 
-data WhereItem m expr = WhereItem
-  { wiGuid :: Guid
-  , wiTypeGuid :: Guid
-  , wiMDelete :: Maybe (T m Guid)
-  , wiValue :: expr
-  } deriving (Functor)
-
-data Where m expr = Where
-  { wWheres :: [WhereItem m expr]
-  , wBody :: expr
-  } deriving (Functor)
-
 data FuncParamActions m = FuncParamActions
   { fpaAddNextParam :: T m Guid
   , fpaAddPrevParam :: T m Guid
@@ -165,7 +152,6 @@ data GetVariable
 data ExpressionBody m expr
   = ExpressionApply   { eHasParens :: HasParens, eApply :: Data.Apply expr }
   | ExpressionSection { eHasParens :: HasParens, eSection :: Section expr }
-  | ExpressionWhere   { eHasParens :: HasParens, _eWhere :: Where m expr }
   | ExpressionFunc    { eHasParens :: HasParens, _eFunc :: Func m expr }
   | ExpressionPi      { eHasParens :: HasParens, _ePi :: Pi m expr }
   | ExpressionGetVariable { _getVariable :: GetVariable }
@@ -181,10 +167,18 @@ data DefinitionNewType m = DefinitionNewType
   , dntAcceptNewType :: T m ()
   }
 
+data WhereItem m = WhereItem
+  { wiValue :: DefinitionContent m
+  , wiGuid :: Guid
+  , wiHiddenGuids :: [Guid]
+  , wiDelete :: T m Guid
+  }
+
 -- Common data for definitions and where-items
 data DefinitionContent m = DefinitionContent
   { dBody :: Expression m
   , dParameters :: [FuncParam m (Expression m)]
+  , dWhereItems :: [WhereItem m]
   }
 
 data DefinitionExpression m = DefinitionExpression
@@ -211,7 +205,6 @@ data Definition m = Definition
 
 AtFieldTH.make ''Hole
 AtFieldTH.make ''WhereItem
-AtFieldTH.make ''Where
 AtFieldTH.make ''FuncParam
 AtFieldTH.make ''Func
 AtFieldTH.make ''Pi
@@ -227,10 +220,10 @@ data ExprEntityInferred a = ExprEntityInferred
   { eesInferred :: Infer.Inferred a
   , eesTypeConflicts :: [Data.PureExpression]
   , eesValueConflicts :: [Data.PureExpression]
-  }
+  } deriving Functor
 
+type ExprEntityStored m = ExprEntityInferred (DataIRef.ExpressionProperty (T m))
 type ExprEntityMStored m = ExprEntityInferred (Maybe (DataIRef.ExpressionProperty (T m)))
-
 type ExprEntity m = Data.Expression (Maybe (ExprEntityMStored m))
 
 eeProp :: ExprEntity m -> Maybe (DataIRef.ExpressionProperty (T m))
@@ -406,27 +399,6 @@ convertPi lambda exprI = do
     , pResultType = removeRedundantTypes sBody
     }
 
-convertWhere
-  :: Monad m
-  => Expression m
-  -> ExprEntity m
-  -> Data.Lambda (ExprEntity m)
-  -> Convertor m
-convertWhere valueRef lambdaI (Data.Lambda typeI bodyI) applyI = do
-  sBody <- convertExpressionI bodyI
-  mkExpression applyI .
-    ExpressionWhere DontHaveParens . atWWheres (item :) $
-    case rExpressionBody sBody of
-      ExpressionWhere _ x -> x
-      _ -> Where [] sBody
-  where
-    item = WhereItem
-      { wiGuid = lambdaGuidToParamGuid (Data.eGuid lambdaI)
-      , wiTypeGuid = Data.eGuid typeI
-      , wiMDelete = mkDelete <$> eeProp applyI <*> eeProp bodyI
-      , wiValue = valueRef
-      }
-
 addParens :: ExpressionBody m (Expression m) -> ExpressionBody m (Expression m)
 addParens (ExpressionInferred (Inferred val hole)) =
   ExpressionInferred $ Inferred (atRExpressionBody addParens val) hole
@@ -452,21 +424,14 @@ isPolymorphicFunc funcI =
 
 convertApply :: Monad m => Data.Apply (ExprEntity m) -> Convertor m
 convertApply (Data.Apply funcI argI) exprI = do
+  funcS <- convertExpressionI funcI
   argS <- convertExpressionI argI
-  case Data.eValue funcI of
-    Data.ExpressionLambda lambda@(
-      Data.Lambda (Data.Expression { Data.eValue = Data.ExpressionLeaf Data.Hole }) _) ->
-      -- TODO: Should we pass the lambda with the hole in its type,
-      -- and not just the body?
-      convertWhere argS funcI lambda exprI
-    _ -> do
-      funcS <- convertExpressionI funcI
-      let apply = Data.Apply (funcS, funcI) (argS, argI)
-      case rExpressionBody funcS of
-        ExpressionSection _ section ->
-          applyOnSection section apply exprI
-        _ ->
-          convertApplyPrefix apply exprI
+  let apply = Data.Apply (funcS, funcI) (argS, argI)
+  case rExpressionBody funcS of
+    ExpressionSection _ section ->
+      applyOnSection section apply exprI
+    _ ->
+      convertApplyPrefix apply exprI
 
 setAddArg :: Monad m => ExprEntity m -> Expression m -> Expression m
 setAddArg exprI =
@@ -776,11 +741,11 @@ loadConvertExpression ::
 loadConvertExpression exprP =
   convertLoadedExpression Nothing =<< Load.loadExpression exprP
 
-convertParams ::
+convertDefinitionParams ::
   Monad m =>
-  SugarContext -> Data.Expression (ExprEntityMStored m) ->
-  T m ([FuncParam m (Expression m)], Data.Expression (ExprEntityMStored m))
-convertParams ctx expr =
+  SugarContext -> Data.Expression (ExprEntityStored m) ->
+  T m ([FuncParam m (Expression m)], Data.Expression (ExprEntityStored m))
+convertDefinitionParams ctx expr =
   case Data.eValue expr of
   Data.ExpressionLambda (Data.Lambda paramType body) -> do
     paramTypeS <- convertStoredExpression ctx paramType
@@ -789,13 +754,58 @@ convertParams ctx expr =
         { fpGuid = lambdaGuidToParamGuid $ Data.eGuid expr
         , fpHiddenLambdaGuid = Just $ Data.eGuid expr
         , fpType = paramTypeS
-        , fpMActions = mkFuncParamActions <$> prop expr <*> prop body
+        , fpMActions = Just $ mkFuncParamActions (prop expr) (prop body)
         }
-    (nextParams, funcBody) <- convertParams ctx body
+    (nextParams, funcBody) <- convertDefinitionParams ctx body
     return (param : nextParams, funcBody)
   _ -> return ([], expr)
   where
     prop = Infer.iStored . eesInferred . Data.ePayload
+
+convertWhereItems ::
+  Monad m =>
+  SugarContext -> Data.Expression (ExprEntityStored m) ->
+  T m ([WhereItem m], Data.Expression (ExprEntityStored m))
+convertWhereItems ctx
+  topLevel@Data.Expression
+  { Data.eValue = Data.ExpressionApply apply@Data.Apply
+  { Data.applyFunc = Data.Expression
+  { Data.eValue = Data.ExpressionLambda lambda@Data.Lambda
+  { Data.lambdaParamType = Data.Expression
+  { Data.eValue = Data.ExpressionLeaf Data.Hole
+  }}}}} = do
+    value <- convertDefinitionContent ctx $ Data.applyArg apply
+    let
+      body = Data.lambdaBody lambda
+      item = WhereItem
+        { wiValue = value
+        , wiDelete = mkDelete (prop topLevel) (prop body)
+        , wiGuid = lambdaGuidToParamGuid . Data.eGuid $ Data.applyFunc apply
+        , wiHiddenGuids =
+            map Data.eGuid
+            [ topLevel
+            , Data.lambdaParamType lambda
+            ]
+        }
+    (nextItems, whereBody) <- convertWhereItems ctx body
+    return (item : nextItems, whereBody)
+  where
+    prop = Infer.iStored . eesInferred . Data.ePayload
+convertWhereItems _ expr = return ([], expr)
+
+convertDefinitionContent ::
+  Monad m =>
+  SugarContext -> Data.Expression (ExprEntityStored m) ->
+  T m (DefinitionContent m)
+convertDefinitionContent sugarContext expr = do
+  (params, funcBody) <- convertDefinitionParams sugarContext expr
+  (whereItems, whereBody) <- convertWhereItems sugarContext funcBody
+  bodyS <- convertStoredExpression sugarContext whereBody
+  return DefinitionContent
+    { dBody = bodyS
+    , dParameters = params
+    , dWhereItems = whereItems
+    }
 
 loadConvertDefinition ::
   Monad m => Data.DefinitionIRef -> T m (Definition m)
@@ -819,8 +829,7 @@ loadConvertDefinition defI = do
     Data.DefinitionExpression exprL -> do
       (isSuccess, sugarContext, exprStored) <-
         inferLoadedExpression (Just defI) exprL
-      (params, funcBody) <- convertParams sugarContext exprStored
-      exprS <- convertStoredExpression sugarContext funcBody
+      content <- convertDefinitionContent sugarContext exprStored
       let
         inferredTypeP =
           Infer.iType . eesInferred $ Data.ePayload exprStored
@@ -839,13 +848,8 @@ loadConvertDefinition defI = do
         if isSuccess && not typesMatch && isCompleteType inferredTypeP
         then liftM Just mkNewType
         else return Nothing
-
       return $ DefinitionBodyExpression DefinitionExpression
-        { deContent =
-            DefinitionContent
-            { dBody = exprS
-            , dParameters = params
-            }
+        { deContent = content
         , deMNewType = mNewType
         , deIsTypeRedundant = isSuccess && typesMatch
         }
@@ -863,7 +867,7 @@ inferLoadedExpression ::
   T f
   (Bool,
    SugarContext,
-   Data.Expression (ExprEntityMStored m))
+   Data.Expression (ExprEntityStored m))
 inferLoadedExpression mDefI exprL = do
   loaded <- uncurry (Infer.load loader) Infer.initial mDefI exprL
   let
@@ -871,7 +875,7 @@ inferLoadedExpression mDefI exprL = do
       runWriter $ Infer.infer actions loaded
     toExprEntity x =
       ExprEntityInferred
-      { eesInferred = fmap Just x
+      { eesInferred = x
       , eesValueConflicts = conflicts Infer.tvVal x
       , eesTypeConflicts = conflicts Infer.tvType x
       }
@@ -896,10 +900,10 @@ convertLoadedExpression mDefI exprL = do
 
 convertStoredExpression ::
   Monad m =>
-  SugarContext -> Data.Expression (ExprEntityMStored m) ->
+  SugarContext -> Data.Expression (ExprEntityStored m) ->
   T m (Expression m)
 convertStoredExpression sugarContext =
-  runSugar sugarContext . convertExpressionI . fmap Just
+  runSugar sugarContext . convertExpressionI . fmap (Just . fmap Just)
 
 removeTypes :: Expression m -> Expression m
 removeTypes =

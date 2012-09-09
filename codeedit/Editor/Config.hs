@@ -81,8 +81,8 @@ rightArrowColor = Draw.Color 1 0.2 0.2 1
 rightArrowTextSize = 30
 
 whereColor = Draw.Color 0.8 0.6 0.1 1
-whereTextSize = 16
 whereScaleFactor = 0.85
+whereLabelScaleFactor = whereScaleFactor
 
 foldKeys = [k '-']
 unfoldKeys = foldKeys
