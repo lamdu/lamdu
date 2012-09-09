@@ -13,7 +13,6 @@ module Editor.CodeEdit.Sugar
   , WhereItem(..)
   , Func(..), FuncParam(..), FuncParamActions(..)
   , Pi(..)
-  , Apply(..)
   , Section(..)
   , Hole(..), HoleResult
   , LiteralInteger(..)
@@ -128,12 +127,6 @@ data Pi m expr = Pi
   , pResultType :: expr
   } deriving (Functor)
 
-data Apply expr = Apply
-  { applyFunc :: expr
-  , applyArg :: expr
-  } deriving (Functor)
-
-
 -- Infix Sections include: (+), (1+), (+1), (1+2). Last is really just
 -- infix application, but considered an infix section too.
 data Section expr = Section
@@ -170,7 +163,7 @@ data GetVariable
   = GetParameter Guid | GetDefinition Data.DefinitionIRef
 
 data ExpressionBody m expr
-  = ExpressionApply   { eHasParens :: HasParens, eApply :: Apply expr }
+  = ExpressionApply   { eHasParens :: HasParens, eApply :: Data.Apply expr }
   | ExpressionSection { eHasParens :: HasParens, eSection :: Section expr }
   | ExpressionWhere   { eHasParens :: HasParens, _eWhere :: Where m expr }
   | ExpressionFunc    { eHasParens :: HasParens, _eFunc :: Func m expr }
@@ -217,7 +210,6 @@ AtFieldTH.make ''Where
 AtFieldTH.make ''FuncParam
 AtFieldTH.make ''Func
 AtFieldTH.make ''Pi
-AtFieldTH.make ''Apply
 AtFieldTH.make ''Section
 AtFieldTH.make ''ExpressionBody
 AtFieldTH.make ''Inferred
@@ -523,7 +515,7 @@ convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, argI)) exprI =
     case rExpressionBody funcRef of
     ExpressionPolymorphic (Polymorphic compact full) ->
       makePolymorphic compact . removeRedundantTypes =<<
-      (mkExpression exprI . ExpressionApply DontHaveParens) (Apply full newArgRef)
+      (mkExpression exprI . ExpressionApply DontHaveParens) (Data.Apply full newArgRef)
     _ ->
       on (makePolymorphic . Just) removeRedundantTypes funcRef =<< makeFullApply
   else makeFullApply
@@ -536,12 +528,12 @@ convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, argI)) exprI =
       setNextArg .
       addApplyChildParens .
       removeRedundantTypes .
-      (atRExpressionBody . atEApply . atApplyArg) setNextArg .
+      (atRExpressionBody . atEApply . Data.atApplyArg) setNextArg .
       (atRExpressionBody . atESection . atSectionOp) setNextArg $
       funcRef
     makeFullApply =
       mkExpression exprI . ExpressionApply DontHaveParens $
-      Apply newFuncRef newArgRef
+      Data.Apply newFuncRef newArgRef
     makePolymorphic x =
       (liftM . atRGuid . Guid.combine . Guid.fromString) "polymorphic" .
       mkExpression exprI . ExpressionPolymorphic . Polymorphic
