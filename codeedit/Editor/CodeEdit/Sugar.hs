@@ -442,10 +442,8 @@ setAddArg exprI =
       liftM DataIRef.exprGuid $ DataOps.callWithArg stored
 
 removeRedundantTypes :: Expression m -> Expression m
-removeRedundantTypes exprRef =
-  case rExpressionBody exprRef of
-    ExpressionHole {} -> exprRef -- Keep types on holes
-    _ -> (atRPayload . atPlInferredTypes) removeIfNoErrors exprRef
+removeRedundantTypes =
+  (atRPayload . atPlInferredTypes) removeIfNoErrors
   where
     removeIfNoErrors [_] = []
     removeIfNoErrors xs = xs
