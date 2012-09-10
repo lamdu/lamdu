@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Editor.CodeEdit.ExpressionEdit.VarEdit(make, makeView, colorOf) where
+module Editor.CodeEdit.ExpressionEdit.VarEdit(make, makeView) where
 
 import Control.Monad (liftM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
@@ -27,6 +27,7 @@ withNameFromVarRef (Sugar.GetParameter g) useName = VarAccess.withName g useName
 withNameFromVarRef (Sugar.GetDefinition defI) useName =
   useName =<< VarAccess.getDefName (IRef.guid defI)
 
+-- Color should be determined on the outside!
 makeView
   :: MonadF m
   => Sugar.GetVariable
@@ -36,7 +37,6 @@ makeView var myId = withNameFromVarRef var $ \(nameSrc, name) ->
   liftM
   (ExpressionGui.fromValueWidget .
    BWidgets.nameSrcTint nameSrc) .
-  VarAccess.atEnv (BWidgets.setTextColor (colorOf var)) .
   VarAccess.otransaction $
   BWidgets.makeFocusableTextView name myId
 
@@ -49,7 +49,9 @@ make getVar myId = do
   case getVar of
     Sugar.GetParameter guid -> VarAccess.markVariablesAsUsed [guid]
     _ -> return ()
-  getVarView <- makeView getVar myId
+  getVarView <-
+    VarAccess.atEnv (BWidgets.setTextColor (colorOf getVar)) $
+    makeView getVar myId
   let
     jumpToDefinitionEventMap =
       Widget.keysEventMapMovesCursor Config.jumpToDefinitionKeys "Jump to definition"

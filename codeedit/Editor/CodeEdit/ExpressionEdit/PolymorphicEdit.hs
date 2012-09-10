@@ -33,10 +33,15 @@ makeInner makeExpressionEdit poly myId = do
     then
       return $ bg Config.polymorphicFullBGColor fullExprEdit
     else
-      (liftM . bg) Config.polymorphicCompactBGColor $
-      VarEdit.make (Sugar.pCompact poly) funcId
+      colorize (Sugar.pCompact poly) $
+      VarEdit.makeView (Sugar.pCompact poly) funcId
   where
     funcId = WidgetIds.fromGuid $ Sugar.pFuncGuid poly
+    colorize (Sugar.GetParameter _) =
+      (liftM . bg) Config.polymorphicCompactBGColor .
+      VarAccess.atEnv (BWidgets.setTextColor Config.parameterColor)
+    colorize (Sugar.GetDefinition _) =
+      VarAccess.atEnv (BWidgets.setTextColor Config.polymorphicForegroundColor)
     bg =
       ExpressionGui.atEgWidget .
       Widget.backgroundColor Layers.polymorphicBG (Widget.toAnimId myId ++ ["bg"])
