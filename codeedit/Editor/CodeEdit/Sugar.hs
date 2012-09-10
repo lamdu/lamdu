@@ -621,16 +621,15 @@ convertWritableHole eeInferred exprI = do
     check expr =
       inferExpr expr inferState . Infer.iPoint $ eesInferred eeInferred
 
-    fillPartialHoles Nothing = return Nothing
-    fillPartialHoles (Just iExpr) = fillPartialHolesInExpression check iExpr
+    fillPartialHoles = maybe (return Nothing) (fillPartialHolesInExpression check)
 
-    makeApplyForms _ Nothing = mzero
-    makeApplyForms expr (Just i) =
-      List.catMaybes . List.mapL (fillPartialHoles <=< check) . List.fromList $
+    makeApplyForms _ _ Nothing = mzero
+    makeApplyForms processRes expr (Just i) =
+      List.catMaybes . List.mapL processRes . List.fromList $
       applyForms (Infer.iType (Data.ePayload i)) expr
 
-    inferResults expr =
-      List.joinL . liftM (makeApplyForms expr) $
+    inferResults processRes expr =
+      List.joinL . liftM (makeApplyForms processRes expr) $
       uncurry (inferExpr expr) .
       Infer.newNodeWithScope
       ((Infer.nScope . Infer.iPoint . eesInferred) eeInferred) $
@@ -639,20 +638,21 @@ convertWritableHole eeInferred exprI = do
   let
     onScopeElement (lambdaGuid, _typeExpr) =
       (lambdaGuidToParamGuid lambdaGuid, Data.ParameterRef lambdaGuid)
-    hole = Hole
+    hole processRes = Hole
       { holeScope = map onScopeElement . Map.toList . Infer.iScope $ eesInferred eeInferred
       , holePickResult = Just . pickResult . Infer.iStored $ eesInferred eeInferred
       , holePaste = mPaste
-      , holeInferResults = inferResults
+      , holeInferResults = inferResults processRes
       }
+    plainHole = return . ExpressionHole $ hole check
   mkExpression exprI =<<
     case eesInferredValues eeInferred of
     [Data.Expression { Data.eValue = Data.ExpressionLeaf Data.Hole }] ->
-      return $ ExpressionHole hole
+      plainHole
     [x] ->
-      liftM (ExpressionInferred . (`Inferred` hole)) .
+      liftM (ExpressionInferred . (`Inferred` hole (fillPartialHoles <=< check))) .
       convertExpressionI . eeFromPure $ Data.randomizeGuids (mkGen 1 2 eGuid) x
-    _ -> return $ ExpressionHole hole
+    _ -> plainHole
   where
     inferExpr expr inferContext inferPoint =
       liftM (fmap fst . Infer.infer (Infer.InferActions (const Nothing))) $
