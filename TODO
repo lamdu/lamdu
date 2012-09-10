@@ -14,15 +14,11 @@
   foo xs = 0 : xs
   when explicit type of xs is not hole
 
-* Foreground color for polymorphic
-
 * Make up type variables implicitly.
   Happens via inference, but as a separate step, so that hole results are unaffected by it.
 
 * Quasi-Monomorphic inference? (Show the monomorphic types a hole
   could be, or that it must be a polymorphic type)
-
-* Delete on hole does not delete parent but rather selects it
 
 * Type errors still allowed:
   * When changing the exported type
