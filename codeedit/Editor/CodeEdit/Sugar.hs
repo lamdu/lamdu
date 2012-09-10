@@ -747,7 +747,7 @@ reportError :: Infer.Error -> Writer ConflictMap ()
 reportError err =
   Writer.tell . ConflictMap .
   Map.singleton (Infer.errRef err) .
-  Set.singleton . Data.canonizeGuids .
+  Set.singleton .
   snd $ Infer.errMismatch err
 
 loadConvertExpression ::
