@@ -25,7 +25,7 @@ module Editor.CodeEdit.Sugar
   ) where
 
 import Control.Applicative ((<$>), (<*>))
-import Control.Arrow (first, second)
+import Control.Arrow (first)
 import Control.Monad ((<=<), liftM, mzero, void)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (MonadTrans(..))
@@ -592,9 +592,15 @@ loader = Infer.Loader Load.loadPureDefinitionType
 -- useful auto-inferred value. By auto-filling those, we allow the
 -- user a chance to access all the partiality that needs filling more
 -- easily.
-fillPartialHolesInExpression :: Data.Expression (Infer.Inferred a) -> (Data.Expression (), Bool)
-fillPartialHolesInExpression = second getAny . runWriter . fillHoleExpr
+fillPartialHolesInExpression ::
+  Monad m =>
+  (Data.PureExpression -> m (Maybe (Infer.Expression a))) ->
+  Infer.Expression a -> m (Maybe (Infer.Expression a))
+fillPartialHolesInExpression check oldExpr =
+  recheck . runWriter $ fillHoleExpr oldExpr
   where
+    recheck (newExpr, Any True) = check newExpr
+    recheck (_, Any False) = return $ Just oldExpr
     fillHoleExpr expr@(Data.Expression _ (Data.ExpressionLeaf Data.Hole) hInferred) =
       if isCompleteType $ Infer.iValue hInferred
       then return $ void expr
@@ -615,10 +621,8 @@ convertWritableHole eeInferred exprI = do
     check expr =
       inferExpr expr inferState . Infer.iPoint $ eesInferred eeInferred
 
-    recheck _ (filledExpr, True) = check filledExpr
-    recheck iExpr (_, False) = return $ Just iExpr -- no holes filled
     fillPartialHoles Nothing = return Nothing
-    fillPartialHoles (Just iExpr) = recheck iExpr $ fillPartialHolesInExpression iExpr
+    fillPartialHoles (Just iExpr) = fillPartialHolesInExpression check iExpr
 
     makeApplyForms _ Nothing = mzero
     makeApplyForms expr (Just i) =
