@@ -123,8 +123,7 @@ makeWhereItemEdit makeExpressionEdit item =
   makeDefBodyEdit makeExpressionEdit (Sugar.wiGuid item) (Sugar.wiValue item)
   where
     assignCursor =
-      foldr (.) id .
-      map ((`VarAccess.assignCursor` myId) . WidgetIds.fromGuid) $
+      foldr ((.) . (`VarAccess.assignCursor` myId) . WidgetIds.fromGuid) id $
       Sugar.wiHiddenGuids item
     myId = WidgetIds.fromGuid $ Sugar.wiGuid item
     deleteEventMap =

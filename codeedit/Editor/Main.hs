@@ -4,7 +4,7 @@ module Main(main) where
 import Control.Applicative ((<*))
 import Control.Arrow (second)
 import Control.Lens ((^.))
-import Control.Monad (liftM, unless, (<=<), when)
+import Control.Monad (liftM, unless, (<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Writer (WriterT, runWriterT)
 import Data.ByteString (unpack)
@@ -55,7 +55,7 @@ main = do
   let
     getFont path = do
       exists <- Directory.doesFileExist path
-      when (not exists) . ioError . userError $ path ++ " does not exist!"
+      unless exists . ioError . userError $ path ++ " does not exist!"
       Draw.openFont path
   font <-
     (getFont =<< getDataFileName "fonts/DejaVuSans.ttf")
