@@ -3,7 +3,7 @@
 module Utils where
 
 import Control.Arrow (first)
-import Control.Monad (void)
+import Control.Monad (join, void)
 import Data.Functor.Identity (Identity(..))
 import Data.Hashable (hash)
 import Data.Map (Map, (!))
@@ -94,6 +94,7 @@ definitionTypes :: Map Guid Data.PureExpression
 definitionTypes =
   Map.fromList $ map (first Guid.fromString . randomizeGuids)
   [ ("Bool", setType)
+  , ("List", makePi "list" setType setType)
   , ("IntToBoolFunc", makePi "intToBool" intType (getDefExpr "bool"))
   , ("*", intToIntToInt)
   , ("-", intToIntToInt)
@@ -112,6 +113,12 @@ definitionTypes =
   , ( "id"
     , makePi "a" setType $
       makePi "idGivenType" (getParamExpr "a") (getParamExpr "a")
+    )
+  , ( ":"
+    , makePi "a" setType .
+      makePi "consx" (getParamExpr "a") .
+      join (makePi "consxs") $
+      makeApply [getDefExpr "List", getParamExpr "a"]
     )
   ]
   where

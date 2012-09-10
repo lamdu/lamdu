@@ -2,7 +2,7 @@ module InferTests (allTests) where
 
 import Control.Applicative (liftA2)
 import Control.Exception (evaluate)
-import Control.Monad (void)
+import Control.Monad (join, void)
 import Data.Map ((!))
 import Data.Maybe (isJust)
 import Test.HUnit (assertBool)
@@ -113,15 +113,51 @@ applyIntToBoolFuncWithHole =
     (mkInferredGetDef "IntToBoolFunc")
     (inferredHole intType)
 
+inferPart :: HUnit.Test
+inferPart =
+  testInfer "foo (xs:List ?) = 5 : xs"
+  (exprWithHoles hole hole) $
+  mkInferredNode "xs"
+    (exprWithHoles intType intType)
+    endoListOfInt $
+  Data.makeLambda
+    (mkInferredNode "" (listOf intType) setType
+      (Data.makeApply
+        (mkInferredGetDef "List")
+        (mkInferredLeaf Data.Hole intType setType)
+      )
+    ) $
+  mkInferredNode ""
+    (applyWithHole intType)
+    (listOf intType) $
+  Data.makeApply
+    ( mkInferredNode ""
+        (makeApply [getDefExpr ":", intType, five])
+        endoListOfInt
+      ( Data.makeApply
+        ( mkInferredNode ""
+            (makeApply [getDefExpr ":", intType])
+            (makePi "" intType endoListOfInt)
+          (Data.makeApply
+            (mkInferredGetDef ":")
+            (mkInferredLeaf Data.Hole intType setType)
+          )
+        )
+        (mkInferredLeafSimple (Data.LiteralInteger 5) intType)
+      )
+    ) $
+  mkInferredGetParam "xs" intType
+  where
+    endoListOfInt = join (makePi "pi") $ listOf intType
+    listOf x = makeApply [getDefExpr "List", x]
+    applyWithHole h = makeApply [getDefExpr ":", h, five, getParamExpr "xs"]
+    exprWithHoles h0 h1 = makeLambda "xs" (listOf h0) (applyWithHole h1)
+
 applyOnVar :: HUnit.Test
 applyOnVar =
   testInfer "apply on var"
   (makeFunnyLambda "lambda"
-    (makeApply
-      [ hole
-      , mkExpr "var" . Data.makeParameterRef $ Guid.fromString "lambda"
-      ]
-    )
+    (makeApply [ hole, getParamExpr "lambda" ] )
   ) $
   mkInferredNode "lambda"
     (makeFunnyLambda "" hole)
@@ -418,5 +454,6 @@ allTests =
   , depApply
   , forceMono
   , fOfXIsFOf5
+  , inferPart
   ] ++
   resumptionTests
