@@ -481,8 +481,7 @@ makeActiveHoleEdit makeExpressionEdit holeInfo = do
     let defaultResult = fmap rlFirst $ listToMaybe firstResults
     searchTermWidget <- makeSearchTermWidget holeInfo searchTermId defaultResult
     (mResult, resultsWidget) <-
-      makeResultsWidget makeExpressionEdit holeInfo firstResults $
-      not hasMoreResults
+      makeResultsWidget makeExpressionEdit holeInfo firstResults hasMoreResults
     let
       adHocEditor =
         fmap IT.transaction . adHocTextEditEventMap $
