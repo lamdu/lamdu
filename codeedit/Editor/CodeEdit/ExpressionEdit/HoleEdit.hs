@@ -165,8 +165,8 @@ makeNoResults myId =
   BWidgets.makeTextView "(No results)" $ mappend myId ["no results"]
 
 makeVariableGroup ::
-  MonadF m => (Guid, Data.VariableRef) -> VarAccess m Group
-makeVariableGroup (guid, varRef) = VarAccess.withName guid $ \(_, varName) ->
+  MonadF m => (Sugar.GetVariable, Data.VariableRef) -> VarAccess m Group
+makeVariableGroup (getVar, varRef) = VarAccess.withNameFromVarRef getVar $ \(_, varName) ->
   return Group
     { groupNames = [varName]
     , groupBaseExpr = toPureExpr . Data.ExpressionLeaf $ Data.GetVariable varRef
@@ -265,10 +265,10 @@ makeAllResults
   -> VarAccess m (ListT (T m) (ResultType, ResultsList (T m)))
 makeAllResults holeInfo = do
   paramResults <-
-    mapM makeVariableGroup $
+    mapM makeVariableGroup . (map . first) Sugar.GetParameter $
     Sugar.holeScope hole
   globalResults <-
-    mapM (makeVariableGroup . (Data.variableRefGuid &&& id)) =<<
+    mapM (makeVariableGroup . (Sugar.GetDefinition &&& Data.DefinitionRef)) =<<
     VarAccess.getP Anchors.globals
   let
     searchTerm = Property.value $ hiSearchTerm holeInfo

@@ -100,7 +100,7 @@ makeBuiltinDefinition
 makeBuiltinDefinition makeExpressionEdit def builtin =
   liftM (BWidgets.vboxAlign 0) $ sequence
   [ liftM BWidgets.hboxCenteredSpaced $ sequence
-    [ VarAccess.withName guid $ \name -> makeNameEdit name (Widget.joinId myId ["name"]) guid
+    [ VarAccess.withParamName guid $ \name -> makeNameEdit name (Widget.joinId myId ["name"]) guid
     , makeEquals myId
     , BuiltinEdit.make builtin myId
     ]

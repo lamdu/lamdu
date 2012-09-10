@@ -58,7 +58,7 @@ fixIRef createOuter = do
   Transaction.writeIRef x =<< createOuter x
   return x
 
-createBuiltins :: Monad m => Transaction A.ViewTag m [Data.VariableRef]
+createBuiltins :: Monad m => Transaction A.ViewTag m [Data.DefinitionIRef]
 createBuiltins =
   Writer.execWriterT $ do
     list <- mkType . A.newBuiltin "Data.List.List" =<< lift setToSet
@@ -132,7 +132,7 @@ createBuiltins =
     mkType f = do
       x <- lift f
       Writer.tell [x]
-      return $ getVar x
+      return . getVar $ Data.DefinitionRef x
     makeWithType builtinName typeMaker =
       tellift (A.newBuiltin builtinName =<< typeMaker)
 

@@ -145,6 +145,6 @@ makeParamsAndResultEdit makeExpressionEdit lhs rhs@(_, result) =
     go [] = liftM ((,) []) $ makeResultEdit makeExpressionEdit lhs result
     go (param:params) = do
       (name, (paramEdits, resultEdit)) <-
-        VarAccess.withName (Sugar.fpGuid param) $ \name -> liftM ((,) name) $ go params
+        VarAccess.withParamName (Sugar.fpGuid param) $ \name -> liftM ((,) name) $ go params
       paramEdit <- makeParamEdit makeExpressionEdit rhs name param
       return (paramEdit : paramEdits, resultEdit)

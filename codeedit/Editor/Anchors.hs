@@ -85,7 +85,7 @@ cursorIRef :: IRef Widget.Id
 cursorIRef = IRef.anchor "cursor"
 
 -- TODO: This should be an index
-globals :: Monad m => MkProperty ViewTag m [Data.VariableRef]
+globals :: Monad m => MkProperty ViewTag m [Data.DefinitionIRef]
 globals = Transaction.fromIRef $ IRef.anchor "globals"
 
 -- Cursor is untagged because it is both saved globally and per-revision.
@@ -125,7 +125,7 @@ makeDefinition = do
   defI <-
     Transaction.newIRef =<<
     liftM2 (Data.Definition . Data.DefinitionExpression) newHole newHole
-  modP globals (Data.DefinitionRef defI :)
+  modP globals (defI :)
   return defI
 
 dataGuid :: SBS.ByteString -> Guid -> Guid
@@ -183,7 +183,7 @@ jumpBack = do
 newBuiltin
   :: Monad m
   => String -> Data.ExpressionIRef
-  -> Transaction t m Data.VariableRef
+  -> Transaction t m Data.DefinitionIRef
 newBuiltin fullyQualifiedName typeI =
   newDefinition name . (`Data.Definition` typeI) . Data.DefinitionBuiltin .
   Data.Builtin $ Data.FFIName (init path) name
@@ -191,11 +191,11 @@ newBuiltin fullyQualifiedName typeI =
     name = last path
     path = splitOn "." fullyQualifiedName
 
-newDefinition :: Monad m => String -> Data.DefinitionI -> Transaction t m Data.VariableRef
+newDefinition :: Monad m => String -> Data.DefinitionI -> Transaction t m Data.DefinitionIRef
 newDefinition name defI = do
   res <- Transaction.newIRef defI
   setP (assocNameRef (IRef.guid res)) name
-  return $ Data.DefinitionRef res
+  return res
 
 
 getP :: Monad m => MkProperty t m a -> Transaction t m a

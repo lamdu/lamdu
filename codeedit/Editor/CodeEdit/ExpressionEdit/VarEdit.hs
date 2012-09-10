@@ -5,7 +5,6 @@ import Control.Monad (liftM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.VarAccess (VarAccess)
 import Editor.MonadF (MonadF)
-import qualified Data.Store.IRef as IRef
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -21,19 +20,13 @@ colorOf :: Sugar.GetVariable -> Draw.Color
 colorOf (Sugar.GetDefinition _) = Config.definitionColor
 colorOf (Sugar.GetParameter _) = Config.parameterColor
 
-withNameFromVarRef ::
-  Monad m => Sugar.GetVariable -> ((VarAccess.NameSource, String) -> VarAccess m a) -> VarAccess m a
-withNameFromVarRef (Sugar.GetParameter g) useName = VarAccess.withName g useName
-withNameFromVarRef (Sugar.GetDefinition defI) useName =
-  useName =<< VarAccess.getDefName (IRef.guid defI)
-
 -- Color should be determined on the outside!
 makeView
   :: MonadF m
   => Sugar.GetVariable
   -> Widget.Id
   -> VarAccess m (ExpressionGui m)
-makeView var myId = withNameFromVarRef var $ \(nameSrc, name) ->
+makeView var myId = VarAccess.withNameFromVarRef var $ \(nameSrc, name) ->
   liftM
   (ExpressionGui.fromValueWidget .
    BWidgets.nameSrcTint nameSrc) .

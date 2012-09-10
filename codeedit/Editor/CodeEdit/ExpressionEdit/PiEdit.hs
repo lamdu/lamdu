@@ -30,7 +30,7 @@ make makeExpressionEdit hasParens (Sugar.Pi param resultType) =
     -- (which it will skip) even if we end up non-dependent and don't
     -- have a name
     (name, (resultTypeEdit, usedVars)) <-
-      VarAccess.withName paramGuid $ \name ->
+      VarAccess.withParamName paramGuid $ \name ->
       liftM ((,) name) . VarAccess.usedVariables $
       FuncEdit.makeResultEdit makeExpressionEdit [paramId] resultType
     let
