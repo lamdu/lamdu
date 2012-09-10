@@ -1,3 +1,6 @@
+* BUG: Expanded polymorphic adds conflicts of function type under the
+  expression twice causing animid conflicts
+
 * VarAccess should be split for the multiple passes
   * makeExpressionEdit should be passed in a reader
   * OTransaction's Style reader should be separated from the
@@ -9,6 +12,7 @@
     WriterT VarInfo (OTransaction t m)
     * Which generates:
       StyleReader m (ExpressionGUI m)
+  * Avoid name clashes in auto-names
 
 * Inference not inferring enough on:
   foo xs = 0 : xs
@@ -31,10 +35,7 @@
   result we're on and lose the cursor
 
 * For inferred holes the results should have the full inferred value as an option
-
 * Holes should not fill results inner holes.
-
-* Avoid name clashes in auto-names
 
 * When anything is selected, show all the stuff that refer/define that
   same symbol
