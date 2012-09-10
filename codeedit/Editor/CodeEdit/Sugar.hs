@@ -25,7 +25,7 @@ module Editor.CodeEdit.Sugar
   ) where
 
 import Control.Applicative ((<$>), (<*>))
-import Control.Arrow (second)
+import Control.Arrow (first, second)
 import Control.Monad ((<=<), liftM, mzero, void)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Class (MonadTrans(..))
@@ -545,11 +545,21 @@ zeroGuid = Guid.fromString "applyZero"
 pureHole :: Data.PureExpression
 pureHole = Data.pureExpression zeroGuid $ Data.ExpressionLeaf Data.Hole
 
-countPis :: Data.PureExpression -> Int
-countPis e =
-  case Data.eValue e of
-  Data.ExpressionPi (Data.Lambda _ resultType) -> 1 + countPis resultType
-  _ -> 0
+countArrows :: Data.PureExpression -> Int
+countArrows Data.Expression
+  { Data.eValue =
+    Data.ExpressionPi (Data.Lambda _ resultType)
+  } = 1 + countArrows resultType
+countArrows _ = 0
+
+countPis :: Data.PureExpression -> (Int, Int)
+countPis e@Data.Expression
+  { Data.eValue =
+    Data.ExpressionPi (Data.Lambda _ resultType)
+  }
+  | Data.isDependentPi e = first (1+) $ countPis resultType
+  | otherwise = (0, 1 + countArrows resultType)
+countPis _ = (0, 0)
 
 applyForms
   :: Data.PureExpression
@@ -557,8 +567,10 @@ applyForms
 applyForms _ e@Data.Expression{ Data.eValue = Data.ExpressionLambda {} } =
   [e]
 applyForms exprType expr =
-  map Data.canonizeGuids . reverse . take (1 + countPis exprType) $ iterate addApply expr
+  map Data.canonizeGuids . reverse . take (1 + arrows) $ iterate addApply withDepPisApplied
   where
+    withDepPisApplied = iterate addApply expr !! depPis
+    (depPis, arrows) = countPis exprType
     addApply =
       Data.pureExpression zeroGuid .
       (`Data.makeApply` pureHole)
