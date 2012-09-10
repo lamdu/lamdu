@@ -14,8 +14,6 @@
   foo xs = 0 : xs
   when explicit type of xs is not hole
 
-* Apply-forms should apply all dependent pis.
-
 * Foreground color for polymorphic
 
 * Make up type variables implicitly.
