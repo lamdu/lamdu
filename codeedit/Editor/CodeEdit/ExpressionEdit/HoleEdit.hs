@@ -265,7 +265,7 @@ makeAllResults
   -> VarAccess m (ListT (T m) (ResultType, ResultsList (T m)))
 makeAllResults holeInfo = do
   paramResults <-
-    mapM makeVariableGroup . (map . first) Sugar.GetParameter $
+    mapM (makeVariableGroup . first Sugar.GetParameter) $
     Sugar.holeScope hole
   globalResults <-
     mapM (makeVariableGroup . (Sugar.GetDefinition &&& Data.DefinitionRef)) =<<
