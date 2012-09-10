@@ -142,7 +142,8 @@ data Inferred m expr = Inferred
   } deriving (Functor)
 
 data Polymorphic expr = Polymorphic
-  { pCompact :: Maybe expr
+  { pFuncGuid :: Guid
+  , pCompact :: GetVariable
   , pFullExpression :: expr
   } deriving (Functor)
 
@@ -402,9 +403,8 @@ convertPi lambda exprI = do
 addParens :: ExpressionBody m (Expression m) -> ExpressionBody m (Expression m)
 addParens (ExpressionInferred (Inferred val hole)) =
   ExpressionInferred $ Inferred (atRExpressionBody addParens val) hole
-addParens (ExpressionPolymorphic (Polymorphic compact full)) =
-  ExpressionPolymorphic .
-  Polymorphic ((fmap . atRExpressionBody) addParens compact) $
+addParens (ExpressionPolymorphic (Polymorphic g compact full)) =
+  ExpressionPolymorphic . Polymorphic g compact $
   atRExpressionBody addParens full
 addParens x = (atEHasParens . const) HaveParens x
 
@@ -477,15 +477,16 @@ applyOnSection _ apply exprI = convertApplyPrefix apply exprI
 convertApplyPrefix ::
   Monad m =>
   Data.Apply (Expression m, ExprEntity m) -> Convertor m
-convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, argI)) exprI =
+convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, _)) exprI =
   if isPolymorphicFunc funcI
   then
     case rExpressionBody funcRef of
-    ExpressionPolymorphic (Polymorphic compact full) ->
-      makePolymorphic compact . removeRedundantTypes =<<
+    ExpressionPolymorphic (Polymorphic g compact full) ->
+      makePolymorphic g compact . removeRedundantTypes =<<
       (mkExpression exprI . ExpressionApply DontHaveParens) (Data.Apply full newArgRef)
-    _ ->
-      on (makePolymorphic . Just) removeRedundantTypes funcRef =<< makeFullApply
+    ExpressionGetVariable getVar ->
+      makePolymorphic (Data.eGuid funcI) getVar . removeRedundantTypes =<< makeFullApply
+    _ -> makeFullApply
   else makeFullApply
   where
     newArgRef =
@@ -502,10 +503,9 @@ convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, argI)) exprI =
     makeFullApply =
       mkExpression exprI . ExpressionApply DontHaveParens $
       Data.Apply newFuncRef newArgRef
-    makePolymorphic x =
+    makePolymorphic g x =
       (liftM . atRGuid . Guid.combine . Guid.fromString) "polymorphic" .
-      mkExpression exprI . ExpressionPolymorphic . Polymorphic
-      (if isHole (Data.eValue argI) then x else Nothing)
+      mkExpression exprI . ExpressionPolymorphic . Polymorphic g x
 
 isHole :: Data.ExpressionBody a -> Bool
 isHole (Data.ExpressionLeaf Data.Hole) = True
