@@ -1,17 +1,28 @@
+* VarAccess should be split for the multiple passes
+  * makeExpressionEdit should be passed in a reader
+  * OTransaction's Style reader should be separated from the
+    cursor reader and transaction layers.
+  * OTransaction is Cursor-reader+Transaction
+  * Monad for GUI execution (e.g: In BranchGUI):
+    StyleReader (OTransaction t m)
+  * Monad for Expression generation:
+    WriterT VarInfo (OTransaction t m)
+    * Which generates:
+      StyleReader m (ExpressionGUI m)
+
+* Inference not inferring enough on:
+  foo xs = 0 : xs
+  when explicit type of xs is not hole
+
 * Apply-forms should apply all dependent pis.
 
 * Foreground color for polymorphic
 
-* Hole allows bad results with hole to convert
-
 * Make up type variables implicitly.
   Happens via inference, but as a separate step, so that hole results are unaffected by it.
 
-* Don't show active hole result type - it's too much noise.
-
-* Don't show type of hole which is a function - it's too much noise
-  or
-  Quasi-Monomorphic inference
+* Quasi-Monomorphic inference? (Show the monomorphic types a hole
+  could be, or that it must be a polymorphic type)
 
 * Delete on hole does not delete parent but rather selects it
 
@@ -25,15 +36,9 @@
 * BUG: When using '[' or ']' to add applies, it can type-filter out the
   result we're on and lose the cursor
 
-* Inference not inferring enough on:
-  foo xs = 0 : xs
-  when explicit type of xs is not hole
-
 * For inferred holes the results should have the full inferred value as an option
 
 * Holes should not fill results inner holes.
-
-
 
 * Avoid name clashes in auto-names
 
