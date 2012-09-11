@@ -173,15 +173,17 @@ runDbStore font store = do
       where
         writeCache = writeMemo <=< newMemoFromCache writeMemo
 
-  initSugarCache <- dbToIO $ viewToDb CodeEdit.makeSugarCache
+  let makeCache = dbToIO $ viewToDb CodeEdit.makeSugarCache
+  initSugarCache <- makeCache
   memoRef <- fixIORef $ \writeMemo -> newMemoFromCache writeMemo initSugarCache
 
   let
+    touchCache = newMemoFromCache (writeIORef memoRef) =<< makeCache
     makeWidget size = do
       mkWidget <- readIORef memoRef
       cursor <- dbToIO $ Anchors.getP Anchors.cursor
       sizeFactor <- readIORef sizeFactorRef
-      eventMap <- globalEventMap settingsRef
+      eventMap <- (liftM . fmap) (touchCache >>) $ mkGlobalEventMap settingsRef
       flyNavMake =<<
         liftM (Widget.scale sizeFactor . Widget.weakerEvents eventMap)
         (mkWidget (size / sizeFactor, cursor))
@@ -195,8 +197,8 @@ runDbStore font store = do
 
 type SugarCache = CodeEdit.SugarCache (Transaction DBTag IO)
 
-globalEventMap :: IORef OT.Settings -> IO (Widget.EventHandlers IO)
-globalEventMap settingsRef = do
+mkGlobalEventMap :: IORef OT.Settings -> IO (Widget.EventHandlers IO)
+mkGlobalEventMap settingsRef = do
   settings <- readIORef settingsRef
   let
     togglePrefix
