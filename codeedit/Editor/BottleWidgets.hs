@@ -9,7 +9,7 @@ module Editor.BottleWidgets
   , hboxCentered, vboxCentered
   , hbox, vbox
   , gridHSpaced, gridHSpacedCentered
-  , spaceWidget
+  , stdSpaceWidget
   ) where
 
 import Control.Applicative (Applicative(..))
@@ -133,12 +133,12 @@ makeTextEdit textRef myId = do
       when (newText /= Property.value textRef) $ Property.set textRef newText
       return eventRes
 
-removeKeys
+removeKey
   :: (Monad m)
   => (a -> b -> m (Widget f))
   -> EventMap.ModKey
   -> a -> b -> m (Widget f)
-removeKeys makeEdit key =
+removeKey makeEdit key =
   (fmap . fmap . liftM . Widget.atWEventMap)
   (EventMap.deleteKey (EventMap.KeyEvent EventMap.Press key))
   makeEdit
@@ -149,7 +149,7 @@ makeLineEdit ::
   Widget.Id ->
   OTransaction t m (OT.WidgetT t m)
 makeLineEdit =
-  removeKeys makeTextEdit $
+  removeKey makeTextEdit $
   EventMap.ModKey EventMap.noMods EventMap.KeyEnter
 
 makeWordEdit ::
@@ -158,7 +158,7 @@ makeWordEdit ::
   Widget.Id ->
   OTransaction t m (OT.WidgetT t m)
 makeWordEdit =
-  removeKeys makeLineEdit $
+  removeKey makeLineEdit $
   EventMap.ModKey EventMap.noMods EventMap.KeySpace
 
 makeNameEdit ::
@@ -203,17 +203,17 @@ hbox = Box.toWidget . Box.make Box.horizontal
 vbox :: [(Box.Alignment, Widget f)] -> Widget f
 vbox = Box.toWidget . Box.make Box.vertical
 
-spaceWidget :: Widget f
-spaceWidget = uncurry Widget.liftView $ Spacer.makeHorizontal 20
+stdSpaceWidget :: Widget f
+stdSpaceWidget = uncurry Widget.liftView $ Spacer.makeHorizontal 20
 
 hboxSpaced :: [(Box.Alignment, Widget f)] -> Widget f
-hboxSpaced = hbox . intersperse (0.5, spaceWidget)
+hboxSpaced = hbox . intersperse (0.5, stdSpaceWidget)
 
 hboxCenteredSpaced :: [Widget f] -> Widget f
-hboxCenteredSpaced = hboxAlign 0.5 . intersperse spaceWidget
+hboxCenteredSpaced = hboxAlign 0.5 . intersperse stdSpaceWidget
 
 gridHSpaced :: [[(Grid.Alignment, Widget f)]] -> Widget f
-gridHSpaced = Grid.toWidget . Grid.make . map (intersperse (0, spaceWidget))
+gridHSpaced = Grid.toWidget . Grid.make . map (intersperse (0, stdSpaceWidget))
 
 gridHSpacedCentered :: [[Widget f]] -> Widget f
 gridHSpacedCentered = gridHSpaced . (map . map) ((,) 0.5)

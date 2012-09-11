@@ -64,7 +64,7 @@ hbox guis =
     f (ExpressionGui widget alignment) = (Vector2 0.5 alignment, widget)
 
 hboxSpaced :: [ExpressionGui m] -> ExpressionGui m
-hboxSpaced = hbox . List.intersperse (fromValueWidget BWidgets.spaceWidget)
+hboxSpaced = hbox . List.intersperse (fromValueWidget BWidgets.stdSpaceWidget)
 
 fromBox :: KBox Bool (ITransaction ViewTag m) -> ExpressionGui m
 fromBox box =

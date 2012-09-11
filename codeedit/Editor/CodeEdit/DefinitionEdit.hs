@@ -57,7 +57,7 @@ makeParts makeExpressionEdit name guid def = do
   (paramsEdits, bodyEdit) <-
     FuncEdit.makeParamsAndResultEdit makeExpressionEdit lhs rhs myId params
   return .
-    List.intersperse (ExpressionGui.fromValueWidget BWidgets.spaceWidget) $
+    List.intersperse (ExpressionGui.fromValueWidget BWidgets.stdSpaceWidget) $
     ExpressionGui.fromValueWidget nameEdit :
     paramsEdits ++
     [ ExpressionGui.fromValueWidget equals
