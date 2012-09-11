@@ -1,6 +1,3 @@
-* BUG: Expanded polymorphic adds conflicts of function type under the
-  expression twice causing animid conflicts
-
 * VarAccess should be split for the multiple passes
   * makeExpressionEdit should be passed in a reader
   * OTransaction's Style reader should be separated from the
