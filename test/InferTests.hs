@@ -146,7 +146,7 @@ inferPart =
         (mkInferredLeafSimple (Data.LiteralInteger 5) intType)
       )
     ) $
-  mkInferredGetParam "xs" intType
+  mkInferredGetParam "xs" $ listOf intType
   where
     endoListOfInt = join (makePi "pi") $ listOf intType
     listOf x = makeApply [getDefExpr "List", x]

@@ -471,6 +471,10 @@ maybePi :: Data.ExpressionBody a -> Maybe (Data.Lambda a)
 maybePi (Data.ExpressionPi x) = Just x
 maybePi _ = Nothing
 
+maybeApply :: Data.ExpressionBody a -> Maybe (Data.Apply a)
+maybeApply (Data.ExpressionApply x) = Just x
+maybeApply _ = Nothing
+
 ruleSimpleType :: TypedValue -> Rule
 ruleSimpleType (TypedValue val typ) =
   Rule [val] $ \[valExpr] -> case valExpr of
@@ -589,6 +593,13 @@ applyRules baseGuid apply (Data.Apply func arg) =
           Data.makeApply funcExpr argExpr
         )
       ]
+
+  , -- If Func is same as in Apply,
+    -- Apply-Arg => Arg
+    Rule [tvVal apply, tvVal func] $ \ [applyExpr, funcExpr] -> do
+      Data.Apply aFunc aArg <- maybeToList . maybeApply $ Data.eValue applyExpr
+      _ <- maybeToList $ Data.matchExpression ((const . const) ()) aFunc funcExpr
+      return (tvVal arg, aArg)
   ]
   ++ recurseSubstRules Data.ExpressionPi maybePi
     (tvType apply) (Data.Apply (tvType func) (tvVal arg))
