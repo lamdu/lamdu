@@ -9,7 +9,7 @@ module Editor.OTransaction
   , envAssignCursor, envAssignCursorPrefix
   , assignCursor, assignCursorPrefix
   , readTextStyle, transaction
-  , atEnvTextStyle, setTextSizeColor
+  , atEnvTextStyle, setTextSizeColor, setTextColor
   , getP
   ) where
 
@@ -118,3 +118,6 @@ setTextSizeColor textSize textColor =
 
 atEnv :: Monad m => (Env -> Env) -> OTransaction t m a -> OTransaction t m a
 atEnv = atOTransaction . Reader.local
+
+setTextColor :: Draw.Color -> Env -> Env
+setTextColor = atEnvTextStyle . TextEdit.atSTextViewStyle . TextView.atStyleColor . const

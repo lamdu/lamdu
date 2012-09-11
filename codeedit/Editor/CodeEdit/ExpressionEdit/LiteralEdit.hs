@@ -23,7 +23,7 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 
 setColor :: Monad m => VarAccess m a -> VarAccess m a
-setColor = VarAccess.atEnv $ BWidgets.setTextColor Config.literalIntColor
+setColor = VarAccess.atEnv $ OT.setTextColor Config.literalIntColor
 
 makeIntView
   :: Monad m

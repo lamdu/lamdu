@@ -10,6 +10,7 @@ import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.CodeEdit.VarAccess as VarAccess
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
+import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -38,7 +39,7 @@ make (Sugar.DefinitionBuiltin (Data.FFIName modulePath name) setFFIName) myId =
     return $ BWidgets.hboxCentered [moduleName, dot, varName]
   where
     makeNamePartEditor color namePartStr mSetter makeWidgetId =
-      VarAccess.atEnv (BWidgets.setTextColor color) .
+      VarAccess.atEnv (OT.setTextColor color) .
       BWidgets.wrapDelegatedVA builtinFDConfig FocusDelegator.NotDelegating id
       (VarAccess.otransaction . maybe
        (BWidgets.makeTextView namePartStr . Widget.toAnimId)

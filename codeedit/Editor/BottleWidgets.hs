@@ -10,7 +10,6 @@ module Editor.BottleWidgets
   , hbox, vbox
   , gridHSpaced, gridHSpacedCentered
   , spaceWidget
-  , setTextColor
   ) where
 
 import Control.Applicative (Applicative(..))
@@ -34,7 +33,6 @@ import qualified Editor.ITransaction as IT
 import qualified Editor.Layers as Layers
 import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
-import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -213,9 +211,6 @@ hboxSpaced = hbox . intersperse (0.5, spaceWidget)
 
 hboxCenteredSpaced :: [Widget f] -> Widget f
 hboxCenteredSpaced = hboxAlign 0.5 . intersperse spaceWidget
-
-setTextColor :: Draw.Color -> OT.Env -> OT.Env
-setTextColor = OT.atEnvTextStyle . TextEdit.atSTextViewStyle . TextView.atStyleColor . const
 
 gridHSpaced :: [[(Grid.Alignment, Widget f)]] -> Widget f
 gridHSpaced = Grid.toWidget . Grid.make . map (intersperse (0, spaceWidget))

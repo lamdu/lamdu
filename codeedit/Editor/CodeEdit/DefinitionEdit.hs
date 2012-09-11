@@ -35,7 +35,7 @@ makeNameEdit ::
   MonadF m => (VarAccess.NameSource, String) -> Widget.Id -> Guid -> VarAccess m (WidgetT m)
 makeNameEdit name myId ident =
   BWidgets.wrapDelegatedVA paramFDConfig FocusDelegator.NotDelegating id
-  (VarAccess.atEnv (BWidgets.setTextColor Config.definitionOriginColor) .
+  (VarAccess.atEnv (OT.setTextColor Config.definitionOriginColor) .
    BWidgets.makeNameEdit name ident)
   myId
 

@@ -36,7 +36,7 @@ makeParamNameEdit
   -> VarAccess m (WidgetT m)
 makeParamNameEdit name ident =
   BWidgets.wrapDelegatedVA paramFDConfig FocusDelegator.NotDelegating id
-  (VarAccess.atEnv (BWidgets.setTextColor Config.paramOriginColor) .
+  (VarAccess.atEnv (OT.setTextColor Config.paramOriginColor) .
    BWidgets.makeNameEdit name ident) $ WidgetIds.fromGuid ident
 
 addJumpToRHS

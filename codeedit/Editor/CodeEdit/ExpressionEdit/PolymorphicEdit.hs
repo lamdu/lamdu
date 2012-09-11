@@ -12,6 +12,7 @@ import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.CodeEdit.VarAccess as VarAccess
 import qualified Editor.Config as Config
 import qualified Editor.Layers as Layers
+import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -39,9 +40,9 @@ makeInner makeExpressionEdit poly myId = do
     funcId = WidgetIds.fromGuid $ Sugar.pFuncGuid poly
     colorize (Sugar.GetParameter _) =
       (liftM . bg) Config.polymorphicCompactBGColor .
-      VarAccess.atEnv (BWidgets.setTextColor Config.parameterColor)
+      VarAccess.atEnv (OT.setTextColor Config.parameterColor)
     colorize (Sugar.GetDefinition _) =
-      VarAccess.atEnv (BWidgets.setTextColor Config.polymorphicForegroundColor)
+      VarAccess.atEnv (OT.setTextColor Config.polymorphicForegroundColor)
     bg =
       ExpressionGui.atEgWidget .
       Widget.backgroundColor Layers.polymorphicBG (Widget.toAnimId myId ++ ["bg"])

@@ -12,6 +12,7 @@ import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.CodeEdit.VarAccess as VarAccess
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
+import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -43,7 +44,7 @@ make getVar myId = do
     Sugar.GetParameter guid -> VarAccess.markVariablesAsUsed [guid]
     _ -> return ()
   getVarView <-
-    VarAccess.atEnv (BWidgets.setTextColor (colorOf getVar)) $
+    VarAccess.atEnv (OT.setTextColor (colorOf getVar)) $
     makeView getVar myId
   let
     jumpToDefinitionEventMap =
