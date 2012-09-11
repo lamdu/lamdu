@@ -11,7 +11,6 @@ module Editor.BottleWidgets
   , gridHSpaced, gridHSpacedCentered
   , spaceView, spaceWidget
   , setTextColor
-  , empty
   ) where
 
 import Control.Applicative (Applicative(..))
@@ -227,6 +226,3 @@ gridHSpaced = Grid.toWidget . Grid.make . map (intersperse (0, spaceWidget))
 
 gridHSpacedCentered :: [[Widget f]] -> Widget f
 gridHSpacedCentered = gridHSpaced . (map . map) ((,) 0.5)
-
-empty :: Widget f
-empty = Spacer.makeWidget 0

@@ -5,7 +5,8 @@ module Graphics.UI.Bottle.Widgets.Spacer
   , makeHorizontal
   , makeHorizontalWidget
   , makeHorizLine
-) where
+  , empty
+  ) where
 
 import Control.Monad (void)
 import Data.Monoid (mempty)
@@ -36,3 +37,6 @@ horizLineFrame animId size@(Vector2 w h) =
 
 makeHorizLine :: Anim.AnimId -> Widget.Size -> Widget f
 makeHorizLine animId size = Widget.liftView size $ horizLineFrame animId size
+
+empty :: Widget f
+empty = makeWidget 0

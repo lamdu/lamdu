@@ -31,6 +31,7 @@ import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
 -- This is not in Sugar because Sugar is for code
 data SugarPane m = SugarPane
@@ -104,7 +105,7 @@ makeClipboardsEdit clipboards = do
     mapM (liftM ExpressionGui.egWidget . ExpressionEdit.make) clipboards
   clipboardTitle <-
     if null clipboardsEdits
-    then return BWidgets.empty
+    then return Spacer.empty
     else VarAccess.otransaction $ BWidgets.makeTextView "Clipboards:" ["clipboards title"]
   return . BWidgets.vboxAlign 0 $ clipboardTitle : clipboardsEdits
 
