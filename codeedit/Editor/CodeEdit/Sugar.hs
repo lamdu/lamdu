@@ -441,6 +441,9 @@ setAddArg exprI =
       atRPayload . atPlActions . fmap . atAddNextArg . const .
       liftM DataIRef.exprGuid $ DataOps.callWithArg stored
 
+removeInferredTypes :: Expression m -> Expression m
+removeInferredTypes = (atRPayload . atPlInferredTypes . const) []
+
 removeRedundantTypes :: Expression m -> Expression m
 removeRedundantTypes =
   (atRPayload . atPlInferredTypes) removeIfNoErrors
@@ -505,7 +508,8 @@ convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, _)) exprI =
       Data.Apply newFuncRef newArgRef
     makePolymorphic g x =
       (liftM . atRGuid . Guid.combine . Guid.fromString) "polymorphic" .
-      mkExpression exprI . ExpressionPolymorphic . Polymorphic g x
+      mkExpression exprI . ExpressionPolymorphic . Polymorphic g x .
+      removeInferredTypes
 
 isHole :: Data.ExpressionBody a -> Bool
 isHole (Data.ExpressionLeaf Data.Hole) = True
@@ -521,7 +525,7 @@ convertGetVariable varRef exprI = do
     then
       mkExpression exprI .
       ExpressionSection HaveParens $
-      Section Nothing ((atRPayload . atPlInferredTypes . const) [] getVarExpr) Nothing
+      Section Nothing (removeInferredTypes getVarExpr) Nothing
     else return getVarExpr
 
 mkPaste :: Monad m => DataIRef.ExpressionProperty (T m) -> Sugar m (Maybe (T m Guid))
@@ -920,9 +924,7 @@ convertStoredExpression sugarContext =
   runSugar sugarContext . convertExpressionI . fmap (Just . fmap Just)
 
 removeTypes :: Expression m -> Expression m
-removeTypes =
-  (atRPayload . atPlInferredTypes . const) [] .
-  (atRExpressionBody . fmap) removeTypes
+removeTypes = removeInferredTypes . (atRExpressionBody . fmap) removeTypes
 
 eesInferredExprs ::
   (Infer.Inferred a -> b) ->
