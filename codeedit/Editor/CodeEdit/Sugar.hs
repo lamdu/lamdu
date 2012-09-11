@@ -607,13 +607,16 @@ fillPartialHolesInExpression check oldExpr =
     recheck (newExpr, Any True) = check newExpr
     recheck (_, Any False) = return Nothing
     fillHoleExpr expr@(Data.Expression _ (Data.ExpressionLeaf Data.Hole) hInferred) =
-      if isCompleteType $ Infer.iValue hInferred
-      then return $ void expr
-      else do
-        -- Hole inferred value has holes to fill, no use leaving it as
-        -- auto-inferred, just fill it:
-        Writer.tell $ Any True
-        return $ Infer.iValue hInferred
+      let inferredVal = Infer.iValue hInferred
+      in
+        case Data.eValue inferredVal of
+        Data.ExpressionLeaf Data.Hole -> return $ void expr
+        _ | isCompleteType inferredVal -> return $ void expr
+          | otherwise -> do
+            -- Hole inferred value has holes to fill, no use leaving it as
+            -- auto-inferred, just fill it:
+            Writer.tell $ Any True
+            return inferredVal
     fillHoleExpr (Data.Expression g body _) =
       liftM (Data.pureExpression g) $ Traversable.mapM fillHoleExpr body
 
