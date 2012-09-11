@@ -1,14 +1,6 @@
-* VarAccess should be split for the multiple passes
-  * makeExpressionEdit should be passed in a reader
-  * OTransaction's Style reader should be separated from the
-    cursor reader and transaction layers.
-  * OTransaction is Cursor-reader+Transaction
-  * Monad for GUI execution (e.g: In BranchGUI):
-    StyleReader (OTransaction t m)
-  * Monad for Expression generation:
-    WriterT VarInfo (OTransaction t m)
-    * Which generates:
-      StyleReader m (ExpressionGUI m)
+* Monads for expression making:
+  1st pass: RWST (ExpressionGUI.Maker m, Cursor) VarInfo () (Transaction t m)
+  2nd pass: Reader (TextEdit.Style, NameGenState)
   * Avoid name clashes in auto-names
 
 * Make up type variables implicitly.
