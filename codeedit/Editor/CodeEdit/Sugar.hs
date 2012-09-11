@@ -777,7 +777,7 @@ convertDefinitionParams ctx expr =
       param = FuncParam
         { fpGuid = lambdaGuidToParamGuid $ Data.eGuid expr
         , fpHiddenLambdaGuid = Just $ Data.eGuid expr
-        , fpType = paramTypeS
+        , fpType = removeRedundantTypes paramTypeS
         , fpMActions = Just $ mkFuncParamActions (prop expr) (prop body)
         }
     (nextParams, funcBody) <- convertDefinitionParams ctx body
