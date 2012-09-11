@@ -11,10 +11,6 @@
       StyleReader m (ExpressionGUI m)
   * Avoid name clashes in auto-names
 
-* Inference not inferring enough on:
-  foo xs = 0 : xs
-  when explicit type of xs is not hole
-
 * Make up type variables implicitly.
   Happens via inference, but as a separate step, so that hole results are unaffected by it.
 
