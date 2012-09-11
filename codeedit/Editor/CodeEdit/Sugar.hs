@@ -171,6 +171,7 @@ data WhereItem m = WhereItem
   , wiGuid :: Guid
   , wiHiddenGuids :: [Guid]
   , wiDelete :: T m Guid
+  , wiAddOuterWhereItem :: T m Guid
   }
 
 -- Common data for definitions and where-items
@@ -805,13 +806,16 @@ convertWhereItems ctx
       body = Data.lambdaBody lambda
       item = WhereItem
         { wiValue = value
-        , wiDelete = mkDelete (prop topLevel) (prop body)
         , wiGuid = lambdaGuidToParamGuid . Data.eGuid $ Data.applyFunc apply
         , wiHiddenGuids =
             map Data.eGuid
             [ topLevel
             , Data.lambdaParamType lambda
             ]
+        , wiDelete = mkDelete (prop topLevel) (prop body)
+        , wiAddOuterWhereItem =
+            liftM (lambdaGuidToParamGuid . DataIRef.exprGuid) .
+            DataOps.redexWrap $ prop topLevel
         }
     (nextItems, whereBody) <- convertWhereItems ctx body
     return (item : nextItems, whereBody)

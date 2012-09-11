@@ -2,6 +2,7 @@
 module Editor.CodeEdit.DefinitionEdit(make) where
 
 import Control.Monad (liftM)
+import Data.Monoid (mconcat)
 import Data.Store.Guid (Guid)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
@@ -122,18 +123,24 @@ makeWhereItemEdit ::
   ExpressionGui.Maker m ->
   Sugar.WhereItem m -> VarAccess m (WidgetT m)
 makeWhereItemEdit makeExpressionEdit item =
-  liftM (Widget.weakerEvents deleteEventMap) . assignCursor $
+  liftM (Widget.weakerEvents eventMap) . assignCursor $
   makeDefBodyEdit makeExpressionEdit (Sugar.wiGuid item) (Sugar.wiValue item)
   where
     assignCursor =
       foldr ((.) . (`VarAccess.assignCursor` myId) . WidgetIds.fromGuid) id $
       Sugar.wiHiddenGuids item
     myId = WidgetIds.fromGuid $ Sugar.wiGuid item
-    deleteEventMap =
-      Widget.keysEventMapMovesCursor (Config.delForwardKeys ++ Config.delBackwordKeys)
-      "Delete where item" .
-      liftM WidgetIds.fromGuid .
-      IT.transaction $ Sugar.wiDelete item
+    eventMap =
+      mconcat
+      [ Widget.keysEventMapMovesCursor (Config.delForwardKeys ++ Config.delBackwordKeys)
+        "Delete where item" .
+        liftM WidgetIds.fromGuid .
+        IT.transaction $ Sugar.wiDelete item
+      , Widget.keysEventMapMovesCursor Config.addWhereItemKeys
+        "Add outer where item" .
+        liftM WidgetIds.fromGuid .
+        IT.transaction $ Sugar.wiAddOuterWhereItem item
+      ]
 
 makeDefBodyEdit ::
   MonadF m =>

@@ -78,6 +78,7 @@ createBuiltins =
 
     makeWithType "Data.List.reverse" $ forAll "a" (endo . listOf)
     makeWithType "Data.List.tail" $ forAll "a" (endo . listOf)
+    makeWithType "Data.List.head" . forAll "a" $ join (mkPi . listOf)
 
     makeWithType "Data.List.length" . forAll "a" $ \a ->
       mkPi (listOf a) integer
@@ -92,6 +93,7 @@ createBuiltins =
     mapM_ ((`makeWithType` aToAToA) . ("Prelude." ++))
       ["+", "-", "*", "/", "^", "++"]
     makeWithType "Prelude.negate" $ forAll "a" endo
+    makeWithType "Prelude.sqrt" $ forAll "a" endo
 
     let aToAToBool = forAll "a" $ \a -> mkPi a $ mkPi a bool
     mapM_ ((`makeWithType` aToAToBool) . ("Prelude." ++))
