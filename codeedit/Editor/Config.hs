@@ -42,8 +42,10 @@ replaceKeys       = alt 'r' : delKeys
 pickResultKeys    = [noMods E.KeyEnter]
 jumpToDefinitionKeys  = [noMods E.KeyEnter]
 
-delKeys           = [noMods E.KeyDel, mk E.alt E.KeyDel]
-backspaceKeys     = [noMods E.KeyBackspace]
+backwardDelKeys = [noMods E.KeyBackspace]
+forwardDelKeys  = [noMods E.KeyDel, mk E.alt E.KeyDel]
+delKeys         = backwardDelKeys ++ forwardDelKeys
+
 giveAsArgumentKeys = [k ']', shift '0']
 callWithArgumentKeys = [k '[', shift '9']
 addNextArgumentKeys = [E.ModKey E.noMods E.KeySpace]
