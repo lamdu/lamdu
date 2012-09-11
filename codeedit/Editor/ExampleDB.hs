@@ -113,6 +113,14 @@ createBuiltins =
 
     makeWithType "Prelude.:" .
       forAll "a" $ \a -> mkPi a . endo $ listOf a
+
+    -- Can't use convinience path functions in case of "."
+    tellift $ do
+      typeI <-
+        forAll "a" $ \a -> forAll "b" $ \b -> forAll "c" $ \c ->
+        mkPi (mkPi b c) . mkPi (mkPi a b) $ mkPi a c
+      A.newDefinition "." . (`Data.Definition` typeI) . Data.DefinitionBuiltin .
+        Data.Builtin $ Data.FFIName ["Prelude"] "."
   where
     endo = join mkPi
     set = DataIRef.newExprBody $ Data.ExpressionLeaf Data.Set
