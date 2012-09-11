@@ -31,8 +31,6 @@
 * BUG: When using '[' or ']' to add applies, it can type-filter out the
   result we're on and lose the cursor
 
-* For inferred holes the results should also have the unfilled holes as an option?
-
 * When anything is selected, show all the stuff that refer/define that
   same symbol
 

@@ -33,7 +33,7 @@ import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.Writer (Writer, runWriter)
 import Data.Function (on)
 import Data.Map (Map)
-import Data.Maybe (listToMaybe)
+import Data.Maybe (listToMaybe, maybeToList)
 import Data.Monoid (Monoid(..), Any(..))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
@@ -599,12 +599,13 @@ loader = Infer.Loader Load.loadPureDefinitionType
 fillPartialHolesInExpression ::
   Monad m =>
   (Data.PureExpression -> m (Maybe (Infer.Expression a))) ->
-  Infer.Expression a -> m (Maybe (Infer.Expression a))
+  Infer.Expression a -> m [Infer.Expression a]
 fillPartialHolesInExpression check oldExpr =
+  liftM ((++ [oldExpr]) . maybeToList) .
   recheck . runWriter $ fillHoleExpr oldExpr
   where
     recheck (newExpr, Any True) = check newExpr
-    recheck (_, Any False) = return $ Just oldExpr
+    recheck (_, Any False) = return Nothing
     fillHoleExpr expr@(Data.Expression _ (Data.ExpressionLeaf Data.Hole) hInferred) =
       if isCompleteType $ Infer.iValue hInferred
       then return $ void expr
@@ -625,11 +626,9 @@ convertWritableHole eeInferred exprI = do
     check expr =
       inferExpr expr inferState . Infer.iPoint $ eesInferred eeInferred
 
-    fillPartialHoles = maybe (return Nothing) (fillPartialHolesInExpression check)
-
     makeApplyForms _ _ Nothing = mzero
     makeApplyForms processRes expr (Just i) =
-      List.catMaybes . List.mapL processRes . List.fromList $
+      List.concat . List.mapL processRes . List.fromList $
       applyForms (Infer.iType (Data.ePayload i)) expr
 
     inferResults processRes expr =
@@ -648,13 +647,17 @@ convertWritableHole eeInferred exprI = do
       , holePaste = mPaste
       , holeInferResults = inferResults processRes
       }
-    plainHole = return . ExpressionHole $ hole check
+    plainHole = return . ExpressionHole $ hole (liftM maybeToList . check)
   mkExpression exprI =<<
     case eesInferredValues eeInferred of
     [Data.Expression { Data.eValue = Data.ExpressionLeaf Data.Hole }] ->
       plainHole
     [x] ->
-      liftM (ExpressionInferred . (`Inferred` hole (fillPartialHoles <=< check))) .
+      liftM
+      ( ExpressionInferred
+      . (`Inferred` hole
+         (maybe (return []) (fillPartialHolesInExpression check) <=< check))
+      ) .
       convertExpressionI . eeFromPure $ Data.randomizeGuids (mkGen 1 2 eGuid) x
     _ -> plainHole
   where
