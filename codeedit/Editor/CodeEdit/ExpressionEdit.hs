@@ -11,6 +11,7 @@ import Editor.CodeEdit.VarAccess (VarAccess)
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (EventHandlers)
+import qualified Control.Lens as Lens
 import qualified Editor.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Editor.CodeEdit.ExpressionEdit.AtomEdit as AtomEdit
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -51,17 +52,23 @@ make sExpr = do
   typeEdits <- mapM make $ Sugar.plInferredTypes payload
   let onReadOnly = Widget.doesntTakeFocus
   exprEventMap <- expressionEventMap exprGuid holePicker $ Sugar.rPayload sExpr
+  settings <- VarAccess.otransaction OT.readSettings
+  let
+    addInferredTypes
+      | Lens.view OT.vsShowInferredTypes settings =
+        ExpressionGui.addType ExpressionGui.Background exprId
+        (map
+         ( Widget.tint Config.inferredTypeTint
+         . Widget.scale Config.typeScaleFactor
+         . ExpressionGui.egWidget
+         ) typeEdits)
+      | otherwise = id
   return .
     ExpressionGui.atEgWidget
     ( maybe onReadOnly (const id) (Sugar.plActions payload)
     . Widget.weakerEvents exprEventMap
     ) .
-    ExpressionGui.addType ExpressionGui.Background exprId
-    (map
-      ( Widget.tint Config.inferredTypeTint
-      . Widget.scale Config.typeScaleFactor
-      . ExpressionGui.egWidget
-      ) typeEdits) $
+    addInferredTypes $
     widget
   where
     payload = Sugar.rPayload sExpr

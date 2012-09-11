@@ -8,6 +8,10 @@ module Editor.OTransaction
   , atEnv, atEnvCursor
   , envAssignCursor, envAssignCursorPrefix
   , assignCursor, assignCursorPrefix
+
+  , Settings(..), vsShowInferredTypes
+  , readSettings
+
   , readTextStyle, transaction
   , atEnvTextStyle, setTextSizeColor, setTextColor
   , getP
@@ -24,6 +28,7 @@ import Data.Store.Transaction (Transaction)
 import Editor.ITransaction (ITransaction)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
+import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Editor.Anchors as Anchors
@@ -32,9 +37,16 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
-data Env = Env {
-  envCursor :: Widget.Id,
-  envTextStyle :: TextEdit.Style
+-- TODO: Move show-help here?
+newtype Settings = Settings
+  { _vsShowInferredTypes :: Bool
+  }
+LensTH.makeLenses ''Settings
+
+data Env = Env
+  { envCursor :: Widget.Id
+  , envTextStyle :: TextEdit.Style
+  , envSettings :: Settings
   }
 AtFieldTH.make ''Env
 
@@ -54,23 +66,24 @@ getP = transaction . Anchors.getP
 
 runOTransaction
   :: Monad m
-  => Widget.Id -> TextEdit.Style
+  => Widget.Id -> TextEdit.Style -> Settings
   -> OTransaction t m a -> Transaction t m a
-runOTransaction cursor style (OTransaction action) =
-  runReaderT action (Env cursor style)
+runOTransaction cursor style settings (OTransaction action) =
+  runReaderT action (Env cursor style settings)
 
 unWrapInner
   :: Monad m
   => (Transaction t0 (Transaction t1 m) a -> Transaction t1 m a)
   -> OTransaction t0 (Transaction t1 m) a
   -> OTransaction t1 m a
-unWrapInner unwrap act = do
-  cursor <- readCursor
-  style <- readTextStyle
-  transaction . unwrap $ runOTransaction cursor style act
+unWrapInner unwrap (OTransaction act) =
+  transaction . unwrap . runReaderT act =<< OTransaction Reader.ask
 
 readCursor :: Monad m => OTransaction t m Widget.Id
 readCursor = OTransaction $ Reader.asks envCursor
+
+readSettings :: Monad m => OTransaction t m Settings
+readSettings = OTransaction $ Reader.asks envSettings
 
 subCursor :: Monad m => Widget.Id -> OTransaction t m (Maybe AnimId)
 subCursor folder = liftM (Widget.subId folder) readCursor
