@@ -8,6 +8,9 @@ module Graphics.UI.Bottle.Widgets.Box
   , atElementRect, atElementW
   , Cursor, toWidget, toWidgetBiased
   , Orientation, horizontal, vertical
+  , hboxAlign, vboxAlign
+  , hboxCentered, vboxCentered
+  , hbox, vbox
   ) where
 
 import Control.Lens (view)
@@ -113,3 +116,26 @@ toWidgetBiased cursor box =
   Grid.toWidgetBiased gridCursor $ toGrid box
   where
     gridCursor = oToGridCursor (boxOrientation box) cursor
+
+boxAlign :: Orientation -> Alignment -> [Widget f] -> Widget f
+boxAlign orientation align =
+  toWidget .
+  makeAlign align orientation
+
+hboxAlign :: Alignment -> [Widget f] -> Widget f
+hboxAlign = boxAlign horizontal
+
+vboxAlign :: Alignment -> [Widget f] -> Widget f
+vboxAlign = boxAlign vertical
+
+vboxCentered :: [Widget f] -> Widget f
+vboxCentered = vboxAlign 0.5
+
+hboxCentered :: [Widget f] -> Widget f
+hboxCentered = hboxAlign 0.5
+
+hbox :: [(Alignment, Widget f)] -> Widget f
+hbox = toWidget . make horizontal
+
+vbox :: [(Alignment, Widget f)] -> Widget f
+vbox = toWidget . make vertical

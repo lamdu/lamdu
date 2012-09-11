@@ -132,7 +132,7 @@ resultsToWidgets makeExpressionEdit holeInfo results = do
         mapM moreResult . (firstResult :) =<<
         VarAccess.transaction (List.toList moreResults)
       return
-        ( BWidgets.vboxAlign 0 $ map fst pairs
+        ( Box.vboxAlign 0 $ map fst pairs
         , msum $ map snd pairs
         )
     moreResult expr = do
@@ -404,7 +404,7 @@ makeResultsWidget makeExpressionEdit holeInfo firstResults moreResults = do
     ( fmap (fst . snd) mResult
     , Widget.scale Config.holeResultScaleFactor .
       BWidgets.hboxCenteredSpaced $
-      BWidgets.vboxCentered (firstResultsWidget : moreResultsWidgets) :
+      Box.vboxCentered (firstResultsWidget : moreResultsWidgets) :
       extraWidgets
     )
   where

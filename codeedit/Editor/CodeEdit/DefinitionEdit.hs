@@ -21,6 +21,7 @@ import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 paramFDConfig :: FocusDelegator.Config
@@ -94,7 +95,7 @@ makeBuiltinDefinition
   -> Sugar.DefinitionBuiltin m
   -> VarAccess m (WidgetT m)
 makeBuiltinDefinition makeExpressionEdit def builtin =
-  liftM (BWidgets.vboxAlign 0) $ sequence
+  liftM (Box.vboxAlign 0) $ sequence
   [ liftM BWidgets.hboxCenteredSpaced $ sequence
     [ VarAccess.withParamName guid $ \name -> makeNameEdit name (Widget.joinId myId ["name"]) guid
     , makeEquals myId
@@ -148,10 +149,10 @@ makeDefBodyEdit makeExpressionEdit guid content = do
       return
         [ BWidgets.hboxSpaced
           [ (0, whereLabel)
-          , (0, Widget.scale Config.whereScaleFactor $ BWidgets.vboxAlign 0 itemEdits)
+          , (0, Widget.scale Config.whereScaleFactor $ Box.vboxAlign 0 itemEdits)
           ]
         ]
-  return . BWidgets.vboxAlign 0 $ body : wheres
+  return . Box.vboxAlign 0 $ body : wheres
   where
     myId = WidgetIds.fromGuid guid
 
@@ -174,7 +175,7 @@ makeExprDefinition makeExpressionEdit def bodyExpr = do
       ]
   bodyWidget <-
     makeDefBodyEdit makeExpressionEdit guid $ Sugar.deContent bodyExpr
-  return . BWidgets.vboxAlign 0 $ typeWidgets ++ [bodyWidget]
+  return . Box.vboxAlign 0 $ typeWidgets ++ [bodyWidget]
   where
     addAcceptanceArrow acceptInferredType label = do
       acceptanceLabel <-

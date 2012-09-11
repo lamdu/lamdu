@@ -14,6 +14,7 @@ import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 builtinFDConfig :: FocusDelegator.Config
@@ -36,7 +37,7 @@ make (Sugar.DefinitionBuiltin (Data.FFIName modulePath name) setFFIName) myId =
       modulePathStr modulePathSetter WidgetIds.builtinFFIPath
     varName <- makeNamePartEditor Config.foreignVarColor name nameSetter WidgetIds.builtinFFIName
     dot <- VarAccess.otransaction . BWidgets.makeLabel "." $ Widget.toAnimId myId
-    return $ BWidgets.hboxCentered [moduleName, dot, varName]
+    return $ Box.hboxCentered [moduleName, dot, varName]
   where
     makeNamePartEditor color namePartStr mSetter makeWidgetId =
       VarAccess.atEnv (OT.setTextColor color) .

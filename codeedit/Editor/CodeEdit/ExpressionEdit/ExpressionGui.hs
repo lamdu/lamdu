@@ -107,7 +107,7 @@ addType style exprId typeEdits eg =
       Widget.translate (Vector2 ((width - getWidth typesBox)/2) 0) typesBox
     getWidth = Lens.view Vector2.first . Widget.wSize
     width = on max getWidth (egWidget eg) typesBox
-    typesBox = BWidgets.vboxCentered typeEdits
+    typesBox = Box.vboxCentered typeEdits
     isError = length typeEdits >= 2
     bgAnimId = Widget.toAnimId exprId ++ ["type background"]
     addBackground = maybe id (Widget.backgroundColor Layers.types bgAnimId) bgColor

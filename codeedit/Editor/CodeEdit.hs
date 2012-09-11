@@ -31,6 +31,7 @@ import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
 -- This is not in Sugar because Sugar is for code
@@ -107,14 +108,14 @@ makeClipboardsEdit clipboards = do
     if null clipboardsEdits
     then return Spacer.empty
     else VarAccess.otransaction $ BWidgets.makeTextView "Clipboards:" ["clipboards title"]
-  return . BWidgets.vboxAlign 0 $ clipboardTitle : clipboardsEdits
+  return . Box.vboxAlign 0 $ clipboardTitle : clipboardsEdits
 
 makeCodeEdit :: MonadF m => SugarCache m -> OTransaction ViewTag m (OT.WidgetT ViewTag m)
 makeCodeEdit cache = VarAccess.run $ do
   panesEdit <- makePanesEdit $ scPanes cache
   clipboardsEdit <- makeClipboardsEdit $ scClipboards cache
   return $
-    BWidgets.vboxAlign 0
+    Box.vboxAlign 0
     [ panesEdit
     , clipboardsEdit
     ]
@@ -130,7 +131,7 @@ makePanesEdit panes = do
     (firstPane:_) ->
       (VarAccess.assignCursor myId . WidgetIds.fromGuid . Sugar.drGuid . spDef) firstPane $ do
         definitionEdits <- mapM makePaneWidget panes
-        return $ BWidgets.vboxAlign 0 definitionEdits
+        return $ Box.vboxAlign 0 definitionEdits
 
   mJumpBack <- VarAccess.transaction Anchors.jumpBack
   newDefinition <- makeNewDefinitionAction
