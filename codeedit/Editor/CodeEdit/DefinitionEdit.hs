@@ -62,17 +62,23 @@ makeParts makeExpressionEdit name guid def = do
     ExpressionGui.fromValueWidget nameEdit :
     paramsEdits ++
     [ ExpressionGui.fromValueWidget equals
-    , bodyEdit
+    , ExpressionGui.atEgWidget
+      (Widget.weakerEvents addWhereItemEventMap)
+      bodyEdit
     ]
   where
     lhs = myId : map (WidgetIds.fromGuid . Sugar.fpGuid) params
     rhs = ("Def Body", body)
     params = Sugar.dParameters def
+    addWhereItemEventMap =
+      Widget.keysEventMapMovesCursor Config.addWhereItemKeys "Add where item" .
+      toEventMapAction $ Sugar.dAddInnermostWhereItem def
     addFirstParamEventMap =
       Widget.keysEventMapMovesCursor Config.addNextParamKeys "Add parameter" .
+      toEventMapAction $ Sugar.dAddFirstParam def
+    toEventMapAction =
       liftM (FocusDelegator.delegatingId . WidgetIds.fromGuid) .
-      IT.transaction $
-      Sugar.dAddFirstParam def
+      IT.transaction
     body = Sugar.dBody def
     myId = WidgetIds.fromGuid guid
 

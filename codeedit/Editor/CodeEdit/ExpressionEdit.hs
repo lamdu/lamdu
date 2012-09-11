@@ -163,7 +163,6 @@ actionsEventMap exprGuid holePicker actions = do
     , addArg
     , replace
     , lambdaWrap
-    , addWhereItem
     , cut
     ]
   where
@@ -189,10 +188,6 @@ actionsEventMap exprGuid holePicker actions = do
     lambdaWrap =
       mkEventMap Config.lambdaWrapKeys "Lambda wrap" FocusDelegator.delegatingId $
       Sugar.lambdaWrap actions
-    addWhereItem =
-      mkEventMap Config.addWhereItemKeys "Add where item" FocusDelegator.delegatingId $
-      Sugar.addWhereItem actions
-
     mkEventMap keys doc f =
       Widget.keysEventMapMovesCursor keys doc .
       liftM (f . WidgetIds.fromGuid) . IT.transaction

@@ -69,7 +69,6 @@ data Actions m = Actions
   , giveAsArg    :: T m Guid
   , callWithArg  :: T m Guid
   , lambdaWrap   :: T m Guid
-  , addWhereItem :: T m Guid
   , replace      :: T m Guid
   , cut          :: T m Guid
   }
@@ -180,6 +179,7 @@ data DefinitionContent m = DefinitionContent
   , dParameters :: [FuncParam m (Expression m)]
   , dWhereItems :: [WhereItem m]
   , dAddFirstParam :: T m Guid
+  , dAddInnermostWhereItem :: T m Guid
   }
 
 data DefinitionExpression m = DefinitionExpression
@@ -296,7 +296,6 @@ mkActions stored =
   , callWithArg = guidify $ DataOps.callWithArg stored
   , giveAsArg = guidify $ DataOps.giveAsArg stored
   , lambdaWrap = paramGuidify $ DataOps.lambdaWrap stored
-  , addWhereItem = paramGuidify $ DataOps.redexWrap stored
   , replace = doReplace
   , cut = mkCutter (Property.value stored) doReplace
   }
@@ -832,9 +831,13 @@ convertDefinitionContent sugarContext expr = do
     { dBody = bodyS
     , dParameters = params
     , dWhereItems = whereItems
-    , dAddFirstParam =
-        mkAddParam . Infer.iStored . eesInferred $ Data.ePayload expr
+    , dAddFirstParam = mkAddParam $ stored expr
+    , dAddInnermostWhereItem =
+        liftM (lambdaGuidToParamGuid . DataIRef.exprGuid) .
+        DataOps.redexWrap $ stored whereBody
     }
+  where
+    stored = Infer.iStored . eesInferred . Data.ePayload
 
 loadConvertDefinition ::
   Monad m => Data.DefinitionIRef -> T m (Definition m)
