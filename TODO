@@ -1,3 +1,6 @@
+* Backspace vs. del behavior on parameters in list should go to different spots
+  (If that's still allowed)
+
 * VarAccess should be split for the multiple passes
   * makeExpressionEdit should be passed in a reader
   * OTransaction's Style reader should be separated from the
