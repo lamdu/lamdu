@@ -92,7 +92,6 @@ type Expression m = ExpressionP m (Payload m)
 
 data FuncParamActions m = FuncParamActions
   { fpaAddNextParam :: T m Guid
-  , fpaAddPrevParam :: T m Guid
   , fpaDelete :: T m Guid
   }
 
@@ -180,6 +179,7 @@ data DefinitionContent m = DefinitionContent
   { dBody :: Expression m
   , dParameters :: [FuncParam m (Expression m)]
   , dWhereItems :: [WhereItem m]
+  , dAddFirstParam :: T m Guid
   }
 
 data DefinitionExpression m = DefinitionExpression
@@ -342,19 +342,22 @@ mkDelete parentP replacerP = do
   where
     replacerI = Property.value replacerP
 
-mkFuncParamActions
-  :: Monad m
-  => DataIRef.ExpressionProperty (T m)
-  -> DataIRef.ExpressionProperty (T m)
-  -> FuncParamActions m
+mkAddParam ::
+  Monad m =>
+  DataIRef.ExpressionProperty (T m) ->
+  T m Guid
+mkAddParam =
+  liftM (lambdaGuidToParamGuid . DataIRef.exprGuid) . DataOps.lambdaWrap
+
+mkFuncParamActions ::
+  Monad m =>
+  DataIRef.ExpressionProperty (T m) ->
+  DataIRef.ExpressionProperty (T m) ->
+  FuncParamActions m
 mkFuncParamActions parentP replacerP = FuncParamActions
   { fpaDelete = mkDelete parentP replacerP
-  , fpaAddNextParam = addParam replacerP
-  , fpaAddPrevParam = addParam parentP
+  , fpaAddNextParam = mkAddParam replacerP
   }
-  where
-    addParam =
-      liftM (lambdaGuidToParamGuid . DataIRef.exprGuid) . DataOps.lambdaWrap
 
 convertLambda
   :: Monad m
@@ -829,6 +832,8 @@ convertDefinitionContent sugarContext expr = do
     { dBody = bodyS
     , dParameters = params
     , dWhereItems = whereItems
+    , dAddFirstParam =
+        mkAddParam . Infer.iStored . eesInferred $ Data.ePayload expr
     }
 
 loadConvertDefinition ::

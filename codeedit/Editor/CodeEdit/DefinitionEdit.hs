@@ -2,7 +2,6 @@
 module Editor.CodeEdit.DefinitionEdit(make) where
 
 import Control.Monad (liftM)
-import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
@@ -69,13 +68,10 @@ makeParts makeExpressionEdit name guid def = do
     rhs = ("Def Body", body)
     params = Sugar.dParameters def
     addFirstParamEventMap =
-      maybe mempty
-      ( Widget.keysEventMapMovesCursor Config.addNextParamKeys "Add parameter"
-      . liftM (FocusDelegator.delegatingId . WidgetIds.fromGuid)
-      . IT.transaction
-      ) $ case params of
-      (p : _) -> fmap Sugar.fpaAddPrevParam $ Sugar.fpMActions p
-      _ -> fmap Sugar.lambdaWrap . Sugar.plActions $ Sugar.rPayload body
+      Widget.keysEventMapMovesCursor Config.addNextParamKeys "Add parameter" .
+      liftM (FocusDelegator.delegatingId . WidgetIds.fromGuid) .
+      IT.transaction $
+      Sugar.dAddFirstParam def
     body = Sugar.dBody def
     myId = WidgetIds.fromGuid guid
 
