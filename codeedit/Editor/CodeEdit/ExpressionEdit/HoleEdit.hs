@@ -489,7 +489,7 @@ makeActiveHoleEdit makeExpressionEdit holeInfo = do
     return
       ( mplus mResult defaultResult
       , ExpressionGui.addBelow
-        [ (0.5, Widget.weakerEvents adHocEditor resultsWidget)
+        [ (0.5, Widget.strongerEvents adHocEditor resultsWidget)
         ]
         searchTermWidget
       )
