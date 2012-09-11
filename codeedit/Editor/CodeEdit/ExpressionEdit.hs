@@ -153,10 +153,10 @@ actionsEventMap exprGuid holePicker actions = do
     replace
       | isSelected =
         if isHole then mempty else
-        mkEventMap Config.replaceKeys "Replace" FocusDelegator.delegatingId $
+        mkEventMap delKeys "Replace" FocusDelegator.delegatingId $
         Sugar.replace actions
       | otherwise =
-        mkEventMap Config.replaceKeys "Select parent" FocusDelegator.notDelegatingId $ return exprGuid
+        mkEventMap delKeys "Select parent" FocusDelegator.notDelegatingId $ return exprGuid
   return $ mconcat
     [ giveAsArg
     , callWithArg
@@ -167,6 +167,7 @@ actionsEventMap exprGuid holePicker actions = do
     , cut
     ]
   where
+    delKeys = concat [Config.replaceKeys, Config.delForwardKeys, Config.delBackwordKeys]
     itrans = liftM WidgetIds.fromGuid . IT.transaction
     giveAsArg =
       moveUnlessOnHole .

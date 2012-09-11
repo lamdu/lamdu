@@ -74,8 +74,8 @@ makeParamEdit makeExpressionEdit rhs name prevId param =
         VarAccess.assignCursor (WidgetIds.fromGuid g) $ WidgetIds.fromGuid ident
     ident = Sugar.fpGuid param
     paramEventMap = mconcat
-      [ paramDeleteEventMap Config.delKeys "" id
-      , paramDeleteEventMap Config.backspaceKeys " backwards" (const prevId)
+      [ paramDeleteEventMap Config.delForwardKeys "" id
+      , paramDeleteEventMap Config.delBackwordKeys " backwards" (const prevId)
       , paramAddNextEventMap
       ]
     paramAddNextEventMap =

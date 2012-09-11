@@ -127,7 +127,7 @@ makeWhereItemEdit makeExpressionEdit item =
       Sugar.wiHiddenGuids item
     myId = WidgetIds.fromGuid $ Sugar.wiGuid item
     deleteEventMap =
-      Widget.keysEventMapMovesCursor Config.delKeys
+      Widget.keysEventMapMovesCursor (Config.delForwardKeys ++ Config.delBackwordKeys)
       "Delete where item" .
       liftM WidgetIds.fromGuid .
       IT.transaction $ Sugar.wiDelete item
