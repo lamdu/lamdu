@@ -9,7 +9,7 @@ module Editor.BottleWidgets
   , hboxCentered, vboxCentered
   , hbox, vbox
   , gridHSpaced, gridHSpacedCentered
-  , spaceView, spaceWidget
+  , spaceWidget
   , setTextColor
   ) where
 
@@ -35,7 +35,6 @@ import qualified Editor.Layers as Layers
 import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -207,16 +206,13 @@ vbox :: [(Box.Alignment, Widget f)] -> Widget f
 vbox = Box.toWidget . Box.make Box.vertical
 
 spaceWidget :: Widget f
-spaceWidget = uncurry Widget.liftView spaceView
+spaceWidget = uncurry Widget.liftView $ Spacer.makeHorizontal 20
 
 hboxSpaced :: [(Box.Alignment, Widget f)] -> Widget f
 hboxSpaced = hbox . intersperse (0.5, spaceWidget)
 
 hboxCenteredSpaced :: [Widget f] -> Widget f
 hboxCenteredSpaced = hboxAlign 0.5 . intersperse spaceWidget
-
-spaceView :: (Anim.Size, Anim.Frame)
-spaceView = Spacer.makeHorizontal 20
 
 setTextColor :: Draw.Color -> OT.Env -> OT.Env
 setTextColor = OT.atEnvTextStyle . TextEdit.atSTextViewStyle . TextView.atStyleColor . const
