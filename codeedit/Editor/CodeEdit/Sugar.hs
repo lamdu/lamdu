@@ -26,7 +26,7 @@ module Editor.CodeEdit.Sugar
 
 import Control.Applicative ((<$>), (<*>))
 import Control.Arrow (first)
-import Control.Monad ((<=<), liftM, void)
+import Control.Monad ((<=<), liftM, mplus, void)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.Writer (Writer, runWriter)
@@ -459,6 +459,13 @@ isSameOp (ExpressionGetVariable v0) (ExpressionGetVariable v1) =
   v0 == v1
 isSameOp _ _ = False
 
+setNextHole :: Expression m -> Expression m -> Expression m
+setNextHole possibleHole =
+  case rExpressionBody possibleHole of
+  ExpressionHole{} ->
+    (fmap . atPlNextHole . flip mplus . Just) possibleHole
+  _ -> id
+
 applyOnSection ::
   Monad m =>
   Section (Expression m) -> Data.Apply (Expression m, ExprEntity m) -> Convertor m
@@ -473,7 +480,7 @@ applyOnSection (Section Nothing op Nothing) (Data.Apply (_, funcI) arg@(argRef, 
     Section (Just (addApplyChildParens argRef)) op Nothing
 applyOnSection (Section (Just left) op Nothing) (Data.Apply _ (argRef, _)) exprI =
   mkExpression exprI . ExpressionSection DontHaveParens $
-  Section (Just left) op (Just right)
+  Section (Just (setNextHole right left)) op (Just right)
   where
     right =
       case rExpressionBody argRef of
@@ -498,17 +505,10 @@ convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, _)) exprI =
   else makeFullApply
   where
     newArgRef = atRExpressionBody addParens argRef
-    setNextHole =
-      case rExpressionBody newArgRef of
-      ExpressionHole{} ->
-        atRPayload . atPlNextHole . const $ Just newArgRef
-      _ -> id
     newFuncRef =
-      setNextHole .
+      setNextHole newArgRef .
       addApplyChildParens .
-      removeRedundantTypes .
-      (atRExpressionBody . atEApply . Data.atApplyArg) setNextHole .
-      (atRExpressionBody . atESection . atSectionOp) setNextHole $
+      removeRedundantTypes $
       funcRef
     expandedGuid = Guid.combine (Data.eGuid exprI) $ Guid.fromString "polyExpanded"
     makeFullApply =
