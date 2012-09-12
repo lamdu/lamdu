@@ -86,11 +86,11 @@ resultPickEventMap holeInfo =
   E.keyPresses Config.pickResultKeys "Pick this search result" .
   pickExpr holeInfo
 
-data ResultsList m = ResultsList
+data ResultsList = ResultsList
   { rlFirstId :: Widget.Id
   , rlMoreResultsPrefixId :: Widget.Id
   , rlFirst :: Sugar.HoleResult
-  , rlMore :: Maybe (Sugar.HoleResult, ListT m Sugar.HoleResult)
+  , rlMore :: Maybe [Sugar.HoleResult]
   }
 
 randomizeResultExpr
@@ -102,7 +102,7 @@ randomizeResultExpr holeInfo expr =
 
 resultsToWidgets
   :: MonadF m
-  => ExpressionGui.Maker m -> HoleInfo m -> ResultsList (T m)
+  => ExpressionGui.Maker m -> HoleInfo m -> ResultsList
   -> VarAccess m
      ( WidgetT m
      , Maybe (Sugar.HoleResult, Maybe (WidgetT m))
@@ -127,10 +127,8 @@ resultsToWidgets makeExpressionEdit holeInfo results = do
     toWidget myId canonizedExpr
   where
     makeExtra = maybe (return Nothing) (liftM Just . makeMoreResults) $ rlMore results
-    makeMoreResults (firstResult, moreResults) = do
-      pairs <-
-        mapM moreResult . (firstResult :) =<<
-        VarAccess.transaction (List.toList moreResults)
+    makeMoreResults moreResults = do
+      pairs <- mapM moreResult moreResults
       return
         ( Box.vboxAlign 0 $ map fst pairs
         , msum $ map snd pairs
@@ -218,11 +216,11 @@ resultsPrefixId holeInfo = mconcat [hiHoleId holeInfo, Widget.Id ["results"]]
 toResultsList ::
   Monad m =>
   HoleInfo m -> Data.PureExpression ->
-  T m (Maybe (ResultsList (T m)))
+  T m (Maybe (ResultsList))
 toResultsList holeInfo baseExpr = do
-  (firstTwo, rest) <- List.splitAtM 2 results
+  results <- Sugar.holeInferResults (hiHole holeInfo) baseExpr
   return $
-    case firstTwo of
+    case results of
     [] -> Nothing
     (x:xs) ->
       let
@@ -235,17 +233,14 @@ toResultsList holeInfo baseExpr = do
         , rlMore =
           case xs of
           [] -> Nothing
-          [y] -> Just (y, rest)
-          _ -> error "We took two, got more!"
+          _ -> Just xs
         }
-  where
-    results = Sugar.holeInferResults (hiHole holeInfo) baseExpr
 
 data ResultType = GoodResult | BadResult
 
 makeResultsList ::
   Monad m => HoleInfo m -> Data.PureExpression ->
-  T m (Maybe (ResultType, ResultsList (T m)))
+  T m (Maybe (ResultType, ResultsList))
 makeResultsList holeInfo baseExpr = do
   -- We always want the first, and we want to know if there's more, so
   -- take 2:
@@ -262,7 +257,7 @@ makeResultsList holeInfo baseExpr = do
 makeAllResults
   :: MonadF m
   => HoleInfo m
-  -> VarAccess m (ListT (T m) (ResultType, ResultsList (T m)))
+  -> VarAccess m (ListT (T m) (ResultType, ResultsList))
 makeAllResults holeInfo = do
   paramResults <-
     mapM (makeVariableGroup . first Sugar.GetParameter) $
@@ -312,9 +307,6 @@ makeAllResults holeInfo = do
       ]
     holeExpr = toPureExpr $ Data.ExpressionLeaf Data.Hole
 
-listToMaybeL :: List l => l a -> List.ItemM l (Maybe a)
-listToMaybeL = liftM listToMaybe . List.toList . List.take 1
-
 addNewDefinitionEventMap ::
   Monad m =>
   HoleInfo m ->
@@ -334,8 +326,9 @@ addNewDefinitionEventMap holeInfo =
         Anchors.newPane newDefI
         return newDefI
       defRef <-
-        liftM (fromMaybe (error "GetDef should always type-check")) .
-        IT.transaction . listToMaybeL . Sugar.holeInferResults (hiHole holeInfo) .
+        liftM (fromMaybe (error "GetDef should always type-check") . listToMaybe) .
+        IT.transaction .
+        Sugar.holeInferResults (hiHole holeInfo) .
         toPureExpr . Data.ExpressionLeaf . Data.GetVariable $
         Data.DefinitionRef newDefI
       -- TODO: Can we use pickResult's animIdMapping?
@@ -375,7 +368,7 @@ vboxMBiasedAlign mChildIndex align =
 makeResultsWidget
   :: MonadF m
   => ExpressionGui.Maker m -> HoleInfo m
-  -> [ResultsList (T m)] -> Bool
+  -> [ResultsList] -> Bool
   -> VarAccess m
      (Maybe Sugar.HoleResult, WidgetT m)
 makeResultsWidget makeExpressionEdit holeInfo firstResults moreResults = do
@@ -495,7 +488,7 @@ makeActiveHoleEdit makeExpressionEdit holeInfo = do
       )
   where
     checkInfer =
-      liftM isJust . VarAccess.transaction . listToMaybeL .
+      liftM (isJust . listToMaybe) . VarAccess.transaction .
       Sugar.holeInferResults (hiHole holeInfo)
     searchTermId = WidgetIds.searchTermId $ hiHoleId holeInfo
 

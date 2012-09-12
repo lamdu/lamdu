@@ -26,8 +26,7 @@ module Editor.CodeEdit.Sugar
 
 import Control.Applicative ((<$>), (<*>))
 import Control.Arrow (first)
-import Control.Monad ((<=<), liftM, mzero, void)
-import Control.Monad.ListT (ListT)
+import Control.Monad ((<=<), liftM, void)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.Writer (Writer, runWriter)
@@ -44,7 +43,6 @@ import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
 import qualified Data.Foldable as Foldable
-import qualified Data.List.Class as List
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
@@ -128,7 +126,7 @@ data Hole m = Hole
   { holeScope :: [(Guid, Data.VariableRef)]
   , holePickResult :: Maybe (HoleResult -> T m Guid)
   , holePaste :: Maybe (T m Guid)
-  , holeInferResults :: Data.PureExpression -> ListT (T m) HoleResult
+  , holeInferResults :: Data.PureExpression -> T m [HoleResult]
   }
 
 data LiteralInteger m = LiteralInteger
@@ -603,7 +601,7 @@ convertReadOnlyHole exprI =
   { holeScope = []
   , holePickResult = Nothing
   , holePaste = Nothing
-  , holeInferResults = mempty
+  , holeInferResults = const $ return []
   }
 
 loader :: Monad m => Infer.Loader (T m)
@@ -647,17 +645,17 @@ convertWritableHole eeInferred exprI = do
     check expr =
       inferExpr expr inferState . Infer.iPoint $ eesInferred eeInferred
 
-    makeApplyForms _ _ Nothing = mzero
+    makeApplyForms _ _ Nothing = return []
     makeApplyForms processRes expr (Just i) =
-      List.concat . List.mapL processRes . List.fromList $
+      liftM concat . mapM processRes $
       applyForms (Infer.iType (Data.ePayload i)) expr
 
     inferResults processRes expr =
-      List.joinL . liftM (makeApplyForms processRes expr) $
-      uncurry (inferExpr expr) .
-      Infer.newNodeWithScope
-      ((Infer.nScope . Infer.iPoint . eesInferred) eeInferred) $
-      inferState
+      makeApplyForms processRes expr =<<
+      ( uncurry (inferExpr expr)
+      . Infer.newNodeWithScope
+        ((Infer.nScope . Infer.iPoint . eesInferred) eeInferred)
+      ) inferState
   mPaste <- mkPaste . Infer.iStored $ eesInferred eeInferred
   let
     onScopeElement (lambdaGuid, _typeExpr) =
