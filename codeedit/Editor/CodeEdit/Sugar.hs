@@ -68,7 +68,6 @@ data Actions m = Actions
   { addNextArg   :: T m Guid
   , giveAsArg    :: T m Guid
   , callWithArg  :: T m Guid
-  , lambdaWrap   :: T m Guid
   , replace      :: T m Guid
   , cut          :: T m Guid
   }
@@ -297,12 +296,10 @@ mkActions stored =
   { addNextArg = guidify $ DataOps.callWithArg stored
   , callWithArg = guidify $ DataOps.callWithArg stored
   , giveAsArg = guidify $ DataOps.giveAsArg stored
-  , lambdaWrap = paramGuidify $ DataOps.lambdaWrap stored
   , replace = doReplace
   , cut = mkCutter (Property.value stored) doReplace
   }
   where
-    paramGuidify = liftM lambdaGuidToParamGuid . guidify
     guidify = liftM DataIRef.exprGuid
     doReplace = guidify $ DataOps.replaceWithHole stored
 
