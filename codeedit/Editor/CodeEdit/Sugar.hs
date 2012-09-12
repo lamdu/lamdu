@@ -147,6 +147,7 @@ data Polymorphic expr = Polymorphic
 
 data GetVariable
   = GetParameter Guid | GetDefinition Data.DefinitionIRef
+  deriving Eq
 
 data ExpressionBody m expr
   = ExpressionApply   { eHasParens :: HasParens, eApply :: Data.Apply expr }
@@ -463,6 +464,13 @@ mkExpressionGetVariable =
     mkGetVariable (Data.DefinitionRef defI) =
       GetDefinition defI
 
+isSameOp :: ExpressionBody m expr -> ExpressionBody m expr -> Bool
+isSameOp (ExpressionPolymorphic p0) (ExpressionPolymorphic p1) =
+  on (==) pCompact p0 p1
+isSameOp (ExpressionGetVariable v0) (ExpressionGetVariable v1) =
+  v0 == v1
+isSameOp _ _ = False
+
 applyOnSection ::
   Monad m =>
   Section (Expression m) -> Data.Apply (Expression m, ExprEntity m) -> Convertor m
@@ -474,10 +482,16 @@ applyOnSection (Section Nothing op Nothing) (Data.Apply (_, funcI) arg@(argRef, 
       Section Nothing (removeRedundantTypes newOpRef) Nothing
   | otherwise =
     mkExpression exprI . ExpressionSection DontHaveParens $
-      Section (Just (addApplyChildParens argRef)) op Nothing
+    Section (Just (addApplyChildParens argRef)) op Nothing
 applyOnSection (Section (Just left) op Nothing) (Data.Apply _ (argRef, _)) exprI =
   mkExpression exprI . ExpressionSection DontHaveParens $
-    Section (Just left) op (Just (addApplyChildParens argRef))
+  Section (Just left) op (Just right)
+  where
+    right =
+      case rExpressionBody argRef of
+      ExpressionSection _ (Section (Just _) rightOp (Just _))
+        | on isSameOp rExpressionBody op rightOp -> argRef
+      _ -> addApplyChildParens argRef
 applyOnSection _ apply exprI = convertApplyPrefix apply exprI
 
 convertApplyPrefix ::
