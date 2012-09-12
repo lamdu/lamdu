@@ -510,11 +510,12 @@ convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, _)) exprI =
       (atRExpressionBody . atEApply . Data.atApplyArg) setNextHole .
       (atRExpressionBody . atESection . atSectionOp) setNextHole $
       funcRef
+    expandedGuid = Guid.combine (Data.eGuid exprI) $ Guid.fromString "polyExpanded"
     makeFullApply =
+      (liftM . atRGuid . const) expandedGuid .
       mkExpression exprI . ExpressionApply DontHaveParens $
       Data.Apply newFuncRef newArgRef
     makePolymorphic g x =
-      (liftM . atRGuid . Guid.combine . Guid.fromString) "polymorphic" .
       mkExpression exprI . ExpressionPolymorphic . Polymorphic g x .
       removeInferredTypes
 
