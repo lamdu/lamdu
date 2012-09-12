@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
-module Editor.CodeEdit.ExpressionEdit.HoleEdit(make, makeUnwrapped, ResultPicker) where
+module Editor.CodeEdit.ExpressionEdit.HoleEdit
+  ( make, makeUnwrapped, pickResultText, ResultPicker
+  ) where
 
 import Control.Applicative ((<*>))
 import Control.Arrow (first, second, (&&&))
@@ -79,11 +81,14 @@ pickExpr holeInfo expr = do
     , Widget.eAnimIdMapping = id -- TODO: Need to fix the parens id
     }
 
+pickResultText :: String
+pickResultText = "Pick this search result"
+
 resultPickEventMap
   :: Monad m
   => HoleInfo m -> Sugar.HoleResult -> Widget.EventHandlers (ITransaction ViewTag m)
 resultPickEventMap holeInfo =
-  E.keyPresses Config.pickResultKeys "Pick this search result" .
+  E.keyPresses Config.pickResultKeys pickResultText .
   pickExpr holeInfo
 
 data ResultsList = ResultsList
@@ -500,12 +505,12 @@ holeFDConfig = FocusDelegator.Config
   , FocusDelegator.stopDelegatingDoc = "Leave hole"
   }
 
-make
-  :: MonadF m
-  => ExpressionGui.Maker m
-  -> Sugar.Hole m -> Guid -> Widget.Id
-  -> VarAccess m
-     (Maybe (ResultPicker m), ExpressionGui m)
+make ::
+  MonadF m =>
+  ExpressionGui.Maker m ->
+  Sugar.Hole m -> Guid ->
+  Widget.Id ->
+  VarAccess m (Maybe (ResultPicker m), ExpressionGui m)
 make makeExpressionEdit hole guid =
   BWidgets.wrapDelegatedVA holeFDConfig FocusDelegator.Delegating (second . ExpressionGui.atEgWidget) $
   makeUnwrapped makeExpressionEdit hole guid

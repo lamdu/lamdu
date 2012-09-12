@@ -77,7 +77,7 @@ data HasParens = HaveParens | DontHaveParens
 data Payload m = Payload
   { plInferredTypes :: [Expression m]
   , plActions :: Maybe (Actions m)
-  , plNextArg :: Maybe (Expression m)
+  , plNextHole :: Maybe (Expression m)
   }
 
 data ExpressionP m pl = Expression
@@ -319,7 +319,7 @@ mkExpression ee expr = do
     , rPayload = Payload
       { plInferredTypes = inferredTypesRefs
       , plActions = fmap mkActions $ eeProp ee
-      , plNextArg = Nothing
+      , plNextHole = Nothing
       }
     }
   where
@@ -498,13 +498,17 @@ convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, _)) exprI =
   else makeFullApply
   where
     newArgRef = atRExpressionBody addParens argRef
-    setNextArg = atRPayload . atPlNextArg . const $ Just newArgRef
+    setNextHole =
+      case rExpressionBody newArgRef of
+      ExpressionHole{} ->
+        atRPayload . atPlNextHole . const $ Just newArgRef
+      _ -> id
     newFuncRef =
-      setNextArg .
+      setNextHole .
       addApplyChildParens .
       removeRedundantTypes .
-      (atRExpressionBody . atEApply . Data.atApplyArg) setNextArg .
-      (atRExpressionBody . atESection . atSectionOp) setNextArg $
+      (atRExpressionBody . atEApply . Data.atApplyArg) setNextHole .
+      (atRExpressionBody . atESection . atSectionOp) setNextHole $
       funcRef
     makeFullApply =
       mkExpression exprI . ExpressionApply DontHaveParens $

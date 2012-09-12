@@ -116,11 +116,11 @@ withPickResultFirst ::
   Widget.EventHandlers (ITransaction ViewTag m)
 withPickResultFirst holePicker keys doc action =
   case holePicker of
-    IsAHole (Just pickResult) ->
-      E.keyPresses keys ("Pick result and " ++ doc) $
-      prependAction pickResult
-    _ ->
-      Widget.keysEventMapMovesCursor keys doc action
+  IsAHole (Just pickResult) ->
+    E.keyPresses keys ("Pick result and " ++ doc) $
+    prependAction pickResult
+  _ ->
+    Widget.keysEventMapMovesCursor keys doc action
   where
     prependAction pickResult = do
       eventResult <- pickResult
@@ -136,17 +136,19 @@ expressionEventMap ::
   VarAccess m (EventHandlers (ITransaction ViewTag m))
 expressionEventMap exprGuid holePicker payload =
   liftM mconcat $ sequence
-  [ return . maybe mempty moveToIfHole $ Sugar.plNextArg payload
-    -- Move to next arg overrides add arg's keys.
+  [ return . maybe pick pickAndMoveTo $ Sugar.plNextHole payload
   , maybe (return mempty) (actionsEventMap exprGuid holePicker) $ Sugar.plActions payload
   ]
   where
-    moveToIfHole nextArg =
-      case Sugar.rExpressionBody nextArg of
-      Sugar.ExpressionHole{} ->
-        withPickResultFirst holePicker Config.addNextArgumentKeys "Move to next arg" .
-        return . WidgetIds.fromGuid $ Sugar.rGuid nextArg
+    pick =
+      case holePicker of
+      IsAHole (Just pickResult) ->
+        E.keyPresses Config.addNextArgumentKeys
+        HoleEdit.pickResultText pickResult
       _ -> mempty
+    pickAndMoveTo nextArg =
+      withPickResultFirst holePicker Config.addNextArgumentKeys "move to next arg" .
+      return . WidgetIds.fromGuid $ Sugar.rGuid nextArg
 
 actionsEventMap ::
   MonadF m =>
