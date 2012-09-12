@@ -70,6 +70,9 @@ data Actions m = Actions
   , callWithArg  :: T m Guid
   , replace      :: T m Guid
   , cut          :: T m Guid
+  -- Turn "x" to "x ? _" where "?" is an operator-hole.
+  -- Given string is initial hole search term.
+  , giveAsArgToOperator :: String -> T m Guid
   }
 
 data HasParens = HaveParens | DontHaveParens
@@ -298,6 +301,7 @@ mkActions stored =
   , giveAsArg = guidify $ DataOps.giveAsArg stored
   , replace = doReplace
   , cut = mkCutter (Property.value stored) doReplace
+  , giveAsArgToOperator = guidify . DataOps.giveAsArgToOperator stored
   }
   where
     guidify = liftM DataIRef.exprGuid

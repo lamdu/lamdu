@@ -166,6 +166,7 @@ actionsEventMap exprGuid holePicker actions = do
         mkEventMap delKeys "Select parent" FocusDelegator.notDelegatingId $ return exprGuid
   return $ mconcat
     [ giveAsArg
+    , addOperator
     , callWithArg
     , addArg
     , replace
@@ -179,6 +180,11 @@ actionsEventMap exprGuid holePicker actions = do
       Widget.keysEventMapMovesCursor
       Config.giveAsArgumentKeys "Give as argument" . itrans $
       Sugar.giveAsArg actions
+    addOperator =
+      (fmap . fmap) Widget.eventResultFromCursor .
+      E.filterChars (`elem` "+-*/^=><&|%$") .
+      E.simpleChars "Operator" "Add operator" $
+      itrans . Sugar.giveAsArgToOperator actions . (:[])
     callWithArg =
       moveUnlessOnHole .
       Widget.keysEventMapMovesCursor

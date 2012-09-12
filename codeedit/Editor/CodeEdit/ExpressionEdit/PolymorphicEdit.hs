@@ -32,20 +32,20 @@ makeInner makeExpressionEdit poly myId = do
   -- so if the cursor is on us it means user enterred our widget.
   if Widget.wIsFocused (ExpressionGui.egWidget fullExprEdit)
     then
-      return $ bg Config.polymorphicFullBGColor fullExprEdit
+      return $ bg Layers.expandedPolymorphicBG Config.polymorphicFullBGColor fullExprEdit
     else
       colorize (Sugar.pCompact poly) $
       VarEdit.makeView (Sugar.pCompact poly) funcId
   where
     funcId = WidgetIds.fromGuid $ Sugar.pFuncGuid poly
     colorize (Sugar.GetParameter _) =
-      (liftM . bg) Config.polymorphicCompactBGColor .
+      (liftM . bg Layers.compactPolymorphicBG) Config.polymorphicCompactBGColor .
       VarAccess.atEnv (OT.setTextColor Config.parameterColor)
     colorize (Sugar.GetDefinition _) =
       VarAccess.atEnv (OT.setTextColor Config.polymorphicForegroundColor)
-    bg =
+    bg layer =
       ExpressionGui.atEgWidget .
-      Widget.backgroundColor Layers.polymorphicBG (Widget.toAnimId myId ++ ["bg"])
+      Widget.backgroundColor layer (Widget.toAnimId myId ++ ["bg"])
 
 polymorphicFDConfig :: FocusDelegator.Config
 polymorphicFDConfig = FocusDelegator.Config

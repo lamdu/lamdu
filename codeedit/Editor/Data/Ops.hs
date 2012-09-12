@@ -2,12 +2,14 @@
 module Editor.Data.Ops
   ( newHole, giveAsArg, callWithArg
   , replace, replaceWithHole, lambdaWrap, redexWrap
+  , giveAsArgToOperator
   )
 where
 
 import Data.Store.Transaction (Transaction)
-import Editor.Anchors(ViewTag)
+import Editor.Anchors (ViewTag)
 import qualified Data.Store.Property as Property
+import qualified Editor.Anchors as Anchors
 import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
 
@@ -23,6 +25,18 @@ giveAsArg exprP = do
     DataIRef.newExprBody
     (Data.makeApply newFuncI (Property.value exprP))
   return newFuncI
+
+giveAsArgToOperator ::
+  Monad m =>
+  DataIRef.ExpressionProperty (T m) ->
+  String ->
+  T m Data.ExpressionIRef
+giveAsArgToOperator exprP searchTerm = do
+  op <- newHole
+  (`Property.set` searchTerm) =<< Anchors.assocSearchTermRef (DataIRef.exprGuid op)
+  opApplied <- DataIRef.newExprBody . Data.makeApply op $ Property.value exprP
+  Property.set exprP =<< DataIRef.newExprBody . Data.makeApply opApplied =<< newHole
+  return op
 
 callWithArg ::
   Monad m =>
