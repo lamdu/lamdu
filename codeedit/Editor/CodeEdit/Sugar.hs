@@ -31,6 +31,7 @@ import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.Writer (Writer, runWriter)
 import Data.Function (on)
+import Data.List.Utils (sortOn)
 import Data.Map (Map)
 import Data.Maybe (listToMaybe, maybeToList)
 import Data.Monoid (Monoid(..), Any(..))
@@ -636,11 +637,17 @@ fillPartialHolesInExpression check oldExpr =
     fillHoleExpr (Data.Expression g body _) =
       liftM (Data.pureExpression g) $ Traversable.mapM fillHoleExpr body
 
+resultComplexityScore :: HoleResult -> Int
+resultComplexityScore =
+  sum . map ((+ negate 2) . length . Foldable.toList . Infer.iType) .
+  Foldable.toList
+
 convertWritableHole ::
   Monad m =>
   ExprEntityInferred (DataIRef.ExpressionProperty (T m)) -> Convertor m
 convertWritableHole eeInferred exprI = do
   inferState <- liftM scInferState readContext
+  mPaste <- mkPaste . Infer.iStored $ eesInferred eeInferred
   let
     check expr =
       inferExpr expr inferState . Infer.iPoint $ eesInferred eeInferred
@@ -651,13 +658,12 @@ convertWritableHole eeInferred exprI = do
       applyForms (Infer.iType (Data.ePayload i)) expr
 
     inferResults processRes expr =
+      liftM (sortOn resultComplexityScore) .
       makeApplyForms processRes expr =<<
       ( uncurry (inferExpr expr)
       . Infer.newNodeWithScope
         ((Infer.nScope . Infer.iPoint . eesInferred) eeInferred)
       ) inferState
-  mPaste <- mkPaste . Infer.iStored $ eesInferred eeInferred
-  let
     onScopeElement (lambdaGuid, _typeExpr) =
       (lambdaGuidToParamGuid lambdaGuid, Data.ParameterRef lambdaGuid)
     hole processRes = Hole
