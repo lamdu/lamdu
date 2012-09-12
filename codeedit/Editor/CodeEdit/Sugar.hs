@@ -13,7 +13,7 @@ module Editor.CodeEdit.Sugar
   , Func(..), FuncParam(..), FuncParamActions(..)
   , Pi(..)
   , Section(..)
-  , Hole(..), HoleResult
+  , Hole(..), HoleResult, holeResultHasHoles
   , LiteralInteger(..)
   , Inferred(..)
   , Polymorphic(..)
@@ -704,6 +704,9 @@ uninferredHoles Data.Expression
     uninferredHoles result ++ uninferredHoles paramType
 uninferredHoles Data.Expression { Data.eValue = body } =
   Foldable.concatMap uninferredHoles body
+
+holeResultHasHoles :: HoleResult -> Bool
+holeResultHasHoles = not . null . uninferredHoles
 
 convertHole :: Monad m => Convertor m
 convertHole exprI =

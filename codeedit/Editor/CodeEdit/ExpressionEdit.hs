@@ -109,26 +109,6 @@ makeEditor sExpr =
        (second . ExpressionGui.atEgWidget . Widget.weakerEvents) (pasteEventMap hole))
     notAHole = (fmap . liftM) ((,) NotAHole)
 
-withPickResultFirst ::
-  MonadF m =>
-  HoleResultPicker m -> [E.ModKey] -> E.Doc ->
-  ITransaction ViewTag m Widget.Id ->
-  Widget.EventHandlers (ITransaction ViewTag m)
-withPickResultFirst holePicker keys doc action =
-  case holePicker of
-  IsAHole (Just pickResult) ->
-    E.keyPresses keys ("Pick result and " ++ doc) $
-    prependAction pickResult
-  _ ->
-    Widget.keysEventMapMovesCursor keys doc action
-  where
-    prependAction pickResult = do
-      eventResult <- pickResult
-      cursorId <- action
-      return $
-        (Widget.atECursor . const . Just) cursorId
-        eventResult
-
 expressionEventMap ::
   MonadF m =>
   Guid -> HoleResultPicker m ->
@@ -136,19 +116,29 @@ expressionEventMap ::
   VarAccess m (EventHandlers (ITransaction ViewTag m))
 expressionEventMap exprGuid holePicker payload =
   liftM mconcat $ sequence
-  [ return . maybe pick pickAndMoveTo $ Sugar.plNextHole payload
+  [ return . holeEvents holePicker $ Sugar.plNextHole payload
   , maybe (return mempty) (actionsEventMap exprGuid holePicker) $ Sugar.plActions payload
   ]
-  where
-    pick =
-      case holePicker of
-      IsAHole (Just pickResult) ->
-        E.keyPresses Config.addNextArgumentKeys
-        HoleEdit.pickResultText pickResult
-      _ -> mempty
-    pickAndMoveTo nextArg =
-      withPickResultFirst holePicker Config.addNextArgumentKeys "move to next arg" .
-      return . WidgetIds.fromGuid $ Sugar.rGuid nextArg
+
+holeEvents ::
+  MonadF m =>
+  HoleResultPicker m -> Maybe (Sugar.Expression m) ->
+  EventHandlers (ITransaction ViewTag m)
+holeEvents (IsAHole (Just (False, pickResult))) (Just nextHole) =
+  E.keyPresses Config.addNextArgumentKeys
+  "Pick result and move to next arg" $ do
+    eventResult <- pickResult
+    return $
+      (Widget.atECursor . const . Just . WidgetIds.fromGuid . Sugar.rGuid) nextHole
+      eventResult
+holeEvents (IsAHole (Just (_, pickResult))) _ =
+  E.keyPresses Config.addNextArgumentKeys
+  HoleEdit.pickResultText pickResult
+holeEvents _ (Just nextHole) =
+  Widget.keysEventMapMovesCursor
+  Config.addNextArgumentKeys "Move to next arg" .
+  return . WidgetIds.fromGuid $ Sugar.rGuid nextHole
+holeEvents _ _ = mempty
 
 actionsEventMap ::
   MonadF m =>

@@ -54,7 +54,7 @@ moreSymbol = "▷"
 moreSymbolSizeFactor :: Fractional a => a
 moreSymbolSizeFactor = 0.5
 
-type ResultPicker m = ITransaction ViewTag m Widget.EventResult
+type ResultPicker m = (Bool, ITransaction ViewTag m Widget.EventResult)
 
 data Group = Group
   { groupNames :: [String]
@@ -72,14 +72,19 @@ data HoleInfo m = HoleInfo
   , hiGuid :: Guid
   }
 
-pickExpr
-  :: Monad m => HoleInfo m -> Sugar.HoleResult -> ResultPicker m
+pickExpr ::
+  Monad m => HoleInfo m -> Sugar.HoleResult -> ITransaction ViewTag m Widget.EventResult
 pickExpr holeInfo expr = do
   guid <- IT.transaction $ hiPickResult holeInfo expr
   return Widget.EventResult
     { Widget.eCursor = Just $ WidgetIds.fromGuid guid
     , Widget.eAnimIdMapping = id -- TODO: Need to fix the parens id
     }
+
+mkResultPicker ::
+  Monad m => HoleInfo m -> Sugar.HoleResult -> ResultPicker m
+mkResultPicker holeInfo expr =
+  (Sugar.holeResultHasHoles expr, pickExpr holeInfo expr)
 
 pickResultText :: String
 pickResultText = "Pick this search result"
@@ -535,7 +540,7 @@ makeUnwrapped makeExpressionEdit hole guid myId = do
           }
       in
         liftM
-        ((first . fmap) (pickExpr holeInfo) .
+        ((first . fmap) (mkResultPicker holeInfo) .
          (second . ExpressionGui.atEgWidget)
          (makeBackground Layers.activeHoleBG Config.holeBackgroundColor .
           Widget.strongerEvents (addNewDefinitionEventMap holeInfo))) $
