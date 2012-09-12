@@ -167,8 +167,6 @@ actionsEventMap exprGuid holePicker actions = do
   return $ mconcat
     [ giveAsArg
     , addOperator
-    , callWithArg
-    , addArg
     , replace
     , cut
     ]
@@ -185,14 +183,6 @@ actionsEventMap exprGuid holePicker actions = do
       E.filterChars (`elem` "+-*/^=><&|%$:.") .
       E.simpleChars "Operator" "Add operator" $
       itrans . Sugar.giveAsArgToOperator actions . (:[])
-    callWithArg =
-      moveUnlessOnHole .
-      Widget.keysEventMapMovesCursor
-      Config.callWithArgumentKeys "Call with argument" . itrans $
-      Sugar.callWithArg actions
-    addArg =
-      withPickResultFirst holePicker Config.addNextArgumentKeys "Add arg" . itrans $
-      Sugar.addNextArg actions
     cut =
       if isHole then mempty else
       mkEventMap Config.cutKeys "Cut" id $

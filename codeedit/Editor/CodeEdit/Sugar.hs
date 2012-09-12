@@ -64,9 +64,7 @@ import qualified System.Random.Utils as RandomUtils
 type T = Transaction ViewTag
 
 data Actions m = Actions
-  { addNextArg   :: T m Guid
-  , giveAsArg    :: T m Guid
-  , callWithArg  :: T m Guid
+  { giveAsArg    :: T m Guid
   , replace      :: T m Guid
   , cut          :: T m Guid
   -- Turn "x" to "x ? _" where "?" is an operator-hole.
@@ -295,9 +293,7 @@ lambdaGuidToParamGuid = Guid.combine $ Guid.fromString "param"
 mkActions :: Monad m => DataIRef.ExpressionProperty (T m) -> Actions m
 mkActions stored =
   Actions
-  { addNextArg = guidify $ DataOps.callWithArg stored
-  , callWithArg = guidify $ DataOps.callWithArg stored
-  , giveAsArg = guidify $ DataOps.giveAsArg stored
+  { giveAsArg = guidify $ DataOps.giveAsArg stored
   , replace = doReplace
   , cut = mkCutter (Property.value stored) doReplace
   , giveAsArgToOperator = guidify . DataOps.giveAsArgToOperator stored
@@ -437,14 +433,6 @@ convertApply (Data.Apply funcI argI) exprI = do
     _ ->
       convertApplyPrefix apply exprI
 
-setAddArg :: Monad m => ExprEntity m -> Expression m -> Expression m
-setAddArg exprI =
-  maybe id f $ eeProp exprI
-  where
-    f stored =
-      atRPayload . atPlActions . fmap . atAddNextArg . const .
-      liftM DataIRef.exprGuid $ DataOps.callWithArg stored
-
 removeInferredTypes :: Expression m -> Expression m
 removeInferredTypes = (atRPayload . atPlInferredTypes . const) []
 
@@ -509,9 +497,7 @@ convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, _)) exprI =
     _ -> makeFullApply
   else makeFullApply
   where
-    newArgRef =
-      setAddArg exprI $
-      atRExpressionBody addParens argRef
+    newArgRef = atRExpressionBody addParens argRef
     setNextArg = atRPayload . atPlNextArg . const $ Just newArgRef
     newFuncRef =
       setNextArg .
