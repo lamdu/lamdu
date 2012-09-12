@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings, Rank2Types#-}
 module Main(main) where
 
-import Control.Applicative ((<*))
 import Control.Arrow (second)
 import Control.Lens ((^.))
 import Control.Monad (liftM, unless, (<=<))
@@ -168,17 +167,17 @@ runDbStore font store = do
     newMemoFromCache writeMemo sugarCache =
       memoIO .
       (liftM . fmap . Widget.weakerEvents)
-      (fmap (<* writeCache sugarCache) sizeFactorEvents) $
-      mkWidgetWithFallback settingsRef (Config.baseStyle font) dbToIO (updateCacheWith writeCache) sugarCache
-      where
-        writeCache = writeMemo <=< newMemoFromCache writeMemo
+      sizeFactorEvents $
+      mkWidgetWithFallback settingsRef
+      (Config.baseStyle font) dbToIO (updateCacheWith (writeCache writeMemo)) sugarCache
+
+    writeCache writeMemo = writeMemo <=< newMemoFromCache writeMemo
 
   let makeCache = dbToIO $ viewToDb CodeEdit.makeSugarCache
-  initSugarCache <- makeCache
-  memoRef <- fixIORef $ \writeMemo -> newMemoFromCache writeMemo initSugarCache
+  memoRef <- fixIORef $ \writeMemo -> newMemoFromCache writeMemo =<< makeCache
 
   let
-    touchCache = newMemoFromCache (writeIORef memoRef) =<< makeCache
+    touchCache = writeCache (writeIORef memoRef) =<< makeCache
     makeWidget size = do
       mkWidget <- readIORef memoRef
       cursor <- dbToIO $ Anchors.getP Anchors.cursor
