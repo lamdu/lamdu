@@ -164,3 +164,5 @@ replaceInferredValueKey = E.ModKey E.noMods E.KeyEnter
 keepInferredValueKey = E.ModKey E.noMods E.KeyEsc
 
 toggleShowInferredTypesKeys = [noMods E.KeyF7]
+
+operatorChars = "+-*/^=><&|%$:."

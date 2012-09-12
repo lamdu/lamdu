@@ -53,6 +53,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Data.Traversable as Traversable
 import qualified Editor.Anchors as Anchors
 import qualified Editor.CodeEdit.Infix as Infix
+import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
 import qualified Editor.Data.Load as Load
@@ -480,7 +481,7 @@ applyOnSection (Section Nothing op Nothing) (Data.Apply (_, funcI) arg@(argRef, 
     Section (Just (addApplyChildParens argRef)) op Nothing
 applyOnSection (Section (Just left) op Nothing) (Data.Apply _ (argRef, _)) exprI =
   mkExpression exprI . ExpressionSection DontHaveParens $
-  Section (Just (setNextHole right left)) op (Just right)
+  on (Section . Just) (setNextHole right) left op (Just right)
   where
     right =
       case rExpressionBody argRef of
@@ -663,18 +664,29 @@ convertWritableHole eeInferred exprI = do
       , holePaste = mPaste
       , holeInferResults = inferResults processRes
       }
-    plainHole = return . ExpressionHole $ hole (liftM maybeToList . check)
-  mkExpression exprI =<<
-    case eesInferredValues eeInferred of
+    plainHole = do
+      holeExpr <- mkExpression exprI . ExpressionHole $ hole (liftM maybeToList . check)
+      searchTermRef <- liftTransaction $ Anchors.assocSearchTermRef eGuid
+      let searchTerm = Property.value searchTermRef
+      if not (null searchTerm) && all (`elem` Config.operatorChars) searchTerm
+        then
+          mkExpression exprI .
+            ExpressionSection DontHaveParens $
+            Section Nothing (removeInferredTypes holeExpr) Nothing
+        else return holeExpr
+
+  case eesInferredValues eeInferred of
     [Data.Expression { Data.eValue = Data.ExpressionLeaf Data.Hole }] ->
       plainHole
     [x] ->
-      liftM
-      ( ExpressionInferred
-      . (`Inferred` hole
-         (maybe (return []) (fillPartialHolesInExpression check) <=< check))
-      ) .
-      convertExpressionI . eeFromPure $ Data.randomizeGuids (mkGen 1 2 eGuid) x
+      mkExpression exprI =<<
+      ( liftM
+        ( ExpressionInferred
+        . (`Inferred` hole
+           (maybe (return []) (fillPartialHolesInExpression check) <=< check))
+        )
+      . convertExpressionI . eeFromPure
+      ) (Data.randomizeGuids (mkGen 1 2 eGuid) x)
     _ -> plainHole
   where
     inferExpr expr inferContext inferPoint =
