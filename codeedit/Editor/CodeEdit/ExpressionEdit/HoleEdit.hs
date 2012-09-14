@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
 module Editor.CodeEdit.ExpressionEdit.HoleEdit
   ( make, makeUnwrapped, pickResultText, ResultPicker
+  , searchTermWidgetId
   ) where
 
 import Control.Applicative ((<*>))
@@ -558,3 +559,6 @@ makeUnwrapped makeExpressionEdit hole guid myId = do
     makeBackground level =
       Widget.backgroundColor level $
       mappend (Widget.toAnimId myId) ["hole background"]
+
+searchTermWidgetId :: Widget.Id -> Widget.Id
+searchTermWidgetId = WidgetIds.searchTermId . FocusDelegator.delegatingId

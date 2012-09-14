@@ -174,6 +174,7 @@ actionsEventMap exprGuid holePicker actions = do
       (fmap . fmap) Widget.eventResultFromCursor .
       E.filterChars (`elem` Config.operatorChars) .
       E.simpleChars "Operator" "Add operator" $
+      liftM HoleEdit.searchTermWidgetId .
       itrans . Sugar.giveAsArgToOperator actions . (:[])
     cut =
       if isHole then mempty else
