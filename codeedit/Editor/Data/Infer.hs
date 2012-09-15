@@ -30,9 +30,7 @@ import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Either as Either
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Foldable as Foldable
-import qualified Data.IntMap.Lens as IntMapLens
 import qualified Data.IntSet as IntSet
-import qualified Data.IntSet.Lens as IntSetLens
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
@@ -240,7 +238,7 @@ initialExprs loader scope entity =
 
 intMapMod :: Functor f => Int -> (v -> f v) -> IntMap v -> f (IntMap v)
 intMapMod k =
-  IntMapLens.at k . Lens.iso from Just
+  Lens.at k . Lens.iso from Just
   where
     from = fromMaybe . error $ unwords ["intMapMod: key", show k, "not in map"]
 
@@ -432,7 +430,7 @@ loadNode loader scope entity typedValue = do
     addTypedVal x =
       liftM ((,) x) createTypedVal
     initializeRefData ref expr =
-      refMap . IntMapLens.at (unRef ref) .=
+      refMap . Lens.at (unRef ref) .=
       Just (RefData (refExprFromPure expr) [])
     setInitialValues = do
       (initialVal, initialType) <-
@@ -624,7 +622,7 @@ load
     loadNode loader scope expression rootTv
   where
     initialMRefData k =
-      Lens.view (refMap . IntMapLens.at (unRef k)) initialRefMap
+      Lens.view (refMap . Lens.at (unRef k)) initialRefMap
     buildLoaded (node, resultRefMap) = Loaded
       { lExpr = node
       , lRefMap = resultRefMap
@@ -661,12 +659,12 @@ addRule :: Rule -> State InferState ()
 addRule rule = do
   ruleId <- makeRule
   mapM_ (addRuleId ruleId) $ ruleInputs rule
-  sBfsNextLayer . IntSetLens.contains ruleId .= True
+  sBfsNextLayer . Lens.contains ruleId .= True
   where
     makeRule = do
       ruleId <- Lens.use (sRefMap . nextRule)
       sRefMap . nextRule += 1
-      sRefMap . rules . IntMapLens.at ruleId .= Just rule
+      sRefMap . rules . Lens.at ruleId .= Just rule
       return ruleId
     addRuleId ruleId ref = refMapAt ref . rRules %= (ruleId :)
 
@@ -724,9 +722,9 @@ infer actions (Loaded expr loadedRefMap (rootValMRefData, rootTypMRefData)) =
         mapM_ processRule $ IntSet.toList curLayer
         go
     processRule key = do
-      liftState $ sBfsCurLayer . IntSetLens.contains key .= False
+      liftState $ sBfsCurLayer . Lens.contains key .= False
       Just (Rule deps ruleAction) <-
-        liftState $ Lens.use (sRefMap . rules . IntMapLens.at key)
+        liftState $ Lens.use (sRefMap . rules . Lens.at key)
       refExps <- mapM getRefExpr deps
       mapM_ (uncurry setRefExpr) $ ruleAction refExps
 
