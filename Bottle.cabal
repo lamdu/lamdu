@@ -69,7 +69,7 @@ Library
                        StateVar,
                        TraceUtils,
                        hashable,
-                       lens >= 2.2,
+                       lens >= 2.9,
                        binary >= 0.5,
                        bytestring,
                        containers >= 0.4,
