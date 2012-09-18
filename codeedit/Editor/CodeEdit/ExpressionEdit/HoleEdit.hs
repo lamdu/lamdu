@@ -69,14 +69,14 @@ data HoleInfo m = HoleInfo
   { hiHoleId :: Widget.Id
   , hiSearchTerm :: Property (T m) String
   , hiHole :: Sugar.Hole m
-  , hiPickResult :: Sugar.HoleResult -> T m Guid
+  , hiPickResult :: Sugar.HoleResult -> T m (Guid, Sugar.Actions m)
   , hiGuid :: Guid
   }
 
 pickExpr ::
   Monad m => HoleInfo m -> Sugar.HoleResult -> ITransaction ViewTag m Widget.EventResult
 pickExpr holeInfo expr = do
-  guid <- IT.transaction $ hiPickResult holeInfo expr
+  (guid, _) <- IT.transaction $ hiPickResult holeInfo expr
   return Widget.EventResult
     { Widget.eCursor = Just $ WidgetIds.fromGuid guid
     , Widget.eAnimIdMapping = id -- TODO: Need to fix the parens id
@@ -358,17 +358,17 @@ makeSearchTermWidget
   => HoleInfo m -> Widget.Id
   -> Maybe Sugar.HoleResult
   -> VarAccess m (ExpressionGui m)
-makeSearchTermWidget holeInfo searchTermId mFirstResult =
+makeSearchTermWidget holeInfo searchTermId mResultToPick =
   VarAccess.otransaction .
   liftM
   (flip ExpressionGui (0.5/Config.holeSearchTermScaleFactor) .
    Widget.scale Config.holeSearchTermScaleFactor .
-   Widget.strongerEvents pickFirstResultEventMap .
+   Widget.strongerEvents pickResultEventMap .
    (Widget.atWEventMap . E.filterChars) (`notElem` "`[]\\")) $
   BWidgets.makeWordEdit (hiSearchTerm holeInfo) searchTermId
   where
-    pickFirstResultEventMap =
-      maybe mempty (resultPickEventMap holeInfo) mFirstResult
+    pickResultEventMap =
+      maybe mempty (resultPickEventMap holeInfo) mResultToPick
 
 vboxMBiasedAlign ::
   Maybe Box.Cursor -> Box.Alignment -> [Widget f] -> Widget f
@@ -482,17 +482,34 @@ makeActiveHoleEdit makeExpressionEdit holeInfo = do
       | otherwise = hiHoleId holeInfo
     destId = head (map rlFirstId firstResults ++ [searchTermId])
   VarAccess.assignCursor assignSource destId $ do
-    let defaultResult = fmap rlFirst $ listToMaybe firstResults
-    searchTermWidget <- makeSearchTermWidget holeInfo searchTermId defaultResult
-    (mResult, resultsWidget) <-
+    (mSelectedResult, resultsWidget) <-
       makeResultsWidget makeExpressionEdit holeInfo firstResults hasMoreResults
     let
+      mResult =
+        mplus mSelectedResult .
+        fmap rlFirst $ listToMaybe firstResults
       adHocEditor =
         fmap IT.transaction . adHocTextEditEventMap $
         hiSearchTerm holeInfo
+      eventMap =
+        case mResult of
+        Just result
+          | null searchTerm -> mempty
+          | all (`notElem` Config.operatorChars) searchTerm ->
+            (fmap . fmap) Widget.eventResultFromCursor .
+            E.charGroup "Operator"
+            "Pick this result and apply operator"
+            Config.operatorChars . fmap const $
+            \x -> IT.transaction $ do
+              (_, actions) <- hiPickResult holeInfo result
+              liftM (searchTermWidgetId . WidgetIds.fromGuid) $
+                Sugar.giveAsArgToOperator actions [x]
+        _ -> mempty
+    searchTermWidget <- makeSearchTermWidget holeInfo searchTermId mResult
     return
-      ( mplus mResult defaultResult
-      , ExpressionGui.addBelow
+      ( mResult
+      , ExpressionGui.atEgWidget (Widget.strongerEvents eventMap) $
+        ExpressionGui.addBelow
         [ (0.5, Widget.strongerEvents adHocEditor resultsWidget)
         ]
         searchTermWidget
@@ -502,6 +519,7 @@ makeActiveHoleEdit makeExpressionEdit holeInfo = do
       liftM (isJust . listToMaybe) . VarAccess.transaction .
       Sugar.holeInferResults (hiHole holeInfo)
     searchTermId = WidgetIds.searchTermId $ hiHoleId holeInfo
+    searchTerm = Property.value $ hiSearchTerm holeInfo
 
 holeFDConfig :: FocusDelegator.Config
 holeFDConfig = FocusDelegator.Config

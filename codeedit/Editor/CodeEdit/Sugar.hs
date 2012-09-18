@@ -124,7 +124,7 @@ type HoleResult = Infer.Expression ()
 
 data Hole m = Hole
   { holeScope :: [(Guid, Data.VariableRef)]
-  , holePickResult :: Maybe (HoleResult -> T m Guid)
+  , holePickResult :: Maybe (HoleResult -> T m (Guid, Actions m))
   , holePaste :: Maybe (T m Guid)
   , holeInferResults :: Data.PureExpression -> T m [HoleResult]
   }
@@ -693,8 +693,10 @@ convertWritableHole eeInferred exprI = do
       liftM (fmap fst . Infer.infer (Infer.InferActions (const Nothing))) $
       Infer.load loader inferContext inferPoint Nothing expr
     pickResult irefP =
-      liftM (maybe eGuid Data.eGuid . listToMaybe . uninferredHoles) .
-      DataIRef.writeExpression (Property.value irefP)
+      liftM
+      ( flip (,) (mkActions irefP)
+      . maybe eGuid Data.eGuid . listToMaybe . uninferredHoles
+      ) . DataIRef.writeExpression (Property.value irefP)
     eGuid = Data.eGuid exprI
 
 -- TODO: This is a DRY violation, implementing isPolymorphic logic

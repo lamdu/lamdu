@@ -172,8 +172,8 @@ actionsEventMap exprGuid holePicker actions = do
       Sugar.giveAsArg actions
     addOperator =
       (fmap . fmap) Widget.eventResultFromCursor .
-      E.filterChars (`elem` Config.operatorChars) .
-      E.simpleChars "Operator" "Add operator" $
+      E.charGroup "Operator" "Apply operator" Config.operatorChars .
+      fmap const $
       liftM HoleEdit.searchTermWidgetId .
       itrans . Sugar.giveAsArgToOperator actions . (:[])
     cut =
