@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit(make) where
 
-import Control.Arrow (first, second)
 import Control.Monad (liftM)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
@@ -33,7 +32,7 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
-data HoleResultPicker m = NotAHole | IsAHole (Maybe (HoleEdit.ResultPicker m))
+data IsHole = NotAHole | IsAHole
 
 pasteEventMap
   :: MonadF m
@@ -79,7 +78,7 @@ makeEditor
   :: MonadF m
   => Sugar.Expression m
   -> Widget.Id
-  -> VarAccess m (HoleResultPicker m, ExpressionGui m)
+  -> VarAccess m (IsHole, ExpressionGui m)
 makeEditor sExpr =
   case Sugar.rExpressionBody sExpr of
   Sugar.ExpressionFunc hasParens f ->
@@ -89,7 +88,7 @@ makeEditor sExpr =
   Sugar.ExpressionPolymorphic poly ->
     notAHole $ PolymorphicEdit.make make poly
   Sugar.ExpressionHole hole ->
-    isAHole hole . HoleEdit.make make hole $ Sugar.rGuid sExpr
+    isAHole hole . HoleEdit.make make hole mNextHole $ Sugar.rGuid sExpr
   Sugar.ExpressionGetVariable varRef ->
     notAHole $ VarEdit.make varRef
   Sugar.ExpressionApply hasParens apply ->
@@ -105,44 +104,23 @@ makeEditor sExpr =
   where
     isAHole hole =
       (fmap . liftM)
-      (first IsAHole .
-       (second . ExpressionGui.atEgWidget . Widget.weakerEvents) (pasteEventMap hole))
+      ((,) IsAHole .
+       (ExpressionGui.atEgWidget . Widget.weakerEvents) (pasteEventMap hole))
     notAHole = (fmap . liftM) ((,) NotAHole)
+    mNextHole = Sugar.plNextHole $ Sugar.rPayload sExpr
 
 expressionEventMap ::
   MonadF m =>
-  Guid -> HoleResultPicker m ->
+  Guid -> IsHole ->
   Sugar.Payload m ->
   VarAccess m (EventHandlers (ITransaction ViewTag m))
 expressionEventMap exprGuid holePicker payload =
-  liftM mconcat $ sequence
-  [ return . holeEvents holePicker $ Sugar.plNextHole payload
-  , maybe (return mempty) (actionsEventMap exprGuid holePicker) $ Sugar.plActions payload
-  ]
-
-holeEvents ::
-  MonadF m =>
-  HoleResultPicker m -> Maybe (Sugar.Expression m) ->
-  EventHandlers (ITransaction ViewTag m)
-holeEvents (IsAHole (Just (False, pickResult))) (Just nextHole) =
-  E.keyPresses Config.addNextArgumentKeys
-  "Pick result and move to next arg" $ do
-    eventResult <- pickResult
-    return $
-      (Widget.atECursor . const . Just . WidgetIds.fromGuid . Sugar.rGuid) nextHole
-      eventResult
-holeEvents (IsAHole (Just (_, pickResult))) _ =
-  E.keyPresses Config.addNextArgumentKeys
-  HoleEdit.pickResultText pickResult
-holeEvents _ (Just nextHole) =
-  Widget.keysEventMapMovesCursor
-  Config.addNextArgumentKeys "Move to next arg" .
-  return . WidgetIds.fromGuid $ Sugar.rGuid nextHole
-holeEvents _ _ = mempty
+  maybe (return mempty) (actionsEventMap exprGuid holePicker) $
+  Sugar.plActions payload
 
 actionsEventMap ::
   MonadF m =>
-  Guid -> HoleResultPicker m -> Sugar.Actions m ->
+  Guid -> IsHole -> Sugar.Actions m ->
   VarAccess m (EventHandlers (ITransaction ViewTag m))
 actionsEventMap exprGuid holePicker actions = do
   isSelected <-
@@ -184,10 +162,12 @@ actionsEventMap exprGuid holePicker actions = do
       Widget.keysEventMapMovesCursor keys doc .
       liftM (f . WidgetIds.fromGuid) . IT.transaction
 
-    moveUnlessOnHole = ifHole $ (const . fmap . liftM . Widget.atECursor . const) Nothing
-    isHole = case holePicker of
+    moveUnlessOnHole = ifHole $ (fmap . liftM . Widget.atECursor . const) Nothing
+    isHole =
+      case holePicker of
       NotAHole -> False
-      IsAHole _ -> True
-    ifHole whenHole = case holePicker of
+      IsAHole -> True
+    ifHole whenHole =
+      case holePicker of
       NotAHole -> id
-      IsAHole x -> whenHole x
+      IsAHole -> whenHole
