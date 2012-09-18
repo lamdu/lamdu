@@ -6,10 +6,10 @@ module Editor.CodeEdit.ExpressionEdit.HoleEdit
 
 import Control.Applicative ((<*>))
 import Control.Arrow (first, second, (&&&))
-import Control.Monad ((<=<), liftM, mplus, msum, void, filterM)
+import Control.Monad ((<=<), filterM, liftM, mplus, msum, void)
 import Control.Monad.ListT (ListT)
 import Data.Function (on)
-import Data.Hashable(hash)
+import Data.Hashable (hash)
 import Data.List (isInfixOf, isPrefixOf)
 import Data.List.Class (List)
 import Data.List.Utils (sortOn)
@@ -502,11 +502,27 @@ makeActiveHoleEdit makeExpressionEdit holeInfo = do
             (fmap . fmap) Widget.eventResultFromCursor .
             E.charGroup "Operator"
             "Pick this result and apply operator"
-            Config.operatorChars . fmap const $
-            \x -> IT.transaction $ do
+            Config.operatorChars $
+            \x _ -> IT.transaction $ do
               (_, actions) <- hiPickResult holeInfo result
               liftM (searchTermWidgetId . WidgetIds.fromGuid) $
                 Sugar.giveAsArgToOperator actions [x]
+          | all (`elem` Config.operatorChars) searchTerm ->
+            (fmap . fmap) Widget.eventResultFromCursor .
+            E.charGroup "Letter/digit"
+            "Pick this result and resume"
+            (['a'..'z'] ++ ['0'..'9']) $
+            \x _ -> IT.transaction $ do
+              (g, _) <- hiPickResult holeInfo result
+              let
+                mTarget
+                  | g /= hiGuid holeInfo = Just g
+                  | otherwise = fmap Sugar.rGuid $ hiMNextHole holeInfo
+              liftM WidgetIds.fromGuid $ case mTarget of
+                Just target -> do
+                  (`Property.set` [x]) =<< Anchors.assocSearchTermRef target
+                  return target
+                Nothing -> return g
         _ -> mempty
     searchTermWidget <- makeSearchTermWidget holeInfo searchTermId mResult
     return .
