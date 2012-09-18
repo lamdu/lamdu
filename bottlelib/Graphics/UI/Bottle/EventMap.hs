@@ -81,7 +81,7 @@ data AllCharsHandler a = AllCharsHandler
 
 data CharGroupHandler a = CharGroupHandler
   { cgInputDoc :: String
-  , cgChars :: [Char]
+  , cgChars :: Set Char
   , cgDocHandler :: DocHandler (Char -> IsShifted -> a)
   } deriving (Functor)
 
@@ -126,8 +126,8 @@ filterCharGroups ::
   [CharGroupHandler a] ->
   [CharGroupHandler a]
 filterCharGroups f =
-  filter (not . null . cgChars) .
-  (map . atCgChars . filter) f
+  filter (not . Set.null . cgChars) .
+  (map . atCgChars . Set.filter) f
 
 isCharConflict :: EventMap a -> Char -> Bool
 isCharConflict eventMap char =
@@ -200,7 +200,7 @@ lookup (Events.KeyEvent isPress ms mchar k) (EventMap dict charGroups _ mAllChar
       Press <- return isPress
       char <- maybeToList mchar
       CharGroupHandler _ chars handler <- charGroups
-      guard $ elem char chars
+      guard $ Set.member char chars
       return . dhHandler handler char $ isShifted ms
   , do
       Press <- return isPress
@@ -215,9 +215,11 @@ charGroup :: String -> Doc -> [Char] -> (Char -> IsShifted -> a) -> EventMap a
 charGroup iDoc oDoc chars handler =
   mempty
   { emCharGroupHandlers =
-      [CharGroupHandler iDoc chars (DocHandler oDoc handler)]
-  , emCharGroupChars = Set.fromList chars
+      [CharGroupHandler iDoc s (DocHandler oDoc handler)]
+  , emCharGroupChars = s
   }
+  where
+    s = Set.fromList chars
 
 -- low-level "smart constructor" in case we need to enforce
 -- invariants:
