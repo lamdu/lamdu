@@ -211,7 +211,7 @@ lookup (Events.KeyEvent isPress ms mchar k) (EventMap dict charGroups _ mAllChar
   where
     modKey = mkModKey ms k
 
-charGroup :: String -> Doc -> [Char] -> (Char -> IsShifted -> a) -> EventMap a
+charGroup :: String -> Doc -> String -> (Char -> IsShifted -> a) -> EventMap a
 charGroup iDoc oDoc chars handler =
   mempty
   { emCharGroupHandlers =

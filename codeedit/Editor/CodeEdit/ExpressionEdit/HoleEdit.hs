@@ -227,7 +227,7 @@ resultsPrefixId holeInfo = mconcat [hiHoleId holeInfo, Widget.Id ["results"]]
 toResultsList ::
   Monad m =>
   HoleInfo m -> Data.PureExpression ->
-  T m (Maybe (ResultsList))
+  T m (Maybe ResultsList)
 toResultsList holeInfo baseExpr = do
   results <- Sugar.holeInferResults (hiHole holeInfo) baseExpr
   return $

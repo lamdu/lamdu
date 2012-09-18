@@ -155,7 +155,7 @@ runDbStore font store = do
   (sizeFactorRef, sizeFactorEvents) <- makeSizeFactor
   flyNavMake <- makeFlyNav
   addHelpWithStyle <- EventMapDoc.makeToggledHelpAdder Config.overlayDocKeys
-  settingsRef <- newIORef $ OT.Settings
+  settingsRef <- newIORef OT.Settings
     { OT._vsShowInferredTypes = True
     }
   let
