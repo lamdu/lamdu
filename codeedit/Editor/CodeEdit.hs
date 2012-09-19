@@ -5,9 +5,10 @@ module Editor.CodeEdit
 where
 
 import Control.Monad (liftM)
-import Data.List.Utils(enumerate, insertAt, removeAt)
+import Data.List (intersperse)
+import Data.List.Utils (enumerate, insertAt, removeAt)
 import Data.Maybe (listToMaybe)
-import Data.Monoid(Monoid(..))
+import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
@@ -131,7 +132,7 @@ makePanesEdit panes = do
     (firstPane:_) ->
       (VarAccess.assignCursor myId . WidgetIds.fromGuid . Sugar.drGuid . spDef) firstPane $ do
         definitionEdits <- mapM makePaneWidget panes
-        return $ Box.vboxAlign 0 definitionEdits
+        return . Box.vboxAlign 0 $ intersperse (Spacer.makeWidget 50) definitionEdits
 
   mJumpBack <- VarAccess.transaction Anchors.jumpBack
   newDefinition <- makeNewDefinitionAction
