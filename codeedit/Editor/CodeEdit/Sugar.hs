@@ -499,9 +499,10 @@ convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, _)) exprI =
     case rExpressionBody funcRef of
     ExpressionPolymorphic (Polymorphic g compact full) ->
       makePolymorphic g compact . removeRedundantTypes =<<
-      (mkExpression exprI . ExpressionApply DontHaveParens) (Data.Apply full newArgRef)
+      makeInnerApply full
     ExpressionGetVariable getVar ->
-      makePolymorphic (Data.eGuid funcI) getVar . removeRedundantTypes =<< makeFullApply
+      makePolymorphic (Data.eGuid funcI) getVar . removeRedundantTypes =<<
+      makeFullApply
     _ -> makeFullApply
   else makeFullApply
   where
@@ -512,10 +513,11 @@ convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, _)) exprI =
       removeRedundantTypes $
       funcRef
     expandedGuid = Guid.combine (Data.eGuid exprI) $ Guid.fromString "polyExpanded"
-    makeFullApply =
+    makeFullApply = makeInnerApply newFuncRef
+    makeInnerApply f =
       (liftM . atRGuid . const) expandedGuid .
       mkExpression exprI . ExpressionApply DontHaveParens $
-      Data.Apply newFuncRef newArgRef
+      Data.Apply f newArgRef
     makePolymorphic g x =
       mkExpression exprI . ExpressionPolymorphic . Polymorphic g x .
       removeInferredTypes

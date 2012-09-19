@@ -26,7 +26,6 @@ makeInner makeExpressionEdit poly myId = do
   -- TODO: This is just to detect whether cursor is in the full expression.
   -- Even when it's not displayed, which is wasteful.
   fullExprEdit <-
-    VarAccess.assignCursor myId funcId .
     makeExpressionEdit $ Sugar.pFullExpression poly
   -- We are inside a non-delegating focus delegator made by makeExpressionEdit,
   -- so if the cursor is on us it means user enterred our widget.
