@@ -9,6 +9,7 @@ import Data.Store.IRef (IRef)
 import Data.Store.Rev.Change (Key, Value)
 import Data.Store.Transaction (Transaction, Store(..))
 import Editor.Anchors (DBTag)
+import Editor.CodeEdit.Sugar.Config (SugarConfig(SugarConfig))
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -17,6 +18,7 @@ import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as A
+import qualified Editor.CodeEdit.Sugar.Config as SugarConfig
 import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
 import qualified Editor.WidgetIds as WidgetIds
@@ -58,12 +60,17 @@ fixIRef createOuter = do
   Transaction.writeIRef x =<< createOuter x
   return x
 
-createBuiltins :: Monad m => Transaction A.ViewTag m [Data.DefinitionIRef]
+createBuiltins :: Monad m => Transaction A.ViewTag m (SugarConfig, [Data.DefinitionIRef])
 createBuiltins =
-  Writer.execWriterT $ do
+  Writer.runWriterT $ do
     list <- mkType . A.newBuiltin "Data.List.List" =<< lift setToSet
     let listOf = mkApply list
     bool <- mkType . A.newBuiltin "Prelude.Bool" =<< lift set
+
+    cons <- lift $ A.newBuiltin "Prelude.:" =<<
+      (forAll "a" $ \a -> mkPi a . endo $ listOf a)
+    nil <- lift $ A.newBuiltin "Prelude.[]" =<< forAll "a" listOf
+    Writer.tell [cons, nil]
 
     makeWithType "Prelude.True" bool
     makeWithType "Prelude.False" bool
@@ -113,9 +120,6 @@ createBuiltins =
     makeWithType "Control.Monad.return" .
       forAll "m" $ \m -> forAll "a" $ \a -> mkPi a $ mkApply m a
 
-    makeWithType "Prelude.:" .
-      forAll "a" $ \a -> mkPi a . endo $ listOf a
-
     -- Can't use convinience path functions in case of "."
     tellift $ do
       typeI <-
@@ -123,6 +127,11 @@ createBuiltins =
         mkPi (mkPi b c) . mkPi (mkPi a b) $ mkPi a c
       A.newDefinition "." . (`Data.Definition` typeI) . Data.DefinitionBuiltin .
         Data.Builtin $ Data.FFIName ["Prelude"] "."
+
+    return SugarConfig
+      { SugarConfig.cons = cons
+      , SugarConfig.nil = nil
+      }
   where
     endo = join mkPi
     set = DataIRef.newExprBody $ Data.ExpressionLeaf Data.Set
@@ -159,8 +168,9 @@ initDB store =
     bs <- initRef A.branchesIRef $ do
       masterNameIRef <- Transaction.newIRef "master"
       changes <- collectWrites Transaction.newKey $ do
-        builtins <- createBuiltins
+        (sugarConfig, builtins) <- createBuiltins
         setMkProp A.clipboards []
+        setMkProp A.sugarConfig sugarConfig
         setMkProp A.globals builtins
         setMkProp A.panes []
         setMkProp A.preJumps []
