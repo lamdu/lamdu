@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, DeriveFunctor #-}
 
 module Editor.CodeEdit.Sugar
-  ( Definition(..), DefinitionBody(..)
+  ( Definition(..), DefinitionBody(..), ListItemActions(..)
   , DefinitionExpression(..), DefinitionContent(..), DefinitionNewType(..)
   , DefinitionBuiltin(..)
   , Actions(..)
@@ -10,7 +10,7 @@ module Editor.CodeEdit.Sugar
   , ExpressionP(..)
   , Expression
   , WhereItem(..)
-  , Func(..), FuncParam(..), FuncParamActions(..)
+  , Func(..), FuncParam(..)
   , Pi(..)
   , Section(..)
   , Hole(..), HoleActions(..), HoleResult, holeResultHasHoles
@@ -90,16 +90,16 @@ data ExpressionP m pl = Expression
 
 type Expression m = ExpressionP m (Payload m)
 
-data FuncParamActions m = FuncParamActions
-  { fpaAddNextParam :: T m Guid
-  , fpaDelete :: T m Guid
+data ListItemActions m = ListItemActions
+  { itemAddNext :: T m Guid
+  , itemDelete :: T m Guid
   }
 
 data FuncParam m expr = FuncParam
   { fpGuid :: Guid
   , fpHiddenLambdaGuid :: Maybe Guid
   , fpType :: expr
-  , fpMActions :: Maybe (FuncParamActions m)
+  , fpMActions :: Maybe (ListItemActions m)
   } deriving (Functor)
 
 -- Multi-param Lambda
@@ -177,8 +177,7 @@ data WhereItem m = WhereItem
   { wiValue :: DefinitionContent m
   , wiGuid :: Guid
   , wiHiddenGuids :: [Guid]
-  , wiDelete :: T m Guid
-  , wiAddOuterWhereItem :: T m Guid
+  , wiActions :: ListItemActions m
   }
 
 -- Common data for definitions and where-items
@@ -221,7 +220,7 @@ AtFieldTH.make ''Section
 AtFieldTH.make ''ExpressionBody
 AtFieldTH.make ''Inferred
 AtFieldTH.make ''Actions
-AtFieldTH.make ''FuncParamActions
+AtFieldTH.make ''ListItemActions
 AtFieldTH.make ''Payload
 AtFieldTH.make ''ExpressionP
 
@@ -358,10 +357,10 @@ mkFuncParamActions ::
   Monad m =>
   DataIRef.ExpressionProperty (T m) ->
   DataIRef.ExpressionProperty (T m) ->
-  FuncParamActions m
-mkFuncParamActions parentP replacerP = FuncParamActions
-  { fpaDelete = mkDelete parentP replacerP
-  , fpaAddNextParam = mkAddParam replacerP
+  ListItemActions m
+mkFuncParamActions parentP replacerP = ListItemActions
+  { itemDelete = mkDelete parentP replacerP
+  , itemAddNext = mkAddParam replacerP
   }
 
 convertLambda
@@ -394,7 +393,7 @@ convertFunc lambda exprI = do
       _ -> Func [param] sBody
   where
     deleteToNextParam =
-      atFpMActions . fmap . atFpaDelete . liftM $ lambdaGuidToParamGuid
+      atFpMActions . fmap . atItemDelete . liftM $ lambdaGuidToParamGuid
 
 convertPi
   :: Monad m
@@ -861,10 +860,13 @@ convertWhereItems ctx
             [ topLevel
             , Data.lambdaParamType lambda
             ]
-        , wiDelete = mkDelete (prop topLevel) (prop body)
-        , wiAddOuterWhereItem =
-            liftM (lambdaGuidToParamGuid . DataIRef.exprGuid) .
-            DataOps.redexWrap $ prop topLevel
+        , wiActions =
+            ListItemActions
+            { itemDelete = mkDelete (prop topLevel) (prop body)
+            , itemAddNext =
+                liftM (lambdaGuidToParamGuid . DataIRef.exprGuid) .
+                DataOps.redexWrap $ prop topLevel
+            }
         }
     (nextItems, whereBody) <- convertWhereItems ctx body
     return (item : nextItems, whereBody)

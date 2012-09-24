@@ -82,13 +82,13 @@ makeParamEdit makeExpressionEdit rhs name prevId param =
       maybe mempty
       (Widget.keysEventMapMovesCursor Config.addNextParamKeys "Add next parameter" .
        liftM (FocusDelegator.delegatingId . WidgetIds.fromGuid) .
-       IT.transaction . Sugar.fpaAddNextParam) $
+       IT.transaction . Sugar.itemAddNext) $
       Sugar.fpMActions param
     paramDeleteEventMap keys docSuffix onId =
       maybe mempty
       (Widget.keysEventMapMovesCursor keys ("Delete parameter" ++ docSuffix) .
        liftM (onId . WidgetIds.fromGuid) .
-       IT.transaction . Sugar.fpaDelete) $
+       IT.transaction . Sugar.itemDelete) $
       Sugar.fpMActions param
 
 makeResultEdit

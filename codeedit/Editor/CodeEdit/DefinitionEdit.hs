@@ -135,11 +135,11 @@ makeWhereItemEdit makeExpressionEdit item =
       [ Widget.keysEventMapMovesCursor (Config.delForwardKeys ++ Config.delBackwordKeys)
         "Delete where item" .
         liftM WidgetIds.fromGuid .
-        IT.transaction $ Sugar.wiDelete item
+        IT.transaction . Sugar.itemDelete $ Sugar.wiActions item
       , Widget.keysEventMapMovesCursor Config.addWhereItemKeys
         "Add outer where item" .
         liftM WidgetIds.fromGuid .
-        IT.transaction $ Sugar.wiAddOuterWhereItem item
+        IT.transaction . Sugar.itemAddNext $ Sugar.wiActions item
       ]
 
 makeDefBodyEdit ::
