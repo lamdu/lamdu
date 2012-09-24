@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit(make) where
 
-import Control.Monad (liftM)
+import Control.Monad ((<=<), liftM)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Editor.Anchors (ViewTag)
@@ -43,7 +43,7 @@ pasteEventMap =
    Config.pasteKeys "Paste" .
    liftM WidgetIds.fromGuid .
    IT.transaction) .
-  Sugar.holePaste
+  (Sugar.holePaste <=< Sugar.holeMActions)
 
 make :: MonadF m => ExpressionGui.Maker m
 make sExpr = do

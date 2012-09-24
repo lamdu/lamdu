@@ -61,8 +61,9 @@ makeSugarCache :: Monad m => Transaction ViewTag m (SugarCache m)
 makeSugarCache = do
   sugarPanes <- makeSugarPanes
   clipboardsP <- Anchors.clipboards
+  sugarConfig <- liftM Property.value Anchors.sugarConfig
   clipboardsExprs <-
-    mapM Sugar.loadConvertExpression $ Property.list clipboardsP
+    mapM (Sugar.loadConvertExpression sugarConfig) $ Property.list clipboardsP
   return SugarCache
     { scPanes = sugarPanes
     , scClipboards = clipboardsExprs
@@ -91,7 +92,8 @@ makeSugarPanes = do
       | i-1 >= 0 = Just $ movePane i (i-1)
       | otherwise = Nothing
     convertPane (i, defI) = do
-      sDef <- Sugar.loadConvertDefinition defI
+      sugarConfig <- liftM Property.value Anchors.sugarConfig
+      sDef <- Sugar.loadConvertDefinition sugarConfig defI
       return SugarPane
         { spDef = sDef
         , mDelPane = mkMDelPane i

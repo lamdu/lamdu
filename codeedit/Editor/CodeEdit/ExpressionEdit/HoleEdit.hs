@@ -67,7 +67,7 @@ data HoleInfo m = HoleInfo
   { hiHoleId :: Widget.Id
   , hiSearchTerm :: Property (T m) String
   , hiHole :: Sugar.Hole m
-  , hiPickResult :: Sugar.HoleResult -> T m (Guid, Sugar.Actions m)
+  , hiHoleActions :: Sugar.HoleActions m
   , hiGuid :: Guid
   , hiMNextHole :: Maybe (Sugar.Expression m)
   }
@@ -75,7 +75,7 @@ data HoleInfo m = HoleInfo
 pickExpr ::
   Monad m => HoleInfo m -> Sugar.HoleResult -> ITransaction ViewTag m Widget.EventResult
 pickExpr holeInfo expr = do
-  (guid, _) <- IT.transaction $ hiPickResult holeInfo expr
+  (guid, _) <- IT.transaction $ Sugar.holePickResult (hiHoleActions holeInfo) expr
   return Widget.EventResult
     { Widget.eCursor = Just $ WidgetIds.fromGuid guid
     , Widget.eAnimIdMapping = id -- TODO: Need to fix the parens id
@@ -92,7 +92,7 @@ resultPickEventMap holeInfo holeResult =
       E.keyPresses Config.addNextArgumentKeys
       "Pick result and move to next arg" .
       liftM Widget.eventResultFromCursor $ do
-        _ <- IT.transaction $ hiPickResult holeInfo holeResult
+        _ <- IT.transaction $ Sugar.holePickResult (hiHoleActions holeInfo) holeResult
         return . WidgetIds.fromGuid $ Sugar.rGuid nextHole
   _ -> simplePickRes $ Config.pickResultKeys ++ Config.addNextArgumentKeys
   where
@@ -160,7 +160,7 @@ resultsToWidgets makeExpressionEdit holeInfo results = do
       Widget.strongerEvents (resultPickEventMap holeInfo expr) .
       ExpressionGui.egWidget =<<
       makeExpressionEdit . Sugar.removeTypes =<<
-      (VarAccess.transaction . Sugar.convertHoleResult) expr
+      (VarAccess.transaction . Sugar.holeConvertResult (hiHoleActions holeInfo)) expr
     moreResultsPrefixId = rlMoreResultsPrefixId results
     addMoreSymbol w = do
       moreSymbolLabel <-
@@ -504,7 +504,7 @@ makeActiveHoleEdit makeExpressionEdit holeInfo = do
             "Pick this result and apply operator"
             Config.operatorChars $
             \x _ -> IT.transaction $ do
-              (_, actions) <- hiPickResult holeInfo result
+              (_, actions) <- Sugar.holePickResult (hiHoleActions holeInfo) result
               liftM (searchTermWidgetId . WidgetIds.fromGuid) $
                 Sugar.giveAsArgToOperator actions [x]
           | all (`elem` Config.operatorChars) searchTerm ->
@@ -513,7 +513,7 @@ makeActiveHoleEdit makeExpressionEdit holeInfo = do
             "Pick this result and resume"
             (['a'..'z'] ++ ['0'..'9']) $
             \x _ -> IT.transaction $ do
-              (g, _) <- hiPickResult holeInfo result
+              (g, _) <- Sugar.holePickResult (hiHoleActions holeInfo) result
               let
                 mTarget
                   | g /= hiGuid holeInfo = Just g
@@ -565,14 +565,14 @@ makeUnwrapped ::
 makeUnwrapped makeExpressionEdit hole mNextHole guid myId = do
   cursor <- VarAccess.otransaction OT.readCursor
   searchTermProp <- VarAccess.transaction $ Anchors.assocSearchTermRef guid
-  case (Sugar.holePickResult hole, Widget.subId myId cursor) of
-    (Just holePickResult, Just _) ->
+  case (Sugar.holeMActions hole, Widget.subId myId cursor) of
+    (Just holeActions, Just _) ->
       let
         holeInfo = HoleInfo
           { hiHoleId = myId
           , hiSearchTerm = searchTermProp
           , hiHole = hole
-          , hiPickResult = holePickResult
+          , hiHoleActions = holeActions
           , hiGuid = guid
           , hiMNextHole = mNextHole
           }
@@ -590,7 +590,7 @@ makeUnwrapped makeExpressionEdit hole mNextHole guid myId = do
     unfocusedColor
       | canPickResult = Config.holeBackgroundColor
       | otherwise = Config.unfocusedReadOnlyHoleBackgroundColor
-    canPickResult = isJust $ Sugar.holePickResult hole
+    canPickResult = isJust $ Sugar.holeMActions hole
     makeBackground level =
       Widget.backgroundColor level $
       mappend (Widget.toAnimId myId) ["hole background"]
