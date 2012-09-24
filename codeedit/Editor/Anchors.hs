@@ -9,6 +9,7 @@ module Editor.Anchors
   , redos, redosIRef
   , currentBranchIRef, currentBranch
   , globals
+  , sugarConfig
   , newBuiltin, newDefinition
   , Pane
   , dbStore, DBTag
@@ -27,13 +28,14 @@ import Data.ByteString.Char8 ()
 import Data.List.Split (splitOn)
 import Data.Maybe (fromMaybe)
 import Data.Store.Db (Db)
-import Data.Store.Guid(Guid)
+import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
-import Data.Store.Property(Property(Property))
+import Data.Store.Property (Property(Property))
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Version(Version)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction, Store(..))
+import Editor.CodeEdit.Sugar.Config (SugarConfig)
 import qualified Data.ByteString as SBS
 import qualified Data.Store.Db as Db
 import qualified Data.Store.Guid as Guid
@@ -87,6 +89,9 @@ cursorIRef = IRef.anchor "cursor"
 -- TODO: This should be an index
 globals :: Monad m => MkProperty ViewTag m [Data.DefinitionIRef]
 globals = Transaction.fromIRef $ IRef.anchor "globals"
+
+sugarConfig :: Monad m => MkProperty ViewTag m SugarConfig
+sugarConfig = Transaction.fromIRef $ IRef.anchor "sugarConfig"
 
 -- Cursor is untagged because it is both saved globally and per-revision.
 -- Cursor movement without any revisioned changes are not saved per-revision.
