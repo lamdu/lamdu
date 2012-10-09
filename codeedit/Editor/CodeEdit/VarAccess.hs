@@ -20,9 +20,7 @@ import Data.Map (Map)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.ITransaction (ITransaction)
 import Editor.OTransaction (OTransaction)
-import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.RWS as RWS
@@ -34,7 +32,7 @@ import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.OTransaction as OT
 import qualified Graphics.UI.Bottle.Widget as Widget
 
-type WidgetT m = Widget (ITransaction ViewTag m)
+type WidgetT m = OT.WidgetT ViewTag m
 
 type AccessedVars = [Guid]
 
