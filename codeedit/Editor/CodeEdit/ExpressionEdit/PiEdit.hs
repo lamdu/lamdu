@@ -2,8 +2,7 @@
 module Editor.CodeEdit.ExpressionEdit.PiEdit(make) where
 
 import Control.Monad (liftM)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ExprGuiM)
 import Editor.MonadF (MonadF)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -18,12 +17,11 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 
 make
   :: MonadF m
-  => ExpressionGui.Maker m
-  -> Sugar.HasParens
+  => Sugar.HasParens
   -> Sugar.Pi m (Sugar.Expression m)
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
-make makeExpressionEdit hasParens (Sugar.Pi param resultType) =
+make hasParens (Sugar.Pi param resultType) =
   ExpressionGui.wrapParenify hasParens Parens.addHighlightedTextParens $ \myId ->
   ExprGuiM.assignCursor myId typeId $ do
     -- TODO: We pollute the resultTypeEdit with our generated name
@@ -32,7 +30,7 @@ make makeExpressionEdit hasParens (Sugar.Pi param resultType) =
     (name, (resultTypeEdit, usedVars)) <-
       ExprGuiM.withParamName paramGuid $ \name ->
       liftM ((,) name) . ExprGuiM.usedVariables $
-      FuncEdit.makeResultEdit makeExpressionEdit [paramId] resultType
+      FuncEdit.makeResultEdit [paramId] resultType
     let
       paramUsed = paramGuid `elem` usedVars
       redirectCursor cursor
@@ -42,7 +40,7 @@ make makeExpressionEdit hasParens (Sugar.Pi param resultType) =
           Nothing -> cursor
           Just _ -> typeId
     ExprGuiM.atEnv (OT.atEnvCursor redirectCursor) $ do
-      paramTypeEdit <- makeExpressionEdit $ Sugar.fpType param
+      paramTypeEdit <- ExpressionGui.makeSubexpresion $ Sugar.fpType param
       paramEdit <-
         if paramUsed
         then do

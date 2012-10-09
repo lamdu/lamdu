@@ -5,8 +5,7 @@ import Control.Monad ((<=<), liftM)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ExprGuiM)
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (EventHandlers)
@@ -45,7 +44,7 @@ pasteEventMap =
    IT.transaction) .
   (Sugar.holePaste <=< Sugar.holeMActions)
 
-make :: MonadF m => ExpressionGui.Maker m
+make :: MonadF m => Sugar.Expression m -> ExprGuiM m (ExpressionGui m)
 make sExpr = do
   (holePicker, widget) <- makeEditor sExpr exprId
   typeEdits <- mapM make $ Sugar.plInferredTypes payload
@@ -82,21 +81,21 @@ makeEditor
 makeEditor sExpr =
   case Sugar.rExpressionBody sExpr of
   Sugar.ExpressionFunc hasParens f ->
-    notAHole $ FuncEdit.make make hasParens f
+    notAHole $ FuncEdit.make hasParens f
   Sugar.ExpressionInferred i ->
-    isAHole (Sugar.iHole i) . InferredEdit.make make i $ Sugar.rGuid sExpr
+    isAHole (Sugar.iHole i) . InferredEdit.make i $ Sugar.rGuid sExpr
   Sugar.ExpressionPolymorphic poly ->
-    notAHole $ PolymorphicEdit.make make poly
+    notAHole $ PolymorphicEdit.make poly
   Sugar.ExpressionHole hole ->
-    isAHole hole . HoleEdit.make make hole mNextHole $ Sugar.rGuid sExpr
+    isAHole hole . HoleEdit.make hole mNextHole $ Sugar.rGuid sExpr
   Sugar.ExpressionGetVariable varRef ->
     notAHole $ VarEdit.make varRef
   Sugar.ExpressionApply hasParens apply ->
-    notAHole $ ApplyEdit.make make hasParens apply
+    notAHole $ ApplyEdit.make hasParens apply
   Sugar.ExpressionPi hasParens funcType ->
-    notAHole $ PiEdit.make make hasParens funcType
+    notAHole $ PiEdit.make hasParens funcType
   Sugar.ExpressionSection hasParens section ->
-    notAHole $ SectionEdit.make make hasParens section
+    notAHole $ SectionEdit.make hasParens section
   Sugar.ExpressionLiteralInteger integer ->
     notAHole $ LiteralEdit.makeInt integer
   Sugar.ExpressionAtom atom ->

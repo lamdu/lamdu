@@ -5,8 +5,7 @@ module Editor.CodeEdit.ExpressionEdit.LiteralEdit(makeInt, makeIntView) where
 import Control.Monad (liftM)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors(ViewTag)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ExprGuiM)
 import Editor.MonadF(MonadF)
 import Graphics.UI.Bottle.Animation (AnimId)
 import qualified Data.Char as Char

@@ -2,7 +2,7 @@ module Editor.CodeEdit.BuiltinEdit(make) where
 
 import Data.List.Split (splitOn)
 import Data.Store.Property (Property(..))
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExprGuiM, WidgetT)
 import Editor.MonadF (MonadF)
 import qualified Data.List as List
 import qualified Editor.BottleWidgets as BWidgets

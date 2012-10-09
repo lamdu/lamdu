@@ -5,8 +5,7 @@ import Control.Monad (liftM)
 import Data.Monoid (mconcat)
 import Data.Store.Guid (Guid)
 import Data.Vector.Vector2 (Vector2(..))
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ExprGuiM, WidgetT)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.List as List
@@ -46,18 +45,17 @@ makeEquals = ExprGuiM.otransaction . BWidgets.makeLabel "=" . Widget.toAnimId
 
 makeParts
   :: MonadF m
-  => ExpressionGui.Maker m
-  -> (ExprGuiM.NameSource, String)
+  => (ExprGuiM.NameSource, String)
   -> Guid
   -> Sugar.DefinitionContent m
   -> ExprGuiM m [ExpressionGui m]
-makeParts makeExpressionEdit name guid def = do
+makeParts name guid def = do
   nameEdit <-
     liftM (FuncEdit.addJumpToRHS rhs . Widget.weakerEvents addFirstParamEventMap) $
     makeNameEdit name myId guid
   equals <- makeEquals myId
   (paramsEdits, bodyEdit) <-
-    FuncEdit.makeParamsAndResultEdit makeExpressionEdit lhs rhs myId params
+    FuncEdit.makeParamsAndResultEdit lhs rhs myId params
   return .
     List.intersperse (ExpressionGui.fromValueWidget BWidgets.stdSpaceWidget) $
     ExpressionGui.fromValueWidget nameEdit :
@@ -85,30 +83,28 @@ makeParts makeExpressionEdit name guid def = do
 
 make
   :: MonadF m
-  => ExpressionGui.Maker m
-  -> Sugar.Definition m
+  => Sugar.Definition m
   -> ExprGuiM m (WidgetT m)
-make makeExpressionEdit def =
+make def =
   case Sugar.drBody def of
   Sugar.DefinitionBodyExpression bodyExpr ->
-    makeExprDefinition makeExpressionEdit def bodyExpr
+    makeExprDefinition def bodyExpr
   Sugar.DefinitionBodyBuiltin builtin ->
-    makeBuiltinDefinition makeExpressionEdit def builtin
+    makeBuiltinDefinition def builtin
 
 makeBuiltinDefinition
   :: MonadF m
-  => ExpressionGui.Maker m
-  -> Sugar.Definition m
+  => Sugar.Definition m
   -> Sugar.DefinitionBuiltin m
   -> ExprGuiM m (WidgetT m)
-makeBuiltinDefinition makeExpressionEdit def builtin =
+makeBuiltinDefinition def builtin =
   liftM (Box.vboxAlign 0) $ sequence
   [ liftM BWidgets.hboxCenteredSpaced $ sequence
     [ ExprGuiM.withParamName guid $ \name -> makeNameEdit name (Widget.joinId myId ["name"]) guid
     , makeEquals myId
     , BuiltinEdit.make builtin myId
     ]
-  , liftM (defTypeScale . ExpressionGui.egWidget) . makeExpressionEdit $
+  , liftM (defTypeScale . ExpressionGui.egWidget) . ExpressionGui.makeSubexpresion $
     Sugar.drType def
   ]
   where
@@ -118,13 +114,10 @@ makeBuiltinDefinition makeExpressionEdit def builtin =
 defTypeScale :: Widget f -> Widget f
 defTypeScale = Widget.scale Config.defTypeBoxSizeFactor
 
-makeWhereItemEdit ::
-  MonadF m =>
-  ExpressionGui.Maker m ->
-  Sugar.WhereItem m -> ExprGuiM m (WidgetT m)
-makeWhereItemEdit makeExpressionEdit item =
+makeWhereItemEdit :: MonadF m => Sugar.WhereItem m -> ExprGuiM m (WidgetT m)
+makeWhereItemEdit item =
   liftM (Widget.weakerEvents eventMap) . assignCursor $
-  makeDefBodyEdit makeExpressionEdit (Sugar.wiGuid item) (Sugar.wiValue item)
+  makeDefBodyEdit (Sugar.wiGuid item) (Sugar.wiValue item)
   where
     assignCursor =
       foldr ((.) . (`ExprGuiM.assignCursor` myId) . WidgetIds.fromGuid) id $
@@ -143,14 +136,11 @@ makeWhereItemEdit makeExpressionEdit item =
       ]
 
 makeDefBodyEdit ::
-  MonadF m =>
-  ExpressionGui.Maker m ->
-  Guid -> Sugar.DefinitionContent m ->
-  ExprGuiM m (WidgetT m)
-makeDefBodyEdit makeExpressionEdit guid content = do
+  MonadF m => Guid -> Sugar.DefinitionContent m -> ExprGuiM m (WidgetT m)
+makeDefBodyEdit guid content = do
   name <- ExprGuiM.getDefName guid
   body <- liftM (ExpressionGui.egWidget . ExpressionGui.hbox) $
-    makeParts makeExpressionEdit name guid content
+    makeParts name guid content
   wheres <-
     case Sugar.dWhereItems content of
     [] -> return []
@@ -158,7 +148,7 @@ makeDefBodyEdit makeExpressionEdit guid content = do
       whereLabel <-
         (liftM . Widget.scale) Config.whereLabelScaleFactor .
         ExprGuiM.otransaction . BWidgets.makeLabel "where" $ Widget.toAnimId myId
-      itemEdits <- mapM (makeWhereItemEdit makeExpressionEdit) $ reverse whereItems
+      itemEdits <- mapM makeWhereItemEdit $ reverse whereItems
       return
         [ BWidgets.hboxSpaced
           [ (0, whereLabel)
@@ -170,12 +160,9 @@ makeDefBodyEdit makeExpressionEdit guid content = do
     myId = WidgetIds.fromGuid guid
 
 makeExprDefinition ::
-  MonadF m =>
-  (Sugar.Expression m -> ExprGuiM m (ExpressionGui m)) ->
-  Sugar.Definition m ->
-  Sugar.DefinitionExpression m ->
+  MonadF m => Sugar.Definition m -> Sugar.DefinitionExpression m ->
   ExprGuiM m (WidgetT m)
-makeExprDefinition makeExpressionEdit def bodyExpr = do
+makeExprDefinition def bodyExpr = do
   typeWidgets <-
     case Sugar.deMNewType bodyExpr of
     Nothing
@@ -187,7 +174,7 @@ makeExprDefinition makeExpressionEdit def bodyExpr = do
       , mkTypeRow id "Inferred type:" inferredType
       ]
   bodyWidget <-
-    makeDefBodyEdit makeExpressionEdit guid $ Sugar.deContent bodyExpr
+    makeDefBodyEdit guid $ Sugar.deContent bodyExpr
   return . Box.vboxAlign 0 $ typeWidgets ++ [bodyWidget]
   where
     addAcceptanceArrow acceptInferredType label = do
@@ -205,7 +192,7 @@ makeExprDefinition makeExpressionEdit def bodyExpr = do
       label <-
         onLabel . labelStyle . ExprGuiM.otransaction .
         BWidgets.makeLabel labelText $ Widget.toAnimId myId
-      typeGui <- makeExpressionEdit typeExpr
+      typeGui <- ExpressionGui.makeSubexpresion typeExpr
       return
         [ (right, label)
         , (center, (Widget.doesntTakeFocus . ExpressionGui.egWidget) typeGui)

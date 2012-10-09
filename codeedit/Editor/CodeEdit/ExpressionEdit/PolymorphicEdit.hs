@@ -2,8 +2,7 @@
 module Editor.CodeEdit.ExpressionEdit.PolymorphicEdit(make) where
 
 import Control.Monad (liftM)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ExprGuiM)
 import Editor.MonadF (MonadF)
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
@@ -18,15 +17,13 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 -- make without the focus delegator
 makeInner ::
-  MonadF m =>
-  ExpressionGui.Maker m -> Sugar.Polymorphic (Sugar.Expression m) ->
-  Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeInner makeExpressionEdit poly myId = do
+  MonadF m => Sugar.Polymorphic (Sugar.Expression m) -> Widget.Id ->
+  ExprGuiM m (ExpressionGui m)
+makeInner poly myId = do
   -- TODO: This is just to detect whether cursor is in the full expression.
   -- Even when it's not displayed, which is wasteful.
-  fullExprEdit <-
-    makeExpressionEdit $ Sugar.pFullExpression poly
-  -- We are inside a non-delegating focus delegator made by makeExpressionEdit,
+  fullExprEdit <- ExpressionGui.makeSubexpresion $ Sugar.pFullExpression poly
+  -- We are inside a non-delegating focus delegator made by makeSubexpresion,
   -- so if the cursor is on us it means user enterred our widget.
   if Widget.wIsFocused (ExpressionGui.egWidget fullExprEdit)
     then
@@ -54,10 +51,8 @@ polymorphicFDConfig = FocusDelegator.Config
   }
 
 make ::
-  MonadF m =>
-  ExpressionGui.Maker m -> Sugar.Polymorphic (Sugar.Expression m) ->
+  MonadF m => Sugar.Polymorphic (Sugar.Expression m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-make makeExpressionEdit poly =
-  ExpressionGui.wrapDelegated polymorphicFDConfig
-  FocusDelegator.NotDelegating ExpressionGui.atEgWidget $
-  makeInner makeExpressionEdit poly
+make poly =
+  ExpressionGui.wrapDelegated polymorphicFDConfig FocusDelegator.NotDelegating
+  ExpressionGui.atEgWidget $ makeInner poly

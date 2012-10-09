@@ -1,8 +1,7 @@
 module Editor.CodeEdit.ExpressionEdit.InferredEdit(make) where
 
 import Data.Store.Guid (Guid)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ExprGuiM)
 import Editor.MonadF (MonadF)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -23,21 +22,19 @@ fDConfig = FocusDelegator.Config
   }
 
 make
-  :: MonadF m
-  => ExpressionGui.Maker m -> Sugar.Inferred m (Sugar.Expression m) -> Guid
-  -> Widget.Id
+  :: MonadF m => Sugar.Inferred m (Sugar.Expression m) -> Guid -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
-make makeExpressionEdit inferred guid =
+make inferred guid =
   ExpressionGui.wrapDelegated fDConfig FocusDelegator.NotDelegating
   ExpressionGui.atEgWidget $
-  makeUnwrapped makeExpressionEdit inferred guid
+  makeUnwrapped inferred guid
 
 makeUnwrapped
   :: MonadF m
-  => ExpressionGui.Maker m -> Sugar.Inferred m (Sugar.Expression m) -> Guid
+  => Sugar.Inferred m (Sugar.Expression m) -> Guid
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
-makeUnwrapped makeExpressionEdit inferred guid myId = do
+makeUnwrapped inferred guid myId = do
   mInnerCursor <- ExprGuiM.otransaction $ OT.subCursor myId
   case mInnerCursor of
     Nothing ->
@@ -46,7 +43,6 @@ makeUnwrapped makeExpressionEdit inferred guid myId = do
       . BWidgets.makeFocusableView myId
       . Widget.tint Config.inferredValueTint
       . Widget.scale Config.inferredValueScaleFactor
-      ) =<<
-      makeExpressionEdit (Sugar.iValue inferred)
+      ) =<< ExpressionGui.makeSubexpresion (Sugar.iValue inferred)
     Just _ ->
-      HoleEdit.makeUnwrapped makeExpressionEdit (Sugar.iHole inferred) Nothing guid myId
+      HoleEdit.makeUnwrapped (Sugar.iHole inferred) Nothing guid myId

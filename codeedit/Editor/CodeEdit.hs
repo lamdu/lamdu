@@ -12,7 +12,7 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExprGuiM, WidgetT)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction)
 import qualified Data.Store.IRef as IRef
@@ -114,8 +114,9 @@ makeClipboardsEdit clipboards = do
     else ExprGuiM.otransaction $ BWidgets.makeTextView "Clipboards:" ["clipboards title"]
   return . Box.vboxAlign 0 $ clipboardTitle : clipboardsEdits
 
-makeCodeEdit :: MonadF m => SugarCache m -> OTransaction ViewTag m (OT.WidgetT ViewTag m)
-makeCodeEdit cache = ExprGuiM.run $ do
+makeCodeEdit ::
+  MonadF m => SugarCache m -> OTransaction ViewTag m (OT.WidgetT ViewTag m)
+makeCodeEdit cache = ExpressionGui.runExprGuiM ExpressionEdit.make $ do
   panesEdit <- makePanesEdit $ scPanes cache
   clipboardsEdit <- makeClipboardsEdit $ scClipboards cache
   return $
@@ -169,4 +170,4 @@ makePanesEdit panes = do
     makePaneWidget pane =
       liftM (onEachPane . Widget.weakerEvents (paneEventMap pane)) .
       makeDefinitionEdit $ spDef pane
-    makeDefinitionEdit = DefinitionEdit.make ExpressionEdit.make
+    makeDefinitionEdit = DefinitionEdit.make
