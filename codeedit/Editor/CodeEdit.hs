@@ -33,6 +33,7 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
 -- This is not in Sugar because Sugar is for code
@@ -55,7 +56,7 @@ makeNewDefinitionAction = do
     newDefI <- Anchors.makeDefinition
     Anchors.newPane newDefI
     Anchors.savePreJumpPosition curCursor
-    return $ WidgetIds.fromIRef newDefI
+    return . FocusDelegator.delegatingId $ WidgetIds.fromIRef newDefI
 
 makeSugarCache :: Monad m => Transaction ViewTag m (SugarCache m)
 makeSugarCache = do
