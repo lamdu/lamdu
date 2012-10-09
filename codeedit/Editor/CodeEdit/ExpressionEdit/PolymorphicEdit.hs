@@ -5,7 +5,6 @@ import Control.Monad (liftM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.VarAccess (VarAccess)
 import Editor.MonadF (MonadF)
-import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
@@ -59,6 +58,6 @@ make ::
   ExpressionGui.Maker m -> Sugar.Polymorphic (Sugar.Expression m) ->
   Widget.Id -> VarAccess m (ExpressionGui m)
 make makeExpressionEdit poly =
-  BWidgets.wrapDelegatedVA polymorphicFDConfig
+  ExpressionGui.wrapDelegated polymorphicFDConfig
   FocusDelegator.NotDelegating ExpressionGui.atEgWidget $
   makeInner makeExpressionEdit poly

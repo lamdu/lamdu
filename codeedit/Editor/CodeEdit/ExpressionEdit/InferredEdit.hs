@@ -28,7 +28,7 @@ make
   -> Widget.Id
   -> VarAccess m (ExpressionGui m)
 make makeExpressionEdit inferred guid =
-  BWidgets.wrapDelegatedVA fDConfig FocusDelegator.NotDelegating
+  ExpressionGui.wrapDelegated fDConfig FocusDelegator.NotDelegating
   ExpressionGui.atEgWidget $
   makeUnwrapped makeExpressionEdit inferred guid
 

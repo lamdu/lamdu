@@ -35,9 +35,9 @@ makeParamNameEdit
   => (VarAccess.NameSource, String) -> Guid
   -> VarAccess m (WidgetT m)
 makeParamNameEdit name ident =
-  BWidgets.wrapDelegatedVA paramFDConfig FocusDelegator.NotDelegating id
+  ExpressionGui.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
   (VarAccess.atEnv (OT.setTextColor Config.paramOriginColor) .
-   BWidgets.makeNameEdit name ident) $ WidgetIds.fromGuid ident
+   ExpressionGui.makeNameEdit name ident) $ WidgetIds.fromGuid ident
 
 addJumpToRHS
   :: MonadF m => (E.Doc, Sugar.Expression m) -> WidgetT m -> WidgetT m

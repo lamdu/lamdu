@@ -36,9 +36,9 @@ paramFDConfig = FocusDelegator.Config
 makeNameEdit ::
   MonadF m => (VarAccess.NameSource, String) -> Widget.Id -> Guid -> VarAccess m (WidgetT m)
 makeNameEdit name myId ident =
-  BWidgets.wrapDelegatedVA paramFDConfig FocusDelegator.NotDelegating id
+  ExpressionGui.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
   (VarAccess.atEnv (OT.setTextColor Config.definitionOriginColor) .
-   BWidgets.makeNameEdit name ident)
+   ExpressionGui.makeNameEdit name ident)
   myId
 
 makeEquals :: MonadF m => Widget.Id -> VarAccess m (Widget f)

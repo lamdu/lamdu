@@ -6,6 +6,7 @@ import Editor.CodeEdit.VarAccess (VarAccess, WidgetT)
 import Editor.MonadF (MonadF)
 import qualified Data.List as List
 import qualified Editor.BottleWidgets as BWidgets
+import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.CodeEdit.VarAccess as VarAccess
 import qualified Editor.Config as Config
@@ -41,7 +42,7 @@ make (Sugar.DefinitionBuiltin (Data.FFIName modulePath name) setFFIName) myId =
   where
     makeNamePartEditor color namePartStr mSetter makeWidgetId =
       VarAccess.atEnv (OT.setTextColor color) .
-      BWidgets.wrapDelegatedVA builtinFDConfig FocusDelegator.NotDelegating id
+      ExpressionGui.wrapDelegated builtinFDConfig FocusDelegator.NotDelegating id
       (VarAccess.otransaction . maybe
        (BWidgets.makeTextView namePartStr . Widget.toAnimId)
        (BWidgets.makeWordEdit . Property namePartStr) mSetter) $

@@ -94,5 +94,5 @@ makeInt
   -> Widget.Id
   -> VarAccess m (ExpressionGui m)
 makeInt integer =
-  BWidgets.wrapDelegatedVA literalFDConfig FocusDelegator.NotDelegating ExpressionGui.atEgWidget
-  (setColor . makeIntEdit integer)
+  ExpressionGui.wrapDelegated literalFDConfig FocusDelegator.NotDelegating
+  ExpressionGui.atEgWidget (setColor . makeIntEdit integer)

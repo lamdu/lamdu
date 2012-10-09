@@ -553,8 +553,8 @@ make ::
   Widget.Id ->
   VarAccess m (ExpressionGui m)
 make makeExpressionEdit hole mNextHole guid =
-  BWidgets.wrapDelegatedVA holeFDConfig FocusDelegator.Delegating ExpressionGui.atEgWidget $
-  makeUnwrapped makeExpressionEdit hole mNextHole guid
+  ExpressionGui.wrapDelegated holeFDConfig FocusDelegator.Delegating
+  ExpressionGui.atEgWidget $ makeUnwrapped makeExpressionEdit hole mNextHole guid
 
 makeUnwrapped ::
   MonadF m =>

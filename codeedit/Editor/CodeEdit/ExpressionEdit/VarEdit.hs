@@ -30,7 +30,7 @@ makeView
 makeView var myId = VarAccess.withNameFromVarRef var $ \(nameSrc, name) ->
   liftM
   (ExpressionGui.fromValueWidget .
-   BWidgets.nameSrcTint nameSrc) .
+   ExpressionGui.nameSrcTint nameSrc) .
   VarAccess.otransaction $
   BWidgets.makeFocusableTextView name myId
 
