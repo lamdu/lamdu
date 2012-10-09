@@ -3,12 +3,12 @@ module Editor.CodeEdit.ExpressionEdit.PolymorphicEdit(make) where
 
 import Control.Monad (liftM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
-import Editor.CodeEdit.VarAccess (VarAccess)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Editor.MonadF (MonadF)
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
+import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
-import qualified Editor.CodeEdit.VarAccess as VarAccess
 import qualified Editor.Config as Config
 import qualified Editor.Layers as Layers
 import qualified Editor.OTransaction as OT
@@ -20,7 +20,7 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 makeInner ::
   MonadF m =>
   ExpressionGui.Maker m -> Sugar.Polymorphic (Sugar.Expression m) ->
-  Widget.Id -> VarAccess m (ExpressionGui m)
+  Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeInner makeExpressionEdit poly myId = do
   -- TODO: This is just to detect whether cursor is in the full expression.
   -- Even when it's not displayed, which is wasteful.
@@ -38,9 +38,9 @@ makeInner makeExpressionEdit poly myId = do
     funcId = WidgetIds.fromGuid $ Sugar.pFuncGuid poly
     colorize (Sugar.GetParameter _) =
       (liftM . bg Layers.compactPolymorphicBG) Config.polymorphicCompactBGColor .
-      VarAccess.atEnv (OT.setTextColor Config.parameterColor)
+      ExprGuiM.atEnv (OT.setTextColor Config.parameterColor)
     colorize (Sugar.GetDefinition _) =
-      VarAccess.atEnv (OT.setTextColor Config.polymorphicForegroundColor)
+      ExprGuiM.atEnv (OT.setTextColor Config.polymorphicForegroundColor)
     bg layer =
       ExpressionGui.atEgWidget .
       Widget.backgroundColor layer (Widget.toAnimId myId ++ ["bg"])
@@ -56,7 +56,7 @@ polymorphicFDConfig = FocusDelegator.Config
 make ::
   MonadF m =>
   ExpressionGui.Maker m -> Sugar.Polymorphic (Sugar.Expression m) ->
-  Widget.Id -> VarAccess m (ExpressionGui m)
+  Widget.Id -> ExprGuiM m (ExpressionGui m)
 make makeExpressionEdit poly =
   ExpressionGui.wrapDelegated polymorphicFDConfig
   FocusDelegator.NotDelegating ExpressionGui.atEgWidget $

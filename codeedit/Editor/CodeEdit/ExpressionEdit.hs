@@ -6,7 +6,7 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
-import Editor.CodeEdit.VarAccess (VarAccess)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (EventHandlers)
@@ -14,6 +14,7 @@ import qualified Control.Lens as Lens
 import qualified Editor.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Editor.CodeEdit.ExpressionEdit.AtomEdit as AtomEdit
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
+import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Editor.CodeEdit.ExpressionEdit.InferredEdit as InferredEdit
@@ -23,7 +24,6 @@ import qualified Editor.CodeEdit.ExpressionEdit.PolymorphicEdit as PolymorphicEd
 import qualified Editor.CodeEdit.ExpressionEdit.SectionEdit as SectionEdit
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
-import qualified Editor.CodeEdit.VarAccess as VarAccess
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
 import qualified Editor.OTransaction as OT
@@ -51,7 +51,7 @@ make sExpr = do
   typeEdits <- mapM make $ Sugar.plInferredTypes payload
   let onReadOnly = Widget.doesntTakeFocus
   exprEventMap <- expressionEventMap exprGuid holePicker $ Sugar.rPayload sExpr
-  settings <- VarAccess.otransaction OT.readSettings
+  settings <- ExprGuiM.otransaction OT.readSettings
   let
     addInferredTypes
       | Lens.view OT.vsShowInferredTypes settings =
@@ -78,7 +78,7 @@ makeEditor
   :: MonadF m
   => Sugar.Expression m
   -> Widget.Id
-  -> VarAccess m (IsHole, ExpressionGui m)
+  -> ExprGuiM m (IsHole, ExpressionGui m)
 makeEditor sExpr =
   case Sugar.rExpressionBody sExpr of
   Sugar.ExpressionFunc hasParens f ->
@@ -113,7 +113,7 @@ expressionEventMap ::
   MonadF m =>
   Guid -> IsHole ->
   Sugar.Payload m ->
-  VarAccess m (EventHandlers (ITransaction ViewTag m))
+  ExprGuiM m (EventHandlers (ITransaction ViewTag m))
 expressionEventMap exprGuid holePicker payload =
   maybe (return mempty) (actionsEventMap exprGuid holePicker) $
   Sugar.plActions payload
@@ -121,10 +121,10 @@ expressionEventMap exprGuid holePicker payload =
 actionsEventMap ::
   MonadF m =>
   Guid -> IsHole -> Sugar.Actions m ->
-  VarAccess m (EventHandlers (ITransaction ViewTag m))
+  ExprGuiM m (EventHandlers (ITransaction ViewTag m))
 actionsEventMap exprGuid holePicker actions = do
   isSelected <-
-    VarAccess.otransaction . OT.isSubCursor $
+    ExprGuiM.otransaction . OT.isSubCursor $
     WidgetIds.fromGuid exprGuid
   let
     replace

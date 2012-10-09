@@ -6,16 +6,16 @@ import Data.Monoid (mconcat)
 import Data.Store.Guid (Guid)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
-import Editor.CodeEdit.VarAccess (VarAccess, WidgetT)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.List as List
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.BuiltinEdit as BuiltinEdit
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
+import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
-import qualified Editor.CodeEdit.VarAccess as VarAccess
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
 import qualified Editor.OTransaction as OT
@@ -34,23 +34,23 @@ paramFDConfig = FocusDelegator.Config
   }
 
 makeNameEdit ::
-  MonadF m => (VarAccess.NameSource, String) -> Widget.Id -> Guid -> VarAccess m (WidgetT m)
+  MonadF m => (ExprGuiM.NameSource, String) -> Widget.Id -> Guid -> ExprGuiM m (WidgetT m)
 makeNameEdit name myId ident =
   ExpressionGui.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
-  (VarAccess.atEnv (OT.setTextColor Config.definitionOriginColor) .
+  (ExprGuiM.atEnv (OT.setTextColor Config.definitionOriginColor) .
    ExpressionGui.makeNameEdit name ident)
   myId
 
-makeEquals :: MonadF m => Widget.Id -> VarAccess m (Widget f)
-makeEquals = VarAccess.otransaction . BWidgets.makeLabel "=" . Widget.toAnimId
+makeEquals :: MonadF m => Widget.Id -> ExprGuiM m (Widget f)
+makeEquals = ExprGuiM.otransaction . BWidgets.makeLabel "=" . Widget.toAnimId
 
 makeParts
   :: MonadF m
   => ExpressionGui.Maker m
-  -> (VarAccess.NameSource, String)
+  -> (ExprGuiM.NameSource, String)
   -> Guid
   -> Sugar.DefinitionContent m
-  -> VarAccess m [ExpressionGui m]
+  -> ExprGuiM m [ExpressionGui m]
 makeParts makeExpressionEdit name guid def = do
   nameEdit <-
     liftM (FuncEdit.addJumpToRHS rhs . Widget.weakerEvents addFirstParamEventMap) $
@@ -87,7 +87,7 @@ make
   :: MonadF m
   => ExpressionGui.Maker m
   -> Sugar.Definition m
-  -> VarAccess m (WidgetT m)
+  -> ExprGuiM m (WidgetT m)
 make makeExpressionEdit def =
   case Sugar.drBody def of
   Sugar.DefinitionBodyExpression bodyExpr ->
@@ -100,11 +100,11 @@ makeBuiltinDefinition
   => ExpressionGui.Maker m
   -> Sugar.Definition m
   -> Sugar.DefinitionBuiltin m
-  -> VarAccess m (WidgetT m)
+  -> ExprGuiM m (WidgetT m)
 makeBuiltinDefinition makeExpressionEdit def builtin =
   liftM (Box.vboxAlign 0) $ sequence
   [ liftM BWidgets.hboxCenteredSpaced $ sequence
-    [ VarAccess.withParamName guid $ \name -> makeNameEdit name (Widget.joinId myId ["name"]) guid
+    [ ExprGuiM.withParamName guid $ \name -> makeNameEdit name (Widget.joinId myId ["name"]) guid
     , makeEquals myId
     , BuiltinEdit.make builtin myId
     ]
@@ -121,13 +121,13 @@ defTypeScale = Widget.scale Config.defTypeBoxSizeFactor
 makeWhereItemEdit ::
   MonadF m =>
   ExpressionGui.Maker m ->
-  Sugar.WhereItem m -> VarAccess m (WidgetT m)
+  Sugar.WhereItem m -> ExprGuiM m (WidgetT m)
 makeWhereItemEdit makeExpressionEdit item =
   liftM (Widget.weakerEvents eventMap) . assignCursor $
   makeDefBodyEdit makeExpressionEdit (Sugar.wiGuid item) (Sugar.wiValue item)
   where
     assignCursor =
-      foldr ((.) . (`VarAccess.assignCursor` myId) . WidgetIds.fromGuid) id $
+      foldr ((.) . (`ExprGuiM.assignCursor` myId) . WidgetIds.fromGuid) id $
       Sugar.wiHiddenGuids item
     myId = WidgetIds.fromGuid $ Sugar.wiGuid item
     eventMap =
@@ -146,9 +146,9 @@ makeDefBodyEdit ::
   MonadF m =>
   ExpressionGui.Maker m ->
   Guid -> Sugar.DefinitionContent m ->
-  VarAccess m (WidgetT m)
+  ExprGuiM m (WidgetT m)
 makeDefBodyEdit makeExpressionEdit guid content = do
-  name <- VarAccess.getDefName guid
+  name <- ExprGuiM.getDefName guid
   body <- liftM (ExpressionGui.egWidget . ExpressionGui.hbox) $
     makeParts makeExpressionEdit name guid content
   wheres <-
@@ -157,7 +157,7 @@ makeDefBodyEdit makeExpressionEdit guid content = do
     whereItems -> do
       whereLabel <-
         (liftM . Widget.scale) Config.whereLabelScaleFactor .
-        VarAccess.otransaction . BWidgets.makeLabel "where" $ Widget.toAnimId myId
+        ExprGuiM.otransaction . BWidgets.makeLabel "where" $ Widget.toAnimId myId
       itemEdits <- mapM (makeWhereItemEdit makeExpressionEdit) $ reverse whereItems
       return
         [ BWidgets.hboxSpaced
@@ -171,10 +171,10 @@ makeDefBodyEdit makeExpressionEdit guid content = do
 
 makeExprDefinition ::
   MonadF m =>
-  (Sugar.Expression m -> VarAccess m (ExpressionGui m)) ->
+  (Sugar.Expression m -> ExprGuiM m (ExpressionGui m)) ->
   Sugar.Definition m ->
   Sugar.DefinitionExpression m ->
-  VarAccess m (WidgetT m)
+  ExprGuiM m (WidgetT m)
 makeExprDefinition makeExpressionEdit def bodyExpr = do
   typeWidgets <-
     case Sugar.deMNewType bodyExpr of
@@ -196,14 +196,14 @@ makeExprDefinition makeExpressionEdit def bodyExpr = do
         (Widget.keysEventMapMovesCursor Config.acceptInferredTypeKeys
          "Accept inferred type"
          (IT.transaction acceptInferredType >> return myId)) .
-        VarAccess.otransaction .
+        ExprGuiM.otransaction .
         BWidgets.makeFocusableTextView "↱" $ Widget.joinId myId ["accept type"]
       return $ BWidgets.hboxCenteredSpaced [acceptanceLabel, label]
     right = Vector2 1 0.5
     center = 0.5
     mkTypeRow onLabel labelText typeExpr = do
       label <-
-        onLabel . labelStyle . VarAccess.otransaction .
+        onLabel . labelStyle . ExprGuiM.otransaction .
         BWidgets.makeLabel labelText $ Widget.toAnimId myId
       typeGui <- makeExpressionEdit typeExpr
       return
@@ -214,4 +214,4 @@ makeExprDefinition makeExpressionEdit def bodyExpr = do
     guid = Sugar.drGuid def
     myId = WidgetIds.fromGuid guid
     labelStyle =
-      VarAccess.atEnv $ OT.setTextSizeColor Config.defTypeLabelTextSize Config.defTypeLabelColor
+      ExprGuiM.atEnv $ OT.setTextSizeColor Config.defTypeLabelTextSize Config.defTypeLabelColor

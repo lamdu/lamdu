@@ -12,7 +12,7 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.VarAccess (VarAccess, WidgetT)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction)
 import qualified Data.Store.IRef as IRef
@@ -22,8 +22,8 @@ import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
 import qualified Editor.CodeEdit.ExpressionEdit as ExpressionEdit
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
+import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.CodeEdit.Sugar as Sugar
-import qualified Editor.CodeEdit.VarAccess as VarAccess
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
 import qualified Editor.Layers as Layers
@@ -49,9 +49,9 @@ data SugarCache m = SugarCache
   , scClipboards :: [Sugar.Expression m]
   }
 
-makeNewDefinitionAction :: Monad m => VarAccess m (Transaction ViewTag m Widget.Id)
+makeNewDefinitionAction :: Monad m => ExprGuiM m (Transaction ViewTag m Widget.Id)
 makeNewDefinitionAction = do
-  curCursor <- VarAccess.otransaction OT.readCursor
+  curCursor <- ExprGuiM.otransaction OT.readCursor
   return $ do
     newDefI <- Anchors.makeDefinition
     Anchors.newPane newDefI
@@ -104,18 +104,18 @@ makeSugarPanes = do
   mapM convertPane $ enumerate panes
 
 makeClipboardsEdit ::
-  MonadF m => [Sugar.Expression m] -> VarAccess m (WidgetT m)
+  MonadF m => [Sugar.Expression m] -> ExprGuiM m (WidgetT m)
 makeClipboardsEdit clipboards = do
   clipboardsEdits <-
     mapM (liftM ExpressionGui.egWidget . ExpressionEdit.make) clipboards
   clipboardTitle <-
     if null clipboardsEdits
     then return Spacer.empty
-    else VarAccess.otransaction $ BWidgets.makeTextView "Clipboards:" ["clipboards title"]
+    else ExprGuiM.otransaction $ BWidgets.makeTextView "Clipboards:" ["clipboards title"]
   return . Box.vboxAlign 0 $ clipboardTitle : clipboardsEdits
 
 makeCodeEdit :: MonadF m => SugarCache m -> OTransaction ViewTag m (OT.WidgetT ViewTag m)
-makeCodeEdit cache = VarAccess.run $ do
+makeCodeEdit cache = ExprGuiM.run $ do
   panesEdit <- makePanesEdit $ scPanes cache
   clipboardsEdit <- makeClipboardsEdit $ scClipboards cache
   return $
@@ -127,17 +127,17 @@ makeCodeEdit cache = VarAccess.run $ do
 panesGuid :: Guid
 panesGuid = IRef.guid Anchors.panesIRef
 
-makePanesEdit :: MonadF m => [SugarPane m] -> VarAccess m (WidgetT m)
+makePanesEdit :: MonadF m => [SugarPane m] -> ExprGuiM m (WidgetT m)
 makePanesEdit panes = do
   panesWidget <-
     case panes of
-    [] -> VarAccess.otransaction $ BWidgets.makeFocusableTextView "<No panes>" myId
+    [] -> ExprGuiM.otransaction $ BWidgets.makeFocusableTextView "<No panes>" myId
     (firstPane:_) ->
-      (VarAccess.assignCursor myId . WidgetIds.fromGuid . Sugar.drGuid . spDef) firstPane $ do
+      (ExprGuiM.assignCursor myId . WidgetIds.fromGuid . Sugar.drGuid . spDef) firstPane $ do
         definitionEdits <- mapM makePaneWidget panes
         return . Box.vboxAlign 0 $ intersperse (Spacer.makeWidget 50) definitionEdits
 
-  mJumpBack <- VarAccess.transaction Anchors.jumpBack
+  mJumpBack <- ExprGuiM.transaction Anchors.jumpBack
   newDefinition <- makeNewDefinitionAction
   let
     panesEventMap =

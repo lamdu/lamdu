@@ -20,7 +20,7 @@ import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
-import Editor.CodeEdit.VarAccess (VarAccess, WidgetT)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Animation(AnimId)
@@ -34,8 +34,8 @@ import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
+import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.CodeEdit.Sugar as Sugar
-import qualified Editor.CodeEdit.VarAccess as VarAccess
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.ITransaction as IT
@@ -118,17 +118,17 @@ randomizeResultExpr holeInfo expr =
 resultsToWidgets
   :: MonadF m
   => ExpressionGui.Maker m -> HoleInfo m -> ResultsList
-  -> VarAccess m
+  -> ExprGuiM m
      ( WidgetT m
      , Maybe (Sugar.HoleResult, Maybe (WidgetT m))
      )
 resultsToWidgets makeExpressionEdit holeInfo results = do
-  cursorOnMain <- VarAccess.otransaction $ OT.isSubCursor myId
+  cursorOnMain <- ExprGuiM.otransaction $ OT.isSubCursor myId
   extra <-
     if cursorOnMain
     then liftM (Just . (,) canonizedExpr . fmap fst) makeExtra
     else do
-      cursorOnExtra <- VarAccess.otransaction $ OT.isSubCursor moreResultsPrefixId
+      cursorOnExtra <- ExprGuiM.otransaction $ OT.isSubCursor moreResultsPrefixId
       if cursorOnExtra
         then do
           extra <- makeExtra
@@ -149,37 +149,37 @@ resultsToWidgets makeExpressionEdit holeInfo results = do
         , msum $ map snd pairs
         )
     moreResult expr = do
-      mResult <- (liftM . fmap . const) cExpr . VarAccess.otransaction $ OT.subCursor resultId
+      mResult <- (liftM . fmap . const) cExpr . ExprGuiM.otransaction $ OT.subCursor resultId
       widget <- toWidget resultId cExpr
       return (widget, mResult)
       where
         resultId = mappend moreResultsPrefixId $ pureGuidId cExpr
         cExpr = randomizeResultExpr holeInfo expr
     toWidget resultId expr =
-      VarAccess.otransaction . BWidgets.makeFocusableView resultId .
+      ExprGuiM.otransaction . BWidgets.makeFocusableView resultId .
       Widget.strongerEvents (resultPickEventMap holeInfo expr) .
       ExpressionGui.egWidget =<<
       makeExpressionEdit . Sugar.removeTypes =<<
-      (VarAccess.transaction . Sugar.holeConvertResult (hiHoleActions holeInfo)) expr
+      (ExprGuiM.transaction . Sugar.holeConvertResult (hiHoleActions holeInfo)) expr
     moreResultsPrefixId = rlMoreResultsPrefixId results
     addMoreSymbol w = do
       moreSymbolLabel <-
         liftM (Widget.scale moreSymbolSizeFactor) .
-        VarAccess.otransaction .
+        ExprGuiM.otransaction .
         BWidgets.makeLabel moreSymbol $ Widget.toAnimId myId
       return $ BWidgets.hboxCenteredSpaced [w, moreSymbolLabel]
     canonizedExpr = rlFirst results
     myId = rlFirstId results
     pureGuidId = WidgetIds.fromGuid . Data.eGuid
 
-makeNoResults :: MonadF m => AnimId -> VarAccess m (WidgetT m)
+makeNoResults :: MonadF m => AnimId -> ExprGuiM m (WidgetT m)
 makeNoResults myId =
-  VarAccess.otransaction .
+  ExprGuiM.otransaction .
   BWidgets.makeTextView "(No results)" $ mappend myId ["no results"]
 
 makeVariableGroup ::
-  MonadF m => (Sugar.GetVariable, Data.VariableRef) -> VarAccess m Group
-makeVariableGroup (getVar, varRef) = VarAccess.withNameFromVarRef getVar $ \(_, varName) ->
+  MonadF m => (Sugar.GetVariable, Data.VariableRef) -> ExprGuiM m Group
+makeVariableGroup (getVar, varRef) = ExprGuiM.withNameFromVarRef getVar $ \(_, varName) ->
   return Group
     { groupNames = [varName]
     , groupBaseExpr = toPureExpr . Data.ExpressionLeaf $ Data.GetVariable varRef
@@ -272,14 +272,14 @@ makeResultsList holeInfo baseExpr = do
 makeAllResults
   :: MonadF m
   => HoleInfo m
-  -> VarAccess m (ListT (T m) (ResultType, ResultsList))
+  -> ExprGuiM m (ListT (T m) (ResultType, ResultsList))
 makeAllResults holeInfo = do
   paramResults <-
     mapM (makeVariableGroup . first Sugar.GetParameter) $
     Sugar.holeScope hole
   globalResults <-
     mapM (makeVariableGroup . (Sugar.GetDefinition &&& Data.DefinitionRef)) =<<
-    VarAccess.getP Anchors.globals
+    ExprGuiM.getP Anchors.globals
   let
     searchTerm = Property.value $ hiSearchTerm holeInfo
     literalResults = makeLiteralGroup searchTerm
@@ -361,9 +361,9 @@ makeSearchTermWidget
   :: MonadF m
   => HoleInfo m -> Widget.Id
   -> Maybe Sugar.HoleResult
-  -> VarAccess m (ExpressionGui m)
+  -> ExprGuiM m (ExpressionGui m)
 makeSearchTermWidget holeInfo searchTermId mResultToPick =
-  VarAccess.otransaction .
+  ExprGuiM.otransaction .
   liftM
   (flip ExpressionGui (0.5/Config.holeSearchTermScaleFactor) .
    Widget.scale Config.holeSearchTermScaleFactor .
@@ -384,7 +384,7 @@ makeResultsWidget
   :: MonadF m
   => ExpressionGui.Maker m -> HoleInfo m
   -> [ResultsList] -> Bool
-  -> VarAccess m
+  -> ExprGuiM m
      (Maybe Sugar.HoleResult, WidgetT m)
 makeResultsWidget makeExpressionEdit holeInfo firstResults moreResults = do
   firstResultsAndWidgets <-
@@ -404,7 +404,7 @@ makeResultsWidget makeExpressionEdit holeInfo firstResults moreResults = do
         )
   let extraWidgets = maybeToList $ snd . snd =<< mResult
   moreResultsWidgets <-
-    VarAccess.otransaction $
+    ExprGuiM.otransaction $
     if moreResults
     then liftM (: []) . BWidgets.makeLabel "..." $ Widget.toAnimId myId
     else return []
@@ -462,9 +462,9 @@ collectResults =
 makeActiveHoleEdit
   :: MonadF m
   => ExpressionGui.Maker m -> HoleInfo m
-  -> VarAccess m (ExpressionGui m)
+  -> ExprGuiM m (ExpressionGui m)
 makeActiveHoleEdit makeExpressionEdit holeInfo = do
-  VarAccess.markVariablesAsUsed . map fst =<<
+  ExprGuiM.markVariablesAsUsed . map fst =<<
     (filterM
      (checkInfer . toPureExpr .
       Data.ExpressionLeaf . Data.GetVariable . snd) .
@@ -473,9 +473,9 @@ makeActiveHoleEdit makeExpressionEdit holeInfo = do
 
   allResults <- makeAllResults holeInfo
 
-  (firstResults, hasMoreResults) <- VarAccess.transaction $ collectResults allResults
+  (firstResults, hasMoreResults) <- ExprGuiM.transaction $ collectResults allResults
 
-  cursor <- VarAccess.otransaction OT.readCursor
+  cursor <- ExprGuiM.otransaction OT.readCursor
   let
     sub = isJust . flip Widget.subId cursor
     shouldBeOnResult = sub $ resultsPrefixId holeInfo
@@ -484,7 +484,7 @@ makeActiveHoleEdit makeExpressionEdit holeInfo = do
       | shouldBeOnResult && not isOnResult = cursor
       | otherwise = hiHoleId holeInfo
     destId = head (map rlFirstId firstResults ++ [searchTermId])
-  VarAccess.assignCursor assignSource destId $ do
+  ExprGuiM.assignCursor assignSource destId $ do
     (mSelectedResult, resultsWidget) <-
       makeResultsWidget makeExpressionEdit holeInfo firstResults hasMoreResults
     let
@@ -533,7 +533,7 @@ makeActiveHoleEdit makeExpressionEdit holeInfo = do
       searchTermWidget
   where
     checkInfer =
-      liftM (isJust . listToMaybe) . VarAccess.transaction .
+      liftM (isJust . listToMaybe) . ExprGuiM.transaction .
       Sugar.holeInferResults (hiHole holeInfo)
     searchTermId = WidgetIds.searchTermId $ hiHoleId holeInfo
     searchTerm = Property.value $ hiSearchTerm holeInfo
@@ -551,7 +551,7 @@ make ::
   ExpressionGui.Maker m ->
   Sugar.Hole m -> Maybe (Sugar.Expression m) -> Guid ->
   Widget.Id ->
-  VarAccess m (ExpressionGui m)
+  ExprGuiM m (ExpressionGui m)
 make makeExpressionEdit hole mNextHole guid =
   ExpressionGui.wrapDelegated holeFDConfig FocusDelegator.Delegating
   ExpressionGui.atEgWidget $ makeUnwrapped makeExpressionEdit hole mNextHole guid
@@ -561,10 +561,10 @@ makeUnwrapped ::
   ExpressionGui.Maker m ->
   Sugar.Hole m -> Maybe (Sugar.Expression m) -> Guid ->
   Widget.Id ->
-  VarAccess m (ExpressionGui m)
+  ExprGuiM m (ExpressionGui m)
 makeUnwrapped makeExpressionEdit hole mNextHole guid myId = do
-  cursor <- VarAccess.otransaction OT.readCursor
-  searchTermProp <- VarAccess.transaction $ Anchors.assocSearchTermRef guid
+  cursor <- ExprGuiM.otransaction OT.readCursor
+  searchTermProp <- ExprGuiM.transaction $ Anchors.assocSearchTermRef guid
   case (Sugar.holeMActions hole, Widget.subId myId cursor) of
     (Just holeActions, Just _) ->
       let
@@ -585,7 +585,7 @@ makeUnwrapped makeExpressionEdit hole mNextHole guid myId = do
       liftM
       (ExpressionGui.fromValueWidget .
        makeBackground Layers.inactiveHole unfocusedColor) .
-      VarAccess.otransaction $ BWidgets.makeFocusableTextView "  " myId
+      ExprGuiM.otransaction $ BWidgets.makeFocusableTextView "  " myId
   where
     unfocusedColor
       | canPickResult = Config.holeBackgroundColor

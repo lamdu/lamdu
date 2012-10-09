@@ -20,7 +20,7 @@ import Data.Function (on)
 import Data.Store.Guid (Guid)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.VarAccess (VarAccess, WidgetT)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (R)
@@ -32,8 +32,8 @@ import qualified Data.List as List
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
+import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as VA
 import qualified Editor.CodeEdit.Sugar as Sugar
-import qualified Editor.CodeEdit.VarAccess as VA
 import qualified Editor.Config as Config
 import qualified Editor.Layers as Layers
 import qualified Editor.OTransaction as OT
@@ -59,7 +59,7 @@ atEgWidgetM ::
 atEgWidgetM conv (ExpressionGui w a) =
   liftM (`ExpressionGui` a) $ conv w
 
-type Maker m = Sugar.Expression m -> VarAccess m (ExpressionGui m)
+type Maker m = Sugar.Expression m -> ExprGuiM m (ExpressionGui m)
 
 fromValueWidget :: WidgetT m -> ExpressionGui m
 fromValueWidget widget = ExpressionGui widget 0.5
@@ -138,20 +138,20 @@ exprFocusDelegatorConfig = FocusDelegator.Config
   }
 
 
--- VarAccess GUIs
+-- ExprGuiM GUIs
 
 wrapDelegated ::
   (MonadF f, Monad m) =>
   FocusDelegator.Config -> FocusDelegator.IsDelegating ->
   ((Widget f -> Widget f) -> a -> b) ->
-  (Widget.Id -> VarAccess m a) ->
-  Widget.Id -> VarAccess m b
+  (Widget.Id -> ExprGuiM m a) ->
+  Widget.Id -> ExprGuiM m b
 wrapDelegated =
   BWidgets.wrapDelegatedWith (VA.otransaction OT.readCursor)
   (VA.atEnv . OT.atEnvCursor)
 
 makeNameEdit ::
-  Monad m => (VA.NameSource, String) -> Guid -> Widget.Id -> VarAccess m (WidgetT m)
+  Monad m => (VA.NameSource, String) -> Guid -> Widget.Id -> ExprGuiM m (WidgetT m)
 makeNameEdit (nameSrc, name) ident myId =
   liftM (nameSrcTint nameSrc) .
   (VA.atEnv . OT.atEnvTextStyle)
@@ -171,25 +171,25 @@ nameSrcTint VA.StoredName = id
 
 wrapExpression ::
   (Monad m, MonadF f) =>
-  (Widget.Id -> VarAccess m (ExpressionGui f)) ->
-  Widget.Id -> VarAccess m (ExpressionGui f)
+  (Widget.Id -> ExprGuiM m (ExpressionGui f)) ->
+  Widget.Id -> ExprGuiM m (ExpressionGui f)
 wrapExpression =
   wrapDelegated exprFocusDelegatorConfig FocusDelegator.Delegating atEgWidget
 
 parenify ::
   Monad m =>
   Sugar.HasParens ->
-  (Widget.Id -> ExpressionGui f -> VarAccess m (ExpressionGui f)) ->
-  (Widget.Id -> VarAccess m (ExpressionGui f)) ->
-  Widget.Id -> VarAccess m (ExpressionGui f)
+  (Widget.Id -> ExpressionGui f -> ExprGuiM m (ExpressionGui f)) ->
+  (Widget.Id -> ExprGuiM m (ExpressionGui f)) ->
+  Widget.Id -> ExprGuiM m (ExpressionGui f)
 parenify Sugar.DontHaveParens _ mkWidget myId = mkWidget myId
 parenify Sugar.HaveParens addParens mkWidget myId = addParens myId =<< mkWidget myId
 
 wrapParenify ::
   (MonadF f, Monad m) =>
   Sugar.HasParens ->
-  (Widget.Id -> ExpressionGui f -> VarAccess m (ExpressionGui f)) ->
-  (Widget.Id -> VarAccess m (ExpressionGui f)) ->
-  Widget.Id -> VarAccess m (ExpressionGui f)
+  (Widget.Id -> ExpressionGui f -> ExprGuiM m (ExpressionGui f)) ->
+  (Widget.Id -> ExprGuiM m (ExpressionGui f)) ->
+  Widget.Id -> ExprGuiM m (ExpressionGui f)
 wrapParenify hasParens addParens =
   wrapExpression . parenify hasParens addParens

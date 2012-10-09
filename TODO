@@ -33,7 +33,7 @@
     to rewrite main loop.
 
 * Cleanups:
-  * Instead of (VarAccess.NameSource, String) and Guid of name
+  * Instead of (ExprGui.Monad.NameSource, String) and Guid of name
     seperately, generate a Property for the name of that type? or give
     a setter instead of Guid
   * Rename Data* to Expression*.
