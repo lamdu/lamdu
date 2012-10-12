@@ -227,7 +227,8 @@ groupOrdering searchTerm result =
 makeLiteralGroup :: String -> [Group]
 makeLiteralGroup searchTerm =
   [ makeLiteralIntResult (read searchTerm)
-  | not (null searchTerm) && all Char.isDigit searchTerm]
+  | not (null searchTerm) && all Char.isDigit searchTerm
+  ]
   where
     makeLiteralIntResult integer =
       Group

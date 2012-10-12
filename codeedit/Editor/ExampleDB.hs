@@ -68,7 +68,7 @@ createBuiltins =
     bool <- mkType . A.newBuiltin "Prelude.Bool" =<< lift set
 
     cons <- lift $ A.newBuiltin "Prelude.:" =<<
-      (forAll "a" $ \a -> mkPi a . endo $ listOf a)
+      forAll "a" (\a -> mkPi a . endo $ listOf a)
     nil <- lift $ A.newBuiltin "Prelude.[]" =<< forAll "a" listOf
     Writer.tell [cons, nil]
 

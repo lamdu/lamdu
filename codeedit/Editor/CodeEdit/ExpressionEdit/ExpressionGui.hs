@@ -27,8 +27,7 @@ import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiRM)
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction)
-import Graphics.UI.Bottle.Widget (R)
-import Graphics.UI.Bottle.Widget (Widget)
+import Graphics.UI.Bottle.Widget (Widget, R)
 import Graphics.UI.Bottle.Widgets.Box (KBox)
 import qualified Control.Lens as Lens
 import qualified Data.AtFieldTH as AtFieldTH
