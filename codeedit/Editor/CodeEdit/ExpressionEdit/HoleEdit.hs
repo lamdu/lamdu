@@ -475,7 +475,7 @@ alphaNumericHandler doc handler =
   Config.alphaNumericChars . flip $ const handler
 
 pickEventMap ::
-  MonadF m => HoleInfo m -> [Char] -> Maybe Sugar.HoleResult ->
+  MonadF m => HoleInfo m -> String -> Maybe Sugar.HoleResult ->
   Widget.EventHandlers (ITransaction ViewTag m)
 pickEventMap holeInfo searchTerm (Just result)
   | null searchTerm = mempty
