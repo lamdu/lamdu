@@ -460,26 +460,34 @@ makeBackground myId level =
   Widget.backgroundColor level $
   mappend (Widget.toAnimId myId) ["hole background"]
 
+operatorHandler ::
+  Functor f => E.Doc -> (Char -> f Widget.Id) -> Widget.EventHandlers f
+operatorHandler doc handler =
+  (fmap . fmap) Widget.eventResultFromCursor .
+  E.charGroup "Operator" doc
+  Config.operatorChars . flip $ const handler
+
+alphaNumericHandler ::
+  Functor f => E.Doc -> (Char -> f Widget.Id) -> Widget.EventHandlers f
+alphaNumericHandler doc handler =
+  (fmap . fmap) Widget.eventResultFromCursor .
+  E.charGroup "Letter/digit" doc
+  Config.alphaNumericChars . flip $ const handler
+
 pickEventMap ::
   MonadF m => HoleInfo m -> [Char] -> Maybe Sugar.HoleResult ->
   Widget.EventHandlers (ITransaction ViewTag m)
 pickEventMap holeInfo searchTerm (Just result)
   | null searchTerm = mempty
   | all (`notElem` Config.operatorChars) searchTerm =
-    (fmap . fmap) Widget.eventResultFromCursor .
-    E.charGroup "Operator"
-    "Pick this result and apply operator"
-    Config.operatorChars $
-    \x _ -> IT.transaction $ do
+    operatorHandler "Pick this result and apply operator" $ \x ->
+    IT.transaction $ do
       (_, actions) <- Sugar.holePickResult (hiHoleActions holeInfo) result
       liftM (searchTermWidgetId . WidgetIds.fromGuid) $
         Sugar.giveAsArgToOperator actions [x]
   | all (`elem` Config.operatorChars) searchTerm =
-    (fmap . fmap) Widget.eventResultFromCursor .
-    E.charGroup "Letter/digit"
-    "Pick this result and resume"
-    Config.alphaNumericChars $
-    \x _ -> IT.transaction $ do
+    alphaNumericHandler "Pick this result and resume" $ \x ->
+    IT.transaction $ do
       (g, _) <- Sugar.holePickResult (hiHoleActions holeInfo) result
       let
         mTarget
