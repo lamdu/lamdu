@@ -492,15 +492,22 @@ pickEventMap holeInfo searchTerm (Just result)
         Nothing -> return g
 pickEventMap _ _ _ = mempty
 
+markTypeMatchesAsUsed :: Monad m => HoleInfo m -> ExprGuiM m ()
+markTypeMatchesAsUsed holeInfo =
+  ExprGuiM.markVariablesAsUsed . map fst =<<
+  (filterM
+   (checkInfer . toPureExpr .
+    Data.ExpressionLeaf . Data.GetVariable . snd) .
+   Sugar.holeScope . hiHole)
+    holeInfo
+  where
+    checkInfer =
+      liftM (isJust . listToMaybe) . ExprGuiM.transaction .
+      Sugar.holeInferResults (hiHole holeInfo)
+
 makeActiveHoleEdit :: MonadF m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
 makeActiveHoleEdit holeInfo = do
-  ExprGuiM.markVariablesAsUsed . map fst =<<
-    (filterM
-     (checkInfer . toPureExpr .
-      Data.ExpressionLeaf . Data.GetVariable . snd) .
-     Sugar.holeScope . hiHole)
-    holeInfo
-
+  markTypeMatchesAsUsed holeInfo
   allResults <- makeAllResults holeInfo
 
   (firstResults, hasMoreResults) <- ExprGuiM.transaction $ collectResults allResults
@@ -539,9 +546,6 @@ makeActiveHoleEdit holeInfo = do
       ]
       searchTermWidget
   where
-    checkInfer =
-      liftM (isJust . listToMaybe) . ExprGuiM.transaction .
-      Sugar.holeInferResults (hiHole holeInfo)
     searchTermId = WidgetIds.searchTermId $ hiHoleId holeInfo
     searchTerm = Property.value $ hiSearchTerm holeInfo
 
