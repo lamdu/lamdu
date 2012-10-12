@@ -12,7 +12,7 @@ import Data.Function (on)
 import Data.Hashable (Hashable, hash)
 import Data.List (isInfixOf, isPrefixOf)
 import Data.List.Class (List)
-import Data.List.Utils (sortOn)
+import Data.List.Utils (sortOn, nonEmptyAll)
 import Data.Maybe (isJust, listToMaybe, maybeToList, mapMaybe, fromMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
@@ -223,10 +223,6 @@ groupOrdering searchTerm result =
     insensitivePrefixOf = isPrefixOf `on` map Char.toLower
     match f = any (f searchTerm) names
     names = groupNames result
-
-nonEmptyAll :: (a -> Bool) -> [a] -> Bool
-nonEmptyAll _ [] = False
-nonEmptyAll f xs = all f xs
 
 makeLiteralGroup :: String -> [Group]
 makeLiteralGroup searchTerm =

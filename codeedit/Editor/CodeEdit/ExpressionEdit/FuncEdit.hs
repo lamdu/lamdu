@@ -1,13 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Editor.CodeEdit.ExpressionEdit.FuncEdit
-  (make, makeParamNameEdit, addJumpToRHS, makeResultEdit, makeParamsAndResultEdit) where
+  (make, makeParamNameEdit, jumpToRHS, makeResultEdit, makeParamsAndResultEdit) where
 
 import Control.Monad (liftM)
-import Data.Monoid (mempty, mconcat)
+import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
+import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ExprGuiM, WidgetT)
+import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
+import Graphics.UI.Bottle.Widget (Widget)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
@@ -38,26 +41,30 @@ makeParamNameEdit name ident =
   (ExprGuiM.atEnv (OT.setTextColor Config.paramOriginColor) .
    ExpressionGui.makeNameEdit name ident) $ WidgetIds.fromGuid ident
 
-addJumpToRHS
-  :: MonadF m => (E.Doc, Sugar.Expression m) -> WidgetT m -> WidgetT m
-addJumpToRHS (rhsDoc, rhs) =
-  Widget.weakerEvents .
-  Widget.keysEventMapMovesCursor Config.jumpLHStoRHSKeys ("Jump to " ++ rhsDoc) $
+jumpToRHS ::
+  (MonadF m, MonadF f) =>
+  [E.ModKey] -> (E.Doc, Sugar.Expression m) -> Widget.EventHandlers f
+jumpToRHS keys (rhsDoc, rhs) =
+  Widget.keysEventMapMovesCursor keys ("Jump to " ++ rhsDoc) $
   return rhsId
   where
     rhsId = WidgetIds.fromGuid $ Sugar.rGuid rhs
 
 -- exported for use in definition sugaring.
-makeParamEdit
-  :: MonadF m
-  => (E.Doc, Sugar.Expression m)
-  -> (ExprGuiM.NameSource, String)
-  -> Widget.Id
-  -> Sugar.FuncParam m (Sugar.Expression m)
-  -> ExprGuiM m (ExpressionGui m)
-makeParamEdit rhs name prevId param =
+makeParamEdit ::
+  MonadF m =>
+  ((ExprGuiM.NameSource, String) ->
+   Widget (ITransaction ViewTag m) -> Widget (ITransaction ViewTag m)) ->
+  (E.Doc, Sugar.Expression m) ->
+  (ExprGuiM.NameSource, String) -> Widget.Id ->
+  Sugar.FuncParam m (Sugar.Expression m) ->
+  ExprGuiM m (ExpressionGui m)
+makeParamEdit atParamWidgets rhs name prevId param =
   (liftM . ExpressionGui.atEgWidget)
-  (addJumpToRHS rhs . Widget.weakerEvents paramEventMap) .
+  ( Widget.weakerEvents
+    (jumpToRHS Config.jumpLHStoRHSKeys rhs `mappend` paramEventMap)
+  . atParamWidgets name
+  ) .
   assignCursor $ do
     paramTypeEdit <- ExpressionGui.makeSubexpresion $ Sugar.fpType param
     paramNameEdit <- makeParamNameEdit name ident
@@ -123,7 +130,7 @@ make hasParens (Sugar.Func params body) =
       ExprGuiM.atEnv (OT.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor) .
       ExprGuiM.otransaction . BWidgets.makeLabel "→" $ Widget.toAnimId myId
     (paramsEdits, bodyEdit) <-
-      makeParamsAndResultEdit lhs ("Func Body", body) myId params
+      makeParamsAndResultEdit (const id) lhs ("Func Body", body) myId params
     return . ExpressionGui.hboxSpaced $
       lambdaLabel : paramsEdits ++ [ rightArrowLabel, bodyEdit ]
   where
@@ -132,12 +139,12 @@ make hasParens (Sugar.Func params body) =
 
 makeParamsAndResultEdit ::
   MonadF m =>
-  [Widget.Id] ->
-  (E.Doc, Sugar.Expression m) ->
-  Widget.Id ->
-  [Sugar.FuncParam m (Sugar.Expression m)] ->
+  ((ExprGuiM.NameSource, String) ->
+   Widget (ITransaction ViewTag m) -> Widget (ITransaction ViewTag m)) ->
+  [Widget.Id] -> (E.Doc, Sugar.Expression m) ->
+  Widget.Id -> [Sugar.FuncParam m (Sugar.Expression m)] ->
   ExprGuiM m ([ExpressionGui m], ExpressionGui m)
-makeParamsAndResultEdit lhs rhs@(_, result) =
+makeParamsAndResultEdit atParamWidgets lhs rhs@(_, result) =
   go
   where
     go _ [] = liftM ((,) []) $ makeResultEdit lhs result
@@ -146,5 +153,5 @@ makeParamsAndResultEdit lhs rhs@(_, result) =
       (name, (paramEdits, resultEdit)) <-
         ExprGuiM.withParamName guid $
         \name -> liftM ((,) name) $ go (WidgetIds.fromGuid guid) params
-      paramEdit <- makeParamEdit rhs name prevId param
+      paramEdit <- makeParamEdit atParamWidgets rhs name prevId param
       return (paramEdit : paramEdits, resultEdit)

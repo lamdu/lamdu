@@ -2,7 +2,8 @@
 module Editor.CodeEdit.DefinitionEdit(make) where
 
 import Control.Monad (liftM)
-import Data.Monoid (mconcat)
+import Data.List.Utils (nonEmptyAll)
+import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ExprGuiM, WidgetT)
@@ -43,6 +44,10 @@ makeNameEdit name myId ident =
 makeEquals :: MonadF m => Widget.Id -> ExprGuiM m (Widget f)
 makeEquals = ExprGuiM.otransaction . BWidgets.makeLabel "=" . Widget.toAnimId
 
+nonOperatorName :: (ExprGuiM.NameSource, String) -> Bool
+nonOperatorName (ExprGuiM.StoredName, x) = nonEmptyAll (`notElem` Config.operatorChars) x
+nonOperatorName _ = False
+
 makeParts
   :: MonadF m
   => (ExprGuiM.NameSource, String)
@@ -51,11 +56,15 @@ makeParts
   -> ExprGuiM m [ExpressionGui m]
 makeParts name guid def = do
   nameEdit <-
-    liftM (FuncEdit.addJumpToRHS rhs . Widget.weakerEvents addFirstParamEventMap) $
+    liftM
+    (Widget.weakerEvents
+     (FuncEdit.jumpToRHS Config.jumpLHStoRHSKeys rhs
+      `mappend` addFirstParamEventMap) .
+     jumpToRHSViaEquals name) $
     makeNameEdit name myId guid
   equals <- makeEquals myId
   (paramsEdits, bodyEdit) <-
-    FuncEdit.makeParamsAndResultEdit lhs rhs myId params
+    FuncEdit.makeParamsAndResultEdit jumpToRHSViaEquals lhs rhs myId params
   return .
     List.intersperse (ExpressionGui.fromValueWidget BWidgets.stdSpaceWidget) $
     ExpressionGui.fromValueWidget nameEdit :
@@ -66,6 +75,12 @@ makeParts name guid def = do
       bodyEdit
     ]
   where
+    jumpToRHSViaEquals n
+      | nonOperatorName n =
+        Widget.weakerEvents
+        (FuncEdit.jumpToRHS [E.ModKey E.noMods (E.charKey '=')] rhs) .
+        Widget.atWEventMap (E.filterChars (/= '='))
+      | otherwise = id
     lhs = myId : map (WidgetIds.fromGuid . Sugar.fpGuid) params
     rhs = ("Def Body", body)
     params = Sugar.dParameters def

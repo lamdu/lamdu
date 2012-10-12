@@ -1,6 +1,17 @@
 module Data.List.Utils
-	( groupOn, sortOn, enumerate, enumerate2d, nth, index, insertAt, removeAt, atPred, pairList, theOne
-	) where
+  ( groupOn
+  , sortOn
+  , enumerate
+  , enumerate2d
+  , nth
+  , index
+  , insertAt
+  , removeAt
+  , atPred
+  , pairList
+  , theOne
+  , nonEmptyAll
+  ) where
 
 import Data.Function (on)
 import Data.List (groupBy, sortBy)
@@ -51,3 +62,7 @@ pairList (x, y) = [x, y]
 theOne :: [a] -> Maybe a
 theOne [x] = Just x
 theOne _ = Nothing
+
+nonEmptyAll :: (a -> Bool) -> [a] -> Bool
+nonEmptyAll _ [] = False
+nonEmptyAll f xs = all f xs
