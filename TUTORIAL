@@ -1,0 +1,48 @@
+Some instructions to get you started with this preliminary[toy] code editor:
+
+1. OPTIONAL: Install fork of FTGL bindings which more gracefully handles missing font files:
+
+  git clone https://github.com/Peaker/FTGL
+  cd FTGL
+  cabal install
+
+2. Build and install bottle's dependencies and bottle itself:
+
+  cabal install
+
+  (Alternatively, you can:
+
+  cabal install --only-dependencies
+  cabal configure
+  cabal build
+
+  But this will require running the Editor directly from the
+  source root dir, because without an install, it will search the
+  font only relatively to the directory from which it was executed.
+
+3. Run bottle, either from your cabal bindir [e.g: ~/.cabal/bin/Editor], or from the build directory (dist/build/Editor/Editor).
+
+4. Press: alt-n (make new definition)
+
+5. Type this line into the Editor slowly, key-by-key, including
+spaces, and examine what happens after each key stroke:
+
+fac x=if x=0 1 x*f x-1
+
+NOTE: If you make a mistake at any time, use undo/redo (Ctrl-z, Ctrl-y)
+
+This should result in:
+
+fac x = if (x == 0) 1 (x * fac (x - 1))
+
+Type information is used to filter out non-sense and offer more
+sensible edit operations gven your keys, ando ne of the side
+effects is having to input much less.
+
+This toy example took 22 key strokes instead of 39 required by an ordinary text editor.
+
+6. Move cursor to the "fac" application in "fac (x - 1)"
+
+7. Press <return> to jump to the definition
+
+8. Press <return> again to rename. Rename it to "factorial"
