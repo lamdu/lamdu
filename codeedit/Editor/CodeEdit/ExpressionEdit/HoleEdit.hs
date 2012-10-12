@@ -41,6 +41,7 @@ import qualified Editor.ITransaction as IT
 import qualified Editor.Layers as Layers
 import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
+import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -453,6 +454,11 @@ collectResults =
         BadResult -> second
       ) (x :) results
 
+makeBackground :: Widget.Id -> Int -> Draw.Color -> Widget f -> Widget f
+makeBackground myId level =
+  Widget.backgroundColor level $
+  mappend (Widget.toAnimId myId) ["hole background"]
+
 makeActiveHoleEdit :: MonadF m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
 makeActiveHoleEdit holeInfo = do
   ExprGuiM.markVariablesAsUsed . map fst =<<
@@ -485,7 +491,11 @@ makeActiveHoleEdit holeInfo = do
       adHocEditor =
         fmap IT.transaction . adHocTextEditEventMap $
         hiSearchTerm holeInfo
-      eventMap =
+      eventMap = mconcat
+        [ addNewDefinitionEventMap holeInfo
+        , pickEventMap
+        ]
+      pickEventMap =
         case mResult of
         Just result
           | null searchTerm -> mempty
@@ -517,7 +527,10 @@ makeActiveHoleEdit holeInfo = do
         _ -> mempty
     searchTermWidget <- makeSearchTermWidget holeInfo searchTermId mResult
     return .
-      ExpressionGui.atEgWidget (Widget.strongerEvents eventMap) $
+      ExpressionGui.atEgWidget
+      (Widget.strongerEvents eventMap .
+       makeBackground (hiHoleId holeInfo)
+       Layers.activeHoleBG Config.holeBackgroundColor) $
       ExpressionGui.addBelow
       [ (0.5, Widget.strongerEvents adHocEditor resultsWidget)
       ]
@@ -544,6 +557,19 @@ make hole mNextHole guid =
   ExpressionGui.wrapDelegated holeFDConfig FocusDelegator.Delegating
   ExpressionGui.atEgWidget $ makeUnwrapped hole mNextHole guid
 
+makeInactiveHoleEdit ::
+  MonadF m => Sugar.Hole m -> Widget.Id -> ExprGuiM m (ExpressionGui m)
+makeInactiveHoleEdit hole myId =
+  liftM
+  (ExpressionGui.fromValueWidget .
+   makeBackground myId Layers.inactiveHole unfocusedColor) .
+  ExprGuiM.otransaction $ BWidgets.makeFocusableTextView "  " myId
+  where
+    unfocusedColor
+      | canPickResult = Config.holeBackgroundColor
+      | otherwise = Config.unfocusedReadOnlyHoleBackgroundColor
+    canPickResult = isJust $ Sugar.holeMActions hole
+
 makeUnwrapped ::
   MonadF m => Sugar.Hole m -> Maybe (Sugar.Expression m) -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
@@ -561,24 +587,8 @@ makeUnwrapped hole mNextHole guid myId = do
           , hiGuid = guid
           , hiMNextHole = mNextHole
           }
-      in
-        (liftM . ExpressionGui.atEgWidget)
-        (makeBackground Layers.activeHoleBG Config.holeBackgroundColor .
-         Widget.strongerEvents (addNewDefinitionEventMap holeInfo)) $
-        makeActiveHoleEdit holeInfo
-    _ ->
-      liftM
-      (ExpressionGui.fromValueWidget .
-       makeBackground Layers.inactiveHole unfocusedColor) .
-      ExprGuiM.otransaction $ BWidgets.makeFocusableTextView "  " myId
-  where
-    unfocusedColor
-      | canPickResult = Config.holeBackgroundColor
-      | otherwise = Config.unfocusedReadOnlyHoleBackgroundColor
-    canPickResult = isJust $ Sugar.holeMActions hole
-    makeBackground level =
-      Widget.backgroundColor level $
-      mappend (Widget.toAnimId myId) ["hole background"]
+      in makeActiveHoleEdit holeInfo
+    _ -> makeInactiveHoleEdit hole myId
 
 searchTermWidgetId :: Widget.Id -> Widget.Id
 searchTermWidgetId = WidgetIds.searchTermId . FocusDelegator.delegatingId
