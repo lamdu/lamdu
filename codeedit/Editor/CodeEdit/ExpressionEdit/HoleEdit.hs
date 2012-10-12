@@ -9,7 +9,7 @@ import Control.Arrow (first, second, (&&&))
 import Control.Monad ((<=<), filterM, liftM, mplus, msum, void)
 import Control.Monad.ListT (ListT)
 import Data.Function (on)
-import Data.Hashable (hash)
+import Data.Hashable (Hashable, hash)
 import Data.List (isInfixOf, isPrefixOf)
 import Data.List.Class (List)
 import Data.List.Utils (sortOn)
@@ -57,6 +57,7 @@ moreSymbolSizeFactor = 0.5
 data Group = Group
   { groupNames :: [String]
   , groupBaseExpr :: Data.PureExpression
+  , groupHashBase :: String
   }
 AtFieldTH.make ''Group
 
@@ -107,12 +108,14 @@ data ResultsList = ResultsList
   , rlMore :: Maybe [Sugar.HoleResult]
   }
 
-randomizeResultExpr
-  :: HoleInfo m
-  -> Data.Expression a -> Data.Expression a
-randomizeResultExpr holeInfo expr =
+randomizeResultExpr ::
+  Hashable h => HoleInfo m -> h -> Data.Expression a -> Data.Expression a
+randomizeResultExpr holeInfo hashBase expr =
   flip Data.randomizeGuids expr . Random.mkStdGen $
-  hash (show (void expr), Guid.bs (hiGuid holeInfo))
+  hash (hashBase, Guid.bs (hiGuid holeInfo))
+
+exprHash :: Data.Expression a -> String
+exprHash = show . void
 
 resultsToWidgets
   :: MonadF m
@@ -153,7 +156,7 @@ resultsToWidgets holeInfo results = do
       return (widget, mResult)
       where
         resultId = mappend moreResultsPrefixId $ pureGuidId cExpr
-        cExpr = randomizeResultExpr holeInfo expr
+        cExpr = randomizeResultExpr holeInfo (exprHash expr) expr
     toWidget resultId expr =
       ExprGuiM.otransaction . BWidgets.makeFocusableView resultId .
       Widget.strongerEvents (resultPickEventMap holeInfo expr) .
@@ -176,13 +179,20 @@ makeNoResults myId =
   ExprGuiM.otransaction .
   BWidgets.makeTextView "(No results)" $ mappend myId ["no results"]
 
+mkGroup :: [String] -> Data.ExpressionBody Data.PureExpression -> Group
+mkGroup names expr = Group
+  { groupNames = names
+  , groupBaseExpr = pExpr
+  , groupHashBase = exprHash pExpr
+  }
+  where
+    pExpr = toPureExpr expr
+
 makeVariableGroup ::
   MonadF m => (Sugar.GetVariable, Data.VariableRef) -> ExprGuiM m Group
-makeVariableGroup (getVar, varRef) = ExprGuiM.withNameFromVarRef getVar $ \(_, varName) ->
-  return Group
-    { groupNames = [varName]
-    , groupBaseExpr = toPureExpr . Data.ExpressionLeaf $ Data.GetVariable varRef
-    }
+makeVariableGroup (getVar, varRef) =
+  ExprGuiM.withNameFromVarRef getVar $ \(_, varName) ->
+  return . mkGroup [varName] . Data.ExpressionLeaf $ Data.GetVariable varRef
 
 toPureExpr
   :: Data.ExpressionBody Data.PureExpression -> Data.PureExpression
@@ -222,23 +232,24 @@ makeLiteralGroup searchTerm =
       Group
       { groupNames = [show integer]
       , groupBaseExpr = toPureExpr . Data.ExpressionLeaf $ Data.LiteralInteger integer
+      , groupHashBase = "Literal"
       }
 
 resultsPrefixId :: HoleInfo m -> Widget.Id
 resultsPrefixId holeInfo = mconcat [hiHoleId holeInfo, Widget.Id ["results"]]
 
 toResultsList ::
-  Monad m =>
-  HoleInfo m -> Data.PureExpression ->
+  (Monad m, Hashable h) =>
+  HoleInfo m -> h -> Data.PureExpression ->
   T m (Maybe ResultsList)
-toResultsList holeInfo baseExpr = do
+toResultsList holeInfo hashBase baseExpr = do
   results <- Sugar.holeInferResults (hiHole holeInfo) baseExpr
   return $
     case results of
     [] -> Nothing
     (x:xs) ->
       let
-        canonizedExpr = randomizeResultExpr holeInfo x
+        canonizedExpr = randomizeResultExpr holeInfo hashBase x
         canonizedExprId = WidgetIds.fromGuid $ Data.eGuid canonizedExpr
       in Just ResultsList
         { rlFirstId = mconcat [resultsPrefixId holeInfo, canonizedExprId]
@@ -253,17 +264,19 @@ toResultsList holeInfo baseExpr = do
 data ResultType = GoodResult | BadResult
 
 makeResultsList ::
-  Monad m => HoleInfo m -> Data.PureExpression ->
+  Monad m => HoleInfo m -> Group ->
   T m (Maybe (ResultType, ResultsList))
-makeResultsList holeInfo baseExpr = do
+makeResultsList holeInfo group = do
   -- We always want the first, and we want to know if there's more, so
   -- take 2:
-  mRes <- toResultsList holeInfo baseExpr
+  mRes <- toResultsList holeInfo hashBase baseExpr
   case mRes of
     Just res -> return . Just $ (GoodResult, res)
     Nothing ->
-      (liftM . fmap) ((,) BadResult) . toResultsList holeInfo $ holeApply baseExpr
+      (liftM . fmap) ((,) BadResult) . toResultsList holeInfo hashBase $ holeApply baseExpr
   where
+    hashBase = groupHashBase group
+    baseExpr = groupBaseExpr group
     holeApply =
       toPureExpr .
       (Data.makeApply . toPureExpr . Data.ExpressionLeaf) Data.Hole
@@ -285,8 +298,7 @@ makeAllResults holeInfo = do
     nameMatch = any (insensitiveInfixOf searchTerm) . groupNames
   return .
     List.catMaybes .
-    List.mapL
-      (makeResultsList holeInfo . groupBaseExpr) .
+    List.mapL (makeResultsList holeInfo) .
     List.fromList .
     sortOn (groupOrdering searchTerm) .
     filter nameMatch $
@@ -298,24 +310,10 @@ makeAllResults holeInfo = do
     insensitiveInfixOf = isInfixOf `on` map Char.toLower
     hole = hiHole holeInfo
     primitiveResults =
-      [ Group
-        { groupNames = ["Set", "Type"]
-        , groupBaseExpr = toPureExpr $ Data.ExpressionLeaf Data.Set
-        }
-      , Group
-        { groupNames = ["Integer", "ℤ", "Z"]
-        , groupBaseExpr = toPureExpr $ Data.ExpressionLeaf Data.IntegerType
-        }
-      , Group
-        { groupNames = ["->", "Pi", "→", "→", "Π", "π"]
-        , groupBaseExpr =
-            toPureExpr . Data.ExpressionPi $ Data.Lambda holeExpr holeExpr
-        }
-      , Group
-        { groupNames = ["\\", "Lambda", "Λ", "λ"]
-        , groupBaseExpr =
-            toPureExpr . Data.ExpressionLambda $ Data.Lambda holeExpr holeExpr
-        }
+      [ mkGroup ["Set", "Type"] $ Data.ExpressionLeaf Data.Set
+      , mkGroup ["Integer", "ℤ", "Z"] $ Data.ExpressionLeaf Data.IntegerType
+      , mkGroup ["->", "Pi", "→", "→", "Π", "π"] $ Data.makePi holeExpr holeExpr
+      , mkGroup ["\\", "Lambda", "Λ", "λ"] $ Data.makeLambda holeExpr holeExpr
       ]
     holeExpr = toPureExpr $ Data.ExpressionLeaf Data.Hole
 
