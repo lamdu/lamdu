@@ -224,10 +224,14 @@ groupOrdering searchTerm result =
     match f = any (f searchTerm) names
     names = groupNames result
 
+nonEmptyAll :: (a -> Bool) -> [a] -> Bool
+nonEmptyAll _ [] = False
+nonEmptyAll f xs = all f xs
+
 makeLiteralGroup :: String -> [Group]
 makeLiteralGroup searchTerm =
   [ makeLiteralIntResult (read searchTerm)
-  | not (null searchTerm) && all Char.isDigit searchTerm
+  | nonEmptyAll Char.isDigit searchTerm
   ]
   where
     makeLiteralIntResult integer =
@@ -478,14 +482,13 @@ pickEventMap ::
   MonadF m => HoleInfo m -> String -> Maybe Sugar.HoleResult ->
   Widget.EventHandlers (ITransaction ViewTag m)
 pickEventMap holeInfo searchTerm (Just result)
-  | null searchTerm = mempty
-  | all (`notElem` Config.operatorChars) searchTerm =
+  | nonEmptyAll (`notElem` Config.operatorChars) searchTerm =
     operatorHandler "Pick this result and apply operator" $ \x ->
     IT.transaction $ do
       (_, actions) <- Sugar.holePickResult (hiHoleActions holeInfo) result
       liftM (searchTermWidgetId . WidgetIds.fromGuid) $
         Sugar.giveAsArgToOperator actions [x]
-  | all (`elem` Config.operatorChars) searchTerm =
+  | nonEmptyAll (`elem` Config.operatorChars) searchTerm =
     alphaNumericHandler "Pick this result and resume" $ \x ->
     IT.transaction $ do
       (g, _) <- Sugar.holePickResult (hiHoleActions holeInfo) result
