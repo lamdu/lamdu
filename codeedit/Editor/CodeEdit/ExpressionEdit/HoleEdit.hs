@@ -309,14 +309,12 @@ makeAllResults holeInfo = do
       , Group
         { groupNames = ["->", "Pi", "→", "→", "Π", "π"]
         , groupBaseExpr =
-          Data.canonizeGuids . toPureExpr . Data.ExpressionPi $
-          Data.Lambda holeExpr holeExpr
+            toPureExpr . Data.ExpressionPi $ Data.Lambda holeExpr holeExpr
         }
       , Group
         { groupNames = ["\\", "Lambda", "Λ", "λ"]
         , groupBaseExpr =
-          Data.canonizeGuids . toPureExpr . Data.ExpressionLambda $
-          Data.Lambda holeExpr holeExpr
+            toPureExpr . Data.ExpressionLambda $ Data.Lambda holeExpr holeExpr
         }
       ]
     holeExpr = toPureExpr $ Data.ExpressionLeaf Data.Hole
