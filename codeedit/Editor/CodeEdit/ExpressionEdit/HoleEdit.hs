@@ -460,6 +460,38 @@ makeBackground myId level =
   Widget.backgroundColor level $
   mappend (Widget.toAnimId myId) ["hole background"]
 
+pickEventMap ::
+  MonadF m => HoleInfo m -> [Char] -> Maybe Sugar.HoleResult ->
+  Widget.EventHandlers (ITransaction ViewTag m)
+pickEventMap holeInfo searchTerm (Just result)
+  | null searchTerm = mempty
+  | all (`notElem` Config.operatorChars) searchTerm =
+    (fmap . fmap) Widget.eventResultFromCursor .
+    E.charGroup "Operator"
+    "Pick this result and apply operator"
+    Config.operatorChars $
+    \x _ -> IT.transaction $ do
+      (_, actions) <- Sugar.holePickResult (hiHoleActions holeInfo) result
+      liftM (searchTermWidgetId . WidgetIds.fromGuid) $
+        Sugar.giveAsArgToOperator actions [x]
+  | all (`elem` Config.operatorChars) searchTerm =
+    (fmap . fmap) Widget.eventResultFromCursor .
+    E.charGroup "Letter/digit"
+    "Pick this result and resume"
+    Config.alphaNumericChars $
+    \x _ -> IT.transaction $ do
+      (g, _) <- Sugar.holePickResult (hiHoleActions holeInfo) result
+      let
+        mTarget
+          | g /= hiGuid holeInfo = Just g
+          | otherwise = fmap Sugar.rGuid $ hiMNextHole holeInfo
+      liftM WidgetIds.fromGuid $ case mTarget of
+        Just target -> do
+          (`Property.set` [x]) =<< Anchors.assocSearchTermRef target
+          return target
+        Nothing -> return g
+pickEventMap _ _ _ = mempty
+
 makeActiveHoleEdit :: MonadF m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
 makeActiveHoleEdit holeInfo = do
   ExprGuiM.markVariablesAsUsed . map fst =<<
@@ -494,38 +526,8 @@ makeActiveHoleEdit holeInfo = do
         hiSearchTerm holeInfo
       eventMap = mconcat
         [ addNewDefinitionEventMap holeInfo
-        , pickEventMap
+        , pickEventMap holeInfo searchTerm mResult
         ]
-      pickEventMap =
-        case mResult of
-        Just result
-          | null searchTerm -> mempty
-          | all (`notElem` Config.operatorChars) searchTerm ->
-            (fmap . fmap) Widget.eventResultFromCursor .
-            E.charGroup "Operator"
-            "Pick this result and apply operator"
-            Config.operatorChars $
-            \x _ -> IT.transaction $ do
-              (_, actions) <- Sugar.holePickResult (hiHoleActions holeInfo) result
-              liftM (searchTermWidgetId . WidgetIds.fromGuid) $
-                Sugar.giveAsArgToOperator actions [x]
-          | all (`elem` Config.operatorChars) searchTerm ->
-            (fmap . fmap) Widget.eventResultFromCursor .
-            E.charGroup "Letter/digit"
-            "Pick this result and resume"
-            (['a'..'z'] ++ ['0'..'9']) $
-            \x _ -> IT.transaction $ do
-              (g, _) <- Sugar.holePickResult (hiHoleActions holeInfo) result
-              let
-                mTarget
-                  | g /= hiGuid holeInfo = Just g
-                  | otherwise = fmap Sugar.rGuid $ hiMNextHole holeInfo
-              liftM WidgetIds.fromGuid $ case mTarget of
-                Just target -> do
-                  (`Property.set` [x]) =<< Anchors.assocSearchTermRef target
-                  return target
-                Nothing -> return g
-        _ -> mempty
     searchTermWidget <- makeSearchTermWidget holeInfo searchTermId mResult
     return .
       ExpressionGui.atEgWidget

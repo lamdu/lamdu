@@ -166,3 +166,4 @@ keepInferredValueKey = E.ModKey E.noMods E.KeyEsc
 toggleShowInferredTypesKeys = [noMods E.KeyF7]
 
 operatorChars = "+-*/^=><&|%$:."
+alphaNumericChars = ['a'..'z'] ++ ['0'..'9']
