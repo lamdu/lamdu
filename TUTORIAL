@@ -10,7 +10,7 @@ Some instructions to get you started with this preliminary[toy] code editor:
 
   cabal install
 
-  (Alternatively, you can:
+  Alternatively, you can:
 
   cabal install --only-dependencies
   cabal configure
