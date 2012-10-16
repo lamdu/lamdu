@@ -57,9 +57,9 @@ import qualified Editor.CodeEdit.Infix as Infix
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
+import qualified Editor.Data.Infer as Infer
 import qualified Editor.Data.Load as Load
 import qualified Editor.Data.Ops as DataOps
-import qualified Editor.Data.Infer as Infer
 import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
 
@@ -896,8 +896,17 @@ convertDefinitionContent sugarContext expr = do
 
 loadConvertDefinition ::
   Monad m => SugarConfig -> Data.DefinitionIRef -> T m (Definition m)
-loadConvertDefinition config defI = do
-  Data.Definition defBody typeL <- Load.loadDefinition defI
+loadConvertDefinition config defI =
+  -- TODO: defI given twice probably means the result of
+  -- loadDefinition is missing some defI-dependent values
+  convertDefinition config defI =<< Load.loadDefinition defI
+
+convertDefinition ::
+  Monad m => SugarConfig ->
+  Data.DefinitionIRef ->
+  Load.DefinitionEntity (T m) ->
+  T m (Definition m)
+convertDefinition config defI (Data.Definition defBody typeL) = do
   let typeP = void typeL
   body <-
     case defBody of
