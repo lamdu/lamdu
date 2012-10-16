@@ -524,18 +524,15 @@ applyOnSection _ apply exprI = convertApplyPrefix apply exprI
 convertApplyPrefix ::
   Monad m =>
   Data.Apply (Expression m, ExprEntity m) -> Convertor m
-convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, _)) exprI =
-  if isPolymorphicFunc funcI
-  then
+convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, _)) exprI
+  | isPolymorphicFunc funcI =
     case rExpressionBody funcRef of
     ExpressionPolymorphic (Polymorphic g compact full) ->
-      makePolymorphic g compact . removeRedundantTypes =<<
-      makeInnerApply full
+      makePolymorphic g compact =<< makeApply full
     ExpressionGetVariable getVar ->
-      makePolymorphic (Data.eGuid funcI) getVar . removeRedundantTypes =<<
-      makeFullApply
+      makePolymorphic (Data.eGuid funcI) getVar =<< makeFullApply
     _ -> makeFullApply
-  else makeFullApply
+  | otherwise = makeFullApply
   where
     newArgRef = atRExpressionBody addParens argRef
     newFuncRef =
@@ -544,14 +541,18 @@ convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, _)) exprI =
       removeRedundantTypes $
       funcRef
     expandedGuid = Guid.combine (Data.eGuid exprI) $ Guid.fromString "polyExpanded"
-    makeFullApply = makeInnerApply newFuncRef
-    makeInnerApply f =
-      (liftM . atRGuid . const) expandedGuid .
+    makeFullApply = makeApply newFuncRef
+    makeApply f =
       mkExpression exprI . ExpressionApply DontHaveParens $
       Data.Apply f newArgRef
-    makePolymorphic g x =
-      mkExpression exprI . ExpressionPolymorphic . Polymorphic g x .
-      removeInferredTypes
+    makePolymorphic g compact fullExpression =
+      mkExpression exprI $ ExpressionPolymorphic Polymorphic
+        { pFuncGuid = g
+        , pCompact = compact
+        , pFullExpression =
+          (atRGuid . const) expandedGuid $ removeInferredTypes fullExpression
+        }
+
 
 isHole :: Data.ExpressionBody a -> Bool
 isHole (Data.ExpressionLeaf Data.Hole) = True
