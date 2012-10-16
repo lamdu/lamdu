@@ -102,6 +102,10 @@ data FuncParam m expr = FuncParam
   , fpMActions :: Maybe (ListItemActions m)
   } deriving (Functor)
 
+instance Show expr => Show (FuncParam m expr) where
+  show fp =
+    concat ["(", show (fpHiddenLambdaGuid fp), ":", show (fpType fp), ")"]
+
 -- Multi-param Lambda
 data Func m expr = Func
   { fParams :: [FuncParam m expr]
@@ -167,6 +171,27 @@ data ExpressionBody m expr
   | ExpressionLiteralInteger { _eLit :: LiteralInteger m }
   | ExpressionAtom { _eAtom :: String }
   deriving (Functor)
+
+wrapParens :: HasParens -> String -> String
+wrapParens HaveParens x = concat ["(", x, ")"]
+wrapParens DontHaveParens x = x
+
+instance Show expr => Show (ExpressionBody m expr) where
+  show ExpressionApply   { eHasParens = hasParens, eApply = Data.Apply func arg } =
+    wrapParens hasParens $ show func ++ " " ++ show arg
+  show ExpressionSection { eHasParens = hasParens, eSection = Section mleft op mright } =
+    wrapParens hasParens $ maybe "" show mleft ++ " " ++ show op ++ maybe "" show mright
+  show ExpressionFunc    { eHasParens = hasParens, _eFunc = Func params body } =
+    wrapParens hasParens $ "\\" ++ unwords (map show params) ++ " -> " ++ show body
+  show ExpressionPi      { eHasParens = hasParens, _ePi = Pi param resultType } =
+    wrapParens hasParens $ "_:" ++ show param ++ " -> " ++ show resultType
+  show ExpressionGetVariable { _getVariable = GetParameter guid } = "P" ++ show guid
+  show ExpressionGetVariable { _getVariable = GetDefinition defI } = "D" ++ show (IRef.guid defI)
+  show ExpressionHole {} = "Hole"
+  show ExpressionInferred {} = "Inferred"
+  show ExpressionPolymorphic {} = "Poly"
+  show ExpressionLiteralInteger { _eLit = LiteralInteger i _ } = show i
+  show ExpressionAtom { _eAtom = atom } = atom
 
 data DefinitionNewType m = DefinitionNewType
   { dntNewType :: Expression m
