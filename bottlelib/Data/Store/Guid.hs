@@ -12,8 +12,7 @@ import Data.ByteString.Utils (randomBS, xorBS)
 import Data.Hashable (hash)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (mappend)
-import Data.Word (Word8)
-import Numeric (showHex)
+import Numeric.Utils (encodeHex)
 import Prelude hiding (length)
 import System.Random (Random(..), split)
 import qualified Data.ByteString as SBS
@@ -45,14 +44,6 @@ inGuid f = Guid . f . bs
 inGuid2 :: (SBS.ByteString -> SBS.ByteString -> SBS.ByteString) ->
            Guid -> Guid -> Guid
 inGuid2 f = inGuid . f . bs
-
-word8Hex :: Word8 -> String
-word8Hex n
-  | n < 0x10 = '0' : showHex n ""
-  | otherwise = showHex n ""
-
-encodeHex :: SBS.ByteString -> String
-encodeHex = concatMap word8Hex . SBS.unpack
 
 asHex :: Guid -> String
 asHex = encodeHex . bs

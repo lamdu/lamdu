@@ -17,6 +17,7 @@ Library
 
                        -- Bottle:
   Exposed-modules:     Data.AtFieldTH,
+                       Numeric.Utils,
                        Data.List.Utils,
                        Data.Maybe.Utils,
                        Data.MRUMemo,

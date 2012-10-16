@@ -2,17 +2,21 @@
 module Graphics.UI.Bottle.WidgetId (Id(..), joinId, subId, atId) where
 
 import Data.Binary (Binary)
-import Data.List(isPrefixOf)
+import Data.List (isPrefixOf, intercalate)
 import Data.Monoid (Monoid(..))
 import Graphics.UI.Bottle.Animation (AnimId)
+import Numeric.Utils (encodeHex)
 import qualified Data.AtFieldTH as AtFieldTH
 
 newtype Id = Id {
   toAnimId :: AnimId
   }
-  deriving (Eq, Ord, Show, Read, Binary, Monoid)
+  deriving (Eq, Ord, Read, Binary, Monoid)
 
 AtFieldTH.make ''Id
+
+instance Show Id where
+  show = ('W' :) . intercalate ":" . map encodeHex . toAnimId
 
 joinId :: Id -> AnimId -> Id
 joinId (Id x) y = Id $ x ++ y
