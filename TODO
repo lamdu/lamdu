@@ -1,7 +1,43 @@
+* Execution:
+
+fac x = if (x == 0) 1 (rec (x - 1))
+    3       3               3   
+           --------        -------
+            False             2
+                      -------------
+                            6
+        ----------------------------
+                     6
+where
+  rec y = x * fac y
+                  5
+      -   -   -----
+      5   3    120
+
 * Monads for expression making:
-  1st pass: RWST (ExpressionMaker m, Cursor) VarInfo () (Transaction t m)
-  2nd pass: Reader (TextEdit.Style, NameGenState)
-  * Avoid name clashes in auto-names
+
+  Really bad: WidgetEnvT duplication means cursor assignments can be
+  out of sync.
+  Instead: Could have something like:
+
+  to get rid of the WidgetEnvT wrapper in the first-pass, and have a clean second pass
+  with just name gen
+
+  -- First pass:
+  RWST (Askable r) VarInfo () (WidgetEnvT m (Transaction ViewTag m))
+  -- Second pass:
+  (Reader NameGenState
+  -- Final result:
+   (ExpressionGui m))
+
+* Lambda should contain a Guid (param name), payload OPTIONALLY contains Guid
+  * canonize/randomize: Expression without guid in payload -> with guid in payload
+    * May need a different canonize that DOES change lambda guids too for alphaEq, etc.
+  * Can optimize/compactize by avoiding Binary instance and not
+    storing lambda guid, just copying it from IRef of lambda (same guid
+    for lambda and param name) -- param name can have a combine'd guid
+
+* Rename "OT" to "WE"?
 
 * Make up type variables implicitly.
   Happens via inference, but as a separate step, so that hole results are unaffected by it.
