@@ -117,7 +117,7 @@ makeClipboardsEdit clipboards = do
 
 makeCodeEdit ::
   MonadF m =>
-  Settings -> SugarCache m -> OTransaction ViewTag m (OT.WidgetT ViewTag m)
+  Settings -> SugarCache m -> OTransaction ViewTag m (IT.WidgetT ViewTag m)
 makeCodeEdit settings cache =
   ExpressionGui.runExprGuiM ExpressionEdit.make settings $ do
     panesEdit <- makePanesEdit $ scPanes cache

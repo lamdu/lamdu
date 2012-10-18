@@ -2,12 +2,14 @@
 module Editor.ITransaction
   ( ITransaction, runITransaction
   , transaction
+  , WidgetT
   ) where
 
 {- Inner transaction -}
 
 import Control.Applicative (Applicative)
 import Data.Store.Transaction (Transaction)
+import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.AtFieldTH as AtFieldTH
 
 newtype ITransaction t m a = ITransaction {
@@ -15,6 +17,8 @@ newtype ITransaction t m a = ITransaction {
   }
   deriving (Functor, Applicative, Monad)
 AtFieldTH.make ''ITransaction
+
+type WidgetT t m = Widget (ITransaction t m)
 
 runITransaction :: ITransaction t m a -> Transaction t m a
 runITransaction = unITransaction

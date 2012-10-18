@@ -103,7 +103,7 @@ makeTextEdit
   :: Monad m
   => Transaction.Property t m String
   -> Widget.Id
-  -> OTransaction t m (OT.WidgetT t m)
+  -> OTransaction t m (IT.WidgetT t m)
 makeTextEdit textRef myId = do
   cursor <- OT.readCursor
   style <- OT.readTextStyle
@@ -129,7 +129,7 @@ makeLineEdit ::
   Monad m =>
   Transaction.Property t m String ->
   Widget.Id ->
-  OTransaction t m (OT.WidgetT t m)
+  OTransaction t m (IT.WidgetT t m)
 makeLineEdit =
   removeKey makeTextEdit $
   EventMap.ModKey EventMap.noMods EventMap.KeyEnter
@@ -138,7 +138,7 @@ makeWordEdit ::
   Monad m =>
   Transaction.Property t m String ->
   Widget.Id ->
-  OTransaction t m (OT.WidgetT t m)
+  OTransaction t m (IT.WidgetT t m)
 makeWordEdit =
   removeKey makeLineEdit $
   EventMap.ModKey EventMap.noMods EventMap.KeySpace

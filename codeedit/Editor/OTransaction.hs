@@ -2,7 +2,6 @@
 module Editor.OTransaction
   ( OTransaction, runOTransaction
   , unWrapInner
-  , WidgetT
   , readCursor, subCursor, isSubCursor
   , Env(..)
   , atEnv, atEnvCursor
@@ -22,9 +21,7 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Data.Maybe (isJust)
 import Data.Store.Transaction (Transaction)
-import Editor.ITransaction (ITransaction)
 import Graphics.UI.Bottle.Animation (AnimId)
-import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Editor.Anchors as Anchors
@@ -38,8 +35,6 @@ data Env = Env
   , envTextStyle :: TextEdit.Style
   }
 AtFieldTH.make ''Env
-
-type WidgetT t m = Widget (ITransaction t m)
 
 newtype OTransaction t m a = OTransaction
   { unOTransaction :: ReaderT Env (Transaction t m) a
