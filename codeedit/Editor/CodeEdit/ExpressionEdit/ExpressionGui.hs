@@ -21,13 +21,14 @@ import Control.Lens ((^.))
 import Control.Monad (liftM)
 import Data.Function (on)
 import Data.Store.Guid (Guid)
+import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiRM)
 import Editor.CodeEdit.Settings (Settings(..))
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
-import Editor.OTransaction (OTransaction)
+import Editor.WidgetEnvT (WidgetEnvT)
 import Graphics.UI.Bottle.Widget (Widget, R)
 import Graphics.UI.Bottle.Widgets.Box (KBox)
 import qualified Control.Lens as Lens
@@ -42,7 +43,7 @@ import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
 import qualified Editor.Layers as Layers
-import qualified Editor.OTransaction as OT
+import qualified Editor.WidgetEnvT as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -76,7 +77,7 @@ runExprGuiM ::
   Monad m =>
   (Sugar.Expression m -> ExprGuiM m (ExpressionGui m)) ->
   Settings ->
-  ExprGuiM m a -> OTransaction ViewTag m a
+  ExprGuiM m a -> WidgetEnvT (Transaction ViewTag m) a
 runExprGuiM = ExprGuiM.run . Maker
 
 makeSubexpresion :: Monad m => Sugar.Expression m -> ExprGuiM m (ExpressionGui m)

@@ -24,7 +24,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.Settings (Settings)
-import Editor.OTransaction (OTransaction)
+import Editor.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.RWS as RWS
@@ -33,7 +33,7 @@ import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Editor.Anchors as Anchors
 import qualified Editor.CodeEdit.Sugar as Sugar
-import qualified Editor.OTransaction as OT
+import qualified Editor.WidgetEnvT as OT
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 type AccessedVars = [Guid]
@@ -51,7 +51,8 @@ data Askable r = Askable
 LensTH.makeLenses ''Askable
 
 newtype ExprGuiRM r m a = ExprGuiRM
-  { _varAccess :: RWST (Askable r) AccessedVars () (OTransaction ViewTag m) a }
+  { _varAccess :: RWST (Askable r) AccessedVars () (WidgetEnvT (Transaction ViewTag m)) a
+  }
   deriving (Functor, Applicative, Monad)
 LensTH.makeLenses ''ExprGuiRM
 
@@ -64,17 +65,17 @@ readSettings = ExprGuiRM . RWS.asks $ Lens.view aSettings
 ask :: Monad m => ExprGuiRM r m r
 ask = ExprGuiRM . RWS.asks $ Lens.view aData
 
-run :: Monad m => r -> Settings -> ExprGuiRM r m a -> OTransaction ViewTag m a
+run :: Monad m => r -> Settings -> ExprGuiRM r m a -> WidgetEnvT (Transaction ViewTag m) a
 run r settings (ExprGuiRM action) =
   liftM f $ runRWST action (Askable initialNameGenState settings r) ()
   where
     f (x, _, _) = x
 
-otransaction :: Monad m => OTransaction ViewTag m a -> ExprGuiRM r m a
+otransaction :: Monad m => WidgetEnvT (Transaction ViewTag m) a -> ExprGuiRM r m a
 otransaction = ExprGuiRM . lift
 
 transaction :: Monad m => Transaction ViewTag m a -> ExprGuiRM r m a
-transaction = otransaction . OT.transaction
+transaction = otransaction . lift
 
 getP :: Monad m => Anchors.MkProperty ViewTag m a -> ExprGuiRM r m a
 getP = transaction . Anchors.getP

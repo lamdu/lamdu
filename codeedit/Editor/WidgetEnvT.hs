@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
-module Editor.OTransaction
-  ( OTransaction, runOTransaction
+module Editor.WidgetEnvT
+  ( WidgetEnvT, runWidgetEnvT
   , unWrapInner
   , readCursor, subCursor, isSubCursor
   , Env(..)
@@ -8,16 +8,14 @@ module Editor.OTransaction
   , envAssignCursor, envAssignCursorPrefix
   , assignCursor, assignCursorPrefix
 
-  , readTextStyle, transaction
+  , readTextStyle
   , atEnvTextStyle, setTextSizeColor, setTextColor
   , getP
   ) where
 
-{- Outer transaction -}
-
 import Control.Applicative (Applicative)
 import Control.Monad (liftM)
-import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Data.Maybe (isJust)
 import Data.Store.Transaction (Transaction)
@@ -36,44 +34,38 @@ data Env = Env
   }
 AtFieldTH.make ''Env
 
-newtype OTransaction t m a = OTransaction
-  { unOTransaction :: ReaderT Env (Transaction t m) a
+newtype WidgetEnvT m a = WidgetEnvT
+  { unWidgetEnvT :: ReaderT Env m a
   }
-  deriving (Functor, Applicative, Monad)
-AtFieldTH.make ''OTransaction
+  deriving (Functor, Applicative, Monad, MonadTrans)
+AtFieldTH.make ''WidgetEnvT
 
-transaction :: Monad m => Transaction t m a -> OTransaction t m a
-transaction = OTransaction . lift
+-- TODO: Remove this
+getP :: Monad m => Anchors.MkProperty t m a -> WidgetEnvT (Transaction t m) a
+getP = lift . Anchors.getP
 
-getP :: Monad m => Anchors.MkProperty t m a -> OTransaction t m a
-getP = transaction . Anchors.getP
-
-runOTransaction
-  :: Monad m
-  => Widget.Id -> TextEdit.Style
-  -> OTransaction t m a -> Transaction t m a
-runOTransaction cursor style (OTransaction action) =
-  runReaderT action (Env cursor style)
+runWidgetEnvT
+  :: Monad m => Widget.Id -> TextEdit.Style -> WidgetEnvT m a -> m a
+runWidgetEnvT cursor style (WidgetEnvT action) = runReaderT action (Env cursor style)
 
 unWrapInner
   :: Monad m
-  => (Transaction t0 (Transaction t1 m) a -> Transaction t1 m a)
-  -> OTransaction t0 (Transaction t1 m) a
-  -> OTransaction t1 m a
-unWrapInner unwrap (OTransaction act) =
-  transaction . unwrap . runReaderT act =<< OTransaction Reader.ask
+  => (m a -> n a)
+  -> WidgetEnvT m a
+  -> WidgetEnvT n a
+unWrapInner = atWidgetEnvT . Reader.mapReaderT
 
-readCursor :: Monad m => OTransaction t m Widget.Id
-readCursor = OTransaction $ Reader.asks envCursor
+readCursor :: Monad m => WidgetEnvT m Widget.Id
+readCursor = WidgetEnvT $ Reader.asks envCursor
 
-subCursor :: Monad m => Widget.Id -> OTransaction t m (Maybe AnimId)
+subCursor :: Monad m => Widget.Id -> WidgetEnvT m (Maybe AnimId)
 subCursor folder = liftM (Widget.subId folder) readCursor
 
-isSubCursor :: Monad m => Widget.Id -> OTransaction t m Bool
+isSubCursor :: Monad m => Widget.Id -> WidgetEnvT m Bool
 isSubCursor = liftM isJust . subCursor
 
-readTextStyle :: Monad m => OTransaction t m TextEdit.Style
-readTextStyle = OTransaction $ Reader.asks envTextStyle
+readTextStyle :: Monad m => WidgetEnvT m TextEdit.Style
+readTextStyle = WidgetEnvT $ Reader.asks envTextStyle
 
 envAssignCursor
   :: Widget.Id -> Widget.Id -> Env -> Env
@@ -94,10 +86,10 @@ envAssignCursorPrefix srcFolder dest =
       Nothing -> cursor
       Just _ -> dest
 
-assignCursor :: Monad m => Widget.Id -> Widget.Id -> OTransaction t m a -> OTransaction t m a
+assignCursor :: Monad m => Widget.Id -> Widget.Id -> WidgetEnvT m a -> WidgetEnvT m a
 assignCursor x y = atEnv $ envAssignCursor x y
 
-assignCursorPrefix :: Monad m => Widget.Id -> Widget.Id -> OTransaction t m a -> OTransaction t m a
+assignCursorPrefix :: Monad m => Widget.Id -> Widget.Id -> WidgetEnvT m a -> WidgetEnvT m a
 assignCursorPrefix x y = atEnv $ envAssignCursorPrefix x y
 
 setTextSizeColor
@@ -110,8 +102,8 @@ setTextSizeColor textSize textColor =
   ((TextView.atStyleFontSize . const) textSize .
    (TextView.atStyleColor . const) textColor)
 
-atEnv :: Monad m => (Env -> Env) -> OTransaction t m a -> OTransaction t m a
-atEnv = atOTransaction . Reader.local
+atEnv :: Monad m => (Env -> Env) -> WidgetEnvT m a -> WidgetEnvT m a
+atEnv = atWidgetEnvT . Reader.local
 
 setTextColor :: Draw.Color -> Env -> Env
 setTextColor = atEnvTextStyle . TextEdit.atSTextViewStyle . TextView.atStyleColor . const

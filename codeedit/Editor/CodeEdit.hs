@@ -15,7 +15,7 @@ import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExprGuiM, WidgetT)
 import Editor.CodeEdit.Settings (Settings)
 import Editor.MonadF (MonadF)
-import Editor.OTransaction (OTransaction)
+import Editor.WidgetEnvT (WidgetEnvT)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
@@ -28,7 +28,7 @@ import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
 import qualified Editor.Layers as Layers
-import qualified Editor.OTransaction as OT
+import qualified Editor.WidgetEnvT as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -117,7 +117,7 @@ makeClipboardsEdit clipboards = do
 
 makeCodeEdit ::
   MonadF m =>
-  Settings -> SugarCache m -> OTransaction ViewTag m (IT.WidgetT ViewTag m)
+  Settings -> SugarCache m -> WidgetEnvT (Transaction ViewTag m) (IT.WidgetT ViewTag m)
 makeCodeEdit settings cache =
   ExpressionGui.runExprGuiM ExpressionEdit.make settings $ do
     panesEdit <- makePanesEdit $ scPanes cache

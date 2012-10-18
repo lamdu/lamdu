@@ -17,9 +17,9 @@ import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag, DBTag)
-import Editor.ITransaction (ITransaction, WidgetT)
+import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
-import Editor.OTransaction (OTransaction)
+import Editor.WidgetEnvT (WidgetEnvT)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Monad.Trans.Writer as Writer
@@ -32,7 +32,7 @@ import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
 import qualified Editor.Layers as Layers
-import qualified Editor.OTransaction as OT
+import qualified Editor.WidgetEnvT as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -40,12 +40,16 @@ import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Edges as Edges
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
-setCurrentBranch :: Monad m => View -> Branch -> Transaction DBTag m ()
+type TDB = Transaction DBTag
+type TV m = Transaction ViewTag (TDB m)
+type ITV m = ITransaction ViewTag (TDB m)
+
+setCurrentBranch :: Monad m => View -> Branch -> TDB m ()
 setCurrentBranch view branch = do
   Anchors.setP Anchors.currentBranch branch
   View.setBranch view branch
 
-deleteCurrentBranch :: Monad m => View -> Transaction DBTag m Widget.Id
+deleteCurrentBranch :: Monad m => View -> TDB m Widget.Id
 deleteCurrentBranch view = do
   branch <- Anchors.getP Anchors.currentBranch
   branches <- Anchors.getP Anchors.branches
@@ -61,7 +65,7 @@ deleteCurrentBranch view = do
   setCurrentBranch view $ snd newCurrentBranch
   return . WidgetIds.fromIRef $ fst newCurrentBranch
 
-makeBranch :: Monad m => View -> Transaction DBTag m Widget.Id
+makeBranch :: Monad m => View -> TDB m Widget.Id
 makeBranch view = do
   newBranch <- Branch.new =<< View.curVersion view
   textEditModelIRef <- Transaction.newIRef "New view"
@@ -89,22 +93,22 @@ branchSelectionFocusDelegatorConfig = FocusDelegator.Config
 
 viewToDb
   :: Monad m => View
-  -> Transaction ViewTag (Transaction DBTag m) a
-  -> Transaction DBTag m a
+  -> TV m a
+  -> TDB m a
 viewToDb = Transaction.run . Anchors.viewStore
 
 type CachedITrans t versionCache m =
   WriterT (Last versionCache) (ITransaction t m)
 
-type CachedTWidget t versionCache m =
-  OTransaction DBTag m (Widget (CachedITrans DBTag versionCache m))
+type CachedTWidget versionCache m =
+  WidgetEnvT (TDB m) (Widget (CachedITrans DBTag versionCache m))
 
 itrans :: Monad m => Transaction t m a -> CachedITrans t versionCache m a
 itrans = lift . IT.transaction
 
 tellNewCache
   :: MonadF m
-  => Transaction DBTag m versionCache
+  => TDB m versionCache
   -> CachedITrans DBTag versionCache m a
   -> CachedITrans DBTag versionCache m a
 tellNewCache mkCache act = act <* do
@@ -113,9 +117,9 @@ tellNewCache mkCache act = act <* do
 
 makeRootWidget
   :: MonadF m
-  => Widget.Size -> Transaction ViewTag (Transaction DBTag m) versionCache
-  -> OTransaction ViewTag (Transaction DBTag m) (WidgetT ViewTag (Transaction DBTag m))
-  -> CachedTWidget DBTag versionCache m
+  => Widget.Size -> TV m versionCache
+  -> WidgetEnvT (TV m) (Widget (ITV m))
+  -> CachedTWidget versionCache m
 makeRootWidget size mkCacheInView widget = do
   view <- OT.getP Anchors.view
   let
@@ -129,7 +133,8 @@ makeRootWidget size mkCacheInView widget = do
     withNewCache = tellNewCache mkCache
     makeBranchNameEdit (textEditModelIRef, branch) = do
       let branchEditId = WidgetIds.fromIRef textEditModelIRef
-      nameProp <- OT.transaction $ Transaction.fromIRef textEditModelIRef
+      nameProp <-
+        lift $ Transaction.fromIRef textEditModelIRef
       branchNameEdit <-
         BWidgets.wrapDelegatedOT branchNameFDConfig
         FocusDelegator.NotDelegating id
@@ -214,13 +219,13 @@ makeBranchChoice forceExpand selectionAnimId orientation children curChild =
 -- transactions on a DB
 makeWidgetForView
   :: MonadF m
-  => Transaction DBTag m versionCache
+  => TDB m versionCache
   -> View
-  -> OTransaction ViewTag (Transaction DBTag m) (WidgetT ViewTag (Transaction DBTag m))
-  -> CachedTWidget t versionCache m
+  -> WidgetEnvT (TV m) (Widget (ITV m))
+  -> CachedTWidget versionCache m
 makeWidgetForView mkCache view innerWidget = do
-  curVersion <- OT.transaction $ View.curVersion view
-  curVersionData <- OT.transaction $ Version.versionData curVersion
+  curVersion <- lift $ View.curVersion view
+  curVersionData <- lift $ Version.versionData curVersion
   redos <- OT.getP Anchors.redos
   cursor <- OT.readCursor
 

@@ -16,7 +16,7 @@ import Data.Vector.Vector2(Vector2)
 import Data.Word(Word8)
 import Editor.Anchors (DBTag)
 import Editor.CodeEdit.Settings (Settings(..))
-import Editor.OTransaction (runOTransaction)
+import Editor.WidgetEnvT (runWidgetEnvT)
 import Graphics.DrawingCombinators((%%))
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
@@ -254,7 +254,7 @@ makeRootWidget settings style dbToIO cache size cursor =
     (Widget.atEvents
      (Writer.mapWriterT (dbToIO . IT.runITransaction) .
       (lift . attachCursor =<<))) .
-    runOTransaction cursor style $
+    runWidgetEnvT cursor style $
     makeCodeEdit cache
   where
     attachCursor eventResult = do

@@ -7,7 +7,7 @@ import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.Config as Config
-import qualified Editor.OTransaction as OT
+import qualified Editor.WidgetEnvT as OT
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 make :: MonadF m => String -> Widget.Id -> ExprGuiM m (ExpressionGui m)
