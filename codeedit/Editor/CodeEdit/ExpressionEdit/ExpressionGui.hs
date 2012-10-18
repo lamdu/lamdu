@@ -24,6 +24,7 @@ import Data.Store.Guid (Guid)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiRM)
+import Editor.CodeEdit.Settings (Settings(..))
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction)
@@ -72,9 +73,9 @@ type ExprGuiM m = ExprGuiRM (Maker m) m
 runExprGuiM ::
   Monad m =>
   (Sugar.Expression m -> ExprGuiM m (ExpressionGui m)) ->
+  Settings ->
   ExprGuiM m a -> OTransaction ViewTag m a
-runExprGuiM =
-  ExprGuiM.run . Maker
+runExprGuiM = ExprGuiM.run . Maker
 
 makeSubexpresion :: Monad m => Sugar.Expression m -> ExprGuiM m (ExpressionGui m)
 makeSubexpresion expr = do

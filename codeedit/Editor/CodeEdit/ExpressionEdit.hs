@@ -22,6 +22,7 @@ import qualified Editor.CodeEdit.ExpressionEdit.PiEdit as PiEdit
 import qualified Editor.CodeEdit.ExpressionEdit.PolymorphicEdit as PolymorphicEdit
 import qualified Editor.CodeEdit.ExpressionEdit.SectionEdit as SectionEdit
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
+import qualified Editor.CodeEdit.Settings as Settings
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
@@ -50,10 +51,10 @@ make sExpr = do
   typeEdits <- mapM make $ Sugar.plInferredTypes payload
   let onReadOnly = Widget.doesntTakeFocus
   exprEventMap <- expressionEventMap exprGuid holePicker $ Sugar.rPayload sExpr
-  settings <- ExprGuiM.otransaction OT.readSettings
+  settings <- ExprGuiM.readSettings
   let
     addInferredTypes
-      | Lens.view OT.vsShowInferredTypes settings =
+      | Lens.view Settings.vsShowInferredTypes settings =
         ExpressionGui.addType ExpressionGui.Background exprId
         (map
          ( Widget.tint Config.inferredTypeTint

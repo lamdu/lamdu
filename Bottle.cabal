@@ -113,6 +113,7 @@ Executable Editor
                        Editor.BottleWidgets,
                        Editor.BranchGUI,
                        Editor.CodeEdit,
+                       Editor.CodeEdit.Settings,
                        Editor.CodeEdit.ExpressionEdit,
                        Editor.CodeEdit.ExpressionEdit.ApplyEdit,
                        Editor.CodeEdit.ExpressionEdit.AtomEdit,

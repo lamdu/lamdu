@@ -6,6 +6,8 @@ module Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad
   , getP, assignCursor, assignCursorPrefix
   --
   , ask
+  --
+  , readSettings
   -- 
   , AccessedVars, markVariablesAsUsed, usedVariables
   , withParamName, NameSource(..)
@@ -21,6 +23,7 @@ import Data.Map (Map)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
+import Editor.CodeEdit.Settings (Settings)
 import Editor.OTransaction (OTransaction)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
@@ -42,6 +45,7 @@ data NameGenState = NameGenState
 
 data Askable r = Askable
   { _aNameGenState :: NameGenState
+  , _aSettings :: Settings
   , _aData :: r
   }
 LensTH.makeLenses ''Askable
@@ -54,12 +58,15 @@ LensTH.makeLenses ''ExprGuiRM
 atEnv :: Monad m => (OT.Env -> OT.Env) -> ExprGuiRM r m a -> ExprGuiRM r m a
 atEnv = Lens.over varAccess . RWS.mapRWST . OT.atEnv
 
+readSettings :: Monad m => ExprGuiRM r m Settings
+readSettings = ExprGuiRM . RWS.asks $ Lens.view aSettings
+
 ask :: Monad m => ExprGuiRM r m r
 ask = ExprGuiRM . RWS.asks $ Lens.view aData
 
-run :: Monad m => r -> ExprGuiRM r m a -> OTransaction ViewTag m a
-run r (ExprGuiRM action) =
-  liftM f $ runRWST action (Askable initialNameGenState r) ()
+run :: Monad m => r -> Settings -> ExprGuiRM r m a -> OTransaction ViewTag m a
+run r settings (ExprGuiRM action) =
+  liftM f $ runRWST action (Askable initialNameGenState settings r) ()
   where
     f (x, _, _) = x
 
