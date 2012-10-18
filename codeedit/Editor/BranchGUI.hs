@@ -142,7 +142,7 @@ makeRootWidget size mkCacheInView widget = do
       return
         ( branch
         , (Widget.atWMaybeEnter . fmap . fmap . Widget.atEnterResultEvent) setBranch .
-          Widget.atEvents lift $ branchNameEdit
+          Widget.atEvents (lift . IT.transaction) $ branchNameEdit
         )
     -- there must be an active branch:
     Just currentBranchWidgetId =

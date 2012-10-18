@@ -33,6 +33,7 @@ import Graphics.UI.Bottle.Widgets.Box (KBox)
 import qualified Control.Lens as Lens
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.List as List
+import qualified Data.Store.Property as Property
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
@@ -179,8 +180,9 @@ makeNameEdit (nameSrc, name) ident myId =
   (ExprGuiM.atEnv . OT.atEnvTextStyle)
   ((TextEdit.atSEmptyUnfocusedString . const) name .
    (TextEdit.atSEmptyFocusedString . const) (concat ["<", name, ">"])) $
-  ExprGuiM.otransaction . flip makeEditor myId =<<
-  ExprGuiM.transaction (Anchors.assocNameRef ident)
+  ExprGuiM.otransaction . flip makeEditor myId .
+  (Property.atSet . fmap) IT.transaction =<<
+  (ExprGuiM.transaction . Anchors.assocNameRef) ident
   where
     makeEditor =
       (fmap . fmap . liftM . Widget.atWEventMap)

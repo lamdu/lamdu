@@ -14,14 +14,13 @@ import Data.ByteString.Char8 (pack)
 import Data.List (intersperse)
 import Data.Maybe (isJust)
 import Data.Monoid (mappend)
+import Data.Store.Property (Property)
 import Editor.MonadF (MonadF)
 import Editor.OTransaction (OTransaction)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Store.Property as Property
-import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Config as Config
-import qualified Editor.ITransaction as IT
 import qualified Editor.Layers as Layers
 import qualified Editor.OTransaction as OT
 import qualified Editor.WidgetIds as WidgetIds
@@ -100,10 +99,10 @@ wrapDelegatedOT
 wrapDelegatedOT = wrapDelegatedWith OT.readCursor (OT.atEnv . OT.atEnvCursor)
 
 makeTextEdit
-  :: Monad m
-  => Transaction.Property t m String
+  :: (Monad m, Monad f)
+  => Property f String
   -> Widget.Id
-  -> OTransaction t m (IT.WidgetT t m)
+  -> OTransaction t m (Widget f)
 makeTextEdit textRef myId = do
   cursor <- OT.readCursor
   style <- OT.readTextStyle
@@ -111,7 +110,7 @@ makeTextEdit textRef myId = do
     Widget.atEvents setter $
     TextEdit.make style cursor (Property.value textRef) myId
   where
-    setter (newText, eventRes) = IT.transaction $ do
+    setter (newText, eventRes) = do
       when (newText /= Property.value textRef) $ Property.set textRef newText
       return eventRes
 
@@ -126,19 +125,19 @@ removeKey makeEdit key =
   makeEdit
 
 makeLineEdit ::
-  Monad m =>
-  Transaction.Property t m String ->
+  (Monad m, Monad f) =>
+  Property f String ->
   Widget.Id ->
-  OTransaction t m (IT.WidgetT t m)
+  OTransaction t m (Widget f)
 makeLineEdit =
   removeKey makeTextEdit $
   EventMap.ModKey EventMap.noMods EventMap.KeyEnter
 
 makeWordEdit ::
-  Monad m =>
-  Transaction.Property t m String ->
+  (Monad m, Monad f) =>
+  Property f String ->
   Widget.Id ->
-  OTransaction t m (IT.WidgetT t m)
+  OTransaction t m (Widget f)
 makeWordEdit =
   removeKey makeLineEdit $
   EventMap.ModKey EventMap.noMods EventMap.KeySpace

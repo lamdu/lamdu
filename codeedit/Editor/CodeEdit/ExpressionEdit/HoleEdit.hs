@@ -66,7 +66,7 @@ type T = Transaction ViewTag
 
 data HoleInfo m = HoleInfo
   { hiHoleId :: Widget.Id
-  , hiSearchTerm :: Property (T m) String
+  , hiSearchTerm :: Property (ITransaction ViewTag m) String
   , hiHole :: Sugar.Hole m
   , hiHoleActions :: Sugar.HoleActions m
   , hiGuid :: Guid
@@ -535,9 +535,7 @@ makeActiveHoleEdit holeInfo = do
       mResult =
         mplus mSelectedResult .
         fmap rlFirst $ listToMaybe firstResults
-      adHocEditor =
-        fmap IT.transaction . adHocTextEditEventMap $
-        hiSearchTerm holeInfo
+      adHocEditor = adHocTextEditEventMap $ hiSearchTerm holeInfo
       eventMap = mconcat
         [ addNewDefinitionEventMap holeInfo
         , pickEventMap holeInfo searchTerm mResult
@@ -589,7 +587,9 @@ makeUnwrapped ::
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeUnwrapped hole mNextHole guid myId = do
   cursor <- ExprGuiM.otransaction OT.readCursor
-  searchTermProp <- ExprGuiM.transaction $ Anchors.assocSearchTermRef guid
+  searchTermProp <-
+    (liftM . Property.atSet . fmap) IT.transaction .
+    ExprGuiM.transaction $ Anchors.assocSearchTermRef guid
   case (Sugar.holeMActions hole, Widget.subId myId cursor) of
     (Just holeActions, Just _) ->
       let
