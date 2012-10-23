@@ -185,8 +185,8 @@ instance Show expr => Show (ExpressionBody m expr) where
     wrapParens hasParens $ "\\" ++ unwords (map show params) ++ " -> " ++ show body
   show ExpressionPi      { eHasParens = hasParens, _ePi = Pi param resultType } =
     wrapParens hasParens $ "_:" ++ show param ++ " -> " ++ show resultType
-  show ExpressionGetVariable { _getVariable = GetParameter guid } = "P" ++ show guid
-  show ExpressionGetVariable { _getVariable = GetDefinition defI } = "D" ++ show (IRef.guid defI)
+  show ExpressionGetVariable { _getVariable = GetParameter guid } = 'P' : show guid
+  show ExpressionGetVariable { _getVariable = GetDefinition defI } = 'D' : show (IRef.guid defI)
   show ExpressionHole {} = "Hole"
   show ExpressionInferred {} = "Inferred"
   show ExpressionPolymorphic {} = "Poly"
