@@ -9,7 +9,7 @@ module Editor.Anchors
   , redos, redosIRef
   , currentBranchIRef, currentBranch
   , globals
-  , sugarConfig
+  , sugarConfig, ffiEnv
   , newBuiltin, newDefinition
   , Pane
   , dbStore, DBTag
@@ -43,6 +43,7 @@ import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
+import qualified Editor.CodeEdit.FFI as FFI
 import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -92,6 +93,9 @@ globals = Transaction.fromIRef $ IRef.anchor "globals"
 
 sugarConfig :: Monad m => MkProperty ViewTag m SugarConfig
 sugarConfig = Transaction.fromIRef $ IRef.anchor "sugarConfig"
+
+ffiEnv :: Monad m => MkProperty ViewTag m FFI.Env
+ffiEnv = Transaction.fromIRef $ IRef.anchor "ffiEnv"
 
 -- Cursor is untagged because it is both saved globally and per-revision.
 -- Cursor movement without any revisioned changes are not saved per-revision.

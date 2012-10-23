@@ -18,6 +18,7 @@ import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as A
+import qualified Editor.CodeEdit.FFI as FFI
 import qualified Editor.CodeEdit.Sugar.Config as SugarConfig
 import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
@@ -60,7 +61,7 @@ fixIRef createOuter = do
   Transaction.writeIRef x =<< createOuter x
   return x
 
-createBuiltins :: Monad m => Transaction A.ViewTag m (SugarConfig, [Data.DefinitionIRef])
+createBuiltins :: Monad m => Transaction A.ViewTag m ((FFI.Env, SugarConfig), [Data.DefinitionIRef])
 createBuiltins =
   Writer.runWriterT $ do
     list <- mkType . A.newBuiltin "Data.List.List" =<< lift setToSet
@@ -72,66 +73,72 @@ createBuiltins =
     nil <- lift $ A.newBuiltin "Prelude.[]" =<< forAll "a" listOf
     Writer.tell [cons, nil]
 
-    makeWithType "Prelude.True" bool
-    makeWithType "Prelude.False" bool
+    true <- makeWithType "Prelude.True" bool
+    false <- makeWithType "Prelude.False" bool
 
-    makeWithType "Prelude.if" . forAll "a" $ \a ->
+    makeWithType_ "Prelude.if" . forAll "a" $ \a ->
       mkPi bool . mkPi a $ endo a
 
-    makeWithType "Prelude.id" $ forAll "a" endo
+    makeWithType_ "Prelude.id" $ forAll "a" endo
 
-    makeWithType "Prelude.const" .
+    makeWithType_ "Prelude.const" .
       forAll "a" $ \a -> forAll "b" $ \b -> mkPi a $ mkPi b a
 
-    makeWithType "Data.List.reverse" $ forAll "a" (endo . listOf)
-    makeWithType "Data.List.tail" $ forAll "a" (endo . listOf)
-    makeWithType "Data.List.head" . forAll "a" $ join (mkPi . listOf)
+    makeWithType_ "Data.List.reverse" $ forAll "a" (endo . listOf)
+    makeWithType_ "Data.List.tail" $ forAll "a" (endo . listOf)
+    makeWithType_ "Data.List.head" . forAll "a" $ join (mkPi . listOf)
 
-    makeWithType "Data.List.length" . forAll "a" $ \a ->
+    makeWithType_ "Data.List.length" . forAll "a" $ \a ->
       mkPi (listOf a) integer
 
-    makeWithType "Data.List.foldl" . forAll "a" $ \a -> forAll "b" $ \b ->
+    makeWithType_ "Data.List.foldl" . forAll "a" $ \a -> forAll "b" $ \b ->
       mkPi (mkPi a (mkPi b a)) . mkPi a $ mkPi (listOf b) a
 
-    makeWithType "Data.List.zipWith" . forAll "a" $ \a -> forAll "b" $ \b -> forAll "c" $ \c ->
+    makeWithType_ "Data.List.zipWith" . forAll "a" $ \a -> forAll "b" $ \b -> forAll "c" $ \c ->
       mkPi (mkPi a (mkPi b c)) . mkPi (listOf a) . mkPi (listOf b) $ listOf c
 
     let aToAToA = forAll "a" $ \a -> mkPi a $ endo a
-    mapM_ ((`makeWithType` aToAToA) . ("Prelude." ++))
+    mapM_ ((`makeWithType_` aToAToA) . ("Prelude." ++))
       ["+", "-", "*", "/", "^", "++"]
-    makeWithType "Prelude.negate" $ forAll "a" endo
-    makeWithType "Prelude.sqrt" $ forAll "a" endo
+    makeWithType_ "Prelude.negate" $ forAll "a" endo
+    makeWithType_ "Prelude.sqrt" $ forAll "a" endo
 
     let aToAToBool = forAll "a" $ \a -> mkPi a $ mkPi a bool
-    mapM_ ((`makeWithType` aToAToBool) . ("Prelude." ++))
+    mapM_ ((`makeWithType_` aToAToBool) . ("Prelude." ++))
       ["==", "/=", "<=", ">=", "<", ">"]
 
-    makeWithType "Prelude.enumFromTo" . mkPi integer . mkPi integer $ listOf integer
+    makeWithType_ "Prelude.enumFromTo" . mkPi integer . mkPi integer $ listOf integer
 
-    makeWithType "Data.Functor.fmap" .
+    makeWithType_ "Data.Functor.fmap" .
       forAll "f" $ \f ->
       forAll "a" $ \a ->
       forAll "b" $ \b ->
       mkPi (mkPi a b) . mkPi (mkApply f a) $ mkApply f b
 
-    makeWithType "Data.List.iterate" .
+    makeWithType_ "Data.List.iterate" .
       forAll "a" $ \a -> mkPi (mkPi a a) . mkPi a $ listOf a
 
-    makeWithType "Control.Monad.return" .
+    makeWithType_ "Control.Monad.return" .
       forAll "m" $ \m -> forAll "a" $ \a -> mkPi a $ mkApply m a
 
     -- Can't use convinience path functions in case of "."
-    tellift $ do
+    tellift_ $ do
       typeI <-
         forAll "a" $ \a -> forAll "b" $ \b -> forAll "c" $ \c ->
         mkPi (mkPi b c) . mkPi (mkPi a b) $ mkPi a c
       A.newDefinition "." . (`Data.Definition` typeI) . Data.DefinitionBuiltin .
         Data.Builtin $ Data.FFIName ["Prelude"] "."
 
-    return SugarConfig
-      { SugarConfig.cons = cons
-      , SugarConfig.nil = nil
-      }
+    let
+      sugarConfig = SugarConfig
+        { SugarConfig.cons = cons
+        , SugarConfig.nil = nil
+        }
+      ffiEnv = FFI.Env
+        { FFI.trueDef = true
+        , FFI.falseDef = false
+        }
+    return (ffiEnv, sugarConfig)
   where
     endo = join mkPi
     set = DataIRef.newExprBody $ Data.ExpressionLeaf Data.Set
@@ -142,7 +149,11 @@ createBuiltins =
       s <- set
       return . Data.makePi s =<< f ((getVar . Data.ParameterRef) aGuid)
     setToSet = mkPi set set
-    tellift f = Writer.tell . (:[]) =<< lift f
+    tellift f = do
+      x <- lift f
+      Writer.tell [x]
+      return x
+    tellift_ = (fmap . liftM . const) () tellift
     getVar = DataIRef.newExprBody . Data.ExpressionLeaf . Data.GetVariable
     mkPi mkArgType mkResType =
       DataIRef.newExprBody =<< liftM2 Data.makePi mkArgType mkResType
@@ -152,6 +163,7 @@ createBuiltins =
       x <- lift f
       Writer.tell [x]
       return . getVar $ Data.DefinitionRef x
+    makeWithType_ = (fmap . fmap . liftM . const) () makeWithType
     makeWithType builtinName typeMaker =
       tellift (A.newBuiltin builtinName =<< typeMaker)
 
@@ -168,9 +180,10 @@ initDB store =
     bs <- initRef A.branchesIRef $ do
       masterNameIRef <- Transaction.newIRef "master"
       changes <- collectWrites Transaction.newKey $ do
-        (sugarConfig, builtins) <- createBuiltins
+        ((ffiEnv, sugarConfig), builtins) <- createBuiltins
         setMkProp A.clipboards []
         setMkProp A.sugarConfig sugarConfig
+        setMkProp A.ffiEnv ffiEnv
         setMkProp A.globals builtins
         setMkProp A.panes []
         setMkProp A.preJumps []
