@@ -14,7 +14,7 @@ module Editor.Anchors
   , Pane
   , dbStore, DBTag
   , viewStore, ViewTag
-  , assocDataRef
+  , assocDataRef, nonEmptyAssocDataRef
   , assocNameRef, assocSearchTermRef
   , makePane, makeDefinition, newPane
   , savePreJumpPosition, jumpBack
@@ -140,10 +140,9 @@ makeDefinition = do
 dataGuid :: SBS.ByteString -> Guid -> Guid
 dataGuid str guid = Guid.combine guid $ Guid.make str
 
-assocDataRef
-  :: (Binary b, Monad m)
-  => SBS.ByteString -> Guid
-  -> MkProperty t m (Maybe b)
+assocDataRef ::
+  (Binary b, Monad m) =>
+  SBS.ByteString -> Guid -> MkProperty t m (Maybe b)
 assocDataRef str guid = do
   val <- Transaction.lookup assocGuid
   return $ Property val set
@@ -152,12 +151,27 @@ assocDataRef str guid = do
     set Nothing = Transaction.delete assocGuid
     set (Just x) = Transaction.writeGuid assocGuid x
 
+nonEmptyAssocDataRef ::
+  (Monad m, Binary a) =>
+  SBS.ByteString -> Guid -> Transaction t m a -> MkProperty t m a
+nonEmptyAssocDataRef str guid makeDef = do
+  dataRef <- assocDataRef str guid
+  def <-
+    case Property.value dataRef of
+    Nothing -> do
+      def <- makeDef
+      Property.set dataRef $ Just def
+      return def
+    Just val ->
+      return val
+  return $ Property def (Property.set dataRef . Just)
+
 assocDataRefDef
   :: (Eq def, Binary def, Monad m)
   => def -> SBS.ByteString
   -> Guid -> MkProperty t m def
-assocDataRefDef def name =
-  liftM (Property.pureCompose (fromMaybe def) f) . assocDataRef name
+assocDataRefDef def str =
+  liftM (Property.pureCompose (fromMaybe def) f) . assocDataRef str
   where
     f x
       | x == def = Nothing

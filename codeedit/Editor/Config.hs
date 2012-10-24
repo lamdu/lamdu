@@ -163,7 +163,7 @@ leaveSubexpressionKey = E.ModKey E.shift E.KeyLeft
 replaceInferredValueKey = E.ModKey E.noMods E.KeyEnter
 keepInferredValueKey = E.ModKey E.noMods E.KeyEsc
 
-toggleShowInferredTypesKeys = [noMods E.KeyF7]
+nextInfoMode = [noMods E.KeyF7]
 
 operatorChars = "+-*/^=><&|%$:."
 alphaNumericChars = ['a'..'z'] ++ ['0'..'9']

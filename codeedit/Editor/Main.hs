@@ -157,7 +157,7 @@ runDbStore font store = do
   flyNavMake <- makeFlyNav
   addHelpWithStyle <- EventMapDoc.makeToggledHelpAdder Config.overlayDocKeys
   settingsRef <- newIORef Settings
-    { _vsShowInferredTypes = True
+    { _sInfoMode = Settings.InfoTypes
     }
   let
     addHelp = addHelpWithStyle $ Config.helpStyle font
@@ -197,17 +197,26 @@ runDbStore font store = do
 
 type SugarCache = CodeEdit.SugarCache (Transaction DBTag IO)
 
+infoStr :: Settings.InfoMode -> String
+infoStr Settings.InfoNone = "None"
+infoStr Settings.InfoTypes = "Types"
+infoStr Settings.InfoExamples = "Examples"
+
+nextInfoMode :: Settings.InfoMode -> Settings.InfoMode
+nextInfoMode Settings.InfoNone = Settings.InfoTypes
+nextInfoMode Settings.InfoTypes = Settings.InfoExamples
+nextInfoMode Settings.InfoExamples = Settings.InfoNone
+
 mkGlobalEventMap :: IORef Settings -> IO (Widget.EventHandlers IO)
 mkGlobalEventMap settingsRef = do
   settings <- readIORef settingsRef
   let
-    togglePrefix
-      | Lens.view Settings.vsShowInferredTypes settings = "Disable"
-      | otherwise = "Enable"
+    curInfoMode = Lens.view Settings.sInfoMode settings
+    next = nextInfoMode curInfoMode
+    nextStr = "Show " ++ infoStr next
   return .
-    Widget.keysEventMap Config.toggleShowInferredTypesKeys
-    (togglePrefix ++ " showing inferred types") $
-    (modifyIORef settingsRef . Lens.over Settings.vsShowInferredTypes) not
+    Widget.keysEventMap Config.nextInfoMode nextStr .
+    modifyIORef settingsRef $ Lens.set Settings.sInfoMode next
 
 mkWidgetWithFallback
   :: IORef Settings

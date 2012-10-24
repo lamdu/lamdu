@@ -1,7 +1,8 @@
-{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, DeriveFunctor #-}
+{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, DeriveFunctor, OverloadedStrings #-}
 
 module Editor.CodeEdit.Sugar
   ( Definition(..), DefinitionBody(..), ListItemActions(..)
+  , FuncParamActions(..)
   , DefinitionExpression(..), DefinitionContent(..), DefinitionNewType(..)
   , DefinitionBuiltin(..)
   , Actions(..)
@@ -24,12 +25,16 @@ module Editor.CodeEdit.Sugar
   , removeTypes
   ) where
 
-import Control.Applicative ((<$>), (<*>))
+import Control.Applicative ((<$>), Applicative(..))
 import Control.Arrow (first)
 import Control.Monad ((<=<), liftM, mplus, void)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.Writer (Writer, runWriter)
+import Data.Derive.Foldable (makeFoldable)
+import Data.Derive.Traversable (makeTraversable)
+import Data.DeriveTH (derive)
+import Data.Foldable (Foldable(..))
 import Data.Function (on)
 import Data.List.Utils (sortOn)
 import Data.Map (Map)
@@ -38,6 +43,7 @@ import Data.Monoid (Monoid(..), Any(..))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
+import Data.Traversable (Traversable(traverse))
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.Sugar.Config (SugarConfig)
 import qualified Control.Monad.Trans.Reader as Reader
@@ -95,11 +101,16 @@ data ListItemActions m = ListItemActions
   , itemDelete :: T m Guid
   }
 
+data FuncParamActions m = FuncParamActions
+  { fpListItemActions :: ListItemActions m
+  , fpGetExample :: T m (Expression m)
+  }
+
 data FuncParam m expr = FuncParam
   { fpGuid :: Guid
   , fpHiddenLambdaGuid :: Maybe Guid
   , fpType :: expr
-  , fpMActions :: Maybe (ListItemActions m)
+  , fpMActions :: Maybe (FuncParamActions m)
   } deriving (Functor)
 
 instance Show expr => Show (FuncParam m expr) where
@@ -246,6 +257,7 @@ AtFieldTH.make ''ExpressionBody
 AtFieldTH.make ''Inferred
 AtFieldTH.make ''Actions
 AtFieldTH.make ''ListItemActions
+AtFieldTH.make ''FuncParamActions
 AtFieldTH.make ''Payload
 AtFieldTH.make ''ExpressionP
 
@@ -253,11 +265,20 @@ data ExprEntityInferred a = ExprEntityInferred
   { eesInferred :: Infer.Inferred a
   , eesTypeConflicts :: [Data.PureExpression]
   , eesValueConflicts :: [Data.PureExpression]
-  } deriving Functor
+  } deriving (Functor)
+derive makeFoldable ''ExprEntityInferred
+derive makeTraversable ''ExprEntityInferred
 
-type ExprEntityStored m = ExprEntityInferred (DataIRef.ExpressionProperty (T m))
-type ExprEntityMStored m = ExprEntityInferred (Maybe (DataIRef.ExpressionProperty (T m)))
+type ExprEntityStored m =
+  ExprEntityInferred (DataIRef.ExpressionProperty (T m))
+
+type ExprEntityMStored m =
+  ExprEntityInferred (Maybe (DataIRef.ExpressionProperty (T m)))
+
 type ExprEntity m = Data.Expression (Maybe (ExprEntityMStored m))
+
+eeStored :: ExprEntity m -> Maybe (ExprEntityStored m)
+eeStored = Traversable.sequenceA <=< Data.ePayload
 
 eeProp :: ExprEntity m -> Maybe (DataIRef.ExpressionProperty (T m))
 eeProp = Infer.iStored . eesInferred <=< Data.ePayload
@@ -378,29 +399,60 @@ mkAddParam ::
 mkAddParam =
   liftM (lambdaGuidToParamGuid . DataIRef.exprGuid) . DataOps.lambdaWrap
 
+storedIRefP :: Data.Expression (ExprEntityInferred a) -> a
+storedIRefP = Infer.iStored . eesInferred . Data.ePayload
+
 mkFuncParamActions ::
-  Monad m =>
+  Monad m => Guid -> SugarContext ->
+  ExprEntityStored m ->
+  Data.Lambda (ExprEntityStored m) ->
   DataIRef.ExpressionProperty (T m) ->
-  DataIRef.ExpressionProperty (T m) ->
-  ListItemActions m
-mkFuncParamActions parentP replacerP = ListItemActions
-  { itemDelete = mkDelete parentP replacerP
-  , itemAddNext = mkAddParam replacerP
+  FuncParamActions m
+mkFuncParamActions
+  guid ctx lambdaStored (Data.Lambda paramType _) replacerP =
+  FuncParamActions
+  { fpListItemActions =
+    ListItemActions
+    { itemDelete =
+         mkDelete ((Infer.iStored . eesInferred) lambdaStored) replacerP
+    , itemAddNext = mkAddParam replacerP
+    }
+  , fpGetExample = do
+      exampleP <-
+        Anchors.nonEmptyAssocDataRef "example" guid .
+        DataIRef.newExprBody $ Data.ExpressionLeaf Data.Hole
+      exampleS <- Load.loadExpression exampleP
+      loaded <- uncurry (Infer.load loader) newNode Nothing exampleS
+      let (_, inferState, exampleStored) = inferWithConflicts loaded
+      convertStoredExpression exampleStored $
+        SugarContext inferState (scConfig ctx)
   }
+  where
+    scope = Infer.nScope . Infer.iPoint $ eesInferred lambdaStored
+    paramTypeRef =
+      Infer.tvVal . Infer.nRefs . Infer.iPoint $ eesInferred paramType
+    newNode =
+      Infer.newTypedNodeWithScope scope paramTypeRef $ scInferState ctx
 
 convertLambda
   :: Monad m
   => Data.Lambda (ExprEntity m)
   -> ExprEntity m -> Sugar m (FuncParam m (Expression m), Expression m)
-convertLambda (Data.Lambda paramTypeI bodyI) exprI = do
+convertLambda lam@(Data.Lambda paramTypeI bodyI) expr = do
   sBody <- convertExpressionI bodyI
   typeExpr <- convertExpressionI paramTypeI
+  ctx <- readContext
   let
+    guid = Data.eGuid expr
     param = FuncParam
-      { fpGuid = lambdaGuidToParamGuid $ Data.eGuid exprI
+      { fpGuid = lambdaGuidToParamGuid guid
       , fpHiddenLambdaGuid = Nothing
       , fpType = removeRedundantTypes typeExpr
-      , fpMActions = mkFuncParamActions <$> eeProp exprI <*> eeProp bodyI
+      , fpMActions =
+        mkFuncParamActions guid ctx
+        <$> eeStored expr
+        <*> Traversable.mapM eeStored lam
+        <*> eeProp bodyI
       }
   return (param, sBody)
 
@@ -418,7 +470,7 @@ convertFunc lambda exprI = do
       _ -> Func [param] sBody
   where
     deleteToNextParam =
-      atFpMActions . fmap . atItemDelete . liftM $ lambdaGuidToParamGuid
+      atFpMActions . fmap . atFpListItemActions . atItemDelete . liftM $ lambdaGuidToParamGuid
 
 convertPi
   :: Monad m
@@ -693,7 +745,9 @@ convertWritableHole eeInferred exprI = do
     onScopeElement (lambdaGuid, _typeExpr) =
       (lambdaGuidToParamGuid lambdaGuid, Data.ParameterRef lambdaGuid)
     hole processRes = Hole
-      { holeScope = map onScopeElement . Map.toList . Infer.iScope $ eesInferred eeInferred
+      { holeScope =
+        map onScopeElement . Map.toList . Infer.iScope $
+        eesInferred eeInferred
       , holeInferResults = inferResults processRes
       , holeMActions = Just HoleActions
           { holePickResult = pickResult . Infer.iStored $ eesInferred eeInferred
@@ -848,20 +902,23 @@ convertDefinitionParams ::
   T m ([FuncParam m (Expression m)], Data.Expression (ExprEntityStored m))
 convertDefinitionParams ctx expr =
   case Data.eValue expr of
-  Data.ExpressionLambda (Data.Lambda paramType body) -> do
-    paramTypeS <- convertStoredExpression ctx paramType
+  Data.ExpressionLambda lam@(Data.Lambda paramType body) -> do
+    paramTypeS <- convertStoredExpression paramType ctx
     let
+      guid = Data.eGuid expr
       param = FuncParam
-        { fpGuid = lambdaGuidToParamGuid $ Data.eGuid expr
+        { fpGuid = lambdaGuidToParamGuid guid
         , fpHiddenLambdaGuid = Just $ Data.eGuid expr
         , fpType = removeRedundantTypes paramTypeS
-        , fpMActions = Just $ mkFuncParamActions (prop expr) (prop body)
+        , fpMActions =
+          Just $
+          mkFuncParamActions guid ctx
+          (Data.ePayload expr) (fmap Data.ePayload lam)
+          (storedIRefP body)
         }
     (nextParams, funcBody) <- convertDefinitionParams ctx body
     return (param : nextParams, funcBody)
   _ -> return ([], expr)
-  where
-    prop = Infer.iStored . eesInferred . Data.ePayload
 
 convertWhereItems ::
   Monad m =>
@@ -907,7 +964,7 @@ convertDefinitionContent ::
 convertDefinitionContent sugarContext expr = do
   (params, funcBody) <- convertDefinitionParams sugarContext expr
   (whereItems, whereBody) <- convertWhereItems sugarContext funcBody
-  bodyS <- convertStoredExpression sugarContext whereBody
+  bodyS <- convertStoredExpression whereBody sugarContext
   return DefinitionContent
     { dBody = bodyS
     , dParameters = params
@@ -997,9 +1054,22 @@ inferLoadedExpression ::
    Data.Expression (ExprEntityStored m))
 inferLoadedExpression mDefI exprL = do
   loaded <- uncurry (Infer.load loader) Infer.initial mDefI exprL
-  let
+  return $ inferWithConflicts loaded
+
+inferWithConflicts ::
+  Infer.Loaded (DataIRef.ExpressionProperty (T m)) ->
+  ( Bool
+  , Infer.RefMap
+  , Data.Expression (ExprEntityStored m)
+  )
+inferWithConflicts loaded =
+  ( Map.null $ unConflictMap conflictsMap
+  , inferContext
+  , fmap toExprEntity exprInferred
+  )
+  where
     ((exprInferred, inferContext), conflictsMap) =
-      runWriter $ Infer.infer actions loaded
+      runWriter $ Infer.infer (Infer.InferActions reportError) loaded
     toExprEntity x =
       ExprEntityInferred
       { eesInferred = x
@@ -1009,12 +1079,6 @@ inferLoadedExpression mDefI exprL = do
     conflicts getRef x =
       getConflicts ((getRef . Infer.nRefs . Infer.iPoint) x)
       conflictsMap
-  return
-    ( Map.null $ unConflictMap conflictsMap
-    , inferContext, fmap toExprEntity exprInferred
-    )
-  where
-    actions = Infer.InferActions reportError
 
 convertLoadedExpression ::
   Monad m =>
@@ -1024,20 +1088,15 @@ convertLoadedExpression ::
   T m (Expression m)
 convertLoadedExpression config mDefI exprL = do
   (_, inferState, exprStored) <- inferLoadedExpression mDefI exprL
-  let
-    ctx =
-      SugarContext
-      { scInferState = inferState
-      , scConfig = config
-      }
-  convertStoredExpression ctx exprStored
+  convertStoredExpression exprStored $ SugarContext inferState config
 
 convertStoredExpression ::
   Monad m =>
-  SugarContext -> Data.Expression (ExprEntityStored m) ->
+  Data.Expression (ExprEntityStored m) -> SugarContext ->
   T m (Expression m)
-convertStoredExpression sugarContext =
-  runSugar sugarContext . convertExpressionI . fmap (Just . fmap Just)
+convertStoredExpression expr sugarContext =
+  runSugar sugarContext . convertExpressionI $
+  fmap (Just . fmap Just) expr
 
 removeTypes :: Expression m -> Expression m
 removeTypes = removeInferredTypes . (atRExpressionBody . fmap) removeTypes

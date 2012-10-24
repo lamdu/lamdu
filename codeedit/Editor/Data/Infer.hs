@@ -6,17 +6,22 @@ module Editor.Data.Infer
   , Error(..), ErrorDetails(..)
   , RefMap, Ref
   , Loader(..), InferActions(..)
-  , initial, newNodeWithScope
+  , initial, newNodeWithScope, newTypedNodeWithScope
   ) where
 
+import Control.Applicative (Applicative(..))
 import Control.Arrow (first)
 import Control.Lens ((%=), (.=), (^.), (+=))
 import Control.Monad (guard, liftM, liftM2, unless, void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
-import Control.Monad.Trans.Writer (Writer)
 import Control.Monad.Trans.State (StateT(..), State, runState, execState)
+import Control.Monad.Trans.Writer (Writer)
+import Data.Derive.Foldable (makeFoldable)
+import Data.Derive.Traversable (makeTraversable)
+import Data.DeriveTH (derive)
+import Data.Foldable (Foldable(..))
 import Data.Functor.Identity (Identity(..))
 import Data.IntMap (IntMap, (!))
 import Data.IntSet (IntSet)
@@ -25,6 +30,7 @@ import Data.Maybe (fromMaybe, isJust, mapMaybe, maybeToList)
 import Data.Monoid (Monoid(..))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
+import Data.Traversable (Traversable(traverse))
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Either as Either
@@ -161,7 +167,9 @@ data Inferred a = Inferred
   , iType :: Data.PureExpression
   , iScope :: Map Guid Data.PureExpression
   , iPoint :: InferNode
-  } deriving Functor
+  } deriving (Functor)
+derive makeFoldable ''Inferred
+derive makeTraversable ''Inferred
 
 type Expression a = Data.Expression (Inferred a)
 
@@ -189,19 +197,25 @@ LensTH.makeLenses ''InferState
 -- For use in loading phase only!
 -- We don't create additional Refs afterwards!
 createTypedVal :: Monad m => StateT RefMap m TypedValue
-createTypedVal =
-  liftM2 TypedValue createRef createRef
-  where
-    createRef = do
-      key <- Lens.use nextRef
-      nextRef += 1
-      return $ Ref key
+createTypedVal = liftM2 TypedValue createRef createRef
+
+createRef :: Monad m => StateT RefMap m Ref
+createRef = do
+  key <- Lens.use nextRef
+  nextRef += 1
+  return $ Ref key
 
 newNodeWithScope :: Scope -> RefMap -> (RefMap, InferNode)
 newNodeWithScope scope prevRefMap =
   (resultRefMap, InferNode tv scope)
   where
     (tv, resultRefMap) = runState createTypedVal prevRefMap
+
+newTypedNodeWithScope :: Scope -> Ref -> RefMap -> (RefMap, InferNode)
+newTypedNodeWithScope scope typ prevRefMap =
+  (resultRefMap, InferNode (TypedValue newValRef typ) scope)
+  where
+    (newValRef, resultRefMap) = runState createRef prevRefMap
 
 initial :: (RefMap, InferNode)
 initial = newNodeWithScope mempty $ RefMap mempty 0 mempty 0

@@ -53,15 +53,18 @@ make sExpr = do
   exprEventMap <- expressionEventMap exprGuid holePicker $ Sugar.rPayload sExpr
   settings <- ExprGuiM.readSettings
   let
-    addInferredTypes
-      | Lens.view Settings.vsShowInferredTypes settings =
+    addInferredTypes =
+      case Lens.view Settings.sInfoMode settings of
+      Settings.InfoNone -> id
+      Settings.InfoTypes ->
         ExpressionGui.addType ExpressionGui.Background exprId
         (map
          ( Widget.tint Config.inferredTypeTint
          . Widget.scale Config.typeScaleFactor
          . ExpressionGui.egWidget
          ) typeEdits)
-      | otherwise = id
+      Settings.InfoExamples -> -- TODO:
+        id
   return .
     ExpressionGui.atEgWidget
     ( maybe onReadOnly (const id) (Sugar.plActions payload)

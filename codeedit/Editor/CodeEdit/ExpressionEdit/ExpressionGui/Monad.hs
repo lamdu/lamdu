@@ -71,6 +71,7 @@ run r settings (ExprGuiRM action) =
   where
     f (x, _, _) = x
 
+-- TODO: Rename to widgetEnv
 otransaction :: Monad m => WidgetEnvT (Transaction ViewTag m) a -> ExprGuiRM r m a
 otransaction = ExprGuiRM . lift
 

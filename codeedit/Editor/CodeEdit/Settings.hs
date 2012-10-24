@@ -1,11 +1,13 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Editor.CodeEdit.Settings
-  ( Settings(..), vsShowInferredTypes
+  ( Settings(..), sInfoMode, InfoMode(..)
   ) where
 
 import qualified Control.Lens.TH as LensTH
 
+data InfoMode = InfoNone | InfoTypes | InfoExamples
+
 newtype Settings = Settings
-  { _vsShowInferredTypes :: Bool
+  { _sInfoMode :: InfoMode
   }
 LensTH.makeLenses ''Settings

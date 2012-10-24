@@ -11,10 +11,12 @@ import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ExprGuiM, Wi
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
+import qualified Control.Lens as Lens
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.CodeEdit.Parens as Parens
+import qualified Editor.CodeEdit.Settings as Settings
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
@@ -22,6 +24,7 @@ import qualified Editor.WidgetEnvT as OT
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 paramFDConfig :: FocusDelegator.Config
@@ -59,42 +62,54 @@ makeParamEdit ::
   (ExprGuiM.NameSource, String) -> Widget.Id ->
   Sugar.FuncParam m (Sugar.Expression m) ->
   ExprGuiM m (ExpressionGui m)
-makeParamEdit atParamWidgets rhs name prevId param =
-  (liftM . ExpressionGui.atEgWidget)
-  ( Widget.weakerEvents
-    (jumpToRHS Config.jumpLHStoRHSKeys rhs `mappend` paramEventMap)
-  . atParamWidgets name
-  ) .
-  assignCursor $ do
+makeParamEdit atParamWidgets rhs name prevId param = do
+  infoMode <- liftM (Lens.view Settings.sInfoMode) ExprGuiM.readSettings
+  (liftM . ExpressionGui.atEgWidget) onFinalWidget . assignCursor $ do
     paramTypeEdit <- ExpressionGui.makeSubexpresion $ Sugar.fpType param
     paramNameEdit <- makeParamNameEdit name ident
-    return . ExpressionGui.addType ExpressionGui.HorizLine (WidgetIds.fromGuid ident)
-      [ExpressionGui.egWidget paramTypeEdit] $
+    let typeWidget = ExpressionGui.egWidget paramTypeEdit
+    infoWidget <-
+      case (infoMode, mActions) of
+      (Settings.InfoExamples, Just actions) -> do
+        exampleSugar <- ExprGuiM.transaction $ Sugar.fpGetExample actions
+        exampleGui <-
+          liftM ExpressionGui.egWidget $
+          ExpressionGui.makeSubexpresion exampleSugar
+        return $ Box.vboxCentered [exampleGui, typeWidget]
+      _ -> return typeWidget
+    return .
+      ExpressionGui.addType ExpressionGui.HorizLine myId [infoWidget] $
       ExpressionGui.fromValueWidget paramNameEdit
   where
+    onFinalWidget =
+      Widget.weakerEvents
+      (jumpToRHS Config.jumpLHStoRHSKeys rhs `mappend` paramEventMap) .
+      atParamWidgets name
     assignCursor =
       case Sugar.fpHiddenLambdaGuid param of
       Nothing -> id
       Just g ->
-        ExprGuiM.assignCursor (WidgetIds.fromGuid g) $ WidgetIds.fromGuid ident
+        ExprGuiM.assignCursor (WidgetIds.fromGuid g) myId
+    myId = WidgetIds.fromGuid ident
     ident = Sugar.fpGuid param
     paramEventMap = mconcat
       [ paramDeleteEventMap Config.delForwardKeys "" id
       , paramDeleteEventMap Config.delBackwordKeys " backwards" (const prevId)
       , paramAddNextEventMap
       ]
+    mActions = Sugar.fpMActions param
     paramAddNextEventMap =
       maybe mempty
       (Widget.keysEventMapMovesCursor Config.addNextParamKeys "Add next parameter" .
        liftM (FocusDelegator.delegatingId . WidgetIds.fromGuid) .
-       IT.transaction . Sugar.itemAddNext) $
-      Sugar.fpMActions param
+       IT.transaction . Sugar.itemAddNext . Sugar.fpListItemActions)
+      mActions
     paramDeleteEventMap keys docSuffix onId =
       maybe mempty
       (Widget.keysEventMapMovesCursor keys ("Delete parameter" ++ docSuffix) .
        liftM (onId . WidgetIds.fromGuid) .
-       IT.transaction . Sugar.itemDelete) $
-      Sugar.fpMActions param
+       IT.transaction . Sugar.itemDelete . Sugar.fpListItemActions)
+      mActions
 
 makeResultEdit
   :: MonadF m

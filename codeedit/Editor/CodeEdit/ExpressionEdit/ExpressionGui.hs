@@ -4,7 +4,7 @@ module Editor.CodeEdit.ExpressionEdit.ExpressionGui
   ( ExpressionGui(..), atEgWidget, atEgWidgetM
   , fromValueWidget
   , hbox, hboxSpaced, addBelow
-  , addType
+  , addType -- TODO: s/type/info
   , TypeStyle(..)
   , parenify, wrapExpression, wrapParenify
   -- ExprGuiM:
