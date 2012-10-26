@@ -2,7 +2,8 @@
 module Editor.CodeEdit.ExpressionEdit.PiEdit(make) where
 
 import Control.Monad (liftM)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ExprGuiM)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Editor.MonadF (MonadF)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -40,7 +41,7 @@ make hasParens (Sugar.Pi param resultType) =
           Nothing -> cursor
           Just _ -> typeId
     ExprGuiM.atEnv (OT.atEnvCursor redirectCursor) $ do
-      paramTypeEdit <- ExpressionGui.makeSubexpresion $ Sugar.fpType param
+      paramTypeEdit <- ExprGuiM.makeSubexpresion $ Sugar.fpType param
       paramEdit <-
         if paramUsed
         then do

@@ -6,7 +6,8 @@ import Data.List.Utils (nonEmptyAll)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Vector.Vector2 (Vector2(..))
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ExprGuiM, WidgetT)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.List as List
@@ -119,7 +120,7 @@ makeBuiltinDefinition def builtin =
     , makeEquals myId
     , BuiltinEdit.make builtin myId
     ]
-  , liftM (defTypeScale . ExpressionGui.egWidget) . ExpressionGui.makeSubexpresion $
+  , liftM (defTypeScale . ExpressionGui.egWidget) . ExprGuiM.makeSubexpresion $
     Sugar.drType def
   ]
   where
@@ -207,7 +208,7 @@ makeExprDefinition def bodyExpr = do
       label <-
         onLabel . labelStyle . ExprGuiM.otransaction .
         BWidgets.makeLabel labelText $ Widget.toAnimId myId
-      typeGui <- ExpressionGui.makeSubexpresion typeExpr
+      typeGui <- ExprGuiM.makeSubexpresion typeExpr
       return
         [ (right, label)
         , (center, (Widget.doesntTakeFocus . ExpressionGui.egWidget) typeGui)

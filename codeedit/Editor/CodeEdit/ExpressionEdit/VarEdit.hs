@@ -2,7 +2,8 @@
 module Editor.CodeEdit.ExpressionEdit.VarEdit(make, makeView) where
 
 import Control.Monad (liftM)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ExprGuiM)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Editor.MonadF (MonadF)
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets

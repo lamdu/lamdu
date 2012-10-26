@@ -2,7 +2,8 @@
 module Editor.CodeEdit.ExpressionEdit.PolymorphicEdit(make) where
 
 import Control.Monad (liftM)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ExprGuiM)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Editor.MonadF (MonadF)
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
@@ -22,7 +23,7 @@ makeInner ::
 makeInner poly myId = do
   -- TODO: This is just to detect whether cursor is in the full expression.
   -- Even when it's not displayed, which is wasteful.
-  fullExprEdit <- ExpressionGui.makeSubexpresion $ Sugar.pFullExpression poly
+  fullExprEdit <- ExprGuiM.makeSubexpresion $ Sugar.pFullExpression poly
   -- We are inside a non-delegating focus delegator made by makeSubexpresion,
   -- so if the cursor is on us it means user enterred our widget.
   if Widget.wIsFocused (ExpressionGui.egWidget fullExprEdit)

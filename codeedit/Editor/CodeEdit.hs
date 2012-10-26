@@ -12,7 +12,7 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExprGuiM, WidgetT)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (WidgetT, ExprGuiM)
 import Editor.CodeEdit.Settings (Settings)
 import Editor.MonadF (MonadF)
 import Editor.WidgetEnvT (WidgetEnvT)
@@ -119,7 +119,7 @@ makeCodeEdit ::
   MonadF m =>
   Settings -> SugarCache m -> WidgetEnvT (Transaction ViewTag m) (IT.WidgetT ViewTag m)
 makeCodeEdit settings cache =
-  ExpressionGui.runExprGuiM ExpressionEdit.make settings $ do
+  ExprGuiM.run ExpressionEdit.make settings $ do
     panesEdit <- makePanesEdit $ scPanes cache
     clipboardsEdit <- makeClipboardsEdit $ scClipboards cache
     return $

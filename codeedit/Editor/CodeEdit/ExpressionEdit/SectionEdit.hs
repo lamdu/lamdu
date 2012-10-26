@@ -3,7 +3,8 @@ module Editor.CodeEdit.ExpressionEdit.SectionEdit(make) where
 
 import Control.Monad (liftM)
 import Data.Maybe (fromMaybe)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ExprGuiM)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Editor.MonadF (MonadF)
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
@@ -31,5 +32,5 @@ make hasParens (Sugar.Section mLArg op mRArg) =
       _ ->
         ExpressionGui.wrapParenify hasParens Parens.addHighlightedTextParens
     destId = WidgetIds.fromGuid . Sugar.rGuid $ fromMaybe op mRArg
-    makeExpressionsEdit = liftM (:[]) . ExpressionGui.makeSubexpresion
+    makeExpressionsEdit = liftM (:[]) . ExprGuiM.makeSubexpresion
     fromMArg = maybe (return []) makeExpressionsEdit

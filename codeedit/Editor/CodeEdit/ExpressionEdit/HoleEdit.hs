@@ -19,7 +19,8 @@ import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..), ExprGuiM, WidgetT)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Animation(AnimId)
@@ -162,7 +163,7 @@ resultsToWidgets holeInfo results = do
       ExprGuiM.otransaction . BWidgets.makeFocusableView resultId .
       Widget.strongerEvents (resultPickEventMap holeInfo expr) .
       ExpressionGui.egWidget =<<
-      ExpressionGui.makeSubexpresion . Sugar.removeTypes =<<
+      ExprGuiM.makeSubexpresion . Sugar.removeTypes =<<
       (ExprGuiM.transaction . Sugar.holeConvertResult (hiHoleActions holeInfo)) expr
     moreResultsPrefixId = rlMoreResultsPrefixId results
     addMoreSymbol w = do

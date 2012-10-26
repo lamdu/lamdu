@@ -1,7 +1,8 @@
 module Editor.CodeEdit.ExpressionEdit.InferredEdit(make) where
 
 import Data.Store.Guid (Guid)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ExprGuiM)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Editor.MonadF (MonadF)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -43,6 +44,6 @@ makeUnwrapped inferred guid myId = do
       . BWidgets.makeFocusableView myId
       . Widget.tint Config.inferredValueTint
       . Widget.scale Config.inferredValueScaleFactor
-      ) =<< ExpressionGui.makeSubexpresion (Sugar.iValue inferred)
+      ) =<< ExprGuiM.makeSubexpresion (Sugar.iValue inferred)
     Just _ ->
       HoleEdit.makeUnwrapped (Sugar.iHole inferred) Nothing guid myId

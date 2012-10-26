@@ -7,7 +7,8 @@ import Control.Monad (liftM)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ExprGuiM, WidgetT)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -65,7 +66,7 @@ makeParamEdit ::
 makeParamEdit atParamWidgets rhs name prevId param = do
   infoMode <- liftM (Lens.view Settings.sInfoMode) ExprGuiM.readSettings
   (liftM . ExpressionGui.atEgWidget) onFinalWidget . assignCursor $ do
-    paramTypeEdit <- ExpressionGui.makeSubexpresion $ Sugar.fpType param
+    paramTypeEdit <- ExprGuiM.makeSubexpresion $ Sugar.fpType param
     paramNameEdit <- makeParamNameEdit name ident
     let typeWidget = ExpressionGui.egWidget paramTypeEdit
     infoWidget <-
@@ -74,7 +75,7 @@ makeParamEdit atParamWidgets rhs name prevId param = do
         exampleSugar <- ExprGuiM.transaction $ Sugar.fpGetExample actions
         exampleGui <-
           liftM ExpressionGui.egWidget $
-          ExpressionGui.makeSubexpresion exampleSugar
+          ExprGuiM.makeSubexpresion exampleSugar
         return $ Box.vboxCentered [exampleGui, typeWidget]
       _ -> return typeWidget
     return .
@@ -118,7 +119,7 @@ makeResultEdit
   -> ExprGuiM m (ExpressionGui m)
 makeResultEdit lhs result =
   liftM ((ExpressionGui.atEgWidget . Widget.weakerEvents) jumpToLhsEventMap) $
-  ExpressionGui.makeSubexpresion result
+  ExprGuiM.makeSubexpresion result
   where
     lastParam = case lhs of
       [] -> error "makeResultEdit given empty LHS"

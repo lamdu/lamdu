@@ -8,31 +8,24 @@ module Editor.CodeEdit.ExpressionEdit.ExpressionGui
   , TypeStyle(..)
   , parenify, wrapExpression, wrapParenify
   -- ExprGuiM:
-  , WidgetT
   , wrapDelegated
   , makeNameEdit
   , nameSrcTint
-  , module Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad
-  , ExprGuiM, runExprGuiM
-  , makeSubexpresion
   ) where
 
 import Control.Lens ((^.))
 import Control.Monad (liftM)
 import Data.Function (on)
 import Data.Store.Guid (Guid)
-import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiRM)
-import Editor.CodeEdit.Settings (Settings(..))
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Types (WidgetT, ExpressionGui(..), atEgWidget)
 import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
-import Editor.WidgetEnvT (WidgetEnvT)
-import Graphics.UI.Bottle.Widget (Widget, R)
+import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Widgets.Box (KBox)
 import qualified Control.Lens as Lens
-import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.List as List
 import qualified Data.Store.Property as Property
 import qualified Data.Vector.Vector2 as Vector2
@@ -53,37 +46,12 @@ import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 
-type WidgetT m = IT.WidgetT ViewTag m
-
-data ExpressionGui m = ExpressionGui
-  { egWidget :: WidgetT m
-  , egAlignment :: R
-  }
-AtFieldTH.make ''ExpressionGui
-
 atEgWidgetM ::
   Monad m =>
   (WidgetT f -> m (WidgetT f)) ->
   ExpressionGui f -> m (ExpressionGui f)
 atEgWidgetM conv (ExpressionGui w a) =
   liftM (`ExpressionGui` a) $ conv w
-
-newtype Maker m = Maker
-  { unMaker :: Sugar.Expression m -> ExprGuiM m (ExpressionGui m) }
-
-type ExprGuiM m = ExprGuiRM (Maker m) m
-
-runExprGuiM ::
-  Monad m =>
-  (Sugar.Expression m -> ExprGuiM m (ExpressionGui m)) ->
-  Settings ->
-  ExprGuiM m a -> WidgetEnvT (Transaction ViewTag m) a
-runExprGuiM = ExprGuiM.run . Maker
-
-makeSubexpresion :: Monad m => Sugar.Expression m -> ExprGuiM m (ExpressionGui m)
-makeSubexpresion expr = do
-  maker <- ExprGuiM.ask
-  unMaker maker expr
 
 fromValueWidget :: WidgetT m -> ExpressionGui m
 fromValueWidget widget = ExpressionGui widget 0.5
@@ -161,8 +129,7 @@ exprFocusDelegatorConfig = FocusDelegator.Config
   , FocusDelegator.stopDelegatingDoc = "Leave subexpression"
   }
 
-
--- ExprGuiM GUIs
+-- ExprGuiM GUIs (TODO: Move to Monad.hs?)
 
 wrapDelegated ::
   (MonadF f, Monad m) =>

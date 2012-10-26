@@ -1,11 +1,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
 module Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad
-  ( ExprGuiRM, run
+  ( ExprGuiM, WidgetT, run
   -- OTransaction wrappers:
   , otransaction, transaction, atEnv
   , getP, assignCursor, assignCursorPrefix
   --
-  , ask
+  , makeSubexpresion
   --
   , readSettings
   -- 
@@ -23,6 +23,7 @@ import Data.Map (Map)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Types (ExpressionGui, WidgetT)
 import Editor.CodeEdit.Settings (Settings)
 import Editor.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
@@ -43,59 +44,66 @@ data NameGenState = NameGenState
   , ngUsedNames :: Map Guid String
   }
 
-data Askable r = Askable
+data Askable m = Askable
   { _aNameGenState :: NameGenState
   , _aSettings :: Settings
-  , _aData :: r
+  , _aMakeSubexpression :: Sugar.Expression m -> ExprGuiM m (ExpressionGui m)
   }
-LensTH.makeLenses ''Askable
 
-newtype ExprGuiRM r m a = ExprGuiRM
-  { _varAccess :: RWST (Askable r) AccessedVars () (WidgetEnvT (Transaction ViewTag m)) a
+newtype ExprGuiM m a = ExprGuiM
+  { _varAccess :: RWST (Askable m) AccessedVars () (WidgetEnvT (Transaction ViewTag m)) a
   }
   deriving (Functor, Applicative, Monad)
-LensTH.makeLenses ''ExprGuiRM
 
-atEnv :: Monad m => (OT.Env -> OT.Env) -> ExprGuiRM r m a -> ExprGuiRM r m a
+LensTH.makeLenses ''Askable
+LensTH.makeLenses ''ExprGuiM
+
+atEnv :: Monad m => (OT.Env -> OT.Env) -> ExprGuiM m a -> ExprGuiM m a
 atEnv = Lens.over varAccess . RWS.mapRWST . OT.atEnv
 
-readSettings :: Monad m => ExprGuiRM r m Settings
-readSettings = ExprGuiRM . RWS.asks $ Lens.view aSettings
+readSettings :: Monad m => ExprGuiM m Settings
+readSettings = ExprGuiM . RWS.asks $ Lens.view aSettings
 
-ask :: Monad m => ExprGuiRM r m r
-ask = ExprGuiRM . RWS.asks $ Lens.view aData
+makeSubexpresion :: Monad m => Sugar.Expression m -> ExprGuiM m (ExpressionGui m)
+makeSubexpresion expr = do
+  maker <- ExprGuiM . RWS.asks $ Lens.view aMakeSubexpression
+  maker expr
 
-run :: Monad m => r -> Settings -> ExprGuiRM r m a -> WidgetEnvT (Transaction ViewTag m) a
-run r settings (ExprGuiRM action) =
-  liftM f $ runRWST action (Askable initialNameGenState settings r) ()
+run ::
+  Monad m =>
+  (Sugar.Expression m -> ExprGuiM m (ExpressionGui m)) ->
+  Settings -> ExprGuiM m a -> WidgetEnvT (Transaction ViewTag m) a
+run makeSubexpression settings (ExprGuiM action) =
+  liftM f $ runRWST action
+  (Askable initialNameGenState settings makeSubexpression) ()
   where
     f (x, _, _) = x
 
 -- TODO: Rename to widgetEnv
-otransaction :: Monad m => WidgetEnvT (Transaction ViewTag m) a -> ExprGuiRM r m a
-otransaction = ExprGuiRM . lift
+otransaction :: Monad m => WidgetEnvT (Transaction ViewTag m) a -> ExprGuiM m a
+otransaction = ExprGuiM . lift
 
-transaction :: Monad m => Transaction ViewTag m a -> ExprGuiRM r m a
+transaction :: Monad m => Transaction ViewTag m a -> ExprGuiM m a
 transaction = otransaction . lift
 
-getP :: Monad m => Anchors.MkProperty ViewTag m a -> ExprGuiRM r m a
+getP :: Monad m => Anchors.MkProperty ViewTag m a -> ExprGuiM m a
 getP = transaction . Anchors.getP
 
-assignCursor :: Monad m => Widget.Id -> Widget.Id -> ExprGuiRM r m a -> ExprGuiRM r m a
+assignCursor :: Monad m => Widget.Id -> Widget.Id -> ExprGuiM m a -> ExprGuiM m a
 assignCursor x y = atEnv $ OT.envAssignCursor x y
 
-assignCursorPrefix :: Monad m => Widget.Id -> Widget.Id -> ExprGuiRM r m a -> ExprGuiRM r m a
+assignCursorPrefix :: Monad m => Widget.Id -> Widget.Id -> ExprGuiM m a -> ExprGuiM m a
 assignCursorPrefix x y = atEnv $ OT.envAssignCursorPrefix x y
 
 -- Used vars:
 
 usedVariables
   :: Monad m
-  => ExprGuiRM r m a -> ExprGuiRM r m (a, [Guid])
+  => ExprGuiM m a -> ExprGuiM m (a, [Guid])
 usedVariables = Lens.over varAccess RWS.listen
 
-markVariablesAsUsed :: Monad m => AccessedVars -> ExprGuiRM r m ()
-markVariablesAsUsed = ExprGuiRM . RWS.tell
+markVariablesAsUsed :: Monad m => AccessedVars -> ExprGuiM m ()
+markVariablesAsUsed = ExprGuiM . RWS.tell
 
 -- Auto-generating names
 
@@ -106,36 +114,36 @@ initialNameGenState =
     alphabet = map (:[]) ['a'..'z']
     names = alphabet ++ liftA2 (++) names alphabet
 
-withNewName :: Monad m => Guid -> (String -> ExprGuiRM r m a) -> ExprGuiRM r m a
+withNewName :: Monad m => Guid -> (String -> ExprGuiM m a) -> ExprGuiM m a
 withNewName guid useNewName = do
-  nameGen <- ExprGuiRM . RWS.asks $ Lens.view aNameGenState
+  nameGen <- ExprGuiM . RWS.asks $ Lens.view aNameGenState
   let
     (name : nextNames) = ngUnusedNames nameGen
     newNameGen = nameGen
       { ngUnusedNames = nextNames
       , ngUsedNames = Map.insert guid name $ ngUsedNames nameGen
       }
-  ExprGuiRM .
+  ExprGuiM .
     (RWS.local . Lens.set aNameGenState) newNameGen .
     Lens.view varAccess $ useNewName name
 
 data NameSource = AutoGeneratedName | StoredName
 
-withParamName :: Monad m => Guid -> ((NameSource, String) -> ExprGuiRM r m a) -> ExprGuiRM r m a
+withParamName :: Monad m => Guid -> ((NameSource, String) -> ExprGuiM m a) -> ExprGuiM m a
 withParamName guid useNewName = do
   storedName <- transaction . Anchors.getP $ Anchors.assocNameRef guid
   -- TODO: maybe use Maybe?
   if null storedName
     then do
       existingName <-
-        ExprGuiRM $ RWS.asks (Map.lookup guid . ngUsedNames . Lens.view aNameGenState)
+        ExprGuiM $ RWS.asks (Map.lookup guid . ngUsedNames . Lens.view aNameGenState)
       let useGenName = useNewName . (,) AutoGeneratedName
       case existingName of
         Nothing -> withNewName guid useGenName
         Just name -> useGenName name
     else useNewName (StoredName, storedName)
 
-getDefName :: Monad m => Guid -> ExprGuiRM r m (NameSource, String)
+getDefName :: Monad m => Guid -> ExprGuiM m (NameSource, String)
 getDefName guid = do
   storedName <- transaction . Anchors.getP $ Anchors.assocNameRef guid
   return $
@@ -144,7 +152,7 @@ getDefName guid = do
     else (StoredName, storedName)
 
 withNameFromVarRef ::
-  Monad m => Sugar.GetVariable -> ((NameSource, String) -> ExprGuiRM r m a) -> ExprGuiRM r m a
+  Monad m => Sugar.GetVariable -> ((NameSource, String) -> ExprGuiM m a) -> ExprGuiM m a
 withNameFromVarRef (Sugar.GetParameter g) useName = withParamName g useName
 withNameFromVarRef (Sugar.GetDefinition defI) useName =
   useName =<< getDefName (IRef.guid defI)

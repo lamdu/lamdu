@@ -119,6 +119,7 @@ Executable Editor
                        Editor.CodeEdit.ExpressionEdit.ApplyEdit,
                        Editor.CodeEdit.ExpressionEdit.AtomEdit,
                        Editor.CodeEdit.ExpressionEdit.ExpressionGui,
+                       Editor.CodeEdit.ExpressionEdit.ExpressionGui.Types,
                        Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad,
                        Editor.CodeEdit.ExpressionEdit.FuncEdit,
                        Editor.CodeEdit.ExpressionEdit.HoleEdit,

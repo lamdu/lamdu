@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit.ApplyEdit(make) where
 
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ExprGuiM)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Editor.MonadF (MonadF)
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
@@ -20,6 +21,6 @@ make
 make hasParens (Data.Apply func arg) =
   ExpressionGui.wrapParenify hasParens Parens.addHighlightedTextParens $ \myId ->
   (ExprGuiM.assignCursor myId . WidgetIds.fromGuid . Sugar.rGuid) arg $ do
-    funcEdit <- ExpressionGui.makeSubexpresion func
-    argEdit <- ExpressionGui.makeSubexpresion arg
+    funcEdit <- ExprGuiM.makeSubexpresion func
+    argEdit <- ExprGuiM.makeSubexpresion arg
     return $ ExpressionGui.hboxSpaced [funcEdit, argEdit]

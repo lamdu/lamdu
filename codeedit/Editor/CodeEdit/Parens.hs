@@ -4,7 +4,8 @@ module Editor.CodeEdit.Parens
   , addHighlightedTextParens
   ) where
 
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ExprGuiM, WidgetT)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Editor.MonadF (MonadF)
 import Editor.WidgetIds (parensPrefix)
 import qualified Editor.BottleWidgets as BWidgets
