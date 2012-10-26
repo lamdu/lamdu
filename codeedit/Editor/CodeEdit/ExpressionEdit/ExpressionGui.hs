@@ -36,7 +36,7 @@ import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
 import qualified Editor.Layers as Layers
-import qualified Editor.WidgetEnvT as OT
+import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -138,14 +138,14 @@ wrapDelegated ::
   (Widget.Id -> ExprGuiM m a) ->
   Widget.Id -> ExprGuiM m b
 wrapDelegated =
-  BWidgets.wrapDelegatedWith (ExprGuiM.otransaction OT.readCursor)
-  (ExprGuiM.atEnv . OT.atEnvCursor)
+  BWidgets.wrapDelegatedWith (ExprGuiM.otransaction WE.readCursor)
+  (ExprGuiM.atEnv . WE.atEnvCursor)
 
 makeNameEdit ::
   Monad m => (ExprGuiM.NameSource, String) -> Guid -> Widget.Id -> ExprGuiM m (WidgetT m)
 makeNameEdit (nameSrc, name) ident myId =
   liftM (nameSrcTint nameSrc) .
-  (ExprGuiM.atEnv . OT.atEnvTextStyle)
+  (ExprGuiM.atEnv . WE.atEnvTextStyle)
   ((TextEdit.atSEmptyUnfocusedString . const) name .
    (TextEdit.atSEmptyFocusedString . const) (concat ["<", name, ">"])) $
   ExprGuiM.otransaction . flip makeEditor myId .

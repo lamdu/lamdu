@@ -12,7 +12,7 @@ import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
-import qualified Editor.WidgetEnvT as OT
+import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -44,7 +44,7 @@ make getVar myId = do
     Sugar.GetParameter guid -> ExprGuiM.markVariablesAsUsed [guid]
     _ -> return ()
   getVarView <-
-    ExprGuiM.atEnv (OT.setTextColor (colorOf getVar)) $
+    ExprGuiM.atEnv (WE.setTextColor (colorOf getVar)) $
     makeView getVar myId
   let
     jumpToDefinitionEventMap =

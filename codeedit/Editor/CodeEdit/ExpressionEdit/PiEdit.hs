@@ -12,7 +12,7 @@ import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.Parens as Parens
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
-import qualified Editor.WidgetEnvT as OT
+import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 
@@ -40,7 +40,7 @@ make hasParens (Sugar.Pi param resultType) =
           case Widget.subId paramId cursor of
           Nothing -> cursor
           Just _ -> typeId
-    ExprGuiM.atEnv (OT.atEnvCursor redirectCursor) $ do
+    ExprGuiM.atEnv (WE.atEnvCursor redirectCursor) $ do
       paramTypeEdit <- ExprGuiM.makeSubexpresion $ Sugar.fpType param
       paramEdit <-
         if paramUsed
@@ -54,7 +54,7 @@ make hasParens (Sugar.Pi param resultType) =
             ]
         else return paramTypeEdit
       rightArrowLabel <-
-        ExprGuiM.atEnv (OT.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor) .
+        ExprGuiM.atEnv (WE.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor) .
         ExprGuiM.otransaction . BWidgets.makeLabel "→" $ Widget.toAnimId myId
       return $ ExpressionGui.hboxSpaced
         [paramEdit, ExpressionGui.fromValueWidget rightArrowLabel, resultTypeEdit]

@@ -41,8 +41,6 @@ where
     storing lambda guid, just copying it from IRef of lambda (same guid
     for lambda and param name) -- param name can have a combine'd guid
 
-* Rename "OT" to "WE"?
-
 * Make up type variables implicitly.
   Happens via inference, but as a separate step, so that hole results are unaffected by it.
 

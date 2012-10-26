@@ -19,7 +19,7 @@ import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
-import qualified Editor.WidgetEnvT as OT
+import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -38,7 +38,7 @@ makeNameEdit ::
   MonadF m => (ExprGuiM.NameSource, String) -> Widget.Id -> Guid -> ExprGuiM m (WidgetT m)
 makeNameEdit name myId ident =
   ExpressionGui.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
-  (ExprGuiM.atEnv (OT.setTextColor Config.definitionOriginColor) .
+  (ExprGuiM.atEnv (WE.setTextColor Config.definitionOriginColor) .
    ExpressionGui.makeNameEdit name ident)
   myId
 
@@ -217,4 +217,4 @@ makeExprDefinition def bodyExpr = do
     guid = Sugar.drGuid def
     myId = WidgetIds.fromGuid guid
     labelStyle =
-      ExprGuiM.atEnv $ OT.setTextSizeColor Config.defTypeLabelTextSize Config.defTypeLabelColor
+      ExprGuiM.atEnv $ WE.setTextSizeColor Config.defTypeLabelTextSize Config.defTypeLabelColor

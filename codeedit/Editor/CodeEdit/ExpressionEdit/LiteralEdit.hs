@@ -16,14 +16,14 @@ import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
-import qualified Editor.WidgetEnvT as OT
+import qualified Editor.WidgetEnvT as WE
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 
 setColor :: Monad m => ExprGuiM m a -> ExprGuiM m a
-setColor = ExprGuiM.atEnv $ OT.setTextColor Config.literalIntColor
+setColor = ExprGuiM.atEnv $ WE.setTextColor Config.literalIntColor
 
 makeIntView
   :: Monad m
@@ -49,7 +49,7 @@ makeIntEditI
   -> (Integer -> Transaction ViewTag m ())
   -> ExprGuiM m (ExpressionGui m)
 makeIntEditI integer myId setValue = do
-  cursor <- ExprGuiM.otransaction OT.readCursor
+  cursor <- ExprGuiM.otransaction WE.readCursor
   let
     suffix = Widget.subId myId cursor
     isEmpty = Sugar.liValue integer == 0 && suffix == Just emptyZeroCursor
@@ -65,7 +65,7 @@ makeIntEditI integer myId setValue = do
       | otherwise = do
         _ <- IT.transaction $ setValue $ read newText
         return eventRes
-  style <- ExprGuiM.otransaction OT.readTextStyle
+  style <- ExprGuiM.otransaction WE.readTextStyle
   return .
     ExpressionGui.fromValueWidget .
     Widget.atEvents setter .

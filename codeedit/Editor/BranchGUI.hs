@@ -32,7 +32,7 @@ import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
 import qualified Editor.Layers as Layers
-import qualified Editor.WidgetEnvT as OT
+import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -121,13 +121,13 @@ makeRootWidget
   -> WidgetEnvT (TV m) (Widget (ITV m))
   -> CachedTWidget versionCache m
 makeRootWidget size mkCacheInView widget = do
-  view <- OT.getP Anchors.view
+  view <- WE.getP Anchors.view
   let
     toDb = viewToDb view
     mkCache = toDb mkCacheInView
-  namedBranches <- OT.getP Anchors.branches
+  namedBranches <- WE.getP Anchors.branches
   viewEdit <- makeWidgetForView mkCache view widget
-  currentBranch <- OT.getP Anchors.currentBranch
+  currentBranch <- WE.getP Anchors.currentBranch
 
   let
     withNewCache = tellNewCache mkCache
@@ -161,14 +161,14 @@ makeRootWidget size mkCacheInView widget = do
         withNewCache . itrans $ deleteCurrentBranch view
 
   branchSelectorFocused <-
-    liftM isJust $ OT.subCursor WidgetIds.branchSelection
+    liftM isJust $ WE.subCursor WidgetIds.branchSelection
   branchSelector <-
     flip
     (BWidgets.wrapDelegatedOT
      branchSelectionFocusDelegatorConfig
      FocusDelegator.NotDelegating id)
     WidgetIds.branchSelection $ \innerId ->
-    OT.assignCursor innerId currentBranchWidgetId $ do
+    WE.assignCursor innerId currentBranchWidgetId $ do
       branchNameEdits <- mapM makeBranchNameEdit namedBranches
       return .
         Widget.strongerEvents delBranchEventMap $
@@ -226,8 +226,8 @@ makeWidgetForView
 makeWidgetForView mkCache view innerWidget = do
   curVersion <- lift $ View.curVersion view
   curVersionData <- lift $ Version.versionData curVersion
-  redos <- OT.getP Anchors.redos
-  cursor <- OT.readCursor
+  redos <- WE.getP Anchors.redos
+  cursor <- WE.readCursor
 
   let
     redo version newRedos = do
@@ -250,7 +250,7 @@ makeWidgetForView mkCache view innerWidget = do
       return eventResult
 
   vWidget <-
-    OT.unWrapInner toDb $
+    WE.unWrapInner toDb $
     (liftM . Widget.atEvents) afterEvent innerWidget
 
   let

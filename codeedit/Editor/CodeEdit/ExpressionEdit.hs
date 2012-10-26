@@ -27,7 +27,7 @@ import qualified Editor.CodeEdit.Settings as Settings
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
-import qualified Editor.WidgetEnvT as OT
+import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -128,7 +128,7 @@ actionsEventMap ::
   ExprGuiM m (EventHandlers (ITransaction ViewTag m))
 actionsEventMap exprGuid holePicker actions = do
   isSelected <-
-    ExprGuiM.otransaction . OT.isSubCursor $
+    ExprGuiM.otransaction . WE.isSubCursor $
     WidgetIds.fromGuid exprGuid
   let
     replace

@@ -22,7 +22,7 @@ import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Store.Property as Property
 import qualified Editor.Config as Config
 import qualified Editor.Layers as Layers
-import qualified Editor.WidgetEnvT as OT
+import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -35,7 +35,7 @@ import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
 makeTextView :: Monad m => String -> AnimId -> WidgetEnvT m (Widget f)
 makeTextView text myId = do
-  style <- OT.readTextStyle
+  style <- WE.readTextStyle
   return $
     TextView.makeWidget (TextEdit.sTextViewStyle style) text myId
 
@@ -48,7 +48,7 @@ makeFocusableView
   => Widget.Id -> Widget f
   -> WidgetEnvT m (Widget f)
 makeFocusableView myId widget = do
-  hasFocus <- liftM isJust $ OT.subCursor myId
+  hasFocus <- liftM isJust $ WE.subCursor myId
   let
     setBackground
       | hasFocus = Widget.backgroundColor Layers.cursorBG WidgetIds.backgroundCursorId Config.cursorBGColor
@@ -96,7 +96,7 @@ wrapDelegatedOT
   -> ((Widget f -> Widget f) -> a -> b)
   -> (Widget.Id -> WidgetEnvT m a)
   -> Widget.Id -> WidgetEnvT m b
-wrapDelegatedOT = wrapDelegatedWith OT.readCursor (OT.atEnv . OT.atEnvCursor)
+wrapDelegatedOT = wrapDelegatedWith WE.readCursor (WE.atEnv . WE.atEnvCursor)
 
 makeTextEdit
   :: (Monad m, Monad f)
@@ -104,8 +104,8 @@ makeTextEdit
   -> Widget.Id
   -> WidgetEnvT m (Widget f)
 makeTextEdit textRef myId = do
-  cursor <- OT.readCursor
-  style <- OT.readTextStyle
+  cursor <- WE.readCursor
+  style <- WE.readTextStyle
   return .
     Widget.atEvents setter $
     TextEdit.make style cursor (Property.value textRef) myId

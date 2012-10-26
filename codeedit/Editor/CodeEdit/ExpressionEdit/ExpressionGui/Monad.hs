@@ -34,7 +34,7 @@ import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Editor.Anchors as Anchors
 import qualified Editor.CodeEdit.Sugar as Sugar
-import qualified Editor.WidgetEnvT as OT
+import qualified Editor.WidgetEnvT as WE
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 type AccessedVars = [Guid]
@@ -58,8 +58,8 @@ newtype ExprGuiM m a = ExprGuiM
 LensTH.makeLenses ''Askable
 LensTH.makeLenses ''ExprGuiM
 
-atEnv :: Monad m => (OT.Env -> OT.Env) -> ExprGuiM m a -> ExprGuiM m a
-atEnv = Lens.over varAccess . RWS.mapRWST . OT.atEnv
+atEnv :: Monad m => (WE.Env -> WE.Env) -> ExprGuiM m a -> ExprGuiM m a
+atEnv = Lens.over varAccess . RWS.mapRWST . WE.atEnv
 
 readSettings :: Monad m => ExprGuiM m Settings
 readSettings = ExprGuiM . RWS.asks $ Lens.view aSettings
@@ -90,10 +90,10 @@ getP :: Monad m => Anchors.MkProperty ViewTag m a -> ExprGuiM m a
 getP = transaction . Anchors.getP
 
 assignCursor :: Monad m => Widget.Id -> Widget.Id -> ExprGuiM m a -> ExprGuiM m a
-assignCursor x y = atEnv $ OT.envAssignCursor x y
+assignCursor x y = atEnv $ WE.envAssignCursor x y
 
 assignCursorPrefix :: Monad m => Widget.Id -> Widget.Id -> ExprGuiM m a -> ExprGuiM m a
-assignCursorPrefix x y = atEnv $ OT.envAssignCursorPrefix x y
+assignCursorPrefix x y = atEnv $ WE.envAssignCursorPrefix x y
 
 -- Used vars:
 

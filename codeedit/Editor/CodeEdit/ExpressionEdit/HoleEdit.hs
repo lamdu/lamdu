@@ -40,7 +40,7 @@ import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.ITransaction as IT
 import qualified Editor.Layers as Layers
-import qualified Editor.WidgetEnvT as OT
+import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -127,12 +127,12 @@ resultsToWidgets
      , Maybe (Sugar.HoleResult, Maybe (WidgetT m))
      )
 resultsToWidgets holeInfo results = do
-  cursorOnMain <- ExprGuiM.otransaction $ OT.isSubCursor myId
+  cursorOnMain <- ExprGuiM.otransaction $ WE.isSubCursor myId
   extra <-
     if cursorOnMain
     then liftM (Just . (,) canonizedExpr . fmap fst) makeExtra
     else do
-      cursorOnExtra <- ExprGuiM.otransaction $ OT.isSubCursor moreResultsPrefixId
+      cursorOnExtra <- ExprGuiM.otransaction $ WE.isSubCursor moreResultsPrefixId
       if cursorOnExtra
         then do
           extra <- makeExtra
@@ -153,7 +153,7 @@ resultsToWidgets holeInfo results = do
         , msum $ map snd pairs
         )
     moreResult expr = do
-      mResult <- (liftM . fmap . const) cExpr . ExprGuiM.otransaction $ OT.subCursor resultId
+      mResult <- (liftM . fmap . const) cExpr . ExprGuiM.otransaction $ WE.subCursor resultId
       widget <- toWidget resultId cExpr
       return (widget, mResult)
       where
@@ -520,7 +520,7 @@ makeActiveHoleEdit holeInfo = do
 
   (firstResults, hasMoreResults) <- ExprGuiM.transaction $ collectResults allResults
 
-  cursor <- ExprGuiM.otransaction OT.readCursor
+  cursor <- ExprGuiM.otransaction WE.readCursor
   let
     sub = isJust . flip Widget.subId cursor
     shouldBeOnResult = sub $ resultsPrefixId holeInfo
@@ -587,7 +587,7 @@ makeUnwrapped ::
   MonadF m => Sugar.Hole m -> Maybe (Sugar.Expression m) -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeUnwrapped hole mNextHole guid myId = do
-  cursor <- ExprGuiM.otransaction OT.readCursor
+  cursor <- ExprGuiM.otransaction WE.readCursor
   searchTermProp <-
     (liftM . Property.atSet . fmap) IT.transaction .
     ExprGuiM.transaction $ Anchors.assocSearchTermRef guid

@@ -28,7 +28,7 @@ import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
 import qualified Editor.Layers as Layers
-import qualified Editor.WidgetEnvT as OT
+import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -52,7 +52,7 @@ data SugarCache m = SugarCache
 
 makeNewDefinitionAction :: Monad m => ExprGuiM m (Transaction ViewTag m Widget.Id)
 makeNewDefinitionAction = do
-  curCursor <- ExprGuiM.otransaction OT.readCursor
+  curCursor <- ExprGuiM.otransaction WE.readCursor
   return $ do
     newDefI <- Anchors.makeDefinition
     Anchors.newPane newDefI

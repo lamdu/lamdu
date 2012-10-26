@@ -10,7 +10,7 @@ import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
-import qualified Editor.WidgetEnvT as OT
+import qualified Editor.WidgetEnvT as WE
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
@@ -36,7 +36,7 @@ makeUnwrapped
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
 makeUnwrapped inferred guid myId = do
-  mInnerCursor <- ExprGuiM.otransaction $ OT.subCursor myId
+  mInnerCursor <- ExprGuiM.otransaction $ WE.subCursor myId
   case mInnerCursor of
     Nothing ->
       ExpressionGui.atEgWidgetM

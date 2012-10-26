@@ -21,7 +21,7 @@ import qualified Editor.CodeEdit.Settings as Settings
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.ITransaction as IT
-import qualified Editor.WidgetEnvT as OT
+import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -42,7 +42,7 @@ makeParamNameEdit
   -> ExprGuiM m (WidgetT m)
 makeParamNameEdit name ident =
   ExpressionGui.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
-  (ExprGuiM.atEnv (OT.setTextColor Config.paramOriginColor) .
+  (ExprGuiM.atEnv (WE.setTextColor Config.paramOriginColor) .
    ExpressionGui.makeNameEdit name ident) $ WidgetIds.fromGuid ident
 
 jumpToRHS ::
@@ -139,11 +139,11 @@ make hasParens (Sugar.Func params body) =
   ExprGuiM.assignCursor myId bodyId $ do
     lambdaLabel <-
       liftM ExpressionGui.fromValueWidget .
-      ExprGuiM.atEnv (OT.setTextSizeColor Config.lambdaTextSize Config.lambdaColor) .
+      ExprGuiM.atEnv (WE.setTextSizeColor Config.lambdaTextSize Config.lambdaColor) .
       ExprGuiM.otransaction . BWidgets.makeLabel "λ" $ Widget.toAnimId myId
     rightArrowLabel <-
       liftM ExpressionGui.fromValueWidget .
-      ExprGuiM.atEnv (OT.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor) .
+      ExprGuiM.atEnv (WE.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor) .
       ExprGuiM.otransaction . BWidgets.makeLabel "→" $ Widget.toAnimId myId
     (paramsEdits, bodyEdit) <-
       makeParamsAndResultEdit (const id) lhs ("Func Body", body) myId params
