@@ -1,3 +1,7 @@
+* Performance:
+
+  * Non-meaningful changes should not re-infer everything
+
 * Execution:
 
 fac x = if (x == 0) 1 (rec (x - 1))
