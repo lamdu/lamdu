@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Editor.CodeEdit.ExpressionEdit.ExpressionGui
   ( ExpressionGui(..), atEgWidget, atEgWidgetM

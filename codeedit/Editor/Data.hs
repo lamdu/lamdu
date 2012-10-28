@@ -46,17 +46,17 @@ import qualified Data.Store.IRef as IRef
 import qualified Data.Traversable as Traversable
 import qualified System.Random as Random
 
-data Lambda expr = Lambda {
-  lambdaParamType :: expr,
-  lambdaBody :: expr
+data Lambda expr = Lambda
+  { lambdaParamType :: expr
+  , lambdaBody :: expr
   } deriving (Eq, Ord, Show, Functor)
 instance Applicative Lambda where
   pure x = Lambda x x
   Lambda p0 b0 <*> Lambda p1 b1 = Lambda (p0 p1) (b0 b1)
 
-data Apply expr = Apply {
-  applyFunc :: expr,
-  applyArg :: expr
+data Apply expr = Apply
+  { applyFunc :: expr
+  , applyArg :: expr
   } deriving (Eq, Ord, Show, Functor)
 instance Applicative Apply where
   pure x = Apply x x
