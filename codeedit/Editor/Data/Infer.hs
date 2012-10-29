@@ -66,37 +66,6 @@ instance Show TypedValue where
 -- When recursing on an expression, we remember the parent expression guids,
 -- And we make sure not to add a sub-expression with a parent guid (that's a recursive structure).
 
--- SimpleType Rule:
--- Type of a Lambda is a Pi, with same param type
--- Type of a Pi is Set
--- Type of Set is Set
--- Type of Builtin is what's stored in it
--- Type of a LiteralInteger is Integer
-
--- Apply Rule:
---
--- Apply =
--- Func                        Arg
--- ----                        ---
--- FuncT = ParamT -> ResultT   ArgT
--- --------------------------------
--- ApplyT
---
--- ParamT <=> ArgT
--- Recurse-Subst ResultT Arg ApplyT
--- If Arg is Get Param:
---   ApplyT <=> ResultT
--- Case Func of
---   Hole -> Do Nothing
---   \LParamT -> Body : BodyT:
---     LParamT <=> ParamT
---     BodyT <=> ResultT
---     Recurse-Subst Body Arg Apply
---   Other -> Copy (Func Arg) to Apply
---
--- Where Recurse-Subst PreSubst Arg PostSubst
--- TODO
-
 newtype RefExprPayload = RefExprPayload
   { _pSubstitutedArgs :: IntSet
   } deriving (Show, Monoid)
@@ -108,6 +77,7 @@ refExprFromPure = fmap $ const mempty
 
 data Rule = Rule
   { ruleInputs :: [Ref]
+    -- TODO: Allow error reporting:
   , _ruleCompute :: [RefExpression] -> [(Ref, RefExpression)]
   }
 
@@ -400,14 +370,6 @@ makeNodeRules (Data.Expression g exprBody (InferNode typedVal scope)) =
 commonRules :: Data.Expression InferNode -> [Rule]
 commonRules expr =
   [ ruleSimpleType . nRefs $ Data.ePayload expr
-  -- TODO:
-  -- If a value is complete (has no holes),
-  -- and it's value contains parameters that the value does not,
-  -- this must be a type error.
-  -- Useful for checking on definitions with unknown types.
-  -- This would require rules to be able to report errors.
-  -- Example:
-  --   f a = id a someDef
   ]
 
 makeRules :: Bool -> Data.Expression InferNode -> [Rule]
