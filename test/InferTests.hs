@@ -3,6 +3,7 @@ module InferTests (allTests) where
 import Control.Applicative (liftA2)
 import Control.Exception (evaluate)
 import Control.Monad (join, void)
+import Data.Function (on)
 import Data.Map ((!))
 import Data.Maybe (isJust)
 import Test.HUnit (assertBool)
@@ -11,7 +12,6 @@ import qualified Data.Foldable as Foldable
 import qualified Data.List as List
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
-import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
 import qualified Editor.Data.Infer as Infer
 import qualified Test.HUnit as HUnit
@@ -54,12 +54,12 @@ showExpressionWithInferred =
 
 compareInferred :: InferResults -> InferResults -> Bool
 compareInferred x y =
-  isJust $ Traversable.sequence =<< Data.matchExpression f x y
+  isJust $ Data.matchExpression f ((const . const) Nothing) x y
   where
     f (v0, t0) (v1, t1) =
       liftA2 (,) (matchI v0 v1) (matchI t0 t1)
-    matchI = Data.matchExpression nop
-    nop () () = ()
+    matchI = Data.matchExpression nop ((const . const) Nothing)
+    nop () () = Just ()
 
 mkInferredLeafSimple :: Data.Leaf -> Data.PureExpression -> InferResults
 mkInferredLeafSimple leaf =
@@ -151,7 +151,8 @@ inferPart =
     endoListOfInt = join (makePi "pi") $ listOf intType
     listOf x = makeApply [getDefExpr "List", x]
     applyWithHole h = makeApply [getDefExpr ":", h, five, getParamExpr "xs"]
-    exprWithHoles h0 h1 = makeLambda "xs" (listOf h0) (applyWithHole h1)
+    exprWithHoles h0 h1 =
+      on (makeLambda "xs") Data.canonizeGuids (listOf h0) (applyWithHole h1)
 
 applyOnVar :: HUnit.Test
 applyOnVar =

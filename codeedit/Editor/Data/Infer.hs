@@ -17,7 +17,8 @@ import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (StateT(..), State, runState, execState)
-import Control.Monad.Trans.Writer (Writer)
+import Control.Monad.Trans.Writer (Writer, execWriter)
+import Control.Monad.Unit (Unit(..))
 import Data.Derive.Foldable (makeFoldable)
 import Data.Derive.Traversable (makeTraversable)
 import Data.DeriveTH (derive)
@@ -28,13 +29,14 @@ import Data.IntSet (IntSet)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe, isJust, mapMaybe, maybeToList)
 import Data.Monoid (Monoid(..))
-import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable(traverse))
+import qualified Control.Compose as Compose
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Either as Either
 import qualified Control.Monad.Trans.Reader as Reader
+import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Foldable as Foldable
 import qualified Data.IntSet as IntSet
 import qualified Data.Map as Map
@@ -77,7 +79,6 @@ refExprFromPure = fmap $ const mempty
 
 data Rule = Rule
   { ruleInputs :: [Ref]
-    -- TODO: Allow error reporting:
   , _ruleCompute :: [RefExpression] -> [(Ref, RefExpression)]
   }
 
@@ -230,12 +231,6 @@ refMapAt ::
   Functor f => Ref -> (RefData -> f RefData) -> InferState -> f InferState
 refMapAt k = sRefMap . refMap . intMapMod (unRef k)
 
-data MergeExprState = MergeExprState
-  { _mGuidMapping :: Map Guid Guid
-  , _mForbiddenGuids :: Set Guid
-  }
-LensTH.makeLenses ''MergeExprState
-
 -- This is because platform's Either's Monad instance sucks
 runEither :: EitherT l Identity a -> Either l a
 runEither = runIdentity . runEitherT
@@ -243,6 +238,15 @@ runEither = runIdentity . runEitherT
 guardEither :: l -> Bool -> EitherT l Identity ()
 guardEither err False = Either.left err
 guardEither _ True = return ()
+
+guidRepeat :: Data.Expression a -> Bool
+guidRepeat =
+  go Set.empty
+  where
+    go forbidden (Data.Expression g body _)
+      | Set.member g forbidden = True
+      | otherwise =
+        Foldable.any (go (Set.insert g forbidden)) body
 
 -- Merge two expressions:
 -- If they do not match, return Nothing.
@@ -254,50 +258,18 @@ mergeExprs ::
   RefExpression ->
   Either ErrorDetails RefExpression
 mergeExprs p0 p1 =
-  runEither . runReaderT (go p0 p1) $ MergeExprState mempty mempty
+  runEither $ do
+    result <- Data.matchExpression onMatch onMismatch p0 p1
+    guardEither (InfiniteExpression (void result)) . not $ guidRepeat result
+    return result
   where
-    -- When first is hole, we take Guids from second expr
-    go
-      (Data.Expression _ (Data.ExpressionLeaf Data.Hole) s0) e =
-      -- TODO: Yair says Data.atEPayload should be fmap.
-      -- The hole-on-right case should be handled in the same
-      -- way by "go" and not in "f" without mappending anything
-      -- Make tests that reproduce a problem...
-      mapParamGuids $ Data.atEPayload (mappend s0) e
-    -- In all other cases guid comes from first expr
-    go (Data.Expression g0 e0 s0) (Data.Expression g1 e1 s1) =
-      fmap (flip (Data.Expression g0) s) .
-      Reader.local
-      ( (Lens.over mForbiddenGuids . Set.insert) g0
-      . Lens.over mGuidMapping (Map.insert g1 g0)
-      ) $ f (g0, g1) e0 e1
-      where
-        s = mappend s0 s1
-    f _ e (Data.ExpressionLeaf Data.Hole) =
-      return e
-    f gs
-      e0@(Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par0)))
-      e1@(Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par1))) = do
-      lift . guardEither (mismatchIn gs e0 e1) .
-        (par0 ==) . fromMaybe par1
-        =<< Reader.asks (Map.lookup par1 . Lens.view mGuidMapping)
-      return $ Data.makeParameterRef par0
-    f gs e0 e1 =
-      case Data.matchExpressionBody go e0 e1 of
-      Nothing -> lift . Either.left $ mismatchIn gs e0 e1
-      Just body -> Traversable.sequence body
-    mismatchIn (g0, g1) e0 e1 =
-      MismatchIn
-      (Data.pureExpression g0 (fmap void e0))
-      (Data.pureExpression g1 (fmap void e1))
-    mapParamGuids e@(Data.Expression g body s) = do
-      lift . guardEither (InfiniteExpression (void e)) .
-        not . Set.member g =<< Reader.asks (Lens.view mForbiddenGuids)
-      fmap (flip (Data.Expression g) s) $ case body of
-        Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef p)) ->
-          liftM (Data.makeParameterRef . fromMaybe p) $
-          Reader.asks (Map.lookup p . Lens.view mGuidMapping)
-        _ -> Traversable.mapM mapParamGuids body
+    onMatch x y = return $ mappend x y
+    onMismatch (Data.Expression _ (Data.ExpressionLeaf Data.Hole) s0) e1 =
+      return $ fmap (mappend s0) e1
+    onMismatch e0 (Data.Expression _ (Data.ExpressionLeaf Data.Hole) s1) =
+      return $ fmap (flip mappend s1) e0
+    onMismatch e0 e1 =
+      Either.left $ MismatchIn (void e0) (void e1)
 
 lambdaRules :: Guid -> TypedValue -> Ref -> [Rule]
 lambdaRules g (TypedValue lambdaValueRef lambdaTypeRef) bodyTypeRef =
@@ -427,15 +399,20 @@ subst from to expr =
 
 mergeToPiResult ::
   RefExpression -> RefExpression -> RefExpression
-mergeToPiResult e0@(Data.Expression _ (Data.ExpressionLeaf Data.Hole) s) e1
-  | IntSet.null substs = e0
-  | otherwise = fmap (Lens.set pSubstitutedArgs substs) e1
+mergeToPiResult =
+  fmap runIdentity .
+  Data.matchExpression onMatch ((fmap . fmap) return onMismatch)
   where
-    substs = s ^. pSubstitutedArgs
-mergeToPiResult e0@(Data.Expression g b s) e1 =
-  case Data.matchExpressionBody mergeToPiResult b (Data.eValue e1) of
-  Nothing -> e0
-  Just newB -> Data.Expression g newB s
+    onMatch x _ = return x
+    onMismatch destHole@(Data.Expression _ (Data.ExpressionLeaf Data.Hole) destPayload) src
+      | IntSet.null substs = destHole
+      | otherwise = fmap (Lens.set pSubstitutedArgs substs) src
+      where
+        substs = destPayload ^. pSubstitutedArgs
+    -- TODO: This seems like it should report an error,
+    -- verify/document that it is OK because the other direction of
+    -- information flow will catch any error:
+    onMismatch dest _ = dest
 
 maybeLambda :: Data.ExpressionBody a -> Maybe (Data.Lambda a)
 maybeLambda (Data.ExpressionLambda x) = Just x
@@ -470,6 +447,7 @@ recurseSubstRules ::
   Ref -> Data.Apply Ref -> [Rule]
 recurseSubstRules cons uncons apply (Data.Apply func arg) =
   [ -- PreSubst with Subst => PostSubst
+    -- (func, arg) -> apply
     Rule [func, arg] $ \ [Data.Expression funcGuid funcBody _, argExpr] -> do
       Data.Lambda _ result <- maybeToList $ uncons funcBody
       return
@@ -482,14 +460,16 @@ recurseSubstRules cons uncons apply (Data.Apply func arg) =
   , -- Recurse over PreSubst and PostSubst together
     --   When PreSubst part refers to its param:
     --     PostSubst part <=> arg
+    -- (apply, func) -> arg
     Rule [apply, func] $ \ [applyExpr, Data.Expression funcGuid funcBody _] -> do
       Data.Lambda _ result <- maybeToList $ uncons funcBody
-      mergeToArg funcGuid result applyExpr
+      mergeToArg funcGuid arg result applyExpr
 
   , -- Propagate data from Apply's to the Func where appropriate.
     -- (Not on non-substituted holes)
-    Rule [apply, func] $ \ [applyExpr, Data.Expression funcGuid funcExpr _] -> do
-      Data.Lambda paramT result <- maybeToList $ uncons funcExpr
+    -- apply -> func result
+    Rule [apply, func] $ \ [applyExpr, Data.Expression funcGuid funcBody _] -> do
+      Data.Lambda paramT result <- maybeToList $ uncons funcBody
       return
         ( func
         , makeRefExpression funcGuid .
@@ -497,18 +477,22 @@ recurseSubstRules cons uncons apply (Data.Apply func arg) =
           mergeToPiResult result applyExpr
         )
   ]
+
+mergeToArg :: Guid -> Ref -> RefExpression -> RefExpression -> [(Ref, RefExpression)]
+mergeToArg paramGuid arg =
+  (fmap . fmap) (execWriter . Compose.unO) $
+  Data.matchExpression onMatch onMismatch
   where
-    mergeToArg paramGuid pre post =
-      case Data.eValue pre of
-      Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef g))
-        | g == paramGuid ->
-          [( arg
-           , (fmap . Lens.over pSubstitutedArgs . IntSet.delete) (unRef arg) post
-           )]
-      preExpr ->
-        Foldable.concat =<< maybeToList
-        (Data.matchExpressionBody (mergeToArg paramGuid) preExpr
-         (Data.eValue post))
+    unit = Compose.O (pure Unit)
+    onMatch _ _ = unit
+    onMismatch
+      Data.Expression { Data.eValue = Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef g)) } post
+      | g == paramGuid =
+        Compose.O . (fmap . const) Unit $ Writer.tell
+        [( arg
+         , (fmap . Lens.over pSubstitutedArgs . IntSet.delete) (unRef arg) post
+         )]
+    onMismatch _ _ = unit
 
 applyRules :: Guid -> TypedValue -> Data.Apply TypedValue -> [Rule]
 applyRules baseGuid apply (Data.Apply func arg) =
@@ -570,12 +554,17 @@ applyRules baseGuid apply (Data.Apply func arg) =
 
   , -- If Func is same as in Apply,
     -- Apply-Arg => Arg
-    Rule [tvVal apply, tvVal func] $ \ [applyExpr, funcExpr] -> do
-      Data.Apply aFunc aArg <- maybeToList . maybeApply $ Data.eValue applyExpr
-      _ <- maybeToList $ Data.matchExpression ((const . const) ()) aFunc funcExpr
+    Rule [tvVal apply, tvVal func] $ \ [applyExpr, funcExpr] -> maybeToList $ do
+      Data.Apply aFunc aArg <- maybeApply $ Data.eValue applyExpr
+      _ <-
+        Data.matchExpression
+        ((const . const) (Just ()))
+        ((const . const) Nothing)
+        aFunc funcExpr
       return (tvVal arg, aArg)
   ]
   ++ recurseSubstRules Data.ExpressionPi maybePi
+  -- TODO: This Data.Apply is a lie
     (tvType apply) (Data.Apply (tvType func) (tvVal arg))
   ++ recurseSubstRules Data.ExpressionLambda maybeLambda
     (tvVal apply) (Data.Apply (tvVal func) (tvVal arg))
@@ -738,7 +727,8 @@ setRefExpr ref newExpr = do
         }
   where
     equiv x y =
-      isJust $ Traversable.sequence =<< Data.matchExpression compareSubsts x y
+      isJust $
+      Data.matchExpression compareSubsts ((const . const) Nothing) x y
     compareSubsts x y = guard $ (x ^. pSubstitutedArgs) == (y ^. pSubstitutedArgs)
 
 {-# SPECIALIZE setRefExpr :: Ref -> RefExpression -> InferT Maybe () #-}

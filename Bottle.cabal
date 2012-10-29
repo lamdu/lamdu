@@ -17,12 +17,12 @@ Library
 
                        -- Bottle:
   Exposed-modules:     Data.AtFieldTH,
-                       Numeric.Utils,
                        Data.List.Utils,
                        Data.Maybe.Utils,
                        Data.MRUMemo,
                        Data.UnionFind.IntMap,
                        Data.Vector.Vector2,
+                       Numeric.Utils,
                        Graphics.DrawingCombinators.Utils,
                        Graphics.UI.Bottle.Animation,
                        Graphics.UI.Bottle.Direction,
@@ -61,7 +61,8 @@ Library
                        Data.Store.Property,
                        Data.Store.Db,
 
-                       System.Random.Utils
+                       System.Random.Utils,
+                       Control.Monad.Unit
 
   Build-depends:       base >= 4,
                        keyvaluehash >= 0.3,
@@ -107,7 +108,8 @@ Executable Editor
                        bottle,
                        random,
                        List >= 0.5.1,
-                       either
+                       either,
+                       TypeCompose
   Other-Modules:       Editor.Anchors,
                        Editor.ExampleDB,
                        Editor.BottleWidgets,

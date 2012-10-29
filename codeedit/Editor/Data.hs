@@ -14,14 +14,13 @@ module Editor.Data
   , Expression(..), atEGuid, atEValue, atEPayload
   , PureExpression, pureExpression
   , canonizeGuids, randomizeGuids
-  , matchExpressionBody
   , matchExpression
   , subExpressions
   , isDependentPi
   ) where
 
-import Control.Applicative (Applicative(..), liftA2)
-import Control.Monad (guard, liftM, liftM2, mzero)
+import Control.Applicative (Applicative(..), liftA2, (<$>))
+import Control.Monad (liftM, liftM2)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (evalState, state)
@@ -43,7 +42,6 @@ import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
 import qualified Data.Store.IRef as IRef
-import qualified Data.Traversable as Traversable
 import qualified System.Random as Random
 
 data Lambda expr = Lambda
@@ -191,34 +189,44 @@ randomizeGuids gen =
 canonizeGuids :: Expression a -> Expression a
 canonizeGuids = randomizeGuids $ Random.mkStdGen 0
 
-matchExpressionBody ::
-  (a -> b -> c) -> ExpressionBody a -> ExpressionBody b -> Maybe (ExpressionBody c)
-matchExpressionBody f (ExpressionLambda l0) (ExpressionLambda l1) =
-  Just . ExpressionLambda $ liftA2 f l0 l1
-matchExpressionBody f (ExpressionPi l0) (ExpressionPi l1) =
-  Just . ExpressionPi $ liftA2 f l0 l1
-matchExpressionBody f (ExpressionApply a0) (ExpressionApply a1) =
-  Just . ExpressionApply $ liftA2 f a0 a1
-matchExpressionBody _ (ExpressionLeaf v0) (ExpressionLeaf v1)
-  | v0 == v1 = Just $ ExpressionLeaf v0
-matchExpressionBody _ _ _ = Nothing
-
+-- The returned expression gets the same guids as the left expression
 matchExpression ::
-  (a -> b -> c) -> Expression a -> Expression b -> Maybe (Expression c)
-matchExpression f =
+  Applicative f =>
+  (a -> b -> f c) ->
+  (Expression a -> Expression b -> f (Expression c)) ->
+  Expression a -> Expression b -> f (Expression c)
+matchExpression onMatch onMismatch =
   go Map.empty
   where
-    go scope (Expression g0 body0 val0) (Expression g1 body1 val1) =
-      fmap (flip (Expression g0) (f val0 val1)) $
-      case matchExpressionBody (go (Map.insert g1 g0 scope)) body0 body1 of
-      Just x -> Traversable.sequence x
-      Nothing ->
-        case (body0, body1) of
-        (ExpressionLeaf l@(GetVariable (ParameterRef par0)),
-         ExpressionLeaf (GetVariable (ParameterRef par1))) -> do
-          guard . (par0 ==) . fromMaybe par1 $ Map.lookup par1 scope
-          return $ ExpressionLeaf l
-        _ -> mzero
+    go scope e0@(Expression g0 body0 pl0) e1@(Expression g1 body1 pl1) =
+      case (body0, body1) of
+      (ExpressionLambda l0, ExpressionLambda l1) ->
+        mkExpression . fmap ExpressionLambda $ onLambda l0 l1
+      (ExpressionPi l0, ExpressionPi l1) ->
+        mkExpression . fmap ExpressionPi $ onLambda l0 l1
+      (ExpressionApply (Apply f0 a0), ExpressionApply (Apply f1 a1)) ->
+        mkExpression . fmap ExpressionApply $ liftA2 Apply (go scope f0 f1) (go scope a0 a1) 
+      (ExpressionLeaf gv@(GetVariable (ParameterRef p0)),
+       ExpressionLeaf (GetVariable (ParameterRef p1)))
+        | p0 == lookupGuid p1 ->
+          mkExpression . pure $ ExpressionLeaf gv
+      (ExpressionLeaf x, ExpressionLeaf y)
+        | x == y -> mkExpression . pure $ ExpressionLeaf x
+      _ -> onMismatch e0 $ onGetParamGuids lookupGuid e1
+      where
+        lookupGuid guid = fromMaybe guid $ Map.lookup guid scope
+        mkExpression body = Expression g0 <$> body <*> onMatch pl0 pl1
+        onLambda (Lambda p0 r0) (Lambda p1 r1) =
+          liftA2 Lambda (go scope p0 p1) $
+          go (Map.insert g1 g0 scope) r0 r1
+
+onGetParamGuids :: (Guid -> Guid) -> Expression a -> Expression a
+onGetParamGuids f (Expression exprGuid body payload) =
+  flip (Expression exprGuid) payload $
+  case body of
+  ExpressionLeaf (GetVariable (ParameterRef getParGuid)) ->
+    makeParameterRef $ f getParGuid
+  _ -> fmap (onGetParamGuids f) body
 
 subExpressions :: Expression a -> [Expression a]
 subExpressions x =
