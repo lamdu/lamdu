@@ -449,41 +449,62 @@ ruleSimpleType (TypedValue val typ) =
          )]
       _ -> []
 
+intoApplyResultRule ::
+  (Data.ExpressionBody RefExpression ->
+   Maybe (Data.Lambda RefExpression)) ->
+  Ref -> Data.Apply Ref -> Rule
+intoApplyResultRule uncons applyRef (Data.Apply func arg) =
+  -- PreSubst with Subst => PostSubst
+  -- (func, arg) -> apply
+  Rule [func, arg] $ \ [Data.Expression funcGuid funcBody _, argExpr] -> do
+    Data.Lambda _ result <- maybeToList $ uncons funcBody
+    return
+      ( applyRef
+      , subst funcGuid
+        ((fmap . Lens.over pSubstitutedArgs . IntSet.insert) (unRef arg) argExpr)
+        result
+      )
+
+intoArgRule ::
+  (Data.ExpressionBody RefExpression ->
+   Maybe (Data.Lambda RefExpression)) ->
+  Ref -> Data.Apply Ref -> Rule
+intoArgRule uncons applyRef (Data.Apply func arg) =
+  -- Recurse over PreSubst and PostSubst together
+  --   When PreSubst part refers to its param:
+  --     PostSubst part <=> arg
+  -- (apply, func) -> arg
+  Rule [applyRef, func] $ \ [applyExpr, Data.Expression funcGuid funcBody _] -> do
+    Data.Lambda _ result <- maybeToList $ uncons funcBody
+    mergeToArg funcGuid arg result applyExpr
+
+intoFuncResultTypeRule ::
+  (Data.Lambda RefExpression ->
+   Data.ExpressionBody RefExpression) ->
+  (Data.ExpressionBody RefExpression ->
+   Maybe (Data.Lambda RefExpression)) ->
+  Ref -> Ref -> Rule
+intoFuncResultTypeRule cons uncons applyRef func =
+  -- Propagate data from Apply's to the Func where appropriate.
+  -- (Not on non-substituted holes)
+  -- apply -> func result
+  Rule [applyRef, func] $ \ [applyExpr, Data.Expression funcGuid funcBody _] -> do
+    Data.Lambda paramT result <- maybeToList $ uncons funcBody
+    return
+      ( func
+      , makeRefExpression funcGuid .
+        cons . Data.Lambda paramT $
+        mergeToPiResult result applyExpr
+      )
+
 recurseSubstRules ::
   (Data.Lambda RefExpression -> Data.ExpressionBody RefExpression) ->
   (Data.ExpressionBody RefExpression -> Maybe (Data.Lambda RefExpression)) ->
   Ref -> Data.Apply Ref -> [Rule]
-recurseSubstRules cons uncons apply (Data.Apply func arg) =
-  [ -- PreSubst with Subst => PostSubst
-    -- (func, arg) -> apply
-    Rule [func, arg] $ \ [Data.Expression funcGuid funcBody _, argExpr] -> do
-      Data.Lambda _ result <- maybeToList $ uncons funcBody
-      return
-        ( apply
-        , subst funcGuid
-          ((fmap . Lens.over pSubstitutedArgs . IntSet.insert) (unRef arg) argExpr)
-          result
-        )
-
-  , -- Recurse over PreSubst and PostSubst together
-    --   When PreSubst part refers to its param:
-    --     PostSubst part <=> arg
-    -- (apply, func) -> arg
-    Rule [apply, func] $ \ [applyExpr, Data.Expression funcGuid funcBody _] -> do
-      Data.Lambda _ result <- maybeToList $ uncons funcBody
-      mergeToArg funcGuid arg result applyExpr
-
-  , -- Propagate data from Apply's to the Func where appropriate.
-    -- (Not on non-substituted holes)
-    -- apply -> func result
-    Rule [apply, func] $ \ [applyExpr, Data.Expression funcGuid funcBody _] -> do
-      Data.Lambda paramT result <- maybeToList $ uncons funcBody
-      return
-        ( func
-        , makeRefExpression funcGuid .
-          cons . Data.Lambda paramT $
-          mergeToPiResult result applyExpr
-        )
+recurseSubstRules cons uncons applyRef apply@(Data.Apply func _) =
+  [ intoApplyResultRule uncons applyRef apply
+  , intoArgRule uncons applyRef apply
+  , intoFuncResultTypeRule cons uncons applyRef func
   ]
 
 mergeToArg :: Guid -> Ref -> RefExpression -> RefExpression -> [(Ref, RefExpression)]
