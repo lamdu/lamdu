@@ -523,80 +523,110 @@ mergeToArg paramGuid arg =
          )]
     onMismatch _ _ = unit
 
+argTypeToPiParamTypeRule :: Guid -> Data.Apply TypedValue -> Rule
+argTypeToPiParamTypeRule baseGuid (Data.Apply func arg) =
+  -- ArgT => Pi ParamT
+  Rule [tvType arg] $ \ [argTypeExpr] ->
+  [( tvType func
+   , makeRefExpression (augmentGuid "ar0" baseGuid) .
+     Data.makePi argTypeExpr $ makeHole "ar1" baseGuid
+   )]
+
+rigidArgApplyTypeToResultTypeRule ::
+  Guid -> TypedValue -> Data.Apply TypedValue -> Rule
+rigidArgApplyTypeToResultTypeRule baseGuid applyTv (Data.Apply func arg) =
+  -- If Arg is GetParam
+  -- ApplyT (Susbt Arg with Hole) => ResultT
+  Rule [tvType applyTv, tvVal arg] $ \ [applyTypeExpr, argExpr] ->
+  case Data.eValue argExpr of
+  Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par)) ->
+    [ ( tvType func
+      , makeRefExpression (augmentGuid "ar2" baseGuid) .
+        Data.makePi (makeHole "ar3" baseGuid) $
+        subst par (makeHole "ar7" baseGuid) applyTypeExpr
+      )
+    ]
+  _ -> []
+
+piParamTypeToArgTypeRule :: Data.Apply TypedValue -> Rule
+piParamTypeToArgTypeRule (Data.Apply func arg) =
+  -- If func type is Pi
+  -- Pi's ParamT => ArgT
+  Rule [tvType func] $ \ [Data.Expression _ funcTExpr _] -> do
+    Data.Lambda paramT _ <- maybeToList $ maybePi funcTExpr
+    return (tvType arg, paramT)
+
+lambdaParamTypeToArgTypeRule :: Data.Apply TypedValue -> Rule
+lambdaParamTypeToArgTypeRule (Data.Apply func arg) =
+  -- If func is Lambda
+  -- Lambda's ParamT => ArgT
+  Rule [tvVal func] $ \ [Data.Expression _ funcExpr _] -> do
+    Data.Lambda paramT _ <- maybeToList $ maybeLambda funcExpr
+    return (tvType arg, paramT)
+
+argTypeToLambdaParamTypeRule :: Guid -> Data.Apply TypedValue -> Rule
+argTypeToLambdaParamTypeRule baseGuid (Data.Apply func arg) =
+  -- If func is Lambda,
+  -- ArgT => Lambda's ParamT
+  Rule [tvVal func, tvType arg] $
+  \ [Data.Expression funcGuid funcExpr _, argTExpr] -> do
+    _ <- maybeToList $ maybeLambda funcExpr
+    return
+      ( tvVal func
+      , makeRefExpression funcGuid .
+        Data.makeLambda argTExpr $ makeHole "ar5" baseGuid
+      )
+
+nonLambdaToApplyValueRule :: Guid -> TypedValue -> Data.Apply TypedValue -> Rule
+nonLambdaToApplyValueRule baseGuid applyTv (Data.Apply func arg) =
+  -- If func is surely not a lambda (a hole too could be a lambda).
+  --
+  -- Applies have a special case in the inferred value handling for
+  -- redexes, and this rule is about detecting that an application is
+  -- *not* a redex, so we can safely set the inferred value to the
+  -- application itself.
+  --
+  -- Func Arg => Outer
+  Rule [tvVal func, tvVal arg] $ \ [funcExpr, argExpr] ->
+  case Data.eValue funcExpr of
+  Data.ExpressionLambda _ -> []
+  Data.ExpressionLeaf Data.Hole -> []
+  _ ->
+    [ ( tvVal applyTv
+      , makeRefExpression (augmentGuid "ar6" baseGuid) $
+        Data.makeApply funcExpr argExpr
+      )
+    ]
+
+applyArgToFuncArgRule ::
+  TypedValue -> Data.Apply TypedValue -> Rule
+applyArgToFuncArgRule applyTv (Data.Apply func arg) =
+  -- If Func is same as in Apply,
+  -- Apply-Arg => Arg
+  Rule [tvVal applyTv, tvVal func] $ \ [applyExpr, funcExpr] -> maybeToList $ do
+    Data.Apply aFunc aArg <- maybeApply $ Data.eValue applyExpr
+    _ <-
+      Data.matchExpression
+      ((const . const) (Just ()))
+      ((const . const) Nothing)
+      aFunc funcExpr
+    return (tvVal arg, aArg)
+
 applyRules :: Guid -> TypedValue -> Data.Apply TypedValue -> [Rule]
-applyRules baseGuid apply (Data.Apply func arg) =
-  [ -- ArgT => Pi ParamT
-    Rule [tvType arg] $ \ [argTypeExpr] ->
-    [( tvType func
-     , makeRefExpression (augmentGuid "ar0" baseGuid) .
-       Data.makePi argTypeExpr $ makeHole "ar1" baseGuid
-     )]
-
-  , -- If Arg is GetParam
-    -- ApplyT (Susbt Arg with Hole) => ResultT
-    Rule [tvType apply, tvVal arg] $ \ [applyTypeExpr, argExpr] ->
-    case Data.eValue argExpr of
-    Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par)) ->
-      [ ( tvType func
-        , makeRefExpression (augmentGuid "ar2" baseGuid) .
-          Data.makePi (makeHole "ar3" baseGuid) $
-          subst par (makeHole "ar7" baseGuid) applyTypeExpr
-        )
-      ]
-    _ -> []
-
-  , -- If func type is Pi
-    -- Pi's ParamT => ArgT
-    Rule [tvType func] $ \ [Data.Expression _ funcTExpr _] -> do
-      Data.Lambda paramT _ <- maybeToList $ maybePi funcTExpr
-      return (tvType arg, paramT)
-
-  , -- If func is Lambda
-    -- Lambda's ParamT => ArgT
-    Rule [tvVal func] $ \ [Data.Expression _ funcExpr _] -> do
-      Data.Lambda paramT _ <- maybeToList $ maybeLambda funcExpr
-      return (tvType arg, paramT)
-
-  , -- If func is Lambda,
-    -- ArgT => Lambda's ParamT
-    Rule [tvVal func, tvType arg] $
-    \ [Data.Expression funcGuid funcExpr _, argTExpr] -> do
-      _ <- maybeToList $ maybeLambda funcExpr
-      return
-        ( tvVal func
-        , makeRefExpression funcGuid .
-          Data.makeLambda argTExpr $ makeHole "ar5" baseGuid
-        )
-
-  , -- If func is surely not a lambda (a hole too could be a lambda),
-    -- Func Arg => Outer
-    Rule [tvVal func, tvVal arg] $ \ [funcExpr, argExpr] ->
-    case Data.eValue funcExpr of
-    Data.ExpressionLambda _ -> []
-    Data.ExpressionLeaf Data.Hole -> []
-    _ ->
-      [ ( tvVal apply
-        , makeRefExpression (augmentGuid "ar6" baseGuid) $
-          Data.makeApply funcExpr argExpr
-        )
-      ]
-
-  , -- If Func is same as in Apply,
-    -- Apply-Arg => Arg
-    Rule [tvVal apply, tvVal func] $ \ [applyExpr, funcExpr] -> maybeToList $ do
-      Data.Apply aFunc aArg <- maybeApply $ Data.eValue applyExpr
-      _ <-
-        Data.matchExpression
-        ((const . const) (Just ()))
-        ((const . const) Nothing)
-        aFunc funcExpr
-      return (tvVal arg, aArg)
+applyRules baseGuid applyTv apply@(Data.Apply func arg) =
+  [ argTypeToPiParamTypeRule baseGuid apply
+  , rigidArgApplyTypeToResultTypeRule baseGuid applyTv apply
+  , piParamTypeToArgTypeRule apply
+  , lambdaParamTypeToArgTypeRule apply
+  , argTypeToLambdaParamTypeRule baseGuid apply
+  , nonLambdaToApplyValueRule baseGuid applyTv apply
+  , applyArgToFuncArgRule applyTv apply
   ]
   ++ recurseSubstRules Data.ExpressionPi maybePi
   -- TODO: This Data.Apply is a lie
-    (tvType apply) (Data.Apply (tvType func) (tvVal arg))
+    (tvType applyTv) (Data.Apply (tvType func) (tvVal arg))
   ++ recurseSubstRules Data.ExpressionLambda maybeLambda
-    (tvVal apply) (Data.Apply (tvVal func) (tvVal arg))
+    (tvVal applyTv) (Data.Apply (tvVal func) (tvVal arg))
 
 data Loaded a = Loaded
   { lExpr :: Data.Expression (a, InferNode)
