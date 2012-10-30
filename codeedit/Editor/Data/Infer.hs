@@ -267,7 +267,7 @@ mergeExprs p0 p1 =
     onMismatch (Data.Expression _ (Data.ExpressionLeaf Data.Hole) s0) e1 =
       return $ fmap (mappend s0) e1
     onMismatch e0 (Data.Expression _ (Data.ExpressionLeaf Data.Hole) s1) =
-      return $ fmap (flip mappend s1) e0
+      return $ fmap (`mappend` s1) e0
     onMismatch e0 e1 =
       Either.left $ MismatchIn (void e0) (void e1)
 
