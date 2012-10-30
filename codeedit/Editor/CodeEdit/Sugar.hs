@@ -18,7 +18,6 @@ module Editor.CodeEdit.Sugar
   , LiteralInteger(..)
   , Inferred(..)
   , Polymorphic(..)
-  , GetVariable(..)
   , HasParens(..)
   , convertExpressionPure
   , loadConvertDefinition, loadConvertExpression
@@ -132,7 +131,7 @@ data Pi m expr = Pi
 -- infix application, but considered an infix section too.
 data Section expr = Section
   { sectionLArg :: Maybe expr
-  , sectionOp :: expr -- TODO: Always a GetVariable, use a more specific type
+  , sectionOp :: expr -- TODO: Always a Data.GetVariable, use a more specific type
   , sectionRArg :: Maybe expr
   } deriving (Functor)
 
@@ -145,7 +144,7 @@ data HoleActions m = HoleActions
   }
 
 data Hole m = Hole
-  { holeScope :: [(Guid, Data.VariableRef)]
+  { holeScope :: [Guid]
   , holeInferResults :: Data.PureExpression -> T m [HoleResult]
   , holeMActions :: Maybe (HoleActions m)
   }
@@ -162,20 +161,16 @@ data Inferred m expr = Inferred
 
 data Polymorphic expr = Polymorphic
   { pFuncGuid :: Guid
-  , pCompact :: GetVariable
+  , pCompact :: Data.VariableRef
   , pFullExpression :: expr
   } deriving (Functor)
-
-data GetVariable
-  = GetParameter Guid | GetDefinition Data.DefinitionIRef
-  deriving Eq
 
 data ExpressionBody m expr
   = ExpressionApply   { eHasParens :: HasParens, eApply :: Data.Apply expr }
   | ExpressionSection { eHasParens :: HasParens, eSection :: Section expr }
   | ExpressionFunc    { eHasParens :: HasParens, _eFunc :: Func m expr }
   | ExpressionPi      { eHasParens :: HasParens, _ePi :: Pi m expr }
-  | ExpressionGetVariable { _getVariable :: GetVariable }
+  | ExpressionGetVariable { _getVariable :: Data.VariableRef }
   | ExpressionHole { _eHole :: Hole m }
   | ExpressionInferred { _eInferred :: Inferred m expr }
   | ExpressionPolymorphic { _ePolymorphic :: Polymorphic expr }
@@ -196,8 +191,8 @@ instance Show expr => Show (ExpressionBody m expr) where
     wrapParens hasParens $ "\\" ++ unwords (map show params) ++ " -> " ++ show body
   show ExpressionPi      { eHasParens = hasParens, _ePi = Pi param resultType } =
     wrapParens hasParens $ "_:" ++ show param ++ " -> " ++ show resultType
-  show ExpressionGetVariable { _getVariable = GetParameter guid } = 'P' : show guid
-  show ExpressionGetVariable { _getVariable = GetDefinition defI } = 'D' : show (IRef.guid defI)
+  show ExpressionGetVariable { _getVariable = Data.ParameterRef guid } = 'P' : show guid
+  show ExpressionGetVariable { _getVariable = Data.DefinitionRef defI } = 'D' : show (IRef.guid defI)
   show ExpressionHole {} = "Hole"
   show ExpressionInferred {} = "Inferred"
   show ExpressionPolymorphic {} = "Poly"
@@ -523,14 +518,6 @@ removeRedundantTypes =
     removeIfNoErrors [_] = []
     removeIfNoErrors xs = xs
 
-mkExpressionGetVariable :: Data.VariableRef -> ExpressionBody m expr
-mkExpressionGetVariable =
-  ExpressionGetVariable . mkGetVariable
-  where
-    -- TODO: Do we still need the separate Sugar.GetParameter/Sugar.GetDefinition?
-    mkGetVariable (Data.ParameterRef param) = GetParameter param
-    mkGetVariable (Data.DefinitionRef defI) = GetDefinition defI
-
 isSameOp :: ExpressionBody m expr -> ExpressionBody m expr -> Bool
 isSameOp (ExpressionPolymorphic p0) (ExpressionPolymorphic p1) =
   on (==) pCompact p0 p1
@@ -609,8 +596,7 @@ convertGetVariable :: Monad m => Data.VariableRef -> Convertor m
 convertGetVariable varRef exprI = do
   isInfix <- liftTransaction $ Infix.isInfixVar varRef
   getVarExpr <-
-    mkExpression exprI $
-    mkExpressionGetVariable varRef
+    mkExpression exprI $ ExpressionGetVariable varRef
   if isInfix
     then
       mkExpression exprI .
@@ -738,7 +724,7 @@ convertWritableHole eeInferred exprI = do
       . Infer.newNodeWithScope
         ((Infer.nScope . Infer.iPoint . eesInferred) eeInferred)
       ) inferState
-    onScopeElement (param, _typeExpr) = (param, Data.ParameterRef param)
+    onScopeElement (param, _typeExpr) = param
     hole processRes = Hole
       { holeScope =
         map onScopeElement . Map.toList . Infer.iScope $

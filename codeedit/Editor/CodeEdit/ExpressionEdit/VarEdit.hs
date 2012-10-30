@@ -9,22 +9,22 @@ import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
-import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
+import qualified Editor.Data as Data
 import qualified Editor.ITransaction as IT
 import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Widget as Widget
 
-colorOf :: Sugar.GetVariable -> Draw.Color
-colorOf (Sugar.GetDefinition _) = Config.definitionColor
-colorOf (Sugar.GetParameter _) = Config.parameterColor
+colorOf :: Data.VariableRef -> Draw.Color
+colorOf (Data.DefinitionRef _) = Config.definitionColor
+colorOf (Data.ParameterRef _) = Config.parameterColor
 
 -- Color should be determined on the outside!
 makeView
   :: MonadF m
-  => Sugar.GetVariable
+  => Data.VariableRef
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
 makeView var myId = ExprGuiM.withNameFromVarRef var $ \(nameSrc, name) ->
@@ -36,12 +36,12 @@ makeView var myId = ExprGuiM.withNameFromVarRef var $ \(nameSrc, name) ->
 
 make
   :: MonadF m
-  => Sugar.GetVariable
+  => Data.VariableRef
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
 make getVar myId = do
   case getVar of
-    Sugar.GetParameter guid -> ExprGuiM.markVariablesAsUsed [guid]
+    Data.ParameterRef guid -> ExprGuiM.markVariablesAsUsed [guid]
     _ -> return ()
   getVarView <-
     ExprGuiM.atEnv (WE.setTextColor (colorOf getVar)) $
@@ -52,11 +52,11 @@ make getVar myId = do
       jumpToDefinition
     jumpToDefinition =
       case getVar of
-        Sugar.GetDefinition defI -> IT.transaction $ do
+        Data.DefinitionRef defI -> IT.transaction $ do
           Anchors.newPane defI
           Anchors.savePreJumpPosition myId
           return $ WidgetIds.fromIRef defI
-        Sugar.GetParameter paramGuid -> IT.transaction $ do
+        Data.ParameterRef paramGuid -> IT.transaction $ do
           Anchors.savePreJumpPosition myId
           return $ WidgetIds.fromGuid paramGuid
   return $ ExpressionGui.atEgWidget (Widget.weakerEvents jumpToDefinitionEventMap) getVarView

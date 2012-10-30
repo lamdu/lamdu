@@ -10,6 +10,7 @@ import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
+import qualified Editor.Data as Data
 import qualified Editor.Layers as Layers
 import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
@@ -34,10 +35,10 @@ makeInner poly myId = do
       VarEdit.makeView (Sugar.pCompact poly) funcId
   where
     funcId = WidgetIds.fromGuid $ Sugar.pFuncGuid poly
-    colorize (Sugar.GetParameter _) =
+    colorize (Data.ParameterRef _) =
       (liftM . bg Layers.compactPolymorphicBG) Config.polymorphicCompactBGColor .
       ExprGuiM.atEnv (WE.setTextColor Config.parameterColor)
-    colorize (Sugar.GetDefinition _) =
+    colorize (Data.DefinitionRef _) =
       ExprGuiM.atEnv (WE.setTextColor Config.polymorphicForegroundColor)
     bg layer =
       ExpressionGui.atEgWidget .

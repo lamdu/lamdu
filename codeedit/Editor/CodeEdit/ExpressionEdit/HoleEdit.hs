@@ -5,7 +5,7 @@ module Editor.CodeEdit.ExpressionEdit.HoleEdit
   ) where
 
 import Control.Applicative ((<*>))
-import Control.Arrow (first, second, (&&&))
+import Control.Arrow (first, second)
 import Control.Monad ((<=<), filterM, liftM, mplus, msum, void)
 import Control.Monad.ListT (ListT)
 import Data.Function (on)
@@ -191,9 +191,9 @@ mkGroup names expr = Group
     pExpr = toPureExpr expr
 
 makeVariableGroup ::
-  MonadF m => (Sugar.GetVariable, Data.VariableRef) -> ExprGuiM m Group
-makeVariableGroup (getVar, varRef) =
-  ExprGuiM.withNameFromVarRef getVar $ \(_, varName) ->
+  MonadF m => Data.VariableRef -> ExprGuiM m Group
+makeVariableGroup varRef =
+  ExprGuiM.withNameFromVarRef varRef $ \(_, varName) ->
   return . mkGroup [varName] . Data.ExpressionLeaf $ Data.GetVariable varRef
 
 toPureExpr
@@ -290,10 +290,10 @@ makeAllResults
   -> ExprGuiM m (ListT (T m) (ResultType, ResultsList))
 makeAllResults holeInfo = do
   paramResults <-
-    mapM (makeVariableGroup . first Sugar.GetParameter) $
+    mapM (makeVariableGroup . Data.ParameterRef) $
     Sugar.holeScope hole
   globalResults <-
-    mapM (makeVariableGroup . (Sugar.GetDefinition &&& Data.DefinitionRef)) =<<
+    mapM (makeVariableGroup . Data.DefinitionRef) =<<
     ExprGuiM.getP Anchors.globals
   let
     searchTerm = Property.value $ hiSearchTerm holeInfo
@@ -502,10 +502,9 @@ pickEventMap _ _ _ = mempty
 
 markTypeMatchesAsUsed :: Monad m => HoleInfo m -> ExprGuiM m ()
 markTypeMatchesAsUsed holeInfo =
-  ExprGuiM.markVariablesAsUsed . map fst =<<
+  ExprGuiM.markVariablesAsUsed =<<
   (filterM
-   (checkInfer . toPureExpr .
-    Data.ExpressionLeaf . Data.GetVariable . snd) .
+   (checkInfer . toPureExpr . Data.makeParameterRef) .
    Sugar.holeScope . hiHole)
     holeInfo
   where

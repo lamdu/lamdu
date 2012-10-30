@@ -35,6 +35,7 @@ import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Editor.Anchors as Anchors
 import qualified Editor.CodeEdit.Sugar as Sugar
+import qualified Editor.Data as Data
 import qualified Editor.WidgetEnvT as WE
 import qualified Graphics.UI.Bottle.Widget as Widget
 
@@ -152,7 +153,7 @@ getDefName guid = do
     else (StoredName, storedName)
 
 withNameFromVarRef ::
-  Monad m => Sugar.GetVariable -> ((NameSource, String) -> ExprGuiM m a) -> ExprGuiM m a
-withNameFromVarRef (Sugar.GetParameter g) useName = withParamName g useName
-withNameFromVarRef (Sugar.GetDefinition defI) useName =
+  Monad m => Data.VariableRef -> ((NameSource, String) -> ExprGuiM m a) -> ExprGuiM m a
+withNameFromVarRef (Data.ParameterRef g) useName = withParamName g useName
+withNameFromVarRef (Data.DefinitionRef defI) useName =
   useName =<< getDefName (IRef.guid defI)
