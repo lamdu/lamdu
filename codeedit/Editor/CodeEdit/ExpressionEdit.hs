@@ -128,7 +128,7 @@ actionsEventMap ::
   ExprGuiM m (EventHandlers (ITransaction ViewTag m))
 actionsEventMap exprGuid holePicker actions = do
   isSelected <-
-    ExprGuiM.otransaction . WE.isSubCursor $
+    ExprGuiM.widgetEnv . WE.isSubCursor $
     WidgetIds.fromGuid exprGuid
   let
     replace

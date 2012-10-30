@@ -140,11 +140,11 @@ make hasParens (Sugar.Func params body) =
     lambdaLabel <-
       liftM ExpressionGui.fromValueWidget .
       ExprGuiM.atEnv (WE.setTextSizeColor Config.lambdaTextSize Config.lambdaColor) .
-      ExprGuiM.otransaction . BWidgets.makeLabel "λ" $ Widget.toAnimId myId
+      ExprGuiM.widgetEnv . BWidgets.makeLabel "λ" $ Widget.toAnimId myId
     rightArrowLabel <-
       liftM ExpressionGui.fromValueWidget .
       ExprGuiM.atEnv (WE.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor) .
-      ExprGuiM.otransaction . BWidgets.makeLabel "→" $ Widget.toAnimId myId
+      ExprGuiM.widgetEnv . BWidgets.makeLabel "→" $ Widget.toAnimId myId
     (paramsEdits, bodyEdit) <-
       makeParamsAndResultEdit (const id) lhs ("Func Body", body) myId params
     return . ExpressionGui.hboxSpaced $

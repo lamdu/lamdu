@@ -52,7 +52,7 @@ data SugarCache m = SugarCache
 
 makeNewDefinitionAction :: Monad m => ExprGuiM m (Transaction ViewTag m Widget.Id)
 makeNewDefinitionAction = do
-  curCursor <- ExprGuiM.otransaction WE.readCursor
+  curCursor <- ExprGuiM.widgetEnv WE.readCursor
   return $ do
     newDefI <- Anchors.makeDefinition
     Anchors.newPane newDefI
@@ -112,7 +112,7 @@ makeClipboardsEdit clipboards = do
   clipboardTitle <-
     if null clipboardsEdits
     then return Spacer.empty
-    else ExprGuiM.otransaction $ BWidgets.makeTextView "Clipboards:" ["clipboards title"]
+    else ExprGuiM.widgetEnv $ BWidgets.makeTextView "Clipboards:" ["clipboards title"]
   return . Box.vboxAlign 0 $ clipboardTitle : clipboardsEdits
 
 makeCodeEdit ::
@@ -135,7 +135,7 @@ makePanesEdit :: MonadF m => [SugarPane m] -> ExprGuiM m (WidgetT m)
 makePanesEdit panes = do
   panesWidget <-
     case panes of
-    [] -> ExprGuiM.otransaction $ BWidgets.makeFocusableTextView "<No panes>" myId
+    [] -> ExprGuiM.widgetEnv $ BWidgets.makeFocusableTextView "<No panes>" myId
     (firstPane:_) ->
       (ExprGuiM.assignCursor myId . WidgetIds.fromGuid . Sugar.drGuid . spDef) firstPane $ do
         definitionEdits <- mapM makePaneWidget panes

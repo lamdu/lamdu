@@ -38,13 +38,13 @@ make (Sugar.DefinitionBuiltin (Data.FFIName modulePath name) setFFIName) myId =
       makeNamePartEditor Config.foreignModuleColor
       modulePathStr modulePathSetter WidgetIds.builtinFFIPath
     varName <- makeNamePartEditor Config.foreignVarColor name nameSetter WidgetIds.builtinFFIName
-    dot <- ExprGuiM.otransaction . BWidgets.makeLabel "." $ Widget.toAnimId myId
+    dot <- ExprGuiM.widgetEnv . BWidgets.makeLabel "." $ Widget.toAnimId myId
     return $ Box.hboxCentered [moduleName, dot, varName]
   where
     makeNamePartEditor color namePartStr mSetter makeWidgetId =
       ExprGuiM.atEnv (WE.setTextColor color) .
       ExpressionGui.wrapDelegated builtinFDConfig FocusDelegator.NotDelegating id
-      (ExprGuiM.otransaction . maybe
+      (ExprGuiM.widgetEnv . maybe
        (BWidgets.makeTextView namePartStr . Widget.toAnimId)
        (BWidgets.makeWordEdit . Property namePartStr) mSetter) $
       makeWidgetId myId

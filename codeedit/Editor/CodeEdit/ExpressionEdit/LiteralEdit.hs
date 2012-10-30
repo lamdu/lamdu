@@ -31,7 +31,7 @@ makeIntView
   -> ExprGuiM m (ExpressionGui m)
 makeIntView myId integer =
   liftM ExpressionGui.fromValueWidget .
-  setColor . ExprGuiM.otransaction $
+  setColor . ExprGuiM.widgetEnv $
   BWidgets.makeTextView (show integer) myId
 
 makeIntEdit
@@ -49,7 +49,7 @@ makeIntEditI
   -> (Integer -> Transaction ViewTag m ())
   -> ExprGuiM m (ExpressionGui m)
 makeIntEditI integer myId setValue = do
-  cursor <- ExprGuiM.otransaction WE.readCursor
+  cursor <- ExprGuiM.widgetEnv WE.readCursor
   let
     suffix = Widget.subId myId cursor
     isEmpty = Sugar.liValue integer == 0 && suffix == Just emptyZeroCursor
@@ -65,7 +65,7 @@ makeIntEditI integer myId setValue = do
       | otherwise = do
         _ <- IT.transaction $ setValue $ read newText
         return eventRes
-  style <- ExprGuiM.otransaction WE.readTextStyle
+  style <- ExprGuiM.widgetEnv WE.readTextStyle
   return .
     ExpressionGui.fromValueWidget .
     Widget.atEvents setter .

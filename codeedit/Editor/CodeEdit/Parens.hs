@@ -37,7 +37,7 @@ addTextParensI onLParen onRParen parenId widget = do
     ]
   where
     label str =
-      ExprGuiM.otransaction . BWidgets.makeLabel str $ parensPrefix parenId
+      ExprGuiM.widgetEnv . BWidgets.makeLabel str $ parensPrefix parenId
 
 highlightExpression :: Widget.Widget f -> Widget.Widget f
 highlightExpression =
@@ -56,9 +56,9 @@ addHighlightedTextParens
   -> ExpressionGui m
   -> ExprGuiM m (ExpressionGui m)
 addHighlightedTextParens myId widget = do
-  mInsideParenId <- ExprGuiM.otransaction $ WE.subCursor rParenId
+  mInsideParenId <- ExprGuiM.widgetEnv $ WE.subCursor rParenId
   widgetWithParens <- addTextParensI id doHighlight (Widget.toAnimId myId) widget
   return $ maybe id (const (ExpressionGui.atEgWidget highlightExpression)) mInsideParenId widgetWithParens
   where
     rParenId = Widget.joinId myId [")"]
-    doHighlight = (ExprGuiM.otransaction . BWidgets.makeFocusableView rParenId =<<)
+    doHighlight = (ExprGuiM.widgetEnv . BWidgets.makeFocusableView rParenId =<<)

@@ -127,12 +127,12 @@ resultsToWidgets
      , Maybe (Sugar.HoleResult, Maybe (WidgetT m))
      )
 resultsToWidgets holeInfo results = do
-  cursorOnMain <- ExprGuiM.otransaction $ WE.isSubCursor myId
+  cursorOnMain <- ExprGuiM.widgetEnv $ WE.isSubCursor myId
   extra <-
     if cursorOnMain
     then liftM (Just . (,) canonizedExpr . fmap fst) makeExtra
     else do
-      cursorOnExtra <- ExprGuiM.otransaction $ WE.isSubCursor moreResultsPrefixId
+      cursorOnExtra <- ExprGuiM.widgetEnv $ WE.isSubCursor moreResultsPrefixId
       if cursorOnExtra
         then do
           extra <- makeExtra
@@ -153,14 +153,14 @@ resultsToWidgets holeInfo results = do
         , msum $ map snd pairs
         )
     moreResult expr = do
-      mResult <- (liftM . fmap . const) cExpr . ExprGuiM.otransaction $ WE.subCursor resultId
+      mResult <- (liftM . fmap . const) cExpr . ExprGuiM.widgetEnv $ WE.subCursor resultId
       widget <- toWidget resultId cExpr
       return (widget, mResult)
       where
         resultId = mappend moreResultsPrefixId $ pureGuidId cExpr
         cExpr = randomizeResultExpr holeInfo (exprHash expr) expr
     toWidget resultId expr =
-      ExprGuiM.otransaction . BWidgets.makeFocusableView resultId .
+      ExprGuiM.widgetEnv . BWidgets.makeFocusableView resultId .
       Widget.strongerEvents (resultPickEventMap holeInfo expr) .
       ExpressionGui.egWidget =<<
       ExprGuiM.makeSubexpresion . Sugar.removeTypes =<<
@@ -169,7 +169,7 @@ resultsToWidgets holeInfo results = do
     addMoreSymbol w = do
       moreSymbolLabel <-
         liftM (Widget.scale moreSymbolSizeFactor) .
-        ExprGuiM.otransaction .
+        ExprGuiM.widgetEnv .
         BWidgets.makeLabel moreSymbol $ Widget.toAnimId myId
       return $ BWidgets.hboxCenteredSpaced [w, moreSymbolLabel]
     canonizedExpr = rlFirst results
@@ -178,7 +178,7 @@ resultsToWidgets holeInfo results = do
 
 makeNoResults :: MonadF m => AnimId -> ExprGuiM m (WidgetT m)
 makeNoResults myId =
-  ExprGuiM.otransaction .
+  ExprGuiM.widgetEnv .
   BWidgets.makeTextView "(No results)" $ mappend myId ["no results"]
 
 mkGroup :: [String] -> Data.ExpressionBody Data.PureExpression -> Group
@@ -361,7 +361,7 @@ makeSearchTermWidget
   -> Maybe Sugar.HoleResult
   -> ExprGuiM m (ExpressionGui m)
 makeSearchTermWidget holeInfo searchTermId mResultToPick =
-  ExprGuiM.otransaction .
+  ExprGuiM.widgetEnv .
   liftM
   (flip ExpressionGui (0.5/Config.holeSearchTermScaleFactor) .
    Widget.scale Config.holeSearchTermScaleFactor .
@@ -401,7 +401,7 @@ makeResultsWidget holeInfo firstResults moreResults = do
         )
   let extraWidgets = maybeToList $ snd . snd =<< mResult
   moreResultsWidgets <-
-    ExprGuiM.otransaction $
+    ExprGuiM.widgetEnv $
     if moreResults
     then liftM (: []) . BWidgets.makeLabel "..." $ Widget.toAnimId myId
     else return []
@@ -520,7 +520,7 @@ makeActiveHoleEdit holeInfo = do
 
   (firstResults, hasMoreResults) <- ExprGuiM.transaction $ collectResults allResults
 
-  cursor <- ExprGuiM.otransaction WE.readCursor
+  cursor <- ExprGuiM.widgetEnv WE.readCursor
   let
     sub = isJust . flip Widget.subId cursor
     shouldBeOnResult = sub $ resultsPrefixId holeInfo
@@ -576,7 +576,7 @@ makeInactiveHoleEdit hole myId =
   liftM
   (ExpressionGui.fromValueWidget .
    makeBackground myId Layers.inactiveHole unfocusedColor) .
-  ExprGuiM.otransaction $ BWidgets.makeFocusableTextView "  " myId
+  ExprGuiM.widgetEnv $ BWidgets.makeFocusableTextView "  " myId
   where
     unfocusedColor
       | canPickResult = Config.holeBackgroundColor
@@ -587,7 +587,7 @@ makeUnwrapped ::
   MonadF m => Sugar.Hole m -> Maybe (Sugar.Expression m) -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeUnwrapped hole mNextHole guid myId = do
-  cursor <- ExprGuiM.otransaction WE.readCursor
+  cursor <- ExprGuiM.widgetEnv WE.readCursor
   searchTermProp <-
     (liftM . Property.atSet . fmap) IT.transaction .
     ExprGuiM.transaction $ Anchors.assocSearchTermRef guid

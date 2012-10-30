@@ -46,7 +46,7 @@ make hasParens (Sugar.Pi param resultType) =
         if paramUsed
         then do
           paramNameEdit <- FuncEdit.makeParamNameEdit name paramGuid
-          colonLabel <- ExprGuiM.otransaction . BWidgets.makeLabel ":" $ Widget.toAnimId paramId
+          colonLabel <- ExprGuiM.widgetEnv . BWidgets.makeLabel ":" $ Widget.toAnimId paramId
           return $ ExpressionGui.hbox
             [ ExpressionGui.fromValueWidget paramNameEdit
             , ExpressionGui.fromValueWidget colonLabel
@@ -55,7 +55,7 @@ make hasParens (Sugar.Pi param resultType) =
         else return paramTypeEdit
       rightArrowLabel <-
         ExprGuiM.atEnv (WE.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor) .
-        ExprGuiM.otransaction . BWidgets.makeLabel "→" $ Widget.toAnimId myId
+        ExprGuiM.widgetEnv . BWidgets.makeLabel "→" $ Widget.toAnimId myId
       return $ ExpressionGui.hboxSpaced
         [paramEdit, ExpressionGui.fromValueWidget rightArrowLabel, resultTypeEdit]
   where

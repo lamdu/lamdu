@@ -1,8 +1,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
 module Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad
   ( ExprGuiM, WidgetT, run
-  -- OTransaction wrappers:
-  , otransaction, transaction, atEnv
+  , widgetEnv
+  
+  , transaction, atEnv
   , getP, assignCursor, assignCursorPrefix
   --
   , makeSubexpresion
@@ -79,12 +80,11 @@ run makeSubexpression settings (ExprGuiM action) =
   where
     f (x, _, _) = x
 
--- TODO: Rename to widgetEnv
-otransaction :: Monad m => WidgetEnvT (Transaction ViewTag m) a -> ExprGuiM m a
-otransaction = ExprGuiM . lift
+widgetEnv :: Monad m => WidgetEnvT (Transaction ViewTag m) a -> ExprGuiM m a
+widgetEnv = ExprGuiM . lift
 
 transaction :: Monad m => Transaction ViewTag m a -> ExprGuiM m a
-transaction = otransaction . lift
+transaction = widgetEnv . lift
 
 getP :: Monad m => Anchors.MkProperty ViewTag m a -> ExprGuiM m a
 getP = transaction . Anchors.getP

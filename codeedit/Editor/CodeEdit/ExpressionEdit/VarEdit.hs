@@ -31,7 +31,7 @@ makeView var myId = ExprGuiM.withNameFromVarRef var $ \(nameSrc, name) ->
   liftM
   (ExpressionGui.fromValueWidget .
    ExpressionGui.nameSrcTint nameSrc) .
-  ExprGuiM.otransaction $
+  ExprGuiM.widgetEnv $
   BWidgets.makeFocusableTextView name myId
 
 make

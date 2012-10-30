@@ -138,7 +138,7 @@ wrapDelegated ::
   (Widget.Id -> ExprGuiM m a) ->
   Widget.Id -> ExprGuiM m b
 wrapDelegated =
-  BWidgets.wrapDelegatedWith (ExprGuiM.otransaction WE.readCursor)
+  BWidgets.wrapDelegatedWith (ExprGuiM.widgetEnv WE.readCursor)
   (ExprGuiM.atEnv . WE.atEnvCursor)
 
 makeNameEdit ::
@@ -148,7 +148,7 @@ makeNameEdit (nameSrc, name) ident myId =
   (ExprGuiM.atEnv . WE.atEnvTextStyle)
   ((TextEdit.atSEmptyUnfocusedString . const) name .
    (TextEdit.atSEmptyFocusedString . const) (concat ["<", name, ">"])) $
-  ExprGuiM.otransaction . flip makeEditor myId .
+  ExprGuiM.widgetEnv . flip makeEditor myId .
   (Property.atSet . fmap) IT.transaction =<<
   (ExprGuiM.transaction . Anchors.assocNameRef) ident
   where

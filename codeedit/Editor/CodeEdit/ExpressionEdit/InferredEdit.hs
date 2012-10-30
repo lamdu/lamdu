@@ -36,11 +36,11 @@ makeUnwrapped
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
 makeUnwrapped inferred guid myId = do
-  mInnerCursor <- ExprGuiM.otransaction $ WE.subCursor myId
+  mInnerCursor <- ExprGuiM.widgetEnv $ WE.subCursor myId
   case mInnerCursor of
     Nothing ->
       ExpressionGui.atEgWidgetM
-      ( ExprGuiM.otransaction
+      ( ExprGuiM.widgetEnv
       . BWidgets.makeFocusableView myId
       . Widget.tint Config.inferredValueTint
       . Widget.scale Config.inferredValueScaleFactor

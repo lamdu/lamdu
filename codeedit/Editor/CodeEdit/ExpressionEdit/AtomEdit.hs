@@ -14,5 +14,5 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 make :: MonadF m => String -> Widget.Id -> ExprGuiM m (ExpressionGui m)
 make name =
   liftM ExpressionGui.fromValueWidget .
-    ExprGuiM.atEnv (WE.setTextColor Config.atomColor) . ExprGuiM.otransaction .
+    ExprGuiM.atEnv (WE.setTextColor Config.atomColor) . ExprGuiM.widgetEnv .
     BWidgets.makeFocusableTextView name

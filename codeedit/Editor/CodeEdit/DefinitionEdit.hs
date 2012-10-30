@@ -43,7 +43,7 @@ makeNameEdit name myId ident =
   myId
 
 makeEquals :: MonadF m => Widget.Id -> ExprGuiM m (Widget f)
-makeEquals = ExprGuiM.otransaction . BWidgets.makeLabel "=" . Widget.toAnimId
+makeEquals = ExprGuiM.widgetEnv . BWidgets.makeLabel "=" . Widget.toAnimId
 
 nonOperatorName :: (ExprGuiM.NameSource, String) -> Bool
 nonOperatorName (ExprGuiM.StoredName, x) = nonEmptyAll (`notElem` Config.operatorChars) x
@@ -163,7 +163,7 @@ makeDefBodyEdit guid content = do
     whereItems -> do
       whereLabel <-
         (liftM . Widget.scale) Config.whereLabelScaleFactor .
-        ExprGuiM.otransaction . BWidgets.makeLabel "where" $ Widget.toAnimId myId
+        ExprGuiM.widgetEnv . BWidgets.makeLabel "where" $ Widget.toAnimId myId
       itemEdits <- mapM makeWhereItemEdit $ reverse whereItems
       return
         [ BWidgets.hboxSpaced
@@ -199,14 +199,14 @@ makeExprDefinition def bodyExpr = do
         (Widget.keysEventMapMovesCursor Config.acceptInferredTypeKeys
          "Accept inferred type"
          (IT.transaction acceptInferredType >> return myId)) .
-        ExprGuiM.otransaction .
+        ExprGuiM.widgetEnv .
         BWidgets.makeFocusableTextView "↱" $ Widget.joinId myId ["accept type"]
       return $ BWidgets.hboxCenteredSpaced [acceptanceLabel, label]
     right = Vector2 1 0.5
     center = 0.5
     mkTypeRow onLabel labelText typeExpr = do
       label <-
-        onLabel . labelStyle . ExprGuiM.otransaction .
+        onLabel . labelStyle . ExprGuiM.widgetEnv .
         BWidgets.makeLabel labelText $ Widget.toAnimId myId
       typeGui <- ExprGuiM.makeSubexpresion typeExpr
       return
