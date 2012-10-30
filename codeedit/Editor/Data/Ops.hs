@@ -6,6 +6,7 @@ module Editor.Data.Ops
   )
 where
 
+import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import qualified Data.Store.Property as Property
@@ -70,26 +71,24 @@ replaceWithHole exprP = replace exprP =<< newHole
 lambdaWrap
   :: Monad m
   => DataIRef.ExpressionProperty (T m)
-  -> T m Data.ExpressionIRef
+  -> T m (Guid, Data.ExpressionIRef)
 lambdaWrap exprP = do
   newParamTypeI <- newHole
-  newExprI <-
-    DataIRef.newExprBody .
-    Data.makeLambda newParamTypeI $ Property.value exprP
+  (newParam, newExprI) <-
+    DataIRef.newLambda newParamTypeI $ Property.value exprP
   Property.set exprP newExprI
-  return newExprI
+  return (newParam, newExprI)
 
 redexWrap
   :: Monad m
   => DataIRef.ExpressionProperty (T m)
-  -> T m Data.ExpressionIRef
+  -> T m (Guid, Data.ExpressionIRef)
 redexWrap exprP = do
   newParamTypeI <- newHole
-  newLambdaI <-
-    DataIRef.newExprBody .
-    Data.makeLambda newParamTypeI $ Property.value exprP
+  (newParam, newLambdaI) <-
+    DataIRef.newLambda newParamTypeI $ Property.value exprP
   newValueI <- newHole
   newApplyI <-
     DataIRef.newExprBody $ Data.makeApply newLambdaI newValueI
   Property.set exprP newApplyI
-  return newLambdaI
+  return (newParam, newLambdaI)

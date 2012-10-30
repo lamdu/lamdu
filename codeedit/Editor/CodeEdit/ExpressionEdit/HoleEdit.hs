@@ -315,8 +315,8 @@ makeAllResults holeInfo = do
     primitiveResults =
       [ mkGroup ["Set", "Type"] $ Data.ExpressionLeaf Data.Set
       , mkGroup ["Integer", "ℤ", "Z"] $ Data.ExpressionLeaf Data.IntegerType
-      , mkGroup ["->", "Pi", "→", "→", "Π", "π"] $ Data.makePi holeExpr holeExpr
-      , mkGroup ["\\", "Lambda", "Λ", "λ"] $ Data.makeLambda holeExpr holeExpr
+      , mkGroup ["->", "Pi", "→", "→", "Π", "π"] $ Data.makePi (Guid.augment "NewPi" (hiGuid holeInfo)) holeExpr holeExpr
+      , mkGroup ["\\", "Lambda", "Λ", "λ"] $ Data.makeLambda (Guid.augment "NewLambda" (hiGuid holeInfo)) holeExpr holeExpr
       ]
     holeExpr = toPureExpr $ Data.ExpressionLeaf Data.Hole
 

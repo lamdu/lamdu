@@ -45,12 +45,10 @@ import qualified Data.Store.IRef as IRef
 import qualified System.Random as Random
 
 data Lambda expr = Lambda
-  { lambdaParamType :: expr
+  { lambdaParamId :: Guid
+  , lambdaParamType :: expr
   , lambdaBody :: expr
   } deriving (Eq, Ord, Show, Functor)
-instance Applicative Lambda where
-  pure x = Lambda x x
-  Lambda p0 b0 <*> Lambda p1 b1 = Lambda (p0 p1) (b0 b1)
 
 data Apply expr = Apply
   { applyFunc :: expr
@@ -90,11 +88,13 @@ data ExpressionBody expr
 makeApply :: expr -> expr -> ExpressionBody expr
 makeApply func arg = ExpressionApply $ Apply func arg
 
-makePi :: expr -> expr -> ExpressionBody expr
-makePi argType resultType = ExpressionPi $ Lambda argType resultType
+makePi :: Guid -> expr -> expr -> ExpressionBody expr
+makePi argId argType resultType =
+  ExpressionPi $ Lambda argId argType resultType
 
-makeLambda :: expr -> expr -> ExpressionBody expr
-makeLambda argType body = ExpressionLambda $ Lambda argType body
+makeLambda :: Guid -> expr -> expr -> ExpressionBody expr
+makeLambda argId argType body =
+  ExpressionLambda $ Lambda argId argType body
 
 makeParameterRef :: Guid -> ExpressionBody a
 makeParameterRef = ExpressionLeaf . GetVariable . ParameterRef
@@ -106,8 +106,10 @@ makeLiteralInteger :: Integer -> ExpressionBody a
 makeLiteralInteger = ExpressionLeaf . LiteralInteger
 
 instance Show expr => Show (ExpressionBody expr) where
-  show (ExpressionLambda (Lambda paramType body)) = concat ["\\:", showP paramType, "==>", showP body]
-  show (ExpressionPi (Lambda paramType body)) = concat [showP paramType, "->", showP body]
+  show (ExpressionLambda (Lambda paramId paramType body)) =
+    concat ["\\", show paramId, ":", showP paramType, "==>", showP body]
+  show (ExpressionPi (Lambda paramId paramType body)) =
+    concat ["(", show paramId, ":", showP paramType, ")->", showP body]
   show (ExpressionApply (Apply func arg)) = unwords [showP func, showP arg]
   show (ExpressionLeaf (GetVariable (ParameterRef guid))) = "par:" ++ show guid
   show (ExpressionLeaf (GetVariable (DefinitionRef defI))) = "def:" ++ show (IRef.guid defI)
@@ -151,7 +153,7 @@ data Expression a = Expression
   } deriving (Functor, Eq, Ord)
 
 instance Show a => Show (Expression a) where
-  show (Expression guid value payload) = show guid ++ ":" ++ show value ++ "{" ++ show payload ++ "}"
+  show (Expression _guid body payload) = show body ++ "{" ++ show payload ++ "}"
 
 AtFieldTH.make ''Expression
 
@@ -167,19 +169,17 @@ randomizeGuids ::
 randomizeGuids gen =
   (`evalState` gen) . (`runReaderT` Map.empty) . go
   where
-    onLambda oldGuid newGuid (Lambda paramType body) =
-      liftM2 Lambda (go paramType) .
-      Reader.local (Map.insert oldGuid newGuid) $ go body
-    go (Expression oldGuid v s) = do
+    onLambda (Lambda oldParamId paramType body) = do
+      newParamId <- lift $ state random
+      liftM2 (Lambda newParamId) (go paramType) .
+        Reader.local (Map.insert oldParamId newParamId) $ go body
+    go (Expression _ v s) = do
       newGuid <- lift $ state random
       liftM (flip (Expression newGuid) s) $
         case v of
-        ExpressionLambda lambda ->
-          liftM ExpressionLambda $ onLambda oldGuid newGuid lambda
-        ExpressionPi lambda ->
-          liftM ExpressionPi $ onLambda oldGuid newGuid lambda
-        ExpressionApply (Apply func arg) ->
-          liftM2 makeApply (go func) (go arg)
+        ExpressionLambda lambda -> liftM ExpressionLambda $ onLambda lambda
+        ExpressionPi lambda -> liftM ExpressionPi $ onLambda lambda
+        ExpressionApply (Apply func arg) -> liftM2 makeApply (go func) (go arg)
         gv@(ExpressionLeaf (GetVariable (ParameterRef guid))) ->
           Reader.asks $
           maybe gv makeParameterRef .
@@ -198,7 +198,7 @@ matchExpression ::
 matchExpression onMatch onMismatch =
   go Map.empty
   where
-    go scope e0@(Expression g0 body0 pl0) e1@(Expression g1 body1 pl1) =
+    go scope e0@(Expression g0 body0 pl0) e1@(Expression _ body1 pl1) =
       case (body0, body1) of
       (ExpressionLambda l0, ExpressionLambda l1) ->
         mkExpression . fmap ExpressionLambda $ onLambda l0 l1
@@ -216,9 +216,9 @@ matchExpression onMatch onMismatch =
       where
         lookupGuid guid = fromMaybe guid $ Map.lookup guid scope
         mkExpression body = Expression g0 <$> body <*> onMatch pl0 pl1
-        onLambda (Lambda p0 r0) (Lambda p1 r1) =
-          liftA2 Lambda (go scope p0 p1) $
-          go (Map.insert g1 g0 scope) r0 r1
+        onLambda (Lambda p0 pt0 r0) (Lambda p1 pt1 r1) =
+          liftA2 (Lambda p0) (go scope pt0 pt1) $
+          go (Map.insert p1 p0 scope) r0 r1
 
 onGetParamGuids :: (Guid -> Guid) -> Expression a -> Expression a
 onGetParamGuids f (Expression exprGuid body payload) =
@@ -234,7 +234,7 @@ subExpressions x =
 
 isDependentPi ::
   Expression a -> Bool
-isDependentPi (Expression g (ExpressionPi (Lambda _ resultType)) _) =
+isDependentPi (Expression _ (ExpressionPi (Lambda g _ resultType)) _) =
   any (isGet . eValue) $ subExpressions resultType
   where
     isGet (ExpressionLeaf (GetVariable (ParameterRef p))) = p == g

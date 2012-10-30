@@ -1,5 +1,5 @@
 module Data.Store.Guid
-    (Guid, make, bs, length, new, combine, fromString, asHex)
+    (Guid, make, bs, length, new, combine, augment, fromString, asHex)
 where
 
 import Control.Arrow (first)
@@ -80,3 +80,6 @@ combine x y =
   where
     rbs = xorBS . encodeS . hash . bs
     xorGuid = inGuid2 xorBS x y
+
+augment :: String -> Guid -> Guid
+augment = combine . fromString

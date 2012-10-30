@@ -26,7 +26,7 @@ showStructure :: Data.ExpressionBody a -> String
 showStructure = show . (fmap . const) Invisible
 
 instance Show (Data.Expression ()) where
-  show (Data.Expression guid value ()) = show guid ++ ":" ++ show value
+  show (Data.Expression _ value ()) = show value
 
 hole :: Data.PureExpression
 hole = mkExpr "hole" $ Data.ExpressionLeaf Data.Hole
@@ -39,11 +39,19 @@ mkExpr = Data.pureExpression . Guid.fromString
 makeApply :: [Data.PureExpression] -> Data.PureExpression
 makeApply = foldl1 (fmap (mkExpr "") . Data.makeApply)
 
+makeLambdaCons ::
+  (Guid -> Data.PureExpression -> Data.PureExpression -> Data.ExpressionBody Data.PureExpression) ->
+  String -> Data.PureExpression -> Data.PureExpression -> Data.PureExpression
+makeLambdaCons cons name paramType body =
+  Data.pureExpression guid $ cons guid paramType body
+  where
+    guid = Guid.fromString name
+
 makeLambda :: String -> Data.PureExpression -> Data.PureExpression -> Data.PureExpression
-makeLambda name paramType body = mkExpr name $ Data.makeLambda paramType body
+makeLambda = makeLambdaCons Data.makeLambda
 
 makePi :: String -> Data.PureExpression -> Data.PureExpression -> Data.PureExpression
-makePi name paramType body = mkExpr name $ Data.makePi paramType body
+makePi = makeLambdaCons Data.makePi
 
 setType :: Data.PureExpression
 setType = mkExpr "set" $ Data.ExpressionLeaf Data.Set

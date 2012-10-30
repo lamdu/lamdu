@@ -340,9 +340,6 @@ mkCutter iref replaceWithHole = do
   Anchors.modP Anchors.clipboards (iref:)
   replaceWithHole
 
-lambdaGuidToParamGuid :: Guid -> Guid
-lambdaGuidToParamGuid = Guid.combine $ Guid.fromString "param"
-
 mkActions :: Monad m => DataIRef.ExpressionProperty (T m) -> Actions m
 mkActions stored =
   Actions
@@ -393,23 +390,20 @@ mkDelete parentP replacerP = do
     replacerI = Property.value replacerP
 
 mkAddParam ::
-  Monad m =>
-  DataIRef.ExpressionProperty (T m) ->
-  T m Guid
-mkAddParam =
-  liftM (lambdaGuidToParamGuid . DataIRef.exprGuid) . DataOps.lambdaWrap
+  Monad m => DataIRef.ExpressionProperty (T m) -> T m Guid
+mkAddParam = liftM fst . DataOps.lambdaWrap
 
 storedIRefP :: Data.Expression (ExprEntityInferred a) -> a
 storedIRefP = Infer.iStored . eesInferred . Data.ePayload
 
 mkFuncParamActions ::
-  Monad m => Guid -> SugarContext ->
+  Monad m => SugarContext ->
   ExprEntityStored m ->
   Data.Lambda (ExprEntityStored m) ->
   DataIRef.ExpressionProperty (T m) ->
   FuncParamActions m
 mkFuncParamActions
-  guid ctx lambdaStored (Data.Lambda paramType _) replacerP =
+  ctx lambdaStored (Data.Lambda param paramType _) replacerP =
   FuncParamActions
   { fpListItemActions =
     ListItemActions
@@ -419,7 +413,7 @@ mkFuncParamActions
     }
   , fpGetExample = do
       exampleP <-
-        Anchors.nonEmptyAssocDataRef "example" guid .
+        Anchors.nonEmptyAssocDataRef "example" param .
         DataIRef.newExprBody $ Data.ExpressionLeaf Data.Hole
       exampleS <- Load.loadExpression exampleP
       loaded <- uncurry (Infer.load loader) newNode Nothing exampleS
@@ -438,23 +432,22 @@ convertLambda
   :: Monad m
   => Data.Lambda (ExprEntity m)
   -> ExprEntity m -> Sugar m (FuncParam m (Expression m), Expression m)
-convertLambda lam@(Data.Lambda paramTypeI bodyI) expr = do
+convertLambda lam@(Data.Lambda param paramTypeI bodyI) expr = do
   sBody <- convertExpressionI bodyI
   typeExpr <- convertExpressionI paramTypeI
   ctx <- readContext
   let
-    guid = Data.eGuid expr
-    param = FuncParam
-      { fpGuid = lambdaGuidToParamGuid guid
+    fp = FuncParam
+      { fpGuid = param
       , fpHiddenLambdaGuid = Nothing
       , fpType = removeRedundantTypes typeExpr
       , fpMActions =
-        mkFuncParamActions guid ctx
+        mkFuncParamActions ctx
         <$> eeStored expr
         <*> Traversable.mapM eeStored lam
         <*> eeProp bodyI
       }
-  return (param, sBody)
+  return (fp, sBody)
 
 convertFunc
   :: Monad m
@@ -465,12 +458,15 @@ convertFunc lambda exprI = do
   mkExpression exprI .
     ExpressionFunc DontHaveParens $
     case rExpressionBody sBody of
-      ExpressionFunc _ (Func params body) ->
-        Func (deleteToNextParam param : params) body
+      ExpressionFunc _ (Func nextParams body) ->
+        case nextParams of
+        [] -> error "Func must have at least 1 param!"
+        (nextParam : _) ->
+          Func (deleteToNextParam nextParam param : nextParams) body
       _ -> Func [param] sBody
   where
-    deleteToNextParam =
-      atFpMActions . fmap . atFpListItemActions . atItemDelete . liftM $ lambdaGuidToParamGuid
+    deleteToNextParam nextParam =
+      atFpMActions . fmap . atFpListItemActions . atItemDelete . liftM . const $ fpGuid nextParam
 
 convertPi
   :: Monad m
@@ -531,10 +527,9 @@ mkExpressionGetVariable :: Data.VariableRef -> ExpressionBody m expr
 mkExpressionGetVariable =
   ExpressionGetVariable . mkGetVariable
   where
-    mkGetVariable (Data.ParameterRef lambdaGuid) =
-      GetParameter $ lambdaGuidToParamGuid lambdaGuid
-    mkGetVariable (Data.DefinitionRef defI) =
-      GetDefinition defI
+    -- TODO: Do we still need the separate Sugar.GetParameter/Sugar.GetDefinition?
+    mkGetVariable (Data.ParameterRef param) = GetParameter param
+    mkGetVariable (Data.DefinitionRef defI) = GetDefinition defI
 
 isSameOp :: ExpressionBody m expr -> ExpressionBody m expr -> Bool
 isSameOp (ExpressionPolymorphic p0) (ExpressionPolymorphic p1) =
@@ -647,14 +642,15 @@ pureHole = Data.pureExpression zeroGuid $ Data.ExpressionLeaf Data.Hole
 countArrows :: Data.PureExpression -> Int
 countArrows Data.Expression
   { Data.eValue =
-    Data.ExpressionPi (Data.Lambda _ resultType)
+    Data.ExpressionPi (Data.Lambda _ _ resultType)
   } = 1 + countArrows resultType
 countArrows _ = 0
 
+-- TODO: Return a record, not a tuple
 countPis :: Data.PureExpression -> (Int, Int)
 countPis e@Data.Expression
   { Data.eValue =
-    Data.ExpressionPi (Data.Lambda _ resultType)
+    Data.ExpressionPi (Data.Lambda _ _ resultType)
   }
   | Data.isDependentPi e = first (1+) $ countPis resultType
   | otherwise = (0, 1 + countArrows resultType)
@@ -742,8 +738,7 @@ convertWritableHole eeInferred exprI = do
       . Infer.newNodeWithScope
         ((Infer.nScope . Infer.iPoint . eesInferred) eeInferred)
       ) inferState
-    onScopeElement (lambdaGuid, _typeExpr) =
-      (lambdaGuidToParamGuid lambdaGuid, Data.ParameterRef lambdaGuid)
+    onScopeElement (param, _typeExpr) = (param, Data.ParameterRef param)
     hole processRes = Hole
       { holeScope =
         map onScopeElement . Map.toList . Infer.iScope $
@@ -802,10 +797,10 @@ uninferredHoles Data.Expression { Data.eValue = Data.ExpressionApply (Data.Apply
   else uninferredHoles func ++ uninferredHoles arg
 uninferredHoles e@Data.Expression { Data.eValue = Data.ExpressionLeaf Data.Hole } = [e]
 uninferredHoles Data.Expression
-  { Data.eValue = Data.ExpressionPi (Data.Lambda paramType resultType) } =
+  { Data.eValue = Data.ExpressionPi (Data.Lambda _ paramType resultType) } =
     uninferredHoles resultType ++ uninferredHoles paramType
 uninferredHoles Data.Expression
-  { Data.eValue = Data.ExpressionLambda (Data.Lambda paramType result) } =
+  { Data.eValue = Data.ExpressionLambda (Data.Lambda _ paramType result) } =
     uninferredHoles result ++ uninferredHoles paramType
 uninferredHoles Data.Expression { Data.eValue = body } =
   Foldable.concatMap uninferredHoles body
@@ -902,22 +897,21 @@ convertDefinitionParams ::
   T m ([FuncParam m (Expression m)], Data.Expression (ExprEntityStored m))
 convertDefinitionParams ctx expr =
   case Data.eValue expr of
-  Data.ExpressionLambda lam@(Data.Lambda paramType body) -> do
+  Data.ExpressionLambda lam@(Data.Lambda param paramType body) -> do
     paramTypeS <- convertStoredExpression paramType ctx
     let
-      guid = Data.eGuid expr
-      param = FuncParam
-        { fpGuid = lambdaGuidToParamGuid guid
+      fp = FuncParam
+        { fpGuid = param
         , fpHiddenLambdaGuid = Just $ Data.eGuid expr
         , fpType = removeRedundantTypes paramTypeS
         , fpMActions =
           Just $
-          mkFuncParamActions guid ctx
+          mkFuncParamActions ctx
           (Data.ePayload expr) (fmap Data.ePayload lam)
           (storedIRefP body)
         }
-    (nextParams, funcBody) <- convertDefinitionParams ctx body
-    return (param : nextParams, funcBody)
+    (nextFPs, funcBody) <- convertDefinitionParams ctx body
+    return (fp : nextFPs, funcBody)
   _ -> return ([], expr)
 
 convertWhereItems ::
@@ -929,7 +923,8 @@ convertWhereItems ctx
   { Data.eValue = Data.ExpressionApply apply@Data.Apply
   { Data.applyFunc = Data.Expression
   { Data.eValue = Data.ExpressionLambda lambda@Data.Lambda
-  { Data.lambdaParamType = Data.Expression
+  { Data.lambdaParamId = param
+  , Data.lambdaParamType = Data.Expression
   { Data.eValue = Data.ExpressionLeaf Data.Hole
   }}}}} = do
     value <- convertDefinitionContent ctx $ Data.applyArg apply
@@ -937,7 +932,7 @@ convertWhereItems ctx
       body = Data.lambdaBody lambda
       item = WhereItem
         { wiValue = value
-        , wiGuid = lambdaGuidToParamGuid . Data.eGuid $ Data.applyFunc apply
+        , wiGuid = param
         , wiHiddenGuids =
             map Data.eGuid
             [ topLevel
@@ -946,9 +941,7 @@ convertWhereItems ctx
         , wiActions =
             ListItemActions
             { itemDelete = mkDelete (prop topLevel) (prop body)
-            , itemAddNext =
-                liftM (lambdaGuidToParamGuid . DataIRef.exprGuid) .
-                DataOps.redexWrap $ prop topLevel
+            , itemAddNext = liftM fst . DataOps.redexWrap $ prop topLevel
             }
         }
     (nextItems, whereBody) <- convertWhereItems ctx body
@@ -971,8 +964,7 @@ convertDefinitionContent sugarContext expr = do
     , dWhereItems = whereItems
     , dAddFirstParam = mkAddParam $ stored expr
     , dAddInnermostWhereItem =
-        liftM (lambdaGuidToParamGuid . DataIRef.exprGuid) .
-        DataOps.redexWrap $ stored whereBody
+        liftM fst . DataOps.redexWrap $ stored whereBody
     }
   where
     stored = Infer.iStored . eesInferred . Data.ePayload

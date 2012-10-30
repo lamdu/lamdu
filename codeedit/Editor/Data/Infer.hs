@@ -91,12 +91,9 @@ makeRefExpression :: Guid -> Data.ExpressionBody RefExpression -> RefExpression
 makeRefExpression g expr =
   Data.Expression g expr mempty
 
-augmentGuid :: String -> Guid -> Guid
-augmentGuid = Guid.combine . Guid.fromString
-
 makeHole :: String -> Guid -> RefExpression
 makeHole s g =
-  makeRefExpression (augmentGuid s g) $ Data.ExpressionLeaf Data.Hole
+  makeRefExpression (Guid.augment s g) $ Data.ExpressionLeaf Data.Hole
 
 setExpr :: RefExpression
 setExpr =
@@ -214,11 +211,11 @@ initialExprs loader scope entity =
   _ -> return (exprStructure, holeType)
   where
     innerHole =
-      Data.pureExpression (augmentGuid "innerHole" (Data.eGuid entity)) $
+      Data.pureExpression (Guid.augment "innerHole" (Data.eGuid entity)) $
       Data.ExpressionLeaf Data.Hole
     exprStructure = fmap (const innerHole) $ Data.eValue entity
     holeType =
-      Data.pureExpression (augmentGuid "type" (Data.eGuid entity)) $
+      Data.pureExpression (Guid.augment "type" (Data.eGuid entity)) $
       Data.ExpressionLeaf Data.Hole
 
 intMapMod :: Functor f => Int -> (v -> f v) -> IntMap v -> f (IntMap v)
@@ -273,34 +270,34 @@ mergeExprs p0 p1 =
 
 -- Lambda body type -> Pi result type
 lambdaBodyTypeToPiResultTypeRule :: Guid -> Ref -> Ref -> Rule
-lambdaBodyTypeToPiResultTypeRule g lambdaTypeRef bodyTypeRef =
+lambdaBodyTypeToPiResultTypeRule param lambdaTypeRef bodyTypeRef =
   Rule [bodyTypeRef] $ \[bodyTypeExpr] ->
   [( lambdaTypeRef
-   , makeRefExpression g $ Data.makePi (makeHole "paramType" g) bodyTypeExpr
+   , makeRefExpression param $ Data.makePi param (makeHole "paramType" param) bodyTypeExpr
    )]
 
 piToLambdaRule :: Guid -> TypedValue -> Ref -> Rule
-piToLambdaRule g (TypedValue lambdaValueRef lambdaTypeRef) bodyTypeRef =
-  Rule [lambdaTypeRef] $ \[Data.Expression piG body _] -> do
-    Data.Lambda paramType resultType <- maybeToList $ maybePi body
+piToLambdaRule param (TypedValue lambdaValueRef lambdaTypeRef) bodyTypeRef =
+  Rule [lambdaTypeRef] $ \[Data.Expression _ piBody _] -> do
+    Data.Lambda piParam paramType resultType <- maybeToList $ maybePi piBody
     [ -- Pi result type -> Body type
       ( bodyTypeRef
-      , subst piG
+      , subst piParam
         ( makeRefExpression (Guid.fromString "getVar")
-          (Data.makeParameterRef g)
+          (Data.makeParameterRef param)
         )
         resultType
       )
       , -- Pi param type -> Lambda param type
         ( lambdaValueRef
-        , makeRefExpression g . Data.makeLambda paramType $ makeHole "body" g
+        , makeRefExpression param . Data.makeLambda piParam paramType $ makeHole "body" param
         )
       ]
 
 lambdaRules :: Guid -> TypedValue -> Ref -> [Rule]
-lambdaRules g lambdaTv@(TypedValue _ lambdaTypeRef) bodyTypeRef =
-  [ lambdaBodyTypeToPiResultTypeRule g lambdaTypeRef bodyTypeRef
-  , piToLambdaRule g lambdaTv bodyTypeRef
+lambdaRules param lambdaTv@(TypedValue _ lambdaTypeRef) bodyTypeRef =
+  [ lambdaBodyTypeToPiResultTypeRule param lambdaTypeRef bodyTypeRef
+  , piToLambdaRule param lambdaTv bodyTypeRef
   ]
 
 unionRules :: Ref -> Ref -> [Rule]
@@ -313,39 +310,39 @@ lambdaStructureRules ::
   (Data.Lambda RefExpression -> Data.ExpressionBody RefExpression) ->
   (Data.ExpressionBody RefExpression -> Maybe (Data.Lambda RefExpression)) ->
   Guid -> Ref -> Data.Lambda Ref -> [Rule]
-lambdaStructureRules cons uncons g lamRef (Data.Lambda paramTypeRef resultRef) =
+lambdaStructureRules cons uncons exprGuid lamRef (Data.Lambda param paramTypeRef resultRef) =
   [ -- Copy the structure from the parent to the paramType and
     -- result
     Rule [lamRef] $ \ [expr] -> do
-      Data.Lambda paramTypeE resultE <-
+      Data.Lambda _ paramTypeE resultE <-
         maybeToList . uncons $ Data.eValue expr
       [(paramTypeRef, paramTypeE), (resultRef, resultE)]
   , -- Copy the structure from the children to the parent
     Rule [paramTypeRef, resultRef] $ \ [paramTypeExpr, resultExpr] ->
     [( lamRef
-     , makeRefExpression g . cons $ Data.Lambda paramTypeExpr resultExpr
+     , makeRefExpression exprGuid . cons $ Data.Lambda param paramTypeExpr resultExpr
      )]
   ]
 
 makeNodeRules :: Data.Expression InferNode -> [Rule]
-makeNodeRules (Data.Expression g exprBody (InferNode typedVal scope)) =
+makeNodeRules (Data.Expression exprGuid exprBody (InferNode typedVal scope)) =
   case fmap (nRefs . Data.ePayload) exprBody of
-  Data.ExpressionPi lambda@(Data.Lambda _ resultType) ->
+  Data.ExpressionPi lambda@(Data.Lambda _ _ resultType) ->
     setRule (tvType resultType) :
     onLambda Data.ExpressionPi maybePi lambda
-  Data.ExpressionLambda lambda@(Data.Lambda _ body) ->
-    lambdaRules g typedVal (tvType body) ++
+  Data.ExpressionLambda lambda@(Data.Lambda param _ body) ->
+    lambdaRules param typedVal (tvType body) ++
     onLambda Data.ExpressionLambda maybeLambda lambda
-  Data.ExpressionApply apply -> applyRules g typedVal apply
+  Data.ExpressionApply apply -> applyRules exprGuid typedVal apply
   Data.ExpressionLeaf (Data.GetVariable var) -> do
     ref <- maybeToList $ Map.lookup var scope
     unionRules ref $ tvType typedVal
   _ -> []
   where
     setRule ref = Rule [] $ \ [] -> [(ref, setExpr)]
-    onLambda cons uncons lam@(Data.Lambda paramType _) =
+    onLambda cons uncons lam@(Data.Lambda _ paramType _) =
       setRule (tvType paramType) :
-      lambdaStructureRules cons uncons g (tvVal typedVal) (fmap tvVal lam)
+      lambdaStructureRules cons uncons exprGuid (tvVal typedVal) (fmap tvVal lam)
 
 commonRules :: Data.Expression InferNode -> [Rule]
 commonRules expr =
@@ -377,10 +374,10 @@ loadNode loader scope entity typedValue = do
     Data.Expression (Data.eGuid entity) exprBody
     (Data.ePayload entity, InferNode typedValue scope)
   where
-    onLambda cons (Data.Lambda paramType@(_, paramTypeTv) result) = do
+    onLambda cons (Data.Lambda param paramType@(_, paramTypeTv) result) = do
       paramTypeR <- go id paramType
-      let paramRef = Data.ParameterRef $ Data.eGuid entity
-      liftM (cons . Data.Lambda paramTypeR) $
+      let paramRef = Data.ParameterRef param
+      liftM (cons . Data.Lambda param paramTypeR) $
         go (Map.insert paramRef (tvVal paramTypeTv)) result
     go onScope = uncurry . loadNode loader $ onScope scope
     addTypedVal x =
@@ -399,8 +396,8 @@ subst ::
   Data.Expression a -> Data.Expression a
 subst from to expr =
   case Data.eValue expr of
-  Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef g))
-    | g == from -> to
+  Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef paramRef))
+    | paramRef == from -> to
   _ ->
     (Data.atEValue . fmap)
     (subst from to) expr
@@ -437,15 +434,15 @@ maybeApply _ = Nothing
 ruleSimpleType :: TypedValue -> Rule
 ruleSimpleType (TypedValue val typ) =
   Rule [val] $ \[valExpr] -> case valExpr of
-    Data.Expression g valExprBody _ -> case valExprBody of
+    Data.Expression exprGuid valExprBody _ -> case valExprBody of
       Data.ExpressionLeaf Data.Set -> [(typ, setExpr)]
       Data.ExpressionLeaf Data.IntegerType -> [(typ, setExpr)]
       Data.ExpressionLeaf (Data.LiteralInteger _) -> [(typ, intTypeExpr)]
       Data.ExpressionPi _ -> [(typ, setExpr)]
-      Data.ExpressionLambda (Data.Lambda paramType _) ->
+      Data.ExpressionLambda (Data.Lambda param paramType _) ->
         [( typ
-         , makeRefExpression g . Data.makePi paramType $
-           makeHole "lambdaBody" g
+         , makeRefExpression exprGuid . Data.makePi param paramType $
+           makeHole "lambdaBody" exprGuid
          )]
       _ -> []
 
@@ -456,11 +453,11 @@ intoApplyResultRule ::
 intoApplyResultRule uncons applyRef func arg =
   -- PreSubst with Subst => PostSubst
   -- (func, arg) -> apply
-  Rule [func, arg] $ \ [Data.Expression funcGuid funcBody _, argExpr] -> do
-    Data.Lambda _ result <- maybeToList $ uncons funcBody
+  Rule [func, arg] $ \ [Data.Expression _ funcBody _, argExpr] -> do
+    Data.Lambda param _ result <- maybeToList $ uncons funcBody
     return
       ( applyRef
-      , subst funcGuid
+      , subst param
         ((fmap . Lens.over pSubstitutedArgs . IntSet.insert) (unRef arg) argExpr)
         result
       )
@@ -474,9 +471,9 @@ intoArgRule uncons applyRef func arg =
   --   When PreSubst part refers to its param:
   --     PostSubst part <=> arg
   -- (apply, func) -> arg
-  Rule [applyRef, func] $ \ [applyExpr, Data.Expression funcGuid funcBody _] -> do
-    Data.Lambda _ result <- maybeToList $ uncons funcBody
-    mergeToArg funcGuid arg result applyExpr
+  Rule [applyRef, func] $ \ [applyExpr, Data.Expression _ funcBody _] -> do
+    Data.Lambda param _ result <- maybeToList $ uncons funcBody
+    mergeToArg param arg result applyExpr
 
 intoFuncResultTypeRule ::
   (Data.Lambda RefExpression ->
@@ -489,11 +486,11 @@ intoFuncResultTypeRule cons uncons applyRef func =
   -- (Not on non-substituted holes)
   -- apply -> func result
   Rule [applyRef, func] $ \ [applyExpr, Data.Expression funcGuid funcBody _] -> do
-    Data.Lambda paramT result <- maybeToList $ uncons funcBody
+    Data.Lambda param paramT result <- maybeToList $ uncons funcBody
     return
       ( func
       , makeRefExpression funcGuid .
-        cons . Data.Lambda paramT $
+        cons . Data.Lambda param paramT $
         mergeToPiResult result applyExpr
       )
 
@@ -508,7 +505,7 @@ recurseSubstRules cons uncons applyRef func arg =
   ]
 
 mergeToArg :: Guid -> Ref -> RefExpression -> RefExpression -> [(Ref, RefExpression)]
-mergeToArg paramGuid arg =
+mergeToArg param arg =
   (fmap . fmap) (execWriter . Compose.unO) $
   Data.matchExpression onMatch onMismatch
   where
@@ -516,7 +513,7 @@ mergeToArg paramGuid arg =
     onMatch _ _ = unit
     onMismatch
       Data.Expression { Data.eValue = Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef g)) } post
-      | g == paramGuid =
+      | g == param =
         Compose.O . (fmap . const) Unit $ Writer.tell
         [( arg
          , (fmap . Lens.over pSubstitutedArgs . IntSet.delete) (unRef arg) post
@@ -528,9 +525,11 @@ argTypeToPiParamTypeRule baseGuid (Data.Apply func arg) =
   -- ArgT => Pi ParamT
   Rule [tvType arg] $ \ [argTypeExpr] ->
   [( tvType func
-   , makeRefExpression (augmentGuid "ar0" baseGuid) .
-     Data.makePi argTypeExpr $ makeHole "ar1" baseGuid
+   , makeRefExpression piGuid .
+     Data.makePi piGuid argTypeExpr $ makeHole "ar1" baseGuid
    )]
+  where
+    piGuid = Guid.augment "ar0" baseGuid
 
 rigidArgApplyTypeToResultTypeRule ::
   Guid -> TypedValue -> Data.Apply TypedValue -> Rule
@@ -541,19 +540,21 @@ rigidArgApplyTypeToResultTypeRule baseGuid applyTv (Data.Apply func arg) =
   case Data.eValue argExpr of
   Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par)) ->
     [ ( tvType func
-      , makeRefExpression (augmentGuid "ar2" baseGuid) .
-        Data.makePi (makeHole "ar3" baseGuid) $
+      , makeRefExpression piGuid .
+        Data.makePi piGuid (makeHole "ar3" baseGuid) $
         subst par (makeHole "ar7" baseGuid) applyTypeExpr
       )
     ]
   _ -> []
+  where
+    piGuid = Guid.augment "ar2" baseGuid
 
 piParamTypeToArgTypeRule :: Data.Apply TypedValue -> Rule
 piParamTypeToArgTypeRule (Data.Apply func arg) =
   -- If func type is Pi
   -- Pi's ParamT => ArgT
   Rule [tvType func] $ \ [Data.Expression _ funcTExpr _] -> do
-    Data.Lambda paramT _ <- maybeToList $ maybePi funcTExpr
+    Data.Lambda _ paramT _ <- maybeToList $ maybePi funcTExpr
     return (tvType arg, paramT)
 
 lambdaParamTypeToArgTypeRule :: Data.Apply TypedValue -> Rule
@@ -561,7 +562,7 @@ lambdaParamTypeToArgTypeRule (Data.Apply func arg) =
   -- If func is Lambda
   -- Lambda's ParamT => ArgT
   Rule [tvVal func] $ \ [Data.Expression _ funcExpr _] -> do
-    Data.Lambda paramT _ <- maybeToList $ maybeLambda funcExpr
+    Data.Lambda _ paramT _ <- maybeToList $ maybeLambda funcExpr
     return (tvType arg, paramT)
 
 argTypeToLambdaParamTypeRule :: Guid -> Data.Apply TypedValue -> Rule
@@ -570,11 +571,11 @@ argTypeToLambdaParamTypeRule baseGuid (Data.Apply func arg) =
   -- ArgT => Lambda's ParamT
   Rule [tvVal func, tvType arg] $
   \ [Data.Expression funcGuid funcExpr _, argTExpr] -> do
-    _ <- maybeToList $ maybeLambda funcExpr
+    Data.Lambda param _ _ <- maybeToList $ maybeLambda funcExpr
     return
       ( tvVal func
       , makeRefExpression funcGuid .
-        Data.makeLambda argTExpr $ makeHole "ar5" baseGuid
+        Data.makeLambda param argTExpr $ makeHole "ar5" baseGuid
       )
 
 nonLambdaToApplyValueRule :: Guid -> TypedValue -> Data.Apply TypedValue -> Rule
@@ -593,7 +594,7 @@ nonLambdaToApplyValueRule baseGuid applyTv (Data.Apply func arg) =
   Data.ExpressionLeaf Data.Hole -> []
   _ ->
     [ ( tvVal applyTv
-      , makeRefExpression (augmentGuid "ar6" baseGuid) $
+      , makeRefExpression (Guid.augment "ar6" baseGuid) $
         Data.makeApply funcExpr argExpr
       )
     ]

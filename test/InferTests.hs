@@ -81,6 +81,12 @@ mkInferredNode ::
 mkInferredNode g iVal iType body =
   Data.Expression (Guid.fromString g) body (iVal, iType)
 
+makeNamedLambda :: String -> expr -> expr -> Data.ExpressionBody expr
+makeNamedLambda = Data.makeLambda . Guid.fromString
+
+makeNamedPi :: String -> expr -> expr -> Data.ExpressionBody expr
+makeNamedPi = Data.makePi . Guid.fromString
+
 simpleTests :: [HUnit.Test]
 simpleTests =
   [ testInfer "literal int"
@@ -97,7 +103,7 @@ simpleTests =
     mkInferredNode ""
       (makePi "pi" hole hole)
       setType $
-    Data.makePi
+    makeNamedPi ""
       (inferredHole setType)
       (inferredHole setType)
   ]
@@ -120,7 +126,7 @@ inferPart =
   mkInferredNode "xs"
     (exprWithHoles intType intType)
     endoListOfInt $
-  Data.makeLambda
+  makeNamedLambda "xs"
     (mkInferredNode "" (listOf intType) setType
       (Data.makeApply
         (mkInferredGetDef "List")
@@ -163,7 +169,7 @@ applyOnVar =
   mkInferredNode "lambda"
     (makeFunnyLambda "" hole)
     (makePi "" hole (getDefExpr "bool")) $
-  Data.makeLambda (inferredHole setType) $
+  makeNamedLambda "lambda" (inferredHole setType) $
   mkInferredNode ""
     (makeApply [getDefExpr "IntToBoolFunc", hole])
     (getDefExpr "bool") $
@@ -186,7 +192,7 @@ idTest =
     (makePi "" intType intType) $
   Data.makeApply
     (mkInferredGetDef "id") $
-  mkInferredLeafSimple Data.IntegerType setType
+    mkInferredLeafSimple Data.IntegerType setType
 
 fOfXIsFOf5 :: HUnit.Test
 fOfXIsFOf5 =
@@ -195,7 +201,7 @@ fOfXIsFOf5 =
   mkInferredNode "x"
     (makeLambda "" intType (makeApply [getRecursiveDef, five]))
     (makePi "" intType hole) $
-  Data.makeLambda
+  makeNamedLambda "x"
     (mkInferredLeaf Data.Hole intType setType) $
   mkInferredNode ""
     (makeApply [getRecursiveDef, five])
@@ -297,10 +303,10 @@ depApply =
   -- expr:
   tLambda .
   -- expected result:
-  mkInferredNode "t"  tLambda  tPi  . Data.makeLambda inferredSetType .
-  mkInferredNode "rt" rtLambda rtPi . Data.makeLambda inferredRTType .
-  mkInferredNode "f"  fLambda  fPi  . Data.makeLambda inferredFParamType .
-  mkInferredNode "x"  xLambda  xPi  . Data.makeLambda inferredXParamType .
+  mkInferredNode "t"  tLambda  tPi  . makeNamedLambda "t"  inferredSetType .
+  mkInferredNode "rt" rtLambda rtPi . makeNamedLambda "rt" inferredRTType .
+  mkInferredNode "f"  fLambda  fPi  . makeNamedLambda "f"  inferredFParamType .
+  mkInferredNode "x"  xLambda  xPi  . makeNamedLambda "x"  inferredXParamType .
   mkInferredNode "" fOfX (rtAppliedTo "x") $ Data.makeApply inferredF inferredX
   where
     inferredF = mkInferredGetParam "f" fParamType
@@ -310,9 +316,9 @@ depApply =
     inferredSetType = mkInferredLeafSimple Data.Set setType
     inferredRTType =
       mkInferredNode "" rtParamType setType $
-      Data.makePi inferredT inferredSetType
+      makeNamedPi "" inferredT inferredSetType
     inferredFParamType =
-      mkInferredNode "d" fParamType setType . Data.makePi inferredT .
+      mkInferredNode "d" fParamType setType . makeNamedPi "d" inferredT .
       mkInferredNode "" (rtAppliedTo "d") setType .
       Data.makeApply inferredRT .
       mkInferredGetParam "d" $
@@ -338,7 +344,7 @@ getLambdaBody :: Data.Expression a -> Data.Expression a
 getLambdaBody e =
   x
   where
-    Data.ExpressionLambda (Data.Lambda _ x) = Data.eValue e
+    Data.ExpressionLambda (Data.Lambda _ _ x) = Data.eValue e
 
 getApplyFunc :: Data.Expression a -> Data.Expression a
 getApplyFunc e =
@@ -424,7 +430,7 @@ resumptionTests =
   , testCase "ref to the def on the side" $
     let
       (exprD, refMap) = doInfer $ makeLambda "" hole hole
-      Data.ExpressionLambda (Data.Lambda _ body) = Data.eValue exprD
+      Data.ExpressionLambda (Data.Lambda _ _ body) = Data.eValue exprD
       scope = Infer.nScope . Infer.iPoint $ Data.ePayload body
       (exprR, _) =
         uncurry doInferM (Infer.newNodeWithScope scope refMap) Nothing Nothing

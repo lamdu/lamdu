@@ -59,7 +59,7 @@ loadExpression exprP = do
   where
     exprI = Property.value exprP
     loadLambda cons lambda =
-      liftM2 Data.Lambda
+      liftM2 (Data.Lambda (Data.lambdaParamId lambda))
       (loadExpression (lambdaTypeProp cons exprI lambda))
       (loadExpression (lambdaBodyProp cons exprI lambda))
 
@@ -88,18 +88,18 @@ lambdaTypeProp
   => (DataIRef.Lambda -> DataIRef.ExpressionBody)
   -> Data.ExpressionIRef -> DataIRef.Lambda
   -> DataIRef.ExpressionProperty (T m)
-lambdaTypeProp cons lambdaI (Data.Lambda paramTypeI bodyI) =
+lambdaTypeProp cons lambdaI (Data.Lambda param paramTypeI bodyI) =
   Property paramTypeI
-  (DataIRef.writeExprBody lambdaI . cons . flip Data.Lambda bodyI)
+  (DataIRef.writeExprBody lambdaI . cons . flip (Data.Lambda param) bodyI)
 
 lambdaBodyProp
   :: Monad m
   => (DataIRef.Lambda -> DataIRef.ExpressionBody)
   -> Data.ExpressionIRef -> DataIRef.Lambda
   -> DataIRef.ExpressionProperty (T m)
-lambdaBodyProp cons lambdaI (Data.Lambda paramTypeI bodyI) =
+lambdaBodyProp cons lambdaI (Data.Lambda param paramTypeI bodyI) =
   Property bodyI
-  (DataIRef.writeExprBody lambdaI . cons . Data.Lambda paramTypeI)
+  (DataIRef.writeExprBody lambdaI . cons . Data.Lambda param paramTypeI)
 
 applyFuncProp
   :: Monad m

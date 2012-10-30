@@ -147,7 +147,7 @@ createBuiltins =
       let aGuid = IRef.guid aI
       A.setP (A.assocNameRef aGuid) name
       s <- set
-      return . Data.makePi s =<< f ((getVar . Data.ParameterRef) aGuid)
+      return . Data.makePi aGuid s =<< f ((getVar . Data.ParameterRef) aGuid)
     setToSet = mkPi set set
     tellift f = do
       x <- lift f
@@ -155,8 +155,7 @@ createBuiltins =
       return x
     tellift_ = (fmap . liftM . const) () tellift
     getVar = DataIRef.newExprBody . Data.ExpressionLeaf . Data.GetVariable
-    mkPi mkArgType mkResType =
-      DataIRef.newExprBody =<< liftM2 Data.makePi mkArgType mkResType
+    mkPi mkArgType mkResType = liftM snd . join $ liftM2 DataIRef.newPi mkArgType mkResType
     mkApply mkFunc mkArg =
       DataIRef.newExprBody =<< liftM2 Data.makeApply mkFunc mkArg
     mkType f = do

@@ -3,6 +3,7 @@ module Editor.Data.IRef
   , ExpressionProperty, epGuid
   , Lambda, Apply
   , newExprBody, readExprBody, writeExprBody, exprGuid
+  , newLambda, newPi
   , newExpression, writeExpression
   ) where
 
@@ -38,6 +39,21 @@ exprGuid = IRef.guid . unExpression
 
 newExprBody :: Monad m => ExpressionBody -> Transaction t m Expression
 newExprBody = liftM Data.ExpressionIRef . Transaction.newIRef
+
+newLambdaCons ::
+  Monad m =>
+  (Guid -> expr -> expr -> ExpressionBody) ->
+  expr -> expr -> Transaction t m (Guid, Expression)
+newLambdaCons cons paramType result = do
+  key <- Transaction.newKey
+  expr <- newExprBody $ cons key paramType result
+  return (key, expr)
+
+newPi :: Monad m => Expression -> Expression -> Transaction t m (Guid, Expression)
+newPi = newLambdaCons Data.makePi
+
+newLambda :: Monad m => Expression -> Expression -> Transaction t m (Guid, Expression)
+newLambda = newLambdaCons Data.makeLambda
 
 readExprBody :: Monad m => Expression -> Transaction t m ExpressionBody
 readExprBody = Transaction.readIRef . unExpression
