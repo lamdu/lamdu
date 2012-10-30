@@ -25,9 +25,11 @@ make
 make hasParens (Sugar.Pi param resultType) =
   ExpressionGui.wrapParenify hasParens Parens.addHighlightedTextParens $ \myId ->
   ExprGuiM.assignCursor myId typeId $ do
-    -- TODO: We pollute the resultTypeEdit with our generated name
-    -- (which it will skip) even if we end up non-dependent and don't
-    -- have a name
+    -- We allocate a name in the resultTypeEdit context even if we end
+    -- up non-dependent and don't have a name. This is the only way to
+    -- do it (until 2-pass gui gen), but it is also desirable: when
+    -- holes spring up, we don't get all the names shuffled
+    -- confusingly.
     (name, (resultTypeEdit, usedVars)) <-
       ExprGuiM.withParamName paramGuid $ \name ->
       liftM ((,) name) . ExprGuiM.usedVariables $
