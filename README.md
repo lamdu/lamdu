@@ -11,21 +11,23 @@ This project aims to create a "next-generation", "live programming" environment 
 * Editing code directly lets beginners avoid syntax errors.
 * Editing type checked code avoids type errors, helps programmers and helps inteligent completions.
 * Integrated unit-testing / code with examples / live programming - helps the programmers avoid silly bugs as they program, and helps programmers understand code better.
+* The editor has a clear separation of non-functional parts of the code (Names, documentation, organization) and allows tracking whether functionality was changed. It will also make many forms of refactoring and organizing code less risky and thus cheaper.
 
 ### Better Source Control
 
-* Code stored as code solves most merge conflicts. With textual tools a line where two variables were renamed causes a conflict.
+* Code stored as code solves most merge conflicts. With textual tools a line where two variables were renamed causes a conflict. Just moving around code also generates a lot of spurious conflicts -- which will no longer be the case.
+* Tracking actual edits rather than heuristically guessing what changed will lead to better merges with less conflicts. It will also allow the user to express his intent in a richer way: Deleting one definition and writing a similar one is semantically different from modifying the original definition, and merges will respect that.
 
 ### Better Debugging
 
-* Integrated Source Control and Testing will allow use to provide "Regression Debugging".
+* Integrated Source Control and Testing will allow the user to provide "Regression Debugging".
   When a "refactor commit" (a change that is not supposed to change behavior) causes a bug,
   you could easily find the root of the problem via the inner-most called function whose output for the same input has changed when it was supposed to stay intact.
   Debug endevours that currently take hours or days would be much much shorter.
 
 ### Other
 
-* Non textual code would allow rich visualization and editing of objects (such as trees) and mathematical formulas.
+* Structural code editing would allow rich visualization and editing of objects (such as trees) and mathematical formulas.
 
 # Similar Efforts
 
