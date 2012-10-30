@@ -271,28 +271,36 @@ mergeExprs p0 p1 =
     onMismatch e0 e1 =
       Either.left $ MismatchIn (void e0) (void e1)
 
-lambdaRules :: Guid -> TypedValue -> Ref -> [Rule]
-lambdaRules g (TypedValue lambdaValueRef lambdaTypeRef) bodyTypeRef =
-  [ -- Lambda body type -> Pi result type
-    Rule [bodyTypeRef] $ \[bodyTypeExpr] ->
-    [( lambdaTypeRef
-     , makeRefExpression g $ Data.makePi (makeHole "paramType" g) bodyTypeExpr
-     )]
-  , Rule [lambdaTypeRef] $ \[Data.Expression piG body _] -> do
-      Data.Lambda paramType resultType <- maybeToList $ maybePi body
-      [ -- Pi result type -> Body type
-        ( bodyTypeRef
-        , subst piG
-          ( makeRefExpression (Guid.fromString "getVar")
-            (Data.makeParameterRef g)
-          )
-          resultType
+-- Lambda body type -> Pi result type
+lambdaBodyTypeToPiResultTypeRule :: Guid -> Ref -> Ref -> Rule
+lambdaBodyTypeToPiResultTypeRule g lambdaTypeRef bodyTypeRef =
+  Rule [bodyTypeRef] $ \[bodyTypeExpr] ->
+  [( lambdaTypeRef
+   , makeRefExpression g $ Data.makePi (makeHole "paramType" g) bodyTypeExpr
+   )]
+
+piToLambdaRule :: Guid -> TypedValue -> Ref -> Rule
+piToLambdaRule g (TypedValue lambdaValueRef lambdaTypeRef) bodyTypeRef =
+  Rule [lambdaTypeRef] $ \[Data.Expression piG body _] -> do
+    Data.Lambda paramType resultType <- maybeToList $ maybePi body
+    [ -- Pi result type -> Body type
+      ( bodyTypeRef
+      , subst piG
+        ( makeRefExpression (Guid.fromString "getVar")
+          (Data.makeParameterRef g)
         )
-        , -- Pi param type -> Lambda param type
+        resultType
+      )
+      , -- Pi param type -> Lambda param type
         ( lambdaValueRef
         , makeRefExpression g . Data.makeLambda paramType $ makeHole "body" g
         )
-        ]
+      ]
+
+lambdaRules :: Guid -> TypedValue -> Ref -> [Rule]
+lambdaRules g lambdaTv@(TypedValue _ lambdaTypeRef) bodyTypeRef =
+  [ lambdaBodyTypeToPiResultTypeRule g lambdaTypeRef bodyTypeRef
+  , piToLambdaRule g lambdaTv bodyTypeRef
   ]
 
 unionRules :: Ref -> Ref -> [Rule]
