@@ -452,8 +452,8 @@ ruleSimpleType (TypedValue val typ) =
 intoApplyResultRule ::
   (Data.ExpressionBody RefExpression ->
    Maybe (Data.Lambda RefExpression)) ->
-  Ref -> Data.Apply Ref -> Rule
-intoApplyResultRule uncons applyRef (Data.Apply func arg) =
+  Ref -> Ref -> Ref -> Rule
+intoApplyResultRule uncons applyRef func arg =
   -- PreSubst with Subst => PostSubst
   -- (func, arg) -> apply
   Rule [func, arg] $ \ [Data.Expression funcGuid funcBody _, argExpr] -> do
@@ -468,8 +468,8 @@ intoApplyResultRule uncons applyRef (Data.Apply func arg) =
 intoArgRule ::
   (Data.ExpressionBody RefExpression ->
    Maybe (Data.Lambda RefExpression)) ->
-  Ref -> Data.Apply Ref -> Rule
-intoArgRule uncons applyRef (Data.Apply func arg) =
+  Ref -> Ref -> Ref -> Rule
+intoArgRule uncons applyRef func arg =
   -- Recurse over PreSubst and PostSubst together
   --   When PreSubst part refers to its param:
   --     PostSubst part <=> arg
@@ -500,10 +500,10 @@ intoFuncResultTypeRule cons uncons applyRef func =
 recurseSubstRules ::
   (Data.Lambda RefExpression -> Data.ExpressionBody RefExpression) ->
   (Data.ExpressionBody RefExpression -> Maybe (Data.Lambda RefExpression)) ->
-  Ref -> Data.Apply Ref -> [Rule]
-recurseSubstRules cons uncons applyRef apply@(Data.Apply func _) =
-  [ intoApplyResultRule uncons applyRef apply
-  , intoArgRule uncons applyRef apply
+  Ref -> Ref -> Ref -> [Rule]
+recurseSubstRules cons uncons applyRef func arg =
+  [ intoApplyResultRule uncons applyRef func arg
+  , intoArgRule uncons applyRef func arg
   , intoFuncResultTypeRule cons uncons applyRef func
   ]
 
@@ -623,10 +623,9 @@ applyRules baseGuid applyTv apply@(Data.Apply func arg) =
   , applyArgToFuncArgRule applyTv apply
   ]
   ++ recurseSubstRules Data.ExpressionPi maybePi
-  -- TODO: This Data.Apply is a lie
-    (tvType applyTv) (Data.Apply (tvType func) (tvVal arg))
+    (tvType applyTv) (tvType func) (tvVal arg)
   ++ recurseSubstRules Data.ExpressionLambda maybeLambda
-    (tvVal applyTv) (Data.Apply (tvVal func) (tvVal arg))
+    (tvVal applyTv) (tvVal func) (tvVal arg)
 
 data Loaded a = Loaded
   { lExpr :: Data.Expression (a, InferNode)
