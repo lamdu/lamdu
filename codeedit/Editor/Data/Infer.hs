@@ -69,7 +69,7 @@ instance Show TypedValue where
 -- And we make sure not to add a sub-expression with a parent guid (that's a recursive structure).
 
 newtype RefExprPayload = RefExprPayload
-  { _pSubstitutedArgs :: IntSet
+  { _rplSubstitutedArgs :: IntSet
   } deriving (Show, Monoid)
 
 type RefExpression = Data.Expression RefExprPayload
@@ -411,9 +411,9 @@ mergeToPiResult =
     onMatch x _ = return x
     onMismatch destHole@(Data.Expression _ (Data.ExpressionLeaf Data.Hole) destPayload) src
       | IntSet.null substs = destHole
-      | otherwise = fmap (Lens.set pSubstitutedArgs substs) src
+      | otherwise = fmap (Lens.set rplSubstitutedArgs substs) src
       where
-        substs = destPayload ^. pSubstitutedArgs
+        substs = destPayload ^. rplSubstitutedArgs
     -- TODO: This seems like it should report an error,
     -- verify/document that it is OK because the other direction of
     -- information flow will catch any error:
@@ -458,7 +458,7 @@ intoApplyResultRule uncons applyRef func arg =
     return
       ( applyRef
       , subst param
-        ((fmap . Lens.over pSubstitutedArgs . IntSet.insert) (unRef arg) argExpr)
+        ((fmap . Lens.over rplSubstitutedArgs . IntSet.insert) (unRef arg) argExpr)
         result
       )
 
@@ -516,7 +516,7 @@ mergeToArg param arg =
       | g == param =
         Compose.O . (fmap . const) Unit $ Writer.tell
         [( arg
-         , (fmap . Lens.over pSubstitutedArgs . IntSet.delete) (unRef arg) post
+         , (fmap . Lens.over rplSubstitutedArgs . IntSet.delete) (unRef arg) post
          )]
     onMismatch _ _ = unit
 
@@ -788,7 +788,7 @@ setRefExpr ref newExpr = do
     equiv x y =
       isJust $
       Data.matchExpression compareSubsts ((const . const) Nothing) x y
-    compareSubsts x y = guard $ (x ^. pSubstitutedArgs) == (y ^. pSubstitutedArgs)
+    compareSubsts x y = guard $ (x ^. rplSubstitutedArgs) == (y ^. rplSubstitutedArgs)
 
 {-# SPECIALIZE setRefExpr :: Ref -> RefExpression -> InferT Maybe () #-}
 {-# SPECIALIZE setRefExpr :: Monoid w => Ref -> RefExpression -> InferT (Writer w) () #-}
