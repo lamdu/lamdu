@@ -257,9 +257,9 @@ AtFieldTH.make ''Payload
 AtFieldTH.make ''ExpressionP
 
 data ExprEntityInferred a = ExprEntityInferred
-  { eesInferred :: Infer.Inferred a
-  , eesTypeConflicts :: [Data.PureExpression]
-  , eesValueConflicts :: [Data.PureExpression]
+  { eeiInferred :: Infer.Inferred a
+  , eeiTypeConflicts :: [Data.PureExpression]
+  , eeiValueConflicts :: [Data.PureExpression]
   } deriving (Functor)
 derive makeFoldable ''ExprEntityInferred
 derive makeTraversable ''ExprEntityInferred
@@ -276,7 +276,7 @@ eeStored :: ExprEntity m -> Maybe (ExprEntityStored m)
 eeStored = Traversable.sequenceA <=< Data.ePayload
 
 eeProp :: ExprEntity m -> Maybe (DataIRef.ExpressionProperty (T m))
-eeProp = Infer.iStored . eesInferred <=< Data.ePayload
+eeProp = Infer.iStored . eeiInferred <=< Data.ePayload
 
 eeFromPure :: Data.PureExpression -> ExprEntity m
 eeFromPure = fmap $ const Nothing
@@ -371,7 +371,7 @@ mkExpression ee expr = do
     types =
       zipWith Data.randomizeGuids
       (RandomUtils.splits (mkGen 0 2 (Data.eGuid ee))) .
-      maybe [] eesInferredTypes $ Data.ePayload ee
+      maybe [] eeiInferredTypes $ Data.ePayload ee
 
 mkDelete
   :: Monad m
@@ -389,7 +389,7 @@ mkAddParam ::
 mkAddParam = liftM fst . DataOps.lambdaWrap
 
 storedIRefP :: Data.Expression (ExprEntityInferred a) -> a
-storedIRefP = Infer.iStored . eesInferred . Data.ePayload
+storedIRefP = Infer.iStored . eeiInferred . Data.ePayload
 
 mkFuncParamActions ::
   Monad m => SugarContext ->
@@ -403,7 +403,7 @@ mkFuncParamActions
   { fpListItemActions =
     ListItemActions
     { itemDelete =
-         mkDelete ((Infer.iStored . eesInferred) lambdaStored) replacerP
+         mkDelete ((Infer.iStored . eeiInferred) lambdaStored) replacerP
     , itemAddNext = mkAddParam replacerP
     }
   , fpGetExample = do
@@ -417,9 +417,9 @@ mkFuncParamActions
         SugarContext inferState (scConfig ctx)
   }
   where
-    scope = Infer.nScope . Infer.iPoint $ eesInferred lambdaStored
+    scope = Infer.nScope . Infer.iPoint $ eeiInferred lambdaStored
     paramTypeRef =
-      Infer.tvVal . Infer.nRefs . Infer.iPoint $ eesInferred paramType
+      Infer.tvVal . Infer.nRefs . Infer.iPoint $ eeiInferred paramType
     newNode =
       Infer.newTypedNodeWithScope scope paramTypeRef $ scInferState ctx
 
@@ -494,7 +494,7 @@ addApplyChildParens =
 isPolymorphicFunc :: ExprEntity m -> Bool
 isPolymorphicFunc funcI =
   maybe False
-  (Data.isDependentPi . Infer.iType . eesInferred)
+  (Data.isDependentPi . Infer.iType . eeiInferred)
   (Data.ePayload funcI)
 
 convertApply :: Monad m => Data.Apply (ExprEntity m) -> Convertor m
@@ -706,11 +706,11 @@ convertWritableHole ::
   ExprEntityInferred (DataIRef.ExpressionProperty (T m)) -> Convertor m
 convertWritableHole eeInferred exprI = do
   ctx <- readContext
-  mPaste <- mkPaste . Infer.iStored $ eesInferred eeInferred
+  mPaste <- mkPaste . Infer.iStored $ eeiInferred eeInferred
   let
     inferState = scInferState ctx
     check expr =
-      inferExpr expr inferState . Infer.iPoint $ eesInferred eeInferred
+      inferExpr expr inferState . Infer.iPoint $ eeiInferred eeInferred
 
     makeApplyForms _ _ Nothing = return []
     makeApplyForms processRes expr (Just i) =
@@ -722,16 +722,16 @@ convertWritableHole eeInferred exprI = do
       makeApplyForms processRes expr =<<
       ( uncurry (inferExpr expr)
       . Infer.newNodeWithScope
-        ((Infer.nScope . Infer.iPoint . eesInferred) eeInferred)
+        ((Infer.nScope . Infer.iPoint . eeiInferred) eeInferred)
       ) inferState
     onScopeElement (param, _typeExpr) = param
     hole processRes = Hole
       { holeScope =
         map onScopeElement . Map.toList . Infer.iScope $
-        eesInferred eeInferred
+        eeiInferred eeInferred
       , holeInferResults = inferResults processRes
       , holeMActions = Just HoleActions
-          { holePickResult = pickResult . Infer.iStored $ eesInferred eeInferred
+          { holePickResult = pickResult . Infer.iStored $ eeiInferred eeInferred
           , holePaste = mPaste
           , holeConvertResult = convertHoleResult $ scConfig ctx
           }
@@ -747,7 +747,7 @@ convertWritableHole eeInferred exprI = do
             Section Nothing (removeInferredTypes holeExpr) Nothing
         else return holeExpr
 
-  case eesInferredValues eeInferred of
+  case eeiInferredValues eeInferred of
     [Data.Expression { Data.eValue = Data.ExpressionLeaf Data.Hole }] ->
       plainHole
     [x] ->
@@ -799,10 +799,10 @@ convertHole exprI =
   maybe convertReadOnlyHole convertWritableHole mStored exprI
   where
     mStored = f =<< Data.ePayload exprI
-    f entity = fmap (g entity) $ (Infer.iStored . eesInferred) entity
+    f entity = fmap (g entity) $ (Infer.iStored . eeiInferred) entity
     g entity stored =
-      (atEesInferred . fmap . const) stored entity
-    atEesInferred j x = x { eesInferred = j $ eesInferred x }
+      (atEeiInferred . fmap . const) stored entity
+    atEeiInferred j x = x { eeiInferred = j $ eeiInferred x }
 
 convertLiteralInteger :: Monad m => Integer -> Convertor m
 convertLiteralInteger i exprI =
@@ -842,9 +842,9 @@ convertHoleResult config =
   where
     toExprEntity inferred =
       Just ExprEntityInferred
-      { eesInferred = (fmap . const) Nothing inferred
-      , eesTypeConflicts = []
-      , eesValueConflicts = []
+      { eeiInferred = (fmap . const) Nothing inferred
+      , eeiTypeConflicts = []
+      , eeiValueConflicts = []
       }
     ctx =
       SugarContext
@@ -933,7 +933,7 @@ convertWhereItems ctx
     (nextItems, whereBody) <- convertWhereItems ctx body
     return (item : nextItems, whereBody)
   where
-    prop = Infer.iStored . eesInferred . Data.ePayload
+    prop = Infer.iStored . eeiInferred . Data.ePayload
 convertWhereItems _ expr = return ([], expr)
 
 convertDefinitionContent ::
@@ -953,7 +953,7 @@ convertDefinitionContent sugarContext expr = do
         liftM fst . DataOps.redexWrap $ stored whereBody
     }
   where
-    stored = Infer.iStored . eesInferred . Data.ePayload
+    stored = Infer.iStored . eeiInferred . Data.ePayload
 
 loadConvertDefinition ::
   Monad m => SugarConfig -> Data.DefinitionIRef -> T m (Definition m)
@@ -988,7 +988,7 @@ convertDefinition config defI (Data.Definition defBody typeL) = do
         inferLoadedExpression (Just defI) exprL
       let
         inferredTypeP =
-          Infer.iType . eesInferred $ Data.ePayload exprStored
+          Infer.iType . eeiInferred $ Data.ePayload exprStored
         typesMatch = on (==) Data.canonizeGuids typeP inferredTypeP
         mkNewType = do
           inferredTypeS <-
@@ -1050,9 +1050,9 @@ inferWithConflicts loaded =
       runWriter $ Infer.infer (Infer.InferActions reportError) loaded
     toExprEntity x =
       ExprEntityInferred
-      { eesInferred = x
-      , eesValueConflicts = conflicts Infer.tvVal x
-      , eesTypeConflicts = conflicts Infer.tvType x
+      { eeiInferred = x
+      , eeiValueConflicts = conflicts Infer.tvVal x
+      , eeiTypeConflicts = conflicts Infer.tvType x
       }
     conflicts getRef x =
       getConflicts ((getRef . Infer.nRefs . Infer.iPoint) x)
@@ -1079,15 +1079,15 @@ convertStoredExpression expr sugarContext =
 removeTypes :: Expression m -> Expression m
 removeTypes = removeInferredTypes . (atRExpressionBody . fmap) removeTypes
 
-eesInferredExprs ::
+eeiInferredExprs ::
   (Infer.Inferred a -> b) ->
   (ExprEntityInferred a -> [b]) ->
   ExprEntityInferred a -> [b]
-eesInferredExprs getVal eeConflicts ee =
-  getVal (eesInferred ee) : eeConflicts ee
+eeiInferredExprs getVal eeConflicts ee =
+  getVal (eeiInferred ee) : eeConflicts ee
 
-eesInferredTypes :: ExprEntityInferred a -> [Data.PureExpression]
-eesInferredTypes = eesInferredExprs Infer.iType eesTypeConflicts
+eeiInferredTypes :: ExprEntityInferred a -> [Data.PureExpression]
+eeiInferredTypes = eeiInferredExprs Infer.iType eeiTypeConflicts
 
-eesInferredValues :: ExprEntityInferred a -> [Data.PureExpression]
-eesInferredValues = eesInferredExprs Infer.iValue eesValueConflicts
+eeiInferredValues :: ExprEntityInferred a -> [Data.PureExpression]
+eeiInferredValues = eeiInferredExprs Infer.iValue eeiValueConflicts
