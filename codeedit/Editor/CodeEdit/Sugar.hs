@@ -19,22 +19,23 @@ module Editor.CodeEdit.Sugar
   , Inferred(..)
   , Polymorphic(..)
   , HasParens(..)
-  , convertExpressionPure
   , loadConvertDefinition, loadConvertExpression
   , removeTypes
   ) where
 
 import Control.Applicative ((<$>), Applicative(..))
 import Control.Arrow (first)
-import Control.Monad ((<=<), liftM, mplus, void)
+import Control.Monad ((<=<), liftM, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
+import Control.Monad.Trans.State (evalState, state)
 import Control.Monad.Trans.Writer (Writer, runWriter)
 import Data.Derive.Foldable (makeFoldable)
 import Data.Derive.Traversable (makeTraversable)
 import Data.DeriveTH (derive)
 import Data.Foldable (Foldable(..))
 import Data.Function (on)
+import Data.Hashable (hash)
 import Data.List.Utils (sortOn)
 import Data.Map (Map)
 import Data.Maybe (listToMaybe, maybeToList)
@@ -45,6 +46,7 @@ import Data.Store.Transaction (Transaction)
 import Data.Traversable (Traversable(traverse))
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.Sugar.Config (SugarConfig)
+import System.Random (RandomGen, random)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.AtFieldTH as AtFieldTH
@@ -271,8 +273,15 @@ type ExprEntityMStored m =
   ExprEntityInferred (Maybe (DataIRef.ExpressionProperty (T m)))
 
 data EntityPayload m = EntityPayload
-  { eplInferred :: Maybe (ExprEntityMStored m)
+  { eplGuid :: Guid
+  , eplInferred :: Maybe (ExprEntityMStored m)
   }
+
+eeiGuid :: ExprEntityStored m -> Guid
+eeiGuid = DataIRef.epGuid . Infer.iStored . eeiInferred
+
+eeGuid :: ExprEntity m -> Guid
+eeGuid = eplGuid . Data.ePayload
 
 type ExprEntity m = Data.Expression (EntityPayload m)
 
@@ -282,8 +291,15 @@ eeStored = Traversable.sequenceA <=< eplInferred . Data.ePayload
 eeProp :: ExprEntity m -> Maybe (DataIRef.ExpressionProperty (T m))
 eeProp = Infer.iStored . eeiInferred <=< eplInferred . Data.ePayload
 
-eeFromPure :: Data.PureExpression -> ExprEntity m
-eeFromPure = fmap . const $ EntityPayload Nothing
+eeFrom :: RandomGen g => g -> Data.Expression (Maybe (ExprEntityMStored m)) -> ExprEntity m
+eeFrom gen =
+  (`evalState` gen) . Traversable.mapM randomize
+  where
+    randomize x =
+      fmap (`EntityPayload` x) $ state random
+
+eeFromPure :: RandomGen g => g -> Data.PureExpression -> ExprEntity m
+eeFromPure gen = eeFrom gen . (fmap . const) Nothing
 
 newtype ConflictMap =
   ConflictMap { unConflictMap :: Map Infer.Ref (Set Data.PureExpression) }
@@ -360,10 +376,11 @@ mkExpression ::
   ExprEntity m ->
   ExpressionBody m (Expression m) -> Sugar m (Expression m)
 mkExpression ee expr = do
-  inferredTypesRefs <- mapM (convertExpressionI . eeFromPure) types
+  inferredTypesRefs <-
+    zipWithM (fmap convertExpressionI . eeFromPure) seeds types
   return
     Expression
-    { rGuid = Data.eGuid ee
+    { rGuid = eeGuid ee
     , rExpressionBody = expr
     , rPayload = Payload
       { plInferredTypes = inferredTypesRefs
@@ -372,10 +389,8 @@ mkExpression ee expr = do
       }
     }
   where
-    types =
-      zipWith Data.randomizeGuids
-      (RandomUtils.splits (mkGen 0 2 (Data.eGuid ee))) .
-      maybe [] eeiInferredTypes . eplInferred $ Data.ePayload ee
+    seeds = RandomUtils.splits . mkGen 0 2 $ eeGuid ee
+    types = maybe [] eeiInferredTypes . eplInferred $ Data.ePayload ee
 
 mkDelete
   :: Monad m
@@ -568,7 +583,7 @@ convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, _)) exprI
     ExpressionPolymorphic (Polymorphic g compact full) ->
       makePolymorphic g compact =<< makeApply full
     ExpressionGetVariable getVar ->
-      makePolymorphic (Data.eGuid funcI) getVar =<< makeFullApply
+      makePolymorphic (eeGuid funcI) getVar =<< makeFullApply
     _ -> makeFullApply
   | otherwise = makeFullApply
   where
@@ -578,7 +593,7 @@ convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, _)) exprI
       addApplyChildParens .
       removeRedundantTypes $
       funcRef
-    expandedGuid = Guid.combine (Data.eGuid exprI) $ Guid.fromString "polyExpanded"
+    expandedGuid = Guid.combine (eeGuid exprI) $ Guid.fromString "polyExpanded"
     makeFullApply = makeApply newFuncRef
     makeApply f =
       mkExpression exprI . ExpressionApply DontHaveParens $
@@ -740,6 +755,8 @@ convertWritableHole eeInferred exprI = do
           , holeConvertResult = convertHoleResult $ scConfig ctx
           }
       }
+    checkedHole =
+      hole (maybe (return []) (fillPartialHolesInExpression check) <=< check)
     plainHole = do
       holeExpr <- mkExpression exprI . ExpressionHole $ hole (liftM maybeToList . check)
       searchTermRef <- liftTransaction $ Anchors.assocSearchTermRef eGuid
@@ -754,15 +771,11 @@ convertWritableHole eeInferred exprI = do
   case eeiInferredValues eeInferred of
     [Data.Expression { Data.eValue = Data.ExpressionLeaf Data.Hole }] ->
       plainHole
-    [x] ->
-      mkExpression exprI =<<
-      ( liftM
-        ( ExpressionInferred
-        . (`Inferred` hole
-           (maybe (return []) (fillPartialHolesInExpression check) <=< check))
-        )
-      . convertExpressionI . eeFromPure
-      ) (Data.randomizeGuids (mkGen 1 2 eGuid) x)
+    [inferredVal] ->
+      mkExpression exprI .
+      ExpressionInferred . (`Inferred` checkedHole) =<<
+      convertExpressionI
+      (eeFromPure (mkGen 1 2 eGuid) inferredVal)
     _ -> plainHole
   where
     inferExpr expr inferContext inferPoint =
@@ -773,7 +786,7 @@ convertWritableHole eeInferred exprI = do
       ( flip (,) (mkActions irefP)
       . maybe eGuid Data.eGuid . listToMaybe . uninferredHoles
       ) . DataIRef.writeExpression (Property.value irefP)
-    eGuid = Data.eGuid exprI
+    eGuid = eeGuid exprI
 
 -- TODO: This is a DRY violation, implementing isPolymorphic logic
 -- here again
@@ -841,11 +854,11 @@ isCompleteType = not . any (isHole . Data.eValue) . Data.subExpressions
 
 convertHoleResult ::
   Monad m => SugarConfig -> HoleResult -> T m (Expression m)
-convertHoleResult config =
-  runSugar ctx . convertExpressionI . fmap toExprEntity
+convertHoleResult config holeResult =
+  runSugar ctx . convertExpressionI . eeFrom gen $ fmap toExprEntity holeResult
   where
+    gen = Random.mkStdGen . hash . show $ void holeResult
     toExprEntity inferred =
-      EntityPayload $
       Just ExprEntityInferred
       { eeiInferred = (fmap . const) Nothing inferred
       , eeiTypeConflicts = []
@@ -858,9 +871,9 @@ convertHoleResult config =
       }
 
 convertExpressionPure ::
-  Monad m => SugarConfig -> Data.PureExpression -> T m (Expression m)
-convertExpressionPure config =
-  runSugar ctx . convertExpressionI . eeFromPure
+  (Monad m, RandomGen g) => g -> SugarConfig -> Data.PureExpression -> T m (Expression m)
+convertExpressionPure gen config =
+  runSugar ctx . convertExpressionI . eeFromPure gen
   where
     ctx =
       SugarContext
@@ -893,7 +906,7 @@ convertDefinitionParams ctx expr =
     let
       fp = FuncParam
         { fpGuid = param
-        , fpHiddenLambdaGuid = Just $ Data.eGuid expr
+        , fpHiddenLambdaGuid = Just . eeiGuid $ Data.ePayload expr
         , fpType = removeRedundantTypes paramTypeS
         , fpMActions =
           Just $
@@ -925,7 +938,7 @@ convertWhereItems ctx
         { wiValue = value
         , wiGuid = param
         , wiHiddenGuids =
-            map Data.eGuid
+            map (eeiGuid . Data.ePayload)
             [ topLevel
             , Data.lambdaParamType lambda
             ]
@@ -997,8 +1010,8 @@ convertDefinition config defI (Data.Definition defBody typeL) = do
         typesMatch = on (==) Data.canonizeGuids typeP inferredTypeP
         mkNewType = do
           inferredTypeS <-
-            convertExpressionPure config $
-            Data.randomizeGuids (mkGen 0 1 (IRef.guid defI)) inferredTypeP
+            convertExpressionPure (mkGen 0 2 (IRef.guid defI)) config $
+            inferredTypeP
           return DefinitionNewType
             { dntNewType = inferredTypeS
             , dntAcceptNewType =
@@ -1020,7 +1033,7 @@ convertDefinition config defI (Data.Definition defBody typeL) = do
         , deMNewType = mNewType
         , deIsTypeRedundant = isSuccess && typesMatch
         }
-  typeS <- convertExpressionPure config typeP
+  typeS <- convertExpressionPure (mkGen 1 2 (IRef.guid defI)) config typeP
   return Definition
     { drGuid = IRef.guid defI
     , drBody = body
@@ -1079,7 +1092,12 @@ convertStoredExpression ::
   T m (Expression m)
 convertStoredExpression expr sugarContext =
   runSugar sugarContext . convertExpressionI $
-  fmap (EntityPayload . Just . fmap Just) expr
+  fmap f expr
+  where
+    f i = EntityPayload
+      { eplGuid = eeiGuid i
+      , eplInferred = Just $ fmap Just i
+      }
 
 removeTypes :: Expression m -> Expression m
 removeTypes = removeInferredTypes . (atRExpressionBody . fmap) removeTypes
