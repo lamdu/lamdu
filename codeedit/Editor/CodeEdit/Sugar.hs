@@ -270,16 +270,20 @@ type ExprEntityStored m =
 type ExprEntityMStored m =
   ExprEntityInferred (Maybe (DataIRef.ExpressionProperty (T m)))
 
-type ExprEntity m = Data.Expression (Maybe (ExprEntityMStored m))
+data EntityPayload m = EntityPayload
+  { eplInferred :: Maybe (ExprEntityMStored m)
+  }
+
+type ExprEntity m = Data.Expression (EntityPayload m)
 
 eeStored :: ExprEntity m -> Maybe (ExprEntityStored m)
-eeStored = Traversable.sequenceA <=< Data.ePayload
+eeStored = Traversable.sequenceA <=< eplInferred . Data.ePayload
 
 eeProp :: ExprEntity m -> Maybe (DataIRef.ExpressionProperty (T m))
-eeProp = Infer.iStored . eeiInferred <=< Data.ePayload
+eeProp = Infer.iStored . eeiInferred <=< eplInferred . Data.ePayload
 
 eeFromPure :: Data.PureExpression -> ExprEntity m
-eeFromPure = fmap $ const Nothing
+eeFromPure = fmap . const $ EntityPayload Nothing
 
 newtype ConflictMap =
   ConflictMap { unConflictMap :: Map Infer.Ref (Set Data.PureExpression) }
@@ -371,7 +375,7 @@ mkExpression ee expr = do
     types =
       zipWith Data.randomizeGuids
       (RandomUtils.splits (mkGen 0 2 (Data.eGuid ee))) .
-      maybe [] eeiInferredTypes $ Data.ePayload ee
+      maybe [] eeiInferredTypes . eplInferred $ Data.ePayload ee
 
 mkDelete
   :: Monad m
@@ -494,8 +498,8 @@ addApplyChildParens =
 isPolymorphicFunc :: ExprEntity m -> Bool
 isPolymorphicFunc funcI =
   maybe False
-  (Data.isDependentPi . Infer.iType . eeiInferred)
-  (Data.ePayload funcI)
+  (Data.isDependentPi . Infer.iType . eeiInferred) .
+  eplInferred $ Data.ePayload funcI
 
 convertApply :: Monad m => Data.Apply (ExprEntity m) -> Convertor m
 convertApply (Data.Apply funcI argI) exprI = do
@@ -798,7 +802,7 @@ convertHole :: Monad m => Convertor m
 convertHole exprI =
   maybe convertReadOnlyHole convertWritableHole mStored exprI
   where
-    mStored = f =<< Data.ePayload exprI
+    mStored = f =<< eplInferred (Data.ePayload exprI)
     f entity = fmap (g entity) $ (Infer.iStored . eeiInferred) entity
     g entity stored =
       (atEeiInferred . fmap . const) stored entity
@@ -841,6 +845,7 @@ convertHoleResult config =
   runSugar ctx . convertExpressionI . fmap toExprEntity
   where
     toExprEntity inferred =
+      EntityPayload $
       Just ExprEntityInferred
       { eeiInferred = (fmap . const) Nothing inferred
       , eeiTypeConflicts = []
@@ -1074,7 +1079,7 @@ convertStoredExpression ::
   T m (Expression m)
 convertStoredExpression expr sugarContext =
   runSugar sugarContext . convertExpressionI $
-  fmap (Just . fmap Just) expr
+  fmap (EntityPayload . Just . fmap Just) expr
 
 removeTypes :: Expression m -> Expression m
 removeTypes = removeInferredTypes . (atRExpressionBody . fmap) removeTypes
