@@ -784,16 +784,17 @@ convertWritableHole eeInferred exprI = do
     pickResult irefP =
       liftM
       ( flip (,) (mkActions irefP)
-      . maybe eGuid Data.eGuid . listToMaybe . uninferredHoles
+      . maybe eGuid
+        (DataIRef.exprGuid . Infer.iStored . Data.ePayload) .
+        listToMaybe . uninferredHoles
+      . fmap intoStored
       ) . DataIRef.writeExpression (Property.value irefP)
+    intoStored (exprIRef, inferred) = (fmap . const) exprIRef inferred
     eGuid = eeGuid exprI
-
--- TODO: This is a DRY violation, implementing isPolymorphic logic
--- here again
 
 -- Also skip param types, those can usually be inferred later, so less
 -- useful to fill immediately
-uninferredHoles :: HoleResult -> [HoleResult]
+uninferredHoles :: Infer.Expression a -> [Infer.Expression a]
 uninferredHoles Data.Expression { Data.eValue = Data.ExpressionApply (Data.Apply func arg) } =
   if (Data.isDependentPi . Infer.iType . Data.ePayload) func
   then uninferredHoles func

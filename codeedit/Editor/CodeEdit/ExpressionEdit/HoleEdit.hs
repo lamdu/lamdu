@@ -146,7 +146,7 @@ resultsToWidgets holeInfo results = do
       widget <- toWidget resultId expr
       return (widget, mResult)
       where
-        resultId = mappend moreResultsPrefixId $ pureGuidId expr
+        resultId = mappend moreResultsPrefixId $ exprWidgetId expr
     toWidget resultId expr =
       ExprGuiM.widgetEnv . BWidgets.makeFocusableView resultId .
       Widget.strongerEvents (resultPickEventMap holeInfo expr) .
@@ -162,7 +162,6 @@ resultsToWidgets holeInfo results = do
       return $ BWidgets.hboxCenteredSpaced [w, moreSymbolLabel]
     canonizedExpr = rlFirst results
     myId = rlFirstId results
-    pureGuidId = WidgetIds.fromGuid . Data.eGuid
 
 makeNoResults :: MonadF m => AnimId -> ExprGuiM m (WidgetT m)
 makeNoResults myId =
@@ -227,6 +226,9 @@ makeLiteralGroup searchTerm =
 resultsPrefixId :: HoleInfo m -> Widget.Id
 resultsPrefixId holeInfo = mconcat [hiHoleId holeInfo, Widget.Id ["results"]]
 
+exprWidgetId :: Data.Expression a -> Widget.Id
+exprWidgetId = WidgetIds.fromGuid . randFunc . show . void
+
 toResultsList ::
   Monad m =>
   HoleInfo m -> Data.PureExpression ->
@@ -237,7 +239,7 @@ toResultsList holeInfo baseExpr = do
     case results of
     [] -> Nothing
     (x:xs) ->
-      let canonizedExprId = WidgetIds.fromGuid . randFunc . show $ void baseExpr
+      let canonizedExprId = exprWidgetId baseExpr
       in Just ResultsList
         { rlFirstId = mconcat [resultsPrefixId holeInfo, canonizedExprId]
         , rlMoreResultsPrefixId =
