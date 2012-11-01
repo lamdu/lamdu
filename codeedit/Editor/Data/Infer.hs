@@ -365,7 +365,7 @@ loadNode ::
   Monad m =>
   Loader m -> Scope ->
   Data.Expression (Guid, s) -> TypedValue ->
-  StateT RefMap m (Data.Expression (s, InferNode))
+  StateT RefMap m (Data.Expression (InferNode, s))
 loadNode loader scope entity typedValue = do
   setInitialValues
   bodyWithChildrenTvs <- Traversable.mapM addTypedVal $ Data.eValue entity
@@ -378,7 +378,7 @@ loadNode loader scope entity typedValue = do
     _ -> Traversable.mapM (go id) bodyWithChildrenTvs
   return $
     Data.Expression entityGuid exprBody
-    (snd (Data.ePayload entity), InferNode typedValue scope)
+    (InferNode typedValue scope, snd (Data.ePayload entity))
   where
     entityGuid = fst $ Data.ePayload entity
     onLambda cons (Data.Lambda param paramType@(_, paramTypeTv) result) = do
@@ -636,7 +636,7 @@ applyRules baseGuid applyTv apply@(Data.Apply func arg) =
     (tvVal applyTv) (tvVal func) (tvVal arg)
 
 data Loaded a = Loaded
-  { lExpr :: Data.Expression (a, InferNode)
+  { lExpr :: Data.Expression (InferNode, a)
   , lRefMap :: RefMap
   , lSavedRoot :: (Maybe RefData, Maybe RefData)
   }
@@ -672,11 +672,11 @@ load
       Just iref -> Map.insert (Data.DefinitionRef iref) (tvType rootTv) rootScope
 
 postProcess ::
-  (Data.Expression (a, InferNode), InferState) -> (Expression a, RefMap)
-postProcess (expr, InferState resultRefMap _ _) =
+  RefMap -> Data.Expression (InferNode, a) -> (Expression a, RefMap)
+postProcess resultRefMap expr =
   (fmap derefNode expr, resultRefMap)
   where
-    derefNode (s, inferNode) =
+    derefNode (inferNode, s) =
       Inferred
       { iStored = s
       , iValue = deref . tvVal $ nRefs inferNode
@@ -708,11 +708,14 @@ newtype InferT m a =
   InferT { unInferT :: ReaderT (InferActions m) (StateT InferState m) a }
   deriving (Monad)
 
+swap :: (a, b) -> (b, a)
+swap (x, y) = (y, x)
+
 runInferT ::
-  InferActions m -> InferState ->
-  InferT m a -> m (a, InferState)
+  Monad m => InferActions m -> InferState ->
+  InferT m a -> m (InferState, a)
 runInferT actions state =
-  (`runStateT` state) . (`runReaderT` actions) . unInferT
+  liftM swap . (`runStateT` state) . (`runReaderT` actions) . unInferT
 
 liftActions :: ReaderT (InferActions m) (StateT InferState m) a -> InferT m a
 liftActions = InferT
@@ -728,7 +731,7 @@ instance MonadTrans InferT where
 
 infer :: Monad m => InferActions m -> Loaded a -> m (Expression a, RefMap)
 infer actions (Loaded expr loadedRefMap (rootValMRefData, rootTypMRefData)) =
-  liftM postProcess .
+  liftM (uncurry postProcess . first (Lens.view sRefMap)) .
   runInferT actions ruleInferState $ do
     restoreRoot rootValR rootValMRefData
     restoreRoot rootTypR rootTypMRefData
@@ -742,8 +745,8 @@ infer actions (Loaded expr loadedRefMap (rootValMRefData, rootTypMRefData)) =
     ruleInferState =
       (`execState` InferState loadedRefMap mempty mempty) .
       mapM_ addRule .
-      makeRules (isJust rootValMRefData) $ fmap snd expr
-    TypedValue rootValR rootTypR = nRefs . snd $ Data.ePayload expr
+      makeRules (isJust rootValMRefData) $ fmap fst expr
+    TypedValue rootValR rootTypR = nRefs . fst $ Data.ePayload expr
     restoreRoot _ Nothing = return ()
     restoreRoot ref (Just (RefData refExpr refRules)) = do
       liftState $ refMapAt ref . rRules %= (refRules ++)
