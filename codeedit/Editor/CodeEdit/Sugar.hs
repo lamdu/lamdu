@@ -301,17 +301,6 @@ eeFrom gen =
 eeFromPure :: RandomGen g => g -> Data.PureExpression -> ExprEntity m
 eeFromPure gen = eeFrom gen . (fmap . const) Nothing
 
-newtype ConflictMap =
-  ConflictMap { unConflictMap :: Map Infer.Ref (Set Data.PureExpression) }
-
-instance Monoid ConflictMap where
-  mempty = ConflictMap mempty
-  mappend (ConflictMap x) (ConflictMap y) =
-    ConflictMap $ Map.unionWith mappend x y
-
-getConflicts :: Infer.Ref -> ConflictMap -> [Data.PureExpression]
-getConflicts ref = maybe [] Set.toList . Map.lookup ref . unConflictMap
-
 argument :: (a -> b) -> (b -> c) -> a -> c
 argument = flip (.)
 
@@ -717,80 +706,109 @@ fillPartialHolesInExpression check oldExpr =
 
 resultComplexityScore :: HoleResult -> Int
 resultComplexityScore =
-  sum . map ((+ negate 2) . length . Foldable.toList . Infer.iType) .
+  sum . map (subtract 2 . length . Foldable.toList . Infer.iType) .
   Foldable.toList
 
-convertWritableHole ::
-  Monad m =>
-  ExprEntityInferred (DataIRef.ExpressionProperty (T m)) -> Convertor m
+convertWritableHole :: Monad m => ExprEntityStored m -> Convertor m
 convertWritableHole eeInferred exprI = do
   ctx <- readContext
   mPaste <- mkPaste . Infer.iStored $ eeiInferred eeInferred
-  let
-    inferState = scInferState ctx
-    check expr =
-      inferExpr expr inferState . Infer.iPoint $ eeiInferred eeInferred
+  convertWritableHoleH ctx mPaste eeInferred exprI
 
-    makeApplyForms _ _ Nothing = return []
-    makeApplyForms processRes expr (Just i) =
+inferApplyForms ::
+  Monad m =>
+  (Data.PureExpression -> T m [HoleResult]) -> Data.PureExpression ->
+  (Infer.RefMap, Infer.InferNode) -> T m [HoleResult]
+inferApplyForms processRes expr (refMap, node) =
+  liftM (sortOn resultComplexityScore) . makeApplyForms =<<
+  inferExpr expr refMap node
+  where
+    makeApplyForms Nothing = return []
+    makeApplyForms (Just i) =
       liftM concat . mapM processRes $
       applyForms (Infer.iType (Data.ePayload i)) expr
 
+convertWritableHoleH ::
+  Monad m =>
+  SugarContext -> Maybe (T m Guid) ->
+  ExprEntityStored m -> Convertor m
+convertWritableHoleH (SugarContext inferState config) mPaste eeInferred exprI =
+  chooseHoleType (eeiInferredValues eeInferred) plainHole inferredHole
+  where
+    inferred = eeiInferred eeInferred
+    scope = Infer.nScope $ Infer.iPoint inferred
+    check expr = inferExpr expr inferState $ Infer.iPoint inferred
+
     inferResults processRes expr =
-      liftM (sortOn resultComplexityScore) .
-      makeApplyForms processRes expr =<<
-      ( uncurry (inferExpr expr)
-      . Infer.newNodeWithScope
-        ((Infer.nScope . Infer.iPoint . eeiInferred) eeInferred)
-      ) inferState
+      inferApplyForms processRes expr $
+      Infer.newNodeWithScope scope inferState
     onScopeElement (param, _typeExpr) = param
-    hole processRes = Hole
+    mkHole processRes = Hole
       { holeScope =
-        map onScopeElement . Map.toList . Infer.iScope $
-        eeiInferred eeInferred
+        map onScopeElement . Map.toList $ Infer.iScope inferred
       , holeInferResults = inferResults processRes
       , holeMActions = Just HoleActions
-          { holePickResult = pickResult . Infer.iStored $ eeiInferred eeInferred
+          { holePickResult = pickResult eGuid $ Infer.iStored inferred
           , holePaste = mPaste
-          , holeConvertResult = convertHoleResult $ scConfig ctx
+          , holeConvertResult = convertHoleResult config
           }
       }
-    checkedHole =
-      hole (maybe (return []) (fillPartialHolesInExpression check) <=< check)
-    plainHole = do
-      holeExpr <- mkExpression exprI . ExpressionHole $ hole (liftM maybeToList . check)
-      searchTermRef <- liftTransaction $ Anchors.assocSearchTermRef eGuid
-      let searchTerm = Property.value searchTermRef
-      if not (null searchTerm) && all (`elem` Config.operatorChars) searchTerm
-        then
-          mkExpression exprI .
-            ExpressionSection DontHaveParens $
-            Section Nothing (removeInferredTypes holeExpr) Nothing
-        else return holeExpr
-
-  case eeiInferredValues eeInferred of
-    [Data.Expression { Data.eValue = Data.ExpressionLeaf Data.Hole }] ->
-      plainHole
-    [inferredVal] ->
+    filledHole =
+      mkHole (maybe (return []) (fillPartialHolesInExpression check) <=< check)
+    inferredHole inferredVal =
       mkExpression exprI .
-      ExpressionInferred . (`Inferred` checkedHole) =<<
+      ExpressionInferred . (`Inferred` filledHole) =<<
       convertExpressionI
       (eeFromPure (mkGen 1 2 eGuid) inferredVal)
-    _ -> plainHole
-  where
-    inferExpr expr inferContext inferPoint =
-      liftM (fmap fst . Infer.infer (Infer.InferActions (const Nothing))) $
-      Infer.load loader inferContext inferPoint Nothing expr
-    pickResult irefP =
-      liftM
-      ( flip (,) (mkActions irefP)
-      . maybe eGuid
-        (DataIRef.exprGuid . Infer.iStored . Data.ePayload) .
-        listToMaybe . uninferredHoles
-      . fmap intoStored
-      ) . DataIRef.writeExpression (Property.value irefP)
-    intoStored (exprIRef, inferred) = (fmap . const) exprIRef inferred
+    plainHole =
+      wrapOperatorHole exprI <=<
+      mkExpression exprI . ExpressionHole $ mkHole (liftM maybeToList . check)
     eGuid = eeGuid exprI
+
+wrapOperatorHole ::
+  Monad m => ExprEntity m -> Expression m -> Sugar m (Expression m)
+wrapOperatorHole exprI holeExpr = do
+  searchTermRef <- liftTransaction . Anchors.assocSearchTermRef $ eeGuid exprI
+  if isOperatorName $ Property.value searchTermRef
+    then
+      -- TODO: Ok to mkExpression with same exprI here?
+      mkExpression exprI . ExpressionSection DontHaveParens $
+      Section Nothing (removeInferredTypes holeExpr) Nothing
+    else return holeExpr
+
+isOperatorName :: String -> Bool
+isOperatorName name =
+  not (null name) && all (`elem` Config.operatorChars) name
+
+inferExpr ::
+  Monad m => Data.Expression a -> Infer.RefMap ->
+  Infer.InferNode -> T m (Maybe (Infer.Expression a))
+inferExpr expr inferContext inferPoint =
+  liftM (fmap fst . Infer.infer (Infer.InferActions (const Nothing))) $
+  Infer.load loader inferContext inferPoint Nothing expr
+
+chooseHoleType ::
+  [Data.Expression f] -> hole -> (Data.Expression f -> hole) -> hole
+chooseHoleType inferredVals plain inferred =
+  case inferredVals of
+  [Data.Expression { Data.eValue = Data.ExpressionLeaf Data.Hole }] -> plain
+  [inferredVal] -> inferred inferredVal
+  _ -> plain
+
+pickResult ::
+  (Monad f, Monad m) =>
+  Guid -> DataIRef.ExpressionProperty (T m) ->
+  Data.Expression (Infer.Inferred a) ->
+  Transaction t f (Guid, Actions m)
+pickResult defaultDest irefP =
+  liftM
+  ( flip (,) (mkActions irefP)
+  . maybe defaultDest (DataIRef.exprGuid . Infer.iStored . Data.ePayload)
+  . listToMaybe . uninferredHoles . fmap intoStored
+  )
+  . DataIRef.writeExpression (Property.value irefP)
+  where
+    intoStored (exprIRef, inferred) = (fmap . const) exprIRef inferred
 
 -- Also skip param types, those can usually be inferred later, so less
 -- useful to fill immediately
@@ -881,13 +899,6 @@ convertExpressionPure gen config =
       { scInferState = error "pure expression doesnt have infer state"
       , scConfig = config
       }
-
-reportError :: Infer.Error -> Writer ConflictMap ()
-reportError err =
-  Writer.tell . ConflictMap .
-  Map.singleton (Infer.errRef err) .
-  Set.singleton .
-  snd $ Infer.errMismatch err
 
 loadConvertExpression ::
   Monad m =>
@@ -1053,6 +1064,26 @@ inferLoadedExpression mDefI exprL = do
   loaded <- uncurry (Infer.load loader) Infer.initial mDefI exprL
   return $ inferWithConflicts loaded
 
+-- Conflicts:
+
+newtype ConflictMap =
+  ConflictMap { unConflictMap :: Map Infer.Ref (Set Data.PureExpression) }
+
+instance Monoid ConflictMap where
+  mempty = ConflictMap mempty
+  mappend (ConflictMap x) (ConflictMap y) =
+    ConflictMap $ Map.unionWith mappend x y
+
+getConflicts :: Infer.Ref -> ConflictMap -> [Data.PureExpression]
+getConflicts ref = maybe [] Set.toList . Map.lookup ref . unConflictMap
+
+reportConflict :: Infer.Error -> Writer ConflictMap ()
+reportConflict err =
+  Writer.tell . ConflictMap .
+  Map.singleton (Infer.errRef err) .
+  Set.singleton .
+  snd $ Infer.errMismatch err
+
 inferWithConflicts ::
   Infer.Loaded (DataIRef.ExpressionProperty (T m)) ->
   ( Bool
@@ -1066,7 +1097,7 @@ inferWithConflicts loaded =
   )
   where
     ((exprInferred, inferContext), conflictsMap) =
-      runWriter $ Infer.infer (Infer.InferActions reportError) loaded
+      runWriter $ Infer.infer (Infer.InferActions reportConflict) loaded
     toExprEntity x =
       ExprEntityInferred
       { eeiInferred = x
@@ -1076,6 +1107,8 @@ inferWithConflicts loaded =
     conflicts getRef x =
       getConflicts ((getRef . Infer.nRefs . Infer.iPoint) x)
       conflictsMap
+
+--------------
 
 convertLoadedExpression ::
   Monad m =>
