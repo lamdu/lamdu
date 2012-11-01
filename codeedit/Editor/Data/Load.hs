@@ -22,16 +22,13 @@ type DefinitionEntity m = Data.Definition (ExpressionEntity m)
 
 type T = Transaction ViewTag
 
-guidExpr :: Guid -> Data.ExpressionBody (Data.Expression Guid) -> Data.Expression Guid
-guidExpr guid body = Data.Expression guid body guid
-
 -- TODO: Remove these and just use ordinary loads (ignore property you
 -- don't want?)
 loadPureExpression
   :: Monad m
   => Data.ExpressionIRef -> Transaction t m (Data.Expression Guid)
 loadPureExpression exprI =
-  liftM (guidExpr (DataIRef.exprGuid exprI)) .
+  liftM (flip Data.Expression (DataIRef.exprGuid exprI)) .
   Traversable.mapM loadPureExpression =<< DataIRef.readExprBody exprI
 
 loadPureDefinition
@@ -51,7 +48,7 @@ loadExpression
   -> T m (ExpressionEntity (T f))
 loadExpression exprP = do
   expr <- DataIRef.readExprBody exprI
-  liftM (flip (Data.Expression (DataIRef.exprGuid exprI)) exprP) $
+  liftM (flip Data.Expression exprP) $
     case expr of
     Data.ExpressionLambda lambda ->
       liftM Data.ExpressionLambda $ loadLambda Data.ExpressionLambda lambda

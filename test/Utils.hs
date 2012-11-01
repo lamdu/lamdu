@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances, OverlappingInstances #-}
 module Utils where
 
+import Control.Applicative ((<$))
 import Control.Arrow (first)
 import Control.Monad (join, void)
 import Data.Functor.Identity (Identity(..))
@@ -26,26 +27,19 @@ showStructure :: Data.ExpressionBody a -> String
 showStructure = show . (fmap . const) Invisible
 
 instance Show (Data.Expression ()) where
-  show (Data.Expression _ value ()) = show value
+  show (Data.Expression value ()) = show value
 
 hole :: Data.PureExpression
-hole = mkExpr "hole" $ Data.ExpressionLeaf Data.Hole
-
-mkExpr ::
-  String -> Data.ExpressionBody Data.PureExpression ->
-  Data.PureExpression
-mkExpr = Data.pureExpression . Guid.fromString
+hole = Data.pureExpression $ Data.ExpressionLeaf Data.Hole
 
 makeApply :: [Data.PureExpression] -> Data.PureExpression
-makeApply = foldl1 (fmap (mkExpr "") . Data.makeApply)
+makeApply = foldl1 (fmap Data.pureExpression . Data.makeApply)
 
 makeLambdaCons ::
   (Guid -> Data.PureExpression -> Data.PureExpression -> Data.ExpressionBody Data.PureExpression) ->
   String -> Data.PureExpression -> Data.PureExpression -> Data.PureExpression
 makeLambdaCons cons name paramType body =
-  Data.pureExpression guid $ cons guid paramType body
-  where
-    guid = Guid.fromString name
+  Data.pureExpression $ cons (Guid.fromString name) paramType body
 
 makeLambda :: String -> Data.PureExpression -> Data.PureExpression -> Data.PureExpression
 makeLambda = makeLambdaCons Data.makeLambda
@@ -54,22 +48,22 @@ makePi :: String -> Data.PureExpression -> Data.PureExpression -> Data.PureExpre
 makePi = makeLambdaCons Data.makePi
 
 setType :: Data.PureExpression
-setType = mkExpr "set" $ Data.ExpressionLeaf Data.Set
+setType = Data.pureExpression $ Data.ExpressionLeaf Data.Set
 
 intType :: Data.PureExpression
-intType = mkExpr "int" $ Data.ExpressionLeaf Data.IntegerType
+intType = Data.pureExpression $ Data.ExpressionLeaf Data.IntegerType
 
 literalInt :: Integer -> Data.PureExpression
-literalInt i = mkExpr ("lit" ++ show i) $ Data.makeLiteralInteger i
+literalInt i = Data.pureExpression $ Data.makeLiteralInteger i
 
 getDefExpr :: String -> Data.PureExpression
 getDefExpr name =
-  mkExpr name . Data.makeDefinitionRef . IRef.unsafeFromGuid $
+  Data.pureExpression . Data.makeDefinitionRef . IRef.unsafeFromGuid $
   Guid.fromString name
 
 getParamExpr :: String -> Data.PureExpression
 getParamExpr name =
-  mkExpr ("GetParam_" ++ name) . Data.makeParameterRef $
+  Data.pureExpression . Data.makeParameterRef $
   Guid.fromString name
 
 data ConflictsAnnotation =
@@ -98,7 +92,7 @@ showExpressionWithConflicts =
         ConflictsAnnotation (val, vErrors) (typ, tErrors) =
           Data.ePayload inferredExpr
 
-definitionTypes :: Map Guid Data.PureExpression
+definitionTypes :: Map Guid (Data.Expression Guid)
 definitionTypes =
   Map.fromList $ map (first Guid.fromString . randomizeGuids)
   [ ("Bool", setType)
@@ -130,7 +124,8 @@ definitionTypes =
     )
   ]
   where
-    randomizeGuids (name, expr) = (name, Data.randomizeGuids (Random.mkStdGen (hash name)) expr)
+    randExpr name = Data.randomizeExpr . Random.mkStdGen $ hash name
+    randomizeGuids (name, expr) = (name, randExpr name $ id <$ expr)
     intToIntToInt = makePi "iii0" intType $ makePi "iii1" intType intType
 
 lookupMany :: Eq a => a -> [(a, b)] -> [b]
@@ -173,7 +168,6 @@ doInfer = uncurry doInferM Infer.initial (Just defI) Nothing
 
 factorialExpr :: Data.PureExpression
 factorialExpr =
-  Data.canonizeGuids .
   makeLambda "x" hole $
   makeApply
   [ getDefExpr "if"
@@ -184,7 +178,7 @@ factorialExpr =
     [ getDefExpr "*"
     , getParamExpr "x"
     , makeApply
-      [ mkExpr "recurse" $ Data.makeDefinitionRef factorialDefI
+      [ Data.pureExpression $ Data.makeDefinitionRef factorialDefI
       , makeApply [getDefExpr "-", getParamExpr "x", literalInt 1]
       ]
     ]

@@ -8,7 +8,6 @@ module Editor.Data.IRef
   ) where
 
 import Control.Monad (liftM)
-import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
 import Data.Store.Property (Property)
@@ -60,57 +59,34 @@ readExprBody = Transaction.readIRef . unExpression
 writeExprBody :: Monad m => Expression -> ExpressionBody -> Transaction t m ()
 writeExprBody = Transaction.writeIRef . unExpression
 
-type Scope = [(Guid, Guid)]
-
-newExpression ::
-  Monad m => Data.Expression a -> Transaction t m Expression
-newExpression =
-  liftM (fst . Data.ePayload) . newExpressionFromH []
+newExpression :: Monad m => Data.Expression a -> Transaction t m Expression
+newExpression = liftM (fst . Data.ePayload) . newExpressionFromH
 
 -- Returns expression with new Guids
 writeExpression
   :: Monad m => Expression -> Data.Expression a
   -> Transaction t m (Data.Expression (Expression, a))
 writeExpression (Data.ExpressionIRef iref) expr = do
-  exprBodyP <- expressionBodyFrom [] g expr
+  exprBodyP <- expressionBodyFrom expr
   Transaction.writeIRef iref $ fmap (fst . Data.ePayload) exprBodyP
-  return $
-    Data.Expression g exprBodyP
+  return $ Data.Expression exprBodyP
     (Data.ExpressionIRef iref, Data.ePayload expr)
-  where
-    g = IRef.guid iref
 
 expressionBodyFrom ::
-  Monad m =>
-  Scope -> Guid -> Data.Expression a ->
+  Monad m => Data.Expression a ->
   Transaction t m
   (Data.ExpressionBody (Data.Expression (Expression, a)))
-expressionBodyFrom scope newGuid (Data.Expression oldGuid exprBody _) =
-  Traversable.mapM (newExpressionFromH newScope) $
-  case exprBody of
-  Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef parGuid)) ->
-    Data.makeParameterRef . fromMaybe parGuid $ lookup parGuid newScope
-  x -> x
-  where
-    newScope
-      | hasLambda exprBody = (oldGuid, newGuid) : scope
-      | otherwise = scope
+expressionBodyFrom = Traversable.mapM newExpressionFromH . Data.eValue
 
 newExpressionFromH ::
   Monad m =>
-  Scope -> Data.Expression a ->
+  Data.Expression a ->
   Transaction t m (Data.Expression (Expression, a))
-newExpressionFromH scope expr =
-  liftM f $ Transaction.newIRefWithGuid mkPair
+newExpressionFromH expr =
+  liftM f . Transaction.newIRefWithGuid $ const mkPair
   where
-    mkPair guid = do
-      body <- expressionBodyFrom scope guid expr
+    mkPair = do
+      body <- expressionBodyFrom expr
       return (fmap (fst . Data.ePayload) body, body)
     f (exprI, body) =
-      Data.Expression (IRef.guid exprI) body
-      (Data.ExpressionIRef exprI, Data.ePayload expr)
-
-hasLambda :: Data.ExpressionBody a -> Bool
-hasLambda Data.ExpressionPi {} = True
-hasLambda Data.ExpressionLambda {} = True
-hasLambda _ = False
+      Data.Expression body (Data.ExpressionIRef exprI, Data.ePayload expr)

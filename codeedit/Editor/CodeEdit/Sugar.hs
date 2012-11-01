@@ -619,11 +619,8 @@ mkPaste exprP = do
       ~() <- replacer clip
       return $ DataIRef.exprGuid clip
 
-zeroGuid :: Guid
-zeroGuid = Guid.fromString "applyZero"
-
 pureHole :: Data.PureExpression
-pureHole = Data.pureExpression zeroGuid $ Data.ExpressionLeaf Data.Hole
+pureHole = Data.pureExpression $ Data.ExpressionLeaf Data.Hole
 
 countArrows :: Data.PureExpression -> Int
 countArrows Data.Expression
@@ -648,13 +645,11 @@ applyForms
 applyForms _ e@Data.Expression{ Data.eValue = Data.ExpressionLambda {} } =
   [e]
 applyForms exprType expr =
-  map Data.canonizeGuids . reverse . take (1 + arrows) $ iterate addApply withDepPisApplied
+  reverse . take (1 + arrows) $ iterate addApply withDepPisApplied
   where
     withDepPisApplied = iterate addApply expr !! depPis
     (depPis, arrows) = countPis exprType
-    addApply =
-      Data.pureExpression zeroGuid .
-      (`Data.makeApply` pureHole)
+    addApply = Data.pureExpression . (`Data.makeApply` pureHole)
 
 convertReadOnlyHole :: Monad m => Convertor m
 convertReadOnlyHole exprI =
@@ -682,7 +677,7 @@ fillPartialHolesInExpression check oldExpr =
   where
     recheck (newExpr, Any True) = check newExpr
     recheck (_, Any False) = return Nothing
-    fillHoleExpr expr@(Data.Expression _ (Data.ExpressionLeaf Data.Hole) hInferred) =
+    fillHoleExpr expr@(Data.Expression (Data.ExpressionLeaf Data.Hole) hInferred) =
       let inferredVal = Infer.iValue hInferred
       in
         case Data.eValue inferredVal of
@@ -693,8 +688,8 @@ fillPartialHolesInExpression check oldExpr =
             -- auto-inferred, just fill it:
             Writer.tell $ Any True
             return inferredVal
-    fillHoleExpr (Data.Expression g body _) =
-      liftM (Data.pureExpression g) $ Traversable.mapM fillHoleExpr body
+    fillHoleExpr (Data.Expression body _) =
+      liftM Data.pureExpression $ Traversable.mapM fillHoleExpr body
 
 resultComplexityScore :: HoleResult -> Int
 resultComplexityScore =
@@ -1013,7 +1008,7 @@ convertDefinition config defI (Data.Definition defBody typeL) = do
       let
         inferredTypeP =
           Infer.iType . eeiInferred $ Data.ePayload exprStored
-        typesMatch = on (==) Data.canonizeGuids typeP inferredTypeP
+        typesMatch = on (==) Data.canonizeParamIds typeP inferredTypeP
         mkNewType = do
           inferredTypeS <-
             convertExpressionPure (mkGen 0 2 (IRef.guid defI)) config

@@ -169,22 +169,16 @@ makeNoResults myId =
   BWidgets.makeTextView "(No results)" $ mappend myId ["no results"]
 
 mkGroup :: [String] -> Data.ExpressionBody Data.PureExpression -> Group
-mkGroup names expr = Group
+mkGroup names body = Group
   { groupNames = names
-  , groupBaseExpr = pExpr
+  , groupBaseExpr = Data.pureExpression body
   }
-  where
-    pExpr = toPureExpr expr
 
 makeVariableGroup ::
   MonadF m => Data.VariableRef -> ExprGuiM m Group
 makeVariableGroup varRef =
   ExprGuiM.withNameFromVarRef varRef $ \(_, varName) ->
   return . mkGroup [varName] . Data.ExpressionLeaf $ Data.GetVariable varRef
-
-toPureExpr
-  :: Data.ExpressionBody Data.PureExpression -> Data.PureExpression
-toPureExpr = Data.pureExpression $ Guid.fromString "ZeroGuid"
 
 renamePrefix :: AnimId -> AnimId -> AnimId -> AnimId
 renamePrefix srcPrefix destPrefix animId =
@@ -220,7 +214,7 @@ makeLiteralGroup searchTerm =
     makeLiteralIntResult integer =
       Group
       { groupNames = [show integer]
-      , groupBaseExpr = toPureExpr . Data.ExpressionLeaf $ Data.LiteralInteger integer
+      , groupBaseExpr = Data.pureExpression . Data.ExpressionLeaf $ Data.LiteralInteger integer
       }
 
 resultsPrefixId :: HoleInfo m -> Widget.Id
@@ -267,8 +261,8 @@ makeResultsList holeInfo group = do
   where
     baseExpr = groupBaseExpr group
     holeApply =
-      toPureExpr .
-      (Data.makeApply . toPureExpr . Data.ExpressionLeaf) Data.Hole
+      Data.pureExpression .
+      (Data.makeApply . Data.pureExpression . Data.ExpressionLeaf) Data.Hole
 
 makeAllResults
   :: MonadF m
@@ -304,7 +298,7 @@ makeAllResults holeInfo = do
       , mkGroup ["->", "Pi", "→", "→", "Π", "π"] $ Data.makePi (Guid.augment "NewPi" (hiGuid holeInfo)) holeExpr holeExpr
       , mkGroup ["\\", "Lambda", "Λ", "λ"] $ Data.makeLambda (Guid.augment "NewLambda" (hiGuid holeInfo)) holeExpr holeExpr
       ]
-    holeExpr = toPureExpr $ Data.ExpressionLeaf Data.Hole
+    holeExpr = Data.pureExpression $ Data.ExpressionLeaf Data.Hole
 
 addNewDefinitionEventMap ::
   Monad m =>
@@ -328,7 +322,7 @@ addNewDefinitionEventMap holeInfo =
         liftM (fromMaybe (error "GetDef should always type-check") . listToMaybe) .
         IT.transaction .
         Sugar.holeInferResults (hiHole holeInfo) .
-        toPureExpr . Data.ExpressionLeaf . Data.GetVariable $
+        Data.pureExpression . Data.ExpressionLeaf . Data.GetVariable $
         Data.DefinitionRef newDefI
       -- TODO: Can we use pickResult's animIdMapping?
       eventResult <- holePickResult defRef
@@ -490,7 +484,7 @@ markTypeMatchesAsUsed :: Monad m => HoleInfo m -> ExprGuiM m ()
 markTypeMatchesAsUsed holeInfo =
   ExprGuiM.markVariablesAsUsed =<<
   (filterM
-   (checkInfer . toPureExpr . Data.makeParameterRef) .
+   (checkInfer . Data.pureExpression . Data.makeParameterRef) .
    Sugar.holeScope . hiHole)
     holeInfo
   where
