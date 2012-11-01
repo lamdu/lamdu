@@ -13,6 +13,7 @@ module Editor.Data
   , makeParameterRef, makeDefinitionRef, makeLiteralInteger
   , Expression(..), atEGuid, atEValue, atEPayload
   , PureExpression, pureExpression
+  , randomizeExpr
   , canonizeGuids, randomizeGuids
   , matchExpression
   , subExpressions
@@ -36,12 +37,13 @@ import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
 import Data.Traversable (Traversable(..))
-import System.Random (RandomGen, random)
+import System.Random (Random, RandomGen, random)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
 import qualified Data.Store.IRef as IRef
+import qualified Data.Traversable as Traversable
 import qualified System.Random as Random
 
 data Lambda expr = Lambda
@@ -164,6 +166,12 @@ variableRefGuid :: VariableRef -> Guid
 variableRefGuid (ParameterRef i) = i
 variableRefGuid (DefinitionRef i) = IRef.guid i
 
+randomizeExpr :: (RandomGen g, Random r) => g -> Expression (r -> a) -> Expression a
+randomizeExpr gen = (`evalState` gen) . Traversable.mapM randomize
+  where
+    randomize f = fmap f $ state random
+
+-- TODO: Remove
 randomizeGuids ::
   RandomGen g => g -> Expression a -> Expression a
 randomizeGuids gen =

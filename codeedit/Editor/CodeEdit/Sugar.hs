@@ -28,7 +28,6 @@ import Control.Arrow (first)
 import Control.Monad ((<=<), liftM, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
-import Control.Monad.Trans.State (evalState, state)
 import Control.Monad.Trans.Writer (Writer, runWriter)
 import Data.Derive.Foldable (makeFoldable)
 import Data.Derive.Traversable (makeTraversable)
@@ -46,7 +45,7 @@ import Data.Store.Transaction (Transaction)
 import Data.Traversable (Traversable(traverse))
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.Sugar.Config (SugarConfig)
-import System.Random (RandomGen, random)
+import System.Random (RandomGen)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.AtFieldTH as AtFieldTH
@@ -291,15 +290,8 @@ eeStored = Traversable.sequenceA <=< eplInferred . Data.ePayload
 eeProp :: ExprEntity m -> Maybe (DataIRef.ExpressionProperty (T m))
 eeProp = Infer.iStored . eeiInferred <=< eplInferred . Data.ePayload
 
-eeFrom :: RandomGen g => g -> Data.Expression (Maybe (ExprEntityMStored m)) -> ExprEntity m
-eeFrom gen =
-  (`evalState` gen) . Traversable.mapM randomize
-  where
-    randomize x =
-      fmap (`EntityPayload` x) $ state random
-
 eeFromPure :: RandomGen g => g -> Data.PureExpression -> ExprEntity m
-eeFromPure gen = eeFrom gen . (fmap . const) Nothing
+eeFromPure gen = Data.randomizeExpr gen . (fmap . const) (`EntityPayload` Nothing)
 
 argument :: (a -> b) -> (b -> c) -> a -> c
 argument = flip (.)
@@ -874,10 +866,12 @@ isCompleteType = not . any (isHole . Data.eValue) . Data.subExpressions
 convertHoleResult ::
   Monad m => SugarConfig -> HoleResult -> T m (Expression m)
 convertHoleResult config holeResult =
-  runSugar ctx . convertExpressionI . eeFrom gen $ fmap toExprEntity holeResult
+  runSugar ctx . convertExpressionI . Data.randomizeExpr gen $
+  fmap toExprEntity holeResult
   where
     gen = Random.mkStdGen . hash . show $ void holeResult
     toExprEntity inferred =
+      flip EntityPayload $
       Just ExprEntityInferred
       { eeiInferred = (fmap . const) Nothing inferred
       , eeiTypeConflicts = []
