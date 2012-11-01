@@ -44,6 +44,7 @@ import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
 import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
+import qualified System.Random as Random
 
 newtype Ref = Ref { unRef :: Int } deriving (Eq, Ord)
 instance Show Ref where
@@ -68,14 +69,15 @@ instance Show TypedValue where
 -- When recursing on an expression, we remember the parent expression guids,
 -- And we make sure not to add a sub-expression with a parent guid (that's a recursive structure).
 
-newtype RefExprPayload = RefExprPayload
+data RefExprPayload = RefExprPayload
   { _rplSubstitutedArgs :: IntSet
-  } deriving (Show, Monoid)
+  , _rplId :: Guid -- For cycle-detection. TODO: Use non-Guid?
+  } deriving (Show)
 
 type RefExpression = Data.Expression RefExprPayload
 
-refExprFromPure :: Data.PureExpression -> RefExpression
-refExprFromPure = fmap $ const mempty
+refExprFromPure :: Data.Expression Guid -> RefExpression
+refExprFromPure = fmap (RefExprPayload mempty)
 
 data Rule = Rule
   { ruleInputs :: [Ref]
@@ -89,7 +91,7 @@ data RefData = RefData
 
 makeRefExpression :: Guid -> Data.ExpressionBody RefExpression -> RefExpression
 makeRefExpression g expr =
-  Data.Expression g expr mempty
+  Data.Expression g expr $ RefExprPayload mempty g
 
 makeHole :: String -> Guid -> RefExpression
 makeHole s g =
@@ -189,7 +191,7 @@ initial :: (RefMap, InferNode)
 initial = newNodeWithScope mempty $ RefMap mempty 0 mempty 0
 
 newtype Loader m = Loader
-  { loadPureDefinitionType :: Data.DefinitionIRef -> m Data.PureExpression
+  { loadPureDefinitionType :: Data.DefinitionIRef -> m (Data.Expression Guid)
   }
 
 -- Initial expression for inferred value and type of a stored entity.
@@ -197,11 +199,10 @@ newtype Loader m = Loader
 initialExprs ::
   Monad m =>
   Loader m ->
-  Scope -> Data.Expression s ->
-  m (Data.PureExpression, Data.PureExpression)
+  Scope -> Data.Expression Guid ->
+  m (Data.Expression Guid, Data.Expression Guid)
 initialExprs loader scope entity =
-  (liftM . first)
-  (Data.pureExpression (Data.eGuid entity)) $
+  (liftM . first) (guidExpr entityGuid) $
   case exprStructure of
   Data.ExpressionApply _ -> return (Data.ExpressionLeaf Data.Hole, holeType)
   Data.ExpressionLeaf (Data.GetVariable var@(Data.DefinitionRef ref))
@@ -210,13 +211,13 @@ initialExprs loader scope entity =
       loadPureDefinitionType loader ref
   _ -> return (exprStructure, holeType)
   where
-    innerHole =
-      Data.pureExpression (Guid.augment "innerHole" (Data.eGuid entity)) $
-      Data.ExpressionLeaf Data.Hole
+    entityGuid = Data.ePayload entity
+    mkGuid name = Guid.augment name entityGuid
+    guidExpr guid body = Data.Expression guid body guid
     exprStructure = fmap (const innerHole) $ Data.eValue entity
-    holeType =
-      Data.pureExpression (Guid.augment "type" (Data.eGuid entity)) $
-      Data.ExpressionLeaf Data.Hole
+    hole name = guidExpr (mkGuid name) $ Data.ExpressionLeaf Data.Hole
+    innerHole = hole "innerHole"
+    holeType = hole "type"
 
 intMapMod :: Functor f => Int -> (v -> f v) -> IntMap v -> f (IntMap v)
 intMapMod k =
@@ -236,14 +237,16 @@ guardEither :: l -> Bool -> EitherT l Identity ()
 guardEither err False = Either.left err
 guardEither _ True = return ()
 
-guidRepeat :: Data.Expression a -> Bool
+guidRepeat :: RefExpression -> Bool
 guidRepeat =
   go Set.empty
   where
-    go forbidden (Data.Expression g body _)
+    go forbidden (Data.Expression _ body pl)
       | Set.member g forbidden = True
       | otherwise =
         Foldable.any (go (Set.insert g forbidden)) body
+      where
+        g = Lens.view rplId pl
 
 -- Merge two expressions:
 -- If they do not match, return Nothing.
@@ -260,11 +263,14 @@ mergeExprs p0 p1 =
     guardEither (InfiniteExpression (void result)) . not $ guidRepeat result
     return result
   where
-    onMatch x y = return $ mappend x y
+    addSubstituted addition =
+      (Lens.over rplSubstitutedArgs)
+      ((mappend . Lens.view rplSubstitutedArgs) addition)
+    onMatch x y = return $ addSubstituted y x
     onMismatch (Data.Expression _ (Data.ExpressionLeaf Data.Hole) s0) e1 =
-      return $ fmap (mappend s0) e1
+      return $ fmap (addSubstituted s0) e1
     onMismatch e0 (Data.Expression _ (Data.ExpressionLeaf Data.Hole) s1) =
-      return $ fmap (`mappend` s1) e0
+      return $ fmap (addSubstituted s1) e0
     onMismatch e0 e1 =
       Either.left $ MismatchIn (void e0) (void e1)
 
@@ -358,7 +364,7 @@ makeRules resumption expr =
 loadNode ::
   Monad m =>
   Loader m -> Scope ->
-  Data.Expression s -> TypedValue ->
+  Data.Expression (Guid, s) -> TypedValue ->
   StateT RefMap m (Data.Expression (s, InferNode))
 loadNode loader scope entity typedValue = do
   setInitialValues
@@ -371,9 +377,10 @@ loadNode loader scope entity typedValue = do
       onLambda Data.ExpressionPi lambda
     _ -> Traversable.mapM (go id) bodyWithChildrenTvs
   return $
-    Data.Expression (Data.eGuid entity) exprBody
-    (Data.ePayload entity, InferNode typedValue scope)
+    Data.Expression entityGuid exprBody
+    (snd (Data.ePayload entity), InferNode typedValue scope)
   where
+    entityGuid = fst $ Data.ePayload entity
     onLambda cons (Data.Lambda param paramType@(_, paramTypeTv) result) = do
       paramTypeR <- go id paramType
       let paramRef = Data.ParameterRef param
@@ -387,7 +394,7 @@ loadNode loader scope entity typedValue = do
       Just (RefData (refExprFromPure expr) [])
     setInitialValues = do
       (initialVal, initialType) <-
-        lift $ initialExprs loader scope entity
+        lift . initialExprs loader scope $ fmap fst entity
       initializeRefData (tvVal typedValue) initialVal
       initializeRefData (tvType typedValue) initialType
 
@@ -635,7 +642,8 @@ data Loaded a = Loaded
   }
 
 load ::
-  Monad m => Loader m -> RefMap -> InferNode ->
+  (Monad m) =>
+  Loader m -> RefMap -> InferNode ->
   Maybe Data.DefinitionIRef -> Data.Expression a ->
   m (Loaded a)
 load
@@ -643,8 +651,11 @@ load
   (InferNode rootTv@(TypedValue rootValR rootTypR) rootScope)
   mRecursiveDef expression =
     liftM buildLoaded . (`runStateT` initialRefMap) $
-    loadNode loader scope expression rootTv
+    loadNode loader scope guidExpr rootTv
   where
+    gen = Random.mkStdGen $ Lens.view nextRef initialRefMap
+    guidExpr =
+      Data.randomizeExpr gen $ fmap (flip (,)) expression
     initialMRefData k =
       Lens.view (refMap . Lens.at (unRef k)) initialRefMap
     buildLoaded (node, resultRefMap) = Loaded
@@ -658,8 +669,7 @@ load
     scope =
       case mRecursiveDef of
       Nothing -> rootScope
-      Just iref ->
-        Map.insert (Data.DefinitionRef iref) (tvType rootTv) rootScope
+      Just iref -> Map.insert (Data.DefinitionRef iref) (tvType rootTv) rootScope
 
 postProcess ::
   (Data.Expression (a, InferNode), InferState) -> (Expression a, RefMap)

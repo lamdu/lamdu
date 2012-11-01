@@ -402,8 +402,7 @@ mkFuncParamActions
   FuncParamActions
   { fpListItemActions =
     ListItemActions
-    { itemDelete =
-         mkDelete ((Infer.iStored . eeiInferred) lambdaStored) replacerP
+    { itemDelete = mkDelete (Infer.iStored lambdaInferred) replacerP
     , itemAddNext = mkAddParam replacerP
     }
   , fpGetExample = do
@@ -417,7 +416,8 @@ mkFuncParamActions
         SugarContext inferState (scConfig ctx)
   }
   where
-    scope = Infer.nScope . Infer.iPoint $ eeiInferred lambdaStored
+    lambdaInferred = eeiInferred lambdaStored
+    scope = Infer.nScope $ Infer.iPoint lambdaInferred
     paramTypeRef =
       Infer.tvVal . Infer.nRefs . Infer.iPoint $ eeiInferred paramType
     newNode =

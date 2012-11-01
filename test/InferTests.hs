@@ -42,7 +42,7 @@ showExpressionWithInferred =
   List.intercalate "\n" . go
   where
     go inferredExpr =
-      [ "Expr: " ++ show (Data.eGuid inferredExpr) ++ ":" ++ showStructure expr
+      [ "Expr:" ++ showStructure expr
       , "  IVal:  " ++ show val
       , "  IType: " ++ show typ
       ] ++
