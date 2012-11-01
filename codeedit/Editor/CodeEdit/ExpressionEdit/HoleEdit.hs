@@ -9,7 +9,6 @@ import Control.Arrow (first, second)
 import Control.Monad ((<=<), filterM, liftM, mplus, msum, void)
 import Control.Monad.ListT (ListT)
 import Data.Function (on)
-import Data.Hashable (Hashable, hash)
 import Data.List (isInfixOf, isPrefixOf)
 import Data.List.Class (List)
 import Data.List.Utils (sortOn, nonEmptyAll)
@@ -25,6 +24,7 @@ import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
+import System.Random.Utils (randFunc)
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Char as Char
 import qualified Data.List.Class as List
@@ -48,7 +48,6 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-import qualified System.Random as Random
 
 moreSymbol :: String
 moreSymbol = "▷"
@@ -59,7 +58,6 @@ moreSymbolSizeFactor = 0.5
 data Group = Group
   { groupNames :: [String]
   , groupBaseExpr :: Data.PureExpression
-  , groupHashBase :: String
   }
 AtFieldTH.make ''Group
 
@@ -110,15 +108,6 @@ data ResultsList = ResultsList
   , rlMore :: Maybe [Sugar.HoleResult]
   }
 
-randomizeResultExpr ::
-  Hashable h => HoleInfo m -> h -> Data.Expression a -> Data.Expression a
-randomizeResultExpr holeInfo hashBase expr =
-  flip Data.randomizeGuids expr . Random.mkStdGen $
-  hash (hashBase, Guid.bs (hiGuid holeInfo))
-
-exprHash :: Data.Expression a -> String
-exprHash = show . void
-
 resultsToWidgets
   :: MonadF m
   => HoleInfo m -> ResultsList
@@ -153,12 +142,11 @@ resultsToWidgets holeInfo results = do
         , msum $ map snd pairs
         )
     moreResult expr = do
-      mResult <- (liftM . fmap . const) cExpr . ExprGuiM.widgetEnv $ WE.subCursor resultId
-      widget <- toWidget resultId cExpr
+      mResult <- (liftM . fmap . const) expr . ExprGuiM.widgetEnv $ WE.subCursor resultId
+      widget <- toWidget resultId expr
       return (widget, mResult)
       where
-        resultId = mappend moreResultsPrefixId $ pureGuidId cExpr
-        cExpr = randomizeResultExpr holeInfo (exprHash expr) expr
+        resultId = mappend moreResultsPrefixId $ exprWidgetId expr
     toWidget resultId expr =
       ExprGuiM.widgetEnv . BWidgets.makeFocusableView resultId .
       Widget.strongerEvents (resultPickEventMap holeInfo expr) .
@@ -174,7 +162,6 @@ resultsToWidgets holeInfo results = do
       return $ BWidgets.hboxCenteredSpaced [w, moreSymbolLabel]
     canonizedExpr = rlFirst results
     myId = rlFirstId results
-    pureGuidId = WidgetIds.fromGuid . Data.eGuid
 
 makeNoResults :: MonadF m => AnimId -> ExprGuiM m (WidgetT m)
 makeNoResults myId =
@@ -182,23 +169,16 @@ makeNoResults myId =
   BWidgets.makeTextView "(No results)" $ mappend myId ["no results"]
 
 mkGroup :: [String] -> Data.ExpressionBody Data.PureExpression -> Group
-mkGroup names expr = Group
+mkGroup names body = Group
   { groupNames = names
-  , groupBaseExpr = pExpr
-  , groupHashBase = exprHash pExpr
+  , groupBaseExpr = Data.pureExpression body
   }
-  where
-    pExpr = toPureExpr expr
 
 makeVariableGroup ::
   MonadF m => Data.VariableRef -> ExprGuiM m Group
 makeVariableGroup varRef =
   ExprGuiM.withNameFromVarRef varRef $ \(_, varName) ->
   return . mkGroup [varName] . Data.ExpressionLeaf $ Data.GetVariable varRef
-
-toPureExpr
-  :: Data.ExpressionBody Data.PureExpression -> Data.PureExpression
-toPureExpr = Data.pureExpression $ Guid.fromString "ZeroGuid"
 
 renamePrefix :: AnimId -> AnimId -> AnimId -> AnimId
 renamePrefix srcPrefix destPrefix animId =
@@ -234,30 +214,31 @@ makeLiteralGroup searchTerm =
     makeLiteralIntResult integer =
       Group
       { groupNames = [show integer]
-      , groupBaseExpr = toPureExpr . Data.ExpressionLeaf $ Data.LiteralInteger integer
-      , groupHashBase = "Literal"
+      , groupBaseExpr = Data.pureExpression . Data.ExpressionLeaf $ Data.LiteralInteger integer
       }
 
 resultsPrefixId :: HoleInfo m -> Widget.Id
 resultsPrefixId holeInfo = mconcat [hiHoleId holeInfo, Widget.Id ["results"]]
 
+exprWidgetId :: Data.Expression a -> Widget.Id
+exprWidgetId = WidgetIds.fromGuid . randFunc . show . void
+
 toResultsList ::
-  (Monad m, Hashable h) =>
-  HoleInfo m -> h -> Data.PureExpression ->
+  Monad m =>
+  HoleInfo m -> Data.PureExpression ->
   T m (Maybe ResultsList)
-toResultsList holeInfo hashBase baseExpr = do
+toResultsList holeInfo baseExpr = do
   results <- Sugar.holeInferResults (hiHole holeInfo) baseExpr
   return $
     case results of
     [] -> Nothing
     (x:xs) ->
-      let
-        canonizedExpr = randomizeResultExpr holeInfo hashBase x
-        canonizedExprId = WidgetIds.fromGuid $ Data.eGuid canonizedExpr
+      let canonizedExprId = exprWidgetId baseExpr
       in Just ResultsList
         { rlFirstId = mconcat [resultsPrefixId holeInfo, canonizedExprId]
-        , rlMoreResultsPrefixId = mconcat [resultsPrefixId holeInfo, Widget.Id ["more results"], canonizedExprId]
-        , rlFirst = canonizedExpr
+        , rlMoreResultsPrefixId =
+          mconcat [resultsPrefixId holeInfo, Widget.Id ["more results"], canonizedExprId]
+        , rlFirst = x
         , rlMore =
           case xs of
           [] -> Nothing
@@ -272,17 +253,16 @@ makeResultsList ::
 makeResultsList holeInfo group = do
   -- We always want the first, and we want to know if there's more, so
   -- take 2:
-  mRes <- toResultsList holeInfo hashBase baseExpr
+  mRes <- toResultsList holeInfo baseExpr
   case mRes of
     Just res -> return . Just $ (GoodResult, res)
     Nothing ->
-      (liftM . fmap) ((,) BadResult) . toResultsList holeInfo hashBase $ holeApply baseExpr
+      (liftM . fmap) ((,) BadResult) . toResultsList holeInfo $ holeApply baseExpr
   where
-    hashBase = groupHashBase group
     baseExpr = groupBaseExpr group
     holeApply =
-      toPureExpr .
-      (Data.makeApply . toPureExpr . Data.ExpressionLeaf) Data.Hole
+      Data.pureExpression .
+      (Data.makeApply . Data.pureExpression . Data.ExpressionLeaf) Data.Hole
 
 makeAllResults
   :: MonadF m
@@ -318,7 +298,7 @@ makeAllResults holeInfo = do
       , mkGroup ["->", "Pi", "→", "→", "Π", "π"] $ Data.makePi (Guid.augment "NewPi" (hiGuid holeInfo)) holeExpr holeExpr
       , mkGroup ["\\", "Lambda", "Λ", "λ"] $ Data.makeLambda (Guid.augment "NewLambda" (hiGuid holeInfo)) holeExpr holeExpr
       ]
-    holeExpr = toPureExpr $ Data.ExpressionLeaf Data.Hole
+    holeExpr = Data.pureExpression $ Data.ExpressionLeaf Data.Hole
 
 addNewDefinitionEventMap ::
   Monad m =>
@@ -342,7 +322,7 @@ addNewDefinitionEventMap holeInfo =
         liftM (fromMaybe (error "GetDef should always type-check") . listToMaybe) .
         IT.transaction .
         Sugar.holeInferResults (hiHole holeInfo) .
-        toPureExpr . Data.ExpressionLeaf . Data.GetVariable $
+        Data.pureExpression . Data.ExpressionLeaf . Data.GetVariable $
         Data.DefinitionRef newDefI
       -- TODO: Can we use pickResult's animIdMapping?
       eventResult <- holePickResult defRef
@@ -504,7 +484,7 @@ markTypeMatchesAsUsed :: Monad m => HoleInfo m -> ExprGuiM m ()
 markTypeMatchesAsUsed holeInfo =
   ExprGuiM.markVariablesAsUsed =<<
   (filterM
-   (checkInfer . toPureExpr . Data.makeParameterRef) .
+   (checkInfer . Data.pureExpression . Data.makeParameterRef) .
    Sugar.holeScope . hiHole)
     holeInfo
   where

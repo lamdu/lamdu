@@ -10,7 +10,7 @@ module Editor.Data.Infer
   ) where
 
 import Control.Applicative (Applicative(..))
-import Control.Arrow (first)
+import Control.Arrow (first, second)
 import Control.Lens ((%=), (.=), (^.), (+=))
 import Control.Monad (guard, liftM, liftM2, unless, void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
@@ -44,6 +44,7 @@ import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
 import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
+import qualified System.Random as Random
 
 newtype Ref = Ref { unRef :: Int } deriving (Eq, Ord)
 instance Show Ref where
@@ -68,14 +69,15 @@ instance Show TypedValue where
 -- When recursing on an expression, we remember the parent expression guids,
 -- And we make sure not to add a sub-expression with a parent guid (that's a recursive structure).
 
-newtype RefExprPayload = RefExprPayload
-  { _pSubstitutedArgs :: IntSet
-  } deriving (Show, Monoid)
+data RefExprPayload = RefExprPayload
+  { _rplSubstitutedArgs :: IntSet
+  , _rplId :: Guid -- For cycle-detection. TODO: Use non-Guid?
+  } deriving (Show)
 
 type RefExpression = Data.Expression RefExprPayload
 
-refExprFromPure :: Data.PureExpression -> RefExpression
-refExprFromPure = fmap $ const mempty
+refExprFromPure :: Data.Expression Guid -> RefExpression
+refExprFromPure = fmap (RefExprPayload mempty)
 
 data Rule = Rule
   { ruleInputs :: [Ref]
@@ -88,8 +90,7 @@ data RefData = RefData
   }
 
 makeRefExpression :: Guid -> Data.ExpressionBody RefExpression -> RefExpression
-makeRefExpression g expr =
-  Data.Expression g expr mempty
+makeRefExpression g expr = Data.Expression expr $ RefExprPayload mempty g
 
 makeHole :: String -> Guid -> RefExpression
 makeHole s g =
@@ -189,7 +190,7 @@ initial :: (RefMap, InferNode)
 initial = newNodeWithScope mempty $ RefMap mempty 0 mempty 0
 
 newtype Loader m = Loader
-  { loadPureDefinitionType :: Data.DefinitionIRef -> m Data.PureExpression
+  { loadPureDefinitionType :: Data.DefinitionIRef -> m (Data.Expression Guid)
   }
 
 -- Initial expression for inferred value and type of a stored entity.
@@ -197,11 +198,10 @@ newtype Loader m = Loader
 initialExprs ::
   Monad m =>
   Loader m ->
-  Scope -> Data.Expression s ->
-  m (Data.PureExpression, Data.PureExpression)
+  Scope -> Data.Expression Guid ->
+  m (Data.Expression Guid, Data.Expression Guid)
 initialExprs loader scope entity =
-  (liftM . first)
-  (Data.pureExpression (Data.eGuid entity)) $
+  (liftM . first) (`Data.Expression` entityGuid) $
   case exprStructure of
   Data.ExpressionApply _ -> return (Data.ExpressionLeaf Data.Hole, holeType)
   Data.ExpressionLeaf (Data.GetVariable var@(Data.DefinitionRef ref))
@@ -210,13 +210,12 @@ initialExprs loader scope entity =
       loadPureDefinitionType loader ref
   _ -> return (exprStructure, holeType)
   where
-    innerHole =
-      Data.pureExpression (Guid.augment "innerHole" (Data.eGuid entity)) $
-      Data.ExpressionLeaf Data.Hole
+    entityGuid = Data.ePayload entity
+    mkGuid name = Guid.augment name entityGuid
     exprStructure = fmap (const innerHole) $ Data.eValue entity
-    holeType =
-      Data.pureExpression (Guid.augment "type" (Data.eGuid entity)) $
-      Data.ExpressionLeaf Data.Hole
+    hole name = Data.Expression (Data.ExpressionLeaf Data.Hole) $ mkGuid name
+    innerHole = hole "innerHole"
+    holeType = hole "type"
 
 intMapMod :: Functor f => Int -> (v -> f v) -> IntMap v -> f (IntMap v)
 intMapMod k =
@@ -236,14 +235,16 @@ guardEither :: l -> Bool -> EitherT l Identity ()
 guardEither err False = Either.left err
 guardEither _ True = return ()
 
-guidRepeat :: Data.Expression a -> Bool
+guidRepeat :: RefExpression -> Bool
 guidRepeat =
   go Set.empty
   where
-    go forbidden (Data.Expression g body _)
+    go forbidden (Data.Expression body pl)
       | Set.member g forbidden = True
       | otherwise =
         Foldable.any (go (Set.insert g forbidden)) body
+      where
+        g = Lens.view rplId pl
 
 -- Merge two expressions:
 -- If they do not match, return Nothing.
@@ -260,11 +261,14 @@ mergeExprs p0 p1 =
     guardEither (InfiniteExpression (void result)) . not $ guidRepeat result
     return result
   where
-    onMatch x y = return $ mappend x y
-    onMismatch (Data.Expression _ (Data.ExpressionLeaf Data.Hole) s0) e1 =
-      return $ fmap (mappend s0) e1
-    onMismatch e0 (Data.Expression _ (Data.ExpressionLeaf Data.Hole) s1) =
-      return $ fmap (`mappend` s1) e0
+    addSubstituted addition =
+      Lens.over rplSubstitutedArgs
+      ((mappend . Lens.view rplSubstitutedArgs) addition)
+    onMatch x y = return $ addSubstituted y x
+    onMismatch (Data.Expression (Data.ExpressionLeaf Data.Hole) s0) e1 =
+      return $ fmap (addSubstituted s0) e1
+    onMismatch e0 (Data.Expression (Data.ExpressionLeaf Data.Hole) s1) =
+      return $ fmap (addSubstituted s1) e0
     onMismatch e0 e1 =
       Either.left $ MismatchIn (void e0) (void e1)
 
@@ -278,7 +282,7 @@ lambdaBodyTypeToPiResultTypeRule param lambdaTypeRef bodyTypeRef =
 
 piToLambdaRule :: Guid -> TypedValue -> Ref -> Rule
 piToLambdaRule param (TypedValue lambdaValueRef lambdaTypeRef) bodyTypeRef =
-  Rule [lambdaTypeRef] $ \[Data.Expression _ piBody _] -> do
+  Rule [lambdaTypeRef] $ \[Data.Expression piBody _] -> do
     Data.Lambda piParam paramType resultType <- maybeToList $ maybePi piBody
     [ -- Pi result type -> Body type
       ( bodyTypeRef
@@ -324,8 +328,8 @@ lambdaStructureRules cons uncons exprGuid lamRef (Data.Lambda param paramTypeRef
      )]
   ]
 
-makeNodeRules :: Data.Expression InferNode -> [Rule]
-makeNodeRules (Data.Expression exprGuid exprBody (InferNode typedVal scope)) =
+makeNodeRules :: Guid -> Data.Expression InferNode -> [Rule]
+makeNodeRules exprGuid (Data.Expression exprBody (InferNode typedVal scope)) =
   case fmap (nRefs . Data.ePayload) exprBody of
   Data.ExpressionPi lambda@(Data.Lambda _ _ resultType) ->
     setRule (tvType resultType) :
@@ -344,22 +348,21 @@ makeNodeRules (Data.Expression exprGuid exprBody (InferNode typedVal scope)) =
       setRule (tvType paramType) :
       lambdaStructureRules cons uncons exprGuid (tvVal typedVal) (fmap tvVal lam)
 
-commonRules :: Data.Expression InferNode -> [Rule]
-commonRules expr =
-  [ ruleSimpleType . nRefs $ Data.ePayload expr
-  ]
+makeResumptionRules :: Data.Expression (Guid, InferNode) -> [Rule]
+makeResumptionRules expr =
+  makeNodeRules (fst (Data.ePayload expr)) (fmap snd expr) ++
+  (Foldable.concat . fmap makeAllRules . Data.eValue) expr
 
-makeRules :: Bool -> Data.Expression InferNode -> [Rule]
-makeRules resumption expr =
-  (if resumption then [] else commonRules expr) ++
-  makeNodeRules expr ++
-  (Foldable.concat . fmap (makeRules False)) (Data.eValue expr)
+makeAllRules :: Data.Expression (Guid, InferNode) -> [Rule]
+makeAllRules expr =
+  (ruleSimpleType . nRefs . snd . Data.ePayload) expr :
+  makeResumptionRules expr
 
 loadNode ::
   Monad m =>
   Loader m -> Scope ->
-  Data.Expression s -> TypedValue ->
-  StateT RefMap m (Data.Expression (s, InferNode))
+  Data.Expression (Guid, s) -> TypedValue ->
+  StateT RefMap m (Data.Expression (InferNode, (Guid, s)))
 loadNode loader scope entity typedValue = do
   setInitialValues
   bodyWithChildrenTvs <- Traversable.mapM addTypedVal $ Data.eValue entity
@@ -371,8 +374,8 @@ loadNode loader scope entity typedValue = do
       onLambda Data.ExpressionPi lambda
     _ -> Traversable.mapM (go id) bodyWithChildrenTvs
   return $
-    Data.Expression (Data.eGuid entity) exprBody
-    (Data.ePayload entity, InferNode typedValue scope)
+    Data.Expression exprBody
+    (InferNode typedValue scope, Data.ePayload entity)
   where
     onLambda cons (Data.Lambda param paramType@(_, paramTypeTv) result) = do
       paramTypeR <- go id paramType
@@ -387,7 +390,7 @@ loadNode loader scope entity typedValue = do
       Just (RefData (refExprFromPure expr) [])
     setInitialValues = do
       (initialVal, initialType) <-
-        lift $ initialExprs loader scope entity
+        lift . initialExprs loader scope $ fmap fst entity
       initializeRefData (tvVal typedValue) initialVal
       initializeRefData (tvType typedValue) initialType
 
@@ -409,11 +412,11 @@ mergeToPiResult =
   Data.matchExpression onMatch ((fmap . fmap) return onMismatch)
   where
     onMatch x _ = return x
-    onMismatch destHole@(Data.Expression _ (Data.ExpressionLeaf Data.Hole) destPayload) src
+    onMismatch destHole@(Data.Expression (Data.ExpressionLeaf Data.Hole) destPayload) src
       | IntSet.null substs = destHole
-      | otherwise = fmap (Lens.set pSubstitutedArgs substs) src
+      | otherwise = fmap (Lens.set rplSubstitutedArgs substs) src
       where
-        substs = destPayload ^. pSubstitutedArgs
+        substs = destPayload ^. rplSubstitutedArgs
     -- TODO: This seems like it should report an error,
     -- verify/document that it is OK because the other direction of
     -- information flow will catch any error:
@@ -434,7 +437,8 @@ maybeApply _ = Nothing
 ruleSimpleType :: TypedValue -> Rule
 ruleSimpleType (TypedValue val typ) =
   Rule [val] $ \[valExpr] -> case valExpr of
-    Data.Expression exprGuid valExprBody _ -> case valExprBody of
+    Data.Expression valExprBody (RefExprPayload { _rplId = exprGuid }) ->
+      case valExprBody of
       Data.ExpressionLeaf Data.Set -> [(typ, setExpr)]
       Data.ExpressionLeaf Data.IntegerType -> [(typ, setExpr)]
       Data.ExpressionLeaf (Data.LiteralInteger _) -> [(typ, intTypeExpr)]
@@ -453,12 +457,12 @@ intoApplyResultRule ::
 intoApplyResultRule uncons applyRef func arg =
   -- PreSubst with Subst => PostSubst
   -- (func, arg) -> apply
-  Rule [func, arg] $ \ [Data.Expression _ funcBody _, argExpr] -> do
+  Rule [func, arg] $ \ [Data.Expression funcBody _, argExpr] -> do
     Data.Lambda param _ result <- maybeToList $ uncons funcBody
     return
       ( applyRef
       , subst param
-        ((fmap . Lens.over pSubstitutedArgs . IntSet.insert) (unRef arg) argExpr)
+        ((fmap . Lens.over rplSubstitutedArgs . IntSet.insert) (unRef arg) argExpr)
         result
       )
 
@@ -471,7 +475,7 @@ intoArgRule uncons applyRef func arg =
   --   When PreSubst part refers to its param:
   --     PostSubst part <=> arg
   -- (apply, func) -> arg
-  Rule [applyRef, func] $ \ [applyExpr, Data.Expression _ funcBody _] -> do
+  Rule [applyRef, func] $ \ [applyExpr, Data.Expression funcBody _] -> do
     Data.Lambda param _ result <- maybeToList $ uncons funcBody
     mergeToArg param arg result applyExpr
 
@@ -485,11 +489,11 @@ intoFuncResultTypeRule cons uncons applyRef func =
   -- Propagate data from Apply's to the Func where appropriate.
   -- (Not on non-substituted holes)
   -- apply -> func result
-  Rule [applyRef, func] $ \ [applyExpr, Data.Expression funcGuid funcBody _] -> do
+  Rule [applyRef, func] $ \ [applyExpr, Data.Expression funcBody funcPl] -> do
     Data.Lambda param paramT result <- maybeToList $ uncons funcBody
     return
       ( func
-      , makeRefExpression funcGuid .
+      , makeRefExpression (Lens.view rplId funcPl) .
         cons . Data.Lambda param paramT $
         mergeToPiResult result applyExpr
       )
@@ -516,7 +520,7 @@ mergeToArg param arg =
       | g == param =
         Compose.O . (fmap . const) Unit $ Writer.tell
         [( arg
-         , (fmap . Lens.over pSubstitutedArgs . IntSet.delete) (unRef arg) post
+         , (fmap . Lens.over rplSubstitutedArgs . IntSet.delete) (unRef arg) post
          )]
     onMismatch _ _ = unit
 
@@ -553,7 +557,7 @@ piParamTypeToArgTypeRule :: Data.Apply TypedValue -> Rule
 piParamTypeToArgTypeRule (Data.Apply func arg) =
   -- If func type is Pi
   -- Pi's ParamT => ArgT
-  Rule [tvType func] $ \ [Data.Expression _ funcTExpr _] -> do
+  Rule [tvType func] $ \ [Data.Expression funcTExpr _] -> do
     Data.Lambda _ paramT _ <- maybeToList $ maybePi funcTExpr
     return (tvType arg, paramT)
 
@@ -561,7 +565,7 @@ lambdaParamTypeToArgTypeRule :: Data.Apply TypedValue -> Rule
 lambdaParamTypeToArgTypeRule (Data.Apply func arg) =
   -- If func is Lambda
   -- Lambda's ParamT => ArgT
-  Rule [tvVal func] $ \ [Data.Expression _ funcExpr _] -> do
+  Rule [tvVal func] $ \ [Data.Expression funcExpr _] -> do
     Data.Lambda _ paramT _ <- maybeToList $ maybeLambda funcExpr
     return (tvType arg, paramT)
 
@@ -570,11 +574,11 @@ argTypeToLambdaParamTypeRule baseGuid (Data.Apply func arg) =
   -- If func is Lambda,
   -- ArgT => Lambda's ParamT
   Rule [tvVal func, tvType arg] $
-  \ [Data.Expression funcGuid funcExpr _, argTExpr] -> do
+  \ [Data.Expression funcExpr funcPl, argTExpr] -> do
     Data.Lambda param _ _ <- maybeToList $ maybeLambda funcExpr
     return
       ( tvVal func
-      , makeRefExpression funcGuid .
+      , makeRefExpression (Lens.view rplId funcPl) .
         Data.makeLambda param argTExpr $ makeHole "ar5" baseGuid
       )
 
@@ -629,13 +633,14 @@ applyRules baseGuid applyTv apply@(Data.Apply func arg) =
     (tvVal applyTv) (tvVal func) (tvVal arg)
 
 data Loaded a = Loaded
-  { lExpr :: Data.Expression (a, InferNode)
+  { lExpr :: Data.Expression (InferNode, (Guid, a))
   , lRefMap :: RefMap
   , lSavedRoot :: (Maybe RefData, Maybe RefData)
   }
 
 load ::
-  Monad m => Loader m -> RefMap -> InferNode ->
+  (Monad m) =>
+  Loader m -> RefMap -> InferNode ->
   Maybe Data.DefinitionIRef -> Data.Expression a ->
   m (Loaded a)
 load
@@ -643,8 +648,11 @@ load
   (InferNode rootTv@(TypedValue rootValR rootTypR) rootScope)
   mRecursiveDef expression =
     liftM buildLoaded . (`runStateT` initialRefMap) $
-    loadNode loader scope expression rootTv
+    loadNode loader scope guidExpr rootTv
   where
+    gen = Random.mkStdGen $ Lens.view nextRef initialRefMap
+    guidExpr =
+      Data.randomizeExpr gen $ fmap (flip (,)) expression
     initialMRefData k =
       Lens.view (refMap . Lens.at (unRef k)) initialRefMap
     buildLoaded (node, resultRefMap) = Loaded
@@ -658,15 +666,14 @@ load
     scope =
       case mRecursiveDef of
       Nothing -> rootScope
-      Just iref ->
-        Map.insert (Data.DefinitionRef iref) (tvType rootTv) rootScope
+      Just iref -> Map.insert (Data.DefinitionRef iref) (tvType rootTv) rootScope
 
 postProcess ::
-  (Data.Expression (a, InferNode), InferState) -> (Expression a, RefMap)
-postProcess (expr, InferState resultRefMap _ _) =
+  RefMap -> Data.Expression (InferNode, a) -> (Expression a, RefMap)
+postProcess resultRefMap expr =
   (fmap derefNode expr, resultRefMap)
   where
-    derefNode (s, inferNode) =
+    derefNode (inferNode, s) =
       Inferred
       { iStored = s
       , iValue = deref . tvVal $ nRefs inferNode
@@ -698,11 +705,14 @@ newtype InferT m a =
   InferT { unInferT :: ReaderT (InferActions m) (StateT InferState m) a }
   deriving (Monad)
 
+swap :: (a, b) -> (b, a)
+swap (x, y) = (y, x)
+
 runInferT ::
-  InferActions m -> InferState ->
-  InferT m a -> m (a, InferState)
+  Monad m => InferActions m -> InferState ->
+  InferT m a -> m (InferState, a)
 runInferT actions state =
-  (`runStateT` state) . (`runReaderT` actions) . unInferT
+  liftM swap . (`runStateT` state) . (`runReaderT` actions) . unInferT
 
 liftActions :: ReaderT (InferActions m) (StateT InferState m) a -> InferT m a
 liftActions = InferT
@@ -718,8 +728,11 @@ instance MonadTrans InferT where
 
 infer :: Monad m => InferActions m -> Loaded a -> m (Expression a, RefMap)
 infer actions (Loaded expr loadedRefMap (rootValMRefData, rootTypMRefData)) =
-  liftM postProcess .
-  runInferT actions ruleInferState $ do
+  liftM
+  ( uncurry postProcess
+  . first (Lens.view sRefMap)
+  . (second . fmap . second) snd -- Get rid of (Guid,)
+  ) . runInferT actions ruleInferState $ do
     restoreRoot rootValR rootValMRefData
     restoreRoot rootTypR rootTypMRefData
     -- when we resume load,
@@ -732,8 +745,10 @@ infer actions (Loaded expr loadedRefMap (rootValMRefData, rootTypMRefData)) =
     ruleInferState =
       (`execState` InferState loadedRefMap mempty mempty) .
       mapM_ addRule .
-      makeRules (isJust rootValMRefData) $ fmap snd expr
-    TypedValue rootValR rootTypR = nRefs . snd $ Data.ePayload expr
+      makeRules rootValMRefData $ fmap (first fst . swap) expr
+    makeRules Nothing = makeAllRules
+    makeRules (Just _) = makeResumptionRules
+    TypedValue rootValR rootTypR = nRefs . fst $ Data.ePayload expr
     restoreRoot _ Nothing = return ()
     restoreRoot ref (Just (RefData refExpr refRules)) = do
       liftState $ refMapAt ref . rRules %= (refRules ++)
@@ -788,7 +803,7 @@ setRefExpr ref newExpr = do
     equiv x y =
       isJust $
       Data.matchExpression compareSubsts ((const . const) Nothing) x y
-    compareSubsts x y = guard $ (x ^. pSubstitutedArgs) == (y ^. pSubstitutedArgs)
+    compareSubsts x y = guard $ (x ^. rplSubstitutedArgs) == (y ^. rplSubstitutedArgs)
 
 {-# SPECIALIZE setRefExpr :: Ref -> RefExpression -> InferT Maybe () #-}
 {-# SPECIALIZE setRefExpr :: Monoid w => Ref -> RefExpression -> InferT (Writer w) () #-}

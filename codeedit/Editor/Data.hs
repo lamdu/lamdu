@@ -11,9 +11,10 @@ module Editor.Data
   , ExpressionBody(..)
   , makeApply, makePi, makeLambda
   , makeParameterRef, makeDefinitionRef, makeLiteralInteger
-  , Expression(..), atEGuid, atEValue, atEPayload
+  , Expression(..), atEValue, atEPayload
   , PureExpression, pureExpression
-  , canonizeGuids, randomizeGuids
+  , randomizeExpr
+  , canonizeParamIds
   , matchExpression
   , subExpressions
   , isDependentPi
@@ -36,12 +37,13 @@ import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
 import Data.Traversable (Traversable(..))
-import System.Random (RandomGen, random)
+import System.Random (Random, RandomGen, random)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
 import qualified Data.Store.IRef as IRef
+import qualified Data.Traversable as Traversable
 import qualified System.Random as Random
 
 data Lambda expr = Lambda
@@ -147,47 +149,45 @@ data Definition expr = Definition
 type PureExpression = Expression ()
 
 data Expression a = Expression
-  { eGuid :: Guid
-  , eValue :: ExpressionBody (Expression a)
+  { eValue :: ExpressionBody (Expression a)
   , ePayload :: a
   } deriving (Functor, Eq, Ord)
 
 instance Show a => Show (Expression a) where
-  show (Expression _guid body payload) = show body ++ "{" ++ show payload ++ "}"
+  show (Expression body payload) = show body ++ "{" ++ show payload ++ "}"
 
 AtFieldTH.make ''Expression
 
-pureExpression :: Guid -> ExpressionBody PureExpression -> PureExpression
-pureExpression guid body = Expression guid body ()
+pureExpression :: ExpressionBody PureExpression -> PureExpression
+pureExpression = (`Expression` ())
 
 variableRefGuid :: VariableRef -> Guid
 variableRefGuid (ParameterRef i) = i
 variableRefGuid (DefinitionRef i) = IRef.guid i
 
-randomizeGuids ::
-  RandomGen g => g -> Expression a -> Expression a
-randomizeGuids gen =
-  (`evalState` gen) . (`runReaderT` Map.empty) . go
+randomizeExpr :: (RandomGen g, Random r) => g -> Expression (r -> a) -> Expression a
+randomizeExpr gen = (`evalState` gen) . Traversable.mapM randomize
+  where
+    randomize f = fmap f $ state random
+
+canonizeParamIds :: Expression a -> Expression a
+canonizeParamIds =
+  (`evalState` Random.mkStdGen 0) . (`runReaderT` Map.empty) . go
   where
     onLambda (Lambda oldParamId paramType body) = do
       newParamId <- lift $ state random
       liftM2 (Lambda newParamId) (go paramType) .
         Reader.local (Map.insert oldParamId newParamId) $ go body
-    go (Expression _ v s) = do
-      newGuid <- lift $ state random
-      liftM (flip (Expression newGuid) s) $
-        case v of
-        ExpressionLambda lambda -> liftM ExpressionLambda $ onLambda lambda
-        ExpressionPi lambda -> liftM ExpressionPi $ onLambda lambda
-        ExpressionApply (Apply func arg) -> liftM2 makeApply (go func) (go arg)
-        gv@(ExpressionLeaf (GetVariable (ParameterRef guid))) ->
-          Reader.asks $
-          maybe gv makeParameterRef .
-          Map.lookup guid
-        _ -> return v
-
-canonizeGuids :: Expression a -> Expression a
-canonizeGuids = randomizeGuids $ Random.mkStdGen 0
+    go (Expression v s) = liftM (`Expression` s) $
+      case v of
+      ExpressionLambda lambda -> liftM ExpressionLambda $ onLambda lambda
+      ExpressionPi lambda -> liftM ExpressionPi $ onLambda lambda
+      ExpressionApply (Apply func arg) -> liftM2 makeApply (go func) (go arg)
+      gv@(ExpressionLeaf (GetVariable (ParameterRef guid))) ->
+        Reader.asks $
+        maybe gv makeParameterRef .
+        Map.lookup guid
+      _ -> return v
 
 -- The returned expression gets the same guids as the left expression
 matchExpression ::
@@ -198,7 +198,7 @@ matchExpression ::
 matchExpression onMatch onMismatch =
   go Map.empty
   where
-    go scope e0@(Expression g0 body0 pl0) e1@(Expression _ body1 pl1) =
+    go scope e0@(Expression body0 pl0) e1@(Expression body1 pl1) =
       case (body0, body1) of
       (ExpressionLambda l0, ExpressionLambda l1) ->
         mkExpression . fmap ExpressionLambda $ onLambda l0 l1
@@ -215,14 +215,14 @@ matchExpression onMatch onMismatch =
       _ -> onMismatch e0 $ onGetParamGuids lookupGuid e1
       where
         lookupGuid guid = fromMaybe guid $ Map.lookup guid scope
-        mkExpression body = Expression g0 <$> body <*> onMatch pl0 pl1
+        mkExpression body = Expression <$> body <*> onMatch pl0 pl1
         onLambda (Lambda p0 pt0 r0) (Lambda p1 pt1 r1) =
           liftA2 (Lambda p0) (go scope pt0 pt1) $
           go (Map.insert p1 p0 scope) r0 r1
 
 onGetParamGuids :: (Guid -> Guid) -> Expression a -> Expression a
-onGetParamGuids f (Expression exprGuid body payload) =
-  flip (Expression exprGuid) payload $
+onGetParamGuids f (Expression body payload) =
+  flip Expression payload $
   case body of
   ExpressionLeaf (GetVariable (ParameterRef getParGuid)) ->
     makeParameterRef $ f getParGuid
@@ -234,7 +234,7 @@ subExpressions x =
 
 isDependentPi ::
   Expression a -> Bool
-isDependentPi (Expression _ (ExpressionPi (Lambda g _ resultType)) _) =
+isDependentPi (Expression (ExpressionPi (Lambda g _ resultType)) _) =
   any (isGet . eValue) $ subExpressions resultType
   where
     isGet (ExpressionLeaf (GetVariable (ParameterRef p))) = p == g

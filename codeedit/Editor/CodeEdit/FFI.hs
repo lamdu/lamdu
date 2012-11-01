@@ -6,7 +6,6 @@ import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
 import Data.Map (Map)
 import qualified Data.Map as Map
-import qualified Data.Store.Guid as Guid
 import qualified Editor.Data as Data
 
 data Env = Env
@@ -21,18 +20,12 @@ class FromExpr a where
 class ToExpr a where
   toExpr :: Env -> a -> [Data.PureExpression] -> Data.PureExpression
 
--- After we get rid of guids in pure expressions, this will be
--- simpler:
-toPureExpr
-  :: Data.ExpressionBody Data.PureExpression -> Data.PureExpression
-toPureExpr = Data.pureExpression $ Guid.fromString "ZeroGuid"
-
 instance FromExpr Integer where
   fromExpr _ (Data.Expression { Data.eValue = Data.ExpressionLeaf (Data.LiteralInteger x) }) = x
   fromExpr _ _ = error "Expecting normalized Integer expression!"
 
 instance ToExpr Integer where
-  toExpr _ x [] = toPureExpr . Data.ExpressionLeaf $ Data.LiteralInteger x
+  toExpr _ x [] = Data.pureExpression . Data.ExpressionLeaf $ Data.LiteralInteger x
   toExpr _ _ _ = error "Integer applied as a function"
 
 instance (FromExpr a, ToExpr b) => ToExpr (a -> b) where
@@ -40,8 +33,8 @@ instance (FromExpr a, ToExpr b) => ToExpr (a -> b) where
   toExpr env f (x:xs) = (toExpr env . f . fromExpr env) x xs
 
 instance ToExpr Bool where
-  toExpr env True [] = toPureExpr . Data.makeDefinitionRef $ trueDef env
-  toExpr env False [] = toPureExpr . Data.makeDefinitionRef $ falseDef env
+  toExpr env True [] = Data.pureExpression . Data.makeDefinitionRef $ trueDef env
+  toExpr env False [] = Data.pureExpression . Data.makeDefinitionRef $ falseDef env
   toExpr _ _ _ = error "Bool applied as a function"
 
 instance FromExpr Bool where
