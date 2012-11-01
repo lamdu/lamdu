@@ -350,16 +350,14 @@ makeNodeRules (Data.Expression exprGuid exprBody (InferNode typedVal scope)) =
       setRule (tvType paramType) :
       lambdaStructureRules cons uncons exprGuid (tvVal typedVal) (fmap tvVal lam)
 
-commonRules :: Data.Expression InferNode -> [Rule]
-commonRules expr =
-  [ ruleSimpleType . nRefs $ Data.ePayload expr
-  ]
-
-makeRules :: Bool -> Data.Expression InferNode -> [Rule]
-makeRules resumption expr =
-  (if resumption then [] else commonRules expr) ++
+makeResumptionRules :: Data.Expression InferNode -> [Rule]
+makeResumptionRules expr =
   makeNodeRules expr ++
-  (Foldable.concat . fmap (makeRules False)) (Data.eValue expr)
+  (Foldable.concat . fmap makeAllRules . Data.eValue) expr
+
+makeAllRules :: Data.Expression InferNode -> [Rule]
+makeAllRules expr =
+  (ruleSimpleType . nRefs . Data.ePayload) expr : makeResumptionRules expr
 
 loadNode ::
   Monad m =>
@@ -745,7 +743,9 @@ infer actions (Loaded expr loadedRefMap (rootValMRefData, rootTypMRefData)) =
     ruleInferState =
       (`execState` InferState loadedRefMap mempty mempty) .
       mapM_ addRule .
-      makeRules (isJust rootValMRefData) $ fmap fst expr
+      makeRules rootValMRefData $ fmap fst expr
+    makeRules Nothing = makeAllRules
+    makeRules (Just _) = makeResumptionRules
     TypedValue rootValR rootTypR = nRefs . fst $ Data.ePayload expr
     restoreRoot _ Nothing = return ()
     restoreRoot ref (Just (RefData refExpr refRules)) = do
