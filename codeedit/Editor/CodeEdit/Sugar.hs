@@ -1016,7 +1016,7 @@ convertDefinition config defI (Data.Definition defBody typeL) = do
         typesMatch = on (==) Data.canonizeGuids typeP inferredTypeP
         mkNewType = do
           inferredTypeS <-
-            convertExpressionPure (mkGen 0 2 (IRef.guid defI)) config $
+            convertExpressionPure (mkGen 0 2 (IRef.guid defI)) config
             inferredTypeP
           return DefinitionNewType
             { dntNewType = inferredTypeS

@@ -264,7 +264,7 @@ mergeExprs p0 p1 =
     return result
   where
     addSubstituted addition =
-      (Lens.over rplSubstitutedArgs)
+      Lens.over rplSubstitutedArgs
       ((mappend . Lens.view rplSubstitutedArgs) addition)
     onMatch x y = return $ addSubstituted y x
     onMismatch (Data.Expression _ (Data.ExpressionLeaf Data.Hole) s0) e1 =
