@@ -1,3 +1,5 @@
+* BUG: Cursor on example edit
+
 * Lambda should contain a Guid (param name), payload OPTIONALLY contains Guid
   * canonize/randomize: Expression without guid in payload -> with guid in payload
     * May need a different canonize that DOES change lambda guids too for alphaEq, etc.
