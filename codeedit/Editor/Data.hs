@@ -14,7 +14,7 @@ module Editor.Data
   , Expression(..), atEValue, atEPayload
   , PureExpression, pureExpression
   , randomizeExpr
-  , canonizeParamIds
+  , canonizeParamIds, randomizeParamIds
   , matchExpression
   , subExpressions
   , isDependentPi
@@ -171,8 +171,11 @@ randomizeExpr gen = (`evalState` gen) . Traversable.mapM randomize
     randomize f = fmap f $ state random
 
 canonizeParamIds :: Expression a -> Expression a
-canonizeParamIds =
-  (`evalState` Random.mkStdGen 0) . (`runReaderT` Map.empty) . go
+canonizeParamIds = randomizeParamIds $ Random.mkStdGen 0
+
+randomizeParamIds :: RandomGen g => g -> Expression a -> Expression a
+randomizeParamIds gen =
+  (`evalState` gen) . (`runReaderT` Map.empty) . go
   where
     onLambda (Lambda oldParamId paramType body) = do
       newParamId <- lift $ state random

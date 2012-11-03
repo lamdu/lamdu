@@ -291,7 +291,12 @@ eeProp :: ExprEntity m -> Maybe (DataIRef.ExpressionProperty (T m))
 eeProp = Infer.iStored . eeiInferred <=< eplInferred . Data.ePayload
 
 eeFromPure :: RandomGen g => g -> Data.PureExpression -> ExprEntity m
-eeFromPure gen = Data.randomizeExpr gen . (fmap . const) (`EntityPayload` Nothing)
+eeFromPure gen =
+    Data.randomizeParamIds paramGen
+  . Data.randomizeExpr exprGen
+  . (fmap . const) (`EntityPayload` Nothing)
+  where
+    paramGen : exprGen : _ = RandomUtils.splits gen
 
 argument :: (a -> b) -> (b -> c) -> a -> c
 argument = flip (.)
