@@ -2,12 +2,11 @@
 module Editor.Data.Load
   ( loadDefinition, DefinitionEntity
   , loadExpression, ExpressionEntity
-  , loadPureExpression, loadPureDefinition
+  , loadPureExpression
   , loadPureDefinitionType
   ) where
 
 import Control.Monad (liftM, liftM2, (<=<))
-import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
@@ -22,23 +21,15 @@ type DefinitionEntity m = Data.Definition (ExpressionEntity m)
 
 type T = Transaction ViewTag
 
--- TODO: Remove these and just use ordinary loads (ignore property you
--- don't want?)
 loadPureExpression
   :: Monad m
-  => Data.ExpressionIRef -> Transaction t m (Data.Expression Guid)
+  => Data.ExpressionIRef -> Transaction t m Data.PureExpression
 loadPureExpression exprI =
-  liftM (flip Data.Expression (DataIRef.exprGuid exprI)) .
+  liftM Data.pureExpression .
   Traversable.mapM loadPureExpression =<< DataIRef.readExprBody exprI
 
-loadPureDefinition
-  :: Monad m
-  => Data.DefinitionIRef
-  -> T m (Data.Definition (Data.Expression Guid))
-loadPureDefinition defI =
-  Traversable.mapM loadPureExpression =<< Transaction.readIRef defI
-
-loadPureDefinitionType :: Monad m => Data.DefinitionIRef -> T m (Data.Expression Guid)
+loadPureDefinitionType ::
+  Monad m => Data.DefinitionIRef -> T m Data.PureExpression
 loadPureDefinitionType =
   loadPureExpression . Data.defType <=< Transaction.readIRef
 

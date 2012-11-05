@@ -2,11 +2,9 @@
 {-# LANGUAGE FlexibleInstances, OverlappingInstances #-}
 module Utils where
 
-import Control.Applicative ((<$))
 import Control.Arrow (first)
 import Control.Monad (join, void)
 import Data.Functor.Identity (Identity(..))
-import Data.Hashable (hash)
 import Data.Map (Map, (!))
 import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
@@ -18,7 +16,6 @@ import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Editor.Data as Data
 import qualified Editor.Data.Infer as Infer
-import qualified System.Random as Random
 
 data Invisible = Invisible
 instance Show Invisible where
@@ -92,9 +89,9 @@ showExpressionWithConflicts =
         ConflictsAnnotation (val, vErrors) (typ, tErrors) =
           Data.ePayload inferredExpr
 
-definitionTypes :: Map Guid (Data.Expression Guid)
+definitionTypes :: Map Guid Data.PureExpression
 definitionTypes =
-  Map.fromList $ map (first Guid.fromString . randomizeGuids)
+  Map.fromList $ map (first Guid.fromString)
   [ ("Bool", setType)
   , ("List", makePi "list" setType setType)
   , ("IntToBoolFunc", makePi "intToBool" intType (getDefExpr "bool"))
@@ -124,8 +121,6 @@ definitionTypes =
     )
   ]
   where
-    randExpr name = Data.randomizeExpr . Random.mkStdGen $ hash name
-    randomizeGuids (name, expr) = (name, randExpr name $ id <$ expr)
     intToIntToInt = makePi "iii0" intType $ makePi "iii1" intType intType
 
 lookupMany :: Eq a => a -> [(a, b)] -> [b]
@@ -152,9 +147,9 @@ doInferM refMap inferNode mDefRef mResumedRoot expr =
         Infer.TypedValue valRef typRef = Infer.nRefs $ Infer.iPoint inferred
     root = fromMaybe inferredExpr mResumedRoot
     actions = Infer.InferActions reportError
-    loaded = runIdentity $ Infer.load loader refMap inferNode mDefRef expr
+    loaded = runIdentity $ Infer.load loader mDefRef expr
     (result@(inferredExpr, _), conflicts) =
-      Writer.runWriter $ Infer.infer actions loaded
+      Writer.runWriter $ Infer.infer actions loaded refMap inferNode
     reportError err = Writer.tell [(Infer.errRef err, err)]
 
 loader :: Monad m => Infer.Loader m
@@ -190,9 +185,8 @@ factorialDefI = IRef.unsafeFromGuid $ Guid.fromString "factorial"
 factorial :: Int -> (Infer.Expression (), Infer.RefMap)
 factorial gen =
   fromMaybe (error "Conflicts in factorial infer") $
-  Infer.infer (Infer.InferActions (const Nothing)) loaded
+  uncurry (Infer.infer (Infer.InferActions (const Nothing)) loaded) Infer.initial
   where
     loaded =
-      runIdentity .
-      uncurry (Infer.load loader) Infer.initial (Just factorialDefI) .
+      runIdentity . Infer.load loader (Just factorialDefI) .
       void $ fmap (const gen) factorialExpr

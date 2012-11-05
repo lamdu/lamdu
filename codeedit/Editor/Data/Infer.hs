@@ -9,7 +9,7 @@ module Editor.Data.Infer
   , initial, newNodeWithScope, newTypedNodeWithScope
   ) where
 
-import Control.Applicative (Applicative(..))
+import Control.Applicative (Applicative(..), (<$))
 import Control.Arrow (first, second)
 import Control.Lens ((%=), (.=), (^.), (+=))
 import Control.Monad (guard, liftM, liftM2, unless, void, when)
@@ -37,11 +37,13 @@ import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Either as Either
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.Writer as Writer
+import qualified Data.Binary.Utils as BinaryUtils
 import qualified Data.Foldable as Foldable
 import qualified Data.IntSet as IntSet
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
+import qualified Data.Store.IRef as IRef
 import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
 import qualified System.Random as Random
@@ -190,26 +192,26 @@ initial :: (RefMap, InferNode)
 initial = newNodeWithScope mempty $ RefMap mempty 0 mempty 0
 
 newtype Loader m = Loader
-  { loadPureDefinitionType :: Data.DefinitionIRef -> m (Data.Expression Guid)
+  { loadPureDefinitionType :: Data.DefinitionIRef -> m Data.PureExpression
   }
 
 -- Initial expression for inferred value and type of a stored entity.
 -- Types are returned only in cases of expanding definitions.
 initialExprs ::
-  Monad m =>
-  Loader m ->
+  Map Data.DefinitionIRef Data.PureExpression ->
   Scope -> Data.Expression Guid ->
-  m (Data.Expression Guid, Data.Expression Guid)
-initialExprs loader scope entity =
-  (liftM . first) (`Data.Expression` entityGuid) $
+  (Data.Expression Guid, Data.Expression Guid)
+initialExprs defTypes scope entity =
+  first (`Data.Expression` entityGuid) $
   case exprStructure of
-  Data.ExpressionApply _ -> return (Data.ExpressionLeaf Data.Hole, holeType)
+  Data.ExpressionApply _ -> (Data.ExpressionLeaf Data.Hole, holeType)
   Data.ExpressionLeaf (Data.GetVariable var@(Data.DefinitionRef ref))
     | not (Map.member var scope) ->
-      liftM ((,) exprStructure) $
-      loadPureDefinitionType loader ref
-  _ -> return (exprStructure, holeType)
+      ((,) exprStructure) $ Map.mapWithKey inventGuid defTypes Map.! ref
+  _ -> (exprStructure, holeType)
   where
+    gen = Random.mkStdGen . BinaryUtils.decodeS . Guid.bs . IRef.guid
+    inventGuid defI defType = Data.randomizeExpr (gen defI) $ id <$ defType
     entityGuid = Data.ePayload entity
     mkGuid name = Guid.augment name entityGuid
     exprStructure = fmap (const innerHole) $ Data.eValue entity
@@ -359,11 +361,10 @@ makeAllRules expr =
   makeResumptionRules expr
 
 loadNode ::
-  Monad m =>
-  Loader m -> Scope ->
+  Map Data.DefinitionIRef Data.PureExpression -> Scope ->
   Data.Expression (Guid, s) -> TypedValue ->
-  StateT RefMap m (Data.Expression (InferNode, (Guid, s)))
-loadNode loader scope entity typedValue = do
+  State RefMap (Data.Expression (InferNode, (Guid, s)))
+loadNode defTypes scope entity typedValue = do
   setInitialValues
   bodyWithChildrenTvs <- Traversable.mapM addTypedVal $ Data.eValue entity
   exprBody <-
@@ -382,15 +383,15 @@ loadNode loader scope entity typedValue = do
       let paramRef = Data.ParameterRef param
       liftM (cons . Data.Lambda param paramTypeR) $
         go (Map.insert paramRef (tvVal paramTypeTv)) result
-    go onScope = uncurry . loadNode loader $ onScope scope
+    go onScope = uncurry . loadNode defTypes $ onScope scope
     addTypedVal x =
       liftM ((,) x) createTypedVal
     initializeRefData ref expr =
       refMap . Lens.at (unRef ref) .=
       Just (RefData (refExprFromPure expr) [])
+    (initialVal, initialType) =
+      initialExprs defTypes scope $ fmap fst entity
     setInitialValues = do
-      (initialVal, initialType) <-
-        lift . initialExprs loader scope $ fmap fst entity
       initializeRefData (tvVal typedValue) initialVal
       initializeRefData (tvType typedValue) initialType
 
@@ -633,29 +634,50 @@ applyRules baseGuid applyTv apply@(Data.Apply func arg) =
     (tvVal applyTv) (tvVal func) (tvVal arg)
 
 data Loaded a = Loaded
+  { lRealExpr :: Data.Expression a
+  , lMRecursiveDef :: Maybe Data.DefinitionIRef
+  , lDefinitionTypes :: Map Data.DefinitionIRef Data.PureExpression
+  }
+
+ordNub :: Ord a => [a] -> [a]
+ordNub = Set.toList . Set.fromList
+
+load ::
+  Monad m => Loader m ->
+  Maybe Data.DefinitionIRef -> Data.Expression a ->
+  m (Loaded a)
+load loader mRecursiveDef expr =
+  liftM (Loaded expr mRecursiveDef . Map.fromList) .
+  mapM loadType $ ordNub
+  [ defI
+  | Data.ExpressionLeaf (Data.GetVariable (Data.DefinitionRef defI)) <-
+    map Data.eValue $ Data.subExpressions expr
+  , Just defI /= mRecursiveDef
+  ]
+  where
+    loadType defI = liftM ((,) defI) $ loadPureDefinitionType loader defI
+
+-- TODO: Preprocessed used to be "Loaded". Now it is just a step in
+-- "infer". Does it still make sense to keep it separately the way it
+-- is?
+data Preprocessed a = Preprocessed
   { lExpr :: Data.Expression (InferNode, (Guid, a))
   , lRefMap :: RefMap
   , lSavedRoot :: (Maybe RefData, Maybe RefData)
   }
 
-load ::
-  (Monad m) =>
-  Loader m -> RefMap -> InferNode ->
-  Maybe Data.DefinitionIRef -> Data.Expression a ->
-  m (Loaded a)
-load
-  loader initialRefMap
-  (InferNode rootTv@(TypedValue rootValR rootTypR) rootScope)
-  mRecursiveDef expression =
-    liftM buildLoaded . (`runStateT` initialRefMap) $
-    loadNode loader scope guidExpr rootTv
+preprocess :: Loaded a -> RefMap -> InferNode -> Preprocessed a
+preprocess loaded initialRefMap (InferNode rootTv rootScope) =
+  buildLoaded . (`runState` initialRefMap) $
+  loadNode (lDefinitionTypes loaded) scope guidExpr rootTv
   where
+    TypedValue rootValR rootTypR = rootTv
     gen = Random.mkStdGen $ Lens.view nextRef initialRefMap
     guidExpr =
-      Data.randomizeExpr gen $ fmap (flip (,)) expression
+      Data.randomizeExpr gen . fmap (flip (,)) $ lRealExpr loaded
     initialMRefData k =
       Lens.view (refMap . Lens.at (unRef k)) initialRefMap
-    buildLoaded (node, resultRefMap) = Loaded
+    buildLoaded (node, resultRefMap) = Preprocessed
       { lExpr = node
       , lRefMap = resultRefMap
       , lSavedRoot =
@@ -664,7 +686,7 @@ load
         )
       }
     scope =
-      case mRecursiveDef of
+      case lMRecursiveDef loaded of
       Nothing -> rootScope
       Just iref -> Map.insert (Data.DefinitionRef iref) (tvType rootTv) rootScope
 
@@ -726,8 +748,10 @@ liftState = liftActions . lift
 instance MonadTrans InferT where
   lift = liftState . lift
 
-infer :: Monad m => InferActions m -> Loaded a -> m (Expression a, RefMap)
-infer actions (Loaded expr loadedRefMap (rootValMRefData, rootTypMRefData)) =
+infer ::
+  Monad m => InferActions m -> Loaded a -> RefMap -> InferNode ->
+  m (Expression a, RefMap)
+infer actions loaded initialRefMap node =
   liftM
   ( uncurry postProcess
   . first (Lens.view sRefMap)
@@ -742,6 +766,8 @@ infer actions (Loaded expr loadedRefMap (rootValMRefData, rootTypMRefData)) =
     go
     return expr
   where
+    Preprocessed expr loadedRefMap (rootValMRefData, rootTypMRefData) =
+      preprocess loaded initialRefMap node
     ruleInferState =
       (`execState` InferState loadedRefMap mempty mempty) .
       mapM_ addRule .
@@ -768,9 +794,12 @@ infer actions (Loaded expr loadedRefMap (rootValMRefData, rootTypMRefData)) =
       mapM_ (uncurry setRefExpr) $ ruleAction refExps
 
 {-# SPECIALIZE
-  infer :: InferActions Maybe -> Loaded a -> Maybe (Expression a, RefMap) #-}
+  infer :: InferActions Maybe -> Loaded a -> RefMap -> InferNode ->
+           Maybe (Expression a, RefMap) #-}
 {-# SPECIALIZE
-  infer :: Monoid w => InferActions (Writer w) -> Loaded a -> Writer w (Expression a, RefMap) #-}
+  infer :: Monoid w => InferActions (Writer w) -> Loaded a ->
+           RefMap -> InferNode ->
+           Writer w (Expression a, RefMap) #-}
 
 getRefExpr :: Monad m => Ref -> InferT m RefExpression
 getRefExpr ref = liftState $ Lens.use (refMapAt ref . rExpression)

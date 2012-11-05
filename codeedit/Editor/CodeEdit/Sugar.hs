@@ -415,8 +415,8 @@ mkFuncParamActions
         Anchors.nonEmptyAssocDataRef "example" param .
         DataIRef.newExprBody $ Data.ExpressionLeaf Data.Hole
       exampleS <- Load.loadExpression exampleP
-      loaded <- uncurry (Infer.load loader) newNode Nothing exampleS
-      let (_, inferState, exampleStored) = inferWithConflicts loaded
+      loaded <- Infer.load loader Nothing exampleS
+      let (_, inferState, exampleStored) = inferWithConflicts loaded refMap inferNode
       convertStoredExpression exampleStored $
         SugarContext inferState (scConfig ctx)
   }
@@ -425,7 +425,7 @@ mkFuncParamActions
     scope = Infer.nScope $ Infer.iPoint lambdaInferred
     paramTypeRef =
       Infer.tvVal . Infer.nRefs . Infer.iPoint $ eeiInferred paramType
-    newNode =
+    (refMap, inferNode) =
       Infer.newTypedNodeWithScope scope paramTypeRef $ scInferState ctx
 
 convertLambda
@@ -775,9 +775,11 @@ isOperatorName name =
 inferExpr ::
   Monad m => Data.Expression a -> Infer.RefMap ->
   Infer.InferNode -> T m (Maybe (Infer.Expression a))
-inferExpr expr inferContext inferPoint =
-  liftM (fmap fst . Infer.infer (Infer.InferActions (const Nothing))) $
-  Infer.load loader inferContext inferPoint Nothing expr
+inferExpr expr inferContext inferPoint = do
+  loaded <- Infer.load loader Nothing expr
+  return . fmap fst $
+    Infer.infer (Infer.InferActions (const Nothing))
+    loaded inferContext inferPoint
 
 chooseHoleType ::
   [Data.Expression f] -> hole -> (Data.Expression f -> hole) -> hole
@@ -1055,8 +1057,8 @@ inferLoadedExpression ::
    Infer.RefMap,
    Data.Expression (ExprEntityStored m))
 inferLoadedExpression mDefI exprL = do
-  loaded <- uncurry (Infer.load loader) Infer.initial mDefI exprL
-  return $ inferWithConflicts loaded
+  loaded <- Infer.load loader mDefI exprL
+  return $ uncurry (inferWithConflicts loaded) Infer.initial
 
 -- Conflicts:
 
@@ -1080,18 +1082,20 @@ reportConflict err =
 
 inferWithConflicts ::
   Infer.Loaded (DataIRef.ExpressionProperty (T m)) ->
+  Infer.RefMap -> Infer.InferNode ->
   ( Bool
   , Infer.RefMap
   , Data.Expression (ExprEntityStored m)
   )
-inferWithConflicts loaded =
+inferWithConflicts loaded refMap node =
   ( Map.null $ unConflictMap conflictsMap
   , inferContext
   , fmap toExprEntity exprInferred
   )
   where
     ((exprInferred, inferContext), conflictsMap) =
-      runWriter $ Infer.infer (Infer.InferActions reportConflict) loaded
+      runWriter $ Infer.infer (Infer.InferActions reportConflict)
+      loaded refMap node
     toExprEntity x =
       ExprEntityInferred
       { eeiInferred = x
