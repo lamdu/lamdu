@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, ConstraintKinds #-}
 module Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad
   ( ExprGuiM, WidgetT, run
   , widgetEnv
@@ -14,12 +14,15 @@ module Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad
   , withParamName, NameSource(..)
   , withNameFromVarRef
   , getDefName
+  , memo, memoT
   ) where
 
 import Control.Applicative (Applicative, liftA2)
 import Control.Monad (liftM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.RWS (RWST, runRWST)
+import Data.Binary (Binary)
+import Data.Cache (Cache)
 import Data.Map (Map)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
@@ -30,6 +33,7 @@ import Editor.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.RWS as RWS
+import qualified Data.Cache as Cache
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
@@ -38,6 +42,9 @@ import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Data as Data
 import qualified Editor.WidgetEnvT as WE
 import qualified Graphics.UI.Bottle.Widget as Widget
+
+cacheSize :: Int
+cacheSize = 16384
 
 type AccessedVars = [Guid]
 
@@ -52,8 +59,10 @@ data Askable m = Askable
   , _aMakeSubexpression :: Sugar.Expression m -> ExprGuiM m (ExpressionGui m)
   }
 
+type T = Transaction ViewTag
+
 newtype ExprGuiM m a = ExprGuiM
-  { _varAccess :: RWST (Askable m) AccessedVars () (WidgetEnvT (Transaction ViewTag m)) a
+  { _varAccess :: RWST (Askable m) AccessedVars Cache (WidgetEnvT (T m)) a
   }
   deriving (Functor, Applicative, Monad)
 
@@ -71,20 +80,34 @@ makeSubexpresion expr = do
   maker <- ExprGuiM . RWS.asks $ Lens.view aMakeSubexpression
   maker expr
 
+memo ::
+  (Cache.Key k, Binary v, Monad m) =>
+  (k -> WidgetEnvT (T m) v) -> k -> ExprGuiM m v
+memo f key = ExprGuiM $ do
+  cache <- RWS.get
+  (val, newCache) <- lift $ Cache.memo f key cache
+  RWS.put newCache
+  return val
+
+memoT ::
+  (Cache.Key k, Binary v, Monad m) =>
+  (k -> T m v) -> k -> ExprGuiM m v
+memoT f = memo (lift . f)
+
 run ::
   Monad m =>
   (Sugar.Expression m -> ExprGuiM m (ExpressionGui m)) ->
-  Settings -> ExprGuiM m a -> WidgetEnvT (Transaction ViewTag m) a
+  Settings -> ExprGuiM m a -> WidgetEnvT (T m) a
 run makeSubexpression settings (ExprGuiM action) =
   liftM f $ runRWST action
-  (Askable initialNameGenState settings makeSubexpression) ()
+  (Askable initialNameGenState settings makeSubexpression) (Cache.new cacheSize)
   where
     f (x, _, _) = x
 
-widgetEnv :: Monad m => WidgetEnvT (Transaction ViewTag m) a -> ExprGuiM m a
+widgetEnv :: Monad m => WidgetEnvT (T m) a -> ExprGuiM m a
 widgetEnv = ExprGuiM . lift
 
-transaction :: Monad m => Transaction ViewTag m a -> ExprGuiM m a
+transaction :: Monad m => T m a -> ExprGuiM m a
 transaction = widgetEnv . lift
 
 getP :: Monad m => Anchors.MkProperty ViewTag m a -> ExprGuiM m a
