@@ -2,14 +2,14 @@
 module Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad
   ( ExprGuiM, WidgetT, run
   , widgetEnv
-  
+
   , transaction, atEnv
   , getP, assignCursor, assignCursorPrefix
   --
   , makeSubexpresion
   --
   , readSettings
-  -- 
+  --
   , AccessedVars, markVariablesAsUsed, usedVariables
   , withParamName, NameSource(..)
   , withNameFromVarRef

@@ -1,5 +1,5 @@
 {- Copied & modified from the public-domain uglymemo package by
- - Lennart Augustsson 
+ - Lennart Augustsson
  -}
 module Data.MRUMemo(memoIO, memoIOPure, memo) where
 

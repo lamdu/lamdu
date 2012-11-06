@@ -208,7 +208,7 @@ matchExpression onMatch onMismatch =
       (ExpressionPi l0, ExpressionPi l1) ->
         mkExpression . fmap ExpressionPi $ onLambda l0 l1
       (ExpressionApply (Apply f0 a0), ExpressionApply (Apply f1 a1)) ->
-        mkExpression . fmap ExpressionApply $ liftA2 Apply (go scope f0 f1) (go scope a0 a1) 
+        mkExpression . fmap ExpressionApply $ liftA2 Apply (go scope f0 f1) (go scope a0 a1)
       (ExpressionLeaf gv@(GetVariable (ParameterRef p0)),
        ExpressionLeaf (GetVariable (ParameterRef p1)))
         | p0 == lookupGuid p1 ->
