@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 module Editor.WidgetEnvT
   ( WidgetEnvT, runWidgetEnvT
-  , unWrapInner
+  , mapWidgetEnvT
   , readCursor, subCursor, isSubCursor
   , Env(..)
   , atEnv, atEnvCursor
@@ -47,12 +47,12 @@ getP = lift . Anchors.getP
 runWidgetEnvT :: Monad m => Widget.Id -> TextEdit.Style -> WidgetEnvT m a -> m a
 runWidgetEnvT cursor style (WidgetEnvT action) = runReaderT action (Env cursor style)
 
-unWrapInner
+mapWidgetEnvT
   :: Monad m
   => (m a -> n a)
   -> WidgetEnvT m a
   -> WidgetEnvT n a
-unWrapInner = atWidgetEnvT . Reader.mapReaderT
+mapWidgetEnvT = atWidgetEnvT . Reader.mapReaderT
 
 readCursor :: Monad m => WidgetEnvT m Widget.Id
 readCursor = WidgetEnvT $ Reader.asks envCursor

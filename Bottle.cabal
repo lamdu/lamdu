@@ -113,6 +113,8 @@ Executable Editor
   Other-Modules:       Editor.Anchors,
                        Editor.ExampleDB,
                        Editor.BottleWidgets,
+                       Editor.VersionControl.Actions,
+                       Editor.VersionControl,
                        Editor.BranchGUI,
                        Editor.CodeEdit,
                        Editor.CodeEdit.FFI,

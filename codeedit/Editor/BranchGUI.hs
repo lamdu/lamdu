@@ -1,29 +1,25 @@
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeOperators, OverloadedStrings #-}
 module Editor.BranchGUI
-  ( makeRootWidget
+  ( make
+  , branchNameProp
   ) where
 
 import Control.Applicative (pure)
 import Control.Arrow (first)
-import Control.Monad (liftM, liftM2, unless)
+import Control.Monad (liftM)
 import Control.Monad.Trans.Class (lift)
-import Data.List (find, findIndex)
-import Data.List.Utils (removeAt)
-import Data.Maybe (fromMaybe, isJust)
+import Data.List (findIndex)
+import Data.Maybe (isJust)
 import Data.Monoid(Monoid(..))
 import Data.Store.Rev.Branch (Branch)
-import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
-import Editor.Anchors (ViewTag, DBTag)
 import Editor.MonadF (MonadF)
+import Editor.VersionControl.Actions (Actions(..))
 import Editor.WidgetEnvT (WidgetEnvT)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Store.Rev.Branch as Branch
-import qualified Data.Store.Rev.Version as Version
-import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
-import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.Config as Config
 import qualified Editor.Layers as Layers
@@ -34,40 +30,6 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Edges as Edges
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-
-type TDB = Transaction DBTag
-type TV m = Transaction ViewTag (TDB m)
-
-setCurrentBranch :: Monad m => View -> Branch -> TDB m ()
-setCurrentBranch view branch = do
-  Anchors.setP Anchors.currentBranch branch
-  View.setBranch view branch
-
-deleteCurrentBranch :: Monad m => View -> TDB m Widget.Id
-deleteCurrentBranch view = do
-  branch <- Anchors.getP Anchors.currentBranch
-  branches <- Anchors.getP Anchors.branches
-  let
-    index =
-      fromMaybe (error "Invalid current branch!") $
-      findIndex ((branch ==) . snd) branches
-    newBranches = removeAt index branches
-  Anchors.setP Anchors.branches newBranches
-  let
-    newCurrentBranch =
-      newBranches !! min (length newBranches - 1) index
-  setCurrentBranch view $ snd newCurrentBranch
-  return . WidgetIds.fromIRef $ fst newCurrentBranch
-
-makeBranch :: Monad m => View -> TDB m Widget.Id
-makeBranch view = do
-  newBranch <- Branch.new =<< View.curVersion view
-  textEditModelIRef <- Transaction.newIRef "New view"
-  let viewPair = (textEditModelIRef, newBranch)
-  Anchors.modP Anchors.branches (++ [viewPair])
-  setCurrentBranch view newBranch
-  return . FocusDelegator.delegatingId $
-    WidgetIds.fromIRef textEditModelIRef
 
 branchNameFDConfig :: FocusDelegator.Config
 branchNameFDConfig = FocusDelegator.Config
@@ -85,50 +47,21 @@ branchSelectionFocusDelegatorConfig = FocusDelegator.Config
   , FocusDelegator.stopDelegatingDoc = "Select branch"
   }
 
-viewToDb
-  :: Monad m => View
-  -> TV m a
-  -> TDB m a
-viewToDb = Transaction.run . Anchors.viewStore
+undoEventMap :: Functor m => Maybe (m Widget.Id) -> Widget.EventHandlers m
+undoEventMap =
+  maybe mempty (Widget.keysEventMapMovesCursor Config.undoKeys "Undo")
 
-makeRootWidget
-  :: MonadF m
-  => Widget.Size
-  -> WidgetEnvT (TV m) (Widget (TV m))
-  -> WidgetEnvT (TDB m) (Widget (TDB m))
-makeRootWidget size widget = do
-  view <- WE.getP Anchors.view
-  namedBranches <- WE.getP Anchors.branches
-  viewEdit <- makeWidgetForView view widget
-  currentBranch <- WE.getP Anchors.currentBranch
+redoEventMap :: Functor m => Maybe (m Widget.Id) -> Widget.EventHandlers m
+redoEventMap =
+  maybe mempty (Widget.keysEventMapMovesCursor Config.redoKeys "Redo")
 
-  let
-    makeBranchNameEdit (textEditModelIRef, branch) = do
-      let branchEditId = WidgetIds.fromIRef textEditModelIRef
-      nameProp <-
-        lift $ Transaction.fromIRef textEditModelIRef
-      branchNameEdit <-
-        BWidgets.wrapDelegatedOT branchNameFDConfig
-        FocusDelegator.NotDelegating id
-        (BWidgets.makeLineEdit nameProp)
-        branchEditId
-      let setBranch = setCurrentBranch view branch
-      return
-        ( branch
-        , (Widget.atWMaybeEnter . fmap . fmap . Widget.atEnterResultEvent)
-          (setBranch >>) $ branchNameEdit
-        )
-    -- there must be an active branch:
-    Just currentBranchWidgetId =
-      fmap (WidgetIds.fromIRef . fst) $ find ((== currentBranch) . snd) namedBranches
+branchNameProp :: Monad m => Branch -> Transaction t m (Transaction.Property t m String)
+branchNameProp = Transaction.assocDataRefDef "" "name" . Branch.guid
 
-  let
-    delBranchEventMap
-      | null (drop 1 namedBranches) = mempty
-      | otherwise =
-        Widget.keysEventMapMovesCursor Config.delBranchKeys "Delete Branch" $
-        deleteCurrentBranch view
-
+make ::
+  MonadF m => Widget.Size -> Actions (Transaction t m) -> Widget (Transaction t m) ->
+  WidgetEnvT (Transaction t m) (Widget (Transaction t m))
+make size actions widget = do
   branchSelectorFocused <-
     liftM isJust $ WE.subCursor WidgetIds.branchSelection
   branchSelector <-
@@ -138,24 +71,49 @@ makeRootWidget size widget = do
      FocusDelegator.NotDelegating id)
     WidgetIds.branchSelection $ \innerId ->
     WE.assignCursor innerId currentBranchWidgetId $ do
-      branchNameEdits <- mapM makeBranchNameEdit namedBranches
+      branchNameEdits <- mapM makeBranchNameEdit $ branches actions
       return .
-        Widget.strongerEvents delBranchEventMap $
+        Widget.strongerEvents delBranchEventMap .
         makeBranchChoice branchSelectorFocused
         (Widget.toAnimId WidgetIds.branchSelection)
-        Box.vertical branchNameEdits currentBranch
-
-  let
-    eventMap = mconcat
-      [ Widget.keysEventMap Config.quitKeys "Quit" (error "Quit")
-      , Widget.keysEventMapMovesCursor Config.makeBranchKeys "New Branch" $
-        makeBranch view
-      , Widget.keysEventMapMovesCursor Config.jumpToBranchesKeys
-        "Select current branch" $ pure currentBranchWidgetId
-      ]
+        Box.vertical branchNameEdits $ currentBranch actions
   return .
     Widget.strongerEvents eventMap $
-    Edges.makeVertical size viewEdit branchSelector
+    Edges.makeVertical size widget branchSelector
+  where
+    eventMap = mconcat
+      [ Widget.keysEventMap Config.quitKeys "Quit" (error "Quit")
+      , Widget.keysEventMapMovesCursor Config.makeBranchKeys "New Branch" .
+        liftM
+        (FocusDelegator.delegatingId .
+         WidgetIds.fromGuid . Branch.guid) $ makeBranch actions
+      , Widget.keysEventMapMovesCursor Config.jumpToBranchesKeys
+        "Select current branch" $ pure currentBranchWidgetId
+      , undoEventMap $ mUndo actions
+      , redoEventMap $ mRedo actions
+      ]
+    makeBranchNameEdit branch = do
+      let branchEditId = WidgetIds.fromGuid $ Branch.guid branch
+      nameProp <- lift $ branchNameProp branch
+      branchNameEdit <-
+        BWidgets.wrapDelegatedOT branchNameFDConfig
+        FocusDelegator.NotDelegating id
+        (BWidgets.makeLineEdit nameProp)
+        branchEditId
+      let setBranch = setCurrentBranch actions branch
+      return
+        ( branch
+        , (Widget.atWMaybeEnter . fmap . fmap . Widget.atEnterResultEvent)
+          (setBranch >>) $ branchNameEdit
+        )
+    currentBranchWidgetId = WidgetIds.fromGuid . Branch.guid $ currentBranch actions
+
+    delBranchEventMap
+      | null (drop 1 (branches actions)) = mempty
+      | otherwise =
+        Widget.keysEventMapMovesCursor Config.delBranchKeys "Delete Branch" .
+        liftM (WidgetIds.fromGuid . Branch.guid) .
+        deleteBranch actions $ currentBranch actions
 
 makeBranchChoice
   :: Eq a
@@ -183,62 +141,3 @@ makeBranchChoice forceExpand selectionAnimId orientation children curChild =
         colorize (True, w) = Widget.backgroundColor Layers.branchChoice selectionAnimId selectedColor w
         colorize (False, w) = w
         selectedColor = Config.selectedBranchColor
-
--- Apply the transactions to the given View and convert them to
--- transactions on a DB
-makeWidgetForView
-  :: MonadF m
-  => View
-  -> WidgetEnvT (TV m) (Widget (TV m))
-  -> WidgetEnvT (TDB m) (Widget (TDB m))
-makeWidgetForView view innerWidget = do
-  curVersion <- lift $ View.curVersion view
-  curVersionData <- lift $ Version.versionData curVersion
-  redos <- WE.getP Anchors.redos
-  cursor <- WE.readCursor
-
-  let
-    redo version newRedos = do
-      Anchors.setP Anchors.redos newRedos
-      View.move view version
-      toDb $ Anchors.getP Anchors.postCursor
-    undo parentVersion = do
-      preCursor <- toDb $ Anchors.getP Anchors.preCursor
-      View.move view parentVersion
-      Anchors.modP Anchors.redos (curVersion:)
-      return preCursor
-
-    afterEvent action = do
-      eventResult <- action
-      isEmpty <- Transaction.isEmpty
-      unless isEmpty $ do
-        Anchors.setP Anchors.preCursor cursor
-        Anchors.setP Anchors.postCursor . fromMaybe cursor $ Widget.eCursor eventResult
-      return eventResult
-
-  vWidget <-
-    WE.unWrapInner toDb $
-    (liftM . Widget.atEvents) afterEvent innerWidget
-
-  let
-    lowerWTransaction act = do
-      (r, isEmpty) <- toDb $ liftM2 (,) act Transaction.isEmpty
-      unless isEmpty $ Anchors.setP Anchors.redos []
-      return r
-
-    redoEventMap [] = mempty
-    redoEventMap (version:restRedos) =
-      Widget.keysEventMapMovesCursor Config.redoKeys "Redo" $
-      redo version restRedos
-    undoEventMap =
-      maybe mempty
-      (Widget.keysEventMapMovesCursor Config.undoKeys "Undo" .
-       undo) $ Version.parent curVersionData
-
-    eventMap = mconcat [undoEventMap, redoEventMap redos]
-
-  return .
-    Widget.strongerEvents eventMap $
-    Widget.atEvents lowerWTransaction vWidget
-  where
-    toDb = viewToDb view

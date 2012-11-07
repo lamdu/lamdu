@@ -70,10 +70,10 @@ clipboardsIRef = IRef.anchor "clipboard"
 clipboards :: Monad m => MkProperty ViewTag m [Data.ExpressionIRef]
 clipboards = Transaction.fromIRef clipboardsIRef
 
-branchesIRef :: IRef [(IRef String, Branch)]
+branchesIRef :: IRef [Branch]
 branchesIRef = IRef.anchor "branches"
 
-branches :: Monad m => MkProperty DBTag m [(IRef String, Branch)]
+branches :: Monad m => MkProperty DBTag m [Branch]
 branches = Transaction.fromIRef branchesIRef
 
 currentBranchIRef :: IRef Branch

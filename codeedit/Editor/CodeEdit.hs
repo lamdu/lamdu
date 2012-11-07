@@ -98,8 +98,8 @@ makeClipboardsEdit clipboards = do
   return . Box.vboxAlign 0 $ clipboardTitle : clipboardsEdits
 
 make ::
-  MonadF m =>
-  Settings -> WidgetEnvT (Transaction ViewTag m) (Widget (Transaction ViewTag m))
+  MonadF m => Settings ->
+  WidgetEnvT (Transaction ViewTag m) (Widget (Transaction ViewTag m))
 make settings = do
   sugarPanes <- lift makeSugarPanes
   clipboardsExprs <- lift $ do

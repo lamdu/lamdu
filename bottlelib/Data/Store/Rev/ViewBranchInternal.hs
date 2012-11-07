@@ -38,7 +38,7 @@ data BranchData = BranchData {
   }
   deriving (Eq, Ord, Read, Show)
 
-newtype Branch = Branch (IRef BranchData)
+newtype Branch = Branch { unBranch :: IRef BranchData }
   deriving (Eq, Ord, Read, Show, Binary)
 
 newtype ViewData = ViewData { vdBranch :: Branch }

@@ -33,6 +33,8 @@ import qualified Editor.CodeEdit as CodeEdit
 import qualified Editor.CodeEdit.Settings as Settings
 import qualified Editor.Config as Config
 import qualified Editor.ExampleDB as ExampleDB
+import qualified Editor.VersionControl as VersionControl
+import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
@@ -216,13 +218,17 @@ makeRootWidget
   -> Widget.Size
   -> Widget.Id
   -> Transaction DBTag IO (Widget IO)
-makeRootWidget settings style dbToIO size cursor =
-  (liftM . Widget.atEvents)
-  (dbToIO . (attachCursor =<<)) $
-  runWidgetEnvT cursor style makeCodeEdit
+makeRootWidget settings style dbToIO size cursor = do
+  actions <- VersionControl.makeActions
+  runWidgetEnvT cursor style $ do
+    codeEdit <-
+      (liftM . Widget.atEvents) (VersionControl.runEvent cursor) .
+      WE.mapWidgetEnvT VersionControl.runAction $
+      CodeEdit.make settings
+    (liftM . Widget.atEvents) (dbToIO . (attachCursor =<<)) $
+      BranchGUI.make size actions codeEdit
   where
     attachCursor eventResult = do
       maybe (return ()) (Anchors.setP Anchors.cursor) $
         Widget.eCursor eventResult
       return eventResult
-    makeCodeEdit = BranchGUI.makeRootWidget size $ CodeEdit.make settings

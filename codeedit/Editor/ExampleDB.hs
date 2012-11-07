@@ -18,6 +18,7 @@ import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as A
+import qualified Editor.BranchGUI as BranchGUI
 import qualified Editor.CodeEdit.FFI as FFI
 import qualified Editor.CodeEdit.Sugar.Config as SugarConfig
 import qualified Editor.Data as Data
@@ -176,8 +177,7 @@ setMkProp mkProp val = do
 initDB :: Store DBTag IO -> IO ()
 initDB store =
   Transaction.run store $ do
-    bs <- initRef A.branchesIRef $ do
-      masterNameIRef <- Transaction.newIRef "master"
+    (branch:_) <- initRef A.branchesIRef $ do
       changes <- collectWrites Transaction.newKey $ do
         ((ffiEnv, sugarConfig), builtins) <- createBuiltins
         setMkProp A.clipboards []
@@ -190,8 +190,8 @@ initDB store =
         setMkProp A.postCursor $ WidgetIds.fromIRef A.panesIRef
       initialVersionIRef <- Version.makeInitialVersion changes
       master <- Branch.new initialVersionIRef
-      return [(masterNameIRef, master)]
-    let branch = snd $ head bs
+      setMkProp (BranchGUI.branchNameProp master) "master"
+      return [master]
     view <- initRef A.viewIRef $ View.new branch
     _ <- initRef A.currentBranchIRef (return branch)
     _ <- initRef A.redosIRef $ return []

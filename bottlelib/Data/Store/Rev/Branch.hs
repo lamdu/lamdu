@@ -1,15 +1,20 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Data.Store.Rev.Branch
-    (Branch, new, move, curVersion, newVersion)
+    (Branch, guid, new, move, curVersion, newVersion)
 where
 
 import Control.Monad (liftM)
+import Data.Store.Guid (Guid)
 import Data.Store.Rev.Change (Change)
 import Data.Store.Rev.Version (Version)
 import Data.Store.Rev.ViewBranchInternal (BranchData(..), Branch(..), moveView)
 import Data.Store.Transaction (Transaction)
+import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Transaction as Transaction
+
+guid :: Branch -> Guid
+guid = IRef.guid . unBranch
 
 move :: Monad m => Branch -> Version -> Transaction t m ()
 move (Branch dataIRef) destVersion = do
