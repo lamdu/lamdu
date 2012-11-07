@@ -1,9 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Editor.CodeEdit (make)
-where
+module Editor.CodeEdit (make) where
 
 import Control.Monad (liftM)
 import Control.Monad.Trans.Class (MonadTrans(..))
+import Control.Monad.Trans.State (StateT)
+import Data.Cache (Cache)
 import Data.List (intersperse)
 import Data.List.Utils (enumerate, insertAt, removeAt)
 import Data.Maybe (listToMaybe)
@@ -36,15 +37,17 @@ import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
+type T = Transaction ViewTag
+
 -- This is not in Sugar because Sugar is for code
 data SugarPane m = SugarPane
   { spDef :: Sugar.Definition m
-  , mDelPane :: Maybe (Transaction ViewTag m Guid)
-  , mMovePaneDown :: Maybe (Transaction ViewTag m ())
-  , mMovePaneUp :: Maybe (Transaction ViewTag m ())
+  , mDelPane :: Maybe (T m Guid)
+  , mMovePaneDown :: Maybe (T m ())
+  , mMovePaneUp :: Maybe (T m ())
   }
 
-makeNewDefinitionAction :: Monad m => ExprGuiM m (Transaction ViewTag m Widget.Id)
+makeNewDefinitionAction :: Monad m => ExprGuiM m (T m Widget.Id)
 makeNewDefinitionAction = do
   curCursor <- ExprGuiM.widgetEnv WE.readCursor
   return $ do
@@ -53,7 +56,7 @@ makeNewDefinitionAction = do
     Anchors.savePreJumpPosition curCursor
     return . FocusDelegator.delegatingId $ WidgetIds.fromIRef newDefI
 
-makeSugarPanes :: Monad m => Transaction ViewTag m [SugarPane m]
+makeSugarPanes :: Monad m => T m [SugarPane m]
 makeSugarPanes = do
   panes <- Anchors.getP Anchors.panes
   let
@@ -99,10 +102,10 @@ makeClipboardsEdit clipboards = do
 
 make ::
   MonadF m => Settings ->
-  WidgetEnvT (Transaction ViewTag m) (Widget (Transaction ViewTag m))
+  StateT Cache (WidgetEnvT (T m)) (Widget (T m))
 make settings = do
-  sugarPanes <- lift makeSugarPanes
-  clipboardsExprs <- lift $ do
+  sugarPanes <- lift $ lift makeSugarPanes
+  clipboardsExprs <- lift . lift $ do
     clipboardsP <- Anchors.clipboards
     sugarConfig <- liftM Property.value Anchors.sugarConfig
     mapM (Sugar.loadConvertExpression sugarConfig) $

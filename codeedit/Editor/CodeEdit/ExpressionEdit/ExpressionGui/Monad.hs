@@ -21,6 +21,7 @@ import Control.Applicative (Applicative, liftA2)
 import Control.Monad (liftM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.RWS (RWST, runRWST)
+import Control.Monad.Trans.State (StateT(..))
 import Data.Binary (Binary)
 import Data.Cache (Cache)
 import Data.Map (Map)
@@ -42,9 +43,6 @@ import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Data as Data
 import qualified Editor.WidgetEnvT as WE
 import qualified Graphics.UI.Bottle.Widget as Widget
-
-cacheSize :: Int
-cacheSize = 16384
 
 type AccessedVars = [Guid]
 
@@ -97,12 +95,12 @@ memoT f = memo (lift . f)
 run ::
   Monad m =>
   (Sugar.Expression m -> ExprGuiM m (ExpressionGui m)) ->
-  Settings -> ExprGuiM m a -> WidgetEnvT (T m) a
-run makeSubexpression settings (ExprGuiM action) =
+  Settings -> ExprGuiM m a -> StateT Cache (WidgetEnvT (T m)) a
+run makeSubexpression settings (ExprGuiM action) = StateT $ \cache ->
   liftM f $ runRWST action
-  (Askable initialNameGenState settings makeSubexpression) (Cache.new cacheSize)
+  (Askable initialNameGenState settings makeSubexpression) cache
   where
-    f (x, _, _) = x
+    f (x, newCache, _) = (x, newCache)
 
 widgetEnv :: Monad m => WidgetEnvT (T m) a -> ExprGuiM m a
 widgetEnv = ExprGuiM . lift

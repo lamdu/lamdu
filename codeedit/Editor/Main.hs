@@ -4,7 +4,10 @@ module Main(main) where
 import Control.Arrow (second)
 import Control.Lens ((^.))
 import Control.Monad (liftM, unless)
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.State (StateT, runStateT, mapStateT)
 import Data.ByteString (unpack)
+import Data.Cache (Cache)
 import Data.IORef
 import Data.List(intercalate)
 import Data.Monoid(Monoid(..))
@@ -23,6 +26,7 @@ import Paths_bottle (getDataFileName)
 import System.FilePath ((</>))
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
+import qualified Data.Cache as Cache
 import qualified Data.Map as Map
 import qualified Data.Store.Db as Db
 import qualified Data.Store.Transaction as Transaction
@@ -148,6 +152,7 @@ runDbStore font store = do
   settingsRef <- newIORef Settings
     { _sInfoMode = Settings.InfoTypes
     }
+  cacheRef <- newIORef $ Cache.new 0x100 -- TODO: Use a real cache size
   let
     addHelp = addHelpWithStyle $ Config.helpStyle font
     makeWidget size = do
@@ -155,9 +160,13 @@ runDbStore font store = do
       sizeFactor <- readIORef sizeFactorRef
       globalEventMap <- mkGlobalEventMap settingsRef
       let eventMap = globalEventMap `mappend` sizeFactorEvents
-      flyNavMake . Widget.scale sizeFactor . Widget.weakerEvents eventMap =<<
+      prevCache <- readIORef cacheRef
+      (widget, newCache) <-
+        (`runStateT` prevCache) $
         mkWidgetWithFallback settingsRef (Config.baseStyle font) dbToIO
         (size / sizeFactor, cursor)
+      writeIORef cacheRef newCache
+      flyNavMake . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
 
   mainLoopDebugMode font makeWidget addHelp
   where
@@ -189,23 +198,23 @@ mkWidgetWithFallback
   -> TextEdit.Style
   -> (forall a. Transaction DBTag IO a -> IO a)
   -> (Widget.Size, Widget.Id)
-  -> IO (Widget IO)
+  -> StateT Cache IO (Widget IO)
 mkWidgetWithFallback settingsRef style dbToIO (size, cursor) = do
-  settings <- readIORef settingsRef
+  settings <- lift $ readIORef settingsRef
   (isValid, widget) <-
-    dbToIO $ do
+    mapStateT dbToIO $ do
       candidateWidget <- fromCursor settings cursor
       (isValid, widget) <-
         if Widget.wIsFocused candidateWidget
         then return (True, candidateWidget)
         else do
           finalWidget <- fromCursor settings rootCursor
-          Anchors.setP Anchors.cursor rootCursor
+          lift $ Anchors.setP Anchors.cursor rootCursor
           return (False, finalWidget)
       unless (Widget.wIsFocused widget) $
         fail "Root cursor did not match"
       return (isValid, widget)
-  unless isValid . putStrLn $ "Invalid cursor: " ++ show cursor
+  unless isValid . lift . putStrLn $ "Invalid cursor: " ++ show cursor
   return widget
   where
     fromCursor settings = makeRootWidget settings style dbToIO size
@@ -217,16 +226,16 @@ makeRootWidget
   -> (forall a. Transaction DBTag IO a -> IO a)
   -> Widget.Size
   -> Widget.Id
-  -> Transaction DBTag IO (Widget IO)
+  -> StateT Cache (Transaction DBTag IO) (Widget IO)
 makeRootWidget settings style dbToIO size cursor = do
-  actions <- VersionControl.makeActions
-  runWidgetEnvT cursor style $ do
+  actions <- lift $ VersionControl.makeActions
+  mapStateT (runWidgetEnvT cursor style) $ do
     codeEdit <-
       (liftM . Widget.atEvents) (VersionControl.runEvent cursor) .
-      WE.mapWidgetEnvT VersionControl.runAction $
+      (mapStateT . WE.mapWidgetEnvT) VersionControl.runAction $
       CodeEdit.make settings
-    (liftM . Widget.atEvents) (dbToIO . (attachCursor =<<)) $
-      BranchGUI.make id size actions codeEdit
+    (liftM . Widget.atEvents) (dbToIO . (attachCursor =<<)) .
+      lift $ BranchGUI.make id size actions codeEdit
   where
     attachCursor eventResult = do
       maybe (return ()) (Anchors.setP Anchors.cursor) $
