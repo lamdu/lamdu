@@ -3,14 +3,11 @@ module Main(main) where
 
 import Control.Arrow (second)
 import Control.Lens ((^.))
-import Control.Monad (liftM, unless, (<=<))
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Writer (WriterT, runWriterT)
+import Control.Monad (liftM, unless)
 import Data.ByteString (unpack)
 import Data.IORef
 import Data.List(intercalate)
-import Data.MRUMemo (memoIO)
-import Data.Monoid(Last(..), Monoid(..))
+import Data.Monoid(Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2(Vector2)
 import Data.Word(Word8)
@@ -26,7 +23,6 @@ import Paths_bottle (getDataFileName)
 import System.FilePath ((</>))
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Map as Map
 import qualified Data.Store.Db as Db
 import qualified Data.Store.Transaction as Transaction
@@ -130,14 +126,6 @@ makeFlyNav = do
       fnState (writeIORef flyNavState) $
       widget
 
--- Safely make an IORef whose initial value needs to refer to the same
--- IORef (for writes)
-fixIORef :: ((a -> IO ()) -> IO a) -> IO (IORef a)
-fixIORef mkInitial = do
-  var <- newIORef undefined
-  writeIORef var =<< mkInitial (writeIORef var)
-  return var
-
 makeSizeFactor :: IO (IORef (Vector2 Widget.R), Widget.EventHandlers IO)
 makeSizeFactor = do
   factor <- newIORef 1
@@ -161,41 +149,18 @@ runDbStore font store = do
     }
   let
     addHelp = addHelpWithStyle $ Config.helpStyle font
-    updateCacheWith _             (Last Nothing) = return ()
-    updateCacheWith writeNewCache (Last (Just newCache)) =
-      writeNewCache newCache
-
-    newMemoFromCache writeMemo sugarCache =
-      memoIO .
-      (liftM . fmap . Widget.weakerEvents)
-      sizeFactorEvents $
-      mkWidgetWithFallback settingsRef
-      (Config.baseStyle font) dbToIO (updateCacheWith (writeCache writeMemo)) sugarCache
-
-    writeCache writeMemo = writeMemo <=< newMemoFromCache writeMemo
-
-  let makeCache = dbToIO $ viewToDb CodeEdit.makeSugarCache
-  memoRef <- fixIORef $ \writeMemo -> newMemoFromCache writeMemo =<< makeCache
-
-  let
-    touchCache = writeCache (writeIORef memoRef) =<< makeCache
     makeWidget size = do
-      mkWidget <- readIORef memoRef
       cursor <- dbToIO $ Anchors.getP Anchors.cursor
       sizeFactor <- readIORef sizeFactorRef
-      eventMap <- (liftM . fmap) (touchCache >>) $ mkGlobalEventMap settingsRef
-      flyNavMake =<<
-        liftM (Widget.scale sizeFactor . Widget.weakerEvents eventMap)
-        (mkWidget (size / sizeFactor, cursor))
+      globalEventMap <- mkGlobalEventMap settingsRef
+      let eventMap = globalEventMap `mappend` sizeFactorEvents
+      flyNavMake . Widget.scale sizeFactor . Widget.weakerEvents eventMap =<<
+        mkWidgetWithFallback settingsRef (Config.baseStyle font) dbToIO
+        (size / sizeFactor, cursor)
 
   mainLoopDebugMode font makeWidget addHelp
   where
     dbToIO = Transaction.run store
-    viewToDb act = do
-      view <- Anchors.getP Anchors.view
-      Transaction.run (Anchors.viewStore view) act
-
-type SugarCache = CodeEdit.SugarCache (Transaction DBTag IO)
 
 infoStr :: Settings.InfoMode -> String
 infoStr Settings.InfoNone = "None"
@@ -222,11 +187,9 @@ mkWidgetWithFallback
   :: IORef Settings
   -> TextEdit.Style
   -> (forall a. Transaction DBTag IO a -> IO a)
-  -> (Last SugarCache -> IO ())
-  -> SugarCache
   -> (Widget.Size, Widget.Id)
   -> IO (Widget IO)
-mkWidgetWithFallback settingsRef style dbToIO updateCache sugarCache (size, cursor) = do
+mkWidgetWithFallback settingsRef style dbToIO (size, cursor) = do
   settings <- readIORef settingsRef
   (isValid, widget) <-
     dbToIO $ do
@@ -242,34 +205,25 @@ mkWidgetWithFallback settingsRef style dbToIO updateCache sugarCache (size, curs
         fail "Root cursor did not match"
       return (isValid, widget)
   unless isValid . putStrLn $ "Invalid cursor: " ++ show cursor
-  return $ Widget.atEvents (saveCache <=< runWriterT) widget
+  return widget
   where
-    fromCursor settings = makeRootWidget settings style dbToIO sugarCache size
-    saveCache (eventResult, mCacheCache) = do
-      ~() <- updateCache mCacheCache
-      return eventResult
+    fromCursor settings = makeRootWidget settings style dbToIO size
     rootCursor = WidgetIds.fromIRef Anchors.panesIRef
 
 makeRootWidget
   :: Settings
   -> TextEdit.Style
   -> (forall a. Transaction DBTag IO a -> IO a)
-  -> SugarCache
   -> Widget.Size
   -> Widget.Id
-  -> Transaction DBTag IO (Widget (WriterT (Last SugarCache) IO))
-makeRootWidget settings style dbToIO cache size cursor =
-  liftM
-    (Widget.atEvents
-     (Writer.mapWriterT (dbToIO . IT.runITransaction) .
-      (lift . attachCursor =<<))) .
-    runWidgetEnvT cursor style $
-    makeCodeEdit cache
+  -> Transaction DBTag IO (Widget IO)
+makeRootWidget settings style dbToIO size cursor =
+  (liftM . Widget.atEvents)
+  (dbToIO . IT.runITransaction . (attachCursor =<<)) $
+  runWidgetEnvT cursor style makeCodeEdit
   where
     attachCursor eventResult = do
       maybe (return ()) (IT.transaction . Anchors.setP Anchors.cursor) $
         Widget.eCursor eventResult
       return eventResult
-    makeCodeEdit =
-      BranchGUI.makeRootWidget size CodeEdit.makeSugarCache .
-      CodeEdit.makeCodeEdit settings
+    makeCodeEdit = BranchGUI.makeRootWidget size $ CodeEdit.make settings

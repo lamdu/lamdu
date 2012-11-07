@@ -1,10 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Editor.CodeEdit
-  ( makeCodeEdit
-  , SugarCache(..), makeSugarCache )
+module Editor.CodeEdit (make)
 where
 
 import Control.Monad (liftM)
+import Control.Monad.Trans.Class (MonadTrans(..))
 import Data.List (intersperse)
 import Data.List.Utils (enumerate, insertAt, removeAt)
 import Data.Maybe (listToMaybe)
@@ -45,11 +44,6 @@ data SugarPane m = SugarPane
   , mMovePaneUp :: Maybe (Transaction ViewTag m ())
   }
 
-data SugarCache m = SugarCache
-  { scPanes :: [SugarPane m]
-  , scClipboards :: [Sugar.Expression m]
-  }
-
 makeNewDefinitionAction :: Monad m => ExprGuiM m (Transaction ViewTag m Widget.Id)
 makeNewDefinitionAction = do
   curCursor <- ExprGuiM.widgetEnv WE.readCursor
@@ -58,18 +52,6 @@ makeNewDefinitionAction = do
     Anchors.newPane newDefI
     Anchors.savePreJumpPosition curCursor
     return . FocusDelegator.delegatingId $ WidgetIds.fromIRef newDefI
-
-makeSugarCache :: Monad m => Transaction ViewTag m (SugarCache m)
-makeSugarCache = do
-  sugarPanes <- makeSugarPanes
-  clipboardsP <- Anchors.clipboards
-  sugarConfig <- liftM Property.value Anchors.sugarConfig
-  clipboardsExprs <-
-    mapM (Sugar.loadConvertExpression sugarConfig) $ Property.list clipboardsP
-  return SugarCache
-    { scPanes = sugarPanes
-    , scClipboards = clipboardsExprs
-    }
 
 makeSugarPanes :: Monad m => Transaction ViewTag m [SugarPane m]
 makeSugarPanes = do
@@ -115,13 +97,19 @@ makeClipboardsEdit clipboards = do
     else ExprGuiM.widgetEnv $ BWidgets.makeTextView "Clipboards:" ["clipboards title"]
   return . Box.vboxAlign 0 $ clipboardTitle : clipboardsEdits
 
-makeCodeEdit ::
+make ::
   MonadF m =>
-  Settings -> SugarCache m -> WidgetEnvT (Transaction ViewTag m) (IT.WidgetT ViewTag m)
-makeCodeEdit settings cache =
+  Settings -> WidgetEnvT (Transaction ViewTag m) (IT.WidgetT ViewTag m)
+make settings = do
+  sugarPanes <- lift makeSugarPanes
+  clipboardsExprs <- lift $ do
+    clipboardsP <- Anchors.clipboards
+    sugarConfig <- liftM Property.value Anchors.sugarConfig
+    mapM (Sugar.loadConvertExpression sugarConfig) $
+      Property.list clipboardsP
   ExprGuiM.run ExpressionEdit.make settings $ do
-    panesEdit <- makePanesEdit $ scPanes cache
-    clipboardsEdit <- makeClipboardsEdit $ scClipboards cache
+    panesEdit <- makePanesEdit sugarPanes
+    clipboardsEdit <- makeClipboardsEdit clipboardsExprs
     return $
       Box.vboxAlign 0
       [ panesEdit

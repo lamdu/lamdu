@@ -44,8 +44,7 @@ AtFieldTH.make ''WidgetEnvT
 getP :: Monad m => Anchors.MkProperty t m a -> WidgetEnvT (Transaction t m) a
 getP = lift . Anchors.getP
 
-runWidgetEnvT
-  :: Monad m => Widget.Id -> TextEdit.Style -> WidgetEnvT m a -> m a
+runWidgetEnvT :: Monad m => Widget.Id -> TextEdit.Style -> WidgetEnvT m a -> m a
 runWidgetEnvT cursor style (WidgetEnvT action) = runReaderT action (Env cursor style)
 
 unWrapInner
