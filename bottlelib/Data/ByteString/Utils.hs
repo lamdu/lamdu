@@ -1,6 +1,6 @@
 module Data.ByteString.Utils
-    (lazifyBS, strictifyBS, randomBS, xorBS, ljust)
-where
+    ( lazifyBS, strictifyBS, randomBS, xorBS, ljust
+    ) where
 
 import Control.Monad (replicateM)
 import Data.Bits (xor)

@@ -128,9 +128,9 @@ lookupMany x = map snd . filter ((== x) . fst)
 
 doInferM ::
   Infer.RefMap -> Infer.InferNode -> Maybe Data.DefinitionIRef ->
-  Maybe (Infer.Expression ()) ->
-  Data.PureExpression ->
-  (Infer.Expression (), Infer.RefMap)
+  Maybe (Infer.Expression a) ->
+  Data.Expression a ->
+  (Infer.Expression a, Infer.RefMap)
 doInferM refMap inferNode mDefRef mResumedRoot expr =
   case conflicts of
     [] -> result
@@ -158,7 +158,7 @@ loader = Infer.Loader (return . (definitionTypes !) . IRef.guid)
 defI :: Data.DefinitionIRef
 defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
 
-doInfer :: Data.PureExpression -> (Infer.Expression (), Infer.RefMap)
+doInfer :: Data.Expression a -> (Infer.Expression a, Infer.RefMap)
 doInfer = uncurry doInferM Infer.initial (Just defI) Nothing
 
 factorialExpr :: Data.PureExpression
@@ -182,11 +182,14 @@ factorialExpr =
 factorialDefI :: Data.DefinitionIRef
 factorialDefI = IRef.unsafeFromGuid $ Guid.fromString "factorial"
 
-factorial :: Int -> (Infer.Expression (), Infer.RefMap)
-factorial gen =
-  fromMaybe (error "Conflicts in factorial infer") $
+inferMaybe :: Maybe Data.DefinitionIRef -> Data.Expression a -> Maybe (Infer.Expression a, Infer.RefMap)
+inferMaybe mRecursiveDef expr =
   uncurry (Infer.infer (Infer.InferActions (const Nothing)) loaded) Infer.initial
   where
-    loaded =
-      runIdentity . Infer.load loader (Just factorialDefI) .
-      void $ fmap (const gen) factorialExpr
+    loaded = runIdentity $ Infer.load loader mRecursiveDef expr
+
+factorial :: Int -> (Infer.Expression (), Infer.RefMap)
+factorial gen =
+  fromMaybe (error "Conflicts in factorial infer") .
+  inferMaybe (Just factorialDefI) . void $
+  fmap (const gen) factorialExpr

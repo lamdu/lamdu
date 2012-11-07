@@ -5,7 +5,14 @@ import Control.Exception (evaluate)
 import Control.Monad (join, void)
 import Data.Map ((!))
 import Data.Maybe (isJust)
+import Data.Monoid (Monoid(..))
+import Editor.Data.Arbitrary () -- Arbitrary instance
+import Test.Framework (Test)
+import Test.Framework.Providers.HUnit (hUnitTestToTests)
+import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.HUnit (assertBool)
+import Test.QuickCheck (Property)
+import Test.QuickCheck.Property (property, rejected)
 import Utils
 import qualified Data.Foldable as Foldable
 import qualified Data.List as List
@@ -445,8 +452,8 @@ resumptionTests =
       makePi "" hole hole
   ]
 
-allTests :: HUnit.Test
-allTests =
+hunitTests :: HUnit.Test
+hunitTests =
   HUnit.TestList $
   simpleTests ++
   [ applyIntToBoolFuncWithHole
@@ -461,3 +468,15 @@ allTests =
   , inferPart
   ] ++
   resumptionTests
+
+inferPreservesShape_prop :: Data.PureExpression -> Property
+inferPreservesShape_prop expr =
+  case inferMaybe Nothing expr of
+    Nothing -> property rejected
+    Just (inferred, _) -> property (void inferred == expr)
+
+qcProps :: [Test]
+qcProps = [testProperty "infer preserves shape" inferPreservesShape_prop]
+
+allTests :: [Test]
+allTests = hUnitTestToTests hunitTests `mappend` qcProps
