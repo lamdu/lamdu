@@ -226,7 +226,7 @@ makeRootWidget settings style dbToIO size cursor = do
       WE.mapWidgetEnvT VersionControl.runAction $
       CodeEdit.make settings
     (liftM . Widget.atEvents) (dbToIO . (attachCursor =<<)) $
-      BranchGUI.make size actions codeEdit
+      BranchGUI.make id size actions codeEdit
   where
     attachCursor eventResult = do
       maybe (return ()) (Anchors.setP Anchors.cursor) $

@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeOperators, OverloadedStrings #-}
+{-# LANGUAGE TypeOperators, OverloadedStrings, RankNTypes #-}
 module Editor.BranchGUI
   ( make
   , branchNameProp
@@ -18,6 +18,7 @@ import Editor.VersionControl.Actions (Actions(..))
 import Editor.WidgetEnvT (WidgetEnvT)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
+import qualified Data.Store.Property as Property
 import qualified Data.Store.Rev.Branch as Branch
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.BottleWidgets as BWidgets
@@ -59,9 +60,11 @@ branchNameProp :: Monad m => Branch -> Transaction t m (Transaction.Property t m
 branchNameProp = Transaction.assocDataRefDef "" "name" . Branch.guid
 
 make ::
-  MonadF m => Widget.Size -> Actions (Transaction t m) -> Widget (Transaction t m) ->
-  WidgetEnvT (Transaction t m) (Widget (Transaction t m))
-make size actions widget = do
+  (MonadF m, Monad n) =>
+  (forall a. Transaction t n a -> m a) ->
+  Widget.Size -> Actions m -> Widget m ->
+  WidgetEnvT m (Widget m)
+make transaction size actions widget = do
   branchSelectorFocused <-
     liftM isJust $ WE.subCursor WidgetIds.branchSelection
   branchSelector <-
@@ -94,7 +97,9 @@ make size actions widget = do
       ]
     makeBranchNameEdit branch = do
       let branchEditId = WidgetIds.fromGuid $ Branch.guid branch
-      nameProp <- lift $ branchNameProp branch
+      nameProp <-
+        lift . transaction . (liftM . Property.atSet . fmap) transaction $
+        branchNameProp branch
       branchNameEdit <-
         BWidgets.wrapDelegatedOT branchNameFDConfig
         FocusDelegator.NotDelegating id
