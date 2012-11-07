@@ -11,7 +11,6 @@ import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
-import qualified Editor.ITransaction as IT
 import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -48,7 +47,7 @@ make (Sugar.DefinitionBuiltin (Data.FFIName modulePath name) setFFIName) myId =
        (BWidgets.makeTextView namePartStr . Widget.toAnimId)
        (BWidgets.makeWordEdit . Property namePartStr) mSetter) $
       makeWidgetId myId
-    maybeSetter f = fmap (f . fmap IT.transaction) setFFIName
+    maybeSetter = (`fmap` setFFIName)
     modulePathStr = List.intercalate "." modulePath
     modulePathSetter = maybeSetter $ \ffiNameSetter ->
       ffiNameSetter . (`Data.FFIName` name) . splitOn "."

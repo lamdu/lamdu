@@ -20,7 +20,6 @@ import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
-import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -38,7 +37,6 @@ import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
-import qualified Editor.ITransaction as IT
 import qualified Editor.Layers as Layers
 import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
@@ -65,7 +63,7 @@ type T = Transaction ViewTag
 
 data HoleInfo m = HoleInfo
   { hiHoleId :: Widget.Id
-  , hiSearchTerm :: Property (ITransaction ViewTag m) String
+  , hiSearchTerm :: Property (Transaction ViewTag m) String
   , hiHole :: Sugar.Hole m
   , hiHoleActions :: Sugar.HoleActions m
   , hiGuid :: Guid
@@ -73,17 +71,18 @@ data HoleInfo m = HoleInfo
   }
 
 pickExpr ::
-  Monad m => HoleInfo m -> Sugar.HoleResult -> ITransaction ViewTag m Widget.EventResult
+  Monad m => HoleInfo m -> Sugar.HoleResult ->
+  Transaction ViewTag m Widget.EventResult
 pickExpr holeInfo expr = do
-  (guid, _) <- IT.transaction $ Sugar.holePickResult (hiHoleActions holeInfo) expr
+  (guid, _) <- Sugar.holePickResult (hiHoleActions holeInfo) expr
   return Widget.EventResult
     { Widget.eCursor = Just $ WidgetIds.fromGuid guid
     , Widget.eAnimIdMapping = id -- TODO: Need to fix the parens id
     }
 
-resultPickEventMap
-  :: Monad m
-  => HoleInfo m -> Sugar.HoleResult -> Widget.EventHandlers (ITransaction ViewTag m)
+resultPickEventMap ::
+  Monad m => HoleInfo m -> Sugar.HoleResult ->
+  Widget.EventHandlers (Transaction ViewTag m)
 resultPickEventMap holeInfo holeResult =
   case hiMNextHole holeInfo of
   Just nextHole
@@ -92,7 +91,7 @@ resultPickEventMap holeInfo holeResult =
       E.keyPresses Config.addNextArgumentKeys
       "Pick result and move to next arg" .
       liftM Widget.eventResultFromCursor $ do
-        _ <- IT.transaction $ Sugar.holePickResult (hiHoleActions holeInfo) holeResult
+        _ <- Sugar.holePickResult (hiHoleActions holeInfo) holeResult
         return . WidgetIds.fromGuid $ Sugar.rGuid nextHole
   _ -> simplePickRes $ Config.pickResultKeys ++ Config.addNextArgumentKeys
   where
@@ -303,30 +302,27 @@ makeAllResults holeInfo = do
 addNewDefinitionEventMap ::
   Monad m =>
   HoleInfo m ->
-  Widget.EventHandlers (ITransaction ViewTag m)
+  Widget.EventHandlers (Transaction ViewTag m)
 addNewDefinitionEventMap holeInfo =
   E.keyPresses Config.newDefinitionKeys
   "Add as new Definition" . makeNewDefinition $
   pickExpr holeInfo
   where
     makeNewDefinition holePickResult = do
-      newDefI <- IT.transaction $ do
-        newDefI <- Anchors.makeDefinition -- TODO: From Sugar
-        let
-          searchTerm = Property.value $ hiSearchTerm holeInfo
-          newName = concat . words $ searchTerm
-        Anchors.setP (Anchors.assocNameRef (IRef.guid newDefI)) newName
-        Anchors.newPane newDefI
-        return newDefI
+      newDefI <- Anchors.makeDefinition -- TODO: From Sugar
+      let
+        searchTerm = Property.value $ hiSearchTerm holeInfo
+        newName = concat . words $ searchTerm
+      Anchors.setP (Anchors.assocNameRef (IRef.guid newDefI)) newName
+      Anchors.newPane newDefI
       defRef <-
         liftM (fromMaybe (error "GetDef should always type-check") . listToMaybe) .
-        IT.transaction .
         Sugar.holeInferResults (hiHole holeInfo) .
         Data.pureExpression . Data.ExpressionLeaf . Data.GetVariable $
         Data.DefinitionRef newDefI
       -- TODO: Can we use pickResult's animIdMapping?
       eventResult <- holePickResult defRef
-      maybe (return ()) (IT.transaction . Anchors.savePreJumpPosition) $
+      maybe (return ()) Anchors.savePreJumpPosition $
         Widget.eCursor eventResult
       return Widget.EventResult {
         Widget.eCursor = Just $ WidgetIds.fromIRef newDefI,
@@ -457,17 +453,15 @@ alphaNumericHandler doc handler =
 
 pickEventMap ::
   MonadF m => HoleInfo m -> String -> Maybe Sugar.HoleResult ->
-  Widget.EventHandlers (ITransaction ViewTag m)
+  Widget.EventHandlers (Transaction ViewTag m)
 pickEventMap holeInfo searchTerm (Just result)
   | nonEmptyAll (`notElem` Config.operatorChars) searchTerm =
-    operatorHandler "Pick this result and apply operator" $ \x ->
-    IT.transaction $ do
+    operatorHandler "Pick this result and apply operator" $ \x -> do
       (_, actions) <- Sugar.holePickResult (hiHoleActions holeInfo) result
       liftM (searchTermWidgetId . WidgetIds.fromGuid) $
         Sugar.giveAsArgToOperator actions [x]
   | nonEmptyAll (`elem` Config.operatorChars) searchTerm =
-    alphaNumericHandler "Pick this result and resume" $ \x ->
-    IT.transaction $ do
+    alphaNumericHandler "Pick this result and resume" $ \x -> do
       (g, _) <- Sugar.holePickResult (hiHoleActions holeInfo) result
       let
         mTarget
@@ -567,9 +561,7 @@ makeUnwrapped ::
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeUnwrapped hole mNextHole guid myId = do
   cursor <- ExprGuiM.widgetEnv WE.readCursor
-  searchTermProp <-
-    (liftM . Property.atSet . fmap) IT.transaction .
-    ExprGuiM.transaction $ Anchors.assocSearchTermRef guid
+  searchTermProp <- ExprGuiM.transaction $ Anchors.assocSearchTermRef guid
   case (Sugar.holeMActions hole, Widget.subId myId cursor) of
     (Just holeActions, Just _) ->
       let

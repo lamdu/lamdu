@@ -6,10 +6,10 @@ module Editor.CodeEdit.ExpressionEdit.FuncEdit
 import Control.Monad (liftM)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
+import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
-import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Lens as Lens
@@ -20,7 +20,6 @@ import qualified Editor.CodeEdit.Parens as Parens
 import qualified Editor.CodeEdit.Settings as Settings
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
-import qualified Editor.ITransaction as IT
 import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -58,7 +57,7 @@ jumpToRHS keys (rhsDoc, rhs) =
 makeParamEdit ::
   MonadF m =>
   ((ExprGuiM.NameSource, String) ->
-   Widget (ITransaction ViewTag m) -> Widget (ITransaction ViewTag m)) ->
+   Widget (Transaction ViewTag m) -> Widget (Transaction ViewTag m)) ->
   (E.Doc, Sugar.Expression m) ->
   (ExprGuiM.NameSource, String) -> Widget.Id ->
   Sugar.FuncParam m (Sugar.Expression m) ->
@@ -103,13 +102,13 @@ makeParamEdit atParamWidgets rhs name prevId param = do
       maybe mempty
       (Widget.keysEventMapMovesCursor Config.addNextParamKeys "Add next parameter" .
        liftM (FocusDelegator.delegatingId . WidgetIds.fromGuid) .
-       IT.transaction . Sugar.itemAddNext . Sugar.fpListItemActions)
+       Sugar.itemAddNext . Sugar.fpListItemActions)
       mActions
     paramDeleteEventMap keys docSuffix onId =
       maybe mempty
       (Widget.keysEventMapMovesCursor keys ("Delete parameter" ++ docSuffix) .
        liftM (onId . WidgetIds.fromGuid) .
-       IT.transaction . Sugar.itemDelete . Sugar.fpListItemActions)
+       Sugar.itemDelete . Sugar.fpListItemActions)
       mActions
 
 makeResultEdit
@@ -156,7 +155,7 @@ make hasParens (Sugar.Func params body) =
 makeParamsAndResultEdit ::
   MonadF m =>
   ((ExprGuiM.NameSource, String) ->
-   Widget (ITransaction ViewTag m) -> Widget (ITransaction ViewTag m)) ->
+   Widget (Transaction ViewTag m) -> Widget (Transaction ViewTag m)) ->
   [Widget.Id] -> (E.Doc, Sugar.Expression m) ->
   Widget.Id -> [Sugar.FuncParam m (Sugar.Expression m)] ->
   ExprGuiM m ([ExpressionGui m], ExpressionGui m)

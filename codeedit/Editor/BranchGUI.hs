@@ -15,7 +15,6 @@ import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag, DBTag)
-import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
 import Editor.WidgetEnvT (WidgetEnvT)
 import Graphics.UI.Bottle.Animation (AnimId)
@@ -27,7 +26,6 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.Config as Config
-import qualified Editor.ITransaction as IT
 import qualified Editor.Layers as Layers
 import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
@@ -39,7 +37,6 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 type TDB = Transaction DBTag
 type TV m = Transaction ViewTag (TDB m)
-type ITV m = ITransaction ViewTag (TDB m)
 
 setCurrentBranch :: Monad m => View -> Branch -> TDB m ()
 setCurrentBranch view branch = do
@@ -97,8 +94,8 @@ viewToDb = Transaction.run . Anchors.viewStore
 makeRootWidget
   :: MonadF m
   => Widget.Size
-  -> WidgetEnvT (TV m) (Widget (ITV m))
-  -> WidgetEnvT (TDB m) (Widget (ITransaction DBTag m))
+  -> WidgetEnvT (TV m) (Widget (TV m))
+  -> WidgetEnvT (TDB m) (Widget (TDB m))
 makeRootWidget size widget = do
   view <- WE.getP Anchors.view
   namedBranches <- WE.getP Anchors.branches
@@ -115,11 +112,11 @@ makeRootWidget size widget = do
         FocusDelegator.NotDelegating id
         (BWidgets.makeLineEdit nameProp)
         branchEditId
-      let setBranch = IT.transaction (setCurrentBranch view branch)
+      let setBranch = setCurrentBranch view branch
       return
         ( branch
-        , (Widget.atWMaybeEnter . fmap . fmap . Widget.atEnterResultEvent) (setBranch >>) .
-          Widget.atEvents IT.transaction $ branchNameEdit
+        , (Widget.atWMaybeEnter . fmap . fmap . Widget.atEnterResultEvent)
+          (setBranch >>) $ branchNameEdit
         )
     -- there must be an active branch:
     Just currentBranchWidgetId =
@@ -129,8 +126,8 @@ makeRootWidget size widget = do
     delBranchEventMap
       | null (drop 1 namedBranches) = mempty
       | otherwise =
-        Widget.keysEventMapMovesCursor Config.delBranchKeys "Delete Branch" .
-        IT.transaction $ deleteCurrentBranch view
+        Widget.keysEventMapMovesCursor Config.delBranchKeys "Delete Branch" $
+        deleteCurrentBranch view
 
   branchSelectorFocused <-
     liftM isJust $ WE.subCursor WidgetIds.branchSelection
@@ -151,8 +148,8 @@ makeRootWidget size widget = do
   let
     eventMap = mconcat
       [ Widget.keysEventMap Config.quitKeys "Quit" (error "Quit")
-      , Widget.keysEventMapMovesCursor Config.makeBranchKeys "New Branch" .
-        IT.transaction $ makeBranch view
+      , Widget.keysEventMapMovesCursor Config.makeBranchKeys "New Branch" $
+        makeBranch view
       , Widget.keysEventMapMovesCursor Config.jumpToBranchesKeys
         "Select current branch" $ pure currentBranchWidgetId
       ]
@@ -192,8 +189,8 @@ makeBranchChoice forceExpand selectionAnimId orientation children curChild =
 makeWidgetForView
   :: MonadF m
   => View
-  -> WidgetEnvT (TV m) (Widget (ITV m))
-  -> WidgetEnvT (TDB m) (Widget (ITransaction DBTag m))
+  -> WidgetEnvT (TV m) (Widget (TV m))
+  -> WidgetEnvT (TDB m) (Widget (TDB m))
 makeWidgetForView view innerWidget = do
   curVersion <- lift $ View.curVersion view
   curVersionData <- lift $ Version.versionData curVersion
@@ -213,11 +210,10 @@ makeWidgetForView view innerWidget = do
 
     afterEvent action = do
       eventResult <- action
-      IT.transaction $ do
-        isEmpty <- Transaction.isEmpty
-        unless isEmpty $ do
-          Anchors.setP Anchors.preCursor cursor
-          Anchors.setP Anchors.postCursor . fromMaybe cursor $ Widget.eCursor eventResult
+      isEmpty <- Transaction.isEmpty
+      unless isEmpty $ do
+        Anchors.setP Anchors.preCursor cursor
+        Anchors.setP Anchors.postCursor . fromMaybe cursor $ Widget.eCursor eventResult
       return eventResult
 
   vWidget <-
@@ -225,11 +221,9 @@ makeWidgetForView view innerWidget = do
     (liftM . Widget.atEvents) afterEvent innerWidget
 
   let
-    runTrans = IT.transaction . toDb . IT.runITransaction
     lowerWTransaction act = do
-      (r, isEmpty) <-
-        runTrans . liftM2 (,) act $ IT.transaction Transaction.isEmpty
-      unless isEmpty . IT.transaction $ Anchors.setP Anchors.redos []
+      (r, isEmpty) <- toDb $ liftM2 (,) act Transaction.isEmpty
+      unless isEmpty $ Anchors.setP Anchors.redos []
       return r
 
     redoEventMap [] = mempty
@@ -241,7 +235,7 @@ makeWidgetForView view innerWidget = do
       (Widget.keysEventMapMovesCursor Config.undoKeys "Undo" .
        undo) $ Version.parent curVersionData
 
-    eventMap = fmap IT.transaction $ mconcat [undoEventMap, redoEventMap redos]
+    eventMap = mconcat [undoEventMap, redoEventMap redos]
 
   return .
     Widget.strongerEvents eventMap $

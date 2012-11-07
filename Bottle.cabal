@@ -133,7 +133,6 @@ Executable Editor
                        Editor.CodeEdit.Sugar,
                        Editor.CodeEdit.Sugar.Config,
                        Editor.Config,
-                       Editor.ITransaction,
                        Editor.WidgetEnvT,
                        Editor.Data,
                        Editor.Data.IRef,

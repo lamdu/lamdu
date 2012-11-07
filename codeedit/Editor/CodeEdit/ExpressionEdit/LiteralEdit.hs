@@ -15,7 +15,6 @@ import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
-import qualified Editor.ITransaction as IT
 import qualified Editor.WidgetEnvT as WE
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -60,10 +59,10 @@ makeIntEditI integer myId setValue = do
       | newText == text = return eventRes
       | not (all Char.isDigit newText) = return Widget.emptyEventResult
       | null newText = do
-        _ <- IT.transaction $ setValue 0
+        _ <- setValue 0
         return . Widget.eventResultFromCursor $ Widget.joinId myId emptyZeroCursor
       | otherwise = do
-        _ <- IT.transaction $ setValue $ read newText
+        _ <- setValue $ read newText
         return eventRes
   style <- ExprGuiM.widgetEnv WE.readTextStyle
   return .

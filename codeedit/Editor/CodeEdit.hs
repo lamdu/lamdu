@@ -15,6 +15,7 @@ import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (WidgetT, ExprGuiM)
 import Editor.CodeEdit.Settings (Settings)
 import Editor.MonadF (MonadF)
 import Editor.WidgetEnvT (WidgetEnvT)
+import Graphics.UI.Bottle.Widget (Widget)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
@@ -25,7 +26,6 @@ import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
-import qualified Editor.ITransaction as IT
 import qualified Editor.Layers as Layers
 import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
@@ -99,7 +99,7 @@ makeClipboardsEdit clipboards = do
 
 make ::
   MonadF m =>
-  Settings -> WidgetEnvT (Transaction ViewTag m) (IT.WidgetT ViewTag m)
+  Settings -> WidgetEnvT (Transaction ViewTag m) (Widget (Transaction ViewTag m))
 make settings = do
   sugarPanes <- lift makeSugarPanes
   clipboardsExprs <- lift $ do
@@ -133,7 +133,6 @@ makePanesEdit panes = do
   newDefinition <- makeNewDefinitionAction
   let
     panesEventMap =
-      fmap IT.transaction $
       mconcat
       [ Widget.keysEventMapMovesCursor Config.newDefinitionKeys
         "New definition" newDefinition
@@ -145,7 +144,7 @@ makePanesEdit panes = do
   return $ Widget.weakerEvents panesEventMap panesWidget
   where
     myId = WidgetIds.fromGuid panesGuid
-    paneEventMap pane = fmap IT.transaction $ mconcat
+    paneEventMap pane = mconcat
       [ maybe mempty (Widget.keysEventMapMovesCursor Config.closePaneKeys "Close pane" . liftM WidgetIds.fromGuid) $ mDelPane pane
       , maybe mempty (Widget.keysEventMap Config.movePaneDownKeys "Move pane down") $ mMovePaneDown pane
       , maybe mempty (Widget.keysEventMap Config.movePaneUpKeys "Move pane up") $ mMovePaneUp pane

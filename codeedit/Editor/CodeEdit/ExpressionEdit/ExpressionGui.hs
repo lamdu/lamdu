@@ -17,24 +17,22 @@ import Control.Lens ((^.))
 import Control.Monad (liftM)
 import Data.Function (on)
 import Data.Store.Guid (Guid)
+import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Types (WidgetT, ExpressionGui(..), atEgWidget)
-import Editor.ITransaction (ITransaction)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Widgets.Box (KBox)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
-import qualified Data.Store.Property as Property
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
-import qualified Editor.ITransaction as IT
 import qualified Editor.Layers as Layers
 import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
@@ -69,7 +67,7 @@ hbox guis =
 hboxSpaced :: [ExpressionGui m] -> ExpressionGui m
 hboxSpaced = hbox . List.intersperse (fromValueWidget BWidgets.stdSpaceWidget)
 
-fromBox :: KBox Bool (ITransaction ViewTag m) -> ExpressionGui m
+fromBox :: KBox Bool (Transaction ViewTag m) -> ExpressionGui m
 fromBox box =
   ExpressionGui (Box.toWidget box) alignment
   where
@@ -148,8 +146,7 @@ makeNameEdit (nameSrc, name) ident myId =
   (ExprGuiM.atEnv . WE.atEnvTextStyle)
   ((TextEdit.atSEmptyUnfocusedString . const) name .
    (TextEdit.atSEmptyFocusedString . const) (concat ["<", name, ">"])) $
-  ExprGuiM.widgetEnv . flip makeEditor myId .
-  (Property.atSet . fmap) IT.transaction =<<
+  ExprGuiM.widgetEnv . flip makeEditor myId =<<
   (ExprGuiM.transaction . Anchors.assocNameRef) ident
   where
     makeEditor =

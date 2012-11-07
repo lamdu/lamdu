@@ -18,7 +18,6 @@ import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
-import qualified Editor.ITransaction as IT
 import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -92,8 +91,7 @@ makeParts name guid def = do
       Widget.keysEventMapMovesCursor Config.addNextParamKeys "Add parameter" .
       toEventMapAction $ Sugar.dAddFirstParam def
     toEventMapAction =
-      liftM (FocusDelegator.delegatingId . WidgetIds.fromGuid) .
-      IT.transaction
+      liftM (FocusDelegator.delegatingId . WidgetIds.fromGuid)
     body = Sugar.dBody def
     myId = WidgetIds.fromGuid guid
 
@@ -144,11 +142,11 @@ makeWhereItemEdit item =
       [ Widget.keysEventMapMovesCursor (Config.delForwardKeys ++ Config.delBackwordKeys)
         "Delete where item" .
         liftM WidgetIds.fromGuid .
-        IT.transaction . Sugar.itemDelete $ Sugar.wiActions item
+        Sugar.itemDelete $ Sugar.wiActions item
       , Widget.keysEventMapMovesCursor Config.addWhereItemKeys
         "Add outer where item" .
         liftM WidgetIds.fromGuid .
-        IT.transaction . Sugar.itemAddNext $ Sugar.wiActions item
+        Sugar.itemAddNext $ Sugar.wiActions item
       ]
 
 makeDefBodyEdit ::
@@ -197,8 +195,7 @@ makeExprDefinition def bodyExpr = do
       acceptanceLabel <-
         (liftM . Widget.weakerEvents)
         (Widget.keysEventMapMovesCursor Config.acceptInferredTypeKeys
-         "Accept inferred type"
-         (IT.transaction acceptInferredType >> return myId)) .
+         "Accept inferred type" (acceptInferredType >> return myId)) .
         ExprGuiM.widgetEnv .
         BWidgets.makeFocusableTextView "↱" $ Widget.joinId myId ["accept type"]
       return $ BWidgets.hboxCenteredSpaced [acceptanceLabel, label]

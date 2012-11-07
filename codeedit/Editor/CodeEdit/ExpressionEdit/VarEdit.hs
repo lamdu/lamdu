@@ -11,7 +11,6 @@ import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
-import qualified Editor.ITransaction as IT
 import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
@@ -52,11 +51,11 @@ make getVar myId = do
       jumpToDefinition
     jumpToDefinition =
       case getVar of
-        Data.DefinitionRef defI -> IT.transaction $ do
+        Data.DefinitionRef defI -> do
           Anchors.newPane defI
           Anchors.savePreJumpPosition myId
           return $ WidgetIds.fromIRef defI
-        Data.ParameterRef paramGuid -> IT.transaction $ do
+        Data.ParameterRef paramGuid -> do
           Anchors.savePreJumpPosition myId
           return $ WidgetIds.fromGuid paramGuid
   return $ ExpressionGui.atEgWidget (Widget.weakerEvents jumpToDefinitionEventMap) getVarView
