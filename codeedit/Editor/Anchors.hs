@@ -14,7 +14,7 @@ module Editor.Anchors
   , Pane
   , dbStore, DBTag
   , viewStore, ViewTag
-  , assocDataRef, nonEmptyAssocDataRef
+  , nonEmptyAssocDataRef
   , assocNameRef, assocSearchTermRef
   , makePane, makeDefinition, newPane
   , savePreJumpPosition, jumpBack
@@ -26,7 +26,6 @@ import Control.Monad (liftM, liftM2, when)
 import Data.Binary (Binary(..))
 import Data.ByteString.Char8 ()
 import Data.List.Split (splitOn)
-import Data.Maybe (fromMaybe)
 import Data.Store.Db (Db)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
@@ -38,7 +37,6 @@ import Data.Store.Transaction (Transaction, Store(..))
 import Editor.CodeEdit.Sugar.Config (SugarConfig)
 import qualified Data.ByteString as SBS
 import qualified Data.Store.Db as Db
-import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Rev.View as View
@@ -137,25 +135,11 @@ makeDefinition = do
   modP globals (defI :)
   return defI
 
-dataGuid :: SBS.ByteString -> Guid -> Guid
-dataGuid str guid = Guid.combine guid $ Guid.make str
-
-assocDataRef ::
-  (Binary b, Monad m) =>
-  SBS.ByteString -> Guid -> MkProperty t m (Maybe b)
-assocDataRef str guid = do
-  val <- Transaction.lookup assocGuid
-  return $ Property val set
-  where
-    assocGuid = dataGuid str guid
-    set Nothing = Transaction.delete assocGuid
-    set (Just x) = Transaction.writeGuid assocGuid x
-
 nonEmptyAssocDataRef ::
   (Monad m, Binary a) =>
   SBS.ByteString -> Guid -> Transaction t m a -> MkProperty t m a
 nonEmptyAssocDataRef str guid makeDef = do
-  dataRef <- assocDataRef str guid
+  dataRef <- Transaction.assocDataRef str guid
   def <-
     case Property.value dataRef of
     Nothing -> do
@@ -166,22 +150,11 @@ nonEmptyAssocDataRef str guid makeDef = do
       return val
   return $ Property def (Property.set dataRef . Just)
 
-assocDataRefDef
-  :: (Eq def, Binary def, Monad m)
-  => def -> SBS.ByteString
-  -> Guid -> MkProperty t m def
-assocDataRefDef def str =
-  liftM (Property.pureCompose (fromMaybe def) f) . assocDataRef str
-  where
-    f x
-      | x == def = Nothing
-      | otherwise = Just x
-
 assocNameRef :: Monad m => Guid -> MkProperty t m String
-assocNameRef = assocDataRefDef "" "Name"
+assocNameRef = Transaction.assocDataRefDef "" "Name"
 
 assocSearchTermRef :: Monad m => Guid -> MkProperty t m String
-assocSearchTermRef = assocDataRefDef "" "searchTerm"
+assocSearchTermRef = Transaction.assocDataRefDef "" "searchTerm"
 
 newPane
   :: Monad m => Data.DefinitionIRef -> Transaction ViewTag m ()

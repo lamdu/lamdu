@@ -14,27 +14,29 @@ module Data.Store.Transaction
   , fromIRef, fromIRefDef
   , followBy
   , anchorRef, anchorRefDef
+  , assocDataRef, assocDataRefDef
   )
 where
 
-import           Prelude                          hiding (lookup)
 import           Control.Applicative              (Applicative)
 import           Control.Monad                    (liftM)
-import           Control.Monad.Trans.State        (StateT, runStateT, get, gets, modify)
-import           Control.Monad.Trans.Reader       (ReaderT, runReaderT, ask)
 import           Control.Monad.Trans.Class        (MonadTrans(..))
+import           Control.Monad.Trans.Reader       (ReaderT, runReaderT, ask)
+import           Control.Monad.Trans.State        (StateT, runStateT, get, gets, modify)
 import           Data.Binary                      (Binary)
 import           Data.Binary.Utils                (encodeS, decodeS)
-import           Data.Store.Rev.Change            (Key, Value)
-import           Data.Store.IRef                  (IRef)
-import qualified Data.Store.IRef                  as IRef
-import           Data.Store.Guid                  (Guid)
-import qualified Data.Store.Property              as Property
-import           Data.Monoid                      (mempty)
-import           Data.Maybe                       (isJust)
 import           Data.ByteString                  (ByteString)
-import qualified Data.Map                         as Map
 import           Data.Map                         (Map)
+import           Data.Maybe                       (fromMaybe, isJust)
+import           Data.Monoid                      (mempty)
+import           Data.Store.Guid                  (Guid)
+import           Data.Store.IRef                  (IRef)
+import           Data.Store.Rev.Change            (Key, Value)
+import           Prelude                          hiding (lookup)
+import qualified Data.Map                         as Map
+import qualified Data.Store.Guid as Guid
+import qualified Data.Store.IRef                  as IRef
+import qualified Data.Store.Property              as Property
 
 type Property t m = Property.Property (Transaction t m)
 
@@ -160,3 +162,24 @@ run store transaction = do
   (res, changes) <- (`runStateT` mempty) . (`runReaderT` store) . unTransaction $ transaction
   storeAtomicWrite store $ Map.toList changes
   return res
+
+assocDataRef ::
+  (Binary a, Monad m) =>
+  ByteString -> Guid -> Transaction t m (Property t m (Maybe a))
+assocDataRef str guid = do
+  val <- lookup assocGuid
+  return $ Property.Property val set
+  where
+    assocGuid = Guid.combine guid $ Guid.make str
+    set Nothing = delete assocGuid
+    set (Just x) = writeGuid assocGuid x
+
+assocDataRefDef ::
+  (Eq a, Binary a, Monad m) =>
+  a -> ByteString -> Guid -> Transaction t m (Property t m a)
+assocDataRefDef def str =
+  liftM (Property.pureCompose (fromMaybe def) f) . assocDataRef str
+  where
+    f x
+      | x == def = Nothing
+      | otherwise = Just x
