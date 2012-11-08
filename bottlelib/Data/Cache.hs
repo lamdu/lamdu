@@ -2,7 +2,7 @@
 
 module Data.Cache
   ( Cache, Key
-  , new, peek, touch, lookup, memo
+  , new, peek, touch, lookup, memo, memoS
   , lookupS
   ) where
 
@@ -147,3 +147,7 @@ memo f key cache =
       return (val, insertHelper bsKey val cache)
     onHit bsKey entry@(_, bsVal) =
       return (decodeS bsVal, touchExisting cache bsKey entry)
+
+memoS :: (Key k, Binary v, Monad m) =>
+  (k -> m v) -> k -> StateT Cache m v
+memoS f key = StateT $ memo f key
