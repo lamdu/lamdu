@@ -665,7 +665,7 @@ convertReadOnlyHole exprI =
   }
 
 loader :: Monad m => Infer.Loader (T m)
-loader = Infer.Loader Load.loadPureDefinitionType
+loader = Infer.Loader (liftM void . Load.loadPureDefinitionType)
 
 -- Fill partial holes in an expression. Parital holes are those whose
 -- inferred (filler) value itself is not complete, so will not be a
@@ -991,7 +991,7 @@ loadConvertDefinition config defI =
 convertDefinition ::
   Monad m => SugarConfig ->
   Data.DefinitionIRef ->
-  Load.DefinitionEntity (T m) ->
+  Data.Definition (Data.Expression (DataIRef.ExpressionProperty (T m))) ->
   T m (Definition m)
 convertDefinition config defI (Data.Definition defBody typeL) = do
   let typeP = void typeL
@@ -1051,7 +1051,7 @@ convertDefinition config defI (Data.Definition defBody typeL) = do
 inferLoadedExpression ::
   Monad f =>
   Maybe Data.DefinitionIRef ->
-  Load.ExpressionEntity (T m) ->
+  Data.Expression (DataIRef.ExpressionProperty (T m)) ->
   T f
   (Bool,
    Infer.RefMap,
