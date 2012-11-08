@@ -26,9 +26,7 @@ loadExpression prop =
   loadPureExpression $ Property.value prop
 
 -- TODO: -> Rename to loadIRefExpression?
-loadPureExpression
-  :: Monad m
-  => Data.ExpressionIRef -> T t m (Data.Expression Data.ExpressionIRef)
+loadPureExpression :: Monad m => Data.ExpressionIRef -> T t m (Data.Expression Data.ExpressionIRef)
 loadPureExpression exprI =
   liftM (`Data.Expression` exprI) .
   Traversable.mapM loadPureExpression =<< DataIRef.readExprBody exprI
@@ -41,8 +39,7 @@ loadPureDefinitionType =
 exprAddProp ::
   Monad m =>
   (Data.ExpressionIRef -> T t m ()) ->
-  Data.Expression Data.ExpressionIRef ->
-  Data.Expression (DataIRef.ExpressionProperty (T t m))
+  Data.Expression Data.ExpressionIRef -> Data.Expression (DataIRef.ExpressionProperty (T t m))
 exprAddProp setIRef (Data.Expression body iref) =
   Data.Expression newBody $ Property iref setIRef
   where
@@ -64,10 +61,10 @@ exprAddProp setIRef (Data.Expression body iref) =
          (loadSubexpr (cons . (`lam` Data.ePayload result)) paramType)
          (loadSubexpr (cons . (Data.ePayload paramType `lam`)) result)
 
-loadDefinition
-  :: (Monad m, Monad f)
-  => Data.DefinitionIRef
-  -> T t m (Data.Definition (Data.Expression (DataIRef.ExpressionProperty (T u f))))
+loadDefinition ::
+  (Monad m, Monad f) =>
+  Data.DefinitionIRef ->
+  T t m (Data.Definition (Data.Expression (DataIRef.ExpressionProperty (T u f))))
 loadDefinition defI = do
   Data.Definition body typeExprI <- Transaction.readIRef defI
   let writeBack = Transaction.writeIRef defI
