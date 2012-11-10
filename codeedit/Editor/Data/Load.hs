@@ -17,13 +17,18 @@ import qualified Editor.Data.IRef as DataIRef
 
 type T = Transaction
 
+exprWithProp ::
+  Monad m => (Data.ExpressionIRef -> T t m ()) ->
+  Data.Expression Data.ExpressionIRef ->
+  Data.Expression (DataIRef.ExpressionProperty (T t m))
+exprWithProp setter = fmap fst . exprAddProp setter . fmap (flip (,) ())
+
 loadExpression ::
   (Monad n, Monad m) =>
   DataIRef.ExpressionProperty (T t m) ->
   T u n (Data.Expression (DataIRef.ExpressionProperty (T t m)))
 loadExpression prop =
-  liftM (exprAddProp (Property.set prop)) .
-  loadPureExpression $ Property.value prop
+  liftM (exprWithProp (Property.set prop)) . loadPureExpression $ Property.value prop
 
 -- TODO: -> Rename to loadIRefExpression?
 loadPureExpression :: Monad m => Data.ExpressionIRef -> T t m (Data.Expression Data.ExpressionIRef)
@@ -39,9 +44,9 @@ loadPureDefinitionType =
 exprAddProp ::
   Monad m =>
   (Data.ExpressionIRef -> T t m ()) ->
-  Data.Expression Data.ExpressionIRef -> Data.Expression (DataIRef.ExpressionProperty (T t m))
-exprAddProp setIRef (Data.Expression body iref) =
-  Data.Expression newBody $ Property iref setIRef
+  Data.Expression (Data.ExpressionIRef, a) -> Data.Expression (DataIRef.ExpressionProperty (T t m), a)
+exprAddProp setIRef (Data.Expression body (iref, a)) =
+  Data.Expression newBody (Property iref setIRef, a)
   where
     newBody =
       case body of
@@ -51,15 +56,15 @@ exprAddProp setIRef (Data.Expression body iref) =
         Data.ExpressionPi $ loadLambda Data.ExpressionPi lambda
       Data.ExpressionApply (Data.Apply func arg) ->
         Data.makeApply
-        (loadSubexpr (`Data.makeApply` Data.ePayload arg) func)
-        (loadSubexpr (Data.ePayload func `Data.makeApply` ) arg)
+        (loadSubexpr (`Data.makeApply` fst (Data.ePayload arg)) func)
+        (loadSubexpr (fst (Data.ePayload func) `Data.makeApply` ) arg)
       Data.ExpressionLeaf x -> Data.ExpressionLeaf x
     loadSubexpr f = exprAddProp (DataIRef.writeExprBody iref . f)
     loadLambda cons (Data.Lambda param paramType result) =
       let lam = Data.Lambda param
       in Data.Lambda param
-         (loadSubexpr (cons . (`lam` Data.ePayload result)) paramType)
-         (loadSubexpr (cons . (Data.ePayload paramType `lam`)) result)
+         (loadSubexpr (cons . (`lam` fst (Data.ePayload result))) paramType)
+         (loadSubexpr (cons . (fst (Data.ePayload paramType) `lam`)) result)
 
 loadDefinition ::
   (Monad m, Monad f) =>
@@ -69,14 +74,14 @@ loadDefinition defI = do
   Data.Definition body typeExprI <- Transaction.readIRef defI
   let writeBack = Transaction.writeIRef defI
   defType <-
-    liftM (exprAddProp (writeBack . (body `Data.Definition` ))) $
+    liftM (exprWithProp (writeBack . (body `Data.Definition` ))) $
     loadPureExpression typeExprI
   liftM (`Data.Definition` defType) $
     case body of
     Data.DefinitionExpression exprI ->
       liftM
       (Data.DefinitionExpression .
-       exprAddProp
+       exprWithProp
        (writeBack . (`Data.Definition` typeExprI) .
         Data.DefinitionExpression)) $
       loadPureExpression exprI
