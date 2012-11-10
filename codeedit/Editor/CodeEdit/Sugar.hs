@@ -988,65 +988,81 @@ loadConvertDefinition config defI =
   -- loadDefinition is missing some defI-dependent values
   convertDefinition config defI =<< Load.loadDefinition defI
 
+convertDefinitionBuiltin ::
+  Monad m =>
+  Data.Builtin -> Data.DefinitionIRef ->
+  Data.Expression (DataIRef.ExpressionProperty (T m)) ->
+  DefinitionBody m
+convertDefinitionBuiltin (Data.Builtin name) defI typeL =
+  -- TODO: If we want editable builtin types:
+  -- typeS <- convertLoadedExpression Nothing typeL
+  DefinitionBodyBuiltin DefinitionBuiltin
+    { biName = name
+    , biMSetName = Just setName
+    }
+  where
+    typeI = Property.value $ Data.ePayload typeL
+    setName =
+      Transaction.writeIRef defI . (`Data.Definition` typeI) .
+      Data.DefinitionBuiltin . Data.Builtin
+
+convertDefinitionExpression ::
+  Monad m => SugarConfig ->
+  Data.Expression (DataIRef.ExpressionProperty (T m)) ->
+  Data.DefinitionIRef ->
+  Data.Expression (DataIRef.ExpressionProperty (T m)) ->
+  Transaction ViewTag m (DefinitionBody m)
+convertDefinitionExpression config exprL defI typeL = do
+  (isSuccess, inferState, exprStored) <-
+    inferLoadedExpression (Just defI) exprL
+  let
+    inferredTypeP =
+      Infer.iType . eeiInferred $ Data.ePayload exprStored
+    typesMatch = on (==) Data.canonizeParamIds (void typeL) inferredTypeP
+    mkNewType = do
+      inferredTypeS <-
+        convertExpressionPure (mkGen 0 2 (IRef.guid defI)) config
+        inferredTypeP
+      return DefinitionNewType
+        { dntNewType = inferredTypeS
+        , dntAcceptNewType =
+          Property.set (Data.ePayload typeL) =<<
+          DataIRef.newExpression inferredTypeP
+        }
+    sugarContext =
+      SugarContext
+      { scInferState = inferState
+      , scConfig = config
+      }
+  content <- convertDefinitionContent sugarContext exprStored
+  mNewType <-
+    if isSuccess && not typesMatch && isCompleteType inferredTypeP
+    then liftM Just mkNewType
+    else return Nothing
+  return $ DefinitionBodyExpression DefinitionExpression
+    { deContent = content
+    , deMNewType = mNewType
+    , deIsTypeRedundant = isSuccess && typesMatch
+    }
+
 convertDefinition ::
   Monad m => SugarConfig ->
   Data.DefinitionIRef ->
   Data.Definition (Data.Expression (DataIRef.ExpressionProperty (T m))) ->
   T m (Definition m)
 convertDefinition config defI (Data.Definition defBody typeL) = do
-  let typeP = void typeL
-  body <-
-    case defBody of
-    Data.DefinitionBuiltin (Data.Builtin name) -> do
-      let
-        typeI = Property.value $ Data.ePayload typeL
-        setName =
-          Transaction.writeIRef defI . (`Data.Definition` typeI) .
-          Data.DefinitionBuiltin . Data.Builtin
-      -- TODO: If we want editable builtin types:
-      -- typeS <- convertLoadedExpression Nothing typeL
-      return $ DefinitionBodyBuiltin DefinitionBuiltin
-        { biName = name
-        , biMSetName = Just setName
-        }
-    Data.DefinitionExpression exprL -> do
-      (isSuccess, inferState, exprStored) <-
-        inferLoadedExpression (Just defI) exprL
-      let
-        inferredTypeP =
-          Infer.iType . eeiInferred $ Data.ePayload exprStored
-        typesMatch = on (==) Data.canonizeParamIds typeP inferredTypeP
-        mkNewType = do
-          inferredTypeS <-
-            convertExpressionPure (mkGen 0 2 (IRef.guid defI)) config
-            inferredTypeP
-          return DefinitionNewType
-            { dntNewType = inferredTypeS
-            , dntAcceptNewType =
-              Property.set (Data.ePayload typeL) =<<
-              DataIRef.newExpression inferredTypeP
-            }
-        sugarContext =
-          SugarContext
-          { scInferState = inferState
-          , scConfig = config
-          }
-      content <- convertDefinitionContent sugarContext exprStored
-      mNewType <-
-        if isSuccess && not typesMatch && isCompleteType inferredTypeP
-        then liftM Just mkNewType
-        else return Nothing
-      return $ DefinitionBodyExpression DefinitionExpression
-        { deContent = content
-        , deMNewType = mNewType
-        , deIsTypeRedundant = isSuccess && typesMatch
-        }
-  typeS <- convertExpressionPure (mkGen 1 2 (IRef.guid defI)) config typeP
+  body <- convertDefBody defBody defI typeL
+  typeS <- convertExpressionPure (mkGen 1 2 (IRef.guid defI)) config $ void typeL
   return Definition
     { drGuid = IRef.guid defI
     , drBody = body
     , drType = typeS
     }
+  where
+    convertDefBody (Data.DefinitionBuiltin builtin) =
+      fmap return . convertDefinitionBuiltin builtin
+    convertDefBody (Data.DefinitionExpression exprL) =
+      convertDefinitionExpression config exprL
 
 inferLoadedExpression ::
   Monad f =>
