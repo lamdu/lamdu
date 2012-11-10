@@ -1,14 +1,9 @@
-* Lambda should contain a Guid (param name), payload OPTIONALLY contains Guid
-  * canonize/randomize: Expression without guid in payload -> with guid in payload
-    * May need a different canonize that DOES change lambda guids too for alphaEq, etc.
-  * Can optimize/compactize by avoiding Binary instance and not
-    storing lambda guid, just copying it from IRef of lambda (same guid
-    for lambda and param name) -- param name can have a combine'd guid
-
 * Performance:
 
   * Non-meaningful changes should not re-infer everything
   * Keep a Map ContentHash InferResult around?
+
+* Only re-infer the parts that are changed only?
 
 * Execution:
 
