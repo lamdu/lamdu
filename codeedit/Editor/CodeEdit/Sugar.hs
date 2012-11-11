@@ -1067,11 +1067,11 @@ convertDefinition config defI (Data.Definition defBody typeL) = do
 inferLoadedExpression ::
   Monad f =>
   Maybe Data.DefinitionIRef ->
-  Data.Expression (DataIRef.ExpressionProperty (T m)) ->
+  Data.Expression a ->
   T f
   (Bool,
    Infer.RefMap,
-   Data.Expression (ExprEntityStored m))
+   Data.Expression (ExprEntityInferred a))
 inferLoadedExpression mDefI exprL = do
   loaded <- Infer.load loader mDefI exprL
   return $ uncurry (inferWithConflicts loaded) Infer.initial
@@ -1097,11 +1097,11 @@ reportConflict err =
   snd $ Infer.errMismatch err
 
 inferWithConflicts ::
-  Infer.Loaded (DataIRef.ExpressionProperty (T m)) ->
+  Infer.Loaded a ->
   Infer.RefMap -> Infer.InferNode ->
   ( Bool
   , Infer.RefMap
-  , Data.Expression (ExprEntityStored m)
+  , Data.Expression (ExprEntityInferred a)
   )
 inferWithConflicts loaded refMap node =
   ( Map.null $ unConflictMap conflictsMap
