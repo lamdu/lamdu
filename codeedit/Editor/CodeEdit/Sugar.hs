@@ -1014,7 +1014,7 @@ convertDefinitionExpression ::
   Transaction ViewTag m (DefinitionBody m)
 convertDefinitionExpression config exprL defI typeL = do
   (isSuccess, inferState, exprStored) <-
-    inferLoadedExpression (Just defI) exprL
+    inferLoadedExpression (Just defI) exprL Infer.initial
   let
     inferredTypeP =
       Infer.iType . eeiInferred $ Data.ePayload exprStored
@@ -1065,16 +1065,16 @@ convertDefinition config defI (Data.Definition defBody typeL) = do
       convertDefinitionExpression config exprL
 
 inferLoadedExpression ::
-  Monad f =>
+  Monad m =>
   Maybe Data.DefinitionIRef ->
   Data.Expression a ->
-  T f
-  (Bool,
-   Infer.RefMap,
+  (Infer.RefMap, Infer.InferNode) ->
+  T m
+  (Bool, Infer.RefMap,
    Data.Expression (ExprEntityInferred a))
-inferLoadedExpression mDefI exprL = do
+inferLoadedExpression mDefI exprL inferState = do
   loaded <- Infer.load loader mDefI exprL
-  return $ uncurry (inferWithConflicts loaded) Infer.initial
+  return $ uncurry (inferWithConflicts loaded) inferState
 
 -- Conflicts:
 
@@ -1131,7 +1131,7 @@ convertLoadedExpression ::
   Data.Expression (DataIRef.ExpressionProperty (T m)) ->
   T m (Expression m)
 convertLoadedExpression config mDefI exprL = do
-  (_, inferState, exprStored) <- inferLoadedExpression mDefI exprL
+  (_, inferState, exprStored) <- inferLoadedExpression mDefI exprL Infer.initial
   convertStoredExpression exprStored $ SugarContext inferState config
 
 convertStoredExpression ::
