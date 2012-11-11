@@ -991,8 +991,6 @@ convertDefinitionBuiltin ::
   Load.Loaded (T m) ->
   DefinitionBody m
 convertDefinitionBuiltin (Data.Builtin name) defI (Load.Stored _ typeIRef) =
-  -- TODO: If we want editable builtin types:
-  -- typeS <- convertLoadedExpression Nothing typeL
   DefinitionBodyBuiltin DefinitionBuiltin
     { biName = name
     , biMSetName = Just setName
@@ -1142,16 +1140,11 @@ loadConvertExpression ::
   SugarConfig ->
   DataIRef.ExpressionProperty (T m) -> T m (Expression m)
 loadConvertExpression config exprP =
-  convertLoadedExpression config Nothing =<< Load.loadExpressionProperty exprP
-
-convertLoadedExpression ::
-  Monad m =>
-  SugarConfig -> Maybe Data.DefinitionIRef ->
-  Load.Loaded (T m) ->
-  T m (Expression m)
-convertLoadedExpression config mDefI exprLoaded = do
-  (_, inferState, exprStored) <- inferLoadedExpression mDefI exprLoaded Infer.initial
-  convertStoredExpression exprStored $ SugarContext inferState config
+  convertLoadedExpression =<< Load.loadExpressionProperty exprP
+  where
+    convertLoadedExpression exprLoaded = do
+      (_, inferState, exprStored) <- inferLoadedExpression Nothing exprLoaded Infer.initial
+      convertStoredExpression exprStored $ SugarContext inferState config
 
 convertStoredExpression ::
   Monad m =>
