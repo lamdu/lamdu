@@ -23,8 +23,8 @@ module Editor.CodeEdit.Sugar
   , removeTypes
   ) where
 
-import Control.Applicative ((<$>), Applicative(..))
-import Control.Arrow (first)
+import Control.Applicative ((<$>), (<$), Applicative(..))
+import Control.Arrow (first, (&&&))
 import Control.Monad ((<=<), liftM, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -370,7 +370,7 @@ mkExpression ee expr = do
     , rExpressionBody = expr
     , rPayload = Payload
       { plInferredTypes = inferredTypesRefs
-      , plActions = fmap mkActions $ eeProp ee
+      , plActions = mkActions <$> eeProp ee
       , plNextHole = Nothing
       }
     }
@@ -414,9 +414,10 @@ mkFuncParamActions
       exampleP <-
         Anchors.nonEmptyAssocDataRef "example" param .
         DataIRef.newExprBody $ Data.ExpressionLeaf Data.Hole
-      exampleS <- Load.loadExpression exampleP
-      loaded <- Infer.load loader Nothing exampleS
-      let (_, inferState, exampleStored) = inferWithConflicts loaded refMap inferNode
+      exampleLoaded <- Load.loadExpressionProperty exampleP
+
+      (_, inferState, exampleStored) <-
+        inferLoadedExpression Nothing exampleLoaded newInferNode
       convertStoredExpression exampleStored $
         SugarContext inferState (scConfig ctx)
   }
@@ -425,7 +426,7 @@ mkFuncParamActions
     scope = Infer.nScope $ Infer.iPoint lambdaInferred
     paramTypeRef =
       Infer.tvVal . Infer.nRefs . Infer.iPoint $ eeiInferred paramType
-    (refMap, inferNode) =
+    newInferNode =
       Infer.newTypedNodeWithScope scope paramTypeRef $ scInferState ctx
 
 convertLambda
@@ -665,7 +666,10 @@ convertReadOnlyHole exprI =
   }
 
 loader :: Monad m => Infer.Loader (T m)
-loader = Infer.Loader (liftM void . Load.loadPureDefinitionType)
+loader =
+  Infer.Loader
+  (liftM void . Load.loadExpressionIRef . Data.defType <=<
+   Transaction.readIRef)
 
 -- Fill partial holes in an expression. Parital holes are those whose
 -- inferred (filler) value itself is not complete, so will not be a
@@ -896,13 +900,6 @@ convertExpressionPure gen config =
       , scConfig = config
       }
 
-loadConvertExpression ::
-  Monad m =>
-  SugarConfig ->
-  DataIRef.ExpressionProperty (T m) -> T m (Expression m)
-loadConvertExpression config exprP =
-  convertLoadedExpression config Nothing =<< Load.loadExpression exprP
-
 convertDefinitionParams ::
   Monad m =>
   SugarContext -> Data.Expression (ExprEntityStored m) ->
@@ -991,9 +988,9 @@ loadConvertDefinition config defI =
 convertDefinitionBuiltin ::
   Monad m =>
   Data.Builtin -> Data.DefinitionIRef ->
-  Data.Expression (DataIRef.ExpressionProperty (T m)) ->
+  Load.Loaded (T m) ->
   DefinitionBody m
-convertDefinitionBuiltin (Data.Builtin name) defI typeL =
+convertDefinitionBuiltin (Data.Builtin name) defI (Load.Stored _ typeIRef) =
   -- TODO: If we want editable builtin types:
   -- typeS <- convertLoadedExpression Nothing typeL
   DefinitionBodyBuiltin DefinitionBuiltin
@@ -1001,24 +998,24 @@ convertDefinitionBuiltin (Data.Builtin name) defI typeL =
     , biMSetName = Just setName
     }
   where
-    typeI = Property.value $ Data.ePayload typeL
+    typeI = Data.ePayload typeIRef
     setName =
       Transaction.writeIRef defI . (`Data.Definition` typeI) .
       Data.DefinitionBuiltin . Data.Builtin
 
 convertDefinitionExpression ::
   Monad m => SugarConfig ->
-  Data.Expression (DataIRef.ExpressionProperty (T m)) ->
+  Load.Loaded (T m) ->
   Data.DefinitionIRef ->
-  Data.Expression (DataIRef.ExpressionProperty (T m)) ->
-  Transaction ViewTag m (DefinitionBody m)
-convertDefinitionExpression config exprL defI typeL = do
+  Load.Loaded (T m) ->
+  T m (DefinitionBody m)
+convertDefinitionExpression config exprLoaded defI (Load.Stored setType typeIRef) = do
   (isSuccess, inferState, exprStored) <-
-    inferLoadedExpression (Just defI) exprL Infer.initial
+    inferLoadedExpression (Just defI) exprLoaded Infer.initial
   let
     inferredTypeP =
       Infer.iType . eeiInferred $ Data.ePayload exprStored
-    typesMatch = on (==) Data.canonizeParamIds (void typeL) inferredTypeP
+    typesMatch = on (==) Data.canonizeParamIds (void typeIRef) inferredTypeP
     mkNewType = do
       inferredTypeS <-
         convertExpressionPure (mkGen 0 2 (IRef.guid defI)) config
@@ -1026,8 +1023,7 @@ convertDefinitionExpression config exprL defI typeL = do
       return DefinitionNewType
         { dntNewType = inferredTypeS
         , dntAcceptNewType =
-          Property.set (Data.ePayload typeL) =<<
-          DataIRef.newExpression inferredTypeP
+          setType =<< DataIRef.newExpression inferredTypeP
         }
     sugarContext =
       SugarContext
@@ -1048,33 +1044,50 @@ convertDefinitionExpression config exprL defI typeL = do
 convertDefinition ::
   Monad m => SugarConfig ->
   Data.DefinitionIRef ->
-  Data.Definition (Data.Expression (DataIRef.ExpressionProperty (T m))) ->
+  Data.Definition (Load.Loaded (T m)) ->
   T m (Definition m)
-convertDefinition config defI (Data.Definition defBody typeL) = do
-  body <- convertDefBody defBody defI typeL
-  typeS <- convertExpressionPure (mkGen 1 2 (IRef.guid defI)) config $ void typeL
+convertDefinition config defI def = do
+  body <- convertDefBody defBody defI typeLoaded
+  typeS <-
+    convertExpressionPure (mkGen 1 2 (IRef.guid defI)) config .
+    void $ Load.sExpr typeLoaded
   return Definition
     { drGuid = IRef.guid defI
     , drBody = body
     , drType = typeS
     }
   where
+    Data.Definition defBody typeLoaded = def
     convertDefBody (Data.DefinitionBuiltin builtin) =
       fmap return . convertDefinitionBuiltin builtin
-    convertDefBody (Data.DefinitionExpression exprL) =
-      convertDefinitionExpression config exprL
+    convertDefBody (Data.DefinitionExpression exprLoaded) =
+      convertDefinitionExpression config exprLoaded
+
+inferredIRefToStored ::
+  Monad m => Load.ExpressionSetter (T m) ->
+  Data.Expression (ExprEntityInferred Data.ExpressionIRef) ->
+  Data.Expression (ExprEntityStored m)
+inferredIRefToStored setter expr =
+  fmap propIntoInferred . Load.exprAddProp . Load.Stored setter $
+  fmap (Infer.iStored . eeiInferred &&& id) expr
+  where
+    propIntoInferred (prop, eei) = prop <$ eei
+
+third :: (c0 -> c1) -> (a, b, c0) -> (a, b, c1)
+third f (x, y, z) = (x, y, f z)
 
 inferLoadedExpression ::
   Monad m =>
   Maybe Data.DefinitionIRef ->
-  Data.Expression a ->
+  Load.Loaded (T m) ->
   (Infer.RefMap, Infer.InferNode) ->
   T m
   (Bool, Infer.RefMap,
-   Data.Expression (ExprEntityInferred a))
-inferLoadedExpression mDefI exprL inferState = do
-  loaded <- Infer.load loader mDefI exprL
-  return $ uncurry (inferWithConflicts loaded) inferState
+   Data.Expression (ExprEntityStored m))
+inferLoadedExpression mDefI (Load.Stored setExpr exprIRef) inferState = do
+  loaded <- Infer.load loader mDefI exprIRef
+  return . third (inferredIRefToStored setExpr) $
+    uncurry (inferWithConflicts loaded) inferState
 
 -- Conflicts:
 
@@ -1124,14 +1137,20 @@ inferWithConflicts loaded refMap node =
 
 --------------
 
-convertLoadedExpression ::
+loadConvertExpression ::
   Monad m =>
   SugarConfig ->
-  Maybe Data.DefinitionIRef ->
-  Data.Expression (DataIRef.ExpressionProperty (T m)) ->
+  DataIRef.ExpressionProperty (T m) -> T m (Expression m)
+loadConvertExpression config exprP =
+  convertLoadedExpression config Nothing =<< Load.loadExpressionProperty exprP
+
+convertLoadedExpression ::
+  Monad m =>
+  SugarConfig -> Maybe Data.DefinitionIRef ->
+  Load.Loaded (T m) ->
   T m (Expression m)
-convertLoadedExpression config mDefI exprL = do
-  (_, inferState, exprStored) <- inferLoadedExpression mDefI exprL Infer.initial
+convertLoadedExpression config mDefI exprLoaded = do
+  (_, inferState, exprStored) <- inferLoadedExpression mDefI exprLoaded Infer.initial
   convertStoredExpression exprStored $ SugarContext inferState config
 
 convertStoredExpression ::
