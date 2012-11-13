@@ -95,7 +95,7 @@ makeClipboardsEdit ::
   MonadF m => [Sugar.Expression m] -> ExprGuiM m (WidgetT m)
 makeClipboardsEdit clipboards = do
   clipboardsEdits <-
-    mapM (liftM ExpressionGui.egWidget . ExpressionEdit.make) clipboards
+    mapM (liftM (Lens.view ExpressionGui.egWidget) . ExpressionEdit.make) clipboards
   clipboardTitle <-
     if null clipboardsEdits
     then return Spacer.empty

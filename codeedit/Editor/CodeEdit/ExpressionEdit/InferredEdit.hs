@@ -4,6 +4,7 @@ import Data.Store.Guid (Guid)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Editor.MonadF (MonadF)
+import qualified Control.Lens as Lens
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
@@ -27,7 +28,7 @@ make
   -> ExprGuiM m (ExpressionGui m)
 make inferred guid =
   ExpressionGui.wrapDelegated fDConfig FocusDelegator.NotDelegating
-  ExpressionGui.atEgWidget $
+  (Lens.over ExpressionGui.egWidget) $
   makeUnwrapped inferred guid
 
 makeUnwrapped

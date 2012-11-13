@@ -153,7 +153,7 @@ resultsToWidgets holeInfo results = do
     toWidget resultId expr =
       ExprGuiM.widgetEnv . BWidgets.makeFocusableView resultId .
       Widget.strongerEvents (resultPickEventMap holeInfo expr) .
-      ExpressionGui.egWidget =<<
+      Lens.view ExpressionGui.egWidget =<<
       ExprGuiM.makeSubexpresion . Sugar.removeTypes =<<
       (ExprGuiM.transaction . Sugar.holeConvertResult (hiHoleActions holeInfo)) expr
     moreResultsPrefixId = rlMoreResultsPrefixId results
@@ -520,7 +520,7 @@ makeActiveHoleEdit holeInfo = do
         ]
     searchTermWidget <- makeSearchTermWidget holeInfo searchTermId mResult
     return .
-      ExpressionGui.atEgWidget
+      Lens.over ExpressionGui.egWidget
       (Widget.strongerEvents eventMap .
        makeBackground (hiHoleId holeInfo)
        Layers.activeHoleBG Config.holeBackgroundColor) $
@@ -545,7 +545,7 @@ make ::
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make hole mNextHole guid =
   ExpressionGui.wrapDelegated holeFDConfig FocusDelegator.Delegating
-  ExpressionGui.atEgWidget $ makeUnwrapped hole mNextHole guid
+  (Lens.over ExpressionGui.egWidget) $ makeUnwrapped hole mNextHole guid
 
 makeInactiveHoleEdit ::
   MonadF m => Sugar.Hole m -> Widget.Id -> ExprGuiM m (ExpressionGui m)

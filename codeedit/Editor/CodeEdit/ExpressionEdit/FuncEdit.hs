@@ -3,6 +3,7 @@
 module Editor.CodeEdit.ExpressionEdit.FuncEdit
   (make, makeParamNameEdit, jumpToRHS, makeResultEdit, makeParamsAndResultEdit) where
 
+import Control.Lens ((^.))
 import Control.Monad (liftM)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
@@ -64,16 +65,16 @@ makeParamEdit ::
   ExprGuiM m (ExpressionGui m)
 makeParamEdit atParamWidgets rhs name prevId param = do
   infoMode <- liftM (Lens.view Settings.sInfoMode) ExprGuiM.readSettings
-  (liftM . ExpressionGui.atEgWidget) onFinalWidget . assignCursor $ do
+  (liftM . Lens.over ExpressionGui.egWidget) onFinalWidget . assignCursor $ do
     paramTypeEdit <- ExprGuiM.makeSubexpresion $ Sugar.fpType param
     paramNameEdit <- makeParamNameEdit name ident
-    let typeWidget = ExpressionGui.egWidget paramTypeEdit
+    let typeWidget = paramTypeEdit ^. ExpressionGui.egWidget
     infoWidget <-
       case (infoMode, mActions) of
       (Settings.InfoExamples, Just actions) -> do
         exampleSugar <- ExprGuiM.liftMemoT $ Sugar.fpGetExample actions
         exampleGui <-
-          liftM ExpressionGui.egWidget $
+          liftM (Lens.view ExpressionGui.egWidget) $
           ExprGuiM.makeSubexpresion exampleSugar
         return $ Box.vboxCentered [exampleGui, typeWidget]
       _ -> return typeWidget
@@ -117,7 +118,7 @@ makeResultEdit
   -> Sugar.Expression m
   -> ExprGuiM m (ExpressionGui m)
 makeResultEdit lhs result =
-  liftM ((ExpressionGui.atEgWidget . Widget.weakerEvents) jumpToLhsEventMap) $
+  liftM ((Lens.over ExpressionGui.egWidget . Widget.weakerEvents) jumpToLhsEventMap) $
   ExprGuiM.makeSubexpresion result
   where
     lastParam = case lhs of

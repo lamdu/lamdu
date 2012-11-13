@@ -5,6 +5,7 @@ import Control.Monad (liftM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Editor.MonadF (MonadF)
+import qualified Control.Lens as Lens
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -58,4 +59,7 @@ make getVar myId = do
         Data.ParameterRef paramGuid -> do
           Anchors.savePreJumpPosition myId
           return $ WidgetIds.fromGuid paramGuid
-  return $ ExpressionGui.atEgWidget (Widget.weakerEvents jumpToDefinitionEventMap) getVarView
+  return $
+    Lens.over ExpressionGui.egWidget
+    (Widget.weakerEvents jumpToDefinitionEventMap)
+    getVarView

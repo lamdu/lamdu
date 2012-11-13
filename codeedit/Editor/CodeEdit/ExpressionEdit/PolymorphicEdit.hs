@@ -6,6 +6,7 @@ import Control.Monad (liftM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Editor.MonadF (MonadF)
+import qualified Control.Lens as Lens
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.CodeEdit.ExpressionEdit.VarEdit as VarEdit
@@ -28,7 +29,7 @@ makeInner poly myId = do
   fullExprEdit <- ExprGuiM.makeSubexpresion $ Sugar.pFullExpression poly
   -- We are inside a non-delegating focus delegator made by makeSubexpresion,
   -- so if the cursor is on us it means user enterred our widget.
-  if ExpressionGui.egWidget fullExprEdit ^. Widget.wIsFocused
+  if fullExprEdit ^. ExpressionGui.egWidget . Widget.wIsFocused
     then
       return $ bg Layers.expandedPolymorphicBG Config.polymorphicFullBGColor fullExprEdit
     else
@@ -42,7 +43,7 @@ makeInner poly myId = do
     colorize (Data.DefinitionRef _) =
       ExprGuiM.atEnv (WE.setTextColor Config.polymorphicForegroundColor)
     bg layer =
-      ExpressionGui.atEgWidget .
+      Lens.over ExpressionGui.egWidget .
       Widget.backgroundColor layer (Widget.toAnimId myId ++ ["bg"])
 
 polymorphicFDConfig :: FocusDelegator.Config
@@ -58,4 +59,4 @@ make ::
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make poly =
   ExpressionGui.wrapDelegated polymorphicFDConfig FocusDelegator.NotDelegating
-  ExpressionGui.atEgWidget $ makeInner poly
+  (Lens.over ExpressionGui.egWidget) $ makeInner poly

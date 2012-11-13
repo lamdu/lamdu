@@ -95,4 +95,4 @@ makeInt
   -> ExprGuiM m (ExpressionGui m)
 makeInt integer =
   ExpressionGui.wrapDelegated literalFDConfig FocusDelegator.NotDelegating
-  ExpressionGui.atEgWidget (setColor . makeIntEdit integer)
+  (Lens.over ExpressionGui.egWidget) (setColor . makeIntEdit integer)

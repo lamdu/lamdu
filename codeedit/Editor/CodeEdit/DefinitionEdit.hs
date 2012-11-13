@@ -71,7 +71,7 @@ makeParts name guid def = do
     ExpressionGui.fromValueWidget nameEdit :
     paramsEdits ++
     [ ExpressionGui.fromValueWidget equals
-    , ExpressionGui.atEgWidget
+    , Lens.over ExpressionGui.egWidget
       (Widget.weakerEvents addWhereItemEventMap)
       bodyEdit
     ]
@@ -119,8 +119,8 @@ makeBuiltinDefinition def builtin =
     , makeEquals myId
     , BuiltinEdit.make builtin myId
     ]
-  , liftM (defTypeScale . ExpressionGui.egWidget) . ExprGuiM.makeSubexpresion $
-    Sugar.drType def
+  , liftM (defTypeScale . Lens.view ExpressionGui.egWidget) .
+    ExprGuiM.makeSubexpresion $ Sugar.drType def
   ]
   where
     guid = Sugar.drGuid def
@@ -154,7 +154,7 @@ makeDefBodyEdit ::
   MonadF m => Guid -> Sugar.DefinitionContent m -> ExprGuiM m (WidgetT m)
 makeDefBodyEdit guid content = do
   name <- ExprGuiM.getDefName guid
-  body <- liftM (ExpressionGui.egWidget . ExpressionGui.hbox) $
+  body <- liftM (Lens.view ExpressionGui.egWidget . ExpressionGui.hbox) $
     makeParts name guid content
   wheres <-
     case Sugar.dWhereItems content of
@@ -209,7 +209,7 @@ makeExprDefinition def bodyExpr = do
       typeGui <- ExprGuiM.makeSubexpresion typeExpr
       return
         [ (right, label)
-        , (center, (Widget.doesntTakeFocus . ExpressionGui.egWidget) typeGui)
+        , (center, (Widget.doesntTakeFocus . Lens.view ExpressionGui.egWidget) typeGui)
         ]
     mkAcceptedRow onLabel = mkTypeRow onLabel "Type:" $ Sugar.drType def
     guid = Sugar.drGuid def

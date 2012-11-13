@@ -60,12 +60,12 @@ make sExpr = do
         (map
          ( Widget.tint Config.inferredTypeTint
          . Widget.scale Config.typeScaleFactor
-         . ExpressionGui.egWidget
+         . Lens.view ExpressionGui.egWidget
          ) typeEdits)
       Settings.InfoExamples -> -- TODO:
         id
   return .
-    ExpressionGui.atEgWidget
+    Lens.over ExpressionGui.egWidget
     ( maybe onReadOnly (const id) (Sugar.plActions payload)
     . Widget.weakerEvents exprEventMap
     ) .
@@ -107,7 +107,7 @@ makeEditor sExpr =
     isAHole hole =
       (fmap . liftM)
       ((,) IsAHole .
-       (ExpressionGui.atEgWidget . Widget.weakerEvents) (pasteEventMap hole))
+       (Lens.over ExpressionGui.egWidget . Widget.weakerEvents) (pasteEventMap hole))
     notAHole = (fmap . liftM) ((,) NotAHole)
     mNextHole = Sugar.plNextHole $ Sugar.rPayload sExpr
 

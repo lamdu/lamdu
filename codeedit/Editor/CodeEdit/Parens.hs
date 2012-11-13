@@ -8,6 +8,7 @@ import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Editor.MonadF (MonadF)
 import Editor.WidgetIds (parensPrefix)
+import qualified Control.Lens as Lens
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
@@ -58,7 +59,9 @@ addHighlightedTextParens
 addHighlightedTextParens myId widget = do
   mInsideParenId <- ExprGuiM.widgetEnv $ WE.subCursor rParenId
   widgetWithParens <- addTextParensI id doHighlight (Widget.toAnimId myId) widget
-  return $ maybe id (const (ExpressionGui.atEgWidget highlightExpression)) mInsideParenId widgetWithParens
+  return $
+    maybe id (const (Lens.over ExpressionGui.egWidget highlightExpression))
+    mInsideParenId widgetWithParens
   where
     rParenId = Widget.joinId myId [")"]
     doHighlight = (ExprGuiM.widgetEnv . BWidgets.makeFocusableView rParenId =<<)

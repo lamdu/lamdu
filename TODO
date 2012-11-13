@@ -1,3 +1,5 @@
+* Logs of wrapDelegated with (Lens.over egWidget), make a wrapper
+
 * Performance:
 
   * Non-meaningful changes should not re-infer everything

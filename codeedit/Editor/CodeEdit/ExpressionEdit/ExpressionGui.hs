@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Editor.CodeEdit.ExpressionEdit.ExpressionGui
-  ( ExpressionGui(..), atEgWidget, atEgWidgetM
+  ( ExpressionGui(..), egWidget, atEgWidgetM
   , fromValueWidget
   , hbox, hboxSpaced, addBelow
   , addType -- TODO: s/type/info
@@ -21,7 +21,7 @@ import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
-import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Types (WidgetT, ExpressionGui(..), atEgWidget)
+import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Types (WidgetT, ExpressionGui(..), egWidget, egAlignment)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Widgets.Box (KBox)
@@ -44,6 +44,7 @@ import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 
+-- TODO: Which lens combinator to use instead?
 atEgWidgetM ::
   Monad m =>
   (WidgetT f -> m (WidgetT f)) ->
@@ -82,7 +83,7 @@ addBelow ::
   ExpressionGui m
 addBelow ws eg =
   fromBox . Box.makeKeyed Box.vertical $
-  (True, (Vector2 0.5 (egAlignment eg), egWidget eg)) :
+  (True, (Vector2 0.5 (eg ^. egAlignment), eg ^. egWidget)) :
   map ((,) False) ws
 
 data TypeStyle = HorizLine | Background
@@ -108,7 +109,7 @@ addType style exprId typeEdits eg =
     annotatedTypes =
       addBackground . Lens.set wWidth width $
       Widget.translate (Vector2 ((width - typesBox ^. wWidth)/2) 0) typesBox
-    width = on max (Lens.view wWidth) (egWidget eg) typesBox
+    width = on max (Lens.view wWidth) (eg ^. egWidget) typesBox
     typesBox = Box.vboxCentered typeEdits
     isError = length typeEdits >= 2
     bgAnimId = Widget.toAnimId exprId ++ ["type background"]
@@ -164,7 +165,7 @@ wrapExpression ::
   (Widget.Id -> ExprGuiM m (ExpressionGui f)) ->
   Widget.Id -> ExprGuiM m (ExpressionGui f)
 wrapExpression =
-  wrapDelegated exprFocusDelegatorConfig FocusDelegator.Delegating atEgWidget
+  wrapDelegated exprFocusDelegatorConfig FocusDelegator.Delegating $ Lens.over egWidget
 
 parenify ::
   Monad m =>
