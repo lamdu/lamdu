@@ -79,11 +79,11 @@ annotationSize :: Vector2 Draw.R
 annotationSize = 5
 
 addAnnotations :: Draw.Font -> Anim.Frame -> Anim.Frame
-addAnnotations font = Anim.atFSubImages $ Map.mapWithKey annotateItem
+addAnnotations font = Lens.over Anim.fSubImages $ Map.mapWithKey annotateItem
   where
     annotateItem animId = map . second $ annotatePosImage animId
     annotatePosImage animId posImage =
-      (`Anim.atPiImage` posImage) . mappend .
+      (flip (Lens.over Anim.piImage) posImage) . mappend .
       (Vector2.uncurry Draw.scale antiScale %%) .
       (Draw.translate (0, -1) %%) $
       drawAnimId font animId
@@ -92,7 +92,7 @@ addAnnotations font = Anim.atFSubImages $ Map.mapWithKey annotateItem
         -- that our annotation is always the same size
         antiScale =
           annotationSize /
-          fmap (max 1) (Anim.piRect posImage ^. Rect.size)
+          fmap (max 1) (posImage ^. Anim.piRect . Rect.size)
 
 whenApply :: Bool -> (a -> a) -> a -> a
 whenApply False _ = id

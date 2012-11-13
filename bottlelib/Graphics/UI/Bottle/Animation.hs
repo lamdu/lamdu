@@ -2,8 +2,8 @@
 
 module Graphics.UI.Bottle.Animation
   ( R, AnimId, Size
-  , PositionedImage(..), atPiImage, atPiRect
-  , Frame(..), atFSubImages, onImages
+  , PositionedImage(..), piImage, piRect
+  , Frame(..), fSubImages, onImages
   , draw, nextFrame, mapIdentities
   , unitSquare, backgroundColor
   , translate, scale, onDepth
@@ -25,7 +25,8 @@ import Data.Monoid(Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators(R, (%%))
 import Graphics.UI.Bottle.Rect(Rect(Rect))
-import qualified Data.AtFieldTH as AtFieldTH
+import qualified Control.Lens as Lens
+import qualified Control.Lens.TH as LensTH
 import qualified Data.ByteString as SBS
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -39,15 +40,15 @@ type Layer = Int
 type Size = Vector2 R
 
 data PositionedImage = PositionedImage {
-  piImage :: Draw.Image (), -- Image always occupies (0,0)..(1,1), the translation/scaling occurs when drawing
-  piRect :: Rect
+  _piImage :: Draw.Image (), -- Image always occupies (0,0)..(1,1), the translation/scaling occurs when drawing
+  _piRect :: Rect
   }
-AtFieldTH.make ''PositionedImage
+LensTH.makeLenses ''PositionedImage
 
 newtype Frame = Frame {
-  fSubImages :: Map AnimId [(Layer, PositionedImage)]
+  _fSubImages :: Map AnimId [(Layer, PositionedImage)]
   }
-AtFieldTH.make ''Frame
+LensTH.makeLenses ''Frame
 
 joinId :: AnimId -> AnimId -> AnimId
 joinId = (++)
@@ -94,7 +95,7 @@ red :: Draw.Color
 red = Draw.Color 1 0 0 1
 
 draw :: Frame -> Draw.Image ()
-draw = mconcat . map (posImages . map snd) . sortOn (fst . head) . Map.elems . fSubImages
+draw = mconcat . map (posImages . map snd) . sortOn (fst . head) . Map.elems . Lens.view fSubImages
   where
     putXOn (PositionedImage img r) = PositionedImage (mappend (Draw.tint red unitX) img) r
     posImages [x] = posImage x
@@ -162,10 +163,10 @@ isVirtuallySame (Frame a) (Frame b) =
       liftA2 max
         (fmap abs (ra ^. Rect.topLeft - rb ^. Rect.topLeft))
         (fmap abs (ra ^. Rect.bottomRight -  rb ^. Rect.bottomRight))
-    rectMap = Map.map (piRect . snd . head)
+    rectMap = Map.map (Lens.view piRect . snd . head)
 
 mapIdentities :: (AnimId -> AnimId) -> Frame -> Frame
-mapIdentities = atFSubImages . Map.mapKeys
+mapIdentities = Lens.over fSubImages . Map.mapKeys
 
 nextFrame :: R -> Frame -> Frame -> Maybe Frame
 nextFrame movement dest cur
@@ -217,14 +218,14 @@ backgroundColor animId layer color size =
 
 translate :: Vector2 R -> Frame -> Frame
 translate pos =
-  atFSubImages $ (Map.map . map . second) moveImage
+  Lens.over fSubImages $ (Map.map . map . second) moveImage
   where
     moveImage (PositionedImage img (Rect tl size)) =
       PositionedImage img (Rect (tl + pos) size)
 
 scale :: Vector2 R -> Frame -> Frame
 scale factor =
-  atFSubImages $ (Map.map . map . second) scaleImage
+  Lens.over fSubImages $ (Map.map . map . second) scaleImage
   where
     scaleImage (PositionedImage img (Rect tl size)) =
       PositionedImage img (Rect (tl * factor) (size * factor))
@@ -236,7 +237,7 @@ unitIntoRect r =
   scale (r ^. Rect.size)
 
 onDepth :: (Int -> Int) -> Frame -> Frame
-onDepth = atFSubImages . Map.map . map . first
+onDepth = Lens.over fSubImages . Map.map . map . first
 
 onImages :: (Draw.Image () -> Draw.Image ()) -> Frame -> Frame
-onImages = atFSubImages . Map.map . map . second . atPiImage
+onImages = Lens.over fSubImages . Map.map . map . second . Lens.over piImage
