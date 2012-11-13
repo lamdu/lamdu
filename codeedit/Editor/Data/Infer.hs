@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFunctor, GeneralizedNewtypeDeriving, TemplateHaskell #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Editor.Data.Infer
   ( Expression, Inferred(..), rExpression
   , Loaded, load, infer
@@ -19,9 +19,6 @@ import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (StateT(..), State, runState, execState)
 import Control.Monad.Trans.Writer (Writer, execWriter)
 import Control.Monad.Unit (Unit(..))
-import Data.Derive.Foldable (makeFoldable)
-import Data.Derive.Traversable (makeTraversable)
-import Data.DeriveTH (derive)
 import Data.Foldable (Foldable(..))
 import Data.Functor.Identity (Identity(..))
 import Data.IntMap (IntMap, (!))
@@ -30,7 +27,7 @@ import Data.Map (Map)
 import Data.Maybe (fromMaybe, isJust, mapMaybe, maybeToList)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
-import Data.Traversable (Traversable(traverse))
+import Data.Traversable (Traversable)
 import qualified Control.Compose as Compose
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
@@ -179,9 +176,7 @@ data Inferred a = Inferred
   , iType :: Data.PureExpression
   , iScope :: Map Guid Data.PureExpression
   , iPoint :: InferNode
-  } deriving (Functor)
-derive makeFoldable ''Inferred
-derive makeTraversable ''Inferred
+  } deriving (Functor, Foldable, Traversable)
 
 type Expression a = Data.Expression (Inferred a)
 

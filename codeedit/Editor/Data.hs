@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DeriveFunctor #-}
+{-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 module Editor.Data
   ( Definition(..), DefinitionBody(..)
   , DefinitionIRef, DefinitionI, ExpressionIRef(..)
@@ -29,8 +29,6 @@ import Data.Binary (Binary(..))
 import Data.Binary.Get (getWord8)
 import Data.Binary.Put (putWord8)
 import Data.Derive.Binary (makeBinary)
-import Data.Derive.Foldable (makeFoldable)
-import Data.Derive.Traversable (makeTraversable)
 import Data.DeriveTH (derive)
 import Data.Foldable (Foldable(..))
 import Data.Maybe (fromMaybe)
@@ -50,12 +48,12 @@ data Lambda expr = Lambda
   { lambdaParamId :: Guid
   , lambdaParamType :: expr
   , lambdaBody :: expr
-  } deriving (Eq, Ord, Show, Functor)
+  } deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
 data Apply expr = Apply
   { applyFunc :: expr
   , applyArg :: expr
-  } deriving (Eq, Ord, Show, Functor)
+  } deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 instance Applicative Apply where
   pure x = Apply x x
   Apply f0 a0 <*> Apply f1 a1 = Apply (f0 f1) (a0 a1)
@@ -85,7 +83,7 @@ data ExpressionBody expr
   | ExpressionPi {-# UNPACK #-} !(Lambda expr)
   | ExpressionApply {-# UNPACK #-} !(Apply expr)
   | ExpressionLeaf !Leaf
-  deriving (Eq, Ord, Functor)
+  deriving (Eq, Ord, Functor, Foldable, Traversable)
 
 makeApply :: expr -> expr -> ExpressionBody expr
 makeApply func arg = ExpressionApply $ Apply func arg
@@ -139,19 +137,19 @@ data Builtin = Builtin
 data DefinitionBody expr
   = DefinitionExpression expr
   | DefinitionBuiltin Builtin
-  deriving (Eq, Ord, Show, Functor)
+  deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
 data Definition expr = Definition
   { defBody :: DefinitionBody expr
   , defType :: expr
-  } deriving (Eq, Ord, Show, Functor)
+  } deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
 type PureExpression = Expression ()
 
 data Expression a = Expression
   { eValue :: ExpressionBody (Expression a)
   , ePayload :: a
-  } deriving (Functor, Eq, Ord)
+  } deriving (Functor, Eq, Ord, Foldable, Traversable)
 
 instance Show a => Show (Expression a) where
   show (Expression body payload) = show body ++ "{" ++ show payload ++ "}"
@@ -244,18 +242,6 @@ isDependentPi (Expression (ExpressionPi (Lambda g _ resultType)) _) =
     isGet _ = False
 isDependentPi _ = False
 
-derive makeFoldable ''Apply
-derive makeFoldable ''Lambda
-derive makeFoldable ''ExpressionBody
-derive makeFoldable ''Expression
-derive makeFoldable ''DefinitionBody
-derive makeFoldable ''Definition
-derive makeTraversable ''Apply
-derive makeTraversable ''Lambda
-derive makeTraversable ''ExpressionBody
-derive makeTraversable ''Expression
-derive makeTraversable ''DefinitionBody
-derive makeTraversable ''Definition
 derive makeBinary ''ExpressionIRef
 derive makeBinary ''FFIName
 derive makeBinary ''VariableRef

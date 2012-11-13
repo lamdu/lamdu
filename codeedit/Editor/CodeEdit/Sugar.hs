@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, DeriveFunctor, OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, OverloadedStrings, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 
 module Editor.CodeEdit.Sugar
   ( Definition(..), DefinitionBody(..), ListItemActions(..)
@@ -31,9 +31,6 @@ import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (StateT)
 import Control.Monad.Trans.Writer (Writer, runWriter)
 import Data.Cache (Cache)
-import Data.Derive.Foldable (makeFoldable)
-import Data.Derive.Traversable (makeTraversable)
-import Data.DeriveTH (derive)
 import Data.Foldable (Foldable(..))
 import Data.Function (on)
 import Data.Hashable (hash)
@@ -44,7 +41,7 @@ import Data.Monoid (Monoid(..), Any(..))
 import Data.Set (Set)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
-import Data.Traversable (Traversable(traverse))
+import Data.Traversable (Traversable)
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.Sugar.Config (SugarConfig)
 import System.Random (RandomGen)
@@ -264,9 +261,7 @@ data ExprEntityInferred a = ExprEntityInferred
   { eeiInferred :: Infer.Inferred a
   , eeiTypeConflicts :: [Data.PureExpression]
   , eeiValueConflicts :: [Data.PureExpression]
-  } deriving (Functor)
-derive makeFoldable ''ExprEntityInferred
-derive makeTraversable ''ExprEntityInferred
+  } deriving (Functor, Foldable, Traversable)
 
 type ExprEntityStored m =
   ExprEntityInferred (DataIRef.ExpressionProperty (T m))
