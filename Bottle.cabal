@@ -15,8 +15,7 @@ Library
   -- Modules exported by the library.
   hs-Source-Dirs:      bottlelib
 
-  Exposed-modules:     Data.AtFieldTH,
-                       Data.Cache,
+  Exposed-modules:     Data.Cache,
                        Data.List.Utils,
                        Data.Maybe.Utils,
                        Data.MRUMemo,
