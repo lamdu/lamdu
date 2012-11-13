@@ -83,7 +83,7 @@ addAnnotations font = Lens.over Anim.fSubImages $ Map.mapWithKey annotateItem
   where
     annotateItem animId = map . second $ annotatePosImage animId
     annotatePosImage animId posImage =
-      (flip (Lens.over Anim.piImage) posImage) . mappend .
+      flip (Lens.over Anim.piImage) posImage . mappend .
       (Vector2.uncurry Draw.scale antiScale %%) .
       (Draw.translate (0, -1) %%) $
       drawAnimId font animId

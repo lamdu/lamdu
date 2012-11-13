@@ -473,14 +473,14 @@ hunitTests =
   ] ++
   resumptionTests
 
-inferPreservesShape_prop :: Data.PureExpression -> Property
-inferPreservesShape_prop expr =
+inferPreservesShapeProp :: Data.PureExpression -> Property
+inferPreservesShapeProp expr =
   case inferMaybe Nothing expr of
     Nothing -> property rejected
     Just (inferred, _) -> property (void inferred == expr)
 
 qcProps :: [Test]
-qcProps = [testProperty "infer preserves shape" inferPreservesShape_prop]
+qcProps = [testProperty "infer preserves shape" inferPreservesShapeProp]
 
 allTests :: [Test]
 allTests = hUnitTestToTests hunitTests `mappend` qcProps

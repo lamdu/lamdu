@@ -144,7 +144,7 @@ make _ Nothing setState w =
   w
 make animId (Just (ActiveState pos movements)) setState w =
   (Lens.over Widget.wFrame . mappend) frame .
-  (Lens.set Widget.wEventMap) eventMap $ w
+  Lens.set Widget.wEventMap eventMap $ w
   where
     delta = sum $ map (Lens.view mDir) movements
     highlight =

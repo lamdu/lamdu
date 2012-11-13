@@ -138,8 +138,8 @@ makeNameEdit ::
 makeNameEdit (nameSrc, name) ident myId =
   liftM (nameSrcTint nameSrc) .
   (ExprGuiM.atEnv . Lens.over WE.envTextStyle)
-  ((Lens.set TextEdit.sEmptyUnfocusedString) name .
-   (Lens.set TextEdit.sEmptyFocusedString) (concat ["<", name, ">"])) $
+  (Lens.set TextEdit.sEmptyUnfocusedString name .
+   Lens.set TextEdit.sEmptyFocusedString (concat ["<", name, ">"])) $
   ExprGuiM.widgetEnv . flip makeEditor myId =<<
   (ExprGuiM.transaction . Anchors.assocNameRef) ident
   where
