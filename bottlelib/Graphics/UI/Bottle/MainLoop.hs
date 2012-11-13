@@ -2,6 +2,7 @@ module Graphics.UI.Bottle.MainLoop (mainLoopAnim, mainLoopImage, mainLoopWidget)
 
 import Control.Arrow(first, second)
 import Control.Concurrent(threadDelay)
+import Control.Lens ((^.))
 import Control.Monad (liftM, when)
 import Data.IORef
 import Data.MRUMemo (memoIO)
@@ -129,7 +130,7 @@ mainLoopWidget mkWidgetUnmemod getAnimationHalfLife = do
     tickHandler size = do
       widget <- getWidget size
       tickResults <-
-        sequence . E.emTickHandlers $ Widget.wEventMap widget
+        sequence $ Widget.wEventMap widget ^. E.emTickHandlers
       case tickResults of
         [] -> return Nothing
         _ -> do

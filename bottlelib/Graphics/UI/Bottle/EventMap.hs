@@ -24,7 +24,8 @@ import Graphics.UI.GLFW (Key(..))
 import Graphics.UI.GLFW.Events (IsPress(..))
 import Graphics.UI.GLFW.ModState (ModState(..), noMods, shift, ctrl, alt)
 import Prelude hiding (lookup)
-import qualified Data.AtFieldTH as AtFieldTH
+import qualified Control.Lens as Lens
+import qualified Control.Lens.TH as LensTH
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Graphics.UI.GLFW.Events as Events
@@ -64,8 +65,8 @@ charKey = CharKey . toUpper
 type Doc = String
 
 data DocHandler a = DocHandler {
-  dhDoc :: Doc,
-  dhHandler :: a
+  _dhDoc :: Doc,
+  _dhHandler :: a
   } deriving (Functor)
 
 data IsShifted = Shifted | NotShifted
@@ -75,28 +76,28 @@ data IsShifted = Shifted | NotShifted
 -- not conflict with shifted/unshifted key events (but not with
 -- alt'd/ctrl'd)
 data AllCharsHandler a = AllCharsHandler
-  { chInputDoc :: String
-  , chDocHandler :: DocHandler (Char -> Maybe (IsShifted -> a))
+  { _chInputDoc :: String
+  , _chDocHandler :: DocHandler (Char -> Maybe (IsShifted -> a))
   } deriving (Functor)
 
 data CharGroupHandler a = CharGroupHandler
-  { cgInputDoc :: String
-  , cgChars :: Set Char
-  , cgDocHandler :: DocHandler (Char -> IsShifted -> a)
+  { _cgInputDoc :: String
+  , _cgChars :: Set Char
+  , _cgDocHandler :: DocHandler (Char -> IsShifted -> a)
   } deriving (Functor)
 
 data EventMap a = EventMap
-  { emKeyMap :: Map KeyEvent (DocHandler a)
-  , emCharGroupHandlers :: [CharGroupHandler a]
-  , emCharGroupChars :: Set Char
-  , emAllCharsHandler :: Maybe (AllCharsHandler a)
-  , emTickHandlers :: [a]
+  { _emKeyMap :: Map KeyEvent (DocHandler a)
+  , _emCharGroupHandlers :: [CharGroupHandler a]
+  , _emCharGroupChars :: Set Char
+  , _emAllCharsHandler :: Maybe (AllCharsHandler a)
+  , _emTickHandlers :: [a]
   } deriving (Functor)
 
-AtFieldTH.make ''DocHandler
-AtFieldTH.make ''CharGroupHandler
-AtFieldTH.make ''AllCharsHandler
-AtFieldTH.make ''EventMap
+LensTH.makeLenses ''DocHandler
+LensTH.makeLenses ''CharGroupHandler
+LensTH.makeLenses ''AllCharsHandler
+LensTH.makeLenses ''EventMap
 
 instance Monoid (EventMap a) where
   mempty = EventMap Map.empty [] Set.empty Nothing []
@@ -126,19 +127,21 @@ filterCharGroups ::
   [CharGroupHandler a] ->
   [CharGroupHandler a]
 filterCharGroups f =
-  filter (not . Set.null . cgChars) .
-  (map . atCgChars . Set.filter) f
+  filter (not . Set.null . Lens.view cgChars) .
+  (map . Lens.over cgChars . Set.filter) f
 
 isCharConflict :: EventMap a -> Char -> Bool
 isCharConflict eventMap char =
-  Set.member char (emCharGroupChars eventMap) ||
-  isJust ((`dhHandler` char) . chDocHandler =<< emAllCharsHandler eventMap)
+  Set.member char (Lens.view emCharGroupChars eventMap) ||
+  isJust
+  (($ char) . Lens.view (chDocHandler . dhHandler) =<<
+   Lens.view emAllCharsHandler eventMap)
 
 filterChars
   :: (Char -> Bool) -> EventMap a -> EventMap a
 filterChars p =
-  (atEmCharGroupHandlers . filterCharGroups) p .
-  (atEmAllCharsHandler . fmap . atChDocHandler . atDhHandler) f
+  (Lens.over emCharGroupHandlers . filterCharGroups) p .
+  (Lens.over emAllCharsHandler . fmap . Lens.over (chDocHandler . dhHandler)) f
   where
     f handler c = do
       guard $ p c
@@ -180,32 +183,32 @@ mkModKey ms k
 eventMapDocs :: EventMap a -> [(String, Doc)]
 eventMapDocs (EventMap dict charGroups _ mAllCharsHandler _) =
   concat
-  [ map (chInputDoc &&& dhDoc . chDocHandler) $ maybeToList mAllCharsHandler
-  , map (cgInputDoc &&& dhDoc . cgDocHandler) charGroups
-  , map (prettyKeyEvent *** dhDoc) $ Map.toList dict
+  [ map (Lens.view chInputDoc &&& Lens.view (chDocHandler . dhDoc)) $ maybeToList mAllCharsHandler
+  , map (Lens.view cgInputDoc &&& Lens.view (cgDocHandler . dhDoc)) charGroups
+  , map (prettyKeyEvent *** Lens.view dhDoc) $ Map.toList dict
   ]
 
 filterByKey :: Ord k => (k -> Bool) -> Map k v -> Map k v
 filterByKey p = Map.filterWithKey (const . p)
 
 deleteKey :: KeyEvent -> EventMap a -> EventMap a
-deleteKey = atEmKeyMap . Map.delete
+deleteKey = Lens.over emKeyMap . Map.delete
 
 lookup :: Events.KeyEvent -> EventMap a -> Maybe a
 lookup (Events.KeyEvent isPress ms mchar k) (EventMap dict charGroups _ mAllCharHandlers _) =
   msum
-  [ fmap dhHandler $
+  [ fmap (Lens.view dhHandler) $
     KeyEvent isPress modKey `Map.lookup` dict
   , listToMaybe $ do
       Press <- return isPress
       char <- maybeToList mchar
       CharGroupHandler _ chars handler <- charGroups
       guard $ Set.member char chars
-      return . dhHandler handler char $ isShifted ms
+      return . Lens.view dhHandler handler char $ isShifted ms
   , do
       Press <- return isPress
       AllCharsHandler _ handler <- mAllCharHandlers
-      charHandler <- dhHandler handler =<< mchar
+      charHandler <- Lens.view dhHandler handler =<< mchar
       return . charHandler $ isShifted ms
   ]
   where
@@ -214,9 +217,9 @@ lookup (Events.KeyEvent isPress ms mchar k) (EventMap dict charGroups _ mAllChar
 charGroup :: String -> Doc -> String -> (Char -> IsShifted -> a) -> EventMap a
 charGroup iDoc oDoc chars handler =
   mempty
-  { emCharGroupHandlers =
+  { _emCharGroupHandlers =
       [CharGroupHandler iDoc s (DocHandler oDoc handler)]
-  , emCharGroupChars = s
+  , _emCharGroupChars = s
   }
   where
     s = Set.fromList chars
@@ -227,7 +230,7 @@ charEventMap
   :: String -> Doc -> (Char -> Maybe (IsShifted -> a)) -> EventMap a
 charEventMap iDoc oDoc handler =
   mempty
-  { emAllCharsHandler =
+  { _emAllCharsHandler =
     Just $ AllCharsHandler iDoc (DocHandler oDoc handler)
   }
 
@@ -241,12 +244,7 @@ simpleChars iDoc oDoc f =
 keyEventMap :: KeyEvent -> Doc -> a -> EventMap a
 keyEventMap eventType doc handler =
   mempty
-  { emKeyMap =
-    Map.singleton eventType
-    DocHandler
-    { dhDoc = doc
-    , dhHandler = handler
-    }
+  { _emKeyMap = Map.singleton eventType $ DocHandler doc handler
   }
 
 keyPress :: ModKey -> Doc -> a -> EventMap a
@@ -257,4 +255,4 @@ keyPresses :: [ModKey] -> Doc -> a -> EventMap a
 keyPresses = mconcat . map keyPress
 
 tickHandler :: a -> EventMap a
-tickHandler x = mempty { emTickHandlers = [x] }
+tickHandler x = mempty { _emTickHandlers = [x] }
