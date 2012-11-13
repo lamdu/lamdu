@@ -57,7 +57,7 @@ fromValueWidget widget = ExpressionGui widget 0.5
 hbox :: [ExpressionGui m] -> ExpressionGui m
 hbox guis =
   ExpressionGui (Box.toWidget box) $
-  case Box.boxContent box of
+  case box ^. Box.boxContent of
   ((_, x) : _) -> Grid.elementAlign x ^. Vector2.second
   _ -> error "hbox must not get empty list :("
   where
@@ -74,7 +74,7 @@ fromBox box =
     alignment =
       maybe (error "True disappeared from box list?!")
         (Lens.view Vector2.second . Grid.elementAlign) .
-      lookup True $ Box.boxContent box
+      lookup True $ box ^. Box.boxContent
 
 addBelow ::
   [(Box.Alignment, WidgetT m)] ->
