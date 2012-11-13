@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit.PiEdit(make) where
 
+import Control.Lens ((^.))
 import Control.Monad (liftM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
@@ -44,7 +45,7 @@ make hasParens (Sugar.Pi param resultType) =
           Nothing -> cursor
           Just _ -> typeId
     ExprGuiM.atEnv (Lens.over WE.envCursor redirectCursor) $ do
-      paramTypeEdit <- ExprGuiM.makeSubexpresion $ Sugar.fpType param
+      paramTypeEdit <- ExprGuiM.makeSubexpresion $ param ^. Sugar.fpType
       paramEdit <-
         if paramUsed
         then do
@@ -62,8 +63,7 @@ make hasParens (Sugar.Pi param resultType) =
       return $ ExpressionGui.hboxSpaced
         [paramEdit, ExpressionGui.fromValueWidget rightArrowLabel, resultTypeEdit]
   where
-    paramGuid = Sugar.fpGuid param
+    paramGuid = param ^. Sugar.fpGuid
     paramId = WidgetIds.fromGuid paramGuid
     typeId =
-      WidgetIds.fromGuid . Sugar.rGuid . Sugar.fpType $
-      param
+      WidgetIds.fromGuid $ param ^. Sugar.fpType . Sugar.rGuid

@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit.SectionEdit(make) where
 
+import Control.Lens ((^.))
 import Control.Monad (liftM)
 import Data.Maybe (fromMaybe)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
@@ -31,6 +32,6 @@ make hasParens (Sugar.Section mLArg op mRArg) =
         ExpressionGui.parenify hasParens (Parens.addTextParens . Widget.toAnimId)
       _ ->
         ExpressionGui.wrapParenify hasParens Parens.addHighlightedTextParens
-    destId = WidgetIds.fromGuid . Sugar.rGuid $ fromMaybe op mRArg
+    destId = WidgetIds.fromGuid $ fromMaybe op mRArg ^. Sugar.rGuid
     makeExpressionsEdit = liftM (:[]) . ExprGuiM.makeSubexpresion
     fromMArg = maybe (return []) makeExpressionsEdit

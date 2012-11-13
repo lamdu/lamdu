@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit(make) where
 
+import Control.Lens ((^.))
 import Control.Monad ((<=<), liftM)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
@@ -47,9 +48,9 @@ pasteEventMap =
 make :: MonadF m => Sugar.Expression m -> ExprGuiM m (ExpressionGui m)
 make sExpr = do
   (holePicker, widget) <- makeEditor sExpr exprId
-  typeEdits <- mapM make $ Sugar.plInferredTypes payload
+  typeEdits <- mapM make $ payload ^. Sugar.plInferredTypes
   let onReadOnly = Widget.doesntTakeFocus
-  exprEventMap <- expressionEventMap exprGuid holePicker $ Sugar.rPayload sExpr
+  exprEventMap <- expressionEventMap exprGuid holePicker $ sExpr ^. Sugar.rPayload
   settings <- ExprGuiM.readSettings
   let
     addInferredTypes =
@@ -66,15 +67,15 @@ make sExpr = do
         id
   return .
     Lens.over ExpressionGui.egWidget
-    ( maybe onReadOnly (const id) (Sugar.plActions payload)
+    ( maybe onReadOnly (const id) (payload ^. Sugar.plActions)
     . Widget.weakerEvents exprEventMap
     ) .
     addInferredTypes $
     widget
   where
-    payload = Sugar.rPayload sExpr
+    payload = sExpr ^. Sugar.rPayload
     exprId = WidgetIds.fromGuid exprGuid
-    exprGuid = Sugar.rGuid sExpr
+    exprGuid = sExpr ^. Sugar.rGuid
 
 makeEditor
   :: MonadF m
@@ -82,15 +83,15 @@ makeEditor
   -> Widget.Id
   -> ExprGuiM m (IsHole, ExpressionGui m)
 makeEditor sExpr =
-  case Sugar.rExpressionBody sExpr of
+  case sExpr ^. Sugar.rExpressionBody of
   Sugar.ExpressionFunc hasParens f ->
     notAHole $ FuncEdit.make hasParens f
   Sugar.ExpressionInferred i ->
-    isAHole (Sugar.iHole i) . InferredEdit.make i $ Sugar.rGuid sExpr
+    isAHole (Sugar.iHole i) . InferredEdit.make i $ sExpr ^. Sugar.rGuid
   Sugar.ExpressionPolymorphic poly ->
     notAHole $ PolymorphicEdit.make poly
   Sugar.ExpressionHole hole ->
-    isAHole hole . HoleEdit.make hole mNextHole $ Sugar.rGuid sExpr
+    isAHole hole . HoleEdit.make hole mNextHole $ sExpr ^. Sugar.rGuid
   Sugar.ExpressionGetVariable varRef ->
     notAHole $ VarEdit.make varRef
   Sugar.ExpressionApply hasParens apply ->
@@ -109,7 +110,7 @@ makeEditor sExpr =
       ((,) IsAHole .
        (Lens.over ExpressionGui.egWidget . Widget.weakerEvents) (pasteEventMap hole))
     notAHole = (fmap . liftM) ((,) NotAHole)
-    mNextHole = Sugar.plNextHole $ Sugar.rPayload sExpr
+    mNextHole = sExpr ^. Sugar.rPayload . Sugar.plNextHole
 
 expressionEventMap ::
   MonadF m =>
@@ -118,7 +119,7 @@ expressionEventMap ::
   ExprGuiM m (EventHandlers (Transaction ViewTag m))
 expressionEventMap exprGuid holePicker payload =
   maybe (return mempty) (actionsEventMap exprGuid holePicker) $
-  Sugar.plActions payload
+  payload ^. Sugar.plActions
 
 actionsEventMap ::
   MonadF m =>

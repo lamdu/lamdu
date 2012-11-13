@@ -2,17 +2,19 @@
              DeriveFunctor, DeriveFoldable, DeriveTraversable, ConstraintKinds #-}
 
 module Editor.CodeEdit.Sugar
-  ( Definition(..), DefinitionBody(..), ListItemActions(..)
-  , FuncParamActions(..)
+  ( Definition(..), DefinitionBody(..)
+  , ListItemActions(..), itemAddNext, itemDelete
+  , FuncParamActions(..), fpListItemActions, fpGetExample
   , DefinitionExpression(..), DefinitionContent(..), DefinitionNewType(..)
   , DefinitionBuiltin(..)
   , Actions(..)
   , ExpressionBody(..)
-  , Payload(..)
-  , ExpressionP(..)
+  , Payload(..), plInferredTypes, plActions, plNextHole
+  , ExpressionP(..), rGuid, rExpressionBody, rPayload
   , Expression
   , WhereItem(..)
-  , Func(..), FuncParam(..)
+  , Func(..)
+  , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
   , Section(..)
   , Hole(..), HoleActions(..), HoleResult, holeResultHasHoles
@@ -51,9 +53,9 @@ import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.Sugar.Config (SugarConfig)
 import System.Random (RandomGen)
 import qualified Control.Lens as Lens
+import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.Writer as Writer
-import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
 import qualified Data.Cache as Cache
 import qualified Data.Foldable as Foldable
@@ -90,39 +92,35 @@ data Actions m = Actions
 data HasParens = HaveParens | DontHaveParens
 
 data Payload m = Payload
-  { plInferredTypes :: [Expression m]
-  , plActions :: Maybe (Actions m)
-  , plNextHole :: Maybe (Expression m)
+  { _plInferredTypes :: [Expression m]
+  , _plActions :: Maybe (Actions m)
+  , _plNextHole :: Maybe (Expression m)
   }
 
 data ExpressionP m pl = Expression
-  { rGuid :: Guid
-  , rExpressionBody :: ExpressionBody m (ExpressionP m pl)
-  , rPayload :: pl
+  { _rGuid :: Guid
+  , _rExpressionBody :: ExpressionBody m (ExpressionP m pl)
+  , _rPayload :: pl
   } deriving (Functor)
 
 type Expression m = ExpressionP m (Payload m)
 
 data ListItemActions m = ListItemActions
-  { itemAddNext :: T m Guid
-  , itemDelete :: T m Guid
+  { _itemAddNext :: T m Guid
+  , _itemDelete :: T m Guid
   }
 
 data FuncParamActions m = FuncParamActions
-  { fpListItemActions :: ListItemActions m
-  , fpGetExample :: CT m (Expression m)
+  { _fpListItemActions :: ListItemActions m
+  , _fpGetExample :: CT m (Expression m)
   }
 
 data FuncParam m expr = FuncParam
-  { fpGuid :: Guid
-  , fpHiddenLambdaGuid :: Maybe Guid
-  , fpType :: expr
-  , fpMActions :: Maybe (FuncParamActions m)
+  { _fpGuid :: Guid
+  , _fpHiddenLambdaGuid :: Maybe Guid
+  , _fpType :: expr
+  , _fpMActions :: Maybe (FuncParamActions m)
   } deriving (Functor)
-
-instance Show expr => Show (FuncParam m expr) where
-  show fp =
-    concat ["(", show (fpHiddenLambdaGuid fp), ":", show (fpType fp), ")"]
 
 -- Multi-param Lambda
 data Func m expr = Func
@@ -174,16 +172,16 @@ data Polymorphic expr = Polymorphic
   } deriving (Functor)
 
 data ExpressionBody m expr
-  = ExpressionApply   { eHasParens :: HasParens, eApply :: Data.Apply expr }
-  | ExpressionSection { eHasParens :: HasParens, eSection :: Section expr }
-  | ExpressionFunc    { eHasParens :: HasParens, _eFunc :: Func m expr }
-  | ExpressionPi      { eHasParens :: HasParens, _ePi :: Pi m expr }
-  | ExpressionGetVariable { _getVariable :: Data.VariableRef }
-  | ExpressionHole { _eHole :: Hole m }
-  | ExpressionInferred { _eInferred :: Inferred m expr }
-  | ExpressionPolymorphic { _ePolymorphic :: Polymorphic expr }
-  | ExpressionLiteralInteger { _eLit :: LiteralInteger m }
-  | ExpressionAtom { _eAtom :: String }
+  = ExpressionApply   { _eHasParens :: HasParens, __eApply :: Data.Apply expr }
+  | ExpressionSection { _eHasParens :: HasParens, __eSection :: Section expr }
+  | ExpressionFunc    { _eHasParens :: HasParens, __eFunc :: Func m expr }
+  | ExpressionPi      { _eHasParens :: HasParens, __ePi :: Pi m expr }
+  | ExpressionGetVariable { __getVariable :: Data.VariableRef }
+  | ExpressionHole { __eHole :: Hole m }
+  | ExpressionInferred { __eInferred :: Inferred m expr }
+  | ExpressionPolymorphic { __ePolymorphic :: Polymorphic expr }
+  | ExpressionLiteralInteger { __eLit :: LiteralInteger m }
+  | ExpressionAtom { __eAtom :: String }
   deriving (Functor)
 
 wrapParens :: HasParens -> String -> String
@@ -191,21 +189,21 @@ wrapParens HaveParens x = concat ["(", x, ")"]
 wrapParens DontHaveParens x = x
 
 instance Show expr => Show (ExpressionBody m expr) where
-  show ExpressionApply   { eHasParens = hasParens, eApply = Data.Apply func arg } =
+  show ExpressionApply   { _eHasParens = hasParens, __eApply = Data.Apply func arg } =
     wrapParens hasParens $ show func ++ " " ++ show arg
-  show ExpressionSection { eHasParens = hasParens, eSection = Section mleft op mright } =
+  show ExpressionSection { _eHasParens = hasParens, __eSection = Section mleft op mright } =
     wrapParens hasParens $ maybe "" show mleft ++ " " ++ show op ++ maybe "" show mright
-  show ExpressionFunc    { eHasParens = hasParens, _eFunc = Func params body } =
+  show ExpressionFunc    { _eHasParens = hasParens, __eFunc = Func params body } =
     wrapParens hasParens $ "\\" ++ unwords (map show params) ++ " -> " ++ show body
-  show ExpressionPi      { eHasParens = hasParens, _ePi = Pi param resultType } =
+  show ExpressionPi      { _eHasParens = hasParens, __ePi = Pi param resultType } =
     wrapParens hasParens $ "_:" ++ show param ++ " -> " ++ show resultType
-  show ExpressionGetVariable { _getVariable = Data.ParameterRef guid } = 'P' : show guid
-  show ExpressionGetVariable { _getVariable = Data.DefinitionRef defI } = 'D' : show (IRef.guid defI)
+  show ExpressionGetVariable { __getVariable = Data.ParameterRef guid } = 'P' : show guid
+  show ExpressionGetVariable { __getVariable = Data.DefinitionRef defI } = 'D' : show (IRef.guid defI)
   show ExpressionHole {} = "Hole"
   show ExpressionInferred {} = "Inferred"
   show ExpressionPolymorphic {} = "Poly"
-  show ExpressionLiteralInteger { _eLit = LiteralInteger i _ } = show i
-  show ExpressionAtom { _eAtom = atom } = atom
+  show ExpressionLiteralInteger { __eLit = LiteralInteger i _ } = show i
+  show ExpressionAtom { __eAtom = atom } = atom
 
 data DefinitionNewType m = DefinitionNewType
   { dntNewType :: Expression m
@@ -250,12 +248,16 @@ data Definition m = Definition
   , drBody :: DefinitionBody m
   }
 
-AtFieldTH.make ''FuncParam
-AtFieldTH.make ''ExpressionBody
-AtFieldTH.make ''ListItemActions
-AtFieldTH.make ''FuncParamActions
-AtFieldTH.make ''Payload
-AtFieldTH.make ''ExpressionP
+LensTH.makeLenses ''FuncParam
+LensTH.makeLenses ''ExpressionBody
+LensTH.makeLenses ''ListItemActions
+LensTH.makeLenses ''FuncParamActions
+LensTH.makeLenses ''Payload
+LensTH.makeLenses ''ExpressionP
+
+instance Show expr => Show (FuncParam m expr) where
+  show fp =
+    concat ["(", show (fp ^. fpHiddenLambdaGuid), ":", show (fp ^. fpType), ")"]
 
 data ExprEntityInferred a = ExprEntityInferred
   { eeiInferred :: Infer.Inferred a
@@ -362,12 +364,12 @@ mkExpression ee expr = do
     zipWithM (fmap convertExpressionI . eeFromPure) seeds types
   return
     Expression
-    { rGuid = eeGuid ee
-    , rExpressionBody = expr
-    , rPayload = Payload
-      { plInferredTypes = inferredTypesRefs
-      , plActions = mkActions <$> eeProp ee
-      , plNextHole = Nothing
+    { _rGuid = eeGuid ee
+    , _rExpressionBody = expr
+    , _rPayload = Payload
+      { _plInferredTypes = inferredTypesRefs
+      , _plActions = mkActions <$> eeProp ee
+      , _plNextHole = Nothing
       }
     }
   where
@@ -401,12 +403,12 @@ mkFuncParamActions ::
 mkFuncParamActions
   ctx lambdaStored (Data.Lambda param paramType _) replacerP =
   FuncParamActions
-  { fpListItemActions =
+  { _fpListItemActions =
     ListItemActions
-    { itemDelete = mkDelete (Infer.iStored lambdaInferred) replacerP
-    , itemAddNext = mkAddParam replacerP
+    { _itemDelete = mkDelete (Infer.iStored lambdaInferred) replacerP
+    , _itemAddNext = mkAddParam replacerP
     }
-  , fpGetExample = do
+  , _fpGetExample = do
       exampleP <-
         lift . Anchors.nonEmptyAssocDataRef "example" param .
         DataIRef.newExprBody $ Data.ExpressionLeaf Data.Hole
@@ -435,10 +437,10 @@ convertLambda lam@(Data.Lambda param paramTypeI bodyI) expr = do
   ctx <- readContext
   let
     fp = FuncParam
-      { fpGuid = param
-      , fpHiddenLambdaGuid = Nothing
-      , fpType = removeRedundantTypes typeExpr
-      , fpMActions =
+      { _fpGuid = param
+      , _fpHiddenLambdaGuid = Nothing
+      , _fpType = removeRedundantTypes typeExpr
+      , _fpMActions =
         mkFuncParamActions ctx
         <$> eeStored expr
         <*> Traversable.mapM eeStored lam
@@ -454,7 +456,7 @@ convertFunc lambda exprI = do
   (param, sBody) <- convertLambda lambda exprI
   mkExpression exprI .
     ExpressionFunc DontHaveParens $
-    case rExpressionBody sBody of
+    case sBody ^. rExpressionBody of
       ExpressionFunc _ (Func nextParams body) ->
         case nextParams of
         [] -> error "Func must have at least 1 param!"
@@ -463,7 +465,7 @@ convertFunc lambda exprI = do
       _ -> Func [param] sBody
   where
     deleteToNextParam nextParam =
-      atFpMActions . fmap . atFpListItemActions . atItemDelete . liftM . const $ fpGuid nextParam
+      Lens.set (fpMActions . Lens.mapped . fpListItemActions .  itemDelete . Lens.sets liftM) $ nextParam ^. fpGuid
 
 convertPi
   :: Monad m
@@ -473,21 +475,21 @@ convertPi lambda exprI = do
   (param, sBody) <- convertLambda lambda exprI
   mkExpression exprI $ ExpressionPi DontHaveParens
     Pi
-    { pParam = atFpType addApplyChildParens param
+    { pParam = Lens.over fpType addApplyChildParens param
     , pResultType = removeRedundantTypes sBody
     }
 
 addParens :: ExpressionBody m (Expression m) -> ExpressionBody m (Expression m)
 addParens (ExpressionInferred (Inferred val hole)) =
-  ExpressionInferred $ Inferred (atRExpressionBody addParens val) hole
+  ExpressionInferred $ Inferred (Lens.over rExpressionBody addParens val) hole
 addParens (ExpressionPolymorphic (Polymorphic g compact full)) =
   ExpressionPolymorphic . Polymorphic g compact $
-  atRExpressionBody addParens full
-addParens x = (atEHasParens . const) HaveParens x
+  Lens.over rExpressionBody addParens full
+addParens x = Lens.set eHasParens HaveParens x
 
 addApplyChildParens :: Expression m -> Expression m
 addApplyChildParens =
-  atRExpressionBody f
+  Lens.over rExpressionBody f
   where
     f x@ExpressionApply{} = x
     f x@ExpressionPolymorphic{} = x
@@ -504,18 +506,18 @@ convertApply (Data.Apply funcI argI) exprI = do
   funcS <- convertExpressionI funcI
   argS <- convertExpressionI argI
   let apply = Data.Apply (funcS, funcI) (argS, argI)
-  case rExpressionBody funcS of
+  case funcS ^. rExpressionBody of
     ExpressionSection _ section ->
       applyOnSection section apply exprI
     _ ->
       convertApplyPrefix apply exprI
 
 removeInferredTypes :: Expression m -> Expression m
-removeInferredTypes = (atRPayload . atPlInferredTypes . const) []
+removeInferredTypes = Lens.set (rPayload . plInferredTypes) []
 
 removeRedundantTypes :: Expression m -> Expression m
 removeRedundantTypes =
-  (atRPayload . atPlInferredTypes) removeIfNoErrors
+  Lens.over (rPayload . plInferredTypes) removeIfNoErrors
   where
     removeIfNoErrors [_] = []
     removeIfNoErrors xs = xs
@@ -529,9 +531,9 @@ isSameOp _ _ = False
 
 setNextHole :: Expression m -> Expression m -> Expression m
 setNextHole possibleHole =
-  case rExpressionBody possibleHole of
+  case possibleHole ^. rExpressionBody of
   ExpressionHole{} ->
-    (fmap . atPlNextHole . flip mplus . Just) possibleHole
+    (fmap . Lens.over plNextHole . flip mplus . Just) possibleHole
   _ -> id
 
 applyOnSection ::
@@ -551,9 +553,9 @@ applyOnSection (Section (Just left) op Nothing) (Data.Apply _ (argRef, _)) exprI
   on (Section . Just) (setNextHole right) left op (Just right)
   where
     right =
-      case rExpressionBody argRef of
+      case argRef ^. rExpressionBody of
       ExpressionSection _ (Section (Just _) rightOp (Just _))
-        | on isSameOp rExpressionBody op rightOp -> argRef
+        | on isSameOp (Lens.view rExpressionBody) op rightOp -> argRef
       _ -> addApplyChildParens argRef
 applyOnSection _ apply exprI = convertApplyPrefix apply exprI
 
@@ -562,7 +564,7 @@ convertApplyPrefix ::
   Data.Apply (Expression m, ExprEntity m) -> Convertor m
 convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, _)) exprI
   | isPolymorphicFunc funcI =
-    case rExpressionBody funcRef of
+    case funcRef ^. rExpressionBody of
     ExpressionPolymorphic (Polymorphic g compact full) ->
       makePolymorphic g compact =<< makeApply full
     ExpressionGetVariable getVar ->
@@ -570,7 +572,7 @@ convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, _)) exprI
     _ -> makeFullApply
   | otherwise = makeFullApply
   where
-    newArgRef = atRExpressionBody addParens argRef
+    newArgRef = Lens.over rExpressionBody addParens argRef
     newFuncRef =
       setNextHole newArgRef .
       addApplyChildParens .
@@ -586,7 +588,7 @@ convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, _)) exprI
         { pFuncGuid = g
         , pCompact = compact
         , pFullExpression =
-          (atRGuid . const) expandedGuid $ removeInferredTypes fullExpression
+          Lens.set rGuid expandedGuid $ removeInferredTypes fullExpression
         }
 
 
@@ -910,10 +912,10 @@ convertDefinitionParams ctx expr =
     paramTypeS <- convertStoredExpression paramType ctx
     let
       fp = FuncParam
-        { fpGuid = param
-        , fpHiddenLambdaGuid = Just . eeiGuid $ expr ^. Data.ePayload
-        , fpType = removeRedundantTypes paramTypeS
-        , fpMActions =
+        { _fpGuid = param
+        , _fpHiddenLambdaGuid = Just . eeiGuid $ expr ^. Data.ePayload
+        , _fpType = removeRedundantTypes paramTypeS
+        , _fpMActions =
           Just $
           mkFuncParamActions ctx
           (expr ^. Data.ePayload) (fmap (Lens.view Data.ePayload) lam)
@@ -949,8 +951,8 @@ convertWhereItems ctx
             ]
         , wiActions =
             ListItemActions
-            { itemDelete = mkDelete (prop topLevel) (prop body)
-            , itemAddNext = liftM fst . DataOps.redexWrap $ prop topLevel
+            { _itemDelete = mkDelete (prop topLevel) (prop body)
+            , _itemAddNext = liftM fst . DataOps.redexWrap $ prop topLevel
             }
         }
     (nextItems, whereBody) <- convertWhereItems ctx body
@@ -1166,7 +1168,7 @@ convertStoredExpression expr sugarContext =
       }
 
 removeTypes :: Expression m -> Expression m
-removeTypes = removeInferredTypes . (atRExpressionBody . fmap) removeTypes
+removeTypes = removeInferredTypes . (Lens.over rExpressionBody . fmap) removeTypes
 
 eeiInferredExprs ::
   (Infer.Inferred a -> b) ->

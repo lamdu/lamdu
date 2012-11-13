@@ -52,7 +52,7 @@ jumpToRHS keys (rhsDoc, rhs) =
   Widget.keysEventMapMovesCursor keys ("Jump to " ++ rhsDoc) $
   return rhsId
   where
-    rhsId = WidgetIds.fromGuid $ Sugar.rGuid rhs
+    rhsId = WidgetIds.fromGuid $ rhs ^. Sugar.rGuid
 
 -- exported for use in definition sugaring.
 makeParamEdit ::
@@ -66,13 +66,13 @@ makeParamEdit ::
 makeParamEdit atParamWidgets rhs name prevId param = do
   infoMode <- liftM (Lens.view Settings.sInfoMode) ExprGuiM.readSettings
   (liftM . Lens.over ExpressionGui.egWidget) onFinalWidget . assignCursor $ do
-    paramTypeEdit <- ExprGuiM.makeSubexpresion $ Sugar.fpType param
+    paramTypeEdit <- ExprGuiM.makeSubexpresion $ param ^. Sugar.fpType
     paramNameEdit <- makeParamNameEdit name ident
     let typeWidget = paramTypeEdit ^. ExpressionGui.egWidget
     infoWidget <-
       case (infoMode, mActions) of
       (Settings.InfoExamples, Just actions) -> do
-        exampleSugar <- ExprGuiM.liftMemoT $ Sugar.fpGetExample actions
+        exampleSugar <- ExprGuiM.liftMemoT $ Lens.view Sugar.fpGetExample actions
         exampleGui <-
           liftM (Lens.view ExpressionGui.egWidget) $
           ExprGuiM.makeSubexpresion exampleSugar
@@ -87,29 +87,29 @@ makeParamEdit atParamWidgets rhs name prevId param = do
       (jumpToRHS Config.jumpLHStoRHSKeys rhs `mappend` paramEventMap) .
       atParamWidgets name
     assignCursor =
-      case Sugar.fpHiddenLambdaGuid param of
+      case param ^. Sugar.fpHiddenLambdaGuid of
       Nothing -> id
       Just g ->
         ExprGuiM.assignCursor (WidgetIds.fromGuid g) myId
     myId = WidgetIds.fromGuid ident
-    ident = Sugar.fpGuid param
+    ident = param ^. Sugar.fpGuid
     paramEventMap = mconcat
       [ paramDeleteEventMap Config.delForwardKeys "" id
       , paramDeleteEventMap Config.delBackwordKeys " backwards" (const prevId)
       , paramAddNextEventMap
       ]
-    mActions = Sugar.fpMActions param
+    mActions = param ^. Sugar.fpMActions
     paramAddNextEventMap =
       maybe mempty
       (Widget.keysEventMapMovesCursor Config.addNextParamKeys "Add next parameter" .
        liftM (FocusDelegator.delegatingId . WidgetIds.fromGuid) .
-       Sugar.itemAddNext . Sugar.fpListItemActions)
+       Lens.view (Sugar.fpListItemActions . Sugar.itemAddNext))
       mActions
     paramDeleteEventMap keys docSuffix onId =
       maybe mempty
       (Widget.keysEventMapMovesCursor keys ("Delete parameter" ++ docSuffix) .
        liftM (onId . WidgetIds.fromGuid) .
-       Sugar.itemDelete . Sugar.fpListItemActions)
+       Lens.view (Sugar.fpListItemActions . Sugar.itemDelete))
       mActions
 
 makeResultEdit
@@ -150,8 +150,8 @@ make hasParens (Sugar.Func params body) =
     return . ExpressionGui.hboxSpaced $
       lambdaLabel : paramsEdits ++ [ rightArrowLabel, bodyEdit ]
   where
-    bodyId = WidgetIds.fromGuid $ Sugar.rGuid body
-    lhs = map (WidgetIds.fromGuid . Sugar.fpGuid) params
+    bodyId = WidgetIds.fromGuid $ body ^. Sugar.rGuid
+    lhs = map (WidgetIds.fromGuid . Lens.view Sugar.fpGuid) params
 
 makeParamsAndResultEdit ::
   MonadF m =>
@@ -165,7 +165,7 @@ makeParamsAndResultEdit atParamWidgets lhs rhs@(_, result) =
   where
     go _ [] = liftM ((,) []) $ makeResultEdit lhs result
     go prevId (param:params) = do
-      let guid = Sugar.fpGuid param
+      let guid = param ^. Sugar.fpGuid
       (name, (paramEdits, resultEdit)) <-
         ExprGuiM.withParamName guid $
         \name -> liftM ((,) name) $ go (WidgetIds.fromGuid guid) params

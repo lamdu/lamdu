@@ -82,7 +82,7 @@ makeParts name guid def = do
         (FuncEdit.jumpToRHS [E.ModKey E.noMods (E.charKey '=')] rhs) .
         Lens.over Widget.wEventMap (E.filterChars (/= '='))
       | otherwise = id
-    lhs = myId : map (WidgetIds.fromGuid . Sugar.fpGuid) params
+    lhs = myId : map (WidgetIds.fromGuid . Lens.view Sugar.fpGuid) params
     rhs = ("Def Body", body)
     params = Sugar.dParameters def
     addWhereItemEventMap =
@@ -143,11 +143,11 @@ makeWhereItemEdit item =
       [ Widget.keysEventMapMovesCursor (Config.delForwardKeys ++ Config.delBackwordKeys)
         "Delete where item" .
         liftM WidgetIds.fromGuid .
-        Sugar.itemDelete $ Sugar.wiActions item
+        Lens.view Sugar.itemDelete $ Sugar.wiActions item
       , Widget.keysEventMapMovesCursor Config.addWhereItemKeys
         "Add outer where item" .
         liftM WidgetIds.fromGuid .
-        Sugar.itemAddNext $ Sugar.wiActions item
+        Lens.view Sugar.itemAddNext $ Sugar.wiActions item
       ]
 
 makeDefBodyEdit ::

@@ -6,6 +6,7 @@ module Editor.CodeEdit.ExpressionEdit.HoleEdit
 
 import Control.Applicative ((<*>))
 import Control.Arrow (first, second)
+import Control.Lens ((^.))
 import Control.Monad ((<=<), filterM, liftM, mplus, msum, void)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.State (StateT)
@@ -94,7 +95,7 @@ resultPickEventMap holeInfo holeResult =
       "Pick result and move to next arg" .
       liftM Widget.eventResultFromCursor $ do
         _ <- Sugar.holePickResult (hiHoleActions holeInfo) holeResult
-        return . WidgetIds.fromGuid $ Sugar.rGuid nextHole
+        return . WidgetIds.fromGuid $ nextHole ^. Sugar.rGuid
   _ -> simplePickRes $ Config.pickResultKeys ++ Config.addNextArgumentKeys
   where
     simplePickRes keys =
@@ -468,7 +469,7 @@ pickEventMap holeInfo searchTerm (Just result)
       let
         mTarget
           | g /= hiGuid holeInfo = Just g
-          | otherwise = fmap Sugar.rGuid $ hiMNextHole holeInfo
+          | otherwise = fmap (Lens.view Sugar.rGuid) $ hiMNextHole holeInfo
       liftM WidgetIds.fromGuid $ case mTarget of
         Just target -> do
           (`Property.set` [x]) =<< Anchors.assocSearchTermRef target
