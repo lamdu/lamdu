@@ -132,7 +132,7 @@ makeFocusable style str myId =
 lineHeightOfStyle :: Style -> Widget.R
 lineHeightOfStyle style = sz * textHeight
   where
-    sz = fromIntegral . TextView.styleFontSize $ style ^. sTextViewStyle
+    sz = fromIntegral $ style ^. sTextViewStyle . TextView.styleFontSize
 
 eventResult ::
   Widget.Id -> [(Maybe Int, Char)] -> [(Maybe Int, Char)] ->

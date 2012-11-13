@@ -113,17 +113,17 @@ polymorphicFullBGColor = Draw.Color 0.1 0.05 0.1 1
 cursorBGColor = Draw.Color 0 0 1 0.3
 
 helpStyle font = TextView.Style {
-  TextView.styleColor = Draw.Color 1 1 1 1,
-  TextView.styleFont = font,
-  TextView.styleFontSize = 10
+  TextView._styleColor = Draw.Color 1 1 1 1,
+  TextView._styleFont = font,
+  TextView._styleFontSize = 10
   }
 
 baseStyle font = TextEdit.Style
   { TextEdit._sTextViewStyle =
     TextView.Style
-      { TextView.styleColor = Draw.Color 1 1 1 1
-      , TextView.styleFont = font
-      , TextView.styleFontSize = 25
+      { TextView._styleColor = Draw.Color 1 1 1 1
+      , TextView._styleFont = font
+      , TextView._styleFontSize = 25
       }
   , TextEdit._sCursorColor = TextEdit.defaultCursorColor
   , TextEdit._sCursorWidth = TextEdit.defaultCursorWidth

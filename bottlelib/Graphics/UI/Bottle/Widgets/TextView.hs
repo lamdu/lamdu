@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Graphics.UI.Bottle.Widgets.TextView
-  ( Style(..), atStyleColor, atStyleFont, atStyleFontSize
+  ( Style(..), styleColor, styleFont, styleFontSize
   , make, makeWidget
   , drawTextAsSingleLetters, drawTextAsLines
   , letterRects
@@ -18,7 +18,7 @@ import Graphics.UI.Bottle.Animation(AnimId, Size)
 import Graphics.UI.Bottle.Rect (Rect(Rect))
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Lens as Lens
-import qualified Data.AtFieldTH as AtFieldTH
+import qualified Control.Lens.TH as LensTH
 import qualified Data.ByteString.Char8 as SBS8
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.DrawingCombinators as Draw
@@ -28,12 +28,12 @@ import qualified Graphics.UI.Bottle.Rect as Rect
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 data Style = Style {
-  styleColor :: Draw.Color,
-  styleFont :: Draw.Font,
-  styleFontSize :: Int
+  _styleColor :: Draw.Color,
+  _styleFont :: Draw.Font,
+  _styleFontSize :: Int
   }
 
-AtFieldTH.make ''Style
+LensTH.makeLenses ''Style
 
 augment :: Show a => AnimId -> a -> AnimId
 augment animId = Anim.joinId animId . (:[]) . SBS8.pack . show

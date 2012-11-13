@@ -99,11 +99,11 @@ setTextSizeColor
   -> Env
 setTextSizeColor textSize textColor =
   (atEnvTextStyle . Lens.over TextEdit.sTextViewStyle)
-  ((TextView.atStyleFontSize . const) textSize .
-   (TextView.atStyleColor . const) textColor)
+  ((Lens.set TextView.styleFontSize) textSize .
+   (Lens.set TextView.styleColor) textColor)
 
 atEnv :: Monad m => (Env -> Env) -> WidgetEnvT m a -> WidgetEnvT m a
 atEnv = atWidgetEnvT . Reader.local
 
 setTextColor :: Draw.Color -> Env -> Env
-setTextColor = atEnvTextStyle . Lens.over TextEdit.sTextViewStyle . TextView.atStyleColor . const
+setTextColor = atEnvTextStyle . Lens.set (TextEdit.sTextViewStyle . TextView.styleColor)
