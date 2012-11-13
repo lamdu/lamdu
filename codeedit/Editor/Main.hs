@@ -228,7 +228,7 @@ makeRootWidget
   -> Widget.Id
   -> StateT Cache (Transaction DBTag IO) (Widget IO)
 makeRootWidget settings style dbToIO size cursor = do
-  actions <- lift $ VersionControl.makeActions
+  actions <- lift VersionControl.makeActions
   mapStateT (runWidgetEnvT cursor style) $ do
     codeEdit <-
       (liftM . Widget.atEvents) (VersionControl.runEvent cursor) .

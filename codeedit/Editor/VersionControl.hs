@@ -1,7 +1,7 @@
 module Editor.VersionControl (makeActions, runAction, runEvent) where
 
 import Control.Monad (unless)
-import Data.List (findIndex)
+import Data.List (elemIndex)
 import Data.List.Utils (removeAt)
 import Data.Maybe (fromMaybe)
 import Data.Store.Rev.Branch (Branch)
@@ -36,7 +36,7 @@ deleteBranch view branches branch = do
     newBranch = newBranches !! min (length newBranches - 1) index
     index =
       fromMaybe (error "Invalid current branch!") $
-      findIndex (branch ==) branches
+      elemIndex branch branches
     newBranches = removeAt index branches
 
 makeBranch :: Monad m => View -> TDB m Branch

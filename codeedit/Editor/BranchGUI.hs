@@ -109,7 +109,7 @@ make transaction size actions widget = do
       return
         ( branch
         , (Widget.atWMaybeEnter . fmap . fmap . Widget.atEnterResultEvent)
-          (setBranch >>) $ branchNameEdit
+          (setBranch >>) branchNameEdit
         )
     currentBranchWidgetId = WidgetIds.fromGuid . Branch.guid $ currentBranch actions
 

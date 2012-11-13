@@ -106,7 +106,7 @@ make ::
 make settings = do
   sugarPanes <- mapStateT lift makeSugarPanes
   clipboardsExprs <- mapStateT lift $ do
-    clipboardsP <- lift $ Anchors.clipboards
+    clipboardsP <- lift Anchors.clipboards
     sugarConfig <- lift $ liftM Property.value Anchors.sugarConfig
     mapM (Sugar.loadConvertExpression sugarConfig) $
       Property.list clipboardsP
