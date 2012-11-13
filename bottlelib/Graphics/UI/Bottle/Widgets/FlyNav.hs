@@ -12,7 +12,7 @@ import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.Widget (Widget, Size)
 import Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys)
 import qualified Control.Lens as Lens
-import qualified Data.AtFieldTH as AtFieldTH
+import qualified Control.Lens.TH as LensTH
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Direction as Direction
@@ -21,11 +21,11 @@ import qualified Graphics.UI.Bottle.Rect as Rect
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 data Movement = Movement
-  { mName :: String
-  , _mModKey :: EventMap.ModKey
-  , mDir :: Vector2 Widget.R
+  { _mName :: String
+  , __mModKey :: EventMap.ModKey
+  , _mDir :: Vector2 Widget.R
   }
-AtFieldTH.make ''Movement
+LensTH.makeLenses ''Movement
 
 data ActiveState = ActiveState
   { _asPos :: Vector2 Widget.R
@@ -119,7 +119,7 @@ addMovement
   -> (Maybe ActiveState -> f ())
   -> Widget.EventHandlers f
 addMovement name keys dir pos movements setState
-  | name `elem` map mName movements = mempty
+  | name `elem` map (Lens.view mName) movements = mempty
   | otherwise =
     mconcat
     [ mkKeyMap EventMap.Press modKey ("Start FlyNav " ++ name) .
@@ -146,7 +146,7 @@ make animId (Just (ActiveState pos movements)) setState w =
   (Lens.over Widget.wFrame . mappend) frame .
   (Lens.set Widget.wEventMap) eventMap $ w
   where
-    delta = sum $ map mDir movements
+    delta = sum $ map (Lens.view mDir) movements
     highlight =
       maybe mempty
       (highlightRect (animId ++ ["highlight"]) . Lens.view Widget.enterResultRect)
@@ -156,7 +156,7 @@ make animId (Just (ActiveState pos movements)) setState w =
     targetPos = Direction.Point pos
     nextState =
       ActiveState (cap (pos + delta*speed) (w ^. Widget.wSize))
-      ((map . atMDir) (* accel) movements)
+      ((map . Lens.over mDir) (* accel) movements)
     eventMap = mconcat $
       (mkTickHandler . setState . Just) nextState :
       addMovements pos movements setState :
