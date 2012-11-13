@@ -20,6 +20,7 @@ import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Data.Maybe (isJust)
 import Data.Store.Transaction (Transaction)
 import Graphics.UI.Bottle.Animation (AnimId)
+import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Editor.Anchors as Anchors
@@ -97,7 +98,7 @@ setTextSizeColor
   -> Env
   -> Env
 setTextSizeColor textSize textColor =
-  (atEnvTextStyle . TextEdit.atSTextViewStyle)
+  (atEnvTextStyle . Lens.over TextEdit.sTextViewStyle)
   ((TextView.atStyleFontSize . const) textSize .
    (TextView.atStyleColor . const) textColor)
 
@@ -105,4 +106,4 @@ atEnv :: Monad m => (Env -> Env) -> WidgetEnvT m a -> WidgetEnvT m a
 atEnv = atWidgetEnvT . Reader.local
 
 setTextColor :: Draw.Color -> Env -> Env
-setTextColor = atEnvTextStyle . TextEdit.atSTextViewStyle . TextView.atStyleColor . const
+setTextColor = atEnvTextStyle . Lens.over TextEdit.sTextViewStyle . TextView.atStyleColor . const

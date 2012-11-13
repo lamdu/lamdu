@@ -9,6 +9,7 @@ module Editor.BottleWidgets
   ) where
 
 import Control.Applicative (Applicative(..))
+import Control.Lens ((^.))
 import Control.Monad (when, liftM)
 import Data.ByteString.Char8 (pack)
 import Data.List (intersperse)
@@ -38,7 +39,7 @@ makeTextView :: Monad m => String -> AnimId -> WidgetEnvT m (Widget f)
 makeTextView text myId = do
   style <- WE.readTextStyle
   return $
-    TextView.makeWidget (TextEdit.sTextViewStyle style) text myId
+    TextView.makeWidget (style ^. TextEdit.sTextViewStyle) text myId
 
 makeLabel :: MonadF m => String -> AnimId -> WidgetEnvT m (Widget f)
 makeLabel text prefix =

@@ -70,7 +70,7 @@ makeIntEditI integer myId setValue = do
     ExpressionGui.fromValueWidget .
     Widget.atEvents setter .
     Lens.over Widget.wEventMap removeKeys $ TextEdit.make
-    style { TextEdit.sEmptyFocusedString = "<0>" } textCursor text myId
+    (Lens.set TextEdit.sEmptyFocusedString "<0>" style) textCursor text myId
   where
     removeKeys =
       E.filterChars Char.isDigit .

@@ -119,19 +119,19 @@ helpStyle font = TextView.Style {
   }
 
 baseStyle font = TextEdit.Style
-  { TextEdit.sTextViewStyle =
+  { TextEdit._sTextViewStyle =
     TextView.Style
       { TextView.styleColor = Draw.Color 1 1 1 1
       , TextView.styleFont = font
       , TextView.styleFontSize = 25
       }
-  , TextEdit.sCursorColor = TextEdit.defaultCursorColor
-  , TextEdit.sCursorWidth = TextEdit.defaultCursorWidth
-  , TextEdit.sTextCursorId = WidgetIds.textCursorId
-  , TextEdit.sBackgroundCursorId = WidgetIds.backgroundCursorId
-  , TextEdit.sBackgroundColor = cursorBGColor
-  , TextEdit.sEmptyUnfocusedString = ""
-  , TextEdit.sEmptyFocusedString = ""
+  , TextEdit._sCursorColor = TextEdit.defaultCursorColor
+  , TextEdit._sCursorWidth = TextEdit.defaultCursorWidth
+  , TextEdit._sTextCursorId = WidgetIds.textCursorId
+  , TextEdit._sBackgroundCursorId = WidgetIds.backgroundCursorId
+  , TextEdit._sBackgroundColor = cursorBGColor
+  , TextEdit._sEmptyUnfocusedString = ""
+  , TextEdit._sEmptyFocusedString = ""
   }
 
 selectedBranchColor = Draw.Color 0 0.5 0 1

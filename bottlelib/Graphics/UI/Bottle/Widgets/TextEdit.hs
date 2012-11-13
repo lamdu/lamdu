@@ -2,13 +2,13 @@
 module Graphics.UI.Bottle.Widgets.TextEdit(
   Cursor, Style(..), make, defaultCursorColor, defaultCursorWidth,
   makeTextEditCursor,
-  atSCursorColor,
-  atSCursorWidth,
-  atSTextCursorId,
-  atSBackgroundCursorId,
-  atSEmptyUnfocusedString,
-  atSEmptyFocusedString,
-  atSTextViewStyle
+  sCursorColor,
+  sCursorWidth,
+  sTextCursorId,
+  sBackgroundCursorId,
+  sEmptyUnfocusedString,
+  sEmptyFocusedString,
+  sTextViewStyle
   ) where
 
 import Control.Arrow (first)
@@ -25,7 +25,7 @@ import Graphics.DrawingCombinators.Utils (square, textHeight)
 import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.Widget (Widget(..))
 import qualified Control.Lens as Lens
-import qualified Data.AtFieldTH as AtFieldTH
+import qualified Control.Lens.TH as LensTH
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.ByteString.Char8 as SBS8
 import qualified Data.Map as Map
@@ -43,16 +43,16 @@ import qualified Safe
 type Cursor = Int
 
 data Style = Style
-  { sCursorColor :: Draw.Color
-  , sCursorWidth :: Widget.R
-  , sTextCursorId :: Anim.AnimId
-  , sBackgroundCursorId :: Anim.AnimId
-  , sBackgroundColor :: Draw.Color
-  , sEmptyUnfocusedString :: String
-  , sEmptyFocusedString :: String
-  , sTextViewStyle :: TextView.Style
+  { _sCursorColor :: Draw.Color
+  , _sCursorWidth :: Widget.R
+  , _sTextCursorId :: Anim.AnimId
+  , _sBackgroundCursorId :: Anim.AnimId
+  , _sBackgroundColor :: Draw.Color
+  , _sEmptyUnfocusedString :: String
+  , _sEmptyFocusedString :: String
+  , _sTextViewStyle :: TextView.Style
   }
-AtFieldTH.make ''Style
+LensTH.makeLenses ''Style
 
 defaultCursorColor :: Draw.Color
 defaultCursorColor = Draw.Color 0 1 0 1
@@ -71,7 +71,7 @@ makeDisplayStr empty ""  = empty
 makeDisplayStr _     str = str
 
 cursorTranslate :: Style -> Anim.Frame -> Anim.Frame
-cursorTranslate style = Anim.translate (Vector2 (sCursorWidth style / 2) 0)
+cursorTranslate style = Anim.translate $ Vector2 (style ^. sCursorWidth / 2) 0
 
 makeTextEditCursor :: Widget.Id -> Int -> Widget.Id
 makeTextEditCursor myId = Widget.joinId myId . (:[]) . BinUtils.encodeS
@@ -91,7 +91,7 @@ cursorRects style str =
   -- original string index-wise.
   zipWith addFirstCursor (iterate (+lineHeight) 0) .
   (map . map) rightSideOfRect $
-  TextView.letterRects (sTextViewStyle style) str
+  TextView.letterRects (style ^. sTextViewStyle) str
   where
     addFirstCursor y = (Rect (Vector2 0 y) (Vector2 0 lineHeight) :)
     lineHeight = lineHeightOfStyle style
@@ -101,11 +101,11 @@ makeUnfocused style str myId =
   makeFocusable style str myId .
   (Widget.wSize . Vector2.first %~ (+ cursorWidth)) .
   Lens.over Widget.wFrame (cursorTranslate style) .
-  TextView.makeWidget (sTextViewStyle style) displayStr $
+  TextView.makeWidget (style ^. sTextViewStyle) displayStr $
   Widget.toAnimId myId
   where
-    cursorWidth = sCursorWidth style
-    displayStr = makeDisplayStr (sEmptyUnfocusedString style) str
+    cursorWidth = style ^. sCursorWidth
+    displayStr = makeDisplayStr (style ^. sEmptyUnfocusedString) str
 
 makeFocusable ::
   Style -> String -> Widget.Id ->
@@ -132,7 +132,7 @@ makeFocusable style str myId =
 lineHeightOfStyle :: Style -> Widget.R
 lineHeightOfStyle style = sz * textHeight
   where
-    sz = fromIntegral . TextView.styleFontSize $ sTextViewStyle style
+    sz = fromIntegral . TextView.styleFontSize $ style ^. sTextViewStyle
 
 eventResult ::
   Widget.Id -> [(Maybe Int, Char)] -> [(Maybe Int, Char)] ->
@@ -164,7 +164,7 @@ eventResult myId strWithIds newText newCursor =
 makeFocused :: Cursor -> Style -> String -> Widget.Id -> Widget ((,) String)
 makeFocused cursor style str myId =
   makeFocusable style str myId .
-  Widget.backgroundColor 10 (sBackgroundCursorId style) (sBackgroundColor style) $
+  Widget.backgroundColor 10 (style ^. sBackgroundCursorId) (style ^. sBackgroundColor) $
   widget
   where
     widget = Widget
@@ -175,22 +175,22 @@ makeFocused cursor style str myId =
       , _wMaybeEnter = Nothing
       , _wFocalArea = cursorRect
       }
-    reqSize = Vector2 (sCursorWidth style + tlWidth) tlHeight
+    reqSize = Vector2 (style ^. sCursorWidth + tlWidth) tlHeight
     myAnimId = Widget.toAnimId myId
     img = cursorTranslate style $ frameGen myAnimId
-    displayStr = makeDisplayStr (sEmptyFocusedString style) str
+    displayStr = makeDisplayStr (style ^. sEmptyFocusedString) str
     (frameGen, Vector2 tlWidth tlHeight) = textViewDraw style displayStr
 
     cursorRect = mkCursorRect style cursor str
     cursorFrame =
       Anim.onDepth (+2) .
       Anim.unitIntoRect cursorRect .
-      (Anim.simpleFrame . sTextCursorId) style $
-      Draw.tint (sCursorColor style) square
+      Anim.simpleFrame (style ^. sTextCursorId) $
+      Draw.tint (style ^. sCursorColor) square
 
 textViewDraw ::
   Style -> String -> (Anim.AnimId -> Anim.Frame, Widget.Size)
-textViewDraw = TextView.drawTextAsSingleLetters . sTextViewStyle
+textViewDraw = TextView.drawTextAsSingleLetters . Lens.view sTextViewStyle
 
 mkCursorRect :: Style -> Int -> String -> Rect
 mkCursorRect style cursor str = Rect cursorPos cursorSize
@@ -198,7 +198,7 @@ mkCursorRect style cursor str = Rect cursorPos cursorSize
     beforeCursorLines = splitWhen (== '\n') $ take cursor str
     lineHeight = lineHeightOfStyle style
     cursorPos = Vector2 cursorPosX cursorPosY
-    cursorSize = Vector2 (sCursorWidth style) lineHeight
+    cursorSize = Vector2 (style ^. sCursorWidth) lineHeight
     cursorPosX =
       Lens.view Vector2.first . snd . textViewDraw style $ last beforeCursorLines
     cursorPosY = (lineHeight *) . subtract 1 $ genericLength beforeCursorLines
