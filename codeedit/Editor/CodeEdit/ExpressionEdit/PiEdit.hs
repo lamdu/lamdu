@@ -5,6 +5,7 @@ import Control.Monad (liftM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Editor.MonadF (MonadF)
+import qualified Control.Lens as Lens
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
@@ -42,7 +43,7 @@ make hasParens (Sugar.Pi param resultType) =
           case Widget.subId paramId cursor of
           Nothing -> cursor
           Just _ -> typeId
-    ExprGuiM.atEnv (WE.atEnvCursor redirectCursor) $ do
+    ExprGuiM.atEnv (Lens.over WE.envCursor redirectCursor) $ do
       paramTypeEdit <- ExprGuiM.makeSubexpresion $ Sugar.fpType param
       paramEdit <-
         if paramUsed

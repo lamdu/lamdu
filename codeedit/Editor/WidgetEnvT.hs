@@ -3,13 +3,15 @@ module Editor.WidgetEnvT
   ( WidgetEnvT, runWidgetEnvT
   , mapWidgetEnvT
   , readCursor, subCursor, isSubCursor
-  , Env(..)
-  , atEnv, atEnvCursor
+
+  , Env(..), envCursor, envTextStyle
+
+  , atEnv
   , envAssignCursor, envAssignCursorPrefix
   , assignCursor, assignCursorPrefix
 
   , readTextStyle
-  , atEnvTextStyle, setTextSizeColor, setTextColor
+  , setTextSizeColor, setTextColor
   , getP
   ) where
 
@@ -21,8 +23,8 @@ import Data.Maybe (isJust)
 import Data.Store.Transaction (Transaction)
 import Graphics.UI.Bottle.Animation (AnimId)
 import qualified Control.Lens as Lens
+import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Reader as Reader
-import qualified Data.AtFieldTH as AtFieldTH
 import qualified Editor.Anchors as Anchors
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -30,16 +32,16 @@ import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
 data Env = Env
-  { envCursor :: Widget.Id
-  , envTextStyle :: TextEdit.Style
+  { _envCursor :: Widget.Id
+  , _envTextStyle :: TextEdit.Style
   }
-AtFieldTH.make ''Env
+LensTH.makeLenses ''Env
 
 newtype WidgetEnvT m a = WidgetEnvT
-  { unWidgetEnvT :: ReaderT Env m a
+  { _widgetEnvT :: ReaderT Env m a
   }
   deriving (Functor, Applicative, Monad, MonadTrans)
-AtFieldTH.make ''WidgetEnvT
+LensTH.makeLenses ''WidgetEnvT
 
 -- TODO: Remove this
 getP :: Monad m => Anchors.MkProperty t m a -> WidgetEnvT (Transaction t m) a
@@ -53,10 +55,10 @@ mapWidgetEnvT
   => (m a -> n a)
   -> WidgetEnvT m a
   -> WidgetEnvT n a
-mapWidgetEnvT = atWidgetEnvT . Reader.mapReaderT
+mapWidgetEnvT = Lens.over widgetEnvT . Reader.mapReaderT
 
 readCursor :: Monad m => WidgetEnvT m Widget.Id
-readCursor = WidgetEnvT $ Reader.asks envCursor
+readCursor = WidgetEnvT . Reader.asks $ Lens.view envCursor
 
 subCursor :: Monad m => Widget.Id -> WidgetEnvT m (Maybe AnimId)
 subCursor folder = liftM (Widget.subId folder) readCursor
@@ -65,12 +67,12 @@ isSubCursor :: Monad m => Widget.Id -> WidgetEnvT m Bool
 isSubCursor = liftM isJust . subCursor
 
 readTextStyle :: Monad m => WidgetEnvT m TextEdit.Style
-readTextStyle = WidgetEnvT $ Reader.asks envTextStyle
+readTextStyle = WidgetEnvT . Reader.asks $ Lens.view envTextStyle
 
 envAssignCursor
   :: Widget.Id -> Widget.Id -> Env -> Env
 envAssignCursor src dest =
-  atEnvCursor replace
+  Lens.over envCursor replace
   where
     replace cursor
       | cursor == src = dest
@@ -79,7 +81,7 @@ envAssignCursor src dest =
 envAssignCursorPrefix
   :: Widget.Id -> Widget.Id -> Env -> Env
 envAssignCursorPrefix srcFolder dest =
-  atEnvCursor replace
+  Lens.over envCursor replace
   where
     replace cursor =
       case Widget.subId srcFolder cursor of
@@ -98,12 +100,12 @@ setTextSizeColor
   -> Env
   -> Env
 setTextSizeColor textSize textColor =
-  (atEnvTextStyle . Lens.over TextEdit.sTextViewStyle)
+  (Lens.over (envTextStyle . TextEdit.sTextViewStyle))
   ((Lens.set TextView.styleFontSize) textSize .
    (Lens.set TextView.styleColor) textColor)
 
 atEnv :: Monad m => (Env -> Env) -> WidgetEnvT m a -> WidgetEnvT m a
-atEnv = atWidgetEnvT . Reader.local
+atEnv = Lens.over widgetEnvT . Reader.local
 
 setTextColor :: Draw.Color -> Env -> Env
-setTextColor = atEnvTextStyle . Lens.set (TextEdit.sTextViewStyle . TextView.styleColor)
+setTextColor = Lens.set (envTextStyle . TextEdit.sTextViewStyle . TextView.styleColor)

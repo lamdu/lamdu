@@ -139,13 +139,13 @@ wrapDelegated ::
   Widget.Id -> ExprGuiM m b
 wrapDelegated =
   BWidgets.wrapDelegatedWith (ExprGuiM.widgetEnv WE.readCursor)
-  (ExprGuiM.atEnv . WE.atEnvCursor)
+  (ExprGuiM.atEnv . Lens.over WE.envCursor)
 
 makeNameEdit ::
   Monad m => (ExprGuiM.NameSource, String) -> Guid -> Widget.Id -> ExprGuiM m (WidgetT m)
 makeNameEdit (nameSrc, name) ident myId =
   liftM (nameSrcTint nameSrc) .
-  (ExprGuiM.atEnv . WE.atEnvTextStyle)
+  (ExprGuiM.atEnv . Lens.over WE.envTextStyle)
   ((Lens.set TextEdit.sEmptyUnfocusedString) name .
    (Lens.set TextEdit.sEmptyFocusedString) (concat ["<", name, ">"])) $
   ExprGuiM.widgetEnv . flip makeEditor myId =<<

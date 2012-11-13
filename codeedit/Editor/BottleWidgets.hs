@@ -98,7 +98,7 @@ wrapDelegatedOT
   -> ((Widget f -> Widget f) -> a -> b)
   -> (Widget.Id -> WidgetEnvT m a)
   -> Widget.Id -> WidgetEnvT m b
-wrapDelegatedOT = wrapDelegatedWith WE.readCursor (WE.atEnv . WE.atEnvCursor)
+wrapDelegatedOT = wrapDelegatedWith WE.readCursor (WE.atEnv . Lens.over WE.envCursor)
 
 makeTextEdit
   :: (Monad m, Monad f)
