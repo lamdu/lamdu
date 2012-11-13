@@ -152,7 +152,7 @@ runDbStore font store = do
   settingsRef <- newIORef Settings
     { _sInfoMode = Settings.InfoTypes
     }
-  cacheRef <- newIORef $ Cache.new 0x100 -- TODO: Use a real cache size
+  cacheRef <- newIORef $ Cache.new 0x100000 -- TODO: Use a real cache size
   let
     addHelp = addHelpWithStyle $ Config.helpStyle font
     makeWidget size = do
