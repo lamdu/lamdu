@@ -3,7 +3,7 @@ module Editor.CodeEdit (make) where
 
 import Control.Monad (liftM)
 import Control.Monad.Trans.Class (MonadTrans(..))
-import Control.Monad.Trans.State (StateT)
+import Control.Monad.Trans.State (StateT, mapStateT)
 import Data.Cache (Cache)
 import Data.List (intersperse)
 import Data.List.Utils (enumerate, insertAt, removeAt)
@@ -56,9 +56,9 @@ makeNewDefinitionAction = do
     Anchors.savePreJumpPosition curCursor
     return . FocusDelegator.delegatingId $ WidgetIds.fromIRef newDefI
 
-makeSugarPanes :: Monad m => T m [SugarPane m]
+makeSugarPanes :: Monad m => StateT Cache (T m) [SugarPane m]
 makeSugarPanes = do
-  panes <- Anchors.getP Anchors.panes
+  panes <- lift $ Anchors.getP Anchors.panes
   let
     mkMDelPane i
       | length panes >= 1 = Just $ do
@@ -79,7 +79,7 @@ makeSugarPanes = do
       | i-1 >= 0 = Just $ movePane i (i-1)
       | otherwise = Nothing
     convertPane (i, defI) = do
-      sugarConfig <- liftM Property.value Anchors.sugarConfig
+      sugarConfig <- lift $ liftM Property.value Anchors.sugarConfig
       sDef <- Sugar.loadConvertDefinition sugarConfig defI
       return SugarPane
         { spDef = sDef
@@ -104,10 +104,10 @@ make ::
   MonadF m => Settings ->
   StateT Cache (WidgetEnvT (T m)) (Widget (T m))
 make settings = do
-  sugarPanes <- lift $ lift makeSugarPanes
-  clipboardsExprs <- lift . lift $ do
-    clipboardsP <- Anchors.clipboards
-    sugarConfig <- liftM Property.value Anchors.sugarConfig
+  sugarPanes <- mapStateT lift makeSugarPanes
+  clipboardsExprs <- mapStateT lift $ do
+    clipboardsP <- lift $ Anchors.clipboards
+    sugarConfig <- lift $ liftM Property.value Anchors.sugarConfig
     mapM (Sugar.loadConvertExpression sugarConfig) $
       Property.list clipboardsP
   ExprGuiM.run ExpressionEdit.make settings $ do

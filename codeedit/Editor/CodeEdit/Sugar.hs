@@ -28,7 +28,9 @@ import Control.Arrow (first, (&&&))
 import Control.Monad ((<=<), liftM, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
+import Control.Monad.Trans.State (StateT)
 import Control.Monad.Trans.Writer (Writer, runWriter)
+import Data.Cache (Cache)
 import Data.Derive.Foldable (makeFoldable)
 import Data.Derive.Traversable (makeTraversable)
 import Data.DeriveTH (derive)
@@ -50,6 +52,7 @@ import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
+-- import qualified Data.Cache as Cache
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -103,7 +106,7 @@ data ListItemActions m = ListItemActions
 
 data FuncParamActions m = FuncParamActions
   { fpListItemActions :: ListItemActions m
-  , fpGetExample :: T m (Expression m)
+  , fpGetExample :: StateT Cache (T m) (Expression m)
   }
 
 data FuncParam m expr = FuncParam
@@ -412,13 +415,13 @@ mkFuncParamActions
     }
   , fpGetExample = do
       exampleP <-
-        Anchors.nonEmptyAssocDataRef "example" param .
+        lift . Anchors.nonEmptyAssocDataRef "example" param .
         DataIRef.newExprBody $ Data.ExpressionLeaf Data.Hole
-      exampleLoaded <- Load.loadExpressionProperty exampleP
+      exampleLoaded <- lift $ Load.loadExpressionProperty exampleP
 
       (_, inferState, exampleStored) <-
         inferLoadedExpression Nothing exampleLoaded newInferNode
-      convertStoredExpression exampleStored $
+      lift . convertStoredExpression exampleStored $
         SugarContext inferState (scConfig ctx)
   }
   where
@@ -979,11 +982,13 @@ convertDefinitionContent sugarContext expr = do
     stored = Infer.iStored . eeiInferred . Data.ePayload
 
 loadConvertDefinition ::
-  Monad m => SugarConfig -> Data.DefinitionIRef -> T m (Definition m)
+  Monad m => SugarConfig -> Data.DefinitionIRef ->
+  StateT Cache (T m) (Definition m)
 loadConvertDefinition config defI =
   -- TODO: defI given twice probably means the result of
   -- loadDefinition is missing some defI-dependent values
-  convertDefinition config defI =<< Load.loadDefinition defI
+  convertDefinition config defI =<<
+  lift (Load.loadDefinition defI)
 
 convertDefinitionBuiltin ::
   Monad m =>
@@ -1006,7 +1011,7 @@ convertDefinitionExpression ::
   Load.Loaded (T m) ->
   Data.DefinitionIRef ->
   Load.Loaded (T m) ->
-  T m (DefinitionBody m)
+  StateT Cache (T m) (DefinitionBody m)
 convertDefinitionExpression config exprLoaded defI (Load.Stored setType typeIRef) = do
   (isSuccess, inferState, exprStored) <-
     inferLoadedExpression (Just defI) exprLoaded Infer.initial
@@ -1028,8 +1033,8 @@ convertDefinitionExpression config exprLoaded defI (Load.Stored setType typeIRef
       { scInferState = inferState
       , scConfig = config
       }
-  content <- convertDefinitionContent sugarContext exprStored
-  mNewType <-
+  content <- lift $ convertDefinitionContent sugarContext exprStored
+  mNewType <- lift $
     if isSuccess && not typesMatch && isCompleteType inferredTypeP
     then liftM Just mkNewType
     else return Nothing
@@ -1043,10 +1048,11 @@ convertDefinition ::
   Monad m => SugarConfig ->
   Data.DefinitionIRef ->
   Data.Definition (Load.Loaded (T m)) ->
-  T m (Definition m)
+  StateT Cache (T m) (Definition m)
 convertDefinition config defI def = do
   body <- convertDefBody defBody defI typeLoaded
   typeS <-
+    lift .
     convertExpressionPure (mkGen 1 2 (IRef.guid defI)) config .
     void $ Load.sExpr typeLoaded
   return Definition
@@ -1079,10 +1085,10 @@ inferLoadedExpression ::
   Maybe Data.DefinitionIRef ->
   Load.Loaded (T m) ->
   (Infer.RefMap, Infer.InferNode) ->
-  T m
+  StateT Cache (T m)
   (Bool, Infer.RefMap,
    Data.Expression (ExprEntityStored m))
-inferLoadedExpression mDefI (Load.Stored setExpr exprIRef) inferState = do
+inferLoadedExpression mDefI (Load.Stored setExpr exprIRef) inferState = lift $ do
   loaded <- Infer.load loader mDefI exprIRef
   return . third (inferredIRefToStored setExpr) $
     uncurry (inferWithConflicts loaded) inferState
@@ -1138,13 +1144,14 @@ inferWithConflicts loaded refMap node =
 loadConvertExpression ::
   Monad m =>
   SugarConfig ->
-  DataIRef.ExpressionProperty (T m) -> T m (Expression m)
+  DataIRef.ExpressionProperty (T m) ->
+  StateT Cache (T m) (Expression m)
 loadConvertExpression config exprP =
-  convertLoadedExpression =<< Load.loadExpressionProperty exprP
+  convertLoadedExpression =<< lift (Load.loadExpressionProperty exprP)
   where
     convertLoadedExpression exprLoaded = do
       (_, inferState, exprStored) <- inferLoadedExpression Nothing exprLoaded Infer.initial
-      convertStoredExpression exprStored $ SugarContext inferState config
+      lift . convertStoredExpression exprStored $ SugarContext inferState config
 
 convertStoredExpression ::
   Monad m =>

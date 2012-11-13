@@ -15,13 +15,15 @@ module Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad
   , withNameFromVarRef
   , getDefName
   , memo, memoT
+  , liftMemo, liftMemoT
+  , unmemo
   ) where
 
 import Control.Applicative (Applicative, liftA2)
 import Control.Monad (liftM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.RWS (RWST, runRWST)
-import Control.Monad.Trans.State (StateT(..))
+import Control.Monad.Trans.State (StateT(..), evalStateT, mapStateT)
 import Data.Binary (Binary)
 import Data.Cache (Cache)
 import Data.Map (Map)
@@ -78,19 +80,28 @@ makeSubexpresion expr = do
   maker <- ExprGuiM . RWS.asks $ Lens.view aMakeSubexpression
   maker expr
 
+liftMemo :: Monad m => StateT Cache (WidgetEnvT (T m)) a -> ExprGuiM m a
+liftMemo act = ExprGuiM $ do
+  cache <- RWS.get
+  (val, newCache) <- lift $ runStateT act cache
+  RWS.put newCache
+  return val
+
+liftMemoT :: Monad m => StateT Cache (T m) a -> ExprGuiM m a
+liftMemoT = liftMemo . mapStateT lift
+
 memo ::
   (Cache.Key k, Binary v, Monad m) =>
   (k -> WidgetEnvT (T m) v) -> k -> ExprGuiM m v
-memo f key = ExprGuiM $ do
-  cache <- RWS.get
-  (val, newCache) <- lift $ Cache.memo f key cache
-  RWS.put newCache
-  return val
+memo f key = liftMemo $ Cache.memoS f key
 
 memoT ::
   (Cache.Key k, Binary v, Monad m) =>
   (k -> T m v) -> k -> ExprGuiM m v
 memoT f = memo (lift . f)
+
+unmemo :: Monad m => StateT Cache m a -> m a
+unmemo = (`evalStateT` Cache.new 0)
 
 run ::
   Monad m =>

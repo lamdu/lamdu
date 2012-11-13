@@ -71,7 +71,7 @@ makeParamEdit atParamWidgets rhs name prevId param = do
     infoWidget <-
       case (infoMode, mActions) of
       (Settings.InfoExamples, Just actions) -> do
-        exampleSugar <- ExprGuiM.transaction $ Sugar.fpGetExample actions
+        exampleSugar <- ExprGuiM.liftMemoT $ Sugar.fpGetExample actions
         exampleGui <-
           liftM ExpressionGui.egWidget $
           ExprGuiM.makeSubexpresion exampleSugar
