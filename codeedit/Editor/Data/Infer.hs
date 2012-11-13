@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveDataTypeable #-}
 module Editor.Data.Infer
   ( Expression, Inferred(..), rExpression
   , Loaded, load, infer
@@ -19,6 +19,9 @@ import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (StateT(..), State, runState, execState)
 import Control.Monad.Trans.Writer (Writer, execWriter)
 import Control.Monad.Unit (Unit(..))
+import Data.Binary (Binary(..), getWord8, putWord8)
+import Data.Derive.Binary (makeBinary)
+import Data.DeriveTH (derive)
 import Data.Foldable (Foldable(..))
 import Data.Functor.Identity (Identity(..))
 import Data.IntMap (IntMap, (!))
@@ -28,6 +31,7 @@ import Data.Maybe (fromMaybe, isJust, mapMaybe, maybeToList)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable)
+import Data.Typeable (Typeable)
 import qualified Control.Compose as Compose
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
@@ -46,6 +50,8 @@ import qualified Editor.Data as Data
 import qualified System.Random as Random
 
 newtype Ref = Ref { unRef :: Int } deriving (Eq, Ord)
+derive makeBinary ''Ref
+
 instance Show Ref where
   show = ('R' :) . show . unRef
 
@@ -53,6 +59,7 @@ data TypedValue = TypedValue
   { tvVal :: Ref
   , tvType :: Ref
   }
+derive makeBinary ''TypedValue
 instance Show TypedValue where
   show (TypedValue v t) = unwords [show v, ":", show t]
 
@@ -72,6 +79,7 @@ data RefExprPayload = RefExprPayload
   { _rplSubstitutedArgs :: IntSet
   , _rplId :: Guid -- For cycle-detection. TODO: Use non-Guid?
   } deriving (Show)
+derive makeBinary ''RefExprPayload
 
 type RefExpression = Data.Expression RefExprPayload
 
@@ -89,6 +97,7 @@ maybePi (Data.ExpressionPi x) = Just x
 maybePi _ = Nothing
 
 data ExprLambdaWrapper = ExprLambda | ExprPi
+derive makeBinary ''ExprLambdaWrapper
 
 exprLambdaCons :: ExprLambdaWrapper -> Data.Lambda expr -> Data.ExpressionBody expr
 exprLambdaCons ExprLambda = Data.ExpressionLambda
@@ -118,16 +127,19 @@ data RuleClosure
   | ArgTypeToLambdaParamTypeClosure (Guid, Ref)
   | NonLambdaToApplyValueClosure (Guid, Ref)
   | ApplyArgToFuncArgClosure Ref
+derive makeBinary ''RuleClosure
 
 data Rule = Rule
   { ruleInputs :: [Ref]
   , _ruleCompute :: RuleClosure
   }
+derive makeBinary ''Rule
 
 data RefData = RefData
   { _rExpression :: RefExpression
   , _rRules :: [Int] -- Rule id
   }
+derive makeBinary ''RefData
 
 makeRefExpression :: Guid -> Data.ExpressionBody RefExpression -> RefExpression
 makeRefExpression g expr = Data.Expression expr $ RefExprPayload mempty g
@@ -151,7 +163,8 @@ data RefMap = RefMap
   , _nextRef :: Int
   , _rules :: IntMap Rule
   , _nextRule :: Int
-  }
+  } deriving (Typeable)
+derive makeBinary ''RefMap
 
 data InferState = InferState
   { _sRefMap :: RefMap
@@ -168,7 +181,8 @@ type Scope = Map Data.VariableRef Ref
 data InferNode = InferNode
   { nRefs :: TypedValue
   , nScope :: Scope
-  }
+  } deriving (Typeable)
+derive makeBinary ''InferNode
 
 data Inferred a = Inferred
   { iStored :: a
@@ -177,6 +191,7 @@ data Inferred a = Inferred
   , iScope :: Map Guid Data.PureExpression
   , iPoint :: InferNode
   } deriving (Functor, Foldable, Traversable)
+derive makeBinary ''Inferred
 
 type Expression a = Data.Expression (Inferred a)
 
@@ -734,7 +749,8 @@ data Loaded a = Loaded
   { lRealExpr :: Data.Expression a
   , lMRecursiveDef :: Maybe Data.DefinitionIRef
   , lDefinitionTypes :: Map Data.DefinitionIRef Data.PureExpression
-  }
+  } deriving (Typeable)
+derive makeBinary ''Loaded
 
 ordNub :: Ord a => [a] -> [a]
 ordNub = Set.toList . Set.fromList

@@ -30,7 +30,10 @@ import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (StateT)
 import Control.Monad.Trans.Writer (Writer, runWriter)
+import Data.Binary (Binary(..))
 import Data.Cache (Cache)
+import Data.Derive.Binary (makeBinary)
+import Data.DeriveTH (derive)
 import Data.Foldable (Foldable(..))
 import Data.Function (on)
 import Data.Hashable (hash)
@@ -49,7 +52,7 @@ import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Binary.Utils as BinaryUtils
--- import qualified Data.Cache as Cache
+import qualified Data.Cache as Cache
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -262,6 +265,7 @@ data ExprEntityInferred a = ExprEntityInferred
   , eeiTypeConflicts :: [Data.PureExpression]
   , eeiValueConflicts :: [Data.PureExpression]
   } deriving (Functor, Foldable, Traversable)
+derive makeBinary ''ExprEntityInferred
 
 type ExprEntityStored m =
   ExprEntityInferred (DataIRef.ExpressionProperty (T m))
@@ -1077,16 +1081,18 @@ third f (x, y, z) = (x, y, f z)
 
 inferLoadedExpression ::
   Monad m =>
-  Maybe Data.DefinitionIRef ->
-  Load.Loaded (T m) ->
+  Maybe Data.DefinitionIRef -> Load.Loaded (T m) ->
   (Infer.RefMap, Infer.InferNode) ->
   StateT Cache (T m)
-  (Bool, Infer.RefMap,
-   Data.Expression (ExprEntityStored m))
-inferLoadedExpression mDefI (Load.Stored setExpr exprIRef) inferState = lift $ do
-  loaded <- Infer.load loader mDefI exprIRef
-  return . third (inferredIRefToStored setExpr) $
-    uncurry (inferWithConflicts loaded) inferState
+   (Bool, Infer.RefMap,
+    Data.Expression (ExprEntityStored m))
+inferLoadedExpression mDefI (Load.Stored setExpr exprIRef) inferState = do
+  loaded <- lift $ Infer.load loader mDefI exprIRef
+  (liftM . third) (inferredIRefToStored setExpr) $
+    Cache.memoS (return . uncurriedInfer) (loaded, inferState)
+  where
+    uncurriedInfer (loaded, (refMap, inferNode)) =
+      inferWithConflicts loaded refMap inferNode
 
 -- Conflicts:
 

@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveDataTypeable #-}
 module Editor.Data
   ( Definition(..), DefinitionBody(..)
   , DefinitionIRef, DefinitionI, ExpressionIRef(..)
@@ -35,6 +35,7 @@ import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
 import Data.Traversable (Traversable(..))
+import Data.Typeable (Typeable)
 import System.Random (Random, RandomGen, random)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.AtFieldTH as AtFieldTH
@@ -60,7 +61,7 @@ instance Applicative Apply where
 
 newtype ExpressionIRef = ExpressionIRef {
   unExpressionIRef :: IRef (ExpressionBody ExpressionIRef)
-  } deriving (Eq, Ord, Show)
+  } deriving (Eq, Ord, Show, Typeable)
 
 type DefinitionI = Definition ExpressionIRef
 type DefinitionIRef = IRef DefinitionI
