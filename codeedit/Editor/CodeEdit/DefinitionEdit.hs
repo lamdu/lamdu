@@ -10,6 +10,7 @@ import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
+import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.BuiltinEdit as BuiltinEdit
@@ -79,7 +80,7 @@ makeParts name guid def = do
       | nonOperatorName n =
         Widget.weakerEvents
         (FuncEdit.jumpToRHS [E.ModKey E.noMods (E.charKey '=')] rhs) .
-        Widget.atWEventMap (E.filterChars (/= '='))
+        Lens.over Widget.wEventMap (E.filterChars (/= '='))
       | otherwise = id
     lhs = myId : map (WidgetIds.fromGuid . Sugar.fpGuid) params
     rhs = ("Def Body", body)

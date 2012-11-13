@@ -114,7 +114,7 @@ mainLoopDebugMode font makeWidget addHelp = do
         doc = (if isDebugMode then "Disable" else "Enable") ++ " Debug Mode"
         set = writeIORef debugModeRef (not isDebugMode)
       return .
-        whenApply isDebugMode (Widget.atWFrame (addAnnotations font)) $
+        whenApply isDebugMode (Lens.over Widget.wFrame (addAnnotations font)) $
         Widget.strongerEvents
         (Widget.keysEventMap Config.debugModeKeys doc set)
         widget
@@ -186,7 +186,7 @@ mkGlobalEventMap :: IORef Settings -> IO (Widget.EventHandlers IO)
 mkGlobalEventMap settingsRef = do
   settings <- readIORef settingsRef
   let
-    curInfoMode = Lens.view Settings.sInfoMode settings
+    curInfoMode = settings ^. Settings.sInfoMode
     next = nextInfoMode curInfoMode
     nextStr = "Show " ++ infoStr next
   return .
@@ -205,13 +205,13 @@ mkWidgetWithFallback settingsRef style dbToIO (size, cursor) = do
     mapStateT dbToIO $ do
       candidateWidget <- fromCursor settings cursor
       (isValid, widget) <-
-        if Widget.wIsFocused candidateWidget
+        if candidateWidget ^. Widget.wIsFocused
         then return (True, candidateWidget)
         else do
           finalWidget <- fromCursor settings rootCursor
           lift $ Anchors.setP Anchors.cursor rootCursor
           return (False, finalWidget)
-      unless (Widget.wIsFocused widget) $
+      unless (widget ^. Widget.wIsFocused) $
         fail "Root cursor did not match"
       return (isValid, widget)
   unless isValid . lift . putStrLn $ "Invalid cursor: " ++ show cursor
@@ -239,5 +239,5 @@ makeRootWidget settings style dbToIO size cursor = do
   where
     attachCursor eventResult = do
       maybe (return ()) (Anchors.setP Anchors.cursor) $
-        Widget.eCursor eventResult
+        eventResult ^. Widget.eCursor
       return eventResult

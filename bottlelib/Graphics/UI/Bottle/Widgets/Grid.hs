@@ -113,12 +113,12 @@ mkNavEventmap navDests = (weakMap, strongMap)
         (EventMap.keyPresses
          events
          ("Move " ++ dirName) .
-         Widget.enterResultEvent) .
+         Lens.view Widget.enterResultEvent) .
       ($ navDests)
 
 getCursor :: [[Widget k]] -> Maybe Cursor
 getCursor =
-  fmap cursorOf . find (wIsFocused . snd) . concat . enumerate2d
+  fmap cursorOf . find (_wIsFocused . snd) . concat . enumerate2d
   where
     cursorOf ((row, column), _) = Vector2 column row
 
@@ -150,7 +150,7 @@ makeKeyed children = KGrid
       GridView.makeGeneric translate $
       (map . map) mkSizedKeyedContent children
     mkSizedKeyedContent (key, (alignment, widget)) =
-      ((Widget.wSize widget, alignment), (key, widget))
+      ((widget ^. Widget.wSize, alignment), (key, widget))
     translate align rect =
       second
       (Element align rect .
@@ -177,34 +177,34 @@ helper combineEnters (KGrid mCursor size sChildren) =
     combineWs wss =
       maybe unselectedW makeW mCursor
       where
-        framess = (map . map) wFrame wss
-        mEnterss = (map . map) wMaybeEnter wss
+        framess = (map . map) _wFrame wss
+        mEnterss = (map . map) _wMaybeEnter wss
         frame = mconcat $ concat framess
         mEnter = combineEnters size mEnterss
 
         unselectedW = Widget
-          { wIsFocused = isJust mCursor
-          , wSize = size
-          , wFrame = frame
-          , wMaybeEnter = mEnter
-          , wEventMap = mempty
-          , wFocalArea = Rect 0 size
+          { _wIsFocused = isJust mCursor
+          , _wSize = size
+          , _wFrame = frame
+          , _wMaybeEnter = mEnter
+          , _wEventMap = mempty
+          , _wFocalArea = Rect 0 size
           }
 
         makeW cursor@(Vector2 x y) = Widget
-          { wIsFocused = isJust mCursor
-          , wSize = size
-          , wFrame = frame
-          , wMaybeEnter = mEnter
-          , wEventMap = makeEventMap w navDests
-          , wFocalArea = wFocalArea w
+          { _wIsFocused = isJust mCursor
+          , _wSize = size
+          , _wFrame = frame
+          , _wMaybeEnter = mEnter
+          , _wEventMap = makeEventMap w navDests
+          , _wFocalArea = _wFocalArea w
           }
           where
-            navDests = mkNavDests size (wFocalArea w) mEnterss cursor
+            navDests = mkNavDests size (_wFocalArea w) mEnterss cursor
             w = wss !! y !! x
 
         makeEventMap w navDests =
-          mconcat [strongMap, wEventMap w, weakMap]
+          mconcat [strongMap, _wEventMap w, weakMap]
           where
             (weakMap, strongMap) = mkNavEventmap navDests
 
@@ -256,7 +256,7 @@ combineMEnters size children = chooseClosest childEnters
     byDirection dir =
       minimumOn
       (Vector2.uncurry (+) . abs . modifyDistance .
-       distance dirRect . Widget.enterResultRect) .
+       distance dirRect . Lens.view Widget.enterResultRect) .
       map ($ dir) $ filteredByEdge edge
       where
         removeUninterestingAxis = ((1 - abs (fmap fromIntegral edge)) *)

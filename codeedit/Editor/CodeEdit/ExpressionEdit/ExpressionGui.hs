@@ -87,6 +87,9 @@ addBelow ws eg =
 
 data TypeStyle = HorizLine | Background
 
+wWidth :: Lens.SimpleLens (Widget f) Widget.R
+wWidth = Widget.wSize . Vector2.first
+
 addType ::
   TypeStyle ->
   Widget.Id ->
@@ -103,11 +106,9 @@ addType style exprId typeEdits eg =
       HorizLine -> (0.5, Spacer.makeHorizLine underlineId (Vector2 width 1))
       Background -> (0.5, Spacer.makeWidget 5)
     annotatedTypes =
-      addBackground .
-      (Widget.atWSize . Lens.over Vector2.first . const) width $
-      Widget.translate (Vector2 ((width - getWidth typesBox)/2) 0) typesBox
-    getWidth = Lens.view Vector2.first . Widget.wSize
-    width = on max getWidth (egWidget eg) typesBox
+      addBackground . Lens.set wWidth width $
+      Widget.translate (Vector2 ((width - typesBox ^. wWidth)/2) 0) typesBox
+    width = on max (Lens.view wWidth) (egWidget eg) typesBox
     typesBox = Box.vboxCentered typeEdits
     isError = length typeEdits >= 2
     bgAnimId = Widget.toAnimId exprId ++ ["type background"]
@@ -150,7 +151,7 @@ makeNameEdit (nameSrc, name) ident myId =
   (ExprGuiM.transaction . Anchors.assocNameRef) ident
   where
     makeEditor =
-      (fmap . fmap . liftM . Widget.atWEventMap)
+      (fmap . fmap . liftM . Lens.over Widget.wEventMap)
       (EventMap.filterChars (`notElem` "[]\\`"))
       BWidgets.makeWordEdit
 

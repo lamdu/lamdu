@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit (make) where
 
+import Control.Lens ((^.))
 import Control.Monad (liftM)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT, mapStateT)
@@ -17,6 +18,7 @@ import Editor.CodeEdit.Settings (Settings)
 import Editor.MonadF (MonadF)
 import Editor.WidgetEnvT (WidgetEnvT)
 import Graphics.UI.Bottle.Widget (Widget)
+import qualified Control.Lens as Lens
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
@@ -153,12 +155,12 @@ makePanesEdit panes = do
       , maybe mempty (Widget.keysEventMap Config.movePaneUpKeys "Move pane up") $ mMovePaneUp pane
       ]
     onEachPane widget
-      | Widget.wIsFocused widget = onActivePane widget
+      | widget ^. Widget.wIsFocused = onActivePane widget
       | otherwise = onInactivePane widget
     onActivePane =
       Widget.backgroundColor Layers.activePane WidgetIds.activeDefBackground Config.activeDefBGColor
     onInactivePane =
-      (Widget.atWFrame . Anim.onImages . Draw.tint)
+      (Lens.over Widget.wFrame . Anim.onImages . Draw.tint)
       Config.inactiveTintColor
     makePaneWidget pane =
       liftM (onEachPane . Widget.weakerEvents (paneEventMap pane)) .

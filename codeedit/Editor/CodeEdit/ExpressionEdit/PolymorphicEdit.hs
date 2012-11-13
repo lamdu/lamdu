@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit.PolymorphicEdit(make) where
 
+import Control.Lens ((^.))
 import Control.Monad (liftM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
@@ -27,7 +28,7 @@ makeInner poly myId = do
   fullExprEdit <- ExprGuiM.makeSubexpresion $ Sugar.pFullExpression poly
   -- We are inside a non-delegating focus delegator made by makeSubexpresion,
   -- so if the cursor is on us it means user enterred our widget.
-  if Widget.wIsFocused (ExpressionGui.egWidget fullExprEdit)
+  if ExpressionGui.egWidget fullExprEdit ^. Widget.wIsFocused
     then
       return $ bg Layers.expandedPolymorphicBG Config.polymorphicFullBGColor fullExprEdit
     else

@@ -1,11 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Graphics.UI.Bottle.Widgets.EventMapDoc(make, addHelp, makeToggledHelpAdder) where
 
+import Control.Lens ((^.))
 import Data.IORef (newIORef, readIORef, modifyIORef)
 import Data.List.Utils (groupOn, sortOn)
 import Data.Monoid (mappend)
 import Graphics.UI.Bottle.EventMap (EventMap)
 import Graphics.UI.Bottle.Widget (Widget)
+import qualified Control.Lens as Lens
 import qualified Data.ByteString.Char8 as SBS8
 import qualified Data.Tuple as Tuple
 import qualified Graphics.DrawingCombinators as Draw
@@ -39,7 +41,7 @@ make eventMap style animId =
 
 addHelp :: Widget.Size -> TextView.Style -> Widget f -> Widget f
 addHelp size style w =
-  Widget.atWFrame (mappend docFrame) w
+  Lens.over Widget.wFrame (mappend docFrame) w
   where
     (eventMapSize, eventMapDoc) = make eventMap style ["help box"]
     transparency = Draw.Color 1 1 1
@@ -50,7 +52,7 @@ addHelp size style w =
       Anim.backgroundColor
       ["help doc background"] 1 (Draw.Color 0.3 0.2 0.1 1) eventMapSize $
       eventMapDoc
-    eventMap = Widget.wEventMap w
+    eventMap = w ^. Widget.wEventMap
 
 makeToggledHelpAdder
   :: [E.ModKey] -> IO (TextView.Style -> Widget.Size -> Widget IO -> IO (Widget IO))

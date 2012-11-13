@@ -26,6 +26,7 @@ import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import System.Random.Utils (randFunc)
+import qualified Control.Lens as Lens
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Char as Char
 import qualified Data.List.Class as List
@@ -79,8 +80,8 @@ pickExpr ::
 pickExpr holeInfo expr = do
   (guid, _) <- Sugar.holePickResult (hiHoleActions holeInfo) expr
   return Widget.EventResult
-    { Widget.eCursor = Just $ WidgetIds.fromGuid guid
-    , Widget.eAnimIdMapping = id -- TODO: Need to fix the parens id
+    { Widget._eCursor = Just $ WidgetIds.fromGuid guid
+    , Widget._eAnimIdMapping = id -- TODO: Need to fix the parens id
     }
 
 resultPickEventMap ::
@@ -326,10 +327,10 @@ addNewDefinitionEventMap holeInfo =
       -- TODO: Can we use pickResult's animIdMapping?
       eventResult <- holePickResult defRef
       maybe (return ()) Anchors.savePreJumpPosition $
-        Widget.eCursor eventResult
+        Widget._eCursor eventResult
       return Widget.EventResult {
-        Widget.eCursor = Just $ WidgetIds.fromIRef newDefI,
-        Widget.eAnimIdMapping =
+        Widget._eCursor = Just $ WidgetIds.fromIRef newDefI,
+        Widget._eAnimIdMapping =
           holeResultAnimMappingNoParens holeInfo searchTermId
         }
     searchTermId = WidgetIds.searchTermId $ hiHoleId holeInfo
@@ -345,7 +346,7 @@ makeSearchTermWidget holeInfo searchTermId mResultToPick =
   (flip ExpressionGui (0.5/Config.holeSearchTermScaleFactor) .
    Widget.scale Config.holeSearchTermScaleFactor .
    Widget.strongerEvents pickResultEventMap .
-   (Widget.atWEventMap . E.filterChars) (`notElem` "`[]\\")) $
+   (Lens.over Widget.wEventMap . E.filterChars) (`notElem` "`[]\\")) $
   BWidgets.makeWordEdit (hiSearchTerm holeInfo) searchTermId
   where
     pickResultEventMap =

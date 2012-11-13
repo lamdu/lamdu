@@ -9,6 +9,7 @@ import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Editor.MonadF(MonadF)
 import Graphics.UI.Bottle.Animation (AnimId)
+import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -68,7 +69,7 @@ makeIntEditI integer myId setValue = do
   return .
     ExpressionGui.fromValueWidget .
     Widget.atEvents setter .
-    Widget.atWEventMap removeKeys $ TextEdit.make
+    Lens.over Widget.wEventMap removeKeys $ TextEdit.make
     style { TextEdit.sEmptyFocusedString = "<0>" } textCursor text myId
   where
     removeKeys =

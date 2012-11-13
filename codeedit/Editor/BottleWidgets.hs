@@ -19,6 +19,7 @@ import Editor.MonadF (MonadF)
 import Editor.WidgetEnvT (WidgetEnvT)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
+import qualified Control.Lens as Lens
 import qualified Data.Store.Property as Property
 import qualified Editor.Config as Config
 import qualified Editor.Layers as Layers
@@ -54,7 +55,7 @@ makeFocusableView myId widget = do
       | hasFocus = Widget.backgroundColor Layers.cursorBG WidgetIds.backgroundCursorId Config.cursorBGColor
       | otherwise = id
   return .
-    (Widget.atWIsFocused . const) hasFocus . setBackground $
+    Lens.set Widget.wIsFocused hasFocus . setBackground $
     Widget.takesFocus (const (pure myId)) widget
 
 makeFocusableTextView
@@ -120,7 +121,7 @@ removeKey
   -> EventMap.ModKey
   -> a -> b -> m (Widget f)
 removeKey makeEdit key =
-  (fmap . fmap . liftM . Widget.atWEventMap)
+  (fmap . fmap . liftM . Lens.over Widget.wEventMap)
   (EventMap.deleteKey (EventMap.KeyEvent EventMap.Press key))
   makeEdit
 

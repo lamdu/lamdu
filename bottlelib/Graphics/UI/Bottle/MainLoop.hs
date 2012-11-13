@@ -14,6 +14,7 @@ import Graphics.DrawingCombinators.Utils (Image)
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget(Widget)
 import Graphics.UI.GLFW.Events (KeyEvent, GLFWEvent(..), eventLoop)
+import qualified Control.Lens as Lens
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.Rendering.OpenGL.GL as GL
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -130,20 +131,20 @@ mainLoopWidget mkWidgetUnmemod getAnimationHalfLife = do
     tickHandler size = do
       widget <- getWidget size
       tickResults <-
-        sequence $ Widget.wEventMap widget ^. E.emTickHandlers
+        sequence $ widget ^. Widget.wEventMap . E.emTickHandlers
       case tickResults of
         [] -> return Nothing
         _ -> do
           newWidget
-          return . Just . compose . map Widget.eAnimIdMapping $ tickResults
+          return . Just . compose . map (Lens.view Widget.eAnimIdMapping) $ tickResults
     eventHandler size event = do
       widget <- getWidget size
       mAnimIdMapping <-
-        maybe (return Nothing) (liftM (Just . Widget.eAnimIdMapping)) .
-        E.lookup event $ Widget.wEventMap widget
+        maybe (return Nothing) (liftM (Just . Lens.view Widget.eAnimIdMapping)) .
+        E.lookup event $ widget ^. Widget.wEventMap
       case mAnimIdMapping of
         Nothing -> return ()
         Just _ -> newWidget
       return mAnimIdMapping
-    mkFrame size = liftM Widget.wFrame $ getWidget size
+    mkFrame size = liftM (Lens.view Widget.wFrame) $ getWidget size
   mainLoopAnim tickHandler eventHandler mkFrame getAnimationHalfLife

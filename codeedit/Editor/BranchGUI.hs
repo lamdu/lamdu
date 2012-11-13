@@ -109,7 +109,8 @@ make transaction size actions widget = do
       let setBranch = setCurrentBranch actions branch
       return
         ( branch
-        , (Widget.atWMaybeEnter . fmap . fmap . Widget.atEnterResultEvent)
+        , (Lens.over Widget.wMaybeEnter . fmap . fmap .
+           Lens.over Widget.enterResultEvent)
           (setBranch >>) branchNameEdit
         )
     currentBranchWidgetId = WidgetIds.fromGuid . Branch.guid $ currentBranch actions
@@ -131,7 +132,7 @@ makeBranchChoice
 makeBranchChoice forceExpand selectionAnimId orientation children curChild =
   maybe Box.toWidget Box.toWidgetBiased mCurChildIndex box
   where
-    childFocused = any (Widget.wIsFocused . snd) children
+    childFocused = any (Lens.view Widget.wIsFocused . snd) children
     pairs = (map . first) (curChild ==) children
     visiblePairs
       | childFocused || forceExpand = pairs

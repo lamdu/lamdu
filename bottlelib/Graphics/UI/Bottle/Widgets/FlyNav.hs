@@ -11,6 +11,7 @@ import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.Widget (Widget, Size)
 import Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys)
+import qualified Control.Lens as Lens
 import qualified Data.AtFieldTH as AtFieldTH
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -131,27 +132,30 @@ zipped :: [a] -> [(a, [a])]
 zipped [] = []
 zipped (x:xs) = (x, xs) : (map . second) (x:) (zipped xs)
 
+focalCenter :: Lens.SimpleLens (Widget f) (Vector2 Widget.R)
+focalCenter = Widget.wFocalArea . Rect.center
+
 make
   :: Applicative f => AnimId -> State -> (State -> f ())
   -> Widget f -> Widget f
 make _ Nothing setState w =
-  (Widget.atWEventMap . flip mappend)
-  (addMovements (Widget.wFocalArea w ^. Rect.center) [] setState)
+  (Lens.over Widget.wEventMap . flip mappend)
+  (addMovements (w ^. focalCenter) [] setState)
   w
 make animId (Just (ActiveState pos movements)) setState w =
-  (Widget.atWFrame . mappend) frame .
-  (Widget.atWEventMap . const) eventMap $ w
+  (Lens.over Widget.wFrame . mappend) frame .
+  (Lens.set Widget.wEventMap) eventMap $ w
   where
     delta = sum $ map mDir movements
     highlight =
       maybe mempty
-      (highlightRect (animId ++ ["highlight"]) . Widget.enterResultRect)
+      (highlightRect (animId ++ ["highlight"]) . Lens.view Widget.enterResultRect)
       mEnteredChild
     frame = target (animId ++ ["target"]) pos `mappend` highlight
-    mEnteredChild = fmap ($ targetPos) $ Widget.wMaybeEnter w
+    mEnteredChild = fmap ($ targetPos) $ w ^. Widget.wMaybeEnter
     targetPos = Direction.Point pos
     nextState =
-      ActiveState (cap (pos + delta*speed) (Widget.wSize w))
+      ActiveState (cap (pos + delta*speed) (w ^. Widget.wSize))
       ((map . atMDir) (* accel) movements)
     eventMap = mconcat $
       (mkTickHandler . setState . Just) nextState :
@@ -176,5 +180,5 @@ make animId (Just (ActiveState pos movements)) setState w =
         setState Nothing *>
         -- TODO: Just cancel FlyNav in any case if the MaybeEnter is
         -- Nothing...
-        maybe (pure Widget.emptyEventResult) Widget.enterResultEvent
+        maybe (pure Widget.emptyEventResult) (Lens.view Widget.enterResultEvent)
           mEnteredChild

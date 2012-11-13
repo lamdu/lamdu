@@ -163,7 +163,7 @@ actionsEventMap exprGuid holePicker actions = do
       Widget.keysEventMapMovesCursor keys doc .
       liftM (f . WidgetIds.fromGuid)
 
-    moveUnlessOnHole = ifHole $ (fmap . liftM . Widget.atECursor . const) Nothing
+    moveUnlessOnHole = ifHole $ (fmap . liftM . Lens.set Widget.eCursor) Nothing
     isHole =
       case holePicker of
       NotAHole -> False

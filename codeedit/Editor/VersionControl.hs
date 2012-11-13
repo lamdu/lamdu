@@ -9,6 +9,7 @@ import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag, DBTag)
 import Editor.VersionControl.Actions (Actions(Actions))
+import qualified Control.Lens as Lens
 import qualified Data.Store.Rev.Branch as Branch
 import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Rev.View as View
@@ -59,7 +60,7 @@ runEvent preCursor eventHandler = do
     isEmpty <- Transaction.isEmpty
     unless isEmpty $ do
       Anchors.setP Anchors.preCursor preCursor
-      Anchors.setP Anchors.postCursor . fromMaybe preCursor $ Widget.eCursor eventResult
+      Anchors.setP Anchors.postCursor . fromMaybe preCursor $ Lens.view Widget.eCursor eventResult
     return (eventResult, isEmpty)
   unless isEmpty $ Anchors.setP Anchors.redos []
   return eventResult

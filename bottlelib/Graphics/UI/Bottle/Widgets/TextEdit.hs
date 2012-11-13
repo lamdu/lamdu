@@ -99,8 +99,8 @@ cursorRects style str =
 makeUnfocused :: Style -> String -> Widget.Id -> Widget ((,) String)
 makeUnfocused style str myId =
   makeFocusable style str myId .
-  (Lens.sets Widget.atWSize . Vector2.first %~ (+ cursorWidth)) .
-  Widget.atWFrame (cursorTranslate style) .
+  (Widget.wSize . Vector2.first %~ (+ cursorWidth)) .
+  Lens.over Widget.wFrame (cursorTranslate style) .
   TextView.makeWidget (sTextViewStyle style) displayStr $
   Widget.toAnimId myId
   where
@@ -111,7 +111,7 @@ makeFocusable ::
   Style -> String -> Widget.Id ->
   Widget ((,) String) -> Widget ((,) String)
 makeFocusable style str myId =
-  Widget.atWMaybeEnter . const $ Just mEnter
+  Lens.set Widget.wMaybeEnter $ Just mEnter
   where
     minimumOn = minimumBy . comparing
     rectToCursor fromRect =
@@ -140,8 +140,8 @@ eventResult ::
 eventResult myId strWithIds newText newCursor =
   (map snd newText,
     Widget.EventResult {
-      Widget.eCursor = Just $ makeTextEditCursor myId newCursor,
-      Widget.eAnimIdMapping = mapping
+      Widget._eCursor = Just $ makeTextEditCursor myId newCursor,
+      Widget._eAnimIdMapping = mapping
     })
   where
     myAnimId = Widget.toAnimId myId
@@ -168,12 +168,12 @@ makeFocused cursor style str myId =
   widget
   where
     widget = Widget
-      { wIsFocused = True
-      , wSize = reqSize
-      , wFrame = img `mappend` cursorFrame
-      , wEventMap = eventMap cursor str displayStr myId
-      , wMaybeEnter = Nothing
-      , wFocalArea = cursorRect
+      { _wIsFocused = True
+      , _wSize = reqSize
+      , _wFrame = img `mappend` cursorFrame
+      , _wEventMap = eventMap cursor str displayStr myId
+      , _wMaybeEnter = Nothing
+      , _wFocalArea = cursorRect
       }
     reqSize = Vector2 (sCursorWidth style + tlWidth) tlHeight
     myAnimId = Widget.toAnimId myId
