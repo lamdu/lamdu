@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Editor.CodeEdit.ExpressionEdit.HoleEdit
   ( make, makeUnwrapped
   , searchTermWidgetId
@@ -27,7 +27,6 @@ import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import System.Random.Utils (randFunc)
 import qualified Control.Lens as Lens
-import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Char as Char
 import qualified Data.List.Class as List
 import qualified Data.Store.Guid as Guid
@@ -60,7 +59,6 @@ data Group = Group
   { groupNames :: [String]
   , groupBaseExpr :: Data.PureExpression
   }
-AtFieldTH.make ''Group
 
 type T = Transaction ViewTag
 type CT m = StateT Cache (T m)
