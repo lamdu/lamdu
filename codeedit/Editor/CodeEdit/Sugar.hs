@@ -250,15 +250,8 @@ data Definition m = Definition
   , drBody :: DefinitionBody m
   }
 
-AtFieldTH.make ''Hole
-AtFieldTH.make ''WhereItem
 AtFieldTH.make ''FuncParam
-AtFieldTH.make ''Func
-AtFieldTH.make ''Pi
-AtFieldTH.make ''Section
 AtFieldTH.make ''ExpressionBody
-AtFieldTH.make ''Inferred
-AtFieldTH.make ''Actions
 AtFieldTH.make ''ListItemActions
 AtFieldTH.make ''FuncParamActions
 AtFieldTH.make ''Payload
@@ -324,12 +317,9 @@ data SugarContext = SugarContext
   { scInferState :: Infer.RefMap
   , scConfig :: SugarConfig
   }
-AtFieldTH.make ''SugarContext
 
-newtype Sugar m a = Sugar {
-  unSugar :: ReaderT SugarContext (T m) a
-  } deriving (Monad)
-AtFieldTH.make ''Sugar
+newtype Sugar m a = Sugar (ReaderT SugarContext (T m) a)
+  deriving (Monad)
 
 runSugar :: Monad m => SugarContext -> Sugar m a -> T m a
 runSugar ctx (Sugar action) = runReaderT action ctx
