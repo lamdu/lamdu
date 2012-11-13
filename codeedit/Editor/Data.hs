@@ -4,14 +4,14 @@ module Editor.Data
   , DefinitionIRef, DefinitionI, ExpressionIRef(..)
   , FFIName(..)
   , VariableRef(..), variableRefGuid
-  , Lambda(..), atLambdaParamType, atLambdaBody
-  , Apply(..), atApplyFunc, atApplyArg
+  , Lambda(..), lambdaParamId, lambdaParamType, lambdaBody
+  , Apply(..), applyFunc, applyArg
   , Builtin(..)
   , Leaf(..)
   , ExpressionBody(..)
   , makeApply, makePi, makeLambda
   , makeParameterRef, makeDefinitionRef, makeLiteralInteger
-  , Expression(..), atEValue, atEPayload
+  , Expression(..), eValue, ePayload
   , PureExpression, pureExpression
   , randomizeExpr
   , canonizeParamIds, randomizeParamIds
@@ -21,6 +21,7 @@ module Editor.Data
   ) where
 
 import Control.Applicative (Applicative(..), liftA2, (<$>))
+import Control.Lens ((^.))
 import Control.Monad (liftM, liftM2)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -37,8 +38,9 @@ import Data.Store.IRef (IRef)
 import Data.Traversable (Traversable(..))
 import Data.Typeable (Typeable)
 import System.Random (Random, RandomGen, random)
+import qualified Control.Lens as Lens
+import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Reader as Reader
-import qualified Data.AtFieldTH as AtFieldTH
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
 import qualified Data.Store.IRef as IRef
@@ -46,14 +48,14 @@ import qualified Data.Traversable as Traversable
 import qualified System.Random as Random
 
 data Lambda expr = Lambda
-  { lambdaParamId :: Guid
-  , lambdaParamType :: expr
-  , lambdaBody :: expr
+  { _lambdaParamId :: Guid
+  , _lambdaParamType :: expr
+  , _lambdaBody :: expr
   } deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
 data Apply expr = Apply
-  { applyFunc :: expr
-  , applyArg :: expr
+  { _applyFunc :: expr
+  , _applyArg :: expr
   } deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 instance Applicative Apply where
   pure x = Apply x x
@@ -148,14 +150,14 @@ data Definition expr = Definition
 type PureExpression = Expression ()
 
 data Expression a = Expression
-  { eValue :: ExpressionBody (Expression a)
-  , ePayload :: a
+  { _eValue :: ExpressionBody (Expression a)
+  , _ePayload :: a
   } deriving (Functor, Eq, Ord, Foldable, Traversable)
 
 instance Show a => Show (Expression a) where
   show (Expression body payload) = show body ++ "{" ++ show payload ++ "}"
 
-AtFieldTH.make ''Expression
+LensTH.makeLenses ''Expression
 
 pureExpression :: ExpressionBody PureExpression -> PureExpression
 pureExpression = (`Expression` ())
@@ -232,12 +234,12 @@ onGetParamGuids f (Expression body payload) =
 
 subExpressions :: Expression a -> [Expression a]
 subExpressions x =
-  x : Foldable.concatMap subExpressions (eValue x)
+  x : Foldable.concatMap subExpressions (x ^. eValue)
 
 isDependentPi ::
   Expression a -> Bool
 isDependentPi (Expression (ExpressionPi (Lambda g _ resultType)) _) =
-  any (isGet . eValue) $ subExpressions resultType
+  any (isGet . Lens.view eValue) $ subExpressions resultType
   where
     isGet (ExpressionLeaf (GetVariable (ParameterRef p))) = p == g
     isGet _ = False
@@ -254,6 +256,5 @@ derive makeBinary ''Expression
 derive makeBinary ''Builtin
 derive makeBinary ''DefinitionBody
 derive makeBinary ''Definition
-AtFieldTH.make ''Lambda
-AtFieldTH.make ''Apply
-AtFieldTH.make ''Definition
+LensTH.makeLenses ''Lambda
+LensTH.makeLenses ''Apply

@@ -7,11 +7,13 @@ module Editor.Data.IRef
   , newExpression, writeExpression
   ) where
 
+import Control.Lens ((^.))
 import Control.Monad (liftM)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
 import Data.Store.Property (Property)
 import Data.Store.Transaction (Transaction)
+import qualified Control.Lens as Lens
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -60,7 +62,7 @@ writeExprBody :: Monad m => Expression -> ExpressionBody -> Transaction t m ()
 writeExprBody = Transaction.writeIRef . unExpression
 
 newExpression :: Monad m => Data.Expression a -> Transaction t m Expression
-newExpression = liftM (fst . Data.ePayload) . newExpressionFromH
+newExpression = liftM (fst . Lens.view Data.ePayload) . newExpressionFromH
 
 -- Returns expression with new Guids
 writeExpression
@@ -68,15 +70,15 @@ writeExpression
   -> Transaction t m (Data.Expression (Expression, a))
 writeExpression (Data.ExpressionIRef iref) expr = do
   exprBodyP <- expressionBodyFrom expr
-  Transaction.writeIRef iref $ fmap (fst . Data.ePayload) exprBodyP
+  Transaction.writeIRef iref $ fmap (fst . Lens.view Data.ePayload) exprBodyP
   return $ Data.Expression exprBodyP
-    (Data.ExpressionIRef iref, Data.ePayload expr)
+    (Data.ExpressionIRef iref, expr ^. Data.ePayload)
 
 expressionBodyFrom ::
   Monad m => Data.Expression a ->
   Transaction t m
   (Data.ExpressionBody (Data.Expression (Expression, a)))
-expressionBodyFrom = Traversable.mapM newExpressionFromH . Data.eValue
+expressionBodyFrom = Traversable.mapM newExpressionFromH . Lens.view Data.eValue
 
 newExpressionFromH ::
   Monad m =>
@@ -87,6 +89,6 @@ newExpressionFromH expr =
   where
     mkPair = do
       body <- expressionBodyFrom expr
-      return (fmap (fst . Data.ePayload) body, body)
+      return (fmap (fst . Lens.view Data.ePayload) body, body)
     f (exprI, body) =
-      Data.Expression body (Data.ExpressionIRef exprI, Data.ePayload expr)
+      Data.Expression body (Data.ExpressionIRef exprI, expr ^. Data.ePayload)

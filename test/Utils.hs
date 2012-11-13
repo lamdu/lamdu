@@ -3,6 +3,7 @@
 module Utils where
 
 import Control.Arrow (first)
+import Control.Lens ((^.))
 import Control.Monad (join, void)
 import Data.Functor.Identity (Identity(..))
 import Data.Map (Map, (!))
@@ -85,9 +86,9 @@ showExpressionWithConflicts =
       ] ++ map ((("    " ++ ansiRed ++ "Conflict: ") ++) . (++ ansiReset) . show) tErrors ++
       (map ("  " ++) . Foldable.concat . fmap go) expr
       where
-        expr = Data.eValue inferredExpr
+        expr = inferredExpr ^. Data.eValue
         ConflictsAnnotation (val, vErrors) (typ, tErrors) =
-          Data.ePayload inferredExpr
+          inferredExpr ^. Data.ePayload
 
 definitionTypes :: Map Guid Data.PureExpression
 definitionTypes =

@@ -7,6 +7,7 @@ module Editor.Data.Load
   , loadExpressionIRef, exprAddProp
   ) where
 
+import Control.Lens ((^.))
 import Control.Monad (liftM)
 import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
@@ -54,15 +55,15 @@ exprAddProp (Stored setIRef (Data.Expression body (iref, a))) =
         Data.ExpressionPi $ loadLambda Data.ExpressionPi lambda
       Data.ExpressionApply (Data.Apply func arg) ->
         Data.makeApply
-        (loadSubexpr (`Data.makeApply` fst (Data.ePayload arg)) func)
-        (loadSubexpr (fst (Data.ePayload func) `Data.makeApply` ) arg)
+        (loadSubexpr (`Data.makeApply` fst (arg ^. Data.ePayload)) func)
+        (loadSubexpr (fst (func ^. Data.ePayload) `Data.makeApply` ) arg)
       Data.ExpressionLeaf x -> Data.ExpressionLeaf x
     loadSubexpr f = exprAddProp . Stored (DataIRef.writeExprBody iref . f)
     loadLambda cons (Data.Lambda param paramType result) =
       let lam = Data.Lambda param
       in Data.Lambda param
-         (loadSubexpr (cons . (`lam` fst (Data.ePayload result))) paramType)
-         (loadSubexpr (cons . (fst (Data.ePayload paramType) `lam`)) result)
+         (loadSubexpr (cons . (`lam` fst (result ^. Data.ePayload))) paramType)
+         (loadSubexpr (cons . (fst (paramType ^. Data.ePayload) `lam`)) result)
 
 loadDefinition ::
   (Monad m, Monad f) =>

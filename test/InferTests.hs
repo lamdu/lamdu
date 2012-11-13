@@ -2,6 +2,7 @@ module InferTests (allTests) where
 
 import Control.Applicative (liftA2)
 import Control.Exception (evaluate)
+import Control.Lens ((^.))
 import Control.Monad (join, void)
 import Data.Map ((!))
 import Data.Maybe (isJust)
@@ -14,6 +15,7 @@ import Test.HUnit (assertBool)
 import Test.QuickCheck (Property)
 import Test.QuickCheck.Property (property, rejected)
 import Utils
+import qualified Control.Lens as Lens
 import qualified Data.Foldable as Foldable
 import qualified Data.List as List
 import qualified Data.Store.Guid as Guid
@@ -55,8 +57,8 @@ showExpressionWithInferred =
       (map ("  " ++) . Foldable.concat .
        fmap go) expr
       where
-        expr = Data.eValue inferredExpr
-        (val, typ) = Data.ePayload inferredExpr
+        expr = inferredExpr ^. Data.eValue
+        (val, typ) = inferredExpr ^. Data.ePayload
 
 compareInferred :: InferResults -> InferResults -> Bool
 compareInferred x y =
@@ -75,8 +77,8 @@ mkInferredLeaf ::
   Data.Leaf -> Data.PureExpression -> Data.PureExpression -> InferResults
 mkInferredLeaf leaf val typ =
   Data.Expression
-  { Data.eValue = Data.ExpressionLeaf leaf
-  , Data.ePayload = (val, typ)
+  { Data._eValue = Data.ExpressionLeaf leaf
+  , Data._ePayload = (val, typ)
   }
 
 mkInferredNode ::
@@ -348,19 +350,19 @@ getLambdaBody :: Data.Expression a -> Data.Expression a
 getLambdaBody e =
   x
   where
-    Data.ExpressionLambda (Data.Lambda _ _ x) = Data.eValue e
+    Data.ExpressionLambda (Data.Lambda _ _ x) = e ^. Data.eValue
 
 getApplyFunc :: Data.Expression a -> Data.Expression a
 getApplyFunc e =
   x
   where
-    Data.ExpressionApply (Data.Apply x _) = Data.eValue e
+    Data.ExpressionApply (Data.Apply x _) = e ^. Data.eValue
 
 getApplyArg :: Data.Expression a -> Data.Expression a
 getApplyArg e =
   x
   where
-    Data.ExpressionApply (Data.Apply _ x) = Data.eValue e
+    Data.ExpressionApply (Data.Apply _ x) = e ^. Data.eValue
 
 testCase :: String -> HUnit.Assertion -> HUnit.Test
 testCase name = HUnit.TestLabel name . HUnit.TestCase
@@ -375,7 +377,9 @@ testResume name newExpr testExpr extract =
     (tExpr, refMap) = doInfer testExpr
   in
     void . evaluate $
-    doInferM refMap ((Infer.iPoint . Data.ePayload . extract) tExpr) Nothing (Just tExpr) newExpr
+    doInferM refMap
+    ((Infer.iPoint . Lens.view Data.ePayload . extract) tExpr)
+    Nothing (Just tExpr) newExpr
 
 applyIdInt :: Data.PureExpression
 applyIdInt =
@@ -434,8 +438,8 @@ resumptionTests =
   , testCase "ref to the def on the side" $
     let
       (exprD, refMap) = doInfer $ makeLambda "" hole hole
-      Data.ExpressionLambda (Data.Lambda _ _ body) = Data.eValue exprD
-      scope = Infer.nScope . Infer.iPoint $ Data.ePayload body
+      Data.ExpressionLambda (Data.Lambda _ _ body) = exprD ^. Data.eValue
+      scope = Infer.nScope . Infer.iPoint $ body ^. Data.ePayload
       (exprR, _) =
         uncurry doInferM (Infer.newNodeWithScope scope refMap) Nothing Nothing
         getRecursiveDef

@@ -1,6 +1,6 @@
-module Editor.CodeEdit.Infix(isInfixName, isInfixVar, infixOp)
-where
+module Editor.CodeEdit.Infix(isInfixName, isInfixVar, infixOp) where
 
+import Control.Lens ((^.))
 import Control.Monad (liftM)
 import Data.Store.Transaction (Transaction)
 import qualified Data.Char as Char
@@ -21,7 +21,7 @@ infixOp
   => Data.Expression ref
   -> Transaction t m (Maybe Data.VariableRef)
 infixOp expr =
-  case Data.eValue expr of
+  case expr ^. Data.eValue of
   Data.ExpressionLeaf (Data.GetVariable var) -> do
     isInfix <- isInfixVar var
     return $ if isInfix then Just var else Nothing
