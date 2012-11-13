@@ -73,11 +73,11 @@ eventResultFromCursor cursor = EventResult {
   }
 
 atEvents :: (f EventResult -> g EventResult) -> Widget f -> Widget g
-atEvents func w = w {
-  _wMaybeEnter =
-     (fmap . fmap . Lens.over enterResultEvent) func $
-     _wMaybeEnter w,
-  _wEventMap = fmap func $ _wEventMap w
+atEvents func w = w
+  { _wMaybeEnter =
+       Lens.over (Lens.mapped . Lens.mapped . enterResultEvent) func $
+       _wMaybeEnter w
+  , _wEventMap = fmap func $ _wEventMap w
   }
 
 liftView :: Anim.Size -> Anim.Frame -> Widget f
@@ -138,8 +138,8 @@ translate :: Vector2 R -> Widget f -> Widget f
 translate pos =
   (Lens.over wFrame . Anim.translate) pos .
   (Lens.over wFocalArea . Lens.over Rect.topLeft) (+pos) .
-  (Lens.over wMaybeEnter . fmap)
-    ((fmap . Lens.over (enterResultRect . Rect.topLeft)) (+pos) .
+  (Lens.over (wMaybeEnter . Lens.mapped))
+    ((Lens.over (Lens.mapped . enterResultRect . Rect.topLeft)) (+pos) .
      (argument . Direction.atCoordinates . Lens.over Rect.topLeft) (subtract pos))
 
 translateBy :: (Vector2 R -> Vector2 R) -> Widget f -> Widget f
@@ -150,8 +150,8 @@ scale :: Vector2 R -> Widget f -> Widget f
 scale mult =
   (Lens.over wFrame . Anim.scale) mult .
   (Lens.over wFocalArea . Lens.over Rect.topLeftAndSize) (* mult) .
-  (Lens.over wMaybeEnter . fmap)
-    ((fmap . Lens.over (enterResultRect . Rect.topLeftAndSize)) (*mult) .
+  (Lens.over (wMaybeEnter . Lens.mapped))
+    ((Lens.over (Lens.mapped . enterResultRect . Rect.topLeftAndSize)) (*mult) .
      (argument . Direction.atCoordinates . Lens.over Rect.topLeftAndSize) (/mult)) .
   Lens.over wSize (* mult)
 

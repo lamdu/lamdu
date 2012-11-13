@@ -512,7 +512,7 @@ runIntoApplyResultClosure (cons, applyRef, arg) ~[Data.Expression funcBody _, ar
   return
     ( applyRef
     , subst param
-      ((fmap . Lens.over rplSubstitutedArgs . IntSet.insert) (unRef arg) argExpr)
+      ((Lens.over (Lens.mapped . rplSubstitutedArgs) . IntSet.insert) (unRef arg) argExpr)
       result
     )
 
@@ -571,7 +571,7 @@ mergeToArg param arg =
       | g == param =
         Compose.O . (fmap . const) Unit $ Writer.tell
         [( arg
-         , (fmap . Lens.over rplSubstitutedArgs . IntSet.delete) (unRef arg) post
+         , (Lens.over (Lens.mapped . rplSubstitutedArgs) . IntSet.delete) (unRef arg) post
          )]
     onMismatch _ _ = unit
 

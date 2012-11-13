@@ -141,7 +141,7 @@ filterChars
   :: (Char -> Bool) -> EventMap a -> EventMap a
 filterChars p =
   (Lens.over emCharGroupHandlers . filterCharGroups) p .
-  (Lens.over emAllCharsHandler . fmap . Lens.over (chDocHandler . dhHandler)) f
+  (Lens.over (emAllCharsHandler . Lens.mapped . chDocHandler . dhHandler)) f
   where
     f handler c = do
       guard $ p c
