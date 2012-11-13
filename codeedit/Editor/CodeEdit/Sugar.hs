@@ -1,4 +1,5 @@
-{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, OverloadedStrings, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, OverloadedStrings,
+             DeriveFunctor, DeriveFoldable, DeriveTraversable, ConstraintKinds #-}
 
 module Editor.CodeEdit.Sugar
   ( Definition(..), DefinitionBody(..), ListItemActions(..)
@@ -73,6 +74,7 @@ import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
 
 type T = Transaction ViewTag
+type CT m = StateT Cache (T m)
 
 data Actions m = Actions
   { giveAsArg    :: T m Guid
@@ -106,7 +108,7 @@ data ListItemActions m = ListItemActions
 
 data FuncParamActions m = FuncParamActions
   { fpListItemActions :: ListItemActions m
-  , fpGetExample :: StateT Cache (T m) (Expression m)
+  , fpGetExample :: CT m (Expression m)
   }
 
 data FuncParam m expr = FuncParam
@@ -149,7 +151,7 @@ data HoleActions m = HoleActions
 
 data Hole m = Hole
   { holeScope :: [Guid]
-  , holeInferResults :: Data.PureExpression -> T m [HoleResult]
+  , holeInferResults :: Data.PureExpression -> CT m [HoleResult]
   , holeMActions :: Maybe (HoleActions m)
   }
 
@@ -715,8 +717,8 @@ convertWritableHole eeInferred exprI = do
 
 inferApplyForms ::
   Monad m =>
-  (Data.PureExpression -> T m [HoleResult]) -> Data.PureExpression ->
-  (Infer.RefMap, Infer.InferNode) -> T m [HoleResult]
+  (Data.PureExpression -> CT m [HoleResult]) -> Data.PureExpression ->
+  (Infer.RefMap, Infer.InferNode) -> CT m [HoleResult]
 inferApplyForms processRes expr (refMap, node) =
   liftM (sortOn resultComplexityScore) . makeApplyForms =<<
   inferExpr expr refMap node
@@ -779,13 +781,16 @@ isOperatorName name =
   not (null name) && all (`elem` Config.operatorChars) name
 
 inferExpr ::
-  Monad m => Data.Expression a -> Infer.RefMap ->
-  Infer.InferNode -> T m (Maybe (Infer.Expression a))
+  (Monad m, Cache.Key a) => Data.Expression a -> Infer.RefMap ->
+  Infer.InferNode -> CT m (Maybe (Infer.Expression a))
 inferExpr expr inferContext inferPoint = do
-  loaded <- Infer.load loader Nothing expr
-  return . fmap fst $
-    Infer.infer (Infer.InferActions (const Nothing))
-    loaded inferContext inferPoint
+  loaded <- lift $ Infer.load loader Nothing expr
+  Cache.memoS (return . fmap fst . uncurriedInfer)
+    (loaded, inferContext, inferPoint)
+  where
+    uncurriedInfer (loaded, ctx, pt) =
+      Infer.infer (Infer.InferActions (const Nothing))
+      loaded ctx pt
 
 chooseHoleType ::
   [Data.Expression f] -> hole -> (Data.Expression f -> hole) -> hole
@@ -982,7 +987,7 @@ convertDefinitionContent sugarContext expr = do
 
 loadConvertDefinition ::
   Monad m => SugarConfig -> Data.DefinitionIRef ->
-  StateT Cache (T m) (Definition m)
+  CT m (Definition m)
 loadConvertDefinition config defI =
   -- TODO: defI given twice probably means the result of
   -- loadDefinition is missing some defI-dependent values
@@ -1010,7 +1015,7 @@ convertDefinitionExpression ::
   Load.Loaded (T m) ->
   Data.DefinitionIRef ->
   Load.Loaded (T m) ->
-  StateT Cache (T m) (DefinitionBody m)
+  CT m (DefinitionBody m)
 convertDefinitionExpression config exprLoaded defI (Load.Stored setType typeIRef) = do
   (isSuccess, inferState, exprStored) <-
     inferLoadedExpression (Just defI) exprLoaded Infer.initial
@@ -1047,7 +1052,7 @@ convertDefinition ::
   Monad m => SugarConfig ->
   Data.DefinitionIRef ->
   Data.Definition (Load.Loaded (T m)) ->
-  StateT Cache (T m) (Definition m)
+  CT m (Definition m)
 convertDefinition config defI def = do
   body <- convertDefBody defBody defI typeLoaded
   typeS <-
@@ -1083,7 +1088,7 @@ inferLoadedExpression ::
   Monad m =>
   Maybe Data.DefinitionIRef -> Load.Loaded (T m) ->
   (Infer.RefMap, Infer.InferNode) ->
-  StateT Cache (T m)
+  CT m
    (Bool, Infer.RefMap,
     Data.Expression (ExprEntityStored m))
 inferLoadedExpression mDefI (Load.Stored setExpr exprIRef) inferState = do
@@ -1146,7 +1151,7 @@ loadConvertExpression ::
   Monad m =>
   SugarConfig ->
   DataIRef.ExpressionProperty (T m) ->
-  StateT Cache (T m) (Expression m)
+  CT m (Expression m)
 loadConvertExpression config exprP =
   convertLoadedExpression =<< lift (Load.loadExpressionProperty exprP)
   where

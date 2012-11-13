@@ -8,6 +8,8 @@ import Control.Applicative ((<*>))
 import Control.Arrow (first, second)
 import Control.Monad ((<=<), filterM, liftM, mplus, msum, void)
 import Control.Monad.ListT (ListT)
+import Control.Monad.Trans.State (StateT)
+import Data.Cache (Cache)
 import Data.Function (on)
 import Data.List (isInfixOf, isPrefixOf)
 import Data.List.Class (List)
@@ -60,6 +62,7 @@ data Group = Group
 AtFieldTH.make ''Group
 
 type T = Transaction ViewTag
+type CT m = StateT Cache (T m)
 
 data HoleInfo m = HoleInfo
   { hiHoleId :: Widget.Id
@@ -225,7 +228,7 @@ exprWidgetId = WidgetIds.fromGuid . randFunc . show . void
 toResultsList ::
   Monad m =>
   HoleInfo m -> Data.PureExpression ->
-  T m (Maybe ResultsList)
+  CT m (Maybe ResultsList)
 toResultsList holeInfo baseExpr = do
   results <- Sugar.holeInferResults (hiHole holeInfo) baseExpr
   return $
@@ -248,7 +251,7 @@ data ResultType = GoodResult | BadResult
 
 makeResultsList ::
   Monad m => HoleInfo m -> Group ->
-  T m (Maybe (ResultType, ResultsList))
+  CT m (Maybe (ResultType, ResultsList))
 makeResultsList holeInfo group = do
   -- We always want the first, and we want to know if there's more, so
   -- take 2:
@@ -266,7 +269,7 @@ makeResultsList holeInfo group = do
 makeAllResults
   :: MonadF m
   => HoleInfo m
-  -> ExprGuiM m (ListT (T m) (ResultType, ResultsList))
+  -> ExprGuiM m (ListT (CT m) (ResultType, ResultsList))
 makeAllResults holeInfo = do
   paramResults <-
     mapM (makeVariableGroup . Data.ParameterRef) $
@@ -317,7 +320,7 @@ addNewDefinitionEventMap holeInfo =
       Anchors.newPane newDefI
       defRef <-
         liftM (fromMaybe (error "GetDef should always type-check") . listToMaybe) .
-        Sugar.holeInferResults (hiHole holeInfo) .
+        ExprGuiM.unmemo . Sugar.holeInferResults (hiHole holeInfo) .
         Data.pureExpression . Data.ExpressionLeaf . Data.GetVariable $
         Data.DefinitionRef newDefI
       -- TODO: Can we use pickResult's animIdMapping?
@@ -483,7 +486,7 @@ markTypeMatchesAsUsed holeInfo =
     holeInfo
   where
     checkInfer =
-      liftM (isJust . listToMaybe) . ExprGuiM.transaction .
+      liftM (isJust . listToMaybe) . ExprGuiM.liftMemoT .
       Sugar.holeInferResults (hiHole holeInfo)
 
 makeActiveHoleEdit :: MonadF m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
@@ -491,7 +494,7 @@ makeActiveHoleEdit holeInfo = do
   markTypeMatchesAsUsed holeInfo
   allResults <- makeAllResults holeInfo
 
-  (firstResults, hasMoreResults) <- ExprGuiM.transaction $ collectResults allResults
+  (firstResults, hasMoreResults) <- ExprGuiM.liftMemoT $ collectResults allResults
 
   cursor <- ExprGuiM.widgetEnv WE.readCursor
   let
