@@ -7,8 +7,9 @@ import Control.Monad (liftM)
 import Data.Store.Guid (Guid)
 import Data.Store.Rev.Change (Change)
 import Data.Store.Rev.Version (Version)
-import Data.Store.Rev.ViewBranchInternal (BranchData(..), Branch(..), moveView)
+import Data.Store.Rev.ViewBranchInternal (BranchData(..), Branch(..), moveView, brVersion)
 import Data.Store.Transaction (Transaction)
+import qualified Control.Lens as Lens
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Transaction as Transaction
@@ -25,7 +26,7 @@ move (Branch dataIRef) destVersion = do
     moveToDest srcVersion view = moveView view srcVersion destVersion
 
 curVersion :: Monad m => Branch -> Transaction t m Version
-curVersion (Branch dataIRef) = brVersion `liftM` Transaction.readIRef dataIRef
+curVersion (Branch dataIRef) = Lens.view brVersion `liftM` Transaction.readIRef dataIRef
 
 -- | A Branch is a mutable version ptr
 new :: Monad m => Version -> Transaction t m Branch

@@ -8,9 +8,10 @@ import Data.Store.IRef (IRef)
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Change(Change(..))
 import Data.Store.Rev.Version (Version)
-import Data.Store.Rev.ViewBranchInternal (BranchData, ViewData(..), View(..), Branch(..), moveView, makeViewKey, applyChangesToView, brViews, vdBranch, atVdBranch, atBrViews)
+import Data.Store.Rev.ViewBranchInternal (BranchData, ViewData(..), View(..), Branch(..), moveView, makeViewKey, applyChangesToView, brViews, vdBranch)
 import Data.Store.Transaction (Transaction, Store(..))
 import Prelude hiding (lookup)
+import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Rev.Branch as Branch
@@ -28,7 +29,7 @@ lookupBS view = Transaction.lookupBS . makeViewKey view
 setBranch :: Monad m => View -> Branch -> Transaction t m ()
 setBranch view@(View viewDataIRef) newBranch@(Branch newBranchDataIRef) = do
   branchRef <-
-    liftM (Property.composeLabel vdBranch (atVdBranch . const)) $
+    liftM (Property.composeLens vdBranch) $
     Transaction.fromIRef viewDataIRef
   let oldBranch@(Branch oldBranchDataIRef) = Property.value branchRef
   oldVersion <- Branch.curVersion oldBranch
@@ -44,7 +45,7 @@ modifyViews
   -> ([View] -> [View]) -> Transaction t m ()
 modifyViews iref f = do
   prop <- Transaction.fromIRef iref
-  Property.pureModify (Property.composeLabel brViews (atBrViews . const) prop) f
+  Property.pureModify (Property.composeLens brViews prop) f
 
 new :: Monad m => Branch -> Transaction t m View
 new br@(Branch branchDataIRef) = do
@@ -65,7 +66,7 @@ move :: Monad m => View -> Version -> Transaction t m ()
 move view version = (`Branch.move` version) =<< branch view
 
 branch :: Monad m => View -> Transaction t m Branch
-branch (View iref) = liftM vdBranch . Transaction.readIRef $ iref
+branch (View iref) = liftM (Lens.view vdBranch) . Transaction.readIRef $ iref
 
 transaction :: Monad m => View -> [(Change.Key, Maybe Change.Value)] -> Transaction t m ()
 transaction _    [] = return ()

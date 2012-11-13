@@ -1,7 +1,7 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, Rank2Types #-}
 module Data.Store.Property
   ( Property(..), pVal, pSet, value, set
-  , composeLabel, compose, pureCompose
+  , compose, pureCompose, composeLens
   , modify, modify_, pureModify
   , list
   ) where
@@ -44,14 +44,9 @@ pureCompose ::
   Monad m => (a -> b) -> (b -> a) -> Property m a -> Property m b
 pureCompose ab ba = compose ab (return . ba)
 
-composeLabel ::
-  Monad m => (rec -> field) -> (field -> rec -> rec) ->
-  Property m rec -> Property m field
-composeLabel getField setField (Property val setter) =
-  Property getter' setter'
-  where
-    getter' = getField val
-    setter' = setter . flip setField val
+composeLens :: Lens.SimpleLens a b -> Property m a -> Property m b
+composeLens lens (Property val setter) =
+  Property (Lens.view lens val) (setter . flip (Lens.set lens) val)
 
 list :: Property m [a] -> [Property m a]
 list (Property vals setter) =

@@ -4,9 +4,9 @@
 -- | contains the parts of both that both may depend on, to avoid the
 -- | cycle.
 module Data.Store.Rev.ViewBranchInternal
-    (ViewData(..), atVdBranch,
+    (ViewData(..), vdBranch,
      View(..),
-     BranchData(..), atBrVersion, atBrViews,
+     BranchData(..), brVersion, brViews,
      Branch(..),
      moveView, applyChangesToView, makeViewKey)
 where
@@ -20,7 +20,7 @@ import Data.Store.IRef (IRef)
 import Data.Store.Rev.Change (Change)
 import Data.Store.Rev.Version (Version)
 import Data.Store.Transaction (Transaction)
-import qualified Data.AtFieldTH as AtFieldTH
+import qualified Control.Lens.TH as LensTH
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Rev.Change as Change
@@ -33,21 +33,20 @@ newtype View = View (IRef ViewData)
   deriving (Eq, Ord, Binary, Show, Read)
 
 data BranchData = BranchData {
-  brVersion :: Version,
-  brViews :: [View]
+  _brVersion :: Version,
+  _brViews :: [View]
   }
   deriving (Eq, Ord, Read, Show)
 
 newtype Branch = Branch { unBranch :: IRef BranchData }
   deriving (Eq, Ord, Read, Show, Binary)
 
-newtype ViewData = ViewData { vdBranch :: Branch }
+newtype ViewData = ViewData { _vdBranch :: Branch }
   deriving (Binary, Eq, Ord, Show, Read)
 
-AtFieldTH.make ''BranchData
-AtFieldTH.make ''ViewData
-
 derive makeBinary ''BranchData
+LensTH.makeLenses ''BranchData
+LensTH.makeLenses ''ViewData
 
 -- | moveView must be given the correct source of the movement
 -- | or it will result in undefined results!
