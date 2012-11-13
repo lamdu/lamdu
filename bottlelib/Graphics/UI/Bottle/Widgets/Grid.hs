@@ -4,11 +4,9 @@ module Graphics.UI.Bottle.Widgets.Grid
   , make, makeKeyed, makeAlign, makeCentered
   , unkey
   , Alignment
-  , atGridMCursor
-  , atGridContent
+  , gridMCursor, gridSize, gridContent
   , Element(..)
-  , atElementRect
-  , atElementW
+  , elementAlign, elementRect, elementW
   , Cursor, toWidget, toWidgetBiased
   ) where
 
@@ -29,7 +27,7 @@ import Graphics.UI.Bottle.Widget (Widget(..), R)
 import Graphics.UI.Bottle.Widgets.GridView (Alignment)
 import Graphics.UI.Bottle.Widgets.StdKeys (DirKeys(..), stdDirKeys)
 import qualified Control.Lens as Lens
-import qualified Data.AtFieldTH as AtFieldTH
+import qualified Control.Lens.TH as LensTH
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as EventMap
@@ -123,27 +121,27 @@ getCursor =
     cursorOf ((row, column), _) = Vector2 column row
 
 data Element f = Element
-  { elementAlign :: Alignment
-  , elementRect :: Rect
-  , elementW :: Widget f
+  { _elementAlign :: Alignment
+  , _elementRect :: Rect
+  , _elementW :: Widget f
   }
 
 data KGrid key f = KGrid
-  { gridMCursor :: Maybe Cursor
-  , gridSize :: Widget.Size
-  , gridContent :: [[(key, Element f)]]
+  { _gridMCursor :: Maybe Cursor
+  , _gridSize :: Widget.Size
+  , _gridContent :: [[(key, Element f)]]
   }
 
-AtFieldTH.make ''Element
-AtFieldTH.make ''KGrid
+LensTH.makeLenses ''Element
+LensTH.makeLenses ''KGrid
 
 type Grid = KGrid ()
 
 makeKeyed :: [[(key, (Alignment, Widget f))]] -> KGrid key f
 makeKeyed children = KGrid
-  { gridMCursor = getCursor $ (map . map) (snd . snd) children
-  , gridSize = size
-  , gridContent = content
+  { _gridMCursor = getCursor $ (map . map) (snd . snd) children
+  , _gridSize = size
+  , _gridContent = content
   }
   where
     (size, content) =
@@ -172,7 +170,7 @@ helper ::
   (Widget.Size -> [[Widget.MEnter f]] -> Widget.MEnter f) ->
   KGrid key f -> Widget f
 helper combineEnters (KGrid mCursor size sChildren) =
-  combineWs $ (map . map) (elementW . snd) sChildren
+  combineWs $ (map . map) (Lens.view elementW . snd) sChildren
   where
     combineWs wss =
       maybe unselectedW makeW mCursor

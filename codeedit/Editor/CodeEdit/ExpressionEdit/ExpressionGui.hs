@@ -58,7 +58,7 @@ hbox :: [ExpressionGui m] -> ExpressionGui m
 hbox guis =
   ExpressionGui (Box.toWidget box) $
   case box ^. Box.boxContent of
-  ((_, x) : _) -> Grid.elementAlign x ^. Vector2.second
+  ((_, x) : _) -> x ^. Grid.elementAlign . Vector2.second
   _ -> error "hbox must not get empty list :("
   where
     box = Box.make Box.horizontal $ map f guis
@@ -73,7 +73,7 @@ fromBox box =
   where
     alignment =
       maybe (error "True disappeared from box list?!")
-        (Lens.view Vector2.second . Grid.elementAlign) .
+        (Lens.view (Grid.elementAlign . Vector2.second)) .
       lookup True $ box ^. Box.boxContent
 
 addBelow ::

@@ -5,7 +5,6 @@ module Graphics.UI.Bottle.Widgets.Box
   , unkey
   , boxMCursor, boxSize, boxContent, boxOrientation
   , Element, elementRect, elementW
-  , atElementRect, atElementW
   , Cursor, toWidget, toWidgetBiased
   , Orientation, horizontal, vertical
   , hboxAlign, vboxAlign
@@ -56,18 +55,11 @@ vertical = Orientation
 
 type Element = Grid.Element
 
-elementRect :: Element f -> Rect
+elementRect :: Lens.SimpleLens (Element f) Rect
 elementRect = Grid.elementRect
 
-elementW :: Element f -> Widget f
+elementW :: Lens.SimpleLens (Element f) (Widget f)
 elementW = Grid.elementW
-
-atElementRect :: (Rect -> Rect) -> Element f -> Element f
-atElementRect = Grid.atElementRect
-
-atElementW
-  :: (Widget a -> Widget b) -> Element a -> Element b
-atElementW = Grid.atElementW
 
 data KBox key f = KBox
   { _boxOrientation :: Orientation
@@ -82,9 +74,9 @@ type Box = KBox ()
 makeKeyed :: Orientation -> [(key, (Alignment, Widget f))] -> KBox key f
 makeKeyed orientation children = KBox
   { _boxOrientation = orientation
-  , _boxMCursor = fmap (oFromGridCursor orientation) $ Grid.gridMCursor grid
-  , _boxSize = Grid.gridSize grid
-  , _boxContent = oFromGridChildren orientation $ Grid.gridContent grid
+  , _boxMCursor = fmap (oFromGridCursor orientation) $ grid ^. Grid.gridMCursor
+  , _boxSize = grid ^. Grid.gridSize
+  , _boxContent = oFromGridChildren orientation $ grid ^. Grid.gridContent
   }
   where
     grid = Grid.makeKeyed $ oToGridChildren orientation children
@@ -103,9 +95,9 @@ makeCentered = makeAlign 0.5
 
 toGrid :: KBox key f -> KGrid key f
 toGrid (KBox orientation mCursor size content) = KGrid
-  { gridMCursor = fmap (oToGridCursor orientation) mCursor
-  , gridSize = size
-  , gridContent = oToGridChildren orientation content
+  { _gridMCursor = fmap (oToGridCursor orientation) mCursor
+  , _gridSize = size
+  , _gridContent = oToGridChildren orientation content
   }
 
 toWidget :: KBox key f -> Widget f
