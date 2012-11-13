@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Editor.CodeEdit.ExpressionEdit.ExpressionGui
-  ( ExpressionGui(..), egWidget, atEgWidgetM
+  ( ExpressionGui(..), egWidget
   , fromValueWidget
   , hbox, hboxSpaced, addBelow
   , addType -- TODO: s/type/info
@@ -43,14 +43,6 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
-
--- TODO: Which lens combinator to use instead?
-atEgWidgetM ::
-  Monad m =>
-  (WidgetT f -> m (WidgetT f)) ->
-  ExpressionGui f -> m (ExpressionGui f)
-atEgWidgetM conv (ExpressionGui w a) =
-  liftM (`ExpressionGui` a) $ conv w
 
 fromValueWidget :: WidgetT m -> ExpressionGui m
 fromValueWidget widget = ExpressionGui widget 0.5

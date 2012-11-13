@@ -40,7 +40,7 @@ makeUnwrapped inferred guid myId = do
   mInnerCursor <- ExprGuiM.widgetEnv $ WE.subCursor myId
   case mInnerCursor of
     Nothing ->
-      ExpressionGui.atEgWidgetM
+      Lens.mapMOf ExpressionGui.egWidget
       ( ExprGuiM.widgetEnv
       . BWidgets.makeFocusableView myId
       . Widget.tint Config.inferredValueTint
