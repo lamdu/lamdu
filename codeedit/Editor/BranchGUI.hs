@@ -18,6 +18,7 @@ import Editor.VersionControl.Actions (Actions(..))
 import Editor.WidgetEnvT (WidgetEnvT)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
+import qualified Control.Lens as Lens
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Rev.Branch as Branch
 import qualified Data.Store.Transaction as Transaction
@@ -98,7 +99,7 @@ make transaction size actions widget = do
     makeBranchNameEdit branch = do
       let branchEditId = WidgetIds.fromGuid $ Branch.guid branch
       nameProp <-
-        lift . transaction . (liftM . Property.atSet . fmap) transaction $
+        lift . transaction . (liftM . Lens.over Property.pSet . fmap) transaction $
         branchNameProp branch
       branchNameEdit <-
         BWidgets.wrapDelegatedOT branchNameFDConfig
