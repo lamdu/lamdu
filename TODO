@@ -1,9 +1,4 @@
-* Logs of wrapDelegated with (Lens.over egWidget), make a wrapper
-
-* Performance:
-
-  * Non-meaningful changes should not re-infer everything
-  * Keep a Map ContentHash InferResult around?
+* Lots of wrapDelegated with (Lens.over egWidget), make a wrapper
 
 * Only re-infer the parts that are changed only?
 
