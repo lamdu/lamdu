@@ -1,6 +1,5 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, OverloadedStrings,
              DeriveFunctor, DeriveFoldable, DeriveTraversable, ConstraintKinds #-}
-
 module Editor.CodeEdit.Sugar
   ( Definition(..), DefinitionBody(..)
   , ListItemActions(..), itemAddNext, itemDelete
@@ -871,10 +870,20 @@ convertExpressionI ee =
 isCompleteType :: Data.PureExpression -> Bool
 isCompleteType = not . any (isHole . Lens.view Data.eValue) . Data.subExpressions
 
+runPureSugar :: Monad m => SugarConfig -> Sugar m a -> T m a
+runPureSugar config =
+  runSugar ctx
+  where
+    ctx =
+      SugarContext
+      { scInferState = error "pure expression doesnt have infer state"
+      , scConfig = config
+      }
+
 convertHoleResult ::
   Monad m => SugarConfig -> HoleResult -> T m (Expression m)
 convertHoleResult config holeResult =
-  runSugar ctx . convertExpressionI . Data.randomizeExpr gen $
+  runPureSugar config . convertExpressionI . Data.randomizeExpr gen $
   fmap toExprEntity holeResult
   where
     gen = Random.mkStdGen . hash . show $ void holeResult
@@ -885,22 +894,11 @@ convertHoleResult config holeResult =
       , eeiTypeConflicts = []
       , eeiValueConflicts = []
       }
-    ctx =
-      SugarContext
-      { scInferState = error "pure expression doesnt have infer state"
-      , scConfig = config
-      }
 
 convertExpressionPure ::
   (Monad m, RandomGen g) => g -> SugarConfig -> Data.PureExpression -> T m (Expression m)
 convertExpressionPure gen config =
-  runSugar ctx . convertExpressionI . eeFromPure gen
-  where
-    ctx =
-      SugarContext
-      { scInferState = error "pure expression doesnt have infer state"
-      , scConfig = config
-      }
+  runPureSugar config . convertExpressionI . eeFromPure gen
 
 convertDefinitionParams ::
   Monad m =>
