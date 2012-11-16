@@ -4,6 +4,8 @@ module Data.Cache
   ( Cache, Key
   , new, peek, touch, lookup, memo, memoS
   , lookupS
+  -- For lower-level memoization
+  , KeyBS, bsOfKey
   ) where
 
 import Control.Lens ((%=), (-=))
@@ -148,6 +150,5 @@ memo f key cache =
     onHit bsKey entry@(_, bsVal) =
       return (decodeS bsVal, touchExisting cache bsKey entry)
 
-memoS :: (Key k, Binary v, Monad m) =>
-  (k -> m v) -> k -> StateT Cache m v
+memoS :: (Key k, Binary v, Monad m) => (k -> m v) -> k -> StateT Cache m v
 memoS f key = StateT $ memo f key

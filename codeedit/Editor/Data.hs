@@ -152,7 +152,7 @@ type PureExpression = Expression ()
 data Expression a = Expression
   { _eValue :: ExpressionBody (Expression a)
   , _ePayload :: a
-  } deriving (Functor, Eq, Ord, Foldable, Traversable)
+  } deriving (Functor, Eq, Ord, Foldable, Traversable, Typeable)
 
 instance Show a => Show (Expression a) where
   show (Expression body payload) = show body ++ "{" ++ show payload ++ "}"
