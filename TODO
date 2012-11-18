@@ -1,5 +1,3 @@
-* Lots of wrapDelegated with (Lens.over egWidget), make a wrapper
-
 * Only re-infer the parts that are changed only?
 
 * Execution:

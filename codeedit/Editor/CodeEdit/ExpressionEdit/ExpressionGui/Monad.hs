@@ -5,6 +5,7 @@ module Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad
 
   , transaction, atEnv
   , getP, assignCursor, assignCursorPrefix
+  , wrapDelegated
   --
   , makeSubexpresion
   --
@@ -32,7 +33,9 @@ import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Types (ExpressionGui, WidgetT)
 import Editor.CodeEdit.Settings (Settings)
+import Editor.MonadF (MonadF)
 import Editor.WidgetEnvT (WidgetEnvT)
+import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.RWS as RWS
@@ -41,10 +44,12 @@ import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Editor.Anchors as Anchors
+import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Data as Data
 import qualified Editor.WidgetEnvT as WE
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 type AccessedVars = [Guid]
 
@@ -127,6 +132,16 @@ assignCursor x y = atEnv $ WE.envAssignCursor x y
 
 assignCursorPrefix :: Monad m => Widget.Id -> Widget.Id -> ExprGuiM m a -> ExprGuiM m a
 assignCursorPrefix x y = atEnv $ WE.envAssignCursorPrefix x y
+
+wrapDelegated ::
+  (MonadF f, Monad m) =>
+  FocusDelegator.Config -> FocusDelegator.IsDelegating ->
+  ((Widget f -> Widget f) -> a -> b) ->
+  (Widget.Id -> ExprGuiM m a) ->
+  Widget.Id -> ExprGuiM m b
+wrapDelegated =
+  BWidgets.wrapDelegatedWith (widgetEnv WE.readCursor)
+  (atEnv . Lens.over WE.envCursor)
 
 -- Used vars:
 

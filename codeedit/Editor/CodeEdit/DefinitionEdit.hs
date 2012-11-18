@@ -37,7 +37,7 @@ paramFDConfig = FocusDelegator.Config
 makeNameEdit ::
   MonadF m => (ExprGuiM.NameSource, String) -> Widget.Id -> Guid -> ExprGuiM m (WidgetT m)
 makeNameEdit name myId ident =
-  ExpressionGui.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
+  ExprGuiM.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
   (ExprGuiM.atEnv (WE.setTextColor Config.definitionOriginColor) .
    ExpressionGui.makeNameEdit name ident)
   myId

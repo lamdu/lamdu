@@ -15,8 +15,8 @@ import qualified Editor.WidgetEnvT as WE
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
-fDConfig :: FocusDelegator.Config
-fDConfig = FocusDelegator.Config
+fdConfig :: FocusDelegator.Config
+fdConfig = FocusDelegator.Config
   { FocusDelegator.startDelegatingKey = Config.replaceInferredValueKey
   , FocusDelegator.startDelegatingDoc = "Replace inferred value"
   , FocusDelegator.stopDelegatingKey = Config.keepInferredValueKey
@@ -27,8 +27,7 @@ make
   :: MonadF m => Sugar.Inferred m (Sugar.Expression m) -> Guid -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
 make inferred guid =
-  ExpressionGui.wrapDelegated fDConfig FocusDelegator.NotDelegating
-  (Lens.over ExpressionGui.egWidget) $
+  ExpressionGui.wrapDelegated fdConfig FocusDelegator.NotDelegating $
   makeUnwrapped inferred guid
 
 makeUnwrapped

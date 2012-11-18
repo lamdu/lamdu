@@ -6,7 +6,6 @@ import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (WidgetT, ExprGuiM)
 import Editor.MonadF (MonadF)
 import qualified Data.List as List
 import qualified Editor.BottleWidgets as BWidgets
-import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
@@ -42,7 +41,7 @@ make (Sugar.DefinitionBuiltin (Data.FFIName modulePath name) setFFIName) myId =
   where
     makeNamePartEditor color namePartStr mSetter makeWidgetId =
       ExprGuiM.atEnv (WE.setTextColor color) .
-      ExpressionGui.wrapDelegated builtinFDConfig FocusDelegator.NotDelegating id
+      ExprGuiM.wrapDelegated builtinFDConfig FocusDelegator.NotDelegating id
       (ExprGuiM.widgetEnv . maybe
        (BWidgets.makeTextView namePartStr . Widget.toAnimId)
        (BWidgets.makeWordEdit . Property namePartStr) mSetter) $

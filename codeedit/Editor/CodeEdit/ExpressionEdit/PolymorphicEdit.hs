@@ -58,5 +58,5 @@ make ::
   MonadF m => Sugar.Polymorphic (Sugar.Expression m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make poly =
-  ExpressionGui.wrapDelegated polymorphicFDConfig FocusDelegator.NotDelegating
-  (Lens.over ExpressionGui.egWidget) $ makeInner poly
+  ExpressionGui.wrapDelegated polymorphicFDConfig FocusDelegator.NotDelegating $
+  makeInner poly

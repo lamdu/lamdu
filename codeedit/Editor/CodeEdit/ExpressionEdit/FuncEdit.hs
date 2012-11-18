@@ -41,7 +41,7 @@ makeParamNameEdit
   => (ExprGuiM.NameSource, String) -> Guid
   -> ExprGuiM m (WidgetT m)
 makeParamNameEdit name ident =
-  ExpressionGui.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
+  ExprGuiM.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
   (ExprGuiM.atEnv (WE.setTextColor Config.paramOriginColor) .
    ExpressionGui.makeNameEdit name ident) $ WidgetIds.fromGuid ident
 

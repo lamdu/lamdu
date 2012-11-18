@@ -543,8 +543,8 @@ make ::
   MonadF m => Sugar.Hole m -> Maybe (Sugar.Expression m) -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make hole mNextHole guid =
-  ExpressionGui.wrapDelegated holeFDConfig FocusDelegator.Delegating
-  (Lens.over ExpressionGui.egWidget) $ makeUnwrapped hole mNextHole guid
+  ExpressionGui.wrapDelegated holeFDConfig FocusDelegator.Delegating $
+  makeUnwrapped hole mNextHole guid
 
 makeInactiveHoleEdit ::
   MonadF m => Sugar.Hole m -> Widget.Id -> ExprGuiM m (ExpressionGui m)
