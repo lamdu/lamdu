@@ -43,6 +43,13 @@ where
   -- Final result:
    (ExpressionGui m))
 
+  * When anything is selected, show all the stuff that refer/define that
+    same symbol
+
+  * When hole result is selected, show (with some different
+    visualization) the inferred types and values due to the hole result
+    are shown
+
 * Make up type variables implicitly.
   Happens via inference, but as a separate step, so that hole results are unaffected by it.
 
@@ -59,18 +66,7 @@ where
 * BUG: When using '[' or ']' to add applies, it can type-filter out the
   result we're on and lose the cursor
 
-* When anything is selected, show all the stuff that refer/define that
-  same symbol
-
-* When hole result is selected, show (with some different
-  visualization) the inferred types and values due to the hole result
-  are shown
-
 * Layout
-
-* Bug: <Del> on branch name does not work
-  * Cursor does not move, so GUI is not regenerated, apparently. Need
-    to rewrite main loop.
 
 * Cleanups:
   * Instead of (ExprGui.Monad.NameSource, String) and Guid of name
