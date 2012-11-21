@@ -33,7 +33,8 @@ priorityScore :: PriorityData -> Int64
 priorityScore (PriorityData use mem) = use - fromIntegral mem
 
 instance Ord PriorityData where
-  x < y
+  x <= y
+    | x == y = True
     | px < py = True
     | px > py = False
     | otherwise = pRecentUse x < pRecentUse y
