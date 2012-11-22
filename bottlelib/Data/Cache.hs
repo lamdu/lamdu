@@ -1,5 +1,4 @@
-{-# LANGUAGE ConstraintKinds, TemplateHaskell #-}
-
+{-# LANGUAGE ConstraintKinds #-}
 module Data.Cache
   ( Cache, Key
   , new, peek, touch, lookup, memo, memoS
@@ -12,49 +11,13 @@ import Control.Lens ((%=), (-=))
 import Control.Monad.Trans.State (StateT(..), state, execState)
 import Data.Binary (Binary)
 import Data.Binary.Utils (decodeS, encodeS)
-import Data.Int (Int64)
-import Data.Map (Map)
+import Data.Cache.Types
 import Data.Typeable (Typeable, typeOf)
 import Prelude hiding (lookup)
 import qualified Control.Lens as Lens
-import qualified Control.Lens.TH as LensTH
 import qualified Crypto.Hash.SHA1 as SHA1
 import qualified Data.ByteString as SBS
 import qualified Data.Map as Map
-
-type Key a = (Binary a, Typeable a)
-
-data PriorityData = PriorityData
-  { pRecentUse :: Int64
-  , pMemoryConsumption :: Int
-  } deriving Eq
-
-priorityScore :: PriorityData -> Int64
-priorityScore (PriorityData use mem) = use - fromIntegral mem
-
-instance Ord PriorityData where
-  x <= y
-    | x == y = True
-    | px < py = True
-    | px > py = False
-    | otherwise = pRecentUse x < pRecentUse y
-    where
-      px = priorityScore x
-      py = priorityScore y
-
-type KeyBS = SBS.ByteString
-type ValBS = SBS.ByteString
-type ValEntry = (PriorityData, ValBS)
-
-data Cache = Cache
-  { _cEntries :: Map KeyBS ValEntry
-  , _cPriorities :: Map PriorityData KeyBS
-  , _cCounter :: Int64
-  , _cSize :: Int
-  , cMaxSize :: Int
-  }
-
-LensTH.makeLenses ''Cache
 
 new :: Int -> Cache
 new maxSize =

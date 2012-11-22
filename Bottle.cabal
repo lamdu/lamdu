@@ -16,6 +16,7 @@ Library
   hs-Source-Dirs:      bottlelib
 
   Exposed-modules:     Data.Cache,
+                       Data.Cache.Types,
                        Data.List.Utils,
                        Data.Maybe.Utils,
                        Data.MRUMemo,
