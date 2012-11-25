@@ -1,7 +1,7 @@
-Name:                bottle
+Name:                lamdu
 Version:             0.1
 Synopsis:            A GLFW, OpenGL, and DrawingCombinators-based Widget-set
-Description:         Bottle widgets
+Description:         Lamdu functional programming editor
 License:             GPL
 License-file:        LICENSE
 Author:              Eyal Lotem, Yair Chuchem
@@ -91,7 +91,7 @@ Library
   ghc-options:         -O2 -Wall
   ghc-prof-options:    -Wall -auto-all -caf-all -rtsopts
 
-Executable Editor
+Executable lamdu
   hs-Source-Dirs:      codeedit
   Build-Depends:       base >= 4,
                        hashable,
@@ -106,7 +106,7 @@ Executable Editor
                        TraceUtils,
                        bytestring,
                        derive,
-                       bottle,
+                       lamdu,
                        random,
                        List >= 0.5.1,
                        either,
@@ -145,7 +145,7 @@ Executable Editor
                        Editor.MonadF,
                        Editor.WidgetIds,
                        Editor.Layers,
-                       Paths_bottle
+                       Paths_lamdu
   ghc-options:         -Wall
   ghc-prof-options:    -Wall -auto-all -caf-all -rtsopts
   main-is:             Editor/Main.hs

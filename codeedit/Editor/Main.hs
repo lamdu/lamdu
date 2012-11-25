@@ -22,7 +22,7 @@ import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Widget(Widget)
 import Numeric (showHex)
-import Paths_bottle (getDataFileName)
+import Paths_lamdu (getDataFileName)
 import System.Environment (getArgs)
 import System.FilePath ((</>))
 import qualified Control.Exception as E
@@ -55,12 +55,12 @@ main :: IO ()
 main = do
   args <- getArgs
   home <- Directory.getHomeDirectory
-  let bottleDir = home </> "bottle"
+  let lamduDir = home </> "lamdu"
   case args of
-    ["-deletedb"] -> Directory.removeDirectoryRecursive bottleDir
+    ["-deletedb"] -> Directory.removeDirectoryRecursive lamduDir
     [] -> return ()
-    _ -> fail "Usage: bottle [-deletedb]"
-  Directory.createDirectoryIfMissing False bottleDir
+    _ -> fail "Usage: lamdu [-deletedb]"
+  Directory.createDirectoryIfMissing False lamduDir
   let
     getFont path = do
       exists <- Directory.doesFileExist path
@@ -70,7 +70,7 @@ main = do
     (getFont =<< getDataFileName "fonts/DejaVuSans.ttf")
     `E.catch` \(E.SomeException _) ->
     getFont "fonts/DejaVuSans.ttf"
-  Db.withDb (bottleDir </> "codeedit.db") $ runDbStore font . Anchors.dbStore
+  Db.withDb (lamduDir </> "codeedit.db") $ runDbStore font . Anchors.dbStore
 
 rjust :: Int -> a -> [a] -> [a]
 rjust len x xs = replicate (length xs - len) x ++ xs

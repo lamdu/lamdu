@@ -6,7 +6,7 @@ Some instructions to get you started with this preliminary[toy] code editor:
   cd FTGL
   cabal install
 
-2. Build and install bottle's dependencies and bottle itself:
+2. Build and install lamdu's dependencies and lamdu itself:
 
   cabal install
 
@@ -20,7 +20,7 @@ Some instructions to get you started with this preliminary[toy] code editor:
   source root dir, because without an install, it will search the
   font only relatively to the directory from which it was executed.
 
-3. Run bottle, either from your cabal bindir [e.g: ~/.cabal/bin/Editor], or from the build directory (dist/build/Editor/Editor).
+3. Run lamdu, either from your cabal bindir [e.g: ~/.cabal/bin/Editor], or from the build directory (dist/build/Editor/Editor).
 
 4. Press: alt-n (make new definition)
 

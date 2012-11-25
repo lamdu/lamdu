@@ -1,6 +1,6 @@
 This README is a work in progress (Peaker have a review please :)
 
-# Project Bottle / Lamdu
+# Project Lamdu
 
 This project aims to create a "next-generation", "live programming" environment that is not centered around text files and gives much added value. The programming language would be similar to Haskell, which we think is very suitable language generally, and even more so for live programming.
 
