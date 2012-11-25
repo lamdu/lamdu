@@ -70,7 +70,7 @@ type DefinitionIRef = IRef DefinitionI
 
 data VariableRef
   = ParameterRef {-# UNPACK #-} !Guid -- of the lambda/pi
-  | DefinitionRef {-# UNPACK #-} !DefinitionIRef
+  | DefinitionRef {- {-# UNPACK #-} -} !DefinitionIRef
   deriving (Eq, Ord, Show)
 
 data Leaf
