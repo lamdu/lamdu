@@ -1,4 +1,4 @@
-This README is a work in progress (Peaker have a review please :)
+This README is a work in progress
 
 # Project Lamdu
 
