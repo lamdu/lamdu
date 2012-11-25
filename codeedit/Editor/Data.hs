@@ -10,7 +10,7 @@ module Editor.Data
   , Builtin(..)
   , Leaf(..)
   , ExpressionBody(..)
-  , makeApply, makePi, makeLambda
+  , makeApply, makePi, makeLambda, hole, pureHole
   , makeParameterRef, makeDefinitionRef, makeLiteralInteger
   , Expression(..), eValue, ePayload
   , PureExpression, pureExpression
@@ -90,6 +90,9 @@ data ExpressionBody expr
   | ExpressionLeaf !Leaf
   deriving (Eq, Ord, Functor, Foldable, Traversable)
 
+hole :: ExpressionBody expr
+hole = ExpressionLeaf Hole
+
 makeApply :: expr -> expr -> ExpressionBody expr
 makeApply func arg = ExpressionApply $ Apply func arg
 
@@ -163,6 +166,9 @@ LensTH.makeLenses ''Expression
 
 pureExpression :: ExpressionBody PureExpression -> PureExpression
 pureExpression = (`Expression` ())
+
+pureHole :: PureExpression
+pureHole = pureExpression hole
 
 variableRefGuid :: VariableRef -> Guid
 variableRefGuid (ParameterRef i) = i

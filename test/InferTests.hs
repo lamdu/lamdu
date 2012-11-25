@@ -389,6 +389,8 @@ applyIdInt =
     intType
   )
 
+-- {g, x} =>
+-- \(g:hole) -> IntToBoolFunc x
 makeFunnyLambda :: String -> Data.PureExpression -> Data.PureExpression
 makeFunnyLambda g =
   makeLambda g hole .
