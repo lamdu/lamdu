@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -O2 #-}
 {-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveDataTypeable #-}
 module Editor.Data
   ( Definition(..), DefinitionBody(..)

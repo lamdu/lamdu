@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -O2 #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveDataTypeable #-}
 module Editor.Data.Infer
   ( Expression, Inferred(..), rExpression

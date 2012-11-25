@@ -146,6 +146,6 @@ Executable Editor
                        Editor.WidgetIds,
                        Editor.Layers,
                        Paths_bottle
-  ghc-options:         -O0 -Wall
+  ghc-options:         -Wall
   ghc-prof-options:    -Wall -auto-all -caf-all -rtsopts
   main-is:             Editor/Main.hs
