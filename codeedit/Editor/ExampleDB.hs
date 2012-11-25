@@ -92,6 +92,14 @@ createBuiltins =
     makeWithType_ "Data.List.length" . forAll "a" $ \a ->
       mkPi (listOf a) integer
 
+    makeWithType_ "Prelude.product" . forAll "a" $ \a ->
+      mkPi (listOf a) a
+    makeWithType_ "Prelude.sum" . forAll "a" $ \a ->
+      mkPi (listOf a) a
+
+    makeWithType_ "Data.List.replicate" . forAll "a" $ \a ->
+      mkPi integer . mkPi a $ listOf a
+
     makeWithType_ "Data.List.foldl" . forAll "a" $ \a -> forAll "b" $ \b ->
       mkPi (mkPi a (mkPi b a)) . mkPi a $ mkPi (listOf b) a
 
