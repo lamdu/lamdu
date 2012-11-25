@@ -19,6 +19,7 @@ module Editor.Data
   , matchExpression
   , subExpressions
   , isDependentPi
+  , recurseWithScope
   ) where
 
 import Control.Applicative (Applicative(..), liftA2, (<$>))
@@ -193,6 +194,24 @@ randomizeParamIds gen =
         maybe gv makeParameterRef .
         Map.lookup guid
       _ -> return v
+
+recurseWithScope ::
+   Applicative f =>
+   (Guid -> a -> scope -> scope) -> (scope -> Expression a -> f b) ->
+   scope -> Expression a -> f (Expression b)
+recurseWithScope addToScope f scope expr@(Expression body _) =
+  Expression <$> mkNewBody <*> f scope expr
+  where
+    mkNewBody =
+      case body of
+      ExpressionLambda lambda -> onLambda makeLambda lambda
+      ExpressionPi lambda -> onLambda makePi lambda
+      _ -> Traversable.traverse (rec scope) body
+    rec = recurseWithScope addToScope f
+    onLambda cons (Lambda param paramType result) =
+      cons param
+      <$> rec scope paramType
+      <*> rec (addToScope param (paramType ^. ePayload) scope) result
 
 -- The returned expression gets the same guids as the left expression
 matchExpression ::

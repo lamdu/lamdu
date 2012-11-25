@@ -10,7 +10,7 @@ module Editor.Data.Infer
   , initial, newNodeWithScope, newTypedNodeWithScope
   ) where
 
-import Control.Applicative (Applicative(..), (<$))
+import Control.Applicative (Applicative(..), (<$), (<$>))
 import Control.Arrow (first, second)
 import Control.Lens ((%=), (.=), (^.), (+=))
 import Control.Monad (guard, liftM, liftM2, unless, void, when)
@@ -425,36 +425,32 @@ loadNode ::
   Map Data.DefinitionIRef Data.PureExpression -> Scope ->
   Data.Expression (Guid, s) -> TypedValue ->
   State RefMap (Data.Expression (InferNode, (Guid, s)))
-loadNode defTypes scope entity typedValue = do
-  setInitialValues
-  bodyWithChildrenTvs <- Traversable.mapM addTypedVal $ entity ^. Data.eValue
-  exprBody <-
-    case bodyWithChildrenTvs of
-    Data.ExpressionLambda lambda ->
-      onLambda Data.ExpressionLambda lambda
-    Data.ExpressionPi lambda ->
-      onLambda Data.ExpressionPi lambda
-    _ -> Traversable.mapM (go id) bodyWithChildrenTvs
-  return $
-    Data.Expression exprBody
-    (InferNode typedValue scope, entity ^. Data.ePayload)
+loadNode defTypes rootScope rootExpr rootTypedValue = do
+  rootExprTV <-
+    Traversable.sequenceA . fmap tupleInto .
+    -- Make new TypedValues for all subexpressions except the root
+    -- which shall use rootTypedValue
+    Lens.set (Data.ePayload . Lens._2) (pure rootTypedValue) $
+    fmap addTypedVal rootExpr
+  Data.recurseWithScope addToScope f rootScope rootExprTV
   where
-    onLambda cons (Data.Lambda param paramType@(_, paramTypeTv) result) = do
-      paramTypeR <- go id paramType
-      let paramRef = Data.ParameterRef param
-      liftM (cons . Data.Lambda param paramTypeR) $
-        go (Map.insert paramRef (tvVal paramTypeTv)) result
-    go onScope = uncurry . loadNode defTypes $ onScope scope
-    addTypedVal x =
-      liftM ((,) x) createTypedVal
-    initializeRefData ref expr =
-      refMap . Lens.at (unRef ref) .=
-      Just (RefData (refExprFromPure expr) [])
-    (initialVal, initialType) =
-      initialExprs defTypes scope $ fmap fst entity
-    setInitialValues = do
-      initializeRefData (tvVal typedValue) initialVal
-      initializeRefData (tvType typedValue) initialType
+    tupleInto (x, act) = (,) x <$> act
+    addTypedVal x = (x, createTypedVal)
+    addToScope paramGuid (_, TypedValue paramTypeVal _) =
+      Map.insert (Data.ParameterRef paramGuid) paramTypeVal
+    f scope expr@(Data.Expression _ (guidS, typedValue)) = do
+      let
+        TypedValue val typ = typedValue
+        (initialVal, initialType) =
+          initialExprs defTypes scope $ fmap (fst . fst) expr
+      initializeRefData val initialVal
+      initializeRefData typ initialType
+      return (InferNode typedValue scope, guidS)
+
+initializeRefData :: Ref -> Data.Expression Guid -> State RefMap ()
+initializeRefData ref expr =
+  refMap . Lens.at (unRef ref) .=
+  Just (RefData (refExprFromPure expr) [])
 
 subst ::
   Guid -> Data.Expression a ->
