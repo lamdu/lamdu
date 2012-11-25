@@ -23,6 +23,7 @@ import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Widget(Widget)
 import Numeric (showHex)
 import Paths_bottle (getDataFileName)
+import System.Environment (getArgs)
 import System.FilePath ((</>))
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
@@ -52,8 +53,13 @@ import qualified System.Directory as Directory
 
 main :: IO ()
 main = do
+  args <- getArgs
   home <- Directory.getHomeDirectory
   let bottleDir = home </> "bottle"
+  case args of
+    ["-deletedb"] -> Directory.removeDirectoryRecursive bottleDir
+    [] -> return ()
+    _ -> fail "Usage: bottle [-deletedb]"
   Directory.createDirectoryIfMissing False bottleDir
   let
     getFont path = do
