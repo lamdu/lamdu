@@ -9,6 +9,7 @@ import Control.Lens ((^.))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Editor.CodeEdit.Sugar.Config (SugarConfig)
+import Editor.CodeEdit.Sugar.Infer (InferExpressionResult(..), ierContext, ierRefmap)
 import Editor.CodeEdit.Sugar.Types -- see export list
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Cache as Cache
@@ -27,7 +28,7 @@ mkContext :: SugarConfig -> InferExpressionResult m -> Context
 mkContext config iResult = Context
   { scInferState = iResult ^. ierRefmap
   , scConfig = config
-  , scMContextHash = Just $ iResult ^. ierContextHash
+  , scMContextHash = Just . Cache.bsOfKey $ iResult ^. ierContext
   }
 
 run :: Monad m => Context -> SugarM m a -> T m a

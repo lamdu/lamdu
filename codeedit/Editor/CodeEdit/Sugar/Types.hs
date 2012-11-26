@@ -20,10 +20,6 @@ module Editor.CodeEdit.Sugar.Types
   , Inferred(..)
   , Polymorphic(..)
   , HasParens(..)
-  -- Internal to Sugar:
-  , ExprEntity, ExprEntityStored
-  , InferExpressionResult(..), ierContextHash, ierExpr, ierRefmap, ierSuccess
-  , EntityPayload(..)
   , T, CT
   ) where
 
@@ -32,12 +28,9 @@ import Data.Cache (Cache)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
-import Editor.Data.Infer.Conflicts (InferredWithConflicts(..))
 import qualified Control.Lens.TH as LensTH
-import qualified Data.Cache as Cache
 import qualified Data.Store.IRef as IRef
 import qualified Editor.Data as Data
-import qualified Editor.Data.IRef as DataIRef
 import qualified Editor.Data.Infer as Infer
 
 type T = Transaction ViewTag
@@ -221,24 +214,3 @@ LensTH.makeLenses ''ListItemActions
 LensTH.makeLenses ''FuncParamActions
 LensTH.makeLenses ''Payload
 LensTH.makeLenses ''ExpressionP
-
-type ExprEntityStored m =
-  InferredWithConflicts (DataIRef.ExpressionProperty (T m))
-
-type ExprEntityMStored m =
-  InferredWithConflicts (Maybe (DataIRef.ExpressionProperty (T m)))
-
-data InferExpressionResult m = InferExpressionResult
-  { _ierSuccess :: Bool
-  , _ierRefmap :: Infer.RefMap
-  , _ierExpr :: Data.Expression (ExprEntityStored m)
-  , _ierContextHash :: Cache.KeyBS
-  }
-LensTH.makeLenses ''InferExpressionResult
-
-data EntityPayload m = EntityPayload
-  { eplGuid :: Guid
-  , eplInferred :: Maybe (ExprEntityMStored m)
-  }
-
-type ExprEntity m = Data.Expression (EntityPayload m)
