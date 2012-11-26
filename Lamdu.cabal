@@ -146,6 +146,6 @@ Executable lamdu
                        Editor.WidgetIds,
                        Editor.Layers,
                        Paths_lamdu
-  ghc-options:         -Wall
+  ghc-options:         -O2 -Wall
   ghc-prof-options:    -Wall -auto-all -caf-all -rtsopts
   main-is:             Editor/Main.hs
