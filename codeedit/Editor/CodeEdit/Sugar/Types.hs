@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE TemplateHaskell, DeriveFunctor #-}
 module Editor.CodeEdit.Sugar.Types
   ( Definition(..), DefinitionBody(..)
   , ListItemActions(..), itemAddNext, itemDelete
@@ -21,35 +21,25 @@ module Editor.CodeEdit.Sugar.Types
   , Polymorphic(..)
   , HasParens(..)
   -- Internal to Sugar:
-  , ExprEntity, ExprEntityStored, eeGuid, eeStored, eeProp, eeFromPure
-  , ExprEntityInferred(..), eeiGuid
+  , ExprEntity, ExprEntityStored
   , InferExpressionResult(..), ierContextHash, ierExpr, ierRefmap, ierSuccess
   , EntityPayload(..)
   , T, CT
   ) where
 
 import Control.Lens ((^.))
-import Control.Monad ((<=<))
 import Control.Monad.Trans.State (StateT)
-import Data.Binary (Binary(..))
 import Data.Cache (Cache)
-import Data.Derive.Binary (makeBinary)
-import Data.DeriveTH (derive)
-import Data.Foldable (Foldable(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
-import Data.Traversable (Traversable)
 import Editor.Anchors (ViewTag)
-import System.Random (RandomGen)
-import qualified Control.Lens as Lens
+import Editor.Data.Infer.Conflicts (InferredWithConflicts(..))
 import qualified Control.Lens.TH as LensTH
 import qualified Data.Cache as Cache
 import qualified Data.Store.IRef as IRef
-import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
 import qualified Editor.Data.Infer as Infer
-import qualified System.Random.Utils as RandomUtils
 
 type T = Transaction ViewTag
 type CT m = StateT Cache (T m)
@@ -233,18 +223,11 @@ instance Show expr => Show (FuncParam m expr) where
   show fp =
     concat ["(", show (fp ^. fpHiddenLambdaGuid), ":", show (fp ^. fpType), ")"]
 
-data ExprEntityInferred a = ExprEntityInferred
-  { eeiInferred :: Infer.Inferred a
-  , eeiTypeConflicts :: [Data.PureExpression]
-  , eeiValueConflicts :: [Data.PureExpression]
-  } deriving (Functor, Foldable, Traversable)
-derive makeBinary ''ExprEntityInferred
-
 type ExprEntityStored m =
-  ExprEntityInferred (DataIRef.ExpressionProperty (T m))
+  InferredWithConflicts (DataIRef.ExpressionProperty (T m))
 
 type ExprEntityMStored m =
-  ExprEntityInferred (Maybe (DataIRef.ExpressionProperty (T m)))
+  InferredWithConflicts (Maybe (DataIRef.ExpressionProperty (T m)))
 
 data InferExpressionResult m = InferExpressionResult
   { _ierSuccess :: Bool
@@ -259,24 +242,4 @@ data EntityPayload m = EntityPayload
   , eplInferred :: Maybe (ExprEntityMStored m)
   }
 
-eeiGuid :: ExprEntityStored m -> Guid
-eeiGuid = DataIRef.epGuid . Infer.iStored . eeiInferred
-
-eeGuid :: ExprEntity m -> Guid
-eeGuid = eplGuid . Lens.view Data.ePayload
-
 type ExprEntity m = Data.Expression (EntityPayload m)
-
-eeStored :: ExprEntity m -> Maybe (ExprEntityStored m)
-eeStored = Traversable.sequenceA <=< eplInferred . Lens.view Data.ePayload
-
-eeProp :: ExprEntity m -> Maybe (DataIRef.ExpressionProperty (T m))
-eeProp = Infer.iStored . eeiInferred <=< eplInferred . Lens.view Data.ePayload
-
-eeFromPure :: RandomGen g => g -> Data.PureExpression -> ExprEntity m
-eeFromPure gen =
-    Data.randomizeParamIds paramGen
-  . Data.randomizeExpr exprGen
-  . (fmap . const) (`EntityPayload` Nothing)
-  where
-    paramGen : exprGen : _ = RandomUtils.splits gen
