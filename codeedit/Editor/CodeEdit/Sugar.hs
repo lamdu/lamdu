@@ -83,22 +83,9 @@ eeFromPure :: RandomGen g => g -> Data.PureExpression -> ExprEntity m
 eeFromPure gen =
     Data.randomizeParamIds paramGen
   . Data.randomizeExpr exprGen
-  . (fmap . const) (`EntityPayload` Nothing)
+  . ((`EntityPayload` Nothing) <$)
   where
     paramGen : exprGen : _ = RandomUtils.splits gen
-
-writeIRef
-  :: Monad m => DataIRef.ExpressionProperty (T m)
-  -> Data.ExpressionBody Data.ExpressionIRef
-  -> Transaction t m ()
-writeIRef = DataIRef.writeExprBody . Property.value
-
-writeIRefVia
-  :: Monad m
-  => (a -> DataIRef.ExpressionBody)
-  -> DataIRef.ExpressionProperty (T m)
-  -> a -> Transaction t m ()
-writeIRefVia f = (fmap . flip (.)) f writeIRef
 
 mkCutter :: Monad m => Data.ExpressionIRef -> T m Guid -> T m Guid
 mkCutter iref replaceWithHole = do
@@ -153,10 +140,6 @@ mkDelete parentP replacerP = do
   where
     replacerI = Property.value replacerP
 
-mkAddParam ::
-  Monad m => DataIRef.ExpressionProperty (T m) -> T m Guid
-mkAddParam = liftM fst . DataOps.lambdaWrap
-
 inferLoadedExpression ::
   Monad m =>
   Maybe Data.DefinitionIRef -> Load.Loaded (T m) ->
@@ -188,7 +171,7 @@ mkFuncParamActions
   { _fpListItemActions =
     ListItemActions
     { _itemDelete = mkDelete (Infer.iStored lambdaInferred) replacerP
-    , _itemAddNext = mkAddParam replacerP
+    , _itemAddNext = liftM fst $ DataOps.lambdaWrap replacerP
     }
   , _fpGetExample = do
       exampleP <-
@@ -630,10 +613,12 @@ convertLiteralInteger i exprI =
   mkExpression exprI . ExpressionLiteralInteger $
   LiteralInteger
   { liValue = i
-  , liSetValue =
-      fmap (writeIRefVia (Data.ExpressionLeaf . Data.LiteralInteger)) $
-      eeProp exprI
+  , liSetValue = writeIRef <$> eeProp exprI
   }
+  where
+    writeIRef prop =
+      DataIRef.writeExprBody (Property.value prop) .
+      Data.makeLiteralInteger
 
 convertAtom :: Monad m => String -> Convertor m
 convertAtom name exprI =
@@ -666,7 +651,7 @@ convertHoleResult config holeResult =
     toExprEntity inferred =
       flip EntityPayload $
       Just InferredWithConflicts
-      { iwcInferred = (fmap . const) Nothing inferred
+      { iwcInferred = Nothing <$ inferred
       , iwcTypeConflicts = []
       , iwcValueConflicts = []
       }
@@ -693,7 +678,7 @@ convertDefinitionParams ctx expr =
         , _fpMActions =
           Just $
           mkFuncParamActions ctx
-          (expr ^. Data.ePayload) (fmap (Lens.view Data.ePayload) lam)
+          (expr ^. Data.ePayload) (Lens.view Data.ePayload <$> lam)
           (storedIRefP body)
         }
     (nextFPs, funcBody) <- convertDefinitionParams ctx body
@@ -750,7 +735,7 @@ convertDefinitionContent sugarContext expr = do
     { dBody = bodyS
     , dParameters = params
     , dWhereItems = whereItems
-    , dAddFirstParam = mkAddParam $ stored expr
+    , dAddFirstParam = liftM fst . DataOps.lambdaWrap $ stored expr
     , dAddInnermostWhereItem =
         liftM fst . DataOps.redexWrap $ stored whereBody
     }
@@ -763,8 +748,23 @@ loadConvertDefinition ::
 loadConvertDefinition config defI =
   -- TODO: defI given twice probably means the result of
   -- loadDefinition is missing some defI-dependent values
-  convertDefinition config defI =<<
-  lift (Load.loadDefinition defI)
+  convertDefinition =<< lift (Load.loadDefinition defI)
+  where
+    convertDefBody (Data.DefinitionBuiltin builtin) =
+      fmap return . convertDefinitionBuiltin builtin
+    convertDefBody (Data.DefinitionExpression exprLoaded) =
+      convertDefinitionExpression config exprLoaded
+    convertDefinition (Data.Definition defBody typeLoaded) = do
+      body <- convertDefBody defBody defI typeLoaded
+      typeS <-
+        lift .
+        convertExpressionPure (mkGen 1 2 (IRef.guid defI)) config .
+        void $ Load.sExpr typeLoaded
+      return Definition
+        { drGuid = IRef.guid defI
+        , drBody = body
+        , drType = typeS
+        }
 
 convertDefinitionBuiltin ::
   Monad m =>
@@ -817,36 +817,13 @@ convertDefinitionExpression config exprLoaded defI (Load.Stored setType typeIRef
     , deIsTypeRedundant = inferredDef ^. ierSuccess && typesMatch
     }
 
-convertDefinition ::
-  Monad m => SugarConfig ->
-  Data.DefinitionIRef ->
-  Data.Definition (Load.Loaded (T m)) ->
-  CT m (Definition m)
-convertDefinition config defI def = do
-  body <- convertDefBody defBody defI typeLoaded
-  typeS <-
-    lift .
-    convertExpressionPure (mkGen 1 2 (IRef.guid defI)) config .
-    void $ Load.sExpr typeLoaded
-  return Definition
-    { drGuid = IRef.guid defI
-    , drBody = body
-    , drType = typeS
-    }
-  where
-    Data.Definition defBody typeLoaded = def
-    convertDefBody (Data.DefinitionBuiltin builtin) =
-      fmap return . convertDefinitionBuiltin builtin
-    convertDefBody (Data.DefinitionExpression exprLoaded) =
-      convertDefinitionExpression config exprLoaded
-
 inferredIRefToStored ::
   Monad m => Load.ExpressionSetter (T m) ->
   Data.Expression (InferredWithConflicts Data.ExpressionIRef) ->
   Data.Expression (ExprEntityStored m)
 inferredIRefToStored setter expr =
   fmap propIntoInferred . Load.exprAddProp . Load.Stored setter $
-  fmap (Infer.iStored . iwcInferred &&& id) expr
+  (Infer.iStored . iwcInferred &&& id) <$> expr
   where
     propIntoInferred (prop, eei) = prop <$ eei
 
@@ -871,11 +848,11 @@ convertStoredExpression ::
   T m (Expression m)
 convertStoredExpression expr sugarContext =
   SugarM.run sugarContext . convertExpressionI $
-  fmap f expr
+  f <$> expr
   where
     f i = EntityPayload
       { eplGuid = iwcGuid i
-      , eplInferred = Just $ fmap Just i
+      , eplInferred = Just $ Just <$> i
       }
 
 removeTypes :: Expression m -> Expression m
