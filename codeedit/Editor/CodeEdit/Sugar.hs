@@ -940,7 +940,7 @@ convertStoredExpression expr sugarContext =
       }
 
 removeTypes :: Expression m -> Expression m
-removeTypes = removeInferredTypes . (Lens.over rExpressionBody . fmap) removeTypes
+removeTypes = Lens.set (Lens.mapped . plInferredTypes) []
 
 eeiInferredExprs ::
   (Infer.Inferred a -> b) ->
