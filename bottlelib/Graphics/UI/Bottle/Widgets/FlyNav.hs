@@ -5,6 +5,7 @@ import Control.Applicative (Applicative(..), liftA2, (*>))
 import Control.Arrow (second)
 import Control.Lens ((^.))
 import Control.Monad (void)
+import Data.ByteString.Char8 () -- instance IsString ByteString
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Animation (AnimId)
