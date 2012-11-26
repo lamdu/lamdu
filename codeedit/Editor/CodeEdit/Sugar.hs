@@ -38,7 +38,7 @@ import Data.Monoid (Any(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.CodeEdit.Sugar.Config (SugarConfig)
-import Editor.CodeEdit.Sugar.Monad (SugarM(..), runSugarM)
+import Editor.CodeEdit.Sugar.Monad (SugarM)
 import Editor.CodeEdit.Sugar.Types -- see export list
 import Editor.Data.Infer.Conflicts (InferredWithConflicts(..), iwcInferredTypes, iwcInferredValues, inferWithConflicts)
 import System.Random (RandomGen)
@@ -156,9 +156,6 @@ mkDelete parentP replacerP = do
 mkAddParam ::
   Monad m => DataIRef.ExpressionProperty (T m) -> T m Guid
 mkAddParam = liftM fst . DataOps.lambdaWrap
-
-storedIRefP :: Data.Expression (InferredWithConflicts a) -> a
-storedIRefP = Infer.iStored . iwcInferred . Lens.view Data.ePayload
 
 inferLoadedExpression ::
   Monad m =>
@@ -659,21 +656,10 @@ convertExpressionI ee =
 isCompleteType :: Data.PureExpression -> Bool
 isCompleteType = not . any (isHole . Lens.view Data.eValue) . Data.subExpressions
 
-runPureSugar :: Monad m => SugarConfig -> SugarM m a -> T m a
-runPureSugar config =
-  runSugarM ctx
-  where
-    ctx =
-      SugarM.Context
-      { SugarM.scInferState = error "pure expression doesnt have infer state"
-      , SugarM.scConfig = config
-      , SugarM.scMContextHash = Nothing
-      }
-
 convertHoleResult ::
   Monad m => SugarConfig -> HoleResult -> T m (Expression m)
 convertHoleResult config holeResult =
-  runPureSugar config . convertExpressionI . Data.randomizeExpr gen $
+  SugarM.runPure config . convertExpressionI . Data.randomizeExpr gen $
   fmap toExprEntity holeResult
   where
     gen = Random.mkStdGen . hash . show $ void holeResult
@@ -689,7 +675,7 @@ convertExpressionPure ::
   (Monad m, RandomGen g) =>
   g -> SugarConfig -> Data.PureExpression -> T m (Expression m)
 convertExpressionPure gen config =
-  runPureSugar config . convertExpressionI . eeFromPure gen
+  SugarM.runPure config . convertExpressionI . eeFromPure gen
 
 convertDefinitionParams ::
   Monad m =>
@@ -713,6 +699,8 @@ convertDefinitionParams ctx expr =
     (nextFPs, funcBody) <- convertDefinitionParams ctx body
     return (fp : nextFPs, funcBody)
   _ -> return ([], expr)
+  where
+    storedIRefP = Infer.iStored . iwcInferred . Lens.view Data.ePayload
 
 convertWhereItems ::
   Monad m =>
@@ -816,11 +804,7 @@ convertDefinitionExpression config exprLoaded defI (Load.Stored setType typeIRef
           setType =<< DataIRef.newExpression inferredTypeP
         }
     sugarContext =
-      SugarM.Context
-      { SugarM.scInferState = inferredDef ^. ierRefmap
-      , SugarM.scConfig = config
-      , SugarM.scMContextHash = Just $ inferredDef ^. ierContextHash
-      }
+      SugarM.mkContext config inferredDef
   content <-
     lift . convertDefinitionContent sugarContext $ inferredDef ^. ierExpr
   mNewType <- lift $
@@ -879,18 +863,14 @@ loadConvertExpression config exprP =
     convertLoadedExpression exprLoaded = do
       inferResult <- inferLoadedExpression Nothing exprLoaded Infer.initial
       lift . convertStoredExpression (inferResult ^. ierExpr) $
-        SugarM.Context
-        { SugarM.scInferState = inferResult ^. ierRefmap
-        , SugarM.scConfig = config
-        , SugarM.scMContextHash = Just $ inferResult ^. ierContextHash
-        }
+        SugarM.mkContext config inferResult
 
 convertStoredExpression ::
   Monad m =>
   Data.Expression (ExprEntityStored m) -> SugarM.Context ->
   T m (Expression m)
 convertStoredExpression expr sugarContext =
-  runSugarM sugarContext . convertExpressionI $
+  SugarM.run sugarContext . convertExpressionI $
   fmap f expr
   where
     f i = EntityPayload

@@ -1,10 +1,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Editor.CodeEdit.Sugar.Monad
-  ( Context (..)
-  , SugarM(..), runSugarM
+  ( Context(..), mkContext
+  , SugarM(..), run, runPure
   , readContext, liftTransaction
   ) where
 
+import Control.Lens ((^.))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Editor.CodeEdit.Sugar.Config (SugarConfig)
@@ -22,8 +23,26 @@ data Context = Context
 newtype SugarM m a = SugarM (ReaderT Context (T m) a)
   deriving (Monad)
 
-runSugarM :: Monad m => Context -> SugarM m a -> T m a
-runSugarM ctx (SugarM action) = runReaderT action ctx
+mkContext :: SugarConfig -> InferExpressionResult m -> Context
+mkContext config iResult = Context
+  { scInferState = iResult ^. ierRefmap
+  , scConfig = config
+  , scMContextHash = Just $ iResult ^. ierContextHash
+  }
+
+run :: Monad m => Context -> SugarM m a -> T m a
+run ctx (SugarM action) = runReaderT action ctx
+
+runPure :: Monad m => SugarConfig -> SugarM m a -> T m a
+runPure config =
+  run ctx
+  where
+    ctx =
+      Context
+      { scInferState = error "pure expression doesnt have infer state"
+      , scConfig = config
+      , scMContextHash = Nothing
+      }
 
 readContext :: Monad m => SugarM m Context
 readContext = SugarM Reader.ask
