@@ -27,7 +27,6 @@ module Editor.CodeEdit.Sugar.Types
   , T, CT
   ) where
 
-import Control.Lens ((^.))
 import Control.Monad.Trans.State (StateT)
 import Data.Cache (Cache)
 import Data.Store.Guid (Guid)
@@ -152,6 +151,10 @@ wrapParens :: HasParens -> String -> String
 wrapParens HaveParens x = concat ["(", x, ")"]
 wrapParens DontHaveParens x = x
 
+instance Show expr => Show (FuncParam m expr) where
+  show fp =
+    concat ["(", show (_fpGuid fp), ":", show (_fpType fp), ")"]
+
 instance Show expr => Show (ExpressionBody m expr) where
   show ExpressionApply   { _eHasParens = hasParens, __eApply = Data.Apply func arg } =
     wrapParens hasParens $ show func ++ " " ++ show arg
@@ -218,10 +221,6 @@ LensTH.makeLenses ''ListItemActions
 LensTH.makeLenses ''FuncParamActions
 LensTH.makeLenses ''Payload
 LensTH.makeLenses ''ExpressionP
-
-instance Show expr => Show (FuncParam m expr) where
-  show fp =
-    concat ["(", show (fp ^. fpHiddenLambdaGuid), ":", show (fp ^. fpType), ")"]
 
 type ExprEntityStored m =
   InferredWithConflicts (DataIRef.ExpressionProperty (T m))
