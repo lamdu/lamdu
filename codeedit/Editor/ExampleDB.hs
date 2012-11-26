@@ -77,6 +77,9 @@ createBuiltins =
     true <- makeWithType "Prelude.True" bool
     false <- makeWithType "Prelude.False" bool
 
+    mapM_ ((`makeWithType_` mkPi bool (endo bool)) . ("Prelude."++))
+      ["&&", "||"]
+
     makeWithType_ "Prelude.if" . forAll "a" $ \a ->
       mkPi bool . mkPi a $ endo a
 
@@ -97,6 +100,9 @@ createBuiltins =
     makeWithType_ "Prelude.sum" . forAll "a" $ \a ->
       mkPi (listOf a) a
 
+    makeWithType_ "Data.List.filter" . forAll "a" $ \a ->
+      mkPi (mkPi a bool) . endo $ listOf a
+
     makeWithType_ "Data.List.replicate" . forAll "a" $ \a ->
       mkPi integer . mkPi a $ listOf a
 
@@ -108,7 +114,7 @@ createBuiltins =
 
     let aToAToA = forAll "a" $ \a -> mkPi a $ endo a
     mapM_ ((`makeWithType_` aToAToA) . ("Prelude." ++))
-      ["+", "-", "*", "/", "^", "++"]
+      ["+", "-", "*", "/", "^", "++", "mod", "div", "quot", "rem"]
     makeWithType_ "Prelude.negate" $ forAll "a" endo
     makeWithType_ "Prelude.sqrt" $ forAll "a" endo
 
