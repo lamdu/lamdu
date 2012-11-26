@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, OverloadedStrings, ConstraintKinds #-}
+{-# LANGUAGE OverloadedStrings, ConstraintKinds #-}
 module Editor.CodeEdit.Sugar
   ( Definition(..), DefinitionBody(..)
   , ListItemActions(..), itemAddNext, itemDelete
@@ -29,7 +29,6 @@ import Control.Arrow (first, (&&&))
 import Control.Lens ((^.))
 import Control.Monad ((<=<), liftM, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (MonadTrans(..))
-import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.Writer (runWriter)
 import Data.Function (on)
 import Data.Hashable (hash)
@@ -39,11 +38,11 @@ import Data.Monoid (Any(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.CodeEdit.Sugar.Config (SugarConfig)
+import Editor.CodeEdit.Sugar.Monad (SugarM(..), runSugarM)
 import Editor.CodeEdit.Sugar.Types -- see export list
 import Editor.Data.Infer.Conflicts (InferredWithConflicts(..), iwcInferredTypes, iwcInferredValues, inferWithConflicts)
 import System.Random (RandomGen)
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Binary.Utils as BinaryUtils
 import qualified Data.Cache as Cache
@@ -56,6 +55,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Data.Traversable as Traversable
 import qualified Editor.Anchors as Anchors
 import qualified Editor.CodeEdit.Infix as Infix
+import qualified Editor.CodeEdit.Sugar.Monad as SugarM
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
@@ -64,6 +64,8 @@ import qualified Editor.Data.Load as Load
 import qualified Editor.Data.Ops as DataOps
 import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
+
+type Convertor m = ExprEntity m -> SugarM m (Expression m)
 
 iwcGuid :: ExprEntityStored m -> Guid
 iwcGuid = DataIRef.epGuid . Infer.iStored . iwcInferred
@@ -98,26 +100,6 @@ writeIRefVia
   -> a -> Transaction t m ()
 writeIRefVia f = (fmap . flip (.)) f writeIRef
 
-data SugarContext = SugarContext
-  { scInferState :: Infer.RefMap
-  , scConfig :: SugarConfig
-  , scMContextHash :: Maybe Cache.KeyBS -- Nothing if converting pure expression
-  }
-
-newtype Sugar m a = Sugar (ReaderT SugarContext (T m) a)
-  deriving (Monad)
-
-runSugar :: Monad m => SugarContext -> Sugar m a -> T m a
-runSugar ctx (Sugar action) = runReaderT action ctx
-
-readContext :: Monad m => Sugar m SugarContext
-readContext = Sugar Reader.ask
-
-liftTransaction :: Monad m => T m a -> Sugar m a
-liftTransaction = Sugar . lift
-
-type Convertor m = ExprEntity m -> Sugar m (Expression m)
-
 mkCutter :: Monad m => Data.ExpressionIRef -> T m Guid -> T m Guid
 mkCutter iref replaceWithHole = do
   Anchors.modP Anchors.clipboards (iref:)
@@ -142,7 +124,7 @@ mkGen select count =
 mkExpression ::
   Monad m =>
   ExprEntity m ->
-  ExpressionBody m (Expression m) -> Sugar m (Expression m)
+  ExpressionBody m (Expression m) -> SugarM m (Expression m)
 mkExpression ee expr = do
   inferredTypesRefs <-
     zipWithM (fmap convertExpressionI . eeFromPure) seeds types
@@ -198,7 +180,7 @@ inferLoadedExpression mDefI (Load.Stored setExpr exprIRef) inferState = do
       inferWithConflicts loaded refMap inferNode
 
 mkFuncParamActions ::
-  Monad m => SugarContext ->
+  Monad m => SugarM.Context ->
   ExprEntityStored m ->
   Data.Lambda (ExprEntityStored m) ->
   DataIRef.ExpressionProperty (T m) ->
@@ -220,7 +202,7 @@ mkFuncParamActions
 
       inferredExample <- inferLoadedExpression Nothing exampleLoaded newInferNode
       lift $ convertStoredExpression (inferredExample ^. ierExpr)
-        ctx { scInferState = inferredExample ^. ierRefmap }
+        ctx { SugarM.scInferState = inferredExample ^. ierRefmap }
   }
   where
     lambdaInferred = iwcInferred lambdaStored
@@ -228,16 +210,16 @@ mkFuncParamActions
     paramTypeRef =
       Infer.tvVal . Infer.nRefs . Infer.iPoint $ iwcInferred paramType
     newInferNode =
-      Infer.newTypedNodeWithScope scope paramTypeRef $ scInferState ctx
+      Infer.newTypedNodeWithScope scope paramTypeRef $ SugarM.scInferState ctx
 
 convertLambda
   :: Monad m
   => Data.Lambda (ExprEntity m)
-  -> ExprEntity m -> Sugar m (FuncParam m (Expression m), Expression m)
+  -> ExprEntity m -> SugarM m (FuncParam m (Expression m), Expression m)
 convertLambda lam@(Data.Lambda param paramTypeI bodyI) expr = do
   sBody <- convertExpressionI bodyI
   typeExpr <- convertExpressionI paramTypeI
-  ctx <- readContext
+  ctx <- SugarM.readContext
   let
     fp = FuncParam
       { _fpGuid = param
@@ -405,7 +387,7 @@ isHole _ = False
 
 convertGetVariable :: Monad m => Data.VariableRef -> Convertor m
 convertGetVariable varRef exprI = do
-  isInfix <- liftTransaction $ Infix.isInfixVar varRef
+  isInfix <- SugarM.liftTransaction $ Infix.isInfixVar varRef
   getVarExpr <-
     mkExpression exprI $ ExpressionGetVariable varRef
   if isInfix
@@ -415,9 +397,9 @@ convertGetVariable varRef exprI = do
       Section Nothing (removeInferredTypes getVarExpr) Nothing
     else return getVarExpr
 
-mkPaste :: Monad m => DataIRef.ExpressionProperty (T m) -> Sugar m (Maybe (T m Guid))
+mkPaste :: Monad m => DataIRef.ExpressionProperty (T m) -> SugarM m (Maybe (T m Guid))
 mkPaste exprP = do
-  clipboardsP <- liftTransaction Anchors.clipboards
+  clipboardsP <- SugarM.liftTransaction Anchors.clipboards
   let
     mClipPop =
       case Property.value clipboardsP of
@@ -512,7 +494,7 @@ resultComplexityScore =
 
 convertWritableHole :: Monad m => ExprEntityStored m -> Convertor m
 convertWritableHole eeInferred exprI = do
-  ctx <- readContext
+  ctx <- SugarM.readContext
   mPaste <- mkPaste . Infer.iStored $ iwcInferred eeInferred
   convertWritableHoleH ctx mPaste eeInferred exprI
 
@@ -531,9 +513,9 @@ inferApplyForms processRes expr (refMap, node) =
 
 convertWritableHoleH ::
   Monad m =>
-  SugarContext -> Maybe (T m Guid) ->
+  SugarM.Context -> Maybe (T m Guid) ->
   ExprEntityStored m -> Convertor m
-convertWritableHoleH (SugarContext inferState config contextHash) mPaste eeInferred exprI =
+convertWritableHoleH (SugarM.Context inferState config contextHash) mPaste eeInferred exprI =
   chooseHoleType (iwcInferredValues eeInferred) plainHole inferredHole
   where
     inferred = iwcInferred eeInferred
@@ -569,9 +551,9 @@ convertWritableHoleH (SugarContext inferState config contextHash) mPaste eeInfer
     eGuid = eeGuid exprI
 
 wrapOperatorHole ::
-  Monad m => ExprEntity m -> Expression m -> Sugar m (Expression m)
+  Monad m => ExprEntity m -> Expression m -> SugarM m (Expression m)
 wrapOperatorHole exprI holeExpr = do
-  searchTermRef <- liftTransaction . Anchors.assocSearchTermRef $ eeGuid exprI
+  searchTermRef <- SugarM.liftTransaction . Anchors.assocSearchTermRef $ eeGuid exprI
   if isOperatorName $ Property.value searchTermRef
     then
       -- TODO: Ok to mkExpression with same exprI here?
@@ -660,7 +642,7 @@ convertAtom :: Monad m => String -> Convertor m
 convertAtom name exprI =
   mkExpression exprI $ ExpressionAtom name
 
-convertExpressionI :: Monad m => ExprEntity m -> Sugar m (Expression m)
+convertExpressionI :: Monad m => ExprEntity m -> SugarM m (Expression m)
 convertExpressionI ee =
   ($ ee) $
   case ee ^. Data.eValue of
@@ -677,15 +659,15 @@ convertExpressionI ee =
 isCompleteType :: Data.PureExpression -> Bool
 isCompleteType = not . any (isHole . Lens.view Data.eValue) . Data.subExpressions
 
-runPureSugar :: Monad m => SugarConfig -> Sugar m a -> T m a
+runPureSugar :: Monad m => SugarConfig -> SugarM m a -> T m a
 runPureSugar config =
-  runSugar ctx
+  runSugarM ctx
   where
     ctx =
-      SugarContext
-      { scInferState = error "pure expression doesnt have infer state"
-      , scConfig = config
-      , scMContextHash = Nothing
+      SugarM.Context
+      { SugarM.scInferState = error "pure expression doesnt have infer state"
+      , SugarM.scConfig = config
+      , SugarM.scMContextHash = Nothing
       }
 
 convertHoleResult ::
@@ -711,7 +693,7 @@ convertExpressionPure gen config =
 
 convertDefinitionParams ::
   Monad m =>
-  SugarContext -> Data.Expression (ExprEntityStored m) ->
+  SugarM.Context -> Data.Expression (ExprEntityStored m) ->
   T m ([FuncParam m (Expression m)], Data.Expression (ExprEntityStored m))
 convertDefinitionParams ctx expr =
   case expr ^. Data.eValue of
@@ -734,7 +716,7 @@ convertDefinitionParams ctx expr =
 
 convertWhereItems ::
   Monad m =>
-  SugarContext -> Data.Expression (ExprEntityStored m) ->
+  SugarM.Context -> Data.Expression (ExprEntityStored m) ->
   T m ([WhereItem m], Data.Expression (ExprEntityStored m))
 convertWhereItems ctx
   topLevel@Data.Expression
@@ -770,7 +752,7 @@ convertWhereItems _ expr = return ([], expr)
 
 convertDefinitionContent ::
   Monad m =>
-  SugarContext -> Data.Expression (ExprEntityStored m) ->
+  SugarM.Context -> Data.Expression (ExprEntityStored m) ->
   T m (DefinitionContent m)
 convertDefinitionContent sugarContext expr = do
   (params, funcBody) <- convertDefinitionParams sugarContext expr
@@ -834,10 +816,10 @@ convertDefinitionExpression config exprLoaded defI (Load.Stored setType typeIRef
           setType =<< DataIRef.newExpression inferredTypeP
         }
     sugarContext =
-      SugarContext
-      { scInferState = inferredDef ^. ierRefmap
-      , scConfig = config
-      , scMContextHash = Just $ inferredDef ^. ierContextHash
+      SugarM.Context
+      { SugarM.scInferState = inferredDef ^. ierRefmap
+      , SugarM.scConfig = config
+      , SugarM.scMContextHash = Just $ inferredDef ^. ierContextHash
       }
   content <-
     lift . convertDefinitionContent sugarContext $ inferredDef ^. ierExpr
@@ -897,18 +879,18 @@ loadConvertExpression config exprP =
     convertLoadedExpression exprLoaded = do
       inferResult <- inferLoadedExpression Nothing exprLoaded Infer.initial
       lift . convertStoredExpression (inferResult ^. ierExpr) $
-        SugarContext
-        { scInferState = inferResult ^. ierRefmap
-        , scConfig = config
-        , scMContextHash = Just $ inferResult ^. ierContextHash
+        SugarM.Context
+        { SugarM.scInferState = inferResult ^. ierRefmap
+        , SugarM.scConfig = config
+        , SugarM.scMContextHash = Just $ inferResult ^. ierContextHash
         }
 
 convertStoredExpression ::
   Monad m =>
-  Data.Expression (ExprEntityStored m) -> SugarContext ->
+  Data.Expression (ExprEntityStored m) -> SugarM.Context ->
   T m (Expression m)
 convertStoredExpression expr sugarContext =
-  runSugar sugarContext . convertExpressionI $
+  runSugarM sugarContext . convertExpressionI $
   fmap f expr
   where
     f i = EntityPayload
