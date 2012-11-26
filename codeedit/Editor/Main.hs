@@ -55,7 +55,7 @@ main :: IO ()
 main = do
   args <- getArgs
   home <- Directory.getHomeDirectory
-  let lamduDir = home </> "lamdu"
+  let lamduDir = home </> ".lamdu"
   case args of
     ["-deletedb"] -> Directory.removeDirectoryRecursive lamduDir
     [] -> return ()
