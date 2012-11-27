@@ -6,7 +6,6 @@ import Data.Monoid(mappend)
 import Data.Store.Guid(Guid, bs)
 import Data.Store.IRef(IRef, guid)
 import Graphics.UI.Bottle.Animation (AnimId)
-import qualified Editor.Data as Data
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
@@ -45,9 +44,6 @@ parenHighlightId = ["paren highlight"]
 
 parensPrefix :: AnimId -> AnimId
 parensPrefix = flip mappend ["parens"]
-
-varId :: Data.VariableRef -> Widget.Id
-varId = fromGuid . Data.variableRefGuid
 
 diveIn :: Functor f => f (IRef a) -> f Widget.Id
 diveIn = fmap $ FocusDelegator.delegatingId . fromIRef
