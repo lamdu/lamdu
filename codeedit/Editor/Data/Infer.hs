@@ -2,11 +2,16 @@
 module Editor.Data.Infer
   ( Expression, Inferred(..), rExpression
   , Loaded, load, infer
+  -- TODO: Expose only ref readers for InferNode (instead of .. and TypedValue)
   , InferNode(..), TypedValue(..)
   , Error(..), ErrorDetails(..)
   , RefMap, Ref
   , Loader(..), InferActions(..)
-  , initial, newNodeWithScope, newTypedNodeWithScope
+  , initial
+  -- Used for inferring independent expressions in an inner infer context
+  -- (See hole apply forms).
+  , newNodeWithScope
+  , newTypedNodeWithScope
   ) where
 
 import Control.Applicative (Applicative(..), (<$), (<$>), (<*))
