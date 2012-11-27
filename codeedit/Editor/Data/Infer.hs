@@ -15,7 +15,6 @@ module Editor.Data.Infer
   ) where
 
 import Control.Applicative (Applicative(..), (<$), (<$>), (<*))
-import Control.Arrow (first)
 import Control.Lens ((%=), (.=), (^.), (+=))
 import Control.Monad (guard, liftM, liftM2, unless, void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
@@ -321,10 +320,11 @@ preprocess loaded initialRefMap (InferNode rootTv rootScope) =
       Just iref -> Map.insert (Data.DefinitionRef iref) (tvType rootTv) rootScope
 
 postProcess ::
-  RefMap -> Data.Expression DataIRef.DefinitionIRef (InferNode, a) -> (Expression a, RefMap)
-postProcess resultRefMap expr =
+  (InferState, Data.Expression DataIRef.DefinitionIRef (InferNode, a)) -> (Expression a, RefMap)
+postProcess (inferState, expr) =
   (fmap derefNode expr, resultRefMap)
   where
+    resultRefMap = inferState ^. sRefMap
     derefNode (inferNode, s) =
       Inferred
       { iStored = s
@@ -382,17 +382,15 @@ infer ::
   Monad m => InferActions m -> Loaded a -> RefMap -> InferNode ->
   m (Expression a, RefMap)
 infer actions loaded initialRefMap node =
-  liftM
-  ( uncurry postProcess
-  . first (Lens.view sRefMap)
-  ) . runInferT actions ruleInferState $ do
+  liftM postProcess .
+  runInferT actions ruleInferState $ do
     restoreRoot rootValR rootValMRefData
     restoreRoot rootTypR rootTypMRefData
     -- when we resume load,
     -- we want to trigger the existing rules for the loaded root
     touch rootValR
     touch rootTypR
-    go
+    executeRules
     return expr
   where
     Preprocessed expr loadedRefMap (rootValMRefData, rootTypMRefData) =
@@ -409,19 +407,6 @@ infer actions loaded initialRefMap node =
     restoreRoot ref (Just (RefData refExpr refRules)) = do
       liftState $ refMapAt ref . rRules %= (refRules ++)
       setRefExpr ref refExpr
-    go = do
-      curLayer <- liftState $ Lens.use sBfsNextLayer
-      liftState $ sBfsCurLayer .= curLayer
-      liftState $ sBfsNextLayer .= IntSet.empty
-      unless (IntSet.null curLayer) $ do
-        mapM_ processRule $ IntSet.toList curLayer
-        go
-    processRule key = do
-      liftState $ sBfsCurLayer . Lens.contains key .= False
-      Just (Rule deps ruleClosure) <-
-        liftState $ Lens.use (sRefMap . rules . Lens.at key)
-      refExps <- mapM getRefExpr deps
-      mapM_ (uncurry setRefExpr) $ runRuleClosure ruleClosure refExps
 
 {-# SPECIALIZE
   infer :: InferActions Maybe -> Loaded a -> RefMap -> InferNode ->
@@ -430,6 +415,25 @@ infer actions loaded initialRefMap node =
   infer :: Monoid w => InferActions (Writer w) -> Loaded a ->
            RefMap -> InferNode ->
            Writer w (Expression a, RefMap) #-}
+
+executeRules :: Monad m => InferT m ()
+executeRules = do
+  curLayer <- liftState $ Lens.use sBfsNextLayer
+  liftState $ sBfsCurLayer .= curLayer
+  liftState $ sBfsNextLayer .= IntSet.empty
+  unless (IntSet.null curLayer) $ do
+    mapM_ processRule $ IntSet.toList curLayer
+    executeRules
+  where
+    processRule key = do
+      liftState $ sBfsCurLayer . Lens.contains key .= False
+      Just (Rule deps ruleClosure) <-
+        liftState $ Lens.use (sRefMap . rules . Lens.at key)
+      refExps <- mapM getRefExpr deps
+      mapM_ (uncurry setRefExpr) $ runRuleClosure ruleClosure refExps
+
+{-# SPECIALIZE executeRules :: InferT Maybe () #-}
+{-# SPECIALIZE executeRules :: Monoid w => InferT (Writer w) () #-}
 
 getRefExpr :: Monad m => Ref -> InferT m RefExpression
 getRefExpr ref = liftState $ Lens.use (refMapAt ref . rExpression)
