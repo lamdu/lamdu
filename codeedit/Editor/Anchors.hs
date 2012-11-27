@@ -1,11 +1,20 @@
 {-# LANGUAGE EmptyDataDecls, OverloadedStrings, GeneralizedNewtypeDeriving #-}
 
 module Editor.Anchors
-  ( panes, panesIRef, clipboards
-  , cursor, preCursor, postCursor, preJumps
-  , branches, branchesIRef, view, redos, currentBranch
-  , globals
-  , sugarConfig, ffiEnv
+  ( panes, panesIRef
+  , clipboards, clipboardsIRef
+  , cursor, cursorIRef
+  , preCursor, preCursorIRef
+  , postCursor, postCursorIRef
+  , preJumps, preJumpsIRef
+  , branches, branchesIRef
+  , view, viewIRef
+  , redos, redosIRef
+  , currentBranch, currentBranchIRef
+  , globals, globalsIRef
+  , sugarConfig, sugarConfigIRef
+  , ffiEnv, ffiEnvIRef
+
   , newBuiltin, newDefinition
   , Pane
   , nonEmptyAssocDataRef
@@ -67,7 +76,10 @@ panes :: MkProperty ViewM [Pane]
 panes = Transaction.fromIRef panesIRef
 
 clipboards :: MkProperty ViewM [DataIRef.Expression]
-clipboards = Transaction.fromIRef $ IRef.anchor "clipboard"
+clipboards = Transaction.fromIRef clipboardsIRef
+
+clipboardsIRef :: IRef [DataIRef.Expression]
+clipboardsIRef = IRef.anchor "clipboard"
 
 branchesIRef :: IRef [Branch]
 branchesIRef = IRef.anchor "branches"
@@ -76,37 +88,67 @@ branches :: MkProperty DbM [Branch]
 branches = Transaction.fromIRef branchesIRef
 
 currentBranch :: MkProperty DbM Branch
-currentBranch = Transaction.fromIRef $ IRef.anchor "currentBranch"
+currentBranch = Transaction.fromIRef currentBranchIRef
+
+currentBranchIRef :: IRef Branch
+currentBranchIRef = IRef.anchor "currentBranch"
 
 -- TODO: This should be an index
 globals :: MkProperty ViewM [DataIRef.DefinitionIRef]
-globals = Transaction.fromIRef $ IRef.anchor "globals"
+globals = Transaction.fromIRef globalsIRef
+
+globalsIRef :: IRef [DataIRef.DefinitionIRef]
+globalsIRef = IRef.anchor "globals"
 
 sugarConfig :: MkProperty ViewM SugarConfig
-sugarConfig = Transaction.fromIRef $ IRef.anchor "sugarConfig"
+sugarConfig = Transaction.fromIRef sugarConfigIRef
+
+sugarConfigIRef :: IRef SugarConfig
+sugarConfigIRef = IRef.anchor "sugarConfig"
 
 ffiEnv :: MkProperty ViewM FFI.Env
-ffiEnv = Transaction.fromIRef $ IRef.anchor "ffiEnv"
+ffiEnv = Transaction.fromIRef ffiEnvIRef
+
+ffiEnvIRef :: IRef FFI.Env
+ffiEnvIRef = IRef.anchor "ffiEnv"
 
 -- Cursor is untagged because it is both saved globally and per-revision.
 -- Cursor movement without any revisioned changes are not saved per-revision.
 cursor :: MkProperty DbM Widget.Id
-cursor = Transaction.fromIRef $ IRef.anchor "cursor"
+cursor = Transaction.fromIRef cursorIRef
+
+cursorIRef :: IRef Widget.Id
+cursorIRef = IRef.anchor "cursor"
 
 preJumps :: MkProperty ViewM [Widget.Id]
-preJumps = Transaction.fromIRef $ IRef.anchor "prejumps"
+preJumps = Transaction.fromIRef preJumpsIRef
+
+preJumpsIRef :: IRef [Widget.Id]
+preJumpsIRef = IRef.anchor "prejumps"
 
 preCursor :: MkProperty ViewM Widget.Id
-preCursor = Transaction.fromIRef $ IRef.anchor "precursor"
+preCursor = Transaction.fromIRef preCursorIRef
+
+preCursorIRef :: IRef Widget.Id
+preCursorIRef = IRef.anchor "precursor"
 
 postCursor :: MkProperty ViewM Widget.Id
-postCursor = Transaction.fromIRef $ IRef.anchor "postcursor"
+postCursor = Transaction.fromIRef postCursorIRef
+
+postCursorIRef :: IRef Widget.Id
+postCursorIRef = IRef.anchor "postcursor"
 
 redos :: MkProperty DbM [Version]
-redos = Transaction.fromIRef $ IRef.anchor "redos"
+redos = Transaction.fromIRef redosIRef
+
+redosIRef :: IRef [Version]
+redosIRef = IRef.anchor "redos"
 
 view :: MkProperty DbM View
-view = Transaction.fromIRef $ IRef.anchor "HEAD"
+view = Transaction.fromIRef viewIRef
+
+viewIRef :: IRef View
+viewIRef = IRef.anchor "HEAD"
 
 makePane :: DataIRef.DefinitionIRef -> Pane
 makePane = id

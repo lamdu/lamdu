@@ -165,21 +165,21 @@ initDB db =
       emptyVersion <- Version.makeInitialVersion []
       master <- newBranch "master" emptyVersion
       view <- View.new master
-      A.setP A.view view
-      A.setP A.branches [master]
-      A.setP A.currentBranch master
-      A.setP A.redos []
-      A.setP A.cursor $ WidgetIds.fromIRef A.panesIRef
+      Transaction.writeIRef A.viewIRef view
+      Transaction.writeIRef A.branchesIRef [master]
+      Transaction.writeIRef A.currentBranchIRef master
+      Transaction.writeIRef A.redosIRef []
+      Transaction.writeIRef A.cursorIRef $ WidgetIds.fromIRef A.panesIRef
       A.runViewTransaction view $ do
         ((ffiEnv, sugarConfig), builtins) <- createBuiltins
-        A.setP A.clipboards []
-        A.setP A.sugarConfig sugarConfig
-        A.setP A.ffiEnv ffiEnv
-        A.setP A.globals builtins
-        A.setP A.panes []
-        A.setP A.preJumps []
-        A.setP A.preCursor $ WidgetIds.fromIRef A.panesIRef
-        A.setP A.postCursor $ WidgetIds.fromIRef A.panesIRef
+        Transaction.writeIRef A.clipboardsIRef []
+        Transaction.writeIRef A.sugarConfigIRef sugarConfig
+        Transaction.writeIRef A.ffiEnvIRef ffiEnv
+        Transaction.writeIRef A.globalsIRef builtins
+        Transaction.writeIRef A.panesIRef []
+        Transaction.writeIRef A.preJumpsIRef []
+        Transaction.writeIRef A.preCursorIRef $ WidgetIds.fromIRef A.panesIRef
+        Transaction.writeIRef A.postCursorIRef $ WidgetIds.fromIRef A.panesIRef
       -- Prevent undo into the invalid empty revision
       newVer <- Branch.curVersion master
       Version.preventUndo newVer
