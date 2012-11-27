@@ -3,6 +3,7 @@ module Editor.CodeEdit.ExpressionEdit.PiEdit(make) where
 
 import Control.Lens ((^.))
 import Control.Monad (liftM)
+import Data.Monoid (mappend)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Editor.MonadF (MonadF)
@@ -14,6 +15,7 @@ import qualified Editor.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Editor.CodeEdit.Parens as Parens
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
+import qualified Editor.Layers as Layers
 import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -60,8 +62,20 @@ make hasParens (Sugar.Pi param resultType) =
       rightArrowLabel <-
         ExprGuiM.atEnv (WE.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor) .
         ExprGuiM.widgetEnv . BWidgets.makeLabel "→" $ Widget.toAnimId myId
-      return $ ExpressionGui.hboxSpaced
-        [paramEdit, ExpressionGui.fromValueWidget rightArrowLabel, resultTypeEdit]
+      let
+        addBg
+          | paramUsed =
+              Lens.over ExpressionGui.egWidget $
+              Widget.backgroundColor
+              Layers.expandedPolymorphicBG
+              (mappend (Widget.toAnimId paramId) ["polymorphic bg"])
+              Config.polymorphicFullBGColor
+          | otherwise = id
+        paramAndArrow =
+          addBg $
+          ExpressionGui.hboxSpaced
+          [paramEdit, ExpressionGui.fromValueWidget rightArrowLabel]
+      return $ ExpressionGui.hboxSpaced [paramAndArrow, resultTypeEdit]
   where
     paramGuid = param ^. Sugar.fpGuid
     paramId = WidgetIds.fromGuid paramGuid
