@@ -1,6 +1,6 @@
 Name:                lamdu
 Version:             0.1
-Synopsis:            A GLFW, OpenGL, and DrawingCombinators-based Widget-set
+Synopsis:            A next generation IDE
 Description:         Lamdu functional programming editor
 License:             GPL
 License-file:        LICENSE
