@@ -13,7 +13,7 @@ module Editor.Data
   , makeApply, makePi, makeLambda, hole, pureHole
   , makeParameterRef, makeDefinitionRef, makeLiteralInteger
   , Expression(..), eValue, ePayload
-  , PureExpression, pureExpression
+  , pureExpression
   , randomizeExpr
   , canonizeParamIds, randomizeParamIds
   , matchExpression
@@ -151,8 +151,6 @@ data Definition expr = Definition
   , defType :: expr
   } deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Typeable)
 
-type PureExpression def = Expression def ()
-
 data Expression def a = Expression
   { _eValue :: ExpressionBody def (Expression def a)
   , _ePayload :: a
@@ -163,10 +161,10 @@ instance (Show a, Show def) => Show (Expression def a) where
 
 LensTH.makeLenses ''Expression
 
-pureExpression :: ExpressionBody def (PureExpression def) -> PureExpression def
+pureExpression :: ExpressionBody def (Expression def ()) -> Expression def ()
 pureExpression = (`Expression` ())
 
-pureHole :: PureExpression def
+pureHole :: Expression def ()
 pureHole = pureExpression hole
 
 randomizeExpr :: (RandomGen g, Random r) => g -> Expression def (r -> a) -> Expression def a

@@ -106,7 +106,7 @@ data HoleActions m = HoleActions
 
 data Hole m = Hole
   { holeScope :: [Guid]
-  , holeInferResults :: Data.PureExpression Data.DefinitionIRef -> CT m [HoleResult]
+  , holeInferResults :: Data.Expression Data.DefinitionIRef () -> CT m [HoleResult]
   , holeMActions :: Maybe (HoleActions m)
   }
 

@@ -84,9 +84,9 @@ data InferState = InferState
 
 data Inferred a = Inferred
   { iStored :: a
-  , iValue :: Data.PureExpression Data.DefinitionIRef
-  , iType :: Data.PureExpression Data.DefinitionIRef
-  , iScope :: Map Guid (Data.PureExpression Data.DefinitionIRef)
+  , iValue :: Data.Expression Data.DefinitionIRef ()
+  , iType :: Data.Expression Data.DefinitionIRef ()
+  , iScope :: Map Guid (Data.Expression Data.DefinitionIRef ())
   , iPoint :: InferNode
   } deriving (Functor, Foldable, Traversable)
 derive makeBinary ''Inferred
@@ -95,16 +95,16 @@ type Expression a = Data.Expression Data.DefinitionIRef (Inferred a)
 
 data ErrorDetails
   = MismatchIn
-    (Data.PureExpression Data.DefinitionIRef)
-    (Data.PureExpression Data.DefinitionIRef)
-  | InfiniteExpression (Data.PureExpression Data.DefinitionIRef)
+    (Data.Expression Data.DefinitionIRef ())
+    (Data.Expression Data.DefinitionIRef ())
+  | InfiniteExpression (Data.Expression Data.DefinitionIRef ())
   deriving Show
 
 data Error = Error
   { errRef :: Ref
   , errMismatch ::
-    ( Data.PureExpression Data.DefinitionIRef
-    , Data.PureExpression Data.DefinitionIRef
+    ( Data.Expression Data.DefinitionIRef ()
+    , Data.Expression Data.DefinitionIRef ()
     )
   , errDetails :: ErrorDetails
   } deriving Show
@@ -145,15 +145,15 @@ initial :: (RefMap, InferNode)
 initial = newNodeWithScope mempty $ RefMap mempty 0 mempty 0 0
 
 newtype Loader m = Loader
-  { loadPureDefinitionType :: Data.DefinitionIRef -> m (Data.PureExpression Data.DefinitionIRef)
+  { loadPureDefinitionType :: Data.DefinitionIRef -> m (Data.Expression Data.DefinitionIRef ())
   }
 
 -- Initial expression for inferred value and type of a stored entity.
 -- Types are returned only in cases of expanding definitions.
 initialExprs ::
-  Map Data.DefinitionIRef (Data.PureExpression Data.DefinitionIRef) ->
+  Map Data.DefinitionIRef (Data.Expression Data.DefinitionIRef ()) ->
   Scope ->
-  Data.PureExpression Data.DefinitionIRef ->
+  Data.Expression Data.DefinitionIRef () ->
   State Origin
   ( Data.Expression Data.DefinitionIRef Origin
   , Data.Expression Data.DefinitionIRef Origin
@@ -233,7 +233,7 @@ initializeRefData ref expr =
   Just (RefData (fmap (RefExprPayload mempty) expr) [])
 
 exprIntoRefMap ::
-  Map Data.DefinitionIRef (Data.PureExpression Data.DefinitionIRef) -> Scope ->
+  Map Data.DefinitionIRef (Data.Expression Data.DefinitionIRef ()) -> Scope ->
   Data.Expression Data.DefinitionIRef s -> TypedValue ->
   State RefMap (Data.Expression Data.DefinitionIRef (InferNode, s))
 exprIntoRefMap defTypes rootScope rootExpr rootTypedValue = do
@@ -261,7 +261,7 @@ exprIntoRefMap defTypes rootScope rootExpr rootTypedValue = do
 data Loaded a = Loaded
   { lRealExpr :: Data.Expression Data.DefinitionIRef a
   , lMRecursiveDef :: Maybe Data.DefinitionIRef
-  , lDefinitionTypes :: Map Data.DefinitionIRef (Data.PureExpression Data.DefinitionIRef)
+  , lDefinitionTypes :: Map Data.DefinitionIRef (Data.Expression Data.DefinitionIRef ())
   } deriving (Typeable)
 derive makeBinary ''Loaded
 

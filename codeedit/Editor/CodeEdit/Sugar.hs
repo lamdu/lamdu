@@ -352,10 +352,10 @@ mkPaste exprP = do
       ~() <- replacer clip
       return $ DataIRef.exprGuid clip
 
-pureHole :: Data.PureExpression Data.DefinitionIRef
+pureHole :: Data.Expression Data.DefinitionIRef ()
 pureHole = Data.pureExpression $ Data.ExpressionLeaf Data.Hole
 
-countArrows :: Data.PureExpression Data.DefinitionIRef -> Int
+countArrows :: Data.Expression Data.DefinitionIRef () -> Int
 countArrows Data.Expression
   { Data._eValue =
     Data.ExpressionPi (Data.Lambda _ _ resultType)
@@ -363,7 +363,7 @@ countArrows Data.Expression
 countArrows _ = 0
 
 -- TODO: Return a record, not a tuple
-countPis :: Data.PureExpression Data.DefinitionIRef -> (Int, Int)
+countPis :: Data.Expression Data.DefinitionIRef () -> (Int, Int)
 countPis e@Data.Expression
   { Data._eValue =
     Data.ExpressionPi (Data.Lambda _ _ resultType)
@@ -373,8 +373,8 @@ countPis e@Data.Expression
 countPis _ = (0, 0)
 
 applyForms
-  :: Data.PureExpression Data.DefinitionIRef
-  -> Data.PureExpression Data.DefinitionIRef -> [Data.PureExpression Data.DefinitionIRef]
+  :: Data.Expression Data.DefinitionIRef ()
+  -> Data.Expression Data.DefinitionIRef () -> [Data.Expression Data.DefinitionIRef ()]
 applyForms _ e@Data.Expression{ Data._eValue = Data.ExpressionLambda {} } =
   [e]
 applyForms exprType expr =
@@ -399,7 +399,7 @@ convertReadOnlyHole exprI =
 -- easily.
 fillPartialHolesInExpression ::
   Monad m =>
-  (Data.PureExpression Data.DefinitionIRef -> m (Maybe (Infer.Expression a))) ->
+  (Data.Expression Data.DefinitionIRef () -> m (Maybe (Infer.Expression a))) ->
   Infer.Expression a -> m [Infer.Expression a]
 fillPartialHolesInExpression check oldExpr =
   liftM ((++ [oldExpr]) . maybeToList) .
@@ -434,7 +434,7 @@ convertWritableHole iwcStored exprI = do
 
 inferApplyForms ::
   Monad m =>
-  (Data.PureExpression Data.DefinitionIRef -> T m [HoleResult]) -> Data.PureExpression Data.DefinitionIRef ->
+  (Data.Expression Data.DefinitionIRef () -> T m [HoleResult]) -> Data.Expression Data.DefinitionIRef () ->
   (Infer.RefMap, Infer.InferNode) -> T m [HoleResult]
 inferApplyForms processRes expr (refMap, node) =
   liftM (sortOn resultComplexityScore) . makeApplyForms =<<
@@ -583,7 +583,7 @@ convertExpressionI ee =
   Data.ExpressionLeaf Data.IntegerType -> convertAtom "Int"
 
 -- Check no holes
-isCompleteType :: Data.PureExpression Data.DefinitionIRef -> Bool
+isCompleteType :: Data.Expression Data.DefinitionIRef () -> Bool
 isCompleteType = not . any (isHole . Lens.view Data.eValue) . Data.subExpressions
   where
     isHole (Data.ExpressionLeaf Data.Hole) = True
@@ -597,7 +597,7 @@ convertHoleResult config holeResult =
 
 convertExpressionPure ::
   (m ~ Anchors.ViewM, RandomGen g) =>
-  g -> SugarConfig -> Data.PureExpression Data.DefinitionIRef -> T m (Expression m)
+  g -> SugarConfig -> Data.Expression Data.DefinitionIRef () -> T m (Expression m)
 convertExpressionPure gen config =
   SugarM.runPure config . convertExpressionI . SugarInfer.resultFromPure gen
 

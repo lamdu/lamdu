@@ -59,7 +59,7 @@ moreSymbolSizeFactor = 0.5
 
 data Group = Group
   { groupNames :: [String]
-  , groupBaseExpr :: Data.PureExpression Data.DefinitionIRef
+  , groupBaseExpr :: Data.Expression Data.DefinitionIRef ()
   }
 
 type T = Transaction
@@ -171,7 +171,7 @@ makeNoResults myId =
   ExprGuiM.widgetEnv .
   BWidgets.makeTextView "(No results)" $ mappend myId ["no results"]
 
-mkGroup :: [String] -> Data.ExpressionBody Data.DefinitionIRef (Data.PureExpression Data.DefinitionIRef) -> Group
+mkGroup :: [String] -> Data.ExpressionBody Data.DefinitionIRef (Data.Expression Data.DefinitionIRef ()) -> Group
 mkGroup names body = Group
   { groupNames = names
   , groupBaseExpr = Data.pureExpression body
@@ -228,7 +228,7 @@ exprWidgetId = WidgetIds.fromGuid . randFunc . show . void
 
 toResultsList ::
   Monad m =>
-  HoleInfo m -> Data.PureExpression Data.DefinitionIRef ->
+  HoleInfo m -> Data.Expression Data.DefinitionIRef () ->
   CT m (Maybe ResultsList)
 toResultsList holeInfo baseExpr = do
   results <- Sugar.holeInferResults (hiHole holeInfo) baseExpr

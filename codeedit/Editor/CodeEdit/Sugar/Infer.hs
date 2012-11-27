@@ -72,7 +72,7 @@ resultFrom gen f =
     paramGen : exprGen : _ = RandomUtils.splits gen
 
 -- Not inferred, not stored
-resultFromPure :: RandomGen g => g -> Data.PureExpression Data.DefinitionIRef -> Result m
+resultFromPure :: RandomGen g => g -> Data.Expression Data.DefinitionIRef () -> Result m
 resultFromPure gen =
   resultFrom gen (const Nothing)
 
