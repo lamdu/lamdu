@@ -141,7 +141,7 @@ inferMaybe ::
 inferMaybe expr inferContext inferPoint = do
   loaded <- Infer.load loader Nothing expr
   return . fmap fst $
-    Infer.infer (Infer.InferActions (const Nothing))
+    Infer.inferLoaded (Infer.InferActions (const Nothing))
     loaded inferContext inferPoint
 
 inferLoadedExpression ::

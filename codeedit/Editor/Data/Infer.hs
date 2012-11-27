@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveDataTypeable #-}
 module Editor.Data.Infer
   ( Expression, Inferred(..), rExpression
-  , Loaded, load, infer
+  , Loaded, load, inferLoaded
   -- TODO: Expose only ref readers for InferNode (instead of .. and TypedValue)
   , InferNode(..), TypedValue(..)
   , Error(..), ErrorDetails(..)
@@ -320,8 +320,8 @@ preprocess loaded initialRefMap (InferNode rootTv rootScope) =
       Just iref -> Map.insert (Data.DefinitionRef iref) (tvType rootTv) rootScope
 
 postProcess ::
-  (InferState, Data.Expression DataIRef.DefinitionIRef (InferNode, a)) -> (Expression a, RefMap)
-postProcess (inferState, expr) =
+  Data.Expression DataIRef.DefinitionIRef (InferNode, a) -> InferState -> (Expression a, RefMap)
+postProcess expr inferState =
   (fmap derefNode expr, resultRefMap)
   where
     resultRefMap = inferState ^. sRefMap
@@ -378,11 +378,11 @@ liftState = liftActions . lift
 instance MonadTrans InferT where
   lift = liftState . lift
 
-infer ::
+inferLoaded ::
   Monad m => InferActions m -> Loaded a -> RefMap -> InferNode ->
   m (Expression a, RefMap)
-infer actions loaded initialRefMap node =
-  liftM postProcess .
+inferLoaded actions loaded initialRefMap node =
+  liftM (postProcess expr . fst) .
   runInferT actions ruleInferState $ do
     restoreRoot rootValR rootValMRefData
     restoreRoot rootTypR rootTypMRefData
@@ -391,7 +391,6 @@ infer actions loaded initialRefMap node =
     touch rootValR
     touch rootTypR
     executeRules
-    return expr
   where
     Preprocessed expr loadedRefMap (rootValMRefData, rootTypMRefData) =
       preprocess loaded initialRefMap node
@@ -409,12 +408,14 @@ infer actions loaded initialRefMap node =
       setRefExpr ref refExpr
 
 {-# SPECIALIZE
-  infer :: InferActions Maybe -> Loaded a -> RefMap -> InferNode ->
-           Maybe (Expression a, RefMap) #-}
+  inferLoaded ::
+    InferActions Maybe -> Loaded a -> RefMap -> InferNode ->
+    Maybe (Expression a, RefMap) #-}
 {-# SPECIALIZE
-  infer :: Monoid w => InferActions (Writer w) -> Loaded a ->
-           RefMap -> InferNode ->
-           Writer w (Expression a, RefMap) #-}
+  inferLoaded ::
+    Monoid w => InferActions (Writer w) -> Loaded a ->
+    RefMap -> InferNode ->
+    Writer w (Expression a, RefMap) #-}
 
 executeRules :: Monad m => InferT m ()
 executeRules = do

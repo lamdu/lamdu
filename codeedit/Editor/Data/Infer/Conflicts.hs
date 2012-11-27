@@ -61,7 +61,7 @@ inferWithConflicts loaded refMap node =
   )
   where
     ((exprInferred, inferContext), conflictsMap) =
-      runWriter $ Infer.infer (Infer.InferActions reportConflict)
+      runWriter $ Infer.inferLoaded (Infer.InferActions reportConflict)
       loaded refMap node
     toIWC x =
       InferredWithConflicts

@@ -162,7 +162,7 @@ doInferM refMap inferNode mDefRef mResumedRoot expr =
     actions = Infer.InferActions reportError
     loaded = runIdentity $ Infer.load loader mDefRef expr
     (result@(inferredExpr, _), conflicts) =
-      Writer.runWriter $ Infer.infer actions loaded refMap inferNode
+      Writer.runWriter $ Infer.inferLoaded actions loaded refMap inferNode
     reportError err = Writer.tell [(Infer.errRef err, err)]
 
 loader :: Monad m => Infer.Loader m
@@ -201,7 +201,7 @@ inferMaybe ::
   Data.Expression DataIRef.DefinitionIRef a ->
   Maybe (Infer.Expression a, Infer.RefMap)
 inferMaybe mRecursiveDef expr =
-  uncurry (Infer.infer (Infer.InferActions (const Nothing)) loaded) Infer.initial
+  uncurry (Infer.inferLoaded (Infer.InferActions (const Nothing)) loaded) Infer.initial
   where
     loaded = runIdentity $ Infer.load loader mRecursiveDef expr
 
