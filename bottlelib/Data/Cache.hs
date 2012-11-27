@@ -12,7 +12,7 @@ import Control.Monad.Trans.State (StateT(..), state, execState)
 import Data.Binary (Binary)
 import Data.Binary.Utils (decodeS, encodeS)
 import Data.Cache.Types
-import Data.Typeable (Typeable, typeOf)
+import Data.Typeable (typeOf)
 import Prelude hiding (lookup)
 import qualified Control.Lens as Lens
 import qualified Crypto.Hash.SHA1 as SHA1
