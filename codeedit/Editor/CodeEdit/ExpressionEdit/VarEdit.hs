@@ -13,19 +13,20 @@ import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
+import qualified Editor.Data.IRef as DataIRef
 import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Widget as Widget
 
-colorOf :: Data.VariableRef Data.DefinitionIRef -> Draw.Color
+colorOf :: Data.VariableRef DataIRef.DefinitionIRef -> Draw.Color
 colorOf (Data.DefinitionRef _) = Config.definitionColor
 colorOf (Data.ParameterRef _) = Config.parameterColor
 
 -- Color should be determined on the outside!
 makeView
   :: MonadF m
-  => Data.VariableRef Data.DefinitionIRef
+  => Data.VariableRef DataIRef.DefinitionIRef
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
 makeView var myId = ExprGuiM.withNameFromVarRef var $ \(nameSrc, name) ->
@@ -37,7 +38,7 @@ makeView var myId = ExprGuiM.withNameFromVarRef var $ \(nameSrc, name) ->
 
 make
   :: m ~ ViewM
-  => Data.VariableRef Data.DefinitionIRef
+  => Data.VariableRef DataIRef.DefinitionIRef
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
 make getVar myId = do

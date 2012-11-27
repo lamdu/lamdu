@@ -47,8 +47,8 @@ type StoredPayload m =
 data StoredResult m = StoredResult
   { _srSuccess :: Bool
   , _srRefmap :: Infer.RefMap
-  , _srExpr :: Data.Expression Data.DefinitionIRef (StoredPayload m)
-  , _srContext :: Infer.Loaded Data.ExpressionIRef
+  , _srExpr :: Data.Expression DataIRef.DefinitionIRef (StoredPayload m)
+  , _srContext :: Infer.Loaded DataIRef.Expression
   }
 LensTH.makeLenses ''StoredResult
 
@@ -59,11 +59,11 @@ data Payload m = Payload
   , plMInferred :: MInferredMStoredPayload m
   }
 
-type Result m = Data.Expression Data.DefinitionIRef (Payload m)
+type Result m = Data.Expression DataIRef.DefinitionIRef (Payload m)
 
 resultFrom ::
   RandomGen g => g -> (a -> MInferredMStoredPayload m) ->
-  Data.Expression Data.DefinitionIRef a -> Result m
+  Data.Expression DataIRef.DefinitionIRef a -> Result m
 resultFrom gen f =
     Data.randomizeParamIds paramGen
   . Data.randomizeExpr exprGen
@@ -72,14 +72,14 @@ resultFrom gen f =
     paramGen : exprGen : _ = RandomUtils.splits gen
 
 -- Not inferred, not stored
-resultFromPure :: RandomGen g => g -> Data.Expression Data.DefinitionIRef () -> Result m
+resultFromPure :: RandomGen g => g -> Data.Expression DataIRef.DefinitionIRef () -> Result m
 resultFromPure gen =
   resultFrom gen (const Nothing)
 
 -- Inferred, but not stored:
 resultFromInferred ::
-  Data.Expression Data.DefinitionIRef (Infer.Inferred ()) ->
-  Data.Expression Data.DefinitionIRef (Payload m)
+  Data.Expression DataIRef.DefinitionIRef (Infer.Inferred ()) ->
+  Data.Expression DataIRef.DefinitionIRef (Payload m)
 resultFromInferred expr =
   resultFrom gen f expr
   where
@@ -93,8 +93,8 @@ resultFromInferred expr =
 
 -- Inferred and stored
 resultFromStored ::
-  Data.Expression Data.DefinitionIRef (StoredPayload m) ->
-  Data.Expression Data.DefinitionIRef (Payload m)
+  Data.Expression DataIRef.DefinitionIRef (StoredPayload m) ->
+  Data.Expression DataIRef.DefinitionIRef (Payload m)
 resultFromStored expr =
   f <$> expr
   where
@@ -120,8 +120,8 @@ resultProp = Infer.iStored . iwcInferred <=< plMInferred . Lens.view Data.ePaylo
 
 inferredIRefToStored ::
   Monad m => Load.ExpressionSetter (T m) ->
-  Data.Expression Data.DefinitionIRef (InferredWithConflicts Data.ExpressionIRef) ->
-  Data.Expression Data.DefinitionIRef (StoredPayload m)
+  Data.Expression DataIRef.DefinitionIRef (InferredWithConflicts DataIRef.Expression) ->
+  Data.Expression DataIRef.DefinitionIRef (StoredPayload m)
 inferredIRefToStored setter expr =
   fmap propIntoInferred . Load.exprAddProp . Load.Stored setter $
   (Infer.iStored . iwcInferred &&& id) <$> expr
@@ -136,7 +136,7 @@ loader =
 
 inferMaybe ::
   Monad m =>
-  Data.Expression Data.DefinitionIRef a -> Infer.RefMap ->
+  Data.Expression DataIRef.DefinitionIRef a -> Infer.RefMap ->
   Infer.InferNode -> T m (Maybe (Infer.Expression a))
 inferMaybe expr inferContext inferPoint = do
   loaded <- Infer.load loader Nothing expr
@@ -146,7 +146,7 @@ inferMaybe expr inferContext inferPoint = do
 
 inferLoadedExpression ::
   Monad m =>
-  Maybe Data.DefinitionIRef -> Load.Loaded (T m) ->
+  Maybe DataIRef.DefinitionIRef -> Load.Loaded (T m) ->
   (Infer.RefMap, Infer.InferNode) ->
   CT m (StoredResult m)
 inferLoadedExpression mDefI (Load.Stored setExpr exprIRef) inferState = do

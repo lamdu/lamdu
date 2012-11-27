@@ -32,7 +32,7 @@ fixIRef createOuter = do
   Transaction.writeIRef x =<< createOuter x
   return x
 
-createBuiltins :: Monad m => Transaction m ((FFI.Env, SugarConfig), [Data.DefinitionIRef])
+createBuiltins :: Monad m => Transaction m ((FFI.Env, SugarConfig), [DataIRef.DefinitionIRef])
 createBuiltins =
   Writer.runWriterT $ do
     list <- mkType . A.newBuiltin "Data.List.List" =<< lift setToSet
@@ -128,7 +128,7 @@ createBuiltins =
     endo = join mkPi
     set = DataIRef.newExprBody $ Data.ExpressionLeaf Data.Set
     integer = DataIRef.newExprBody $ Data.ExpressionLeaf Data.IntegerType
-    forAll name f = liftM Data.ExpressionIRef . fixIRef $ \aI -> do
+    forAll name f = liftM DataIRef.Expression . fixIRef $ \aI -> do
       let aGuid = IRef.guid aI
       A.setP (A.assocNameRef aGuid) name
       s <- set

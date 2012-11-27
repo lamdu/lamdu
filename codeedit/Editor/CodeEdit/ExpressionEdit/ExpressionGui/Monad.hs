@@ -47,6 +47,7 @@ import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Data as Data
+import qualified Editor.Data.IRef as DataIRef
 import qualified Editor.WidgetEnvT as WE
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -200,7 +201,7 @@ getDefName guid = do
     else (StoredName, storedName)
 
 withNameFromVarRef ::
-  Monad m => Data.VariableRef Data.DefinitionIRef ->
+  Monad m => Data.VariableRef DataIRef.DefinitionIRef ->
   ((NameSource, String) -> ExprGuiM m a) -> ExprGuiM m a
 withNameFromVarRef (Data.ParameterRef g) useName = withParamName g useName
 withNameFromVarRef (Data.DefinitionRef defI) useName =

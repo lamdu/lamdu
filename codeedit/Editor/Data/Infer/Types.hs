@@ -21,6 +21,7 @@ import Data.Typeable (Typeable)
 import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.State as State
 import qualified Editor.Data as Data
+import qualified Editor.Data.IRef as DataIRef
 
 newtype Ref = Ref { unRef :: Int } deriving (Eq, Ord)
 derive makeBinary ''Ref
@@ -49,15 +50,15 @@ data RefExprPayload = RefExprPayload
 derive makeBinary ''RefExprPayload
 LensTH.makeLenses ''RefExprPayload
 
-type RefExpression = Data.Expression Data.DefinitionIRef RefExprPayload
+type RefExpression = Data.Expression DataIRef.DefinitionIRef RefExprPayload
 
-makeRefExpr :: Origin -> Data.ExpressionBody Data.DefinitionIRef RefExpression -> RefExpression
+makeRefExpr :: Origin -> Data.ExpressionBody DataIRef.DefinitionIRef RefExpression -> RefExpression
 makeRefExpr g expr = Data.Expression expr $ RefExprPayload mempty g
 
 -- Map from params to their Param type,
 -- also including the recursive ref to the definition.
 -- (hence not just parameters)
-type Scope = Map (Data.VariableRef Data.DefinitionIRef) Ref
+type Scope = Map (Data.VariableRef DataIRef.DefinitionIRef) Ref
 
 -- Used to refer to expressions in the inference state and resume inference.
 data InferNode = InferNode

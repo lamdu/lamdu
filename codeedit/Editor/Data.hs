@@ -2,7 +2,6 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveDataTypeable #-}
 module Editor.Data
   ( Definition(..), DefinitionBody(..)
-  , DefinitionIRef, DefinitionI, ExpressionIRef(..)
   , FFIName(..)
   , VariableRef(..)
   , Lambda(..), lambdaParamId, lambdaParamType, lambdaBody
@@ -36,7 +35,6 @@ import Data.DeriveTH (derive)
 import Data.Foldable (Foldable(..))
 import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
-import Data.Store.IRef (IRef)
 import Data.Traversable (Traversable(..))
 import Data.Typeable (Typeable)
 import System.Random (Random, RandomGen, random)
@@ -61,13 +59,6 @@ data Apply expr = Apply
 instance Applicative Apply where
   pure x = Apply x x
   Apply f0 a0 <*> Apply f1 a1 = Apply (f0 f1) (a0 a1)
-
-newtype ExpressionIRef = ExpressionIRef {
-  unExpressionIRef :: IRef (ExpressionBody DefinitionIRef ExpressionIRef)
-  } deriving (Eq, Ord, Show, Typeable)
-
-type DefinitionI = Definition ExpressionIRef
-type DefinitionIRef = IRef DefinitionI
 
 data VariableRef def
   = ParameterRef {-# UNPACK #-} !Guid -- of the lambda/pi
@@ -106,7 +97,7 @@ makeLambda argId argType body =
 makeParameterRef :: Guid -> ExpressionBody def a
 makeParameterRef = ExpressionLeaf . GetVariable . ParameterRef
 
-makeDefinitionRef :: DefinitionIRef -> ExpressionBody DefinitionIRef a
+makeDefinitionRef :: def -> ExpressionBody def a
 makeDefinitionRef = ExpressionLeaf . GetVariable . DefinitionRef
 
 makeLiteralInteger :: Integer -> ExpressionBody def a
@@ -265,7 +256,6 @@ isDependentPi (Expression (ExpressionPi (Lambda g _ resultType)) _) =
     isGet _ = False
 isDependentPi _ = False
 
-derive makeBinary ''ExpressionIRef
 derive makeBinary ''FFIName
 derive makeBinary ''VariableRef
 derive makeBinary ''Lambda

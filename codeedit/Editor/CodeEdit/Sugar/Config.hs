@@ -7,11 +7,10 @@ module Editor.CodeEdit.Sugar.Config
 import Data.Binary (Binary(..))
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
-import Editor.Data (DefinitionIRef)
+import qualified Editor.Data.IRef as DataIRef
 
 data SugarConfig = SugarConfig
-  { cons :: DefinitionIRef
-  , nil :: DefinitionIRef
+  { cons :: DataIRef.DefinitionIRef
+  , nil :: DataIRef.DefinitionIRef
   }
-
 derive makeBinary ''SugarConfig

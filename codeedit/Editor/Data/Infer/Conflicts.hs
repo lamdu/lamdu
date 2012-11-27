@@ -19,24 +19,25 @@ import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Editor.Data as Data
+import qualified Editor.Data.IRef as DataIRef
 import qualified Editor.Data.Infer as Infer
 
 data InferredWithConflicts a = InferredWithConflicts
   { iwcInferred :: Infer.Inferred a
-  , iwcTypeConflicts :: [Data.Expression Data.DefinitionIRef ()]
-  , iwcValueConflicts :: [Data.Expression Data.DefinitionIRef ()]
+  , iwcTypeConflicts :: [Data.Expression DataIRef.DefinitionIRef ()]
+  , iwcValueConflicts :: [Data.Expression DataIRef.DefinitionIRef ()]
   } deriving (Functor, Foldable, Traversable)
 derive makeBinary ''InferredWithConflicts
 
 newtype ConflictMap =
-  ConflictMap { unConflictMap :: Map Infer.Ref (Set (Data.Expression Data.DefinitionIRef ())) }
+  ConflictMap { unConflictMap :: Map Infer.Ref (Set (Data.Expression DataIRef.DefinitionIRef ())) }
 
 instance Monoid ConflictMap where
   mempty = ConflictMap mempty
   mappend (ConflictMap x) (ConflictMap y) =
     ConflictMap $ Map.unionWith mappend x y
 
-getConflicts :: Infer.Ref -> ConflictMap -> [Data.Expression Data.DefinitionIRef ()]
+getConflicts :: Infer.Ref -> ConflictMap -> [Data.Expression DataIRef.DefinitionIRef ()]
 getConflicts ref = maybe [] Set.toList . Map.lookup ref . unConflictMap
 
 reportConflict :: Infer.Error -> Writer ConflictMap ()
@@ -51,7 +52,7 @@ inferWithConflicts ::
   Infer.RefMap -> Infer.InferNode ->
   ( Bool
   , Infer.RefMap
-  , Data.Expression Data.DefinitionIRef (InferredWithConflicts a)
+  , Data.Expression DataIRef.DefinitionIRef (InferredWithConflicts a)
   )
 inferWithConflicts loaded refMap node =
   ( Map.null $ unConflictMap conflictsMap
@@ -79,8 +80,8 @@ iwcInferredExprs ::
 iwcInferredExprs getVal eeConflicts ee =
   getVal (iwcInferred ee) : eeConflicts ee
 
-iwcInferredTypes :: InferredWithConflicts a -> [Data.Expression Data.DefinitionIRef ()]
+iwcInferredTypes :: InferredWithConflicts a -> [Data.Expression DataIRef.DefinitionIRef ()]
 iwcInferredTypes = iwcInferredExprs Infer.iType iwcTypeConflicts
 
-iwcInferredValues :: InferredWithConflicts a -> [Data.Expression Data.DefinitionIRef ()]
+iwcInferredValues :: InferredWithConflicts a -> [Data.Expression DataIRef.DefinitionIRef ()]
 iwcInferredValues = iwcInferredExprs Infer.iValue iwcValueConflicts

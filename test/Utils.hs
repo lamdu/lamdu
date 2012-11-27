@@ -16,68 +16,69 @@ import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Editor.Data as Data
+import qualified Editor.Data.IRef as DataIRef
 import qualified Editor.Data.Infer as Infer
 
 data Invisible = Invisible
 instance Show Invisible where
   show = const ""
-showStructure :: Data.ExpressionBody Data.DefinitionIRef a -> String
+showStructure :: Data.ExpressionBody DataIRef.DefinitionIRef a -> String
 showStructure = show . (fmap . const) Invisible
 
-instance Show (Data.Expression Data.DefinitionIRef ()) where
+instance Show (Data.Expression DataIRef.DefinitionIRef ()) where
   show (Data.Expression value ()) = show value
 
-hole :: Data.Expression Data.DefinitionIRef ()
+hole :: Data.Expression DataIRef.DefinitionIRef ()
 hole = Data.pureExpression $ Data.ExpressionLeaf Data.Hole
 
 makeApply ::
-  [Data.Expression Data.DefinitionIRef ()] ->
-  Data.Expression Data.DefinitionIRef ()
+  [Data.Expression DataIRef.DefinitionIRef ()] ->
+  Data.Expression DataIRef.DefinitionIRef ()
 makeApply = foldl1 (fmap Data.pureExpression . Data.makeApply)
 
 makeLambdaCons ::
-  (Guid -> Data.Expression Data.DefinitionIRef () -> Data.Expression Data.DefinitionIRef () ->
-   Data.ExpressionBody Data.DefinitionIRef (Data.Expression Data.DefinitionIRef ())) ->
-  String -> Data.Expression Data.DefinitionIRef () -> Data.Expression Data.DefinitionIRef () ->
-  Data.Expression Data.DefinitionIRef ()
+  (Guid -> Data.Expression DataIRef.DefinitionIRef () -> Data.Expression DataIRef.DefinitionIRef () ->
+   Data.ExpressionBody DataIRef.DefinitionIRef (Data.Expression DataIRef.DefinitionIRef ())) ->
+  String -> Data.Expression DataIRef.DefinitionIRef () -> Data.Expression DataIRef.DefinitionIRef () ->
+  Data.Expression DataIRef.DefinitionIRef ()
 makeLambdaCons cons name paramType body =
   Data.pureExpression $ cons (Guid.fromString name) paramType body
 
 makeLambda ::
-  String -> Data.Expression Data.DefinitionIRef () ->
-  Data.Expression Data.DefinitionIRef () ->
-  Data.Expression Data.DefinitionIRef ()
+  String -> Data.Expression DataIRef.DefinitionIRef () ->
+  Data.Expression DataIRef.DefinitionIRef () ->
+  Data.Expression DataIRef.DefinitionIRef ()
 makeLambda = makeLambdaCons Data.makeLambda
 
 makePi ::
-  String -> Data.Expression Data.DefinitionIRef () ->
-  Data.Expression Data.DefinitionIRef () ->
-  Data.Expression Data.DefinitionIRef ()
+  String -> Data.Expression DataIRef.DefinitionIRef () ->
+  Data.Expression DataIRef.DefinitionIRef () ->
+  Data.Expression DataIRef.DefinitionIRef ()
 makePi = makeLambdaCons Data.makePi
 
-setType :: Data.Expression Data.DefinitionIRef ()
+setType :: Data.Expression DataIRef.DefinitionIRef ()
 setType = Data.pureExpression $ Data.ExpressionLeaf Data.Set
 
-intType :: Data.Expression Data.DefinitionIRef ()
+intType :: Data.Expression DataIRef.DefinitionIRef ()
 intType = Data.pureExpression $ Data.ExpressionLeaf Data.IntegerType
 
-literalInt :: Integer -> Data.Expression Data.DefinitionIRef ()
+literalInt :: Integer -> Data.Expression DataIRef.DefinitionIRef ()
 literalInt i = Data.pureExpression $ Data.makeLiteralInteger i
 
-getDefExpr :: String -> Data.Expression Data.DefinitionIRef ()
+getDefExpr :: String -> Data.Expression DataIRef.DefinitionIRef ()
 getDefExpr name =
   Data.pureExpression . Data.makeDefinitionRef . IRef.unsafeFromGuid $
   Guid.fromString name
 
-getParamExpr :: String -> Data.Expression Data.DefinitionIRef ()
+getParamExpr :: String -> Data.Expression DataIRef.DefinitionIRef ()
 getParamExpr name =
   Data.pureExpression . Data.makeParameterRef $
   Guid.fromString name
 
 data ConflictsAnnotation =
   ConflictsAnnotation
-  (Data.Expression Data.DefinitionIRef (), [Infer.Error])
-  (Data.Expression Data.DefinitionIRef (), [Infer.Error])
+  (Data.Expression DataIRef.DefinitionIRef (), [Infer.Error])
+  (Data.Expression DataIRef.DefinitionIRef (), [Infer.Error])
 
 ansiRed :: String
 ansiRed = "\ESC[31m"
@@ -85,7 +86,7 @@ ansiReset :: String
 ansiReset = "\ESC[0m"
 
 showExpressionWithConflicts ::
-  Data.Expression Data.DefinitionIRef ConflictsAnnotation -> String
+  Data.Expression DataIRef.DefinitionIRef ConflictsAnnotation -> String
 showExpressionWithConflicts =
   List.intercalate "\n" . go
   where
@@ -101,7 +102,7 @@ showExpressionWithConflicts =
         ConflictsAnnotation (val, vErrors) (typ, tErrors) =
           inferredExpr ^. Data.ePayload
 
-definitionTypes :: Map Guid (Data.Expression Data.DefinitionIRef ())
+definitionTypes :: Map Guid (Data.Expression DataIRef.DefinitionIRef ())
 definitionTypes =
   Map.fromList $ map (first Guid.fromString)
   [ ("Bool", setType)
@@ -139,9 +140,9 @@ lookupMany :: Eq a => a -> [(a, b)] -> [b]
 lookupMany x = map snd . filter ((== x) . fst)
 
 doInferM ::
-  Infer.RefMap -> Infer.InferNode -> Maybe Data.DefinitionIRef ->
+  Infer.RefMap -> Infer.InferNode -> Maybe DataIRef.DefinitionIRef ->
   Maybe (Infer.Expression a) ->
-  Data.Expression Data.DefinitionIRef a ->
+  Data.Expression DataIRef.DefinitionIRef a ->
   (Infer.Expression a, Infer.RefMap)
 doInferM refMap inferNode mDefRef mResumedRoot expr =
   case conflicts of
@@ -167,14 +168,14 @@ doInferM refMap inferNode mDefRef mResumedRoot expr =
 loader :: Monad m => Infer.Loader m
 loader = Infer.Loader (return . (definitionTypes !) . IRef.guid)
 
-defI :: Data.DefinitionIRef
+defI :: DataIRef.DefinitionIRef
 defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
 
 doInfer ::
-  Data.Expression Data.DefinitionIRef a -> (Infer.Expression a, Infer.RefMap)
+  Data.Expression DataIRef.DefinitionIRef a -> (Infer.Expression a, Infer.RefMap)
 doInfer = uncurry doInferM Infer.initial (Just defI) Nothing
 
-factorialExpr :: Data.Expression Data.DefinitionIRef ()
+factorialExpr :: Data.Expression DataIRef.DefinitionIRef ()
 factorialExpr =
   makeLambda "x" hole $
   makeApply
@@ -192,12 +193,12 @@ factorialExpr =
     ]
   ]
 
-factorialDefI :: Data.DefinitionIRef
+factorialDefI :: DataIRef.DefinitionIRef
 factorialDefI = IRef.unsafeFromGuid $ Guid.fromString "factorial"
 
 inferMaybe ::
-  Maybe Data.DefinitionIRef ->
-  Data.Expression Data.DefinitionIRef a ->
+  Maybe DataIRef.DefinitionIRef ->
+  Data.Expression DataIRef.DefinitionIRef a ->
   Maybe (Infer.Expression a, Infer.RefMap)
 inferMaybe mRecursiveDef expr =
   uncurry (Infer.infer (Infer.InferActions (const Nothing)) loaded) Infer.initial

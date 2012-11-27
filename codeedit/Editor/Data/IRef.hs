@@ -1,18 +1,25 @@
+{-# LANGUAGE TemplateHaskell, DeriveDataTypeable #-}
 module Editor.Data.IRef
-  ( Expression, ExpressionBody
+  ( Expression(..)
+  , ExpressionBody
   , ExpressionProperty, epGuid
   , Lambda, Apply
   , newExprBody, readExprBody, writeExprBody, exprGuid
   , newLambda, newPi
   , newExpression, writeExpression
+  , DefinitionIRef, DefinitionI
   ) where
 
 import Control.Lens ((^.))
 import Control.Monad (liftM)
+import Data.Binary (Binary(..))
+import Data.Derive.Binary (makeBinary)
+import Data.DeriveTH (derive)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
 import Data.Store.Property (Property)
 import Data.Store.Transaction (Transaction)
+import Data.Typeable (Typeable)
 import qualified Control.Lens as Lens
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
@@ -20,14 +27,18 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
 
-type Expression = Data.ExpressionIRef
+type DefinitionI = Data.Definition Expression
+type DefinitionIRef = IRef DefinitionI
+
+newtype Expression = Expression {
+  unExpression :: IRef (Data.ExpressionBody DefinitionIRef Expression)
+  } deriving (Eq, Ord, Show, Typeable)
+derive makeBinary ''Expression
+
 type ExpressionProperty m = Property m Expression
-type ExpressionBody = Data.ExpressionBody Data.DefinitionIRef Expression
+type ExpressionBody = Data.ExpressionBody DefinitionIRef Expression
 type Lambda = Data.Lambda Expression
 type Apply = Data.Apply Expression
-
-unExpression :: Expression -> IRef ExpressionBody
-unExpression = Data.unExpressionIRef
 
 epGuid :: ExpressionProperty m -> Guid
 epGuid = IRef.guid . unExpression . Property.value
@@ -36,7 +47,7 @@ exprGuid :: Expression -> Guid
 exprGuid = IRef.guid . unExpression
 
 newExprBody :: Monad m => ExpressionBody -> Transaction m Expression
-newExprBody = liftM Data.ExpressionIRef . Transaction.newIRef
+newExprBody = liftM Expression . Transaction.newIRef
 
 newLambdaCons ::
   Monad m =>
@@ -59,33 +70,32 @@ readExprBody = Transaction.readIRef . unExpression
 writeExprBody :: Monad m => Expression -> ExpressionBody -> Transaction m ()
 writeExprBody = Transaction.writeIRef . unExpression
 
-newExpression :: Monad m => Data.Expression Data.DefinitionIRef a -> Transaction m Expression
+newExpression :: Monad m => Data.Expression DefinitionIRef a -> Transaction m Expression
 newExpression = liftM (fst . Lens.view Data.ePayload) . newExpressionFromH
 
 -- Returns expression with new Guids
 writeExpression
-  :: Monad m => Expression -> Data.Expression Data.DefinitionIRef a
-  -> Transaction m (Data.Expression Data.DefinitionIRef (Expression, a))
-writeExpression (Data.ExpressionIRef iref) expr = do
+  :: Monad m => Expression -> Data.Expression DefinitionIRef a
+  -> Transaction m (Data.Expression DefinitionIRef (Expression, a))
+writeExpression (Expression iref) expr = do
   exprBodyP <- expressionBodyFrom expr
   Transaction.writeIRef iref $ fmap (fst . Lens.view Data.ePayload) exprBodyP
   return $ Data.Expression exprBodyP
-    (Data.ExpressionIRef iref, expr ^. Data.ePayload)
+    (Expression iref, expr ^. Data.ePayload)
 
 expressionBodyFrom ::
   Monad m =>
-  Data.Expression Data.DefinitionIRef a ->
+  Data.Expression DefinitionIRef a ->
   Transaction m
-  (Data.ExpressionBody Data.DefinitionIRef
-   (Data.Expression Data.DefinitionIRef (Expression, a)))
+  (Data.ExpressionBody DefinitionIRef
+   (Data.Expression DefinitionIRef (Expression, a)))
 expressionBodyFrom = Traversable.mapM newExpressionFromH . Lens.view Data.eValue
 
 newExpressionFromH ::
   Monad m =>
-  Data.Expression Data.DefinitionIRef a ->
+  Data.Expression DefinitionIRef a ->
   Transaction m
-  (Data.Expression Data.DefinitionIRef
-   (Expression, a))
+  (Data.Expression DefinitionIRef (Expression, a))
 newExpressionFromH expr =
   liftM f . Transaction.newIRefWithGuid $ const mkPair
   where
@@ -93,4 +103,4 @@ newExpressionFromH expr =
       body <- expressionBodyFrom expr
       return (fmap (fst . Lens.view Data.ePayload) body, body)
     f (exprI, body) =
-      Data.Expression body (Data.ExpressionIRef exprI, expr ^. Data.ePayload)
+      Data.Expression body (Expression exprI, expr ^. Data.ePayload)

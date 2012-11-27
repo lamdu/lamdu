@@ -19,14 +19,14 @@ import qualified Editor.Data.IRef as DataIRef
 
 type T = Transaction
 
-type ExpressionSetter m = Data.ExpressionIRef -> m ()
+type ExpressionSetter m = DataIRef.Expression -> m ()
 
 data Stored m a = Stored
   { sSetIRef :: ExpressionSetter m
-  , sExpr :: Data.Expression Data.DefinitionIRef a
+  , sExpr :: Data.Expression DataIRef.DefinitionIRef a
   } deriving (Functor)
 
-type Loaded m = Stored m Data.ExpressionIRef
+type Loaded m = Stored m DataIRef.Expression
 
 loadExpressionProperty ::
   (Monad n, Monad m) =>
@@ -38,15 +38,15 @@ loadExpressionProperty prop =
 
 loadExpressionIRef ::
   Monad m =>
-  Data.ExpressionIRef ->
-  T m (Data.Expression Data.DefinitionIRef Data.ExpressionIRef)
+  DataIRef.Expression ->
+  T m (Data.Expression DataIRef.DefinitionIRef DataIRef.Expression)
 loadExpressionIRef exprI =
   liftM (`Data.Expression` exprI) .
   Traversable.mapM loadExpressionIRef =<< DataIRef.readExprBody exprI
 
 exprAddProp ::
-  Monad m => Stored (T m) (Data.ExpressionIRef, a) ->
-  Data.Expression Data.DefinitionIRef
+  Monad m => Stored (T m) (DataIRef.Expression, a) ->
+  Data.Expression DataIRef.DefinitionIRef
   (DataIRef.ExpressionProperty (T m), a)
 exprAddProp (Stored setIRef (Data.Expression body (iref, a))) =
   Data.Expression newBody (Property iref setIRef, a)
@@ -71,7 +71,7 @@ exprAddProp (Stored setIRef (Data.Expression body (iref, a))) =
 
 loadDefinition ::
   (Monad m, Monad f) =>
-  Data.DefinitionIRef ->
+  DataIRef.DefinitionIRef ->
   T m (Data.Definition (Loaded (T f)))
 loadDefinition defI = do
   Data.Definition body typeExprI <- Transaction.readIRef defI

@@ -41,6 +41,7 @@ import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
+import qualified Editor.Data.IRef as DataIRef
 import qualified Editor.Layers as Layers
 import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
@@ -59,7 +60,7 @@ moreSymbolSizeFactor = 0.5
 
 data Group = Group
   { groupNames :: [String]
-  , groupBaseExpr :: Data.Expression Data.DefinitionIRef ()
+  , groupBaseExpr :: Data.Expression DataIRef.DefinitionIRef ()
   }
 
 type T = Transaction
@@ -171,14 +172,14 @@ makeNoResults myId =
   ExprGuiM.widgetEnv .
   BWidgets.makeTextView "(No results)" $ mappend myId ["no results"]
 
-mkGroup :: [String] -> Data.ExpressionBody Data.DefinitionIRef (Data.Expression Data.DefinitionIRef ()) -> Group
+mkGroup :: [String] -> Data.ExpressionBody DataIRef.DefinitionIRef (Data.Expression DataIRef.DefinitionIRef ()) -> Group
 mkGroup names body = Group
   { groupNames = names
   , groupBaseExpr = Data.pureExpression body
   }
 
 makeVariableGroup ::
-  MonadF m => Data.VariableRef Data.DefinitionIRef -> ExprGuiM m Group
+  MonadF m => Data.VariableRef DataIRef.DefinitionIRef -> ExprGuiM m Group
 makeVariableGroup varRef =
   ExprGuiM.withNameFromVarRef varRef $ \(_, varName) ->
   return . mkGroup [varName] . Data.ExpressionLeaf $ Data.GetVariable varRef
@@ -223,12 +224,12 @@ makeLiteralGroup searchTerm =
 resultsPrefixId :: HoleInfo m -> Widget.Id
 resultsPrefixId holeInfo = mconcat [hiHoleId holeInfo, Widget.Id ["results"]]
 
-exprWidgetId :: Data.Expression Data.DefinitionIRef a -> Widget.Id
+exprWidgetId :: Data.Expression DataIRef.DefinitionIRef a -> Widget.Id
 exprWidgetId = WidgetIds.fromGuid . randFunc . show . void
 
 toResultsList ::
   Monad m =>
-  HoleInfo m -> Data.Expression Data.DefinitionIRef () ->
+  HoleInfo m -> Data.Expression DataIRef.DefinitionIRef () ->
   CT m (Maybe ResultsList)
 toResultsList holeInfo baseExpr = do
   results <- Sugar.holeInferResults (hiHole holeInfo) baseExpr
