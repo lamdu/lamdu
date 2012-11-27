@@ -54,8 +54,8 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Data.Traversable as Traversable
 import qualified Editor.Anchors as Anchors
 import qualified Editor.CodeEdit.Infix as Infix
-import qualified Editor.CodeEdit.Sugar.Monad as SugarM
 import qualified Editor.CodeEdit.Sugar.Infer as SugarInfer
+import qualified Editor.CodeEdit.Sugar.Monad as SugarM
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef

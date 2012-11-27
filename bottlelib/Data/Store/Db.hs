@@ -2,13 +2,13 @@ module Data.Store.Db
     (Db, withDb, lookup, transaction, store)
 where
 
-import qualified Control.Exception      as Exc
-import           Prelude                hiding (lookup)
-import qualified Database.KeyValueHash  as HashDB
-import           Data.ByteString        (ByteString)
-import           Data.Store.Guid        (Guid)
-import qualified Data.Store.Guid        as Guid
-import           Data.Store.Transaction (Store(..))
+import Data.ByteString (ByteString)
+import Data.Store.Guid (Guid)
+import Data.Store.Transaction (Store(..))
+import Prelude hiding (lookup)
+import qualified Control.Exception as Exc
+import qualified Data.Store.Guid as Guid
+import qualified Database.KeyValueHash as HashDB
 
 type Db = HashDB.Database
 

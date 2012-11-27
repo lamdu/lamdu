@@ -2,11 +2,11 @@
 module Data.Store.Rev.Change (Key, Value, Change(..))
 where
 
-import Data.ByteString (ByteString)
 import Data.Binary (Binary(..))
-import Data.Store.Guid (Guid)
+import Data.ByteString (ByteString)
 import Data.Derive.Binary(makeBinary)
 import Data.DeriveTH(derive)
+import Data.Store.Guid (Guid)
 
 type Key = Guid
 type Value = ByteString

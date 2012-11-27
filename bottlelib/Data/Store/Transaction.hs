@@ -18,25 +18,25 @@ module Data.Store.Transaction
   )
 where
 
-import           Control.Applicative              (Applicative)
-import           Control.Monad                    (liftM)
-import           Control.Monad.Trans.Class        (MonadTrans(..))
-import           Control.Monad.Trans.Reader       (ReaderT, runReaderT, ask)
-import           Control.Monad.Trans.State        (StateT, runStateT, get, gets, modify)
-import           Data.Binary                      (Binary)
-import           Data.Binary.Utils                (encodeS, decodeS)
-import           Data.ByteString                  (ByteString)
-import           Data.Map                         (Map)
-import           Data.Maybe                       (fromMaybe, isJust)
-import           Data.Monoid                      (mempty)
-import           Data.Store.Guid                  (Guid)
-import           Data.Store.IRef                  (IRef)
-import           Data.Store.Rev.Change            (Key, Value)
-import           Prelude                          hiding (lookup)
-import qualified Data.Map                         as Map
+import Control.Applicative (Applicative)
+import Control.Monad (liftM)
+import Control.Monad.Trans.Class (MonadTrans(..))
+import Control.Monad.Trans.Reader (ReaderT, runReaderT, ask)
+import Control.Monad.Trans.State (StateT, runStateT, get, gets, modify)
+import Data.Binary (Binary)
+import Data.Binary.Utils (encodeS, decodeS)
+import Data.ByteString (ByteString)
+import Data.Map (Map)
+import Data.Maybe (fromMaybe, isJust)
+import Data.Monoid (mempty)
+import Data.Store.Guid (Guid)
+import Data.Store.IRef (IRef)
+import Data.Store.Rev.Change (Key, Value)
+import Prelude                          hiding (lookup)
+import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
-import qualified Data.Store.IRef                  as IRef
-import qualified Data.Store.Property              as Property
+import qualified Data.Store.IRef as IRef
+import qualified Data.Store.Property as Property
 
 type Property t m = Property.Property (Transaction t m)
 

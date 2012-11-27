@@ -6,14 +6,14 @@ module Data.Store.Rev.Version
      walkUp, walkDown, versionsBetween)
 where
 
-import           Control.Monad          (liftM, liftM2, join)
-import           Data.Binary            (Binary(..))
-import           Data.Store.IRef        (IRef)
-import           Data.Store.Transaction (Transaction)
-import qualified Data.Store.Transaction as Transaction
-import           Data.Store.Rev.Change  (Change(..), Key, Value)
+import Control.Monad (liftM, liftM2, join)
+import Data.Binary (Binary(..))
 import Data.Derive.Binary(makeBinary)
 import Data.DeriveTH(derive)
+import Data.Store.IRef (IRef)
+import Data.Store.Rev.Change (Change(..), Key, Value)
+import Data.Store.Transaction (Transaction)
+import qualified Data.Store.Transaction as Transaction
 
 newtype Version = Version { versionIRef :: IRef VersionData }
   deriving (Eq, Ord, Read, Show, Binary)
