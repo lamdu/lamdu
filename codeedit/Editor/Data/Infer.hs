@@ -2,6 +2,7 @@
 module Editor.Data.Infer
   ( Expression, Inferred(..), rExpression
   , Loaded, load, inferLoaded
+  , updateAndInfer
   -- TODO: Expose only ref readers for InferNode (instead of .. and TypedValue)
   , InferNode(..), TypedValue(..)
   , Error(..), ErrorDetails(..)
@@ -14,7 +15,7 @@ module Editor.Data.Infer
   , newTypedNodeWithScope
   ) where
 
-import Control.Applicative (Applicative(..), (<$), (<$>), (<*))
+import Control.Applicative (Applicative(..), (<$), (<$>))
 import Control.Lens ((%=), (.=), (^.), (+=))
 import Control.Monad (guard, liftM, liftM2, unless, void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
@@ -50,8 +51,11 @@ import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
 
-mkOrigin :: State Origin Origin
-mkOrigin = State.get <* State.modify (+1)
+mkOrigin :: Monad m => StateT Origin m Origin
+mkOrigin = do
+  r <- State.get
+  State.modify (+1)
+  return r
 
 -- Initial Pass:
 -- Get Definitions' types expand.
@@ -398,6 +402,22 @@ execInferT actions state expr act =
     Monoid w => InferActions (Writer w) ->
     InferState -> Data.Expression DataIRef.DefinitionIRef (InferNode, a) ->
     InferT (Writer w) () -> Writer w (Expression a, RefMap) #-}
+
+updateAndInfer ::
+  Monad m => InferActions m -> RefMap ->
+  [(Ref, Data.Expression DataIRef.DefinitionIRef ())] ->
+  Expression a -> m (Expression a, RefMap)
+updateAndInfer actions prevRefMap updates expr =
+  execInferT actions inferState (f <$> expr) $ do
+    mapM_ doUpdate updates
+  where
+    inferState = InferState prevRefMap mempty mempty
+    f inferred = (iPoint inferred, iStored inferred)
+    doUpdate (ref, newExpr) =
+      setRefExpr ref =<<
+      (liftState . Lens.zoom (sRefMap . nextOrigin) . makeRefExprFromPure) newExpr
+    makeRefExprFromPure =
+      Traversable.mapM . const $ liftM (RefExprPayload mempty) mkOrigin
 
 inferLoaded ::
   Monad m => InferActions m -> Loaded a -> RefMap -> InferNode ->
