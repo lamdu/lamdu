@@ -378,15 +378,34 @@ liftState = liftActions . lift
 instance MonadTrans InferT where
   lift = liftState . lift
 
+execInferT ::
+  Monad m => InferActions m ->
+  InferState -> Data.Expression DataIRef.DefinitionIRef (InferNode, a) ->
+  InferT m () -> m (Expression a, RefMap)
+execInferT actions state expr act =
+  liftM (postProcess expr . fst) .
+  runInferT actions state $ do
+    act
+    executeRules
+
+{-# SPECIALIZE
+  execInferT ::
+    InferActions Maybe ->
+    InferState -> Data.Expression DataIRef.DefinitionIRef (InferNode, a) ->
+    InferT Maybe () -> Maybe (Expression a, RefMap) #-}
+{-# SPECIALIZE
+  execInferT ::
+    Monoid w => InferActions (Writer w) ->
+    InferState -> Data.Expression DataIRef.DefinitionIRef (InferNode, a) ->
+    InferT (Writer w) () -> Writer w (Expression a, RefMap) #-}
+
 inferLoaded ::
   Monad m => InferActions m -> Loaded a -> RefMap -> InferNode ->
   m (Expression a, RefMap)
 inferLoaded actions loaded initialRefMap node =
-  liftM (postProcess expr . fst) .
-  runInferT actions ruleInferState $ do
+  execInferT actions ruleInferState expr $ do
     restoreRoot rootValR rootValMRefData
     restoreRoot rootTypR rootTypMRefData
-    executeRules
   where
     Preprocessed expr loadedRefMap (rootValMRefData, rootTypMRefData) =
       preprocess loaded initialRefMap node
