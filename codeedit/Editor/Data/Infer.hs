@@ -31,6 +31,8 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
+import Editor.Data.Infer.Rules (Rule(..), makeAllRules, makeResumptionRules, runRuleClosure)
+import Editor.Data.Infer.Types
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Either as Either
@@ -42,9 +44,6 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
-
-import Editor.Data.Infer.Rules
-import Editor.Data.Infer.Types
 
 mkOrigin :: State Origin Origin
 mkOrigin = State.get <* State.modify (+1)
