@@ -63,7 +63,7 @@ makeSugarPanes = do
   panes <- lift $ Anchors.getP Anchors.panes
   let
     mkMDelPane i
-      | length panes >= 1 = Just $ do
+      | not (null panes) = Just $ do
         let newPanes = removeAt i panes
         Anchors.setP Anchors.panes newPanes
         return . maybe panesGuid IRef.guid . listToMaybe . reverse $
