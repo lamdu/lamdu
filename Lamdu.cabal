@@ -16,7 +16,6 @@ Library
   hs-Source-Dirs:      bottlelib
 
   Exposed-modules:     Data.Cache,
-                       Data.Cache.Types,
                        Data.List.Utils,
                        Data.Maybe.Utils,
                        Data.MRUMemo,
@@ -55,7 +54,6 @@ Library
                        Data.Store.Rev.Change,
                        Data.Store.Rev.Version,
                        Data.Store.Rev.Branch,
-                       Data.Store.Rev.ViewBranchInternal,
                        Data.Store.Rev.View,
                        Data.Store.Transaction,
                        Data.Store.Property,
@@ -63,6 +61,9 @@ Library
 
                        System.Random.Utils,
                        Control.Monad.Unit
+
+  Other-Modules:       Data.Store.Rev.ViewBranchInternal,
+                       Data.Cache.Types
 
   Build-depends:       base >= 4,
                        keyvaluehash >= 0.3,
