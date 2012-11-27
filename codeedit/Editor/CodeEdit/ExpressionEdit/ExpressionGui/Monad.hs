@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, ConstraintKinds #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, ConstraintKinds, TypeFamilies #-}
 module Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad
   ( ExprGuiM, WidgetT, run
   , widgetEnv
@@ -30,7 +30,7 @@ import Data.Cache (Cache)
 import Data.Map (Map)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
-import Editor.Anchors (ViewTag)
+import Editor.Anchors (ViewM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Types (ExpressionGui, WidgetT)
 import Editor.CodeEdit.Settings (Settings)
 import Editor.MonadF (MonadF)
@@ -64,7 +64,7 @@ data Askable m = Askable
   , _aMakeSubexpression :: Sugar.Expression m -> ExprGuiM m (ExpressionGui m)
   }
 
-type T = Transaction ViewTag
+type T = Transaction
 
 newtype ExprGuiM m a = ExprGuiM
   { _varAccess :: RWST (Askable m) AccessedVars Cache (WidgetEnvT (T m)) a
@@ -124,7 +124,7 @@ widgetEnv = ExprGuiM . lift
 transaction :: Monad m => T m a -> ExprGuiM m a
 transaction = widgetEnv . lift
 
-getP :: Monad m => Anchors.MkProperty ViewTag m a -> ExprGuiM m a
+getP :: m ~ ViewM => Anchors.MkProperty ViewM a -> ExprGuiM m a
 getP = transaction . Anchors.getP
 
 assignCursor :: Monad m => Widget.Id -> Widget.Id -> ExprGuiM m a -> ExprGuiM m a

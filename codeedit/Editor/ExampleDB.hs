@@ -1,18 +1,16 @@
 module Editor.ExampleDB(initDB) where
 
-import Control.Monad (join, liftM, liftM2, unless, (<=<))
+import Control.Monad (join, liftM, liftM2, unless)
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Writer (WriterT)
 import Data.Binary (Binary(..))
-import Data.Store.Guid (Guid)
+import Data.Store.Db (Db)
 import Data.Store.IRef (IRef)
-import Data.Store.Rev.Change (Key, Value)
-import Data.Store.Transaction (Transaction, Store(..))
-import Editor.Anchors (DBTag)
+import Data.Store.Rev.Branch (Branch)
+import Data.Store.Rev.Version (Version)
+import Data.Store.Transaction (Transaction)
 import Editor.CodeEdit.Sugar.Config (SugarConfig(SugarConfig))
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Store.IRef as IRef
-import qualified Data.Store.Property as Property
 import qualified Data.Store.Rev.Branch as Branch
 import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Rev.View as View
@@ -25,44 +23,16 @@ import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
 import qualified Editor.WidgetIds as WidgetIds
 
-type WriteCollector m = WriterT [(Key, Value)] m
-
-writeCollectorStore ::
-  Monad m => m Guid -> Store t (WriteCollector m)
-writeCollectorStore newKey = Store {
-  storeNewKey = lift newKey,
-  -- TODO: Eww! Hack! Remove collectWrites?
-  storeLookup = \k -> return . Just . error $ "Attempt to use key: " ++ show k,
-  storeAtomicWrite = Writer.tell <=< mapM makeChange
-  }
-  where
-    makeChange (key, Just value) = return (key, value)
-    makeChange (_, Nothing) =
-      fail "Cannot delete when collecting writes"
-
-collectWrites ::
-  Monad m =>
-  m Guid -> Transaction t (WriteCollector m) () -> m [(Key, Value)]
-collectWrites newGuid =
-  Writer.execWriterT . Transaction.run (writeCollectorStore newGuid)
-
--- Initialize an IRef if it does not already exist.
-initRef :: (Binary a, Monad m) => IRef a -> Transaction t m a -> Transaction t m a
-initRef iref act = do
-  exists <- Transaction.irefExists iref
-  unless exists (Transaction.writeIRef iref =<< act)
-  Transaction.readIRef iref
-
-newTodoIRef :: Monad m => Transaction t m (IRef a)
+newTodoIRef :: Monad m => Transaction m (IRef a)
 newTodoIRef = liftM IRef.unsafeFromGuid Transaction.newKey
 
-fixIRef :: (Binary a, Monad m) => (IRef a -> Transaction t m a) -> Transaction t m (IRef a)
+fixIRef :: (Binary a, Monad m) => (IRef a -> Transaction m a) -> Transaction m (IRef a)
 fixIRef createOuter = do
   x <- newTodoIRef
   Transaction.writeIRef x =<< createOuter x
   return x
 
-createBuiltins :: Monad m => Transaction A.ViewTag m ((FFI.Env, SugarConfig), [Data.DefinitionIRef])
+createBuiltins :: Monad m => Transaction m ((FFI.Env, SugarConfig), [Data.DefinitionIRef])
 createBuiltins =
   Writer.runWriterT $ do
     list <- mkType . A.newBuiltin "Data.List.List" =<< lift setToSet
@@ -181,35 +151,35 @@ createBuiltins =
     makeWithType builtinName typeMaker =
       tellift (A.newBuiltin builtinName =<< typeMaker)
 
-setMkProp
-  :: Monad m
-  => m (Property.Property m a) -> a -> m ()
-setMkProp mkProp val = do
-  prop <- mkProp
-  Property.set prop val
+newBranch :: Monad m => String -> Version -> Transaction m Branch
+newBranch name ver = do
+  branch <- Branch.new ver
+  A.setP (BranchGUI.branchNameProp branch) name
+  return branch
 
-initDB :: Store DBTag IO -> IO ()
-initDB store =
-  Transaction.run store $ do
-    (branch:_) <- initRef A.branchesIRef $ do
-      changes <- collectWrites Transaction.newKey $ do
+initDB :: Db -> IO ()
+initDB db =
+  A.runDbTransaction db $ do
+    exists <- Transaction.irefExists A.branchesIRef
+    unless exists $ do
+      emptyVersion <- Version.makeInitialVersion []
+      master <- newBranch "master" emptyVersion
+      view <- View.new master
+      A.setP A.view view
+      A.setP A.branches [master]
+      A.setP A.currentBranch master
+      A.setP A.redos []
+      A.setP A.cursor $ WidgetIds.fromIRef A.panesIRef
+      A.runViewTransaction view $ do
         ((ffiEnv, sugarConfig), builtins) <- createBuiltins
-        setMkProp A.clipboards []
-        setMkProp A.sugarConfig sugarConfig
-        setMkProp A.ffiEnv ffiEnv
-        setMkProp A.globals builtins
-        setMkProp A.panes []
-        setMkProp A.preJumps []
-        setMkProp A.preCursor $ WidgetIds.fromIRef A.panesIRef
-        setMkProp A.postCursor $ WidgetIds.fromIRef A.panesIRef
-      initialVersionIRef <- Version.makeInitialVersion changes
-      master <- Branch.new initialVersionIRef
-      setMkProp (BranchGUI.branchNameProp master) "master"
-      return [master]
-    view <- initRef A.viewIRef $ View.new branch
-    _ <- initRef A.currentBranchIRef (return branch)
-    _ <- initRef A.redosIRef $ return []
-    _ <-
-      initRef A.cursorIRef . Transaction.run (View.store view) .
-      return $ WidgetIds.fromIRef A.panesIRef
-    return ()
+        A.setP A.clipboards []
+        A.setP A.sugarConfig sugarConfig
+        A.setP A.ffiEnv ffiEnv
+        A.setP A.globals builtins
+        A.setP A.panes []
+        A.setP A.preJumps []
+        A.setP A.preCursor $ WidgetIds.fromIRef A.panesIRef
+        A.setP A.postCursor $ WidgetIds.fromIRef A.panesIRef
+      -- Prevent undo into the invalid empty revision
+      newVer <- Branch.curVersion master
+      Version.preventUndo newVer

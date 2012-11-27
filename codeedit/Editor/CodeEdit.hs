@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, TypeFamilies #-}
 module Editor.CodeEdit (make) where
 
 import Control.Lens ((^.))
@@ -12,10 +12,9 @@ import Data.Maybe (listToMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
-import Editor.Anchors (ViewTag)
+import Editor.Anchors (ViewM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (WidgetT, ExprGuiM)
 import Editor.CodeEdit.Settings (Settings)
-import Editor.MonadF (MonadF)
 import Editor.WidgetEnvT (WidgetEnvT)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Lens as Lens
@@ -39,7 +38,7 @@ import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
-type T = Transaction ViewTag
+type T = Transaction
 
 -- This is not in Sugar because Sugar is for code
 data SugarPane m = SugarPane
@@ -49,7 +48,7 @@ data SugarPane m = SugarPane
   , mMovePaneUp :: Maybe (T m ())
   }
 
-makeNewDefinitionAction :: Monad m => ExprGuiM m (T m Widget.Id)
+makeNewDefinitionAction :: m ~ ViewM => ExprGuiM m (T m Widget.Id)
 makeNewDefinitionAction = do
   curCursor <- ExprGuiM.widgetEnv WE.readCursor
   return $ do
@@ -58,7 +57,7 @@ makeNewDefinitionAction = do
     Anchors.savePreJumpPosition curCursor
     return . FocusDelegator.delegatingId $ WidgetIds.fromIRef newDefI
 
-makeSugarPanes :: Monad m => StateT Cache (T m) [SugarPane m]
+makeSugarPanes :: m ~ ViewM => StateT Cache (T m) [SugarPane m]
 makeSugarPanes = do
   panes <- lift $ Anchors.getP Anchors.panes
   let
@@ -92,7 +91,7 @@ makeSugarPanes = do
   mapM convertPane $ enumerate panes
 
 makeClipboardsEdit ::
-  MonadF m => [Sugar.Expression m] -> ExprGuiM m (WidgetT m)
+  m ~ ViewM => [Sugar.Expression m] -> ExprGuiM m (WidgetT m)
 makeClipboardsEdit clipboards = do
   clipboardsEdits <-
     mapM (liftM (Lens.view ExpressionGui.egWidget) . ExpressionEdit.make) clipboards
@@ -103,7 +102,7 @@ makeClipboardsEdit clipboards = do
   return . Box.vboxAlign 0 $ clipboardTitle : clipboardsEdits
 
 make ::
-  MonadF m => Settings ->
+  m ~ ViewM => Settings ->
   StateT Cache (WidgetEnvT (T m)) (Widget (T m))
 make settings = do
   sugarPanes <- mapStateT lift makeSugarPanes
@@ -124,7 +123,7 @@ make settings = do
 panesGuid :: Guid
 panesGuid = IRef.guid Anchors.panesIRef
 
-makePanesEdit :: MonadF m => [SugarPane m] -> ExprGuiM m (WidgetT m)
+makePanesEdit :: m ~ ViewM => [SugarPane m] -> ExprGuiM m (WidgetT m)
 makePanesEdit panes = do
   panesWidget <-
     case panes of

@@ -30,20 +30,20 @@ type Loaded m = Stored m Data.ExpressionIRef
 
 loadExpressionProperty ::
   (Monad n, Monad m) =>
-  DataIRef.ExpressionProperty (T t m) ->
-  T u n (Loaded (T t m))
+  DataIRef.ExpressionProperty (T m) ->
+  T n (Loaded (T m))
 loadExpressionProperty prop =
   liftM (Stored (Property.set prop)) .
   loadExpressionIRef $ Property.value prop
 
-loadExpressionIRef :: Monad m => Data.ExpressionIRef -> T t m (Data.Expression Data.ExpressionIRef)
+loadExpressionIRef :: Monad m => Data.ExpressionIRef -> T m (Data.Expression Data.ExpressionIRef)
 loadExpressionIRef exprI =
   liftM (`Data.Expression` exprI) .
   Traversable.mapM loadExpressionIRef =<< DataIRef.readExprBody exprI
 
 exprAddProp ::
-  Monad m => Stored (T t m) (Data.ExpressionIRef, a) ->
-  Data.Expression (DataIRef.ExpressionProperty (T t m), a)
+  Monad m => Stored (T m) (Data.ExpressionIRef, a) ->
+  Data.Expression (DataIRef.ExpressionProperty (T m), a)
 exprAddProp (Stored setIRef (Data.Expression body (iref, a))) =
   Data.Expression newBody (Property iref setIRef, a)
   where
@@ -68,7 +68,7 @@ exprAddProp (Stored setIRef (Data.Expression body (iref, a))) =
 loadDefinition ::
   (Monad m, Monad f) =>
   Data.DefinitionIRef ->
-  T t m (Data.Definition (Loaded (T u f)))
+  T m (Data.Definition (Loaded (T f)))
 loadDefinition defI = do
   Data.Definition body typeExprI <- Transaction.readIRef defI
   let

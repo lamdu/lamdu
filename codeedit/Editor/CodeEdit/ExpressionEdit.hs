@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, TypeFamilies #-}
 module Editor.CodeEdit.ExpressionEdit(make) where
 
 import Control.Lens ((^.))
@@ -6,7 +6,7 @@ import Control.Monad ((<=<), liftM)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
-import Editor.Anchors (ViewTag)
+import Editor.Anchors (ViewM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Editor.MonadF (MonadF)
@@ -37,7 +37,7 @@ data IsHole = NotAHole | IsAHole
 
 pasteEventMap
   :: MonadF m
-  => Sugar.Hole m -> Widget.EventHandlers (Transaction ViewTag m)
+  => Sugar.Hole m -> Widget.EventHandlers (Transaction m)
 pasteEventMap =
   maybe mempty
   (Widget.keysEventMapMovesCursor
@@ -45,7 +45,7 @@ pasteEventMap =
    liftM WidgetIds.fromGuid) .
   (Sugar.holePaste <=< Sugar.holeMActions)
 
-make :: MonadF m => Sugar.Expression m -> ExprGuiM m (ExpressionGui m)
+make :: m ~ ViewM => Sugar.Expression m -> ExprGuiM m (ExpressionGui m)
 make sExpr = do
   (holePicker, widget) <- makeEditor sExpr exprId
   typeEdits <- mapM make $ payload ^. Sugar.plInferredTypes
@@ -78,7 +78,7 @@ make sExpr = do
     exprGuid = sExpr ^. Sugar.rGuid
 
 makeEditor
-  :: MonadF m
+  :: m ~ ViewM
   => Sugar.Expression m
   -> Widget.Id
   -> ExprGuiM m (IsHole, ExpressionGui m)
@@ -116,7 +116,7 @@ expressionEventMap ::
   MonadF m =>
   Guid -> IsHole ->
   Sugar.Payload m ->
-  ExprGuiM m (EventHandlers (Transaction ViewTag m))
+  ExprGuiM m (EventHandlers (Transaction m))
 expressionEventMap exprGuid holePicker payload =
   maybe (return mempty) (actionsEventMap exprGuid holePicker) $
   payload ^. Sugar.plActions
@@ -124,7 +124,7 @@ expressionEventMap exprGuid holePicker payload =
 actionsEventMap ::
   MonadF m =>
   Guid -> IsHole -> Sugar.Actions m ->
-  ExprGuiM m (EventHandlers (Transaction ViewTag m))
+  ExprGuiM m (EventHandlers (Transaction m))
 actionsEventMap exprGuid holePicker actions = do
   isSelected <-
     ExprGuiM.widgetEnv . WE.isSubCursor $

@@ -4,7 +4,6 @@ module Editor.CodeEdit.ExpressionEdit.LiteralEdit(makeInt, makeIntView) where
 
 import Control.Monad (liftM)
 import Data.Store.Transaction (Transaction)
-import Editor.Anchors(ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Editor.MonadF(MonadF)
@@ -46,7 +45,7 @@ makeIntEdit integer myId =
 makeIntEditI
   :: Monad m
   => Sugar.LiteralInteger m -> Widget.Id
-  -> (Integer -> Transaction ViewTag m ())
+  -> (Integer -> Transaction m ())
   -> ExprGuiM m (ExpressionGui m)
 makeIntEditI integer myId setValue = do
   cursor <- ExprGuiM.widgetEnv WE.readCursor

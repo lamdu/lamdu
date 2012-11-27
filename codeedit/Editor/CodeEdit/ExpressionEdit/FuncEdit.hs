@@ -8,7 +8,6 @@ import Control.Monad (liftM)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
-import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Editor.MonadF (MonadF)
@@ -58,7 +57,7 @@ jumpToRHS keys (rhsDoc, rhs) =
 makeParamEdit ::
   MonadF m =>
   ((ExprGuiM.NameSource, String) ->
-   Widget (Transaction ViewTag m) -> Widget (Transaction ViewTag m)) ->
+   Widget (Transaction m) -> Widget (Transaction m)) ->
   (E.Doc, Sugar.Expression m) ->
   (ExprGuiM.NameSource, String) -> Widget.Id ->
   Sugar.FuncParam m (Sugar.Expression m) ->
@@ -156,7 +155,7 @@ make hasParens (Sugar.Func params body) =
 makeParamsAndResultEdit ::
   MonadF m =>
   ((ExprGuiM.NameSource, String) ->
-   Widget (Transaction ViewTag m) -> Widget (Transaction ViewTag m)) ->
+   Widget (Transaction m) -> Widget (Transaction m)) ->
   [Widget.Id] -> (E.Doc, Sugar.Expression m) ->
   Widget.Id -> [Sugar.FuncParam m (Sugar.Expression m)] ->
   ExprGuiM m ([ExpressionGui m], ExpressionGui m)

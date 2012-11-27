@@ -39,7 +39,7 @@ transaction db = mapM_ applyChange
     applyChange (key, Just value) = HashDB.writeKey db (Guid.bs key) value
 
 -- You get a Store tagged however you like...
-store :: Db -> Store t IO
+store :: Db -> Store IO
 store db = Store {
   storeNewKey = Guid.new,
   storeLookup = lookup db,

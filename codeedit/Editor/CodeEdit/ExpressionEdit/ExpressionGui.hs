@@ -18,7 +18,6 @@ import Data.Function (on)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
-import Editor.Anchors (ViewTag)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Types (WidgetT, ExpressionGui(..), egWidget, egAlignment)
 import Editor.MonadF (MonadF)
@@ -59,7 +58,7 @@ hbox guis =
 hboxSpaced :: [ExpressionGui m] -> ExpressionGui m
 hboxSpaced = hbox . List.intersperse (fromValueWidget BWidgets.stdSpaceWidget)
 
-fromBox :: KBox Bool (Transaction ViewTag m) -> ExpressionGui m
+fromBox :: KBox Bool (Transaction m) -> ExpressionGui m
 fromBox box =
   ExpressionGui (Box.toWidget box) alignment
   where

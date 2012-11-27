@@ -37,7 +37,7 @@ where
   with just name gen
 
   -- First pass:
-  RWST (Askable r) VarInfo () (WidgetEnvT m (Transaction ViewTag m))
+  RWST (Askable r) VarInfo () (WidgetEnvT m (Transaction m))
   -- Second pass:
   (Reader NameGenState
   -- Final result:

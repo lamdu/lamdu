@@ -44,7 +44,7 @@ newtype WidgetEnvT m a = WidgetEnvT
 LensTH.makeLenses ''WidgetEnvT
 
 -- TODO: Remove this
-getP :: Monad m => Anchors.MkProperty t m a -> WidgetEnvT (Transaction t m) a
+getP :: Monad m => Anchors.MkProperty m a -> WidgetEnvT (Transaction m) a
 getP = lift . Anchors.getP
 
 runWidgetEnvT :: Monad m => Widget.Id -> TextEdit.Style -> WidgetEnvT m a -> m a

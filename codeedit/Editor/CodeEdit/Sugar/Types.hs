@@ -27,13 +27,12 @@ import Control.Monad.Trans.State (StateT)
 import Data.Cache (Cache)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
-import Editor.Anchors (ViewTag)
 import qualified Control.Lens.TH as LensTH
 import qualified Data.Store.IRef as IRef
 import qualified Editor.Data as Data
 import qualified Editor.Data.Infer as Infer
 
-type T = Transaction ViewTag
+type T = Transaction
 type CT m = StateT Cache (T m)
 
 data Actions m = Actions

@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, TypeFamilies #-}
 module Editor.CodeEdit.ExpressionEdit.HoleEdit
   ( make, makeUnwrapped
   , searchTermWidgetId
@@ -20,7 +20,7 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
-import Editor.Anchors (ViewTag)
+import Editor.Anchors (ViewM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Editor.MonadF (MonadF)
@@ -62,12 +62,12 @@ data Group = Group
   , groupBaseExpr :: Data.PureExpression
   }
 
-type T = Transaction ViewTag
+type T = Transaction
 type CT m = StateT Cache (T m)
 
 data HoleInfo m = HoleInfo
   { hiHoleId :: Widget.Id
-  , hiSearchTerm :: Property (Transaction ViewTag m) String
+  , hiSearchTerm :: Property (Transaction m) String
   , hiHole :: Sugar.Hole m
   , hiHoleActions :: Sugar.HoleActions m
   , hiGuid :: Guid
@@ -76,7 +76,7 @@ data HoleInfo m = HoleInfo
 
 pickExpr ::
   Monad m => HoleInfo m -> Sugar.HoleResult ->
-  Transaction ViewTag m Widget.EventResult
+  Transaction m Widget.EventResult
 pickExpr holeInfo expr = do
   (guid, _) <- Sugar.holePickResult (hiHoleActions holeInfo) expr
   return Widget.EventResult
@@ -86,7 +86,7 @@ pickExpr holeInfo expr = do
 
 resultPickEventMap ::
   Monad m => HoleInfo m -> Sugar.HoleResult ->
-  Widget.EventHandlers (Transaction ViewTag m)
+  Widget.EventHandlers (Transaction m)
 resultPickEventMap holeInfo holeResult =
   case hiMNextHole holeInfo of
   Just nextHole
@@ -268,8 +268,7 @@ makeResultsList holeInfo group = do
       (Data.makeApply . Data.pureExpression . Data.ExpressionLeaf) Data.Hole
 
 makeAllResults
-  :: MonadF m
-  => HoleInfo m
+  :: ViewM ~ m => HoleInfo m
   -> ExprGuiM m (ListT (CT m) (ResultType, ResultsList))
 makeAllResults holeInfo = do
   paramResults <-
@@ -304,9 +303,7 @@ makeAllResults holeInfo = do
     holeExpr = Data.pureExpression $ Data.ExpressionLeaf Data.Hole
 
 addNewDefinitionEventMap ::
-  Monad m =>
-  HoleInfo m ->
-  Widget.EventHandlers (Transaction ViewTag m)
+  ViewM ~ m => HoleInfo m -> Widget.EventHandlers (Transaction m)
 addNewDefinitionEventMap holeInfo =
   E.keyPresses Config.newDefinitionKeys
   "Add as new Definition" . makeNewDefinition $
@@ -457,7 +454,7 @@ alphaNumericHandler doc handler =
 
 pickEventMap ::
   MonadF m => HoleInfo m -> String -> Maybe Sugar.HoleResult ->
-  Widget.EventHandlers (Transaction ViewTag m)
+  Widget.EventHandlers (Transaction m)
 pickEventMap holeInfo searchTerm (Just result)
   | nonEmptyAll (`notElem` Config.operatorChars) searchTerm =
     operatorHandler "Pick this result and apply operator" $ \x -> do
@@ -490,7 +487,7 @@ markTypeMatchesAsUsed holeInfo =
       liftM (isJust . listToMaybe) . ExprGuiM.liftMemoT .
       Sugar.holeInferResults (hiHole holeInfo)
 
-makeActiveHoleEdit :: MonadF m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
+makeActiveHoleEdit :: ViewM ~ m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
 makeActiveHoleEdit holeInfo = do
   markTypeMatchesAsUsed holeInfo
   allResults <- makeAllResults holeInfo
@@ -541,7 +538,7 @@ holeFDConfig = FocusDelegator.Config
   }
 
 make ::
-  MonadF m => Sugar.Hole m -> Maybe (Sugar.Expression m) -> Guid ->
+  m ~ ViewM => Sugar.Hole m -> Maybe (Sugar.Expression m) -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make hole mNextHole guid =
   ExpressionGui.wrapDelegated holeFDConfig FocusDelegator.Delegating $
@@ -561,7 +558,7 @@ makeInactiveHoleEdit hole myId =
     canPickResult = isJust $ Sugar.holeMActions hole
 
 makeUnwrapped ::
-  MonadF m => Sugar.Hole m -> Maybe (Sugar.Expression m) -> Guid ->
+  m ~ ViewM => Sugar.Hole m -> Maybe (Sugar.Expression m) -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeUnwrapped hole mNextHole guid myId = do
   cursor <- ExprGuiM.widgetEnv WE.readCursor

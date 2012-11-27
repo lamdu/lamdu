@@ -1,6 +1,8 @@
+{-# LANGUAGE TypeFamilies #-}
 module Editor.CodeEdit.ExpressionEdit.InferredEdit(make) where
 
 import Data.Store.Guid (Guid)
+import Editor.Anchors (ViewM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Editor.MonadF (MonadF)
@@ -24,17 +26,16 @@ fdConfig = FocusDelegator.Config
   }
 
 make
-  :: MonadF m => Sugar.Inferred m (Sugar.Expression m) -> Guid -> Widget.Id
+  :: (MonadF m, m ~ ViewM) => Sugar.Inferred m (Sugar.Expression m) -> Guid -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
 make inferred guid =
   ExpressionGui.wrapDelegated fdConfig FocusDelegator.NotDelegating $
   makeUnwrapped inferred guid
 
 makeUnwrapped
-  :: MonadF m
-  => Sugar.Inferred m (Sugar.Expression m) -> Guid
+  :: Sugar.Inferred ViewM (Sugar.Expression ViewM) -> Guid
   -> Widget.Id
-  -> ExprGuiM m (ExpressionGui m)
+  -> ExprGuiM ViewM (ExpressionGui ViewM)
 makeUnwrapped inferred guid myId = do
   mInnerCursor <- ExprGuiM.widgetEnv $ WE.subCursor myId
   case mInnerCursor of

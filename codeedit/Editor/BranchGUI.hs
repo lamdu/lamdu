@@ -57,12 +57,12 @@ redoEventMap :: Functor m => Maybe (m Widget.Id) -> Widget.EventHandlers m
 redoEventMap =
   maybe mempty (Widget.keysEventMapMovesCursor Config.redoKeys "Redo")
 
-branchNameProp :: Monad m => Branch -> Transaction t m (Transaction.Property t m String)
+branchNameProp :: Monad m => Branch -> Transaction m (Transaction.Property m String)
 branchNameProp = Transaction.assocDataRefDef "" "name" . Branch.guid
 
 make ::
   (MonadF m, Monad n) =>
-  (forall a. Transaction t n a -> m a) ->
+  (forall a. Transaction n a -> m a) ->
   Widget.Size -> Actions m -> Widget m ->
   WidgetEnvT m (Widget m)
 make transaction size actions widget = do

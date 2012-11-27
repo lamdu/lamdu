@@ -1,7 +1,8 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, TypeFamilies #-}
 module Editor.CodeEdit.ExpressionEdit.VarEdit(make, makeView) where
 
 import Control.Monad (liftM)
+import Editor.Anchors (ViewM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Editor.MonadF (MonadF)
@@ -35,7 +36,7 @@ makeView var myId = ExprGuiM.withNameFromVarRef var $ \(nameSrc, name) ->
   BWidgets.makeFocusableTextView name myId
 
 make
-  :: MonadF m
+  :: m ~ ViewM
   => Data.VariableRef
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)

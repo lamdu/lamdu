@@ -7,7 +7,6 @@ import Data.Maybe (fromMaybe)
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
-import Editor.Anchors (ViewTag, DBTag)
 import Editor.VersionControl.Actions (Actions(Actions))
 import qualified Control.Lens as Lens
 import qualified Data.Store.Rev.Branch as Branch
@@ -18,17 +17,16 @@ import qualified Editor.Anchors as Anchors
 import qualified Editor.VersionControl.Actions as Actions
 import qualified Graphics.UI.Bottle.Widget as Widget
 
-type TDB = Transaction DBTag
-type TV m = Transaction ViewTag (TDB m)
+-- TODO: Use the monad newtypes:
+type TDB = Transaction Anchors.DbM
+type TV = Transaction Anchors.ViewM
 
-setCurrentBranch :: Monad m => View -> Branch -> TDB m ()
+setCurrentBranch :: View -> Branch -> TDB ()
 setCurrentBranch view branch = do
   Anchors.setP Anchors.currentBranch branch
   View.setBranch view branch
 
-deleteBranch ::
-  Monad m => View -> [Branch] -> Branch ->
-  TDB m Branch
+deleteBranch :: View -> [Branch] -> Branch -> TDB Branch
 deleteBranch view branches branch = do
   Anchors.setP Anchors.branches newBranches
   setCurrentBranch view newBranch
@@ -40,20 +38,19 @@ deleteBranch view branches branch = do
       elemIndex branch branches
     newBranches = removeAt index branches
 
-makeBranch :: Monad m => View -> TDB m Branch
+makeBranch :: View -> TDB Branch
 makeBranch view = do
   newBranch <- Branch.new =<< View.curVersion view
   Anchors.modP Anchors.branches (++ [newBranch])
   setCurrentBranch view newBranch
   return newBranch
 
-runAction :: Monad m => TV m a -> TDB m a
+runAction :: TV a -> TDB a
 runAction action = do
   view <- Anchors.getP Anchors.view
-  Transaction.run (Anchors.viewStore view) action
+  Anchors.runViewTransaction view action
 
-runEvent ::
-  Monad m => Widget.Id -> TV m Widget.EventResult -> TDB m Widget.EventResult
+runEvent :: Widget.Id -> TV Widget.EventResult -> TDB Widget.EventResult
 runEvent preCursor eventHandler = do
   (eventResult, isEmpty) <- runAction $ do
     eventResult <- eventHandler
@@ -65,7 +62,7 @@ runEvent preCursor eventHandler = do
   unless isEmpty $ Anchors.setP Anchors.redos []
   return eventResult
 
-makeActions :: Monad m => Transaction DBTag m (Actions (Transaction DBTag m))
+makeActions :: Transaction Anchors.DbM (Actions (Transaction Anchors.DbM))
 makeActions = do
   view <- Anchors.getP Anchors.view
   branches <- Anchors.getP Anchors.branches
@@ -74,7 +71,7 @@ makeActions = do
   curVersionData <- Version.versionData curVersion
   allRedos <- Anchors.getP Anchors.redos
   let
-    toDb = Transaction.run (Anchors.viewStore view)
+    toDb = Anchors.runViewTransaction view
     undo parentVersion = do
       preCursor <- toDb $ Anchors.getP Anchors.preCursor
       View.move view parentVersion

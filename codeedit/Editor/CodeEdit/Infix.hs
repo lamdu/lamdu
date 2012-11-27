@@ -11,7 +11,7 @@ isInfixName :: String -> Bool
 isInfixName "" = False
 isInfixName name = all (not . Char.isAlphaNum) name
 
-isInfixVar :: Monad m => Data.VariableRef -> Transaction t m Bool
+isInfixVar :: Monad m => Data.VariableRef -> Transaction m Bool
 isInfixVar =
   liftM isInfixName . Anchors.getP .
   Anchors.assocNameRef . Data.variableRefGuid
@@ -19,7 +19,7 @@ isInfixVar =
 infixOp
   :: Monad m
   => Data.Expression ref
-  -> Transaction t m (Maybe Data.VariableRef)
+  -> Transaction m (Maybe Data.VariableRef)
 infixOp expr =
   case expr ^. Data.eValue of
   Data.ExpressionLeaf (Data.GetVariable var) -> do

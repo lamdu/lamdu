@@ -11,10 +11,10 @@ import Data.Cache (Cache)
 import Data.IORef
 import Data.List(intercalate)
 import Data.Monoid(Monoid(..))
+import Data.Store.Db (Db)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2(Vector2)
 import Data.Word(Word8)
-import Editor.Anchors (DBTag)
 import Editor.CodeEdit.Settings (Settings(..))
 import Editor.WidgetEnvT (runWidgetEnvT)
 import Graphics.DrawingCombinators((%%))
@@ -30,7 +30,6 @@ import qualified Control.Lens as Lens
 import qualified Data.Cache as Cache
 import qualified Data.Map as Map
 import qualified Data.Store.Db as Db
-import qualified Data.Store.Transaction as Transaction
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BranchGUI as BranchGUI
@@ -70,7 +69,7 @@ main = do
     (getFont =<< getDataFileName "fonts/DejaVuSans.ttf")
     `E.catch` \(E.SomeException _) ->
     getFont "fonts/DejaVuSans.ttf"
-  Db.withDb (lamduDir </> "codeedit.db") $ runDbStore font . Anchors.dbStore
+  Db.withDb (lamduDir </> "codeedit.db") $ runDb font
 
 rjust :: Int -> a -> [a] -> [a]
 rjust len x xs = replicate (length xs - len) x ++ xs
@@ -149,9 +148,9 @@ makeSizeFactor = do
       ]
   return (factor, eventMap)
 
-runDbStore :: Draw.Font -> Transaction.Store DBTag IO -> IO a
-runDbStore font store = do
-  ExampleDB.initDB store
+runDb :: Draw.Font -> Db -> IO a
+runDb font db = do
+  ExampleDB.initDB db
   (sizeFactorRef, sizeFactorEvents) <- makeSizeFactor
   flyNavMake <- makeFlyNav
   addHelpWithStyle <- EventMapDoc.makeToggledHelpAdder Config.overlayDocKeys
@@ -176,7 +175,7 @@ runDbStore font store = do
 
   mainLoopDebugMode font makeWidget addHelp
   where
-    dbToIO = Transaction.run store
+    dbToIO = Anchors.runDbTransaction db
 
 infoStr :: Settings.InfoMode -> String
 infoStr Settings.InfoNone = "None"
@@ -202,7 +201,7 @@ mkGlobalEventMap settingsRef = do
 mkWidgetWithFallback
   :: IORef Settings
   -> TextEdit.Style
-  -> (forall a. Transaction DBTag IO a -> IO a)
+  -> (forall a. Transaction Anchors.DbM a -> IO a)
   -> (Widget.Size, Widget.Id)
   -> StateT Cache IO (Widget IO)
 mkWidgetWithFallback settingsRef style dbToIO (size, cursor) = do
@@ -229,10 +228,10 @@ mkWidgetWithFallback settingsRef style dbToIO (size, cursor) = do
 makeRootWidget
   :: Settings
   -> TextEdit.Style
-  -> (forall a. Transaction DBTag IO a -> IO a)
+  -> (forall a. Transaction Anchors.DbM a -> IO a)
   -> Widget.Size
   -> Widget.Id
-  -> StateT Cache (Transaction DBTag IO) (Widget IO)
+  -> StateT Cache (Transaction Anchors.DbM) (Widget IO)
 makeRootWidget settings style dbToIO size cursor = do
   actions <- lift VersionControl.makeActions
   mapStateT (runWidgetEnvT cursor style) $ do

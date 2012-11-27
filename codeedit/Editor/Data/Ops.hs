@@ -8,13 +8,12 @@ where
 
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
-import Editor.Anchors (ViewTag)
 import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
 import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
 
-type T = Transaction ViewTag
+type T = Transaction
 
 giveAsArg ::
   Monad m =>
