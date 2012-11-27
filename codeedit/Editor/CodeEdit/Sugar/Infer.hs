@@ -1,18 +1,19 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor #-}
 module Editor.CodeEdit.Sugar.Infer
-   -- Type-check an expression into an ordinary Inferred Expression,
-   -- short-circuit on error:
-   ( inferMaybe
+  (
+  -- Type-check an expression into an ordinary Inferred Expression,
+  -- short-circuit on error:
+    inferMaybe
 
-   -- Type-check an expression into a StoredResult:
-   , inferLoadedExpression
-   , StoredResult(..), srContext, srExpr, srRefmap, srSuccess
-   , StoredPayload, splGuid
+  -- Type-check an expression into a StoredResult:
+  , inferLoadedExpression
+  , StoredResult(..), srContext, srExpr, srRefmap, srSuccess
+  , StoredPayload, splGuid
 
-   -- Convert pure, inferred, stored expressions to Result:
-   , resultFromStored, resultFromPure, resultFromInferred
-   , Result, resultGuid, resultMInferred, resultIWC, resultProp
-   ) where
+  -- Convert pure, inferred, stored expressions to Result:
+  , resultFromStored, resultFromPure, resultFromInferred
+  , Result, resultGuid, resultMInferred, resultIWC, resultProp
+  ) where
 
 import Control.Applicative ((<$>), (<$))
 import Control.Arrow ((&&&))
