@@ -110,7 +110,7 @@ polymorphicForegroundColor = Draw.Color 1 0.4 0.3 1
 polymorphicCompactBGColor = Draw.Color 0.15 0.1 0.25 1
 polymorphicFullBGColor = Draw.Color 0.1 0.05 0.1 1
 
-cursorBGColor = Draw.Color 0 0 1 0.3
+cursorBGColor = Draw.Color 0 0 1 0.45
 
 helpStyle font = TextView.Style {
   TextView._styleColor = Draw.Color 1 1 1 1,
