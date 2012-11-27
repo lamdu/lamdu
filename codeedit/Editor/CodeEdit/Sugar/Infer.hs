@@ -1,13 +1,12 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor #-}
 module Editor.CodeEdit.Sugar.Infer
-   ( ExprEntity
-   , ExprEntityStored
-   , InferExpressionResult(..), ierContext, ierExpr, ierRefmap, ierSuccess
-   , EntityPayload(..)
+   ( IWCStored
+   , StoredResult(..), srContext, srExpr, srRefmap, srSuccess
+   , Result
    , inferMaybe
    , inferLoadedExpression
-   , iwcGuid, eeGuid, eeStored, eeProp
-   , eeFromPure
+   , iwcGuid, resultGuid, resultMInferred, resultIWC, resultProp
+   , resultFromPure, resultFromStored, resultFromInferred
    ) where
 
 import Control.Applicative ((<$>), (<$))
@@ -16,6 +15,7 @@ import Control.Monad (liftM, void, (<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT)
 import Data.Cache (Cache)
+import Data.Hashable (hash)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewTag)
@@ -30,61 +30,94 @@ import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
 import qualified Editor.Data.Infer as Infer
 import qualified Editor.Data.Load as Load
+import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
 
 type T = Transaction ViewTag
 type CT m = StateT Cache (T m)
 
-type ExprEntityStored m =
+type IWCStored m =
   InferredWithConflicts (DataIRef.ExpressionProperty (T m))
 
-type ExprEntityMStored m =
-  InferredWithConflicts (Maybe (DataIRef.ExpressionProperty (T m)))
-
-data InferExpressionResult m = InferExpressionResult
-  { _ierSuccess :: Bool
-  , _ierRefmap :: Infer.RefMap
-  , _ierExpr :: Data.Expression (ExprEntityStored m)
-  , _ierContext :: Infer.Loaded Data.ExpressionIRef
+data StoredResult m = StoredResult
+  { _srSuccess :: Bool
+  , _srRefmap :: Infer.RefMap
+  , _srExpr :: Data.Expression (IWCStored m)
+  , _srContext :: Infer.Loaded Data.ExpressionIRef
   }
-LensTH.makeLenses ''InferExpressionResult
+LensTH.makeLenses ''StoredResult
 
-data EntityPayload m = EntityPayload
-  { eplGuid :: Guid
-  , eplInferred :: Maybe (ExprEntityMStored m)
+type MIWCMStored m = Maybe (InferredWithConflicts (Maybe (DataIRef.ExpressionProperty (T m))))
+
+data Payload m = Payload
+  { plGuid :: Guid
+  , plMInferred :: MIWCMStored m
   }
 
-type ExprEntity m = Data.Expression (EntityPayload m)
+type Result m = Data.Expression (Payload m)
 
-iwcGuid :: ExprEntityStored m -> Guid
-iwcGuid = DataIRef.epGuid . Infer.iStored . iwcInferred
-
-eeGuid :: ExprEntity m -> Guid
-eeGuid = eplGuid . Lens.view Data.ePayload
-
-eeStored :: ExprEntity m -> Maybe (ExprEntityStored m)
-eeStored = Traversable.sequenceA <=< eplInferred . Lens.view Data.ePayload
-
-eeProp :: ExprEntity m -> Maybe (DataIRef.ExpressionProperty (T m))
-eeProp = Infer.iStored . iwcInferred <=< eplInferred . Lens.view Data.ePayload
-
-eeFromPure :: RandomGen g => g -> Data.PureExpression -> ExprEntity m
-eeFromPure gen =
+resultFrom ::
+  RandomGen g => g -> (a -> MIWCMStored m) ->
+  Data.Expression a -> Result m
+resultFrom gen f =
     Data.randomizeParamIds paramGen
   . Data.randomizeExpr exprGen
-  . ((`EntityPayload` Nothing) <$)
+  . (flip Payload . f <$>)
   where
     paramGen : exprGen : _ = RandomUtils.splits gen
+
+-- Not inferred, not stored
+resultFromPure :: RandomGen g => g -> Data.PureExpression -> Result m
+resultFromPure gen =
+  resultFrom gen (const Nothing)
+
+-- Inferred, but not stored:
+resultFromInferred :: Data.Expression (Infer.Inferred ()) -> Data.Expression (Payload m)
+resultFromInferred expr =
+  resultFrom gen f expr
+  where
+    gen = Random.mkStdGen . hash . show $ void expr
+    f inferred =
+      Just InferredWithConflicts
+      { iwcInferred = Nothing <$ inferred
+      , iwcTypeConflicts = []
+      , iwcValueConflicts = []
+      }
+
+-- Inferred and stored
+resultFromStored :: Data.Expression (IWCStored m) -> Data.Expression (Payload m)
+resultFromStored expr =
+  f <$> expr
+  where
+    f i = Payload
+      { plGuid = iwcGuid i
+      , plMInferred = Just $ Just <$> i
+      }
+
+iwcGuid :: IWCStored m -> Guid
+iwcGuid = DataIRef.epGuid . Infer.iStored . iwcInferred
+
+resultGuid :: Result m -> Guid
+resultGuid = plGuid . Lens.view Data.ePayload
+
+resultMInferred :: Result m -> MIWCMStored m
+resultMInferred = plMInferred . Lens.view Data.ePayload
+
+resultIWC :: Result m -> Maybe (IWCStored m)
+resultIWC = Traversable.sequenceA <=< plMInferred . Lens.view Data.ePayload
+
+resultProp :: Result m -> Maybe (DataIRef.ExpressionProperty (T m))
+resultProp = Infer.iStored . iwcInferred <=< plMInferred . Lens.view Data.ePayload
 
 inferredIRefToStored ::
   Monad m => Load.ExpressionSetter (T m) ->
   Data.Expression (InferredWithConflicts Data.ExpressionIRef) ->
-  Data.Expression (ExprEntityStored m)
+  Data.Expression (IWCStored m)
 inferredIRefToStored setter expr =
   fmap propIntoInferred . Load.exprAddProp . Load.Stored setter $
   (Infer.iStored . iwcInferred &&& id) <$> expr
   where
-    propIntoInferred (prop, eei) = prop <$ eei
+    propIntoInferred (prop, iwc) = prop <$ iwc
 
 loader :: Monad m => Infer.Loader (T m)
 loader =
@@ -105,16 +138,16 @@ inferLoadedExpression ::
   Monad m =>
   Maybe Data.DefinitionIRef -> Load.Loaded (T m) ->
   (Infer.RefMap, Infer.InferNode) ->
-  CT m (InferExpressionResult m)
+  CT m (StoredResult m)
 inferLoadedExpression mDefI (Load.Stored setExpr exprIRef) inferState = do
   loaded <- lift $ Infer.load loader mDefI exprIRef
   (success, refMap, expr) <-
     Cache.memoS (return . uncurriedInfer) (loaded, inferState)
-  return InferExpressionResult
-    { _ierSuccess = success
-    , _ierRefmap = refMap
-    , _ierExpr = inferredIRefToStored setExpr expr
-    , _ierContext = loaded
+  return StoredResult
+    { _srSuccess = success
+    , _srRefmap = refMap
+    , _srExpr = inferredIRefToStored setExpr expr
+    , _srContext = loaded
     }
   where
     uncurriedInfer (loaded, (refMap, inferNode)) =

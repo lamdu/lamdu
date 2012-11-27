@@ -56,13 +56,13 @@ inferWithConflicts ::
 inferWithConflicts loaded refMap node =
   ( Map.null $ unConflictMap conflictsMap
   , inferContext
-  , fmap toExprEntity exprInferred
+  , fmap toIWC exprInferred
   )
   where
     ((exprInferred, inferContext), conflictsMap) =
       runWriter $ Infer.infer (Infer.InferActions reportConflict)
       loaded refMap node
-    toExprEntity x =
+    toIWC x =
       InferredWithConflicts
       { iwcInferred = x
       , iwcValueConflicts = conflicts Infer.tvVal x
