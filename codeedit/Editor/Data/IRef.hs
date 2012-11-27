@@ -1,5 +1,5 @@
 module Editor.Data.IRef
-  ( ExpressionBody
+  ( Expression, ExpressionBody
   , ExpressionProperty, epGuid
   , Lambda, Apply
   , newExprBody, readExprBody, writeExprBody, exprGuid
@@ -21,18 +21,16 @@ import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
 
 type Expression = Data.ExpressionIRef
+type ExpressionProperty m = Property m Expression
+type ExpressionBody = Data.ExpressionBody Data.DefinitionIRef Expression
+type Lambda = Data.Lambda Expression
+type Apply = Data.Apply Expression
 
 unExpression :: Expression -> IRef ExpressionBody
 unExpression = Data.unExpressionIRef
 
-type ExpressionProperty m = Property m Expression
-
 epGuid :: ExpressionProperty m -> Guid
 epGuid = IRef.guid . unExpression . Property.value
-
-type ExpressionBody = Data.ExpressionBody Expression
-type Lambda = Data.Lambda Expression
-type Apply = Data.Apply Expression
 
 exprGuid :: Expression -> Guid
 exprGuid = IRef.guid . unExpression
@@ -61,13 +59,13 @@ readExprBody = Transaction.readIRef . unExpression
 writeExprBody :: Monad m => Expression -> ExpressionBody -> Transaction m ()
 writeExprBody = Transaction.writeIRef . unExpression
 
-newExpression :: Monad m => Data.Expression a -> Transaction m Expression
+newExpression :: Monad m => Data.Expression Data.DefinitionIRef a -> Transaction m Expression
 newExpression = liftM (fst . Lens.view Data.ePayload) . newExpressionFromH
 
 -- Returns expression with new Guids
 writeExpression
-  :: Monad m => Expression -> Data.Expression a
-  -> Transaction m (Data.Expression (Expression, a))
+  :: Monad m => Expression -> Data.Expression Data.DefinitionIRef a
+  -> Transaction m (Data.Expression Data.DefinitionIRef (Expression, a))
 writeExpression (Data.ExpressionIRef iref) expr = do
   exprBodyP <- expressionBodyFrom expr
   Transaction.writeIRef iref $ fmap (fst . Lens.view Data.ePayload) exprBodyP
@@ -75,15 +73,19 @@ writeExpression (Data.ExpressionIRef iref) expr = do
     (Data.ExpressionIRef iref, expr ^. Data.ePayload)
 
 expressionBodyFrom ::
-  Monad m => Data.Expression a ->
+  Monad m =>
+  Data.Expression Data.DefinitionIRef a ->
   Transaction m
-  (Data.ExpressionBody (Data.Expression (Expression, a)))
+  (Data.ExpressionBody Data.DefinitionIRef
+   (Data.Expression Data.DefinitionIRef (Expression, a)))
 expressionBodyFrom = Traversable.mapM newExpressionFromH . Lens.view Data.eValue
 
 newExpressionFromH ::
   Monad m =>
-  Data.Expression a ->
-  Transaction m (Data.Expression (Expression, a))
+  Data.Expression Data.DefinitionIRef a ->
+  Transaction m
+  (Data.Expression Data.DefinitionIRef
+   (Expression, a))
 newExpressionFromH expr =
   liftM f . Transaction.newIRefWithGuid $ const mkPair
   where

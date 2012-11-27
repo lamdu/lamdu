@@ -32,12 +32,16 @@ mkInferredGetDef name =
   where
     g = Guid.fromString name
 
-mkInferredGetParam :: String -> Data.PureExpression -> InferResults
+mkInferredGetParam :: String -> Data.PureExpression Data.DefinitionIRef -> InferResults
 mkInferredGetParam name = mkInferredLeafSimple gv
   where
     gv = Data.GetVariable . Data.ParameterRef $ Guid.fromString name
 
-type InferResults = Data.Expression (Data.PureExpression, Data.PureExpression)
+type InferResults =
+  Data.Expression Data.DefinitionIRef
+  ( Data.PureExpression Data.DefinitionIRef
+  , Data.PureExpression Data.DefinitionIRef
+  )
 
 inferResults :: Infer.Expression a -> InferResults
 inferResults =
@@ -69,12 +73,12 @@ compareInferred x y =
     matchI = Data.matchExpression nop ((const . const) Nothing)
     nop () () = Just ()
 
-mkInferredLeafSimple :: Data.Leaf -> Data.PureExpression -> InferResults
+mkInferredLeafSimple :: Data.Leaf Data.DefinitionIRef -> Data.PureExpression Data.DefinitionIRef -> InferResults
 mkInferredLeafSimple leaf =
   mkInferredLeaf leaf . Data.pureExpression $ Data.ExpressionLeaf leaf
 
 mkInferredLeaf ::
-  Data.Leaf -> Data.PureExpression -> Data.PureExpression -> InferResults
+  Data.Leaf Data.DefinitionIRef -> Data.PureExpression Data.DefinitionIRef -> Data.PureExpression Data.DefinitionIRef -> InferResults
 mkInferredLeaf leaf val typ =
   Data.Expression
   { Data._eValue = Data.ExpressionLeaf leaf
@@ -82,15 +86,16 @@ mkInferredLeaf leaf val typ =
   }
 
 mkInferredNode ::
-  Data.PureExpression -> Data.PureExpression ->
-  Data.ExpressionBody InferResults -> InferResults
+  Data.PureExpression Data.DefinitionIRef ->
+  Data.PureExpression Data.DefinitionIRef ->
+  Data.ExpressionBody Data.DefinitionIRef InferResults -> InferResults
 mkInferredNode iVal iType body =
   Data.Expression body (iVal, iType)
 
-makeNamedLambda :: String -> expr -> expr -> Data.ExpressionBody expr
+makeNamedLambda :: String -> expr -> expr -> Data.ExpressionBody Data.DefinitionIRef expr
 makeNamedLambda = Data.makeLambda . Guid.fromString
 
-makeNamedPi :: String -> expr -> expr -> Data.ExpressionBody expr
+makeNamedPi :: String -> expr -> expr -> Data.ExpressionBody Data.DefinitionIRef expr
 makeNamedPi = Data.makePi . Guid.fromString
 
 simpleTests :: [HUnit.Test]
@@ -218,7 +223,7 @@ fOfXIsFOf5 =
       (makePi "" intType hole)) $
   mkInferredLeafSimple (Data.LiteralInteger 5) intType
 
-five :: Data.PureExpression
+five :: Data.PureExpression Data.DefinitionIRef
 five = Data.pureExpression . Data.ExpressionLeaf $ Data.LiteralInteger 5
 
 argTypeGoesToPi :: HUnit.Test
@@ -299,7 +304,7 @@ forceMono =
     idSet = makeApply [getDefExpr "id", setType]
     idSetHole = makeApply [idSet, hole]
 
-inferredHole :: Data.PureExpression -> InferResults
+inferredHole :: Data.PureExpression Data.DefinitionIRef -> InferResults
 inferredHole = mkInferredLeafSimple Data.Hole
 
 -- | depApply =  \(t : Set) -> \(rt : t -> Set) -> \(f : (d : t) -> rt d) -> \(x : t) -> f x
@@ -346,19 +351,19 @@ depApply =
     rtAppliedTo name =
       Data.pureExpression . Data.makeApply (getParamExpr "rt") $ getParamExpr name
 
-getLambdaBody :: Data.Expression a -> Data.Expression a
+getLambdaBody :: Data.Expression Data.DefinitionIRef a -> Data.Expression Data.DefinitionIRef a
 getLambdaBody e =
   x
   where
     Data.ExpressionLambda (Data.Lambda _ _ x) = e ^. Data.eValue
 
-getApplyFunc :: Data.Expression a -> Data.Expression a
+getApplyFunc :: Data.Expression Data.DefinitionIRef a -> Data.Expression Data.DefinitionIRef a
 getApplyFunc e =
   x
   where
     Data.ExpressionApply (Data.Apply x _) = e ^. Data.eValue
 
-getApplyArg :: Data.Expression a -> Data.Expression a
+getApplyArg :: Data.Expression Data.DefinitionIRef a -> Data.Expression Data.DefinitionIRef a
 getApplyArg e =
   x
   where
@@ -368,8 +373,9 @@ testCase :: String -> HUnit.Assertion -> HUnit.Test
 testCase name = HUnit.TestLabel name . HUnit.TestCase
 
 testResume ::
-  String -> Data.PureExpression -> Data.PureExpression ->
-  (Infer.Expression () -> Data.Expression (Infer.Inferred a)) ->
+  String -> Data.PureExpression Data.DefinitionIRef ->
+  Data.PureExpression Data.DefinitionIRef ->
+  (Infer.Expression () -> Data.Expression Data.DefinitionIRef (Infer.Inferred a)) ->
   HUnit.Test
 testResume name newExpr testExpr extract =
   testCase name $
@@ -381,7 +387,7 @@ testResume name newExpr testExpr extract =
     ((Infer.iPoint . Lens.view Data.ePayload . extract) tExpr)
     Nothing (Just tExpr) newExpr
 
-applyIdInt :: Data.PureExpression
+applyIdInt :: Data.PureExpression Data.DefinitionIRef
 applyIdInt =
   Data.pureExpression
   (Data.makeApply
@@ -391,14 +397,17 @@ applyIdInt =
 
 -- {g, x} =>
 -- \(g:hole) -> IntToBoolFunc x
-makeFunnyLambda :: String -> Data.PureExpression -> Data.PureExpression
+makeFunnyLambda ::
+  String ->
+  Data.PureExpression Data.DefinitionIRef ->
+  Data.PureExpression Data.DefinitionIRef
 makeFunnyLambda g =
   makeLambda g hole .
   Data.pureExpression .
   Data.makeApply (getDefExpr "IntToBoolFunc")
 
 testInfer ::
-  String -> Data.PureExpression ->
+  String -> Data.PureExpression Data.DefinitionIRef ->
   InferResults -> HUnit.Test
 testInfer name pureExpr result =
   testCase name .
@@ -410,7 +419,7 @@ testInfer name pureExpr result =
   where
     inferredExpr = inferResults . fst $ doInfer pureExpr
 
-getRecursiveDef :: Data.PureExpression
+getRecursiveDef :: Data.PureExpression Data.DefinitionIRef
 getRecursiveDef =
   Data.pureExpression . Data.ExpressionLeaf . Data.GetVariable $ Data.DefinitionRef defI
 
@@ -475,7 +484,7 @@ hunitTests =
   ] ++
   resumptionTests
 
-inferPreservesShapeProp :: Data.PureExpression -> Property
+inferPreservesShapeProp :: Data.PureExpression Data.DefinitionIRef -> Property
 inferPreservesShapeProp expr =
   case inferMaybe Nothing expr of
     Nothing -> property rejected

@@ -106,7 +106,7 @@ runRuleClosure closure =
   ApplyArgToFuncArgClosure x ->
     runApplyArgToFuncArgClosure x
 
-makeNodeRules :: Data.Expression InferNode -> State Origin [Rule]
+makeNodeRules :: Data.Expression Data.DefinitionIRef InferNode -> State Origin [Rule]
 makeNodeRules (Data.Expression exprBody (InferNode typedVal scope)) =
   case fmap (nRefs . Lens.view Data.ePayload) exprBody of
   Data.ExpressionPi lambda@(Data.Lambda _ _ resultType) ->
@@ -128,13 +128,13 @@ makeNodeRules (Data.Expression exprBody (InferNode typedVal scope)) =
       (:) <$> setRule (tvType paramType) <*>
       lambdaStructureRules cons (tvVal typedVal) (fmap tvVal lam)
 
-makeResumptionRules :: Data.Expression InferNode -> State Origin [Rule]
+makeResumptionRules :: Data.Expression Data.DefinitionIRef InferNode -> State Origin [Rule]
 makeResumptionRules expr =
   (++)
   <$> makeNodeRules expr
   <*> (fmap Foldable.concat . Traversable.mapM makeAllRules . Lens.view Data.eValue) expr
 
-makeAllRules :: Data.Expression InferNode -> State Origin [Rule]
+makeAllRules :: Data.Expression Data.DefinitionIRef InferNode -> State Origin [Rule]
 makeAllRules expr =
   (:)
   <$> (ruleSimpleType . nRefs . Lens.view Data.ePayload) expr
@@ -156,19 +156,22 @@ makePi :: Origin -> RefExpression -> RefExpression -> RefExpression
 makePi o paramType result =
   makeRefExpr o $ Data.makePi (guidFromOrigin o) paramType result
 
-maybeLambda :: Data.ExpressionBody a -> Maybe (Data.Lambda a)
+maybeLambda :: Data.ExpressionBody Data.DefinitionIRef a -> Maybe (Data.Lambda a)
 maybeLambda (Data.ExpressionLambda x) = Just x
 maybeLambda _ = Nothing
 
-maybePi :: Data.ExpressionBody a -> Maybe (Data.Lambda a)
+maybePi :: Data.ExpressionBody Data.DefinitionIRef a -> Maybe (Data.Lambda a)
 maybePi (Data.ExpressionPi x) = Just x
 maybePi _ = Nothing
 
-exprLambdaCons :: ExprLambdaWrapper -> Data.Lambda expr -> Data.ExpressionBody expr
+exprLambdaCons :: ExprLambdaWrapper -> Data.Lambda expr -> Data.ExpressionBody Data.DefinitionIRef expr
 exprLambdaCons ExprLambda = Data.ExpressionLambda
 exprLambdaCons ExprPi = Data.ExpressionPi
 
-exprLambdaUncons :: ExprLambdaWrapper -> Data.ExpressionBody expr -> Maybe (Data.Lambda expr)
+exprLambdaUncons ::
+  ExprLambdaWrapper ->
+  Data.ExpressionBody Data.DefinitionIRef expr ->
+  Maybe (Data.Lambda expr)
 exprLambdaUncons ExprLambda = maybeLambda
 exprLambdaUncons ExprPi = maybePi
 
@@ -240,8 +243,8 @@ runSetClosure :: [(Ref, RefExpression)] -> RuleFunction
 runSetClosure outputs ~[] = outputs
 
 subst ::
-  Guid -> Data.Expression a ->
-  Data.Expression a -> Data.Expression a
+  Guid -> Data.Expression def a ->
+  Data.Expression def a -> Data.Expression def a
 subst from to expr =
   case expr ^. Data.eValue of
   Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef paramRef))
@@ -267,7 +270,7 @@ mergeToPiResult =
     -- information flow will catch any error:
     onMismatch dest _ = dest
 
-maybeApply :: Data.ExpressionBody a -> Maybe (Data.Apply a)
+maybeApply :: Data.ExpressionBody def a -> Maybe (Data.Apply a)
 maybeApply (Data.ExpressionApply x) = Just x
 maybeApply _ = Nothing
 

@@ -106,7 +106,7 @@ data HoleActions m = HoleActions
 
 data Hole m = Hole
   { holeScope :: [Guid]
-  , holeInferResults :: Data.PureExpression -> CT m [HoleResult]
+  , holeInferResults :: Data.PureExpression Data.DefinitionIRef -> CT m [HoleResult]
   , holeMActions :: Maybe (HoleActions m)
   }
 
@@ -122,7 +122,7 @@ data Inferred m expr = Inferred
 
 data Polymorphic expr = Polymorphic
   { pFuncGuid :: Guid
-  , pCompact :: Data.VariableRef
+  , pCompact :: Data.VariableRef Data.DefinitionIRef
   , pFullExpression :: expr
   } deriving (Functor)
 
@@ -131,7 +131,7 @@ data ExpressionBody m expr
   | ExpressionSection { _eHasParens :: HasParens, __eSection :: Section expr }
   | ExpressionFunc    { _eHasParens :: HasParens, __eFunc :: Func m expr }
   | ExpressionPi      { _eHasParens :: HasParens, __ePi :: Pi m expr }
-  | ExpressionGetVariable { __getVariable :: Data.VariableRef }
+  | ExpressionGetVariable { __getVariable :: Data.VariableRef Data.DefinitionIRef }
   | ExpressionHole { __eHole :: Hole m }
   | ExpressionInferred { __eInferred :: Inferred m expr }
   | ExpressionPolymorphic { __ePolymorphic :: Polymorphic expr }

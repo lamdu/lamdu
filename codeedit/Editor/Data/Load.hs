@@ -23,7 +23,7 @@ type ExpressionSetter m = Data.ExpressionIRef -> m ()
 
 data Stored m a = Stored
   { sSetIRef :: ExpressionSetter m
-  , sExpr :: Data.Expression a
+  , sExpr :: Data.Expression Data.DefinitionIRef a
   } deriving (Functor)
 
 type Loaded m = Stored m Data.ExpressionIRef
@@ -36,14 +36,18 @@ loadExpressionProperty prop =
   liftM (Stored (Property.set prop)) .
   loadExpressionIRef $ Property.value prop
 
-loadExpressionIRef :: Monad m => Data.ExpressionIRef -> T m (Data.Expression Data.ExpressionIRef)
+loadExpressionIRef ::
+  Monad m =>
+  Data.ExpressionIRef ->
+  T m (Data.Expression Data.DefinitionIRef Data.ExpressionIRef)
 loadExpressionIRef exprI =
   liftM (`Data.Expression` exprI) .
   Traversable.mapM loadExpressionIRef =<< DataIRef.readExprBody exprI
 
 exprAddProp ::
   Monad m => Stored (T m) (Data.ExpressionIRef, a) ->
-  Data.Expression (DataIRef.ExpressionProperty (T m), a)
+  Data.Expression Data.DefinitionIRef
+  (DataIRef.ExpressionProperty (T m), a)
 exprAddProp (Stored setIRef (Data.Expression body (iref, a))) =
   Data.Expression newBody (Property iref setIRef, a)
   where

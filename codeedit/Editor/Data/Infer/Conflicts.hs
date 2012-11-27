@@ -23,20 +23,20 @@ import qualified Editor.Data.Infer as Infer
 
 data InferredWithConflicts a = InferredWithConflicts
   { iwcInferred :: Infer.Inferred a
-  , iwcTypeConflicts :: [Data.PureExpression]
-  , iwcValueConflicts :: [Data.PureExpression]
+  , iwcTypeConflicts :: [Data.PureExpression Data.DefinitionIRef]
+  , iwcValueConflicts :: [Data.PureExpression Data.DefinitionIRef]
   } deriving (Functor, Foldable, Traversable)
 derive makeBinary ''InferredWithConflicts
 
 newtype ConflictMap =
-  ConflictMap { unConflictMap :: Map Infer.Ref (Set Data.PureExpression) }
+  ConflictMap { unConflictMap :: Map Infer.Ref (Set (Data.PureExpression Data.DefinitionIRef)) }
 
 instance Monoid ConflictMap where
   mempty = ConflictMap mempty
   mappend (ConflictMap x) (ConflictMap y) =
     ConflictMap $ Map.unionWith mappend x y
 
-getConflicts :: Infer.Ref -> ConflictMap -> [Data.PureExpression]
+getConflicts :: Infer.Ref -> ConflictMap -> [Data.PureExpression Data.DefinitionIRef]
 getConflicts ref = maybe [] Set.toList . Map.lookup ref . unConflictMap
 
 reportConflict :: Infer.Error -> Writer ConflictMap ()
@@ -51,7 +51,7 @@ inferWithConflicts ::
   Infer.RefMap -> Infer.InferNode ->
   ( Bool
   , Infer.RefMap
-  , Data.Expression (InferredWithConflicts a)
+  , Data.Expression Data.DefinitionIRef (InferredWithConflicts a)
   )
 inferWithConflicts loaded refMap node =
   ( Map.null $ unConflictMap conflictsMap
@@ -79,8 +79,8 @@ iwcInferredExprs ::
 iwcInferredExprs getVal eeConflicts ee =
   getVal (iwcInferred ee) : eeConflicts ee
 
-iwcInferredTypes :: InferredWithConflicts a -> [Data.PureExpression]
+iwcInferredTypes :: InferredWithConflicts a -> [Data.PureExpression Data.DefinitionIRef]
 iwcInferredTypes = iwcInferredExprs Infer.iType iwcTypeConflicts
 
-iwcInferredValues :: InferredWithConflicts a -> [Data.PureExpression]
+iwcInferredValues :: InferredWithConflicts a -> [Data.PureExpression Data.DefinitionIRef]
 iwcInferredValues = iwcInferredExprs Infer.iValue iwcValueConflicts

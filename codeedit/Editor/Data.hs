@@ -4,7 +4,7 @@ module Editor.Data
   ( Definition(..), DefinitionBody(..)
   , DefinitionIRef, DefinitionI, ExpressionIRef(..)
   , FFIName(..)
-  , VariableRef(..), variableRefGuid
+  , VariableRef(..)
   , Lambda(..), lambdaParamId, lambdaParamType, lambdaBody
   , Apply(..), applyFunc, applyArg
   , Builtin(..)
@@ -45,7 +45,6 @@ import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
-import qualified Data.Store.IRef as IRef
 import qualified Data.Traversable as Traversable
 import qualified System.Random as Random
 
@@ -64,63 +63,63 @@ instance Applicative Apply where
   Apply f0 a0 <*> Apply f1 a1 = Apply (f0 f1) (a0 a1)
 
 newtype ExpressionIRef = ExpressionIRef {
-  unExpressionIRef :: IRef (ExpressionBody ExpressionIRef)
+  unExpressionIRef :: IRef (ExpressionBody DefinitionIRef ExpressionIRef)
   } deriving (Eq, Ord, Show, Typeable)
 
 type DefinitionI = Definition ExpressionIRef
 type DefinitionIRef = IRef DefinitionI
 
-data VariableRef
+data VariableRef def
   = ParameterRef {-# UNPACK #-} !Guid -- of the lambda/pi
-  | DefinitionRef {- {-# UNPACK #-} -} !DefinitionIRef
+  | DefinitionRef def
   deriving (Eq, Ord, Show)
 
-data Leaf
-  = GetVariable !VariableRef
+data Leaf def
+  = GetVariable !(VariableRef def)
   | LiteralInteger !Integer
   | Set
   | IntegerType
   | Hole
   deriving (Eq, Ord, Show)
 
-data ExpressionBody expr
+data ExpressionBody def expr
   = ExpressionLambda {-# UNPACK #-} !(Lambda expr)
   | ExpressionPi {-# UNPACK #-} !(Lambda expr)
   | ExpressionApply {-# UNPACK #-} !(Apply expr)
-  | ExpressionLeaf !Leaf
+  | ExpressionLeaf !(Leaf def)
   deriving (Eq, Ord, Functor, Foldable, Traversable)
 
-hole :: ExpressionBody expr
+hole :: ExpressionBody def expr
 hole = ExpressionLeaf Hole
 
-makeApply :: expr -> expr -> ExpressionBody expr
+makeApply :: expr -> expr -> ExpressionBody def expr
 makeApply func arg = ExpressionApply $ Apply func arg
 
-makePi :: Guid -> expr -> expr -> ExpressionBody expr
+makePi :: Guid -> expr -> expr -> ExpressionBody def expr
 makePi argId argType resultType =
   ExpressionPi $ Lambda argId argType resultType
 
-makeLambda :: Guid -> expr -> expr -> ExpressionBody expr
+makeLambda :: Guid -> expr -> expr -> ExpressionBody def expr
 makeLambda argId argType body =
   ExpressionLambda $ Lambda argId argType body
 
-makeParameterRef :: Guid -> ExpressionBody a
+makeParameterRef :: Guid -> ExpressionBody def a
 makeParameterRef = ExpressionLeaf . GetVariable . ParameterRef
 
-makeDefinitionRef :: DefinitionIRef -> ExpressionBody a
+makeDefinitionRef :: DefinitionIRef -> ExpressionBody DefinitionIRef a
 makeDefinitionRef = ExpressionLeaf . GetVariable . DefinitionRef
 
-makeLiteralInteger :: Integer -> ExpressionBody a
+makeLiteralInteger :: Integer -> ExpressionBody def a
 makeLiteralInteger = ExpressionLeaf . LiteralInteger
 
-instance Show expr => Show (ExpressionBody expr) where
+instance (Show expr, Show def) => Show (ExpressionBody def expr) where
   show (ExpressionLambda (Lambda paramId paramType body)) =
     concat ["\\", show paramId, ":", showP paramType, "==>", showP body]
   show (ExpressionPi (Lambda paramId paramType body)) =
     concat ["(", show paramId, ":", showP paramType, ")->", showP body]
   show (ExpressionApply (Apply func arg)) = unwords [showP func, showP arg]
   show (ExpressionLeaf (GetVariable (ParameterRef guid))) = "par:" ++ show guid
-  show (ExpressionLeaf (GetVariable (DefinitionRef defI))) = "def:" ++ show (IRef.guid defI)
+  show (ExpressionLeaf (GetVariable (DefinitionRef defI))) = "def:" ++ show defI
   show (ExpressionLeaf (LiteralInteger int)) = show int
   show (ExpressionLeaf x) = show x
 
@@ -150,39 +149,35 @@ data DefinitionBody expr
 data Definition expr = Definition
   { defBody :: DefinitionBody expr
   , defType :: expr
-  } deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
+  } deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Typeable)
 
-type PureExpression = Expression ()
+type PureExpression def = Expression def ()
 
-data Expression a = Expression
-  { _eValue :: ExpressionBody (Expression a)
+data Expression def a = Expression
+  { _eValue :: ExpressionBody def (Expression def a)
   , _ePayload :: a
   } deriving (Functor, Eq, Ord, Foldable, Traversable, Typeable)
 
-instance Show a => Show (Expression a) where
+instance (Show a, Show def) => Show (Expression def a) where
   show (Expression body payload) = show body ++ "{" ++ show payload ++ "}"
 
 LensTH.makeLenses ''Expression
 
-pureExpression :: ExpressionBody PureExpression -> PureExpression
+pureExpression :: ExpressionBody def (PureExpression def) -> PureExpression def
 pureExpression = (`Expression` ())
 
-pureHole :: PureExpression
+pureHole :: PureExpression def
 pureHole = pureExpression hole
 
-variableRefGuid :: VariableRef -> Guid
-variableRefGuid (ParameterRef i) = i
-variableRefGuid (DefinitionRef i) = IRef.guid i
-
-randomizeExpr :: (RandomGen g, Random r) => g -> Expression (r -> a) -> Expression a
+randomizeExpr :: (RandomGen g, Random r) => g -> Expression def (r -> a) -> Expression def a
 randomizeExpr gen = (`evalState` gen) . Traversable.mapM randomize
   where
     randomize f = fmap f $ state random
 
-canonizeParamIds :: Expression a -> Expression a
+canonizeParamIds :: Expression def a -> Expression def a
 canonizeParamIds = randomizeParamIds $ Random.mkStdGen 0
 
-randomizeParamIds :: RandomGen g => g -> Expression a -> Expression a
+randomizeParamIds :: RandomGen g => g -> Expression def a -> Expression def a
 randomizeParamIds gen =
   (`evalState` gen) . (`runReaderT` Map.empty) . go
   where
@@ -203,8 +198,8 @@ randomizeParamIds gen =
 
 recurseWithScope ::
    Applicative f =>
-   (Guid -> a -> scope -> scope) -> (scope -> Expression a -> f b) ->
-   scope -> Expression a -> f (Expression b)
+   (Guid -> a -> scope -> scope) -> (scope -> Expression def a -> f b) ->
+   scope -> Expression def a -> f (Expression def b)
 recurseWithScope addToScope f scope expr@(Expression body _) =
   Expression <$> mkNewBody <*> f scope expr
   where
@@ -219,12 +214,14 @@ recurseWithScope addToScope f scope expr@(Expression body _) =
       <$> rec scope paramType
       <*> rec (addToScope param (paramType ^. ePayload) scope) result
 
--- The returned expression gets the same guids as the left expression
+-- TODO: Generalize to defa/defb/defc with hof's to handle matching
+-- them?  The returned expression gets the same guids as the left
+-- expression
 matchExpression ::
-  Applicative f =>
+  (Eq def, Applicative f) =>
   (a -> b -> f c) ->
-  (Expression a -> Expression b -> f (Expression c)) ->
-  Expression a -> Expression b -> f (Expression c)
+  (Expression def a -> Expression def b -> f (Expression def c)) ->
+  Expression def a -> Expression def b -> f (Expression def c)
 matchExpression onMatch onMismatch =
   go Map.empty
   where
@@ -250,7 +247,7 @@ matchExpression onMatch onMismatch =
           liftA2 (Lambda p0) (go scope pt0 pt1) $
           go (Map.insert p1 p0 scope) r0 r1
 
-onGetParamGuids :: (Guid -> Guid) -> Expression a -> Expression a
+onGetParamGuids :: (Guid -> Guid) -> Expression def a -> Expression def a
 onGetParamGuids f (Expression body payload) =
   flip Expression payload $
   case body of
@@ -258,12 +255,11 @@ onGetParamGuids f (Expression body payload) =
     makeParameterRef $ f getParGuid
   _ -> fmap (onGetParamGuids f) body
 
-subExpressions :: Expression a -> [Expression a]
+subExpressions :: Expression def a -> [Expression def a]
 subExpressions x =
   x : Foldable.concatMap subExpressions (x ^. eValue)
 
-isDependentPi ::
-  Expression a -> Bool
+isDependentPi :: Expression def a -> Bool
 isDependentPi (Expression (ExpressionPi (Lambda g _ resultType)) _) =
   any (isGet . Lens.view eValue) $ subExpressions resultType
   where

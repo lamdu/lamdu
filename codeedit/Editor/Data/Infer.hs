@@ -84,23 +84,28 @@ data InferState = InferState
 
 data Inferred a = Inferred
   { iStored :: a
-  , iValue :: Data.PureExpression
-  , iType :: Data.PureExpression
-  , iScope :: Map Guid Data.PureExpression
+  , iValue :: Data.PureExpression Data.DefinitionIRef
+  , iType :: Data.PureExpression Data.DefinitionIRef
+  , iScope :: Map Guid (Data.PureExpression Data.DefinitionIRef)
   , iPoint :: InferNode
   } deriving (Functor, Foldable, Traversable)
 derive makeBinary ''Inferred
 
-type Expression a = Data.Expression (Inferred a)
+type Expression a = Data.Expression Data.DefinitionIRef (Inferred a)
 
 data ErrorDetails
-  = MismatchIn Data.PureExpression Data.PureExpression
-  | InfiniteExpression Data.PureExpression
+  = MismatchIn
+    (Data.PureExpression Data.DefinitionIRef)
+    (Data.PureExpression Data.DefinitionIRef)
+  | InfiniteExpression (Data.PureExpression Data.DefinitionIRef)
   deriving Show
 
 data Error = Error
   { errRef :: Ref
-  , errMismatch :: (Data.PureExpression, Data.PureExpression)
+  , errMismatch ::
+    ( Data.PureExpression Data.DefinitionIRef
+    , Data.PureExpression Data.DefinitionIRef
+    )
   , errDetails :: ErrorDetails
   } deriving Show
 
@@ -140,15 +145,19 @@ initial :: (RefMap, InferNode)
 initial = newNodeWithScope mempty $ RefMap mempty 0 mempty 0 0
 
 newtype Loader m = Loader
-  { loadPureDefinitionType :: Data.DefinitionIRef -> m Data.PureExpression
+  { loadPureDefinitionType :: Data.DefinitionIRef -> m (Data.PureExpression Data.DefinitionIRef)
   }
 
 -- Initial expression for inferred value and type of a stored entity.
 -- Types are returned only in cases of expanding definitions.
 initialExprs ::
-  Map Data.DefinitionIRef Data.PureExpression ->
-  Scope -> Data.PureExpression ->
-  State Origin (Data.Expression Origin, Data.Expression Origin)
+  Map Data.DefinitionIRef (Data.PureExpression Data.DefinitionIRef) ->
+  Scope ->
+  Data.PureExpression Data.DefinitionIRef ->
+  State Origin
+  ( Data.Expression Data.DefinitionIRef Origin
+  , Data.Expression Data.DefinitionIRef Origin
+  )
 initialExprs defTypes scope entity =
   case entity ^. Data.eValue of
   Data.ExpressionApply _ ->
@@ -218,15 +227,15 @@ mergeExprs p0 p1 =
     onMismatch e0 e1 =
       Either.left $ MismatchIn (void e0) (void e1)
 
-initializeRefData :: Ref -> Data.Expression Origin -> State RefMap ()
+initializeRefData :: Ref -> Data.Expression Data.DefinitionIRef Origin -> State RefMap ()
 initializeRefData ref expr =
   refMap . Lens.at (unRef ref) .=
   Just (RefData (fmap (RefExprPayload mempty) expr) [])
 
 exprIntoRefMap ::
-  Map Data.DefinitionIRef Data.PureExpression -> Scope ->
-  Data.Expression s -> TypedValue ->
-  State RefMap (Data.Expression (InferNode, s))
+  Map Data.DefinitionIRef (Data.PureExpression Data.DefinitionIRef) -> Scope ->
+  Data.Expression Data.DefinitionIRef s -> TypedValue ->
+  State RefMap (Data.Expression Data.DefinitionIRef (InferNode, s))
 exprIntoRefMap defTypes rootScope rootExpr rootTypedValue = do
   rootExprTV <-
     Traversable.traverse tupleInto .
@@ -250,9 +259,9 @@ exprIntoRefMap defTypes rootScope rootExpr rootTypedValue = do
       return (InferNode typedValue scope, originS)
 
 data Loaded a = Loaded
-  { lRealExpr :: Data.Expression a
+  { lRealExpr :: Data.Expression Data.DefinitionIRef a
   , lMRecursiveDef :: Maybe Data.DefinitionIRef
-  , lDefinitionTypes :: Map Data.DefinitionIRef Data.PureExpression
+  , lDefinitionTypes :: Map Data.DefinitionIRef (Data.PureExpression Data.DefinitionIRef)
   } deriving (Typeable)
 derive makeBinary ''Loaded
 
@@ -261,7 +270,7 @@ ordNub = Set.toList . Set.fromList
 
 load ::
   Monad m => Loader m ->
-  Maybe Data.DefinitionIRef -> Data.Expression a ->
+  Maybe Data.DefinitionIRef -> Data.Expression Data.DefinitionIRef a ->
   m (Loaded a)
 load loader mRecursiveDef expr =
   liftM (Loaded expr mRecursiveDef . Map.fromList) .
@@ -278,7 +287,7 @@ load loader mRecursiveDef expr =
 -- "infer". Does it still make sense to keep it separately the way it
 -- is?
 data Preprocessed a = Preprocessed
-  { lExpr :: Data.Expression (InferNode, a)
+  { lExpr :: Data.Expression Data.DefinitionIRef (InferNode, a)
   , lRefMap :: RefMap
   , lSavedRoot :: (Maybe RefData, Maybe RefData)
   }
@@ -306,7 +315,7 @@ preprocess loaded initialRefMap (InferNode rootTv rootScope) =
       Just iref -> Map.insert (Data.DefinitionRef iref) (tvType rootTv) rootScope
 
 postProcess ::
-  RefMap -> Data.Expression (InferNode, a) -> (Expression a, RefMap)
+  RefMap -> Data.Expression Data.DefinitionIRef (InferNode, a) -> (Expression a, RefMap)
 postProcess resultRefMap expr =
   (fmap derefNode expr, resultRefMap)
   where
