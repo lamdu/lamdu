@@ -386,10 +386,6 @@ inferLoaded actions loaded initialRefMap node =
   runInferT actions ruleInferState $ do
     restoreRoot rootValR rootValMRefData
     restoreRoot rootTypR rootTypMRefData
-    -- when we resume load,
-    -- we want to trigger the existing rules for the loaded root
-    touch rootValR
-    touch rootTypR
     executeRules
   where
     Preprocessed expr loadedRefMap (rootValMRefData, rootTypMRefData) =
