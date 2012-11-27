@@ -205,25 +205,22 @@ convertPi lambda exprI = do
     }
 
 addParens :: ExpressionP m pl -> ExpressionP m pl
-addParens = Lens.over rExpressionBody addParensBody
-
-addParensBody
-  :: ExpressionBody m (ExpressionP m pl)
-     -> ExpressionBody m (ExpressionP m pl)
-addParensBody (ExpressionInferred (Inferred val hole)) =
-  ExpressionInferred $ Inferred (addParens val) hole
-addParensBody (ExpressionPolymorphic (Polymorphic g compact full)) =
-  ExpressionPolymorphic . Polymorphic g compact $
-  addParens full
-addParensBody x = Lens.set eHasParens HaveParens x
+addParens =
+  Lens.over rExpressionBody addParensBody
+  where
+    addParensBody (ExpressionInferred (Inferred val hole)) =
+      ExpressionInferred $ Inferred (addParens val) hole
+    addParensBody (ExpressionPolymorphic (Polymorphic g compact full)) =
+      ExpressionPolymorphic . Polymorphic g compact $
+      addParens full
+    addParensBody x = Lens.set eHasParens HaveParens x
 
 addApplyChildParens :: Expression m -> Expression m
-addApplyChildParens =
-  Lens.over rExpressionBody f
-  where
-    f x@ExpressionApply{} = x
-    f x@ExpressionPolymorphic{} = x
-    f x = addParensBody x
+addApplyChildParens x =
+  case x ^. rExpressionBody of
+  ExpressionApply{} -> x
+  ExpressionPolymorphic{} -> x
+  _ -> addParens x
 
 isPolymorphicFunc :: SugarInfer.Result m -> Bool
 isPolymorphicFunc funcI =
@@ -252,13 +249,6 @@ removeRedundantTypes =
     removeIfNoErrors [_] = []
     removeIfNoErrors xs = xs
 
-isSameOp :: ExpressionBody m expr -> ExpressionBody m expr -> Bool
-isSameOp (ExpressionPolymorphic p0) (ExpressionPolymorphic p1) =
-  on (==) pCompact p0 p1
-isSameOp (ExpressionGetVariable v0) (ExpressionGetVariable v1) =
-  v0 == v1
-isSameOp _ _ = False
-
 setNextHole :: Expression m -> Expression m -> Expression m
 setNextHole possibleHole =
   case possibleHole ^. rExpressionBody of
@@ -282,6 +272,12 @@ applyOnSection (Section (Just left) op Nothing) (Data.Apply _ (argRef, _)) exprI
   mkExpression exprI . ExpressionSection DontHaveParens $
   on (Section . Just) (setNextHole right) left op (Just right)
   where
+    -- TODO: Handle left/right-associativity
+    isSameOp (ExpressionPolymorphic p0) (ExpressionPolymorphic p1) =
+      on (==) pCompact p0 p1
+    isSameOp (ExpressionGetVariable v0) (ExpressionGetVariable v1) =
+      v0 == v1
+    isSameOp _ _ = False
     right =
       case argRef ^. rExpressionBody of
       ExpressionSection _ (Section (Just _) rightOp (Just _))
@@ -320,10 +316,6 @@ convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, _)) exprI
         , pFullExpression =
           Lens.set rGuid expandedGuid $ removeInferredTypes fullExpression
         }
-
-isHole :: Data.ExpressionBody a -> Bool
-isHole (Data.ExpressionLeaf Data.Hole) = True
-isHole _ = False
 
 convertGetVariable :: Monad m => Data.VariableRef -> Convertor m
 convertGetVariable varRef exprI = do
@@ -585,6 +577,9 @@ convertExpressionI ee =
 -- Check no holes
 isCompleteType :: Data.PureExpression -> Bool
 isCompleteType = not . any (isHole . Lens.view Data.eValue) . Data.subExpressions
+  where
+    isHole (Data.ExpressionLeaf Data.Hole) = True
+    isHole _ = False
 
 convertHoleResult ::
   Monad m => SugarConfig -> HoleResult -> T m (Expression m)
