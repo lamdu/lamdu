@@ -122,8 +122,8 @@ mkDelete parentP replacerP = do
 
 mkFuncParamActions ::
   Monad m => SugarM.Context ->
-  SugarInfer.IWCStored m ->
-  Data.Lambda (SugarInfer.IWCStored m) ->
+  SugarInfer.StoredPayload m ->
+  Data.Lambda (SugarInfer.StoredPayload m) ->
   DataIRef.ExpressionProperty (T m) ->
   FuncParamActions m
 mkFuncParamActions
@@ -426,7 +426,7 @@ resultComplexityScore =
   sum . map (subtract 2 . length . Foldable.toList . Infer.iType) .
   Foldable.toList
 
-convertWritableHole :: Monad m => SugarInfer.IWCStored m -> Convertor m
+convertWritableHole :: Monad m => SugarInfer.StoredPayload m -> Convertor m
 convertWritableHole iwcStored exprI = do
   ctx <- SugarM.readContext
   mPaste <- mkPaste . Infer.iStored $ iwcInferred iwcStored
@@ -448,7 +448,7 @@ inferApplyForms processRes expr (refMap, node) =
 convertWritableHoleH ::
   Monad m =>
   SugarM.Context -> Maybe (T m Guid) ->
-  SugarInfer.IWCStored m -> Convertor m
+  SugarInfer.StoredPayload m -> Convertor m
 convertWritableHoleH (SugarM.Context inferState config contextHash) mPaste iwcStored exprI =
   chooseHoleType (iwcInferredValues iwcStored) plainHole inferredHole
   where
@@ -600,8 +600,8 @@ convertExpressionPure gen config =
 
 convertDefinitionParams ::
   Monad m =>
-  SugarM.Context -> Data.Expression (SugarInfer.IWCStored m) ->
-  T m ([FuncParam m (Expression m)], Data.Expression (SugarInfer.IWCStored m))
+  SugarM.Context -> Data.Expression (SugarInfer.StoredPayload m) ->
+  T m ([FuncParam m (Expression m)], Data.Expression (SugarInfer.StoredPayload m))
 convertDefinitionParams ctx expr =
   case expr ^. Data.eValue of
   Data.ExpressionLambda lam@(Data.Lambda param paramType body) -> do
@@ -609,7 +609,7 @@ convertDefinitionParams ctx expr =
     let
       fp = FuncParam
         { _fpGuid = param
-        , _fpHiddenLambdaGuid = Just . SugarInfer.iwcGuid $ expr ^. Data.ePayload
+        , _fpHiddenLambdaGuid = Just . SugarInfer.splGuid $ expr ^. Data.ePayload
         , _fpType = removeRedundantTypes paramTypeS
         , _fpMActions =
           Just $
@@ -625,8 +625,8 @@ convertDefinitionParams ctx expr =
 
 convertWhereItems ::
   Monad m =>
-  SugarM.Context -> Data.Expression (SugarInfer.IWCStored m) ->
-  T m ([WhereItem m], Data.Expression (SugarInfer.IWCStored m))
+  SugarM.Context -> Data.Expression (SugarInfer.StoredPayload m) ->
+  T m ([WhereItem m], Data.Expression (SugarInfer.StoredPayload m))
 convertWhereItems ctx
   topLevel@Data.Expression
   { Data._eValue = Data.ExpressionApply apply@Data.Apply
@@ -643,7 +643,7 @@ convertWhereItems ctx
         { wiValue = value
         , wiGuid = param
         , wiHiddenGuids =
-            map (SugarInfer.iwcGuid . Lens.view Data.ePayload)
+            map (SugarInfer.splGuid . Lens.view Data.ePayload)
             [ topLevel
             , lambda ^. Data.lambdaParamType
             ]
@@ -661,7 +661,7 @@ convertWhereItems _ expr = return ([], expr)
 
 convertDefinitionContent ::
   Monad m =>
-  SugarM.Context -> Data.Expression (SugarInfer.IWCStored m) ->
+  SugarM.Context -> Data.Expression (SugarInfer.StoredPayload m) ->
   T m (DefinitionContent m)
 convertDefinitionContent sugarContext expr = do
   (params, funcBody) <- convertDefinitionParams sugarContext expr
@@ -770,7 +770,7 @@ loadConvertExpression config exprP =
 
 convertStoredExpression ::
   Monad m =>
-  Data.Expression (SugarInfer.IWCStored m) -> SugarM.Context ->
+  Data.Expression (SugarInfer.StoredPayload m) -> SugarM.Context ->
   T m (Expression m)
 convertStoredExpression expr sugarContext =
   SugarM.run sugarContext . convertExpressionI $
