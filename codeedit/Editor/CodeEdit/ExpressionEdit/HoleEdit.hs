@@ -33,6 +33,7 @@ import qualified Data.List.Class as List
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
+import qualified Data.Traversable as Traversable
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -136,7 +137,7 @@ resultsToWidgets holeInfo results = do
     maybe return (const addMoreSymbol) (rlMore results) =<<
     toWidget myId canonizedExpr
   where
-    makeExtra = maybe (return Nothing) (liftM Just . makeMoreResults) $ rlMore results
+    makeExtra = Traversable.mapM makeMoreResults $ rlMore results
     makeMoreResults moreResults = do
       pairs <- mapM moreResult moreResults
       return

@@ -15,6 +15,7 @@ import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget(Widget)
 import Graphics.UI.GLFW.Events (KeyEvent, GLFWEvent(..), eventLoop)
 import qualified Control.Lens as Lens
+import qualified Data.Traversable as Traversable
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.Rendering.OpenGL.GL as GL
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -140,7 +141,7 @@ mainLoopWidget mkWidgetUnmemod getAnimationHalfLife = do
     eventHandler size event = do
       widget <- getWidget size
       mAnimIdMapping <-
-        maybe (return Nothing) (liftM (Just . Lens.view Widget.eAnimIdMapping)) .
+        (Traversable.mapM . fmap) (Lens.view Widget.eAnimIdMapping) .
         E.lookup event $ widget ^. Widget.wEventMap
       case mAnimIdMapping of
         Nothing -> return ()
