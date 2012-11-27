@@ -122,16 +122,19 @@ mkDelete parentP replacerP = do
 
 mkFuncParamActions ::
   Monad m => SugarM.Context ->
+  SugarInfer.Result m ->
   SugarInfer.StoredPayload m ->
   Data.Lambda (SugarInfer.StoredPayload m) ->
   DataIRef.ExpressionProperty (T m) ->
   FuncParamActions m
 mkFuncParamActions
-  ctx lambdaStored (Data.Lambda param paramType _) replacerP =
+  ctx bodyI lambdaStored (Data.Lambda param paramType _) replacerP =
   FuncParamActions
   { _fpListItemActions =
     ListItemActions
-    { _itemDelete = mkDelete (Infer.iStored lambdaInferred) replacerP
+    { _itemDelete = do
+        mapM_ deleteIfParamRef $ Data.subExpressions bodyI
+        mkDelete (Infer.iStored lambdaInferred) replacerP
     , _itemAddNext = liftM fst $ DataOps.lambdaWrap replacerP
     }
   , _fpGetExample = do
@@ -145,6 +148,11 @@ mkFuncParamActions
         ctx { SugarM.scInferState = inferredExample ^. SugarInfer.srRefmap }
   }
   where
+    deleteIfParamRef expr =
+      case (SugarInfer.resultProp expr, expr ^. Data.eValue) of
+      (Just prop, Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef p)))
+        | p == param -> DataOps.replaceWithHole prop >> return ()
+      _ -> return ()
     lambdaInferred = iwcInferred lambdaStored
     scope = Infer.nScope $ Infer.iPoint lambdaInferred
     paramTypeRef =
@@ -166,7 +174,7 @@ convertLambda lam@(Data.Lambda param paramTypeI bodyI) expr = do
       , _fpHiddenLambdaGuid = Nothing
       , _fpType = removeRedundantTypes typeExpr
       , _fpMActions =
-        mkFuncParamActions ctx
+        mkFuncParamActions ctx bodyI
         <$> SugarInfer.resultIWC expr
         <*> Traversable.mapM SugarInfer.resultIWC lam
         <*> SugarInfer.resultProp bodyI
@@ -608,7 +616,7 @@ convertDefinitionParams ctx expr =
         , _fpType = removeRedundantTypes paramTypeS
         , _fpMActions =
           Just $
-          mkFuncParamActions ctx
+          mkFuncParamActions ctx (SugarInfer.resultFromStored body)
           (expr ^. Data.ePayload) (Lens.view Data.ePayload <$> lam)
           (storedIRefP body)
         }
