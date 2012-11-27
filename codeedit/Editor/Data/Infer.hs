@@ -229,7 +229,7 @@ exprIntoRefMap ::
   State RefMap (Data.Expression (InferNode, s))
 exprIntoRefMap defTypes rootScope rootExpr rootTypedValue = do
   rootExprTV <-
-    Traversable.sequenceA . fmap tupleInto .
+    Traversable.traverse tupleInto .
     -- Make new TypedValues for all subexpressions except the root
     -- which shall use rootTypedValue
     Lens.set (Data.ePayload . Lens._2) (pure rootTypedValue) $
