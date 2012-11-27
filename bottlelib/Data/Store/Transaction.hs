@@ -108,7 +108,7 @@ readGuidDef = readGuidMb . return
 readGuid :: (Monad m, Binary a) => Guid -> Transaction m a
 readGuid guid = readGuidMb failure guid
   where
-    failure = fail $ show guid ++ " to inexistent object dereferenced"
+    failure = fail $ "Inexistent guid: " ++ show guid ++ " referenced"
 
 deleteIRef :: Monad m => IRef a -> Transaction m ()
 deleteIRef = delete . IRef.guid
