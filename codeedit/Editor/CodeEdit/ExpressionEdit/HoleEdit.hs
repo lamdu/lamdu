@@ -172,7 +172,7 @@ makeNoResults myId =
   ExprGuiM.widgetEnv .
   BWidgets.makeTextView "(No results)" $ mappend myId ["no results"]
 
-mkGroup :: [String] -> Data.ExpressionBody DataIRef.DefinitionIRef (Data.Expression DataIRef.DefinitionIRef ()) -> Group
+mkGroup :: [String] -> Data.ExpressionBodyExpr DataIRef.DefinitionIRef () -> Group
 mkGroup names body = Group
   { groupNames = names
   , groupBaseExpr = Data.pureExpression body

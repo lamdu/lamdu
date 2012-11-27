@@ -87,8 +87,7 @@ expressionBodyFrom ::
   Monad m =>
   Data.Expression DefinitionIRef a ->
   Transaction m
-  (Data.ExpressionBody DefinitionIRef
-   (Data.Expression DefinitionIRef (Expression, a)))
+  (Data.ExpressionBodyExpr DefinitionIRef (Expression, a))
 expressionBodyFrom = Traversable.mapM newExpressionFromH . Lens.view Data.eValue
 
 newExpressionFromH ::

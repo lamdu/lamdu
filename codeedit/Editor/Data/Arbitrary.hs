@@ -55,7 +55,7 @@ arbitraryLeaf = do
 liftGen :: Gen a -> GenExpr a
 liftGen = lift . lift
 
-arbitraryBody :: Arbitrary a => GenExpr (Data.ExpressionBody DataIRef.DefinitionIRef (Data.Expression DataIRef.DefinitionIRef a))
+arbitraryBody :: Arbitrary a => GenExpr (Data.ExpressionBodyExpr DataIRef.DefinitionIRef a)
 arbitraryBody =
   join . liftGen . Gen.frequency . (map . second) pure $
   [ weight 1  $ Data.ExpressionLambda <$> arbitraryLambda

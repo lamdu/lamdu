@@ -38,7 +38,7 @@ makeApply = foldl1 (fmap Data.pureExpression . Data.makeApply)
 
 makeLambdaCons ::
   (Guid -> Data.Expression DataIRef.DefinitionIRef () -> Data.Expression DataIRef.DefinitionIRef () ->
-   Data.ExpressionBody DataIRef.DefinitionIRef (Data.Expression DataIRef.DefinitionIRef ())) ->
+   Data.ExpressionBodyExpr DataIRef.DefinitionIRef ()) ->
   String -> Data.Expression DataIRef.DefinitionIRef () -> Data.Expression DataIRef.DefinitionIRef () ->
   Data.Expression DataIRef.DefinitionIRef ()
 makeLambdaCons cons name paramType body =

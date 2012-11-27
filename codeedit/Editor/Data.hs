@@ -9,6 +9,7 @@ module Editor.Data
   , Builtin(..)
   , Leaf(..)
   , ExpressionBody(..)
+  , ExpressionBodyExpr
   , makeApply, makePi, makeLambda, hole, pureHole
   , makeParameterRef, makeDefinitionRef, makeLiteralInteger
   , Expression(..), eValue, ePayload
@@ -79,6 +80,8 @@ data ExpressionBody def expr
   | ExpressionApply {-# UNPACK #-} !(Apply expr)
   | ExpressionLeaf !(Leaf def)
   deriving (Eq, Ord, Functor, Foldable, Traversable)
+
+type ExpressionBodyExpr def a = ExpressionBody def (Expression def a)
 
 hole :: ExpressionBody def expr
 hole = ExpressionLeaf Hole
