@@ -135,11 +135,11 @@ definitionTypes =
     intToIntToInt = makePi "iii0" intType $ makePi "iii1" intType intType
 
 doInferM ::
-  Infer.RefMap -> Infer.InferNode -> Maybe DataIRef.DefinitionIRef ->
+  Infer.Context -> Infer.InferNode -> Maybe DataIRef.DefinitionIRef ->
   Data.Expression DataIRef.DefinitionIRef a ->
-  (Infer.Expression a, Infer.RefMap)
-doInferM initialRefMap inferNode mDefRef expr
-  | success = (iwcInferred <$> exprWC, resultRefMap)
+  (Infer.Expression a, Infer.Context)
+doInferM initialInferContext inferNode mDefRef expr
+  | success = (iwcInferred <$> exprWC, resultInferContext)
   | otherwise =
     error $ unlines
     [ "Result with conflicts:"
@@ -148,8 +148,8 @@ doInferM initialRefMap inferNode mDefRef expr
     ]
   where
     loaded = runIdentity $ Infer.load loader mDefRef expr
-    (success, resultRefMap, exprWC) =
-      inferWithConflicts loaded initialRefMap inferNode
+    (success, resultInferContext, exprWC) =
+      inferWithConflicts loaded initialInferContext inferNode
 
 loader :: Monad m => Infer.Loader m
 loader = Infer.Loader (return . (definitionTypes !) . IRef.guid)
@@ -158,7 +158,7 @@ defI :: DataIRef.DefinitionIRef
 defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
 
 doInfer ::
-  Data.Expression DataIRef.DefinitionIRef a -> (Infer.Expression a, Infer.RefMap)
+  Data.Expression DataIRef.DefinitionIRef a -> (Infer.Expression a, Infer.Context)
 doInfer = uncurry doInferM Infer.initial (Just defI)
 
 factorialExpr :: Data.Expression DataIRef.DefinitionIRef ()
@@ -185,13 +185,13 @@ factorialDefI = IRef.unsafeFromGuid $ Guid.fromString "factorial"
 inferMaybe ::
   Maybe DataIRef.DefinitionIRef ->
   Data.Expression DataIRef.DefinitionIRef a ->
-  Maybe (Infer.Expression a, Infer.RefMap)
+  Maybe (Infer.Expression a, Infer.Context)
 inferMaybe mRecursiveDef expr =
   uncurry (Infer.inferLoaded (Infer.InferActions (const Nothing)) loaded) Infer.initial
   where
     loaded = runIdentity $ Infer.load loader mRecursiveDef expr
 
-factorial :: Int -> (Infer.Expression (), Infer.RefMap)
+factorial :: Int -> (Infer.Expression (), Infer.Context)
 factorial gen =
   fromMaybe (error "Conflicts in factorial infer") .
   inferMaybe (Just factorialDefI) . void $

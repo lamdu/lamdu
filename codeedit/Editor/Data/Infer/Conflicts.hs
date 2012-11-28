@@ -48,20 +48,20 @@ reportConflict err =
 
 inferWithConflicts ::
   Infer.Loaded a ->
-  Infer.RefMap -> Infer.InferNode ->
+  Infer.Context -> Infer.InferNode ->
   ( Bool
-  , Infer.RefMap
+  , Infer.Context
   , Data.Expression DataIRef.DefinitionIRef (InferredWithConflicts a)
   )
-inferWithConflicts loaded initialRefMap node =
+inferWithConflicts loaded initialInferContext node =
   ( Map.null $ unConflictMap conflictsMap
-  , resultRefMap
+  , resultInferContext
   , fmap toIWC exprInferred
   )
   where
-    ((exprInferred, resultRefMap), conflictsMap) =
+    ((exprInferred, resultInferContext), conflictsMap) =
       runWriter $ Infer.inferLoaded (Infer.InferActions reportConflict)
-      loaded initialRefMap node
+      loaded initialInferContext node
     toIWC x =
       InferredWithConflicts
       { iwcInferred = x

@@ -7,7 +7,7 @@ module Editor.CodeEdit.Sugar.Infer
 
   -- Type-check an expression into a StoredResult:
   , inferLoadedExpression
-  , StoredResult(..), srContext, srExpr, srRefmap, srSuccess
+  , StoredResult(..), srContext, srExpr, srInferContext, srSuccess
   , StoredPayload, splGuid
 
   -- Convert pure, inferred, stored expressions to Result:
@@ -46,7 +46,7 @@ type StoredPayload m =
 
 data StoredResult m = StoredResult
   { _srSuccess :: Bool
-  , _srRefmap :: Infer.RefMap
+  , _srInferContext :: Infer.Context
   , _srExpr :: Data.Expression DataIRef.DefinitionIRef (StoredPayload m)
   , _srContext :: Infer.Loaded DataIRef.Expression
   }
@@ -136,7 +136,7 @@ loader =
 
 inferMaybe ::
   Monad m =>
-  Data.Expression DataIRef.DefinitionIRef a -> Infer.RefMap ->
+  Data.Expression DataIRef.DefinitionIRef a -> Infer.Context ->
   Infer.InferNode -> T m (Maybe (Infer.Expression a))
 inferMaybe expr inferContext inferPoint = do
   loaded <- Infer.load loader Nothing expr
@@ -147,18 +147,18 @@ inferMaybe expr inferContext inferPoint = do
 inferLoadedExpression ::
   Monad m =>
   Maybe DataIRef.DefinitionIRef -> Load.Loaded (T m) ->
-  (Infer.RefMap, Infer.InferNode) ->
+  (Infer.Context, Infer.InferNode) ->
   CT m (StoredResult m)
 inferLoadedExpression mDefI (Load.Stored setExpr exprIRef) inferState = do
   loaded <- lift $ Infer.load loader mDefI exprIRef
-  (success, refMap, expr) <-
+  (success, inferContext, expr) <-
     Cache.memoS (return . uncurriedInfer) (loaded, inferState)
   return StoredResult
     { _srSuccess = success
-    , _srRefmap = refMap
+    , _srInferContext = inferContext
     , _srExpr = inferredIRefToStored setExpr expr
     , _srContext = loaded
     }
   where
-    uncurriedInfer (loaded, (refMap, inferNode)) =
-      inferWithConflicts loaded refMap inferNode
+    uncurriedInfer (loaded, (inferContext, inferNode)) =
+      inferWithConflicts loaded inferContext inferNode

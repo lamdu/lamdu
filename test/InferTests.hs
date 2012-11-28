@@ -381,10 +381,10 @@ testResume ::
 testResume name newExpr testExpr extract =
   testCase name $
   let
-    (tExpr, refMap) = doInfer testExpr
+    (tExpr, inferContext) = doInfer testExpr
   in
     void . evaluate $
-    doInferM refMap
+    doInferM inferContext
     ((Infer.iPoint . Lens.view Data.ePayload . extract) tExpr)
     Nothing newExpr
 
@@ -449,11 +449,11 @@ resumptionTests =
     (getApplyArg . getLambdaBody . getLambdaBody . getLambdaBody)
   , testCase "ref to the def on the side" $
     let
-      (exprD, refMap) = doInfer $ makeLambda "" hole hole
+      (exprD, inferContext) = doInfer $ makeLambda "" hole hole
       Data.ExpressionLambda (Data.Lambda _ _ body) = exprD ^. Data.eValue
       scope = Infer.nScope . Infer.iPoint $ body ^. Data.ePayload
       (exprR, _) =
-        uncurry doInferM (Infer.newNodeWithScope scope refMap) Nothing
+        uncurry doInferM (Infer.newNodeWithScope scope inferContext) Nothing
         getRecursiveDef
       resultD = inferResults exprD
       resultR = inferResults exprR

@@ -145,7 +145,7 @@ mkFuncParamActions
       exampleLoaded <- lift $ Load.loadExpressionProperty exampleP
       inferredExample <- SugarInfer.inferLoadedExpression Nothing exampleLoaded newInferNode
       lift $ convertStoredExpression (inferredExample ^. SugarInfer.srExpr)
-        ctx { SugarM.scInferState = inferredExample ^. SugarInfer.srRefmap }
+        ctx { SugarM.scInferState = inferredExample ^. SugarInfer.srInferContext }
   }
   where
     deleteIfParamRef expr =
@@ -435,10 +435,10 @@ convertWritableHole iwcStored exprI = do
 inferApplyForms ::
   Monad m =>
   (Data.Expression DataIRef.DefinitionIRef () -> T m [HoleResult]) -> Data.Expression DataIRef.DefinitionIRef () ->
-  (Infer.RefMap, Infer.InferNode) -> T m [HoleResult]
-inferApplyForms processRes expr (refMap, node) =
+  (Infer.Context, Infer.InferNode) -> T m [HoleResult]
+inferApplyForms processRes expr (inferContext, node) =
   liftM (sortOn resultComplexityScore) . makeApplyForms =<<
-  SugarInfer.inferMaybe expr refMap node
+  SugarInfer.inferMaybe expr inferContext node
   where
     makeApplyForms Nothing = return []
     makeApplyForms (Just i) =

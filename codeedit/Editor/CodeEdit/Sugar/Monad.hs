@@ -9,14 +9,14 @@ import Control.Lens ((^.))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Editor.CodeEdit.Sugar.Config (SugarConfig)
-import Editor.CodeEdit.Sugar.Infer (StoredResult(..), srContext, srRefmap)
+import Editor.CodeEdit.Sugar.Infer (StoredResult(..), srContext, srInferContext)
 import Editor.CodeEdit.Sugar.Types -- see export list
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Cache as Cache
 import qualified Editor.Data.Infer as Infer
 
 data Context = Context
-  { scInferState :: Infer.RefMap
+  { scInferState :: Infer.Context
   , scConfig :: SugarConfig
   , scMContextHash :: Maybe Cache.KeyBS -- Nothing if converting pure expression
   }
@@ -26,7 +26,7 @@ newtype SugarM m a = SugarM (ReaderT Context (T m) a)
 
 mkContext :: SugarConfig -> StoredResult m -> Context
 mkContext config iResult = Context
-  { scInferState = iResult ^. srRefmap
+  { scInferState = iResult ^. srInferContext
   , scConfig = config
   , scMContextHash = Just . Cache.bsOfKey $ iResult ^. srContext
   }
