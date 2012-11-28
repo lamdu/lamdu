@@ -28,6 +28,7 @@ import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
 import Data.Foldable (Foldable(..))
+import Data.Function (on)
 import Data.Functor.Identity (Identity(..))
 import Data.IntMap (IntMap)
 import Data.IntSet (IntSet)
@@ -38,7 +39,7 @@ import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable)
 import Data.Tuple (swap)
 import Data.Typeable (Typeable)
-import Editor.Data.Infer.Rules (Rule(..), makeAllRules, makeResumptionRules, runRuleClosure)
+import Editor.Data.Infer.Rules (Rule(..), makeAllRules, makeResumptionRules, runRuleClosure, unionRules)
 import Editor.Data.Infer.Types
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
@@ -335,8 +336,7 @@ newtype Loader m = Loader
 -- Types are returned only in cases of expanding definitions.
 initialExprs ::
   Map DataIRef.DefinitionIRef (Data.Expression DataIRef.DefinitionIRef ()) ->
-  Scope ->
-  Data.Expression DataIRef.DefinitionIRef () ->
+  Scope -> Data.Expression DataIRef.DefinitionIRef () ->
   State Origin
   ( Data.Expression DataIRef.DefinitionIRef Origin
   , Data.Expression DataIRef.DefinitionIRef Origin
@@ -445,15 +445,12 @@ setRefExpr ref newExpr = do
 exprIntoContext ::
   Monad m =>
   Map DataIRef.DefinitionIRef (Data.Expression DataIRef.DefinitionIRef ()) -> Scope ->
-  Data.Expression DataIRef.DefinitionIRef s -> TypedValue ->
+  Data.Expression DataIRef.DefinitionIRef s ->
   InferT m (Data.Expression DataIRef.DefinitionIRef (InferNode, s))
-exprIntoContext defTypes rootScope rootExpr rootTypedValue = do
+exprIntoContext defTypes rootScope rootExpr = do
   rootExprTV <-
     liftState . Lens.zoom sContext .
-    Traversable.mapM tupleInto .
-    -- Make new TypedValues for all subexpressions except the root
-    -- which shall use rootTypedValue
-    Lens.set (Data.ePayload . Lens._2) (return rootTypedValue) $
+    Traversable.mapM tupleInto $
     fmap addTypedVal rootExpr
   Data.recurseWithScopeM addToScope f rootScope rootExprTV
   where
@@ -532,8 +529,13 @@ inferLoaded ::
   m (Expression a, Context)
 inferLoaded actions isNewRoot loaded initialContext node =
   execInferT actions initialState $ do
-    expr <- exprIntoContext (lDefinitionTypes loaded) (nScope node) (lRealExpr loaded) (nRefs node)
+    expr <- exprIntoContext (lDefinitionTypes loaded) (nScope node) (lRealExpr loaded)
     liftState . toStateT $ do
+      let
+        addUnionRules f =
+          mapM_ addRule $ on unionRules (f . nRefs) node . fst $ expr ^. Data.ePayload
+      addUnionRules tvVal
+      addUnionRules tvType
       rules <-
         Lens.zoom (sContext . nextOrigin) .
         makeRules $ fmap fst expr

@@ -2,7 +2,7 @@
 
 module Editor.Data.Infer.Rules
   ( Rule(..)
-  , makeAllRules, makeResumptionRules
+  , makeAllRules, makeResumptionRules, unionRules
   , runRuleClosure
   ) where
 
