@@ -19,10 +19,10 @@ module Editor.Data
   , matchExpression
   , subExpressions
   , isDependentPi
-  , recurseWithScope
+  , recurseWithScope, recurseWithScopeM
   ) where
 
-import Control.Applicative (Applicative(..), liftA2, (<$>))
+import Control.Applicative (Applicative(..), WrappedMonad(..), liftA2, (<$>))
 import Control.Lens ((^.))
 import Control.Monad (liftM, liftM2)
 import Control.Monad.Trans.Class (lift)
@@ -187,6 +187,13 @@ randomizeParamIds gen =
         maybe gv makeParameterRef .
         Map.lookup guid
       _ -> return v
+
+recurseWithScopeM ::
+   Monad f =>
+   (Guid -> a -> scope -> scope) -> (scope -> Expression def a -> f b) ->
+   scope -> Expression def a -> f (Expression def b)
+recurseWithScopeM addToScope f scope =
+  unwrapMonad . recurseWithScope addToScope (fmap WrapMonad . f) scope
 
 recurseWithScope ::
    Applicative f =>

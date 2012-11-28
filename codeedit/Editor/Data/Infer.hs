@@ -1,7 +1,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveDataTypeable #-}
 module Editor.Data.Infer
   ( Expression, Inferred(..), rExpression
-  , Loaded, load, inferLoaded
+  , Loaded, load
+  , IsNewRoot(..), inferLoaded
   , updateAndInfer
   -- TODO: Expose only ref readers for InferNode (instead of .. and TypedValue)
   , InferNode(..), TypedValue(..)
@@ -21,7 +22,7 @@ import Control.Monad (guard, liftM, liftM2, unless, void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
-import Control.Monad.Trans.State (StateT(..), State, runState, execState)
+import Control.Monad.Trans.State (StateT(..), State, runState)
 import Control.Monad.Trans.Writer (Writer)
 import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
@@ -35,6 +36,7 @@ import Data.Maybe (fromMaybe, isJust, mapMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable)
+import Data.Tuple (swap)
 import Data.Typeable (Typeable)
 import Editor.Data.Infer.Rules (Rule(..), makeAllRules, makeResumptionRules, runRuleClosure)
 import Editor.Data.Infer.Types
@@ -51,7 +53,10 @@ import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
 
-mkOrigin :: Monad m => StateT Origin m Origin
+toStateT :: Monad m => State s a -> StateT s m a
+toStateT = State.mapStateT (return . runIdentity)
+
+mkOrigin :: State Origin Origin
 mkOrigin = do
   r <- State.get
   State.modify (+1)
@@ -97,20 +102,23 @@ emptyRefMap =
   , _nextRef = 0
   }
 
-createEmptyRef :: Monad m => StateT (RefMap a) m Int
+createEmptyRef :: State (RefMap a) Int
 createEmptyRef = do
   key <- Lens.use nextRef
   nextRef += 1
   return key
 
-refsMAt :: Functor f => Int -> (Maybe a -> f (Maybe a)) -> RefMap a -> f (RefMap a)
-refsMAt k = refs . Lens.at k
-
 refsAt :: Functor f => Int -> (a -> f a) -> RefMap a -> f (RefMap a)
-refsAt k = refsMAt k . Lens.iso from Just
+refsAt k = refs . Lens.at k . Lens.iso from Just
   where
     from = fromMaybe $ error msg
     msg = unwords ["intMapMod: key", show k, "not in map"]
+
+createRef :: a -> State (RefMap a) Int
+createRef initialVal = do
+  ref <- createEmptyRef
+  refsAt ref .= initialVal
+  return ref
 --------------
 
 data Context = Context
@@ -164,12 +172,13 @@ LensTH.makeLenses ''InferState
 
 -- ExprRefMap:
 
-createEmptyRefExpr :: Monad m => StateT Context m ExprRef
-createEmptyRefExpr = liftM ExprRef $ Lens.zoom exprMap createEmptyRef
-
-exprRefsMAt ::
-  Functor f => ExprRef -> (Maybe RefData -> f (Maybe RefData)) -> Context -> f Context
-exprRefsMAt k = exprMap . refsMAt (unExprRef k)
+createRefExpr :: State Context ExprRef
+createRefExpr = do
+  holeRefExpr <-
+    liftM (Data.Expression Data.hole . RefExprPayload mempty) $
+    Lens.zoom nextOrigin mkOrigin
+  liftM ExprRef . Lens.zoom exprMap . createRef $
+    RefData holeRefExpr mempty
 
 exprRefsAt ::
   Functor f => ExprRef -> (RefData -> f RefData) -> Context -> f Context
@@ -177,7 +186,7 @@ exprRefsAt k = exprMap . refsAt (unExprRef k)
 
 -- RuleRefMap
 
-createEmptyRefRule :: Monad m => StateT Context m RuleRef
+createEmptyRefRule :: State Context RuleRef
 createEmptyRefRule = liftM RuleRef $ Lens.zoom ruleMap createEmptyRef
 
 ruleRefsAt ::
@@ -189,8 +198,8 @@ ruleRefsAt k = ruleMap . refsAt (unRuleRef k)
 -- TODO: createTypeVal should use newNode, not vice versa.
 -- For use in loading phase only!
 -- We don't create additional Refs afterwards!
-createTypedVal :: Monad m => StateT Context m TypedValue
-createTypedVal = liftM2 TypedValue createEmptyRefExpr createEmptyRefExpr
+createTypedVal :: State Context TypedValue
+createTypedVal = TypedValue <$> createRefExpr <*> createRefExpr
 
 newNodeWithScope :: Scope -> Context -> (Context, InferNode)
 newNodeWithScope scope prevContext =
@@ -202,7 +211,7 @@ newTypedNodeWithScope :: Scope -> ExprRef -> Context -> (Context, InferNode)
 newTypedNodeWithScope scope typ prevContext =
   (resultContext, InferNode (TypedValue newValRef typ) scope)
   where
-    (newValRef, resultContext) = runState createEmptyRefExpr prevContext
+    (newValRef, resultContext) = runState createRefExpr prevContext
 
 initial :: Maybe DataIRef.DefinitionIRef -> (Context, InferNode)
 initial mRecursiveDefI =
@@ -225,6 +234,99 @@ initial mRecursiveDefI =
       , _ruleMap = emptyRefMap
       }
 
+--- InferT:
+
+newtype InferT m a =
+  InferT { unInferT :: ReaderT (InferActions m) (StateT InferState m) a }
+  deriving (Monad)
+
+runInferT ::
+  Monad m => InferActions m -> InferState ->
+  InferT m a -> m (InferState, a)
+runInferT actions state =
+  liftM swap . (`runStateT` state) . (`runReaderT` actions) . unInferT
+
+liftActions :: ReaderT (InferActions m) (StateT InferState m) a -> InferT m a
+liftActions = InferT
+
+liftState :: Monad m => StateT InferState m a -> InferT m a
+liftState = liftActions . lift
+
+{-# SPECIALIZE liftState :: StateT InferState Maybe a -> InferT Maybe a #-}
+{-# SPECIALIZE liftState :: Monoid w => StateT InferState (Writer w) a -> InferT (Writer w) a #-}
+
+instance MonadTrans InferT where
+  lift = liftState . lift
+
+postProcess ::
+  (InferState, Data.Expression DataIRef.DefinitionIRef (InferNode, a)) -> (Expression a, Context)
+postProcess (inferState, expr) =
+  (fmap derefNode expr, resultContext)
+  where
+    resultContext = inferState ^. sContext
+    derefNode (inferNode, s) =
+      Inferred
+      { iStored = s
+      , iValue = deref . tvVal $ nRefs inferNode
+      , iType = deref . tvType $ nRefs inferNode
+      , iScope =
+        Map.fromList . mapMaybe onScopeElement . Map.toList $ nScope inferNode
+      , iPoint = inferNode
+      }
+    onScopeElement (Data.ParameterRef guid, ref) = Just (guid, deref ref)
+    onScopeElement _ = Nothing
+    deref ref = void $ resultContext ^. exprRefsAt ref . rExpression
+
+getRefExpr :: Monad m => ExprRef -> InferT m RefExpression
+getRefExpr ref = liftState $ Lens.use (sContext . exprRefsAt ref . rExpression)
+
+{-# SPECIALIZE getRefExpr :: ExprRef -> InferT Maybe RefExpression #-}
+{-# SPECIALIZE getRefExpr :: Monoid w => ExprRef -> InferT (Writer w) RefExpression #-}
+
+executeRules :: Monad m => InferT m ()
+executeRules = do
+  curLayer <- liftState $ Lens.use sBfsNextLayer
+  liftState $ sBfsCurLayer .= curLayer
+  liftState $ sBfsNextLayer .= IntSet.empty
+  unless (IntSet.null curLayer) $ do
+    mapM_ processRule $ IntSet.toList curLayer
+    executeRules
+  where
+    processRule key = do
+      liftState $ sBfsCurLayer . Lens.contains key .= False
+      Rule deps ruleClosure <-
+        liftState $ Lens.use (sContext . ruleRefsAt (RuleRef key))
+      refExps <- mapM getRefExpr deps
+      mapM_ (uncurry setRefExpr) $ runRuleClosure ruleClosure refExps
+
+{-# SPECIALIZE executeRules :: InferT Maybe () #-}
+{-# SPECIALIZE executeRules :: Monoid w => InferT (Writer w) () #-}
+
+execInferT ::
+  Monad m => InferActions m -> InferState ->
+  InferT m (Data.Expression DataIRef.DefinitionIRef (InferNode, a)) ->
+  m (Expression a, Context)
+execInferT actions state act =
+  liftM postProcess .
+  runInferT actions state $ do
+    res <- act
+    executeRules
+    return res
+
+{-# SPECIALIZE
+  execInferT ::
+    InferActions Maybe -> InferState ->
+    InferT Maybe (Data.Expression DataIRef.DefinitionIRef (InferNode, a)) ->
+    Maybe (Expression a, Context)
+  #-}
+
+{-# SPECIALIZE
+  execInferT ::
+    Monoid w => InferActions (Writer w) -> InferState ->
+    InferT (Writer w) (Data.Expression DataIRef.DefinitionIRef (InferNode, a)) ->
+    (Writer w) (Expression a, Context)
+  #-}
+
 newtype Loader m = Loader
   { loadPureDefinitionType :: DataIRef.DefinitionIRef -> m (Data.Expression DataIRef.DefinitionIRef ())
   }
@@ -242,13 +344,11 @@ initialExprs ::
 initialExprs defTypes scope entity =
   case entity ^. Data.eValue of
   Data.ExpressionApply _ ->
-    (,) <$> mkHoleO <*> mkHoleO
+    liftM2 (,) mkHoleO mkHoleO
   Data.ExpressionLeaf (Data.GetVariable var@(Data.DefinitionRef ref))
     | not (Map.member var scope) ->
-      (,) <$> addOrigin entity <*> addOrigin (defTypes Map.! ref)
-  _ -> (,)
-    <$> addOrigin (Lens.over Data.eValue (Data.pureHole <$) entity)
-    <*> mkHoleO
+      liftM2 (,) (addOrigin entity) (addOrigin (defTypes Map.! ref))
+  _ -> liftM2 (,) (addOrigin (Lens.over Data.eValue (Data.pureHole <$) entity)) mkHoleO
   where
     mkHoleO = addOrigin Data.pureHole
     addOrigin = Traversable.mapM (const mkOrigin)
@@ -298,243 +398,19 @@ mergeExprs p0 p1 =
     onMismatch e0 e1 =
       Either.left $ MismatchIn (void e0) (void e1)
 
-initializeRefData :: ExprRef -> Data.Expression DataIRef.DefinitionIRef Origin -> State Context ()
-initializeRefData ref expr =
-  exprRefsAt ref .= RefData (fmap (RefExprPayload mempty) expr) []
+touch :: Monad m => ExprRef -> InferT m ()
+touch ref =
+  liftState $ do
+    nodeRules <- Lens.use (sContext . exprRefsAt ref . rRules)
+    curLayer <- Lens.use sBfsCurLayer
+    sBfsNextLayer %=
+      ( mappend . IntSet.fromList
+      . filter (not . (`IntSet.member` curLayer))
+      . map unRuleRef
+      ) nodeRules
 
-exprIntoContext ::
-  Map DataIRef.DefinitionIRef (Data.Expression DataIRef.DefinitionIRef ()) -> Scope ->
-  Data.Expression DataIRef.DefinitionIRef s -> TypedValue ->
-  State Context (Data.Expression DataIRef.DefinitionIRef (InferNode, s))
-exprIntoContext defTypes rootScope rootExpr rootTypedValue = do
-  rootExprTV <-
-    Traversable.traverse tupleInto .
-    -- Make new TypedValues for all subexpressions except the root
-    -- which shall use rootTypedValue
-    Lens.set (Data.ePayload . Lens._2) (pure rootTypedValue) $
-    fmap addTypedVal rootExpr
-  Data.recurseWithScope addToScope f rootScope rootExprTV
-  where
-    tupleInto (x, act) = (,) x <$> act
-    addTypedVal x = (x, createTypedVal)
-    addToScope paramGuid (_, TypedValue paramTypeVal _) =
-      Map.insert (Data.ParameterRef paramGuid) paramTypeVal
-    f scope expr@(Data.Expression _ (originS, typedValue)) = do
-      let TypedValue val typ = typedValue
-      (initialVal, initialType) <-
-        Lens.zoom nextOrigin . initialExprs defTypes scope $
-        void expr
-      initializeRefData val initialVal
-      initializeRefData typ initialType
-      return (InferNode typedValue scope, originS)
-
-data Loaded a = Loaded
-  { lRealExpr :: Data.Expression DataIRef.DefinitionIRef a
-  , lDefinitionTypes :: Map DataIRef.DefinitionIRef (Data.Expression DataIRef.DefinitionIRef ())
-  } deriving (Typeable)
-derive makeBinary ''Loaded
-
-ordNub :: Ord a => [a] -> [a]
-ordNub = Set.toList . Set.fromList
-
-load ::
-  Monad m => Loader m ->
-  Maybe DataIRef.DefinitionIRef -> Data.Expression DataIRef.DefinitionIRef a ->
-  m (Loaded a)
-load loader mRecursiveDef expr =
-  liftM (Loaded expr . Map.fromList) .
-  mapM loadType $ ordNub
-  [ defI
-  | Data.ExpressionLeaf (Data.GetVariable (Data.DefinitionRef defI)) <-
-    map (Lens.view Data.eValue) $ Data.subExpressions expr
-  , Just defI /= mRecursiveDef
-  ]
-  where
-    loadType defI = liftM ((,) defI) $ loadPureDefinitionType loader defI
-
--- TODO: Preprocessed used to be "Loaded". Now it is just a step in
--- "infer". Does it still make sense to keep it separately the way it
--- is?
-data Preprocessed a = Preprocessed
-  { lExpr :: Data.Expression DataIRef.DefinitionIRef (InferNode, a)
-  , lContext :: Context
-  , lSavedRoot :: (Maybe RefData, Maybe RefData)
-  }
-
-preprocess :: Loaded a -> Context -> InferNode -> Preprocessed a
-preprocess loaded initialContext (InferNode rootTv scope) =
-  buildPreprocessed . (`runState` initialContext) $
-  exprIntoContext (lDefinitionTypes loaded) scope
-  (lRealExpr loaded) rootTv
-  where
-    TypedValue rootValR rootTypR = rootTv
-    initialMRefData k =
-      Lens.view (exprRefsMAt k) initialContext
-    buildPreprocessed (node, resultContext) = Preprocessed
-      { lExpr = node
-      , lContext = resultContext
-      , lSavedRoot =
-        ( initialMRefData rootValR
-        , initialMRefData rootTypR
-        )
-      }
-
-postProcess ::
-  Data.Expression DataIRef.DefinitionIRef (InferNode, a) -> InferState -> (Expression a, Context)
-postProcess expr inferState =
-  (fmap derefNode expr, resultContext)
-  where
-    resultContext = inferState ^. sContext
-    derefNode (inferNode, s) =
-      Inferred
-      { iStored = s
-      , iValue = deref . tvVal $ nRefs inferNode
-      , iType = deref . tvType $ nRefs inferNode
-      , iScope =
-        Map.fromList . mapMaybe onScopeElement . Map.toList $ nScope inferNode
-      , iPoint = inferNode
-      }
-    onScopeElement (Data.ParameterRef guid, ref) = Just (guid, deref ref)
-    onScopeElement _ = Nothing
-    deref ref = void $ resultContext ^. exprRefsAt ref . rExpression
-
-addRule :: Rule -> State InferState ()
-addRule rule = do
-  ruleRef <- makeRule
-  mapM_ (addRuleId ruleRef) $ ruleInputs rule
-  sBfsNextLayer . Lens.contains (unRuleRef ruleRef) .= True
-  where
-    makeRule = do
-      ruleRef <- Lens.zoom sContext createEmptyRefRule
-      sContext . ruleRefsAt ruleRef .= rule
-      return ruleRef
-    addRuleId ruleRef ref = sContext . exprRefsAt ref . rRules %= (ruleRef :)
-
---- InferT:
-
-newtype InferT m a =
-  InferT { unInferT :: ReaderT (InferActions m) (StateT InferState m) a }
-  deriving (Monad)
-
-swap :: (a, b) -> (b, a)
-swap (x, y) = (y, x)
-
-runInferT ::
-  Monad m => InferActions m -> InferState ->
-  InferT m a -> m (InferState, a)
-runInferT actions state =
-  liftM swap . (`runStateT` state) . (`runReaderT` actions) . unInferT
-
-liftActions :: ReaderT (InferActions m) (StateT InferState m) a -> InferT m a
-liftActions = InferT
-
-liftState :: Monad m => StateT InferState m a -> InferT m a
-liftState = liftActions . lift
-
-{-# SPECIALIZE liftState :: StateT InferState Maybe a -> InferT Maybe a #-}
-{-# SPECIALIZE liftState :: Monoid w => StateT InferState (Writer w) a -> InferT (Writer w) a #-}
-
-instance MonadTrans InferT where
-  lift = liftState . lift
-
-execInferT ::
-  Monad m => InferActions m ->
-  InferState -> Data.Expression DataIRef.DefinitionIRef (InferNode, a) ->
-  InferT m () -> m (Expression a, Context)
-execInferT actions state expr act =
-  liftM (postProcess expr . fst) .
-  runInferT actions state $ do
-    act
-    executeRules
-
-{-# SPECIALIZE
-  execInferT ::
-    InferActions Maybe ->
-    InferState -> Data.Expression DataIRef.DefinitionIRef (InferNode, a) ->
-    InferT Maybe () -> Maybe (Expression a, Context) #-}
-{-# SPECIALIZE
-  execInferT ::
-    Monoid w => InferActions (Writer w) ->
-    InferState -> Data.Expression DataIRef.DefinitionIRef (InferNode, a) ->
-    InferT (Writer w) () -> Writer w (Expression a, Context) #-}
-
-updateAndInfer ::
-  Monad m => InferActions m -> Context ->
-  [(ExprRef, Data.Expression DataIRef.DefinitionIRef ())] ->
-  Expression a -> m (Expression a, Context)
-updateAndInfer actions prevContext updates expr =
-  execInferT actions inferState (f <$> expr) $ do
-    mapM_ doUpdate updates
-  where
-    inferState = InferState prevContext mempty mempty
-    f inferred = (iPoint inferred, iStored inferred)
-    doUpdate (ref, newExpr) =
-      setRefExpr ref =<<
-      (liftState . Lens.zoom (sContext . nextOrigin) . makeRefExprFromPure) newExpr
-    makeRefExprFromPure =
-      Traversable.mapM . const $ liftM (RefExprPayload mempty) mkOrigin
-
-inferLoaded ::
-  Monad m => InferActions m -> Loaded a -> Context -> InferNode ->
-  m (Expression a, Context)
-inferLoaded actions loaded initialContext node =
-  execInferT actions ruleInferState expr $ do
-    restoreRoot rootValR rootValMRefData
-    restoreRoot rootTypR rootTypMRefData
-    -- when we resume load,
-    -- we want to trigger the existing rules for the loaded root
-    touch rootValR
-    touch rootTypR
-  where
-    Preprocessed expr loadedContext (rootValMRefData, rootTypMRefData) =
-      preprocess loaded initialContext node
-    ruleInferState =
-      (`execState` InferState loadedContext mempty mempty) $
-      mapM_ addRule =<<
-      Lens.zoom (sContext . nextOrigin)
-      (makeRules rootValMRefData (fmap fst expr))
-    makeRules Nothing = makeAllRules
-    makeRules (Just _) = makeResumptionRules
-    TypedValue rootValR rootTypR = nRefs . fst $ expr ^. Data.ePayload
-    restoreRoot _ Nothing = return ()
-    restoreRoot ref (Just (RefData refExpr refRules)) = do
-      liftState $ sContext . exprRefsAt ref . rRules %= (refRules ++)
-      setRefExpr ref refExpr
-
-{-# SPECIALIZE
-  inferLoaded ::
-    InferActions Maybe -> Loaded a -> Context -> InferNode ->
-    Maybe (Expression a, Context) #-}
-{-# SPECIALIZE
-  inferLoaded ::
-    Monoid w => InferActions (Writer w) -> Loaded a ->
-    Context -> InferNode ->
-    Writer w (Expression a, Context) #-}
-
-executeRules :: Monad m => InferT m ()
-executeRules = do
-  curLayer <- liftState $ Lens.use sBfsNextLayer
-  liftState $ sBfsCurLayer .= curLayer
-  liftState $ sBfsNextLayer .= IntSet.empty
-  unless (IntSet.null curLayer) $ do
-    mapM_ processRule $ IntSet.toList curLayer
-    executeRules
-  where
-    processRule key = do
-      liftState $ sBfsCurLayer . Lens.contains key .= False
-      Rule deps ruleClosure <-
-        liftState $ Lens.use (sContext . ruleRefsAt (RuleRef key))
-      refExps <- mapM getRefExpr deps
-      mapM_ (uncurry setRefExpr) $ runRuleClosure ruleClosure refExps
-
-{-# SPECIALIZE executeRules :: InferT Maybe () #-}
-{-# SPECIALIZE executeRules :: Monoid w => InferT (Writer w) () #-}
-
-getRefExpr :: Monad m => ExprRef -> InferT m RefExpression
-getRefExpr ref = liftState $ Lens.use (sContext . exprRefsAt ref . rExpression)
-
-{-# SPECIALIZE getRefExpr :: ExprRef -> InferT Maybe RefExpression #-}
-{-# SPECIALIZE getRefExpr :: Monoid w => ExprRef -> InferT (Writer w) RefExpression #-}
+{-# SPECIALIZE touch :: ExprRef -> InferT Maybe () #-}
+{-# SPECIALIZE touch :: Monoid w => ExprRef -> InferT (Writer w) () #-}
 
 setRefExpr :: Monad m => ExprRef -> RefExpression -> InferT m ()
 setRefExpr ref newExpr = do
@@ -566,16 +442,117 @@ setRefExpr ref newExpr = do
 {-# SPECIALIZE setRefExpr :: ExprRef -> RefExpression -> InferT Maybe () #-}
 {-# SPECIALIZE setRefExpr :: Monoid w => ExprRef -> RefExpression -> InferT (Writer w) () #-}
 
-touch :: Monad m => ExprRef -> InferT m ()
-touch ref =
-  liftState $ do
-    nodeRules <- Lens.use (sContext . exprRefsAt ref . rRules)
-    curLayer <- Lens.use sBfsCurLayer
-    sBfsNextLayer %=
-      ( mappend . IntSet.fromList
-      . filter (not . (`IntSet.member` curLayer))
-      . map unRuleRef
-      ) nodeRules
+exprIntoContext ::
+  Monad m =>
+  Map DataIRef.DefinitionIRef (Data.Expression DataIRef.DefinitionIRef ()) -> Scope ->
+  Data.Expression DataIRef.DefinitionIRef s -> TypedValue ->
+  InferT m (Data.Expression DataIRef.DefinitionIRef (InferNode, s))
+exprIntoContext defTypes rootScope rootExpr rootTypedValue = do
+  rootExprTV <-
+    liftState . Lens.zoom sContext .
+    Traversable.mapM tupleInto .
+    -- Make new TypedValues for all subexpressions except the root
+    -- which shall use rootTypedValue
+    Lens.set (Data.ePayload . Lens._2) (return rootTypedValue) $
+    fmap addTypedVal rootExpr
+  Data.recurseWithScopeM addToScope f rootScope rootExprTV
+  where
+    tupleInto (x, act) = liftM ((,) x) act
+    addTypedVal x = (x, toStateT createTypedVal)
+    addToScope paramGuid (_, TypedValue paramTypeVal _) =
+      Map.insert (Data.ParameterRef paramGuid) paramTypeVal
+    f scope expr@(Data.Expression _ (originS, typedValue)) = do
+      let TypedValue val typ = typedValue
+      (initialVal, initialType) <-
+        liftState . Lens.zoom (sContext . nextOrigin) . toStateT . initialExprs defTypes scope $
+        void expr
+      setRefExpr val $ RefExprPayload mempty <$> initialVal
+      setRefExpr typ $ RefExprPayload mempty <$> initialType
+      return (InferNode typedValue scope, originS)
 
-{-# SPECIALIZE touch :: ExprRef -> InferT Maybe () #-}
-{-# SPECIALIZE touch :: Monoid w => ExprRef -> InferT (Writer w) () #-}
+data Loaded a = Loaded
+  { lRealExpr :: Data.Expression DataIRef.DefinitionIRef a
+  , lDefinitionTypes :: Map DataIRef.DefinitionIRef (Data.Expression DataIRef.DefinitionIRef ())
+  } deriving (Typeable)
+derive makeBinary ''Loaded
+
+ordNub :: Ord a => [a] -> [a]
+ordNub = Set.toList . Set.fromList
+
+load ::
+  Monad m => Loader m ->
+  Maybe DataIRef.DefinitionIRef -> Data.Expression DataIRef.DefinitionIRef a ->
+  m (Loaded a)
+load loader mRecursiveDef expr =
+  liftM (Loaded expr . Map.fromList) .
+  mapM loadType $ ordNub
+  [ defI
+  | Data.ExpressionLeaf (Data.GetVariable (Data.DefinitionRef defI)) <-
+    map (Lens.view Data.eValue) $ Data.subExpressions expr
+  , Just defI /= mRecursiveDef
+  ]
+  where
+    loadType defI = liftM ((,) defI) $ loadPureDefinitionType loader defI
+
+addRule :: Rule -> State InferState ()
+addRule rule = do
+  ruleRef <- makeRule
+  mapM_ (addRuleId ruleRef) $ ruleInputs rule
+  sBfsNextLayer . Lens.contains (unRuleRef ruleRef) .= True
+  where
+    makeRule = do
+      ruleRef <- Lens.zoom sContext createEmptyRefRule
+      sContext . ruleRefsAt ruleRef .= rule
+      return ruleRef
+    addRuleId ruleRef ref = sContext . exprRefsAt ref . rRules %= (ruleRef :)
+
+updateAndInfer ::
+  Monad m => InferActions m -> Context ->
+  [(ExprRef, Data.Expression DataIRef.DefinitionIRef ())] ->
+  Expression a -> m (Expression a, Context)
+updateAndInfer actions prevContext updates expr =
+  execInferT actions inferState $ do
+    mapM_ doUpdate updates
+    return $ f <$> expr
+  where
+    inferState = InferState prevContext mempty mempty
+    f inferred = (iPoint inferred, iStored inferred)
+    doUpdate (ref, newExpr) =
+      setRefExpr ref =<<
+      (liftState . Lens.zoom (sContext . nextOrigin) . makeRefExprFromPure) newExpr
+    makeRefExprFromPure =
+      Traversable.mapM . const . liftM (RefExprPayload mempty) $ toStateT mkOrigin
+
+data IsNewRoot = NewRoot | ExistingNode
+  deriving (Typeable)
+derive makeBinary ''IsNewRoot
+
+inferLoaded ::
+  Monad m => InferActions m -> IsNewRoot -> Loaded a -> Context -> InferNode ->
+  m (Expression a, Context)
+inferLoaded actions isNewRoot loaded initialContext node =
+  execInferT actions initialState $ do
+    expr <- exprIntoContext (lDefinitionTypes loaded) (nScope node) (lRealExpr loaded) (nRefs node)
+    liftState . toStateT $ do
+      rules <-
+        Lens.zoom (sContext . nextOrigin) .
+        makeRules $ fmap fst expr
+      mapM_ addRule rules
+    return expr
+  where
+    initialState = InferState initialContext mempty mempty
+    makeRules =
+      case isNewRoot of
+      NewRoot -> makeAllRules
+      ExistingNode -> makeResumptionRules
+
+{-# SPECIALIZE
+  inferLoaded ::
+    InferActions Maybe -> IsNewRoot -> Loaded a -> Context -> InferNode ->
+    Maybe (Expression a, Context)
+  #-}
+{-# SPECIALIZE
+  inferLoaded ::
+    Monoid w => InferActions (Writer w) -> IsNewRoot -> Loaded a -> Context -> InferNode ->
+    Writer w (Expression a, Context)
+  #-}

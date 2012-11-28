@@ -397,7 +397,7 @@ testResume name newExpr testExpr extract =
     (tExpr, inferContext) = doInfer testExpr
   in
     void . evaluate $
-    doInferM inferContext
+    doInferM Infer.ExistingNode inferContext
     ((Infer.iPoint . Lens.view Data.ePayload . extract) tExpr)
     newExpr
 
@@ -467,7 +467,8 @@ resumptionTests =
       body = getLambdaBody exprD
       scope = Infer.nScope . Infer.iPoint $ body ^. Data.ePayload
       (exprR, _) =
-        uncurry doInferM (Infer.newNodeWithScope scope inferContext)
+        uncurry (doInferM Infer.NewRoot)
+        (Infer.newNodeWithScope scope inferContext)
         getRecursiveDef
       resultD = inferResults exprD
       resultR = inferResults exprR
@@ -499,7 +500,9 @@ failResumptionAddsRules =
   where
     -- TODO: Verify iwc has the right kind of conflict (or add
     -- different tests to do that)
-    (success, _, _iwc) = inferWithConflicts (doLoad resumptionValue) origRefMap resumptionPoint
+    (success, _, _iwc) =
+      inferWithConflicts (doLoad resumptionValue)
+      Infer.ExistingNode origRefMap resumptionPoint
     resumptionValue = getDefExpr "Bool" -- <- anything but Pi
     resumptionPoint =
       ( Infer.iPoint . Lens.view Data.ePayload
