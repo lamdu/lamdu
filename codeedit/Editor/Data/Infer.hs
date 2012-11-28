@@ -28,7 +28,7 @@ import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
 import Data.Foldable (Foldable(..))
 import Data.Functor.Identity (Identity(..))
-import Data.IntMap (IntMap, (!))
+import Data.IntMap (IntMap)
 import Data.IntSet (IntSet)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe, isJust, mapMaybe)
@@ -75,11 +75,31 @@ data RefData = RefData
   }
 derive makeBinary ''RefData
 
+--------------
+--- RefMap:
 data RefMap a = RefMap
   { _refs :: IntMap a
   , _nextRef :: Int
   }
+LensTH.makeLenses ''RefData
+LensTH.makeLenses ''RefMap
 derive makeBinary ''RefMap
+
+createEmptyRef :: Monad m => StateT (RefMap a) m Int
+createEmptyRef = do
+  key <- Lens.use nextRef
+  nextRef += 1
+  return key
+
+refsMAt :: Functor f => Int -> (Maybe a -> f (Maybe a)) -> RefMap a -> f (RefMap a)
+refsMAt k = refs . Lens.at k
+
+refsAt :: Functor f => Int -> (a -> f a) -> RefMap a -> f (RefMap a)
+refsAt k = refsMAt k . Lens.iso from Just
+  where
+    from = fromMaybe $ error msg
+    msg = unwords ["intMapMod: key", show k, "not in map"]
+--------------
 
 data Context = Context
   { _exprMap :: RefMap RefData
@@ -128,22 +148,29 @@ newtype InferActions m = InferActions
   { reportError :: Error -> m ()
   }
 
-LensTH.makeLenses ''RefData
-LensTH.makeLenses ''RefMap
 LensTH.makeLenses ''Context
 LensTH.makeLenses ''InferState
+
+-- ExprRefMap:
+
+createEmptyRefExpr :: Monad m => StateT Context m ExprRef
+createEmptyRefExpr = liftM ExprRef $ Lens.zoom exprMap createEmptyRef
+
+exprRefsMAt ::
+  Functor f => ExprRef -> (Maybe RefData -> f (Maybe RefData)) -> Context -> f Context
+exprRefsMAt k = exprMap . refsMAt (unExprRef k)
+
+exprRefsAt ::
+  Functor f => ExprRef -> (RefData -> f RefData) -> Context -> f Context
+exprRefsAt k = exprMap . refsAt (unExprRef k)
+
+-------------
 
 -- TODO: createTypeVal should use newNode, not vice versa.
 -- For use in loading phase only!
 -- We don't create additional Refs afterwards!
 createTypedVal :: Monad m => StateT Context m TypedValue
-createTypedVal = liftM2 TypedValue createRef createRef
-
-createRef :: Monad m => StateT Context m ExprRef
-createRef = do
-  key <- Lens.use (exprMap . nextRef)
-  exprMap . nextRef += 1
-  return $ ExprRef key
+createTypedVal = liftM2 TypedValue createEmptyRefExpr createEmptyRefExpr
 
 newNodeWithScope :: Scope -> Context -> (Context, InferNode)
 newNodeWithScope scope prevContext =
@@ -155,7 +182,7 @@ newTypedNodeWithScope :: Scope -> ExprRef -> Context -> (Context, InferNode)
 newTypedNodeWithScope scope typ prevContext =
   (resultContext, InferNode (TypedValue newValRef typ) scope)
   where
-    (newValRef, resultContext) = runState createRef prevContext
+    (newValRef, resultContext) = runState createEmptyRefExpr prevContext
 
 initial :: (Context, InferNode)
 initial =
@@ -196,16 +223,6 @@ initialExprs defTypes scope entity =
   where
     mkHoleO = addOrigin Data.pureHole
     addOrigin = Traversable.mapM (const mkOrigin)
-
-intMapMod :: Functor f => Int -> (v -> f v) -> IntMap v -> f (IntMap v)
-intMapMod k =
-  Lens.at k . Lens.iso from Just
-  where
-    from = fromMaybe . error $ unwords ["intMapMod: key", show k, "not in map"]
-
-refsAt ::
-  Functor f => ExprRef -> (RefData -> f RefData) -> InferState -> f InferState
-refsAt k = sContext . exprMap . refs . intMapMod (unExprRef k)
 
 -- This is because platform's Either's Monad instance sucks
 runEither :: EitherT l Identity a -> Either l a
@@ -254,8 +271,7 @@ mergeExprs p0 p1 =
 
 initializeRefData :: ExprRef -> Data.Expression DataIRef.DefinitionIRef Origin -> State Context ()
 initializeRefData ref expr =
-  exprMap . refs . Lens.at (unExprRef ref) .=
-  Just (RefData (fmap (RefExprPayload mempty) expr) [])
+  exprRefsAt ref .= RefData (fmap (RefExprPayload mempty) expr) []
 
 exprIntoContext ::
   Map DataIRef.DefinitionIRef (Data.Expression DataIRef.DefinitionIRef ()) -> Scope ->
@@ -325,7 +341,7 @@ preprocess loaded initialContext (InferNode rootTv rootScope) =
   where
     TypedValue rootValR rootTypR = rootTv
     initialMRefData k =
-      Lens.view (exprMap . refs . Lens.at (unExprRef k)) initialContext
+      Lens.view (exprRefsMAt k) initialContext
     buildPreprocessed (node, resultContext) = Preprocessed
       { lExpr = node
       , lContext = resultContext
@@ -356,7 +372,7 @@ postProcess expr inferState =
       }
     onScopeElement (Data.ParameterRef guid, ref) = Just (guid, deref ref)
     onScopeElement _ = Nothing
-    deref (ExprRef x) = void $ ((resultContext ^. exprMap . refs) ! x) ^. rExpression
+    deref ref = void $ resultContext ^. exprRefsAt ref . rExpression
 
 addRule :: Rule -> State InferState ()
 addRule rule = do
@@ -369,7 +385,7 @@ addRule rule = do
       sContext . nextRule += 1
       sContext . rules . Lens.at ruleId .= Just rule
       return ruleId
-    addRuleId ruleId ref = refsAt ref . rRules %= (ruleId :)
+    addRuleId ruleId ref = sContext . exprRefsAt ref . rRules %= (ruleId :)
 
 --- InferT:
 
@@ -455,7 +471,7 @@ inferLoaded actions loaded initialContext node =
     TypedValue rootValR rootTypR = nRefs . fst $ expr ^. Data.ePayload
     restoreRoot _ Nothing = return ()
     restoreRoot ref (Just (RefData refExpr refRules)) = do
-      liftState $ refsAt ref . rRules %= (refRules ++)
+      liftState $ sContext . exprRefsAt ref . rRules %= (refRules ++)
       setRefExpr ref refExpr
 
 {-# SPECIALIZE
@@ -488,14 +504,14 @@ executeRules = do
 {-# SPECIALIZE executeRules :: Monoid w => InferT (Writer w) () #-}
 
 getRefExpr :: Monad m => ExprRef -> InferT m RefExpression
-getRefExpr ref = liftState $ Lens.use (refsAt ref . rExpression)
+getRefExpr ref = liftState $ Lens.use (sContext . exprRefsAt ref . rExpression)
 
 {-# SPECIALIZE getRefExpr :: ExprRef -> InferT Maybe RefExpression #-}
 {-# SPECIALIZE getRefExpr :: Monoid w => ExprRef -> InferT (Writer w) RefExpression #-}
 
 setRefExpr :: Monad m => ExprRef -> RefExpression -> InferT m ()
 setRefExpr ref newExpr = do
-  curExpr <- liftState $ Lens.use (refsAt ref . rExpression)
+  curExpr <- liftState $ Lens.use (sContext . exprRefsAt ref . rExpression)
   case mergeExprs curExpr newExpr of
     Right mergedExpr -> do
       let
@@ -506,7 +522,7 @@ setRefExpr ref newExpr = do
           _ -> False
       when isChange $ touch ref
       when (isChange || isHole) $
-        liftState $ refsAt ref . rExpression .= mergedExpr
+        liftState $ sContext . exprRefsAt ref . rExpression .= mergedExpr
     Left details -> do
       report <- liftActions $ Reader.asks reportError
       lift $ report Error
@@ -526,7 +542,7 @@ setRefExpr ref newExpr = do
 touch :: Monad m => ExprRef -> InferT m ()
 touch ref =
   liftState $ do
-    nodeRules <- Lens.use (refsAt ref . rRules)
+    nodeRules <- Lens.use (sContext . exprRefsAt ref . rRules)
     curLayer <- Lens.use sBfsCurLayer
     sBfsNextLayer %=
       ( mappend . IntSet.fromList
