@@ -24,28 +24,27 @@ import qualified Editor.Data.Infer as Infer
 
 data InferredWithConflicts a = InferredWithConflicts
   { iwcInferred :: Infer.Inferred a
-  , iwcTypeConflicts :: [Data.Expression DataIRef.DefinitionIRef ()]
-  , iwcValueConflicts :: [Data.Expression DataIRef.DefinitionIRef ()]
+  , iwcTypeConflicts :: [Infer.Error]
+  , iwcValueConflicts :: [Infer.Error]
   } deriving (Functor, Foldable, Traversable)
 derive makeBinary ''InferredWithConflicts
 
 newtype ConflictMap =
-  ConflictMap { unConflictMap :: Map Infer.Ref (Set (Data.Expression DataIRef.DefinitionIRef ())) }
+  ConflictMap { unConflictMap :: Map Infer.Ref (Set Infer.Error) }
 
 instance Monoid ConflictMap where
   mempty = ConflictMap mempty
   mappend (ConflictMap x) (ConflictMap y) =
     ConflictMap $ Map.unionWith mappend x y
 
-getConflicts :: Infer.Ref -> ConflictMap -> [Data.Expression DataIRef.DefinitionIRef ()]
+getConflicts :: Infer.Ref -> ConflictMap -> [Infer.Error]
 getConflicts ref = maybe [] Set.toList . Map.lookup ref . unConflictMap
 
 reportConflict :: Infer.Error -> Writer ConflictMap ()
 reportConflict err =
   Writer.tell . ConflictMap .
-  Map.singleton (Infer.errRef err) .
-  Set.singleton .
-  snd $ Infer.errMismatch err
+  Map.singleton (Infer.errRef err) $
+  Set.singleton err
 
 inferWithConflicts ::
   Infer.Loaded a ->
@@ -54,15 +53,15 @@ inferWithConflicts ::
   , Infer.RefMap
   , Data.Expression DataIRef.DefinitionIRef (InferredWithConflicts a)
   )
-inferWithConflicts loaded refMap node =
+inferWithConflicts loaded initialRefMap node =
   ( Map.null $ unConflictMap conflictsMap
-  , inferContext
+  , resultRefMap
   , fmap toIWC exprInferred
   )
   where
-    ((exprInferred, inferContext), conflictsMap) =
+    ((exprInferred, resultRefMap), conflictsMap) =
       runWriter $ Infer.inferLoaded (Infer.InferActions reportConflict)
-      loaded refMap node
+      loaded initialRefMap node
     toIWC x =
       InferredWithConflicts
       { iwcInferred = x
@@ -74,11 +73,12 @@ inferWithConflicts loaded refMap node =
       conflictsMap
 
 iwcInferredExprs ::
-  (Infer.Inferred a -> b) ->
-  (InferredWithConflicts a -> [b]) ->
-  InferredWithConflicts a -> [b]
+  (Infer.Inferred a -> Data.Expression DataIRef.DefinitionIRef ()) ->
+  (InferredWithConflicts a -> [Infer.Error]) ->
+  InferredWithConflicts a -> [Data.Expression DataIRef.DefinitionIRef ()]
 iwcInferredExprs getVal eeConflicts ee =
-  getVal (iwcInferred ee) : eeConflicts ee
+  (getVal . iwcInferred) ee :
+  (Set.toList . Set.fromList . map (snd . Infer.errMismatch) . eeConflicts) ee
 
 iwcInferredTypes :: InferredWithConflicts a -> [Data.Expression DataIRef.DefinitionIRef ()]
 iwcInferredTypes = iwcInferredExprs Infer.iType iwcTypeConflicts

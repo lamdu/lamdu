@@ -23,7 +23,7 @@ import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (StateT(..), State, runState, execState)
 import Control.Monad.Trans.Writer (Writer)
-import Data.Binary (Binary(..))
+import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
 import Data.Foldable (Foldable(..))
@@ -107,7 +107,8 @@ data ErrorDetails
     (Data.Expression DataIRef.DefinitionIRef ())
     (Data.Expression DataIRef.DefinitionIRef ())
   | InfiniteExpression (Data.Expression DataIRef.DefinitionIRef ())
-  deriving Show
+  deriving (Show, Eq, Ord)
+derive makeBinary ''ErrorDetails
 
 data Error = Error
   { errRef :: Ref
@@ -116,7 +117,8 @@ data Error = Error
     , Data.Expression DataIRef.DefinitionIRef ()
     )
   , errDetails :: ErrorDetails
-  } deriving Show
+  } deriving (Show, Eq, Ord)
+derive makeBinary ''Error
 
 newtype InferActions m = InferActions
   { reportError :: Error -> m ()
