@@ -6,8 +6,7 @@ import Control.Applicative ((<$), (<$>))
 import Control.Arrow (first)
 import Control.Lens ((^.))
 import Control.Monad (join, void)
-import Data.Functor.Identity (Identity(..))
-import Data.Map (Map, (!))
+import Data.Map (Map)
 import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
 import Editor.Data.Infer.Conflicts (InferredWithConflicts(..), inferWithConflicts)
@@ -105,12 +104,12 @@ definitionTypes =
   Map.fromList $ map (first Guid.fromString)
   [ ("Bool", setType)
   , ("List", makePi "list" setType setType)
-  , ("IntToBoolFunc", makePi "intToBool" intType (getDefExpr "bool"))
+  , ("IntToBoolFunc", makePi "intToBool" intType (getDefExpr "Bool"))
   , ("*", intToIntToInt)
   , ("-", intToIntToInt)
   , ( "if"
     , makePi "a" setType .
-      makePi "ifboolarg" (getDefExpr "bool") .
+      makePi "ifboolarg" (getDefExpr "Bool") .
       makePi "iftarg" (getParamExpr "a") .
       makePi "iffarg" (getParamExpr "a") $
       getParamExpr "a"
@@ -118,7 +117,7 @@ definitionTypes =
   , ( "=="
     , makePi "==0" intType .
       makePi "==1" intType $
-      getDefExpr "bool"
+      getDefExpr "Bool"
     )
   , ( "id"
     , makePi "a" setType $
@@ -147,12 +146,26 @@ doInferM initialInferContext inferNode expr
     , showExpressionWithConflicts exprWC
     ]
   where
-    loaded = runIdentity $ Infer.load loader (Just defI) expr
+    loaded = doLoad expr
     (success, resultInferContext, exprWC) =
       inferWithConflicts loaded initialInferContext inferNode
 
-loader :: Monad m => Infer.Loader m
-loader = Infer.Loader (return . (definitionTypes !) . IRef.guid)
+doLoad ::
+  Data.Expression DataIRef.DefinitionIRef a ->
+  Infer.Loaded a
+doLoad expr =
+  case Infer.load loader (Just defI) expr of
+  Left err -> error err
+  Right x -> x
+
+loader :: Infer.Loader (Either String)
+loader =
+  Infer.Loader load
+  where
+    load key =
+      case Map.lookup (IRef.guid key) definitionTypes of
+      Nothing -> Left ("Could not find" ++ show key)
+      Just x -> Right x
 
 defI :: DataIRef.DefinitionIRef
 defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
@@ -173,26 +186,22 @@ factorialExpr =
     [ getDefExpr "*"
     , getParamExpr "x"
     , makeApply
-      [ Data.pureExpression $ Data.makeDefinitionRef factorialDefI
+      [ Data.pureExpression $ Data.makeDefinitionRef defI
       , makeApply [getDefExpr "-", getParamExpr "x", literalInt 1]
       ]
     ]
   ]
 
-factorialDefI :: DataIRef.DefinitionIRef
-factorialDefI = IRef.unsafeFromGuid $ Guid.fromString "factorial"
-
 inferMaybe ::
-  Maybe DataIRef.DefinitionIRef ->
   Data.Expression DataIRef.DefinitionIRef a ->
   Maybe (Infer.Expression a, Infer.Context)
-inferMaybe mRecursiveDef expr =
-  uncurry (Infer.inferLoaded (Infer.InferActions (const Nothing)) loaded) $ Infer.initial mRecursiveDef
+inferMaybe expr =
+  uncurry (Infer.inferLoaded (Infer.InferActions (const Nothing)) loaded) $ Infer.initial (Just defI)
   where
-    loaded = runIdentity $ Infer.load loader mRecursiveDef expr
+    loaded = doLoad expr
 
 factorial :: Int -> (Infer.Expression (), Infer.Context)
 factorial gen =
   fromMaybe (error "Conflicts in factorial infer") .
-  inferMaybe (Just factorialDefI) . void $
+  inferMaybe . void $
   fmap (const gen) factorialExpr

@@ -126,7 +126,7 @@ applyIntToBoolFuncWithHole =
   (makeApply [getDefExpr "IntToBoolFunc", hole]) $
   mkInferredNode
     (makeApply [getDefExpr "IntToBoolFunc", hole])
-    (getDefExpr "bool") $
+    (getDefExpr "Bool") $
   Data.makeApply
     (mkInferredGetDef "IntToBoolFunc")
     (inferredHole intType)
@@ -180,11 +180,11 @@ applyOnVar =
   ) $
   mkInferredNode
     (makeFunnyLambda "" hole)
-    (makePi "" hole (getDefExpr "bool")) $
+    (makePi "" hole (getDefExpr "Bool")) $
   makeNamedLambda "lambda" (inferredHole setType) $
   mkInferredNode
     (makeApply [getDefExpr "IntToBoolFunc", hole])
-    (getDefExpr "bool") $
+    (getDefExpr "Bool") $
   Data.makeApply (mkInferredGetDef "IntToBoolFunc") $
   mkInferredNode
     hole
@@ -449,8 +449,9 @@ resumptionTests =
     (getApplyArg . getLambdaBody . getLambdaBody . getLambdaBody)
   , testCase "ref to the def on the side" $
     let
-      (exprD, inferContext) = doInfer $ makeLambda "" hole hole
-      Data.ExpressionLambda (Data.Lambda _ _ body) = exprD ^. Data.eValue
+      (exprD, inferContext) =
+        doInfer $ makeLambda "" hole hole
+      body = getLambdaBody exprD
       scope = Infer.nScope . Infer.iPoint $ body ^. Data.ePayload
       (exprR, _) =
         uncurry doInferM (Infer.newNodeWithScope scope inferContext)
@@ -459,8 +460,11 @@ resumptionTests =
       resultR = inferResults exprR
     in
       assertBool (unlines
-        [ showExpressionWithInferred resultD
+        [ "Root expression inferred:"
+        , showExpressionWithInferred resultD
+        , "Scope:"
         , show scope
+        , ""
         , showExpressionWithInferred resultR
         ]) .
       compareInferred resultR .
@@ -487,7 +491,7 @@ hunitTests =
 
 inferPreservesShapeProp :: Data.Expression DataIRef.DefinitionIRef () -> Property
 inferPreservesShapeProp expr =
-  case inferMaybe Nothing expr of
+  case inferMaybe expr of
     Nothing -> property rejected
     Just (inferred, _) -> property (void inferred == expr)
 
