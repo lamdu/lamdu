@@ -82,7 +82,7 @@ data RefMap a = RefMap
 derive makeBinary ''RefMap
 
 data Context = Context
-  { _refMap :: RefMap RefData
+  { _exprMap :: RefMap RefData
   , _nextOrigin :: Int
   , _rules :: IntMap Rule
   , _nextRule :: Int
@@ -141,8 +141,8 @@ createTypedVal = liftM2 TypedValue createRef createRef
 
 createRef :: Monad m => StateT Context m Ref
 createRef = do
-  key <- Lens.use (refMap . nextRef)
-  refMap . nextRef += 1
+  key <- Lens.use (exprMap . nextRef)
+  exprMap . nextRef += 1
   return $ Ref key
 
 newNodeWithScope :: Scope -> Context -> (Context, InferNode)
@@ -160,7 +160,7 @@ newTypedNodeWithScope scope typ prevContext =
 initial :: (Context, InferNode)
 initial =
   newNodeWithScope mempty $ Context
-    { _refMap = RefMap
+    { _exprMap = RefMap
       { _refs = mempty
       , _nextRef = 0
       }
@@ -205,7 +205,7 @@ intMapMod k =
 
 refsAt ::
   Functor f => Ref -> (RefData -> f RefData) -> InferState -> f InferState
-refsAt k = sContext . refMap . refs . intMapMod (unRef k)
+refsAt k = sContext . exprMap . refs . intMapMod (unRef k)
 
 -- This is because platform's Either's Monad instance sucks
 runEither :: EitherT l Identity a -> Either l a
@@ -254,7 +254,7 @@ mergeExprs p0 p1 =
 
 initializeRefData :: Ref -> Data.Expression DataIRef.DefinitionIRef Origin -> State Context ()
 initializeRefData ref expr =
-  refMap . refs . Lens.at (unRef ref) .=
+  exprMap . refs . Lens.at (unRef ref) .=
   Just (RefData (fmap (RefExprPayload mempty) expr) [])
 
 exprIntoContext ::
@@ -325,7 +325,7 @@ preprocess loaded initialContext (InferNode rootTv rootScope) =
   where
     TypedValue rootValR rootTypR = rootTv
     initialMRefData k =
-      Lens.view (refMap . refs . Lens.at (unRef k)) initialContext
+      Lens.view (exprMap . refs . Lens.at (unRef k)) initialContext
     buildPreprocessed (node, resultContext) = Preprocessed
       { lExpr = node
       , lContext = resultContext
@@ -356,7 +356,7 @@ postProcess expr inferState =
       }
     onScopeElement (Data.ParameterRef guid, ref) = Just (guid, deref ref)
     onScopeElement _ = Nothing
-    deref (Ref x) = void $ ((resultContext ^. refMap . refs) ! x) ^. rExpression
+    deref (Ref x) = void $ ((resultContext ^. exprMap . refs) ! x) ^. rExpression
 
 addRule :: Rule -> State InferState ()
 addRule rule = do
