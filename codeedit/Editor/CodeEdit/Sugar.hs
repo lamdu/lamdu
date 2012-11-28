@@ -449,14 +449,9 @@ convertWritableHoleH ::
   m ~ Anchors.ViewM =>
   SugarM.Context -> Maybe (T m Guid) ->
   SugarInfer.StoredPayload m -> Convertor m
-convertWritableHoleH sugarContext mPaste iwcStored exprI =
+convertWritableHoleH (SugarM.Context inferState config contextHash) mPaste iwcStored exprI =
   chooseHoleType (iwcInferredValues iwcStored) plainHole inferredHole
   where
-    SugarM.Context
-      { SugarM.scHoleInferState = inferState
-      , SugarM.scConfig = config
-      , SugarM.scMContextHash = contextHash
-      } = sugarContext
     inferred = iwcInferred iwcStored
     scope = Infer.nScope $ Infer.iPoint inferred
     check expr = SugarInfer.inferMaybe expr inferState $ Infer.iPoint inferred
@@ -747,7 +742,8 @@ convertDefinitionExpression config exprLoaded defI (Load.Stored setType typeIRef
         , dntAcceptNewType =
           setType =<< DataIRef.newExpression inferredTypeP
         }
-    sugarContext = SugarM.mkContext config inferredDef
+    sugarContext =
+      SugarM.mkContext config inferredDef
   content <-
     lift . convertDefinitionContent sugarContext $ inferredDef ^. SugarInfer.srExpr
   mNewType <- lift $
