@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances, OverlappingInstances #-}
 module Utils where
 
+import Control.Applicative ((<$), (<$>))
 import Control.Arrow (first)
 import Control.Lens ((^.))
 import Control.Monad (join, void)
@@ -9,7 +10,7 @@ import Data.Functor.Identity (Identity(..))
 import Data.Map (Map, (!))
 import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
-import qualified Control.Monad.Trans.Writer as Writer
+import Editor.Data.Infer.Conflicts (InferredWithConflicts(..), inferWithConflicts)
 import qualified Data.Foldable as Foldable
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -23,7 +24,7 @@ data Invisible = Invisible
 instance Show Invisible where
   show = const ""
 showStructure :: Data.ExpressionBody DataIRef.DefinitionIRef a -> String
-showStructure = show . (fmap . const) Invisible
+showStructure = show . (Invisible <$)
 
 instance Show (Data.Expression DataIRef.DefinitionIRef ()) where
   show (Data.Expression value ()) = show value
@@ -75,18 +76,13 @@ getParamExpr name =
   Data.pureExpression . Data.makeParameterRef $
   Guid.fromString name
 
-data ConflictsAnnotation =
-  ConflictsAnnotation
-  (Data.Expression DataIRef.DefinitionIRef (), [Infer.Error])
-  (Data.Expression DataIRef.DefinitionIRef (), [Infer.Error])
-
 ansiRed :: String
 ansiRed = "\ESC[31m"
 ansiReset :: String
 ansiReset = "\ESC[0m"
 
 showExpressionWithConflicts ::
-  Data.Expression DataIRef.DefinitionIRef ConflictsAnnotation -> String
+  Data.Expression DataIRef.DefinitionIRef (InferredWithConflicts a) -> String
 showExpressionWithConflicts =
   List.intercalate "\n" . go
   where
@@ -99,7 +95,9 @@ showExpressionWithConflicts =
       (map ("  " ++) . Foldable.concat . fmap go) expr
       where
         expr = inferredExpr ^. Data.eValue
-        ConflictsAnnotation (val, vErrors) (typ, tErrors) =
+        val = Infer.iValue inferred
+        typ = Infer.iType inferred
+        InferredWithConflicts inferred tErrors vErrors =
           inferredExpr ^. Data.ePayload
 
 definitionTypes :: Map Guid (Data.Expression DataIRef.DefinitionIRef ())
@@ -136,34 +134,22 @@ definitionTypes =
   where
     intToIntToInt = makePi "iii0" intType $ makePi "iii1" intType intType
 
-lookupMany :: Eq a => a -> [(a, b)] -> [b]
-lookupMany x = map snd . filter ((== x) . fst)
-
 doInferM ::
   Infer.RefMap -> Infer.InferNode -> Maybe DataIRef.DefinitionIRef ->
-  Maybe (Infer.Expression a) ->
   Data.Expression DataIRef.DefinitionIRef a ->
   (Infer.Expression a, Infer.RefMap)
-doInferM refMap inferNode mDefRef mResumedRoot expr =
-  case conflicts of
-    [] -> result
-    _ -> error $ unlines
-      [ "Result with conflicts:"
-      , showExpressionWithConflicts $ fmap addConflicts root
-      ]
+doInferM initialRefMap inferNode mDefRef expr
+  | success = (iwcInferred <$> exprWC, resultRefMap)
+  | otherwise =
+    error $ unlines
+    [ "Result with conflicts:"
+    -- TODO: Extract the real root (in case of resumption) to show
+    , showExpressionWithConflicts exprWC
+    ]
   where
-    addConflicts inferred =
-      ConflictsAnnotation
-      (Infer.iValue inferred, lookupMany valRef conflicts)
-      (Infer.iType inferred, lookupMany typRef conflicts)
-      where
-        Infer.TypedValue valRef typRef = Infer.nRefs $ Infer.iPoint inferred
-    root = fromMaybe inferredExpr mResumedRoot
-    actions = Infer.InferActions reportError
     loaded = runIdentity $ Infer.load loader mDefRef expr
-    (result@(inferredExpr, _), conflicts) =
-      Writer.runWriter $ Infer.inferLoaded actions loaded refMap inferNode
-    reportError err = Writer.tell [(Infer.errRef err, err)]
+    (success, resultRefMap, exprWC) =
+      inferWithConflicts loaded initialRefMap inferNode
 
 loader :: Monad m => Infer.Loader m
 loader = Infer.Loader (return . (definitionTypes !) . IRef.guid)
@@ -173,7 +159,7 @@ defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
 
 doInfer ::
   Data.Expression DataIRef.DefinitionIRef a -> (Infer.Expression a, Infer.RefMap)
-doInfer = uncurry doInferM Infer.initial (Just defI) Nothing
+doInfer = uncurry doInferM Infer.initial (Just defI)
 
 factorialExpr :: Data.Expression DataIRef.DefinitionIRef ()
 factorialExpr =
