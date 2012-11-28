@@ -134,10 +134,10 @@ definitionTypes =
     intToIntToInt = makePi "iii0" intType $ makePi "iii1" intType intType
 
 doInferM ::
-  Infer.IsNewRoot -> Infer.Context -> Infer.InferNode ->
+  Infer.Context -> Infer.InferNode ->
   Data.Expression DataIRef.DefinitionIRef a ->
   (Infer.Expression a, Infer.Context)
-doInferM isNewRoot initialInferContext inferNode expr
+doInferM initialInferContext inferNode expr
   | success = (iwcInferred <$> exprWC, resultInferContext)
   | otherwise =
     error $ unlines
@@ -147,7 +147,7 @@ doInferM isNewRoot initialInferContext inferNode expr
     ]
   where
     (success, resultInferContext, exprWC) =
-      inferWithConflicts (doLoad expr) isNewRoot initialInferContext inferNode
+      inferWithConflicts (doLoad expr) initialInferContext inferNode
 
 doLoad ::
   Data.Expression DataIRef.DefinitionIRef a ->
@@ -171,7 +171,7 @@ defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
 
 doInfer ::
   Data.Expression DataIRef.DefinitionIRef a -> (Infer.Expression a, Infer.Context)
-doInfer = uncurry (doInferM Infer.NewRoot) . Infer.initial $ Just defI
+doInfer = uncurry doInferM . Infer.initial $ Just defI
 
 factorialExpr :: Data.Expression DataIRef.DefinitionIRef ()
 factorialExpr =
@@ -195,7 +195,7 @@ inferMaybe ::
   Data.Expression DataIRef.DefinitionIRef a ->
   Maybe (Infer.Expression a, Infer.Context)
 inferMaybe expr =
-  uncurry (Infer.inferLoaded (Infer.InferActions (const Nothing)) Infer.NewRoot loaded) $ Infer.initial (Just defI)
+  uncurry (Infer.inferLoaded (Infer.InferActions (const Nothing)) loaded) $ Infer.initial (Just defI)
   where
     loaded = doLoad expr
 

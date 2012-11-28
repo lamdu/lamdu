@@ -2,7 +2,7 @@
 
 module Editor.Data.Infer.Rules
   ( Rule(..)
-  , makeAllRules, makeResumptionRules, unionRules
+  , makeAllRules, unionRules
   , runRuleClosure
   ) where
 
@@ -129,17 +129,16 @@ makeNodeRules (Data.Expression exprBody (InferNode typedVal scope)) =
       (:) <$> setRule (tvType paramType) <*>
       lambdaStructureRules cons (tvVal typedVal) (fmap tvVal lam)
 
-makeResumptionRules :: Data.Expression DataIRef.DefinitionIRef InferNode -> State Origin [Rule]
-makeResumptionRules expr =
-  (++)
-  <$> makeNodeRules expr
-  <*> (fmap Foldable.concat . Traversable.mapM makeAllRules . Lens.view Data.eValue) expr
-
 makeAllRules :: Data.Expression DataIRef.DefinitionIRef InferNode -> State Origin [Rule]
 makeAllRules expr =
   (:)
   <$> (ruleSimpleType . nRefs . Lens.view Data.ePayload) expr
-  <*> makeResumptionRules expr
+  <*> makeResumptionRules
+  where
+    makeResumptionRules =
+      (++)
+      <$> makeNodeRules expr
+      <*> (fmap Foldable.concat . Traversable.mapM makeAllRules . Lens.view Data.eValue) expr
 
 makeHole :: Origin -> RefExpression
 makeHole g = makeRefExpr g $ Data.ExpressionLeaf Data.Hole

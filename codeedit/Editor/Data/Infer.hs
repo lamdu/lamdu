@@ -2,7 +2,7 @@
 module Editor.Data.Infer
   ( Expression, Inferred(..), rExpression
   , Loaded, load
-  , IsNewRoot(..), inferLoaded
+  , inferLoaded
   , updateAndInfer
   -- TODO: Expose only ref readers for InferNode (instead of .. and TypedValue)
   , InferNode(..), TypedValue(..)
@@ -39,7 +39,7 @@ import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable)
 import Data.Tuple (swap)
 import Data.Typeable (Typeable)
-import Editor.Data.Infer.Rules (Rule(..), makeAllRules, makeResumptionRules, runRuleClosure, unionRules)
+import Editor.Data.Infer.Rules (Rule(..), makeAllRules, runRuleClosure, unionRules)
 import Editor.Data.Infer.Types
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
@@ -520,14 +520,10 @@ updateAndInfer actions prevContext updates expr =
     makeRefExprFromPure =
       Traversable.mapM . const . liftM (RefExprPayload mempty) $ toStateT mkOrigin
 
-data IsNewRoot = NewRoot | ExistingNode
-  deriving (Typeable)
-derive makeBinary ''IsNewRoot
-
 inferLoaded ::
-  Monad m => InferActions m -> IsNewRoot -> Loaded a -> Context -> InferNode ->
+  Monad m => InferActions m -> Loaded a -> Context -> InferNode ->
   m (Expression a, Context)
-inferLoaded actions isNewRoot loaded initialContext node =
+inferLoaded actions loaded initialContext node =
   execInferT actions initialState $ do
     expr <- exprIntoContext (lDefinitionTypes loaded) (nScope node) (lRealExpr loaded)
     liftState . toStateT $ do
@@ -538,23 +534,19 @@ inferLoaded actions isNewRoot loaded initialContext node =
       addUnionRules tvType
       rules <-
         Lens.zoom (sContext . nextOrigin) .
-        makeRules $ fmap fst expr
+        makeAllRules $ fmap fst expr
       mapM_ addRule rules
     return expr
   where
     initialState = InferState initialContext mempty mempty
-    makeRules =
-      case isNewRoot of
-      NewRoot -> makeAllRules
-      ExistingNode -> makeResumptionRules
 
 {-# SPECIALIZE
   inferLoaded ::
-    InferActions Maybe -> IsNewRoot -> Loaded a -> Context -> InferNode ->
+    InferActions Maybe -> Loaded a -> Context -> InferNode ->
     Maybe (Expression a, Context)
   #-}
 {-# SPECIALIZE
   inferLoaded ::
-    Monoid w => InferActions (Writer w) -> IsNewRoot -> Loaded a -> Context -> InferNode ->
+    Monoid w => InferActions (Writer w) -> Loaded a -> Context -> InferNode ->
     Writer w (Expression a, Context)
   #-}

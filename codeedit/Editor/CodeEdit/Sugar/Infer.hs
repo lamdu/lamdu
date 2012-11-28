@@ -136,24 +136,23 @@ loader =
 
 inferMaybe ::
   Monad m =>
-  Infer.IsNewRoot ->
   Data.Expression DataIRef.DefinitionIRef a -> Infer.Context ->
   Infer.InferNode -> T m (Maybe (Infer.Expression a))
-inferMaybe isNewRoot expr inferContext inferPoint = do
+inferMaybe expr inferContext inferPoint = do
   loaded <- Infer.load loader Nothing expr
   return . fmap fst $
     Infer.inferLoaded (Infer.InferActions (const Nothing))
-    isNewRoot loaded inferContext inferPoint
+    loaded inferContext inferPoint
 
 inferLoadedExpression ::
-  Monad m => Infer.IsNewRoot ->
+  Monad m =>
   Maybe DataIRef.DefinitionIRef -> Load.Loaded (T m) ->
   (Infer.Context, Infer.InferNode) ->
   CT m (StoredResult m)
-inferLoadedExpression isNewRoot mDefI (Load.Stored setExpr exprIRef) inferState = do
+inferLoadedExpression mDefI (Load.Stored setExpr exprIRef) inferState = do
   loaded <- lift $ Infer.load loader mDefI exprIRef
   (success, inferContext, expr) <-
-    Cache.memoS (return . uncurriedInfer) (loaded, isNewRoot, inferState)
+    Cache.memoS (return . uncurriedInfer) (loaded, inferState)
   return StoredResult
     { _srSuccess = success
     , _srInferContext = inferContext
@@ -161,5 +160,5 @@ inferLoadedExpression isNewRoot mDefI (Load.Stored setExpr exprIRef) inferState 
     , _srContext = loaded
     }
   where
-    uncurriedInfer (loaded, isResume, (inferContext, inferNode)) =
-      inferWithConflicts loaded isResume inferContext inferNode
+    uncurriedInfer (loaded, (inferContext, inferNode)) =
+      inferWithConflicts loaded inferContext inferNode

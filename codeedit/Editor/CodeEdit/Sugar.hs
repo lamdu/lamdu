@@ -143,7 +143,7 @@ mkFuncParamActions
         lift . Anchors.nonEmptyAssocDataRef "example" param .
         DataIRef.newExprBody $ Data.ExpressionLeaf Data.Hole
       exampleLoaded <- lift $ Load.loadExpressionProperty exampleP
-      inferredExample <- SugarInfer.inferLoadedExpression Infer.NewRoot Nothing exampleLoaded newInferNode
+      inferredExample <- SugarInfer.inferLoadedExpression Nothing exampleLoaded newInferNode
       lift $ convertStoredExpression (inferredExample ^. SugarInfer.srExpr)
         ctx { SugarM.scInferState = inferredExample ^. SugarInfer.srInferContext }
   }
@@ -438,7 +438,7 @@ inferApplyForms ::
   (Infer.Context, Infer.InferNode) -> T m [HoleResult]
 inferApplyForms processRes expr (inferContext, node) =
   liftM (sortOn resultComplexityScore) . makeApplyForms =<<
-  SugarInfer.inferMaybe Infer.NewRoot expr inferContext node
+  SugarInfer.inferMaybe expr inferContext node
   where
     makeApplyForms Nothing = return []
     makeApplyForms (Just i) =
@@ -454,7 +454,7 @@ convertWritableHoleH (SugarM.Context inferState config contextHash) mPaste iwcSt
   where
     inferred = iwcInferred iwcStored
     scope = Infer.nScope $ Infer.iPoint inferred
-    check expr = SugarInfer.inferMaybe Infer.ExistingNode expr inferState $ Infer.iPoint inferred
+    check expr = SugarInfer.inferMaybe expr inferState $ Infer.iPoint inferred
 
     memoBy expr act = Cache.memoS (const act) (expr, eGuid, contextHash)
 
@@ -729,7 +729,7 @@ convertDefinitionExpression ::
   CT m (DefinitionBody m)
 convertDefinitionExpression config exprLoaded defI (Load.Stored setType typeIRef) = do
   inferredDef <-
-    SugarInfer.inferLoadedExpression Infer.NewRoot
+    SugarInfer.inferLoadedExpression
     (Just defI) exprLoaded (Infer.initial (Just defI))
   let
     inferredTypeP =
@@ -770,7 +770,7 @@ loadConvertExpression config exprP =
   where
     convertLoadedExpression exprLoaded = do
       inferResult <-
-        SugarInfer.inferLoadedExpression Infer.NewRoot Nothing exprLoaded (Infer.initial Nothing)
+        SugarInfer.inferLoadedExpression Nothing exprLoaded (Infer.initial Nothing)
       lift . convertStoredExpression (inferResult ^. SugarInfer.srExpr) $
         SugarM.mkContext config inferResult
 

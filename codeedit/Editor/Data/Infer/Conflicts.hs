@@ -47,20 +47,20 @@ reportConflict err =
   Set.singleton err
 
 inferWithConflicts ::
-  Infer.Loaded a -> Infer.IsNewRoot ->
+  Infer.Loaded a ->
   Infer.Context -> Infer.InferNode ->
   ( Bool
   , Infer.Context
   , Data.Expression DataIRef.DefinitionIRef (InferredWithConflicts a)
   )
-inferWithConflicts loaded isNewRoot initialInferContext node =
+inferWithConflicts loaded initialInferContext node =
   ( Map.null $ unConflictMap conflictsMap
   , resultInferContext
   , fmap toIWC exprInferred
   )
   where
     ((exprInferred, resultInferContext), conflictsMap) =
-      runWriter $ Infer.inferLoaded (Infer.InferActions reportConflict) isNewRoot
+      runWriter $ Infer.inferLoaded (Infer.InferActions reportConflict)
       loaded initialInferContext node
     toIWC x =
       InferredWithConflicts

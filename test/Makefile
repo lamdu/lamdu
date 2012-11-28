@@ -1,6 +1,6 @@
 all: run_test_infer
 
-build: build_test_infer build_benchmark_infer build_profile_infer
+build: build_test_infer build_benchmark_infer build_profile_infer build_cabal
 
 run_test_infer: build_test_infer
 	./test_Infer
@@ -19,3 +19,6 @@ run_profile_infer: build_profile_infer
 
 build_profile_infer: build_benchmark_infer
 	ghc -O2 -prof -hisuf p_hi -osuf p_o -Wall -auto-all -caf-all -rtsopts --make profile_Infer -i../codeedit -i../bottlelib
+
+build_cabal:
+	make -C ..
