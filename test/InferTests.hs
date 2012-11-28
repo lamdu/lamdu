@@ -386,7 +386,7 @@ testResume name newExpr testExpr extract =
     void . evaluate $
     doInferM inferContext
     ((Infer.iPoint . Lens.view Data.ePayload . extract) tExpr)
-    Nothing newExpr
+    newExpr
 
 applyIdInt :: Data.Expression DataIRef.DefinitionIRef ()
 applyIdInt =
@@ -453,7 +453,7 @@ resumptionTests =
       Data.ExpressionLambda (Data.Lambda _ _ body) = exprD ^. Data.eValue
       scope = Infer.nScope . Infer.iPoint $ body ^. Data.ePayload
       (exprR, _) =
-        uncurry doInferM (Infer.newNodeWithScope scope inferContext) Nothing
+        uncurry doInferM (Infer.newNodeWithScope scope inferContext)
         getRecursiveDef
       resultD = inferResults exprD
       resultR = inferResults exprR

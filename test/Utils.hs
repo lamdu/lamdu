@@ -135,10 +135,10 @@ definitionTypes =
     intToIntToInt = makePi "iii0" intType $ makePi "iii1" intType intType
 
 doInferM ::
-  Infer.Context -> Infer.InferNode -> Maybe DataIRef.DefinitionIRef ->
+  Infer.Context -> Infer.InferNode ->
   Data.Expression DataIRef.DefinitionIRef a ->
   (Infer.Expression a, Infer.Context)
-doInferM initialInferContext inferNode mDefRef expr
+doInferM initialInferContext inferNode expr
   | success = (iwcInferred <$> exprWC, resultInferContext)
   | otherwise =
     error $ unlines
@@ -147,7 +147,7 @@ doInferM initialInferContext inferNode mDefRef expr
     , showExpressionWithConflicts exprWC
     ]
   where
-    loaded = runIdentity $ Infer.load loader mDefRef expr
+    loaded = runIdentity $ Infer.load loader (Just defI) expr
     (success, resultInferContext, exprWC) =
       inferWithConflicts loaded initialInferContext inferNode
 
@@ -159,7 +159,7 @@ defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
 
 doInfer ::
   Data.Expression DataIRef.DefinitionIRef a -> (Infer.Expression a, Infer.Context)
-doInfer = uncurry doInferM (Infer.initial (Just defI)) (Just defI)
+doInfer = uncurry doInferM . Infer.initial $ Just defI
 
 factorialExpr :: Data.Expression DataIRef.DefinitionIRef ()
 factorialExpr =
