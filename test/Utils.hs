@@ -159,7 +159,7 @@ defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
 
 doInfer ::
   Data.Expression DataIRef.DefinitionIRef a -> (Infer.Expression a, Infer.Context)
-doInfer = uncurry doInferM Infer.initial (Just defI)
+doInfer = uncurry doInferM (Infer.initial (Just defI)) (Just defI)
 
 factorialExpr :: Data.Expression DataIRef.DefinitionIRef ()
 factorialExpr =
@@ -187,7 +187,7 @@ inferMaybe ::
   Data.Expression DataIRef.DefinitionIRef a ->
   Maybe (Infer.Expression a, Infer.Context)
 inferMaybe mRecursiveDef expr =
-  uncurry (Infer.inferLoaded (Infer.InferActions (const Nothing)) loaded) Infer.initial
+  uncurry (Infer.inferLoaded (Infer.InferActions (const Nothing)) loaded) $ Infer.initial mRecursiveDef
   where
     loaded = runIdentity $ Infer.load loader mRecursiveDef expr
 

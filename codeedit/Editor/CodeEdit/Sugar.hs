@@ -728,7 +728,7 @@ convertDefinitionExpression ::
   Load.Loaded (T m) ->
   CT m (DefinitionBody m)
 convertDefinitionExpression config exprLoaded defI (Load.Stored setType typeIRef) = do
-  inferredDef <- SugarInfer.inferLoadedExpression (Just defI) exprLoaded Infer.initial
+  inferredDef <- SugarInfer.inferLoadedExpression (Just defI) exprLoaded (Infer.initial (Just defI))
   let
     inferredTypeP =
       Infer.iType . iwcInferred $ inferredDef ^. SugarInfer.srExpr . Data.ePayload
@@ -767,7 +767,7 @@ loadConvertExpression config exprP =
   convertLoadedExpression =<< lift (Load.loadExpressionProperty exprP)
   where
     convertLoadedExpression exprLoaded = do
-      inferResult <- SugarInfer.inferLoadedExpression Nothing exprLoaded Infer.initial
+      inferResult <- SugarInfer.inferLoadedExpression Nothing exprLoaded (Infer.initial Nothing)
       lift . convertStoredExpression (inferResult ^. SugarInfer.srExpr) $
         SugarM.mkContext config inferResult
 

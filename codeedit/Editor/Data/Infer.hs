@@ -90,6 +90,13 @@ LensTH.makeLenses ''RefData
 LensTH.makeLenses ''RefMap
 derive makeBinary ''RefMap
 
+emptyRefMap :: RefMap a
+emptyRefMap =
+  RefMap
+  { _refs = mempty
+  , _nextRef = 0
+  }
+
 createEmptyRef :: Monad m => StateT (RefMap a) m Int
 createEmptyRef = do
   key <- Lens.use nextRef
@@ -197,16 +204,26 @@ newTypedNodeWithScope scope typ prevContext =
   where
     (newValRef, resultContext) = runState createEmptyRefExpr prevContext
 
-initial :: (Context, InferNode)
-initial =
-  newNodeWithScope mempty $ Context
-    { _exprMap = RefMap
-      { _refs = mempty
-      , _nextRef = 0
+initial :: Maybe DataIRef.DefinitionIRef -> (Context, InferNode)
+initial mRecursiveDefI =
+  (context, res)
+  where
+    (res, context) =
+      (`runState` emptyContext) $ do
+        rootTv <- createTypedVal
+        let
+          scope =
+            case mRecursiveDefI of
+            Nothing -> mempty
+            Just recursiveDefI ->
+              Map.singleton (Data.DefinitionRef recursiveDefI) (tvType rootTv)
+        return $ InferNode rootTv scope
+    emptyContext =
+      Context
+      { _exprMap = emptyRefMap
+      , _nextOrigin = 0
+      , _ruleMap = emptyRefMap
       }
-    , _nextOrigin = 0
-    , _ruleMap = RefMap mempty 0
-    }
 
 newtype Loader m = Loader
   { loadPureDefinitionType :: DataIRef.DefinitionIRef -> m (Data.Expression DataIRef.DefinitionIRef ())
@@ -313,7 +330,6 @@ exprIntoContext defTypes rootScope rootExpr rootTypedValue = do
 
 data Loaded a = Loaded
   { lRealExpr :: Data.Expression DataIRef.DefinitionIRef a
-  , lMRecursiveDef :: Maybe DataIRef.DefinitionIRef
   , lDefinitionTypes :: Map DataIRef.DefinitionIRef (Data.Expression DataIRef.DefinitionIRef ())
   } deriving (Typeable)
 derive makeBinary ''Loaded
@@ -326,7 +342,7 @@ load ::
   Maybe DataIRef.DefinitionIRef -> Data.Expression DataIRef.DefinitionIRef a ->
   m (Loaded a)
 load loader mRecursiveDef expr =
-  liftM (Loaded expr mRecursiveDef . Map.fromList) .
+  liftM (Loaded expr . Map.fromList) .
   mapM loadType $ ordNub
   [ defI
   | Data.ExpressionLeaf (Data.GetVariable (Data.DefinitionRef defI)) <-
@@ -346,7 +362,7 @@ data Preprocessed a = Preprocessed
   }
 
 preprocess :: Loaded a -> Context -> InferNode -> Preprocessed a
-preprocess loaded initialContext (InferNode rootTv rootScope) =
+preprocess loaded initialContext (InferNode rootTv scope) =
   buildPreprocessed . (`runState` initialContext) $
   exprIntoContext (lDefinitionTypes loaded) scope
   (lRealExpr loaded) rootTv
@@ -362,10 +378,6 @@ preprocess loaded initialContext (InferNode rootTv rootScope) =
         , initialMRefData rootTypR
         )
       }
-    scope =
-      case lMRecursiveDef loaded of
-      Nothing -> rootScope
-      Just iref -> Map.insert (Data.DefinitionRef iref) (tvType rootTv) rootScope
 
 postProcess ::
   Data.Expression DataIRef.DefinitionIRef (InferNode, a) -> InferState -> (Expression a, Context)
