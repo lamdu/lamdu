@@ -145,6 +145,7 @@ Executable lamdu
                        Editor.Data.Infer.Conflicts,
                        Editor.Data.Infer.Rules,
                        Editor.Data.Infer.Types,
+                       Editor.Data.Infer.ImplicitVariables,
                        Editor.Data.Infer,
                        Editor.Data.IRef,
                        Editor.Data.Load,

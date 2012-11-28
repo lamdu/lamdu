@@ -9,7 +9,7 @@ import Control.Lens ((^.))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Editor.CodeEdit.Sugar.Config (SugarConfig)
-import Editor.CodeEdit.Sugar.Infer (StoredResult(..), srContext, srRefmap)
+import Editor.CodeEdit.Sugar.Infer (StoredResult(..), srContext, srRefmap, srBaseRefmap)
 import Editor.CodeEdit.Sugar.Types -- see export list
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Cache as Cache
@@ -19,6 +19,7 @@ data Context = Context
   { scInferState :: Infer.RefMap
   , scConfig :: SugarConfig
   , scMContextHash :: Maybe Cache.KeyBS -- Nothing if converting pure expression
+  , scHoleInferState :: Infer.RefMap
   }
 
 newtype SugarM m a = SugarM (ReaderT Context (T m) a)
@@ -29,6 +30,7 @@ mkContext config iResult = Context
   { scInferState = iResult ^. srRefmap
   , scConfig = config
   , scMContextHash = Just . Cache.bsOfKey $ iResult ^. srContext
+  , scHoleInferState = iResult ^. srBaseRefmap
   }
 
 run :: Monad m => Context -> SugarM m a -> T m a
@@ -41,6 +43,7 @@ runPure config =
     ctx =
       Context
       { scInferState = error "pure expression doesnt have infer state"
+      , scHoleInferState = error "pure expression doesnt have hole infer state"
       , scConfig = config
       , scMContextHash = Nothing
       }
