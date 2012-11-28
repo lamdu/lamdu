@@ -26,7 +26,7 @@ import qualified Editor.Data.IRef as DataIRef
 newtype ExprRef = ExprRef { unExprRef :: Int } deriving (Eq, Ord)
 derive makeBinary ''ExprRef
 instance Show ExprRef where
-  show = ('R' :) . show . unExprRef
+  show = ('E' :) . show . unExprRef
 
 data TypedValue = TypedValue
   { tvVal :: ExprRef

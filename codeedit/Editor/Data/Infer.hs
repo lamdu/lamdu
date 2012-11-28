@@ -57,6 +57,11 @@ mkOrigin = do
   State.modify (+1)
   return r
 
+newtype RuleRef = RuleRef { unRuleRef :: Int }
+derive makeBinary ''RuleRef
+instance Show RuleRef where
+  show = ('E' :) . show . unRuleRef
+
 -- Initial Pass:
 -- Get Definitions' types expand.
 -- Use expression's structures except for Apply.
@@ -71,7 +76,7 @@ mkOrigin = do
 
 data RefData = RefData
   { _rExpression :: RefExpression
-  , _rRules :: [Int] -- Rule id
+  , _rRules :: [RuleRef] -- Rule id
   }
 derive makeBinary ''RefData
 
@@ -104,8 +109,7 @@ refsAt k = refsMAt k . Lens.iso from Just
 data Context = Context
   { _exprMap :: RefMap RefData
   , _nextOrigin :: Int
-  , _rules :: IntMap Rule
-  , _nextRule :: Int
+  , _ruleMap :: RefMap Rule
   } deriving (Typeable)
 derive makeBinary ''Context
 
@@ -164,6 +168,15 @@ exprRefsAt ::
   Functor f => ExprRef -> (RefData -> f RefData) -> Context -> f Context
 exprRefsAt k = exprMap . refsAt (unExprRef k)
 
+-- RuleRefMap
+
+createEmptyRefRule :: Monad m => StateT Context m RuleRef
+createEmptyRefRule = liftM RuleRef $ Lens.zoom ruleMap createEmptyRef
+
+ruleRefsAt ::
+  Functor f => RuleRef -> (Rule -> f Rule) -> Context -> f Context
+ruleRefsAt k = ruleMap . refsAt (unRuleRef k)
+
 -------------
 
 -- TODO: createTypeVal should use newNode, not vice versa.
@@ -192,8 +205,7 @@ initial =
       , _nextRef = 0
       }
     , _nextOrigin = 0
-    , _rules = mempty
-    , _nextRule = 0
+    , _ruleMap = RefMap mempty 0
     }
 
 newtype Loader m = Loader
@@ -376,16 +388,15 @@ postProcess expr inferState =
 
 addRule :: Rule -> State InferState ()
 addRule rule = do
-  ruleId <- makeRule
-  mapM_ (addRuleId ruleId) $ ruleInputs rule
-  sBfsNextLayer . Lens.contains ruleId .= True
+  ruleRef <- makeRule
+  mapM_ (addRuleId ruleRef) $ ruleInputs rule
+  sBfsNextLayer . Lens.contains (unRuleRef ruleRef) .= True
   where
     makeRule = do
-      ruleId <- Lens.use (sContext . nextRule)
-      sContext . nextRule += 1
-      sContext . rules . Lens.at ruleId .= Just rule
-      return ruleId
-    addRuleId ruleId ref = sContext . exprRefsAt ref . rRules %= (ruleId :)
+      ruleRef <- Lens.zoom sContext createEmptyRefRule
+      sContext . ruleRefsAt ruleRef .= rule
+      return ruleRef
+    addRuleId ruleRef ref = sContext . exprRefsAt ref . rRules %= (ruleRef :)
 
 --- InferT:
 
@@ -495,8 +506,8 @@ executeRules = do
   where
     processRule key = do
       liftState $ sBfsCurLayer . Lens.contains key .= False
-      Just (Rule deps ruleClosure) <-
-        liftState $ Lens.use (sContext . rules . Lens.at key)
+      Rule deps ruleClosure <-
+        liftState $ Lens.use (sContext . ruleRefsAt (RuleRef key))
       refExps <- mapM getRefExpr deps
       mapM_ (uncurry setRefExpr) $ runRuleClosure ruleClosure refExps
 
@@ -547,6 +558,7 @@ touch ref =
     sBfsNextLayer %=
       ( mappend . IntSet.fromList
       . filter (not . (`IntSet.member` curLayer))
+      . map unRuleRef
       ) nodeRules
 
 {-# SPECIALIZE touch :: ExprRef -> InferT Maybe () #-}
