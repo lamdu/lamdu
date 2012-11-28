@@ -23,7 +23,6 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Foldable as Foldable
 import qualified Data.IntSet as IntSet
-import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
@@ -107,9 +106,9 @@ runRuleClosure closure =
   ApplyArgToFuncArgClosure x ->
     runApplyArgToFuncArgClosure x
 
-makeNodeRules :: Data.Expression DataIRef.DefinitionIRef InferNode -> State Origin [Rule]
-makeNodeRules (Data.Expression exprBody (InferNode typedVal scope)) =
-  case fmap (nRefs . Lens.view Data.ePayload) exprBody of
+makeNodeRules :: Data.Expression DataIRef.DefinitionIRef TypedValue -> State Origin [Rule]
+makeNodeRules (Data.Expression exprBody typedVal) =
+  case fmap (Lens.view Data.ePayload) exprBody of
   Data.ExpressionPi lambda@(Data.Lambda _ _ resultType) ->
     (:) <$> setRule (tvType resultType) <*>
     onLambda ExprPi lambda
@@ -117,9 +116,6 @@ makeNodeRules (Data.Expression exprBody (InferNode typedVal scope)) =
     (++) <$> lambdaRules param typedVal (tvType body) <*>
     onLambda ExprLambda lambda
   Data.ExpressionApply apply -> applyRules typedVal apply
-  Data.ExpressionLeaf (Data.GetVariable var) -> pure $ do
-    ref <- maybeToList $ Map.lookup var scope
-    unionRules ref $ tvType typedVal
   _ -> pure []
   where
     setRule ref = do
@@ -129,10 +125,10 @@ makeNodeRules (Data.Expression exprBody (InferNode typedVal scope)) =
       (:) <$> setRule (tvType paramType) <*>
       lambdaStructureRules cons (tvVal typedVal) (fmap tvVal lam)
 
-makeAllRules :: Data.Expression DataIRef.DefinitionIRef InferNode -> State Origin [Rule]
+makeAllRules :: Data.Expression DataIRef.DefinitionIRef TypedValue -> State Origin [Rule]
 makeAllRules expr =
   (:)
-  <$> (ruleSimpleType . nRefs . Lens.view Data.ePayload) expr
+  <$> (ruleSimpleType . Lens.view Data.ePayload) expr
   <*> makeResumptionRules
   where
     makeResumptionRules =

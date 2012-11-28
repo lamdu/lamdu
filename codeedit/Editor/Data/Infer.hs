@@ -458,8 +458,15 @@ exprIntoContext defTypes rootScope rootExpr = do
     addTypedVal x = (x, toStateT createTypedVal)
     addToScope paramGuid (_, TypedValue paramTypeVal _) =
       Map.insert (Data.ParameterRef paramGuid) paramTypeVal
-    f scope expr@(Data.Expression _ (originS, typedValue)) = do
-      let TypedValue val typ = typedValue
+    f scope expr@(Data.Expression body (originS, newTypedValue)) = do
+      let
+        typedValue = TypedValue val typ
+        val = tvVal newTypedValue
+        typ =
+          case body of
+          Data.ExpressionLeaf (Data.GetVariable varRef)
+            | Just x <- Map.lookup varRef scope -> x
+          _ -> tvType newTypedValue
       (initialVal, initialType) <-
         liftState . Lens.zoom (sContext . nextOrigin) . toStateT . initialExprs defTypes scope $
         void expr
@@ -534,7 +541,7 @@ inferLoaded actions loaded initialContext node =
       addUnionRules tvType
       rules <-
         Lens.zoom (sContext . nextOrigin) .
-        makeAllRules $ fmap fst expr
+        makeAllRules $ nRefs . fst <$> expr
       mapM_ addRule rules
     return expr
   where
