@@ -8,6 +8,7 @@ import Data.Map ((!))
 import Data.Maybe (isJust)
 import Data.Monoid (Monoid(..))
 import Editor.Data.Arbitrary () -- Arbitrary instance
+import Editor.Data.Infer.Conflicts (inferWithConflicts)
 import Test.Framework (Test)
 import Test.Framework.Providers.HUnit (hUnitTestToTests)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
@@ -358,6 +359,18 @@ getLambdaBody e =
   where
     Data.ExpressionLambda (Data.Lambda _ _ x) = e ^. Data.eValue
 
+getPiResult :: Data.Expression DataIRef.DefinitionIRef a -> Data.Expression DataIRef.DefinitionIRef a
+getPiResult e =
+  x
+  where
+    Data.ExpressionPi (Data.Lambda _ _ x) = e ^. Data.eValue
+
+getLambdaParamType :: Data.Expression DataIRef.DefinitionIRef a -> Data.Expression DataIRef.DefinitionIRef a
+getLambdaParamType e =
+  x
+  where
+    Data.ExpressionLambda (Data.Lambda _ x _) = e ^. Data.eValue
+
 getApplyFunc :: Data.Expression DataIRef.DefinitionIRef a -> Data.Expression DataIRef.DefinitionIRef a
 getApplyFunc e =
   x
@@ -472,6 +485,31 @@ resumptionTests =
       makePi "" hole hole
   ]
 
+makeParameterRef :: String -> Data.Expression def ()
+makeParameterRef = Data.pureExpression . Data.makeParameterRef . Guid.fromString
+
+-- f     x    = x _ _
+--   --------
+--   (_ -> _)
+--         ^ Set Bool here
+failResumptionAddsRules :: HUnit.Test
+failResumptionAddsRules =
+  testCase "Resumption that adds rules and fails" $
+  assertBool "Resumption should have failed" (not success)
+  where
+    -- TODO: Verify iwc has the right kind of conflict (or add
+    -- different tests to do that)
+    (success, _, _iwc) = inferWithConflicts (doLoad resumptionValue) origRefMap resumptionPoint
+    resumptionValue = getDefExpr "Bool" -- <- anything but Pi
+    resumptionPoint =
+      ( Infer.iPoint . Lens.view Data.ePayload
+      . getPiResult . getLambdaParamType
+      ) origInferred
+    (origInferred, origRefMap) = doInfer origExpr
+    origExpr =
+      makeLambda "x" (makePi "" hole hole) $
+      makeApply [makeParameterRef "x", hole, hole]
+
 hunitTests :: HUnit.Test
 hunitTests =
   HUnit.TestList $
@@ -486,8 +524,9 @@ hunitTests =
   , forceMono
   , fOfXIsFOf5
   , inferPart
-  ] ++
-  resumptionTests
+  , failResumptionAddsRules
+  ]
+  ++ resumptionTests
 
 inferPreservesShapeProp :: Data.Expression DataIRef.DefinitionIRef () -> Property
 inferPreservesShapeProp expr =

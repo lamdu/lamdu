@@ -146,9 +146,8 @@ doInferM initialInferContext inferNode expr
     , showExpressionWithConflicts exprWC
     ]
   where
-    loaded = doLoad expr
     (success, resultInferContext, exprWC) =
-      inferWithConflicts loaded initialInferContext inferNode
+      inferWithConflicts (doLoad expr) initialInferContext inferNode
 
 doLoad ::
   Data.Expression DataIRef.DefinitionIRef a ->
