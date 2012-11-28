@@ -146,7 +146,6 @@ actionsEventMap exprGuid holePicker actions = do
   where
     delKeys = concat [Config.replaceKeys, Config.delForwardKeys, Config.delBackwordKeys]
     giveAsArg =
-      moveUnlessOnHole .
       Widget.keysEventMapMovesCursor
       Config.giveAsArgumentKeys "Give as argument" . liftM WidgetIds.fromGuid $
       Sugar.giveAsArg actions
@@ -164,12 +163,7 @@ actionsEventMap exprGuid holePicker actions = do
       Widget.keysEventMapMovesCursor keys doc .
       liftM (f . WidgetIds.fromGuid)
 
-    moveUnlessOnHole = ifHole $ (fmap . liftM . Lens.set Widget.eCursor) Nothing
     isHole =
       case holePicker of
       NotAHole -> False
       IsAHole -> True
-    ifHole whenHole =
-      case holePicker of
-      NotAHole -> id
-      IsAHole -> whenHole
