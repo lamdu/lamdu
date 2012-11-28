@@ -75,14 +75,14 @@ data RefData = RefData
   }
 derive makeBinary ''RefData
 
-data RefMap = RefMap
-  { _refs :: IntMap RefData
+data RefMap a = RefMap
+  { _refs :: IntMap a
   , _nextRef :: Int
   }
 derive makeBinary ''RefMap
 
 data Context = Context
-  { _refMap :: RefMap
+  { _refMap :: RefMap RefData
   , _nextOrigin :: Int
   , _rules :: IntMap Rule
   , _nextRule :: Int
