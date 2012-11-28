@@ -30,14 +30,14 @@ data InferredWithConflicts a = InferredWithConflicts
 derive makeBinary ''InferredWithConflicts
 
 newtype ConflictMap =
-  ConflictMap { unConflictMap :: Map Infer.Ref (Set Infer.Error) }
+  ConflictMap { unConflictMap :: Map Infer.ExprRef (Set Infer.Error) }
 
 instance Monoid ConflictMap where
   mempty = ConflictMap mempty
   mappend (ConflictMap x) (ConflictMap y) =
     ConflictMap $ Map.unionWith mappend x y
 
-getConflicts :: Infer.Ref -> ConflictMap -> [Infer.Error]
+getConflicts :: Infer.ExprRef -> ConflictMap -> [Infer.Error]
 getConflicts ref = maybe [] Set.toList . Map.lookup ref . unConflictMap
 
 reportConflict :: Infer.Error -> Writer ConflictMap ()

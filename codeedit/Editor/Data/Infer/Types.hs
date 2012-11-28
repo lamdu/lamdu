@@ -3,7 +3,7 @@
 module Editor.Data.Infer.Types
   ( InferNode(..)
   , Origin, mkOrigin
-  , Ref(..)
+  , ExprRef(..)
   , RefExpression, makeRefExpr
   , RefExprPayload(..), rplOrigin, rplSubstitutedArgs
   , Scope, TypedValue(..)
@@ -23,14 +23,14 @@ import qualified Control.Monad.Trans.State as State
 import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
 
-newtype Ref = Ref { unRef :: Int } deriving (Eq, Ord)
-derive makeBinary ''Ref
-instance Show Ref where
-  show = ('R' :) . show . unRef
+newtype ExprRef = ExprRef { unExprRef :: Int } deriving (Eq, Ord)
+derive makeBinary ''ExprRef
+instance Show ExprRef where
+  show = ('R' :) . show . unExprRef
 
 data TypedValue = TypedValue
-  { tvVal :: Ref
-  , tvType :: Ref
+  { tvVal :: ExprRef
+  , tvType :: ExprRef
   }
 derive makeBinary ''TypedValue
 instance Show TypedValue where
@@ -58,7 +58,7 @@ makeRefExpr g expr = Data.Expression expr $ RefExprPayload mempty g
 -- Map from params to their Param type,
 -- also including the recursive ref to the definition.
 -- (hence not just parameters)
-type Scope = Map (Data.VariableRef DataIRef.DefinitionIRef) Ref
+type Scope = Map (Data.VariableRef DataIRef.DefinitionIRef) ExprRef
 
 -- Used to refer to expressions in the inference state and resume inference.
 data InferNode = InferNode

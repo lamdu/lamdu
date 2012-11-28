@@ -6,7 +6,7 @@ module Editor.Data.Infer
   -- TODO: Expose only ref readers for InferNode (instead of .. and TypedValue)
   , InferNode(..), TypedValue(..)
   , Error(..), ErrorDetails(..)
-  , RefMap, Context, Ref
+  , RefMap, Context, ExprRef
   , Loader(..), InferActions(..)
   , initial
   -- Used for inferring independent expressions in an inner infer context
@@ -115,7 +115,7 @@ data ErrorDetails
 derive makeBinary ''ErrorDetails
 
 data Error = Error
-  { errRef :: Ref
+  { errRef :: ExprRef
   , errMismatch ::
     ( Data.Expression DataIRef.DefinitionIRef ()
     , Data.Expression DataIRef.DefinitionIRef ()
@@ -139,11 +139,11 @@ LensTH.makeLenses ''InferState
 createTypedVal :: Monad m => StateT Context m TypedValue
 createTypedVal = liftM2 TypedValue createRef createRef
 
-createRef :: Monad m => StateT Context m Ref
+createRef :: Monad m => StateT Context m ExprRef
 createRef = do
   key <- Lens.use (exprMap . nextRef)
   exprMap . nextRef += 1
-  return $ Ref key
+  return $ ExprRef key
 
 newNodeWithScope :: Scope -> Context -> (Context, InferNode)
 newNodeWithScope scope prevContext =
@@ -151,7 +151,7 @@ newNodeWithScope scope prevContext =
   where
     (tv, resultContext) = runState createTypedVal prevContext
 
-newTypedNodeWithScope :: Scope -> Ref -> Context -> (Context, InferNode)
+newTypedNodeWithScope :: Scope -> ExprRef -> Context -> (Context, InferNode)
 newTypedNodeWithScope scope typ prevContext =
   (resultContext, InferNode (TypedValue newValRef typ) scope)
   where
@@ -204,8 +204,8 @@ intMapMod k =
     from = fromMaybe . error $ unwords ["intMapMod: key", show k, "not in map"]
 
 refsAt ::
-  Functor f => Ref -> (RefData -> f RefData) -> InferState -> f InferState
-refsAt k = sContext . exprMap . refs . intMapMod (unRef k)
+  Functor f => ExprRef -> (RefData -> f RefData) -> InferState -> f InferState
+refsAt k = sContext . exprMap . refs . intMapMod (unExprRef k)
 
 -- This is because platform's Either's Monad instance sucks
 runEither :: EitherT l Identity a -> Either l a
@@ -252,9 +252,9 @@ mergeExprs p0 p1 =
     onMismatch e0 e1 =
       Either.left $ MismatchIn (void e0) (void e1)
 
-initializeRefData :: Ref -> Data.Expression DataIRef.DefinitionIRef Origin -> State Context ()
+initializeRefData :: ExprRef -> Data.Expression DataIRef.DefinitionIRef Origin -> State Context ()
 initializeRefData ref expr =
-  exprMap . refs . Lens.at (unRef ref) .=
+  exprMap . refs . Lens.at (unExprRef ref) .=
   Just (RefData (fmap (RefExprPayload mempty) expr) [])
 
 exprIntoContext ::
@@ -325,7 +325,7 @@ preprocess loaded initialContext (InferNode rootTv rootScope) =
   where
     TypedValue rootValR rootTypR = rootTv
     initialMRefData k =
-      Lens.view (exprMap . refs . Lens.at (unRef k)) initialContext
+      Lens.view (exprMap . refs . Lens.at (unExprRef k)) initialContext
     buildPreprocessed (node, resultContext) = Preprocessed
       { lExpr = node
       , lContext = resultContext
@@ -356,7 +356,7 @@ postProcess expr inferState =
       }
     onScopeElement (Data.ParameterRef guid, ref) = Just (guid, deref ref)
     onScopeElement _ = Nothing
-    deref (Ref x) = void $ ((resultContext ^. exprMap . refs) ! x) ^. rExpression
+    deref (ExprRef x) = void $ ((resultContext ^. exprMap . refs) ! x) ^. rExpression
 
 addRule :: Rule -> State InferState ()
 addRule rule = do
@@ -421,7 +421,7 @@ execInferT actions state expr act =
 
 updateAndInfer ::
   Monad m => InferActions m -> Context ->
-  [(Ref, Data.Expression DataIRef.DefinitionIRef ())] ->
+  [(ExprRef, Data.Expression DataIRef.DefinitionIRef ())] ->
   Expression a -> m (Expression a, Context)
 updateAndInfer actions prevContext updates expr =
   execInferT actions inferState (f <$> expr) $ do
@@ -487,13 +487,13 @@ executeRules = do
 {-# SPECIALIZE executeRules :: InferT Maybe () #-}
 {-# SPECIALIZE executeRules :: Monoid w => InferT (Writer w) () #-}
 
-getRefExpr :: Monad m => Ref -> InferT m RefExpression
+getRefExpr :: Monad m => ExprRef -> InferT m RefExpression
 getRefExpr ref = liftState $ Lens.use (refsAt ref . rExpression)
 
-{-# SPECIALIZE getRefExpr :: Ref -> InferT Maybe RefExpression #-}
-{-# SPECIALIZE getRefExpr :: Monoid w => Ref -> InferT (Writer w) RefExpression #-}
+{-# SPECIALIZE getRefExpr :: ExprRef -> InferT Maybe RefExpression #-}
+{-# SPECIALIZE getRefExpr :: Monoid w => ExprRef -> InferT (Writer w) RefExpression #-}
 
-setRefExpr :: Monad m => Ref -> RefExpression -> InferT m ()
+setRefExpr :: Monad m => ExprRef -> RefExpression -> InferT m ()
 setRefExpr ref newExpr = do
   curExpr <- liftState $ Lens.use (refsAt ref . rExpression)
   case mergeExprs curExpr newExpr of
@@ -520,10 +520,10 @@ setRefExpr ref newExpr = do
       Data.matchExpression compareSubsts ((const . const) Nothing) x y
     compareSubsts x y = guard $ (x ^. rplSubstitutedArgs) == (y ^. rplSubstitutedArgs)
 
-{-# SPECIALIZE setRefExpr :: Ref -> RefExpression -> InferT Maybe () #-}
-{-# SPECIALIZE setRefExpr :: Monoid w => Ref -> RefExpression -> InferT (Writer w) () #-}
+{-# SPECIALIZE setRefExpr :: ExprRef -> RefExpression -> InferT Maybe () #-}
+{-# SPECIALIZE setRefExpr :: Monoid w => ExprRef -> RefExpression -> InferT (Writer w) () #-}
 
-touch :: Monad m => Ref -> InferT m ()
+touch :: Monad m => ExprRef -> InferT m ()
 touch ref =
   liftState $ do
     nodeRules <- Lens.use (refsAt ref . rRules)
@@ -533,5 +533,5 @@ touch ref =
       . filter (not . (`IntSet.member` curLayer))
       ) nodeRules
 
-{-# SPECIALIZE touch :: Ref -> InferT Maybe () #-}
-{-# SPECIALIZE touch :: Monoid w => Ref -> InferT (Writer w) () #-}
+{-# SPECIALIZE touch :: ExprRef -> InferT Maybe () #-}
+{-# SPECIALIZE touch :: Monoid w => ExprRef -> InferT (Writer w) () #-}
