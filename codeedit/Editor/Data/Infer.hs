@@ -481,6 +481,10 @@ inferLoaded actions loaded initialContext node =
   execInferT actions ruleInferState expr $ do
     restoreRoot rootValR rootValMRefData
     restoreRoot rootTypR rootTypMRefData
+    -- when we resume load,
+    -- we want to trigger the existing rules for the loaded root
+    touch rootValR
+    touch rootTypR
   where
     Preprocessed expr loadedContext (rootValMRefData, rootTypMRefData) =
       preprocess loaded initialContext node
