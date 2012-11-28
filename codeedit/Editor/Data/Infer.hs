@@ -79,9 +79,9 @@ derive makeBinary ''RefData
 data Context = Context
   { _refs :: IntMap RefData
   , _nextRef :: Int
+  , _nextOrigin :: Int
   , _rules :: IntMap Rule
   , _nextRule :: Int
-  , _nextOrigin :: Int
   } deriving (Typeable)
 derive makeBinary ''Context
 
@@ -153,7 +153,14 @@ newTypedNodeWithScope scope typ prevContext =
     (newValRef, resultContext) = runState createRef prevContext
 
 initial :: (Context, InferNode)
-initial = newNodeWithScope mempty $ Context mempty 0 mempty 0 0
+initial =
+  newNodeWithScope mempty $ Context
+    { _refs = mempty
+    , _nextRef = 0
+    , _nextOrigin = 0
+    , _rules = mempty
+    , _nextRule = 0
+    }
 
 newtype Loader m = Loader
   { loadPureDefinitionType :: DataIRef.DefinitionIRef -> m (Data.Expression DataIRef.DefinitionIRef ())
