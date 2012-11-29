@@ -109,7 +109,7 @@ createEmptyRef = do
   nextRef += 1
   return key
 
-refsAt :: Functor f => Int -> (a -> f a) -> RefMap a -> f (RefMap a)
+refsAt :: Functor f => Int -> Lens.SimpleLensLike f (RefMap a) a
 refsAt k = refs . Lens.at k . Lens.iso from Just
   where
     from = fromMaybe $ error msg
@@ -181,8 +181,7 @@ createRefExpr = do
   liftM ExprRef . Lens.zoom exprMap . createRef $
     RefData holeRefExpr mempty
 
-exprRefsAt ::
-  Functor f => ExprRef -> (RefData -> f RefData) -> Context -> f Context
+exprRefsAt :: Functor f => ExprRef -> Lens.SimpleLensLike f Context RefData
 exprRefsAt k = exprMap . refsAt (unExprRef k)
 
 -- RuleRefMap
@@ -190,8 +189,7 @@ exprRefsAt k = exprMap . refsAt (unExprRef k)
 createEmptyRefRule :: State Context RuleRef
 createEmptyRefRule = liftM RuleRef $ Lens.zoom ruleMap createEmptyRef
 
-ruleRefsAt ::
-  Functor f => RuleRef -> (Rule -> f Rule) -> Context -> f Context
+ruleRefsAt :: Functor f => RuleRef -> Lens.SimpleLensLike f Context Rule
 ruleRefsAt k = ruleMap . refsAt (unRuleRef k)
 
 -------------

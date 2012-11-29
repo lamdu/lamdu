@@ -20,6 +20,7 @@ module Editor.Data
   , subExpressions
   , isDependentPi
   , recurseWithScope, recurseWithScopeM
+  , expressionDef, expressionBodyDef
   ) where
 
 import Control.Applicative (Applicative(..), WrappedMonad(..), liftA2, (<$>))
@@ -64,7 +65,7 @@ instance Applicative Apply where
 data VariableRef def
   = ParameterRef {-# UNPACK #-} !Guid -- of the lambda/pi
   | DefinitionRef def
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
 data Leaf def
   = GetVariable !(VariableRef def)
@@ -72,7 +73,7 @@ data Leaf def
   | Set
   | IntegerType
   | Hole
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
 data ExpressionBody def expr
   = ExpressionLambda {-# UNPACK #-} !(Lambda expr)
@@ -149,11 +150,40 @@ data Expression def a = Expression
   { _eValue :: ExpressionBody def (Expression def a)
   , _ePayload :: a
   } deriving (Functor, Eq, Ord, Foldable, Traversable, Typeable)
+LensTH.makeLenses ''Expression
 
 instance (Show a, Show def) => Show (Expression def a) where
   show (Expression body payload) = show body ++ "{" ++ show payload ++ "}"
 
-LensTH.makeLenses ''Expression
+expressionDef :: Lens.Traversal (Expression a pl) (Expression b pl) a b
+expressionDef f =
+  Lens.traverseOf eValue onBody
+  where
+    onBody (ExpressionLambda lam) =
+      ExpressionLambda <$> traverse (expressionDef f) lam
+    onBody (ExpressionPi lam) =
+      ExpressionPi <$> traverse (expressionDef f) lam
+    onBody (ExpressionApply apply) =
+      ExpressionApply <$> traverse (expressionDef f) apply
+    onBody (ExpressionLeaf leaf) =
+      ExpressionLeaf <$> traverse f leaf
+
+  --     undefined $
+  --     -- Lens.over (Lens.mapped . Lens.mapped . expressionDef) f .
+
+  --     expressionBodyDef f x -- f (ExpressionBody b (Expression a pl))
+
+-- A Traversal for ExpressionBodyDef
+expressionBodyDef ::
+  Lens.Traversal (ExpressionBody a expr) (ExpressionBody b expr) a b
+expressionBodyDef f (ExpressionLeaf leaf) =
+  ExpressionLeaf <$> traverse f leaf
+expressionBodyDef _ (ExpressionLambda x) =
+  pure $ ExpressionLambda x
+expressionBodyDef _ (ExpressionPi     x) =
+  pure $ ExpressionPi     x
+expressionBodyDef _ (ExpressionApply  x) =
+  pure $ ExpressionApply  x
 
 pureExpression :: ExpressionBody def (Expression def ()) -> Expression def ()
 pureExpression = (`Expression` ())
@@ -164,7 +194,7 @@ pureHole = pureExpression hole
 randomizeExpr :: (RandomGen g, Random r) => g -> Expression def (r -> a) -> Expression def a
 randomizeExpr gen = (`evalState` gen) . Traversable.mapM randomize
   where
-    randomize f = fmap f $ state random
+    randomize f = f <$> state random
 
 canonizeParamIds :: Expression def a -> Expression def a
 canonizeParamIds = randomizeParamIds $ Random.mkStdGen 0
@@ -227,11 +257,11 @@ matchExpression onMatch onMismatch =
     go scope e0@(Expression body0 pl0) e1@(Expression body1 pl1) =
       case (body0, body1) of
       (ExpressionLambda l0, ExpressionLambda l1) ->
-        mkExpression . fmap ExpressionLambda $ onLambda l0 l1
+        mkExpression $ ExpressionLambda <$> onLambda l0 l1
       (ExpressionPi l0, ExpressionPi l1) ->
-        mkExpression . fmap ExpressionPi $ onLambda l0 l1
+        mkExpression $ ExpressionPi <$> onLambda l0 l1
       (ExpressionApply (Apply f0 a0), ExpressionApply (Apply f1 a1)) ->
-        mkExpression . fmap ExpressionApply $ liftA2 Apply (go scope f0 f1) (go scope a0 a1)
+        mkExpression $ ExpressionApply <$> liftA2 Apply (go scope f0 f1) (go scope a0 a1)
       (ExpressionLeaf gv@(GetVariable (ParameterRef p0)),
        ExpressionLeaf (GetVariable (ParameterRef p1)))
         | p0 == lookupGuid p1 ->
@@ -252,7 +282,7 @@ onGetParamGuids f (Expression body payload) =
   case body of
   ExpressionLeaf (GetVariable (ParameterRef getParGuid)) ->
     makeParameterRef $ f getParGuid
-  _ -> fmap (onGetParamGuids f) body
+  _ -> onGetParamGuids f <$> body
 
 subExpressions :: Expression def a -> [Expression def a]
 subExpressions x =
