@@ -20,7 +20,11 @@ module Editor.Data
   , subExpressions
   , isDependentPi
   , recurseWithScope, recurseWithScopeM
-  , expressionDef, expressionBodyDef
+  -- Traversals
+  , bitraverseExpressionBody
+  , bitraverseExpression
+  , expressionBodyDef
+  , expressionDef
   ) where
 
 import Control.Applicative (Applicative(..), WrappedMonad(..), liftA2, (<$>))
@@ -81,6 +85,20 @@ data ExpressionBody def expr
   | ExpressionApply {-# UNPACK #-} !(Apply expr)
   | ExpressionLeaf !(Leaf def)
   deriving (Eq, Ord, Functor, Foldable, Traversable)
+
+bitraverseExpressionBody ::
+  Applicative f => (defa -> f defb) -> (expra -> f exprb) ->
+  ExpressionBody defa expra ->
+  f (ExpressionBody defb exprb)
+bitraverseExpressionBody onDef onExpr body =
+  case body of
+  ExpressionLambda x -> ExpressionLambda <$> traverse onExpr x
+  ExpressionPi x -> ExpressionPi <$> traverse onExpr x
+  ExpressionApply x -> ExpressionApply <$> traverse onExpr x
+  ExpressionLeaf leaf -> ExpressionLeaf <$> traverse onDef leaf
+
+expressionBodyDef :: Lens.Traversal (ExpressionBody a expr) (ExpressionBody b expr) a b
+expressionBodyDef = (`bitraverseExpressionBody` pure)
 
 type ExpressionBodyExpr def a = ExpressionBody def (Expression def a)
 
@@ -155,35 +173,17 @@ LensTH.makeLenses ''Expression
 instance (Show a, Show def) => Show (Expression def a) where
   show (Expression body payload) = show body ++ "{" ++ show payload ++ "}"
 
-expressionDef :: Lens.Traversal (Expression a pl) (Expression b pl) a b
-expressionDef f =
-  Lens.traverseOf eValue onBody
+bitraverseExpression ::
+  Applicative f =>
+  (defa -> f defb) -> (pla -> f plb) ->
+  Expression defa pla -> f (Expression defb plb)
+bitraverseExpression onDef onPl = f
   where
-    onBody (ExpressionLambda lam) =
-      ExpressionLambda <$> traverse (expressionDef f) lam
-    onBody (ExpressionPi lam) =
-      ExpressionPi <$> traverse (expressionDef f) lam
-    onBody (ExpressionApply apply) =
-      ExpressionApply <$> traverse (expressionDef f) apply
-    onBody (ExpressionLeaf leaf) =
-      ExpressionLeaf <$> traverse f leaf
+    f (Expression body payload) =
+      Expression <$> bitraverseExpressionBody onDef f body <*> onPl payload
 
-  --     undefined $
-  --     -- Lens.over (Lens.mapped . Lens.mapped . expressionDef) f .
-
-  --     expressionBodyDef f x -- f (ExpressionBody b (Expression a pl))
-
--- A Traversal for ExpressionBodyDef
-expressionBodyDef ::
-  Lens.Traversal (ExpressionBody a expr) (ExpressionBody b expr) a b
-expressionBodyDef f (ExpressionLeaf leaf) =
-  ExpressionLeaf <$> traverse f leaf
-expressionBodyDef _ (ExpressionLambda x) =
-  pure $ ExpressionLambda x
-expressionBodyDef _ (ExpressionPi     x) =
-  pure $ ExpressionPi     x
-expressionBodyDef _ (ExpressionApply  x) =
-  pure $ ExpressionApply  x
+expressionDef :: Lens.Traversal (Expression a pl) (Expression b pl) a b
+expressionDef = (`bitraverseExpression` pure)
 
 pureExpression :: ExpressionBody def (Expression def ()) -> Expression def ()
 pureExpression = (`Expression` ())
