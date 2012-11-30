@@ -448,13 +448,11 @@ exprIntoContext ::
   InferT m (Data.Expression DataIRef.DefinitionIRef (InferNode, s))
 exprIntoContext defTypes rootScope rootExpr = do
   rootExprTV <-
-    liftState . Lens.zoom sContext .
-    Traversable.mapM tupleInto $
-    fmap addTypedVal rootExpr
+    liftState . Lens.zoom sContext $
+    Traversable.mapM tupleInto rootExpr
   Data.recurseWithScopeM addToScope f rootScope rootExprTV
   where
-    tupleInto (x, act) = liftM ((,) x) act
-    addTypedVal x = (x, toStateT createTypedVal)
+    tupleInto x = liftM ((,) x) $ toStateT createTypedVal
     addToScope paramGuid (_, TypedValue paramTypeVal _) =
       Map.insert (Data.ParameterRef paramGuid) paramTypeVal
     f scope expr@(Data.Expression body (originS, newTypedValue)) = do
