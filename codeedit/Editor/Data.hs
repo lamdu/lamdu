@@ -10,7 +10,9 @@ module Editor.Data
   , Leaf(..)
   , ExpressionBody(..)
   , ExpressionBodyExpr
-  , makeApply, makePi, makeLambda, hole, pureHole
+  , makeApply, makePi, makeLambda
+  , hole, pureHole
+  , set, pureSet
   , makeParameterRef, makeDefinitionRef, makeLiteralInteger
   , Expression(..), eValue, ePayload
   , pureExpression
@@ -104,6 +106,9 @@ type ExpressionBodyExpr def a = ExpressionBody def (Expression def a)
 hole :: ExpressionBody def expr
 hole = ExpressionLeaf Hole
 
+set :: ExpressionBody def expr
+set = ExpressionLeaf Set
+
 makeApply :: expr -> expr -> ExpressionBody def expr
 makeApply func arg = ExpressionApply $ Apply func arg
 
@@ -189,6 +194,9 @@ pureExpression = (`Expression` ())
 
 pureHole :: Expression def ()
 pureHole = pureExpression hole
+
+pureSet :: Expression def ()
+pureSet = pureExpression set
 
 randomizeExpr :: (RandomGen g, Random r) => g -> Expression def (r -> a) -> Expression def a
 randomizeExpr gen = (`evalState` gen) . Traversable.mapM randomize

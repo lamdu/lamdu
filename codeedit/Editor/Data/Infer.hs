@@ -539,7 +539,8 @@ addRule rule = do
 updateAndInfer ::
   (Eq def, Monad m) => InferActions def m -> Context def ->
   [(ExprRef, Data.Expression def ())] ->
-  Data.Expression def (Inferred def a) -> m (Data.Expression def (Inferred def a), Context def)
+  Data.Expression def (Inferred def a) ->
+  m (Data.Expression def (Inferred def a), Context def)
 updateAndInfer actions prevContext updates expr =
   execInferT inferState $ do
     mapM_ doUpdate updates

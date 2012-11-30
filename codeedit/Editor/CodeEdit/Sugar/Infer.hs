@@ -7,7 +7,7 @@ module Editor.CodeEdit.Sugar.Infer
 
   -- Type-check an expression into a StoredResult:
   , inferLoadedExpression
-  , StoredResult(..), srContext, srExpr, srInferContext, srSuccess
+  , StoredResult(..), srSuccess, srContext, srInferContext, srExpr, srBaseExpr, srBaseInferContext
   , StoredPayload, splGuid
 
   -- Convert pure, inferred, stored expressions to Result:
@@ -16,7 +16,7 @@ module Editor.CodeEdit.Sugar.Infer
   ) where
 
 import Control.Applicative ((<$>), (<$))
-import Control.Arrow ((&&&))
+import Control.Arrow ((&&&), second)
 import Control.Monad (liftM, void, (<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT)
@@ -25,6 +25,7 @@ import Data.Hashable (hash)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Data.Infer.Conflicts (InferredWithConflicts(..), inferWithConflicts)
+import Editor.Data.Infer.ImplicitVariables (addVariables)
 import System.Random (RandomGen)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
@@ -47,9 +48,14 @@ type StoredPayload m =
 
 data StoredResult m = StoredResult
   { _srSuccess :: Bool
+  , _srContext :: Infer.Loaded DefI DataIRef.Expression
+
   , _srInferContext :: Infer.Context DefI
   , _srExpr :: Data.Expression DefI (StoredPayload m)
-  , _srContext :: Infer.Loaded DefI DataIRef.Expression
+
+  -- Prior to adding variables
+  , _srBaseInferContext :: Infer.Context DefI
+  , _srBaseExpr :: Data.Expression DefI (StoredPayload m)
   }
 LensTH.makeLenses ''StoredResult
 
@@ -149,6 +155,26 @@ inferMaybe expr inferContext inferPoint = do
     Infer.inferLoaded (Infer.InferActions (const Nothing))
     loaded inferContext inferPoint
 
+inferWithVariables ::
+  Infer.Loaded DefI a -> Infer.Context DefI -> Infer.InferNode DefI ->
+  ( ( Bool
+    , Infer.Context DefI
+    , Data.Expression DefI (InferredWithConflicts DefI a)
+    )
+  , ( Infer.Context DefI
+    , Data.Expression DefI (InferredWithConflicts DefI a)
+    )
+  )
+inferWithVariables loaded baseRefMap node =
+  (res, withVars)
+  where
+    res@(_, newRefMap, expr) = inferWithConflicts loaded baseRefMap node
+    withVars =
+      (second . fmap) asIWC .
+      addVariables newRefMap $
+      iwcInferred <$> expr
+    asIWC inferred = InferredWithConflicts inferred [] []
+
 inferLoadedExpression ::
   Monad m =>
   Maybe DefI -> Load.Loaded (T m) ->
@@ -156,14 +182,18 @@ inferLoadedExpression ::
   CT m (StoredResult m)
 inferLoadedExpression mDefI (Load.Stored setExpr exprIRef) inferState = do
   loaded <- lift $ Infer.load loader mDefI exprIRef
-  (success, inferContext, expr) <-
+  ((success, inferContext, expr), (wvRefMap, wvExpr)) <-
     Cache.memoS (return . uncurriedInfer) (loaded, inferState)
   return StoredResult
     { _srSuccess = success
-    , _srInferContext = inferContext
-    , _srExpr = inferredIRefToStored setExpr expr
     , _srContext = loaded
+
+    , _srBaseInferContext = inferContext
+    , _srBaseExpr = inferredIRefToStored setExpr expr
+
+    , _srInferContext = wvRefMap
+    , _srExpr = inferredIRefToStored setExpr wvExpr
     }
   where
     uncurriedInfer (loaded, (inferContext, inferNode)) =
-      inferWithConflicts loaded inferContext inferNode
+      inferWithVariables loaded inferContext inferNode
