@@ -22,7 +22,6 @@ import Control.Lens ((%=), (.=), (^.), (+=))
 import Control.Monad (guard, liftM, liftM2, unless, void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either (EitherT(..))
-import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (StateT(..), State, runState)
 import Control.Monad.Trans.Writer (Writer)
 import Data.Binary (Binary(..), getWord8, putWord8)
@@ -45,7 +44,6 @@ import Editor.Data.Infer.Types
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Either as Either
-import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Foldable as Foldable
 import qualified Data.IntSet as IntSet
@@ -124,32 +122,7 @@ createRef initialVal = do
   ref <- createEmptyRef
   refsAt ref .= initialVal
   return ref
---------------
-
-data Context def = Context
-  { _exprMap :: RefMap (RefData def)
-  , _nextOrigin :: Int
-  , _ruleMap :: RefMap (Rule def)
-  } deriving (Typeable)
-derive makeBinary ''Context
-
-data InferState def = InferState
-  { _sContext :: Context def
-  , _sBfsNextLayer :: IntSet
-  , _sBfsCurLayer :: IntSet
-  }
-
-data Inferred def a = Inferred
-  { iStored :: a
-  , iValue :: Data.Expression def ()
-  , iType :: Data.Expression def ()
-  , iScope :: Map Guid (Data.Expression def ())
-  , iPoint :: InferNode def
-  } deriving (Functor, Foldable, Traversable)
-
-instance (Ord def, Binary def, Binary a) => Binary (Inferred def a) where
-  get = Inferred <$> get <*> get <*> get <*> get <*> get
-  put (Inferred a b c d e) = sequence_ [put a, put b, put c, put d, put e]
+-------------- InferActions
 
 data ErrorDetails def
   = MismatchIn
@@ -172,6 +145,34 @@ derive makeBinary ''Error
 newtype InferActions def m = InferActions
   { reportError :: Error def -> m ()
   }
+
+--------------
+
+data Context def = Context
+  { _exprMap :: RefMap (RefData def)
+  , _nextOrigin :: Int
+  , _ruleMap :: RefMap (Rule def)
+  } deriving (Typeable)
+derive makeBinary ''Context
+
+data InferState def m = InferState
+  { _sContext :: Context def
+  , _sBfsNextLayer :: IntSet
+  , _sBfsCurLayer :: IntSet
+  , _sActions :: InferActions def m
+  }
+
+data Inferred def a = Inferred
+  { iStored :: a
+  , iValue :: Data.Expression def ()
+  , iType :: Data.Expression def ()
+  , iScope :: Map Guid (Data.Expression def ())
+  , iPoint :: InferNode def
+  } deriving (Functor, Foldable, Traversable)
+
+instance (Ord def, Binary def, Binary a) => Binary (Inferred def a) where
+  get = Inferred <$> get <*> get <*> get <*> get <*> get
+  put (Inferred a b c d e) = sequence_ [put a, put b, put c, put d, put e]
 
 LensTH.makeLenses ''Context
 LensTH.makeLenses ''InferState
@@ -241,29 +242,28 @@ initial mRecursiveDefI =
 --- InferT:
 
 newtype InferT def m a =
-  InferT { unInferT :: ReaderT (InferActions def m) (StateT (InferState def) m) a }
+  InferT { unInferT :: StateT (InferState def m) m a }
   deriving (Monad)
 
 runInferT ::
-  Monad m => InferActions def m -> InferState def ->
-  InferT def m a -> m (InferState def, a)
-runInferT actions state =
-  liftM swap . (`runStateT` state) . (`runReaderT` actions) . unInferT
+  Monad m => InferState def m ->
+  InferT def m a -> m (InferState def m, a)
+runInferT state = liftM swap . (`runStateT` state) . unInferT
 
-liftActions :: ReaderT (InferActions def m) (StateT (InferState def) m) a -> InferT def m a
-liftActions = InferT
+askActions :: Monad m => InferT def m (InferActions def m)
+askActions = InferT $ Lens.use sActions
 
-liftState :: Monad m => StateT (InferState def) m a -> InferT def m a
-liftState = liftActions . lift
+liftState :: Monad m => StateT (InferState def m) m a -> InferT def m a
+liftState = InferT
 
-{-# SPECIALIZE liftState :: StateT (InferState DefI) Maybe a -> InferT DefI Maybe a #-}
-{-# SPECIALIZE liftState :: Monoid w => StateT (InferState DefI) (Writer w) a -> InferT DefI (Writer w) a #-}
+{-# SPECIALIZE liftState :: StateT (InferState def Maybe) Maybe a -> InferT def Maybe a #-}
+{-# SPECIALIZE liftState :: Monoid w => StateT (InferState def (Writer w)) (Writer w) a -> InferT def (Writer w) a #-}
 
 instance MonadTrans (InferT def) where
   lift = liftState . lift
 
 derefExpr ::
-  (InferState def, Data.Expression def (InferNode def, a)) ->
+  (InferState def m, Data.Expression def (InferNode def, a)) ->
   (Data.Expression def (Inferred def a), Context def)
 derefExpr (inferState, expr) =
   (derefNode <$> expr, resultContext)
@@ -308,26 +308,26 @@ executeRules = do
 {-# SPECIALIZE executeRules :: Monoid w => InferT DefI (Writer w) () #-}
 
 execInferT ::
-  (Monad m, Eq def) => InferActions def m -> InferState def ->
+  (Monad m, Eq def) => InferState def m ->
   InferT def m (Data.Expression def (InferNode def, a)) ->
   m (Data.Expression def (Inferred def a), Context def)
-execInferT actions state act =
+execInferT state act =
   liftM derefExpr .
-  runInferT actions state $ do
+  runInferT state $ do
     res <- act
     executeRules
     return res
 
 {-# SPECIALIZE
   execInferT ::
-    InferActions DefI Maybe -> InferState DefI ->
+    InferState DefI Maybe ->
     InferT DefI Maybe (Data.Expression DefI (InferNode DefI, a)) ->
     Maybe (Data.Expression DefI (Inferred DefI a), Context DefI)
   #-}
 
 {-# SPECIALIZE
   execInferT ::
-    Monoid w => InferActions DefI (Writer w) -> InferState DefI ->
+    Monoid w => InferState DefI (Writer w) ->
     InferT DefI (Writer w) (Data.Expression DefI (InferNode DefI, a)) ->
     (Writer w) (Data.Expression DefI (Inferred DefI a), Context DefI)
   #-}
@@ -436,7 +436,7 @@ setRefExpr ref newExpr = do
       when (isChange || isHole) $
         liftState $ sContext . exprRefsAt ref . rExpression .= mergedExpr
     Left details -> do
-      report <- liftActions $ Reader.asks reportError
+      report <- liftM reportError askActions
       lift $ report Error
         { errRef = ref
         , errMismatch = (void curExpr, void newExpr)
@@ -538,7 +538,7 @@ load loader mRecursiveDef expr = do
       ]
     loadType defI = liftM ((,) defI) $ loadPureDefinitionType loader defI
 
-addRule :: Rule def -> State (InferState def) ()
+addRule :: Rule def -> State (InferState def m) ()
 addRule rule = do
   ruleRef <- makeRule
   mapM_ (addRuleId ruleRef) $ ruleInputs rule
@@ -555,11 +555,11 @@ updateAndInfer ::
   [(ExprRef, Data.Expression def ())] ->
   Data.Expression def (Inferred def a) -> m (Data.Expression def (Inferred def a), Context def)
 updateAndInfer actions prevContext updates expr =
-  execInferT actions inferState $ do
+  execInferT inferState $ do
     mapM_ doUpdate updates
     return $ f <$> expr
   where
-    inferState = InferState prevContext mempty mempty
+    inferState = InferState prevContext mempty mempty actions
     f inferred = (iPoint inferred, iStored inferred)
     doUpdate (ref, newExpr) =
       setRefExpr ref =<<
@@ -571,7 +571,7 @@ inferLoaded ::
   (Ord def, Monad m) => InferActions def m -> Loaded def a -> Context def -> InferNode def ->
   m (Data.Expression def (Inferred def a), Context def)
 inferLoaded actions loadedExpr initialContext node =
-  execInferT actions initialState $ do
+  execInferT initialState $ do
     expr <- exprIntoContext (nScope node) loadedExpr
     liftState . toStateT $ do
       let
@@ -585,7 +585,7 @@ inferLoaded actions loadedExpr initialContext node =
       mapM_ addRule rules
     return expr
   where
-    initialState = InferState initialContext mempty mempty
+    initialState = InferState initialContext mempty mempty actions
 
 {-# SPECIALIZE
   inferLoaded ::
