@@ -1,3 +1,40 @@
+* def loading removes sharing, restore def types map
+
+* use boolean for polymorphic instantiations, since the expr's are not full yet at the
+  stage
+
+* Type variables:
+  * Need to avoid giving a type-variable to something that eventually
+    gets propagated to a monomorphic type.
+
+* Cleanups:
+  * Instead of (ExprGui.Monad.NameSource, String) and Guid of name
+    seperately, generate a Property for the name of that type? or give
+    a setter instead of Guid
+  * Rename Data* to Expression*.
+
+* Type synonyms/expansions
+
+* When anything is selected, show all the stuff that refer/define that
+  same symbol
+
+* When hole result is selected, show (with some different
+  visualization) the inferred types and values due to the hole result
+  are shown
+
+* Quasi-Monomorphic inference? (Show the monomorphic types a hole
+  could be, or that it must be a polymorphic type)
+
+* Type errors still allowed:
+  * When changing the exported type
+  * When adding/deleting parameters
+  * With space/call-with-arg
+  * Need to:
+    * Allow delete when type-checks in some cases
+    * Other manipulations?
+* BUG: When using '[' or ']' to add applies, it can type-filter out the
+  result we're on and lose the cursor
+
 * Execution:
 
 fac x = if (x == 0) 1 (rec (x - 1))
@@ -14,55 +51,6 @@ where
       -   -   -----
       5   3    120
 
-* Monads for expression making:
-
-  Really bad: WidgetEnvT duplication means cursor assignments can be
-  out of sync.
-  Instead: Could have something like:
-
-  to get rid of the WidgetEnvT wrapper in the first-pass, and have a clean second pass
-  with just name gen
-
-  -- First pass:
-  RWST (Askable r) VarInfo () (WidgetEnvT m (Transaction m))
-  -- Second pass:
-  (Reader NameGenState
-  -- Final result:
-   (ExpressionGui m))
-
-  * When anything is selected, show all the stuff that refer/define that
-    same symbol
-
-  * When hole result is selected, show (with some different
-    visualization) the inferred types and values due to the hole result
-    are shown
-
-* Make up type variables implicitly.
-  Happens via inference, but as a separate step, so that hole results are unaffected by it.
-
-* Quasi-Monomorphic inference? (Show the monomorphic types a hole
-  could be, or that it must be a polymorphic type)
-
-* Type errors still allowed:
-  * When changing the exported type
-  * When adding/deleting parameters
-  * With space/call-with-arg
-  * Need to:
-    * Allow delete when type-checks in some cases
-    * Other manipulations?
-* BUG: When using '[' or ']' to add applies, it can type-filter out the
-  result we're on and lose the cursor
-
-* Layout
-
-* Cleanups:
-  * Instead of (ExprGui.Monad.NameSource, String) and Guid of name
-    seperately, generate a Property for the name of that type? or give
-    a setter instead of Guid
-  * Rename Data* to Expression*.
-
-* Type synonyms/expansions
-
 * Whenever prejumps is added/popped, we actually update in-version
   data, so it actually creates a new, undo-able version. Need to have
   the JumpBack stack actually be outside the version and in the DB to
@@ -72,6 +60,10 @@ where
   * Jump back should be outside the source control. For this we need
     transactions inside the source control to be able to result in
     extra data outwards, beside the widget's event result.
+
+* Record params
+
+* Layout
 
 * Lambda actions not bound to eventmap by Sugar.Func
 
