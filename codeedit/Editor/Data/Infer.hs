@@ -260,10 +260,10 @@ liftState = liftActions . lift
 instance MonadTrans (InferT def) where
   lift = liftState . lift
 
-postProcess ::
+derefExpr ::
   (InferState def, Data.Expression def (InferNode def, a)) ->
   (Expression def a, Context def)
-postProcess (inferState, expr) =
+derefExpr (inferState, expr) =
   (fmap derefNode expr, resultContext)
   where
     resultContext = inferState ^. sContext
@@ -310,7 +310,7 @@ execInferT ::
   InferT def m (Data.Expression def (InferNode def, a)) ->
   m (Expression def a, Context def)
 execInferT actions state act =
-  liftM postProcess .
+  liftM derefExpr .
   runInferT actions state $ do
     res <- act
     executeRules
