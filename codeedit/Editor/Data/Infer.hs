@@ -446,30 +446,45 @@ exprIntoContext ::
   Map DataIRef.DefinitionIRef (Data.Expression DataIRef.DefinitionIRef ()) -> Scope ->
   Data.Expression DataIRef.DefinitionIRef s ->
   InferT m (Data.Expression DataIRef.DefinitionIRef (InferNode, s))
-exprIntoContext defTypes rootScope rootExpr = do
-  rootExprTV <-
-    liftState . Lens.zoom sContext $
-    Traversable.mapM tupleInto rootExpr
-  Data.recurseWithScopeM addToScope f rootScope rootExprTV
+exprIntoContext defTypes rootScope rootExpr =
+  go rootScope =<<
+    ( liftState . Lens.zoom sContext
+    . Traversable.mapM addTypedVal
+    ) rootExpr
   where
-    tupleInto x = liftM ((,) x) $ toStateT createTypedVal
-    addToScope paramGuid (_, TypedValue paramTypeVal _) =
-      Map.insert (Data.ParameterRef paramGuid) paramTypeVal
-    f scope expr@(Data.Expression body (originS, newTypedValue)) = do
+    addTypedVal x = liftM ((,) x) $ toStateT createTypedVal
+    go scope (Data.Expression body (s, createdTV)) = do
+      inferNode <- toInferNode scope (void <$> body) createdTV
+      newBody <-
+        case body of
+        Data.ExpressionLambda lam -> goLambda Data.makeLambda scope lam
+        Data.ExpressionPi lam -> goLambda Data.makePi scope lam
+        _ -> Traversable.mapM (go scope) body
+      return $ Data.Expression newBody (inferNode, s)
+    goLambda cons scope (Data.Lambda paramGuid paramType result) = do
+      paramTypeDone <- go scope paramType
       let
-        typedValue = TypedValue val typ
-        val = tvVal newTypedValue
-        typ =
-          case body of
-          Data.ExpressionLeaf (Data.GetVariable varRef)
-            | Just x <- Map.lookup varRef scope -> x
-          _ -> tvType newTypedValue
+        paramTypeRef = tvVal . nRefs . fst $ paramTypeDone ^. Data.ePayload
+        newScope = Map.insert (Data.ParameterRef paramGuid) paramTypeRef scope
+      resultDone <- go newScope result
+      return $ cons paramGuid paramTypeDone resultDone
+
+    toInferNode scope body tv = do
+      let
+        typedValue@(TypedValue val typ) =
+          tv
+          { tvType =
+            case body of
+            Data.ExpressionLeaf (Data.GetVariable varRef)
+              | Just x <- Map.lookup varRef scope -> x
+            _ -> tvType tv
+          }
       (initialVal, initialType) <-
         liftState . Lens.zoom (sContext . nextOrigin) . toStateT . initialExprs defTypes scope $
-        void expr
+        Data.pureExpression body
       setRefExpr val $ RefExprPayload mempty <$> initialVal
       setRefExpr typ $ RefExprPayload mempty <$> initialType
-      return (InferNode typedValue scope, originS)
+      return $ InferNode typedValue scope
 
 data Loaded a = Loaded
   { lRealExpr :: Data.Expression DataIRef.DefinitionIRef a

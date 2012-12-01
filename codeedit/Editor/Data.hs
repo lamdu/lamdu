@@ -19,7 +19,6 @@ module Editor.Data
   , matchExpression
   , subExpressions
   , isDependentPi
-  , recurseWithScope, recurseWithScopeM
   -- Traversals
   , bitraverseExpressionBody
   , bitraverseExpression
@@ -27,7 +26,7 @@ module Editor.Data
   , expressionDef
   ) where
 
-import Control.Applicative (Applicative(..), WrappedMonad(..), liftA2, (<$>))
+import Control.Applicative (Applicative(..), liftA2, (<$>))
 import Control.Lens ((^.))
 import Control.Monad (liftM, liftM2)
 import Control.Monad.Trans.Class (lift)
@@ -217,31 +216,6 @@ randomizeParamIds gen =
         maybe gv makeParameterRef .
         Map.lookup guid
       _ -> return v
-
-recurseWithScopeM ::
-   Monad f =>
-   (Guid -> a -> scope -> scope) -> (scope -> Expression def a -> f b) ->
-   scope -> Expression def a -> f (Expression def b)
-recurseWithScopeM addToScope f scope =
-  unwrapMonad . recurseWithScope addToScope (fmap WrapMonad . f) scope
-
-recurseWithScope ::
-   Applicative f =>
-   (Guid -> a -> scope -> scope) -> (scope -> Expression def a -> f b) ->
-   scope -> Expression def a -> f (Expression def b)
-recurseWithScope addToScope f scope expr@(Expression body _) =
-  Expression <$> mkNewBody <*> f scope expr
-  where
-    mkNewBody =
-      case body of
-      ExpressionLambda lambda -> onLambda makeLambda lambda
-      ExpressionPi lambda -> onLambda makePi lambda
-      _ -> Traversable.traverse (rec scope) body
-    rec = recurseWithScope addToScope f
-    onLambda cons (Lambda param paramType result) =
-      cons param
-      <$> rec scope paramType
-      <*> rec (addToScope param (paramType ^. ePayload) scope) result
 
 -- TODO: Generalize to defa/defb/defc with hof's to handle matching
 -- them?  The returned expression gets the same guids as the left
