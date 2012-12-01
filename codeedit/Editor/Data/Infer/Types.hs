@@ -9,7 +9,7 @@ module Editor.Data.Infer.Types
   , Scope, TypedValue(..)
   ) where
 
-import Control.Applicative (Applicative(..), (<*))
+import Control.Applicative (Applicative(..), (<*), (<$>), (<*>))
 import Control.Monad.Trans.State (State)
 import Data.Binary (Binary(..))
 import Data.Derive.Binary (makeBinary)
@@ -21,7 +21,6 @@ import Data.Typeable (Typeable)
 import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.State as State
 import qualified Editor.Data as Data
-import qualified Editor.Data.IRef as DataIRef
 
 newtype ExprRef = ExprRef { unExprRef :: Int } deriving (Eq, Ord)
 derive makeBinary ''ExprRef
@@ -50,19 +49,24 @@ data RefExprPayload = RefExprPayload
 derive makeBinary ''RefExprPayload
 LensTH.makeLenses ''RefExprPayload
 
-type RefExpression = Data.Expression DataIRef.DefinitionIRef RefExprPayload
+type RefExpression def = Data.Expression def RefExprPayload
 
-makeRefExpr :: Origin -> Data.ExpressionBody DataIRef.DefinitionIRef RefExpression -> RefExpression
+makeRefExpr :: Origin -> Data.ExpressionBody def (RefExpression def) -> RefExpression def
 makeRefExpr g expr = Data.Expression expr $ RefExprPayload mempty g
 
 -- Map from params to their Param type,
 -- also including the recursive ref to the definition.
 -- (hence not just parameters)
-type Scope = Map (Data.VariableRef DataIRef.DefinitionIRef) ExprRef
+type Scope def = Map (Data.VariableRef def) ExprRef
 
 -- Used to refer to expressions in the inference state and resume inference.
-data InferNode = InferNode
+data InferNode def = InferNode
   { nRefs :: TypedValue
-  , nScope :: Scope
+  , nScope :: Scope def
   } deriving (Typeable)
-derive makeBinary ''InferNode
+
+-- "derive makeBinary ''InferNode" fails because of the Ord constraint
+
+instance (Ord def, Binary def) => Binary (InferNode def) where
+  get = InferNode <$> get <*> get
+  put (InferNode x y) = put x >> put y

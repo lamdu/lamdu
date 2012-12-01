@@ -19,58 +19,57 @@ import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
 import qualified Editor.Data.Infer as Infer
 
+type DefI = DataIRef.DefinitionIRef
+
 data Invisible = Invisible
 instance Show Invisible where
   show = const ""
-showStructure :: Data.ExpressionBody DataIRef.DefinitionIRef a -> String
+showStructure :: Data.ExpressionBody DefI a -> String
 showStructure = show . (Invisible <$)
 
-instance Show (Data.Expression DataIRef.DefinitionIRef ()) where
-  show (Data.Expression value ()) = show value
-
-hole :: Data.Expression DataIRef.DefinitionIRef ()
+hole :: Data.Expression DefI ()
 hole = Data.pureExpression $ Data.ExpressionLeaf Data.Hole
 
 makeApply ::
-  [Data.Expression DataIRef.DefinitionIRef ()] ->
-  Data.Expression DataIRef.DefinitionIRef ()
+  [Data.Expression DefI ()] ->
+  Data.Expression DefI ()
 makeApply = foldl1 (fmap Data.pureExpression . Data.makeApply)
 
 makeLambdaCons ::
-  (Guid -> Data.Expression DataIRef.DefinitionIRef () -> Data.Expression DataIRef.DefinitionIRef () ->
-   Data.ExpressionBodyExpr DataIRef.DefinitionIRef ()) ->
-  String -> Data.Expression DataIRef.DefinitionIRef () -> Data.Expression DataIRef.DefinitionIRef () ->
-  Data.Expression DataIRef.DefinitionIRef ()
+  (Guid -> Data.Expression DefI () -> Data.Expression DefI () ->
+   Data.ExpressionBodyExpr DefI ()) ->
+  String -> Data.Expression DefI () -> Data.Expression DefI () ->
+  Data.Expression DefI ()
 makeLambdaCons cons name paramType body =
   Data.pureExpression $ cons (Guid.fromString name) paramType body
 
 makeLambda ::
-  String -> Data.Expression DataIRef.DefinitionIRef () ->
-  Data.Expression DataIRef.DefinitionIRef () ->
-  Data.Expression DataIRef.DefinitionIRef ()
+  String -> Data.Expression DefI () ->
+  Data.Expression DefI () ->
+  Data.Expression DefI ()
 makeLambda = makeLambdaCons Data.makeLambda
 
 makePi ::
-  String -> Data.Expression DataIRef.DefinitionIRef () ->
-  Data.Expression DataIRef.DefinitionIRef () ->
-  Data.Expression DataIRef.DefinitionIRef ()
+  String -> Data.Expression DefI () ->
+  Data.Expression DefI () ->
+  Data.Expression DefI ()
 makePi = makeLambdaCons Data.makePi
 
-setType :: Data.Expression DataIRef.DefinitionIRef ()
+setType :: Data.Expression DefI ()
 setType = Data.pureExpression $ Data.ExpressionLeaf Data.Set
 
-intType :: Data.Expression DataIRef.DefinitionIRef ()
+intType :: Data.Expression DefI ()
 intType = Data.pureExpression $ Data.ExpressionLeaf Data.IntegerType
 
-literalInt :: Integer -> Data.Expression DataIRef.DefinitionIRef ()
+literalInt :: Integer -> Data.Expression DefI ()
 literalInt i = Data.pureExpression $ Data.makeLiteralInteger i
 
-getDefExpr :: String -> Data.Expression DataIRef.DefinitionIRef ()
+getDefExpr :: String -> Data.Expression DefI ()
 getDefExpr name =
   Data.pureExpression . Data.makeDefinitionRef . IRef.unsafeFromGuid $
   Guid.fromString name
 
-getParamExpr :: String -> Data.Expression DataIRef.DefinitionIRef ()
+getParamExpr :: String -> Data.Expression DefI ()
 getParamExpr name =
   Data.pureExpression . Data.makeParameterRef $
   Guid.fromString name
@@ -81,7 +80,7 @@ ansiReset :: String
 ansiReset = "\ESC[0m"
 
 showExpressionWithConflicts ::
-  Data.Expression DataIRef.DefinitionIRef (InferredWithConflicts a) -> String
+  Data.Expression DefI (InferredWithConflicts DefI a) -> String
 showExpressionWithConflicts =
   List.intercalate "\n" . go
   where
@@ -99,7 +98,7 @@ showExpressionWithConflicts =
         InferredWithConflicts inferred tErrors vErrors =
           inferredExpr ^. Data.ePayload
 
-definitionTypes :: Map Guid (Data.Expression DataIRef.DefinitionIRef ())
+definitionTypes :: Map Guid (Data.Expression DefI ())
 definitionTypes =
   Map.fromList $ map (first Guid.fromString)
   [ ("Bool", setType)
@@ -134,9 +133,9 @@ definitionTypes =
     intToIntToInt = makePi "iii0" intType $ makePi "iii1" intType intType
 
 doInferM ::
-  Infer.Context -> Infer.InferNode ->
-  Data.Expression DataIRef.DefinitionIRef a ->
-  (Infer.Expression a, Infer.Context)
+  Infer.Context DefI -> Infer.InferNode DefI ->
+  Data.Expression DefI a ->
+  (Infer.Expression DefI a, Infer.Context DefI)
 doInferM initialInferContext inferNode expr
   | success = (iwcInferred <$> exprWC, resultInferContext)
   | otherwise =
@@ -150,14 +149,14 @@ doInferM initialInferContext inferNode expr
       inferWithConflicts (doLoad expr) initialInferContext inferNode
 
 doLoad ::
-  Data.Expression DataIRef.DefinitionIRef a ->
-  Infer.Loaded a
+  Data.Expression DefI a ->
+  Infer.Loaded DefI a
 doLoad expr =
   case Infer.load loader (Just defI) expr of
   Left err -> error err
   Right x -> x
 
-loader :: Infer.Loader (Either String)
+loader :: Infer.Loader DefI (Either String)
 loader =
   Infer.Loader load
   where
@@ -166,14 +165,14 @@ loader =
       Nothing -> Left ("Could not find" ++ show key)
       Just x -> Right x
 
-defI :: DataIRef.DefinitionIRef
+defI :: DefI
 defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
 
 doInfer ::
-  Data.Expression DataIRef.DefinitionIRef a -> (Infer.Expression a, Infer.Context)
+  Data.Expression DefI a -> (Infer.Expression DefI a, Infer.Context DefI)
 doInfer = uncurry doInferM . Infer.initial $ Just defI
 
-factorialExpr :: Data.Expression DataIRef.DefinitionIRef ()
+factorialExpr :: Data.Expression DefI ()
 factorialExpr =
   makeLambda "x" hole $
   makeApply
@@ -192,14 +191,14 @@ factorialExpr =
   ]
 
 inferMaybe ::
-  Data.Expression DataIRef.DefinitionIRef a ->
-  Maybe (Infer.Expression a, Infer.Context)
+  Data.Expression DefI a ->
+  Maybe (Infer.Expression DefI a, Infer.Context DefI)
 inferMaybe expr =
   uncurry (Infer.inferLoaded (Infer.InferActions (const Nothing)) loaded) $ Infer.initial (Just defI)
   where
     loaded = doLoad expr
 
-factorial :: Int -> (Infer.Expression (), Infer.Context)
+factorial :: Int -> (Infer.Expression DefI (), Infer.Context DefI)
 factorial gen =
   fromMaybe (error "Conflicts in factorial infer") .
   inferMaybe . void $

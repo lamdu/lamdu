@@ -6,10 +6,9 @@ module Editor.Data.Infer.Conflicts
   , iwcInferredValues
   ) where
 
+import Control.Applicative ((<$>), (<*>))
 import Control.Monad.Trans.Writer (Writer, runWriter)
 import Data.Binary (Binary(..))
-import Data.Derive.Binary (makeBinary)
-import Data.DeriveTH (derive)
 import Data.Foldable (Foldable(..))
 import Data.Map (Map)
 import Data.Monoid (Monoid(..))
@@ -19,39 +18,41 @@ import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Editor.Data as Data
-import qualified Editor.Data.IRef as DataIRef
 import qualified Editor.Data.Infer as Infer
 
-data InferredWithConflicts a = InferredWithConflicts
-  { iwcInferred :: Infer.Inferred a
-  , iwcTypeConflicts :: [Infer.Error]
-  , iwcValueConflicts :: [Infer.Error]
+data InferredWithConflicts def a = InferredWithConflicts
+  { iwcInferred :: Infer.Inferred def a
+  , iwcTypeConflicts :: [Infer.Error def]
+  , iwcValueConflicts :: [Infer.Error def]
   } deriving (Functor, Foldable, Traversable)
-derive makeBinary ''InferredWithConflicts
 
-newtype ConflictMap =
-  ConflictMap { unConflictMap :: Map Infer.ExprRef (Set Infer.Error) }
+instance (Ord def, Binary def, Binary a) => Binary (InferredWithConflicts def a) where
+  get = InferredWithConflicts <$> get <*> get <*> get
+  put (InferredWithConflicts a b c) = sequence_ [put a, put b, put c]
 
-instance Monoid ConflictMap where
+newtype ConflictMap def =
+  ConflictMap { unConflictMap :: Map Infer.ExprRef (Set (Infer.Error def)) }
+
+instance Ord def => Monoid (ConflictMap def) where
   mempty = ConflictMap mempty
   mappend (ConflictMap x) (ConflictMap y) =
     ConflictMap $ Map.unionWith mappend x y
 
-getConflicts :: Infer.ExprRef -> ConflictMap -> [Infer.Error]
+getConflicts :: Infer.ExprRef -> ConflictMap def -> [Infer.Error def]
 getConflicts ref = maybe [] Set.toList . Map.lookup ref . unConflictMap
 
-reportConflict :: Infer.Error -> Writer ConflictMap ()
+reportConflict :: Ord def => Infer.Error def -> Writer (ConflictMap def) ()
 reportConflict err =
   Writer.tell . ConflictMap .
   Map.singleton (Infer.errRef err) $
   Set.singleton err
 
 inferWithConflicts ::
-  Infer.Loaded a ->
-  Infer.Context -> Infer.InferNode ->
+  Ord def => Infer.Loaded def a ->
+  Infer.Context def -> Infer.InferNode def ->
   ( Bool
-  , Infer.Context
-  , Data.Expression DataIRef.DefinitionIRef (InferredWithConflicts a)
+  , Infer.Context def
+  , Data.Expression def (InferredWithConflicts def a)
   )
 inferWithConflicts loaded initialInferContext node =
   ( Map.null $ unConflictMap conflictsMap
@@ -73,15 +74,16 @@ inferWithConflicts loaded initialInferContext node =
       conflictsMap
 
 iwcInferredExprs ::
-  (Infer.Inferred a -> Data.Expression DataIRef.DefinitionIRef ()) ->
-  (InferredWithConflicts a -> [Infer.Error]) ->
-  InferredWithConflicts a -> [Data.Expression DataIRef.DefinitionIRef ()]
+  Ord def =>
+  (Infer.Inferred def a -> Data.Expression def ()) ->
+  (InferredWithConflicts def a -> [Infer.Error def]) ->
+  InferredWithConflicts def a -> [Data.Expression def ()]
 iwcInferredExprs getVal eeConflicts ee =
   (getVal . iwcInferred) ee :
   (Set.toList . Set.fromList . map (snd . Infer.errMismatch) . eeConflicts) ee
 
-iwcInferredTypes :: InferredWithConflicts a -> [Data.Expression DataIRef.DefinitionIRef ()]
+iwcInferredTypes :: Ord def => InferredWithConflicts def a -> [Data.Expression def ()]
 iwcInferredTypes = iwcInferredExprs Infer.iType iwcTypeConflicts
 
-iwcInferredValues :: InferredWithConflicts a -> [Data.Expression DataIRef.DefinitionIRef ()]
+iwcInferredValues :: Ord def => InferredWithConflicts def a -> [Data.Expression def ()]
 iwcInferredValues = iwcInferredExprs Infer.iValue iwcValueConflicts

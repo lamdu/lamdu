@@ -26,9 +26,8 @@ import qualified Data.IntSet as IntSet
 import qualified Data.Store.Guid as Guid
 import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
-import qualified Editor.Data.IRef as DataIRef
 
-type RuleFunction = [RefExpression] -> [(ExprRef, RefExpression)]
+type RuleFunction def = [RefExpression def] -> [(ExprRef, RefExpression def)]
 
 type Origin2 = (Origin, Origin)
 type Origin3 = (Origin, Origin, Origin)
@@ -42,13 +41,13 @@ derive makeBinary ''ExprLambdaWrapper
 
 -- Boilerplate to work around lack of serialization of functions
 -- Represents a serialization of RuleFunction:
-data RuleClosure
+data RuleClosure def
   = LambdaBodyTypeToPiResultTypeClosure (Guid, ExprRef) Origin2
   | PiToLambdaClosure (Guid, ExprRef, ExprRef) Origin3
   | CopyClosure ExprRef
   | LambdaParentToChildrenClosure (ExprLambdaWrapper, ExprRef, ExprRef)
   | LambdaChildrenToParentClosure (ExprLambdaWrapper, Guid, ExprRef) Origin
-  | SetClosure [(ExprRef, RefExpression)]
+  | SetClosure [(ExprRef, RefExpression def)]
   | SimpleTypeClosure ExprRef Origin2
   | IntoApplyResultClosure (ExprLambdaWrapper, ExprRef, ExprRef)
   | IntoArgClosure (ExprLambdaWrapper, ExprRef)
@@ -62,13 +61,13 @@ data RuleClosure
   | ApplyArgToFuncArgClosure ExprRef
 derive makeBinary ''RuleClosure
 
-data Rule = Rule
+data Rule def = Rule
   { ruleInputs :: [ExprRef]
-  , _ruleCompute :: RuleClosure
+  , _ruleCompute :: RuleClosure def
   }
 derive makeBinary ''Rule
 
-runRuleClosure :: RuleClosure -> RuleFunction
+runRuleClosure :: Eq def => RuleClosure def -> RuleFunction def
 runRuleClosure closure =
   case closure of
   LambdaBodyTypeToPiResultTypeClosure x o ->
@@ -106,7 +105,7 @@ runRuleClosure closure =
   ApplyArgToFuncArgClosure x ->
     runApplyArgToFuncArgClosure x
 
-makeNodeRules :: Data.Expression DataIRef.DefinitionIRef TypedValue -> State Origin [Rule]
+makeNodeRules :: Data.Expression def TypedValue -> State Origin [Rule def]
 makeNodeRules (Data.Expression exprBody typedVal) =
   case fmap (Lens.view Data.ePayload) exprBody of
   Data.ExpressionPi lambda@(Data.Lambda _ _ resultType) ->
@@ -125,7 +124,7 @@ makeNodeRules (Data.Expression exprBody typedVal) =
       (:) <$> setRule (tvType paramType) <*>
       lambdaStructureRules cons (tvVal typedVal) (fmap tvVal lam)
 
-makeAllRules :: Data.Expression DataIRef.DefinitionIRef TypedValue -> State Origin [Rule]
+makeAllRules :: Data.Expression def TypedValue -> State Origin [Rule def]
 makeAllRules expr =
   (:)
   <$> (ruleSimpleType . Lens.view Data.ePayload) expr
@@ -136,48 +135,48 @@ makeAllRules expr =
       <$> makeNodeRules expr
       <*> (fmap Foldable.concat . Traversable.mapM makeAllRules . Lens.view Data.eValue) expr
 
-makeHole :: Origin -> RefExpression
+makeHole :: Origin -> RefExpression def
 makeHole g = makeRefExpr g $ Data.ExpressionLeaf Data.Hole
 
-setExpr :: Origin -> RefExpression
+setExpr :: Origin -> RefExpression def
 setExpr g = makeRefExpr g $ Data.ExpressionLeaf Data.Set
 
-intTypeExpr :: Origin -> RefExpression
+intTypeExpr :: Origin -> RefExpression def
 intTypeExpr g = makeRefExpr g $ Data.ExpressionLeaf Data.IntegerType
 
 guidFromOrigin :: Origin -> Guid
 guidFromOrigin origin = Guid.fromString $ show origin ++ "(orig)"
 
-makePi :: Origin -> RefExpression -> RefExpression -> RefExpression
+makePi :: Origin -> RefExpression def -> RefExpression def -> RefExpression def
 makePi o paramType result =
   makeRefExpr o $ Data.makePi (guidFromOrigin o) paramType result
 
-maybeLambda :: Data.ExpressionBody DataIRef.DefinitionIRef a -> Maybe (Data.Lambda a)
+maybeLambda :: Data.ExpressionBody def a -> Maybe (Data.Lambda a)
 maybeLambda (Data.ExpressionLambda x) = Just x
 maybeLambda _ = Nothing
 
-maybePi :: Data.ExpressionBody DataIRef.DefinitionIRef a -> Maybe (Data.Lambda a)
+maybePi :: Data.ExpressionBody def a -> Maybe (Data.Lambda a)
 maybePi (Data.ExpressionPi x) = Just x
 maybePi _ = Nothing
 
-exprLambdaCons :: ExprLambdaWrapper -> Data.Lambda expr -> Data.ExpressionBody DataIRef.DefinitionIRef expr
+exprLambdaCons :: ExprLambdaWrapper -> Data.Lambda expr -> Data.ExpressionBody def expr
 exprLambdaCons ExprLambda = Data.ExpressionLambda
 exprLambdaCons ExprPi = Data.ExpressionPi
 
 exprLambdaUncons ::
   ExprLambdaWrapper ->
-  Data.ExpressionBody DataIRef.DefinitionIRef expr ->
+  Data.ExpressionBody def expr ->
   Maybe (Data.Lambda expr)
 exprLambdaUncons ExprLambda = maybeLambda
 exprLambdaUncons ExprPi = maybePi
 
-runLambdaBodyTypeToPiResultTypeClosure :: (Guid, ExprRef) -> Origin2 -> RuleFunction
+runLambdaBodyTypeToPiResultTypeClosure :: (Guid, ExprRef) -> Origin2 -> RuleFunction def
 runLambdaBodyTypeToPiResultTypeClosure (param, lambdaTypeRef) (o0, o1) ~[bodyTypeExpr] =
   [( lambdaTypeRef
    , makeRefExpr o0 $ Data.makePi param (makeHole o1) bodyTypeExpr
    )]
 
-runPiToLambdaClosure :: (Guid, ExprRef, ExprRef) -> Origin3 -> RuleFunction
+runPiToLambdaClosure :: (Guid, ExprRef, ExprRef) -> Origin3 -> RuleFunction def
 runPiToLambdaClosure (param, lambdaValueRef, bodyTypeRef) (o0, o1, o2) ~[Data.Expression piBody _] = do
   Data.Lambda piParam paramType resultType <- maybeToList $ maybePi piBody
   [ -- Pi result type -> Body type
@@ -194,38 +193,38 @@ runPiToLambdaClosure (param, lambdaValueRef, bodyTypeRef) (o0, o1, o2) ~[Data.Ex
       )
     ]
 
-lambdaRules :: Guid -> TypedValue -> ExprRef -> State Origin [Rule]
+lambdaRules :: Guid -> TypedValue -> ExprRef -> State Origin [Rule def]
 lambdaRules param (TypedValue lambdaValueRef lambdaTypeRef) bodyTypeRef =
   sequence
   [ Rule [bodyTypeRef] . LambdaBodyTypeToPiResultTypeClosure (param, lambdaTypeRef) <$> mkOrigin2
   , Rule [lambdaTypeRef] . PiToLambdaClosure (param, lambdaValueRef, bodyTypeRef) <$> mkOrigin3
   ]
 
-runCopyClosure :: ExprRef -> RuleFunction
+runCopyClosure :: ExprRef -> RuleFunction def
 runCopyClosure dest ~[srcExpr] = [(dest, srcExpr)]
 
-unionRules :: ExprRef -> ExprRef -> [Rule]
+unionRules :: ExprRef -> ExprRef -> [Rule def]
 unionRules x y =
   [ Rule [x] $ CopyClosure y
   , Rule [y] $ CopyClosure x
   ]
 
 -- Parent lambda to children
-runLambdaParentToChildrenClosure :: (ExprLambdaWrapper, ExprRef, ExprRef) -> RuleFunction
+runLambdaParentToChildrenClosure :: (ExprLambdaWrapper, ExprRef, ExprRef) -> RuleFunction def
 runLambdaParentToChildrenClosure (cons, paramTypeRef, resultRef) ~[expr] = do
   Data.Lambda _ paramTypeE resultE <-
     maybeToList . exprLambdaUncons cons $ expr ^. Data.eValue
   [(paramTypeRef, paramTypeE), (resultRef, resultE)]
 
 -- Children of lambda to lambda parent
-runLambdaChildrenToParentClosure :: (ExprLambdaWrapper, Guid, ExprRef) -> Origin -> RuleFunction
+runLambdaChildrenToParentClosure :: (ExprLambdaWrapper, Guid, ExprRef) -> Origin -> RuleFunction def
 runLambdaChildrenToParentClosure (cons, param, lamRef) o0 ~[paramTypeExpr, resultExpr] =
   [( lamRef
    , makeRefExpr o0 . exprLambdaCons cons $
      Data.Lambda param paramTypeExpr resultExpr
    )]
 
-lambdaStructureRules :: ExprLambdaWrapper -> ExprRef -> Data.Lambda ExprRef -> State Origin [Rule]
+lambdaStructureRules :: ExprLambdaWrapper -> ExprRef -> Data.Lambda ExprRef -> State Origin [Rule def]
 lambdaStructureRules cons lamRef (Data.Lambda param paramTypeRef resultRef) =
   sequence
   [ pure . Rule [lamRef] $
@@ -235,7 +234,7 @@ lambdaStructureRules cons lamRef (Data.Lambda param paramTypeRef resultRef) =
     LambdaChildrenToParentClosure (cons, param, lamRef) <$> mkOrigin
   ]
 
-runSetClosure :: [(ExprRef, RefExpression)] -> RuleFunction
+runSetClosure :: [(ExprRef, RefExpression def)] -> RuleFunction def
 runSetClosure outputs ~[] = outputs
 
 subst ::
@@ -250,7 +249,7 @@ subst from to expr =
     (subst from to) expr
 
 mergeToPiResult ::
-  RefExpression -> RefExpression -> RefExpression
+  Eq def => RefExpression def -> RefExpression def -> RefExpression def
 mergeToPiResult =
   fmap runIdentity .
   Data.matchExpression onMatch ((fmap . fmap) return onMismatch)
@@ -270,7 +269,7 @@ maybeApply :: Data.ExpressionBody def a -> Maybe (Data.Apply a)
 maybeApply (Data.ExpressionApply x) = Just x
 maybeApply _ = Nothing
 
-runSimpleTypeClosure :: ExprRef -> Origin2 -> RuleFunction
+runSimpleTypeClosure :: ExprRef -> Origin2 -> RuleFunction def
 runSimpleTypeClosure typ (o0, o1) ~[valExpr] =
   case valExpr ^. Data.eValue of
   Data.ExpressionLeaf Data.Set -> [(typ, setExpr o0)]
@@ -284,10 +283,10 @@ runSimpleTypeClosure typ (o0, o1) ~[valExpr] =
      )]
   _ -> []
 
-ruleSimpleType :: TypedValue -> State Origin Rule
+ruleSimpleType :: TypedValue -> State Origin (Rule def)
 ruleSimpleType (TypedValue val typ) = Rule [val] . SimpleTypeClosure typ <$> mkOrigin2
 
-runIntoApplyResultClosure :: (ExprLambdaWrapper, ExprRef, ExprRef) -> RuleFunction
+runIntoApplyResultClosure :: (ExprLambdaWrapper, ExprRef, ExprRef) -> RuleFunction def
 runIntoApplyResultClosure (cons, applyRef, arg) ~[Data.Expression funcBody _, argExpr] = do
   Data.Lambda param _ result <- maybeToList $ exprLambdaUncons cons funcBody
   return
@@ -297,13 +296,13 @@ runIntoApplyResultClosure (cons, applyRef, arg) ~[Data.Expression funcBody _, ar
       result
     )
 
-intoApplyResultRule :: ExprLambdaWrapper -> ExprRef -> ExprRef -> ExprRef -> Rule
+intoApplyResultRule :: ExprLambdaWrapper -> ExprRef -> ExprRef -> ExprRef -> (Rule def)
 intoApplyResultRule cons applyRef func arg =
   -- PreSubst with Subst => PostSubst
   -- (func, arg) -> apply
   Rule [func, arg] $ IntoApplyResultClosure (cons, applyRef, arg)
 
-runIntoArgClosure :: (ExprLambdaWrapper, ExprRef) -> RuleFunction
+runIntoArgClosure :: Eq def => (ExprLambdaWrapper, ExprRef) -> RuleFunction def
 runIntoArgClosure (cons, arg) ~[applyExpr, Data.Expression funcBody _] = do
   -- Recurse over PreSubst and PostSubst together
   --   When PreSubst part refers to its param:
@@ -312,11 +311,11 @@ runIntoArgClosure (cons, arg) ~[applyExpr, Data.Expression funcBody _] = do
   Data.Lambda param _ result <- maybeToList $ exprLambdaUncons cons funcBody
   mergeToArg param arg result applyExpr
 
-intoArgRule :: ExprLambdaWrapper -> ExprRef -> ExprRef -> ExprRef -> Rule
+intoArgRule :: ExprLambdaWrapper -> ExprRef -> ExprRef -> ExprRef -> (Rule def)
 intoArgRule cons applyRef func arg =
   Rule [applyRef, func] $ IntoArgClosure (cons, arg)
 
-runIntoFuncResultTypeClosure :: (ExprLambdaWrapper, ExprRef) -> RuleFunction
+runIntoFuncResultTypeClosure :: Eq def => (ExprLambdaWrapper, ExprRef) -> RuleFunction def
 runIntoFuncResultTypeClosure (cons, func) ~[applyExpr, Data.Expression funcBody funcPl] = do
   Data.Lambda param paramT result <- maybeToList $ exprLambdaUncons cons funcBody
   return
@@ -326,21 +325,21 @@ runIntoFuncResultTypeClosure (cons, func) ~[applyExpr, Data.Expression funcBody 
       mergeToPiResult result applyExpr
     )
 
-intoFuncResultTypeRule :: ExprLambdaWrapper -> ExprRef -> ExprRef -> Rule
+intoFuncResultTypeRule :: ExprLambdaWrapper -> ExprRef -> ExprRef -> (Rule def)
 intoFuncResultTypeRule cons applyRef func =
   -- Propagate data from Apply's to the Func where appropriate.
   -- (Not on non-substituted holes)
   -- apply -> func result
   Rule [applyRef, func] $ IntoFuncResultTypeClosure (cons, func)
 
-recurseSubstRules :: ExprLambdaWrapper -> ExprRef -> ExprRef -> ExprRef -> [Rule]
+recurseSubstRules :: ExprLambdaWrapper -> ExprRef -> ExprRef -> ExprRef -> [Rule def]
 recurseSubstRules cons applyRef func arg =
   [ intoApplyResultRule cons applyRef func arg
   , intoArgRule cons applyRef func arg
   , intoFuncResultTypeRule cons applyRef func
   ]
 
-mergeToArg :: Guid -> ExprRef -> RefExpression -> RefExpression -> [(ExprRef, RefExpression)]
+mergeToArg :: Eq def => Guid -> ExprRef -> RefExpression def -> RefExpression def -> [(ExprRef, RefExpression def)]
 mergeToArg param arg =
   (fmap . fmap) (execWriter . Compose.unO) $
   Data.matchExpression onMatch onMismatch
@@ -357,18 +356,18 @@ mergeToArg param arg =
          )]
     onMismatch _ _ = unit
 
-runArgTypeToPiParamTypeClosure :: ExprRef -> Origin2 -> RuleFunction
+runArgTypeToPiParamTypeClosure :: ExprRef -> Origin2 -> RuleFunction def
 runArgTypeToPiParamTypeClosure funcTypeRef (o0, o1) ~[argTypeExpr] =
   [( funcTypeRef
    , makePi o0 argTypeExpr $ makeHole o1
    )]
 
-argTypeToPiParamTypeRule :: Data.Apply TypedValue -> State Origin Rule
+argTypeToPiParamTypeRule :: Data.Apply TypedValue -> State Origin (Rule def)
 argTypeToPiParamTypeRule (Data.Apply func arg) =
   -- ArgT => Pi ParamT
   Rule [tvType arg] . ArgTypeToPiParamTypeClosure (tvType func) <$> mkOrigin2
 
-runRigidArgApplyTypeToResultTypeClosure :: ExprRef -> Origin3 -> RuleFunction
+runRigidArgApplyTypeToResultTypeClosure :: ExprRef -> Origin3 -> RuleFunction def
 runRigidArgApplyTypeToResultTypeClosure funcTypeRef (o0, o1, o2) ~[applyTypeExpr, argExpr] =
   case argExpr ^. Data.eValue of
   Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef par)) ->
@@ -380,36 +379,36 @@ runRigidArgApplyTypeToResultTypeClosure funcTypeRef (o0, o1, o2) ~[applyTypeExpr
   _ -> []
 
 rigidArgApplyTypeToResultTypeRule ::
-  TypedValue -> Data.Apply TypedValue -> State Origin Rule
+  TypedValue -> Data.Apply TypedValue -> State Origin (Rule def)
 rigidArgApplyTypeToResultTypeRule applyTv (Data.Apply func arg) =
   -- If Arg is GetParam
   -- ApplyT (Susbt Arg with Hole) => ResultT
   Rule [tvType applyTv, tvVal arg] .
   RigidArgApplyTypeToResultTypeClosure (tvType func) <$> mkOrigin3
 
-runPiParamTypeToArgTypeClosure :: ExprRef -> RuleFunction
+runPiParamTypeToArgTypeClosure :: ExprRef -> RuleFunction def
 runPiParamTypeToArgTypeClosure argTypeRef ~[Data.Expression funcTExpr _] = do
   -- If func type is Pi
   -- Pi's ParamT => ArgT
   Data.Lambda _ paramT _ <- maybeToList $ maybePi funcTExpr
   return (argTypeRef, paramT)
 
-piParamTypeToArgTypeRule :: Data.Apply TypedValue -> Rule
+piParamTypeToArgTypeRule :: Data.Apply TypedValue -> (Rule def)
 piParamTypeToArgTypeRule (Data.Apply func arg) =
   Rule [tvType func] $ PiParamTypeToArgTypeClosure (tvType arg)
 
-runLambdaParamTypeToArgTypeClosure :: ExprRef -> RuleFunction
+runLambdaParamTypeToArgTypeClosure :: ExprRef -> RuleFunction def
 runLambdaParamTypeToArgTypeClosure argTypeRef ~[Data.Expression funcExpr _] = do
   -- If func is Lambda
   -- Lambda's ParamT => ArgT
   Data.Lambda _ paramT _ <- maybeToList $ maybeLambda funcExpr
   return (argTypeRef, paramT)
 
-lambdaParamTypeToArgTypeRule :: Data.Apply TypedValue -> Rule
+lambdaParamTypeToArgTypeRule :: Data.Apply TypedValue -> (Rule def)
 lambdaParamTypeToArgTypeRule (Data.Apply func arg) =
   Rule [tvVal func] $ LambdaParamTypeToArgTypeClosure (tvType arg)
 
-runArgTypeToLambdaParamTypeClosure :: ExprRef -> Origin -> RuleFunction
+runArgTypeToLambdaParamTypeClosure :: ExprRef -> Origin -> RuleFunction def
 runArgTypeToLambdaParamTypeClosure funcValRef o0 ~[Data.Expression funcExpr funcPl, argTExpr] = do
   -- If func is Lambda,
   -- ArgT => Lambda's ParamT
@@ -420,11 +419,11 @@ runArgTypeToLambdaParamTypeClosure funcValRef o0 ~[Data.Expression funcExpr func
       Data.makeLambda param argTExpr $ makeHole o0
     )
 
-argTypeToLambdaParamTypeRule :: Data.Apply TypedValue -> State Origin Rule
+argTypeToLambdaParamTypeRule :: Data.Apply TypedValue -> State Origin (Rule def)
 argTypeToLambdaParamTypeRule (Data.Apply func arg) =
   Rule [tvVal func, tvType arg] . ArgTypeToLambdaParamTypeClosure (tvVal func) <$> mkOrigin
 
-runNonLambdaToApplyValueClosure :: ExprRef -> Origin -> RuleFunction
+runNonLambdaToApplyValueClosure :: ExprRef -> Origin -> RuleFunction def
 runNonLambdaToApplyValueClosure applyValRef o0 ~[funcExpr, argExpr] =
   -- If func is surely not a lambda (a hole too could be a lambda).
   --
@@ -443,12 +442,12 @@ runNonLambdaToApplyValueClosure applyValRef o0 ~[funcExpr, argExpr] =
       )
     ]
 
-nonLambdaToApplyValueRule :: TypedValue -> Data.Apply TypedValue -> State Origin Rule
+nonLambdaToApplyValueRule :: TypedValue -> Data.Apply TypedValue -> State Origin (Rule def)
 nonLambdaToApplyValueRule applyTv (Data.Apply func arg) =
   Rule [tvVal func, tvVal arg] .
   NonLambdaToApplyValueClosure (tvVal applyTv) <$> mkOrigin
 
-runApplyArgToFuncArgClosure :: ExprRef -> RuleFunction
+runApplyArgToFuncArgClosure :: Eq def => ExprRef -> RuleFunction def
 runApplyArgToFuncArgClosure argValRef ~[applyExpr, funcExpr] = maybeToList $ do
   -- If Func is same as in Apply,
   -- Apply-Arg => Arg
@@ -461,11 +460,11 @@ runApplyArgToFuncArgClosure argValRef ~[applyExpr, funcExpr] = maybeToList $ do
   return (argValRef, aArg)
 
 applyArgToFuncArgRule ::
-  TypedValue -> Data.Apply TypedValue -> Rule
+  TypedValue -> Data.Apply TypedValue -> Rule def
 applyArgToFuncArgRule applyTv (Data.Apply func arg) =
   Rule [tvVal applyTv, tvVal func] $ ApplyArgToFuncArgClosure (tvVal arg)
 
-applyRules :: TypedValue -> Data.Apply TypedValue -> State Origin [Rule]
+applyRules :: TypedValue -> Data.Apply TypedValue -> State Origin [Rule def]
 applyRules applyTv apply@(Data.Apply func arg) =
   -- TODO: make all of these functions have a standard signature and
   -- just apply them all to the same args?

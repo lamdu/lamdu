@@ -97,7 +97,7 @@ data Section expr = Section
   , sectionRArg :: Maybe expr
   } deriving (Functor)
 
-type HoleResult = Infer.Expression ()
+type HoleResult = Infer.Expression DataIRef.DefinitionIRef ()
 
 data HoleActions m = HoleActions
   { holePickResult :: HoleResult -> T m (Guid, Actions m)
