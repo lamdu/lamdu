@@ -53,6 +53,9 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
+import qualified Editor.Data.IRef as DataIRef
+
+type DefI = DataIRef.DefinitionIRef
 
 toStateT :: Monad m => State s a -> StateT s m a
 toStateT = State.mapStateT (return . runIdentity)
@@ -252,8 +255,8 @@ liftActions = InferT
 liftState :: Monad m => StateT (InferState def) m a -> InferT def m a
 liftState = liftActions . lift
 
-{-# SPECIALIZE liftState :: StateT (InferState def) Maybe a -> InferT def Maybe a #-}
-{-# SPECIALIZE liftState :: Monoid w => StateT (InferState def) (Writer w) a -> InferT def (Writer w) a #-}
+{-# SPECIALIZE liftState :: StateT (InferState DefI) Maybe a -> InferT DefI Maybe a #-}
+{-# SPECIALIZE liftState :: Monoid w => StateT (InferState DefI) (Writer w) a -> InferT DefI (Writer w) a #-}
 
 instance MonadTrans (InferT def) where
   lift = liftState . lift
@@ -281,8 +284,8 @@ derefExpr (inferState, expr) =
 getRefExpr :: Monad m => ExprRef -> InferT def m (RefExpression def)
 getRefExpr ref = liftState $ Lens.use (sContext . exprRefsAt ref . rExpression)
 
-{-# SPECIALIZE getRefExpr :: ExprRef -> InferT def Maybe (RefExpression def) #-}
-{-# SPECIALIZE getRefExpr :: Monoid w => ExprRef -> InferT def (Writer w) (RefExpression def) #-}
+{-# SPECIALIZE getRefExpr :: ExprRef -> InferT DefI Maybe (RefExpression DefI) #-}
+{-# SPECIALIZE getRefExpr :: Monoid w => ExprRef -> InferT DefI (Writer w) (RefExpression DefI) #-}
 
 executeRules :: (Eq def, Monad m) => InferT def m ()
 executeRules = do
@@ -300,8 +303,8 @@ executeRules = do
       refExps <- mapM getRefExpr deps
       mapM_ (uncurry setRefExpr) $ runRuleClosure ruleClosure refExps
 
-{-# SPECIALIZE executeRules :: Eq def => InferT def Maybe () #-}
-{-# SPECIALIZE executeRules :: (Monoid w, Eq def) => InferT def (Writer w) () #-}
+{-# SPECIALIZE executeRules :: InferT DefI Maybe () #-}
+{-# SPECIALIZE executeRules :: Monoid w => InferT DefI (Writer w) () #-}
 
 execInferT ::
   (Monad m, Eq def) => InferActions def m -> InferState def ->
@@ -316,16 +319,16 @@ execInferT actions state act =
 
 {-# SPECIALIZE
   execInferT ::
-    Eq def => InferActions def Maybe -> InferState def ->
-    InferT def Maybe (Data.Expression def (InferNode def, a)) ->
-    Maybe (Data.Expression def (Inferred def a), Context def)
+    InferActions DefI Maybe -> InferState DefI ->
+    InferT DefI Maybe (Data.Expression DefI (InferNode DefI, a)) ->
+    Maybe (Data.Expression DefI (Inferred DefI a), Context DefI)
   #-}
 
 {-# SPECIALIZE
   execInferT ::
-    (Eq def, Monoid w) => InferActions def (Writer w) -> InferState def ->
-    InferT def (Writer w) (Data.Expression def (InferNode def, a)) ->
-    (Writer w) (Data.Expression def (Inferred def a), Context def)
+    Monoid w => InferActions DefI (Writer w) -> InferState DefI ->
+    InferT DefI (Writer w) (Data.Expression DefI (InferNode DefI, a)) ->
+    (Writer w) (Data.Expression DefI (Inferred DefI a), Context DefI)
   #-}
 
 newtype Loader def m = Loader
@@ -414,8 +417,8 @@ touch ref =
       . map unRuleRef
       ) nodeRules
 
-{-# SPECIALIZE touch :: ExprRef -> InferT def Maybe () #-}
-{-# SPECIALIZE touch :: Monoid w => ExprRef -> InferT def (Writer w) () #-}
+{-# SPECIALIZE touch :: ExprRef -> InferT DefI Maybe () #-}
+{-# SPECIALIZE touch :: Monoid w => ExprRef -> InferT DefI (Writer w) () #-}
 
 setRefExpr :: (Eq def, Monad m) => ExprRef -> RefExpression def -> InferT def m ()
 setRefExpr ref newExpr = do
@@ -444,8 +447,8 @@ setRefExpr ref newExpr = do
       Data.matchExpression compareSubsts ((const . const) Nothing) x y
     compareSubsts x y = guard $ (x ^. rplSubstitutedArgs) == (y ^. rplSubstitutedArgs)
 
-{-# SPECIALIZE setRefExpr :: Eq def => ExprRef -> RefExpression def -> InferT def Maybe () #-}
-{-# SPECIALIZE setRefExpr :: (Monoid w, Eq def) => ExprRef -> RefExpression def -> InferT def (Writer w) () #-}
+{-# SPECIALIZE setRefExpr :: ExprRef -> RefExpression DefI -> InferT DefI Maybe () #-}
+{-# SPECIALIZE setRefExpr :: Monoid w => ExprRef -> RefExpression DefI -> InferT DefI (Writer w) () #-}
 
 data LoadedDef def = LoadedDef
   { lplDef :: def
@@ -585,11 +588,11 @@ inferLoaded actions loadedExpr initialContext node =
 
 {-# SPECIALIZE
   inferLoaded ::
-    Ord def => InferActions def Maybe -> Loaded def a -> Context def -> InferNode def ->
-    Maybe (Data.Expression def (Inferred def a), Context def)
+    InferActions DefI Maybe -> Loaded DefI a -> Context DefI -> InferNode DefI ->
+    Maybe (Data.Expression DefI (Inferred DefI a), Context DefI)
   #-}
 {-# SPECIALIZE
   inferLoaded ::
-    (Ord def, Monoid w) => InferActions def (Writer w) -> Loaded def a -> Context def -> InferNode def ->
-    Writer w (Data.Expression def (Inferred def a), Context def)
+    Monoid w => InferActions DefI (Writer w) -> Loaded DefI a -> Context DefI -> InferNode DefI ->
+    Writer w (Data.Expression DefI (Inferred DefI a), Context DefI)
   #-}
