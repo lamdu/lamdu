@@ -44,7 +44,7 @@ type InferResults =
   , Data.Expression DefI ()
   )
 
-inferResults :: Infer.Expression DefI a -> InferResults
+inferResults :: Data.Expression DefI (Infer.Inferred DefI a) -> InferResults
 inferResults =
   fmap f
   where
@@ -388,7 +388,8 @@ testCase name = HUnit.TestLabel name . HUnit.TestCase
 testResume ::
   String -> Data.Expression DefI () ->
   Data.Expression DefI () ->
-  (Infer.Expression DefI () -> Data.Expression DefI (Infer.Inferred DefI a)) ->
+  (Data.Expression DefI (Infer.Inferred DefI ()) ->
+   Data.Expression DefI (Infer.Inferred DefI a)) ->
   HUnit.Test
 testResume name newExpr testExpr extract =
   testCase name $

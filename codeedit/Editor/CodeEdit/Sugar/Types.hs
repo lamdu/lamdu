@@ -27,12 +27,13 @@ import Control.Monad.Trans.State (StateT)
 import Data.Cache (Cache)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
+import Editor.Data.IRef (DefinitionIRef)
 import qualified Control.Lens.TH as LensTH
 import qualified Data.Store.IRef as IRef
 import qualified Editor.Data as Data
-import qualified Editor.Data.IRef as DataIRef
 import qualified Editor.Data.Infer as Infer
 
+type DefI = DefinitionIRef
 type T = Transaction
 type CT m = StateT Cache (T m)
 
@@ -97,7 +98,7 @@ data Section expr = Section
   , sectionRArg :: Maybe expr
   } deriving (Functor)
 
-type HoleResult = Infer.Expression DataIRef.DefinitionIRef ()
+type HoleResult = Data.Expression DefI (Infer.Inferred DefI ())
 
 data HoleActions m = HoleActions
   { holePickResult :: HoleResult -> T m (Guid, Actions m)
@@ -107,7 +108,7 @@ data HoleActions m = HoleActions
 
 data Hole m = Hole
   { holeScope :: [Guid]
-  , holeInferResults :: Data.Expression DataIRef.DefinitionIRef () -> CT m [HoleResult]
+  , holeInferResults :: Data.Expression DefI () -> CT m [HoleResult]
   , holeMActions :: Maybe (HoleActions m)
   }
 
@@ -123,7 +124,7 @@ data Inferred m expr = Inferred
 
 data Polymorphic expr = Polymorphic
   { pFuncGuid :: Guid
-  , pCompact :: Data.VariableRef DataIRef.DefinitionIRef
+  , pCompact :: Data.VariableRef DefI
   , pFullExpression :: expr
   } deriving (Functor)
 
@@ -132,7 +133,7 @@ data ExpressionBody m expr
   | ExpressionSection { _eHasParens :: HasParens, __eSection :: Section expr }
   | ExpressionFunc    { _eHasParens :: HasParens, __eFunc :: Func m expr }
   | ExpressionPi      { _eHasParens :: HasParens, __ePi :: Pi m expr }
-  | ExpressionGetVariable { __getVariable :: Data.VariableRef DataIRef.DefinitionIRef }
+  | ExpressionGetVariable { __getVariable :: Data.VariableRef DefI }
   | ExpressionHole { __eHole :: Hole m }
   | ExpressionInferred { __eInferred :: Inferred m expr }
   | ExpressionPolymorphic { __ePolymorphic :: Polymorphic expr }

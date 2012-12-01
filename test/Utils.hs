@@ -27,6 +27,9 @@ instance Show Invisible where
 showStructure :: Data.ExpressionBody DefI a -> String
 showStructure = show . (Invisible <$)
 
+instance Show (Data.Expression DefI ()) where
+  show (Data.Expression value ()) = show value
+
 hole :: Data.Expression DefI ()
 hole = Data.pureExpression $ Data.ExpressionLeaf Data.Hole
 
@@ -135,7 +138,7 @@ definitionTypes =
 doInferM ::
   Infer.Context DefI -> Infer.InferNode DefI ->
   Data.Expression DefI a ->
-  (Infer.Expression DefI a, Infer.Context DefI)
+  (Data.Expression DefI (Infer.Inferred DefI a), Infer.Context DefI)
 doInferM initialInferContext inferNode expr
   | success = (iwcInferred <$> exprWC, resultInferContext)
   | otherwise =
@@ -169,7 +172,7 @@ defI :: DefI
 defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
 
 doInfer ::
-  Data.Expression DefI a -> (Infer.Expression DefI a, Infer.Context DefI)
+  Data.Expression DefI a -> (Data.Expression DefI (Infer.Inferred DefI a), Infer.Context DefI)
 doInfer = uncurry doInferM . Infer.initial $ Just defI
 
 factorialExpr :: Data.Expression DefI ()
@@ -192,13 +195,13 @@ factorialExpr =
 
 inferMaybe ::
   Data.Expression DefI a ->
-  Maybe (Infer.Expression DefI a, Infer.Context DefI)
+  Maybe (Data.Expression DefI (Infer.Inferred DefI a), Infer.Context DefI)
 inferMaybe expr =
   uncurry (Infer.inferLoaded (Infer.InferActions (const Nothing)) loaded) $ Infer.initial (Just defI)
   where
     loaded = doLoad expr
 
-factorial :: Int -> (Infer.Expression DefI (), Infer.Context DefI)
+factorial :: Int -> (Data.Expression DefI (Infer.Inferred DefI ()), Infer.Context DefI)
 factorial gen =
   fromMaybe (error "Conflicts in factorial infer") .
   inferMaybe . void $

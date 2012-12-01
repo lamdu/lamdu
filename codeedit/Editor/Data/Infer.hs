@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveDataTypeable,
              PatternGuards #-}
 module Editor.Data.Infer
-  ( Expression, Inferred(..), rExpression
+  ( Inferred(..), rExpression
   , Loaded, load
   , inferLoaded
   , updateAndInfer
@@ -147,8 +147,6 @@ instance (Ord def, Binary def, Binary a) => Binary (Inferred def a) where
   get = Inferred <$> get <*> get <*> get <*> get <*> get
   put (Inferred a b c d e) = sequence_ [put a, put b, put c, put d, put e]
 
-type Expression def a = Data.Expression def (Inferred def a)
-
 data ErrorDetails def
   = MismatchIn
     (Data.Expression def ())
@@ -262,9 +260,9 @@ instance MonadTrans (InferT def) where
 
 derefExpr ::
   (InferState def, Data.Expression def (InferNode def, a)) ->
-  (Expression def a, Context def)
+  (Data.Expression def (Inferred def a), Context def)
 derefExpr (inferState, expr) =
-  (fmap derefNode expr, resultContext)
+  (derefNode <$> expr, resultContext)
   where
     resultContext = inferState ^. sContext
     derefNode (inferNode, s) =
@@ -308,7 +306,7 @@ executeRules = do
 execInferT ::
   (Monad m, Eq def) => InferActions def m -> InferState def ->
   InferT def m (Data.Expression def (InferNode def, a)) ->
-  m (Expression def a, Context def)
+  m (Data.Expression def (Inferred def a), Context def)
 execInferT actions state act =
   liftM derefExpr .
   runInferT actions state $ do
@@ -320,14 +318,14 @@ execInferT actions state act =
   execInferT ::
     Eq def => InferActions def Maybe -> InferState def ->
     InferT def Maybe (Data.Expression def (InferNode def, a)) ->
-    Maybe (Expression def a, Context def)
+    Maybe (Data.Expression def (Inferred def a), Context def)
   #-}
 
 {-# SPECIALIZE
   execInferT ::
     (Eq def, Monoid w) => InferActions def (Writer w) -> InferState def ->
     InferT def (Writer w) (Data.Expression def (InferNode def, a)) ->
-    (Writer w) (Expression def a, Context def)
+    (Writer w) (Data.Expression def (Inferred def a), Context def)
   #-}
 
 newtype Loader def m = Loader
@@ -551,7 +549,7 @@ addRule rule = do
 updateAndInfer ::
   (Eq def, Monad m) => InferActions def m -> Context def ->
   [(ExprRef, Data.Expression def ())] ->
-  Expression def a -> m (Expression def a, Context def)
+  Data.Expression def (Inferred def a) -> m (Data.Expression def (Inferred def a), Context def)
 updateAndInfer actions prevContext updates expr =
   execInferT actions inferState $ do
     mapM_ doUpdate updates
@@ -567,7 +565,7 @@ updateAndInfer actions prevContext updates expr =
 
 inferLoaded ::
   (Ord def, Monad m) => InferActions def m -> Loaded def a -> Context def -> InferNode def ->
-  m (Expression def a, Context def)
+  m (Data.Expression def (Inferred def a), Context def)
 inferLoaded actions loadedExpr initialContext node =
   execInferT actions initialState $ do
     expr <- exprIntoContext (nScope node) loadedExpr
@@ -588,10 +586,10 @@ inferLoaded actions loadedExpr initialContext node =
 {-# SPECIALIZE
   inferLoaded ::
     Ord def => InferActions def Maybe -> Loaded def a -> Context def -> InferNode def ->
-    Maybe (Expression def a, Context def)
+    Maybe (Data.Expression def (Inferred def a), Context def)
   #-}
 {-# SPECIALIZE
   inferLoaded ::
     (Ord def, Monoid w) => InferActions def (Writer w) -> Loaded def a -> Context def -> InferNode def ->
-    Writer w (Expression def a, Context def)
+    Writer w (Data.Expression def (Inferred def a), Context def)
   #-}

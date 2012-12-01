@@ -402,8 +402,9 @@ convertReadOnlyHole exprI =
 fillPartialHolesInExpression ::
   Monad m =>
   (Data.Expression DefI () ->
-   m (Maybe (Infer.Expression DefI a))) ->
-  Infer.Expression DefI a -> m [Infer.Expression DefI a]
+   m (Maybe (Data.Expression DefI (Infer.Inferred DefI a)))) ->
+  Data.Expression DefI (Infer.Inferred DefI a) ->
+  m [Data.Expression DefI (Infer.Inferred DefI a)]
 fillPartialHolesInExpression check oldExpr =
   liftM ((++ [oldExpr]) . maybeToList) .
   recheck . runWriter $ fillHoleExpr oldExpr
@@ -528,7 +529,7 @@ pickResult defaultDest irefP =
 
 -- Also skip param types, those can usually be inferred later, so less
 -- useful to fill immediately
-uninferredHoles :: Infer.Expression DefI a -> [Infer.Expression DefI a]
+uninferredHoles :: Data.Expression DefI (Infer.Inferred DefI a) -> [Data.Expression DefI (Infer.Inferred DefI a)]
 uninferredHoles Data.Expression { Data._eValue = Data.ExpressionApply (Data.Apply func arg) } =
   if (Data.isDependentPi . Infer.iType . Lens.view Data.ePayload) func
   then uninferredHoles func

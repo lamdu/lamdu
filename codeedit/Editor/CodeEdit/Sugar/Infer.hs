@@ -142,7 +142,8 @@ loader =
 inferMaybe ::
   Monad m =>
   Data.Expression DefI a -> Infer.Context DefI ->
-  Infer.InferNode DefI -> T m (Maybe (Infer.Expression DefI a))
+  Infer.InferNode DefI ->
+  T m (Maybe (Data.Expression DefI (Infer.Inferred DefI a)))
 inferMaybe expr inferContext inferPoint = do
   loaded <- Infer.load loader Nothing expr
   return . fmap fst $
