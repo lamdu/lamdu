@@ -27,13 +27,13 @@ import Control.Monad.Trans.State (StateT)
 import Data.Cache (Cache)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
-import Editor.Data.IRef (DefinitionIRef)
 import qualified Control.Lens.TH as LensTH
 import qualified Data.Store.IRef as IRef
 import qualified Editor.Data as Data
+import qualified Editor.Data.IRef as DataIRef
 import qualified Editor.Data.Infer as Infer
 
-type DefI = DefinitionIRef
+type DefI = DataIRef.DefinitionIRef
 type T = Transaction
 type CT m = StateT Cache (T m)
 

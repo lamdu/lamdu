@@ -38,7 +38,6 @@ import Data.Store.Guid (Guid)
 import Editor.CodeEdit.Sugar.Config (SugarConfig)
 import Editor.CodeEdit.Sugar.Monad (SugarM)
 import Editor.CodeEdit.Sugar.Types -- see export list
-import Editor.Data.IRef (DefinitionIRef)
 import Editor.Data.Infer.Conflicts (InferredWithConflicts(..), iwcInferredTypes, iwcInferredValues)
 import System.Random (RandomGen)
 import qualified Control.Lens as Lens
@@ -65,7 +64,7 @@ import qualified Editor.Data.Ops as DataOps
 import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
 
-type DefI = DefinitionIRef
+type DefI = DataIRef.DefinitionIRef
 type Convertor m = SugarInfer.Result m -> SugarM m (Expression m)
 
 mkCutter :: m ~ Anchors.ViewM => DataIRef.Expression -> T m Guid -> T m Guid
