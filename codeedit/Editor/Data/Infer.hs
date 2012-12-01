@@ -40,7 +40,7 @@ import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable)
 import Data.Tuple (swap)
 import Data.Typeable (Typeable)
-import Editor.Data.Infer.Rules (Rule(..), makeAllRules, runRuleClosure, unionRules)
+import Editor.Data.Infer.Rules (Rule(..))
 import Editor.Data.Infer.Types
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
@@ -54,6 +54,7 @@ import qualified Data.Set as Set
 import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
+import qualified Editor.Data.Infer.Rules as Rules
 
 type DefI = DataIRef.DefinitionIRef
 
@@ -301,7 +302,7 @@ executeRules = do
       Rule deps ruleClosure <-
         liftState $ Lens.use (sContext . ruleRefsAt (RuleRef key))
       refExps <- mapM getRefExpr deps
-      mapM_ (uncurry setRefExpr) $ runRuleClosure ruleClosure refExps
+      mapM_ (uncurry setRefExpr) $ Rules.runClosure ruleClosure refExps
 
 {-# SPECIALIZE executeRules :: InferT DefI Maybe () #-}
 {-# SPECIALIZE executeRules :: Monoid w => InferT DefI (Writer w) () #-}
@@ -575,12 +576,12 @@ inferLoaded actions loadedExpr initialContext node =
     liftState . toStateT $ do
       let
         addUnionRules f =
-          mapM_ addRule $ on unionRules (f . nRefs) node . fst $ expr ^. Data.ePayload
+          mapM_ addRule $ on Rules.union (f . nRefs) node . fst $ expr ^. Data.ePayload
       addUnionRules tvVal
       addUnionRules tvType
       rules <-
         Lens.zoom (sContext . nextOrigin) .
-        makeAllRules $ nRefs . fst <$> expr
+        Rules.makeAll $ nRefs . fst <$> expr
       mapM_ addRule rules
     return expr
   where

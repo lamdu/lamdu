@@ -2,8 +2,8 @@
 
 module Editor.Data.Infer.Rules
   ( Rule(..)
-  , makeAllRules, unionRules
-  , runRuleClosure
+  , makeAll, union
+  , runClosure
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
@@ -67,8 +67,8 @@ data Rule def = Rule
   }
 derive makeBinary ''Rule
 
-runRuleClosure :: Eq def => RuleClosure def -> RuleFunction def
-runRuleClosure closure =
+runClosure :: Eq def => RuleClosure def -> RuleFunction def
+runClosure closure =
   case closure of
   LambdaBodyTypeToPiResultTypeClosure x o ->
     runLambdaBodyTypeToPiResultTypeClosure x o
@@ -124,8 +124,8 @@ makeNodeRules (Data.Expression exprBody typedVal) =
       (:) <$> setRule (tvType paramType) <*>
       lambdaStructureRules cons (tvVal typedVal) (fmap tvVal lam)
 
-makeAllRules :: Data.Expression def TypedValue -> State Origin [Rule def]
-makeAllRules expr =
+makeAll :: Data.Expression def TypedValue -> State Origin [Rule def]
+makeAll expr =
   (:)
   <$> (ruleSimpleType . Lens.view Data.ePayload) expr
   <*> makeResumptionRules
@@ -133,7 +133,7 @@ makeAllRules expr =
     makeResumptionRules =
       (++)
       <$> makeNodeRules expr
-      <*> (fmap Foldable.concat . Traversable.mapM makeAllRules . Lens.view Data.eValue) expr
+      <*> (fmap Foldable.concat . Traversable.mapM makeAll . Lens.view Data.eValue) expr
 
 makeHole :: Origin -> RefExpression def
 makeHole g = makeRefExpr g $ Data.ExpressionLeaf Data.Hole
@@ -203,8 +203,8 @@ lambdaRules param (TypedValue lambdaValueRef lambdaTypeRef) bodyTypeRef =
 runCopyClosure :: ExprRef -> RuleFunction def
 runCopyClosure dest ~[srcExpr] = [(dest, srcExpr)]
 
-unionRules :: ExprRef -> ExprRef -> [Rule def]
-unionRules x y =
+union :: ExprRef -> ExprRef -> [Rule def]
+union x y =
   [ Rule [x] $ CopyClosure y
   , Rule [y] $ CopyClosure x
   ]
