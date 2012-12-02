@@ -752,7 +752,7 @@ convertDefinitionExpression config exprLoaded defI (Load.Stored setType typeIRef
   content <-
     lift . convertDefinitionContent sugarContext $ inferredDef ^. SugarInfer.srExpr
   mNewType <- lift $
-    if inferredDef ^. SugarInfer.srSuccess && not typesMatch && isCompleteType inferredTypeP
+    if inferredDef ^. SugarInfer.srSuccess && not typesMatch
     then liftM Just mkNewType
     else return Nothing
   return $ DefinitionBodyExpression DefinitionExpression
