@@ -19,7 +19,7 @@ module Editor.Data.Infer
 
 import Control.Applicative (Applicative(..), (<$), (<$>))
 import Control.Lens ((%=), (.=), (^.), (+=))
-import Control.Monad (guard, liftM, liftM2, unless, void, when)
+import Control.Monad (guard, liftM, unless, void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.State (StateT(..), State, runState)
@@ -179,13 +179,13 @@ LensTH.makeLenses ''InferState
 
 -- ExprRefMap:
 
+toRefExpression :: Data.Expression def () -> State Origin (RefExpression def)
+toRefExpression = Traversable.mapM . const $ RefExprPayload mempty <$> mkOrigin
+
 createRefExpr :: State (Context def) ExprRef
 createRefExpr = do
-  holeRefExpr <-
-    liftM (Data.Expression Data.hole . RefExprPayload mempty) $
-    Lens.zoom nextOrigin mkOrigin
-  liftM ExprRef . Lens.zoom exprMap . createRef $
-    RefData holeRefExpr mempty
+  holeRefExpr <- Lens.zoom nextOrigin $ toRefExpression Data.pureHole
+  liftM ExprRef . Lens.zoom exprMap . createRef $ RefData holeRefExpr mempty
 
 exprRefsAt :: Functor f => ExprRef -> Lens.SimpleLensLike f (Context def) (RefData def)
 exprRefsAt k = exprMap . refsAt (unExprRef k)
@@ -338,28 +338,16 @@ newtype Loader def m = Loader
 
 -- Initial expression for inferred value and type of a stored entity.
 -- Types are returned only in cases of expanding definitions.
-initialExprs ::
-  Data.Expression (LoadedDef def) () ->
-  State Origin
-  ( Data.Expression def Origin
-  , Data.Expression def Origin
-  )
-initialExprs (Data.Expression body ()) =
+initialValExpr ::
+  Data.Expression def () ->
+  State Origin (RefExpression def)
+initialValExpr (Data.Expression body ()) =
+  toRefExpression $
   case body of
-  Data.ExpressionApply _ ->
-    liftM2 (,) mkHoleO mkHoleO
-  Data.ExpressionLeaf
-    (Data.GetVariable
-     (Data.DefinitionRef (LoadedDef _ (Just refType))))
-    -> liftM2 (,) (addOrigin circumcizedBody) (addOrigin refType)
-  _ -> liftM2 (,) (addOrigin circumcizedBody) mkHoleO
+  Data.ExpressionApply _ -> Data.pureHole
+  _ -> circumcized body
   where
-    circumcizedBody =
-      Data.pureExpression .
-      Lens.over Data.expressionBodyDef lplDef $
-      (Data.pureHole <$) body
-    mkHoleO = addOrigin Data.pureHole
-    addOrigin = Traversable.mapM (const mkOrigin)
+    circumcized = Data.pureExpression . (Data.pureHole <$)
 
 -- This is because platform's Either's Monad instance sucks
 runEither :: EitherT l Identity a -> Either l a
@@ -451,34 +439,36 @@ setRefExpr ref newExpr = do
 {-# SPECIALIZE setRefExpr :: ExprRef -> RefExpression DefI -> InferT DefI Maybe () #-}
 {-# SPECIALIZE setRefExpr :: Monoid w => ExprRef -> RefExpression DefI -> InferT DefI (Writer w) () #-}
 
-data LoadedDef def = LoadedDef
-  { lplDef :: def
-  , -- Nothing to signify recursive reference:
-    _lplDefType :: Maybe (Data.Expression def ())
-  } deriving (Typeable)
-derive makeBinary ''LoadedDef
+liftOriginState :: Monad m => State Origin a -> InferT def m a
+liftOriginState = liftState . Lens.zoom (sContext . nextOrigin) . toStateT
 
-instance Functor LoadedDef where
-  fmap f (LoadedDef def defType) =
-    LoadedDef
-    (f def) $
-    Lens.over (Lens.mapped . Data.expressionDef) f defType
+liftContextState :: Monad m => State (Context def) a -> InferT def m a
+liftContextState = liftState . Lens.zoom sContext . toStateT
 
 exprIntoContext ::
   (Monad m, Ord def) => Scope def ->
-  Data.Expression (LoadedDef def) s ->
-  InferT def m (Data.Expression def (InferNode def, s))
-exprIntoContext rootScope rootExpr = do
-  go rootScope =<<
-    ( liftState . Lens.zoom sContext
-    . Traversable.mapM addTypedVal
-    ) rootExpr
+  Loaded def a ->
+  InferT def m (Data.Expression def (InferNode def, a))
+exprIntoContext rootScope (Loaded rootExpr defTypes) = do
+  defTypesRefs <-
+    Traversable.mapM defTypeIntoContext $
+    Map.mapKeys Data.DefinitionRef defTypes
+  -- mappend prefers left, so it is critical we put rootScope
+  -- first. defTypesRefs may contain the loaded recursive defI because
+  -- upon resumption, we load without giving the root defI, so its
+  -- type does get (unnecessarily) loaded.
+  go (rootScope `mappend` defTypesRefs) =<<
+    liftContextState
+    (Traversable.mapM addTypedVal rootExpr)
   where
-    addTypedVal x = liftM ((,) x) $ toStateT createTypedVal
+    defTypeIntoContext defType = do
+      ref <- liftContextState createRefExpr
+      setRefExpr ref =<< liftOriginState (toRefExpression defType)
+      return ref
+    addTypedVal x = liftM ((,) x) $ createTypedVal
     go scope (Data.Expression body (s, createdTV)) = do
       inferNode <- toInferNode scope (void <$> body) createdTV
       newBody <-
-        (liftM . Lens.over Data.expressionBodyDef) lplDef $
         case body of
         Data.ExpressionLambda lam -> goLambda Data.makeLambda scope lam
         Data.ExpressionPi lam -> goLambda Data.makePi scope lam
@@ -494,39 +484,35 @@ exprIntoContext rootScope rootExpr = do
 
     toInferNode scope body tv = do
       let
-        typedValue@(TypedValue val typ) =
+        typedValue@(TypedValue val _) =
           tv
           { tvType =
             case body of
             Data.ExpressionLeaf (Data.GetVariable varRef)
-              | Just x <- Map.lookup (lplDef <$> varRef) scope -> x
+              | Just x <- Map.lookup varRef scope -> x
             _ -> tvType tv
           }
-      (initialVal, initialType) <-
-        liftState . Lens.zoom (sContext . nextOrigin) . toStateT . initialExprs $
-        Data.pureExpression body
-      setRefExpr val $ RefExprPayload mempty <$> initialVal
-      setRefExpr typ $ RefExprPayload mempty <$> initialType
+      initialVal <- liftOriginState . initialValExpr $ Data.pureExpression body
+      setRefExpr val initialVal
       return $ InferNode typedValue scope
 
 ordNub :: Ord a => [a] -> [a]
 ordNub = Set.toList . Set.fromList
 
-type Loaded def a = Data.Expression (LoadedDef def) a
+data Loaded def a = Loaded
+  { _lExpr :: Data.Expression def a
+  , _lDefTypes :: Map def (Data.Expression def ())
+  } deriving (Typeable)
+instance (Binary a, Binary def, Ord def) => Binary (Loaded def a) where
+  get = Loaded <$> get <*> get
+  put (Loaded a b) = put a >> put b
 
 load ::
   (Monad m, Ord def) => Loader def m ->
   Maybe def -> Data.Expression def a ->
   m (Loaded def a)
-load loader mRecursiveDef expr = do
-  -- Separate load-types phase so we avoid duplicate work (loading
-  -- same def's type twice)
-  defTypesMap <- loadDefTypes
-  -- Inject the loaded types into the def in the expression:
-  let
-    mkLoadedDef def =
-      LoadedDef def $ Map.lookup def defTypesMap
-  return $ Lens.over Data.expressionDef mkLoadedDef expr
+load loader mRecursiveDef expr =
+  liftM (Loaded expr) loadDefTypes
   where
     loadDefTypes =
       liftM Map.fromList .
@@ -563,12 +549,12 @@ updateAndInfer actions prevContext updates expr =
     f inferred = (iPoint inferred, iStored inferred)
     doUpdate (ref, newExpr) =
       setRefExpr ref =<<
-      (liftState . Lens.zoom (sContext . nextOrigin) . makeRefExprFromPure) newExpr
-    makeRefExprFromPure =
-      Traversable.mapM . const . liftM (RefExprPayload mempty) $ toStateT mkOrigin
+      (liftOriginState . toRefExpression) newExpr
 
 inferLoaded ::
-  (Ord def, Monad m) => InferActions def m -> Loaded def a -> Context def -> InferNode def ->
+  (Ord def, Monad m) =>
+  InferActions def m -> Loaded def a ->
+  Context def -> InferNode def ->
   m (Data.Expression def (Inferred def a), Context def)
 inferLoaded actions loadedExpr initialContext node =
   execInferT initialState $ do
@@ -580,8 +566,7 @@ inferLoaded actions loadedExpr initialContext node =
       addUnionRules tvVal
       addUnionRules tvType
       rules <-
-        Lens.zoom (sContext . nextOrigin) .
-        Rules.makeAll $ nRefs . fst <$> expr
+        Lens.zoom (sContext . nextOrigin) . Rules.makeAll $ nRefs . fst <$> expr
       mapM_ addRule rules
     return expr
   where
