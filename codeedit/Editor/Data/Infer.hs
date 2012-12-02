@@ -81,8 +81,8 @@ instance Show RuleRef where
 -- Param types of Lambdas and Pis are of type Set
 -- Pi result type is of type Set
 
--- When recursing on an expression, we remember the parent expression guids,
--- And we make sure not to add a sub-expression with a parent guid (that's a recursive structure).
+-- When recursing on an expression, we remember the parent expression origins,
+-- And we make sure not to add a sub-expression with a parent origin (that's a recursive structure).
 
 data RefData def = RefData
   { _rExpression :: RefExpression def
@@ -369,8 +369,8 @@ guardEither :: l -> Bool -> EitherT l Identity ()
 guardEither err False = Either.left err
 guardEither _ True = return ()
 
-guidRepeat :: RefExpression def -> Bool
-guidRepeat =
+originRepeat :: RefExpression def -> Bool
+originRepeat =
   go Set.empty
   where
     go forbidden (Data.Expression body pl)
@@ -383,8 +383,8 @@ guidRepeat =
 -- Merge two expressions:
 -- If they do not match, return Nothing.
 -- Holes match with anything, expand to the other expr.
--- Guids come from the first expression (where available).
--- If guids repeat, fail.
+-- Param guids and Origins come from the first expression.
+-- If origins repeat, fail.
 mergeExprs ::
   Eq def =>
   RefExpression def ->
@@ -393,17 +393,17 @@ mergeExprs ::
 mergeExprs p0 p1 =
   runEither $ do
     result <- Data.matchExpression onMatch onMismatch p0 p1
-    guardEither (InfiniteExpression (void result)) . not $ guidRepeat result
+    guardEither (InfiniteExpression (void result)) . not $ originRepeat result
     return result
   where
-    addSubstituted addition =
+    src `mergePayloadInto` dest =
       Lens.over rplSubstitutedArgs
-      ((mappend . Lens.view rplSubstitutedArgs) addition)
-    onMatch x y = return $ addSubstituted y x
+      ((mappend . Lens.view rplSubstitutedArgs) src) dest
+    onMatch x y = return $ y `mergePayloadInto` x
     onMismatch (Data.Expression (Data.ExpressionLeaf Data.Hole) s0) e1 =
-      return $ fmap (addSubstituted s0) e1
+      return $ (s0 `mergePayloadInto`) <$> e1
     onMismatch e0 (Data.Expression (Data.ExpressionLeaf Data.Hole) s1) =
-      return $ fmap (addSubstituted s1) e0
+      return $ (s1 `mergePayloadInto`) <$> e0
     onMismatch e0 e1 =
       Either.left $ MismatchIn (void e0) (void e1)
 
