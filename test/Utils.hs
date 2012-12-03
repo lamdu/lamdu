@@ -82,8 +82,7 @@ ansiRed = "\ESC[31m"
 ansiReset :: String
 ansiReset = "\ESC[0m"
 
-showExpressionWithConflicts ::
-  Data.Expression DefI (InferredWithConflicts DefI a) -> String
+showExpressionWithConflicts :: Data.Expression DefI (InferredWithConflicts DefI) -> String
 showExpressionWithConflicts =
   List.intercalate "\n" . go
   where
@@ -138,18 +137,26 @@ definitionTypes =
 doInferM ::
   Infer.Context DefI -> Infer.InferNode DefI ->
   Data.Expression DefI a ->
-  (Data.Expression DefI (Infer.Inferred DefI a), Infer.Context DefI)
+  (Data.Expression DefI (Infer.Inferred DefI, a), Infer.Context DefI)
 doInferM initialInferContext inferNode expr
-  | success = (iwcInferred <$> exprWC, resultInferContext)
+  | success = ((fmap . first) iwcInferred exprWC, resultInferContext)
   | otherwise =
     error $ unlines
     [ "Result with conflicts:"
     -- TODO: Extract the real root (in case of resumption) to show
-    , showExpressionWithConflicts exprWC
+    , showExpressionWithConflicts $ fst <$> exprWC
     ]
   where
     (success, resultInferContext, exprWC) =
       inferWithConflicts (doLoad expr) initialInferContext inferNode
+
+doInferM_ ::
+  Infer.Context DefI -> Infer.InferNode DefI ->
+  Data.Expression DefI a ->
+  (Data.Expression DefI (Infer.Inferred DefI), Infer.Context DefI)
+doInferM_ initialInferContext inferNode expr =
+  (first . fmap) fst $
+  doInferM initialInferContext inferNode expr
 
 doLoad ::
   Data.Expression DefI a ->
@@ -172,8 +179,16 @@ defI :: DefI
 defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
 
 doInfer ::
-  Data.Expression DefI a -> (Data.Expression DefI (Infer.Inferred DefI a), Infer.Context DefI)
+  Data.Expression DefI a ->
+  ( Data.Expression DefI (Infer.Inferred DefI, a)
+  , Infer.Context DefI
+  )
 doInfer = uncurry doInferM . Infer.initial $ Just defI
+
+doInfer_ ::
+  Data.Expression DefI a ->
+  (Data.Expression DefI (Infer.Inferred DefI), Infer.Context DefI)
+doInfer_ = (first . fmap) fst . doInfer
 
 factorialExpr :: Data.Expression DefI ()
 factorialExpr =
@@ -195,14 +210,19 @@ factorialExpr =
 
 inferMaybe ::
   Data.Expression DefI a ->
-  Maybe (Data.Expression DefI (Infer.Inferred DefI a), Infer.Context DefI)
+  Maybe (Data.Expression DefI (Infer.Inferred DefI, a), Infer.Context DefI)
 inferMaybe expr =
   uncurry (Infer.inferLoaded (Infer.InferActions (const Nothing)) loaded) $ Infer.initial (Just defI)
   where
     loaded = doLoad expr
 
-factorial :: Int -> (Data.Expression DefI (Infer.Inferred DefI ()), Infer.Context DefI)
+inferMaybe_ ::
+  Data.Expression DefI b ->
+  Maybe (Data.Expression DefI (Infer.Inferred DefI), Infer.Context DefI)
+inferMaybe_ = (fmap . first . fmap) fst . inferMaybe
+
+factorial :: Int -> (Data.Expression DefI (Infer.Inferred DefI), Infer.Context DefI)
 factorial gen =
   fromMaybe (error "Conflicts in factorial infer") .
-  inferMaybe . void $
+  inferMaybe_ . void $
   fmap (const gen) factorialExpr

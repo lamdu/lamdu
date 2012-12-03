@@ -98,7 +98,7 @@ data Section expr = Section
   , sectionRArg :: Maybe expr
   } deriving (Functor)
 
-type HoleResult = Data.Expression DefI (Infer.Inferred DefI ())
+type HoleResult = Data.Expression DefI (Infer.Inferred DefI)
 
 data HoleActions m = HoleActions
   { holePickResult :: HoleResult -> T m (Guid, Actions m)
@@ -175,7 +175,7 @@ data WhereItem m = WhereItem
   { wiValue :: DefinitionContent m
   , wiGuid :: Guid
   , wiHiddenGuids :: [Guid]
-  , wiActions :: ListItemActions m
+  , wiActions :: Maybe (ListItemActions m)
   }
 
 -- Common data for definitions and where-items

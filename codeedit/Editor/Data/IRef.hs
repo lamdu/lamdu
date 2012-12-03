@@ -6,7 +6,7 @@ module Editor.Data.IRef
   , Lambda, Apply
   , newExprBody, readExprBody, writeExprBody, exprGuid
   , newLambda, newPi
-  , newExpression, writeExpression
+  , newExpression, writeExpression, readExpression
   , DefinitionIRef, DefinitionI
   ) where
 
@@ -30,6 +30,8 @@ import qualified Editor.Data as Data
 type DefinitionI = Data.Definition Expression
 type DefinitionIRef = IRef DefinitionI
 
+type T = Transaction
+
 newtype Expression = Expression {
   unExpression :: IRef (Data.ExpressionBody DefinitionIRef Expression)
   } deriving (Eq, Ord, Show, Typeable)
@@ -46,55 +48,58 @@ epGuid = IRef.guid . unExpression . Property.value
 exprGuid :: Expression -> Guid
 exprGuid = IRef.guid . unExpression
 
-newExprBody :: Monad m => ExpressionBody -> Transaction m Expression
+newExprBody :: Monad m => ExpressionBody -> T m Expression
 newExprBody = liftM Expression . Transaction.newIRef
 
 newLambdaCons ::
   Monad m =>
   (Guid -> expr -> expr -> ExpressionBody) ->
-  expr -> expr -> Transaction m (Guid, Expression)
+  expr -> expr -> T m (Guid, Expression)
 newLambdaCons cons paramType result = do
   key <- Transaction.newKey
   expr <- newExprBody $ cons key paramType result
   return (key, expr)
 
-newPi :: Monad m => Expression -> Expression -> Transaction m (Guid, Expression)
+newPi :: Monad m => Expression -> Expression -> T m (Guid, Expression)
 newPi = newLambdaCons Data.makePi
 
-newLambda :: Monad m => Expression -> Expression -> Transaction m (Guid, Expression)
+newLambda :: Monad m => Expression -> Expression -> T m (Guid, Expression)
 newLambda = newLambdaCons Data.makeLambda
 
-readExprBody :: Monad m => Expression -> Transaction m ExpressionBody
+readExprBody :: Monad m => Expression -> T m ExpressionBody
 readExprBody = Transaction.readIRef . unExpression
 
-writeExprBody :: Monad m => Expression -> ExpressionBody -> Transaction m ()
+writeExprBody :: Monad m => Expression -> ExpressionBody -> T m ()
 writeExprBody = Transaction.writeIRef . unExpression
 
-newExpression :: Monad m => Data.Expression DefinitionIRef a -> Transaction m Expression
+newExpression :: Monad m => Data.Expression DefinitionIRef a -> T m Expression
 newExpression = liftM (fst . Lens.view Data.ePayload) . newExpressionFromH
 
 -- Returns expression with new Guids
-writeExpression
-  :: Monad m => Expression -> Data.Expression DefinitionIRef a
-  -> Transaction m (Data.Expression DefinitionIRef (Expression, a))
-writeExpression (Expression iref) expr = do
+writeExpression ::
+  Monad m => Expression -> Data.Expression DefinitionIRef a ->
+  T m (Data.Expression DefinitionIRef (Expression, a))
+writeExpression iref expr = do
   exprBodyP <- expressionBodyFrom expr
-  Transaction.writeIRef iref $ fmap (fst . Lens.view Data.ePayload) exprBodyP
+  writeExprBody iref $ fmap (fst . Lens.view Data.ePayload) exprBodyP
   return $ Data.Expression exprBodyP
-    (Expression iref, expr ^. Data.ePayload)
+    (iref, expr ^. Data.ePayload)
+
+readExpression ::
+  Monad m => Expression -> T m (Data.Expression DefinitionIRef Expression)
+readExpression exprI =
+  liftM (`Data.Expression` exprI) .
+  Traversable.mapM readExpression =<< readExprBody exprI
 
 expressionBodyFrom ::
-  Monad m =>
-  Data.Expression DefinitionIRef a ->
-  Transaction m
-  (Data.ExpressionBodyExpr DefinitionIRef (Expression, a))
+  Monad m => Data.Expression DefinitionIRef a ->
+  T m (Data.ExpressionBodyExpr DefinitionIRef (Expression, a))
 expressionBodyFrom = Traversable.mapM newExpressionFromH . Lens.view Data.eValue
 
 newExpressionFromH ::
   Monad m =>
   Data.Expression DefinitionIRef a ->
-  Transaction m
-  (Data.Expression DefinitionIRef (Expression, a))
+  T m (Data.Expression DefinitionIRef (Expression, a))
 newExpressionFromH expr =
   liftM f . Transaction.newIRefWithGuid $ const mkPair
   where

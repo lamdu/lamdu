@@ -1,7 +1,8 @@
 {-# OPTIONS_GHC -O2 #-}
 {-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveDataTypeable #-}
 module Editor.Data
-  ( Definition(..), DefinitionBody(..)
+  ( Definition(..), defBody, defType
+  , DefinitionBody(..)
   , FFIName(..)
   , VariableRef(..)
   , Lambda(..), lambdaParamId, lambdaParamType, lambdaBody
@@ -26,6 +27,9 @@ module Editor.Data
   , bitraverseExpression
   , expressionBodyDef
   , expressionDef
+
+  , ExprLambdaWrapper(..), exprLambdaCons, exprLambdaUncons
+  , maybePi, maybeLambda
   ) where
 
 import Control.Applicative (Applicative(..), liftA2, (<$>))
@@ -56,6 +60,7 @@ import qualified System.Random as Random
 data Lambda expr = Lambda
   { _lambdaParamId :: Guid
   , _lambdaParamType :: expr
+  -- TODO: Rename to _lambdaResult (for Pi it is not a body)
   , _lambdaBody :: expr
   } deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
@@ -164,8 +169,8 @@ data DefinitionBody expr
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
 data Definition expr = Definition
-  { defBody :: DefinitionBody expr
-  , defType :: expr
+  { _defBody :: DefinitionBody expr
+  , _defType :: expr
   } deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Typeable)
 
 data Expression def a = Expression
@@ -173,9 +178,16 @@ data Expression def a = Expression
   , _ePayload :: a
   } deriving (Functor, Eq, Ord, Foldable, Traversable, Typeable)
 LensTH.makeLenses ''Expression
+LensTH.makeLenses ''Definition
 
 instance (Show a, Show def) => Show (Expression def a) where
-  show (Expression body payload) = show body ++ "{" ++ show payload ++ "}"
+  show (Expression body payload) =
+    show body ++ showPayload
+    where
+      showPayload =
+        case show payload of
+        "()" -> ""
+        x -> "{" ++ x ++ "}"
 
 bitraverseExpression ::
   Applicative f =>
@@ -277,6 +289,31 @@ isDependentPi (Expression (ExpressionPi (Lambda g _ resultType)) _) =
     isGet (ExpressionLeaf (GetVariable (ParameterRef p))) = p == g
     isGet _ = False
 isDependentPi _ = False
+
+data ExprLambdaWrapper = ExprLambda | ExprPi
+  deriving (Eq, Ord, Show, Typeable)
+derive makeBinary ''ExprLambdaWrapper
+
+-- TODO: Rename to extractExpressionLambda?
+maybeLambda :: ExpressionBody def a -> Maybe (Lambda a)
+maybeLambda (ExpressionLambda x) = Just x
+maybeLambda _ = Nothing
+
+-- TODO: Rename to extractExpressionPi?
+maybePi :: ExpressionBody def a -> Maybe (Lambda a)
+maybePi (ExpressionPi x) = Just x
+maybePi _ = Nothing
+
+exprLambdaCons :: ExprLambdaWrapper -> Lambda expr -> ExpressionBody def expr
+exprLambdaCons ExprLambda = ExpressionLambda
+exprLambdaCons ExprPi = ExpressionPi
+
+exprLambdaUncons ::
+  ExprLambdaWrapper ->
+  ExpressionBody def expr ->
+  Maybe (Lambda expr)
+exprLambdaUncons ExprLambda = maybeLambda
+exprLambdaUncons ExprPi = maybePi
 
 derive makeBinary ''FFIName
 derive makeBinary ''VariableRef

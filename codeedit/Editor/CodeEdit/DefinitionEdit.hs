@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, PatternGuards #-}
 module Editor.CodeEdit.DefinitionEdit(make) where
 
 import Control.Monad (liftM)
@@ -138,17 +138,19 @@ makeWhereItemEdit item =
       foldr ((.) . (`ExprGuiM.assignCursor` myId) . WidgetIds.fromGuid) id $
       Sugar.wiHiddenGuids item
     myId = WidgetIds.fromGuid $ Sugar.wiGuid item
-    eventMap =
+    eventMap
+      | Just wiActions <- Sugar.wiActions item =
       mconcat
       [ Widget.keysEventMapMovesCursor (Config.delForwardKeys ++ Config.delBackwordKeys)
         "Delete where item" .
-        liftM WidgetIds.fromGuid .
-        Lens.view Sugar.itemDelete $ Sugar.wiActions item
+        liftM WidgetIds.fromGuid $
+        Lens.view Sugar.itemDelete wiActions
       , Widget.keysEventMapMovesCursor Config.addWhereItemKeys
         "Add outer where item" .
-        liftM WidgetIds.fromGuid .
-        Lens.view Sugar.itemAddNext $ Sugar.wiActions item
+        liftM WidgetIds.fromGuid $
+        Lens.view Sugar.itemAddNext wiActions
       ]
+      | otherwise = mempty
 
 makeDefBodyEdit ::
   MonadF m => Guid -> Sugar.DefinitionContent m -> ExprGuiM m (WidgetT m)

@@ -1,6 +1,7 @@
 module InferTests (allTests) where
 
 import Control.Applicative (liftA2)
+import Control.Arrow ((&&&))
 import Control.Exception (evaluate)
 import Control.Lens ((^.))
 import Control.Monad (join, void)
@@ -44,11 +45,8 @@ type InferResults =
   , Data.Expression DefI ()
   )
 
-inferResults :: Data.Expression DefI (Infer.Inferred DefI a) -> InferResults
-inferResults =
-  fmap f
-  where
-    f inferred = (Infer.iValue inferred, Infer.iType inferred)
+inferResults :: Data.Expression DefI (Infer.Inferred DefI) -> InferResults
+inferResults = fmap (void . Infer.iValue &&& void . Infer.iType)
 
 showExpressionWithInferred :: InferResults -> String
 showExpressionWithInferred =
@@ -388,13 +386,13 @@ testCase name = HUnit.TestLabel name . HUnit.TestCase
 testResume ::
   String -> Data.Expression DefI () ->
   Data.Expression DefI () ->
-  (Data.Expression DefI (Infer.Inferred DefI ()) ->
-   Data.Expression DefI (Infer.Inferred DefI a)) ->
+  (Data.Expression DefI (Infer.Inferred DefI) ->
+   Data.Expression DefI (Infer.Inferred DefI)) ->
   HUnit.Test
 testResume name newExpr testExpr extract =
   testCase name $
   let
-    (tExpr, inferContext) = doInfer testExpr
+    (tExpr, inferContext) = doInfer_ testExpr
   in
     void . evaluate $
     doInferM inferContext
@@ -431,7 +429,7 @@ testInfer name pureExpr result =
      , "expected expr:", showExpressionWithInferred result
      ]) $ compareInferred inferredExpr result
   where
-    inferredExpr = inferResults . fst $ doInfer pureExpr
+    inferredExpr = inferResults . fst $ doInfer_ pureExpr
 
 getRecursiveDef :: Data.Expression DefI ()
 getRecursiveDef =
@@ -463,11 +461,11 @@ resumptionTests =
   , testCase "ref to the def on the side" $
     let
       (exprD, inferContext) =
-        doInfer $ makeLambda "" hole hole
+        doInfer_ $ makeLambda "" hole hole
       body = getLambdaBody exprD
       scope = Infer.nScope . Infer.iPoint $ body ^. Data.ePayload
       (exprR, _) =
-        uncurry doInferM
+        uncurry doInferM_
         (Infer.newNodeWithScope scope inferContext)
         getRecursiveDef
       resultD = inferResults exprD
@@ -508,7 +506,7 @@ failResumptionAddsRules =
       ( Infer.iPoint . Lens.view Data.ePayload
       . getPiResult . getLambdaParamType
       ) origInferred
-    (origInferred, origRefMap) = doInfer origExpr
+    (origInferred, origRefMap) = doInfer_ origExpr
     origExpr =
       makeLambda "x" (makePi "" hole hole) $
       makeApply [makeParameterRef "x", hole, hole]

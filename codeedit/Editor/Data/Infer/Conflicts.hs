@@ -7,26 +7,27 @@ module Editor.Data.Infer.Conflicts
   ) where
 
 import Control.Applicative ((<$>), (<*>))
+import Control.Arrow (first)
+import Control.Monad (void)
+import Control.Monad.Trans.State (runStateT)
 import Control.Monad.Trans.Writer (Writer, runWriter)
 import Data.Binary (Binary(..))
-import Data.Foldable (Foldable(..))
 import Data.Map (Map)
 import Data.Monoid (Monoid(..))
 import Data.Set (Set)
-import Data.Traversable (Traversable)
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Editor.Data as Data
 import qualified Editor.Data.Infer as Infer
 
-data InferredWithConflicts def a = InferredWithConflicts
-  { iwcInferred :: Infer.Inferred def a
+data InferredWithConflicts def = InferredWithConflicts
+  { iwcInferred :: Infer.Inferred def
   , iwcTypeConflicts :: [Infer.Error def]
   , iwcValueConflicts :: [Infer.Error def]
-  } deriving (Functor, Foldable, Traversable)
+  }
 
-instance (Ord def, Binary def, Binary a) => Binary (InferredWithConflicts def a) where
+instance (Ord def, Binary def) => Binary (InferredWithConflicts def) where
   get = InferredWithConflicts <$> get <*> get <*> get
   put (InferredWithConflicts a b c) = sequence_ [put a, put b, put c]
 
@@ -52,17 +53,18 @@ inferWithConflicts ::
   Infer.Context def -> Infer.InferNode def ->
   ( Bool
   , Infer.Context def
-  , Data.Expression def (InferredWithConflicts def a)
+  , Data.Expression def (InferredWithConflicts def, a)
   )
 inferWithConflicts loaded initialInferContext node =
   ( Map.null $ unConflictMap conflictsMap
   , resultInferContext
-  , fmap toIWC exprInferred
+  , (fmap . first) toIWC exprInferred
   )
   where
     ((exprInferred, resultInferContext), conflictsMap) =
-      runWriter $ Infer.inferLoaded (Infer.InferActions reportConflict)
-      loaded initialInferContext node
+      runWriter . (`runStateT` initialInferContext) $
+      Infer.inferLoaded (Infer.InferActions reportConflict)
+      loaded node
     toIWC x =
       InferredWithConflicts
       { iwcInferred = x
@@ -75,15 +77,15 @@ inferWithConflicts loaded initialInferContext node =
 
 iwcInferredExprs ::
   Ord def =>
-  (Infer.Inferred def a -> Data.Expression def ()) ->
-  (InferredWithConflicts def a -> [Infer.Error def]) ->
-  InferredWithConflicts def a -> [Data.Expression def ()]
+  (Infer.Inferred def -> Data.Expression def a) ->
+  (InferredWithConflicts def -> [Infer.Error def]) ->
+  InferredWithConflicts def -> [Data.Expression def ()]
 iwcInferredExprs getVal eeConflicts ee =
-  (getVal . iwcInferred) ee :
+  (void . getVal . iwcInferred) ee :
   (Set.toList . Set.fromList . map (snd . Infer.errMismatch) . eeConflicts) ee
 
-iwcInferredTypes :: Ord def => InferredWithConflicts def a -> [Data.Expression def ()]
+iwcInferredTypes :: Ord def => InferredWithConflicts def -> [Data.Expression def ()]
 iwcInferredTypes = iwcInferredExprs Infer.iType iwcTypeConflicts
 
-iwcInferredValues :: Ord def => InferredWithConflicts def a -> [Data.Expression def ()]
+iwcInferredValues :: Ord def => InferredWithConflicts def -> [Data.Expression def ()]
 iwcInferredValues = iwcInferredExprs Infer.iValue iwcValueConflicts

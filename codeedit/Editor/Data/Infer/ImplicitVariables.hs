@@ -1,86 +1,106 @@
+{-# LANGUAGE DeriveFunctor, DeriveDataTypeable, TemplateHaskell #-}
 module Editor.Data.Infer.ImplicitVariables
-  ( addVariables
+  ( addVariables, Payload(..)
   ) where
 
-import Control.Applicative ((<$), (<$>))
-import Control.Arrow (second)
-import Control.Lens ((^.))
-import Control.Monad (guard, void)
-import Control.Monad.Trans.State (runState)
+import Control.Lens (SimpleLens, (^.))
+import Control.Monad (liftM, liftM2)
+import Control.Monad.Trans.State (State, runState)
+import Data.Binary (Binary(..), getWord8, putWord8)
+import Data.Derive.Binary (makeBinary)
+import Data.DeriveTH (derive)
+import Data.Functor.Identity (Identity(..))
 import Data.Hashable (hash)
-import Data.Maybe (fromMaybe)
+import Data.Monoid (mempty)
+import Data.Store.Guid (Guid)
+import Data.Tuple (swap)
+import Data.Typeable (Typeable)
 import System.Random (RandomGen, random)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
-import qualified Data.Traversable as Traversable
+import qualified Data.Store.Guid as Guid
 import qualified Editor.Data as Data
 import qualified Editor.Data.Infer as Infer
 import qualified System.Random as Random
 
-onFirstHole ::
-  (Data.Expression def a -> Data.Expression def a) ->
-  Data.Expression def a -> Maybe (Data.Expression def a)
-onFirstHole f =
-  toMaybe . (`runState` False) . go
-  where
-    toMaybe (x, isDone) = x <$ guard isDone
-    go expr@(Data.Expression body payload) = do
-      isDone <- State.get
-      if isDone
-        then return expr
-        else
-          case body of
-          Data.ExpressionLeaf Data.Hole ->
-            let newExpr = f expr
-            in newExpr <$ State.put True
-          _ ->
-            (`Data.Expression` payload) <$>
-            Traversable.mapM go body
+inferredLens :: SimpleLens (Data.Expression def (Infer.Inferred def, b)) (Infer.Inferred def)
+inferredLens = Data.ePayload . Lens._1
+
+data Payload a = Stored a | AutoGen Guid
+  deriving (Eq, Ord, Show, Functor, Typeable)
+derive makeBinary ''Payload
+
+isUnrestrictedHole :: Data.Expression def Infer.IsRestrictedPoly -> Bool
+isUnrestrictedHole
+  (Data.Expression
+    (Data.ExpressionLeaf Data.Hole)
+    Infer.UnrestrictedPoly) = True
+isUnrestrictedHole _ = False
 
 addVariablesGen ::
-  (Eq def, RandomGen g) => g -> Infer.Context def ->
-  Data.Expression def (Infer.Inferred def a) ->
-  ( Infer.Context def
-  , Data.Expression def (Infer.Inferred def a)
-  )
-addVariablesGen gen refMap expr =
-  case mFirstHoleReplaced of
-  Nothing -> (refMap, expr)
-  Just replacedType ->
+  (Ord def, RandomGen g) => g ->
+  Data.Expression def (Infer.Inferred def, b) ->
+  Data.Expression def (Infer.Inferred def, Payload a) ->
+  State (Infer.Context def) (Data.Expression def (Infer.Inferred def, Payload a))
+addVariablesGen gen rootTypeExpr expr =
+  case unrestrictedHoles of
+  [] -> return expr
+  (hole : _) -> do
+    paramTypeTypeRef <- Infer.createRefExpr
     let
-      (newExpr, newRefMap) =
-        fromMaybe
-        (error
-         "Adding type-variable should never fail type checking") $
-        Infer.updateAndInfer actions refMap [(typeRef, void replacedType)]
-        expr
-    in
-      -- TODO: This is a hack, because it makes the inferred payload
-      -- go out of sync with the inferred refs/refmap. Need to add the
-      -- ability to "reparent" the root under the lambda properly.
-      (second . Lens.over Data.ePayload) wrapLambda $
-      addVariablesGen newGen newRefMap newExpr
+      holePoint = Infer.iPoint . fst $ hole ^. Data.ePayload
+      paramTypeRef = Infer.tvType $ Infer.nRefs holePoint
+      paramTypeNode =
+        Infer.InferNode (Infer.TypedValue paramTypeRef paramTypeTypeRef) mempty
+      loaded = runIdentity $ Infer.load loader Nothing getVar
+    _ <- Infer.inferLoaded actions loaded holePoint
+    newRootNode <- Infer.newNodeWithScope mempty
+    let
+      paramTypeExpr = Data.Expression Data.hole (paramTypeNode, AutoGen (Guid.augment "paramType" paramGuid))
+      newRootLam = Data.makeLambda paramGuid paramTypeExpr $ Lens.over (Lens.mapped . Lens._1) Infer.iPoint expr
+      newRootExpr = Data.Expression newRootLam (newRootNode, AutoGen (Guid.augment "root" paramGuid))
+    Infer.addRules actions [fmap fst newRootExpr]
+    inferredRootTypeExpr <-
+      State.gets . Infer.derefExpr $
+      Lens.over (Lens.mapped . Lens._1) Infer.iPoint rootTypeExpr
+    inferredNewRootExpr <- State.gets $ Infer.derefExpr newRootExpr
+    addVariablesGen newGen inferredRootTypeExpr inferredNewRootExpr
   where
-    wrapLambda inferred =
-      -- TODO: Use lens
-      inferred
-      { Infer.iType =
-        Data.pureExpression .
-        Data.makePi paramGuid (Data.pureExpression (Data.ExpressionLeaf Data.Set)) $
-        Infer.iType inferred
-      }
-    mFirstHoleReplaced =
-      onFirstHole (const getVar) exprType
-    typeRef =
-      Infer.tvType . Infer.nRefs . Infer.iPoint $
-      expr ^. Data.ePayload
+    loader =
+      Infer.Loader . const . Identity $ error "Should not be loading defs when loading a mere getVar"
+    unrestrictedHoles =
+      filter (isUnrestrictedHole . Infer.iValue . fst . Lens.view Data.ePayload) .
+      reverse $ Data.subExpressions rootTypeExpr
     getVar = Data.pureExpression $ Data.makeParameterRef paramGuid
     (paramGuid, newGen) = random gen
-    exprType = Infer.iType $ expr ^. Data.ePayload
-    actions = Infer.InferActions (const Nothing)
+
+-- TODO: Infer.Utils
+actions :: Infer.InferActions def Identity
+actions = Infer.InferActions . const . Identity $ error "Infer error when adding implicit vars!"
 
 addVariables ::
-  Eq def =>
-  Infer.Context def -> Data.Expression def (Infer.Inferred def a) ->
-  (Infer.Context def, Data.Expression def (Infer.Inferred def a))
-addVariables = addVariablesGen . Random.mkStdGen $ hash "AddVars"
+  (Monad m, Ord def) =>
+  Infer.Loader def m ->
+  Infer.Context def -> Data.Expression def (Infer.Inferred def, a) ->
+  m (Infer.Context def, Data.Expression def (Infer.Inferred def, Payload a))
+addVariables loader initialInferContext expr =
+  liftM swap $
+  liftM2 onLoaded
+  (load Data.pureSet)
+  (load (Infer.iType rootNode))
+  where
+    load = Infer.load loader Nothing -- <-- TODO: Nothing?
+    onLoaded loadedSet loadedRootType =
+      (`runState` initialInferContext) $ do
+        inferredSet <-
+          (fmap . fmap) fst $
+          Infer.inferLoaded actions loadedSet =<< Infer.newNodeWithScope mempty
+        let
+          rootTypeTypeRef = Infer.tvVal . Infer.nRefs . Infer.iPoint $ inferredSet ^. Data.ePayload
+          rootTypeNode = Infer.InferNode (Infer.TypedValue rootTypeRef rootTypeTypeRef) mempty
+        inferredRootType <- Infer.inferLoaded actions loadedRootType rootTypeNode
+        addVariablesGen gen inferredRootType $
+          Lens.over (Lens.mapped . Lens._2) Stored expr
+    gen = Random.mkStdGen $ hash "AddVars"
+    rootNode = expr ^. inferredLens
+    rootTypeRef = (Infer.tvType . Infer.nRefs . Infer.iPoint) rootNode

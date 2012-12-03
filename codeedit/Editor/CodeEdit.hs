@@ -24,7 +24,7 @@ import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
 import qualified Editor.CodeEdit.ExpressionEdit as ExpressionEdit
-import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
+-- import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
@@ -90,34 +90,34 @@ makeSugarPanes = do
         }
   mapM convertPane $ enumerate panes
 
-makeClipboardsEdit ::
-  m ~ ViewM => [Sugar.Expression m] -> ExprGuiM m (WidgetT m)
-makeClipboardsEdit clipboards = do
-  clipboardsEdits <-
-    mapM (liftM (Lens.view ExpressionGui.egWidget) . ExpressionEdit.make) clipboards
-  clipboardTitle <-
-    if null clipboardsEdits
-    then return Spacer.empty
-    else ExprGuiM.widgetEnv $ BWidgets.makeTextView "Clipboards:" ["clipboards title"]
-  return . Box.vboxAlign 0 $ clipboardTitle : clipboardsEdits
+-- makeClipboardsEdit ::
+--   m ~ ViewM => [Sugar.Expression m] -> ExprGuiM m (WidgetT m)
+-- makeClipboardsEdit clipboards = do
+--   clipboardsEdits <-
+--     mapM (liftM (Lens.view ExpressionGui.egWidget) . ExpressionEdit.make) clipboards
+--   clipboardTitle <-
+--     if null clipboardsEdits
+--     then return Spacer.empty
+--     else ExprGuiM.widgetEnv $ BWidgets.makeTextView "Clipboards:" ["clipboards title"]
+--   return . Box.vboxAlign 0 $ clipboardTitle : clipboardsEdits
 
 make ::
   m ~ ViewM => Settings ->
   StateT Cache (WidgetEnvT (T m)) (Widget (T m))
 make settings = do
   sugarPanes <- mapStateT lift makeSugarPanes
-  clipboardsExprs <- mapStateT lift $ do
-    clipboardsP <- lift Anchors.clipboards
-    sugarConfig <- lift $ liftM Property.value Anchors.sugarConfig
-    mapM (Sugar.loadConvertExpression sugarConfig) $
-      Property.list clipboardsP
+  -- clipboardsExprs <- mapStateT lift $ do
+  --   clipboardsP <- lift Anchors.clipboards
+  --   sugarConfig <- lift $ liftM Property.value Anchors.sugarConfig
+  --   mapM (Sugar.loadConvertExpression sugarConfig) $
+  --     Property.list clipboardsP
   ExprGuiM.run ExpressionEdit.make settings $ do
     panesEdit <- makePanesEdit sugarPanes
-    clipboardsEdit <- makeClipboardsEdit clipboardsExprs
+    -- clipboardsEdit <- makeClipboardsEdit clipboardsExprs
     return $
       Box.vboxAlign 0
       [ panesEdit
-      , clipboardsEdit
+      -- , clipboardsEdit
       ]
 
 panesGuid :: Guid
