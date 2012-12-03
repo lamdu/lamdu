@@ -18,6 +18,7 @@ Library
   Exposed-modules:     Data.Cache,
                        Data.List.Utils,
                        Data.Maybe.Utils,
+                       Data.Monoid.Instances,
                        Data.MRUMemo,
                        Data.UnionFind.IntMap,
                        Data.Vector.Vector2,
