@@ -458,7 +458,7 @@ exprIntoContext rootScope (Loaded rootExpr defTypes) = do
       ref <- liftContextState createRefExpr
       setRefExpr ref =<< liftOriginState (toRefExpression defType)
       return ref
-    addTypedVal x = liftM ((,) x) $ createTypedVal
+    addTypedVal x = liftM ((,) x) createTypedVal
     go scope (Data.Expression body (s, createdTV)) = do
       inferNode <- toInferNode scope (void <$> body) createdTV
       newBody <-

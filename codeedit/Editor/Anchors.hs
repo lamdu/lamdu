@@ -1,4 +1,4 @@
-{-# LANGUAGE EmptyDataDecls, OverloadedStrings, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving #-}
 
 module Editor.Anchors
   ( panes, panesIRef

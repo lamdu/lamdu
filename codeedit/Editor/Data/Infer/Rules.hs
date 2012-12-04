@@ -274,7 +274,7 @@ runIntoApplyResultClosure (cons, applyRef, arg) ~[Data.Expression funcBody _, ar
       result
     )
 
-intoApplyResultRule :: Data.ExprLambdaWrapper -> ExprRef -> ExprRef -> ExprRef -> (Rule def)
+intoApplyResultRule :: Data.ExprLambdaWrapper -> ExprRef -> ExprRef -> ExprRef -> Rule def
 intoApplyResultRule cons applyRef func arg =
   -- PreSubst with Subst => PostSubst
   -- (func, arg) -> apply
@@ -289,7 +289,7 @@ runIntoArgClosure (cons, arg) ~[applyExpr, Data.Expression funcBody _] = do
   Data.Lambda param _ result <- maybeToList $ Data.exprLambdaUncons cons funcBody
   mergeToArg param arg result applyExpr
 
-intoArgRule :: Data.ExprLambdaWrapper -> ExprRef -> ExprRef -> ExprRef -> (Rule def)
+intoArgRule :: Data.ExprLambdaWrapper -> ExprRef -> ExprRef -> ExprRef -> Rule def
 intoArgRule cons applyRef func arg =
   Rule [applyRef, func] $ IntoArgClosure (cons, arg)
 
@@ -303,7 +303,7 @@ runIntoFuncResultTypeClosure (cons, func) ~[applyExpr, Data.Expression funcBody 
       mergeToPiResult result applyExpr
     )
 
-intoFuncResultTypeRule :: Data.ExprLambdaWrapper -> ExprRef -> ExprRef -> (Rule def)
+intoFuncResultTypeRule :: Data.ExprLambdaWrapper -> ExprRef -> ExprRef -> Rule def
 intoFuncResultTypeRule cons applyRef func =
   -- Propagate data from Apply's to the Func where appropriate.
   -- (Not on non-substituted holes)
@@ -375,7 +375,7 @@ runPiParamTypeToArgTypeClosure argTypeRef ~[Data.Expression funcTExpr _] = do
   Data.Lambda _ paramT _ <- maybeToList $ Data.maybePi funcTExpr
   return (argTypeRef, paramT)
 
-piParamTypeToArgTypeRule :: Data.Apply TypedValue -> (Rule def)
+piParamTypeToArgTypeRule :: Data.Apply TypedValue -> Rule def
 piParamTypeToArgTypeRule (Data.Apply func arg) =
   Rule [tvType func] $ PiParamTypeToArgTypeClosure (tvType arg)
 
@@ -386,7 +386,7 @@ runLambdaParamTypeToArgTypeClosure argTypeRef ~[Data.Expression funcExpr _] = do
   Data.Lambda _ paramT _ <- maybeToList $ Data.maybeLambda funcExpr
   return (argTypeRef, paramT)
 
-lambdaParamTypeToArgTypeRule :: Data.Apply TypedValue -> (Rule def)
+lambdaParamTypeToArgTypeRule :: Data.Apply TypedValue -> Rule def
 lambdaParamTypeToArgTypeRule (Data.Apply func arg) =
   Rule [tvVal func] $ LambdaParamTypeToArgTypeClosure (tvType arg)
 

@@ -161,7 +161,7 @@ mkFuncParamActions
     deleteIfParamRef expr =
       case (SugarInfer.resultProp expr, expr ^. Data.eValue) of
       (Just prop, Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef p)))
-        | p == param -> DataOps.replaceWithHole prop >> return ()
+        | p == param -> void $ DataOps.replaceWithHole prop
       _ -> return ()
     -- scope = Infer.nScope . Infer.iPoint $ iwcInferred lambdaIWC
     -- paramTypeRef =
