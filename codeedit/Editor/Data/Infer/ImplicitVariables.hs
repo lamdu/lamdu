@@ -10,7 +10,6 @@ import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
 import Data.Functor.Identity (Identity(..))
-import Data.Hashable (hash)
 import Data.Monoid (mempty)
 import Data.Store.Guid (Guid)
 import Data.Tuple (swap)
@@ -21,7 +20,6 @@ import qualified Control.Monad.Trans.State as State
 import qualified Data.Store.Guid as Guid
 import qualified Editor.Data as Data
 import qualified Editor.Data.Infer as Infer
-import qualified System.Random as Random
 
 inferredLens :: SimpleLens (Data.Expression def (Infer.Inferred def, b)) (Infer.Inferred def)
 inferredLens = Data.ePayload . Lens._1
@@ -79,11 +77,11 @@ actions :: Infer.InferActions def Identity
 actions = Infer.InferActions . const . Identity $ error "Infer error when adding implicit vars!"
 
 addVariables ::
-  (Monad m, Ord def) =>
-  Infer.Loader def m ->
+  (Monad m, Ord def, RandomGen g) =>
+  g -> Infer.Loader def m ->
   Infer.Context def -> Data.Expression def (Infer.Inferred def, a) ->
   m (Infer.Context def, Data.Expression def (Infer.Inferred def, Payload a))
-addVariables loader initialInferContext expr =
+addVariables gen loader initialInferContext expr =
   liftM swap $
   liftM2 onLoaded
   (load Data.pureSet)
@@ -101,6 +99,5 @@ addVariables loader initialInferContext expr =
         inferredRootType <- Infer.inferLoaded actions loadedRootType rootTypeNode
         addVariablesGen gen inferredRootType $
           Lens.over (Lens.mapped . Lens._2) Stored expr
-    gen = Random.mkStdGen $ hash "AddVars"
     rootNode = expr ^. inferredLens
     rootTypeRef = (Infer.tvType . Infer.nRefs . Infer.iPoint) rootNode

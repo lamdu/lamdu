@@ -28,7 +28,7 @@ module Editor.CodeEdit.Sugar
 import Control.Applicative ((<$>), Applicative(..))
 import Control.Arrow (first)
 import Control.Lens ((^.))
-import Control.Monad ((<=<), liftM, mplus, void, zipWithM)
+import Control.Monad ((<=<), liftM, join, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (runState)
 import Control.Monad.Trans.Writer (runWriter)
@@ -133,7 +133,7 @@ mkExpression result expr = do
       }
     }
   where
-    seeds = RandomUtils.splits . mkGen 0 2 $ resultGuid result
+    seeds = RandomUtils.splits . mkGen 0 3 $ resultGuid result
     types = maybe [] iwcInferredTypes $ resultInferred result
 
 mkDelete
@@ -176,7 +176,8 @@ mkFuncParamActions
       --   DataIRef.newExprBody $ Data.ExpressionLeaf Data.Hole
       -- exampleLoaded <- lift $ Load.loadExpressionClosure exampleP
       -- inferredExample <-
-      --   SugarInfer.inferLoadedExpression Nothing exampleLoaded newInferNode
+      --   -- TODO: Nothing -> Just defI
+      --   SugarInfer.inferLoadedExpression ??gen?? Nothing exampleLoaded newInferNode
       -- lift $ convertStoredExpression (inferredExample ^. SugarInfer.ilrExpr)
       --   ctx { SugarM.scInferState = inferredExample ^. SugarInfer.ilrInferContext }
   }
@@ -420,14 +421,6 @@ applyForms exprType expr =
     (depPis, arrows) = countPis exprType
     addApply = Data.pureExpression . (`Data.makeApply` pureHole)
 
-convertReadOnlyHole :: m ~ Anchors.ViewM => Convertor m
-convertReadOnlyHole exprI =
-  mkExpression exprI $ ExpressionHole Hole
-  { holeScope = []
-  , holeInferResults = const $ return []
-  , holeMActions = Nothing
-  }
-
 -- Fill partial holes in an expression. Parital holes are those whose
 -- inferred (filler) value itself is not complete, so will not be a
 -- useful auto-inferred value. By auto-filling those, we allow the
@@ -464,14 +457,6 @@ resultComplexityScore =
   sum . map (subtract 2 . length . Foldable.toList . Infer.iType) .
   Foldable.toList
 
-convertWritableHole ::
-  m ~ Anchors.ViewM =>
-  SugarInfer.Payload InferredWC (Stored (T m)) -> Convertor m
-convertWritableHole pl exprI = do
-  ctx <- SugarM.readContext
-  mPaste <- mkPaste $ pl ^. SugarInfer.plStored
-  convertWritableHoleH ctx mPaste pl exprI
-
 inferApplyForms ::
   Monad m =>
   (Data.Expression DefI () -> T m [HoleResult]) -> Data.Expression DefI () ->
@@ -485,15 +470,15 @@ inferApplyForms processRes expr (node, inferContext) =
       liftM concat . mapM processRes $
       (applyForms . void) (Infer.iType (i ^. Data.ePayload)) expr
 
-convertWritableHoleH ::
+convertInferredHoleH ::
   m ~ Anchors.ViewM =>
   SugarM.Context -> Maybe (T m Guid) ->
-  SugarInfer.Payload InferredWC (Stored (T m)) ->
-  Convertor m
-convertWritableHoleH
-  sugarContext mPaste (SugarInfer.Payload eGuid iwc holeProp) exprI =
+  InferredWC -> Convertor m
+convertInferredHoleH
+  sugarContext mPaste iwc exprI =
     chooseHoleType (iwcInferredValues iwc) plainHole inferredHole
   where
+    eGuid = resultGuid exprI
     SugarM.Context
       { SugarM.scHoleInferState = inferState
       , SugarM.scConfig = config
@@ -513,11 +498,13 @@ convertWritableHoleH
       { holeScope =
         map onScopeElement . Map.toList $ Infer.iScope inferred
       , holeInferResults = inferResults processRes
-      , holeMActions = Just HoleActions
-          { holePickResult = pickResult eGuid holeProp
-          , holePaste = mPaste
-          , holeConvertResult = convertHoleResult config
-          }
+      , holeMActions = mkHoleActions <$> resultStored exprI
+      }
+    mkHoleActions stored =
+      HoleActions
+      { holePickResult = pickResult eGuid stored
+      , holePaste = mPaste
+      , holeConvertResult = convertHoleResult config
       }
     filledHole =
       mkHole $
@@ -526,7 +513,7 @@ convertWritableHoleH
       mkExpression exprI .
       ExpressionInferred . (`Inferred` filledHole) <=<
       convertExpressionI . fmap toPayloadMM .
-      SugarInfer.resultFromPure (mkGen 1 2 eGuid)
+      SugarInfer.resultFromPure (mkGen 2 3 eGuid)
     plainHole =
       wrapOperatorHole exprI <=<
       mkExpression exprI . ExpressionHole $ mkHole (liftM maybeToList . check)
@@ -593,12 +580,19 @@ holeResultHasHoles = not . null . uninferredHoles . fmap (flip (,) ())
 
 convertHole :: m ~ Anchors.ViewM => Convertor m
 convertHole exprI =
-  maybe convertReadOnlyHole convertWritableHole mStored exprI
+  maybe convertUninferredHole convertInferredHole $
+  resultInferred exprI
   where
-    mStored =
-      Lens.sequenceOf SugarInfer.plInferred <=<
-      Lens.sequenceOf SugarInfer.plStored $
-      exprI ^. Data.ePayload
+    convertInferredHole inferred = do
+      ctx <- SugarM.readContext
+      mPaste <- liftM join . Traversable.mapM mkPaste $ resultStored exprI
+      convertInferredHoleH ctx mPaste inferred exprI
+    convertUninferredHole =
+      mkExpression exprI $ ExpressionHole Hole
+      { holeScope = []
+      , holeInferResults = const $ return []
+      , holeMActions = Nothing
+      }
 
 convertLiteralInteger :: m ~ Anchors.ViewM => Integer -> Convertor m
 convertLiteralInteger i exprI =
@@ -747,7 +741,7 @@ loadConvertDefinition config defI =
       body <- convertDefBody defBody defI typeLoaded
       typeS <-
         lift .
-        convertExpressionPure (mkGen 1 2 (IRef.guid defI)) config $
+        convertExpressionPure (mkGen 2 3 (IRef.guid defI)) config $
         void typeLoaded
       return Definition
         { drGuid = IRef.guid defI
@@ -777,7 +771,8 @@ convertDefinitionExpression ::
 convertDefinitionExpression config exprLoaded defI typeI = do
   inferredLoadedResult <-
     SugarInfer.inferLoadedExpression
-    (Just defI) exprLoaded (Infer.initial (Just defI))
+    inferLoadedGen (Just defI) exprLoaded $
+    Infer.initial (Just defI)
   let
     inferredTypeP =
       void . Infer.iType . iwcInferred . resultInferred $
@@ -786,7 +781,7 @@ convertDefinitionExpression config exprLoaded defI typeI = do
       on (==) Data.canonizeParamIds (void typeI) inferredTypeP
     mkNewType = do
       inferredTypeS <-
-        convertExpressionPure (mkGen 0 2 (IRef.guid defI)) config
+        convertExpressionPure iTypeGen config
         inferredTypeP
       return DefinitionNewType
         { dntNewType = inferredTypeS
@@ -808,6 +803,9 @@ convertDefinitionExpression config exprLoaded defI typeI = do
     , deMNewType = mNewType
     , deIsTypeRedundant = inferredLoadedResult ^. SugarInfer.ilrSuccess && typesMatch
     }
+  where
+    iTypeGen = mkGen 0 3 $ IRef.guid defI
+    inferLoadedGen = mkGen 1 3 $ IRef.guid defI
 
 --------------
 

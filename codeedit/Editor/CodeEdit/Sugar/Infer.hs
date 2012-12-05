@@ -117,7 +117,7 @@ inferMaybe_ expr inferContext inferPoint =
 -- }}}}}}}}}}}}}}}}}
 
 inferWithVariables ::
-  Monad m =>
+  (RandomGen g, Monad m) => g ->
   Infer.Loaded DefI a -> Infer.Context DefI -> Infer.InferNode DefI ->
   T m
   ( ( Bool
@@ -128,9 +128,9 @@ inferWithVariables ::
     , Data.Expression DefI (InferredWithConflicts DefI, ImplicitVariables.Payload a)
     )
   )
-inferWithVariables loaded baseRefMap node = do
+inferWithVariables gen loaded baseRefMap node = do
   (wvContext, wvExpr) <-
-    ImplicitVariables.addVariables loader newRefMap $
+    ImplicitVariables.addVariables gen loader newRefMap $
     (iwcInferred . fst &&& id) <$> expr
   return (res, (wvContext, asIWC <$> wvExpr))
   where
@@ -156,11 +156,11 @@ data InferLoadedResult m = InferLoadedResult
 LensTH.makeLenses ''InferLoadedResult
 
 inferLoadedExpression ::
-  Monad m =>
+  (RandomGen g, Monad m) => g ->
   Maybe DefI -> Load.LoadedClosure ->
   (Infer.Context DefI, Infer.InferNode DefI) ->
   CT m (InferLoadedResult (T m))
-inferLoadedExpression mDefI lExpr inferState = do
+inferLoadedExpression gen mDefI lExpr inferState = do
   loaded <- lift $ Infer.load loader mDefI lExpr
   ((success, inferContext, expr), (wvInferContext, wvExpr)) <-
     Cache.memoS uncurriedInfer (loaded, inferState)
@@ -176,7 +176,7 @@ inferLoadedExpression mDefI lExpr inferState = do
     }
   where
     uncurriedInfer (loaded, (inferContext, inferNode)) =
-      inferWithVariables loaded inferContext inferNode
+      inferWithVariables gen loaded inferContext inferNode
 
     mkStoredPayload (iwc, propClosure) =
       Payload (DataIRef.epGuid prop) iwc prop
