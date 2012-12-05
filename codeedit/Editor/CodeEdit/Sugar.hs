@@ -20,7 +20,7 @@ module Editor.CodeEdit.Sugar
   , Inferred(..)
   , Polymorphic(..)
   , HasParens(..)
-  , loadConvertDefinition
+  , loadConvertDefI
   -- , loadConvertExpression
   , removeTypes
   ) where
@@ -740,17 +740,17 @@ convertDefinitionContent expr = do
         -- liftM fst . DataOps.redexWrap $ getProp whereBody
     }
 
-loadConvertDefinition ::
+loadConvertDefI ::
   m ~ Anchors.ViewM => SugarConfig -> DefI ->
   CT m (Definition m)
-loadConvertDefinition config defI =
-  convertDefinition =<< lift (Load.loadDefinitionClosure defI)
+loadConvertDefI config defI =
+  convertDefI =<< lift (Load.loadDefinitionClosure defI)
   where
     convertDefBody (Data.DefinitionBuiltin builtin) =
-      fmap return . convertDefinitionBuiltin builtin
+      fmap return . convertDefIBuiltin builtin
     convertDefBody (Data.DefinitionExpression exprLoaded) =
-      convertDefinitionExpression config exprLoaded
-    convertDefinition (Data.Definition defBody typeLoaded) = do
+      convertDefIExpression config exprLoaded
+    convertDefI (Data.Definition defBody typeLoaded) = do
       body <- convertDefBody defBody defI typeLoaded
       typeS <-
         lift .
@@ -762,11 +762,11 @@ loadConvertDefinition config defI =
         , drType = typeS
         }
 
-convertDefinitionBuiltin ::
+convertDefIBuiltin ::
   Monad m =>
   Data.Builtin -> DefI ->
   Load.LoadedClosure -> DefinitionBody m
-convertDefinitionBuiltin (Data.Builtin name) defI typeIRef =
+convertDefIBuiltin (Data.Builtin name) defI typeIRef =
   DefinitionBodyBuiltin DefinitionBuiltin
     { biName = name
     , biMSetName = Just setName
@@ -777,11 +777,11 @@ convertDefinitionBuiltin (Data.Builtin name) defI typeIRef =
       Transaction.writeIRef defI . (`Data.Definition` Load.irefOfClosure typeI) .
       Data.DefinitionBuiltin . Data.Builtin
 
-convertDefinitionExpression ::
+convertDefIExpression ::
   m ~ Anchors.ViewM => SugarConfig ->
   Load.LoadedClosure -> DefI -> Load.LoadedClosure ->
   CT m (DefinitionBody m)
-convertDefinitionExpression config exprLoaded defI typeI = do
+convertDefIExpression config exprLoaded defI typeI = do
   inferredLoadedResult <-
     SugarInfer.inferLoadedExpression
     inferLoadedGen (Just defI) exprLoaded $

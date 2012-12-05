@@ -81,7 +81,7 @@ makeSugarPanes = do
       | otherwise = Nothing
     convertPane (i, defI) = do
       sugarConfig <- lift $ liftM Property.value Anchors.sugarConfig
-      sDef <- Sugar.loadConvertDefinition sugarConfig defI
+      sDef <- Sugar.loadConvertDefI sugarConfig defI
       return SugarPane
         { spDef = sDef
         , mDelPane = mkMDelPane i
