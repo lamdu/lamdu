@@ -282,12 +282,16 @@ subExpressions :: Expression def a -> [Expression def a]
 subExpressions x =
   x : Foldable.concatMap subExpressions (x ^. eValue)
 
-isDependentPi :: Expression def a -> Bool
-isDependentPi (Expression (ExpressionPi (Lambda g _ resultType)) _) =
-  any (isGet . Lens.view eValue) $ subExpressions resultType
+hasGetVar :: Guid -> Expression def a -> Bool
+hasGetVar g =
+  any (isGet . Lens.view eValue) . subExpressions
   where
     isGet (ExpressionLeaf (GetVariable (ParameterRef p))) = p == g
     isGet _ = False
+
+isDependentPi :: Expression def a -> Bool
+isDependentPi (Expression (ExpressionPi (Lambda g _ resultType)) _) =
+  hasGetVar g resultType
 isDependentPi _ = False
 
 data ExprLambdaWrapper = ExprLambda | ExprPi
