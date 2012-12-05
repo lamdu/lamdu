@@ -673,14 +673,20 @@ convertDefinitionParams ::
   Data.Expression DefI (PayloadMM m) ->
   SugarM m
   ( [FuncParam m (Expression m)]
+  , [FuncParam m (Expression m)]
   , Data.Expression DefI (PayloadMM m)
   )
 convertDefinitionParams expr =
   case expr ^. Data.eValue of
   Data.ExpressionLambda lambda -> do
-    (_isDependent, fp) <- convertFuncParam lambda expr
-    (liftM . first) (fp:) . convertDefinitionParams $ lambda ^. Data.lambdaBody
-  _ -> return ([], expr)
+    (isDependent, fp) <- convertFuncParam lambda expr
+    (depParams, params, deepBody) <-
+      convertDefinitionParams $ lambda ^. Data.lambdaBody
+    return $
+      case isDependent of
+      Dependent -> (fp : depParams, params, deepBody)
+      NonDependent -> ([], fp : depParams ++ params, deepBody)
+  _ -> return ([], [], expr)
 
 convertWhereItems ::
   m ~ Anchors.ViewM =>
@@ -722,12 +728,11 @@ convertDefinitionContent ::
   Data.Expression DefI (PayloadMM m) ->
   SugarM m (DefinitionContent m)
 convertDefinitionContent expr = do
-  (params, funcBody) <- convertDefinitionParams expr
+  (depParams, params, funcBody) <- convertDefinitionParams expr
   (whereItems, whereBody) <- convertWhereItems funcBody
   bodyS <- convertExpressionI whereBody
   return DefinitionContent
-    { dBody = bodyS
-    , dParameters = params
+    { dFunc = Func depParams params bodyS
     , dWhereItems = whereItems
     , dAddFirstParam = error "TODO1" -- liftM fst . DataOps.lambdaWrap $ getProp expr
     , dAddInnermostWhereItem =

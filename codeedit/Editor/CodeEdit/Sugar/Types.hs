@@ -186,8 +186,7 @@ data WhereItem m = WhereItem
 
 -- Common data for definitions and where-items
 data DefinitionContent m = DefinitionContent
-  { dBody :: Expression m
-  , dParameters :: [FuncParam m (Expression m)]
+  { dFunc :: Func m (Expression m)
   , dWhereItems :: [WhereItem m]
   , dAddFirstParam :: T m Guid
   , dAddInnermostWhereItem :: T m Guid

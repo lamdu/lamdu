@@ -65,7 +65,7 @@ makeParts name guid def = do
     makeNameEdit name myId guid
   equals <- makeEquals myId
   (paramsEdits, bodyEdit) <-
-    FuncEdit.makeParamsAndResultEdit jumpToRHSViaEquals lhs rhs myId params
+    FuncEdit.makeParamsAndResultEdit jumpToRHSViaEquals lhs rhs myId allParams
   return .
     List.intersperse (ExpressionGui.fromValueWidget BWidgets.stdSpaceWidget) $
     ExpressionGui.fromValueWidget nameEdit :
@@ -82,9 +82,10 @@ makeParts name guid def = do
         (FuncEdit.jumpToRHS [E.ModKey E.noMods (E.charKey '=')] rhs) .
         Lens.over Widget.wEventMap (E.filterChars (/= '='))
       | otherwise = id
-    lhs = myId : map (WidgetIds.fromGuid . Lens.view Sugar.fpGuid) params
+    lhs = myId : map (WidgetIds.fromGuid . Lens.view Sugar.fpGuid) allParams
     rhs = ("Def Body", body)
-    params = Sugar.dParameters def
+    allParams = depParams ++ params
+    Sugar.Func depParams params body = Sugar.dFunc def
     addWhereItemEventMap =
       Widget.keysEventMapMovesCursor Config.addWhereItemKeys "Add where item" .
       toEventMapAction $ Sugar.dAddInnermostWhereItem def
@@ -93,7 +94,6 @@ makeParts name guid def = do
       toEventMapAction $ Sugar.dAddFirstParam def
     toEventMapAction =
       liftM (FocusDelegator.delegatingId . WidgetIds.fromGuid)
-    body = Sugar.dBody def
     myId = WidgetIds.fromGuid guid
 
 make
