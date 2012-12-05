@@ -11,7 +11,7 @@ module Editor.CodeEdit.Sugar.Types
   , ExpressionP(..), rGuid, rExpressionBody, rPayload
   , Expression
   , WhereItem(..)
-  , Func(..)
+  , Func(..), fParams, fBody
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
   , Section(..)
@@ -81,8 +81,8 @@ data FuncParam m expr = FuncParam
 
 -- Multi-param Lambda
 data Func m expr = Func
-  { fParams :: [FuncParam m expr]
-  , fBody :: expr
+  { _fParams :: [FuncParam m expr]
+  , _fBody :: expr
   } deriving (Functor)
 
 data Pi m expr = Pi
@@ -209,6 +209,7 @@ data Definition m = Definition
   , drBody :: DefinitionBody m
   }
 
+LensTH.makeLenses ''Func
 LensTH.makeLenses ''FuncParam
 LensTH.makeLenses ''ExpressionBody
 LensTH.makeLenses ''ListItemActions
