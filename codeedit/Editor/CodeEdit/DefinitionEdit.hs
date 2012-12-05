@@ -64,12 +64,13 @@ makeParts name guid def = do
      jumpToRHSViaEquals name) $
     makeNameEdit name myId guid
   equals <- makeEquals myId
-  (paramsEdits, bodyEdit) <-
-    FuncEdit.makeParamsAndResultEdit jumpToRHSViaEquals lhs rhs myId allParams
+  (depParamsEdits, paramsEdits, bodyEdit) <-
+    FuncEdit.makeParamsAndResultEdit
+    jumpToRHSViaEquals lhs rhs myId depParams params
   return .
     List.intersperse (ExpressionGui.fromValueWidget BWidgets.stdSpaceWidget) $
     ExpressionGui.fromValueWidget nameEdit :
-    paramsEdits ++
+    depParamsEdits ++ paramsEdits ++
     [ ExpressionGui.fromValueWidget equals
     , Lens.over ExpressionGui.egWidget
       (Widget.weakerEvents addWhereItemEventMap)
