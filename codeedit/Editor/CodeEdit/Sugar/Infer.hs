@@ -1,23 +1,24 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor #-}
 module Editor.CodeEdit.Sugar.Infer
-  (
+  ( Payload(..), plGuid, plInferred, plStored
+  , NoInferred(..), InferredWC
+  , NoStored(..), Stored
+
+  , inferLoadedExpression
+  , InferLoadedResult(..)
+  , ilrSuccess, ilrContext, ilrInferContext
+  , ilrExpr, ilrBaseExpr, ilrBaseInferContext
+
+  , resultFromPure, resultFromInferred
+
+  -- TODO: These don't belong here:
   -- Type-check an expression into an ordinary Inferred Expression,
   -- short-circuit on error:
-    inferMaybe, inferMaybe_
-
-  -- Type-check an expression into a StoredResult:
-  , inferLoadedExpression
-  , StoredResult(..), srSuccess, srContext, srInferContext, srExpr, srBaseExpr, srBaseInferContext
-  , StoredPayload, splGuid, splIWC, splProp
-
-  -- Convert pure, inferred, stored expressions to Result:
-  , resultFromStored, resultFromPure, resultFromInferred
-  , Payload(..), Result, resultGuid, resultMInferred, resultPlMStored, resultProp
+  , inferMaybe, inferMaybe_
   ) where
 
 import Control.Applicative ((<$>))
 import Control.Arrow ((&&&))
-import Control.Lens (SimpleLens)
 import Control.Monad (liftM, void, (<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..))
@@ -43,95 +44,54 @@ type DefI = DataIRef.DefinitionIRef
 type T = Transaction
 type CT m = StateT Cache (T m)
 
-type StoredPayload m = (InferredWithConflicts DefI, DataIRef.ExpressionProperty (T m))
+data NoInferred = NoInferred
+type InferredWC = InferredWithConflicts DefI
 
-splIWC :: SimpleLens (InferredWithConflicts DefI, a) (InferredWithConflicts DefI)
-splIWC = Lens._1
+data NoStored = NoStored
+type Stored m = DataIRef.ExpressionProperty m
 
-splProp :: SimpleLens (StoredPayload m) (DataIRef.ExpressionProperty (T m))
-splProp = Lens._2
+data Payload inferred stored
+  = Payload
+    { _plGuid :: Guid
+    , _plInferred :: inferred
+    , _plStored :: stored
+    }
+LensTH.makeLenses ''Payload
 
-type MInferredMStoredPayload m =
-  Maybe
-  ( InferredWithConflicts DefI
-  , Maybe (DataIRef.ExpressionProperty (T m))
-  )
-
-data Payload m = Payload
-  { plGuid :: Guid
-  , plMInferred :: MInferredMStoredPayload m
-  }
-
-type Result m = Data.Expression DefI (Payload m)
-
-data StoredResult m = StoredResult
-  { _srSuccess :: Bool
-  , _srContext :: Infer.Loaded DefI Load.PropertyClosure
-
-  , _srInferContext :: Infer.Context DefI
-  , _srExpr :: Result m
-  -- Prior to adding variables
-  , _srBaseInferContext :: Infer.Context DefI
-  , _srBaseExpr :: Data.Expression DefI (StoredPayload m)
-  }
-LensTH.makeLenses ''StoredResult
-
-resultFrom ::
-  RandomGen g => g -> (a -> MInferredMStoredPayload m) ->
-  Data.Expression DefI a -> Result m
-resultFrom gen f =
+randomizeGuids ::
+  RandomGen g => g -> (a -> inferred) ->
+  Data.Expression DefI a ->
+  Data.Expression DefI (Payload inferred NoStored)
+randomizeGuids gen f =
     Data.randomizeParamIds paramGen
   . Data.randomizeExpr exprGen
-  . (flip Payload . f <$>)
+  . fmap (toPayload . f)
   where
+    toPayload inferred guid = Payload guid inferred NoStored
     paramGen : exprGen : _ = RandomUtils.splits gen
 
 -- Not inferred, not stored
-resultFromPure :: RandomGen g => g -> Data.Expression DefI () -> Result m
-resultFromPure gen =
-  resultFrom gen (const Nothing)
+resultFromPure ::
+  RandomGen g => g -> Data.Expression DefI () ->
+  Data.Expression DefI (Payload NoInferred NoStored)
+resultFromPure = (`randomizeGuids` const NoInferred)
 
--- Inferred, but not stored:
-resultFromInferred :: Data.Expression DefI (Infer.Inferred DefI) -> Result m
+resultFromInferred ::
+  Data.Expression DefI (Infer.Inferred DefI) ->
+  Data.Expression DefI (Payload InferredWC NoStored)
 resultFromInferred expr =
-  resultFrom gen f expr
+  randomizeGuids gen f expr
   where
     gen = Random.mkStdGen . hash . show $ void expr
     f inferred =
-      Just
-        ( InferredWithConflicts
-          { iwcInferred = inferred
-          , iwcTypeConflicts = []
-          , iwcValueConflicts = []
-          }
-        , Nothing
-        )
-
--- Inferred and stored
-resultFromStored :: Data.Expression DefI (StoredPayload m) -> Result m
-resultFromStored expr =
-  f <$> expr
-  where
-    f i = Payload
-      { plGuid = splGuid i
-      , plMInferred = Just $ Just <$> i
+      InferredWithConflicts
+      { iwcInferred = inferred
+      , iwcTypeConflicts = []
+      , iwcValueConflicts = []
       }
 
-splGuid :: StoredPayload m -> Guid
-splGuid = DataIRef.epGuid . snd
-
-resultGuid :: Result m -> Guid
-resultGuid = plGuid . Lens.view Data.ePayload
-
-resultMInferred :: Result m -> MInferredMStoredPayload m
-resultMInferred = plMInferred . Lens.view Data.ePayload
-
-resultPlMStored :: Result m -> Maybe (StoredPayload m)
-resultPlMStored = Lens.sequenceOf Lens._2 <=< plMInferred . Lens.view Data.ePayload
-
-resultProp :: Result m -> Maybe (DataIRef.ExpressionProperty (T m))
-resultProp = snd <=< plMInferred . Lens.view Data.ePayload
-
+-- {{{{{{{{{{{{{{{{{
+-- TODO: These don't belong here
 loader :: Monad m => Infer.Loader DefI (T m)
 loader =
   Infer.Loader
@@ -154,6 +114,7 @@ inferMaybe_ ::
   T m (Maybe (Data.Expression DefI (Infer.Inferred DefI)))
 inferMaybe_ expr inferContext inferPoint =
   (liftM . fmap . fmap) fst $ inferMaybe expr inferContext inferPoint
+-- }}}}}}}}}}}}}}}}}
 
 inferWithVariables ::
   Monad m =>
@@ -183,31 +144,46 @@ inferWithVariables loaded baseRefMap node = do
       , ImplicitVariables.AutoGen guid
       )
 
+data InferLoadedResult m = InferLoadedResult
+  { _ilrSuccess :: Bool
+  , _ilrContext :: Infer.Loaded DefI Load.PropertyClosure
+  , _ilrInferContext :: Infer.Context DefI
+  , _ilrExpr :: Data.Expression DefI (Payload InferredWC (Maybe (Stored m)))
+  -- Prior to adding variables
+  , _ilrBaseInferContext :: Infer.Context DefI
+  , _ilrBaseExpr :: Data.Expression DefI (Payload InferredWC (Stored m))
+  }
+LensTH.makeLenses ''InferLoadedResult
+
 inferLoadedExpression ::
   Monad m =>
   Maybe DefI -> Load.LoadedClosure ->
   (Infer.Context DefI, Infer.InferNode DefI) ->
-  CT m (StoredResult m)
+  CT m (InferLoadedResult (T m))
 inferLoadedExpression mDefI lExpr inferState = do
   loaded <- lift $ Infer.load loader mDefI lExpr
   ((success, inferContext, expr), (wvInferContext, wvExpr)) <-
     Cache.memoS uncurriedInfer (loaded, inferState)
-  return StoredResult
-    { _srSuccess = success
-    , _srContext = loaded
+  return InferLoadedResult
+    { _ilrSuccess = success
+    , _ilrContext = loaded
 
-    , _srBaseInferContext = inferContext
-    , _srBaseExpr = toProp (Lens.mapped . Lens._2) expr
+    , _ilrBaseInferContext = inferContext
+    , _ilrBaseExpr = mkStoredPayload <$> expr
 
-    , _srInferContext = wvInferContext
-    , _srExpr =
-      toResult <$> toProp (Lens.mapped . Lens._2 . Lens.mapped) wvExpr
+    , _ilrInferContext = wvInferContext
+    , _ilrExpr = mkWVPayload <$> wvExpr
     }
   where
-    toResult (iwc, ImplicitVariables.AutoGen guid) =
-      Payload guid $ Just (iwc, Nothing)
-    toResult (iwc, ImplicitVariables.Stored prop) =
-      Payload (DataIRef.epGuid prop) $ Just (iwc, Just prop)
-    toProp lens = Lens.over lens Load.propertyOfClosure
     uncurriedInfer (loaded, (inferContext, inferNode)) =
       inferWithVariables loaded inferContext inferNode
+
+    mkStoredPayload (iwc, propClosure) =
+      Payload (DataIRef.epGuid prop) iwc prop
+      where
+        prop = Load.propertyOfClosure propClosure
+    mkWVPayload (iwc, ImplicitVariables.AutoGen guid) =
+      Payload guid iwc Nothing
+    mkWVPayload (iwc, ImplicitVariables.Stored propClosure) =
+      Lens.over plStored Just $
+      mkStoredPayload (iwc, propClosure)

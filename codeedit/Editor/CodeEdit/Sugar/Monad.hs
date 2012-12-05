@@ -9,7 +9,7 @@ import Control.Lens ((^.))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Editor.CodeEdit.Sugar.Config (SugarConfig)
-import Editor.CodeEdit.Sugar.Infer (StoredResult(..), srContext, srInferContext, srBaseInferContext)
+import Editor.CodeEdit.Sugar.Infer (InferLoadedResult, ilrInferContext, ilrContext, ilrBaseInferContext)
 import Editor.CodeEdit.Sugar.Types -- see export list
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Cache as Cache
@@ -28,12 +28,12 @@ data Context = Context
 newtype SugarM m a = SugarM (ReaderT Context (T m) a)
   deriving (Monad)
 
-mkContext :: SugarConfig -> StoredResult m -> Context
+mkContext :: SugarConfig -> InferLoadedResult m -> Context
 mkContext config iResult = Context
-  { scInferState = iResult ^. srInferContext
+  { scInferState = iResult ^. ilrInferContext
   , scConfig = config
-  , scMContextHash = Just . Cache.bsOfKey $ iResult ^. srContext
-  , scHoleInferState = iResult ^. srBaseInferContext
+  , scMContextHash = Just . Cache.bsOfKey $ iResult ^. ilrContext
+  , scHoleInferState = iResult ^. ilrBaseInferContext
   }
 
 run :: Monad m => Context -> SugarM m a -> T m a
