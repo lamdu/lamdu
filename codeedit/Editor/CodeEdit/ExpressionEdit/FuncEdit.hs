@@ -133,7 +133,7 @@ make
   -> Sugar.Func m (Sugar.Expression m)
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
-make hasParens (Sugar.Func params body) =
+make hasParens (Sugar.Func depParams params body) =
   ExpressionGui.wrapParenify hasParens Parens.addHighlightedTextParens $ \myId ->
   ExprGuiM.assignCursor myId bodyId $ do
     lambdaLabel <-
@@ -145,12 +145,13 @@ make hasParens (Sugar.Func params body) =
       ExprGuiM.atEnv (WE.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor) .
       ExprGuiM.widgetEnv . BWidgets.makeLabel "→" $ Widget.toAnimId myId
     (paramsEdits, bodyEdit) <-
-      makeParamsAndResultEdit (const id) lhs ("Func Body", body) myId params
+      makeParamsAndResultEdit (const id) lhs ("Func Body", body) myId allParams
     return . ExpressionGui.hboxSpaced $
       lambdaLabel : paramsEdits ++ [ rightArrowLabel, bodyEdit ]
   where
+    allParams = depParams ++ params
     bodyId = WidgetIds.fromGuid $ body ^. Sugar.rGuid
-    lhs = map (WidgetIds.fromGuid . Lens.view Sugar.fpGuid) params
+    lhs = map (WidgetIds.fromGuid . Lens.view Sugar.fpGuid) allParams
 
 makeParamsAndResultEdit ::
   MonadF m =>

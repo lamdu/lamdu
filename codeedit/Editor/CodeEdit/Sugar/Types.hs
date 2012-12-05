@@ -11,7 +11,7 @@ module Editor.CodeEdit.Sugar.Types
   , ExpressionP(..), rGuid, rExpressionBody, rPayload
   , Expression
   , WhereItem(..)
-  , Func(..), fParams, fBody
+  , Func(..), fDepParams, fParams, fBody
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
   , Section(..)
@@ -81,7 +81,8 @@ data FuncParam m expr = FuncParam
 
 -- Multi-param Lambda
 data Func m expr = Func
-  { _fParams :: [FuncParam m expr]
+  { _fDepParams :: [FuncParam m expr]
+  , _fParams :: [FuncParam m expr]
   , _fBody :: expr
   } deriving (Functor)
 
@@ -154,8 +155,13 @@ instance Show expr => Show (ExpressionBody m expr) where
     wrapParens hasParens $ show func ++ " " ++ show arg
   show ExpressionSection { _eHasParens = hasParens, __eSection = Section mleft op mright } =
     wrapParens hasParens $ maybe "" show mleft ++ " " ++ show op ++ maybe "" show mright
-  show ExpressionFunc    { _eHasParens = hasParens, __eFunc = Func params body } =
-    wrapParens hasParens $ "\\" ++ unwords (map show params) ++ " -> " ++ show body
+  show ExpressionFunc    { _eHasParens = hasParens, __eFunc = Func depParams params body } =
+    wrapParens hasParens $ concat
+    ["\\", parenify (showWords depParams), showWords params, " -> ", show body]
+    where
+      parenify "" = ""
+      parenify xs = concat ["{", xs, "}"]
+      showWords = unwords . map show
   show ExpressionPi      { _eHasParens = hasParens, __ePi = Pi param resultType } =
     wrapParens hasParens $ "_:" ++ show param ++ " -> " ++ show resultType
   show ExpressionGetVariable { __getVariable = Data.ParameterRef guid } = 'P' : show guid

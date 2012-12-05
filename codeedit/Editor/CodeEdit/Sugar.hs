@@ -28,7 +28,7 @@ module Editor.CodeEdit.Sugar
 import Control.Applicative ((<$>), Applicative(..))
 import Control.Arrow (first)
 import Control.Lens ((^.))
-import Control.Monad ((<=<), liftM, join, mplus, void, zipWithM)
+import Control.Monad ((<=<), liftM, liftM2, join, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (runState)
 import Control.Monad.Trans.Writer (runWriter)
@@ -194,43 +194,64 @@ mkFuncParamActions
     -- newInferNode =
     --   Infer.newTypedNodeWithScope scope paramTypeRef $ SugarM.scInferState ctx
 
+data IsDependent = Dependent | NonDependent
+  deriving (Eq, Ord, Show)
+
+convertFuncParam ::
+  m ~ Anchors.ViewM =>
+  Data.Lambda (Data.Expression DefI (PayloadMM m)) ->
+  Data.Expression DefI (PayloadMM m) ->
+  SugarM m (IsDependent, FuncParam m (Expression m))
+convertFuncParam lam@(Data.Lambda paramGuid paramType body) expr = do
+  paramTypeS <- convertExpressionI paramType
+  ctx <- SugarM.readContext
+  let
+    fp = FuncParam
+      { _fpGuid = paramGuid
+      , _fpHiddenLambdaGuid = Just $ resultGuid expr
+      , _fpType = removeRedundantTypes paramTypeS
+      , _fpMActions =
+        mkFuncParamActions ctx body
+        <$> resultStored expr
+        <*> Traversable.mapM resultStored lam
+        <*> resultStored body
+      }
+    isDependent
+      | isPolymorphicFunc expr = Dependent
+      | otherwise = NonDependent
+  return (isDependent, fp)
+
 convertLambda ::
   m ~ Anchors.ViewM =>
   Data.Lambda (Data.Expression DefI (PayloadMM m)) ->
   Data.Expression DefI (PayloadMM m) ->
-  SugarM m (FuncParam m (Expression m), Expression m)
-convertLambda lam@(Data.Lambda param paramTypeI bodyI) expr = do
-  sBody <- convertExpressionI bodyI
-  typeExpr <- convertExpressionI paramTypeI
-  ctx <- SugarM.readContext
-  let
-    fp = FuncParam
-      { _fpGuid = param
-      , _fpHiddenLambdaGuid = Nothing
-      , _fpType = removeRedundantTypes typeExpr
-      , _fpMActions =
-        mkFuncParamActions ctx bodyI
-        <$> resultStored expr
-        <*> Traversable.mapM resultStored lam
-        <*> resultStored bodyI
-      }
-  return (fp, sBody)
+  SugarM m ((IsDependent, FuncParam m (Expression m)), Expression m)
+convertLambda lam expr =
+  liftM2 (,)
+  (convertFuncParam lam expr) $
+  convertExpressionI (lam ^. Data.lambdaBody)
+
+fAllParams :: Func m expr -> [FuncParam m expr]
+fAllParams (Func depParams params _) = depParams ++ params
 
 convertFunc
   :: m ~ Anchors.ViewM
   => Data.Lambda (Data.Expression DefI (PayloadMM m))
   -> Convertor m
 convertFunc lambda exprI = do
-  (param, sBody) <- convertLambda lambda exprI
-  mkExpression exprI .
-    ExpressionFunc DontHaveParens $
-    case sBody ^. rExpressionBody of
-      ExpressionFunc _ (Func nextParams body) ->
-        case nextParams of
-        [] -> error "Func must have at least 1 param!"
-        (nextParam : _) ->
-          Func (deleteToNextParam nextParam param : nextParams) body
-      _ -> Func [param] sBody
+  ((isDependent, param), sBody) <- convertLambda lambda exprI
+  let
+    innerFunc =
+      case sBody ^. rExpressionBody of
+      ExpressionFunc _ func -> func
+      _ -> Func [] [] sBody
+    mNextParam = listToMaybe $ fAllParams innerFunc
+    newParam = maybe id deleteToNextParam mNextParam param
+    newFunc =
+      case isDependent of
+      Dependent -> Lens.over fDepParams (newParam :) innerFunc
+      NonDependent -> Func [] (newParam : fAllParams innerFunc) (innerFunc ^. fBody)
+  mkExpression exprI $ ExpressionFunc DontHaveParens newFunc
   where
     deleteToNextParam nextParam =
       Lens.set (fpMActions . Lens.mapped . fpListItemActions .  itemDelete . Lens.sets liftM) $ nextParam ^. fpGuid
@@ -240,7 +261,7 @@ convertPi
   => Data.Lambda (Data.Expression DefI (PayloadMM m))
   -> Convertor m
 convertPi lambda exprI = do
-  (param, sBody) <- convertLambda lambda exprI
+  ((_, param), sBody) <- convertLambda lambda exprI
   mkExpression exprI $ ExpressionPi DontHaveParens
     Pi
     { pParam = Lens.over fpType addApplyChildParens param
@@ -649,36 +670,23 @@ convertExpressionPure gen config =
 
 convertDefinitionParams ::
   m ~ Anchors.ViewM =>
-  SugarM.Context -> Data.Expression DefI (PayloadMM m) ->
-  T m
+  Data.Expression DefI (PayloadMM m) ->
+  SugarM m
   ( [FuncParam m (Expression m)]
   , Data.Expression DefI (PayloadMM m)
   )
-convertDefinitionParams ctx expr =
+convertDefinitionParams expr =
   case expr ^. Data.eValue of
-  Data.ExpressionLambda lam@(Data.Lambda param paramType body) -> do
-    paramTypeS <- convertResult paramType ctx
-    let
-      -- TODO: This is code duplication
-      fp = FuncParam
-        { _fpGuid = param
-        , _fpHiddenLambdaGuid = Just $ resultGuid expr
-        , _fpType = removeRedundantTypes paramTypeS
-        , _fpMActions =
-          mkFuncParamActions ctx body
-          <$> resultStored expr
-          <*> Traversable.mapM resultStored lam
-          <*> resultStored body
-        }
-    (nextFPs, funcBody) <- convertDefinitionParams ctx body
-    return (fp : nextFPs, funcBody)
+  Data.ExpressionLambda lambda -> do
+    (_isDependent, fp) <- convertFuncParam lambda expr
+    (liftM . first) (fp:) . convertDefinitionParams $ lambda ^. Data.lambdaBody
   _ -> return ([], expr)
 
 convertWhereItems ::
   m ~ Anchors.ViewM =>
-  SugarM.Context -> Data.Expression DefI (PayloadMM m) ->
-  T m ([WhereItem m], Data.Expression DefI (PayloadMM m))
-convertWhereItems ctx
+  Data.Expression DefI (PayloadMM m) ->
+  SugarM m ([WhereItem m], Data.Expression DefI (PayloadMM m))
+convertWhereItems
   topLevel@Data.Expression
   { Data._eValue = Data.ExpressionApply apply@Data.Apply
   { Data._applyFunc = Data.Expression
@@ -687,7 +695,7 @@ convertWhereItems ctx
   , Data._lambdaParamType = Data.Expression
   { Data._eValue = Data.ExpressionLeaf Data.Hole
   }}}}} = do
-    value <- convertDefinitionContent ctx $ apply ^. Data.applyArg
+    value <- convertDefinitionContent $ apply ^. Data.applyArg
     let
       body = lambda ^. Data.lambdaBody
       mkWIActions topLevelProp bodyProp =
@@ -705,18 +713,18 @@ convertWhereItems ctx
           resultStored topLevel <*>
           resultStored body
         }
-    (nextItems, whereBody) <- convertWhereItems ctx body
+    (nextItems, whereBody) <- convertWhereItems body
     return (item : nextItems, whereBody)
-convertWhereItems _ expr = return ([], expr)
+convertWhereItems expr = return ([], expr)
 
 convertDefinitionContent ::
   m ~ Anchors.ViewM =>
-  SugarM.Context -> Data.Expression DefI (PayloadMM m) ->
-  T m (DefinitionContent m)
-convertDefinitionContent sugarContext expr = do
-  (params, funcBody) <- convertDefinitionParams sugarContext expr
-  (whereItems, whereBody) <- convertWhereItems sugarContext funcBody
-  bodyS <- convertResult whereBody sugarContext
+  Data.Expression DefI (PayloadMM m) ->
+  SugarM m (DefinitionContent m)
+convertDefinitionContent expr = do
+  (params, funcBody) <- convertDefinitionParams expr
+  (whereItems, whereBody) <- convertWhereItems funcBody
+  bodyS <- convertExpressionI whereBody
   return DefinitionContent
     { dBody = bodyS
     , dParameters = params
@@ -789,20 +797,20 @@ convertDefinitionExpression config exprLoaded defI typeI = do
           (Property.set . Load.propertyOfClosure) (typeI ^. Data.ePayload) =<<
           DataIRef.newExpression inferredTypeP
         }
-    sugarContext = SugarM.mkContext config inferredLoadedResult
-  content <-
-    lift . convertDefinitionContent sugarContext .
-    (fmap . Lens.over SugarInfer.plInferred) Just $
-    inferredLoadedResult ^. SugarInfer.ilrExpr
-  mNewType <-
-    if inferredLoadedResult ^. SugarInfer.ilrSuccess && not typesMatch
-    then liftM Just $ lift mkNewType
-    else return Nothing
-  return $ DefinitionBodyExpression DefinitionExpression
-    { deContent = content
-    , deMNewType = mNewType
-    , deIsTypeRedundant = inferredLoadedResult ^. SugarInfer.ilrSuccess && typesMatch
-    }
+  lift . SugarM.run (SugarM.mkContext config inferredLoadedResult) $ do
+    content <-
+      convertDefinitionContent .
+      (fmap . Lens.over SugarInfer.plInferred) Just $
+      inferredLoadedResult ^. SugarInfer.ilrExpr
+    mNewType <-
+      if inferredLoadedResult ^. SugarInfer.ilrSuccess && not typesMatch
+      then liftM Just $ SugarM.liftTransaction mkNewType
+      else return Nothing
+    return $ DefinitionBodyExpression DefinitionExpression
+      { deContent = content
+      , deMNewType = mNewType
+      , deIsTypeRedundant = inferredLoadedResult ^. SugarInfer.ilrSuccess && typesMatch
+      }
   where
     iTypeGen = mkGen 0 3 $ IRef.guid defI
     inferLoadedGen = mkGen 1 3 $ IRef.guid defI
@@ -822,12 +830,6 @@ convertDefinitionExpression config exprLoaded defI typeI = do
 --         SugarInfer.inferLoadedExpression Nothing exprLoaded (Infer.initial Nothing)
 --       lift . convertStoredExpression (inferResult ^. SugarInfer.ilrExpr) $
 --         SugarM.mkContext config inferResult
-
-convertResult ::
-  m ~ Anchors.ViewM => Data.Expression DefI (PayloadMM m) -> SugarM.Context ->
-  T m (Expression m)
-convertResult expr sugarContext =
-  SugarM.run sugarContext $ convertExpressionI expr
 
 -- convertStoredExpression ::
 --   m ~ Anchors.ViewM =>
