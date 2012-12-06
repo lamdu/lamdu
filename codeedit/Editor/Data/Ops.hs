@@ -16,6 +16,7 @@ import Data.List.Split (splitOn)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.Anchors (ViewM)
+import Editor.Data.IRef (DefI)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -26,7 +27,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 
 type T = Transaction
 
-makeDefinition :: Transaction ViewM DataIRef.DefI
+makeDefinition :: Transaction ViewM DefI
 makeDefinition = do
   defI <-
     Transaction.newIRef =<<
@@ -111,7 +112,7 @@ redexWrap exprP = do
   Property.set exprP newApplyI
   return (newParam, newLambdaI)
 
-newPane :: DataIRef.DefI -> Transaction ViewM ()
+newPane :: DefI -> Transaction ViewM ()
 newPane defI = do
   panesP <- Anchors.panes
   when (defI `notElem` Property.value panesP) $
@@ -133,7 +134,7 @@ jumpBack = do
 newBuiltin
   :: MonadA m
   => String -> DataIRef.Expression
-  -> Transaction m DataIRef.DefI
+  -> Transaction m DefI
 newBuiltin fullyQualifiedName typeI =
   newDefinition name . (`Data.Definition` typeI) . Data.DefinitionBuiltin .
   Data.Builtin $ Data.FFIName (init path) name
@@ -141,7 +142,7 @@ newBuiltin fullyQualifiedName typeI =
     name = last path
     path = splitOn "." fullyQualifiedName
 
-newDefinition :: MonadA m => String -> DataIRef.DefinitionI -> Transaction m DataIRef.DefI
+newDefinition :: MonadA m => String -> DataIRef.DefinitionI -> Transaction m DefI
 newDefinition name defI = do
   res <- Transaction.newIRef defI
   Anchors.setP (Anchors.assocNameRef (IRef.guid res)) name
