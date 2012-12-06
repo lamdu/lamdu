@@ -71,10 +71,10 @@ type MkProperty m a = Transaction m (Transaction.Property m a)
 panes :: MkProperty ViewM [Pane]
 panes = Transaction.fromIRef panesIRef
 
-clipboards :: MkProperty ViewM [DataIRef.Expression]
+clipboards :: MkProperty ViewM [DefI]
 clipboards = Transaction.fromIRef clipboardsIRef
 
-clipboardsIRef :: IRef [DataIRef.Expression]
+clipboardsIRef :: IRef [DefI]
 clipboardsIRef = IRef.anchor "clipboard"
 
 branchesIRef :: IRef [Branch]

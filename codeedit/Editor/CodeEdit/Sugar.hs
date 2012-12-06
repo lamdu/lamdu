@@ -21,7 +21,6 @@ module Editor.CodeEdit.Sugar
   , Polymorphic(..)
   , HasParens(..)
   , loadConvertDefI
-  -- , loadConvertExpression
   , removeTypes
   ) where
 
@@ -77,8 +76,8 @@ type Convertor m =
   SugarM m (Expression m)
 
 mkCutter :: m ~ Anchors.ViewM => DataIRef.Expression -> T m Guid -> T m Guid
-mkCutter iref replaceWithHole = do
-  Anchors.modP Anchors.clipboards (iref:)
+mkCutter expr replaceWithHole = do
+  _ <- DataOps.newClipboard expr
   replaceWithHole
 
 mkActions :: m ~ Anchors.ViewM => Stored (T m) -> Actions m
@@ -180,24 +179,7 @@ mkFuncParamActions lambdaProp (Data.Lambda param _paramType body) =
       Expression (Guid.augment "EXAMPLE" param)
       (ExpressionAtom "NotImplemented") $
       Payload [] Nothing Nothing
-      -- exampleP <-
-      --   -- TODO: move to Anchors
-      --   lift . Anchors.nonEmptyAssocDataRef "example" param .
-      --   DataIRef.newExprBody $ Data.ExpressionLeaf Data.Hole
-      -- exampleLoaded <- lift $ Load.loadExpressionClosure exampleP
-      -- inferredExample <-
-      --   -- TODO: Nothing -> Just defI
-      --   SugarInfer.inferLoadedExpression ??gen?? Nothing exampleLoaded newInferNode
-      -- lift $ convertStoredExpression (inferredExample ^. SugarInfer.ilrExpr)
-      --   ctx { SugarM.scInferState = inferredExample ^. SugarInfer.ilrInferContext }
   }
-  where
-    -- (paramTypeIWC, _) = paramType
-    -- scope = Infer.nScope . Infer.iPoint $ iwcInferred lambdaIWC
-    -- paramTypeRef =
-    --   Infer.tvVal . Infer.nRefs . Infer.iPoint $ iwcInferred paramTypeIWC
-    -- newInferNode =
-    --   Infer.newTypedNodeWithScope scope paramTypeRef $ SugarM.scInferState ctx
 
 data IsDependent = Dependent | NonDependent
   deriving (Eq, Ord, Show)
@@ -409,9 +391,16 @@ mkPaste exprP = do
       case Property.value clipboardsP of
       [] -> Nothing
       (clip : clips) -> Just (clip, Property.set clipboardsP clips)
-  return $ fmap (doPaste (Property.set exprP)) mClipPop
+  return $ doPaste (Property.set exprP) <$> mClipPop
   where
-    doPaste replacer (clip, popClip) = do
+    doPaste replacer (clipDefI, popClip) = do
+      clipDef <- Transaction.readIRef clipDefI
+      let
+        clip =
+          case clipDef of
+          Data.Definition (Data.DefinitionExpression defExpr) _ -> defExpr
+          _ -> error "Clipboard contained a non-expression definition!"
+      Transaction.deleteIRef clipDefI
       ~() <- popClip
       ~() <- replacer clip
       return $ DataIRef.exprGuid clip
@@ -859,28 +848,6 @@ convertDefIExpression config exprLoaded defI typeI = do
     inferLoadedGen = mkGen 1 3 $ IRef.guid defI
 
 --------------
-
--- loadConvertExpression ::
---   m ~ Anchors.ViewM =>
---   SugarConfig ->
---   Stored (T m) ->
---   CT m (Expression m)
--- loadConvertExpression config exprP =
---   convertLoadedExpression =<< lift (Load.loadExpressionClosure exprP)
---   where
---     convertLoadedExpression exprLoaded = do
---       inferResult <-
---         SugarInfer.inferLoadedExpression Nothing exprLoaded (Infer.initial Nothing)
---       lift . convertStoredExpression (inferResult ^. SugarInfer.ilrExpr) $
---         SugarM.mkContext config inferResult
-
--- convertStoredExpression ::
---   m ~ Anchors.ViewM =>
---   Data.Expression DefI (Stored (T m)) -> SugarM.Context ->
---   T m (Expression m)
--- convertStoredExpression expr sugarContext =
---   SugarM.run sugarContext . convertExpressionI $
---   SugarInfer.resultFromStored expr
 
 removeTypes :: Expression m -> Expression m
 removeTypes = Lens.set (Lens.mapped . plInferredTypes) []

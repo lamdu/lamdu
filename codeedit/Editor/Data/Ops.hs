@@ -7,6 +7,7 @@ module Editor.Data.Ops
   , newBuiltin, newDefinition
   , savePreJumpPosition, jumpBack
   , newPane
+  , newClipboard
   ) where
 
 import Control.Applicative ((<$>), (<*>))
@@ -147,3 +148,11 @@ newDefinition name defI = do
   res <- Transaction.newIRef defI
   Anchors.setP (Anchors.assocNameRef (IRef.guid res)) name
   return res
+
+newClipboard :: DataIRef.Expression -> Transaction ViewM DefI
+newClipboard expr = do
+  len <- length <$> Anchors.getP Anchors.clipboards
+  def <- Data.Definition (Data.DefinitionExpression expr) <$> newHole
+  defI <- newDefinition ("clipboard" ++ show len) def
+  Anchors.modP Anchors.clipboards (defI:)
+  return defI

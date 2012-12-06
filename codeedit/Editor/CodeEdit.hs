@@ -1,10 +1,11 @@
 {-# LANGUAGE OverloadedStrings, TypeFamilies #-}
 module Editor.CodeEdit (make) where
 
--- import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
+import Control.Applicative ((<$>), (<*>))
 import Control.Lens ((^.))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT, mapStateT)
+import Control.MonadA (MonadA)
 import Data.Cache (Cache)
 import Data.List (intersperse)
 import Data.List.Utils (enumerate, insertAt, removeAt)
@@ -16,11 +17,11 @@ import Data.Traversable (traverse)
 import Editor.Anchors (ViewM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (WidgetT, ExprGuiM)
 import Editor.CodeEdit.Settings (Settings)
+import Editor.Data.IRef (DefI)
 import Editor.WidgetEnvT (WidgetEnvT)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Lens as Lens
 import qualified Data.Store.IRef as IRef
-import qualified Data.Store.Property as Property
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
@@ -40,6 +41,7 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
 type T = Transaction
+type CT m = StateT Cache (T m)
 
 -- This is not in Sugar because Sugar is for code
 data SugarPane m = SugarPane
@@ -58,7 +60,12 @@ makeNewDefinitionAction = do
     DataOps.savePreJumpPosition curCursor
     return . FocusDelegator.delegatingId $ WidgetIds.fromIRef newDefI
 
-makeSugarPanes :: m ~ ViewM => StateT Cache (T m) [SugarPane m]
+loadConvertDefI :: DefI -> CT ViewM (Sugar.Definition ViewM)
+loadConvertDefI defI = do
+  sugarConfig <- lift $ Anchors.getP Anchors.sugarConfig
+  Sugar.loadConvertDefI sugarConfig defI
+
+makeSugarPanes :: m ~ ViewM => CT m [SugarPane m]
 makeSugarPanes = do
   panes <- lift $ Anchors.getP Anchors.panes
   let
@@ -81,8 +88,7 @@ makeSugarPanes = do
       | i-1 >= 0 = Just $ movePane i (i-1)
       | otherwise = Nothing
     convertPane (i, defI) = do
-      sugarConfig <- lift $ fmap Property.value Anchors.sugarConfig
-      sDef <- Sugar.loadConvertDefI sugarConfig defI
+      sDef <- loadConvertDefI defI
       return SugarPane
         { spDef = sDef
         , mDelPane = mkMDelPane i
@@ -91,34 +97,34 @@ makeSugarPanes = do
         }
   traverse convertPane $ enumerate panes
 
--- makeClipboardsEdit ::
---   m ~ ViewM => [Sugar.Expression m] -> ExprGuiM m (WidgetT m)
--- makeClipboardsEdit clipboards = do
---   clipboardsEdits <-
---     traverse (fmap (Lens.view ExpressionGui.egWidget) . ExpressionEdit.make) clipboards
---   clipboardTitle <-
---     if null clipboardsEdits
---     then return Spacer.empty
---     else ExprGuiM.widgetEnv $ BWidgets.makeTextView "Clipboards:" ["clipboards title"]
---   return . Box.vboxAlign 0 $ clipboardTitle : clipboardsEdits
+makeClipboardsEdit ::
+  m ~ ViewM => [Sugar.Definition m] -> ExprGuiM m (WidgetT m)
+makeClipboardsEdit clipboards = do
+  clipboardsEdits <- traverse makePaneWidget clipboards
+  clipboardTitle <-
+    if null clipboardsEdits
+    then return Spacer.empty
+    else ExprGuiM.widgetEnv $ BWidgets.makeTextView "Clipboards:" ["clipboards title"]
+  return . Box.vboxAlign 0 $ clipboardTitle : clipboardsEdits
+
+makeSugarClipboards :: CT ViewM [Sugar.Definition ViewM]
+makeSugarClipboards =
+  traverse loadConvertDefI =<< lift (Anchors.getP Anchors.clipboards)
 
 make ::
   m ~ ViewM => Settings ->
   StateT Cache (WidgetEnvT (T m)) (Widget (T m))
 make settings = do
-  sugarPanes <- mapStateT lift makeSugarPanes
-  -- clipboardsExprs <- mapStateT lift $ do
-  --   clipboardsP <- lift Anchors.clipboards
-  --   sugarConfig <- lift $ fmap Property.value Anchors.sugarConfig
-  --   traverse (Sugar.loadConvertExpression sugarConfig) $
-  --     Property.list clipboardsP
+  (sugarPanes, sugarClipboards) <-
+    mapStateT lift $
+    (,) <$> makeSugarPanes <*> makeSugarClipboards
   ExprGuiM.run ExpressionEdit.make settings $ do
     panesEdit <- makePanesEdit sugarPanes
-    -- clipboardsEdit <- makeClipboardsEdit clipboardsExprs
+    clipboardsEdit <- makeClipboardsEdit sugarClipboards
     return $
       Box.vboxAlign 0
       [ panesEdit
-      -- , clipboardsEdit
+      , clipboardsEdit
       ]
 
 panesGuid :: Guid
@@ -131,7 +137,7 @@ makePanesEdit panes = do
     [] -> ExprGuiM.widgetEnv $ BWidgets.makeFocusableTextView "<No panes>" myId
     (firstPane:_) ->
       (ExprGuiM.assignCursor myId . WidgetIds.fromGuid . Sugar.drGuid . spDef) firstPane $ do
-        definitionEdits <- traverse makePaneWidget panes
+        definitionEdits <- traverse makePaneEdit panes
         return . Box.vboxAlign 0 $ intersperse (Spacer.makeWidget 50) definitionEdits
 
   mJumpBack <- ExprGuiM.transaction DataOps.jumpBack
@@ -149,11 +155,19 @@ makePanesEdit panes = do
   return $ Widget.weakerEvents panesEventMap panesWidget
   where
     myId = WidgetIds.fromGuid panesGuid
+    makePaneEdit pane =
+      (fmap . Widget.weakerEvents) (paneEventMap pane) .
+      makePaneWidget . spDef $ pane
     paneEventMap pane = mconcat
       [ maybe mempty (Widget.keysEventMapMovesCursor Config.closePaneKeys "Close pane" . fmap WidgetIds.fromGuid) $ mDelPane pane
       , maybe mempty (Widget.keysEventMap Config.movePaneDownKeys "Move pane down") $ mMovePaneDown pane
       , maybe mempty (Widget.keysEventMap Config.movePaneUpKeys "Move pane up") $ mMovePaneUp pane
       ]
+
+makePaneWidget :: MonadA m => Sugar.Definition m -> ExprGuiM m (Widget (T m))
+makePaneWidget =
+  fmap onEachPane . DefinitionEdit.make
+  where
     onEachPane widget
       | widget ^. Widget.wIsFocused = onActivePane widget
       | otherwise = onInactivePane widget
@@ -162,7 +176,3 @@ makePanesEdit panes = do
     onInactivePane =
       (Lens.over Widget.wFrame . Anim.onImages . Draw.tint)
       Config.inactiveTintColor
-    makePaneWidget pane =
-      fmap (onEachPane . Widget.weakerEvents (paneEventMap pane)) .
-      makeDefinitionEdit $ spDef pane
-    makeDefinitionEdit = DefinitionEdit.make
