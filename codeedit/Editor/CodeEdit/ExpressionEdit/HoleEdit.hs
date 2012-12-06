@@ -60,7 +60,7 @@ moreSymbolSizeFactor = 0.5
 
 data Group = Group
   { groupNames :: [String]
-  , groupBaseExpr :: Data.Expression DataIRef.DefinitionIRef ()
+  , groupBaseExpr :: Data.Expression DataIRef.DefI ()
   }
 
 type T = Transaction
@@ -172,14 +172,14 @@ makeNoResults myId =
   ExprGuiM.widgetEnv .
   BWidgets.makeTextView "(No results)" $ mappend myId ["no results"]
 
-mkGroup :: [String] -> Data.ExpressionBodyExpr DataIRef.DefinitionIRef () -> Group
+mkGroup :: [String] -> Data.ExpressionBodyExpr DataIRef.DefI () -> Group
 mkGroup names body = Group
   { groupNames = names
   , groupBaseExpr = Data.pureExpression body
   }
 
 makeVariableGroup ::
-  MonadA m => Data.VariableRef DataIRef.DefinitionIRef -> ExprGuiM m Group
+  MonadA m => Data.VariableRef DataIRef.DefI -> ExprGuiM m Group
 makeVariableGroup varRef =
   ExprGuiM.withNameFromVarRef varRef $ \(_, varName) ->
   return . mkGroup [varName] . Data.ExpressionLeaf $ Data.GetVariable varRef
@@ -224,12 +224,12 @@ makeLiteralGroup searchTerm =
 resultsPrefixId :: HoleInfo m -> Widget.Id
 resultsPrefixId holeInfo = mconcat [hiHoleId holeInfo, Widget.Id ["results"]]
 
-exprWidgetId :: Data.Expression DataIRef.DefinitionIRef a -> Widget.Id
+exprWidgetId :: Data.Expression DataIRef.DefI a -> Widget.Id
 exprWidgetId = WidgetIds.fromGuid . randFunc . show . void
 
 toResultsList ::
   MonadA m =>
-  HoleInfo m -> Data.Expression DataIRef.DefinitionIRef () ->
+  HoleInfo m -> Data.Expression DataIRef.DefI () ->
   CT m (Maybe ResultsList)
 toResultsList holeInfo baseExpr = do
   results <- Sugar.holeInferResults (hiHole holeInfo) baseExpr

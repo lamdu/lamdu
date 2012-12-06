@@ -35,7 +35,7 @@ fixIRef createOuter = do
   Transaction.writeIRef x =<< createOuter x
   return x
 
-createBuiltins :: MonadA m => Transaction m ((FFI.Env, SugarConfig), [DataIRef.DefinitionIRef])
+createBuiltins :: MonadA m => Transaction m ((FFI.Env, SugarConfig), [DataIRef.DefI])
 createBuiltins =
   Writer.runWriterT $ do
     list <- mkType . A.newBuiltin "Data.List.List" =<< lift setToSet

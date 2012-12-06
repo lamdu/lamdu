@@ -13,12 +13,10 @@ import Control.MonadA (MonadA)
 import Editor.CodeEdit.Sugar.Config (SugarConfig)
 import Editor.CodeEdit.Sugar.Infer (InferLoadedResult, ilrInferContext, ilrContext, ilrBaseInferContext)
 import Editor.CodeEdit.Sugar.Types -- see export list
+import Editor.Data.IRef (DefI)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Cache as Cache
-import qualified Editor.Data.IRef as DataIRef
 import qualified Editor.Data.Infer as Infer
-
-type DefI = DataIRef.DefinitionIRef
 
 data Context = Context
   { scInferState :: Infer.Context DefI

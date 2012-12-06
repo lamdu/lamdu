@@ -200,7 +200,7 @@ getDefName guid = do
     else (StoredName, storedName)
 
 withNameFromVarRef ::
-  MonadA m => Data.VariableRef DataIRef.DefinitionIRef ->
+  MonadA m => Data.VariableRef DataIRef.DefI ->
   ((NameSource, String) -> ExprGuiM m a) -> ExprGuiM m a
 withNameFromVarRef (Data.ParameterRef g) useName = withParamName g useName
 withNameFromVarRef (Data.DefinitionRef defI) useName =

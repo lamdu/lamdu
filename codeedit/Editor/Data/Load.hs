@@ -18,6 +18,7 @@ import Data.Functor.Identity (Identity(..))
 import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
 import Data.Typeable (Typeable)
+import Editor.Data.IRef (DefI)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.Internal as LensInternal
 import qualified Data.Store.Property as Property
@@ -26,7 +27,6 @@ import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
 
 type T = Transaction
-type DefI = DataIRef.DefinitionIRef
 
 data ApplyRole = Func | Arg
   deriving (Eq, Ord, Show, Typeable)

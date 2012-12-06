@@ -22,7 +22,7 @@ import qualified Test.QuickCheck.Gen as Gen
 
 data Env = Env
   { _envScope :: [Guid]
-  , __envMakeDefinitionIRef :: Maybe (Gen DataIRef.DefinitionIRef)
+  , __envMakeDefI :: Maybe (Gen DataIRef.DefI)
   }
 LensTH.makeLenses ''Env
 
@@ -31,15 +31,15 @@ type GenExpr = ReaderT Env (StateT [Guid] Gen)
 next :: GenExpr Guid
 next = lift $ State.gets head <* State.modify tail
 
-arbitraryLambda :: Arbitrary a => GenExpr (Data.Lambda (Data.Expression DataIRef.DefinitionIRef a))
+arbitraryLambda :: Arbitrary a => GenExpr (Data.Lambda (Data.Expression DataIRef.DefI a))
 arbitraryLambda = do
   guid <- next
   Data.Lambda guid <$> arbitraryExpr <*> (Reader.local . Lens.over envScope) (guid :) arbitraryExpr
 
-arbitraryApply :: Arbitrary a => GenExpr (Data.Apply (Data.Expression DataIRef.DefinitionIRef a))
+arbitraryApply :: Arbitrary a => GenExpr (Data.Apply (Data.Expression DataIRef.DefI a))
 arbitraryApply = Data.Apply <$> arbitraryExpr <*> arbitraryExpr
 
-arbitraryLeaf :: GenExpr (Data.Leaf DataIRef.DefinitionIRef)
+arbitraryLeaf :: GenExpr (Data.Leaf DataIRef.DefI)
 arbitraryLeaf = do
   Env scope mGenDefI <- Reader.ask
   join . liftGen . Gen.elements $
@@ -55,7 +55,7 @@ arbitraryLeaf = do
 liftGen :: Gen a -> GenExpr a
 liftGen = lift . lift
 
-arbitraryBody :: Arbitrary a => GenExpr (Data.ExpressionBodyExpr DataIRef.DefinitionIRef a)
+arbitraryBody :: Arbitrary a => GenExpr (Data.ExpressionBodyExpr DataIRef.DefI a)
 arbitraryBody =
   join . liftGen . Gen.frequency . (map . second) pure $
   [ weight 1  $ Data.ExpressionLambda <$> arbitraryLambda
@@ -66,7 +66,7 @@ arbitraryBody =
   where
     weight = (,)
 
-arbitraryExpr :: Arbitrary a => GenExpr (Data.Expression DataIRef.DefinitionIRef a)
+arbitraryExpr :: Arbitrary a => GenExpr (Data.Expression DataIRef.DefI a)
 arbitraryExpr = Data.Expression <$> arbitraryBody <*> liftGen arbitrary
 
 nameStream :: [Guid]
@@ -75,14 +75,14 @@ nameStream = map Guid.fromString names
     alphabet = map (:[]) ['a'..'z']
     names = (alphabet ++) $ (++) <$> names <*> alphabet
 
-exprGen :: Arbitrary a => Maybe (Gen DataIRef.DefinitionIRef) -> Gen (Data.Expression DataIRef.DefinitionIRef a)
-exprGen makeDefinitionIRef =
+exprGen :: Arbitrary a => Maybe (Gen DataIRef.DefI) -> Gen (Data.Expression DataIRef.DefI a)
+exprGen makeDefI =
   (`evalStateT` nameStream) .
-  (`runReaderT` Env [] makeDefinitionIRef) $
+  (`runReaderT` Env [] makeDefI) $
   arbitraryExpr
 
 -- TODO: This instance doesn't know which Definitions exist in the
 -- world so avoids DefinitionRef and only has valid ParameterRefs to
 -- its own lambdas.
-instance Arbitrary a => Arbitrary (Data.Expression DataIRef.DefinitionIRef a) where
+instance Arbitrary a => Arbitrary (Data.Expression DataIRef.DefI a) where
   arbitrary = exprGen Nothing

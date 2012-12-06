@@ -43,6 +43,7 @@ import Data.Store.Rev.Version(Version)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
 import Editor.CodeEdit.Sugar.Config (SugarConfig)
+import Editor.Data.IRef (DefI)
 import qualified Data.ByteString as SBS
 import qualified Data.Store.Db as Db
 import qualified Data.Store.IRef as IRef
@@ -54,7 +55,7 @@ import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
 import qualified Graphics.UI.Bottle.Widget as Widget
 
-type Pane = DataIRef.DefinitionIRef
+type Pane = DefI
 
 newtype DbM a = DbM { dbM :: IO a }
   deriving (Functor, Applicative, Monad, MonadIO)
@@ -95,10 +96,10 @@ currentBranchIRef :: IRef Branch
 currentBranchIRef = IRef.anchor "currentBranch"
 
 -- TODO: This should be an index
-globals :: MkProperty ViewM [DataIRef.DefinitionIRef]
+globals :: MkProperty ViewM [DataIRef.DefI]
 globals = Transaction.fromIRef globalsIRef
 
-globalsIRef :: IRef [DataIRef.DefinitionIRef]
+globalsIRef :: IRef [DataIRef.DefI]
 globalsIRef = IRef.anchor "globals"
 
 sugarConfig :: MkProperty ViewM SugarConfig
@@ -151,11 +152,10 @@ view = Transaction.fromIRef viewIRef
 viewIRef :: IRef View
 viewIRef = IRef.anchor "HEAD"
 
-makePane :: DataIRef.DefinitionIRef -> Pane
+makePane :: DataIRef.DefI -> Pane
 makePane = id
 
-makeDefinition
-  :: Transaction ViewM DataIRef.DefinitionIRef
+makeDefinition :: Transaction ViewM DataIRef.DefI
 makeDefinition = do
   let newHole = DataIRef.newExprBody $ Data.ExpressionLeaf Data.Hole
   defI <-
@@ -185,7 +185,7 @@ assocNameRef = Transaction.assocDataRefDef "" "Name"
 assocSearchTermRef :: MonadA m => Guid -> MkProperty m String
 assocSearchTermRef = Transaction.assocDataRefDef "" "searchTerm"
 
-newPane :: DataIRef.DefinitionIRef -> Transaction ViewM ()
+newPane :: DataIRef.DefI -> Transaction ViewM ()
 newPane defI = do
   panesP <- panes
   when (defI `notElem` Property.value panesP) $
@@ -207,7 +207,7 @@ jumpBack = do
 newBuiltin
   :: MonadA m
   => String -> DataIRef.Expression
-  -> Transaction m DataIRef.DefinitionIRef
+  -> Transaction m DataIRef.DefI
 newBuiltin fullyQualifiedName typeI =
   newDefinition name . (`Data.Definition` typeI) . Data.DefinitionBuiltin .
   Data.Builtin $ Data.FFIName (init path) name
@@ -215,7 +215,7 @@ newBuiltin fullyQualifiedName typeI =
     name = last path
     path = splitOn "." fullyQualifiedName
 
-newDefinition :: MonadA m => String -> DataIRef.DefinitionI -> Transaction m DataIRef.DefinitionIRef
+newDefinition :: MonadA m => String -> DataIRef.DefinitionI -> Transaction m DataIRef.DefI
 newDefinition name defI = do
   res <- Transaction.newIRef defI
   setP (assocNameRef (IRef.guid res)) name

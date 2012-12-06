@@ -27,6 +27,7 @@ import Data.Cache (Cache)
 import Data.Hashable (hash)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
+import Editor.Data.IRef (DefI)
 import Editor.Data.Infer.Conflicts (InferredWithConflicts(..), inferWithConflicts)
 import System.Random (RandomGen)
 import qualified Control.Lens as Lens
@@ -41,7 +42,6 @@ import qualified Editor.Data.Load as Load
 import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
 
-type DefI = DataIRef.DefinitionIRef
 type T = Transaction
 type CT m = StateT Cache (T m)
 

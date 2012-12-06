@@ -7,7 +7,7 @@ module Editor.Data.IRef
   , newExprBody, readExprBody, writeExprBody, exprGuid
   , newLambda, newPi
   , newExpression, writeExpression, readExpression
-  , DefinitionIRef, DefinitionI
+  , DefI, DefinitionI
   ) where
 
 import Control.Lens ((^.))
@@ -28,17 +28,17 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Data as Data
 
 type DefinitionI = Data.Definition Expression
-type DefinitionIRef = IRef DefinitionI
+type DefI = IRef DefinitionI
 
 type T = Transaction
 
 newtype Expression = Expression {
-  unExpression :: IRef (Data.ExpressionBody DefinitionIRef Expression)
+  unExpression :: IRef (Data.ExpressionBody DefI Expression)
   } deriving (Eq, Ord, Show, Typeable)
 derive makeBinary ''Expression
 
 type ExpressionProperty m = Property m Expression
-type ExpressionBody = Data.ExpressionBody DefinitionIRef Expression
+type ExpressionBody = Data.ExpressionBody DefI Expression
 type Lambda = Data.Lambda Expression
 type Apply = Data.Apply Expression
 
@@ -72,13 +72,13 @@ readExprBody = Transaction.readIRef . unExpression
 writeExprBody :: MonadA m => Expression -> ExpressionBody -> T m ()
 writeExprBody = Transaction.writeIRef . unExpression
 
-newExpression :: MonadA m => Data.Expression DefinitionIRef a -> T m Expression
+newExpression :: MonadA m => Data.Expression DefI a -> T m Expression
 newExpression = fmap (fst . Lens.view Data.ePayload) . newExpressionFromH
 
 -- Returns expression with new Guids
 writeExpression ::
-  MonadA m => Expression -> Data.Expression DefinitionIRef a ->
-  T m (Data.Expression DefinitionIRef (Expression, a))
+  MonadA m => Expression -> Data.Expression DefI a ->
+  T m (Data.Expression DefI (Expression, a))
 writeExpression iref expr = do
   exprBodyP <- expressionBodyFrom expr
   writeExprBody iref $ fmap (fst . Lens.view Data.ePayload) exprBodyP
@@ -86,20 +86,20 @@ writeExpression iref expr = do
     (iref, expr ^. Data.ePayload)
 
 readExpression ::
-  MonadA m => Expression -> T m (Data.Expression DefinitionIRef Expression)
+  MonadA m => Expression -> T m (Data.Expression DefI Expression)
 readExpression exprI =
   fmap (`Data.Expression` exprI) .
   traverse readExpression =<< readExprBody exprI
 
 expressionBodyFrom ::
-  MonadA m => Data.Expression DefinitionIRef a ->
-  T m (Data.ExpressionBodyExpr DefinitionIRef (Expression, a))
+  MonadA m => Data.Expression DefI a ->
+  T m (Data.ExpressionBodyExpr DefI (Expression, a))
 expressionBodyFrom = traverse newExpressionFromH . Lens.view Data.eValue
 
 newExpressionFromH ::
   MonadA m =>
-  Data.Expression DefinitionIRef a ->
-  T m (Data.Expression DefinitionIRef (Expression, a))
+  Data.Expression DefI a ->
+  T m (Data.Expression DefI (Expression, a))
 newExpressionFromH expr =
   fmap f . Transaction.newIRefWithGuid $ const mkPair
   where

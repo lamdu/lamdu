@@ -45,6 +45,7 @@ import Editor.CodeEdit.Sugar.Config (SugarConfig)
 import Editor.CodeEdit.Sugar.Infer (InferredWC, NoInferred, Stored, NoStored)
 import Editor.CodeEdit.Sugar.Monad (SugarM)
 import Editor.CodeEdit.Sugar.Types -- see export list
+import Editor.Data.IRef (DefI)
 import Editor.Data.Infer.Conflicts (InferredWithConflicts(..), iwcInferredTypes, iwcInferredValues)
 import System.Random (RandomGen)
 import qualified Control.Lens as Lens
@@ -71,7 +72,6 @@ import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
 
 type PayloadMM m = SugarInfer.Payload (Maybe InferredWC) (Maybe (Stored (T m)))
-type DefI = DataIRef.DefinitionIRef
 type Convertor m =
   Data.Expression DefI (PayloadMM m) ->
   SugarM m (Expression m)

@@ -9,6 +9,7 @@ import Control.Monad (join, void)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
+import Editor.Data.IRef (DefI)
 import Editor.Data.Infer.Conflicts (InferredWithConflicts(..), inferWithConflicts)
 import qualified Data.Foldable as Foldable
 import qualified Data.List as List
@@ -18,8 +19,6 @@ import qualified Data.Store.IRef as IRef
 import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
 import qualified Editor.Data.Infer as Infer
-
-type DefI = DataIRef.DefinitionIRef
 
 data Invisible = Invisible
 instance Show Invisible where

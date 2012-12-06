@@ -10,7 +10,7 @@ import Data.DeriveTH (derive)
 import qualified Editor.Data.IRef as DataIRef
 
 data SugarConfig = SugarConfig
-  { cons :: DataIRef.DefinitionIRef
-  , nil :: DataIRef.DefinitionIRef
+  { cons :: DataIRef.DefI
+  , nil :: DataIRef.DefI
   }
 derive makeBinary ''SugarConfig

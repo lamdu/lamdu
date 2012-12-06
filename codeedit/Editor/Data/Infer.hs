@@ -40,6 +40,7 @@ import Data.Maybe (fromMaybe, isJust, mapMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable)
+import Editor.Data.IRef (DefI)
 import Editor.Data.Infer.Rules (Rule(..))
 import Editor.Data.Infer.Types
 import qualified Control.Lens as Lens
@@ -52,10 +53,7 @@ import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
 import qualified Editor.Data as Data
-import qualified Editor.Data.IRef as DataIRef
 import qualified Editor.Data.Infer.Rules as Rules
-
-type DefI = DataIRef.DefinitionIRef
 
 toStateT :: MonadA m => State s a -> StateT s m a
 toStateT = State.mapStateT (return . runIdentity)
