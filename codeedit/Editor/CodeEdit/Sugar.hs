@@ -725,6 +725,35 @@ convertWhereItems
     return (item : nextItems, whereBody)
 convertWhereItems expr = return ([], expr)
 
+addStoredParam ::
+  MonadA m =>
+  Data.Expression def (SugarInfer.Payload inferred (Maybe (Stored (T m)))) ->
+  T m Guid
+addStoredParam
+  Data.Expression
+  { Data._ePayload =
+    SugarInfer.Payload { SugarInfer._plStored = Just prop } } =
+  fmap fst $ DataOps.lambdaWrap prop
+addStoredParam
+  Data.Expression
+  { Data._eValue =
+    Data.ExpressionLambda
+    Data.Lambda { Data._lambdaBody = body } } =
+  addStoredParam body
+addStoredParam _ =
+  error $
+  "Non-stored can only be lambda added by implicit " ++
+  "type-variables which must contain a stored in its body"
+
+assertedGetProp ::
+  String ->
+  Data.Expression def (SugarInfer.Payload inferred (Maybe stored)) -> stored
+assertedGetProp _
+  Data.Expression
+  { Data._ePayload =
+    SugarInfer.Payload { SugarInfer._plStored = Just prop } } = prop
+assertedGetProp msg _ = error msg
+
 convertDefinitionContent ::
   m ~ Anchors.ViewM =>
   Data.Expression DefI (PayloadMM m) ->
@@ -736,10 +765,10 @@ convertDefinitionContent expr = do
   return DefinitionContent
     { dFunc = Func depParams params bodyS
     , dWhereItems = whereItems
-    , dAddFirstParam = error "TODO1" -- fmap fst . DataOps.lambdaWrap $ getProp expr
+    , dAddFirstParam = addStoredParam expr
     , dAddInnermostWhereItem =
-        error "TODO2"
-        -- fmap fst . DataOps.redexWrap $ getProp whereBody
+      fmap fst . DataOps.redexWrap $
+      assertedGetProp "Where must be stored" whereBody
     }
 
 loadConvertDefI ::
