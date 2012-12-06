@@ -1,11 +1,15 @@
-* def loading removes sharing, restore def types map
+* Shift-left should let you select all the way up to definition,
+  especially in where (e.g: to add outer where)
 
-* use boolean for polymorphic instantiations, since the expr's are not full yet at the
-  stage
+* WhereItem edits should be nested, name-generation-wise, under the func body
 
-* Type variables:
-  * Need to avoid giving a type-variable to something that eventually
-    gets propagated to a monomorphic type.
+* Add (IRef m) tag
+
+* Missing a test to verify that recursive references have a recursive
+  type rather than the type "in db"
+
+* "AddVars" randomgen for add-variables guids is a problem with
+   multiple expressions
 
 * Cleanups:
   * Instead of (ExprGui.Monad.NameSource, String) and Guid of name
