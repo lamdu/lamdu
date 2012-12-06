@@ -116,7 +116,7 @@ toPayloadMM =
 
 mkExpression ::
   m ~ Anchors.ViewM =>
-  Data.Expression DefI (SugarInfer.Payload (Maybe InferredWC) (Maybe (Stored (T m)))) ->
+  Data.Expression DefI (PayloadMM m) ->
   ExpressionBody m (Expression m) -> SugarM m (Expression m)
 mkExpression result expr = do
   inferredTypesRefs <-
@@ -149,23 +149,33 @@ mkDelete parentP replacerP = do
   where
     replacerI = Property.value replacerP
 
+mkDeleteParam ::
+  MonadA m =>
+  SugarInfer.Stored (T m) ->
+  Data.Lambda (Data.Expression def (SugarInfer.Stored (T m))) -> T m Guid
+mkDeleteParam lambdaProp (Data.Lambda param _ body) = do
+  deleteParamRef body
+  mkDelete lambdaProp $ body ^. Data.ePayload
+  where
+    deleteParamRef = traverse_ deleteIfParamRef . Data.subExpressions
+    deleteIfParamRef expr =
+      case expr of
+      Data.Expression
+        (Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef p))) prop
+        | p == param -> void $ DataOps.replaceWithHole prop
+      _ -> return ()
+
 mkFuncParamActions ::
   m ~ Anchors.ViewM =>
-  SugarM.Context ->
-  Data.Expression DefI (PayloadMM m) ->
   SugarInfer.Stored (T m) ->
-  Data.Lambda (SugarInfer.Stored (T m)) ->
-  Stored (T m) ->
+  Data.Lambda (Data.Expression def (SugarInfer.Stored (T m))) ->
   FuncParamActions m
-mkFuncParamActions
-  _ctx bodyI lambdaProp (Data.Lambda param _paramType _) replacerProp =
+mkFuncParamActions lambdaProp lam@(Data.Lambda param _paramType body) =
   FuncParamActions
   { _fpListItemActions =
     ListItemActions
-    { _itemDelete = do
-        traverse_ deleteIfParamRef $ Data.subExpressions bodyI
-        mkDelete lambdaProp replacerProp
-    , _itemAddNext = fmap fst $ DataOps.lambdaWrap replacerProp
+    { _itemDelete = mkDeleteParam lambdaProp lam
+    , _itemAddNext = fmap fst . DataOps.lambdaWrap $ body ^. Data.ePayload
     }
   , _fpGetExample =
       return .
@@ -185,11 +195,6 @@ mkFuncParamActions
   }
   where
     -- (paramTypeIWC, _) = paramType
-    deleteIfParamRef expr =
-      case (resultStored expr, expr ^. Data.eValue) of
-      (Just prop, Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef p)))
-        | p == param -> void $ DataOps.replaceWithHole prop
-      _ -> return ()
     -- scope = Infer.nScope . Infer.iPoint $ iwcInferred lambdaIWC
     -- paramTypeRef =
     --   Infer.tvVal . Infer.nRefs . Infer.iPoint $ iwcInferred paramTypeIWC
@@ -204,19 +209,17 @@ convertFuncParam ::
   Data.Lambda (Data.Expression DefI (PayloadMM m)) ->
   Data.Expression DefI (PayloadMM m) ->
   SugarM m (IsDependent, FuncParam m (Expression m))
-convertFuncParam lam@(Data.Lambda paramGuid paramType body) expr = do
+convertFuncParam lam@(Data.Lambda paramGuid paramType _) expr = do
   paramTypeS <- convertExpressionI paramType
-  ctx <- SugarM.readContext
   let
     fp = FuncParam
       { _fpGuid = paramGuid
       , _fpHiddenLambdaGuid = Just $ resultGuid expr
       , _fpType = removeRedundantTypes paramTypeS
       , _fpMActions =
-        mkFuncParamActions ctx body
+        mkFuncParamActions
         <$> resultStored expr
-        <*> traverse resultStored lam
-        <*> resultStored body
+        <*> (traverse . traverse) (Lens.view SugarInfer.plStored) lam
       }
     isDependent
       | isPolymorphicFunc expr = Dependent
