@@ -138,26 +138,22 @@ mkExpression result expr = do
     seeds = RandomUtils.splits . mkGen 0 3 $ resultGuid result
     types = maybe [] iwcInferredTypes $ resultInferred result
 
-mkDelete
+replaceWith
   :: MonadA m
   => Stored (T m)
   -> Stored (T m)
   -> T m Guid
-mkDelete parentP replacerP = do
+replaceWith parentP replacerP = do
   Property.set parentP replacerI
   return $ DataIRef.exprGuid replacerI
   where
     replacerI = Property.value replacerP
 
-mkDeleteParam ::
-  MonadA m =>
-  SugarInfer.Stored (T m) ->
-  Data.Lambda (Data.Expression def (SugarInfer.Stored (T m))) -> T m Guid
-mkDeleteParam lambdaProp (Data.Lambda param _ body) = do
-  deleteParamRef body
-  mkDelete lambdaProp $ body ^. Data.ePayload
+deleteParamRef ::
+  MonadA m => Guid -> Data.Expression def (Stored (T m)) -> T m ()
+deleteParamRef param =
+  traverse_ deleteIfParamRef . Data.subExpressions
   where
-    deleteParamRef = traverse_ deleteIfParamRef . Data.subExpressions
     deleteIfParamRef expr =
       case expr of
       Data.Expression
@@ -167,14 +163,16 @@ mkDeleteParam lambdaProp (Data.Lambda param _ body) = do
 
 mkFuncParamActions ::
   m ~ Anchors.ViewM =>
-  SugarInfer.Stored (T m) ->
-  Data.Lambda (Data.Expression def (SugarInfer.Stored (T m))) ->
+  Stored (T m) ->
+  Data.Lambda (Data.Expression def (Stored (T m))) ->
   FuncParamActions m
-mkFuncParamActions lambdaProp lam@(Data.Lambda param _paramType body) =
+mkFuncParamActions lambdaProp (Data.Lambda param _paramType body) =
   FuncParamActions
   { _fpListItemActions =
     ListItemActions
-    { _itemDelete = mkDeleteParam lambdaProp lam
+    { _itemDelete = do
+        deleteParamRef param body
+        replaceWith lambdaProp $ body ^. Data.ePayload
     , _itemAddNext = fmap fst . DataOps.lambdaWrap $ body ^. Data.ePayload
     }
   , _fpGetExample =
@@ -259,7 +257,10 @@ convertFunc lambda exprI = do
   mkExpression exprI $ ExpressionFunc DontHaveParens newFunc
   where
     deleteToNextParam nextParam =
-      Lens.set (fpMActions . Lens.mapped . fpListItemActions .  itemDelete . Lens.sets fmap) $ nextParam ^. fpGuid
+      Lens.set
+      (fpMActions . Lens.mapped . fpListItemActions .
+       itemDelete . Lens.sets fmap) $
+      nextParam ^. fpGuid
 
 convertPi
   :: m ~ Anchors.ViewM
@@ -705,13 +706,16 @@ convertWhereItems
   { Data._lambdaParamId = param
   , Data._lambdaParamType = Data.Expression
   { Data._eValue = Data.ExpressionLeaf Data.Hole
-  }}}}} = do
+  }
+  , Data._lambdaBody = body
+  }}}} = do
     value <- convertDefinitionContent $ apply ^. Data.applyArg
     let
-      body = lambda ^. Data.lambdaBody
-      mkWIActions topLevelProp bodyProp =
+      mkWIActions topLevelProp bodyStored =
         ListItemActions
-        { _itemDelete = mkDelete topLevelProp bodyProp
+        { _itemDelete = do
+             deleteParamRef param bodyStored
+             replaceWith topLevelProp $ bodyStored ^. Data.ePayload
         , _itemAddNext = fmap fst $ DataOps.redexWrap topLevelProp
         }
       item = WhereItem
@@ -722,7 +726,7 @@ convertWhereItems
         , wiActions =
           mkWIActions <$>
           resultStored topLevel <*>
-          resultStored body
+          traverse (Lens.view SugarInfer.plStored) body
         }
     (nextItems, whereBody) <- convertWhereItems body
     return (item : nextItems, whereBody)
@@ -872,7 +876,7 @@ convertDefIExpression config exprLoaded defI typeI = do
 
 -- convertStoredExpression ::
 --   m ~ Anchors.ViewM =>
---   Data.Expression DefI (SugarInfer.Stored (T m)) -> SugarM.Context ->
+--   Data.Expression DefI (Stored (T m)) -> SugarM.Context ->
 --   T m (Expression m)
 -- convertStoredExpression expr sugarContext =
 --   SugarM.run sugarContext . convertExpressionI $
