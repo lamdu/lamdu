@@ -4,13 +4,12 @@ module Editor.CodeEdit.ExpressionEdit.FuncEdit
   (make, makeParamNameEdit, jumpToRHS, makeResultEdit, makeParamsAndResultEdit) where
 
 import Control.Lens ((^.))
-import Control.Monad (liftM)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
-import Editor.MonadF (MonadF)
+import Control.MonadA (MonadA)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Lens as Lens
 import qualified Editor.BottleWidgets as BWidgets
@@ -36,7 +35,7 @@ paramFDConfig = FocusDelegator.Config
   }
 
 makeParamNameEdit
-  :: MonadF m
+  :: MonadA m
   => (ExprGuiM.NameSource, String) -> Guid
   -> ExprGuiM m (WidgetT m)
 makeParamNameEdit name ident =
@@ -45,7 +44,7 @@ makeParamNameEdit name ident =
    ExpressionGui.makeNameEdit name ident) $ WidgetIds.fromGuid ident
 
 jumpToRHS ::
-  (MonadF m, MonadF f) =>
+  (MonadA m, MonadA f) =>
   [E.ModKey] -> (E.Doc, Sugar.Expression m) -> Widget.EventHandlers f
 jumpToRHS keys (rhsDoc, rhs) =
   Widget.keysEventMapMovesCursor keys ("Jump to " ++ rhsDoc) $
@@ -55,7 +54,7 @@ jumpToRHS keys (rhsDoc, rhs) =
 
 -- exported for use in definition sugaring.
 makeParamEdit ::
-  MonadF m =>
+  MonadA m =>
   ((ExprGuiM.NameSource, String) ->
    Widget (Transaction m) -> Widget (Transaction m)) ->
   (E.Doc, Sugar.Expression m) ->
@@ -63,17 +62,17 @@ makeParamEdit ::
   Sugar.FuncParam m (Sugar.Expression m) ->
   ExprGuiM m (ExpressionGui m)
 makeParamEdit atParamWidgets rhs prevId name param = do
-  infoMode <- liftM (Lens.view Settings.sInfoMode) ExprGuiM.readSettings
-  (liftM . Lens.over ExpressionGui.egWidget) onFinalWidget . assignCursor $ do
+  infoMode <- fmap (Lens.view Settings.sInfoMode) ExprGuiM.readSettings
+  (fmap . Lens.over ExpressionGui.egWidget) onFinalWidget . assignCursor $ do
     paramTypeEdit <- ExprGuiM.makeSubexpresion $ param ^. Sugar.fpType
     paramNameEdit <- makeParamNameEdit name ident
     let typeWidget = paramTypeEdit ^. ExpressionGui.egWidget
     infoWidget <-
       case (infoMode, mActions) of
       (Settings.InfoExamples, Just actions) -> do
-        exampleSugar <- ExprGuiM.liftMemoT $ Lens.view Sugar.fpGetExample actions
+        exampleSugar <- ExprGuiM.fmapemoT $ Lens.view Sugar.fpGetExample actions
         exampleGui <-
-          liftM (Lens.view ExpressionGui.egWidget) $
+          fmap (Lens.view ExpressionGui.egWidget) $
           ExprGuiM.makeSubexpresion exampleSugar
         return $ Box.vboxCentered [exampleGui, typeWidget]
       _ -> return typeWidget
@@ -101,23 +100,23 @@ makeParamEdit atParamWidgets rhs prevId name param = do
     paramAddNextEventMap =
       maybe mempty
       (Widget.keysEventMapMovesCursor Config.addNextParamKeys "Add next parameter" .
-       liftM (FocusDelegator.delegatingId . WidgetIds.fromGuid) .
+       fmap (FocusDelegator.delegatingId . WidgetIds.fromGuid) .
        Lens.view (Sugar.fpListItemActions . Sugar.itemAddNext))
       mActions
     paramDeleteEventMap keys docSuffix onId =
       maybe mempty
       (Widget.keysEventMapMovesCursor keys ("Delete parameter" ++ docSuffix) .
-       liftM (onId . WidgetIds.fromGuid) .
+       fmap (onId . WidgetIds.fromGuid) .
        Lens.view (Sugar.fpListItemActions . Sugar.itemDelete))
       mActions
 
 makeResultEdit
-  :: MonadF m
+  :: MonadA m
   => [Widget.Id]
   -> Sugar.Expression m
   -> ExprGuiM m (ExpressionGui m)
 makeResultEdit lhs result =
-  liftM ((Lens.over ExpressionGui.egWidget . Widget.weakerEvents) jumpToLhsEventMap) $
+  fmap ((Lens.over ExpressionGui.egWidget . Widget.weakerEvents) jumpToLhsEventMap) $
   ExprGuiM.makeSubexpresion result
   where
     lastParam = case lhs of
@@ -128,7 +127,7 @@ makeResultEdit lhs result =
       return lastParam
 
 make
-  :: MonadF m
+  :: MonadA m
   => Sugar.HasParens
   -> Sugar.Func m (Sugar.Expression m)
   -> Widget.Id
@@ -137,11 +136,11 @@ make hasParens (Sugar.Func depParams params body) =
   ExpressionGui.wrapParenify hasParens Parens.addHighlightedTextParens $ \myId ->
   ExprGuiM.assignCursor myId bodyId $ do
     lambdaLabel <-
-      liftM ExpressionGui.fromValueWidget .
+      fmap ExpressionGui.fromValueWidget .
       ExprGuiM.atEnv (WE.setTextSizeColor Config.lambdaTextSize Config.lambdaColor) .
       ExprGuiM.widgetEnv . BWidgets.makeLabel "λ" $ Widget.toAnimId myId
     rightArrowLabel <-
-      liftM ExpressionGui.fromValueWidget .
+      fmap ExpressionGui.fromValueWidget .
       ExprGuiM.atEnv (WE.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor) .
       ExprGuiM.widgetEnv . BWidgets.makeLabel "→" $ Widget.toAnimId myId
     (depParamsEdits, paramsEdits, bodyEdit) <-
@@ -159,7 +158,7 @@ make hasParens (Sugar.Func depParams params body) =
     lhs = map (WidgetIds.fromGuid . Lens.view Sugar.fpGuid) allParams
 
 makeParamsAndResultEdit ::
-  MonadF m =>
+  MonadA m =>
   ((ExprGuiM.NameSource, String) ->
    Widget (Transaction m) -> Widget (Transaction m)) ->
   [Widget.Id] -> (E.Doc, Sugar.Expression m) ->
@@ -180,7 +179,7 @@ makeParamsAndResultEdit atParamWidgets lhs rhs@(_, result) firstParId depParams 
       mkFinal guid l
 
 makeNestedParamNames ::
-  Monad m =>
+  MonadA m =>
   (a -> Guid) ->
   (Widget.Id -> (ExprGuiM.NameSource, String) -> a -> ExprGuiM m item) ->
   (Widget.Id -> ExprGuiM m final) ->
@@ -188,13 +187,13 @@ makeNestedParamNames ::
   ExprGuiM m ([item], final)
 makeNestedParamNames itemGuid makeItem mkFinal = go
   where
-    go wId [] = liftM ((,) []) $ mkFinal wId
+    go wId [] = fmap ((,) []) $ mkFinal wId
     go oldWId (x:xs) = do
       let
         guid = itemGuid x
         newWId = WidgetIds.fromGuid guid
       (name, (items, final)) <-
         ExprGuiM.withParamName guid $ \name ->
-        liftM ((,) name) $ go newWId xs
+        fmap ((,) name) $ go newWId xs
       item <- makeItem oldWId name x
       return (item : items, final)

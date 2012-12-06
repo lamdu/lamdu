@@ -3,6 +3,7 @@ module Data.Store.Db
 where
 
 import Data.ByteString (ByteString)
+import Data.Foldable (traverse_)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Store(..))
 import Prelude hiding (lookup)
@@ -33,7 +34,7 @@ lookup :: Db -> Guid -> IO (Maybe ByteString)
 lookup db = HashDB.readKey db . Guid.bs
 
 transaction :: Db -> [(Guid, Maybe ByteString)] -> IO ()
-transaction db = mapM_ applyChange
+transaction db = traverse_ applyChange
   where
     applyChange (key, Nothing) = HashDB.deleteKey db (Guid.bs key)
     applyChange (key, Just value) = HashDB.writeKey db (Guid.bs key) value

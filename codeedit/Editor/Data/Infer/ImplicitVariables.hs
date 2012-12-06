@@ -3,9 +3,10 @@ module Editor.Data.Infer.ImplicitVariables
   ( addVariables, Payload(..)
   ) where
 
+import Control.Applicative (liftA2)
 import Control.Lens (SimpleLens, (^.))
-import Control.Monad (liftM, liftM2)
 import Control.Monad.Trans.State (State, runState)
+import Control.MonadA (MonadA)
 import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
@@ -77,13 +78,13 @@ actions :: Infer.InferActions def Identity
 actions = Infer.InferActions . const . Identity $ error "Infer error when adding implicit vars!"
 
 addVariables ::
-  (Monad m, Ord def, RandomGen g) =>
+  (MonadA m, Ord def, RandomGen g) =>
   g -> Infer.Loader def m ->
   Infer.Context def -> Data.Expression def (Infer.Inferred def, a) ->
   m (Infer.Context def, Data.Expression def (Infer.Inferred def, Payload a))
 addVariables gen loader initialInferContext expr =
-  liftM swap $
-  liftM2 onLoaded
+  fmap swap $
+  liftA2 onLoaded
   (load Data.pureSet)
   (load (Infer.iType rootNode))
   where

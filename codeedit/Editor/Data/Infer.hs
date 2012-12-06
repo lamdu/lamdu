@@ -21,14 +21,16 @@ module Editor.Data.Infer
 
 import Control.Applicative (Applicative(..), (<$), (<$>))
 import Control.Lens ((%=), (.=), (^.), (+=))
-import Control.Monad ((<=<), guard, liftM, unless, void, when)
+import Control.Monad ((<=<), guard, unless, void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.State (StateT(..), State, runState)
 import Control.Monad.Trans.Writer (Writer)
+import Control.MonadA (MonadA)
 import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
+import Data.Foldable (traverse_)
 import Data.Function (on)
 import Data.Functor.Identity (Identity(..))
 import Data.IntMap (IntMap)
@@ -36,6 +38,7 @@ import Data.IntSet (IntSet)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe, isJust, mapMaybe)
 import Data.Monoid (Monoid(..))
+import Data.Traversable (traverse)
 import Data.Typeable (Typeable)
 import Editor.Data.Infer.Rules (Rule(..))
 import Editor.Data.Infer.Types
@@ -48,14 +51,13 @@ import qualified Data.IntSet as IntSet
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
-import qualified Data.Traversable as Traversable
 import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
 import qualified Editor.Data.Infer.Rules as Rules
 
 type DefI = DataIRef.DefinitionIRef
 
-toStateT :: Monad m => State s a -> StateT s m a
+toStateT :: MonadA m => State s a -> StateT s m a
 toStateT = State.mapStateT (return . runIdentity)
 
 mkOrigin :: State Origin Origin
@@ -167,13 +169,13 @@ LensTH.makeLenses ''InferState
 
 toRefExpression :: Data.Expression def () -> State Origin (RefExpression def)
 toRefExpression =
-  Traversable.mapM . const $
+  traverse . const $
   RefExprPayload mempty (Monoid.Any False) <$> mkOrigin
 
 createRefExpr :: State (Context def) ExprRef
 createRefExpr = do
   holeRefExpr <- Lens.zoom nextOrigin $ toRefExpression Data.pureHole
-  liftM ExprRef . Lens.zoom exprMap . createRef $ RefData holeRefExpr mempty
+  fmap ExprRef . Lens.zoom exprMap . createRef $ RefData holeRefExpr mempty
 
 exprRefsAt :: Functor f => ExprRef -> Lens.SimpleLensLike f (Context def) (RefData def)
 exprRefsAt k = exprMap . refsAt (unExprRef k)
@@ -181,7 +183,7 @@ exprRefsAt k = exprMap . refsAt (unExprRef k)
 -- RuleRefMap
 
 createEmptyRefRule :: State (Context def) RuleRef
-createEmptyRefRule = liftM RuleRef $ Lens.zoom ruleMap createEmptyRef
+createEmptyRefRule = fmap RuleRef $ Lens.zoom ruleMap createEmptyRef
 
 ruleRefsAt :: Functor f => RuleRef -> Lens.SimpleLensLike f (Context def) (Rule def)
 ruleRefsAt k = ruleMap . refsAt (unRuleRef k)
@@ -227,9 +229,9 @@ initial mRecursiveDefI =
 
 newtype InferT def m a =
   InferT { unInferT :: StateT (InferState def m) m a }
-  deriving (Monad)
+  deriving (Functor, Applicative, Monad)
 
-askActions :: Monad m => InferT def m (InferActions def m)
+askActions :: MonadA m => InferT def m (InferActions def m)
 askActions = InferT $ Lens.use sActions
 
 liftState :: Monad m => StateT (InferState def m) m a -> InferT def m a
@@ -265,33 +267,33 @@ derefExpr expr context =
       toIsRestrictedPoly . Monoid.getAny . Lens.view rplRestrictedPoly <$>
       context ^. exprRefsAt ref . rExpression
 
-getRefExpr :: Monad m => ExprRef -> InferT def m (RefExpression def)
+getRefExpr :: MonadA m => ExprRef -> InferT def m (RefExpression def)
 getRefExpr ref = liftState $ Lens.use (sContext . exprRefsAt ref . rExpression)
 
 {-# SPECIALIZE getRefExpr :: ExprRef -> InferT DefI Maybe (RefExpression DefI) #-}
 {-# SPECIALIZE getRefExpr :: Monoid w => ExprRef -> InferT DefI (Writer w) (RefExpression DefI) #-}
 
-executeRules :: (Eq def, Monad m) => InferT def m ()
+executeRules :: (Eq def, MonadA m) => InferT def m ()
 executeRules = do
   curLayer <- liftState $ Lens.use sBfsNextLayer
   liftState $ sBfsCurLayer .= curLayer
   liftState $ sBfsNextLayer .= IntSet.empty
   unless (IntSet.null curLayer) $ do
-    mapM_ processRule $ IntSet.toList curLayer
+    traverse_ processRule $ IntSet.toList curLayer
     executeRules
   where
     processRule key = do
       liftState $ sBfsCurLayer . Lens.contains key .= False
       Rule deps ruleClosure <-
         liftState $ Lens.use (sContext . ruleRefsAt (RuleRef key))
-      refExps <- mapM getRefExpr deps
-      mapM_ (uncurry setRefExpr) $ Rules.runClosure ruleClosure refExps
+      refExps <- traverse getRefExpr deps
+      traverse_ (uncurry setRefExpr) $ Rules.runClosure ruleClosure refExps
 
 {-# SPECIALIZE executeRules :: InferT DefI Maybe () #-}
 {-# SPECIALIZE executeRules :: Monoid w => InferT DefI (Writer w) () #-}
 
 execInferT ::
-  (Monad m, Eq def) => InferActions def m ->
+  (MonadA m, Eq def) => InferActions def m ->
   InferT def m a -> StateT (Context def) m a
 execInferT actions act = do
   inferState <- State.gets mkInferState
@@ -335,7 +337,7 @@ initialValExpr (Data.Expression body ()) =
   where
     circumcized = Data.pureExpression . (Data.pureHole <$)
 
--- This is because platform's Either's Monad instance sucks
+-- This is because platform's Either's MonadA instance sucks
 runEither :: EitherT l Identity a -> Either l a
 runEither = runIdentity . runEitherT
 
@@ -385,7 +387,7 @@ mergeExprs p0 p1 =
     onMismatch e0 e1 =
       Either.left $ MismatchIn (void e0) (void e1)
 
-touch :: Monad m => ExprRef -> InferT def m ()
+touch :: MonadA m => ExprRef -> InferT def m ()
 touch ref =
   liftState $ do
     nodeRules <- Lens.use (sContext . exprRefsAt ref . rRules)
@@ -399,7 +401,7 @@ touch ref =
 {-# SPECIALIZE touch :: ExprRef -> InferT DefI Maybe () #-}
 {-# SPECIALIZE touch :: Monoid w => ExprRef -> InferT DefI (Writer w) () #-}
 
-setRefExpr :: (Eq def, Monad m) => ExprRef -> RefExpression def -> InferT def m ()
+setRefExpr :: (Eq def, MonadA m) => ExprRef -> RefExpression def -> InferT def m ()
 setRefExpr ref newExpr = do
   curExpr <- liftState $ Lens.use (sContext . exprRefsAt ref . rExpression)
   case mergeExprs curExpr newExpr of
@@ -414,7 +416,7 @@ setRefExpr ref newExpr = do
       when (isChange || isHole) $
         liftState $ sContext . exprRefsAt ref . rExpression .= mergedExpr
     Left details -> do
-      report <- liftM reportError askActions
+      report <- fmap reportError askActions
       lift $ report Error
         { errRef = ref
         , errMismatch = (void curExpr, void newExpr)
@@ -432,19 +434,19 @@ setRefExpr ref newExpr = do
 {-# SPECIALIZE setRefExpr :: ExprRef -> RefExpression DefI -> InferT DefI Maybe () #-}
 {-# SPECIALIZE setRefExpr :: Monoid w => ExprRef -> RefExpression DefI -> InferT DefI (Writer w) () #-}
 
-liftOriginState :: Monad m => State Origin a -> InferT def m a
+liftOriginState :: MonadA m => State Origin a -> InferT def m a
 liftOriginState = liftState . Lens.zoom (sContext . nextOrigin) . toStateT
 
-liftContextState :: Monad m => State (Context def) a -> InferT def m a
+liftContextState :: MonadA m => State (Context def) a -> InferT def m a
 liftContextState = liftState . Lens.zoom sContext . toStateT
 
 exprIntoContext ::
-  (Monad m, Ord def) => Scope def ->
+  (MonadA m, Ord def) => Scope def ->
   Loaded def a ->
   InferT def m (Data.Expression def (InferNode def, a))
 exprIntoContext rootScope (Loaded rootExpr defTypes) = do
   defTypesRefs <-
-    Traversable.mapM defTypeIntoContext $
+    traverse defTypeIntoContext $
     Map.mapKeys Data.DefinitionRef defTypes
   -- mappend prefers left, so it is critical we put rootScope
   -- first. defTypesRefs may contain the loaded recursive defI because
@@ -452,20 +454,20 @@ exprIntoContext rootScope (Loaded rootExpr defTypes) = do
   -- type does get (unnecessarily) loaded.
   go (rootScope `mappend` defTypesRefs) =<<
     liftContextState
-    (Traversable.mapM addTypedVal rootExpr)
+    (traverse addTypedVal rootExpr)
   where
     defTypeIntoContext defType = do
       ref <- liftContextState createRefExpr
       setRefExpr ref =<< liftOriginState (toRefExpression defType)
       return ref
-    addTypedVal x = liftM ((,) x) createTypedVal
+    addTypedVal x = fmap ((,) x) createTypedVal
     go scope (Data.Expression body (s, createdTV)) = do
       inferNode <- toInferNode scope (void <$> body) createdTV
       newBody <-
         case body of
         Data.ExpressionLambda lam -> goLambda Data.makeLambda scope lam
         Data.ExpressionPi lam -> goLambda Data.makePi scope lam
-        _ -> Traversable.mapM (go scope) body
+        _ -> traverse (go scope) body
       return $ Data.Expression newBody (inferNode, s)
     goLambda cons scope (Data.Lambda paramGuid paramType result) = do
       paramTypeDone <- go scope paramType
@@ -501,26 +503,26 @@ instance (Binary a, Binary def, Ord def) => Binary (Loaded def a) where
   put (Loaded a b) = put a >> put b
 
 load ::
-  (Monad m, Ord def) => Loader def m ->
+  (MonadA m, Ord def) => Loader def m ->
   Maybe def -> Data.Expression def a ->
   m (Loaded def a)
 load loader mRecursiveDef expr =
-  liftM (Loaded expr) loadDefTypes
+  fmap (Loaded expr) loadDefTypes
   where
     loadDefTypes =
-      liftM Map.fromList .
-      mapM loadType $ ordNub
+      fmap Map.fromList .
+      traverse loadType $ ordNub
       [ defI
       | Data.ExpressionLeaf (Data.GetVariable (Data.DefinitionRef defI)) <-
         map (Lens.view Data.eValue) $ Data.subExpressions expr
       , Just defI /= mRecursiveDef
       ]
-    loadType defI = liftM ((,) defI) $ loadPureDefinitionType loader defI
+    loadType defI = fmap ((,) defI) $ loadPureDefinitionType loader defI
 
 addRule :: Rule def -> State (InferState def m) ()
 addRule rule = do
   ruleRef <- makeRule
-  mapM_ (addRuleId ruleRef) $ ruleInputs rule
+  traverse_ (addRuleId ruleRef) $ ruleInputs rule
   sBfsNextLayer . Lens.contains (unRuleRef ruleRef) .= True
   where
     makeRule = do
@@ -530,17 +532,17 @@ addRule rule = do
     addRuleId ruleRef ref = sContext . exprRefsAt ref . rRules %= (ruleRef :)
 
 addRules ::
-  (Eq def, Monad m) => InferActions def m ->
+  (Eq def, MonadA m) => InferActions def m ->
   [Data.Expression def (InferNode def)] ->
   StateT (Context def) m ()
 addRules actions exprs =
   execInferT actions . liftState . toStateT $
-  mapM_ addRule . concat =<<
+  traverse_ addRule . concat =<<
   (Lens.zoom (sContext . nextOrigin) .
-   mapM Rules.makeForNode . (map . fmap) nRefs) exprs
+   traverse Rules.makeForNode . (map . fmap) nRefs) exprs
 
 inferLoaded ::
-  (Ord def, Monad m) =>
+  (Ord def, MonadA m) =>
   InferActions def m -> Loaded def a ->
   InferNode def ->
   StateT (Context def) m (Data.Expression def (Inferred def, a))
@@ -551,13 +553,13 @@ inferLoaded actions loadedExpr node =
     liftState . toStateT $ do
       let
         addUnionRules f =
-          mapM_ addRule $ on Rules.union (f . nRefs) node . fst $ expr ^. Data.ePayload
+          traverse_ addRule $ on Rules.union (f . nRefs) node . fst $ expr ^. Data.ePayload
       addUnionRules tvVal
       addUnionRules tvType
       rules <-
         Lens.zoom (sContext . nextOrigin) .
         Rules.makeForAll $ nRefs . fst <$> expr
-      mapM_ addRule rules
+      traverse_ addRule rules
     return expr
 
 {-# SPECIALIZE

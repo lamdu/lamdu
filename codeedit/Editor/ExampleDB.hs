@@ -1,8 +1,11 @@
 module Editor.ExampleDB(initDB) where
 
-import Control.Monad (join, liftM, liftM2, unless)
+import Control.Applicative (liftA2)
+import Control.Monad (join, unless)
 import Control.Monad.Trans.Class (lift)
+import Control.MonadA (MonadA)
 import Data.Binary (Binary(..))
+import Data.Foldable (traverse_)
 import Data.Store.Db (Db)
 import Data.Store.IRef (IRef)
 import Data.Store.Rev.Branch (Branch)
@@ -23,16 +26,16 @@ import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
 import qualified Editor.WidgetIds as WidgetIds
 
-newTodoIRef :: Monad m => Transaction m (IRef a)
-newTodoIRef = liftM IRef.unsafeFromGuid Transaction.newKey
+newTodoIRef :: MonadA m => Transaction m (IRef a)
+newTodoIRef = fmap IRef.unsafeFromGuid Transaction.newKey
 
-fixIRef :: (Binary a, Monad m) => (IRef a -> Transaction m a) -> Transaction m (IRef a)
+fixIRef :: (Binary a, MonadA m) => (IRef a -> Transaction m a) -> Transaction m (IRef a)
 fixIRef createOuter = do
   x <- newTodoIRef
   Transaction.writeIRef x =<< createOuter x
   return x
 
-createBuiltins :: Monad m => Transaction m ((FFI.Env, SugarConfig), [DataIRef.DefinitionIRef])
+createBuiltins :: MonadA m => Transaction m ((FFI.Env, SugarConfig), [DataIRef.DefinitionIRef])
 createBuiltins =
   Writer.runWriterT $ do
     list <- mkType . A.newBuiltin "Data.List.List" =<< lift setToSet
@@ -47,7 +50,7 @@ createBuiltins =
     true <- makeWithType "Prelude.True" bool
     false <- makeWithType "Prelude.False" bool
 
-    mapM_ ((`makeWithType_` mkPi bool (endo bool)) . ("Prelude."++))
+    traverse_ ((`makeWithType_` mkPi bool (endo bool)) . ("Prelude."++))
       ["&&", "||"]
 
     makeWithType_ "Prelude.if" . forAll "a" $ \a ->
@@ -83,13 +86,13 @@ createBuiltins =
       mkPi (mkPi a (mkPi b c)) . mkPi (listOf a) . mkPi (listOf b) $ listOf c
 
     let aToAToA = forAll "a" $ \a -> mkPi a $ endo a
-    mapM_ ((`makeWithType_` aToAToA) . ("Prelude." ++))
+    traverse_ ((`makeWithType_` aToAToA) . ("Prelude." ++))
       ["+", "-", "*", "/", "^", "++", "mod", "div", "quot", "rem"]
     makeWithType_ "Prelude.negate" $ forAll "a" endo
     makeWithType_ "Prelude.sqrt" $ forAll "a" endo
 
     let aToAToBool = forAll "a" $ \a -> mkPi a $ mkPi a bool
-    mapM_ ((`makeWithType_` aToAToBool) . ("Prelude." ++))
+    traverse_ ((`makeWithType_` aToAToBool) . ("Prelude." ++))
       ["==", "/=", "<=", ">=", "<", ">"]
 
     makeWithType_ "Prelude.enumFromTo" . mkPi integer . mkPi integer $ listOf integer
@@ -128,7 +131,7 @@ createBuiltins =
     endo = join mkPi
     set = DataIRef.newExprBody $ Data.ExpressionLeaf Data.Set
     integer = DataIRef.newExprBody $ Data.ExpressionLeaf Data.IntegerType
-    forAll name f = liftM DataIRef.Expression . fixIRef $ \aI -> do
+    forAll name f = fmap DataIRef.Expression . fixIRef $ \aI -> do
       let aGuid = IRef.guid aI
       A.setP (A.assocNameRef aGuid) name
       s <- set
@@ -138,20 +141,20 @@ createBuiltins =
       x <- lift f
       Writer.tell [x]
       return x
-    tellift_ = (fmap . liftM . const) () tellift
+    tellift_ = (fmap . fmap . const) () tellift
     getVar = DataIRef.newExprBody . Data.ExpressionLeaf . Data.GetVariable
-    mkPi mkArgType mkResType = liftM snd . join $ liftM2 DataIRef.newPi mkArgType mkResType
+    mkPi mkArgType mkResType = fmap snd . join $ liftA2 DataIRef.newPi mkArgType mkResType
     mkApply mkFunc mkArg =
-      DataIRef.newExprBody =<< liftM2 Data.makeApply mkFunc mkArg
+      DataIRef.newExprBody =<< liftA2 Data.makeApply mkFunc mkArg
     mkType f = do
       x <- lift f
       Writer.tell [x]
       return . getVar $ Data.DefinitionRef x
-    makeWithType_ = (fmap . fmap . liftM . const) () makeWithType
+    makeWithType_ = (fmap . fmap . fmap . const) () makeWithType
     makeWithType builtinName typeMaker =
       tellift (A.newBuiltin builtinName =<< typeMaker)
 
-newBranch :: Monad m => String -> Version -> Transaction m Branch
+newBranch :: MonadA m => String -> Version -> Transaction m Branch
 newBranch name ver = do
   branch <- Branch.new ver
   A.setP (BranchGUI.branchNameProp branch) name

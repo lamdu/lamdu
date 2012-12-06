@@ -1,9 +1,8 @@
 module Editor.CodeEdit.ExpressionEdit.AtomEdit(make) where
 
-import Control.Monad (liftM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
-import Editor.MonadF (MonadF)
+import Control.MonadA (MonadA)
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
@@ -11,8 +10,8 @@ import qualified Editor.Config as Config
 import qualified Editor.WidgetEnvT as WE
 import qualified Graphics.UI.Bottle.Widget as Widget
 
-make :: MonadF m => String -> Widget.Id -> ExprGuiM m (ExpressionGui m)
+make :: MonadA m => String -> Widget.Id -> ExprGuiM m (ExpressionGui m)
 make name =
-  liftM ExpressionGui.fromValueWidget .
+  fmap ExpressionGui.fromValueWidget .
     ExprGuiM.atEnv (WE.setTextColor Config.atomColor) . ExprGuiM.widgetEnv .
     BWidgets.makeFocusableTextView name

@@ -1,15 +1,16 @@
-{-# LANGUAGE OverloadedStrings, TypeFamilies #-}
+{-# LANGUAGE OverloadedStrings, TypeFamilies, FlexibleContexts #-}
 module Editor.CodeEdit.ExpressionEdit.HoleEdit
   ( make, makeUnwrapped
   , searchTermWidgetId
   ) where
 
-import Control.Applicative ((<*>))
+import Control.Applicative (Applicative(..))
 import Control.Arrow (first, second)
 import Control.Lens ((^.))
-import Control.Monad ((<=<), filterM, liftM, mplus, msum, void)
+import Control.Monad ((<=<), filterM, mplus, msum, void)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.State (StateT)
+import Control.MonadA (MonadA)
 import Data.Cache (Cache)
 import Data.Function (on)
 import Data.List (isInfixOf, isPrefixOf)
@@ -20,10 +21,10 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
+import Data.Traversable (traverse)
 import Editor.Anchors (ViewM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
-import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import System.Random.Utils (randFunc)
@@ -33,7 +34,6 @@ import qualified Data.List.Class as List
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
-import qualified Data.Traversable as Traversable
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -76,7 +76,7 @@ data HoleInfo m = HoleInfo
   }
 
 pickExpr ::
-  Monad m => HoleInfo m -> Sugar.HoleResult ->
+  MonadA m => HoleInfo m -> Sugar.HoleResult ->
   Transaction m Widget.EventResult
 pickExpr holeInfo expr = do
   (guid, _) <- Sugar.holePickResult (hiHoleActions holeInfo) expr
@@ -86,7 +86,7 @@ pickExpr holeInfo expr = do
     }
 
 resultPickEventMap ::
-  Monad m => HoleInfo m -> Sugar.HoleResult ->
+  MonadA m => HoleInfo m -> Sugar.HoleResult ->
   Widget.EventHandlers (Transaction m)
 resultPickEventMap holeInfo holeResult =
   case hiMNextHole holeInfo of
@@ -95,7 +95,7 @@ resultPickEventMap holeInfo holeResult =
       mappend (simplePickRes Config.pickResultKeys) .
       E.keyPresses Config.addNextArgumentKeys
       "Pick result and move to next arg" .
-      liftM Widget.eventResultFromCursor $ do
+      fmap Widget.eventResultFromCursor $ do
         _ <- Sugar.holePickResult (hiHoleActions holeInfo) holeResult
         return . WidgetIds.fromGuid $ nextHole ^. Sugar.rGuid
   _ -> simplePickRes $ Config.pickResultKeys ++ Config.addNextArgumentKeys
@@ -113,7 +113,7 @@ data ResultsList = ResultsList
   }
 
 resultsToWidgets
-  :: MonadF m
+  :: MonadA m
   => HoleInfo m -> ResultsList
   -> ExprGuiM m
      ( WidgetT m
@@ -123,7 +123,7 @@ resultsToWidgets holeInfo results = do
   cursorOnMain <- ExprGuiM.widgetEnv $ WE.isSubCursor myId
   extra <-
     if cursorOnMain
-    then liftM (Just . (,) canonizedExpr . fmap fst) makeExtra
+    then fmap (Just . (,) canonizedExpr . fmap fst) makeExtra
     else do
       cursorOnExtra <- ExprGuiM.widgetEnv $ WE.isSubCursor moreResultsPrefixId
       if cursorOnExtra
@@ -134,19 +134,19 @@ resultsToWidgets holeInfo results = do
             result <- mResult
             return (result, Just widget)
         else return Nothing
-  liftM (flip (,) extra) .
+  fmap (flip (,) extra) .
     maybe return (const addMoreSymbol) (rlMore results) =<<
     toWidget myId canonizedExpr
   where
-    makeExtra = Traversable.mapM makeMoreResults $ rlMore results
+    makeExtra = traverse makeMoreResults $ rlMore results
     makeMoreResults moreResults = do
-      pairs <- mapM moreResult moreResults
+      pairs <- traverse moreResult moreResults
       return
         ( Box.vboxAlign 0 $ map fst pairs
         , msum $ map snd pairs
         )
     moreResult expr = do
-      mResult <- (liftM . fmap . const) expr . ExprGuiM.widgetEnv $ WE.subCursor resultId
+      mResult <- (fmap . fmap . const) expr . ExprGuiM.widgetEnv $ WE.subCursor resultId
       widget <- toWidget resultId expr
       return (widget, mResult)
       where
@@ -160,14 +160,14 @@ resultsToWidgets holeInfo results = do
     moreResultsPrefixId = rlMoreResultsPrefixId results
     addMoreSymbol w = do
       moreSymbolLabel <-
-        liftM (Widget.scale moreSymbolSizeFactor) .
+        fmap (Widget.scale moreSymbolSizeFactor) .
         ExprGuiM.widgetEnv .
         BWidgets.makeLabel moreSymbol $ Widget.toAnimId myId
       return $ BWidgets.hboxCenteredSpaced [w, moreSymbolLabel]
     canonizedExpr = rlFirst results
     myId = rlFirstId results
 
-makeNoResults :: MonadF m => AnimId -> ExprGuiM m (WidgetT m)
+makeNoResults :: MonadA m => AnimId -> ExprGuiM m (WidgetT m)
 makeNoResults myId =
   ExprGuiM.widgetEnv .
   BWidgets.makeTextView "(No results)" $ mappend myId ["no results"]
@@ -179,7 +179,7 @@ mkGroup names body = Group
   }
 
 makeVariableGroup ::
-  MonadF m => Data.VariableRef DataIRef.DefinitionIRef -> ExprGuiM m Group
+  MonadA m => Data.VariableRef DataIRef.DefinitionIRef -> ExprGuiM m Group
 makeVariableGroup varRef =
   ExprGuiM.withNameFromVarRef varRef $ \(_, varName) ->
   return . mkGroup [varName] . Data.ExpressionLeaf $ Data.GetVariable varRef
@@ -228,7 +228,7 @@ exprWidgetId :: Data.Expression DataIRef.DefinitionIRef a -> Widget.Id
 exprWidgetId = WidgetIds.fromGuid . randFunc . show . void
 
 toResultsList ::
-  Monad m =>
+  MonadA m =>
   HoleInfo m -> Data.Expression DataIRef.DefinitionIRef () ->
   CT m (Maybe ResultsList)
 toResultsList holeInfo baseExpr = do
@@ -252,7 +252,7 @@ toResultsList holeInfo baseExpr = do
 data ResultType = GoodResult | BadResult
 
 makeResultsList ::
-  Monad m => HoleInfo m -> Group ->
+  MonadA m => HoleInfo m -> Group ->
   CT m (Maybe (ResultType, ResultsList))
 makeResultsList holeInfo group = do
   -- We always want the first, and we want to know if there's more, so
@@ -261,7 +261,7 @@ makeResultsList holeInfo group = do
   case mRes of
     Just res -> return . Just $ (GoodResult, res)
     Nothing ->
-      (liftM . fmap) ((,) BadResult) . toResultsList holeInfo $ holeApply baseExpr
+      (fmap . fmap) ((,) BadResult) . toResultsList holeInfo $ holeApply baseExpr
   where
     baseExpr = groupBaseExpr group
     holeApply =
@@ -273,10 +273,10 @@ makeAllResults
   -> ExprGuiM m (ListT (CT m) (ResultType, ResultsList))
 makeAllResults holeInfo = do
   paramResults <-
-    mapM (makeVariableGroup . Data.ParameterRef) $
+    traverse (makeVariableGroup . Data.ParameterRef) $
     Sugar.holeScope hole
   globalResults <-
-    mapM (makeVariableGroup . Data.DefinitionRef) =<<
+    traverse (makeVariableGroup . Data.DefinitionRef) =<<
     ExprGuiM.getP Anchors.globals
   let
     searchTerm = Property.value $ hiSearchTerm holeInfo
@@ -318,7 +318,7 @@ addNewDefinitionEventMap holeInfo =
       Anchors.setP (Anchors.assocNameRef (IRef.guid newDefI)) newName
       Anchors.newPane newDefI
       defRef <-
-        liftM (fromMaybe (error "GetDef should always type-check") . listToMaybe) .
+        fmap (fromMaybe (error "GetDef should always type-check") . listToMaybe) .
         ExprGuiM.unmemo . Sugar.holeInferResults (hiHole holeInfo) .
         Data.pureExpression . Data.ExpressionLeaf . Data.GetVariable $
         Data.DefinitionRef newDefI
@@ -337,13 +337,13 @@ disallowedHoleChars :: String
 disallowedHoleChars = "`[]\\\n "
 
 makeSearchTermWidget
-  :: MonadF m
+  :: MonadA m
   => HoleInfo m -> Widget.Id
   -> Maybe Sugar.HoleResult
   -> ExprGuiM m (ExpressionGui m)
 makeSearchTermWidget holeInfo searchTermId mResultToPick =
   ExprGuiM.widgetEnv .
-  liftM
+  fmap
   (flip ExpressionGui (0.5/Config.holeSearchTermScaleFactor) .
    Widget.scale Config.holeSearchTermScaleFactor .
    Widget.strongerEvents pickResultEventMap .
@@ -360,16 +360,16 @@ vboxMBiasedAlign mChildIndex align =
   Box.makeAlign align Box.vertical
 
 makeResultsWidget
-  :: MonadF m
+  :: MonadA m
   => HoleInfo m
   -> [ResultsList] -> Bool
   -> ExprGuiM m (Maybe Sugar.HoleResult, WidgetT m)
 makeResultsWidget holeInfo firstResults moreResults = do
   firstResultsAndWidgets <-
-    mapM (resultsToWidgets holeInfo) firstResults
+    traverse (resultsToWidgets holeInfo) firstResults
   (mResult, firstResultsWidget) <-
     case firstResultsAndWidgets of
-    [] -> liftM ((,) Nothing) . makeNoResults $ Widget.toAnimId myId
+    [] -> fmap ((,) Nothing) . makeNoResults $ Widget.toAnimId myId
     xs -> do
       let
         mResult =
@@ -384,7 +384,7 @@ makeResultsWidget holeInfo firstResults moreResults = do
   moreResultsWidgets <-
     ExprGuiM.widgetEnv $
     if moreResults
-    then liftM (: []) . BWidgets.makeLabel "..." $ Widget.toAnimId myId
+    then fmap (: []) . BWidgets.makeLabel "..." $ Widget.toAnimId myId
     else return []
   return
     ( fmap (fst . snd) mResult
@@ -401,7 +401,7 @@ makeResultsWidget holeInfo firstResults moreResults = do
       [E.ModKey E.noMods E.KeyDown]
       "Nothing (at bottom)" (return ())
 
-adHocTextEditEventMap :: Monad m => Property m String -> Widget.EventHandlers m
+adHocTextEditEventMap :: MonadA m => Property m String -> Widget.EventHandlers m
 adHocTextEditEventMap textProp =
   mconcat . concat $
   [ [ E.filterChars (`notElem` disallowedHoleChars) .
@@ -418,14 +418,16 @@ adHocTextEditEventMap textProp =
       Property.pureModify textProp f
       return Widget.emptyEventResult
 
-collectResults :: List l => l (ResultType, a) -> List.ItemM l ([a], Bool)
+collectResults ::
+  (Applicative (List.ItemM l), List l) =>
+  l (ResultType, a) -> List.ItemM l ([a], Bool)
 collectResults =
   conclude <=<
   List.splitWhenM (return . (>= Config.holeResultCount) . length . fst) .
   List.scanl step ([], [])
   where
     conclude (notEnoughResults, enoughResultsM) =
-      liftM
+      fmap
       ( second (not . null) . splitAt Config.holeResultCount
       . uncurry (on (++) reverse) . last . mappend notEnoughResults
       ) .
@@ -457,13 +459,13 @@ alphaNumericHandler doc handler =
   Config.alphaNumericChars . flip $ const handler
 
 pickEventMap ::
-  MonadF m => HoleInfo m -> String -> Maybe Sugar.HoleResult ->
+  MonadA m => HoleInfo m -> String -> Maybe Sugar.HoleResult ->
   Widget.EventHandlers (Transaction m)
 pickEventMap holeInfo searchTerm (Just result)
   | nonEmptyAll (`notElem` Config.operatorChars) searchTerm =
     operatorHandler "Pick this result and apply operator" $ \x -> do
       (_, actions) <- Sugar.holePickResult (hiHoleActions holeInfo) result
-      liftM (searchTermWidgetId . WidgetIds.fromGuid) $
+      fmap (searchTermWidgetId . WidgetIds.fromGuid) $
         Sugar.giveAsArgToOperator actions [x]
   | nonEmptyAll (`elem` Config.operatorChars) searchTerm =
     alphaNumericHandler "Pick this result and resume" $ \x -> do
@@ -472,14 +474,14 @@ pickEventMap holeInfo searchTerm (Just result)
         mTarget
           | g /= hiGuid holeInfo = Just g
           | otherwise = fmap (Lens.view Sugar.rGuid) $ hiMNextHole holeInfo
-      liftM WidgetIds.fromGuid $ case mTarget of
+      fmap WidgetIds.fromGuid $ case mTarget of
         Just target -> do
           (`Property.set` [x]) =<< Anchors.assocSearchTermRef target
           return target
         Nothing -> return g
 pickEventMap _ _ _ = mempty
 
-markTypeMatchesAsUsed :: Monad m => HoleInfo m -> ExprGuiM m ()
+markTypeMatchesAsUsed :: MonadA m => HoleInfo m -> ExprGuiM m ()
 markTypeMatchesAsUsed holeInfo =
   ExprGuiM.markVariablesAsUsed =<<
   (filterM
@@ -488,7 +490,7 @@ markTypeMatchesAsUsed holeInfo =
     holeInfo
   where
     checkInfer =
-      liftM (isJust . listToMaybe) . ExprGuiM.liftMemoT .
+      fmap (isJust . listToMaybe) . ExprGuiM.fmapemoT .
       Sugar.holeInferResults (hiHole holeInfo)
 
 makeActiveHoleEdit :: ViewM ~ m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
@@ -496,7 +498,7 @@ makeActiveHoleEdit holeInfo = do
   markTypeMatchesAsUsed holeInfo
   allResults <- makeAllResults holeInfo
 
-  (firstResults, hasMoreResults) <- ExprGuiM.liftMemoT $ collectResults allResults
+  (firstResults, hasMoreResults) <- ExprGuiM.fmapemoT $ collectResults allResults
 
   cursor <- ExprGuiM.widgetEnv WE.readCursor
   let
@@ -549,9 +551,9 @@ make hole mNextHole guid =
   makeUnwrapped hole mNextHole guid
 
 makeInactiveHoleEdit ::
-  MonadF m => Sugar.Hole m -> Widget.Id -> ExprGuiM m (ExpressionGui m)
+  MonadA m => Sugar.Hole m -> Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeInactiveHoleEdit hole myId =
-  liftM
+  fmap
   (ExpressionGui.fromValueWidget .
    makeBackground myId Layers.inactiveHole unfocusedColor) .
   ExprGuiM.widgetEnv $ BWidgets.makeFocusableTextView "  " myId

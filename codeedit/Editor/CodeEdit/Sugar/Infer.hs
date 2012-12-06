@@ -19,9 +19,10 @@ module Editor.CodeEdit.Sugar.Infer
 
 import Control.Applicative ((<$>))
 import Control.Arrow ((&&&))
-import Control.Monad (liftM, void, (<=<))
+import Control.Monad (void, (<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..))
+import Control.MonadA (MonadA)
 import Data.Cache (Cache)
 import Data.Hashable (hash)
 import Data.Store.Guid (Guid)
@@ -92,14 +93,14 @@ resultFromInferred expr =
 
 -- {{{{{{{{{{{{{{{{{
 -- TODO: These don't belong here
-loader :: Monad m => Infer.Loader DefI (T m)
+loader :: MonadA m => Infer.Loader DefI (T m)
 loader =
   Infer.Loader
-  (liftM void . DataIRef.readExpression . Lens.view Data.defType <=<
+  (fmap void . DataIRef.readExpression . Lens.view Data.defType <=<
    Transaction.readIRef)
 
 inferMaybe ::
-  Monad m =>
+  MonadA m =>
   Data.Expression DefI a -> Infer.Context DefI -> Infer.InferNode DefI ->
   T m (Maybe (Data.Expression DefI (Infer.Inferred DefI, a)))
 inferMaybe expr inferContext inferPoint = do
@@ -109,15 +110,15 @@ inferMaybe expr inferContext inferPoint = do
     loaded inferPoint
 
 inferMaybe_ ::
-  Monad m =>
+  MonadA m =>
   Data.Expression DefI () -> Infer.Context DefI -> Infer.InferNode DefI ->
   T m (Maybe (Data.Expression DefI (Infer.Inferred DefI)))
 inferMaybe_ expr inferContext inferPoint =
-  (liftM . fmap . fmap) fst $ inferMaybe expr inferContext inferPoint
+  (fmap . fmap . fmap) fst $ inferMaybe expr inferContext inferPoint
 -- }}}}}}}}}}}}}}}}}
 
 inferWithVariables ::
-  (RandomGen g, Monad m) => g ->
+  (RandomGen g, MonadA m) => g ->
   Infer.Loaded DefI a -> Infer.Context DefI -> Infer.InferNode DefI ->
   T m
   ( ( Bool
@@ -156,7 +157,7 @@ data InferLoadedResult m = InferLoadedResult
 LensTH.makeLenses ''InferLoadedResult
 
 inferLoadedExpression ::
-  (RandomGen g, Monad m) => g ->
+  (RandomGen g, MonadA m) => g ->
   Maybe DefI -> Load.LoadedClosure ->
   (Infer.Context DefI, Infer.InferNode DefI) ->
   CT m (InferLoadedResult (T m))

@@ -2,10 +2,11 @@ module Graphics.UI.GLFW.Utils(withGLFW, openWindow, getVideoModeSize) where
 
 import Control.Exception(bracket_)
 import Control.Monad(unless)
+import Control.MonadA (MonadA)
 import Data.Vector.Vector2 (Vector2(..))
 import qualified Graphics.UI.GLFW as GLFW
 
-assert :: Monad m => String -> Bool -> m ()
+assert :: MonadA m => String -> Bool -> m ()
 assert msg p = unless p (fail msg)
 
 withGLFW :: IO a -> IO a

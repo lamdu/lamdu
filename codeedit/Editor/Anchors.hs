@@ -27,9 +27,10 @@ module Editor.Anchors
   , ViewM, runViewTransaction
   ) where
 
-import Control.Applicative (Applicative)
-import Control.Monad (liftM, liftM2, when)
+import Control.Applicative (Applicative, liftA2)
+import Control.Monad (when)
 import Control.Monad.IO.Class (MonadIO)
+import Control.MonadA (MonadA)
 import Data.Binary (Binary(..))
 import Data.ByteString.Char8 ()
 import Data.List.Split (splitOn)
@@ -159,12 +160,12 @@ makeDefinition = do
   let newHole = DataIRef.newExprBody $ Data.ExpressionLeaf Data.Hole
   defI <-
     Transaction.newIRef =<<
-    liftM2 (Data.Definition . Data.DefinitionExpression) newHole newHole
+    liftA2 (Data.Definition . Data.DefinitionExpression) newHole newHole
   modP globals (defI :)
   return defI
 
 nonEmptyAssocDataRef ::
-  (Monad m, Binary a) =>
+  (MonadA m, Binary a) =>
   SBS.ByteString -> Guid -> Transaction m a -> MkProperty m a
 nonEmptyAssocDataRef str guid makeDef = do
   dataRef <- Transaction.assocDataRef str guid
@@ -178,10 +179,10 @@ nonEmptyAssocDataRef str guid makeDef = do
       return val
   return $ Property def (Property.set dataRef . Just)
 
-assocNameRef :: Monad m => Guid -> MkProperty m String
+assocNameRef :: MonadA m => Guid -> MkProperty m String
 assocNameRef = Transaction.assocDataRefDef "" "Name"
 
-assocSearchTermRef :: Monad m => Guid -> MkProperty m String
+assocSearchTermRef :: MonadA m => Guid -> MkProperty m String
 assocSearchTermRef = Transaction.assocDataRefDef "" "searchTerm"
 
 newPane :: DataIRef.DefinitionIRef -> Transaction ViewM ()
@@ -204,7 +205,7 @@ jumpBack = do
       return j
 
 newBuiltin
-  :: Monad m
+  :: MonadA m
   => String -> DataIRef.Expression
   -> Transaction m DataIRef.DefinitionIRef
 newBuiltin fullyQualifiedName typeI =
@@ -214,21 +215,21 @@ newBuiltin fullyQualifiedName typeI =
     name = last path
     path = splitOn "." fullyQualifiedName
 
-newDefinition :: Monad m => String -> DataIRef.DefinitionI -> Transaction m DataIRef.DefinitionIRef
+newDefinition :: MonadA m => String -> DataIRef.DefinitionI -> Transaction m DataIRef.DefinitionIRef
 newDefinition name defI = do
   res <- Transaction.newIRef defI
   setP (assocNameRef (IRef.guid res)) name
   return res
 
-getP :: Monad m => MkProperty m a -> Transaction m a
-getP = liftM Property.value
+getP :: MonadA m => MkProperty m a -> Transaction m a
+getP = fmap Property.value
 
-setP :: Monad m => MkProperty m a -> a -> Transaction m ()
+setP :: MonadA m => MkProperty m a -> a -> Transaction m ()
 setP mkProp val = do
   prop <- mkProp
   Property.set prop val
 
-modP :: Monad m => MkProperty m a -> (a -> a) -> Transaction m ()
+modP :: MonadA m => MkProperty m a -> (a -> a) -> Transaction m ()
 modP mkProp f = do
   prop <- mkProp
   Property.pureModify prop f

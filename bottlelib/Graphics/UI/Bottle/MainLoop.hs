@@ -3,11 +3,12 @@ module Graphics.UI.Bottle.MainLoop (mainLoopAnim, mainLoopImage, mainLoopWidget)
 import Control.Arrow(first, second)
 import Control.Concurrent(threadDelay)
 import Control.Lens ((^.))
-import Control.Monad (liftM, when)
+import Control.Monad (when)
 import Data.IORef
 import Data.MRUMemo (memoIO)
 import Data.StateVar (($=))
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
+import Data.Traversable (traverse, sequenceA)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators ((%%))
 import Graphics.DrawingCombinators.Utils (Image)
@@ -15,7 +16,6 @@ import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget(Widget)
 import Graphics.UI.GLFW.Events (KeyEvent, GLFWEvent(..), eventLoop)
 import qualified Control.Lens as Lens
-import qualified Data.Traversable as Traversable
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.Rendering.OpenGL.GL as GL
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -46,7 +46,7 @@ mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
 
     handleEvents events = do
       winSize@(Vector2 winSizeX winSizeY) <- windowSize
-      anyChange <- fmap or $ mapM (handleEvent winSize) events
+      anyChange <- fmap or $ traverse (handleEvent winSize) events
       GL.viewport $=
         (GL.Position 0 0,
          GL.Size (round winSizeX) (round winSizeY))
@@ -104,7 +104,7 @@ mainLoopAnim tickHandler eventHandler makeFrame getAnimationHalfLife = do
       curTime <- getCurrentTime
       writeIORef frameStateVar =<<
         nextFrameState curTime size =<< readIORef frameStateVar
-      liftM frameStateResult $ readIORef frameStateVar
+      fmap frameStateResult $ readIORef frameStateVar
 
     frameStateResult Nothing = error "No frame to draw at start??"
     frameStateResult (Just (drawCount, (_, frame)))
@@ -132,7 +132,7 @@ mainLoopWidget mkWidgetUnmemod getAnimationHalfLife = do
     tickHandler size = do
       widget <- getWidget size
       tickResults <-
-        sequence $ widget ^. Widget.wEventMap . E.emTickHandlers
+        sequenceA $ widget ^. Widget.wEventMap . E.emTickHandlers
       case tickResults of
         [] -> return Nothing
         _ -> do
@@ -141,11 +141,11 @@ mainLoopWidget mkWidgetUnmemod getAnimationHalfLife = do
     eventHandler size event = do
       widget <- getWidget size
       mAnimIdMapping <-
-        (Traversable.mapM . fmap) (Lens.view Widget.eAnimIdMapping) .
+        (traverse . fmap) (Lens.view Widget.eAnimIdMapping) .
         E.lookup event $ widget ^. Widget.wEventMap
       case mAnimIdMapping of
         Nothing -> return ()
         Just _ -> newWidget
       return mAnimIdMapping
-    mkFrame size = liftM (Lens.view Widget.wFrame) $ getWidget size
+    mkFrame size = fmap (Lens.view Widget.wFrame) $ getWidget size
   mainLoopAnim tickHandler eventHandler mkFrame getAnimationHalfLife

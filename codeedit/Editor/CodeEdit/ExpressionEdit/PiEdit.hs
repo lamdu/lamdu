@@ -2,11 +2,10 @@
 module Editor.CodeEdit.ExpressionEdit.PiEdit(make) where
 
 import Control.Lens ((^.))
-import Control.Monad (liftM)
 import Data.Monoid (mappend)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
-import Editor.MonadF (MonadF)
+import Control.MonadA (MonadA)
 import qualified Control.Lens as Lens
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -21,7 +20,7 @@ import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 make
-  :: MonadF m
+  :: MonadA m
   => Sugar.HasParens
   -> Sugar.Pi m (Sugar.Expression m)
   -> Widget.Id
@@ -36,7 +35,7 @@ make hasParens (Sugar.Pi param resultType) =
     -- confusingly.
     (name, (resultTypeEdit, usedVars)) <-
       ExprGuiM.withParamName paramGuid $ \name ->
-      liftM ((,) name) . ExprGuiM.usedVariables $
+      fmap ((,) name) . ExprGuiM.usedVariables $
       FuncEdit.makeResultEdit [paramId] resultType
     let
       paramUsed = paramGuid `elem` usedVars

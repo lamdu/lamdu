@@ -10,13 +10,13 @@ module Editor.BottleWidgets
 
 import Control.Applicative (Applicative(..))
 import Control.Lens ((^.))
-import Control.Monad (when, liftM)
+import Control.Monad (when)
+import Control.MonadA (MonadA)
 import Data.ByteString.Char8 (pack)
 import Data.List (intersperse)
 import Data.Maybe (isJust)
 import Data.Monoid (mappend)
 import Data.Store.Property (Property)
-import Editor.MonadF (MonadF)
 import Editor.WidgetEnvT (WidgetEnvT)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -35,22 +35,22 @@ import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
-makeTextView :: Monad m => String -> AnimId -> WidgetEnvT m (Widget f)
+makeTextView :: MonadA m => String -> AnimId -> WidgetEnvT m (Widget f)
 makeTextView text myId = do
   style <- WE.readTextStyle
   return $
     TextView.makeWidget (style ^. TextEdit.sTextViewStyle) text myId
 
-makeLabel :: MonadF m => String -> AnimId -> WidgetEnvT m (Widget f)
+makeLabel :: MonadA m => String -> AnimId -> WidgetEnvT m (Widget f)
 makeLabel text prefix =
   makeTextView text $ mappend prefix [pack text]
 
 makeFocusableView
-  :: (Applicative f, MonadF m)
+  :: (Applicative f, MonadA m)
   => Widget.Id -> Widget f
   -> WidgetEnvT m (Widget f)
 makeFocusableView myId widget = do
-  hasFocus <- liftM isJust $ WE.subCursor myId
+  hasFocus <- fmap isJust $ WE.subCursor myId
   let
     setBackground
       | hasFocus = Widget.backgroundColor Layers.cursorBG WidgetIds.backgroundCursorId Config.cursorBGColor
@@ -60,7 +60,7 @@ makeFocusableView myId widget = do
     Widget.takesFocus (const (pure myId)) widget
 
 makeFocusableTextView
-  :: (Applicative f, MonadF m)
+  :: (Applicative f, MonadA m)
   => String -> Widget.Id
   -> WidgetEnvT m (Widget f)
 makeFocusableTextView text myId = do
@@ -75,7 +75,7 @@ fdStyle = FocusDelegator.Style
   }
 
 wrapDelegatedWith
-  :: (Applicative f, Monad m)
+  :: (Applicative f, MonadA m)
   => m Widget.Id
   -> ((Widget.Id -> Widget.Id) -> m a -> m a)
   -> FocusDelegator.Config
@@ -88,11 +88,11 @@ wrapDelegatedWith readCursor atCursor config entryState aToB mkA myId = do
   FocusDelegator.wrapEnv (FocusDelegator.Env config fdStyle) entryState mk myId cursor
   where
     mk f innerId newCursor =
-      liftM (aToB f) . (atCursor . const) newCursor $ mkA innerId
+      fmap (aToB f) . (atCursor . const) newCursor $ mkA innerId
 
 -- TODO: This logic belongs in the FocusDelegator itself
 wrapDelegatedOT
-  :: (Applicative f, Monad m)
+  :: (Applicative f, MonadA m)
   => FocusDelegator.Config
   -> FocusDelegator.IsDelegating
   -> ((Widget f -> Widget f) -> a -> b)
@@ -101,7 +101,7 @@ wrapDelegatedOT
 wrapDelegatedOT = wrapDelegatedWith WE.readCursor (WE.atEnv . Lens.over WE.envCursor)
 
 makeTextEdit
-  :: (Monad m, Monad f)
+  :: (MonadA m, MonadA f)
   => Property f String
   -> Widget.Id
   -> WidgetEnvT m (Widget f)
@@ -117,17 +117,17 @@ makeTextEdit textRef myId = do
       return eventRes
 
 removeKey
-  :: (Monad m)
+  :: (MonadA m)
   => (a -> b -> m (Widget f))
   -> EventMap.ModKey
   -> a -> b -> m (Widget f)
 removeKey makeEdit key =
-  (fmap . fmap . liftM . Lens.over Widget.wEventMap)
+  (fmap . fmap . fmap . Lens.over Widget.wEventMap)
   (EventMap.deleteKey (EventMap.KeyEvent EventMap.Press key))
   makeEdit
 
 makeLineEdit ::
-  (Monad m, Monad f) =>
+  (MonadA m, MonadA f) =>
   Property f String ->
   Widget.Id ->
   WidgetEnvT m (Widget f)
@@ -136,7 +136,7 @@ makeLineEdit =
   EventMap.ModKey EventMap.noMods EventMap.KeyEnter
 
 makeWordEdit ::
-  (Monad m, Monad f) =>
+  (MonadA m, MonadA f) =>
   Property f String ->
   Widget.Id ->
   WidgetEnvT m (Widget f)

@@ -7,6 +7,7 @@ module Data.Store.Property
   ) where
 
 import Control.Monad ((<=<))
+import Control.MonadA (MonadA)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
 
@@ -22,26 +23,26 @@ value = Lens.view pVal
 set :: Property m a -> a -> m ()
 set = Lens.view pSet
 
-modify :: Monad m => Property m a -> (a -> m (a, b)) -> m b
+modify :: MonadA m => Property m a -> (a -> m (a, b)) -> m b
 modify (Property val setter) f = do
   (newValue, res) <- f val
   setter newValue
   return res
 
-modify_ :: Monad m => Property m a -> (a -> m a) -> m ()
+modify_ :: MonadA m => Property m a -> (a -> m a) -> m ()
 modify_ (Property val setter) f = setter =<< f val
 
-pureModify :: Monad m => Property m a -> (a -> a) -> m ()
+pureModify :: MonadA m => Property m a -> (a -> a) -> m ()
 pureModify prop = modify_ prop . (return .)
 
 compose ::
-  Monad m => (a -> b) -> (b -> m a) ->
+  MonadA m => (a -> b) -> (b -> m a) ->
   Property m a -> Property m b
 compose aToB bToA (Property val setter) =
   Property (aToB val) (setter <=< bToA)
 
 pureCompose ::
-  Monad m => (a -> b) -> (b -> a) -> Property m a -> Property m b
+  MonadA m => (a -> b) -> (b -> a) -> Property m a -> Property m b
 pureCompose ab ba = compose ab (return . ba)
 
 composeLens :: Lens.SimpleLens a b -> Property m a -> Property m b

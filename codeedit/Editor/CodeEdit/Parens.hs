@@ -6,7 +6,7 @@ module Editor.CodeEdit.Parens
 
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
-import Editor.MonadF (MonadF)
+import Control.MonadA (MonadA)
 import Editor.WidgetIds (parensPrefix)
 import qualified Control.Lens as Lens
 import qualified Editor.BottleWidgets as BWidgets
@@ -22,7 +22,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 type WidgetMaker m = ExprGuiM m (WidgetT m)
 
 addTextParensI
-  :: MonadF m
+  :: MonadA m
   => (WidgetMaker m -> WidgetMaker m)
   -> (WidgetMaker m -> WidgetMaker m)
   -> Anim.AnimId
@@ -45,14 +45,14 @@ highlightExpression =
   Widget.backgroundColor Layers.parensHighlightBG WidgetIds.parenHighlightId Config.parenHighlightColor
 
 addTextParens
-  :: MonadF m
+  :: MonadA m
   => Anim.AnimId
   -> ExpressionGui m
   -> ExprGuiM m (ExpressionGui m)
 addTextParens = addTextParensI id id
 
 addHighlightedTextParens
-  :: (MonadF m)
+  :: (MonadA m)
   => Widget.Id
   -> ExpressionGui m
   -> ExprGuiM m (ExpressionGui m)

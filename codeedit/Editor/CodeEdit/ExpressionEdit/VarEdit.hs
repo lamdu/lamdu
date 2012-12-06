@@ -1,11 +1,10 @@
 {-# LANGUAGE OverloadedStrings, TypeFamilies #-}
 module Editor.CodeEdit.ExpressionEdit.VarEdit(make, makeView) where
 
-import Control.Monad (liftM)
 import Editor.Anchors (ViewM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
-import Editor.MonadF (MonadF)
+import Control.MonadA (MonadA)
 import qualified Control.Lens as Lens
 import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
@@ -25,12 +24,12 @@ colorOf (Data.ParameterRef _) = Config.parameterColor
 
 -- Color should be determined on the outside!
 makeView
-  :: MonadF m
+  :: MonadA m
   => Data.VariableRef DataIRef.DefinitionIRef
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
 makeView var myId = ExprGuiM.withNameFromVarRef var $ \(nameSrc, name) ->
-  liftM
+  fmap
   (ExpressionGui.fromValueWidget .
    ExpressionGui.nameSrcTint nameSrc) .
   ExprGuiM.widgetEnv $

@@ -25,18 +25,21 @@ module Editor.CodeEdit.Sugar
   , removeTypes
   ) where
 
-import Control.Applicative ((<$>), Applicative(..))
+import Control.Applicative ((<$>), Applicative(..), liftA2)
 import Control.Arrow (first)
 import Control.Lens ((^.))
-import Control.Monad ((<=<), liftM, liftM2, join, mplus, void, zipWithM)
+import Control.Monad ((<=<), join, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (runState)
 import Control.Monad.Trans.Writer (runWriter)
+import Control.MonadA (MonadA)
+import Data.Foldable (traverse_)
 import Data.Function (on)
 import Data.List.Utils (sortOn)
 import Data.Maybe (listToMaybe, maybeToList)
 import Data.Monoid (Any(..))
 import Data.Store.Guid (Guid)
+import Data.Traversable (traverse)
 import Data.Tuple (swap)
 import Editor.CodeEdit.Sugar.Config (SugarConfig)
 import Editor.CodeEdit.Sugar.Infer (InferredWC, NoInferred, Stored, NoStored)
@@ -54,7 +57,6 @@ import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
-import qualified Data.Traversable as Traversable
 import qualified Editor.Anchors as Anchors
 import qualified Editor.CodeEdit.Infix as Infix
 import qualified Editor.CodeEdit.Sugar.Infer as SugarInfer
@@ -88,7 +90,7 @@ mkActions stored =
   , giveAsArgToOperator = guidify . DataOps.giveAsArgToOperator stored
   }
   where
-    guidify = liftM DataIRef.exprGuid
+    guidify = fmap DataIRef.exprGuid
     doReplace = guidify $ DataOps.replaceWithHole stored
 
 mkGen :: Int -> Int -> Guid -> Random.StdGen
@@ -137,7 +139,7 @@ mkExpression result expr = do
     types = maybe [] iwcInferredTypes $ resultInferred result
 
 mkDelete
-  :: Monad m
+  :: MonadA m
   => Stored (T m)
   -> Stored (T m)
   -> T m Guid
@@ -161,9 +163,9 @@ mkFuncParamActions
   { _fpListItemActions =
     ListItemActions
     { _itemDelete = do
-        mapM_ deleteIfParamRef $ Data.subExpressions bodyI
+        traverse_ deleteIfParamRef $ Data.subExpressions bodyI
         mkDelete lambdaProp replacerProp
-    , _itemAddNext = liftM fst $ DataOps.lambdaWrap replacerProp
+    , _itemAddNext = fmap fst $ DataOps.lambdaWrap replacerProp
     }
   , _fpGetExample =
       return .
@@ -213,7 +215,7 @@ convertFuncParam lam@(Data.Lambda paramGuid paramType body) expr = do
       , _fpMActions =
         mkFuncParamActions ctx body
         <$> resultStored expr
-        <*> Traversable.mapM resultStored lam
+        <*> traverse resultStored lam
         <*> resultStored body
       }
     isDependent
@@ -227,7 +229,7 @@ convertLambda ::
   Data.Expression DefI (PayloadMM m) ->
   SugarM m ((IsDependent, FuncParam m (Expression m)), Expression m)
 convertLambda lam expr =
-  liftM2 (,)
+  liftA2 (,)
   (convertFuncParam lam expr) $
   convertExpressionI (lam ^. Data.lambdaBody)
 
@@ -254,7 +256,7 @@ convertFunc lambda exprI = do
   mkExpression exprI $ ExpressionFunc DontHaveParens newFunc
   where
     deleteToNextParam nextParam =
-      Lens.set (fpMActions . Lens.mapped . fpListItemActions .  itemDelete . Lens.sets liftM) $ nextParam ^. fpGuid
+      Lens.set (fpMActions . Lens.mapped . fpListItemActions .  itemDelete . Lens.sets fmap) $ nextParam ^. fpGuid
 
 convertPi
   :: m ~ Anchors.ViewM
@@ -448,13 +450,13 @@ applyForms exprType expr =
 -- user a chance to access all the partiality that needs filling more
 -- easily.
 fillPartialHolesInExpression ::
-  Monad m =>
+  MonadA m =>
   (Data.Expression DefI () ->
    m (Maybe (Data.Expression DefI (Infer.Inferred DefI)))) ->
   Data.Expression DefI (Infer.Inferred DefI) ->
   m [Data.Expression DefI (Infer.Inferred DefI)]
 fillPartialHolesInExpression check oldExpr =
-  liftM ((++ [oldExpr]) . maybeToList) .
+  fmap ((++ [oldExpr]) . maybeToList) .
   recheck . runWriter $ fillHoleExpr oldExpr
   where
     recheck (newExpr, Any True) = check newExpr
@@ -471,7 +473,7 @@ fillPartialHolesInExpression check oldExpr =
             Writer.tell $ Any True
             return inferredVal
     fillHoleExpr (Data.Expression body _) =
-      liftM Data.pureExpression $ Traversable.mapM fillHoleExpr body
+      fmap Data.pureExpression $ traverse fillHoleExpr body
 
 resultComplexityScore :: HoleResult -> Int
 resultComplexityScore =
@@ -479,16 +481,16 @@ resultComplexityScore =
   Foldable.toList
 
 inferApplyForms ::
-  Monad m =>
+  MonadA m =>
   (Data.Expression DefI () -> T m [HoleResult]) -> Data.Expression DefI () ->
   (Infer.InferNode DefI, Infer.Context DefI) -> T m [HoleResult]
 inferApplyForms processRes expr (node, inferContext) =
-  liftM (sortOn resultComplexityScore) . makeApplyForms =<<
+  fmap (sortOn resultComplexityScore) . makeApplyForms =<<
   SugarInfer.inferMaybe_ expr inferContext node
   where
     makeApplyForms Nothing = return []
     makeApplyForms (Just i) =
-      liftM concat . mapM processRes $
+      fmap concat . traverse processRes $
       (applyForms . void) (Infer.iType (i ^. Data.ePayload)) expr
 
 convertInferredHoleH ::
@@ -537,7 +539,7 @@ convertInferredHoleH
       SugarInfer.resultFromPure (mkGen 2 3 eGuid)
     plainHole =
       wrapOperatorHole exprI <=<
-      mkExpression exprI . ExpressionHole $ mkHole (liftM maybeToList . check)
+      mkExpression exprI . ExpressionHole $ mkHole (fmap maybeToList . check)
 
 wrapOperatorHole ::
   m ~ Anchors.ViewM => Data.Expression DefI (PayloadMM m) -> Expression m -> SugarM m (Expression m)
@@ -563,12 +565,12 @@ chooseHoleType inferredVals plain inferred =
   _ -> plain
 
 pickResult ::
-  (Monad f, m ~ Anchors.ViewM) =>
+  (MonadA f, m ~ Anchors.ViewM) =>
   Guid -> Stored (T m) ->
   Data.Expression DefI (Infer.Inferred DefI) ->
   T f (Guid, Actions m)
 pickResult defaultDest irefP =
-  liftM
+  fmap
   ( flip (,) (mkActions irefP)
   . maybe defaultDest
     (DataIRef.exprGuid . Lens.view (Data.ePayload . Lens._2))
@@ -606,7 +608,7 @@ convertHole exprI =
   where
     convertInferredHole inferred = do
       ctx <- SugarM.readContext
-      mPaste <- liftM join . Traversable.mapM mkPaste $ resultStored exprI
+      mPaste <- fmap join . traverse mkPaste $ resultStored exprI
       convertInferredHoleH ctx mPaste inferred exprI
     convertUninferredHole =
       mkExpression exprI $ ExpressionHole Hole
@@ -707,7 +709,7 @@ convertWhereItems
       mkWIActions topLevelProp bodyProp =
         ListItemActions
         { _itemDelete = mkDelete topLevelProp bodyProp
-        , _itemAddNext = liftM fst $ DataOps.redexWrap topLevelProp
+        , _itemAddNext = fmap fst $ DataOps.redexWrap topLevelProp
         }
       item = WhereItem
         { wiValue = value
@@ -734,10 +736,10 @@ convertDefinitionContent expr = do
   return DefinitionContent
     { dFunc = Func depParams params bodyS
     , dWhereItems = whereItems
-    , dAddFirstParam = error "TODO1" -- liftM fst . DataOps.lambdaWrap $ getProp expr
+    , dAddFirstParam = error "TODO1" -- fmap fst . DataOps.lambdaWrap $ getProp expr
     , dAddInnermostWhereItem =
         error "TODO2"
-        -- liftM fst . DataOps.redexWrap $ getProp whereBody
+        -- fmap fst . DataOps.redexWrap $ getProp whereBody
     }
 
 loadConvertDefI ::
@@ -763,7 +765,7 @@ loadConvertDefI config defI =
         }
 
 convertDefIBuiltin ::
-  Monad m =>
+  MonadA m =>
   Data.Builtin -> DefI ->
   Load.LoadedClosure -> DefinitionBody m
 convertDefIBuiltin (Data.Builtin name) defI typeIRef =
@@ -809,7 +811,7 @@ convertDefIExpression config exprLoaded defI typeI = do
       inferredLoadedResult ^. SugarInfer.ilrExpr
     mNewType <-
       if inferredLoadedResult ^. SugarInfer.ilrSuccess && not typesMatch
-      then liftM Just $ SugarM.liftTransaction mkNewType
+      then fmap Just $ SugarM.liftTransaction mkNewType
       else return Nothing
     return $ DefinitionBodyExpression DefinitionExpression
       { deContent = content

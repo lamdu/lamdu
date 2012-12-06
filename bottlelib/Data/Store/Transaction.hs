@@ -19,10 +19,10 @@ module Data.Store.Transaction
 where
 
 import Control.Applicative (Applicative)
-import Control.Monad (liftM)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT, ask)
 import Control.Monad.Trans.State (StateT, runStateT, get, gets, modify)
+import Control.MonadA (MonadA)
 import Data.Binary (Binary)
 import Data.Binary.Utils (encodeS, decodeS)
 import Data.ByteString (ByteString)
@@ -63,15 +63,15 @@ newtype Transaction m a = Transaction {
   } deriving (Monad, Applicative, Functor)
 liftReaderT :: ReaderT (Store m) (StateT Changes m) a -> Transaction m a
 liftReaderT = Transaction
-liftStateT :: Monad m => StateT Changes m a -> Transaction m a
+liftStateT :: MonadA m => StateT Changes m a -> Transaction m a
 liftStateT = liftReaderT . lift
-liftInner :: Monad m => m a -> Transaction m a
+liftInner :: MonadA m => m a -> Transaction m a
 liftInner = Transaction . lift . lift
 
-isEmpty :: Monad m => Transaction m Bool
+isEmpty :: MonadA m => Transaction m Bool
 isEmpty = liftStateT (gets Map.null)
 
-lookupBS :: Monad m => Guid -> Transaction m (Maybe Value)
+lookupBS :: MonadA m => Guid -> Transaction m (Maybe Value)
 lookupBS guid = do
   changes <- liftStateT get
   case Map.lookup guid changes of
@@ -80,68 +80,68 @@ lookupBS guid = do
       liftInner $ storeLookup store guid
     Just res -> return res
 
-insertBS :: Monad m => Guid -> ByteString -> Transaction m ()
+insertBS :: MonadA m => Guid -> ByteString -> Transaction m ()
 insertBS key = liftStateT . modify . Map.insert key . Just
 
-delete :: Monad m => Guid -> Transaction m ()
+delete :: MonadA m => Guid -> Transaction m ()
 delete key = liftStateT . modify . Map.insert key $ Nothing
 
-lookup :: (Monad m, Binary a) => Guid -> Transaction m (Maybe a)
-lookup = (liftM . fmap) decodeS . lookupBS
+lookup :: (MonadA m, Binary a) => Guid -> Transaction m (Maybe a)
+lookup = (fmap . fmap) decodeS . lookupBS
 
-insert :: (Monad m, Binary a) => Guid -> a -> Transaction m ()
+insert :: (MonadA m, Binary a) => Guid -> a -> Transaction m ()
 insert key = insertBS key . encodeS
 
-writeGuid :: (Monad m, Binary a) => Guid -> a -> Transaction m ()
+writeGuid :: (MonadA m, Binary a) => Guid -> a -> Transaction m ()
 writeGuid = insert
 
-guidExists :: Monad m => Guid -> Transaction m Bool
-guidExists = liftM isJust . lookupBS
+guidExists :: MonadA m => Guid -> Transaction m Bool
+guidExists = fmap isJust . lookupBS
 
-readGuidMb :: (Monad m, Binary a) => Transaction m a -> Guid -> Transaction m a
+readGuidMb :: (MonadA m, Binary a) => Transaction m a -> Guid -> Transaction m a
 readGuidMb nothingCase guid =
   maybe nothingCase return =<< lookup guid
 
-readGuidDef :: (Monad m, Binary a) => a -> Guid -> Transaction m a
+readGuidDef :: (MonadA m, Binary a) => a -> Guid -> Transaction m a
 readGuidDef = readGuidMb . return
 
-readGuid :: (Monad m, Binary a) => Guid -> Transaction m a
+readGuid :: (MonadA m, Binary a) => Guid -> Transaction m a
 readGuid guid = readGuidMb failure guid
   where
     failure = fail $ "Inexistent guid: " ++ show guid ++ " referenced"
 
-deleteIRef :: Monad m => IRef a -> Transaction m ()
+deleteIRef :: MonadA m => IRef a -> Transaction m ()
 deleteIRef = delete . IRef.guid
 
-readIRefDef :: (Monad m, Binary a) => a -> IRef a -> Transaction m a
+readIRefDef :: (MonadA m, Binary a) => a -> IRef a -> Transaction m a
 readIRefDef def = readGuidDef def . IRef.guid
 
-readIRef :: (Monad m, Binary a) => IRef a -> Transaction m a
+readIRef :: (MonadA m, Binary a) => IRef a -> Transaction m a
 readIRef = readGuid . IRef.guid
 
-irefExists :: (Monad m, Binary a) => IRef a -> Transaction m Bool
+irefExists :: (MonadA m, Binary a) => IRef a -> Transaction m Bool
 irefExists = guidExists . IRef.guid
 
-writeIRef :: (Monad m, Binary a) => IRef a -> a -> Transaction m ()
+writeIRef :: (MonadA m, Binary a) => IRef a -> a -> Transaction m ()
 writeIRef = writeGuid . IRef.guid
 
-fromIRef :: (Monad m, Binary a) => IRef a -> Transaction m (Property m a)
-fromIRef iref = liftM (flip Property.Property (writeIRef iref)) $ readIRef iref
+fromIRef :: (MonadA m, Binary a) => IRef a -> Transaction m (Property m a)
+fromIRef iref = fmap (flip Property.Property (writeIRef iref)) $ readIRef iref
 
-fromIRefDef :: (Monad m, Binary a) => IRef a -> a -> Transaction m (Property m a)
-fromIRefDef iref def = liftM (flip Property.Property (writeIRef iref)) $ readIRefDef def iref
+fromIRefDef :: (MonadA m, Binary a) => IRef a -> a -> Transaction m (Property m a)
+fromIRefDef iref def = fmap (flip Property.Property (writeIRef iref)) $ readIRefDef def iref
 
-newKey :: Monad m => Transaction m Key
+newKey :: MonadA m => Transaction m Key
 newKey = liftInner . storeNewKey =<< liftReaderT ask
 
-newIRef :: (Monad m, Binary a) => a -> Transaction m (IRef a)
+newIRef :: (MonadA m, Binary a) => a -> Transaction m (IRef a)
 newIRef val = do
   newGuid <- newKey
   insert newGuid val
   return $ IRef.unsafeFromGuid newGuid
 
 newIRefWithGuid ::
-  (Binary a, Monad m) =>
+  (Binary a, MonadA m) =>
   (Guid -> Transaction m (a, b)) -> Transaction m (IRef a, b)
 newIRefWithGuid f = do
   newGuid <- newKey
@@ -152,26 +152,26 @@ newIRefWithGuid f = do
 
 -- Dereference the *current* value of the IRef (Will not track new
 -- values of IRef, by-value and not by-name)
-followBy :: (Monad m, Binary a) =>
+followBy :: (MonadA m, Binary a) =>
             (b -> IRef a) ->
             Property m b ->
             Transaction m (Property m a)
 followBy conv = fromIRef . conv . Property.value
 
-anchorRef :: (Monad m, Binary a) => String -> Transaction m (Property m a)
+anchorRef :: (MonadA m, Binary a) => String -> Transaction m (Property m a)
 anchorRef = fromIRef . IRef.anchor
 
-anchorRefDef :: (Monad m, Binary a) => String -> a -> Transaction m (Property m a)
+anchorRefDef :: (MonadA m, Binary a) => String -> a -> Transaction m (Property m a)
 anchorRefDef name def = flip fromIRefDef def $ IRef.anchor name
 
-run :: Monad m => Store m -> Transaction m a -> m a
+run :: MonadA m => Store m -> Transaction m a -> m a
 run store transaction = do
   (res, changes) <- (`runStateT` mempty) . (`runReaderT` store) . unTransaction $ transaction
   storeAtomicWrite store $ Map.toList changes
   return res
 
 assocDataRef ::
-  (Binary a, Monad m) =>
+  (Binary a, MonadA m) =>
   ByteString -> Guid -> Transaction m (Property m (Maybe a))
 assocDataRef str guid = do
   val <- lookup assocGuid
@@ -182,10 +182,10 @@ assocDataRef str guid = do
     set (Just x) = writeGuid assocGuid x
 
 assocDataRefDef ::
-  (Eq a, Binary a, Monad m) =>
+  (Eq a, Binary a, MonadA m) =>
   a -> ByteString -> Guid -> Transaction m (Property m a)
 assocDataRefDef def str =
-  liftM (Property.pureCompose (fromMaybe def) f) . assocDataRef str
+  fmap (Property.pureCompose (fromMaybe def) f) . assocDataRef str
   where
     f x
       | x == def = Nothing

@@ -34,7 +34,6 @@ module Editor.Data
 
 import Control.Applicative (Applicative(..), liftA2, (<$>))
 import Control.Lens ((^.))
-import Control.Monad (liftM, liftM2)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (evalState, state)
@@ -54,7 +53,6 @@ import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
-import qualified Data.Traversable as Traversable
 import qualified System.Random as Random
 
 data Lambda expr = Lambda
@@ -211,7 +209,7 @@ pureSet :: Expression def ()
 pureSet = pureExpression set
 
 randomizeExpr :: (RandomGen g, Random r) => g -> Expression def (r -> a) -> Expression def a
-randomizeExpr gen = (`evalState` gen) . Traversable.mapM randomize
+randomizeExpr gen = (`evalState` gen) . traverse randomize
   where
     randomize f = f <$> state random
 
@@ -224,13 +222,13 @@ randomizeParamIds gen =
   where
     onLambda (Lambda oldParamId paramType body) = do
       newParamId <- lift $ state random
-      liftM2 (Lambda newParamId) (go paramType) .
+      liftA2 (Lambda newParamId) (go paramType) .
         Reader.local (Map.insert oldParamId newParamId) $ go body
-    go (Expression v s) = liftM (`Expression` s) $
+    go (Expression v s) = fmap (`Expression` s) $
       case v of
-      ExpressionLambda lambda -> liftM ExpressionLambda $ onLambda lambda
-      ExpressionPi lambda -> liftM ExpressionPi $ onLambda lambda
-      ExpressionApply (Apply func arg) -> liftM2 makeApply (go func) (go arg)
+      ExpressionLambda lambda -> fmap ExpressionLambda $ onLambda lambda
+      ExpressionPi lambda -> fmap ExpressionPi $ onLambda lambda
+      ExpressionApply (Apply func arg) -> liftA2 makeApply (go func) (go arg)
       gv@(ExpressionLeaf (GetVariable (ParameterRef guid))) ->
         Reader.asks $
         maybe gv makeParameterRef .

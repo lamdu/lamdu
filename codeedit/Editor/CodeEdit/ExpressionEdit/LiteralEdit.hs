@@ -2,11 +2,10 @@
 
 module Editor.CodeEdit.ExpressionEdit.LiteralEdit(makeInt, makeIntView) where
 
-import Control.Monad (liftM)
 import Data.Store.Transaction (Transaction)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
-import Editor.MonadF(MonadF)
+import Control.MonadA(MonadA)
 import Graphics.UI.Bottle.Animation (AnimId)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
@@ -21,20 +20,20 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 
-setColor :: Monad m => ExprGuiM m a -> ExprGuiM m a
+setColor :: MonadA m => ExprGuiM m a -> ExprGuiM m a
 setColor = ExprGuiM.atEnv $ WE.setTextColor Config.literalIntColor
 
 makeIntView
-  :: Monad m
+  :: MonadA m
   => AnimId -> Integer
   -> ExprGuiM m (ExpressionGui m)
 makeIntView myId integer =
-  liftM ExpressionGui.fromValueWidget .
+  fmap ExpressionGui.fromValueWidget .
   setColor . ExprGuiM.widgetEnv $
   BWidgets.makeTextView (show integer) myId
 
 makeIntEdit
-  :: Monad m
+  :: MonadA m
   => Sugar.LiteralInteger m -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
 makeIntEdit integer myId =
@@ -43,7 +42,7 @@ makeIntEdit integer myId =
     Just setValue -> makeIntEditI integer myId setValue
 
 makeIntEditI
-  :: Monad m
+  :: MonadA m
   => Sugar.LiteralInteger m -> Widget.Id
   -> (Integer -> Transaction m ())
   -> ExprGuiM m (ExpressionGui m)
@@ -88,7 +87,7 @@ literalFDConfig = FocusDelegator.Config
   }
 
 makeInt
-  :: MonadF m
+  :: MonadA m
   => Sugar.LiteralInteger m
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)

@@ -1,14 +1,14 @@
 {-# LANGUAGE OverloadedStrings, PatternGuards #-}
 module Editor.CodeEdit.DefinitionEdit(make) where
 
-import Control.Monad (liftM)
+import Control.MonadA (MonadA)
 import Data.List.Utils (nonEmptyAll)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
+import Data.Traversable (traverse, sequenceA)
 import Data.Vector.Vector2 (Vector2(..))
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
-import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
@@ -35,14 +35,14 @@ paramFDConfig = FocusDelegator.Config
   }
 
 makeNameEdit ::
-  MonadF m => (ExprGuiM.NameSource, String) -> Widget.Id -> Guid -> ExprGuiM m (WidgetT m)
+  MonadA m => (ExprGuiM.NameSource, String) -> Widget.Id -> Guid -> ExprGuiM m (WidgetT m)
 makeNameEdit name myId ident =
   ExprGuiM.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
   (ExprGuiM.atEnv (WE.setTextColor Config.definitionOriginColor) .
    ExpressionGui.makeNameEdit name ident)
   myId
 
-makeEquals :: MonadF m => Widget.Id -> ExprGuiM m (Widget f)
+makeEquals :: MonadA m => Widget.Id -> ExprGuiM m (Widget f)
 makeEquals = ExprGuiM.widgetEnv . BWidgets.makeLabel "=" . Widget.toAnimId
 
 nonOperatorName :: (ExprGuiM.NameSource, String) -> Bool
@@ -50,14 +50,14 @@ nonOperatorName (ExprGuiM.StoredName, x) = nonEmptyAll (`notElem` Config.operato
 nonOperatorName _ = False
 
 makeParts
-  :: MonadF m
+  :: MonadA m
   => (ExprGuiM.NameSource, String)
   -> Guid
   -> Sugar.DefinitionContent m
   -> ExprGuiM m [ExpressionGui m]
 makeParts name guid def = do
   nameEdit <-
-    liftM
+    fmap
     (Widget.weakerEvents
      (FuncEdit.jumpToRHS Config.jumpLHStoRHSKeys rhs
       `mappend` addFirstParamEventMap) .
@@ -94,11 +94,11 @@ makeParts name guid def = do
       Widget.keysEventMapMovesCursor Config.addNextParamKeys "Add parameter" .
       toEventMapAction $ Sugar.dAddFirstParam def
     toEventMapAction =
-      liftM (FocusDelegator.delegatingId . WidgetIds.fromGuid)
+      fmap (FocusDelegator.delegatingId . WidgetIds.fromGuid)
     myId = WidgetIds.fromGuid guid
 
 make
-  :: MonadF m
+  :: MonadA m
   => Sugar.Definition m
   -> ExprGuiM m (WidgetT m)
 make def =
@@ -109,18 +109,18 @@ make def =
     makeBuiltinDefinition def builtin
 
 makeBuiltinDefinition
-  :: MonadF m
+  :: MonadA m
   => Sugar.Definition m
   -> Sugar.DefinitionBuiltin m
   -> ExprGuiM m (WidgetT m)
 makeBuiltinDefinition def builtin =
-  liftM (Box.vboxAlign 0) $ sequence
-  [ liftM BWidgets.hboxCenteredSpaced $ sequence
+  fmap (Box.vboxAlign 0) $ sequenceA
+  [ fmap BWidgets.hboxCenteredSpaced $ sequenceA
     [ ExprGuiM.withParamName guid $ \name -> makeNameEdit name (Widget.joinId myId ["name"]) guid
     , makeEquals myId
     , BuiltinEdit.make builtin myId
     ]
-  , liftM (defTypeScale . Lens.view ExpressionGui.egWidget) .
+  , fmap (defTypeScale . Lens.view ExpressionGui.egWidget) .
     ExprGuiM.makeSubexpresion $ Sugar.drType def
   ]
   where
@@ -130,9 +130,9 @@ makeBuiltinDefinition def builtin =
 defTypeScale :: Widget f -> Widget f
 defTypeScale = Widget.scale Config.defTypeBoxSizeFactor
 
-makeWhereItemEdit :: MonadF m => Sugar.WhereItem m -> ExprGuiM m (WidgetT m)
+makeWhereItemEdit :: MonadA m => Sugar.WhereItem m -> ExprGuiM m (WidgetT m)
 makeWhereItemEdit item =
-  liftM (Widget.weakerEvents eventMap) . assignCursor $
+  fmap (Widget.weakerEvents eventMap) . assignCursor $
   makeDefBodyEdit (Sugar.wiGuid item) (Sugar.wiValue item)
   where
     assignCursor =
@@ -144,29 +144,29 @@ makeWhereItemEdit item =
       mconcat
       [ Widget.keysEventMapMovesCursor (Config.delForwardKeys ++ Config.delBackwordKeys)
         "Delete where item" .
-        liftM WidgetIds.fromGuid $
+        fmap WidgetIds.fromGuid $
         Lens.view Sugar.itemDelete wiActions
       , Widget.keysEventMapMovesCursor Config.addWhereItemKeys
         "Add outer where item" .
-        liftM WidgetIds.fromGuid $
+        fmap WidgetIds.fromGuid $
         Lens.view Sugar.itemAddNext wiActions
       ]
       | otherwise = mempty
 
 makeDefBodyEdit ::
-  MonadF m => Guid -> Sugar.DefinitionContent m -> ExprGuiM m (WidgetT m)
+  MonadA m => Guid -> Sugar.DefinitionContent m -> ExprGuiM m (WidgetT m)
 makeDefBodyEdit guid content = do
   name <- ExprGuiM.getDefName guid
-  body <- liftM (Lens.view ExpressionGui.egWidget . ExpressionGui.hbox) $
+  body <- fmap (Lens.view ExpressionGui.egWidget . ExpressionGui.hbox) $
     makeParts name guid content
   wheres <-
     case Sugar.dWhereItems content of
     [] -> return []
     whereItems -> do
       whereLabel <-
-        (liftM . Widget.scale) Config.whereLabelScaleFactor .
+        (fmap . Widget.scale) Config.whereLabelScaleFactor .
         ExprGuiM.widgetEnv . BWidgets.makeLabel "where" $ Widget.toAnimId myId
-      itemEdits <- mapM makeWhereItemEdit $ reverse whereItems
+      itemEdits <- traverse makeWhereItemEdit $ reverse whereItems
       return
         [ BWidgets.hboxSpaced
           [ (0, whereLabel)
@@ -178,16 +178,16 @@ makeDefBodyEdit guid content = do
     myId = WidgetIds.fromGuid guid
 
 makeExprDefinition ::
-  MonadF m => Sugar.Definition m -> Sugar.DefinitionExpression m ->
+  MonadA m => Sugar.Definition m -> Sugar.DefinitionExpression m ->
   ExprGuiM m (WidgetT m)
 makeExprDefinition def bodyExpr = do
   typeWidgets <-
     case Sugar.deMNewType bodyExpr of
     Nothing
       | Sugar.deIsTypeRedundant bodyExpr -> return []
-      | otherwise -> liftM ((:[]) . defTypeScale . BWidgets.hboxSpaced) (mkAcceptedRow id)
+      | otherwise -> fmap ((:[]) . defTypeScale . BWidgets.hboxSpaced) (mkAcceptedRow id)
     Just (Sugar.DefinitionNewType inferredType acceptInferredType) ->
-      liftM ((:[]) . defTypeScale . BWidgets.gridHSpaced) $ sequence
+      fmap ((:[]) . defTypeScale . BWidgets.gridHSpaced) $ sequenceA
       [ mkAcceptedRow (>>= addAcceptanceArrow acceptInferredType)
       , mkTypeRow id "Inferred type:" inferredType
       ]
@@ -197,7 +197,7 @@ makeExprDefinition def bodyExpr = do
   where
     addAcceptanceArrow acceptInferredType label = do
       acceptanceLabel <-
-        (liftM . Widget.weakerEvents)
+        (fmap . Widget.weakerEvents)
         (Widget.keysEventMapMovesCursor Config.acceptInferredTypeKeys
          "Accept inferred type" (acceptInferredType >> return myId)) .
         ExprGuiM.widgetEnv .

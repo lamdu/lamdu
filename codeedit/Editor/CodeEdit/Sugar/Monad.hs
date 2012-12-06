@@ -5,9 +5,11 @@ module Editor.CodeEdit.Sugar.Monad
   , readContext, liftTransaction
   ) where
 
+import Control.Applicative (Applicative)
 import Control.Lens ((^.))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
+import Control.MonadA (MonadA)
 import Editor.CodeEdit.Sugar.Config (SugarConfig)
 import Editor.CodeEdit.Sugar.Infer (InferLoadedResult, ilrInferContext, ilrContext, ilrBaseInferContext)
 import Editor.CodeEdit.Sugar.Types -- see export list
@@ -26,7 +28,7 @@ data Context = Context
   }
 
 newtype SugarM m a = SugarM (ReaderT Context (T m) a)
-  deriving (Monad)
+  deriving (Functor, Applicative, Monad)
 
 mkContext :: SugarConfig -> InferLoadedResult m -> Context
 mkContext config iResult = Context
@@ -36,10 +38,10 @@ mkContext config iResult = Context
   , scHoleInferState = iResult ^. ilrBaseInferContext
   }
 
-run :: Monad m => Context -> SugarM m a -> T m a
+run :: MonadA m => Context -> SugarM m a -> T m a
 run ctx (SugarM action) = runReaderT action ctx
 
-runPure :: Monad m => SugarConfig -> SugarM m a -> T m a
+runPure :: MonadA m => SugarConfig -> SugarM m a -> T m a
 runPure config =
   run ctx
   where
@@ -51,8 +53,8 @@ runPure config =
       , scMContextHash = Nothing
       }
 
-readContext :: Monad m => SugarM m Context
+readContext :: MonadA m => SugarM m Context
 readContext = SugarM Reader.ask
 
-liftTransaction :: Monad m => T m a -> SugarM m a
+liftTransaction :: MonadA m => T m a -> SugarM m a
 liftTransaction = SugarM . lift

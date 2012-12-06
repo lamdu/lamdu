@@ -2,14 +2,15 @@
 module Editor.CodeEdit.ExpressionEdit(make) where
 
 import Control.Lens ((^.))
-import Control.Monad ((<=<), liftM)
+import Control.Monad ((<=<))
+import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
+import Data.Traversable (traverse)
 import Editor.Anchors (ViewM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
-import Editor.MonadF (MonadF)
 import Graphics.UI.Bottle.Widget (EventHandlers)
 import qualified Control.Lens as Lens
 import qualified Editor.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
@@ -36,19 +37,19 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 data IsHole = NotAHole | IsAHole
 
 pasteEventMap
-  :: MonadF m
+  :: MonadA m
   => Sugar.Hole m -> Widget.EventHandlers (Transaction m)
 pasteEventMap =
   maybe mempty
   (Widget.keysEventMapMovesCursor
    Config.pasteKeys "Paste" .
-   liftM WidgetIds.fromGuid) .
+   fmap WidgetIds.fromGuid) .
   (Sugar.holePaste <=< Sugar.holeMActions)
 
 make :: m ~ ViewM => Sugar.Expression m -> ExprGuiM m (ExpressionGui m)
 make sExpr = do
   (holePicker, widget) <- makeEditor sExpr exprId
-  typeEdits <- mapM make $ payload ^. Sugar.plInferredTypes
+  typeEdits <- traverse make $ payload ^. Sugar.plInferredTypes
   let onReadOnly = Widget.doesntTakeFocus
   exprEventMap <- expressionEventMap exprGuid holePicker $ sExpr ^. Sugar.rPayload
   settings <- ExprGuiM.readSettings
@@ -106,14 +107,14 @@ makeEditor sExpr =
     notAHole $ AtomEdit.make atom
   where
     isAHole hole =
-      (fmap . liftM)
+      (fmap . fmap)
       ((,) IsAHole .
        (Lens.over ExpressionGui.egWidget . Widget.weakerEvents) (pasteEventMap hole))
-    notAHole = (fmap . liftM) ((,) NotAHole)
+    notAHole = (fmap . fmap) ((,) NotAHole)
     mNextHole = sExpr ^. Sugar.rPayload . Sugar.plNextHole
 
 expressionEventMap ::
-  MonadF m =>
+  MonadA m =>
   Guid -> IsHole ->
   Sugar.Payload m ->
   ExprGuiM m (EventHandlers (Transaction m))
@@ -122,7 +123,7 @@ expressionEventMap exprGuid holePicker payload =
   payload ^. Sugar.plActions
 
 actionsEventMap ::
-  MonadF m =>
+  MonadA m =>
   Guid -> IsHole -> Sugar.Actions m ->
   ExprGuiM m (EventHandlers (Transaction m))
 actionsEventMap exprGuid holePicker actions = do
@@ -147,13 +148,13 @@ actionsEventMap exprGuid holePicker actions = do
     delKeys = concat [Config.replaceKeys, Config.delForwardKeys, Config.delBackwordKeys]
     giveAsArg =
       Widget.keysEventMapMovesCursor
-      Config.giveAsArgumentKeys "Give as argument" . liftM WidgetIds.fromGuid $
+      Config.giveAsArgumentKeys "Give as argument" . fmap WidgetIds.fromGuid $
       Sugar.giveAsArg actions
     addOperator =
       (fmap . fmap) Widget.eventResultFromCursor .
       E.charGroup "Operator" "Apply operator" Config.operatorChars .
       fmap const $
-      liftM (HoleEdit.searchTermWidgetId . WidgetIds.fromGuid) .
+      fmap (HoleEdit.searchTermWidgetId . WidgetIds.fromGuid) .
       Sugar.giveAsArgToOperator actions . (:[])
     cut =
       if isHole then mempty else
@@ -161,7 +162,7 @@ actionsEventMap exprGuid holePicker actions = do
       Sugar.cut actions
     mkEventMap keys doc f =
       Widget.keysEventMapMovesCursor keys doc .
-      liftM (f . WidgetIds.fromGuid)
+      fmap (f . WidgetIds.fromGuid)
 
     isHole =
       case holePicker of

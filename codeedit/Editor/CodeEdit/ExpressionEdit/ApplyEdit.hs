@@ -4,7 +4,7 @@ module Editor.CodeEdit.ExpressionEdit.ApplyEdit(make) where
 import Control.Lens ((^.))
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
-import Editor.MonadF (MonadF)
+import Control.MonadA (MonadA)
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.CodeEdit.Parens as Parens
@@ -14,7 +14,7 @@ import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 make
-  :: MonadF m
+  :: MonadA m
   => Sugar.HasParens
   -> Data.Apply (Sugar.Expression m)
   -> Widget.Id

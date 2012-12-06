@@ -12,6 +12,7 @@ import Control.Monad (void)
 import Control.Monad.Trans.State (runStateT)
 import Control.Monad.Trans.Writer (Writer, runWriter)
 import Data.Binary (Binary(..))
+import Data.Foldable (sequenceA_)
 import Data.Map (Map)
 import Data.Monoid (Monoid(..))
 import Data.Set (Set)
@@ -29,7 +30,7 @@ data InferredWithConflicts def = InferredWithConflicts
 
 instance (Ord def, Binary def) => Binary (InferredWithConflicts def) where
   get = InferredWithConflicts <$> get <*> get <*> get
-  put (InferredWithConflicts a b c) = sequence_ [put a, put b, put c]
+  put (InferredWithConflicts a b c) = sequenceA_ [put a, put b, put c]
 
 newtype ConflictMap def =
   ConflictMap { unConflictMap :: Map Infer.ExprRef (Set (Infer.Error def)) }

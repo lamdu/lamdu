@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings, TypeFamilies #-}
 module Editor.CodeEdit (make) where
 
+-- import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import Control.Lens ((^.))
-import Control.Monad (liftM)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT, mapStateT)
 import Data.Cache (Cache)
@@ -12,6 +12,7 @@ import Data.Maybe (listToMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
+import Data.Traversable (traverse)
 import Editor.Anchors (ViewM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (WidgetT, ExprGuiM)
 import Editor.CodeEdit.Settings (Settings)
@@ -24,7 +25,6 @@ import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.DefinitionEdit as DefinitionEdit
 import qualified Editor.CodeEdit.ExpressionEdit as ExpressionEdit
--- import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
@@ -80,7 +80,7 @@ makeSugarPanes = do
       | i-1 >= 0 = Just $ movePane i (i-1)
       | otherwise = Nothing
     convertPane (i, defI) = do
-      sugarConfig <- lift $ liftM Property.value Anchors.sugarConfig
+      sugarConfig <- lift $ fmap Property.value Anchors.sugarConfig
       sDef <- Sugar.loadConvertDefI sugarConfig defI
       return SugarPane
         { spDef = sDef
@@ -88,13 +88,13 @@ makeSugarPanes = do
         , mMovePaneDown = mkMMovePaneDown i
         , mMovePaneUp = mkMMovePaneUp i
         }
-  mapM convertPane $ enumerate panes
+  traverse convertPane $ enumerate panes
 
 -- makeClipboardsEdit ::
 --   m ~ ViewM => [Sugar.Expression m] -> ExprGuiM m (WidgetT m)
 -- makeClipboardsEdit clipboards = do
 --   clipboardsEdits <-
---     mapM (liftM (Lens.view ExpressionGui.egWidget) . ExpressionEdit.make) clipboards
+--     traverse (fmap (Lens.view ExpressionGui.egWidget) . ExpressionEdit.make) clipboards
 --   clipboardTitle <-
 --     if null clipboardsEdits
 --     then return Spacer.empty
@@ -108,8 +108,8 @@ make settings = do
   sugarPanes <- mapStateT lift makeSugarPanes
   -- clipboardsExprs <- mapStateT lift $ do
   --   clipboardsP <- lift Anchors.clipboards
-  --   sugarConfig <- lift $ liftM Property.value Anchors.sugarConfig
-  --   mapM (Sugar.loadConvertExpression sugarConfig) $
+  --   sugarConfig <- lift $ fmap Property.value Anchors.sugarConfig
+  --   traverse (Sugar.loadConvertExpression sugarConfig) $
   --     Property.list clipboardsP
   ExprGuiM.run ExpressionEdit.make settings $ do
     panesEdit <- makePanesEdit sugarPanes
@@ -130,7 +130,7 @@ makePanesEdit panes = do
     [] -> ExprGuiM.widgetEnv $ BWidgets.makeFocusableTextView "<No panes>" myId
     (firstPane:_) ->
       (ExprGuiM.assignCursor myId . WidgetIds.fromGuid . Sugar.drGuid . spDef) firstPane $ do
-        definitionEdits <- mapM makePaneWidget panes
+        definitionEdits <- traverse makePaneWidget panes
         return . Box.vboxAlign 0 $ intersperse (Spacer.makeWidget 50) definitionEdits
 
   mJumpBack <- ExprGuiM.transaction Anchors.jumpBack
@@ -149,7 +149,7 @@ makePanesEdit panes = do
   where
     myId = WidgetIds.fromGuid panesGuid
     paneEventMap pane = mconcat
-      [ maybe mempty (Widget.keysEventMapMovesCursor Config.closePaneKeys "Close pane" . liftM WidgetIds.fromGuid) $ mDelPane pane
+      [ maybe mempty (Widget.keysEventMapMovesCursor Config.closePaneKeys "Close pane" . fmap WidgetIds.fromGuid) $ mDelPane pane
       , maybe mempty (Widget.keysEventMap Config.movePaneDownKeys "Move pane down") $ mMovePaneDown pane
       , maybe mempty (Widget.keysEventMap Config.movePaneUpKeys "Move pane up") $ mMovePaneUp pane
       ]
@@ -162,6 +162,6 @@ makePanesEdit panes = do
       (Lens.over Widget.wFrame . Anim.onImages . Draw.tint)
       Config.inactiveTintColor
     makePaneWidget pane =
-      liftM (onEachPane . Widget.weakerEvents (paneEventMap pane)) .
+      fmap (onEachPane . Widget.weakerEvents (paneEventMap pane)) .
       makeDefinitionEdit $ spDef pane
     makeDefinitionEdit = DefinitionEdit.make

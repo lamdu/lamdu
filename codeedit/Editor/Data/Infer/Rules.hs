@@ -17,6 +17,7 @@ import Data.DeriveTH (derive)
 import Data.Functor.Identity (Identity(..))
 import Data.Maybe (maybeToList)
 import Data.Store.Guid (Guid)
+import Data.Traversable (traverse, sequenceA)
 import Editor.Data.Infer.Types
 import qualified Control.Compose as Compose
 import qualified Control.Lens as Lens
@@ -124,7 +125,7 @@ makeForNode (Data.Expression exprBody typedVal) =
       lambdaStructureRules cons (tvVal typedVal) (fmap tvVal lam)
 
 makeForAll :: Data.Expression def TypedValue -> State Origin [Rule def]
-makeForAll = fmap concat . mapM makeForNode . Data.subExpressions
+makeForAll = fmap concat . traverse makeForNode . Data.subExpressions
 
 makeHole :: Origin -> RefExpression def
 makeHole g = makeRefExpr g $ Data.ExpressionLeaf Data.Hole
@@ -167,7 +168,7 @@ runPiToLambdaClosure (param, lambdaValueRef, bodyTypeRef) (o0, o1, o2) ~[Data.Ex
 
 lambdaRules :: Guid -> TypedValue -> ExprRef -> State Origin [Rule def]
 lambdaRules param (TypedValue lambdaValueRef lambdaTypeRef) bodyTypeRef =
-  sequence
+  sequenceA
   [ Rule [bodyTypeRef] . LambdaBodyTypeToPiResultTypeClosure (param, lambdaTypeRef) <$> mkOrigin2
   , Rule [lambdaTypeRef] . PiToLambdaClosure (param, lambdaValueRef, bodyTypeRef) <$> mkOrigin3
   ]
@@ -198,7 +199,7 @@ runLambdaChildrenToParentClosure (cons, param, lamRef) o0 ~[paramTypeExpr, resul
 
 lambdaStructureRules :: Data.ExprLambdaWrapper -> ExprRef -> Data.Lambda ExprRef -> State Origin [Rule def]
 lambdaStructureRules cons lamRef (Data.Lambda param paramTypeRef resultRef) =
-  sequence
+  sequenceA
   [ pure . Rule [lamRef] $
     LambdaParentToChildrenClosure (cons, paramTypeRef, resultRef)
   , -- Copy the structure from the children to the parent
@@ -451,7 +452,7 @@ applyRules applyTv apply@(Data.Apply func arg) =
   -- TODO: make all of these functions have a standard signature and
   -- just apply them all to the same args?
   (++ pureRules) <$>
-  sequence
+  sequenceA
   [ argTypeToPiParamTypeRule apply
   , rigidArgApplyTypeToResultTypeRule applyTv apply
   , argTypeToLambdaParamTypeRule apply

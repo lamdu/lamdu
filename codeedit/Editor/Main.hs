@@ -3,7 +3,7 @@ module Main(main) where
 
 import Control.Arrow (second)
 import Control.Lens ((^.))
-import Control.Monad (liftM, unless)
+import Control.Monad (unless)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, runStateT, mapStateT)
 import Data.ByteString (unpack)
@@ -236,10 +236,10 @@ makeRootWidget settings style dbToIO size cursor = do
   actions <- lift VersionControl.makeActions
   mapStateT (runWidgetEnvT cursor style) $ do
     codeEdit <-
-      (liftM . Widget.atEvents) (VersionControl.runEvent cursor) .
+      (fmap . Widget.atEvents) (VersionControl.runEvent cursor) .
       (mapStateT . WE.mapWidgetEnvT) VersionControl.runAction $
       CodeEdit.make settings
-    (liftM . Widget.atEvents) (dbToIO . (attachCursor =<<)) .
+    (fmap . Widget.atEvents) (dbToIO . (attachCursor =<<)) .
       lift $ BranchGUI.make id size actions codeEdit
   where
     attachCursor eventResult = do

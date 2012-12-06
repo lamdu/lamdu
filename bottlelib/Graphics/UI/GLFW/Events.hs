@@ -3,6 +3,7 @@ module Graphics.UI.GLFW.Events(GLFWEvent(..), KeyEvent(..), IsPress(..), eventLo
 
 import Control.Monad(forever, (<=<))
 import Data.IORef
+import Data.Traversable (traverse)
 import Graphics.UI.GLFW.ModState(ModState, isModifierKey, asModkey, modStateFromModkeySet)
 import qualified Data.Set as Set
 import qualified Graphics.UI.GLFW as GLFW
@@ -101,7 +102,7 @@ modKeyHandlerWrap handler = do
         asModkey key
       return result
     handleEvent e = modState e
-  return $ handler <=< mapM handleEvent
+  return $ handler <=< traverse handleEvent
 
 eventLoop :: ([GLFWEvent] -> IO ()) -> IO a
 eventLoop handler = do

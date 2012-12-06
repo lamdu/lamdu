@@ -15,6 +15,7 @@ import Control.Monad.Trans.State (State)
 import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
+import Data.Foldable (sequenceA_)
 import Data.IntSet (IntSet)
 import Data.Map (Map)
 import Data.Monoid (Monoid(..))
@@ -74,7 +75,7 @@ data InferNode def = InferNode
 
 instance (Ord def, Binary def) => Binary (InferNode def) where
   get = InferNode <$> get <*> get
-  put (InferNode a b) = sequence_ [put a, put b]
+  put (InferNode a b) = sequenceA_ [put a, put b]
 
 data IsRestrictedPoly = UnrestrictedPoly | RestrictedPoly
   deriving (Eq, Ord, Show, Typeable)
@@ -89,4 +90,4 @@ data Inferred def = Inferred
 
 instance (Ord def, Binary def) => Binary (Inferred def) where
   get = Inferred <$> get <*> get <*> get <*> get
-  put (Inferred a b c d) = sequence_ [put a, put b, put c, put d]
+  put (Inferred a b c d) = sequenceA_ [put a, put b, put c, put d]

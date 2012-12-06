@@ -9,6 +9,7 @@ module Data.Cache
 
 import Control.Lens ((%=), (-=))
 import Control.Monad.Trans.State (StateT(..), state, execState)
+import Control.MonadA (MonadA)
 import Data.Binary (Binary)
 import Data.Binary.Utils (decodeS, encodeS)
 import Data.Cache.Types
@@ -67,7 +68,7 @@ lookup key cache =
       , touchExisting cache bsKey entry
       )
 
-lookupS :: Monad m => (Key k, Binary v) => k -> StateT Cache m (Maybe v)
+lookupS :: MonadA m => (Key k, Binary v) => k -> StateT Cache m (Maybe v)
 lookupS = state . lookup
 
 evictLowestScore :: Cache -> Cache
@@ -103,7 +104,7 @@ insertHelper bsKey val cache =
 
 -- Actually requires only Pointed Functor.
 memo ::
-  (Key k, Binary v, Monad m) =>
+  (Key k, Binary v, MonadA m) =>
   (k -> m v) -> k -> Cache -> m (v, Cache)
 memo f key cache =
   lookupHelper onMiss onHit key cache
@@ -114,5 +115,5 @@ memo f key cache =
     onHit bsKey entry@(_, bsVal) =
       return (decodeS bsVal, touchExisting cache bsKey entry)
 
-memoS :: (Key k, Binary v, Monad m) => (k -> m v) -> k -> StateT Cache m v
+memoS :: (Key k, Binary v, MonadA m) => (k -> m v) -> k -> StateT Cache m v
 memoS f key = StateT $ memo f key

@@ -6,14 +6,14 @@ module Editor.BranchGUI
 
 import Control.Applicative (pure)
 import Control.Arrow (first)
-import Control.Monad (liftM)
 import Control.Monad.Trans.Class (lift)
+import Control.MonadA (MonadA)
 import Data.List (findIndex)
 import Data.Maybe (isJust)
 import Data.Monoid(Monoid(..))
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Transaction (Transaction)
-import Editor.MonadF (MonadF)
+import Data.Traversable (traverse)
 import Editor.VersionControl.Actions (Actions(..))
 import Editor.WidgetEnvT (WidgetEnvT)
 import Graphics.UI.Bottle.Animation (AnimId)
@@ -57,17 +57,17 @@ redoEventMap :: Functor m => Maybe (m Widget.Id) -> Widget.EventHandlers m
 redoEventMap =
   maybe mempty (Widget.keysEventMapMovesCursor Config.redoKeys "Redo")
 
-branchNameProp :: Monad m => Branch -> Transaction m (Transaction.Property m String)
+branchNameProp :: MonadA m => Branch -> Transaction m (Transaction.Property m String)
 branchNameProp = Transaction.assocDataRefDef "" "name" . Branch.guid
 
 make ::
-  (MonadF m, Monad n) =>
+  (MonadA m, MonadA n) =>
   (forall a. Transaction n a -> m a) ->
   Widget.Size -> Actions m -> Widget m ->
   WidgetEnvT m (Widget m)
 make transaction size actions widget = do
   branchSelectorFocused <-
-    liftM isJust $ WE.subCursor WidgetIds.branchSelection
+    fmap isJust $ WE.subCursor WidgetIds.branchSelection
   branchSelector <-
     flip
     (BWidgets.wrapDelegatedOT
@@ -75,7 +75,7 @@ make transaction size actions widget = do
      FocusDelegator.NotDelegating id)
     WidgetIds.branchSelection $ \innerId ->
     WE.assignCursor innerId currentBranchWidgetId $ do
-      branchNameEdits <- mapM makeBranchNameEdit $ branches actions
+      branchNameEdits <- traverse makeBranchNameEdit $ branches actions
       return .
         Widget.strongerEvents delBranchEventMap .
         makeBranchChoice branchSelectorFocused
@@ -88,7 +88,7 @@ make transaction size actions widget = do
     eventMap = mconcat
       [ Widget.keysEventMap Config.quitKeys "Quit" (error "Quit")
       , Widget.keysEventMapMovesCursor Config.makeBranchKeys "New Branch" .
-        liftM
+        fmap
         (FocusDelegator.delegatingId .
          WidgetIds.fromGuid . Branch.guid) $ makeBranch actions
       , Widget.keysEventMapMovesCursor Config.jumpToBranchesKeys
@@ -99,7 +99,7 @@ make transaction size actions widget = do
     makeBranchNameEdit branch = do
       let branchEditId = WidgetIds.fromGuid $ Branch.guid branch
       nameProp <-
-        lift . transaction . (liftM . Lens.over (Property.pSet . Lens.mapped)) transaction $
+        lift . transaction . (fmap . Lens.over (Property.pSet . Lens.mapped)) transaction $
         branchNameProp branch
       branchNameEdit <-
         BWidgets.wrapDelegatedOT branchNameFDConfig
@@ -119,7 +119,7 @@ make transaction size actions widget = do
       | null (drop 1 (branches actions)) = mempty
       | otherwise =
         Widget.keysEventMapMovesCursor Config.delBranchKeys "Delete Branch" .
-        liftM (WidgetIds.fromGuid . Branch.guid) .
+        fmap (WidgetIds.fromGuid . Branch.guid) .
         deleteBranch actions $ currentBranch actions
 
 makeBranchChoice

@@ -2,10 +2,9 @@
 module Editor.CodeEdit.ExpressionEdit.PolymorphicEdit(make) where
 
 import Control.Lens ((^.))
-import Control.Monad (liftM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
-import Editor.MonadF (MonadF)
+import Control.MonadA (MonadA)
 import qualified Control.Lens as Lens
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
@@ -21,7 +20,7 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 -- make without the focus delegator
 makeInner ::
-  MonadF m => Sugar.Polymorphic (Sugar.Expression m) -> Widget.Id ->
+  MonadA m => Sugar.Polymorphic (Sugar.Expression m) -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 makeInner poly myId = do
   -- TODO: This is just to detect whether cursor is in the full expression.
@@ -38,7 +37,7 @@ makeInner poly myId = do
   where
     funcId = WidgetIds.fromGuid $ Sugar.pFuncGuid poly
     colorize (Data.ParameterRef _) =
-      (liftM . bg Layers.compactPolymorphicBG) Config.polymorphicCompactBGColor .
+      (fmap . bg Layers.compactPolymorphicBG) Config.polymorphicCompactBGColor .
       ExprGuiM.atEnv (WE.setTextColor Config.parameterColor)
     colorize (Data.DefinitionRef _) =
       ExprGuiM.atEnv (WE.setTextColor Config.polymorphicForegroundColor)
@@ -55,7 +54,7 @@ polymorphicFDConfig = FocusDelegator.Config
   }
 
 make ::
-  MonadF m => Sugar.Polymorphic (Sugar.Expression m) ->
+  MonadA m => Sugar.Polymorphic (Sugar.Expression m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make poly =
   ExpressionGui.wrapDelegated polymorphicFDConfig FocusDelegator.NotDelegating $

@@ -12,9 +12,11 @@ module Data.Store.Rev.ViewBranchInternal
 where
 
 import Control.Monad (when)
+import Control.MonadA (MonadA)
 import Data.Binary (Binary(..))
 import Data.Derive.Binary(makeBinary)
 import Data.DeriveTH(derive)
+import Data.Foldable (traverse_)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
 import Data.Store.Rev.Change (Change)
@@ -50,7 +52,7 @@ LensTH.makeLenses ''ViewData
 
 -- | moveView must be given the correct source of the movement
 -- | or it will result in undefined results!
-moveView :: Monad m => View -> Version -> Version -> Transaction m ()
+moveView :: MonadA m => View -> Version -> Version -> Transaction m ()
 moveView vm srcVersion destVersion =
   when (srcVersion /= destVersion) $ do
     mraIRef <- Version.mostRecentAncestor srcVersion destVersion
@@ -65,9 +67,9 @@ makeViewKey :: View -> Change.Key -> Guid
 makeViewKey (View iref) = Guid.combine . IRef.guid $ iref
 
 applyChangesToView ::
-  Monad m => View -> (Change -> Maybe Change.Value) ->
+  MonadA m => View -> (Change -> Maybe Change.Value) ->
   [Change] -> Transaction m ()
-applyChangesToView vm changeDir = mapM_ applyChange
+applyChangesToView vm changeDir = traverse_ applyChange
   where
     applyChange change = setValue
                          (makeViewKey vm $ Change.objectKey change)

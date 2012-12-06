@@ -7,8 +7,9 @@ module Editor.Data.Load
   , PropertyClosure, propertyOfClosure, irefOfClosure
   ) where
 
+import Control.Applicative (liftA2)
 import Control.Lens ((^.), SimpleLensLike)
-import Control.Monad (liftM, liftM2)
+import Control.MonadA (MonadA)
 import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
@@ -56,7 +57,7 @@ derive makeBinary ''PropertyClosure
 setter :: Lens.LensLike (LensInternal.Context a b) s t a b -> s -> b -> t
 setter = flip . Lens.set . Lens.cloneLens
 
-propertyOfClosure :: Monad m => PropertyClosure -> DataIRef.ExpressionProperty (T m)
+propertyOfClosure :: MonadA m => PropertyClosure -> DataIRef.ExpressionProperty (T m)
 propertyOfClosure (DefinitionTypeProperty defI (Data.Definition defBody defType)) =
   Property defType $
   Transaction.writeIRef defI . Data.Definition defBody
@@ -89,47 +90,47 @@ type LoadedClosure = Data.Expression DefI PropertyClosure
 type Loaded m = Data.Expression DefI (DataIRef.ExpressionProperty m)
 
 loadExpressionProperty ::
-  Monad m => DataIRef.ExpressionProperty (T m) -> T m (Loaded (T m))
+  MonadA m => DataIRef.ExpressionProperty (T m) -> T m (Loaded (T m))
 loadExpressionProperty prop =
-  liftM ((`Data.Expression` prop) . (fmap . fmap) propertyOfClosure) .
+  fmap ((`Data.Expression` prop) . (fmap . fmap) propertyOfClosure) .
   loadExpressionBody $ Property.value prop
 
-loadExpressionClosure :: Monad m => PropertyClosure -> T m LoadedClosure
+loadExpressionClosure :: MonadA m => PropertyClosure -> T m LoadedClosure
 loadExpressionClosure closure =
-  liftM (`Data.Expression` closure) . loadExpressionBody $
+  fmap (`Data.Expression` closure) . loadExpressionBody $
   irefOfClosure closure
 
 loadExpressionBody ::
-  Monad m => DataIRef.Expression -> T m (Data.ExpressionBody DefI LoadedClosure)
+  MonadA m => DataIRef.Expression -> T m (Data.ExpressionBody DefI LoadedClosure)
 loadExpressionBody iref = onBody =<< DataIRef.readExprBody iref
   where
     onBody (Data.ExpressionLeaf x) =
       return $ Data.ExpressionLeaf x
     onBody (Data.ExpressionApply apply) =
-      on (liftM2 Data.makeApply) loadExpressionClosure (prop Func) (prop Arg)
+      on (liftA2 Data.makeApply) loadExpressionClosure (prop Func) (prop Arg)
       where
         prop = ApplyProperty iref apply
     onBody (Data.ExpressionLambda lambda) = onLambda Data.ExprLambda lambda
     onBody (Data.ExpressionPi lambda) = onLambda Data.ExprPi lambda
     onLambda cons lambda@(Data.Lambda param _ _) =
-      liftM (Data.exprLambdaCons cons) $
-      on (liftM2 (Data.Lambda param)) loadExpressionClosure
+      fmap (Data.exprLambdaCons cons) $
+      on (liftA2 (Data.Lambda param)) loadExpressionClosure
       (prop ParamType) (prop Result)
       where
         prop = LambdaProperty cons iref lambda
 
 loadDefinition ::
-  (Monad m, Monad n) => DefI -> T m (Data.Definition (Loaded (T n)))
-loadDefinition = (liftM . fmap . fmap) propertyOfClosure . loadDefinitionClosure
+  (MonadA m, MonadA n) => DefI -> T m (Data.Definition (Loaded (T n)))
+loadDefinition = (fmap . fmap . fmap) propertyOfClosure . loadDefinitionClosure
 
-loadDefinitionClosure :: Monad m => DefI -> T m (Data.Definition LoadedClosure)
+loadDefinitionClosure :: MonadA m => DefI -> T m (Data.Definition LoadedClosure)
 loadDefinitionClosure defI = do
   def <- Transaction.readIRef defI
   defType <- loadExpressionClosure $ DefinitionTypeProperty defI def
-  liftM (`Data.Definition` defType) $
+  fmap (`Data.Definition` defType) $
     case def ^. Data.defBody of
     Data.DefinitionExpression bodyI ->
-      liftM Data.DefinitionExpression . loadExpressionClosure $
+      fmap Data.DefinitionExpression . loadExpressionClosure $
       DefinitionBodyExpressionProperty defI bodyI $ def ^. Data.defType
     Data.DefinitionBuiltin (Data.Builtin name) ->
       return . Data.DefinitionBuiltin $ Data.Builtin name

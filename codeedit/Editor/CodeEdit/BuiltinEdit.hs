@@ -3,7 +3,7 @@ module Editor.CodeEdit.BuiltinEdit(make) where
 import Data.List.Split (splitOn)
 import Data.Store.Property (Property(..))
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (WidgetT, ExprGuiM)
-import Editor.MonadF (MonadF)
+import Control.MonadA (MonadA)
 import qualified Data.List as List
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
@@ -26,7 +26,7 @@ builtinFDConfig = FocusDelegator.Config
   }
 
 make
-  :: MonadF m
+  :: MonadA m
   => Sugar.DefinitionBuiltin m
   -> Widget.Id
   -> ExprGuiM m (WidgetT m)

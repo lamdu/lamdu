@@ -7,10 +7,13 @@ module Data.Store.Rev.Version
   , walkUp, walkDown, versionsBetween
   ) where
 
-import Control.Monad (liftM, liftM2, join)
+import Control.Applicative (liftA2)
+import Control.Monad (join)
+import Control.MonadA (MonadA)
 import Data.Binary (Binary(..))
 import Data.Derive.Binary(makeBinary)
 import Data.DeriveTH(derive)
+import Data.Foldable (traverse_)
 import Data.Store.IRef (IRef)
 import Data.Store.Rev.Change (Change(..), Key, Value)
 import Data.Store.Transaction (Transaction)
@@ -27,32 +30,32 @@ data VersionData = VersionData {
   deriving (Eq, Ord, Read, Show)
 $(derive makeBinary ''VersionData)
 
-makeInitialVersion :: Monad m => [(Key, Value)] -> Transaction m Version
-makeInitialVersion initialValues = liftM Version . Transaction.newIRef . VersionData 0 Nothing $ map makeChange initialValues
+makeInitialVersion :: MonadA m => [(Key, Value)] -> Transaction m Version
+makeInitialVersion initialValues = fmap Version . Transaction.newIRef . VersionData 0 Nothing $ map makeChange initialValues
   where
     makeChange (key, value) = Change key Nothing (Just value)
 
-versionData :: Monad m => Version -> Transaction m VersionData
+versionData :: MonadA m => Version -> Transaction m VersionData
 versionData = Transaction.readIRef . versionIRef
 
 -- TODO: This is a hack. Used to prevent undo into initial empty
 -- version. Can instead explicitly make a version when running a
 -- "view" transaction
-preventUndo :: Monad m => Version -> Transaction m ()
+preventUndo :: MonadA m => Version -> Transaction m ()
 preventUndo version = do
   ver <- versionData version
   Transaction.writeIRef (versionIRef version)
     ver { parent = Nothing }
 
-newVersion :: Monad m => Version -> [Change] -> Transaction m Version
+newVersion :: MonadA m => Version -> [Change] -> Transaction m Version
 newVersion version newChanges = do
-  parentDepth <- liftM depth . versionData $ version
-  liftM Version .
+  parentDepth <- fmap depth . versionData $ version
+  fmap Version .
     Transaction.newIRef .
     VersionData (parentDepth+1) (Just version) $
     newChanges
 
-mostRecentAncestor :: Monad m => Version -> Version -> Transaction m Version
+mostRecentAncestor :: MonadA m => Version -> Version -> Transaction m Version
 mostRecentAncestor aVersion bVersion
   | aVersion == bVersion  = return aVersion
   | otherwise             = do
@@ -63,7 +66,7 @@ mostRecentAncestor aVersion bVersion
       GT -> (`mostRecentAncestor` bVersion) =<< upToDepth bDepth aVersion
       EQ -> if aDepth == 0
             then fail "Two versions without common ancestor given"
-            else join $ liftM2 mostRecentAncestor (getParent aMbParentRef) (getParent bMbParentRef)
+            else join $ liftA2 mostRecentAncestor (getParent aMbParentRef) (getParent bMbParentRef)
   where
     upToDepth depthToReach version = do
       VersionData curDepth curMbParentRef _curChanges <- versionData version
@@ -72,7 +75,7 @@ mostRecentAncestor aVersion bVersion
         else return version
     getParent = maybe (fail "Non-0 depth must have a parent") return
 
-walkUp :: Monad m => (VersionData -> Transaction m ()) -> Version -> Version -> Transaction m ()
+walkUp :: MonadA m => (VersionData -> Transaction m ()) -> Version -> Version -> Transaction m ()
 walkUp onVersion topRef bottomRef
   | bottomRef == topRef  = return ()
   | otherwise            = do
@@ -84,7 +87,7 @@ walkUp onVersion topRef bottomRef
 -- We can't directly walkDown (we don't have references pointing
 -- downwards... But we can generate a list of versions by walking up
 -- and accumulating a reverse list)
-versionsBetween :: Monad m => Version -> Version -> Transaction m [VersionData]
+versionsBetween :: MonadA m => Version -> Version -> Transaction m [VersionData]
 versionsBetween topRef = accumulateWalkUp []
   where
     accumulateWalkUp vs curRef
@@ -95,6 +98,6 @@ versionsBetween topRef = accumulateWalkUp []
           parent versionD
 
 -- Implement in terms of versionsBetween
-walkDown :: Monad m => (VersionData -> Transaction m ()) -> Version -> Version -> Transaction m ()
+walkDown :: MonadA m => (VersionData -> Transaction m ()) -> Version -> Version -> Transaction m ()
 walkDown onVersion topRef bottomRef =
-  mapM_ onVersion =<< versionsBetween topRef bottomRef
+  traverse_ onVersion =<< versionsBetween topRef bottomRef

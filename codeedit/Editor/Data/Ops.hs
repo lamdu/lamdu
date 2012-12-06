@@ -6,6 +6,7 @@ module Editor.Data.Ops
   )
 where
 
+import Control.MonadA (MonadA)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import qualified Data.Store.Property as Property
@@ -16,7 +17,7 @@ import qualified Editor.Data.IRef as DataIRef
 type T = Transaction
 
 giveAsArg ::
-  Monad m =>
+  MonadA m =>
   DataIRef.ExpressionProperty (T m) ->
   T m DataIRef.Expression
 giveAsArg exprP = do
@@ -27,7 +28,7 @@ giveAsArg exprP = do
   return newFuncI
 
 giveAsArgToOperator ::
-  Monad m =>
+  MonadA m =>
   DataIRef.ExpressionProperty (T m) ->
   String ->
   T m DataIRef.Expression
@@ -39,7 +40,7 @@ giveAsArgToOperator exprP searchTerm = do
   return op
 
 callWithArg ::
-  Monad m =>
+  MonadA m =>
   DataIRef.ExpressionProperty (T m) ->
   T m DataIRef.Expression
 callWithArg exprP = do
@@ -49,11 +50,11 @@ callWithArg exprP = do
     (Data.makeApply (Property.value exprP) argI)
   return argI
 
-newHole :: Monad m => T m DataIRef.Expression
+newHole :: MonadA m => T m DataIRef.Expression
 newHole = DataIRef.newExprBody $ Data.ExpressionLeaf Data.Hole
 
 replace
-  :: Monad m
+  :: MonadA m
   => DataIRef.ExpressionProperty (T m)
   -> DataIRef.Expression
   -> T m DataIRef.Expression
@@ -62,13 +63,13 @@ replace exprP newExprI = do
   return newExprI
 
 replaceWithHole
-  :: Monad m
+  :: MonadA m
   => DataIRef.ExpressionProperty (T m)
   -> T m DataIRef.Expression
 replaceWithHole exprP = replace exprP =<< newHole
 
 lambdaWrap
-  :: Monad m
+  :: MonadA m
   => DataIRef.ExpressionProperty (T m)
   -> T m (Guid, DataIRef.Expression)
 lambdaWrap exprP = do
@@ -79,7 +80,7 @@ lambdaWrap exprP = do
   return (newParam, newExprI)
 
 redexWrap
-  :: Monad m
+  :: MonadA m
   => DataIRef.ExpressionProperty (T m)
   -> T m (Guid, DataIRef.Expression)
 redexWrap exprP = do

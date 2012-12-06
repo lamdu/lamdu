@@ -10,7 +10,7 @@ where
 -- import Test.QuickCheck.Arbitrary(Arbitrary(..))
 --import Control.Lens (Lens)
 import Control.Applicative (Applicative(..), liftA2)
-import Control.Monad (join, liftM2)
+import Control.Monad (join)
 import Data.Binary (Binary(..))
 import Prelude hiding (curry, uncurry, zip)
 import qualified Control.Lens.TH as LensTH
@@ -26,7 +26,7 @@ data Vector2 a = Vector2
 LensTH.makeLenses ''Vector2
 
 instance Binary a => Binary (Vector2 a) where
-  get = liftM2 Vector2 get get
+  get = liftA2 Vector2 get get
   put (Vector2 x y) = put x >> put y
 
 -- Taken almost verbatim from QuickCheck's instance for (a, b)

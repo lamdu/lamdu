@@ -1,11 +1,11 @@
 {-# LANGUAGE TypeFamilies #-}
 module Editor.CodeEdit.ExpressionEdit.InferredEdit(make) where
 
+import Control.MonadA (MonadA)
 import Data.Store.Guid (Guid)
 import Editor.Anchors (ViewM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
-import Editor.MonadF (MonadF)
 import qualified Control.Lens as Lens
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -26,7 +26,7 @@ fdConfig = FocusDelegator.Config
   }
 
 make
-  :: (MonadF m, m ~ ViewM) => Sugar.Inferred m (Sugar.Expression m) -> Guid -> Widget.Id
+  :: (MonadA m, m ~ ViewM) => Sugar.Inferred m (Sugar.Expression m) -> Guid -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
 make inferred guid =
   ExpressionGui.wrapDelegated fdConfig FocusDelegator.NotDelegating $
@@ -40,7 +40,7 @@ makeUnwrapped inferred guid myId = do
   mInnerCursor <- ExprGuiM.widgetEnv $ WE.subCursor myId
   case mInnerCursor of
     Nothing ->
-      Lens.mapMOf ExpressionGui.egWidget
+      Lens.traverseOf ExpressionGui.egWidget
       ( ExprGuiM.widgetEnv
       . BWidgets.makeFocusableView myId
       . Widget.tint Config.inferredValueTint

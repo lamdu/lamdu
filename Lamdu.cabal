@@ -60,6 +60,7 @@ Library
                        Data.Store.Property,
                        Data.Store.Db,
 
+                       Control.MonadA,
                        System.Random.Utils,
                        Control.Monad.Unit
 
@@ -155,7 +156,6 @@ Executable lamdu
                        Editor.ExampleDB,
                        Editor.Layers,
                        Editor.Main,
-                       Editor.MonadF,
                        Editor.VersionControl.Actions,
                        Editor.VersionControl,
                        Editor.WidgetEnvT,

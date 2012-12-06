@@ -1,7 +1,7 @@
 module Editor.CodeEdit.Infix(isInfixName, isInfixVar, infixOp) where
 
 import Control.Lens ((^.))
-import Control.Monad (liftM)
+import Control.MonadA (MonadA)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import qualified Data.Char as Char
@@ -18,13 +18,13 @@ variableRefGuid :: Data.VariableRef DataIRef.DefinitionIRef -> Guid
 variableRefGuid (Data.ParameterRef i) = i
 variableRefGuid (Data.DefinitionRef i) = IRef.guid i
 
-isInfixVar :: Monad m => Data.VariableRef DataIRef.DefinitionIRef -> Transaction m Bool
+isInfixVar :: MonadA m => Data.VariableRef DataIRef.DefinitionIRef -> Transaction m Bool
 isInfixVar =
-  liftM isInfixName . Anchors.getP .
+  fmap isInfixName . Anchors.getP .
   Anchors.assocNameRef . variableRefGuid
 
 infixOp
-  :: Monad m
+  :: MonadA m
   => Data.Expression DataIRef.DefinitionIRef ref
   -> Transaction m (Maybe (Data.VariableRef DataIRef.DefinitionIRef))
 infixOp expr =
