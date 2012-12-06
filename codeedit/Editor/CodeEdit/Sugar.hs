@@ -180,7 +180,7 @@ mkFuncParamActions lambdaProp lam@(Data.Lambda param _paramType body) =
   , _fpGetExample =
       return .
       Expression (Guid.augment "EXAMPLE" param)
-      (ExpressionAtom "Examples not implemented") $
+      (ExpressionAtom "NotImplemented") $
       Payload [] Nothing Nothing
       -- exampleP <-
       --   -- TODO: move to Anchors
