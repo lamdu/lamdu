@@ -6,6 +6,7 @@ import Control.Applicative ((<$), (<$>))
 import Control.Arrow (first)
 import Control.Lens ((^.))
 import Control.Monad (join, void)
+import Control.Monad.Trans.State (State, runState, runStateT)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
@@ -17,7 +18,6 @@ import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Lamdu.Data as Data
-import qualified Lamdu.Data.IRef as DataIRef
 import qualified Lamdu.Data.Infer as Infer
 
 data Invisible = Invisible
@@ -134,28 +134,25 @@ definitionTypes =
     intToIntToInt = makePi "iii0" intType $ makePi "iii1" intType intType
 
 doInferM ::
-  Infer.Context DefI -> Infer.InferNode DefI ->
-  Data.Expression DefI a ->
-  (Data.Expression DefI (Infer.Inferred DefI, a), Infer.Context DefI)
-doInferM initialInferContext inferNode expr
-  | success = ((fmap . first) iwcInferred exprWC, resultInferContext)
-  | otherwise =
-    error $ unlines
-    [ "Result with conflicts:"
-    -- TODO: Extract the real root (in case of resumption) to show
-    , showExpressionWithConflicts $ fst <$> exprWC
-    ]
-  where
-    (success, resultInferContext, exprWC) =
-      inferWithConflicts (doLoad expr) initialInferContext inferNode
+  Infer.InferNode DefI -> Data.Expression DefI a ->
+  State (Infer.Context DefI) (Data.Expression DefI (Infer.Inferred DefI, a))
+doInferM inferNode expr = do
+  (success, exprWC) <-
+    inferWithConflicts (doLoad expr) inferNode
+  return $
+    if success
+    then (fmap . first) iwcInferred exprWC
+    else
+      error $ unlines
+      [ "Result with conflicts:"
+      -- TODO: Extract the real root (in case of resumption) to show
+      , showExpressionWithConflicts $ fst <$> exprWC
+      ]
 
 doInferM_ ::
-  Infer.Context DefI -> Infer.InferNode DefI ->
-  Data.Expression DefI a ->
-  (Data.Expression DefI (Infer.Inferred DefI), Infer.Context DefI)
-doInferM_ initialInferContext inferNode expr =
-  (first . fmap) fst $
-  doInferM initialInferContext inferNode expr
+  Infer.InferNode DefI -> Data.Expression DefI a ->
+  State (Infer.Context DefI) (Data.Expression DefI (Infer.Inferred DefI))
+doInferM_ = (fmap . fmap . fmap . fmap) fst doInferM
 
 doLoad ::
   Data.Expression DefI a ->
@@ -182,7 +179,10 @@ doInfer ::
   ( Data.Expression DefI (Infer.Inferred DefI, a)
   , Infer.Context DefI
   )
-doInfer = uncurry doInferM . Infer.initial $ Just defI
+doInfer =
+  (`runState` ctx) . doInferM node
+  where
+    (ctx, node) = Infer.initial $ Just defI
 
 doInfer_ ::
   Data.Expression DefI a ->
@@ -211,8 +211,10 @@ inferMaybe ::
   Data.Expression DefI a ->
   Maybe (Data.Expression DefI (Infer.Inferred DefI, a), Infer.Context DefI)
 inferMaybe expr =
-  uncurry (Infer.inferLoaded (Infer.InferActions (const Nothing)) loaded) $ Infer.initial (Just defI)
+  (`runStateT` ctx) $
+  Infer.inferLoaded (Infer.InferActions (const Nothing)) loaded node
   where
+    (ctx, node) = Infer.initial (Just defI)
     loaded = doLoad expr
 
 inferMaybe_ ::

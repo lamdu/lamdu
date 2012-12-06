@@ -9,10 +9,11 @@ module Lamdu.Data.Infer.Conflicts
 import Control.Applicative ((<$>), (<*>))
 import Control.Arrow (first)
 import Control.Monad (void)
-import Control.Monad.Trans.State (runStateT)
+import Control.Monad.Trans.State (State, mapStateT)
 import Control.Monad.Trans.Writer (Writer, runWriter)
 import Data.Binary (Binary(..))
 import Data.Foldable (sequenceA_)
+import Data.Functor.Identity (Identity(..))
 import Data.Map (Map)
 import Data.Monoid (Monoid(..))
 import Data.Set (Set)
@@ -50,31 +51,31 @@ reportConflict err =
   Set.singleton err
 
 inferWithConflicts ::
-  Ord def => Infer.Loaded def a ->
-  Infer.Context def -> Infer.InferNode def ->
+  Ord def => Infer.Loaded def a -> Infer.InferNode def ->
+  State (Infer.Context def)
   ( Bool
-  , Infer.Context def
   , Data.Expression def (InferredWithConflicts def, a)
   )
-inferWithConflicts loaded initialInferContext node =
-  ( Map.null $ unConflictMap conflictsMap
-  , resultInferContext
-  , (fmap . first) toIWC exprInferred
-  )
-  where
-    ((exprInferred, resultInferContext), conflictsMap) =
-      runWriter . (`runStateT` initialInferContext) $
-      Infer.inferLoaded (Infer.InferActions reportConflict)
-      loaded node
+inferWithConflicts loaded node = do
+  (exprInferred, conflictsMap) <-
+    mapStateT (toRes . runWriter) $
+    Infer.inferLoaded (Infer.InferActions reportConflict) loaded node
+  let
+    conflicts getRef x =
+      getConflicts ((getRef . Infer.nRefs . Infer.iPoint) x)
+      conflictsMap
     toIWC x =
       InferredWithConflicts
       { iwcInferred = x
       , iwcValueConflicts = conflicts Infer.tvVal x
       , iwcTypeConflicts = conflicts Infer.tvType x
       }
-    conflicts getRef x =
-      getConflicts ((getRef . Infer.nRefs . Infer.iPoint) x)
-      conflictsMap
+  return
+    ( Map.null $ unConflictMap conflictsMap
+    , (fmap . first) toIWC exprInferred
+    )
+  where
+    toRes ((a, s), w) = Identity ((a, w), s)
 
 iwcInferredExprs ::
   Ord def =>

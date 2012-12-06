@@ -21,7 +21,8 @@ import Control.Applicative ((<$>))
 import Control.Arrow ((&&&))
 import Control.Monad (void, (<=<))
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.State (StateT(..))
+import Control.Monad.Trans.State (StateT(..), evalStateT)
+import Control.Monad.Trans.State.Utils (toStateT)
 import Control.MonadA (MonadA)
 import Data.Cache (Cache)
 import Data.Hashable (hash)
@@ -32,6 +33,7 @@ import Lamdu.Data.Infer.Conflicts (InferredWithConflicts(..), inferWithConflicts
 import System.Random (RandomGen)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
+import qualified Control.Monad.Trans.State as State
 import qualified Data.Cache as Cache
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data as Data
@@ -129,13 +131,19 @@ inferWithVariables ::
     , Data.Expression DefI (InferredWithConflicts DefI, ImplicitVariables.Payload a)
     )
   )
-inferWithVariables gen loaded baseRefMap node = do
-  (wvContext, wvExpr) <-
-    ImplicitVariables.addVariables gen loader newRefMap $
-    (iwcInferred . fst &&& id) <$> expr
-  return (res, (wvContext, asIWC <$> wvExpr))
+inferWithVariables gen loaded baseInferContext node =
+  (`evalStateT` baseInferContext) $ do
+    (success, expr) <- toStateT $ inferWithConflicts loaded node
+    intermediateContext <- State.get
+    wvExpr <-
+      ImplicitVariables.addVariables gen loader $
+      (iwcInferred . fst &&& id) <$> expr
+    wvContext <- State.get
+    return
+      ( (success, intermediateContext, expr)
+      , (wvContext, asIWC <$> wvExpr)
+      )
   where
-    res@(_, newRefMap, expr) = inferWithConflicts loaded baseRefMap node
     asIWC (newInferred, ImplicitVariables.Stored (oldIWC, a)) =
       ( oldIWC { iwcInferred = newInferred }
       , ImplicitVariables.Stored a

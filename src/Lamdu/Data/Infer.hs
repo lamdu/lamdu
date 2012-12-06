@@ -25,6 +25,7 @@ import Control.Monad ((<=<), guard, unless, void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.State (StateT(..), State, runState)
+import Control.Monad.Trans.State.Utils (toStateT)
 import Control.Monad.Trans.Writer (Writer)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..), getWord8, putWord8)
@@ -54,9 +55,6 @@ import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
 import qualified Lamdu.Data as Data
 import qualified Lamdu.Data.Infer.Rules as Rules
-
-toStateT :: MonadA m => State s a -> StateT s m a
-toStateT = State.mapStateT (return . runIdentity)
 
 mkOrigin :: State Origin Origin
 mkOrigin = do

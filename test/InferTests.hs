@@ -5,10 +5,12 @@ import Control.Arrow ((&&&))
 import Control.Exception (evaluate)
 import Control.Lens ((^.))
 import Control.Monad (join, void)
+import Control.Monad.Trans.State (runStateT, evalState)
 import Data.Map ((!))
 import Data.Maybe (isJust)
 import Data.Monoid (Monoid(..))
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
+import Lamdu.Data.IRef (DefI)
 import Lamdu.Data.Infer.Conflicts (inferWithConflicts)
 import Test.Framework (Test)
 import Test.Framework.Providers.HUnit (hUnitTestToTests)
@@ -394,10 +396,8 @@ testResume name newExpr testExpr extract =
   let
     (tExpr, inferContext) = doInfer_ testExpr
   in
-    void . evaluate $
-    doInferM inferContext
-    ((Infer.iPoint . Lens.view Data.ePayload . extract) tExpr)
-    newExpr
+    void . evaluate . (`runStateT` inferContext) $
+    doInferM ((Infer.iPoint . Lens.view Data.ePayload . extract) tExpr) newExpr
 
 applyIdInt :: Data.Expression DefI ()
 applyIdInt =
@@ -464,10 +464,9 @@ resumptionTests =
         doInfer_ $ makeLambda "" hole hole
       body = getLambdaBody exprD
       scope = Infer.nScope . Infer.iPoint $ body ^. Data.ePayload
-      (exprR, _) =
-        uncurry doInferM_
-        (Infer.newNodeWithScope scope inferContext)
-        getRecursiveDef
+      exprR = (`evalState` inferContext) $ do
+        node <- Infer.newNodeWithScope scope
+        doInferM_ node getRecursiveDef
       resultD = inferResults exprD
       resultR = inferResults exprR
     in
@@ -493,20 +492,19 @@ makeParameterRef = Data.pureExpression . Data.makeParameterRef . Guid.fromString
 --         ^ Set Bool here
 failResumptionAddsRules :: HUnit.Test
 failResumptionAddsRules =
-  testCase "Resumption that adds rules and fails" $
-  assertBool "Resumption should have failed" (not success)
+  testCase "Resumption that adds rules and fails" .
+  assertBool "Resumption should have failed" $ not success
   where
-    -- TODO: Verify iwc has the right kind of conflict (or add
-    -- different tests to do that)
-    (success, _, _iwc) =
-      inferWithConflicts (doLoad resumptionValue)
-      origRefMap resumptionPoint
+    (success, _iwc) = (`evalState` origInferContext) $
+      -- TODO: Verify iwc has the right kind of conflict (or add
+      -- different tests to do that)
+      inferWithConflicts (doLoad resumptionValue) resumptionPoint
     resumptionValue = getDefExpr "Bool" -- <- anything but Pi
     resumptionPoint =
       ( Infer.iPoint . Lens.view Data.ePayload
       . getPiResult . getLambdaParamType
       ) origInferred
-    (origInferred, origRefMap) = doInfer_ origExpr
+    (origInferred, origInferContext) = doInfer_ origExpr
     origExpr =
       makeLambda "x" (makePi "" hole hole) $
       makeApply [makeParameterRef "x", hole, hole]

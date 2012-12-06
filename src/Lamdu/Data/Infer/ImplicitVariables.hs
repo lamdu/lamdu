@@ -3,9 +3,12 @@ module Lamdu.Data.Infer.ImplicitVariables
   ( addVariables, Payload(..)
   ) where
 
-import Control.Applicative (liftA2)
+import Control.Applicative ((<$>), (<*>))
 import Control.Lens (SimpleLens, (^.))
-import Control.Monad.Trans.State (State, runState)
+import Control.Monad (join)
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.State (StateT, State)
+import Control.Monad.Trans.State.Utils (toStateT)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
@@ -13,7 +16,6 @@ import Data.DeriveTH (derive)
 import Data.Functor.Identity (Identity(..))
 import Data.Monoid (mempty)
 import Data.Store.Guid (Guid)
-import Data.Tuple (swap)
 import Data.Typeable (Typeable)
 import System.Random (RandomGen, random)
 import qualified Control.Lens as Lens
@@ -80,25 +82,23 @@ actions = Infer.InferActions . const . Identity $ error "Infer error when adding
 addVariables ::
   (MonadA m, Ord def, RandomGen g) =>
   g -> Infer.Loader def m ->
-  Infer.Context def -> Data.Expression def (Infer.Inferred def, a) ->
-  m (Infer.Context def, Data.Expression def (Infer.Inferred def, Payload a))
-addVariables gen loader initialInferContext expr =
-  fmap swap $
-  liftA2 onLoaded
-  (load Data.pureSet)
-  (load (Infer.iType rootNode))
+  Data.Expression def (Infer.Inferred def, a) ->
+  StateT (Infer.Context def) m
+  (Data.Expression def (Infer.Inferred def, Payload a))
+addVariables gen loader expr =
+  join $
+  onLoaded <$> load Data.pureSet <*> load (Infer.iType rootNode)
   where
-    load = Infer.load loader Nothing -- <-- TODO: Nothing?
-    onLoaded loadedSet loadedRootType =
-      (`runState` initialInferContext) $ do
-        inferredSet <-
-          (fmap . fmap) fst $
-          Infer.inferLoaded actions loadedSet =<< Infer.newNodeWithScope mempty
-        let
-          rootTypeTypeRef = Infer.tvVal . Infer.nRefs . Infer.iPoint $ inferredSet ^. Data.ePayload
-          rootTypeNode = Infer.InferNode (Infer.TypedValue rootTypeRef rootTypeTypeRef) mempty
-        inferredRootType <- Infer.inferLoaded actions loadedRootType rootTypeNode
-        addVariablesGen gen inferredRootType $
-          Lens.over (Lens.mapped . Lens._2) Stored expr
+    load = lift . Infer.load loader Nothing -- <-- TODO: Nothing?
+    onLoaded loadedSet loadedRootType = toStateT $ do
+      inferredSet <-
+        (fmap . fmap) fst $
+        Infer.inferLoaded actions loadedSet =<< Infer.newNodeWithScope mempty
+      let
+        rootTypeTypeRef = Infer.tvVal . Infer.nRefs . Infer.iPoint $ inferredSet ^. Data.ePayload
+        rootTypeNode = Infer.InferNode (Infer.TypedValue rootTypeRef rootTypeTypeRef) mempty
+      inferredRootType <- Infer.inferLoaded actions loadedRootType rootTypeNode
+      addVariablesGen gen inferredRootType $
+        Lens.over (Lens.mapped . Lens._2) Stored expr
     rootNode = expr ^. inferredLens
     rootTypeRef = (Infer.tvType . Infer.nRefs . Infer.iPoint) rootNode
