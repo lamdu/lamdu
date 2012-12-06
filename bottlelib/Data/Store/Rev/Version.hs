@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Data.Store.Rev.Version
   ( VersionData, depth, parent, changes
   , preventUndo
@@ -7,47 +7,48 @@ module Data.Store.Rev.Version
   , walkUp, walkDown, versionsBetween
   ) where
 
-import Control.Applicative (liftA2)
+import Control.Applicative ((<$>), (<*>))
 import Control.Monad (join)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..))
-import Data.Derive.Binary(makeBinary)
-import Data.DeriveTH(derive)
-import Data.Foldable (traverse_)
+import Data.Foldable (traverse_, sequenceA_)
 import Data.Store.IRef (IRef)
 import Data.Store.Rev.Change (Change(..), Key, Value)
 import Data.Store.Transaction (Transaction)
 import qualified Data.Store.Transaction as Transaction
 
-newtype Version = Version { versionIRef :: IRef VersionData }
+newtype Version t = Version { versionIRef :: IRef t (VersionData t) }
   deriving (Eq, Ord, Read, Show, Binary)
 
-data VersionData = VersionData {
+data VersionData t = VersionData {
   depth :: Int,
-  parent :: Maybe Version,
+  parent :: Maybe (Version t),
   changes :: [Change]
   }
   deriving (Eq, Ord, Read, Show)
-$(derive makeBinary ''VersionData)
 
-makeInitialVersion :: MonadA m => [(Key, Value)] -> Transaction m Version
+instance Binary (VersionData t) where
+  get = VersionData <$> get <*> get <*> get
+  put (VersionData x y z) = sequenceA_ [put x, put y, put z]
+
+makeInitialVersion :: MonadA m => [(Key, Value)] -> Transaction m (Version (m ()))
 makeInitialVersion initialValues = fmap Version . Transaction.newIRef . VersionData 0 Nothing $ map makeChange initialValues
   where
     makeChange (key, value) = Change key Nothing (Just value)
 
-versionData :: MonadA m => Version -> Transaction m VersionData
+versionData :: MonadA m => Version (m ()) -> Transaction m (VersionData (m ()))
 versionData = Transaction.readIRef . versionIRef
 
 -- TODO: This is a hack. Used to prevent undo into initial empty
 -- version. Can instead explicitly make a version when running a
 -- "view" transaction
-preventUndo :: MonadA m => Version -> Transaction m ()
+preventUndo :: MonadA m => Version (m ()) -> Transaction m ()
 preventUndo version = do
   ver <- versionData version
   Transaction.writeIRef (versionIRef version)
     ver { parent = Nothing }
 
-newVersion :: MonadA m => Version -> [Change] -> Transaction m Version
+newVersion :: MonadA m => Version (m ()) -> [Change] -> Transaction m (Version (m ()))
 newVersion version newChanges = do
   parentDepth <- fmap depth . versionData $ version
   fmap Version .
@@ -55,7 +56,8 @@ newVersion version newChanges = do
     VersionData (parentDepth+1) (Just version) $
     newChanges
 
-mostRecentAncestor :: MonadA m => Version -> Version -> Transaction m Version
+mostRecentAncestor ::
+  MonadA m => Version (m ()) -> Version (m ()) -> Transaction m (Version (m ()))
 mostRecentAncestor aVersion bVersion
   | aVersion == bVersion  = return aVersion
   | otherwise             = do
@@ -66,7 +68,7 @@ mostRecentAncestor aVersion bVersion
       GT -> (`mostRecentAncestor` bVersion) =<< upToDepth bDepth aVersion
       EQ -> if aDepth == 0
             then fail "Two versions without common ancestor given"
-            else join $ liftA2 mostRecentAncestor (getParent aMbParentRef) (getParent bMbParentRef)
+            else join $ mostRecentAncestor <$> getParent aMbParentRef <*> getParent bMbParentRef
   where
     upToDepth depthToReach version = do
       VersionData curDepth curMbParentRef _curChanges <- versionData version
@@ -75,7 +77,10 @@ mostRecentAncestor aVersion bVersion
         else return version
     getParent = maybe (fail "Non-0 depth must have a parent") return
 
-walkUp :: MonadA m => (VersionData -> Transaction m ()) -> Version -> Version -> Transaction m ()
+walkUp ::
+  MonadA m =>
+  (VersionData (m ()) -> Transaction m ()) ->
+  Version (m ()) -> Version (m ()) -> Transaction m ()
 walkUp onVersion topRef bottomRef
   | bottomRef == topRef  = return ()
   | otherwise            = do
@@ -87,7 +92,9 @@ walkUp onVersion topRef bottomRef
 -- We can't directly walkDown (we don't have references pointing
 -- downwards... But we can generate a list of versions by walking up
 -- and accumulating a reverse list)
-versionsBetween :: MonadA m => Version -> Version -> Transaction m [VersionData]
+versionsBetween ::
+  MonadA m => Version (m ()) -> Version (m ()) ->
+  Transaction m [VersionData (m ())]
 versionsBetween topRef = accumulateWalkUp []
   where
     accumulateWalkUp vs curRef
@@ -98,6 +105,6 @@ versionsBetween topRef = accumulateWalkUp []
           parent versionD
 
 -- Implement in terms of versionsBetween
-walkDown :: MonadA m => (VersionData -> Transaction m ()) -> Version -> Version -> Transaction m ()
+walkDown :: MonadA m => (VersionData (m ()) -> Transaction m ()) -> Version (m ()) -> Version (m ()) -> Transaction m ()
 walkDown onVersion topRef bottomRef =
   traverse_ onVersion =<< versionsBetween topRef bottomRef

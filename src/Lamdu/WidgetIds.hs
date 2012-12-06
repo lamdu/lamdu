@@ -15,7 +15,7 @@ backgroundCursorId = ["background cursor"]
 textCursorId :: AnimId
 textCursorId = ["text cursor"]
 
-fromIRef :: IRef a -> Widget.Id
+fromIRef :: IRef t a -> Widget.Id
 fromIRef = fromGuid . guid
 
 fromGuid :: Guid -> Widget.Id
@@ -45,7 +45,7 @@ parenHighlightId = ["paren highlight"]
 parensPrefix :: AnimId -> AnimId
 parensPrefix = flip mappend ["parens"]
 
-diveIn :: Functor f => f (IRef a) -> f Widget.Id
+diveIn :: Functor f => f (IRef t a) -> f Widget.Id
 diveIn = fmap $ FocusDelegator.delegatingId . fromIRef
 
 underlineId :: AnimId -> AnimId

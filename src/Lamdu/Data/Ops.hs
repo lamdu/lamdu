@@ -28,7 +28,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 
 type T = Transaction
 
-makeDefinition :: Transaction ViewM DefI
+makeDefinition :: Transaction ViewM (DefI (ViewM ()))
 makeDefinition = do
   defI <-
     Transaction.newIRef =<<
@@ -38,8 +38,8 @@ makeDefinition = do
 
 giveAsArg ::
   MonadA m =>
-  DataIRef.ExpressionProperty (T m) ->
-  T m DataIRef.Expression
+  DataIRef.ExpressionProperty m ->
+  T m (DataIRef.Expression (m ()))
 giveAsArg exprP = do
   newFuncI <- newHole
   Property.set exprP =<<
@@ -49,9 +49,9 @@ giveAsArg exprP = do
 
 giveAsArgToOperator ::
   MonadA m =>
-  DataIRef.ExpressionProperty (T m) ->
+  DataIRef.ExpressionProperty m ->
   String ->
-  T m DataIRef.Expression
+  T m (DataIRef.Expression (m ()))
 giveAsArgToOperator exprP searchTerm = do
   op <- newHole
   (`Property.set` searchTerm) =<< Anchors.assocSearchTermRef (DataIRef.exprGuid op)
@@ -61,8 +61,8 @@ giveAsArgToOperator exprP searchTerm = do
 
 callWithArg ::
   MonadA m =>
-  DataIRef.ExpressionProperty (T m) ->
-  T m DataIRef.Expression
+  DataIRef.ExpressionProperty m ->
+  T m (DataIRef.Expression (m ()))
 callWithArg exprP = do
   argI <- newHole
   Property.set exprP =<<
@@ -70,28 +70,28 @@ callWithArg exprP = do
     (Data.makeApply (Property.value exprP) argI)
   return argI
 
-newHole :: MonadA m => T m DataIRef.Expression
+newHole :: MonadA m => T m (DataIRef.Expression (m ()))
 newHole = DataIRef.newExprBody $ Data.ExpressionLeaf Data.Hole
 
 replace
   :: MonadA m
-  => DataIRef.ExpressionProperty (T m)
-  -> DataIRef.Expression
-  -> T m DataIRef.Expression
+  => DataIRef.ExpressionProperty m
+  -> DataIRef.Expression (m ())
+  -> T m (DataIRef.Expression (m ()))
 replace exprP newExprI = do
   Property.set exprP newExprI
   return newExprI
 
 replaceWithHole
   :: MonadA m
-  => DataIRef.ExpressionProperty (T m)
-  -> T m DataIRef.Expression
+  => DataIRef.ExpressionProperty m
+  -> T m (DataIRef.Expression (m ()))
 replaceWithHole exprP = replace exprP =<< newHole
 
 lambdaWrap
   :: MonadA m
-  => DataIRef.ExpressionProperty (T m)
-  -> T m (Guid, DataIRef.Expression)
+  => DataIRef.ExpressionProperty m
+  -> T m (Guid, DataIRef.Expression (m ()))
 lambdaWrap exprP = do
   newParamTypeI <- newHole
   (newParam, newExprI) <-
@@ -101,8 +101,8 @@ lambdaWrap exprP = do
 
 redexWrap
   :: MonadA m
-  => DataIRef.ExpressionProperty (T m)
-  -> T m (Guid, DataIRef.Expression)
+  => DataIRef.ExpressionProperty m
+  -> T m (Guid, DataIRef.Expression (m ()))
 redexWrap exprP = do
   newParamTypeI <- newHole
   (newParam, newLambdaI) <-
@@ -113,7 +113,7 @@ redexWrap exprP = do
   Property.set exprP newApplyI
   return (newParam, newLambdaI)
 
-newPane :: DefI -> Transaction ViewM ()
+newPane :: DefI (ViewM ()) -> Transaction ViewM ()
 newPane defI = do
   panesP <- Anchors.panes
   when (defI `notElem` Property.value panesP) $
@@ -134,8 +134,8 @@ jumpBack = do
 
 newBuiltin
   :: MonadA m
-  => String -> DataIRef.Expression
-  -> Transaction m DefI
+  => String -> DataIRef.Expression (m ())
+  -> Transaction m (DefI (m ()))
 newBuiltin fullyQualifiedName typeI =
   newDefinition name . (`Data.Definition` typeI) . Data.DefinitionBuiltin .
   Data.Builtin $ Data.FFIName (init path) name
@@ -143,13 +143,15 @@ newBuiltin fullyQualifiedName typeI =
     name = last path
     path = splitOn "." fullyQualifiedName
 
-newDefinition :: MonadA m => String -> DataIRef.DefinitionI -> Transaction m DefI
+newDefinition ::
+  MonadA m => String ->
+  DataIRef.DefinitionI (m ()) -> Transaction m (DefI (m ()))
 newDefinition name defI = do
   res <- Transaction.newIRef defI
   Anchors.setP (Anchors.assocNameRef (IRef.guid res)) name
   return res
 
-newClipboard :: DataIRef.Expression -> Transaction ViewM DefI
+newClipboard :: DataIRef.Expression (ViewM ()) -> Transaction ViewM (DefI (ViewM ()))
 newClipboard expr = do
   len <- length <$> Anchors.getP Anchors.clipboards
   def <- Data.Definition (Data.DefinitionExpression expr) <$> newHole

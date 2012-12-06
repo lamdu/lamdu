@@ -7,14 +7,14 @@ module Lamdu.Data.Load
   , PropertyClosure, propertyOfClosure, irefOfClosure
   ) where
 
-import Control.Applicative (liftA2)
+import Control.Applicative (liftA2, (<$>), (<*>))
 import Control.Lens ((^.), SimpleLensLike)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
+import Data.Foldable (sequenceA_)
 import Data.Function (on)
-import Data.Functor.Identity (Identity(..))
 import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
 import Data.Typeable (Typeable)
@@ -42,22 +42,34 @@ lambdaChildByRole :: Functor f => LambdaRole -> SimpleLensLike f (Data.Lambda a)
 lambdaChildByRole ParamType = Data.lambdaParamType
 lambdaChildByRole Result = Data.lambdaBody
 
-data PropertyClosure
+data PropertyClosure t
   = DefinitionTypeProperty
-      DefI (Data.Definition DataIRef.Expression)
+      (DefI t) (Data.Definition (DataIRef.Expression t))
   | DefinitionBodyExpressionProperty
-      DefI DataIRef.Expression DataIRef.Expression
+      (DefI t) (DataIRef.Expression t) (DataIRef.Expression t)
   | ApplyProperty
-      DataIRef.Expression (Data.Apply DataIRef.Expression) ApplyRole
+      (DataIRef.Expression t) (Data.Apply (DataIRef.Expression t)) ApplyRole
   | LambdaProperty Data.ExprLambdaWrapper
-      DataIRef.Expression (Data.Lambda DataIRef.Expression) LambdaRole
+      (DataIRef.Expression t) (Data.Lambda (DataIRef.Expression t)) LambdaRole
   deriving (Eq, Ord, Show, Typeable)
-derive makeBinary ''PropertyClosure
+instance Binary (PropertyClosure t) where
+  get = do
+    tag <- get
+    case tag of
+      'T' -> DefinitionTypeProperty <$> get <*> get
+      'B' -> DefinitionBodyExpressionProperty <$> get <*> get <*> get
+      'A' -> ApplyProperty <$> get <*> get <*> get
+      'L' -> LambdaProperty <$> get <*> get <*> get <*> get
+      _ -> error $ "Bad Binary encoding: " ++ show tag
+  put (DefinitionTypeProperty a b) = sequenceA_ [put 'T', put a, put b]
+  put (DefinitionBodyExpressionProperty a b c) = sequenceA_ [put 'B', put a, put b, put c]
+  put (ApplyProperty a b c) = sequenceA_ [put 'A', put a, put b, put c]
+  put (LambdaProperty a b c d) = sequenceA_ [put 'L', put a, put b, put c, put d]
 
 setter :: Lens.LensLike (LensInternal.Context a b) s t a b -> s -> b -> t
 setter = flip . Lens.set . Lens.cloneLens
 
-propertyOfClosure :: MonadA m => PropertyClosure -> DataIRef.ExpressionProperty (T m)
+propertyOfClosure :: MonadA m => PropertyClosure (m ()) -> DataIRef.ExpressionProperty m
 propertyOfClosure (DefinitionTypeProperty defI (Data.Definition defBody defType)) =
   Property defType $
   Transaction.writeIRef defI . Data.Definition defBody
@@ -78,30 +90,25 @@ propertyOfClosure (LambdaProperty cons exprI lambda role) =
   where
     lens = lambdaChildByRole role
 
-irefOfClosure :: PropertyClosure -> DataIRef.Expression
-irefOfClosure closure =
-  Property.value
-  -- Yuck: We don't care about the setter, but we must provide a Monad
-  -- instance for it, so we just hard-code it to Identity and ignore
-  -- it.
-  (propertyOfClosure closure :: DataIRef.ExpressionProperty (T Identity))
+irefOfClosure :: MonadA m => PropertyClosure (m ()) -> DataIRef.Expression (m ())
+irefOfClosure = Property.value . propertyOfClosure
 
-type LoadedClosure = Data.Expression DefI PropertyClosure
-type Loaded m = Data.Expression DefI (DataIRef.ExpressionProperty m)
+type LoadedClosure t = Data.Expression (DefI t) (PropertyClosure t)
+type Loaded m = Data.Expression (DefI (m ())) (DataIRef.ExpressionProperty m)
 
 loadExpressionProperty ::
-  MonadA m => DataIRef.ExpressionProperty (T m) -> T m (Loaded (T m))
+  MonadA m => DataIRef.ExpressionProperty m -> T m (Loaded m)
 loadExpressionProperty prop =
   fmap ((`Data.Expression` prop) . (fmap . fmap) propertyOfClosure) .
   loadExpressionBody $ Property.value prop
 
-loadExpressionClosure :: MonadA m => PropertyClosure -> T m LoadedClosure
+loadExpressionClosure :: MonadA m => PropertyClosure (m ()) -> T m (LoadedClosure (m ()))
 loadExpressionClosure closure =
   fmap (`Data.Expression` closure) . loadExpressionBody $
   irefOfClosure closure
 
 loadExpressionBody ::
-  MonadA m => DataIRef.Expression -> T m (Data.ExpressionBody DefI LoadedClosure)
+  MonadA m => DataIRef.Expression (m ()) -> T m (Data.ExpressionBody (DefI (m ())) (LoadedClosure (m ())))
 loadExpressionBody iref = onBody =<< DataIRef.readExprBody iref
   where
     onBody (Data.ExpressionLeaf x) =
@@ -119,11 +126,10 @@ loadExpressionBody iref = onBody =<< DataIRef.readExprBody iref
       where
         prop = LambdaProperty cons iref lambda
 
-loadDefinition ::
-  (MonadA m, MonadA n) => DefI -> T m (Data.Definition (Loaded (T n)))
-loadDefinition = (fmap . fmap . fmap) propertyOfClosure . loadDefinitionClosure
+loadDefinition :: MonadA m => DefI (m ()) -> T m (Data.Definition (Loaded m))
+loadDefinition x = (fmap . fmap . fmap) propertyOfClosure . loadDefinitionClosure $ x
 
-loadDefinitionClosure :: MonadA m => DefI -> T m (Data.Definition LoadedClosure)
+loadDefinitionClosure :: MonadA m => DefI (m ()) -> T m (Data.Definition (LoadedClosure (m ())))
 loadDefinitionClosure defI = do
   def <- Transaction.readIRef defI
   defType <- loadExpressionClosure $ DefinitionTypeProperty defI def

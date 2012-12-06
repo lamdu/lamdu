@@ -27,16 +27,20 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.IRef as DataIRef
 import qualified Lamdu.WidgetIds as WidgetIds
 
-newTodoIRef :: MonadA m => Transaction m (IRef a)
+newTodoIRef :: MonadA m => Transaction m (IRef (m ()) a)
 newTodoIRef = fmap IRef.unsafeFromGuid Transaction.newKey
 
-fixIRef :: (Binary a, MonadA m) => (IRef a -> Transaction m a) -> Transaction m (IRef a)
+fixIRef ::
+  (Binary a, MonadA m) =>
+  (IRef (m ()) a -> Transaction m a) ->
+  Transaction m (IRef (m ()) a)
 fixIRef createOuter = do
   x <- newTodoIRef
   Transaction.writeIRef x =<< createOuter x
   return x
 
-createBuiltins :: MonadA m => Transaction m ((FFI.Env, SugarConfig), [DataIRef.DefI])
+createBuiltins ::
+  MonadA m => Transaction m ((FFI.Env (m ()), SugarConfig (m ())), [DataIRef.DefI (m ())])
 createBuiltins =
   Writer.runWriterT $ do
     list <- mkType . DataOps.newBuiltin "Data.List.List" =<< lift setToSet
@@ -156,7 +160,7 @@ createBuiltins =
     makeWithType builtinName typeMaker =
       tellift (DataOps.newBuiltin builtinName =<< typeMaker)
 
-newBranch :: MonadA m => String -> Version -> Transaction m Branch
+newBranch :: MonadA m => String -> Version (m ()) -> Transaction m (Branch (m ()))
 newBranch name ver = do
   branch <- Branch.new ver
   A.setP (BranchGUI.branchNameProp branch) name

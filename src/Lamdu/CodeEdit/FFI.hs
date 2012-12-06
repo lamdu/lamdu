@@ -1,25 +1,26 @@
-{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.CodeEdit.FFI (Env(..), table) where
 
+import Control.Applicative ((<$>), (<*>))
 import Data.Binary (Binary(..))
-import Data.Derive.Binary (makeBinary)
-import Data.DeriveTH (derive)
+import Data.Foldable (sequenceA_)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Lamdu.Data as Data
 import qualified Lamdu.Data.IRef as DataIRef
 
-data Env = Env
-  { trueDef :: DataIRef.DefI
-  , falseDef :: DataIRef.DefI
+data Env t = Env
+  { trueDef :: DataIRef.DefI t
+  , falseDef :: DataIRef.DefI t
   }
-derive makeBinary ''Env
+instance Binary (Env t) where
+  get = Env <$> get <*> get
+  put (Env x y) = sequenceA_ [put x, put y]
 
 class FromExpr a where
-  fromExpr :: Env -> Data.Expression DataIRef.DefI () -> a
+  fromExpr :: Env t -> Data.Expression (DataIRef.DefI t) () -> a
 
 class ToExpr a where
-  toExpr :: Env -> a -> [Data.Expression DataIRef.DefI ()] -> Data.Expression DataIRef.DefI ()
+  toExpr :: Env t -> a -> [Data.Expression (DataIRef.DefI t) ()] -> Data.Expression (DataIRef.DefI t) ()
 
 instance FromExpr Integer where
   fromExpr _ (Data.Expression { Data._eValue = Data.ExpressionLeaf (Data.LiteralInteger x) }) = x
@@ -44,7 +45,7 @@ instance FromExpr Bool where
     | defRef == falseDef env = False
   fromExpr _ _ = error "Expected a normalized bool expression!"
 
-table :: Env -> Map Data.FFIName ([Data.Expression DataIRef.DefI ()] -> Data.Expression DataIRef.DefI ())
+table :: Env t -> Map Data.FFIName ([Data.Expression (DataIRef.DefI t) ()] -> Data.Expression (DataIRef.DefI t) ())
 table env =
   Map.fromList
   [ prelude "==" ((==) :: Integer -> Integer -> Bool)

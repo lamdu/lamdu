@@ -14,19 +14,19 @@ isInfixName :: String -> Bool
 isInfixName "" = False
 isInfixName name = all (not . Char.isAlphaNum) name
 
-variableRefGuid :: Data.VariableRef DataIRef.DefI -> Guid
+variableRefGuid :: Data.VariableRef (DataIRef.DefI t) -> Guid
 variableRefGuid (Data.ParameterRef i) = i
 variableRefGuid (Data.DefinitionRef i) = IRef.guid i
 
-isInfixVar :: MonadA m => Data.VariableRef DataIRef.DefI -> Transaction m Bool
+isInfixVar :: MonadA m => Data.VariableRef (DataIRef.DefI (m ())) -> Transaction m Bool
 isInfixVar =
   fmap isInfixName . Anchors.getP .
   Anchors.assocNameRef . variableRefGuid
 
 infixOp
   :: MonadA m
-  => Data.Expression DataIRef.DefI ref
-  -> Transaction m (Maybe (Data.VariableRef DataIRef.DefI))
+  => Data.Expression (DataIRef.DefI (m ())) ref
+  -> Transaction m (Maybe (Data.VariableRef (DataIRef.DefI (m ()))))
 infixOp expr =
   case expr ^. Data.eValue of
   Data.ExpressionLeaf (Data.GetVariable var) -> do

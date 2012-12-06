@@ -1,16 +1,16 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Lamdu.CodeEdit.Sugar.Config
   ( SugarConfig(..)
   ) where
 
+import Control.Applicative ((<$>), (<*>))
 import Data.Binary (Binary(..))
-import Data.Derive.Binary (makeBinary)
-import Data.DeriveTH (derive)
+import Data.Foldable (sequenceA_)
 import qualified Lamdu.Data.IRef as DataIRef
 
-data SugarConfig = SugarConfig
-  { cons :: DataIRef.DefI
-  , nil :: DataIRef.DefI
+data SugarConfig t = SugarConfig
+  { cons :: DataIRef.DefI t
+  , nil :: DataIRef.DefI t
   }
-derive makeBinary ''SugarConfig
+instance Binary (SugarConfig t) where
+  get = SugarConfig <$> get <*> get
+  put (SugarConfig x y) = sequenceA_ [put x, put y]

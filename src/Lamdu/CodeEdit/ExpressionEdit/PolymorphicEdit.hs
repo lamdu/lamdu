@@ -20,7 +20,7 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 -- make without the focus delegator
 makeInner ::
-  MonadA m => Sugar.Polymorphic (Sugar.Expression m) -> Widget.Id ->
+  MonadA m => Sugar.Polymorphic (m ()) (Sugar.Expression m) -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 makeInner poly myId = do
   -- TODO: This is just to detect whether cursor is in the full expression.
@@ -54,7 +54,7 @@ polymorphicFDConfig = FocusDelegator.Config
   }
 
 make ::
-  MonadA m => Sugar.Polymorphic (Sugar.Expression m) ->
+  MonadA m => Sugar.Polymorphic (m ()) (Sugar.Expression m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make poly =
   ExpressionGui.wrapDelegated polymorphicFDConfig FocusDelegator.NotDelegating $

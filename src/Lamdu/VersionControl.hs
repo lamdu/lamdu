@@ -7,26 +7,27 @@ import Data.Maybe (fromMaybe)
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
+import Lamdu.Anchors (DbM)
 import Lamdu.VersionControl.Actions (Actions(Actions))
 import qualified Control.Lens as Lens
 import qualified Data.Store.Rev.Branch as Branch
 import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
+import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.Anchors as Anchors
 import qualified Lamdu.VersionControl.Actions as Actions
-import qualified Graphics.UI.Bottle.Widget as Widget
 
 -- TODO: Use the monad newtypes:
 type TDB = Transaction Anchors.DbM
 type TV = Transaction Anchors.ViewM
 
-setCurrentBranch :: View -> Branch -> TDB ()
+setCurrentBranch :: View (DbM ()) -> Branch (DbM ()) -> TDB ()
 setCurrentBranch view branch = do
   Anchors.setP Anchors.currentBranch branch
   View.setBranch view branch
 
-deleteBranch :: View -> [Branch] -> Branch -> TDB Branch
+deleteBranch :: View (DbM ()) -> [Branch (DbM ())] -> Branch (DbM ()) -> TDB (Branch (DbM ()))
 deleteBranch view branches branch = do
   Anchors.setP Anchors.branches newBranches
   setCurrentBranch view newBranch
@@ -38,7 +39,7 @@ deleteBranch view branches branch = do
       elemIndex branch branches
     newBranches = removeAt index branches
 
-makeBranch :: View -> TDB Branch
+makeBranch :: View (DbM ()) -> TDB (Branch (DbM ()))
 makeBranch view = do
   newBranch <- Branch.new =<< View.curVersion view
   Anchors.modP Anchors.branches (++ [newBranch])
@@ -62,7 +63,7 @@ runEvent preCursor eventHandler = do
   unless isEmpty $ Anchors.setP Anchors.redos []
   return eventResult
 
-makeActions :: Transaction Anchors.DbM (Actions (Transaction Anchors.DbM))
+makeActions :: Transaction Anchors.DbM (Actions (Anchors.DbM ()) (Transaction Anchors.DbM))
 makeActions = do
   view <- Anchors.getP Anchors.view
   branches <- Anchors.getP Anchors.branches

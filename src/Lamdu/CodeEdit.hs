@@ -60,7 +60,7 @@ makeNewDefinitionAction = do
     DataOps.savePreJumpPosition curCursor
     return . FocusDelegator.delegatingId $ WidgetIds.fromIRef newDefI
 
-loadConvertDefI :: DefI -> CT ViewM (Sugar.Definition ViewM)
+loadConvertDefI :: DefI (ViewM ()) -> CT ViewM (Sugar.Definition ViewM)
 loadConvertDefI defI = do
   sugarConfig <- lift $ Anchors.getP Anchors.sugarConfig
   Sugar.loadConvertDefI sugarConfig defI

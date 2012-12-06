@@ -98,17 +98,17 @@ data Section expr = Section
   , sectionRArg :: Maybe expr
   } deriving (Functor)
 
-type HoleResult = Data.Expression DefI (Infer.Inferred DefI)
+type HoleResult t = Data.Expression (DefI t) (Infer.Inferred (DefI t))
 
 data HoleActions m = HoleActions
-  { holePickResult :: HoleResult -> T m (Guid, Actions m)
-  , holeConvertResult :: HoleResult -> T m (Expression m)
+  { holePickResult :: HoleResult (m ()) -> T m (Guid, Actions m)
+  , holeConvertResult :: HoleResult (m ()) -> T m (Expression m)
   , holePaste :: Maybe (T m Guid)
   }
 
 data Hole m = Hole
   { holeScope :: [Guid]
-  , holeInferResults :: Data.Expression DefI () -> CT m [HoleResult]
+  , holeInferResults :: Data.Expression (DefI (m ())) () -> CT m [HoleResult (m ())]
   , holeMActions :: Maybe (HoleActions m)
   }
 
@@ -122,9 +122,9 @@ data Inferred m expr = Inferred
   , iHole :: Hole m
   } deriving (Functor)
 
-data Polymorphic expr = Polymorphic
+data Polymorphic t expr = Polymorphic
   { pFuncGuid :: Guid
-  , pCompact :: Data.VariableRef DefI
+  , pCompact :: Data.VariableRef (DefI t)
   , pFullExpression :: expr
   } deriving (Functor)
 
@@ -133,10 +133,10 @@ data ExpressionBody m expr
   | ExpressionSection { _eHasParens :: HasParens, __eSection :: Section expr }
   | ExpressionFunc    { _eHasParens :: HasParens, __eFunc :: Func m expr }
   | ExpressionPi      { _eHasParens :: HasParens, __ePi :: Pi m expr }
-  | ExpressionGetVariable { __getVariable :: Data.VariableRef DefI }
+  | ExpressionGetVariable { __getVariable :: Data.VariableRef (DefI (m ())) }
   | ExpressionHole { __eHole :: Hole m }
   | ExpressionInferred { __eInferred :: Inferred m expr }
-  | ExpressionPolymorphic { __ePolymorphic :: Polymorphic expr }
+  | ExpressionPolymorphic { __ePolymorphic :: Polymorphic (m ()) expr }
   | ExpressionLiteralInteger { __eLit :: LiteralInteger m }
   | ExpressionAtom { __eAtom :: String }
   deriving (Functor)

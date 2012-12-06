@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 
 module Lamdu.Anchors
   ( panes, panesIRef
@@ -37,6 +37,7 @@ import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Version(Version)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
+import Data.Typeable (Typeable)
 import Lamdu.CodeEdit.Sugar.Config (SugarConfig)
 import Lamdu.Data.IRef (DefI)
 import qualified Data.ByteString as SBS
@@ -45,67 +46,68 @@ import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
+import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.CodeEdit.FFI as FFI
 import qualified Lamdu.Data.IRef as DataIRef
-import qualified Graphics.UI.Bottle.Widget as Widget
 
-type Pane = DefI
+type T = Transaction
+type Pane t = DefI t
 
 newtype DbM a = DbM { dbM :: IO a }
-  deriving (Functor, Applicative, Monad, MonadIO)
+  deriving (Functor, Applicative, Monad, MonadIO, Typeable)
 
-newtype ViewM a = ViewM { viewM :: Transaction DbM a }
-  deriving (Functor, Applicative, Monad)
+newtype ViewM a = ViewM { viewM :: T DbM a }
+  deriving (Functor, Applicative, Monad, Typeable)
 
-runDbTransaction :: Db -> Transaction DbM a -> IO a
+runDbTransaction :: Db -> T DbM a -> IO a
 runDbTransaction db = dbM . Transaction.run (Transaction.onStoreM DbM (Db.store db))
 
-runViewTransaction :: View -> Transaction ViewM a -> Transaction DbM a
+runViewTransaction :: View (DbM ()) -> T ViewM a -> T DbM a
 runViewTransaction v = viewM . (Transaction.run . Transaction.onStoreM ViewM . View.store) v
 
-panesIRef :: IRef [Pane]
+panesIRef :: IRef t [Pane t]
 panesIRef = IRef.anchor "panes"
 
-type MkProperty m a = Transaction m (Transaction.Property m a)
+type MkProperty m a = T m (Transaction.Property m a)
 
-panes :: MkProperty ViewM [Pane]
+panes :: MkProperty ViewM [Pane (ViewM ())]
 panes = Transaction.fromIRef panesIRef
 
-clipboards :: MkProperty ViewM [DefI]
+clipboards :: MkProperty ViewM [DefI (ViewM ())]
 clipboards = Transaction.fromIRef clipboardsIRef
 
-clipboardsIRef :: IRef [DefI]
+clipboardsIRef :: IRef (ViewM ()) [DefI (ViewM ())]
 clipboardsIRef = IRef.anchor "clipboard"
 
-branchesIRef :: IRef [Branch]
+branchesIRef :: IRef (DbM ()) [Branch (DbM ())]
 branchesIRef = IRef.anchor "branches"
 
-branches :: MkProperty DbM [Branch]
+branches :: MkProperty DbM [Branch (DbM ())]
 branches = Transaction.fromIRef branchesIRef
 
-currentBranch :: MkProperty DbM Branch
+currentBranch :: MkProperty DbM (Branch (DbM ()))
 currentBranch = Transaction.fromIRef currentBranchIRef
 
-currentBranchIRef :: IRef Branch
+currentBranchIRef :: IRef (DbM ()) (Branch (DbM ()))
 currentBranchIRef = IRef.anchor "currentBranch"
 
 -- TODO: This should be an index
-globals :: MkProperty ViewM [DataIRef.DefI]
+globals :: MkProperty ViewM [DataIRef.DefI (ViewM ())]
 globals = Transaction.fromIRef globalsIRef
 
-globalsIRef :: IRef [DataIRef.DefI]
+globalsIRef :: IRef (ViewM ()) [DataIRef.DefI (ViewM ())]
 globalsIRef = IRef.anchor "globals"
 
-sugarConfig :: MkProperty ViewM SugarConfig
+sugarConfig :: MkProperty ViewM (SugarConfig (ViewM ()))
 sugarConfig = Transaction.fromIRef sugarConfigIRef
 
-sugarConfigIRef :: IRef SugarConfig
+sugarConfigIRef :: IRef (ViewM ()) (SugarConfig (ViewM ()))
 sugarConfigIRef = IRef.anchor "sugarConfig"
 
-ffiEnv :: MkProperty ViewM FFI.Env
+ffiEnv :: MkProperty ViewM (FFI.Env (ViewM ()))
 ffiEnv = Transaction.fromIRef ffiEnvIRef
 
-ffiEnvIRef :: IRef FFI.Env
+ffiEnvIRef :: IRef (ViewM ()) (FFI.Env (ViewM ()))
 ffiEnvIRef = IRef.anchor "ffiEnv"
 
 -- Cursor is untagged because it is both saved globally and per-revision.
@@ -113,45 +115,45 @@ ffiEnvIRef = IRef.anchor "ffiEnv"
 cursor :: MkProperty DbM Widget.Id
 cursor = Transaction.fromIRef cursorIRef
 
-cursorIRef :: IRef Widget.Id
+cursorIRef :: IRef (DbM ()) Widget.Id
 cursorIRef = IRef.anchor "cursor"
 
 preJumps :: MkProperty ViewM [Widget.Id]
 preJumps = Transaction.fromIRef preJumpsIRef
 
-preJumpsIRef :: IRef [Widget.Id]
+preJumpsIRef :: IRef (ViewM ()) [Widget.Id]
 preJumpsIRef = IRef.anchor "prejumps"
 
 preCursor :: MkProperty ViewM Widget.Id
 preCursor = Transaction.fromIRef preCursorIRef
 
-preCursorIRef :: IRef Widget.Id
+preCursorIRef :: IRef (ViewM ()) Widget.Id
 preCursorIRef = IRef.anchor "precursor"
 
 postCursor :: MkProperty ViewM Widget.Id
 postCursor = Transaction.fromIRef postCursorIRef
 
-postCursorIRef :: IRef Widget.Id
+postCursorIRef :: IRef (ViewM ()) Widget.Id
 postCursorIRef = IRef.anchor "postcursor"
 
-redos :: MkProperty DbM [Version]
+redos :: MkProperty DbM [Version (DbM ())]
 redos = Transaction.fromIRef redosIRef
 
-redosIRef :: IRef [Version]
+redosIRef :: IRef (DbM ()) [Version (DbM ())]
 redosIRef = IRef.anchor "redos"
 
-view :: MkProperty DbM View
+view :: MkProperty DbM (View (DbM ()))
 view = Transaction.fromIRef viewIRef
 
-viewIRef :: IRef View
+viewIRef :: IRef (DbM ()) (View (DbM ()))
 viewIRef = IRef.anchor "HEAD"
 
-makePane :: DataIRef.DefI -> Pane
+makePane :: DataIRef.DefI (ViewM ()) -> Pane (ViewM ())
 makePane = id
 
 nonEmptyAssocDataRef ::
   (MonadA m, Binary a) =>
-  SBS.ByteString -> Guid -> Transaction m a -> MkProperty m a
+  SBS.ByteString -> Guid -> T m a -> MkProperty m a
 nonEmptyAssocDataRef str guid makeDef = do
   dataRef <- Transaction.assocDataRef str guid
   def <-
@@ -170,15 +172,15 @@ assocNameRef = Transaction.assocDataRefDef "" "Name"
 assocSearchTermRef :: MonadA m => Guid -> MkProperty m String
 assocSearchTermRef = Transaction.assocDataRefDef "" "searchTerm"
 
-getP :: MonadA m => MkProperty m a -> Transaction m a
+getP :: MonadA m => MkProperty m a -> T m a
 getP = fmap Property.value
 
-setP :: MonadA m => MkProperty m a -> a -> Transaction m ()
+setP :: MonadA m => MkProperty m a -> a -> T m ()
 setP mkProp val = do
   prop <- mkProp
   Property.set prop val
 
-modP :: MonadA m => MkProperty m a -> (a -> a) -> Transaction m ()
+modP :: MonadA m => MkProperty m a -> (a -> a) -> T m ()
 modP mkProp f = do
   prop <- mkProp
   Property.pureModify prop f

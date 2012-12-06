@@ -59,9 +59,9 @@ moreSymbol = "▷"
 moreSymbolSizeFactor :: Fractional a => a
 moreSymbolSizeFactor = 0.5
 
-data Group = Group
+data Group def = Group
   { groupNames :: [String]
-  , groupBaseExpr :: Data.Expression DataIRef.DefI ()
+  , groupBaseExpr :: Data.Expression def ()
   }
 
 type T = Transaction
@@ -77,7 +77,7 @@ data HoleInfo m = HoleInfo
   }
 
 pickExpr ::
-  MonadA m => HoleInfo m -> Sugar.HoleResult ->
+  MonadA m => HoleInfo m -> Sugar.HoleResult (m ()) ->
   Transaction m Widget.EventResult
 pickExpr holeInfo expr = do
   (guid, _) <- Sugar.holePickResult (hiHoleActions holeInfo) expr
@@ -87,7 +87,7 @@ pickExpr holeInfo expr = do
     }
 
 resultPickEventMap ::
-  MonadA m => HoleInfo m -> Sugar.HoleResult ->
+  MonadA m => HoleInfo m -> Sugar.HoleResult (m ()) ->
   Widget.EventHandlers (Transaction m)
 resultPickEventMap holeInfo holeResult =
   case hiMNextHole holeInfo of
@@ -106,19 +106,19 @@ resultPickEventMap holeInfo holeResult =
       pickExpr holeInfo holeResult
 
 
-data ResultsList = ResultsList
+data ResultsList t = ResultsList
   { rlFirstId :: Widget.Id
   , rlMoreResultsPrefixId :: Widget.Id
-  , rlFirst :: Sugar.HoleResult
-  , rlMore :: Maybe [Sugar.HoleResult]
+  , rlFirst :: Sugar.HoleResult t
+  , rlMore :: Maybe [Sugar.HoleResult t]
   }
 
 resultsToWidgets
   :: MonadA m
-  => HoleInfo m -> ResultsList
+  => HoleInfo m -> ResultsList (m ())
   -> ExprGuiM m
      ( WidgetT m
-     , Maybe (Sugar.HoleResult, Maybe (WidgetT m))
+     , Maybe (Sugar.HoleResult (m ()), Maybe (WidgetT m))
      )
 resultsToWidgets holeInfo results = do
   cursorOnMain <- ExprGuiM.widgetEnv $ WE.isSubCursor myId
@@ -173,14 +173,15 @@ makeNoResults myId =
   ExprGuiM.widgetEnv .
   BWidgets.makeTextView "(No results)" $ mappend myId ["no results"]
 
-mkGroup :: [String] -> Data.ExpressionBodyExpr DataIRef.DefI () -> Group
+mkGroup :: [String] -> Data.ExpressionBodyExpr def () -> Group def
 mkGroup names body = Group
   { groupNames = names
   , groupBaseExpr = Data.pureExpression body
   }
 
 makeVariableGroup ::
-  MonadA m => Data.VariableRef DataIRef.DefI -> ExprGuiM m Group
+  MonadA m => Data.VariableRef (DataIRef.DefI (m ())) ->
+  ExprGuiM m (Group (DataIRef.DefI (m ())))
 makeVariableGroup varRef =
   ExprGuiM.withNameFromVarRef varRef $ \(_, varName) ->
   return . mkGroup [varName] . Data.ExpressionLeaf $ Data.GetVariable varRef
@@ -197,7 +198,7 @@ holeResultAnimMappingNoParens holeInfo resultId =
   where
     myId = Widget.toAnimId $ hiHoleId holeInfo
 
-groupOrdering :: String -> Group -> [Bool]
+groupOrdering :: String -> Group def -> [Bool]
 groupOrdering searchTerm result =
   map not
   [ match (==)
@@ -210,7 +211,7 @@ groupOrdering searchTerm result =
     match f = any (f searchTerm) names
     names = groupNames result
 
-makeLiteralGroup :: String -> [Group]
+makeLiteralGroup :: String -> [Group def]
 makeLiteralGroup searchTerm =
   [ makeLiteralIntResult (read searchTerm)
   | nonEmptyAll Char.isDigit searchTerm
@@ -225,13 +226,12 @@ makeLiteralGroup searchTerm =
 resultsPrefixId :: HoleInfo m -> Widget.Id
 resultsPrefixId holeInfo = mconcat [hiHoleId holeInfo, Widget.Id ["results"]]
 
-exprWidgetId :: Data.Expression DataIRef.DefI a -> Widget.Id
+exprWidgetId :: Show def => Data.Expression def a -> Widget.Id
 exprWidgetId = WidgetIds.fromGuid . randFunc . show . void
 
 toResultsList ::
-  MonadA m =>
-  HoleInfo m -> Data.Expression DataIRef.DefI () ->
-  CT m (Maybe ResultsList)
+  MonadA m => HoleInfo m -> Data.Expression (DataIRef.DefI (m ())) () ->
+  CT m (Maybe (ResultsList (m ())))
 toResultsList holeInfo baseExpr = do
   results <- Sugar.holeInferResults (hiHole holeInfo) baseExpr
   return $
@@ -253,8 +253,8 @@ toResultsList holeInfo baseExpr = do
 data ResultType = GoodResult | BadResult
 
 makeResultsList ::
-  MonadA m => HoleInfo m -> Group ->
-  CT m (Maybe (ResultType, ResultsList))
+  MonadA m => HoleInfo m -> Group (DataIRef.DefI (m ())) ->
+  CT m (Maybe (ResultType, ResultsList (m ())))
 makeResultsList holeInfo group = do
   -- We always want the first, and we want to know if there's more, so
   -- take 2:
@@ -271,7 +271,7 @@ makeResultsList holeInfo group = do
 
 makeAllResults
   :: ViewM ~ m => HoleInfo m
-  -> ExprGuiM m (ListT (CT m) (ResultType, ResultsList))
+  -> ExprGuiM m (ListT (CT m) (ResultType, ResultsList (m ())))
 makeAllResults holeInfo = do
   paramResults <-
     traverse (makeVariableGroup . Data.ParameterRef) $
@@ -340,7 +340,7 @@ disallowedHoleChars = "`[]\\\n "
 makeSearchTermWidget
   :: MonadA m
   => HoleInfo m -> Widget.Id
-  -> Maybe Sugar.HoleResult
+  -> Maybe (Sugar.HoleResult (m ()))
   -> ExprGuiM m (ExpressionGui m)
 makeSearchTermWidget holeInfo searchTermId mResultToPick =
   ExprGuiM.widgetEnv .
@@ -363,8 +363,8 @@ vboxMBiasedAlign mChildIndex align =
 makeResultsWidget
   :: MonadA m
   => HoleInfo m
-  -> [ResultsList] -> Bool
-  -> ExprGuiM m (Maybe Sugar.HoleResult, WidgetT m)
+  -> [ResultsList (m ())] -> Bool
+  -> ExprGuiM m (Maybe (Sugar.HoleResult (m ())), WidgetT m)
 makeResultsWidget holeInfo firstResults moreResults = do
   firstResultsAndWidgets <-
     traverse (resultsToWidgets holeInfo) firstResults
@@ -460,7 +460,7 @@ alphaNumericHandler doc handler =
   Config.alphaNumericChars . flip $ const handler
 
 pickEventMap ::
-  MonadA m => HoleInfo m -> String -> Maybe Sugar.HoleResult ->
+  MonadA m => HoleInfo m -> String -> Maybe (Sugar.HoleResult (m ())) ->
   Widget.EventHandlers (Transaction m)
 pickEventMap holeInfo searchTerm (Just result)
   | nonEmptyAll (`notElem` Config.operatorChars) searchTerm =
