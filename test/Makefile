@@ -15,7 +15,7 @@ build_benchmark_infer:
 	ghc -O2 -Wall --make benchmark_Infer -i../src -i../bottlelib
 
 run_profile_infer: build_profile_infer
-	time ./profile_Infer +RTS -p
+	./profile_Infer +RTS -p
 
 build_profile_infer: build_benchmark_infer
 	ghc -O2 -prof -hisuf p_hi -osuf p_o -Wall -auto-all -caf-all -rtsopts --make profile_Infer -i../src -i../bottlelib
