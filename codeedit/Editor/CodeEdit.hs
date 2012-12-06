@@ -28,6 +28,7 @@ import qualified Editor.CodeEdit.ExpressionEdit as ExpressionEdit
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
+import qualified Editor.Data.Ops as DataOps
 import qualified Editor.Layers as Layers
 import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
@@ -52,9 +53,9 @@ makeNewDefinitionAction :: m ~ ViewM => ExprGuiM m (T m Widget.Id)
 makeNewDefinitionAction = do
   curCursor <- ExprGuiM.widgetEnv WE.readCursor
   return $ do
-    newDefI <- Anchors.makeDefinition
-    Anchors.newPane newDefI
-    Anchors.savePreJumpPosition curCursor
+    newDefI <- DataOps.makeDefinition
+    DataOps.newPane newDefI
+    DataOps.savePreJumpPosition curCursor
     return . FocusDelegator.delegatingId $ WidgetIds.fromIRef newDefI
 
 makeSugarPanes :: m ~ ViewM => StateT Cache (T m) [SugarPane m]
@@ -133,7 +134,7 @@ makePanesEdit panes = do
         definitionEdits <- traverse makePaneWidget panes
         return . Box.vboxAlign 0 $ intersperse (Spacer.makeWidget 50) definitionEdits
 
-  mJumpBack <- ExprGuiM.transaction Anchors.jumpBack
+  mJumpBack <- ExprGuiM.transaction DataOps.jumpBack
   newDefinition <- makeNewDefinitionAction
   let
     panesEventMap =

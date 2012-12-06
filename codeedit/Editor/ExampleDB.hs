@@ -23,6 +23,7 @@ import qualified Editor.BranchGUI as BranchGUI
 import qualified Editor.CodeEdit.FFI as FFI
 import qualified Editor.CodeEdit.Sugar.Config as SugarConfig
 import qualified Editor.Data as Data
+import qualified Editor.Data.Ops as DataOps
 import qualified Editor.Data.IRef as DataIRef
 import qualified Editor.WidgetIds as WidgetIds
 
@@ -38,13 +39,13 @@ fixIRef createOuter = do
 createBuiltins :: MonadA m => Transaction m ((FFI.Env, SugarConfig), [DataIRef.DefI])
 createBuiltins =
   Writer.runWriterT $ do
-    list <- mkType . A.newBuiltin "Data.List.List" =<< lift setToSet
+    list <- mkType . DataOps.newBuiltin "Data.List.List" =<< lift setToSet
     let listOf = mkApply list
-    bool <- mkType . A.newBuiltin "Prelude.Bool" =<< lift set
+    bool <- mkType . DataOps.newBuiltin "Prelude.Bool" =<< lift set
 
-    cons <- lift $ A.newBuiltin "Prelude.:" =<<
+    cons <- lift $ DataOps.newBuiltin "Prelude.:" =<<
       forAll "a" (\a -> mkPi a . endo $ listOf a)
-    nil <- lift $ A.newBuiltin "Prelude.[]" =<< forAll "a" listOf
+    nil <- lift $ DataOps.newBuiltin "Prelude.[]" =<< forAll "a" listOf
     Writer.tell [cons, nil]
 
     true <- makeWithType "Prelude.True" bool
@@ -109,12 +110,13 @@ createBuiltins =
     makeWithType_ "Control.Monad.return" .
       forAll "m" $ \m -> forAll "a" $ \a -> mkPi a $ mkApply m a
 
-    -- Can't use convinience path functions in case of "."
     tellift_ $ do
       typeI <-
         forAll "a" $ \a -> forAll "b" $ \b -> forAll "c" $ \c ->
         mkPi (mkPi b c) . mkPi (mkPi a b) $ mkPi a c
-      A.newDefinition "." . (`Data.Definition` typeI) . Data.DefinitionBuiltin .
+      -- Can't use newBuiltin in case of "."
+      DataOps.newDefinition "." .
+        (`Data.Definition` typeI) . Data.DefinitionBuiltin .
         Data.Builtin $ Data.FFIName ["Prelude"] "."
 
     let
@@ -152,7 +154,7 @@ createBuiltins =
       return . getVar $ Data.DefinitionRef x
     makeWithType_ = (fmap . fmap . fmap . const) () makeWithType
     makeWithType builtinName typeMaker =
-      tellift (A.newBuiltin builtinName =<< typeMaker)
+      tellift (DataOps.newBuiltin builtinName =<< typeMaker)
 
 newBranch :: MonadA m => String -> Version -> Transaction m Branch
 newBranch name ver = do

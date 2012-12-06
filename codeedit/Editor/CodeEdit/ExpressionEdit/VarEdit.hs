@@ -1,18 +1,18 @@
 {-# LANGUAGE OverloadedStrings, TypeFamilies #-}
 module Editor.CodeEdit.ExpressionEdit.VarEdit(make, makeView) where
 
+import Control.MonadA (MonadA)
 import Editor.Anchors (ViewM)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
-import Control.MonadA (MonadA)
 import qualified Control.Lens as Lens
-import qualified Editor.Anchors as Anchors
 import qualified Editor.BottleWidgets as BWidgets
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Editor.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
+import qualified Editor.Data.Ops as DataOps
 import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
@@ -54,11 +54,11 @@ make getVar myId = do
     jumpToDefinition =
       case getVar of
         Data.DefinitionRef defI -> do
-          Anchors.newPane defI
-          Anchors.savePreJumpPosition myId
+          DataOps.newPane defI
+          DataOps.savePreJumpPosition myId
           return $ WidgetIds.fromIRef defI
         Data.ParameterRef paramGuid -> do
-          Anchors.savePreJumpPosition myId
+          DataOps.savePreJumpPosition myId
           return $ WidgetIds.fromGuid paramGuid
   return $
     Lens.over ExpressionGui.egWidget

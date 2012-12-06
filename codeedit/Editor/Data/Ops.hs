@@ -3,18 +3,36 @@ module Editor.Data.Ops
   ( newHole, giveAsArg, callWithArg
   , replace, replaceWithHole, lambdaWrap, redexWrap
   , giveAsArgToOperator
-  )
-where
+  , makeDefinition
+  , newBuiltin, newDefinition
+  , savePreJumpPosition, jumpBack
+  , newPane
+  ) where
 
+import Control.Applicative ((<$>), (<*>))
+import Control.Monad (when)
 import Control.MonadA (MonadA)
+import Data.List.Split (splitOn)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
+import Editor.Anchors (ViewM)
+import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
+import qualified Data.Store.Transaction as Transaction
 import qualified Editor.Anchors as Anchors
 import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
+import qualified Graphics.UI.Bottle.Widget as Widget
 
 type T = Transaction
+
+makeDefinition :: Transaction ViewM DataIRef.DefI
+makeDefinition = do
+  defI <-
+    Transaction.newIRef =<<
+    Data.Definition . Data.DefinitionExpression <$> newHole <*> newHole
+  Anchors.modP Anchors.globals (defI :)
+  return defI
 
 giveAsArg ::
   MonadA m =>
@@ -92,3 +110,39 @@ redexWrap exprP = do
     DataIRef.newExprBody $ Data.makeApply newLambdaI newValueI
   Property.set exprP newApplyI
   return (newParam, newLambdaI)
+
+newPane :: DataIRef.DefI -> Transaction ViewM ()
+newPane defI = do
+  panesP <- Anchors.panes
+  when (defI `notElem` Property.value panesP) $
+    Property.set panesP $ Anchors.makePane defI : Property.value panesP
+
+savePreJumpPosition :: Widget.Id -> Transaction ViewM ()
+savePreJumpPosition pos = Anchors.modP Anchors.preJumps $ (pos :) . take 19
+
+jumpBack :: Transaction ViewM (Maybe (Transaction ViewM Widget.Id))
+jumpBack = do
+  preJumpsP <- Anchors.preJumps
+  return $
+    case Property.value preJumpsP of
+    [] -> Nothing
+    (j:js) -> Just $ do
+      Property.set preJumpsP js
+      return j
+
+newBuiltin
+  :: MonadA m
+  => String -> DataIRef.Expression
+  -> Transaction m DataIRef.DefI
+newBuiltin fullyQualifiedName typeI =
+  newDefinition name . (`Data.Definition` typeI) . Data.DefinitionBuiltin .
+  Data.Builtin $ Data.FFIName (init path) name
+  where
+    name = last path
+    path = splitOn "." fullyQualifiedName
+
+newDefinition :: MonadA m => String -> DataIRef.DefinitionI -> Transaction m DataIRef.DefI
+newDefinition name defI = do
+  res <- Transaction.newIRef defI
+  Anchors.setP (Anchors.assocNameRef (IRef.guid res)) name
+  return res

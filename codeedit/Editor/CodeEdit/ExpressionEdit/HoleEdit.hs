@@ -42,6 +42,7 @@ import qualified Editor.CodeEdit.Sugar as Sugar
 import qualified Editor.Config as Config
 import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
+import qualified Editor.Data.Ops as DataOps
 import qualified Editor.Layers as Layers
 import qualified Editor.WidgetEnvT as WE
 import qualified Editor.WidgetIds as WidgetIds
@@ -311,12 +312,12 @@ addNewDefinitionEventMap holeInfo =
   pickExpr holeInfo
   where
     makeNewDefinition holePickResult = do
-      newDefI <- Anchors.makeDefinition -- TODO: From Sugar
+      newDefI <- DataOps.makeDefinition -- TODO: From Sugar
       let
         searchTerm = Property.value $ hiSearchTerm holeInfo
         newName = concat . words $ searchTerm
       Anchors.setP (Anchors.assocNameRef (IRef.guid newDefI)) newName
-      Anchors.newPane newDefI
+      DataOps.newPane newDefI
       defRef <-
         fmap (fromMaybe (error "GetDef should always type-check") . listToMaybe) .
         ExprGuiM.unmemo . Sugar.holeInferResults (hiHole holeInfo) .
@@ -324,7 +325,7 @@ addNewDefinitionEventMap holeInfo =
         Data.DefinitionRef newDefI
       -- TODO: Can we use pickResult's animIdMapping?
       eventResult <- holePickResult defRef
-      maybe (return ()) Anchors.savePreJumpPosition $
+      maybe (return ()) DataOps.savePreJumpPosition $
         Widget._eCursor eventResult
       return Widget.EventResult {
         Widget._eCursor = Just $ WidgetIds.fromIRef newDefI,

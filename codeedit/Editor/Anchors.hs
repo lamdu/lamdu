@@ -15,25 +15,20 @@ module Editor.Anchors
   , sugarConfig, sugarConfigIRef
   , ffiEnv, ffiEnvIRef
 
-  , newBuiltin, newDefinition
-  , Pane
+  , Pane, makePane
   , nonEmptyAssocDataRef
   , assocNameRef, assocSearchTermRef
-  , makePane, makeDefinition, newPane
-  , savePreJumpPosition, jumpBack
   , MkProperty, getP, setP, modP
 
   , DbM, runDbTransaction
   , ViewM, runViewTransaction
   ) where
 
-import Control.Applicative (Applicative, liftA2)
-import Control.Monad (when)
+import Control.Applicative (Applicative)
 import Control.Monad.IO.Class (MonadIO)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..))
 import Data.ByteString.Char8 ()
-import Data.List.Split (splitOn)
 import Data.Store.Db (Db)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef)
@@ -51,7 +46,6 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
 import qualified Editor.CodeEdit.FFI as FFI
-import qualified Editor.Data as Data
 import qualified Editor.Data.IRef as DataIRef
 import qualified Graphics.UI.Bottle.Widget as Widget
 
@@ -155,15 +149,6 @@ viewIRef = IRef.anchor "HEAD"
 makePane :: DataIRef.DefI -> Pane
 makePane = id
 
-makeDefinition :: Transaction ViewM DataIRef.DefI
-makeDefinition = do
-  let newHole = DataIRef.newExprBody $ Data.ExpressionLeaf Data.Hole
-  defI <-
-    Transaction.newIRef =<<
-    liftA2 (Data.Definition . Data.DefinitionExpression) newHole newHole
-  modP globals (defI :)
-  return defI
-
 nonEmptyAssocDataRef ::
   (MonadA m, Binary a) =>
   SBS.ByteString -> Guid -> Transaction m a -> MkProperty m a
@@ -184,42 +169,6 @@ assocNameRef = Transaction.assocDataRefDef "" "Name"
 
 assocSearchTermRef :: MonadA m => Guid -> MkProperty m String
 assocSearchTermRef = Transaction.assocDataRefDef "" "searchTerm"
-
-newPane :: DataIRef.DefI -> Transaction ViewM ()
-newPane defI = do
-  panesP <- panes
-  when (defI `notElem` Property.value panesP) $
-    Property.set panesP $ makePane defI : Property.value panesP
-
-savePreJumpPosition :: Widget.Id -> Transaction ViewM ()
-savePreJumpPosition pos = modP preJumps $ (pos :) . take 19
-
-jumpBack :: Transaction ViewM (Maybe (Transaction ViewM Widget.Id))
-jumpBack = do
-  preJumpsP <- preJumps
-  return $
-    case Property.value preJumpsP of
-    [] -> Nothing
-    (j:js) -> Just $ do
-      Property.set preJumpsP js
-      return j
-
-newBuiltin
-  :: MonadA m
-  => String -> DataIRef.Expression
-  -> Transaction m DataIRef.DefI
-newBuiltin fullyQualifiedName typeI =
-  newDefinition name . (`Data.Definition` typeI) . Data.DefinitionBuiltin .
-  Data.Builtin $ Data.FFIName (init path) name
-  where
-    name = last path
-    path = splitOn "." fullyQualifiedName
-
-newDefinition :: MonadA m => String -> DataIRef.DefinitionI -> Transaction m DataIRef.DefI
-newDefinition name defI = do
-  res <- Transaction.newIRef defI
-  setP (assocNameRef (IRef.guid res)) name
-  return res
 
 getP :: MonadA m => MkProperty m a -> Transaction m a
 getP = fmap Property.value
