@@ -8,8 +8,8 @@ import Control.Monad (join, void)
 import Data.Map ((!))
 import Data.Maybe (isJust)
 import Data.Monoid (Monoid(..))
-import Editor.Data.Arbitrary () -- Arbitrary instance
-import Editor.Data.Infer.Conflicts (inferWithConflicts)
+import Lamdu.Data.Arbitrary () -- Arbitrary instance
+import Lamdu.Data.Infer.Conflicts (inferWithConflicts)
 import Test.Framework (Test)
 import Test.Framework.Providers.HUnit (hUnitTestToTests)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
@@ -22,8 +22,8 @@ import qualified Data.Foldable as Foldable
 import qualified Data.List as List
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
-import qualified Editor.Data as Data
-import qualified Editor.Data.Infer as Infer
+import qualified Lamdu.Data as Data
+import qualified Lamdu.Data.Infer as Infer
 import qualified Test.HUnit as HUnit
 
 mkInferredGetDef :: String -> InferResults
