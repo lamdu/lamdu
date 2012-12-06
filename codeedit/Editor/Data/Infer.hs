@@ -245,7 +245,7 @@ instance MonadTrans (InferT def) where
 
 derefExpr ::
   Data.Expression def (InferNode def, a) -> Context def ->
-  (Data.Expression def (Inferred def, a))
+  Data.Expression def (Inferred def, a)
 derefExpr expr context =
   derefNode <$> expr
   where
