@@ -13,6 +13,7 @@ import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, Collapser(..)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
+import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -62,6 +63,7 @@ makePolyNameEdit ::
   MonadA m =>
   (ExprGuiM.NameSource, String) -> Guid -> [ExpressionGui m] -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
+makePolyNameEdit name guid [] = makeNameGui name guid Config.monomorphicDefOriginForegroundColor
 makePolyNameEdit name guid depParamsEdit =
   ExpressionGui.makeCollapser polyNameFDConfig f
   where
@@ -69,18 +71,24 @@ makePolyNameEdit name guid depParamsEdit =
       Collapser
       { cMakeExpanded =
         ExpressionGui.hbox . (: depParamsEdit) <$>
-        makeNameGui Config.monomorphicDefOriginForegroundColor
+        nameGui Config.monomorphicDefOriginForegroundColor
       , cOnFocusedExpanded =
         ExpressionGui.withBgColor Layers.polymorphicExpandedBG
         Config.polymorphicExpandedBGColor bgId
       , cMakeFocusedCompact =
-        makeNameGui Config.polymorphicDefOriginForegroundColor
+        nameGui Config.polymorphicDefOriginForegroundColor
       }
       where
-        makeNameGui color =
-          ExprGuiM.withFgColor color $
-          ExpressionGui.fromValueWidget <$> makeNameEdit name myId guid
+        nameGui color = makeNameGui name guid color myId
         bgId = Widget.toAnimId myId ++ ["bg"]
+
+makeNameGui ::
+  MonadA m =>
+  (ExprGuiM.NameSource, String) -> Guid -> Draw.Color -> Widget.Id ->
+  ExprGuiM m (ExpressionGui m)
+makeNameGui name guid color myId =
+  ExprGuiM.withFgColor color $
+  ExpressionGui.fromValueWidget <$> makeNameEdit name myId guid
 
 makeParts
   :: MonadA m
