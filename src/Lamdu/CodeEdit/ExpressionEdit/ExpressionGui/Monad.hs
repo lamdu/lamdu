@@ -3,7 +3,7 @@ module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad
   ( ExprGuiM, WidgetT, run
   , widgetEnv
 
-  , transaction, atEnv
+  , transaction, atEnv, withFgColor
   , getP, assignCursor, assignCursorPrefix
   , wrapDelegated
   --
@@ -24,17 +24,17 @@ import Control.Applicative (Applicative, liftA2)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.RWS (RWST, runRWST)
 import Control.Monad.Trans.State (StateT(..), evalStateT, mapStateT)
+import Control.MonadA (MonadA)
 import Data.Binary (Binary)
 import Data.Cache (Cache)
 import Data.Map (Map)
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
+import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.Anchors (ViewM)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Types (ExpressionGui, WidgetT)
 import Lamdu.CodeEdit.Settings (Settings)
-import Control.MonadA (MonadA)
 import Lamdu.WidgetEnvT (WidgetEnvT)
-import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.RWS as RWS
@@ -42,14 +42,15 @@ import qualified Data.Cache as Cache
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
+import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Anchors as Anchors
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Data as Data
 import qualified Lamdu.Data.IRef as DataIRef
 import qualified Lamdu.WidgetEnvT as WE
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 type AccessedVars = [Guid]
 
@@ -76,6 +77,9 @@ LensTH.makeLenses ''ExprGuiM
 
 atEnv :: MonadA m => (WE.Env -> WE.Env) -> ExprGuiM m a -> ExprGuiM m a
 atEnv = Lens.over varAccess . RWS.mapRWST . WE.atEnv
+
+withFgColor :: MonadA m => Draw.Color -> ExprGuiM m a -> ExprGuiM m a
+withFgColor = atEnv . WE.setTextColor
 
 readSettings :: MonadA m => ExprGuiM m Settings
 readSettings = ExprGuiM . RWS.asks $ Lens.view aSettings

@@ -6,10 +6,10 @@ module Lamdu.Layers where
 cursorBG = 25
 inactiveHole = 26
 types = 27
-compactPolymorphicBG = 28
+polymorphicCompactBG = 28
 activeHoleBG = 31
 parensHighlightBG = 33
-expandedPolymorphicBG = 34
+polymorphicExpandedBG = 34
 activePane = 40
 
 

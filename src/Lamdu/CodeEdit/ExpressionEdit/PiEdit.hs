@@ -66,9 +66,9 @@ make hasParens (Sugar.Pi param resultType) =
           | paramUsed =
               Lens.over ExpressionGui.egWidget $
               Widget.backgroundColor
-              Layers.expandedPolymorphicBG
+              Layers.polymorphicExpandedBG
               (mappend (Widget.toAnimId paramId) ["polymorphic bg"])
-              Config.polymorphicFullBGColor
+              Config.polymorphicExpandedBGColor
           | otherwise = id
         paramAndArrow =
           addBg $

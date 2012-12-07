@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses #-}
 
 module Graphics.UI.Bottle.Animation
-  ( R, AnimId, Size
+  ( R, AnimId, Size, Layer
   , PositionedImage(..), piImage, piRect
   , Frame(..), fSubImages, onImages
   , draw, nextFrame, mapIdentities
