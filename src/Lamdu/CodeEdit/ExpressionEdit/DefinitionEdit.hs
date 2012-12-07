@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, PatternGuards #-}
-module Lamdu.CodeEdit.DefinitionEdit(make) where
+module Lamdu.CodeEdit.ExpressionEdit.DefinitionEdit(make) where
 
 import Control.MonadA (MonadA)
 import Data.List.Utils (nonEmptyAll)
@@ -7,13 +7,17 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Traversable (traverse, sequenceA)
 import Data.Vector.Vector2 (Vector2(..))
+import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
-import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
+import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.BottleWidgets as BWidgets
-import qualified Lamdu.CodeEdit.BuiltinEdit as BuiltinEdit
+import qualified Lamdu.CodeEdit.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
@@ -21,10 +25,6 @@ import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
-import qualified Graphics.UI.Bottle.EventMap as E
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.Box as Box
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 paramFDConfig :: FocusDelegator.Config
 paramFDConfig = FocusDelegator.Config

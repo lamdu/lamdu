@@ -1,4 +1,4 @@
-module Lamdu.CodeEdit.BuiltinEdit(make) where
+module Lamdu.CodeEdit.ExpressionEdit.BuiltinEdit(make) where
 
 import Data.List.Split (splitOn)
 import Data.Store.Property (Property(..))

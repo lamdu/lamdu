@@ -2,16 +2,16 @@
 module Lamdu.CodeEdit.ExpressionEdit.SectionEdit(make) where
 
 import Control.Lens ((^.))
+import Control.MonadA (MonadA)
 import Data.Maybe (fromMaybe)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
-import Control.MonadA (MonadA)
+import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.CodeEdit.Parens as Parens
+import qualified Lamdu.CodeEdit.ExpressionEdit.Parens as Parens
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.WidgetIds as WidgetIds
-import qualified Graphics.UI.Bottle.Widget as Widget
 
 make
   :: MonadA m

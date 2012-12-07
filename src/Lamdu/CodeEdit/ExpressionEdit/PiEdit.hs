@@ -2,22 +2,22 @@
 module Lamdu.CodeEdit.ExpressionEdit.PiEdit(make) where
 
 import Control.Lens ((^.))
+import Control.MonadA (MonadA)
 import Data.Monoid (mappend)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
-import Control.MonadA (MonadA)
 import qualified Control.Lens as Lens
+import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
-import qualified Lamdu.CodeEdit.Parens as Parens
+import qualified Lamdu.CodeEdit.ExpressionEdit.Parens as Parens
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
-import qualified Graphics.UI.Bottle.Widget as Widget
 
 make
   :: MonadA m

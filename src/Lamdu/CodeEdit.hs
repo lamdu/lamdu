@@ -14,18 +14,24 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
+import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.Anchors (ViewM)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (WidgetT, ExprGuiM)
 import Lamdu.CodeEdit.Settings (Settings)
 import Lamdu.Data.IRef (DefI)
 import Lamdu.WidgetEnvT (WidgetEnvT)
-import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Lens as Lens
 import qualified Data.Store.IRef as IRef
+import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.Animation as Anim
+import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Anchors as Anchors
 import qualified Lamdu.BottleWidgets as BWidgets
-import qualified Lamdu.CodeEdit.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit as ExpressionEdit
+import qualified Lamdu.CodeEdit.ExpressionEdit.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
@@ -33,12 +39,6 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
-import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.Bottle.Animation as Anim
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.Box as Box
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 
 type T = Transaction
 type CT m = StateT Cache (T m)

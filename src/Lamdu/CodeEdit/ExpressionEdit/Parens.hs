@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.CodeEdit.Parens
+module Lamdu.CodeEdit.ExpressionEdit.Parens
   ( addTextParens
   , addHighlightedTextParens
   ) where
