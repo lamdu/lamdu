@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings, PatternGuards #-}
 module Lamdu.CodeEdit.ExpressionEdit.DefinitionEdit(make) where
 
+import Control.Applicative ((<$>))
 import Control.MonadA (MonadA)
 import Data.List.Utils (nonEmptyAll)
 import Data.Monoid (Monoid(..))
@@ -57,11 +58,7 @@ makeParts
   -> ExprGuiM m [ExpressionGui m]
 makeParts name guid def = do
   nameEdit <-
-    fmap
-    (Widget.weakerEvents
-     (FuncEdit.jumpToRHS Config.jumpLHStoRHSKeys rhs
-      `mappend` addFirstParamEventMap) .
-     jumpToRHSViaEquals name) $
+    Widget.weakerEvents nameEditEventMap . jumpToRHSViaEquals name <$>
     makeNameEdit name myId guid
   equals <- makeEquals myId
   (depParamsEdits, paramsEdits, bodyEdit) <-
@@ -93,6 +90,9 @@ makeParts name guid def = do
     addFirstParamEventMap =
       Widget.keysEventMapMovesCursor Config.addNextParamKeys "Add parameter" .
       toEventMapAction $ Sugar.dAddFirstParam def
+    nameEditEventMap =
+      mappend addFirstParamEventMap $
+      FuncEdit.jumpToRHS Config.jumpLHStoRHSKeys rhs
     toEventMapAction =
       fmap (FocusDelegator.delegatingId . WidgetIds.fromGuid)
     myId = WidgetIds.fromGuid guid
@@ -133,7 +133,7 @@ defTypeScale = Widget.scale Config.defTypeBoxSizeFactor
 makeWhereItemEdit :: MonadA m => Sugar.WhereItem m -> ExprGuiM m (WidgetT m)
 makeWhereItemEdit item =
   fmap (Widget.weakerEvents eventMap) . assignCursor $
-  makeDefBodyEdit (Sugar.wiGuid item) (Sugar.wiValue item)
+  makeDefContentEdit (Sugar.wiGuid item) (Sugar.wiValue item)
   where
     assignCursor =
       foldr ((.) . (`ExprGuiM.assignCursor` myId) . WidgetIds.fromGuid) id $
@@ -153,11 +153,12 @@ makeWhereItemEdit item =
       ]
       | otherwise = mempty
 
-makeDefBodyEdit ::
+makeDefContentEdit ::
   MonadA m => Guid -> Sugar.DefinitionContent m -> ExprGuiM m (WidgetT m)
-makeDefBodyEdit guid content = do
+makeDefContentEdit guid content = do
   name <- ExprGuiM.getDefName guid
-  body <- fmap (Lens.view ExpressionGui.egWidget . ExpressionGui.hbox) $
+  body <-
+    fmap (Lens.view ExpressionGui.egWidget . ExpressionGui.hbox) $
     makeParts name guid content
   wheres <-
     case Sugar.dWhereItems content of
@@ -192,7 +193,7 @@ makeExprDefinition def bodyExpr = do
       , mkTypeRow id "Inferred type:" inferredType
       ]
   bodyWidget <-
-    makeDefBodyEdit guid $ Sugar.deContent bodyExpr
+    makeDefContentEdit guid $ Sugar.deContent bodyExpr
   return . Box.vboxAlign 0 $ typeWidgets ++ [bodyWidget]
   where
     addAcceptanceArrow acceptInferredType label = do
