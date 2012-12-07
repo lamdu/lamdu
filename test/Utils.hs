@@ -23,56 +23,52 @@ import qualified Lamdu.Data.Infer as Infer
 data Invisible = Invisible
 instance Show Invisible where
   show = const ""
-showStructure :: Data.ExpressionBody DefI a -> String
+showStructure :: Show def => Data.ExpressionBody def a -> String
 showStructure = show . (Invisible <$)
 
-instance Show (Data.Expression DefI ()) where
+instance Show def => Show (Data.Expression def ()) where
   show (Data.Expression value ()) = show value
 
-hole :: Data.Expression DefI ()
+hole :: Data.Expression def ()
 hole = Data.pureExpression $ Data.ExpressionLeaf Data.Hole
 
-makeApply ::
-  [Data.Expression DefI ()] ->
-  Data.Expression DefI ()
-makeApply = foldl1 (fmap Data.pureExpression . Data.makeApply)
+makeNamedLambda :: String -> expr -> expr -> Data.ExpressionBody def expr
+makeNamedLambda = Data.makeLambda . Guid.fromString
 
-makeLambdaCons ::
-  (Guid -> Data.Expression DefI () -> Data.Expression DefI () ->
-   Data.ExpressionBodyExpr DefI ()) ->
-  String -> Data.Expression DefI () -> Data.Expression DefI () ->
-  Data.Expression DefI ()
-makeLambdaCons cons name paramType body =
-  Data.pureExpression $ cons (Guid.fromString name) paramType body
+makeNamedPi :: String -> expr -> expr -> Data.ExpressionBody def expr
+makeNamedPi = Data.makePi . Guid.fromString
 
-makeLambda ::
-  String -> Data.Expression DefI () ->
-  Data.Expression DefI () ->
-  Data.Expression DefI ()
-makeLambda = makeLambdaCons Data.makeLambda
+pureApply :: [Data.Expression def ()] -> Data.Expression def ()
+pureApply = foldl1 (fmap Data.pureExpression . Data.makeApply)
 
-makePi ::
-  String -> Data.Expression DefI () ->
-  Data.Expression DefI () ->
-  Data.Expression DefI ()
-makePi = makeLambdaCons Data.makePi
+pureLambda ::
+  String -> Data.Expression def () ->
+  Data.Expression def () ->
+  Data.Expression def ()
+pureLambda name x y = Data.pureExpression $ makeNamedLambda name x y
 
-setType :: Data.Expression DefI ()
+purePi ::
+  String -> Data.Expression def () ->
+  Data.Expression def () ->
+  Data.Expression def ()
+purePi name x y = Data.pureExpression $ makeNamedPi name x y
+
+setType :: Data.Expression def ()
 setType = Data.pureExpression $ Data.ExpressionLeaf Data.Set
 
-intType :: Data.Expression DefI ()
+intType :: Data.Expression def ()
 intType = Data.pureExpression $ Data.ExpressionLeaf Data.IntegerType
 
-literalInt :: Integer -> Data.Expression DefI ()
+literalInt :: Integer -> Data.Expression def ()
 literalInt i = Data.pureExpression $ Data.makeLiteralInteger i
 
-getDefExpr :: String -> Data.Expression DefI ()
-getDefExpr name =
+pureGetDef :: String -> Data.Expression (DefI t) ()
+pureGetDef name =
   Data.pureExpression . Data.makeDefinitionRef . IRef.unsafeFromGuid $
   Guid.fromString name
 
-getParamExpr :: String -> Data.Expression DefI ()
-getParamExpr name =
+pureGetParam :: String -> Data.Expression def ()
+pureGetParam name =
   Data.pureExpression . Data.makeParameterRef $
   Guid.fromString name
 
@@ -81,7 +77,8 @@ ansiRed = "\ESC[31m"
 ansiReset :: String
 ansiReset = "\ESC[0m"
 
-showExpressionWithConflicts :: Data.Expression DefI (InferredWithConflicts DefI) -> String
+showExpressionWithConflicts ::
+  Show def => Data.Expression def (InferredWithConflicts def) -> String
 showExpressionWithConflicts =
   List.intercalate "\n" . go
   where
@@ -99,43 +96,43 @@ showExpressionWithConflicts =
         InferredWithConflicts inferred tErrors vErrors =
           inferredExpr ^. Data.ePayload
 
-definitionTypes :: Map Guid (Data.Expression DefI ())
+definitionTypes :: Map Guid (Data.Expression (DefI t) ())
 definitionTypes =
   Map.fromList $ map (first Guid.fromString)
   [ ("Bool", setType)
-  , ("List", makePi "list" setType setType)
-  , ("IntToBoolFunc", makePi "intToBool" intType (getDefExpr "Bool"))
+  , ("List", purePi "list" setType setType)
+  , ("IntToBoolFunc", purePi "intToBool" intType (pureGetDef "Bool"))
   , ("*", intToIntToInt)
   , ("-", intToIntToInt)
   , ( "if"
-    , makePi "a" setType .
-      makePi "ifboolarg" (getDefExpr "Bool") .
-      makePi "iftarg" (getParamExpr "a") .
-      makePi "iffarg" (getParamExpr "a") $
-      getParamExpr "a"
+    , purePi "a" setType .
+      purePi "ifboolarg" (pureGetDef "Bool") .
+      purePi "iftarg" (pureGetParam "a") .
+      purePi "iffarg" (pureGetParam "a") $
+      pureGetParam "a"
     )
   , ( "=="
-    , makePi "==0" intType .
-      makePi "==1" intType $
-      getDefExpr "Bool"
+    , purePi "==0" intType .
+      purePi "==1" intType $
+      pureGetDef "Bool"
     )
   , ( "id"
-    , makePi "a" setType $
-      makePi "idGivenType" (getParamExpr "a") (getParamExpr "a")
+    , purePi "a" setType $
+      purePi "idGivenType" (pureGetParam "a") (pureGetParam "a")
     )
   , ( ":"
-    , makePi "a" setType .
-      makePi "consx" (getParamExpr "a") .
-      join (makePi "consxs") $
-      makeApply [getDefExpr "List", getParamExpr "a"]
+    , purePi "a" setType .
+      purePi "consx" (pureGetParam "a") .
+      join (purePi "consxs") $
+      pureApply [pureGetDef "List", pureGetParam "a"]
     )
   ]
   where
-    intToIntToInt = makePi "iii0" intType $ makePi "iii1" intType intType
+    intToIntToInt = purePi "iii0" intType $ purePi "iii1" intType intType
 
 doInferM ::
-  Infer.InferNode DefI -> Data.Expression DefI a ->
-  State (Infer.Context DefI) (Data.Expression DefI (Infer.Inferred DefI, a))
+  Infer.InferNode (DefI t) -> Data.Expression (DefI t) a ->
+  State (Infer.Context (DefI t)) (Data.Expression (DefI t) (Infer.Inferred (DefI t), a))
 doInferM inferNode expr = do
   (success, exprWC) <-
     inferWithConflicts (doLoad expr) inferNode
@@ -150,19 +147,17 @@ doInferM inferNode expr = do
       ]
 
 doInferM_ ::
-  Infer.InferNode DefI -> Data.Expression DefI a ->
-  State (Infer.Context DefI) (Data.Expression DefI (Infer.Inferred DefI))
+  Infer.InferNode (DefI t) -> Data.Expression (DefI t) a ->
+  State (Infer.Context (DefI t)) (Data.Expression (DefI t) (Infer.Inferred (DefI t)))
 doInferM_ = (fmap . fmap . fmap . fmap) fst doInferM
 
-doLoad ::
-  Data.Expression DefI a ->
-  Infer.Loaded DefI a
+doLoad :: Data.Expression (DefI t) a -> Infer.Loaded (DefI t) a
 doLoad expr =
   case Infer.load loader (Just defI) expr of
   Left err -> error err
   Right x -> x
 
-loader :: Infer.Loader DefI (Either String)
+loader :: Infer.Loader (DefI t) (Either String)
 loader =
   Infer.Loader load
   where
@@ -171,13 +166,13 @@ loader =
       Nothing -> Left ("Could not find" ++ show key)
       Just x -> Right x
 
-defI :: DefI
+defI :: DefI t
 defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
 
 doInfer ::
-  Data.Expression DefI a ->
-  ( Data.Expression DefI (Infer.Inferred DefI, a)
-  , Infer.Context DefI
+  Data.Expression (DefI t) a ->
+  ( Data.Expression (DefI t) (Infer.Inferred (DefI t), a)
+  , Infer.Context (DefI t)
   )
 doInfer =
   (`runState` ctx) . doInferM node
@@ -185,31 +180,31 @@ doInfer =
     (ctx, node) = Infer.initial $ Just defI
 
 doInfer_ ::
-  Data.Expression DefI a ->
-  (Data.Expression DefI (Infer.Inferred DefI), Infer.Context DefI)
+  Data.Expression (DefI t) a ->
+  (Data.Expression (DefI t) (Infer.Inferred (DefI t)), Infer.Context (DefI t))
 doInfer_ = (first . fmap) fst . doInfer
 
-factorialExpr :: Data.Expression DefI ()
+factorialExpr :: Data.Expression (DefI t) ()
 factorialExpr =
-  makeLambda "x" hole $
-  makeApply
-  [ getDefExpr "if"
+  pureLambda "x" hole $
+  pureApply
+  [ pureGetDef "if"
   , hole
-  , makeApply [getDefExpr "==", getParamExpr "x", literalInt 0]
+  , pureApply [pureGetDef "==", pureGetParam "x", literalInt 0]
   , literalInt 1
-  , makeApply
-    [ getDefExpr "*"
-    , getParamExpr "x"
-    , makeApply
+  , pureApply
+    [ pureGetDef "*"
+    , pureGetParam "x"
+    , pureApply
       [ Data.pureExpression $ Data.makeDefinitionRef defI
-      , makeApply [getDefExpr "-", getParamExpr "x", literalInt 1]
+      , pureApply [pureGetDef "-", pureGetParam "x", literalInt 1]
       ]
     ]
   ]
 
 inferMaybe ::
-  Data.Expression DefI a ->
-  Maybe (Data.Expression DefI (Infer.Inferred DefI, a), Infer.Context DefI)
+  Data.Expression (DefI t) a ->
+  Maybe (Data.Expression (DefI t) (Infer.Inferred (DefI t), a), Infer.Context (DefI t))
 inferMaybe expr =
   (`runStateT` ctx) $
   Infer.inferLoaded (Infer.InferActions (const Nothing)) loaded node
@@ -218,11 +213,15 @@ inferMaybe expr =
     loaded = doLoad expr
 
 inferMaybe_ ::
-  Data.Expression DefI b ->
-  Maybe (Data.Expression DefI (Infer.Inferred DefI), Infer.Context DefI)
+  Data.Expression (DefI t) b ->
+  Maybe (Data.Expression (DefI t) (Infer.Inferred (DefI t)), Infer.Context (DefI t))
 inferMaybe_ = (fmap . first . fmap) fst . inferMaybe
 
-factorial :: Int -> (Data.Expression DefI (Infer.Inferred DefI), Infer.Context DefI)
+factorial ::
+  Int ->
+  ( Data.Expression (DefI t) (Infer.Inferred (DefI t))
+  , Infer.Context (DefI t)
+  )
 factorial gen =
   fromMaybe (error "Conflicts in factorial infer") .
   inferMaybe_ . void $
