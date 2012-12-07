@@ -89,3 +89,9 @@ where
 * Nice to haves:
   * Holes can have same IDs for same results emphasizing sameness
   * LHS needs to be in infix form too
+  * To improve on DB laziness, maybe we could use  unsafePerformIO on
+    transactions such that at the "commit" of the transaction we force
+    any non-GC'd thunk-reads if remaining. Read-DB thunks that were
+    GC'd will not cost a read. This will mean that e.g: Generating the
+    child widget to check if it takes focus will not cost much
+    unnecessary work.
