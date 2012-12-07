@@ -9,7 +9,7 @@ import Data.Store.Guid (Guid)
 import Data.Traversable (traverse, sequenceA)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, Collapser(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
@@ -24,6 +24,7 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
@@ -39,8 +40,7 @@ makeNameEdit ::
   MonadA m => (ExprGuiM.NameSource, String) -> Widget.Id -> Guid -> ExprGuiM m (WidgetT m)
 makeNameEdit name myId ident =
   ExprGuiM.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
-  (ExprGuiM.atEnv (WE.setTextColor Config.definitionOriginColor) .
-   ExpressionGui.makeNameEdit name ident)
+  (ExpressionGui.makeNameEdit name ident)
   myId
 
 makeEquals :: MonadA m => Widget.Id -> ExprGuiM m (Widget f)
@@ -50,6 +50,38 @@ nonOperatorName :: (ExprGuiM.NameSource, String) -> Bool
 nonOperatorName (ExprGuiM.StoredName, x) = nonEmptyAll (`notElem` Config.operatorChars) x
 nonOperatorName _ = False
 
+polyNameFDConfig :: FocusDelegator.Config
+polyNameFDConfig = FocusDelegator.Config
+  { FocusDelegator.startDelegatingKey = Config.polymorphicExpandKey
+  , FocusDelegator.startDelegatingDoc = "Expand polymorphic"
+  , FocusDelegator.stopDelegatingKey = Config.polymorphicCollapseKey
+  , FocusDelegator.stopDelegatingDoc = "Collapse polymorphic"
+  }
+
+makePolyNameEdit ::
+  MonadA m =>
+  (ExprGuiM.NameSource, String) -> Guid -> [ExpressionGui m] -> Widget.Id ->
+  ExprGuiM m (ExpressionGui m)
+makePolyNameEdit name guid depParamsEdit =
+  ExpressionGui.makeCollapser polyNameFDConfig f
+  where
+    f myId =
+      Collapser
+      { cMakeExpanded =
+        ExpressionGui.hbox . (: depParamsEdit) <$>
+        makeNameGui Config.monomorphicDefOriginForegroundColor
+      , cOnFocusedExpanded =
+        ExpressionGui.withBgColor Layers.polymorphicExpandedBG
+        Config.polymorphicExpandedBGColor bgId
+      , cMakeFocusedCompact =
+        makeNameGui Config.polymorphicDefOriginForegroundColor
+      }
+      where
+        makeNameGui color =
+          ExprGuiM.withFgColor color $
+          ExpressionGui.fromValueWidget <$> makeNameEdit name myId guid
+        bgId = Widget.toAnimId myId ++ ["bg"]
+
 makeParts
   :: MonadA m
   => (ExprGuiM.NameSource, String)
@@ -57,17 +89,17 @@ makeParts
   -> Sugar.DefinitionContent m
   -> ExprGuiM m [ExpressionGui m]
 makeParts name guid def = do
-  nameEdit <-
-    Widget.weakerEvents nameEditEventMap . jumpToRHSViaEquals name <$>
-    makeNameEdit name myId guid
   equals <- makeEquals myId
   (depParamsEdits, paramsEdits, bodyEdit) <-
     FuncEdit.makeParamsAndResultEdit
     jumpToRHSViaEquals lhs rhs myId depParams params
+  polyNameEdit <-
+    Lens.over ExpressionGui.egWidget
+    (Widget.weakerEvents nameEditEventMap . jumpToRHSViaEquals name) <$>
+    makePolyNameEdit name guid depParamsEdits myId
   return .
     List.intersperse (ExpressionGui.fromValueWidget BWidgets.stdSpaceWidget) $
-    ExpressionGui.fromValueWidget nameEdit :
-    depParamsEdits ++ paramsEdits ++
+    polyNameEdit : paramsEdits ++
     [ ExpressionGui.fromValueWidget equals
     , Lens.over ExpressionGui.egWidget
       (Widget.weakerEvents addWhereItemEventMap)
@@ -116,7 +148,10 @@ makeBuiltinDefinition
 makeBuiltinDefinition def builtin =
   fmap (Box.vboxAlign 0) $ sequenceA
   [ fmap BWidgets.hboxCenteredSpaced $ sequenceA
-    [ ExprGuiM.withParamName guid $ \name -> makeNameEdit name (Widget.joinId myId ["name"]) guid
+    [ ExprGuiM.withParamName guid $
+      \name ->
+      ExprGuiM.atEnv (WE.setTextColor Config.builtinOriginNameColor) $
+      makeNameEdit name (Widget.joinId myId ["name"]) guid
     , makeEquals myId
     , BuiltinEdit.make builtin myId
     ]
