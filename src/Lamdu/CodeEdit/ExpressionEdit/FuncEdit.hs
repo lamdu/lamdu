@@ -126,37 +126,6 @@ makeResultEdit lhs result =
       Widget.keysEventMapMovesCursor Config.jumpRHStoLHSKeys "Jump to last param" $
       return lastParam
 
-make
-  :: MonadA m
-  => Sugar.HasParens
-  -> Sugar.Func m (Sugar.Expression m)
-  -> Widget.Id
-  -> ExprGuiM m (ExpressionGui m)
-make hasParens (Sugar.Func depParams params body) =
-  ExpressionGui.wrapParenify hasParens Parens.addHighlightedTextParens $ \myId ->
-  ExprGuiM.assignCursor myId bodyId $ do
-    lambdaLabel <-
-      fmap ExpressionGui.fromValueWidget .
-      ExprGuiM.atEnv (WE.setTextSizeColor Config.lambdaTextSize Config.lambdaColor) .
-      ExprGuiM.widgetEnv . BWidgets.makeLabel "λ" $ Widget.toAnimId myId
-    rightArrowLabel <-
-      fmap ExpressionGui.fromValueWidget .
-      ExprGuiM.atEnv (WE.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor) .
-      ExprGuiM.widgetEnv . BWidgets.makeLabel "→" $ Widget.toAnimId myId
-    (depParamsEdits, paramsEdits, bodyEdit) <-
-      makeParamsAndResultEdit (const id) lhs ("Func Body", body) myId depParams params
-    return . ExpressionGui.hboxSpaced $
-      concat
-      [ [lambdaLabel]
-      , depParamsEdits
-      , paramsEdits
-      , [ rightArrowLabel, bodyEdit ]
-      ]
-  where
-    allParams = depParams ++ params
-    bodyId = WidgetIds.fromGuid $ body ^. Sugar.rGuid
-    lhs = map (WidgetIds.fromGuid . Lens.view Sugar.fpGuid) allParams
-
 makeParamsAndResultEdit ::
   MonadA m =>
   ((ExprGuiM.NameSource, String) ->
@@ -197,3 +166,34 @@ makeNestedParamNames itemGuid makeItem mkFinal = go
         fmap ((,) name) $ go newWId xs
       item <- makeItem oldWId name x
       return (item : items, final)
+
+make
+  :: MonadA m
+  => Sugar.HasParens
+  -> Sugar.Func m (Sugar.Expression m)
+  -> Widget.Id
+  -> ExprGuiM m (ExpressionGui m)
+make hasParens (Sugar.Func depParams params body) =
+  ExpressionGui.wrapParenify hasParens Parens.addHighlightedTextParens $ \myId ->
+  ExprGuiM.assignCursor myId bodyId $ do
+    lambdaLabel <-
+      fmap ExpressionGui.fromValueWidget .
+      ExprGuiM.atEnv (WE.setTextSizeColor Config.lambdaTextSize Config.lambdaColor) .
+      ExprGuiM.widgetEnv . BWidgets.makeLabel "λ" $ Widget.toAnimId myId
+    rightArrowLabel <-
+      fmap ExpressionGui.fromValueWidget .
+      ExprGuiM.atEnv (WE.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor) .
+      ExprGuiM.widgetEnv . BWidgets.makeLabel "→" $ Widget.toAnimId myId
+    (depParamsEdits, paramsEdits, bodyEdit) <-
+      makeParamsAndResultEdit (const id) lhs ("Func Body", body) myId depParams params
+    return . ExpressionGui.hboxSpaced $
+      concat
+      [ [lambdaLabel]
+      , depParamsEdits
+      , paramsEdits
+      , [ rightArrowLabel, bodyEdit ]
+      ]
+  where
+    allParams = depParams ++ params
+    bodyId = WidgetIds.fromGuid $ body ^. Sugar.rGuid
+    lhs = map (WidgetIds.fromGuid . Lens.view Sugar.fpGuid) allParams
