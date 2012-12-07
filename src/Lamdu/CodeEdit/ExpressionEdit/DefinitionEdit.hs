@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, PatternGuards #-}
-module Lamdu.CodeEdit.ExpressionEdit.DefinitionEdit(make) where
+module Lamdu.CodeEdit.ExpressionEdit.DefinitionEdit(make, diveToNameEdit) where
 
 import Control.Applicative ((<$>))
 import Control.MonadA (MonadA)
@@ -263,3 +263,11 @@ makeExprDefinition def bodyExpr = do
     myId = WidgetIds.fromGuid guid
     labelStyle =
       ExprGuiM.atEnv $ WE.setTextSizeColor Config.defTypeLabelTextSize Config.defTypeLabelColor
+
+diveToNameEdit :: Widget.Id -> Widget.Id
+diveToNameEdit =
+  -- If we delegate too deep (e.g: No polymorphic params) that's
+  -- handled OK. So we may as well assume we're always wrapped by a
+  -- polymorphic wrapper:
+  FocusDelegator.delegatingId . -- Polymorphic wrapper
+  FocusDelegator.delegatingId -- Name editor

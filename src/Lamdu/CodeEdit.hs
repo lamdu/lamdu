@@ -26,7 +26,6 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Lamdu.Anchors as Anchors
 import qualified Lamdu.BottleWidgets as BWidgets
@@ -58,7 +57,7 @@ makeNewDefinitionAction = do
     newDefI <- DataOps.makeDefinition
     DataOps.newPane newDefI
     DataOps.savePreJumpPosition curCursor
-    return . FocusDelegator.delegatingId $ WidgetIds.fromIRef newDefI
+    return . DefinitionEdit.diveToNameEdit $ WidgetIds.fromIRef newDefI
 
 loadConvertDefI :: DefI (ViewM ()) -> CT ViewM (Sugar.Definition ViewM)
 loadConvertDefI defI = do
