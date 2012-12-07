@@ -11,10 +11,13 @@ module Lamdu.Data
   , Leaf(..)
   , ExpressionBody(..)
   , ExpressionBodyExpr
-  , makeApply, makePi, makeLambda
+  , makeApply, pureApply
+  , makePi, makeLambda
   , hole, pureHole
   , set, pureSet
-  , makeParameterRef, makeDefinitionRef, makeLiteralInteger
+  , makeParameterRef, makeDefinitionRef
+  , makeLiteralInteger, pureLiteralInteger
+  , integerType, pureIntegerType
   , Expression(..), eValue, ePayload
   , pureExpression
   , randomizeExpr
@@ -109,6 +112,9 @@ type ExpressionBodyExpr def a = ExpressionBody def (Expression def a)
 hole :: ExpressionBody def expr
 hole = ExpressionLeaf Hole
 
+integerType :: ExpressionBody def expr
+integerType = ExpressionLeaf IntegerType
+
 set :: ExpressionBody def expr
 set = ExpressionLeaf Set
 
@@ -201,6 +207,15 @@ expressionDef = (`bitraverseExpression` pure)
 
 pureExpression :: ExpressionBody def (Expression def ()) -> Expression def ()
 pureExpression = (`Expression` ())
+
+pureIntegerType :: Expression def ()
+pureIntegerType = pureExpression integerType
+
+pureLiteralInteger :: Integer -> Expression def ()
+pureLiteralInteger = pureExpression . makeLiteralInteger
+
+pureApply :: Expression def () -> Expression def () -> Expression def ()
+pureApply f x = pureExpression $ makeApply f x
 
 pureHole :: Expression def ()
 pureHole = pureExpression hole

@@ -83,15 +83,12 @@ mkInferredLeaf ::
   Data.Leaf def -> Data.Expression def () -> Data.Expression def () ->
   InferResults def
 mkInferredLeaf leaf val typ =
-  Data.Expression
-  { Data._eValue = Data.ExpressionLeaf leaf
-  , Data._ePayload = (val, typ)
-  }
+  mkInferredNode val typ $ Data.ExpressionLeaf leaf
 
 mkInferredNode ::
-  Data.Expression (DefI t) () ->
-  Data.Expression (DefI t) () ->
-  Data.ExpressionBody (DefI t) (InferResults (DefI t)) -> InferResults (DefI t)
+  Data.Expression def () ->
+  Data.Expression def () ->
+  Data.ExpressionBody def (InferResults def) -> InferResults def
 mkInferredNode iVal iType body =
   Data.Expression body (iVal, iType)
 

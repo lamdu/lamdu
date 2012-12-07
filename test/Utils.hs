@@ -29,9 +29,6 @@ showStructure = show . (Invisible <$)
 instance Show def => Show (Data.Expression def ()) where
   show (Data.Expression value ()) = show value
 
-hole :: Data.Expression def ()
-hole = Data.pureExpression $ Data.ExpressionLeaf Data.Hole
-
 makeNamedLambda :: String -> expr -> expr -> Data.ExpressionBody def expr
 makeNamedLambda = Data.makeLambda . Guid.fromString
 
@@ -53,11 +50,14 @@ purePi ::
   Data.Expression def ()
 purePi name x y = Data.pureExpression $ makeNamedPi name x y
 
+hole :: Data.Expression def ()
+hole = Data.pureHole
+
 setType :: Data.Expression def ()
-setType = Data.pureExpression $ Data.ExpressionLeaf Data.Set
+setType = Data.pureSet
 
 intType :: Data.Expression def ()
-intType = Data.pureExpression $ Data.ExpressionLeaf Data.IntegerType
+intType = Data.pureIntegerType
 
 literalInt :: Integer -> Data.Expression def ()
 literalInt i = Data.pureExpression $ Data.makeLiteralInteger i
@@ -186,10 +186,10 @@ doInfer_ = (first . fmap) fst . doInfer
 
 factorialExpr :: Data.Expression (DefI t) ()
 factorialExpr =
-  pureLambda "x" hole $
+  pureLambda "x" Data.pureHole $
   pureApply
   [ pureGetDef "if"
-  , hole
+  , Data.pureHole
   , pureApply [pureGetDef "==", pureGetParam "x", literalInt 0]
   , literalInt 1
   , pureApply
