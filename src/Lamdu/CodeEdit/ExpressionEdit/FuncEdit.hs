@@ -4,14 +4,19 @@ module Lamdu.CodeEdit.ExpressionEdit.FuncEdit
   (make, makeParamNameEdit, jumpToRHS, makeResultEdit, makeParamsAndResultEdit) where
 
 import Control.Lens ((^.))
+import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
+import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
-import Control.MonadA (MonadA)
-import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Lens as Lens
+import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
@@ -21,10 +26,6 @@ import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
-import qualified Graphics.UI.Bottle.EventMap as E
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.Box as Box
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 paramFDConfig :: FocusDelegator.Config
 paramFDConfig = FocusDelegator.Config
@@ -167,6 +168,13 @@ makeNestedParamNames itemGuid makeItem mkFinal = go
       item <- makeItem oldWId name x
       return (item : items, final)
 
+makeLabel ::
+  MonadA m => Int -> Draw.Color -> String -> Widget.Id -> ExprGuiM m (ExpressionGui f)
+makeLabel textSize color text myId =
+  fmap ExpressionGui.fromValueWidget .
+  ExprGuiM.atEnv (WE.setTextSizeColor textSize color) .
+  ExprGuiM.widgetEnv . BWidgets.makeLabel text $ Widget.toAnimId myId
+
 make
   :: MonadA m
   => Sugar.HasParens
@@ -176,14 +184,8 @@ make
 make hasParens (Sugar.Func depParams params body) =
   ExpressionGui.wrapParenify hasParens Parens.addHighlightedTextParens $ \myId ->
   ExprGuiM.assignCursor myId bodyId $ do
-    lambdaLabel <-
-      fmap ExpressionGui.fromValueWidget .
-      ExprGuiM.atEnv (WE.setTextSizeColor Config.lambdaTextSize Config.lambdaColor) .
-      ExprGuiM.widgetEnv . BWidgets.makeLabel "λ" $ Widget.toAnimId myId
-    rightArrowLabel <-
-      fmap ExpressionGui.fromValueWidget .
-      ExprGuiM.atEnv (WE.setTextSizeColor Config.rightArrowTextSize Config.rightArrowColor) .
-      ExprGuiM.widgetEnv . BWidgets.makeLabel "→" $ Widget.toAnimId myId
+    lambdaLabel <- makeLabel Config.lambdaTextSize Config.lambdaColor "λ" myId
+    rightArrowLabel <- makeLabel Config.rightArrowTextSize Config.rightArrowColor "→" myId
     (depParamsEdits, paramsEdits, bodyEdit) <-
       makeParamsAndResultEdit (const id) lhs ("Func Body", body) myId depParams params
     return . ExpressionGui.hboxSpaced $
