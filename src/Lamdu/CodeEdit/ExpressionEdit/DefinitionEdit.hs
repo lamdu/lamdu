@@ -12,7 +12,6 @@ import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, Collapser(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import qualified Control.Lens as Lens
-import qualified Data.List as List
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -70,7 +69,7 @@ makePolyNameEdit name guid depParamsEdit =
     f myId =
       Collapser
       { cMakeExpanded =
-        ExpressionGui.hbox . (: depParamsEdit) <$>
+        ExpressionGui.hboxSpaced . (: depParamsEdit) <$>
         nameGui Config.monomorphicDefOriginForegroundColor
       , cOnFocusedExpanded =
         ExpressionGui.withBgColor Layers.polymorphicExpandedBG
@@ -105,8 +104,7 @@ makeParts name guid def = do
     Lens.over ExpressionGui.egWidget
     (Widget.weakerEvents nameEditEventMap . jumpToRHSViaEquals name) <$>
     makePolyNameEdit name guid depParamsEdits myId
-  return .
-    List.intersperse (ExpressionGui.fromValueWidget BWidgets.stdSpaceWidget) $
+  return $
     polyNameEdit : paramsEdits ++
     [ ExpressionGui.fromValueWidget equals
     , Lens.over ExpressionGui.egWidget
@@ -201,7 +199,7 @@ makeDefContentEdit ::
 makeDefContentEdit guid content = do
   name <- ExprGuiM.getDefName guid
   body <-
-    fmap (Lens.view ExpressionGui.egWidget . ExpressionGui.hbox) $
+    fmap (Lens.view ExpressionGui.egWidget . ExpressionGui.hboxSpaced) $
     makeParts name guid content
   wheres <-
     case Sugar.dWhereItems content of
