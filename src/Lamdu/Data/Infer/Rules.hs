@@ -51,6 +51,7 @@ data RuleClosure def
   | IntoFuncResultTypeClosure (Data.ExprLambdaWrapper, ExprRef)
   | ArgTypeToPiParamTypeClosure ExprRef Origin2
   | RigidArgApplyTypeToResultTypeClosure ExprRef Origin3
+  | RedexApplyTypeToResultTypeClosure ExprRef
   | PiParamTypeToArgTypeClosure ExprRef
   | LambdaParamTypeToArgTypeClosure ExprRef
   | ArgTypeToLambdaParamTypeClosure ExprRef Origin
@@ -91,6 +92,8 @@ runClosure closure =
     runArgTypeToPiParamTypeClosure x o
   RigidArgApplyTypeToResultTypeClosure x o ->
     runRigidArgApplyTypeToResultTypeClosure x o
+  RedexApplyTypeToResultTypeClosure x ->
+    runRedexApplyTypeToResultTypeClosure x
   PiParamTypeToArgTypeClosure x ->
     runPiParamTypeToArgTypeClosure x
   LambdaParamTypeToArgTypeClosure x ->
@@ -369,6 +372,21 @@ rigidArgApplyTypeToResultTypeRule applyTv (Data.Apply func arg) =
   Rule [tvType applyTv, tvVal arg] .
   RigidArgApplyTypeToResultTypeClosure (tvType func) <$> mkOrigin3
 
+runRedexApplyTypeToResultTypeClosure :: ExprRef -> RuleFunction def
+runRedexApplyTypeToResultTypeClosure funcTypeRef
+  ~[applyTypeExpr, Data.Expression funcExpr funcPl] = do
+  Data.Lambda paramGuid paramType _ <- maybeToList $ Data.maybeLambda funcExpr
+  return
+    ( funcTypeRef
+    , makeRefExpr (Lens.view rplOrigin funcPl) $
+      Data.makePi paramGuid paramType applyTypeExpr
+    )
+
+redexApplyTypeToResultTypeRule :: TypedValue -> TypedValue -> Rule def
+redexApplyTypeToResultTypeRule applyTv funcTv =
+  Rule [tvType applyTv, tvVal funcTv] $
+  RedexApplyTypeToResultTypeClosure (tvType funcTv)
+
 runPiParamTypeToArgTypeClosure :: ExprRef -> RuleFunction def
 runPiParamTypeToArgTypeClosure argTypeRef ~[Data.Expression funcTExpr _] = do
   -- If func type is Pi
@@ -461,6 +479,7 @@ applyRules applyTv apply@(Data.Apply func arg) =
   where
     pureRules =
       [ piParamTypeToArgTypeRule apply
+      , redexApplyTypeToResultTypeRule applyTv func
       , lambdaParamTypeToArgTypeRule apply
       , applyArgToFuncArgRule applyTv apply
       ]

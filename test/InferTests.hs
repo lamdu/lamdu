@@ -199,6 +199,65 @@ idTest =
     (mkInferredGetDef "id") $
     mkInferredLeafSimple Data.IntegerType setType
 
+monomorphRedex :: HUnit.Test
+monomorphRedex =
+  testInfer "foo = f (λ~ x -> (λ~ -> x) _) where f ~:(a:Set -> _ -> a) = _"
+  expr .
+  mkInferredNode inferredExpr hole $
+  Data.makeApply
+    ( mkInferredNode (bodyLambda True) bodyLambdaType $
+      makeNamedLambda "f"
+        (mkInferredLeaf Data.Hole fType setType) $
+      mkInferredNode (body True) hole $
+      Data.makeApply
+        (mkInferredGetParam "f" fType) $
+      mkInferredNode (fArg True) (fArgType True) $
+      makeNamedLambda "b"
+        (mkInferredLeaf Data.Hole setType setType) $
+      mkInferredNode xToX (fArgInnerType True) $
+      makeNamedLambda "x"
+        (mkInferredLeaf Data.Hole (pureGetParam "b") setType) $
+      mkInferredNode (pureGetParam "x") (pureGetParam "b") $
+      Data.makeApply
+        ( mkInferredNode cToX (purePi "" hole (pureGetParam "b")) $
+          makeNamedLambda "c"
+            (mkInferredLeafSimple Data.Hole setType) $
+          mkInferredGetParam "x" $ pureGetParam "b"
+        ) $
+      mkInferredLeafSimple Data.Hole hole
+    ) $
+  mkInferredNode (fExpr True) fType $
+  makeNamedLambda "fArg"
+    ( mkInferredNode (fArgType True) setType $
+      makeNamedPi "b"
+        (mkInferredLeafSimple Data.Set setType) $
+      mkInferredNode (fArgInnerType True) setType $
+      makeNamedPi "x"
+        (mkInferredLeaf Data.Hole (pureGetParam "b") setType) $
+      mkInferredGetParam "b" setType
+    ) $
+  mkInferredLeafSimple Data.Hole hole
+  where
+    expr = pureApply [bodyLambda False, fExpr False]
+    inferredExpr = pureApply [fExpr True, fArg True]
+    bodyLambda isInferred =
+      pureLambda "f" (if isInferred then fType else hole) $
+      body isInferred
+    fExpr isInferred = pureLambda "" (fArgType isInferred) hole
+    fArgType isInferred = purePi "b" setType $ fArgInnerType isInferred
+    fArgInnerType False = purePi "" hole $ pureGetParam "b"
+    fArgInnerType True = purePi "" (pureGetParam "b") $ pureGetParam "b"
+    body isInferred = pureApply [pureGetParam "f", fArg isInferred]
+    fArg False =
+        pureLambda "b" hole .
+        pureLambda "x" hole $
+        pureApply [cToX, hole]
+    fArg True = pureLambda "b" setType xToX
+    cToX = pureLambda "c" hole $ pureGetParam "x"
+    xToX = pureLambda "x" (pureGetParam "b") $ pureGetParam "x"
+    bodyLambdaType = purePi "" fType hole
+    fType = purePi "" (fArgType True) hole
+
 fOfXIsFOf5 :: HUnit.Test
 fOfXIsFOf5 =
   testInfer "f x = f 5"
@@ -304,7 +363,7 @@ inferredHole = mkInferredLeafSimple Data.Hole
 inferredSetType :: InferResults def
 inferredSetType = mkInferredLeafSimple Data.Set setType
 
--- | depApply =  \(t : Set) -> \(rt : t -> Set) -> \(f : (d : t) -> rt d) -> \(x : t) -> f x
+-- | depApply (t : Set) (rt : t -> Set) (f : (d : t) -> rt d) (x : t) = f x
 depApply :: HUnit.Test
 depApply =
   testInfer "dep apply"
@@ -518,6 +577,7 @@ hunitTests =
   , depApply
   , forceMono
   , fOfXIsFOf5
+  , monomorphRedex
   , inferPart
   , failResumptionAddsRules
   ]
