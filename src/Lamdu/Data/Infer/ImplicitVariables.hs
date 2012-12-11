@@ -7,13 +7,14 @@ import Control.Applicative ((<$>), (<*>))
 import Control.Lens (SimpleLens, (^.))
 import Control.Monad (join)
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.State (StateT, State)
+import Control.Monad.Trans.State (StateT, State, mapStateT)
 import Control.Monad.Trans.State.Utils (toStateT)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
 import Data.Functor.Identity (Identity(..))
+import Data.Maybe (fromMaybe)
 import Data.Monoid (mempty)
 import Data.Store.Guid (Guid)
 import Data.Typeable (Typeable)
@@ -53,31 +54,44 @@ addVariablesGen gen rootTypeExpr expr =
       paramTypeRef = Infer.tvType $ Infer.nRefs holePoint
       paramTypeNode =
         Infer.InferNode (Infer.TypedValue paramTypeRef paramTypeTypeRef) mempty
-      loaded = runIdentity $ Infer.load loader Nothing getVar
-    _ <- Infer.inferLoaded actions loaded holePoint
+      loaded =
+        fromMaybe (error "Should not be loading defs when loading a mere getVar") $
+        Infer.load loader Nothing getVar
+    _ <- inferLoaded loaded holePoint
     newRootNode <- Infer.newNodeWithScope mempty
     let
       paramTypeExpr = Data.Expression Data.hole (paramTypeNode, AutoGen (Guid.augment "paramType" paramGuid))
       newRootLam = Data.makeLambda paramGuid paramTypeExpr $ Lens.over (Lens.mapped . Lens._1) Infer.iPoint expr
       newRootExpr = Data.Expression newRootLam (newRootNode, AutoGen (Guid.augment "root" paramGuid))
-    Infer.addRules actions [fmap fst newRootExpr]
+    unMaybe $ Infer.addRules actions [fst <$> newRootExpr]
     inferredRootTypeExpr <-
       State.gets . Infer.derefExpr $
       Lens.over (Lens.mapped . Lens._1) Infer.iPoint rootTypeExpr
     inferredNewRootExpr <- State.gets $ Infer.derefExpr newRootExpr
     addVariablesGen newGen inferredRootTypeExpr inferredNewRootExpr
   where
-    loader =
-      Infer.Loader . const . Identity $ error "Should not be loading defs when loading a mere getVar"
+    loader = Infer.Loader $ const Nothing
     unrestrictedHoles =
       filter (isUnrestrictedHole . Infer.iValue . fst . Lens.view Data.ePayload) .
       reverse $ Data.subExpressions rootTypeExpr
     getVar = Data.pureExpression $ Data.makeParameterRef paramGuid
     (paramGuid, newGen) = random gen
 
+inferLoaded ::
+  Ord def =>
+  Infer.Loaded def a ->
+  Infer.InferNode def ->
+  StateT (Infer.Context def) Identity (Data.Expression def (Infer.Inferred def, a))
+inferLoaded loaded =
+  unMaybe . Infer.inferLoaded actions loaded
+
+unMaybe :: StateT s Maybe b -> StateT s Identity b
+unMaybe =
+  mapStateT (Identity . fromMaybe (error "Infer error when adding implicit vars!"))
+
 -- TODO: Infer.Utils
-actions :: Infer.InferActions def Identity
-actions = Infer.InferActions . const . Identity $ error "Infer error when adding implicit vars!"
+actions :: Infer.InferActions def Maybe
+actions = Infer.InferActions $ const Nothing
 
 addVariables ::
   (MonadA m, Ord def, RandomGen g) =>
@@ -93,11 +107,11 @@ addVariables gen loader expr =
     onLoaded loadedSet loadedRootType = toStateT $ do
       inferredSet <-
         (fmap . fmap) fst $
-        Infer.inferLoaded actions loadedSet =<< Infer.newNodeWithScope mempty
+        inferLoaded loadedSet =<< Infer.newNodeWithScope mempty
       let
         rootTypeTypeRef = Infer.tvVal . Infer.nRefs . Infer.iPoint $ inferredSet ^. Data.ePayload
         rootTypeNode = Infer.InferNode (Infer.TypedValue rootTypeRef rootTypeTypeRef) mempty
-      inferredRootType <- Infer.inferLoaded actions loadedRootType rootTypeNode
+      inferredRootType <- inferLoaded loadedRootType rootTypeNode
       addVariablesGen gen inferredRootType $
         Lens.over (Lens.mapped . Lens._2) Stored expr
     rootNode = expr ^. inferredLens

@@ -92,7 +92,7 @@ createBuiltins =
 
     let aToAToA = forAll "a" $ \a -> mkPi a $ endo a
     traverse_ ((`makeWithType_` aToAToA) . ("Prelude." ++))
-      ["+", "-", "*", "/", "^", "++", "mod", "div", "quot", "rem"]
+      ["+", "-", "*", "/", "^", "++", "%", "mod", "div", "quot", "rem"]
     makeWithType_ "Prelude.negate" $ forAll "a" endo
     makeWithType_ "Prelude.sqrt" $ forAll "a" endo
 
