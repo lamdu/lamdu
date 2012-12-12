@@ -22,18 +22,13 @@ import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.GLFW as GLFW
-import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 
 mainLoopImage
   :: (Widget.Size -> KeyEvent -> IO Bool)
   -> (Bool -> Widget.Size -> IO (Maybe Image)) -> IO a
-mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
-  Vector2 displayWidth displayHeight <- GLFWUtils.getVideoModeSize
-  GLFWUtils.openWindow GLFW.defaultDisplayOptions
-    { GLFW.displayOptions_width = displayWidth
-    , GLFW.displayOptions_height = displayHeight
-    }
-  let
+mainLoopImage eventHandler makeImage =
+  eventLoop handleEvents
+  where
     windowSize = do
       (x, y) <- GLFW.getWindowDimensions
       return $ Vector2 (fromIntegral x) (fromIntegral y)
@@ -61,7 +56,6 @@ mainLoopImage eventHandler makeImage = GLFWUtils.withGLFW $ do
           (Draw.translate (-1, 1) %%) .
           (Draw.scale (2/winSizeX) (-2/winSizeY) %%) $
           image
-  eventLoop handleEvents
 
 mainLoopAnim
   :: (Widget.Size -> IO (Maybe (AnimId -> AnimId)))

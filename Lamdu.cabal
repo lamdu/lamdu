@@ -106,6 +106,7 @@ Executable lamdu
                        graphics-drawingcombinators >= 1.4,
                        binary >= 0.5,
                        transformers,
+                       GLFW-b,
                        split,
                        TraceUtils,
                        bytestring,

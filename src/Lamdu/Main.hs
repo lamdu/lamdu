@@ -13,14 +13,14 @@ import Data.List(intercalate)
 import Data.Monoid(Monoid(..))
 import Data.Store.Db (Db)
 import Data.Store.Transaction (Transaction)
-import Data.Vector.Vector2(Vector2)
+import Data.Vector.Vector2 (Vector2(..))
 import Data.Word(Word8)
-import Lamdu.CodeEdit.Settings (Settings(..))
-import Lamdu.WidgetEnvT (runWidgetEnvT)
 import Graphics.DrawingCombinators((%%))
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Widget(Widget)
+import Lamdu.CodeEdit.Settings (Settings(..))
+import Lamdu.WidgetEnvT (runWidgetEnvT)
 import Numeric (showHex)
 import Paths_lamdu (getDataFileName)
 import System.Environment (getArgs)
@@ -31,6 +31,16 @@ import qualified Data.Cache as Cache
 import qualified Data.Map as Map
 import qualified Data.Store.Db as Db
 import qualified Data.Vector.Vector2 as Vector2
+import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.DrawingCombinators.Utils as DrawUtils
+import qualified Graphics.UI.Bottle.Animation as Anim
+import qualified Graphics.UI.Bottle.Rect as Rect
+import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
+import qualified Graphics.UI.Bottle.Widgets.FlyNav as FlyNav
+import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
+import qualified Graphics.UI.GLFW as GLFW
+import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 import qualified Lamdu.Anchors as Anchors
 import qualified Lamdu.BranchGUI as BranchGUI
 import qualified Lamdu.CodeEdit as CodeEdit
@@ -40,14 +50,6 @@ import qualified Lamdu.ExampleDB as ExampleDB
 import qualified Lamdu.VersionControl as VersionControl
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
-import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.DrawingCombinators.Utils as DrawUtils
-import qualified Graphics.UI.Bottle.Animation as Anim
-import qualified Graphics.UI.Bottle.Rect as Rect
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
-import qualified Graphics.UI.Bottle.Widgets.FlyNav as FlyNav
-import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified System.Directory as Directory
 
 main :: IO ()
@@ -60,16 +62,24 @@ main = do
     [] -> return ()
     _ -> fail "Usage: lamdu [-deletedb]"
   Directory.createDirectoryIfMissing False lamduDir
-  let
-    getFont path = do
-      exists <- Directory.doesFileExist path
-      unless exists . ioError . userError $ path ++ " does not exist!"
-      Draw.openFont path
-  font <-
-    (getFont =<< getDataFileName "fonts/DejaVuSans.ttf")
-    `E.catch` \(E.SomeException _) ->
-    getFont "fonts/DejaVuSans.ttf"
-  Db.withDb (lamduDir </> "codeedit.db") $ runDb font
+
+  GLFWUtils.withGLFW $ do
+    Vector2 displayWidth displayHeight <- GLFWUtils.getVideoModeSize
+    GLFWUtils.openWindow GLFW.defaultDisplayOptions
+      { GLFW.displayOptions_width = displayWidth
+      , GLFW.displayOptions_height = displayHeight
+      }
+    -- Fonts must be loaded after the GL context is created..
+    let
+      getFont path = do
+        exists <- Directory.doesFileExist path
+        unless exists . ioError . userError $ path ++ " does not exist!"
+        Draw.openFont path
+    font <-
+      (getFont =<< getDataFileName "fonts/DejaVuSans.ttf")
+      `E.catch` \(E.SomeException _) ->
+      getFont "fonts/DejaVuSans.ttf"
+    Db.withDb (lamduDir </> "codeedit.db") $ runDb font
 
 rjust :: Int -> a -> [a] -> [a]
 rjust len x xs = replicate (length xs - len) x ++ xs
