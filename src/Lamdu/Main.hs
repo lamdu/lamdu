@@ -62,6 +62,8 @@ main = do
     [] -> return ()
     _ -> fail "Usage: lamdu [-deletedb]"
   Directory.createDirectoryIfMissing False lamduDir
+  -- GLFW changes the directory from start directory, at least on macs.
+  startDir <- Directory.getCurrentDirectory
 
   GLFWUtils.withGLFW $ do
     Vector2 displayWidth displayHeight <- GLFWUtils.getVideoModeSize
@@ -78,7 +80,7 @@ main = do
     font <-
       (getFont =<< getDataFileName "fonts/DejaVuSans.ttf")
       `E.catch` \(E.SomeException _) ->
-      getFont "fonts/DejaVuSans.ttf"
+      getFont $ startDir </> "fonts/DejaVuSans.ttf"
     Db.withDb (lamduDir </> "codeedit.db") $ runDb font
 
 rjust :: Int -> a -> [a] -> [a]
