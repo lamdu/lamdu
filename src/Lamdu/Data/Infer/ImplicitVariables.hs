@@ -18,6 +18,7 @@ import Data.Maybe (fromMaybe)
 import Data.Monoid (mempty)
 import Data.Store.Guid (Guid)
 import Data.Typeable (Typeable)
+import Lamdu.Data.Infer.UntilConflict (inferAssertNoConflict)
 import System.Random (RandomGen, random)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
@@ -57,7 +58,7 @@ addVariablesGen gen rootTypeExpr expr =
       loaded =
         fromMaybe (error "Should not be loading defs when loading a mere getVar") $
         Infer.load loader Nothing getVar
-    _ <- inferLoaded loaded holePoint
+    _ <- inferAssertNoConflict loaded holePoint
     newRootNode <- Infer.newNodeWithScope mempty
     let
       paramTypeExpr = Data.Expression Data.hole (paramTypeNode, AutoGen (Guid.augment "paramType" paramGuid))
@@ -76,14 +77,6 @@ addVariablesGen gen rootTypeExpr expr =
       reverse $ Data.subExpressions rootTypeExpr
     getVar = Data.pureExpression $ Data.makeParameterRef paramGuid
     (paramGuid, newGen) = random gen
-
-inferLoaded ::
-  Ord def =>
-  Infer.Loaded def a ->
-  Infer.InferNode def ->
-  StateT (Infer.Context def) Identity (Data.Expression def (Infer.Inferred def, a))
-inferLoaded loaded =
-  unMaybe . Infer.inferLoaded actions loaded
 
 unMaybe :: StateT s Maybe b -> StateT s Identity b
 unMaybe =
@@ -107,11 +100,11 @@ addVariables gen loader expr =
     onLoaded loadedSet loadedRootType = toStateT $ do
       inferredSet <-
         (fmap . fmap) fst $
-        inferLoaded loadedSet =<< Infer.newNodeWithScope mempty
+        inferAssertNoConflict loadedSet =<< Infer.newNodeWithScope mempty
       let
         rootTypeTypeRef = Infer.tvVal . Infer.nRefs . Infer.iPoint $ inferredSet ^. Data.ePayload
         rootTypeNode = Infer.InferNode (Infer.TypedValue rootTypeRef rootTypeTypeRef) mempty
-      inferredRootType <- inferLoaded loadedRootType rootTypeNode
+      inferredRootType <- inferAssertNoConflict loadedRootType rootTypeNode
       addVariablesGen gen inferredRootType $
         Lens.over (Lens.mapped . Lens._2) Stored expr
     rootNode = expr ^. inferredLens
