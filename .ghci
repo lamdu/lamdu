@@ -1,3 +1,5 @@
 :set -isrc
 :set -ibottlelib
 :set -itest
+
+:set -Wall

@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -O2 #-}
 {-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveDataTypeable #-}
 module Lamdu.Data
   ( Definition(..), defBody, defType

@@ -128,6 +128,11 @@ data ErrorDetails def
   | InfiniteExpression (Data.Expression def ())
   deriving (Show, Eq, Ord)
 derive makeBinary ''ErrorDetails
+instance Functor ErrorDetails where
+  fmap f (MismatchIn x y) =
+    on MismatchIn (Lens.over Data.expressionDef f) x y
+  fmap f (InfiniteExpression x) =
+    InfiniteExpression $ Lens.over Data.expressionDef f x
 
 data Error def = Error
   { errRef :: ExprRef
@@ -138,6 +143,11 @@ data Error def = Error
   , errDetails :: ErrorDetails def
   } deriving (Show, Eq, Ord)
 derive makeBinary ''Error
+instance Functor Error where
+  fmap f (Error ref mis details) =
+    Error ref
+    (Lens.over (Lens.both . Data.expressionDef) f mis)
+    (fmap f details)
 
 newtype InferActions def m = InferActions
   { reportError :: Error def -> m ()

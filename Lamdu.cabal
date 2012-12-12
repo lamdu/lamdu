@@ -147,6 +147,7 @@ Executable lamdu
                        Lamdu.Config,
                        Lamdu.Data.Arbitrary,
                        Lamdu.Data.Infer.Conflicts,
+                       Lamdu.Data.Infer.UntilConflict,
                        Lamdu.Data.Infer.Rules,
                        Lamdu.Data.Infer.Types,
                        Lamdu.Data.Infer.ImplicitVariables,
