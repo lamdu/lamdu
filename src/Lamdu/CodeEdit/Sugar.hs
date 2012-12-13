@@ -640,10 +640,11 @@ convertExpressionI ee =
 
 -- Check no holes
 isCompleteType :: Data.Expression def () -> Bool
-isCompleteType = not . any (isHole . Lens.view Data.eValue) . Data.subExpressions
-  where
-    isHole (Data.ExpressionLeaf Data.Hole) = True
-    isHole _ = False
+isCompleteType =
+  Lens.nullOf
+  ( Lens.folding Data.subExpressions
+  . Data.eValue . Data.expressionLeaf . Data.hole
+  )
 
 convertHoleResult ::
   m ~ Anchors.ViewM => SugarConfig (m ()) -> HoleResult (m ()) -> T m (Expression m)

@@ -102,7 +102,7 @@ Executable lamdu
                        containers,
                        directory,
                        filepath,
-                       lens >= 2.2,
+                       lens >= 3.7.1,
                        graphics-drawingcombinators >= 1.4,
                        binary >= 0.5,
                        transformers,

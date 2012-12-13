@@ -61,7 +61,10 @@ addVariablesGen gen rootTypeExpr expr =
     _ <- inferAssertNoConflict loaded holePoint
     newRootNode <- Infer.newNodeWithScope mempty
     let
-      paramTypeExpr = Data.Expression Data.hole (paramTypeNode, AutoGen (Guid.augment "paramType" paramGuid))
+      paramTypeExpr =
+        Data.Expression
+        (Data.ExpressionLeaf Data.Hole)
+        (paramTypeNode, AutoGen (Guid.augment "paramType" paramGuid))
       newRootLam = Data.makeLambda paramGuid paramTypeExpr $ Lens.over (Lens.mapped . Lens._1) Infer.iPoint expr
       newRootExpr = Data.Expression newRootLam (newRootNode, AutoGen (Guid.augment "root" paramGuid))
     unMaybe $ Infer.addRules actions [fst <$> newRootExpr]

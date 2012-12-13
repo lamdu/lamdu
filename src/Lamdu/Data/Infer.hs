@@ -517,12 +517,12 @@ load loader mRecursiveDef expr =
   where
     loadDefTypes =
       fmap Map.fromList .
-      traverse loadType $ ordNub
-      [ defI
-      | Data.ExpressionLeaf (Data.GetVariable (Data.DefinitionRef defI)) <-
-        map (Lens.view Data.eValue) $ Data.subExpressions expr
-      , Just defI /= mRecursiveDef
-      ]
+      traverse loadType . ordNub $
+      Lens.toListOf
+      ( Lens.folding Data.subExpressions . Data.eValue
+      . Data.expressionLeaf . Data.getVariable . Data.definitionRef
+      . Lens.filtered ((/= mRecursiveDef) . Just)
+      ) expr
     loadType defI = fmap ((,) defI) $ loadPureDefinitionType loader defI
 
 addRule :: Rule def -> State (InferState def m) ()

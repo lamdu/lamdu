@@ -85,7 +85,7 @@ propertyOfClosure (ApplyProperty exprI apply role) =
     lens = applyChildByRole role
 propertyOfClosure (LambdaProperty cons exprI lambda role) =
   Property (lambda ^. Lens.cloneLens lens) $
-  DataIRef.writeExprBody exprI . Data.exprLambdaCons cons .
+  DataIRef.writeExprBody exprI . Lens.review (Data.exprLambdaPrism cons) .
   setter lens lambda
   where
     lens = lambdaChildByRole role
@@ -120,7 +120,7 @@ loadExpressionBody iref = onBody =<< DataIRef.readExprBody iref
     onBody (Data.ExpressionLambda lambda) = onLambda Data.ExprLambda lambda
     onBody (Data.ExpressionPi lambda) = onLambda Data.ExprPi lambda
     onLambda cons lambda@(Data.Lambda param _ _) =
-      fmap (Data.exprLambdaCons cons) $
+      fmap (Lens.review (Data.exprLambdaPrism cons)) $
       on (liftA2 (Data.Lambda param)) loadExpressionClosure
       (prop ParamType) (prop Result)
       where
