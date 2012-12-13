@@ -118,9 +118,9 @@ addType style exprId typeEdits eg =
 exprFocusDelegatorConfig :: FocusDelegator.Config
 exprFocusDelegatorConfig = FocusDelegator.Config
   { FocusDelegator.startDelegatingKey = Config.enterSubexpressionKey
-  , FocusDelegator.startDelegatingDoc = "Enter subexpression"
+  , FocusDelegator.startDelegatingDoc = EventMap.Doc ["Navigation", "Enter subexpression"]
   , FocusDelegator.stopDelegatingKey = Config.leaveSubexpressionKey
-  , FocusDelegator.stopDelegatingDoc = "Leave subexpression"
+  , FocusDelegator.stopDelegatingDoc = EventMap.Doc ["Navigation", "Leave subexpression"]
   }
 
 -- ExprGuiM GUIs (TODO: Move to Monad.hs?)

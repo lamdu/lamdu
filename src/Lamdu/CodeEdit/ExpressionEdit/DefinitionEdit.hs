@@ -12,7 +12,6 @@ import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, Collapser(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import qualified Control.Lens as Lens
-import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -31,13 +30,14 @@ import qualified Lamdu.WidgetIds as WidgetIds
 paramFDConfig :: FocusDelegator.Config
 paramFDConfig = FocusDelegator.Config
   { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyEnter
-  , FocusDelegator.startDelegatingDoc = "Change parameter name"
+  , FocusDelegator.startDelegatingDoc = E.Doc ["Edit", "Rename definition"]
   , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEsc
-  , FocusDelegator.stopDelegatingDoc = "Stop changing name"
+  , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Done renaming"]
   }
 
 makeNameEdit ::
-  MonadA m => (ExprGuiM.NameSource, String) -> Widget.Id -> Guid -> ExprGuiM m (WidgetT m)
+  MonadA m => (ExprGuiM.NameSource, String) ->
+  Widget.Id -> Guid -> ExprGuiM m (WidgetT m)
 makeNameEdit name myId ident =
   ExprGuiM.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
   (ExpressionGui.makeNameEdit name ident)
@@ -53,23 +53,24 @@ nonOperatorName _ = False
 polyNameFDConfig :: FocusDelegator.Config
 polyNameFDConfig = FocusDelegator.Config
   { FocusDelegator.startDelegatingKey = Config.polymorphicExpandKey
-  , FocusDelegator.startDelegatingDoc = "Expand polymorphic"
+  , FocusDelegator.startDelegatingDoc = E.Doc ["View", "Expand polymorphic"]
   , FocusDelegator.stopDelegatingKey = Config.polymorphicCollapseKey
-  , FocusDelegator.stopDelegatingDoc = "Collapse polymorphic"
+  , FocusDelegator.stopDelegatingDoc = E.Doc ["View", "Collapse polymorphic"]
   }
 
 makePolyNameEdit ::
   MonadA m =>
   (ExprGuiM.NameSource, String) -> Guid -> [ExpressionGui m] -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
-makePolyNameEdit name guid [] = makeNameGui name guid Config.monomorphicDefOriginForegroundColor
-makePolyNameEdit name guid depParamsEdit =
-  ExpressionGui.makeCollapser polyNameFDConfig f
+makePolyNameEdit name guid depParamsEdits =
+  case depParamsEdits of
+  [] -> makeNameGui Config.monomorphicDefOriginForegroundColor
+  _ -> ExpressionGui.makeCollapser polyNameFDConfig f
   where
     f myId =
       Collapser
       { cMakeExpanded =
-        ExpressionGui.hboxSpaced . (: depParamsEdit) <$>
+        ExpressionGui.hboxSpaced . (: depParamsEdits) <$>
         nameGui Config.monomorphicDefOriginForegroundColor
       , cOnFocusedExpanded =
         ExpressionGui.withBgColor Layers.polymorphicExpandedBG
@@ -78,16 +79,11 @@ makePolyNameEdit name guid depParamsEdit =
         nameGui Config.polymorphicDefOriginForegroundColor
       }
       where
-        nameGui color = makeNameGui name guid color myId
+        nameGui color = makeNameGui color myId
         bgId = Widget.toAnimId myId ++ ["bg"]
-
-makeNameGui ::
-  MonadA m =>
-  (ExprGuiM.NameSource, String) -> Guid -> Draw.Color -> Widget.Id ->
-  ExprGuiM m (ExpressionGui m)
-makeNameGui name guid color myId =
-  ExprGuiM.withFgColor color $
-  ExpressionGui.fromValueWidget <$> makeNameEdit name myId guid
+    makeNameGui color myId =
+      ExprGuiM.withFgColor color $
+      ExpressionGui.fromValueWidget <$> makeNameEdit name myId guid
 
 makeParts
   :: MonadA m
@@ -123,10 +119,10 @@ makeParts name guid def = do
     allParams = depParams ++ params
     Sugar.Func depParams params body = Sugar.dFunc def
     addWhereItemEventMap =
-      Widget.keysEventMapMovesCursor Config.addWhereItemKeys "Add where item" .
+      Widget.keysEventMapMovesCursor Config.addWhereItemKeys (E.Doc ["Edit", "Add where item"]) .
       toEventMapAction $ Sugar.dAddInnermostWhereItem def
     addFirstParamEventMap =
-      Widget.keysEventMapMovesCursor Config.addNextParamKeys "Add parameter" .
+      Widget.keysEventMapMovesCursor Config.addNextParamKeys (E.Doc ["Edit", "Add parameter"]) .
       toEventMapAction $ Sugar.dAddFirstParam def
     nameEditEventMap =
       mappend addFirstParamEventMap $
@@ -184,11 +180,11 @@ makeWhereItemEdit item =
       | Just wiActions <- Sugar.wiActions item =
       mconcat
       [ Widget.keysEventMapMovesCursor (Config.delForwardKeys ++ Config.delBackwordKeys)
-        "Delete where item" .
+        (E.Doc ["Edit", "Where item", "Delete"]) .
         fmap WidgetIds.fromGuid $
         Lens.view Sugar.itemDelete wiActions
       , Widget.keysEventMapMovesCursor Config.addWhereItemKeys
-        "Add outer where item" .
+        (E.Doc ["Edit", "Where item", "Add"]) .
         fmap WidgetIds.fromGuid $
         Lens.view Sugar.itemAddNext wiActions
       ]
@@ -241,7 +237,7 @@ makeExprDefinition def bodyExpr = do
       acceptanceLabel <-
         (fmap . Widget.weakerEvents)
         (Widget.keysEventMapMovesCursor Config.acceptInferredTypeKeys
-         "Accept inferred type" (acceptInferredType >> return myId)) .
+         (E.Doc ["Edit", "Accept inferred type"]) (acceptInferredType >> return myId)) .
         ExprGuiM.widgetEnv .
         BWidgets.makeFocusableTextView "↱" $ Widget.joinId myId ["accept type"]
       return $ BWidgets.hboxCenteredSpaced [acceptanceLabel, label]

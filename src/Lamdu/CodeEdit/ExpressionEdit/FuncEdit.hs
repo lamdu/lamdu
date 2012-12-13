@@ -30,9 +30,9 @@ import qualified Lamdu.WidgetIds as WidgetIds
 paramFDConfig :: FocusDelegator.Config
 paramFDConfig = FocusDelegator.Config
   { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyEnter
-  , FocusDelegator.startDelegatingDoc = "Change parameter name"
+  , FocusDelegator.startDelegatingDoc = E.Doc ["Edit", "Rename parameter"]
   , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEsc
-  , FocusDelegator.stopDelegatingDoc = "Stop changing name"
+  , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Done renaming"]
   }
 
 makeParamNameEdit
@@ -46,9 +46,9 @@ makeParamNameEdit name ident =
 
 jumpToRHS ::
   (MonadA m, MonadA f) =>
-  [E.ModKey] -> (E.Doc, Sugar.Expression m) -> Widget.EventHandlers f
+  [E.ModKey] -> (String, Sugar.Expression m) -> Widget.EventHandlers f
 jumpToRHS keys (rhsDoc, rhs) =
-  Widget.keysEventMapMovesCursor keys ("Jump to " ++ rhsDoc) $
+  Widget.keysEventMapMovesCursor keys (E.Doc ["Navigation", "Jump to " ++ rhsDoc]) $
   return rhsId
   where
     rhsId = WidgetIds.fromGuid $ rhs ^. Sugar.rGuid
@@ -58,7 +58,7 @@ makeParamEdit ::
   MonadA m =>
   ((ExprGuiM.NameSource, String) ->
    Widget (Transaction m) -> Widget (Transaction m)) ->
-  (E.Doc, Sugar.Expression m) ->
+  (String, Sugar.Expression m) ->
   Widget.Id -> (ExprGuiM.NameSource, String) ->
   Sugar.FuncParam m (Sugar.Expression m) ->
   ExprGuiM m (ExpressionGui m)
@@ -100,13 +100,13 @@ makeParamEdit atParamWidgets rhs prevId name param = do
     mActions = param ^. Sugar.fpMActions
     paramAddNextEventMap =
       maybe mempty
-      (Widget.keysEventMapMovesCursor Config.addNextParamKeys "Add next parameter" .
+      (Widget.keysEventMapMovesCursor Config.addNextParamKeys (E.Doc ["Edit", "Add next parameter"]) .
        fmap (FocusDelegator.delegatingId . WidgetIds.fromGuid) .
        Lens.view (Sugar.fpListItemActions . Sugar.itemAddNext))
       mActions
     paramDeleteEventMap keys docSuffix onId =
       maybe mempty
-      (Widget.keysEventMapMovesCursor keys ("Delete parameter" ++ docSuffix) .
+      (Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "Delete parameter" ++ docSuffix]) .
        fmap (onId . WidgetIds.fromGuid) .
        Lens.view (Sugar.fpListItemActions . Sugar.itemDelete))
       mActions
@@ -124,14 +124,14 @@ makeResultEdit lhs result =
       [] -> error "makeResultEdit given empty LHS"
       xs -> last xs
     jumpToLhsEventMap =
-      Widget.keysEventMapMovesCursor Config.jumpRHStoLHSKeys "Jump to last param" $
+      Widget.keysEventMapMovesCursor Config.jumpRHStoLHSKeys (E.Doc ["Navigation", "Jump to last param"]) $
       return lastParam
 
 makeParamsAndResultEdit ::
   MonadA m =>
   ((ExprGuiM.NameSource, String) ->
    Widget (Transaction m) -> Widget (Transaction m)) ->
-  [Widget.Id] -> (E.Doc, Sugar.Expression m) ->
+  [Widget.Id] -> (String, Sugar.Expression m) ->
   Widget.Id ->
   [Sugar.FuncParam m (Sugar.Expression m)] ->
   [Sugar.FuncParam m (Sugar.Expression m)] ->

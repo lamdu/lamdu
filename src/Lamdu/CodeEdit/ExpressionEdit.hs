@@ -42,7 +42,7 @@ pasteEventMap
 pasteEventMap =
   maybe mempty
   (Widget.keysEventMapMovesCursor
-   Config.pasteKeys "Paste" .
+   Config.pasteKeys (E.Doc ["Edit", "Paste"]) .
    fmap WidgetIds.fromGuid) .
   (Sugar.holePaste <=< Sugar.holeMActions)
 
@@ -134,10 +134,10 @@ actionsEventMap exprGuid holePicker actions = do
     replace
       | isSelected =
         if isHole then mempty else
-        mkEventMap delKeys "Replace" FocusDelegator.delegatingId $
+        mkEventMap delKeys (E.Doc ["Edit", "Replace expression"]) FocusDelegator.delegatingId $
         Sugar.replace actions
       | otherwise =
-        mkEventMap delKeys "Select parent" FocusDelegator.notDelegatingId $ return exprGuid
+        mkEventMap delKeys (E.Doc ["Navigation", "Select parent"]) FocusDelegator.notDelegatingId $ return exprGuid
   return $ mconcat
     [ giveAsArg
     , addOperator
@@ -148,17 +148,17 @@ actionsEventMap exprGuid holePicker actions = do
     delKeys = concat [Config.replaceKeys, Config.delForwardKeys, Config.delBackwordKeys]
     giveAsArg =
       Widget.keysEventMapMovesCursor
-      Config.giveAsArgumentKeys "Give as argument" . fmap WidgetIds.fromGuid $
+      Config.giveAsArgumentKeys (E.Doc ["Edit", "Give as argument"]) . fmap WidgetIds.fromGuid $
       Sugar.giveAsArg actions
     addOperator =
       (fmap . fmap) Widget.eventResultFromCursor .
-      E.charGroup "Operator" "Apply operator" Config.operatorChars .
+      E.charGroup "Operator" (E.Doc ["Edit", "Apply operator"]) Config.operatorChars .
       fmap const $
       fmap (HoleEdit.searchTermWidgetId . WidgetIds.fromGuid) .
       Sugar.giveAsArgToOperator actions . (:[])
     cut =
       if isHole then mempty else
-      mkEventMap Config.cutKeys "Cut" id $
+      mkEventMap Config.cutKeys (E.Doc ["Edit", "Cut"]) id $
       Sugar.cut actions
     mkEventMap keys doc f =
       Widget.keysEventMapMovesCursor keys doc .

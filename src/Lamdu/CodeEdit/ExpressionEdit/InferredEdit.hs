@@ -7,6 +7,9 @@ import Lamdu.Anchors (ViewM)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import qualified Control.Lens as Lens
+import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
@@ -14,15 +17,13 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.WidgetEnvT as WE
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 fdConfig :: FocusDelegator.Config
 fdConfig = FocusDelegator.Config
   { FocusDelegator.startDelegatingKey = Config.replaceInferredValueKey
-  , FocusDelegator.startDelegatingDoc = "Replace inferred value"
+  , FocusDelegator.startDelegatingDoc = E.Doc ["Edit", "Replace inferred value"]
   , FocusDelegator.stopDelegatingKey = Config.keepInferredValueKey
-  , FocusDelegator.stopDelegatingDoc = "Keep inferred value"
+  , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Keep inferred value"]
   }
 
 make

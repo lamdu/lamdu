@@ -95,14 +95,14 @@ resultPickEventMap holeInfo holeResult =
     | not (Sugar.holeResultHasHoles holeResult) ->
       mappend (simplePickRes Config.pickResultKeys) .
       E.keyPresses Config.addNextArgumentKeys
-      "Pick result and move to next arg" .
+      (E.Doc ["Edit", "Result", "Pick and move to next hole"]) .
       fmap Widget.eventResultFromCursor $ do
         _ <- Sugar.holePickResult (hiHoleActions holeInfo) holeResult
         return . WidgetIds.fromGuid $ nextHole ^. Sugar.rGuid
   _ -> simplePickRes $ Config.pickResultKeys ++ Config.addNextArgumentKeys
   where
     simplePickRes keys =
-      E.keyPresses keys "Pick this search result" $
+      E.keyPresses keys (E.Doc ["Edit", "Result", "Pick"]) $
       pickExpr holeInfo holeResult
 
 
@@ -308,7 +308,7 @@ addNewDefinitionEventMap ::
   ViewM ~ m => HoleInfo m -> Widget.EventHandlers (Transaction m)
 addNewDefinitionEventMap holeInfo =
   E.keyPresses Config.newDefinitionKeys
-  "Add as new Definition" . makeNewDefinition $
+  (E.Doc ["Edit", "Result", "As new Definition"]) . makeNewDefinition $
   pickExpr holeInfo
   where
     makeNewDefinition holePickResult = do
@@ -400,16 +400,16 @@ makeResultsWidget holeInfo firstResults moreResults = do
       Widget.weakerEvents $
       Widget.keysEventMap
       [E.ModKey E.noMods E.KeyDown]
-      "Nothing (at bottom)" (return ())
+      E.noDoc (return ())
 
 adHocTextEditEventMap :: MonadA m => Property m String -> Widget.EventHandlers m
 adHocTextEditEventMap textProp =
   mconcat . concat $
   [ [ E.filterChars (`notElem` disallowedHoleChars) .
-      E.simpleChars "Character" "Append search term character" $
+      E.simpleChars "Character" (E.Doc ["Edit", "Search Term", "Append character"]) $
       changeText . flip (++) . (: [])
     ]
-  , [ E.keyPresses (map (E.ModKey E.noMods) [E.KeyBackspace, E.KeyDel]) "Delete backwards" $
+  , [ E.keyPresses (map (E.ModKey E.noMods) [E.KeyBackspace, E.KeyDel]) (E.Doc ["Edit", "Search Term", "Delete backwards"]) $
       changeText init
     | (not . null . Property.value) textProp
     ]
@@ -464,12 +464,12 @@ pickEventMap ::
   Widget.EventHandlers (Transaction m)
 pickEventMap holeInfo searchTerm (Just result)
   | nonEmptyAll (`notElem` Config.operatorChars) searchTerm =
-    operatorHandler "Pick this result and apply operator" $ \x -> do
+    operatorHandler (E.Doc ["Edit", "Result", "Pick and apply operator"]) $ \x -> do
       (_, actions) <- Sugar.holePickResult (hiHoleActions holeInfo) result
       fmap (searchTermWidgetId . WidgetIds.fromGuid) $
         Sugar.giveAsArgToOperator actions [x]
   | nonEmptyAll (`elem` Config.operatorChars) searchTerm =
-    alphaNumericHandler "Pick this result and resume" $ \x -> do
+    alphaNumericHandler (E.Doc ["Edit", "Result", "Pick and resume"]) $ \x -> do
       (g, _) <- Sugar.holePickResult (hiHoleActions holeInfo) result
       let
         mTarget
@@ -539,9 +539,9 @@ makeActiveHoleEdit holeInfo = do
 holeFDConfig :: FocusDelegator.Config
 holeFDConfig = FocusDelegator.Config
   { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyEnter
-  , FocusDelegator.startDelegatingDoc = "Enter hole"
+  , FocusDelegator.startDelegatingDoc = E.Doc ["Navigation", "Hole", "Enter"]
   , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEsc
-  , FocusDelegator.stopDelegatingDoc = "Leave hole"
+  , FocusDelegator.stopDelegatingDoc = E.Doc ["Navigation", "Hole", "Leave"]
   }
 
 make ::

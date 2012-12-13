@@ -123,7 +123,7 @@ addMovement name keys dir pos movements setState
   | name `elem` map (Lens.view mName) movements = mempty
   | otherwise =
     mconcat
-    [ mkKeyMap EventMap.Press modKey ("Start FlyNav " ++ name) .
+    [ mkKeyMap EventMap.Press modKey (EventMap.Doc ["Navigation", "FlyNav", name]) .
       setState . Just $ ActiveState pos (Movement name modKey dir : movements)
     | key <- keys
     , let modKey = EventMap.ModKey modifier key
@@ -173,11 +173,11 @@ make animId (Just (ActiveState pos movements)) setState w =
       | key <- modifierKeys
       ]
     stopMovement name modKey newMovements =
-      mkKeyMap EventMap.Release modKey ("Stop FlyNav " ++ name) .
+      mkKeyMap EventMap.Release modKey (EventMap.Doc ["Navigation", "Stop FlyNav", name]) .
       setState . Just $ ActiveState pos newMovements
     finishOn modKey =
       EventMap.keyEventMap (EventMap.KeyEvent EventMap.Release modKey)
-        "Stop FlyNav" $
+        (EventMap.Doc ["Navigation", "Stop FlyNav"]) $
         setState Nothing *>
         -- TODO: Just cancel FlyNav in any case if the MaybeEnter is
         -- Nothing...

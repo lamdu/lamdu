@@ -46,8 +46,8 @@ makeVertical size top unTranslatedBottom = Widget
       Just $ \dir -> choose (enterTop dir) (enterBottom dir) dir
     mEnter x y = x `mplus` y
     selectedWidget
-      | _wIsFocused top = Just $ addTo "down" (keysDown stdDirKeys) bottom top
-      | _wIsFocused bottom = Just $ addTo "up" (keysUp stdDirKeys) top bottom
+      | _wIsFocused top = Just $ addTo (EventMap.Doc ["Navigation", "down"]) (keysDown stdDirKeys) bottom top
+      | _wIsFocused bottom = Just $ addTo (EventMap.Doc ["Navigation", "up"]) (keysUp stdDirKeys) top bottom
       | otherwise = Nothing
     mkKeys = map $ EventMap.ModKey EventMap.noMods
     eventMap = maybe mempty _wEventMap selectedWidget

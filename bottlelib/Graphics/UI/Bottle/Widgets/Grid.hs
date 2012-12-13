@@ -110,7 +110,7 @@ mkNavEventmap navDests = (weakMap, strongMap)
       fmap
         (EventMap.keyPresses
          events
-         ("Move " ++ dirName) .
+         (EventMap.Doc ["Navigation", "Move", dirName]) .
          Lens.view Widget.enterResultEvent) .
       ($ navDests)
 

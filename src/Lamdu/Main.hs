@@ -36,6 +36,7 @@ import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Rect as Rect
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
 import qualified Graphics.UI.Bottle.Widgets.FlyNav as FlyNav
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
@@ -151,7 +152,7 @@ mainLoopDebugMode font makeWidget addHelp = do
     addDebugMode widget = do
       isDebugMode <- readIORef debugModeRef
       let
-        doc = (if isDebugMode then "Disable" else "Enable") ++ " Debug Mode"
+        doc = EventMap.Doc $ "Debug Mode" : if isDebugMode then ["Disable"] else ["Enable"]
         set = writeIORef debugModeRef (not isDebugMode)
       return .
         whenApply isDebugMode (Lens.over Widget.wFrame (addAnnotations font)) $
@@ -176,9 +177,9 @@ makeSizeFactor = do
   factor <- newIORef 1
   let
     eventMap = mconcat
-      [ Widget.keysEventMap Config.enlargeBaseFontKeys "Enlarge text" $
+      [ Widget.keysEventMap Config.enlargeBaseFontKeys (EventMap.Doc ["View", "Zoom", "Enlarge"]) $
         modifyIORef factor (* Config.enlargeFactor)
-      , Widget.keysEventMap Config.shrinkBaseFontKeys "Shrink text" $
+      , Widget.keysEventMap Config.shrinkBaseFontKeys (EventMap.Doc ["View", "Zoom", "Shrink"]) $
         modifyIORef factor (/ Config.shrinkFactor)
       ]
   return (factor, eventMap)
@@ -228,9 +229,9 @@ mkGlobalEventMap settingsRef = do
   let
     curInfoMode = settings ^. Settings.sInfoMode
     next = nextInfoMode curInfoMode
-    nextStr = "Show " ++ infoStr next
+    nextDoc = EventMap.Doc ["View", "Subtext", "Show " ++ infoStr next]
   return .
-    Widget.keysEventMap Config.nextInfoMode nextStr .
+    Widget.keysEventMap Config.nextInfoMode nextDoc .
     modifyIORef settingsRef $ Lens.set Settings.sInfoMode next
 
 mkWidgetWithFallback

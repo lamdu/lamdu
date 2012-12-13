@@ -20,9 +20,9 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 builtinFDConfig :: FocusDelegator.Config
 builtinFDConfig = FocusDelegator.Config
   { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyEnter
-  , FocusDelegator.startDelegatingDoc = "Change imported name"
+  , FocusDelegator.startDelegatingDoc = E.Doc ["Edit", "Change imported name"]
   , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEsc
-  , FocusDelegator.stopDelegatingDoc = "Stop changing name"
+  , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Stop changing name"]
   }
 
 make

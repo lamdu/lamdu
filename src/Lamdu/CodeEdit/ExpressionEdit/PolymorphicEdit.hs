@@ -4,6 +4,7 @@ module Lamdu.CodeEdit.ExpressionEdit.PolymorphicEdit(make) where
 import Control.MonadA (MonadA)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, Collapser(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -18,9 +19,9 @@ import qualified Lamdu.WidgetIds as WidgetIds
 polymorphicFDConfig :: FocusDelegator.Config
 polymorphicFDConfig = FocusDelegator.Config
   { FocusDelegator.startDelegatingKey = Config.polymorphicExpandKey
-  , FocusDelegator.startDelegatingDoc = "Expand polymorphic"
+  , FocusDelegator.startDelegatingDoc = E.Doc ["View", "Expand polymorphic"]
   , FocusDelegator.stopDelegatingKey = Config.polymorphicCollapseKey
-  , FocusDelegator.stopDelegatingDoc = "Collapse polymorphic"
+  , FocusDelegator.stopDelegatingDoc = E.Doc ["View", "Collapse polymorphic"]
   }
 
 make ::

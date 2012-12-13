@@ -208,50 +208,50 @@ eventMap ::
   Widget.EventHandlers ((,) String)
 eventMap cursor str displayStr myId =
   mconcat . concat $ [
-    [ keys "Move left" [specialKey E.KeyLeft] $
+    [ keys (moveDoc ["left"]) [specialKey E.KeyLeft] $
       moveRelative (-1)
     | cursor > 0 ],
 
-    [ keys "Move right" [specialKey E.KeyRight] $
+    [ keys (moveDoc ["right"]) [specialKey E.KeyRight] $
       moveRelative 1
     | cursor < textLength ],
 
-    [ keys "Move word left" [ctrlSpecialKey E.KeyLeft]
+    [ keys (moveDoc ["word", "left"]) [ctrlSpecialKey E.KeyLeft]
       backMoveWord
     | cursor > 0 ],
 
-    [ keys "Move word right" [ctrlSpecialKey E.KeyRight] moveWord
+    [ keys (moveDoc ["word", "right"]) [ctrlSpecialKey E.KeyRight] moveWord
     | cursor < textLength ],
 
-    [ keys "Move up" [specialKey E.KeyUp] $
+    [ keys (moveDoc ["up"]) [specialKey E.KeyUp] $
       moveRelative (- cursorX - 1 - length (drop cursorX prevLine))
     | cursorY > 0 ],
 
-    [ keys "Move down" [specialKey E.KeyDown] $
+    [ keys (moveDoc ["down"]) [specialKey E.KeyDown] $
       moveRelative (length curLineAfter + 1 + min cursorX (length nextLine))
     | cursorY < lineCount - 1 ],
 
-    [ keys "Move to beginning of line" homeKeys $
+    [ keys (moveDoc ["beginning of line"]) homeKeys $
       moveRelative (-cursorX)
     | cursorX > 0 ],
 
-    [ keys "Move to end of line" endKeys $
+    [ keys (moveDoc ["end of line"]) endKeys $
       moveRelative (length curLineAfter)
     | not . null $ curLineAfter ],
 
-    [ keys "Move to beginning of text" homeKeys $
+    [ keys (moveDoc ["beginning of text"]) homeKeys $
       moveAbsolute 0
     | cursorX == 0 && cursor > 0 ],
 
-    [ keys "Move to end of text" endKeys $
+    [ keys (moveDoc ["end of text"]) endKeys $
       moveAbsolute textLength
     | null curLineAfter && cursor < textLength ],
 
-    [ keys "Delete backwards" [specialKey E.KeyBackspace] $
+    [ keys (deleteDoc ["backwards"]) [specialKey E.KeyBackspace] $
       backDelete 1
     | cursor > 0 ],
 
-    [ keys "Delete word backwards" [ctrlCharKey 'w']
+    [ keys (deleteDoc ["word", "backwards"]) [ctrlCharKey 'w']
       backDeleteWord
     | cursor > 0 ],
 
@@ -261,41 +261,45 @@ eventMap cursor str displayStr myId =
 
     in
 
-    [ keys "Swap letters" [ctrlCharKey 't']
+    [ keys (editDoc ["Swap letters"]) [ctrlCharKey 't']
       swapLetters
     | cursor > 0 && textLength >= 2 ],
 
-    [ keys "Delete forward" [specialKey E.KeyDel] $
+    [ keys (deleteDoc ["forward"]) [specialKey E.KeyDel] $
       delete 1
     | cursor < textLength ],
 
-    [ keys "Delete word forward" [altCharKey 'd']
+    [ keys (deleteDoc ["word", "forward"]) [altCharKey 'd']
       deleteWord
     | cursor < textLength ],
 
-    [ keys "Delete rest of line" [ctrlCharKey 'k'] $
+    [ keys (deleteDoc ["till", "end of line"]) [ctrlCharKey 'k'] $
       delete (length curLineAfter)
     | not . null $ curLineAfter ],
 
-    [ keys "Delete newline" [ctrlCharKey 'k'] $
+    [ keys (deleteDoc ["newline"]) [ctrlCharKey 'k'] $
       delete 1
     | null curLineAfter && cursor < textLength ],
 
-    [ keys "Delete till beginning of line" [ctrlCharKey 'u'] $
+    [ keys (deleteDoc ["till", "beginning of line"]) [ctrlCharKey 'u'] $
       backDelete (length curLineBefore)
     | not . null $ curLineBefore ],
 
     [ E.filterChars (`notElem` " \n") .
-      E.simpleChars "Character" "Insert character" $
+      E.simpleChars "Character" (insertDoc ["character"]) $
       insert . (: [])
     ],
 
-    [ keys "Insert Newline" [specialKey E.KeyEnter] (insert "\n") ],
+    [ keys (insertDoc ["Newline"]) [specialKey E.KeyEnter] (insert "\n") ],
 
-    [ keys "Insert Space" [E.ModKey E.noMods E.KeySpace] (insert " ") ]
+    [ keys (insertDoc ["Space"]) [E.ModKey E.noMods E.KeySpace] (insert " ") ]
 
     ]
   where
+    editDoc = E.Doc . ("Edit" :)
+    deleteDoc = editDoc . ("Delete" :)
+    insertDoc = editDoc . ("Insert" :)
+    moveDoc = E.Doc . ("Navigate" :) . ("Move" :)
     splitLines = splitWhen ((== '\n') . snd)
     linesBefore = reverse (splitLines before)
     linesAfter = splitLines after

@@ -9,6 +9,7 @@ import Graphics.UI.Bottle.EventMap (EventMap)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Lens as Lens
 import qualified Data.ByteString.Char8 as SBS8
+import qualified Data.List as List
 import qualified Data.Tuple as Tuple
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -34,10 +35,10 @@ make eventMap style animId =
     textView uniq str =
       TextView.make style str $
       Anim.joinId animId (map SBS8.pack [str, uniq])
-    toRow (eventDoc, eventKeys) =
+    toRow (E.Doc eventDocs, eventKeys) =
       [ GridView.makeAlign 0
         [concatMap ((: [Spacer.makeHorizontal 8]) . textView "key") eventKeys]
-      , textView "doc" eventDoc]
+      , textView "doc" (List.intercalate "." eventDocs)]
 
 addHelp :: Widget.Size -> TextView.Style -> Widget f -> Widget f
 addHelp size style w =
@@ -67,5 +68,5 @@ makeToggledHelpAdder overlayDocKeys = do
     showingHelp <- readIORef showingHelpVar
     return $
       if showingHelp
-      then addHelp size style $ addToggleEventMap "Hide Key Bindings" widget
-      else addToggleEventMap "Show Key Bindings" widget
+      then addHelp size style $ addToggleEventMap (E.Doc ["Help", "Key Bindings", "Hide"]) widget
+      else addToggleEventMap (E.Doc ["Help", "Key Bindings", "Show"]) widget

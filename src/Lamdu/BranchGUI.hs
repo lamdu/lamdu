@@ -36,26 +36,26 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 branchNameFDConfig :: FocusDelegator.Config
 branchNameFDConfig = FocusDelegator.Config
   { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyF2
-  , FocusDelegator.startDelegatingDoc = "Rename branch"
+  , FocusDelegator.startDelegatingDoc = E.Doc ["Branches", "Rename"]
   , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEnter
-  , FocusDelegator.stopDelegatingDoc = "Stop renaming"
+  , FocusDelegator.stopDelegatingDoc = E.Doc ["Branches", "Done renaming"]
   }
 
 branchSelectionFocusDelegatorConfig :: FocusDelegator.Config
 branchSelectionFocusDelegatorConfig = FocusDelegator.Config
   { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyEnter
-  , FocusDelegator.startDelegatingDoc = "Enter select branches mode"
+  , FocusDelegator.startDelegatingDoc = E.Doc ["Branches", "Select"]
   , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEnter
-  , FocusDelegator.stopDelegatingDoc = "Select branch"
+  , FocusDelegator.stopDelegatingDoc = E.Doc ["Branches", "Choose selected"]
   }
 
 undoEventMap :: Functor m => Maybe (m Widget.Id) -> Widget.EventHandlers m
 undoEventMap =
-  maybe mempty (Widget.keysEventMapMovesCursor Config.undoKeys "Undo")
+  maybe mempty (Widget.keysEventMapMovesCursor Config.undoKeys (E.Doc ["Edit", "Undo"]))
 
 redoEventMap :: Functor m => Maybe (m Widget.Id) -> Widget.EventHandlers m
 redoEventMap =
-  maybe mempty (Widget.keysEventMapMovesCursor Config.redoKeys "Redo")
+  maybe mempty (Widget.keysEventMapMovesCursor Config.redoKeys (E.Doc ["Edit", "Redo"]))
 
 branchNameProp ::
   MonadA m => Branch (m ()) -> Transaction m (Transaction.Property m String)
@@ -87,13 +87,14 @@ make transaction size actions widget = do
     Edges.makeVertical size widget branchSelector
   where
     eventMap = mconcat
-      [ Widget.keysEventMap Config.quitKeys "Quit" (error "Quit")
-      , Widget.keysEventMapMovesCursor Config.makeBranchKeys "New Branch" .
+    -- TODO: Get Quit out of here
+      [ Widget.keysEventMap Config.quitKeys (E.Doc ["Application", "Quit"]) (error "Quit")
+      , Widget.keysEventMapMovesCursor Config.makeBranchKeys (E.Doc ["Branches", "New"]) .
         fmap
         (FocusDelegator.delegatingId .
          WidgetIds.fromGuid . Branch.guid) $ makeBranch actions
       , Widget.keysEventMapMovesCursor Config.jumpToBranchesKeys
-        "Select current branch" $ pure currentBranchWidgetId
+        (E.Doc ["Branches", "Select"]) $ pure currentBranchWidgetId
       , undoEventMap $ mUndo actions
       , redoEventMap $ mRedo actions
       ]
@@ -119,7 +120,7 @@ make transaction size actions widget = do
     delBranchEventMap
       | null (drop 1 (branches actions)) = mempty
       | otherwise =
-        Widget.keysEventMapMovesCursor Config.delBranchKeys "Delete Branch" .
+        Widget.keysEventMapMovesCursor Config.delBranchKeys (E.Doc ["Branches", "Delete"]) .
         fmap (WidgetIds.fromGuid . Branch.guid) .
         deleteBranch actions $ currentBranch actions
 
