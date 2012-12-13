@@ -3,7 +3,7 @@ module Main(main) where
 
 import Control.Arrow (second)
 import Control.Lens ((^.))
-import Control.Monad (unless)
+import Control.Monad (when, unless)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, runStateT, mapStateT)
 import Data.ByteString (unpack)
@@ -52,15 +52,35 @@ import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 import qualified System.Directory as Directory
 
+data ParsedOpts = ParsedOpts
+  { shouldDeleteDB :: Bool
+  , mFontPath :: Maybe FilePath
+  }
+
+parseArgs :: [String] -> Either String ParsedOpts
+parseArgs =
+  go (ParsedOpts False Nothing)
+  where
+    go args [] = return args
+    go (ParsedOpts _ mPath) ("-deletedb" : args) =
+      go (ParsedOpts True mPath) args
+    go _ ("-font" : []) = failUsage "-font must be followed by a font name"
+    go (ParsedOpts delDB mPath) ("-font" : fn : args) =
+      case mPath of
+      Nothing -> go (ParsedOpts delDB (Just fn)) args
+      Just _ -> failUsage "Duplicate -font arguments"
+    go _ (arg : _) = failUsage $ "Unexpected arg: " ++ show arg
+    failUsage msg = fail $ unlines [ msg, usage ]
+    usage = "Usage: lamdu [-deletedb] [-font <filename>]"
+
 main :: IO ()
 main = do
   args <- getArgs
   home <- Directory.getHomeDirectory
   let lamduDir = home </> ".lamdu"
-  case args of
-    ["-deletedb"] -> Directory.removeDirectoryRecursive lamduDir
-    [] -> return ()
-    _ -> fail "Usage: lamdu [-deletedb]"
+  opts <- either fail return $ parseArgs args
+  when (shouldDeleteDB opts) $
+    Directory.removeDirectoryRecursive lamduDir
   Directory.createDirectoryIfMissing False lamduDir
   -- GLFW changes the directory from start directory, at least on macs.
   startDir <- Directory.getCurrentDirectory
@@ -78,9 +98,12 @@ main = do
         unless exists . ioError . userError $ path ++ " does not exist!"
         Draw.openFont path
     font <-
-      (getFont =<< getDataFileName "fonts/DejaVuSans.ttf")
-      `E.catch` \(E.SomeException _) ->
-      getFont $ startDir </> "fonts/DejaVuSans.ttf"
+      case mFontPath opts of
+      Nothing ->
+        (getFont =<< getDataFileName "fonts/DejaVuSans.ttf")
+        `E.catch` \(E.SomeException _) ->
+        getFont $ startDir </> "fonts/DejaVuSans.ttf"
+      Just path -> getFont path
     Db.withDb (lamduDir </> "codeedit.db") $ runDb font
 
 rjust :: Int -> a -> [a] -> [a]
