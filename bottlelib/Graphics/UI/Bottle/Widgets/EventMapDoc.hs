@@ -36,9 +36,10 @@ make eventMap style animId =
       TextView.make style str $
       Anim.joinId animId (map SBS8.pack [str, uniq])
     toRow (E.Doc eventDocs, eventKeys) =
-      [ GridView.makeAlign 0
+      [ textView "doc" (List.intercalate "." eventDocs)
+      , GridView.makeAlign 0
         [concatMap ((: [Spacer.makeHorizontal 8]) . textView "key") eventKeys]
-      , textView "doc" (List.intercalate "." eventDocs)]
+      ]
 
 addHelp :: Widget.Size -> TextView.Style -> Widget f -> Widget f
 addHelp size style w =
