@@ -3,6 +3,8 @@ module Graphics.UI.Bottle.Widgets.GridView
   ( make, makeAlign, makeCentered
   , makeGeneric
   , Alignment
+  , verticalAlign, vertical
+  , horizontalAlign, horizontal
   ) where
 
 import Control.Arrow (first, second)
@@ -63,3 +65,15 @@ makeAlign alignment = make . (map . map . first) (flip (,) alignment)
 
 makeCentered :: [[(Anim.Size, Anim.Frame)]] -> (Anim.Size, Anim.Frame)
 makeCentered = makeAlign 0.5
+
+vertical :: [((Anim.Size, Alignment), Anim.Frame)] -> (Anim.Size, Anim.Frame)
+vertical = make . map (:[])
+
+horizontal :: [((Anim.Size, Alignment), Anim.Frame)] -> (Anim.Size, Anim.Frame)
+horizontal = make . (:[])
+
+verticalAlign :: Alignment -> [(Anim.Size, Anim.Frame)] -> (Anim.Size, Anim.Frame)
+verticalAlign align = makeAlign align . map (:[])
+
+horizontalAlign :: Alignment -> [(Anim.Size, Anim.Frame)] -> (Anim.Size, Anim.Frame)
+horizontalAlign align = makeAlign align . (:[])

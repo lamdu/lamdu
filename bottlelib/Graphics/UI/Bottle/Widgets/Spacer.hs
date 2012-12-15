@@ -2,7 +2,7 @@
 module Graphics.UI.Bottle.Widgets.Spacer
   ( make
   , makeWidget
-  , makeHorizontal
+  , makeHorizontal, makeVertical
   , makeHorizontalWidget
   , makeHorizLine
   , empty
@@ -27,6 +27,9 @@ makeWidget = widget . make
 
 makeHorizontal :: Anim.R -> (Anim.Size, Anim.Frame)
 makeHorizontal width = make $ Vector2 width 0
+
+makeVertical :: Anim.R -> (Anim.Size, Anim.Frame)
+makeVertical height = make $ Vector2 0 height
 
 makeHorizontalWidget :: Widget.R -> Widget f
 makeHorizontalWidget = widget . makeHorizontal

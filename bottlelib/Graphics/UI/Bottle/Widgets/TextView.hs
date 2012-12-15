@@ -2,6 +2,7 @@
 module Graphics.UI.Bottle.Widgets.TextView
   ( Style(..), styleColor, styleFont, styleFontSize
   , make, makeWidget
+  , label, augment
   , drawTextAsSingleLetters, drawTextAsLines
   , letterRects
   ) where
@@ -114,3 +115,6 @@ make style text animId = (textSize, frame animId)
 
 makeWidget :: Style -> String -> AnimId -> Widget a
 makeWidget style text = uncurry Widget.liftView . make style text
+
+label :: Style -> AnimId -> String -> (Size, Anim.Frame)
+label style animId text = make style text $ augment animId text
