@@ -299,7 +299,7 @@ eventMap cursor str displayStr myId =
     editDoc = E.Doc . ("Edit" :)
     deleteDoc = editDoc . ("Delete" :)
     insertDoc = editDoc . ("Insert" :)
-    moveDoc = E.Doc . ("Navigate" :) . ("Move" :)
+    moveDoc = E.Doc . ("Navigation" :) . ("Move" :)
     splitLines = splitWhen ((== '\n') . snd)
     linesBefore = reverse (splitLines before)
     linesAfter = splitLines after
