@@ -10,6 +10,7 @@ import Data.Traversable (traverse)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Animation (AnimId, R)
 import Graphics.UI.Bottle.EventMap (EventMap)
+import Graphics.UI.Bottle.View (View)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
@@ -18,6 +19,7 @@ import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
@@ -43,8 +45,6 @@ groupTree = foldr step []
           | at == bt -> Branch bt (step (as, l) bs) : rest
         _ -> Branch at (step (as, l) []) : b
 
-type View = (Anim.Size, Anim.Frame)
-
 -- We also rely on Map.toList returning a sorted list
 groupInputDocs :: [([E.Subtitle], E.InputDoc)] -> [([E.Subtitle], [E.InputDoc])]
 groupInputDocs = Map.toList . Map.fromListWith (++) . (map . Lens.over Lens._2) (:[])
@@ -54,7 +54,7 @@ addAnimIds animId (Leaf b) = Leaf (animId ++ ["leaf"], b)
 addAnimIds animId (Branch a cs) =
   Branch (tAnimId, a) $ map (addAnimIds tAnimId) cs
   where
-    tAnimId = TextView.augment animId a
+    tAnimId = View.augmentAnimId animId a
 
 shortcutKeyDocColor :: Draw.Color
 shortcutKeyDocColor = Draw.Color 0.1 0.9 0.9 1

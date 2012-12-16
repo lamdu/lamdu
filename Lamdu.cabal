@@ -29,6 +29,7 @@ Library
                        Graphics.UI.Bottle.EventMap,
                        Graphics.UI.Bottle.MainLoop,
                        Graphics.UI.Bottle.Rect,
+                       Graphics.UI.Bottle.View,
                        Graphics.UI.Bottle.Widget,
                        Graphics.UI.Bottle.WidgetId,
                        Graphics.UI.Bottle.Widgets.StdKeys,

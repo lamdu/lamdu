@@ -2,7 +2,7 @@
 module Graphics.UI.Bottle.Widgets.TextView
   ( Style(..), styleColor, styleFont, styleFontSize
   , make, makeWidget
-  , label, augment
+  , label
   , drawTextAsSingleLetters, drawTextAsLines
   , letterRects
   ) where
@@ -20,12 +20,12 @@ import Graphics.UI.Bottle.Rect (Rect(Rect))
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
-import qualified Data.ByteString.Char8 as SBS8
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Rect as Rect
+import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
 
 data Style = Style {
@@ -35,9 +35,6 @@ data Style = Style {
   }
 
 LensTH.makeLenses ''Style
-
-augment :: Show a => AnimId -> a -> AnimId
-augment animId = Anim.joinId animId . (:[]) . SBS8.pack . show
 
 fontRender :: Style -> String -> (Draw.Image (), Size)
 fontRender (Style color font ptSize) =
@@ -73,7 +70,7 @@ nestedFrame (i, (image, size)) =
   (draw, size)
   where
     draw animId =
-      Anim.simpleFrameDownscale (augment animId i) size image
+      Anim.simpleFrameDownscale (View.augmentAnimId animId i) size image
 
 drawTextAsSingleLetters ::
   Style -> String -> (AnimId -> Anim.Frame, Size)
@@ -117,4 +114,4 @@ makeWidget :: Style -> String -> AnimId -> Widget a
 makeWidget style text = uncurry Widget.liftView . make style text
 
 label :: Style -> AnimId -> String -> (Size, Anim.Frame)
-label style animId text = make style text $ augment animId text
+label style animId text = make style text $ View.augmentAnimId animId text

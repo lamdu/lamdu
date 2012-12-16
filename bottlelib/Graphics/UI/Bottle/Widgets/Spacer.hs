@@ -11,24 +11,25 @@ module Graphics.UI.Bottle.Widgets.Spacer
 import Control.Monad (void)
 import Data.Monoid (mempty)
 import Data.Vector.Vector2 (Vector2(..))
+import Graphics.UI.Bottle.View (View)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
 
-widget :: (Anim.Size, Anim.Frame) -> Widget f
+widget :: View -> Widget f
 widget = uncurry Widget.liftView
 
-make :: Anim.Size -> (Anim.Size, Anim.Frame)
+make :: Anim.Size -> View
 make size = (size, mempty)
 
 makeWidget :: Widget.Size -> Widget f
 makeWidget = widget . make
 
-makeHorizontal :: Anim.R -> (Anim.Size, Anim.Frame)
+makeHorizontal :: Anim.R -> View
 makeHorizontal width = make $ Vector2 width 0
 
-makeVertical :: Anim.R -> (Anim.Size, Anim.Frame)
+makeVertical :: Anim.R -> View
 makeVertical height = make $ Vector2 0 height
 
 makeHorizontalWidget :: Widget.R -> Widget f

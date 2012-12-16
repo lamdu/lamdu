@@ -12,6 +12,7 @@ import Data.List (transpose)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Rect (Rect(..))
+import Graphics.UI.Bottle.View (View)
 import qualified Control.Lens as Lens
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -57,23 +58,23 @@ makeGeneric translate rows =
     items = (map . map) snd rows
     place aRects = (zipWith . zipWith) (uncurry translate) aRects items
 
-make :: [[((Anim.Size, Alignment), Anim.Frame)]] -> (Anim.Size, Anim.Frame)
+make :: [[((Anim.Size, Alignment), Anim.Frame)]] -> View
 make = second (mconcat . concat) . makeGeneric (const (Anim.translate . Lens.view Rect.topLeft))
 
-makeAlign :: Alignment -> [[(Anim.Size, Anim.Frame)]] -> (Anim.Size, Anim.Frame)
+makeAlign :: Alignment -> [[View]] -> View
 makeAlign alignment = make . (map . map . first) (flip (,) alignment)
 
-makeCentered :: [[(Anim.Size, Anim.Frame)]] -> (Anim.Size, Anim.Frame)
+makeCentered :: [[View]] -> View
 makeCentered = makeAlign 0.5
 
-vertical :: [((Anim.Size, Alignment), Anim.Frame)] -> (Anim.Size, Anim.Frame)
+vertical :: [((Anim.Size, Alignment), Anim.Frame)] -> View
 vertical = make . map (:[])
 
-horizontal :: [((Anim.Size, Alignment), Anim.Frame)] -> (Anim.Size, Anim.Frame)
+horizontal :: [((Anim.Size, Alignment), Anim.Frame)] -> View
 horizontal = make . (:[])
 
-verticalAlign :: Alignment -> [(Anim.Size, Anim.Frame)] -> (Anim.Size, Anim.Frame)
+verticalAlign :: Alignment -> [View] -> View
 verticalAlign align = makeAlign align . map (:[])
 
-horizontalAlign :: Alignment -> [(Anim.Size, Anim.Frame)] -> (Anim.Size, Anim.Frame)
+horizontalAlign :: Alignment -> [View] -> View
 horizontalAlign align = makeAlign align . (:[])
