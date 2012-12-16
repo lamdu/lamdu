@@ -2,6 +2,7 @@
 module Lamdu.CodeEdit.ExpressionEdit.PolymorphicEdit(make) where
 
 import Control.MonadA (MonadA)
+import Data.Store.IRef (Tag)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, Collapser(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -25,7 +26,7 @@ polymorphicFDConfig = FocusDelegator.Config
   }
 
 make ::
-  MonadA m => Sugar.Polymorphic (m ()) (Sugar.Expression m) ->
+  MonadA m => Sugar.Polymorphic (Tag m) (Sugar.Expression m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make poly =
   ExpressionGui.makeCollapser polymorphicFDConfig f

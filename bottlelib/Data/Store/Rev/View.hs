@@ -5,7 +5,7 @@ where
 
 import Control.Monad ((<=<))
 import Control.MonadA (MonadA)
-import Data.Store.IRef (IRef)
+import Data.Store.IRef (IRef, Tag)
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Change(Change(..))
 import Data.Store.Rev.Version (Version)
@@ -25,10 +25,10 @@ import qualified Data.Store.Transaction as Transaction
 -- | "current-version" values. This serves as a "cache" which is
 -- | redundant to the lists of changes stored in the version graph.
 
-lookupBS :: MonadA m => View (m ()) -> Change.Key -> Transaction m (Maybe Change.Value)
+lookupBS :: MonadA m => View (Tag m) -> Change.Key -> Transaction m (Maybe Change.Value)
 lookupBS view = Transaction.lookupBS . makeViewKey view
 
-setBranch :: MonadA m => View (m ()) -> Branch (m ()) -> Transaction m ()
+setBranch :: MonadA m => View (Tag m) -> Branch (Tag m) -> Transaction m ()
 setBranch view@(View viewDataIRef) newBranch@(Branch newBranchDataIRef) = do
   branchRef <-
     fmap (Property.composeLens vdBranch) $
@@ -43,13 +43,13 @@ setBranch view@(View viewDataIRef) newBranch@(Branch newBranchDataIRef) = do
 
 modifyViews
   :: MonadA m
-  => IRef (m ()) (BranchData (m ()))
-  -> ([View (m ())] -> [View (m ())]) -> Transaction m ()
+  => IRef (Tag m) (BranchData (Tag m))
+  -> ([View (Tag m)] -> [View (Tag m)]) -> Transaction m ()
 modifyViews iref f = do
   prop <- Transaction.fromIRef iref
   Property.pureModify (Property.composeLens brViews prop) f
 
-new :: MonadA m => Branch (m ()) -> Transaction m (View (m ()))
+new :: MonadA m => Branch (Tag m) -> Transaction m (View (Tag m))
 new br@(Branch branchDataIRef) = do
   view <- View `fmap` Transaction.newIRef (ViewData br)
   version <- Branch.curVersion br
@@ -61,16 +61,16 @@ new br@(Branch branchDataIRef) = do
       maybe (return ()) (applyHistory view <=< Version.versionData) . Version.parent $ versionData
       applyChangesToView view Change.newValue $ Version.changes versionData
 
-curVersion :: MonadA m => View (m ()) -> Transaction m (Version (m ()))
+curVersion :: MonadA m => View (Tag m) -> Transaction m (Version (Tag m))
 curVersion = Branch.curVersion <=< branch
 
-move :: MonadA m => View (m ()) -> Version (m ()) -> Transaction m ()
+move :: MonadA m => View (Tag m) -> Version (Tag m) -> Transaction m ()
 move view version = (`Branch.move` version) =<< branch view
 
-branch :: MonadA m => View (m ()) -> Transaction m (Branch (m ()))
+branch :: MonadA m => View (Tag m) -> Transaction m (Branch (Tag m))
 branch (View iref) = fmap (Lens.view vdBranch) . Transaction.readIRef $ iref
 
-transaction :: MonadA m => View (m ()) -> [(Change.Key, Maybe Change.Value)] -> Transaction m ()
+transaction :: MonadA m => View (Tag m) -> [(Change.Key, Maybe Change.Value)] -> Transaction m ()
 transaction _    [] = return ()
 transaction view changes = do
   b <- branch view
@@ -80,7 +80,7 @@ transaction view changes = do
       flip (Change key) value `fmap` lookupBS view key
 
 -- You get a store tagged however you like...
-store :: MonadA m => View (m ()) -> Store (Transaction m)
+store :: MonadA m => View (Tag m) -> Store (Transaction m)
 store view = Store {
   storeNewKey = Transaction.newKey,
   storeLookup = lookupBS view,

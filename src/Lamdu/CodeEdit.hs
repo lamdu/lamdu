@@ -12,6 +12,7 @@ import Data.List.Utils (enumerate, insertAt, removeAt)
 import Data.Maybe (listToMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
+import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -60,7 +61,7 @@ makeNewDefinitionAction = do
     DataOps.savePreJumpPosition curCursor
     return . DefinitionEdit.diveToNameEdit $ WidgetIds.fromIRef newDefI
 
-loadConvertDefI :: DefI (ViewM ()) -> CT ViewM (Sugar.Definition ViewM)
+loadConvertDefI :: DefI (Tag ViewM) -> CT ViewM (Sugar.Definition ViewM)
 loadConvertDefI defI = do
   sugarConfig <- lift $ Anchors.getP Anchors.sugarConfig
   Sugar.loadConvertDefI sugarConfig defI

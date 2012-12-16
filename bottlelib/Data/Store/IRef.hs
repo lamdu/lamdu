@@ -1,21 +1,33 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
+{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 
 module Data.Store.IRef
-  (IRef, guid, unsafeFromGuid, anchor) where
+  ( IRef, guid, unsafeFromGuid
+  , anchor
+  , Tagged(..), Tag
+  ) where
 
-import Control.Applicative ((<$>))
+import Control.Applicative (pure)
 import Data.Binary (Binary(..))
+import Data.Derive.Binary (makeBinary)
+import Data.DeriveTH (derive)
 import Data.Store.Guid (Guid)
 import Data.Typeable (Typeable)
 import qualified Data.Store.Guid as Guid
+
+data Tagged t = Tagged
+  deriving (Eq, Ord, Read, Show, Typeable)
+
+instance Binary (Tagged t) where
+  get = pure Tagged
+  put Tagged = pure ()
+
+type Tag m = Tagged (m ())
 
 newtype IRef t a = IRef {
   guid :: Guid
   } deriving (Eq, Ord, Read, Show, Typeable)
 
-instance Binary (IRef t a) where
-  get = IRef <$> get
-  put (IRef x) = put x
+derive makeBinary ''IRef
 
 -- Wrapper modules need to create an IRef
 unsafeFromGuid :: Guid -> IRef t a

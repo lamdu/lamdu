@@ -27,6 +27,7 @@ import Control.MonadA (MonadA)
 import Data.Cache (Cache)
 import Data.Hashable (hash)
 import Data.Store.Guid (Guid)
+import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Data.Typeable (Typeable)
 import Lamdu.Data.IRef (DefI)
@@ -96,7 +97,7 @@ resultFromInferred expr =
 
 -- {{{{{{{{{{{{{{{{{
 -- TODO: These don't belong here
-loader :: MonadA m => Infer.Loader (DefI (m ())) (T m)
+loader :: MonadA m => Infer.Loader (DefI (Tag m)) (T m)
 loader =
   Infer.Loader
   (fmap void . DataIRef.readExpression . Lens.view Data.defType <=<
@@ -104,8 +105,8 @@ loader =
 
 inferMaybe ::
   MonadA m =>
-  Data.Expression (DefI (m ())) a -> Infer.Context (DefI (m ())) -> Infer.InferNode (DefI (m ())) ->
-  T m (Maybe (Data.Expression (DefI (m ())) (Infer.Inferred (DefI (m ())), a)))
+  Data.Expression (DefI (Tag m)) a -> Infer.Context (DefI (Tag m)) -> Infer.InferNode (DefI (Tag m)) ->
+  T m (Maybe (Data.Expression (DefI (Tag m)) (Infer.Inferred (DefI (Tag m)), a)))
 inferMaybe expr inferContext inferPoint = do
   loaded <- Infer.load loader Nothing expr
   return . fmap fst . (`runStateT` inferContext) $
@@ -114,22 +115,22 @@ inferMaybe expr inferContext inferPoint = do
 
 inferMaybe_ ::
   MonadA m =>
-  Data.Expression (DefI (m ())) () -> Infer.Context (DefI (m ())) -> Infer.InferNode (DefI (m ())) ->
-  T m (Maybe (Data.Expression (DefI (m ())) (Infer.Inferred (DefI (m ())))))
+  Data.Expression (DefI (Tag m)) () -> Infer.Context (DefI (Tag m)) -> Infer.InferNode (DefI (Tag m)) ->
+  T m (Maybe (Data.Expression (DefI (Tag m)) (Infer.Inferred (DefI (Tag m)))))
 inferMaybe_ expr inferContext inferPoint =
   (fmap . fmap . fmap) fst $ inferMaybe expr inferContext inferPoint
 -- }}}}}}}}}}}}}}}}}
 
 inferWithVariables ::
   (RandomGen g, MonadA m) => g ->
-  Infer.Loaded (DefI (m ())) a -> Infer.Context (DefI (m ())) -> Infer.InferNode (DefI (m ())) ->
+  Infer.Loaded (DefI (Tag m)) a -> Infer.Context (DefI (Tag m)) -> Infer.InferNode (DefI (Tag m)) ->
   T m
   ( ( Bool
-    , Infer.Context (DefI (m ()))
-    , Data.Expression (DefI (m ())) (InferredWithConflicts (DefI (m ())), a)
+    , Infer.Context (DefI (Tag m))
+    , Data.Expression (DefI (Tag m)) (InferredWithConflicts (DefI (Tag m)), a)
     )
-  , ( Infer.Context (DefI (m ()))
-    , Data.Expression (DefI (m ())) (InferredWithConflicts (DefI (m ())), ImplicitVariables.Payload a)
+  , ( Infer.Context (DefI (Tag m))
+    , Data.Expression (DefI (Tag m)) (InferredWithConflicts (DefI (Tag m)), ImplicitVariables.Payload a)
     )
   )
 inferWithVariables gen loaded baseInferContext node =
@@ -156,19 +157,19 @@ inferWithVariables gen loaded baseInferContext node =
 
 data InferLoadedResult m = InferLoadedResult
   { _ilrSuccess :: Bool
-  , _ilrContext :: Infer.Loaded (DefI (m ())) (Load.PropertyClosure (m ()))
-  , _ilrInferContext :: Infer.Context (DefI (m ()))
-  , _ilrExpr :: Data.Expression (DefI (m ())) (Payload (InferredWC (m ())) (Maybe (Stored m)))
+  , _ilrContext :: Infer.Loaded (DefI (Tag m)) (Load.PropertyClosure (Tag m))
+  , _ilrInferContext :: Infer.Context (DefI (Tag m))
+  , _ilrExpr :: Data.Expression (DefI (Tag m)) (Payload (InferredWC (Tag m)) (Maybe (Stored m)))
   -- Prior to adding variables
-  , _ilrBaseInferContext :: Infer.Context (DefI (m ()))
-  , _ilrBaseExpr :: Data.Expression (DefI (m ())) (Payload (InferredWC (m ())) (Stored m))
+  , _ilrBaseInferContext :: Infer.Context (DefI (Tag m))
+  , _ilrBaseExpr :: Data.Expression (DefI (Tag m)) (Payload (InferredWC (Tag m)) (Stored m))
   }
 LensTH.makeLenses ''InferLoadedResult
 
 inferLoadedExpression ::
   (RandomGen g, MonadA m, Typeable (m ())) => g ->
-  Maybe (DefI (m ())) -> Load.LoadedClosure (m ()) ->
-  (Infer.Context (DefI (m ())), Infer.InferNode (DefI (m ()))) ->
+  Maybe (DefI (Tag m)) -> Load.LoadedClosure (Tag m) ->
+  (Infer.Context (DefI (Tag m)), Infer.InferNode (DefI (Tag m))) ->
   CT m (InferLoadedResult m)
 inferLoadedExpression gen mDefI lExpr inferState = do
   loaded <- lift $ Infer.load loader mDefI lExpr

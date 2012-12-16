@@ -30,7 +30,7 @@ import Data.Map (Map)
 import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid (mempty)
 import Data.Store.Guid (Guid)
-import Data.Store.IRef (IRef)
+import Data.Store.IRef (IRef, Tag)
 import Data.Store.Rev.Change (Key, Value)
 import Prelude                          hiding (lookup)
 import qualified Data.Map as Map
@@ -110,31 +110,31 @@ readGuid guid = readGuidMb failure guid
   where
     failure = fail $ "Inexistent guid: " ++ show guid ++ " referenced"
 
-deleteIRef :: MonadA m => IRef (m ()) a -> Transaction m ()
+deleteIRef :: MonadA m => IRef (Tag m) a -> Transaction m ()
 deleteIRef = delete . IRef.guid
 
-readIRefDef :: (MonadA m, Binary a) => a -> IRef (m ()) a -> Transaction m a
+readIRefDef :: (MonadA m, Binary a) => a -> IRef (Tag m) a -> Transaction m a
 readIRefDef def = readGuidDef def . IRef.guid
 
-readIRef :: (MonadA m, Binary a) => IRef (m ()) a -> Transaction m a
+readIRef :: (MonadA m, Binary a) => IRef (Tag m) a -> Transaction m a
 readIRef = readGuid . IRef.guid
 
-irefExists :: (MonadA m, Binary a) => IRef (m ()) a -> Transaction m Bool
+irefExists :: (MonadA m, Binary a) => IRef (Tag m) a -> Transaction m Bool
 irefExists = guidExists . IRef.guid
 
-writeIRef :: (MonadA m, Binary a) => IRef (m ()) a -> a -> Transaction m ()
+writeIRef :: (MonadA m, Binary a) => IRef (Tag m) a -> a -> Transaction m ()
 writeIRef = writeGuid . IRef.guid
 
-fromIRef :: (MonadA m, Binary a) => IRef (m ()) a -> Transaction m (Property m a)
+fromIRef :: (MonadA m, Binary a) => IRef (Tag m) a -> Transaction m (Property m a)
 fromIRef iref = fmap (flip Property.Property (writeIRef iref)) $ readIRef iref
 
-fromIRefDef :: (MonadA m, Binary a) => IRef (m ()) a -> a -> Transaction m (Property m a)
+fromIRefDef :: (MonadA m, Binary a) => IRef (Tag m) a -> a -> Transaction m (Property m a)
 fromIRefDef iref def = fmap (flip Property.Property (writeIRef iref)) $ readIRefDef def iref
 
 newKey :: MonadA m => Transaction m Key
 newKey = liftInner . storeNewKey =<< liftReaderT ask
 
-newIRef :: (MonadA m, Binary a) => a -> Transaction m (IRef (m ()) a)
+newIRef :: (MonadA m, Binary a) => a -> Transaction m (IRef (Tag m) a)
 newIRef val = do
   newGuid <- newKey
   insert newGuid val
@@ -142,7 +142,7 @@ newIRef val = do
 
 newIRefWithGuid ::
   (Binary a, MonadA m) =>
-  (Guid -> Transaction m (a, b)) -> Transaction m (IRef (m ()) a, b)
+  (Guid -> Transaction m (a, b)) -> Transaction m (IRef (Tag m) a, b)
 newIRefWithGuid f = do
   newGuid <- newKey
   let iref = IRef.unsafeFromGuid newGuid
@@ -153,7 +153,7 @@ newIRefWithGuid f = do
 -- Dereference the *current* value of the IRef (Will not track new
 -- values of IRef, by-value and not by-name)
 followBy :: (MonadA m, Binary a) =>
-            (b -> IRef (m ()) a) ->
+            (b -> IRef (Tag m) a) ->
             Property m b ->
             Transaction m (Property m a)
 followBy conv = fromIRef . conv . Property.value

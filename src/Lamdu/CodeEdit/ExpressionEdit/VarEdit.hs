@@ -2,6 +2,7 @@
 module Lamdu.CodeEdit.ExpressionEdit.VarEdit(make, makeView) where
 
 import Control.MonadA (MonadA)
+import Data.Store.IRef (Tag)
 import Lamdu.Anchors (ViewM)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
@@ -26,7 +27,7 @@ colorOf (Data.ParameterRef _) = Config.parameterColor
 -- Color should be determined on the outside!
 makeView
   :: MonadA m
-  => Data.VariableRef (DataIRef.DefI (m ()))
+  => Data.VariableRef (DataIRef.DefI (Tag m))
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
 makeView var myId = ExprGuiM.withNameFromVarRef var $ \(nameSrc, name) ->
@@ -38,7 +39,7 @@ makeView var myId = ExprGuiM.withNameFromVarRef var $ \(nameSrc, name) ->
 
 make
   :: m ~ ViewM
-  => Data.VariableRef (DataIRef.DefI (m ()))
+  => Data.VariableRef (DataIRef.DefI (Tag m))
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
 make getVar myId = do

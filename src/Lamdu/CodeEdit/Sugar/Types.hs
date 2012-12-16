@@ -26,6 +26,7 @@ module Lamdu.CodeEdit.Sugar.Types
 import Control.Monad.Trans.State (StateT)
 import Data.Cache (Cache)
 import Data.Store.Guid (Guid)
+import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Lamdu.Data.IRef (DefI)
 import qualified Control.Lens.TH as LensTH
@@ -101,14 +102,14 @@ data Section expr = Section
 type HoleResult t = Data.Expression (DefI t) (Infer.Inferred (DefI t))
 
 data HoleActions m = HoleActions
-  { holePickResult :: HoleResult (m ()) -> T m (Guid, Actions m)
-  , holeConvertResult :: HoleResult (m ()) -> T m (Expression m)
+  { holePickResult :: HoleResult (Tag m) -> T m (Guid, Actions m)
+  , holeConvertResult :: HoleResult (Tag m) -> T m (Expression m)
   , holePaste :: Maybe (T m Guid)
   }
 
 data Hole m = Hole
   { holeScope :: [Guid]
-  , holeInferResults :: Data.Expression (DefI (m ())) () -> CT m [HoleResult (m ())]
+  , holeInferResults :: Data.Expression (DefI (Tag m)) () -> CT m [HoleResult (Tag m)]
   , holeMActions :: Maybe (HoleActions m)
   }
 
@@ -133,10 +134,10 @@ data ExpressionBody m expr
   | ExpressionSection { _eHasParens :: HasParens, __eSection :: Section expr }
   | ExpressionFunc    { _eHasParens :: HasParens, __eFunc :: Func m expr }
   | ExpressionPi      { _eHasParens :: HasParens, __ePi :: Pi m expr }
-  | ExpressionGetVariable { __getVariable :: Data.VariableRef (DefI (m ())) }
+  | ExpressionGetVariable { __getVariable :: Data.VariableRef (DefI (Tag m)) }
   | ExpressionHole { __eHole :: Hole m }
   | ExpressionInferred { __eInferred :: Inferred m expr }
-  | ExpressionPolymorphic { __ePolymorphic :: Polymorphic (m ()) expr }
+  | ExpressionPolymorphic { __ePolymorphic :: Polymorphic (Tag m) expr }
   | ExpressionLiteralInteger { __eLit :: LiteralInteger m }
   | ExpressionAtom { __eAtom :: String }
   deriving (Functor)

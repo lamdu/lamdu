@@ -7,7 +7,7 @@ import Control.MonadA (MonadA)
 import Data.Binary (Binary(..))
 import Data.Foldable (traverse_)
 import Data.Store.Db (Db)
-import Data.Store.IRef (IRef)
+import Data.Store.IRef (IRef, Tag)
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Version (Version)
 import Data.Store.Transaction (Transaction)
@@ -27,20 +27,20 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.IRef as DataIRef
 import qualified Lamdu.WidgetIds as WidgetIds
 
-newTodoIRef :: MonadA m => Transaction m (IRef (m ()) a)
+newTodoIRef :: MonadA m => Transaction m (IRef (Tag m) a)
 newTodoIRef = fmap IRef.unsafeFromGuid Transaction.newKey
 
 fixIRef ::
   (Binary a, MonadA m) =>
-  (IRef (m ()) a -> Transaction m a) ->
-  Transaction m (IRef (m ()) a)
+  (IRef (Tag m) a -> Transaction m a) ->
+  Transaction m (IRef (Tag m) a)
 fixIRef createOuter = do
   x <- newTodoIRef
   Transaction.writeIRef x =<< createOuter x
   return x
 
 createBuiltins ::
-  MonadA m => Transaction m ((FFI.Env (m ()), SugarConfig (m ())), [DataIRef.DefI (m ())])
+  MonadA m => Transaction m ((FFI.Env (Tag m), SugarConfig (Tag m)), [DataIRef.DefI (Tag m)])
 createBuiltins =
   Writer.runWriterT $ do
     list <- mkType . DataOps.newBuiltin "Data.List.List" =<< lift setToSet
@@ -160,7 +160,7 @@ createBuiltins =
     makeWithType builtinName typeMaker =
       tellift (DataOps.newBuiltin builtinName =<< typeMaker)
 
-newBranch :: MonadA m => String -> Version (m ()) -> Transaction m (Branch (m ()))
+newBranch :: MonadA m => String -> Version (Tag m) -> Transaction m (Branch (Tag m))
 newBranch name ver = do
   branch <- Branch.new ver
   A.setP (BranchGUI.branchNameProp branch) name

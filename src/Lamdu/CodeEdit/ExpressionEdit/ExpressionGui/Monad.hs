@@ -29,6 +29,7 @@ import Data.Binary (Binary)
 import Data.Cache (Cache)
 import Data.Map (Map)
 import Data.Store.Guid (Guid)
+import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.Anchors (ViewM)
@@ -204,7 +205,7 @@ getDefName guid = do
     else (StoredName, storedName)
 
 withNameFromVarRef ::
-  MonadA m => Data.VariableRef (DataIRef.DefI (m ())) ->
+  MonadA m => Data.VariableRef (DataIRef.DefI (Tag m)) ->
   ((NameSource, String) -> ExprGuiM m a) -> ExprGuiM m a
 withNameFromVarRef (Data.ParameterRef g) useName = withParamName g useName
 withNameFromVarRef (Data.DefinitionRef defI) useName =

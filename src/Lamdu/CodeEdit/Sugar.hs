@@ -38,6 +38,7 @@ import Data.List.Utils (sortOn)
 import Data.Maybe (listToMaybe, maybeToList)
 import Data.Monoid (Any(..))
 import Data.Store.Guid (Guid)
+import Data.Store.IRef (Tag)
 import Data.Traversable (traverse)
 import Data.Tuple (swap)
 import Lamdu.CodeEdit.Sugar.Config (SugarConfig)
@@ -70,12 +71,12 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
 
-type PayloadMM m = SugarInfer.Payload (Maybe (InferredWC (m ()))) (Maybe (Stored m))
+type PayloadMM m = SugarInfer.Payload (Maybe (InferredWC (Tag m))) (Maybe (Stored m))
 type Convertor m =
-  Data.Expression (DefI (m ())) (PayloadMM m) ->
+  Data.Expression (DefI (Tag m)) (PayloadMM m) ->
   SugarM m (Expression m)
 
-mkCutter :: m ~ Anchors.ViewM => DataIRef.Expression (m ()) -> T m Guid -> T m Guid
+mkCutter :: m ~ Anchors.ViewM => DataIRef.Expression (Tag m) -> T m Guid -> T m Guid
 mkCutter expr replaceWithHole = do
   _ <- DataOps.newClipboard expr
   replaceWithHole
@@ -115,7 +116,7 @@ toPayloadMM =
 
 mkExpression ::
   m ~ Anchors.ViewM =>
-  Data.Expression (DefI (m ())) (PayloadMM m) ->
+  Data.Expression (DefI (Tag m)) (PayloadMM m) ->
   ExpressionBody m (Expression m) -> SugarM m (Expression m)
 mkExpression result expr = do
   inferredTypesRefs <-
@@ -186,8 +187,8 @@ data IsDependent = Dependent | NonDependent
 
 convertFuncParam ::
   m ~ Anchors.ViewM =>
-  Data.Lambda (Data.Expression (DefI (m ())) (PayloadMM m)) ->
-  Data.Expression (DefI (m ())) (PayloadMM m) ->
+  Data.Lambda (Data.Expression (DefI (Tag m)) (PayloadMM m)) ->
+  Data.Expression (DefI (Tag m)) (PayloadMM m) ->
   SugarM m (IsDependent, FuncParam m (Expression m))
 convertFuncParam lam@(Data.Lambda paramGuid paramType _) expr = do
   paramTypeS <- convertExpressionI paramType
@@ -208,8 +209,8 @@ convertFuncParam lam@(Data.Lambda paramGuid paramType _) expr = do
 
 convertLambda ::
   m ~ Anchors.ViewM =>
-  Data.Lambda (Data.Expression (DefI (m ())) (PayloadMM m)) ->
-  Data.Expression (DefI (m ())) (PayloadMM m) ->
+  Data.Lambda (Data.Expression (DefI (Tag m)) (PayloadMM m)) ->
+  Data.Expression (DefI (Tag m)) (PayloadMM m) ->
   SugarM m ((IsDependent, FuncParam m (Expression m)), Expression m)
 convertLambda lam expr =
   liftA2 (,)
@@ -221,7 +222,7 @@ fAllParams (Func depParams params _) = depParams ++ params
 
 convertFunc
   :: m ~ Anchors.ViewM
-  => Data.Lambda (Data.Expression (DefI (m ())) (PayloadMM m))
+  => Data.Lambda (Data.Expression (DefI (Tag m)) (PayloadMM m))
   -> Convertor m
 convertFunc lambda exprI = do
   ((isDependent, param), sBody) <- convertLambda lambda exprI
@@ -246,7 +247,7 @@ convertFunc lambda exprI = do
 
 convertPi
   :: m ~ Anchors.ViewM
-  => Data.Lambda (Data.Expression (DefI (m ())) (PayloadMM m))
+  => Data.Lambda (Data.Expression (DefI (Tag m)) (PayloadMM m))
   -> Convertor m
 convertPi lambda exprI = do
   ((_, param), sBody) <- convertLambda lambda exprI
@@ -274,13 +275,13 @@ addApplyChildParens x =
   ExpressionPolymorphic{} -> x
   _ -> addParens x
 
-isPolymorphicFunc :: Data.Expression (DefI (m ())) (PayloadMM m) -> Bool
+isPolymorphicFunc :: Data.Expression (DefI (Tag m)) (PayloadMM m) -> Bool
 isPolymorphicFunc funcI =
   maybe False
   (Data.isDependentPi . Infer.iType . iwcInferred) $
   resultInferred funcI
 
-convertApply :: m ~ Anchors.ViewM => Data.Apply (Data.Expression (DefI (m ())) (PayloadMM m)) -> Convertor m
+convertApply :: m ~ Anchors.ViewM => Data.Apply (Data.Expression (DefI (Tag m)) (PayloadMM m)) -> Convertor m
 convertApply (Data.Apply funcI argI) exprI = do
   funcS <- convertExpressionI funcI
   argS <- convertExpressionI argI
@@ -310,7 +311,7 @@ setNextHole possibleHole =
 
 applyOnSection ::
   m ~ Anchors.ViewM =>
-  Section (Expression m) -> Data.Apply (Expression m, Data.Expression (DefI (m ())) (PayloadMM m)) -> Convertor m
+  Section (Expression m) -> Data.Apply (Expression m, Data.Expression (DefI (Tag m)) (PayloadMM m)) -> Convertor m
 applyOnSection (Section Nothing op Nothing) (Data.Apply (_, funcI) arg@(argRef, _)) exprI
   | isPolymorphicFunc funcI = do
     newOpRef <-
@@ -339,7 +340,7 @@ applyOnSection _ apply exprI = convertApplyPrefix apply exprI
 
 convertApplyPrefix ::
   m ~ Anchors.ViewM =>
-  Data.Apply (Expression m, Data.Expression (DefI (m ())) (PayloadMM m)) -> Convertor m
+  Data.Apply (Expression m, Data.Expression (DefI (Tag m)) (PayloadMM m)) -> Convertor m
 convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, _)) exprI
   | isPolymorphicFunc funcI =
     case funcRef ^. rExpressionBody of
@@ -369,7 +370,7 @@ convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, _)) exprI
           Lens.set rGuid expandedGuid $ removeInferredTypes fullExpression
         }
 
-convertGetVariable :: m ~ Anchors.ViewM => Data.VariableRef (DefI (m ())) -> Convertor m
+convertGetVariable :: m ~ Anchors.ViewM => Data.VariableRef (DefI (Tag m)) -> Convertor m
 convertGetVariable varRef exprI = do
   isInfix <- SugarM.liftTransaction $ Infix.isInfixVar varRef
   getVarExpr <-
@@ -472,8 +473,8 @@ resultComplexityScore =
 
 inferApplyForms ::
   MonadA m =>
-  (Data.Expression (DefI (m ())) () -> T m [HoleResult (m ())]) -> Data.Expression (DefI (m ())) () ->
-  (Infer.InferNode (DefI (m ())), Infer.Context (DefI (m ()))) -> T m [HoleResult (m ())]
+  (Data.Expression (DefI (Tag m)) () -> T m [HoleResult (Tag m)]) -> Data.Expression (DefI (Tag m)) () ->
+  (Infer.InferNode (DefI (Tag m)), Infer.Context (DefI (Tag m))) -> T m [HoleResult (Tag m)]
 inferApplyForms processRes expr (node, inferContext) =
   fmap (sortOn resultComplexityScore) . makeApplyForms =<<
   SugarInfer.inferMaybe_ expr inferContext node
@@ -485,8 +486,8 @@ inferApplyForms processRes expr (node, inferContext) =
 
 convertInferredHoleH ::
   m ~ Anchors.ViewM =>
-  SugarM.Context (m ()) -> Maybe (T m Guid) ->
-  InferredWC (m ()) -> Convertor m
+  SugarM.Context (Tag m) -> Maybe (T m Guid) ->
+  InferredWC (Tag m) -> Convertor m
 convertInferredHoleH
   sugarContext mPaste iwc exprI =
     chooseHoleType (iwcInferredValues iwc) plainHole inferredHole
@@ -532,7 +533,7 @@ convertInferredHoleH
       mkExpression exprI . ExpressionHole $ mkHole (fmap maybeToList . check)
 
 wrapOperatorHole ::
-  m ~ Anchors.ViewM => Data.Expression (DefI (m ())) (PayloadMM m) -> Expression m -> SugarM m (Expression m)
+  m ~ Anchors.ViewM => Data.Expression (DefI (Tag m)) (PayloadMM m) -> Expression m -> SugarM m (Expression m)
 wrapOperatorHole exprI holeExpr = do
   searchTermRef <- SugarM.liftTransaction . Anchors.assocSearchTermRef $ resultGuid exprI
   if isOperatorName $ Property.value searchTermRef
@@ -547,7 +548,7 @@ isOperatorName name =
   not (null name) && all (`elem` Config.operatorChars) name
 
 chooseHoleType ::
-  [Data.Expression (DefI (m ())) f] -> hole -> (Data.Expression (DefI (m ())) f -> hole) -> hole
+  [Data.Expression (DefI (Tag m)) f] -> hole -> (Data.Expression (DefI (Tag m)) f -> hole) -> hole
 chooseHoleType inferredVals plain inferred =
   case inferredVals of
   [Data.Expression { Data._eValue = Data.ExpressionLeaf Data.Hole }] -> plain
@@ -557,7 +558,7 @@ chooseHoleType inferredVals plain inferred =
 pickResult ::
   m ~ Anchors.ViewM =>
   Guid -> Stored m ->
-  Data.Expression (DefI (m ())) (Infer.Inferred (DefI (m ()))) ->
+  Data.Expression (DefI (Tag m)) (Infer.Inferred (DefI (Tag m))) ->
   T m (Guid, Actions m)
 pickResult defaultDest irefP =
   fmap
@@ -625,7 +626,7 @@ convertAtom name exprI =
 
 convertExpressionI ::
   m ~ Anchors.ViewM =>
-  Data.Expression (DefI (m ())) (PayloadMM m) -> SugarM m (Expression m)
+  Data.Expression (DefI (Tag m)) (PayloadMM m) -> SugarM m (Expression m)
 convertExpressionI ee =
   ($ ee) $
   case ee ^. Data.eValue of
@@ -647,7 +648,7 @@ isCompleteType =
   )
 
 convertHoleResult ::
-  m ~ Anchors.ViewM => SugarConfig (m ()) -> HoleResult (m ()) -> T m (Expression m)
+  m ~ Anchors.ViewM => SugarConfig (Tag m) -> HoleResult (Tag m) -> T m (Expression m)
 convertHoleResult config =
   SugarM.runPure config . convertExpressionI .
   Lens.over (Lens.mapped . SugarInfer.plInferred) Just .
@@ -656,18 +657,18 @@ convertHoleResult config =
 
 convertExpressionPure ::
   (m ~ Anchors.ViewM, RandomGen g) =>
-  g -> SugarConfig (m ()) -> Data.Expression (DefI (m ())) () -> T m (Expression m)
+  g -> SugarConfig (Tag m) -> Data.Expression (DefI (Tag m)) () -> T m (Expression m)
 convertExpressionPure gen config =
   SugarM.runPure config . convertExpressionI . fmap toPayloadMM .
   SugarInfer.resultFromPure gen
 
 convertDefinitionParams ::
   m ~ Anchors.ViewM =>
-  Data.Expression (DefI (m ())) (PayloadMM m) ->
+  Data.Expression (DefI (Tag m)) (PayloadMM m) ->
   SugarM m
   ( [FuncParam m (Expression m)]
   , [FuncParam m (Expression m)]
-  , Data.Expression (DefI (m ())) (PayloadMM m)
+  , Data.Expression (DefI (Tag m)) (PayloadMM m)
   )
 convertDefinitionParams expr =
   case expr ^. Data.eValue of
@@ -683,8 +684,8 @@ convertDefinitionParams expr =
 
 convertWhereItems ::
   m ~ Anchors.ViewM =>
-  Data.Expression (DefI (m ())) (PayloadMM m) ->
-  SugarM m ([WhereItem m], Data.Expression (DefI (m ())) (PayloadMM m))
+  Data.Expression (DefI (Tag m)) (PayloadMM m) ->
+  SugarM m ([WhereItem m], Data.Expression (DefI (Tag m)) (PayloadMM m))
 convertWhereItems
   topLevel@Data.Expression
   { Data._eValue = Data.ExpressionApply apply@Data.Apply
@@ -750,7 +751,7 @@ assertedGetProp msg _ = error msg
 
 convertDefinitionContent ::
   m ~ Anchors.ViewM =>
-  Data.Expression (DefI (m ())) (PayloadMM m) ->
+  Data.Expression (DefI (Tag m)) (PayloadMM m) ->
   SugarM m (DefinitionContent m)
 convertDefinitionContent expr = do
   (depParams, params, funcBody) <- convertDefinitionParams expr
@@ -766,7 +767,7 @@ convertDefinitionContent expr = do
     }
 
 loadConvertDefI ::
-  m ~ Anchors.ViewM => SugarConfig (m ()) -> DefI (m ()) ->
+  m ~ Anchors.ViewM => SugarConfig (Tag m) -> DefI (Tag m) ->
   CT m (Definition m)
 loadConvertDefI config defI =
   convertDefI =<< lift (Load.loadDefinitionClosure defI)
@@ -789,8 +790,8 @@ loadConvertDefI config defI =
 
 convertDefIBuiltin ::
   MonadA m =>
-  Data.Builtin -> DefI (m ()) ->
-  Load.LoadedClosure (m ()) -> DefinitionBody m
+  Data.Builtin -> DefI (Tag m) ->
+  Load.LoadedClosure (Tag m) -> DefinitionBody m
 convertDefIBuiltin (Data.Builtin name) defI typeIRef =
   DefinitionBodyBuiltin DefinitionBuiltin
     { biName = name
@@ -803,8 +804,8 @@ convertDefIBuiltin (Data.Builtin name) defI typeIRef =
       Data.DefinitionBuiltin . Data.Builtin
 
 convertDefIExpression ::
-  m ~ Anchors.ViewM => SugarConfig (m ()) ->
-  Load.LoadedClosure (m ()) -> DefI (m ()) -> Load.LoadedClosure (m ()) ->
+  m ~ Anchors.ViewM => SugarConfig (Tag m) ->
+  Load.LoadedClosure (Tag m) -> DefI (Tag m) -> Load.LoadedClosure (Tag m) ->
   CT m (DefinitionBody m)
 convertDefIExpression config exprLoaded defI typeI = do
   inferredLoadedResult <-

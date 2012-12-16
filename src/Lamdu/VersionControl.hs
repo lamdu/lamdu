@@ -4,6 +4,7 @@ import Control.Monad (unless)
 import Data.List (elemIndex)
 import Data.List.Utils (removeAt)
 import Data.Maybe (fromMaybe)
+import Data.Store.IRef (Tag)
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
@@ -19,15 +20,15 @@ import qualified Lamdu.Anchors as Anchors
 import qualified Lamdu.VersionControl.Actions as Actions
 
 -- TODO: Use the monad newtypes:
-type TDB = Transaction Anchors.DbM
+type TDB = Transaction DbM
 type TV = Transaction Anchors.ViewM
 
-setCurrentBranch :: View (DbM ()) -> Branch (DbM ()) -> TDB ()
+setCurrentBranch :: View (Tag DbM) -> Branch (Tag DbM) -> TDB ()
 setCurrentBranch view branch = do
   Anchors.setP Anchors.currentBranch branch
   View.setBranch view branch
 
-deleteBranch :: View (DbM ()) -> [Branch (DbM ())] -> Branch (DbM ()) -> TDB (Branch (DbM ()))
+deleteBranch :: View (Tag DbM) -> [Branch (Tag DbM)] -> Branch (Tag DbM) -> TDB (Branch (Tag DbM))
 deleteBranch view branches branch = do
   Anchors.setP Anchors.branches newBranches
   setCurrentBranch view newBranch
@@ -39,7 +40,7 @@ deleteBranch view branches branch = do
       elemIndex branch branches
     newBranches = removeAt index branches
 
-makeBranch :: View (DbM ()) -> TDB (Branch (DbM ()))
+makeBranch :: View (Tag DbM) -> TDB (Branch (Tag DbM))
 makeBranch view = do
   newBranch <- Branch.new =<< View.curVersion view
   Anchors.modP Anchors.branches (++ [newBranch])
@@ -63,7 +64,7 @@ runEvent preCursor eventHandler = do
   unless isEmpty $ Anchors.setP Anchors.redos []
   return eventResult
 
-makeActions :: Transaction Anchors.DbM (Actions (Anchors.DbM ()) (Transaction Anchors.DbM))
+makeActions :: Transaction DbM (Actions (Tag DbM) (Transaction DbM))
 makeActions = do
   view <- Anchors.getP Anchors.view
   branches <- Anchors.getP Anchors.branches

@@ -31,7 +31,7 @@ import Data.Binary (Binary(..))
 import Data.ByteString.Char8 ()
 import Data.Store.Db (Db)
 import Data.Store.Guid (Guid)
-import Data.Store.IRef (IRef)
+import Data.Store.IRef (IRef, Tag)
 import Data.Store.Property (Property(Property))
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Version(Version)
@@ -62,7 +62,7 @@ newtype ViewM a = ViewM { viewM :: T DbM a }
 runDbTransaction :: Db -> T DbM a -> IO a
 runDbTransaction db = dbM . Transaction.run (Transaction.onStoreM DbM (Db.store db))
 
-runViewTransaction :: View (DbM ()) -> T ViewM a -> T DbM a
+runViewTransaction :: View (Tag DbM) -> T ViewM a -> T DbM a
 runViewTransaction v = viewM . (Transaction.run . Transaction.onStoreM ViewM . View.store) v
 
 panesIRef :: IRef t [Pane t]
@@ -70,44 +70,44 @@ panesIRef = IRef.anchor "panes"
 
 type MkProperty m a = T m (Transaction.Property m a)
 
-panes :: MkProperty ViewM [Pane (ViewM ())]
+panes :: MkProperty ViewM [Pane (Tag ViewM)]
 panes = Transaction.fromIRef panesIRef
 
-clipboards :: MkProperty ViewM [DefI (ViewM ())]
+clipboards :: MkProperty ViewM [DefI (Tag ViewM)]
 clipboards = Transaction.fromIRef clipboardsIRef
 
-clipboardsIRef :: IRef (ViewM ()) [DefI (ViewM ())]
+clipboardsIRef :: IRef (Tag ViewM) [DefI (Tag ViewM)]
 clipboardsIRef = IRef.anchor "clipboard"
 
-branchesIRef :: IRef (DbM ()) [Branch (DbM ())]
+branchesIRef :: IRef (Tag DbM) [Branch (Tag DbM)]
 branchesIRef = IRef.anchor "branches"
 
-branches :: MkProperty DbM [Branch (DbM ())]
+branches :: MkProperty DbM [Branch (Tag DbM)]
 branches = Transaction.fromIRef branchesIRef
 
-currentBranch :: MkProperty DbM (Branch (DbM ()))
+currentBranch :: MkProperty DbM (Branch (Tag DbM))
 currentBranch = Transaction.fromIRef currentBranchIRef
 
-currentBranchIRef :: IRef (DbM ()) (Branch (DbM ()))
+currentBranchIRef :: IRef (Tag DbM) (Branch (Tag DbM))
 currentBranchIRef = IRef.anchor "currentBranch"
 
 -- TODO: This should be an index
-globals :: MkProperty ViewM [DataIRef.DefI (ViewM ())]
+globals :: MkProperty ViewM [DataIRef.DefI (Tag ViewM)]
 globals = Transaction.fromIRef globalsIRef
 
-globalsIRef :: IRef (ViewM ()) [DataIRef.DefI (ViewM ())]
+globalsIRef :: IRef (Tag ViewM) [DataIRef.DefI (Tag ViewM)]
 globalsIRef = IRef.anchor "globals"
 
-sugarConfig :: MkProperty ViewM (SugarConfig (ViewM ()))
+sugarConfig :: MkProperty ViewM (SugarConfig (Tag ViewM))
 sugarConfig = Transaction.fromIRef sugarConfigIRef
 
-sugarConfigIRef :: IRef (ViewM ()) (SugarConfig (ViewM ()))
+sugarConfigIRef :: IRef (Tag ViewM) (SugarConfig (Tag ViewM))
 sugarConfigIRef = IRef.anchor "sugarConfig"
 
-ffiEnv :: MkProperty ViewM (FFI.Env (ViewM ()))
+ffiEnv :: MkProperty ViewM (FFI.Env (Tag ViewM))
 ffiEnv = Transaction.fromIRef ffiEnvIRef
 
-ffiEnvIRef :: IRef (ViewM ()) (FFI.Env (ViewM ()))
+ffiEnvIRef :: IRef (Tag ViewM) (FFI.Env (Tag ViewM))
 ffiEnvIRef = IRef.anchor "ffiEnv"
 
 -- Cursor is untagged because it is both saved globally and per-revision.
@@ -115,40 +115,40 @@ ffiEnvIRef = IRef.anchor "ffiEnv"
 cursor :: MkProperty DbM Widget.Id
 cursor = Transaction.fromIRef cursorIRef
 
-cursorIRef :: IRef (DbM ()) Widget.Id
+cursorIRef :: IRef (Tag DbM) Widget.Id
 cursorIRef = IRef.anchor "cursor"
 
 preJumps :: MkProperty ViewM [Widget.Id]
 preJumps = Transaction.fromIRef preJumpsIRef
 
-preJumpsIRef :: IRef (ViewM ()) [Widget.Id]
+preJumpsIRef :: IRef (Tag ViewM) [Widget.Id]
 preJumpsIRef = IRef.anchor "prejumps"
 
 preCursor :: MkProperty ViewM Widget.Id
 preCursor = Transaction.fromIRef preCursorIRef
 
-preCursorIRef :: IRef (ViewM ()) Widget.Id
+preCursorIRef :: IRef (Tag ViewM) Widget.Id
 preCursorIRef = IRef.anchor "precursor"
 
 postCursor :: MkProperty ViewM Widget.Id
 postCursor = Transaction.fromIRef postCursorIRef
 
-postCursorIRef :: IRef (ViewM ()) Widget.Id
+postCursorIRef :: IRef (Tag ViewM) Widget.Id
 postCursorIRef = IRef.anchor "postcursor"
 
-redos :: MkProperty DbM [Version (DbM ())]
+redos :: MkProperty DbM [Version (Tag DbM)]
 redos = Transaction.fromIRef redosIRef
 
-redosIRef :: IRef (DbM ()) [Version (DbM ())]
+redosIRef :: IRef (Tag DbM) [Version (Tag DbM)]
 redosIRef = IRef.anchor "redos"
 
-view :: MkProperty DbM (View (DbM ()))
+view :: MkProperty DbM (View (Tag DbM))
 view = Transaction.fromIRef viewIRef
 
-viewIRef :: IRef (DbM ()) (View (DbM ()))
+viewIRef :: IRef (Tag DbM) (View (Tag DbM))
 viewIRef = IRef.anchor "HEAD"
 
-makePane :: DataIRef.DefI (ViewM ()) -> Pane (ViewM ())
+makePane :: DataIRef.DefI (Tag ViewM) -> Pane (Tag ViewM)
 makePane = id
 
 nonEmptyAssocDataRef ::

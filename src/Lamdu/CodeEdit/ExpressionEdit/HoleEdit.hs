@@ -19,14 +19,15 @@ import Data.List.Utils (sortOn, nonEmptyAll)
 import Data.Maybe (isJust, listToMaybe, maybeToList, mapMaybe, fromMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
+import Data.Store.IRef (Tag)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
+import Graphics.UI.Bottle.Animation(AnimId)
+import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.Anchors (ViewM)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
-import Graphics.UI.Bottle.Animation(AnimId)
-import Graphics.UI.Bottle.Widget (Widget)
 import System.Random.Utils (randFunc)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
@@ -34,6 +35,12 @@ import qualified Data.List.Class as List
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
+import qualified Graphics.DrawingCombinators as Draw
+import qualified Graphics.UI.Bottle.Animation as Anim
+import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.Box as Box
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Anchors as Anchors
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -46,12 +53,6 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
-import qualified Graphics.DrawingCombinators as Draw
-import qualified Graphics.UI.Bottle.Animation as Anim
-import qualified Graphics.UI.Bottle.EventMap as E
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.Box as Box
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 moreSymbol :: String
 moreSymbol = "▷"
@@ -77,7 +78,7 @@ data HoleInfo m = HoleInfo
   }
 
 pickExpr ::
-  MonadA m => HoleInfo m -> Sugar.HoleResult (m ()) ->
+  MonadA m => HoleInfo m -> Sugar.HoleResult (Tag m) ->
   Transaction m Widget.EventResult
 pickExpr holeInfo expr = do
   (guid, _) <- Sugar.holePickResult (hiHoleActions holeInfo) expr
@@ -87,7 +88,7 @@ pickExpr holeInfo expr = do
     }
 
 resultPickEventMap ::
-  MonadA m => HoleInfo m -> Sugar.HoleResult (m ()) ->
+  MonadA m => HoleInfo m -> Sugar.HoleResult (Tag m) ->
   Widget.EventHandlers (Transaction m)
 resultPickEventMap holeInfo holeResult =
   case hiMNextHole holeInfo of
@@ -115,10 +116,10 @@ data ResultsList t = ResultsList
 
 resultsToWidgets
   :: MonadA m
-  => HoleInfo m -> ResultsList (m ())
+  => HoleInfo m -> ResultsList (Tag m)
   -> ExprGuiM m
      ( WidgetT m
-     , Maybe (Sugar.HoleResult (m ()), Maybe (WidgetT m))
+     , Maybe (Sugar.HoleResult (Tag m), Maybe (WidgetT m))
      )
 resultsToWidgets holeInfo results = do
   cursorOnMain <- ExprGuiM.widgetEnv $ WE.isSubCursor myId
@@ -180,8 +181,8 @@ mkGroup names body = Group
   }
 
 makeVariableGroup ::
-  MonadA m => Data.VariableRef (DataIRef.DefI (m ())) ->
-  ExprGuiM m (Group (DataIRef.DefI (m ())))
+  MonadA m => Data.VariableRef (DataIRef.DefI (Tag m)) ->
+  ExprGuiM m (Group (DataIRef.DefI (Tag m)))
 makeVariableGroup varRef =
   ExprGuiM.withNameFromVarRef varRef $ \(_, varName) ->
   return . mkGroup [varName] . Data.ExpressionLeaf $ Data.GetVariable varRef
@@ -230,8 +231,8 @@ exprWidgetId :: Show def => Data.Expression def a -> Widget.Id
 exprWidgetId = WidgetIds.fromGuid . randFunc . show . void
 
 toResultsList ::
-  MonadA m => HoleInfo m -> Data.Expression (DataIRef.DefI (m ())) () ->
-  CT m (Maybe (ResultsList (m ())))
+  MonadA m => HoleInfo m -> Data.Expression (DataIRef.DefI (Tag m)) () ->
+  CT m (Maybe (ResultsList (Tag m)))
 toResultsList holeInfo baseExpr = do
   results <- Sugar.holeInferResults (hiHole holeInfo) baseExpr
   return $
@@ -253,8 +254,8 @@ toResultsList holeInfo baseExpr = do
 data ResultType = GoodResult | BadResult
 
 makeResultsList ::
-  MonadA m => HoleInfo m -> Group (DataIRef.DefI (m ())) ->
-  CT m (Maybe (ResultType, ResultsList (m ())))
+  MonadA m => HoleInfo m -> Group (DataIRef.DefI (Tag m)) ->
+  CT m (Maybe (ResultType, ResultsList (Tag m)))
 makeResultsList holeInfo group = do
   -- We always want the first, and we want to know if there's more, so
   -- take 2:
@@ -271,7 +272,7 @@ makeResultsList holeInfo group = do
 
 makeAllResults
   :: ViewM ~ m => HoleInfo m
-  -> ExprGuiM m (ListT (CT m) (ResultType, ResultsList (m ())))
+  -> ExprGuiM m (ListT (CT m) (ResultType, ResultsList (Tag m)))
 makeAllResults holeInfo = do
   paramResults <-
     traverse (makeVariableGroup . Data.ParameterRef) $
@@ -340,7 +341,7 @@ disallowedHoleChars = "`[]\\\n "
 makeSearchTermWidget
   :: MonadA m
   => HoleInfo m -> Widget.Id
-  -> Maybe (Sugar.HoleResult (m ()))
+  -> Maybe (Sugar.HoleResult (Tag m))
   -> ExprGuiM m (ExpressionGui m)
 makeSearchTermWidget holeInfo searchTermId mResultToPick =
   ExprGuiM.widgetEnv .
@@ -363,8 +364,8 @@ vboxMBiasedAlign mChildIndex align =
 makeResultsWidget
   :: MonadA m
   => HoleInfo m
-  -> [ResultsList (m ())] -> Bool
-  -> ExprGuiM m (Maybe (Sugar.HoleResult (m ())), WidgetT m)
+  -> [ResultsList (Tag m)] -> Bool
+  -> ExprGuiM m (Maybe (Sugar.HoleResult (Tag m)), WidgetT m)
 makeResultsWidget holeInfo firstResults moreResults = do
   firstResultsAndWidgets <-
     traverse (resultsToWidgets holeInfo) firstResults
@@ -460,7 +461,7 @@ alphaNumericHandler doc handler =
   Config.alphaNumericChars . flip $ const handler
 
 pickEventMap ::
-  MonadA m => HoleInfo m -> String -> Maybe (Sugar.HoleResult (m ())) ->
+  MonadA m => HoleInfo m -> String -> Maybe (Sugar.HoleResult (Tag m)) ->
   Widget.EventHandlers (Transaction m)
 pickEventMap holeInfo searchTerm (Just result)
   | nonEmptyAll (`notElem` Config.operatorChars) searchTerm =

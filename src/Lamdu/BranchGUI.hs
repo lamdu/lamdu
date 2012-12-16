@@ -11,27 +11,28 @@ import Control.MonadA (MonadA)
 import Data.List (findIndex)
 import Data.Maybe (isJust)
 import Data.Monoid(Monoid(..))
+import Data.Store.IRef (Tag)
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
-import Lamdu.VersionControl.Actions (Actions(..))
-import Lamdu.WidgetEnvT (WidgetEnvT)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
+import Lamdu.VersionControl.Actions (Actions(..))
+import Lamdu.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Rev.Branch as Branch
 import qualified Data.Store.Transaction as Transaction
-import qualified Lamdu.BottleWidgets as BWidgets
-import qualified Lamdu.Config as Config
-import qualified Lamdu.Layers as Layers
-import qualified Lamdu.WidgetEnvT as WE
-import qualified Lamdu.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Edges as Edges
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified Lamdu.BottleWidgets as BWidgets
+import qualified Lamdu.Config as Config
+import qualified Lamdu.Layers as Layers
+import qualified Lamdu.WidgetEnvT as WE
+import qualified Lamdu.WidgetIds as WidgetIds
 
 branchNameFDConfig :: FocusDelegator.Config
 branchNameFDConfig = FocusDelegator.Config
@@ -58,13 +59,13 @@ redoEventMap =
   maybe mempty (Widget.keysEventMapMovesCursor Config.redoKeys (E.Doc ["Edit", "Redo"]))
 
 branchNameProp ::
-  MonadA m => Branch (m ()) -> Transaction m (Transaction.Property m String)
+  MonadA m => Branch (Tag m) -> Transaction m (Transaction.Property m String)
 branchNameProp = Transaction.assocDataRefDef "" "name" . Branch.guid
 
 make ::
   (MonadA m, MonadA n) =>
   (forall a. Transaction n a -> m a) ->
-  Widget.Size -> Actions (n ()) m -> Widget m ->
+  Widget.Size -> Actions (Tag n) m -> Widget m ->
   WidgetEnvT m (Widget m)
 make transaction size actions widget = do
   branchSelectorFocused <-
