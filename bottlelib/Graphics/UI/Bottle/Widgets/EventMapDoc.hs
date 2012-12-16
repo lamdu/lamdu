@@ -87,15 +87,14 @@ makeView eventMap style animId =
   map (Lens.over Lens._1 E.docStrs . Tuple.swap) $ E.eventMapDocs eventMap
 
 makeTreeView :: [Tree View View] -> View
-makeTreeView =
-  GridView.makeAlign 0 . recurse
+makeTreeView = GridView.verticalAlign 0 . map fromTree
   where
-    recurse = concat . map fromTree
-    fromTree (Leaf inputDocsView) = [[inputDocsView]]
+    fromTree (Leaf inputDocsView) = inputDocsView
     fromTree (Branch titleView trees) =
-      let row : rows = recurse trees
-      in (titleView : Spacer.make 5 : row) :
-         map ((Spacer.make 0 :) . (Spacer.make 0 :)) rows
+      GridView.verticalAlign 0
+      [ titleView
+      , GridView.horizontalAlign 0 [Spacer.make 10, makeTreeView trees]
+      ]
 
 addHelp :: Widget.Size -> TextView.Style -> Widget f -> Widget f
 addHelp size style w =
