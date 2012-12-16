@@ -3,7 +3,7 @@
 module Graphics.UI.Bottle.EventMap
   ( KeyEvent(..), IsPress(..), ModKey(..)
   , ModState(..), noMods, shift, ctrl, alt
-  , Key(..), Doc(..), noDoc
+  , Key(..), Doc(..)
   , EventMap, lookup, emTickHandlers
   , charEventMap, allChars, simpleChars, charGroup
   , keyEventMap, keyPress, keyPresses
@@ -65,9 +65,6 @@ charKey = CharKey . toUpper
 newtype Doc = Doc
   { _docStrs :: [String]
   } deriving (Eq, Ord)
-
-noDoc :: Doc
-noDoc = Doc []
 
 data DocHandler a = DocHandler {
   _dhDoc :: Doc,

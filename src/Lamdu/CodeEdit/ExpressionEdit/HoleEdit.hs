@@ -400,7 +400,7 @@ makeResultsWidget holeInfo firstResults moreResults = do
       Widget.weakerEvents $
       Widget.keysEventMap
       [E.ModKey E.noMods E.KeyDown]
-      E.noDoc (return ())
+      (E.Doc ["Navigation", "Move", "down (blocked)"]) (return ())
 
 adHocTextEditEventMap :: MonadA m => Property m String -> Widget.EventHandlers m
 adHocTextEditEventMap textProp =
