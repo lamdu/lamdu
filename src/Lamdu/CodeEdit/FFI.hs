@@ -1,8 +1,9 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.CodeEdit.FFI (Env(..), table) where
 
-import Control.Applicative ((<$>), (<*>))
 import Data.Binary (Binary(..))
-import Data.Foldable (sequenceA_)
+import Data.Derive.Binary (makeBinary)
+import Data.DeriveTH (derive)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Lamdu.Data as Data
@@ -12,9 +13,7 @@ data Env t = Env
   { trueDef :: DataIRef.DefI t
   , falseDef :: DataIRef.DefI t
   }
-instance Binary (Env t) where
-  get = Env <$> get <*> get
-  put (Env x y) = sequenceA_ [put x, put y]
+derive makeBinary ''Env
 
 class FromExpr a where
   fromExpr :: Env t -> Data.Expression (DataIRef.DefI t) () -> a

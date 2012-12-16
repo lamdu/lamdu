@@ -28,7 +28,7 @@ data InferredWithConflicts def = InferredWithConflicts
   , iwcTypeConflicts :: [Infer.Error def]
   , iwcValueConflicts :: [Infer.Error def]
   }
-
+-- Requires Ord instance for def, cannot derive
 instance (Ord def, Binary def) => Binary (InferredWithConflicts def) where
   get = InferredWithConflicts <$> get <*> get <*> get
   put (InferredWithConflicts a b c) = sequenceA_ [put a, put b, put c]

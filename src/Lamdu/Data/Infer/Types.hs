@@ -63,6 +63,7 @@ makeRefExpr g expr = Data.Expression expr $ RefExprPayload mempty (Monoid.Any Fa
 -- Map from params to their Param type,
 -- also including the recursive ref to the definition.
 -- (hence not just parameters)
+-- TODO: Convert to list
 type Scope def = Map (Data.VariableRef def) ExprRef
 
 -- Used to refer to expressions in the inference state and resume inference.
@@ -87,7 +88,8 @@ data Inferred def = Inferred
   , iType :: Data.Expression def IsRestrictedPoly
   , iScope :: Map Guid (Data.Expression def IsRestrictedPoly)
   }
-
+-- Cannot derive Binary instance because binary instance of Scope
+-- requires (Ord def)
 instance (Ord def, Binary def) => Binary (Inferred def) where
   get = Inferred <$> get <*> get <*> get <*> get
   put (Inferred a b c d) = sequenceA_ [put a, put b, put c, put d]

@@ -12,11 +12,12 @@ module Data.Store.Rev.ViewBranchInternal
   )
 where
 
-import Control.Applicative ((<$>), (<*>))
 import Control.Monad (when)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..))
-import Data.Foldable (traverse_, sequenceA_)
+import Data.Derive.Binary (makeBinary)
+import Data.DeriveTH (derive)
+import Data.Foldable (traverse_)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef, Tag)
 import Data.Store.Rev.Change (Change)
@@ -39,16 +40,13 @@ data BranchData t = BranchData {
   _brViews :: [View t]
   } deriving (Eq, Ord, Read, Show)
 
-instance Binary (BranchData t) where
-  get = BranchData <$> get <*> get
-  put (BranchData x y) = sequenceA_ [put x, put y]
-
 newtype Branch t = Branch { unBranch :: IRef t (BranchData t) }
   deriving (Eq, Ord, Read, Show, Binary)
 
 newtype ViewData t = ViewData { _vdBranch :: Branch t }
   deriving (Eq, Ord, Show, Read, Binary)
 
+derive makeBinary ''BranchData
 LensTH.makeLenses ''BranchData
 LensTH.makeLenses ''ViewData
 

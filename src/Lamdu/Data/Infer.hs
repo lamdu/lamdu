@@ -504,6 +504,7 @@ data Loaded def a = Loaded
   { _lExpr :: Data.Expression def a
   , _lDefTypes :: Map def (Data.Expression def ())
   } deriving (Typeable, Functor)
+-- Requires Ord instance for def, cannot derive
 instance (Binary a, Binary def, Ord def) => Binary (Loaded def a) where
   get = Loaded <$> get <*> get
   put (Loaded a b) = put a >> put b

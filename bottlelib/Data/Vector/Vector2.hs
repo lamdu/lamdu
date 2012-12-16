@@ -10,6 +10,8 @@ where
 import Control.Applicative (Applicative(..), liftA2)
 import Control.Monad (join)
 import Data.Binary (Binary(..))
+import Data.Derive.Binary (makeBinary)
+import Data.DeriveTH (derive)
 import Data.Monoid
 import Prelude hiding (curry, uncurry, zip)
 import qualified Control.Lens.TH as LensTH
@@ -23,10 +25,7 @@ data Vector2 a = Vector2
   -- tree though.
   deriving (Eq, Ord, Show, Read)
 LensTH.makeLenses ''Vector2
-
-instance Binary a => Binary (Vector2 a) where
-  get = liftA2 Vector2 get get
-  put (Vector2 x y) = put x >> put y
+derive makeBinary ''Vector2
 
 -- Taken almost verbatim from QuickCheck's instance for (a, b)
 -- instance Arbitrary a => Arbitrary (Vector2 a) where

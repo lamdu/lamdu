@@ -1,10 +1,10 @@
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS -fno-warn-orphans #-}
 module Data.Monoid.Instances () where
 
-import Control.Applicative ((<$>))
 import Data.Binary(Binary(..))
-import qualified Data.Monoid as Monoid
+import Data.Derive.Binary (makeBinary)
+import Data.DeriveTH (derive)
+import Data.Monoid (Any(..))
 
-instance Binary Monoid.Any where
-  get = Monoid.Any <$> get
-  put (Monoid.Any x) = put x
+derive makeBinary ''Any

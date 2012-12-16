@@ -7,13 +7,12 @@ module Lamdu.Data.Load
   , PropertyClosure, propertyOfClosure, irefOfClosure
   ) where
 
-import Control.Applicative (liftA2, (<$>), (<*>))
+import Control.Applicative (liftA2)
 import Control.Lens ((^.), SimpleLensLike)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
-import Data.Foldable (sequenceA_)
 import Data.Function (on)
 import Data.Store.IRef (Tag)
 import Data.Store.Property (Property(Property))
@@ -53,19 +52,7 @@ data PropertyClosure t
   | LambdaProperty Data.ExprLambdaWrapper
       (DataIRef.Expression t) (Data.Lambda (DataIRef.Expression t)) LambdaRole
   deriving (Eq, Ord, Show, Typeable)
-instance Binary (PropertyClosure t) where
-  get = do
-    tag <- get
-    case tag of
-      'T' -> DefinitionTypeProperty <$> get <*> get
-      'B' -> DefinitionBodyExpressionProperty <$> get <*> get <*> get
-      'A' -> ApplyProperty <$> get <*> get <*> get
-      'L' -> LambdaProperty <$> get <*> get <*> get <*> get
-      _ -> error $ "Bad Binary encoding: " ++ show tag
-  put (DefinitionTypeProperty a b) = sequenceA_ [put 'T', put a, put b]
-  put (DefinitionBodyExpressionProperty a b c) = sequenceA_ [put 'B', put a, put b, put c]
-  put (ApplyProperty a b c) = sequenceA_ [put 'A', put a, put b, put c]
-  put (LambdaProperty a b c d) = sequenceA_ [put 'L', put a, put b, put c, put d]
+derive makeBinary ''PropertyClosure
 
 setter :: Lens.LensLike (LensInternal.Context a b) s t a b -> s -> b -> t
 setter = flip . Lens.set . Lens.cloneLens
