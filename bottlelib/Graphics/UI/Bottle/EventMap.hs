@@ -2,6 +2,7 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses, GeneralizedNewtypeDeriving, DeriveDataTypeable, DeriveFunctor #-}
 module Graphics.UI.Bottle.EventMap
   ( KeyEvent(..), IsPress(..), ModKey(..)
+  , prettyModKey
   , ModState(..), noMods, shift, ctrl, alt
   , Key(..), InputDoc, Subtitle, Doc(..)
   , EventMap, lookup, emTickHandlers
@@ -153,21 +154,21 @@ filterChars p =
       guard $ p c
       handler c
 
-prettyKey :: Key -> String
+prettyKey :: Key -> InputDoc
 prettyKey (CharKey x) = [toLower x]
 prettyKey k
   | "Key" `isPrefixOf` show k = drop 3 $ show k
   | otherwise = show k
 
-prettyModKey :: ModKey -> String
+prettyModKey :: ModKey -> InputDoc
 prettyModKey (ModKey ms key) = prettyModState ms ++ prettyKey key
 
-prettyKeyEvent :: KeyEvent -> String
+prettyKeyEvent :: KeyEvent -> InputDoc
 prettyKeyEvent (KeyEvent Press modKey) = prettyModKey modKey
 prettyKeyEvent (KeyEvent Release modKey) =
   "Depress " ++ prettyModKey modKey
 
-prettyModState :: ModState -> String
+prettyModState :: ModState -> InputDoc
 prettyModState ms = concat $
   ["Ctrl+" | modCtrl ms] ++
   ["Alt+" | modAlt ms] ++

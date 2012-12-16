@@ -80,12 +80,6 @@ makeTextViews style =
   . fmap (makeShortcutKeyView style)
   ) . addAnimIds
 
-makeView :: Vector2 R -> EventMap a -> TextView.Style -> AnimId -> View
-makeView size eventMap style animId =
-  makeTreeView size .
-  map (makeTextViews style animId) . groupTree . groupInputDocs .
-  map (Lens.over Lens._1 E.docStrs . Tuple.swap) $ E.eventMapDocs eventMap
-
 columns :: R -> [View] -> View
 columns height =
   combine . foldr step (Spacer.make 0, [])
@@ -98,6 +92,21 @@ columns height =
         (new, curColumn : rest)
       | otherwise =
         (GridView.verticalAlign 0 [new, curColumn], rest)
+
+makeView :: Vector2 R -> EventMap a -> TextView.Style -> AnimId -> View
+makeView size eventMap style animId =
+  makeTreeView size .
+  map (makeTextViews style animId) . groupTree . groupInputDocs .
+  map (Lens.over Lens._1 E.docStrs . Tuple.swap) $ E.eventMapDocs eventMap
+
+makeTooltip :: TextView.Style -> [E.ModKey] -> AnimId -> View
+makeTooltip style overlayDocKeys animId =
+  GridView.horizontalAlign 0
+  [ TextView.label style animId "Show help"
+  , Spacer.makeHorizontal 10
+  , makeShortcutKeyView style
+    (animId ++ ["HelpKeys"], map E.prettyModKey overlayDocKeys)
+  ]
 
 indent :: R -> View -> View
 indent width x =
@@ -114,18 +123,18 @@ makeTreeView size =
       [ vertical
         ( GridView.horizontalAlign 0
           [titleView, Spacer.make 10, vertical rights]
-        : map (indent 10) belows
-        )
+        : map (indent 10) belows)
       ] []
       where
         vertical = GridView.verticalAlign 0
         Vector2 belows rights = recurse trees
 
-addHelp :: Widget.Size -> TextView.Style -> Widget f -> Widget f
-addHelp size style w =
+addHelp ::
+  (AnimId -> View) -> Widget.Size -> Widget f -> Widget f
+addHelp f size w =
   Lens.over Widget.wFrame (mappend docFrame) w
   where
-    (eventMapSize, eventMapDoc) = makeView size eventMap style ["help box"]
+    (eventMapSize, eventMapDoc) = f ["help box"]
     transparency = Draw.Color 1 1 1
     docFrame =
       (Anim.onImages . Draw.tint . transparency) 0.8 .
@@ -134,7 +143,6 @@ addHelp size style w =
       Anim.backgroundColor
       ["help doc background"] 1 (Draw.Color 0.3 0.2 0.1 0.5) eventMapSize $
       eventMapDoc
-    eventMap = w ^. Widget.wEventMap
 
 makeToggledHelpAdder
   :: [E.ModKey] -> IO (TextView.Style -> Widget.Size -> Widget IO -> IO (Widget IO))
@@ -142,12 +150,13 @@ makeToggledHelpAdder overlayDocKeys = do
   showingHelpVar <- newIORef True
   let
     toggle = modifyIORef showingHelpVar not
-    addToggleEventMap doc =
-      Widget.strongerEvents $
-      Widget.keysEventMap overlayDocKeys doc toggle
+    toggleEventMap docStr =
+      Widget.keysEventMap overlayDocKeys (E.Doc ["Help", "Key Bindings", docStr]) toggle
   return $ \style size widget -> do
     showingHelp <- readIORef showingHelpVar
-    return $
-      if showingHelp
-      then addHelp size style $ addToggleEventMap (E.Doc ["Help", "Key Bindings", "Hide"]) widget
-      else addToggleEventMap (E.Doc ["Help", "Key Bindings", "Show"]) widget
+    let
+      (f, docStr)
+        | showingHelp = (makeView size (widget ^. Widget.wEventMap) style, "Hide")
+        | otherwise = (makeTooltip style overlayDocKeys, "Show")
+    return . addHelp f size $
+      Widget.strongerEvents (toggleEventMap docStr) widget
