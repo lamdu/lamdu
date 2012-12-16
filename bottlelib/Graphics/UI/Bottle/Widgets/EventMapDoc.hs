@@ -5,14 +5,16 @@ import Control.Applicative ((<$>), Applicative(..))
 import Control.Lens ((^.))
 import Data.IORef (newIORef, readIORef, modifyIORef)
 import Data.Monoid (mappend)
+import Data.Monoid (mconcat)
 import Data.Traversable (traverse)
-import Graphics.UI.Bottle.Animation (AnimId)
+import Data.Vector.Vector2 (Vector2(..))
+import Graphics.UI.Bottle.Animation (AnimId, R)
 import Graphics.UI.Bottle.EventMap (EventMap)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Lens as Lens
-import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Tuple as Tuple
+import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -60,14 +62,12 @@ shortcutKeyDocColor = Draw.Color 0.1 0.9 0.9 1
 makeShortcutKeyView ::
   TextView.Style -> (AnimId, [E.InputDoc]) -> View
 makeShortcutKeyView style (animId, inputDocs) =
-  GridView.horizontalAlign 0 .
-  List.intersperse semicolon .
+  GridView.verticalAlign 0 .
   map
   ( fgColor shortcutKeyDocColor
   . TextView.label style animId) $
   inputDocs
   where
-    semicolon = TextView.label style animId ";"
     fgColor = Lens.over Lens._2 . Anim.onImages . Draw.tint
 
 makeTextViews ::
@@ -80,27 +80,52 @@ makeTextViews style =
   . fmap (makeShortcutKeyView style)
   ) . addAnimIds
 
-makeView :: EventMap a -> TextView.Style -> AnimId -> View
-makeView eventMap style animId =
-  makeTreeView .
+makeView :: Vector2 R -> EventMap a -> TextView.Style -> AnimId -> View
+makeView size eventMap style animId =
+  makeTreeView size .
   map (makeTextViews style animId) . groupTree . groupInputDocs .
   map (Lens.over Lens._1 E.docStrs . Tuple.swap) $ E.eventMapDocs eventMap
 
-makeTreeView :: [Tree View View] -> View
-makeTreeView = GridView.verticalAlign 0 . map fromTree
+columns :: R -> [View] -> View
+columns height =
+  combine . foldr step (Spacer.make 0, [])
   where
-    fromTree (Leaf inputDocsView) = inputDocsView
+    combine (curColumn, rest) =
+      GridView.horizontalAlign 1 $ curColumn : rest
+    step :: View -> (View, [View]) -> (View, [View])
+    step new@(newSize, _) (curColumn@(curColumnSize, _), rest)
+      | (newSize + curColumnSize) ^. Vector2.second > height =
+        (new, curColumn : rest)
+      | otherwise =
+        (GridView.verticalAlign 0 [new, curColumn], rest)
+
+indent :: R -> View -> View
+indent width x =
+  GridView.horizontalAlign 0 [Spacer.makeHorizontal width, x]
+
+makeTreeView :: Vector2 R -> [Tree View View] -> View
+makeTreeView size =
+  columns (size ^. Vector2.second) . Vector2.uncurry (++) . recurse
+  where
+    recurse = mconcat . map fromTree
+    fromTree (Leaf inputDocsView) = Vector2 [] [inputDocsView]
     fromTree (Branch titleView trees) =
-      GridView.verticalAlign 0
-      [ titleView
-      , GridView.horizontalAlign 0 [Spacer.make 10, makeTreeView trees]
-      ]
+      Vector2
+      [ vertical
+        ( GridView.horizontalAlign 0
+          [titleView, Spacer.make 10, vertical rights]
+        : map (indent 10) belows
+        )
+      ] []
+      where
+        vertical = GridView.verticalAlign 0
+        Vector2 belows rights = recurse trees
 
 addHelp :: Widget.Size -> TextView.Style -> Widget f -> Widget f
 addHelp size style w =
   Lens.over Widget.wFrame (mappend docFrame) w
   where
-    (eventMapSize, eventMapDoc) = makeView eventMap style ["help box"]
+    (eventMapSize, eventMapDoc) = makeView size eventMap style ["help box"]
     transparency = Draw.Color 1 1 1
     docFrame =
       (Anim.onImages . Draw.tint . transparency) 0.8 .
