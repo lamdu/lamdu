@@ -88,7 +88,7 @@ make transaction size actions widget = do
   where
     eventMap = mconcat
     -- TODO: Get Quit out of here
-      [ Widget.keysEventMap Config.quitKeys (E.Doc ["Application", "Quit"]) (error "Quit")
+      [ Widget.keysEventMap Config.quitKeys (E.Doc ["Quit"]) (error "Quit")
       , Widget.keysEventMapMovesCursor Config.makeBranchKeys (E.Doc ["Branches", "New"]) .
         fmap
         (FocusDelegator.delegatingId .
