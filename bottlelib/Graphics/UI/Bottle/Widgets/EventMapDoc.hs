@@ -80,27 +80,34 @@ makeTextViews style =
   . fmap (makeShortcutKeyView style)
   ) . addAnimIds
 
-columns :: R -> [View] -> View
-columns height =
+addHelpBG :: AnimId -> View -> View
+addHelpBG animId =
+  View.backgroundColor animId 1 (Draw.Color 0.3 0.2 0.1 0.5)
+
+columns :: AnimId -> R -> [View] -> View
+columns animId height =
   combine . foldr step (Spacer.make 0, [])
   where
     combine (curColumn, rest) =
-      GridView.horizontalAlign 1 $ curColumn : rest
-    step :: View -> (View, [View]) -> (View, [View])
+      GridView.horizontalAlign 1 .
+      zipWith bg [(0 :: Int)..] $ curColumn : rest
+    bg i = addHelpBG (View.augmentAnimId animId i)
+
     step new@(newSize, _) (curColumn@(curColumnSize, _), rest)
       | (newSize + curColumnSize) ^. Vector2.second > height =
         (new, curColumn : rest)
       | otherwise =
-        (GridView.verticalAlign 0 [new, curColumn], rest)
+        (vertical [new, curColumn], rest)
 
 makeView :: Vector2 R -> EventMap a -> TextView.Style -> AnimId -> View
 makeView size eventMap style animId =
-  makeTreeView size .
+  makeTreeView animId size .
   map (makeTextViews style animId) . groupTree . groupInputDocs .
   map (Lens.over Lens._1 E.docStrs . Tuple.swap) $ E.eventMapDocs eventMap
 
 makeTooltip :: TextView.Style -> [E.ModKey] -> AnimId -> View
 makeTooltip style overlayDocKeys animId =
+  addHelpBG animId $
   GridView.horizontalAlign 0
   [ TextView.label style animId "Show help"
   , Spacer.makeHorizontal 10
@@ -112,9 +119,12 @@ indent :: R -> View -> View
 indent width x =
   GridView.horizontalAlign 0 [Spacer.makeHorizontal width, x]
 
-makeTreeView :: Vector2 R -> [Tree View View] -> View
-makeTreeView size =
-  columns (size ^. Vector2.second) . Vector2.uncurry (++) . recurse
+vertical :: [View] -> View
+vertical = GridView.verticalAlign 0
+
+makeTreeView :: AnimId -> Vector2 R -> [Tree View View] -> View
+makeTreeView animId size =
+  columns animId (size ^. Vector2.second) . Vector2.uncurry (++) . recurse
   where
     recurse = mconcat . map fromTree
     fromTree (Leaf inputDocsView) = Vector2 [] [inputDocsView]
@@ -126,7 +136,6 @@ makeTreeView size =
         : map (indent 10) belows)
       ] []
       where
-        vertical = GridView.verticalAlign 0
         Vector2 belows rights = recurse trees
 
 addHelp ::
@@ -139,9 +148,7 @@ addHelp f size w =
     docFrame =
       (Anim.onImages . Draw.tint . transparency) 0.8 .
       Anim.onDepth (subtract 10) .
-      Anim.translate (size - eventMapSize) .
-      Anim.backgroundColor
-      ["help doc background"] 1 (Draw.Color 0.3 0.2 0.1 0.5) eventMapSize $
+      Anim.translate (size - eventMapSize) $
       eventMapDoc
 
 makeToggledHelpAdder
