@@ -3,13 +3,8 @@
 
 * WhereItem edits should be nested, name-generation-wise, under the func body
 
-* Add (IRef m) tag
-
 * Missing a test to verify that recursive references have a recursive
   type rather than the type "in db"
-
-* "AddVars" randomgen for add-variables guids is a problem with
-   multiple expressions
 
 * Cleanups:
   * Instead of (ExprGui.Monad.NameSource, String) and Guid of name
