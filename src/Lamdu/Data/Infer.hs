@@ -330,8 +330,7 @@ newtype Loader def m = Loader
   { loadPureDefinitionType :: def -> m (Data.Expression def ())
   }
 
--- Initial expression for inferred value and type of a stored entity.
--- Types are returned only in cases of expanding definitions.
+-- Initial expression for inferred value of a stored entity.
 initialValExpr ::
   Data.Expression def () ->
   State Origin (RefExpression def)
