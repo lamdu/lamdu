@@ -32,7 +32,6 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (runState)
 import Control.Monad.Trans.Writer (runWriter)
 import Control.MonadA (MonadA)
-import Data.Foldable (traverse_)
 import Data.Function (on)
 import Data.List.Utils (sortOn)
 import Data.Maybe (listToMaybe, maybeToList)
@@ -152,14 +151,13 @@ replaceWith parentP replacerP = do
 deleteParamRef ::
   MonadA m => Guid -> Data.Expression def (Stored m) -> T m ()
 deleteParamRef param =
-  traverse_ deleteIfParamRef . Data.subExpressions
+  Lens.mapMOf_ refs
+  (DataOps.replaceWithHole . Lens.view Data.ePayload)
   where
-    deleteIfParamRef expr =
-      case expr of
-      Data.Expression
-        (Data.ExpressionLeaf (Data.GetVariable (Data.ParameterRef p))) prop
-        | p == param -> void $ DataOps.replaceWithHole prop
-      _ -> return ()
+    refs =
+      Lens.folding Data.subExpressions .
+      Lens.filtered (Lens.anyOf paramRef (== param))
+    paramRef = Data.eValue . Data.expressionLeaf . Data.getVariable . Data.parameterRef
 
 mkFuncParamActions ::
   m ~ Anchors.ViewM =>
@@ -303,11 +301,10 @@ removeRedundantTypes =
     removeIfNoErrors xs = xs
 
 setNextHole :: Expression m -> Expression m -> Expression m
-setNextHole possibleHole =
-  case possibleHole ^. rExpressionBody of
-  ExpressionHole{} ->
-    (fmap . Lens.over plNextHole . flip mplus . Just) possibleHole
-  _ -> id
+setNextHole possibleHole
+  | Lens.notNullOf (rExpressionBody . expressionHole) possibleHole
+  = (fmap . Lens.over plNextHole . flip mplus . Just) possibleHole
+  | otherwise = id
 
 applyOnSection ::
   m ~ Anchors.ViewM =>

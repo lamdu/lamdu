@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DeriveFunctor #-}
+{-# LANGUAGE TemplateHaskell, DeriveFunctor, KindSignatures #-}
 module Lamdu.CodeEdit.Sugar.Types
   ( Definition(..), DefinitionBody(..)
   , ListItemActions(..), itemAddNext, itemDelete
@@ -7,6 +7,10 @@ module Lamdu.CodeEdit.Sugar.Types
   , DefinitionBuiltin(..)
   , Actions(..)
   , ExpressionBody(..), eHasParens
+  , expressionPi, expressionApply, expressionSection
+  , expressionFunc, expressionGetVariable, expressionHole
+  , expressionInferred, expressionPolymorphic
+  , expressionLiteralInteger, expressionAtom
   , Payload(..), plInferredTypes, plActions, plNextHole
   , ExpressionP(..), rGuid, rExpressionBody, rPayload
   , Expression
@@ -141,6 +145,7 @@ data ExpressionBody m expr
   | ExpressionLiteralInteger { __eLit :: LiteralInteger m }
   | ExpressionAtom { __eAtom :: String }
   deriving (Functor)
+LensTH.makePrisms ''ExpressionBody
 
 wrapParens :: HasParens -> String -> String
 wrapParens HaveParens x = concat ["(", x, ")"]
