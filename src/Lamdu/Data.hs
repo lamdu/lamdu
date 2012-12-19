@@ -24,6 +24,7 @@ module Lamdu.Data
   , matchExpression
   , subExpressions
   , isDependentPi
+  , funcArguments
   -- Traversals
   , bitraverseExpressionBody
   , bitraverseExpression
@@ -299,6 +300,13 @@ isDependentPi =
   Lens.anyOf (eValue . expressionPi) f
   where
     f (Lambda g _ resultType) = hasGetVar g resultType
+
+funcArguments :: Expression def a -> [Expression def a]
+funcArguments =
+  Lens.toListOf (eValue . expressionLambda . Lens.folding f)
+  where
+    f (Lambda _ paramType body) =
+      paramType : funcArguments body
 
 data ExprLambdaWrapper = ExprLambda | ExprPi
   deriving (Eq, Ord, Show, Typeable)

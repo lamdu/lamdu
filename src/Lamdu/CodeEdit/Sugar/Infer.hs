@@ -138,7 +138,7 @@ inferWithVariables gen loaded baseInferContext node =
     (success, expr) <- toStateT $ inferWithConflicts loaded node
     intermediateContext <- State.get
     wvExpr <-
-      ImplicitVariables.addVariables gen loader $
+      ImplicitVariables.addVariables gen $
       (iwcInferred . fst &&& id) <$> expr
     wvContext <- State.get
     return

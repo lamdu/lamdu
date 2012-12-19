@@ -3,10 +3,8 @@ module Lamdu.Data.Infer.ImplicitVariables
   ( addVariables, Payload(..)
   ) where
 
-import Control.Applicative ((<$>), (<*>))
-import Control.Lens (SimpleLens, (^.))
-import Control.Monad (join)
-import Control.Monad.Trans.Class (lift)
+import Control.Applicative ((<$>))
+import Control.Lens ((^.))
 import Control.Monad.Trans.State (StateT, State, mapStateT)
 import Control.Monad.Trans.State.Utils (toStateT)
 import Control.MonadA (MonadA)
@@ -26,9 +24,6 @@ import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Data as Data
 import qualified Lamdu.Data.Infer as Infer
 
-inferredLens :: SimpleLens (Data.Expression def (Infer.Inferred def, b)) (Infer.Inferred def)
-inferredLens = Data.ePayload . Lens._1
-
 data Payload a = Stored a | AutoGen Guid
   deriving (Eq, Ord, Show, Functor, Typeable)
 derive makeBinary ''Payload
@@ -42,10 +37,9 @@ isUnrestrictedHole _ = False
 
 addVariablesGen ::
   (Ord def, RandomGen g) => g ->
-  Data.Expression def (Infer.Inferred def, b) ->
   Data.Expression def (Infer.Inferred def, Payload a) ->
   State (Infer.Context def) (Data.Expression def (Infer.Inferred def, Payload a))
-addVariablesGen gen rootTypeExpr expr =
+addVariablesGen gen expr =
   case unrestrictedHoles of
   [] -> return expr
   (hole : _) -> do
@@ -68,16 +62,12 @@ addVariablesGen gen rootTypeExpr expr =
       newRootLam = Data.makeLambda paramGuid paramTypeExpr $ Lens.over (Lens.mapped . Lens._1) Infer.iPoint expr
       newRootExpr = Data.Expression newRootLam (newRootNode, AutoGen (Guid.augment "root" paramGuid))
     unMaybe $ Infer.addRules actions [fst <$> newRootExpr]
-    inferredRootTypeExpr <-
-      State.gets . Infer.derefExpr $
-      Lens.over (Lens.mapped . Lens._1) Infer.iPoint rootTypeExpr
-    inferredNewRootExpr <- State.gets $ Infer.derefExpr newRootExpr
-    addVariablesGen newGen inferredRootTypeExpr inferredNewRootExpr
+    addVariablesGen newGen =<< State.gets (Infer.derefExpr newRootExpr)
   where
     loader = Infer.Loader $ const Nothing
     unrestrictedHoles =
       filter (isUnrestrictedHole . Infer.iValue . fst . Lens.view Data.ePayload) .
-      reverse $ Data.subExpressions rootTypeExpr
+      reverse $ Data.subExpressions =<< Data.funcArguments expr
     getVar = Data.pureExpression $ Data.makeParameterRef paramGuid
     (paramGuid, newGen) = random gen
 
@@ -91,24 +81,11 @@ actions = Infer.InferActions $ const Nothing
 
 addVariables ::
   (MonadA m, Ord def, RandomGen g) =>
-  g -> Infer.Loader def m ->
+  g ->
   Data.Expression def (Infer.Inferred def, a) ->
   StateT (Infer.Context def) m
   (Data.Expression def (Infer.Inferred def, Payload a))
-addVariables gen loader expr =
-  join $
-  onLoaded <$> load Data.pureSet <*> load (Infer.iType rootNode)
-  where
-    load = lift . Infer.load loader Nothing -- <-- TODO: Nothing?
-    onLoaded loadedSet loadedRootType = toStateT $ do
-      inferredSet <-
-        (fmap . fmap) fst $
-        inferAssertNoConflict loadedSet =<< Infer.newNodeWithScope mempty
-      let
-        rootTypeTypeRef = Infer.tvVal . Infer.nRefs . Infer.iPoint $ inferredSet ^. Data.ePayload
-        rootTypeNode = Infer.InferNode (Infer.TypedValue rootTypeRef rootTypeTypeRef) mempty
-      inferredRootType <- inferAssertNoConflict loadedRootType rootTypeNode
-      addVariablesGen gen inferredRootType $
-        Lens.over (Lens.mapped . Lens._2) Stored expr
-    rootNode = expr ^. inferredLens
-    rootTypeRef = (Infer.tvType . Infer.nRefs . Infer.iPoint) rootNode
+addVariables gen =
+  toStateT .
+  addVariablesGen gen .
+  Lens.over (Lens.mapped . Lens._2) Stored
