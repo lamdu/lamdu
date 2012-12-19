@@ -47,10 +47,11 @@ createBuiltins =
     let listOf = mkApply list
     bool <- mkType . DataOps.newBuiltin "Prelude.Bool" =<< lift set
 
-    cons <- lift $ DataOps.newBuiltin "Prelude.:" =<<
+    _ <- tellift $ DataOps.newBuiltin "Data.Map.Map" =<< mkPi set (endo set)
+
+    cons <- tellift $ DataOps.newBuiltin "Prelude.:" =<<
       forAll "a" (\a -> mkPi a . endo $ listOf a)
-    nil <- lift $ DataOps.newBuiltin "Prelude.[]" =<< forAll "a" listOf
-    Writer.tell [cons, nil]
+    nil <- tellift $ DataOps.newBuiltin "Prelude.[]" =<< forAll "a" listOf
 
     true <- makeWithType "Prelude.True" bool
     false <- makeWithType "Prelude.False" bool

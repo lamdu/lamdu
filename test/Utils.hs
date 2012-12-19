@@ -101,6 +101,7 @@ definitionTypes =
   Map.fromList $ map (first Guid.fromString)
   [ ("Bool", setType)
   , ("List", purePi "list" setType setType)
+  , ("Map", purePi "key" setType $ purePi "val" setType setType)
   , ("IntToBoolFunc", purePi "intToBool" intType (pureGetDef "Bool"))
   , ("*", intToIntToInt)
   , ("-", intToIntToInt)

@@ -199,6 +199,87 @@ idTest =
     (mkInferredGetDef "id") $
     mkInferredLeafSimple Data.IntegerType setType
 
+inferFromOneArgToOther :: HUnit.Test
+inferFromOneArgToOther =
+  testInfer "f a b (x:Map _ _) (y:Map a b) = if _ x y"
+  (expr False) .
+  mkInferredNode (expr True) (purePi "a" setType lamBType) $
+  makeNamedLambda "a"
+    (mkInferredLeaf Data.Hole setType setType) $
+  mkInferredNode (lamB True) lamBType $
+  makeNamedLambda "b"
+    (mkInferredLeaf Data.Hole setType setType) $
+  mkInferredNode (lamX True) lamXType $
+  makeNamedLambda "x"
+    ( mkInferredNode (typeOfX True) setType $
+      Data.makeApply
+        ( mkInferredNode (typeOfX' True) setToSet $
+          Data.makeApply
+            (mkInferredGetDef "Map") $
+          mkInferredLeaf Data.Hole (pureGetParam "a") setType
+        ) $
+      mkInferredLeaf Data.Hole (pureGetParam "b") setType
+    ) $
+  mkInferredNode lamY lamYType $
+  makeNamedLambda "y"
+    ( mkInferredNode (typeOfX True) setType $
+      Data.makeApply
+        ( mkInferredNode (typeOfX' True) setToSet $
+          Data.makeApply
+            (mkInferredGetDef "Map") $
+          mkInferredGetParam "a" setType
+        ) $
+      mkInferredGetParam "b" setType
+    ) $
+  mkInferredNode body (typeOfX True) $
+  Data.makeApply
+    ( mkInferredNode body1 body1Type $
+      Data.makeApply
+        ( mkInferredNode body2 body2Type $
+          Data.makeApply
+            ( mkInferredNode body3 body3Type $
+              Data.makeApply
+                (mkInferredGetDef "if") $
+              mkInferredLeaf Data.Hole (typeOfX True) setType
+            ) $
+          mkInferredLeafSimple Data.Hole (pureGetDef "Bool")
+        ) $
+      mkInferredGetParam "x" (typeOfX True)
+    ) $
+  mkInferredGetParam "y" (typeOfX True)
+  where
+    expr isInferred =
+      pureLambda "a" (holeOr setType isInferred) $ lamB isInferred
+    lamB isInferred =
+      pureLambda "b" (holeOr setType isInferred) $ lamX isInferred
+    lamX isInferred =
+      pureLambda "x" (typeOfX isInferred) lamY
+    lamY =
+      pureLambda "y" (typeOfX True) body
+    body = pureApply [body1, pureGetParam "y"]
+    body1 = pureApply [body2, pureGetParam "x"]
+    body2 = pureApply [body3, hole]
+    body3 = pureApply [pureGetDef "if", hole]
+    body1Type = purePi "body1" (typeOfX True) (typeOfX True)
+    body2Type = purePi "body2" (typeOfX True) body1Type
+    body3Type = purePi "body3" (pureGetDef "Bool") body2Type
+    typeOfX isInferred =
+      pureApply
+      [ typeOfX' isInferred
+      , holeOr (pureGetParam "b") isInferred
+      ]
+    typeOfX' isInferred =
+      pureApply
+      [ pureGetDef "Map"
+      , holeOr (pureGetParam "a") isInferred
+      ]
+    setToSet = purePi "setToSet" setType setType
+    holeOr _ False = hole
+    holeOr x True = x
+    lamBType = purePi "b" setType lamXType
+    lamXType = purePi "x" (typeOfX True) lamYType
+    lamYType = purePi "y" (typeOfX True) (typeOfX True)
+
 monomorphRedex :: HUnit.Test
 monomorphRedex =
   testInfer "foo = f (λ~ x -> (λ~ -> x) _) where f ~:(a:Set -> _ -> a) = _"
@@ -249,9 +330,9 @@ monomorphRedex =
     fArgInnerType True = purePi "" (pureGetParam "b") $ pureGetParam "b"
     body isInferred = pureApply [pureGetParam "f", fArg isInferred]
     fArg False =
-        pureLambda "b" hole .
-        pureLambda "x" hole $
-        pureApply [cToX, hole]
+      pureLambda "b" hole .
+      pureLambda "x" hole $
+      pureApply [cToX, hole]
     fArg True = pureLambda "b" setType xToX
     cToX = pureLambda "c" hole $ pureGetParam "x"
     xToX = pureLambda "x" (pureGetParam "b") $ pureGetParam "x"
@@ -574,6 +655,7 @@ hunitTests =
   , argTypeGoesToPi
   , idOnAnInt
   , idOnHole
+  , inferFromOneArgToOther
   , depApply
   , forceMono
   , fOfXIsFOf5
