@@ -283,7 +283,7 @@ inferFromOneArgToOther =
 
 monomorphRedex :: HUnit.Test
 monomorphRedex =
-  testInfer "foo = f (λ~ x -> (λ~ -> x) _) where f ~:(a:Set -> _ -> a) = _"
+  testInfer "foo = f (\\~ x -> (\\~ -> x) _) where f ~:(a:Set -> _ -> a) = _"
   expr .
   mkInferredNode inferredExpr hole $
   Data.makeApply
