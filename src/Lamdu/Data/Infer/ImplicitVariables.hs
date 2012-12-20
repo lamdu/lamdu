@@ -46,23 +46,34 @@ addVariablesGen gen expr =
     paramTypeTypeRef <- Infer.createRefExpr
     let
       holePoint = Infer.iPoint . fst $ hole ^. Data.ePayload
-      paramTypeRef = Infer.tvType $ Infer.nRefs holePoint
-      paramTypeNode =
-        Infer.InferNode (Infer.TypedValue paramTypeRef paramTypeTypeRef) mempty
       loaded =
         fromMaybe (error "Should not be loading defs when loading a mere getVar") $
         Infer.load loader Nothing getVar
-    _ <- inferAssertNoConflict loaded holePoint
-    newRootNode <- Infer.newNodeWithScope mempty
+    inferredGetVar <- inferAssertNoConflict loaded holePoint
     let
-      paramTypeExpr =
-        Data.Expression
-        (Data.ExpressionLeaf Data.Hole)
-        (paramTypeNode, AutoGen (Guid.augment "paramType" paramGuid))
-      newRootLam = Data.makeLambda paramGuid paramTypeExpr $ Lens.over (Lens.mapped . Lens._1) Infer.iPoint expr
-      newRootExpr = Data.Expression newRootLam (newRootNode, AutoGen (Guid.augment "root" paramGuid))
-    unMaybe $ Infer.addRules actions [fst <$> newRootExpr]
-    addVariablesGen newGen =<< State.gets (Infer.derefExpr newRootExpr)
+      dependsOnVars =
+        Lens.notNullOf
+        ( Data.ePayload . Lens._1
+        . Lens.to Infer.iType . Lens.folding Data.subExpressions
+        . Data.eValue . Data.expressionLeaf
+        . Data.getVariable . Data.parameterRef
+        ) inferredGetVar
+    if dependsOnVars
+      then return expr
+      else do
+        newRootNode <- Infer.newNodeWithScope mempty
+        let
+          paramTypeRef = Infer.tvType $ Infer.nRefs holePoint
+          paramTypeNode =
+            Infer.InferNode (Infer.TypedValue paramTypeRef paramTypeTypeRef) mempty
+          paramTypeExpr =
+            Data.Expression
+            (Data.ExpressionLeaf Data.Hole)
+            (paramTypeNode, AutoGen (Guid.augment "paramType" paramGuid))
+          newRootLam = Data.makeLambda paramGuid paramTypeExpr $ Lens.over (Lens.mapped . Lens._1) Infer.iPoint expr
+          newRootExpr = Data.Expression newRootLam (newRootNode, AutoGen (Guid.augment "root" paramGuid))
+        unMaybe $ Infer.addRules actions [fst <$> newRootExpr]
+        addVariablesGen newGen =<< State.gets (Infer.derefExpr newRootExpr)
   where
     loader = Infer.Loader $ const Nothing
     unrestrictedHoles =
