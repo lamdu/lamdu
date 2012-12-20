@@ -8,6 +8,7 @@ module Lamdu.Data.Infer.Rules
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens ((^.), (^..))
+import Control.Monad (guard)
 import Control.Monad.Trans.State (State)
 import Control.Monad.Trans.Writer (execWriter)
 import Control.Monad.Unit (Unit(..))
@@ -15,7 +16,6 @@ import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
 import Data.Functor.Identity (Identity(..))
-import Data.Maybe (maybeToList)
 import Data.Store.Guid (Guid)
 import Data.Traversable (traverse, sequenceA)
 import Lamdu.Data.Infer.Types
@@ -56,7 +56,7 @@ data RuleClosure def
   | LambdaParamTypeToArgTypeClosure ExprRef
   | ArgTypeToLambdaParamTypeClosure ExprRef Origin
   | NonLambdaToApplyValueClosure ExprRef Origin
-  | ApplyArgToFuncArgClosure ExprRef
+  | ApplyToPartsClosure (Data.Apply ExprRef)
 derive makeBinary ''RuleClosure
 
 data Rule def = Rule
@@ -102,8 +102,8 @@ runClosure closure =
     runArgTypeToLambdaParamTypeClosure x o
   NonLambdaToApplyValueClosure x o ->
     runNonLambdaToApplyValueClosure x o
-  ApplyArgToFuncArgClosure x ->
-    runApplyArgToFuncArgClosure x
+  ApplyToPartsClosure x ->
+    runApplyToPartsClosure x
 
 makeForNode :: Data.Expression def TypedValue -> State Origin [Rule def]
 makeForNode (Data.Expression exprBody typedVal) =
@@ -442,23 +442,20 @@ nonLambdaToApplyValueRule applyTv (Data.Apply func arg) =
   Rule [tvVal func, tvVal arg] .
   NonLambdaToApplyValueClosure (tvVal applyTv) <$> mkOrigin
 
-runApplyArgToFuncArgClosure :: Eq def => ExprRef -> RuleFunction def
-runApplyArgToFuncArgClosure argValRef ~[applyExpr, funcExpr] = do
-  -- If Func is same as in Apply,
+runApplyToPartsClosure :: Eq def => Data.Apply ExprRef -> RuleFunction def
+runApplyToPartsClosure refs ~[applyExpr, funcExpr] = do
+  -- If definitely not a redex (func also not a hole)
   -- Apply-Arg => Arg
+  -- Apply-Func => Func
+  guard $ Lens.nullOf (Data.eValue . Data.expressionLambda) funcExpr
+  guard $ Lens.nullOf (Data.eValue . Data.expressionLeaf . Data.hole) funcExpr
   Data.Apply aFunc aArg <- applyExpr ^.. Data.eValue . Data.expressionApply
-  _ <-
-    maybeToList $
-    Data.matchExpression
-    ((const . const) (Just ()))
-    ((const . const) Nothing)
-    aFunc funcExpr
-  return (argValRef, aArg)
+  [(refs ^. Data.applyFunc, aFunc), (refs ^. Data.applyArg, aArg)]
 
-applyArgToFuncArgRule ::
+applyToPartsRule ::
   TypedValue -> Data.Apply TypedValue -> Rule def
-applyArgToFuncArgRule applyTv (Data.Apply func arg) =
-  Rule [tvVal applyTv, tvVal func] $ ApplyArgToFuncArgClosure (tvVal arg)
+applyToPartsRule applyTv parts@(Data.Apply func _) =
+  Rule [tvVal applyTv, tvVal func] . ApplyToPartsClosure $ tvVal <$> parts
 
 applyRules :: TypedValue -> Data.Apply TypedValue -> State Origin [Rule def]
 applyRules applyTv apply@(Data.Apply func arg) =
@@ -476,7 +473,7 @@ applyRules applyTv apply@(Data.Apply func arg) =
       [ piParamTypeToArgTypeRule apply
       , redexApplyTypeToResultTypeRule applyTv func
       , lambdaParamTypeToArgTypeRule apply
-      , applyArgToFuncArgRule applyTv apply
+      , applyToPartsRule applyTv apply
       ]
       ++ recurseSubstRules Data.ExprPi
         (tvType applyTv) (tvType func) (tvVal arg)
