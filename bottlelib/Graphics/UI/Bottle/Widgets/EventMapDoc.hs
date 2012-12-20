@@ -1,5 +1,10 @@
 {-# LANGUAGE OverloadedStrings, DeriveFunctor #-}
-module Graphics.UI.Bottle.Widgets.EventMapDoc(makeView, addHelp, makeToggledHelpAdder) where
+module Graphics.UI.Bottle.Widgets.EventMapDoc
+  ( makeView
+  , IsHelpShown(..)
+  , addHelp
+  , makeToggledHelpAdder
+  ) where
 
 import Control.Applicative ((<$>), Applicative(..))
 import Control.Lens ((^.))
@@ -138,8 +143,7 @@ makeTreeView animId size =
       where
         Vector2 belows rights = recurse trees
 
-addHelp ::
-  (AnimId -> View) -> Widget.Size -> Widget f -> Widget f
+addHelp :: (AnimId -> View) -> Widget.Size -> Widget f -> Widget f
 addHelp f size w =
   Lens.over Widget.wFrame (mappend docFrame) w
   where
@@ -151,19 +155,26 @@ addHelp f size w =
       Anim.translate (size - eventMapSize) $
       eventMapDoc
 
+data IsHelpShown = HelpShown | HelpNotShown
+  deriving (Eq, Ord, Read, Show)
+
+toggle :: IsHelpShown -> IsHelpShown
+toggle HelpShown = HelpNotShown
+toggle HelpNotShown = HelpShown
+
 makeToggledHelpAdder
-  :: [E.ModKey] -> IO (TextView.Style -> Widget.Size -> Widget IO -> IO (Widget IO))
-makeToggledHelpAdder overlayDocKeys = do
-  showingHelpVar <- newIORef True
+  :: IsHelpShown -> [E.ModKey] -> IO (TextView.Style -> Widget.Size -> Widget IO -> IO (Widget IO))
+makeToggledHelpAdder startValue overlayDocKeys = do
+  showingHelpVar <- newIORef startValue
   let
-    toggle = modifyIORef showingHelpVar not
     toggleEventMap docStr =
-      Widget.keysEventMap overlayDocKeys (E.Doc ["Help", "Key Bindings", docStr]) toggle
+      Widget.keysEventMap overlayDocKeys (E.Doc ["Help", "Key Bindings", docStr]) $
+      modifyIORef showingHelpVar toggle
   return $ \style size widget -> do
     showingHelp <- readIORef showingHelpVar
     let
-      (f, docStr)
-        | showingHelp = (makeView size (widget ^. Widget.wEventMap) style, "Hide")
-        | otherwise = (makeTooltip style overlayDocKeys, "Show")
+      (f, docStr) = case showingHelp of
+        HelpShown -> (makeView size (widget ^. Widget.wEventMap) style, "Hide")
+        HelpNotShown -> (makeTooltip style overlayDocKeys, "Show")
     return . addHelp f size $
       Widget.strongerEvents (toggleEventMap docStr) widget

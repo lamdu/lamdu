@@ -189,7 +189,8 @@ runDb font db = do
   ExampleDB.initDB db
   (sizeFactorRef, sizeFactorEvents) <- makeSizeFactor
   flyNavMake <- makeFlyNav
-  addHelpWithStyle <- EventMapDoc.makeToggledHelpAdder Config.overlayDocKeys
+  addHelpWithStyle <-
+    EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown Config.overlayDocKeys
   settingsRef <- newIORef Settings
     { _sInfoMode = Settings.InfoTypes
     }
