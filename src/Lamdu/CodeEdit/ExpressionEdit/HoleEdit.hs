@@ -96,12 +96,12 @@ resultPickEventMap holeInfo holeResult =
   Just nextHole
     | not (Sugar.holeResultHasHoles holeResult) ->
       mappend (simplePickRes Config.pickResultKeys) .
-      E.keyPresses Config.addNextArgumentKeys
+      E.keyPresses Config.pickAndMoveToNextHoleKeys
       (E.Doc ["Edit", "Result", "Pick and move to next hole"]) .
       fmap Widget.eventResultFromCursor $ do
         _ <- Sugar.holePickResult (hiHoleActions holeInfo) holeResult
         return . WidgetIds.fromGuid $ nextHole ^. Sugar.rGuid
-  _ -> simplePickRes $ Config.pickResultKeys ++ Config.addNextArgumentKeys
+  _ -> simplePickRes $ Config.pickResultKeys ++ Config.pickAndMoveToNextHoleKeys
   where
     simplePickRes keys =
       E.keyPresses keys (E.Doc ["Edit", "Result", "Pick"]) $
