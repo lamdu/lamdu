@@ -80,15 +80,28 @@ mkCutter expr replaceWithHole = do
   _ <- DataOps.newClipboard expr
   replaceWithHole
 
-mkActions :: m ~ Anchors.ViewM => Stored m -> Actions m
-mkActions stored =
+mkCallWithArg ::
+  MonadA m => Maybe (DefI (Tag m)) ->
+  DataIRef.ExpressionM m (Stored m) -> T m (Maybe (T m Guid))
+mkCallWithArg mDefI exprS =
+  (fmap . fmap . const) mkCall .
+  uncurry (SugarInfer.inferMaybe_ mDefI withApply) $
+  Infer.initial mDefI
+  where
+    mkCall = fmap DataIRef.exprGuid . DataOps.callWithArg $ exprS ^. Data.ePayload
+    withApply = Data.pureApply (void exprS) Data.pureHole
+
+mkActions :: m ~ Anchors.ViewM => Maybe (DefI (Tag m)) -> DataIRef.ExpressionM m (Stored m) -> Actions m
+mkActions mDefI exprS =
   Actions
   { giveAsArg = guidify $ DataOps.giveAsArg stored
+  , callWithArg = mkCallWithArg mDefI exprS
   , replace = doReplace
   , cut = mkCutter (Property.value stored) doReplace
   , giveAsArgToOperator = guidify . DataOps.giveAsArgToOperator stored
   }
   where
+    stored = exprS ^. Data.ePayload
     guidify = fmap DataIRef.exprGuid
     doReplace = guidify $ DataOps.replaceWithHole stored
 
@@ -118,6 +131,7 @@ mkExpression ::
   DataIRef.ExpressionM m (PayloadMM m) ->
   ExpressionBody m (Expression m) -> SugarM m (Expression m)
 mkExpression exprI expr = do
+  mDefI <- SugarM.scMDefI <$> SugarM.readContext
   inferredTypesRefs <-
     zipWithM
     ( fmap (convertExpressionI . fmap toPayloadMM)
@@ -129,7 +143,7 @@ mkExpression exprI expr = do
     , _rExpressionBody = expr
     , _rPayload = Payload
       { _plInferredTypes = inferredTypesRefs
-      , _plActions = mkActions <$> resultStored exprI
+      , _plActions = mkActions mDefI <$> traverse (Lens.view SugarInfer.plStored) exprI
       , _plNextHole = Nothing
       }
     }
@@ -474,7 +488,7 @@ inferApplyForms ::
   (Infer.InferNode (DefI (Tag m)), Infer.Context (DefI (Tag m))) -> T m [HoleResult (Tag m)]
 inferApplyForms processRes expr (node, inferContext) =
   fmap (sortOn resultComplexityScore) . makeApplyForms =<<
-  SugarInfer.inferMaybe_ expr inferContext node
+  SugarInfer.inferMaybe_ Nothing expr inferContext node
   where
     makeApplyForms Nothing = return []
     makeApplyForms (Just i) =
@@ -494,10 +508,11 @@ convertInferredHoleH
       { SugarM.scHoleInferState = inferState
       , SugarM.scConfig = config
       , SugarM.scMContextHash = contextHash
+      , SugarM.scMDefI = mDefI
       } = sugarContext
     inferred = iwcInferred iwc
     scope = Infer.nScope $ Infer.iPoint inferred
-    check expr = SugarInfer.inferMaybe_ expr inferState $ Infer.iPoint inferred
+    check expr = SugarInfer.inferMaybe_ Nothing expr inferState $ Infer.iPoint inferred
 
     memoBy expr act = Cache.memoS (const act) (expr, eGuid, contextHash)
 
@@ -509,11 +524,11 @@ convertInferredHoleH
       { holeScope =
         map onScopeElement . Map.toList $ Infer.iScope inferred
       , holeInferResults = inferResults processRes
-      , holeMActions = mkHoleActions <$> resultStored exprI
+      , holeMActions = mkHoleActions <$> traverse (Lens.view SugarInfer.plStored) exprI
       }
-    mkHoleActions stored =
+    mkHoleActions exprS =
       HoleActions
-      { holePickResult = pickResult eGuid stored
+      { holePickResult = pickResult mDefI eGuid exprS
       , holePaste = mPaste
       , holeConvertResult = convertHoleResult config
       }
@@ -554,17 +569,18 @@ chooseHoleType inferredVals plain inferred =
 
 pickResult ::
   m ~ Anchors.ViewM =>
-  Guid -> Stored m ->
+  Maybe (DefI (Tag m)) ->
+  Guid -> DataIRef.ExpressionM m (Stored m) ->
   DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) ->
   T m (Guid, Actions m)
-pickResult defaultDest exprS =
+pickResult mDefI defaultDest exprS =
   fmap
-  ( flip (,) (mkActions exprS)
+  ( flip (,) (mkActions mDefI exprS)
   . maybe defaultDest
     (DataIRef.exprGuid . Lens.view (Data.ePayload . Lens._2))
   . listToMaybe . uninferredHoles . fmap swap
   )
-  . (DataIRef.writeExpression . Property.value) exprS
+  . (DataIRef.writeExpression . Property.value) (exprS ^. Data.ePayload)
 
 -- Also skip param types, those can usually be inferred later, so less
 -- useful to fill immediately
@@ -825,7 +841,7 @@ convertDefIExpression config exprLoaded defI typeI = do
           (Property.set . Load.propertyOfClosure) (typeI ^. Data.ePayload) =<<
           DataIRef.newExpression inferredTypeP
         }
-  lift . SugarM.run (SugarM.mkContext config inferredLoadedResult) $ do
+  lift . SugarM.run (SugarM.mkContext (Just defI) config inferredLoadedResult) $ do
     content <-
       convertDefinitionContent .
       (fmap . Lens.over SugarInfer.plInferred) Just $

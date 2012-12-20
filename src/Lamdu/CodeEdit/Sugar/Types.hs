@@ -44,6 +44,7 @@ type CT m = StateT Cache (T m)
 
 data Actions m = Actions
   { giveAsArg    :: T m Guid
+  , callWithArg  :: T m (Maybe (T m Guid))
   , replace      :: T m Guid
   , cut          :: T m Guid
   -- Turn "x" to "x ? _" where "?" is an operator-hole.

@@ -510,9 +510,8 @@ instance (Binary a, Binary def, Ord def) => Binary (Loaded def a) where
   put (Loaded a b) = put a >> put b
 
 load ::
-  (MonadA m, Ord def) => Loader def m ->
-  Maybe def -> Data.Expression def a ->
-  m (Loaded def a)
+  (MonadA m, Ord def) =>
+  Loader def m -> Maybe def -> Data.Expression def a -> m (Loaded def a)
 load loader mRecursiveDef expr =
   fmap (Loaded expr) loadDefTypes
   where

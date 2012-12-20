@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor #-}
 module Lamdu.CodeEdit.Sugar.Infer
-  ( Payload(..), plGuid, plInferred, plStored
+  ( Payload(..), bitraversePayload, plGuid, plInferred, plStored
   , NoInferred(..), InferredWC
   , NoStored(..), Stored
 
@@ -17,7 +17,7 @@ module Lamdu.CodeEdit.Sugar.Infer
   , inferMaybe, inferMaybe_
   ) where
 
-import Control.Applicative ((<$>))
+import Control.Applicative (Applicative(..), (<$>))
 import Control.Arrow ((&&&))
 import Control.Monad (void, (<=<))
 import Control.Monad.Trans.Class (lift)
@@ -63,6 +63,15 @@ data Payload inferred stored
     }
 LensTH.makeLenses ''Payload
 
+bitraversePayload ::
+  Applicative f =>
+  (inferreda -> f inferredb) ->
+  (storeda -> f storedb) ->
+  Payload inferreda storeda ->
+  f (Payload inferredb storedb)
+bitraversePayload i s (Payload guid inferred stored) =
+  Payload guid <$> i inferred <*> s stored
+
 randomizeGuids ::
   RandomGen g => g -> (a -> inferred) ->
   DataIRef.Expression t a ->
@@ -105,20 +114,25 @@ loader =
 
 inferMaybe ::
   MonadA m =>
-  DataIRef.ExpressionM m a -> Infer.Context (DefI (Tag m)) -> Infer.InferNode (DefI (Tag m)) ->
+  Maybe (DefI (Tag m)) ->
+  DataIRef.ExpressionM m a ->
+  Infer.Context (DefI (Tag m)) ->
+  Infer.InferNode (DefI (Tag m)) ->
   T m (Maybe (DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), a)))
-inferMaybe expr inferContext inferPoint = do
-  loaded <- Infer.load loader Nothing expr
+inferMaybe mDefI expr inferContext inferPoint = do
+  loaded <- Infer.load loader mDefI expr
   return . fmap fst . (`runStateT` inferContext) $
     Infer.inferLoaded (Infer.InferActions (const Nothing))
     loaded inferPoint
 
 inferMaybe_ ::
   MonadA m =>
-  DataIRef.ExpressionM m () -> Infer.Context (DefI (Tag m)) -> Infer.InferNode (DefI (Tag m)) ->
+  Maybe (DefI (Tag m)) ->
+  DataIRef.ExpressionM m () ->
+  Infer.Context (DefI (Tag m)) -> Infer.InferNode (DefI (Tag m)) ->
   T m (Maybe (DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))))
-inferMaybe_ expr inferContext inferPoint =
-  (fmap . fmap . fmap) fst $ inferMaybe expr inferContext inferPoint
+inferMaybe_ mDefI expr inferContext inferPoint =
+  (fmap . fmap . fmap) fst $ inferMaybe mDefI expr inferContext inferPoint
 -- }}}}}}}}}}}}}}}}}
 
 inferWithVariables ::
