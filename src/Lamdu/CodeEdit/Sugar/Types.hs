@@ -36,6 +36,7 @@ import Lamdu.Data.IRef (DefI)
 import qualified Control.Lens.TH as LensTH
 import qualified Data.Store.IRef as IRef
 import qualified Lamdu.Data as Data
+import qualified Lamdu.Data.IRef as DataIRef
 import qualified Lamdu.Data.Infer as Infer
 
 type T = Transaction
@@ -103,7 +104,7 @@ data Section expr = Section
   , sectionRArg :: Maybe expr
   } deriving (Functor)
 
-type HoleResult t = Data.Expression (DefI t) (Infer.Inferred (DefI t))
+type HoleResult t = DataIRef.Expression t (Infer.Inferred (DefI t))
 
 data HoleActions m = HoleActions
   { holePickResult :: HoleResult (Tag m) -> T m (Guid, Actions m)
@@ -113,7 +114,7 @@ data HoleActions m = HoleActions
 
 data Hole m = Hole
   { holeScope :: [Guid]
-  , holeInferResults :: Data.Expression (DefI (Tag m)) () -> CT m [HoleResult (Tag m)]
+  , holeInferResults :: DataIRef.ExpressionM m () -> CT m [HoleResult (Tag m)]
   , holeMActions :: Maybe (HoleActions m)
   }
 

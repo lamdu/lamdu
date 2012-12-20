@@ -18,6 +18,7 @@ import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Lamdu.Data as Data
+import qualified Lamdu.Data.IRef as DataIRef
 import qualified Lamdu.Data.Infer as Infer
 
 data Invisible = Invisible
@@ -62,7 +63,7 @@ intType = Data.pureIntegerType
 literalInt :: Integer -> Data.Expression def ()
 literalInt i = Data.pureExpression $ Data.makeLiteralInteger i
 
-pureGetDef :: String -> Data.Expression (DefI t) ()
+pureGetDef :: String -> DataIRef.Expression t ()
 pureGetDef name =
   Data.pureExpression . Data.makeDefinitionRef . IRef.unsafeFromGuid $
   Guid.fromString name
@@ -96,7 +97,7 @@ showExpressionWithConflicts =
         InferredWithConflicts inferred tErrors vErrors =
           inferredExpr ^. Data.ePayload
 
-definitionTypes :: Map Guid (Data.Expression (DefI t) ())
+definitionTypes :: Map Guid (DataIRef.Expression t ())
 definitionTypes =
   Map.fromList $ map (first Guid.fromString)
   [ ("Bool", setType)
@@ -132,8 +133,8 @@ definitionTypes =
     intToIntToInt = purePi "iii0" intType $ purePi "iii1" intType intType
 
 doInferM ::
-  Infer.InferNode (DefI t) -> Data.Expression (DefI t) a ->
-  State (Infer.Context (DefI t)) (Data.Expression (DefI t) (Infer.Inferred (DefI t), a))
+  Infer.InferNode (DefI t) -> DataIRef.Expression t a ->
+  State (Infer.Context (DefI t)) (DataIRef.Expression t (Infer.Inferred (DefI t), a))
 doInferM inferNode expr = do
   (success, exprWC) <-
     inferWithConflicts (doLoad expr) inferNode
@@ -148,11 +149,11 @@ doInferM inferNode expr = do
       ]
 
 doInferM_ ::
-  Infer.InferNode (DefI t) -> Data.Expression (DefI t) a ->
-  State (Infer.Context (DefI t)) (Data.Expression (DefI t) (Infer.Inferred (DefI t)))
+  Infer.InferNode (DefI t) -> DataIRef.Expression t a ->
+  State (Infer.Context (DefI t)) (DataIRef.Expression t (Infer.Inferred (DefI t)))
 doInferM_ = (fmap . fmap . fmap . fmap) fst doInferM
 
-doLoad :: Data.Expression (DefI t) a -> Infer.Loaded (DefI t) a
+doLoad :: DataIRef.Expression t a -> Infer.Loaded (DefI t) a
 doLoad expr =
   case Infer.load loader (Just defI) expr of
   Left err -> error err
@@ -171,8 +172,8 @@ defI :: DefI t
 defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
 
 doInfer ::
-  Data.Expression (DefI t) a ->
-  ( Data.Expression (DefI t) (Infer.Inferred (DefI t), a)
+  DataIRef.Expression t a ->
+  ( DataIRef.Expression t (Infer.Inferred (DefI t), a)
   , Infer.Context (DefI t)
   )
 doInfer =
@@ -181,11 +182,11 @@ doInfer =
     (ctx, node) = Infer.initial $ Just defI
 
 doInfer_ ::
-  Data.Expression (DefI t) a ->
-  (Data.Expression (DefI t) (Infer.Inferred (DefI t)), Infer.Context (DefI t))
+  DataIRef.Expression t a ->
+  (DataIRef.Expression t (Infer.Inferred (DefI t)), Infer.Context (DefI t))
 doInfer_ = (first . fmap) fst . doInfer
 
-factorialExpr :: Data.Expression (DefI t) ()
+factorialExpr :: DataIRef.Expression t ()
 factorialExpr =
   pureLambda "x" Data.pureHole $
   pureApply
@@ -204,8 +205,8 @@ factorialExpr =
   ]
 
 inferMaybe ::
-  Data.Expression (DefI t) a ->
-  Maybe (Data.Expression (DefI t) (Infer.Inferred (DefI t), a), Infer.Context (DefI t))
+  DataIRef.Expression t a ->
+  Maybe (DataIRef.Expression t (Infer.Inferred (DefI t), a), Infer.Context (DefI t))
 inferMaybe expr =
   (`runStateT` ctx) $
   Infer.inferLoaded (Infer.InferActions (const Nothing)) loaded node
@@ -214,13 +215,13 @@ inferMaybe expr =
     loaded = doLoad expr
 
 inferMaybe_ ::
-  Data.Expression (DefI t) b ->
-  Maybe (Data.Expression (DefI t) (Infer.Inferred (DefI t)), Infer.Context (DefI t))
+  DataIRef.Expression t b ->
+  Maybe (DataIRef.Expression t (Infer.Inferred (DefI t)), Infer.Context (DefI t))
 inferMaybe_ = (fmap . first . fmap) fst . inferMaybe
 
 factorial ::
   Int ->
-  ( Data.Expression (DefI t) (Infer.Inferred (DefI t))
+  ( DataIRef.Expression t (Infer.Inferred (DefI t))
   , Infer.Context (DefI t)
   )
 factorial gen =

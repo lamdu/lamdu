@@ -28,6 +28,7 @@ import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.Anchors (ViewM)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
+import Lamdu.Data.IRef (DefI)
 import System.Random.Utils (randFunc)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
@@ -181,8 +182,8 @@ mkGroup names body = Group
   }
 
 makeVariableGroup ::
-  MonadA m => Data.VariableRef (DataIRef.DefI (Tag m)) ->
-  ExprGuiM m (Group (DataIRef.DefI (Tag m)))
+  MonadA m => Data.VariableRef (DefI (Tag m)) ->
+  ExprGuiM m (Group (DefI (Tag m)))
 makeVariableGroup varRef =
   ExprGuiM.withNameFromVarRef varRef $ \(_, varName) ->
   return . mkGroup [varName] . Data.ExpressionLeaf $ Data.GetVariable varRef
@@ -231,7 +232,7 @@ exprWidgetId :: Show def => Data.Expression def a -> Widget.Id
 exprWidgetId = WidgetIds.fromGuid . randFunc . show . void
 
 toResultsList ::
-  MonadA m => HoleInfo m -> Data.Expression (DataIRef.DefI (Tag m)) () ->
+  MonadA m => HoleInfo m -> DataIRef.ExpressionM m () ->
   CT m (Maybe (ResultsList (Tag m)))
 toResultsList holeInfo baseExpr = do
   results <- Sugar.holeInferResults (hiHole holeInfo) baseExpr
@@ -254,7 +255,7 @@ toResultsList holeInfo baseExpr = do
 data ResultType = GoodResult | BadResult
 
 makeResultsList ::
-  MonadA m => HoleInfo m -> Group (DataIRef.DefI (Tag m)) ->
+  MonadA m => HoleInfo m -> Group (DefI (Tag m)) ->
   CT m (Maybe (ResultType, ResultsList (Tag m)))
 makeResultsList holeInfo group = do
   -- We always want the first, and we want to know if there's more, so

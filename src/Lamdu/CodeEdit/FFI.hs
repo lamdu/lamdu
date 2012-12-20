@@ -16,10 +16,10 @@ data Env t = Env
 derive makeBinary ''Env
 
 class FromExpr a where
-  fromExpr :: Env t -> Data.Expression (DataIRef.DefI t) () -> a
+  fromExpr :: Env t -> DataIRef.Expression t () -> a
 
 class ToExpr a where
-  toExpr :: Env t -> a -> [Data.Expression (DataIRef.DefI t) ()] -> Data.Expression (DataIRef.DefI t) ()
+  toExpr :: Env t -> a -> [DataIRef.Expression t ()] -> DataIRef.Expression t ()
 
 instance FromExpr Integer where
   fromExpr _ (Data.Expression { Data._eValue = Data.ExpressionLeaf (Data.LiteralInteger x) }) = x
@@ -44,7 +44,7 @@ instance FromExpr Bool where
     | defRef == falseDef env = False
   fromExpr _ _ = error "Expected a normalized bool expression!"
 
-table :: Env t -> Map Data.FFIName ([Data.Expression (DataIRef.DefI t) ()] -> Data.Expression (DataIRef.DefI t) ())
+table :: Env t -> Map Data.FFIName ([DataIRef.Expression t ()] -> DataIRef.Expression t ())
 table env =
   Map.fromList
   [ prelude "==" ((==) :: Integer -> Integer -> Bool)

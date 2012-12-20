@@ -26,7 +26,7 @@ isInfixVar =
 
 infixOp
   :: MonadA m
-  => Data.Expression (DataIRef.DefI (Tag m)) ref
+  => DataIRef.ExpressionM m ref
   -> Transaction m (Maybe (Data.VariableRef (DataIRef.DefI (Tag m))))
 infixOp expr =
   case expr ^. Data.eValue of

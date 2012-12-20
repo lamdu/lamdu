@@ -81,8 +81,8 @@ propertyOfClosure (LambdaProperty cons exprI lambda role) =
 irefOfClosure :: MonadA m => PropertyClosure (Tag m) -> DataIRef.ExpressionI (Tag m)
 irefOfClosure = Property.value . propertyOfClosure
 
-type LoadedClosure t = Data.Expression (DefI t) (PropertyClosure t)
-type Loaded m = Data.Expression (DefI (Tag m)) (DataIRef.ExpressionProperty m)
+type LoadedClosure t = DataIRef.Expression t (PropertyClosure t)
+type Loaded m = DataIRef.ExpressionM m (DataIRef.ExpressionProperty m)
 
 loadExpressionProperty ::
   MonadA m => DataIRef.ExpressionProperty m -> T m (Loaded m)

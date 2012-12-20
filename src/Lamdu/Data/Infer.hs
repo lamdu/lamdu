@@ -54,6 +54,7 @@ import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
 import qualified Lamdu.Data as Data
+import qualified Lamdu.Data.IRef as DataIRef
 import qualified Lamdu.Data.Infer.Rules as Rules
 
 mkOrigin :: State Origin Origin
@@ -572,11 +573,11 @@ inferLoaded actions loadedExpr node =
   inferLoaded ::
     InferActions (DefI t) Maybe -> Loaded (DefI t) a ->
     InferNode (DefI t) ->
-    StateT (Context (DefI t)) Maybe (Data.Expression (DefI t) (Inferred (DefI t), a))
+    StateT (Context (DefI t)) Maybe (DataIRef.Expression t (Inferred (DefI t), a))
   #-}
 {-# SPECIALIZE
   inferLoaded ::
     Monoid w => InferActions (DefI t) (Writer w) -> Loaded (DefI t) a ->
     InferNode (DefI t) ->
-    StateT (Context (DefI t)) (Writer w) (Data.Expression (DefI t) (Inferred (DefI t), a))
+    StateT (Context (DefI t)) (Writer w) (DataIRef.Expression t (Inferred (DefI t), a))
   #-}
