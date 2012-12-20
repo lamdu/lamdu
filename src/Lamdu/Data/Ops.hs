@@ -40,7 +40,7 @@ makeDefinition = do
 giveAsArg ::
   MonadA m =>
   DataIRef.ExpressionProperty m ->
-  T m (DataIRef.Expression (Tag m))
+  T m (DataIRef.ExpressionI (Tag m))
 giveAsArg exprP = do
   newFuncI <- newHole
   Property.set exprP =<<
@@ -52,7 +52,7 @@ giveAsArgToOperator ::
   MonadA m =>
   DataIRef.ExpressionProperty m ->
   String ->
-  T m (DataIRef.Expression (Tag m))
+  T m (DataIRef.ExpressionI (Tag m))
 giveAsArgToOperator exprP searchTerm = do
   op <- newHole
   (`Property.set` searchTerm) =<< Anchors.assocSearchTermRef (DataIRef.exprGuid op)
@@ -63,7 +63,7 @@ giveAsArgToOperator exprP searchTerm = do
 callWithArg ::
   MonadA m =>
   DataIRef.ExpressionProperty m ->
-  T m (DataIRef.Expression (Tag m))
+  T m (DataIRef.ExpressionI (Tag m))
 callWithArg exprP = do
   argI <- newHole
   Property.set exprP =<<
@@ -71,14 +71,14 @@ callWithArg exprP = do
     (Data.makeApply (Property.value exprP) argI)
   return argI
 
-newHole :: MonadA m => T m (DataIRef.Expression (Tag m))
+newHole :: MonadA m => T m (DataIRef.ExpressionI (Tag m))
 newHole = DataIRef.newExprBody $ Data.ExpressionLeaf Data.Hole
 
 replace
   :: MonadA m
   => DataIRef.ExpressionProperty m
-  -> DataIRef.Expression (Tag m)
-  -> T m (DataIRef.Expression (Tag m))
+  -> DataIRef.ExpressionI (Tag m)
+  -> T m (DataIRef.ExpressionI (Tag m))
 replace exprP newExprI = do
   Property.set exprP newExprI
   return newExprI
@@ -86,13 +86,13 @@ replace exprP newExprI = do
 replaceWithHole
   :: MonadA m
   => DataIRef.ExpressionProperty m
-  -> T m (DataIRef.Expression (Tag m))
+  -> T m (DataIRef.ExpressionI (Tag m))
 replaceWithHole exprP = replace exprP =<< newHole
 
 lambdaWrap
   :: MonadA m
   => DataIRef.ExpressionProperty m
-  -> T m (Guid, DataIRef.Expression (Tag m))
+  -> T m (Guid, DataIRef.ExpressionI (Tag m))
 lambdaWrap exprP = do
   newParamTypeI <- newHole
   (newParam, newExprI) <-
@@ -103,7 +103,7 @@ lambdaWrap exprP = do
 redexWrap
   :: MonadA m
   => DataIRef.ExpressionProperty m
-  -> T m (Guid, DataIRef.Expression (Tag m))
+  -> T m (Guid, DataIRef.ExpressionI (Tag m))
 redexWrap exprP = do
   newParamTypeI <- newHole
   (newParam, newLambdaI) <-
@@ -135,7 +135,7 @@ jumpBack = do
 
 newBuiltin
   :: MonadA m
-  => String -> DataIRef.Expression (Tag m)
+  => String -> DataIRef.ExpressionI (Tag m)
   -> Transaction m (DefI (Tag m))
 newBuiltin fullyQualifiedName typeI =
   newDefinition name . (`Data.Definition` typeI) . Data.DefinitionBuiltin .
@@ -152,7 +152,7 @@ newDefinition name defI = do
   Anchors.setP (Anchors.assocNameRef (IRef.guid res)) name
   return res
 
-newClipboard :: DataIRef.Expression (Tag ViewM) -> Transaction ViewM (DefI (Tag ViewM))
+newClipboard :: DataIRef.ExpressionI (Tag ViewM) -> Transaction ViewM (DefI (Tag ViewM))
 newClipboard expr = do
   len <- length <$> Anchors.getP Anchors.clipboards
   def <- Data.Definition (Data.DefinitionExpression expr) <$> newHole

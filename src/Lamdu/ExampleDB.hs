@@ -138,7 +138,7 @@ createBuiltins =
     endo = join mkPi
     set = DataIRef.newExprBody $ Data.ExpressionLeaf Data.Set
     integer = DataIRef.newExprBody $ Data.ExpressionLeaf Data.IntegerType
-    forAll name f = fmap DataIRef.Expression . fixIRef $ \aI -> do
+    forAll name f = fmap DataIRef.ExpressionI . fixIRef $ \aI -> do
       let aGuid = IRef.guid aI
       A.setP (A.assocNameRef aGuid) name
       s <- set

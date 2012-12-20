@@ -75,7 +75,7 @@ type Convertor m =
   Data.Expression (DefI (Tag m)) (PayloadMM m) ->
   SugarM m (Expression m)
 
-mkCutter :: m ~ Anchors.ViewM => DataIRef.Expression (Tag m) -> T m Guid -> T m Guid
+mkCutter :: m ~ Anchors.ViewM => DataIRef.ExpressionI (Tag m) -> T m Guid -> T m Guid
 mkCutter expr replaceWithHole = do
   _ <- DataOps.newClipboard expr
   replaceWithHole

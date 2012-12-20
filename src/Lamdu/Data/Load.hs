@@ -44,13 +44,13 @@ lambdaChildByRole Result = Data.lambdaBody
 
 data PropertyClosure t
   = DefinitionTypeProperty
-      (DefI t) (Data.Definition (DataIRef.Expression t))
+      (DefI t) (Data.Definition (DataIRef.ExpressionI t))
   | DefinitionBodyExpressionProperty
-      (DefI t) (DataIRef.Expression t) (DataIRef.Expression t)
+      (DefI t) (DataIRef.ExpressionI t) (DataIRef.ExpressionI t)
   | ApplyProperty
-      (DataIRef.Expression t) (Data.Apply (DataIRef.Expression t)) ApplyRole
+      (DataIRef.ExpressionI t) (Data.Apply (DataIRef.ExpressionI t)) ApplyRole
   | LambdaProperty Data.ExprLambdaWrapper
-      (DataIRef.Expression t) (Data.Lambda (DataIRef.Expression t)) LambdaRole
+      (DataIRef.ExpressionI t) (Data.Lambda (DataIRef.ExpressionI t)) LambdaRole
   deriving (Eq, Ord, Show, Typeable)
 derive makeBinary ''PropertyClosure
 
@@ -78,7 +78,7 @@ propertyOfClosure (LambdaProperty cons exprI lambda role) =
   where
     lens = lambdaChildByRole role
 
-irefOfClosure :: MonadA m => PropertyClosure (Tag m) -> DataIRef.Expression (Tag m)
+irefOfClosure :: MonadA m => PropertyClosure (Tag m) -> DataIRef.ExpressionI (Tag m)
 irefOfClosure = Property.value . propertyOfClosure
 
 type LoadedClosure t = Data.Expression (DefI t) (PropertyClosure t)
@@ -96,7 +96,7 @@ loadExpressionClosure closure =
   irefOfClosure closure
 
 loadExpressionBody ::
-  MonadA m => DataIRef.Expression (Tag m) -> T m (Data.ExpressionBody (DefI (Tag m)) (LoadedClosure (Tag m)))
+  MonadA m => DataIRef.ExpressionI (Tag m) -> T m (Data.ExpressionBody (DefI (Tag m)) (LoadedClosure (Tag m)))
 loadExpressionBody iref = onBody =<< DataIRef.readExprBody iref
   where
     onBody (Data.ExpressionLeaf x) =
