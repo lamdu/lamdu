@@ -127,17 +127,17 @@ actionsEventMap ::
   Guid -> IsHole -> Sugar.Actions m ->
   ExprGuiM m (EventHandlers (Transaction m))
 actionsEventMap exprGuid holePicker actions = do
-  isSelected <-
-    ExprGuiM.widgetEnv . WE.isSubCursor $
-    WidgetIds.fromGuid exprGuid
+  isSelected <- ExprGuiM.widgetEnv . WE.isSubCursor $ WidgetIds.fromGuid exprGuid
   let
     replace
       | isSelected =
         if isHole then mempty else
-        mkEventMap delKeys (E.Doc ["Edit", "Replace expression"]) FocusDelegator.delegatingId $
+        mkEventMap delKeys (E.Doc ["Edit", "Replace expression"])
+        FocusDelegator.delegatingId $
         Sugar.replace actions
       | otherwise =
-        mkEventMap delKeys (E.Doc ["Navigation", "Select parent"]) FocusDelegator.notDelegatingId $ return exprGuid
+        mkEventMap delKeys (E.Doc ["Navigation", "Select parent"])
+        FocusDelegator.notDelegatingId $ return exprGuid
   return $ mconcat
     [ giveAsArg
     , addOperator
