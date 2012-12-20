@@ -220,7 +220,7 @@ inferFromOneArgToOther =
         ) $
       mkInferredLeaf Data.Hole (pureGetParam "b") setType
     ) $
-  mkInferredNode lamY lamYType $
+  mkInferredNode (lamY True) lamYType $
   makeNamedLambda "y"
     ( mkInferredNode (typeOfX True) setType $
       Data.makeApply
@@ -231,13 +231,13 @@ inferFromOneArgToOther =
         ) $
       mkInferredGetParam "b" setType
     ) $
-  mkInferredNode body (typeOfX True) $
+  mkInferredNode (body True) (typeOfX True) $
   Data.makeApply
-    ( mkInferredNode body1 body1Type $
+    ( mkInferredNode (body1 True) body1Type $
       Data.makeApply
-        ( mkInferredNode body2 body2Type $
+        ( mkInferredNode (body2 True) body2Type $
           Data.makeApply
-            ( mkInferredNode body3 body3Type $
+            ( mkInferredNode (body3 True) body3Type $
               Data.makeApply
                 (mkInferredGetDef "if") $
               mkInferredLeaf Data.Hole (typeOfX True) setType
@@ -253,13 +253,14 @@ inferFromOneArgToOther =
     lamB isInferred =
       pureLambda "b" (holeOr setType isInferred) $ lamX isInferred
     lamX isInferred =
-      pureLambda "x" (typeOfX isInferred) lamY
-    lamY =
-      pureLambda "y" (typeOfX True) body
-    body = pureApply [body1, pureGetParam "y"]
-    body1 = pureApply [body2, pureGetParam "x"]
-    body2 = pureApply [body3, hole]
-    body3 = pureApply [pureGetDef "if", hole]
+      pureLambda "x" (typeOfX isInferred) $ lamY isInferred
+    lamY isInferred =
+      pureLambda "y" (typeOfX True) $ body isInferred
+    body isInferred = pureApply [body1 isInferred, pureGetParam "y"]
+    body1 isInferred = pureApply [body2 isInferred, pureGetParam "x"]
+    body2 isInferred = pureApply [body3 isInferred, hole]
+    body3 isInferred =
+      pureApply [pureGetDef "if", holeOr (typeOfX True) isInferred]
     body1Type = purePi "body1" (typeOfX True) (typeOfX True)
     body2Type = purePi "body2" (typeOfX True) body1Type
     body3Type = purePi "body3" (pureGetDef "Bool") body2Type
