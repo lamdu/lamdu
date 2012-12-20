@@ -168,3 +168,7 @@ Executable lamdu
   ghc-options:         -O2 -Wall
   ghc-prof-options:    -Wall -auto-all -caf-all -rtsopts
   main-is:             Lamdu/Main.hs
+
+source-repository head
+  type: git
+  location: https://github.com/Peaker/lamdu.git
