@@ -5,7 +5,9 @@ module Lamdu.Data.Infer.ImplicitVariables
 
 import Control.Applicative ((<$>))
 import Control.Lens ((^.))
-import Control.Monad.Trans.State (StateT, State, mapStateT)
+import Control.Monad (foldM)
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.State (StateT, State, evalStateT, mapStateT, state)
 import Control.Monad.Trans.State.Utils (toStateT)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..), getWord8, putWord8)
@@ -35,53 +37,6 @@ isUnrestrictedHole
     Infer.UnrestrictedPoly) = True
 isUnrestrictedHole _ = False
 
-addVariablesGen ::
-  (Ord def, RandomGen g) => g ->
-  Data.Expression def (Infer.Inferred def, Payload a) ->
-  State (Infer.Context def) (Data.Expression def (Infer.Inferred def, Payload a))
-addVariablesGen gen expr =
-  case unrestrictedHoles of
-  [] -> return expr
-  (hole : _) -> do
-    paramTypeTypeRef <- Infer.createRefExpr
-    let
-      holePoint = Infer.iPoint . fst $ hole ^. Data.ePayload
-      loaded =
-        fromMaybe (error "Should not be loading defs when loading a mere getVar") $
-        Infer.load loader Nothing getVar
-    inferredGetVar <- inferAssertNoConflict loaded holePoint
-    let
-      dependsOnVars =
-        Lens.notNullOf
-        ( Data.ePayload . Lens._1
-        . Lens.to Infer.iType . Lens.folding Data.subExpressions
-        . Data.eValue . Data.expressionLeaf
-        . Data.getVariable . Data.parameterRef
-        ) inferredGetVar
-    if dependsOnVars
-      then return expr
-      else do
-        newRootNode <- Infer.newNodeWithScope mempty
-        let
-          paramTypeRef = Infer.tvType $ Infer.nRefs holePoint
-          paramTypeNode =
-            Infer.InferNode (Infer.TypedValue paramTypeRef paramTypeTypeRef) mempty
-          paramTypeExpr =
-            Data.Expression
-            (Data.ExpressionLeaf Data.Hole)
-            (paramTypeNode, AutoGen (Guid.augment "paramType" paramGuid))
-          newRootLam = Data.makeLambda paramGuid paramTypeExpr $ Lens.over (Lens.mapped . Lens._1) Infer.iPoint expr
-          newRootExpr = Data.Expression newRootLam (newRootNode, AutoGen (Guid.augment "root" paramGuid))
-        unMaybe $ Infer.addRules actions [fst <$> newRootExpr]
-        addVariablesGen newGen =<< State.gets (Infer.derefExpr newRootExpr)
-  where
-    loader = Infer.Loader $ const Nothing
-    unrestrictedHoles =
-      filter (isUnrestrictedHole . Infer.iValue . fst . Lens.view Data.ePayload) .
-      reverse $ Data.subExpressions =<< Data.funcArguments expr
-    getVar = Data.pureExpression $ Data.makeParameterRef paramGuid
-    (paramGuid, newGen) = random gen
-
 unMaybe :: StateT s Maybe b -> StateT s Identity b
 unMaybe =
   mapStateT (Identity . fromMaybe (error "Infer error when adding implicit vars!"))
@@ -90,13 +45,91 @@ unMaybe =
 actions :: Infer.InferActions def Maybe
 actions = Infer.InferActions $ const Nothing
 
+addVariableForHole ::
+  (Ord def, RandomGen g) =>
+  Infer.InferNode def ->
+  StateT g (State (Infer.Context def)) (Guid, Infer.InferNode def)
+addVariableForHole holePoint = do
+  paramGuid <- state random
+  let
+    getVar = Data.pureExpression $ Data.makeParameterRef paramGuid
+    loaded =
+      fromMaybe (error "Should not be loading defs when loading a mere getVar") $
+      Infer.load loader Nothing getVar
+  lift $ do
+    inferredGetVar <- inferAssertNoConflict loaded holePoint
+    let
+      paramTypeRef =
+        Infer.tvType . Infer.nRefs . Infer.iPoint . fst $
+        inferredGetVar ^. Data.ePayload
+    paramTypeTypeRef <- Infer.createRefExpr
+    return
+      ( paramGuid
+      , Infer.InferNode (Infer.TypedValue paramTypeRef paramTypeTypeRef) mempty
+      )
+  where
+    loader = Infer.Loader $ const Nothing
+
+addVariablesForExpr ::
+  (MonadA m, Ord def, RandomGen g) =>
+  Infer.Loader def m ->
+  Data.Expression def (Infer.Inferred def, a) ->
+  StateT g (StateT (Infer.Context def) m) [(Guid, Infer.InferNode def)]
+addVariablesForExpr loader expr = do
+  reinferred <-
+    lift . State.gets . Infer.derefExpr $
+    Lens.over (Lens.mapped . Lens._1) Infer.iPoint expr
+  if isUnrestrictedHole $ inferredVal reinferred
+    then
+      fmap (:[]) . mapStateT toStateT . addVariableForHole $
+      Infer.iPoint . fst $ expr ^. Data.ePayload
+    else do
+      reloaded <-
+        lift . lift . Infer.load loader Nothing $ -- <-- TODO: Nothing?
+        inferredVal reinferred
+      reinferredLoaded <-
+        lift . toStateT . inferAssertNoConflict reloaded .
+        Infer.iPoint . fst $ Lens.view Data.ePayload reinferred
+      fmap concat . mapM (addVariablesForExpr loader) .
+        filter (isUnrestrictedHole . inferredVal) $
+        Data.subExpressions reinferredLoaded
+  where
+    inferredVal = Infer.iValue . fst . Lens.view Data.ePayload
+
+addParam ::
+  Ord def =>
+  Data.Expression def (Infer.InferNode def, Payload a) ->
+  (Guid, Infer.InferNode def) ->
+  State (Infer.Context def)
+  (Data.Expression def (Infer.InferNode def, Payload a))
+addParam body (paramGuid, paramTypeNode) = do
+  newRootNode <- Infer.newNodeWithScope mempty
+  let
+    newRootExpr =
+      Data.Expression newRootLam (newRootNode, AutoGen (Guid.augment "root" paramGuid))
+  unMaybe $ Infer.addRules actions [fst <$> newRootExpr]
+  return newRootExpr
+  where
+    paramTypeExpr =
+      Data.Expression
+      (Data.ExpressionLeaf Data.Hole)
+      (paramTypeNode, AutoGen (Guid.augment "paramType" paramGuid))
+    newRootLam =
+      Data.makeLambda paramGuid paramTypeExpr body
+
 addVariables ::
   (MonadA m, Ord def, RandomGen g) =>
-  g ->
+  g -> Infer.Loader def m ->
   Data.Expression def (Infer.Inferred def, a) ->
   StateT (Infer.Context def) m
   (Data.Expression def (Infer.Inferred def, Payload a))
-addVariables gen =
-  toStateT .
-  addVariablesGen gen .
-  Lens.over (Lens.mapped . Lens._2) Stored
+addVariables gen loader expr = do
+  implicitParams <-
+    (`evalStateT` gen) . fmap concat .
+    mapM (addVariablesForExpr loader) $ Data.funcArguments expr
+  newRoot <-
+    toStateT $ foldM addParam
+    ( Lens.over Lens._1 Infer.iPoint
+    . Lens.over Lens._2 Stored <$> expr)
+    implicitParams
+  State.gets $ Infer.derefExpr newRoot
