@@ -31,11 +31,16 @@ module Lamdu.Data
   , expressionBodyDef
   , expressionDef
 
+  -- Each expression gets a ptr to itself
+  , addSubexpressionSetters
+  , addExpressionBodyContexts
+
   , ExprLambdaWrapper(..), exprLambdaPrism
   ) where
 
 import Control.Applicative (Applicative(..), liftA2, (<$>))
 import Control.Lens (Simple, Prism, (^.))
+import Control.Lens.Utils (SimpleContext, lensContext, contextSetter, result)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (evalState, state)
@@ -45,6 +50,7 @@ import Data.Binary.Put (putWord8)
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
 import Data.Foldable (Foldable(..))
+import Data.Function (on)
 import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable(..))
@@ -95,6 +101,8 @@ data ExpressionBody def expr
   deriving (Eq, Ord, Functor, Foldable, Traversable)
 LensTH.makePrisms ''ExpressionBody
 
+type ExpressionBodyExpr def a = ExpressionBody def (Expression def a)
+
 bitraverseExpressionBody ::
   Applicative f => (defa -> f defb) -> (expra -> f exprb) ->
   ExpressionBody defa expra ->
@@ -108,8 +116,6 @@ bitraverseExpressionBody onDef onExpr body =
 
 expressionBodyDef :: Lens.Traversal (ExpressionBody a expr) (ExpressionBody b expr) a b
 expressionBodyDef = (`bitraverseExpressionBody` pure)
-
-type ExpressionBodyExpr def a = ExpressionBody def (Expression def a)
 
 makeApply :: expr -> expr -> ExpressionBody def expr
 makeApply func arg = ExpressionApply $ Apply func arg
@@ -176,6 +182,18 @@ data Expression def a = Expression
   } deriving (Functor, Eq, Ord, Foldable, Traversable, Typeable)
 LensTH.makeLenses ''Expression
 LensTH.makeLenses ''Definition
+derive makeBinary ''FFIName
+derive makeBinary ''VariableRef
+derive makeBinary ''Lambda
+derive makeBinary ''Apply
+derive makeBinary ''Leaf
+derive makeBinary ''ExpressionBody
+derive makeBinary ''Expression
+derive makeBinary ''Builtin
+derive makeBinary ''DefinitionBody
+derive makeBinary ''Definition
+LensTH.makeLenses ''Lambda
+LensTH.makeLenses ''Apply
 
 instance (Show a, Show def) => Show (Expression def a) where
   show (Expression body payload) =
@@ -197,6 +215,39 @@ bitraverseExpression onDef onPl = f
 
 expressionDef :: Lens.Traversal (Expression a pl) (Expression b pl) a b
 expressionDef = (`bitraverseExpression` pure)
+
+addExpressionBodyContexts ::
+  SimpleContext (ExpressionBody def expr) container ->
+  ExpressionBody def (SimpleContext expr container)
+addExpressionBodyContexts (Lens.Context intoContainer body) =
+  Lens.over (traverse . contextSetter . result) intoContainer $
+  case body of
+  ExpressionLambda lam -> onLambda ExpressionLambda ExpressionLambda lam
+  ExpressionPi lam -> onLambda ExpressionPi ExpressionPi lam
+  ExpressionApply app ->
+    ExpressionApply . wrap ExpressionApply $
+    -- `on` must be used infix here, because GHC (at least as of
+    -- 7.4.1) has a type inference bug/feature that infers this well,
+    -- whereas it fails to infer the prefix form:
+    (Apply `on` lensContext app) applyFunc applyArg
+  ExpressionLeaf leaf -> ExpressionLeaf leaf
+  where
+    wrap f = Lens.over (traverse . contextSetter . result) f
+    onLambda consa consb lam@(Lambda param _ _) =
+      consa . wrap consb $
+      Lambda param (lensContext lam lambdaParamType) (lensContext lam lambdaBody)
+
+addSubexpressionSetters ::
+  SimpleContext (Expression def a) container ->
+  Expression def (Expression def a -> container, a)
+addSubexpressionSetters (Lens.Context intoContainer (Expression body pl)) =
+  Expression newBody (intoContainer, pl)
+  where
+    ptr f = Lens.Context (intoContainer . f)
+    bodyPtr = ptr (`Expression` pl) body
+    newBody =
+      Lens.over traverse addSubexpressionSetters $
+      addExpressionBodyContexts bodyPtr
 
 pureExpression :: ExpressionBody def (Expression def ()) -> Expression def ()
 pureExpression = (`Expression` ())
@@ -308,6 +359,7 @@ funcArguments =
     f (Lambda _ paramType body) =
       paramType : funcArguments body
 
+
 data ExprLambdaWrapper = ExprLambda | ExprPi
   deriving (Eq, Ord, Show, Typeable)
 derive makeBinary ''ExprLambdaWrapper
@@ -315,16 +367,3 @@ derive makeBinary ''ExprLambdaWrapper
 exprLambdaPrism :: ExprLambdaWrapper -> Simple Prism (ExpressionBody def expr) (Lambda expr)
 exprLambdaPrism ExprLambda = expressionLambda
 exprLambdaPrism ExprPi = expressionPi
-
-derive makeBinary ''FFIName
-derive makeBinary ''VariableRef
-derive makeBinary ''Lambda
-derive makeBinary ''Apply
-derive makeBinary ''Leaf
-derive makeBinary ''ExpressionBody
-derive makeBinary ''Expression
-derive makeBinary ''Builtin
-derive makeBinary ''DefinitionBody
-derive makeBinary ''Definition
-LensTH.makeLenses ''Lambda
-LensTH.makeLenses ''Apply
