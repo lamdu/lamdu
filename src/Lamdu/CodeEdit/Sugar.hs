@@ -856,7 +856,7 @@ convertDefIExpression config exprLoaded defI typeI = do
       (fmap . Lens.over SugarInfer.plInferred) Just $
       inferredLoadedResult ^. SugarInfer.ilrExpr
     mNewType <-
-      if inferredLoadedResult ^. SugarInfer.ilrSuccess && not typesMatch
+      if inferredLoadedResult ^. SugarInfer.ilrSuccess && not typesMatch && isCompleteType inferredTypeP
       then fmap Just $ SugarM.liftTransaction mkNewType
       else return Nothing
     return $ DefinitionBodyExpression DefinitionExpression
