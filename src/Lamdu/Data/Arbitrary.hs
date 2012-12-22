@@ -54,7 +54,7 @@ arbitraryLeaf = do
 liftGen :: Gen a -> GenExpr def a
 liftGen = lift . lift
 
-arbitraryBody :: Arbitrary a => GenExpr def (Expression.ExpressionBodyExpr def a)
+arbitraryBody :: Arbitrary a => GenExpr def (Expression.BodyExpr def a)
 arbitraryBody =
   join . liftGen . Gen.frequency . (map . second) pure $
   [ weight 1  $ Expression.ExpressionLambda <$> arbitraryLambda

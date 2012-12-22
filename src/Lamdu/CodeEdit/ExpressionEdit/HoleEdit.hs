@@ -29,7 +29,7 @@ import Lamdu.Anchors (ViewM)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.Data.Expression (Expression)
-import Lamdu.Data.IRef (DefI)
+import Lamdu.Data.Expression.IRef (DefI)
 import System.Random.Utils (randFunc)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
@@ -50,7 +50,7 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Expression as Expression
-import qualified Lamdu.Data.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
@@ -176,7 +176,7 @@ makeNoResults myId =
   ExprGuiM.widgetEnv .
   BWidgets.makeTextView "(No results)" $ mappend myId ["no results"]
 
-mkGroup :: [String] -> Expression.ExpressionBodyExpr def () -> Group def
+mkGroup :: [String] -> Expression.BodyExpr def () -> Group def
 mkGroup names body = Group
   { groupNames = names
   , groupBaseExpr = Expression.pureExpression body

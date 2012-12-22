@@ -8,7 +8,7 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expression
-import qualified Lamdu.Data.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as DataIRef
 
 data Env t = Env
   { trueDef :: DataIRef.DefI t

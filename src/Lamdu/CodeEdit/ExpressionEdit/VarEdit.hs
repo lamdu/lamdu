@@ -15,7 +15,7 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Expression as Expression
-import qualified Lamdu.Data.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds

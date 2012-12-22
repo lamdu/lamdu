@@ -11,7 +11,7 @@ import Data.Map ((!))
 import Data.Maybe (isJust)
 import Data.Monoid (Monoid(..))
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
-import Lamdu.Data.IRef (DefI)
+import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Infer.Conflicts (inferWithConflicts)
 import Test.Framework (Test)
 import Test.Framework.Providers.HUnit (hUnitTestToTests)
@@ -26,7 +26,7 @@ import qualified Data.List as List
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Lamdu.Data.Expression as Expression
-import qualified Lamdu.Data.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Infer as Infer
 import qualified Test.HUnit as HUnit
 
@@ -89,7 +89,7 @@ mkInferredLeaf leaf val typ =
 mkInferredNode ::
   Expression.Expression def () ->
   Expression.Expression def () ->
-  Expression.ExpressionBody def (InferResults def) -> InferResults def
+  Expression.Body def (InferResults def) -> InferResults def
 mkInferredNode iVal iType body =
   Expression.Expression body (iVal, iType)
 

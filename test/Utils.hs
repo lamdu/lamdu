@@ -10,7 +10,7 @@ import Control.Monad.Trans.State (State, runState, runStateT)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
-import Lamdu.Data.IRef (DefI)
+import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Infer.Conflicts (InferredWithConflicts(..), inferWithConflicts)
 import qualified Data.Foldable as Foldable
 import qualified Data.List as List
@@ -18,22 +18,22 @@ import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Lamdu.Data.Expression as Expression
-import qualified Lamdu.Data.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Infer as Infer
 
 data Invisible = Invisible
 instance Show Invisible where
   show = const ""
-showStructure :: Show def => Expression.ExpressionBody def a -> String
+showStructure :: Show def => Expression.Body def a -> String
 showStructure = show . (Invisible <$)
 
 instance Show def => Show (Expression.Expression def ()) where
   show (Expression.Expression value ()) = show value
 
-makeNamedLambda :: String -> expr -> expr -> Expression.ExpressionBody def expr
+makeNamedLambda :: String -> expr -> expr -> Expression.Body def expr
 makeNamedLambda = Expression.makeLambda . Guid.fromString
 
-makeNamedPi :: String -> expr -> expr -> Expression.ExpressionBody def expr
+makeNamedPi :: String -> expr -> expr -> Expression.Body def expr
 makeNamedPi = Expression.makePi . Guid.fromString
 
 pureApply :: [Expression.Expression def ()] -> Expression.Expression def ()

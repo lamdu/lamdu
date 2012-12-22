@@ -50,7 +50,7 @@ import qualified Lamdu.Anchors as Anchors
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Data.Expression as Expression
-import qualified Lamdu.Data.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.WidgetEnvT as WE
 
 type AccessedVars = [Guid]

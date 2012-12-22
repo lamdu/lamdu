@@ -15,7 +15,7 @@ import Data.Typeable (Typeable)
 import Lamdu.CodeEdit.Sugar.Config (SugarConfig)
 import Lamdu.CodeEdit.Sugar.Infer (InferLoadedResult, ilrInferContext, ilrContext, ilrBaseInferContext)
 import Lamdu.CodeEdit.Sugar.Types -- see export list
-import Lamdu.Data.IRef (DefI)
+import Lamdu.Data.Expression.IRef (DefI)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Cache as Cache
 import qualified Lamdu.Data.Infer as Infer

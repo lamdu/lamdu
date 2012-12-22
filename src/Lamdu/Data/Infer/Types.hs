@@ -57,7 +57,7 @@ LensTH.makeLenses ''RefExprPayload
 
 type RefExpression def = Expression.Expression def RefExprPayload
 
-makeRefExpr :: Origin -> Expression.ExpressionBody def (RefExpression def) -> RefExpression def
+makeRefExpr :: Origin -> Expression.Body def (RefExpression def) -> RefExpression def
 makeRefExpr g expr = Expression.Expression expr $ RefExprPayload mempty (Monoid.Any False) g
 
 -- Map from params to their Param type,

@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeFamilies, FlexibleContexts, DeriveFunctor, TemplateHaskell, DeriveDataTypeable #-}
-module Lamdu.Data.Load
+module Lamdu.Data.Expression.Load
   ( LoadedClosure, Loaded
   , loadDefinition, loadDefinitionClosure
   , loadExpressionClosure, loadExpressionProperty
@@ -19,14 +19,14 @@ import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
 import Data.Typeable (Typeable)
 import Lamdu.Data.Definition (Definition(..))
-import Lamdu.Data.IRef (DefI)
+import Lamdu.Data.Expression.IRef (DefI)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.Internal as LensInternal
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expression
-import qualified Lamdu.Data.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as DataIRef
 
 type T = Transaction
 
@@ -98,7 +98,7 @@ loadExpressionClosure closure =
   irefOfClosure closure
 
 loadExpressionBody ::
-  MonadA m => DataIRef.ExpressionI (Tag m) -> T m (Expression.ExpressionBody (DefI (Tag m)) (LoadedClosure (Tag m)))
+  MonadA m => DataIRef.ExpressionI (Tag m) -> T m (Expression.Body (DefI (Tag m)) (LoadedClosure (Tag m)))
 loadExpressionBody iref = onBody =<< DataIRef.readExprBody iref
   where
     onBody (Expression.ExpressionLeaf x) =

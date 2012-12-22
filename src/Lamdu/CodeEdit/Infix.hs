@@ -9,7 +9,7 @@ import qualified Data.Char as Char
 import qualified Data.Store.IRef as IRef
 import qualified Lamdu.Anchors as Anchors
 import qualified Lamdu.Data.Expression as Expression
-import qualified Lamdu.Data.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as DataIRef
 
 isInfixName :: String -> Bool
 isInfixName "" = False

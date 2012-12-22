@@ -4,8 +4,8 @@ module Lamdu.Data.Expression
   , Lambda(..), lambdaParamId, lambdaParamType, lambdaBody
   , Apply(..), applyFunc, applyArg
   , Leaf(..), getVariable, literalInteger, hole, set, integerType
-  , ExpressionBody(..), expressionLambda, expressionPi, expressionApply, expressionLeaf
-  , ExpressionBodyExpr
+  , Body(..), expressionLambda, expressionPi, expressionApply, expressionLeaf
+  , BodyExpr
   , makeApply, pureApply
   , makePi, makeLambda
   , pureHole
@@ -22,14 +22,14 @@ module Lamdu.Data.Expression
   , isDependentPi
   , funcArguments
   -- Traversals
-  , bitraverseExpressionBody
+  , bitraverseBody
   , bitraverseExpression
   , expressionBodyDef
   , expressionDef
 
   -- Each expression gets a ptr to itself
   , addSubexpressionSetters
-  , addExpressionBodyContexts
+  , addBodyContexts
 
   , LambdaWrapper(..), lambdaWrapperPrism
   ) where
@@ -89,51 +89,51 @@ data Leaf def
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 LensTH.makePrisms ''Leaf
 
-data ExpressionBody def expr
+data Body def expr
   = ExpressionLambda {-# UNPACK #-} !(Lambda expr)
   | ExpressionPi {-# UNPACK #-} !(Lambda expr)
   | ExpressionApply {-# UNPACK #-} !(Apply expr)
   | ExpressionLeaf !(Leaf def)
   deriving (Eq, Ord, Functor, Foldable, Traversable)
-LensTH.makePrisms ''ExpressionBody
+LensTH.makePrisms ''Body
 
-type ExpressionBodyExpr def a = ExpressionBody def (Expression def a)
+type BodyExpr def a = Body def (Expression def a)
 
-bitraverseExpressionBody ::
+bitraverseBody ::
   Applicative f => (defa -> f defb) -> (expra -> f exprb) ->
-  ExpressionBody defa expra ->
-  f (ExpressionBody defb exprb)
-bitraverseExpressionBody onDef onExpr body =
+  Body defa expra ->
+  f (Body defb exprb)
+bitraverseBody onDef onExpr body =
   case body of
   ExpressionLambda x -> ExpressionLambda <$> traverse onExpr x
   ExpressionPi x -> ExpressionPi <$> traverse onExpr x
   ExpressionApply x -> ExpressionApply <$> traverse onExpr x
   ExpressionLeaf leaf -> ExpressionLeaf <$> traverse onDef leaf
 
-expressionBodyDef :: Lens.Traversal (ExpressionBody a expr) (ExpressionBody b expr) a b
-expressionBodyDef = (`bitraverseExpressionBody` pure)
+expressionBodyDef :: Lens.Traversal (Body a expr) (Body b expr) a b
+expressionBodyDef = (`bitraverseBody` pure)
 
-makeApply :: expr -> expr -> ExpressionBody def expr
+makeApply :: expr -> expr -> Body def expr
 makeApply func arg = ExpressionApply $ Apply func arg
 
-makePi :: Guid -> expr -> expr -> ExpressionBody def expr
+makePi :: Guid -> expr -> expr -> Body def expr
 makePi argId argType resultType =
   ExpressionPi $ Lambda argId argType resultType
 
-makeLambda :: Guid -> expr -> expr -> ExpressionBody def expr
+makeLambda :: Guid -> expr -> expr -> Body def expr
 makeLambda argId argType body =
   ExpressionLambda $ Lambda argId argType body
 
-makeParameterRef :: Guid -> ExpressionBody def a
+makeParameterRef :: Guid -> Body def a
 makeParameterRef = ExpressionLeaf . GetVariable . ParameterRef
 
-makeDefinitionRef :: def -> ExpressionBody def a
+makeDefinitionRef :: def -> Body def a
 makeDefinitionRef = ExpressionLeaf . GetVariable . DefinitionRef
 
-makeLiteralInteger :: Integer -> ExpressionBody def a
+makeLiteralInteger :: Integer -> Body def a
 makeLiteralInteger = ExpressionLeaf . LiteralInteger
 
-instance (Show expr, Show def) => Show (ExpressionBody def expr) where
+instance (Show expr, Show def) => Show (Body def expr) where
   show (ExpressionLambda (Lambda paramId paramType body)) =
     concat ["\\", show paramId, ":", showP paramType, "==>", showP body]
   show (ExpressionPi (Lambda paramId paramType body)) =
@@ -150,7 +150,7 @@ showP = parenify . show
 parenify :: String -> String
 parenify x = concat ["(", x, ")"]
 data Expression def a = Expression
-  { _eValue :: ExpressionBody def (Expression def a)
+  { _eValue :: Body def (Expression def a)
   , _ePayload :: a
   } deriving (Functor, Eq, Ord, Foldable, Traversable, Typeable)
 LensTH.makeLenses ''Expression
@@ -158,7 +158,7 @@ derive makeBinary ''VariableRef
 derive makeBinary ''Lambda
 derive makeBinary ''Apply
 derive makeBinary ''Leaf
-derive makeBinary ''ExpressionBody
+derive makeBinary ''Body
 derive makeBinary ''Expression
 LensTH.makeLenses ''Lambda
 LensTH.makeLenses ''Apply
@@ -179,16 +179,16 @@ bitraverseExpression ::
 bitraverseExpression onDef onPl = f
   where
     f (Expression body payload) =
-      Expression <$> bitraverseExpressionBody onDef f body <*> onPl payload
+      Expression <$> bitraverseBody onDef f body <*> onPl payload
 
 expressionDef :: Lens.Traversal (Expression a pl) (Expression b pl) a b
 expressionDef = (`bitraverseExpression` pure)
 
-addExpressionBodyContexts ::
+addBodyContexts ::
   (a -> b) ->
-  Lens.Context (ExpressionBody def a) (ExpressionBody def b) container ->
-  ExpressionBody def (Lens.Context a b container)
-addExpressionBodyContexts tob (Lens.Context intoContainer body) =
+  Lens.Context (Body def a) (Body def b) container ->
+  Body def (Lens.Context a b container)
+addBodyContexts tob (Lens.Context intoContainer body) =
   Lens.over afterSetter intoContainer $
   case body of
   ExpressionLambda lam -> onLambda makeLambda ExpressionLambda lam
@@ -219,11 +219,11 @@ addSubexpressionSetters atob (Lens.Context intoContainer (Expression body a)) =
   where
     newBody =
       Lens.over traverse (addSubexpressionSetters atob) $
-      addExpressionBodyContexts (fmap atob) bodyPtr
+      addBodyContexts (fmap atob) bodyPtr
     bodyPtr =
       Lens.Context (intoContainer . (`Expression` atob a)) body
 
-pureExpression :: ExpressionBody def (Expression def ()) -> Expression def ()
+pureExpression :: Body def (Expression def ()) -> Expression def ()
 pureExpression = (`Expression` ())
 
 pureIntegerType :: Expression def ()
@@ -337,6 +337,6 @@ data LambdaWrapper = LambdaWrapperLambda | LambdaWrapperPi
   deriving (Eq, Ord, Show, Typeable)
 derive makeBinary ''LambdaWrapper
 
-lambdaWrapperPrism :: LambdaWrapper -> Simple Prism (ExpressionBody def expr) (Lambda expr)
+lambdaWrapperPrism :: LambdaWrapper -> Simple Prism (Body def expr) (Lambda expr)
 lambdaWrapperPrism LambdaWrapperLambda = expressionLambda
 lambdaWrapperPrism LambdaWrapperPi = expressionPi

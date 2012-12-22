@@ -6,7 +6,7 @@ module Lamdu.CodeEdit.Sugar.Config
 import Data.Binary (Binary(..))
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
-import qualified Lamdu.Data.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as DataIRef
 
 data SugarConfig t = SugarConfig
   { cons :: DataIRef.DefI t

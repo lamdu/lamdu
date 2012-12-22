@@ -39,7 +39,7 @@ import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
 import Data.Typeable (Typeable)
 import Lamdu.CodeEdit.Sugar.Config (SugarConfig)
-import Lamdu.Data.IRef (DefI)
+import Lamdu.Data.Expression.IRef (DefI)
 import qualified Data.ByteString as SBS
 import qualified Data.Store.Db as Db
 import qualified Data.Store.IRef as IRef
@@ -48,7 +48,7 @@ import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.CodeEdit.FFI as FFI
-import qualified Lamdu.Data.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as DataIRef
 
 type T = Transaction
 type Pane t = DefI t

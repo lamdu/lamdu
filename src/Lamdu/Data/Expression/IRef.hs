@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
-module Lamdu.Data.IRef
+module Lamdu.Data.Expression.IRef
   ( Expression, ExpressionM
   , ExpressionI(..)
   , ExpressionBody
@@ -36,11 +36,11 @@ type DefinitionI t = Definition (ExpressionI t)
 type DefI t = IRef t (DefinitionI t)
 
 newtype ExpressionI t = ExpressionI {
-  unExpression :: IRef t (Expression.ExpressionBody (DefI t) (ExpressionI t))
+  unExpression :: IRef t (Expression.Body (DefI t) (ExpressionI t))
   } deriving (Eq, Ord, Show, Typeable, Binary)
 
 type ExpressionProperty m = Property (T m) (ExpressionI (Tag m))
-type ExpressionBody t = Expression.ExpressionBody (DefI t) (ExpressionI t)
+type ExpressionBody t = Expression.Body (DefI t) (ExpressionI t)
 type Lambda t = Expression.Lambda (ExpressionI t)
 type Apply t = Expression.Apply (ExpressionI t)
 
@@ -95,7 +95,7 @@ readExpression exprI =
 
 expressionBodyFrom ::
   MonadA m => ExpressionM m a ->
-  T m (Expression.ExpressionBodyExpr (DefI (Tag m)) (ExpressionI (Tag m), a))
+  T m (Expression.BodyExpr (DefI (Tag m)) (ExpressionI (Tag m), a))
 expressionBodyFrom = traverse newExpressionFromH . Lens.view Expression.eValue
 
 newExpressionFromH ::

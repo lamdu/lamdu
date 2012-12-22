@@ -19,7 +19,7 @@ import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Lamdu.Anchors (ViewM)
 import Lamdu.Data.Definition (Definition(..))
-import Lamdu.Data.IRef (DefI)
+import Lamdu.Data.Expression.IRef (DefI)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -27,7 +27,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expression
-import qualified Lamdu.Data.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as DataIRef
 
 type T = Transaction
 

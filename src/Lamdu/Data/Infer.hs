@@ -41,7 +41,7 @@ import Data.Maybe (fromMaybe, isJust, mapMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable)
-import Lamdu.Data.IRef (DefI)
+import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Infer.Rules (Rule(..))
 import Lamdu.Data.Infer.Types
 import qualified Control.Lens as Lens
@@ -54,7 +54,7 @@ import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
 import qualified Lamdu.Data.Expression as Expression
-import qualified Lamdu.Data.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Infer.Rules as Rules
 
 mkOrigin :: State Origin Origin
