@@ -39,7 +39,7 @@ module Lamdu.Data
   ) where
 
 import Control.Applicative (Applicative(..), liftA2, (<$>))
-import Control.Lens (Simple, Prism, (^.))
+import Control.Lens (Simple, Prism, (^.), (??))
 import Control.Lens.Utils (contextSetter, result)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -235,7 +235,7 @@ addExpressionBodyContexts tob (Lens.Context intoContainer body) =
     afterSetter = traverse . contextSetter . result
     tobs = Lens.over traverse tob
     mkContext orig (lensa, lensb) =
-      Lens.Context (flip (Lens.set lensb) (tobs orig)) $
+      Lens.Context (Lens.set lensb ?? tobs orig) $
       orig ^. lensa
     onLambda consa consb lam@(Lambda param _ _) =
       Lens.over afterSetter consb $
