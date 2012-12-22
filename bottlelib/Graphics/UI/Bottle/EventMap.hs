@@ -19,6 +19,7 @@ module Graphics.UI.Bottle.EventMap
 
 import Control.Applicative ((<$>), (<*>))
 import Control.Arrow ((***), (&&&))
+import Control.Lens ((%~))
 import Control.Monad (guard, mplus, msum)
 import Data.Char (toLower, toUpper)
 import Data.List (isPrefixOf)
@@ -143,7 +144,7 @@ filterCharGroups ::
   [CharGroupHandler a]
 filterCharGroups f =
   filter (not . Set.null . Lens.view cgChars) .
-  (map . Lens.over cgChars . Set.filter) (uncurry f)
+  (Lens.traversed . cgChars %~ Set.filter (uncurry f))
 
 isCharConflict :: EventMap a -> Char -> IsShifted -> Bool
 isCharConflict eventMap char isShifted =
@@ -155,8 +156,8 @@ isCharConflict eventMap char isShifted =
 filterSChars
   :: (Char -> IsShifted -> Bool) -> EventMap a -> EventMap a
 filterSChars p =
-  (Lens.over emCharGroupHandlers . filterCharGroups) p .
-  Lens.over (emAllCharsHandler . Lens.mapped . chDocHandler . dhHandler) f
+  (emCharGroupHandlers %~ filterCharGroups p) .
+  (emAllCharsHandler . Lens.traversed . chDocHandler . dhHandler %~ f)
   where
     f handler c isShifted = do
       guard $ p c isShifted
@@ -207,7 +208,7 @@ filterByKey :: Ord k => (k -> Bool) -> Map k v -> Map k v
 filterByKey p = Map.filterWithKey (const . p)
 
 deleteKey :: KeyEvent -> EventMap a -> EventMap a
-deleteKey = Lens.over emKeyMap . Map.delete
+deleteKey key = emKeyMap %~ Map.delete key
 
 lookup :: Events.KeyEvent -> EventMap a -> Maybe a
 lookup (Events.KeyEvent isPress ms mchar k) (EventMap dict charGroups _ mAllCharHandlers _) =

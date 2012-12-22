@@ -14,8 +14,7 @@ module Graphics.UI.Bottle.Animation
   ) where
 
 import Control.Applicative(Applicative(..), liftA2)
-import Control.Arrow(first, second)
-import Control.Lens ((^.))
+import Control.Lens (SimpleTraversal, (^.), (%~))
 import Control.Monad(void)
 import Data.List(isPrefixOf)
 import Data.List.Utils(groupOn, sortOn)
@@ -166,7 +165,7 @@ isVirtuallySame (Frame a) (Frame b) =
     rectMap = Map.map (Lens.view piRect . snd . head)
 
 mapIdentities :: (AnimId -> AnimId) -> Frame -> Frame
-mapIdentities = Lens.over fSubImages . Map.mapKeys
+mapIdentities f = fSubImages %~ Map.mapKeys f
 
 nextFrame :: R -> Frame -> Frame -> Maybe Frame
 nextFrame movement dest cur
@@ -216,16 +215,20 @@ backgroundColor animId layer color size =
   flip mappend . onDepth (+layer) . scale size .
   onImages (Draw.tint color) $ unitSquare animId
 
+eachFrame :: SimpleTraversal Frame (Layer, PositionedImage)
+eachFrame = fSubImages . Lens.traversed . Lens.traversed
+
+images :: SimpleTraversal Frame PositionedImage
+images = eachFrame . Lens._2
+
 translate :: Vector2 R -> Frame -> Frame
-translate pos =
-  Lens.over fSubImages $ (Map.map . map . second) moveImage
+translate pos = images %~ moveImage
   where
     moveImage (PositionedImage img (Rect tl size)) =
       PositionedImage img (Rect (tl + pos) size)
 
 scale :: Vector2 R -> Frame -> Frame
-scale factor =
-  Lens.over fSubImages $ (Map.map . map . second) scaleImage
+scale factor = images %~ scaleImage
   where
     scaleImage (PositionedImage img (Rect tl size)) =
       PositionedImage img (Rect (tl * factor) (size * factor))
@@ -237,7 +240,8 @@ unitIntoRect r =
   scale (r ^. Rect.size)
 
 onDepth :: (Int -> Int) -> Frame -> Frame
-onDepth = Lens.over fSubImages . Map.map . map . first
+onDepth = (eachFrame . Lens._1 %~)
 
+-- TODO: Export a lens?
 onImages :: (Draw.Image () -> Draw.Image ()) -> Frame -> Frame
-onImages = Lens.over fSubImages . Map.map . map . second . Lens.over piImage
+onImages = (images . piImage %~)
