@@ -217,9 +217,9 @@ expressionDef :: Lens.Traversal (Expression a pl) (Expression b pl) a b
 expressionDef = (`bitraverseExpression` pure)
 
 addExpressionBodyContexts ::
-  (expra -> exprb) ->
-  Lens.Context (ExpressionBody def expra) (ExpressionBody def exprb) container ->
-  ExpressionBody def (Lens.Context expra exprb container)
+  (a -> b) ->
+  Lens.Context (ExpressionBody def a) (ExpressionBody def b) container ->
+  ExpressionBody def (Lens.Context a b container)
 addExpressionBodyContexts tob (Lens.Context intoContainer body) =
   Lens.over afterSetter intoContainer $
   case body of
