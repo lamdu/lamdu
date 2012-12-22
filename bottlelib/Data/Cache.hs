@@ -7,7 +7,7 @@ module Data.Cache
   , KeyBS, bsOfKey
   ) where
 
-import Control.Lens ((%=), (-=))
+import Control.Lens ((&), (%=), (-=), (%~), (+~), (^.))
 import Control.Monad.Trans.State (StateT(..), state, execState)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary)
@@ -33,25 +33,27 @@ new maxSize =
 bsOfKey :: Key k => k -> KeyBS
 bsOfKey key = SHA1.hash $ encodeS (show (typeOf key), key)
 
+-- TODO: Convert to Lens.at so you can poke too
 peek :: (Key k, Binary v) => k -> Cache -> Maybe v
 peek key =
   fmap (decodeS . snd) . Map.lookup (bsOfKey key) . Lens.view cEntries
 
 touchExisting :: Cache -> KeyBS -> ValEntry -> Cache
 touchExisting cache bsKey (prevPriority, bsVal) =
-  Lens.over cEntries (Map.insert bsKey (newPriority, bsVal)) .
-  Lens.over cPriorities
-    (Map.insert newPriority bsKey . Map.delete prevPriority) .
-  Lens.over cCounter (+1) $
   cache
+  & cEntries %~ Map.insert bsKey (newPriority, bsVal)
+  & cPriorities %~
+    Map.insert newPriority bsKey .
+    Map.delete prevPriority
+  & cCounter +~ 1
   where
     newPriority =
-      prevPriority { pRecentUse = Lens.view cCounter cache }
+      prevPriority { pRecentUse = cache ^. cCounter }
 
 lookupHelper :: Key k => (KeyBS -> r) -> (KeyBS -> ValEntry -> r) -> k -> Cache -> r
 lookupHelper onMiss onHit key cache =
   maybe (onMiss bsKey) (onHit bsKey) .
-  Map.lookup bsKey $ Lens.view cEntries cache
+  Map.lookup bsKey $ cache ^. cEntries
   where
     bsKey = bsOfKey key
 
@@ -84,23 +86,23 @@ evictLowestScore =
 
 evict :: Cache -> Cache
 evict cache
-  | Lens.view cSize cache <= cMaxSize cache = cache
+  | cache ^. cSize <= cMaxSize cache = cache
   | otherwise = evict $ evictLowestScore cache
 
 -- Assumes key was not in the cache before.
 insertHelper :: Binary v => KeyBS -> v -> Cache -> Cache
 insertHelper bsKey val cache =
   evict .
-  Lens.over cSize (+valLen) .
-  Lens.over cEntries (Map.insert bsKey entry) .
-  Lens.over cPriorities (Map.insert priority bsKey) .
-  Lens.over cCounter (+1) $
+  (cSize +~ valLen) .
+  (cEntries %~ Map.insert bsKey entry) .
+  (cPriorities %~ Map.insert priority bsKey) .
+  (cCounter +~ 1) $
   cache
   where
     entry = (priority, bsVal)
     bsVal = encodeS val
     valLen = SBS.length bsVal
-    priority = PriorityData (Lens.view cCounter cache) valLen
+    priority = PriorityData (cache ^. cCounter) valLen
 
 -- Actually requires only Pointed Functor.
 memo ::
