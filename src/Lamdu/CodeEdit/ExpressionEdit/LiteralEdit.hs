@@ -71,7 +71,7 @@ makeIntEditI integer myId setValue = do
     (Lens.set TextEdit.sEmptyFocusedString "<0>" style) textCursor text myId
   where
     removeKeys =
-      E.filterChars Char.isDigit .
+      (E.filterSChars . flip . const) Char.isDigit .
       foldr (.) id
       [ E.deleteKey (E.KeyEvent E.Press (E.ModKey E.noMods key))
       | key <- [E.KeyEnter, E.KeySpace]

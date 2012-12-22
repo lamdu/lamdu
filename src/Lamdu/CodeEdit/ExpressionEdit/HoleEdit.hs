@@ -336,8 +336,15 @@ addNewDefinitionEventMap holeInfo =
         }
     searchTermId = WidgetIds.searchTermId $ hiHoleId holeInfo
 
-disallowedHoleChars :: String
-disallowedHoleChars = "`[]\\\n() "
+disallowedHoleChars :: [(Char, E.IsShifted)]
+disallowedHoleChars =
+  E.anyShiftedChars "`[]\\\n() " ++
+  [ ('0', E.Shifted)
+  , ('9', E.Shifted)
+  ]
+
+disallowChars :: E.EventMap a -> E.EventMap a
+disallowChars = E.filterSChars $ curry (`notElem` disallowedHoleChars)
 
 makeSearchTermWidget
   :: MonadA m
@@ -350,7 +357,7 @@ makeSearchTermWidget holeInfo searchTermId mResultToPick =
   (flip ExpressionGui (0.5/Config.holeSearchTermScaleFactor) .
    Widget.scale Config.holeSearchTermScaleFactor .
    Widget.strongerEvents pickResultEventMap .
-   (Lens.over Widget.wEventMap . E.filterChars) (`notElem` disallowedHoleChars)) $
+   (Lens.over Widget.wEventMap) disallowChars) $
   BWidgets.makeWordEdit (hiSearchTerm holeInfo) searchTermId
   where
     pickResultEventMap =
@@ -407,7 +414,7 @@ makeResultsWidget holeInfo firstResults moreResults = do
 adHocTextEditEventMap :: MonadA m => Property m String -> Widget.EventHandlers m
 adHocTextEditEventMap textProp =
   mconcat . concat $
-  [ [ E.filterChars (`notElem` disallowedHoleChars) .
+  [ [ disallowChars .
       E.simpleChars "Character"
       (E.Doc ["Edit", "Search Term", "Append character"]) $
       changeText . flip (++) . (: [])

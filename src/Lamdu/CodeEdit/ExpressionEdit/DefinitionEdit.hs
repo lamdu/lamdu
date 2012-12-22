@@ -112,7 +112,7 @@ makeParts name guid def = do
       | nonOperatorName n =
         Widget.weakerEvents
         (FuncEdit.jumpToRHS [E.ModKey E.noMods (E.charKey '=')] rhs) .
-        Lens.over Widget.wEventMap (E.filterChars (/= '='))
+        Lens.over Widget.wEventMap (E.filterSChars (curry (/= ('=', E.NotShifted))))
       | otherwise = id
     lhs = myId : map (WidgetIds.fromGuid . Lens.view Sugar.fpGuid) allParams
     rhs = ("Def Body", body)

@@ -6,13 +6,18 @@ module Graphics.UI.Bottle.EventMap
   , ModState(..), noMods, shift, ctrl, alt
   , Key(..), InputDoc, Subtitle, Doc(..)
   , EventMap, lookup, emTickHandlers
-  , charEventMap, allChars, simpleChars, charGroup
+  , charEventMap, allChars, simpleChars
+  , charGroup, sCharGroup
   , keyEventMap, keyPress, keyPresses
-  , deleteKey, filterChars
+  , deleteKey
+  , IsShifted(..)
+  , filterSChars
+  , anyShiftedChars
   , charKey, eventMapDocs
   , tickHandler
   ) where
 
+import Control.Applicative ((<$>), (<*>))
 import Control.Arrow ((***), (&&&))
 import Control.Monad (guard, mplus, msum)
 import Data.Char (toLower, toUpper)
@@ -36,6 +41,9 @@ data ModKey = ModKey ModState Key
 
 data KeyEvent = KeyEvent Events.IsPress ModKey
   deriving (Show, Eq, Ord)
+
+anyShiftedChars :: String -> [(Char, IsShifted)]
+anyShiftedChars s = (,) <$> s <*> [Shifted, NotShifted]
 
 charOfKey :: Key -> Maybe Char
 charOfKey key =
@@ -84,19 +92,19 @@ type InputDoc = String
 -- alt'd/ctrl'd)
 data AllCharsHandler a = AllCharsHandler
   { _chInputDoc :: InputDoc
-  , _chDocHandler :: DocHandler (Char -> Maybe (IsShifted -> a))
+  , _chDocHandler :: DocHandler (Char -> IsShifted -> Maybe a)
   } deriving (Functor)
 
 data CharGroupHandler a = CharGroupHandler
   { _cgInputDoc :: InputDoc
-  , _cgChars :: Set Char
+  , _cgChars :: Set (Char, IsShifted)
   , _cgDocHandler :: DocHandler (Char -> IsShifted -> a)
   } deriving (Functor)
 
 data EventMap a = EventMap
   { _emKeyMap :: Map KeyEvent (DocHandler a)
   , _emCharGroupHandlers :: [CharGroupHandler a]
-  , _emCharGroupChars :: Set Char
+  , _emCharGroupChars :: Set (Char, IsShifted)
   , _emAllCharsHandler :: Maybe (AllCharsHandler a)
   , _emTickHandlers :: [a]
   } deriving (Functor)
@@ -124,35 +132,35 @@ overrides
     filteredYMap = filterByKey (not . isKeyConflict) yMap
     isKeyConflict (KeyEvent _ (ModKey mods key))
       | isCharMods mods =
-        maybe False (isCharConflict x) $ charOfKey key
+        maybe False (flip (isCharConflict x) (shiftedMods mods)) $ charOfKey key
       | otherwise = False
     filteredYCharGroups =
-      filterCharGroups (not . isCharConflict x) yCharGroups
+      filterCharGroups (fmap not . isCharConflict x) yCharGroups
 
 filterCharGroups ::
-  (Char -> Bool) ->
+  (Char -> IsShifted -> Bool) ->
   [CharGroupHandler a] ->
   [CharGroupHandler a]
 filterCharGroups f =
   filter (not . Set.null . Lens.view cgChars) .
-  (map . Lens.over cgChars . Set.filter) f
+  (map . Lens.over cgChars . Set.filter) (uncurry f)
 
-isCharConflict :: EventMap a -> Char -> Bool
-isCharConflict eventMap char =
-  Set.member char (Lens.view emCharGroupChars eventMap) ||
+isCharConflict :: EventMap a -> Char -> IsShifted -> Bool
+isCharConflict eventMap char isShifted =
+  Set.member (char, isShifted) (Lens.view emCharGroupChars eventMap) ||
   isJust
-  (($ char) . Lens.view (chDocHandler . dhHandler) =<<
+  (($ isShifted) . ($ char) . Lens.view (chDocHandler . dhHandler) =<<
    Lens.view emAllCharsHandler eventMap)
 
-filterChars
-  :: (Char -> Bool) -> EventMap a -> EventMap a
-filterChars p =
+filterSChars
+  :: (Char -> IsShifted -> Bool) -> EventMap a -> EventMap a
+filterSChars p =
   (Lens.over emCharGroupHandlers . filterCharGroups) p .
   Lens.over (emAllCharsHandler . Lens.mapped . chDocHandler . dhHandler) f
   where
-    f handler c = do
-      guard $ p c
-      handler c
+    f handler c isShifted = do
+      guard $ p c isShifted
+      handler c isShifted
 
 prettyKey :: Key -> InputDoc
 prettyKey (CharKey x) = [toLower x]
@@ -178,9 +186,9 @@ isCharMods :: ModState -> Bool
 isCharMods ModState { modCtrl = False, modAlt = False } = True
 isCharMods _ = False
 
-isShifted :: ModState -> IsShifted
-isShifted ModState { modShift = True } = Shifted
-isShifted ModState { modShift = False } = NotShifted
+shiftedMods :: ModState -> IsShifted
+shiftedMods ModState { modShift = True } = Shifted
+shiftedMods ModState { modShift = False } = NotShifted
 
 mkModKey :: ModState -> Key -> ModKey
 mkModKey ms k
@@ -210,19 +218,19 @@ lookup (Events.KeyEvent isPress ms mchar k) (EventMap dict charGroups _ mAllChar
       Press <- return isPress
       char <- maybeToList mchar
       CharGroupHandler _ chars handler <- charGroups
-      guard $ Set.member char chars
-      return . Lens.view dhHandler handler char $ isShifted ms
+      guard $ Set.member (char, isShifted) chars
+      return $ Lens.view dhHandler handler char isShifted
   , do
       Press <- return isPress
       AllCharsHandler _ handler <- mAllCharHandlers
-      charHandler <- Lens.view dhHandler handler =<< mchar
-      return . charHandler $ isShifted ms
+      flip (Lens.view dhHandler handler) isShifted =<< mchar
   ]
   where
+    isShifted = shiftedMods ms
     modKey = mkModKey ms k
 
-charGroup :: InputDoc -> Doc -> String -> (Char -> IsShifted -> a) -> EventMap a
-charGroup iDoc oDoc chars handler =
+sCharGroup :: InputDoc -> Doc -> [(Char, IsShifted)] -> (Char -> IsShifted -> a) -> EventMap a
+sCharGroup iDoc oDoc chars handler =
   mempty
   { _emCharGroupHandlers =
       [CharGroupHandler iDoc s (DocHandler oDoc handler)]
@@ -231,10 +239,13 @@ charGroup iDoc oDoc chars handler =
   where
     s = Set.fromList chars
 
+charGroup :: InputDoc -> Doc -> [Char] -> (Char -> IsShifted -> a) -> EventMap a
+charGroup iDoc oDoc = sCharGroup iDoc oDoc . (flip (,) <$> [NotShifted, Shifted] <*>)
+
 -- low-level "smart constructor" in case we need to enforce
 -- invariants:
 charEventMap
-  :: InputDoc -> Doc -> (Char -> Maybe (IsShifted -> a)) -> EventMap a
+  :: InputDoc -> Doc -> (Char -> IsShifted -> Maybe a) -> EventMap a
 charEventMap iDoc oDoc handler =
   mempty
   { _emAllCharsHandler =
@@ -242,7 +253,7 @@ charEventMap iDoc oDoc handler =
   }
 
 allChars :: InputDoc -> Doc -> (Char -> IsShifted -> a) -> EventMap a
-allChars iDoc oDoc f = charEventMap iDoc oDoc $ Just . f
+allChars iDoc oDoc f = charEventMap iDoc oDoc $ fmap Just . f
 
 simpleChars :: InputDoc -> Doc -> (Char -> a) -> EventMap a
 simpleChars iDoc oDoc f =

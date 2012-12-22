@@ -125,6 +125,13 @@ exprFocusDelegatorConfig = FocusDelegator.Config
 
 -- ExprGuiM GUIs (TODO: Move to Monad.hs?)
 
+disallowedNameChars :: [(Char, EventMap.IsShifted)]
+disallowedNameChars =
+  EventMap.anyShiftedChars "[]\\`()" ++
+  [ ('0', EventMap.Shifted)
+  , ('9', EventMap.Shifted)
+  ]
+
 makeNameEdit ::
   MonadA m => (ExprGuiM.NameSource, String) -> Guid -> Widget.Id -> ExprGuiM m (WidgetT m)
 makeNameEdit (nameSrc, name) ident myId =
@@ -137,7 +144,7 @@ makeNameEdit (nameSrc, name) ident myId =
   where
     makeEditor =
       (fmap . fmap . fmap . Lens.over Widget.wEventMap)
-      (EventMap.filterChars (`notElem` "[]\\`()"))
+      (EventMap.filterSChars (curry (`notElem` disallowedNameChars)))
       BWidgets.makeWordEdit
 
 nameSrcTint :: ExprGuiM.NameSource -> Widget f -> Widget f
