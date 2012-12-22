@@ -12,6 +12,7 @@ import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Version (Version)
 import Data.Store.Transaction (Transaction)
 import Lamdu.CodeEdit.Sugar.Config (SugarConfig(SugarConfig))
+import Lamdu.Data.Definition (Definition(..))
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Rev.Branch as Branch
@@ -22,9 +23,10 @@ import qualified Lamdu.Anchors as A
 import qualified Lamdu.BranchGUI as BranchGUI
 import qualified Lamdu.CodeEdit.FFI as FFI
 import qualified Lamdu.CodeEdit.Sugar.Config as SugarConfig
-import qualified Lamdu.Data as Data
-import qualified Lamdu.Data.Ops as DataOps
+import qualified Lamdu.Data.Definition as Definition
+import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.IRef as DataIRef
+import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.WidgetIds as WidgetIds
 
 newTodoIRef :: MonadA m => Transaction m (IRef (Tag m) a)
@@ -121,8 +123,8 @@ createBuiltins =
         mkPi (mkPi b c) . mkPi (mkPi a b) $ mkPi a c
       -- Can't use newBuiltin in case of "."
       DataOps.newDefinition "." .
-        (`Data.Definition` typeI) . Data.DefinitionBuiltin .
-        Data.Builtin $ Data.FFIName ["Prelude"] "."
+        (`Definition` typeI) . Definition.BodyBuiltin .
+        Definition.Builtin $ Definition.FFIName ["Prelude"] "."
 
     let
       sugarConfig = SugarConfig
@@ -136,27 +138,27 @@ createBuiltins =
     return (ffiEnv, sugarConfig)
   where
     endo = join mkPi
-    set = DataIRef.newExprBody $ Data.ExpressionLeaf Data.Set
-    integer = DataIRef.newExprBody $ Data.ExpressionLeaf Data.IntegerType
+    set = DataIRef.newExprBody $ Expression.ExpressionLeaf Expression.Set
+    integer = DataIRef.newExprBody $ Expression.ExpressionLeaf Expression.IntegerType
     forAll name f = fmap DataIRef.ExpressionI . fixIRef $ \aI -> do
       let aGuid = IRef.guid aI
       A.setP (A.assocNameRef aGuid) name
       s <- set
-      return . Data.makePi aGuid s =<< f ((getVar . Data.ParameterRef) aGuid)
+      return . Expression.makePi aGuid s =<< f ((getVar . Expression.ParameterRef) aGuid)
     setToSet = mkPi set set
     tellift f = do
       x <- lift f
       Writer.tell [x]
       return x
     tellift_ = (fmap . fmap . const) () tellift
-    getVar = DataIRef.newExprBody . Data.ExpressionLeaf . Data.GetVariable
+    getVar = DataIRef.newExprBody . Expression.ExpressionLeaf . Expression.GetVariable
     mkPi mkArgType mkResType = fmap snd . join $ liftA2 DataIRef.newPi mkArgType mkResType
     mkApply mkFunc mkArg =
-      DataIRef.newExprBody =<< liftA2 Data.makeApply mkFunc mkArg
+      DataIRef.newExprBody =<< liftA2 Expression.makeApply mkFunc mkArg
     mkType f = do
       x <- lift f
       Writer.tell [x]
-      return . getVar $ Data.DefinitionRef x
+      return . getVar $ Expression.DefinitionRef x
     makeWithType_ = (fmap . fmap . fmap . const) () makeWithType
     makeWithType builtinName typeMaker =
       tellift (DataOps.newBuiltin builtinName =<< typeMaker)

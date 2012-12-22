@@ -62,7 +62,8 @@ import qualified Lamdu.CodeEdit.Infix as Infix
 import qualified Lamdu.CodeEdit.Sugar.Infer as SugarInfer
 import qualified Lamdu.CodeEdit.Sugar.Monad as SugarM
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Data as Data
+import qualified Lamdu.Data.Definition as Definition
+import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.IRef as DataIRef
 import qualified Lamdu.Data.Infer as Infer
 import qualified Lamdu.Data.Load as Load
@@ -92,8 +93,8 @@ mkCallWithArg mDefI exprS =
   where
     mkCall = fmap DataIRef.exprGuid . DataOps.callWithArg $ resultStored exprS
     withApply =
-      exprS ^. Data.ePayload . SugarInfer.plSetter $
-      Data.pureApply (void exprS) Data.pureHole
+      exprS ^. Expression.ePayload . SugarInfer.plSetter $
+      Expression.pureApply (void exprS) Expression.pureHole
 
 mkActions ::
   m ~ Anchors.ViewM => Maybe (DefI (Tag m)) ->
@@ -116,16 +117,16 @@ mkGen select count =
   Random.mkStdGen . (+select) . (*count) . BinaryUtils.decodeS . Guid.bs
 
 resultGuid ::
-  Data.Expression def (SugarInfer.Payload t inferred stored) -> Guid
-resultGuid = Lens.view (Data.ePayload . SugarInfer.plGuid)
+  Expression.Expression def (SugarInfer.Payload t inferred stored) -> Guid
+resultGuid = Lens.view (Expression.ePayload . SugarInfer.plGuid)
 
 resultStored ::
-  Data.Expression def (SugarInfer.Payload t inferred stored) -> stored
-resultStored = Lens.view (Data.ePayload . SugarInfer.plStored)
+  Expression.Expression def (SugarInfer.Payload t inferred stored) -> stored
+resultStored = Lens.view (Expression.ePayload . SugarInfer.plStored)
 
 resultInferred ::
-  Data.Expression def (SugarInfer.Payload t inferred stored) -> inferred
-resultInferred = Lens.view (Data.ePayload . SugarInfer.plInferred)
+  Expression.Expression def (SugarInfer.Payload t inferred stored) -> inferred
+resultInferred = Lens.view (Expression.ePayload . SugarInfer.plInferred)
 
 toPayloadMM :: SugarInfer.Payload (Tagged (m ())) NoInferred NoStored -> PayloadMM m
 toPayloadMM =
@@ -171,29 +172,29 @@ replaceWith parentP replacerP = do
     replacerI = Property.value replacerP
 
 deleteParamRef ::
-  MonadA m => Guid -> Data.Expression def (Stored m) -> T m ()
+  MonadA m => Guid -> Expression.Expression def (Stored m) -> T m ()
 deleteParamRef param =
   Lens.mapMOf_ refs
-  (DataOps.replaceWithHole . Lens.view Data.ePayload)
+  (DataOps.replaceWithHole . Lens.view Expression.ePayload)
   where
     refs =
-      Lens.folding Data.subExpressions .
+      Lens.folding Expression.subExpressions .
       Lens.filtered (Lens.anyOf paramRef (== param))
-    paramRef = Data.eValue . Data.expressionLeaf . Data.getVariable . Data.parameterRef
+    paramRef = Expression.eValue . Expression.expressionLeaf . Expression.getVariable . Expression.parameterRef
 
 mkFuncParamActions ::
   m ~ Anchors.ViewM =>
   Stored m ->
-  Data.Lambda (Data.Expression def (Stored m)) ->
+  Expression.Lambda (Expression.Expression def (Stored m)) ->
   FuncParamActions m
-mkFuncParamActions lambdaProp (Data.Lambda param _paramType body) =
+mkFuncParamActions lambdaProp (Expression.Lambda param _paramType body) =
   FuncParamActions
   { _fpListItemActions =
     ListItemActions
     { _itemDelete = do
         deleteParamRef param body
-        replaceWith lambdaProp $ body ^. Data.ePayload
-    , _itemAddNext = fmap fst . DataOps.lambdaWrap $ body ^. Data.ePayload
+        replaceWith lambdaProp $ body ^. Expression.ePayload
+    , _itemAddNext = fmap fst . DataOps.lambdaWrap $ body ^. Expression.ePayload
     }
   , _fpGetExample =
       return .
@@ -207,10 +208,10 @@ data IsDependent = Dependent | NonDependent
 
 convertFuncParam ::
   m ~ Anchors.ViewM =>
-  Data.Lambda (DataIRef.ExpressionM m (PayloadMM m)) ->
+  Expression.Lambda (DataIRef.ExpressionM m (PayloadMM m)) ->
   DataIRef.ExpressionM m (PayloadMM m) ->
   SugarM m (IsDependent, FuncParam m (Expression m))
-convertFuncParam lam@(Data.Lambda paramGuid paramType _) expr = do
+convertFuncParam lam@(Expression.Lambda paramGuid paramType _) expr = do
   paramTypeS <- convertExpressionI paramType
   let
     fp = FuncParam
@@ -229,20 +230,20 @@ convertFuncParam lam@(Data.Lambda paramGuid paramType _) expr = do
 
 convertLambda ::
   m ~ Anchors.ViewM =>
-  Data.Lambda (DataIRef.ExpressionM m (PayloadMM m)) ->
+  Expression.Lambda (DataIRef.ExpressionM m (PayloadMM m)) ->
   DataIRef.ExpressionM m (PayloadMM m) ->
   SugarM m ((IsDependent, FuncParam m (Expression m)), Expression m)
 convertLambda lam expr =
   liftA2 (,)
   (convertFuncParam lam expr) $
-  convertExpressionI (lam ^. Data.lambdaBody)
+  convertExpressionI (lam ^. Expression.lambdaBody)
 
 fAllParams :: Func m expr -> [FuncParam m expr]
 fAllParams (Func depParams params _) = depParams ++ params
 
 convertFunc
   :: m ~ Anchors.ViewM
-  => Data.Lambda (DataIRef.ExpressionM m (PayloadMM m))
+  => Expression.Lambda (DataIRef.ExpressionM m (PayloadMM m))
   -> Convertor m
 convertFunc lambda exprI = do
   ((isDependent, param), sBody) <- convertLambda lambda exprI
@@ -267,7 +268,7 @@ convertFunc lambda exprI = do
 
 convertPi
   :: m ~ Anchors.ViewM
-  => Data.Lambda (DataIRef.ExpressionM m (PayloadMM m))
+  => Expression.Lambda (DataIRef.ExpressionM m (PayloadMM m))
   -> Convertor m
 convertPi lambda exprI = do
   ((_, param), sBody) <- convertLambda lambda exprI
@@ -298,14 +299,14 @@ addApplyChildParens x =
 isPolymorphicFunc :: DataIRef.ExpressionM m (PayloadMM m) -> Bool
 isPolymorphicFunc funcI =
   maybe False
-  (Data.isDependentPi . Infer.iType . iwcInferred) $
+  (Expression.isDependentPi . Infer.iType . iwcInferred) $
   resultInferred funcI
 
-convertApply :: m ~ Anchors.ViewM => Data.Apply (DataIRef.ExpressionM m (PayloadMM m)) -> Convertor m
-convertApply (Data.Apply funcI argI) exprI = do
+convertApply :: m ~ Anchors.ViewM => Expression.Apply (DataIRef.ExpressionM m (PayloadMM m)) -> Convertor m
+convertApply (Expression.Apply funcI argI) exprI = do
   funcS <- convertExpressionI funcI
   argS <- convertExpressionI argI
-  let apply = Data.Apply (funcS, funcI) (argS, argI)
+  let apply = Expression.Apply (funcS, funcI) (argS, argI)
   case funcS ^. rExpressionBody of
     ExpressionSection _ section ->
       applyOnSection section apply exprI
@@ -330,17 +331,17 @@ setNextHole possibleHole
 
 applyOnSection ::
   m ~ Anchors.ViewM =>
-  Section (Expression m) -> Data.Apply (Expression m, DataIRef.ExpressionM m (PayloadMM m)) -> Convertor m
-applyOnSection (Section Nothing op Nothing) (Data.Apply (_, funcI) arg@(argRef, _)) exprI
+  Section (Expression m) -> Expression.Apply (Expression m, DataIRef.ExpressionM m (PayloadMM m)) -> Convertor m
+applyOnSection (Section Nothing op Nothing) (Expression.Apply (_, funcI) arg@(argRef, _)) exprI
   | isPolymorphicFunc funcI = do
     newOpRef <-
-      convertApplyPrefix (Data.Apply (op, funcI) arg) exprI
+      convertApplyPrefix (Expression.Apply (op, funcI) arg) exprI
     mkExpression exprI . ExpressionSection DontHaveParens $
       Section Nothing (removeRedundantTypes newOpRef) Nothing
   | otherwise =
     mkExpression exprI . ExpressionSection DontHaveParens $
     Section (Just (addApplyChildParens argRef)) op Nothing
-applyOnSection (Section (Just left) op Nothing) (Data.Apply _ (argRef, _)) exprI =
+applyOnSection (Section (Just left) op Nothing) (Expression.Apply _ (argRef, _)) exprI =
   mkExpression exprI . ExpressionSection DontHaveParens $
   on (Section . Just) (setNextHole right) left op (Just right)
   where
@@ -359,8 +360,8 @@ applyOnSection _ apply exprI = convertApplyPrefix apply exprI
 
 convertApplyPrefix ::
   m ~ Anchors.ViewM =>
-  Data.Apply (Expression m, DataIRef.ExpressionM m (PayloadMM m)) -> Convertor m
-convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, _)) exprI
+  Expression.Apply (Expression m, DataIRef.ExpressionM m (PayloadMM m)) -> Convertor m
+convertApplyPrefix (Expression.Apply (funcRef, funcI) (argRef, _)) exprI
   | isPolymorphicFunc funcI =
     case funcRef ^. rExpressionBody of
     ExpressionPolymorphic (Polymorphic g compact full) ->
@@ -380,7 +381,7 @@ convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, _)) exprI
     makeFullApply = makeApply newFuncRef
     makeApply f =
       mkExpression exprI . ExpressionApply DontHaveParens $
-      Data.Apply f newArgRef
+      Expression.Apply f newArgRef
     makePolymorphic g compact fullExpression =
       mkExpression exprI $ ExpressionPolymorphic Polymorphic
         { pFuncGuid = g
@@ -389,7 +390,7 @@ convertApplyPrefix (Data.Apply (funcRef, funcI) (argRef, _)) exprI
           Lens.set rGuid expandedGuid $ removeInferredTypes fullExpression
         }
 
-convertGetVariable :: m ~ Anchors.ViewM => Data.VariableRef (DefI (Tag m)) -> Convertor m
+convertGetVariable :: m ~ Anchors.ViewM => Expression.VariableRef (DefI (Tag m)) -> Convertor m
 convertGetVariable varRef exprI = do
   isInfix <- SugarM.liftTransaction $ Infix.isInfixVar varRef
   getVarExpr <-
@@ -418,41 +419,41 @@ mkPaste exprP = do
       let
         clip =
           case clipDef of
-          Data.Definition (Data.DefinitionExpression defExpr) _ -> defExpr
+          Definition.Definition (Definition.BodyExpression defExpr) _ -> defExpr
           _ -> error "Clipboard contained a non-expression definition!"
       Transaction.deleteIRef clipDefI
       ~() <- popClip
       ~() <- replacer clip
       return $ DataIRef.exprGuid clip
 
-countArrows :: Data.Expression def () -> Int
-countArrows Data.Expression
-  { Data._eValue =
-    Data.ExpressionPi (Data.Lambda _ _ resultType)
+countArrows :: Expression.Expression def () -> Int
+countArrows Expression.Expression
+  { Expression._eValue =
+    Expression.ExpressionPi (Expression.Lambda _ _ resultType)
   } = 1 + countArrows resultType
 countArrows _ = 0
 
 -- TODO: Return a record, not a tuple
-countPis :: Data.Expression def () -> (Int, Int)
-countPis e@Data.Expression
-  { Data._eValue =
-    Data.ExpressionPi (Data.Lambda _ _ resultType)
+countPis :: Expression.Expression def () -> (Int, Int)
+countPis e@Expression.Expression
+  { Expression._eValue =
+    Expression.ExpressionPi (Expression.Lambda _ _ resultType)
   }
-  | Data.isDependentPi e = first (1+) $ countPis resultType
+  | Expression.isDependentPi e = first (1+) $ countPis resultType
   | otherwise = (0, 1 + countArrows resultType)
 countPis _ = (0, 0)
 
 applyForms
-  :: Data.Expression def ()
-  -> Data.Expression def () -> [Data.Expression def ()]
-applyForms _ e@Data.Expression{ Data._eValue = Data.ExpressionLambda {} } =
+  :: Expression.Expression def ()
+  -> Expression.Expression def () -> [Expression.Expression def ()]
+applyForms _ e@Expression.Expression{ Expression._eValue = Expression.ExpressionLambda {} } =
   [e]
 applyForms exprType expr =
   reverse . take (1 + arrows) $ iterate addApply withDepPisApplied
   where
     withDepPisApplied = iterate addApply expr !! depPis
     (depPis, arrows) = countPis exprType
-    addApply = Data.pureExpression . (`Data.makeApply` Data.pureHole)
+    addApply = Expression.pureExpression . (`Expression.makeApply` Expression.pureHole)
 
 -- Fill partial holes in an expression. Parital holes are those whose
 -- inferred (filler) value itself is not complete, so will not be a
@@ -461,29 +462,29 @@ applyForms exprType expr =
 -- easily.
 fillPartialHolesInExpression ::
   MonadA m =>
-  (Data.Expression def () ->
-   m (Maybe (Data.Expression def (Infer.Inferred def)))) ->
-  Data.Expression def (Infer.Inferred def) ->
-  m [Data.Expression def (Infer.Inferred def)]
+  (Expression.Expression def () ->
+   m (Maybe (Expression.Expression def (Infer.Inferred def)))) ->
+  Expression.Expression def (Infer.Inferred def) ->
+  m [Expression.Expression def (Infer.Inferred def)]
 fillPartialHolesInExpression check oldExpr =
   fmap ((++ [oldExpr]) . maybeToList) .
   recheck . runWriter $ fillHoleExpr oldExpr
   where
     recheck (newExpr, Any True) = check newExpr
     recheck (_, Any False) = return Nothing
-    fillHoleExpr expr@(Data.Expression (Data.ExpressionLeaf Data.Hole) inferred) =
+    fillHoleExpr expr@(Expression.Expression (Expression.ExpressionLeaf Expression.Hole) inferred) =
       let inferredVal = void $ Infer.iValue inferred
       in
-        case inferredVal ^. Data.eValue of
-        Data.ExpressionLeaf Data.Hole -> return $ void expr
+        case inferredVal ^. Expression.eValue of
+        Expression.ExpressionLeaf Expression.Hole -> return $ void expr
         _ | isCompleteType inferredVal -> return $ void expr
           | otherwise -> do
             -- Hole inferred value has holes to fill, no use leaving it as
             -- auto-inferred, just fill it:
             Writer.tell $ Any True
             return inferredVal
-    fillHoleExpr (Data.Expression body _) =
-      fmap Data.pureExpression $ traverse fillHoleExpr body
+    fillHoleExpr (Expression.Expression body _) =
+      fmap Expression.pureExpression $ traverse fillHoleExpr body
 
 resultComplexityScore :: HoleResult t -> Int
 resultComplexityScore =
@@ -501,7 +502,7 @@ inferApplyForms processRes expr (node, inferContext) =
     makeApplyForms Nothing = return []
     makeApplyForms (Just i) =
       fmap concat . traverse processRes $
-      (applyForms . void) (Infer.iType (i ^. Data.ePayload)) expr
+      (applyForms . void) (Infer.iType (i ^. Expression.ePayload)) expr
 
 convertInferredHoleH ::
   m ~ Anchors.ViewM =>
@@ -574,7 +575,7 @@ chooseHoleType ::
   [DataIRef.ExpressionM m f] -> hole -> (DataIRef.ExpressionM m f -> hole) -> hole
 chooseHoleType inferredVals plain inferred =
   case inferredVals of
-  [Data.Expression { Data._eValue = Data.ExpressionLeaf Data.Hole }] -> plain
+  [Expression.Expression { Expression._eValue = Expression.ExpressionLeaf Expression.Hole }] -> plain
   [inferredVal] -> inferred inferredVal
   _ -> plain
 
@@ -586,7 +587,7 @@ pickResult ::
 pickResult defaultDest exprS =
   fmap
   ( maybe defaultDest
-    (DataIRef.exprGuid . Lens.view (Data.ePayload . Lens._2))
+    (DataIRef.exprGuid . Lens.view (Expression.ePayload . Lens._2))
   . listToMaybe . uninferredHoles . fmap swap
   )
   . (DataIRef.writeExpression . Property.value . resultStored) exprS
@@ -594,21 +595,21 @@ pickResult defaultDest exprS =
 -- Also skip param types, those can usually be inferred later, so less
 -- useful to fill immediately
 uninferredHoles ::
-  Data.Expression def (Infer.Inferred def, a) ->
-  [Data.Expression def (Infer.Inferred def, a)]
+  Expression.Expression def (Infer.Inferred def, a) ->
+  [Expression.Expression def (Infer.Inferred def, a)]
 uninferredHoles
-  Data.Expression { Data._eValue = Data.ExpressionApply (Data.Apply func arg) }
-  | (Data.isDependentPi . Infer.iType . Lens.view (Data.ePayload . Lens._1)) func =
+  Expression.Expression { Expression._eValue = Expression.ExpressionApply (Expression.Apply func arg) }
+  | (Expression.isDependentPi . Infer.iType . Lens.view (Expression.ePayload . Lens._1)) func =
     uninferredHoles func
   | otherwise = uninferredHoles func ++ uninferredHoles arg
-uninferredHoles e@Data.Expression { Data._eValue = Data.ExpressionLeaf Data.Hole } = [e]
-uninferredHoles Data.Expression
-  { Data._eValue = Data.ExpressionPi (Data.Lambda _ paramType resultType) } =
+uninferredHoles e@Expression.Expression { Expression._eValue = Expression.ExpressionLeaf Expression.Hole } = [e]
+uninferredHoles Expression.Expression
+  { Expression._eValue = Expression.ExpressionPi (Expression.Lambda _ paramType resultType) } =
     uninferredHoles resultType ++ uninferredHoles paramType
-uninferredHoles Data.Expression
-  { Data._eValue = Data.ExpressionLambda (Data.Lambda _ paramType result) } =
+uninferredHoles Expression.Expression
+  { Expression._eValue = Expression.ExpressionLambda (Expression.Lambda _ paramType result) } =
     uninferredHoles result ++ uninferredHoles paramType
-uninferredHoles Data.Expression { Data._eValue = body } =
+uninferredHoles Expression.Expression { Expression._eValue = body } =
   Foldable.concatMap uninferredHoles body
 
 holeResultHasHoles :: HoleResult t -> Bool
@@ -640,7 +641,7 @@ convertLiteralInteger i exprI =
   where
     writeIRef prop =
       DataIRef.writeExprBody (Property.value prop) .
-      Data.makeLiteralInteger
+      Expression.makeLiteralInteger
 
 convertAtom :: m ~ Anchors.ViewM => String -> Convertor m
 convertAtom name exprI =
@@ -651,22 +652,22 @@ convertExpressionI ::
   DataIRef.ExpressionM m (PayloadMM m) -> SugarM m (Expression m)
 convertExpressionI ee =
   ($ ee) $
-  case ee ^. Data.eValue of
-  Data.ExpressionLambda x -> convertFunc x
-  Data.ExpressionPi x -> convertPi x
-  Data.ExpressionApply x -> convertApply x
-  Data.ExpressionLeaf (Data.GetVariable x) -> convertGetVariable x
-  Data.ExpressionLeaf (Data.LiteralInteger x) -> convertLiteralInteger x
-  Data.ExpressionLeaf Data.Hole -> convertHole
-  Data.ExpressionLeaf Data.Set -> convertAtom "Set"
-  Data.ExpressionLeaf Data.IntegerType -> convertAtom "Int"
+  case ee ^. Expression.eValue of
+  Expression.ExpressionLambda x -> convertFunc x
+  Expression.ExpressionPi x -> convertPi x
+  Expression.ExpressionApply x -> convertApply x
+  Expression.ExpressionLeaf (Expression.GetVariable x) -> convertGetVariable x
+  Expression.ExpressionLeaf (Expression.LiteralInteger x) -> convertLiteralInteger x
+  Expression.ExpressionLeaf Expression.Hole -> convertHole
+  Expression.ExpressionLeaf Expression.Set -> convertAtom "Set"
+  Expression.ExpressionLeaf Expression.IntegerType -> convertAtom "Int"
 
 -- Check no holes
-isCompleteType :: Data.Expression def () -> Bool
+isCompleteType :: Expression.Expression def () -> Bool
 isCompleteType =
   Lens.nullOf
-  ( Lens.folding Data.subExpressions
-  . Data.eValue . Data.expressionLeaf . Data.hole
+  ( Lens.folding Expression.subExpressions
+  . Expression.eValue . Expression.expressionLeaf . Expression.hole
   )
 
 convertHoleResult ::
@@ -693,11 +694,11 @@ convertDefinitionParams ::
   , DataIRef.ExpressionM m (PayloadMM m)
   )
 convertDefinitionParams expr =
-  case expr ^. Data.eValue of
-  Data.ExpressionLambda lambda -> do
+  case expr ^. Expression.eValue of
+  Expression.ExpressionLambda lambda -> do
     (isDependent, fp) <- convertFuncParam lambda expr
     (depParams, params, deepBody) <-
-      convertDefinitionParams $ lambda ^. Data.lambdaBody
+      convertDefinitionParams $ lambda ^. Expression.lambdaBody
     return $
       case isDependent of
       Dependent -> (fp : depParams, params, deepBody)
@@ -709,30 +710,30 @@ convertWhereItems ::
   DataIRef.ExpressionM m (PayloadMM m) ->
   SugarM m ([WhereItem m], DataIRef.ExpressionM m (PayloadMM m))
 convertWhereItems
-  topLevel@Data.Expression
-  { Data._eValue = Data.ExpressionApply apply@Data.Apply
-  { Data._applyFunc = Data.Expression
-  { Data._eValue = Data.ExpressionLambda lambda@Data.Lambda
-  { Data._lambdaParamId = param
-  , Data._lambdaParamType = Data.Expression
-  { Data._eValue = Data.ExpressionLeaf Data.Hole
+  topLevel@Expression.Expression
+  { Expression._eValue = Expression.ExpressionApply apply@Expression.Apply
+  { Expression._applyFunc = Expression.Expression
+  { Expression._eValue = Expression.ExpressionLambda lambda@Expression.Lambda
+  { Expression._lambdaParamId = param
+  , Expression._lambdaParamType = Expression.Expression
+  { Expression._eValue = Expression.ExpressionLeaf Expression.Hole
   }
-  , Data._lambdaBody = body
+  , Expression._lambdaBody = body
   }}}} = do
-    value <- convertDefinitionContent $ apply ^. Data.applyArg
+    value <- convertDefinitionContent $ apply ^. Expression.applyArg
     let
       mkWIActions topLevelProp bodyStored =
         ListItemActions
         { _itemDelete = do
              deleteParamRef param bodyStored
-             replaceWith topLevelProp $ bodyStored ^. Data.ePayload
+             replaceWith topLevelProp $ bodyStored ^. Expression.ePayload
         , _itemAddNext = fmap fst $ DataOps.redexWrap topLevelProp
         }
       item = WhereItem
         { wiValue = value
         , wiGuid = param
         , wiHiddenGuids =
-            map resultGuid [topLevel, lambda ^. Data.lambdaParamType]
+            map resultGuid [topLevel, lambda ^. Expression.lambdaParamType]
         , wiActions =
           mkWIActions <$>
           resultStored topLevel <*>
@@ -744,18 +745,18 @@ convertWhereItems expr = return ([], expr)
 
 addStoredParam ::
   MonadA m =>
-  Data.Expression def (SugarInfer.Payload t inferred (Maybe (Stored m))) ->
+  Expression.Expression def (SugarInfer.Payload t inferred (Maybe (Stored m))) ->
   T m Guid
 addStoredParam
-  Data.Expression
-  { Data._ePayload =
+  Expression.Expression
+  { Expression._ePayload =
     SugarInfer.Payload { SugarInfer._plStored = Just prop } } =
   fmap fst $ DataOps.lambdaWrap prop
 addStoredParam
-  Data.Expression
-  { Data._eValue =
-    Data.ExpressionLambda
-    Data.Lambda { Data._lambdaBody = body } } =
+  Expression.Expression
+  { Expression._eValue =
+    Expression.ExpressionLambda
+    Expression.Lambda { Expression._lambdaBody = body } } =
   addStoredParam body
 addStoredParam _ =
   error $
@@ -764,10 +765,10 @@ addStoredParam _ =
 
 assertedGetProp ::
   String ->
-  Data.Expression def (SugarInfer.Payload t inferred (Maybe stored)) -> stored
+  Expression.Expression def (SugarInfer.Payload t inferred (Maybe stored)) -> stored
 assertedGetProp _
-  Data.Expression
-  { Data._ePayload =
+  Expression.Expression
+  { Expression._ePayload =
     SugarInfer.Payload { SugarInfer._plStored = Just prop } } = prop
 assertedGetProp msg _ = error msg
 
@@ -794,11 +795,11 @@ loadConvertDefI ::
 loadConvertDefI config defI =
   convertDefI =<< lift (Load.loadDefinitionClosure defI)
   where
-    convertDefBody (Data.DefinitionBuiltin builtin) =
+    convertDefBody (Definition.BodyBuiltin builtin) =
       fmap return . convertDefIBuiltin builtin
-    convertDefBody (Data.DefinitionExpression exprLoaded) =
+    convertDefBody (Definition.BodyExpression exprLoaded) =
       convertDefIExpression config exprLoaded
-    convertDefI (Data.Definition defBody typeLoaded) = do
+    convertDefI (Definition.Definition defBody typeLoaded) = do
       body <- convertDefBody defBody defI typeLoaded
       typeS <-
         lift .
@@ -812,18 +813,18 @@ loadConvertDefI config defI =
 
 convertDefIBuiltin ::
   MonadA m =>
-  Data.Builtin -> DefI (Tag m) ->
+  Definition.Builtin -> DefI (Tag m) ->
   Load.LoadedClosure (Tag m) -> DefinitionBody m
-convertDefIBuiltin (Data.Builtin name) defI typeIRef =
+convertDefIBuiltin (Definition.Builtin name) defI typeIRef =
   DefinitionBodyBuiltin DefinitionBuiltin
     { biName = name
     , biMSetName = Just setName
     }
   where
-    typeI = typeIRef ^. Data.ePayload
+    typeI = typeIRef ^. Expression.ePayload
     setName =
-      Transaction.writeIRef defI . (`Data.Definition` Load.irefOfClosure typeI) .
-      Data.DefinitionBuiltin . Data.Builtin
+      Transaction.writeIRef defI . (`Definition.Definition` Load.irefOfClosure typeI) .
+      Definition.BodyBuiltin . Definition.Builtin
 
 convertDefIExpression ::
   m ~ Anchors.ViewM => SugarConfig (Tag m) ->
@@ -839,7 +840,7 @@ convertDefIExpression config exprLoaded defI typeI = do
       void . Infer.iType . iwcInferred . resultInferred $
       inferredLoadedResult ^. SugarInfer.ilrExpr
     typesMatch =
-      on (==) Data.canonizeParamIds (void typeI) inferredTypeP
+      on (==) Expression.canonizeParamIds (void typeI) inferredTypeP
     mkNewType = do
       inferredTypeS <-
         convertExpressionPure iTypeGen config
@@ -847,7 +848,7 @@ convertDefIExpression config exprLoaded defI typeI = do
       return DefinitionNewType
         { dntNewType = inferredTypeS
         , dntAcceptNewType =
-          (Property.set . Load.propertyOfClosure) (typeI ^. Data.ePayload) =<<
+          (Property.set . Load.propertyOfClosure) (typeI ^. Expression.ePayload) =<<
           DataIRef.newExpression inferredTypeP
         }
   lift . SugarM.run (SugarM.mkContext (Just defI) config inferredLoadedResult) $ do

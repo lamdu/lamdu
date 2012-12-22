@@ -23,17 +23,17 @@ import System.Random (RandomGen, random)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Store.Guid as Guid
-import qualified Lamdu.Data as Data
+import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Infer as Infer
 
 data Payload a = Stored a | AutoGen Guid
   deriving (Eq, Ord, Show, Functor, Typeable)
 derive makeBinary ''Payload
 
-isUnrestrictedHole :: Data.Expression def Infer.IsRestrictedPoly -> Bool
+isUnrestrictedHole :: Expression.Expression def Infer.IsRestrictedPoly -> Bool
 isUnrestrictedHole
-  (Data.Expression
-    (Data.ExpressionLeaf Data.Hole)
+  (Expression.Expression
+    (Expression.ExpressionLeaf Expression.Hole)
     Infer.UnrestrictedPoly) = True
 isUnrestrictedHole _ = False
 
@@ -52,7 +52,7 @@ addVariableForHole ::
 addVariableForHole holePoint = do
   paramGuid <- state random
   let
-    getVar = Data.pureExpression $ Data.makeParameterRef paramGuid
+    getVar = Expression.pureExpression $ Expression.makeParameterRef paramGuid
     loaded =
       fromMaybe (error "Should not be loading defs when loading a mere getVar") $
       Infer.load loader Nothing getVar
@@ -61,7 +61,7 @@ addVariableForHole holePoint = do
     let
       paramTypeRef =
         Infer.tvType . Infer.nRefs . Infer.iPoint . fst $
-        inferredGetVar ^. Data.ePayload
+        inferredGetVar ^. Expression.ePayload
     paramTypeTypeRef <- Infer.createRefExpr
     return
       ( paramGuid
@@ -73,7 +73,7 @@ addVariableForHole holePoint = do
 addVariablesForExpr ::
   (MonadA m, Ord def, RandomGen g) =>
   Infer.Loader def m ->
-  Data.Expression def (Infer.Inferred def, a) ->
+  Expression.Expression def (Infer.Inferred def, a) ->
   StateT g (StateT (Infer.Context def) m) [(Guid, Infer.InferNode def)]
 addVariablesForExpr loader expr = do
   reinferred <-
@@ -82,51 +82,51 @@ addVariablesForExpr loader expr = do
   if isUnrestrictedHole $ inferredVal reinferred
     then
       fmap (:[]) . mapStateT toStateT . addVariableForHole $
-      Infer.iPoint . fst $ expr ^. Data.ePayload
+      Infer.iPoint . fst $ expr ^. Expression.ePayload
     else do
       reloaded <-
         lift . lift . Infer.load loader Nothing $ -- <-- TODO: Nothing?
         inferredVal reinferred
       reinferredLoaded <-
         lift . toStateT . inferAssertNoConflict reloaded .
-        Infer.iPoint . fst $ Lens.view Data.ePayload reinferred
+        Infer.iPoint . fst $ Lens.view Expression.ePayload reinferred
       fmap concat . mapM (addVariablesForExpr loader) .
         filter (isUnrestrictedHole . inferredVal) $
-        Data.subExpressions reinferredLoaded
+        Expression.subExpressions reinferredLoaded
   where
-    inferredVal = Infer.iValue . fst . Lens.view Data.ePayload
+    inferredVal = Infer.iValue . fst . Lens.view Expression.ePayload
 
 addParam ::
   Ord def =>
-  Data.Expression def (Infer.InferNode def, Payload a) ->
+  Expression.Expression def (Infer.InferNode def, Payload a) ->
   (Guid, Infer.InferNode def) ->
   State (Infer.Context def)
-  (Data.Expression def (Infer.InferNode def, Payload a))
+  (Expression.Expression def (Infer.InferNode def, Payload a))
 addParam body (paramGuid, paramTypeNode) = do
   newRootNode <- Infer.newNodeWithScope mempty
   let
     newRootExpr =
-      Data.Expression newRootLam (newRootNode, AutoGen (Guid.augment "root" paramGuid))
+      Expression.Expression newRootLam (newRootNode, AutoGen (Guid.augment "root" paramGuid))
   unMaybe $ Infer.addRules actions [fst <$> newRootExpr]
   return newRootExpr
   where
     paramTypeExpr =
-      Data.Expression
-      (Data.ExpressionLeaf Data.Hole)
+      Expression.Expression
+      (Expression.ExpressionLeaf Expression.Hole)
       (paramTypeNode, AutoGen (Guid.augment "paramType" paramGuid))
     newRootLam =
-      Data.makeLambda paramGuid paramTypeExpr body
+      Expression.makeLambda paramGuid paramTypeExpr body
 
 addVariables ::
   (MonadA m, Ord def, RandomGen g) =>
   g -> Infer.Loader def m ->
-  Data.Expression def (Infer.Inferred def, a) ->
+  Expression.Expression def (Infer.Inferred def, a) ->
   StateT (Infer.Context def) m
-  (Data.Expression def (Infer.Inferred def, Payload a))
+  (Expression.Expression def (Infer.Inferred def, Payload a))
 addVariables gen loader expr = do
   implicitParams <-
     (`evalStateT` gen) . fmap concat .
-    mapM (addVariablesForExpr loader) $ Data.funcArguments expr
+    mapM (addVariablesForExpr loader) $ Expression.funcArguments expr
   newRoot <-
     toStateT $ foldM addParam
     ( Lens.over Lens._1 Infer.iPoint

@@ -39,7 +39,8 @@ import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Cache as Cache
 import qualified Data.Store.Transaction as Transaction
-import qualified Lamdu.Data as Data
+import qualified Lamdu.Data.Definition as Definition
+import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.IRef as DataIRef
 import qualified Lamdu.Data.Infer as Infer
 import qualified Lamdu.Data.Infer.ImplicitVariables as ImplicitVariables
@@ -56,7 +57,7 @@ type InferredWC t = InferredWithConflicts (DefI t)
 data NoStored = NoStored
 type Stored m = DataIRef.ExpressionProperty m
 
-type ExpressionSetter def = Data.Expression def () -> Data.Expression def ()
+type ExpressionSetter def = Expression.Expression def () -> Expression.Expression def ()
 
 data Payload t inferred stored
   = Payload
@@ -78,16 +79,16 @@ ntraversePayload onInferred onStored onSetter (Payload guid inferred stored sett
   Payload guid <$> onInferred inferred <*> onStored stored <*> onSetter setter
 
 addPureExpressionSetters ::
-  Data.Expression def a -> Data.Expression def (ExpressionSetter def, a)
-addPureExpressionSetters = Data.addSubexpressionSetters (const ()) . Lens.Context void
+  Expression.Expression def a -> Expression.Expression def (ExpressionSetter def, a)
+addPureExpressionSetters = Expression.addSubexpressionSetters (const ()) . Lens.Context void
 
 randomizeGuids ::
   RandomGen g => g -> (a -> inferred) ->
   DataIRef.Expression t a ->
   DataIRef.Expression t (Payload t inferred NoStored)
 randomizeGuids gen f =
-    Data.randomizeParamIds paramGen
-  . Data.randomizeExpr exprGen
+    Expression.randomizeParamIds paramGen
+  . Expression.randomizeExpr exprGen
   . fmap toPayload
   . addPureExpressionSetters
   . fmap f
@@ -120,7 +121,7 @@ resultFromInferred expr =
 loader :: MonadA m => Infer.Loader (DefI (Tag m)) (T m)
 loader =
   Infer.Loader
-  (fmap void . DataIRef.readExpression . Lens.view Data.defType <=<
+  (fmap void . DataIRef.readExpression . Lens.view Definition.defType <=<
    Transaction.readIRef)
 
 inferMaybe ::

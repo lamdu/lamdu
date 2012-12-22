@@ -53,7 +53,7 @@ import qualified Data.IntSet as IntSet
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
-import qualified Lamdu.Data as Data
+import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.IRef as DataIRef
 import qualified Lamdu.Data.Infer.Rules as Rules
 
@@ -124,22 +124,22 @@ createRef initialVal = do
 
 data ErrorDetails def
   = MismatchIn
-    (Data.Expression def ())
-    (Data.Expression def ())
-  | InfiniteExpression (Data.Expression def ())
+    (Expression.Expression def ())
+    (Expression.Expression def ())
+  | InfiniteExpression (Expression.Expression def ())
   deriving (Show, Eq, Ord)
 derive makeBinary ''ErrorDetails
 instance Functor ErrorDetails where
   fmap f (MismatchIn x y) =
-    on MismatchIn (Lens.over Data.expressionDef f) x y
+    on MismatchIn (Lens.over Expression.expressionDef f) x y
   fmap f (InfiniteExpression x) =
-    InfiniteExpression $ Lens.over Data.expressionDef f x
+    InfiniteExpression $ Lens.over Expression.expressionDef f x
 
 data Error def = Error
   { errRef :: ExprRef
   , errMismatch ::
-    ( Data.Expression def ()
-    , Data.Expression def ()
+    ( Expression.Expression def ()
+    , Expression.Expression def ()
     )
   , errDetails :: ErrorDetails def
   } deriving (Show, Eq, Ord)
@@ -147,7 +147,7 @@ derive makeBinary ''Error
 instance Functor Error where
   fmap f (Error ref mis details) =
     Error ref
-    (Lens.over (Lens.both . Data.expressionDef) f mis)
+    (Lens.over (Lens.both . Expression.expressionDef) f mis)
     (fmap f details)
 
 newtype InferActions def m = InferActions
@@ -174,14 +174,14 @@ LensTH.makeLenses ''InferState
 
 -- ExprRefMap:
 
-toRefExpression :: Data.Expression def () -> State Origin (RefExpression def)
+toRefExpression :: Expression.Expression def () -> State Origin (RefExpression def)
 toRefExpression =
   traverse . const $
   RefExprPayload mempty (Monoid.Any False) <$> mkOrigin
 
 createRefExpr :: State (Context def) ExprRef
 createRefExpr = do
-  holeRefExpr <- Lens.zoom nextOrigin $ toRefExpression Data.pureHole
+  holeRefExpr <- Lens.zoom nextOrigin $ toRefExpression Expression.pureHole
   fmap ExprRef . Lens.zoom exprMap . createRef $ RefData holeRefExpr mempty
 
 exprRefsAt :: Functor f => ExprRef -> Lens.SimpleLensLike f (Context def) (RefData def)
@@ -223,7 +223,7 @@ initial mRecursiveDefI =
             case mRecursiveDefI of
             Nothing -> mempty
             Just recursiveDefI ->
-              Map.singleton (Data.DefinitionRef recursiveDefI) (tvType rootTv)
+              Map.singleton (Expression.DefinitionRef recursiveDefI) (tvType rootTv)
         return $ InferNode rootTv scope
     emptyContext =
       Context
@@ -251,8 +251,8 @@ instance MonadTrans (InferT def) where
   lift = liftState . lift
 
 derefExpr ::
-  Data.Expression def (InferNode def, a) -> Context def ->
-  Data.Expression def (Inferred def, a)
+  Expression.Expression def (InferNode def, a) -> Context def ->
+  Expression.Expression def (Inferred def, a)
 derefExpr expr context =
   derefNode <$> expr
   where
@@ -266,7 +266,7 @@ derefExpr expr context =
         }
       , s
       )
-    onScopeElement (Data.ParameterRef guid, ref) = Just (guid, deref ref)
+    onScopeElement (Expression.ParameterRef guid, ref) = Just (guid, deref ref)
     onScopeElement _ = Nothing
     toIsRestrictedPoly False = UnrestrictedPoly
     toIsRestrictedPoly True = RestrictedPoly
@@ -328,20 +328,20 @@ execInferT actions act = do
   #-}
 
 newtype Loader def m = Loader
-  { loadPureDefinitionType :: def -> m (Data.Expression def ())
+  { loadPureDefinitionType :: def -> m (Expression.Expression def ())
   }
 
 -- Initial expression for inferred value of a stored entity.
 initialValExpr ::
-  Data.Expression def () ->
+  Expression.Expression def () ->
   State Origin (RefExpression def)
-initialValExpr (Data.Expression body ()) =
+initialValExpr (Expression.Expression body ()) =
   toRefExpression $
   case body of
-  Data.ExpressionApply _ -> Data.pureHole
+  Expression.ExpressionApply _ -> Expression.pureHole
   _ -> circumcized body
   where
-    circumcized = Data.pureExpression . (Data.pureHole <$)
+    circumcized = Expression.pureExpression . (Expression.pureHole <$)
 
 -- This is because platform's Either's MonadA instance sucks
 runEither :: EitherT l Identity a -> Either l a
@@ -355,7 +355,7 @@ originRepeat :: RefExpression def -> Bool
 originRepeat =
   go Set.empty
   where
-    go forbidden (Data.Expression body pl)
+    go forbidden (Expression.Expression body pl)
       | Set.member g forbidden = True
       | otherwise =
         Foldable.any (go (Set.insert g forbidden)) body
@@ -374,7 +374,7 @@ mergeExprs ::
   Either (ErrorDetails def) (RefExpression def)
 mergeExprs p0 p1 =
   runEither $ do
-    result <- Data.matchExpression onMatch onMismatch p0 p1
+    result <- Expression.matchExpression onMatch onMismatch p0 p1
     guardEither (InfiniteExpression (void result)) . not $ originRepeat result
     return result
   where
@@ -386,9 +386,9 @@ mergeExprs p0 p1 =
       Lens.over (Lens.cloneLens lens)
       ((mappend . Lens.view (Lens.cloneLens lens)) src)
     onMatch x y = return $ y `mergePayloadInto` x
-    onMismatch (Data.Expression (Data.ExpressionLeaf Data.Hole) s0) e1 =
+    onMismatch (Expression.Expression (Expression.ExpressionLeaf Expression.Hole) s0) e1 =
       return $ (s0 `mergePayloadInto`) <$> e1
-    onMismatch e0 (Data.Expression (Data.ExpressionLeaf Data.Hole) s1) =
+    onMismatch e0 (Expression.Expression (Expression.ExpressionLeaf Expression.Hole) s1) =
       return $ (s1 `mergePayloadInto`) <$> e0
     onMismatch e0 e1 =
       Either.left $ MismatchIn (void e0) (void e1)
@@ -415,8 +415,8 @@ setRefExpr ref newExpr = do
       let
         isChange = not $ equiv mergedExpr curExpr
         isHole =
-          case mergedExpr ^. Data.eValue of
-          Data.ExpressionLeaf Data.Hole -> True
+          case mergedExpr ^. Expression.eValue of
+          Expression.ExpressionLeaf Expression.Hole -> True
           _ -> False
       when isChange $ touch ref
       when (isChange || isHole) $
@@ -431,7 +431,7 @@ setRefExpr ref newExpr = do
   where
     equiv x y =
       isJust $
-      Data.matchExpression comparePl ((const . const) Nothing) x y
+      Expression.matchExpression comparePl ((const . const) Nothing) x y
     comparePl x y =
       guard $
       (x ^. rplSubstitutedArgs) == (y ^. rplSubstitutedArgs) &&
@@ -449,11 +449,11 @@ liftContextState = liftState . Lens.zoom sContext . toStateT
 exprIntoContext ::
   (MonadA m, Ord def) => Scope def ->
   Loaded def a ->
-  InferT def m (Data.Expression def (InferNode def, a))
+  InferT def m (Expression.Expression def (InferNode def, a))
 exprIntoContext rootScope (Loaded rootExpr defTypes) = do
   defTypesRefs <-
     traverse defTypeIntoContext $
-    Map.mapKeys Data.DefinitionRef defTypes
+    Map.mapKeys Expression.DefinitionRef defTypes
   -- mappend prefers left, so it is critical we put rootScope
   -- first. defTypesRefs may contain the loaded recursive defI because
   -- upon resumption, we load without giving the root defI, so its
@@ -467,19 +467,19 @@ exprIntoContext rootScope (Loaded rootExpr defTypes) = do
       setRefExpr ref =<< liftOriginState (toRefExpression defType)
       return ref
     addTypedVal x = fmap ((,) x) createTypedVal
-    go scope (Data.Expression body (s, createdTV)) = do
+    go scope (Expression.Expression body (s, createdTV)) = do
       inferNode <- toInferNode scope (void <$> body) createdTV
       newBody <-
         case body of
-        Data.ExpressionLambda lam -> goLambda Data.makeLambda scope lam
-        Data.ExpressionPi lam -> goLambda Data.makePi scope lam
+        Expression.ExpressionLambda lam -> goLambda Expression.makeLambda scope lam
+        Expression.ExpressionPi lam -> goLambda Expression.makePi scope lam
         _ -> traverse (go scope) body
-      return $ Data.Expression newBody (inferNode, s)
-    goLambda cons scope (Data.Lambda paramGuid paramType result) = do
+      return $ Expression.Expression newBody (inferNode, s)
+    goLambda cons scope (Expression.Lambda paramGuid paramType result) = do
       paramTypeDone <- go scope paramType
       let
-        paramTypeRef = tvVal . nRefs . fst $ paramTypeDone ^. Data.ePayload
-        newScope = Map.insert (Data.ParameterRef paramGuid) paramTypeRef scope
+        paramTypeRef = tvVal . nRefs . fst $ paramTypeDone ^. Expression.ePayload
+        newScope = Map.insert (Expression.ParameterRef paramGuid) paramTypeRef scope
       resultDone <- go newScope result
       return $ cons paramGuid paramTypeDone resultDone
 
@@ -489,11 +489,11 @@ exprIntoContext rootScope (Loaded rootExpr defTypes) = do
           tv
           { tvType =
             case body of
-            Data.ExpressionLeaf (Data.GetVariable varRef)
+            Expression.ExpressionLeaf (Expression.GetVariable varRef)
               | Just x <- Map.lookup varRef scope -> x
             _ -> tvType tv
           }
-      initialVal <- liftOriginState . initialValExpr $ Data.pureExpression body
+      initialVal <- liftOriginState . initialValExpr $ Expression.pureExpression body
       setRefExpr val initialVal
       return $ InferNode typedValue scope
 
@@ -501,8 +501,8 @@ ordNub :: Ord a => [a] -> [a]
 ordNub = Set.toList . Set.fromList
 
 data Loaded def a = Loaded
-  { _lExpr :: Data.Expression def a
-  , _lDefTypes :: Map def (Data.Expression def ())
+  { _lExpr :: Expression.Expression def a
+  , _lDefTypes :: Map def (Expression.Expression def ())
   } deriving (Typeable, Functor)
 -- Requires Ord instance for def, cannot derive
 instance (Binary a, Binary def, Ord def) => Binary (Loaded def a) where
@@ -511,7 +511,7 @@ instance (Binary a, Binary def, Ord def) => Binary (Loaded def a) where
 
 load ::
   (MonadA m, Ord def) =>
-  Loader def m -> Maybe def -> Data.Expression def a -> m (Loaded def a)
+  Loader def m -> Maybe def -> Expression.Expression def a -> m (Loaded def a)
 load loader mRecursiveDef expr =
   fmap (Loaded expr) loadDefTypes
   where
@@ -519,8 +519,8 @@ load loader mRecursiveDef expr =
       fmap Map.fromList .
       traverse loadType . ordNub $
       Lens.toListOf
-      ( Lens.folding Data.subExpressions . Data.eValue
-      . Data.expressionLeaf . Data.getVariable . Data.definitionRef
+      ( Lens.folding Expression.subExpressions . Expression.eValue
+      . Expression.expressionLeaf . Expression.getVariable . Expression.definitionRef
       . Lens.filtered ((/= mRecursiveDef) . Just)
       ) expr
     loadType defI = fmap ((,) defI) $ loadPureDefinitionType loader defI
@@ -539,7 +539,7 @@ addRule rule = do
 
 addRules ::
   (Eq def, MonadA m) => InferActions def m ->
-  [Data.Expression def (InferNode def)] ->
+  [Expression.Expression def (InferNode def)] ->
   StateT (Context def) m ()
 addRules actions exprs =
   execInferT actions . liftState . toStateT $
@@ -551,7 +551,7 @@ inferLoaded ::
   (Ord def, MonadA m) =>
   InferActions def m -> Loaded def a ->
   InferNode def ->
-  StateT (Context def) m (Data.Expression def (Inferred def, a))
+  StateT (Context def) m (Expression.Expression def (Inferred def, a))
 inferLoaded actions loadedExpr node =
   State.gets . derefExpr <=<
   execInferT actions $ do
@@ -559,7 +559,7 @@ inferLoaded actions loadedExpr node =
     liftState . toStateT $ do
       let
         addUnionRules f =
-          traverse_ addRule $ on Rules.union (f . nRefs) node . fst $ expr ^. Data.ePayload
+          traverse_ addRule $ on Rules.union (f . nRefs) node . fst $ expr ^. Expression.ePayload
       addUnionRules tvVal
       addUnionRules tvType
       rules <-

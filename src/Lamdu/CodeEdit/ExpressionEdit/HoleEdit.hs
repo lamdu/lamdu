@@ -28,6 +28,7 @@ import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.Anchors (ViewM)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
+import Lamdu.Data.Expression (Expression)
 import Lamdu.Data.IRef (DefI)
 import System.Random.Utils (randFunc)
 import qualified Control.Lens as Lens
@@ -48,7 +49,7 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Data as Data
+import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.IRef as DataIRef
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Layers as Layers
@@ -63,7 +64,7 @@ moreSymbolSizeFactor = 0.5
 
 data Group def = Group
   { groupNames :: [String]
-  , groupBaseExpr :: Data.Expression def ()
+  , groupBaseExpr :: Expression def ()
   }
 
 type T = Transaction
@@ -175,18 +176,18 @@ makeNoResults myId =
   ExprGuiM.widgetEnv .
   BWidgets.makeTextView "(No results)" $ mappend myId ["no results"]
 
-mkGroup :: [String] -> Data.ExpressionBodyExpr def () -> Group def
+mkGroup :: [String] -> Expression.ExpressionBodyExpr def () -> Group def
 mkGroup names body = Group
   { groupNames = names
-  , groupBaseExpr = Data.pureExpression body
+  , groupBaseExpr = Expression.pureExpression body
   }
 
 makeVariableGroup ::
-  MonadA m => Data.VariableRef (DefI (Tag m)) ->
+  MonadA m => Expression.VariableRef (DefI (Tag m)) ->
   ExprGuiM m (Group (DefI (Tag m)))
 makeVariableGroup varRef =
   ExprGuiM.withNameFromVarRef varRef $ \(_, varName) ->
-  return . mkGroup [varName] . Data.ExpressionLeaf $ Data.GetVariable varRef
+  return . mkGroup [varName] . Expression.ExpressionLeaf $ Expression.GetVariable varRef
 
 renamePrefix :: AnimId -> AnimId -> AnimId -> AnimId
 renamePrefix srcPrefix destPrefix animId =
@@ -222,13 +223,13 @@ makeLiteralGroup searchTerm =
     makeLiteralIntResult integer =
       Group
       { groupNames = [show integer]
-      , groupBaseExpr = Data.pureExpression . Data.ExpressionLeaf $ Data.LiteralInteger integer
+      , groupBaseExpr = Expression.pureExpression . Expression.ExpressionLeaf $ Expression.LiteralInteger integer
       }
 
 resultsPrefixId :: HoleInfo m -> Widget.Id
 resultsPrefixId holeInfo = mconcat [hiHoleId holeInfo, Widget.Id ["results"]]
 
-exprWidgetId :: Show def => Data.Expression def a -> Widget.Id
+exprWidgetId :: Show def => Expression def a -> Widget.Id
 exprWidgetId = WidgetIds.fromGuid . randFunc . show . void
 
 toResultsList ::
@@ -268,18 +269,18 @@ makeResultsList holeInfo group = do
   where
     baseExpr = groupBaseExpr group
     holeApply =
-      Data.pureExpression .
-      (Data.makeApply . Data.pureExpression . Data.ExpressionLeaf) Data.Hole
+      Expression.pureExpression .
+      (Expression.makeApply . Expression.pureExpression . Expression.ExpressionLeaf) Expression.Hole
 
 makeAllResults
   :: ViewM ~ m => HoleInfo m
   -> ExprGuiM m (ListT (CT m) (ResultType, ResultsList (Tag m)))
 makeAllResults holeInfo = do
   paramResults <-
-    traverse (makeVariableGroup . Data.ParameterRef) $
+    traverse (makeVariableGroup . Expression.ParameterRef) $
     Sugar.holeScope hole
   globalResults <-
-    traverse (makeVariableGroup . Data.DefinitionRef) =<<
+    traverse (makeVariableGroup . Expression.DefinitionRef) =<<
     ExprGuiM.getP Anchors.globals
   let
     searchTerm = Property.value $ hiSearchTerm holeInfo
@@ -299,12 +300,12 @@ makeAllResults holeInfo = do
     insensitiveInfixOf = isInfixOf `on` map Char.toLower
     hole = hiHole holeInfo
     primitiveResults =
-      [ mkGroup ["Set", "Type"] $ Data.ExpressionLeaf Data.Set
-      , mkGroup ["Integer", "ℤ", "Z"] $ Data.ExpressionLeaf Data.IntegerType
-      , mkGroup ["->", "Pi", "→", "→", "Π", "π"] $ Data.makePi (Guid.augment "NewPi" (hiGuid holeInfo)) holeExpr holeExpr
-      , mkGroup ["\\", "Lambda", "Λ", "λ"] $ Data.makeLambda (Guid.augment "NewLambda" (hiGuid holeInfo)) holeExpr holeExpr
+      [ mkGroup ["Set", "Type"] $ Expression.ExpressionLeaf Expression.Set
+      , mkGroup ["Integer", "ℤ", "Z"] $ Expression.ExpressionLeaf Expression.IntegerType
+      , mkGroup ["->", "Pi", "→", "→", "Π", "π"] $ Expression.makePi (Guid.augment "NewPi" (hiGuid holeInfo)) holeExpr holeExpr
+      , mkGroup ["\\", "Lambda", "Λ", "λ"] $ Expression.makeLambda (Guid.augment "NewLambda" (hiGuid holeInfo)) holeExpr holeExpr
       ]
-    holeExpr = Data.pureExpression $ Data.ExpressionLeaf Data.Hole
+    holeExpr = Expression.pureExpression $ Expression.ExpressionLeaf Expression.Hole
 
 addNewDefinitionEventMap ::
   ViewM ~ m => HoleInfo m -> Widget.EventHandlers (T m)
@@ -323,8 +324,8 @@ addNewDefinitionEventMap holeInfo =
       defRef <-
         fmap (fromMaybe (error "GetDef should always type-check") . listToMaybe) .
         ExprGuiM.unmemo . Sugar.holeInferResults (hiHole holeInfo) .
-        Data.pureExpression . Data.ExpressionLeaf . Data.GetVariable $
-        Data.DefinitionRef newDefI
+        Expression.pureExpression . Expression.ExpressionLeaf . Expression.GetVariable $
+        Expression.DefinitionRef newDefI
       -- TODO: Can we use pickResult's animIdMapping?
       eventResult <- holePickResult defRef
       maybe (return ()) DataOps.savePreJumpPosition $
@@ -515,7 +516,7 @@ markTypeMatchesAsUsed :: MonadA m => HoleInfo m -> ExprGuiM m ()
 markTypeMatchesAsUsed holeInfo =
   ExprGuiM.markVariablesAsUsed =<<
   (filterM
-   (checkInfer . Data.pureExpression . Data.makeParameterRef) .
+   (checkInfer . Expression.pureExpression . Expression.makeParameterRef) .
    Sugar.holeScope . hiHole)
     holeInfo
   where

@@ -35,7 +35,8 @@ import Data.Store.Transaction (Transaction)
 import Lamdu.Data.IRef (DefI)
 import qualified Control.Lens.TH as LensTH
 import qualified Data.Store.IRef as IRef
-import qualified Lamdu.Data as Data
+import qualified Lamdu.Data.Definition as Definition
+import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.IRef as DataIRef
 import qualified Lamdu.Data.Infer as Infer
 
@@ -133,16 +134,16 @@ data Inferred m expr = Inferred
 
 data Polymorphic t expr = Polymorphic
   { pFuncGuid :: Guid
-  , pCompact :: Data.VariableRef (DefI t)
+  , pCompact :: Expression.VariableRef (DefI t)
   , pFullExpression :: expr
   } deriving (Functor)
 
 data ExpressionBody m expr
-  = ExpressionApply   { _eHasParens :: HasParens, __eApply :: Data.Apply expr }
+  = ExpressionApply   { _eHasParens :: HasParens, __eApply :: Expression.Apply expr }
   | ExpressionSection { _eHasParens :: HasParens, __eSection :: Section expr }
   | ExpressionFunc    { _eHasParens :: HasParens, __eFunc :: Func m expr }
   | ExpressionPi      { _eHasParens :: HasParens, __ePi :: Pi m expr }
-  | ExpressionGetVariable { __getVariable :: Data.VariableRef (DefI (Tag m)) }
+  | ExpressionGetVariable { __getVariable :: Expression.VariableRef (DefI (Tag m)) }
   | ExpressionHole { __eHole :: Hole m }
   | ExpressionInferred { __eInferred :: Inferred m expr }
   | ExpressionPolymorphic { __ePolymorphic :: Polymorphic (Tag m) expr }
@@ -160,7 +161,7 @@ instance Show expr => Show (FuncParam m expr) where
     concat ["(", show (_fpGuid fp), ":", show (_fpType fp), ")"]
 
 instance Show expr => Show (ExpressionBody m expr) where
-  show ExpressionApply   { _eHasParens = hasParens, __eApply = Data.Apply func arg } =
+  show ExpressionApply   { _eHasParens = hasParens, __eApply = Expression.Apply func arg } =
     wrapParens hasParens $ show func ++ " " ++ show arg
   show ExpressionSection { _eHasParens = hasParens, __eSection = Section mleft op mright } =
     wrapParens hasParens $ maybe "" show mleft ++ " " ++ show op ++ maybe "" show mright
@@ -173,8 +174,8 @@ instance Show expr => Show (ExpressionBody m expr) where
       showWords = unwords . map show
   show ExpressionPi      { _eHasParens = hasParens, __ePi = Pi param resultType } =
     wrapParens hasParens $ "_:" ++ show param ++ " -> " ++ show resultType
-  show ExpressionGetVariable { __getVariable = Data.ParameterRef guid } = 'P' : show guid
-  show ExpressionGetVariable { __getVariable = Data.DefinitionRef defI } = 'D' : show (IRef.guid defI)
+  show ExpressionGetVariable { __getVariable = Expression.ParameterRef guid } = 'P' : show guid
+  show ExpressionGetVariable { __getVariable = Expression.DefinitionRef defI } = 'D' : show (IRef.guid defI)
   show ExpressionHole {} = "Hole"
   show ExpressionInferred {} = "Inferred"
   show ExpressionPolymorphic {} = "Poly"
@@ -208,9 +209,9 @@ data DefinitionExpression m = DefinitionExpression
   }
 
 data DefinitionBuiltin m = DefinitionBuiltin
-  { biName :: Data.FFIName
+  { biName :: Definition.FFIName
   -- Consider removing Maybe'ness here
-  , biMSetName :: Maybe (Data.FFIName -> T m ())
+  , biMSetName :: Maybe (Definition.FFIName -> T m ())
   }
 
 data DefinitionBody m

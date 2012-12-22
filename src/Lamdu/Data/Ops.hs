@@ -18,13 +18,15 @@ import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Lamdu.Anchors (ViewM)
+import Lamdu.Data.Definition (Definition(..))
 import Lamdu.Data.IRef (DefI)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.Anchors as Anchors
-import qualified Lamdu.Data as Data
+import qualified Lamdu.Data.Definition as Definition
+import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.IRef as DataIRef
 
 type T = Transaction
@@ -33,7 +35,7 @@ makeDefinition :: Transaction ViewM (DefI (Tag ViewM))
 makeDefinition = do
   defI <-
     Transaction.newIRef =<<
-    Data.Definition . Data.DefinitionExpression <$> newHole <*> newHole
+    Definition . Definition.BodyExpression <$> newHole <*> newHole
   Anchors.modP Anchors.globals (defI :)
   return defI
 
@@ -45,7 +47,7 @@ giveAsArg exprP = do
   newFuncI <- newHole
   Property.set exprP =<<
     DataIRef.newExprBody
-    (Data.makeApply newFuncI (Property.value exprP))
+    (Expression.makeApply newFuncI (Property.value exprP))
   return newFuncI
 
 giveAsArgToOperator ::
@@ -56,8 +58,8 @@ giveAsArgToOperator ::
 giveAsArgToOperator exprP searchTerm = do
   op <- newHole
   (`Property.set` searchTerm) =<< Anchors.assocSearchTermRef (DataIRef.exprGuid op)
-  opApplied <- DataIRef.newExprBody . Data.makeApply op $ Property.value exprP
-  Property.set exprP =<< DataIRef.newExprBody . Data.makeApply opApplied =<< newHole
+  opApplied <- DataIRef.newExprBody . Expression.makeApply op $ Property.value exprP
+  Property.set exprP =<< DataIRef.newExprBody . Expression.makeApply opApplied =<< newHole
   return op
 
 callWithArg ::
@@ -68,11 +70,11 @@ callWithArg exprP = do
   argI <- newHole
   Property.set exprP =<<
     DataIRef.newExprBody
-    (Data.makeApply (Property.value exprP) argI)
+    (Expression.makeApply (Property.value exprP) argI)
   return argI
 
 newHole :: MonadA m => T m (DataIRef.ExpressionI (Tag m))
-newHole = DataIRef.newExprBody $ Data.ExpressionLeaf Data.Hole
+newHole = DataIRef.newExprBody $ Expression.ExpressionLeaf Expression.Hole
 
 replace
   :: MonadA m
@@ -110,7 +112,7 @@ redexWrap exprP = do
     DataIRef.newLambda newParamTypeI $ Property.value exprP
   newValueI <- newHole
   newApplyI <-
-    DataIRef.newExprBody $ Data.makeApply newLambdaI newValueI
+    DataIRef.newExprBody $ Expression.makeApply newLambdaI newValueI
   Property.set exprP newApplyI
   return (newParam, newLambdaI)
 
@@ -138,8 +140,8 @@ newBuiltin
   => String -> DataIRef.ExpressionI (Tag m)
   -> Transaction m (DefI (Tag m))
 newBuiltin fullyQualifiedName typeI =
-  newDefinition name . (`Data.Definition` typeI) . Data.DefinitionBuiltin .
-  Data.Builtin $ Data.FFIName (init path) name
+  newDefinition name . (`Definition` typeI) . Definition.BodyBuiltin .
+  Definition.Builtin $ Definition.FFIName (init path) name
   where
     name = last path
     path = splitOn "." fullyQualifiedName
@@ -155,7 +157,7 @@ newDefinition name defI = do
 newClipboard :: DataIRef.ExpressionI (Tag ViewM) -> Transaction ViewM (DefI (Tag ViewM))
 newClipboard expr = do
   len <- length <$> Anchors.getP Anchors.clipboards
-  def <- Data.Definition (Data.DefinitionExpression expr) <$> newHole
+  def <- Definition (Definition.BodyExpression expr) <$> newHole
   defI <- newDefinition ("clipboard" ++ show len) def
   Anchors.modP Anchors.clipboards (defI:)
   return defI

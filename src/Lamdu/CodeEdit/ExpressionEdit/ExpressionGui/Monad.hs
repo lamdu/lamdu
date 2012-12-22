@@ -49,7 +49,7 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Anchors as Anchors
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.Sugar as Sugar
-import qualified Lamdu.Data as Data
+import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.IRef as DataIRef
 import qualified Lamdu.WidgetEnvT as WE
 
@@ -205,8 +205,8 @@ getDefName guid = do
     else (StoredName, storedName)
 
 withNameFromVarRef ::
-  MonadA m => Data.VariableRef (DataIRef.DefI (Tag m)) ->
+  MonadA m => Expression.VariableRef (DataIRef.DefI (Tag m)) ->
   ((NameSource, String) -> ExprGuiM m a) -> ExprGuiM m a
-withNameFromVarRef (Data.ParameterRef g) useName = withParamName g useName
-withNameFromVarRef (Data.DefinitionRef defI) useName =
+withNameFromVarRef (Expression.ParameterRef g) useName = withParamName g useName
+withNameFromVarRef (Expression.DefinitionRef defI) useName =
   useName =<< getDefName (IRef.guid defI)

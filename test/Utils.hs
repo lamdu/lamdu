@@ -17,60 +17,60 @@ import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
-import qualified Lamdu.Data as Data
+import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.IRef as DataIRef
 import qualified Lamdu.Data.Infer as Infer
 
 data Invisible = Invisible
 instance Show Invisible where
   show = const ""
-showStructure :: Show def => Data.ExpressionBody def a -> String
+showStructure :: Show def => Expression.ExpressionBody def a -> String
 showStructure = show . (Invisible <$)
 
-instance Show def => Show (Data.Expression def ()) where
-  show (Data.Expression value ()) = show value
+instance Show def => Show (Expression.Expression def ()) where
+  show (Expression.Expression value ()) = show value
 
-makeNamedLambda :: String -> expr -> expr -> Data.ExpressionBody def expr
-makeNamedLambda = Data.makeLambda . Guid.fromString
+makeNamedLambda :: String -> expr -> expr -> Expression.ExpressionBody def expr
+makeNamedLambda = Expression.makeLambda . Guid.fromString
 
-makeNamedPi :: String -> expr -> expr -> Data.ExpressionBody def expr
-makeNamedPi = Data.makePi . Guid.fromString
+makeNamedPi :: String -> expr -> expr -> Expression.ExpressionBody def expr
+makeNamedPi = Expression.makePi . Guid.fromString
 
-pureApply :: [Data.Expression def ()] -> Data.Expression def ()
-pureApply = foldl1 (fmap Data.pureExpression . Data.makeApply)
+pureApply :: [Expression.Expression def ()] -> Expression.Expression def ()
+pureApply = foldl1 (fmap Expression.pureExpression . Expression.makeApply)
 
 pureLambda ::
-  String -> Data.Expression def () ->
-  Data.Expression def () ->
-  Data.Expression def ()
-pureLambda name x y = Data.pureExpression $ makeNamedLambda name x y
+  String -> Expression.Expression def () ->
+  Expression.Expression def () ->
+  Expression.Expression def ()
+pureLambda name x y = Expression.pureExpression $ makeNamedLambda name x y
 
 purePi ::
-  String -> Data.Expression def () ->
-  Data.Expression def () ->
-  Data.Expression def ()
-purePi name x y = Data.pureExpression $ makeNamedPi name x y
+  String -> Expression.Expression def () ->
+  Expression.Expression def () ->
+  Expression.Expression def ()
+purePi name x y = Expression.pureExpression $ makeNamedPi name x y
 
-hole :: Data.Expression def ()
-hole = Data.pureHole
+hole :: Expression.Expression def ()
+hole = Expression.pureHole
 
-setType :: Data.Expression def ()
-setType = Data.pureSet
+setType :: Expression.Expression def ()
+setType = Expression.pureSet
 
-intType :: Data.Expression def ()
-intType = Data.pureIntegerType
+intType :: Expression.Expression def ()
+intType = Expression.pureIntegerType
 
-literalInt :: Integer -> Data.Expression def ()
-literalInt i = Data.pureExpression $ Data.makeLiteralInteger i
+literalInt :: Integer -> Expression.Expression def ()
+literalInt i = Expression.pureExpression $ Expression.makeLiteralInteger i
 
 pureGetDef :: String -> DataIRef.Expression t ()
 pureGetDef name =
-  Data.pureExpression . Data.makeDefinitionRef . IRef.unsafeFromGuid $
+  Expression.pureExpression . Expression.makeDefinitionRef . IRef.unsafeFromGuid $
   Guid.fromString name
 
-pureGetParam :: String -> Data.Expression def ()
+pureGetParam :: String -> Expression.Expression def ()
 pureGetParam name =
-  Data.pureExpression . Data.makeParameterRef $
+  Expression.pureExpression . Expression.makeParameterRef $
   Guid.fromString name
 
 ansiRed :: String
@@ -79,7 +79,7 @@ ansiReset :: String
 ansiReset = "\ESC[0m"
 
 showExpressionWithConflicts ::
-  Show def => Data.Expression def (InferredWithConflicts def) -> String
+  Show def => Expression.Expression def (InferredWithConflicts def) -> String
 showExpressionWithConflicts =
   List.intercalate "\n" . go
   where
@@ -91,11 +91,11 @@ showExpressionWithConflicts =
       ] ++ map ((("    " ++ ansiRed ++ "Conflict: ") ++) . (++ ansiReset) . show) tErrors ++
       (map ("  " ++) . Foldable.concat . fmap go) expr
       where
-        expr = inferredExpr ^. Data.eValue
+        expr = inferredExpr ^. Expression.eValue
         val = Infer.iValue inferred
         typ = Infer.iType inferred
         InferredWithConflicts inferred tErrors vErrors =
-          inferredExpr ^. Data.ePayload
+          inferredExpr ^. Expression.ePayload
 
 definitionTypes :: Map Guid (DataIRef.Expression t ())
 definitionTypes =
@@ -188,17 +188,17 @@ doInfer_ = (first . fmap) fst . doInfer
 
 factorialExpr :: DataIRef.Expression t ()
 factorialExpr =
-  pureLambda "x" Data.pureHole $
+  pureLambda "x" Expression.pureHole $
   pureApply
   [ pureGetDef "if"
-  , Data.pureHole
+  , Expression.pureHole
   , pureApply [pureGetDef "==", pureGetParam "x", literalInt 0]
   , literalInt 1
   , pureApply
     [ pureGetDef "*"
     , pureGetParam "x"
     , pureApply
-      [ Data.pureExpression $ Data.makeDefinitionRef defI
+      [ Expression.pureExpression $ Expression.makeDefinitionRef defI
       , pureApply [pureGetDef "-", pureGetParam "x", literalInt 1]
       ]
     ]

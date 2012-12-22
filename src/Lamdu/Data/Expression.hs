@@ -1,12 +1,8 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveDataTypeable, RankNTypes, NoMonomorphismRestriction #-}
-module Lamdu.Data
-  ( Definition(..), defBody, defType
-  , DefinitionBody(..)
-  , FFIName(..)
-  , VariableRef(..), parameterRef, definitionRef
+module Lamdu.Data.Expression
+  ( VariableRef(..), parameterRef, definitionRef
   , Lambda(..), lambdaParamId, lambdaParamType, lambdaBody
   , Apply(..), applyFunc, applyArg
-  , Builtin(..)
   , Leaf(..), getVariable, literalInteger, hole, set, integerType
   , ExpressionBody(..), expressionLambda, expressionPi, expressionApply, expressionLeaf
   , ExpressionBodyExpr
@@ -35,7 +31,7 @@ module Lamdu.Data
   , addSubexpressionSetters
   , addExpressionBodyContexts
 
-  , ExprLambdaWrapper(..), exprLambdaPrism
+  , LambdaWrapper(..), lambdaWrapperPrism
   ) where
 
 import Control.Applicative (Applicative(..), liftA2, (<$>))
@@ -153,45 +149,17 @@ showP = parenify . show
 
 parenify :: String -> String
 parenify x = concat ["(", x, ")"]
-
-data FFIName = FFIName
-  { fModule :: [String]
-  , fName :: String
-  } deriving (Eq, Ord)
-
-instance Show FFIName where
-  show (FFIName path name) = concatMap (++".") path ++ name
-
-data Builtin = Builtin
-  { bName :: FFIName
-  } deriving (Eq, Ord, Show)
-
-data DefinitionBody expr
-  = DefinitionExpression expr
-  | DefinitionBuiltin Builtin
-  deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
-
-data Definition expr = Definition
-  { _defBody :: DefinitionBody expr
-  , _defType :: expr
-  } deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Typeable)
-
 data Expression def a = Expression
   { _eValue :: ExpressionBody def (Expression def a)
   , _ePayload :: a
   } deriving (Functor, Eq, Ord, Foldable, Traversable, Typeable)
 LensTH.makeLenses ''Expression
-LensTH.makeLenses ''Definition
-derive makeBinary ''FFIName
 derive makeBinary ''VariableRef
 derive makeBinary ''Lambda
 derive makeBinary ''Apply
 derive makeBinary ''Leaf
 derive makeBinary ''ExpressionBody
 derive makeBinary ''Expression
-derive makeBinary ''Builtin
-derive makeBinary ''DefinitionBody
-derive makeBinary ''Definition
 LensTH.makeLenses ''Lambda
 LensTH.makeLenses ''Apply
 
@@ -365,11 +333,10 @@ funcArguments =
     f (Lambda _ paramType body) =
       paramType : funcArguments body
 
-
-data ExprLambdaWrapper = ExprLambda | ExprPi
+data LambdaWrapper = LambdaWrapperLambda | LambdaWrapperPi
   deriving (Eq, Ord, Show, Typeable)
-derive makeBinary ''ExprLambdaWrapper
+derive makeBinary ''LambdaWrapper
 
-exprLambdaPrism :: ExprLambdaWrapper -> Simple Prism (ExpressionBody def expr) (Lambda expr)
-exprLambdaPrism ExprLambda = expressionLambda
-exprLambdaPrism ExprPi = expressionPi
+lambdaWrapperPrism :: LambdaWrapper -> Simple Prism (ExpressionBody def expr) (Lambda expr)
+lambdaWrapperPrism LambdaWrapperLambda = expressionLambda
+lambdaWrapperPrism LambdaWrapperPi = expressionPi

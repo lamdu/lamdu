@@ -14,20 +14,20 @@ import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Data as Data
+import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.IRef as DataIRef
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
-colorOf :: Data.VariableRef def -> Draw.Color
-colorOf (Data.DefinitionRef _) = Config.definitionColor
-colorOf (Data.ParameterRef _) = Config.parameterColor
+colorOf :: Expression.VariableRef def -> Draw.Color
+colorOf (Expression.DefinitionRef _) = Config.definitionColor
+colorOf (Expression.ParameterRef _) = Config.parameterColor
 
 -- Color should be determined on the outside!
 makeView
   :: MonadA m
-  => Data.VariableRef (DataIRef.DefI (Tag m))
+  => Expression.VariableRef (DataIRef.DefI (Tag m))
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
 makeView var myId = ExprGuiM.withNameFromVarRef var $ \(nameSrc, name) ->
@@ -39,12 +39,12 @@ makeView var myId = ExprGuiM.withNameFromVarRef var $ \(nameSrc, name) ->
 
 make
   :: m ~ ViewM
-  => Data.VariableRef (DataIRef.DefI (Tag m))
+  => Expression.VariableRef (DataIRef.DefI (Tag m))
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
 make getVar myId = do
   case getVar of
-    Data.ParameterRef guid -> ExprGuiM.markVariablesAsUsed [guid]
+    Expression.ParameterRef guid -> ExprGuiM.markVariablesAsUsed [guid]
     _ -> return ()
   getVarView <-
     ExprGuiM.atEnv (WE.setTextColor (colorOf getVar)) $
@@ -55,11 +55,11 @@ make getVar myId = do
       jumpToDefinition
     jumpToDefinition =
       case getVar of
-        Data.DefinitionRef defI -> do
+        Expression.DefinitionRef defI -> do
           DataOps.newPane defI
           DataOps.savePreJumpPosition myId
           return $ WidgetIds.fromIRef defI
-        Data.ParameterRef paramGuid -> do
+        Expression.ParameterRef paramGuid -> do
           DataOps.savePreJumpPosition myId
           return $ WidgetIds.fromGuid paramGuid
   return $

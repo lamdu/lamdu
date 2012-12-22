@@ -8,18 +8,18 @@ import Data.Store.Transaction (Transaction)
 import qualified Data.Char as Char
 import qualified Data.Store.IRef as IRef
 import qualified Lamdu.Anchors as Anchors
-import qualified Lamdu.Data as Data
+import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.IRef as DataIRef
 
 isInfixName :: String -> Bool
 isInfixName "" = False
 isInfixName name = all (not . Char.isAlphaNum) name
 
-variableRefGuid :: Data.VariableRef (DataIRef.DefI t) -> Guid
-variableRefGuid (Data.ParameterRef i) = i
-variableRefGuid (Data.DefinitionRef i) = IRef.guid i
+variableRefGuid :: Expression.VariableRef (DataIRef.DefI t) -> Guid
+variableRefGuid (Expression.ParameterRef i) = i
+variableRefGuid (Expression.DefinitionRef i) = IRef.guid i
 
-isInfixVar :: MonadA m => Data.VariableRef (DataIRef.DefI (Tag m)) -> Transaction m Bool
+isInfixVar :: MonadA m => Expression.VariableRef (DataIRef.DefI (Tag m)) -> Transaction m Bool
 isInfixVar =
   fmap isInfixName . Anchors.getP .
   Anchors.assocNameRef . variableRefGuid
@@ -27,10 +27,10 @@ isInfixVar =
 infixOp
   :: MonadA m
   => DataIRef.ExpressionM m ref
-  -> Transaction m (Maybe (Data.VariableRef (DataIRef.DefI (Tag m))))
+  -> Transaction m (Maybe (Expression.VariableRef (DataIRef.DefI (Tag m))))
 infixOp expr =
-  case expr ^. Data.eValue of
-  Data.ExpressionLeaf (Data.GetVariable var) -> do
+  case expr ^. Expression.eValue of
+  Expression.ExpressionLeaf (Expression.GetVariable var) -> do
     isInfix <- isInfixVar var
     return $ if isInfix then Just var else Nothing
   _ -> return Nothing

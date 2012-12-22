@@ -1,21 +1,21 @@
 module Lamdu.CodeEdit.ExpressionEdit.BuiltinEdit(make) where
 
+import Control.MonadA (MonadA)
 import Data.List.Split (splitOn)
 import Data.Store.Property (Property(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (WidgetT, ExprGuiM)
-import Control.MonadA (MonadA)
 import qualified Data.List as List
-import qualified Lamdu.BottleWidgets as BWidgets
-import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.CodeEdit.Sugar as Sugar
-import qualified Lamdu.Config as Config
-import qualified Lamdu.Data as Data
-import qualified Lamdu.WidgetEnvT as WE
-import qualified Lamdu.WidgetIds as WidgetIds
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified Lamdu.BottleWidgets as BWidgets
+import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.CodeEdit.Sugar as Sugar
+import qualified Lamdu.Config as Config
+import qualified Lamdu.Data.Definition as Definition
+import qualified Lamdu.WidgetEnvT as WE
+import qualified Lamdu.WidgetIds as WidgetIds
 
 builtinFDConfig :: FocusDelegator.Config
 builtinFDConfig = FocusDelegator.Config
@@ -30,7 +30,7 @@ make
   => Sugar.DefinitionBuiltin m
   -> Widget.Id
   -> ExprGuiM m (WidgetT m)
-make (Sugar.DefinitionBuiltin (Data.FFIName modulePath name) setFFIName) myId =
+make (Sugar.DefinitionBuiltin (Definition.FFIName modulePath name) setFFIName) myId =
   ExprGuiM.assignCursor myId (WidgetIds.builtinFFIName myId) $ do
     moduleName <-
       makeNamePartEditor Config.foreignModuleColor
@@ -49,5 +49,5 @@ make (Sugar.DefinitionBuiltin (Data.FFIName modulePath name) setFFIName) myId =
     maybeSetter = (`fmap` setFFIName)
     modulePathStr = List.intercalate "." modulePath
     modulePathSetter = maybeSetter $ \ffiNameSetter ->
-      ffiNameSetter . (`Data.FFIName` name) . splitOn "."
-    nameSetter = maybeSetter $ \ffiNameSetter -> ffiNameSetter . Data.FFIName modulePath
+      ffiNameSetter . (`Definition.FFIName` name) . splitOn "."
+    nameSetter = maybeSetter $ \ffiNameSetter -> ffiNameSetter . Definition.FFIName modulePath

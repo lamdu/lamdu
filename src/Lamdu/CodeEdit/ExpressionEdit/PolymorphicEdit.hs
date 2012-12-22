@@ -13,7 +13,7 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.ExpressionEdit.VarEdit as VarEdit
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Data as Data
+import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetIds as WidgetIds
 
@@ -44,12 +44,12 @@ make poly =
       }
       where
         bgId = Widget.toAnimId myId ++ ["bg"]
-    colorize bgId (Data.ParameterRef _) =
+    colorize bgId (Expression.ParameterRef _) =
       fmap
       (ExpressionGui.withBgColor
        Layers.polymorphicCompactBG
        Config.polymorphicCompactBGColor bgId) .
       ExprGuiM.withFgColor Config.parameterColor
-    colorize _ (Data.DefinitionRef _) =
+    colorize _ (Expression.DefinitionRef _) =
       ExprGuiM.withFgColor Config.polymorphicForegroundColor
     funcId = WidgetIds.fromGuid $ Sugar.pFuncGuid poly
