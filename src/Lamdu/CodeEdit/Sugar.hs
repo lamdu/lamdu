@@ -5,7 +5,7 @@ module Lamdu.CodeEdit.Sugar
   , FuncParamActions(..), fpListItemActions, fpGetExample
   , DefinitionExpression(..), DefinitionContent(..), DefinitionNewType(..)
   , DefinitionBuiltin(..)
-  , Actions(..)
+  , Actions(..), giveAsArg, callWithArg, replace, cut, giveAsArgToOperator
   , ExpressionBody(..)
   , Payload(..), plInferredTypes, plActions, plNextHole
   , ExpressionP(..), rGuid, rExpressionBody, rPayload
@@ -100,11 +100,11 @@ mkActions ::
   DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) NoInferred (Stored m)) -> Actions m
 mkActions mDefI exprS =
   Actions
-  { giveAsArg = guidify $ DataOps.giveAsArg stored
-  , callWithArg = mkCallWithArg mDefI exprS
-  , replace = doReplace
-  , cut = mkCutter (Property.value stored) doReplace
-  , giveAsArgToOperator = guidify . DataOps.giveAsArgToOperator stored
+  { _giveAsArg = guidify $ DataOps.giveAsArg stored
+  , _callWithArg = mkCallWithArg mDefI exprS
+  , _replace = doReplace
+  , _cut = mkCutter (Property.value stored) doReplace
+  , _giveAsArgToOperator = guidify . DataOps.giveAsArgToOperator stored
   }
   where
     stored = resultStored exprS

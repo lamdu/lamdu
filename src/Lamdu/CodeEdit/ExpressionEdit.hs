@@ -129,7 +129,7 @@ actionsEventMap ::
 actionsEventMap exprGuid holePicker actions = do
   isSelected <- ExprGuiM.widgetEnv . WE.isSubCursor $ WidgetIds.fromGuid exprGuid
   mCallWithArg <- if isSelected
-    then ExprGuiM.transaction $ Sugar.callWithArg actions
+    then ExprGuiM.transaction $ actions ^. Sugar.callWithArg
     else return Nothing
   let
     callWithArg =
@@ -140,7 +140,7 @@ actionsEventMap exprGuid holePicker actions = do
       | isSelected && isHole = mempty
       | isSelected =
         mkEventMap delKeys (E.Doc ["Edit", "Replace expression"])
-        FocusDelegator.delegatingId $ Sugar.replace actions
+        FocusDelegator.delegatingId $ actions ^. Sugar.replace
       | otherwise =
         mkEventMap delKeys (E.Doc ["Navigation", "Select parent"])
         FocusDelegator.notDelegatingId $ return exprGuid
@@ -156,18 +156,18 @@ actionsEventMap exprGuid holePicker actions = do
     giveAsArg =
       Widget.keysEventMapMovesCursor
       Config.giveAsArgumentKeys (E.Doc ["Edit", "Give as argument"]) . fmap WidgetIds.fromGuid $
-      Sugar.giveAsArg actions
+      actions ^. Sugar.giveAsArg
     addOperator =
       (fmap . fmap) Widget.eventResultFromCursor .
       E.charGroup "Operator" (E.Doc ["Edit", "Apply operator"]) Config.operatorChars .
       fmap const $
       fmap (HoleEdit.searchTermWidgetId . WidgetIds.fromGuid) .
-      Sugar.giveAsArgToOperator actions . (:[])
+      (actions ^. Sugar.giveAsArgToOperator) . (:[])
     cut
       | isHole = mempty
       | otherwise =
         mkEventMap Config.cutKeys (E.Doc ["Edit", "Cut"]) id $
-        Sugar.cut actions
+        actions ^. Sugar.cut
     mkEventMap keys doc f =
       Widget.keysEventMapMovesCursor keys doc .
       fmap (f . WidgetIds.fromGuid)

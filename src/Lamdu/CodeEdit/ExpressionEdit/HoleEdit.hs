@@ -478,7 +478,7 @@ pickEventMap holeInfo searchTerm (Just result)
     operatorHandler (E.Doc ["Edit", "Result", "Pick and apply operator"]) $ \x -> do
       _ <- Sugar.holePickResult actions result
       fmap (searchTermWidgetId . WidgetIds.fromGuid) $
-        Sugar.giveAsArgToOperator exprActions [x]
+        (exprActions ^. Sugar.giveAsArgToOperator) [x]
   | nonEmptyAll (`elem` Config.operatorChars) searchTerm =
     alphaNumericHandler (E.Doc ["Edit", "Result", "Pick and resume"]) $ \x -> do
       g <- Sugar.holePickResult actions result
@@ -501,7 +501,7 @@ mkCallWithArgEventMap ::
   T m (Widget.EventHandlers (T m))
 mkCallWithArgEventMap _ Nothing = pure mempty
 mkCallWithArgEventMap holeInfo (Just result) =
-  maybe mempty mkCallWithArg <$> Sugar.callWithArg exprActions
+  maybe mempty mkCallWithArg <$> exprActions ^. Sugar.callWithArg
   where
     mkCallWithArg callWithArg =
       Widget.keysEventMapMovesCursor Config.callWithArgumentKeys

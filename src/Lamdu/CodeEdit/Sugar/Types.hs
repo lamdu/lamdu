@@ -5,7 +5,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , FuncParamActions(..), fpListItemActions, fpGetExample
   , DefinitionExpression(..), DefinitionContent(..), DefinitionNewType(..)
   , DefinitionBuiltin(..)
-  , Actions(..)
+  , Actions(..), giveAsArg, callWithArg, replace, cut, giveAsArgToOperator
   , ExpressionBody(..), eHasParens
   , expressionPi, expressionApply, expressionSection
   , expressionFunc, expressionGetVariable, expressionHole
@@ -43,14 +43,15 @@ type T = Transaction
 type CT m = StateT Cache (T m)
 
 data Actions m = Actions
-  { giveAsArg    :: T m Guid
-  , callWithArg  :: T m (Maybe (T m Guid))
-  , replace      :: T m Guid
-  , cut          :: T m Guid
+  { _giveAsArg    :: T m Guid
+  , _callWithArg  :: T m (Maybe (T m Guid))
+  , _replace      :: T m Guid
+  , _cut          :: T m Guid
   -- Turn "x" to "x ? _" where "?" is an operator-hole.
   -- Given string is initial hole search term.
-  , giveAsArgToOperator :: String -> T m Guid
+  , _giveAsArgToOperator :: String -> T m Guid
   }
+LensTH.makeLenses ''Actions
 
 data HasParens = HaveParens | DontHaveParens
 
