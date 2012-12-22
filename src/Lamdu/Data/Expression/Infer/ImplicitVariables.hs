@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveFunctor, DeriveDataTypeable, TemplateHaskell #-}
-module Lamdu.Data.Infer.ImplicitVariables
+module Lamdu.Data.Expression.Infer.ImplicitVariables
   ( addVariables, Payload(..)
   ) where
 
@@ -18,13 +18,13 @@ import Data.Maybe (fromMaybe)
 import Data.Monoid (mempty)
 import Data.Store.Guid (Guid)
 import Data.Typeable (Typeable)
-import Lamdu.Data.Infer.UntilConflict (inferAssertNoConflict)
+import Lamdu.Data.Expression.Infer.UntilConflict (inferAssertNoConflict)
 import System.Random (RandomGen, random)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Data.Expression as Expression
-import qualified Lamdu.Data.Infer as Infer
+import qualified Lamdu.Data.Expression.Infer as Infer
 
 data Payload a = Stored a | AutoGen Guid
   deriving (Eq, Ord, Show, Functor, Typeable)

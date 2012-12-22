@@ -12,7 +12,7 @@ import Data.Maybe (isJust)
 import Data.Monoid (Monoid(..))
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expression.IRef (DefI)
-import Lamdu.Data.Infer.Conflicts (inferWithConflicts)
+import Lamdu.Data.Expression.Infer.Conflicts (inferWithConflicts)
 import Test.Framework (Test)
 import Test.Framework.Providers.HUnit (hUnitTestToTests)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
@@ -27,7 +27,7 @@ import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
-import qualified Lamdu.Data.Infer as Infer
+import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Test.HUnit as HUnit
 
 type InferResults def =

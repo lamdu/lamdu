@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Lamdu.Data.Infer.Rules
+module Lamdu.Data.Expression.Infer.Rules
   ( Rule(..)
   , makeForAll, makeForNode
   , union
@@ -18,7 +18,7 @@ import Data.DeriveTH (derive)
 import Data.Functor.Identity (Identity(..))
 import Data.Store.Guid (Guid)
 import Data.Traversable (traverse, sequenceA)
-import Lamdu.Data.Infer.Types
+import Lamdu.Data.Expression.Infer.Types
 import qualified Control.Compose as Compose
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer

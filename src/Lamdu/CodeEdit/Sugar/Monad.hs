@@ -18,7 +18,7 @@ import Lamdu.CodeEdit.Sugar.Types -- see export list
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Cache as Cache
-import qualified Lamdu.Data.Infer as Infer
+import qualified Lamdu.Data.Expression.Infer as Infer
 
 data Context t = Context
   { scMDefI :: Maybe (DefI t)

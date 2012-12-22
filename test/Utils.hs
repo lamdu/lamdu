@@ -11,7 +11,7 @@ import Data.Map (Map)
 import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Expression.IRef (DefI)
-import Lamdu.Data.Infer.Conflicts (InferredWithConflicts(..), inferWithConflicts)
+import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), inferWithConflicts)
 import qualified Data.Foldable as Foldable
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -19,7 +19,7 @@ import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
-import qualified Lamdu.Data.Infer as Infer
+import qualified Lamdu.Data.Expression.Infer as Infer
 
 data Invisible = Invisible
 instance Show Invisible where

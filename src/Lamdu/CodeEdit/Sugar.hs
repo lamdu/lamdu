@@ -45,7 +45,7 @@ import Lamdu.CodeEdit.Sugar.Infer (InferredWC, NoInferred(..), Stored, NoStored)
 import Lamdu.CodeEdit.Sugar.Monad (SugarM)
 import Lamdu.CodeEdit.Sugar.Types -- see export list
 import Lamdu.Data.Expression.IRef (DefI)
-import Lamdu.Data.Infer.Conflicts (InferredWithConflicts(..), iwcInferredTypes, iwcInferredValues)
+import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), iwcInferredTypes, iwcInferredValues)
 import System.Random (RandomGen)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer
@@ -65,8 +65,8 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
+import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Load as Load
-import qualified Lamdu.Data.Infer as Infer
 import qualified Lamdu.Data.Ops as DataOps
 import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils

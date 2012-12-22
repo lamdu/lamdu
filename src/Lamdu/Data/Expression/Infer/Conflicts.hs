@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
-module Lamdu.Data.Infer.Conflicts
+module Lamdu.Data.Expression.Infer.Conflicts
   ( InferredWithConflicts(..)
   , inferWithConflicts
   , iwcInferredTypes
@@ -21,7 +21,7 @@ import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Lamdu.Data.Expression as Expression
-import qualified Lamdu.Data.Infer as Infer
+import qualified Lamdu.Data.Expression.Infer as Infer
 
 data InferredWithConflicts def = InferredWithConflicts
   { iwcInferred :: Infer.Inferred def

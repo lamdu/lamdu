@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable, GeneralizedNewtypeDeriving, TemplateHaskell #-}
 
-module Lamdu.Data.Infer.Types
+module Lamdu.Data.Expression.Infer.Types
   ( InferNode(..), Inferred(..)
   , IsRestrictedPoly(..)
   , Origin, mkOrigin

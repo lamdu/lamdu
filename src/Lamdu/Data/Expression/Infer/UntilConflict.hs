@@ -1,11 +1,11 @@
-module Lamdu.Data.Infer.UntilConflict
+module Lamdu.Data.Expression.Infer.UntilConflict
   ( inferUntilConflict, inferAssertNoConflict
   ) where
 
 import Control.Monad (void)
 import Control.Monad.Trans.State (StateT, State, mapStateT)
 import qualified Lamdu.Data.Expression as Expression
-import qualified Lamdu.Data.Infer as Infer
+import qualified Lamdu.Data.Expression.Infer as Infer
 
 inferUntilConflict ::
   Ord def => Infer.Loaded def a -> Infer.InferNode def ->

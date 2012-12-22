@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveDataTypeable,
              PatternGuards #-}
-module Lamdu.Data.Infer
+module Lamdu.Data.Expression.Infer
   ( Inferred(..), rExpression
   , Loaded, load
   , inferLoaded
@@ -42,8 +42,8 @@ import Data.Monoid (Monoid(..))
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable)
 import Lamdu.Data.Expression.IRef (DefI)
-import Lamdu.Data.Infer.Rules (Rule(..))
-import Lamdu.Data.Infer.Types
+import Lamdu.Data.Expression.Infer.Rules (Rule(..))
+import Lamdu.Data.Expression.Infer.Types
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Either as Either
@@ -55,7 +55,7 @@ import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
-import qualified Lamdu.Data.Infer.Rules as Rules
+import qualified Lamdu.Data.Expression.Infer.Rules as Rules
 
 mkOrigin :: State Origin Origin
 mkOrigin = do

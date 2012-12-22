@@ -32,7 +32,7 @@ import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Data.Typeable (Typeable)
 import Lamdu.Data.Expression.IRef (DefI)
-import Lamdu.Data.Infer.Conflicts (InferredWithConflicts(..), inferWithConflicts)
+import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), inferWithConflicts)
 import System.Random (RandomGen)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
@@ -42,9 +42,9 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
+import qualified Lamdu.Data.Expression.Infer as Infer
+import qualified Lamdu.Data.Expression.Infer.ImplicitVariables as ImplicitVariables
 import qualified Lamdu.Data.Expression.Load as Load
-import qualified Lamdu.Data.Infer as Infer
-import qualified Lamdu.Data.Infer.ImplicitVariables as ImplicitVariables
 import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
 
