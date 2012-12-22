@@ -239,7 +239,7 @@ sCharGroup iDoc oDoc chars handler =
   where
     s = Set.fromList chars
 
-charGroup :: InputDoc -> Doc -> [Char] -> (Char -> IsShifted -> a) -> EventMap a
+charGroup :: InputDoc -> Doc -> String -> (Char -> IsShifted -> a) -> EventMap a
 charGroup iDoc oDoc = sCharGroup iDoc oDoc . (flip (,) <$> [NotShifted, Shifted] <*>)
 
 -- low-level "smart constructor" in case we need to enforce

@@ -9,8 +9,7 @@ module Graphics.UI.Bottle.Widgets.EventMapDoc
 import Control.Applicative ((<$>), Applicative(..))
 import Control.Lens ((^.))
 import Data.IORef (newIORef, readIORef, modifyIORef)
-import Data.Monoid (mappend)
-import Data.Monoid (mconcat)
+import Data.Monoid (Monoid(..))
 import Data.Traversable (traverse)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Animation (AnimId, R)
@@ -44,7 +43,7 @@ groupTree :: Eq n => [([n], l)] -> [Tree n l]
 groupTree = foldr step []
   where
     step ([], l) rest = Leaf l : rest
-    step ((at:as), l) b =
+    step (at:as, l) b =
       case b of
         Branch bt bs : rest
           | at == bt -> Branch bt (step (as, l) bs) : rest
@@ -144,8 +143,8 @@ makeTreeView animId size =
         Vector2 belows rights = recurse trees
 
 addHelp :: (AnimId -> View) -> Widget.Size -> Widget f -> Widget f
-addHelp f size w =
-  Lens.over Widget.wFrame (mappend docFrame) w
+addHelp f size =
+  Lens.over Widget.wFrame (mappend docFrame)
   where
     (eventMapSize, eventMapDoc) = f ["help box"]
     transparency = Draw.Color 1 1 1

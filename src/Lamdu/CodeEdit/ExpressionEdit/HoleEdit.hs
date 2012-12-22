@@ -357,7 +357,7 @@ makeSearchTermWidget holeInfo searchTermId mResultToPick =
   (flip ExpressionGui (0.5/Config.holeSearchTermScaleFactor) .
    Widget.scale Config.holeSearchTermScaleFactor .
    Widget.strongerEvents pickResultEventMap .
-   (Lens.over Widget.wEventMap) disallowChars) $
+   Lens.over Widget.wEventMap disallowChars) $
   BWidgets.makeWordEdit (hiSearchTerm holeInfo) searchTermId
   where
     pickResultEventMap =
