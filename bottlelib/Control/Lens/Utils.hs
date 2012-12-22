@@ -25,4 +25,4 @@ argument :: Lens.Setter (a0 -> b) (a1 -> b) a1 a0
 argument = Lens.sets (flip (.))
 
 result :: Lens.Setter (a -> b0) (a -> b1) b0 b1
-result = Lens.sets (.)
+result = Lens.mapped
