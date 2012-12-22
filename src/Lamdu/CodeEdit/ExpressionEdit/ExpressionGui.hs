@@ -137,7 +137,7 @@ makeNameEdit (nameSrc, name) ident myId =
   where
     makeEditor =
       (fmap . fmap . fmap . Lens.over Widget.wEventMap)
-      (EventMap.filterChars (`notElem` "[]\\`"))
+      (EventMap.filterChars (`notElem` "[]\\`()"))
       BWidgets.makeWordEdit
 
 nameSrcTint :: ExprGuiM.NameSource -> Widget f -> Widget f

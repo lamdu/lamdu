@@ -337,7 +337,7 @@ addNewDefinitionEventMap holeInfo =
     searchTermId = WidgetIds.searchTermId $ hiHoleId holeInfo
 
 disallowedHoleChars :: String
-disallowedHoleChars = "`[]\\\n "
+disallowedHoleChars = "`[]\\\n() "
 
 makeSearchTermWidget
   :: MonadA m
