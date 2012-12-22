@@ -415,7 +415,7 @@ setRefExpr ref newExpr = do
       let
         isChange = not $ equiv mergedExpr curExpr
         isHole =
-          case mergedExpr ^. Expression.eValue of
+          case mergedExpr ^. Expression.eBody of
           Expression.BodyLeaf Expression.Hole -> True
           _ -> False
       when isChange $ touch ref
@@ -519,7 +519,7 @@ load loader mRecursiveDef expr =
       fmap Map.fromList .
       traverse loadType . ordNub $
       Lens.toListOf
-      ( Lens.folding Expression.subExpressions . Expression.eValue
+      ( Lens.folding Expression.subExpressions . Expression.eBody
       . Expression.bodyLeaf . Expression.getVariable . Expression.definitionRef
       . Lens.filtered ((/= mRecursiveDef) . Just)
       ) expr

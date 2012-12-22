@@ -91,7 +91,7 @@ showExpressionWithConflicts =
       ] ++ map ((("    " ++ ansiRed ++ "Conflict: ") ++) . (++ ansiReset) . show) tErrors ++
       (map ("  " ++) . Foldable.concat . fmap go) expr
       where
-        expr = inferredExpr ^. Expression.eValue
+        expr = inferredExpr ^. Expression.eBody
         val = Infer.iValue inferred
         typ = Infer.iType inferred
         InferredWithConflicts inferred tErrors vErrors =

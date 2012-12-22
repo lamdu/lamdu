@@ -13,7 +13,7 @@ module Lamdu.Data.Expression
   , makeParameterRef, makeDefinitionRef
   , makeLiteralInteger, pureLiteralInteger
   , pureIntegerType
-  , Expression(..), eValue, ePayload
+  , Expression(..), eBody, ePayload
   , pureExpression
   , randomizeExpr
   , canonizeParamIds, randomizeParamIds
@@ -152,7 +152,7 @@ parenify x = concat ["(", x, ")"]
 
 -- TODO: Expression = Cofree, do we want to use that?
 data Expression def a = Expression
-  { _eValue :: Body def (Expression def a)
+  { _eBody :: Body def (Expression def a)
   , _ePayload :: a
   } deriving (Functor, Eq, Ord, Foldable, Traversable, Typeable)
 
@@ -314,24 +314,24 @@ onGetParamGuids f (Expression body payload) =
 
 subExpressions :: Expression def a -> [Expression def a]
 subExpressions x =
-  x : Foldable.concatMap subExpressions (x ^. eValue)
+  x : Foldable.concatMap subExpressions (x ^. eBody)
 
 hasGetVar :: Guid -> Expression def a -> Bool
 hasGetVar =
   Lens.anyOf
-  ( Lens.folding subExpressions . eValue
+  ( Lens.folding subExpressions . eBody
   . bodyLeaf . getVariable . parameterRef
   ) . (==)
 
 isDependentPi :: Expression def a -> Bool
 isDependentPi =
-  Lens.anyOf (eValue . bodyPi) f
+  Lens.anyOf (eBody . bodyPi) f
   where
     f (Lambda g _ resultType) = hasGetVar g resultType
 
 funcArguments :: Expression def a -> [Expression def a]
 funcArguments =
-  Lens.toListOf (eValue . bodyLambda . Lens.folding f)
+  Lens.toListOf (eBody . bodyLambda . Lens.folding f)
   where
     f (Lambda _ paramType body) =
       paramType : funcArguments body

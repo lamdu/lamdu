@@ -180,7 +180,7 @@ deleteParamRef param =
     refs =
       Lens.folding Expression.subExpressions .
       Lens.filtered (Lens.anyOf paramRef (== param))
-    paramRef = Expression.eValue . Expression.bodyLeaf . Expression.getVariable . Expression.parameterRef
+    paramRef = Expression.eBody . Expression.bodyLeaf . Expression.getVariable . Expression.parameterRef
 
 mkFuncParamActions ::
   m ~ Anchors.ViewM =>
@@ -428,7 +428,7 @@ mkPaste exprP = do
 
 countArrows :: Expression.Expression def () -> Int
 countArrows Expression.Expression
-  { Expression._eValue =
+  { Expression._eBody =
     Expression.BodyPi (Expression.Lambda _ _ resultType)
   } = 1 + countArrows resultType
 countArrows _ = 0
@@ -436,7 +436,7 @@ countArrows _ = 0
 -- TODO: Return a record, not a tuple
 countPis :: Expression.Expression def () -> (Int, Int)
 countPis e@Expression.Expression
-  { Expression._eValue =
+  { Expression._eBody =
     Expression.BodyPi (Expression.Lambda _ _ resultType)
   }
   | Expression.isDependentPi e = first (1+) $ countPis resultType
@@ -446,7 +446,7 @@ countPis _ = (0, 0)
 applyForms
   :: Expression.Expression def ()
   -> Expression.Expression def () -> [Expression.Expression def ()]
-applyForms _ e@Expression.Expression{ Expression._eValue = Expression.BodyLambda {} } =
+applyForms _ e@Expression.Expression{ Expression._eBody = Expression.BodyLambda {} } =
   [e]
 applyForms exprType expr =
   reverse . take (1 + arrows) $ iterate addApply withDepPisApplied
@@ -475,7 +475,7 @@ fillPartialHolesInExpression check oldExpr =
     fillHoleExpr expr@(Expression.Expression (Expression.BodyLeaf Expression.Hole) inferred) =
       let inferredVal = void $ Infer.iValue inferred
       in
-        case inferredVal ^. Expression.eValue of
+        case inferredVal ^. Expression.eBody of
         Expression.BodyLeaf Expression.Hole -> return $ void expr
         _ | isCompleteType inferredVal -> return $ void expr
           | otherwise -> do
@@ -575,7 +575,7 @@ chooseHoleType ::
   [DataIRef.ExpressionM m f] -> hole -> (DataIRef.ExpressionM m f -> hole) -> hole
 chooseHoleType inferredVals plain inferred =
   case inferredVals of
-  [Expression.Expression { Expression._eValue = Expression.BodyLeaf Expression.Hole }] -> plain
+  [Expression.Expression { Expression._eBody = Expression.BodyLeaf Expression.Hole }] -> plain
   [inferredVal] -> inferred inferredVal
   _ -> plain
 
@@ -598,18 +598,18 @@ uninferredHoles ::
   Expression.Expression def (Infer.Inferred def, a) ->
   [Expression.Expression def (Infer.Inferred def, a)]
 uninferredHoles
-  Expression.Expression { Expression._eValue = Expression.BodyApply (Expression.Apply func arg) }
+  Expression.Expression { Expression._eBody = Expression.BodyApply (Expression.Apply func arg) }
   | (Expression.isDependentPi . Infer.iType . Lens.view (Expression.ePayload . Lens._1)) func =
     uninferredHoles func
   | otherwise = uninferredHoles func ++ uninferredHoles arg
-uninferredHoles e@Expression.Expression { Expression._eValue = Expression.BodyLeaf Expression.Hole } = [e]
+uninferredHoles e@Expression.Expression { Expression._eBody = Expression.BodyLeaf Expression.Hole } = [e]
 uninferredHoles Expression.Expression
-  { Expression._eValue = Expression.BodyPi (Expression.Lambda _ paramType resultType) } =
+  { Expression._eBody = Expression.BodyPi (Expression.Lambda _ paramType resultType) } =
     uninferredHoles resultType ++ uninferredHoles paramType
 uninferredHoles Expression.Expression
-  { Expression._eValue = Expression.BodyLambda (Expression.Lambda _ paramType result) } =
+  { Expression._eBody = Expression.BodyLambda (Expression.Lambda _ paramType result) } =
     uninferredHoles result ++ uninferredHoles paramType
-uninferredHoles Expression.Expression { Expression._eValue = body } =
+uninferredHoles Expression.Expression { Expression._eBody = body } =
   Foldable.concatMap uninferredHoles body
 
 holeResultHasHoles :: HoleResult t -> Bool
@@ -652,7 +652,7 @@ convertExpressionI ::
   DataIRef.ExpressionM m (PayloadMM m) -> SugarM m (Expression m)
 convertExpressionI ee =
   ($ ee) $
-  case ee ^. Expression.eValue of
+  case ee ^. Expression.eBody of
   Expression.BodyLambda x -> convertFunc x
   Expression.BodyPi x -> convertPi x
   Expression.BodyApply x -> convertApply x
@@ -667,7 +667,7 @@ isCompleteType :: Expression.Expression def () -> Bool
 isCompleteType =
   Lens.nullOf
   ( Lens.folding Expression.subExpressions
-  . Expression.eValue . Expression.bodyLeaf . Expression.hole
+  . Expression.eBody . Expression.bodyLeaf . Expression.hole
   )
 
 convertHoleResult ::
@@ -694,7 +694,7 @@ convertDefinitionParams ::
   , DataIRef.ExpressionM m (PayloadMM m)
   )
 convertDefinitionParams expr =
-  case expr ^. Expression.eValue of
+  case expr ^. Expression.eBody of
   Expression.BodyLambda lambda -> do
     (isDependent, fp) <- convertFuncParam lambda expr
     (depParams, params, deepBody) <-
@@ -711,12 +711,12 @@ convertWhereItems ::
   SugarM m ([WhereItem m], DataIRef.ExpressionM m (PayloadMM m))
 convertWhereItems
   topLevel@Expression.Expression
-  { Expression._eValue = Expression.BodyApply apply@Expression.Apply
+  { Expression._eBody = Expression.BodyApply apply@Expression.Apply
   { Expression._applyFunc = Expression.Expression
-  { Expression._eValue = Expression.BodyLambda lambda@Expression.Lambda
+  { Expression._eBody = Expression.BodyLambda lambda@Expression.Lambda
   { Expression._lambdaParamId = param
   , Expression._lambdaParamType = Expression.Expression
-  { Expression._eValue = Expression.BodyLeaf Expression.Hole
+  { Expression._eBody = Expression.BodyLeaf Expression.Hole
   }
   , Expression._lambdaBody = body
   }}}} = do
@@ -754,7 +754,7 @@ addStoredParam
   fmap fst $ DataOps.lambdaWrap prop
 addStoredParam
   Expression.Expression
-  { Expression._eValue =
+  { Expression._eBody =
     Expression.BodyLambda
     Expression.Lambda { Expression._lambdaBody = body } } =
   addStoredParam body

@@ -64,7 +64,7 @@ showExpressionWithInferred =
       (map ("  " ++) . Foldable.concat .
        fmap go) expr
       where
-        expr = inferredExpr ^. Expression.eValue
+        expr = inferredExpr ^. Expression.eBody
         (val, typ) = inferredExpr ^. Expression.ePayload
 
 compareInferred :: InferResults (DefI t) -> InferResults (DefI t) -> Bool
@@ -493,31 +493,31 @@ getLambdaBody :: DataIRef.Expression t a -> DataIRef.Expression t a
 getLambdaBody e =
   x
   where
-    Expression.BodyLambda (Expression.Lambda _ _ x) = e ^. Expression.eValue
+    Expression.BodyLambda (Expression.Lambda _ _ x) = e ^. Expression.eBody
 
 getPiResult :: DataIRef.Expression t a -> DataIRef.Expression t a
 getPiResult e =
   x
   where
-    Expression.BodyPi (Expression.Lambda _ _ x) = e ^. Expression.eValue
+    Expression.BodyPi (Expression.Lambda _ _ x) = e ^. Expression.eBody
 
 getLambdaParamType :: DataIRef.Expression t a -> DataIRef.Expression t a
 getLambdaParamType e =
   x
   where
-    Expression.BodyLambda (Expression.Lambda _ x _) = e ^. Expression.eValue
+    Expression.BodyLambda (Expression.Lambda _ x _) = e ^. Expression.eBody
 
 getApplyFunc :: DataIRef.Expression t a -> DataIRef.Expression t a
 getApplyFunc e =
   x
   where
-    Expression.BodyApply (Expression.Apply x _) = e ^. Expression.eValue
+    Expression.BodyApply (Expression.Apply x _) = e ^. Expression.eBody
 
 getApplyArg :: DataIRef.Expression t a -> DataIRef.Expression t a
 getApplyArg e =
   x
   where
-    Expression.BodyApply (Expression.Apply _ x) = e ^. Expression.eValue
+    Expression.BodyApply (Expression.Apply _ x) = e ^. Expression.eBody
 
 testCase :: String -> HUnit.Assertion -> HUnit.Test
 testCase name = HUnit.TestLabel name . HUnit.TestCase

@@ -96,7 +96,7 @@ readExpression exprI =
 expressionBodyFrom ::
   MonadA m => ExpressionM m a ->
   T m (Expression.BodyExpr (DefI (Tag m)) (ExpressionI (Tag m), a))
-expressionBodyFrom = traverse newExpressionFromH . Lens.view Expression.eValue
+expressionBodyFrom = traverse newExpressionFromH . Lens.view Expression.eBody
 
 newExpressionFromH ::
   MonadA m =>

@@ -23,7 +23,7 @@ class ToExpr a where
   toExpr :: Env t -> a -> [DataIRef.Expression t ()] -> DataIRef.Expression t ()
 
 instance FromExpr Integer where
-  fromExpr _ (Expression.Expression { Expression._eValue = Expression.BodyLeaf (Expression.LiteralInteger x) }) = x
+  fromExpr _ (Expression.Expression { Expression._eBody = Expression.BodyLeaf (Expression.LiteralInteger x) }) = x
   fromExpr _ _ = error "Expecting normalized Integer expression!"
 
 instance ToExpr Integer where
@@ -40,7 +40,7 @@ instance ToExpr Bool where
   toExpr _ _ _ = error "Bool applied as a function"
 
 instance FromExpr Bool where
-  fromExpr env (Expression.Expression { Expression._eValue = Expression.BodyLeaf (Expression.GetVariable (Expression.DefinitionRef defRef)) })
+  fromExpr env (Expression.Expression { Expression._eBody = Expression.BodyLeaf (Expression.GetVariable (Expression.DefinitionRef defRef)) })
     | defRef == trueDef env = True
     | defRef == falseDef env = False
   fromExpr _ _ = error "Expected a normalized bool expression!"
