@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveDataTypeable, RankNTypes #-}
+{-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveDataTypeable, RankNTypes, NoMonomorphismRestriction #-}
 module Lamdu.Data
   ( Definition(..), defBody, defType
   , DefinitionBody(..)
@@ -40,7 +40,7 @@ module Lamdu.Data
 
 import Control.Applicative (Applicative(..), liftA2, (<$>))
 import Control.Lens (Simple, Prism, (^.))
-import Control.Lens.Utils (SimpleContext, lensContext, contextSetter, result)
+import Control.Lens.Utils (contextSetter, result)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (evalState, state)
@@ -217,37 +217,43 @@ expressionDef :: Lens.Traversal (Expression a pl) (Expression b pl) a b
 expressionDef = (`bitraverseExpression` pure)
 
 addExpressionBodyContexts ::
-  SimpleContext (ExpressionBody def expr) container ->
-  ExpressionBody def (SimpleContext expr container)
-addExpressionBodyContexts (Lens.Context intoContainer body) =
-  Lens.over (traverse . contextSetter . result) intoContainer $
+  (expra -> exprb) ->
+  Lens.Context (ExpressionBody def expra) (ExpressionBody def exprb) container ->
+  ExpressionBody def (Lens.Context expra exprb container)
+addExpressionBodyContexts tob (Lens.Context intoContainer body) =
+  Lens.over afterSetter intoContainer $
   case body of
-  ExpressionLambda lam -> onLambda ExpressionLambda ExpressionLambda lam
-  ExpressionPi lam -> onLambda ExpressionPi ExpressionPi lam
+  ExpressionLambda lam -> onLambda makeLambda ExpressionLambda lam
+  ExpressionPi lam -> onLambda makePi ExpressionPi lam
   ExpressionApply app ->
-    ExpressionApply . wrap ExpressionApply $
-    -- `on` must be used infix here, because GHC (at least as of
-    -- 7.4.1) has a type inference bug/feature that infers this well,
-    -- whereas it fails to infer the prefix form:
-    (Apply `on` lensContext app) applyFunc applyArg
+    Lens.over afterSetter ExpressionApply $
+    (makeApply `on` mkContext app)
+    (applyFunc, applyFunc)
+    (applyArg, applyArg)
   ExpressionLeaf leaf -> ExpressionLeaf leaf
   where
-    wrap f = Lens.over (traverse . contextSetter . result) f
+    afterSetter = traverse . contextSetter . result
+    tobs = Lens.over traverse tob
+    mkContext orig (lensa, lensb) =
+      Lens.Context (flip (Lens.set lensb) (tobs orig)) $
+      orig ^. lensa
     onLambda consa consb lam@(Lambda param _ _) =
-      consa . wrap consb $
-      Lambda param (lensContext lam lambdaParamType) (lensContext lam lambdaBody)
+      Lens.over afterSetter consb $
+      (consa param `on` mkContext lam)
+      (lambdaParamType, lambdaParamType)
+      (lambdaBody, lambdaBody)
 
 addSubexpressionSetters ::
-  SimpleContext (Expression def a) container ->
-  Expression def (Expression def a -> container, a)
-addSubexpressionSetters (Lens.Context intoContainer (Expression body pl)) =
-  Expression newBody (intoContainer, pl)
+  (a -> b) -> Lens.Context (Expression def a) (Expression def b) container ->
+  Expression def (Expression def b -> container, a)
+addSubexpressionSetters atob (Lens.Context intoContainer (Expression body a)) =
+  Expression newBody (intoContainer, a)
   where
-    ptr f = Lens.Context (intoContainer . f)
-    bodyPtr = ptr (`Expression` pl) body
     newBody =
-      Lens.over traverse addSubexpressionSetters $
-      addExpressionBodyContexts bodyPtr
+      Lens.over traverse (addSubexpressionSetters atob) $
+      addExpressionBodyContexts (fmap atob) bodyPtr
+    bodyPtr =
+      Lens.Context (intoContainer . (`Expression` atob a)) body
 
 pureExpression :: ExpressionBody def (Expression def ()) -> Expression def ()
 pureExpression = (`Expression` ())

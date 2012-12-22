@@ -37,11 +37,11 @@ import Data.List.Utils (sortOn)
 import Data.Maybe (listToMaybe, maybeToList)
 import Data.Monoid (Any(..))
 import Data.Store.Guid (Guid)
-import Data.Store.IRef (Tag)
+import Data.Store.IRef (Tag, Tagged)
 import Data.Traversable (traverse)
 import Data.Tuple (swap)
 import Lamdu.CodeEdit.Sugar.Config (SugarConfig)
-import Lamdu.CodeEdit.Sugar.Infer (InferredWC, NoInferred, Stored, NoStored)
+import Lamdu.CodeEdit.Sugar.Infer (InferredWC, NoInferred(..), Stored, NoStored)
 import Lamdu.CodeEdit.Sugar.Monad (SugarM)
 import Lamdu.CodeEdit.Sugar.Types -- see export list
 import Lamdu.Data.IRef (DefI)
@@ -70,7 +70,8 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
 
-type PayloadMM m = SugarInfer.Payload (Maybe (InferredWC (Tag m))) (Maybe (Stored m))
+type PayloadMM m =
+  SugarInfer.Payload (Tag m) (Maybe (InferredWC (Tag m))) (Maybe (Stored m))
 type Convertor m =
   DataIRef.ExpressionM m (PayloadMM m) ->
   SugarM m (Expression m)
@@ -82,16 +83,21 @@ mkCutter expr replaceWithHole = do
 
 mkCallWithArg ::
   MonadA m => Maybe (DefI (Tag m)) ->
-  DataIRef.ExpressionM m (Stored m) -> T m (Maybe (T m Guid))
+  DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) NoInferred (Stored m)) ->
+  T m (Maybe (T m Guid))
 mkCallWithArg mDefI exprS =
   (fmap . fmap . const) mkCall .
   uncurry (SugarInfer.inferMaybe_ mDefI withApply) $
   Infer.initial mDefI
   where
-    mkCall = fmap DataIRef.exprGuid . DataOps.callWithArg $ exprS ^. Data.ePayload
-    withApply = Data.pureApply (void exprS) Data.pureHole
+    mkCall = fmap DataIRef.exprGuid . DataOps.callWithArg $ resultStored exprS
+    withApply =
+      exprS ^. Data.ePayload . SugarInfer.plSetter $
+      Data.pureApply (void exprS) Data.pureHole
 
-mkActions :: m ~ Anchors.ViewM => Maybe (DefI (Tag m)) -> DataIRef.ExpressionM m (Stored m) -> Actions m
+mkActions ::
+  m ~ Anchors.ViewM => Maybe (DefI (Tag m)) ->
+  DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) NoInferred (Stored m)) -> Actions m
 mkActions mDefI exprS =
   Actions
   { giveAsArg = guidify $ DataOps.giveAsArg stored
@@ -101,7 +107,7 @@ mkActions mDefI exprS =
   , giveAsArgToOperator = guidify . DataOps.giveAsArgToOperator stored
   }
   where
-    stored = exprS ^. Data.ePayload
+    stored = resultStored exprS
     guidify = fmap DataIRef.exprGuid
     doReplace = guidify $ DataOps.replaceWithHole stored
 
@@ -110,18 +116,18 @@ mkGen select count =
   Random.mkStdGen . (+select) . (*count) . BinaryUtils.decodeS . Guid.bs
 
 resultGuid ::
-  Data.Expression def (SugarInfer.Payload inferred stored) -> Guid
+  Data.Expression def (SugarInfer.Payload t inferred stored) -> Guid
 resultGuid = Lens.view (Data.ePayload . SugarInfer.plGuid)
 
 resultStored ::
-  Data.Expression def (SugarInfer.Payload inferred stored) -> stored
+  Data.Expression def (SugarInfer.Payload t inferred stored) -> stored
 resultStored = Lens.view (Data.ePayload . SugarInfer.plStored)
 
 resultInferred ::
-  Data.Expression def (SugarInfer.Payload inferred stored) -> inferred
+  Data.Expression def (SugarInfer.Payload t inferred stored) -> inferred
 resultInferred = Lens.view (Data.ePayload . SugarInfer.plInferred)
 
-toPayloadMM :: SugarInfer.Payload NoInferred NoStored -> PayloadMM m
+toPayloadMM :: SugarInfer.Payload (Tagged (m ())) NoInferred NoStored -> PayloadMM m
 toPayloadMM =
   Lens.set SugarInfer.plInferred Nothing .
   Lens.set SugarInfer.plStored Nothing
@@ -143,7 +149,9 @@ mkExpression exprI expr = do
     , _rExpressionBody = expr
     , _rPayload = Payload
       { _plInferredTypes = inferredTypesRefs
-      , _plActions = mkActions mDefI <$> traverse (Lens.view SugarInfer.plStored) exprI
+      , _plActions =
+        mkActions mDefI <$>
+        traverse (SugarInfer.ntraversePayload (const (pure NoInferred)) id pure) exprI
       , _plNextHole = Nothing
       }
     }
@@ -524,7 +532,9 @@ convertInferredHoleH
       { holeScope =
         map onScopeElement . Map.toList $ Infer.iScope inferred
       , holeInferResults = inferResults processRes
-      , holeMActions = mkHoleActions <$> traverse (Lens.view SugarInfer.plStored) exprI
+      , holeMActions =
+        mkHoleActions <$>
+        traverse (SugarInfer.ntraversePayload (const (pure NoInferred)) id pure) exprI
       }
     mkHoleActions exprS =
       HoleActions
@@ -570,7 +580,7 @@ chooseHoleType inferredVals plain inferred =
 pickResult ::
   m ~ Anchors.ViewM =>
   Maybe (DefI (Tag m)) ->
-  Guid -> DataIRef.ExpressionM m (Stored m) ->
+  Guid -> DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) NoInferred (Stored m)) ->
   DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) ->
   T m (Guid, Actions m)
 pickResult mDefI defaultDest exprS =
@@ -580,7 +590,7 @@ pickResult mDefI defaultDest exprS =
     (DataIRef.exprGuid . Lens.view (Data.ePayload . Lens._2))
   . listToMaybe . uninferredHoles . fmap swap
   )
-  . (DataIRef.writeExpression . Property.value) (exprS ^. Data.ePayload)
+  . (DataIRef.writeExpression . Property.value . resultStored) exprS
 
 -- Also skip param types, those can usually be inferred later, so less
 -- useful to fill immediately
@@ -735,7 +745,7 @@ convertWhereItems expr = return ([], expr)
 
 addStoredParam ::
   MonadA m =>
-  Data.Expression def (SugarInfer.Payload inferred (Maybe (Stored m))) ->
+  Data.Expression def (SugarInfer.Payload t inferred (Maybe (Stored m))) ->
   T m Guid
 addStoredParam
   Data.Expression
@@ -755,7 +765,7 @@ addStoredParam _ =
 
 assertedGetProp ::
   String ->
-  Data.Expression def (SugarInfer.Payload inferred (Maybe stored)) -> stored
+  Data.Expression def (SugarInfer.Payload t inferred (Maybe stored)) -> stored
 assertedGetProp _
   Data.Expression
   { Data._ePayload =
