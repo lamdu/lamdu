@@ -20,7 +20,7 @@ module Lamdu.Data.Expression.Infer
   ) where
 
 import Control.Applicative (Applicative(..), (<$), (<$>))
-import Control.Lens ((%=), (.=), (^.), (+=))
+import Control.Lens ((%=), (.=), (^.), (+=), (%~), (&), (<>~))
 import Control.Monad ((<=<), guard, unless, void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either (EitherT(..))
@@ -131,9 +131,9 @@ data ErrorDetails def
 derive makeBinary ''ErrorDetails
 instance Functor ErrorDetails where
   fmap f (MismatchIn x y) =
-    on MismatchIn (Lens.over Expression.expressionDef f) x y
+    on MismatchIn (Expression.expressionDef %~ f) x y
   fmap f (InfiniteExpression x) =
-    InfiniteExpression $ Lens.over Expression.expressionDef f x
+    InfiniteExpression $ x & Expression.expressionDef %~ f
 
 data Error def = Error
   { errRef :: ExprRef
@@ -147,8 +147,8 @@ derive makeBinary ''Error
 instance Functor Error where
   fmap f (Error ref mis details) =
     Error ref
-    (Lens.over (Lens.both . Expression.expressionDef) f mis)
-    (fmap f details)
+    (mis & Lens.both . Expression.expressionDef %~ f)
+    (f <$> details)
 
 newtype InferActions def m = InferActions
   { reportError :: Error def -> m ()
@@ -383,8 +383,7 @@ mergeExprs p0 p1 =
       mappendLens rplSubstitutedArgs src $
       dest
     mappendLens lens src =
-      Lens.over (Lens.cloneLens lens)
-      ((mappend . Lens.view (Lens.cloneLens lens)) src)
+      Lens.cloneLens lens <>~ src ^. Lens.cloneLens lens
     onMatch x y = return $ y `mergePayloadInto` x
     onMismatch (Expression.Expression (Expression.BodyLeaf Expression.Hole) s0) e1 =
       return $ (s0 `mergePayloadInto`) <$> e1

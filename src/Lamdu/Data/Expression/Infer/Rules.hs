@@ -7,7 +7,7 @@ module Lamdu.Data.Expression.Infer.Rules
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
-import Control.Lens ((^.), (^..))
+import Control.Lens ((^.), (^..), (&), (%~), (.~))
 import Control.Monad (guard)
 import Control.Monad.Trans.State (State)
 import Control.Monad.Trans.Writer (execWriter)
@@ -220,7 +220,7 @@ subst from to expr
     (Expression.eBody . Expression.bodyLeaf . Expression.getVariable . Expression.parameterRef)
     (== from) expr
   = to
-  | otherwise = Lens.over (Expression.eBody . Lens.mapped) (subst from to) expr
+  | otherwise = expr & Expression.eBody . Lens.traversed %~ subst from to
 
 mergeToPiResult ::
   Eq def => RefExpression def -> RefExpression def -> RefExpression def
@@ -266,9 +266,9 @@ runIntoApplyResultClosure (cons, applyRef, arg) ~[funcExpr, argExpr] = do
   return
     ( applyRef
     , subst param
-      ((Lens.over (Lens.mapped . rplSubstitutedArgs) . IntSet.insert) (unExprRef arg) argExpr) .
+      (argExpr & Lens.traversed . rplSubstitutedArgs %~ IntSet.insert (unExprRef arg)) .
       -- TODO: Is this correct?
-      Lens.set (Lens.mapped . rplRestrictedPoly) (Monoid.Any False) $
+      Lens.set (Lens.traversed . rplRestrictedPoly) (Monoid.Any False) $
       result
     )
 
@@ -329,10 +329,10 @@ mergeToArg param arg =
         (== param) expr
       = Compose.O . (fmap . const) Unit $ Writer.tell
         [( arg
-         , (Lens.over (Lens.mapped . rplSubstitutedArgs) . IntSet.delete) (unExprRef arg) .
+         , post
+           & Lens.traversed . rplSubstitutedArgs %~ IntSet.delete (unExprRef arg)
            -- TODO: Is this correct?
-           Lens.set (Lens.mapped . rplRestrictedPoly) (Monoid.Any False) $
-           post
+           & Lens.traversed . rplRestrictedPoly .~ Monoid.Any False
          )]
       | otherwise = unit
 

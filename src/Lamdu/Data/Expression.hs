@@ -35,7 +35,7 @@ module Lamdu.Data.Expression
   ) where
 
 import Control.Applicative (Applicative(..), liftA2, (<$>))
-import Control.Lens (Simple, Prism, (^.))
+import Control.Lens (Simple, Prism, (^.), (%~), (&))
 import Control.Lens.Utils (contextSetter, result)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -191,16 +191,22 @@ addBodyContexts ::
   Lens.Context (Body def a) (Body def b) container ->
   Body def (Lens.Context a b container)
 addBodyContexts tob (Lens.Context intoContainer body) =
-  Lens.over afterSetter intoContainer $
+  afterSetter %~ intoContainer $
   case body of
   BodyLambda lam ->
-    Lens.over afterSetter BodyLambda . BodyLambda $ onLambda lam
+    onLambda lam
+    & BodyLambda
+    & afterSetter %~ BodyLambda
   BodyPi lam ->
-    Lens.over afterSetter BodyPi . BodyPi $ onLambda lam
+    onLambda lam
+    & BodyPi
+    & afterSetter %~ BodyPi
   BodyApply (Apply func arg) ->
-    Lens.over afterSetter BodyApply . BodyApply $ Apply
+    Apply
     (Lens.Context (`Apply` tob arg) func)
     (Lens.Context (tob func `Apply`) arg)
+    & BodyApply
+    & afterSetter %~ BodyApply
   BodyLeaf leaf -> BodyLeaf leaf
   where
     afterSetter = traverse . contextSetter . result
@@ -216,7 +222,7 @@ addSubexpressionSetters atob (Lens.Context intoContainer (Expression body a)) =
   Expression newBody (intoContainer, a)
   where
     newBody =
-      Lens.over traverse (addSubexpressionSetters atob) $
+      fmap (addSubexpressionSetters atob) $
       addBodyContexts (fmap atob) bodyPtr
     bodyPtr =
       Lens.Context (intoContainer . (`Expression` atob a)) body

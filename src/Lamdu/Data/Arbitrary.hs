@@ -4,6 +4,7 @@ module Lamdu.Data.Arbitrary () where
 
 import Control.Applicative (Applicative(..), (<$>), (<*))
 import Control.Arrow (second)
+import Control.Lens ((%~))
 import Control.Monad (join)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -11,7 +12,6 @@ import Control.Monad.Trans.State (StateT, evalStateT)
 import Data.Maybe (maybeToList)
 import Data.Store.Guid (Guid)
 import Test.QuickCheck (Arbitrary(..), Gen)
-import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.State as State
@@ -33,7 +33,8 @@ next = lift $ State.gets head <* State.modify tail
 arbitraryLambda :: Arbitrary a => GenExpr def (Expression.Lambda (Expression.Expression def a))
 arbitraryLambda = do
   guid <- next
-  Expression.Lambda guid <$> arbitraryExpr <*> (Reader.local . Lens.over envScope) (guid :) arbitraryExpr
+  Expression.Lambda guid <$> arbitraryExpr <*>
+    Reader.local (envScope %~ (guid :)) arbitraryExpr
 
 arbitraryApply :: Arbitrary a => GenExpr def (Expression.Apply (Expression.Expression def a))
 arbitraryApply = Expression.Apply <$> arbitraryExpr <*> arbitraryExpr

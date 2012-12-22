@@ -4,7 +4,7 @@ module Lamdu.Data.Expression.Infer.ImplicitVariables
   ) where
 
 import Control.Applicative ((<$>))
-import Control.Lens ((^.))
+import Control.Lens ((^.), (%~), (&))
 import Control.Monad (foldM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, State, evalStateT, mapStateT, state)
@@ -78,7 +78,7 @@ addVariablesForExpr ::
 addVariablesForExpr loader expr = do
   reinferred <-
     lift . State.gets . Infer.derefExpr $
-    Lens.over (Lens.mapped . Lens._1) Infer.iPoint expr
+    expr & Lens.traversed . Lens._1 %~ Infer.iPoint
   if isUnrestrictedHole $ inferredVal reinferred
     then
       fmap (:[]) . mapStateT toStateT . addVariableForHole $
@@ -127,9 +127,10 @@ addVariables gen loader expr = do
   implicitParams <-
     (`evalStateT` gen) . fmap concat .
     mapM (addVariablesForExpr loader) $ Expression.funcArguments expr
-  newRoot <-
-    toStateT $ foldM addParam
-    ( Lens.over Lens._1 Infer.iPoint
-    . Lens.over Lens._2 Stored <$> expr)
-    implicitParams
+  newRoot <- toStateT $ foldM addParam baseExpr implicitParams
   State.gets $ Infer.derefExpr newRoot
+  where
+    baseExpr =
+      expr & Lens.traversed %~
+      (Lens._1 %~ Infer.iPoint) .
+      (Lens._2 %~ Stored)

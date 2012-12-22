@@ -1,6 +1,6 @@
 all: run_test_infer
 
-build: build_test_infer build_benchmark_infer build_profile_infer build_cabal
+build: build_cabal build_test_infer build_benchmark_infer build_profile_infer
 
 run_test_infer: build_test_infer
 	./test_Infer

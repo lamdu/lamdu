@@ -1,3 +1,6 @@
+* Import Control.Lens.Tuple unqualified. edwardk says unlikely to
+  change, for _1, _2, etc
+
 * Shift-left should let you select all the way up to definition,
   especially in where (e.g: to add outer where)
 
