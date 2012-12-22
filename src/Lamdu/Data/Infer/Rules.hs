@@ -111,13 +111,13 @@ makeForNode (Expression.Expression exprBody typedVal) =
   <$> ruleSimpleType typedVal
   <*>
   case fmap (Lens.view Expression.ePayload) exprBody of
-  Expression.ExpressionPi lambda@(Expression.Lambda _ _ resultType) ->
+  Expression.BodyPi lambda@(Expression.Lambda _ _ resultType) ->
     (:) <$> setRule (tvType resultType) <*>
     onLambda Expression.LambdaWrapperPi lambda
-  Expression.ExpressionLambda lambda@(Expression.Lambda param _ body) ->
+  Expression.BodyLambda lambda@(Expression.Lambda param _ body) ->
     (++) <$> lambdaRules param typedVal (tvType body) <*>
     onLambda Expression.LambdaWrapperLambda lambda
-  Expression.ExpressionApply apply -> applyRules typedVal apply
+  Expression.BodyApply apply -> applyRules typedVal apply
   _ -> pure []
   where
     setRule ref = do
@@ -131,13 +131,13 @@ makeForAll :: Expression.Expression def TypedValue -> State Origin [Rule def]
 makeForAll = fmap concat . traverse makeForNode . Expression.subExpressions
 
 makeHole :: Origin -> RefExpression def
-makeHole g = makeRefExpr g $ Expression.ExpressionLeaf Expression.Hole
+makeHole g = makeRefExpr g $ Expression.BodyLeaf Expression.Hole
 
 setExpr :: Origin -> RefExpression def
-setExpr g = makeRefExpr g $ Expression.ExpressionLeaf Expression.Set
+setExpr g = makeRefExpr g $ Expression.BodyLeaf Expression.Set
 
 intTypeExpr :: Origin -> RefExpression def
-intTypeExpr g = makeRefExpr g $ Expression.ExpressionLeaf Expression.IntegerType
+intTypeExpr g = makeRefExpr g $ Expression.BodyLeaf Expression.IntegerType
 
 guidFromOrigin :: Origin -> Guid
 guidFromOrigin origin = Guid.fromString $ show origin ++ "(orig)"
@@ -154,7 +154,7 @@ runLambdaBodyTypeToPiResultTypeClosure (param, lambdaTypeRef) (o0, o1) ~[bodyTyp
 
 runPiToLambdaClosure :: (Guid, ExprRef, ExprRef) -> Origin3 -> RuleFunction def
 runPiToLambdaClosure (param, lambdaValueRef, bodyTypeRef) (o0, o1, o2) ~[piBody] = do
-  Expression.Lambda piParam paramType resultType <- piBody ^.. Expression.eValue . Expression.expressionPi
+  Expression.Lambda piParam paramType resultType <- piBody ^.. Expression.eValue . Expression.bodyPi
   [ -- Pi result type -> Body type
     ( bodyTypeRef
     , subst piParam
@@ -217,7 +217,7 @@ subst ::
   Expression.Expression def a -> Expression.Expression def a
 subst from to expr
   | Lens.anyOf
-    (Expression.eValue . Expression.expressionLeaf . Expression.getVariable . Expression.parameterRef)
+    (Expression.eValue . Expression.bodyLeaf . Expression.getVariable . Expression.parameterRef)
     (== from) expr
   = to
   | otherwise = Lens.over (Expression.eValue . Lens.mapped) (subst from to) expr
@@ -241,16 +241,16 @@ mergeToPiResult =
       | otherwise = dest
       where
         substs = dest ^. Expression.ePayload . rplSubstitutedArgs
-    notAHole = Lens.nullOf (Expression.eValue . Expression.expressionLeaf . Expression.hole)
+    notAHole = Lens.nullOf (Expression.eValue . Expression.bodyLeaf . Expression.hole)
 
 runSimpleTypeClosure :: ExprRef -> Origin2 -> RuleFunction def
 runSimpleTypeClosure typ (o0, o1) ~[valExpr] =
   case valExpr ^. Expression.eValue of
-  Expression.ExpressionLeaf Expression.Set -> [(typ, setExpr o0)]
-  Expression.ExpressionLeaf Expression.IntegerType -> [(typ, setExpr o0)]
-  Expression.ExpressionLeaf (Expression.LiteralInteger _) -> [(typ, intTypeExpr o0)]
-  Expression.ExpressionPi _ -> [(typ, setExpr o0)]
-  Expression.ExpressionLambda (Expression.Lambda param paramType _) ->
+  Expression.BodyLeaf Expression.Set -> [(typ, setExpr o0)]
+  Expression.BodyLeaf Expression.IntegerType -> [(typ, setExpr o0)]
+  Expression.BodyLeaf (Expression.LiteralInteger _) -> [(typ, intTypeExpr o0)]
+  Expression.BodyPi _ -> [(typ, setExpr o0)]
+  Expression.BodyLambda (Expression.Lambda param paramType _) ->
     [( typ
      , makeRefExpr o0 . Expression.makePi param paramType $
        makeHole o1
@@ -325,7 +325,7 @@ mergeToArg param arg =
     onMatch _ _ = unit
     onMismatch expr post
       | Lens.anyOf
-        (Expression.eValue . Expression.expressionLeaf . Expression.getVariable . Expression.parameterRef)
+        (Expression.eValue . Expression.bodyLeaf . Expression.getVariable . Expression.parameterRef)
         (== param) expr
       = Compose.O . (fmap . const) Unit $ Writer.tell
         [( arg
@@ -351,7 +351,7 @@ runRigidArgApplyTypeToResultTypeClosure :: ExprRef -> Origin3 -> RuleFunction de
 runRigidArgApplyTypeToResultTypeClosure funcTypeRef (o0, o1, o2) ~[applyTypeExpr, argExpr] = do
   par <-
     argExpr ^..
-    Expression.eValue . Expression.expressionLeaf . Expression.getVariable . Expression.parameterRef
+    Expression.eValue . Expression.bodyLeaf . Expression.getVariable . Expression.parameterRef
   return
     ( funcTypeRef
     , makePi o0 (makeHole o1) $
@@ -369,7 +369,7 @@ rigidArgApplyTypeToResultTypeRule applyTv (Expression.Apply func arg) =
 runRedexApplyTypeToResultTypeClosure :: ExprRef -> RuleFunction def
 runRedexApplyTypeToResultTypeClosure funcTypeRef
   ~[applyTypeExpr, Expression.Expression funcExpr funcPl] = do
-  Expression.Lambda paramGuid paramType _ <- funcExpr ^.. Expression.expressionLambda
+  Expression.Lambda paramGuid paramType _ <- funcExpr ^.. Expression.bodyLambda
   return
     ( funcTypeRef
     , makeRefExpr (Lens.view rplOrigin funcPl) $
@@ -385,7 +385,7 @@ runPiParamTypeToArgTypeClosure :: ExprRef -> RuleFunction def
 runPiParamTypeToArgTypeClosure argTypeRef ~[Expression.Expression funcTExpr _] = do
   -- If func type is Pi
   -- Pi's ParamT => ArgT
-  Expression.Lambda _ paramT _ <- funcTExpr ^.. Expression.expressionPi
+  Expression.Lambda _ paramT _ <- funcTExpr ^.. Expression.bodyPi
   return (argTypeRef, paramT)
 
 piParamTypeToArgTypeRule :: Expression.Apply TypedValue -> Rule def
@@ -396,7 +396,7 @@ runLambdaParamTypeToArgTypeClosure :: ExprRef -> RuleFunction def
 runLambdaParamTypeToArgTypeClosure argTypeRef ~[Expression.Expression funcExpr _] = do
   -- If func is Lambda
   -- Lambda's ParamT => ArgT
-  Expression.Lambda _ paramT _ <- funcExpr ^.. Expression.expressionLambda
+  Expression.Lambda _ paramT _ <- funcExpr ^.. Expression.bodyLambda
   return (argTypeRef, paramT)
 
 lambdaParamTypeToArgTypeRule :: Expression.Apply TypedValue -> Rule def
@@ -407,7 +407,7 @@ runArgTypeToLambdaParamTypeClosure :: ExprRef -> Origin -> RuleFunction def
 runArgTypeToLambdaParamTypeClosure funcValRef o0 ~[Expression.Expression funcExpr funcPl, argTExpr] = do
   -- If func is Lambda,
   -- ArgT => Lambda's ParamT
-  Expression.Lambda param _ _ <- funcExpr ^.. Expression.expressionLambda
+  Expression.Lambda param _ _ <- funcExpr ^.. Expression.bodyLambda
   return
     ( funcValRef
     , makeRefExpr (Lens.view rplOrigin funcPl) .
@@ -429,8 +429,8 @@ runNonLambdaToApplyValueClosure applyValRef o0 ~[funcExpr, argExpr] =
   --
   -- Func Arg => Outer
   case funcExpr ^. Expression.eValue of
-  Expression.ExpressionLambda _ -> []
-  Expression.ExpressionLeaf Expression.Hole -> []
+  Expression.BodyLambda _ -> []
+  Expression.BodyLeaf Expression.Hole -> []
   _ ->
     [ ( applyValRef
       , makeRefExpr o0 $ Expression.makeApply funcExpr argExpr
@@ -447,9 +447,9 @@ runApplyToPartsClosure refs ~[applyExpr, funcExpr] = do
   -- If definitely not a redex (func also not a hole)
   -- Apply-Arg => Arg
   -- Apply-Func => Func
-  guard $ Lens.nullOf (Expression.eValue . Expression.expressionLambda) funcExpr
-  guard $ Lens.nullOf (Expression.eValue . Expression.expressionLeaf . Expression.hole) funcExpr
-  Expression.Apply aFunc aArg <- applyExpr ^.. Expression.eValue . Expression.expressionApply
+  guard $ Lens.nullOf (Expression.eValue . Expression.bodyLambda) funcExpr
+  guard $ Lens.nullOf (Expression.eValue . Expression.bodyLeaf . Expression.hole) funcExpr
+  Expression.Apply aFunc aArg <- applyExpr ^.. Expression.eValue . Expression.bodyApply
   [(refs ^. Expression.applyFunc, aFunc), (refs ^. Expression.applyArg, aArg)]
 
 applyToPartsRule ::

@@ -57,10 +57,10 @@ liftGen = lift . lift
 arbitraryBody :: Arbitrary a => GenExpr def (Expression.BodyExpr def a)
 arbitraryBody =
   join . liftGen . Gen.frequency . (map . second) pure $
-  [ weight 1  $ Expression.ExpressionLambda <$> arbitraryLambda
-  , weight 1  $ Expression.ExpressionPi     <$> arbitraryLambda
-  , weight 5  $ Expression.ExpressionApply  <$> arbitraryApply
-  , weight 10 $ Expression.ExpressionLeaf   <$> arbitraryLeaf
+  [ weight 1  $ Expression.BodyLambda <$> arbitraryLambda
+  , weight 1  $ Expression.BodyPi     <$> arbitraryLambda
+  , weight 5  $ Expression.BodyApply  <$> arbitraryApply
+  , weight 10 $ Expression.BodyLeaf   <$> arbitraryLeaf
   ]
   where
     weight = (,)

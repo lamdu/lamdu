@@ -138,8 +138,8 @@ createBuiltins =
     return (ffiEnv, sugarConfig)
   where
     endo = join mkPi
-    set = DataIRef.newExprBody $ Expression.ExpressionLeaf Expression.Set
-    integer = DataIRef.newExprBody $ Expression.ExpressionLeaf Expression.IntegerType
+    set = DataIRef.newExprBody $ Expression.BodyLeaf Expression.Set
+    integer = DataIRef.newExprBody $ Expression.BodyLeaf Expression.IntegerType
     forAll name f = fmap DataIRef.ExpressionI . fixIRef $ \aI -> do
       let aGuid = IRef.guid aI
       A.setP (A.assocNameRef aGuid) name
@@ -151,7 +151,7 @@ createBuiltins =
       Writer.tell [x]
       return x
     tellift_ = (fmap . fmap . const) () tellift
-    getVar = DataIRef.newExprBody . Expression.ExpressionLeaf . Expression.GetVariable
+    getVar = DataIRef.newExprBody . Expression.BodyLeaf . Expression.GetVariable
     mkPi mkArgType mkResType = fmap snd . join $ liftA2 DataIRef.newPi mkArgType mkResType
     mkApply mkFunc mkArg =
       DataIRef.newExprBody =<< liftA2 Expression.makeApply mkFunc mkArg

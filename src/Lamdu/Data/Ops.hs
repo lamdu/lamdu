@@ -74,7 +74,7 @@ callWithArg exprP = do
   return argI
 
 newHole :: MonadA m => T m (DataIRef.ExpressionI (Tag m))
-newHole = DataIRef.newExprBody $ Expression.ExpressionLeaf Expression.Hole
+newHole = DataIRef.newExprBody $ Expression.BodyLeaf Expression.Hole
 
 replace
   :: MonadA m

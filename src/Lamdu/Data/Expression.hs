@@ -4,7 +4,7 @@ module Lamdu.Data.Expression
   , Lambda(..), lambdaParamId, lambdaParamType, lambdaBody
   , Apply(..), applyFunc, applyArg
   , Leaf(..), getVariable, literalInteger, hole, set, integerType
-  , Body(..), expressionLambda, expressionPi, expressionApply, expressionLeaf
+  , Body(..), bodyLambda, bodyPi, bodyApply, bodyLeaf
   , BodyExpr
   , makeApply, pureApply
   , makePi, makeLambda
@@ -90,10 +90,10 @@ data Leaf def
 LensTH.makePrisms ''Leaf
 
 data Body def expr
-  = ExpressionLambda {-# UNPACK #-} !(Lambda expr)
-  | ExpressionPi {-# UNPACK #-} !(Lambda expr)
-  | ExpressionApply {-# UNPACK #-} !(Apply expr)
-  | ExpressionLeaf !(Leaf def)
+  = BodyLambda {-# UNPACK #-} !(Lambda expr)
+  | BodyPi {-# UNPACK #-} !(Lambda expr)
+  | BodyApply {-# UNPACK #-} !(Apply expr)
+  | BodyLeaf !(Leaf def)
   deriving (Eq, Ord, Functor, Foldable, Traversable)
 LensTH.makePrisms ''Body
 
@@ -105,54 +105,57 @@ bitraverseBody ::
   f (Body defb exprb)
 bitraverseBody onDef onExpr body =
   case body of
-  ExpressionLambda x -> ExpressionLambda <$> traverse onExpr x
-  ExpressionPi x -> ExpressionPi <$> traverse onExpr x
-  ExpressionApply x -> ExpressionApply <$> traverse onExpr x
-  ExpressionLeaf leaf -> ExpressionLeaf <$> traverse onDef leaf
+  BodyLambda x -> BodyLambda <$> traverse onExpr x
+  BodyPi x -> BodyPi <$> traverse onExpr x
+  BodyApply x -> BodyApply <$> traverse onExpr x
+  BodyLeaf leaf -> BodyLeaf <$> traverse onDef leaf
 
 expressionBodyDef :: Lens.Traversal (Body a expr) (Body b expr) a b
 expressionBodyDef = (`bitraverseBody` pure)
 
 makeApply :: expr -> expr -> Body def expr
-makeApply func arg = ExpressionApply $ Apply func arg
+makeApply func arg = BodyApply $ Apply func arg
 
 makePi :: Guid -> expr -> expr -> Body def expr
 makePi argId argType resultType =
-  ExpressionPi $ Lambda argId argType resultType
+  BodyPi $ Lambda argId argType resultType
 
 makeLambda :: Guid -> expr -> expr -> Body def expr
 makeLambda argId argType body =
-  ExpressionLambda $ Lambda argId argType body
+  BodyLambda $ Lambda argId argType body
 
 makeParameterRef :: Guid -> Body def a
-makeParameterRef = ExpressionLeaf . GetVariable . ParameterRef
+makeParameterRef = BodyLeaf . GetVariable . ParameterRef
 
 makeDefinitionRef :: def -> Body def a
-makeDefinitionRef = ExpressionLeaf . GetVariable . DefinitionRef
+makeDefinitionRef = BodyLeaf . GetVariable . DefinitionRef
 
 makeLiteralInteger :: Integer -> Body def a
-makeLiteralInteger = ExpressionLeaf . LiteralInteger
+makeLiteralInteger = BodyLeaf . LiteralInteger
 
 instance (Show expr, Show def) => Show (Body def expr) where
-  show (ExpressionLambda (Lambda paramId paramType body)) =
+  show (BodyLambda (Lambda paramId paramType body)) =
     concat ["\\", show paramId, ":", showP paramType, "==>", showP body]
-  show (ExpressionPi (Lambda paramId paramType body)) =
+  show (BodyPi (Lambda paramId paramType body)) =
     concat ["(", show paramId, ":", showP paramType, ")->", showP body]
-  show (ExpressionApply (Apply func arg)) = unwords [showP func, showP arg]
-  show (ExpressionLeaf (GetVariable (ParameterRef guid))) = "par:" ++ show guid
-  show (ExpressionLeaf (GetVariable (DefinitionRef defI))) = "def:" ++ show defI
-  show (ExpressionLeaf (LiteralInteger int)) = show int
-  show (ExpressionLeaf x) = show x
+  show (BodyApply (Apply func arg)) = unwords [showP func, showP arg]
+  show (BodyLeaf (GetVariable (ParameterRef guid))) = "par:" ++ show guid
+  show (BodyLeaf (GetVariable (DefinitionRef defI))) = "def:" ++ show defI
+  show (BodyLeaf (LiteralInteger int)) = show int
+  show (BodyLeaf x) = show x
 
 showP :: Show a => a -> String
 showP = parenify . show
 
 parenify :: String -> String
 parenify x = concat ["(", x, ")"]
+
+-- TODO: Expression = Cofree, do we want to use that?
 data Expression def a = Expression
   { _eValue :: Body def (Expression def a)
   , _ePayload :: a
   } deriving (Functor, Eq, Ord, Foldable, Traversable, Typeable)
+
 LensTH.makeLenses ''Expression
 derive makeBinary ''VariableRef
 derive makeBinary ''Lambda
@@ -191,14 +194,14 @@ addBodyContexts ::
 addBodyContexts tob (Lens.Context intoContainer body) =
   Lens.over afterSetter intoContainer $
   case body of
-  ExpressionLambda lam -> onLambda makeLambda ExpressionLambda lam
-  ExpressionPi lam -> onLambda makePi ExpressionPi lam
-  ExpressionApply app ->
-    Lens.over afterSetter ExpressionApply $
+  BodyLambda lam -> onLambda makeLambda BodyLambda lam
+  BodyPi lam -> onLambda makePi BodyPi lam
+  BodyApply app ->
+    Lens.over afterSetter BodyApply $
     (makeApply `on` mkContext app)
     (applyFunc, applyFunc)
     (applyArg, applyArg)
-  ExpressionLeaf leaf -> ExpressionLeaf leaf
+  BodyLeaf leaf -> BodyLeaf leaf
   where
     afterSetter = traverse . contextSetter . result
     tobs = Lens.over traverse tob
@@ -227,7 +230,7 @@ pureExpression :: Body def (Expression def ()) -> Expression def ()
 pureExpression = (`Expression` ())
 
 pureIntegerType :: Expression def ()
-pureIntegerType = pureExpression $ ExpressionLeaf IntegerType
+pureIntegerType = pureExpression $ BodyLeaf IntegerType
 
 pureLiteralInteger :: Integer -> Expression def ()
 pureLiteralInteger = pureExpression . makeLiteralInteger
@@ -236,10 +239,10 @@ pureApply :: Expression def () -> Expression def () -> Expression def ()
 pureApply f x = pureExpression $ makeApply f x
 
 pureHole :: Expression def ()
-pureHole = pureExpression $ ExpressionLeaf Hole
+pureHole = pureExpression $ BodyLeaf Hole
 
 pureSet :: Expression def ()
-pureSet = pureExpression $ ExpressionLeaf Set
+pureSet = pureExpression $ BodyLeaf Set
 
 randomizeExpr :: (RandomGen g, Random r) => g -> Expression def (r -> a) -> Expression def a
 randomizeExpr gen = (`evalState` gen) . traverse randomize
@@ -259,10 +262,10 @@ randomizeParamIds gen =
         Reader.local (Map.insert oldParamId newParamId) $ go body
     go (Expression v s) = fmap (`Expression` s) $
       case v of
-      ExpressionLambda lambda -> fmap ExpressionLambda $ onLambda lambda
-      ExpressionPi lambda -> fmap ExpressionPi $ onLambda lambda
-      ExpressionApply (Apply func arg) -> liftA2 makeApply (go func) (go arg)
-      gv@(ExpressionLeaf (GetVariable (ParameterRef guid))) ->
+      BodyLambda lambda -> fmap BodyLambda $ onLambda lambda
+      BodyPi lambda -> fmap BodyPi $ onLambda lambda
+      BodyApply (Apply func arg) -> liftA2 makeApply (go func) (go arg)
+      gv@(BodyLeaf (GetVariable (ParameterRef guid))) ->
         Reader.asks $
         maybe gv makeParameterRef .
         Map.lookup guid
@@ -281,18 +284,18 @@ matchExpression onMatch onMismatch =
   where
     go scope e0@(Expression body0 pl0) e1@(Expression body1 pl1) =
       case (body0, body1) of
-      (ExpressionLambda l0, ExpressionLambda l1) ->
-        mkExpression $ ExpressionLambda <$> onLambda l0 l1
-      (ExpressionPi l0, ExpressionPi l1) ->
-        mkExpression $ ExpressionPi <$> onLambda l0 l1
-      (ExpressionApply (Apply f0 a0), ExpressionApply (Apply f1 a1)) ->
-        mkExpression $ ExpressionApply <$> liftA2 Apply (go scope f0 f1) (go scope a0 a1)
-      (ExpressionLeaf gv@(GetVariable (ParameterRef p0)),
-       ExpressionLeaf (GetVariable (ParameterRef p1)))
+      (BodyLambda l0, BodyLambda l1) ->
+        mkExpression $ BodyLambda <$> onLambda l0 l1
+      (BodyPi l0, BodyPi l1) ->
+        mkExpression $ BodyPi <$> onLambda l0 l1
+      (BodyApply (Apply f0 a0), BodyApply (Apply f1 a1)) ->
+        mkExpression $ BodyApply <$> liftA2 Apply (go scope f0 f1) (go scope a0 a1)
+      (BodyLeaf gv@(GetVariable (ParameterRef p0)),
+       BodyLeaf (GetVariable (ParameterRef p1)))
         | p0 == lookupGuid p1 ->
-          mkExpression . pure $ ExpressionLeaf gv
-      (ExpressionLeaf x, ExpressionLeaf y)
-        | x == y -> mkExpression . pure $ ExpressionLeaf x
+          mkExpression . pure $ BodyLeaf gv
+      (BodyLeaf x, BodyLeaf y)
+        | x == y -> mkExpression . pure $ BodyLeaf x
       _ -> onMismatch e0 $ onGetParamGuids lookupGuid e1
       where
         lookupGuid guid = fromMaybe guid $ Map.lookup guid scope
@@ -305,7 +308,7 @@ onGetParamGuids :: (Guid -> Guid) -> Expression def a -> Expression def a
 onGetParamGuids f (Expression body payload) =
   flip Expression payload $
   case body of
-  ExpressionLeaf (GetVariable (ParameterRef getParGuid)) ->
+  BodyLeaf (GetVariable (ParameterRef getParGuid)) ->
     makeParameterRef $ f getParGuid
   _ -> onGetParamGuids f <$> body
 
@@ -317,18 +320,18 @@ hasGetVar :: Guid -> Expression def a -> Bool
 hasGetVar =
   Lens.anyOf
   ( Lens.folding subExpressions . eValue
-  . expressionLeaf . getVariable . parameterRef
+  . bodyLeaf . getVariable . parameterRef
   ) . (==)
 
 isDependentPi :: Expression def a -> Bool
 isDependentPi =
-  Lens.anyOf (eValue . expressionPi) f
+  Lens.anyOf (eValue . bodyPi) f
   where
     f (Lambda g _ resultType) = hasGetVar g resultType
 
 funcArguments :: Expression def a -> [Expression def a]
 funcArguments =
-  Lens.toListOf (eValue . expressionLambda . Lens.folding f)
+  Lens.toListOf (eValue . bodyLambda . Lens.folding f)
   where
     f (Lambda _ paramType body) =
       paramType : funcArguments body
@@ -338,5 +341,5 @@ data LambdaWrapper = LambdaWrapperLambda | LambdaWrapperPi
 derive makeBinary ''LambdaWrapper
 
 lambdaWrapperPrism :: LambdaWrapper -> Simple Prism (Body def expr) (Lambda expr)
-lambdaWrapperPrism LambdaWrapperLambda = expressionLambda
-lambdaWrapperPrism LambdaWrapperPi = expressionPi
+lambdaWrapperPrism LambdaWrapperLambda = bodyLambda
+lambdaWrapperPrism LambdaWrapperPi = bodyPi

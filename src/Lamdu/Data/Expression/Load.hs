@@ -69,7 +69,7 @@ propertyOfClosure (DefinitionBodyExpressionProperty defI bodyExpr defType) =
   Definition.BodyExpression
 propertyOfClosure (ApplyProperty exprI apply role) =
   Property (apply ^. Lens.cloneLens lens) $
-  DataIRef.writeExprBody exprI . Expression.ExpressionApply .
+  DataIRef.writeExprBody exprI . Expression.BodyApply .
   setter lens apply
   where
     lens = applyChildByRole role
@@ -101,14 +101,14 @@ loadExpressionBody ::
   MonadA m => DataIRef.ExpressionI (Tag m) -> T m (Expression.Body (DefI (Tag m)) (LoadedClosure (Tag m)))
 loadExpressionBody iref = onBody =<< DataIRef.readExprBody iref
   where
-    onBody (Expression.ExpressionLeaf x) =
-      return $ Expression.ExpressionLeaf x
-    onBody (Expression.ExpressionApply apply) =
+    onBody (Expression.BodyLeaf x) =
+      return $ Expression.BodyLeaf x
+    onBody (Expression.BodyApply apply) =
       on (liftA2 Expression.makeApply) loadExpressionClosure (prop Func) (prop Arg)
       where
         prop = ApplyProperty iref apply
-    onBody (Expression.ExpressionLambda lambda) = onLambda Expression.LambdaWrapperLambda lambda
-    onBody (Expression.ExpressionPi lambda) = onLambda Expression.LambdaWrapperPi lambda
+    onBody (Expression.BodyLambda lambda) = onLambda Expression.LambdaWrapperLambda lambda
+    onBody (Expression.BodyPi lambda) = onLambda Expression.LambdaWrapperPi lambda
     onLambda cons lambda@(Expression.Lambda param _ _) =
       fmap (Lens.review (Expression.lambdaWrapperPrism cons)) $
       on (liftA2 (Expression.Lambda param)) loadExpressionClosure

@@ -338,7 +338,7 @@ initialValExpr ::
 initialValExpr (Expression.Expression body ()) =
   toRefExpression $
   case body of
-  Expression.ExpressionApply _ -> Expression.pureHole
+  Expression.BodyApply _ -> Expression.pureHole
   _ -> circumcized body
   where
     circumcized = Expression.pureExpression . (Expression.pureHole <$)
@@ -386,9 +386,9 @@ mergeExprs p0 p1 =
       Lens.over (Lens.cloneLens lens)
       ((mappend . Lens.view (Lens.cloneLens lens)) src)
     onMatch x y = return $ y `mergePayloadInto` x
-    onMismatch (Expression.Expression (Expression.ExpressionLeaf Expression.Hole) s0) e1 =
+    onMismatch (Expression.Expression (Expression.BodyLeaf Expression.Hole) s0) e1 =
       return $ (s0 `mergePayloadInto`) <$> e1
-    onMismatch e0 (Expression.Expression (Expression.ExpressionLeaf Expression.Hole) s1) =
+    onMismatch e0 (Expression.Expression (Expression.BodyLeaf Expression.Hole) s1) =
       return $ (s1 `mergePayloadInto`) <$> e0
     onMismatch e0 e1 =
       Either.left $ MismatchIn (void e0) (void e1)
@@ -416,7 +416,7 @@ setRefExpr ref newExpr = do
         isChange = not $ equiv mergedExpr curExpr
         isHole =
           case mergedExpr ^. Expression.eValue of
-          Expression.ExpressionLeaf Expression.Hole -> True
+          Expression.BodyLeaf Expression.Hole -> True
           _ -> False
       when isChange $ touch ref
       when (isChange || isHole) $
@@ -471,8 +471,8 @@ exprIntoContext rootScope (Loaded rootExpr defTypes) = do
       inferNode <- toInferNode scope (void <$> body) createdTV
       newBody <-
         case body of
-        Expression.ExpressionLambda lam -> goLambda Expression.makeLambda scope lam
-        Expression.ExpressionPi lam -> goLambda Expression.makePi scope lam
+        Expression.BodyLambda lam -> goLambda Expression.makeLambda scope lam
+        Expression.BodyPi lam -> goLambda Expression.makePi scope lam
         _ -> traverse (go scope) body
       return $ Expression.Expression newBody (inferNode, s)
     goLambda cons scope (Expression.Lambda paramGuid paramType result) = do
@@ -489,7 +489,7 @@ exprIntoContext rootScope (Loaded rootExpr defTypes) = do
           tv
           { tvType =
             case body of
-            Expression.ExpressionLeaf (Expression.GetVariable varRef)
+            Expression.BodyLeaf (Expression.GetVariable varRef)
               | Just x <- Map.lookup varRef scope -> x
             _ -> tvType tv
           }
@@ -520,7 +520,7 @@ load loader mRecursiveDef expr =
       traverse loadType . ordNub $
       Lens.toListOf
       ( Lens.folding Expression.subExpressions . Expression.eValue
-      . Expression.expressionLeaf . Expression.getVariable . Expression.definitionRef
+      . Expression.bodyLeaf . Expression.getVariable . Expression.definitionRef
       . Lens.filtered ((/= mRecursiveDef) . Just)
       ) expr
     loadType defI = fmap ((,) defI) $ loadPureDefinitionType loader defI

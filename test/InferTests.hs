@@ -78,13 +78,13 @@ compareInferred x y =
 
 mkInferredLeafSimple :: Expression.Leaf def -> Expression.Expression def () -> InferResults def
 mkInferredLeafSimple leaf =
-  mkInferredLeaf leaf . Expression.pureExpression $ Expression.ExpressionLeaf leaf
+  mkInferredLeaf leaf . Expression.pureExpression $ Expression.BodyLeaf leaf
 
 mkInferredLeaf ::
   Expression.Leaf def -> Expression.Expression def () -> Expression.Expression def () ->
   InferResults def
 mkInferredLeaf leaf val typ =
-  mkInferredNode val typ $ Expression.ExpressionLeaf leaf
+  mkInferredNode val typ $ Expression.BodyLeaf leaf
 
 mkInferredNode ::
   Expression.Expression def () ->
@@ -396,7 +396,7 @@ idOnAnInt =
       (purePi "" intType intType)
       (Expression.makeApply
         (mkInferredGetDef "id")
-        ((mkInferredNode intType setType . Expression.ExpressionLeaf) Expression.Hole)
+        ((mkInferredNode intType setType . Expression.BodyLeaf) Expression.Hole)
       )
     ) $
   mkInferredLeafSimple (Expression.LiteralInteger 5) intType
@@ -493,31 +493,31 @@ getLambdaBody :: DataIRef.Expression t a -> DataIRef.Expression t a
 getLambdaBody e =
   x
   where
-    Expression.ExpressionLambda (Expression.Lambda _ _ x) = e ^. Expression.eValue
+    Expression.BodyLambda (Expression.Lambda _ _ x) = e ^. Expression.eValue
 
 getPiResult :: DataIRef.Expression t a -> DataIRef.Expression t a
 getPiResult e =
   x
   where
-    Expression.ExpressionPi (Expression.Lambda _ _ x) = e ^. Expression.eValue
+    Expression.BodyPi (Expression.Lambda _ _ x) = e ^. Expression.eValue
 
 getLambdaParamType :: DataIRef.Expression t a -> DataIRef.Expression t a
 getLambdaParamType e =
   x
   where
-    Expression.ExpressionLambda (Expression.Lambda _ x _) = e ^. Expression.eValue
+    Expression.BodyLambda (Expression.Lambda _ x _) = e ^. Expression.eValue
 
 getApplyFunc :: DataIRef.Expression t a -> DataIRef.Expression t a
 getApplyFunc e =
   x
   where
-    Expression.ExpressionApply (Expression.Apply x _) = e ^. Expression.eValue
+    Expression.BodyApply (Expression.Apply x _) = e ^. Expression.eValue
 
 getApplyArg :: DataIRef.Expression t a -> DataIRef.Expression t a
 getApplyArg e =
   x
   where
-    Expression.ExpressionApply (Expression.Apply _ x) = e ^. Expression.eValue
+    Expression.BodyApply (Expression.Apply _ x) = e ^. Expression.eValue
 
 testCase :: String -> HUnit.Assertion -> HUnit.Test
 testCase name = HUnit.TestLabel name . HUnit.TestCase
@@ -570,7 +570,7 @@ testInfer name pureExpr result =
 
 getRecursiveDef :: DataIRef.Expression t ()
 getRecursiveDef =
-  Expression.pureExpression . Expression.ExpressionLeaf . Expression.GetVariable $ Expression.DefinitionRef defI
+  Expression.pureExpression . Expression.BodyLeaf . Expression.GetVariable $ Expression.DefinitionRef defI
 
 resumptionTests :: [HUnit.Test]
 resumptionTests =

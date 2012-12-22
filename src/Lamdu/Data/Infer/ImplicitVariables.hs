@@ -33,7 +33,7 @@ derive makeBinary ''Payload
 isUnrestrictedHole :: Expression.Expression def Infer.IsRestrictedPoly -> Bool
 isUnrestrictedHole
   (Expression.Expression
-    (Expression.ExpressionLeaf Expression.Hole)
+    (Expression.BodyLeaf Expression.Hole)
     Infer.UnrestrictedPoly) = True
 isUnrestrictedHole _ = False
 
@@ -112,7 +112,7 @@ addParam body (paramGuid, paramTypeNode) = do
   where
     paramTypeExpr =
       Expression.Expression
-      (Expression.ExpressionLeaf Expression.Hole)
+      (Expression.BodyLeaf Expression.Hole)
       (paramTypeNode, AutoGen (Guid.augment "paramType" paramGuid))
     newRootLam =
       Expression.makeLambda paramGuid paramTypeExpr body

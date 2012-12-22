@@ -187,7 +187,7 @@ makeVariableGroup ::
   ExprGuiM m (Group (DefI (Tag m)))
 makeVariableGroup varRef =
   ExprGuiM.withNameFromVarRef varRef $ \(_, varName) ->
-  return . mkGroup [varName] . Expression.ExpressionLeaf $ Expression.GetVariable varRef
+  return . mkGroup [varName] . Expression.BodyLeaf $ Expression.GetVariable varRef
 
 renamePrefix :: AnimId -> AnimId -> AnimId -> AnimId
 renamePrefix srcPrefix destPrefix animId =
@@ -223,7 +223,7 @@ makeLiteralGroup searchTerm =
     makeLiteralIntResult integer =
       Group
       { groupNames = [show integer]
-      , groupBaseExpr = Expression.pureExpression . Expression.ExpressionLeaf $ Expression.LiteralInteger integer
+      , groupBaseExpr = Expression.pureExpression . Expression.BodyLeaf $ Expression.LiteralInteger integer
       }
 
 resultsPrefixId :: HoleInfo m -> Widget.Id
@@ -270,7 +270,7 @@ makeResultsList holeInfo group = do
     baseExpr = groupBaseExpr group
     holeApply =
       Expression.pureExpression .
-      (Expression.makeApply . Expression.pureExpression . Expression.ExpressionLeaf) Expression.Hole
+      (Expression.makeApply . Expression.pureExpression . Expression.BodyLeaf) Expression.Hole
 
 makeAllResults
   :: ViewM ~ m => HoleInfo m
@@ -300,12 +300,12 @@ makeAllResults holeInfo = do
     insensitiveInfixOf = isInfixOf `on` map Char.toLower
     hole = hiHole holeInfo
     primitiveResults =
-      [ mkGroup ["Set", "Type"] $ Expression.ExpressionLeaf Expression.Set
-      , mkGroup ["Integer", "ℤ", "Z"] $ Expression.ExpressionLeaf Expression.IntegerType
+      [ mkGroup ["Set", "Type"] $ Expression.BodyLeaf Expression.Set
+      , mkGroup ["Integer", "ℤ", "Z"] $ Expression.BodyLeaf Expression.IntegerType
       , mkGroup ["->", "Pi", "→", "→", "Π", "π"] $ Expression.makePi (Guid.augment "NewPi" (hiGuid holeInfo)) holeExpr holeExpr
       , mkGroup ["\\", "Lambda", "Λ", "λ"] $ Expression.makeLambda (Guid.augment "NewLambda" (hiGuid holeInfo)) holeExpr holeExpr
       ]
-    holeExpr = Expression.pureExpression $ Expression.ExpressionLeaf Expression.Hole
+    holeExpr = Expression.pureExpression $ Expression.BodyLeaf Expression.Hole
 
 addNewDefinitionEventMap ::
   ViewM ~ m => HoleInfo m -> Widget.EventHandlers (T m)
@@ -324,7 +324,7 @@ addNewDefinitionEventMap holeInfo =
       defRef <-
         fmap (fromMaybe (error "GetDef should always type-check") . listToMaybe) .
         ExprGuiM.unmemo . Sugar.holeInferResults (hiHole holeInfo) .
-        Expression.pureExpression . Expression.ExpressionLeaf . Expression.GetVariable $
+        Expression.pureExpression . Expression.BodyLeaf . Expression.GetVariable $
         Expression.DefinitionRef newDefI
       -- TODO: Can we use pickResult's animIdMapping?
       eventResult <- holePickResult defRef
