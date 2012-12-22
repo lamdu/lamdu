@@ -35,7 +35,7 @@ module Lamdu.Data.Expression
   ) where
 
 import Control.Applicative (Applicative(..), liftA2, (<$>))
-import Control.Lens (Simple, Prism, (^.), (??))
+import Control.Lens (Simple, Prism, (^.))
 import Control.Lens.Utils (contextSetter, result)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -46,7 +46,6 @@ import Data.Binary.Put (putWord8)
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
 import Data.Foldable (Foldable(..))
-import Data.Function (on)
 import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable(..))
@@ -194,25 +193,21 @@ addBodyContexts ::
 addBodyContexts tob (Lens.Context intoContainer body) =
   Lens.over afterSetter intoContainer $
   case body of
-  BodyLambda lam -> onLambda makeLambda BodyLambda lam
-  BodyPi lam -> onLambda makePi BodyPi lam
-  BodyApply app ->
-    Lens.over afterSetter BodyApply $
-    (makeApply `on` mkContext app)
-    (applyFunc, applyFunc)
-    (applyArg, applyArg)
+  BodyLambda lam ->
+    Lens.over afterSetter BodyLambda . BodyLambda $ onLambda lam
+  BodyPi lam ->
+    Lens.over afterSetter BodyPi . BodyPi $ onLambda lam
+  BodyApply (Apply func arg) ->
+    Lens.over afterSetter BodyApply . BodyApply $ Apply
+    (Lens.Context (`Apply` tob arg) func)
+    (Lens.Context (tob func `Apply`) arg)
   BodyLeaf leaf -> BodyLeaf leaf
   where
     afterSetter = traverse . contextSetter . result
-    tobs = Lens.over traverse tob
-    mkContext orig (lensa, lensb) =
-      Lens.Context (Lens.set lensb ?? tobs orig) $
-      orig ^. lensa
-    onLambda consa consb lam@(Lambda param _ _) =
-      Lens.over afterSetter consb $
-      (consa param `on` mkContext lam)
-      (lambdaParamType, lambdaParamType)
-      (lambdaBody, lambdaBody)
+    onLambda (Lambda paramId func arg) =
+      Lambda paramId
+      (Lens.Context (flip (Lambda paramId) (tob arg)) func)
+      (Lens.Context (Lambda paramId (tob func)) arg)
 
 addSubexpressionSetters ::
   (a -> b) -> Lens.Context (Expression def a) (Expression def b) container ->
