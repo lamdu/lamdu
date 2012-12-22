@@ -408,10 +408,12 @@ adHocTextEditEventMap :: MonadA m => Property m String -> Widget.EventHandlers m
 adHocTextEditEventMap textProp =
   mconcat . concat $
   [ [ E.filterChars (`notElem` disallowedHoleChars) .
-      E.simpleChars "Character" (E.Doc ["Edit", "Search Term", "Append character"]) $
+      E.simpleChars "Character"
+      (E.Doc ["Edit", "Search Term", "Append character"]) $
       changeText . flip (++) . (: [])
     ]
-  , [ E.keyPresses (map (E.ModKey E.noMods) [E.KeyBackspace, E.KeyDel]) (E.Doc ["Edit", "Search Term", "Delete backwards"]) $
+  , [ E.keyPresses (map (E.ModKey E.noMods) [E.KeyBackspace, E.KeyDel])
+      (E.Doc ["Edit", "Search Term", "Delete backwards"]) $
       changeText init
     | (not . null . Property.value) textProp
     ]
