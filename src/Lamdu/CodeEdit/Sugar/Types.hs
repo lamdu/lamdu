@@ -108,9 +108,10 @@ data Section expr = Section
 type HoleResult t = DataIRef.Expression t (Infer.Inferred (DefI t))
 
 data HoleActions m = HoleActions
-  { holePickResult :: HoleResult (Tag m) -> T m (Guid, Actions m)
+  { holePickResult :: HoleResult (Tag m) -> T m Guid
   , holeConvertResult :: HoleResult (Tag m) -> T m (Expression m)
   , holePaste :: Maybe (T m Guid)
+  , holeExprActions :: Actions m
   }
 
 data Hole m = Hole

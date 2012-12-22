@@ -4,7 +4,7 @@ module Lamdu.CodeEdit.ExpressionEdit.HoleEdit
   , searchTermWidgetId
   ) where
 
-import Control.Applicative (Applicative(..))
+import Control.Applicative (Applicative(..), (<$>), (<$))
 import Control.Arrow (first, second)
 import Control.Lens ((^.))
 import Control.Monad ((<=<), filterM, mplus, msum, void)
@@ -71,7 +71,7 @@ type CT m = StateT Cache (T m)
 
 data HoleInfo m = HoleInfo
   { hiHoleId :: Widget.Id
-  , hiSearchTerm :: Property (Transaction m) String
+  , hiSearchTerm :: Property (T m) String
   , hiHole :: Sugar.Hole m
   , hiHoleActions :: Sugar.HoleActions m
   , hiGuid :: Guid
@@ -80,9 +80,9 @@ data HoleInfo m = HoleInfo
 
 pickExpr ::
   MonadA m => HoleInfo m -> Sugar.HoleResult (Tag m) ->
-  Transaction m Widget.EventResult
+  T m Widget.EventResult
 pickExpr holeInfo expr = do
-  (guid, _) <- Sugar.holePickResult (hiHoleActions holeInfo) expr
+  guid <- Sugar.holePickResult (hiHoleActions holeInfo) expr
   return Widget.EventResult
     { Widget._eCursor = Just $ WidgetIds.fromGuid guid
     , Widget._eAnimIdMapping = id -- TODO: Need to fix the parens id
@@ -90,7 +90,7 @@ pickExpr holeInfo expr = do
 
 resultPickEventMap ::
   MonadA m => HoleInfo m -> Sugar.HoleResult (Tag m) ->
-  Widget.EventHandlers (Transaction m)
+  Widget.EventHandlers (T m)
 resultPickEventMap holeInfo holeResult =
   case hiMNextHole holeInfo of
   Just nextHole
@@ -98,9 +98,9 @@ resultPickEventMap holeInfo holeResult =
       mappend (simplePickRes Config.pickResultKeys) .
       E.keyPresses Config.pickAndMoveToNextHoleKeys
       (E.Doc ["Edit", "Result", "Pick and move to next hole"]) .
-      fmap Widget.eventResultFromCursor $ do
-        _ <- Sugar.holePickResult (hiHoleActions holeInfo) holeResult
-        return . WidgetIds.fromGuid $ nextHole ^. Sugar.rGuid
+      fmap Widget.eventResultFromCursor $
+        WidgetIds.fromGuid (nextHole ^. Sugar.rGuid) <$
+        Sugar.holePickResult (hiHoleActions holeInfo) holeResult
   _ -> simplePickRes $ Config.pickResultKeys ++ Config.pickAndMoveToNextHoleKeys
   where
     simplePickRes keys =
@@ -307,7 +307,7 @@ makeAllResults holeInfo = do
     holeExpr = Data.pureExpression $ Data.ExpressionLeaf Data.Hole
 
 addNewDefinitionEventMap ::
-  ViewM ~ m => HoleInfo m -> Widget.EventHandlers (Transaction m)
+  ViewM ~ m => HoleInfo m -> Widget.EventHandlers (T m)
 addNewDefinitionEventMap holeInfo =
   E.keyPresses Config.newDefinitionKeys
   (E.Doc ["Edit", "Result", "As new Definition"]) . makeNewDefinition $
@@ -472,16 +472,16 @@ alphaNumericHandler doc handler =
 
 pickEventMap ::
   MonadA m => HoleInfo m -> String -> Maybe (Sugar.HoleResult (Tag m)) ->
-  Widget.EventHandlers (Transaction m)
+  Widget.EventHandlers (T m)
 pickEventMap holeInfo searchTerm (Just result)
   | nonEmptyAll (`notElem` Config.operatorChars) searchTerm =
     operatorHandler (E.Doc ["Edit", "Result", "Pick and apply operator"]) $ \x -> do
-      (_, actions) <- Sugar.holePickResult (hiHoleActions holeInfo) result
+      _ <- Sugar.holePickResult actions result
       fmap (searchTermWidgetId . WidgetIds.fromGuid) $
-        Sugar.giveAsArgToOperator actions [x]
+        Sugar.giveAsArgToOperator exprActions [x]
   | nonEmptyAll (`elem` Config.operatorChars) searchTerm =
     alphaNumericHandler (E.Doc ["Edit", "Result", "Pick and resume"]) $ \x -> do
-      (g, _) <- Sugar.holePickResult (hiHoleActions holeInfo) result
+      g <- Sugar.holePickResult actions result
       let
         mTarget
           | g /= hiGuid holeInfo = Just g
@@ -491,7 +491,25 @@ pickEventMap holeInfo searchTerm (Just result)
           (`Property.set` [x]) =<< Anchors.assocSearchTermRef target
           return target
         Nothing -> return g
+  where
+    exprActions = Sugar.holeExprActions actions
+    actions = hiHoleActions holeInfo
 pickEventMap _ _ _ = mempty
+
+mkCallWithArgEventMap ::
+  ViewM ~ m => HoleInfo m -> Maybe (Sugar.HoleResult (Tag m)) ->
+  T m (Widget.EventHandlers (T m))
+mkCallWithArgEventMap _ Nothing = pure mempty
+mkCallWithArgEventMap holeInfo (Just result) =
+  maybe mempty mkCallWithArg <$> Sugar.callWithArg exprActions
+  where
+    mkCallWithArg callWithArg =
+      Widget.keysEventMapMovesCursor Config.callWithArgumentKeys
+      (E.Doc ["Edit", "Result", "Pick and give arg"]) $ do
+        _ <- Sugar.holePickResult actions result
+        WidgetIds.fromGuid <$> callWithArg
+    actions = hiHoleActions holeInfo
+    exprActions = Sugar.holeExprActions actions
 
 markTypeMatchesAsUsed :: MonadA m => HoleInfo m -> ExprGuiM m ()
 markTypeMatchesAsUsed holeInfo =
@@ -528,12 +546,15 @@ makeActiveHoleEdit holeInfo = do
       mResult =
         mplus mSelectedResult .
         fmap rlFirst $ listToMaybe firstResults
+    callWithArgEventMap <- ExprGuiM.transaction $ mkCallWithArgEventMap holeInfo mResult
+    searchTermWidget <- makeSearchTermWidget holeInfo searchTermId mResult
+    let
       adHocEditor = adHocTextEditEventMap $ hiSearchTerm holeInfo
       eventMap = mconcat
         [ addNewDefinitionEventMap holeInfo
         , pickEventMap holeInfo searchTerm mResult
+        , callWithArgEventMap
         ]
-    searchTermWidget <- makeSearchTermWidget holeInfo searchTermId mResult
     return .
       Lens.over ExpressionGui.egWidget
       (Widget.strongerEvents eventMap .

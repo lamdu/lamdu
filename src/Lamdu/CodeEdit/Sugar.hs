@@ -538,9 +538,10 @@ convertInferredHoleH
       }
     mkHoleActions exprS =
       HoleActions
-      { holePickResult = pickResult mDefI eGuid exprS
+      { holePickResult = pickResult eGuid exprS
       , holePaste = mPaste
       , holeConvertResult = convertHoleResult config
+      , holeExprActions = mkActions mDefI exprS
       }
     filledHole =
       mkHole $
@@ -579,14 +580,12 @@ chooseHoleType inferredVals plain inferred =
 
 pickResult ::
   m ~ Anchors.ViewM =>
-  Maybe (DefI (Tag m)) ->
   Guid -> DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) NoInferred (Stored m)) ->
   DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) ->
-  T m (Guid, Actions m)
-pickResult mDefI defaultDest exprS =
+  T m Guid
+pickResult defaultDest exprS =
   fmap
-  ( flip (,) (mkActions mDefI exprS)
-  . maybe defaultDest
+  ( maybe defaultDest
     (DataIRef.exprGuid . Lens.view (Data.ePayload . Lens._2))
   . listToMaybe . uninferredHoles . fmap swap
   )
