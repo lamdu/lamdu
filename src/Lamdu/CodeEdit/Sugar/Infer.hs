@@ -79,8 +79,9 @@ ntraversePayload onInferred onStored onSetter (Payload guid inferred stored sett
   Payload guid <$> onInferred inferred <*> onStored stored <*> onSetter setter
 
 addPureExpressionSetters ::
-  Expression.Expression def a -> Expression.Expression def (ExpressionSetter def, a)
-addPureExpressionSetters = Expression.addSubexpressionSetters (const ()) . Lens.Context void
+  Expression.Expression def a ->
+  Expression.Expression def (Lens.Context a (Expression.Expression def ()) (Expression.Expression def ()))
+addPureExpressionSetters = Expression.addSubexpressionContexts (const ()) . Lens.Context id
 
 randomizeGuids ::
   RandomGen g => g -> (a -> inferred) ->
@@ -93,7 +94,7 @@ randomizeGuids gen f =
   . addPureExpressionSetters
   . fmap f
   where
-    toPayload (setter, inferred) guid = Payload guid inferred NoStored setter
+    toPayload (Lens.Context setter inferred) guid = Payload guid inferred NoStored setter
     paramGen : exprGen : _ = RandomUtils.splits gen
 
 -- Not inferred, not stored
@@ -215,12 +216,12 @@ inferLoadedExpression gen mDefI lExpr inferState = do
     uncurriedInfer (loaded, (inferContext, inferNode)) =
       inferWithVariables gen loaded inferContext inferNode
 
-    mkStoredPayload (setter, (iwc, propClosure)) =
+    mkStoredPayload (Lens.Context setter (iwc, propClosure)) =
       Payload (DataIRef.epGuid prop) iwc prop setter
       where
         prop = Load.propertyOfClosure propClosure
-    mkWVPayload (setter, (iwc, ImplicitVariables.AutoGen guid)) =
+    mkWVPayload (Lens.Context setter (iwc, ImplicitVariables.AutoGen guid)) =
       Payload guid iwc Nothing setter
-    mkWVPayload (setter, (iwc, ImplicitVariables.Stored propClosure)) =
+    mkWVPayload (Lens.Context setter (iwc, ImplicitVariables.Stored propClosure)) =
       Lens.over plStored Just $
-      mkStoredPayload (setter, (iwc, propClosure))
+      mkStoredPayload (Lens.Context setter (iwc, propClosure))

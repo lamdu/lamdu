@@ -28,7 +28,7 @@ module Lamdu.Data.Expression
   , expressionDef
 
   -- Each expression gets a ptr to itself
-  , addSubexpressionSetters
+  , addSubexpressionContexts
   , addBodyContexts
 
   , LambdaWrapper(..), lambdaWrapperPrism
@@ -215,14 +215,15 @@ addBodyContexts tob (Lens.Context intoContainer body) =
       (Lens.Context (flip (Lambda paramId) (tob arg)) func)
       (Lens.Context (Lambda paramId (tob func)) arg)
 
-addSubexpressionSetters ::
-  (a -> b) -> Lens.Context (Expression def a) (Expression def b) container ->
-  Expression def (Expression def b -> container, a)
-addSubexpressionSetters atob (Lens.Context intoContainer (Expression body a)) =
-  Expression newBody (intoContainer, a)
+addSubexpressionContexts ::
+  (a -> b) ->
+  Lens.Context (Expression def a) (Expression def b) container ->
+  Expression def (Lens.Context a (Expression def b) container)
+addSubexpressionContexts atob (Lens.Context intoContainer (Expression body a)) =
+  Expression newBody (Lens.Context intoContainer a)
   where
     newBody =
-      fmap (addSubexpressionSetters atob) $
+      fmap (addSubexpressionContexts atob) $
       addBodyContexts (fmap atob) bodyPtr
     bodyPtr =
       Lens.Context (intoContainer . (`Expression` atob a)) body
