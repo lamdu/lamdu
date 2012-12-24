@@ -89,10 +89,10 @@ mkCutter expr replaceWithHole = do
 
 checkReplaceWithExpr ::
   MonadA m =>
-  Expression.Expression (DefI (Tag m)) () ->
+  DataIRef.ExpressionM m () ->
   Maybe (DefI (Tag m)) ->
   DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i s) ->
-  T m (Maybe (Expression.Expression (DefI (Tag m)) (Infer.Inferred (DefI (Tag m)))))
+  T m (Maybe (DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))))
 checkReplaceWithExpr replacer mDefI expr =
   uncurry (SugarInfer.inferMaybe_ mDefI withApply) $
   Infer.initial mDefI
@@ -111,7 +111,7 @@ mkCallWithArg mDefI exprS =
   where
     mkCall = fmap DataIRef.exprGuid . DataOps.callWithArg $ resultStored exprS
     replacer = Expression.pureApply (void exprS) Expression.pureHole
-      
+
 
 mkActions ::
   m ~ Anchors.ViewM => Maybe (DefI (Tag m)) ->
@@ -535,7 +535,7 @@ inferApplyForms processRes expr (node, inferContext) =
 mkHoleResultActions ::
   m ~ Anchors.ViewM =>
   SugarM.Context (Tag m) ->
-  Expression.Expression (DefI (Tag m)) (SugarInfer.Payload (Tag m) i (Stored m)) ->
+  DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i (Stored m)) ->
   HoleResult (Tag m) -> HoleResultActions m
 mkHoleResultActions sugarContext exprS res =
   HoleResultActions
