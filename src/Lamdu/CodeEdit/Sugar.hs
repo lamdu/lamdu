@@ -15,7 +15,12 @@ module Lamdu.CodeEdit.Sugar
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
   , Section(..)
-  , Hole(..), HoleActions(..), HoleResultActions(..), HoleResult, holeResultHasHoles
+  , Hole(..), holeScope, holeMActions, holeInferResults
+  , HoleActions(..), holeResultActions, holePaste
+  , HoleResultActions(..), holeResultConvert, holeResultMPickAndCallWithArg
+  , holeResultPick, holeResultPickAndGiveAsArg
+  , holeResultPickAndGiveAsArgToOperator
+  , HoleResult, holeResultHasHoles
   , LiteralInteger(..)
   , Inferred(..)
   , Polymorphic(..)
@@ -534,12 +539,12 @@ mkHoleResultActions ::
   HoleResult (Tag m) -> HoleResultActions m
 mkHoleResultActions sugarContext exprS res =
   HoleResultActions
-  { holeResultConvert = convertHoleResult config res
-  , holeResultPick = pick
-  , holeResultPickAndGiveAsArg =
+  { _holeResultConvert = convertHoleResult config res
+  , _holeResultPick = pick
+  , _holeResultPickAndGiveAsArg =
       pick >> DataIRef.exprGuid <$> DataOps.giveAsArg stored
-  , holeResultPickAndGiveAsArgToOperator = pickAndGiveAsArgToOp
-  , holeResultMPickAndCallWithArg =
+  , _holeResultPickAndGiveAsArgToOperator = pickAndGiveAsArgToOp
+  , _holeResultMPickAndCallWithArg =
       (pickAndCallWithArg <$) <$>
       checkReplaceWithExpr
       (Expression.pureApply (void res) Expression.pureHole)
@@ -578,17 +583,17 @@ convertInferredHoleH
       (`runState` inferState) $ Infer.newNodeWithScope scope
     onScopeElement (param, _typeExpr) = param
     mkHole processRes = Hole
-      { holeScope =
-        map onScopeElement . Map.toList $ Infer.iScope inferred
-      , holeInferResults = inferResults processRes
-      , holeMActions =
-        mkHoleActions <$>
-        traverse (SugarInfer.ntraversePayload pure id pure) exprI
+      { _holeScope =
+          map onScopeElement . Map.toList $ Infer.iScope inferred
+      , _holeInferResults = inferResults processRes
+      , _holeMActions =
+          mkHoleActions <$>
+          traverse (SugarInfer.ntraversePayload pure id pure) exprI
       }
     mkHoleActions exprS =
       HoleActions
-      { holeResultActions = mkHoleResultActions sugarContext exprS
-      , holePaste = mPaste
+      { _holeResultActions = mkHoleResultActions sugarContext exprS
+      , _holePaste = mPaste
       }
     filledHole =
       mkHole $
@@ -672,9 +677,9 @@ convertHole exprI =
       convertInferredHoleH ctx mPaste inferred exprI
     convertUninferredHole =
       mkExpression exprI $ ExpressionHole Hole
-      { holeScope = []
-      , holeInferResults = const $ return []
-      , holeMActions = Nothing
+      { _holeScope = []
+      , _holeInferResults = const $ return []
+      , _holeMActions = Nothing
       }
 
 convertLiteralInteger :: m ~ Anchors.ViewM => Integer -> Convertor m

@@ -83,7 +83,7 @@ pickExpr ::
   MonadA m => HoleInfo m -> Sugar.HoleResult (Tag m) ->
   T m Widget.EventResult
 pickExpr holeInfo expr = do
-  guid <- Sugar.holeResultPick $ Sugar.holeResultActions (hiHoleActions holeInfo) expr
+  guid <- (hiHoleActions holeInfo ^. Sugar.holeResultActions) expr ^. Sugar.holeResultPick
   return Widget.EventResult
     { Widget._eCursor = Just $ WidgetIds.fromGuid guid
     , Widget._eAnimIdMapping = id -- TODO: Need to fix the parens id
@@ -101,7 +101,7 @@ resultPickEventMap holeInfo holeResult =
       (E.Doc ["Edit", "Result", "Pick and move to next hole"]) .
       fmap Widget.eventResultFromCursor $
         WidgetIds.fromGuid (nextHole ^. Sugar.rGuid) <$
-        Sugar.holeResultPick (Sugar.holeResultActions (hiHoleActions holeInfo) holeResult)
+        (hiHoleActions holeInfo ^. Sugar.holeResultActions) holeResult ^. Sugar.holeResultPick
   _ -> simplePickRes $ Config.pickResultKeys ++ Config.pickAndMoveToNextHoleKeys
   where
     simplePickRes keys =
@@ -160,8 +160,8 @@ resultsToWidgets holeInfo results = do
       Widget.strongerEvents (resultPickEventMap holeInfo expr) .
       Lens.view ExpressionGui.egWidget =<<
       ExprGuiM.makeSubexpresion . Sugar.removeTypes =<<
-      (ExprGuiM.transaction . Sugar.holeResultConvert)
-      (Sugar.holeResultActions (hiHoleActions holeInfo) expr)
+      ExprGuiM.transaction
+      ((hiHoleActions holeInfo ^. Sugar.holeResultActions) expr ^. Sugar.holeResultConvert)
     moreResultsPrefixId = rlMoreResultsPrefixId results
     addMoreSymbol w = do
       moreSymbolLabel <-
@@ -237,7 +237,7 @@ toResultsList ::
   MonadA m => HoleInfo m -> DataIRef.ExpressionM m () ->
   CT m (Maybe (ResultsList (Tag m)))
 toResultsList holeInfo baseExpr = do
-  results <- Sugar.holeInferResults (hiHole holeInfo) baseExpr
+  results <- hiHole holeInfo ^. Sugar.holeInferResults $ baseExpr
   return $
     case results of
     [] -> Nothing
@@ -279,7 +279,7 @@ makeAllResults
 makeAllResults holeInfo = do
   paramResults <-
     traverse (makeVariableGroup . Expression.ParameterRef) $
-    Sugar.holeScope hole
+    hole ^. Sugar.holeScope
   globalResults <-
     traverse (makeVariableGroup . Expression.DefinitionRef) =<<
     ExprGuiM.getP Anchors.globals
@@ -324,7 +324,7 @@ addNewDefinitionEventMap holeInfo =
       DataOps.newPane newDefI
       defRef <-
         fmap (fromMaybe (error "GetDef should always type-check") . listToMaybe) .
-        ExprGuiM.unmemo . Sugar.holeInferResults (hiHole holeInfo) .
+        ExprGuiM.unmemo . (hiHole holeInfo ^. Sugar.holeInferResults) .
         Expression.pureExpression . Expression.BodyLeaf . Expression.GetVariable $
         Expression.DefinitionRef newDefI
       -- TODO: Can we use pickResult's animIdMapping?
@@ -479,10 +479,10 @@ pickEventMap holeInfo searchTerm (Just result)
   | nonEmptyAll (`notElem` Config.operatorChars) searchTerm =
     operatorHandler (E.Doc ["Edit", "Result", "Pick and apply operator"]) $ \x ->
       searchTermWidgetId . WidgetIds.fromGuid <$>
-      Sugar.holeResultPickAndGiveAsArgToOperator holeActions [x]
+      (holeActions ^. Sugar.holeResultPickAndGiveAsArgToOperator) [x]
   | nonEmptyAll (`elem` Config.operatorChars) searchTerm =
     alphaNumericHandler (E.Doc ["Edit", "Result", "Pick and resume"]) $ \x -> do
-      g <- Sugar.holeResultPick holeActions
+      g <- holeActions ^. Sugar.holeResultPick
       let
         mTarget
           | g /= hiGuid holeInfo = Just g
@@ -493,7 +493,7 @@ pickEventMap holeInfo searchTerm (Just result)
           return target
         Nothing -> return g
   where
-    holeActions = Sugar.holeResultActions actions result
+    holeActions = actions ^. Sugar.holeResultActions $ result
     actions = hiHoleActions holeInfo
 pickEventMap _ _ _ = mempty
 
@@ -502,26 +502,24 @@ mkCallWithArgEventMap ::
   T m (Widget.EventHandlers (T m))
 mkCallWithArgEventMap _ Nothing = pure mempty
 mkCallWithArgEventMap holeInfo (Just result) =
-  maybe mempty mkCallWithArg <$> Sugar.holeResultMPickAndCallWithArg holeActions
+  maybe mempty mkCallWithArg <$> holeActions ^. Sugar.holeResultMPickAndCallWithArg
   where
     mkCallWithArg callWithArg =
       Widget.keysEventMapMovesCursor Config.callWithArgumentKeys
       (E.Doc ["Edit", "Result", "Pick and give arg"]) $
       WidgetIds.fromGuid <$> callWithArg
     actions = hiHoleActions holeInfo
-    holeActions = Sugar.holeResultActions actions result
+    holeActions = actions ^. Sugar.holeResultActions $ result
 
 markTypeMatchesAsUsed :: MonadA m => HoleInfo m -> ExprGuiM m ()
 markTypeMatchesAsUsed holeInfo =
   ExprGuiM.markVariablesAsUsed =<<
-  (filterM
-   (checkInfer . Expression.pureExpression . Expression.makeParameterRef) .
-   Sugar.holeScope . hiHole)
-    holeInfo
+  filterM (checkInfer . Expression.pureExpression . Expression.makeParameterRef)
+  (hiHole holeInfo ^. Sugar.holeScope)
   where
     checkInfer =
       fmap (isJust . listToMaybe) . ExprGuiM.fmapemoT .
-      Sugar.holeInferResults (hiHole holeInfo)
+      (hiHole holeInfo ^. Sugar.holeInferResults)
 
 makeActiveHoleEdit :: ViewM ~ m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
 makeActiveHoleEdit holeInfo = do
@@ -594,7 +592,7 @@ makeInactiveHoleEdit hole myId =
     unfocusedColor
       | canPickResult = Config.holeBackgroundColor
       | otherwise = Config.unfocusedReadOnlyHoleBackgroundColor
-    canPickResult = isJust $ Sugar.holeMActions hole
+    canPickResult = isJust $ hole ^. Sugar.holeMActions
 
 makeUnwrapped ::
   m ~ ViewM => Sugar.Hole m -> Maybe (Sugar.Expression m) -> Guid ->
@@ -602,7 +600,7 @@ makeUnwrapped ::
 makeUnwrapped hole mNextHole guid myId = do
   cursor <- ExprGuiM.widgetEnv WE.readCursor
   searchTermProp <- ExprGuiM.transaction $ Anchors.assocSearchTermRef guid
-  case (Sugar.holeMActions hole, Widget.subId myId cursor) of
+  case (hole ^. Sugar.holeMActions, Widget.subId myId cursor) of
     (Just holeActions, Just _) ->
       let
         holeInfo = HoleInfo

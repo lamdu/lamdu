@@ -19,7 +19,12 @@ module Lamdu.CodeEdit.Sugar.Types
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
   , Section(..)
-  , Hole(..), HoleActions(..), HoleResultActions(..), HoleResult
+  , Hole(..), holeScope, holeMActions, holeInferResults
+  , HoleActions(..), holeResultActions, holePaste
+  , HoleResultActions(..), holeResultConvert, holeResultMPickAndCallWithArg
+  , holeResultPick, holeResultPickAndGiveAsArg
+  , holeResultPickAndGiveAsArgToOperator
+  , HoleResult
   , LiteralInteger(..)
   , Inferred(..)
   , Polymorphic(..)
@@ -111,22 +116,22 @@ data Section expr = Section
 type HoleResult t = DataIRef.Expression t (Infer.Inferred (DefI t))
 
 data HoleResultActions m = HoleResultActions
-  { holeResultConvert :: T m (Expression m)
-  , holeResultPick :: T m Guid
-  , holeResultPickAndGiveAsArg :: T m Guid
-  , holeResultPickAndGiveAsArgToOperator :: String -> T m Guid
-  , holeResultMPickAndCallWithArg :: T m (Maybe (T m Guid))
+  { _holeResultConvert :: T m (Expression m)
+  , _holeResultPick :: T m Guid
+  , _holeResultPickAndGiveAsArg :: T m Guid
+  , _holeResultPickAndGiveAsArgToOperator :: String -> T m Guid
+  , _holeResultMPickAndCallWithArg :: T m (Maybe (T m Guid))
   }
 
 data HoleActions m = HoleActions
-  { holeResultActions :: HoleResult (Tag m) -> HoleResultActions m
-  , holePaste :: Maybe (T m Guid)
+  { _holeResultActions :: HoleResult (Tag m) -> HoleResultActions m
+  , _holePaste :: Maybe (T m Guid)
   }
 
 data Hole m = Hole
-  { holeScope :: [Guid]
-  , holeInferResults :: DataIRef.ExpressionM m () -> CT m [HoleResult (Tag m)]
-  , holeMActions :: Maybe (HoleActions m)
+  { _holeScope :: [Guid]
+  , _holeInferResults :: DataIRef.ExpressionM m () -> CT m [HoleResult (Tag m)]
+  , _holeMActions :: Maybe (HoleActions m)
   }
 
 data LiteralInteger m = LiteralInteger
@@ -238,3 +243,6 @@ LensTH.makeLenses ''ListItemActions
 LensTH.makeLenses ''FuncParamActions
 LensTH.makeLenses ''Payload
 LensTH.makeLenses ''ExpressionP
+LensTH.makeLenses ''HoleResultActions
+LensTH.makeLenses ''HoleActions
+LensTH.makeLenses ''Hole

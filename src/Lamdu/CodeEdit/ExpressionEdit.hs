@@ -45,7 +45,7 @@ pasteEventMap =
   (Widget.keysEventMapMovesCursor
    Config.pasteKeys (E.Doc ["Edit", "Paste"]) .
    fmap WidgetIds.fromGuid) .
-  (Sugar.holePaste <=< Sugar.holeMActions)
+  (Lens.view Sugar.holePaste <=< Lens.view Sugar.holeMActions)
 
 make :: m ~ ViewM => Sugar.Expression m -> ExprGuiM m (ExpressionGui m)
 make sExpr = do
