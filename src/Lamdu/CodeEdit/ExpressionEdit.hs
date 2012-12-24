@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings, TypeFamilies #-}
 module Lamdu.CodeEdit.ExpressionEdit(make) where
 
+import Control.Applicative ((<$>))
 import Control.Lens ((^.))
 import Control.Monad ((<=<))
 import Control.MonadA (MonadA)
@@ -128,14 +129,21 @@ actionsEventMap ::
   ExprGuiM m (EventHandlers (Transaction m))
 actionsEventMap exprGuid holePicker actions = do
   isSelected <- ExprGuiM.widgetEnv . WE.isSubCursor $ WidgetIds.fromGuid exprGuid
-  mCallWithArg <- if isSelected
-    then ExprGuiM.transaction $ actions ^. Sugar.callWithArg
-    else return Nothing
+  callWithArgsEventMap <-
+    if isSelected
+    then
+      mconcat <$> sequence
+      [ maybe mempty
+        (mkEventMap Config.callWithArgumentKeys (E.Doc ["Edit", "Call with argument"])
+         FocusDelegator.delegatingId) <$>
+        ExprGuiM.transaction (actions ^. Sugar.callWithArg)
+      , maybe mempty
+        (mkEventMap Config.callWithNextArgumentKeys (E.Doc ["Edit", "Add argument"])
+         FocusDelegator.delegatingId) <$>
+        ExprGuiM.transaction (actions ^. Sugar.callWithNextArg)
+      ]
+    else return mempty
   let
-    callWithArg =
-      maybe mempty
-      (mkEventMap Config.callWithArgumentKeys (E.Doc ["Edit", "Call with argument"])
-       FocusDelegator.delegatingId) mCallWithArg
     replace
       | isSelected && isHole = mempty
       | isSelected =
@@ -145,7 +153,7 @@ actionsEventMap exprGuid holePicker actions = do
         mkEventMap delKeys (E.Doc ["Navigation", "Select parent"])
         FocusDelegator.notDelegatingId $ return exprGuid
   return $ mconcat
-    [ callWithArg
+    [ callWithArgsEventMap
     , giveAsArg
     , addOperator
     , replace

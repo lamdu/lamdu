@@ -5,7 +5,7 @@ module Lamdu.CodeEdit.Sugar
   , FuncParamActions(..), fpListItemActions, fpGetExample
   , DefinitionExpression(..), DefinitionContent(..), DefinitionNewType(..)
   , DefinitionBuiltin(..)
-  , Actions(..), giveAsArg, callWithArg, replace, cut, giveAsArgToOperator
+  , Actions(..), giveAsArg, callWithArg, callWithNextArg, replace, cut, giveAsArgToOperator
   , ExpressionBody(..)
   , Payload(..), plInferredTypes, plActions, plNextHole
   , ExpressionP(..), rGuid, rExpressionBody, rPayload
@@ -26,7 +26,7 @@ module Lamdu.CodeEdit.Sugar
 
 import Control.Applicative ((<$), (<$>), Applicative(..), liftA2)
 import Control.Arrow (first)
-import Control.Lens ((^.))
+import Control.Lens ((.~), (^.))
 import Control.Monad ((<=<), join, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (runState)
@@ -115,6 +115,7 @@ mkActions mDefI exprS =
   Actions
   { _giveAsArg = DataIRef.exprGuid <$> DataOps.giveAsArg stored
   , _callWithArg = mkCallWithArg mDefI exprS
+  , _callWithNextArg = pure Nothing
   , _replace = doReplace
   , _cut = mkCutter (Property.value stored) doReplace
   , _giveAsArgToOperator =
@@ -373,27 +374,37 @@ applyOnSection _ apply exprI = convertApplyPrefix apply exprI
 convertApplyPrefix ::
   m ~ Anchors.ViewM =>
   Expression.Apply (Expression m, DataIRef.ExpressionM m (PayloadMM m)) -> Convertor m
-convertApplyPrefix (Expression.Apply (funcRef, funcI) (argRef, _)) exprI
-  | isPolymorphicFunc funcI =
-    case funcRef ^. rExpressionBody of
-    ExpressionPolymorphic (Polymorphic g compact full) ->
-      makePolymorphic g compact =<< makeApply full
-    ExpressionGetVariable getVar ->
-      makePolymorphic (resultGuid funcI) getVar =<< makeFullApply
-    _ -> makeFullApply
-  | otherwise = makeFullApply
-  where
-    newArgRef = addParens argRef
+convertApplyPrefix (Expression.Apply (funcRef, funcI) (argRef, _)) exprI = do
+  mDefI <- SugarM.scMDefI <$> SugarM.readContext
+  let
+    newArgRef = addCallWithNextArg $ addParens argRef
+    addCallWithNextArg =
+      case traverse (SugarInfer.ntraversePayload pure id pure) exprI of
+      Nothing -> id
+      Just exprS ->
+        rPayload . plActions . Lens.mapped . callWithNextArg .~
+        mkCallWithArg mDefI exprS
     newFuncRef =
       setNextHole newArgRef .
       addApplyChildParens .
       removeRedundantTypes $
       funcRef
-    expandedGuid = Guid.combine (resultGuid exprI) $ Guid.fromString "polyExpanded"
     makeFullApply = makeApply newFuncRef
     makeApply f =
       mkExpression exprI . ExpressionApply DontHaveParens $
       Expression.Apply f newArgRef
+  if isPolymorphicFunc funcI
+    then
+      case funcRef ^. rExpressionBody of
+      ExpressionPolymorphic (Polymorphic g compact full) ->
+        makePolymorphic g compact =<< makeApply full
+      ExpressionGetVariable getVar ->
+        makePolymorphic (resultGuid funcI) getVar =<< makeFullApply
+      _ -> makeFullApply
+    else
+      makeFullApply
+  where
+    expandedGuid = Guid.combine (resultGuid exprI) $ Guid.fromString "polyExpanded"
     makePolymorphic g compact fullExpression =
       mkExpression exprI $ ExpressionPolymorphic Polymorphic
         { pFuncGuid = g

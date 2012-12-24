@@ -5,7 +5,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , FuncParamActions(..), fpListItemActions, fpGetExample
   , DefinitionExpression(..), DefinitionContent(..), DefinitionNewType(..)
   , DefinitionBuiltin(..)
-  , Actions(..), giveAsArg, callWithArg, replace, cut, giveAsArgToOperator
+  , Actions(..), giveAsArg, callWithArg, callWithNextArg, replace, cut, giveAsArgToOperator
   , ExpressionBody(..), eHasParens
   , expressionPi, expressionApply, expressionSection
   , expressionFunc, expressionGetVariable, expressionHole
@@ -44,13 +44,14 @@ type T = Transaction
 type CT m = StateT Cache (T m)
 
 data Actions m = Actions
-  { _giveAsArg    :: T m Guid
+  { _giveAsArg :: T m Guid
   -- Turn "x" to "x ? _" where "?" is an operator-hole.
   -- Given string is initial hole search term.
   , _giveAsArgToOperator :: String -> T m Guid
-  , _callWithArg  :: T m (Maybe (T m Guid))
-  , _replace      :: T m Guid
-  , _cut          :: T m Guid
+  , _callWithNextArg :: T m (Maybe (T m Guid))
+  , _callWithArg :: T m (Maybe (T m Guid))
+  , _replace :: T m Guid
+  , _cut :: T m Guid
   }
 LensTH.makeLenses ''Actions
 

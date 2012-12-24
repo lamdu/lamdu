@@ -47,6 +47,7 @@ delBackwordKeys     = [noMods E.KeyBackspace]
 giveAsArgumentKeys  = [k ']', shift '0']
 pickAndMoveToNextHoleKeys = [noMods E.KeySpace]
 callWithArgumentKeys = [k '[', shift '9']
+callWithNextArgumentKeys = [k ',']
 debugModeKeys = [ctrlAlt 'd']
 
 newDefinitionKeys = [alt 'n']
