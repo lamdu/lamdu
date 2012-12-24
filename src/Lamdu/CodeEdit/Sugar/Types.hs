@@ -19,7 +19,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
   , Section(..)
-  , Hole(..), HoleActions(..), HoleResult
+  , Hole(..), HoleActions(..), HoleResultActions(..), HoleResult
   , LiteralInteger(..)
   , Inferred(..)
   , Polymorphic(..)
@@ -45,12 +45,12 @@ type CT m = StateT Cache (T m)
 
 data Actions m = Actions
   { _giveAsArg    :: T m Guid
-  , _callWithArg  :: T m (Maybe (T m Guid))
-  , _replace      :: T m Guid
-  , _cut          :: T m Guid
   -- Turn "x" to "x ? _" where "?" is an operator-hole.
   -- Given string is initial hole search term.
   , _giveAsArgToOperator :: String -> T m Guid
+  , _callWithArg  :: T m (Maybe (T m Guid))
+  , _replace      :: T m Guid
+  , _cut          :: T m Guid
   }
 LensTH.makeLenses ''Actions
 
@@ -109,11 +109,17 @@ data Section expr = Section
 
 type HoleResult t = DataIRef.Expression t (Infer.Inferred (DefI t))
 
+data HoleResultActions m = HoleResultActions
+  { holeResultConvert :: T m (Expression m)
+  , holeResultPick :: T m Guid
+  , holeResultPickAndGiveAsArg :: T m Guid
+  , holeResultPickAndGiveAsArgToOperator :: String -> T m Guid
+  , holeResultMPickAndCallWithArg :: T m (Maybe (T m Guid))
+  }
+
 data HoleActions m = HoleActions
-  { holePickResult :: HoleResult (Tag m) -> T m Guid
-  , holeConvertResult :: HoleResult (Tag m) -> T m (Expression m)
+  { holeResultActions :: HoleResult (Tag m) -> HoleResultActions m
   , holePaste :: Maybe (T m Guid)
-  , holeExprActions :: Actions m
   }
 
 data Hole m = Hole

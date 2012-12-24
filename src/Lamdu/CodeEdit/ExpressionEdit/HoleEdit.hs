@@ -83,7 +83,7 @@ pickExpr ::
   MonadA m => HoleInfo m -> Sugar.HoleResult (Tag m) ->
   T m Widget.EventResult
 pickExpr holeInfo expr = do
-  guid <- Sugar.holePickResult (hiHoleActions holeInfo) expr
+  guid <- Sugar.holeResultPick $ Sugar.holeResultActions (hiHoleActions holeInfo) expr
   return Widget.EventResult
     { Widget._eCursor = Just $ WidgetIds.fromGuid guid
     , Widget._eAnimIdMapping = id -- TODO: Need to fix the parens id
@@ -101,7 +101,7 @@ resultPickEventMap holeInfo holeResult =
       (E.Doc ["Edit", "Result", "Pick and move to next hole"]) .
       fmap Widget.eventResultFromCursor $
         WidgetIds.fromGuid (nextHole ^. Sugar.rGuid) <$
-        Sugar.holePickResult (hiHoleActions holeInfo) holeResult
+        Sugar.holeResultPick (Sugar.holeResultActions (hiHoleActions holeInfo) holeResult)
   _ -> simplePickRes $ Config.pickResultKeys ++ Config.pickAndMoveToNextHoleKeys
   where
     simplePickRes keys =
@@ -160,7 +160,8 @@ resultsToWidgets holeInfo results = do
       Widget.strongerEvents (resultPickEventMap holeInfo expr) .
       Lens.view ExpressionGui.egWidget =<<
       ExprGuiM.makeSubexpresion . Sugar.removeTypes =<<
-      (ExprGuiM.transaction . Sugar.holeConvertResult (hiHoleActions holeInfo)) expr
+      (ExprGuiM.transaction . Sugar.holeResultConvert)
+      (Sugar.holeResultActions (hiHoleActions holeInfo) expr)
     moreResultsPrefixId = rlMoreResultsPrefixId results
     addMoreSymbol w = do
       moreSymbolLabel <-
@@ -476,13 +477,12 @@ pickEventMap ::
   Widget.EventHandlers (T m)
 pickEventMap holeInfo searchTerm (Just result)
   | nonEmptyAll (`notElem` Config.operatorChars) searchTerm =
-    operatorHandler (E.Doc ["Edit", "Result", "Pick and apply operator"]) $ \x -> do
-      _ <- Sugar.holePickResult actions result
-      fmap (searchTermWidgetId . WidgetIds.fromGuid) $
-        (exprActions ^. Sugar.giveAsArgToOperator) [x]
+    operatorHandler (E.Doc ["Edit", "Result", "Pick and apply operator"]) $ \x ->
+      searchTermWidgetId . WidgetIds.fromGuid <$>
+      Sugar.holeResultPickAndGiveAsArgToOperator holeActions [x]
   | nonEmptyAll (`elem` Config.operatorChars) searchTerm =
     alphaNumericHandler (E.Doc ["Edit", "Result", "Pick and resume"]) $ \x -> do
-      g <- Sugar.holePickResult actions result
+      g <- Sugar.holeResultPick holeActions
       let
         mTarget
           | g /= hiGuid holeInfo = Just g
@@ -493,7 +493,7 @@ pickEventMap holeInfo searchTerm (Just result)
           return target
         Nothing -> return g
   where
-    exprActions = Sugar.holeExprActions actions
+    holeActions = Sugar.holeResultActions actions result
     actions = hiHoleActions holeInfo
 pickEventMap _ _ _ = mempty
 
@@ -502,15 +502,14 @@ mkCallWithArgEventMap ::
   T m (Widget.EventHandlers (T m))
 mkCallWithArgEventMap _ Nothing = pure mempty
 mkCallWithArgEventMap holeInfo (Just result) =
-  maybe mempty mkCallWithArg <$> exprActions ^. Sugar.callWithArg
+  maybe mempty mkCallWithArg <$> Sugar.holeResultMPickAndCallWithArg holeActions
   where
     mkCallWithArg callWithArg =
       Widget.keysEventMapMovesCursor Config.callWithArgumentKeys
-      (E.Doc ["Edit", "Result", "Pick and give arg"]) $ do
-        _ <- Sugar.holePickResult actions result
-        WidgetIds.fromGuid <$> callWithArg
+      (E.Doc ["Edit", "Result", "Pick and give arg"]) $
+      WidgetIds.fromGuid <$> callWithArg
     actions = hiHoleActions holeInfo
-    exprActions = Sugar.holeExprActions actions
+    holeActions = Sugar.holeResultActions actions result
 
 markTypeMatchesAsUsed :: MonadA m => HoleInfo m -> ExprGuiM m ()
 markTypeMatchesAsUsed holeInfo =

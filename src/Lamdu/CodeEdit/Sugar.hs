@@ -15,7 +15,7 @@ module Lamdu.CodeEdit.Sugar
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
   , Section(..)
-  , Hole(..), HoleActions(..), HoleResult, holeResultHasHoles
+  , Hole(..), HoleActions(..), HoleResultActions(..), HoleResult, holeResultHasHoles
   , LiteralInteger(..)
   , Inferred(..)
   , Polymorphic(..)
@@ -24,7 +24,7 @@ module Lamdu.CodeEdit.Sugar
   , removeTypes
   ) where
 
-import Control.Applicative ((<$>), Applicative(..), liftA2)
+import Control.Applicative ((<$), (<$>), Applicative(..), liftA2)
 import Control.Arrow (first)
 import Control.Lens ((^.))
 import Control.Monad ((<=<), join, mplus, void, zipWithM)
@@ -82,35 +82,47 @@ mkCutter expr replaceWithHole = do
   _ <- DataOps.newClipboard expr
   replaceWithHole
 
+checkReplaceWithExpr ::
+  MonadA m =>
+  Expression.Expression (DefI (Tag m)) () ->
+  Maybe (DefI (Tag m)) ->
+  DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i s) ->
+  T m (Maybe (Expression.Expression (DefI (Tag m)) (Infer.Inferred (DefI (Tag m)))))
+checkReplaceWithExpr replacer mDefI expr =
+  uncurry (SugarInfer.inferMaybe_ mDefI withApply) $
+  Infer.initial mDefI
+  where
+    withApply =
+      expr ^. Expression.ePayload . SugarInfer.plSetter $
+      replacer
+
 mkCallWithArg ::
   MonadA m => Maybe (DefI (Tag m)) ->
   DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i (Stored m)) ->
   T m (Maybe (T m Guid))
 mkCallWithArg mDefI exprS =
-  (fmap . fmap . const) mkCall .
-  uncurry (SugarInfer.inferMaybe_ mDefI withApply) $
-  Infer.initial mDefI
+  (mkCall <$) <$>
+  checkReplaceWithExpr replacer mDefI exprS
   where
     mkCall = fmap DataIRef.exprGuid . DataOps.callWithArg $ resultStored exprS
-    withApply =
-      exprS ^. Expression.ePayload . SugarInfer.plSetter $
-      Expression.pureApply (void exprS) Expression.pureHole
+    replacer = Expression.pureApply (void exprS) Expression.pureHole
+      
 
 mkActions ::
   m ~ Anchors.ViewM => Maybe (DefI (Tag m)) ->
   DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i (Stored m)) -> Actions m
 mkActions mDefI exprS =
   Actions
-  { _giveAsArg = guidify $ DataOps.giveAsArg stored
+  { _giveAsArg = DataIRef.exprGuid <$> DataOps.giveAsArg stored
   , _callWithArg = mkCallWithArg mDefI exprS
   , _replace = doReplace
   , _cut = mkCutter (Property.value stored) doReplace
-  , _giveAsArgToOperator = guidify . DataOps.giveAsArgToOperator stored
+  , _giveAsArgToOperator =
+      fmap DataIRef.exprGuid . DataOps.giveAsArgToOperator stored
   }
   where
     stored = resultStored exprS
-    guidify = fmap DataIRef.exprGuid
-    doReplace = guidify $ DataOps.replaceWithHole stored
+    doReplace = DataIRef.exprGuid <$> DataOps.replaceWithHole stored
 
 mkGen :: Int -> Int -> Guid -> Random.StdGen
 mkGen select count =
@@ -504,6 +516,35 @@ inferApplyForms processRes expr (node, inferContext) =
       fmap concat . traverse processRes $
       (applyForms . void) (Infer.iType (i ^. Expression.ePayload)) expr
 
+mkHoleResultActions ::
+  m ~ Anchors.ViewM =>
+  SugarM.Context (Tag m) ->
+  Expression.Expression (DefI (Tag m)) (SugarInfer.Payload (Tag m) i (Stored m)) ->
+  HoleResult (Tag m) -> HoleResultActions m
+mkHoleResultActions sugarContext exprS res =
+  HoleResultActions
+  { holeResultConvert = convertHoleResult config res
+  , holeResultPick = pick
+  , holeResultPickAndGiveAsArg =
+      pick >> DataIRef.exprGuid <$> DataOps.giveAsArg stored
+  , holeResultPickAndGiveAsArgToOperator = pickAndGiveAsArgToOp
+  , holeResultMPickAndCallWithArg =
+      (pickAndCallWithArg <$) <$>
+      checkReplaceWithExpr
+      (Expression.pureApply (void res) Expression.pureHole)
+      mDefI exprS
+  }
+  where
+    pickAndCallWithArg =
+      pick >> DataIRef.exprGuid <$> DataOps.callWithArg stored
+    pickAndGiveAsArgToOp name =
+      pick >> DataIRef.exprGuid <$> DataOps.giveAsArgToOperator stored name
+    pick = pickResult eGuid exprS res
+    stored = resultStored exprS
+    eGuid = resultGuid exprS
+    mDefI = SugarM.scMDefI sugarContext
+    config = SugarM.scConfig sugarContext
+
 convertInferredHoleH ::
   m ~ Anchors.ViewM =>
   SugarM.Context (Tag m) -> Maybe (T m Guid) ->
@@ -513,12 +554,8 @@ convertInferredHoleH
     chooseHoleType (iwcInferredValues iwc) plainHole inferredHole
   where
     eGuid = resultGuid exprI
-    SugarM.Context
-      { SugarM.scHoleInferState = inferState
-      , SugarM.scConfig = config
-      , SugarM.scMContextHash = contextHash
-      , SugarM.scMDefI = mDefI
-      } = sugarContext
+    inferState = SugarM.scHoleInferState sugarContext
+    contextHash = SugarM.scMContextHash sugarContext
     inferred = iwcInferred iwc
     scope = Infer.nScope $ Infer.iPoint inferred
     check expr = SugarInfer.inferMaybe_ Nothing expr inferState $ Infer.iPoint inferred
@@ -539,10 +576,8 @@ convertInferredHoleH
       }
     mkHoleActions exprS =
       HoleActions
-      { holePickResult = pickResult eGuid exprS
+      { holeResultActions = mkHoleResultActions sugarContext exprS
       , holePaste = mPaste
-      , holeConvertResult = convertHoleResult config
-      , holeExprActions = mkActions mDefI exprS
       }
     filledHole =
       mkHole $
