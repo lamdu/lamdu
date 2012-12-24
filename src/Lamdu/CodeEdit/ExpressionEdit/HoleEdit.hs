@@ -497,17 +497,21 @@ pickEventMap holeInfo searchTerm (Just result)
     actions = hiHoleActions holeInfo
 pickEventMap _ _ _ = mempty
 
-mkCallWithArgEventMap ::
+mkCallsWithArgsEventMap ::
   ViewM ~ m => HoleInfo m -> Maybe (Sugar.HoleResult (Tag m)) ->
   T m (Widget.EventHandlers (T m))
-mkCallWithArgEventMap _ Nothing = pure mempty
-mkCallWithArgEventMap holeInfo (Just result) =
-  maybe mempty mkCallWithArg <$> holeActions ^. Sugar.holeResultMPickAndCallWithArg
+mkCallsWithArgsEventMap _ Nothing = pure mempty
+mkCallsWithArgsEventMap holeInfo (Just result) =
+  mconcat <$> sequence
+  [ maybe mempty mkCallWithArg <$> holeActions ^. Sugar.holeResultMPickAndCallWithArg
+  , maybe mempty mkCallWithNextArg <$> holeActions ^. Sugar.holeResultMPickAndCallWithNextArg
+  ]
   where
-    mkCallWithArg callWithArg =
-      Widget.keysEventMapMovesCursor Config.callWithArgumentKeys
-      (E.Doc ["Edit", "Result", "Pick and give arg"]) $
-      WidgetIds.fromGuid <$> callWithArg
+    mkCallWithArg = mkEventMap Config.callWithArgumentKeys "Pick and give arg"
+    mkCallWithNextArg = mkEventMap Config.callWithNextArgumentKeys "Pick and give next arg"
+    mkEventMap keys doc f =
+      Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "Result", doc]) $
+      WidgetIds.fromGuid <$> f
     actions = hiHoleActions holeInfo
     holeActions = actions ^. Sugar.holeResultActions $ result
 
@@ -544,7 +548,7 @@ makeActiveHoleEdit holeInfo = do
       mResult =
         mplus mSelectedResult .
         fmap rlFirst $ listToMaybe firstResults
-    callWithArgEventMap <- ExprGuiM.transaction $ mkCallWithArgEventMap holeInfo mResult
+    callWithArgEventMap <- ExprGuiM.transaction $ mkCallsWithArgsEventMap holeInfo mResult
     searchTermWidget <- makeSearchTermWidget holeInfo searchTermId mResult
     let
       adHocEditor = adHocTextEditEventMap $ hiSearchTerm holeInfo

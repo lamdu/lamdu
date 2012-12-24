@@ -24,6 +24,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , HoleResultActions(..), holeResultConvert, holeResultMPickAndCallWithArg
   , holeResultPick, holeResultPickAndGiveAsArg
   , holeResultPickAndGiveAsArgToOperator
+  , holeResultMPickAndCallWithNextArg
   , HoleResult
   , LiteralInteger(..)
   , Inferred(..)
@@ -121,6 +122,7 @@ data HoleResultActions m = HoleResultActions
   , _holeResultPickAndGiveAsArg :: T m Guid
   , _holeResultPickAndGiveAsArgToOperator :: String -> T m Guid
   , _holeResultMPickAndCallWithArg :: T m (Maybe (T m Guid))
+  , _holeResultMPickAndCallWithNextArg :: T m (Maybe (T m Guid))
   }
 
 data HoleActions m = HoleActions
