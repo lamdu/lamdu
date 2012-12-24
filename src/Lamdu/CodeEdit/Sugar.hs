@@ -84,7 +84,7 @@ mkCutter expr replaceWithHole = do
 
 mkCallWithArg ::
   MonadA m => Maybe (DefI (Tag m)) ->
-  DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) NoInferred (Stored m)) ->
+  DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i (Stored m)) ->
   T m (Maybe (T m Guid))
 mkCallWithArg mDefI exprS =
   (fmap . fmap . const) mkCall .
@@ -98,7 +98,7 @@ mkCallWithArg mDefI exprS =
 
 mkActions ::
   m ~ Anchors.ViewM => Maybe (DefI (Tag m)) ->
-  DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) NoInferred (Stored m)) -> Actions m
+  DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i (Stored m)) -> Actions m
 mkActions mDefI exprS =
   Actions
   { _giveAsArg = guidify $ DataOps.giveAsArg stored
@@ -152,7 +152,7 @@ mkExpression exprI expr = do
       { _plInferredTypes = inferredTypesRefs
       , _plActions =
         mkActions mDefI <$>
-        traverse (SugarInfer.ntraversePayload (const (pure NoInferred)) id pure) exprI
+        traverse (SugarInfer.ntraversePayload pure id pure) exprI
       , _plNextHole = Nothing
       }
     }
@@ -535,7 +535,7 @@ convertInferredHoleH
       , holeInferResults = inferResults processRes
       , holeMActions =
         mkHoleActions <$>
-        traverse (SugarInfer.ntraversePayload (const (pure NoInferred)) id pure) exprI
+        traverse (SugarInfer.ntraversePayload pure id pure) exprI
       }
     mkHoleActions exprS =
       HoleActions
@@ -581,7 +581,7 @@ chooseHoleType inferredVals plain inferred =
 
 pickResult ::
   m ~ Anchors.ViewM =>
-  Guid -> DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) NoInferred (Stored m)) ->
+  Guid -> DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i (Stored m)) ->
   DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) ->
   T m Guid
 pickResult defaultDest exprS =
