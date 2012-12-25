@@ -16,12 +16,14 @@ module Lamdu.CodeEdit.Sugar
   , Pi(..)
   , Section(..)
   , Hole(..), holeScope, holeMActions, holeInferResults
-  , HoleActions(..), holeResultActions, holePaste, holeMDelete
-  , HoleResultActions(..), holeResultConvert, holeResultMPickAndCallWithArg
-  , holeResultPick, holeResultPickAndGiveAsArg
-  , holeResultPickAndGiveAsArgToOperator
-  , holeResultMPickAndCallWithNextArg
-  , HoleResult, holeResultHasHoles
+  , HoleActions(..), holePaste, holeMDelete
+  , HoleResult(..)
+    , holeResultInferred
+    , holeResultConvert, holeResultMPickAndCallWithArg
+    , holeResultPick, holeResultPickAndGiveAsArg
+    , holeResultPickAndGiveAsArgToOperator
+    , holeResultMPickAndCallWithNextArg
+  , holeResultHasHoles
   , LiteralInteger(..)
   , Inferred(..)
   , Polymorphic(..)
@@ -32,8 +34,7 @@ module Lamdu.CodeEdit.Sugar
 
 import Control.Applicative ((<$), (<$>), Applicative(..), liftA2)
 import Control.Arrow (first)
-import Control.Lens ((.~), (^.), (%@~), (<.), (.>), (&))
-import Control.Lens.Utils (iresult)
+import Control.Lens ((.~), (^.), (&), (%~), (.~))
 import Control.Monad ((<=<), join, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (runState, evalStateT)
@@ -521,15 +522,16 @@ fillPartialHolesInExpression check oldExpr =
     fillHoleExpr (Expression.Expression body _) =
       fmap Expression.pureExpression $ traverse fillHoleExpr body
 
-resultComplexityScore :: HoleResult t -> Int
+resultComplexityScore :: DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) -> Int
 resultComplexityScore =
   sum . map (subtract 2 . length . Foldable.toList . Infer.iType) .
   Foldable.toList
 
 inferApplyForms ::
   MonadA m =>
-  (DataIRef.ExpressionM m () -> T m [HoleResult (Tag m)]) -> DataIRef.ExpressionM m () ->
-  (Infer.InferNode (DefI (Tag m)), Infer.Context (DefI (Tag m))) -> T m [HoleResult (Tag m)]
+  (DataIRef.ExpressionM m () -> T m [DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))]) -> DataIRef.ExpressionM m () ->
+  (Infer.InferNode (DefI (Tag m)), Infer.Context (DefI (Tag m))) ->
+  T m [DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))]
 inferApplyForms processRes expr (node, inferContext) =
   fmap (sortOn resultComplexityScore) . makeApplyForms =<<
   SugarInfer.inferMaybe_ Nothing expr inferContext node
@@ -539,14 +541,15 @@ inferApplyForms processRes expr (node, inferContext) =
       fmap concat . traverse processRes $
       (applyForms . void) (Infer.iType (i ^. Expression.ePayload)) expr
 
-mkHoleResultActions ::
+mkHoleResult ::
   m ~ Anchors.ViewM =>
   SugarM.Context (Tag m) ->
   DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i (Stored m)) ->
-  HoleResult (Tag m) -> HoleResultActions m
-mkHoleResultActions sugarContext exprS res =
-  HoleResultActions
-  { _holeResultConvert = convertHoleResult (SugarM.scConfig sugarContext) res
+  DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) -> HoleResult m
+mkHoleResult sugarContext exprS res =
+  HoleResult
+  { _holeResultInferred = res
+  , _holeResultConvert = convertHoleResult (SugarM.scConfig sugarContext) res
   , _holeResultPick = pick
   , _holeResultPickAndGiveAsArg =
       pick >> DataIRef.exprGuid <$> DataOps.giveAsArg stored
@@ -558,6 +561,11 @@ mkHoleResultActions sugarContext exprS res =
   , _holeResultMPickAndCallWithNextArg = Nothing
   }
   where
+    convertHoleResult config =
+      SugarM.runPure config . convertExpressionI .
+      (Lens.mapped . SugarInfer.plInferred %~ Just) .
+      (Lens.mapped . SugarInfer.plStored .~ Nothing) .
+      SugarInfer.resultFromInferred
     pickAndCallWithArg =
       pick >> DataIRef.exprGuid <$> DataOps.callWithArg stored
     pickAndGiveAsArgToOp name =
@@ -574,14 +582,18 @@ addPickAndCallWithNextArg ::
   DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i (Stored m)) ->
   Expression m -> Expression m
 addPickAndCallWithNextArg inferParams app applyS argS =
-  ( rExpressionBody .> expressionHole .> holeMActions .> Lens.mapped .>
-    holeResultActions .> iresult <. holeResultMPickAndCallWithNextArg %@~
-    onHoleResultActions
+  ( rExpressionBody . expressionHole . holeMActions . Lens.mapped .
+    holeInferResults . Lens.mapped . Lens.mapped . Lens.mapped %~ onHoleResult
   )
   where
+    onHoleResult holeResult =
+      holeResult
+      & holeResultMPickAndCallWithNextArg .~
+        newPickAndCallWithArg (holeResult ^. holeResultInferred)
+
     -- In this context we return the new actions of an apply's arg
     -- (which is a hole):
-    onHoleResultActions res _ =
+    newPickAndCallWithArg res =
       pickAndCallWithArg res <$
       checkReplaceWithExpr inferParams
       (Expression.pureApply (appWithPicked res) Expression.pureHole)
@@ -621,11 +633,12 @@ convertInferredHoleH
       traverse (SugarInfer.ntraversePayload pure id pure) exprI
     mkWritableHoleActions processRes exprS =
       HoleActions
-      { _holeResultActions = mkHoleResultActions sugarContext exprS
-      , _holePaste = mPaste
+      { _holePaste = mPaste
       , _holeMDelete = Nothing
       , _holeScope = map onScopeElement . Map.toList $ Infer.iScope inferred
-      , _holeInferResults = inferResults processRes
+      , _holeInferResults =
+        (fmap . map) (mkHoleResult sugarContext exprS) .
+        inferResults processRes
       }
     filledHole =
       mkHole $ maybe (return []) (fillPartialHolesInExpression check) <=< check
@@ -694,8 +707,9 @@ uninferredHoles Expression.Expression
 uninferredHoles Expression.Expression { Expression._eBody = body } =
   Foldable.concatMap uninferredHoles body
 
-holeResultHasHoles :: HoleResult t -> Bool
-holeResultHasHoles = not . null . uninferredHoles . fmap (flip (,) ())
+holeResultHasHoles :: HoleResult m -> Bool
+holeResultHasHoles =
+  not . null . uninferredHoles . fmap (flip (,) ()) . Lens.view holeResultInferred
 
 convertHole :: m ~ Anchors.ViewM => Convertor m
 convertHole exprI =
@@ -746,14 +760,6 @@ isCompleteType =
   ( Lens.folding Expression.subExpressions
   . Expression.eBody . Expression.bodyLeaf . Expression.hole
   )
-
-convertHoleResult ::
-  m ~ Anchors.ViewM => SugarConfig (Tag m) -> HoleResult (Tag m) -> T m (Expression m)
-convertHoleResult config =
-  SugarM.runPure config . convertExpressionI .
-  Lens.over (Lens.mapped . SugarInfer.plInferred) Just .
-  Lens.set (Lens.mapped . SugarInfer.plStored) Nothing .
-  SugarInfer.resultFromInferred
 
 convertExpressionPure ::
   (m ~ Anchors.ViewM, RandomGen g) =>

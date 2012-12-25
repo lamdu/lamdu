@@ -78,18 +78,16 @@ data HoleInfo m = HoleInfo
   , hiMNextHole :: Maybe (Sugar.Expression m)
   }
 
-pickExpr ::
-  MonadA m => HoleInfo m -> Sugar.HoleResult (Tag m) ->
-  T m Widget.EventResult
-pickExpr holeInfo expr = do
-  guid <- (hiHoleActions holeInfo ^. Sugar.holeResultActions) expr ^. Sugar.holeResultPick
+pickExpr :: MonadA m => Sugar.HoleResult m -> T m Widget.EventResult
+pickExpr holeResult = do
+  guid <- holeResult ^. Sugar.holeResultPick
   return Widget.EventResult
     { Widget._eCursor = Just $ WidgetIds.fromGuid guid
     , Widget._eAnimIdMapping = id -- TODO: Need to fix the parens id
     }
 
 resultPickEventMap ::
-  MonadA m => HoleInfo m -> Sugar.HoleResult (Tag m) ->
+  MonadA m => HoleInfo m -> Sugar.HoleResult m ->
   Widget.EventHandlers (T m)
 resultPickEventMap holeInfo holeResult =
   case hiMNextHole holeInfo of
@@ -100,33 +98,33 @@ resultPickEventMap holeInfo holeResult =
       (E.Doc ["Edit", "Result", "Pick and move to next hole"]) .
       fmap Widget.eventResultFromCursor $
         WidgetIds.fromGuid (nextHole ^. Sugar.rGuid) <$
-        (hiHoleActions holeInfo ^. Sugar.holeResultActions) holeResult ^. Sugar.holeResultPick
+        holeResult ^. Sugar.holeResultPick
   _ -> simplePickRes $ Config.pickResultKeys ++ Config.pickAndMoveToNextHoleKeys
   where
     simplePickRes keys =
       E.keyPresses keys (E.Doc ["Edit", "Result", "Pick"]) $
-      pickExpr holeInfo holeResult
+      pickExpr holeResult
 
 
-data ResultsList t = ResultsList
+data ResultsList m = ResultsList
   { rlFirstId :: Widget.Id
   , rlMoreResultsPrefixId :: Widget.Id
-  , rlFirst :: Sugar.HoleResult t
-  , rlMore :: Maybe [Sugar.HoleResult t]
+  , rlFirst :: Sugar.HoleResult m
+  , rlMore :: Maybe [Sugar.HoleResult m]
   }
 
 resultsToWidgets
   :: MonadA m
-  => HoleInfo m -> ResultsList (Tag m)
+  => HoleInfo m -> ResultsList m
   -> ExprGuiM m
      ( WidgetT m
-     , Maybe (Sugar.HoleResult (Tag m), Maybe (WidgetT m))
+     , Maybe (Sugar.HoleResult m, Maybe (WidgetT m))
      )
 resultsToWidgets holeInfo results = do
   cursorOnMain <- ExprGuiM.widgetEnv $ WE.isSubCursor myId
   extra <-
     if cursorOnMain
-    then fmap (Just . (,) canonizedExpr . fmap fst) makeExtra
+    then fmap (Just . (,) (rlFirst results) . fmap fst) makeExtra
     else do
       cursorOnExtra <- ExprGuiM.widgetEnv $ WE.isSubCursor moreResultsPrefixId
       if cursorOnExtra
@@ -139,7 +137,7 @@ resultsToWidgets holeInfo results = do
         else return Nothing
   fmap (flip (,) extra) .
     maybe return (const addMoreSymbol) (rlMore results) =<<
-    toWidget myId canonizedExpr
+    toWidget myId (rlFirst results)
   where
     makeExtra = traverse makeMoreResults $ rlMore results
     makeMoreResults moreResults = do
@@ -148,19 +146,22 @@ resultsToWidgets holeInfo results = do
         ( Box.vboxAlign 0 $ map fst pairs
         , msum $ map snd pairs
         )
-    moreResult expr = do
-      mResult <- (fmap . fmap . const) expr . ExprGuiM.widgetEnv $ WE.subCursor resultId
-      widget <- toWidget resultId expr
+    moreResult holeResult = do
+      mResult <-
+        (fmap . fmap . const) holeResult . ExprGuiM.widgetEnv $ WE.subCursor resultId
+      widget <- toWidget resultId holeResult
       return (widget, mResult)
       where
-        resultId = mappend moreResultsPrefixId $ exprWidgetId expr
-    toWidget resultId expr =
+        resultId =
+          mappend moreResultsPrefixId . widgetIdHash . void $
+          holeResult ^. Sugar.holeResultInferred
+    toWidget resultId holeResult =
       ExprGuiM.widgetEnv . BWidgets.makeFocusableView resultId .
-      Widget.strongerEvents (resultPickEventMap holeInfo expr) .
+      Widget.strongerEvents (resultPickEventMap holeInfo holeResult) .
       Lens.view ExpressionGui.egWidget =<<
       ExprGuiM.makeSubexpresion . Sugar.removeTypes =<<
       ExprGuiM.transaction
-      ((hiHoleActions holeInfo ^. Sugar.holeResultActions) expr ^. Sugar.holeResultConvert)
+      (holeResult ^. Sugar.holeResultConvert)
     moreResultsPrefixId = rlMoreResultsPrefixId results
     addMoreSymbol w = do
       moreSymbolLabel <-
@@ -168,7 +169,6 @@ resultsToWidgets holeInfo results = do
         ExprGuiM.widgetEnv .
         BWidgets.makeLabel moreSymbol $ Widget.toAnimId myId
       return $ BWidgets.hboxCenteredSpaced [w, moreSymbolLabel]
-    canonizedExpr = rlFirst results
     myId = rlFirstId results
 
 makeNoResults :: MonadA m => AnimId -> ExprGuiM m (WidgetT m)
@@ -229,23 +229,23 @@ makeLiteralGroup searchTerm =
 resultsPrefixId :: HoleInfo m -> Widget.Id
 resultsPrefixId holeInfo = mconcat [hiHoleId holeInfo, Widget.Id ["results"]]
 
-exprWidgetId :: Show def => Expression def a -> Widget.Id
-exprWidgetId = WidgetIds.fromGuid . randFunc . show . void
+widgetIdHash :: Show a => a -> Widget.Id
+widgetIdHash = WidgetIds.fromGuid . randFunc . show
 
 toResultsList ::
   MonadA m => HoleInfo m -> DataIRef.ExpressionM m () ->
-  CT m (Maybe (ResultsList (Tag m)))
+  CT m (Maybe (ResultsList m))
 toResultsList holeInfo baseExpr = do
   results <- hiHoleActions holeInfo ^. Sugar.holeInferResults $ baseExpr
   return $
     case results of
     [] -> Nothing
     (x:xs) ->
-      let canonizedExprId = exprWidgetId baseExpr
+      let baseId = widgetIdHash baseExpr
       in Just ResultsList
-        { rlFirstId = mconcat [resultsPrefixId holeInfo, canonizedExprId]
+        { rlFirstId = mconcat [resultsPrefixId holeInfo, baseId]
         , rlMoreResultsPrefixId =
-          mconcat [resultsPrefixId holeInfo, Widget.Id ["more results"], canonizedExprId]
+          mconcat [resultsPrefixId holeInfo, Widget.Id ["more results"], baseId]
         , rlFirst = x
         , rlMore =
           case xs of
@@ -257,7 +257,7 @@ data ResultType = GoodResult | BadResult
 
 makeResultsList ::
   MonadA m => HoleInfo m -> Group (DefI (Tag m)) ->
-  CT m (Maybe (ResultType, ResultsList (Tag m)))
+  CT m (Maybe (ResultType, ResultsList m))
 makeResultsList holeInfo group = do
   -- We always want the first, and we want to know if there's more, so
   -- take 2:
@@ -274,7 +274,7 @@ makeResultsList holeInfo group = do
 
 makeAllResults
   :: ViewM ~ m => HoleInfo m
-  -> ExprGuiM m (ListT (CT m) (ResultType, ResultsList (Tag m)))
+  -> ExprGuiM m (ListT (CT m) (ResultType, ResultsList m))
 makeAllResults holeInfo = do
   paramResults <-
     traverse (makeVariableGroup . Expression.ParameterRef) $
@@ -310,8 +310,7 @@ addNewDefinitionEventMap ::
   ViewM ~ m => HoleInfo m -> Widget.EventHandlers (T m)
 addNewDefinitionEventMap holeInfo =
   E.keyPresses Config.newDefinitionKeys
-  (E.Doc ["Edit", "Result", "As new Definition"]) . makeNewDefinition $
-  pickExpr holeInfo
+  (E.Doc ["Edit", "Result", "As new Definition"]) $ makeNewDefinition pickExpr
   where
     makeNewDefinition holePickResult = do
       newDefI <- DataOps.makeDefinition -- TODO: From Sugar
@@ -349,7 +348,7 @@ disallowChars = E.filterSChars $ curry (`notElem` disallowedHoleChars)
 makeSearchTermWidget
   :: MonadA m
   => HoleInfo m -> Widget.Id
-  -> Maybe (Sugar.HoleResult (Tag m))
+  -> Maybe (Sugar.HoleResult m)
   -> ExprGuiM m (ExpressionGui m)
 makeSearchTermWidget holeInfo searchTermId mResultToPick =
   ExprGuiM.widgetEnv .
@@ -372,8 +371,8 @@ vboxMBiasedAlign mChildIndex align =
 makeResultsWidget
   :: MonadA m
   => HoleInfo m
-  -> [ResultsList (Tag m)] -> Bool
-  -> ExprGuiM m (Maybe (Sugar.HoleResult (Tag m)), WidgetT m)
+  -> [ResultsList m] -> Bool
+  -> ExprGuiM m (Maybe (Sugar.HoleResult m), WidgetT m)
 makeResultsWidget holeInfo firstResults moreResults = do
   firstResultsAndWidgets <-
     traverse (resultsToWidgets holeInfo) firstResults
@@ -469,16 +468,16 @@ alphaNumericHandler doc handler =
   Config.alphaNumericChars . flip $ const handler
 
 pickEventMap ::
-  MonadA m => HoleInfo m -> String -> Maybe (Sugar.HoleResult (Tag m)) ->
+  MonadA m => HoleInfo m -> String -> Maybe (Sugar.HoleResult m) ->
   Widget.EventHandlers (T m)
 pickEventMap holeInfo searchTerm (Just result)
   | nonEmptyAll (`notElem` Config.operatorChars) searchTerm =
     operatorHandler (E.Doc ["Edit", "Result", "Pick and apply operator"]) $ \x ->
       searchTermWidgetId . WidgetIds.fromGuid <$>
-      (holeActions ^. Sugar.holeResultPickAndGiveAsArgToOperator) [x]
+      (result ^. Sugar.holeResultPickAndGiveAsArgToOperator) [x]
   | nonEmptyAll (`elem` Config.operatorChars) searchTerm =
     alphaNumericHandler (E.Doc ["Edit", "Result", "Pick and resume"]) $ \x -> do
-      g <- holeActions ^. Sugar.holeResultPick
+      g <- result ^. Sugar.holeResultPick
       let
         mTarget
           | g /= hiGuid holeInfo = Just g
@@ -488,19 +487,16 @@ pickEventMap holeInfo searchTerm (Just result)
           (`Property.set` [x]) =<< Anchors.assocSearchTermRef target
           return target
         Nothing -> return g
-  where
-    holeActions = actions ^. Sugar.holeResultActions $ result
-    actions = hiHoleActions holeInfo
 pickEventMap _ _ _ = mempty
 
 mkCallsWithArgsEventMap ::
-  ViewM ~ m => HoleInfo m -> Maybe (Sugar.HoleResult (Tag m)) ->
+  ViewM ~ m => Maybe (Sugar.HoleResult m) ->
   Widget.EventHandlers (T m)
-mkCallsWithArgsEventMap _ Nothing = mempty
-mkCallsWithArgsEventMap holeInfo (Just result) =
+mkCallsWithArgsEventMap Nothing = mempty
+mkCallsWithArgsEventMap (Just result) =
   mconcat
-  [ maybe mempty mkCallWithArg $ holeActions ^. Sugar.holeResultMPickAndCallWithArg
-  , maybe mempty mkCallWithNextArg $ holeActions ^. Sugar.holeResultMPickAndCallWithNextArg
+  [ maybe mempty mkCallWithArg $ result ^. Sugar.holeResultMPickAndCallWithArg
+  , maybe mempty mkCallWithNextArg $ result ^. Sugar.holeResultMPickAndCallWithNextArg
   ]
   where
     mkCallWithArg = eventMap Config.callWithArgumentKeys "Pick and give arg"
@@ -508,8 +504,6 @@ mkCallsWithArgsEventMap holeInfo (Just result) =
     eventMap keys doc f =
       E.keyPresses keys (E.Doc ["Edit", "Result", doc]) $
       Widget.eventResultFromCursor . WidgetIds.fromGuid <$> f
-    actions = hiHoleActions holeInfo
-    holeActions = actions ^. Sugar.holeResultActions $ result
 
 markTypeMatchesAsUsed :: MonadA m => HoleInfo m -> ExprGuiM m ()
 markTypeMatchesAsUsed holeInfo =
@@ -523,11 +517,11 @@ markTypeMatchesAsUsed holeInfo =
 
 mkEventMap ::
   m ~ ViewM =>
-  HoleInfo m -> String -> Maybe (Sugar.HoleResult (Tag m)) -> Widget.EventHandlers (T m)
+  HoleInfo m -> String -> Maybe (Sugar.HoleResult m) -> Widget.EventHandlers (T m)
 mkEventMap holeInfo searchTerm mResult = mconcat
   [ addNewDefinitionEventMap holeInfo
   , pickEventMap holeInfo searchTerm mResult
-  , mkCallsWithArgsEventMap holeInfo mResult
+  , mkCallsWithArgsEventMap mResult
   , maybe mempty
     (E.keyPresses (Config.delForwardKeys ++ Config.delBackwordKeys)
      (E.Doc ["Edit", "Delete"]) .

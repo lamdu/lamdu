@@ -20,12 +20,13 @@ module Lamdu.CodeEdit.Sugar.Types
   , Pi(..)
   , Section(..)
   , Hole(..), holeScope, holeMActions, holeInferResults
-  , HoleActions(..), holeResultActions, holePaste, holeMDelete
-  , HoleResultActions(..), holeResultConvert, holeResultMPickAndCallWithArg
-  , holeResultPick, holeResultPickAndGiveAsArg
-  , holeResultPickAndGiveAsArgToOperator
-  , holeResultMPickAndCallWithNextArg
-  , HoleResult
+  , HoleActions(..), holePaste, holeMDelete
+  , HoleResult(..)
+    , holeResultInferred
+    , holeResultConvert, holeResultMPickAndCallWithArg
+    , holeResultPick, holeResultPickAndGiveAsArg
+    , holeResultPickAndGiveAsArgToOperator
+    , holeResultMPickAndCallWithNextArg
   , LiteralInteger(..)
   , Inferred(..)
   , Polymorphic(..)
@@ -114,10 +115,9 @@ data Section expr = Section
   , sectionRArg :: Maybe expr
   } deriving (Functor)
 
-type HoleResult t = DataIRef.Expression t (Infer.Inferred (DefI t))
-
-data HoleResultActions m = HoleResultActions
-  { _holeResultConvert :: T m (Expression m)
+data HoleResult m = HoleResult
+  { _holeResultInferred :: DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))
+  , _holeResultConvert :: T m (Expression m)
   , _holeResultPick :: T m Guid
   , _holeResultPickAndGiveAsArg :: T m Guid
   , _holeResultPickAndGiveAsArgToOperator :: String -> T m Guid
@@ -127,12 +127,10 @@ data HoleResultActions m = HoleResultActions
 
 data HoleActions m = HoleActions
   { _holeScope :: [Guid]
-  , _holeResultActions :: HoleResult (Tag m) -> HoleResultActions m
-  , _holeInferResults :: DataIRef.ExpressionM m () -> CT m [HoleResult (Tag m)]
+  , _holeInferResults :: DataIRef.ExpressionM m () -> CT m [HoleResult m]
   , _holePaste :: Maybe (T m Guid)
-
-  -- TODO: holeMDelete is always Nothing, not implemented yet
-  , _holeMDelete :: Maybe (T m Guid)
+  , -- TODO: holeMDelete is always Nothing, not implemented yet
+    _holeMDelete :: Maybe (T m Guid)
   }
 
 newtype Hole m = Hole
@@ -248,6 +246,6 @@ LensTH.makeLenses ''ListItemActions
 LensTH.makeLenses ''FuncParamActions
 LensTH.makeLenses ''Payload
 LensTH.makeLenses ''ExpressionP
-LensTH.makeLenses ''HoleResultActions
+LensTH.makeLenses ''HoleResult
 LensTH.makeLenses ''HoleActions
 LensTH.makeLenses ''Hole
