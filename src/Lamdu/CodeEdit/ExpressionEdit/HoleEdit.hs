@@ -409,9 +409,9 @@ makeResultsWidget holeInfo firstResults moreResults = do
     myId = hiHoleId holeInfo
     blockDownEvents =
       Widget.weakerEvents $
-      Widget.keysEventMap
+      E.keyPresses
       [E.ModKey E.noMods E.KeyDown]
-      (E.Doc ["Navigation", "Move", "down (blocked)"]) (return ())
+      (E.Doc ["Navigation", "Move", "down (blocked)"]) (return Widget.emptyEventResult)
 
 adHocTextEditEventMap :: MonadA m => Property m String -> Widget.EventHandlers m
 adHocTextEditEventMap textProp =
@@ -428,9 +428,7 @@ adHocTextEditEventMap textProp =
     ]
   ]
   where
-    changeText f = do
-      Property.pureModify textProp f
-      return Widget.emptyEventResult
+    changeText f = Widget.emptyEventResult <$ Property.pureModify textProp f
 
 collectResults ::
   (Applicative (List.ItemM l), List l) =>
@@ -510,7 +508,8 @@ mkCallsWithArgsEventMap holeInfo (Just result) =
     mkCallWithArg = eventMap Config.callWithArgumentKeys "Pick and give arg"
     mkCallWithNextArg = eventMap Config.callWithNextArgumentKeys "Pick and give next arg"
     eventMap keys doc f =
-      Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "Result", doc]) $
+      (fmap . fmap) Widget.eventResultFromCursor .
+      E.keyPresses keys (E.Doc ["Edit", "Result", doc]) $
       WidgetIds.fromGuid <$> f
     actions = hiHoleActions holeInfo
     holeActions = actions ^. Sugar.holeResultActions $ result
