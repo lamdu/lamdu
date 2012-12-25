@@ -507,9 +507,9 @@ mkCallsWithArgsEventMap holeInfo (Just result) =
   , maybe mempty mkCallWithNextArg $ holeActions ^. Sugar.holeResultMPickAndCallWithNextArg
   ]
   where
-    mkCallWithArg = mkEventMap Config.callWithArgumentKeys "Pick and give arg"
-    mkCallWithNextArg = mkEventMap Config.callWithNextArgumentKeys "Pick and give next arg"
-    mkEventMap keys doc f =
+    mkCallWithArg = eventMap Config.callWithArgumentKeys "Pick and give arg"
+    mkCallWithNextArg = eventMap Config.callWithNextArgumentKeys "Pick and give next arg"
+    eventMap keys doc f =
       Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "Result", doc]) $
       WidgetIds.fromGuid <$> f
     actions = hiHoleActions holeInfo
@@ -524,6 +524,15 @@ markTypeMatchesAsUsed holeInfo =
     checkInfer =
       fmap (isJust . listToMaybe) . ExprGuiM.fmapemoT .
       (hiHole holeInfo ^. Sugar.holeInferResults)
+
+mkEventMap ::
+  m ~ ViewM =>
+  HoleInfo m -> String -> Maybe (Sugar.HoleResult (Tag m)) -> Widget.EventHandlers (T m)
+mkEventMap holeInfo searchTerm mResult = mconcat
+  [ addNewDefinitionEventMap holeInfo
+  , pickEventMap holeInfo searchTerm mResult
+  , mkCallsWithArgsEventMap holeInfo mResult
+  ]
 
 makeActiveHoleEdit :: ViewM ~ m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
 makeActiveHoleEdit holeInfo = do
@@ -549,16 +558,10 @@ makeActiveHoleEdit holeInfo = do
         mplus mSelectedResult .
         fmap rlFirst $ listToMaybe firstResults
     searchTermWidget <- makeSearchTermWidget holeInfo searchTermId mResult
-    let
-      adHocEditor = adHocTextEditEventMap $ hiSearchTerm holeInfo
-      eventMap = mconcat
-        [ addNewDefinitionEventMap holeInfo
-        , pickEventMap holeInfo searchTerm mResult
-        , mkCallsWithArgsEventMap holeInfo mResult
-        ]
+    let adHocEditor = adHocTextEditEventMap $ hiSearchTerm holeInfo
     return .
       Lens.over ExpressionGui.egWidget
-      (Widget.strongerEvents eventMap .
+      (Widget.strongerEvents (mkEventMap holeInfo searchTerm mResult) .
        makeBackground (hiHoleId holeInfo)
        Layers.activeHoleBG Config.holeBackgroundColor) $
       ExpressionGui.addBelow
