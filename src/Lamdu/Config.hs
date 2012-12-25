@@ -44,10 +44,10 @@ jumpToDefinitionKeys = [noMods E.KeyEnter]
 
 delForwardKeys      = [noMods E.KeyDel, mk E.alt E.KeyDel]
 delBackwordKeys     = [noMods E.KeyBackspace]
-giveAsArgumentKeys  = [k ']', shift '0']
+giveAsArgumentKeys  = [k ']']
 pickAndMoveToNextHoleKeys = [noMods E.KeySpace]
-callWithArgumentKeys = [k '[', shift '9']
-callWithNextArgumentKeys = [k ',']
+callWithArgumentKeys = [shift '9']
+callWithNextArgumentKeys = [shift '0']
 debugModeKeys = [ctrlAlt 'd']
 
 newDefinitionKeys = [alt 'n']
