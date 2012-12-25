@@ -508,9 +508,8 @@ mkCallsWithArgsEventMap holeInfo (Just result) =
     mkCallWithArg = eventMap Config.callWithArgumentKeys "Pick and give arg"
     mkCallWithNextArg = eventMap Config.callWithNextArgumentKeys "Pick and give next arg"
     eventMap keys doc f =
-      (fmap . fmap) Widget.eventResultFromCursor .
       E.keyPresses keys (E.Doc ["Edit", "Result", doc]) $
-      WidgetIds.fromGuid <$> f
+      Widget.eventResultFromCursor . WidgetIds.fromGuid <$> f
     actions = hiHoleActions holeInfo
     holeActions = actions ^. Sugar.holeResultActions $ result
 
@@ -531,7 +530,14 @@ mkEventMap holeInfo searchTerm mResult = mconcat
   [ addNewDefinitionEventMap holeInfo
   , pickEventMap holeInfo searchTerm mResult
   , mkCallsWithArgsEventMap holeInfo mResult
+  , maybe mempty
+    (E.keyPresses (Config.delForwardKeys ++ Config.delBackwordKeys)
+     (E.Doc ["Edit", "Delete"]) .
+     fmap (Widget.eventResultFromCursor . WidgetIds.fromGuid)) $
+    actions ^. Sugar.holeMDelete
   ]
+  where
+    actions = hiHoleActions holeInfo
 
 makeActiveHoleEdit :: ViewM ~ m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
 makeActiveHoleEdit holeInfo = do
@@ -556,8 +562,8 @@ makeActiveHoleEdit holeInfo = do
       mResult =
         mplus mSelectedResult .
         fmap rlFirst $ listToMaybe firstResults
+      adHocEditor = adHocTextEditEventMap $ hiSearchTerm holeInfo
     searchTermWidget <- makeSearchTermWidget holeInfo searchTermId mResult
-    let adHocEditor = adHocTextEditEventMap $ hiSearchTerm holeInfo
     return .
       Lens.over ExpressionGui.egWidget
       (Widget.strongerEvents (mkEventMap holeInfo searchTerm mResult) .

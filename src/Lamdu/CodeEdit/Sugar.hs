@@ -16,7 +16,7 @@ module Lamdu.CodeEdit.Sugar
   , Pi(..)
   , Section(..)
   , Hole(..), holeScope, holeMActions, holeInferResults
-  , HoleActions(..), holeResultActions, holePaste
+  , HoleActions(..), holeResultActions, holePaste, holeMDelete
   , HoleResultActions(..), holeResultConvert, holeResultMPickAndCallWithArg
   , holeResultPick, holeResultPickAndGiveAsArg
   , holeResultPickAndGiveAsArgToOperator
@@ -627,6 +627,7 @@ convertInferredHoleH
       HoleActions
       { _holeResultActions = mkHoleResultActions sugarContext exprS
       , _holePaste = mPaste
+      , _holeMDelete = Nothing
       }
     filledHole =
       mkHole $

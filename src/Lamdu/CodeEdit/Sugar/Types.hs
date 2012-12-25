@@ -20,7 +20,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , Pi(..)
   , Section(..)
   , Hole(..), holeScope, holeMActions, holeInferResults
-  , HoleActions(..), holeResultActions, holePaste
+  , HoleActions(..), holeResultActions, holePaste, holeMDelete
   , HoleResultActions(..), holeResultConvert, holeResultMPickAndCallWithArg
   , holeResultPick, holeResultPickAndGiveAsArg
   , holeResultPickAndGiveAsArgToOperator
@@ -128,6 +128,9 @@ data HoleResultActions m = HoleResultActions
 data HoleActions m = HoleActions
   { _holeResultActions :: HoleResult (Tag m) -> HoleResultActions m
   , _holePaste :: Maybe (T m Guid)
+
+  -- TODO: holeMDelete is always Nothing, not implemented yet
+  , _holeMDelete :: Maybe (T m Guid)
   }
 
 data Hole m = Hole
