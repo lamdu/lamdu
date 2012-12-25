@@ -4,9 +4,10 @@ module Control.Lens.Utils
   , lensContext
   , contextSetter, contextVal
   , argument, result
+  , iresult
   ) where
 
-import Control.Applicative ((<$>))
+import Control.Applicative ((<$>), (<*>))
 import Control.Lens (Lens, (^.))
 import qualified Control.Lens as Lens
 
@@ -26,3 +27,7 @@ argument = Lens.sets (flip (.))
 
 result :: Lens.Setter (a -> b0) (a -> b1) b0 b1
 result = Lens.mapped
+
+-- An indexed result, usable with the indexed (@ in the name) lens operators
+iresult :: (Lens.Settable f, Lens.Indexable i k) => k (a -> f b) ((i -> a) -> f (i -> b))
+iresult = Lens.isets (<*>)

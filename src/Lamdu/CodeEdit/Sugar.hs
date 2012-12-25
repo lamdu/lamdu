@@ -32,7 +32,8 @@ module Lamdu.CodeEdit.Sugar
 
 import Control.Applicative ((<$), (<$>), Applicative(..), liftA2)
 import Control.Arrow (first)
-import Control.Lens ((.~), (^.), (%~), (&))
+import Control.Lens ((.~), (^.), (%@~), (<.), (.>), (&))
+import Control.Lens.Utils (iresult)
 import Control.Monad ((<=<), join, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (runState)
@@ -575,15 +576,14 @@ addPickAndCallWithNextArg ::
   DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i (Stored m)) ->
   Expression m -> Expression m
 addPickAndCallWithNextArg sugarContext app applyS argS =
-  ( rExpressionBody . expressionHole . holeMActions . Lens.mapped .
-    holeResultActions %~ onHoleResultActions
+  ( rExpressionBody .> expressionHole .> holeMActions .> Lens.mapped .>
+    holeResultActions .> iresult <. holeResultMPickAndCallWithNextArg %@~
+    onHoleResultActions
   )
   where
     -- In this context we return the new actions of an apply's arg
     -- (which is a hole):
-    onHoleResultActions f res =
-      f res & holeResultMPickAndCallWithNextArg .~ mPickAndCallWithNextArg res
-    mPickAndCallWithNextArg res =
+    onHoleResultActions res _ =
       (pickAndCallWithArg res <$) <$>
       checkReplaceWithExpr
       (Expression.pureApply (appWithPicked res) Expression.pureHole)
