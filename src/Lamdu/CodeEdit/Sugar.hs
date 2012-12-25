@@ -615,23 +615,20 @@ convertInferredHoleH
       memoBy expr . inferApplyForms processRes expr .
       (`runState` inferState) $ Infer.newNodeWithScope scope
     onScopeElement (param, _typeExpr) = param
-    mkHole processRes = Hole
-      { _holeScope =
-          map onScopeElement . Map.toList $ Infer.iScope inferred
-      , _holeInferResults = inferResults processRes
-      , _holeMActions =
-          mkHoleActions <$>
-          traverse (SugarInfer.ntraversePayload pure id pure) exprI
-      }
-    mkHoleActions exprS =
+    mkHole processRes =
+      Hole $
+      mkWritableHoleActions processRes <$>
+      traverse (SugarInfer.ntraversePayload pure id pure) exprI
+    mkWritableHoleActions processRes exprS =
       HoleActions
       { _holeResultActions = mkHoleResultActions sugarContext exprS
       , _holePaste = mPaste
       , _holeMDelete = Nothing
+      , _holeScope = map onScopeElement . Map.toList $ Infer.iScope inferred
+      , _holeInferResults = inferResults processRes
       }
     filledHole =
-      mkHole $
-      maybe (return []) (fillPartialHolesInExpression check) <=< check
+      mkHole $ maybe (return []) (fillPartialHolesInExpression check) <=< check
     inferredHole =
       mkExpression exprI .
       ExpressionInferred . (`Inferred` filledHole) <=<
@@ -709,12 +706,7 @@ convertHole exprI =
       ctx <- SugarM.readContext
       mPaste <- fmap join . traverse mkPaste $ resultStored exprI
       convertInferredHoleH ctx mPaste inferred exprI
-    convertUninferredHole =
-      mkExpression exprI $ ExpressionHole Hole
-      { _holeScope = []
-      , _holeInferResults = const $ return []
-      , _holeMActions = Nothing
-      }
+    convertUninferredHole = mkExpression exprI . ExpressionHole $ Hole Nothing
 
 convertLiteralInteger :: m ~ Anchors.ViewM => Integer -> Convertor m
 convertLiteralInteger i exprI =

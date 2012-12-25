@@ -73,7 +73,6 @@ type CT m = StateT Cache (T m)
 data HoleInfo m = HoleInfo
   { hiHoleId :: Widget.Id
   , hiSearchTerm :: Property (T m) String
-  , hiHole :: Sugar.Hole m
   , hiHoleActions :: Sugar.HoleActions m
   , hiGuid :: Guid
   , hiMNextHole :: Maybe (Sugar.Expression m)
@@ -237,7 +236,7 @@ toResultsList ::
   MonadA m => HoleInfo m -> DataIRef.ExpressionM m () ->
   CT m (Maybe (ResultsList (Tag m)))
 toResultsList holeInfo baseExpr = do
-  results <- hiHole holeInfo ^. Sugar.holeInferResults $ baseExpr
+  results <- hiHoleActions holeInfo ^. Sugar.holeInferResults $ baseExpr
   return $
     case results of
     [] -> Nothing
@@ -279,7 +278,7 @@ makeAllResults
 makeAllResults holeInfo = do
   paramResults <-
     traverse (makeVariableGroup . Expression.ParameterRef) $
-    hole ^. Sugar.holeScope
+    hiHoleActions holeInfo ^. Sugar.holeScope
   globalResults <-
     traverse (makeVariableGroup . Expression.DefinitionRef) =<<
     ExprGuiM.getP Anchors.globals
@@ -299,7 +298,6 @@ makeAllResults holeInfo = do
     globalResults
   where
     insensitiveInfixOf = isInfixOf `on` map Char.toLower
-    hole = hiHole holeInfo
     primitiveResults =
       [ mkGroup ["Set", "Type"] $ Expression.BodyLeaf Expression.Set
       , mkGroup ["Integer", "ℤ", "Z"] $ Expression.BodyLeaf Expression.IntegerType
@@ -324,7 +322,7 @@ addNewDefinitionEventMap holeInfo =
       DataOps.newPane newDefI
       defRef <-
         fmap (fromMaybe (error "GetDef should always type-check") . listToMaybe) .
-        ExprGuiM.unmemo . (hiHole holeInfo ^. Sugar.holeInferResults) .
+        ExprGuiM.unmemo . (hiHoleActions holeInfo ^. Sugar.holeInferResults) .
         Expression.pureExpression . Expression.BodyLeaf . Expression.GetVariable $
         Expression.DefinitionRef newDefI
       -- TODO: Can we use pickResult's animIdMapping?
@@ -517,11 +515,11 @@ markTypeMatchesAsUsed :: MonadA m => HoleInfo m -> ExprGuiM m ()
 markTypeMatchesAsUsed holeInfo =
   ExprGuiM.markVariablesAsUsed =<<
   filterM (checkInfer . Expression.pureExpression . Expression.makeParameterRef)
-  (hiHole holeInfo ^. Sugar.holeScope)
+  (hiHoleActions holeInfo ^. Sugar.holeScope)
   where
     checkInfer =
       fmap (isJust . listToMaybe) . ExprGuiM.fmapemoT .
-      (hiHole holeInfo ^. Sugar.holeInferResults)
+      (hiHoleActions holeInfo ^. Sugar.holeInferResults)
 
 mkEventMap ::
   m ~ ViewM =>
@@ -617,7 +615,6 @@ makeUnwrapped hole mNextHole guid myId = do
         holeInfo = HoleInfo
           { hiHoleId = myId
           , hiSearchTerm = searchTermProp
-          , hiHole = hole
           , hiHoleActions = holeActions
           , hiGuid = guid
           , hiMNextHole = mNextHole

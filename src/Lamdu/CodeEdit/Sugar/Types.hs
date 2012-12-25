@@ -126,17 +126,17 @@ data HoleResultActions m = HoleResultActions
   }
 
 data HoleActions m = HoleActions
-  { _holeResultActions :: HoleResult (Tag m) -> HoleResultActions m
+  { _holeScope :: [Guid]
+  , _holeResultActions :: HoleResult (Tag m) -> HoleResultActions m
+  , _holeInferResults :: DataIRef.ExpressionM m () -> CT m [HoleResult (Tag m)]
   , _holePaste :: Maybe (T m Guid)
 
   -- TODO: holeMDelete is always Nothing, not implemented yet
   , _holeMDelete :: Maybe (T m Guid)
   }
 
-data Hole m = Hole
-  { _holeScope :: [Guid]
-  , _holeInferResults :: DataIRef.ExpressionM m () -> CT m [HoleResult (Tag m)]
-  , _holeMActions :: Maybe (HoleActions m)
+newtype Hole m = Hole
+  { _holeMActions :: Maybe (HoleActions m)
   }
 
 data LiteralInteger m = LiteralInteger
