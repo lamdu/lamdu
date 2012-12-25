@@ -55,8 +55,8 @@ data Actions m = Actions
   -- Turn "x" to "x ? _" where "?" is an operator-hole.
   -- Given string is initial hole search term.
   , _giveAsArgToOperator :: String -> T m Guid
-  , _callWithArg :: Maybe (T m Guid)
-  , _callWithNextArg :: Maybe (T m Guid)
+  , _callWithNextArg :: T m (Maybe (T m Guid))
+  , _callWithArg :: T m (Maybe (T m Guid))
   , _replace :: T m Guid
   , _cut :: T m Guid
   }
@@ -121,8 +121,8 @@ data HoleResult m = HoleResult
   , _holeResultPick :: T m Guid
   , _holeResultPickAndGiveAsArg :: T m Guid
   , _holeResultPickAndGiveAsArgToOperator :: String -> T m Guid
-  , _holeResultMPickAndCallWithArg :: Maybe (T m Guid)
-  , _holeResultMPickAndCallWithNextArg :: Maybe (T m Guid)
+  , _holeResultMPickAndCallWithArg :: T m (Maybe (T m Guid))
+  , _holeResultMPickAndCallWithNextArg :: T m (Maybe (T m Guid))
   }
 
 data HoleActions m = HoleActions
