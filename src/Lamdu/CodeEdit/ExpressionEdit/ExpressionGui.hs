@@ -13,6 +13,7 @@ module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui
   , withBgColor
   -- TODO: Maybe move to ExpressionGui.Collapser:
   , Collapser(..), makeCollapser
+  , makeColoredLabel
   ) where
 
 import Control.Lens ((^.))
@@ -165,6 +166,13 @@ wrapExpression ::
   Widget.Id -> ExprGuiM m (ExpressionGui f)
 wrapExpression =
   wrapDelegated exprFocusDelegatorConfig FocusDelegator.Delegating
+
+makeColoredLabel ::
+  MonadA m => Int -> Draw.Color -> String -> Widget.Id -> ExprGuiM m (ExpressionGui f)
+makeColoredLabel textSize color text myId =
+  fmap fromValueWidget .
+  ExprGuiM.atEnv (WE.setTextSizeColor textSize color) .
+  ExprGuiM.widgetEnv . BWidgets.makeLabel text $ Widget.toAnimId myId
 
 parenify ::
   MonadA m =>
