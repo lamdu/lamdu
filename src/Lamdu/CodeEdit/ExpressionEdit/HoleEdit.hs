@@ -499,12 +499,12 @@ pickEventMap _ _ _ = mempty
 
 mkCallsWithArgsEventMap ::
   ViewM ~ m => HoleInfo m -> Maybe (Sugar.HoleResult (Tag m)) ->
-  T m (Widget.EventHandlers (T m))
-mkCallsWithArgsEventMap _ Nothing = pure mempty
+  Widget.EventHandlers (T m)
+mkCallsWithArgsEventMap _ Nothing = mempty
 mkCallsWithArgsEventMap holeInfo (Just result) =
-  mconcat <$> sequence
-  [ maybe mempty mkCallWithArg <$> holeActions ^. Sugar.holeResultMPickAndCallWithArg
-  , maybe mempty mkCallWithNextArg <$> holeActions ^. Sugar.holeResultMPickAndCallWithNextArg
+  mconcat
+  [ maybe mempty mkCallWithArg $ holeActions ^. Sugar.holeResultMPickAndCallWithArg
+  , maybe mempty mkCallWithNextArg $ holeActions ^. Sugar.holeResultMPickAndCallWithNextArg
   ]
   where
     mkCallWithArg = mkEventMap Config.callWithArgumentKeys "Pick and give arg"
@@ -548,14 +548,13 @@ makeActiveHoleEdit holeInfo = do
       mResult =
         mplus mSelectedResult .
         fmap rlFirst $ listToMaybe firstResults
-    callWithArgEventMap <- ExprGuiM.transaction $ mkCallsWithArgsEventMap holeInfo mResult
     searchTermWidget <- makeSearchTermWidget holeInfo searchTermId mResult
     let
       adHocEditor = adHocTextEditEventMap $ hiSearchTerm holeInfo
       eventMap = mconcat
         [ addNewDefinitionEventMap holeInfo
         , pickEventMap holeInfo searchTerm mResult
-        , callWithArgEventMap
+        , mkCallsWithArgsEventMap holeInfo mResult
         ]
     return .
       Lens.over ExpressionGui.egWidget

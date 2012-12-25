@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings, TypeFamilies #-}
 module Lamdu.CodeEdit.ExpressionEdit(make) where
 
-import Control.Applicative ((<$>))
 import Control.Lens ((^.))
 import Control.Monad ((<=<))
 import Control.MonadA (MonadA)
@@ -129,21 +128,18 @@ actionsEventMap ::
   ExprGuiM m (EventHandlers (Transaction m))
 actionsEventMap exprGuid holePicker actions = do
   isSelected <- ExprGuiM.widgetEnv . WE.isSubCursor $ WidgetIds.fromGuid exprGuid
-  callWithArgsEventMap <-
-    if isSelected
-    then
-      mconcat <$> sequence
-      [ maybe mempty
-        (mkEventMap Config.callWithArgumentKeys (E.Doc ["Edit", "Call with argument"])
-         FocusDelegator.delegatingId) <$>
-        ExprGuiM.transaction (actions ^. Sugar.callWithArg)
-      , maybe mempty
-        (mkEventMap Config.callWithNextArgumentKeys (E.Doc ["Edit", "Add argument"])
-         FocusDelegator.delegatingId) <$>
-        ExprGuiM.transaction (actions ^. Sugar.callWithNextArg)
-      ]
-    else return mempty
   let
+    callWithArgsEventMap
+      | isSelected =
+        mconcat
+        [ maybe mempty
+          (mkEventMap Config.callWithArgumentKeys (E.Doc ["Edit", "Call with argument"])
+           FocusDelegator.delegatingId) $ actions ^. Sugar.callWithArg
+        , maybe mempty
+          (mkEventMap Config.callWithNextArgumentKeys (E.Doc ["Edit", "Add argument"])
+           FocusDelegator.delegatingId) $ actions ^. Sugar.callWithNextArg
+        ]
+      | otherwise = mempty
     replace
       | isSelected && isHole = mempty
       | isSelected =

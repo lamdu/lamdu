@@ -2,7 +2,7 @@
              PatternGuards #-}
 module Lamdu.Data.Expression.Infer
   ( Inferred(..), rExpression
-  , Loaded, load
+  , Loaded, load, loaderOfExisting
   , inferLoaded
   , addRules, derefExpr
   -- TODO: Expose only ref readers for InferNode (instead of .. and TypedValue)
@@ -507,6 +507,9 @@ data Loaded def a = Loaded
 instance (Binary a, Binary def, Ord def) => Binary (Loaded def a) where
   get = Loaded <$> get <*> get
   put (Loaded a b) = put a >> put b
+
+loaderOfExisting :: Ord def => Loaded def a -> Loader def Maybe
+loaderOfExisting (Loaded _ typesMap) = Loader (`Map.lookup` typesMap)
 
 load ::
   (MonadA m, Ord def) =>

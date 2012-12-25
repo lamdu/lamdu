@@ -36,12 +36,12 @@ import Control.Lens ((.~), (^.), (%@~), (<.), (.>), (&))
 import Control.Lens.Utils (iresult)
 import Control.Monad ((<=<), join, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.State (runState)
+import Control.Monad.Trans.State (runState, evalStateT)
 import Control.Monad.Trans.Writer (runWriter)
 import Control.MonadA (MonadA)
 import Data.Function (on)
 import Data.List.Utils (sortOn)
-import Data.Maybe (listToMaybe, maybeToList)
+import Data.Maybe (listToMaybe, maybeToList, fromMaybe)
 import Data.Monoid (Any(..))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag, Tagged)
@@ -91,38 +91,41 @@ mkCutter expr replaceWithHole = do
 
 checkReplaceWithExpr ::
   MonadA m =>
+  SugarM.InferParams (Tag m) ->
   DataIRef.ExpressionM m () ->
-  Maybe (DefI (Tag m)) ->
   DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i s) ->
-  T m (Maybe (DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))))
-checkReplaceWithExpr replacer mDefI expr =
-  uncurry (SugarInfer.inferMaybe_ mDefI withApply) $
-  Infer.initial mDefI
+  Maybe (DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))))
+checkReplaceWithExpr (SugarM.InferParams mDefI loader) replacer expr =
+  (fmap . fmap) fst . (`evalStateT` initialContext) $
+  Infer.inferLoaded (Infer.InferActions (const Nothing)) loaded rootNode
   where
+    (initialContext, rootNode) = Infer.initial mDefI
+    loaded =
+      fromMaybe (error "reload of same expression has new defs?") $
+      Infer.load loader mDefI withApply
     withApply =
-      expr ^. Expression.ePayload . SugarInfer.plSetter $
-      replacer
+      expr ^. Expression.ePayload . SugarInfer.plSetter $ replacer
 
 mkCallWithArg ::
-  MonadA m => Maybe (DefI (Tag m)) ->
+  MonadA m =>
+  SugarM.InferParams (Tag m) ->
   DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i (Stored m)) ->
-  T m (Maybe (T m Guid))
-mkCallWithArg mDefI exprS =
-  (mkCall <$) <$>
-  checkReplaceWithExpr replacer mDefI exprS
+  Maybe (T m Guid)
+mkCallWithArg inferParams exprS =
+  mkCall <$ checkReplaceWithExpr inferParams replacer exprS
   where
     mkCall = fmap DataIRef.exprGuid . DataOps.callWithArg $ resultStored exprS
     replacer = Expression.pureApply (void exprS) Expression.pureHole
 
-
 mkActions ::
-  m ~ Anchors.ViewM => Maybe (DefI (Tag m)) ->
+  m ~ Anchors.ViewM =>
+  SugarM.InferParams (Tag m) ->
   DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i (Stored m)) -> Actions m
-mkActions mDefI exprS =
+mkActions inferParams exprS =
   Actions
   { _giveAsArg = DataIRef.exprGuid <$> DataOps.giveAsArg stored
-  , _callWithArg = mkCallWithArg mDefI exprS
-  , _callWithNextArg = pure Nothing
+  , _callWithArg = mkCallWithArg inferParams exprS
+  , _callWithNextArg = Nothing
   , _replace = doReplace
   , _cut = mkCutter (Property.value stored) doReplace
   , _giveAsArgToOperator =
@@ -158,7 +161,7 @@ mkExpression ::
   DataIRef.ExpressionM m (PayloadMM m) ->
   ExpressionBody m (Expression m) -> SugarM m (Expression m)
 mkExpression exprI expr = do
-  mDefI <- SugarM.scMDefI <$> SugarM.readContext
+  sugarContext <- SugarM.readContext
   inferredTypesRefs <-
     zipWithM
     ( fmap (convertExpressionI . fmap toPayloadMM)
@@ -171,7 +174,7 @@ mkExpression exprI expr = do
     , _rPayload = Payload
       { _plInferredTypes = inferredTypesRefs
       , _plActions =
-        mkActions mDefI <$>
+        mkActions (SugarM.scInferParams sugarContext) <$>
         traverse (SugarInfer.ntraversePayload pure id pure) exprI
       , _plNextHole = Nothing
       }
@@ -382,18 +385,17 @@ convertApplyPrefix ::
   m ~ Anchors.ViewM =>
   Expression.Apply (Expression m, DataIRef.ExpressionM m (PayloadMM m)) -> Convertor m
 convertApplyPrefix app@(Expression.Apply (funcRef, funcI) (argRef, argI)) applyI = do
-  sugarContext <- SugarM.readContext
+  inferParams <- SugarM.scInferParams <$> SugarM.readContext
   let
-    mDefI = SugarM.scMDefI sugarContext
     newArgRef = addCallWithNextArg $ addParens argRef
     fromMaybeStored = traverse (SugarInfer.ntraversePayload pure id pure)
     onStored expr f = maybe id f $ fromMaybeStored expr
     addCallWithNextArg =
       onStored applyI $ \applyS ->
       ( rPayload . plActions . Lens.mapped . callWithNextArg .~
-        mkCallWithArg mDefI applyS
+        mkCallWithArg inferParams applyS
       ) .
-      onStored argI (addPickAndCallWithNextArg sugarContext (void . snd <$> app) applyS)
+      onStored argI (addPickAndCallWithNextArg inferParams (void . snd <$> app) applyS)
     newFuncRef =
       setNextHole newArgRef .
       addApplyChildParens .
@@ -544,38 +546,34 @@ mkHoleResultActions ::
   HoleResult (Tag m) -> HoleResultActions m
 mkHoleResultActions sugarContext exprS res =
   HoleResultActions
-  { _holeResultConvert = convertHoleResult config res
+  { _holeResultConvert = convertHoleResult (SugarM.scConfig sugarContext) res
   , _holeResultPick = pick
   , _holeResultPickAndGiveAsArg =
       pick >> DataIRef.exprGuid <$> DataOps.giveAsArg stored
   , _holeResultPickAndGiveAsArgToOperator = pickAndGiveAsArgToOp
   , _holeResultMPickAndCallWithArg =
-      (pickAndCallWithArg <$) <$>
-      checkReplaceWithExpr
-      (Expression.pureApply (void res) Expression.pureHole)
-      mDefI exprS
-  , _holeResultMPickAndCallWithNextArg = pure Nothing
+      pickAndCallWithArg <$
+      checkReplaceWithExpr (SugarM.scInferParams sugarContext)
+      (Expression.pureApply (void res) Expression.pureHole) exprS
+  , _holeResultMPickAndCallWithNextArg = Nothing
   }
   where
     pickAndCallWithArg =
       pick >> DataIRef.exprGuid <$> DataOps.callWithArg stored
     pickAndGiveAsArgToOp name =
       pick >> DataIRef.exprGuid <$> DataOps.giveAsArgToOperator stored name
-    pick = pickResult eGuid exprS res
+    pick = pickResult (resultGuid exprS) exprS res
     stored = resultStored exprS
-    eGuid = resultGuid exprS
-    mDefI = SugarM.scMDefI sugarContext
-    config = SugarM.scConfig sugarContext
 
 -- This is called to add the pick-and-call-with-next-arg action on the
 -- *ARG*(argS) which may be a hole (inside the applyS).
 addPickAndCallWithNextArg ::
   m ~ Anchors.ViewM =>
-  SugarM.Context (Tag m) -> Expression.Apply (DataIRef.ExpressionM m ()) ->
+  SugarM.InferParams (Tag m) -> Expression.Apply (DataIRef.ExpressionM m ()) ->
   DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i (Stored m)) ->
   DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i (Stored m)) ->
   Expression m -> Expression m
-addPickAndCallWithNextArg sugarContext app applyS argS =
+addPickAndCallWithNextArg inferParams app applyS argS =
   ( rExpressionBody .> expressionHole .> holeMActions .> Lens.mapped .>
     holeResultActions .> iresult <. holeResultMPickAndCallWithNextArg %@~
     onHoleResultActions
@@ -584,17 +582,16 @@ addPickAndCallWithNextArg sugarContext app applyS argS =
     -- In this context we return the new actions of an apply's arg
     -- (which is a hole):
     onHoleResultActions res _ =
-      (pickAndCallWithArg res <$) <$>
-      checkReplaceWithExpr
+      pickAndCallWithArg res <$
+      checkReplaceWithExpr inferParams
       (Expression.pureApply (appWithPicked res) Expression.pureHole)
-      mDefI applyS
+      applyS
     appWithPicked res =
       Expression.pureExpression . Expression.BodyApply $
       app & Expression.applyArg .~ void res
     pickAndCallWithArg res = do
       _ <- pickResult eGuid argS res
       DataIRef.exprGuid <$> DataOps.callWithArg (resultStored applyS)
-    mDefI = SugarM.scMDefI sugarContext
     eGuid = resultGuid applyS
 
 convertInferredHoleH ::
