@@ -337,7 +337,7 @@ addNewDefinitionEventMap holeInfo =
 
 disallowedHoleChars :: [(Char, E.IsShifted)]
 disallowedHoleChars =
-  E.anyShiftedChars ",`[]\n() " ++
+  E.anyShiftedChars ",`\n() " ++
   [ ('0', E.Shifted)
   , ('9', E.Shifted)
   ]

@@ -11,7 +11,7 @@ import Data.Store.IRef (IRef, Tag)
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Version (Version)
 import Data.Store.Transaction (Transaction)
-import Lamdu.CodeEdit.Sugar.Config (SugarConfig(SugarConfig))
+import Lamdu.CodeEdit.Sugar.Config (SugarConfig(..))
 import Lamdu.Data.Definition (Definition(..))
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Store.IRef as IRef
@@ -22,7 +22,6 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Anchors as A
 import qualified Lamdu.BranchGUI as BranchGUI
 import qualified Lamdu.CodeEdit.FFI as FFI
-import qualified Lamdu.CodeEdit.Sugar.Config as SugarConfig
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
@@ -128,8 +127,8 @@ createBuiltins =
 
     let
       sugarConfig = SugarConfig
-        { SugarConfig.cons = cons
-        , SugarConfig.nil = nil
+        { scCons = cons
+        , scNil = nil
         }
       ffiEnv = FFI.Env
         { FFI.trueDef = true

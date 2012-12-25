@@ -14,6 +14,7 @@ module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui
   -- TODO: Maybe move to ExpressionGui.Collapser:
   , Collapser(..), makeCollapser
   , makeColoredLabel
+  , makeFocusableView
   ) where
 
 import Control.Lens ((^.))
@@ -173,6 +174,12 @@ makeColoredLabel textSize color text myId =
   fmap fromValueWidget .
   ExprGuiM.atEnv (WE.setTextSizeColor textSize color) .
   ExprGuiM.widgetEnv . BWidgets.makeLabel text $ Widget.toAnimId myId
+
+makeFocusableView ::
+  (MonadA m, MonadA n) => Widget.Id -> ExpressionGui n -> ExprGuiM m (ExpressionGui n)
+makeFocusableView myId gui =
+  ExprGuiM.widgetEnv $
+  egWidget (BWidgets.makeFocusableView myId) gui
 
 parenify ::
   MonadA m =>

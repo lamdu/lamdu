@@ -11,6 +11,7 @@ module Lamdu.CodeEdit.Sugar
   , ExpressionP(..), rGuid, rExpressionBody, rPayload
   , Expression
   , WhereItem(..)
+  , ListItem(..), List(..)
   , Func(..)
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
@@ -34,7 +35,7 @@ module Lamdu.CodeEdit.Sugar
 
 import Control.Applicative ((<$), (<$>), Applicative(..), liftA2)
 import Control.Arrow (first)
-import Control.Lens ((.~), (^.), (&), (%~), (.~))
+import Control.Lens (SimpleTraversal, (.~), (^.), (&), (%~), (.~))
 import Control.Monad ((<=<), join, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (runState)
@@ -48,7 +49,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag, Tagged)
 import Data.Traversable (traverse)
 import Data.Tuple (swap)
-import Lamdu.CodeEdit.Sugar.Config (SugarConfig)
+import Lamdu.CodeEdit.Sugar.Config (SugarConfig(..))
 import Lamdu.CodeEdit.Sugar.Infer (InferredWC, NoInferred(..), Stored, NoStored)
 import Lamdu.CodeEdit.Sugar.Monad (SugarM)
 import Lamdu.CodeEdit.Sugar.Types -- see export list
@@ -114,7 +115,6 @@ mkCallWithArg mDefI exprS =
   where
     mkCall = fmap DataIRef.exprGuid . DataOps.callWithArg $ resultStored exprS
     replacer = Expression.pureApply (void exprS) Expression.pureHole
-
 
 mkActions ::
   m ~ Anchors.ViewM => Maybe (DefI (Tag m)) ->
@@ -201,7 +201,10 @@ deleteParamRef param =
     refs =
       Lens.folding Expression.subExpressions .
       Lens.filtered (Lens.anyOf paramRef (== param))
-    paramRef = Expression.eBody . Expression.bodyLeaf . Expression.getVariable . Expression.parameterRef
+    paramRef = getVar . Expression.parameterRef
+
+getVar :: SimpleTraversal (Expression.Expression def a) (Expression.VariableRef def)
+getVar = Expression.eBody . Expression.bodyLeaf . Expression.getVariable
 
 mkFuncParamActions ::
   m ~ Anchors.ViewM =>
@@ -325,14 +328,18 @@ isPolymorphicFunc funcI =
 
 convertApply :: m ~ Anchors.ViewM => Expression.Apply (DataIRef.ExpressionM m (PayloadMM m)) -> Convertor m
 convertApply (Expression.Apply funcI argI) exprI = do
-  funcS <- convertExpressionI funcI
-  argS <- convertExpressionI argI
-  let apply = Expression.Apply (funcS, funcI) (argS, argI)
-  case funcS ^. rExpressionBody of
-    ExpressionSection _ section ->
-      applyOnSection section apply exprI
-    _ ->
-      convertApplyPrefix apply exprI
+  nil <- scNil . SugarM.scConfig <$> SugarM.readContext
+  if Lens.anyOf (getVar . Expression.definitionRef) (== nil) funcI
+    then mkExpression exprI . ExpressionList $ List []
+    else do
+      funcS <- convertExpressionI funcI
+      argS <- convertExpressionI argI
+      let apply = Expression.Apply (funcS, funcI) (argS, argI)
+      case funcS ^. rExpressionBody of
+        ExpressionSection _ section ->
+          applyOnSection section apply exprI
+        _ ->
+          convertApplyPrefix apply exprI
 
 removeInferredTypes :: Expression m -> Expression m
 removeInferredTypes = Lens.set (rPayload . plInferredTypes) []
@@ -409,8 +416,8 @@ convertApplyPrefix app@(Expression.Apply (funcRef, funcI) (argRef, argI)) applyI
       case funcRef ^. rExpressionBody of
       ExpressionPolymorphic (Polymorphic g compact full) ->
         makePolymorphic g compact =<< makeApply full
-      ExpressionGetVariable getVar ->
-        makePolymorphic (resultGuid funcI) getVar =<< makeFullApply
+      ExpressionGetVariable varRef ->
+        makePolymorphic (resultGuid funcI) varRef =<< makeFullApply
       _ -> makeFullApply
     else
       makeFullApply

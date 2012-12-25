@@ -9,11 +9,14 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
+import Graphics.UI.Bottle.Widget (EventHandlers)
 import Lamdu.Anchors (ViewM)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
-import Graphics.UI.Bottle.Widget (EventHandlers)
 import qualified Control.Lens as Lens
+import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.AtomEdit as AtomEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -21,6 +24,7 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.InferredEdit as InferredEdit
+import qualified Lamdu.CodeEdit.ExpressionEdit.ListEdit as ListEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.PiEdit as PiEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.PolymorphicEdit as PolymorphicEdit
@@ -31,9 +35,6 @@ import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
-import qualified Graphics.UI.Bottle.EventMap as E
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 data IsHole = NotAHole | IsAHole
 
@@ -105,6 +106,8 @@ makeEditor sExpr =
     notAHole $ LiteralEdit.makeInt integer
   Sugar.ExpressionAtom atom ->
     notAHole $ AtomEdit.make atom
+  Sugar.ExpressionList list ->
+    notAHole $ ListEdit.make list
   where
     isAHole hole =
       (fmap . fmap)

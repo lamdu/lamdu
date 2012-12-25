@@ -7,14 +7,16 @@ module Lamdu.CodeEdit.Sugar.Types
   , DefinitionBuiltin(..)
   , Actions(..), giveAsArg, callWithArg, callWithNextArg, replace, cut, giveAsArgToOperator
   , ExpressionBody(..), eHasParens
-  , expressionPi, expressionApply, expressionSection
-  , expressionFunc, expressionGetVariable, expressionHole
-  , expressionInferred, expressionPolymorphic
-  , expressionLiteralInteger, expressionAtom
+    , expressionPi, expressionApply, expressionSection
+    , expressionFunc, expressionGetVariable, expressionHole
+    , expressionInferred, expressionPolymorphic
+    , expressionLiteralInteger, expressionAtom
+    , expressionList
   , Payload(..), plInferredTypes, plActions, plNextHole
   , ExpressionP(..), rGuid, rExpressionBody, rPayload
   , Expression
   , WhereItem(..)
+  , ListItem(..), List(..)
   , Func(..), fDepParams, fParams, fBody
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
@@ -41,6 +43,7 @@ import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Control.Lens.TH as LensTH
+import qualified Data.List as List
 import qualified Data.Store.IRef as IRef
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expression
@@ -153,6 +156,15 @@ data Polymorphic t expr = Polymorphic
   , pFullExpression :: expr
   } deriving (Functor)
 
+data ListItem m expr = ListItem
+  { liActions :: ListItemActions m
+  , liExpr :: expr
+  } deriving (Functor)
+
+newtype List m expr = List
+  { lValues :: [ListItem m expr]
+  } deriving (Functor)
+
 data ExpressionBody m expr
   = ExpressionApply   { _eHasParens :: HasParens, __eApply :: Expression.Apply expr }
   | ExpressionSection { _eHasParens :: HasParens, __eSection :: Section expr }
@@ -164,6 +176,7 @@ data ExpressionBody m expr
   | ExpressionPolymorphic { __ePolymorphic :: Polymorphic (Tag m) expr }
   | ExpressionLiteralInteger { __eLit :: LiteralInteger m }
   | ExpressionAtom { __eAtom :: String }
+  | ExpressionList { __eList :: List m expr }
   deriving (Functor)
 LensTH.makePrisms ''ExpressionBody
 
@@ -196,6 +209,12 @@ instance Show expr => Show (ExpressionBody m expr) where
   show ExpressionPolymorphic {} = "Poly"
   show ExpressionLiteralInteger { __eLit = LiteralInteger i _ } = show i
   show ExpressionAtom { __eAtom = atom } = atom
+  show ExpressionList { __eList = List items } =
+    concat
+    [ "["
+    , List.intercalate ", " $ map (show . liExpr) items
+    , "]"
+    ]
 
 data DefinitionNewType m = DefinitionNewType
   { dntNewType :: Expression m

@@ -9,7 +9,7 @@ import Data.DeriveTH (derive)
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 
 data SugarConfig t = SugarConfig
-  { cons :: DataIRef.DefI t
-  , nil :: DataIRef.DefI t
+  { scCons :: DataIRef.DefI t
+  , scNil :: DataIRef.DefI t
   }
 derive makeBinary ''SugarConfig
