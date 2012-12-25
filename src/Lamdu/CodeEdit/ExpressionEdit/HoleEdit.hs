@@ -73,12 +73,12 @@ type CT m = StateT Cache (T m)
 data HoleInfo m = HoleInfo
   { hiHoleId :: Widget.Id
   , hiSearchTerm :: Property (T m) String
-  , hiHoleActions :: Sugar.HoleActions m
+  , hiHoleActions :: Sugar.HoleActions m (Sugar.Expression m)
   , hiGuid :: Guid
   , hiMNextHole :: Maybe (Sugar.Expression m)
   }
 
-pickExpr :: MonadA m => Sugar.HoleResult m -> T m Widget.EventResult
+pickExpr :: MonadA m => Sugar.HoleResult m (Sugar.Expression m) -> T m Widget.EventResult
 pickExpr holeResult = do
   guid <- holeResult ^. Sugar.holeResultPick
   return Widget.EventResult
@@ -87,7 +87,7 @@ pickExpr holeResult = do
     }
 
 resultPickEventMap ::
-  MonadA m => HoleInfo m -> Sugar.HoleResult m ->
+  MonadA m => HoleInfo m -> Sugar.HoleResult m (Sugar.Expression m) ->
   Widget.EventHandlers (T m)
 resultPickEventMap holeInfo holeResult =
   case hiMNextHole holeInfo of
@@ -109,8 +109,8 @@ resultPickEventMap holeInfo holeResult =
 data ResultsList m = ResultsList
   { rlFirstId :: Widget.Id
   , rlMoreResultsPrefixId :: Widget.Id
-  , rlFirst :: Sugar.HoleResult m
-  , rlMore :: Maybe [Sugar.HoleResult m]
+  , rlFirst :: Sugar.HoleResult m (Sugar.Expression m)
+  , rlMore :: Maybe [Sugar.HoleResult m (Sugar.Expression m)]
   }
 
 resultsToWidgets
@@ -118,7 +118,7 @@ resultsToWidgets
   => HoleInfo m -> ResultsList m
   -> ExprGuiM m
      ( WidgetT m
-     , Maybe (Sugar.HoleResult m, Maybe (WidgetT m))
+     , Maybe (Sugar.HoleResult m (Sugar.Expression m), Maybe (WidgetT m))
      )
 resultsToWidgets holeInfo results = do
   cursorOnMain <- ExprGuiM.widgetEnv $ WE.isSubCursor myId
@@ -348,7 +348,7 @@ disallowChars = E.filterSChars $ curry (`notElem` disallowedHoleChars)
 makeSearchTermWidget
   :: MonadA m
   => HoleInfo m -> Widget.Id
-  -> Maybe (Sugar.HoleResult m)
+  -> Maybe (Sugar.HoleResult m (Sugar.Expression m))
   -> ExprGuiM m (ExpressionGui m)
 makeSearchTermWidget holeInfo searchTermId mResultToPick =
   ExprGuiM.widgetEnv .
@@ -372,7 +372,7 @@ makeResultsWidget
   :: MonadA m
   => HoleInfo m
   -> [ResultsList m] -> Bool
-  -> ExprGuiM m (Maybe (Sugar.HoleResult m), WidgetT m)
+  -> ExprGuiM m (Maybe (Sugar.HoleResult m (Sugar.Expression m)), WidgetT m)
 makeResultsWidget holeInfo firstResults moreResults = do
   firstResultsAndWidgets <-
     traverse (resultsToWidgets holeInfo) firstResults
@@ -468,7 +468,7 @@ alphaNumericHandler doc handler =
   Config.alphaNumericChars . flip $ const handler
 
 pickEventMap ::
-  MonadA m => HoleInfo m -> String -> Maybe (Sugar.HoleResult m) ->
+  MonadA m => HoleInfo m -> String -> Maybe (Sugar.HoleResult m (Sugar.Expression m)) ->
   Widget.EventHandlers (T m)
 pickEventMap holeInfo searchTerm (Just result)
   | nonEmptyAll (`notElem` Config.operatorChars) searchTerm =
@@ -490,7 +490,7 @@ pickEventMap holeInfo searchTerm (Just result)
 pickEventMap _ _ _ = mempty
 
 mkCallsWithArgsEventMap ::
-  ViewM ~ m => Maybe (Sugar.HoleResult m) ->
+  ViewM ~ m => Maybe (Sugar.HoleResult m (Sugar.Expression m)) ->
   T m (Widget.EventHandlers (T m))
 mkCallsWithArgsEventMap Nothing = pure mempty
 mkCallsWithArgsEventMap (Just result) =
@@ -517,7 +517,7 @@ markTypeMatchesAsUsed holeInfo =
 
 mkEventMap ::
   m ~ ViewM =>
-  HoleInfo m -> String -> Maybe (Sugar.HoleResult m) ->
+  HoleInfo m -> String -> Maybe (Sugar.HoleResult m (Sugar.Expression m)) ->
   ExprGuiM m (Widget.EventHandlers (T m))
 mkEventMap holeInfo searchTerm mResult = do
   callsWithArgsEventMap <-
@@ -583,14 +583,15 @@ holeFDConfig = FocusDelegator.Config
   }
 
 make ::
-  m ~ ViewM => Sugar.Hole m -> Maybe (Sugar.Expression m) -> Guid ->
+  m ~ ViewM => Sugar.Hole m (Sugar.Expression m) -> Maybe (Sugar.Expression m) -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make hole mNextHole guid =
   ExpressionGui.wrapDelegated holeFDConfig FocusDelegator.Delegating $
   makeUnwrapped hole mNextHole guid
 
 makeInactiveHoleEdit ::
-  MonadA m => Sugar.Hole m -> Widget.Id -> ExprGuiM m (ExpressionGui m)
+  MonadA m =>
+  Sugar.Hole m (Sugar.Expression m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeInactiveHoleEdit hole myId =
   fmap
   (ExpressionGui.fromValueWidget .
@@ -603,7 +604,8 @@ makeInactiveHoleEdit hole myId =
     canPickResult = isJust $ hole ^. Sugar.holeMActions
 
 makeUnwrapped ::
-  m ~ ViewM => Sugar.Hole m -> Maybe (Sugar.Expression m) -> Guid ->
+  m ~ ViewM => Sugar.Hole m (Sugar.Expression m) ->
+  Maybe (Sugar.Expression m) -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeUnwrapped hole mNextHole guid myId = do
   cursor <- ExprGuiM.widgetEnv WE.readCursor

@@ -83,16 +83,16 @@ data ListItemActions m = ListItemActions
   , _itemDelete :: T m Guid
   }
 
-data FuncParamActions m = FuncParamActions
+data FuncParamActions m expr = FuncParamActions
   { _fpListItemActions :: ListItemActions m
-  , _fpGetExample :: CT m (Expression m)
-  }
+  , _fpGetExample :: CT m expr
+  } deriving (Functor)
 
 data FuncParam m expr = FuncParam
   { _fpGuid :: Guid
   , _fpHiddenLambdaGuid :: Maybe Guid
   , _fpType :: expr
-  , _fpMActions :: Maybe (FuncParamActions m)
+  , _fpMActions :: Maybe (FuncParamActions m expr)
   } deriving (Functor)
 
 -- Multi-param Lambda
@@ -115,27 +115,27 @@ data Section expr = Section
   , sectionRArg :: Maybe expr
   } deriving (Functor)
 
-data HoleResult m = HoleResult
+data HoleResult m expr = HoleResult
   { _holeResultInferred :: DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))
-  , _holeResultConvert :: T m (Expression m)
+  , _holeResultConvert :: T m expr
   , _holeResultPick :: T m Guid
   , _holeResultPickAndGiveAsArg :: T m Guid
   , _holeResultPickAndGiveAsArgToOperator :: String -> T m Guid
   , _holeResultMPickAndCallWithArg :: T m (Maybe (T m Guid))
   , _holeResultMPickAndCallWithNextArg :: T m (Maybe (T m Guid))
-  }
+  } deriving (Functor)
 
-data HoleActions m = HoleActions
+data HoleActions m expr = HoleActions
   { _holeScope :: [Guid]
-  , _holeInferResults :: DataIRef.ExpressionM m () -> CT m [HoleResult m]
+  , _holeInferResults :: DataIRef.ExpressionM m () -> CT m [HoleResult m expr]
   , _holePaste :: Maybe (T m Guid)
   , -- TODO: holeMDelete is always Nothing, not implemented yet
     _holeMDelete :: Maybe (T m Guid)
-  }
+  } deriving (Functor)
 
-newtype Hole m = Hole
-  { _holeMActions :: Maybe (HoleActions m)
-  }
+newtype Hole m expr = Hole
+  { _holeMActions :: Maybe (HoleActions m expr)
+  } deriving (Functor)
 
 data LiteralInteger m = LiteralInteger
   { liValue :: Integer
@@ -144,7 +144,7 @@ data LiteralInteger m = LiteralInteger
 
 data Inferred m expr = Inferred
   { iValue :: expr
-  , iHole :: Hole m
+  , iHole :: Hole m expr
   } deriving (Functor)
 
 data Polymorphic t expr = Polymorphic
@@ -159,7 +159,7 @@ data ExpressionBody m expr
   | ExpressionFunc    { _eHasParens :: HasParens, __eFunc :: Func m expr }
   | ExpressionPi      { _eHasParens :: HasParens, __ePi :: Pi m expr }
   | ExpressionGetVariable { __getVariable :: Expression.VariableRef (DefI (Tag m)) }
-  | ExpressionHole { __eHole :: Hole m }
+  | ExpressionHole    { __eHole :: Hole m expr }
   | ExpressionInferred { __eInferred :: Inferred m expr }
   | ExpressionPolymorphic { __ePolymorphic :: Polymorphic (Tag m) expr }
   | ExpressionLiteralInteger { __eLit :: LiteralInteger m }

@@ -37,9 +37,8 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 
 data IsHole = NotAHole | IsAHole
 
-pasteEventMap
-  :: MonadA m
-  => Sugar.Hole m -> Widget.EventHandlers (Transaction m)
+pasteEventMap ::
+  MonadA m => Sugar.Hole m (Sugar.Expression m) -> Widget.EventHandlers (Transaction m)
 pasteEventMap =
   maybe mempty
   (Widget.keysEventMapMovesCursor
