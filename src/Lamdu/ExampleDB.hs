@@ -10,7 +10,7 @@ import Data.Store.Db (Db)
 import Data.Store.IRef (IRef, Tag)
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Version (Version)
-import Data.Store.Transaction (Transaction)
+import Data.Store.Transaction (Transaction, setP)
 import Lamdu.CodeEdit.Sugar.Config (SugarConfig(..))
 import Lamdu.Data.Definition (Definition(..))
 import qualified Control.Monad.Trans.Writer as Writer
@@ -141,7 +141,7 @@ createBuiltins =
     integer = DataIRef.newExprBody $ Expression.BodyLeaf Expression.IntegerType
     forAll name f = fmap DataIRef.ExpressionI . fixIRef $ \aI -> do
       let aGuid = IRef.guid aI
-      A.setP (A.assocNameRef aGuid) name
+      setP (A.assocNameRef aGuid) name
       s <- set
       return . Expression.makePi aGuid s =<< f ((getVar . Expression.ParameterRef) aGuid)
     setToSet = mkPi set set
@@ -165,7 +165,7 @@ createBuiltins =
 newBranch :: MonadA m => String -> Version (Tag m) -> Transaction m (Branch (Tag m))
 newBranch name ver = do
   branch <- Branch.new ver
-  A.setP (BranchGUI.branchNameProp branch) name
+  setP (BranchGUI.branchNameProp branch) name
   return branch
 
 initDB :: Db -> IO ()

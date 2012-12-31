@@ -18,7 +18,6 @@ module Lamdu.Anchors
   , Pane, makePane
   , nonEmptyAssocDataRef
   , assocNameRef, assocSearchTermRef
-  , MkProperty, getP, setP, modP
 
   , DbM, runDbTransaction
   , ViewM, runViewTransaction
@@ -68,12 +67,10 @@ runViewTransaction v = viewM . (Transaction.run . Transaction.onStoreM ViewM . V
 panesIRef :: IRef t [Pane t]
 panesIRef = IRef.anchor "panes"
 
-type MkProperty m a = T m (Transaction.Property m a)
-
-panes :: MkProperty ViewM [Pane (Tag ViewM)]
+panes :: Transaction.MkProperty ViewM [Pane (Tag ViewM)]
 panes = Transaction.fromIRef panesIRef
 
-clipboards :: MkProperty ViewM [DefI (Tag ViewM)]
+clipboards :: Transaction.MkProperty ViewM [DefI (Tag ViewM)]
 clipboards = Transaction.fromIRef clipboardsIRef
 
 clipboardsIRef :: IRef (Tag ViewM) [DefI (Tag ViewM)]
@@ -82,29 +79,29 @@ clipboardsIRef = IRef.anchor "clipboard"
 branchesIRef :: IRef (Tag DbM) [Branch (Tag DbM)]
 branchesIRef = IRef.anchor "branches"
 
-branches :: MkProperty DbM [Branch (Tag DbM)]
+branches :: Transaction.MkProperty DbM [Branch (Tag DbM)]
 branches = Transaction.fromIRef branchesIRef
 
-currentBranch :: MkProperty DbM (Branch (Tag DbM))
+currentBranch :: Transaction.MkProperty DbM (Branch (Tag DbM))
 currentBranch = Transaction.fromIRef currentBranchIRef
 
 currentBranchIRef :: IRef (Tag DbM) (Branch (Tag DbM))
 currentBranchIRef = IRef.anchor "currentBranch"
 
 -- TODO: This should be an index
-globals :: MkProperty ViewM [DataIRef.DefI (Tag ViewM)]
+globals :: Transaction.MkProperty ViewM [DataIRef.DefI (Tag ViewM)]
 globals = Transaction.fromIRef globalsIRef
 
 globalsIRef :: IRef (Tag ViewM) [DataIRef.DefI (Tag ViewM)]
 globalsIRef = IRef.anchor "globals"
 
-sugarConfig :: MkProperty ViewM (SugarConfig (Tag ViewM))
+sugarConfig :: Transaction.MkProperty ViewM (SugarConfig (Tag ViewM))
 sugarConfig = Transaction.fromIRef sugarConfigIRef
 
 sugarConfigIRef :: IRef (Tag ViewM) (SugarConfig (Tag ViewM))
 sugarConfigIRef = IRef.anchor "sugarConfig"
 
-ffiEnv :: MkProperty ViewM (FFI.Env (Tag ViewM))
+ffiEnv :: Transaction.MkProperty ViewM (FFI.Env (Tag ViewM))
 ffiEnv = Transaction.fromIRef ffiEnvIRef
 
 ffiEnvIRef :: IRef (Tag ViewM) (FFI.Env (Tag ViewM))
@@ -112,37 +109,37 @@ ffiEnvIRef = IRef.anchor "ffiEnv"
 
 -- Cursor is untagged because it is both saved globally and per-revision.
 -- Cursor movement without any revisioned changes are not saved per-revision.
-cursor :: MkProperty DbM Widget.Id
+cursor :: Transaction.MkProperty DbM Widget.Id
 cursor = Transaction.fromIRef cursorIRef
 
 cursorIRef :: IRef (Tag DbM) Widget.Id
 cursorIRef = IRef.anchor "cursor"
 
-preJumps :: MkProperty ViewM [Widget.Id]
+preJumps :: Transaction.MkProperty ViewM [Widget.Id]
 preJumps = Transaction.fromIRef preJumpsIRef
 
 preJumpsIRef :: IRef (Tag ViewM) [Widget.Id]
 preJumpsIRef = IRef.anchor "prejumps"
 
-preCursor :: MkProperty ViewM Widget.Id
+preCursor :: Transaction.MkProperty ViewM Widget.Id
 preCursor = Transaction.fromIRef preCursorIRef
 
 preCursorIRef :: IRef (Tag ViewM) Widget.Id
 preCursorIRef = IRef.anchor "precursor"
 
-postCursor :: MkProperty ViewM Widget.Id
+postCursor :: Transaction.MkProperty ViewM Widget.Id
 postCursor = Transaction.fromIRef postCursorIRef
 
 postCursorIRef :: IRef (Tag ViewM) Widget.Id
 postCursorIRef = IRef.anchor "postcursor"
 
-redos :: MkProperty DbM [Version (Tag DbM)]
+redos :: Transaction.MkProperty DbM [Version (Tag DbM)]
 redos = Transaction.fromIRef redosIRef
 
 redosIRef :: IRef (Tag DbM) [Version (Tag DbM)]
 redosIRef = IRef.anchor "redos"
 
-view :: MkProperty DbM (View (Tag DbM))
+view :: Transaction.MkProperty DbM (View (Tag DbM))
 view = Transaction.fromIRef viewIRef
 
 viewIRef :: IRef (Tag DbM) (View (Tag DbM))
@@ -153,7 +150,7 @@ makePane = id
 
 nonEmptyAssocDataRef ::
   (MonadA m, Binary a) =>
-  SBS.ByteString -> Guid -> T m a -> MkProperty m a
+  SBS.ByteString -> Guid -> T m a -> Transaction.MkProperty m a
 nonEmptyAssocDataRef str guid makeDef = do
   dataRef <- Transaction.assocDataRef str guid
   def <-
@@ -166,21 +163,8 @@ nonEmptyAssocDataRef str guid makeDef = do
       return val
   return $ Property def (Property.set dataRef . Just)
 
-assocNameRef :: MonadA m => Guid -> MkProperty m String
+assocNameRef :: MonadA m => Guid -> Transaction.MkProperty m String
 assocNameRef = Transaction.assocDataRefDef "" "Name"
 
-assocSearchTermRef :: MonadA m => Guid -> MkProperty m String
+assocSearchTermRef :: MonadA m => Guid -> Transaction.MkProperty m String
 assocSearchTermRef = Transaction.assocDataRefDef "" "searchTerm"
-
-getP :: MonadA m => MkProperty m a -> T m a
-getP = fmap Property.value
-
-setP :: MonadA m => MkProperty m a -> a -> T m ()
-setP mkProp val = do
-  prop <- mkProp
-  Property.set prop val
-
-modP :: MonadA m => MkProperty m a -> (a -> a) -> T m ()
-modP mkProp f = do
-  prop <- mkProp
-  Property.pureModify prop f

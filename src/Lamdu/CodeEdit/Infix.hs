@@ -4,7 +4,7 @@ import Control.Lens ((^.))
 import Control.MonadA (MonadA)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
-import Data.Store.Transaction (Transaction)
+import Data.Store.Transaction (Transaction, getP)
 import qualified Data.Char as Char
 import qualified Data.Store.IRef as IRef
 import qualified Lamdu.Anchors as Anchors
@@ -21,7 +21,7 @@ variableRefGuid (Expression.DefinitionRef i) = IRef.guid i
 
 isInfixVar :: MonadA m => Expression.VariableRef (DataIRef.DefI (Tag m)) -> Transaction m Bool
 isInfixVar =
-  fmap isInfixName . Anchors.getP .
+  fmap isInfixName . getP .
   Anchors.assocNameRef . variableRefGuid
 
 infixOp

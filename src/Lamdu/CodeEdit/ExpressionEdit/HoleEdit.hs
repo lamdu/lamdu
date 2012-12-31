@@ -37,6 +37,7 @@ import qualified Data.List.Class as List
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
+import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -317,7 +318,7 @@ addNewDefinitionEventMap holeInfo =
       let
         searchTerm = Property.value $ hiSearchTerm holeInfo
         newName = concat . words $ searchTerm
-      Anchors.setP (Anchors.assocNameRef (IRef.guid newDefI)) newName
+      Transaction.setP (Anchors.assocNameRef (IRef.guid newDefI)) newName
       DataOps.newPane newDefI
       defRef <-
         fmap (fromMaybe (error "GetDef should always type-check") . listToMaybe) .

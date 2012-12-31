@@ -30,13 +30,14 @@ import qualified Control.Lens as Lens
 import qualified Data.Cache as Cache
 import qualified Data.Map as Map
 import qualified Data.Store.Db as Db
+import qualified Data.Store.Transaction as Transaction
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import qualified Graphics.UI.Bottle.Animation as Anim
+import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Rect as Rect
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
 import qualified Graphics.UI.Bottle.Widgets.FlyNav as FlyNav
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
@@ -198,7 +199,7 @@ runDb font db = do
   let
     addHelp = addHelpWithStyle $ Config.helpStyle font
     makeWidget size = do
-      cursor <- dbToIO $ Anchors.getP Anchors.cursor
+      cursor <- dbToIO $ Transaction.getP Anchors.cursor
       sizeFactor <- readIORef sizeFactorRef
       globalEventMap <- mkGlobalEventMap settingsRef
       let eventMap = globalEventMap `mappend` sizeFactorEvents
@@ -251,7 +252,7 @@ mkWidgetWithFallback settingsRef style dbToIO (size, cursor) = do
         then return (True, candidateWidget)
         else do
           finalWidget <- fromCursor settings rootCursor
-          lift $ Anchors.setP Anchors.cursor rootCursor
+          lift $ Transaction.setP Anchors.cursor rootCursor
           return (False, finalWidget)
       unless (widget ^. Widget.wIsFocused) $
         fail "Root cursor did not match"
@@ -280,6 +281,6 @@ makeRootWidget settings style dbToIO size cursor = do
       lift $ BranchGUI.make id size actions codeEdit
   where
     attachCursor eventResult = do
-      maybe (return ()) (Anchors.setP Anchors.cursor) $
+      maybe (return ()) (Transaction.setP Anchors.cursor) $
         eventResult ^. Widget.eCursor
       return eventResult

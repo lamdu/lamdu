@@ -25,7 +25,7 @@ import Graphics.UI.Bottle.Animation (AnimId)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Reader as Reader
-import qualified Lamdu.Anchors as Anchors
+import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
@@ -44,8 +44,8 @@ newtype WidgetEnvT m a = WidgetEnvT
 LensTH.makeLenses ''WidgetEnvT
 
 -- TODO: Remove this
-getP :: MonadA m => Anchors.MkProperty m a -> WidgetEnvT (Transaction m) a
-getP = lift . Anchors.getP
+getP :: MonadA m => Transaction.MkProperty m a -> WidgetEnvT (Transaction m) a
+getP = lift . Transaction.getP
 
 runWidgetEnvT :: MonadA m => Widget.Id -> TextEdit.Style -> WidgetEnvT m a -> m a
 runWidgetEnvT cursor style (WidgetEnvT action) = runReaderT action (Env cursor style)

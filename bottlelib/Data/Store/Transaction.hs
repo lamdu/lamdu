@@ -1,7 +1,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, RankNTypes #-}
 
 module Data.Store.Transaction
-  ( Transaction, run, Property
+  ( Transaction, run
+  , Property
   , Store(..), onStoreM
   , lookupBS, lookup
   , insertBS, insert
@@ -15,6 +16,7 @@ module Data.Store.Transaction
   , followBy
   , anchorRef, anchorRefDef
   , assocDataRef, assocDataRefDef
+  , MkProperty, getP, setP, modP
   )
 where
 
@@ -190,3 +192,18 @@ assocDataRefDef def str =
     f x
       | x == def = Nothing
       | otherwise = Just x
+
+type MkProperty m a = Transaction m (Property m a)
+
+getP :: MonadA m => MkProperty m a -> Transaction m a
+getP = fmap Property.value
+
+setP :: MonadA m => MkProperty m a -> a -> Transaction m ()
+setP mkProp val = do
+  prop <- mkProp
+  Property.set prop val
+
+modP :: MonadA m => MkProperty m a -> (a -> a) -> Transaction m ()
+modP mkProp f = do
+  prop <- mkProp
+  Property.pureModify prop f

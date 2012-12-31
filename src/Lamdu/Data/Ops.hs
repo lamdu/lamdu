@@ -16,7 +16,7 @@ import Control.MonadA (MonadA)
 import Data.List.Split (splitOn)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
-import Data.Store.Transaction (Transaction)
+import Data.Store.Transaction (Transaction, getP, setP, modP)
 import Lamdu.Anchors (ViewM)
 import Lamdu.Data.Definition (Definition(..))
 import Lamdu.Data.Expression.IRef (DefI)
@@ -36,7 +36,7 @@ makeDefinition = do
   defI <-
     Transaction.newIRef =<<
     Definition . Definition.BodyExpression <$> newHole <*> newHole
-  Anchors.modP Anchors.globals (defI :)
+  modP Anchors.globals (defI :)
   return defI
 
 giveAsArg ::
@@ -123,7 +123,7 @@ newPane defI = do
     Property.set panesP $ Anchors.makePane defI : Property.value panesP
 
 savePreJumpPosition :: Widget.Id -> Transaction ViewM ()
-savePreJumpPosition pos = Anchors.modP Anchors.preJumps $ (pos :) . take 19
+savePreJumpPosition pos = modP Anchors.preJumps $ (pos :) . take 19
 
 jumpBack :: Transaction ViewM (Maybe (Transaction ViewM Widget.Id))
 jumpBack = do
@@ -151,13 +151,13 @@ newDefinition ::
   DataIRef.DefinitionI (Tag m) -> Transaction m (DefI (Tag m))
 newDefinition name defI = do
   res <- Transaction.newIRef defI
-  Anchors.setP (Anchors.assocNameRef (IRef.guid res)) name
+  setP (Anchors.assocNameRef (IRef.guid res)) name
   return res
 
 newClipboard :: DataIRef.ExpressionI (Tag ViewM) -> Transaction ViewM (DefI (Tag ViewM))
 newClipboard expr = do
-  len <- length <$> Anchors.getP Anchors.clipboards
+  len <- length <$> getP Anchors.clipboards
   def <- Definition (Definition.BodyExpression expr) <$> newHole
   defI <- newDefinition ("clipboard" ++ show len) def
-  Anchors.modP Anchors.clipboards (defI:)
+  modP Anchors.clipboards (defI:)
   return defI

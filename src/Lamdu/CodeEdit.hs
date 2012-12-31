@@ -23,6 +23,7 @@ import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
 import qualified Data.Store.IRef as IRef
+import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -63,17 +64,17 @@ makeNewDefinitionAction = do
 
 loadConvertDefI :: DefI (Tag ViewM) -> CT ViewM (Sugar.Definition ViewM)
 loadConvertDefI defI = do
-  sugarConfig <- lift $ Anchors.getP Anchors.sugarConfig
+  sugarConfig <- lift $ Transaction.getP Anchors.sugarConfig
   Sugar.loadConvertDefI sugarConfig defI
 
 makeSugarPanes :: m ~ ViewM => CT m [SugarPane m]
 makeSugarPanes = do
-  panes <- lift $ Anchors.getP Anchors.panes
+  panes <- lift $ Transaction.getP Anchors.panes
   let
     mkMDelPane i
       | not (null panes) = Just $ do
         let newPanes = removeAt i panes
-        Anchors.setP Anchors.panes newPanes
+        Transaction.setP Anchors.panes newPanes
         return . maybe panesGuid IRef.guid . listToMaybe . reverse $
           take (i+1) newPanes
       | otherwise = Nothing
@@ -81,7 +82,7 @@ makeSugarPanes = do
       let
         (before, item:after) = splitAt oldIndex panes
         newPanes = insertAt newIndex item $ before ++ after
-      Anchors.setP Anchors.panes newPanes
+      Transaction.setP Anchors.panes newPanes
     mkMMovePaneDown i
       | i+1 < length panes = Just $ movePane i (i+1)
       | otherwise = Nothing
@@ -110,7 +111,7 @@ makeClipboardsEdit clipboards = do
 
 makeSugarClipboards :: CT ViewM [Sugar.Definition ViewM]
 makeSugarClipboards =
-  traverse loadConvertDefI =<< lift (Anchors.getP Anchors.clipboards)
+  traverse loadConvertDefI =<< lift (Transaction.getP Anchors.clipboards)
 
 make ::
   m ~ ViewM => Settings ->
