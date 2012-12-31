@@ -57,7 +57,7 @@ giveAsArgToOperator ::
   T m (DataIRef.ExpressionI (Tag m))
 giveAsArgToOperator exprP searchTerm = do
   op <- newHole
-  (`Property.set` searchTerm) =<< Anchors.assocSearchTermRef (DataIRef.exprGuid op)
+  setP (Anchors.assocSearchTermRef (DataIRef.exprGuid op)) searchTerm
   opApplied <- DataIRef.newExprBody . Expression.makeApply op $ Property.value exprP
   Property.set exprP =<< DataIRef.newExprBody . Expression.makeApply opApplied =<< newHole
   return op
@@ -118,21 +118,21 @@ redexWrap exprP = do
 
 newPane :: DefI (Tag ViewM) -> Transaction ViewM ()
 newPane defI = do
-  panesP <- Anchors.panes
-  when (defI `notElem` Property.value panesP) $
-    Property.set panesP $ Anchors.makePane defI : Property.value panesP
+  panes <- getP Anchors.panes
+  when (defI `notElem` panes) $
+    setP Anchors.panes $ Anchors.makePane defI : panes
 
 savePreJumpPosition :: Widget.Id -> Transaction ViewM ()
 savePreJumpPosition pos = modP Anchors.preJumps $ (pos :) . take 19
 
 jumpBack :: Transaction ViewM (Maybe (Transaction ViewM Widget.Id))
 jumpBack = do
-  preJumpsP <- Anchors.preJumps
+  preJumps <- getP Anchors.preJumps
   return $
-    case Property.value preJumpsP of
+    case preJumps of
     [] -> Nothing
     (j:js) -> Just $ do
-      Property.set preJumpsP js
+      setP Anchors.preJumps js
       return j
 
 newBuiltin

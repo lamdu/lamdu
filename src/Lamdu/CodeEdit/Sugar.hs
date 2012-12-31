@@ -447,12 +447,12 @@ mkPaste ::
   m ~ Anchors.ViewM =>
   Stored m -> SugarM m (Maybe (T m Guid))
 mkPaste exprP = do
-  clipboardsP <- SugarM.liftTransaction Anchors.clipboards
+  clipboards <- SugarM.liftTransaction $ Transaction.getP Anchors.clipboards
   let
     mClipPop =
-      case Property.value clipboardsP of
+      case clipboards of
       [] -> Nothing
-      (clip : clips) -> Just (clip, Property.set clipboardsP clips)
+      (clip : clips) -> Just (clip, Transaction.setP Anchors.clipboards clips)
   return $ doPaste (Property.set exprP) <$> mClipPop
   where
     doPaste replacer (clipDefI, popClip) = do
@@ -661,8 +661,9 @@ convertInferredHoleH
 wrapOperatorHole ::
   m ~ Anchors.ViewM => DataIRef.ExpressionM m (PayloadMM m) -> Expression m -> SugarM m (Expression m)
 wrapOperatorHole exprI holeExpr = do
-  searchTermRef <- SugarM.liftTransaction . Anchors.assocSearchTermRef $ resultGuid exprI
-  if isOperatorName $ Property.value searchTermRef
+  searchTerm <-
+    SugarM.liftTransaction . Transaction.getP . Anchors.assocSearchTermRef $ resultGuid exprI
+  if isOperatorName searchTerm
     then
       -- TODO: Ok to mkExpression with same exprI here?
       mkExpression exprI . ExpressionSection DontHaveParens $

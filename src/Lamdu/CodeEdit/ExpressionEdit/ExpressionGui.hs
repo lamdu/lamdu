@@ -30,6 +30,7 @@ import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Types (WidgetT, ExpressionGui(..), egWidget, egAlignment)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
+import qualified Data.Store.Transaction as Transaction
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as EventMap
@@ -142,7 +143,7 @@ makeNameEdit (nameSrc, name) ident myId =
   (Lens.set TextEdit.sEmptyUnfocusedString name .
    Lens.set TextEdit.sEmptyFocusedString (concat ["<", name, ">"])) $
   ExprGuiM.widgetEnv . flip makeEditor myId =<<
-  (ExprGuiM.transaction . Anchors.assocNameRef) ident
+  (ExprGuiM.transaction . Transaction.getMkProperty . Anchors.assocNameRef) ident
   where
     makeEditor =
       (fmap . fmap . fmap . Lens.over Widget.wEventMap)

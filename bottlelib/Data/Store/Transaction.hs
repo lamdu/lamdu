@@ -16,7 +16,8 @@ module Data.Store.Transaction
   , followBy
   , anchorRef, anchorRefDef
   , assocDataRef, assocDataRefDef
-  , MkProperty, getP, setP, modP
+  , MkProperty(..), mkProperty, atMkProperty
+  , getP, setP, modP
   )
 where
 
@@ -172,10 +173,32 @@ run store transaction = do
   storeAtomicWrite store $ Map.toList changes
   return res
 
-assocDataRef ::
-  (Binary a, MonadA m) =>
-  ByteString -> Guid -> Transaction m (Property m (Maybe a))
-assocDataRef str guid = do
+newtype MkProperty m a = MkProperty { getMkProperty :: Transaction m (Property m a) }
+
+mkProperty :: (MonadA m, Binary a) => IRef (Tag m) a -> MkProperty m a
+mkProperty = MkProperty . fromIRef
+
+atMkProperty ::
+  (Transaction m (Property m a) ->
+   Transaction n (Property n b)) ->
+  MkProperty m a -> MkProperty n b
+atMkProperty f (MkProperty t) = MkProperty (f t)
+
+getP :: MonadA m => MkProperty m a -> Transaction m a
+getP = fmap Property.value . getMkProperty
+
+setP :: MonadA m => MkProperty m a -> a -> Transaction m ()
+setP (MkProperty mkProp) val = do
+  prop <- mkProp
+  Property.set prop val
+
+modP :: MonadA m => MkProperty m a -> (a -> a) -> Transaction m ()
+modP (MkProperty mkProp) f = do
+  prop <- mkProp
+  Property.pureModify prop f
+
+assocDataRef :: (Binary a, MonadA m) => ByteString -> Guid -> MkProperty m (Maybe a)
+assocDataRef str guid = MkProperty $ do
   val <- lookup assocGuid
   return $ Property.Property val set
   where
@@ -183,27 +206,11 @@ assocDataRef str guid = do
     set Nothing = delete assocGuid
     set (Just x) = writeGuid assocGuid x
 
-assocDataRefDef ::
-  (Eq a, Binary a, MonadA m) =>
-  a -> ByteString -> Guid -> Transaction m (Property m a)
-assocDataRefDef def str =
-  fmap (Property.pureCompose (fromMaybe def) f) . assocDataRef str
+assocDataRefDef :: (Eq a, Binary a, MonadA m) => a -> ByteString -> Guid -> MkProperty m a
+assocDataRefDef def str guid =
+  (atMkProperty . fmap . Property.pureCompose (fromMaybe def)) f $
+  assocDataRef str guid
   where
     f x
       | x == def = Nothing
       | otherwise = Just x
-
-type MkProperty m a = Transaction m (Property m a)
-
-getP :: MonadA m => MkProperty m a -> Transaction m a
-getP = fmap Property.value
-
-setP :: MonadA m => MkProperty m a -> a -> Transaction m ()
-setP mkProp val = do
-  prop <- mkProp
-  Property.set prop val
-
-modP :: MonadA m => MkProperty m a -> (a -> a) -> Transaction m ()
-modP mkProp f = do
-  prop <- mkProp
-  Property.pureModify prop f

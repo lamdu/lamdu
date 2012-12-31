@@ -59,7 +59,7 @@ redoEventMap =
   maybe mempty (Widget.keysEventMapMovesCursor Config.redoKeys (E.Doc ["Edit", "Redo"]))
 
 branchNameProp ::
-  MonadA m => Branch (Tag m) -> Transaction m (Transaction.Property m String)
+  MonadA m => Branch (Tag m) -> Transaction.MkProperty m String
 branchNameProp = Transaction.assocDataRefDef "" "name" . Branch.guid
 
 make ::
@@ -102,8 +102,8 @@ make transaction size actions widget = do
     makeBranchNameEdit branch = do
       let branchEditId = WidgetIds.fromGuid $ Branch.guid branch
       nameProp <-
-        lift . transaction . (fmap . Lens.over (Property.pSet . Lens.mapped)) transaction $
-        branchNameProp branch
+        lift . transaction . (fmap . Lens.over (Property.pSet . Lens.mapped)) transaction .
+        Transaction.getMkProperty $ branchNameProp branch
       branchNameEdit <-
         BWidgets.wrapDelegatedOT branchNameFDConfig
         FocusDelegator.NotDelegating id

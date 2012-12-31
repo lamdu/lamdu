@@ -485,7 +485,7 @@ pickEventMap holeInfo searchTerm (Just result)
           | otherwise = fmap (Lens.view Sugar.rGuid) $ hiMNextHole holeInfo
       fmap WidgetIds.fromGuid $ case mTarget of
         Just target -> do
-          (`Property.set` [x]) =<< Anchors.assocSearchTermRef target
+          Transaction.setP (Anchors.assocSearchTermRef target) [x]
           return target
         Nothing -> return g
 pickEventMap _ _ _ = mempty
@@ -610,7 +610,8 @@ makeUnwrapped ::
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeUnwrapped hole mNextHole guid myId = do
   cursor <- ExprGuiM.widgetEnv WE.readCursor
-  searchTermProp <- ExprGuiM.transaction $ Anchors.assocSearchTermRef guid
+  searchTermProp <-
+    ExprGuiM.transaction . Transaction.getMkProperty $ Anchors.assocSearchTermRef guid
   case (hole ^. Sugar.holeMActions, Widget.subId myId cursor) of
     (Just holeActions, Just _) ->
       let
