@@ -35,7 +35,7 @@ module Lamdu.CodeEdit.Sugar
 
 import Control.Applicative ((<$), (<$>), Applicative(..), liftA2)
 import Control.Arrow (first)
-import Control.Lens (SimpleTraversal, (.~), (^.), (&), (%~), (.~), (^?))
+import Control.Lens (SimpleTraversal, (.~), (^.), (&), (%~), (.~), (^?), (<>~))
 import Control.Monad ((<=<), join, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (runState)
@@ -333,7 +333,10 @@ convertApply (Expression.Apply funcI argI) exprI = do
             -- Our form is (((cons _) funcArgI) argI)
             -> do
               listElem <- convertExpressionI funcArgI
-              mkList $ ListItem { liMActions = Nothing, liExpr = listElem } : values
+              mkList (ListItem { liMActions = Nothing, liExpr = listElem } : values)
+                & Lens.mapped . rHiddenGuids <>~
+                  funcI ^. Expression.ePayload . SugarInfer.plGuid :
+                  argS ^. rGuid : argS ^. rHiddenGuids
         _ -> do
           funcS <- convertExpressionI funcI
           let apply = Expression.Apply (funcS, funcI) (argS, argI)
