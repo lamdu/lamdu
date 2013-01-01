@@ -1,3 +1,6 @@
+* Ops.addListItem should be giveAsArgTo which should take the expr to
+  write in the function side
+
 * Sugar hides stuff, what if the inferred of that stuff is conflict?
   e.g: Hiding the type params for nil/cons
   * Maybe we need to figure out a UI for showing the type params to
