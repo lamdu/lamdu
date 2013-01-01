@@ -592,9 +592,8 @@ addPickAndCallWithNextArg ::
   DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i (Stored m)) ->
   Expression m -> Expression m
 addPickAndCallWithNextArg sugarContext app applyS argS =
-  ( rExpressionBody . expressionHole . holeMActions . Lens.mapped .
-    holeInferResults . Lens.mapped . Lens.mapped . Lens.mapped %~ onHoleResult
-  )
+  rExpressionBody . expressionHole . holeMActions . Lens.mapped .
+  holeInferResults . Lens.mapped . Lens.mapped . Lens.mapped %~ onHoleResult
   where
     onHoleResult holeResult =
       holeResult
