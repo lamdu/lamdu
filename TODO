@@ -1,3 +1,5 @@
+* Need to support callWithArg/etc on applyInfix too
+
 * Import Control.Lens.Tuple unqualified. edwardk says unlikely to
   change, for _1, _2, etc
 
