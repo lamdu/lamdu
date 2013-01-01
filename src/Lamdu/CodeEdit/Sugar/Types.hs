@@ -164,6 +164,7 @@ data Polymorphic t expr = Polymorphic
 -- TODO: Do we want to store/allow-access to the implicit type params (nil's type, each cons type?)
 data ListItem m expr = ListItem
   { liMActions :: Maybe (ListItemActions m)
+  , liHiddenGuids :: [Guid]
   , liExpr :: expr
   } deriving (Functor)
 
