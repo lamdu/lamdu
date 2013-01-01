@@ -416,7 +416,7 @@ adHocTextEditEventMap textProp =
       (E.Doc ["Edit", "Search Term", "Append character"]) $
       changeText . flip (++) . (: [])
     ]
-  , [ E.keyPresses (map (E.ModKey E.noMods) [E.KeyBackspace, E.KeyDel])
+  , [ E.keyPresses (map (E.ModKey E.noMods) [E.KeyBackspace])
       (E.Doc ["Edit", "Search Term", "Delete backwards"]) $
       changeText init
     | (not . null . Property.value) textProp

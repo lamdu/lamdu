@@ -11,7 +11,7 @@ module Lamdu.Data.Ops
   , newClipboard
   ) where
 
-import Control.Applicative ((<$>), (<*>))
+import Control.Applicative ((<$>), (<*>), (<$))
 import Control.Monad (when)
 import Control.MonadA (MonadA)
 import Data.List.Split (splitOn)
@@ -89,7 +89,11 @@ replaceWithHole
   :: MonadA m
   => DataIRef.ExpressionProperty m
   -> T m (DataIRef.ExpressionI (Tag m))
-replaceWithHole exprP = replace exprP =<< newHole
+replaceWithHole exprP =
+  exprI <$ DataIRef.writeExprBody exprI hole
+  where
+    hole = Expression.BodyLeaf Expression.Hole
+    exprI = Property.value exprP
 
 lambdaWrap
   :: MonadA m
