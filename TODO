@@ -1,10 +1,19 @@
+* Need an infrastructure for picking-current-hole-result and then
+  doing parent action
+
+  * Maybe ExprGuiM needs to have a WriterT [Hole Picker] in it, that
+    has the currently selected hole's picker in it, and then
+    makeSubexpresion could listen and return also the picker.
+    List could then pick before doing actions
+
+* Sugar: Brackets need consistent anim id when deleting/adding
+  elements
+
+* Sugar: Replace the nil if deleting the close bracket, so you can go
+  back to editing it as nested cons'
+
 * Ops.addListItem should be giveAsArgTo which should take the expr to
   write in the function side
-
-* Sugar hides stuff, what if the inferred of that stuff is conflict?
-  e.g: Hiding the type params for nil/cons
-  * Maybe we need to figure out a UI for showing the type params to
-    nil/cons, instead?
 
 * Need to support callWithArg/etc on applyInfix too
 
