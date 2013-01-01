@@ -23,14 +23,20 @@ import qualified Lamdu.VersionControl.Actions as Actions
 type TDB = Transaction DbM
 type TV = Transaction Anchors.ViewM
 
+revProp :: (Anchors.RevisionProps -> a) -> a
+revProp x = x Anchors.revisionProps
+
+codeProp :: (Anchors.CodeProps -> a) -> a
+codeProp x = x Anchors.codeProps
+
 setCurrentBranch :: View (Tag DbM) -> Branch (Tag DbM) -> TDB ()
 setCurrentBranch view branch = do
-  setP Anchors.currentBranch branch
+  setP (revProp Anchors.currentBranch) branch
   View.setBranch view branch
 
 deleteBranch :: View (Tag DbM) -> [Branch (Tag DbM)] -> Branch (Tag DbM) -> TDB (Branch (Tag DbM))
 deleteBranch view branches branch = do
-  setP Anchors.branches newBranches
+  setP (revProp Anchors.branches) newBranches
   setCurrentBranch view newBranch
   return newBranch
   where
@@ -43,13 +49,13 @@ deleteBranch view branches branch = do
 makeBranch :: View (Tag DbM) -> TDB (Branch (Tag DbM))
 makeBranch view = do
   newBranch <- Branch.new =<< View.curVersion view
-  modP Anchors.branches (++ [newBranch])
+  modP (revProp Anchors.branches) (++ [newBranch])
   setCurrentBranch view newBranch
   return newBranch
 
 runAction :: TV a -> TDB a
 runAction action = do
-  view <- getP Anchors.view
+  view <- getP $ revProp Anchors.view
   Anchors.runViewTransaction view action
 
 runEvent :: Widget.Id -> TV Widget.EventResult -> TDB Widget.EventResult
@@ -58,32 +64,33 @@ runEvent preCursor eventHandler = do
     eventResult <- eventHandler
     isEmpty <- Transaction.isEmpty
     unless isEmpty $ do
-      setP Anchors.preCursor preCursor
-      setP Anchors.postCursor . fromMaybe preCursor $ Lens.view Widget.eCursor eventResult
+      setP (codeProp Anchors.preCursor) preCursor
+      setP (codeProp Anchors.postCursor) .
+        fromMaybe preCursor $ Lens.view Widget.eCursor eventResult
     return (eventResult, isEmpty)
-  unless isEmpty $ setP Anchors.redos []
+  unless isEmpty $ setP (revProp Anchors.redos) []
   return eventResult
 
 makeActions :: Transaction DbM (Actions (Tag DbM) (Transaction DbM))
 makeActions = do
-  view <- getP Anchors.view
-  branches <- getP Anchors.branches
-  currentBranch <- getP Anchors.currentBranch
+  view <- getP $ revProp Anchors.view
+  branches <- getP $ revProp Anchors.branches
+  currentBranch <- getP $ revProp Anchors.currentBranch
   curVersion <- View.curVersion view
   curVersionData <- Version.versionData curVersion
-  allRedos <- getP Anchors.redos
+  allRedos <- getP $ revProp Anchors.redos
   let
     toDb = Anchors.runViewTransaction view
     undo parentVersion = do
-      preCursor <- toDb $ getP Anchors.preCursor
+      preCursor <- toDb . getP $ codeProp Anchors.preCursor
       View.move view parentVersion
-      modP Anchors.redos (curVersion :)
+      modP (revProp Anchors.redos) (curVersion :)
       return preCursor
     mkRedo [] = Nothing
     mkRedo (redo : redos) = Just $ do
-      setP Anchors.redos redos
+      setP (revProp Anchors.redos) redos
       View.move view redo
-      toDb $ getP Anchors.postCursor
+      toDb . getP $ codeProp Anchors.postCursor
   return Actions
     { Actions.branches = branches
     , Actions.currentBranch = currentBranch

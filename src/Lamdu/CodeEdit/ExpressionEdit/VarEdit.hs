@@ -1,9 +1,9 @@
 {-# LANGUAGE OverloadedStrings, TypeFamilies #-}
 module Lamdu.CodeEdit.ExpressionEdit.VarEdit(make, makeView) where
 
+import Control.Applicative ((<$), pure)
 import Control.MonadA (MonadA)
 import Data.Store.IRef (Tag)
-import Lamdu.Anchors (ViewM)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import qualified Control.Lens as Lens
@@ -37,11 +37,10 @@ makeView var myId = ExprGuiM.withNameFromVarRef var $ \(nameSrc, name) ->
   ExprGuiM.widgetEnv $
   BWidgets.makeFocusableTextView name myId
 
-make
-  :: m ~ ViewM
-  => Expression.VariableRef (DataIRef.DefI (Tag m))
-  -> Widget.Id
-  -> ExprGuiM m (ExpressionGui m)
+make ::
+  MonadA m =>
+  Expression.VariableRef (DataIRef.DefI (Tag m)) ->
+  Widget.Id -> ExprGuiM m (ExpressionGui m)
 make getVar myId = do
   case getVar of
     Expression.ParameterRef guid -> ExprGuiM.markVariablesAsUsed [guid]
@@ -49,19 +48,18 @@ make getVar myId = do
   getVarView <-
     ExprGuiM.atEnv (WE.setTextColor (colorOf getVar)) $
     makeView getVar myId
+  cp <- ExprGuiM.readCodeAnchors
   let
     jumpToDefinitionEventMap =
       Widget.keysEventMapMovesCursor Config.jumpToDefinitionKeys (E.Doc ["Navigation", "Jump to definition"])
       jumpToDefinition
-    jumpToDefinition =
+    jumpToDefinition = do
+      DataOps.savePreJumpPosition cp myId
       case getVar of
-        Expression.DefinitionRef defI -> do
-          DataOps.newPane defI
-          DataOps.savePreJumpPosition myId
-          return $ WidgetIds.fromIRef defI
-        Expression.ParameterRef paramGuid -> do
-          DataOps.savePreJumpPosition myId
-          return $ WidgetIds.fromGuid paramGuid
+        Expression.DefinitionRef defI ->
+          WidgetIds.fromIRef defI <$ DataOps.newPane cp defI
+        Expression.ParameterRef paramGuid ->
+          pure $ WidgetIds.fromGuid paramGuid
   return $
     Lens.over ExpressionGui.egWidget
     (Widget.weakerEvents jumpToDefinitionEventMap)

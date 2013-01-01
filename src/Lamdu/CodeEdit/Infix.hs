@@ -7,7 +7,7 @@ import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction, getP)
 import qualified Data.Char as Char
 import qualified Data.Store.IRef as IRef
-import qualified Lamdu.Anchors as Anchors
+import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 

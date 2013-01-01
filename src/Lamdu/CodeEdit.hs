@@ -15,8 +15,8 @@ import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
+import Data.Typeable (Typeable1)
 import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.Anchors (ViewM)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (WidgetT, ExprGuiM)
 import Lamdu.CodeEdit.Settings (Settings)
 import Lamdu.Data.Expression.IRef (DefI)
@@ -30,13 +30,13 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
-import qualified Lamdu.Anchors as Anchors
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
@@ -53,36 +53,37 @@ data SugarPane m = SugarPane
   , mMovePaneUp :: Maybe (T m ())
   }
 
-makeNewDefinitionAction :: m ~ ViewM => ExprGuiM m (T m Widget.Id)
+makeNewDefinitionAction :: MonadA m => ExprGuiM m (T m Widget.Id)
 makeNewDefinitionAction = do
   curCursor <- ExprGuiM.widgetEnv WE.readCursor
+  cp <- ExprGuiM.readCodeAnchors
   return $ do
-    newDefI <- DataOps.makeDefinition
-    DataOps.newPane newDefI
-    DataOps.savePreJumpPosition curCursor
+    newDefI <- DataOps.makeDefinition cp
+    DataOps.newPane cp newDefI
+    DataOps.savePreJumpPosition cp curCursor
     return . DefinitionEdit.diveToNameEdit $ WidgetIds.fromIRef newDefI
 
-loadConvertDefI :: DefI (Tag ViewM) -> CT ViewM (Sugar.Definition ViewM)
-loadConvertDefI defI = do
-  sugarConfig <- lift $ Transaction.getP Anchors.sugarConfig
-  Sugar.loadConvertDefI sugarConfig defI
+loadConvertDefI :: (MonadA m, Typeable1 m) => Anchors.CodeProps m -> DefI (Tag m) -> CT m (Sugar.Definition m)
+loadConvertDefI cp defI = do
+  sugarConfig <- lift . Transaction.getP $ Anchors.sugarConfig cp
+  Sugar.loadConvertDefI cp sugarConfig defI
 
-makeSugarPanes :: m ~ ViewM => CT m [SugarPane m]
-makeSugarPanes = do
-  panes <- lift $ Transaction.getP Anchors.panes
+makeSugarPanes :: (MonadA m, Typeable1 m) => Anchors.CodeProps m -> Guid -> CT m [SugarPane m]
+makeSugarPanes cp rootGuid = do
+  panes <- lift . Transaction.getP $ Anchors.panes cp
   let
     mkMDelPane i
       | not (null panes) = Just $ do
         let newPanes = removeAt i panes
-        Transaction.setP Anchors.panes newPanes
-        return . maybe panesGuid IRef.guid . listToMaybe . reverse $
+        Transaction.setP (Anchors.panes cp) newPanes
+        return . maybe rootGuid IRef.guid . listToMaybe . reverse $
           take (i+1) newPanes
       | otherwise = Nothing
     movePane oldIndex newIndex = do
       let
         (before, item:after) = splitAt oldIndex panes
         newPanes = insertAt newIndex item $ before ++ after
-      Transaction.setP Anchors.panes newPanes
+      Transaction.setP (Anchors.panes cp) newPanes
     mkMMovePaneDown i
       | i+1 < length panes = Just $ movePane i (i+1)
       | otherwise = Nothing
@@ -90,7 +91,7 @@ makeSugarPanes = do
       | i-1 >= 0 = Just $ movePane i (i-1)
       | otherwise = Nothing
     convertPane (i, defI) = do
-      sDef <- loadConvertDefI defI
+      sDef <- loadConvertDefI cp defI
       return SugarPane
         { spDef = sDef
         , mDelPane = mkMDelPane i
@@ -100,7 +101,7 @@ makeSugarPanes = do
   traverse convertPane $ enumerate panes
 
 makeClipboardsEdit ::
-  m ~ ViewM => [Sugar.Definition m] -> ExprGuiM m (WidgetT m)
+  MonadA m => [Sugar.Definition m] -> ExprGuiM m (WidgetT m)
 makeClipboardsEdit clipboards = do
   clipboardsEdits <- traverse makePaneWidget clipboards
   clipboardTitle <-
@@ -109,19 +110,21 @@ makeClipboardsEdit clipboards = do
     else ExprGuiM.widgetEnv $ BWidgets.makeTextView "Clipboards:" ["clipboards title"]
   return . Box.vboxAlign 0 $ clipboardTitle : clipboardsEdits
 
-makeSugarClipboards :: CT ViewM [Sugar.Definition ViewM]
-makeSugarClipboards =
-  traverse loadConvertDefI =<< lift (Transaction.getP Anchors.clipboards)
+makeSugarClipboards :: (MonadA m, Typeable1 m) => Anchors.CodeProps m -> CT m [Sugar.Definition m]
+makeSugarClipboards cp =
+  traverse (loadConvertDefI cp) =<<
+  (lift . Transaction.getP . Anchors.clipboards) cp
 
 make ::
-  m ~ ViewM => Settings ->
+  (MonadA m, Typeable1 m) =>
+  Anchors.CodeProps m -> Settings -> Guid ->
   StateT Cache (WidgetEnvT (T m)) (Widget (T m))
-make settings = do
+make cp settings rootGuid = do
   (sugarPanes, sugarClipboards) <-
     mapStateT lift $
-    (,) <$> makeSugarPanes <*> makeSugarClipboards
-  ExprGuiM.run ExpressionEdit.make settings $ do
-    panesEdit <- makePanesEdit sugarPanes
+    (,) <$> makeSugarPanes cp rootGuid <*> makeSugarClipboards cp
+  ExprGuiM.run ExpressionEdit.make cp settings $ do
+    panesEdit <- makePanesEdit sugarPanes $ WidgetIds.fromGuid rootGuid
     clipboardsEdit <- makeClipboardsEdit sugarClipboards
     return $
       Box.vboxAlign 0
@@ -129,11 +132,8 @@ make settings = do
       , clipboardsEdit
       ]
 
-panesGuid :: Guid
-panesGuid = IRef.guid Anchors.panesIRef
-
-makePanesEdit :: m ~ ViewM => [SugarPane m] -> ExprGuiM m (WidgetT m)
-makePanesEdit panes = do
+makePanesEdit :: MonadA m => [SugarPane m] -> Widget.Id -> ExprGuiM m (WidgetT m)
+makePanesEdit panes myId = do
   panesWidget <-
     case panes of
     [] -> ExprGuiM.widgetEnv $ BWidgets.makeFocusableTextView "<No panes>" myId
@@ -142,7 +142,8 @@ makePanesEdit panes = do
         definitionEdits <- traverse makePaneEdit panes
         return . Box.vboxAlign 0 $ intersperse (Spacer.makeWidget 50) definitionEdits
 
-  mJumpBack <- ExprGuiM.transaction DataOps.jumpBack
+  cp <- ExprGuiM.readCodeAnchors
+  mJumpBack <- ExprGuiM.transaction $ DataOps.jumpBack cp
   newDefinition <- makeNewDefinitionAction
   let
     panesEventMap =
@@ -156,7 +157,6 @@ makePanesEdit panes = do
 
   return $ Widget.weakerEvents panesEventMap panesWidget
   where
-    myId = WidgetIds.fromGuid panesGuid
     makePaneEdit pane =
       (fmap . Widget.weakerEvents) (paneEventMap pane) .
       makePaneWidget . spDef $ pane

@@ -3,7 +3,6 @@ module Lamdu.CodeEdit.ExpressionEdit.InferredEdit(make) where
 
 import Control.MonadA (MonadA)
 import Data.Store.Guid (Guid)
-import Lamdu.Anchors (ViewM)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import qualified Control.Lens as Lens
@@ -27,16 +26,16 @@ fdConfig = FocusDelegator.Config
   }
 
 make
-  :: (MonadA m, m ~ ViewM) => Sugar.Inferred m (Sugar.Expression m) -> Guid -> Widget.Id
+  :: MonadA m => Sugar.Inferred m (Sugar.Expression m) -> Guid -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
 make inferred guid =
   ExpressionGui.wrapDelegated fdConfig FocusDelegator.NotDelegating $
   makeUnwrapped inferred guid
 
-makeUnwrapped
-  :: Sugar.Inferred ViewM (Sugar.Expression ViewM) -> Guid
-  -> Widget.Id
-  -> ExprGuiM ViewM (ExpressionGui ViewM)
+makeUnwrapped ::
+  MonadA m =>
+  Sugar.Inferred m (Sugar.Expression m) -> Guid -> Widget.Id ->
+  ExprGuiM m (ExpressionGui m)
 makeUnwrapped inferred guid myId = do
   mInnerCursor <- ExprGuiM.widgetEnv $ WE.subCursor myId
   case mInnerCursor of

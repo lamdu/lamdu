@@ -148,6 +148,7 @@ Executable lamdu
                        Lamdu.CodeEdit.Sugar,
                        Lamdu.CodeEdit,
                        Lamdu.Config,
+                       Lamdu.Data.Anchors,
                        Lamdu.Data.Arbitrary,
                        Lamdu.Data.Ops,
                        Lamdu.Data.Definition,

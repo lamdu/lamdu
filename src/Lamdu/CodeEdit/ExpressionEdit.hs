@@ -10,7 +10,6 @@ import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Graphics.UI.Bottle.Widget (EventHandlers)
-import Lamdu.Anchors (ViewM)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import qualified Control.Lens as Lens
@@ -47,7 +46,7 @@ pasteEventMap =
    fmap WidgetIds.fromGuid) .
   (Lens.view Sugar.holePaste <=< Lens.view Sugar.holeMActions)
 
-make :: m ~ ViewM => Sugar.Expression m -> ExprGuiM m (ExpressionGui m)
+make :: MonadA m => Sugar.Expression m -> ExprGuiM m (ExpressionGui m)
 make sExpr = do
   (holePicker, widget) <- makeEditor sExpr exprId
   typeEdits <- traverse make $ payload ^. Sugar.plInferredTypes
@@ -79,11 +78,9 @@ make sExpr = do
     exprId = WidgetIds.fromGuid exprGuid
     exprGuid = sExpr ^. Sugar.rGuid
 
-makeEditor
-  :: m ~ ViewM
-  => Sugar.Expression m
-  -> Widget.Id
-  -> ExprGuiM m (IsHole, ExpressionGui m)
+makeEditor ::
+  MonadA m => Sugar.Expression m -> Widget.Id ->
+  ExprGuiM m (IsHole, ExpressionGui m)
 makeEditor sExpr =
   case sExpr ^. Sugar.rExpressionBody of
   Sugar.ExpressionFunc hasParens f ->

@@ -12,6 +12,7 @@ import Data.IORef
 import Data.List(intercalate)
 import Data.Monoid(Monoid(..))
 import Data.Store.Db (Db)
+import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Data.Word(Word8)
@@ -30,6 +31,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Cache as Cache
 import qualified Data.Map as Map
 import qualified Data.Store.Db as Db
+import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Transaction as Transaction
 import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.DrawingCombinators as Draw
@@ -199,7 +201,7 @@ runDb font db = do
   let
     addHelp = addHelpWithStyle $ Config.helpStyle font
     makeWidget size = do
-      cursor <- dbToIO $ Transaction.getP Anchors.cursor
+      cursor <- dbToIO . Transaction.getP $ Anchors.cursor Anchors.revisionProps
       sizeFactor <- readIORef sizeFactorRef
       globalEventMap <- mkGlobalEventMap settingsRef
       let eventMap = globalEventMap `mappend` sizeFactorEvents
@@ -252,7 +254,7 @@ mkWidgetWithFallback settingsRef style dbToIO (size, cursor) = do
         then return (True, candidateWidget)
         else do
           finalWidget <- fromCursor settings rootCursor
-          lift $ Transaction.setP Anchors.cursor rootCursor
+          lift $ Transaction.setP (Anchors.cursor Anchors.revisionProps) rootCursor
           return (False, finalWidget)
       unless (widget ^. Widget.wIsFocused) $
         fail "Root cursor did not match"
@@ -261,7 +263,10 @@ mkWidgetWithFallback settingsRef style dbToIO (size, cursor) = do
   return widget
   where
     fromCursor settings = makeRootWidget settings style dbToIO size
-    rootCursor = WidgetIds.fromIRef Anchors.panesIRef
+    rootCursor = WidgetIds.fromGuid rootGuid
+
+rootGuid :: Guid
+rootGuid = IRef.guid $ Anchors.panes Anchors.codeIRefs
 
 makeRootWidget
   :: Settings
@@ -276,11 +281,11 @@ makeRootWidget settings style dbToIO size cursor = do
     codeEdit <-
       (fmap . Widget.atEvents) (VersionControl.runEvent cursor) .
       (mapStateT . WE.mapWidgetEnvT) VersionControl.runAction $
-      CodeEdit.make settings
+      CodeEdit.make Anchors.codeProps settings rootGuid
     (fmap . Widget.atEvents) (dbToIO . (attachCursor =<<)) .
       lift $ BranchGUI.make id size actions codeEdit
   where
     attachCursor eventResult = do
-      maybe (return ()) (Transaction.setP Anchors.cursor) $
+      maybe (return ()) (Transaction.setP (Anchors.cursor Anchors.revisionProps)) $
         eventResult ^. Widget.eCursor
       return eventResult

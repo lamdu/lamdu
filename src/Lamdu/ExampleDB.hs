@@ -171,26 +171,29 @@ newBranch name ver = do
 initDB :: Db -> IO ()
 initDB db =
   A.runDbTransaction db $ do
-    exists <- Transaction.irefExists A.branchesIRef
+    exists <- Transaction.irefExists $ A.branches A.revisionIRefs
     unless exists $ do
       emptyVersion <- Version.makeInitialVersion []
       master <- newBranch "master" emptyVersion
       view <- View.new master
-      Transaction.writeIRef A.viewIRef view
-      Transaction.writeIRef A.branchesIRef [master]
-      Transaction.writeIRef A.currentBranchIRef master
-      Transaction.writeIRef A.redosIRef []
-      Transaction.writeIRef A.cursorIRef $ WidgetIds.fromIRef A.panesIRef
+      Transaction.writeIRef (A.view A.revisionIRefs) view
+      Transaction.writeIRef (A.branches A.revisionIRefs) [master]
+      Transaction.writeIRef (A.currentBranch A.revisionIRefs) master
+      Transaction.writeIRef (A.redos A.revisionIRefs) []
+      Transaction.writeIRef (A.cursor A.revisionIRefs) .
+        WidgetIds.fromIRef $ A.panes A.codeIRefs
       A.runViewTransaction view $ do
         ((ffiEnv, sugarConfig), builtins) <- createBuiltins
-        Transaction.writeIRef A.clipboardsIRef []
-        Transaction.writeIRef A.sugarConfigIRef sugarConfig
-        Transaction.writeIRef A.ffiEnvIRef ffiEnv
-        Transaction.writeIRef A.globalsIRef builtins
-        Transaction.writeIRef A.panesIRef []
-        Transaction.writeIRef A.preJumpsIRef []
-        Transaction.writeIRef A.preCursorIRef $ WidgetIds.fromIRef A.panesIRef
-        Transaction.writeIRef A.postCursorIRef $ WidgetIds.fromIRef A.panesIRef
+        Transaction.writeIRef (A.clipboards A.codeIRefs) []
+        Transaction.writeIRef (A.sugarConfig A.codeIRefs) sugarConfig
+        Transaction.writeIRef (A.ffiEnv A.codeIRefs) ffiEnv
+        Transaction.writeIRef (A.globals A.codeIRefs) builtins
+        Transaction.writeIRef (A.panes A.codeIRefs) []
+        Transaction.writeIRef (A.preJumps A.codeIRefs) []
+        Transaction.writeIRef (A.preCursor A.codeIRefs) .
+          WidgetIds.fromIRef $ A.panes A.codeIRefs
+        Transaction.writeIRef (A.postCursor A.codeIRefs) .
+          WidgetIds.fromIRef $ A.panes A.codeIRefs
       -- Prevent undo into the invalid empty revision
       newVer <- Branch.curVersion master
       Version.preventUndo newVer

@@ -40,11 +40,11 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
-import qualified Lamdu.Anchors as Anchors
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds

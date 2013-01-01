@@ -3,9 +3,11 @@ module Lamdu.CodeEdit.Sugar.Monad
   ( Context(..), mkContext
   , SugarM(..), run, runPure
   , readContext, liftTransaction
+  , codeAnchor
+  , getP
   ) where
 
-import Control.Applicative (Applicative)
+import Control.Applicative (Applicative, (<$>))
 import Control.Lens ((^.))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -18,35 +20,40 @@ import Lamdu.CodeEdit.Sugar.Types -- see export list
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Cache as Cache
+import qualified Data.Store.Transaction as Transaction
+import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression.Infer as Infer
 
-data Context t = Context
-  { scMDefI :: Maybe (DefI t)
-  , scInferState :: Infer.Context (DefI t)
-  , scConfig :: SugarConfig t
+data Context m = Context
+  { scMDefI :: Maybe (DefI (Tag m))
+  , scInferState :: Infer.Context (DefI (Tag m))
+  , scConfig :: SugarConfig (Tag m)
   , scMContextHash :: Maybe Cache.KeyBS -- Nothing if converting pure expression
-  , scHoleInferState :: Infer.Context (DefI t)
+  , scHoleInferState :: Infer.Context (DefI (Tag m))
+  , scCodeAnchors :: Anchors.CodeProps m
   }
 
-newtype SugarM m a = SugarM (ReaderT (Context (Tag m)) (T m) a)
+newtype SugarM m a = SugarM (ReaderT (Context m) (T m) a)
   deriving (Functor, Applicative, Monad)
 
 mkContext ::
   Typeable (m ()) =>
-  Maybe (DefI (Tag m)) -> SugarConfig (Tag m) -> InferLoadedResult m -> Context (Tag m)
-mkContext mDefI config iResult = Context
+  Anchors.CodeProps m ->
+  Maybe (DefI (Tag m)) -> SugarConfig (Tag m) -> InferLoadedResult m -> Context m
+mkContext cp mDefI config iResult = Context
   { scMDefI = mDefI
   , scInferState = iResult ^. ilrInferContext
   , scConfig = config
   , scMContextHash = Just . Cache.bsOfKey $ iResult ^. ilrContext
   , scHoleInferState = iResult ^. ilrBaseInferContext
+  , scCodeAnchors = cp
   }
 
-run :: MonadA m => Context (Tag m) -> SugarM m a -> T m a
+run :: MonadA m => Context m -> SugarM m a -> T m a
 run ctx (SugarM action) = runReaderT action ctx
 
-runPure :: MonadA m => SugarConfig (Tag m) -> SugarM m a -> T m a
-runPure config =
+runPure :: MonadA m => Anchors.CodeProps m -> SugarConfig (Tag m) -> SugarM m a -> T m a
+runPure cp config =
   run ctx
   where
     ctx =
@@ -56,10 +63,17 @@ runPure config =
       , scHoleInferState = error "pure expression doesnt have hole infer state"
       , scConfig = config
       , scMContextHash = Nothing
+      , scCodeAnchors = cp
       }
 
-readContext :: MonadA m => SugarM m (Context (Tag m))
+readContext :: MonadA m => SugarM m (Context m)
 readContext = SugarM Reader.ask
 
 liftTransaction :: MonadA m => T m a -> SugarM m a
 liftTransaction = SugarM . lift
+
+codeAnchor :: MonadA m => (Anchors.CodeProps m -> a) -> SugarM m a
+codeAnchor f = f . scCodeAnchors <$> readContext
+
+getP :: MonadA m => Transaction.MkProperty m a -> SugarM m a
+getP = liftTransaction . Transaction.getP

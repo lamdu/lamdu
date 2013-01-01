@@ -25,7 +25,6 @@ import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.Anchors (ViewM)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.Data.Expression (Expression)
@@ -44,12 +43,12 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-import qualified Lamdu.Anchors as Anchors
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Ops as DataOps
@@ -273,16 +272,14 @@ makeResultsList holeInfo group = do
       Expression.pureExpression .
       (Expression.makeApply . Expression.pureExpression . Expression.BodyLeaf) Expression.Hole
 
-makeAllResults
-  :: ViewM ~ m => HoleInfo m
-  -> ExprGuiM m (ListT (CT m) (ResultType, ResultsList m))
+makeAllResults :: MonadA m => HoleInfo m -> ExprGuiM m (ListT (CT m) (ResultType, ResultsList m))
 makeAllResults holeInfo = do
   paramResults <-
     traverse (makeVariableGroup . Expression.ParameterRef) $
     hiHoleActions holeInfo ^. Sugar.holeScope
   globalResults <-
     traverse (makeVariableGroup . Expression.DefinitionRef) =<<
-    ExprGuiM.getP Anchors.globals
+    ExprGuiM.getCodeAnchor Anchors.globals
   let
     searchTerm = Property.value $ hiSearchTerm holeInfo
     literalResults = makeLiteralGroup searchTerm
@@ -308,18 +305,18 @@ makeAllResults holeInfo = do
     holeExpr = Expression.pureExpression $ Expression.BodyLeaf Expression.Hole
 
 addNewDefinitionEventMap ::
-  ViewM ~ m => HoleInfo m -> Widget.EventHandlers (T m)
-addNewDefinitionEventMap holeInfo =
+  MonadA m => Anchors.CodeProps m -> HoleInfo m -> Widget.EventHandlers (T m)
+addNewDefinitionEventMap cp holeInfo =
   E.keyPresses Config.newDefinitionKeys
   (E.Doc ["Edit", "Result", "As new Definition"]) $ makeNewDefinition pickExpr
   where
     makeNewDefinition holePickResult = do
-      newDefI <- DataOps.makeDefinition -- TODO: From Sugar
+      newDefI <- DataOps.makeDefinition cp -- TODO: From Sugar
       let
         searchTerm = Property.value $ hiSearchTerm holeInfo
         newName = concat . words $ searchTerm
       Transaction.setP (Anchors.assocNameRef (IRef.guid newDefI)) newName
-      DataOps.newPane newDefI
+      DataOps.newPane cp newDefI
       defRef <-
         fmap (fromMaybe (error "GetDef should always type-check") . listToMaybe) .
         ExprGuiM.unmemo . (hiHoleActions holeInfo ^. Sugar.holeInferResults) .
@@ -327,7 +324,7 @@ addNewDefinitionEventMap holeInfo =
         Expression.DefinitionRef newDefI
       -- TODO: Can we use pickResult's animIdMapping?
       eventResult <- holePickResult defRef
-      maybe (return ()) DataOps.savePreJumpPosition $
+      maybe (return ()) (DataOps.savePreJumpPosition cp) $
         Widget._eCursor eventResult
       return Widget.EventResult {
         Widget._eCursor = Just $ WidgetIds.fromIRef newDefI,
@@ -491,7 +488,7 @@ pickEventMap holeInfo searchTerm (Just result)
 pickEventMap _ _ _ = mempty
 
 mkCallsWithArgsEventMap ::
-  ViewM ~ m => Maybe (Sugar.HoleResult m (Sugar.Expression m)) ->
+  MonadA m => Maybe (Sugar.HoleResult m (Sugar.Expression m)) ->
   T m (Widget.EventHandlers (T m))
 mkCallsWithArgsEventMap Nothing = pure mempty
 mkCallsWithArgsEventMap (Just result) =
@@ -517,14 +514,14 @@ markTypeMatchesAsUsed holeInfo =
       (hiHoleActions holeInfo ^. Sugar.holeInferResults)
 
 mkEventMap ::
-  m ~ ViewM =>
-  HoleInfo m -> String -> Maybe (Sugar.HoleResult m (Sugar.Expression m)) ->
+  MonadA m => HoleInfo m -> String -> Maybe (Sugar.HoleResult m (Sugar.Expression m)) ->
   ExprGuiM m (Widget.EventHandlers (T m))
 mkEventMap holeInfo searchTerm mResult = do
   callsWithArgsEventMap <-
     ExprGuiM.transaction $ mkCallsWithArgsEventMap mResult
+  cp <- ExprGuiM.readCodeAnchors
   pure $ mconcat
-    [ addNewDefinitionEventMap holeInfo
+    [ addNewDefinitionEventMap cp holeInfo
     , pickEventMap holeInfo searchTerm mResult
     , callsWithArgsEventMap
     , maybe mempty
@@ -536,7 +533,7 @@ mkEventMap holeInfo searchTerm mResult = do
   where
     actions = hiHoleActions holeInfo
 
-makeActiveHoleEdit :: ViewM ~ m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
+makeActiveHoleEdit :: MonadA m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
 makeActiveHoleEdit holeInfo = do
   markTypeMatchesAsUsed holeInfo
   allResults <- makeAllResults holeInfo
@@ -584,7 +581,7 @@ holeFDConfig = FocusDelegator.Config
   }
 
 make ::
-  m ~ ViewM => Sugar.Hole m (Sugar.Expression m) -> Maybe (Sugar.Expression m) -> Guid ->
+  MonadA m => Sugar.Hole m (Sugar.Expression m) -> Maybe (Sugar.Expression m) -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make hole mNextHole guid =
   ExpressionGui.wrapDelegated holeFDConfig FocusDelegator.Delegating $
@@ -605,7 +602,7 @@ makeInactiveHoleEdit hole myId =
     canPickResult = isJust $ hole ^. Sugar.holeMActions
 
 makeUnwrapped ::
-  m ~ ViewM => Sugar.Hole m (Sugar.Expression m) ->
+  MonadA m => Sugar.Hole m (Sugar.Expression m) ->
   Maybe (Sugar.Expression m) -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeUnwrapped hole mNextHole guid myId = do

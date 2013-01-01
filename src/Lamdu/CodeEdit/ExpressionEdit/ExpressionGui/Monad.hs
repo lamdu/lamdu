@@ -9,7 +9,8 @@ module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad
   --
   , makeSubexpresion
   --
-  , readSettings
+  , readSettings, readCodeAnchors
+  , getCodeAnchor
   --
   , AccessedVars, markVariablesAsUsed, usedVariables
   , withParamName, NameSource(..)
@@ -32,7 +33,6 @@ import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.Anchors (ViewM)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Types (ExpressionGui, WidgetT)
 import Lamdu.CodeEdit.Settings (Settings)
 import Lamdu.WidgetEnvT (WidgetEnvT)
@@ -47,9 +47,9 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-import qualified Lamdu.Anchors as Anchors
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.Sugar as Sugar
+import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.WidgetEnvT as WE
@@ -65,6 +65,7 @@ data Askable m = Askable
   { _aNameGenState :: NameGenState
   , _aSettings :: Settings
   , _aMakeSubexpression :: Sugar.Expression m -> ExprGuiM m (ExpressionGui m)
+  , _aCodeAnchors :: Anchors.CodeProps m
   }
 
 type T = Transaction
@@ -85,6 +86,9 @@ withFgColor = atEnv . WE.setTextColor
 
 readSettings :: MonadA m => ExprGuiM m Settings
 readSettings = ExprGuiM . RWS.asks $ Lens.view aSettings
+
+readCodeAnchors :: MonadA m => ExprGuiM m (Anchors.CodeProps m)
+readCodeAnchors = ExprGuiM . RWS.asks $ Lens.view aCodeAnchors
 
 makeSubexpresion :: MonadA m => Sugar.Expression m -> ExprGuiM m (ExpressionGui m)
 makeSubexpresion expr = do
@@ -117,10 +121,17 @@ unmemo = (`evalStateT` Cache.new 0)
 run ::
   MonadA m =>
   (Sugar.Expression m -> ExprGuiM m (ExpressionGui m)) ->
-  Settings -> ExprGuiM m a -> StateT Cache (WidgetEnvT (T m)) a
-run makeSubexpression settings (ExprGuiM action) = StateT $ \cache ->
+  Anchors.CodeProps m -> Settings -> ExprGuiM m a ->
+  StateT Cache (WidgetEnvT (T m)) a
+run makeSubexpression codeAnchors settings (ExprGuiM action) = StateT $ \cache ->
   fmap f $ runRWST action
-  (Askable initialNameGenState settings makeSubexpression) cache
+  Askable
+  { _aNameGenState = initialNameGenState
+  , _aSettings = settings
+  , _aMakeSubexpression = makeSubexpression
+  , _aCodeAnchors = codeAnchors
+  }
+  cache
   where
     f (x, newCache, _) = (x, newCache)
 
@@ -130,8 +141,12 @@ widgetEnv = ExprGuiM . lift
 transaction :: MonadA m => T m a -> ExprGuiM m a
 transaction = widgetEnv . lift
 
-getP :: m ~ ViewM => Transaction.MkProperty ViewM a -> ExprGuiM m a
+getP :: MonadA m => Transaction.MkProperty m a -> ExprGuiM m a
 getP = transaction . Transaction.getP
+
+getCodeAnchor ::
+  MonadA m => (Anchors.CodeProps m -> Transaction.MkProperty m b) -> ExprGuiM m b
+getCodeAnchor anchor = getP . anchor =<< readCodeAnchors
 
 assignCursor :: MonadA m => Widget.Id -> Widget.Id -> ExprGuiM m a -> ExprGuiM m a
 assignCursor x y = atEnv $ WE.envAssignCursor x y
