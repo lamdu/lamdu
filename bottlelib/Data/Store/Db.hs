@@ -34,7 +34,9 @@ lookup :: Db -> Guid -> IO (Maybe ByteString)
 lookup db = HashDB.readKey db . Guid.bs
 
 transaction :: Db -> [(Guid, Maybe ByteString)] -> IO ()
-transaction db = traverse_ applyChange
+transaction db changes = do
+  traverse_ applyChange changes
+  HashDB.msync db
   where
     applyChange (key, Nothing) = HashDB.deleteKey db (Guid.bs key)
     applyChange (key, Just value) = HashDB.writeKey db (Guid.bs key) value
