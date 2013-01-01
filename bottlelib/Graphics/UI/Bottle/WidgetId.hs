@@ -1,7 +1,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module Graphics.UI.Bottle.WidgetId (Id(..), joinId, subId) where
+module Graphics.UI.Bottle.WidgetId (Id(..), joinId, subId, augmentId) where
 
 import Data.Binary (Binary)
+import Data.ByteString.Char8(pack) -- IsString instance
 import Data.List (isPrefixOf, intercalate)
 import Data.Monoid (Monoid(..))
 import Graphics.UI.Bottle.Animation (AnimId)
@@ -21,3 +22,6 @@ subId :: Id -> Id -> Maybe AnimId
 subId (Id folder) (Id path)
   | folder `isPrefixOf` path = Just $ drop (length folder) path
   | otherwise = Nothing
+
+augmentId :: Show a => a -> Id -> Id
+augmentId x = (`joinId` [pack (show x)])

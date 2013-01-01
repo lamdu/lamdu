@@ -22,7 +22,7 @@ import Graphics.UI.Bottle.Animation (AnimId, R, Size)
 import Graphics.UI.Bottle.Direction (Direction)
 import Graphics.UI.Bottle.EventMap (EventMap)
 import Graphics.UI.Bottle.Rect (Rect(..))
-import Graphics.UI.Bottle.WidgetId (Id(..), toAnimId, joinId, subId)
+import Graphics.UI.Bottle.WidgetId (Id(..), augmentId, toAnimId, joinId, subId)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
 import qualified Graphics.DrawingCombinators as Draw
