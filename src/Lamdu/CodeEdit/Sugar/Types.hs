@@ -167,8 +167,9 @@ data ListItem m expr = ListItem
   , liExpr :: expr
   } deriving (Functor)
 
-newtype List m expr = List
+data List m expr = List
   { lValues :: [ListItem m expr]
+  , lMAddFirstItem :: Maybe (T m Guid)
   } deriving (Functor)
 
 data ExpressionBody m expr
@@ -215,7 +216,7 @@ instance Show expr => Show (ExpressionBody m expr) where
   show ExpressionPolymorphic {} = "Poly"
   show ExpressionLiteralInteger { __eLit = LiteralInteger i _ } = show i
   show ExpressionAtom { __eAtom = atom } = atom
-  show ExpressionList { __eList = List items } =
+  show ExpressionList { __eList = List items _ } =
     concat
     [ "["
     , List.intercalate ", " $ map (show . liExpr) items

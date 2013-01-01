@@ -3,6 +3,7 @@ module Lamdu.Data.Ops
   ( newHole, giveAsArg, callWithArg
   , replace, replaceWithHole, lambdaWrap, redexWrap
   , giveAsArgToOperator
+  , addListItem
   , makeDefinition
   , newBuiltin, newDefinition
   , savePreJumpPosition, jumpBack
@@ -17,6 +18,7 @@ import Data.List.Split (splitOn)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction, getP, setP, modP)
+import Lamdu.CodeEdit.Sugar.Config (SugarConfig(..))
 import Lamdu.Data.Definition (Definition(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Data.Store.IRef as IRef
@@ -114,6 +116,25 @@ redexWrap exprP = do
     DataIRef.newExprBody $ Expression.makeApply newLambdaI newValueI
   Property.set exprP newApplyI
   return (newParam, newLambdaI)
+
+addListItem ::
+  MonadA m =>
+  SugarConfig (Tag m) ->
+  DataIRef.ExpressionProperty m ->
+  T m (DataIRef.ExpressionI (Tag m), DataIRef.ExpressionI (Tag m))
+addListItem sugarConfig exprP = do
+  consTempI <-
+    DataIRef.newExprBody . Expression.makeDefinitionRef $ scCons sugarConfig
+  consI <-
+    DataIRef.newExprBody . Expression.makeApply consTempI =<< newHole
+  newItemI <- newHole
+  consSectionI <-
+    DataIRef.newExprBody $ Expression.makeApply consI newItemI
+  newListI <-
+    DataIRef.newExprBody . Expression.makeApply consSectionI $
+    Property.value exprP
+  Property.set exprP newListI
+  return (newListI, newItemI)
 
 newPane :: MonadA m => Anchors.CodeProps m -> DefI (Tag m) -> Transaction m ()
 newPane codeProps defI = do

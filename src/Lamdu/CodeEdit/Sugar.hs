@@ -320,20 +320,39 @@ isPolymorphicFunc funcI =
 convertApply :: (Typeable1 m, MonadA m) => Expression.Apply (DataIRef.ExpressionM m (PayloadMM m)) -> Convertor m
 convertApply (Expression.Apply funcI argI) exprI = do
   -- if we're an apply of the form (nil T): Return an empty list
-  nil <- scNil . SugarM.scConfig <$> SugarM.readContext
-  if Lens.anyOf getDefinition (== nil) funcI
+  sugarConfig <- SugarM.scConfig <$> SugarM.readContext
+  let
+    mAddFirstItem =
+      fmap (DataIRef.exprGuid . snd) .
+      DataOps.addListItem sugarConfig <$>
+      resultStored exprI
+    mkList =
+      mkExpression exprI . ExpressionList .
+      (`List` mAddFirstItem)
+  if Lens.anyOf getDefinition (== scNil sugarConfig) funcI
     then mkList []
     else do
       argS <- convertExpressionI argI
       cons <- scCons . SugarM.scConfig <$> SugarM.readContext
       case (funcI ^? eApply, argS ^. rExpressionBody) of
-        (Just (Expression.Apply funcFuncI funcArgI), ExpressionList (List values))
+        (Just (Expression.Apply funcFuncI funcArgI), ExpressionList (List values mAddNextItem))
           -- Our form is ((funcFuncI funcArgI) argI)
           | Lens.anyOf (eApply . Expression.applyFunc . getDefinition) (== cons) funcFuncI
             -- Our form is (((cons _) funcArgI) argI)
             -> do
-              listElem <- convertExpressionI funcArgI
-              mkList (ListItem { liMActions = Nothing, liExpr = listElem } : values)
+              listItemExpr <- convertExpressionI funcArgI
+              let
+                listItem =
+                  ListItem
+                  { liExpr = listItemExpr
+                  , liMActions = do
+                      addNext <- mAddNextItem
+                      return ListItemActions
+                        { _itemAddNext = addNext
+                        , _itemDelete = undefined
+                        }
+                  }
+              mkList (listItem : values)
                 & Lens.mapped . rHiddenGuids <>~
                   funcI ^. Expression.ePayload . SugarInfer.plGuid :
                   argS ^. rGuid : argS ^. rHiddenGuids
@@ -344,8 +363,6 @@ convertApply (Expression.Apply funcI argI) exprI = do
             ExpressionSection _ section ->
               applyOnSection section apply exprI
             _ -> convertApplyPrefix apply exprI
-  where
-    mkList = mkExpression exprI . ExpressionList . List
 
 eApply :: SimpleTraversal (Expression.Expression def a) (Expression.Apply (Expression.Expression def a))
 eApply = Expression.eBody . Expression.bodyApply
