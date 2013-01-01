@@ -50,7 +50,6 @@ import Data.Store.IRef (Tag, Tagged)
 import Data.Traversable (traverse)
 import Data.Tuple (swap)
 import Data.Typeable (Typeable1)
-import Lamdu.CodeEdit.Sugar.Config (SugarConfig(..))
 import Lamdu.CodeEdit.Sugar.Infer (InferredWC, NoInferred(..), Stored, NoStored)
 import Lamdu.CodeEdit.Sugar.Monad (SugarM)
 import Lamdu.CodeEdit.Sugar.Types -- see export list
@@ -320,20 +319,22 @@ isPolymorphicFunc funcI =
 convertApply :: (Typeable1 m, MonadA m) => Expression.Apply (DataIRef.ExpressionM m (PayloadMM m)) -> Convertor m
 convertApply (Expression.Apply funcI argI) exprI = do
   -- if we're an apply of the form (nil T): Return an empty list
-  sugarConfig <- SugarM.scConfig <$> SugarM.readContext
+  specialFunctions <-
+    SugarM.getP . Anchors.specialFunctions .
+    SugarM.scCodeAnchors =<< SugarM.readContext
   let
     mAddFirstItem =
       fmap (DataIRef.exprGuid . snd) .
-      DataOps.addListItem sugarConfig <$>
+      DataOps.addListItem specialFunctions <$>
       resultStored exprI
     mkList =
       mkExpression exprI . ExpressionList .
       (`List` mAddFirstItem)
-  if Lens.anyOf getDefinition (== scNil sugarConfig) funcI
+  if Lens.anyOf getDefinition (== Anchors.sfNil specialFunctions) funcI
     then mkList []
     else do
       argS <- convertExpressionI argI
-      cons <- scCons . SugarM.scConfig <$> SugarM.readContext
+      let cons = Anchors.sfCons specialFunctions
       case (funcI ^? eApply, argS ^. rExpressionBody) of
         (Just (Expression.Apply funcFuncI funcArgI), ExpressionList (List values mAddNextItem))
           -- Our form is ((funcFuncI funcArgI) argI)
@@ -594,8 +595,7 @@ mkHoleResult sugarContext exprS res =
   where
     cp = SugarM.scCodeAnchors sugarContext
     convertHoleResult =
-      SugarM.runPure cp
-      (SugarM.scConfig sugarContext) . convertExpressionI .
+      SugarM.runPure cp . convertExpressionI .
       (Lens.mapped . SugarInfer.plInferred %~ Just) .
       (Lens.mapped . SugarInfer.plStored .~ Nothing) .
       SugarInfer.resultFromInferred
@@ -791,10 +791,11 @@ isCompleteType =
   )
 
 convertExpressionPure ::
-  (MonadA m, Typeable1 m, RandomGen g) => Anchors.CodeProps m ->
-  g -> SugarConfig (Tag m) -> DataIRef.ExpressionM m () -> T m (Expression m)
-convertExpressionPure cp gen config =
-  SugarM.runPure cp config . convertExpressionI . fmap toPayloadMM .
+  (MonadA m, Typeable1 m, RandomGen g) =>
+  Anchors.CodeProps m -> g ->
+  DataIRef.ExpressionM m () -> T m (Expression m)
+convertExpressionPure cp gen =
+  SugarM.runPure cp . convertExpressionI . fmap toPayloadMM .
   SugarInfer.resultFromPure gen
 
 convertDefinitionParams ::
@@ -901,20 +902,21 @@ convertDefinitionContent expr = do
     }
 
 loadConvertDefI ::
-  (MonadA m, Typeable1 m) => Anchors.CodeProps m -> SugarConfig (Tag m) -> DefI (Tag m) ->
+  (MonadA m, Typeable1 m) =>
+  Anchors.CodeProps m -> DefI (Tag m) ->
   CT m (Definition m)
-loadConvertDefI cp config defI =
+loadConvertDefI cp defI =
   convertDefI =<< lift (Load.loadDefinitionClosure defI)
   where
     convertDefBody (Definition.BodyBuiltin builtin) =
       fmap return . convertDefIBuiltin builtin
     convertDefBody (Definition.BodyExpression exprLoaded) =
-      convertDefIExpression cp config exprLoaded
+      convertDefIExpression cp exprLoaded
     convertDefI (Definition.Definition defBody typeLoaded) = do
       body <- convertDefBody defBody defI typeLoaded
       typeS <-
         lift .
-        convertExpressionPure cp (mkGen 2 3 (IRef.guid defI)) config $
+        convertExpressionPure cp (mkGen 2 3 (IRef.guid defI)) $
         void typeLoaded
       return Definition
         { drGuid = IRef.guid defI
@@ -938,10 +940,10 @@ convertDefIBuiltin (Definition.Builtin name) defI typeIRef =
       Definition.BodyBuiltin . Definition.Builtin
 
 convertDefIExpression ::
-  (MonadA m, Typeable1 m) => Anchors.CodeProps m -> SugarConfig (Tag m) ->
+  (MonadA m, Typeable1 m) => Anchors.CodeProps m ->
   Load.LoadedClosure (Tag m) -> DefI (Tag m) -> Load.LoadedClosure (Tag m) ->
   CT m (DefinitionBody m)
-convertDefIExpression cp config exprLoaded defI typeI = do
+convertDefIExpression cp exprLoaded defI typeI = do
   inferredLoadedResult <-
     SugarInfer.inferLoadedExpression
     inferLoadedGen (Just defI) exprLoaded $
@@ -954,7 +956,7 @@ convertDefIExpression cp config exprLoaded defI typeI = do
       on (==) Expression.canonizeParamIds (void typeI) inferredTypeP
     mkNewType = do
       inferredTypeS <-
-        convertExpressionPure cp iTypeGen config
+        convertExpressionPure cp iTypeGen
         inferredTypeP
       return DefinitionNewType
         { dntNewType = inferredTypeS
@@ -962,7 +964,7 @@ convertDefIExpression cp config exprLoaded defI typeI = do
           (Property.set . Load.propertyOfClosure) (typeI ^. Expression.ePayload) =<<
           DataIRef.newExpression inferredTypeP
         }
-  lift . SugarM.run (SugarM.mkContext cp (Just defI) config inferredLoadedResult) $ do
+  lift . SugarM.run (SugarM.mkContext cp (Just defI) inferredLoadedResult) $ do
     content <-
       convertDefinitionContent .
       (fmap . Lens.over SugarInfer.plInferred) Just $

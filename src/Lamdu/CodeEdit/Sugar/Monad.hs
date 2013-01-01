@@ -14,7 +14,6 @@ import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.MonadA (MonadA)
 import Data.Store.IRef (Tag)
 import Data.Typeable (Typeable)
-import Lamdu.CodeEdit.Sugar.Config (SugarConfig)
 import Lamdu.CodeEdit.Sugar.Infer (InferLoadedResult, ilrInferContext, ilrContext, ilrBaseInferContext)
 import Lamdu.CodeEdit.Sugar.Types -- see export list
 import Lamdu.Data.Expression.IRef (DefI)
@@ -27,7 +26,6 @@ import qualified Lamdu.Data.Expression.Infer as Infer
 data Context m = Context
   { scMDefI :: Maybe (DefI (Tag m))
   , scInferState :: Infer.Context (DefI (Tag m))
-  , scConfig :: SugarConfig (Tag m)
   , scMContextHash :: Maybe Cache.KeyBS -- Nothing if converting pure expression
   , scHoleInferState :: Infer.Context (DefI (Tag m))
   , scCodeAnchors :: Anchors.CodeProps m
@@ -39,11 +37,10 @@ newtype SugarM m a = SugarM (ReaderT (Context m) (T m) a)
 mkContext ::
   Typeable (m ()) =>
   Anchors.CodeProps m ->
-  Maybe (DefI (Tag m)) -> SugarConfig (Tag m) -> InferLoadedResult m -> Context m
-mkContext cp mDefI config iResult = Context
+  Maybe (DefI (Tag m)) -> InferLoadedResult m -> Context m
+mkContext cp mDefI iResult = Context
   { scMDefI = mDefI
   , scInferState = iResult ^. ilrInferContext
-  , scConfig = config
   , scMContextHash = Just . Cache.bsOfKey $ iResult ^. ilrContext
   , scHoleInferState = iResult ^. ilrBaseInferContext
   , scCodeAnchors = cp
@@ -52,8 +49,8 @@ mkContext cp mDefI config iResult = Context
 run :: MonadA m => Context m -> SugarM m a -> T m a
 run ctx (SugarM action) = runReaderT action ctx
 
-runPure :: MonadA m => Anchors.CodeProps m -> SugarConfig (Tag m) -> SugarM m a -> T m a
-runPure cp config =
+runPure :: MonadA m => Anchors.CodeProps m -> SugarM m a -> T m a
+runPure cp =
   run ctx
   where
     ctx =
@@ -61,7 +58,6 @@ runPure cp config =
       { scMDefI = Nothing
       , scInferState = error "pure expression doesnt have infer state"
       , scHoleInferState = error "pure expression doesnt have hole infer state"
-      , scConfig = config
       , scMContextHash = Nothing
       , scCodeAnchors = cp
       }

@@ -11,7 +11,6 @@ import Data.Store.IRef (IRef, Tag)
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Version (Version)
 import Data.Store.Transaction (Transaction, setP)
-import Lamdu.CodeEdit.Sugar.Config (SugarConfig(..))
 import Lamdu.Data.Definition (Definition(..))
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Store.IRef as IRef
@@ -41,7 +40,7 @@ fixIRef createOuter = do
   return x
 
 createBuiltins ::
-  MonadA m => Transaction m ((FFI.Env (Tag m), SugarConfig (Tag m)), [DataIRef.DefI (Tag m)])
+  MonadA m => Transaction m ((FFI.Env (Tag m), A.SpecialFunctions (Tag m)), [DataIRef.DefI (Tag m)])
 createBuiltins =
   Writer.runWriterT $ do
     list <- mkType . DataOps.newBuiltin "Data.List.List" =<< lift setToSet
@@ -126,15 +125,15 @@ createBuiltins =
         Definition.Builtin $ Definition.FFIName ["Prelude"] "."
 
     let
-      sugarConfig = SugarConfig
-        { scCons = cons
-        , scNil = nil
+      specialFunctions = A.SpecialFunctions
+        { A.sfCons = cons
+        , A.sfNil = nil
         }
       ffiEnv = FFI.Env
         { FFI.trueDef = true
         , FFI.falseDef = false
         }
-    return (ffiEnv, sugarConfig)
+    return (ffiEnv, specialFunctions)
   where
     endo = join mkPi
     set = DataIRef.newExprBody $ Expression.BodyLeaf Expression.Set
@@ -183,9 +182,9 @@ initDB db =
       Transaction.writeIRef (A.cursor A.revisionIRefs) .
         WidgetIds.fromIRef $ A.panes A.codeIRefs
       A.runViewTransaction view $ do
-        ((ffiEnv, sugarConfig), builtins) <- createBuiltins
+        ((ffiEnv, specialFunctions), builtins) <- createBuiltins
         Transaction.writeIRef (A.clipboards A.codeIRefs) []
-        Transaction.writeIRef (A.sugarConfig A.codeIRefs) sugarConfig
+        Transaction.writeIRef (A.specialFunctions A.codeIRefs) specialFunctions
         Transaction.writeIRef (A.ffiEnv A.codeIRefs) ffiEnv
         Transaction.writeIRef (A.globals A.codeIRefs) builtins
         Transaction.writeIRef (A.panes A.codeIRefs) []

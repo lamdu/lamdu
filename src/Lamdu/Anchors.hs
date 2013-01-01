@@ -5,9 +5,7 @@ module Lamdu.Anchors
   , ViewM, runViewTransaction
   , CodeProps, codeProps, codeIRefs
   , RevisionProps, revisionProps, revisionIRefs
-  , Code(..) -- Re-export
-  , Revision(..) -- Re-export
-  , assocNameRef -- Re-export
+  , module Lamdu.Data.Anchors
   ) where
 
 import Control.Applicative (Applicative)
@@ -18,7 +16,7 @@ import Data.Store.IRef (IRef, Tag)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction)
 import Data.Typeable (Typeable)
-import Lamdu.Data.Anchors (Code(..), Revision(..), assocNameRef)
+import Lamdu.Data.Anchors (Code(..), Revision(..), assocNameRef, SpecialFunctions(..))
 import qualified Data.Store.Db as Db
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Rev.View as View
@@ -44,7 +42,7 @@ codeIRefs = Code
   { panes = IRef.anchor "panes"
   , clipboards = IRef.anchor "clipboards"
   , globals = IRef.anchor "globals"
-  , sugarConfig = IRef.anchor "sugarConfig"
+  , specialFunctions = IRef.anchor "specialFuncs"
   , ffiEnv = IRef.anchor "ffiEnv"
   , preJumps = IRef.anchor "prejumps"
   , preCursor = IRef.anchor "precursor"

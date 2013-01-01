@@ -18,7 +18,6 @@ import Data.List.Split (splitOn)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction, getP, setP, modP)
-import Lamdu.CodeEdit.Sugar.Config (SugarConfig(..))
 import Lamdu.Data.Definition (Definition(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Data.Store.IRef as IRef
@@ -119,12 +118,12 @@ redexWrap exprP = do
 
 addListItem ::
   MonadA m =>
-  SugarConfig (Tag m) ->
+  Anchors.SpecialFunctions (Tag m) ->
   DataIRef.ExpressionProperty m ->
   T m (DataIRef.ExpressionI (Tag m), DataIRef.ExpressionI (Tag m))
-addListItem sugarConfig exprP = do
+addListItem specialFunctions exprP = do
   consTempI <-
-    DataIRef.newExprBody . Expression.makeDefinitionRef $ scCons sugarConfig
+    DataIRef.newExprBody . Expression.makeDefinitionRef $ Anchors.sfCons specialFunctions
   consI <-
     DataIRef.newExprBody . Expression.makeApply consTempI =<< newHole
   newItemI <- newHole

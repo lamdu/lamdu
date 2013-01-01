@@ -12,14 +12,12 @@ import Data.List.Utils (enumerate, insertAt, removeAt)
 import Data.Maybe (listToMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
-import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable1)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (WidgetT, ExprGuiM)
 import Lamdu.CodeEdit.Settings (Settings)
-import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
 import qualified Data.Store.IRef as IRef
@@ -63,11 +61,6 @@ makeNewDefinitionAction = do
     DataOps.savePreJumpPosition cp curCursor
     return . DefinitionEdit.diveToNameEdit $ WidgetIds.fromIRef newDefI
 
-loadConvertDefI :: (MonadA m, Typeable1 m) => Anchors.CodeProps m -> DefI (Tag m) -> CT m (Sugar.Definition m)
-loadConvertDefI cp defI = do
-  sugarConfig <- lift . Transaction.getP $ Anchors.sugarConfig cp
-  Sugar.loadConvertDefI cp sugarConfig defI
-
 makeSugarPanes :: (MonadA m, Typeable1 m) => Anchors.CodeProps m -> Guid -> CT m [SugarPane m]
 makeSugarPanes cp rootGuid = do
   panes <- lift . Transaction.getP $ Anchors.panes cp
@@ -91,7 +84,7 @@ makeSugarPanes cp rootGuid = do
       | i-1 >= 0 = Just $ movePane i (i-1)
       | otherwise = Nothing
     convertPane (i, defI) = do
-      sDef <- loadConvertDefI cp defI
+      sDef <- Sugar.loadConvertDefI cp defI
       return SugarPane
         { spDef = sDef
         , mDelPane = mkMDelPane i
@@ -112,7 +105,7 @@ makeClipboardsEdit clipboards = do
 
 makeSugarClipboards :: (MonadA m, Typeable1 m) => Anchors.CodeProps m -> CT m [Sugar.Definition m]
 makeSugarClipboards cp =
-  traverse (loadConvertDefI cp) =<<
+  traverse (Sugar.loadConvertDefI cp) =<<
   (lift . Transaction.getP . Anchors.clipboards) cp
 
 make ::

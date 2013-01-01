@@ -142,7 +142,6 @@ Executable lamdu
                        Lamdu.CodeEdit.FFI,
                        Lamdu.CodeEdit.Infix,
                        Lamdu.CodeEdit.Settings,
-                       Lamdu.CodeEdit.Sugar.Config,
                        Lamdu.CodeEdit.Sugar.Monad,
                        Lamdu.CodeEdit.Sugar.Types,
                        Lamdu.CodeEdit.Sugar,
