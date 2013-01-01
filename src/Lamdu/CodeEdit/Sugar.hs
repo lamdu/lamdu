@@ -35,7 +35,7 @@ module Lamdu.CodeEdit.Sugar
 
 import Control.Applicative ((<$), (<$>), Applicative(..), liftA2)
 import Control.Arrow (first)
-import Control.Lens (SimpleTraversal, (.~), (^.), (&), (%~), (.~))
+import Control.Lens (SimpleTraversal, (.~), (^.), (&), (%~), (.~), (^?))
 import Control.Monad ((<=<), join, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (runState)
@@ -317,18 +317,36 @@ isPolymorphicFunc funcI =
 
 convertApply :: (Typeable1 m, MonadA m) => Expression.Apply (DataIRef.ExpressionM m (PayloadMM m)) -> Convertor m
 convertApply (Expression.Apply funcI argI) exprI = do
+  -- if we're an apply of the form (nil T): Return an empty list
   nil <- scNil . SugarM.scConfig <$> SugarM.readContext
-  if Lens.anyOf (getVar . Expression.definitionRef) (== nil) funcI
-    then mkExpression exprI . ExpressionList $ List []
+  if Lens.anyOf getDefinition (== nil) funcI
+    then mkList []
     else do
-      funcS <- convertExpressionI funcI
       argS <- convertExpressionI argI
-      let apply = Expression.Apply (funcS, funcI) (argS, argI)
-      case funcS ^. rExpressionBody of
-        ExpressionSection _ section ->
-          applyOnSection section apply exprI
-        _ ->
-          convertApplyPrefix apply exprI
+      cons <- scCons . SugarM.scConfig <$> SugarM.readContext
+      case (funcI ^? eApply, argS ^. rExpressionBody) of
+        (Just (Expression.Apply funcFuncI funcArgI), ExpressionList (List values))
+          -- Our form is ((funcFuncI funcArgI) argI)
+          | Lens.anyOf (eApply . Expression.applyFunc . getDefinition) (== cons) funcFuncI
+            -- Our form is (((cons _) funcArgI) argI)
+            -> do
+              listElem <- convertExpressionI funcArgI
+              mkList $ ListItem { liMActions = Nothing, liExpr = listElem } : values
+        _ -> do
+          funcS <- convertExpressionI funcI
+          let apply = Expression.Apply (funcS, funcI) (argS, argI)
+          case funcS ^. rExpressionBody of
+            ExpressionSection _ section ->
+              applyOnSection section apply exprI
+            _ -> convertApplyPrefix apply exprI
+  where
+    mkList = mkExpression exprI . ExpressionList . List
+
+eApply :: SimpleTraversal (Expression.Expression def a) (Expression.Apply (Expression.Expression def a))
+eApply = Expression.eBody . Expression.bodyApply
+
+getDefinition :: SimpleTraversal (Expression.Expression def a) def
+getDefinition = getVar . Expression.definitionRef
 
 removeInferredTypes :: Expression m -> Expression m
 removeInferredTypes = Lens.set (rPayload . plInferredTypes) []

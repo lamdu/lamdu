@@ -142,8 +142,10 @@ baseStyle font = TextEdit.Style
   , TextEdit._sEmptyFocusedString = ""
   }
 
-bracketTextSize = 25
-bracketColor = Draw.Color 0.2 0.8 0.8 1
+listBracketTextSize = 25
+listBracketColor = Draw.Color 0.2 0.8 0.8 1
+listCommaTextSize = 25
+listCommaColor = Draw.Color 0.2 0.8 0.8 1
 
 selectedBranchColor = Draw.Color 0 0.5 0 1
 
