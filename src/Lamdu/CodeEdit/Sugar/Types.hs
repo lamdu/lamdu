@@ -13,7 +13,7 @@ module Lamdu.CodeEdit.Sugar.Types
     , expressionLiteralInteger, expressionAtom
     , expressionList
   , Payload(..), plInferredTypes, plActions, plNextHole
-  , ExpressionP(..), rGuid, rExpressionBody, rPayload
+  , ExpressionP(..), rGuid, rExpressionBody, rPayload, rHiddenGuids
   , Expression
   , WhereItem(..)
   , ListItem(..), List(..)
@@ -77,6 +77,11 @@ data ExpressionP m pl = Expression
   { _rGuid :: Guid
   , _rExpressionBody :: ExpressionBody m (ExpressionP m pl)
   , _rPayload :: pl
+  , -- Guids from data model expression which were sugared out into
+    -- this sugar expression.
+    -- If the cursor was on them for whatever reason, it should be
+    -- mapped into the sugar expression's guid.
+    _rHiddenGuids :: [Guid]
   } deriving (Functor)
 
 type Expression m = ExpressionP m (Payload m)

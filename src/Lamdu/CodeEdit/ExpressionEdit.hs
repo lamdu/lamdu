@@ -47,7 +47,7 @@ pasteEventMap =
   (Lens.view Sugar.holePaste <=< Lens.view Sugar.holeMActions)
 
 make :: MonadA m => Sugar.Expression m -> ExprGuiM m (ExpressionGui m)
-make sExpr = do
+make sExpr = assignCursor $ do
   (holePicker, widget) <- makeEditor sExpr exprId
   typeEdits <- traverse make $ payload ^. Sugar.plInferredTypes
   let onReadOnly = Widget.doesntTakeFocus
@@ -77,6 +77,9 @@ make sExpr = do
     payload = sExpr ^. Sugar.rPayload
     exprId = WidgetIds.fromGuid exprGuid
     exprGuid = sExpr ^. Sugar.rGuid
+    assignCursor f =
+      foldr (`ExprGuiM.assignCursor` exprId) f
+      (WidgetIds.fromGuid <$> sExpr ^. Sugar.rHiddenGuids)
 
 makeEditor ::
   MonadA m => Sugar.Expression m -> Widget.Id ->
