@@ -48,10 +48,10 @@ pasteEventMap =
 
 make :: MonadA m => Sugar.Expression m -> ExprGuiM m (ExpressionGui m)
 make sExpr = assignCursor $ do
-  (holePicker, widget) <- makeEditor sExpr exprId
+  (isHole, widget) <- makeEditor sExpr exprId
   typeEdits <- traverse make $ payload ^. Sugar.plInferredTypes
   let onReadOnly = Widget.doesntTakeFocus
-  exprEventMap <- expressionEventMap exprGuid holePicker $ sExpr ^. Sugar.rPayload
+  exprEventMap <- expressionEventMap exprGuid isHole $ sExpr ^. Sugar.rPayload
   settings <- ExprGuiM.readSettings
   let
     addInferredTypes =
@@ -121,15 +121,15 @@ expressionEventMap ::
   Guid -> IsHole ->
   Sugar.Payload m ->
   ExprGuiM m (EventHandlers (Transaction m))
-expressionEventMap exprGuid holePicker payload =
-  maybe (return mempty) (actionsEventMap exprGuid holePicker) $
+expressionEventMap exprGuid isHole payload =
+  maybe (return mempty) (actionsEventMap exprGuid isHole) $
   payload ^. Sugar.plActions
 
 actionsEventMap ::
   MonadA m =>
   Guid -> IsHole -> Sugar.Actions m ->
   ExprGuiM m (EventHandlers (Transaction m))
-actionsEventMap exprGuid holePicker actions = do
+actionsEventMap exprGuid isHole actions = do
   isSelected <- ExprGuiM.widgetEnv . WE.isSubCursor $ WidgetIds.fromGuid exprGuid
   callWithArgsEventMap <-
     if isSelected
@@ -147,7 +147,7 @@ actionsEventMap exprGuid holePicker actions = do
     else return mempty
   let
     replace
-      | isSelected && isHole = mempty
+      | isSelected && isHoleBool = mempty
       | isSelected =
         mkEventMap delKeys (E.Doc ["Edit", "Replace expression"])
         FocusDelegator.delegatingId $ actions ^. Sugar.replace
@@ -174,14 +174,14 @@ actionsEventMap exprGuid holePicker actions = do
       fmap (HoleEdit.searchTermWidgetId . WidgetIds.fromGuid) .
       (actions ^. Sugar.giveAsArgToOperator) . (:[])
     cut
-      | isHole = mempty
+      | isHoleBool = mempty
       | otherwise =
         mkEventMap Config.cutKeys (E.Doc ["Edit", "Cut"]) id $
         actions ^. Sugar.cut
     mkEventMap keys doc f =
       Widget.keysEventMapMovesCursor keys doc .
       fmap (f . WidgetIds.fromGuid)
-    isHole =
-      case holePicker of
+    isHoleBool =
+      case isHole of
       NotAHole -> False
       IsAHole -> True

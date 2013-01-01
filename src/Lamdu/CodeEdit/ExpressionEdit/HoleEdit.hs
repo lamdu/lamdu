@@ -558,6 +558,8 @@ makeActiveHoleEdit holeInfo = do
         fmap rlFirst $ listToMaybe firstResults
     searchTermWidget <- makeSearchTermWidget holeInfo searchTermId mResult
     eventMap <- mkEventMap holeInfo searchTerm mResult
+    maybe (return ())
+      (ExprGuiM.addResultPicker . (^. Sugar.holeResultPick)) mResult
     let adHocEditor = adHocTextEditEventMap $ hiSearchTerm holeInfo
     return .
       Lens.over ExpressionGui.egWidget

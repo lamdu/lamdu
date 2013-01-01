@@ -59,34 +59,39 @@ makeItem ::
   Sugar.ListItem m (Sugar.ExpressionP m (Sugar.Payload m)) ->
   ExprGuiM m (ExpressionGui m, ExpressionGui m)
 makeItem item =
-  (compose . map assignCursor . Sugar.liHiddenGuids) item $
-  Lens.sequenceOf Lens.both
-  ( ExpressionGui.makeColoredLabel Config.listCommaTextSize
-    Config.listCommaColor ", " $
-    Widget.augmentId ',' itemWidgetId
-  , ExprGuiM.makeSubexpresion itemExpr
-    & Lens.mapped . ExpressionGui.egWidget %~
+  (compose . map assignCursor . Sugar.liHiddenGuids) item $ do
+    (pair, resultPickers) <-
+      ExprGuiM.listenResultPickers $
+      Lens.sequenceOf Lens.both
+      ( ExpressionGui.makeColoredLabel Config.listCommaTextSize
+        Config.listCommaColor ", " $ Widget.augmentId ',' itemWidgetId
+      , ExprGuiM.makeSubexpresion itemExpr
+      )
+    return $ pair
+      & Lens._2 . ExpressionGui.egWidget %~
       Widget.weakerEvents
-      (maybe mempty mkItemEventMap (Sugar.liMActions item))
-  )
+      (maybe mempty (mkItemEventMap resultPickers) (Sugar.liMActions item))
   where
     assignCursor guid =
       ExprGuiM.assignCursorPrefix (WidgetIds.fromGuid guid) itemWidgetId
     itemExpr = Sugar.liExpr item
     itemWidgetId = WidgetIds.fromGuid $ itemExpr ^. Sugar.rGuid
-    mkItemEventMap Sugar.ListItemActions
+    mkItemEventMap resultPickers Sugar.ListItemActions
       { Sugar._itemAddNext = addItem
       , Sugar._itemDelete = delItem
       } =
       mconcat
       [ Widget.keysEventMapMovesCursor
-        Config.listAddItemKeys (E.Doc ["Edit", "List", "Add Next Item"]) $
-        WidgetIds.fromGuid <$> addItem
+        Config.listAddItemKeys (doc resultPickers) $ do
+          sequence_ resultPickers
+          WidgetIds.fromGuid <$> addItem
       , Widget.keysEventMapMovesCursor
         (Config.delBackwordKeys ++ Config.delForwardKeys)
         (E.Doc ["Edit", "List", "Delete Item"]) $
         WidgetIds.fromGuid <$> delItem
       ]
+    doc [] = E.Doc ["Edit", "List", "Add Next Item"]
+    doc _ = E.Doc ["Edit", "List", "Pick Result and Add Next Item"]
 
 compose :: [a -> a] -> a -> a
 compose = foldr (.) id

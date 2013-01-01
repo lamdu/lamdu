@@ -1,11 +1,3 @@
-* Need an infrastructure for picking-current-hole-result and then
-  doing parent action
-
-  * Maybe ExprGuiM needs to have a WriterT [Hole Picker] in it, that
-    has the currently selected hole's picker in it, and then
-    makeSubexpresion could listen and return also the picker.
-    List could then pick before doing actions
-
 * Sugar: Brackets need consistent anim id when deleting/adding
   elements
 
