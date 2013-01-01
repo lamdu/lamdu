@@ -10,7 +10,7 @@ import Data.Binary.Get (getByteString)
 import Data.Binary.Put (putByteString)
 import Data.Binary.Utils (encodeS)
 import Data.ByteString.Utils (randomBS, xorBS)
-import Data.Hashable (hash)
+import Data.Hashable (hashWithSalt)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (mappend)
 import Data.Typeable (Typeable)
@@ -80,7 +80,7 @@ combine :: Guid -> Guid -> Guid
 combine x y =
   inGuid (rbs x . rbs y) xorGuid
   where
-    rbs = xorBS . encodeS . hash . bs
+    rbs = xorBS . encodeS . hashWithSalt 0 . bs
     xorGuid = inGuid2 xorBS x y
 
 augment :: String -> Guid -> Guid

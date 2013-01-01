@@ -26,7 +26,7 @@ import Control.Monad.Trans.State (StateT(..), evalStateT)
 import Control.Monad.Trans.State.Utils (toStateT)
 import Control.MonadA (MonadA)
 import Data.Cache (Cache)
-import Data.Hashable (hash)
+import Data.Hashable (hashWithSalt)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
@@ -109,7 +109,7 @@ resultFromInferred ::
 resultFromInferred expr =
   randomizeGuids gen f expr
   where
-    gen = Random.mkStdGen . hash . show $ void expr
+    gen = Random.mkStdGen . hashWithSalt 0 . show $ void expr
     f inferred =
       InferredWithConflicts
       { iwcInferred = inferred
