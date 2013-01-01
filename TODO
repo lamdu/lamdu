@@ -1,3 +1,8 @@
+* Sugar hides stuff, what if the inferred of that stuff is conflict?
+  e.g: Hiding the type params for nil/cons
+  * Maybe we need to figure out a UI for showing the type params to
+    nil/cons, instead?
+
 * Need to support callWithArg/etc on applyInfix too
 
 * Import Control.Lens.Tuple unqualified. edwardk says unlikely to
