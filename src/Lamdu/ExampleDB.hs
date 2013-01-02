@@ -79,8 +79,9 @@ createBuiltins =
     makeWithType_ "Prelude.sum" . forAll "a" $ \a ->
       mkPi (listOf a) a
 
-    makeWithType_ "Data.List.filter" . forAll "a" $ \a ->
-      mkPi (mkPi a bool) . endo $ listOf a
+    let filterType = forAll "a" $ \a -> mkPi (mkPi a bool) . endo $ listOf a
+    makeWithType_ "Data.List.filter" filterType
+    makeWithType_ "Data.List.takeWhile" filterType
 
     makeWithType_ "Data.List.replicate" . forAll "a" $ \a ->
       mkPi integer . mkPi a $ listOf a
@@ -93,7 +94,8 @@ createBuiltins =
 
     let aToAToA = forAll "a" $ \a -> mkPi a $ endo a
     traverse_ ((`makeWithType_` aToAToA) . ("Prelude." ++))
-      ["+", "-", "*", "/", "^", "++", "%", "mod", "div", "quot", "rem"]
+      ["+", "-", "*", "/", "^", "++", "div", "quot", "rem"]
+    newDef "%" ["Prelude"] "mod" aToAToA
     makeWithType_ "Prelude.negate" $ forAll "a" endo
     makeWithType_ "Prelude.sqrt" $ forAll "a" endo
 
