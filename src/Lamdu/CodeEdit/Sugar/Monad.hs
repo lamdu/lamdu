@@ -29,38 +29,43 @@ data Context m = Context
   , scMContextHash :: Maybe Cache.KeyBS -- Nothing if converting pure expression
   , scHoleInferState :: Infer.Context (DefI (Tag m))
   , scCodeAnchors :: Anchors.CodeProps m
+  , scSpecialFunctions :: Anchors.SpecialFunctions (Tag m)
   }
 
 newtype SugarM m a = SugarM (ReaderT (Context m) (T m) a)
   deriving (Functor, Applicative, Monad)
 
 mkContext ::
-  Typeable (m ()) =>
+  MonadA m => Typeable (m ()) =>
   Anchors.CodeProps m ->
-  Maybe (DefI (Tag m)) -> InferLoadedResult m -> Context m
-mkContext cp mDefI iResult = Context
-  { scMDefI = mDefI
-  , scInferState = iResult ^. ilrInferContext
-  , scMContextHash = Just . Cache.bsOfKey $ iResult ^. ilrContext
-  , scHoleInferState = iResult ^. ilrBaseInferContext
-  , scCodeAnchors = cp
-  }
+  Maybe (DefI (Tag m)) -> InferLoadedResult m ->
+  T m (Context m)
+mkContext cp mDefI iResult = do
+  specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
+  return Context
+    { scMDefI = mDefI
+    , scInferState = iResult ^. ilrInferContext
+    , scMContextHash = Just . Cache.bsOfKey $ iResult ^. ilrContext
+    , scHoleInferState = iResult ^. ilrBaseInferContext
+    , scCodeAnchors = cp
+    , scSpecialFunctions = specialFunctions
+    }
 
 run :: MonadA m => Context m -> SugarM m a -> T m a
 run ctx (SugarM action) = runReaderT action ctx
 
 runPure :: MonadA m => Anchors.CodeProps m -> SugarM m a -> T m a
-runPure cp =
-  run ctx
-  where
-    ctx =
-      Context
-      { scMDefI = Nothing
-      , scInferState = error "pure expression doesnt have infer state"
-      , scHoleInferState = error "pure expression doesnt have hole infer state"
-      , scMContextHash = Nothing
-      , scCodeAnchors = cp
-      }
+runPure cp act = do
+  specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
+  run Context
+    { scMDefI = Nothing
+    , scInferState = error "pure expression doesnt have infer state"
+    , scHoleInferState = error "pure expression doesnt have hole infer state"
+    , scMContextHash = Nothing
+    , scCodeAnchors = cp
+    , scSpecialFunctions = specialFunctions
+    } act
+
 
 readContext :: MonadA m => SugarM m (Context m)
 readContext = SugarM Reader.ask

@@ -341,9 +341,7 @@ convertApply ::
   Convertor m
 convertApply app@(Expression.Apply _ argI) exprI = do
   -- if we're an apply of the form (nil T): Return an empty list
-  specialFunctions <-
-    SugarM.getP . Anchors.specialFunctions .
-    SugarM.scCodeAnchors =<< SugarM.readContext
+  specialFunctions <- SugarM.scSpecialFunctions <$> SugarM.readContext
   convertApplyEmptyList app specialFunctions exprI
     `orElse` do
       argS <- convertExpressionI argI
@@ -1053,7 +1051,8 @@ convertDefIExpression cp exprLoaded defI typeI = do
           (Property.set . Load.propertyOfClosure) (typeI ^. Expression.ePayload) =<<
           DataIRef.newExpression inferredTypeP
         }
-  lift . SugarM.run (SugarM.mkContext cp (Just defI) inferredLoadedResult) $ do
+  context <- lift $ SugarM.mkContext cp (Just defI) inferredLoadedResult
+  lift . SugarM.run context $ do
     content <-
       convertDefinitionContent .
       (fmap . Lens.over SugarInfer.plInferred) Just $
