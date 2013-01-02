@@ -44,8 +44,8 @@ make ::
 make list = ExpressionGui.wrapExpression $ makeUnwrapped list
 
 makeBracketLabel :: MonadA m => String -> Widget.Id -> ExprGuiM m (ExpressionGui f)
-makeBracketLabel text myId =
-  ExpressionGui.makeColoredLabel Config.listBracketTextSize Config.listBracketColor text myId
+makeBracketLabel =
+  ExpressionGui.makeColoredLabel Config.listBracketTextSize Config.listBracketColor
 
 makeUnwrapped ::
   MonadA m => Sugar.List m (Sugar.Expression m) -> Widget.Id ->
