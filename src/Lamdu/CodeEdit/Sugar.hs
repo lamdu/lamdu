@@ -427,14 +427,15 @@ convertApplyList (Expression.Apply funcI argI) argS specialFunctions exprI =
         let
           listItem =
             ListItem
-            { liExpr = listItemExpr
-            , liHiddenGuids =
-              concat
-              [ funcFuncI ^.. subExpressionGuids
-              , funcI ^.. exprStoredGuid
-              , argS ^. rHiddenGuids
-              , [ argS ^. rGuid ]
-              ]
+            { liExpr =
+              listItemExpr
+              & rHiddenGuids <>~
+                concat
+                [ funcFuncI ^.. subExpressionGuids
+                , funcI ^.. exprStoredGuid
+                , argS ^. rHiddenGuids
+                , [ argS ^. rGuid ]
+                ]
             , liMActions = do
                 addNext <- mAddNextItem
                 exprProp <- resultStored exprI

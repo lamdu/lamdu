@@ -81,22 +81,19 @@ makeItem ::
   MonadA m =>
   Sugar.ListItem m (Sugar.ExpressionP m (Sugar.Payload m)) ->
   ExprGuiM m (ExpressionGui m, ExpressionGui m)
-makeItem item =
-  (compose . map assignCursor . Sugar.liHiddenGuids) item $ do
-    (pair, resultPickers) <-
-      ExprGuiM.listenResultPickers $
-      Lens.sequenceOf Lens.both
-      ( ExpressionGui.makeColoredLabel Config.listCommaTextSize
-        Config.listCommaColor ", " $ Widget.augmentId ',' itemWidgetId
-      , ExprGuiM.makeSubexpresion itemExpr
-      )
-    return $ pair
-      & Lens._2 . ExpressionGui.egWidget %~
-      Widget.weakerEvents
-      (maybe mempty (mkItemEventMap resultPickers) (Sugar.liMActions item))
+makeItem item = do
+  (pair, resultPickers) <-
+    ExprGuiM.listenResultPickers $
+    Lens.sequenceOf Lens.both
+    ( ExpressionGui.makeColoredLabel Config.listCommaTextSize
+      Config.listCommaColor ", " $ Widget.augmentId ',' itemWidgetId
+    , ExprGuiM.makeSubexpresion itemExpr
+    )
+  return $ pair
+    & Lens._2 . ExpressionGui.egWidget %~
+    Widget.weakerEvents
+    (maybe mempty (mkItemEventMap resultPickers) (Sugar.liMActions item))
   where
-    assignCursor guid =
-      ExprGuiM.assignCursorPrefix (WidgetIds.fromGuid guid) itemWidgetId
     itemExpr = Sugar.liExpr item
     itemWidgetId = WidgetIds.fromGuid $ itemExpr ^. Sugar.rGuid
     mkItemEventMap resultPickers Sugar.ListItemActions
@@ -115,6 +112,3 @@ makeItem item =
       ]
     doc [] = E.Doc ["Edit", "List", "Add Next Item"]
     doc _ = E.Doc ["Edit", "List", "Pick Result and Add Next Item"]
-
-compose :: [a -> a] -> a -> a
-compose = foldr (.) id
