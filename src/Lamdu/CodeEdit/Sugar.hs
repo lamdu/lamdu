@@ -205,7 +205,7 @@ getVar = Expression.eBody . Expression.bodyLeaf . Expression.getVariable
 mkFuncParamActions ::
   MonadA m => Stored m ->
   Expression.Lambda (Expression.Expression def (Stored m)) ->
-  FuncParamActions m (Expression m)
+  FuncParamActions m
 mkFuncParamActions lambdaProp (Expression.Lambda param _paramType body) =
   FuncParamActions
   { _fpListItemActions =
@@ -471,7 +471,7 @@ removeRedundantTypes =
 setNextHole :: MonadA m => Expression m -> Expression m -> Expression m
 setNextHole possibleHole
   | Lens.notNullOf (rExpressionBody . expressionHole) possibleHole
-  = (fmap . Lens.over plNextHole . flip mplus . Just) possibleHole
+  = Lens.mapped . plNextHole %~ (`mplus` Just possibleHole)
   | otherwise = id
 
 applyOnSection ::
@@ -663,7 +663,7 @@ inferApplyForms processRes expr (node, inferContext) =
 mkHoleResult ::
   (MonadA m, Typeable1 m) => SugarM.Context m ->
   DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i (Stored m)) ->
-  DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) -> HoleResult m (Expression m)
+  DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) -> HoleResult m
 mkHoleResult sugarContext exprS res =
   HoleResult
   { _holeResultInferred = res
@@ -825,7 +825,7 @@ uninferredHoles Expression.Expression
 uninferredHoles Expression.Expression { Expression._eBody = body } =
   Foldable.concatMap uninferredHoles body
 
-holeResultHasHoles :: HoleResult m (Expression m) -> Bool
+holeResultHasHoles :: HoleResult m -> Bool
 holeResultHasHoles =
   not . null . uninferredHoles . fmap (flip (,) ()) . Lens.view holeResultInferred
 

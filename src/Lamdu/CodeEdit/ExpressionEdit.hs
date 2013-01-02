@@ -38,7 +38,7 @@ import qualified Lamdu.WidgetIds as WidgetIds
 data IsHole = NotAHole | IsAHole
 
 pasteEventMap ::
-  MonadA m => Sugar.Hole m (Sugar.Expression m) -> Widget.EventHandlers (Transaction m)
+  MonadA m => Sugar.Hole m -> Widget.EventHandlers (Transaction m)
 pasteEventMap =
   maybe mempty
   (Widget.keysEventMapMovesCursor

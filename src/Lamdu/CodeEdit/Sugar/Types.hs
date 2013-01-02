@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DeriveFunctor, KindSignatures #-}
+{-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, KindSignatures #-}
 module Lamdu.CodeEdit.Sugar.Types
   ( Definition(..), DefinitionBody(..)
   , ListItemActions(..), itemAddNext, itemDelete
@@ -39,9 +39,11 @@ module Lamdu.CodeEdit.Sugar.Types
 
 import Control.Monad.Trans.State (StateT)
 import Data.Cache (Cache)
+import Data.Foldable (Foldable)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
+import Data.Traversable (Traversable)
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Control.Lens.TH as LensTH
 import qualified Data.List as List
@@ -83,7 +85,7 @@ data ExpressionP m pl = Expression
     -- If the cursor was on them for whatever reason, it should be
     -- mapped into the sugar expression's guid.
     _rHiddenGuids :: [Guid]
-  } deriving (Functor)
+  } deriving (Functor, Foldable, Traversable)
 
 type Expression m = ExpressionP m (Payload m)
 
@@ -92,29 +94,29 @@ data ListItemActions m = ListItemActions
   , _itemDelete :: T m Guid
   }
 
-data FuncParamActions m expr = FuncParamActions
+data FuncParamActions m = FuncParamActions
   { _fpListItemActions :: ListItemActions m
-  , _fpGetExample :: CT m expr
-  } deriving (Functor)
+  , _fpGetExample :: CT m (Expression m)
+  }
 
 data FuncParam m expr = FuncParam
   { _fpGuid :: Guid
   , _fpHiddenLambdaGuid :: Maybe Guid
   , _fpType :: expr
-  , _fpMActions :: Maybe (FuncParamActions m expr)
-  } deriving (Functor)
+  , _fpMActions :: Maybe (FuncParamActions m)
+  } deriving (Functor, Foldable, Traversable)
 
 -- Multi-param Lambda
 data Func m expr = Func
   { _fDepParams :: [FuncParam m expr]
   , _fParams :: [FuncParam m expr]
   , _fBody :: expr
-  } deriving (Functor)
+  } deriving (Functor, Foldable, Traversable)
 
 data Pi m expr = Pi
   { pParam :: FuncParam m expr
   , pResultType :: expr
-  } deriving (Functor)
+  } deriving (Functor, Foldable, Traversable)
 
 -- Infix Sections include: (+), (1+), (+1), (1+2). Last is really just
 -- infix application, but considered an infix section too.
@@ -122,29 +124,29 @@ data Section expr = Section
   { sectionLArg :: Maybe expr
   , sectionOp :: expr -- TODO: Always a Data.GetVariable, use a more specific type
   , sectionRArg :: Maybe expr
-  } deriving (Functor)
+  } deriving (Functor, Foldable, Traversable)
 
-data HoleResult m expr = HoleResult
+data HoleResult m = HoleResult
   { _holeResultInferred :: DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))
-  , _holeResultConvert :: T m expr
+  , _holeResultConvert :: T m (Expression m)
   , _holeResultPick :: T m Guid
   , _holeResultPickAndGiveAsArg :: T m Guid
   , _holeResultPickAndGiveAsArgToOperator :: String -> T m Guid
   , _holeResultMPickAndCallWithArg :: T m (Maybe (T m Guid))
   , _holeResultMPickAndCallWithNextArg :: T m (Maybe (T m Guid))
-  } deriving (Functor)
+  }
 
-data HoleActions m expr = HoleActions
+data HoleActions m = HoleActions
   { _holeScope :: [Guid]
-  , _holeInferResults :: DataIRef.ExpressionM m () -> CT m [HoleResult m expr]
+  , _holeInferResults :: DataIRef.ExpressionM m () -> CT m [HoleResult m]
   , _holePaste :: Maybe (T m Guid)
   , -- TODO: holeMDelete is always Nothing, not implemented yet
     _holeMDelete :: Maybe (T m Guid)
-  } deriving (Functor)
+  }
 
-newtype Hole m expr = Hole
-  { _holeMActions :: Maybe (HoleActions m expr)
-  } deriving (Functor)
+newtype Hole m = Hole
+  { _holeMActions :: Maybe (HoleActions m)
+  }
 
 data LiteralInteger m = LiteralInteger
   { liValue :: Integer
@@ -153,30 +155,30 @@ data LiteralInteger m = LiteralInteger
 
 data Inferred m expr = Inferred
   { iValue :: expr
-  , iHole :: Hole m expr
-  } deriving (Functor)
+  , iHole :: Hole m
+  } deriving (Functor, Foldable, Traversable)
 
 data Polymorphic t expr = Polymorphic
   { pFuncGuid :: Guid
   , pCompact :: Expression.VariableRef (DefI t)
   , pFullExpression :: expr
-  } deriving (Functor)
+  } deriving (Functor, Foldable, Traversable)
 
 -- TODO: Do we want to store/allow-access to the implicit type params (nil's type, each cons type?)
 data ListItem m expr = ListItem
   { liMActions :: Maybe (ListItemActions m)
   , liExpr :: expr
-  } deriving (Functor)
+  } deriving (Functor, Foldable, Traversable)
 
 data List m expr = List
   { lValues :: [ListItem m expr]
   , lMAddFirstItem :: Maybe (T m Guid)
-  } deriving (Functor)
+  } deriving (Functor, Foldable, Traversable)
 
 data EnumFromTo expr = EnumFromTo
   { eftLow :: expr
   , eftHigh :: expr
-  } deriving (Functor)
+  } deriving (Functor, Foldable, Traversable)
 
 data ExpressionBody m expr
   = ExpressionApply   { _eHasParens :: HasParens, __eApply :: Expression.Apply expr }
@@ -184,14 +186,14 @@ data ExpressionBody m expr
   | ExpressionFunc    { _eHasParens :: HasParens, __eFunc :: Func m expr }
   | ExpressionPi      { _eHasParens :: HasParens, __ePi :: Pi m expr }
   | ExpressionGetVariable { __getVariable :: Expression.VariableRef (DefI (Tag m)) }
-  | ExpressionHole    { __eHole :: Hole m expr }
+  | ExpressionHole    { __eHole :: Hole m }
   | ExpressionInferred { __eInferred :: Inferred m expr }
   | ExpressionPolymorphic { __ePolymorphic :: Polymorphic (Tag m) expr }
   | ExpressionLiteralInteger { __eLit :: LiteralInteger m }
   | ExpressionAtom { __eAtom :: String }
   | ExpressionList { __eList :: List m expr }
   | ExpressionEnumFromTo { __eEnumFromTo :: EnumFromTo expr }
-  deriving (Functor)
+  deriving (Functor, Foldable, Traversable)
 LensTH.makePrisms ''ExpressionBody
 
 wrapParens :: HasParens -> String -> String
