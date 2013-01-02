@@ -146,6 +146,8 @@ listBracketTextSize = 25
 listBracketColor = Draw.Color 0.2 0.8 0.8 1
 listCommaTextSize = 25
 listCommaColor = Draw.Color 0.2 0.8 0.8 1
+enumFromToDotSize = 25
+enumFromToDotColor = Draw.Color 0.2 0.8 0.8 1
 
 listAddItemKeys = [k ',']
 

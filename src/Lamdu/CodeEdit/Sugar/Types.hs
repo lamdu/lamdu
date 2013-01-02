@@ -11,12 +11,13 @@ module Lamdu.CodeEdit.Sugar.Types
     , expressionFunc, expressionGetVariable, expressionHole
     , expressionInferred, expressionPolymorphic
     , expressionLiteralInteger, expressionAtom
-    , expressionList
+    , expressionList, expressionEnumFromTo
   , Payload(..), plInferredTypes, plActions, plNextHole
   , ExpressionP(..), rGuid, rExpressionBody, rPayload, rHiddenGuids
   , Expression
   , WhereItem(..)
   , ListItem(..), List(..)
+  , EnumFromTo(..)
   , Func(..), fDepParams, fParams, fBody
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
@@ -173,6 +174,11 @@ data List m expr = List
   , lMAddFirstItem :: Maybe (T m Guid)
   } deriving (Functor)
 
+data EnumFromTo expr = EnumFromTo
+  { eftLow :: expr
+  , eftHigh :: expr
+  } deriving (Functor)
+
 data ExpressionBody m expr
   = ExpressionApply   { _eHasParens :: HasParens, __eApply :: Expression.Apply expr }
   | ExpressionSection { _eHasParens :: HasParens, __eSection :: Section expr }
@@ -185,6 +191,7 @@ data ExpressionBody m expr
   | ExpressionLiteralInteger { __eLit :: LiteralInteger m }
   | ExpressionAtom { __eAtom :: String }
   | ExpressionList { __eList :: List m expr }
+  | ExpressionEnumFromTo { __eEnumFromTo :: EnumFromTo expr }
   deriving (Functor)
 LensTH.makePrisms ''ExpressionBody
 
@@ -221,6 +228,14 @@ instance Show expr => Show (ExpressionBody m expr) where
     concat
     [ "["
     , List.intercalate ", " $ map (show . liExpr) items
+    , "]"
+    ]
+  show ExpressionEnumFromTo { __eEnumFromTo = EnumFromTo low high } =
+    concat
+    [ "["
+    , show low
+    , ".."
+    , show high
     , "]"
     ]
 

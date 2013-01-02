@@ -28,6 +28,7 @@ import qualified Lamdu.Data.Expression.IRef as DataIRef
 data SpecialFunctions t = SpecialFunctions
   { sfCons :: DataIRef.DefI t
   , sfNil :: DataIRef.DefI t
+  , sfEnumFromTo :: DataIRef.DefI t
   }
 derive makeBinary ''SpecialFunctions
 

@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.CodeEdit.ExpressionEdit.ListEdit(make) where
+module Lamdu.CodeEdit.ExpressionEdit.ListEdit(make, makeEnumFromTo) where
 
 import Control.Applicative ((<$>))
 import Control.Lens ((&), (%~), (^.))
@@ -17,10 +17,35 @@ import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.WidgetIds as WidgetIds
 
+makeEnumFromTo ::
+  MonadA m => Sugar.EnumFromTo (Sugar.Expression m) -> Widget.Id ->
+  ExprGuiM m (ExpressionGui m)
+makeEnumFromTo eft = ExpressionGui.wrapExpression $ makeEnumFromToUnwrapped eft
+
+makeEnumFromToUnwrapped ::
+  MonadA m => Sugar.EnumFromTo (Sugar.Expression m) -> Widget.Id ->
+  ExprGuiM m (ExpressionGui m)
+makeEnumFromToUnwrapped (Sugar.EnumFromTo lo hi) myId =
+  ExprGuiM.assignCursor myId cursorDest $
+  ExpressionGui.hbox <$> sequence
+    [ makeBracketLabel "[" myId
+    , ExprGuiM.makeSubexpresion lo
+    , ExpressionGui.makeColoredLabel Config.enumFromToDotSize
+      Config.enumFromToDotColor ".." myId
+    , ExprGuiM.makeSubexpresion hi
+    , makeBracketLabel "]" myId
+    ]
+  where
+    cursorDest = WidgetIds.fromGuid $ lo ^. Sugar.rGuid
+
 make ::
   MonadA m => Sugar.List m (Sugar.Expression m) -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 make list = ExpressionGui.wrapExpression $ makeUnwrapped list
+
+makeBracketLabel :: MonadA m => String -> Widget.Id -> ExprGuiM m (ExpressionGui f)
+makeBracketLabel text myId =
+  ExpressionGui.makeColoredLabel Config.listBracketTextSize Config.listBracketColor text myId
 
 makeUnwrapped ::
   MonadA m => Sugar.List m (Sugar.Expression m) -> Widget.Id ->
@@ -32,7 +57,7 @@ makeUnwrapped (Sugar.List items mAddFirstItem) myId =
   [] -> makeFirstBracket "[]"
   (_, firstEdit) : nextEdits -> do
     bracketOpen <- makeFirstBracket "["
-    bracketClose <- ExpressionGui.makeFocusableView closeBracketId =<< makeBracketLabel "]"
+    bracketClose <- ExpressionGui.makeFocusableView closeBracketId =<< makeBracketLabel "]" myId
     return . ExpressionGui.hbox $ concat
       [[bracketOpen, firstEdit], nextEdits >>= pairToList, [bracketClose]]
   where
@@ -47,12 +72,10 @@ makeUnwrapped (Sugar.List items mAddFirstItem) myId =
       mAddFirstItem
     firstBracketId = Widget.joinId myId ["first-bracket"]
     makeFirstBracket txt =
-      (ExpressionGui.makeFocusableView firstBracketId =<< makeBracketLabel txt)
+      (ExpressionGui.makeFocusableView firstBracketId =<< makeBracketLabel txt myId)
       & Lens.mapped . ExpressionGui.egWidget %~
         Widget.weakerEvents addFirstElemEventMap
     cursorDest = maybe firstBracketId itemId $ listToMaybe items
-    makeBracketLabel text =
-      ExpressionGui.makeColoredLabel Config.listBracketTextSize Config.listBracketColor text myId
 
 makeItem ::
   MonadA m =>

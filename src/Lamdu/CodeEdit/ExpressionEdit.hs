@@ -85,6 +85,7 @@ makeEditor ::
   MonadA m => Sugar.Expression m -> Widget.Id ->
   ExprGuiM m (IsHole, ExpressionGui m)
 makeEditor sExpr =
+  -- TODO: listenResultPickers to see if hole rather than the mess..
   case sExpr ^. Sugar.rExpressionBody of
   Sugar.ExpressionFunc hasParens f ->
     notAHole $ FuncEdit.make hasParens f
@@ -108,6 +109,8 @@ makeEditor sExpr =
     notAHole $ AtomEdit.make atom
   Sugar.ExpressionList list ->
     notAHole $ ListEdit.make list
+  Sugar.ExpressionEnumFromTo eft ->
+    notAHole $ ListEdit.makeEnumFromTo eft
   where
     isAHole hole =
       (fmap . fmap)

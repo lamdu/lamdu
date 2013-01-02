@@ -101,7 +101,7 @@ createBuiltins =
     traverse_ ((`makeWithType_` aToAToBool) . ("Prelude." ++))
       ["==", "/=", "<=", ">=", "<", ">"]
 
-    makeWithType_ "Prelude.enumFromTo" . mkPi integer . mkPi integer $ listOf integer
+    enumFromToFunc <- makeWithType "Prelude.enumFromTo" . mkPi integer . mkPi integer $ listOf integer
 
     makeWithType_ "Data.Functor.fmap" .
       forAll "f" $ \f ->
@@ -128,6 +128,7 @@ createBuiltins =
       specialFunctions = A.SpecialFunctions
         { A.sfCons = cons
         , A.sfNil = nil
+        , A.sfEnumFromTo = enumFromToFunc
         }
       ffiEnv = FFI.Env
         { FFI.trueDef = true
