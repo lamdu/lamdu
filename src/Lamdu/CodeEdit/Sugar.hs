@@ -468,11 +468,20 @@ removeRedundantTypes =
     removeIfNoErrors [_] = []
     removeIfNoErrors xs = xs
 
+subExpressions :: Expression m -> [Expression m]
+subExpressions x = x : x ^.. rExpressionBody . Lens.traversed . Lens.folding subExpressions
+
 setNextHole :: MonadA m => Expression m -> Expression m -> Expression m
-setNextHole possibleHole
-  | Lens.notNullOf (rExpressionBody . expressionHole) possibleHole
-  = Lens.mapped . plNextHole %~ (`mplus` Just possibleHole)
-  | otherwise = id
+setNextHole dest =
+  case dest ^? subHoles of
+  Just hole ->
+    -- The mplus ignores holes that are already set:
+    Lens.mapped . plNextHole %~ (`mplus` Just hole)
+  Nothing -> id
+  where
+    subHoles =
+      Lens.folding subExpressions .
+      Lens.filtered (Lens.notNullOf (rExpressionBody . expressionHole))
 
 applyOnSection ::
   (MonadA m, Typeable1 m) => Section (Expression m) ->
