@@ -16,7 +16,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , ExpressionP(..), rGuid, rExpressionBody, rPayload, rHiddenGuids
   , Expression
   , WhereItem(..)
-  , ListItem(..), List(..)
+  , ListItem(..), ListActions(..), List(..)
   , Func(..), fDepParams, fParams, fBody
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
@@ -169,9 +169,13 @@ data ListItem m expr = ListItem
   , liExpr :: expr
   } deriving (Functor, Foldable, Traversable)
 
+newtype ListActions m = ListActions
+  { addFirstItem :: T m Guid
+  }
+
 data List m expr = List
   { lValues :: [ListItem m expr]
-  , lMAddFirstItem :: Maybe (T m Guid)
+  , lMActions :: Maybe (ListActions m)
   } deriving (Functor, Foldable, Traversable)
 
 data ExpressionBody m expr

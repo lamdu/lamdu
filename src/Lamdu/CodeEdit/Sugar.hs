@@ -11,7 +11,7 @@ module Lamdu.CodeEdit.Sugar
   , ExpressionP(..), rGuid, rExpressionBody, rPayload, rHiddenGuids
   , Expression
   , WhereItem(..)
-  , ListItem(..), List(..)
+  , ListItem(..), ListActions(..), List(..)
   , Func(..)
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
@@ -370,15 +370,18 @@ mkList ::
   Guid -> Convertor m
 mkList specialFunctions values consistentGuid exprI =
   modifyGuids <$>
-  (mkExpression exprI . ExpressionList) (List values mAddFirstItem)
+  (mkExpression exprI . ExpressionList)
+  (List values (mkListActions <$> resultStored exprI))
   where
     modifyGuids e = e
       & rGuid .~ consistentGuid
       & rHiddenGuids %~ (e ^. rGuid :)
-    mAddFirstItem =
-      fmap (DataIRef.exprGuid . snd) .
-      DataOps.addListItem specialFunctions <$>
-      resultStored exprI
+    mkListActions exprS =
+      ListActions
+      { addFirstItem =
+        DataIRef.exprGuid . snd <$>
+        DataOps.addListItem specialFunctions exprS
+      }
 
 convertApplyEmptyList ::
   (Typeable1 m, MonadA m) =>
@@ -403,7 +406,7 @@ convertApplyList ::
 convertApplyList (Expression.Apply funcI argI) argS specialFunctions exprI =
   case (funcI ^? eApply, argS ^. rExpressionBody) of
   ( Just (Expression.Apply funcFuncI funcArgI)
-    , ExpressionList (List values mAddNextItem)
+    , ExpressionList (List values listMActions)
     )
     -- exprI@(funcI@(funcFuncI funcArgI) argI)
     | Lens.anyOf (eApply . Expression.applyFunc . getDefinition)
@@ -424,7 +427,7 @@ convertApplyList (Expression.Apply funcI argI) argS specialFunctions exprI =
                 , argS ^. rHiddenGuids
                 ]
             , liMActions = do
-                addNext <- mAddNextItem
+                addNext <- addFirstItem <$> listMActions
                 exprProp <- resultStored exprI
                 argProp <- resultStored argI
                 return ListItemActions

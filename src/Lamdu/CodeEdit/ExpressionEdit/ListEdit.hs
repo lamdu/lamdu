@@ -51,7 +51,7 @@ makeUnwrapped (Sugar.List items mAddFirstItem) myId =
       maybe mempty
       (Widget.keysEventMapMovesCursor
        Config.listAddItemKeys (E.Doc ["Edit", "List", "Add First Item"]) .
-       fmap WidgetIds.fromGuid)
+       fmap WidgetIds.fromGuid . Sugar.addFirstItem)
       mAddFirstItem
     firstBracketId = Widget.joinId myId ["first-bracket"]
     onFirstBracket label =
