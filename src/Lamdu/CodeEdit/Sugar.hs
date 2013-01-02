@@ -316,28 +316,6 @@ isPolymorphicFunc funcI =
   (Expression.isDependentPi . Infer.iType . iwcInferred) $
   resultInferred funcI
 
-convertApply :: (Typeable1 m, MonadA m) => Expression.Apply (DataIRef.ExpressionM m (PayloadMM m)) -> Convertor m
-convertApply app@(Expression.Apply _ argI) exprI = do
-  -- if we're an apply of the form (nil T): Return an empty list
-  argS <- convertExpressionI argI
-  specialFunctions <-
-    SugarM.getP . Anchors.specialFunctions .
-    SugarM.scCodeAnchors =<< SugarM.readContext
-  maybe (convertApplyNormal app argS exprI) return =<<
-    convertApplyListSugar app argS specialFunctions exprI
-
-convertApplyNormal ::
-  (Typeable1 m, MonadA m) =>
-  Expression.Apply (DataIRef.ExpressionM m (PayloadMM m)) ->
-  Expression m -> Convertor m
-convertApplyNormal (Expression.Apply funcI argI) argS exprI = do
-  funcS <- convertExpressionI funcI
-  let apply = Expression.Apply (funcS, funcI) (argS, argI)
-  case funcS ^. rExpressionBody of
-    ExpressionSection _ section ->
-      applyOnSection section apply exprI
-    _ -> convertApplyPrefix apply exprI
-
 exprStoredGuid ::
   Lens.Fold
   (Expression.Expression def (SugarInfer.Payload t i (Maybe (Stored m)))) Guid
@@ -353,58 +331,103 @@ subExpressionGuids ::
   (Expression.Expression def (SugarInfer.Payload t i (Maybe (Stored m)))) Guid
 subExpressionGuids = Lens.folding Expression.subExpressions . exprStoredGuid
 
-convertApplyListSugar ::
+infixr 9 `orElse`
+orElse :: Monad m => m (Maybe a) -> m a -> m a
+orElse a b = maybe b return =<< a
+
+convertApply ::
   (Typeable1 m, MonadA m) =>
   Expression.Apply (DataIRef.ExpressionM m (PayloadMM m)) ->
-  Expression m -> Anchors.SpecialFunctions (Tag m) ->
-  DataIRef.ExpressionM m (PayloadMM m) ->
-  SugarM m (Maybe (Expression m))
-convertApplyListSugar app@(Expression.Apply funcI argI) argS specialFunctions exprI
-  | Lens.anyOf getDefinition (== Anchors.sfNil specialFunctions) funcI
-    = fmap
-      (Just . (rHiddenGuids <>~ (app ^.. Lens.traversed . subExpressionGuids))) $
-      mkList []
-  | otherwise =
-    case (funcI ^? eApply, argS ^. rExpressionBody) of
-    ( Just (Expression.Apply funcFuncI funcArgI)
-      , ExpressionList (List values mAddNextItem)
-      )
-      -- exprI@(funcI@(funcFuncI funcArgI) argI)
-      | Lens.anyOf (eApply . Expression.applyFunc . getDefinition)
-        (== Anchors.sfCons specialFunctions) funcFuncI
-        -- exprI@(funcI@(funcFuncI@(cons _) funcArgI) argI)
-        -> Just <$> do
-          listItemExpr <- convertExpressionI funcArgI
-          let
-            listItem =
-              ListItem
-              { liExpr = listItemExpr
-              , liHiddenGuids =
-                concat
-                [ funcFuncI ^.. subExpressionGuids
-                , funcI ^.. exprStoredGuid
-                , argS ^. rHiddenGuids
-                , [ argS ^. rGuid ]
-                ]
-              , liMActions = do
-                  addNext <- mAddNextItem
-                  exprProp <- resultStored exprI
-                  argProp <- resultStored argI
-                  return ListItemActions
-                    { _itemAddNext = addNext
-                    , _itemDelete = replaceWith exprProp argProp
-                    }
-              }
-          mkList (listItem : values)
-    _ -> pure Nothing
+  Convertor m
+convertApply app@(Expression.Apply _ argI) exprI = do
+  -- if we're an apply of the form (nil T): Return an empty list
+  specialFunctions <-
+    SugarM.getP . Anchors.specialFunctions .
+    SugarM.scCodeAnchors =<< SugarM.readContext
+  convertApplyEmptyList app specialFunctions exprI
+    `orElse` do
+      argS <- convertExpressionI argI
+      convertApplyList app argS specialFunctions exprI
+        `orElse` convertApplyNormal app argS exprI
+
+convertApplyNormal ::
+  (Typeable1 m, MonadA m) =>
+  Expression.Apply (DataIRef.ExpressionM m (PayloadMM m)) ->
+  Expression m -> Convertor m
+convertApplyNormal (Expression.Apply funcI argI) argS exprI = do
+  funcS <- convertExpressionI funcI
+  let apply = Expression.Apply (funcS, funcI) (argS, argI)
+  case funcS ^. rExpressionBody of
+    ExpressionSection _ section ->
+      applyOnSection section apply exprI
+    _ -> convertApplyPrefix apply exprI
+
+mkList ::
+  (Typeable1 m, MonadA m) =>
+  Anchors.SpecialFunctions (Tag m) ->
+  [ListItem m (Expression m)] ->
+  Convertor m
+mkList specialFunctions values exprI =
+  mkExpression exprI . ExpressionList $ List values mAddFirstItem
   where
     mAddFirstItem =
       fmap (DataIRef.exprGuid . snd) .
       DataOps.addListItem specialFunctions <$>
       resultStored exprI
-    mkList =
-      mkExpression exprI . ExpressionList .
-      (`List` mAddFirstItem)
+
+convertApplyEmptyList ::
+  (Typeable1 m, MonadA m) =>
+  Expression.Apply (DataIRef.ExpressionM m (PayloadMM m)) ->
+  Anchors.SpecialFunctions (Tag m) ->
+  DataIRef.ExpressionM m (PayloadMM m) ->
+  SugarM m (Maybe (Expression m))
+convertApplyEmptyList app@(Expression.Apply funcI _) specialFunctions exprI
+  | Lens.anyOf getDefinition (== Anchors.sfNil specialFunctions) funcI
+  = fmap
+    (Just . (rHiddenGuids <>~ (app ^.. Lens.traversed . subExpressionGuids))) $
+    mkList specialFunctions [] exprI
+  | otherwise = pure Nothing
+
+convertApplyList ::
+  (Typeable1 m, MonadA m) =>
+  Expression.Apply (DataIRef.ExpressionM m (PayloadMM m)) ->
+  Expression m ->
+  Anchors.SpecialFunctions (Tag m) ->
+  DataIRef.ExpressionM m (PayloadMM m) ->
+  SugarM m (Maybe (Expression m))
+convertApplyList (Expression.Apply funcI argI) argS specialFunctions exprI =
+  case (funcI ^? eApply, argS ^. rExpressionBody) of
+  ( Just (Expression.Apply funcFuncI funcArgI)
+    , ExpressionList (List values mAddNextItem)
+    )
+    -- exprI@(funcI@(funcFuncI funcArgI) argI)
+    | Lens.anyOf (eApply . Expression.applyFunc . getDefinition)
+      (== Anchors.sfCons specialFunctions) funcFuncI
+      -- exprI@(funcI@(funcFuncI@(cons _) funcArgI) argI)
+      -> Just <$> do
+        listItemExpr <- convertExpressionI funcArgI
+        let
+          listItem =
+            ListItem
+            { liExpr = listItemExpr
+            , liHiddenGuids =
+              concat
+              [ funcFuncI ^.. subExpressionGuids
+              , funcI ^.. exprStoredGuid
+              , argS ^. rHiddenGuids
+              , [ argS ^. rGuid ]
+              ]
+            , liMActions = do
+                addNext <- mAddNextItem
+                exprProp <- resultStored exprI
+                argProp <- resultStored argI
+                return ListItemActions
+                  { _itemAddNext = addNext
+                  , _itemDelete = replaceWith exprProp argProp
+                  }
+            }
+        mkList specialFunctions (listItem : values) exprI
+  _ -> pure Nothing
 
 eApply :: SimpleTraversal (Expression.Expression def a) (Expression.Apply (Expression.Expression def a))
 eApply = Expression.eBody . Expression.bodyApply
