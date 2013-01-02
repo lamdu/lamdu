@@ -344,13 +344,14 @@ convertApply app@(Expression.Apply _ argI) exprI = do
   specialFunctions <-
     SugarM.getP . Anchors.specialFunctions .
     SugarM.scCodeAnchors =<< SugarM.readContext
-  convertApplyEmptyList app specialFunctions exprI
+  convertApplyEnumFromTo app specialFunctions exprI
     `orElse`
-    convertApplyEnumFromTo app specialFunctions exprI
+    convertApplyEmptyList app specialFunctions exprI
     `orElse` do
       argS <- convertExpressionI argI
       convertApplyList app argS specialFunctions exprI
-        `orElse` convertApplyNormal app argS exprI
+        `orElse`
+        convertApplyNormal app argS exprI
 
 convertApplyNormal ::
   (Typeable1 m, MonadA m) =>
@@ -368,10 +369,14 @@ mkList ::
   (Typeable1 m, MonadA m) =>
   Anchors.SpecialFunctions (Tag m) ->
   [ListItem m (Expression m)] ->
-  Convertor m
-mkList specialFunctions values exprI =
-  mkExpression exprI . ExpressionList $ List values mAddFirstItem
+  Guid -> Convertor m
+mkList specialFunctions values consistentGuid exprI =
+  modifyGuids <$>
+  (mkExpression exprI . ExpressionList) (List values mAddFirstItem)
   where
+    modifyGuids e = e
+      & rGuid .~ consistentGuid
+      & rHiddenGuids %~ (e ^. rGuid :)
     mAddFirstItem =
       fmap (DataIRef.exprGuid . snd) .
       DataOps.addListItem specialFunctions <$>
@@ -403,7 +408,7 @@ convertApplyEmptyList app@(Expression.Apply funcI _) specialFunctions exprI
   | Lens.anyOf getDefinition (== Anchors.sfNil specialFunctions) funcI
   = fmap
     (Just . (rHiddenGuids <>~ (app ^.. Lens.traversed . subExpressionGuids))) $
-    mkList specialFunctions [] exprI
+    mkList specialFunctions [] (Guid.augment "list" (resultGuid exprI)) exprI
   | otherwise = pure Nothing
 
 convertApplyList ::
@@ -434,7 +439,6 @@ convertApplyList (Expression.Apply funcI argI) argS specialFunctions exprI =
                 [ funcFuncI ^.. subExpressionGuids
                 , funcI ^.. exprStoredGuid
                 , argS ^. rHiddenGuids
-                , [ argS ^. rGuid ]
                 ]
             , liMActions = do
                 addNext <- mAddNextItem
@@ -445,7 +449,7 @@ convertApplyList (Expression.Apply funcI argI) argS specialFunctions exprI =
                   , _itemDelete = replaceWith exprProp argProp
                   }
             }
-        mkList specialFunctions (listItem : values) exprI
+        mkList specialFunctions (listItem : values) (argS ^. rGuid) exprI
   _ -> pure Nothing
 
 eApply :: SimpleTraversal (Expression.Expression def a) (Expression.Apply (Expression.Expression def a))

@@ -52,14 +52,18 @@ makeUnwrapped ::
   ExprGuiM m (ExpressionGui m)
 makeUnwrapped (Sugar.List items mAddFirstItem) myId =
   ExprGuiM.assignCursor myId cursorDest $
-  mapM makeItem items >>= \itemEdits ->
-  case itemEdits of
-  [] -> makeFirstBracket "[]"
-  (_, firstEdit) : nextEdits -> do
-    bracketOpen <- makeFirstBracket "["
-    bracketClose <- ExpressionGui.makeFocusableView closeBracketId =<< makeBracketLabel "]" myId
-    return . ExpressionGui.hbox $ concat
-      [[bracketOpen, firstEdit], nextEdits >>= pairToList, [bracketClose]]
+  mapM makeItem items >>= \itemEdits -> do
+    bracketOpenLabel <- makeBracketLabel "[" myId
+    bracketCloseLabel <- makeBracketLabel "]" myId
+    case itemEdits of
+      [] ->
+        onFirstBracket $ ExpressionGui.hbox [bracketOpenLabel, bracketCloseLabel]
+      (_, firstEdit) : nextEdits -> do
+        bracketOpen <- onFirstBracket bracketOpenLabel
+        bracketClose <-
+          ExpressionGui.makeFocusableView closeBracketId bracketCloseLabel
+        return . ExpressionGui.hbox $ concat
+          [[bracketOpen, firstEdit], nextEdits >>= pairToList, [bracketClose]]
   where
     pairToList (x, y) = [x, y]
     closeBracketId = Widget.joinId myId ["close-bracket"]
@@ -71,8 +75,8 @@ makeUnwrapped (Sugar.List items mAddFirstItem) myId =
        fmap WidgetIds.fromGuid)
       mAddFirstItem
     firstBracketId = Widget.joinId myId ["first-bracket"]
-    makeFirstBracket txt =
-      (ExpressionGui.makeFocusableView firstBracketId =<< makeBracketLabel txt myId)
+    onFirstBracket label =
+      ExpressionGui.makeFocusableView firstBracketId label
       & Lens.mapped . ExpressionGui.egWidget %~
         Widget.weakerEvents addFirstElemEventMap
     cursorDest = maybe firstBracketId itemId $ listToMaybe items
