@@ -393,9 +393,11 @@ convertApplyEnumFromTo _app@(Expression.Apply func1 arg1) specialFunctions expr
     Just (Expression.Apply func0 arg0)
       -- expr@(func1@(func0 arg0) arg1)
       | Lens.anyOf getDefinition (== Anchors.sfEnumFromTo specialFunctions) func0
-      -> fmap Just . mkExpression expr =<<
-         ExpressionEnumFromTo <$>
-         (EnumFromTo <$> convertExpressionI arg0 <*> convertExpressionI arg1)
+      -> do
+        arg0S <- convertExpressionI arg0
+        arg1S <- convertExpressionI arg1
+        fmap Just . mkExpression expr $
+          ExpressionEnumFromTo (EnumFromTo (setNextHole arg1S arg0S) arg1S)
     _ -> pure Nothing
 
 convertApplyEmptyList ::
@@ -434,6 +436,7 @@ convertApplyList (Expression.Apply funcI argI) argS specialFunctions exprI =
             ListItem
             { liExpr =
               listItemExpr
+              & setNextHole argS
               & rHiddenGuids <>~
                 concat
                 [ funcFuncI ^.. subExpressionGuids
