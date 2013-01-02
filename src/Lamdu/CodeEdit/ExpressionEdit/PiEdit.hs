@@ -35,7 +35,7 @@ make hasParens (Sugar.Pi param resultType) =
     -- confusingly.
     (name, (resultTypeEdit, usedVars)) <-
       ExprGuiM.withParamName paramGuid $ \name ->
-      fmap ((,) name) . ExprGuiM.usedVariables $
+      fmap ((,) name) . ExprGuiM.listenUsedVariables $
       FuncEdit.makeResultEdit [paramId] resultType
     let
       paramUsed = paramGuid `elem` usedVars

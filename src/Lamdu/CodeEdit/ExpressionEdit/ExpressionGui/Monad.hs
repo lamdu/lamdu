@@ -14,7 +14,7 @@ module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad
   --
   , addResultPicker, listenResultPickers
 
-  , AccessedVars, markVariablesAsUsed, usedVariables
+  , AccessedVars, markVariablesAsUsed, listenUsedVariables
   , withParamName, NameSource(..)
   , withNameFromVarRef
   , getDefName
@@ -182,9 +182,8 @@ listener f =
   Lens.over exprGuiM RWS.listen
   & Lens.mapped . Lens.mapped . Lens._2 %~ f
 
--- TODO: Add listen to name
-usedVariables :: MonadA m => ExprGuiM m a -> ExprGuiM m (a, [Guid])
-usedVariables = listener oAccessedVars
+listenUsedVariables :: MonadA m => ExprGuiM m a -> ExprGuiM m (a, [Guid])
+listenUsedVariables = listener oAccessedVars
 
 listenResultPickers :: MonadA m => ExprGuiM m a -> ExprGuiM m (a, [T m Guid])
 listenResultPickers = listener oHolePickers
