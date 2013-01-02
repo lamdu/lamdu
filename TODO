@@ -1,5 +1,3 @@
-* Cut&paste need to replace and not set
-
 * Sugar Monad: Pass the already-read specialFunctions in the context
 
 * Hole picker writer should support the "virtual picker" for type-checking

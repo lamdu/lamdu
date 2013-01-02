@@ -124,14 +124,14 @@ mkActions sugarContext exprS =
   { _giveAsArg = DataIRef.exprGuid <$> DataOps.giveAsArg stored
   , _callWithArg = mkCallWithArg (SugarM.scMDefI sugarContext) exprS
   , _callWithNextArg = pure Nothing
-  , _replace = doReplace
-  , _cut = mkCutter (SugarM.scCodeAnchors sugarContext) (Property.value stored) doReplace
+  , _replace = doReplace DataOps.setToHole
+  , _cut = mkCutter (SugarM.scCodeAnchors sugarContext) (Property.value stored) $ doReplace DataOps.replaceWithHole
   , _giveAsArgToOperator =
       fmap DataIRef.exprGuid . DataOps.giveAsArgToOperator stored
   }
   where
     stored = resultStored exprS
-    doReplace = DataIRef.exprGuid <$> DataOps.replaceWithHole stored
+    doReplace f = DataIRef.exprGuid <$> f stored
 
 mkGen :: Int -> Int -> Guid -> Random.StdGen
 mkGen select count =
@@ -192,7 +192,7 @@ deleteParamRef ::
   MonadA m => Guid -> Expression.Expression def (Stored m) -> T m ()
 deleteParamRef param =
   Lens.mapMOf_ refs
-  (DataOps.replaceWithHole . Lens.view Expression.ePayload)
+  (DataOps.setToHole . Lens.view Expression.ePayload)
   where
     refs =
       Lens.folding Expression.subExpressions .
@@ -391,7 +391,7 @@ convertApplyEmptyList app@(Expression.Apply funcI _) specialFunctions exprI
     mkListActions exprS =
       ListActions
       { addFirstItem = mkListAddFirstItem specialFunctions exprS
-      , replaceNil = DataIRef.exprGuid <$> DataOps.replaceWithHole exprS
+      , replaceNil = DataIRef.exprGuid <$> DataOps.setToHole exprS
       }
 
 convertApplyList ::

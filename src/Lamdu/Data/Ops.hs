@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveFunctor #-}
 module Lamdu.Data.Ops
   ( newHole, giveAsArg, callWithArg
-  , replace, replaceWithHole, lambdaWrap, redexWrap
+  , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap
   , giveAsArgToOperator
   , addListItem
   , makeDefinition
@@ -76,20 +76,20 @@ callWithArg exprP = do
 newHole :: MonadA m => T m (DataIRef.ExpressionI (Tag m))
 newHole = DataIRef.newExprBody $ Expression.BodyLeaf Expression.Hole
 
-replace
-  :: MonadA m
-  => DataIRef.ExpressionProperty m
-  -> DataIRef.ExpressionI (Tag m)
-  -> T m (DataIRef.ExpressionI (Tag m))
+replace ::
+  MonadA m =>
+  DataIRef.ExpressionProperty m ->
+  DataIRef.ExpressionI (Tag m) ->
+  T m (DataIRef.ExpressionI (Tag m))
 replace exprP newExprI = do
   Property.set exprP newExprI
   return newExprI
 
-replaceWithHole
-  :: MonadA m
-  => DataIRef.ExpressionProperty m
-  -> T m (DataIRef.ExpressionI (Tag m))
-replaceWithHole exprP =
+replaceWithHole :: MonadA m => DataIRef.ExpressionProperty m -> T m (DataIRef.ExpressionI (Tag m))
+replaceWithHole exprP = replace exprP =<< newHole
+
+setToHole :: MonadA m => DataIRef.ExpressionProperty m -> T m (DataIRef.ExpressionI (Tag m))
+setToHole exprP =
   exprI <$ DataIRef.writeExprBody exprI hole
   where
     hole = Expression.BodyLeaf Expression.Hole
