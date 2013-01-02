@@ -11,7 +11,7 @@ module Lamdu.CodeEdit.Sugar
   , ExpressionP(..), rGuid, rExpressionBody, rPayload, rHiddenGuids
   , Expression
   , WhereItem(..)
-  , ListItem(..), List(..), EnumFromTo(..)
+  , ListItem(..), List(..)
   , Func(..)
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
@@ -344,9 +344,7 @@ convertApply app@(Expression.Apply _ argI) exprI = do
   specialFunctions <-
     SugarM.getP . Anchors.specialFunctions .
     SugarM.scCodeAnchors =<< SugarM.readContext
-  convertApplyEnumFromTo app specialFunctions exprI
-    `orElse`
-    convertApplyEmptyList app specialFunctions exprI
+  convertApplyEmptyList app specialFunctions exprI
     `orElse` do
       argS <- convertExpressionI argI
       convertApplyList app argS specialFunctions exprI
@@ -381,24 +379,6 @@ mkList specialFunctions values consistentGuid exprI =
       fmap (DataIRef.exprGuid . snd) .
       DataOps.addListItem specialFunctions <$>
       resultStored exprI
-
-convertApplyEnumFromTo ::
-  (Typeable1 m, MonadA m) =>
-  Expression.Apply (DataIRef.ExpressionM m (PayloadMM m)) ->
-  Anchors.SpecialFunctions (Tag m) ->
-  DataIRef.ExpressionM m (PayloadMM m) ->
-  SugarM m (Maybe (Expression m))
-convertApplyEnumFromTo _app@(Expression.Apply func1 arg1) specialFunctions expr
-  = case func1 ^? eApply of
-    Just (Expression.Apply func0 arg0)
-      -- expr@(func1@(func0 arg0) arg1)
-      | Lens.anyOf getDefinition (== Anchors.sfEnumFromTo specialFunctions) func0
-      -> do
-        arg0S <- convertExpressionI arg0
-        arg1S <- convertExpressionI arg1
-        fmap Just . mkExpression expr $
-          ExpressionEnumFromTo (EnumFromTo (setNextHole arg1S arg0S) arg1S)
-    _ -> pure Nothing
 
 convertApplyEmptyList ::
   (Typeable1 m, MonadA m) =>

@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.CodeEdit.ExpressionEdit.ListEdit(make, makeEnumFromTo) where
+module Lamdu.CodeEdit.ExpressionEdit.ListEdit(make) where
 
 import Control.Applicative ((<$>))
 import Control.Lens ((&), (%~), (^.))
@@ -16,27 +16,6 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.WidgetIds as WidgetIds
-
-makeEnumFromTo ::
-  MonadA m => Sugar.EnumFromTo (Sugar.Expression m) -> Widget.Id ->
-  ExprGuiM m (ExpressionGui m)
-makeEnumFromTo eft = ExpressionGui.wrapExpression $ makeEnumFromToUnwrapped eft
-
-makeEnumFromToUnwrapped ::
-  MonadA m => Sugar.EnumFromTo (Sugar.Expression m) -> Widget.Id ->
-  ExprGuiM m (ExpressionGui m)
-makeEnumFromToUnwrapped (Sugar.EnumFromTo lo hi) myId =
-  ExprGuiM.assignCursor myId cursorDest $
-  ExpressionGui.hbox <$> sequence
-    [ makeBracketLabel "[" myId
-    , ExprGuiM.makeSubexpresion lo
-    , ExpressionGui.makeColoredLabel Config.enumFromToDotSize
-      Config.enumFromToDotColor ".." myId
-    , ExprGuiM.makeSubexpresion hi
-    , makeBracketLabel "]" myId
-    ]
-  where
-    cursorDest = WidgetIds.fromGuid $ lo ^. Sugar.rGuid
 
 make ::
   MonadA m => Sugar.List m (Sugar.Expression m) -> Widget.Id ->

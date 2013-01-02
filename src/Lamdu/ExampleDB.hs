@@ -101,7 +101,8 @@ createBuiltins =
     traverse_ ((`makeWithType_` aToAToBool) . ("Prelude." ++))
       ["==", "/=", "<=", ">=", "<", ">"]
 
-    enumFromToFunc <- makeWithType "Prelude.enumFromTo" . mkPi integer . mkPi integer $ listOf integer
+    newDef ".." ["Prelude"] "enumFromTo" .
+      mkPi integer . mkPi integer $ listOf integer
 
     makeWithType_ "Data.Functor.fmap" .
       forAll "f" $ \f ->
@@ -115,20 +116,13 @@ createBuiltins =
     makeWithType_ "Control.Monad.return" .
       forAll "m" $ \m -> forAll "a" $ \a -> mkPi a $ mkApply m a
 
-    tellift_ $ do
-      typeI <-
-        forAll "a" $ \a -> forAll "b" $ \b -> forAll "c" $ \c ->
-        mkPi (mkPi b c) . mkPi (mkPi a b) $ mkPi a c
-      -- Can't use newBuiltin in case of "."
-      DataOps.newDefinition "." .
-        (`Definition` typeI) . Definition.BodyBuiltin .
-        Definition.Builtin $ Definition.FFIName ["Prelude"] "."
-
+    newDef "." ["Prelude"] "." .
+      forAll "a" $ \a -> forAll "b" $ \b -> forAll "c" $ \c ->
+      mkPi (mkPi b c) . mkPi (mkPi a b) $ mkPi a c
     let
       specialFunctions = A.SpecialFunctions
         { A.sfCons = cons
         , A.sfNil = nil
-        , A.sfEnumFromTo = enumFromToFunc
         }
       ffiEnv = FFI.Env
         { FFI.trueDef = true
@@ -136,6 +130,11 @@ createBuiltins =
         }
     return (ffiEnv, specialFunctions)
   where
+    newDef name ffiPath ffiName mkTypeI = tellift_ $ do
+      typeI <- mkTypeI
+      DataOps.newDefinition name .
+        (`Definition` typeI) . Definition.BodyBuiltin .
+        Definition.Builtin $ Definition.FFIName ffiPath ffiName
     endo = join mkPi
     set = DataIRef.newExprBody $ Expression.BodyLeaf Expression.Set
     integer = DataIRef.newExprBody $ Expression.BodyLeaf Expression.IntegerType
