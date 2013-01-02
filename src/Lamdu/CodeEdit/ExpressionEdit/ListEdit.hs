@@ -29,7 +29,7 @@ makeBracketLabel =
 makeUnwrapped ::
   MonadA m => Sugar.List m (Sugar.Expression m) -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
-makeUnwrapped (Sugar.List items mAddFirstItem) myId =
+makeUnwrapped (Sugar.List items mActions) myId =
   ExprGuiM.assignCursor myId cursorDest $
   mapM makeItem items >>= \itemEdits -> do
     bracketOpenLabel <- makeBracketLabel "[" myId
@@ -41,18 +41,22 @@ makeUnwrapped (Sugar.List items mAddFirstItem) myId =
         bracketOpen <- onFirstBracket bracketOpenLabel
         bracketClose <-
           ExpressionGui.makeFocusableView closeBracketId bracketCloseLabel
+          & Lens.mapped . ExpressionGui.egWidget %~ Widget.weakerEvents nilDeleteEventMap
         return . ExpressionGui.hbox $ concat
           [[bracketOpen, firstEdit], nextEdits >>= pairToList, [bracketClose]]
   where
     pairToList (x, y) = [x, y]
     closeBracketId = Widget.joinId myId ["close-bracket"]
     itemId = WidgetIds.fromGuid . Lens.view Sugar.rGuid . Sugar.liExpr
-    addFirstElemEventMap =
+    actionEventMap keys doc actSelect =
       maybe mempty
-      (Widget.keysEventMapMovesCursor
-       Config.listAddItemKeys (E.Doc ["Edit", "List", "Add First Item"]) .
-       fmap WidgetIds.fromGuid . Sugar.addFirstItem)
-      mAddFirstItem
+      (Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "List", doc]) .
+       fmap WidgetIds.fromGuid . actSelect) mActions
+    addFirstElemEventMap =
+      actionEventMap Config.listAddItemKeys "Add First Item" Sugar.addFirstItem
+    delKeys = Config.delForwardKeys ++ Config.delBackwordKeys
+    nilDeleteEventMap =
+      actionEventMap delKeys "Replace nil with hole" Sugar.replaceNil
     firstBracketId = Widget.joinId myId ["first-bracket"]
     onFirstBracket label =
       ExpressionGui.makeFocusableView firstBracketId label

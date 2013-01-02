@@ -169,8 +169,9 @@ data ListItem m expr = ListItem
   , liExpr :: expr
   } deriving (Functor, Foldable, Traversable)
 
-newtype ListActions m = ListActions
+data ListActions m = ListActions
   { addFirstItem :: T m Guid
+  , replaceNil :: T m Guid
   }
 
 data List m expr = List

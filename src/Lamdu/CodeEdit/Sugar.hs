@@ -363,25 +363,15 @@ convertApplyNormal (Expression.Apply funcI argI) argS exprI = do
       applyOnSection section apply exprI
     _ -> convertApplyPrefix apply exprI
 
-mkList ::
-  (Typeable1 m, MonadA m) =>
-  Anchors.SpecialFunctions (Tag m) ->
-  [ListItem m (Expression m)] ->
-  Guid -> Convertor m
-mkList specialFunctions values consistentGuid exprI =
-  modifyGuids <$>
-  (mkExpression exprI . ExpressionList)
-  (List values (mkListActions <$> resultStored exprI))
-  where
-    modifyGuids e = e
-      & rGuid .~ consistentGuid
-      & rHiddenGuids %~ (e ^. rGuid :)
-    mkListActions exprS =
-      ListActions
-      { addFirstItem =
-        DataIRef.exprGuid . snd <$>
-        DataOps.addListItem specialFunctions exprS
-      }
+setListGuid :: Guid -> Expression m -> Expression m
+setListGuid consistentGuid e = e
+  & rGuid .~ consistentGuid
+  & rHiddenGuids %~ (e ^. rGuid :)
+
+mkListAddFirstItem ::
+  MonadA m => Anchors.SpecialFunctions (Tag m) -> Stored m -> T m Guid
+mkListAddFirstItem specialFunctions =
+  fmap (DataIRef.exprGuid . snd) . DataOps.addListItem specialFunctions
 
 convertApplyEmptyList ::
   (Typeable1 m, MonadA m) =>
@@ -391,10 +381,18 @@ convertApplyEmptyList ::
   SugarM m (Maybe (Expression m))
 convertApplyEmptyList app@(Expression.Apply funcI _) specialFunctions exprI
   | Lens.anyOf getDefinition (== Anchors.sfNil specialFunctions) funcI
-  = fmap
-    (Just . (rHiddenGuids <>~ (app ^.. Lens.traversed . subExpressionGuids))) $
-    mkList specialFunctions [] (Guid.augment "list" (resultGuid exprI)) exprI
+  = Just . (rHiddenGuids <>~ (app ^.. Lens.traversed . subExpressionGuids)) .
+    setListGuid consistentGuid <$>
+    (mkExpression exprI . ExpressionList)
+    (List [] (mkListActions <$> resultStored exprI))
   | otherwise = pure Nothing
+  where
+    consistentGuid = Guid.augment "list" (resultGuid exprI)
+    mkListActions exprS =
+      ListActions
+      { addFirstItem = mkListAddFirstItem specialFunctions exprS
+      , replaceNil = DataIRef.exprGuid <$> DataOps.replaceWithHole exprS
+      }
 
 convertApplyList ::
   (Typeable1 m, MonadA m) =>
@@ -406,7 +404,7 @@ convertApplyList ::
 convertApplyList (Expression.Apply funcI argI) argS specialFunctions exprI =
   case (funcI ^? eApply, argS ^. rExpressionBody) of
   ( Just (Expression.Apply funcFuncI funcArgI)
-    , ExpressionList (List values listMActions)
+    , ExpressionList (List innerValues innerListMActions)
     )
     -- exprI@(funcI@(funcFuncI funcArgI) argI)
     | Lens.anyOf (eApply . Expression.applyFunc . getDefinition)
@@ -427,7 +425,7 @@ convertApplyList (Expression.Apply funcI argI) argS specialFunctions exprI =
                 , argS ^. rHiddenGuids
                 ]
             , liMActions = do
-                addNext <- addFirstItem <$> listMActions
+                addNext <- addFirstItem <$> innerListMActions
                 exprProp <- resultStored exprI
                 argProp <- resultStored argI
                 return ListItemActions
@@ -435,7 +433,16 @@ convertApplyList (Expression.Apply funcI argI) argS specialFunctions exprI =
                   , _itemDelete = replaceWith exprProp argProp
                   }
             }
-        mkList specialFunctions (listItem : values) (argS ^. rGuid) exprI
+          mListActions = do
+            exprS <- resultStored exprI
+            innerListActions <- innerListMActions
+            pure ListActions
+              { addFirstItem = mkListAddFirstItem specialFunctions exprS
+              , replaceNil = replaceNil innerListActions
+              }
+        setListGuid (argS ^. rGuid) <$>
+          (mkExpression exprI . ExpressionList)
+          (List (listItem : innerValues) mListActions)
   _ -> pure Nothing
 
 eApply :: SimpleTraversal (Expression.Expression def a) (Expression.Apply (Expression.Expression def a))
