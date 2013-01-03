@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings, Rank2Types#-}
 module Main(main) where
 
-import Control.Arrow (second)
-import Control.Lens ((^.))
+import Control.Applicative ((<$>))
+import Control.Lens ((^.), (%~))
 import Control.Monad (when, unless)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, runStateT, mapStateT)
@@ -125,7 +125,7 @@ annotationSize = 5
 addAnnotations :: Draw.Font -> Anim.Frame -> Anim.Frame
 addAnnotations font = Lens.over Anim.fSubImages $ Map.mapWithKey annotateItem
   where
-    annotateItem animId = map . second $ annotatePosImage animId
+    annotateItem animId = Lens.mapped . Lens._2 %~ annotatePosImage animId
     annotatePosImage animId posImage =
       flip (Lens.over Anim.piImage) posImage . mappend .
       (Vector2.uncurry Draw.scale antiScale %%) .
@@ -136,7 +136,7 @@ addAnnotations font = Lens.over Anim.fSubImages $ Map.mapWithKey annotateItem
         -- that our annotation is always the same size
         antiScale =
           annotationSize /
-          fmap (max 1) (posImage ^. Anim.piRect . Rect.size)
+          (max 1 <$> posImage ^. Anim.piRect . Rect.size)
 
 whenApply :: Bool -> (a -> a) -> a -> a
 whenApply False _ = id
