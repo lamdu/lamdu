@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings, Rank2Types#-}
 module Main(main) where
 
-import Control.Applicative ((<$>))
+import Control.Applicative ((<$>), (<*))
 import Control.Lens ((^.), (%~))
 import Control.Monad (when, unless)
 import Control.Monad.Trans.Class (lift)
@@ -10,6 +10,7 @@ import Data.ByteString (unpack)
 import Data.Cache (Cache)
 import Data.IORef
 import Data.List(intercalate)
+import Data.MRUMemo(memoIO)
 import Data.Monoid(Monoid(..))
 import Data.Store.Db (Db)
 import Data.Store.Guid (Guid)
@@ -165,15 +166,18 @@ mainLoopDebugMode font makeWidget addHelp = do
     makeDebugModeWidget size = addHelp size =<< addDebugMode =<< makeWidget size
   mainLoopWidget makeDebugModeWidget getAnimHalfLife
 
-makeFlyNav :: IO (Widget IO -> IO (Widget IO))
-makeFlyNav = do
+makeFlyNav :: (Widget.Size -> IO (Widget IO)) -> IO (Widget.Size -> IO (Widget IO))
+makeFlyNav mkWidget = do
+  widgetCacheRef <- newIORef =<< memoIO mkWidget
+  let invalidateCache = writeIORef widgetCacheRef =<< memoIO mkWidget
   flyNavState <- newIORef FlyNav.initState
-  return $ \widget -> do
+  return $ \size -> do
+    mkWidgetCached <- readIORef widgetCacheRef
     fnState <- readIORef flyNavState
-    return .
-      FlyNav.make WidgetIds.flyNav
-      fnState (writeIORef flyNavState) $
-      widget
+    FlyNav.make WidgetIds.flyNav
+      fnState (writeIORef flyNavState) .
+      Widget.atEvents (<* invalidateCache) <$>
+      mkWidgetCached size
 
 makeSizeFactor :: IO (IORef (Vector2 Widget.R), Widget.EventHandlers IO)
 makeSizeFactor = do
@@ -191,7 +195,6 @@ runDb :: Draw.Font -> Db -> IO a
 runDb font db = do
   ExampleDB.initDB db
   (sizeFactorRef, sizeFactorEvents) <- makeSizeFactor
-  flyNavMake <- makeFlyNav
   addHelpWithStyle <-
     EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown Config.overlayDocKeys
   settingsRef <- newIORef Settings
@@ -211,9 +214,10 @@ runDb font db = do
         mkWidgetWithFallback settingsRef (Config.baseStyle font) dbToIO
         (size / sizeFactor, cursor)
       writeIORef cacheRef newCache
-      flyNavMake . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
+      return . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
 
-  mainLoopDebugMode font makeWidget addHelp
+  mkWidgetWithFlyNav <- makeFlyNav makeWidget
+  mainLoopDebugMode font mkWidgetWithFlyNav addHelp
   where
     dbToIO = Anchors.runDbTransaction db
 
