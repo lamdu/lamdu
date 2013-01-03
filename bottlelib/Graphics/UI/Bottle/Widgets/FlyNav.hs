@@ -2,8 +2,7 @@
 module Graphics.UI.Bottle.Widgets.FlyNav(make, State, initState) where
 
 import Control.Applicative (Applicative(..), liftA2, (*>))
-import Control.Arrow (second)
-import Control.Lens ((^.))
+import Control.Lens ((^.), (%~))
 import Control.Monad (void)
 import Data.ByteString.Char8 () -- instance IsString ByteString
 import Data.Monoid (Monoid(..))
@@ -129,9 +128,12 @@ addMovement name keys dir pos movements setState
     , let modKey = EventMap.ModKey modifier key
     ]
 
+-- separate out a single element each time
 zipped :: [a] -> [(a, [a])]
 zipped [] = []
-zipped (x:xs) = (x, xs) : (map . second) (x:) (zipped xs)
+zipped (x:xs) =
+  (x, xs) :
+  (Lens.mapped . Lens._2 %~ (x:)) (zipped xs)
 
 focalCenter :: Lens.SimpleLens (Widget f) (Vector2 Widget.R)
 focalCenter = Widget.wFocalArea . Rect.center
