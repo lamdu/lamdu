@@ -1,8 +1,7 @@
 module Graphics.UI.Bottle.MainLoop (mainLoopAnim, mainLoopImage, mainLoopWidget) where
 
-import Control.Arrow(first, second)
-import Control.Concurrent(threadDelay)
-import Control.Lens ((^.))
+import Control.Concurrent (threadDelay)
+import Control.Lens ((^.), (%~), (.~), _1, _2)
 import Control.Monad (when)
 import Data.IORef
 import Data.MRUMemo (memoIO)
@@ -67,9 +66,9 @@ mainLoopAnim tickHandler eventHandler makeFrame getAnimationHalfLife = do
   let
     handleResult Nothing = return False
     handleResult (Just animIdMapping) = do
-      (modifyIORef frameStateVar . fmap)
-        ((first . const) 0 .
-         (second . second . Anim.mapIdentities) animIdMapping)
+      modifyIORef frameStateVar . fmap $
+        (_1 .~  0) .
+        (_2 . _2 %~ Anim.mapIdentities animIdMapping)
       return True
 
     nextFrameState curTime size Nothing = do
@@ -92,8 +91,8 @@ mainLoopAnim tickHandler eventHandler makeFrame getAnimationHalfLife = do
 
     makeImage forceRedraw size = do
       when forceRedraw .
-        modifyIORef frameStateVar .
-        fmap . first $ const 0
+        modifyIORef frameStateVar $
+        Lens.mapped . _1 .~ 0
       _ <- handleResult =<< tickHandler size
       curTime <- getCurrentTime
       writeIORef frameStateVar =<<
