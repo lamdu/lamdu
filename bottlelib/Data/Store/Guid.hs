@@ -1,9 +1,8 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 module Data.Store.Guid
-    (Guid, make, bs, length, new, combine, augment, fromString, asHex)
-where
+  (Guid, make, bs, length, new, combine, augment, fromString, asHex) where
 
-import Control.Arrow (first)
+import Control.Lens ((%~), _1)
 import Control.Monad (guard)
 import Data.Binary (Binary(..))
 import Data.Binary.Get (getByteString)
@@ -52,7 +51,7 @@ asHex = encodeHex . bs
 
 instance Random Guid where
   randomR = error "randomR: you nuts?"
-  random = first (Guid . SBS.pack . take 16 . randoms) . split
+  random = (_1 %~ Guid . SBS.pack . take 16 . randoms) . split
 
 length :: Int
 length = 16
