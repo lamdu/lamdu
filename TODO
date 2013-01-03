@@ -1,3 +1,10 @@
+* BUG: WhereItem edits should be nested, name-generation-wise, under the func body
+
+* Holes not entered in navigation, left with ESC or otherwise pick their
+  result?
+  * Could be annoying if you wanna go somewhere to check something and you have
+    to remmember to <ESC> first!
+
 * Infix:
   * Need to support callWithArg/etc on applyInfix too
   * (_ x) and you press <op>, convert to: (x *_<op>)
@@ -12,6 +19,8 @@
 
 * When hole is "[", press of operator/alpha key makes [*_<key>]
 
+* Green holes for (a|_->a|_) type? Or do we type-check if func is removable?
+
 * Sugar adds a virtual IRef to each Expression into a pure memory
   DB containing the expression
 
@@ -20,31 +29,13 @@
 * Ops.addListItem should be giveAsArgTo which should take the expr to
   write in the function side
 
-* Import Control.Lens.Tuple unqualified. edwardk says unlikely to
-  change, for _1, _2, etc
-
-* Shift-left should let you select all the way up to definition,
-  especially in where (e.g: to add outer where)
-
-* WhereItem edits should be nested, name-generation-wise, under the func body
-
-* Missing a test to verify that recursive references have a recursive
+* TEST: Missing a test to verify that recursive references have a recursive
   type rather than the type "in db"
 
-* Cleanups:
-  * Instead of (ExprGui.Monad.NameSource, String) and Guid of name
-    seperately, generate a Property for the name of that type? or give
-    a setter instead of Guid
-  * Rename Data* to Expression*.
+* TYPE SYSTEM: Type synonyms/expansions
 
-* Type synonyms/expansions
-
-* When anything is selected, show all the stuff that refer/define that
-  same symbol
-
-* When hole result is selected, show (with some different
-  visualization) the inferred types and values due to the hole result
-  are shown
+* When a GetVariable or var name is selected, show all the stuff that
+  refer/define that same symbol
 
 * Quasi-Monomorphic inference? (Show the monomorphic types a hole
   could be, or that it must be a polymorphic type)
@@ -115,3 +106,5 @@ where
     GC'd will not cost a read. This will mean that e.g: Generating the
     child widget to check if it takes focus will not cost much
     unnecessary work.
+  * Import Control.Lens.Tuple unqualified. edwardk says unlikely to
+    change, for _1, _2, etc
