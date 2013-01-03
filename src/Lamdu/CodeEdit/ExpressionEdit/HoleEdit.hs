@@ -5,8 +5,7 @@ module Lamdu.CodeEdit.ExpressionEdit.HoleEdit
   ) where
 
 import Control.Applicative (Applicative(..), (<$>), (<$))
-import Control.Arrow (first, second)
-import Control.Lens ((^.))
+import Control.Lens ((^.), (&), (%~))
 import Control.Monad ((<=<), filterM, mplus, msum, void)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.State (StateT)
@@ -381,7 +380,7 @@ makeResultsWidget holeInfo firstResults moreResults = do
       let
         mResult =
           listToMaybe . mapMaybe snd $
-          zipWith (second . fmap . (,)) [0..] xs
+          zipWith (Lens.over (Lens._2 . Lens.mapped) . (,)) [0..] xs
       return
         ( mResult
         , blockDownEvents . vboxMBiasedAlign (fmap fst mResult) 0 $
@@ -434,17 +433,16 @@ collectResults =
   List.scanl step ([], [])
   where
     conclude (notEnoughResults, enoughResultsM) =
-      fmap
-      ( second (not . null) . splitAt Config.holeResultCount
+      ( (Lens._2 %~ not . null) . splitAt Config.holeResultCount
       . uncurry (on (++) reverse) . last . mappend notEnoughResults
-      ) .
-      List.toList $
-      List.take 2 enoughResultsM
+      ) <$>
+      List.toList (List.take 2 enoughResultsM)
     step results (tag, x) =
-      ( case tag of
-        GoodResult -> first
-        BadResult -> second
-      ) (x :) results
+      results
+      & case tag of
+        GoodResult -> Lens._1
+        BadResult -> Lens._2
+        %~ (x :)
 
 makeBackground :: Widget.Id -> Int -> Draw.Color -> Widget f -> Widget f
 makeBackground myId level =
