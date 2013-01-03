@@ -11,8 +11,7 @@ module Graphics.UI.Bottle.Widgets.Grid
   ) where
 
 import Control.Applicative (liftA2)
-import Control.Arrow (first, second)
-import Control.Lens ((^.))
+import Control.Lens ((^.), (%~))
 import Control.Monad (join, msum)
 import Data.Function (on)
 import Data.List (foldl', transpose, find, minimumBy, sortBy, groupBy)
@@ -150,9 +149,8 @@ makeKeyed children = KGrid
     mkSizedKeyedContent (key, (alignment, widget)) =
       ((widget ^. Widget.wSize, alignment), (key, widget))
     translate align rect =
-      second
-      (Element align rect .
-       Widget.translate (rect ^. Rect.topLeft))
+      Lens._2 %~
+      Element align rect . Widget.translate (rect ^. Rect.topLeft)
 
 unkey :: [[(Alignment, Widget f)]] -> [[((), (Alignment, Widget f))]]
 unkey = (map . map) ((,) ())
@@ -245,7 +243,7 @@ combineMEnters size children = chooseClosest childEnters
   where
     childEnters =
       mapMaybe indexIntoMaybe .
-      (concatMap . map . first) tupleToVector2 $
+      concat . (Lens.mapped . Lens.mapped . Lens._1 %~ tupleToVector2) $
       enumerate2d children
 
     chooseClosest [] = Nothing
