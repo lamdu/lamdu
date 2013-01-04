@@ -126,7 +126,7 @@ mkActions sugarContext exprS =
   , _replace = doReplace DataOps.setToHole
   , _cut = mkCutter (SugarM.scCodeAnchors sugarContext) (Property.value stored) $ doReplace DataOps.replaceWithHole
   , _giveAsArgToOperator =
-      fmap DataIRef.exprGuid . DataOps.giveAsArgToOperator stored
+      fmap DataIRef.exprGuid $ DataOps.giveAsArgToOperator stored
   }
   where
     stored = resultStored exprS
@@ -687,8 +687,8 @@ mkHoleResult sugarContext exprS res =
       SugarInfer.resultFromInferred
     pickAndCallWithArg =
       pick >> DataIRef.exprGuid <$> DataOps.callWithArg stored
-    pickAndGiveAsArgToOp name =
-      pick >> DataIRef.exprGuid <$> DataOps.giveAsArgToOperator stored name
+    pickAndGiveAsArgToOp =
+      pick >> DataIRef.exprGuid <$> DataOps.giveAsArgToOperator stored
     pick = pickResult (resultGuid exprS) exprS res
     stored = resultStored exprS
 
@@ -724,10 +724,10 @@ addPickAndCallWithNextArg sugarContext app applyS argS =
     mDefI = SugarM.scMDefI sugarContext
     eGuid = resultGuid applyS
 
-convertInferredHoleH ::
+convertTypeCheckedHoleH ::
   (MonadA m, Typeable1 m) => SugarM.Context m -> Maybe (T m Guid) ->
   InferredWC (Tag m) -> Convertor m
-convertInferredHoleH
+convertTypeCheckedHoleH
   sugarContext mPaste iwc exprI =
     chooseHoleType (iwcInferredValues iwc) plainHole inferredHole
   where
@@ -770,8 +770,12 @@ convertInferredHoleH
 
 wrapOperatorHole :: (MonadA m, Typeable1 m) => DataIRef.ExpressionM m (PayloadMM m) -> Expression m -> SugarM m (Expression m)
 wrapOperatorHole exprI holeExpr = do
+  -- TODO: It is ugly to even know about assocSearchTermRef in
+  -- Sugar. Instead, some other metadata should be set to indicate it
+  -- is a hole
   searchTerm <-
-    SugarM.liftTransaction . Transaction.getP . Anchors.assocSearchTermRef $ resultGuid exprI
+    SugarM.liftTransaction . Transaction.getP . Anchors.assocSearchTermRef $
+    resultGuid exprI
   if isOperatorName searchTerm
     then
       -- TODO: Ok to mkExpression with same exprI here?
@@ -830,14 +834,14 @@ holeResultHasHoles =
 
 convertHole :: (MonadA m, Typeable1 m) => Convertor m
 convertHole exprI =
-  maybe convertUninferredHole convertInferredHole $
+  maybe convertUntypedHole convertTypeCheckedHole $
   resultInferred exprI
   where
-    convertInferredHole inferred = do
+    convertTypeCheckedHole inferred = do
       ctx <- SugarM.readContext
       mPaste <- fmap join . traverse mkPaste $ resultStored exprI
-      convertInferredHoleH ctx mPaste inferred exprI
-    convertUninferredHole = mkExpression exprI . ExpressionHole $ Hole Nothing
+      convertTypeCheckedHoleH ctx mPaste inferred exprI
+    convertUntypedHole = mkExpression exprI . ExpressionHole $ Hole Nothing
 
 convertLiteralInteger :: (MonadA m, Typeable1 m) => Integer -> Convertor m
 convertLiteralInteger i exprI =

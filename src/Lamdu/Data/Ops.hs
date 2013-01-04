@@ -53,11 +53,9 @@ giveAsArg exprP = do
 giveAsArgToOperator ::
   MonadA m =>
   DataIRef.ExpressionProperty m ->
-  String ->
   T m (DataIRef.ExpressionI (Tag m))
-giveAsArgToOperator exprP searchTerm = do
+giveAsArgToOperator exprP = do
   op <- newHole
-  setP (Anchors.assocSearchTermRef (DataIRef.exprGuid op)) searchTerm
   opApplied <- DataIRef.newExprBody . Expression.makeApply op $ Property.value exprP
   Property.set exprP =<< DataIRef.newExprBody . Expression.makeApply opApplied =<< newHole
   return op

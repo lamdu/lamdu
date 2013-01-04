@@ -2,6 +2,7 @@
 module Lamdu.CodeEdit.ExpressionEdit.HoleEdit
   ( make, makeUnwrapped
   , searchTermWidgetId
+  , holeCreated
   ) where
 
 import Control.Applicative (Applicative(..), (<$>), (<$))
@@ -473,9 +474,10 @@ pickEventMap ::
   Widget.EventHandlers (T m)
 pickEventMap holeInfo searchTerm (Just result)
   | nonEmptyAll (`notElem` Config.operatorChars) searchTerm =
-    operatorHandler (E.Doc ["Edit", "Result", "Pick and apply operator"]) $ \x ->
-      searchTermWidgetId . WidgetIds.fromGuid <$>
-      (result ^. Sugar.holeResultPickAndGiveAsArgToOperator) [x]
+    operatorHandler (E.Doc ["Edit", "Result", "Pick and apply operator"]) $
+    \x -> do
+      targetGuid <- result ^. Sugar.holeResultPickAndGiveAsArgToOperator
+      holeCreated targetGuid [x]
   | nonEmptyAll (`elem` Config.operatorChars) searchTerm =
     alphaNumericHandler (E.Doc ["Edit", "Result", "Pick and resume"]) $ \x -> do
       g <- result ^. Sugar.holeResultPick
@@ -628,3 +630,8 @@ makeUnwrapped hole mNextHole guid myId = do
 
 searchTermWidgetId :: Widget.Id -> Widget.Id
 searchTermWidgetId = WidgetIds.searchTermId . FocusDelegator.delegatingId
+
+holeCreated :: MonadA m => Guid -> String -> T m Widget.Id
+holeCreated newHoleGuid newSearchTerm = do
+  Transaction.setP (Anchors.assocSearchTermRef newHoleGuid) newSearchTerm
+  pure . searchTermWidgetId $ WidgetIds.fromGuid newHoleGuid

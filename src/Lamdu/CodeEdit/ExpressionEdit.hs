@@ -169,10 +169,10 @@ actionsEventMap exprGuid isHole actions = do
       actions ^. Sugar.giveAsArg
     addOperator =
       (fmap . fmap) Widget.eventResultFromCursor .
-      E.charGroup "Operator" (E.Doc ["Edit", "Apply operator"]) Config.operatorChars .
-      fmap const $
-      fmap (HoleEdit.searchTermWidgetId . WidgetIds.fromGuid) .
-      (actions ^. Sugar.giveAsArgToOperator) . (:[])
+      E.charGroup "Operator" (E.Doc ["Edit", "Apply operator"])
+      Config.operatorChars $ \c _isShifted -> do
+        targetGuid <- actions ^. Sugar.giveAsArgToOperator
+        HoleEdit.holeCreated targetGuid [c]
     cut
       | isHoleBool = mempty
       | otherwise =
