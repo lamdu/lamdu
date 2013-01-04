@@ -7,7 +7,7 @@ module Lamdu.Data.Expression.Infer.Conflicts
   ) where
 
 import Control.Applicative ((<$>), (<*>))
-import Control.Arrow (first)
+import Control.Lens ((%~))
 import Control.Monad (void)
 import Control.Monad.Trans.State (State, mapStateT)
 import Control.Monad.Trans.Writer (Writer, runWriter)
@@ -17,6 +17,7 @@ import Data.Functor.Identity (Identity(..))
 import Data.Map (Map)
 import Data.Monoid (Monoid(..))
 import Data.Set (Set)
+import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -72,7 +73,7 @@ inferWithConflicts loaded node = do
       }
   return
     ( Map.null $ unConflictMap conflictsMap
-    , (fmap . first) toIWC exprInferred
+    , Lens.mapped . Lens._1 %~ toIWC $ exprInferred
     )
   where
     toRes ((a, s), w) = Identity ((a, w), s)
