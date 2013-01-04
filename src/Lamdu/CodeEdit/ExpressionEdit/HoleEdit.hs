@@ -365,10 +365,12 @@ vboxMBiasedAlign mChildIndex align =
   maybe Box.toWidget Box.toWidgetBiased mChildIndex .
   Box.makeAlign align Box.vertical
 
+data HaveMoreResults = HaveMoreResults | NoMoreResults
+
 makeResultsWidget
   :: MonadA m
   => HoleInfo m
-  -> [ResultsList m] -> Bool
+  -> [ResultsList m] -> HaveMoreResults
   -> ExprGuiM m (Maybe (Sugar.HoleResult m), WidgetT m)
 makeResultsWidget holeInfo firstResults moreResults = do
   firstResultsAndWidgets <-
@@ -389,9 +391,10 @@ makeResultsWidget holeInfo firstResults moreResults = do
   let extraWidgets = maybeToList $ snd . snd =<< mResult
   moreResultsWidgets <-
     ExprGuiM.widgetEnv $
-    if moreResults
-    then fmap (: []) . BWidgets.makeLabel "..." $ Widget.toAnimId myId
-    else return []
+    case moreResults of
+      HaveMoreResults ->
+        (: []) <$> BWidgets.makeLabel "..." (Widget.toAnimId myId)
+      NoMoreResults -> return []
   return
     ( fmap (fst . snd) mResult
     , Widget.scale Config.holeResultScaleFactor .
@@ -426,14 +429,16 @@ adHocTextEditEventMap textProp =
 
 collectResults ::
   (Applicative (List.ItemM l), List l) =>
-  l (ResultType, a) -> List.ItemM l ([a], Bool)
+  l (ResultType, a) -> List.ItemM l ([a], HaveMoreResults)
 collectResults =
   conclude <=<
   List.splitWhenM (return . (>= Config.holeResultCount) . length . fst) .
   List.scanl step ([], [])
   where
+    haveMoreResults [] = NoMoreResults
+    haveMoreResults _ = HaveMoreResults
     conclude (notEnoughResults, enoughResultsM) =
-      ( (Lens._2 %~ not . null) . splitAt Config.holeResultCount
+      ( (Lens._2 %~ haveMoreResults) . splitAt Config.holeResultCount
       . uncurry (on (++) reverse) . last . mappend notEnoughResults
       ) <$>
       List.toList (List.take 2 enoughResultsM)
