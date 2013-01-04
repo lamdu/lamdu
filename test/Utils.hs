@@ -3,8 +3,7 @@
 module Utils where
 
 import Control.Applicative ((<$), (<$>))
-import Control.Arrow (first)
-import Control.Lens ((^.))
+import Control.Lens ((^.), (%~))
 import Control.Monad (join, void)
 import Control.Monad.Trans.State (State, runState, runStateT)
 import Data.Map (Map)
@@ -12,6 +11,7 @@ import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), inferWithConflicts)
+import qualified Control.Lens as Lens
 import qualified Data.Foldable as Foldable
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -99,7 +99,7 @@ showExpressionWithConflicts =
 
 definitionTypes :: Map Guid (DataIRef.Expression t ())
 definitionTypes =
-  Map.fromList $ map (first Guid.fromString)
+  Map.fromList . (Lens.mapped . Lens._1 %~ Guid.fromString) $
   [ ("Bool", setType)
   , ("List", purePi "list" setType setType)
   , ("Map", purePi "key" setType $ purePi "val" setType setType)
@@ -140,7 +140,7 @@ doInferM inferNode expr = do
     inferWithConflicts (doLoad expr) inferNode
   return $
     if success
-    then (fmap . first) iwcInferred exprWC
+    then Lens.mapped . Lens._1 %~ iwcInferred $ exprWC
     else
       error $ unlines
       [ "Result with conflicts:"
@@ -184,7 +184,7 @@ doInfer =
 doInfer_ ::
   DataIRef.Expression t a ->
   (DataIRef.Expression t (Infer.Inferred (DefI t)), Infer.Context (DefI t))
-doInfer_ = (first . fmap) fst . doInfer
+doInfer_ = (Lens._1 . Lens.mapped %~ fst) . doInfer
 
 factorialExpr :: DataIRef.Expression t ()
 factorialExpr =
@@ -217,7 +217,7 @@ inferMaybe expr =
 inferMaybe_ ::
   DataIRef.Expression t b ->
   Maybe (DataIRef.Expression t (Infer.Inferred (DefI t)), Infer.Context (DefI t))
-inferMaybe_ = (fmap . first . fmap) fst . inferMaybe
+inferMaybe_ = (Lens.mapped . Lens._1 . Lens.mapped %~ fst) . inferMaybe
 
 factorial ::
   Int ->
