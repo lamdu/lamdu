@@ -8,8 +8,8 @@ module Graphics.UI.Bottle.Widgets.TextView
   ) where
 
 import Control.Applicative (liftA2)
-import Control.Arrow (first, second, (&&&))
-import Control.Lens ((^.), (.~))
+import Control.Arrow ((&&&))
+import Control.Lens ((^.), (.~), (%~))
 import Data.List (foldl')
 import Data.List.Split (splitWhen)
 import Data.List.Utils (enumerate)
@@ -77,8 +77,8 @@ drawTextAsSingleLetters ::
 drawTextAsSingleLetters style text =
   joinLines $
   map
-  (second (max minLineSize) . drawMany horizontal .
-   map (nestedFrame . second (fontRender style . (:[])))) .
+  ((Lens._2 %~ max minLineSize) . drawMany horizontal .
+   map (nestedFrame . (Lens._2 %~ fontRender style . (:[])))) .
   splitWhen ((== '\n') . snd) $ enumerate text
   where
     (_, minLineSize) = fontRender style ""
@@ -102,7 +102,7 @@ letterRects style text =
 drawTextAsLines :: Style -> String -> (AnimId -> Anim.Frame, Size)
 drawTextAsLines style text =
   joinLines $
-  map (nestedFrame . second (fontRender style) . first ((,) "Line")) .
+  map (nestedFrame . (Lens._2 %~ fontRender style) . (Lens._1 %~ (,) "Line")) .
   enumerate $ splitWhen (== '\n') text
 
 make :: Style -> String -> AnimId -> (Size, Anim.Frame)
