@@ -3,7 +3,6 @@
 module Lamdu.Data.Arbitrary () where
 
 import Control.Applicative (Applicative(..), (<$>), (<*))
-import Control.Arrow (second)
 import Control.Lens ((%~))
 import Control.Monad (join)
 import Control.Monad.Trans.Class (lift)
@@ -12,6 +11,7 @@ import Control.Monad.Trans.State (StateT, evalStateT)
 import Data.Maybe (maybeToList)
 import Data.Store.Guid (Guid)
 import Test.QuickCheck (Arbitrary(..), Gen)
+import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.State as State
@@ -57,7 +57,7 @@ liftGen = lift . lift
 
 arbitraryBody :: Arbitrary a => GenExpr def (Expression.BodyExpr def a)
 arbitraryBody =
-  join . liftGen . Gen.frequency . (map . second) pure $
+  join . liftGen . Gen.frequency . (Lens.mapped . Lens._2 %~ pure) $
   [ weight 1  $ Expression.BodyLambda <$> arbitraryLambda
   , weight 1  $ Expression.BodyPi     <$> arbitraryLambda
   , weight 5  $ Expression.BodyApply  <$> arbitraryApply
