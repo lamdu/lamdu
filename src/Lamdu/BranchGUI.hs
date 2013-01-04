@@ -5,7 +5,7 @@ module Lamdu.BranchGUI
   ) where
 
 import Control.Applicative (pure)
-import Control.Arrow (first)
+import Control.Lens ((%~))
 import Control.Monad.Trans.Class (lift)
 import Control.MonadA (MonadA)
 import Data.List (findIndex)
@@ -136,7 +136,7 @@ makeBranchChoice forceExpand selectionAnimId orientation children curChild =
   maybe Box.toWidget Box.toWidgetBiased mCurChildIndex box
   where
     childFocused = any (Lens.view Widget.wIsFocused . snd) children
-    pairs = (map . first) (curChild ==) children
+    pairs = Lens.mapped . Lens._1 %~ (curChild ==) $ children
     visiblePairs
       | childFocused || forceExpand = pairs
       | otherwise = filter fst pairs
