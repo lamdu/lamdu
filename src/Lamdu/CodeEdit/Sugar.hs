@@ -34,8 +34,7 @@ module Lamdu.CodeEdit.Sugar
   ) where
 
 import Control.Applicative ((<$), (<$>), Applicative(..), liftA2)
-import Control.Arrow (first)
-import Control.Lens (SimpleTraversal, (.~), (^.), (&), (%~), (.~), (^?), (^..), (<>~))
+import Control.Lens (SimpleTraversal, (.~), (^.), (&), (%~), (.~), (^?), (^..), (<>~), (+~))
 import Control.Monad ((<=<), join, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (runState)
@@ -596,7 +595,7 @@ countPis e@Expression.Expression
   { Expression._eBody =
     Expression.BodyPi (Expression.Lambda _ _ resultType)
   }
-  | Expression.isDependentPi e = first (1+) $ countPis resultType
+  | Expression.isDependentPi e = Lens._1 +~ 1 $ countPis resultType
   | otherwise = (0, 1 + countArrows resultType)
 countPis _ = (0, 0)
 
