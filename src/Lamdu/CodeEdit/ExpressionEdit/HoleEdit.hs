@@ -513,7 +513,7 @@ markTypeMatchesAsUsed holeInfo =
   (hiHoleActions holeInfo ^. Sugar.holeScope)
   where
     checkInfer =
-      fmap (isJust . listToMaybe) . ExprGuiM.fmapemoT .
+      fmap (isJust . listToMaybe) . ExprGuiM.liftMemoT .
       (hiHoleActions holeInfo ^. Sugar.holeInferResults)
 
 mkEventMap ::
@@ -539,9 +539,8 @@ mkEventMap holeInfo searchTerm mResult = do
 makeActiveHoleEdit :: MonadA m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
 makeActiveHoleEdit holeInfo = do
   markTypeMatchesAsUsed holeInfo
-  allResults <- makeAllResults holeInfo
-
-  (firstResults, hasMoreResults) <- ExprGuiM.fmapemoT $ collectResults allResults
+  (firstResults, hasMoreResults) <-
+    ExprGuiM.liftMemoT . collectResults =<< makeAllResults holeInfo
 
   cursor <- ExprGuiM.widgetEnv WE.readCursor
   let

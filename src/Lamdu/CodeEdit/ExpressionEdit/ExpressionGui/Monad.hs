@@ -19,7 +19,7 @@ module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad
   , withNameFromVarRef
   , getDefName
   , memo, memoT
-  , fmapemo, fmapemoT
+  , liftMemo, liftMemoT
   , unmemo
   ) where
 
@@ -106,20 +106,20 @@ makeSubexpresion expr = do
   maker <- ExprGuiM . RWS.asks $ Lens.view aMakeSubexpression
   maker expr
 
-fmapemo :: MonadA m => StateT Cache (WidgetEnvT (T m)) a -> ExprGuiM m a
-fmapemo act = ExprGuiM $ do
+liftMemo :: MonadA m => StateT Cache (WidgetEnvT (T m)) a -> ExprGuiM m a
+liftMemo act = ExprGuiM $ do
   cache <- RWS.get
   (val, newCache) <- lift $ runStateT act cache
   RWS.put newCache
   return val
 
-fmapemoT :: MonadA m => StateT Cache (T m) a -> ExprGuiM m a
-fmapemoT = fmapemo . mapStateT lift
+liftMemoT :: MonadA m => StateT Cache (T m) a -> ExprGuiM m a
+liftMemoT = liftMemo . mapStateT lift
 
 memo ::
   (Cache.Key k, Binary v, MonadA m) =>
   (k -> WidgetEnvT (T m) v) -> k -> ExprGuiM m v
-memo f key = fmapemo $ Cache.memoS f key
+memo f key = liftMemo $ Cache.memoS f key
 
 memoT ::
   (Cache.Key k, Binary v, MonadA m) =>
