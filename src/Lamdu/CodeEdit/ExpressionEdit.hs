@@ -172,7 +172,7 @@ actionsEventMap exprGuid isHole actions = do
       E.charGroup "Operator" (E.Doc ["Edit", "Apply operator"])
       Config.operatorChars $ \c _isShifted -> do
         targetGuid <- actions ^. Sugar.giveAsArgToOperator
-        HoleEdit.holeCreated targetGuid [c]
+        HoleEdit.setSearchTermAndJump [c] targetGuid
     cut
       | isHoleBool = mempty
       | otherwise =
