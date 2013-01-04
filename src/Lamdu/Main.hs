@@ -3,7 +3,7 @@ module Main(main) where
 
 import Control.Applicative ((<$>), (<*))
 import Control.Lens ((^.), (%~))
-import Control.Monad (when, unless)
+import Control.Monad (when, unless, (<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, runStateT, mapStateT)
 import Data.ByteString (unpack)
@@ -166,18 +166,21 @@ mainLoopDebugMode font makeWidget addHelp = do
     makeDebugModeWidget size = addHelp size =<< addDebugMode =<< makeWidget size
   mainLoopWidget makeDebugModeWidget getAnimHalfLife
 
-makeFlyNav :: (Widget.Size -> IO (Widget IO)) -> IO (Widget.Size -> IO (Widget IO))
-makeFlyNav mkWidget = do
+cacheMakeWidget :: Eq a => (a -> IO (Widget IO)) -> IO (a -> IO (Widget IO))
+cacheMakeWidget mkWidget = do
   widgetCacheRef <- newIORef =<< memoIO mkWidget
   let invalidateCache = writeIORef widgetCacheRef =<< memoIO mkWidget
-  flyNavState <- newIORef FlyNav.initState
-  return $ \size -> do
+  return $ \x -> do
     mkWidgetCached <- readIORef widgetCacheRef
+    Widget.atEvents (<* invalidateCache) <$>
+      mkWidgetCached x
+
+makeFlyNav :: IO (Widget IO -> IO (Widget IO))
+makeFlyNav = do
+  flyNavState <- newIORef FlyNav.initState
+  return $ \widget -> do
     fnState <- readIORef flyNavState
-    FlyNav.make WidgetIds.flyNav
-      fnState (writeIORef flyNavState) .
-      Widget.atEvents (<* invalidateCache) <$>
-      mkWidgetCached size
+    return $ FlyNav.make WidgetIds.flyNav fnState (writeIORef flyNavState) widget
 
 makeSizeFactor :: IO (IORef (Vector2 Widget.R), Widget.EventHandlers IO)
 makeSizeFactor = do
@@ -201,6 +204,7 @@ runDb font db = do
     { _sInfoMode = Settings.InfoTypes
     }
   cacheRef <- newIORef $ Cache.new 0x100000 -- TODO: Use a real cache size
+  wrapFlyNav <- makeFlyNav
   let
     addHelp = addHelpWithStyle $ Config.helpStyle font
     makeWidget size = do
@@ -215,9 +219,8 @@ runDb font db = do
         (size / sizeFactor, cursor)
       writeIORef cacheRef newCache
       return . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
-
-  mkWidgetWithFlyNav <- makeFlyNav makeWidget
-  mainLoopDebugMode font mkWidgetWithFlyNav addHelp
+  makeWidgetCached <- cacheMakeWidget makeWidget
+  mainLoopDebugMode font (wrapFlyNav <=< makeWidgetCached) addHelp
   where
     dbToIO = Anchors.runDbTransaction db
 
