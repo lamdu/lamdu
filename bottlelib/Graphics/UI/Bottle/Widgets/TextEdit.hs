@@ -11,8 +11,7 @@ module Graphics.UI.Bottle.Widgets.TextEdit(
   sTextViewStyle
   ) where
 
-import Control.Arrow (first)
-import Control.Lens ((+~), (^.))
+import Control.Lens ((+~), (^.), (%~), _1)
 import Data.Char (isSpace)
 import Data.List (genericLength, minimumBy)
 import Data.List.Split (splitWhen)
@@ -335,7 +334,7 @@ eventMap cursor str displayStr myId =
     endKeys = [specialKey E.KeyEnd, ctrlCharKey 'E']
     textLength = length str
     lineCount = length $ splitWhen (== '\n') displayStr
-    strWithIds = map (first Just) $ enumerate str
+    strWithIds = Lens.mapped . _1 %~ Just $ enumerate str
     (before, after) = splitAt cursor strWithIds
 
 make :: Style -> Widget.Id -> String -> Widget.Id -> Widget ((,) String)
