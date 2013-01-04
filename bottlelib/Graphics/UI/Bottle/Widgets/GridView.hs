@@ -7,14 +7,13 @@ module Graphics.UI.Bottle.Widgets.GridView
   , horizontalAlign, horizontal
   ) where
 
-import Control.Arrow (first, second)
+import Control.Lens ((%~))
 import Data.List (transpose)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.View (View)
 import qualified Control.Lens as Lens
-import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Rect as Rect
 
@@ -35,8 +34,8 @@ makePlacements rows =
       ( Vector2 (alignX / width) (alignY / height)
       , Rect (Vector2 (alignX - preX) (alignY - preY)) itemSize
       )
-    colSizes = map (groupSize Vector2.first) $ transpose posRows
-    rowSizes = map (groupSize Vector2.second) posRows
+    colSizes = map (groupSize Lens._1) $ transpose posRows
+    rowSizes = map (groupSize Lens._2) posRows
     groupSize dim group =
       (alignmentPos + maxSize snd, alignmentPos)
       where
@@ -52,17 +51,18 @@ makeGeneric :: (Alignment -> Rect -> a -> b) -> [[((Anim.Size, Alignment), a)]] 
 -- Special case to preserve shape to avoid handling it above in
 -- "maximum", "transpose", etc
 makeGeneric translate rows =
-  second place $ makePlacements szAlignments
+  Lens._2 %~ place $ makePlacements szAlignments
   where
     szAlignments = (map . map) fst rows
     items = (map . map) snd rows
     place aRects = (zipWith . zipWith) (uncurry translate) aRects items
 
 make :: [[((Anim.Size, Alignment), Anim.Frame)]] -> View
-make = second (mconcat . concat) . makeGeneric (const (Anim.translate . Lens.view Rect.topLeft))
+make = (Lens._2 %~ mconcat . concat) . makeGeneric (const (Anim.translate . Lens.view Rect.topLeft))
 
 makeAlign :: Alignment -> [[View]] -> View
-makeAlign alignment = make . (map . map . first) (flip (,) alignment)
+makeAlign alignment =
+  make . (Lens.mapped . Lens.mapped . Lens._1 %~ flip (,) alignment)
 
 makeCentered :: [[View]] -> View
 makeCentered = makeAlign 0.5

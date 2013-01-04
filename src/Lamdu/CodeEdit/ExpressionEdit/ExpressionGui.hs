@@ -31,7 +31,6 @@ import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Types (WidgetT, ExpressionGui
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Data.Store.Transaction as Transaction
-import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -56,7 +55,7 @@ hbox :: [ExpressionGui m] -> ExpressionGui m
 hbox guis =
   ExpressionGui (Box.toWidget box) $
   case box ^. Box.boxContent of
-  ((_, x) : _) -> x ^. Grid.elementAlign . Vector2.second
+  ((_, x) : _) -> x ^. Grid.elementAlign . Lens._2
   _ -> error "hbox must not get empty list :("
   where
     box = Box.make Box.horizontal $ map f guis
@@ -71,7 +70,7 @@ fromBox box =
   where
     alignment =
       maybe (error "True disappeared from box list?!")
-        (Lens.view (Grid.elementAlign . Vector2.second)) .
+        (Lens.view (Grid.elementAlign . Lens._2)) .
       lookup True $ box ^. Box.boxContent
 
 addBelow ::
@@ -86,7 +85,7 @@ addBelow ws eg =
 data TypeStyle = HorizLine | Background
 
 wWidth :: Lens.SimpleLens (Widget f) Widget.R
-wWidth = Widget.wSize . Vector2.first
+wWidth = Widget.wSize . Lens._1
 
 addType ::
   TypeStyle ->

@@ -98,7 +98,7 @@ columns animId height =
     bg i = addHelpBG (View.augmentAnimId animId i)
 
     step new@(newSize, _) (curColumn@(curColumnSize, _), rest)
-      | (newSize + curColumnSize) ^. Vector2.second > height =
+      | (newSize + curColumnSize) ^. Lens._2 > height =
         (new, curColumn : rest)
       | otherwise =
         (vertical [new, curColumn], rest)
@@ -128,7 +128,7 @@ vertical = GridView.verticalAlign 0
 
 makeTreeView :: AnimId -> Vector2 R -> [Tree View View] -> View
 makeTreeView animId size =
-  columns animId (size ^. Vector2.second) . Vector2.uncurry (++) . recurse
+  columns animId (size ^. Lens._2) . Vector2.uncurry (++) . recurse
   where
     recurse = mconcat . map fromTree
     fromTree (Leaf inputDocsView) = Vector2 [] [inputDocsView]

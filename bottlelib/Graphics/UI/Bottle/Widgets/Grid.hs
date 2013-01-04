@@ -266,8 +266,8 @@ combineMEnters size children = chooseClosest childEnters
 
     filteredByEdge = memo $ \(Vector2 hEdge vEdge) ->
       map snd .
-      safeHead . groupSortOn ((* (-hEdge)) . Lens.view Vector2.first . fst) .
-      safeHead . groupSortOn ((* (-vEdge)) . Lens.view Vector2.second . fst) $
+      safeHead . groupSortOn ((* (-hEdge)) . Lens.view (Lens._1 . Lens._1)) .
+      safeHead . groupSortOn ((* (-vEdge)) . Lens.view (Lens._1 . Lens._2)) $
       childEnters
     indexIntoMaybe (i, m) = fmap ((,) i) m
 

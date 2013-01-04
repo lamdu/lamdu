@@ -9,6 +9,7 @@ module Graphics.UI.Bottle.Widgets.TextView
 
 import Control.Applicative (liftA2)
 import Control.Arrow (first, second, (&&&))
+import Control.Lens ((^.), (.~))
 import Data.List (foldl')
 import Data.List.Split (splitWhen)
 import Data.List.Utils (enumerate)
@@ -20,7 +21,6 @@ import Graphics.UI.Bottle.Rect (Rect(Rect))
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
-import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -62,7 +62,7 @@ joinLines ::
 joinLines =
   drawMany vertical
   where
-    vertical = Lens.set Vector2.first 0
+    vertical = Lens._1 .~ 0
 
 nestedFrame ::
   Show a => (a, (Draw.Image (), Size)) -> (AnimId -> Anim.Frame, Size)
@@ -82,7 +82,7 @@ drawTextAsSingleLetters style text =
   splitWhen ((== '\n') . snd) $ enumerate text
   where
     (_, minLineSize) = fontRender style ""
-    horizontal = Lens.set Vector2.second 0
+    horizontal = Lens._2 .~ 0
 
 letterRects :: Style -> String -> [[Rect]]
 letterRects style text =
@@ -93,7 +93,7 @@ letterRects style text =
     (_, Vector2 _ lineHeight) = fontRender style ""
     makeLine textLine =
       zipWith makeLetterRect sizes . scanl (+) 0 .
-      map (Lens.view Vector2.first) $ sizes
+      map (^. Lens._1) $ sizes
       where
         sizes = map toSize textLine
         toSize = snd . fontRender style . (:[])

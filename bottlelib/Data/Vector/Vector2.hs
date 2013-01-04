@@ -1,8 +1,8 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, FlexibleInstances, TypeFamilies #-}
 module Data.Vector.Vector2
     ( Vector2(Vector2)
     , (***),both,zip
-    , first,second,swap
+    , swap
     , curry,uncurry,sqrNorm
     )
 where
@@ -14,6 +14,7 @@ import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
 import Data.Monoid
 import Prelude hiding (curry, uncurry, zip)
+import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
 
 data Vector2 a = Vector2
@@ -26,6 +27,11 @@ data Vector2 a = Vector2
   deriving (Eq, Ord, Show, Read)
 LensTH.makeLenses ''Vector2
 derive makeBinary ''Vector2
+
+instance a ~ b => Lens.Field1 (Vector2 a) (Vector2 b) a b where
+  _1 = first
+instance a ~ b => Lens.Field2 (Vector2 a) (Vector2 b) a b where
+  _2 = second
 
 -- Taken almost verbatim from QuickCheck's instance for (a, b)
 -- instance Arbitrary a => Arbitrary (Vector2 a) where

@@ -12,7 +12,7 @@ module Graphics.UI.Bottle.Widgets.TextEdit(
   ) where
 
 import Control.Arrow (first)
-import Control.Lens ((%~), (^.))
+import Control.Lens ((+~), (^.))
 import Data.Char (isSpace)
 import Data.List (genericLength, minimumBy)
 import Data.List.Split (splitWhen)
@@ -30,7 +30,6 @@ import qualified Data.Binary.Utils as BinUtils
 import qualified Data.ByteString.Char8 as SBS8
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Direction as Direction
@@ -99,7 +98,7 @@ cursorRects style str =
 makeUnfocused :: Style -> String -> Widget.Id -> Widget ((,) String)
 makeUnfocused style str myId =
   makeFocusable style str myId .
-  (Widget.wSize . Vector2.first %~ (+ cursorWidth)) .
+  (Widget.wSize . Lens._1 +~ cursorWidth) .
   Lens.over Widget.wFrame (cursorTranslate style) .
   TextView.makeWidget (style ^. sTextViewStyle) displayStr $
   Widget.toAnimId myId
@@ -200,7 +199,7 @@ mkCursorRect style cursor str = Rect cursorPos cursorSize
     cursorPos = Vector2 cursorPosX cursorPosY
     cursorSize = Vector2 (style ^. sCursorWidth) lineHeight
     cursorPosX =
-      Lens.view Vector2.first . snd . textViewDraw style $ last beforeCursorLines
+      Lens.view (Lens._2 . Lens._1) . textViewDraw style $ last beforeCursorLines
     cursorPosY = (lineHeight *) . subtract 1 $ genericLength beforeCursorLines
 
 eventMap ::

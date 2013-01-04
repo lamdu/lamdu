@@ -8,7 +8,7 @@ module Graphics.UI.Bottle.Rect
   ) where
 
 import Control.Applicative (liftA2)
-import Control.Lens (Simple, Traversal, Lens, (^.))
+import Control.Lens (Simple, Traversal, Lens, (^.), _1, _2)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators(R)
 import qualified Control.Lens.TH as LensTH
@@ -39,22 +39,22 @@ center f (Rect tl s) =
       Rect (tl + newCenter - centerVal) s
 
 left :: Simple Lens Rect R
-left = topLeft . Vector2.first
+left = topLeft . _1
 
 top :: Simple Lens Rect R
-top = topLeft . Vector2.second
+top = topLeft . _2
 
 right :: Simple Lens Rect R
-right = bottomRight . Vector2.first
+right = bottomRight . _1
 
 bottom :: Simple Lens Rect R
-bottom = bottomRight . Vector2.second
+bottom = bottomRight . _2
 
 width :: Simple Lens Rect R
-width = size . Vector2.first
+width = size . _1
 
 height :: Simple Lens Rect R
-height = size . Vector2.second
+height = size . _2
 
 distance :: Rect -> Rect -> R
 distance r1 r2 = Vector2.sqrNorm dist2
