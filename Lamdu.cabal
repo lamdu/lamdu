@@ -95,7 +95,8 @@ Library
                        utf8-string >= 0.3
 
   ghc-options:         -O2 -Wall
-  ghc-prof-options:    -Wall -auto-all -caf-all -rtsopts
+  -- ghc-options is prepended to ghc-prof-options
+  ghc-prof-options:    -auto-all -caf-all -rtsopts
 
 Executable lamdu
   hs-Source-Dirs:      src
@@ -169,7 +170,8 @@ Executable lamdu
                        Lamdu.WidgetIds,
                        Paths_lamdu
   ghc-options:         -O2 -Wall
-  ghc-prof-options:    -Wall -auto-all -caf-all -rtsopts
+  -- ghc-options is prepended to ghc-prof-options
+  ghc-prof-options:    -auto-all -caf-all -rtsopts
   main-is:             Lamdu/Main.hs
 
 source-repository head
