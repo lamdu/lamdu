@@ -1,11 +1,13 @@
 {-# LANGUAGE OverloadedStrings, PatternGuards #-}
 module Lamdu.CodeEdit.ExpressionEdit.DefinitionEdit(make, diveToNameEdit) where
 
-import Control.Applicative ((<$>))
+import Control.Applicative ((<$>), (<*>))
+import Control.Lens ((%~), (&), (^.))
 import Control.MonadA (MonadA)
 import Data.List.Utils (nonEmptyAll)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
+import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse, sequenceA)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Widget (Widget)
@@ -26,6 +28,8 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
+
+type T = Transaction
 
 paramFDConfig :: FocusDelegator.Config
 paramFDConfig = FocusDelegator.Config
@@ -85,28 +89,50 @@ makePolyNameEdit name guid depParamsEdits =
       ExprGuiM.withFgColor color $
       ExpressionGui.fromValueWidget <$> makeNameEdit name myId guid
 
+makeWheres ::
+  MonadA m =>
+  [Sugar.WhereItem m] -> Widget.Id ->
+  ExprGuiM m [Widget (T m)]
+makeWheres [] _ = return []
+makeWheres whereItems myId = do
+  whereLabel <-
+    (fmap . Widget.scale) Config.whereLabelScaleFactor .
+    ExprGuiM.widgetEnv . BWidgets.makeLabel "where" $ Widget.toAnimId myId
+  itemEdits <- traverse makeWhereItemEdit $ reverse whereItems
+  return
+    [ BWidgets.hboxSpaced
+      [ (0, whereLabel)
+      , (0, Widget.scale Config.whereScaleFactor $ Box.vboxAlign 0 itemEdits)
+      ]
+    ]
+
 makeParts
   :: MonadA m
   => (ExprGuiM.NameSource, String)
   -> Guid
   -> Sugar.DefinitionContent m
-  -> ExprGuiM m [ExpressionGui m]
-makeParts name guid def = do
+  -> ExprGuiM m ([ExpressionGui m], [Widget (T m)])
+makeParts name guid content = do
   equals <- makeEquals myId
-  (depParamsEdits, paramsEdits, bodyEdit) <-
-    FuncEdit.makeParamsAndResultEdit
-    jumpToRHSViaEquals lhs rhs myId depParams params
+  (depParamsEdits, paramsEdits, (wheres, bodyEdit)) <-
+    FuncEdit.makeNestedParams
+    jumpToRHSViaEquals rhs myId depParams params $
+    (,)
+    <$> makeWheres (Sugar.dWhereItems content) myId
+    <*> FuncEdit.makeResultEdit lhs body
   polyNameEdit <-
     Lens.over ExpressionGui.egWidget
     (Widget.weakerEvents nameEditEventMap . jumpToRHSViaEquals name) <$>
     makePolyNameEdit name guid depParamsEdits myId
-  return $
-    polyNameEdit : paramsEdits ++
-    [ ExpressionGui.fromValueWidget equals
-    , Lens.over ExpressionGui.egWidget
-      (Widget.weakerEvents addWhereItemEventMap)
-      bodyEdit
-    ]
+  return
+    ( polyNameEdit : paramsEdits ++
+      [ ExpressionGui.fromValueWidget equals
+      , Lens.over ExpressionGui.egWidget
+        (Widget.weakerEvents addWhereItemEventMap)
+        bodyEdit
+      ]
+    , wheres
+    )
   where
     jumpToRHSViaEquals n
       | nonOperatorName n =
@@ -117,13 +143,13 @@ makeParts name guid def = do
     lhs = myId : map (WidgetIds.fromGuid . Lens.view Sugar.fpGuid) allParams
     rhs = ("Def Body", body)
     allParams = depParams ++ params
-    Sugar.Func depParams params body = Sugar.dFunc def
+    Sugar.Func depParams params body = Sugar.dFunc content
     addWhereItemEventMap =
       Widget.keysEventMapMovesCursor Config.addWhereItemKeys (E.Doc ["Edit", "Add where item"]) .
-      toEventMapAction $ Sugar.dAddInnermostWhereItem def
+      toEventMapAction $ Sugar.dAddInnermostWhereItem content
     addFirstParamEventMap =
       Widget.keysEventMapMovesCursor Config.addNextParamKeys (E.Doc ["Edit", "Add parameter"]) .
-      toEventMapAction $ Sugar.dAddFirstParam def
+      toEventMapAction $ Sugar.dAddFirstParam content
     nameEditEventMap =
       mappend addFirstParamEventMap $
       FuncEdit.jumpToRHS Config.jumpLHStoRHSKeys rhs
@@ -194,26 +220,11 @@ makeDefContentEdit ::
   MonadA m => Guid -> Sugar.DefinitionContent m -> ExprGuiM m (WidgetT m)
 makeDefContentEdit guid content = do
   name <- ExprGuiM.getDefName guid
-  body <-
-    fmap (Lens.view ExpressionGui.egWidget . ExpressionGui.hboxSpaced) $
+  (body, wheres) <-
     makeParts name guid content
-  wheres <-
-    case Sugar.dWhereItems content of
-    [] -> return []
-    whereItems -> do
-      whereLabel <-
-        (fmap . Widget.scale) Config.whereLabelScaleFactor .
-        ExprGuiM.widgetEnv . BWidgets.makeLabel "where" $ Widget.toAnimId myId
-      itemEdits <- traverse makeWhereItemEdit $ reverse whereItems
-      return
-        [ BWidgets.hboxSpaced
-          [ (0, whereLabel)
-          , (0, Widget.scale Config.whereScaleFactor $ Box.vboxAlign 0 itemEdits)
-          ]
-        ]
+    & Lens.mapped . Lens._1 %~
+      (^. ExpressionGui.egWidget) . ExpressionGui.hboxSpaced
   return . Box.vboxAlign 0 $ body : wheres
-  where
-    myId = WidgetIds.fromGuid guid
 
 makeExprDefinition ::
   MonadA m => Sugar.Definition m -> Sugar.DefinitionExpression m ->

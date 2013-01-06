@@ -1,7 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Lamdu.CodeEdit.ExpressionEdit.FuncEdit
-  (make, makeParamNameEdit, jumpToRHS, makeResultEdit, makeParamsAndResultEdit) where
+  ( make, makeParamNameEdit, jumpToRHS, makeResultEdit
+  , makeNestedParams, makeParamsAndResultEdit
+  ) where
 
 import Control.Lens ((^.))
 import Control.MonadA (MonadA)
@@ -24,6 +26,8 @@ import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
+
+type T = Transaction
 
 paramFDConfig :: FocusDelegator.Config
 paramFDConfig = FocusDelegator.Config
@@ -55,7 +59,7 @@ jumpToRHS keys (rhsDoc, rhs) =
 makeParamEdit ::
   MonadA m =>
   ((ExprGuiM.NameSource, String) ->
-   Widget (Transaction m) -> Widget (Transaction m)) ->
+   Widget (T m) -> Widget (T m)) ->
   (String, Sugar.Expression m) ->
   Widget.Id -> (ExprGuiM.NameSource, String) ->
   Sugar.FuncParam m (Sugar.Expression m) ->
@@ -127,24 +131,34 @@ makeResultEdit lhs result =
 
 makeParamsAndResultEdit ::
   MonadA m =>
-  ((ExprGuiM.NameSource, String) ->
-   Widget (Transaction m) -> Widget (Transaction m)) ->
-  [Widget.Id] -> (String, Sugar.Expression m) ->
-  Widget.Id ->
+  ((ExprGuiM.NameSource, String) -> Widget (T m) -> Widget (T m)) ->
+  [Widget.Id] -> (String, Sugar.Expression m) -> Widget.Id ->
   [Sugar.FuncParam m (Sugar.Expression m)] ->
   [Sugar.FuncParam m (Sugar.Expression m)] ->
   ExprGuiM m ([ExpressionGui m], [ExpressionGui m], ExpressionGui m)
-makeParamsAndResultEdit atParamWidgets lhs rhs@(_, result) firstParId depParams params = do
+makeParamsAndResultEdit atParamWidgets lhs rhs firstParId depParams params =
+  makeNestedParams atParamWidgets rhs firstParId depParams params .
+  makeResultEdit lhs $ snd rhs
+
+makeNestedParams ::
+  MonadA m =>
+  ((ExprGuiM.NameSource, String) ->
+   Widget (T m) -> Widget (T m))
+ -> (String, Sugar.Expression m)
+ -> Widget.Id
+ -> [Sugar.FuncParam m (Sugar.Expression m)]
+ -> [Sugar.FuncParam m (Sugar.Expression m)]
+ -> ExprGuiM m a
+ -> ExprGuiM m ([ExpressionGui m], [ExpressionGui m], a)
+makeNestedParams atParamWidgets rhs firstParId depParams params mkResultEdit = do
   (depParamsEdits, (paramsEdits, resultEdit)) <-
-    makeNestedParams firstParId depParams $ \nextParId ->
-    makeNestedParams nextParId params $ \_ ->
-    makeResultEdit lhs result
+    mkParams firstParId depParams $ \nextParId ->
+    mkParams nextParId params $ \_ -> mkResultEdit
   return (depParamsEdits, paramsEdits, resultEdit)
   where
-    makeNestedParams guid l mkFinal =
+    mkParams guid l mkFinal =
       makeNestedParamNames (Lens.view Sugar.fpGuid)
-      (makeParamEdit atParamWidgets rhs)
-      mkFinal guid l
+      (makeParamEdit atParamWidgets rhs) mkFinal guid l
 
 makeNestedParamNames ::
   MonadA m =>

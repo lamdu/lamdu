@@ -1,5 +1,3 @@
-* BUG: WhereItem edits should be nested, name-generation-wise, under the func body
-
 * Holes not entered in navigation, left with ESC or otherwise pick their
   result?
   * Could be annoying if you wanna go somewhere to check something and you have
