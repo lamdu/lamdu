@@ -1,20 +1,15 @@
-{-# LANGUAGE Rank2Types #-}
 module Control.Lens.Utils
   ( SimpleContext
-  , lensContext
   , contextSetter, contextVal
   , argument, result
   , iresult
   ) where
 
 import Control.Applicative ((<$>), (<*>))
-import Control.Lens (Lens, (^.))
+import Control.Lens (Lens)
 import qualified Control.Lens as Lens
 
 type SimpleContext a t = Lens.Context a a t
-
-lensContext :: s -> Lens s t a b -> Lens.Context a b t
-lensContext x lens = Lens.Context (flip (Lens.set lens) x) $ x ^. lens
 
 contextSetter :: Lens (Lens.Context a b0 t0) (Lens.Context a b1 t1) (b0 -> t0) (b1 -> t1)
 contextSetter f (Lens.Context set val) = (`Lens.Context` val) <$> f set
