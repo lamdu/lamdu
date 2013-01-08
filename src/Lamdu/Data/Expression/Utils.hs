@@ -186,8 +186,8 @@ subExpressions x =
 hasGetVar :: Guid -> Expression def a -> Bool
 hasGetVar =
   Lens.anyOf
-  ( Lens.folding subExpressions . eBody
-  . bodyLeaf . getVariable . parameterRef
+  ( Lens.folding subExpressions
+  . eBody . bodyParameterRef
   ) . (==)
 
 isDependentPi :: Expression def a -> Bool

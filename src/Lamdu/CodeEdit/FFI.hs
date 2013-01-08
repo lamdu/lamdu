@@ -26,8 +26,10 @@ class ToExpr a where
   toExpr :: Env t -> a -> [DataIRef.Expression t ()] -> DataIRef.Expression t ()
 
 instance FromExpr Integer where
-  fromExpr _ (Expression.Expression { Expression._eBody = Expression.BodyLeaf (Expression.LiteralInteger x) }) = x
-  fromExpr _ _ = error "Expecting normalized Integer expression!"
+  fromExpr _ e =
+    case e ^? Expression.eBody . ExprUtil.bodyLiteralInteger of
+    Just x -> x
+    Nothing -> error "Expecting normalized Integer expression!"
 
 instance ToExpr Integer where
   toExpr _ x [] = ExprUtil.pureLiteralInteger x
@@ -45,10 +47,7 @@ instance ToExpr Bool where
 
 instance FromExpr Bool where
   fromExpr env expr =
-    case
-      expr ^?
-      Expression.eBody . Expression.bodyLeaf .
-      Expression.getVariable . Expression.definitionRef of
+    case expr ^? Expression.eBody . ExprUtil.bodyDefinitionRef of
     Just defRef
       | defRef == trueDef env -> True
       | defRef == falseDef env -> False

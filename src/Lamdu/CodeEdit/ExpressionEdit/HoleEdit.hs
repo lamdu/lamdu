@@ -223,7 +223,7 @@ makeLiteralGroup searchTerm =
     makeLiteralIntResult integer =
       Group
       { groupNames = [show integer]
-      , groupBaseExpr = ExprUtil.pureExpression . Expression.BodyLeaf $ Expression.LiteralInteger integer
+      , groupBaseExpr = ExprUtil.pureExpression $ Lens.review ExprUtil.bodyLiteralInteger integer
       }
 
 resultsPrefixId :: HoleInfo m -> Widget.Id
@@ -320,8 +320,7 @@ addNewDefinitionEventMap cp holeInfo =
       defRef <-
         fmap (fromMaybe (error "GetDef should always type-check") . listToMaybe) .
         ExprGuiM.unmemo . (hiHoleActions holeInfo ^. Sugar.holeInferResults) .
-        ExprUtil.pureExpression . Expression.BodyLeaf . Expression.GetVariable $
-        Expression.DefinitionRef newDefI
+        ExprUtil.pureExpression $ Lens.review ExprUtil.bodyDefinitionRef newDefI
       -- TODO: Can we use pickResult's animIdMapping?
       eventResult <- holePickResult defRef
       maybe (return ()) (DataOps.savePreJumpPosition cp) $

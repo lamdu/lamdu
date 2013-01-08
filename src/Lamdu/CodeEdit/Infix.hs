@@ -1,6 +1,6 @@
 module Lamdu.CodeEdit.Infix(isInfixName, isInfixVar, infixOp) where
 
-import Control.Lens ((^.))
+import Control.Lens ((^?))
 import Control.MonadA (MonadA)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
@@ -29,8 +29,8 @@ infixOp
   => DataIRef.ExpressionM m ref
   -> Transaction m (Maybe (Expression.VariableRef (DataIRef.DefI (Tag m))))
 infixOp expr =
-  case expr ^. Expression.eBody of
-  Expression.BodyLeaf (Expression.GetVariable var) -> do
+  case expr ^? Expression.eBody . Expression.bodyLeaf . Expression.getVariable of
+  Just var -> do
     isInfix <- isInfixVar var
     return $ if isInfix then Just var else Nothing
-  _ -> return Nothing
+  Nothing -> return Nothing

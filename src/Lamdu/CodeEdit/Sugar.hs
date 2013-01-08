@@ -197,11 +197,7 @@ deleteParamRef param =
   where
     refs =
       Lens.folding ExprUtil.subExpressions .
-      Lens.filtered (Lens.anyOf paramRef (== param))
-    paramRef = getVar . Expression.parameterRef
-
-getVar :: SimpleTraversal (Expression.Expression def a) (Expression.VariableRef def)
-getVar = Expression.eBody . Expression.bodyLeaf . Expression.getVariable
+      Lens.filtered (Lens.anyOf (Expression.eBody . ExprUtil.bodyParameterRef) (== param))
 
 mkFuncParamActions ::
   MonadA m => Stored m ->
@@ -379,7 +375,10 @@ convertApplyEmptyList ::
   DataIRef.ExpressionM m (PayloadMM m) ->
   SugarM m (Maybe (Expression m))
 convertApplyEmptyList app@(Expression.Apply funcI _) specialFunctions exprI
-  | Lens.anyOf getDefinition (== Anchors.sfNil specialFunctions) funcI
+  | Lens.anyOf
+    (Expression.eBody . ExprUtil.bodyDefinitionRef)
+    (== Anchors.sfNil specialFunctions)
+    funcI
   = Just . (rHiddenGuids <>~ (app ^.. Lens.traversed . subExpressionGuids)) .
     setListGuid consistentGuid <$>
     (mkExpression exprI . ExpressionList)
@@ -406,8 +405,10 @@ convertApplyList (Expression.Apply funcI argI) argS specialFunctions exprI =
     , ExpressionList (List innerValues innerListMActions)
     )
     -- exprI@(funcI@(funcFuncI funcArgI) argI)
-    | Lens.anyOf (eApply . Expression.applyFunc . getDefinition)
-      (== Anchors.sfCons specialFunctions) funcFuncI
+    | Lens.anyOf
+      (eApply . Expression.applyFunc . Expression.eBody . ExprUtil.bodyDefinitionRef)
+      (== Anchors.sfCons specialFunctions)
+      funcFuncI
       -- exprI@(funcI@(funcFuncI@(cons _) funcArgI) argI)
       -> Just <$> do
         listItemExpr <- convertExpressionI funcArgI
@@ -446,9 +447,6 @@ convertApplyList (Expression.Apply funcI argI) argS specialFunctions exprI =
 
 eApply :: SimpleTraversal (Expression.Expression def a) (Expression.Apply (Expression.Expression def a))
 eApply = Expression.eBody . Expression.bodyApply
-
-getDefinition :: SimpleTraversal (Expression.Expression def a) def
-getDefinition = getVar . Expression.definitionRef
 
 removeInferredTypes :: Expression m -> Expression m
 removeInferredTypes = Lens.set (rPayload . plInferredTypes) []
@@ -627,19 +625,22 @@ fillPartialHolesInExpression check oldExpr =
   where
     recheck (newExpr, Any True) = check newExpr
     recheck (_, Any False) = return Nothing
-    fillHoleExpr expr@(Expression.Expression (Expression.BodyLeaf Expression.Hole) inferred) =
-      let inferredVal = void $ Infer.iValue inferred
-      in
-        case inferredVal ^. Expression.eBody of
-        Expression.BodyLeaf Expression.Hole -> return $ void expr
-        _ | isCompleteType inferredVal -> return $ void expr
-          | otherwise -> do
-            -- Hole inferred value has holes to fill, no use leaving it as
-            -- auto-inferred, just fill it:
-            Writer.tell $ Any True
-            return inferredVal
-    fillHoleExpr (Expression.Expression body _) =
-      fmap ExprUtil.pureExpression $ traverse fillHoleExpr body
+    fillHoleExpr expr
+      | not (isHole expr) =
+        ExprUtil.pureExpression <$>
+        traverse fillHoleExpr (expr ^. Expression.eBody)
+      | isHole inferredVal
+      || isCompleteType inferredVal = return $ void expr
+      | otherwise = do
+        -- Hole inferred value has holes to fill, no use leaving it as
+        -- auto-inferred, just fill it:
+        Writer.tell $ Any True
+        return inferredVal
+      where
+        isHole =
+          Lens.notNullOf
+          (Expression.eBody . Expression.bodyLeaf . Expression.hole)
+        inferredVal = void . Infer.iValue $ expr ^. Expression.ePayload
 
 resultComplexityScore :: DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) -> Int
 resultComplexityScore =

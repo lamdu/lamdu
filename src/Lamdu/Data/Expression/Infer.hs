@@ -20,7 +20,7 @@ module Lamdu.Data.Expression.Infer
   ) where
 
 import Control.Applicative (Applicative(..), (<$), (<$>))
-import Control.Lens ((%=), (.=), (^.), (+=), (%~), (&), (<>~))
+import Control.Lens ((%=), (.=), (^.), (^?), (+=), (%~), (&), (<>~))
 import Control.Monad ((<=<), guard, unless, void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either (EitherT(..))
@@ -415,9 +415,9 @@ setRefExpr ref newExpr = do
       let
         isChange = not $ equiv mergedExpr curExpr
         isHole =
-          case mergedExpr ^. Expression.eBody of
-          Expression.BodyLeaf Expression.Hole -> True
-          _ -> False
+          Lens.notNullOf
+          (Expression.eBody . Expression.bodyLeaf . Expression.hole)
+          mergedExpr
       when isChange $ touch ref
       when (isChange || isHole) $
         liftState $ sContext . exprRefsAt ref . rExpression .= mergedExpr
@@ -488,10 +488,13 @@ exprIntoContext rootScope (Loaded rootExpr defTypes) = do
         typedValue@(TypedValue val _) =
           tv
           { tvType =
-            case body of
-            Expression.BodyLeaf (Expression.GetVariable varRef)
-              | Just x <- Map.lookup varRef scope -> x
-            _ -> tvType tv
+            case
+              body ^?
+              Expression.bodyLeaf . Expression.getVariable .
+              Lens.folding (`Map.lookup` scope)
+              of
+            Just x -> x
+            Nothing -> tvType tv
           }
       initialVal <- liftOriginState . initialValExpr $ ExprUtil.pureExpression body
       setRefExpr val initialVal
@@ -519,8 +522,8 @@ load loader mRecursiveDef expr =
       fmap Map.fromList .
       traverse loadType . ordNub $
       Lens.toListOf
-      ( Lens.folding ExprUtil.subExpressions . Expression.eBody
-      . Expression.bodyLeaf . Expression.getVariable . Expression.definitionRef
+      ( Lens.folding ExprUtil.subExpressions
+      . Expression.eBody . ExprUtil.bodyDefinitionRef
       . Lens.filtered ((/= mRecursiveDef) . Just)
       ) expr
     loadType defI = fmap ((,) defI) $ loadPureDefinitionType loader defI

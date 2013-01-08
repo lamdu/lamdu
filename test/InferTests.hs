@@ -571,7 +571,7 @@ testInfer name pureExpr result =
 
 getRecursiveDef :: DataIRef.Expression t ()
 getRecursiveDef =
-  ExprUtil.pureExpression . Expression.BodyLeaf . Expression.GetVariable $ Expression.DefinitionRef defI
+  ExprUtil.pureExpression $ Lens.review ExprUtil.bodyDefinitionRef defI
 
 resumptionTests :: [HUnit.Test]
 resumptionTests =

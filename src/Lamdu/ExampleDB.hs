@@ -12,6 +12,7 @@ import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Version (Version)
 import Data.Store.Transaction (Transaction, setP)
 import Lamdu.Data.Definition (Definition(..))
+import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Rev.Branch as Branch
@@ -145,21 +146,21 @@ createBuiltins =
       let aGuid = IRef.guid aI
       setP (A.assocNameRef aGuid) name
       s <- set
-      return . ExprUtil.makePi aGuid s =<< f ((getVar . Expression.ParameterRef) aGuid)
+      return . ExprUtil.makePi aGuid s =<<
+        f ((DataIRef.newExprBody . Lens.review ExprUtil.bodyParameterRef) aGuid)
     setToSet = mkPi set set
     tellift f = do
       x <- lift f
       Writer.tell [x]
       return x
     tellift_ = (fmap . fmap . const) () tellift
-    getVar = DataIRef.newExprBody . Expression.BodyLeaf . Expression.GetVariable
     mkPi mkArgType mkResType = fmap snd . join $ liftA2 DataIRef.newPi mkArgType mkResType
     mkApply mkFunc mkArg =
       DataIRef.newExprBody =<< liftA2 ExprUtil.makeApply mkFunc mkArg
     mkType f = do
       x <- lift f
       Writer.tell [x]
-      return . getVar $ Expression.DefinitionRef x
+      return . DataIRef.newExprBody $ Lens.review ExprUtil.bodyDefinitionRef x
     makeWithType_ = (fmap . fmap . fmap . const) () makeWithType
     makeWithType builtinName typeMaker =
       tellift (DataOps.newBuiltin builtinName =<< typeMaker)

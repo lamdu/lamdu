@@ -218,7 +218,7 @@ subst ::
   Expression.Expression def a -> Expression.Expression def a
 subst from to expr
   | Lens.anyOf
-    (Expression.eBody . Expression.bodyLeaf . Expression.getVariable . Expression.parameterRef)
+    (Expression.eBody . ExprUtil.bodyParameterRef)
     (== from) expr
   = to
   | otherwise = expr & Expression.eBody . Lens.traversed %~ subst from to
@@ -326,7 +326,7 @@ mergeToArg param arg =
     onMatch _ _ = unit
     onMismatch expr post
       | Lens.anyOf
-        (Expression.eBody . Expression.bodyLeaf . Expression.getVariable . Expression.parameterRef)
+        (Expression.eBody . ExprUtil.bodyParameterRef)
         (== param) expr
       = Compose.O . (fmap . const) Unit $ Writer.tell
         [( arg
