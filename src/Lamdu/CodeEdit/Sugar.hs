@@ -173,7 +173,7 @@ mkExpression exprI expr = do
       { _plInferredTypes = inferredTypesRefs
       , _plActions =
         mkActions sugarContext <$>
-        traverse (SugarInfer.ntraversePayload pure id pure) exprI
+        traverse (SugarInfer.ntraversePayload pure id) exprI
       , _plNextHole = Nothing
       }
     , _rHiddenGuids = []
@@ -511,7 +511,7 @@ convertApplyPrefix (Expression.Apply (funcRef, funcI) (argRef, argI)) applyI = d
   sugarContext <- SugarM.readContext
   let
     newArgRef = addCallWithNextArg $ addParens argRef
-    fromMaybeStored = traverse (SugarInfer.ntraversePayload pure id pure)
+    fromMaybeStored = traverse (SugarInfer.ntraversePayload pure id)
     onStored expr f = maybe id f $ fromMaybeStored expr
     addCallWithNextArg =
       onStored applyI $ \applyS ->
@@ -737,7 +737,7 @@ convertTypeCheckedHoleH
     mkHole processRes =
       Hole $
       mkWritableHoleActions processRes <$>
-      traverse (SugarInfer.ntraversePayload pure id pure) exprI
+      traverse (SugarInfer.ntraversePayload pure id) exprI
     mkWritableHoleActions processRes exprS =
       HoleActions
       { _holePaste = mPaste

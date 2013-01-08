@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor #-}
 module Lamdu.CodeEdit.Sugar.Infer
-  ( Payload(..), ntraversePayload, plGuid, plInferred, plStored, plSetter
+  ( Payload(..), ntraversePayload, plGuid, plInferred, plStored
   , ExpressionSetter
   , NoInferred(..), InferredWC
   , NoStored(..), Stored
@@ -65,7 +65,6 @@ data Payload t inferred stored
     { _plGuid :: Guid
     , _plInferred :: inferred
     , _plStored :: stored
-    , _plSetter :: ExpressionSetter (DefI t)
     }
 LensTH.makeLenses ''Payload
 
@@ -73,16 +72,10 @@ ntraversePayload ::
   Applicative f =>
   (inferreda -> f inferredb) ->
   (storeda -> f storedb) ->
-  (ExpressionSetter (DefI ta) -> f (ExpressionSetter (DefI tb))) ->
   Payload ta inferreda storeda ->
   f (Payload tb inferredb storedb)
-ntraversePayload onInferred onStored onSetter (Payload guid inferred stored setter) =
-  Payload guid <$> onInferred inferred <*> onStored stored <*> onSetter setter
-
-addPureExpressionSetters ::
-  Expression.Expression def a ->
-  Expression.Expression def (Lens.Context a (Expression.Expression def ()) (Expression.Expression def ()))
-addPureExpressionSetters = ExprUtil.addSubexpressionContexts (const ()) . Lens.Context id
+ntraversePayload onInferred onStored (Payload guid inferred stored) =
+  Payload guid <$> onInferred inferred <*> onStored stored
 
 randomizeGuids ::
   RandomGen g => g -> (a -> inferred) ->
@@ -92,10 +85,9 @@ randomizeGuids gen f =
     ExprUtil.randomizeParamIds paramGen
   . ExprUtil.randomizeExpr exprGen
   . fmap toPayload
-  . addPureExpressionSetters
   . fmap f
   where
-    toPayload (Lens.Context setter inferred) guid = Payload guid inferred NoStored setter
+    toPayload inferred guid = Payload guid inferred NoStored
     paramGen : exprGen : _ = RandomUtils.splits gen
 
 -- Not inferred, not stored
@@ -209,21 +201,21 @@ inferLoadedExpression gen mDefI lExpr inferState = do
     , _ilrContext = loaded
 
     , _ilrBaseInferContext = inferContext
-    , _ilrBaseExpr = mkStoredPayload <$> addPureExpressionSetters expr
+    , _ilrBaseExpr = mkStoredPayload <$> expr
 
     , _ilrInferContext = wvInferContext
-    , _ilrExpr = mkWVPayload <$> addPureExpressionSetters wvExpr
+    , _ilrExpr = mkWVPayload <$> wvExpr
     }
   where
     uncurriedInfer (loaded, (inferContext, inferNode)) =
       inferWithVariables gen loaded inferContext inferNode
 
-    mkStoredPayload (Lens.Context setter (iwc, propClosure)) =
-      Payload (DataIRef.epGuid prop) iwc prop setter
+    mkStoredPayload (iwc, propClosure) =
+      Payload (DataIRef.epGuid prop) iwc prop
       where
         prop = Load.propertyOfClosure propClosure
-    mkWVPayload (Lens.Context setter (iwc, ImplicitVariables.AutoGen guid)) =
-      Payload guid iwc Nothing setter
-    mkWVPayload (Lens.Context setter (iwc, ImplicitVariables.Stored propClosure)) =
+    mkWVPayload (iwc, ImplicitVariables.AutoGen guid) =
+      Payload guid iwc Nothing
+    mkWVPayload (iwc, ImplicitVariables.Stored propClosure) =
       Lens.over plStored Just $
-      mkStoredPayload (Lens.Context setter (iwc, propClosure))
+      mkStoredPayload (iwc, propClosure)

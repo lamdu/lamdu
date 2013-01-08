@@ -15,8 +15,6 @@ module Lamdu.Data.Expression.Utils
   , subExpressions
   , isDependentPi
   , funcArguments
-  , addSubexpressionContexts
-  , addBodyContexts
   , LambdaWrapper(..), lambdaWrapperPrism
   -- Traversals
   , bitraverseExpression
@@ -28,8 +26,7 @@ module Lamdu.Data.Expression.Utils
 import Lamdu.Data.Expression
 
 import Control.Applicative (Applicative(..), liftA2, (<$>))
-import Control.Lens (Simple, Prism, (^.), (%~), (&))
-import Control.Lens.Utils (contextSetter, result)
+import Control.Lens (Simple, Prism, (^.))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (evalState, state)
@@ -212,46 +209,3 @@ derive makeBinary ''LambdaWrapper
 lambdaWrapperPrism :: LambdaWrapper -> Simple Prism (Body def expr) (Lambda expr)
 lambdaWrapperPrism LambdaWrapperLambda = bodyLambda
 lambdaWrapperPrism LambdaWrapperPi = bodyPi
-
-
-addBodyContexts ::
-  (a -> b) ->
-  Lens.Context (Body def a) (Body def b) container ->
-  Body def (Lens.Context a b container)
-addBodyContexts tob (Lens.Context intoContainer body) =
-  afterSetter %~ intoContainer $
-  case body of
-  BodyLambda lam ->
-    onLambda lam
-    & BodyLambda
-    & afterSetter %~ BodyLambda
-  BodyPi lam ->
-    onLambda lam
-    & BodyPi
-    & afterSetter %~ BodyPi
-  BodyApply (Apply func arg) ->
-    Apply
-    (Lens.Context (`Apply` tob arg) func)
-    (Lens.Context (tob func `Apply`) arg)
-    & BodyApply
-    & afterSetter %~ BodyApply
-  BodyLeaf leaf -> BodyLeaf leaf
-  where
-    afterSetter = traverse . contextSetter . result
-    onLambda (Lambda paramId func arg) =
-      Lambda paramId
-      (Lens.Context (flip (Lambda paramId) (tob arg)) func)
-      (Lens.Context (Lambda paramId (tob func)) arg)
-
-addSubexpressionContexts ::
-  (a -> b) ->
-  Lens.Context (Expression def a) (Expression def b) container ->
-  Expression def (Lens.Context a (Expression def b) container)
-addSubexpressionContexts atob (Lens.Context intoContainer (Expression body a)) =
-  Expression newBody (Lens.Context intoContainer a)
-  where
-    newBody =
-      fmap (addSubexpressionContexts atob) $
-      addBodyContexts (fmap atob) bodyPtr
-    bodyPtr =
-      Lens.Context (intoContainer . (`Expression` atob a)) body
