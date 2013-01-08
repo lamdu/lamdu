@@ -20,6 +20,7 @@ import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction, getP, setP, modP)
 import Lamdu.Data.Definition (Definition(..))
 import Lamdu.Data.Expression.IRef (DefI)
+import qualified Control.Lens as Lens
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -126,7 +127,7 @@ addListItem ::
   T m (DataIRef.ExpressionI (Tag m), DataIRef.ExpressionI (Tag m))
 addListItem specialFunctions exprP = do
   consTempI <-
-    DataIRef.newExprBody . ExprUtil.makeDefinitionRef $ Anchors.sfCons specialFunctions
+    DataIRef.newExprBody . Lens.review ExprUtil.bodyDefinitionRef $ Anchors.sfCons specialFunctions
   consI <-
     DataIRef.newExprBody . ExprUtil.makeApply consTempI =<< newHole
   newItemI <- newHole

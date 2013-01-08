@@ -160,7 +160,7 @@ runPiToLambdaClosure (param, lambdaValueRef, bodyTypeRef) (o0, o1, o2) ~[piBody]
     ( bodyTypeRef
     , subst piParam
       ( makeRefExpr o0
-        (ExprUtil.makeParameterRef param)
+        (Lens.review ExprUtil.bodyParameterRef param)
       )
       resultType
     )

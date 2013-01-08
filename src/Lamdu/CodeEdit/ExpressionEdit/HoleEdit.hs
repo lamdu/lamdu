@@ -511,7 +511,8 @@ mkCallsWithArgsEventMap (Just result) =
 markTypeMatchesAsUsed :: MonadA m => HoleInfo m -> ExprGuiM m ()
 markTypeMatchesAsUsed holeInfo =
   ExprGuiM.markVariablesAsUsed =<<
-  filterM (checkInfer . ExprUtil.pureExpression . ExprUtil.makeParameterRef)
+  filterM
+  (checkInfer . ExprUtil.pureExpression . Lens.review ExprUtil.bodyParameterRef)
   (hiHoleActions holeInfo ^. Sugar.holeScope)
   where
     checkInfer =

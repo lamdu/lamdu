@@ -843,7 +843,7 @@ convertLiteralInteger i exprI =
   where
     writeIRef prop =
       DataIRef.writeExprBody (Property.value prop) .
-      ExprUtil.makeLiteralInteger
+      Lens.review ExprUtil.bodyLiteralInteger
 
 convertAtom :: (MonadA m, Typeable1 m) => String -> Convertor m
 convertAtom name exprI =

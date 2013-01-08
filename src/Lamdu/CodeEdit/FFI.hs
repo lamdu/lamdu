@@ -6,6 +6,7 @@ import Data.Binary (Binary(..))
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
 import Data.Map (Map)
+import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expression
@@ -37,8 +38,9 @@ instance (FromExpr a, ToExpr b) => ToExpr (a -> b) where
   toExpr env f (x:xs) = (toExpr env . f . fromExpr env) x xs
 
 instance ToExpr Bool where
-  toExpr env True [] = ExprUtil.pureExpression . ExprUtil.makeDefinitionRef $ trueDef env
-  toExpr env False [] = ExprUtil.pureExpression . ExprUtil.makeDefinitionRef $ falseDef env
+  toExpr env b [] =
+    ExprUtil.pureExpression . Lens.review ExprUtil.bodyDefinitionRef $
+    (if b then trueDef else falseDef) env
   toExpr _ _ _ = error "Bool applied as a function"
 
 instance FromExpr Bool where

@@ -5,8 +5,8 @@ module Lamdu.Data.Expression.Utils
   , makePi, makeLambda
   , pureHole
   , pureSet
-  , makeParameterRef, makeDefinitionRef
-  , makeLiteralInteger, pureLiteralInteger
+  , bodyParameterRef, bodyDefinitionRef
+  , bodyLiteralInteger, pureLiteralInteger
   , pureIntegerType
   , pureExpression
   , randomizeExpr
@@ -24,6 +24,10 @@ module Lamdu.Data.Expression.Utils
   ) where
 
 import Lamdu.Data.Expression
+
+-- TODO in future: Use Prelude.(.) with future version of Lens.
+import Prelude hiding ((.))
+import Control.Category ((.))
 
 import Control.Applicative (Applicative(..), liftA2, (<$>))
 import Control.Lens (Simple, Prism, (^.))
@@ -57,14 +61,14 @@ makeLambda :: Guid -> expr -> expr -> Body def expr
 makeLambda argId argType body =
   BodyLambda $ Lambda argId argType body
 
-makeParameterRef :: Guid -> Body def a
-makeParameterRef = BodyLeaf . GetVariable . ParameterRef
+bodyParameterRef :: Simple Prism (Body def expr) Guid
+bodyParameterRef = bodyLeaf . getVariable . parameterRef
 
-makeDefinitionRef :: def -> Body def a
-makeDefinitionRef = BodyLeaf . GetVariable . DefinitionRef
+bodyDefinitionRef :: Prism (Body defa expr) (Body defb expr) defa defb
+bodyDefinitionRef = bodyLeaf . getVariable . definitionRef
 
-makeLiteralInteger :: Integer -> Body def a
-makeLiteralInteger = BodyLeaf . LiteralInteger
+bodyLiteralInteger :: Simple Prism (Body def expr) Integer
+bodyLiteralInteger = bodyLeaf . literalInteger
 
 bitraverseBody ::
   Applicative f => (defa -> f defb) -> (expra -> f exprb) ->
@@ -99,7 +103,7 @@ pureIntegerType :: Expression def ()
 pureIntegerType = pureExpression $ BodyLeaf IntegerType
 
 pureLiteralInteger :: Integer -> Expression def ()
-pureLiteralInteger = pureExpression . makeLiteralInteger
+pureLiteralInteger = pureExpression . Lens.review bodyLiteralInteger
 
 pureApply :: Expression def () -> Expression def () -> Expression def ()
 pureApply f x = pureExpression $ makeApply f x
@@ -133,7 +137,7 @@ randomizeParamIds gen =
       BodyApply (Apply func arg) -> liftA2 makeApply (go func) (go arg)
       gv@(BodyLeaf (GetVariable (ParameterRef guid))) ->
         Reader.asks $
-        maybe gv makeParameterRef .
+        maybe gv (Lens.review bodyParameterRef) .
         Map.lookup guid
       _ -> return v
 
@@ -171,12 +175,9 @@ matchExpression onMatch onMismatch =
           go (Map.insert p1 p0 scope) r0 r1
 
 onGetParamGuids :: (Guid -> Guid) -> Expression def a -> Expression def a
-onGetParamGuids f (Expression body payload) =
-  flip Expression payload $
-  case body of
-  BodyLeaf (GetVariable (ParameterRef getParGuid)) ->
-    makeParameterRef $ f getParGuid
-  _ -> onGetParamGuids f <$> body
+onGetParamGuids f =
+  Lens.over (eBody . bodyParameterRef) f .
+  Lens.over (eBody . Lens.mapped) (onGetParamGuids f)
 
 subExpressions :: Expression def a -> [Expression def a]
 subExpressions x =

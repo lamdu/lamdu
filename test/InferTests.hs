@@ -97,7 +97,7 @@ mkInferredNode iVal iType body =
 simpleTests :: [HUnit.Test]
 simpleTests =
   [ testInfer "literal int"
-    (ExprUtil.pureExpression (ExprUtil.makeLiteralInteger 5)) $
+    (ExprUtil.pureExpression (Lens.review ExprUtil.bodyLiteralInteger 5)) $
     mkInferredLeafSimple (Expression.LiteralInteger 5) intType
   , testInfer "simple apply"
     (pureApply [hole, hole]) $
@@ -361,7 +361,7 @@ fOfXIsFOf5 =
   mkInferredLeafSimple (Expression.LiteralInteger 5) intType
 
 five :: DataIRef.Expression t ()
-five = ExprUtil.pureExpression $ ExprUtil.makeLiteralInteger 5
+five = ExprUtil.pureExpression $ Lens.review ExprUtil.bodyLiteralInteger 5
 
 argTypeGoesToPi :: HUnit.Test
 argTypeGoesToPi =
@@ -380,14 +380,14 @@ idOnAnInt =
   (pureApply
     [ pureGetDef "id"
     , hole
-    , ExprUtil.pureExpression $ ExprUtil.makeLiteralInteger 5
+    , five
     ]
   ) $
   mkInferredNode
     (pureApply
       [ pureGetDef "id"
       , intType
-      , ExprUtil.pureExpression $ ExprUtil.makeLiteralInteger 5
+      , five
       ]
     )
     intType $
@@ -622,7 +622,8 @@ resumptionTests =
   ]
 
 makeParameterRef :: String -> Expression.Expression def ()
-makeParameterRef = ExprUtil.pureExpression . ExprUtil.makeParameterRef . Guid.fromString
+makeParameterRef =
+  ExprUtil.pureExpression . Lens.review ExprUtil.bodyParameterRef . Guid.fromString
 
 -- f     x    = x _ _
 --   --------

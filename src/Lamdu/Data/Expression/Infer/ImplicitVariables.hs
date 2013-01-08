@@ -53,7 +53,7 @@ addVariableForHole ::
 addVariableForHole holePoint = do
   paramGuid <- state random
   let
-    getVar = ExprUtil.pureExpression $ ExprUtil.makeParameterRef paramGuid
+    getVar = ExprUtil.pureExpression $ Lens.review ExprUtil.bodyParameterRef paramGuid
     loaded =
       fromMaybe (error "Should not be loading defs when loading a mere getVar") $
       Infer.load loader Nothing getVar

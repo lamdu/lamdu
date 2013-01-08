@@ -62,16 +62,16 @@ intType :: Expression.Expression def ()
 intType = ExprUtil.pureIntegerType
 
 literalInt :: Integer -> Expression.Expression def ()
-literalInt = ExprUtil.pureExpression . ExprUtil.makeLiteralInteger
+literalInt = ExprUtil.pureExpression . Lens.review ExprUtil.bodyLiteralInteger
 
 pureGetDef :: String -> DataIRef.Expression t ()
 pureGetDef name =
-  ExprUtil.pureExpression . ExprUtil.makeDefinitionRef . IRef.unsafeFromGuid $
+  ExprUtil.pureExpression . Lens.review ExprUtil.bodyDefinitionRef . IRef.unsafeFromGuid $
   Guid.fromString name
 
 pureGetParam :: String -> Expression.Expression def ()
 pureGetParam name =
-  ExprUtil.pureExpression . ExprUtil.makeParameterRef $
+  ExprUtil.pureExpression . Lens.review ExprUtil.bodyParameterRef $
   Guid.fromString name
 
 ansiRed :: String
@@ -199,7 +199,7 @@ factorialExpr =
     [ pureGetDef "*"
     , pureGetParam "x"
     , pureApply
-      [ ExprUtil.pureExpression $ ExprUtil.makeDefinitionRef defI
+      [ ExprUtil.pureExpression $ Lens.review ExprUtil.bodyDefinitionRef defI
       , pureApply [pureGetDef "-", pureGetParam "x", literalInt 1]
       ]
     ]
