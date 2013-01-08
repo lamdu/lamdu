@@ -16,6 +16,7 @@ module Lamdu.Data.Expression.Utils
   , isDependentPi
   , funcArguments
   , LambdaWrapper(..), lambdaWrapperPrism
+  , applyForms
   -- Traversals
   , bitraverseExpression
   , bitraverseBody
@@ -30,7 +31,7 @@ import Prelude hiding ((.))
 import Control.Category ((.))
 
 import Control.Applicative (Applicative(..), liftA2, (<$>))
-import Control.Lens (Simple, Prism, (^.))
+import Control.Lens (Simple, Prism, (^.), (+~))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (evalState, state)
@@ -210,3 +211,32 @@ derive makeBinary ''LambdaWrapper
 lambdaWrapperPrism :: LambdaWrapper -> Simple Prism (Body def expr) (Lambda expr)
 lambdaWrapperPrism LambdaWrapperLambda = bodyLambda
 lambdaWrapperPrism LambdaWrapperPi = bodyPi
+
+countArrows :: Expression def () -> Int
+countArrows Expression
+  { _eBody =
+    BodyPi (Lambda _ _ resultType)
+  } = 1 + countArrows resultType
+countArrows _ = 0
+
+-- TODO: Return a record, not a tuple
+countPis :: Expression def () -> (Int, Int)
+countPis e@Expression
+  { _eBody =
+    BodyPi (Lambda _ _ resultType)
+  }
+  | isDependentPi e = Lens._1 +~ 1 $ countPis resultType
+  | otherwise = (0, 1 + countArrows resultType)
+countPis _ = (0, 0)
+
+-- Transform expression to expression applied with holes,
+-- with all different sensible levels of currying.
+applyForms :: Expression def () -> Expression def () -> [Expression def ()]
+applyForms _ e@Expression{ _eBody = BodyLambda {} } =
+  [e]
+applyForms exprType expr =
+  reverse . take (1 + arrows) $ iterate addApply withDepPisApplied
+  where
+    withDepPisApplied = iterate addApply expr !! depPis
+    (depPis, arrows) = countPis exprType
+    addApply = pureExpression . (`makeApply` pureHole)

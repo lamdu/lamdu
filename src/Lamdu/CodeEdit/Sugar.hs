@@ -34,7 +34,7 @@ module Lamdu.CodeEdit.Sugar
   ) where
 
 import Control.Applicative ((<$>), Applicative(..), liftA2)
-import Control.Lens (SimpleTraversal, (.~), (^.), (&), (%~), (.~), (^?), (^..), (<>~), (+~))
+import Control.Lens (SimpleTraversal, (.~), (^.), (&), (%~), (.~), (^?), (^..), (<>~))
 import Control.Monad ((<=<), join, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (runState)
@@ -581,33 +581,6 @@ mkPaste exprP = do
       ~() <- replacer clip
       return $ DataIRef.exprGuid clip
 
-countArrows :: Expression.Expression def () -> Int
-countArrows Expression.Expression
-  { Expression._eBody =
-    Expression.BodyPi (Expression.Lambda _ _ resultType)
-  } = 1 + countArrows resultType
-countArrows _ = 0
-
--- TODO: Return a record, not a tuple
-countPis :: Expression.Expression def () -> (Int, Int)
-countPis e@Expression.Expression
-  { Expression._eBody =
-    Expression.BodyPi (Expression.Lambda _ _ resultType)
-  }
-  | ExprUtil.isDependentPi e = Lens._1 +~ 1 $ countPis resultType
-  | otherwise = (0, 1 + countArrows resultType)
-countPis _ = (0, 0)
-
-applyForms :: Expression.Expression def () -> Expression.Expression def () -> [Expression.Expression def ()]
-applyForms _ e@Expression.Expression{ Expression._eBody = Expression.BodyLambda {} } =
-  [e]
-applyForms exprType expr =
-  reverse . take (1 + arrows) $ iterate addApply withDepPisApplied
-  where
-    withDepPisApplied = iterate addApply expr !! depPis
-    (depPis, arrows) = countPis exprType
-    addApply = ExprUtil.pureExpression . (`ExprUtil.makeApply` ExprUtil.pureHole)
-
 -- Fill partial holes in an expression. Parital holes are those whose
 -- inferred (filler) value itself is not complete, so will not be a
 -- useful auto-inferred value. By auto-filling those, we allow the
@@ -659,7 +632,7 @@ inferApplyForms processRes expr (node, inferContext) =
     makeApplyForms Nothing = return []
     makeApplyForms (Just i) =
       fmap concat . traverse processRes $
-      (applyForms . void) (Infer.iType (i ^. Expression.ePayload)) expr
+      (ExprUtil.applyForms . void) (Infer.iType (i ^. Expression.ePayload)) expr
 
 mkHoleResult ::
   (MonadA m, Typeable1 m) => SugarM.Context m ->
