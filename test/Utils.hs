@@ -20,6 +20,7 @@ import qualified Data.Store.IRef as IRef
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
+import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 data Invisible = Invisible
 instance Show Invisible where
@@ -31,46 +32,46 @@ instance Show def => Show (Expression.Expression def ()) where
   show (Expression.Expression value ()) = show value
 
 makeNamedLambda :: String -> expr -> expr -> Expression.Body def expr
-makeNamedLambda = Expression.makeLambda . Guid.fromString
+makeNamedLambda = ExprUtil.makeLambda . Guid.fromString
 
 makeNamedPi :: String -> expr -> expr -> Expression.Body def expr
-makeNamedPi = Expression.makePi . Guid.fromString
+makeNamedPi = ExprUtil.makePi . Guid.fromString
 
 pureApply :: [Expression.Expression def ()] -> Expression.Expression def ()
-pureApply = foldl1 (fmap Expression.pureExpression . Expression.makeApply)
+pureApply = foldl1 (fmap ExprUtil.pureExpression . ExprUtil.makeApply)
 
 pureLambda ::
   String -> Expression.Expression def () ->
   Expression.Expression def () ->
   Expression.Expression def ()
-pureLambda name x y = Expression.pureExpression $ makeNamedLambda name x y
+pureLambda name x y = ExprUtil.pureExpression $ makeNamedLambda name x y
 
 purePi ::
   String -> Expression.Expression def () ->
   Expression.Expression def () ->
   Expression.Expression def ()
-purePi name x y = Expression.pureExpression $ makeNamedPi name x y
+purePi name x y = ExprUtil.pureExpression $ makeNamedPi name x y
 
 hole :: Expression.Expression def ()
-hole = Expression.pureHole
+hole = ExprUtil.pureHole
 
 setType :: Expression.Expression def ()
-setType = Expression.pureSet
+setType = ExprUtil.pureSet
 
 intType :: Expression.Expression def ()
-intType = Expression.pureIntegerType
+intType = ExprUtil.pureIntegerType
 
 literalInt :: Integer -> Expression.Expression def ()
-literalInt i = Expression.pureExpression $ Expression.makeLiteralInteger i
+literalInt = ExprUtil.pureExpression . ExprUtil.makeLiteralInteger
 
 pureGetDef :: String -> DataIRef.Expression t ()
 pureGetDef name =
-  Expression.pureExpression . Expression.makeDefinitionRef . IRef.unsafeFromGuid $
+  ExprUtil.pureExpression . ExprUtil.makeDefinitionRef . IRef.unsafeFromGuid $
   Guid.fromString name
 
 pureGetParam :: String -> Expression.Expression def ()
 pureGetParam name =
-  Expression.pureExpression . Expression.makeParameterRef $
+  ExprUtil.pureExpression . ExprUtil.makeParameterRef $
   Guid.fromString name
 
 ansiRed :: String
@@ -188,17 +189,17 @@ doInfer_ = (Lens._1 . Lens.mapped %~ fst) . doInfer
 
 factorialExpr :: DataIRef.Expression t ()
 factorialExpr =
-  pureLambda "x" Expression.pureHole $
+  pureLambda "x" hole $
   pureApply
   [ pureGetDef "if"
-  , Expression.pureHole
+  , hole
   , pureApply [pureGetDef "==", pureGetParam "x", literalInt 0]
   , literalInt 1
   , pureApply
     [ pureGetDef "*"
     , pureGetParam "x"
     , pureApply
-      [ Expression.pureExpression $ Expression.makeDefinitionRef defI
+      [ ExprUtil.pureExpression $ ExprUtil.makeDefinitionRef defI
       , pureApply [pureGetDef "-", pureGetParam "x", literalInt 1]
       ]
     ]
