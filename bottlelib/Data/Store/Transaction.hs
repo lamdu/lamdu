@@ -4,6 +4,7 @@ module Data.Store.Transaction
   ( Transaction, run
   , Property
   , Store(..), onStoreM
+  , forkScratch
   , lookupBS, lookup
   , insertBS, insert
   , delete, deleteIRef
@@ -24,7 +25,7 @@ where
 import Control.Applicative (Applicative)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT, ask)
-import Control.Monad.Trans.State (StateT, runStateT, get, gets, modify)
+import Control.Monad.Trans.State (StateT, runStateT, evalStateT, get, gets, modify)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary)
 import Data.Binary.Utils (encodeS, decodeS)
@@ -70,6 +71,14 @@ liftStateT :: MonadA m => StateT Changes m a -> Transaction m a
 liftStateT = liftReaderT . lift
 liftInner :: MonadA m => m a -> Transaction m a
 liftInner = Transaction . lift . lift
+
+-- | Run the given transaction in a new "scratch" space forked from
+-- the current transaction. It's
+forkScratch :: MonadA m => Transaction m a -> Transaction m a
+forkScratch discardableTrans = do
+  store <- liftReaderT ask
+  changes <- liftStateT get
+  liftInner . (`evalStateT` changes) . (`runReaderT` store) $ unTransaction discardableTrans
 
 isEmpty :: MonadA m => Transaction m Bool
 isEmpty = liftStateT (gets Map.null)

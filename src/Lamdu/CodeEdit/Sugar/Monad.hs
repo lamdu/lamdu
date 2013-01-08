@@ -30,6 +30,7 @@ data Context m = Context
   , scHoleInferState :: Infer.Context (DefI (Tag m))
   , scCodeAnchors :: Anchors.CodeProps m
   , scSpecialFunctions :: Anchors.SpecialFunctions (Tag m)
+  , scMReinferRoot :: Maybe (T m Bool)
   }
 
 newtype SugarM m a = SugarM (ReaderT (Context m) (T m) a)
@@ -38,9 +39,11 @@ newtype SugarM m a = SugarM (ReaderT (Context m) (T m) a)
 mkContext ::
   MonadA m => Typeable (m ()) =>
   Anchors.CodeProps m ->
-  Maybe (DefI (Tag m)) -> InferLoadedResult m ->
+  Maybe (DefI (Tag m)) ->
+  Maybe (T m Bool) ->
+  InferLoadedResult m ->
   T m (Context m)
-mkContext cp mDefI iResult = do
+mkContext cp mDefI mReinferRoot iResult = do
   specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
   return Context
     { scMDefI = mDefI
@@ -49,6 +52,7 @@ mkContext cp mDefI iResult = do
     , scHoleInferState = iResult ^. ilrBaseInferContext
     , scCodeAnchors = cp
     , scSpecialFunctions = specialFunctions
+    , scMReinferRoot = mReinferRoot
     }
 
 run :: MonadA m => Context m -> SugarM m a -> T m a
@@ -64,6 +68,7 @@ runPure cp act = do
     , scMContextHash = Nothing
     , scCodeAnchors = cp
     , scSpecialFunctions = specialFunctions
+    , scMReinferRoot = Nothing
     } act
 
 
