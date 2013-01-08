@@ -26,6 +26,7 @@ import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Expression as Expression
+import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 type Expression t = Expression.Expression (DefI t)
 type ExpressionM m = Expression.Expression (DefI (Tag m))
@@ -63,10 +64,10 @@ newLambdaCons cons paramType result = do
   return (key, expr)
 
 newPi :: MonadA m => ExpressionI (Tag m) -> ExpressionI (Tag m) -> T m (Guid, ExpressionI (Tag m))
-newPi = newLambdaCons Expression.makePi
+newPi = newLambdaCons ExprUtil.makePi
 
 newLambda :: MonadA m => ExpressionI (Tag m) -> ExpressionI (Tag m) -> T m (Guid, ExpressionI (Tag m))
-newLambda = newLambdaCons Expression.makeLambda
+newLambda = newLambdaCons ExprUtil.makeLambda
 
 readExprBody :: MonadA m => ExpressionI (Tag m) -> T m (ExpressionBody (Tag m))
 readExprBody = Transaction.readIRef . unExpression

@@ -25,6 +25,7 @@ import qualified Control.Monad.Trans.State as State
 import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.Infer as Infer
+import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 data Payload a = Stored a | AutoGen Guid
   deriving (Eq, Ord, Show, Functor, Typeable)
@@ -52,7 +53,7 @@ addVariableForHole ::
 addVariableForHole holePoint = do
   paramGuid <- state random
   let
-    getVar = Expression.pureExpression $ Expression.makeParameterRef paramGuid
+    getVar = ExprUtil.pureExpression $ ExprUtil.makeParameterRef paramGuid
     loaded =
       fromMaybe (error "Should not be loading defs when loading a mere getVar") $
       Infer.load loader Nothing getVar
@@ -92,7 +93,7 @@ addVariablesForExpr loader expr = do
         Infer.iPoint . fst $ Lens.view Expression.ePayload reinferred
       fmap concat . mapM (addVariablesForExpr loader) .
         filter (isUnrestrictedHole . inferredVal) $
-        Expression.subExpressions reinferredLoaded
+        ExprUtil.subExpressions reinferredLoaded
   where
     inferredVal = Infer.iValue . fst . Lens.view Expression.ePayload
 
@@ -115,7 +116,7 @@ addParam body (paramGuid, paramTypeNode) = do
       (Expression.BodyLeaf Expression.Hole)
       (paramTypeNode, AutoGen (Guid.augment "paramType" paramGuid))
     newRootLam =
-      Expression.makeLambda paramGuid paramTypeExpr body
+      ExprUtil.makeLambda paramGuid paramTypeExpr body
 
 addVariables ::
   (MonadA m, Ord def, RandomGen g) =>
@@ -126,7 +127,7 @@ addVariables ::
 addVariables gen loader expr = do
   implicitParams <-
     (`evalStateT` gen) . fmap concat .
-    mapM (addVariablesForExpr loader) $ Expression.funcArguments expr
+    mapM (addVariablesForExpr loader) $ ExprUtil.funcArguments expr
   newRoot <- toStateT $ foldM addParam baseExpr implicitParams
   State.gets $ Infer.derefExpr newRoot
   where

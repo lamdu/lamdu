@@ -56,6 +56,7 @@ import qualified Data.Set as Set
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Expression.Infer.Rules as Rules
+import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 mkOrigin :: State Origin Origin
 mkOrigin = do
@@ -131,9 +132,9 @@ data ErrorDetails def
 derive makeBinary ''ErrorDetails
 instance Functor ErrorDetails where
   fmap f (MismatchIn x y) =
-    on MismatchIn (Expression.expressionDef %~ f) x y
+    on MismatchIn (ExprUtil.expressionDef %~ f) x y
   fmap f (InfiniteExpression x) =
-    InfiniteExpression $ x & Expression.expressionDef %~ f
+    InfiniteExpression $ x & ExprUtil.expressionDef %~ f
 
 data Error def = Error
   { errRef :: ExprRef
@@ -147,7 +148,7 @@ derive makeBinary ''Error
 instance Functor Error where
   fmap f (Error ref mis details) =
     Error ref
-    (mis & Lens.both . Expression.expressionDef %~ f)
+    (mis & Lens.both . ExprUtil.expressionDef %~ f)
     (f <$> details)
 
 newtype InferActions def m = InferActions
@@ -181,7 +182,7 @@ toRefExpression =
 
 createRefExpr :: State (Context def) ExprRef
 createRefExpr = do
-  holeRefExpr <- Lens.zoom nextOrigin $ toRefExpression Expression.pureHole
+  holeRefExpr <- Lens.zoom nextOrigin $ toRefExpression ExprUtil.pureHole
   fmap ExprRef . Lens.zoom exprMap . createRef $ RefData holeRefExpr mempty
 
 exprRefsAt :: Functor f => ExprRef -> Lens.SimpleLensLike f (Context def) (RefData def)
@@ -338,10 +339,10 @@ initialValExpr ::
 initialValExpr (Expression.Expression body ()) =
   toRefExpression $
   case body of
-  Expression.BodyApply _ -> Expression.pureHole
+  Expression.BodyApply _ -> ExprUtil.pureHole
   _ -> circumcized body
   where
-    circumcized = Expression.pureExpression . (Expression.pureHole <$)
+    circumcized = ExprUtil.pureExpression . (ExprUtil.pureHole <$)
 
 -- This is because platform's Either's MonadA instance sucks
 runEither :: EitherT l Identity a -> Either l a
@@ -374,7 +375,7 @@ mergeExprs ::
   Either (ErrorDetails def) (RefExpression def)
 mergeExprs p0 p1 =
   runEither $ do
-    result <- Expression.matchExpression onMatch onMismatch p0 p1
+    result <- ExprUtil.matchExpression onMatch onMismatch p0 p1
     guardEither (InfiniteExpression (void result)) . not $ originRepeat result
     return result
   where
@@ -430,7 +431,7 @@ setRefExpr ref newExpr = do
   where
     equiv x y =
       isJust $
-      Expression.matchExpression comparePl ((const . const) Nothing) x y
+      ExprUtil.matchExpression comparePl ((const . const) Nothing) x y
     comparePl x y =
       guard $
       (x ^. rplSubstitutedArgs) == (y ^. rplSubstitutedArgs) &&
@@ -470,8 +471,8 @@ exprIntoContext rootScope (Loaded rootExpr defTypes) = do
       inferNode <- toInferNode scope (void <$> body) createdTV
       newBody <-
         case body of
-        Expression.BodyLambda lam -> goLambda Expression.makeLambda scope lam
-        Expression.BodyPi lam -> goLambda Expression.makePi scope lam
+        Expression.BodyLambda lam -> goLambda ExprUtil.makeLambda scope lam
+        Expression.BodyPi lam -> goLambda ExprUtil.makePi scope lam
         _ -> traverse (go scope) body
       return $ Expression.Expression newBody (inferNode, s)
     goLambda cons scope (Expression.Lambda paramGuid paramType result) = do
@@ -492,7 +493,7 @@ exprIntoContext rootScope (Loaded rootExpr defTypes) = do
               | Just x <- Map.lookup varRef scope -> x
             _ -> tvType tv
           }
-      initialVal <- liftOriginState . initialValExpr $ Expression.pureExpression body
+      initialVal <- liftOriginState . initialValExpr $ ExprUtil.pureExpression body
       setRefExpr val initialVal
       return $ InferNode typedValue scope
 
@@ -518,7 +519,7 @@ load loader mRecursiveDef expr =
       fmap Map.fromList .
       traverse loadType . ordNub $
       Lens.toListOf
-      ( Lens.folding Expression.subExpressions . Expression.eBody
+      ( Lens.folding ExprUtil.subExpressions . Expression.eBody
       . Expression.bodyLeaf . Expression.getVariable . Expression.definitionRef
       . Lens.filtered ((/= mRecursiveDef) . Just)
       ) expr

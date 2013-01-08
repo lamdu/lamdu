@@ -27,6 +27,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
+import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 type T = Transaction
 
@@ -51,7 +52,7 @@ data PropertyClosure t
       (DefI t) (DataIRef.ExpressionI t) (DataIRef.ExpressionI t)
   | ApplyProperty
       (DataIRef.ExpressionI t) (Expression.Apply (DataIRef.ExpressionI t)) ApplyRole
-  | LambdaProperty Expression.LambdaWrapper
+  | LambdaProperty ExprUtil.LambdaWrapper
       (DataIRef.ExpressionI t) (Expression.Lambda (DataIRef.ExpressionI t)) LambdaRole
   deriving (Eq, Ord, Show, Typeable)
 derive makeBinary ''PropertyClosure
@@ -75,7 +76,7 @@ propertyOfClosure (ApplyProperty exprI apply role) =
     lens = applyChildByRole role
 propertyOfClosure (LambdaProperty cons exprI lambda role) =
   Property (lambda ^. Lens.cloneLens lens) $
-  DataIRef.writeExprBody exprI . Lens.review (Expression.lambdaWrapperPrism cons) .
+  DataIRef.writeExprBody exprI . Lens.review (ExprUtil.lambdaWrapperPrism cons) .
   setter lens lambda
   where
     lens = lambdaChildByRole role
@@ -104,13 +105,13 @@ loadExpressionBody iref = onBody =<< DataIRef.readExprBody iref
     onBody (Expression.BodyLeaf x) =
       return $ Expression.BodyLeaf x
     onBody (Expression.BodyApply apply) =
-      on (liftA2 Expression.makeApply) loadExpressionClosure (prop Func) (prop Arg)
+      on (liftA2 ExprUtil.makeApply) loadExpressionClosure (prop Func) (prop Arg)
       where
         prop = ApplyProperty iref apply
-    onBody (Expression.BodyLambda lambda) = onLambda Expression.LambdaWrapperLambda lambda
-    onBody (Expression.BodyPi lambda) = onLambda Expression.LambdaWrapperPi lambda
+    onBody (Expression.BodyLambda lambda) = onLambda ExprUtil.LambdaWrapperLambda lambda
+    onBody (Expression.BodyPi lambda) = onLambda ExprUtil.LambdaWrapperPi lambda
     onLambda cons lambda@(Expression.Lambda param _ _) =
-      fmap (Lens.review (Expression.lambdaWrapperPrism cons)) $
+      fmap (Lens.review (ExprUtil.lambdaWrapperPrism cons)) $
       on (liftA2 (Expression.Lambda param)) loadExpressionClosure
       (prop ParamType) (prop Result)
       where

@@ -45,6 +45,7 @@ import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Infer.ImplicitVariables as ImplicitVariables
 import qualified Lamdu.Data.Expression.Load as Load
+import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
 
@@ -81,15 +82,15 @@ ntraversePayload onInferred onStored onSetter (Payload guid inferred stored sett
 addPureExpressionSetters ::
   Expression.Expression def a ->
   Expression.Expression def (Lens.Context a (Expression.Expression def ()) (Expression.Expression def ()))
-addPureExpressionSetters = Expression.addSubexpressionContexts (const ()) . Lens.Context id
+addPureExpressionSetters = ExprUtil.addSubexpressionContexts (const ()) . Lens.Context id
 
 randomizeGuids ::
   RandomGen g => g -> (a -> inferred) ->
   DataIRef.Expression t a ->
   DataIRef.Expression t (Payload t inferred NoStored)
 randomizeGuids gen f =
-    Expression.randomizeParamIds paramGen
-  . Expression.randomizeExpr exprGen
+    ExprUtil.randomizeParamIds paramGen
+  . ExprUtil.randomizeExpr exprGen
   . fmap toPayload
   . addPureExpressionSetters
   . fmap f

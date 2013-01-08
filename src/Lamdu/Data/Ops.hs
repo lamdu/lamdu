@@ -28,6 +28,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
+import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 type T = Transaction
 
@@ -47,7 +48,7 @@ giveAsArg exprP = do
   newFuncI <- newHole
   Property.set exprP =<<
     DataIRef.newExprBody
-    (Expression.makeApply newFuncI (Property.value exprP))
+    (ExprUtil.makeApply newFuncI (Property.value exprP))
   return newFuncI
 
 giveAsArgToOperator ::
@@ -56,8 +57,8 @@ giveAsArgToOperator ::
   T m (DataIRef.ExpressionI (Tag m))
 giveAsArgToOperator exprP = do
   op <- newHole
-  opApplied <- DataIRef.newExprBody . Expression.makeApply op $ Property.value exprP
-  Property.set exprP =<< DataIRef.newExprBody . Expression.makeApply opApplied =<< newHole
+  opApplied <- DataIRef.newExprBody . ExprUtil.makeApply op $ Property.value exprP
+  Property.set exprP =<< DataIRef.newExprBody . ExprUtil.makeApply opApplied =<< newHole
   return op
 
 callWithArg ::
@@ -68,7 +69,7 @@ callWithArg exprP = do
   argI <- newHole
   Property.set exprP =<<
     DataIRef.newExprBody
-    (Expression.makeApply (Property.value exprP) argI)
+    (ExprUtil.makeApply (Property.value exprP) argI)
   return argI
 
 newHole :: MonadA m => T m (DataIRef.ExpressionI (Tag m))
@@ -114,7 +115,7 @@ redexWrap exprP = do
     DataIRef.newLambda newParamTypeI $ Property.value exprP
   newValueI <- newHole
   newApplyI <-
-    DataIRef.newExprBody $ Expression.makeApply newLambdaI newValueI
+    DataIRef.newExprBody $ ExprUtil.makeApply newLambdaI newValueI
   Property.set exprP newApplyI
   return (newParam, newLambdaI)
 
@@ -125,14 +126,14 @@ addListItem ::
   T m (DataIRef.ExpressionI (Tag m), DataIRef.ExpressionI (Tag m))
 addListItem specialFunctions exprP = do
   consTempI <-
-    DataIRef.newExprBody . Expression.makeDefinitionRef $ Anchors.sfCons specialFunctions
+    DataIRef.newExprBody . ExprUtil.makeDefinitionRef $ Anchors.sfCons specialFunctions
   consI <-
-    DataIRef.newExprBody . Expression.makeApply consTempI =<< newHole
+    DataIRef.newExprBody . ExprUtil.makeApply consTempI =<< newHole
   newItemI <- newHole
   consSectionI <-
-    DataIRef.newExprBody $ Expression.makeApply consI newItemI
+    DataIRef.newExprBody $ ExprUtil.makeApply consI newItemI
   newListI <-
-    DataIRef.newExprBody . Expression.makeApply consSectionI $
+    DataIRef.newExprBody . ExprUtil.makeApply consSectionI $
     Property.value exprP
   Property.set exprP newListI
   return (newListI, newItemI)

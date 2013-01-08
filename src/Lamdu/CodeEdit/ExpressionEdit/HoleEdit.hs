@@ -51,6 +51,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
+import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
@@ -178,7 +179,7 @@ makeNoResults myId =
 mkGroup :: [String] -> Expression.BodyExpr def () -> Group def
 mkGroup names body = Group
   { groupNames = names
-  , groupBaseExpr = Expression.pureExpression body
+  , groupBaseExpr = ExprUtil.pureExpression body
   }
 
 makeVariableGroup ::
@@ -222,7 +223,7 @@ makeLiteralGroup searchTerm =
     makeLiteralIntResult integer =
       Group
       { groupNames = [show integer]
-      , groupBaseExpr = Expression.pureExpression . Expression.BodyLeaf $ Expression.LiteralInteger integer
+      , groupBaseExpr = ExprUtil.pureExpression . Expression.BodyLeaf $ Expression.LiteralInteger integer
       }
 
 resultsPrefixId :: HoleInfo m -> Widget.Id
@@ -268,8 +269,8 @@ makeResultsList holeInfo group = do
   where
     baseExpr = groupBaseExpr group
     holeApply =
-      Expression.pureExpression .
-      (Expression.makeApply . Expression.pureExpression . Expression.BodyLeaf) Expression.Hole
+      ExprUtil.pureExpression .
+      (ExprUtil.makeApply . ExprUtil.pureExpression . Expression.BodyLeaf) Expression.Hole
 
 makeAllResults :: MonadA m => HoleInfo m -> ExprGuiM m (ListT (CT m) (ResultType, ResultsList m))
 makeAllResults holeInfo = do
@@ -298,10 +299,10 @@ makeAllResults holeInfo = do
     primitiveResults =
       [ mkGroup ["Set", "Type"] $ Expression.BodyLeaf Expression.Set
       , mkGroup ["Integer", "ℤ", "Z"] $ Expression.BodyLeaf Expression.IntegerType
-      , mkGroup ["->", "Pi", "→", "→", "Π", "π"] $ Expression.makePi (Guid.augment "NewPi" (hiGuid holeInfo)) holeExpr holeExpr
-      , mkGroup ["\\", "Lambda", "Λ", "λ"] $ Expression.makeLambda (Guid.augment "NewLambda" (hiGuid holeInfo)) holeExpr holeExpr
+      , mkGroup ["->", "Pi", "→", "→", "Π", "π"] $ ExprUtil.makePi (Guid.augment "NewPi" (hiGuid holeInfo)) holeExpr holeExpr
+      , mkGroup ["\\", "Lambda", "Λ", "λ"] $ ExprUtil.makeLambda (Guid.augment "NewLambda" (hiGuid holeInfo)) holeExpr holeExpr
       ]
-    holeExpr = Expression.pureExpression $ Expression.BodyLeaf Expression.Hole
+    holeExpr = ExprUtil.pureExpression $ Expression.BodyLeaf Expression.Hole
 
 addNewDefinitionEventMap ::
   MonadA m => Anchors.CodeProps m -> HoleInfo m -> Widget.EventHandlers (T m)
@@ -319,7 +320,7 @@ addNewDefinitionEventMap cp holeInfo =
       defRef <-
         fmap (fromMaybe (error "GetDef should always type-check") . listToMaybe) .
         ExprGuiM.unmemo . (hiHoleActions holeInfo ^. Sugar.holeInferResults) .
-        Expression.pureExpression . Expression.BodyLeaf . Expression.GetVariable $
+        ExprUtil.pureExpression . Expression.BodyLeaf . Expression.GetVariable $
         Expression.DefinitionRef newDefI
       -- TODO: Can we use pickResult's animIdMapping?
       eventResult <- holePickResult defRef
@@ -510,7 +511,7 @@ mkCallsWithArgsEventMap (Just result) =
 markTypeMatchesAsUsed :: MonadA m => HoleInfo m -> ExprGuiM m ()
 markTypeMatchesAsUsed holeInfo =
   ExprGuiM.markVariablesAsUsed =<<
-  filterM (checkInfer . Expression.pureExpression . Expression.makeParameterRef)
+  filterM (checkInfer . ExprUtil.pureExpression . ExprUtil.makeParameterRef)
   (hiHoleActions holeInfo ^. Sugar.holeScope)
   where
     checkInfer =

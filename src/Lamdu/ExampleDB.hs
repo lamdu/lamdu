@@ -24,6 +24,7 @@ import qualified Lamdu.CodeEdit.FFI as FFI
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
+import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.WidgetIds as WidgetIds
 
@@ -144,7 +145,7 @@ createBuiltins =
       let aGuid = IRef.guid aI
       setP (A.assocNameRef aGuid) name
       s <- set
-      return . Expression.makePi aGuid s =<< f ((getVar . Expression.ParameterRef) aGuid)
+      return . ExprUtil.makePi aGuid s =<< f ((getVar . Expression.ParameterRef) aGuid)
     setToSet = mkPi set set
     tellift f = do
       x <- lift f
@@ -154,7 +155,7 @@ createBuiltins =
     getVar = DataIRef.newExprBody . Expression.BodyLeaf . Expression.GetVariable
     mkPi mkArgType mkResType = fmap snd . join $ liftA2 DataIRef.newPi mkArgType mkResType
     mkApply mkFunc mkArg =
-      DataIRef.newExprBody =<< liftA2 Expression.makeApply mkFunc mkArg
+      DataIRef.newExprBody =<< liftA2 ExprUtil.makeApply mkFunc mkArg
     mkType f = do
       x <- lift f
       Writer.tell [x]

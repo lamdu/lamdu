@@ -75,6 +75,7 @@ import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Load as Load
+import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Ops as DataOps
 import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
@@ -113,7 +114,7 @@ mkCallWithArg mDefI exprS =
   checkReplaceWithExpr replacer mDefI exprS
   where
     mkCall = fmap DataIRef.exprGuid . DataOps.callWithArg $ resultStored exprS
-    replacer = Expression.pureApply (void exprS) Expression.pureHole
+    replacer = ExprUtil.pureApply (void exprS) ExprUtil.pureHole
 
 mkActions ::
   MonadA m => SugarM.Context m ->
@@ -194,7 +195,7 @@ deleteParamRef param =
   (DataOps.setToHole . Lens.view Expression.ePayload)
   where
     refs =
-      Lens.folding Expression.subExpressions .
+      Lens.folding ExprUtil.subExpressions .
       Lens.filtered (Lens.anyOf paramRef (== param))
     paramRef = getVar . Expression.parameterRef
 
@@ -312,7 +313,7 @@ addApplyChildParens x =
 isPolymorphicFunc :: DataIRef.ExpressionM m (PayloadMM m) -> Bool
 isPolymorphicFunc funcI =
   maybe False
-  (Expression.isDependentPi . Infer.iType . iwcInferred) $
+  (ExprUtil.isDependentPi . Infer.iType . iwcInferred) $
   resultInferred funcI
 
 exprStoredGuid ::
@@ -328,7 +329,7 @@ exprStoredGuid =
 subExpressionGuids ::
   Lens.Fold
   (Expression.Expression def (SugarInfer.Payload t i (Maybe (Stored m)))) Guid
-subExpressionGuids = Lens.folding Expression.subExpressions . exprStoredGuid
+subExpressionGuids = Lens.folding ExprUtil.subExpressions . exprStoredGuid
 
 infixr 9 `orElse`
 orElse :: Monad m => m (Maybe a) -> m a -> m a
@@ -595,7 +596,7 @@ countPis e@Expression.Expression
   { Expression._eBody =
     Expression.BodyPi (Expression.Lambda _ _ resultType)
   }
-  | Expression.isDependentPi e = Lens._1 +~ 1 $ countPis resultType
+  | ExprUtil.isDependentPi e = Lens._1 +~ 1 $ countPis resultType
   | otherwise = (0, 1 + countArrows resultType)
 countPis _ = (0, 0)
 
@@ -607,7 +608,7 @@ applyForms exprType expr =
   where
     withDepPisApplied = iterate addApply expr !! depPis
     (depPis, arrows) = countPis exprType
-    addApply = Expression.pureExpression . (`Expression.makeApply` Expression.pureHole)
+    addApply = ExprUtil.pureExpression . (`ExprUtil.makeApply` ExprUtil.pureHole)
 
 -- Fill partial holes in an expression. Parital holes are those whose
 -- inferred (filler) value itself is not complete, so will not be a
@@ -638,7 +639,7 @@ fillPartialHolesInExpression check oldExpr =
             Writer.tell $ Any True
             return inferredVal
     fillHoleExpr (Expression.Expression body _) =
-      fmap Expression.pureExpression $ traverse fillHoleExpr body
+      fmap ExprUtil.pureExpression $ traverse fillHoleExpr body
 
 resultComplexityScore :: DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) -> Int
 resultComplexityScore =
@@ -674,7 +675,7 @@ mkHoleResult sugarContext exprS res =
   , _holeResultMPickAndCallWithArg =
       (pickAndCallWithArg <$) <$>
       checkReplaceWithExpr
-      (Expression.pureApply (void res) Expression.pureHole)
+      (ExprUtil.pureApply (void res) ExprUtil.pureHole)
       (SugarM.scMDefI sugarContext) exprS
   , _holeResultMPickAndCallWithNextArg = pure Nothing
   }
@@ -713,10 +714,10 @@ addPickAndCallWithNextArg sugarContext app applyS argS =
     newPickAndCallWithArg res =
       (pickAndCallWithArg res <$) <$>
       checkReplaceWithExpr
-      (Expression.pureApply (appWithPicked res) Expression.pureHole)
+      (ExprUtil.pureApply (appWithPicked res) ExprUtil.pureHole)
       mDefI applyS
     appWithPicked res =
-      Expression.pureExpression . Expression.BodyApply $
+      ExprUtil.pureExpression . Expression.BodyApply $
       app & Expression.applyArg .~ void res
     pickAndCallWithArg res = do
       _ <- pickResult eGuid argS res
@@ -815,7 +816,7 @@ uninferredHoles ::
   [Expression.Expression def (Infer.Inferred def, a)]
 uninferredHoles
   Expression.Expression { Expression._eBody = Expression.BodyApply (Expression.Apply func arg) }
-  | (Expression.isDependentPi . Infer.iType . Lens.view (Expression.ePayload . Lens._1)) func =
+  | (ExprUtil.isDependentPi . Infer.iType . Lens.view (Expression.ePayload . Lens._1)) func =
     uninferredHoles func
   | otherwise = uninferredHoles func ++ uninferredHoles arg
 uninferredHoles e@Expression.Expression { Expression._eBody = Expression.BodyLeaf Expression.Hole } = [e]
@@ -853,7 +854,7 @@ convertLiteralInteger i exprI =
   where
     writeIRef prop =
       DataIRef.writeExprBody (Property.value prop) .
-      Expression.makeLiteralInteger
+      ExprUtil.makeLiteralInteger
 
 convertAtom :: (MonadA m, Typeable1 m) => String -> Convertor m
 convertAtom name exprI =
@@ -876,7 +877,7 @@ convertExpressionI ee =
 isCompleteType :: Expression.Expression def () -> Bool
 isCompleteType =
   Lens.nullOf
-  ( Lens.folding Expression.subExpressions
+  ( Lens.folding ExprUtil.subExpressions
   . Expression.eBody . Expression.bodyLeaf . Expression.hole
   )
 
@@ -1043,7 +1044,7 @@ convertDefIExpression cp exprLoaded defI typeI = do
       void . Infer.iType . iwcInferred . resultInferred $
       inferredLoadedResult ^. SugarInfer.ilrExpr
     typesMatch =
-      on (==) Expression.canonizeParamIds (void typeI) inferredTypeP
+      on (==) ExprUtil.canonizeParamIds (void typeI) inferredTypeP
     mkNewType = do
       inferredTypeS <-
         convertExpressionPure cp iTypeGen

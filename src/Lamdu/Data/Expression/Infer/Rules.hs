@@ -26,6 +26,7 @@ import qualified Data.IntSet as IntSet
 import qualified Data.Monoid as Monoid
 import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Data.Expression as Expression
+import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 type RuleFunction def = [RefExpression def] -> [(ExprRef, RefExpression def)]
 
@@ -42,13 +43,13 @@ data RuleClosure def
   = LambdaBodyTypeToPiResultTypeClosure (Guid, ExprRef) Origin2
   | PiToLambdaClosure (Guid, ExprRef, ExprRef) Origin3
   | CopyClosure ExprRef
-  | LambdaParentToChildrenClosure (Expression.LambdaWrapper, ExprRef, ExprRef)
-  | LambdaChildrenToParentClosure (Expression.LambdaWrapper, Guid, ExprRef) Origin
+  | LambdaParentToChildrenClosure (ExprUtil.LambdaWrapper, ExprRef, ExprRef)
+  | LambdaChildrenToParentClosure (ExprUtil.LambdaWrapper, Guid, ExprRef) Origin
   | SetClosure [(ExprRef, RefExpression def)]
   | SimpleTypeClosure ExprRef Origin2
-  | IntoApplyResultClosure (Expression.LambdaWrapper, ExprRef, ExprRef)
-  | IntoArgClosure (Expression.LambdaWrapper, ExprRef)
-  | IntoFuncResultTypeClosure (Expression.LambdaWrapper, ExprRef)
+  | IntoApplyResultClosure (ExprUtil.LambdaWrapper, ExprRef, ExprRef)
+  | IntoArgClosure (ExprUtil.LambdaWrapper, ExprRef)
+  | IntoFuncResultTypeClosure (ExprUtil.LambdaWrapper, ExprRef)
   | ArgTypeToPiParamTypeClosure ExprRef Origin2
   | RigidArgApplyTypeToResultTypeClosure ExprRef Origin3
   | RedexApplyTypeToResultTypeClosure ExprRef
@@ -113,10 +114,10 @@ makeForNode (Expression.Expression exprBody typedVal) =
   case fmap (Lens.view Expression.ePayload) exprBody of
   Expression.BodyPi lambda@(Expression.Lambda _ _ resultType) ->
     (:) <$> setRule (tvType resultType) <*>
-    onLambda Expression.LambdaWrapperPi lambda
+    onLambda ExprUtil.LambdaWrapperPi lambda
   Expression.BodyLambda lambda@(Expression.Lambda param _ body) ->
     (++) <$> lambdaRules param typedVal (tvType body) <*>
-    onLambda Expression.LambdaWrapperLambda lambda
+    onLambda ExprUtil.LambdaWrapperLambda lambda
   Expression.BodyApply apply -> applyRules typedVal apply
   _ -> pure []
   where
@@ -128,7 +129,7 @@ makeForNode (Expression.Expression exprBody typedVal) =
       lambdaStructureRules cons (tvVal typedVal) (fmap tvVal lam)
 
 makeForAll :: Expression.Expression def TypedValue -> State Origin [Rule def]
-makeForAll = fmap concat . traverse makeForNode . Expression.subExpressions
+makeForAll = fmap concat . traverse makeForNode . ExprUtil.subExpressions
 
 makeHole :: Origin -> RefExpression def
 makeHole g = makeRefExpr g $ Expression.BodyLeaf Expression.Hole
@@ -144,12 +145,12 @@ guidFromOrigin origin = Guid.fromString $ show origin ++ "(orig)"
 
 makePi :: Origin -> RefExpression def -> RefExpression def -> RefExpression def
 makePi o paramType result =
-  makeRefExpr o $ Expression.makePi (guidFromOrigin o) paramType result
+  makeRefExpr o $ ExprUtil.makePi (guidFromOrigin o) paramType result
 
 runLambdaBodyTypeToPiResultTypeClosure :: (Guid, ExprRef) -> Origin2 -> RuleFunction def
 runLambdaBodyTypeToPiResultTypeClosure (param, lambdaTypeRef) (o0, o1) ~[bodyTypeExpr] =
   [( lambdaTypeRef
-   , makeRefExpr o0 $ Expression.makePi param (makeHole o1) bodyTypeExpr
+   , makeRefExpr o0 $ ExprUtil.makePi param (makeHole o1) bodyTypeExpr
    )]
 
 runPiToLambdaClosure :: (Guid, ExprRef, ExprRef) -> Origin3 -> RuleFunction def
@@ -159,13 +160,13 @@ runPiToLambdaClosure (param, lambdaValueRef, bodyTypeRef) (o0, o1, o2) ~[piBody]
     ( bodyTypeRef
     , subst piParam
       ( makeRefExpr o0
-        (Expression.makeParameterRef param)
+        (ExprUtil.makeParameterRef param)
       )
       resultType
     )
     , -- Pi param type -> Lambda param type
       ( lambdaValueRef
-      , makeRefExpr o1 . Expression.makeLambda piParam paramType $ makeHole o2
+      , makeRefExpr o1 . ExprUtil.makeLambda piParam paramType $ makeHole o2
       )
     ]
 
@@ -186,20 +187,20 @@ union x y =
   ]
 
 -- Parent lambda to children
-runLambdaParentToChildrenClosure :: (Expression.LambdaWrapper, ExprRef, ExprRef) -> RuleFunction def
+runLambdaParentToChildrenClosure :: (ExprUtil.LambdaWrapper, ExprRef, ExprRef) -> RuleFunction def
 runLambdaParentToChildrenClosure (cons, paramTypeRef, resultRef) ~[expr] = do
-  Expression.Lambda _ paramTypeE resultE <- expr ^.. Expression.eBody . Expression.lambdaWrapperPrism cons
+  Expression.Lambda _ paramTypeE resultE <- expr ^.. Expression.eBody . ExprUtil.lambdaWrapperPrism cons
   [(paramTypeRef, paramTypeE), (resultRef, resultE)]
 
 -- Children of lambda to lambda parent
-runLambdaChildrenToParentClosure :: (Expression.LambdaWrapper, Guid, ExprRef) -> Origin -> RuleFunction def
+runLambdaChildrenToParentClosure :: (ExprUtil.LambdaWrapper, Guid, ExprRef) -> Origin -> RuleFunction def
 runLambdaChildrenToParentClosure (cons, param, lamRef) o0 ~[paramTypeExpr, resultExpr] =
   [( lamRef
-   , makeRefExpr o0 . Lens.review (Expression.lambdaWrapperPrism cons) $
+   , makeRefExpr o0 . Lens.review (ExprUtil.lambdaWrapperPrism cons) $
      Expression.Lambda param paramTypeExpr resultExpr
    )]
 
-lambdaStructureRules :: Expression.LambdaWrapper -> ExprRef -> Expression.Lambda ExprRef -> State Origin [Rule def]
+lambdaStructureRules :: ExprUtil.LambdaWrapper -> ExprRef -> Expression.Lambda ExprRef -> State Origin [Rule def]
 lambdaStructureRules cons lamRef (Expression.Lambda param paramTypeRef resultRef) =
   sequenceA
   [ pure . Rule [lamRef] $
@@ -226,7 +227,7 @@ mergeToPiResult ::
   Eq def => RefExpression def -> RefExpression def -> RefExpression def
 mergeToPiResult =
   fmap runIdentity .
-  Expression.matchExpression onMatch ((fmap . fmap) return onMismatch)
+  ExprUtil.matchExpression onMatch ((fmap . fmap) return onMismatch)
   where
     onMatch x _ = return x
     onMismatch dest src
@@ -252,7 +253,7 @@ runSimpleTypeClosure typ (o0, o1) ~[valExpr] =
   Expression.BodyPi _ -> [(typ, setExpr o0)]
   Expression.BodyLambda (Expression.Lambda param paramType _) ->
     [( typ
-     , makeRefExpr o0 . Expression.makePi param paramType $
+     , makeRefExpr o0 . ExprUtil.makePi param paramType $
        makeHole o1
      )]
   _ -> []
@@ -260,9 +261,9 @@ runSimpleTypeClosure typ (o0, o1) ~[valExpr] =
 ruleSimpleType :: TypedValue -> State Origin (Rule def)
 ruleSimpleType (TypedValue val typ) = Rule [val] . SimpleTypeClosure typ <$> mkOrigin2
 
-runIntoApplyResultClosure :: (Expression.LambdaWrapper, ExprRef, ExprRef) -> RuleFunction def
+runIntoApplyResultClosure :: (ExprUtil.LambdaWrapper, ExprRef, ExprRef) -> RuleFunction def
 runIntoApplyResultClosure (cons, applyRef, arg) ~[funcExpr, argExpr] = do
-  Expression.Lambda param _ result <- funcExpr ^.. Expression.eBody . Expression.lambdaWrapperPrism cons
+  Expression.Lambda param _ result <- funcExpr ^.. Expression.eBody . ExprUtil.lambdaWrapperPrism cons
   return
     ( applyRef
     , subst param
@@ -272,43 +273,43 @@ runIntoApplyResultClosure (cons, applyRef, arg) ~[funcExpr, argExpr] = do
       result
     )
 
-intoApplyResultRule :: Expression.LambdaWrapper -> ExprRef -> ExprRef -> ExprRef -> Rule def
+intoApplyResultRule :: ExprUtil.LambdaWrapper -> ExprRef -> ExprRef -> ExprRef -> Rule def
 intoApplyResultRule cons applyRef func arg =
   -- PreSubst with Subst => PostSubst
   -- (func, arg) -> apply
   Rule [func, arg] $ IntoApplyResultClosure (cons, applyRef, arg)
 
-runIntoArgClosure :: Eq def => (Expression.LambdaWrapper, ExprRef) -> RuleFunction def
+runIntoArgClosure :: Eq def => (ExprUtil.LambdaWrapper, ExprRef) -> RuleFunction def
 runIntoArgClosure (cons, arg) ~[applyExpr, funcExpr] = do
   -- Recurse over PreSubst and PostSubst together
   --   When PreSubst part refers to its param:
   --     PostSubst part <=> arg
   -- (apply, func) -> arg
-  Expression.Lambda param _ result <- funcExpr ^.. Expression.eBody . Expression.lambdaWrapperPrism cons
+  Expression.Lambda param _ result <- funcExpr ^.. Expression.eBody . ExprUtil.lambdaWrapperPrism cons
   mergeToArg param arg result applyExpr
 
-intoArgRule :: Expression.LambdaWrapper -> ExprRef -> ExprRef -> ExprRef -> Rule def
+intoArgRule :: ExprUtil.LambdaWrapper -> ExprRef -> ExprRef -> ExprRef -> Rule def
 intoArgRule cons applyRef func arg =
   Rule [applyRef, func] $ IntoArgClosure (cons, arg)
 
-runIntoFuncResultTypeClosure :: Eq def => (Expression.LambdaWrapper, ExprRef) -> RuleFunction def
+runIntoFuncResultTypeClosure :: Eq def => (ExprUtil.LambdaWrapper, ExprRef) -> RuleFunction def
 runIntoFuncResultTypeClosure (cons, func) ~[applyExpr, Expression.Expression funcBody funcPl] = do
-  Expression.Lambda param paramT result <- funcBody ^.. Expression.lambdaWrapperPrism cons
+  Expression.Lambda param paramT result <- funcBody ^.. ExprUtil.lambdaWrapperPrism cons
   return
     ( func
     , makeRefExpr (Lens.view rplOrigin funcPl) .
-      Lens.review (Expression.lambdaWrapperPrism cons) . Expression.Lambda param paramT $
+      Lens.review (ExprUtil.lambdaWrapperPrism cons) . Expression.Lambda param paramT $
       mergeToPiResult result applyExpr
     )
 
-intoFuncResultTypeRule :: Expression.LambdaWrapper -> ExprRef -> ExprRef -> Rule def
+intoFuncResultTypeRule :: ExprUtil.LambdaWrapper -> ExprRef -> ExprRef -> Rule def
 intoFuncResultTypeRule cons applyRef func =
   -- Propagate data from Apply's to the Func where appropriate.
   -- (Not on non-substituted holes)
   -- apply -> func result
   Rule [applyRef, func] $ IntoFuncResultTypeClosure (cons, func)
 
-recurseSubstRules :: Expression.LambdaWrapper -> ExprRef -> ExprRef -> ExprRef -> [Rule def]
+recurseSubstRules :: ExprUtil.LambdaWrapper -> ExprRef -> ExprRef -> ExprRef -> [Rule def]
 recurseSubstRules cons applyRef func arg =
   [ intoApplyResultRule cons applyRef func arg
   , intoArgRule cons applyRef func arg
@@ -319,7 +320,7 @@ recurseSubstRules cons applyRef func arg =
 mergeToArg :: Eq def => Guid -> ExprRef -> RefExpression def -> RefExpression def -> [(ExprRef, RefExpression def)]
 mergeToArg param arg =
   (fmap . fmap) (execWriter . Compose.unO) $
-  Expression.matchExpression onMatch onMismatch
+  ExprUtil.matchExpression onMatch onMismatch
   where
     unit = Compose.O (pure Unit)
     onMatch _ _ = unit
@@ -373,7 +374,7 @@ runRedexApplyTypeToResultTypeClosure funcTypeRef
   return
     ( funcTypeRef
     , makeRefExpr (Lens.view rplOrigin funcPl) $
-      Expression.makePi paramGuid paramType applyTypeExpr
+      ExprUtil.makePi paramGuid paramType applyTypeExpr
     )
 
 redexApplyTypeToResultTypeRule :: TypedValue -> TypedValue -> Rule def
@@ -411,7 +412,7 @@ runArgTypeToLambdaParamTypeClosure funcValRef o0 ~[Expression.Expression funcExp
   return
     ( funcValRef
     , makeRefExpr (Lens.view rplOrigin funcPl) .
-      Expression.makeLambda param argTExpr $ makeHole o0
+      ExprUtil.makeLambda param argTExpr $ makeHole o0
     )
 
 argTypeToLambdaParamTypeRule :: Expression.Apply TypedValue -> State Origin (Rule def)
@@ -433,7 +434,7 @@ runNonLambdaToApplyValueClosure applyValRef o0 ~[funcExpr, argExpr] =
   Expression.BodyLeaf Expression.Hole -> []
   _ ->
     [ ( applyValRef
-      , makeRefExpr o0 $ Expression.makeApply funcExpr argExpr
+      , makeRefExpr o0 $ ExprUtil.makeApply funcExpr argExpr
       )
     ]
 
@@ -475,7 +476,7 @@ applyRules applyTv apply@(Expression.Apply func arg) =
       , lambdaParamTypeToArgTypeRule apply
       , applyToPartsRule applyTv apply
       ]
-      ++ recurseSubstRules Expression.LambdaWrapperPi
+      ++ recurseSubstRules ExprUtil.LambdaWrapperPi
         (tvType applyTv) (tvType func) (tvVal arg)
-      ++ recurseSubstRules Expression.LambdaWrapperLambda
+      ++ recurseSubstRules ExprUtil.LambdaWrapperLambda
         (tvVal applyTv) (tvVal func) (tvVal arg)

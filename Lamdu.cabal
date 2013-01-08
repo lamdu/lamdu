@@ -159,6 +159,7 @@ Executable lamdu
                        Lamdu.Data.Expression.Infer.ImplicitVariables,
                        Lamdu.Data.Expression.Infer,
                        Lamdu.Data.Expression,
+                       Lamdu.Data.Expression.Utils,
                        Lamdu.Data.Expression.IRef,
                        Lamdu.Data.Expression.Load,
                        Lamdu.ExampleDB,
