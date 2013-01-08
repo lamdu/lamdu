@@ -126,6 +126,7 @@ loader =
   (fmap void . DataIRef.readExpression . Lens.view Definition.defType <=<
    Transaction.readIRef)
 
+-- TODO: Do these need to be cached?
 inferMaybe ::
   MonadA m =>
   Maybe (DefI (Tag m)) ->
