@@ -91,18 +91,22 @@ mkCutter cp expr replaceWithHole = do
   _ <- DataOps.newClipboard cp expr
   replaceWithHole
 
-guardReinferSuccess :: MonadA m => SugarM.Context m -> T m a -> T m (Maybe (T m a))
-guardReinferSuccess sugarContext act =
+checkReinferSuccess :: MonadA m => SugarM.Context m -> T m a -> T m Bool
+checkReinferSuccess sugarContext act =
   case SugarM.scMReinferRoot sugarContext of
-  Nothing -> pure Nothing
+  Nothing -> pure False
   Just reinferRoot ->
     Transaction.forkScratch $ do
     _ <- act
-    success <- reinferRoot
-    pure $
-      if success
-      then Just act
-      else Nothing
+    reinferRoot
+
+guardReinferSuccess :: MonadA m => SugarM.Context m -> T m a -> T m (Maybe (T m a))
+guardReinferSuccess sugarContext act = do
+  success <- checkReinferSuccess sugarContext act
+  pure $
+    if success
+    then Just act
+    else Nothing
 
 mkCallWithArg ::
   MonadA m => SugarM.Context m ->
