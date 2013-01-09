@@ -19,11 +19,6 @@
 
 * Green holes for (a|_->a|_) type? Or do we type-check if func is removable?
 
-* Sugar adds a virtual IRef to each Expression into a pure memory
-  DB containing the expression
-
-  * Hole picker writer should support the "virtual picker" for type-checking
-
 * Ops.addListItem should be giveAsArgTo which should take the expr to
   write in the function side
 
