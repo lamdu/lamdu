@@ -582,40 +582,6 @@ mkPaste exprP = do
       ~() <- replacer clip
       return $ DataIRef.exprGuid clip
 
--- Fill partial holes in an expression. Parital holes are those whose
--- inferred (filler) value itself is not complete, so will not be a
--- useful auto-inferred value. By auto-filling those, we allow the
--- user a chance to access all the partiality that needs filling more
--- easily.
-fillPartialHolesInExpression ::
-  MonadA m =>
-  (Expression.Expression def () ->
-   m (Maybe (Expression.Expression def (Infer.Inferred def)))) ->
-  Expression.Expression def (Infer.Inferred def) ->
-  m [Expression.Expression def (Infer.Inferred def)]
-fillPartialHolesInExpression check oldExpr =
-  fmap ((++ [oldExpr]) . maybeToList) .
-  recheck . runWriter $ fillHoleExpr oldExpr
-  where
-    recheck (newExpr, Any True) = check newExpr
-    recheck (_, Any False) = return Nothing
-    fillHoleExpr expr
-      | not (isHole expr) =
-        ExprUtil.pureExpression <$>
-        traverse fillHoleExpr (expr ^. Expression.eBody)
-      | isHole inferredVal
-      || isCompleteType inferredVal = return $ void expr
-      | otherwise = do
-        -- Hole inferred value has holes to fill, no use leaving it as
-        -- auto-inferred, just fill it:
-        Writer.tell $ Any True
-        return inferredVal
-      where
-        isHole =
-          Lens.notNullOf
-          (Expression.eBody . Expression.bodyLeaf . Expression.hole)
-        inferredVal = void . Infer.iValue $ expr ^. Expression.ePayload
-
 resultComplexityScore :: DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) -> Int
 resultComplexityScore =
   sum . map (subtract 2 . length . Foldable.toList . Infer.iType) .
@@ -638,7 +604,7 @@ inferApplyForms ::
   Infer.Context (DefI (Tag m)) ->
   Infer.Scope (DefI (Tag m)) ->
   ( DataIRef.ExpressionM m () ->
-    T m [DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))]
+    T m (Maybe (DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))))
   ) ->
   DataIRef.ExpressionM m () ->
   T m [DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))]
@@ -648,7 +614,7 @@ inferApplyForms holeInferContext scope processRes expr =
   where
     makeApplyForms Nothing = return []
     makeApplyForms (Just i) =
-      fmap concat . traverse processRes $
+      fmap (concat . map maybeToList) . traverse processRes $
       ExprUtil.applyForms i expr
 
 mkHoleResult ::
@@ -724,16 +690,16 @@ convertTypeCheckedHoleH
       k -> m v -> StateT Cache.Cache m v
     memoBy x act = Cache.memoS (const act) (x, eGuid, contextHash)
 
-    inferResults processRes expr =
-      memoBy expr $ inferApplyForms inferState scope processRes expr
+    inferResults expr =
+      memoBy expr $ inferApplyForms inferState scope check expr
     inferExprType expr =
       memoBy expr $ inferOnTheSide inferState scope expr
     onScopeElement (param, _typeExpr) = param
-    mkHole processRes =
+    hole =
       Hole $
-      mkWritableHoleActions processRes <$>
+      mkWritableHoleActions <$>
       traverse (SugarInfer.ntraversePayload pure id) exprI
-    mkWritableHoleActions processRes exprS =
+    mkWritableHoleActions exprS =
       HoleActions
       { _holePaste = mPaste
       , _holeMDelete = Nothing
@@ -741,18 +707,16 @@ convertTypeCheckedHoleH
       , _holeInferExprType = inferExprType
       , _holeInferResults =
         (fmap . map) (mkHoleResult sugarContext exprS) .
-        inferResults processRes
+        inferResults
       }
-    filledHole =
-      mkHole $ maybe (return []) (fillPartialHolesInExpression check) <=< check
     inferredHole =
       mkExpression exprI .
-      ExpressionInferred . (`Inferred` filledHole) <=<
+      ExpressionInferred . (`Inferred` hole) <=<
       convertExpressionI . fmap toPayloadMM .
       SugarInfer.resultFromPure (mkGen 2 3 eGuid)
     plainHole =
-      wrapOperatorHole exprI <=<
-      mkExpression exprI . ExpressionHole $ mkHole (fmap maybeToList . check)
+      wrapOperatorHole exprI =<<
+      mkExpression exprI (ExpressionHole hole)
 
 wrapOperatorHole :: (MonadA m, Typeable1 m) => DataIRef.ExpressionM m (PayloadMM m) -> Expression m -> SugarM m (Expression m)
 wrapOperatorHole exprI holeExpr = do
