@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, ConstraintKinds, TypeFamilies #-}
+{-# LANGUAGE FlexibleContexts, OverloadedStrings, ConstraintKinds, TypeFamilies #-}
 module Lamdu.CodeEdit.Sugar
   ( Definition(..), DefinitionBody(..)
   , ListItemActions(..), itemAddNext, itemDelete
@@ -37,9 +37,10 @@ import Control.Applicative ((<$>), Applicative(..), liftA2)
 import Control.Lens (SimpleTraversal, (.~), (^.), (&), (%~), (.~), (^?), (^..), (<>~))
 import Control.Monad ((<=<), join, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.State (runState)
+import Control.Monad.Trans.State (StateT, runState)
 import Control.Monad.Trans.Writer (runWriter)
 import Control.MonadA (MonadA)
+import Data.Binary (Binary)
 import Data.Function (on)
 import Data.List.Utils (sortOn)
 import Data.Maybe (listToMaybe, maybeToList, isJust)
@@ -620,19 +621,35 @@ resultComplexityScore =
   sum . map (subtract 2 . length . Foldable.toList . Infer.iType) .
   Foldable.toList
 
+inferOnTheSide ::
+  MonadA m =>
+  Infer.Context (DefI (Tag m)) -> Infer.Scope (DefI (Tag m)) ->
+  DataIRef.ExpressionM m () ->
+  T m (Maybe (DataIRef.ExpressionM m ()))
+inferOnTheSide holeInferContext scope expr =
+  fmap (void . Infer.iType . Lens.view Expression.ePayload) <$>
+  SugarInfer.inferMaybe_ Nothing expr sideInferContext node
+  where
+    (node, sideInferContext) =
+      (`runState` holeInferContext) $ Infer.newNodeWithScope scope
+
 inferApplyForms ::
   MonadA m =>
-  (DataIRef.ExpressionM m () -> T m [DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))]) -> DataIRef.ExpressionM m () ->
-  (Infer.InferNode (DefI (Tag m)), Infer.Context (DefI (Tag m))) ->
+  Infer.Context (DefI (Tag m)) ->
+  Infer.Scope (DefI (Tag m)) ->
+  ( DataIRef.ExpressionM m () ->
+    T m [DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))]
+  ) ->
+  DataIRef.ExpressionM m () ->
   T m [DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))]
-inferApplyForms processRes expr (node, inferContext) =
+inferApplyForms holeInferContext scope processRes expr =
   fmap (sortOn resultComplexityScore) . makeApplyForms =<<
-  SugarInfer.inferMaybe_ Nothing expr inferContext node
+  inferOnTheSide holeInferContext scope expr
   where
     makeApplyForms Nothing = return []
     makeApplyForms (Just i) =
       fmap concat . traverse processRes $
-      (ExprUtil.applyForms . void) (Infer.iType (i ^. Expression.ePayload)) expr
+      ExprUtil.applyForms i expr
 
 mkHoleResult ::
   (MonadA m, Typeable1 m) => SugarM.Context m ->
@@ -702,11 +719,15 @@ convertTypeCheckedHoleH
     scope = Infer.nScope $ Infer.iPoint inferred
     check expr = SugarInfer.inferMaybe_ Nothing expr inferState $ Infer.iPoint inferred
 
-    memoBy expr act = Cache.memoS (const act) (expr, eGuid, contextHash)
+    memoBy ::
+      (Cache.Key k, Binary v, MonadA m) =>
+      k -> m v -> StateT Cache.Cache m v
+    memoBy x act = Cache.memoS (const act) (x, eGuid, contextHash)
 
     inferResults processRes expr =
-      memoBy expr . inferApplyForms processRes expr .
-      (`runState` inferState) $ Infer.newNodeWithScope scope
+      memoBy expr $ inferApplyForms inferState scope processRes expr
+    inferExprType expr =
+      memoBy expr $ inferOnTheSide inferState scope expr
     onScopeElement (param, _typeExpr) = param
     mkHole processRes =
       Hole $
@@ -717,6 +738,7 @@ convertTypeCheckedHoleH
       { _holePaste = mPaste
       , _holeMDelete = Nothing
       , _holeScope = map onScopeElement . Map.toList $ Infer.iScope inferred
+      , _holeInferExprType = inferExprType
       , _holeInferResults =
         (fmap . map) (mkHoleResult sugarContext exprS) .
         inferResults processRes

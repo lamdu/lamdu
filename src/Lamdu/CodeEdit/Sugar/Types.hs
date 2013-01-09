@@ -21,8 +21,9 @@ module Lamdu.CodeEdit.Sugar.Types
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
   , Section(..)
-  , Hole(..), holeScope, holeMActions, holeInferResults
-  , HoleActions(..), holePaste, holeMDelete
+  , Hole(..), holeScope, holeMActions
+  , HoleActions(..)
+    , holePaste, holeMDelete, holeInferResults, holeInferExprType
   , HoleResult(..)
     , holeResultInferred
     , holeResultConvert, holeResultMPickAndCallWithArg
@@ -137,6 +138,11 @@ data HoleResult m = HoleResult
 
 data HoleActions m = HoleActions
   { _holeScope :: [Guid]
+  , -- Infer expression "on the side" (not in the hole position),
+    -- but with the hole's scope in scope.
+    -- If given expression does not type check on its own, returns Nothing.
+    -- (used by HoleEdit to suggest variations based on type)
+    _holeInferExprType :: DataIRef.ExpressionM m () -> CT m (Maybe (DataIRef.ExpressionM m ()))
   , _holeInferResults :: DataIRef.ExpressionM m () -> CT m [HoleResult m]
   , _holePaste :: Maybe (T m Guid)
   , -- TODO: holeMDelete is always Nothing, not implemented yet

@@ -9,7 +9,7 @@ module Lamdu.Data.Expression.Infer
   , IsRestrictedPoly(..)
   , InferNode(..), TypedValue(..)
   , Error(..), ErrorDetails(..)
-  , RefMap, Context, ExprRef
+  , RefMap, Context, ExprRef, Scope
   , Loader(..), InferActions(..)
   , initial
   -- Used for inferring independent expressions in an inner infer context
