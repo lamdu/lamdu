@@ -6,12 +6,12 @@ import Control.Lens ((^.))
 import Control.Monad ((<=<))
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
-import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Graphics.UI.Bottle.Widget (EventHandlers)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.CodeEdit.ExpressionEdit.HoleEdit (HoleState(..))
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -52,8 +52,7 @@ make sExpr = assignCursor $ do
     ExprGuiM.listenResultPickers $ makeEditor sExpr exprId
   typeEdits <- traverse make $ payload ^. Sugar.plInferredTypes
   let onReadOnly = Widget.doesntTakeFocus
-  exprEventMap <-
-    expressionEventMap exprGuid isHole resultPickers $ sExpr ^. Sugar.rPayload
+  exprEventMap <- expressionEventMap isHole resultPickers sExpr
   settings <- ExprGuiM.readSettings
   let
     addInferredTypes =
@@ -77,8 +76,7 @@ make sExpr = assignCursor $ do
     widget
   where
     payload = sExpr ^. Sugar.rPayload
-    exprId = WidgetIds.fromGuid exprGuid
-    exprGuid = sExpr ^. Sugar.rGuid
+    exprId = WidgetIds.fromGuid $ sExpr ^. Sugar.rGuid
     assignCursor f =
       foldr (`ExprGuiM.assignCursor` exprId) f
       (WidgetIds.fromGuid <$> sExpr ^. Sugar.rHiddenGuids)
@@ -120,19 +118,19 @@ makeEditor sExpr =
 
 expressionEventMap ::
   MonadA m =>
-  Guid -> IsHole -> [Sugar.PrefixAction m] ->
-  Sugar.Payload m ->
+  IsHole -> [Sugar.PrefixAction m] ->
+  Sugar.Expression m ->
   ExprGuiM m (EventHandlers (Transaction m))
-expressionEventMap exprGuid isHole resultPickers payload =
-  maybe (return mempty) (actionsEventMap exprGuid isHole resultPickers) $
-  payload ^. Sugar.plActions
+expressionEventMap isHole resultPickers sExpr =
+  maybe (return mempty) (actionsEventMap sExpr isHole resultPickers) $
+  sExpr ^. Sugar.rPayload . Sugar.plActions
 
 actionsEventMap ::
   MonadA m =>
-  Guid -> IsHole -> [Sugar.PrefixAction m] ->
+  Sugar.Expression m -> IsHole -> [Sugar.PrefixAction m] ->
   Sugar.Actions m ->
   ExprGuiM m (EventHandlers (Transaction m))
-actionsEventMap exprGuid isHole resultPickers actions = do
+actionsEventMap sExpr isHole resultPickers actions = do
   isSelected <- ExprGuiM.widgetEnv . WE.isSubCursor $ WidgetIds.fromGuid exprGuid
   callWithArgsEventMap <-
     if isSelected
@@ -165,6 +163,7 @@ actionsEventMap exprGuid isHole resultPickers actions = do
     , cut
     ]
   where
+    exprGuid = sExpr ^. Sugar.rGuid
     docPrefix
       | null resultPickers = ""
       | otherwise = "Pick and "
@@ -179,8 +178,13 @@ actionsEventMap exprGuid isHole resultPickers actions = do
       (fmap . fmap) Widget.eventResultFromCursor .
       E.charGroup "Operator" (E.Doc ["Edit", "Apply operator"])
       Config.operatorChars $ \c _isShifted -> do
-        targetGuid <- actions ^. Sugar.giveAsArgToOperator
-        HoleEdit.setSearchTermAndJump [c] targetGuid
+        targetGuid <- actions ^. Sugar.replace
+        HoleEdit.setHoleStateAndJump
+          HoleState
+          { _hsSearchTerm = [c]
+          , _hsArgument = Just $ sExpr ^. Sugar.rPresugaredExpression
+          }
+          targetGuid
     cut
       | isHoleBool = mempty
       | otherwise =

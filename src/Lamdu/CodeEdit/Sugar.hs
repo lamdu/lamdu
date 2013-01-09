@@ -66,7 +66,6 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.CodeEdit.Infix as Infix
 import qualified Lamdu.CodeEdit.Sugar.Infer as SugarInfer
 import qualified Lamdu.CodeEdit.Sugar.Monad as SugarM
-import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expression
@@ -660,27 +659,7 @@ convertTypeCheckedHoleH
       convertExpressionI . fmap toPayloadMM .
       SugarInfer.resultFromPure (mkGen 2 3 eGuid)
     plainHole =
-      wrapOperatorHole exprI =<<
       mkExpression exprI (ExpressionHole hole)
-
-wrapOperatorHole :: (MonadA m, Typeable1 m) => DataIRef.ExpressionM m (PayloadMM m) -> Expression m -> SugarM m (Expression m)
-wrapOperatorHole exprI holeExpr = do
-  -- TODO: It is ugly to even know about assocSearchTermRef in
-  -- Sugar. Instead, some other metadata should be set to indicate it
-  -- is a hole
-  searchTerm <-
-    SugarM.liftTransaction . Transaction.getP . Anchors.assocSearchTermRef $
-    resultGuid exprI
-  if isOperatorName searchTerm
-    then
-      -- TODO: Ok to mkExpression with same exprI here?
-      mkExpression exprI . ExpressionSection DontHaveParens $
-      Section Nothing (removeInferredTypes holeExpr) Nothing
-    else return holeExpr
-
-isOperatorName :: String -> Bool
-isOperatorName name =
-  not (null name) && all (`elem` Config.operatorChars) name
 
 chooseHoleType ::
   [DataIRef.ExpressionM m f] -> hole -> (DataIRef.ExpressionM m f -> hole) -> hole

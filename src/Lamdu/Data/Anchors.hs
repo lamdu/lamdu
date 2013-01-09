@@ -4,7 +4,7 @@ module Lamdu.Data.Anchors
   , Revision(..), onRevision
   , Pane, makePane
   , CodeProps, RevisionProps
-  , assocNameRef, assocSearchTermRef
+  , assocNameRef
   , SpecialFunctions(..)
   ) where
 
@@ -66,6 +66,3 @@ makePane = id
 
 assocNameRef :: MonadA m => Guid -> MkProperty m String
 assocNameRef = Transaction.assocDataRefDef "" "Name"
-
-assocSearchTermRef :: MonadA m => Guid -> MkProperty m String
-assocSearchTermRef = Transaction.assocDataRefDef "" "searchTerm"

@@ -16,7 +16,7 @@ module Lamdu.Data.Expression.Utils
   , isDependentPi
   , funcArguments
   , LambdaWrapper(..), lambdaWrapperPrism
-  , applyForms
+  , applyForms, applyDependentPis
   -- Traversals
   , bitraverseExpression
   , bitraverseBody
@@ -218,6 +218,13 @@ countArrows expr =
   Just resultType -> 1 + countArrows resultType
   Nothing -> 0
 
+countDependentPis :: Expression def () -> Int
+countDependentPis expr =
+  case expr ^? eBody . bodyPi . lambdaBody of
+  Just resultType
+    | isDependentPi expr -> 1 + countDependentPis resultType
+  _ -> 0
+
 -- TODO: Return a record, not a tuple
 countPis :: Expression def () -> (Int, Int)
 countPis expr =
@@ -227,6 +234,15 @@ countPis expr =
     | otherwise -> (0, 1 + countArrows resultType)
   Nothing -> (0, 0)
 
+applyWithHoles :: Int -> Expression def () -> Expression def ()
+applyWithHoles count expr =
+  iterate addApply expr !! count
+  where
+    addApply = pureExpression . (`makeApply` pureHole)
+
+applyDependentPis :: Expression def () -> Expression def () -> Expression def ()
+applyDependentPis exprType = applyWithHoles (countDependentPis exprType)
+
 -- Transform expression to expression applied with holes,
 -- with all different sensible levels of currying.
 applyForms :: Expression def () -> Expression def () -> [Expression def ()]
@@ -235,6 +251,6 @@ applyForms exprType expr
   | otherwise =
     reverse . take (1 + arrows) $ iterate addApply withDepPisApplied
   where
-    withDepPisApplied = iterate addApply expr !! depPis
+    withDepPisApplied = applyWithHoles depPis expr
     (depPis, arrows) = countPis exprType
     addApply = pureExpression . (`makeApply` pureHole)

@@ -1,3 +1,5 @@
+* When applying operator, avoid recreating argument expression
+
 * Holes not entered in navigation, left with ESC or otherwise pick their
   result?
   * Could be annoying if you wanna go somewhere to check something and you have
