@@ -8,7 +8,8 @@ module Lamdu.CodeEdit.Sugar
   , Actions(..), giveAsArg, callWithArg, callWithNextArg, replace, cut, giveAsArgToOperator
   , ExpressionBody(..)
   , Payload(..), plInferredTypes, plActions, plNextHole
-  , ExpressionP(..), rGuid, rExpressionBody, rPayload, rHiddenGuids
+  , ExpressionP(..)
+    , rGuid, rExpressionBody, rPayload, rHiddenGuids, rPresugaredExpression
   , Expression
   , WhereItem(..)
   , ListItem(..), ListActions(..), List(..)
@@ -174,6 +175,7 @@ mkExpression exprI expr = do
       , _plNextHole = Nothing
       }
     , _rHiddenGuids = []
+    , _rPresugaredExpression = void exprI
     }
   where
     seeds = RandomUtils.splits . mkGen 0 3 $ resultGuid exprI
@@ -211,10 +213,13 @@ mkFuncParamActions lambdaProp (Expression.Lambda param _paramType body) =
     }
   , _fpGetExample =
       return $
-      Expression (Guid.augment "EXAMPLE" param)
-      (ExpressionAtom "NotImplemented")
-      (Payload [] Nothing Nothing)
-      []
+      Expression
+      { _rGuid = Guid.augment "EXAMPLE" param
+      , _rExpressionBody = ExpressionAtom "NotImplemented"
+      , _rPayload = Payload [] Nothing Nothing
+      , _rHiddenGuids = []
+      , _rPresugaredExpression = ExprUtil.pureHole
+      }
   }
 
 data IsDependent = Dependent | NonDependent
