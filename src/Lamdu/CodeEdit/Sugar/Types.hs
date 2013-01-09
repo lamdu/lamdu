@@ -26,15 +26,14 @@ module Lamdu.CodeEdit.Sugar.Types
     , holePaste, holeMDelete, holeResult, holeInferExprType
   , HoleResult(..)
     , holeResultInferred
-    , holeResultConvert, holeResultMPickAndCallWithArg
-    , holeResultPick, holeResultPickAndGiveAsArg
-    , holeResultPickAndGiveAsArgToOperator
-    , holeResultMPickAndCallWithNextArg
+    , holeResultConvert
+    , holeResultPick, holeResultPickPrefix
   , LiteralInteger(..)
   , Inferred(..)
   , Polymorphic(..)
   , HasParens(..)
   , T, CT
+  , PrefixAction, emptyPrefixAction
   ) where
 
 import Control.Monad.Trans.State (StateT)
@@ -56,13 +55,18 @@ import qualified Lamdu.Data.Expression.Infer as Infer
 type T = Transaction
 type CT m = StateT Cache (T m)
 
+type PrefixAction m = T m ()
+
+emptyPrefixAction :: Monad m => PrefixAction m
+emptyPrefixAction = return ()
+
 data Actions m = Actions
-  { _giveAsArg :: T m Guid
+  { _giveAsArg :: PrefixAction m -> T m Guid
   -- Turn "x" to "x ? _" where "?" is an operator-hole.
   -- Given string is initial hole search term.
   , _giveAsArgToOperator :: T m Guid
-  , _callWithNextArg :: T m (Maybe (T m Guid))
-  , _callWithArg :: T m (Maybe (T m Guid))
+  , _callWithNextArg :: PrefixAction m -> T m (Maybe (T m Guid))
+  , _callWithArg :: PrefixAction m -> T m (Maybe (T m Guid))
   , _replace :: T m Guid
   , _cut :: T m Guid
   }
@@ -130,10 +134,7 @@ data HoleResult m = HoleResult
   { _holeResultInferred :: DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))
   , _holeResultConvert :: T m (Expression m)
   , _holeResultPick :: T m Guid
-  , _holeResultPickAndGiveAsArg :: T m Guid
-  , _holeResultPickAndGiveAsArgToOperator :: T m Guid
-  , _holeResultMPickAndCallWithArg :: T m (Maybe (T m Guid))
-  , _holeResultMPickAndCallWithNextArg :: T m (Maybe (T m Guid))
+  , _holeResultPickPrefix :: PrefixAction m
   }
 
 data HoleActions m = HoleActions

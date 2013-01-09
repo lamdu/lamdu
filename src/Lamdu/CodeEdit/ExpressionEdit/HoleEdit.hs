@@ -494,7 +494,7 @@ pickEventMap holeInfo searchTerm (Just (resultType, result))
     \x -> do
       targetGuid <-
         case resultType of
-        GoodResult -> result ^. Sugar.holeResultPickAndGiveAsArgToOperator
+        GoodResult -> result ^. Sugar.holeResultPick -- TODO: this was holeResultPickAndGiveAsArgToOperator
         BadResult -> result ^. Sugar.holeResultPick
       setSearchTermAndJump [x] targetGuid
   | nonEmptyAll (`elem` Config.operatorChars) searchTerm =
@@ -507,22 +507,6 @@ pickEventMap holeInfo searchTerm (Just (resultType, result))
       maybe ((pure . WidgetIds.fromGuid) g) (setSearchTermAndJump [x]) mTarget
 
 pickEventMap _ _ _ = mempty
-
-mkCallsWithArgsEventMap ::
-  MonadA m => Maybe (Sugar.HoleResult m) ->
-  T m (Widget.EventHandlers (T m))
-mkCallsWithArgsEventMap Nothing = pure mempty
-mkCallsWithArgsEventMap (Just result) =
-  mconcat <$> sequence
-  [ maybe mempty mkCallWithArg <$> result ^. Sugar.holeResultMPickAndCallWithArg
-  , maybe mempty mkCallWithNextArg <$> result ^. Sugar.holeResultMPickAndCallWithNextArg
-  ]
-  where
-    mkCallWithArg = eventMap Config.callWithArgumentKeys "Pick and give arg"
-    mkCallWithNextArg = eventMap Config.callWithNextArgumentKeys "Pick and give next arg"
-    eventMap keys doc f =
-      E.keyPresses keys (E.Doc ["Edit", "Result", doc]) $
-      Widget.eventResultFromCursor . WidgetIds.fromGuid <$> f
 
 markTypeMatchesAsUsed :: MonadA m => HoleInfo m -> ExprGuiM m ()
 markTypeMatchesAsUsed holeInfo =
@@ -539,13 +523,10 @@ mkEventMap ::
   MonadA m => HoleInfo m -> String -> Maybe (ResultType, Sugar.HoleResult m) ->
   ExprGuiM m (Widget.EventHandlers (T m))
 mkEventMap holeInfo searchTerm mResult = do
-  callsWithArgsEventMap <-
-    ExprGuiM.transaction . mkCallsWithArgsEventMap $ snd <$> mResult
   cp <- ExprGuiM.readCodeAnchors
   pure $ mconcat
     [ addNewDefinitionEventMap cp holeInfo
     , pickEventMap holeInfo searchTerm mResult
-    , callsWithArgsEventMap
     , maybe mempty
       (E.keyPresses (Config.delForwardKeys ++ Config.delBackwordKeys)
        (E.Doc ["Edit", "Delete"]) .
@@ -582,7 +563,7 @@ makeActiveHoleEdit holeInfo = do
       makeSearchTermWidget holeInfo searchTermId $ snd <$> mResult
     eventMap <- mkEventMap holeInfo searchTerm mResult
     maybe (return ())
-      (ExprGuiM.addResultPicker . (^. Lens._2 . Sugar.holeResultPick)) mResult
+      (ExprGuiM.addResultPicker . (^. Lens._2 . Sugar.holeResultPickPrefix)) mResult
     let adHocEditor = adHocTextEditEventMap $ hiSearchTerm holeInfo
     return .
       Lens.over ExpressionGui.egWidget

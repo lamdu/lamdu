@@ -65,7 +65,7 @@ type AccessedVars = [Guid]
 
 data Output m = Output
   { oAccessedVars :: AccessedVars
-  , oHolePickers :: [T m Guid]
+  , oHolePickers :: [Sugar.PrefixAction m]
   }
 derive makeMonoid ''Output
 
@@ -185,13 +185,13 @@ listener f =
 listenUsedVariables :: MonadA m => ExprGuiM m a -> ExprGuiM m (a, [Guid])
 listenUsedVariables = listener oAccessedVars
 
-listenResultPickers :: MonadA m => ExprGuiM m a -> ExprGuiM m (a, [T m Guid])
+listenResultPickers :: MonadA m => ExprGuiM m a -> ExprGuiM m (a, [T m ()])
 listenResultPickers = listener oHolePickers
 
 markVariablesAsUsed :: MonadA m => AccessedVars -> ExprGuiM m ()
 markVariablesAsUsed vars = ExprGuiM $ RWS.tell mempty { oAccessedVars = vars }
 
-addResultPicker :: MonadA m => T m Guid -> ExprGuiM m ()
+addResultPicker :: MonadA m => T m () -> ExprGuiM m ()
 addResultPicker picker = ExprGuiM $ RWS.tell mempty { oHolePickers = [picker] }
 
 -- Auto-generating names

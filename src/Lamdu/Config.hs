@@ -40,12 +40,13 @@ movePaneUpKeys    = [mk E.alt E.KeyUp]
 replaceKeys       = [alt 'r']
 
 pickResultKeys    = [noMods E.KeyEnter]
+pickAndMoveToNextHoleKeys = [noMods E.KeySpace]
+
 jumpToDefinitionKeys = [noMods E.KeyEnter]
 
 delForwardKeys      = [noMods E.KeyDel, mk E.alt E.KeyDel]
 delBackwordKeys     = [noMods E.KeyBackspace]
 giveAsArgumentKeys  = [k ']']
-pickAndMoveToNextHoleKeys = [noMods E.KeySpace]
 callWithArgumentKeys = [shift '9']
 callWithNextArgumentKeys = [shift '0']
 debugModeKeys = [ctrlAlt 'd']

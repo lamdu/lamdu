@@ -48,10 +48,12 @@ pasteEventMap =
 
 make :: MonadA m => Sugar.Expression m -> ExprGuiM m (ExpressionGui m)
 make sExpr = assignCursor $ do
-  (isHole, widget) <- makeEditor sExpr exprId
+  ((isHole, widget), resultPickers) <-
+    ExprGuiM.listenResultPickers $ makeEditor sExpr exprId
   typeEdits <- traverse make $ payload ^. Sugar.plInferredTypes
   let onReadOnly = Widget.doesntTakeFocus
-  exprEventMap <- expressionEventMap exprGuid isHole $ sExpr ^. Sugar.rPayload
+  exprEventMap <-
+    expressionEventMap exprGuid isHole resultPickers $ sExpr ^. Sugar.rPayload
   settings <- ExprGuiM.readSettings
   let
     addInferredTypes =
@@ -118,31 +120,32 @@ makeEditor sExpr =
 
 expressionEventMap ::
   MonadA m =>
-  Guid -> IsHole ->
+  Guid -> IsHole -> [Sugar.PrefixAction m] ->
   Sugar.Payload m ->
   ExprGuiM m (EventHandlers (Transaction m))
-expressionEventMap exprGuid isHole payload =
-  maybe (return mempty) (actionsEventMap exprGuid isHole) $
+expressionEventMap exprGuid isHole resultPickers payload =
+  maybe (return mempty) (actionsEventMap exprGuid isHole resultPickers) $
   payload ^. Sugar.plActions
 
 actionsEventMap ::
   MonadA m =>
-  Guid -> IsHole -> Sugar.Actions m ->
+  Guid -> IsHole -> [Sugar.PrefixAction m] ->
+  Sugar.Actions m ->
   ExprGuiM m (EventHandlers (Transaction m))
-actionsEventMap exprGuid isHole actions = do
+actionsEventMap exprGuid isHole resultPickers actions = do
   isSelected <- ExprGuiM.widgetEnv . WE.isSubCursor $ WidgetIds.fromGuid exprGuid
   callWithArgsEventMap <-
     if isSelected
     then
       mconcat <$> sequence
       [ maybe mempty
-        (mkEventMap Config.callWithArgumentKeys (E.Doc ["Edit", "Call with argument"])
+        (mkEventMap Config.callWithArgumentKeys (E.Doc ["Edit", docPrefix ++ "Call with argument"])
          FocusDelegator.delegatingId) <$>
-        ExprGuiM.transaction (actions ^. Sugar.callWithArg)
+        ExprGuiM.transaction ((actions ^. Sugar.callWithArg) prefix)
       , maybe mempty
-        (mkEventMap Config.callWithNextArgumentKeys (E.Doc ["Edit", "Add argument"])
+        (mkEventMap Config.callWithNextArgumentKeys (E.Doc ["Edit", docPrefix ++ "Add argument"])
          FocusDelegator.delegatingId) <$>
-        ExprGuiM.transaction (actions ^. Sugar.callWithNextArg)
+        ExprGuiM.transaction ((actions ^. Sugar.callWithNextArg) prefix)
       ]
     else return mempty
   let
@@ -162,11 +165,16 @@ actionsEventMap exprGuid isHole actions = do
     , cut
     ]
   where
+    docPrefix
+      | null resultPickers = ""
+      | otherwise = "Pick and "
+    prefix = sequence_ resultPickers
     delKeys = concat [Config.replaceKeys, Config.delForwardKeys, Config.delBackwordKeys]
     giveAsArg =
       Widget.keysEventMapMovesCursor
-      Config.giveAsArgumentKeys (E.Doc ["Edit", "Give as argument"]) . fmap WidgetIds.fromGuid $
-      actions ^. Sugar.giveAsArg
+      Config.giveAsArgumentKeys (E.Doc ["Edit", "Give as argument"]) .
+      fmap WidgetIds.fromGuid $
+      (actions ^. Sugar.giveAsArg) Sugar.emptyPrefixAction
     addOperator =
       (fmap . fmap) Widget.eventResultFromCursor .
       E.charGroup "Operator" (E.Doc ["Edit", "Apply operator"])
