@@ -62,7 +62,7 @@ type CodeProps = Anchors.CodeProps ViewM
 type RevisionProps = Anchors.RevisionProps DbM
 
 codeProps :: CodeProps
-codeProps = Anchors.onCode Transaction.mkProperty codeIRefs
+codeProps = Anchors.onCode Transaction.mkPropertyFromIRef codeIRefs
 
 revisionProps :: RevisionProps
-revisionProps = Anchors.onRevision Transaction.mkProperty revisionIRefs
+revisionProps = Anchors.onRevision Transaction.mkPropertyFromIRef revisionIRefs

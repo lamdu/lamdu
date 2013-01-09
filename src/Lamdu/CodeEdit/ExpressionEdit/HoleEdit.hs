@@ -633,7 +633,7 @@ makeUnwrapped ::
 makeUnwrapped hole mNextHole guid myId = do
   cursor <- ExprGuiM.widgetEnv WE.readCursor
   searchTermProp <-
-    ExprGuiM.transaction . Transaction.getMkProperty $ Anchors.assocSearchTermRef guid
+    ExprGuiM.transaction $ Anchors.assocSearchTermRef guid ^. Transaction.mkProperty
   case (hole ^. Sugar.holeMActions, Widget.subId myId cursor) of
     (Just holeActions, Just _) ->
       let

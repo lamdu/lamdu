@@ -5,7 +5,7 @@ module Lamdu.BranchGUI
   ) where
 
 import Control.Applicative (pure)
-import Control.Lens ((%~))
+import Control.Lens ((%~), (^.))
 import Control.Monad.Trans.Class (lift)
 import Control.MonadA (MonadA)
 import Data.List (findIndex)
@@ -102,8 +102,8 @@ make transaction size actions widget = do
     makeBranchNameEdit branch = do
       let branchEditId = WidgetIds.fromGuid $ Branch.guid branch
       nameProp <-
-        lift . transaction . (fmap . Lens.over (Property.pSet . Lens.mapped)) transaction .
-        Transaction.getMkProperty $ branchNameProp branch
+        lift . transaction . (fmap . Lens.over (Property.pSet . Lens.mapped)) transaction $
+        branchNameProp branch ^. Transaction.mkProperty
       branchNameEdit <-
         BWidgets.wrapDelegatedOT branchNameFDConfig
         FocusDelegator.NotDelegating id

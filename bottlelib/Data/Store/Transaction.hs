@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, RankNTypes #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, RankNTypes, TemplateHaskell #-}
 
 module Data.Store.Transaction
   ( Transaction, run
@@ -17,12 +17,13 @@ module Data.Store.Transaction
   , followBy
   , anchorRef, anchorRefDef
   , assocDataRef, assocDataRefDef
-  , MkProperty(..), mkProperty, atMkProperty
+  , MkProperty(..), mkProperty, mkPropertyFromIRef
   , getP, setP, modP
   )
 where
 
 import Control.Applicative (Applicative)
+import Control.Lens ((&), (%~))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT, ask)
 import Control.Monad.Trans.State (StateT, runStateT, evalStateT, get, gets, modify)
@@ -36,7 +37,9 @@ import Data.Monoid (mempty)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (IRef, Tag)
 import Data.Store.Rev.Change (Key, Value)
-import Prelude                          hiding (lookup)
+import Prelude hiding (lookup)
+import qualified Control.Lens as Lens
+import qualified Control.Lens.TH as LensTH
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
@@ -182,19 +185,14 @@ run store transaction = do
   storeAtomicWrite store $ Map.toList changes
   return res
 
-newtype MkProperty m a = MkProperty { getMkProperty :: Transaction m (Property m a) }
+newtype MkProperty m a = MkProperty { _mkProperty :: Transaction m (Property m a) }
+LensTH.makeLenses ''MkProperty
 
-mkProperty :: (MonadA m, Binary a) => IRef (Tag m) a -> MkProperty m a
-mkProperty = MkProperty . fromIRef
-
-atMkProperty ::
-  (Transaction m (Property m a) ->
-   Transaction n (Property n b)) ->
-  MkProperty m a -> MkProperty n b
-atMkProperty f (MkProperty t) = MkProperty (f t)
+mkPropertyFromIRef :: (MonadA m, Binary a) => IRef (Tag m) a -> MkProperty m a
+mkPropertyFromIRef = MkProperty . fromIRef
 
 getP :: MonadA m => MkProperty m a -> Transaction m a
-getP = fmap Property.value . getMkProperty
+getP = fmap Property.value . Lens.view mkProperty
 
 setP :: MonadA m => MkProperty m a -> a -> Transaction m ()
 setP (MkProperty mkProp) val = do
@@ -217,8 +215,8 @@ assocDataRef str guid = MkProperty $ do
 
 assocDataRefDef :: (Eq a, Binary a, MonadA m) => a -> ByteString -> Guid -> MkProperty m a
 assocDataRefDef def str guid =
-  (atMkProperty . fmap . Property.pureCompose (fromMaybe def)) f $
   assocDataRef str guid
+  & mkProperty . Lens.mapped %~ Property.pureCompose (fromMaybe def) f
   where
     f x
       | x == def = Nothing

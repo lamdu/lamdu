@@ -142,7 +142,7 @@ makeNameEdit (nameSrc, name) ident myId =
   (Lens.set TextEdit.sEmptyUnfocusedString name .
    Lens.set TextEdit.sEmptyFocusedString (concat ["<", name, ">"])) $
   ExprGuiM.widgetEnv . flip makeEditor myId =<<
-  (ExprGuiM.transaction . Transaction.getMkProperty . Anchors.assocNameRef) ident
+  (ExprGuiM.transaction . Lens.view Transaction.mkProperty . Anchors.assocNameRef) ident
   where
     makeEditor =
       (fmap . fmap . fmap . Lens.over Widget.wEventMap)
