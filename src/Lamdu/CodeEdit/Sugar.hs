@@ -16,8 +16,9 @@ module Lamdu.CodeEdit.Sugar
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
   , Section(..)
-  , Hole(..), holeScope, holeMActions, holeInferResults
-  , HoleActions(..), holePaste, holeMDelete
+  , Hole(..), holeScope, holeMActions
+  , HoleActions(..)
+    , holePaste, holeMDelete, holeResult, holeInferExprType
   , HoleResult(..)
     , holeResultInferred
     , holeResultConvert, holeResultMPickAndCallWithArg
@@ -38,13 +39,10 @@ import Control.Lens (SimpleTraversal, (.~), (^.), (&), (%~), (.~), (^?), (^..), 
 import Control.Monad ((<=<), join, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, runState)
-import Control.Monad.Trans.Writer (runWriter)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary)
 import Data.Function (on)
-import Data.List.Utils (sortOn)
-import Data.Maybe (listToMaybe, maybeToList, isJust)
-import Data.Monoid (Any(..))
+import Data.Maybe (listToMaybe, isJust)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag, Tagged)
 import Data.Traversable (traverse)
@@ -57,7 +55,6 @@ import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), iwcInferredTypes, iwcInferredValues)
 import System.Random (RandomGen)
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Binary.Utils as BinaryUtils
 import qualified Data.Cache as Cache
 import qualified Data.Foldable as Foldable
@@ -582,11 +579,6 @@ mkPaste exprP = do
       ~() <- replacer clip
       return $ DataIRef.exprGuid clip
 
-resultComplexityScore :: DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) -> Int
-resultComplexityScore =
-  sum . map (subtract 2 . length . Foldable.toList . Infer.iType) .
-  Foldable.toList
-
 inferOnTheSide ::
   MonadA m =>
   Infer.Context (DefI (Tag m)) -> Infer.Scope (DefI (Tag m)) ->
@@ -598,24 +590,6 @@ inferOnTheSide holeInferContext scope expr =
   where
     (node, sideInferContext) =
       (`runState` holeInferContext) $ Infer.newNodeWithScope scope
-
-inferApplyForms ::
-  MonadA m =>
-  Infer.Context (DefI (Tag m)) ->
-  Infer.Scope (DefI (Tag m)) ->
-  ( DataIRef.ExpressionM m () ->
-    T m (Maybe (DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))))
-  ) ->
-  DataIRef.ExpressionM m () ->
-  T m [DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))]
-inferApplyForms holeInferContext scope processRes expr =
-  fmap (sortOn resultComplexityScore) . makeApplyForms =<<
-  inferOnTheSide holeInferContext scope expr
-  where
-    makeApplyForms Nothing = return []
-    makeApplyForms (Just i) =
-      fmap (concat . map maybeToList) . traverse processRes $
-      ExprUtil.applyForms i expr
 
 mkHoleResult ::
   (MonadA m, Typeable1 m) => SugarM.Context m ->
@@ -655,12 +629,12 @@ addPickAndCallWithNextArg ::
   Expression m -> Expression m
 addPickAndCallWithNextArg sugarContext applyS argS =
   rExpressionBody . expressionHole . holeMActions . Lens.mapped .
-  holeInferResults . Lens.mapped . Lens.mapped . Lens.mapped %~ onHoleResult
+  holeResult . Lens.mapped . Lens.mapped . Lens.mapped %~ onHoleResult
   where
-    onHoleResult holeResult =
-      holeResult
+    onHoleResult result =
+      result
       & holeResultMPickAndCallWithNextArg .~
-        newPickAndCallWithArg (holeResult ^. holeResultInferred)
+        newPickAndCallWithArg (result ^. holeResultInferred)
 
     -- In this context we return the new actions of an apply's arg
     -- (which is a hole):
@@ -690,10 +664,12 @@ convertTypeCheckedHoleH
       k -> m v -> StateT Cache.Cache m v
     memoBy x act = Cache.memoS (const act) (x, eGuid, contextHash)
 
-    inferResults expr =
-      memoBy expr $ inferApplyForms inferState scope check expr
+    inferResult expr =
+      memoBy ('r', expr) $
+      check expr
     inferExprType expr =
-      memoBy expr $ inferOnTheSide inferState scope expr
+      memoBy ('t', expr) $
+      inferOnTheSide inferState scope expr
     onScopeElement (param, _typeExpr) = param
     hole =
       Hole $
@@ -705,9 +681,9 @@ convertTypeCheckedHoleH
       , _holeMDelete = Nothing
       , _holeScope = map onScopeElement . Map.toList $ Infer.iScope inferred
       , _holeInferExprType = inferExprType
-      , _holeInferResults =
-        (fmap . map) (mkHoleResult sugarContext exprS) .
-        inferResults
+      , _holeResult =
+        (fmap . fmap) (mkHoleResult sugarContext exprS) .
+        inferResult
       }
     inferredHole =
       mkExpression exprI .

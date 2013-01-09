@@ -23,7 +23,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , Section(..)
   , Hole(..), holeScope, holeMActions
   , HoleActions(..)
-    , holePaste, holeMDelete, holeInferResults, holeInferExprType
+    , holePaste, holeMDelete, holeResult, holeInferExprType
   , HoleResult(..)
     , holeResultInferred
     , holeResultConvert, holeResultMPickAndCallWithArg
@@ -143,7 +143,7 @@ data HoleActions m = HoleActions
     -- If given expression does not type check on its own, returns Nothing.
     -- (used by HoleEdit to suggest variations based on type)
     _holeInferExprType :: DataIRef.ExpressionM m () -> CT m (Maybe (DataIRef.ExpressionM m ()))
-  , _holeInferResults :: DataIRef.ExpressionM m () -> CT m [HoleResult m]
+  , _holeResult :: DataIRef.ExpressionM m () -> CT m (Maybe (HoleResult m))
   , _holePaste :: Maybe (T m Guid)
   , -- TODO: holeMDelete is always Nothing, not implemented yet
     _holeMDelete :: Maybe (T m Guid)

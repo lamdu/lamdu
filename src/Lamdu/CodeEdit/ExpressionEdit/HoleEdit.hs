@@ -32,6 +32,7 @@ import Lamdu.Data.Expression.IRef (DefI)
 import System.Random.Utils (randFunc)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
+import qualified Data.Foldable as Foldable
 import qualified Data.List.Class as List
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
@@ -50,6 +51,7 @@ import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression as Expression
+import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Ops as DataOps
@@ -232,26 +234,41 @@ resultsPrefixId holeInfo = mconcat [hiHoleId holeInfo, Widget.Id ["results"]]
 widgetIdHash :: Show a => a -> Widget.Id
 widgetIdHash = WidgetIds.fromGuid . randFunc . show
 
+resultComplexityScore :: DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) -> Int
+resultComplexityScore =
+  sum . map (subtract 2 . length . Foldable.toList . Infer.iType) .
+  Foldable.toList
+
 toResultsList ::
   MonadA m => HoleInfo m -> DataIRef.ExpressionM m () ->
   CT m (Maybe (ResultsList m))
 toResultsList holeInfo baseExpr = do
-  results <- hiHoleActions holeInfo ^. Sugar.holeInferResults $ baseExpr
-  return $
-    case results of
-    [] -> Nothing
-    (x:xs) ->
-      let baseId = widgetIdHash baseExpr
-      in Just ResultsList
-        { rlFirstId = mconcat [resultsPrefixId holeInfo, baseId]
-        , rlMoreResultsPrefixId =
-          mconcat [resultsPrefixId holeInfo, Widget.Id ["more results"], baseId]
-        , rlFirst = x
-        , rlMore =
-          case xs of
-          [] -> Nothing
-          _ -> Just xs
-        }
+  mBaseExprType <- hiHoleActions holeInfo ^. Sugar.holeInferExprType $ baseExpr
+  case mBaseExprType of
+    Nothing -> return Nothing
+    Just baseExprType -> do
+      results <-
+        sortOn (resultComplexityScore . Lens.view Sugar.holeResultInferred) .
+        concat . map maybeToList <$>
+        traverse
+        (hiHoleActions holeInfo ^. Sugar.holeResult)
+        (ExprUtil.applyForms baseExprType baseExpr)
+      return $
+        case results of
+        [] -> Nothing
+        (x:xs) ->
+          Just ResultsList
+          { rlFirstId = mconcat [resultsPrefixId holeInfo, baseId]
+          , rlMoreResultsPrefixId =
+            mconcat [resultsPrefixId holeInfo, Widget.Id ["more results"], baseId]
+          , rlFirst = x
+          , rlMore =
+            case xs of
+            [] -> Nothing
+            _ -> Just xs
+          }
+  where
+    baseId = widgetIdHash baseExpr
 
 data ResultType = GoodResult | BadResult
 
@@ -318,8 +335,8 @@ addNewDefinitionEventMap cp holeInfo =
       Transaction.setP (Anchors.assocNameRef (IRef.guid newDefI)) newName
       DataOps.newPane cp newDefI
       defRef <-
-        fmap (fromMaybe (error "GetDef should always type-check") . listToMaybe) .
-        ExprGuiM.unmemo . (hiHoleActions holeInfo ^. Sugar.holeInferResults) .
+        fmap (fromMaybe (error "GetDef should always type-check")) .
+        ExprGuiM.unmemo . (hiHoleActions holeInfo ^. Sugar.holeResult) .
         ExprUtil.pureExpression $ Lens.review ExprUtil.bodyDefinitionRef newDefI
       -- TODO: Can we use pickResult's animIdMapping?
       eventResult <- holePickResult defRef
@@ -515,8 +532,8 @@ markTypeMatchesAsUsed holeInfo =
   (hiHoleActions holeInfo ^. Sugar.holeScope)
   where
     checkInfer =
-      fmap (isJust . listToMaybe) . ExprGuiM.liftMemoT .
-      (hiHoleActions holeInfo ^. Sugar.holeInferResults)
+      fmap isJust . ExprGuiM.liftMemoT .
+      (hiHoleActions holeInfo ^. Sugar.holeResult)
 
 mkEventMap ::
   MonadA m => HoleInfo m -> String -> Maybe (ResultType, Sugar.HoleResult m) ->
