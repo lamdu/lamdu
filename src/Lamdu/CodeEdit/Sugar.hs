@@ -41,6 +41,7 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, runState)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary)
+import Data.Cache (Cache)
 import Data.Function (on)
 import Data.Maybe (listToMaybe, isJust)
 import Data.Store.Guid (Guid)
@@ -613,6 +614,11 @@ mkHoleResult sugarContext exprS res =
       SugarInfer.resultFromInferred
     pick = pickResult (resultGuid exprS) exprS res
 
+memoBy ::
+  (Cache.Key k, Binary v, MonadA m) =>
+  k -> m v -> StateT Cache m v
+memoBy k act = Cache.memoS (const act) k
+
 convertTypeCheckedHoleH ::
   (MonadA m, Typeable1 m) => SugarM.Context m -> Maybe (T m Guid) ->
   InferredWC (Tag m) -> Convertor m
@@ -627,17 +633,11 @@ convertTypeCheckedHoleH
     scope = Infer.nScope $ Infer.iPoint inferred
     check expr = SugarInfer.inferMaybe_ Nothing expr inferState $ Infer.iPoint inferred
 
-    memoBy ::
-      (Cache.Key k, Binary v, MonadA m) =>
-      k -> m v -> StateT Cache.Cache m v
-    memoBy x act = Cache.memoS (const act) (x, eGuid, contextHash)
-
+    token = (eGuid, contextHash)
     inferResult expr =
-      memoBy ('r', expr) $
-      check expr
+      memoBy (token, expr, 'r') $ check expr
     inferExprType expr =
-      memoBy ('t', expr) $
-      inferOnTheSide inferState scope expr
+      memoBy (token, expr, 't') $ inferOnTheSide inferState scope expr
     onScopeElement (param, _typeExpr) = param
     hole =
       Hole $
