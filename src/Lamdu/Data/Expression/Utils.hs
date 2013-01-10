@@ -31,7 +31,7 @@ import Prelude hiding ((.))
 import Control.Category ((.))
 
 import Control.Applicative (Applicative(..), liftA2, (<$>))
-import Control.Lens (Simple, Prism, (^.), (^?), (+~))
+import Control.Lens (Simple, Prism, Prismatic, (^.), (^?), (+~))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (evalState, state)
@@ -208,7 +208,12 @@ data LambdaWrapper = LambdaWrapperLambda | LambdaWrapperPi
   deriving (Eq, Ord, Show, Typeable)
 derive makeBinary ''LambdaWrapper
 
-lambdaWrapperPrism :: LambdaWrapper -> Simple Prism (Body def expr) (Lambda expr)
+type PrismLike f k s t a b = k (a -> f b) (s -> f t)
+type SimplePrismLike f k s a = PrismLike f k s s a a
+
+lambdaWrapperPrism ::
+  (Prismatic k, Applicative f) =>
+  LambdaWrapper -> SimplePrismLike f k (Body def expr) (Lambda expr)
 lambdaWrapperPrism LambdaWrapperLambda = bodyLambda
 lambdaWrapperPrism LambdaWrapperPi = bodyPi
 
