@@ -124,7 +124,7 @@ data ResultsList m = ResultsList
   { rlFirstId :: Widget.Id
   , rlMoreResultsPrefixId :: Widget.Id
   , rlFirst :: Sugar.HoleResult m
-  , rlMore :: Maybe [Sugar.HoleResult m]
+  , rlMore :: [Sugar.HoleResult m]
   }
 
 resultsToWidgets
@@ -150,10 +150,12 @@ resultsToWidgets holeInfo (resultType, results) = do
             return ((resultType, result), Just widget)
         else return Nothing
   fmap (flip (,) extra) .
-    maybe return (const addMoreSymbol) (rlMore results) =<<
+    (if null (rlMore results) then return else addMoreSymbol) =<<
     toWidget myId (rlFirst results)
   where
-    makeExtra = traverse makeMoreResults $ rlMore results
+    makeExtra
+      | null (rlMore results) = return Nothing
+      | otherwise = Just <$> makeMoreResults (rlMore results)
     makeMoreResults moreResults = do
       pairs <- traverse moreResult moreResults
       return
@@ -268,10 +270,7 @@ toMResultsList holeInfo baseId options = do
       , rlMoreResultsPrefixId =
         mconcat [resultsPrefixId holeInfo, Widget.Id ["more results"], baseId]
       , rlFirst = x
-      , rlMore =
-        case xs of
-        [] -> Nothing
-        _ -> Just xs
+      , rlMore = xs
       }
 
 baseExprToResultsList ::
