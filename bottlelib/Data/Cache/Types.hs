@@ -16,7 +16,7 @@ data PriorityData = PriorityData
   } deriving Eq
 
 priorityScore :: PriorityData -> Int64
-priorityScore (PriorityData use mem) = use - fromIntegral mem
+priorityScore (PriorityData use mem) = use*use - fromIntegral mem
 
 instance Ord PriorityData where
   x <= y
