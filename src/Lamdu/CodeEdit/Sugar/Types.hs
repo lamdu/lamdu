@@ -5,7 +5,9 @@ module Lamdu.CodeEdit.Sugar.Types
   , FuncParamActions(..), fpListItemActions, fpGetExample
   , DefinitionExpression(..), DefinitionContent(..), DefinitionNewType(..)
   , DefinitionBuiltin(..)
-  , Actions(..), giveAsArg, callWithArg, callWithNextArg, setToHole, cut, giveAsArgToOperator
+  , Actions(..)
+    , giveAsArg, callWithArg, callWithNextArg
+    , setToHole, replaceWithNewHole, cut, giveAsArgToOperator
   , ExpressionBody(..), eHasParens
     , expressionPi, expressionApply, expressionSection
     , expressionFunc, expressionGetVariable, expressionHole
@@ -69,6 +71,7 @@ data Actions m = Actions
   , _callWithNextArg :: PrefixAction m -> CT m (Maybe (T m Guid))
   , _callWithArg :: PrefixAction m -> CT m (Maybe (T m Guid))
   , _setToHole :: T m Guid
+  , _replaceWithNewHole :: T m Guid
   , _cut :: T m Guid
   }
 LensTH.makeLenses ''Actions

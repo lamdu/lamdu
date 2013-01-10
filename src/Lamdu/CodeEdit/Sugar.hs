@@ -5,7 +5,9 @@ module Lamdu.CodeEdit.Sugar
   , FuncParamActions(..), fpListItemActions, fpGetExample
   , DefinitionExpression(..), DefinitionContent(..), DefinitionNewType(..)
   , DefinitionBuiltin(..)
-  , Actions(..), giveAsArg, callWithArg, callWithNextArg, setToHole, cut, giveAsArgToOperator
+  , Actions(..)
+    , giveAsArg, callWithArg, callWithNextArg
+    , setToHole, replaceWithNewHole, cut, giveAsArgToOperator
   , ExpressionBody(..)
   , Payload(..), plInferredTypes, plActions, plNextHole
   , ExpressionP(..)
@@ -124,6 +126,7 @@ mkActions sugarContext exprS =
   , _callWithArg = mkCallWithArg sugarContext exprS
   , _callWithNextArg = pure (pure Nothing)
   , _setToHole = doReplace DataOps.setToHole
+  , _replaceWithNewHole = doReplace DataOps.replaceWithHole
   , _cut = mkCutter (SugarM.scCodeAnchors sugarContext) (Property.value stored) $ doReplace DataOps.replaceWithHole
   , _giveAsArgToOperator = DataIRef.exprGuid <$> DataOps.giveAsArgToOperator stored
   }

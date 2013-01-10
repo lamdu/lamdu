@@ -178,7 +178,7 @@ actionsEventMap sExpr isHole resultPickers actions = do
       (fmap . fmap) Widget.eventResultFromCursor .
       E.charGroup "Operator" (E.Doc ["Edit", "Apply operator"])
       Config.operatorChars $ \c _isShifted -> do
-        targetGuid <- actions ^. Sugar.setToHole
+        targetGuid <- actions ^. Sugar.replaceWithNewHole
         HoleEdit.setHoleStateAndJump
           HoleState
           { _hsSearchTerm = [c]
