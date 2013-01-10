@@ -352,7 +352,7 @@ makeAllResults holeInfo = do
     relevantResults =
       case state ^. hsArgument of
       Just _ -> getVarResults
-      Nothing -> getVarResults ++ literalResults ++ primitiveResults
+      Nothing -> primitiveResults ++ literalResults ++ getVarResults
   return .
     List.catMaybes .
     List.mapL (makeResultsList holeInfo) .
