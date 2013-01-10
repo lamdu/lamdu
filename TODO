@@ -1,5 +1,10 @@
 * When applying operator, avoid recreating argument expression
 
+* Dependent lambdas/pis get "t" prefix in name
+
+* TEST: Missing a test to verify that recursive references have a recursive
+  type rather than the type "in db"
+
 * Holes not entered in navigation, left with ESC or otherwise pick their
   result?
   * Could be annoying if you wanna go somewhere to check something and you have
@@ -23,9 +28,6 @@
 
 * Ops.addListItem should be giveAsArgTo which should take the expr to
   write in the function side
-
-* TEST: Missing a test to verify that recursive references have a recursive
-  type rather than the type "in db"
 
 * TYPE SYSTEM: Type synonyms/expansions
 
