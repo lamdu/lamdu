@@ -7,7 +7,7 @@ module Lamdu.CodeEdit.ExpressionEdit.HoleEdit
   ) where
 
 import Control.Applicative (Applicative(..), (<$>), (<$))
-import Control.Lens ((^.), (&), (%~), (.~))
+import Control.Lens ((^.), (&), (%~), (.~), (^?))
 import Control.Monad ((<=<), filterM, mplus, msum, void, guard, join)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.State (StateT)
@@ -303,12 +303,22 @@ applyOperatorResultsList argument holeInfo baseExpr = do
           ExprUtil.pureExpression . ExprUtil.makeApply (applyBase x)
       in
         toMResultsList holeInfo baseId
-        [ fullyApplied argument ExprUtil.pureHole
-        , fullyApplied ExprUtil.pureHole argument
-        , applyBase argument
+        [ fullyApplied unwrappedArg ExprUtil.pureHole
+        , fullyApplied ExprUtil.pureHole unwrappedArg
+        , applyBase unwrappedArg
         ]
   where
+    unwrappedArg = fromMaybe argument $ removeHoleWrap argument
     baseId = widgetIdHash baseExpr
+
+removeHoleWrap :: Expression def () -> Maybe (Expression def ())
+removeHoleWrap expr = do
+  apply <- expr ^? Expression.eBody . Expression.bodyApply
+  void $
+    apply ^?
+    Expression.applyFunc . Expression.eBody .
+    Expression.bodyLeaf . Expression.hole
+  pure $ apply ^. Expression.applyArg
 
 data ResultType = GoodResult | BadResult
 
