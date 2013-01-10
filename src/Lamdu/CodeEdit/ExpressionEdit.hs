@@ -151,7 +151,7 @@ actionsEventMap sExpr isHole resultPickers actions = do
       | isSelected && isHoleBool = mempty
       | isSelected =
         mkEventMap delKeys (E.Doc ["Edit", "Replace expression"])
-        FocusDelegator.delegatingId $ actions ^. Sugar.replace
+        FocusDelegator.delegatingId $ actions ^. Sugar.setToHole
       | otherwise =
         mkEventMap delKeys (E.Doc ["Navigation", "Select parent"])
         FocusDelegator.notDelegatingId $ return exprGuid
@@ -178,7 +178,7 @@ actionsEventMap sExpr isHole resultPickers actions = do
       (fmap . fmap) Widget.eventResultFromCursor .
       E.charGroup "Operator" (E.Doc ["Edit", "Apply operator"])
       Config.operatorChars $ \c _isShifted -> do
-        targetGuid <- actions ^. Sugar.replace
+        targetGuid <- actions ^. Sugar.setToHole
         HoleEdit.setHoleStateAndJump
           HoleState
           { _hsSearchTerm = [c]
