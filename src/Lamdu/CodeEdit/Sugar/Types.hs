@@ -66,8 +66,8 @@ data Actions m = Actions
   -- Turn "x" to "x ? _" where "?" is an operator-hole.
   -- Given string is initial hole search term.
   , _giveAsArgToOperator :: T m Guid
-  , _callWithNextArg :: PrefixAction m -> T m (Maybe (T m Guid))
-  , _callWithArg :: PrefixAction m -> T m (Maybe (T m Guid))
+  , _callWithNextArg :: PrefixAction m -> CT m (Maybe (T m Guid))
+  , _callWithArg :: PrefixAction m -> CT m (Maybe (T m Guid))
   , _replace :: T m Guid
   , _cut :: T m Guid
   }

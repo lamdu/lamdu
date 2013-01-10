@@ -38,7 +38,7 @@ import Control.Applicative ((<$>), Applicative(..), liftA2)
 import Control.Lens (SimpleTraversal, (.~), (^.), (&), (%~), (.~), (^?), (^..), (<>~))
 import Control.Monad ((<=<), join, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.State (StateT, runState)
+import Control.Monad.Trans.State (StateT, runState, mapStateT)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary)
 import Data.Cache (Cache)
@@ -89,18 +89,18 @@ mkCutter cp expr replaceWithHole = do
   _ <- DataOps.newClipboard cp expr
   replaceWithHole
 
-checkReinferSuccess :: MonadA m => SugarM.Context m -> T m a -> T m Bool
-checkReinferSuccess sugarContext act =
+checkReinferSuccess :: MonadA m => SugarM.Context m -> String -> T m a -> CT m Bool
+checkReinferSuccess sugarContext key act =
   case SugarM.scMReinferRoot sugarContext of
   Nothing -> pure False
   Just reinferRoot ->
-    Transaction.forkScratch $ do
-      _ <- act
-      reinferRoot
+    mapStateT Transaction.forkScratch $ do
+      _ <- lift act
+      reinferRoot key
 
-guardReinferSuccess :: MonadA m => SugarM.Context m -> T m a -> T m (Maybe (T m a))
-guardReinferSuccess sugarContext act = do
-  success <- checkReinferSuccess sugarContext act
+guardReinferSuccess :: MonadA m => SugarM.Context m -> String -> T m a -> CT m (Maybe (T m a))
+guardReinferSuccess sugarContext key act = do
+  success <- checkReinferSuccess sugarContext key act
   pure $
     if success
     then Just act
@@ -109,9 +109,9 @@ guardReinferSuccess sugarContext act = do
 mkCallWithArg ::
   MonadA m => SugarM.Context m ->
   DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i (Stored m)) ->
-  PrefixAction m -> T m (Maybe (T m Guid))
+  PrefixAction m -> CT m (Maybe (T m Guid))
 mkCallWithArg sugarContext exprS prefixAction =
-  guardReinferSuccess sugarContext $ do
+  guardReinferSuccess sugarContext "callWithArg" $ do
     prefixAction
     fmap DataIRef.exprGuid . DataOps.callWithArg $ resultStored exprS
 
@@ -945,7 +945,7 @@ convertDefIExpression cp exprLoaded defI typeI = do
       }
   where
     initialInferState = Infer.initial (Just defI)
-    reinferRoot = do
+    reinferRoot key = memoBy (key, defI, "reinfer root" :: String) $ do
       reloadedRoot <-
         DataIRef.readExpression . Load.irefOfClosure $
         exprLoaded ^. Expression.ePayload

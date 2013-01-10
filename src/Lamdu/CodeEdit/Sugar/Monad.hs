@@ -30,7 +30,7 @@ data Context m = Context
   , scHoleInferState :: Infer.Context (DefI (Tag m))
   , scCodeAnchors :: Anchors.CodeProps m
   , scSpecialFunctions :: Anchors.SpecialFunctions (Tag m)
-  , scMReinferRoot :: Maybe (T m Bool)
+  , scMReinferRoot :: Maybe (String -> CT m Bool)
   }
 
 newtype SugarM m a = SugarM (ReaderT (Context m) (T m) a)
@@ -40,7 +40,7 @@ mkContext ::
   MonadA m => Typeable (m ()) =>
   Anchors.CodeProps m ->
   Maybe (DefI (Tag m)) ->
-  Maybe (T m Bool) ->
+  Maybe (String -> CT m Bool) ->
   InferLoadedResult m ->
   T m (Context m)
 mkContext cp mDefI mReinferRoot iResult = do

@@ -139,11 +139,11 @@ actionsEventMap sExpr isHole resultPickers actions = do
       [ maybe mempty
         (mkEventMap Config.callWithArgumentKeys (E.Doc ["Edit", docPrefix ++ "Call with argument"])
          FocusDelegator.delegatingId) <$>
-        ExprGuiM.transaction ((actions ^. Sugar.callWithArg) prefix)
+        ExprGuiM.liftMemoT ((actions ^. Sugar.callWithArg) prefix)
       , maybe mempty
         (mkEventMap Config.callWithNextArgumentKeys (E.Doc ["Edit", docPrefix ++ "Add argument"])
          FocusDelegator.delegatingId) <$>
-        ExprGuiM.transaction ((actions ^. Sugar.callWithNextArg) prefix)
+        ExprGuiM.liftMemoT ((actions ^. Sugar.callWithNextArg) prefix)
       ]
     else return mempty
   let
