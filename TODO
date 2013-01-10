@@ -1,5 +1,3 @@
-* When applying operator, avoid recreating argument expression
-
 * Dependent lambdas/pis get "t" prefix in name
 
 * TEST: Missing a test to verify that recursive references have a recursive

@@ -31,7 +31,7 @@ import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
-import Lamdu.Data.Expression (Expression)
+import Lamdu.Data.Expression (Expression(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import System.Random.Utils (randFunc)
 import qualified Control.Lens as Lens
@@ -64,9 +64,9 @@ import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
-data HoleState t = HoleState
+data HoleState m = HoleState
   { _hsSearchTerm :: String
-  , _hsArgument :: Maybe (DataIRef.Expression t ())
+  , _hsArgument :: Maybe (DataIRef.ExpressionM m (Maybe (Sugar.StorePoint (Tag m))))
   } deriving Eq
 LensTH.makeLenses ''HoleState
 derive makeBinary ''HoleState
@@ -87,7 +87,7 @@ type CT m = StateT Cache (T m)
 
 data HoleInfo m = HoleInfo
   { hiHoleId :: Widget.Id
-  , hiState :: Property (T m) (HoleState (Tag m))
+  , hiState :: Property (T m) (HoleState m)
   , hiHoleActions :: Sugar.HoleActions m
   , hiGuid :: Guid
   , hiMNextHole :: Maybe (Sugar.Expression m)
@@ -254,7 +254,8 @@ resultComplexityScore =
 
 toMResultsList ::
   MonadA m =>
-  HoleInfo m -> Widget.Id -> [DataIRef.ExpressionM m ()] ->
+  HoleInfo m -> Widget.Id ->
+  [DataIRef.ExpressionM m (Maybe (Sugar.StorePoint (Tag m)))] ->
   StateT Cache (T m) (Maybe (ResultsList m))
 toMResultsList holeInfo baseId options = do
   results <-
@@ -281,13 +282,14 @@ baseExprToResultsList holeInfo baseExpr = do
   case mBaseExprType of
     Nothing -> pure Nothing
     Just baseExprType ->
-      toMResultsList holeInfo baseId $ ExprUtil.applyForms baseExprType baseExpr
+      toMResultsList holeInfo baseId . map (Nothing <$) $
+      ExprUtil.applyForms baseExprType baseExpr
   where
     baseId = widgetIdHash baseExpr
 
 applyOperatorResultsList ::
   MonadA m =>
-  DataIRef.ExpressionM m () ->
+  DataIRef.ExpressionM m (Maybe (Sugar.StorePoint (Tag m))) ->
   HoleInfo m -> DataIRef.ExpressionM m () ->
   CT m (Maybe (ResultsList m))
 applyOperatorResultsList argument holeInfo baseExpr = do
@@ -296,22 +298,22 @@ applyOperatorResultsList argument holeInfo baseExpr = do
     Nothing -> pure Nothing
     Just baseExprType ->
       let
-        base = ExprUtil.applyDependentPis baseExprType baseExpr
-        applyBase =
-          ExprUtil.pureExpression . ExprUtil.makeApply base
-        fullyApplied x =
-          ExprUtil.pureExpression . ExprUtil.makeApply (applyBase x)
+        base = Nothing <$ ExprUtil.applyDependentPis baseExprType baseExpr
+        applyBase = genExpr . ExprUtil.makeApply base
+        fullyApplied x = genExpr . ExprUtil.makeApply (applyBase x)
       in
         toMResultsList holeInfo baseId
-        [ fullyApplied unwrappedArg ExprUtil.pureHole
-        , fullyApplied ExprUtil.pureHole unwrappedArg
+        [ fullyApplied unwrappedArg hole
+        , fullyApplied hole unwrappedArg
         , applyBase unwrappedArg
         ]
   where
+    genExpr = (`Expression` Nothing)
+    hole = genExpr $ Expression.BodyLeaf Expression.Hole
     unwrappedArg = fromMaybe argument $ removeHoleWrap argument
     baseId = widgetIdHash baseExpr
 
-removeHoleWrap :: Expression def () -> Maybe (Expression def ())
+removeHoleWrap :: Expression def a -> Maybe (Expression def a)
 removeHoleWrap expr = do
   apply <- expr ^? Expression.eBody . Expression.bodyApply
   void $
@@ -391,8 +393,9 @@ addNewDefinitionEventMap cp holeInfo =
     DataOps.newPane cp newDefI
     defRef <-
       fmap (fromMaybe (error "GetDef should always type-check")) .
-      ExprGuiM.unmemo . (hiHoleActions holeInfo ^. Sugar.holeResult) .
-      ExprUtil.pureExpression $ Lens.review ExprUtil.bodyDefinitionRef newDefI
+      ExprGuiM.unmemo . (hiHoleActions holeInfo ^. Sugar.holeResult) $
+      Nothing <$
+      ExprUtil.pureExpression (Lens.review ExprUtil.bodyDefinitionRef newDefI)
     targetGuid <- pickResultAndCleanUp holeInfo defRef
     DataOps.savePreJumpPosition cp $ WidgetIds.fromGuid targetGuid
     return Widget.EventResult {
@@ -550,7 +553,7 @@ pickEventMap holeInfo result
     Widget.emptyEventResult <$
     Transaction.setP (assocStateRef (hiGuid holeInfo))
     ( charToHoleState x
-      & hsArgument .~ (Just . void) (result ^. Sugar.holeResultInferred)
+      & hsArgument .~ (Just . (Nothing <$)) (result ^. Sugar.holeResultInferred)
     )
   | nonEmptyAll (`elem` Config.operatorChars) searchTerm =
     alphaNumericHandler (E.Doc ["Edit", "Result", "Pick and resume"]) $ \x -> do
@@ -581,7 +584,8 @@ markTypeMatchesAsUsed holeInfo =
   where
     checkInfer =
       fmap isJust . ExprGuiM.liftMemoT .
-      (hiHoleActions holeInfo ^. Sugar.holeResult)
+      (hiHoleActions holeInfo ^. Sugar.holeResult) .
+      (Nothing <$)
 
 mkEventMap ::
   MonadA m => HoleInfo m -> Maybe (Sugar.HoleResult m) ->
@@ -706,7 +710,7 @@ makeUnwrapped hole mNextHole guid myId = do
 searchTermWidgetId :: Widget.Id -> Widget.Id
 searchTermWidgetId = WidgetIds.searchTermId . FocusDelegator.delegatingId
 
-setHoleStateAndJump :: MonadA m => HoleState (Tag m) -> Guid -> T m Widget.Id
+setHoleStateAndJump :: MonadA m => HoleState m -> Guid -> T m Widget.Id
 setHoleStateAndJump newHoleState newHoleGuid = do
   Transaction.setP (assocStateRef newHoleGuid) newHoleState
   pure . searchTermWidgetId $ WidgetIds.fromGuid newHoleGuid
@@ -718,5 +722,5 @@ emptyState =
   , _hsArgument = Nothing
   }
 
-assocStateRef :: MonadA m => Guid -> MkProperty m (HoleState (Tag m))
+assocStateRef :: MonadA m => Guid -> MkProperty m (HoleState m)
 assocStateRef = Transaction.assocDataRefDef emptyState "searchTerm"

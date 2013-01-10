@@ -22,6 +22,7 @@ module Lamdu.CodeEdit.Sugar
   , Hole(..), holeScope, holeMActions
   , HoleActions(..)
     , holePaste, holeMDelete, holeResult, holeInferExprType
+  , StorePoint
   , HoleResult(..)
     , holeResultInferred
     , holeResultConvert
@@ -36,7 +37,7 @@ module Lamdu.CodeEdit.Sugar
   , PrefixAction, emptyPrefixAction
   ) where
 
-import Control.Applicative ((<$>), Applicative(..), liftA2)
+import Control.Applicative (Applicative(..), (<$>), (<$), liftA2)
 import Control.Lens (SimpleTraversal, (.~), (^.), (&), (%~), (.~), (^?), (^..), (<>~))
 import Control.Monad ((<=<), join, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (lift)
@@ -178,7 +179,9 @@ mkExpression exprI expr = do
       , _plNextHole = Nothing
       }
     , _rHiddenGuids = []
-    , _rPresugaredExpression = void exprI
+    , _rPresugaredExpression =
+      fmap (StorePoint . Property.value) .
+      Lens.view SugarInfer.plStored <$> exprI
     }
   where
     seeds = RandomUtils.splits . mkGen 0 3 $ resultGuid exprI
@@ -221,7 +224,7 @@ mkFuncParamActions lambdaProp (Expression.Lambda param _paramType body) =
       , _rExpressionBody = ExpressionAtom "NotImplemented"
       , _rPayload = Payload [] Nothing Nothing
       , _rHiddenGuids = []
-      , _rPresugaredExpression = ExprUtil.pureHole
+      , _rPresugaredExpression = Nothing <$ ExprUtil.pureHole
       }
   }
 
@@ -600,11 +603,12 @@ inferOnTheSide holeInferContext scope expr =
 mkHoleResult ::
   (MonadA m, Typeable1 m) => SugarM.Context m ->
   DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i (Stored m)) ->
-  DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) -> HoleResult m
+  DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), Maybe (StorePoint (Tag m))) ->
+  HoleResult m
 mkHoleResult sugarContext exprS res =
   HoleResult
-  { _holeResultInferred = res
-  , _holeResultConvert = convertHoleResult res
+  { _holeResultInferred = fst <$> res
+  , _holeResultConvert = convertHoleResult $ fst <$> res
   , _holeResultPick = pick
   , _holeResultPickPrefix = void pick
   }
@@ -634,7 +638,7 @@ convertTypeCheckedHoleH
     contextHash = SugarM.scMContextHash sugarContext
     inferred = iwcInferred iwc
     scope = Infer.nScope $ Infer.iPoint inferred
-    check expr = SugarInfer.inferMaybe_ Nothing expr inferState $ Infer.iPoint inferred
+    check expr = SugarInfer.inferMaybe Nothing expr inferState $ Infer.iPoint inferred
 
     token = (eGuid, contextHash)
     inferResult expr =
@@ -675,15 +679,16 @@ chooseHoleType inferredVals plain inferred =
 pickResult ::
   MonadA m => Guid ->
   DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i (Stored m)) ->
-  DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) ->
+  DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), Maybe (StorePoint (Tag m))) ->
   T m Guid
 pickResult defaultDest exprS =
   fmap
   ( maybe defaultDest
     (DataIRef.exprGuid . Lens.view (Expression.ePayload . Lens._2))
   . listToMaybe . uninferredHoles . fmap swap
-  )
-  . (DataIRef.writeExpression . Property.value . resultStored) exprS
+  ) .
+  (DataIRef.writeExpressionWithStoredSubexpressions . Property.value . resultStored) exprS .
+  fmap (Lens.over (Lens._1 . Lens.mapped) unStorePoint . swap)
 
 -- Also skip param types, those can usually be inferred later, so less
 -- useful to fill immediately

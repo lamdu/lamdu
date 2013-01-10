@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, KindSignatures #-}
+{-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, KindSignatures, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 module Lamdu.CodeEdit.Sugar.Types
   ( Definition(..), DefinitionBody(..)
   , ListItemActions(..), itemAddNext, itemDelete
@@ -27,6 +27,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , Hole(..), holeScope, holeMActions
   , HoleActions(..)
     , holePaste, holeMDelete, holeResult, holeInferExprType
+  , StorePoint(..)
   , HoleResult(..)
     , holeResultInferred
     , holeResultConvert
@@ -40,12 +41,14 @@ module Lamdu.CodeEdit.Sugar.Types
   ) where
 
 import Control.Monad.Trans.State (StateT)
+import Data.Binary (Binary)
 import Data.Cache (Cache)
 import Data.Foldable (Foldable)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (Traversable)
+import Data.Typeable (Typeable)
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Control.Lens.TH as LensTH
 import qualified Data.List as List
@@ -84,6 +87,9 @@ data Payload m = Payload
   , _plNextHole :: Maybe (Expression m)
   }
 
+newtype StorePoint t = StorePoint { unStorePoint :: DataIRef.ExpressionI t }
+  deriving (Eq, Binary, Typeable)
+
 data ExpressionP m pl = Expression
   { _rGuid :: Guid
   , _rExpressionBody :: ExpressionBody m (ExpressionP m pl)
@@ -93,7 +99,7 @@ data ExpressionP m pl = Expression
     -- If the cursor was on them for whatever reason, it should be
     -- mapped into the sugar expression's guid.
     _rHiddenGuids :: [Guid]
-  , _rPresugaredExpression :: DataIRef.ExpressionM m ()
+  , _rPresugaredExpression :: DataIRef.ExpressionM m (Maybe (StorePoint (Tag m)))
   } deriving (Functor, Foldable, Traversable)
 
 type Expression m = ExpressionP m (Payload m)
@@ -149,7 +155,9 @@ data HoleActions m = HoleActions
     -- If given expression does not type check on its own, returns Nothing.
     -- (used by HoleEdit to suggest variations based on type)
     _holeInferExprType :: DataIRef.ExpressionM m () -> CT m (Maybe (DataIRef.ExpressionM m ()))
-  , _holeResult :: DataIRef.ExpressionM m () -> CT m (Maybe (HoleResult m))
+  , _holeResult ::
+      DataIRef.ExpressionM m (Maybe (StorePoint (Tag m))) ->
+      CT m (Maybe (HoleResult m))
   , _holePaste :: Maybe (T m Guid)
   , -- TODO: holeMDelete is always Nothing, not implemented yet
     _holeMDelete :: Maybe (T m Guid)
