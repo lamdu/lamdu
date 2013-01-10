@@ -20,7 +20,7 @@ import Data.Function (on)
 import Data.List (isInfixOf, isPrefixOf)
 import Data.List.Class (List)
 import Data.List.Utils (sortOn, nonEmptyAll)
-import Data.Maybe (isJust, listToMaybe, maybeToList, mapMaybe, fromMaybe)
+import Data.Maybe (isJust, listToMaybe, maybeToList, mapMaybe, fromMaybe, catMaybes)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
@@ -257,7 +257,7 @@ toMResultsList ::
 toMResultsList holeInfo baseId options = do
   results <-
     sortOn (resultComplexityScore . Lens.view Sugar.holeResultInferred) .
-    concat . map maybeToList <$>
+    catMaybes <$>
     traverse (hiHoleActions holeInfo ^. Sugar.holeResult) options
   return $
     case results of
