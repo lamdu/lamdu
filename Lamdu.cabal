@@ -58,6 +58,7 @@ Library
                        Data.Store.Rev.Branch,
                        Data.Store.Rev.View,
                        Data.Store.Transaction,
+                       Data.Store.Map,
                        Data.Store.Property,
                        Data.Store.Db,
 
