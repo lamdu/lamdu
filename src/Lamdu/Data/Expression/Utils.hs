@@ -31,6 +31,7 @@ import Prelude hiding ((.))
 import Control.Category ((.))
 
 import Control.Applicative (Applicative(..), liftA2, (<$>))
+import Control.DeepSeq (NFData(..))
 import Control.Lens (Simple, Prism, Prismatic, (^.), (^?), (+~))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -39,6 +40,7 @@ import Data.Binary (Binary(..))
 import Data.Binary.Get (getWord8)
 import Data.Binary.Put (putWord8)
 import Data.Derive.Binary (makeBinary)
+import Data.Derive.NFData (makeNFData)
 import Data.DeriveTH (derive)
 import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
@@ -207,6 +209,7 @@ funcArguments =
 data LambdaWrapper = LambdaWrapperLambda | LambdaWrapperPi
   deriving (Eq, Ord, Show, Typeable)
 derive makeBinary ''LambdaWrapper
+derive makeNFData ''LambdaWrapper
 
 type PrismLike f k s t a b = k (a -> f b) (s -> f t)
 type SimplePrismLike f k s a = PrismLike f k s s a a

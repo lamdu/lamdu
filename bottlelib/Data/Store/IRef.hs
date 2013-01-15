@@ -6,6 +6,7 @@ module Data.Store.IRef
   , Tagged(..), Tag
   ) where
 
+import Control.DeepSeq (NFData(..))
 import Control.Applicative (pure)
 import Data.Binary (Binary(..))
 import Data.Derive.Binary (makeBinary)
@@ -21,12 +22,16 @@ instance Binary (Tagged t) where
   get = pure Tagged
   put Tagged = pure ()
 
+instance NFData (Tagged t) where
+  rnf Tagged = ()
+
 type Tag m = Tagged (m ())
 
 newtype IRef t a = IRef {
   guid :: Guid
-  } deriving (Eq, Ord, Read, Show, Typeable)
+  } deriving (Eq, Ord, Read, Show, Typeable, NFData)
 
+-- derive makeNFData ''IRef
 derive makeBinary ''IRef
 
 -- Wrapper modules need to create an IRef

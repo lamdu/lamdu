@@ -11,9 +11,11 @@ module Lamdu.Data.Expression.Infer.Types
   ) where
 
 import Control.Applicative (Applicative(..), (<*), (<$>), (<*>))
+import Control.DeepSeq (NFData(..))
 import Control.Monad.Trans.State (State)
 import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
+import Data.Derive.NFData (makeNFData)
 import Data.DeriveTH (derive)
 import Data.Foldable (sequenceA_)
 import Data.IntSet (IntSet)
@@ -28,7 +30,6 @@ import qualified Data.Monoid as Monoid
 import qualified Lamdu.Data.Expression as Expression
 
 newtype ExprRef = ExprRef { unExprRef :: Int } deriving (Eq, Ord)
-derive makeBinary ''ExprRef
 instance Show ExprRef where
   show = ('E' :) . show . unExprRef
 
@@ -36,7 +37,6 @@ data TypedValue = TypedValue
   { tvVal :: ExprRef
   , tvType :: ExprRef
   }
-derive makeBinary ''TypedValue
 instance Show TypedValue where
   show (TypedValue v t) = unwords [show v, ":", show t]
 
@@ -52,7 +52,6 @@ data RefExprPayload = RefExprPayload
   , _rplRestrictedPoly :: Monoid.Any
   , _rplOrigin :: Origin
   } deriving (Show)
-derive makeBinary ''RefExprPayload
 LensTH.makeLenses ''RefExprPayload
 
 type RefExpression def = Expression.Expression def RefExprPayload
@@ -73,14 +72,13 @@ data InferNode def = InferNode
   } deriving (Typeable)
 
 -- "derive makeBinary ''InferNode" fails because of the Ord constraint
-
 instance (Ord def, Binary def) => Binary (InferNode def) where
   get = InferNode <$> get <*> get
   put (InferNode a b) = sequenceA_ [put a, put b]
+derive makeNFData ''InferNode
 
 data IsRestrictedPoly = UnrestrictedPoly | RestrictedPoly
   deriving (Eq, Ord, Show, Typeable)
-derive makeBinary ''IsRestrictedPoly
 
 data Inferred def = Inferred
   { iPoint :: InferNode def
@@ -93,3 +91,9 @@ data Inferred def = Inferred
 instance (Ord def, Binary def) => Binary (Inferred def) where
   get = Inferred <$> get <*> get <*> get <*> get
   put (Inferred a b c d) = sequenceA_ [put a, put b, put c, put d]
+derive makeNFData ''Inferred
+
+fmap concat . sequence $
+  derive
+  <$> [makeBinary, makeNFData]
+  <*> [''IsRestrictedPoly, ''ExprRef, ''TypedValue, ''RefExprPayload]

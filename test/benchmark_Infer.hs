@@ -5,6 +5,6 @@ main :: IO ()
 main =
   defaultMain
   [ bgroup "test"
-    [ bench "factorial" (whnf factorial 0)
+    [ bench "factorial" (nf factorial 0)
     ]
   ]

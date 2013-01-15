@@ -20,6 +20,7 @@ module Lamdu.Data.Expression.Infer
   ) where
 
 import Control.Applicative (Applicative(..), (<$), (<$>))
+import Control.DeepSeq (NFData(..))
 import Control.Lens ((%=), (.=), (^.), (^?), (+=), (%~), (&), (<>~))
 import Control.Monad ((<=<), guard, unless, void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
@@ -30,6 +31,7 @@ import Control.Monad.Trans.Writer (Writer)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
+import Data.Derive.NFData (makeNFData)
 import Data.DeriveTH (derive)
 import Data.Foldable (traverse_)
 import Data.Function (on)
@@ -65,7 +67,7 @@ mkOrigin = do
   return r
 
 newtype RuleRef = RuleRef { unRuleRef :: Int }
-derive makeBinary ''RuleRef
+
 instance Show RuleRef where
   show = ('E' :) . show . unRuleRef
 
@@ -85,7 +87,6 @@ data RefData def = RefData
   { _rExpression :: RefExpression def
   , _rRules :: [RuleRef] -- Rule id
   }
-derive makeBinary ''RefData
 
 --------------
 --- RefMap:
@@ -95,7 +96,6 @@ data RefMap a = RefMap
   }
 LensTH.makeLenses ''RefData
 LensTH.makeLenses ''RefMap
-derive makeBinary ''RefMap
 
 emptyRefMap :: RefMap a
 emptyRefMap =
@@ -129,7 +129,7 @@ data ErrorDetails def
     (Expression.Expression def ())
   | InfiniteExpression (Expression.Expression def ())
   deriving (Show, Eq, Ord)
-derive makeBinary ''ErrorDetails
+
 instance Functor ErrorDetails where
   fmap f (MismatchIn x y) =
     on MismatchIn (ExprUtil.expressionDef %~ f) x y
@@ -144,7 +144,7 @@ data Error def = Error
     )
   , errDetails :: ErrorDetails def
   } deriving (Show, Eq, Ord)
-derive makeBinary ''Error
+
 instance Functor Error where
   fmap f (Error ref mis details) =
     Error ref
@@ -162,7 +162,6 @@ data Context def = Context
   , _nextOrigin :: Int
   , _ruleMap :: RefMap (Rule def)
   } deriving (Typeable)
-derive makeBinary ''Context
 
 data InferState def m = InferState
   { _sContext :: Context def
@@ -172,6 +171,11 @@ data InferState def m = InferState
   }
 LensTH.makeLenses ''Context
 LensTH.makeLenses ''InferState
+
+fmap concat . sequence $
+  derive
+  <$> [makeBinary, makeNFData]
+  <*> [''Context, ''ErrorDetails, ''Error, ''RuleRef, ''RefData, ''RefMap]
 
 -- ExprRefMap:
 

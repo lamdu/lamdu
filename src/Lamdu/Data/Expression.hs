@@ -9,11 +9,13 @@ module Lamdu.Data.Expression
   , Expression(..), eBody, ePayload
   ) where
 
-import Control.Applicative (Applicative(..))
+import Control.Applicative (Applicative(..), (<$>))
+import Control.DeepSeq (NFData(..))
 import Data.Binary (Binary(..))
 import Data.Binary.Get (getWord8)
 import Data.Binary.Put (putWord8)
 import Data.Derive.Binary (makeBinary)
+import Data.Derive.NFData (makeNFData)
 import Data.DeriveTH (derive)
 import Data.Foldable (Foldable(..))
 import Data.Store.Guid (Guid)
@@ -88,12 +90,10 @@ LensTH.makeLenses ''Expression
 LensTH.makeLenses ''Lambda
 LensTH.makeLenses ''Apply
 
-derive makeBinary ''VariableRef
-derive makeBinary ''Lambda
-derive makeBinary ''Apply
-derive makeBinary ''Leaf
-derive makeBinary ''Body
-derive makeBinary ''Expression
+fmap concat . sequence $
+  derive
+  <$> [makeBinary, makeNFData]
+  <*> [''VariableRef, ''Lambda, ''Apply, ''Leaf, ''Body, ''Expression]
 
 instance (Show a, Show def) => Show (Expression def a) where
   show (Expression body payload) =

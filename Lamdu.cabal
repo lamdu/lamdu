@@ -47,9 +47,9 @@ Library
                        Graphics.UI.GLFW.ModState,
                        Graphics.UI.GLFW.Utils,
 
-                       -- DataStore:
                        Data.Random.Instances,
                        Data.ByteString.Utils,
+                       Data.ByteString.NFData,
                        Data.Binary.Utils,
                        Data.Store.Guid,
                        Data.Store.IRef,
@@ -74,6 +74,7 @@ Library
                        keyvaluehash >= 0.3.1,
                        cryptohash >= 0.7,
                        GLFW-b >= 0.1.0,
+                       deepseq,
                        OpenGL,
                        StateVar,
                        TraceUtils,
@@ -105,6 +106,7 @@ Executable lamdu
                        containers,
                        directory,
                        filepath,
+                       deepseq,
                        lens >= 3.7.1,
                        graphics-drawingcombinators >= 1.4,
                        binary >= 0.5,

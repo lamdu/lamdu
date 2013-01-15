@@ -7,6 +7,7 @@ module Lamdu.Data.Expression.Infer.Rules
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
+import Control.DeepSeq (NFData(..))
 import Control.Lens ((^.), (^..), (&), (%~), (.~))
 import Control.Monad (guard)
 import Control.Monad.Trans.State (State)
@@ -14,6 +15,7 @@ import Control.Monad.Trans.Writer (execWriter)
 import Control.Monad.Unit (Unit(..))
 import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
+import Data.Derive.NFData (makeNFData)
 import Data.DeriveTH (derive)
 import Data.Functor.Identity (Identity(..))
 import Data.Store.Guid (Guid)
@@ -58,13 +60,16 @@ data RuleClosure def
   | ArgTypeToLambdaParamTypeClosure ExprRef Origin
   | NonLambdaToApplyValueClosure ExprRef Origin
   | ApplyToPartsClosure (Expression.Apply ExprRef)
-derive makeBinary ''RuleClosure
 
 data Rule def = Rule
   { ruleInputs :: [ExprRef]
   , _ruleCompute :: RuleClosure def
   }
-derive makeBinary ''Rule
+
+fmap concat . sequence $
+  derive
+  <$> [makeBinary, makeNFData]
+  <*> [''RuleClosure, ''Rule]
 
 runClosure :: Eq def => RuleClosure def -> RuleFunction def
 runClosure closure =
