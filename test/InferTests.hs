@@ -356,7 +356,7 @@ fOfXIsFOf5 =
     hole $
   ExprUtil.makeApply
     (mkInferredLeafSimple
-      (Expression.GetVariable (Expression.DefinitionRef defI))
+      (Expression.GetVariable (Expression.DefinitionRef recursiveDefI))
       (purePi "" intType hole)) $
   mkInferredLeafSimple (Expression.LiteralInteger 5) intType
 
@@ -571,7 +571,7 @@ testInfer name pureExpr result =
 
 getRecursiveDef :: DataIRef.Expression t ()
 getRecursiveDef =
-  ExprUtil.pureExpression $ Lens.review ExprUtil.bodyDefinitionRef defI
+  ExprUtil.pureExpression $ Lens.review ExprUtil.bodyDefinitionRef recursiveDefI
 
 resumptionTests :: [HUnit.Test]
 resumptionTests =
@@ -617,7 +617,7 @@ resumptionTests =
         , showExpressionWithInferred resultR
         ]) .
       compareInferred resultR .
-      mkInferredLeafSimple (Expression.GetVariable (Expression.DefinitionRef defI)) $
+      mkInferredLeafSimple (Expression.GetVariable (Expression.DefinitionRef recursiveDefI)) $
       purePi "" hole hole
   ]
 

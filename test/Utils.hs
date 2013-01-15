@@ -2,25 +2,34 @@
 {-# LANGUAGE FlexibleInstances, OverlappingInstances #-}
 module Utils where
 
-import Control.Applicative ((<$), (<$>))
+import Control.Applicative ((<$), (<$>), (<*>))
 import Control.Lens ((^.), (%~))
-import Control.Monad (join, void)
+import Control.Monad (void)
 import Control.Monad.Trans.State (State, runState, runStateT)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
+import Data.Monoid (mappend, mconcat)
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), inferWithConflicts)
+import Lamdu.ExampleDB (createBuiltins)
 import qualified Control.Lens as Lens
 import qualified Data.Foldable as Foldable
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
+import qualified Data.Store.Map as MapStore
+import qualified Data.Store.Transaction as Transaction
+import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
+
+(==>) :: k -> v -> Map k v
+(==>) = Map.singleton
 
 data Invisible = Invisible
 instance Show Invisible where
@@ -100,38 +109,28 @@ showExpressionWithConflicts =
 
 definitionTypes :: Map Guid (DataIRef.Expression t ())
 definitionTypes =
-  Map.fromList . (Lens.mapped . Lens._1 %~ Guid.fromString) $
-  [ ("Bool", setType)
-  , ("List", purePi "list" setType setType)
-  , ("Map", purePi "key" setType $ purePi "val" setType setType)
-  , ("IntToBoolFunc", purePi "intToBool" intType (pureGetDef "Bool"))
-  , ("*", intToIntToInt)
-  , ("-", intToIntToInt)
-  , ( "if"
-    , purePi "a" setType .
-      purePi "ifboolarg" (pureGetDef "Bool") .
-      purePi "iftarg" (pureGetParam "a") .
-      purePi "iffarg" (pureGetParam "a") $
-      pureGetParam "a"
-    )
-  , ( "=="
-    , purePi "==0" intType .
-      purePi "==1" intType $
-      pureGetDef "Bool"
-    )
-  , ( "id"
-    , purePi "a" setType $
-      purePi "idGivenType" (pureGetParam "a") (pureGetParam "a")
-    )
-  , ( ":"
-    , purePi "a" setType .
-      purePi "consx" (pureGetParam "a") .
-      join (purePi "consxs") $
-      pureApply [pureGetDef "List", pureGetParam "a"]
-    )
-  ]
+  exampleDBDefs `mappend` extras
   where
-    intToIntToInt = purePi "iii0" intType $ purePi "iii1" intType intType
+    g = Guid.fromString
+    extras =
+      mconcat
+      [ g "IntToBoolFunc" ==> purePi "intToBool" intType (pureGetDef "Bool")
+      ]
+    exampleDBDefs =
+      fst . MapStore.runEmpty . Transaction.run MapStore.mapStore $ do
+        (_, defIs) <- createBuiltins
+        Lens.mapMOf (Lens.traversed . ExprUtil.expressionDef) reIRef
+          =<< Map.fromList <$> mapM readDef defIs
+
+    reIRef = fmap IRef.unsafeFromGuid . guidNameOf
+    guidNameOf =
+      fmap Guid.fromString . Transaction.getP . Anchors.assocNameRef . IRef.guid
+    readDef defI =
+      (,)
+      <$> guidNameOf defI
+      <*>
+      (fmap void . DataIRef.readExpression . Lens.view Definition.defType =<<
+       Transaction.readIRef defI)
 
 doInferM ::
   Infer.InferNode (DefI t) -> DataIRef.Expression t a ->
@@ -156,7 +155,7 @@ doInferM_ = (fmap . fmap . fmap . fmap) fst doInferM
 
 doLoad :: DataIRef.Expression t a -> Infer.Loaded (DefI t) a
 doLoad expr =
-  case Infer.load loader (Just defI) expr of
+  case Infer.load loader (Just recursiveDefI) expr of
   Left err -> error err
   Right x -> x
 
@@ -169,8 +168,8 @@ loader =
       Nothing -> Left ("Could not find" ++ show key)
       Just x -> Right x
 
-defI :: DefI t
-defI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
+recursiveDefI :: DefI t
+recursiveDefI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
 
 doInfer ::
   DataIRef.Expression t a ->
@@ -180,7 +179,7 @@ doInfer ::
 doInfer =
   (`runState` ctx) . doInferM node
   where
-    (ctx, node) = Infer.initial $ Just defI
+    (ctx, node) = Infer.initial $ Just recursiveDefI
 
 doInfer_ ::
   DataIRef.Expression t a ->
@@ -191,16 +190,15 @@ factorialExpr :: DataIRef.Expression t ()
 factorialExpr =
   pureLambda "x" hole $
   pureApply
-  [ pureGetDef "if"
-  , hole
-  , pureApply [pureGetDef "==", pureGetParam "x", literalInt 0]
+  [ pureGetDef "if", hole
+  , pureApply [pureGetDef "==", hole, pureGetParam "x", literalInt 0]
   , literalInt 1
   , pureApply
-    [ pureGetDef "*"
+    [ pureGetDef "*", hole
     , pureGetParam "x"
     , pureApply
-      [ ExprUtil.pureExpression $ Lens.review ExprUtil.bodyDefinitionRef defI
-      , pureApply [pureGetDef "-", pureGetParam "x", literalInt 1]
+      [ ExprUtil.pureExpression $ Lens.review ExprUtil.bodyDefinitionRef recursiveDefI
+      , pureApply [pureGetDef "-", hole, pureGetParam "x", literalInt 1]
       ]
     ]
   ]
@@ -212,7 +210,7 @@ inferMaybe expr =
   (`runStateT` ctx) $
   Infer.inferLoaded (Infer.InferActions (const Nothing)) loaded node
   where
-    (ctx, node) = Infer.initial (Just defI)
+    (ctx, node) = Infer.initial (Just recursiveDefI)
     loaded = doLoad expr
 
 inferMaybe_ ::

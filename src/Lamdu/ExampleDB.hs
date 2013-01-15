@@ -1,4 +1,4 @@
-module Lamdu.ExampleDB(initDB) where
+module Lamdu.ExampleDB(initDB, createBuiltins) where
 
 import Control.Applicative (liftA2)
 import Control.Monad (join, unless)
