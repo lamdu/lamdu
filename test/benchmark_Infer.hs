@@ -4,7 +4,6 @@ import Utils
 main :: IO ()
 main =
   defaultMain
-  [ bgroup "test"
-    [ bench "factorial" (nf factorial 0)
-    ]
+  [ bench "factorial" (factorial 0)
+  , bench "euler1" (euler1 0)
   ]

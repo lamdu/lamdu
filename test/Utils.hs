@@ -6,6 +6,7 @@ import Control.Applicative ((<$), (<$>), (<*>))
 import Control.Lens ((^.), (%~))
 import Control.Monad (void)
 import Control.Monad.Trans.State (State, runState, runStateT)
+import Data.Binary.Utils (encodeS)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (mappend, mconcat)
@@ -14,6 +15,7 @@ import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), inferWithConflicts)
 import Lamdu.ExampleDB (createBuiltins)
 import qualified Control.Lens as Lens
+import qualified Data.ByteString as SBS
 import qualified Data.Foldable as Foldable
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -212,6 +214,22 @@ factorialExpr =
     ]
   ]
 
+euler1Expr :: DataIRef.Expression t ()
+euler1Expr =
+  pureApplyPoly1 "sum"
+  [ pureApplyPoly1 "filter"
+    [ pureLambda "x" hole $
+      pureApply
+      [ pureGetDef "||"
+      , pureApplyPoly1 "=="
+        [ literalInt 0, pureApplyPoly1 "%" [pureGetParam "x", literalInt 3] ]
+      , pureApplyPoly1 "=="
+        [ literalInt 0, pureApplyPoly1 "%" [pureGetParam "x", literalInt 5] ]
+      ]
+    , pureApply [pureGetDef "..", literalInt 1, literalInt 1000]
+    ]
+  ]
+
 inferMaybe ::
   DataIRef.Expression t a ->
   Maybe (DataIRef.Expression t (Infer.Inferred (DefI t), a), Infer.Context (DefI t))
@@ -227,12 +245,26 @@ inferMaybe_ ::
   Maybe (DataIRef.Expression t (Infer.Inferred (DefI t)), Infer.Context (DefI t))
 inferMaybe_ = (Lens.mapped . Lens._1 . Lens.mapped %~ fst) . inferMaybe
 
+inferAndEncode ::
+  String -> DataIRef.Expression t a -> Int ->
+  IO (DataIRef.Expression t (Infer.Inferred (DefI t)), Infer.Context (DefI t))
+inferAndEncode name expr par = do
+  putStrLn $
+    name ++ " inferred: " ++
+    (show . SBS.length . encodeS . fst) result ++ " bytes"
+  return result
+  where
+    result =
+      fromMaybe (error "Conflicts in factorial infer") .
+      inferMaybe_ . void $
+      fmap (const par) expr
+
 factorial ::
   Int ->
-  ( DataIRef.Expression t (Infer.Inferred (DefI t))
-  , Infer.Context (DefI t)
-  )
-factorial gen =
-  fromMaybe (error "Conflicts in factorial infer") .
-  inferMaybe_ . void $
-  fmap (const gen) factorialExpr
+  IO (DataIRef.Expression t (Infer.Inferred (DefI t)), Infer.Context (DefI t))
+factorial = inferAndEncode "factorial" factorialExpr
+
+euler1 ::
+  Int ->
+  IO (DataIRef.Expression t (Infer.Inferred (DefI t)), Infer.Context (DefI t))
+euler1 = inferAndEncode "euler1" euler1Expr
