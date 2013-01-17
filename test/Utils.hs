@@ -49,6 +49,13 @@ makeNamedPi = ExprUtil.makePi . Guid.fromString
 pureApply :: [Expression.Expression def ()] -> Expression.Expression def ()
 pureApply = foldl1 (fmap ExprUtil.pureExpression . ExprUtil.makeApply)
 
+-- 1 dependent param
+pureApplyPoly1 ::
+  String ->
+  [Expression.Expression (DefI t) ()] ->
+  Expression.Expression (DefI t) ()
+pureApplyPoly1 name xs = pureApply $ pureGetDef name : hole : xs
+
 pureLambda ::
   String -> Expression.Expression def () ->
   Expression.Expression def () ->
@@ -186,19 +193,21 @@ doInfer_ ::
   (DataIRef.Expression t (Infer.Inferred (DefI t)), Infer.Context (DefI t))
 doInfer_ = (Lens._1 . Lens.mapped %~ fst) . doInfer
 
+pureGetRecursiveDefI :: DataIRef.Expression t ()
+pureGetRecursiveDefI =
+  ExprUtil.pureExpression $ Lens.review ExprUtil.bodyDefinitionRef recursiveDefI
+
 factorialExpr :: DataIRef.Expression t ()
 factorialExpr =
   pureLambda "x" hole $
-  pureApply
-  [ pureGetDef "if", hole
-  , pureApply [pureGetDef "==", hole, pureGetParam "x", literalInt 0]
+  pureApplyPoly1 "if"
+  [ pureApplyPoly1 "==" [pureGetParam "x", literalInt 0]
   , literalInt 1
-  , pureApply
-    [ pureGetDef "*", hole
-    , pureGetParam "x"
+  , pureApplyPoly1 "*"
+    [ pureGetParam "x"
     , pureApply
-      [ ExprUtil.pureExpression $ Lens.review ExprUtil.bodyDefinitionRef recursiveDefI
-      , pureApply [pureGetDef "-", hole, pureGetParam "x", literalInt 1]
+      [ pureGetRecursiveDefI
+      , pureApplyPoly1 "-" [pureGetParam "x", literalInt 1]
       ]
     ]
   ]
