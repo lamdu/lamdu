@@ -245,26 +245,16 @@ inferMaybe_ ::
   Maybe (DataIRef.Expression t (Infer.Inferred (DefI t)), Infer.Context (DefI t))
 inferMaybe_ = (Lens.mapped . Lens._1 . Lens.mapped %~ fst) . inferMaybe
 
-inferAndEncode ::
-  String -> DataIRef.Expression t a -> Int ->
-  IO (DataIRef.Expression t (Infer.Inferred (DefI t)), Infer.Context (DefI t))
-inferAndEncode name expr par = do
-  putStrLn $
-    name ++ " inferred: " ++
-    (show . SBS.length . encodeS . fst) result ++ " bytes"
-  return result
+inferAndEncode :: DataIRef.Expression t a -> Int -> Int
+inferAndEncode expr par = SBS.length . encodeS $ fst result
   where
     result =
       fromMaybe (error "Conflicts in factorial infer") .
       inferMaybe_ . void $
       fmap (const par) expr
 
-factorial ::
-  Int ->
-  IO (DataIRef.Expression t (Infer.Inferred (DefI t)), Infer.Context (DefI t))
-factorial = inferAndEncode "factorial" factorialExpr
+factorial :: Int -> Int
+factorial = inferAndEncode factorialExpr
 
-euler1 ::
-  Int ->
-  IO (DataIRef.Expression t (Infer.Inferred (DefI t)), Infer.Context (DefI t))
-euler1 = inferAndEncode "euler1" euler1Expr
+euler1 :: Int -> Int
+euler1 = inferAndEncode euler1Expr
