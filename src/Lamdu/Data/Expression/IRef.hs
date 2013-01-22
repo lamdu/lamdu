@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 module Lamdu.Data.Expression.IRef
   ( Expression, ExpressionM
-  , ExpressionI(..)
+  , ExpressionI(..), ExpressionIM
   , ExpressionBody
   , ExpressionProperty, epGuid
   , Lambda, Apply
@@ -42,7 +42,9 @@ newtype ExpressionI t = ExpressionI {
   unExpression :: IRef t (Expression.Body (DefI t) (ExpressionI t))
   } deriving (Eq, Ord, Show, Typeable, Binary)
 
-type ExpressionProperty m = Property (T m) (ExpressionI (Tag m))
+type ExpressionIM m = ExpressionI (Tag m)
+
+type ExpressionProperty m = Property (T m) (ExpressionIM m)
 type ExpressionBody t = Expression.Body (DefI t) (ExpressionI t)
 type Lambda t = Expression.Lambda (ExpressionI t)
 type Apply t = Expression.Apply (ExpressionI t)
@@ -53,53 +55,48 @@ epGuid = IRef.guid . unExpression . Property.value
 exprGuid :: ExpressionI t -> Guid
 exprGuid = IRef.guid . unExpression
 
-newExprBody :: MonadA m => ExpressionBody (Tag m) -> T m (ExpressionI (Tag m))
+newExprBody :: MonadA m => ExpressionBody (Tag m) -> T m (ExpressionIM m)
 newExprBody = fmap ExpressionI . Transaction.newIRef
 
 newLambdaCons ::
   MonadA m =>
   (Guid -> expr -> expr -> ExpressionBody (Tag m)) ->
-  expr -> expr -> T m (Guid, ExpressionI (Tag m))
+  expr -> expr -> T m (Guid, ExpressionIM m)
 newLambdaCons cons paramType result = do
   key <- Transaction.newKey
   expr <- newExprBody $ cons key paramType result
   return (key, expr)
 
-newPi :: MonadA m => ExpressionI (Tag m) -> ExpressionI (Tag m) -> T m (Guid, ExpressionI (Tag m))
+newPi :: MonadA m => ExpressionIM m -> ExpressionIM m -> T m (Guid, ExpressionIM m)
 newPi = newLambdaCons ExprUtil.makePi
 
-newLambda :: MonadA m => ExpressionI (Tag m) -> ExpressionI (Tag m) -> T m (Guid, ExpressionI (Tag m))
+newLambda :: MonadA m => ExpressionIM m -> ExpressionIM m -> T m (Guid, ExpressionIM m)
 newLambda = newLambdaCons ExprUtil.makeLambda
 
-readExprBody :: MonadA m => ExpressionI (Tag m) -> T m (ExpressionBody (Tag m))
+readExprBody :: MonadA m => ExpressionIM m -> T m (ExpressionBody (Tag m))
 readExprBody = Transaction.readIRef . unExpression
 
-writeExprBody :: MonadA m => ExpressionI (Tag m) -> ExpressionBody (Tag m) -> T m ()
+writeExprBody :: MonadA m => ExpressionIM m -> ExpressionBody (Tag m) -> T m ()
 writeExprBody = Transaction.writeIRef . unExpression
 
-newExpression :: MonadA m => ExpressionM m a -> T m (ExpressionI (Tag m))
-newExpression = newExpressionWithStoredSubExpressions . fmap ((,) Nothing)
-
-newExpressionWithStoredSubExpressions ::
-  MonadA m =>
-  ExpressionM m (Maybe (ExpressionI (Tag m)), a) ->
-  T m (ExpressionI (Tag m))
-newExpressionWithStoredSubExpressions =
-  fmap undefined . newExpressionFromH
+newExpression :: MonadA m => ExpressionM m () -> T m (ExpressionIM m)
+newExpression =
+  fmap (fst . Lens.view Expression.ePayload) .
+  newExpressionFromH . ((,) Nothing <$>)
 
 -- Returns expression with new Guids
 writeExpression ::
-  MonadA m => ExpressionI (Tag m) -> ExpressionM m a ->
-  T m (ExpressionM m (ExpressionI (Tag m), a))
+  MonadA m => ExpressionIM m -> ExpressionM m a ->
+  T m (ExpressionM m (ExpressionIM m, a))
 writeExpression iref =
   writeExpressionWithStoredSubexpressions iref .
   fmap ((,) Nothing)
 
 writeExpressionWithStoredSubexpressions ::
   MonadA m =>
-  ExpressionI (Tag m) ->
-  ExpressionM m (Maybe (ExpressionI (Tag m)), a) ->
-  T m (ExpressionM m (ExpressionI (Tag m), a))
+  ExpressionIM m ->
+  ExpressionM m (Maybe (ExpressionIM m), a) ->
+  T m (ExpressionM m (ExpressionIM m, a))
 writeExpressionWithStoredSubexpressions iref expr = do
   exprBodyP <- expressionBodyFrom expr
   writeExprBody iref $ fmap (fst . Lens.view Expression.ePayload) exprBodyP
@@ -107,21 +104,21 @@ writeExpressionWithStoredSubexpressions iref expr = do
     (iref, expr ^. Expression.ePayload . Lens._2)
 
 readExpression ::
-  MonadA m => ExpressionI (Tag m) -> T m (ExpressionM m (ExpressionI (Tag m)))
+  MonadA m => ExpressionIM m -> T m (ExpressionM m (ExpressionIM m))
 readExpression exprI =
   fmap (`Expression.Expression` exprI) .
   traverse readExpression =<< readExprBody exprI
 
 expressionBodyFrom ::
   MonadA m =>
-  ExpressionM m (Maybe (ExpressionI (Tag m)), a) ->
-  T m (Expression.BodyExpr (DefI (Tag m)) (ExpressionI (Tag m), a))
+  ExpressionM m (Maybe (ExpressionIM m), a) ->
+  T m (Expression.BodyExpr (DefI (Tag m)) (ExpressionIM m, a))
 expressionBodyFrom = traverse newExpressionFromH . Lens.view Expression.eBody
 
 newExpressionFromH ::
   MonadA m =>
-  ExpressionM m (Maybe (ExpressionI (Tag m)), a) ->
-  T m (ExpressionM m (ExpressionI (Tag m), a))
+  ExpressionM m (Maybe (ExpressionIM m), a) ->
+  T m (ExpressionM m (ExpressionIM m, a))
 newExpressionFromH expr =
   case Lens.sequenceOf (Lens.traverse . Lens._1) expr of
   Just result -> pure result
