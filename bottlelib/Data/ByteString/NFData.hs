@@ -1,5 +1,5 @@
 {-# LANGUAGE CPP #-}
-#if __GLASGOW_HASKELL__ < 702
+#if __GLASGOW_HASKELL__ < 706
 {-# OPTIONS -fno-warn-orphans #-} -- NFData ByteString
 module Data.ByteString.NFData () where
 
