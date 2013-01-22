@@ -143,6 +143,7 @@ randomizeParamIds gen =
 -- TODO: Generalize to defa/defb/defc with hof's to handle matching
 -- them?  The returned expression gets the same guids as the left
 -- expression
+{-# INLINE matchExpression #-}
 matchExpression ::
   (Eq def, Applicative f) =>
   (a -> b -> f c) ->

@@ -110,12 +110,14 @@ createEmptyRef = do
   nextRef += 1
   return key
 
+{-# INLINE refsAt #-}
 refsAt :: Functor f => Int -> LensLike' f (RefMap a) a
 refsAt k = refs . Lens.at k . Lens.iso from Just
   where
     from = fromMaybe $ error msg
     msg = unwords ["intMapMod: key", show k, "not in map"]
 
+{-# INLINE createRef #-}
 createRef :: a -> State (RefMap a) Int
 createRef initialVal = do
   ref <- createEmptyRef
@@ -189,6 +191,7 @@ createRefExpr = do
   holeRefExpr <- Lens.zoom nextOrigin $ toRefExpression ExprUtil.pureHole
   fmap ExprRef . Lens.zoom exprMap . createRef $ RefData holeRefExpr mempty
 
+{-# INLINE exprRefsAt #-}
 exprRefsAt :: Functor f => ExprRef -> LensLike' f (Context def) (RefData def)
 exprRefsAt k = exprMap . refsAt (unExprRef k)
 
@@ -197,6 +200,7 @@ exprRefsAt k = exprMap . refsAt (unExprRef k)
 createEmptyRefRule :: State (Context def) RuleRef
 createEmptyRefRule = fmap RuleRef $ Lens.zoom ruleMap createEmptyRef
 
+{-# INLINE ruleRefsAt #-}
 ruleRefsAt :: Functor f => RuleRef -> LensLike' f (Context def) (Rule def)
 ruleRefsAt k = ruleMap . refsAt (unRuleRef k)
 
