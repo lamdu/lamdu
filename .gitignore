@@ -3,6 +3,7 @@
 *.p_hi
 *.p_o
 TAGS
+tags
 GUIWidgets
 dist/
 cabal-dev/
