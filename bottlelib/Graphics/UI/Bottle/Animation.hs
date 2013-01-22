@@ -14,7 +14,7 @@ module Graphics.UI.Bottle.Animation
   ) where
 
 import Control.Applicative(Applicative(..), liftA2)
-import Control.Lens (SimpleTraversal, (^.), (%~))
+import Control.Lens (Traversal', (^.), (%~))
 import Control.Monad(void)
 import Data.List(isPrefixOf)
 import Data.List.Utils(groupOn, sortOn)
@@ -215,10 +215,10 @@ backgroundColor animId layer color size =
   flip mappend . onDepth (+layer) . scale size .
   onImages (Draw.tint color) $ unitSquare animId
 
-eachFrame :: SimpleTraversal Frame (Layer, PositionedImage)
+eachFrame :: Traversal' Frame (Layer, PositionedImage)
 eachFrame = fSubImages . Lens.traversed . Lens.traversed
 
-images :: SimpleTraversal Frame PositionedImage
+images :: Traversal' Frame PositionedImage
 images = eachFrame . Lens._2
 
 translate :: Vector2 R -> Frame -> Frame

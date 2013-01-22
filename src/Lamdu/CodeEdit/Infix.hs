@@ -29,7 +29,7 @@ infixOp
   => DataIRef.ExpressionM m ref
   -> Transaction m (Maybe (Expression.VariableRef (DataIRef.DefI (Tag m))))
 infixOp expr =
-  case expr ^? Expression.eBody . Expression.bodyLeaf . Expression.getVariable of
+  case expr ^? Expression.eBody . Expression._BodyLeaf . Expression._GetVariable of
   Just var -> do
     isInfix <- isInfixVar var
     return $ if isInfix then Just var else Nothing

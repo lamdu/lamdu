@@ -8,7 +8,7 @@ module Lamdu.Data.Expression.Load
   ) where
 
 import Control.Applicative (liftA2)
-import Control.Lens ((^.), SimpleLensLike)
+import Control.Lens ((^.), LensLike')
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
@@ -21,7 +21,6 @@ import Data.Typeable (Typeable)
 import Lamdu.Data.Definition (Definition(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Control.Lens as Lens
-import qualified Control.Lens.Internal as LensInternal
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
@@ -34,14 +33,14 @@ type T = Transaction
 data ApplyRole = Func | Arg
   deriving (Eq, Ord, Show, Typeable)
 derive makeBinary ''ApplyRole
-applyChildByRole :: Functor f => ApplyRole -> SimpleLensLike f (Expression.Apply a) a
+applyChildByRole :: Functor f => ApplyRole -> LensLike' f (Expression.Apply a) a
 applyChildByRole Func = Expression.applyFunc
 applyChildByRole Arg = Expression.applyArg
 
 data LambdaRole = ParamType | Result
   deriving (Eq, Ord, Show, Typeable)
 derive makeBinary ''LambdaRole
-lambdaChildByRole :: Functor f => LambdaRole -> SimpleLensLike f (Expression.Lambda a) a
+lambdaChildByRole :: Functor f => LambdaRole -> LensLike' f (Expression.Lambda a) a
 lambdaChildByRole ParamType = Expression.lambdaParamType
 lambdaChildByRole Result = Expression.lambdaBody
 
@@ -57,7 +56,7 @@ data PropertyClosure t
   deriving (Eq, Ord, Show, Typeable)
 derive makeBinary ''PropertyClosure
 
-setter :: Lens.LensLike (LensInternal.Context a b) s t a b -> s -> b -> t
+setter :: Lens.ALens s t dummy b -> s -> b -> t
 setter = flip . Lens.set . Lens.cloneLens
 
 propertyOfClosure :: MonadA m => PropertyClosure (Tag m) -> DataIRef.ExpressionProperty m

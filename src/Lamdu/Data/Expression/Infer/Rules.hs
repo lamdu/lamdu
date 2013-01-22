@@ -160,7 +160,7 @@ runLambdaBodyTypeToPiResultTypeClosure (param, lambdaTypeRef) (o0, o1) ~[bodyTyp
 
 runPiToLambdaClosure :: (Guid, ExprRef, ExprRef) -> Origin3 -> RuleFunction def
 runPiToLambdaClosure (param, lambdaValueRef, bodyTypeRef) (o0, o1, o2) ~[piBody] = do
-  Expression.Lambda piParam paramType resultType <- piBody ^.. Expression.eBody . Expression.bodyPi
+  Expression.Lambda piParam paramType resultType <- piBody ^.. Expression.eBody . Expression._BodyPi
   [ -- Pi result type -> Body type
     ( bodyTypeRef
     , subst piParam
@@ -247,7 +247,7 @@ mergeToPiResult =
       | otherwise = dest
       where
         substs = dest ^. Expression.ePayload . rplSubstitutedArgs
-    notAHole = Lens.nullOf (Expression.eBody . Expression.bodyLeaf . Expression.hole)
+    notAHole = Lens.nullOf (Expression.eBody . Expression._BodyLeaf . Expression._Hole)
 
 runSimpleTypeClosure :: ExprRef -> Origin2 -> RuleFunction def
 runSimpleTypeClosure typ (o0, o1) ~[valExpr] =
@@ -357,7 +357,7 @@ runRigidArgApplyTypeToResultTypeClosure :: ExprRef -> Origin3 -> RuleFunction de
 runRigidArgApplyTypeToResultTypeClosure funcTypeRef (o0, o1, o2) ~[applyTypeExpr, argExpr] = do
   par <-
     argExpr ^..
-    Expression.eBody . Expression.bodyLeaf . Expression.getVariable . Expression.parameterRef
+    Expression.eBody . Expression._BodyLeaf . Expression._GetVariable . Expression._ParameterRef
   return
     ( funcTypeRef
     , makePi o0 (makeHole o1) $
@@ -375,7 +375,7 @@ rigidArgApplyTypeToResultTypeRule applyTv (Expression.Apply func arg) =
 runRedexApplyTypeToResultTypeClosure :: ExprRef -> RuleFunction def
 runRedexApplyTypeToResultTypeClosure funcTypeRef
   ~[applyTypeExpr, Expression.Expression funcExpr funcPl] = do
-  Expression.Lambda paramGuid paramType _ <- funcExpr ^.. Expression.bodyLambda
+  Expression.Lambda paramGuid paramType _ <- funcExpr ^.. Expression._BodyLambda
   return
     ( funcTypeRef
     , makeRefExpr (Lens.view rplOrigin funcPl) $
@@ -391,7 +391,7 @@ runPiParamTypeToArgTypeClosure :: ExprRef -> RuleFunction def
 runPiParamTypeToArgTypeClosure argTypeRef ~[Expression.Expression funcTExpr _] = do
   -- If func type is Pi
   -- Pi's ParamT => ArgT
-  Expression.Lambda _ paramT _ <- funcTExpr ^.. Expression.bodyPi
+  Expression.Lambda _ paramT _ <- funcTExpr ^.. Expression._BodyPi
   return (argTypeRef, paramT)
 
 piParamTypeToArgTypeRule :: Expression.Apply TypedValue -> Rule def
@@ -402,7 +402,7 @@ runLambdaParamTypeToArgTypeClosure :: ExprRef -> RuleFunction def
 runLambdaParamTypeToArgTypeClosure argTypeRef ~[Expression.Expression funcExpr _] = do
   -- If func is Lambda
   -- Lambda's ParamT => ArgT
-  Expression.Lambda _ paramT _ <- funcExpr ^.. Expression.bodyLambda
+  Expression.Lambda _ paramT _ <- funcExpr ^.. Expression._BodyLambda
   return (argTypeRef, paramT)
 
 lambdaParamTypeToArgTypeRule :: Expression.Apply TypedValue -> Rule def
@@ -413,7 +413,7 @@ runArgTypeToLambdaParamTypeClosure :: ExprRef -> Origin -> RuleFunction def
 runArgTypeToLambdaParamTypeClosure funcValRef o0 ~[Expression.Expression funcExpr funcPl, argTExpr] = do
   -- If func is Lambda,
   -- ArgT => Lambda's ParamT
-  Expression.Lambda param _ _ <- funcExpr ^.. Expression.bodyLambda
+  Expression.Lambda param _ _ <- funcExpr ^.. Expression._BodyLambda
   return
     ( funcValRef
     , makeRefExpr (Lens.view rplOrigin funcPl) .
@@ -453,9 +453,9 @@ runApplyToPartsClosure refs ~[applyExpr, funcExpr] = do
   -- If definitely not a redex (func also not a hole)
   -- Apply-Arg => Arg
   -- Apply-Func => Func
-  guard $ Lens.nullOf (Expression.eBody . Expression.bodyLambda) funcExpr
-  guard $ Lens.nullOf (Expression.eBody . Expression.bodyLeaf . Expression.hole) funcExpr
-  Expression.Apply aFunc aArg <- applyExpr ^.. Expression.eBody . Expression.bodyApply
+  guard $ Lens.nullOf (Expression.eBody . Expression._BodyLambda) funcExpr
+  guard $ Lens.nullOf (Expression.eBody . Expression._BodyLeaf . Expression._Hole) funcExpr
+  Expression.Apply aFunc aArg <- applyExpr ^.. Expression.eBody . Expression._BodyApply
   [(refs ^. Expression.applyFunc, aFunc), (refs ^. Expression.applyArg, aArg)]
 
 applyToPartsRule ::

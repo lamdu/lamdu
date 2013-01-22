@@ -26,13 +26,9 @@ module Lamdu.Data.Expression.Utils
 
 import Lamdu.Data.Expression
 
--- TODO in future: Use Prelude.(.) with future version of Lens.
-import Prelude hiding ((.))
-import Control.Category ((.))
-
 import Control.Applicative (Applicative(..), liftA2, (<$>))
 import Control.DeepSeq (NFData(..))
-import Control.Lens (Simple, Prism, Prismatic, (^.), (^?), (+~))
+import Control.Lens (Prism, Prism', (^.), (^?), (+~))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (evalState, state)
@@ -64,14 +60,14 @@ makeLambda :: Guid -> expr -> expr -> Body def expr
 makeLambda argId argType body =
   BodyLambda $ Lambda argId argType body
 
-bodyParameterRef :: Simple Prism (Body def expr) Guid
-bodyParameterRef = bodyLeaf . getVariable . parameterRef
+bodyParameterRef :: Prism' (Body def expr) Guid
+bodyParameterRef = _BodyLeaf . _GetVariable . _ParameterRef
 
 bodyDefinitionRef :: Prism (Body defa expr) (Body defb expr) defa defb
-bodyDefinitionRef = bodyLeaf . getVariable . definitionRef
+bodyDefinitionRef = _BodyLeaf . _GetVariable . _DefinitionRef
 
-bodyLiteralInteger :: Simple Prism (Body def expr) Integer
-bodyLiteralInteger = bodyLeaf . literalInteger
+bodyLiteralInteger :: Prism' (Body def expr) Integer
+bodyLiteralInteger = _BodyLeaf . _LiteralInteger
 
 bitraverseBody ::
   Applicative f => (defa -> f defb) -> (expra -> f exprb) ->
@@ -195,13 +191,13 @@ hasGetVar =
 
 isDependentPi :: Expression def a -> Bool
 isDependentPi =
-  Lens.anyOf (eBody . bodyPi) f
+  Lens.anyOf (eBody . _BodyPi) f
   where
     f (Lambda g _ resultType) = hasGetVar g resultType
 
 funcArguments :: Expression def a -> [Expression def a]
 funcArguments =
-  Lens.toListOf (eBody . bodyLambda . Lens.folding f)
+  Lens.toListOf (eBody . _BodyLambda . Lens.folding f)
   where
     f (Lambda _ paramType body) =
       paramType : funcArguments body
@@ -211,24 +207,23 @@ data LambdaWrapper = LambdaWrapperLambda | LambdaWrapperPi
 derive makeBinary ''LambdaWrapper
 derive makeNFData ''LambdaWrapper
 
-type PrismLike f k s t a b = k (a -> f b) (s -> f t)
-type SimplePrismLike f k s a = PrismLike f k s s a a
-
 lambdaWrapperPrism ::
-  (Prismatic k, Applicative f) =>
-  LambdaWrapper -> SimplePrismLike f k (Body def expr) (Lambda expr)
-lambdaWrapperPrism LambdaWrapperLambda = bodyLambda
-lambdaWrapperPrism LambdaWrapperPi = bodyPi
+  (Applicative f, Lens.Choice p) =>
+  LambdaWrapper ->
+  p (Lambda expr) (f (Lambda expr)) ->
+  p (Body def expr) (f (Body def expr))
+lambdaWrapperPrism LambdaWrapperLambda = _BodyLambda
+lambdaWrapperPrism LambdaWrapperPi = _BodyPi
 
 countArrows :: Expression def () -> Int
 countArrows expr =
-  case expr ^? eBody . bodyPi . lambdaBody of
+  case expr ^? eBody . _BodyPi . lambdaBody of
   Just resultType -> 1 + countArrows resultType
   Nothing -> 0
 
 countDependentPis :: Expression def () -> Int
 countDependentPis expr =
-  case expr ^? eBody . bodyPi . lambdaBody of
+  case expr ^? eBody . _BodyPi . lambdaBody of
   Just resultType
     | isDependentPi expr -> 1 + countDependentPis resultType
   _ -> 0
@@ -236,7 +231,7 @@ countDependentPis expr =
 -- TODO: Return a record, not a tuple
 countPis :: Expression def () -> (Int, Int)
 countPis expr =
-  case expr ^? eBody . bodyPi . lambdaBody of
+  case expr ^? eBody . _BodyPi . lambdaBody of
   Just resultType
     | isDependentPi expr -> Lens._1 +~ 1 $ countPis resultType
     | otherwise -> (0, 1 + countArrows resultType)
@@ -255,7 +250,7 @@ applyDependentPis exprType = applyWithHoles (countDependentPis exprType)
 -- with all different sensible levels of currying.
 applyForms :: Expression def () -> Expression def () -> [Expression def ()]
 applyForms exprType expr
-  | Lens.notNullOf (eBody . bodyLambda) expr = [expr]
+  | Lens.notNullOf (eBody . _BodyLambda) expr = [expr]
   | otherwise =
     reverse . take (1 + arrows) $ iterate addApply withDepPisApplied
   where

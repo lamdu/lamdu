@@ -17,7 +17,7 @@ module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui
   , makeFocusableView
   ) where
 
-import Control.Lens ((^.))
+import Control.Lens (Lens', (^.))
 import Control.MonadA (MonadA)
 import Data.Function (on)
 import Data.Store.Guid (Guid)
@@ -84,7 +84,7 @@ addBelow ws eg =
 
 data TypeStyle = HorizLine | Background
 
-wWidth :: Lens.SimpleLens (Widget f) Widget.R
+wWidth :: Lens' (Widget f) Widget.R
 wWidth = Widget.wSize . Lens._1
 
 addType ::

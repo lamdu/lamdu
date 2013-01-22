@@ -21,7 +21,7 @@ module Lamdu.Data.Expression.Infer
 
 import Control.Applicative (Applicative(..), (<$), (<$>))
 import Control.DeepSeq (NFData(..))
-import Control.Lens ((%=), (.=), (^.), (^?), (+=), (%~), (&), (<>~))
+import Control.Lens (LensLike', (%=), (.=), (^.), (^?), (+=), (%~), (&), (<>~))
 import Control.Monad ((<=<), guard, unless, void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either (EitherT(..))
@@ -110,7 +110,7 @@ createEmptyRef = do
   nextRef += 1
   return key
 
-refsAt :: Functor f => Int -> Lens.SimpleLensLike f (RefMap a) a
+refsAt :: Functor f => Int -> LensLike' f (RefMap a) a
 refsAt k = refs . Lens.at k . Lens.iso from Just
   where
     from = fromMaybe $ error msg
@@ -189,7 +189,7 @@ createRefExpr = do
   holeRefExpr <- Lens.zoom nextOrigin $ toRefExpression ExprUtil.pureHole
   fmap ExprRef . Lens.zoom exprMap . createRef $ RefData holeRefExpr mempty
 
-exprRefsAt :: Functor f => ExprRef -> Lens.SimpleLensLike f (Context def) (RefData def)
+exprRefsAt :: Functor f => ExprRef -> LensLike' f (Context def) (RefData def)
 exprRefsAt k = exprMap . refsAt (unExprRef k)
 
 -- RuleRefMap
@@ -197,7 +197,7 @@ exprRefsAt k = exprMap . refsAt (unExprRef k)
 createEmptyRefRule :: State (Context def) RuleRef
 createEmptyRefRule = fmap RuleRef $ Lens.zoom ruleMap createEmptyRef
 
-ruleRefsAt :: Functor f => RuleRef -> Lens.SimpleLensLike f (Context def) (Rule def)
+ruleRefsAt :: Functor f => RuleRef -> LensLike' f (Context def) (Rule def)
 ruleRefsAt k = ruleMap . refsAt (unRuleRef k)
 
 -------------
@@ -420,7 +420,7 @@ setRefExpr ref newExpr = do
         isChange = not $ equiv mergedExpr curExpr
         isHole =
           Lens.notNullOf
-          (Expression.eBody . Expression.bodyLeaf . Expression.hole)
+          (Expression.eBody . Expression._BodyLeaf . Expression._Hole)
           mergedExpr
       when isChange $ touch ref
       when (isChange || isHole) $
@@ -494,7 +494,7 @@ exprIntoContext rootScope (Loaded rootExpr defTypes) = do
           { tvType =
             case
               body ^?
-              Expression.bodyLeaf . Expression.getVariable .
+              Expression._BodyLeaf . Expression._GetVariable .
               Lens.folding (`Map.lookup` scope)
               of
             Just x -> x

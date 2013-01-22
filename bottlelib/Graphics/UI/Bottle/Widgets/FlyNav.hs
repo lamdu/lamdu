@@ -2,7 +2,7 @@
 module Graphics.UI.Bottle.Widgets.FlyNav(make, State, initState) where
 
 import Control.Applicative (Applicative(..), liftA2, (*>))
-import Control.Lens ((^.), (%~))
+import Control.Lens (Lens', (^.), (%~))
 import Control.Monad (void)
 import Data.ByteString.Char8 () -- instance IsString ByteString
 import Data.Monoid (Monoid(..))
@@ -135,7 +135,7 @@ zipped (x:xs) =
   (x, xs) :
   (Lens.mapped . Lens._2 %~ (x:)) (zipped xs)
 
-focalCenter :: Lens.SimpleLens (Widget f) (Vector2 Widget.R)
+focalCenter :: Lens' (Widget f) (Vector2 Widget.R)
 focalCenter = Widget.wFocalArea . Rect.center
 
 make

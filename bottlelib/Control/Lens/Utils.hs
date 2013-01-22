@@ -1,15 +1,14 @@
 module Control.Lens.Utils
-  ( SimpleContext
+  ( Context'
   , contextSetter, contextVal
   , argument, result
-  , iresult
   ) where
 
-import Control.Applicative ((<$>), (<*>))
+import Control.Applicative ((<$>))
 import Control.Lens (Lens)
 import qualified Control.Lens as Lens
 
-type SimpleContext a t = Lens.Context a a t
+type Context' a t = Lens.Context a a t
 
 contextSetter :: Lens (Lens.Context a b0 t0) (Lens.Context a b1 t1) (b0 -> t0) (b1 -> t1)
 contextSetter f (Lens.Context set val) = (`Lens.Context` val) <$> f set
@@ -22,7 +21,3 @@ argument = Lens.sets (flip (.))
 
 result :: Lens.Setter (a -> b0) (a -> b1) b0 b1
 result = Lens.mapped
-
--- An indexed result, usable with the indexed (@ in the name) lens operators
-iresult :: (Lens.Settable f, Lens.Indexable i k) => k (a -> f b) ((i -> a) -> f (i -> b))
-iresult = Lens.isets (<*>)

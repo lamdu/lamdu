@@ -38,7 +38,7 @@ module Lamdu.CodeEdit.Sugar
   ) where
 
 import Control.Applicative (Applicative(..), (<$>), (<$), liftA2)
-import Control.Lens (SimpleTraversal, (.~), (^.), (&), (%~), (.~), (^?), (^..), (<>~))
+import Control.Lens (Traversal', (.~), (^.), (&), (%~), (.~), (^?), (^..), (<>~))
 import Control.Monad ((<=<), join, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, runState, mapStateT)
@@ -453,8 +453,8 @@ convertApplyList (Expression.Apply funcI argI) argS specialFunctions exprI =
           (List (listItem : innerValues) mListActions)
   _ -> pure Nothing
 
-eApply :: SimpleTraversal (Expression.Expression def a) (Expression.Apply (Expression.Expression def a))
-eApply = Expression.eBody . Expression.bodyApply
+eApply :: Traversal' (Expression.Expression def a) (Expression.Apply (Expression.Expression def a))
+eApply = Expression.eBody . Expression._BodyApply
 
 removeInferredTypes :: Expression m -> Expression m
 removeInferredTypes = Lens.set (rPayload . plInferredTypes) []
@@ -479,7 +479,7 @@ setNextHole dest =
   where
     subHoles =
       Lens.folding subExpressions .
-      Lens.filtered (Lens.notNullOf (rExpressionBody . expressionHole))
+      Lens.filtered (Lens.notNullOf (rExpressionBody . _ExpressionHole))
 
 applyOnSection ::
   (MonadA m, Typeable1 m) => Section (Expression m) ->
@@ -759,7 +759,7 @@ isCompleteType :: Expression.Expression def () -> Bool
 isCompleteType =
   Lens.nullOf
   ( Lens.folding ExprUtil.subExpressions
-  . Expression.eBody . Expression.bodyLeaf . Expression.hole
+  . Expression.eBody . Expression._BodyLeaf . Expression._Hole
   )
 
 convertExpressionPure ::

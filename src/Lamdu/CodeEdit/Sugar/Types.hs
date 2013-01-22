@@ -9,11 +9,11 @@ module Lamdu.CodeEdit.Sugar.Types
     , giveAsArg, callWithArg, callWithNextArg
     , setToHole, replaceWithNewHole, cut, giveAsArgToOperator
   , ExpressionBody(..), eHasParens
-    , expressionPi, expressionApply, expressionSection
-    , expressionFunc, expressionGetVariable, expressionHole
-    , expressionInferred, expressionPolymorphic
-    , expressionLiteralInteger, expressionAtom
-    , expressionList
+    , _ExpressionPi, _ExpressionApply, _ExpressionSection
+    , _ExpressionFunc, _ExpressionGetVariable, _ExpressionHole
+    , _ExpressionInferred, _ExpressionPolymorphic
+    , _ExpressionLiteralInteger, _ExpressionAtom
+    , _ExpressionList
   , Payload(..), plInferredTypes, plActions, plNextHole
   , ExpressionP(..)
     , rGuid, rExpressionBody, rPayload, rHiddenGuids, rPresugaredExpression

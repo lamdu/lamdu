@@ -8,7 +8,7 @@ module Graphics.UI.Bottle.Rect
   ) where
 
 import Control.Applicative (liftA2)
-import Control.Lens (Simple, Traversal, Lens, (^.), _1, _2)
+import Control.Lens (Traversal', Lens', (^.), _1, _2)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators(R)
 import qualified Control.Lens.TH as LensTH
@@ -20,17 +20,17 @@ data Rect = Rect {
   } deriving Show
 LensTH.makeLenses ''Rect
 
-topLeftAndSize :: Simple Traversal Rect (Vector2 R)
+topLeftAndSize :: Traversal' Rect (Vector2 R)
 topLeftAndSize f (Rect tl s) = liftA2 Rect (f tl) (f s)
 
-bottomRight :: Simple Lens Rect (Vector2 R)
+bottomRight :: Lens' Rect (Vector2 R)
 bottomRight f (Rect tl s) =
   fmap withNew $ f (tl + s)
   where
     withNew newBottomRight =
       Rect tl (newBottomRight - tl)
 
-center :: Simple Lens Rect (Vector2 R)
+center :: Lens' Rect (Vector2 R)
 center f (Rect tl s) =
   fmap withNew $ f centerVal
   where
@@ -38,22 +38,22 @@ center f (Rect tl s) =
     withNew newCenter =
       Rect (tl + newCenter - centerVal) s
 
-left :: Simple Lens Rect R
+left :: Lens' Rect R
 left = topLeft . _1
 
-top :: Simple Lens Rect R
+top :: Lens' Rect R
 top = topLeft . _2
 
-right :: Simple Lens Rect R
+right :: Lens' Rect R
 right = bottomRight . _1
 
-bottom :: Simple Lens Rect R
+bottom :: Lens' Rect R
 bottom = bottomRight . _2
 
-width :: Simple Lens Rect R
+width :: Lens' Rect R
 width = size . _1
 
-height :: Simple Lens Rect R
+height :: Lens' Rect R
 height = size . _2
 
 distance :: Rect -> Rect -> R

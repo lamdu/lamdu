@@ -315,11 +315,11 @@ applyOperatorResultsList argument holeInfo baseExpr = do
 
 removeHoleWrap :: Expression def a -> Maybe (Expression def a)
 removeHoleWrap expr = do
-  apply <- expr ^? Expression.eBody . Expression.bodyApply
+  apply <- expr ^? Expression.eBody . Expression._BodyApply
   void $
     apply ^?
     Expression.applyFunc . Expression.eBody .
-    Expression.bodyLeaf . Expression.hole
+    Expression._BodyLeaf . Expression._Hole
   pure $ apply ^. Expression.applyArg
 
 data ResultType = GoodResult | BadResult

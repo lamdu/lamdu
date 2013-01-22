@@ -6,6 +6,7 @@ module Data.Store.Property
   , list
   ) where
 
+import Control.Lens (Lens')
 import Control.Monad ((<=<))
 import Control.MonadA (MonadA)
 import qualified Control.Lens as Lens
@@ -45,7 +46,7 @@ pureCompose ::
   MonadA m => (a -> b) -> (b -> a) -> Property m a -> Property m b
 pureCompose ab ba = compose ab (return . ba)
 
-composeLens :: Lens.SimpleLens a b -> Property m a -> Property m b
+composeLens :: Lens' a b -> Property m a -> Property m b
 composeLens lens (Property val setter) =
   Property (Lens.view lens val) (setter . flip (Lens.set lens) val)
 

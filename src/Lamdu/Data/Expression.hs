@@ -1,10 +1,10 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveDataTypeable, RankNTypes, NoMonomorphismRestriction #-}
 module Lamdu.Data.Expression
-  ( VariableRef(..), parameterRef, definitionRef
+  ( VariableRef(..), _ParameterRef, _DefinitionRef
   , Lambda(..), lambdaParamId, lambdaParamType, lambdaBody
   , Apply(..), applyFunc, applyArg
-  , Leaf(..), getVariable, literalInteger, hole, set, integerType
-  , Body(..), bodyLambda, bodyPi, bodyApply, bodyLeaf
+  , Leaf(..), _GetVariable, _LiteralInteger, _Hole, _Set, _IntegerType
+  , Body(..), _BodyLambda, _BodyPi, _BodyApply, _BodyLeaf
   , BodyExpr
   , Expression(..), eBody, ePayload
   ) where
