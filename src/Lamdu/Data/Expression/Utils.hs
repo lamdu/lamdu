@@ -11,7 +11,7 @@ module Lamdu.Data.Expression.Utils
   , pureExpression
   , randomizeExpr
   , canonizeParamIds, randomizeParamIds
-  , matchExpression
+  , matchBody, matchExpression
   , subExpressions
   , isDependentPi
   , funcArguments
@@ -22,13 +22,15 @@ module Lamdu.Data.Expression.Utils
   , bitraverseBody
   , expressionBodyDef
   , expressionDef
+  , exprLeaves
+  , bodyLeaves
   ) where
 
 import Lamdu.Data.Expression
 
 import Control.Applicative (Applicative(..), liftA2, (<$>))
 import Control.DeepSeq (NFData(..))
-import Control.Lens (Prism, Prism', (^.), (^?), (+~))
+import Control.Lens (Prism, Prism', (^.), (^?), (+~), (%~))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (evalState, state)
@@ -182,7 +184,9 @@ matchExpression onMatch onMismatch =
   where
     go scope e0@(Expression body0 pl0) e1@(Expression body1 pl1) =
       case matchBody matchLamResult matchOther matchGetPar body0 body1 of
-      Nothing -> onMismatch e0 $ onGetParamGuids lookupGuid e1
+      Nothing ->
+        onMismatch e0 $
+        (exprLeaves . _GetVariable . _ParameterRef %~ lookupGuid) e1
       Just bodyMatched -> Expression <$> sequenceA bodyMatched <*> onMatch pl0 pl1
       where
         matchGetPar p0 p1 = p0 == lookupGuid p1
@@ -190,10 +194,25 @@ matchExpression onMatch onMismatch =
         matchOther = go scope
         lookupGuid guid = fromMaybe guid $ Map.lookup guid scope
 
-onGetParamGuids :: (Guid -> Guid) -> Expression def a -> Expression def a
-onGetParamGuids f =
-  Lens.over (eBody . bodyParameterRef) f .
-  Lens.over (eBody . Lens.mapped) (onGetParamGuids f)
+exprLeaves ::
+  Lens.Traversal (Expression defa a) (Expression defb a) (Leaf defa) (Leaf defb)
+exprLeaves = eBody . bodyLeaves exprLeaves
+
+bodyLeaves ::
+  Applicative f =>
+  Lens.LensLike f expra exprb (Leaf defa) (Leaf defb) ->
+  Lens.LensLike f (Body defa expra) (Body defb exprb) (Leaf defa) (Leaf defb)
+bodyLeaves recu onLeaves body =
+  case body of
+  BodyLambda (Lambda paramName paramType result) ->
+    BodyLambda <$> (Lambda paramName <$> recLeaves paramType <*> recLeaves result)
+  BodyPi (Lambda paramName paramType result) ->
+    BodyPi <$> (Lambda paramName <$> recLeaves paramType <*> recLeaves result)
+  BodyApply (Apply func arg) ->
+    BodyApply <$> (Apply <$> recLeaves func <*> recLeaves arg)
+  BodyLeaf l -> BodyLeaf <$> onLeaves l
+  where
+    recLeaves = recu onLeaves
 
 subExpressions :: Expression def a -> [Expression def a]
 subExpressions x =
