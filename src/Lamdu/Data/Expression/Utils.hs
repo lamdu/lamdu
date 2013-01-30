@@ -40,7 +40,7 @@ import Data.Derive.NFData (makeNFData)
 import Data.DeriveTH (derive)
 import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
-import Data.Traversable (Traversable(..))
+import Data.Traversable (Traversable(..), sequenceA)
 import Data.Typeable (Typeable)
 import System.Random (Random, RandomGen, random)
 import qualified Control.Lens as Lens
@@ -140,6 +140,34 @@ randomizeParamIds gen =
         Map.lookup guid
       _ -> return v
 
+-- Left-biased on parameter guids
+{-# INLINE matchBody #-}
+matchBody ::
+  Eq def =>
+  (Guid -> Guid -> a -> b -> c) -> -- ^ Lambda/Pi result match
+  (a -> b -> c) ->                 -- ^ Ordinary structural match (Apply components, param type)
+  (Guid -> Guid -> Bool) ->        -- ^ Match ParameterRef's
+  Body def a -> Body def b -> Maybe (Body def c)
+matchBody matchLamResult matchOther matchGetPar body0 body1 =
+  case (body0, body1) of
+  (BodyLambda l0, BodyLambda l1) ->
+    Just . BodyLambda $ onLambda l0 l1
+  (BodyPi l0, BodyPi l1) ->
+    Just . BodyPi $ onLambda l0 l1
+  (BodyApply (Apply f0 a0), BodyApply (Apply f1 a1)) ->
+    Just . BodyApply $ Apply (matchOther f0 f1) (matchOther a0 a1)
+  (BodyLeaf (GetVariable (ParameterRef p0)),
+   BodyLeaf (GetVariable (ParameterRef p1)))
+    | matchGetPar p0 p1
+      -> Just $ Lens.review bodyParameterRef p0
+  (BodyLeaf x, BodyLeaf y)
+    | x == y -> Just $ BodyLeaf x
+  _ -> Nothing
+  where
+    onLambda (Lambda p0 pt0 r0) (Lambda p1 pt1 r1) =
+      Lambda p0 (matchOther pt0 pt1) $
+      matchLamResult p0 p1 r0 r1
+
 -- TODO: Generalize to defa/defb/defc with hof's to handle matching
 -- them?  The returned expression gets the same guids as the left
 -- expression
@@ -153,26 +181,14 @@ matchExpression onMatch onMismatch =
   go Map.empty
   where
     go scope e0@(Expression body0 pl0) e1@(Expression body1 pl1) =
-      case (body0, body1) of
-      (BodyLambda l0, BodyLambda l1) ->
-        mkExpression $ BodyLambda <$> onLambda l0 l1
-      (BodyPi l0, BodyPi l1) ->
-        mkExpression $ BodyPi <$> onLambda l0 l1
-      (BodyApply (Apply f0 a0), BodyApply (Apply f1 a1)) ->
-        mkExpression $ BodyApply <$> liftA2 Apply (go scope f0 f1) (go scope a0 a1)
-      (BodyLeaf gv@(GetVariable (ParameterRef p0)),
-       BodyLeaf (GetVariable (ParameterRef p1)))
-        | p0 == lookupGuid p1 ->
-          mkExpression . pure $ BodyLeaf gv
-      (BodyLeaf x, BodyLeaf y)
-        | x == y -> mkExpression . pure $ BodyLeaf x
-      _ -> onMismatch e0 $ onGetParamGuids lookupGuid e1
+      case matchBody matchLamResult matchOther matchGetPar body0 body1 of
+      Nothing -> onMismatch e0 $ onGetParamGuids lookupGuid e1
+      Just bodyMatched -> Expression <$> sequenceA bodyMatched <*> onMatch pl0 pl1
       where
+        matchGetPar p0 p1 = p0 == lookupGuid p1
+        matchLamResult p0 p1 = go $ Map.insert p1 p0 scope
+        matchOther = go scope
         lookupGuid guid = fromMaybe guid $ Map.lookup guid scope
-        mkExpression body = Expression <$> body <*> onMatch pl0 pl1
-        onLambda (Lambda p0 pt0 r0) (Lambda p1 pt1 r1) =
-          liftA2 (Lambda p0) (go scope pt0 pt1) $
-          go (Map.insert p1 p0 scope) r0 r1
 
 onGetParamGuids :: (Guid -> Guid) -> Expression def a -> Expression def a
 onGetParamGuids f =
