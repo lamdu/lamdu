@@ -1,5 +1,5 @@
 GHC=ghc
-GHC_FLAGS=-O2 -Wall
+GHC_FLAGS=-O2 -Wall -XScopedTypeVariables
 
 all: run_test_infer
 
