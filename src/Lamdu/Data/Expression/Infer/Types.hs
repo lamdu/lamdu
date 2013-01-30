@@ -34,8 +34,8 @@ instance Show ExprRef where
   show = ('E' :) . show . unExprRef
 
 data TypedValue = TypedValue
-  { tvVal :: ExprRef
-  , tvType :: ExprRef
+  { tvVal :: {-# UNPACK #-}! ExprRef
+  , tvType :: {-# UNPACK #-}! ExprRef
   }
 instance Show TypedValue where
   show (TypedValue v t) = unwords [show v, ":", show t]
@@ -48,9 +48,9 @@ mkOrigin :: State Origin Origin
 mkOrigin = State.get <* State.modify (+1)
 
 data RefExprPayload = RefExprPayload
-  { _rplSubstitutedArgs :: IntSet
-  , _rplRestrictedPoly :: Monoid.Any
-  , _rplOrigin :: Origin
+  { _rplSubstitutedArgs :: !IntSet
+  , _rplRestrictedPoly :: !Monoid.Any
+  , _rplOrigin :: {-# UNPACK #-}!Origin
   } deriving (Show)
 LensTH.makeLenses ''RefExprPayload
 
@@ -67,7 +67,7 @@ type Scope def = Map (Expression.VariableRef def) ExprRef
 
 -- Used to refer to expressions in the inference state and resume inference.
 data InferNode def = InferNode
-  { nRefs :: TypedValue
+  { nRefs :: {-# UNPACK #-}!TypedValue
   , nScope :: Scope def
   } deriving (Typeable)
 
@@ -83,7 +83,7 @@ data IsRestrictedPoly = UnrestrictedPoly | RestrictedPoly
 data Inferred def = Inferred
   { iPoint :: InferNode def
   , iValue :: Expression.Expression def IsRestrictedPoly
-  , iType :: Expression.Expression def IsRestrictedPoly
+  , iType  :: Expression.Expression def IsRestrictedPoly
   , iScope :: Map Guid (Expression.Expression def IsRestrictedPoly)
   }
 -- Cannot derive Binary instance because binary instance of Scope
