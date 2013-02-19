@@ -119,10 +119,10 @@ makeForNode (Expression.Expression exprBody typedVal) =
   case fmap (Lens.view Expression.ePayload) exprBody of
   Expression.BodyPi lambda@(Expression.Lambda _ _ resultType) ->
     (:) <$> setRule (tvType resultType) <*>
-    onLambda Expression.LamKindPi lambda
+    onLambda Expression.KindPi lambda
   Expression.BodyLambda lambda@(Expression.Lambda param _ body) ->
     (++) <$> lambdaRules param typedVal (tvType body) <*>
-    onLambda Expression.LamKindLambda lambda
+    onLambda Expression.KindLambda lambda
   Expression.BodyApply apply -> applyRules typedVal apply
   _ -> pure []
   where
@@ -481,7 +481,7 @@ applyRules applyTv apply@(Expression.Apply func arg) =
       , lambdaParamTypeToArgTypeRule apply
       , applyToPartsRule applyTv apply
       ]
-      ++ recurseSubstRules Expression.LamKindPi
+      ++ recurseSubstRules Expression.KindPi
         (tvType applyTv) (tvType func) (tvVal arg)
-      ++ recurseSubstRules Expression.LamKindLambda
+      ++ recurseSubstRules Expression.KindLambda
         (tvVal applyTv) (tvVal func) (tvVal arg)

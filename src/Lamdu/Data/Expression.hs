@@ -25,7 +25,7 @@ import Data.Typeable (Typeable)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
 
-data LamKind = LamKindLambda | LamKindPi
+data LamKind = KindLambda | KindPi
   deriving (Eq, Ord, Show, Typeable)
 
 data Lambda expr = Lambda
@@ -116,5 +116,5 @@ lamKindPrism ::
   LamKind ->
   p (Lambda expr) (f (Lambda expr)) ->
   p (Body def expr) (f (Body def expr))
-lamKindPrism LamKindLambda = _BodyLambda
-lamKindPrism LamKindPi = _BodyPi
+lamKindPrism KindLambda = _BodyLambda
+lamKindPrism KindPi = _BodyPi

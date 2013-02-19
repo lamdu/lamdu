@@ -107,8 +107,8 @@ loadExpressionBody iref = onBody =<< DataIRef.readExprBody iref
       on (liftA2 ExprUtil.makeApply) loadExpressionClosure (prop Func) (prop Arg)
       where
         prop = ApplyProperty iref apply
-    onBody (Expression.BodyLambda lambda) = onLambda Expression.LamKindLambda lambda
-    onBody (Expression.BodyPi lambda) = onLambda Expression.LamKindPi lambda
+    onBody (Expression.BodyLambda lambda) = onLambda Expression.KindLambda lambda
+    onBody (Expression.BodyPi lambda) = onLambda Expression.KindPi lambda
     onLambda cons lambda@(Expression.Lambda param _ _) =
       fmap (Lens.review (Expression.lamKindPrism cons)) $
       on (liftA2 (Expression.Lambda param)) loadExpressionClosure
