@@ -7,6 +7,7 @@ module Lamdu.Data.Expression
   , Body(..), _BodyLambda, _BodyPi, _BodyApply, _BodyLeaf
   , BodyExpr
   , Expression(..), eBody, ePayload
+  , LamKind(..), lamKindPrism
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
@@ -21,7 +22,11 @@ import Data.Foldable (Foldable(..))
 import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
+import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
+
+data LamKind = LamKindLambda | LamKindPi
+  deriving (Eq, Ord, Show, Typeable)
 
 data Lambda expr = Lambda
   { _lambdaParamId :: Guid
@@ -42,7 +47,6 @@ data VariableRef def
   = ParameterRef {-# UNPACK #-} !Guid -- of the lambda/pi
   | DefinitionRef def
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
-LensTH.makePrisms ''VariableRef
 
 data Leaf def
   = GetVariable !(VariableRef def)
@@ -51,7 +55,6 @@ data Leaf def
   | IntegerType
   | Hole
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
-LensTH.makePrisms ''Leaf
 
 data Body def expr
   = BodyLambda {-# UNPACK #-} !(Lambda expr)
@@ -59,7 +62,6 @@ data Body def expr
   | BodyApply {-# UNPACK #-} !(Apply expr)
   | BodyLeaf !(Leaf def)
   deriving (Eq, Ord, Functor, Foldable, Traversable)
-LensTH.makePrisms ''Body
 
 type BodyExpr def a = Body def (Expression def a)
 
@@ -86,6 +88,20 @@ data Expression def a = Expression
   , _ePayload :: a
   } deriving (Functor, Eq, Ord, Foldable, Traversable, Typeable)
 
+instance (Show a, Show def) => Show (Expression def a) where
+  show (Expression body payload) =
+    show body ++ showPayload
+    where
+      showPayload =
+        case show payload of
+        "()" -> ""
+        x -> "{" ++ x ++ "}"
+
+derive makeBinary ''LamKind
+derive makeNFData ''LamKind
+LensTH.makePrisms ''VariableRef
+LensTH.makePrisms ''Leaf
+LensTH.makePrisms ''Body
 LensTH.makeLenses ''Expression
 LensTH.makeLenses ''Lambda
 LensTH.makeLenses ''Apply
@@ -95,11 +111,10 @@ fmap concat . sequence $
   <$> [makeBinary, makeNFData]
   <*> [''VariableRef, ''Lambda, ''Apply, ''Leaf, ''Body, ''Expression]
 
-instance (Show a, Show def) => Show (Expression def a) where
-  show (Expression body payload) =
-    show body ++ showPayload
-    where
-      showPayload =
-        case show payload of
-        "()" -> ""
-        x -> "{" ++ x ++ "}"
+lamKindPrism ::
+  (Applicative f, Lens.Choice p) =>
+  LamKind ->
+  p (Lambda expr) (f (Lambda expr)) ->
+  p (Body def expr) (f (Body def expr))
+lamKindPrism LamKindLambda = _BodyLambda
+lamKindPrism LamKindPi = _BodyPi

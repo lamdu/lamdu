@@ -15,7 +15,6 @@ module Lamdu.Data.Expression.Utils
   , subExpressions
   , isDependentPi
   , funcArguments
-  , LambdaWrapper(..), lambdaWrapperPrism
   , applyForms, applyDependentPis
   -- Traversals
   , bitraverseExpression
@@ -29,21 +28,13 @@ module Lamdu.Data.Expression.Utils
 import Lamdu.Data.Expression
 
 import Control.Applicative (Applicative(..), liftA2, (<$>))
-import Control.DeepSeq (NFData(..))
 import Control.Lens (Prism, Prism', (^.), (^?), (+~), (%~))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (evalState, state)
-import Data.Binary (Binary(..))
-import Data.Binary.Get (getWord8)
-import Data.Binary.Put (putWord8)
-import Data.Derive.Binary (makeBinary)
-import Data.Derive.NFData (makeNFData)
-import Data.DeriveTH (derive)
 import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable(..), sequenceA)
-import Data.Typeable (Typeable)
 import System.Random (Random, RandomGen, random)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
@@ -237,19 +228,6 @@ funcArguments =
   where
     f (Lambda _ paramType body) =
       paramType : funcArguments body
-
-data LambdaWrapper = LambdaWrapperLambda | LambdaWrapperPi
-  deriving (Eq, Ord, Show, Typeable)
-derive makeBinary ''LambdaWrapper
-derive makeNFData ''LambdaWrapper
-
-lambdaWrapperPrism ::
-  (Applicative f, Lens.Choice p) =>
-  LambdaWrapper ->
-  p (Lambda expr) (f (Lambda expr)) ->
-  p (Body def expr) (f (Body def expr))
-lambdaWrapperPrism LambdaWrapperLambda = _BodyLambda
-lambdaWrapperPrism LambdaWrapperPi = _BodyPi
 
 countArrows :: Expression def () -> Int
 countArrows expr =
