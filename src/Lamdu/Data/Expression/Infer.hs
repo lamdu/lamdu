@@ -479,18 +479,15 @@ exprIntoContext rootScope (Loaded rootExpr defTypes) = do
       inferNode <- toInferNode scope (void <$> body) createdTV
       newBody <-
         case body of
-        Expression.BodyLambda lam -> goLambda ExprUtil.makeLambda scope lam
-        Expression.BodyPi lam -> goLambda ExprUtil.makePi scope lam
+        Expression.BodyLam k (Expression.Lambda paramGuid paramType result) -> do
+          paramTypeDone <- go scope paramType
+          let
+            paramTypeRef = tvVal . nRefs . fst $ paramTypeDone ^. Expression.ePayload
+            newScope = Map.insert (Expression.ParameterRef paramGuid) paramTypeRef scope
+          resultDone <- go newScope result
+          return $ ExprUtil.makeLam k paramGuid paramTypeDone resultDone
         _ -> traverse (go scope) body
       return $ Expression.Expression newBody (inferNode, s)
-    goLambda cons scope (Expression.Lambda paramGuid paramType result) = do
-      paramTypeDone <- go scope paramType
-      let
-        paramTypeRef = tvVal . nRefs . fst $ paramTypeDone ^. Expression.ePayload
-        newScope = Map.insert (Expression.ParameterRef paramGuid) paramTypeRef scope
-      resultDone <- go newScope result
-      return $ cons paramGuid paramTypeDone resultDone
-
     toInferNode scope body tv = do
       let
         typedValue@(TypedValue val _) =

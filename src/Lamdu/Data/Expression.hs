@@ -4,10 +4,10 @@ module Lamdu.Data.Expression
   , Lambda(..), lambdaParamId, lambdaParamType, lambdaBody
   , Apply(..), applyFunc, applyArg
   , Leaf(..), _GetVariable, _LiteralInteger, _Hole, _Set, _IntegerType
-  , Body(..), _BodyLambda, _BodyPi, _BodyApply, _BodyLeaf
+  , Body(..), _BodyLam, _BodyApply, _BodyLeaf
   , BodyExpr
   , Expression(..), eBody, ePayload
-  , LamKind(..), lamKindPrism
+  , LamKind(..)
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
@@ -22,11 +22,7 @@ import Data.Foldable (Foldable(..))
 import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
-import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
-
-data LamKind = KindLambda | KindPi
-  deriving (Eq, Ord, Show, Typeable)
 
 data Lambda expr = Lambda
   { _lambdaParamId :: Guid
@@ -56,9 +52,11 @@ data Leaf def
   | Hole
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
+data LamKind = KindLambda | KindPi
+  deriving (Eq, Ord, Show, Typeable)
+
 data Body def expr
-  = BodyLambda {-# UNPACK #-} !(Lambda expr)
-  | BodyPi {-# UNPACK #-} !(Lambda expr)
+  = BodyLam LamKind {-# UNPACK #-}!(Lambda expr)
   | BodyApply {-# UNPACK #-} !(Apply expr)
   | BodyLeaf !(Leaf def)
   deriving (Eq, Ord, Functor, Foldable, Traversable)
@@ -66,9 +64,9 @@ data Body def expr
 type BodyExpr def a = Body def (Expression def a)
 
 instance (Show expr, Show def) => Show (Body def expr) where
-  show (BodyLambda (Lambda paramId paramType body)) =
+  show (BodyLam KindLambda (Lambda paramId paramType body)) =
     concat ["\\", show paramId, ":", showP paramType, "==>", showP body]
-  show (BodyPi (Lambda paramId paramType body)) =
+  show (BodyLam KindPi (Lambda paramId paramType body)) =
     concat ["(", show paramId, ":", showP paramType, ")->", showP body]
   show (BodyApply (Apply func arg)) = unwords [showP func, showP arg]
   show (BodyLeaf (GetVariable (ParameterRef guid))) = "par:" ++ show guid
@@ -110,11 +108,3 @@ fmap concat . sequence $
   derive
   <$> [makeBinary, makeNFData]
   <*> [''VariableRef, ''Lambda, ''Apply, ''Leaf, ''Body, ''Expression]
-
-lamKindPrism ::
-  (Applicative f, Lens.Choice p) =>
-  LamKind ->
-  p (Lambda expr) (f (Lambda expr)) ->
-  p (Body def expr) (f (Body def expr))
-lamKindPrism KindLambda = _BodyLambda
-lamKindPrism KindPi = _BodyPi

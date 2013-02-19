@@ -702,10 +702,7 @@ uninferredHoles
   | otherwise = uninferredHoles func ++ uninferredHoles arg
 uninferredHoles e@Expression.Expression { Expression._eBody = Expression.BodyLeaf Expression.Hole } = [e]
 uninferredHoles Expression.Expression
-  { Expression._eBody = Expression.BodyPi (Expression.Lambda _ paramType resultType) } =
-    uninferredHoles resultType ++ uninferredHoles paramType
-uninferredHoles Expression.Expression
-  { Expression._eBody = Expression.BodyLambda (Expression.Lambda _ paramType result) } =
+  { Expression._eBody = Expression.BodyLam _ (Expression.Lambda _ paramType result) } =
     uninferredHoles result ++ uninferredHoles paramType
 uninferredHoles Expression.Expression { Expression._eBody = body } =
   Foldable.concatMap uninferredHoles body
@@ -745,8 +742,8 @@ convertExpressionI :: (Typeable1 m, MonadA m) => DataIRef.ExpressionM m (Payload
 convertExpressionI ee =
   ($ ee) $
   case ee ^. Expression.eBody of
-  Expression.BodyLambda x -> convertFunc x
-  Expression.BodyPi x -> convertPi x
+  Expression.BodyLam Expression.KindLambda x -> convertFunc x
+  Expression.BodyLam Expression.KindPi x -> convertPi x
   Expression.BodyApply x -> convertApply x
   Expression.BodyLeaf (Expression.GetVariable x) -> convertGetVariable x
   Expression.BodyLeaf (Expression.LiteralInteger x) -> convertLiteralInteger x
@@ -780,7 +777,7 @@ convertDefinitionParams ::
   )
 convertDefinitionParams expr =
   case expr ^. Expression.eBody of
-  Expression.BodyLambda lambda -> do
+  Expression.BodyLam Expression.KindLambda lambda -> do
     (isDependent, fp) <- convertFuncParam lambda expr
     (depParams, params, deepBody) <-
       convertDefinitionParams $ lambda ^. Expression.lambdaBody
@@ -797,7 +794,7 @@ convertWhereItems
   topLevel@Expression.Expression
   { Expression._eBody = Expression.BodyApply apply@Expression.Apply
   { Expression._applyFunc = Expression.Expression
-  { Expression._eBody = Expression.BodyLambda lambda@Expression.Lambda
+  { Expression._eBody = Expression.BodyLam Expression.KindLambda lambda@Expression.Lambda
   { Expression._lambdaParamId = param
   , Expression._lambdaParamType = Expression.Expression
   { Expression._eBody = Expression.BodyLeaf Expression.Hole
@@ -839,9 +836,9 @@ addStoredParam
 addStoredParam
   Expression.Expression
   { Expression._eBody =
-    Expression.BodyLambda
-    Expression.Lambda { Expression._lambdaBody = body } } =
-  addStoredParam body
+    Expression.BodyLam Expression.KindLambda
+    Expression.Lambda { Expression._lambdaBody = body }
+  } = addStoredParam body
 addStoredParam _ =
   error $
   "Non-stored can only be lambda added by implicit " ++

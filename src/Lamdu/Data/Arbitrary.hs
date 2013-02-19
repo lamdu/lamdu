@@ -8,9 +8,12 @@ import Control.Monad (join)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (StateT, evalStateT)
+import Data.Derive.Arbitrary (makeArbitrary)
+import Data.DeriveTH (derive)
 import Data.Maybe (maybeToList)
 import Data.Store.Guid (Guid)
-import Test.QuickCheck (Arbitrary(..), Gen)
+import Lamdu.Data.Expression (LamKind(..))
+import Test.QuickCheck (Arbitrary(..), Gen, choose)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Reader as Reader
@@ -58,8 +61,7 @@ liftGen = lift . lift
 arbitraryBody :: Arbitrary a => GenExpr def (Expression.BodyExpr def a)
 arbitraryBody =
   join . liftGen . Gen.frequency . (Lens.mapped . Lens._2 %~ pure) $
-  [ weight 1  $ Expression.BodyLambda <$> arbitraryLambda
-  , weight 1  $ Expression.BodyPi     <$> arbitraryLambda
+  [ weight 2  $ Expression.BodyLam    <$> liftGen arbitrary <*> arbitraryLambda
   , weight 5  $ Expression.BodyApply  <$> arbitraryApply
   , weight 10 $ Expression.BodyLeaf   <$> arbitraryLeaf
   ]
@@ -86,3 +88,5 @@ exprGen makeDefI =
 -- its own lambdas.
 instance Arbitrary a => Arbitrary (Expression.Expression def a) where
   arbitrary = exprGen Nothing
+
+derive makeArbitrary ''Expression.LamKind
