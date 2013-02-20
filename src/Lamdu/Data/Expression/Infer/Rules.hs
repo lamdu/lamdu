@@ -25,6 +25,7 @@ import qualified Control.Compose as Compose
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.IntSet as IntSet
+import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Data.Expression as Expression
@@ -116,22 +117,26 @@ makeForNode (Expression.Expression exprBody typedVal) =
   (:)
   <$> ruleSimpleType typedVal
   <*>
-  case fmap (Lens.view Expression.ePayload) exprBody of
+  case Lens.view Expression.ePayload <$> exprBody of
   Expression.BodyLam lambda ->
     (++) <$> lamKindRules lambda <*> onLambda lambda
   Expression.BodyApply apply -> applyRules typedVal apply
-  _ -> pure []
+  Expression.BodyRecord record -> recordRules record
+  -- Leafs need no additional rules beyond the commonal simpleTypeRule
+  Expression.BodyLeaf _ -> pure []
   where
+    recordRules (Expression.Record Expression.KindType fields) =
+      mapM (setRule . tvType) $ Map.elems fields
     lamKindRules (Expression.Lambda Expression.KindPi _ _ body) =
       fmap (:[]) . setRule $ tvType body
     lamKindRules (Expression.Lambda Expression.KindLambda param _ body) =
       lambdaRules param typedVal (tvType body)
-    setRule ref = do
-      o <- mkOrigin
-      return . Rule [] $ SetClosure [(ref, setExpr o)]
     onLambda lam =
       (:) <$> setRule (tvType (lam ^. Expression.lambdaParamType)) <*>
       lambdaStructureRules (tvVal typedVal) (fmap tvVal lam)
+    setRule ref = do
+      o <- mkOrigin
+      return . Rule [] $ SetClosure [(ref, setExpr o)]
 
 makeForAll :: Expression.Expression def TypedValue -> State Origin [Rule def]
 makeForAll = fmap concat . traverse makeForNode . ExprUtil.subExpressions
@@ -255,18 +260,24 @@ mergeToPiResult =
 runSimpleTypeClosure :: ExprRef -> Origin2 -> RuleFunction def
 runSimpleTypeClosure typ (o0, o1) ~[valExpr] =
   case valExpr ^. Expression.eBody of
-  Expression.BodyLeaf Expression.Set -> [(typ, setExpr o0)]
-  Expression.BodyLeaf Expression.IntegerType -> [(typ, setExpr o0)]
+  Expression.BodyLeaf Expression.Set -> simpleType
+  Expression.BodyLeaf Expression.IntegerType -> simpleType
+  Expression.BodyLam (Expression.Lambda Expression.KindPi _ _ _) -> simpleType
+  Expression.BodyRecord (Expression.Record Expression.KindType _) -> simpleType
   Expression.BodyLeaf (Expression.LiteralInteger _) -> [(typ, intTypeExpr o0)]
-  Expression.BodyLam
-    (Expression.Lambda Expression.KindPi _ _ _) -> [(typ, setExpr o0)]
   Expression.BodyLam
     (Expression.Lambda Expression.KindLambda param paramType _) ->
     [( typ
      , makeRefExpr o0 . ExprUtil.makePi param paramType $
        makeHole o1
      )]
-  _ -> []
+  -- All type information that can be deduced from these depends on
+  -- external information which is not used in the simple type rules.
+  Expression.BodyLeaf Expression.GetVariable {} -> []
+  Expression.BodyLeaf Expression.Hole {} -> []
+  Expression.BodyApply _ -> []
+  where
+    simpleType = [(typ, setExpr o0)]
 
 ruleSimpleType :: TypedValue -> State Origin (Rule def)
 ruleSimpleType (TypedValue val typ) = Rule [val] . SimpleTypeClosure typ <$> mkOrigin2

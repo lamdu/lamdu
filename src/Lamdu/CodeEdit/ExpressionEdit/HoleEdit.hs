@@ -375,8 +375,12 @@ makeAllResults holeInfo = do
     primitiveResults =
       [ mkGroup ["Set", "Type"] $ Expression.BodyLeaf Expression.Set
       , mkGroup ["Integer", "ℤ", "Z"] $ Expression.BodyLeaf Expression.IntegerType
-      , mkGroup ["->", "Pi", "→", "→", "Π", "π"] $ ExprUtil.makePi (Guid.augment "NewPi" (hiGuid holeInfo)) holeExpr holeExpr
-      , mkGroup ["\\", "Lambda", "Λ", "λ"] $ ExprUtil.makeLambda (Guid.augment "NewLambda" (hiGuid holeInfo)) holeExpr holeExpr
+      , mkGroup ["->", "Pi", "→", "→", "Π", "π"] $
+        ExprUtil.makePi (Guid.augment "NewPi" (hiGuid holeInfo)) holeExpr holeExpr
+      , mkGroup ["\\", "Lambda", "Λ", "λ"] $
+        ExprUtil.makeLambda (Guid.augment "NewLambda" (hiGuid holeInfo)) holeExpr holeExpr
+      , mkGroup ["Record Type", "{"] . Expression.BodyRecord $
+        Expression.Record Expression.KindType mempty
       ]
     holeExpr = ExprUtil.pureExpression $ Expression.BodyLeaf Expression.Hole
 

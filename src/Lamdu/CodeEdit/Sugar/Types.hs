@@ -20,6 +20,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , Expression
   , WhereItem(..)
   , ListItem(..), ListActions(..), List(..)
+  , RecordField(..), RecordKind(..), Record(..)
   , Func(..), fDepParams, fParams, fBody
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
@@ -49,6 +50,7 @@ import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
+import Lamdu.Data.Expression (RecordKind(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Control.Lens.TH as LensTH
 import qualified Data.List as List
@@ -199,6 +201,18 @@ data List m expr = List
   , lMActions :: Maybe (ListActions m)
   } deriving (Functor, Foldable, Traversable)
 
+data RecordField m expr = RecordField
+  { rfMDel :: Maybe (T m Guid)
+  , rfId :: Expression.Field
+  , rfExpr :: expr -- field type or val
+  } deriving (Functor, Foldable, Traversable)
+
+data Record m expr = Record
+  { rKind :: RecordKind -- record type or val
+  , rFields :: [RecordField m expr]
+  , rMAddField :: Maybe (T m Guid)
+  } deriving (Functor, Foldable, Traversable)
+
 data ExpressionBody m expr
   = ExpressionApply   { _eHasParens :: HasParens, __eApply :: Expression.Apply expr }
   | ExpressionSection { _eHasParens :: HasParens, __eSection :: Section expr }
@@ -209,8 +223,9 @@ data ExpressionBody m expr
   | ExpressionInferred { __eInferred :: Inferred m expr }
   | ExpressionPolymorphic { __ePolymorphic :: Polymorphic (Tag m) expr }
   | ExpressionLiteralInteger { __eLit :: LiteralInteger m }
-  | ExpressionAtom { __eAtom :: String }
-  | ExpressionList { __eList :: List m expr }
+  | ExpressionAtom    { __eAtom :: String }
+  | ExpressionList    { __eList :: List m expr }
+  | ExpressionRecord  { __eRecord :: Record m expr }
   deriving (Functor, Foldable, Traversable)
 LensTH.makePrisms ''ExpressionBody
 
@@ -249,6 +264,7 @@ instance Show expr => Show (ExpressionBody m expr) where
     , List.intercalate ", " $ map (show . liExpr) items
     , "]"
     ]
+  show ExpressionRecord { __eRecord = _ } = "Record:TODO"
 
 data DefinitionNewType m = DefinitionNewType
   { dntNewType :: Expression m

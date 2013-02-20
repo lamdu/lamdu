@@ -73,6 +73,7 @@ bitraverseBody onDef onExpr body =
   case body of
   BodyLam x -> BodyLam <$> traverse onExpr x
   BodyApply x -> BodyApply <$> traverse onExpr x
+  BodyRecord x -> BodyRecord <$> traverse onExpr x
   BodyLeaf leaf -> BodyLeaf <$> traverse onDef leaf
 
 expressionBodyDef :: Lens.Traversal (Body a expr) (Body b expr) a b
@@ -150,6 +151,10 @@ matchBody matchLamResult matchOther matchGetPar body0 body1 =
       matchLamResult p0 p1 r0 r1
   (BodyApply (Apply f0 a0), BodyApply (Apply f1 a1)) ->
     Just . BodyApply $ Apply (matchOther f0 f1) (matchOther a0 a1)
+  (BodyRecord (Record k0 fs0), BodyRecord (Record k1 fs1))
+    | k0 == k1 && Map.keys fs0 == Map.keys fs1 ->
+      Just . BodyRecord . Record k0 $
+      Map.intersectionWith matchOther fs0 fs1
   (BodyLeaf (GetVariable (ParameterRef p0)),
    BodyLeaf (GetVariable (ParameterRef p1)))
     | matchGetPar p0 p1
@@ -196,6 +201,8 @@ bodyLeaves recu onLeaves body =
     BodyLam <$> (Lambda k paramName <$> recLeaves paramType <*> recLeaves result)
   BodyApply (Apply func arg) ->
     BodyApply <$> (Apply <$> recLeaves func <*> recLeaves arg)
+  BodyRecord (Record k fields) ->
+    BodyRecord . Record k <$> traverse recLeaves fields
   BodyLeaf l -> BodyLeaf <$> onLeaves l
   where
     recLeaves = recu onLeaves

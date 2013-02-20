@@ -15,6 +15,7 @@ module Lamdu.CodeEdit.Sugar
   , Expression
   , WhereItem(..)
   , ListItem(..), ListActions(..), List(..)
+  , RecordField(..), RecordKind(..), Record(..)
   , Func(..)
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
@@ -739,6 +740,27 @@ convertAtom :: (MonadA m, Typeable1 m) => String -> Convertor m
 convertAtom name exprI =
   mkExpression exprI $ ExpressionAtom name
 
+convertRecord ::
+  (Typeable1 m, MonadA m) =>
+  Expression.Record (DataIRef.ExpressionM m (PayloadMM m)) ->
+  Convertor m
+convertRecord (Expression.Record KindType fields) exprI = do
+  sFields <- mapM toField $ Map.toList fields
+  mkExpression exprI . ExpressionRecord $
+    Record
+    { rKind = KindType
+    , rFields = sFields
+    , rMAddField = Nothing -- TODO: Not Nothing
+    }
+  where
+    toField (field, expr) = do
+      child <- convertExpressionI expr
+      return RecordField
+        { rfMDel = Nothing -- TODO
+        , rfId = field
+        , rfExpr = child
+        }
+
 convertExpressionI :: (Typeable1 m, MonadA m) => DataIRef.ExpressionM m (PayloadMM m) -> SugarM m (Expression m)
 convertExpressionI ee =
   ($ ee) $
@@ -746,6 +768,7 @@ convertExpressionI ee =
   Expression.BodyLam x@(Expression.Lambda Expression.KindLambda _ _ _) -> convertFunc x
   Expression.BodyLam x@(Expression.Lambda Expression.KindPi _ _ _) -> convertPi x
   Expression.BodyApply x -> convertApply x
+  Expression.BodyRecord x -> convertRecord x
   Expression.BodyLeaf (Expression.GetVariable x) -> convertGetVariable x
   Expression.BodyLeaf (Expression.LiteralInteger x) -> convertLiteralInteger x
   Expression.BodyLeaf Expression.Hole -> convertHole

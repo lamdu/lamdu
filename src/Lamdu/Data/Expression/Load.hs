@@ -7,13 +7,12 @@ module Lamdu.Data.Expression.Load
   , PropertyClosure, propertyOfClosure, irefOfClosure
   ) where
 
-import Control.Applicative (liftA2, (<$>))
+import Control.Applicative ((<$>), (<*>))
 import Control.Lens ((^.), LensLike')
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
-import Data.Function (on)
 import Data.Store.IRef (Tag)
 import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
@@ -21,6 +20,8 @@ import Data.Typeable (Typeable)
 import Lamdu.Data.Definition (Definition(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Control.Lens as Lens
+import qualified Control.Lens.Utils as LensUtils
+import qualified Data.Map as Map
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
@@ -53,6 +54,8 @@ data PropertyClosure t
       (DataIRef.ExpressionI t) (Expression.Apply (DataIRef.ExpressionI t)) ApplyRole
   | LambdaProperty
       (DataIRef.ExpressionI t) (Expression.Lambda (DataIRef.ExpressionI t)) LambdaRole
+  | RecordProperty
+      (DataIRef.ExpressionI t) (Expression.Record (DataIRef.ExpressionI t)) Expression.Field
   deriving (Eq, Ord, Show, Typeable)
 derive makeBinary ''PropertyClosure
 
@@ -61,23 +64,27 @@ setter = flip . Lens.set . Lens.cloneLens
 
 propertyOfClosure :: MonadA m => PropertyClosure (Tag m) -> DataIRef.ExpressionProperty m
 propertyOfClosure (DefinitionTypeProperty defI (Definition defBody defType)) =
-  Property defType $
-  Transaction.writeIRef defI . Definition defBody
+  Property defType (Transaction.writeIRef defI . Definition defBody)
 propertyOfClosure (DefinitionBodyExpressionProperty defI bodyExpr defType) =
-  Property bodyExpr $
-  Transaction.writeIRef defI . (`Definition` defType) .
-  Definition.BodyExpression
+  Property bodyExpr
+  (Transaction.writeIRef defI . (`Definition` defType) . Definition.BodyExpression)
 propertyOfClosure (ApplyProperty exprI apply role) =
-  Property (apply ^. Lens.cloneLens lens) $
-  DataIRef.writeExprBody exprI . Expression.BodyApply .
-  setter lens apply
+  Property (apply ^. Lens.cloneLens lens)
+  (DataIRef.writeExprBody exprI . Expression.BodyApply . setter lens apply)
   where
     lens = applyChildByRole role
 propertyOfClosure (LambdaProperty exprI lambda role) =
-  Property (lambda ^. Lens.cloneLens lens) $
-  DataIRef.writeExprBody exprI . Expression.BodyLam . setter lens lambda
+  Property (lambda ^. Lens.cloneLens lens)
+  (DataIRef.writeExprBody exprI . Expression.BodyLam . setter lens lambda)
   where
     lens = lambdaChildByRole role
+propertyOfClosure (RecordProperty exprI record field) =
+  Property (record ^. Lens.cloneLens lens)
+  (DataIRef.writeExprBody exprI . Expression.BodyRecord . setter lens record)
+  where
+    lens =
+      Expression.recordFields . Lens.at field .
+      LensUtils._fromJust (unwords ["Record field", show field, "does not exist"])
 
 irefOfClosure :: MonadA m => PropertyClosure (Tag m) -> DataIRef.ExpressionI (Tag m)
 irefOfClosure = Property.value . propertyOfClosure
@@ -97,21 +104,26 @@ loadExpressionClosure closure =
   irefOfClosure closure
 
 loadExpressionBody ::
-  MonadA m => DataIRef.ExpressionI (Tag m) -> T m (Expression.Body (DefI (Tag m)) (LoadedClosure (Tag m)))
-loadExpressionBody iref = onBody =<< DataIRef.readExprBody iref
+  MonadA m =>
+  DataIRef.ExpressionI (Tag m) ->
+  T m (Expression.Body (DefI (Tag m)) (LoadedClosure (Tag m)))
+loadExpressionBody iref =
+  onBody =<< DataIRef.readExprBody iref
   where
-    onBody (Expression.BodyLeaf x) =
-      return $ Expression.BodyLeaf x
+    onBody (Expression.BodyLeaf x) = return $ Expression.BodyLeaf x
     onBody (Expression.BodyApply apply) =
-      on (liftA2 ExprUtil.makeApply) loadExpressionClosure (prop Func) (prop Arg)
+      ExprUtil.makeApply <$> loadRole Func <*> loadRole Arg
       where
-        prop = ApplyProperty iref apply
+        loadRole = loadExpressionClosure . ApplyProperty iref apply
     onBody (Expression.BodyLam lambda@(Expression.Lambda k param _ _)) =
-      Expression.BodyLam <$>
-      on (liftA2 (Expression.Lambda k param)) loadExpressionClosure
-      (prop ParamType) (prop Result)
+      ExprUtil.makeLam k param <$> loadRole ParamType <*> loadRole Result
       where
-        prop = LambdaProperty iref lambda
+        loadRole = loadExpressionClosure . LambdaProperty iref lambda
+    onBody (Expression.BodyRecord record@(Expression.Record k fields)) =
+      Expression.BodyRecord . Expression.Record k <$>
+      Map.traverseWithKey loadField fields
+      where
+        loadField field _ = loadExpressionClosure $ RecordProperty iref record field
 
 loadDefinition :: MonadA m => DefI (Tag m) -> T m (Definition (Loaded m))
 loadDefinition x = (fmap . fmap . fmap) propertyOfClosure . loadDefinitionClosure $ x

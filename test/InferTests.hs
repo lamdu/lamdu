@@ -628,6 +628,14 @@ failResumptionAddsRules =
       pureLambda "x" (purePi "" hole hole) $
       pureApply [makeParameterRef "x", hole, hole]
 
+recordTest :: HUnit.Test
+recordTest =
+  testInfer "empty record type infer" emptyRecordType $
+  mkInferredNode emptyRecordType setType emptyRecordTypeBody
+  where
+    emptyRecordType = ExprUtil.pureExpression emptyRecordTypeBody
+    emptyRecordTypeBody =
+      Expression.BodyRecord $ Expression.Record Expression.KindType mempty
 
 hunitTests :: HUnit.Test
 hunitTests =
@@ -646,6 +654,7 @@ hunitTests =
   , monomorphRedex
   , inferPart
   , failResumptionAddsRules
+  , recordTest
   ]
   ++ resumptionTests
 

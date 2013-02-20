@@ -4,6 +4,9 @@ module Lamdu.Data.Expression
   , LamKind(..), _KindLambda, _KindPi
   , Lambda(..), lambdaKind, lambdaParamId, lambdaParamType, lambdaResult
   , Apply(..), applyFunc, applyArg
+  , RecordKind(..), _KindType
+  , Field
+  , Record(..), recordKind, recordFields
   , Leaf(..), _GetVariable, _LiteralInteger, _Hole, _Set, _IntegerType
   , Body(..), _BodyLam, _BodyApply, _BodyLeaf
   , BodyExpr
@@ -19,10 +22,13 @@ import Data.Derive.Binary (makeBinary)
 import Data.Derive.NFData (makeNFData)
 import Data.DeriveTH (derive)
 import Data.Foldable (Foldable(..))
+import Data.Map (Map)
 import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
 import qualified Control.Lens.TH as LensTH
+import qualified Data.List as List
+import qualified Data.Map as Map
 
 data LamKind = KindLambda | KindPi
   deriving (Eq, Ord, Show, Typeable)
@@ -56,9 +62,21 @@ data Leaf def
   | Hole
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
+type Field = Guid
+
+data RecordKind = KindType
+  deriving (Eq, Ord, Show, Typeable)
+
+data Record expr = Record
+  { _recordKind :: RecordKind
+  , _recordFields :: Map Field expr
+  }
+  deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
+
 data Body def expr
   = BodyLam {-# UNPACK #-}!(Lambda expr)
   | BodyApply {-# UNPACK #-} !(Apply expr)
+  | BodyRecord {-# UNPACK #-}!(Record expr)
   | BodyLeaf !(Leaf def)
   deriving (Eq, Ord, Functor, Foldable, Traversable)
 
@@ -70,6 +88,10 @@ instance (Show expr, Show def) => Show (Body def expr) where
   show (BodyLam (Lambda KindPi paramId paramType body)) =
     concat ["(", show paramId, ":", showP paramType, ")->", showP body]
   show (BodyApply (Apply func arg)) = unwords [showP func, showP arg]
+  show (BodyRecord (Record KindType fields)) =
+    "RecT{" ++ List.intercalate ", " (map showField (Map.toList fields)) ++ "}"
+    where
+      showField (field, typ) = unwords [show field, ":", show typ]
   show (BodyLeaf (GetVariable (ParameterRef guid))) = "par:" ++ show guid
   show (BodyLeaf (GetVariable (DefinitionRef defI))) = "def:" ++ show defI
   show (BodyLeaf (LiteralInteger int)) = show int
@@ -96,17 +118,12 @@ instance (Show a, Show def) => Show (Expression def a) where
         "()" -> ""
         x -> "{" ++ x ++ "}"
 
-derive makeBinary ''LamKind
-derive makeNFData ''LamKind
-LensTH.makePrisms ''VariableRef
-LensTH.makePrisms ''Leaf
-LensTH.makePrisms ''Body
-LensTH.makePrisms ''LamKind
-LensTH.makeLenses ''Expression
-LensTH.makeLenses ''Lambda
-LensTH.makeLenses ''Apply
+fmap concat $ mapM LensTH.makePrisms [''LamKind, ''RecordKind, ''VariableRef, ''Leaf, ''Body]
+fmap concat $ mapM LensTH.makeLenses [''Expression, ''Record, ''Lambda, ''Apply]
 
 fmap concat . sequence $
   derive
   <$> [makeBinary, makeNFData]
-  <*> [''VariableRef, ''Lambda, ''Apply, ''Leaf, ''Body, ''Expression]
+  <*> [ ''RecordKind, ''LamKind, ''VariableRef
+      , ''Lambda, ''Apply, ''Leaf, ''Body, ''Record, ''Expression
+      ]
