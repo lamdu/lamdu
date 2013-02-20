@@ -21,7 +21,6 @@ import Lamdu.Data.Definition (Definition(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.Utils as LensUtils
-import qualified Data.Map as Map
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
@@ -121,7 +120,7 @@ loadExpressionBody iref =
         loadRole = loadExpressionClosure . LambdaProperty iref lambda
     onBody (Expression.BodyRecord record@(Expression.Record k fields)) =
       Expression.BodyRecord . Expression.Record k <$>
-      Map.traverseWithKey loadField fields
+      Lens.itraverse loadField fields
       where
         loadField field _ = loadExpressionClosure $ RecordProperty iref record field
 
