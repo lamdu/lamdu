@@ -1,16 +1,18 @@
+{-# LANGUAGE RankNTypes #-}
 {-# OPTIONS -Wall -Werror #-}
 module InferTests (allTests) where
 
 import Control.Applicative (liftA2)
 import Control.Arrow ((&&&))
 import Control.Exception (evaluate)
-import Control.Lens ((^.))
+import Control.Lens ((^.), (^?))
 import Control.Monad (join, void)
 import Control.Monad.Trans.State (runStateT, evalState)
 import Data.Map ((!))
 import Data.Maybe (isJust)
 import Data.Monoid (Monoid(..))
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
+import Lamdu.Data.Expression (Expression(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Infer.Conflicts (inferWithConflicts)
 import Test.Framework (Test)
@@ -490,52 +492,24 @@ depApply =
     rtAppliedTo name =
       ExprUtil.pureExpression . ExprUtil.makeApply (pureGetParam "rt") $ pureGetParam name
 
-getLambdaBody :: DataIRef.Expression t a -> DataIRef.Expression t a
-getLambdaBody e =
-  x
-  where
-    Expression.BodyLam (Expression.Lambda Expression.KindLambda _ _ x) = e ^. Expression.eBody
-
-getPiResult :: DataIRef.Expression t a -> DataIRef.Expression t a
-getPiResult e =
-  x
-  where
-    Expression.BodyLam (Expression.Lambda Expression.KindPi _ _ x) = e ^. Expression.eBody
-
-getLambdaParamType :: DataIRef.Expression t a -> DataIRef.Expression t a
-getLambdaParamType e =
-  x
-  where
-    Expression.BodyLam (Expression.Lambda Expression.KindLambda _ x _) = e ^. Expression.eBody
-
-getApplyFunc :: DataIRef.Expression t a -> DataIRef.Expression t a
-getApplyFunc e =
-  x
-  where
-    Expression.BodyApply (Expression.Apply x _) = e ^. Expression.eBody
-
-getApplyArg :: DataIRef.Expression t a -> DataIRef.Expression t a
-getApplyArg e =
-  x
-  where
-    Expression.BodyApply (Expression.Apply _ x) = e ^. Expression.eBody
-
 testCase :: String -> HUnit.Assertion -> HUnit.Test
 testCase name = HUnit.TestLabel name . HUnit.TestCase
 
 testResume ::
   String -> DataIRef.Expression t () ->
   DataIRef.Expression t () ->
-  (DataIRef.Expression t (Infer.Inferred (DefI t)) ->
-   DataIRef.Expression t (Infer.Inferred (DefI t))) ->
+  Lens.Traversal'
+    (Expression (DefI t) (Infer.Inferred (DefI t)))
+    (Expression (DefI t) (Infer.Inferred (DefI t))) ->
   HUnit.Test
-testResume name newExpr testExpr extract =
+testResume name newExpr testExpr lens =
   testCase name $
   let
     (tExpr, inferContext) = doInfer_ testExpr
+    Just pl = tExpr ^? lens . Expression.ePayload
   in
     void . evaluate . (`runStateT` inferContext) $
-    doInferM ((Infer.iPoint . Lens.view Expression.ePayload . extract) tExpr) newExpr
+    doInferM (Infer.iPoint pl) newExpr
 
 applyIdInt :: DataIRef.Expression t ()
 applyIdInt =
@@ -578,29 +552,27 @@ resumptionTests =
   [ testResume "resume with pi"
     (purePi "" hole hole) hole id
   , testResume "resume infer in apply func"
-    (pureGetDef "id") (pureApply [hole, hole]) getApplyFunc
+    (pureGetDef "id") (pureApply [hole, hole]) (apply . Expression.applyFunc)
   , testResume "resume infer in lambda body"
-    (pureGetDef "id") (pureLambda "" hole hole) getLambdaBody
+    (pureGetDef "id") (pureLambda "" hole hole) lamBody
   , testResume "resume infer to get param 1 of 2"
     (pureGetParam "a")
-    ((pureLambda "a" hole . pureLambda "b" hole) hole)
-    (getLambdaBody . getLambdaBody)
+    ((pureLambda "a" hole . pureLambda "b" hole) hole) (lamBody . lamBody)
   , testResume "resume infer to get param 2 of 2"
     (pureGetParam "b")
-    ((pureLambda "a" hole . pureLambda "b" hole) hole)
-    (getLambdaBody . getLambdaBody)
+    ((pureLambda "a" hole . pureLambda "b" hole) hole) (lamBody . lamBody)
   , testResume "bad a b:Set f = f a {b}"
     (pureGetParam "b")
     ((pureLambda "a" hole .
       pureLambda "b" setType .
       pureLambda "f" hole)
      (pureApply [pureGetParam "f", pureGetParam "a", hole]))
-    (getApplyArg . getLambdaBody . getLambdaBody . getLambdaBody)
+    (lamBody . lamBody . lamBody . apply . Expression.applyArg)
   , testCase "ref to the def on the side" $
     let
       (exprD, inferContext) =
         doInfer_ $ pureLambda "" hole hole
-      body = getLambdaBody exprD
+      Just body = exprD ^? lamBody
       scope = Infer.nScope . Infer.iPoint $ body ^. Expression.ePayload
       exprR = (`evalState` inferContext) $ do
         node <- Infer.newNodeWithScope scope
@@ -620,6 +592,11 @@ resumptionTests =
       mkInferredLeafSimple (Expression.GetVariable (Expression.DefinitionRef recursiveDefI)) $
       purePi "" hole hole
   ]
+  where
+    apply :: Lens.Traversal' (Expression def a) (Expression.Apply (Expression def a))
+    apply = Expression.eBody . Expression._BodyApply
+    lamBody :: Lens.Traversal' (Expression def a) (Expression def a)
+    lamBody = Expression.eBody . Expression._BodyLam . Expression.lambdaBody
 
 makeParameterRef :: String -> Expression.Expression def ()
 makeParameterRef =
@@ -639,10 +616,13 @@ failResumptionAddsRules =
       -- different tests to do that)
       inferWithConflicts (doLoad resumptionValue) resumptionPoint
     resumptionValue = pureGetDef "Bool" -- <- anything but Pi
-    resumptionPoint =
-      ( Infer.iPoint . Lens.view Expression.ePayload
-      . getPiResult . getLambdaParamType
-      ) origInferred
+    lam = Expression.eBody . Expression._BodyLam
+    Just pl =
+      origInferred ^?
+      lam . Expression.lambdaParamType .
+      lam . Expression.lambdaBody .
+      Expression.ePayload
+    resumptionPoint = Infer.iPoint pl
     (origInferred, origInferContext) = doInfer_ origExpr
     origExpr =
       pureLambda "x" (purePi "" hole hole) $
