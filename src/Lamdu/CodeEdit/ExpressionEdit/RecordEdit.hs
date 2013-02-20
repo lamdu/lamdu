@@ -1,9 +1,11 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Lamdu.CodeEdit.ExpressionEdit.RecordEdit(make) where
 
 import Control.Applicative ((<$>))
 import Control.Lens ((%~), (^.))
 import Control.MonadA (MonadA)
-import Data.Monoid (mempty)
+import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Vector.Vector2 (Vector2(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
@@ -45,7 +47,7 @@ make (Sugar.Record Sugar.KindType fields mAddField) myId = do
   let fieldsWidget = Box.vboxCentered $ map (^. ExpressionGui.egWidget) fieldsGuis
   bracketWidget <-
     ExprGuiM.atEnv (WE.setTextColor Config.recordParensColor) .
-    ExprGuiM.widgetEnv $ BWidgets.makeFocusableTextView "{" myId
+    ExprGuiM.widgetEnv . BWidgets.makeFocusableTextView "{" $ Widget.joinId myId ["{"]
   let
     height = Widget.wSize . Lens._2
     bracketHeight = bracketWidget ^. height
@@ -61,7 +63,7 @@ make (Sugar.Record Sugar.KindType fields mAddField) myId = do
       name <- ExprGuiM.getGuidName fieldGuid
       nameEdit <-
         ExpressionGui.fromValueWidget <$>
-        makeFieldNameEdit name (WidgetIds.fromGuid fieldGuid) fieldGuid
+        makeFieldNameEdit name fieldId fieldGuid
       fieldExprEdit <- ExprGuiM.makeSubexpresion fieldExpr
       let
         delEventMap =
@@ -70,10 +72,12 @@ make (Sugar.Record Sugar.KindType fields mAddField) myId = do
       -- TODO: Could be equals rather than : for non-KindType
       sepEdit <-
         fmap ExpressionGui.fromValueWidget . ExprGuiM.widgetEnv .
-        BWidgets.makeLabel ":" . Widget.toAnimId $ WidgetIds.fromGuid fieldGuid
+        BWidgets.makeLabel ":" $ Widget.toAnimId fieldId
       return $
         ExpressionGui.egWidget %~ Widget.weakerEvents delEventMap $
         ExpressionGui.hboxSpaced [nameEdit, sepEdit, fieldExprEdit]
+      where
+        fieldId = mappend myId $ WidgetIds.fromGuid fieldGuid
     mkEventMap f mAction keys doc =
       maybe mempty
       ( Widget.keysEventMapMovesCursor keys doc
