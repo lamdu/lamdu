@@ -3,7 +3,7 @@
 module Lamdu.CodeEdit.ExpressionEdit.RecordEdit(make) where
 
 import Control.Applicative ((<$>))
-import Control.Lens ((%~), (^.))
+import Control.Lens ((^.))
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
@@ -13,8 +13,8 @@ import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
@@ -43,8 +43,8 @@ make ::
   MonadA m =>
   Sugar.Record m (Sugar.Expression m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
 make (Sugar.Record Sugar.KindType fields mAddField) myId = do
-  fieldsGuis <- mapM makeFieldWidget fields
-  let fieldsWidget = Box.vboxCentered $ map (^. ExpressionGui.egWidget) fieldsGuis
+  fieldRows <- mapM makeFieldRow fields
+  let fieldsWidget = Grid.toWidget $ Grid.make fieldRows
   bracketWidget <-
     ExprGuiM.atEnv (WE.setTextColor Config.recordParensColor) .
     ExprGuiM.widgetEnv . BWidgets.makeFocusableTextView "{" $ Widget.joinId myId ["{"]
@@ -59,23 +59,22 @@ make (Sugar.Record Sugar.KindType fields mAddField) myId = do
   return . ExpressionGui.fromValueWidget . Widget.weakerEvents eventMap $
     BWidgets.hboxCenteredSpaced [resizedBracketWidget, fieldsWidget]
   where
-    makeFieldWidget (Sugar.RecordField mDel fieldGuid fieldExpr) = do
+    makeFieldRow (Sugar.RecordField mDel fieldGuid fieldExpr) = do
       name <- ExprGuiM.getGuidName fieldGuid
-      nameEdit <-
-        ExpressionGui.fromValueWidget <$>
-        makeFieldNameEdit name fieldId fieldGuid
-      fieldExprEdit <- ExprGuiM.makeSubexpresion fieldExpr
+      nameEdit <- makeFieldNameEdit name fieldId fieldGuid
+      fieldExprEdit <- (^. ExpressionGui.egWidget) <$> ExprGuiM.makeSubexpresion fieldExpr
       let
         delEventMap =
           mkEventMap id mDel (Config.delForwardKeys ++ Config.delBackwordKeys) $
           E.Doc ["Edit", "Record", "Field", "Delete"]
       -- TODO: Could be equals rather than : for non-KindType
       sepEdit <-
-        fmap ExpressionGui.fromValueWidget . ExprGuiM.widgetEnv .
-        BWidgets.makeLabel ":" $ Widget.toAnimId fieldId
-      return $
-        ExpressionGui.egWidget %~ Widget.weakerEvents delEventMap $
-        ExpressionGui.hboxSpaced [nameEdit, sepEdit, fieldExprEdit]
+        ExprGuiM.widgetEnv . BWidgets.makeLabel ":" $ Widget.toAnimId fieldId
+      return
+        [ (Vector2 1 0.5, Widget.weakerEvents delEventMap nameEdit)
+        , (0.5, sepEdit)
+        , (Vector2 0 0.5, Widget.weakerEvents delEventMap fieldExprEdit)
+        ]
       where
         fieldId = mappend myId $ WidgetIds.fromGuid fieldGuid
     mkEventMap f mAction keys doc =
