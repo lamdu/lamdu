@@ -184,3 +184,4 @@ operatorChars = "+-*/^=><&|%$:."
 alphaNumericChars = ['a'..'z'] ++ ['0'..'9']
 
 recordParensColor = Draw.Color 1 0.3 1 1
+recordAddFieldKeys = [k 'a', noMods E.KeySpace]

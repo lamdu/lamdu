@@ -17,7 +17,7 @@ module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad
   , AccessedVars, markVariablesAsUsed, listenUsedVariables
   , withParamName, NameSource(..)
   , withNameFromVarRef
-  , getDefName
+  , getDefName, getGuidName
   , memo, memoT
   , liftMemo, liftMemoT
   , unmemo
@@ -232,7 +232,10 @@ withParamName guid useNewName = do
     else useNewName (StoredName, storedName)
 
 getDefName :: MonadA m => Guid -> ExprGuiM m (NameSource, String)
-getDefName guid = do
+getDefName = getGuidName
+
+getGuidName :: MonadA m => Guid -> ExprGuiM m (NameSource, String)
+getGuidName guid = do
   storedName <- transaction . Transaction.getP $ Anchors.assocNameRef guid
   return $
     if null storedName

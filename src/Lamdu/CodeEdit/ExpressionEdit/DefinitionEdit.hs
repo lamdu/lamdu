@@ -31,8 +31,8 @@ import qualified Lamdu.WidgetIds as WidgetIds
 
 type T = Transaction
 
-paramFDConfig :: FocusDelegator.Config
-paramFDConfig = FocusDelegator.Config
+defFDConfig :: FocusDelegator.Config
+defFDConfig = FocusDelegator.Config
   { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyEnter
   , FocusDelegator.startDelegatingDoc = E.Doc ["Edit", "Rename definition"]
   , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEsc
@@ -43,7 +43,7 @@ makeNameEdit ::
   MonadA m => (ExprGuiM.NameSource, String) ->
   Widget.Id -> Guid -> ExprGuiM m (WidgetT m)
 makeNameEdit name myId ident =
-  ExprGuiM.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
+  ExprGuiM.wrapDelegated defFDConfig FocusDelegator.NotDelegating id
   (ExpressionGui.makeNameEdit name ident)
   myId
 

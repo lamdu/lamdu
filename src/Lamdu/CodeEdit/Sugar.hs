@@ -729,12 +729,11 @@ convertLiteralInteger i exprI =
   mkExpression exprI . ExpressionLiteralInteger $
   LiteralInteger
   { liValue = i
-  , liSetValue = writeIRef <$> resultStored exprI
+  , liSetValue = setValue . Property.value <$> resultStored exprI
   }
   where
-    writeIRef prop =
-      DataIRef.writeExprBody (Property.value prop) .
-      Lens.review ExprUtil.bodyLiteralInteger
+    setValue iref =
+      DataIRef.writeExprBody iref . Lens.review ExprUtil.bodyLiteralInteger
 
 convertAtom :: (MonadA m, Typeable1 m) => String -> Convertor m
 convertAtom name exprI =
@@ -745,18 +744,35 @@ convertRecord ::
   Expression.Record (DataIRef.ExpressionM m (PayloadMM m)) ->
   Convertor m
 convertRecord (Expression.Record KindType fields) exprI = do
-  sFields <- mapM toField $ Map.toList fields
+  let
+    mStored =
+      (,) <$> resultIRef exprI <*>
+      (Expression.Record Expression.KindType <$> traverse resultIRef fields)
+  sFields <- mapM (toField mStored) $ Map.toList fields
   mkExpression exprI . ExpressionRecord $
     Record
     { rKind = KindType
     , rFields = sFields
-    , rMAddField = Nothing -- TODO: Not Nothing
+    , rMAddField = addField <$> mStored
     }
   where
-    toField (field, expr) = do
+    resultIRef = fmap Property.value . resultStored
+    writeIRef iref record =
+      DataIRef.writeExprBody iref $ Expression.BodyRecord record
+    addField (iref, record) = do
+      holeIRef <- DataOps.newHole
+      let guid = Guid.augment "Field" $ DataIRef.exprGuid holeIRef
+      writeIRef iref $ record & Expression.recordFields %~ Map.insert guid holeIRef
+      return guid
+    deleteField field (iref, record) = do
+      let newRecord = record & Expression.recordFields %~ Map.delete field
+      writeIRef iref newRecord
+      return . head $
+        Map.keys (newRecord ^. Expression.recordFields) ++ [DataIRef.exprGuid iref]
+    toField mStored (field, expr) = do
       child <- convertExpressionI expr
       return RecordField
-        { rfMDel = Nothing -- TODO
+        { rfMDel = deleteField field <$> mStored
         , rfId = field
         , rfExpr = child
         }
