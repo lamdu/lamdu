@@ -596,7 +596,7 @@ resumptionTests =
     apply :: Lens.Traversal' (Expression def a) (Expression.Apply (Expression def a))
     apply = Expression.eBody . Expression._BodyApply
     lamBody :: Lens.Traversal' (Expression def a) (Expression def a)
-    lamBody = Expression.eBody . Expression._BodyLam . Expression.lambdaBody
+    lamBody = Expression.eBody . Expression._BodyLam . Expression.lambdaResult
 
 makeParameterRef :: String -> Expression.Expression def ()
 makeParameterRef =
@@ -620,7 +620,7 @@ failResumptionAddsRules =
     Just pl =
       origInferred ^?
       lam . Expression.lambdaParamType .
-      lam . Expression.lambdaBody .
+      lam . Expression.lambdaResult .
       Expression.ePayload
     resumptionPoint = Infer.iPoint pl
     (origInferred, origInferContext) = doInfer_ origExpr

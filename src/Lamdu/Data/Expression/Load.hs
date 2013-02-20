@@ -42,7 +42,7 @@ data LambdaRole = ParamType | Result
 derive makeBinary ''LambdaRole
 lambdaChildByRole :: Functor f => LambdaRole -> LensLike' f (Expression.Lambda a) a
 lambdaChildByRole ParamType = Expression.lambdaParamType
-lambdaChildByRole Result = Expression.lambdaBody
+lambdaChildByRole Result = Expression.lambdaResult
 
 data PropertyClosure t
   = DefinitionTypeProperty

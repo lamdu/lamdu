@@ -2,7 +2,7 @@
 module Lamdu.Data.Expression
   ( VariableRef(..), _ParameterRef, _DefinitionRef
   , LamKind(..), _KindLambda, _KindPi
-  , Lambda(..), lambdaKind, lambdaParamId, lambdaParamType, lambdaBody
+  , Lambda(..), lambdaKind, lambdaParamId, lambdaParamType, lambdaResult
   , Apply(..), applyFunc, applyArg
   , Leaf(..), _GetVariable, _LiteralInteger, _Hole, _Set, _IntegerType
   , Body(..), _BodyLam, _BodyApply, _BodyLeaf
@@ -32,7 +32,7 @@ data Lambda expr = Lambda
   , _lambdaParamId :: {-# UNPACK #-}!Guid
   , _lambdaParamType :: expr
   -- TODO: Rename to _lambdaResult (for Pi it is not a body)
-  , _lambdaBody :: expr
+  , _lambdaResult :: expr
   } deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
 data Apply expr = Apply

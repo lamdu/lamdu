@@ -259,7 +259,7 @@ convertLambda ::
 convertLambda lam expr =
   liftA2 (,)
   (convertFuncParam lam expr) $
-  convertExpressionI (lam ^. Expression.lambdaBody)
+  convertExpressionI (lam ^. Expression.lambdaResult)
 
 fAllParams :: Func m expr -> [FuncParam m expr]
 fAllParams (Func depParams params _) = depParams ++ params
@@ -799,7 +799,7 @@ convertWhereItems
   , Expression._lambdaParamType = Expression.Expression
   { Expression._eBody = Expression.BodyLeaf Expression.Hole
   }
-  , Expression._lambdaBody = body
+  , Expression._lambdaResult = body
   }}}} = do
     value <- convertDefinitionContent $ apply ^. Expression.applyArg
     let
@@ -839,7 +839,7 @@ addStoredParam
     Expression.BodyLam
     Expression.Lambda
     { Expression._lambdaKind = Expression.KindLambda
-    , Expression._lambdaBody = body
+    , Expression._lambdaResult = body
     }
   } = addStoredParam body
 addStoredParam _ =
