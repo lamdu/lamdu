@@ -774,7 +774,7 @@ convertRecord (Expression.Record KindType fields) exprI = do
       return RecordField
         { rfMDel = deleteField field <$> mStored
         , rfId = field
-        , rfExpr = child
+        , rfExpr = removeRedundantTypes child
         }
 
 convertExpressionI :: (Typeable1 m, MonadA m) => DataIRef.ExpressionM m (PayloadMM m) -> SugarM m (Expression m)
