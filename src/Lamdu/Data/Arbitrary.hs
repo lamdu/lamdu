@@ -30,13 +30,16 @@ LensTH.makeLenses ''Env
 
 type GenExpr def = ReaderT (Env def) (StateT [Guid] Gen)
 
+liftGen :: Gen a -> GenExpr def a
+liftGen = lift . lift
+
 next :: GenExpr def Guid
 next = lift $ State.gets head <* State.modify tail
 
 arbitraryLambda :: Arbitrary a => GenExpr def (Expression.Lambda (Expression.Expression def a))
 arbitraryLambda = do
   guid <- next
-  Expression.Lambda guid <$> arbitraryExpr <*>
+  flip Expression.Lambda guid <$> liftGen arbitrary <*> arbitraryExpr <*>
     Reader.local (envScope %~ (guid :)) arbitraryExpr
 
 arbitraryApply :: Arbitrary a => GenExpr def (Expression.Apply (Expression.Expression def a))
@@ -55,13 +58,10 @@ arbitraryLeaf = do
     map (fmap (Expression.GetVariable . Expression.DefinitionRef) . liftGen)
       (maybeToList mGenDefI)
 
-liftGen :: Gen a -> GenExpr def a
-liftGen = lift . lift
-
 arbitraryBody :: Arbitrary a => GenExpr def (Expression.BodyExpr def a)
 arbitraryBody =
   join . liftGen . Gen.frequency . (Lens.mapped . Lens._2 %~ pure) $
-  [ weight 2  $ Expression.BodyLam    <$> liftGen arbitrary <*> arbitraryLambda
+  [ weight 2  $ Expression.BodyLam    <$> arbitraryLambda
   , weight 5  $ Expression.BodyApply  <$> arbitraryApply
   , weight 10 $ Expression.BodyLeaf   <$> arbitraryLeaf
   ]

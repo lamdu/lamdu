@@ -1,13 +1,13 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveDataTypeable, RankNTypes, NoMonomorphismRestriction #-}
 module Lamdu.Data.Expression
   ( VariableRef(..), _ParameterRef, _DefinitionRef
-  , Lambda(..), lambdaParamId, lambdaParamType, lambdaBody
+  , LamKind(..), _KindLambda, _KindPi
+  , Lambda(..), lambdaKind, lambdaParamId, lambdaParamType, lambdaBody
   , Apply(..), applyFunc, applyArg
   , Leaf(..), _GetVariable, _LiteralInteger, _Hole, _Set, _IntegerType
   , Body(..), _BodyLam, _BodyApply, _BodyLeaf
   , BodyExpr
   , Expression(..), eBody, ePayload
-  , LamKind(..)
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
@@ -24,8 +24,12 @@ import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
 import qualified Control.Lens.TH as LensTH
 
+data LamKind = KindLambda | KindPi
+  deriving (Eq, Ord, Show, Typeable)
+
 data Lambda expr = Lambda
-  { _lambdaParamId :: Guid
+  { _lambdaKind :: LamKind
+  , _lambdaParamId :: {-# UNPACK #-}!Guid
   , _lambdaParamType :: expr
   -- TODO: Rename to _lambdaResult (for Pi it is not a body)
   , _lambdaBody :: expr
@@ -52,11 +56,8 @@ data Leaf def
   | Hole
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
-data LamKind = KindLambda | KindPi
-  deriving (Eq, Ord, Show, Typeable)
-
 data Body def expr
-  = BodyLam LamKind {-# UNPACK #-}!(Lambda expr)
+  = BodyLam {-# UNPACK #-}!(Lambda expr)
   | BodyApply {-# UNPACK #-} !(Apply expr)
   | BodyLeaf !(Leaf def)
   deriving (Eq, Ord, Functor, Foldable, Traversable)
@@ -64,9 +65,9 @@ data Body def expr
 type BodyExpr def a = Body def (Expression def a)
 
 instance (Show expr, Show def) => Show (Body def expr) where
-  show (BodyLam KindLambda (Lambda paramId paramType body)) =
+  show (BodyLam (Lambda KindLambda paramId paramType body)) =
     concat ["\\", show paramId, ":", showP paramType, "==>", showP body]
-  show (BodyLam KindPi (Lambda paramId paramType body)) =
+  show (BodyLam (Lambda KindPi paramId paramType body)) =
     concat ["(", show paramId, ":", showP paramType, ")->", showP body]
   show (BodyApply (Apply func arg)) = unwords [showP func, showP arg]
   show (BodyLeaf (GetVariable (ParameterRef guid))) = "par:" ++ show guid
@@ -100,6 +101,7 @@ derive makeNFData ''LamKind
 LensTH.makePrisms ''VariableRef
 LensTH.makePrisms ''Leaf
 LensTH.makePrisms ''Body
+LensTH.makePrisms ''LamKind
 LensTH.makeLenses ''Expression
 LensTH.makeLenses ''Lambda
 LensTH.makeLenses ''Apply

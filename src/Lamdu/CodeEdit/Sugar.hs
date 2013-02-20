@@ -208,7 +208,7 @@ mkFuncParamActions ::
   MonadA m => Stored m ->
   Expression.Lambda (Expression.Expression def (Stored m)) ->
   FuncParamActions m
-mkFuncParamActions lambdaProp (Expression.Lambda param _paramType body) =
+mkFuncParamActions lambdaProp (Expression.Lambda _ param _paramType body) =
   FuncParamActions
   { _fpListItemActions =
     ListItemActions
@@ -235,7 +235,7 @@ convertFuncParam ::
   (Typeable1 m, MonadA m) => Expression.Lambda (DataIRef.ExpressionM m (PayloadMM m)) ->
   DataIRef.ExpressionM m (PayloadMM m) ->
   SugarM m (IsDependent, FuncParam m (Expression m))
-convertFuncParam lam@(Expression.Lambda paramGuid paramType _) expr = do
+convertFuncParam lam@(Expression.Lambda _ paramGuid paramType _) expr = do
   paramTypeS <- convertExpressionI paramType
   let
     fp = FuncParam
@@ -702,7 +702,7 @@ uninferredHoles
   | otherwise = uninferredHoles func ++ uninferredHoles arg
 uninferredHoles e@Expression.Expression { Expression._eBody = Expression.BodyLeaf Expression.Hole } = [e]
 uninferredHoles Expression.Expression
-  { Expression._eBody = Expression.BodyLam _ (Expression.Lambda _ paramType result) } =
+  { Expression._eBody = Expression.BodyLam (Expression.Lambda _ _ paramType result) } =
     uninferredHoles result ++ uninferredHoles paramType
 uninferredHoles Expression.Expression { Expression._eBody = body } =
   Foldable.concatMap uninferredHoles body
@@ -742,8 +742,8 @@ convertExpressionI :: (Typeable1 m, MonadA m) => DataIRef.ExpressionM m (Payload
 convertExpressionI ee =
   ($ ee) $
   case ee ^. Expression.eBody of
-  Expression.BodyLam Expression.KindLambda x -> convertFunc x
-  Expression.BodyLam Expression.KindPi x -> convertPi x
+  Expression.BodyLam x@(Expression.Lambda Expression.KindLambda _ _ _) -> convertFunc x
+  Expression.BodyLam x@(Expression.Lambda Expression.KindPi _ _ _) -> convertPi x
   Expression.BodyApply x -> convertApply x
   Expression.BodyLeaf (Expression.GetVariable x) -> convertGetVariable x
   Expression.BodyLeaf (Expression.LiteralInteger x) -> convertLiteralInteger x
@@ -777,10 +777,9 @@ convertDefinitionParams ::
   )
 convertDefinitionParams expr =
   case expr ^. Expression.eBody of
-  Expression.BodyLam Expression.KindLambda lambda -> do
+  Expression.BodyLam lambda@(Expression.Lambda Expression.KindLambda _ _ body) -> do
     (isDependent, fp) <- convertFuncParam lambda expr
-    (depParams, params, deepBody) <-
-      convertDefinitionParams $ lambda ^. Expression.lambdaBody
+    (depParams, params, deepBody) <- convertDefinitionParams body
     return $
       case isDependent of
       Dependent -> (fp : depParams, params, deepBody)
@@ -794,8 +793,9 @@ convertWhereItems
   topLevel@Expression.Expression
   { Expression._eBody = Expression.BodyApply apply@Expression.Apply
   { Expression._applyFunc = Expression.Expression
-  { Expression._eBody = Expression.BodyLam Expression.KindLambda lambda@Expression.Lambda
-  { Expression._lambdaParamId = param
+  { Expression._eBody = Expression.BodyLam lambda@Expression.Lambda
+  { Expression._lambdaKind = Expression.KindLambda
+  , Expression._lambdaParamId = param
   , Expression._lambdaParamType = Expression.Expression
   { Expression._eBody = Expression.BodyLeaf Expression.Hole
   }
@@ -836,8 +836,11 @@ addStoredParam
 addStoredParam
   Expression.Expression
   { Expression._eBody =
-    Expression.BodyLam Expression.KindLambda
-    Expression.Lambda { Expression._lambdaBody = body }
+    Expression.BodyLam
+    Expression.Lambda
+    { Expression._lambdaKind = Expression.KindLambda
+    , Expression._lambdaBody = body
+    }
   } = addStoredParam body
 addStoredParam _ =
   error $

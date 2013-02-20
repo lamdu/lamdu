@@ -494,19 +494,19 @@ getLambdaBody :: DataIRef.Expression t a -> DataIRef.Expression t a
 getLambdaBody e =
   x
   where
-    Expression.BodyLam Expression.KindLambda (Expression.Lambda _ _ x) = e ^. Expression.eBody
+    Expression.BodyLam (Expression.Lambda Expression.KindLambda _ _ x) = e ^. Expression.eBody
 
 getPiResult :: DataIRef.Expression t a -> DataIRef.Expression t a
 getPiResult e =
   x
   where
-    Expression.BodyLam Expression.KindPi (Expression.Lambda _ _ x) = e ^. Expression.eBody
+    Expression.BodyLam (Expression.Lambda Expression.KindPi _ _ x) = e ^. Expression.eBody
 
 getLambdaParamType :: DataIRef.Expression t a -> DataIRef.Expression t a
 getLambdaParamType e =
   x
   where
-    Expression.BodyLam Expression.KindLambda (Expression.Lambda _ x _) = e ^. Expression.eBody
+    Expression.BodyLam (Expression.Lambda Expression.KindLambda _ x _) = e ^. Expression.eBody
 
 getApplyFunc :: DataIRef.Expression t a -> DataIRef.Expression t a
 getApplyFunc e =

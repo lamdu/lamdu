@@ -5,7 +5,6 @@ module Lamdu.Data.Expression.Utils
   , makePi, makeLambda, makeLam
   , pureHole
   , pureSet
-  , bodyLambda, bodyPi
   , bodyParameterRef, bodyDefinitionRef
   , bodyLiteralInteger, pureLiteralInteger
   , pureIntegerType
@@ -48,7 +47,7 @@ makeApply func arg = BodyApply $ Apply func arg
 
 makeLam :: LamKind -> Guid -> expr -> expr -> Body def expr
 makeLam k argId argType resultType =
-  BodyLam k $ Lambda argId argType resultType
+  BodyLam $ Lambda k argId argType resultType
 
 -- TODO: Remove this? Take KindPi/KindLambda as arg
 makePi :: Guid -> expr -> expr -> Body def expr
@@ -72,7 +71,7 @@ bitraverseBody ::
   f (Body defb exprb)
 bitraverseBody onDef onExpr body =
   case body of
-  BodyLam k x -> BodyLam k <$> traverse onExpr x
+  BodyLam x -> BodyLam <$> traverse onExpr x
   BodyApply x -> BodyApply <$> traverse onExpr x
   BodyLeaf leaf -> BodyLeaf <$> traverse onDef leaf
 
@@ -123,9 +122,9 @@ randomizeParamIds gen =
   where
     go (Expression v s) = fmap (`Expression` s) $
       case v of
-      BodyLam k (Lambda oldParamId paramType body) -> do
+      BodyLam (Lambda k oldParamId paramType body) -> do
         newParamId <- lift $ state random
-        fmap (BodyLam k) $ liftA2 (Lambda newParamId) (go paramType) .
+        fmap BodyLam $ liftA2 (Lambda k newParamId) (go paramType) .
           Reader.local (Map.insert oldParamId newParamId) $ go body
       BodyApply (Apply func arg) -> liftA2 makeApply (go func) (go arg)
       gv@(BodyLeaf (GetVariable (ParameterRef guid))) ->
@@ -144,10 +143,10 @@ matchBody ::
   Body def a -> Body def b -> Maybe (Body def c)
 matchBody matchLamResult matchOther matchGetPar body0 body1 =
   case (body0, body1) of
-  (BodyLam k0 (Lambda p0 pt0 r0), BodyLam k1 (Lambda p1 pt1 r1))
+  (BodyLam (Lambda k0 p0 pt0 r0), BodyLam (Lambda k1 p1 pt1 r1))
     | k0 == k1 ->
-      Just . BodyLam k0 $
-      Lambda p0 (matchOther pt0 pt1) $
+      Just . BodyLam $
+      Lambda k0 p0 (matchOther pt0 pt1) $
       matchLamResult p0 p1 r0 r1
   (BodyApply (Apply f0 a0), BodyApply (Apply f1 a1)) ->
     Just . BodyApply $ Apply (matchOther f0 f1) (matchOther a0 a1)
@@ -193,8 +192,8 @@ bodyLeaves ::
   Lens.LensLike f (Body defa expra) (Body defb exprb) (Leaf defa) (Leaf defb)
 bodyLeaves recu onLeaves body =
   case body of
-  BodyLam k (Lambda paramName paramType result) ->
-    BodyLam k <$> (Lambda paramName <$> recLeaves paramType <*> recLeaves result)
+  BodyLam (Lambda k paramName paramType result) ->
+    BodyLam <$> (Lambda k paramName <$> recLeaves paramType <*> recLeaves result)
   BodyApply (Apply func arg) ->
     BodyApply <$> (Apply <$> recLeaves func <*> recLeaves arg)
   BodyLeaf l -> BodyLeaf <$> onLeaves l
@@ -214,38 +213,40 @@ hasGetVar =
 
 isDependentPi :: Expression def a -> Bool
 isDependentPi =
-  Lens.anyOf (eBody . bodyPi) f
+  Lens.anyOf (eBody . _BodyLam) f
   where
-    f (Lambda g _ resultType) = hasGetVar g resultType
+    f (Lambda KindPi g _ resultType) = hasGetVar g resultType
+    f _ = False
 
 funcArguments :: Expression def a -> [Expression def a]
 funcArguments =
-  Lens.toListOf (eBody . bodyLambda . Lens.folding f)
+  Lens.toListOf (eBody . _BodyLam . Lens.folding f)
   where
-    f (Lambda _ paramType body) =
+    f (Lambda KindLambda _ paramType body) =
       paramType : funcArguments body
+    f _ = []
 
 countArrows :: Expression def () -> Int
 countArrows expr =
-  case expr ^? eBody . bodyPi . lambdaBody of
-  Just resultType -> 1 + countArrows resultType
-  Nothing -> 0
+  case expr ^? eBody . _BodyLam of
+  Just (Lambda KindPi _ _ resultType) -> 1 + countArrows resultType
+  _ -> 0
 
 countDependentPis :: Expression def () -> Int
 countDependentPis expr =
-  case expr ^? eBody . bodyPi . lambdaBody of
-  Just resultType
+  case expr ^? eBody . _BodyLam of
+  Just (Lambda KindPi _ _  resultType)
     | isDependentPi expr -> 1 + countDependentPis resultType
   _ -> 0
 
 -- TODO: Return a record, not a tuple
 countPis :: Expression def () -> (Int, Int)
 countPis expr =
-  case expr ^? eBody . bodyPi . lambdaBody of
-  Just resultType
+  case expr ^? eBody . _BodyLam of
+  Just (Lambda KindPi _ _ resultType)
     | isDependentPi expr -> Lens._1 +~ 1 $ countPis resultType
     | otherwise -> (0, 1 + countArrows resultType)
-  Nothing -> (0, 0)
+  _ -> (0, 0)
 
 applyWithHoles :: Int -> Expression def () -> Expression def ()
 applyWithHoles count expr =
@@ -260,24 +261,10 @@ applyDependentPis exprType = applyWithHoles (countDependentPis exprType)
 -- with all different sensible levels of currying.
 applyForms :: Expression def () -> Expression def () -> [Expression def ()]
 applyForms exprType expr
-  | Lens.notNullOf (eBody . bodyLambda) expr = [expr]
+  | Lens.notNullOf (eBody . _BodyLam . lambdaKind . _KindLambda) expr = [expr]
   | otherwise =
     reverse . take (1 + arrows) $ iterate addApply withDepPisApplied
   where
     withDepPisApplied = applyWithHoles depPis expr
     (depPis, arrows) = countPis exprType
     addApply = pureExpression . (`makeApply` pureHole)
-
-bodyLambda :: Lens.Prism' (Body def a) (Lambda a)
-bodyLambda =
-  Lens.prism' (BodyLam KindLambda) unBody
-  where
-    unBody (BodyLam KindLambda l) = Just l
-    unBody _ = Nothing
-
-bodyPi :: Lens.Prism' (Body def a) (Lambda a)
-bodyPi =
-  Lens.prism' (BodyLam KindPi) unBody
-  where
-    unBody (BodyLam KindPi l) = Just l
-    unBody _ = Nothing

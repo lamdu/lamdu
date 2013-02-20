@@ -51,7 +51,7 @@ data PropertyClosure t
       (DefI t) (DataIRef.ExpressionI t) (DataIRef.ExpressionI t)
   | ApplyProperty
       (DataIRef.ExpressionI t) (Expression.Apply (DataIRef.ExpressionI t)) ApplyRole
-  | LambdaProperty Expression.LamKind
+  | LambdaProperty
       (DataIRef.ExpressionI t) (Expression.Lambda (DataIRef.ExpressionI t)) LambdaRole
   deriving (Eq, Ord, Show, Typeable)
 derive makeBinary ''PropertyClosure
@@ -73,9 +73,9 @@ propertyOfClosure (ApplyProperty exprI apply role) =
   setter lens apply
   where
     lens = applyChildByRole role
-propertyOfClosure (LambdaProperty k exprI lambda role) =
+propertyOfClosure (LambdaProperty exprI lambda role) =
   Property (lambda ^. Lens.cloneLens lens) $
-  DataIRef.writeExprBody exprI . Expression.BodyLam k . setter lens lambda
+  DataIRef.writeExprBody exprI . Expression.BodyLam . setter lens lambda
   where
     lens = lambdaChildByRole role
 
@@ -106,12 +106,12 @@ loadExpressionBody iref = onBody =<< DataIRef.readExprBody iref
       on (liftA2 ExprUtil.makeApply) loadExpressionClosure (prop Func) (prop Arg)
       where
         prop = ApplyProperty iref apply
-    onBody (Expression.BodyLam k lambda@(Expression.Lambda param _ _)) =
-      Expression.BodyLam k <$>
-      on (liftA2 (Expression.Lambda param)) loadExpressionClosure
+    onBody (Expression.BodyLam lambda@(Expression.Lambda k param _ _)) =
+      Expression.BodyLam <$>
+      on (liftA2 (Expression.Lambda k param)) loadExpressionClosure
       (prop ParamType) (prop Result)
       where
-        prop = LambdaProperty k iref lambda
+        prop = LambdaProperty iref lambda
 
 loadDefinition :: MonadA m => DefI (Tag m) -> T m (Definition (Loaded m))
 loadDefinition x = (fmap . fmap . fmap) propertyOfClosure . loadDefinitionClosure $ x
