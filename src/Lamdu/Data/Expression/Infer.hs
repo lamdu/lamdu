@@ -104,10 +104,12 @@ emptyRefMap =
   , _nextRef = 0
   }
 
-createEmptyRef :: State (RefMap a) Int
-createEmptyRef = do
+{-# INLINE createRef #-}
+createRef :: a -> State (RefMap a) Int
+createRef val = do
   key <- Lens.use nextRef
   nextRef += 1
+  refs . Lens.at key .= Just val
   return key
 
 {-# INLINE refsAt #-}
@@ -116,13 +118,6 @@ refsAt k = refs . Lens.at k . Lens.iso from Just
   where
     from = fromMaybe $ error msg
     msg = unwords ["intMapMod: key", show k, "not in map"]
-
-{-# INLINE createRef #-}
-createRef :: a -> State (RefMap a) Int
-createRef initialVal = do
-  ref <- createEmptyRef
-  refsAt ref .= initialVal
-  return ref
 -------------- InferActions
 
 data ErrorDetails def
@@ -197,8 +192,8 @@ exprRefsAt k = exprMap . refsAt (unExprRef k)
 
 -- RuleRefMap
 
-createEmptyRefRule :: State (Context def) RuleRef
-createEmptyRefRule = fmap RuleRef $ Lens.zoom ruleMap createEmptyRef
+createRuleRef :: Rule def -> State (Context def) RuleRef
+createRuleRef = fmap RuleRef . Lens.zoom ruleMap . createRef
 
 {-# INLINE ruleRefsAt #-}
 ruleRefsAt :: Functor f => RuleRef -> LensLike' f (Context def) (Rule def)
@@ -539,10 +534,7 @@ addRule rule = do
   traverse_ (addRuleId ruleRef) $ ruleInputs rule
   sBfsNextLayer . Lens.contains (unRuleRef ruleRef) .= True
   where
-    makeRule = do
-      ruleRef <- Lens.zoom sContext createEmptyRefRule
-      sContext . ruleRefsAt ruleRef .= rule
-      return ruleRef
+    makeRule = Lens.zoom sContext $ createRuleRef rule
     addRuleId ruleRef ref = sContext . exprRefsAt ref . rRules %= (ruleRef :)
 
 addRules ::
