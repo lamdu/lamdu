@@ -39,7 +39,7 @@ import Data.Functor.Identity (Identity(..))
 import Data.IntMap (IntMap)
 import Data.IntSet (IntSet)
 import Data.Map (Map)
-import Data.Maybe (fromMaybe, isJust, mapMaybe)
+import Data.Maybe (isJust, mapMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable)
@@ -48,6 +48,7 @@ import Lamdu.Data.Expression.Infer.Rules (Rule(..))
 import Lamdu.Data.Expression.Infer.Types
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
+import qualified Control.Lens.Utils as LensUtils
 import qualified Control.Monad.Trans.Either as Either
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Foldable as Foldable
@@ -114,10 +115,9 @@ createRef val = do
 
 {-# INLINE refsAt #-}
 refsAt :: Functor f => Int -> LensLike' f (RefMap a) a
-refsAt k = refs . Lens.at k . Lens.iso from Just
-  where
-    from = fromMaybe $ error msg
-    msg = unwords ["intMapMod: key", show k, "not in map"]
+refsAt k =
+  refs . Lens.at k .
+  LensUtils._fromJust (unwords ["intMapMod: key", show k, "not in map"])
 -------------- InferActions
 
 data ErrorDetails def

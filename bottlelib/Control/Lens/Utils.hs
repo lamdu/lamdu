@@ -1,11 +1,14 @@
+{-# LANGUAGE RankNTypes #-}
 module Control.Lens.Utils
   ( Context'
   , contextSetter, contextVal
   , argument, result
+  , _fromJust
   ) where
 
 import Control.Applicative ((<$>))
 import Control.Lens (Lens)
+import Data.Maybe (fromMaybe)
 import qualified Control.Lens as Lens
 
 type Context' a t = Lens.Context a a t
@@ -21,3 +24,7 @@ argument = Lens.sets (flip (.))
 
 result :: Lens.Setter (a -> b0) (a -> b1) b0 b1
 result = Lens.mapped
+
+_fromJust :: String -> Lens.Iso (Maybe a) (Maybe b) a b
+_fromJust msg = Lens.iso (fromMaybe (error msg)) Just
+{-# INLINE _fromJust #-}
