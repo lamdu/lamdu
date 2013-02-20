@@ -15,7 +15,7 @@ module Lamdu.CodeEdit.Sugar
   , Expression
   , WhereItem(..)
   , ListItem(..), ListActions(..), List(..)
-  , RecordField(..), RecordKind(..), Record(..)
+  , RecordField(..), Kind(..), Record(..)
   , Func(..)
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
@@ -743,15 +743,15 @@ convertRecord ::
   (Typeable1 m, MonadA m) =>
   Expression.Record (DataIRef.ExpressionM m (PayloadMM m)) ->
   Convertor m
-convertRecord (Expression.Record KindType fields) exprI = do
+convertRecord (Expression.Record Type fields) exprI = do
   let
     mStored =
       (,) <$> resultIRef exprI <*>
-      (Expression.Record Expression.KindType <$> traverse resultIRef fields)
+      (Expression.Record Expression.Type <$> traverse resultIRef fields)
   sFields <- mapM (toField mStored) $ Map.toList fields
   mkExpression exprI . ExpressionRecord $
     Record
-    { rKind = KindType
+    { rKind = Type
     , rFields = sFields
     , rMAddField = addField <$> mStored
     }
@@ -781,8 +781,8 @@ convertExpressionI :: (Typeable1 m, MonadA m) => DataIRef.ExpressionM m (Payload
 convertExpressionI ee =
   ($ ee) $
   case ee ^. Expression.eBody of
-  Expression.BodyLam x@(Expression.Lambda Expression.KindLambda _ _ _) -> convertFunc x
-  Expression.BodyLam x@(Expression.Lambda Expression.KindPi _ _ _) -> convertPi x
+  Expression.BodyLam x@(Expression.Lambda Expression.Val _ _ _) -> convertFunc x
+  Expression.BodyLam x@(Expression.Lambda Expression.Type _ _ _) -> convertPi x
   Expression.BodyApply x -> convertApply x
   Expression.BodyRecord x -> convertRecord x
   Expression.BodyLeaf (Expression.GetVariable x) -> convertGetVariable x
@@ -817,7 +817,7 @@ convertDefinitionParams ::
   )
 convertDefinitionParams expr =
   case expr ^. Expression.eBody of
-  Expression.BodyLam lambda@(Expression.Lambda Expression.KindLambda _ _ body) -> do
+  Expression.BodyLam lambda@(Expression.Lambda Expression.Val _ _ body) -> do
     (isDependent, fp) <- convertFuncParam lambda expr
     (depParams, params, deepBody) <- convertDefinitionParams body
     return $
@@ -834,7 +834,7 @@ convertWhereItems
   { Expression._eBody = Expression.BodyApply apply@Expression.Apply
   { Expression._applyFunc = Expression.Expression
   { Expression._eBody = Expression.BodyLam lambda@Expression.Lambda
-  { Expression._lambdaKind = Expression.KindLambda
+  { Expression._lambdaKind = Expression.Val
   , Expression._lambdaParamId = param
   , Expression._lambdaParamType = Expression.Expression
   { Expression._eBody = Expression.BodyLeaf Expression.Hole
@@ -878,7 +878,7 @@ addStoredParam
   { Expression._eBody =
     Expression.BodyLam
     Expression.Lambda
-    { Expression._lambdaKind = Expression.KindLambda
+    { Expression._lambdaKind = Expression.Val
     , Expression._lambdaResult = body
     }
   } = addStoredParam body

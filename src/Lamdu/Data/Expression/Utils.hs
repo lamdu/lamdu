@@ -45,16 +45,16 @@ import qualified System.Random as Random
 makeApply :: expr -> expr -> Body def expr
 makeApply func arg = BodyApply $ Apply func arg
 
-makeLam :: LamKind -> Guid -> expr -> expr -> Body def expr
+makeLam :: Kind -> Guid -> expr -> expr -> Body def expr
 makeLam k argId argType resultType =
   BodyLam $ Lambda k argId argType resultType
 
--- TODO: Remove this? Take KindPi/KindLambda as arg
+-- TODO: Remove this? Take Type/Val as arg
 makePi :: Guid -> expr -> expr -> Body def expr
-makePi = makeLam KindPi
+makePi = makeLam Type
 
 makeLambda :: Guid -> expr -> expr -> Body def expr
-makeLambda = makeLam KindLambda
+makeLambda = makeLam Val
 
 bodyParameterRef :: Prism' (Body def expr) Guid
 bodyParameterRef = _BodyLeaf . _GetVariable . _ParameterRef
@@ -222,27 +222,27 @@ isDependentPi :: Expression def a -> Bool
 isDependentPi =
   Lens.anyOf (eBody . _BodyLam) f
   where
-    f (Lambda KindPi g _ resultType) = hasGetVar g resultType
+    f (Lambda Type g _ resultType) = hasGetVar g resultType
     f _ = False
 
 funcArguments :: Expression def a -> [Expression def a]
 funcArguments =
   Lens.toListOf (eBody . _BodyLam . Lens.folding f)
   where
-    f (Lambda KindLambda _ paramType body) =
+    f (Lambda Val _ paramType body) =
       paramType : funcArguments body
     f _ = []
 
 countArrows :: Expression def () -> Int
 countArrows expr =
   case expr ^? eBody . _BodyLam of
-  Just (Lambda KindPi _ _ resultType) -> 1 + countArrows resultType
+  Just (Lambda Type _ _ resultType) -> 1 + countArrows resultType
   _ -> 0
 
 countDependentPis :: Expression def () -> Int
 countDependentPis expr =
   case expr ^? eBody . _BodyLam of
-  Just (Lambda KindPi _ _  resultType)
+  Just (Lambda Type _ _  resultType)
     | isDependentPi expr -> 1 + countDependentPis resultType
   _ -> 0
 
@@ -250,7 +250,7 @@ countDependentPis expr =
 countPis :: Expression def () -> (Int, Int)
 countPis expr =
   case expr ^? eBody . _BodyLam of
-  Just (Lambda KindPi _ _ resultType)
+  Just (Lambda Type _ _ resultType)
     | isDependentPi expr -> Lens._1 +~ 1 $ countPis resultType
     | otherwise -> (0, 1 + countArrows resultType)
   _ -> (0, 0)
@@ -268,7 +268,7 @@ applyDependentPis exprType = applyWithHoles (countDependentPis exprType)
 -- with all different sensible levels of currying.
 applyForms :: Expression def () -> Expression def () -> [Expression def ()]
 applyForms exprType expr
-  | Lens.notNullOf (eBody . _BodyLam . lambdaKind . _KindLambda) expr = [expr]
+  | Lens.notNullOf (eBody . _BodyLam . lambdaKind . _Val) expr = [expr]
   | otherwise =
     reverse . take (1 + arrows) $ iterate addApply withDepPisApplied
   where

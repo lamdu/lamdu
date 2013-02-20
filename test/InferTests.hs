@@ -635,7 +635,7 @@ recordTest =
   where
     emptyRecordType = ExprUtil.pureExpression emptyRecordTypeBody
     emptyRecordTypeBody =
-      Expression.BodyRecord $ Expression.Record Expression.KindType mempty
+      Expression.BodyRecord $ Expression.Record Expression.Type mempty
 
 hunitTests :: HUnit.Test
 hunitTests =

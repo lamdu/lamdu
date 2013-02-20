@@ -42,7 +42,7 @@ makeFieldNameEdit name myId fieldGuid =
 make ::
   MonadA m =>
   Sugar.Record m (Sugar.Expression m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
-make (Sugar.Record Sugar.KindType fields mAddField) myId = do
+make (Sugar.Record k fields mAddField) myId = do
   fieldRows <- mapM makeFieldRow fields
   let fieldsWidget = Grid.toWidget $ Grid.make fieldRows
   bracketWidget <-
@@ -67,9 +67,12 @@ make (Sugar.Record Sugar.KindType fields mAddField) myId = do
         delEventMap =
           mkEventMap id mDel (Config.delForwardKeys ++ Config.delBackwordKeys) $
           E.Doc ["Edit", "Record", "Field", "Delete"]
-      -- TODO: Could be equals rather than : for non-KindType
+      -- TODO: Could be equals rather than : for Val
+      let
+        sep Sugar.Val = "="
+        sep Sugar.Type = ":"
       sepEdit <-
-        ExprGuiM.widgetEnv . BWidgets.makeLabel ":" $ Widget.toAnimId fieldId
+        ExprGuiM.widgetEnv . BWidgets.makeLabel (sep k) $ Widget.toAnimId fieldId
       return
         [ (Vector2 1 0.5, Widget.weakerEvents delEventMap nameEdit)
         , (0.5, sepEdit)

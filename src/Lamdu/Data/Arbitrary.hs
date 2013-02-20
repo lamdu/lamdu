@@ -12,7 +12,7 @@ import Data.Derive.Arbitrary (makeArbitrary)
 import Data.DeriveTH (derive)
 import Data.Maybe (maybeToList)
 import Data.Store.Guid (Guid)
-import Lamdu.Data.Expression (LamKind(..))
+import Lamdu.Data.Expression (Kind(..))
 import Test.QuickCheck (Arbitrary(..), Gen, choose)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
@@ -89,4 +89,4 @@ exprGen makeDefI =
 instance Arbitrary a => Arbitrary (Expression.Expression def a) where
   arbitrary = exprGen Nothing
 
-derive makeArbitrary ''Expression.LamKind
+derive makeArbitrary ''Expression.Kind
