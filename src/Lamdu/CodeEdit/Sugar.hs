@@ -39,7 +39,7 @@ module Lamdu.CodeEdit.Sugar
   ) where
 
 import Control.Applicative (Applicative(..), (<$>), (<$), liftA2)
-import Control.Lens (Traversal', (.~), (^.), (&), (%~), (.~), (^?), (^..), (<>~))
+import Control.Lens (Traversal', (^.), (&), (%~), (.~), (^?), (^..), (<>~))
 import Control.Monad ((<=<), join, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, runState, mapStateT)
@@ -163,7 +163,7 @@ mkExpression ::
   ExpressionBody m (Expression m) -> SugarM m (Expression m)
 mkExpression exprI expr = do
   sugarContext <- SugarM.readContext
-  inferredTypesRefs <-
+  inferredTypes <-
     zipWithM
     ( fmap (convertExpressionI . fmap toPayloadMM)
     . SugarInfer.resultFromPure
@@ -173,7 +173,7 @@ mkExpression exprI expr = do
     { _rGuid = resultGuid exprI
     , _rExpressionBody = expr
     , _rPayload = Payload
-      { _plInferredTypes = inferredTypesRefs
+      { _plInferredTypes = onInferredTypes inferredTypes
       , _plActions =
         mkActions sugarContext <$>
         traverse (SugarInfer.ntraversePayload pure id) exprI
@@ -185,6 +185,10 @@ mkExpression exprI expr = do
       Lens.view SugarInfer.plStored <$> exprI
     }
   where
+    onInferredTypes ts =
+      case (ts, expr) of
+      ([_], ExpressionRecord (Record Val _ _)) -> []
+      _ -> ts
     seeds = RandomUtils.splits . mkGen 0 3 $ resultGuid exprI
     types = maybe [] iwcInferredTypes $ resultInferred exprI
 
@@ -242,7 +246,7 @@ convertFuncParam lam@(Expression.Lambda _ paramGuid paramType _) expr = do
     fp = FuncParam
       { _fpGuid = paramGuid
       , _fpHiddenLambdaGuid = Just $ resultGuid expr
-      , _fpType = removeRedundantTypes paramTypeS
+      , _fpType = removeSuccessfulType paramTypeS
       , _fpMActions =
         mkFuncParamActions
         <$> resultStored expr
@@ -295,7 +299,7 @@ convertPi lambda exprI = do
   mkExpression exprI $ ExpressionPi DontHaveParens
     Pi
     { pParam = Lens.over fpType addApplyChildParens param
-    , pResultType = removeRedundantTypes sBody
+    , pResultType = removeSuccessfulType sBody
     }
 
 addParens :: ExpressionP m pl -> ExpressionP m pl
@@ -457,16 +461,6 @@ convertApplyList (Expression.Apply funcI argI) argS specialFunctions exprI =
 eApply :: Traversal' (Expression.Expression def a) (Expression.Apply (Expression.Expression def a))
 eApply = Expression.eBody . Expression._BodyApply
 
-removeInferredTypes :: Expression m -> Expression m
-removeInferredTypes = Lens.set (rPayload . plInferredTypes) []
-
-removeRedundantTypes :: Expression m -> Expression m
-removeRedundantTypes =
-  Lens.over (rPayload . plInferredTypes) removeIfNoErrors
-  where
-    removeIfNoErrors [_] = []
-    removeIfNoErrors xs = xs
-
 subExpressions :: Expression m -> [Expression m]
 subExpressions x = x : x ^.. rExpressionBody . Lens.traversed . Lens.folding subExpressions
 
@@ -491,7 +485,7 @@ applyOnSection (Section Nothing op Nothing) (Expression.Apply (_, funcI) arg@(ar
     newOpRef <-
       convertApplyPrefix (Expression.Apply (op, funcI) arg) exprI
     mkExpression exprI . ExpressionSection DontHaveParens $
-      Section Nothing (removeRedundantTypes newOpRef) Nothing
+      Section Nothing (removeSuccessfulType newOpRef) Nothing
   | otherwise =
     mkExpression exprI . ExpressionSection DontHaveParens $
     Section (Just (addApplyChildParens argRef)) op Nothing
@@ -528,7 +522,7 @@ convertApplyPrefix (Expression.Apply (funcRef, funcI) (argRef, _)) applyI = do
     newFuncRef =
       setNextHole newArgRef .
       addApplyChildParens .
-      removeRedundantTypes $
+      removeSuccessfulType $
       funcRef
     makeFullApply = makeApply newFuncRef
     makeApply f =
@@ -776,7 +770,7 @@ convertRecord (Expression.Record k fields) exprI = do
         , rfExpr =
             case k of
             Val -> child
-            Type -> removeRedundantTypes child
+            Type -> removeSuccessfulType child
         }
 
 convertExpressionI :: (Typeable1 m, MonadA m) => DataIRef.ExpressionM m (PayloadMM m) -> SugarM m (Expression m)
@@ -1008,5 +1002,15 @@ convertDefIExpression cp exprLoaded defI typeI = do
 
 --------------
 
+removeSuccessfulType :: Expression m -> Expression m
+removeSuccessfulType =
+  rPayload . plInferredTypes %~ removeIfNoErrors
+  where
+    removeIfNoErrors [_] = []
+    removeIfNoErrors xs = xs
+
+removeInferredTypes :: Expression m -> Expression m
+removeInferredTypes = rPayload . plInferredTypes .~ []
+
 removeTypes :: MonadA m => Expression m -> Expression m
-removeTypes = Lens.set (Lens.mapped . plInferredTypes) []
+removeTypes = Lens.mapped . plInferredTypes .~ []
