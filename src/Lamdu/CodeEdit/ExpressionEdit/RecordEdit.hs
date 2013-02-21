@@ -3,7 +3,7 @@
 module Lamdu.CodeEdit.ExpressionEdit.RecordEdit(make) where
 
 import Control.Applicative ((<$>))
-import Control.Lens ((^.))
+import Control.Lens ((^.), (%~), (&))
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
@@ -60,32 +60,31 @@ make (Sugar.Record k fields mAddField) myId =
     return . ExpressionGui.fromValueWidget . Widget.weakerEvents eventMap $
       BWidgets.hboxCenteredSpaced [resizedBracketWidget, fieldsWidget]
   where
+    sep Sugar.Val = "="
+    sep Sugar.Type = ":"
     bracketId = Widget.joinId myId ["{"]
     makeFieldRow (Sugar.RecordField mDel fieldGuid fieldExpr) = do
       name <- ExprGuiM.getGuidName fieldGuid
-      nameEdit <- makeFieldNameEdit name fieldId fieldGuid
+      nameEdit <- makeFieldNameEdit name (fromFieldGuid fieldGuid) fieldGuid
       fieldExprEdit <- (^. ExpressionGui.egWidget) <$> ExprGuiM.makeSubexpresion fieldExpr
+      sepEdit <-
+        ExprGuiM.widgetEnv . BWidgets.makeLabel (sep k) . Widget.toAnimId $
+        fromFieldGuid fieldGuid
       let
         delEventMap =
-          mkEventMap (fmap (maybe myId fromFieldId)) mDel
+          mkEventMap (fmap (maybe myId fromFieldGuid)) mDel
           (Config.delForwardKeys ++ Config.delBackwordKeys) $
           E.Doc ["Edit", "Record", "Field", "Delete"]
-      -- TODO: Could be equals rather than : for Val
-      let
-        sep Sugar.Val = "="
-        sep Sugar.Type = ":"
-      sepEdit <-
-        ExprGuiM.widgetEnv . BWidgets.makeLabel (sep k) $ Widget.toAnimId fieldId
-      return
-        [ (Vector2 1 0.5, Widget.weakerEvents delEventMap nameEdit)
-        , (0.5, sepEdit)
-        , (Vector2 0 0.5, Widget.weakerEvents delEventMap fieldExprEdit)
-        ]
-      where
-        fieldId = mappend myId $ WidgetIds.fromGuid fieldGuid
+        widgets =
+          [ (Vector2 1 0.5, nameEdit)
+          , (0.5, sepEdit)
+          , (Vector2 0 0.5, fieldExprEdit)
+          ]
+      return $ widgets &
+        Lens.mapped . Lens._2 %~ Widget.weakerEvents delEventMap
     mkEventMap f mAction keys doc =
       maybe mempty (Widget.keysEventMapMovesCursor keys doc . f) mAction
-    fromFieldId = mappend myId . WidgetIds.fromGuid
+    fromFieldGuid = mappend myId . WidgetIds.fromGuid
     eventMap =
-      mkEventMap (fmap (FocusDelegator.delegatingId . fromFieldId))
+      mkEventMap (fmap (FocusDelegator.delegatingId . fromFieldGuid))
       mAddField Config.recordAddFieldKeys $ E.Doc ["Edit", "Record", "Add Field"]
