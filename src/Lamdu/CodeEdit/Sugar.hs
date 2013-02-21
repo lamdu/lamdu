@@ -644,6 +644,7 @@ convertTypeCheckedHoleH
     inferResult expr =
       memoBy (token, expr, 'r') $ check expr
     inferExprType expr =
+      -- TODO: Is it valid to ignore "scope" here?
       memoBy (token, expr, 't') $ inferOnTheSide inferState scope expr
     onScopeElement (param, _typeExpr) = param
     hole =
@@ -953,11 +954,12 @@ convertDefIExpression cp exprLoaded defI typeI = do
       }
   where
     initialInferState = Infer.initial (Just defI)
-    reinferRoot key = memoBy (key, defI, "reinfer root" :: String) $ do
+    reinferRoot key = do
       reloadedRoot <-
-        DataIRef.readExpression . Load.irefOfClosure $
+        lift . DataIRef.readExpression . Load.irefOfClosure $
         exprLoaded ^. Expression.ePayload
-      isJust <$> uncurry (SugarInfer.inferMaybe_ (Just defI) (void reloadedRoot))
+      memoBy (key, defI, reloadedRoot, "reinfer root" :: String) $
+        isJust <$> uncurry (SugarInfer.inferMaybe_ (Just defI) (void reloadedRoot))
         initialInferState
 
     iTypeGen = mkGen 0 3 $ IRef.guid defI
