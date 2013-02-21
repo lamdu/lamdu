@@ -183,5 +183,6 @@ nextInfoMode = [noMods E.KeyF7]
 operatorChars = "+-*/^=><&|%$:."
 alphaNumericChars = ['a'..'z'] ++ ['0'..'9']
 
-recordParensColor = Draw.Color 1 0.3 1 1
+recordTypeParensColor = rightArrowColor
+recordValParensColor = Draw.Color 0.2 1 0.2 1
 recordAddFieldKeys = [k 'a', noMods E.KeySpace]

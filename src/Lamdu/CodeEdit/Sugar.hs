@@ -743,15 +743,15 @@ convertRecord ::
   (Typeable1 m, MonadA m) =>
   Expression.Record (DataIRef.ExpressionM m (PayloadMM m)) ->
   Convertor m
-convertRecord (Expression.Record Type fields) exprI = do
+convertRecord (Expression.Record k fields) exprI = do
   let
     mStored =
       (,) <$> resultIRef exprI <*>
-      (Expression.Record Expression.Type <$> traverse resultIRef fields)
+      (Expression.Record k <$> traverse resultIRef fields)
   sFields <- mapM (toField mStored) $ Map.toList fields
   mkExpression exprI . ExpressionRecord $
     Record
-    { rKind = Type
+    { rKind = k
     , rFields = sFields
     , rMAddField = addField <$> mStored
     }

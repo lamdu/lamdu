@@ -127,6 +127,8 @@ makeForNode (Expression.Expression exprBody typedVal) =
   where
     recordRules (Expression.Record Expression.Type fields) =
       mapM (setRule . tvType) $ Map.elems fields
+    recordRules (Expression.Record Expression.Val fields) =
+      return [] -- TODO
     lamKindRules (Expression.Lambda Expression.Type _ _ body) =
       fmap (:[]) . setRule $ tvType body
     lamKindRules (Expression.Lambda Expression.Val param _ body) =
@@ -264,6 +266,7 @@ runSimpleTypeClosure typ (o0, o1) ~[valExpr] =
   Expression.BodyLeaf Expression.IntegerType -> simpleType
   Expression.BodyLam (Expression.Lambda Expression.Type _ _ _) -> simpleType
   Expression.BodyRecord (Expression.Record Expression.Type _) -> simpleType
+  Expression.BodyRecord (Expression.Record Expression.Val _) -> [] -- TODO
   Expression.BodyLeaf (Expression.LiteralInteger _) -> [(typ, intTypeExpr o0)]
   Expression.BodyLam
     (Expression.Lambda Expression.Val param paramType _) ->

@@ -47,8 +47,9 @@ make (Sugar.Record k fields mAddField) myId =
     fieldRows <- mapM makeFieldRow fields
     let fieldsWidget = Grid.toWidget $ Grid.make fieldRows
     bracketWidget <-
-      ExprGuiM.atEnv (WE.setTextColor Config.recordParensColor) .
-      ExprGuiM.widgetEnv $ BWidgets.makeFocusableTextView "{" bracketId
+      ( ExprGuiM.atEnv (WE.setTextColor (parensColor k))
+      . ExprGuiM.widgetEnv . BWidgets.makeFocusableTextView "{" )
+      bracketId
     let
       height = Widget.wSize . Lens._2
       bracketHeight = bracketWidget ^. height
@@ -60,6 +61,8 @@ make (Sugar.Record k fields mAddField) myId =
     return . ExpressionGui.fromValueWidget . Widget.weakerEvents eventMap $
       BWidgets.hboxCenteredSpaced [resizedBracketWidget, fieldsWidget]
   where
+    parensColor Sugar.Type = Config.recordTypeParensColor
+    parensColor Sugar.Val = Config.recordValParensColor
     sep Sugar.Val = "="
     sep Sugar.Type = ":"
     bracketId = Widget.joinId myId ["{"]

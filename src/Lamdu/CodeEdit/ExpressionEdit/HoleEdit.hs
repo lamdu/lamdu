@@ -381,6 +381,8 @@ makeAllResults holeInfo = do
         ExprUtil.makeLambda (Guid.augment "NewLambda" (hiGuid holeInfo)) holeExpr holeExpr
       , mkGroup ["Record Type", "{"] . Expression.BodyRecord $
         Expression.Record Expression.Type mempty
+      , mkGroup ["Record Value", "{"] . Expression.BodyRecord $
+        Expression.Record Expression.Val mempty
       ]
     holeExpr = ExprUtil.pureExpression $ Expression.BodyLeaf Expression.Hole
 

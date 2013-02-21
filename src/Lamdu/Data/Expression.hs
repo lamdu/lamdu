@@ -85,7 +85,7 @@ instance (Show expr, Show def) => Show (Body def expr) where
     concat ["(", show paramId, ":", showP paramType, ")->", showP body]
   show (BodyApply (Apply func arg)) = unwords [showP func, showP arg]
   show (BodyRecord (Record k fields)) =
-    "RecT{" ++ List.intercalate ", " (map showField (Map.toList fields)) ++ "}"
+    "Rec" ++ show k ++ "{" ++ List.intercalate ", " (map showField (Map.toList fields)) ++ "}"
     where
       sep Val = "="
       sep Type = ":"
