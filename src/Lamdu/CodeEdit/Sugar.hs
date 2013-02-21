@@ -767,8 +767,7 @@ convertRecord (Expression.Record Type fields) exprI = do
     deleteField field (iref, record) = do
       let newRecord = record & Expression.recordFields %~ Map.delete field
       writeIRef iref newRecord
-      return . head $
-        Map.keys (newRecord ^. Expression.recordFields) ++ [DataIRef.exprGuid iref]
+      return . listToMaybe $ Map.keys (newRecord ^. Expression.recordFields)
     toField mStored (field, expr) = do
       child <- convertExpressionI expr
       return RecordField
