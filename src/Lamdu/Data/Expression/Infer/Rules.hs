@@ -47,6 +47,7 @@ data RuleClosure def
   = LambdaBodyTypeToPiResultTypeClosure (Guid, ExprRef) Origin2
   | PiToLambdaClosure (Guid, ExprRef, ExprRef) Origin3
   | RecordValToTypeClosure ([Expression.Field], ExprRef) Origin
+  | RecordTypeToFieldTypesClosure (Map Expression.Field ExprRef)
   | CopyClosure ExprRef
   | LambdaParentToChildrenClosure (Expression.Lambda ExprRef)
   | LambdaChildrenToParentClosure (Expression.Kind, Guid, ExprRef) Origin
@@ -85,6 +86,8 @@ runClosure closure =
     runPiToLambdaClosure x o
   RecordValToTypeClosure x o ->
     runRecordValToTypeClosure x o
+  RecordTypeToFieldTypesClosure x ->
+    runRecordTypeToFieldTypesClosure x
   CopyClosure x ->
     runCopyClosure x
   LambdaParentToChildrenClosure x ->
@@ -204,16 +207,24 @@ lambdaRules param (TypedValue lambdaValueRef lambdaTypeRef) bodyTypeRef =
   ]
 
 runRecordValToTypeClosure :: ([Expression.Field], ExprRef) -> Origin -> RuleFunction def
-runRecordValToTypeClosure (fields, recordTypeRef) o0 fieldTypeExprs = do
+runRecordValToTypeClosure (fields, recordTypeRef) o0 fieldTypeExprs =
   [ ( recordTypeRef
     , makeRefExpr o0 . Expression.BodyRecord . Expression.Record Expression.Type .
       Map.fromList $ zip fields fieldTypeExprs
-    )]
+    )
+  ]
+
+runRecordTypeToFieldTypesClosure :: Map Expression.Field ExprRef -> RuleFunction def
+runRecordTypeToFieldTypesClosure fieldTypeRefs ~[recordTypeExpr] = do
+  Expression.Record _ fieldTypeExprs <-
+    recordTypeExpr ^.. Expression.eBody . Expression._BodyRecord
+  Map.elems $ Map.intersectionWith (,) fieldTypeRefs fieldTypeExprs
 
 recordRules :: ExprRef -> Map Expression.Field ExprRef -> State Origin [Rule def]
 recordRules recTypeRef fieldTypeRefs =
   sequenceA
   [ Rule typeRefs . RecordValToTypeClosure (fields, recTypeRef) <$> mkOrigin
+  , pure . Rule [recTypeRef] $ RecordTypeToFieldTypesClosure fieldTypeRefs
   ]
   where
     (fields, typeRefs) = unzip $ Map.toList fieldTypeRefs
