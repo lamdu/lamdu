@@ -65,23 +65,23 @@ make (Sugar.Record k fields mAddField) myId =
     bracketId = Widget.joinId myId ["{"]
     makeFieldRow (Sugar.RecordField mDel fieldGuid fieldExpr) = do
       name <- ExprGuiM.getGuidName fieldGuid
-      nameEdit <- makeFieldNameEdit name (fromFieldGuid fieldGuid) fieldGuid
-      fieldExprEdit <- (^. ExpressionGui.egWidget) <$> ExprGuiM.makeSubexpresion fieldExpr
-      sepEdit <-
-        ExprGuiM.widgetEnv . BWidgets.makeLabel (sep k) . Widget.toAnimId $
-        fromFieldGuid fieldGuid
+      nameGui <-
+        ExpressionGui.fromValueWidget <$>
+        makeFieldNameEdit name (fromFieldGuid fieldGuid) fieldGuid
+      fieldExprGui <- ExprGuiM.makeSubexpresion fieldExpr
+      sepGui <-
+        ExpressionGui.fromValueWidget <$>
+        (ExprGuiM.widgetEnv . BWidgets.makeLabel (sep k) .
+         Widget.toAnimId . fromFieldGuid) fieldGuid
       let
         delEventMap =
           mkEventMap (fmap (maybe myId fromFieldGuid)) mDel
           (Config.delForwardKeys ++ Config.delBackwordKeys) $
           E.Doc ["Edit", "Record", "Field", "Delete"]
-        widgets =
-          [ (Vector2 1 0.5, nameEdit)
-          , (0.5, sepEdit)
-          , (Vector2 0 0.5, fieldExprEdit)
-          ]
-      return $ widgets &
-        Lens.mapped . Lens._2 %~ Widget.weakerEvents delEventMap
+      return . ExpressionGui.makeRow $
+        [(1, nameGui), (0.5, sepGui), (0, fieldExprGui)]
+        & Lens.mapped . Lens._2 . ExpressionGui.egWidget %~
+          Widget.weakerEvents delEventMap
     mkEventMap f mAction keys doc =
       maybe mempty (Widget.keysEventMapMovesCursor keys doc . f) mAction
     fromFieldGuid = mappend myId . WidgetIds.fromGuid

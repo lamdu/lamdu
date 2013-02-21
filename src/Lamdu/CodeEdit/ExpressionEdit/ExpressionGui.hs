@@ -15,6 +15,7 @@ module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui
   , Collapser(..), makeCollapser
   , makeColoredLabel
   , makeFocusableView
+  , makeRow
   ) where
 
 import Control.Lens (Lens', (^.))
@@ -227,3 +228,10 @@ makeCollapser fdConfig f =
     if expandedEdit ^. egWidget . Widget.wIsFocused
       then return $ onFocusedExpanded expandedEdit
       else makeFocusedCompact
+
+makeRow :: [(Widget.R, ExpressionGui m)] -> [(Vector2 Widget.R, WidgetT m)]
+makeRow halignGuis =
+  map item halignGuis
+  where
+    item (halign, ExpressionGui widget alignment) =
+      (Vector2 halign alignment, widget)
