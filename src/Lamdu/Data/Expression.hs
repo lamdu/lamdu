@@ -7,7 +7,7 @@ module Lamdu.Data.Expression
   , Field
   , Record(..), recordKind, recordFields
   , Leaf(..), _GetVariable, _LiteralInteger, _Hole, _Set, _IntegerType
-  , Body(..), _BodyLam, _BodyApply, _BodyLeaf
+  , Body(..), _BodyLam, _BodyApply, _BodyLeaf, _BodyRecord
   , BodyExpr
   , Expression(..), eBody, ePayload
   ) where

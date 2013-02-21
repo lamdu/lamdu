@@ -48,6 +48,8 @@ data RuleClosure def
   | CopyClosure ExprRef
   | LambdaParentToChildrenClosure (Expression.Lambda ExprRef)
   | LambdaChildrenToParentClosure (Expression.Kind, Guid, ExprRef) Origin
+  | RecordParentToChildrenClosure (Expression.Record ExprRef)
+  | RecordChildrenToParentClosure (Expression.Kind, [Expression.Field], ExprRef) Origin
   | SetClosure [(ExprRef, RefExpression def)]
   | SimpleTypeClosure ExprRef Origin2
   | IntoApplyResultClosure (Expression.Kind, ExprRef, ExprRef)
@@ -85,6 +87,10 @@ runClosure closure =
     runLambdaParentToChildrenClosure x
   LambdaChildrenToParentClosure x o ->
     runLambdaChildrenToParentClosure x o
+  RecordParentToChildrenClosure x ->
+    runRecordParentToChildrenClosure x
+  RecordChildrenToParentClosure x o ->
+    runRecordChildrenToParentClosure x o
   SetClosure x ->
     runSetClosure x
   SimpleTypeClosure x o ->
@@ -121,13 +127,16 @@ makeForNode (Expression.Expression exprBody typedVal) =
   Expression.BodyLam lambda ->
     (++) <$> lamKindRules lambda <*> onLambda lambda
   Expression.BodyApply apply -> applyRules typedVal apply
-  Expression.BodyRecord record -> recordRules record
+  Expression.BodyRecord record ->
+    (++)
+    <$> recordKindRules record
+    <*> recordStructureRules (tvVal typedVal) (fmap tvVal record)
   -- Leafs need no additional rules beyond the commonal simpleTypeRule
   Expression.BodyLeaf _ -> pure []
   where
-    recordRules (Expression.Record Expression.Type fields) =
+    recordKindRules (Expression.Record Expression.Type fields) =
       mapM (setRule . tvType) $ Map.elems fields
-    recordRules (Expression.Record Expression.Val fields) =
+    recordKindRules (Expression.Record Expression.Val fields) =
       return [] -- TODO
     lamKindRules (Expression.Lambda Expression.Type _ _ body) =
       fmap (:[]) . setRule $ tvType body
@@ -217,12 +226,35 @@ runLambdaChildrenToParentClosure (k, param, lamRef) o0 ~[paramTypeExpr, resultEx
 lambdaStructureRules :: ExprRef -> Expression.Lambda ExprRef -> State Origin [Rule def]
 lambdaStructureRules lamRef lam@(Expression.Lambda k param paramTypeRef resultRef) =
   sequenceA
-  [ pure . Rule [lamRef] $
-    LambdaParentToChildrenClosure lam
+  [ pure . Rule [lamRef] $ LambdaParentToChildrenClosure lam
   , -- Copy the structure from the children to the parent
     Rule [paramTypeRef, resultRef] .
     LambdaChildrenToParentClosure (k, param, lamRef) <$> mkOrigin
   ]
+
+runRecordParentToChildrenClosure :: Expression.Record ExprRef -> RuleFunction def
+runRecordParentToChildrenClosure (Expression.Record _ fieldRefs) ~[expr] = do
+  Expression.Record _ fieldExprs <-
+    expr ^.. Expression.eBody . Expression._BodyRecord
+  Map.elems $ Map.intersectionWith (,) fieldRefs fieldExprs
+
+runRecordChildrenToParentClosure ::
+  (Expression.Kind, [Expression.Field], ExprRef) -> Origin -> RuleFunction def
+runRecordChildrenToParentClosure (k, fields, recRef) o0 fieldExprs =
+  [( recRef
+   , makeRefExpr o0 . Expression.BodyRecord .
+     Expression.Record k . Map.fromList $ zip fields fieldExprs
+   )]
+
+recordStructureRules :: ExprRef -> Expression.Record ExprRef -> State Origin [Rule def]
+recordStructureRules recRef rec@(Expression.Record k fields) =
+  sequenceA
+  [ pure . Rule [recRef] $ RecordParentToChildrenClosure rec
+  , Rule valRefs .
+    RecordChildrenToParentClosure (k, keys, recRef) <$> mkOrigin
+  ]
+  where
+    (keys, valRefs) = unzip $ Map.toList fields
 
 runSetClosure :: [(ExprRef, RefExpression def)] -> RuleFunction def
 runSetClosure outputs ~[] = outputs
