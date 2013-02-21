@@ -13,6 +13,7 @@ import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Lamdu.BottleWidgets as BWidgets
@@ -59,7 +60,7 @@ make (Sugar.Record k fields mAddField) myId =
           Widget.scale (Vector2 1 (fieldsHeight / bracketHeight)) bracketWidget
         | otherwise = bracketWidget
     return . ExpressionGui.fromValueWidget . Widget.weakerEvents eventMap $
-      BWidgets.hboxCenteredSpaced [resizedBracketWidget, fieldsWidget]
+      Box.hboxCentered [resizedBracketWidget, fieldsWidget]
   where
     parensColor Sugar.Type = Config.recordTypeParensColor
     parensColor Sugar.Val = Config.recordValParensColor
