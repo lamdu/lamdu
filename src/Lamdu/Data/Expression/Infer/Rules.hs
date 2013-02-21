@@ -18,6 +18,7 @@ import Data.Derive.Binary (makeBinary)
 import Data.Derive.NFData (makeNFData)
 import Data.DeriveTH (derive)
 import Data.Functor.Identity (Identity(..))
+import Data.Map (Map)
 import Data.Store.Guid (Guid)
 import Data.Traversable (traverse, sequenceA)
 import Lamdu.Data.Expression.Infer.Types
@@ -45,6 +46,7 @@ mkOrigin3 = (,,) <$> mkOrigin <*> mkOrigin <*> mkOrigin
 data RuleClosure def
   = LambdaBodyTypeToPiResultTypeClosure (Guid, ExprRef) Origin2
   | PiToLambdaClosure (Guid, ExprRef, ExprRef) Origin3
+  | RecordValToTypeClosure ([Expression.Field], ExprRef) Origin
   | CopyClosure ExprRef
   | LambdaParentToChildrenClosure (Expression.Lambda ExprRef)
   | LambdaChildrenToParentClosure (Expression.Kind, Guid, ExprRef) Origin
@@ -81,6 +83,8 @@ runClosure closure =
     runLambdaBodyTypeToPiResultTypeClosure x o
   PiToLambdaClosure x o ->
     runPiToLambdaClosure x o
+  RecordValToTypeClosure x o ->
+    runRecordValToTypeClosure x o
   CopyClosure x ->
     runCopyClosure x
   LambdaParentToChildrenClosure x ->
@@ -137,7 +141,7 @@ makeForNode (Expression.Expression exprBody typedVal) =
     recordKindRules (Expression.Record Expression.Type fields) =
       mapM (setRule . tvType) $ Map.elems fields
     recordKindRules (Expression.Record Expression.Val fields) =
-      return [] -- TODO
+      recordRules (tvType typedVal) (tvType <$> fields)
     lamKindRules (Expression.Lambda Expression.Type _ _ body) =
       fmap (:[]) . setRule $ tvType body
     lamKindRules (Expression.Lambda Expression.Val param _ body) =
@@ -198,6 +202,21 @@ lambdaRules param (TypedValue lambdaValueRef lambdaTypeRef) bodyTypeRef =
   [ Rule [bodyTypeRef] . LambdaBodyTypeToPiResultTypeClosure (param, lambdaTypeRef) <$> mkOrigin2
   , Rule [lambdaTypeRef] . PiToLambdaClosure (param, lambdaValueRef, bodyTypeRef) <$> mkOrigin3
   ]
+
+runRecordValToTypeClosure :: ([Expression.Field], ExprRef) -> Origin -> RuleFunction def
+runRecordValToTypeClosure (fields, recordTypeRef) o0 fieldTypeExprs = do
+  [ ( recordTypeRef
+    , makeRefExpr o0 . Expression.BodyRecord . Expression.Record Expression.Type .
+      Map.fromList $ zip fields fieldTypeExprs
+    )]
+
+recordRules :: ExprRef -> Map Expression.Field ExprRef -> State Origin [Rule def]
+recordRules recTypeRef fieldTypeRefs =
+  sequenceA
+  [ Rule typeRefs . RecordValToTypeClosure (fields, recTypeRef) <$> mkOrigin
+  ]
+  where
+    (fields, typeRefs) = unzip $ Map.toList fieldTypeRefs
 
 runCopyClosure :: ExprRef -> RuleFunction def
 runCopyClosure dest ~[srcExpr] = [(dest, srcExpr)]
@@ -297,7 +316,12 @@ runSimpleTypeClosure typ (o0, o1) ~[valExpr] =
   Expression.BodyLeaf Expression.IntegerType -> simpleType
   Expression.BodyLam (Expression.Lambda Expression.Type _ _ _) -> simpleType
   Expression.BodyRecord (Expression.Record Expression.Type _) -> simpleType
-  Expression.BodyRecord (Expression.Record Expression.Val _) -> [] -- TODO
+  Expression.BodyRecord (Expression.Record Expression.Val _) ->
+    []
+    -- TODO?
+    -- [( typ
+    --  , makeRefExpr o0 . Expression.BodyRecord . Expression.Record Expression.Type $
+    --  )]
   Expression.BodyLeaf (Expression.LiteralInteger _) -> [(typ, intTypeExpr o0)]
   Expression.BodyLam
     (Expression.Lambda Expression.Val param paramType _) ->
