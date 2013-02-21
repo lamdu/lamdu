@@ -46,7 +46,7 @@ data RuleClosure def
   = LambdaBodyTypeToPiResultTypeClosure (Guid, ExprRef) Origin2
   | PiToLambdaClosure (Guid, ExprRef, ExprRef) Origin3
   | CopyClosure ExprRef
-  | LambdaParentToChildrenClosure (Expression.Kind, ExprRef, ExprRef)
+  | LambdaParentToChildrenClosure (Expression.Lambda ExprRef)
   | LambdaChildrenToParentClosure (Expression.Kind, Guid, ExprRef) Origin
   | SetClosure [(ExprRef, RefExpression def)]
   | SimpleTypeClosure ExprRef Origin2
@@ -200,11 +200,10 @@ union x y =
   ]
 
 -- Parent lambda to children
-runLambdaParentToChildrenClosure :: (Expression.Kind, ExprRef, ExprRef) -> RuleFunction def
-runLambdaParentToChildrenClosure (k, paramTypeRef, resultRef) ~[expr] = do
-  Expression.Lambda bk _ paramTypeE resultE <-
+runLambdaParentToChildrenClosure :: Expression.Lambda ExprRef -> RuleFunction def
+runLambdaParentToChildrenClosure (Expression.Lambda _ _ paramTypeRef resultRef) ~[expr] = do
+  Expression.Lambda _ _ paramTypeE resultE <-
     expr ^.. Expression.eBody . Expression._BodyLam
-  guard $ bk == k
   [(paramTypeRef, paramTypeE), (resultRef, resultE)]
 
 -- Children of lambda to lambda parent
@@ -216,10 +215,10 @@ runLambdaChildrenToParentClosure (k, param, lamRef) o0 ~[paramTypeExpr, resultEx
    )]
 
 lambdaStructureRules :: ExprRef -> Expression.Lambda ExprRef -> State Origin [Rule def]
-lambdaStructureRules lamRef (Expression.Lambda k param paramTypeRef resultRef) =
+lambdaStructureRules lamRef lam@(Expression.Lambda k param paramTypeRef resultRef) =
   sequenceA
   [ pure . Rule [lamRef] $
-    LambdaParentToChildrenClosure (k, paramTypeRef, resultRef)
+    LambdaParentToChildrenClosure lam
   , -- Copy the structure from the children to the parent
     Rule [paramTypeRef, resultRef] .
     LambdaChildrenToParentClosure (k, param, lamRef) <$> mkOrigin
