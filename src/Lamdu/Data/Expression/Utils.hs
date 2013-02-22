@@ -27,7 +27,7 @@ module Lamdu.Data.Expression.Utils
 
 import Lamdu.Data.Expression
 
-import Control.Applicative (Applicative(..), liftA2, (<$>))
+import Control.Applicative (Applicative(..), liftA2, (<$>), (<$))
 import Control.Lens (Prism, Prism', (^.), (^?), (%~), (&))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -287,12 +287,18 @@ applyDependentPis exprType = applyWithHoles (length (getDependentParams exprType
 applyForms :: Expression def () -> Expression def () -> [Expression def ()]
 applyForms exprType expr
   | Lens.notNullOf (eBody . _BodyLam . lambdaKind . _Val) expr = [expr]
-  | otherwise =
-    reverse . take (1 + length nonDepParams) $ iterate addApply withDepPisApplied
+  | otherwise = reverse $ scanl (flip addApply) withDepPisApplied nonDepParams
   where
     withDepPisApplied = applyWithHoles (length depParams) expr
     PiWrappers
       { _dependentPiParams = depParams
       , nonDependentPiParams = nonDepParams
       } = getPiWrappers exprType
-    addApply = pureExpression . (`makeApply` pureHole)
+    addApply (_, paramType) =
+      pureExpression . (`makeApply` arg)
+      where
+        arg =
+          case paramType ^? eBody . _BodyRecord of
+          Just (Record Type fields) ->
+            pureExpression . BodyRecord . Record Val $ pureHole <$ fields
+          _ -> pureHole
