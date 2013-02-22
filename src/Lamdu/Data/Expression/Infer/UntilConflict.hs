@@ -17,10 +17,10 @@ actions :: Infer.InferActions def (Either (Infer.Error def))
 actions = Infer.InferActions Left
 
 inferAssertNoConflict ::
-  Ord def => Infer.Loaded def a -> Infer.InferNode def ->
+  Ord def => String -> Infer.Loaded def a -> Infer.InferNode def ->
   State (Infer.Context def) (Expression.Expression def (Infer.Inferred def, a))
-inferAssertNoConflict loaded =
+inferAssertNoConflict msg loaded =
   mapStateT fromEither . inferUntilConflict loaded
   where
-    fromEither (Left err) = error . show $ void err
+    fromEither (Left err) = error . ((msg ++ ": ") ++) . show $ void err
     fromEither (Right x) = return x

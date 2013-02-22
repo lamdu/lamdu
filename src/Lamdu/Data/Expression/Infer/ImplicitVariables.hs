@@ -58,7 +58,8 @@ addVariableForHole holePoint = do
       fromMaybe (error "Should not be loading defs when loading a mere getVar") $
       Infer.load loader Nothing getVar
   lift $ do
-    inferredGetVar <- inferAssertNoConflict loaded holePoint
+    inferredGetVar <-
+      inferAssertNoConflict "ImplicitVariables.addVariableForHole" loaded holePoint
     let
       paramTypeRef =
         Infer.tvType . Infer.nRefs . Infer.iPoint . fst $
@@ -89,7 +90,9 @@ addVariablesForExpr loader expr = do
         lift . lift . Infer.load loader Nothing $ -- <-- TODO: Nothing?
         inferredVal reinferred
       reinferredLoaded <-
-        lift . toStateT . inferAssertNoConflict reloaded .
+        lift . toStateT .
+        inferAssertNoConflict "ImplicitVariables.addVariableForExpr"
+        reloaded .
         Infer.iPoint . fst $ Lens.view Expression.ePayload reinferred
       fmap concat . mapM (addVariablesForExpr loader) .
         filter (isUnrestrictedHole . inferredVal) $
