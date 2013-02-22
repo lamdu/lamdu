@@ -28,7 +28,7 @@ module Lamdu.Data.Expression.Utils
 import Lamdu.Data.Expression
 
 import Control.Applicative (Applicative(..), liftA2, (<$>))
-import Control.Lens (Prism, Prism', (^.), (^?), (+~), (%~))
+import Control.Lens (Prism, Prism', (^.), (^?), (%~), (&))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (evalState, state)
@@ -37,6 +37,7 @@ import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable(..), sequenceA)
 import System.Random (Random, RandomGen, random)
 import qualified Control.Lens as Lens
+import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
@@ -233,36 +234,53 @@ funcArguments =
       paramType : funcArguments body
     f _ = []
 
-countArrows :: Expression def () -> Int
-countArrows expr =
+getParams :: Expression def a -> [(Guid, Expression def a)]
+getParams expr =
   case expr ^? eBody . _BodyLam of
-  Just (Lambda Type _ _ resultType) -> 1 + countArrows resultType
-  _ -> 0
+  Just (Lambda Type param paramType resultType) ->
+    (param, paramType) : getParams resultType
+  _ -> []
 
-countDependentPis :: Expression def () -> Int
-countDependentPis expr =
-  case expr ^? eBody . _BodyLam of
-  Just (Lambda Type _ _  resultType)
-    | isDependentPi expr -> 1 + countDependentPis resultType
-  _ -> 0
+data PiWrappers def a = PiWrappers
+  { _dependentPiParams :: [(Guid, Expression def a)]
+  , nonDependentPiParams :: [(Guid, Expression def a)]
+  }
+LensTH.makeLenses ''PiWrappers
 
 -- TODO: Return a record, not a tuple
-countPis :: Expression def () -> (Int, Int)
-countPis expr =
+getPiWrappers :: Expression def a -> PiWrappers def a
+getPiWrappers expr =
   case expr ^? eBody . _BodyLam of
-  Just (Lambda Type _ _ resultType)
-    | isDependentPi expr -> Lens._1 +~ 1 $ countPis resultType
-    | otherwise -> (0, 1 + countArrows resultType)
-  _ -> (0, 0)
+  Just (Lambda Type param paramType resultType)
+    | isDependentPi expr ->
+      getPiWrappers resultType & dependentPiParams %~ addParam
+    | otherwise ->
+        PiWrappers
+        { _dependentPiParams = []
+        , nonDependentPiParams = addParam (getParams resultType)
+        }
+    where
+      addParam = ((param, paramType) :)
+  _ -> PiWrappers [] []
+
+getDependentParams :: Expression def a -> [(Guid, Expression def a)]
+getDependentParams = (^. dependentPiParams) . getPiWrappers
+
+compose :: [a -> a] -> a -> a
+compose = foldr (.) id
+{-# INLINE compose #-}
+
+applyWith :: [Expression def ()] -> Expression def () -> Expression def ()
+applyWith args expr =
+  compose (map addApply args) expr
+  where
+    addApply arg = pureExpression . (`makeApply` arg)
 
 applyWithHoles :: Int -> Expression def () -> Expression def ()
-applyWithHoles count expr =
-  iterate addApply expr !! count
-  where
-    addApply = pureExpression . (`makeApply` pureHole)
+applyWithHoles count = applyWith $ replicate count pureHole
 
 applyDependentPis :: Expression def () -> Expression def () -> Expression def ()
-applyDependentPis exprType = applyWithHoles (countDependentPis exprType)
+applyDependentPis exprType = applyWithHoles (length (getDependentParams exprType))
 
 -- Transform expression to expression applied with holes,
 -- with all different sensible levels of currying.
@@ -270,8 +288,11 @@ applyForms :: Expression def () -> Expression def () -> [Expression def ()]
 applyForms exprType expr
   | Lens.notNullOf (eBody . _BodyLam . lambdaKind . _Val) expr = [expr]
   | otherwise =
-    reverse . take (1 + arrows) $ iterate addApply withDepPisApplied
+    reverse . take (1 + length nonDepParams) $ iterate addApply withDepPisApplied
   where
-    withDepPisApplied = applyWithHoles depPis expr
-    (depPis, arrows) = countPis exprType
+    withDepPisApplied = applyWithHoles (length depParams) expr
+    PiWrappers
+      { _dependentPiParams = depParams
+      , nonDependentPiParams = nonDepParams
+      } = getPiWrappers exprType
     addApply = pureExpression . (`makeApply` pureHole)
