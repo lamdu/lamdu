@@ -746,10 +746,15 @@ convertRecord (Expression.Record k fields) exprI = do
   mkExpression exprI . ExpressionRecord $
     Record
     { rKind = k
-    , rFields = sFields
+    , rFields = withNextHoles sFields
     , rMAddField = addField <$> mStored
     }
   where
+    withNextHoles (field : rest@(nextField:_)) =
+      (field
+       & rfExpr %~ setNextHole (nextField ^. rfExpr))
+      : withNextHoles rest
+    withNextHoles xs = xs
     resultIRef = fmap Property.value . resultStored
     writeIRef iref record =
       DataIRef.writeExprBody iref $ Expression.BodyRecord record
@@ -765,9 +770,9 @@ convertRecord (Expression.Record k fields) exprI = do
     toField mStored (field, expr) = do
       child <- convertExpressionI expr
       return RecordField
-        { rfMDel = deleteField field <$> mStored
-        , rfId = field
-        , rfExpr =
+        { _rfMDel = deleteField field <$> mStored
+        , _rfId = field
+        , _rfExpr =
             case k of
             Val -> child
             Type -> removeSuccessfulType child
