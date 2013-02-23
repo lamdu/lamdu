@@ -43,7 +43,12 @@ makeFieldNameEdit name myId fieldGuid =
 make ::
   MonadA m =>
   Sugar.Record m (Sugar.Expression m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
-make (Sugar.Record k fields mAddField) myId =
+make = ExpressionGui.wrapExpression . makeUnwrapped
+
+makeUnwrapped ::
+  MonadA m =>
+  Sugar.Record m (Sugar.Expression m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
+makeUnwrapped (Sugar.Record k fields mAddField) myId =
   ExprGuiM.assignCursor myId bracketId $ do
     fieldRows <- mapM makeFieldRow fields
     let fieldsWidget = Grid.toWidget $ Grid.make fieldRows
