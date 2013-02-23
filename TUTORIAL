@@ -1,12 +1,16 @@
 Some instructions to get you started with this preliminary[toy] code editor:
 
-1. OPTIONAL: Install fork of FTGL bindings which more gracefully handles missing font files:
+1. Install the ftgl C bindings. If you're on Ubuntu, use:
+
+   sudo apt-get install libftgl-dev libftgl2
+
+2. OPTIONAL: Install fork of FTGL bindings which more gracefully handles missing font files:
 
   git clone https://github.com/Peaker/FTGL
   cd FTGL
   cabal install
 
-2. Build and install lamdu's dependencies and lamdu itself:
+3. Build and install lamdu's dependencies and lamdu itself:
 
   cabal install
 
@@ -20,11 +24,11 @@ Some instructions to get you started with this preliminary[toy] code editor:
   source root dir, because without an install, it will search the
   font only relatively to the directory from which it was executed.
 
-3. Run lamdu, either from your cabal bindir [e.g: ~/.cabal/bin/Editor], or from the build directory (dist/build/Editor/Editor).
+4. Run lamdu, either from your cabal bindir [e.g: ~/.cabal/bin/Editor], or from the build directory (dist/build/Editor/Editor).
 
-4. Press: alt-n (make new definition)
+5. Press: alt-n (make new definition)
 
-5. Type this line into the Editor slowly, key-by-key, including
+6. Type this line into the Editor slowly, key-by-key, including
 spaces, and examine what happens after each key stroke:
 
 fac x=if x=0 1 x*f x-1
@@ -41,8 +45,8 @@ effects is having to input much less.
 
 This toy example took 22 key strokes instead of 39 required by an ordinary text editor.
 
-6. Move cursor to the "fac" application in "fac (x - 1)"
+7. Move cursor to the "fac" application in "fac (x - 1)"
 
-7. Press <return> to jump to the definition
+8. Press <return> to jump to the definition
 
-8. Press <return> again to rename. Rename it to "factorial"
+9. Press <return> again to rename. Rename it to "factorial"
