@@ -9,7 +9,7 @@ This project aims to create a "next-generation", "live programming" environment 
 ### Easier coding with less mistakes
 
 * Editing code directly lets beginners avoid syntax errors.
-* Editing type checked code avoids type errors, helps programmers and helps inteligent completions.
+* Editing type checked code avoids type errors, helps programmers and helps intelligent completions.
 * Integrated unit-testing / code with examples / live programming - helps the programmers avoid silly bugs as they program, and helps programmers understand code better.
 * The editor has a clear separation of non-functional parts of the code (Names, documentation, organization) and allows tracking whether functionality was changed. It will also make many forms of refactoring and organizing code less risky and thus cheaper.
 
@@ -23,7 +23,7 @@ This project aims to create a "next-generation", "live programming" environment 
 * Integrated Source Control and Testing will allow the user to provide "Regression Debugging".
   When a "refactor commit" (a change that is not supposed to change behavior) causes a bug,
   you could easily find the root of the problem via the inner-most called function whose output for the same input has changed when it was supposed to stay intact.
-  Debug endevours that currently take hours or days would be much much shorter.
+  Debug endeavors that currently take hours or days would be much much shorter.
 
 ### Other
 
@@ -33,7 +33,7 @@ This project aims to create a "next-generation", "live programming" environment 
 
 ## Text based environments
 
-Text based environments seem to have more promise in the short term, as they add on to existing "eco systems" of efficient compilers and common source control systems and interoperate with the current ways of doing things.
+Text based environments seem to have more promise in the short term, as they add on to existing ecosystems of efficient compilers and common source control systems and inter-operate with the current ways of doing things.
 
 ### Bret Victor's talk
 
@@ -71,7 +71,7 @@ The project launched at September 2012, and as of October, Jules said he'll be r
 In his [Subtext 1](http://subtextual.org/demo1.html) demo and talk, JE presents a live programming environment to a language similar to Haskell. In his impressive second demo he dives into more topics such as canonical representations of code and filtered views of code.
 
 The project seems to be stuck as JE works on inventing a suitable programming language for his vision.
-JE seems relunctant to adopt existing languages or concepts from the functional programming community even as these seem close to what he had in mind.
+JE seems reluctant to adopt existing languages or concepts from the functional programming community even as these seem close to what he had in mind.
 
 In part, we started our project as we grew tired of waiting for Subtext to bear useful fruits.
 
