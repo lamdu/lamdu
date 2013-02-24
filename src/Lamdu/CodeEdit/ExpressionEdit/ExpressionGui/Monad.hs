@@ -10,7 +10,7 @@ module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad
   , makeSubexpresion
   --
   , readSettings, readCodeAnchors
-  , getCodeAnchor
+  , getCodeAnchor, mkPrejumpPosSaver
   --
   , addResultPicker, listenResultPickers
 
@@ -23,7 +23,7 @@ module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad
   , unmemo
   ) where
 
-import Control.Applicative (Applicative, liftA2)
+import Control.Applicative (Applicative(..), (<$>), liftA2)
 import Control.Lens ((%~), (&))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.RWS (RWST, runRWST)
@@ -58,6 +58,7 @@ import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
+import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.WidgetEnvT as WE
 
 type T = Transaction
@@ -100,6 +101,10 @@ readSettings = ExprGuiM . RWS.asks $ Lens.view aSettings
 
 readCodeAnchors :: MonadA m => ExprGuiM m (Anchors.CodeProps m)
 readCodeAnchors = ExprGuiM . RWS.asks $ Lens.view aCodeAnchors
+
+mkPrejumpPosSaver :: MonadA m => ExprGuiM m (T m ())
+mkPrejumpPosSaver =
+  DataOps.savePreJumpPosition <$> readCodeAnchors <*> widgetEnv WE.readCursor
 
 makeSubexpresion :: MonadA m => Sugar.Expression m -> ExprGuiM m (ExpressionGui m)
 makeSubexpresion expr = do

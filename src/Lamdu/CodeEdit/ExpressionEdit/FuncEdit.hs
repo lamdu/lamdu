@@ -5,6 +5,7 @@ module Lamdu.CodeEdit.ExpressionEdit.FuncEdit
   , makeNestedParams, makeParamsAndResultEdit
   ) where
 
+import Control.Applicative ((<$), (<$>))
 import Control.Lens ((^.))
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
@@ -48,10 +49,13 @@ makeParamNameEdit name ident =
 
 jumpToRHS ::
   (MonadA m, MonadA f) =>
-  [E.ModKey] -> (String, Sugar.Expression m) -> Widget.EventHandlers f
-jumpToRHS keys (rhsDoc, rhs) =
-  Widget.keysEventMapMovesCursor keys (E.Doc ["Navigation", "Jump to " ++ rhsDoc]) $
-  return rhsId
+  [E.ModKey] -> (String, Sugar.Expression m) ->
+  ExprGuiM f (Widget.EventHandlers (T f))
+jumpToRHS keys (rhsDoc, rhs) = do
+  savePos <- ExprGuiM.mkPrejumpPosSaver
+  return $
+    Widget.keysEventMapMovesCursor keys (E.Doc ["Navigation", "Jump to " ++ rhsDoc]) $
+      rhsId <$ savePos
   where
     rhsId = WidgetIds.fromGuid $ rhs ^. Sugar.rGuid
 
@@ -66,6 +70,12 @@ makeParamEdit ::
   ExprGuiM m (ExpressionGui m)
 makeParamEdit atParamWidgets rhs prevId name param = do
   infoMode <- fmap (Lens.view Settings.sInfoMode) ExprGuiM.readSettings
+  rhsJumper <- jumpToRHS Config.jumpLHStoRHSKeys rhs
+  let
+    onFinalWidget =
+      Widget.weakerEvents
+      (rhsJumper `mappend` paramEventMap) .
+      atParamWidgets name
   (fmap . Lens.over ExpressionGui.egWidget) onFinalWidget . assignCursor $ do
     paramTypeEdit <- ExprGuiM.makeSubexpresion $ param ^. Sugar.fpType
     paramNameEdit <- makeParamNameEdit name ident
@@ -83,10 +93,6 @@ makeParamEdit atParamWidgets rhs prevId name param = do
       ExpressionGui.addType ExpressionGui.HorizLine myId [infoWidget] $
       ExpressionGui.fromValueWidget paramNameEdit
   where
-    onFinalWidget =
-      Widget.weakerEvents
-      (jumpToRHS Config.jumpLHStoRHSKeys rhs `mappend` paramEventMap) .
-      atParamWidgets name
     assignCursor =
       case param ^. Sugar.fpHiddenLambdaGuid of
       Nothing -> id
@@ -118,16 +124,18 @@ makeResultEdit
   => [Widget.Id]
   -> Sugar.Expression m
   -> ExprGuiM m (ExpressionGui m)
-makeResultEdit lhs result =
-  fmap ((Lens.over ExpressionGui.egWidget . Widget.weakerEvents) jumpToLhsEventMap) $
-  ExprGuiM.makeSubexpresion result
+makeResultEdit lhs result = do
+  savePos <- ExprGuiM.mkPrejumpPosSaver
+  let
+    jumpToLhsEventMap =
+      Widget.keysEventMapMovesCursor Config.jumpRHStoLHSKeys (E.Doc ["Navigation", "Jump to last param"]) $
+        lastParam <$ savePos
+  ((Lens.over ExpressionGui.egWidget . Widget.weakerEvents) jumpToLhsEventMap) <$>
+    ExprGuiM.makeSubexpresion result
   where
     lastParam = case lhs of
       [] -> error "makeResultEdit given empty LHS"
       xs -> last xs
-    jumpToLhsEventMap =
-      Widget.keysEventMapMovesCursor Config.jumpRHStoLHSKeys (E.Doc ["Navigation", "Jump to last param"]) $
-      return lastParam
 
 makeParamsAndResultEdit ::
   MonadA m =>

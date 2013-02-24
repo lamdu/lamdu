@@ -114,16 +114,32 @@ makeParts
   -> ExprGuiM m ([ExpressionGui m], [Widget (T m)])
 makeParts name guid content = do
   equals <- makeEquals myId
+  rhsJumperEquals <- FuncEdit.jumpToRHS [E.ModKey E.noMods (E.charKey '=')] rhs
+  let
+    jumpToRHSViaEquals n
+      | nonOperatorName n =
+        Widget.weakerEvents rhsJumperEquals .
+        Lens.over Widget.wEventMap (E.filterSChars (curry (/= ('=', E.NotShifted))))
+      | otherwise = id
   (depParamsEdits, paramsEdits, (wheres, bodyEdit)) <-
     FuncEdit.makeNestedParams
     jumpToRHSViaEquals rhs myId depParams params $
     (,)
     <$> makeWheres (Sugar.dWhereItems content) myId
     <*> FuncEdit.makeResultEdit lhs body
+  rhsJumper <- FuncEdit.jumpToRHS Config.jumpLHStoRHSKeys rhs
+  let nameEditEventMap = mappend addFirstParamEventMap rhsJumper
   polyNameEdit <-
     Lens.over ExpressionGui.egWidget
     (Widget.weakerEvents nameEditEventMap . jumpToRHSViaEquals name) <$>
     makePolyNameEdit name guid depParamsEdits myId
+  savePos <- ExprGuiM.mkPrejumpPosSaver
+  let
+    addWhereItemEventMap =
+      Widget.keysEventMapMovesCursor Config.addWhereItemKeys (E.Doc ["Edit", "Add where item"]) .
+      toEventMapAction $ do
+        savePos
+        Sugar.dAddInnermostWhereItem content
   return
     ( polyNameEdit : paramsEdits ++
       [ ExpressionGui.fromValueWidget equals
@@ -134,25 +150,13 @@ makeParts name guid content = do
     , wheres
     )
   where
-    jumpToRHSViaEquals n
-      | nonOperatorName n =
-        Widget.weakerEvents
-        (FuncEdit.jumpToRHS [E.ModKey E.noMods (E.charKey '=')] rhs) .
-        Lens.over Widget.wEventMap (E.filterSChars (curry (/= ('=', E.NotShifted))))
-      | otherwise = id
     lhs = myId : map (WidgetIds.fromGuid . Lens.view Sugar.fpGuid) allParams
     rhs = ("Def Body", body)
     allParams = depParams ++ params
     Sugar.Func depParams params body = Sugar.dFunc content
-    addWhereItemEventMap =
-      Widget.keysEventMapMovesCursor Config.addWhereItemKeys (E.Doc ["Edit", "Add where item"]) .
-      toEventMapAction $ Sugar.dAddInnermostWhereItem content
     addFirstParamEventMap =
       Widget.keysEventMapMovesCursor Config.addNextParamKeys (E.Doc ["Edit", "Add parameter"]) .
       toEventMapAction $ Sugar.dAddFirstParam content
-    nameEditEventMap =
-      mappend addFirstParamEventMap $
-      FuncEdit.jumpToRHS Config.jumpLHStoRHSKeys rhs
     toEventMapAction =
       fmap (FocusDelegator.delegatingId . WidgetIds.fromGuid)
     myId = WidgetIds.fromGuid guid

@@ -33,7 +33,7 @@ import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 type T = Transaction
 
-makeDefinition :: MonadA m => Anchors.CodeProps m -> Transaction m (DefI (Tag m))
+makeDefinition :: MonadA m => Anchors.CodeProps m -> T m (DefI (Tag m))
 makeDefinition codeProps = do
   defI <-
     Transaction.newIRef =<<
@@ -139,17 +139,17 @@ addListItem specialFunctions exprP = do
   Property.set exprP newListI
   return (newListI, newItemI)
 
-newPane :: MonadA m => Anchors.CodeProps m -> DefI (Tag m) -> Transaction m ()
+newPane :: MonadA m => Anchors.CodeProps m -> DefI (Tag m) -> T m ()
 newPane codeProps defI = do
   let panesProp = Anchors.panes codeProps
   panes <- getP panesProp
   when (defI `notElem` panes) $
     setP panesProp $ Anchors.makePane defI : panes
 
-savePreJumpPosition :: MonadA m => Anchors.CodeProps m -> Widget.Id -> Transaction m ()
+savePreJumpPosition :: MonadA m => Anchors.CodeProps m -> Widget.Id -> T m ()
 savePreJumpPosition codeProps pos = modP (Anchors.preJumps codeProps) $ (pos :) . take 19
 
-jumpBack :: MonadA m => Anchors.CodeProps m -> Transaction m (Maybe (Transaction m Widget.Id))
+jumpBack :: MonadA m => Anchors.CodeProps m -> T m (Maybe (T m Widget.Id))
 jumpBack codeProps = do
   preJumps <- getP (Anchors.preJumps codeProps)
   return $
@@ -162,7 +162,7 @@ jumpBack codeProps = do
 newBuiltin
   :: MonadA m
   => String -> DataIRef.ExpressionI (Tag m)
-  -> Transaction m (DefI (Tag m))
+  -> T m (DefI (Tag m))
 newBuiltin fullyQualifiedName typeI =
   newDefinition name . (`Definition` typeI) . Definition.BodyBuiltin .
   Definition.Builtin $ Definition.FFIName (init path) name
@@ -172,7 +172,7 @@ newBuiltin fullyQualifiedName typeI =
 
 newDefinition ::
   MonadA m => String ->
-  DataIRef.DefinitionI (Tag m) -> Transaction m (DefI (Tag m))
+  DataIRef.DefinitionI (Tag m) -> T m (DefI (Tag m))
 newDefinition name defI = do
   res <- Transaction.newIRef defI
   setP (Anchors.assocNameRef (IRef.guid res)) name
@@ -181,7 +181,7 @@ newDefinition name defI = do
 newClipboard ::
   MonadA m => Anchors.CodeProps m ->
   DataIRef.ExpressionI (Tag m) ->
-  Transaction m (DefI (Tag m))
+  T m (DefI (Tag m))
 newClipboard codeProps expr = do
   len <- length <$> getP (Anchors.clipboards codeProps)
   def <- Definition (Definition.BodyExpression expr) <$> newHole
