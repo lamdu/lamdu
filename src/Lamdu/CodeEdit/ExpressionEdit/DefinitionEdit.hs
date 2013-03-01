@@ -177,19 +177,18 @@ makeBuiltinDefinition
   => Sugar.Definition m
   -> Sugar.DefinitionBuiltin m
   -> ExprGuiM m (WidgetT m)
-makeBuiltinDefinition def builtin =
+makeBuiltinDefinition def builtin = do
+  name <- ExprGuiM.getDefName guid
   fmap (Box.vboxAlign 0) $ sequenceA
-  [ fmap BWidgets.hboxCenteredSpaced $ sequenceA
-    [ ExprGuiM.withParamName guid $
-      \name ->
-      ExprGuiM.atEnv (WE.setTextColor Config.builtinOriginNameColor) $
-      makeNameEdit name (Widget.joinId myId ["name"]) guid
-    , makeEquals myId
-    , BuiltinEdit.make builtin myId
+    [ fmap BWidgets.hboxCenteredSpaced $ sequenceA
+      [ ExprGuiM.atEnv (WE.setTextColor Config.builtinOriginNameColor) $
+        makeNameEdit name (Widget.joinId myId ["name"]) guid
+      , makeEquals myId
+      , BuiltinEdit.make builtin myId
+      ]
+    , fmap (defTypeScale . Lens.view ExpressionGui.egWidget) .
+      ExprGuiM.makeSubexpresion $ Sugar.drType def
     ]
-  , fmap (defTypeScale . Lens.view ExpressionGui.egWidget) .
-    ExprGuiM.makeSubexpresion $ Sugar.drType def
-  ]
   where
     guid = Sugar.drGuid def
     myId = WidgetIds.fromGuid guid
