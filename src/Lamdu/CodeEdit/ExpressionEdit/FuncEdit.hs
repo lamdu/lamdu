@@ -13,7 +13,7 @@ import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
+import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT, IsDependent(..))
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -160,22 +160,22 @@ makeNestedParams ::
  -> ExprGuiM m ([ExpressionGui m], [ExpressionGui m], a)
 makeNestedParams atParamWidgets rhs firstParId depParams params mkResultEdit = do
   (depParamsEdits, (paramsEdits, resultEdit)) <-
-    mkParams firstParId depParams $ \nextParId ->
-    mkParams nextParId params $ \_ -> mkResultEdit
+    mkParams Dependent firstParId depParams $ \nextParId ->
+    mkParams Independent nextParId params $ \_ -> mkResultEdit
   return (depParamsEdits, paramsEdits, resultEdit)
   where
-    mkParams guid l mkFinal =
-      makeNestedParamNames (Lens.view Sugar.fpGuid)
+    mkParams isDep guid l mkFinal =
+      makeNestedParamNames isDep (Lens.view Sugar.fpGuid)
       (makeParamEdit atParamWidgets rhs) mkFinal guid l
 
 makeNestedParamNames ::
   MonadA m =>
-  (a -> Guid) ->
+  IsDependent -> (a -> Guid) ->
   (Widget.Id -> (ExprGuiM.NameSource, String) -> a -> ExprGuiM m item) ->
   (Widget.Id -> ExprGuiM m final) ->
   Widget.Id -> [a] ->
   ExprGuiM m ([item], final)
-makeNestedParamNames itemGuid makeItem mkFinal = go
+makeNestedParamNames isDep itemGuid makeItem mkFinal = go
   where
     go wId [] = fmap ((,) []) $ mkFinal wId
     go oldWId (x:xs) = do
@@ -183,7 +183,7 @@ makeNestedParamNames itemGuid makeItem mkFinal = go
         guid = itemGuid x
         newWId = WidgetIds.fromGuid guid
       (name, (items, final)) <-
-        ExprGuiM.withParamName guid $ \name ->
+        ExprGuiM.withParamName isDep guid $ \name ->
         fmap ((,) name) $ go newWId xs
       item <- makeItem oldWId name x
       return (item : items, final)

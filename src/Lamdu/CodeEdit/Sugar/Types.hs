@@ -250,8 +250,8 @@ instance Show expr => Show (ExpressionBody m expr) where
       parenify "" = ""
       parenify xs = concat ["{", xs, "}"]
       showWords = unwords . map show
-  show ExpressionPi      { _eHasParens = hasParens, __ePi = Pi param resultType } =
-    wrapParens hasParens $ "_:" ++ show param ++ " -> " ++ show resultType
+  show ExpressionPi      { _eHasParens = hasParens, __ePi = Pi paramType resultType } =
+    wrapParens hasParens $ "_:" ++ show paramType ++ " -> " ++ show resultType
   show ExpressionGetVariable { __getVariable = Expression.ParameterRef guid } = 'P' : show guid
   show ExpressionGetVariable { __getVariable = Expression.DefinitionRef defI } = 'D' : show (IRef.guid defI)
   show ExpressionHole {} = "Hole"

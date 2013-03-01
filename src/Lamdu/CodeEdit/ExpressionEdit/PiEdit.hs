@@ -5,7 +5,7 @@ import Control.Lens ((^.))
 import Control.MonadA (MonadA)
 import Data.Monoid (mappend)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, IsDependent(..))
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.BottleWidgets as BWidgets
@@ -33,12 +33,16 @@ make hasParens (Sugar.Pi param resultType) =
     -- do it (until 2-pass gui gen), but it is also desirable: when
     -- holes spring up, we don't get all the names shuffled
     -- confusingly.
-    (name, (resultTypeEdit, usedVars)) <-
-      ExprGuiM.withParamName paramGuid $ \name ->
-      fmap ((,) name) . ExprGuiM.listenUsedVariables $
+    (depName, indepName, (resultTypeEdit, usedVars)) <-
+      ExprGuiM.withParamName Dependent paramGuid $ \depName ->
+      ExprGuiM.withParamName Independent paramGuid $ \indepName ->
+      fmap ((,,) depName indepName) . ExprGuiM.listenUsedVariables $
       FuncEdit.makeResultEdit [paramId] resultType
     let
       paramUsed = paramGuid `elem` usedVars
+      name
+        | paramUsed = depName
+        | otherwise = indepName
       redirectCursor cursor
         | paramUsed = cursor
         | otherwise =
