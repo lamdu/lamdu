@@ -206,7 +206,6 @@ withBgColor layer color animId =
 
 data Collapser m = Collapser
   { cMakeExpanded :: ExprGuiM m (ExpressionGui m)
-  , cOnFocusedExpanded :: ExpressionGui m -> ExpressionGui m
   , cMakeFocusedCompact :: ExprGuiM m (ExpressionGui m)
   }
 
@@ -218,7 +217,7 @@ makeCollapser ::
 makeCollapser fdConfig f =
   wrapDelegated fdConfig FocusDelegator.NotDelegating $
   \myId -> do
-    let Collapser makeExpanded onFocusedExpanded makeFocusedCompact = f myId
+    let Collapser makeExpanded makeFocusedCompact = f myId
     -- TODO: This is just to detect whether cursor is in the full
     -- expression.  Even when it's not displayed, which may be wasteful
     -- (even with laziness, at least the names are going to be read).
@@ -226,7 +225,7 @@ makeCollapser fdConfig f =
     -- We are inside a focus delegator, so if the cursor is on us it
     -- means user entered our widget.
     if expandedEdit ^. egWidget . Widget.wIsFocused
-      then return $ onFocusedExpanded expandedEdit
+      then return expandedEdit
       else makeFocusedCompact
 
 makeRow :: [(Widget.R, ExpressionGui m)] -> [(Vector2 Widget.R, WidgetT m)]

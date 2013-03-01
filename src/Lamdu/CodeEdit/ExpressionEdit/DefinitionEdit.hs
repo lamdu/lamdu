@@ -74,11 +74,10 @@ makePolyNameEdit name guid depParamsEdits =
     f myId =
       Collapser
       { cMakeExpanded =
+        ExpressionGui.withBgColor Layers.polymorphicExpandedBG
+        Config.polymorphicExpandedBGColor bgId .
         ExpressionGui.hboxSpaced . (: depParamsEdits) <$>
         nameGui Config.monomorphicDefOriginForegroundColor
-      , cOnFocusedExpanded =
-        ExpressionGui.withBgColor Layers.polymorphicExpandedBG
-        Config.polymorphicExpandedBGColor bgId
       , cMakeFocusedCompact =
         nameGui Config.polymorphicDefOriginForegroundColor
       }

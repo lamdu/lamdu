@@ -33,11 +33,11 @@ make poly =
   where
     f myId =
       Collapser
-      { cMakeExpanded = ExprGuiM.makeSubexpresion $ Sugar.pFullExpression poly
-      , cOnFocusedExpanded =
-        ExpressionGui.withBgColor
-        Layers.polymorphicExpandedBG
-        Config.polymorphicExpandedBGColor bgId
+      { cMakeExpanded =
+        fmap
+        (ExpressionGui.withBgColor Layers.polymorphicExpandedBG
+         Config.polymorphicExpandedBGColor bgId) .
+        ExprGuiM.makeSubexpresion $ Sugar.pFullExpression poly
       , cMakeFocusedCompact =
         colorize bgId (Sugar.pCompact poly) $
         VarEdit.makeView (Sugar.pCompact poly) funcId
