@@ -25,6 +25,7 @@ import Utils
 import qualified Control.Lens as Lens
 import qualified Data.Foldable as Foldable
 import qualified Data.List as List
+import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Lamdu.Data.Expression as Expression
@@ -628,14 +629,47 @@ failResumptionAddsRules =
       pureLambda "x" (purePi "" hole hole) $
       pureApply [makeParameterRef "x", hole, hole]
 
-recordTest :: HUnit.Test
-recordTest =
+emptyRecordTest :: HUnit.Test
+emptyRecordTest =
   testInfer "empty record type infer" emptyRecordType $
   mkInferredNode emptyRecordType setType emptyRecordTypeBody
   where
     emptyRecordType = ExprUtil.pureExpression emptyRecordTypeBody
     emptyRecordTypeBody =
       Expression.BodyRecord $ Expression.Record Expression.Type mempty
+
+recordTest :: HUnit.Test
+recordTest =
+  testInfer "f a x:a = {x" lamA $
+  mkInferredNode lamA piA $
+  makeNamedLambda "a" (mkInferredLeafSimple Expression.Set setType) $
+  mkInferredNode lamX piX $
+  makeNamedLambda "x" (mkInferredGetParam "a" setType) $
+  mkInferredNode recVal recType $
+  rec Expression.Val $
+  mkInferredGetParam "x" (pureGetParam "a")
+  where
+    lamA =
+      pureLambda "a" setType lamX
+    lamX =
+      pureLambda "x" (pureGetParam "a") recVal
+    recVal =
+      ExprUtil.pureExpression $
+      rec Expression.Val $
+      pureGetParam "x"
+    rec k =
+      Expression.BodyRecord .
+      Expression.Record k .
+      Map.singleton fieldGuid
+    fieldGuid = Guid.fromString "field"
+    piA =
+      purePi "a" setType piX
+    piX =
+      purePi "x" (pureGetParam "a") recType
+    recType =
+      ExprUtil.pureExpression $
+      rec Expression.Type $
+      pureGetParam "a"
 
 hunitTests :: HUnit.Test
 hunitTests =
@@ -654,6 +688,7 @@ hunitTests =
   , monomorphRedex
   , inferPart
   , failResumptionAddsRules
+  , emptyRecordTest
   , recordTest
   ]
   ++ resumptionTests
