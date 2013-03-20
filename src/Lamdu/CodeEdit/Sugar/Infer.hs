@@ -20,6 +20,7 @@ module Lamdu.CodeEdit.Sugar.Infer
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Arrow ((&&&))
+import Control.Lens ((&), (%~))
 import Control.Monad (void, (<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..), evalStateT)
@@ -27,6 +28,7 @@ import Control.Monad.Trans.State.Utils (toStateT)
 import Control.MonadA (MonadA)
 import Data.Cache (Cache)
 import Data.Hashable (hashWithSalt)
+import Data.Maybe (isJust)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
@@ -145,11 +147,11 @@ inferWithVariables ::
   (RandomGen g, MonadA m) => g ->
   Infer.Loaded (DefI (Tag m)) a -> Infer.Context (DefI (Tag m)) -> Infer.InferNode (DefI (Tag m)) ->
   T m
-  ( ( Bool
-    , Infer.Context (DefI (Tag m))
+  ( ( Infer.Context (DefI (Tag m))
     , DataIRef.ExpressionM m (InferredWithConflicts (DefI (Tag m)), a)
     )
-  , ( Infer.Context (DefI (Tag m))
+  , Maybe
+    ( Infer.Context (DefI (Tag m))
     , DataIRef.ExpressionM m (InferredWithConflicts (DefI (Tag m)), ImplicitVariables.Payload a)
     )
   )
@@ -157,13 +159,18 @@ inferWithVariables gen loaded baseInferContext node =
   (`evalStateT` baseInferContext) $ do
     (success, expr) <- toStateT $ inferWithConflicts loaded node
     intermediateContext <- State.get
-    wvExpr <-
-      ImplicitVariables.addVariables gen loader $
-      (iwcInferred . fst &&& id) <$> expr
-    wvContext <- State.get
+    mWithVariables <- if success
+      then do
+        wvExpr <-
+          ImplicitVariables.addVariables gen loader $
+          (iwcInferred . fst &&& id) <$> expr
+        wvContext <- State.get
+        return $ Just (wvContext, asIWC <$> wvExpr)
+      else
+        return Nothing
     return
-      ( (success, intermediateContext, expr)
-      , (wvContext, asIWC <$> wvExpr)
+      ( (intermediateContext, expr)
+      , mWithVariables
       )
   where
     asIWC (newInferred, ImplicitVariables.Stored (oldIWC, a)) =
@@ -193,17 +200,20 @@ inferLoadedExpression ::
   CT m (InferLoadedResult m)
 inferLoadedExpression gen mDefI lExpr inferState = do
   loaded <- lift $ Infer.load loader mDefI lExpr
-  ((success, inferContext, expr), (wvInferContext, wvExpr)) <-
+  ((baseContext, expr), mWithVariables) <-
     Cache.memoS uncurriedInfer (loaded, inferState)
+  let baseExpr = mkStoredPayload <$> expr
   return InferLoadedResult
-    { _ilrSuccess = success
+    { _ilrSuccess = isJust mWithVariables
     , _ilrContext = loaded
 
-    , _ilrBaseInferContext = inferContext
-    , _ilrBaseExpr = mkStoredPayload <$> expr
+    , _ilrBaseInferContext = baseContext
+    , _ilrBaseExpr = baseExpr
 
-    , _ilrInferContext = wvInferContext
-    , _ilrExpr = mkWVPayload <$> wvExpr
+    , _ilrInferContext = maybe baseContext fst mWithVariables
+    , _ilrExpr =
+      maybe (baseExpr & Lens.mapped . plStored %~ Just)
+      (fmap mkWVPayload . snd) mWithVariables
     }
   where
     uncurriedInfer (loaded, (inferContext, inferNode)) =
