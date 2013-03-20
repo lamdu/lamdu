@@ -3,7 +3,7 @@ module Main(main) where
 
 import Control.Applicative ((<$>), (<*))
 import Control.Lens ((^.), (%~))
-import Control.Monad (when, unless, (<=<))
+import Control.Monad (unless, (<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, runStateT, mapStateT)
 import Data.ByteString (unpack)
@@ -58,8 +58,8 @@ import qualified Lamdu.WidgetIds as WidgetIds
 import qualified System.Directory as Directory
 
 data ParsedOpts = ParsedOpts
-  { shouldDeleteDB :: Bool
-  , mFontPath :: Maybe FilePath
+  { poShouldDeleteDB :: Bool
+  , poMFontPath :: Maybe FilePath
   }
 
 parseArgs :: [String] -> Either String ParsedOpts
@@ -84,8 +84,14 @@ main = do
   home <- Directory.getHomeDirectory
   let lamduDir = home </> ".lamdu"
   opts <- either fail return $ parseArgs args
-  when (shouldDeleteDB opts) $
-    Directory.removeDirectoryRecursive lamduDir
+  if poShouldDeleteDB opts
+    then do
+      putStrLn "Deleting DB..."
+      Directory.removeDirectoryRecursive lamduDir
+    else runEditor lamduDir $ poMFontPath opts
+
+runEditor :: FilePath -> Maybe FilePath -> IO ()
+runEditor lamduDir mFontPath = do
   Directory.createDirectoryIfMissing False lamduDir
   -- GLFW changes the directory from start directory, at least on macs.
   startDir <- Directory.getCurrentDirectory
@@ -103,7 +109,7 @@ main = do
         unless exists . ioError . userError $ path ++ " does not exist!"
         Draw.openFont path
     font <-
-      case mFontPath opts of
+      case mFontPath of
       Nothing ->
         (getFont =<< getDataFileName "fonts/DejaVuSans.ttf")
         `E.catch` \(E.SomeException _) ->
