@@ -128,12 +128,13 @@ randomizeParamIds gen =
         newParamId <- lift $ state random
         fmap BodyLam $ liftA2 (Lambda k newParamId) (go paramType) .
           Reader.local (Map.insert oldParamId newParamId) $ go body
-      BodyApply (Apply func arg) -> liftA2 makeApply (go func) (go arg)
       gv@(BodyLeaf (GetVariable (ParameterRef guid))) ->
         Reader.asks $
         maybe gv (Lens.review bodyParameterRef) .
         Map.lookup guid
-      _ -> return v
+      BodyLeaf _ -> return v
+      BodyApply (Apply func arg) -> liftA2 makeApply (go func) (go arg)
+      BodyRecord fields -> BodyRecord <$> traverse go fields
 
 -- Left-biased on parameter guids
 {-# INLINE matchBody #-}
