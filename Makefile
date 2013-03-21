@@ -1,2 +1,2 @@
 all:
-	cabal build
+	cabal build --ghc-options -XScopedTypeVariables
