@@ -33,16 +33,12 @@ make hasParens (Sugar.Pi param resultType) =
     -- do it (until 2-pass gui gen), but it is also desirable: when
     -- holes spring up, we don't get all the names shuffled
     -- confusingly.
-    (depName, indepName, (resultTypeEdit, usedVars)) <-
-      ExprGuiM.withParamName Dependent paramGuid $ \depName ->
-      ExprGuiM.withParamName Independent paramGuid $ \indepName ->
-      fmap ((,,) depName indepName) . ExprGuiM.listenUsedVariables $
+    (name, (resultTypeEdit, usedVars)) <-
+      ExprGuiM.withParamName Dependent paramGuid $ \name ->
+      fmap ((,) name) . ExprGuiM.listenUsedVariables $
       FuncEdit.makeResultEdit [paramId] resultType
     let
       paramUsed = paramGuid `elem` usedVars
-      name
-        | paramUsed = depName
-        | otherwise = indepName
       redirectCursor cursor
         | paramUsed = cursor
         | otherwise =
