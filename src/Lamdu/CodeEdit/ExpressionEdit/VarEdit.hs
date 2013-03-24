@@ -49,15 +49,14 @@ make getVar myId = do
   cp <- ExprGuiM.readCodeAnchors
   let
     jumpToDefinitionEventMap =
-      Widget.keysEventMapMovesCursor Config.jumpToDefinitionKeys (E.Doc ["Navigation", "Jump to definition"])
-      jumpToDefinition
-    jumpToDefinition = do
-      DataOps.savePreJumpPosition cp myId
-      case getVar of
-        Expression.DefinitionRef defI ->
-          WidgetIds.fromIRef defI <$ DataOps.newPane cp defI
-        Expression.ParameterRef paramGuid ->
-          pure $ WidgetIds.fromGuid paramGuid
+      Widget.keysEventMapMovesCursor Config.jumpToDefinitionKeys
+      (E.Doc ["Navigation", "Jump to definition"]) $ do
+        DataOps.savePreJumpPosition cp myId
+        case getVar of
+          Expression.DefinitionRef defI ->
+            WidgetIds.fromIRef defI <$ DataOps.newPane cp defI
+          Expression.ParameterRef paramGuid ->
+            pure $ WidgetIds.fromGuid paramGuid
   return $
     Lens.over ExpressionGui.egWidget
     (Widget.weakerEvents jumpToDefinitionEventMap)

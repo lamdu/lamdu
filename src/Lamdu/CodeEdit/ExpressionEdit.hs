@@ -87,14 +87,14 @@ makeEditor ::
   ExprGuiM m (IsHole, ExpressionGui m)
 makeEditor sExpr =
   case sExpr ^. Sugar.rExpressionBody of
-  Sugar.ExpressionFunc hasParens f ->
-    notAHole $ FuncEdit.make hasParens f
   Sugar.ExpressionInferred i ->
     isAHole (Sugar.iHole i) . InferredEdit.make i $ sExpr ^. Sugar.rGuid
-  Sugar.ExpressionPolymorphic poly ->
-    notAHole $ PolymorphicEdit.make poly
   Sugar.ExpressionHole hole ->
     isAHole hole . HoleEdit.make hole mNextHole $ sExpr ^. Sugar.rGuid
+  Sugar.ExpressionFunc hasParens f ->
+    notAHole $ FuncEdit.make hasParens f
+  Sugar.ExpressionPolymorphic poly ->
+    notAHole $ PolymorphicEdit.make poly
   Sugar.ExpressionGetVariable varRef ->
     notAHole $ VarEdit.make varRef
   Sugar.ExpressionApply hasParens apply ->

@@ -47,6 +47,7 @@ codeIRefs = Code
   , preJumps = IRef.anchor "prejumps"
   , preCursor = IRef.anchor "precursor"
   , postCursor = IRef.anchor "postcursor"
+  , fields = IRef.anchor "fields"
   }
 
 revisionIRefs :: Revision (IRef t) t

@@ -1,15 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
-
 module Lamdu.CodeEdit.ExpressionEdit.RecordEdit(make) where
 
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
-import Data.Store.Guid (Guid)
 import Data.Vector.Vector2 (Vector2(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
+import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -19,25 +17,10 @@ import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.CodeEdit.ExpressionEdit.FieldEdit as FieldEdit
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.WidgetIds as WidgetIds
-
-fieldFDConfig :: FocusDelegator.Config
-fieldFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyEnter
-  , FocusDelegator.startDelegatingDoc = E.Doc ["Edit", "Record", "Field", "Rename"]
-  , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEsc
-  , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Record", "Field", "Done renaming"]
-  }
-
-makeFieldNameEdit ::
-  MonadA m => (ExprGuiM.NameSource, String) ->
-  Widget.Id -> Guid -> ExprGuiM m (WidgetT m)
-makeFieldNameEdit name myId fieldGuid =
-  ExprGuiM.wrapDelegated fieldFDConfig FocusDelegator.NotDelegating id
-  (ExpressionGui.makeNameEdit name fieldGuid)
-  myId
 
 make ::
   MonadA m =>
@@ -72,10 +55,7 @@ makeUnwrapped (Sugar.Record k fields mAddField) myId =
     sep Sugar.Type = ":"
     bracketId = Widget.joinId myId ["{"]
     makeFieldRow (Sugar.RecordField mDel fieldGuid fieldExpr) = do
-      name <- ExprGuiM.getGuidName fieldGuid
-      nameGui <-
-        ExpressionGui.fromValueWidget <$>
-        makeFieldNameEdit name (fromFieldExpr fieldExpr) fieldGuid
+      fieldRefGui <- FieldEdit.make fieldGuid $ fromFieldExpr fieldExpr
       fieldExprGui <- ExprGuiM.makeSubexpresion fieldExpr
       sepGui <-
         ExpressionGui.fromValueWidget <$>
@@ -87,7 +67,7 @@ makeUnwrapped (Sugar.Record k fields mAddField) myId =
           (Config.delForwardKeys ++ Config.delBackwordKeys) $
           E.Doc ["Edit", "Record", "Field", "Delete"]
       return . ExpressionGui.makeRow $
-        [(1, nameGui), (0.5, sepGui), (0, fieldExprGui)]
+        [(1, fieldRefGui), (0.5, sepGui), (0, fieldExprGui)]
         & Lens.mapped . Lens._2 . ExpressionGui.egWidget %~
           Widget.weakerEvents delEventMap
     mkEventMap f mAction keys doc =
