@@ -21,7 +21,7 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 
 setColor :: MonadA m => ExprGuiM m a -> ExprGuiM m a
-setColor = ExprGuiM.atEnv $ WE.setTextColor Config.literalIntColor
+setColor = ExprGuiM.withFgColor Config.literalIntColor
 
 makeIntView
   :: MonadA m

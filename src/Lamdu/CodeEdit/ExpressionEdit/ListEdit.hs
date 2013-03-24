@@ -24,6 +24,7 @@ make = ExpressionGui.wrapExpression . makeUnwrapped
 
 makeBracketLabel :: MonadA m => String -> Widget.Id -> ExprGuiM m (ExpressionGui f)
 makeBracketLabel =
+  (fmap . fmap) ExpressionGui.fromValueWidget .
   ExpressionGui.makeColoredLabel Config.listBracketTextSize Config.listBracketColor
 
 makeUnwrapped ::
@@ -72,7 +73,8 @@ makeItem item = do
   (pair, resultPickers) <-
     ExprGuiM.listenResultPickers $
     Lens.sequenceOf Lens.both
-    ( ExpressionGui.makeColoredLabel Config.listCommaTextSize
+    ( fmap ExpressionGui.fromValueWidget .
+      ExpressionGui.makeColoredLabel Config.listCommaTextSize
       Config.listCommaColor ", " $ Widget.augmentId ',' itemWidgetId
     , ExprGuiM.makeSubexpresion itemExpr
     )

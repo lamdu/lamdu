@@ -17,7 +17,6 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Ops as DataOps
-import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
 colorOf :: Expression.VariableRef def -> Draw.Color
@@ -46,8 +45,7 @@ make getVar myId = do
     Expression.ParameterRef guid -> ExprGuiM.markVariablesAsUsed [guid]
     _ -> return ()
   getVarView <-
-    ExprGuiM.atEnv (WE.setTextColor (colorOf getVar)) $
-    makeView getVar myId
+    ExprGuiM.withFgColor (colorOf getVar) $ makeView getVar myId
   cp <- ExprGuiM.readCodeAnchors
   let
     jumpToDefinitionEventMap =

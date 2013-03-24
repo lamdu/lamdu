@@ -25,7 +25,6 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.Parens as Parens
 import qualified Lamdu.CodeEdit.Settings as Settings
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
-import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
 type T = Transaction
@@ -44,7 +43,7 @@ makeParamNameEdit
   -> ExprGuiM m (WidgetT m)
 makeParamNameEdit name ident =
   ExprGuiM.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
-  (ExprGuiM.atEnv (WE.setTextColor Config.paramOriginColor) .
+  (ExprGuiM.withFgColor Config.paramOriginColor .
    ExpressionGui.makeNameEdit name ident) $ WidgetIds.fromGuid ident
 
 jumpToRHS ::
@@ -205,10 +204,10 @@ make hasParens (Sugar.Func depParams params body) =
       makeParamsAndResultEdit (const id) lhs ("Func Body", body) myId depParams params
     return . ExpressionGui.hboxSpaced $
       concat
-      [ [lambdaLabel]
+      [ [ExpressionGui.fromValueWidget lambdaLabel]
       , depParamsEdits
       , paramsEdits
-      , [ rightArrowLabel, bodyEdit ]
+      , [ ExpressionGui.fromValueWidget rightArrowLabel, bodyEdit ]
       ]
   where
     allParams = depParams ++ params

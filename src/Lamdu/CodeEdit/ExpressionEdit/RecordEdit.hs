@@ -21,7 +21,6 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
-import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
 fieldFDConfig :: FocusDelegator.Config
@@ -53,7 +52,7 @@ makeUnwrapped (Sugar.Record k fields mAddField) myId =
     fieldRows <- mapM makeFieldRow fields
     let fieldsWidget = Grid.toWidget $ Grid.make fieldRows
     bracketWidget <-
-      ( ExprGuiM.atEnv (WE.setTextColor (parensColor k))
+      ( ExprGuiM.withFgColor (parensColor k)
       . ExprGuiM.widgetEnv . BWidgets.makeFocusableTextView "{" )
       bracketId
     let

@@ -14,7 +14,6 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
 builtinFDConfig :: FocusDelegator.Config
@@ -40,7 +39,7 @@ make (Sugar.DefinitionBuiltin (Definition.FFIName modulePath name) setFFIName) m
     return $ Box.hboxCentered [moduleName, dot, varName]
   where
     makeNamePartEditor color namePartStr mSetter makeWidgetId =
-      ExprGuiM.atEnv (WE.setTextColor color) .
+      ExprGuiM.withFgColor color .
       ExprGuiM.wrapDelegated builtinFDConfig FocusDelegator.NotDelegating id
       (ExprGuiM.widgetEnv . maybe
        (BWidgets.makeTextView namePartStr . Widget.toAnimId)

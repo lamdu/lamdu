@@ -180,7 +180,7 @@ makeBuiltinDefinition def builtin = do
   name <- ExprGuiM.getDefName guid
   fmap (Box.vboxAlign 0) $ sequenceA
     [ fmap BWidgets.hboxCenteredSpaced $ sequenceA
-      [ ExprGuiM.atEnv (WE.setTextColor Config.builtinOriginNameColor) $
+      [ ExprGuiM.withFgColor Config.builtinOriginNameColor $
         makeNameEdit name (Widget.joinId myId ["name"]) guid
       , makeEquals myId
       , BuiltinEdit.make builtin myId

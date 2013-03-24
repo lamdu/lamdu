@@ -8,10 +8,9 @@ import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.Config as Config
-import qualified Lamdu.WidgetEnvT as WE
 
 make :: MonadA m => String -> Widget.Id -> ExprGuiM m (ExpressionGui m)
 make name =
   fmap ExpressionGui.fromValueWidget .
-    ExprGuiM.atEnv (WE.setTextColor Config.atomColor) . ExprGuiM.widgetEnv .
+    ExprGuiM.withFgColor Config.atomColor . ExprGuiM.widgetEnv .
     BWidgets.makeFocusableTextView name
