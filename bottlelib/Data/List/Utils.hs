@@ -7,7 +7,6 @@ module Data.List.Utils
   , index
   , insertAt
   , removeAt
-  , atPred
   , pairList
   , theOne
   , nonEmptyAll
@@ -47,15 +46,6 @@ removeAt n xs = take n xs ++ drop (n+1) xs
 
 insertAt :: Int -> a -> [a] -> [a]
 insertAt n x xs = take n xs ++ x : drop n xs
-
-atPred
-  :: (key -> Bool)
-  -> (a -> a)
-  -> [(key, a)]
-  -> [(key, a)]
-atPred p f xs =
-  [ (key, if p key then f x else x)
-  | (key, x) <- xs ]
 
 pairList :: (a, a) -> [a]
 pairList (x, y) = [x, y]
