@@ -76,15 +76,15 @@ makeUnwrapped (Sugar.Record k fields mAddField) myId =
       name <- ExprGuiM.getGuidName fieldGuid
       nameGui <-
         ExpressionGui.fromValueWidget <$>
-        makeFieldNameEdit name (fromFieldGuid fieldGuid) fieldGuid
+        makeFieldNameEdit name (fromFieldExpr fieldExpr) fieldGuid
       fieldExprGui <- ExprGuiM.makeSubexpresion fieldExpr
       sepGui <-
         ExpressionGui.fromValueWidget <$>
         (ExprGuiM.widgetEnv . BWidgets.makeLabel (sep k) .
-         Widget.toAnimId . fromFieldGuid) fieldGuid
+         Widget.toAnimId . fromFieldExpr) fieldExpr
       let
         delEventMap =
-          mkEventMap (fmap (maybe myId fromFieldGuid)) mDel
+          mkEventMap (fmap (maybe myId fromFieldExprGuid)) mDel
           (Config.delForwardKeys ++ Config.delBackwordKeys) $
           E.Doc ["Edit", "Record", "Field", "Delete"]
       return . ExpressionGui.makeRow $
@@ -93,7 +93,8 @@ makeUnwrapped (Sugar.Record k fields mAddField) myId =
           Widget.weakerEvents delEventMap
     mkEventMap f mAction keys doc =
       maybe mempty (Widget.keysEventMapMovesCursor keys doc . f) mAction
-    fromFieldGuid = mappend myId . WidgetIds.fromGuid
+    fromFieldExprGuid = mappend myId . WidgetIds.fromGuid
+    fromFieldExpr = fromFieldExprGuid . (^. Sugar.rGuid)
     eventMap =
-      mkEventMap (fmap (FocusDelegator.delegatingId . fromFieldGuid))
+      mkEventMap (fmap (FocusDelegator.delegatingId . fromFieldExprGuid))
       mAddField Config.recordAddFieldKeys $ E.Doc ["Edit", "Record", "Add Field"]

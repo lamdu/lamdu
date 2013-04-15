@@ -764,13 +764,13 @@ convertRecord (Expression.Record k fields) exprI = do
       writeIRef iref $
         record
         & Expression.recordFields <>~ [(Expression.Field guid, holeIRef)]
-      return guid
+      return $ DataIRef.exprGuid holeIRef
     deleteField field (iref, record) = do
       let newRecord = record & Expression.recordFields %~ filter ((/= field) . fst)
       writeIRef iref newRecord
-      return $
+      return . fmap DataIRef.exprGuid $
         newRecord ^?
-        Expression.recordFields . Lens.traverse . Lens._1 . Expression._Field
+        Expression.recordFields . Lens.traverse . Lens._2
     toField mStored (field, expr) = do
       child <- convertExpressionI expr
       return RecordField
