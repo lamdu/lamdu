@@ -25,7 +25,7 @@ import qualified Control.Compose as Compose
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.IntSet as IntSet
-import qualified Data.Map as Map
+import qualified Data.List.Assoc as AssocList
 import qualified Data.Monoid as Monoid
 import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Data.Expression as Expression
@@ -141,7 +141,7 @@ makeForNode (Expression.Expression exprBody typedVal) =
   Expression.BodyLeaf _ -> pure []
   where
     recordKindRules (Expression.Record Expression.Type fields) =
-      mapM (setRule . tvType) $ map snd fields
+      mapM (setRule . tvType . snd) fields
     recordKindRules (Expression.Record Expression.Val fields) =
       recordRules (tvType typedVal) $ fields & Lens.mapped . Lens._2 %~ tvType
     lamKindRules (Expression.Lambda Expression.Type _ _ body) =
@@ -217,7 +217,7 @@ runRecordTypeToFieldTypesClosure :: [(Expression.Field, ExprRef)] -> RuleFunctio
 runRecordTypeToFieldTypesClosure fieldTypeRefs ~[recordTypeExpr] = do
   Expression.Record _ fieldTypeExprs <-
     recordTypeExpr ^.. Expression.eBody . Expression._BodyRecord
-  Map.elems $ Map.intersectionWith (,) (Map.fromList fieldTypeRefs) (Map.fromList fieldTypeExprs)
+  maybe [] (map snd) $ AssocList.match (,) fieldTypeRefs fieldTypeExprs
 
 recordRules :: ExprRef -> [(Expression.Field, ExprRef)] -> State Origin [Rule def]
 recordRules recTypeRef fieldTypeRefs =
@@ -265,7 +265,7 @@ runRecordParentToChildrenClosure :: Expression.Record ExprRef -> RuleFunction de
 runRecordParentToChildrenClosure (Expression.Record _ fieldRefs) ~[expr] = do
   Expression.Record _ fieldExprs <-
     expr ^.. Expression.eBody . Expression._BodyRecord
-  Map.elems $ Map.intersectionWith (,) (Map.fromList fieldRefs) (Map.fromList fieldExprs)
+  maybe [] (map snd) $ AssocList.match (,) fieldRefs fieldExprs
 
 runRecordChildrenToParentClosure ::
   (Expression.Kind, [Expression.Field], ExprRef) -> Origin -> RuleFunction def
