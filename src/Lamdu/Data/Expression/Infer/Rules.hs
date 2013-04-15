@@ -18,7 +18,6 @@ import Data.Derive.Binary (makeBinary)
 import Data.Derive.NFData (makeNFData)
 import Data.DeriveTH (derive)
 import Data.Functor.Identity (Identity(..))
-import Data.Map (Map)
 import Data.Store.Guid (Guid)
 import Data.Traversable (traverse, sequenceA)
 import Lamdu.Data.Expression.Infer.Types
@@ -47,7 +46,7 @@ data RuleClosure def
   = LambdaBodyTypeToPiResultTypeClosure (Guid, ExprRef) Origin2
   | PiToLambdaClosure (Guid, ExprRef, ExprRef) Origin3
   | RecordValToTypeClosure ([Expression.Field], ExprRef) Origin
-  | RecordTypeToFieldTypesClosure (Map Expression.Field ExprRef)
+  | RecordTypeToFieldTypesClosure [(Expression.Field, ExprRef)]
   | CopyClosure ExprRef
   | LambdaParentToChildrenClosure (Expression.Lambda ExprRef)
   | LambdaChildrenToParentClosure (Expression.Kind, Guid, ExprRef) Origin
@@ -142,9 +141,9 @@ makeForNode (Expression.Expression exprBody typedVal) =
   Expression.BodyLeaf _ -> pure []
   where
     recordKindRules (Expression.Record Expression.Type fields) =
-      mapM (setRule . tvType) $ Map.elems fields
+      mapM (setRule . tvType) $ map snd fields
     recordKindRules (Expression.Record Expression.Val fields) =
-      recordRules (tvType typedVal) (tvType <$> fields)
+      recordRules (tvType typedVal) $ fields & Lens.mapped . Lens._2 %~ tvType
     lamKindRules (Expression.Lambda Expression.Type _ _ body) =
       fmap (:[]) . setRule $ tvType body
     lamKindRules (Expression.Lambda Expression.Val param _ body) =
@@ -209,25 +208,25 @@ lambdaRules param (TypedValue lambdaValueRef lambdaTypeRef) bodyTypeRef =
 runRecordValToTypeClosure :: ([Expression.Field], ExprRef) -> Origin -> RuleFunction def
 runRecordValToTypeClosure (fields, recordTypeRef) o0 fieldTypeExprs =
   [ ( recordTypeRef
-    , makeRefExpr o0 . Expression.BodyRecord . Expression.Record Expression.Type .
-      Map.fromList $ zip fields fieldTypeExprs
+    , makeRefExpr o0 . Expression.BodyRecord . Expression.Record Expression.Type $
+      zip fields fieldTypeExprs
     )
   ]
 
-runRecordTypeToFieldTypesClosure :: Map Expression.Field ExprRef -> RuleFunction def
+runRecordTypeToFieldTypesClosure :: [(Expression.Field, ExprRef)] -> RuleFunction def
 runRecordTypeToFieldTypesClosure fieldTypeRefs ~[recordTypeExpr] = do
   Expression.Record _ fieldTypeExprs <-
     recordTypeExpr ^.. Expression.eBody . Expression._BodyRecord
-  Map.elems $ Map.intersectionWith (,) fieldTypeRefs fieldTypeExprs
+  Map.elems $ Map.intersectionWith (,) (Map.fromList fieldTypeRefs) (Map.fromList fieldTypeExprs)
 
-recordRules :: ExprRef -> Map Expression.Field ExprRef -> State Origin [Rule def]
+recordRules :: ExprRef -> [(Expression.Field, ExprRef)] -> State Origin [Rule def]
 recordRules recTypeRef fieldTypeRefs =
   sequenceA
   [ Rule typeRefs . RecordValToTypeClosure (fields, recTypeRef) <$> mkOrigin
   , pure . Rule [recTypeRef] $ RecordTypeToFieldTypesClosure fieldTypeRefs
   ]
   where
-    (fields, typeRefs) = unzip $ Map.toList fieldTypeRefs
+    (fields, typeRefs) = unzip fieldTypeRefs
 
 runCopyClosure :: ExprRef -> RuleFunction def
 runCopyClosure dest ~[srcExpr] = [(dest, srcExpr)]
@@ -266,14 +265,14 @@ runRecordParentToChildrenClosure :: Expression.Record ExprRef -> RuleFunction de
 runRecordParentToChildrenClosure (Expression.Record _ fieldRefs) ~[expr] = do
   Expression.Record _ fieldExprs <-
     expr ^.. Expression.eBody . Expression._BodyRecord
-  Map.elems $ Map.intersectionWith (,) fieldRefs fieldExprs
+  Map.elems $ Map.intersectionWith (,) (Map.fromList fieldRefs) (Map.fromList fieldExprs)
 
 runRecordChildrenToParentClosure ::
   (Expression.Kind, [Expression.Field], ExprRef) -> Origin -> RuleFunction def
 runRecordChildrenToParentClosure (k, fields, recRef) o0 fieldExprs =
   [( recRef
    , makeRefExpr o0 . Expression.BodyRecord .
-     Expression.Record k . Map.fromList $ zip fields fieldExprs
+     Expression.Record k $ zip fields fieldExprs
    )]
 
 recordStructureRules :: ExprRef -> Expression.Record ExprRef -> State Origin [Rule def]
@@ -284,7 +283,7 @@ recordStructureRules recRef rec@(Expression.Record k fields) =
     RecordChildrenToParentClosure (k, keys, recRef) <$> mkOrigin
   ]
   where
-    (keys, valRefs) = unzip $ Map.toList fields
+    (keys, valRefs) = unzip fields
 
 runSetClosure :: [(ExprRef, RefExpression def)] -> RuleFunction def
 runSetClosure outputs ~[] = outputs

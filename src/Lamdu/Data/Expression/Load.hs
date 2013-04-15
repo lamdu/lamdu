@@ -7,8 +7,9 @@ module Lamdu.Data.Expression.Load
   , PropertyClosure, propertyOfClosure, irefOfClosure
   ) where
 
-import Control.Applicative ((<$>), (<*>))
-import Control.Lens ((^.), LensLike')
+import Control.Applicative (Applicative, (<$>), (<*>))
+import Control.Lens (LensLike')
+import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
@@ -20,7 +21,6 @@ import Data.Typeable (Typeable)
 import Lamdu.Data.Definition (Definition(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Control.Lens as Lens
-import qualified Control.Lens.Utils as LensUtils
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
@@ -61,6 +61,9 @@ derive makeBinary ''PropertyClosure
 setter :: Lens.ALens s t dummy b -> s -> b -> t
 setter = flip . Lens.set . Lens.cloneLens
 
+assocListAt :: (Applicative f, Eq k) => k -> LensLike' f [(k, a)] a
+assocListAt key = Lens.traverse . Lens.filtered ((== key) . fst) . Lens._2
+
 propertyOfClosure :: MonadA m => PropertyClosure (Tag m) -> DataIRef.ExpressionProperty m
 propertyOfClosure (DefinitionTypeProperty defI (Definition defBody defType)) =
   Property defType (Transaction.writeIRef defI . Definition defBody)
@@ -78,12 +81,12 @@ propertyOfClosure (LambdaProperty exprI lambda role) =
   where
     lens = lambdaChildByRole role
 propertyOfClosure (RecordProperty exprI record field) =
-  Property (record ^. Lens.cloneLens lens)
-  (DataIRef.writeExprBody exprI . Expression.BodyRecord . setter lens record)
+  Property (record ^?! lens0)
+  (DataIRef.writeExprBody exprI . Expression.BodyRecord . (flip . Lens.set) lens1 record)
   where
-    lens =
-      Expression.recordFields . Lens.at field .
-      LensUtils._fromJust (unwords ["Record field", show field, "does not exist"])
+    -- TODO: Why does Lens.cloneLens not work?
+    lens0 = Expression.recordFields . assocListAt field
+    lens1 = Expression.recordFields . assocListAt field
 
 irefOfClosure :: MonadA m => PropertyClosure (Tag m) -> DataIRef.ExpressionI (Tag m)
 irefOfClosure = Property.value . propertyOfClosure
@@ -120,9 +123,10 @@ loadExpressionBody iref =
         loadRole = loadExpressionClosure . LambdaProperty iref lambda
     onBody (Expression.BodyRecord record@(Expression.Record k fields)) =
       Expression.BodyRecord . Expression.Record k <$>
-      Lens.itraverse loadField fields
+      Lens.traverse loadField fields
       where
-        loadField field _ = loadExpressionClosure $ RecordProperty iref record field
+        loadField (field, _) =
+          (,) field <$> loadExpressionClosure (RecordProperty iref record field)
 
 loadDefinition :: MonadA m => DefI (Tag m) -> T m (Definition (Loaded m))
 loadDefinition x = (fmap . fmap . fmap) propertyOfClosure . loadDefinitionClosure $ x

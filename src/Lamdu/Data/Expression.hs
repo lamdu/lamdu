@@ -21,13 +21,11 @@ import Data.Derive.Binary (makeBinary)
 import Data.Derive.NFData (makeNFData)
 import Data.DeriveTH (derive)
 import Data.Foldable (Foldable(..))
-import Data.Map (Map)
 import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
 import qualified Control.Lens.TH as LensTH
 import qualified Data.List as List
-import qualified Data.Map as Map
 
 data Kind = Val | Type
   deriving (Eq, Ord, Show, Typeable)
@@ -65,7 +63,7 @@ type Field = Guid
 
 data Record expr = Record
   { _recordKind :: Kind
-  , _recordFields :: Map Field expr
+  , _recordFields :: [(Field, expr)]
   }
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
@@ -85,7 +83,7 @@ instance (Show expr, Show def) => Show (Body def expr) where
     concat ["(", show paramId, ":", showP paramType, ")->", showP body]
   show (BodyApply (Apply func arg)) = unwords [showP func, showP arg]
   show (BodyRecord (Record k fields)) =
-    "Rec" ++ show k ++ "{" ++ List.intercalate ", " (map showField (Map.toList fields)) ++ "}"
+    "Rec" ++ show k ++ "{" ++ List.intercalate ", " (map showField fields) ++ "}"
     where
       sep Val = "="
       sep Type = ":"

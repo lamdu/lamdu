@@ -740,8 +740,8 @@ convertRecord (Expression.Record k fields) exprI = do
   let
     mStored =
       (,) <$> resultIRef exprI <*>
-      (Expression.Record k <$> traverse resultIRef fields)
-  sFields <- mapM (toField mStored) $ Map.toList fields
+      (Expression.Record k <$> (traverse . Lens._2) resultIRef fields)
+  sFields <- mapM (toField mStored) fields
   mkExpression exprI . ExpressionRecord $
     Record
     { rKind = k
@@ -760,12 +760,12 @@ convertRecord (Expression.Record k fields) exprI = do
     addField (iref, record) = do
       holeIRef <- DataOps.newHole
       let guid = Guid.augment "Field" $ DataIRef.exprGuid holeIRef
-      writeIRef iref $ record & Expression.recordFields %~ Map.insert guid holeIRef
+      writeIRef iref $ record & Expression.recordFields <>~ [(guid, holeIRef)]
       return guid
     deleteField field (iref, record) = do
-      let newRecord = record & Expression.recordFields %~ Map.delete field
+      let newRecord = record & Expression.recordFields %~ filter ((/= field) . fst)
       writeIRef iref newRecord
-      return . listToMaybe $ Map.keys (newRecord ^. Expression.recordFields)
+      return $ newRecord ^? Expression.recordFields . Lens.traverse . Lens._1
     toField mStored (field, expr) = do
       child <- convertExpressionI expr
       return RecordField

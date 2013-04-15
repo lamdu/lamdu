@@ -25,7 +25,6 @@ import Utils
 import qualified Control.Lens as Lens
 import qualified Data.Foldable as Foldable
 import qualified Data.List as List
-import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Lamdu.Data.Expression as Expression
@@ -660,7 +659,7 @@ recordTest =
     rec k =
       Expression.BodyRecord .
       Expression.Record k .
-      Map.singleton fieldGuid
+      (:[]) . (,) fieldGuid
     fieldGuid = Guid.fromString "field"
     piA =
       purePi "a" setType piX

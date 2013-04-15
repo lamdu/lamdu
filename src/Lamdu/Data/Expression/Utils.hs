@@ -27,8 +27,9 @@ module Lamdu.Data.Expression.Utils
 
 import Lamdu.Data.Expression
 
-import Control.Applicative (Applicative(..), liftA2, (<$>), (<$))
-import Control.Lens (Prism, Prism', (^.), (^?), (%~), (&))
+import Control.Applicative (Applicative(..), liftA2, (<$>))
+import Control.Lens (Prism, Prism', (^.), (.~), (^?), (%~), (&))
+import Control.Monad (guard, zipWithM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (evalState, state)
@@ -153,10 +154,9 @@ matchBody matchLamResult matchOther matchGetPar body0 body1 =
       matchLamResult p0 p1 r0 r1
   (BodyApply (Apply f0 a0), BodyApply (Apply f1 a1)) ->
     Just . BodyApply $ Apply (matchOther f0 f1) (matchOther a0 a1)
-  (BodyRecord (Record k0 fs0), BodyRecord (Record k1 fs1))
-    | k0 == k1 && Map.keys fs0 == Map.keys fs1 ->
-      Just . BodyRecord . Record k0 $
-      Map.intersectionWith matchOther fs0 fs1
+  (BodyRecord (Record k0 fs0), BodyRecord (Record k1 fs1)) -> do
+    guard $ k0 == k1
+    BodyRecord . Record k0 <$> zipWithM fieldMatch fs0 fs1
   (BodyLeaf (GetVariable (ParameterRef p0)),
    BodyLeaf (GetVariable (ParameterRef p1)))
     | matchGetPar p0 p1
@@ -164,6 +164,10 @@ matchBody matchLamResult matchOther matchGetPar body0 body1 =
   (BodyLeaf x, BodyLeaf y)
     | x == y -> Just $ BodyLeaf x
   _ -> Nothing
+  where
+    fieldMatch (f0, e0) (f1, e1) = do
+      guard $ f0 == f1
+      return (f0, matchOther e0 e1)
 
 -- TODO: Generalize to defa/defb/defc with hof's to handle matching
 -- them?  The returned expression gets the same guids as the left
@@ -204,7 +208,7 @@ bodyLeaves recu onLeaves body =
   BodyApply (Apply func arg) ->
     BodyApply <$> (Apply <$> recLeaves func <*> recLeaves arg)
   BodyRecord (Record k fields) ->
-    BodyRecord . Record k <$> traverse recLeaves fields
+    BodyRecord . Record k <$> (traverse . Lens._2) recLeaves fields
   BodyLeaf l -> BodyLeaf <$> onLeaves l
   where
     recLeaves = recu onLeaves
@@ -301,5 +305,6 @@ applyForms exprType expr
         arg =
           case paramType ^? eBody . _BodyRecord of
           Just (Record Type fields) ->
-            pureExpression . BodyRecord . Record Val $ pureHole <$ fields
+            pureExpression . BodyRecord . Record Val $
+            fields & Lens.mapped . Lens._2 .~ pureHole
           _ -> pureHole
