@@ -78,11 +78,12 @@ drawTextAsSingleLetters style text =
   joinLines $
   map
   ((Lens._2 %~ max minLineSize) . drawMany horizontal .
-   map (nestedFrame . (Lens._2 %~ fontRender style . (:[])))) .
+   map (nestedFrame . (Lens._2 %~ renderLetter))) .
   splitWhen ((== '\n') . snd) $ enumerate text
   where
     (_, minLineSize) = fontRender style ""
     horizontal = Lens._2 .~ 0
+    renderLetter = fontRender style . (:[])
 
 letterRects :: Style -> String -> [[Rect]]
 letterRects style text =
