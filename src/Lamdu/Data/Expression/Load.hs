@@ -21,6 +21,7 @@ import Data.Typeable (Typeable)
 import Lamdu.Data.Definition (Definition(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Control.Lens as Lens
+import qualified Data.List.Assoc as AssocList
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
@@ -61,9 +62,6 @@ derive makeBinary ''PropertyClosure
 setter :: Lens.ALens s t dummy b -> s -> b -> t
 setter = flip . Lens.set . Lens.cloneLens
 
-assocListAt :: (Applicative f, Eq k) => k -> LensLike' f [(k, a)] a
-assocListAt key = Lens.traverse . Lens.filtered ((== key) . fst) . Lens._2
-
 propertyOfClosure :: MonadA m => PropertyClosure (Tag m) -> DataIRef.ExpressionProperty m
 propertyOfClosure (DefinitionTypeProperty defI (Definition defBody defType)) =
   Property defType (Transaction.writeIRef defI . Definition defBody)
@@ -85,8 +83,8 @@ propertyOfClosure (RecordProperty exprI record field) =
   (DataIRef.writeExprBody exprI . Expression.BodyRecord . (flip . Lens.set) lens1 record)
   where
     -- TODO: Why does Lens.cloneLens not work?
-    lens0 = Expression.recordFields . assocListAt field
-    lens1 = Expression.recordFields . assocListAt field
+    lens0 = Expression.recordFields . AssocList.at field
+    lens1 = Expression.recordFields . AssocList.at field
 
 irefOfClosure :: MonadA m => PropertyClosure (Tag m) -> DataIRef.ExpressionI (Tag m)
 irefOfClosure = Property.value . propertyOfClosure
