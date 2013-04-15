@@ -11,6 +11,7 @@ module Data.List.Utils
   , pairList
   , theOne
   , nonEmptyAll
+  , zipWithSameLength
   ) where
 
 import Data.Function (on)
@@ -66,3 +67,9 @@ theOne _ = Nothing
 nonEmptyAll :: (a -> Bool) -> [a] -> Bool
 nonEmptyAll _ [] = False
 nonEmptyAll f xs = all f xs
+
+zipWithSameLength :: (a -> b -> c) -> [a] -> [b] -> Maybe [c]
+zipWithSameLength f (x:xs) (y:ys) =
+  fmap (f x y :) $ zipWithSameLength f xs ys
+zipWithSameLength _ [] [] = Just []
+zipWithSameLength _ _ _ = Nothing
