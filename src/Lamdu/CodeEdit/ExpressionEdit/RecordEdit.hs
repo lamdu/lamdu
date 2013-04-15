@@ -3,7 +3,7 @@
 module Lamdu.CodeEdit.ExpressionEdit.RecordEdit(make) where
 
 import Control.Applicative ((<$>))
-import Control.Lens ((^.), (%~), (&))
+import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)

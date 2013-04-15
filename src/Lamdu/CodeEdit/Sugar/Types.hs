@@ -203,8 +203,8 @@ data List m expr = List
   } deriving (Functor, Foldable, Traversable)
 
 data RecordField m expr = RecordField
-  { _rfMDel :: Maybe (T m (Maybe Expression.Field))
-  , _rfId :: Expression.Field
+  { _rfMDel :: Maybe (T m (Maybe Guid))
+  , _rfId :: Guid
   , _rfExpr :: expr -- field type or val
   } deriving (Functor, Foldable, Traversable)
 

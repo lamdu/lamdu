@@ -39,7 +39,8 @@ module Lamdu.CodeEdit.Sugar
   ) where
 
 import Control.Applicative (Applicative(..), (<$>), (<$), liftA2)
-import Control.Lens (Traversal', (^.), (&), (%~), (.~), (^?), (^..), (<>~))
+import Control.Lens (Traversal')
+import Control.Lens.Operators
 import Control.Monad ((<=<), join, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, runState, mapStateT)
@@ -760,17 +761,21 @@ convertRecord (Expression.Record k fields) exprI = do
     addField (iref, record) = do
       holeIRef <- DataOps.newHole
       let guid = Guid.augment "Field" $ DataIRef.exprGuid holeIRef
-      writeIRef iref $ record & Expression.recordFields <>~ [(guid, holeIRef)]
+      writeIRef iref $
+        record
+        & Expression.recordFields <>~ [(Expression.Field guid, holeIRef)]
       return guid
     deleteField field (iref, record) = do
       let newRecord = record & Expression.recordFields %~ filter ((/= field) . fst)
       writeIRef iref newRecord
-      return $ newRecord ^? Expression.recordFields . Lens.traverse . Lens._1
+      return $
+        newRecord ^?
+        Expression.recordFields . Lens.traverse . Lens._1 . Expression._Field
     toField mStored (field, expr) = do
       child <- convertExpressionI expr
       return RecordField
         { _rfMDel = deleteField field <$> mStored
-        , _rfId = field
+        , _rfId = field ^?! Expression._Field
         , _rfExpr =
             case k of
             Val -> child

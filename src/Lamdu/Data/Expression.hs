@@ -4,7 +4,7 @@ module Lamdu.Data.Expression
   , Kind(..), _Val, _Type
   , Lambda(..), lambdaKind, lambdaParamId, lambdaParamType, lambdaResult
   , Apply(..), applyFunc, applyArg
-  , Field
+  , Field(..), _FieldHole, _Field
   , Record(..), recordKind, recordFields
   , Leaf(..), _GetVariable, _LiteralInteger, _Hole, _Set, _IntegerType
   , Body(..), _BodyLam, _BodyApply, _BodyLeaf, _BodyRecord
@@ -59,7 +59,8 @@ data Leaf def
   | Hole
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
-type Field = Guid
+data Field = FieldHole | Field Guid
+  deriving (Eq, Ord, Show)
 
 data Record expr = Record
   { _recordKind :: Kind
@@ -115,12 +116,12 @@ instance (Show a, Show def) => Show (Expression def a) where
         "()" -> ""
         x -> "{" ++ x ++ "}"
 
-fmap concat $ mapM LensTH.makePrisms [''Kind, ''VariableRef, ''Leaf, ''Body]
+fmap concat $ mapM LensTH.makePrisms [''Kind, ''VariableRef, ''Leaf, ''Body, ''Field]
 fmap concat $ mapM LensTH.makeLenses [''Expression, ''Record, ''Lambda, ''Apply]
 
 fmap concat . sequence $
   derive
   <$> [makeBinary, makeNFData]
   <*> [ ''Kind, ''VariableRef, ''Lambda, ''Apply, ''Leaf, ''Body, ''Record
-      , ''Expression
+      , ''Expression, ''Field
       ]

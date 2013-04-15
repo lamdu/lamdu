@@ -659,7 +659,7 @@ recordTest =
     rec k =
       Expression.BodyRecord .
       Expression.Record k .
-      (:[]) . (,) fieldGuid
+      (:[]) . (,) (Expression.Field fieldGuid)
     fieldGuid = Guid.fromString "field"
     piA =
       purePi "a" setType piX
