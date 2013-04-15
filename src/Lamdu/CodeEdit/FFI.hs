@@ -6,6 +6,7 @@ import Data.Binary (Binary(..))
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
 import Data.Map (Map)
+import Data.Maybe (fromMaybe)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Lamdu.Data.Definition as Definition
@@ -27,9 +28,8 @@ class ToExpr a where
 
 instance FromExpr Integer where
   fromExpr _ e =
-    case e ^? Expression.eBody . ExprUtil.bodyLiteralInteger of
-    Just x -> x
-    Nothing -> error "Expecting normalized Integer expression!"
+    fromMaybe (error "Expecting normalized Integer expression!") $
+    e ^? Expression.eBody . ExprUtil.bodyLiteralInteger
 
 instance ToExpr Integer where
   toExpr _ x [] = ExprUtil.pureLiteralInteger x

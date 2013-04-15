@@ -39,7 +39,7 @@ import Data.Functor.Identity (Identity(..))
 import Data.IntMap (IntMap)
 import Data.IntSet (IntSet)
 import Data.Map (Map)
-import Data.Maybe (isJust, mapMaybe)
+import Data.Maybe (isJust, mapMaybe, fromMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable)
@@ -488,13 +488,10 @@ exprIntoContext rootScope (Loaded rootExpr defTypes) = do
         typedValue@(TypedValue val _) =
           tv
           { tvType =
-            case
+              fromMaybe (tvType tv) $
               body ^?
-              Expression._BodyLeaf . Expression._GetVariable .
-              Lens.folding (`Map.lookup` scope)
-              of
-            Just x -> x
-            Nothing -> tvType tv
+                Expression._BodyLeaf . Expression._GetVariable .
+                Lens.folding (`Map.lookup` scope)
           }
       initialVal <- liftOriginState . initialValExpr $ ExprUtil.pureExpression body
       setRefExpr val initialVal

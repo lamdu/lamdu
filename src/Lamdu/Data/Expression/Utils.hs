@@ -272,8 +272,8 @@ compose = foldr (.) id
 {-# INLINE compose #-}
 
 applyWith :: [Expression def ()] -> Expression def () -> Expression def ()
-applyWith args expr =
-  compose (map addApply args) expr
+applyWith =
+  compose . map addApply
   where
     addApply arg = pureExpression . (`makeApply` arg)
 

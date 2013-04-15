@@ -130,7 +130,7 @@ makeResultEdit lhs result = do
     jumpToLhsEventMap =
       Widget.keysEventMapMovesCursor Config.jumpRHStoLHSKeys (E.Doc ["Navigation", "Jump to last param"]) $
         lastParam <$ savePos
-  ((Lens.over ExpressionGui.egWidget . Widget.weakerEvents) jumpToLhsEventMap) <$>
+  (Lens.over ExpressionGui.egWidget . Widget.weakerEvents) jumpToLhsEventMap <$>
     ExprGuiM.makeSubexpresion result
   where
     lastParam = case lhs of
@@ -161,7 +161,7 @@ makeNestedParams ::
 makeNestedParams atParamWidgets rhs firstParId depParams params mkResultEdit = do
   (depParamsEdits, (paramsEdits, resultEdit)) <-
     mkParams Dependent firstParId depParams $ \nextParId ->
-    mkParams Independent nextParId params $ \_ -> mkResultEdit
+    mkParams Independent nextParId params $ const mkResultEdit
   return (depParamsEdits, paramsEdits, resultEdit)
   where
     mkParams isDep guid l mkFinal =

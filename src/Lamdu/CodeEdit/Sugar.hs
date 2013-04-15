@@ -223,7 +223,7 @@ mkFuncParamActions lambdaProp (Expression.Lambda _ param _paramType body) =
     , _itemAddNext = fmap fst . DataOps.lambdaWrap $ body ^. Expression.ePayload
     }
   , _fpGetExample =
-      return $
+      return
       Expression
       { _rGuid = Guid.augment "EXAMPLE" param
       , _rExpressionBody = ExpressionAtom "NotImplemented"
@@ -516,9 +516,8 @@ convertApplyPrefix (Expression.Apply (funcRef, funcI) (argRef, _)) applyI = do
     onStored expr f = maybe id f $ fromMaybeStored expr
     addCallWithNextArg =
       onStored applyI $ \applyS ->
-      ( rPayload . plActions . Lens.mapped . callWithNextArg .~
+        rPayload . plActions . Lens.mapped . callWithNextArg .~
         mkCallWithArg sugarContext applyS
-      )
     newFuncRef =
       setNextHole newArgRef .
       addApplyChildParens .

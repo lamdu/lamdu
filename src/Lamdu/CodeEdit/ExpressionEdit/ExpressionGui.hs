@@ -229,8 +229,8 @@ makeCollapser fdConfig f =
       else makeFocusedCompact
 
 makeRow :: [(Widget.R, ExpressionGui m)] -> [(Vector2 Widget.R, WidgetT m)]
-makeRow halignGuis =
-  map item halignGuis
+makeRow =
+  map item
   where
     item (halign, ExpressionGui widget alignment) =
       (Vector2 halign alignment, widget)

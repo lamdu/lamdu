@@ -86,8 +86,7 @@ randomizeGuids ::
 randomizeGuids gen f =
     ExprUtil.randomizeParamIds paramGen
   . ExprUtil.randomizeExpr exprGen
-  . fmap toPayload
-  . fmap f
+  . fmap (toPayload . f)
   where
     toPayload inferred guid = Payload guid inferred NoStored
     paramGen : exprGen : _ = RandomUtils.splits gen
