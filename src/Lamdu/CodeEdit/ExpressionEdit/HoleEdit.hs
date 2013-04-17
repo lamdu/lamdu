@@ -89,7 +89,6 @@ data HoleInfo m = HoleInfo
   { hiHoleId :: Widget.Id
   , hiState :: Property (T m) (HoleState m)
   , hiHoleActions :: Sugar.HoleActions m
-  , hiGuid :: Guid
   , hiMNextHole :: Maybe (Sugar.Expression m)
   }
 
@@ -97,7 +96,7 @@ pickResultAndCleanUp ::
   MonadA m =>
   HoleInfo m -> Sugar.HoleResult m -> T m Guid
 pickResultAndCleanUp holeInfo holeResult = do
-  Transaction.setP (assocStateRef (hiGuid holeInfo)) emptyState
+  Property.set (hiState holeInfo) emptyState
   holeResult ^. Sugar.holeResultPick
 
 resultPickEventMap ::
@@ -557,7 +556,7 @@ pickEventMap holeInfo result
   | nonEmptyAll (`notElem` Config.operatorChars) searchTerm =
     operatorHandler (E.Doc ["Edit", "Result", "Apply operator"]) $ \x ->
     Widget.emptyEventResult <$
-    Transaction.setP (assocStateRef (hiGuid holeInfo))
+    Property.set (hiState holeInfo)
     ( charToHoleState x
       & hsArgument .~ (Just . (Nothing <$)) (result ^. Sugar.holeResultInferred)
     )
@@ -566,7 +565,7 @@ pickEventMap holeInfo result
       g <- pickResultAndCleanUp holeInfo result
       let
         mTarget
-          | g /= hiGuid holeInfo = Just g
+          | Sugar.holeResultHasHoles result = Just g
           | otherwise = (^. Sugar.rGuid) <$> hiMNextHole holeInfo
       maybe
         ((pure . WidgetIds.fromGuid) g)
@@ -707,7 +706,6 @@ makeUnwrapped hole mNextHole guid myId = do
           { hiHoleId = myId
           , hiState = stateProp
           , hiHoleActions = holeActions
-          , hiGuid = guid
           , hiMNextHole = mNextHole
           }
       in makeActiveHoleEdit holeInfo
