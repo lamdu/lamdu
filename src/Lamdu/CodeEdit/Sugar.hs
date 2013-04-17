@@ -747,7 +747,7 @@ convertRecord (Expression.Record k fields) exprI = do
     Record
     { rKind = k
     , rFields = withNextHoles sFields
-    , rMAddField = addField <$> mStored
+    , rMAddFirstField = addField <$> mStored
     }
   where
     withNextHoles (field : rest@(nextField:_)) =
@@ -762,7 +762,7 @@ convertRecord (Expression.Record k fields) exprI = do
       holeIRef <- DataOps.newHole
       writeIRef iref $
         record
-        & Expression.recordFields <>~ [(FieldHole, holeIRef)]
+        & Expression.recordFields %~ ((FieldHole, holeIRef) :)
       return $ DataIRef.exprGuid holeIRef
     deleteField expr (iref, record) = do
       let

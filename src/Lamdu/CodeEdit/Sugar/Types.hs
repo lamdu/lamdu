@@ -212,7 +212,7 @@ data RecordField m expr = RecordField
 data Record m expr = Record
   { rKind :: Kind -- record type or val
   , rFields :: [RecordField m expr]
-  , rMAddField :: Maybe (T m Guid)
+  , rMAddFirstField :: Maybe (T m Guid)
   } deriving (Functor, Foldable, Traversable)
 
 data ExpressionBody m expr
