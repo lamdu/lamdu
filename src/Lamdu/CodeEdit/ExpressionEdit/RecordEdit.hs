@@ -12,7 +12,6 @@ import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -54,16 +53,16 @@ makeUnwrapped (Sugar.Record k fields mAddField) myId =
     sep Sugar.Val = "="
     sep Sugar.Type = ":"
     bracketId = Widget.joinId myId ["{"]
-    makeFieldRow (Sugar.RecordField mDel fieldGuid fieldExpr) = do
-      fieldRefGui <- FieldEdit.make fieldGuid $ fromFieldExpr fieldExpr
+    makeFieldRow (Sugar.RecordField mDel field fieldGuid fieldExpr) = do
+      fieldRefGui <- FieldEdit.make field $ WidgetIds.fromGuid fieldGuid
       fieldExprGui <- ExprGuiM.makeSubexpresion fieldExpr
       sepGui <-
         ExpressionGui.fromValueWidget <$>
         (ExprGuiM.widgetEnv . BWidgets.makeLabel (sep k) .
-         Widget.toAnimId . fromFieldExpr) fieldExpr
+         Widget.toAnimId . WidgetIds.fromGuid) fieldGuid
       let
         delEventMap =
-          mkEventMap (fmap (maybe myId fromFieldExprGuid)) mDel
+          mkEventMap (fmap WidgetIds.fromGuid) mDel
           (Config.delForwardKeys ++ Config.delBackwordKeys) $
           E.Doc ["Edit", "Record", "Field", "Delete"]
       return . ExpressionGui.makeRow $
@@ -72,8 +71,6 @@ makeUnwrapped (Sugar.Record k fields mAddField) myId =
           Widget.weakerEvents delEventMap
     mkEventMap f mAction keys doc =
       maybe mempty (Widget.keysEventMapMovesCursor keys doc . f) mAction
-    fromFieldExprGuid = mappend myId . WidgetIds.fromGuid
-    fromFieldExpr = fromFieldExprGuid . (^. Sugar.rGuid)
     eventMap =
-      mkEventMap (fmap (FocusDelegator.delegatingId . fromFieldExprGuid))
+      mkEventMap (fmap WidgetIds.fromGuid)
       mAddField Config.recordAddFieldKeys $ E.Doc ["Edit", "Record", "Add Field"]

@@ -770,18 +770,21 @@ convertRecord (Expression.Record k fields) exprI = do
           record & Expression.recordFields %~
           filter ((/= resultGuid expr) . DataIRef.exprGuid . snd)
       writeIRef iref newRecord
-      return . fmap DataIRef.exprGuid $
+      return . maybe (resultGuid exprI)
+        (fieldGuidOfExpr . DataIRef.exprGuid) $
         newRecord ^?
         Expression.recordFields . Lens.traverse . Lens._2
+    fieldGuidOfExpr = Guid.augment "FieldOf"
     toField mStored (field, expr) = do
-      child <- convertExpressionI expr
+      exprS <- convertExpressionI expr
       return RecordField
         { _rfMDel = deleteField expr <$> mStored
+        , _rfGuid = fieldGuidOfExpr $ exprS ^. rGuid
         , _rfField = field
         , _rfExpr =
             case k of
-            Val -> child
-            Type -> removeSuccessfulType child
+            Val -> exprS
+            Type -> removeSuccessfulType exprS
         }
 
 convertExpressionI :: (Typeable1 m, MonadA m) => DataIRef.ExpressionM m (PayloadMM m) -> SugarM m (Expression m)
