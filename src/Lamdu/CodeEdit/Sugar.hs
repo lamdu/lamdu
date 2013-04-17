@@ -733,6 +733,37 @@ convertAtom :: (MonadA m, Typeable1 m) => String -> Convertor m
 convertAtom name exprI =
   mkExpression exprI $ ExpressionAtom name
 
+fieldGuidOfExpr :: Guid -> Guid
+fieldGuidOfExpr = Guid.augment "FieldOf"
+
+recordFieldActions ::
+  MonadA m => Guid -> Guid ->
+  ( DataIRef.ExpressionIM m
+  , Expression.Record (DataIRef.ExpressionI (Tag m))
+  ) ->
+  ListItemActions m
+recordFieldActions defaultGuid exprGuid (iref, record) =
+  ListItemActions
+  { _itemDelete = do
+      writeRecordFields $ prevFields ++ nextFields
+      return $
+        case nextFields ++ reverse prevFields of
+        [] -> defaultGuid
+        ((_, nextExpr) : _) -> fieldGuidOfExpr $ DataIRef.exprGuid nextExpr
+  , _itemAddNext = do
+      hole <- DataOps.newHole
+      writeRecordFields $ prevFields ++ field : (FieldHole, hole) : nextFields
+      return . fieldGuidOfExpr $ DataIRef.exprGuid hole
+  }
+  where
+    (prevFields, field : nextFields) =
+      break
+      ((== exprGuid) . DataIRef.exprGuid . snd)
+      (record ^. Expression.recordFields)
+    writeRecordFields newFields =
+      DataIRef.writeExprBody iref . Expression.BodyRecord $
+      record & Expression.recordFields .~ newFields
+
 convertRecord ::
   (Typeable1 m, MonadA m) =>
   Expression.Record (DataIRef.ExpressionM m (PayloadMM m)) ->
@@ -743,7 +774,7 @@ convertRecord (Expression.Record k fields) exprI = do
       (,) <$> resultIRef exprI <*>
       (Expression.Record k <$> (traverse . Lens._2) resultIRef fields)
   sFields <- mapM (toField mStored) fields
-  mkExpression exprI . ExpressionRecord $
+  mkExpression exprI $ ExpressionRecord
     Record
     { rKind = k
     , rFields = withNextHoles sFields
@@ -756,29 +787,20 @@ convertRecord (Expression.Record k fields) exprI = do
       : withNextHoles rest
     withNextHoles xs = xs
     resultIRef = fmap Property.value . resultStored
-    writeIRef iref record =
-      DataIRef.writeExprBody iref $ Expression.BodyRecord record
-    addField (iref, record) = do
-      holeIRef <- DataOps.newHole
-      writeIRef iref $
-        record
-        & Expression.recordFields %~ ((FieldHole, holeIRef) :)
-      return $ DataIRef.exprGuid holeIRef
-    deleteField expr (iref, record) = do
-      let
-        newRecord =
-          record & Expression.recordFields %~
-          filter ((/= resultGuid expr) . DataIRef.exprGuid . snd)
-      writeIRef iref newRecord
-      return . maybe (resultGuid exprI)
-        (fieldGuidOfExpr . DataIRef.exprGuid) $
-        newRecord ^?
-        Expression.recordFields . Lens.traverse . Lens._2
-    fieldGuidOfExpr = Guid.augment "FieldOf"
+    writeRecordFields (iref, record) newFields =
+      DataIRef.writeExprBody iref . Expression.BodyRecord $
+      record & Expression.recordFields .~ newFields
+    addField stored@(_, record) = do
+      hole <- DataOps.newHole
+      writeRecordFields stored $
+        (FieldHole, hole) :
+        record ^. Expression.recordFields
+      return . fieldGuidOfExpr $ DataIRef.exprGuid hole
     toField mStored (field, expr) = do
       exprS <- convertExpressionI expr
       return RecordField
-        { _rfMDel = deleteField expr <$> mStored
+        { _rfMItemActions =
+            recordFieldActions (resultGuid exprI) (resultGuid expr) <$> mStored
         , _rfGuid = fieldGuidOfExpr $ exprS ^. rGuid
         , _rfField = field
         , _rfExpr =
