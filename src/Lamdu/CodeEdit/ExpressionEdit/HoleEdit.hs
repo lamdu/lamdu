@@ -52,6 +52,7 @@ import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.CodeEdit.ExpressionEdit.HoleCommon as HoleCommon
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
@@ -411,36 +412,9 @@ addNewDefinitionEventMap cp holeInfo =
   where
     searchTermId = WidgetIds.searchTermId $ hiHoleId holeInfo
 
-disallowedHoleChars :: [(Char, E.IsShifted)]
-disallowedHoleChars =
-  E.anyShiftedChars ",`\n() " ++
-  [ ('0', E.Shifted)
-  , ('9', E.Shifted)
-  ]
-
-disallowChars :: E.EventMap a -> E.EventMap a
-disallowChars = E.filterSChars $ curry (`notElem` disallowedHoleChars)
-
 searchTermProperty :: HoleInfo m -> Property (T m) String
 searchTermProperty holeInfo =
   Property.composeLens hsSearchTerm $ hiState holeInfo
-
-makeSearchTermWidget
-  :: MonadA m
-  => HoleInfo m -> Widget.Id
-  -> Maybe (Sugar.HoleResult m)
-  -> ExprGuiM m (ExpressionGui m)
-makeSearchTermWidget holeInfo searchTermId mResultToPick =
-  ExprGuiM.widgetEnv .
-  fmap
-  (flip ExpressionGui (0.5/Config.holeSearchTermScaleFactor) .
-   Widget.scale Config.holeSearchTermScaleFactor .
-   Widget.strongerEvents pickResultEventMap .
-   Lens.over Widget.wEventMap disallowChars) $
-  BWidgets.makeWordEdit (searchTermProperty holeInfo) searchTermId
-  where
-    pickResultEventMap =
-      maybe mempty (resultPickEventMap holeInfo) mResultToPick
 
 vboxMBiasedAlign ::
   Maybe Box.Cursor -> Box.Alignment -> [Widget f] -> Widget f
@@ -491,23 +465,6 @@ makeResultsWidget holeInfo firstResults moreResults = do
       E.keyPresses
       [E.ModKey E.noMods E.KeyDown]
       (E.Doc ["Navigation", "Move", "down (blocked)"]) (return Widget.emptyEventResult)
-
-adHocTextEditEventMap :: MonadA m => Property m String -> Widget.EventHandlers m
-adHocTextEditEventMap textProp =
-  mconcat . concat $
-  [ [ disallowChars .
-      E.simpleChars "Character"
-      (E.Doc ["Edit", "Search Term", "Append character"]) $
-      changeText . flip (++) . (: [])
-    ]
-  , [ E.keyPresses (map (E.ModKey E.noMods) [E.KeyBackspace])
-      (E.Doc ["Edit", "Search Term", "Delete backwards"]) $
-      changeText init
-    | (not . null . Property.value) textProp
-    ]
-  ]
-  where
-    changeText f = Widget.emptyEventResult <$ Property.pureModify textProp f
 
 collectResults ::
   (Applicative (List.ItemM l), List l) =>
@@ -646,11 +603,13 @@ makeActiveHoleEdit holeInfo = do
       mResult =
         mplus mSelectedResult . (Lens.mapped %~ rlFirst) $
         listToMaybe firstResults
-    searchTermWidget <- makeSearchTermWidget holeInfo searchTermId mResult
+    searchTermWidget <-
+      HoleCommon.makeSearchTermWidget (searchTermProperty holeInfo) searchTermId $
+      maybe mempty (resultPickEventMap holeInfo) mResult
     eventMap <- mkEventMap holeInfo mResult
     maybe (return ()) (ExprGuiM.addResultPicker . (^. Sugar.holeResultPickPrefix))
       mResult
-    let adHocEditor = adHocTextEditEventMap $ searchTermProperty holeInfo
+    let adHocEditor = HoleCommon.adHocTextEditEventMap $ searchTermProperty holeInfo
     return .
       Lens.over ExpressionGui.egWidget
       (Widget.strongerEvents eventMap .
