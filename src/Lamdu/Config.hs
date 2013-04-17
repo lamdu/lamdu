@@ -67,7 +67,9 @@ holeResultScaleFactor = 0.75
 holeSearchTermScaleFactor = 0.6
 
 holeBackgroundColor = Draw.Color 0.3 0 0 1
-unfocusedReadOnlyHoleBackgroundColor = Draw.Color 0.5 0.25 0.25 1
+readOnlyHoleBackgroundColor = Draw.Color 0.5 0.25 0.25 1
+
+makeNewFieldSizeFactor = 0.4
 
 inferredValueScaleFactor = 0.7
 inferredValueTint = Draw.Color 1 1 1 0.6

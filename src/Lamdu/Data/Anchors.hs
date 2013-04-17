@@ -19,7 +19,6 @@ import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Version(Version)
 import Data.Store.Rev.View (View)
 import Data.Store.Transaction (MkProperty(..))
-import Lamdu.Data.Expression (FieldTag)
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -43,7 +42,7 @@ data Code f t = Code
   , preJumps :: f [Widget.Id]
   , preCursor :: f Widget.Id
   , postCursor :: f Widget.Id
-  , fields :: f [FieldTag]
+  , fields :: f [Guid]
   }
 onCode :: Binary t => (forall a. Binary a => f a -> g a) -> Code f t -> Code g t
 onCode f (Code x0 x1 x2 x3 x4 x5 x6 x7 x8) =

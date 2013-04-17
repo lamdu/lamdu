@@ -122,6 +122,7 @@ Executable lamdu
                        random,
                        List >= 0.5.1,
                        either,
+                       utf8-string,
                        TypeCompose
   Other-Modules:       Lamdu.Anchors,
                        Lamdu.BottleWidgets,

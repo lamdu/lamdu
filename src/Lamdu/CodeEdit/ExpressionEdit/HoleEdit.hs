@@ -43,7 +43,6 @@ import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
-import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -173,6 +172,8 @@ resultsToWidgets holeInfo results = do
           holeResult ^. Sugar.holeResultInferred
     toWidget resultId holeResult =
       ExprGuiM.widgetEnv . BWidgets.makeFocusableView resultId .
+      -- TODO: No need for this if we just add a pick result event map
+      -- to the whole hole
       Widget.strongerEvents (resultPickEventMap holeInfo holeResult) .
       Lens.view ExpressionGui.egWidget =<<
       ExprGuiM.makeSubexpresion . Sugar.removeTypes =<<
@@ -242,7 +243,7 @@ makeLiteralGroup searchTerm =
       }
 
 resultsPrefixId :: HoleInfo m -> Widget.Id
-resultsPrefixId holeInfo = mconcat [hiHoleId holeInfo, Widget.Id ["results"]]
+resultsPrefixId = HoleCommon.resultsPrefixId . hiHoleId
 
 widgetIdHash :: Show a => a -> Widget.Id
 widgetIdHash = WidgetIds.fromGuid . randFunc . show
@@ -446,10 +447,10 @@ makeResultsWidget holeInfo firstResults moreResults = do
         )
   let extraWidgets = maybeToList $ snd . snd =<< mResult
   moreResultsWidgets <-
-    ExprGuiM.widgetEnv $
     case moreResults of
       HaveMoreResults ->
-        (: []) <$> BWidgets.makeLabel "..." (Widget.toAnimId myId)
+        ExprGuiM.widgetEnv . fmap (: []) .
+        BWidgets.makeLabel "..." $ Widget.toAnimId myId
       NoMoreResults -> return []
   return
     ( fmap (fst . snd) mResult
@@ -488,11 +489,6 @@ collectResults =
         BadResult -> Lens._2
         %~ (x :)
 
-makeBackground :: Widget.Id -> Int -> Draw.Color -> Widget f -> Widget f
-makeBackground myId level =
-  Widget.backgroundColor level $
-  mappend (Widget.toAnimId myId) ["hole background"]
-
 operatorHandler :: E.Doc -> (Char -> a) -> E.EventMap a
 operatorHandler doc handler =
   E.charGroup "Operator" doc
@@ -505,11 +501,11 @@ alphaNumericHandler doc handler =
   E.charGroup "Letter/digit" doc
   Config.alphaNumericChars . flip $ const handler
 
-pickEventMap ::
+opPickEventMap ::
   MonadA m =>
   HoleInfo m -> Sugar.HoleResult m ->
   Widget.EventHandlers (T m)
-pickEventMap holeInfo result
+opPickEventMap holeInfo result
   | nonEmptyAll (`notElem` Config.operatorChars) searchTerm =
     operatorHandler (E.Doc ["Edit", "Result", "Apply operator"]) $ \x ->
     Widget.emptyEventResult <$
@@ -561,7 +557,7 @@ mkEventMap holeInfo mResult = do
       Just $ hiHoleActions holeInfo ^. Sugar.holeResult $ arg
   pure $ mconcat
     [ addNewDefinitionEventMap cp holeInfo
-    , maybe mempty (pickEventMap holeInfo) mResult
+    , maybe mempty (opPickEventMap holeInfo) mResult
     , maybe mempty
       ( E.keyPresses
         (Config.delForwardKeys ++ Config.delBackwordKeys)
@@ -603,17 +599,20 @@ makeActiveHoleEdit holeInfo = do
       mResult =
         mplus mSelectedResult . (Lens.mapped %~ rlFirst) $
         listToMaybe firstResults
+      searchTermEventMap = maybe mempty (resultPickEventMap holeInfo) mResult
     searchTermWidget <-
-      HoleCommon.makeSearchTermWidget (searchTermProperty holeInfo) searchTermId $
-      maybe mempty (resultPickEventMap holeInfo) mResult
-    eventMap <- mkEventMap holeInfo mResult
+      HoleCommon.makeSearchTermWidget (searchTermProperty holeInfo) searchTermId
+      -- TODO: Move the result picking events into pickEventMap
+      -- instead of here on the searchTerm and on each result
+      & Lens.mapped . ExpressionGui.egWidget %~ Widget.strongerEvents searchTermEventMap
+    holeEventMap <- mkEventMap holeInfo mResult
     maybe (return ()) (ExprGuiM.addResultPicker . (^. Sugar.holeResultPickPrefix))
       mResult
     let adHocEditor = HoleCommon.adHocTextEditEventMap $ searchTermProperty holeInfo
     return .
       Lens.over ExpressionGui.egWidget
-      (Widget.strongerEvents eventMap .
-       makeBackground (hiHoleId holeInfo)
+      (Widget.strongerEvents holeEventMap .
+       HoleCommon.makeBackground (hiHoleId holeInfo)
        Layers.activeHoleBG Config.holeBackgroundColor) $
       ExpressionGui.addBelow
       [ (0.5, Widget.strongerEvents adHocEditor resultsWidget)
@@ -622,34 +621,12 @@ makeActiveHoleEdit holeInfo = do
   where
     searchTermId = WidgetIds.searchTermId $ hiHoleId holeInfo
 
-holeFDConfig :: FocusDelegator.Config
-holeFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyEnter
-  , FocusDelegator.startDelegatingDoc = E.Doc ["Navigation", "Hole", "Enter"]
-  , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEsc
-  , FocusDelegator.stopDelegatingDoc = E.Doc ["Navigation", "Hole", "Leave"]
-  }
-
 make ::
   MonadA m => Sugar.Hole m -> Maybe (Sugar.Expression m) -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make hole mNextHole guid =
-  ExpressionGui.wrapDelegated holeFDConfig FocusDelegator.Delegating $
+  ExpressionGui.wrapDelegated HoleCommon.holeFDConfig FocusDelegator.Delegating $
   makeUnwrapped hole mNextHole guid
-
-makeInactiveHoleEdit ::
-  MonadA m =>
-  Sugar.Hole m -> Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeInactiveHoleEdit hole myId =
-  fmap
-  (ExpressionGui.fromValueWidget .
-   makeBackground myId Layers.inactiveHole unfocusedColor) .
-  ExprGuiM.widgetEnv $ BWidgets.makeFocusableTextView "  " myId
-  where
-    unfocusedColor
-      | canPickResult = Config.holeBackgroundColor
-      | otherwise = Config.unfocusedReadOnlyHoleBackgroundColor
-    canPickResult = isJust $ hole ^. Sugar.holeMActions
 
 makeUnwrapped ::
   MonadA m => Sugar.Hole m ->
@@ -657,18 +634,16 @@ makeUnwrapped ::
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeUnwrapped hole mNextHole guid myId = do
   cursor <- ExprGuiM.widgetEnv WE.readCursor
-  stateProp <- ExprGuiM.transaction $ assocStateRef guid ^. Transaction.mkProperty
   case (hole ^. Sugar.holeMActions, Widget.subId myId cursor) of
-    (Just holeActions, Just _) ->
-      let
-        holeInfo = HoleInfo
-          { hiHoleId = myId
-          , hiState = stateProp
-          , hiHoleActions = holeActions
-          , hiMNextHole = mNextHole
-          }
-      in makeActiveHoleEdit holeInfo
-    _ -> makeInactiveHoleEdit hole myId
+    (Just holeActions, Just _) -> do
+      stateProp <- ExprGuiM.transaction $ assocStateRef guid ^. Transaction.mkProperty
+      makeActiveHoleEdit HoleInfo
+        { hiHoleId = myId
+        , hiState = stateProp
+        , hiHoleActions = holeActions
+        , hiMNextHole = mNextHole
+        }
+    (x, _) -> HoleCommon.makeInactive (isJust x) myId
 
 searchTermWidgetId :: Widget.Id -> Widget.Id
 searchTermWidgetId = WidgetIds.searchTermId . FocusDelegator.delegatingId

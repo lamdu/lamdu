@@ -738,6 +738,21 @@ convertAtom name exprI =
 tagGuidOfExpr :: Guid -> Guid
 tagGuidOfExpr = Guid.augment "FieldOf"
 
+setTag ::
+  MonadA m => Guid ->
+  ( DataIRef.ExpressionIM m
+  , Expression.Record (DataIRef.ExpressionI (Tag m))
+  ) ->
+  Maybe Guid -> T m ()
+setTag exprGuid (iref, record) mFieldGuid = do
+  writeIRef $ record & fieldLens . Lens._1 .~ fieldTag
+  where
+    fieldTag = maybe Expression.FieldTagHole Expression.FieldTag mFieldGuid
+    fieldLens =
+      Expression.recordFields . traverse .
+      Lens.filtered ((== exprGuid) . DataIRef.exprGuid . snd)
+    writeIRef = DataIRef.writeExprBody iref . Expression.BodyRecord
+
 recordFieldActions ::
   MonadA m => Guid -> Guid ->
   ( DataIRef.ExpressionIM m
@@ -808,7 +823,7 @@ convertRecord (Expression.Record k fields) exprI = do
                case tag of
                Expression.FieldTagHole -> Nothing
                Expression.FieldTag guid -> Just guid
-          , _ftMSetTag = Nothing -- TODO!
+          , _ftMSetTag = setTag (resultGuid expr) <$> mStored
           , _ftGuid = tagGuidOfExpr $ exprS ^. rGuid
           }
         , _rfExpr =

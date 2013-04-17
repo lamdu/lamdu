@@ -179,24 +179,25 @@ initDB db =
       emptyVersion <- Version.makeInitialVersion []
       master <- newBranch "master" emptyVersion
       view <- View.new master
-      Transaction.writeIRef (A.view A.revisionIRefs) view
-      Transaction.writeIRef (A.branches A.revisionIRefs) [master]
-      Transaction.writeIRef (A.currentBranch A.revisionIRefs) master
-      Transaction.writeIRef (A.redos A.revisionIRefs) []
-      Transaction.writeIRef (A.cursor A.revisionIRefs) .
-        WidgetIds.fromIRef $ A.panes A.codeIRefs
+      let writeRevAnchor f = Transaction.writeIRef (f A.revisionIRefs)
+      writeRevAnchor A.view view
+      writeRevAnchor A.branches [master]
+      writeRevAnchor A.currentBranch master
+      writeRevAnchor A.redos []
+      let paneWId = WidgetIds.fromIRef $ A.panes A.codeIRefs
+      writeRevAnchor A.cursor paneWId
       A.runViewTransaction view $ do
         ((ffiEnv, specialFunctions), builtins) <- createBuiltins
-        Transaction.writeIRef (A.clipboards A.codeIRefs) []
-        Transaction.writeIRef (A.specialFunctions A.codeIRefs) specialFunctions
-        Transaction.writeIRef (A.ffiEnv A.codeIRefs) ffiEnv
-        Transaction.writeIRef (A.globals A.codeIRefs) builtins
-        Transaction.writeIRef (A.panes A.codeIRefs) []
-        Transaction.writeIRef (A.preJumps A.codeIRefs) []
-        Transaction.writeIRef (A.preCursor A.codeIRefs) .
-          WidgetIds.fromIRef $ A.panes A.codeIRefs
-        Transaction.writeIRef (A.postCursor A.codeIRefs) .
-          WidgetIds.fromIRef $ A.panes A.codeIRefs
+        let writeCodeAnchor f = Transaction.writeIRef (f A.codeIRefs)
+        writeCodeAnchor A.clipboards []
+        writeCodeAnchor A.specialFunctions specialFunctions
+        writeCodeAnchor A.ffiEnv ffiEnv
+        writeCodeAnchor A.globals builtins
+        writeCodeAnchor A.panes []
+        writeCodeAnchor A.preJumps []
+        writeCodeAnchor A.preCursor paneWId
+        writeCodeAnchor A.postCursor paneWId
+        writeCodeAnchor A.fields []
       -- Prevent undo into the invalid empty revision
       newVer <- Branch.curVersion master
       Version.preventUndo newVer

@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.CodeEdit.ExpressionEdit.RecordEdit(make) where
 
-import Control.Applicative ((<$>))
+import Control.Applicative ((<$>), (<*>), (*>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
@@ -57,13 +57,16 @@ makeUnwrapped (Sugar.Record k fields mAddField) myId =
     sep Sugar.Type = ":"
     bracketId = Widget.joinId myId ["{"]
     makeFieldRow (Sugar.RecordField mItemActions tag fieldExpr) = do
-      fieldRefGui <- FieldEdit.make tag
-      fieldExprGui <- ExprGuiM.makeSubexpresion fieldExpr
-      sepGui <-
-        ExpressionGui.fromValueWidget <$>
-        (ExprGuiM.widgetEnv . BWidgets.makeLabel (sep k) .
-         Widget.toAnimId . WidgetIds.fromGuid . (^. Sugar.rGuid)) fieldExpr
-      let itemEventMap = maybe mempty recordItemEventMap mItemActions
+      ((fieldRefGui, fieldExprGui, sepGui), resultPickers) <-
+        ExprGuiM.listenResultPickers $
+        (,,)
+        <$> FieldEdit.make tag
+        <*> ExprGuiM.makeSubexpresion fieldExpr
+        <*>
+          (ExpressionGui.fromValueWidget <$>
+           (ExprGuiM.widgetEnv . BWidgets.makeLabel (sep k) .
+            Widget.toAnimId . WidgetIds.fromGuid . (^. Sugar.rGuid)) fieldExpr)
+      let itemEventMap = maybe mempty (recordItemEventMap resultPickers) mItemActions
       return . ExpressionGui.makeRow $
         [(1, fieldRefGui), (0.5, sepGui), (0, fieldExprGui)]
         & Lens.mapped . Lens._2 . ExpressionGui.egWidget %~
@@ -74,11 +77,11 @@ makeUnwrapped (Sugar.Record k fields mAddField) myId =
       mkEventMap (fmap WidgetIds.fromGuid)
       mAddField Config.recordAddFieldKeys $ E.Doc ["Edit", "Record", "Add First Field"]
 
-recordItemEventMap :: MonadA m => Sugar.ListItemActions m -> Widget.EventHandlers (T m)
-recordItemEventMap (Sugar.ListItemActions addNext delete) =
+recordItemEventMap :: MonadA m => [T m ()] -> Sugar.ListItemActions m -> Widget.EventHandlers (T m)
+recordItemEventMap resultPickers (Sugar.ListItemActions addNext delete) =
   mconcat
   [ Widget.keysEventMapMovesCursor Config.recordAddFieldKeys
-    (E.Doc ["Edit", "Record", "Add Next Field"]) $ WidgetIds.fromGuid <$> addNext
+    (E.Doc ["Edit", "Record", "Add Next Field"]) $ WidgetIds.fromGuid <$> (sequence_ resultPickers *> addNext)
   , Widget.keysEventMapMovesCursor (Config.delForwardKeys ++ Config.delBackwordKeys)
     (E.Doc ["Edit", "Record", "Delete Field"]) $ WidgetIds.fromGuid <$> delete
   ]

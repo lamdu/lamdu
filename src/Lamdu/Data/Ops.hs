@@ -9,6 +9,7 @@ module Lamdu.Data.Ops
   , savePreJumpPosition, jumpBack
   , newPane
   , newClipboard
+  , makeNewFieldTag
   ) where
 
 import Control.Applicative ((<$>), (<*>), (<$))
@@ -188,3 +189,12 @@ newClipboard codeProps expr = do
   defI <- newDefinition ("clipboard" ++ show len) def
   modP (Anchors.clipboards codeProps) (defI:)
   return defI
+
+makeNewFieldTag ::
+  MonadA m => Anchors.CodeProps m ->
+  String -> T m Guid
+makeNewFieldTag codeProps name = do
+  field <- Transaction.newKey
+  setP (Anchors.assocNameRef field) name
+  modP (Anchors.fields codeProps) (field :)
+  return field
