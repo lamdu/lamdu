@@ -45,13 +45,13 @@ mkOrigin3 = (,,) <$> mkOrigin <*> mkOrigin <*> mkOrigin
 data RuleClosure def
   = LambdaBodyTypeToPiResultTypeClosure (Guid, ExprRef) Origin2
   | PiToLambdaClosure (Guid, ExprRef, ExprRef) Origin3
-  | RecordValToTypeClosure ([Expression.Field], ExprRef) Origin
-  | RecordTypeToFieldTypesClosure [(Expression.Field, ExprRef)]
+  | RecordValToTypeClosure ([Expression.FieldTag], ExprRef) Origin
+  | RecordTypeToFieldTypesClosure [(Expression.FieldTag, ExprRef)]
   | CopyClosure ExprRef
   | LambdaParentToChildrenClosure (Expression.Lambda ExprRef)
   | LambdaChildrenToParentClosure (Expression.Kind, Guid, ExprRef) Origin
   | RecordParentToChildrenClosure (Expression.Record ExprRef)
-  | RecordChildrenToParentClosure (Expression.Kind, [Expression.Field], ExprRef) Origin
+  | RecordChildrenToParentClosure (Expression.Kind, [Expression.FieldTag], ExprRef) Origin
   | SetClosure [(ExprRef, RefExpression def)]
   | SimpleTypeClosure ExprRef Origin2
   | IntoApplyResultClosure (Expression.Kind, ExprRef, ExprRef)
@@ -205,7 +205,7 @@ lambdaRules param (TypedValue lambdaValueRef lambdaTypeRef) bodyTypeRef =
   , Rule [lambdaTypeRef] . PiToLambdaClosure (param, lambdaValueRef, bodyTypeRef) <$> mkOrigin3
   ]
 
-runRecordValToTypeClosure :: ([Expression.Field], ExprRef) -> Origin -> RuleFunction def
+runRecordValToTypeClosure :: ([Expression.FieldTag], ExprRef) -> Origin -> RuleFunction def
 runRecordValToTypeClosure (fields, recordTypeRef) o0 fieldTypeExprs =
   [ ( recordTypeRef
     , makeRefExpr o0 . Expression.BodyRecord . Expression.Record Expression.Type $
@@ -213,13 +213,13 @@ runRecordValToTypeClosure (fields, recordTypeRef) o0 fieldTypeExprs =
     )
   ]
 
-runRecordTypeToFieldTypesClosure :: [(Expression.Field, ExprRef)] -> RuleFunction def
+runRecordTypeToFieldTypesClosure :: [(Expression.FieldTag, ExprRef)] -> RuleFunction def
 runRecordTypeToFieldTypesClosure fieldTypeRefs ~[recordTypeExpr] = do
   Expression.Record _ fieldTypeExprs <-
     recordTypeExpr ^.. Expression.eBody . Expression._BodyRecord
   maybe [] (map snd) $ AssocList.match (,) fieldTypeRefs fieldTypeExprs
 
-recordRules :: ExprRef -> [(Expression.Field, ExprRef)] -> State Origin [Rule def]
+recordRules :: ExprRef -> [(Expression.FieldTag, ExprRef)] -> State Origin [Rule def]
 recordRules recTypeRef fieldTypeRefs =
   sequenceA
   [ Rule typeRefs . RecordValToTypeClosure (fields, recTypeRef) <$> mkOrigin
@@ -268,7 +268,7 @@ runRecordParentToChildrenClosure (Expression.Record _ fieldRefs) ~[expr] = do
   maybe [] (map snd) $ AssocList.match (,) fieldRefs fieldExprs
 
 runRecordChildrenToParentClosure ::
-  (Expression.Kind, [Expression.Field], ExprRef) -> Origin -> RuleFunction def
+  (Expression.Kind, [Expression.FieldTag], ExprRef) -> Origin -> RuleFunction def
 runRecordChildrenToParentClosure (k, fields, recRef) o0 fieldExprs =
   [( recRef
    , makeRefExpr o0 . Expression.BodyRecord .

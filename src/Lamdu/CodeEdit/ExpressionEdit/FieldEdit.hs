@@ -27,13 +27,13 @@ fieldFDConfig = FocusDelegator.Config
     E.Doc ["Edit", "Record", "Field", "Done renaming"]
   }
 
-make :: MonadA m => Sugar.Field -> Widget.Id -> ExprGuiM m (ExpressionGui m)
-make (Sugar.Field fieldGuid) myId = do
+make :: MonadA m => Sugar.FieldTag -> Widget.Id -> ExprGuiM m (ExpressionGui m)
+make (Sugar.FieldTag fieldGuid) myId = do
   name@(nameSrc, _) <- ExprGuiM.getGuidName fieldGuid
   ExpressionGui.fromValueWidget
     . ExpressionGui.nameSrcTint nameSrc
     <$>
     ExprGuiM.wrapDelegated fieldFDConfig FocusDelegator.NotDelegating id
     (ExpressionGui.makeNameEdit name fieldGuid) myId
-make Sugar.FieldHole myId =
+make Sugar.FieldTagHole myId =
   fmap ExpressionGui.fromValueWidget . ExprGuiM.widgetEnv $ BWidgets.makeFocusableTextView "HOLE" myId

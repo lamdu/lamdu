@@ -16,7 +16,7 @@ module Lamdu.CodeEdit.Sugar
   , WhereItem(..)
   , ListItem(..), ListActions(..), List(..)
   , RecordField(..), rfMItemActions, rfField, rfGuid, rfExpr
-  , Kind(..), Field(..), Record(..)
+  , Kind(..), FieldTag(..), Record(..)
   , Func(..)
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
@@ -753,7 +753,7 @@ recordFieldActions defaultGuid exprGuid (iref, record) =
         ((_, nextExpr) : _) -> fieldGuidOfExpr $ DataIRef.exprGuid nextExpr
   , _itemAddNext = do
       hole <- DataOps.newHole
-      writeRecordFields $ prevFields ++ field : (FieldHole, hole) : nextFields
+      writeRecordFields $ prevFields ++ field : (FieldTagHole, hole) : nextFields
       return . fieldGuidOfExpr $ DataIRef.exprGuid hole
   }
   where
@@ -794,7 +794,7 @@ convertRecord (Expression.Record k fields) exprI = do
     addField stored@(_, record) = do
       hole <- DataOps.newHole
       writeRecordFields stored $
-        (FieldHole, hole) :
+        (FieldTagHole, hole) :
         record ^. Expression.recordFields
       return . fieldGuidOfExpr $ DataIRef.exprGuid hole
     toField mStored (field, expr) = do
