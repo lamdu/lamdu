@@ -21,7 +21,6 @@ import Data.Typeable (Typeable)
 import Lamdu.Data.Definition (Definition(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Control.Lens as Lens
-import qualified Data.List.Assoc as AssocList
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
@@ -55,7 +54,7 @@ data PropertyClosure t
   | LambdaProperty
       (DataIRef.ExpressionI t) (Expression.Lambda (DataIRef.ExpressionI t)) LambdaRole
   | RecordProperty
-      (DataIRef.ExpressionI t) (Expression.Record (DataIRef.ExpressionI t)) Expression.Field
+      (DataIRef.ExpressionI t) (Expression.Record (DataIRef.ExpressionI t)) Int
   deriving (Eq, Ord, Show, Typeable)
 derive makeBinary ''PropertyClosure
 
@@ -78,13 +77,13 @@ propertyOfClosure (LambdaProperty exprI lambda role) =
   (DataIRef.writeExprBody exprI . Expression.BodyLam . setter lens lambda)
   where
     lens = lambdaChildByRole role
-propertyOfClosure (RecordProperty exprI record field) =
+propertyOfClosure (RecordProperty exprI record idx) =
   Property (record ^?! lens0)
   (DataIRef.writeExprBody exprI . Expression.BodyRecord . (flip . Lens.set) lens1 record)
   where
     -- TODO: Why does Lens.cloneLens not work?
-    lens0 = Expression.recordFields . AssocList.at field
-    lens1 = Expression.recordFields . AssocList.at field
+    lens0 = Expression.recordFields . Lens.ix idx . Lens._2
+    lens1 = Expression.recordFields . Lens.ix idx . Lens._2
 
 irefOfClosure :: MonadA m => PropertyClosure (Tag m) -> DataIRef.ExpressionI (Tag m)
 irefOfClosure = Property.value . propertyOfClosure
@@ -121,10 +120,10 @@ loadExpressionBody iref =
         loadRole = loadExpressionClosure . LambdaProperty iref lambda
     onBody (Expression.BodyRecord record@(Expression.Record k fields)) =
       Expression.BodyRecord . Expression.Record k <$>
-      Lens.traverse loadField fields
+      Lens.itraverse loadField fields
       where
-        loadField (field, _) =
-          (,) field <$> loadExpressionClosure (RecordProperty iref record field)
+        loadField idx (field, _) =
+          (,) field <$> loadExpressionClosure (RecordProperty iref record idx)
 
 loadDefinition :: MonadA m => DefI (Tag m) -> T m (Definition (Loaded m))
 loadDefinition x = (fmap . fmap . fmap) propertyOfClosure . loadDefinitionClosure $ x
