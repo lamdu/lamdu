@@ -56,13 +56,13 @@ makeUnwrapped (Sugar.Record k fields mAddField) myId =
     sep Sugar.Val = "="
     sep Sugar.Type = ":"
     bracketId = Widget.joinId myId ["{"]
-    makeFieldRow (Sugar.RecordField mItemActions field fieldGuid fieldExpr) = do
-      fieldRefGui <- FieldEdit.make field $ WidgetIds.fromGuid fieldGuid
+    makeFieldRow (Sugar.RecordField mItemActions tag fieldExpr) = do
+      fieldRefGui <- FieldEdit.make tag
       fieldExprGui <- ExprGuiM.makeSubexpresion fieldExpr
       sepGui <-
         ExpressionGui.fromValueWidget <$>
         (ExprGuiM.widgetEnv . BWidgets.makeLabel (sep k) .
-         Widget.toAnimId . WidgetIds.fromGuid) fieldGuid
+         Widget.toAnimId . WidgetIds.fromGuid . (^. Sugar.rGuid)) fieldExpr
       let itemEventMap = maybe mempty recordItemEventMap mItemActions
       return . ExpressionGui.makeRow $
         [(1, fieldRefGui), (0.5, sepGui), (0, fieldExprGui)]

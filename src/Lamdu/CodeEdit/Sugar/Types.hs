@@ -20,8 +20,9 @@ module Lamdu.CodeEdit.Sugar.Types
   , Expression
   , WhereItem(..)
   , ListItem(..), ListActions(..), List(..)
-  , RecordField(..), rfMItemActions, rfField, rfGuid, rfExpr
-  , Kind(..), FieldTag(..), Record(..)
+  , FieldTag(..), ftTag, ftMSetTag, ftGuid
+  , RecordField(..), rfMItemActions, rfTag, rfExpr
+  , Kind(..), Record(..)
   , Func(..), fDepParams, fParams, fBody
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
@@ -51,7 +52,7 @@ import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
-import Lamdu.Data.Expression (Kind(..), FieldTag(..))
+import Lamdu.Data.Expression (Kind(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Control.Lens.TH as LensTH
 import qualified Data.List as List
@@ -202,10 +203,15 @@ data List m expr = List
   , lMActions :: Maybe (ListActions m)
   } deriving (Functor, Foldable, Traversable)
 
+data FieldTag m = FieldTag
+  { _ftTag :: Maybe Guid -- Hole or tag
+  , _ftMSetTag :: Maybe (Maybe Guid -> T m ())
+  , _ftGuid :: Guid -- Represents this incarnation
+  }
+
 data RecordField m expr = RecordField
   { _rfMItemActions :: Maybe (ListItemActions m)
-  , _rfField :: FieldTag
-  , _rfGuid :: Guid -- Represents this incarnation
+  , _rfTag :: FieldTag m
   , _rfExpr :: expr -- field type or val
   } deriving (Functor, Foldable, Traversable)
 
@@ -312,6 +318,7 @@ data Definition m = Definition
 
 LensTH.makeLenses ''Func
 LensTH.makeLenses ''FuncParam
+LensTH.makeLenses ''FieldTag
 LensTH.makeLenses ''RecordField
 LensTH.makeLenses ''ExpressionBody
 LensTH.makeLenses ''ListItemActions

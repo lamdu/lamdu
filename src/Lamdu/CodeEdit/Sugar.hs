@@ -15,8 +15,9 @@ module Lamdu.CodeEdit.Sugar
   , Expression
   , WhereItem(..)
   , ListItem(..), ListActions(..), List(..)
-  , RecordField(..), rfMItemActions, rfField, rfGuid, rfExpr
-  , Kind(..), FieldTag(..), Record(..)
+  , FieldTag(..), ftTag, ftMSetTag, ftGuid
+  , RecordField(..), rfMItemActions, rfTag, rfExpr
+  , Kind(..), Record(..)
   , Func(..)
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
@@ -734,8 +735,8 @@ convertAtom :: (MonadA m, Typeable1 m) => String -> Convertor m
 convertAtom name exprI =
   mkExpression exprI $ ExpressionAtom name
 
-fieldGuidOfExpr :: Guid -> Guid
-fieldGuidOfExpr = Guid.augment "FieldOf"
+tagGuidOfExpr :: Guid -> Guid
+tagGuidOfExpr = Guid.augment "FieldOf"
 
 recordFieldActions ::
   MonadA m => Guid -> Guid ->
@@ -750,11 +751,11 @@ recordFieldActions defaultGuid exprGuid (iref, record) =
       return $
         case nextFields ++ reverse prevFields of
         [] -> defaultGuid
-        ((_, nextExpr) : _) -> fieldGuidOfExpr $ DataIRef.exprGuid nextExpr
+        ((_, nextExpr) : _) -> tagGuidOfExpr $ DataIRef.exprGuid nextExpr
   , _itemAddNext = do
       hole <- DataOps.newHole
-      writeRecordFields $ prevFields ++ field : (FieldTagHole, hole) : nextFields
-      return . fieldGuidOfExpr $ DataIRef.exprGuid hole
+      writeRecordFields $ prevFields ++ field : (Expression.FieldTagHole, hole) : nextFields
+      return . tagGuidOfExpr $ DataIRef.exprGuid hole
   }
   where
     (prevFields, field : nextFields) =
@@ -794,16 +795,22 @@ convertRecord (Expression.Record k fields) exprI = do
     addField stored@(_, record) = do
       hole <- DataOps.newHole
       writeRecordFields stored $
-        (FieldTagHole, hole) :
+        (Expression.FieldTagHole, hole) :
         record ^. Expression.recordFields
-      return . fieldGuidOfExpr $ DataIRef.exprGuid hole
-    toField mStored (field, expr) = do
+      return . tagGuidOfExpr $ DataIRef.exprGuid hole
+    toField mStored (tag, expr) = do
       exprS <- convertExpressionI expr
       return RecordField
         { _rfMItemActions =
             recordFieldActions (resultGuid exprI) (resultGuid expr) <$> mStored
-        , _rfGuid = fieldGuidOfExpr $ exprS ^. rGuid
-        , _rfField = field
+        , _rfTag = FieldTag
+          { _ftTag =
+               case tag of
+               Expression.FieldTagHole -> Nothing
+               Expression.FieldTag guid -> Just guid
+          , _ftMSetTag = Nothing -- TODO!
+          , _ftGuid = tagGuidOfExpr $ exprS ^. rGuid
+          }
         , _rfExpr =
             case k of
             Val -> exprS
