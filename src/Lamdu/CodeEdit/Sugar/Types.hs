@@ -20,8 +20,8 @@ module Lamdu.CodeEdit.Sugar.Types
   , Expression
   , WhereItem(..)
   , ListItem(..), ListActions(..), List(..)
-  , RecordField(..), rfMDel, rfId, rfExpr
-  , Kind(..), Record(..)
+  , RecordField(..), rfMDel, rfField, rfExpr
+  , Kind(..), Field(..), Record(..)
   , Func(..), fDepParams, fParams, fBody
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
@@ -51,7 +51,7 @@ import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
-import Lamdu.Data.Expression (Kind(..))
+import Lamdu.Data.Expression (Kind(..), Field(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Control.Lens.TH as LensTH
 import qualified Data.List as List
@@ -204,7 +204,7 @@ data List m expr = List
 
 data RecordField m expr = RecordField
   { _rfMDel :: Maybe (T m (Maybe Guid))
-  , _rfId :: Guid
+  , _rfField :: Field
   , _rfExpr :: expr -- field type or val
   } deriving (Functor, Foldable, Traversable)
 

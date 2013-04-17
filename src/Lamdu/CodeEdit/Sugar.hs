@@ -15,7 +15,7 @@ module Lamdu.CodeEdit.Sugar
   , Expression
   , WhereItem(..)
   , ListItem(..), ListActions(..), List(..)
-  , RecordField(..), Kind(..), Record(..)
+  , RecordField(..), Kind(..), Field(..), Record(..)
   , Func(..)
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
@@ -760,13 +760,15 @@ convertRecord (Expression.Record k fields) exprI = do
       DataIRef.writeExprBody iref $ Expression.BodyRecord record
     addField (iref, record) = do
       holeIRef <- DataOps.newHole
-      let guid = Guid.augment "Field" $ DataIRef.exprGuid holeIRef
       writeIRef iref $
         record
-        & Expression.recordFields <>~ [(Expression.Field guid, holeIRef)]
+        & Expression.recordFields <>~ [(FieldHole, holeIRef)]
       return $ DataIRef.exprGuid holeIRef
-    deleteField field (iref, record) = do
-      let newRecord = record & Expression.recordFields %~ filter ((/= field) . fst)
+    deleteField expr (iref, record) = do
+      let
+        newRecord =
+          record & Expression.recordFields %~
+          filter ((/= resultGuid expr) . DataIRef.exprGuid . snd)
       writeIRef iref newRecord
       return . fmap DataIRef.exprGuid $
         newRecord ^?
@@ -774,8 +776,8 @@ convertRecord (Expression.Record k fields) exprI = do
     toField mStored (field, expr) = do
       child <- convertExpressionI expr
       return RecordField
-        { _rfMDel = deleteField field <$> mStored
-        , _rfId = field ^?! Expression._Field
+        { _rfMDel = deleteField expr <$> mStored
+        , _rfField = field
         , _rfExpr =
             case k of
             Val -> child
