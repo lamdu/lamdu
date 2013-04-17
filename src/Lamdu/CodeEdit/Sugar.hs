@@ -15,7 +15,8 @@ module Lamdu.CodeEdit.Sugar
   , Expression
   , WhereItem(..)
   , ListItem(..), ListActions(..), List(..)
-  , RecordField(..), Kind(..), Field(..), Record(..)
+  , RecordField(..), rfMItemActions, rfField, rfGuid, rfExpr
+  , Kind(..), Field(..), Record(..)
   , Func(..)
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
