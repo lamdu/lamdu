@@ -40,7 +40,7 @@ module Lamdu.CodeEdit.Sugar
   , PrefixAction, emptyPrefixAction
   ) where
 
-import Control.Applicative (Applicative(..), (<$>), (<$), liftA2)
+import Control.Applicative (Applicative(..), (<$>), (<$))
 import Control.Lens (Traversal')
 import Control.Lens.Operators
 import Control.Monad ((<=<), join, mplus, void, zipWithM)
@@ -264,10 +264,10 @@ convertLambda ::
   (Typeable1 m, MonadA m) => Expression.Lambda (DataIRef.ExpressionM m (PayloadMM m)) ->
   DataIRef.ExpressionM m (PayloadMM m) ->
   SugarM m ((IsDependent, FuncParam m (Expression m)), Expression m)
-convertLambda lam expr =
-  liftA2 (,)
-  (convertFuncParam lam expr) $
-  convertExpressionI (lam ^. Expression.lambdaResult)
+convertLambda lam expr = do
+  param <- convertFuncParam lam expr
+  result <- convertExpressionI (lam ^. Expression.lambdaResult)
+  return (param & Lens._2 . fpType %~ setNextHole result, result)
 
 fAllParams :: Func m expr -> [FuncParam m expr]
 fAllParams (Func depParams params _) = depParams ++ params
