@@ -8,7 +8,7 @@ module Lamdu.Data.Expression.Load
   ) where
 
 import Control.Applicative (Applicative, (<$>), (<*>))
-import Control.Lens (LensLike')
+import Control.Lens (LensLike', Traversal', Lens')
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..), getWord8, putWord8)
@@ -58,9 +58,6 @@ data PropertyClosure t
   deriving (Eq, Ord, Show, Typeable)
 derive makeBinary ''PropertyClosure
 
-setter :: Lens.ALens s t dummy b -> s -> b -> t
-setter = flip . Lens.set . Lens.cloneLens
-
 propertyOfClosure :: MonadA m => PropertyClosure (Tag m) -> DataIRef.ExpressionProperty m
 propertyOfClosure (DefinitionTypeProperty defI (Definition defBody defType)) =
   Property defType (Transaction.writeIRef defI . Definition defBody)
@@ -68,22 +65,23 @@ propertyOfClosure (DefinitionBodyExpressionProperty defI bodyExpr defType) =
   Property bodyExpr
   (Transaction.writeIRef defI . (`Definition` defType) . Definition.BodyExpression)
 propertyOfClosure (ApplyProperty exprI apply role) =
-  Property (apply ^. Lens.cloneLens lens)
-  (DataIRef.writeExprBody exprI . Expression.BodyApply . setter lens apply)
+  Property (apply ^. lens)
+  (DataIRef.writeExprBody exprI . Expression.BodyApply . flip (Lens.set lens) apply)
   where
+    lens :: Lens' (Expression.Apply expr) expr
     lens = applyChildByRole role
 propertyOfClosure (LambdaProperty exprI lambda role) =
-  Property (lambda ^. Lens.cloneLens lens)
-  (DataIRef.writeExprBody exprI . Expression.BodyLam . setter lens lambda)
+  Property (lambda ^. lens)
+  (DataIRef.writeExprBody exprI . Expression.BodyLam . flip (Lens.set lens) lambda)
   where
+    lens :: Lens' (Expression.Lambda expr) expr
     lens = lambdaChildByRole role
 propertyOfClosure (RecordProperty exprI record idx) =
-  Property (record ^?! lens0)
-  (DataIRef.writeExprBody exprI . Expression.BodyRecord . (flip . Lens.set) lens1 record)
+  Property (record ^?! lens)
+  (DataIRef.writeExprBody exprI . Expression.BodyRecord . (flip . Lens.set) lens record)
   where
-    -- TODO: Why does Lens.cloneLens not work?
-    lens0 = Expression.recordFields . Lens.ix idx . Lens._2
-    lens1 = Expression.recordFields . Lens.ix idx . Lens._2
+    lens :: Traversal' (Expression.Record expr) expr
+    lens = Expression.recordFields . Lens.ix idx . Lens._2
 
 irefOfClosure :: MonadA m => PropertyClosure (Tag m) -> DataIRef.ExpressionI (Tag m)
 irefOfClosure = Property.value . propertyOfClosure
