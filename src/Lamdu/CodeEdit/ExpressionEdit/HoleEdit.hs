@@ -257,7 +257,7 @@ toMResultsList ::
   MonadA m =>
   HoleInfo m -> Widget.Id ->
   [DataIRef.ExpressionM m (Maybe (Sugar.StorePoint (Tag m)))] ->
-  StateT Cache (T m) (Maybe (ResultsList m))
+  CT m (Maybe (ResultsList m))
 toMResultsList holeInfo baseId options = do
   results <-
     sortOn (resultComplexityScore . Lens.view Sugar.holeResultInferred) .
@@ -278,14 +278,13 @@ toMResultsList holeInfo baseId options = do
 baseExprToResultsList ::
   MonadA m => HoleInfo m -> DataIRef.ExpressionM m () ->
   CT m (Maybe (ResultsList m))
-baseExprToResultsList holeInfo baseExpr = do
-  mBaseExprType <- hiHoleActions holeInfo ^. Sugar.holeInferExprType $ baseExpr
-  case mBaseExprType of
-    Nothing -> pure Nothing
-    Just baseExprType ->
+baseExprToResultsList holeInfo baseExpr =
+  fmap join . traverse conclude =<<
+  (hiHoleActions holeInfo ^. Sugar.holeInferExprType) baseExpr
+  where
+    conclude baseExprType =
       toMResultsList holeInfo baseId . map (Nothing <$) $
       ExprUtil.applyForms baseExprType baseExpr
-  where
     baseId = widgetIdHash baseExpr
 
 applyOperatorResultsList ::
