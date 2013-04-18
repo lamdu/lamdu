@@ -27,7 +27,6 @@ import Control.Monad.Trans.State (StateT(..), evalStateT)
 import Control.Monad.Trans.State.Utils (toStateT)
 import Control.MonadA (MonadA)
 import Data.Cache (Cache)
-import Data.Hashable (hashWithSalt)
 import Data.Maybe (isJust)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
@@ -48,7 +47,6 @@ import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Infer.ImplicitVariables as ImplicitVariables
 import qualified Lamdu.Data.Expression.Load as Load
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
-import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
 
 type T = Transaction
@@ -98,18 +96,16 @@ resultFromPure ::
 resultFromPure = (`randomizeGuids` const NoInferred)
 
 resultFromInferred ::
+  RandomGen g => g ->
   DataIRef.Expression t (Infer.Inferred (DefI t)) ->
   DataIRef.Expression t (Payload t (InferredWC t) NoStored)
-resultFromInferred expr =
-  randomizeGuids gen f expr
-  where
-    gen = Random.mkStdGen . hashWithSalt 0 . show $ void expr
-    f inferred =
-      InferredWithConflicts
-      { iwcInferred = inferred
-      , iwcTypeConflicts = []
-      , iwcValueConflicts = []
-      }
+resultFromInferred =
+  flip randomizeGuids $ \inferred ->
+    InferredWithConflicts
+    { iwcInferred = inferred
+    , iwcTypeConflicts = []
+    , iwcValueConflicts = []
+    }
 
 -- {{{{{{{{{{{{{{{{{
 -- TODO: These don't belong here

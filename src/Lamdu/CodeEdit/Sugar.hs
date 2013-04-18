@@ -50,6 +50,7 @@ import Control.MonadA (MonadA)
 import Data.Binary (Binary)
 import Data.Cache (Cache)
 import Data.Function (on)
+import Data.Hashable (hashWithSalt)
 import Data.Maybe (listToMaybe, isJust)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag, Tagged)
@@ -602,10 +603,10 @@ mkHoleResult ::
   DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i (Stored m)) ->
   DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), Maybe (StorePoint (Tag m))) ->
   HoleResult m
-mkHoleResult sugarContext exprS res =
+mkHoleResult sugarContext exprI res =
   HoleResult
   { _holeResultInferred = fst <$> res
-  , _holeResultConvert = convertHoleResult $ fst <$> res
+  , _holeResultConvert = convertHoleResult
   , _holeResultPick = pick
   , _holeResultPickPrefix = void pick
   }
@@ -615,8 +616,12 @@ mkHoleResult sugarContext exprS res =
       SugarM.runPure cp . convertExpressionI .
       (Lens.mapped . SugarInfer.plInferred %~ Just) .
       (Lens.mapped . SugarInfer.plStored .~ Nothing) .
-      SugarInfer.resultFromInferred
-    pick = pickResult (resultGuid exprS) exprS res
+      SugarInfer.resultFromInferred gen $ fst <$> res
+    gen =
+      Random.mkStdGen $
+      hashWithSalt 0 (show (void res), show guid)
+    guid = resultGuid exprI
+    pick = pickResult guid exprI $ ExprUtil.randomizeParamIds gen res
 
 memoBy ::
   (Cache.Key k, Binary v, MonadA m) =>
