@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, TypeFamilies, FlexibleContexts, TemplateHaskell #-}
+{-# LANGUAGE OverloadedStrings, TypeFamilies, FlexibleContexts #-}
 module Lamdu.CodeEdit.ExpressionEdit.FieldEdit
   ( make
   ) where

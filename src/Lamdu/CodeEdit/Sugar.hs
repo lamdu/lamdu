@@ -749,7 +749,7 @@ setTag ::
   , Expression.Record (DataIRef.ExpressionI (Tag m))
   ) ->
   Maybe Guid -> T m ()
-setTag exprGuid (iref, record) mFieldGuid = do
+setTag exprGuid (iref, record) mFieldGuid =
   writeIRef $ record & fieldLens . Lens._1 .~ fieldTag
   where
     fieldTag = maybe Expression.FieldTagHole Expression.FieldTag mFieldGuid
