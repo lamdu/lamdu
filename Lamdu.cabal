@@ -21,7 +21,6 @@ Library
                        Data.Maybe.Utils,
                        Data.Monoid.Instances,
                        Data.MRUMemo,
-                       Data.UnionFind.IntMap,
                        Data.Vector.Vector2,
                        Numeric.Utils,
                        Graphics.DrawingCombinators.Utils,
