@@ -786,6 +786,34 @@ recordFieldActions defaultGuid exprGuid (iref, record) =
       DataIRef.writeExprBody iref . Expression.BodyRecord $
       record & Expression.recordFields .~ newFields
 
+convertField ::
+  (Typeable1 m, MonadA m) =>
+  Kind ->
+  Maybe
+  ( DataIRef.ExpressionIM m
+  , Expression.Record (DataIRef.ExpressionIM m)
+  ) -> Guid ->
+  (Expression.FieldTag, DataIRef.ExpressionM m (PayloadMM m)) ->
+  SugarM m (RecordField m (Expression m))
+convertField k mStored exprGuid (tag, expr) = do
+  exprS <- convertExpressionI expr
+  return RecordField
+    { _rfMItemActions =
+        recordFieldActions exprGuid (resultGuid expr) <$> mStored
+    , _rfTag = FieldTag
+      { _ftTag =
+           case tag of
+           Expression.FieldTagHole -> Nothing
+           Expression.FieldTag guid -> Just guid
+      , _ftMSetTag = setTag (resultGuid expr) <$> mStored
+      , _ftGuid = tagGuidOfExpr $ exprS ^. rGuid
+      }
+    , _rfExpr =
+        case k of
+        Val -> exprS
+        Type -> removeSuccessfulType exprS
+    }
+
 convertRecord ::
   (Typeable1 m, MonadA m) =>
   Expression.Record (DataIRef.ExpressionM m (PayloadMM m)) ->
@@ -795,7 +823,7 @@ convertRecord (Expression.Record k fields) exprI = do
     mStored =
       (,) <$> resultIRef exprI <*>
       (Expression.Record k <$> (traverse . Lens._2) resultIRef fields)
-  sFields <- mapM (toField mStored) fields
+  sFields <- mapM (convertField k mStored (resultGuid exprI)) fields
   mkExpression exprI $ ExpressionRecord
     Record
     { rKind = k
@@ -818,24 +846,6 @@ convertRecord (Expression.Record k fields) exprI = do
         (Expression.FieldTagHole, hole) :
         record ^. Expression.recordFields
       return . tagGuidOfExpr $ DataIRef.exprGuid hole
-    toField mStored (tag, expr) = do
-      exprS <- convertExpressionI expr
-      return RecordField
-        { _rfMItemActions =
-            recordFieldActions (resultGuid exprI) (resultGuid expr) <$> mStored
-        , _rfTag = FieldTag
-          { _ftTag =
-               case tag of
-               Expression.FieldTagHole -> Nothing
-               Expression.FieldTag guid -> Just guid
-          , _ftMSetTag = setTag (resultGuid expr) <$> mStored
-          , _ftGuid = tagGuidOfExpr $ exprS ^. rGuid
-          }
-        , _rfExpr =
-            case k of
-            Val -> exprS
-            Type -> removeSuccessfulType exprS
-        }
 
 convertExpressionI :: (Typeable1 m, MonadA m) => DataIRef.ExpressionM m (PayloadMM m) -> SugarM m (Expression m)
 convertExpressionI ee =
