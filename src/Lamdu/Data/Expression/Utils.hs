@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DeriveDataTypeable #-}
+{-# LANGUAGE TemplateHaskell, DeriveDataTypeable, NoMonomorphismRestriction #-}
 
 module Lamdu.Data.Expression.Utils
   ( makeApply, pureApply
@@ -21,7 +21,7 @@ module Lamdu.Data.Expression.Utils
   , bitraverseBody
   , expressionBodyDef
   , expressionDef
-  , exprLeaves
+  , expressionLeaves
   , bodyLeaves
   ) where
 
@@ -133,9 +133,9 @@ randomizeParamIds gen =
         Reader.asks $
         maybe gv (Lens.review bodyParameterRef) .
         Map.lookup guid
-      BodyLeaf _ -> return v
-      BodyApply (Apply func arg) -> liftA2 makeApply (go func) (go arg)
-      BodyRecord fields -> BodyRecord <$> traverse go fields
+      x@BodyLeaf {}     -> return x
+      x@BodyApply {}    -> traverse go x
+      x@BodyRecord {}   -> traverse go x
 
 -- Left-biased on parameter guids
 {-# INLINE matchBody #-}
@@ -181,7 +181,7 @@ matchExpression onMatch onMismatch =
       case matchBody matchLamResult matchOther matchGetPar body0 body1 of
       Nothing ->
         onMismatch e0 $
-        (exprLeaves . _GetVariable . _ParameterRef %~ lookupGuid) e1
+        (expressionLeaves . _GetVariable . _ParameterRef %~ lookupGuid) e1
       Just bodyMatched -> Expression <$> sequenceA bodyMatched <*> onMatch pl0 pl1
       where
         matchGetPar p0 p1 = p0 == lookupGuid p1
@@ -189,25 +189,22 @@ matchExpression onMatch onMismatch =
         matchOther = go scope
         lookupGuid guid = fromMaybe guid $ Map.lookup guid scope
 
-exprLeaves ::
+expressionLeaves ::
   Lens.Traversal (Expression defa a) (Expression defb a) (Leaf defa) (Leaf defb)
-exprLeaves = eBody . bodyLeaves exprLeaves
+expressionLeaves = eBody . bodyLeaves expressionLeaves
 
 bodyLeaves ::
   Applicative f =>
   Lens.LensLike f expra exprb (Leaf defa) (Leaf defb) ->
   Lens.LensLike f (Body defa expra) (Body defb exprb) (Leaf defa) (Leaf defb)
-bodyLeaves recu onLeaves body =
+bodyLeaves exprLeaves onLeaves body =
   case body of
-  BodyLam (Lambda k paramName paramType result) ->
-    BodyLam <$> (Lambda k paramName <$> recLeaves paramType <*> recLeaves result)
-  BodyApply (Apply func arg) ->
-    BodyApply <$> (Apply <$> recLeaves func <*> recLeaves arg)
-  BodyRecord (Record k fields) ->
-    BodyRecord . Record k <$> (traverse . Lens._2) recLeaves fields
+  BodyLam x      -> BodyLam      <$> onExprs x
+  BodyApply x    -> BodyApply    <$> onExprs x
+  BodyRecord x   -> BodyRecord   <$> onExprs x
   BodyLeaf l -> BodyLeaf <$> onLeaves l
   where
-    recLeaves = recu onLeaves
+    onExprs = traverse (exprLeaves onLeaves)
 
 subExpressions :: Expression def a -> [Expression def a]
 subExpressions x =
