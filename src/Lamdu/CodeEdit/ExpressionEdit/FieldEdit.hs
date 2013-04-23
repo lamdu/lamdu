@@ -150,7 +150,7 @@ makeResultsWidget ::
   MonadA m => HoleInfo m -> [Result] -> Bool ->
   ExprGuiM m (Widget (T m))
 makeResultsWidget holeInfo firstResults moreResults =
-  Widget.scale Config.holeResultScaleFactor . Box.vboxCentered <$>
+  Box.vboxCentered <$>
   ((++) <$> mapM (makeResultWidget holeInfo) firstResults <*> makeMoreResultsWidgets moreResults)
   where
     makeMoreResultsWidgets False = return []
