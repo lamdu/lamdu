@@ -171,7 +171,7 @@ actionsEventMap sExpr isHole resultPickers actions = do
       | null resultPickers = ""
       | otherwise = "Pick and "
     prefix = sequence_ resultPickers
-    delKeys = concat [Config.replaceKeys, Config.delKeys]
+    delKeys = Config.replaceKeys ++ Config.delKeys
     giveAsArg =
       Widget.keysEventMapMovesCursor
       Config.giveAsArgumentKeys (E.Doc ["Edit", "Give as argument"]) .
