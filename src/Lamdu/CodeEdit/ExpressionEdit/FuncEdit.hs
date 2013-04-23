@@ -101,7 +101,7 @@ makeParamEdit atParamWidgets rhs prevId name param = do
     ident = param ^. Sugar.fpGuid
     paramEventMap = mconcat
       [ paramDeleteEventMap Config.delForwardKeys "" id
-      , paramDeleteEventMap Config.delBackwordKeys " backwards" (const prevId)
+      , paramDeleteEventMap Config.delBackwardKeys " backwards" (const prevId)
       , paramAddNextEventMap
       ]
     mActions = param ^. Sugar.fpMActions
