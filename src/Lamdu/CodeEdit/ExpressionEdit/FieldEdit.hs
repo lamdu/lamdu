@@ -123,8 +123,9 @@ resultsPrefixId = HoleCommon.resultsPrefixId . hiHoleId
 
 data Result = MakeNewFieldTag String | SetFieldTag Guid
 
-pickResult :: MonadA m => Anchors.CodeProps m -> HoleInfo m -> Result -> T m ()
-pickResult cp holeInfo res =
+pickResultAndCleanUp :: MonadA m => Anchors.CodeProps m -> HoleInfo m -> Result -> T m ()
+pickResultAndCleanUp cp holeInfo res = do
+  Property.set (hiSearchTermProp holeInfo) ""
   hiSetTag holeInfo =<<
     case res of
     MakeNewFieldTag str -> DataOps.makeNewFieldTag cp str
@@ -209,7 +210,7 @@ makeActiveHoleEdit holeInfo = do
       HoleCommon.makeSearchTermWidget (hiSearchTermProp holeInfo) searchTermId
     let
       adHocEditor = HoleCommon.adHocTextEditEventMap $ hiSearchTermProp holeInfo
-      pick = pickResult cp holeInfo
+      pick = pickResultAndCleanUp cp holeInfo
       eventMap = maybe mempty (mkEventMap holeInfo . pick) mResult
     maybe (return ()) (ExprGuiM.addResultPicker . void . pick) mResult
     return .
