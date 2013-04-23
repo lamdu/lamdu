@@ -278,21 +278,29 @@ applyOperatorResultsList ::
   DataIRef.ExpressionM m (Maybe (Sugar.StorePoint (Tag m))) ->
   HoleInfo m -> DataIRef.ExpressionM m () ->
   CT m (Maybe (ResultsList m))
-applyOperatorResultsList argument holeInfo baseExpr = do
-  mBaseExprType <- hiHoleActions holeInfo ^. Sugar.holeInferExprType $ baseExpr
-  case mBaseExprType of
-    Nothing -> pure Nothing
-    Just baseExprType ->
-      let
-        base = Nothing <$ ExprUtil.applyDependentPis baseExprType baseExpr
-        applyBase = genExpr . ExprUtil.makeApply base
-        fullyApplied x = genExpr . ExprUtil.makeApply (applyBase x)
-      in
-        toMResultsList holeInfo baseId
-        [ fullyApplied unwrappedArg hole
-        , fullyApplied hole unwrappedArg
-        , applyBase unwrappedArg
-        ]
+applyOperatorResultsList argument holeInfo baseExpr =
+  toMResultsList holeInfo baseId =<<
+  case (Nothing <$ baseExpr) ^. Expression.eBody of
+  Expression.BodyLam (Expression.Lambda k paramGuid paramType result) ->
+    pure $ map genExpr
+    [ Expression.BodyLam (Expression.Lambda k paramGuid unwrappedArg result)
+    , Expression.BodyLam (Expression.Lambda k paramGuid paramType unwrappedArg)
+    ]
+  _ -> do
+    mBaseExprType <- hiHoleActions holeInfo ^. Sugar.holeInferExprType $ baseExpr
+    pure $
+      case mBaseExprType of
+      Nothing -> []
+      Just baseExprType ->
+        let
+          base = Nothing <$ ExprUtil.applyDependentPis baseExprType baseExpr
+          applyBase = genExpr . ExprUtil.makeApply base
+          fullyApplied x = genExpr . ExprUtil.makeApply (applyBase x)
+        in
+          [ fullyApplied unwrappedArg hole
+          , fullyApplied hole unwrappedArg
+          , applyBase unwrappedArg
+          ]
   where
     genExpr = (`Expression` Nothing)
     hole = genExpr $ Expression.BodyLeaf Expression.Hole
@@ -345,10 +353,7 @@ makeAllResults holeInfo = do
     searchTerm = state ^. hsSearchTerm
     literalResults = makeLiteralGroup searchTerm
     getVarResults = paramResults ++ globalResults
-    relevantResults =
-      case state ^. hsArgument of
-      Just _ -> getVarResults
-      Nothing -> primitiveResults ++ literalResults ++ getVarResults
+    relevantResults = primitiveResults ++ literalResults ++ getVarResults
   return .
     List.catMaybes .
     List.mapL (makeResultsList holeInfo) .

@@ -187,7 +187,7 @@ keepInferredValueKey = noMods E.KeyEsc
 
 nextInfoMode = [noMods E.KeyF7]
 
-operatorChars = "+-*/^=><&|%$:."
+operatorChars = "\\+-*/^=><&|%$:."
 alphaNumericChars = ['a'..'z'] ++ ['0'..'9']
 
 recordTypeParensColor = rightArrowColor
