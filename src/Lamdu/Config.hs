@@ -46,6 +46,7 @@ jumpToDefinitionKeys = [noMods E.KeyEnter]
 
 delForwardKeys      = [noMods E.KeyDel, mk E.alt E.KeyDel]
 delBackwordKeys     = [noMods E.KeyBackspace]
+delKeys             = delForwardKeys ++ delBackwordKeys
 giveAsArgumentKeys  = [k ']']
 callWithArgumentKeys = [shift '9']
 callWithNextArgumentKeys = [shift '0']

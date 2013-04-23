@@ -55,9 +55,8 @@ makeUnwrapped (Sugar.List items mActions) myId =
        fmap WidgetIds.fromGuid . actSelect) mActions
     addFirstElemEventMap =
       actionEventMap Config.listAddItemKeys "Add First Item" Sugar.addFirstItem
-    delKeys = Config.delForwardKeys ++ Config.delBackwordKeys
     nilDeleteEventMap =
-      actionEventMap delKeys "Replace nil with hole" Sugar.replaceNil
+      actionEventMap Config.delKeys "Replace nil with hole" Sugar.replaceNil
     firstBracketId = Widget.joinId myId ["first-bracket"]
     onFirstBracket label =
       ExpressionGui.makeFocusableView firstBracketId label
@@ -94,8 +93,7 @@ makeItem item = do
         Config.listAddItemKeys (doc resultPickers) $ do
           sequence_ resultPickers
           WidgetIds.fromGuid <$> addItem
-      , Widget.keysEventMapMovesCursor
-        (Config.delBackwordKeys ++ Config.delForwardKeys)
+      , Widget.keysEventMapMovesCursor Config.delKeys
         (E.Doc ["Edit", "List", "Delete Item"]) $
         WidgetIds.fromGuid <$> delItem
       ]

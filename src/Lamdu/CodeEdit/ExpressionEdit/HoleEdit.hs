@@ -541,15 +541,13 @@ mkEventMap holeInfo mResult = do
     [ addNewDefinitionEventMap cp holeInfo
     , maybe mempty (opPickEventMap holeInfo) mResult
     , maybe mempty
-      ( E.keyPresses
-        (Config.delForwardKeys ++ Config.delBackwordKeys)
+      ( E.keyPresses Config.delKeys
         (E.Doc ["Edit", "Back"])
       . fmap (Widget.eventResultFromCursor . WidgetIds.fromGuid)
       . pickResultAndCleanUp holeInfo
       ) mDeleteOpResult
     , maybe mempty
-      ( E.keyPresses
-        (Config.delForwardKeys ++ Config.delBackwordKeys)
+      ( E.keyPresses Config.delKeys
         (E.Doc ["Edit", "Delete"])
       . fmap (Widget.eventResultFromCursor . WidgetIds.fromGuid)
       ) $ do

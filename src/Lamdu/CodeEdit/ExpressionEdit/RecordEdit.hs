@@ -78,6 +78,6 @@ recordItemEventMap resultPickers (Sugar.ListItemActions addNext delete) =
   mconcat
   [ Widget.keysEventMapMovesCursor Config.recordAddFieldKeys
     (E.Doc ["Edit", "Record", "Add Next Field"]) $ WidgetIds.fromGuid <$> (sequence_ resultPickers *> addNext)
-  , Widget.keysEventMapMovesCursor (Config.delForwardKeys ++ Config.delBackwordKeys)
+  , Widget.keysEventMapMovesCursor Config.delKeys
     (E.Doc ["Edit", "Record", "Delete Field"]) $ WidgetIds.fromGuid <$> delete
   ]

@@ -207,7 +207,7 @@ makeWhereItemEdit item =
     eventMap
       | Just wiActions <- Sugar.wiActions item =
       mconcat
-      [ Widget.keysEventMapMovesCursor (Config.delForwardKeys ++ Config.delBackwordKeys)
+      [ Widget.keysEventMapMovesCursor Config.delKeys
         (E.Doc ["Edit", "Where item", "Delete"]) .
         fmap WidgetIds.fromGuid $
         Lens.view Sugar.itemDelete wiActions
