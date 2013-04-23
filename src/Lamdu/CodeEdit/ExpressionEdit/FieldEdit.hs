@@ -31,7 +31,6 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.HoleCommon as HoleCommon
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
@@ -85,8 +84,8 @@ make fieldTag =
     eventMap =
       maybe mempty
       (Widget.keysEventMapMovesCursor (Config.delKeys ++ Config.replaceKeys)
-       (E.Doc ["Edit", "Field", "Replace"]) . (myId <$) . ($ Nothing)) $
-      fieldTag ^. Sugar.ftMSetTag
+       (E.Doc ["Edit", "Field", "Replace"]) . (myId <$) . ($ Nothing) . Sugar.setFieldTag) $
+      fieldTag ^. Sugar.ftMActions
 
 makeFieldTagHole :: MonadA m => Sugar.FieldTag m -> Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeFieldTagHole fieldTag =
@@ -97,15 +96,15 @@ data HoleInfo m = HoleInfo
   { hiHoleId :: Widget.Id
   , hiFieldTag :: Sugar.FieldTag m
   , hiSearchTermProp :: Property (T m) String
-  , hiSetTag :: Guid -> T m ()
+  , hiActions :: Sugar.FieldTagActions m
   }
 
 makeUnwrappedHole ::
   MonadA m => Sugar.FieldTag m -> Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeUnwrappedHole fieldTag myId = do
   cursor <- ExprGuiM.widgetEnv WE.readCursor
-  case (fieldTag ^. Sugar.ftMSetTag, Widget.subId myId cursor) of
-    (Just setTag, Just _) -> do
+  case (fieldTag ^. Sugar.ftMActions, Widget.subId myId cursor) of
+    (Just actions, Just _) -> do
       searchTermProp <-
         ExprGuiM.transaction $
         Transaction.assocDataRefDef "" "SearchTerm"
@@ -114,7 +113,7 @@ makeUnwrappedHole fieldTag myId = do
         { hiHoleId = myId
         , hiFieldTag = fieldTag
         , hiSearchTermProp = searchTermProp
-        , hiSetTag = setTag . Just
+        , hiActions = actions
         }
     (x, _) -> HoleCommon.makeInactive (isJust x) myId
 
@@ -123,13 +122,15 @@ resultsPrefixId = HoleCommon.resultsPrefixId . hiHoleId
 
 data Result = MakeNewFieldTag String | SetFieldTag Guid
 
-pickResultAndCleanUp :: MonadA m => Anchors.CodeProps m -> HoleInfo m -> Result -> T m ()
-pickResultAndCleanUp cp holeInfo res = do
+pickResultAndCleanUp :: MonadA m => HoleInfo m -> Result -> T m ()
+pickResultAndCleanUp holeInfo res = do
   Property.set (hiSearchTermProp holeInfo) ""
-  hiSetTag holeInfo =<<
-    case res of
-    MakeNewFieldTag str -> DataOps.makeNewFieldTag cp str
-    SetFieldTag guid -> return guid
+  case res of
+    MakeNewFieldTag str -> do
+      guid <- Sugar.setNewFieldTag $ hiActions holeInfo
+      Transaction.setP (Anchors.assocNameRef guid) str
+    SetFieldTag guid ->
+      Sugar.setFieldTag (hiActions holeInfo) $ Just guid
 
 resultId :: HoleInfo m -> Result -> Widget.Id
 resultId holeInfo result =
@@ -211,7 +212,7 @@ makeActiveHoleEdit holeInfo = do
       HoleCommon.makeSearchTermWidget (hiSearchTermProp holeInfo) searchTermId
     let
       adHocEditor = HoleCommon.adHocTextEditEventMap $ hiSearchTermProp holeInfo
-      pick = pickResultAndCleanUp cp holeInfo
+      pick = pickResultAndCleanUp holeInfo
       eventMap = maybe mempty (mkEventMap holeInfo . pick) mResult
     maybe (return ()) (ExprGuiM.addResultPicker . void . pick) mResult
     return .

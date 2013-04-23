@@ -15,7 +15,8 @@ module Lamdu.CodeEdit.Sugar
   , Expression
   , WhereItem(..)
   , ListItem(..), ListActions(..), List(..)
-  , FieldTag(..), ftTag, ftMSetTag, ftGuid
+  , FieldTagActions(..)
+  , FieldTag(..), ftTag, ftMActions, ftGuid
   , RecordField(..), rfMItemActions, rfTag, rfExpr
   , Kind(..), Record(..), GetField(..)
   , Func(..)
@@ -800,12 +801,25 @@ recordFieldActions defaultGuid exprGuid iref =
       (prevFields, field : nextFields) -> f (prevFields, field, nextFields)
       _ -> return (defaultGuid, oldFields)
 
+makeFieldTagActions ::
+  MonadA m => Anchors.CodeProps m ->
+  (Maybe Guid -> T m ()) -> FieldTagActions m
+makeFieldTagActions cp setTag =
+  FieldTagActions
+  { setFieldTag = setTag
+  , setNewFieldTag = do
+      guid <- DataOps.makeNewFieldTag cp
+      setTag $ Just guid
+      return guid
+  }
+
 convertField ::
   (Typeable1 m, MonadA m) =>
   Kind -> Maybe (DataIRef.ExpressionIM m) -> Guid ->
   (Expression.FieldTag, DataIRef.ExpressionM m (PayloadMM m)) ->
   SugarM m (RecordField m (Expression m))
 convertField k mIRef defaultGuid (tag, expr) = do
+  cp <- SugarM.scCodeAnchors <$> SugarM.readContext
   exprS <- convertExpressionI expr
   return RecordField
     { _rfMItemActions =
@@ -813,7 +827,7 @@ convertField k mIRef defaultGuid (tag, expr) = do
     , _rfTag =
       FieldTag
       { _ftTag = tag ^? Expression._FieldTag
-      , _ftMSetTag = setTag <$> mIRef
+      , _ftMActions = makeFieldTagActions cp . setTag <$> mIRef
       , _ftGuid = tagGuidOfExpr exprGuid
       }
     , _rfExpr =
@@ -873,13 +887,14 @@ convertGetField ::
   DataIRef.ExpressionM m (PayloadMM m) ->
   SugarM m (Expression m)
 convertGetField (Expression.GetField tag recExpr) exprI = do
+  cp <- SugarM.scCodeAnchors <$> SugarM.readContext
   recExprS <- convertExpressionI recExpr
   mkExpression exprI $ ExpressionGetField
     GetField
     { gfTag =
       FieldTag
       { _ftTag = tag ^? Expression._FieldTag
-      , _ftMSetTag = setTag <$> resultMIRef exprI
+      , _ftMActions = makeFieldTagActions cp . setTag <$> resultMIRef exprI
       , _ftGuid = tagGuidOfExpr $ resultGuid exprI
       }
     , gfRecord = recExprS

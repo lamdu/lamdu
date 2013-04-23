@@ -190,11 +190,8 @@ newClipboard codeProps expr = do
   modP (Anchors.clipboards codeProps) (defI:)
   return defI
 
-makeNewFieldTag ::
-  MonadA m => Anchors.CodeProps m ->
-  String -> T m Guid
-makeNewFieldTag codeProps name = do
+makeNewFieldTag :: MonadA m => Anchors.CodeProps m -> T m Guid
+makeNewFieldTag codeProps = do
   field <- Transaction.newKey
-  setP (Anchors.assocNameRef field) name
   modP (Anchors.fields codeProps) (field :)
   return field

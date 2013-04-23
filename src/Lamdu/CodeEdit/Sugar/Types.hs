@@ -20,7 +20,8 @@ module Lamdu.CodeEdit.Sugar.Types
   , Expression
   , WhereItem(..)
   , ListItem(..), ListActions(..), List(..)
-  , FieldTag(..), ftTag, ftMSetTag, ftGuid
+  , FieldTagActions(..)
+  , FieldTag(..), ftTag, ftMActions, ftGuid
   , RecordField(..), rfMItemActions, rfTag, rfExpr
   , Kind(..), Record(..), GetField(..)
   , Func(..), fDepParams, fParams, fBody
@@ -203,9 +204,13 @@ data List m expr = List
   , lMActions :: Maybe (ListActions m)
   } deriving (Functor, Foldable, Traversable)
 
+data FieldTagActions m = FieldTagActions
+  { setFieldTag :: Maybe Guid -> T m ()
+  , setNewFieldTag :: T m Guid
+  }
 data FieldTag m = FieldTag
   { _ftTag :: Maybe Guid -- Hole or tag
-  , _ftMSetTag :: Maybe (Maybe Guid -> T m ())
+  , _ftMActions :: Maybe (FieldTagActions m)
   , _ftGuid :: Guid -- Represents this incarnation
   }
 
