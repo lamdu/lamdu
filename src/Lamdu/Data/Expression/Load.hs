@@ -7,9 +7,8 @@ module Lamdu.Data.Expression.Load
   , PropertyClosure, propertyOfClosure, irefOfClosure
   ) where
 
-import Control.Applicative (Applicative, (<$>), (<*>))
-import Control.Lens (LensLike', Traversal', Lens')
 import Control.Lens.Operators
+import Control.Lens.Utils (allElementsOf)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
@@ -17,6 +16,7 @@ import Data.DeriveTH (derive)
 import Data.Store.IRef (Tag)
 import Data.Store.Property (Property(Property))
 import Data.Store.Transaction (Transaction)
+import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
 import Lamdu.Data.Definition (Definition(..))
 import Lamdu.Data.Expression.IRef (DefI)
@@ -26,32 +26,19 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
-import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 type T = Transaction
 
-data ApplyRole = Func | Arg
-  deriving (Eq, Ord, Show, Typeable)
-derive makeBinary ''ApplyRole
-applyChildByRole :: Functor f => ApplyRole -> LensLike' f (Expression.Apply a) a
-applyChildByRole Func = Expression.applyFunc
-applyChildByRole Arg = Expression.applyArg
-
-data LambdaRole = ParamType | Result
-  deriving (Eq, Ord, Show, Typeable)
-derive makeBinary ''LambdaRole
-lambdaChildByRole :: Functor f => LambdaRole -> LensLike' f (Expression.Lambda a) a
-lambdaChildByRole ParamType = Expression.lambdaParamType
-lambdaChildByRole Result = Expression.lambdaResult
-
 type ExprI = DataIRef.ExpressionI
+
+-- | SubexpressionIndex is a Foldable-index into Expression.Body (i.e:
+-- 0 or 1 for BodyApply func/arg)
+type SubexpressionIndex = Int
 
 data PropertyClosure t
   = DefinitionTypeProperty (DefI t) (Definition (ExprI t))
   | DefinitionBodyExpressionProperty (DefI t) (ExprI t) (ExprI t)
-  | ApplyProperty (ExprI t) (Expression.Apply (ExprI t)) ApplyRole
-  | LambdaProperty (ExprI t) (Expression.Lambda (ExprI t)) LambdaRole
-  | RecordProperty (ExprI t) (Expression.Record (ExprI t)) Int
+  | SubexpressionProperty (ExprI t) (Expression.Body (DefI t) (ExprI t)) SubexpressionIndex
   deriving (Eq, Ord, Show, Typeable)
 derive makeBinary ''PropertyClosure
 
@@ -61,24 +48,12 @@ propertyOfClosure (DefinitionTypeProperty defI (Definition defBody defType)) =
 propertyOfClosure (DefinitionBodyExpressionProperty defI bodyExpr defType) =
   Property bodyExpr
   (Transaction.writeIRef defI . (`Definition` defType) . Definition.BodyExpression)
-propertyOfClosure (ApplyProperty exprI apply role) =
-  Property (apply ^. lens)
-  (DataIRef.writeExprBody exprI . Expression.BodyApply . flip (Lens.set lens) apply)
+propertyOfClosure (SubexpressionProperty exprI body index) =
+  Property (body ^?! lens)
+  (DataIRef.writeExprBody exprI . flip (Lens.set lens) body)
   where
-    lens :: Lens' (Expression.Apply expr) expr
-    lens = applyChildByRole role
-propertyOfClosure (LambdaProperty exprI lambda role) =
-  Property (lambda ^. lens)
-  (DataIRef.writeExprBody exprI . Expression.BodyLam . flip (Lens.set lens) lambda)
-  where
-    lens :: Lens' (Expression.Lambda expr) expr
-    lens = lambdaChildByRole role
-propertyOfClosure (RecordProperty exprI record idx) =
-  Property (record ^?! lens)
-  (DataIRef.writeExprBody exprI . Expression.BodyRecord . (flip . Lens.set) lens record)
-  where
-    lens :: Traversal' (Expression.Record expr) expr
-    lens = Expression.recordFields . Lens.ix idx . Lens._2
+    lens :: Traversable t => Lens.IndexedTraversal' Int (t a) a
+    lens = Lens.element index
 
 irefOfClosure :: MonadA m => PropertyClosure (Tag m) -> ExprI (Tag m)
 irefOfClosure = Property.value . propertyOfClosure
@@ -103,21 +78,9 @@ loadExpressionBody ::
 loadExpressionBody iref =
   onBody =<< DataIRef.readExprBody iref
   where
-    onBody (Expression.BodyLeaf x) = return $ Expression.BodyLeaf x
-    onBody (Expression.BodyApply apply) =
-      ExprUtil.makeApply <$> loadRole Func <*> loadRole Arg
-      where
-        loadRole = loadExpressionClosure . ApplyProperty iref apply
-    onBody (Expression.BodyLam lambda@(Expression.Lambda k param _ _)) =
-      ExprUtil.makeLam k param <$> loadRole ParamType <*> loadRole Result
-      where
-        loadRole = loadExpressionClosure . LambdaProperty iref lambda
-    onBody (Expression.BodyRecord record@(Expression.Record k fields)) =
-      Expression.BodyRecord . Expression.Record k <$>
-      Lens.itraverse loadField fields
-      where
-        loadField idx (field, _) =
-          (,) field <$> loadExpressionClosure (RecordProperty iref record idx)
+    onBody body =
+      Lens.itraverseOf (allElementsOf Lens.traverse) (loadElement body) body
+    loadElement body i _ = loadExpressionClosure $ SubexpressionProperty iref body i
 
 loadDefinition :: MonadA m => DefI (Tag m) -> T m (Definition (Loaded m))
 loadDefinition x = (fmap . fmap . fmap) propertyOfClosure . loadDefinitionClosure $ x
