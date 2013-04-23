@@ -44,17 +44,14 @@ lambdaChildByRole :: Functor f => LambdaRole -> LensLike' f (Expression.Lambda a
 lambdaChildByRole ParamType = Expression.lambdaParamType
 lambdaChildByRole Result = Expression.lambdaResult
 
+type ExprI = DataIRef.ExpressionI
+
 data PropertyClosure t
-  = DefinitionTypeProperty
-      (DefI t) (Definition (DataIRef.ExpressionI t))
-  | DefinitionBodyExpressionProperty
-      (DefI t) (DataIRef.ExpressionI t) (DataIRef.ExpressionI t)
-  | ApplyProperty
-      (DataIRef.ExpressionI t) (Expression.Apply (DataIRef.ExpressionI t)) ApplyRole
-  | LambdaProperty
-      (DataIRef.ExpressionI t) (Expression.Lambda (DataIRef.ExpressionI t)) LambdaRole
-  | RecordProperty
-      (DataIRef.ExpressionI t) (Expression.Record (DataIRef.ExpressionI t)) Int
+  = DefinitionTypeProperty (DefI t) (Definition (ExprI t))
+  | DefinitionBodyExpressionProperty (DefI t) (ExprI t) (ExprI t)
+  | ApplyProperty (ExprI t) (Expression.Apply (ExprI t)) ApplyRole
+  | LambdaProperty (ExprI t) (Expression.Lambda (ExprI t)) LambdaRole
+  | RecordProperty (ExprI t) (Expression.Record (ExprI t)) Int
   deriving (Eq, Ord, Show, Typeable)
 derive makeBinary ''PropertyClosure
 
@@ -83,7 +80,7 @@ propertyOfClosure (RecordProperty exprI record idx) =
     lens :: Traversal' (Expression.Record expr) expr
     lens = Expression.recordFields . Lens.ix idx . Lens._2
 
-irefOfClosure :: MonadA m => PropertyClosure (Tag m) -> DataIRef.ExpressionI (Tag m)
+irefOfClosure :: MonadA m => PropertyClosure (Tag m) -> ExprI (Tag m)
 irefOfClosure = Property.value . propertyOfClosure
 
 type LoadedClosure t = DataIRef.Expression t (PropertyClosure t)
@@ -101,8 +98,7 @@ loadExpressionClosure closure =
   irefOfClosure closure
 
 loadExpressionBody ::
-  MonadA m =>
-  DataIRef.ExpressionI (Tag m) ->
+  MonadA m => ExprI (Tag m) ->
   T m (Expression.Body (DefI (Tag m)) (LoadedClosure (Tag m)))
 loadExpressionBody iref =
   onBody =<< DataIRef.readExprBody iref
