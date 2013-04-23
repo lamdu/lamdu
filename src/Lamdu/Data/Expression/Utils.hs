@@ -21,8 +21,6 @@ module Lamdu.Data.Expression.Utils
   , bitraverseBody
   , expressionBodyDef
   , expressionDef
-  , expressionLeaves
-  , bodyLeaves
   ) where
 
 import Lamdu.Data.Expression
