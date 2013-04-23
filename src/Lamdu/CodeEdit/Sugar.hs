@@ -876,11 +876,17 @@ convertExpressionI ee =
 
 -- Check no holes
 isCompleteType :: Expression.Expression def () -> Bool
-isCompleteType =
-  Lens.nullOf
-  ( Lens.folding ExprUtil.subExpressions
-  . Expression.eBody . Expression._BodyLeaf . Expression._Hole
-  )
+isCompleteType expr =
+  bodiesWithout (Expression._BodyLeaf . Expression._Hole) &&
+  bodiesWithout
+  (Expression._BodyRecord . Expression.recordFields .
+   traverse . Lens._1 . Expression._FieldTagHole)
+  where
+    bodiesWithout f =
+      Lens.nullOf
+      ( Lens.folding ExprUtil.subExpressions
+      . Expression.eBody . f
+      ) expr
 
 convertExpressionPure ::
   (MonadA m, Typeable1 m, RandomGen g) =>
