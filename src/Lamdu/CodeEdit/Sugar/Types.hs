@@ -22,7 +22,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , ListItem(..), ListActions(..), List(..)
   , FieldTag(..), ftTag, ftMSetTag, ftGuid
   , RecordField(..), rfMItemActions, rfTag, rfExpr
-  , Kind(..), Record(..)
+  , Kind(..), Record(..), GetField(..)
   , Func(..), fDepParams, fParams, fBody
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
@@ -221,6 +221,11 @@ data Record m expr = Record
   , rMAddFirstField :: Maybe (T m Guid)
   } deriving (Functor, Foldable, Traversable)
 
+data GetField m expr = GetField
+  { gfTag :: FieldTag m
+  , gfRecord :: expr
+  } deriving (Functor, Foldable, Traversable)
+
 data ExpressionBody m expr
   = ExpressionApply   { _eHasParens :: HasParens, __eApply :: Expression.Apply expr }
   | ExpressionSection { _eHasParens :: HasParens, __eSection :: Section expr }
@@ -231,9 +236,10 @@ data ExpressionBody m expr
   | ExpressionInferred { __eInferred :: Inferred m expr }
   | ExpressionPolymorphic { __ePolymorphic :: Polymorphic (Tag m) expr }
   | ExpressionLiteralInteger { __eLit :: LiteralInteger m }
-  | ExpressionAtom    { __eAtom :: String }
-  | ExpressionList    { __eList :: List m expr }
-  | ExpressionRecord  { __eRecord :: Record m expr }
+  | ExpressionAtom     { __eAtom :: String }
+  | ExpressionList     { __eList :: List m expr }
+  | ExpressionRecord   { __eRecord :: Record m expr }
+  | ExpressionGetField { __eGetField :: GetField m expr }
   deriving (Functor, Foldable, Traversable)
 LensTH.makePrisms ''ExpressionBody
 
@@ -273,6 +279,7 @@ instance Show expr => Show (ExpressionBody m expr) where
     , "]"
     ]
   show ExpressionRecord { __eRecord = _ } = "Record:TODO"
+  show ExpressionGetField { __eGetField = _ } = "GetField:TODO"
 
 data DefinitionNewType m = DefinitionNewType
   { dntNewType :: Expression m

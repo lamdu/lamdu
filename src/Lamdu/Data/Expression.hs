@@ -5,9 +5,10 @@ module Lamdu.Data.Expression
   , Lambda(..), lambdaKind, lambdaParamId, lambdaParamType, lambdaResult
   , Apply(..), applyFunc, applyArg
   , FieldTag(..), _FieldTagHole, _FieldTag
+  , GetField(..), getFieldTag, getFieldRecord
   , Record(..), recordKind, recordFields
   , Leaf(..), _GetVariable, _LiteralInteger, _Hole, _Set, _IntegerType
-  , Body(..), _BodyLam, _BodyApply, _BodyLeaf, _BodyRecord
+  , Body(..), _BodyLam, _BodyApply, _BodyLeaf, _BodyRecord, _BodyGetField
   , BodyExpr
   , Expression(..), eBody, ePayload
   ) where
@@ -65,13 +66,18 @@ data FieldTag = FieldTagHole | FieldTag Guid
 data Record expr = Record
   { _recordKind :: Kind
   , _recordFields :: [(FieldTag, expr)]
-  }
-  deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
+  } deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
+
+data GetField expr = GetField
+  { _getFieldTag :: FieldTag
+  , _getFieldRecord :: expr
+  } deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
 data Body def expr
   = BodyLam {-# UNPACK #-}!(Lambda expr)
-  | BodyApply {-# UNPACK #-} !(Apply expr)
+  | BodyApply {-# UNPACK #-}!(Apply expr)
   | BodyRecord {-# UNPACK #-}!(Record expr)
+  | BodyGetField {-# UNPACK #-}!(GetField expr)
   | BodyLeaf !(Leaf def)
   deriving (Eq, Ord, Functor, Foldable, Traversable)
 
@@ -90,6 +96,8 @@ instance (Show expr, Show def) => Show (Body def expr) where
       sep Type = ":"
       showField (field, typ) =
         unwords [show field, sep k, show typ]
+  show (BodyGetField (GetField tag r)) =
+    concat ["(", show r, ".", show tag, ")"]
   show (BodyLeaf (GetVariable (ParameterRef guid))) = "par:" ++ show guid
   show (BodyLeaf (GetVariable (DefinitionRef defI))) = "def:" ++ show defI
   show (BodyLeaf (LiteralInteger int)) = show int
@@ -117,11 +125,11 @@ instance (Show a, Show def) => Show (Expression def a) where
         x -> "{" ++ x ++ "}"
 
 fmap concat $ mapM LensTH.makePrisms [''Kind, ''VariableRef, ''Leaf, ''Body, ''FieldTag]
-fmap concat $ mapM LensTH.makeLenses [''Expression, ''Record, ''Lambda, ''Apply]
+fmap concat $ mapM LensTH.makeLenses [''Expression, ''Record, ''GetField, ''Lambda, ''Apply]
 
 fmap concat . sequence $
   derive
   <$> [makeBinary, makeNFData]
-  <*> [ ''Kind, ''VariableRef, ''Lambda, ''Apply, ''Leaf, ''Body, ''Record
+  <*> [ ''Kind, ''VariableRef, ''Lambda, ''Apply, ''Leaf, ''Body, ''Record, ''GetField
       , ''Expression, ''FieldTag
       ]

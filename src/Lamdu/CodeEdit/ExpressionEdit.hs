@@ -21,6 +21,7 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.AtomEdit as AtomEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
+import qualified Lamdu.CodeEdit.ExpressionEdit.GetFieldEdit as GetFieldEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.InferredEdit as InferredEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.ListEdit as ListEdit
@@ -111,6 +112,8 @@ makeEditor sExpr =
     notAHole $ ListEdit.make list
   Sugar.ExpressionRecord record ->
     notAHole $ RecordEdit.make record
+  Sugar.ExpressionGetField getField ->
+    notAHole $ GetFieldEdit.make getField
   where
     isAHole hole =
       (fmap . fmap)

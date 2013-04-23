@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, PatternGuards #-}
 module Lamdu.Data.Expression.Infer.Rules
   ( Rule(..)
   , makeForAll, makeForNode
@@ -47,6 +47,8 @@ data RuleClosure def
   | PiToLambdaClosure (Guid, ExprRef, ExprRef) Origin3
   | RecordValToTypeClosure ([Expression.FieldTag], ExprRef) Origin
   | RecordTypeToFieldTypesClosure [(Expression.FieldTag, ExprRef)]
+  | RecordTypeToGetFieldTypeClosure ExprRef
+  | GetFieldTypeToRecordFieldTypeClosure ExprRef Origin2
   | CopyClosure ExprRef
   | LambdaParentToChildrenClosure (Expression.Lambda ExprRef)
   | LambdaChildrenToParentClosure (Expression.Kind, Guid, ExprRef) Origin
@@ -87,6 +89,10 @@ runClosure closure =
     runRecordValToTypeClosure x o
   RecordTypeToFieldTypesClosure x ->
     runRecordTypeToFieldTypesClosure x
+  RecordTypeToGetFieldTypeClosure x ->
+    runRecordTypeToGetFieldTypeClosure x
+  GetFieldTypeToRecordFieldTypeClosure x o ->
+    runGetFieldTypeToRecordFieldTypeClosure x o
   CopyClosure x ->
     runCopyClosure x
   LambdaParentToChildrenClosure x ->
@@ -137,6 +143,9 @@ makeForNode (Expression.Expression exprBody typedVal) =
     (++)
     <$> recordKindRules record
     <*> recordStructureRules (tvVal typedVal) (fmap tvVal record)
+  Expression.BodyGetField getField ->
+    getFieldRules typedVal . tvType $ getField ^. Expression.getFieldRecord
+    -- TODO: GetField Structure rules
   -- Leafs need no additional rules beyond the commonal simpleTypeRule
   Expression.BodyLeaf _ -> pure []
   where
@@ -218,6 +227,54 @@ runRecordTypeToFieldTypesClosure fieldTypeRefs ~[recordTypeExpr] = do
   Expression.Record _ fieldTypeExprs <-
     recordTypeExpr ^.. Expression.eBody . Expression._BodyRecord
   maybe [] (map snd) $ AssocList.match (,) fieldTypeRefs fieldTypeExprs
+
+getFieldTag :: Lens.Traversal' (Expression.Expression def a) Expression.FieldTag
+getFieldTag = Expression.eBody . Expression._BodyGetField . Expression.getFieldTag
+
+runRecordTypeToGetFieldTypeClosure :: ExprRef -> RuleFunction def
+runRecordTypeToGetFieldTypeClosure getFieldTypeRef ~[recordTypeExpr, getFieldValExpr] = do
+  fieldTag <- getFieldValExpr ^.. getFieldTag
+  case recordTypeExpr ^. Expression.eBody of
+    Expression.BodyRecord (Expression.Record Expression.Type fields)
+      | Just fieldType <- lookup fieldTag fields
+        -> [(getFieldTypeRef, fieldType)]
+    _ -> []
+
+runGetFieldTypeToRecordFieldTypeClosure :: ExprRef -> Origin2 -> RuleFunction def
+runGetFieldTypeToRecordFieldTypeClosure recordTypeRef (o0, o1) ~[recordTypeExpr, getFieldValExpr, getFieldTypeExpr] = do
+  fieldTag <- getFieldValExpr ^.. getFieldTag
+  let
+    recordTypeExample =
+      makeRefExpr o0 . Expression.BodyRecord . Expression.Record Expression.Type $
+      [ (fieldTag, makeRefExpr o1 (Expression.BodyLeaf Expression.Hole)) ]
+    makeError = [(recordTypeRef, recordTypeExample)]
+  case recordTypeExpr ^. Expression.eBody of
+    Expression.BodyLeaf Expression.Hole -> []
+    Expression.BodyRecord (Expression.Record Expression.Type fields)
+      | Lens.notNullOf Expression._FieldTag fieldTag &&
+        any ((fieldTag ==) . fst) fields ->
+        [ ( recordTypeRef
+          , recordTypeExpr &
+            Expression.eBody . Expression._BodyRecord .
+            Expression.recordFields . AssocList.at fieldTag .~
+            getFieldTypeExpr
+          )]
+      | any (matchFieldTag fieldTag . fst) fields -> []
+    _ -> makeError
+
+matchFieldTag :: Expression.FieldTag -> Expression.FieldTag -> Bool
+matchFieldTag Expression.FieldTagHole _ = True
+matchFieldTag _ Expression.FieldTagHole = True
+matchFieldTag (Expression.FieldTag x) (Expression.FieldTag y) = x == y
+
+getFieldRules :: TypedValue -> ExprRef -> State Origin [Rule def]
+getFieldRules (TypedValue valRef typeRef) recordTypeRef =
+  sequenceA
+  [ pure . Rule [recordTypeRef, valRef] $
+    RecordTypeToGetFieldTypeClosure typeRef
+  , Rule [recordTypeRef, valRef, typeRef] .
+    GetFieldTypeToRecordFieldTypeClosure recordTypeRef <$> mkOrigin2
+  ]
 
 recordValueRules :: ExprRef -> [(Expression.FieldTag, ExprRef)] -> State Origin [Rule def]
 recordValueRules recTypeRef fieldTypeRefs =
@@ -343,7 +400,8 @@ runSimpleTypeClosure typ (o0, o1) ~[valExpr] =
   -- external information which is not used in the simple type rules.
   Expression.BodyLeaf Expression.GetVariable {} -> []
   Expression.BodyLeaf Expression.Hole {} -> []
-  Expression.BodyApply _ -> []
+  Expression.BodyApply {} -> []
+  Expression.BodyGetField {} -> []
   where
     simpleType = [(typ, setExpr o0)]
 

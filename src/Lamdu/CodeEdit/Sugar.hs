@@ -17,7 +17,7 @@ module Lamdu.CodeEdit.Sugar
   , ListItem(..), ListActions(..), List(..)
   , FieldTag(..), ftTag, ftMSetTag, ftGuid
   , RecordField(..), rfMItemActions, rfTag, rfExpr
-  , Kind(..), Record(..)
+  , Kind(..), Record(..), GetField(..)
   , Func(..)
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
@@ -772,16 +772,6 @@ writeRecordFields iref def f = do
       DataIRef.writeExprBody iref $ Expression.BodyRecord newRecord
       return res
 
-setTag ::
-  MonadA m => Guid -> DataIRef.ExpressionIM m -> Maybe Guid -> T m ()
-setTag exprGuid iref mFieldGuid =
-  writeRecordFields iref () $ \recordFields ->
-  return ((), recordFields & fieldLens . Lens._1 .~ fieldTag)
-  where
-    fieldTag = maybe Expression.FieldTagHole Expression.FieldTag mFieldGuid
-    fieldLens =
-      traverse . Lens.filtered ((== exprGuid) . DataIRef.exprGuid . snd)
-
 recordFieldActions ::
   MonadA m => Guid -> Guid -> DataIRef.ExpressionIM m ->
   ListItemActions m
@@ -810,7 +800,6 @@ recordFieldActions defaultGuid exprGuid iref =
       (prevFields, field : nextFields) -> f (prevFields, field, nextFields)
       _ -> return (defaultGuid, oldFields)
 
-
 convertField ::
   (Typeable1 m, MonadA m) =>
   Kind -> Maybe (DataIRef.ExpressionIM m) -> Guid ->
@@ -820,33 +809,48 @@ convertField k mIRef defaultGuid (tag, expr) = do
   exprS <- convertExpressionI expr
   return RecordField
     { _rfMItemActions =
-        recordFieldActions defaultGuid (resultGuid expr) <$> mIRef
-    , _rfTag = FieldTag
-      { _ftTag =
-           case tag of
-           Expression.FieldTagHole -> Nothing
-           Expression.FieldTag guid -> Just guid
-      , _ftMSetTag = setTag (resultGuid expr) <$> mIRef
-      , _ftGuid = tagGuidOfExpr $ exprS ^. rGuid
+      recordFieldActions defaultGuid exprGuid <$> mIRef
+    , _rfTag =
+      FieldTag
+      { _ftTag = tag ^? Expression._FieldTag
+      , _ftMSetTag = setTag <$> mIRef
+      , _ftGuid = tagGuidOfExpr exprGuid
       }
     , _rfExpr =
         case k of
         Val -> exprS
         Type -> removeSuccessfulType exprS
     }
+  where
+    exprGuid = resultGuid expr
+    setTag iref mFieldGuid =
+      writeRecordFields iref () $ \recordFields ->
+      return
+      ( ()
+      , recordFields &
+        fieldLens . Lens._1 .~
+        maybe Expression.FieldTagHole Expression.FieldTag mFieldGuid
+      )
+      where
+        fieldLens =
+          traverse . Lens.filtered ((== exprGuid) . DataIRef.exprGuid . snd)
+
+resultMIRef ::
+  DataIRef.ExpressionM m (PayloadMM m) ->
+  Maybe (DataIRef.ExpressionIM m)
+resultMIRef = fmap Property.value . resultStored
 
 convertRecord ::
   (Typeable1 m, MonadA m) =>
   Expression.Record (DataIRef.ExpressionM m (PayloadMM m)) ->
   Convertor m
 convertRecord (Expression.Record k fields) exprI = do
-  let mIRef = resultIRef exprI
-  sFields <- mapM (convertField k mIRef defaultGuid) fields
+  sFields <- mapM (convertField k (resultMIRef exprI) defaultGuid) fields
   mkExpression exprI $ ExpressionRecord
     Record
     { rKind = k
     , rFields = withNextHoles sFields
-    , rMAddFirstField = addField <$> mIRef
+    , rMAddFirstField = addField <$> resultMIRef exprI
     }
   where
     defaultGuid = resultGuid exprI
@@ -855,7 +859,6 @@ convertRecord (Expression.Record k fields) exprI = do
        & rfExpr %~ setNextHole (nextField ^. rfExpr))
       : withNextHoles rest
     withNextHoles xs = xs
-    resultIRef = fmap Property.value . resultStored
     addField iref =
       writeRecordFields iref defaultGuid $ \recordFields -> do
         hole <- DataOps.newHole
@@ -863,6 +866,33 @@ convertRecord (Expression.Record k fields) exprI = do
           ( tagGuidOfExpr $ DataIRef.exprGuid hole
           , (Expression.FieldTagHole, hole) : recordFields
           )
+
+convertGetField ::
+  (MonadA m, Typeable1 m) =>
+  Expression.GetField (DataIRef.ExpressionM m (PayloadMM m)) ->
+  DataIRef.ExpressionM m (PayloadMM m) ->
+  SugarM m (Expression m)
+convertGetField (Expression.GetField tag recExpr) exprI = do
+  recExprS <- convertExpressionI recExpr
+  mkExpression exprI $ ExpressionGetField
+    GetField
+    { gfTag =
+      FieldTag
+      { _ftTag = tag ^? Expression._FieldTag
+      , _ftMSetTag = setTag <$> resultMIRef exprI
+      , _ftGuid = tagGuidOfExpr $ resultGuid exprI
+      }
+    , gfRecord = recExprS
+    }
+  where
+    setTag iref mFieldGuid = do
+      oldBody <- DataIRef.readExprBody iref
+      case oldBody of
+        Expression.BodyGetField (Expression.GetField _ recExprIRef) ->
+          DataIRef.writeExprBody iref . Expression.BodyGetField $
+          Expression.GetField (maybe Expression.FieldTagHole Expression.FieldTag mFieldGuid)
+          recExprIRef
+        _ -> return ()
 
 convertExpressionI :: (Typeable1 m, MonadA m) => DataIRef.ExpressionM m (PayloadMM m) -> SugarM m (Expression m)
 convertExpressionI ee =
@@ -872,6 +902,7 @@ convertExpressionI ee =
   Expression.BodyLam x@(Expression.Lambda Expression.Type _ _ _) -> convertPi x
   Expression.BodyApply x -> convertApply x
   Expression.BodyRecord x -> convertRecord x
+  Expression.BodyGetField x -> convertGetField x
   Expression.BodyLeaf (Expression.GetVariable x) -> convertGetVariable x
   Expression.BodyLeaf (Expression.LiteralInteger x) -> convertLiteralInteger x
   Expression.BodyLeaf Expression.Hole -> convertHole

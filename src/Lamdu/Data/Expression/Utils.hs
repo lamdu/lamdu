@@ -74,6 +74,7 @@ bitraverseBody onDef onExpr body =
   BodyLam x -> BodyLam <$> traverse onExpr x
   BodyApply x -> BodyApply <$> traverse onExpr x
   BodyRecord x -> BodyRecord <$> traverse onExpr x
+  BodyGetField x -> BodyGetField <$> traverse onExpr x
   BodyLeaf leaf -> BodyLeaf <$> traverse onDef leaf
 
 expressionBodyDef :: Lens.Traversal (Body a expr) (Body b expr) a b
@@ -133,6 +134,7 @@ randomizeParamIds gen =
         Map.lookup guid
       x@BodyLeaf {}     -> return x
       x@BodyApply {}    -> traverse go x
+      x@BodyGetField {} -> traverse go x
       x@BodyRecord {}   -> traverse go x
 
 -- Left-biased on parameter guids
@@ -155,6 +157,9 @@ matchBody matchLamResult matchOther matchGetPar body0 body1 =
   (BodyRecord (Record k0 fs0), BodyRecord (Record k1 fs1))
     | k0 == k1 ->
       BodyRecord . Record k0 <$> AssocList.match matchOther fs0 fs1
+  (BodyGetField (GetField f0 r0), BodyGetField (GetField f1 r1))
+    | f0 == f1 ->
+      Just . BodyGetField . GetField f0 $ matchOther r0 r1
   (BodyLeaf (GetVariable (ParameterRef p0)),
    BodyLeaf (GetVariable (ParameterRef p1)))
     | matchGetPar p0 p1
@@ -200,6 +205,7 @@ bodyLeaves exprLeaves onLeaves body =
   BodyLam x      -> BodyLam      <$> onExprs x
   BodyApply x    -> BodyApply    <$> onExprs x
   BodyRecord x   -> BodyRecord   <$> onExprs x
+  BodyGetField x -> BodyGetField <$> onExprs x
   BodyLeaf l -> BodyLeaf <$> onLeaves l
   where
     onExprs = traverse (exprLeaves onLeaves)
