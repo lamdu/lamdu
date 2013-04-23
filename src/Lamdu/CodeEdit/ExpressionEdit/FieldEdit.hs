@@ -15,6 +15,7 @@ import Data.Store.Transaction (Transaction)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import qualified Control.Lens as Lens
 import qualified Data.ByteString.UTF8 as UTF8
 import qualified Data.List as List
 import qualified Data.Store.Property as Property
@@ -115,13 +116,23 @@ resultId holeInfo result =
     f (MakeNewFieldTag str) = Widget.Id ["new field", UTF8.fromString str]
     f (SetFieldTag guid) = WidgetIds.fromGuid guid
 
-makeAllResults :: MonadA m => HoleInfo m -> ([Result], Bool)
-makeAllResults holeInfo = (newFieldResults, False)
+existingFieldResults :: MonadA m => Anchors.CodeProps m -> String -> T m [Result]
+existingFieldResults cp searchTerm =
+  fmap (map snd . HoleCommon.holeMatches fst searchTerm) .
+  mapM fieldPair =<< Transaction.getP (Anchors.fields cp)
+  where
+    fieldPair guid = do
+      name <- snd <$> ExprGuiM.getGuidName guid
+      return ([name], SetFieldTag guid)
+
+makeAllResults :: MonadA m => Anchors.CodeProps m -> String -> T m [Result]
+makeAllResults cp searchTerm =
+  (newFieldResults ++) <$> existingFieldResults cp searchTerm
   where
     newFieldResults =
-      case Property.value (hiSearchTermProp holeInfo) of
+      case searchTerm of
       [] -> []
-      searchTerm -> [MakeNewFieldTag searchTerm]
+      _ -> [MakeNewFieldTag searchTerm]
 
 makeResultWidget :: MonadA m => HoleInfo m -> Result -> ExprGuiM m (Widget (T m))
 makeResultWidget holeInfo res =
@@ -156,8 +167,13 @@ mkEventMap holeInfo =
 makeActiveHoleEdit :: MonadA m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
 makeActiveHoleEdit holeInfo = do
   cursor <- ExprGuiM.widgetEnv WE.readCursor
+  cp <- ExprGuiM.readCodeAnchors
+  (firstResults, hasMoreResults) <-
+    (Lens._2 %~ not . null) .
+    splitAt Config.fieldHoleResultCount <$>
+    (ExprGuiM.transaction . makeAllResults cp .
+     Property.value . hiSearchTermProp) holeInfo
   let
-    (firstResults, hasMoreResults) = makeAllResults holeInfo
     sub = isJust . flip Widget.subId cursor
     shouldBeOnResult = sub $ resultsPrefixId holeInfo
     mSelectedResult = List.find (sub . resultId holeInfo) firstResults
@@ -170,7 +186,6 @@ makeActiveHoleEdit holeInfo = do
     resultsWidget <- makeResultsWidget holeInfo firstResults hasMoreResults
     searchTermWidget <-
       HoleCommon.makeSearchTermWidget (hiSearchTermProp holeInfo) searchTermId
-    cp <- ExprGuiM.readCodeAnchors
     let
       adHocEditor = HoleCommon.adHocTextEditEventMap $ hiSearchTermProp holeInfo
       pick = pickResult cp holeInfo
