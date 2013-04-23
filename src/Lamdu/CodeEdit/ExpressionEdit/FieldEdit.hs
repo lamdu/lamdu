@@ -50,27 +50,48 @@ fieldFDConfig = FocusDelegator.Config
     E.Doc ["Edit", "Record", "Field", "Done renaming"]
   }
 
-makeTagNameEdit :: MonadA m => Guid -> Widget.Id -> ExprGuiM m (Widget (T m))
-makeTagNameEdit fieldGuid myId = do
+makeTagNameWidget ::
+  MonadA m =>
+  ((ExprGuiM.NameSource, String) -> ExprGuiM m (Widget f)) ->
+  Guid -> ExprGuiM m (Widget f)
+makeTagNameWidget f fieldGuid = do
   name@(nameSrc, _) <- ExprGuiM.transaction $ ExprGuiM.getGuidName fieldGuid
-  ExpressionGui.nameSrcTint nameSrc . Widget.tint Config.fieldTint . Widget.scale Config.fieldScale <$>
-    ExpressionGui.makeNameEdit name fieldGuid myId
+  ExpressionGui.nameSrcTint nameSrc .
+    Widget.tint Config.fieldTint .
+    Widget.scale Config.fieldScale <$> f name
+
+makeTagNameView :: MonadA m => Guid -> Widget.Id -> ExprGuiM m (Widget (T m))
+makeTagNameView fieldGuid myId =
+  makeTagNameWidget makeView fieldGuid
+  where
+    makeView (_, name) = ExprGuiM.widgetEnv $ BWidgets.makeFocusableTextView name myId
+
+makeTagNameEdit :: MonadA m => Guid -> Widget.Id -> ExprGuiM m (Widget (T m))
+makeTagNameEdit fieldGuid myId =
+  makeTagNameWidget makeEdit fieldGuid
+  where
+    makeEdit name = ExpressionGui.makeNameEdit name fieldGuid myId
 
 make :: MonadA m => Sugar.FieldTag m -> ExprGuiM m (ExpressionGui m)
 make fieldTag =
   case fieldTag ^. Sugar.ftTag of
   Nothing -> makeFieldTagHole fieldTag myId
   Just fieldGuid ->
-    ExpressionGui.fromValueWidget <$>
+    ExpressionGui.fromValueWidget . Widget.weakerEvents eventMap <$>
     ExprGuiM.wrapDelegated fieldFDConfig FocusDelegator.NotDelegating id
     (makeTagNameEdit fieldGuid) myId
   where
     myId = WidgetIds.fromGuid $ fieldTag ^. Sugar.ftGuid
+    eventMap =
+      maybe mempty
+      (Widget.keysEventMapMovesCursor (Config.delKeys ++ Config.replaceKeys)
+       (E.Doc ["Edit", "Field", "Replace"]) . (myId <$) . ($ Nothing)) $
+      fieldTag ^. Sugar.ftMSetTag
 
 makeFieldTagHole :: MonadA m => Sugar.FieldTag m -> Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeFieldTagHole fieldTag =
   ExpressionGui.wrapDelegated HoleCommon.holeFDConfig FocusDelegator.Delegating $
-  makeUnwrapped fieldTag
+  makeUnwrappedHole fieldTag
 
 data HoleInfo m = HoleInfo
   { hiHoleId :: Widget.Id
@@ -79,9 +100,9 @@ data HoleInfo m = HoleInfo
   , hiSetTag :: Guid -> T m ()
   }
 
-makeUnwrapped ::
+makeUnwrappedHole ::
   MonadA m => Sugar.FieldTag m -> Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeUnwrapped fieldTag myId = do
+makeUnwrappedHole fieldTag myId = do
   cursor <- ExprGuiM.widgetEnv WE.readCursor
   case (fieldTag ^. Sugar.ftMSetTag, Widget.subId myId cursor) of
     (Just setTag, Just _) -> do
@@ -142,7 +163,7 @@ makeResultWidget holeInfo res =
     ExprGuiM.widgetEnv $
     BWidgets.makeFocusableTextView "Make new field" myId
   (SetFieldTag fieldGuid) ->
-    makeTagNameEdit fieldGuid myId
+    makeTagNameView fieldGuid myId
   where
     myId = resultId holeInfo res
 
