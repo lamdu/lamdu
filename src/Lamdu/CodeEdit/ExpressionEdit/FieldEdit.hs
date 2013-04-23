@@ -138,9 +138,9 @@ resultId holeInfo result =
     f (MakeNewFieldTag str) = Widget.Id ["new field", UTF8.fromString str]
     f (SetFieldTag guid) = WidgetIds.fromGuid guid
 
-existingFieldResults :: MonadA m => Anchors.CodeProps m -> String -> T m [Result]
+existingFieldResults :: MonadA m => Anchors.CodeProps m -> String -> T m ([Result], [Result])
 existingFieldResults cp searchTerm =
-  fmap (map snd . HoleCommon.holeMatches fst searchTerm) .
+  fmap ((Lens.both %~ map snd) . break ((/= [searchTerm]) . fst) . HoleCommon.holeMatches fst searchTerm) .
   mapM fieldPair =<< Transaction.getP (Anchors.fields cp)
   where
     fieldPair guid = do
@@ -149,8 +149,9 @@ existingFieldResults cp searchTerm =
 
 makeAllResults :: MonadA m => Anchors.CodeProps m -> String -> T m [Result]
 makeAllResults cp searchTerm =
-  (newFieldResults ++) <$> existingFieldResults cp searchTerm
+  addNewFieldResults <$> existingFieldResults cp searchTerm
   where
+    addNewFieldResults (before, after) = before ++ newFieldResults ++ after
     newFieldResults =
       case searchTerm of
       [] -> []
