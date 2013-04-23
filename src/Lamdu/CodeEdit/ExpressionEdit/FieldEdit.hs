@@ -53,7 +53,7 @@ fieldFDConfig = FocusDelegator.Config
 makeTagNameEdit :: MonadA m => Guid -> Widget.Id -> ExprGuiM m (Widget (T m))
 makeTagNameEdit fieldGuid myId = do
   name@(nameSrc, _) <- ExprGuiM.transaction $ ExprGuiM.getGuidName fieldGuid
-  ExpressionGui.nameSrcTint nameSrc <$>
+  ExpressionGui.nameSrcTint nameSrc . Widget.tint Config.fieldTint . Widget.scale Config.fieldScale <$>
     ExpressionGui.makeNameEdit name fieldGuid myId
 
 make :: MonadA m => Sugar.FieldTag m -> ExprGuiM m (ExpressionGui m)

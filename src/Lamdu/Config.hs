@@ -72,6 +72,8 @@ holeBackgroundColor = Draw.Color 0.3 0 0 1
 readOnlyHoleBackgroundColor = Draw.Color 0.5 0.25 0.25 1
 
 makeNewFieldSizeFactor = 0.4
+fieldScale = 0.4
+fieldTint = Draw.Color 1 1 1 0.6
 
 inferredValueScaleFactor = 0.7
 inferredValueTint = Draw.Color 1 1 1 0.6

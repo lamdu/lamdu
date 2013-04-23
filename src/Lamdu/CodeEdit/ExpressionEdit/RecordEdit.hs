@@ -53,22 +53,18 @@ makeUnwrapped (Sugar.Record k fields mAddField) myId =
   where
     parensColor Sugar.Type = Config.recordTypeParensColor
     parensColor Sugar.Val = Config.recordValParensColor
-    sep Sugar.Val = "="
-    sep Sugar.Type = ":"
     bracketId = Widget.joinId myId ["{"]
     makeFieldRow (Sugar.RecordField mItemActions tag fieldExpr) = do
-      ((fieldRefGui, fieldExprGui, sepGui), resultPickers) <-
+      ((fieldRefGui, fieldExprGui), resultPickers) <-
         ExprGuiM.listenResultPickers $
-        (,,)
+        (,)
         <$> FieldEdit.make tag
         <*> ExprGuiM.makeSubexpresion fieldExpr
-        <*>
-          (ExpressionGui.fromValueWidget <$>
-           (ExprGuiM.widgetEnv . BWidgets.makeLabel (sep k) .
-            Widget.toAnimId . WidgetIds.fromGuid . (^. Sugar.rGuid)) fieldExpr)
-      let itemEventMap = maybe mempty (recordItemEventMap resultPickers) mItemActions
+      let
+        itemEventMap = maybe mempty (recordItemEventMap resultPickers) mItemActions
+        space = ExpressionGui.fromValueWidget $ Widget.scale Config.fieldScale BWidgets.stdSpaceWidget
       return . ExpressionGui.makeRow $
-        [(1, fieldRefGui), (0.5, sepGui), (0, fieldExprGui)]
+        [(1, fieldRefGui), (0.5, space), (0, fieldExprGui)]
         & Lens.mapped . Lens._2 . ExpressionGui.egWidget %~
           Widget.weakerEvents itemEventMap
     mkEventMap f mAction keys doc =
