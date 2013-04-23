@@ -143,7 +143,7 @@ makeForNode (Expression.Expression exprBody typedVal) =
     recordKindRules (Expression.Record Expression.Type fields) =
       mapM (setRule . tvType . snd) fields
     recordKindRules (Expression.Record Expression.Val fields) =
-      recordRules (tvType typedVal) $ fields & Lens.mapped . Lens._2 %~ tvType
+      recordValueRules (tvType typedVal) $ fields & Lens.mapped . Lens._2 %~ tvType
     lamKindRules (Expression.Lambda Expression.Type _ _ body) =
       fmap (:[]) . setRule $ tvType body
     lamKindRules (Expression.Lambda Expression.Val param _ body) =
@@ -219,8 +219,8 @@ runRecordTypeToFieldTypesClosure fieldTypeRefs ~[recordTypeExpr] = do
     recordTypeExpr ^.. Expression.eBody . Expression._BodyRecord
   maybe [] (map snd) $ AssocList.match (,) fieldTypeRefs fieldTypeExprs
 
-recordRules :: ExprRef -> [(Expression.FieldTag, ExprRef)] -> State Origin [Rule def]
-recordRules recTypeRef fieldTypeRefs =
+recordValueRules :: ExprRef -> [(Expression.FieldTag, ExprRef)] -> State Origin [Rule def]
+recordValueRules recTypeRef fieldTypeRefs =
   sequenceA
   [ Rule typeRefs . RecordValToTypeClosure (fields, recTypeRef) <$> mkOrigin
   , pure . Rule [recTypeRef] $ RecordTypeToFieldTypesClosure fieldTypeRefs
@@ -327,11 +327,11 @@ runSimpleTypeClosure typ (o0, o1) ~[valExpr] =
   Expression.BodyLam (Expression.Lambda Expression.Type _ _ _) -> simpleType
   Expression.BodyRecord (Expression.Record Expression.Type _) -> simpleType
   Expression.BodyRecord (Expression.Record Expression.Val _) ->
+    -- The rule to copy inferred types of fields to the inferred type
+    -- of the whole record requiers dereferencing the inferred types
+    -- of the field exprs which is impossible in this context. This is
+    -- handled in the recordValueRules
     []
-    -- TODO?
-    -- [( typ
-    --  , makeRefExpr o0 . Expression.BodyRecord . Expression.Record Expression.Type $
-    --  )]
   Expression.BodyLeaf (Expression.LiteralInteger _) -> [(typ, intTypeExpr o0)]
   Expression.BodyLam
     (Expression.Lambda Expression.Val param paramType _) ->
