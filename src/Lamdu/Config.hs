@@ -66,7 +66,7 @@ holeResultCount = 8
 holeResultScaleFactor = 0.75
 holeSearchTermScaleFactor = 0.6
 
-fieldHoleResultCount = 8
+fieldHoleResultCount = 3
 
 holeBackgroundColor = Draw.Color 0.3 0 0 1
 readOnlyHoleBackgroundColor = Draw.Color 0.5 0.25 0.25 1
