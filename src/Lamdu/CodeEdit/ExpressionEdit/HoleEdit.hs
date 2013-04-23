@@ -17,7 +17,6 @@ import Data.Cache (Cache)
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
 import Data.Function (on)
-import Data.List (isInfixOf, isPrefixOf)
 import Data.List.Class (List)
 import Data.List.Utils (sortOn, nonEmptyAll)
 import Data.Maybe (isJust, listToMaybe, maybeToList, mapMaybe, fromMaybe, catMaybes)
@@ -56,8 +55,8 @@ import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression as Expression
-import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.IRef as DataIRef
+import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Layers as Layers
@@ -217,19 +216,6 @@ holeResultAnimMappingNoParens holeInfo resultId =
   where
     myId = Widget.toAnimId $ hiHoleId holeInfo
 
-groupOrdering :: String -> Group def -> [Bool]
-groupOrdering searchTerm result =
-  map not
-  [ match (==)
-  , match isPrefixOf
-  , match insensitivePrefixOf
-  , match isInfixOf
-  ]
-  where
-    insensitivePrefixOf = isPrefixOf `on` map Char.toLower
-    match f = any (f searchTerm) names
-    names = groupNames result
-
 makeLiteralGroup :: String -> [Group def]
 makeLiteralGroup searchTerm =
   [ makeLiteralIntResult (read searchTerm)
@@ -358,7 +344,6 @@ makeAllResults holeInfo = do
     state = Property.value $ hiState holeInfo
     searchTerm = state ^. hsSearchTerm
     literalResults = makeLiteralGroup searchTerm
-    nameMatch = any (insensitiveInfixOf searchTerm) . groupNames
     getVarResults = paramResults ++ globalResults
     relevantResults =
       case state ^. hsArgument of
@@ -367,11 +352,9 @@ makeAllResults holeInfo = do
   return .
     List.catMaybes .
     List.mapL (makeResultsList holeInfo) .
-    List.fromList .
-    sortOn (groupOrdering searchTerm) $
-    filter nameMatch relevantResults
+    List.fromList $
+    HoleCommon.holeMatches groupNames searchTerm relevantResults
   where
-    insensitiveInfixOf = isInfixOf `on` map Char.toLower
     primitiveResults =
       [ mkGroup ["Set", "Type"] $ Expression.BodyLeaf Expression.Set
       , mkGroup ["Integer", "ℤ", "Z"] $ Expression.BodyLeaf Expression.IntegerType

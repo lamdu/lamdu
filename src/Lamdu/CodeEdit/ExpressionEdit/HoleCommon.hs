@@ -1,11 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.CodeEdit.ExpressionEdit.HoleCommon
   ( adHocTextEditEventMap, disallowChars, makeSearchTermWidget, holeFDConfig
-  , makeInactive, makeBackground, resultsPrefixId
+  , makeInactive, makeBackground, resultsPrefixId, holeMatches
   ) where
 
 import Control.Applicative ((<$))
 import Control.MonadA (MonadA)
+import Data.Function (on)
+import Data.List (isInfixOf, isPrefixOf)
+import Data.List.Utils (sortOn)
 import Data.Monoid (Monoid(..))
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
@@ -13,6 +16,7 @@ import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import qualified Control.Lens as Lens
+import qualified Data.Char as Char
 import qualified Data.Store.Property as Property
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -92,3 +96,23 @@ makeInactive isReadOnly myId =
 
 resultsPrefixId :: Widget.Id -> Widget.Id
 resultsPrefixId holeId = mconcat [holeId, Widget.Id ["results"]]
+
+groupOrdering :: String -> [String] -> [Bool]
+groupOrdering searchTerm names =
+  map not
+  [ match (==)
+  , match isPrefixOf
+  , match insensitivePrefixOf
+  , match isInfixOf
+  ]
+  where
+    insensitivePrefixOf = isPrefixOf `on` map Char.toLower
+    match f = any (f searchTerm) names
+
+holeMatches :: (a -> [String]) -> String -> [a] -> [a]
+holeMatches getNames searchTerm =
+  sortOn (groupOrdering searchTerm . getNames) .
+  filter nameMatch
+  where
+    nameMatch = any (insensitiveInfixOf searchTerm) . getNames
+    insensitiveInfixOf = isInfixOf `on` map Char.toLower
