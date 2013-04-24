@@ -157,7 +157,7 @@ newtype InferActions def m = InferActions
 data Context def = Context
   { _exprMap :: RefMap (RefData def)
   , _nextOrigin :: Int
-  , _ruleMap :: RefMap (Rule def)
+  , _ruleMap :: RefMap (Rule def ExprRef)
   } deriving (Typeable)
 
 data InferState def m = InferState
@@ -192,11 +192,11 @@ exprRefsAt k = exprMap . refsAt (unExprRef k)
 
 -- RuleRefMap
 
-createRuleRef :: Rule def -> State (Context def) RuleRef
+createRuleRef :: Rule def ExprRef -> State (Context def) RuleRef
 createRuleRef = fmap RuleRef . Lens.zoom ruleMap . createRef
 
 {-# INLINE ruleRefsAt #-}
-ruleRefsAt :: Functor f => RuleRef -> LensLike' f (Context def) (Rule def)
+ruleRefsAt :: Functor f => RuleRef -> LensLike' f (Context def) (Rule def ExprRef)
 ruleRefsAt k = ruleMap . refsAt (unRuleRef k)
 
 -------------
@@ -295,10 +295,9 @@ executeRules = do
   where
     processRule key = do
       liftState $ sBfsCurLayer . Lens.contains key .= False
-      Rule deps ruleClosure <-
-        liftState $ Lens.use (sContext . ruleRefsAt (RuleRef key))
-      refExps <- traverse getRefExpr deps
-      traverse_ (uncurry setRefExpr) $ Rules.runClosure ruleClosure refExps
+      ruleRefs <- liftState $ Lens.use (sContext . ruleRefsAt (RuleRef key))
+      ruleExprs <- traverse getRefExpr ruleRefs
+      traverse_ (uncurry setRefExpr) $ Rules.runRule ruleExprs
 
 {-# SPECIALIZE executeRules :: InferT (DefI t) Maybe () #-}
 {-# SPECIALIZE executeRules :: Monoid w => InferT (DefI t) (Writer w) () #-}
@@ -525,10 +524,10 @@ load loader mRecursiveDef expr =
       ) expr
     loadType defI = fmap ((,) defI) $ loadPureDefinitionType loader defI
 
-addRule :: Rule def -> State (InferState def m) ()
+addRule :: Rule def ExprRef -> State (InferState def m) ()
 addRule rule = do
   ruleRef <- makeRule
-  traverse_ (addRuleId ruleRef) $ ruleInputs rule
+  traverse_ (addRuleId ruleRef) $ Foldable.toList rule
   sBfsNextLayer . Lens.contains (unRuleRef ruleRef) .= True
   where
     makeRule = Lens.zoom sContext $ createRuleRef rule
