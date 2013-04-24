@@ -72,6 +72,7 @@ data Rule def a
   | NonLambdaToApplyValue ExprRef (a, a) Origin
   | ApplyToParts (Expression.Apply ExprRef) (a, a)
   | VerifyTagRule ExprRef a Origin
+  | DisallowTagTypeForApply ExprRef a Origin3
   deriving (Functor, Foldable, Traversable)
 
 derive makeBinary ''Rule
@@ -124,6 +125,8 @@ runRule rule =
     runApplyToParts x e
   VerifyTagRule x e o ->
     runVerifyTagRule x e o
+  DisallowTagTypeForApply x e o ->
+    runDisallowTagTypeForApply x e o
 
 childrenToParentRules ::
   ExprRef -> Expression.Body def a -> State Origin [Rule def a]
@@ -140,25 +143,8 @@ tagRules tagExpr =
   , do
       o <- mkOrigin
       return [SetRule [(tvType pl, makeRefExpr o $ Expression.BodyLeaf Expression.TagType)]]
-  , case tagExpr ^. Expression.eBody of
-    -- Applies from stored expression are not allowed in the tag
-    -- position, but since they aren't directly copied into the
-    -- inferred value, the ordinary rules fail to verify this. Need
-    -- this special case:
-    Expression.BodyApply {} -> makeError
-    _ -> pure []
   ]
   where
-    makeError = do
-      (o0, o1, o2) <- mkOrigin3
-      let
-        app =
-          makeRefExpr o0 . Expression.BodyApply $
-          Expression.Apply (hole o1) (hole o2)
-      -- tagRef is the inferred value, where conflicts are invisible
-      -- in the UI as of now...
-      return [SetRule [(tagRef, app)]]
-    hole o = makeRefExpr o $ Expression.BodyLeaf Expression.Hole
     pl = tagExpr ^. Expression.ePayload
     tagRef = tvVal pl
 
@@ -628,10 +614,28 @@ runVerifyTagRule tagRef tagExpr o0 =
         )
       ]
 
+runDisallowTagTypeForApply :: ExprRef -> RefExpression def -> Origin3 -> RuleResult def
+runDisallowTagTypeForApply applyValRef applyTypeExpr (o0, o1, o2) = do
+  _ <- applyTypeExpr ^.. Expression.eBody . Expression._BodyLeaf . Expression._TagType
+  makeError
+  where
+    makeError =
+      [ ( applyValRef
+        , makeRefExpr o0 . Expression.BodyApply $
+          Expression.Apply (hole o1) (hole o2)
+        )
+      ]
+    hole o = makeRefExpr o $ Expression.BodyLeaf Expression.Hole
+
 applyToPartsRule ::
   TypedValue -> Expression.Apply TypedValue -> Rule def ExprRef
 applyToPartsRule applyTv parts@(Expression.Apply func _) =
   ApplyToParts (tvVal <$> parts) (tvVal applyTv, tvVal func)
+
+-- Apply's type may not be TagType
+disallowTagTypeForApplyRule :: TypedValue -> State Origin (Rule def ExprRef)
+disallowTagTypeForApplyRule (TypedValue valRef typRef) =
+  DisallowTagTypeForApply valRef typRef <$> mkOrigin3
 
 applyRules :: TypedValue -> Expression.Apply TypedValue -> State Origin [Rule def ExprRef]
 applyRules applyTv apply@(Expression.Apply func arg) =
@@ -643,6 +647,7 @@ applyRules applyTv apply@(Expression.Apply func arg) =
   , rigidArgApplyTypeToResultTypeRule applyTv apply
   , argTypeToLambdaParamTypeRule apply
   , nonLambdaToApplyValueRule applyTv apply
+  , disallowTagTypeForApplyRule applyTv
   ]
   where
     pureRules =
