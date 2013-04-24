@@ -212,6 +212,13 @@ makeVariableGroup varRef =
   ExprGuiM.withNameFromVarRef varRef $ \(_, varName) ->
   return . mkGroup [varName] . Expression.BodyLeaf $ Expression.GetVariable varRef
 
+makeTagGroup ::
+  MonadA m => Guid ->
+  ExprGuiM m (Group (DefI (Tag m)))
+makeTagGroup tag = do
+  (_, name) <- ExprGuiM.transaction $ ExprGuiM.getGuidName tag
+  return . mkGroup [name] . Expression.BodyLeaf $ Expression.Tag tag
+
 renamePrefix :: AnimId -> AnimId -> AnimId -> AnimId
 renamePrefix srcPrefix destPrefix animId =
   maybe animId (Anim.joinId destPrefix) $
@@ -358,12 +365,13 @@ makeAllResults holeInfo = do
   globalResults <-
     traverse (makeVariableGroup . Expression.DefinitionRef) =<<
     ExprGuiM.getCodeAnchor Anchors.globals
+  tagResults <- traverse makeTagGroup =<< ExprGuiM.getCodeAnchor Anchors.fields
   let
     state = Property.value $ hiState holeInfo
     searchTerm = state ^. hsSearchTerm
     literalResults = makeLiteralGroup searchTerm
     getVarResults = paramResults ++ globalResults
-    relevantResults = primitiveResults ++ literalResults ++ getVarResults
+    relevantResults = primitiveResults ++ literalResults ++ getVarResults ++ tagResults
   return .
     List.catMaybes .
     List.mapL (makeResultsList holeInfo) .

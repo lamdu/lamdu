@@ -31,6 +31,7 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.PolymorphicEdit as PolymorphicEdi
 import qualified Lamdu.CodeEdit.ExpressionEdit.RecordEdit as RecordEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.SectionEdit as SectionEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.VarEdit as VarEdit
+import qualified Lamdu.CodeEdit.ExpressionEdit.TagEdit as TagEdit
 import qualified Lamdu.CodeEdit.Settings as Settings
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
@@ -114,6 +115,8 @@ makeEditor sExpr =
     notAHole $ RecordEdit.make record
   Sugar.ExpressionGetField getField ->
     notAHole $ GetFieldEdit.make getField
+  Sugar.ExpressionTag tag ->
+    notAHole $ TagEdit.make tag
   where
     isAHole hole =
       (fmap . fmap)

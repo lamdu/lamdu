@@ -732,6 +732,10 @@ convertLiteralInteger i exprI =
     setValue iref =
       DataIRef.writeExprBody iref . Lens.review ExprUtil.bodyLiteralInteger
 
+convertTag :: (MonadA m, Typeable1 m) => Guid -> Convertor m
+convertTag tag exprI =
+  mkExpression exprI $ ExpressionTag tag
+
 convertAtom :: (MonadA m, Typeable1 m) => String -> Convertor m
 convertAtom name exprI =
   mkExpression exprI $ ExpressionAtom name
@@ -870,6 +874,7 @@ convertExpressionI ee =
   Expression.BodyGetField x -> convertGetField x
   Expression.BodyLeaf (Expression.GetVariable x) -> convertGetVariable x
   Expression.BodyLeaf (Expression.LiteralInteger x) -> convertLiteralInteger x
+  Expression.BodyLeaf (Expression.Tag x) -> convertTag x
   Expression.BodyLeaf Expression.Hole -> convertHole
   Expression.BodyLeaf Expression.Set -> convertAtom "Set"
   Expression.BodyLeaf Expression.IntegerType -> convertAtom "Int"
