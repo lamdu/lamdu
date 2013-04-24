@@ -144,7 +144,7 @@ makeForNode (Expression.Expression exprBody typedVal) =
       (:) <$> onLambda lambda <*> lamKindRules lambda
     Expression.BodyApply apply -> applyRules typedVal apply
     Expression.BodyRecord record -> recordKindRules record
-    Expression.BodyGetField (Expression.GetField fieldTag record) ->
+    Expression.BodyGetField (Expression.GetField record fieldTag) ->
       getFieldRules (tvType typedVal) (tvVal fieldTag) (tvType record)
       -- TODO: GetField Structure rules
     -- Leafs need no additional rules beyond the commonal simpleTypeRule

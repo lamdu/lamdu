@@ -4,7 +4,7 @@ module Lamdu.Data.Expression
   , Kind(..), _Val, _Type
   , Lambda(..), lambdaKind, lambdaParamId, lambdaParamType, lambdaResult
   , Apply(..), applyFunc, applyArg
-  , GetField(..), getFieldTag, getFieldRecord
+  , GetField(..), getFieldRecord, getFieldTag
   , Record(..), recordKind, recordFields
   , Leaf(..), _GetVariable, _LiteralInteger, _Hole, _Set, _IntegerType, _Tag, _TagType
   , Body(..), _BodyLam, _BodyApply, _BodyLeaf, _BodyRecord, _BodyGetField
@@ -67,8 +67,8 @@ data Record expr = Record
   } deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
 data GetField expr = GetField
-  { _getFieldTag :: expr
-  , _getFieldRecord :: expr
+  { _getFieldRecord :: expr
+  , _getFieldTag :: expr
   } deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
 data Body def expr
@@ -94,7 +94,7 @@ instance (Show expr, Show def) => Show (Body def expr) where
       sep Type = ":"
       showField (field, typ) =
         unwords [show field, sep k, show typ]
-  show (BodyGetField (GetField tag r)) =
+  show (BodyGetField (GetField r tag)) =
     concat ["(", show r, ".", show tag, ")"]
   show (BodyLeaf (GetVariable (ParameterRef guid))) = "par:" ++ show guid
   show (BodyLeaf (GetVariable (DefinitionRef defI))) = "def:" ++ show defI

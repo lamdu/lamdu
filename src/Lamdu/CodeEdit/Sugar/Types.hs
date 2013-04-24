@@ -22,7 +22,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , ListItem(..), ListActions(..), List(..)
   , RecordField(..), rfMItemActions, rfTag, rfExpr
   , Kind(..), Record(..)
-  , GetField(..), gfTag, gfRecord
+  , GetField(..), gfRecord, gfTag
   , Func(..), fDepParams, fParams, fBody
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
@@ -216,8 +216,8 @@ data Record m expr = Record
   } deriving (Functor, Foldable, Traversable)
 
 data GetField expr = GetField
-  { _gfTag :: expr
-  , _gfRecord :: expr
+  { _gfRecord :: expr
+  , _gfTag :: expr
   } deriving (Functor, Foldable, Traversable)
 
 data ExpressionBody m expr

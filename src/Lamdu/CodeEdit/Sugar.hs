@@ -853,13 +853,13 @@ convertGetField ::
   Expression.GetField (DataIRef.ExpressionM m (PayloadMM m)) ->
   DataIRef.ExpressionM m (PayloadMM m) ->
   SugarM m (Expression m)
-convertGetField (Expression.GetField tagExpr recExpr) exprI = do
-  tagExprS <- convertExpressionI tagExpr
+convertGetField (Expression.GetField recExpr tagExpr) exprI = do
   recExprS <- convertExpressionI recExpr
+  tagExprS <- convertExpressionI tagExpr
   mkExpression exprI $ ExpressionGetField
     GetField
-    { _gfTag = tagExprS
-    , _gfRecord = recExprS
+    { _gfRecord = recExprS
+    , _gfTag = tagExprS
     }
 
 convertExpressionI :: (Typeable1 m, MonadA m) => DataIRef.ExpressionM m (PayloadMM m) -> SugarM m (Expression m)

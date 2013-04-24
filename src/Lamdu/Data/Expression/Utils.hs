@@ -165,9 +165,9 @@ matchBody matchLamResult matchOther matchGetPar body0 body1 =
     Record k1 fs1 <- body1 ^? _BodyRecord
     guard $ k0 == k1
     BodyRecord . Record k0 <$> ListUtils.match matchPair fs0 fs1
-  BodyGetField (GetField f0 r0) -> do
-    GetField f1 r1 <- body1 ^? _BodyGetField
-    return . BodyGetField $ GetField (matchOther f0 f1) (matchOther r0 r1)
+  BodyGetField (GetField r0 f0) -> do
+    GetField r1 f1 <- body1 ^? _BodyGetField
+    return . BodyGetField $ GetField (matchOther r0 r1) (matchOther f0 f1)
   BodyLeaf (GetVariable (ParameterRef p0)) -> do
     p1 <- body1 ^? bodyParameterRef
     guard $ matchGetPar p0 p1

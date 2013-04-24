@@ -14,7 +14,7 @@ import qualified Lamdu.CodeEdit.Sugar as Sugar
 make ::
   MonadA m =>
   Sugar.GetField (Sugar.Expression m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
-make (Sugar.GetField tagExpr recExpr) =
+make (Sugar.GetField recExpr tagExpr) =
   ExpressionGui.wrapExpression $ \myId -> do
     recExprEdit <- ExprGuiM.makeSubexpresion recExpr
     tagEdit <- ExprGuiM.makeSubexpresion tagExpr
