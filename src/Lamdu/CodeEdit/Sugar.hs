@@ -691,36 +691,30 @@ pickResult ::
   T m (Maybe Guid)
 pickResult exprS =
   fmap
-  ( listToMaybe . uninferredHoles DataIRef.exprGuid . fmap swap
+  ( fmap (DataIRef.exprGuid . Lens.view (Expression.ePayload . Lens._2))
+  . listToMaybe . uninferredHoles . fmap swap
   ) .
   (DataIRef.writeExpressionWithStoredSubexpressions . Property.value . resultStored) exprS .
   fmap (Lens.over (Lens._1 . Lens.mapped) unStorePoint . swap)
 
-tagGuidOfExpr :: Guid -> Guid
-tagGuidOfExpr = Guid.augment "FieldOf"
-
 -- Also skip param types, those can usually be inferred later, so less
 -- useful to fill immediately
-uninferredHoles :: (a -> Guid) -> Expression.Expression def (Infer.Inferred def, a) -> [Guid]
-uninferredHoles getGuid e =
+uninferredHoles ::
+  Expression.Expression def (Infer.Inferred def, a) ->
+  [Expression.Expression def (Infer.Inferred def, a)]
+uninferredHoles e =
   case e ^. Expression.eBody of
-  Expression.BodyLeaf Expression.Hole -> [exprGuid]
+  Expression.BodyLeaf Expression.Hole -> [e]
   Expression.BodyApply (Expression.Apply func _)
     | (ExprUtil.isDependentPi . Infer.iType . Lens.view (Expression.ePayload . Lens._1)) func ->
-      go func
+      uninferredHoles func
   Expression.BodyLam (Expression.Lambda _ _ paramType result) ->
-    go result ++ go paramType
-  Expression.BodyGetField (Expression.GetField Expression.FieldTagHole recExpr) ->
-    tagGuidOfExpr exprGuid : go recExpr
-  body -> Foldable.concatMap go body
-  where
-    exprGuid = getGuid $ e ^. Expression.ePayload . Lens._2
-    go = uninferredHoles getGuid
+    uninferredHoles result ++ uninferredHoles paramType
+  body -> Foldable.concatMap uninferredHoles body
 
 holeResultHasHoles :: HoleResult m -> Bool
 holeResultHasHoles =
-  not . null . uninferredHoles (const (Guid.fromString "dummy")) .
-  fmap (flip (,) ()) . Lens.view holeResultInferred
+  not . null . uninferredHoles . fmap (flip (,) ()) . Lens.view holeResultInferred
 
 convertHole :: (MonadA m, Typeable1 m) => Convertor m
 convertHole exprI =
@@ -747,6 +741,9 @@ convertLiteralInteger i exprI =
 convertAtom :: (MonadA m, Typeable1 m) => String -> Convertor m
 convertAtom name exprI =
   mkExpression exprI $ ExpressionAtom name
+
+tagGuidOfExpr :: Guid -> Guid
+tagGuidOfExpr = Guid.augment "FieldOf"
 
 sideChannel ::
   Monad m =>
