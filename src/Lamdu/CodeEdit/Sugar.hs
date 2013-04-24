@@ -873,6 +873,7 @@ convertExpressionI ee =
   Expression.BodyLeaf Expression.Hole -> convertHole
   Expression.BodyLeaf Expression.Set -> convertAtom "Set"
   Expression.BodyLeaf Expression.IntegerType -> convertAtom "Int"
+  Expression.BodyLeaf Expression.TagType -> convertAtom "Tag"
 
 -- Check no holes
 isCompleteType :: Expression.Expression def () -> Bool

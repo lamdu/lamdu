@@ -131,6 +131,33 @@ childrenToParentRules _ Expression.BodyApply {} = pure []
 childrenToParentRules valRef bodyWithRefs =
   (: []) . ChildrenToParent valRef bodyWithRefs <$> mkOrigin
 
+recordTagRules :: Expression.Expression def TypedValue -> State Origin [Rule def ExprRef]
+recordTagRules tagExpr =
+  fmap concat $
+  sequenceA
+  [ (:[]) . VerifyTagRule tagRef tagRef <$> mkOrigin
+  , do
+      o <- mkOrigin
+      return [SetRule [(tvType pl, makeRefExpr o $ Expression.BodyLeaf Expression.TagType)]]
+  , case tagExpr ^. Expression.eBody of
+    -- Applies from stored expression are not allowed in the tag
+    -- position, but since they aren't directly copied into the
+    -- inferred value, the ordinary rules fail to verify this. Need
+    -- this special case:
+    Expression.BodyApply {} -> do
+      (o0, o1, o2) <- mkOrigin3
+      let
+        app =
+          makeRefExpr o0 . Expression.BodyApply $
+          Expression.Apply (hole o1) (hole o2)
+      return [SetRule [(tvType pl, app)]]
+    _ -> pure []
+  ]
+  where
+    hole o = makeRefExpr o $ Expression.BodyLeaf Expression.Hole
+    pl = tagExpr ^. Expression.ePayload
+    tagRef = tvVal pl
+
 makeForNode :: Expression.Expression def TypedValue -> State Origin [Rule def ExprRef]
 makeForNode (Expression.Expression exprBody typedVal) =
   fmap concat $
@@ -138,25 +165,25 @@ makeForNode (Expression.Expression exprBody typedVal) =
   [ (: []) <$> ruleSimpleType typedVal
   , childrenToParentRules (tvVal typedVal) bodyWithValRefs
   , pure [ParentToChildren bodyWithValRefs (tvVal typedVal)]
-  , case bodyWithPayloads of
+  , case exprBody of
     Expression.BodyLam lambda ->
-      (:) <$> onLambda lambda <*> lamKindRules lambda
-    Expression.BodyApply apply -> applyRules typedVal apply
+      (:) <$> onLambda (pls lambda) <*> lamKindRules (pls lambda)
+    Expression.BodyApply apply -> applyRules typedVal $ pls apply
     Expression.BodyRecord record ->
       (++)
-      <$> traverse recordTagRule
-          (record ^.. Expression.recordFields . traverse . Lens._1 . Lens.to tvVal)
-      <*> recordKindRules record
+      <$> (fmap concat . traverse recordTagRules)
+          (record ^.. Expression.recordFields . traverse . Lens._1)
+      <*> recordKindRules (pls record)
     Expression.BodyGetField (Expression.GetField record fieldTag) ->
-      getFieldRules (tvType typedVal) (tvVal fieldTag) (tvType record)
+      getFieldRules (tvType typedVal) (tvVal (pl fieldTag)) (tvType (pl record))
       -- TODO: GetField Structure rules
     -- Leafs need no additional rules beyond the commonal simpleTypeRule
     Expression.BodyLeaf _ -> pure []
   ]
   where
-    bodyWithPayloads = Lens.view Expression.ePayload <$> exprBody
-    bodyWithValRefs = tvVal <$> bodyWithPayloads
-    recordTagRule tagRef = VerifyTagRule tagRef tagRef <$> mkOrigin
+    pl = (^. Expression.ePayload)
+    pls x = pl <$> x
+    bodyWithValRefs = tvVal <$> pls exprBody
     recordKindRules (Expression.Record Expression.Type fields) =
       mapM (setRule . tvType . snd) fields
     recordKindRules (Expression.Record Expression.Val fields) =
