@@ -131,8 +131,9 @@ childrenToParentRules _ Expression.BodyApply {} = pure []
 childrenToParentRules valRef bodyWithRefs =
   (: []) . ChildrenToParent valRef bodyWithRefs <$> mkOrigin
 
-recordTagRules :: Expression.Expression def TypedValue -> State Origin [Rule def ExprRef]
-recordTagRules tagExpr =
+-- Forbid composite apply, tag type
+tagRules :: Expression.Expression def TypedValue -> State Origin [Rule def ExprRef]
+tagRules tagExpr =
   fmap concat $
   sequenceA
   [ (:[]) . VerifyTagRule tagRef tagRef <$> mkOrigin
@@ -144,16 +145,19 @@ recordTagRules tagExpr =
     -- position, but since they aren't directly copied into the
     -- inferred value, the ordinary rules fail to verify this. Need
     -- this special case:
-    Expression.BodyApply {} -> do
+    Expression.BodyApply {} -> makeError
+    _ -> pure []
+  ]
+  where
+    makeError = do
       (o0, o1, o2) <- mkOrigin3
       let
         app =
           makeRefExpr o0 . Expression.BodyApply $
           Expression.Apply (hole o1) (hole o2)
-      return [SetRule [(tvType pl, app)]]
-    _ -> pure []
-  ]
-  where
+      -- tagRef is the inferred value, where conflicts are invisible
+      -- in the UI as of now...
+      return [SetRule [(tagRef, app)]]
     hole o = makeRefExpr o $ Expression.BodyLeaf Expression.Hole
     pl = tagExpr ^. Expression.ePayload
     tagRef = tvVal pl
@@ -171,11 +175,11 @@ makeForNode (Expression.Expression exprBody typedVal) =
     Expression.BodyApply apply -> applyRules typedVal $ pls apply
     Expression.BodyRecord record ->
       (++)
-      <$> (fmap concat . traverse recordTagRules)
+      <$> (fmap concat . traverse tagRules)
           (record ^.. Expression.recordFields . traverse . Lens._1)
       <*> recordKindRules (pls record)
     Expression.BodyGetField (Expression.GetField record fieldTag) ->
-      getFieldRules (tvType typedVal) (tvVal (pl fieldTag)) (tvType (pl record))
+      getFieldRules (tvType typedVal) fieldTag (tvType (pl record))
       -- TODO: GetField Structure rules
     -- Leafs need no additional rules beyond the commonal simpleTypeRule
     Expression.BodyLeaf _ -> pure []
@@ -301,13 +305,15 @@ runGetFieldTypeToRecordFieldType recordTypeRef (recordTypeExpr, fieldTag, getFie
           ]
       _ -> makeError
 
-getFieldRules :: ExprRef -> ExprRef -> ExprRef -> State Origin [Rule def ExprRef]
-getFieldRules getFieldTypeRef tagValRef recordTypeRef =
-  sequenceA
-  [ pure $ RecordTypeToGetFieldType getFieldTypeRef (recordTypeRef, tagValRef)
-  , GetFieldTypeToRecordFieldType recordTypeRef (recordTypeRef, tagValRef, getFieldTypeRef) <$> mkOrigin2
-  , VerifyTagRule tagValRef tagValRef <$> mkOrigin
+getFieldRules :: ExprRef -> Expression.Expression def TypedValue -> ExprRef -> State Origin [Rule def ExprRef]
+getFieldRules getFieldTypeRef tagExpr recordTypeRef =
+  fmap concat $ sequenceA
+  [ pure [RecordTypeToGetFieldType getFieldTypeRef (recordTypeRef, tagValRef)]
+  , (: []) . GetFieldTypeToRecordFieldType recordTypeRef (recordTypeRef, tagValRef, getFieldTypeRef) <$> mkOrigin2
+  , tagRules tagExpr
   ]
+  where
+    tagValRef = tvVal $ tagExpr ^. Expression.ePayload
 
 recordValueRules :: ExprRef -> [(ExprRef, ExprRef)] -> State Origin [Rule def ExprRef]
 recordValueRules recTypeRef fieldTypeRefs =
