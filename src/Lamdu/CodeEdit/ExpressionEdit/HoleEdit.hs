@@ -286,6 +286,10 @@ applyOperatorResultsList argument holeInfo baseExpr =
     [ Expression.BodyLam (Expression.Lambda k paramGuid unwrappedArg result)
     , Expression.BodyLam (Expression.Lambda k paramGuid paramType unwrappedArg)
     ]
+  Expression.BodyGetField (Expression.GetField fieldTag _) ->
+    pure
+    [ genExpr . Expression.BodyGetField $ Expression.GetField fieldTag unwrappedArg
+    ]
   _ -> do
     mBaseExprType <- hiHoleActions holeInfo ^. Sugar.holeInferExprType $ baseExpr
     pure $
