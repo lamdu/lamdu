@@ -23,7 +23,8 @@ module Lamdu.CodeEdit.Sugar.Types
   , FieldTagActions(..)
   , FieldTag(..), ftTag, ftMActions, ftGuid
   , RecordField(..), rfMItemActions, rfTag, rfExpr
-  , Kind(..), Record(..), GetField(..)
+  , Kind(..), Record(..)
+  , GetField(..), gfTag, gfRecord
   , Func(..), fDepParams, fParams, fBody
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
@@ -227,8 +228,8 @@ data Record m expr = Record
   } deriving (Functor, Foldable, Traversable)
 
 data GetField m expr = GetField
-  { gfTag :: FieldTag m
-  , gfRecord :: expr
+  { _gfTag :: FieldTag m
+  , _gfRecord :: expr
   } deriving (Functor, Foldable, Traversable)
 
 data ExpressionBody m expr
@@ -332,6 +333,7 @@ LensTH.makeLenses ''Func
 LensTH.makeLenses ''FuncParam
 LensTH.makeLenses ''FieldTag
 LensTH.makeLenses ''RecordField
+LensTH.makeLenses ''GetField
 LensTH.makeLenses ''ExpressionBody
 LensTH.makeLenses ''ListItemActions
 LensTH.makeLenses ''FuncParamActions

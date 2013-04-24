@@ -891,13 +891,13 @@ convertGetField (Expression.GetField tag recExpr) exprI = do
   recExprS <- convertExpressionI recExpr
   mkExpression exprI $ ExpressionGetField
     GetField
-    { gfTag =
-      FieldTag
-      { _ftTag = tag ^? Expression._FieldTag
-      , _ftMActions = makeFieldTagActions cp . setTag <$> resultMIRef exprI
-      , _ftGuid = tagGuidOfExpr $ resultGuid exprI
-      }
-    , gfRecord = recExprS
+    { _gfTag =
+        FieldTag
+        { _ftTag = tag ^? Expression._FieldTag
+        , _ftMActions = makeFieldTagActions cp . setTag <$> resultMIRef exprI
+        , _ftGuid = tagGuidOfExpr $ resultGuid exprI
+        }
+    , _gfRecord = recExprS
     }
   where
     setTag iref mFieldGuid = do
