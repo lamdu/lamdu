@@ -57,8 +57,7 @@ data Rule def a
   | GetFieldTypeToRecordFieldType ExprRef (a, a, a) Origin2
   | Copy ExprRef a
   | LambdaParentToChildren (Expression.Lambda ExprRef) a
-  | LambdaChildrenToParent (Expression.Kind, Guid, ExprRef) (a, a) Origin
-  | RecordChildrenToParent (Expression.Kind, ExprRef) [(a, a)] Origin
+  | ChildrenToParent ExprRef (Expression.Body def a) Origin
   | SetRule [(ExprRef, RefExpression def)]
   | SimpleType ExprRef a Origin2
   | IntoApplyResult (Expression.Kind, ExprRef, ExprRef) (a, a)
@@ -96,10 +95,8 @@ runRule rule =
     runCopy x e
   LambdaParentToChildren x e ->
     runLambdaParentToChildren x e
-  LambdaChildrenToParent x e o ->
-    runLambdaChildrenToParent x e o
-  RecordChildrenToParent x e o ->
-    runRecordChildrenToParent x e o
+  ChildrenToParent x e o ->
+    runChildrenToParent x e o
   SetRule x ->
     runSetRule x
   SimpleType x e o ->
@@ -127,24 +124,31 @@ runRule rule =
   ApplyToParts x e ->
     runApplyToParts x e
 
+childrenToParentRules ::
+  ExprRef -> Expression.Body def a -> State Origin [Rule def a]
+childrenToParentRules _ Expression.BodyApply {} = pure []
+childrenToParentRules valRef bodyWithRefs =
+  (: []) . ChildrenToParent valRef bodyWithRefs <$> mkOrigin
+
 makeForNode :: Expression.Expression def TypedValue -> State Origin [Rule def ExprRef]
 makeForNode (Expression.Expression exprBody typedVal) =
-  (:)
-  <$> ruleSimpleType typedVal
-  <*>
-  case Lens.view Expression.ePayload <$> exprBody of
-  Expression.BodyLam lambda ->
-    (++) <$> lamKindRules lambda <*> onLambda lambda
-  Expression.BodyApply apply -> applyRules typedVal apply
-  Expression.BodyRecord record ->
-    (++)
-    <$> recordKindRules record
-    <*> recordStructureRules (tvVal typedVal) (fmap tvVal record)
-  Expression.BodyGetField (Expression.GetField fieldTag record) ->
-    getFieldRules (tvType typedVal) (tvVal fieldTag) (tvType record)
-    -- TODO: GetField Structure rules
-  -- Leafs need no additional rules beyond the commonal simpleTypeRule
-  Expression.BodyLeaf _ -> pure []
+  fmap concat $
+  sequenceA
+  [ (: []) <$> ruleSimpleType typedVal
+  , childrenToParentRules (tvVal typedVal) (tvVal . (^. Expression.ePayload) <$> exprBody)
+  , case Lens.view Expression.ePayload <$> exprBody of
+    Expression.BodyLam lambda ->
+      (++) <$> lamKindRules lambda <*> onLambda lambda
+    Expression.BodyApply apply -> applyRules typedVal apply
+    Expression.BodyRecord record ->
+      (RecordFieldPropagation (fmap tvVal record ^. Expression.recordFields) (tvVal typedVal) :)
+      <$> recordKindRules record
+    Expression.BodyGetField (Expression.GetField fieldTag record) ->
+      getFieldRules (tvType typedVal) (tvVal fieldTag) (tvType record)
+      -- TODO: GetField Structure rules
+    -- Leafs need no additional rules beyond the commonal simpleTypeRule
+    Expression.BodyLeaf _ -> pure []
+  ]
   where
     recordKindRules (Expression.Record Expression.Type fields) =
       mapM (setRule . tvType . snd) fields
@@ -155,8 +159,8 @@ makeForNode (Expression.Expression exprBody typedVal) =
     lamKindRules (Expression.Lambda Expression.Val param _ body) =
       lambdaRules param typedVal (tvType body)
     onLambda lam =
-      (:) <$> setRule (tvType (lam ^. Expression.lambdaParamType)) <*>
-      lambdaStructureRules (tvVal typedVal) (fmap tvVal lam)
+      (: [LambdaParentToChildren (fmap tvVal lam) (tvVal typedVal)])
+      <$> setRule (tvType (lam ^. Expression.lambdaParamType))
     setRule ref = do
       o <- mkOrigin
       return $ SetRule [(ref, setExpr o)]
@@ -308,35 +312,8 @@ runLambdaParentToChildren (Expression.Lambda _ _ paramTypeRef resultRef) expr = 
     expr ^.. Expression.eBody . Expression._BodyLam
   [(paramTypeRef, paramTypeE), (resultRef, resultE)]
 
--- Children of lambda to lambda parent
-runLambdaChildrenToParent :: (Expression.Kind, Guid, ExprRef) -> RefExpression2 def -> Origin -> RuleResult def
-runLambdaChildrenToParent (k, param, lamRef) (paramTypeExpr, resultExpr) o0 =
-  [( lamRef
-   , makeRefExpr o0 . Expression.BodyLam $
-     Expression.Lambda k param paramTypeExpr resultExpr
-   )]
-
-lambdaStructureRules :: ExprRef -> Expression.Lambda ExprRef -> State Origin [Rule def ExprRef]
-lambdaStructureRules lamRef lam@(Expression.Lambda k param paramTypeRef resultRef) =
-  sequenceA
-  [ pure $ LambdaParentToChildren lam lamRef
-  , -- Copy the structure from the children to the parent
-    LambdaChildrenToParent (k, param, lamRef) (paramTypeRef, resultRef) <$> mkOrigin
-  ]
-
-runRecordChildrenToParent ::
-  (Expression.Kind, ExprRef) -> [RefExpression2 def] -> Origin -> RuleResult def
-runRecordChildrenToParent (k, recRef) fieldExprs o0 =
-  [( recRef
-   , makeRefExpr o0 . Expression.BodyRecord $ Expression.Record k fieldExprs
-   )]
-
-recordStructureRules :: ExprRef -> Expression.Record ExprRef -> State Origin [Rule def ExprRef]
-recordStructureRules recRef (Expression.Record k fields) =
-  sequenceA
-  [ pure $ RecordFieldPropagation fields recRef
-  , RecordChildrenToParent (k, recRef) fields <$> mkOrigin
-  ]
+runChildrenToParent :: ExprRef -> Expression.Body def (RefExpression def) -> Origin -> RuleResult def
+runChildrenToParent destRef bodyWithExprs o0 = [(destRef, makeRefExpr o0 bodyWithExprs)]
 
 runSetRule :: [(ExprRef, RefExpression def)] -> RuleResult def
 runSetRule outputs = outputs
