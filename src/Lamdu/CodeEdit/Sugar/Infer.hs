@@ -15,7 +15,7 @@ module Lamdu.CodeEdit.Sugar.Infer
   -- TODO: These don't belong here:
   -- Type-check an expression into an ordinary Inferred Expression,
   -- short-circuit on error:
-  , inferMaybe, inferMaybe_
+  , load, inferMaybe, inferMaybe_
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
@@ -115,27 +115,33 @@ loader =
   (fmap void . DataIRef.readExpression . Lens.view Definition.defType <=<
    Transaction.readIRef)
 
+load ::
+  MonadA m => Maybe (DefI (Tag m)) ->
+  DataIRef.ExpressionM m a ->
+  T m (Infer.Loaded (DefI (Tag m)) a)
+load = Infer.load loader
+
+-- TODO: All uses of inferMaybe wrap it with memoization, so put
+-- memoization here...
 inferMaybe ::
   MonadA m =>
-  Maybe (DefI (Tag m)) ->
-  DataIRef.ExpressionM m a ->
+  Infer.Loaded (DefI (Tag m)) a ->
   Infer.Context (DefI (Tag m)) ->
   Infer.InferNode (DefI (Tag m)) ->
-  T m (Maybe (DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), a)))
-inferMaybe mDefI expr inferContext inferPoint = do
-  loaded <- Infer.load loader mDefI expr
-  return . fmap fst . (`runStateT` inferContext) $
-    Infer.inferLoaded (Infer.InferActions (const Nothing))
-    loaded inferPoint
+  Maybe (DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), a))
+inferMaybe loaded inferContext inferPoint =
+  fmap fst . (`runStateT` inferContext) $
+  Infer.inferLoaded (Infer.InferActions (const Nothing))
+  loaded inferPoint
 
 inferMaybe_ ::
   MonadA m =>
-  Maybe (DefI (Tag m)) ->
-  DataIRef.ExpressionM m () ->
-  Infer.Context (DefI (Tag m)) -> Infer.InferNode (DefI (Tag m)) ->
-  T m (Maybe (DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))))
-inferMaybe_ mDefI expr inferContext inferPoint =
-  (fmap . fmap . fmap) fst $ inferMaybe mDefI expr inferContext inferPoint
+  Infer.Loaded (DefI (Tag m)) a ->
+  Infer.Context (DefI (Tag m)) ->
+  Infer.InferNode (DefI (Tag m)) ->
+  Maybe (DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))))
+inferMaybe_ loaded inferContext inferPoint =
+  (fmap . fmap) fst $ inferMaybe loaded inferContext inferPoint
 -- }}}}}}}}}}}}}}}}}
 
 inferWithVariables ::
@@ -194,7 +200,7 @@ inferLoadedExpression ::
   (Infer.Context (DefI (Tag m)), Infer.InferNode (DefI (Tag m))) ->
   CT m (InferLoadedResult m)
 inferLoadedExpression gen mDefI lExpr inferState = do
-  loaded <- lift $ Infer.load loader mDefI lExpr
+  loaded <- lift $ load mDefI lExpr
   ((baseContext, expr), mWithVariables) <-
     Cache.memoS uncurriedInfer (loaded, inferState)
   let baseExpr = mkStoredPayload <$> expr

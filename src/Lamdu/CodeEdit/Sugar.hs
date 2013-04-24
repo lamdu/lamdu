@@ -588,12 +588,13 @@ mkPaste exprP = do
 
 inferOnTheSide ::
   MonadA m =>
-  Infer.Context (DefI (Tag m)) -> Infer.Scope (DefI (Tag m)) ->
-  DataIRef.ExpressionM m () ->
-  T m (Maybe (DataIRef.ExpressionM m ()))
-inferOnTheSide holeInferContext scope expr =
-  fmap (void . Infer.iType . Lens.view Expression.ePayload) <$>
-  SugarInfer.inferMaybe_ Nothing expr sideInferContext node
+  Infer.Context (DefI (Tag m)) ->
+  Infer.Scope (DefI (Tag m)) ->
+  Infer.Loaded (DefI (Tag m)) () ->
+  Maybe (DataIRef.ExpressionM m ())
+inferOnTheSide holeInferContext scope loaded =
+  void . Infer.iType . Lens.view Expression.ePayload <$>
+  SugarInfer.inferMaybe_ loaded sideInferContext node
   where
     (node, sideInferContext) =
       (`runState` holeInferContext) $ Infer.newNodeWithScope scope
@@ -640,14 +641,18 @@ convertTypeCheckedHoleH
     contextHash = SugarM.scMContextHash sugarContext
     inferred = iwcInferred iwc
     scope = Infer.nScope $ Infer.iPoint inferred
-    check expr = SugarInfer.inferMaybe Nothing expr inferState $ Infer.iPoint inferred
+    inferResult expr = do
+      loaded <- lift $ SugarInfer.load Nothing expr
+      let point = Infer.iPoint inferred
+      memoBy (loaded, token, point, 'r') . return $
+        SugarInfer.inferMaybe loaded inferState point
 
     token = (eGuid, contextHash)
-    inferResult expr =
-      memoBy (token, expr, 'r') $ check expr
-    inferExprType expr =
-      -- TODO: Is it valid to ignore "scope" here?
-      memoBy (token, expr, 't') $ inferOnTheSide inferState scope expr
+    inferExprType expr = do
+      loaded <- lift $ SugarInfer.load Nothing expr
+      -- TODO: scope is ignore here, this is most likely a bug!
+      memoBy (loaded, token, 't') . return $
+        inferOnTheSide inferState scope loaded
     onScopeElement (param, _typeExpr) = param
     hole =
       Hole $
@@ -1083,11 +1088,14 @@ convertDefIExpression cp exprLoaded defI typeI = do
   where
     initialInferState = Infer.initial (Just defI)
     reinferRoot key = do
-      reloadedRoot <-
-        lift . DataIRef.readExpression . Load.irefOfClosure $
-        exprLoaded ^. Expression.ePayload
-      memoBy (key, defI, reloadedRoot, "reinfer root" :: String) $
-        isJust <$> uncurry (SugarInfer.inferMaybe_ (Just defI) (void reloadedRoot))
+      loaded <-
+        lift $ do
+          reloadedRoot <-
+            DataIRef.readExpression . Load.irefOfClosure $
+            exprLoaded ^. Expression.ePayload
+          SugarInfer.load (Just defI) (void reloadedRoot)
+      memoBy (key, loaded, initialInferState, "reinfer root" :: String) .
+        return . isJust $ uncurry (SugarInfer.inferMaybe_ loaded)
         initialInferState
 
     iTypeGen = mkGen 0 3 $ IRef.guid defI
