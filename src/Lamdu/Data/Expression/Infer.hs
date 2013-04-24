@@ -19,7 +19,7 @@ module Lamdu.Data.Expression.Infer
   , createRefExpr
   ) where
 
-import Control.Applicative (Applicative(..), (<$), (<$>))
+import Control.Applicative (Applicative(..), (<$>))
 import Control.DeepSeq (NFData(..))
 import Control.Lens (LensLike', (%=), (.=), (^.), (^?), (+=), (%~), (&), (<>~))
 import Control.Monad ((<=<), guard, unless, void, when)
@@ -472,7 +472,7 @@ exprIntoContext rootScope (Loaded rootExpr defTypes) = do
       return $ Expression.Expression newBody (inferNode, s)
     toInferNode scope body tv = do
       let
-        typedValue@(TypedValue val _) =
+        typedValue =
           tv
           { tvType =
               fromMaybe (tvType tv) $

@@ -71,6 +71,7 @@ data Rule def a
   | ArgTypeToLambdaParamType ExprRef (a, a) Origin
   | NonLambdaToApplyValue ExprRef (a, a) Origin
   | ApplyToParts (Expression.Apply ExprRef) (a, a)
+  | VerifyTagRule ExprRef a Origin
   deriving (Functor, Foldable, Traversable)
 
 derive makeBinary ''Rule
@@ -121,6 +122,8 @@ runRule rule =
     runNonLambdaToApplyValue x e o
   ApplyToParts x e ->
     runApplyToParts x e
+  VerifyTagRule x e o ->
+    runVerifyTagRule x e o
 
 childrenToParentRules ::
   ExprRef -> Expression.Body def a -> State Origin [Rule def a]
@@ -139,7 +142,11 @@ makeForNode (Expression.Expression exprBody typedVal) =
     Expression.BodyLam lambda ->
       (:) <$> onLambda lambda <*> lamKindRules lambda
     Expression.BodyApply apply -> applyRules typedVal apply
-    Expression.BodyRecord record -> recordKindRules record
+    Expression.BodyRecord record ->
+      (++)
+      <$> traverse recordTagRule
+          (record ^.. Expression.recordFields . traverse . Lens._1 . Lens.to tvVal)
+      <*> recordKindRules record
     Expression.BodyGetField (Expression.GetField record fieldTag) ->
       getFieldRules (tvType typedVal) (tvVal fieldTag) (tvType record)
       -- TODO: GetField Structure rules
@@ -149,6 +156,7 @@ makeForNode (Expression.Expression exprBody typedVal) =
   where
     bodyWithPayloads = Lens.view Expression.ePayload <$> exprBody
     bodyWithValRefs = tvVal <$> bodyWithPayloads
+    recordTagRule tagRef = VerifyTagRule tagRef tagRef <$> mkOrigin
     recordKindRules (Expression.Record Expression.Type fields) =
       mapM (setRule . tvType . snd) fields
     recordKindRules (Expression.Record Expression.Val fields) =
@@ -271,6 +279,7 @@ getFieldRules getFieldTypeRef tagValRef recordTypeRef =
   sequenceA
   [ pure $ RecordTypeToGetFieldType getFieldTypeRef (recordTypeRef, tagValRef)
   , GetFieldTypeToRecordFieldType recordTypeRef (recordTypeRef, tagValRef, getFieldTypeRef) <$> mkOrigin2
+  , VerifyTagRule tagValRef tagValRef <$> mkOrigin
   ]
 
 recordValueRules :: ExprRef -> [(ExprRef, ExprRef)] -> State Origin [Rule def ExprRef]
@@ -345,10 +354,10 @@ runSimpleType typ valExpr (o0, o1) =
   Expression.BodyLeaf Expression.Set -> simpleType
   Expression.BodyLeaf Expression.IntegerType -> simpleType
   Expression.BodyLeaf Expression.TagType -> [(typ, setExpr o0)]
-  Expression.BodyLeaf (Expression.LiteralInteger _) -> [(typ, intTypeExpr o0)]
+  Expression.BodyLeaf Expression.LiteralInteger {} -> [(typ, intTypeExpr o0)]
   Expression.BodyLeaf Expression.GetVariable {} -> []
   Expression.BodyLeaf Expression.Hole {} -> []
-  Expression.BodyLeaf (Expression.Tag _) -> [(typ, tagTypeExpr o0)]
+  Expression.BodyLeaf Expression.Tag {} -> [(typ, tagTypeExpr o0)]
   Expression.BodyLam (Expression.Lambda Expression.Type _ _ _) -> simpleType
   Expression.BodyRecord (Expression.Record Expression.Type _) -> simpleType
   Expression.BodyRecord (Expression.Record Expression.Val _) ->
@@ -571,6 +580,20 @@ runApplyToParts refs (applyExpr, funcExpr) = do
   guard $ Lens.nullOf (Expression.eBody . Expression._BodyLeaf . Expression._Hole) funcExpr
   Expression.Apply aFunc aArg <- applyExpr ^.. Expression.eBody . Expression._BodyApply
   [(refs ^. Expression.applyFunc, aFunc), (refs ^. Expression.applyArg, aArg)]
+
+runVerifyTagRule :: ExprRef -> RefExpression def -> Origin -> RuleResult def
+runVerifyTagRule tagRef tagExpr o0 =
+  case tagExpr ^. Expression.eBody of
+  Expression.BodyLeaf Expression.Hole -> []
+  Expression.BodyLeaf Expression.Tag {} -> []
+  _ -> makeError
+  where
+    makeError =
+      [ ( tagRef
+        , makeRefExpr o0 . Expression.BodyLeaf . Expression.Tag $
+          Guid.fromString "EXAMPLE"
+        )
+      ]
 
 applyToPartsRule ::
   TypedValue -> Expression.Apply TypedValue -> Rule def ExprRef
