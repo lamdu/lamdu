@@ -150,7 +150,7 @@ data Section expr = Section
 data HoleResult m = HoleResult
   { _holeResultInferred :: DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))
   , _holeResultConvert :: T m (Expression m)
-  , _holeResultPick :: T m Guid
+  , _holeResultPick :: T m (Maybe Guid)
   , _holeResultPickPrefix :: PrefixAction m
   }
 

@@ -93,7 +93,7 @@ data HoleInfo m = HoleInfo
 
 pickResultAndCleanUp ::
   MonadA m =>
-  HoleInfo m -> Sugar.HoleResult m -> T m Guid
+  HoleInfo m -> Sugar.HoleResult m -> T m (Maybe Guid)
 pickResultAndCleanUp holeInfo holeResult = do
   Property.set (hiState holeInfo) emptyState
   holeResult ^. Sugar.holeResultPick
@@ -115,8 +115,11 @@ resultPickEventMap holeInfo holeResult =
   where
     simplePickRes keys =
       E.keyPresses keys (E.Doc ["Edit", "Result", "Pick"]) .
-      fmap (Widget.eventResultFromCursor . WidgetIds.fromGuid) $
+      fmap (eventResultFromMaybeCursor . fmap WidgetIds.fromGuid) $
       pickResultAndCleanUp holeInfo holeResult
+
+eventResultFromMaybeCursor :: Maybe Widget.Id -> Widget.EventResult
+eventResultFromMaybeCursor = maybe Widget.emptyEventResult Widget.eventResultFromCursor
 
 data ResultsList m = ResultsList
   { rlFirstId :: Widget.Id
@@ -396,8 +399,11 @@ addNewDefinitionEventMap cp holeInfo =
       ExprGuiM.unmemo . (hiHoleActions holeInfo ^. Sugar.holeResult) $
       Nothing <$
       ExprUtil.pureExpression (Lens.review ExprUtil.bodyDefinitionRef newDefI)
-    targetGuid <- pickResultAndCleanUp holeInfo defRef
-    DataOps.savePreJumpPosition cp $ WidgetIds.fromGuid targetGuid
+    mTargetGuid <- pickResultAndCleanUp holeInfo defRef
+    case mTargetGuid of
+      Nothing -> return ()
+      Just targetGuid ->
+        DataOps.savePreJumpPosition cp $ WidgetIds.fromGuid targetGuid
     return Widget.EventResult {
       Widget._eCursor = Just $ WidgetIds.fromIRef newDefI,
       Widget._eAnimIdMapping =
@@ -508,13 +514,9 @@ opPickEventMap holeInfo result
     )
   | nonEmptyAll (`elem` Config.operatorChars) searchTerm =
     alphaNumericHandler (E.Doc ["Edit", "Result", "Pick and resume"]) $ \x -> do
-      g <- pickResultAndCleanUp holeInfo result
-      let
-        mTarget
-          | Sugar.holeResultHasHoles result = Just g
-          | otherwise = (^. Sugar.rGuid) <$> hiMNextHole holeInfo
+      mTarget <- pickResultAndCleanUp holeInfo result
       maybe
-        ((pure . WidgetIds.fromGuid) g)
+        (pure (hiHoleId holeInfo))
         (setHoleStateAndJump (charToHoleState x))
         mTarget
   | otherwise = mempty
@@ -554,7 +556,7 @@ mkEventMap holeInfo mResult = do
     , maybe mempty
       ( E.keyPresses Config.delKeys
         (E.Doc ["Edit", "Back"])
-      . fmap (Widget.eventResultFromCursor . WidgetIds.fromGuid)
+      . fmap (eventResultFromMaybeCursor . fmap WidgetIds.fromGuid)
       . pickResultAndCleanUp holeInfo
       ) mDeleteOpResult
     , maybe mempty

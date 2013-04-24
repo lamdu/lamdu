@@ -623,7 +623,7 @@ mkHoleResult sugarContext exprI res =
       Random.mkStdGen $
       hashWithSalt 0 (show (void res), show guid)
     guid = resultGuid exprI
-    pick = pickResult guid exprI $ ExprUtil.randomizeParamIds gen res
+    pick = pickResult exprI $ ExprUtil.randomizeParamIds gen res
 
 memoBy ::
   (Cache.Key k, Binary v, MonadA m) =>
@@ -685,14 +685,13 @@ chooseHoleType inferredVals plain inferred =
   _ -> plain
 
 pickResult ::
-  MonadA m => Guid ->
+  MonadA m =>
   DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i (Stored m)) ->
   DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), Maybe (StorePoint (Tag m))) ->
-  T m Guid
-pickResult defaultDest exprS =
+  T m (Maybe Guid)
+pickResult exprS =
   fmap
-  ( maybe defaultDest
-    (DataIRef.exprGuid . Lens.view (Expression.ePayload . Lens._2))
+  ( fmap (DataIRef.exprGuid . Lens.view (Expression.ePayload . Lens._2))
   . listToMaybe . uninferredHoles . fmap swap
   ) .
   (DataIRef.writeExpressionWithStoredSubexpressions . Property.value . resultStored) exprS .
