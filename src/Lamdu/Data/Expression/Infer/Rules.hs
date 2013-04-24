@@ -173,6 +173,9 @@ setExpr g = makeRefExpr g $ Expression.BodyLeaf Expression.Set
 intTypeExpr :: Origin -> RefExpression def
 intTypeExpr g = makeRefExpr g $ Expression.BodyLeaf Expression.IntegerType
 
+tagTypeExpr :: Origin -> RefExpression def
+tagTypeExpr g = makeRefExpr g $ Expression.BodyLeaf Expression.TagType
+
 guidFromOrigin :: Origin -> Guid
 guidFromOrigin origin = Guid.fromString $ show origin ++ "(orig)"
 
@@ -374,6 +377,11 @@ runSimpleType typ valExpr (o0, o1) =
   case valExpr ^. Expression.eBody of
   Expression.BodyLeaf Expression.Set -> simpleType
   Expression.BodyLeaf Expression.IntegerType -> simpleType
+  Expression.BodyLeaf Expression.TagType -> [(typ, setExpr o0)]
+  Expression.BodyLeaf (Expression.LiteralInteger _) -> [(typ, intTypeExpr o0)]
+  Expression.BodyLeaf Expression.GetVariable {} -> []
+  Expression.BodyLeaf Expression.Hole {} -> []
+  Expression.BodyLeaf (Expression.Tag _) -> [(typ, tagTypeExpr o0)]
   Expression.BodyLam (Expression.Lambda Expression.Type _ _ _) -> simpleType
   Expression.BodyRecord (Expression.Record Expression.Type _) -> simpleType
   Expression.BodyRecord (Expression.Record Expression.Val _) ->
@@ -382,7 +390,6 @@ runSimpleType typ valExpr (o0, o1) =
     -- of the field exprs which is impossible in this context. This is
     -- handled in the recordValueRules
     []
-  Expression.BodyLeaf (Expression.LiteralInteger _) -> [(typ, intTypeExpr o0)]
   Expression.BodyLam
     (Expression.Lambda Expression.Val param paramType _) ->
     [( typ
@@ -391,8 +398,6 @@ runSimpleType typ valExpr (o0, o1) =
      )]
   -- All type information that can be deduced from these depends on
   -- external information which is not used in the simple type rules.
-  Expression.BodyLeaf Expression.GetVariable {} -> []
-  Expression.BodyLeaf Expression.Hole {} -> []
   Expression.BodyApply {} -> []
   Expression.BodyGetField {} -> []
   where
