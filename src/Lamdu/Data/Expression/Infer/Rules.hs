@@ -20,6 +20,7 @@ import Data.Derive.NFData (makeNFData)
 import Data.DeriveTH (derive)
 import Data.Foldable (Foldable)
 import Data.Functor.Identity (Identity(..))
+import Data.Maybe (maybeToList)
 import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable)
 import Data.Traversable (traverse, sequenceA)
@@ -27,6 +28,7 @@ import Lamdu.Data.Expression.Infer.Types
 import qualified Control.Compose as Compose
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer
+import qualified Data.Foldable as Foldable
 import qualified Data.IntSet as IntSet
 import qualified Data.List.Utils as ListUtils
 import qualified Data.Monoid as Monoid
@@ -56,7 +58,7 @@ data Rule def a
   | RecordTypeToGetFieldType ExprRef (a, a)
   | GetFieldTypeToRecordFieldType ExprRef (a, a, a) Origin2
   | Copy ExprRef a
-  | LambdaParentToChildren (Expression.Lambda ExprRef) a
+  | ParentToChildren (Expression.Body def ExprRef) a
   | ChildrenToParent ExprRef (Expression.Body def a) Origin
   | SetRule [(ExprRef, RefExpression def)]
   | SimpleType ExprRef a Origin2
@@ -93,8 +95,8 @@ runRule rule =
     runGetFieldTypeToRecordFieldType x e o
   Copy x e ->
     runCopy x e
-  LambdaParentToChildren x e ->
-    runLambdaParentToChildren x e
+  ParentToChildren x e ->
+    runParentToChildren x e
   ChildrenToParent x e o ->
     runChildrenToParent x e o
   SetRule x ->
@@ -135,14 +137,13 @@ makeForNode (Expression.Expression exprBody typedVal) =
   fmap concat $
   sequenceA
   [ (: []) <$> ruleSimpleType typedVal
-  , childrenToParentRules (tvVal typedVal) (tvVal . (^. Expression.ePayload) <$> exprBody)
-  , case Lens.view Expression.ePayload <$> exprBody of
+  , childrenToParentRules (tvVal typedVal) bodyWithValRefs
+  , pure [ParentToChildren bodyWithValRefs (tvVal typedVal)]
+  , case bodyWithPayloads of
     Expression.BodyLam lambda ->
-      (++) <$> lamKindRules lambda <*> onLambda lambda
+      (:) <$> onLambda lambda <*> lamKindRules lambda
     Expression.BodyApply apply -> applyRules typedVal apply
-    Expression.BodyRecord record ->
-      (RecordFieldPropagation (fmap tvVal record ^. Expression.recordFields) (tvVal typedVal) :)
-      <$> recordKindRules record
+    Expression.BodyRecord record -> recordKindRules record
     Expression.BodyGetField (Expression.GetField fieldTag record) ->
       getFieldRules (tvType typedVal) (tvVal fieldTag) (tvType record)
       -- TODO: GetField Structure rules
@@ -150,6 +151,8 @@ makeForNode (Expression.Expression exprBody typedVal) =
     Expression.BodyLeaf _ -> pure []
   ]
   where
+    bodyWithPayloads = Lens.view Expression.ePayload <$> exprBody
+    bodyWithValRefs = tvVal <$> bodyWithPayloads
     recordKindRules (Expression.Record Expression.Type fields) =
       mapM (setRule . tvType . snd) fields
     recordKindRules (Expression.Record Expression.Val fields) =
@@ -158,9 +161,7 @@ makeForNode (Expression.Expression exprBody typedVal) =
       fmap (:[]) . setRule $ tvType body
     lamKindRules (Expression.Lambda Expression.Val param _ body) =
       lambdaRules param typedVal (tvType body)
-    onLambda lam =
-      (: [LambdaParentToChildren (fmap tvVal lam) (tvVal typedVal)])
-      <$> setRule (tvType (lam ^. Expression.lambdaParamType))
+    onLambda lam = setRule . tvType $ lam ^. Expression.lambdaParamType
     setRule ref = do
       o <- mkOrigin
       return $ SetRule [(ref, setExpr o)]
@@ -293,6 +294,7 @@ recordValueRules :: ExprRef -> [(ExprRef, ExprRef)] -> State Origin [Rule def Ex
 recordValueRules recTypeRef fieldTypeRefs =
   sequenceA
   [ RecordValToType recTypeRef fieldTypeRefs <$> mkOrigin
+    -- TODO: This can re-use ParentToChildren
   , pure $ RecordFieldPropagation fieldTypeRefs recTypeRef
   ]
 
@@ -306,11 +308,17 @@ union x y =
   ]
 
 -- Parent lambda to children
-runLambdaParentToChildren :: Expression.Lambda ExprRef -> RefExpression def -> RuleResult def
-runLambdaParentToChildren (Expression.Lambda _ _ paramTypeRef resultRef) expr = do
-  Expression.Lambda _ _ paramTypeE resultE <-
-    expr ^.. Expression.eBody . Expression._BodyLam
-  [(paramTypeRef, paramTypeE), (resultRef, resultE)]
+runParentToChildren ::
+  Eq def => Expression.Body def ExprRef -> RefExpression def ->
+  RuleResult def
+runParentToChildren Expression.BodyApply {} _ = []
+runParentToChildren childrenRefs expr = do
+  bodyRules <-
+    maybeToList . ExprUtil.matchBody
+    ((const . const) (,)) (,)
+    ((const . const) True) childrenRefs $
+    expr ^. Expression.eBody
+  Foldable.toList bodyRules
 
 runChildrenToParent :: ExprRef -> Expression.Body def (RefExpression def) -> Origin -> RuleResult def
 runChildrenToParent destRef bodyWithExprs o0 = [(destRef, makeRefExpr o0 bodyWithExprs)]
