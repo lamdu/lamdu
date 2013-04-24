@@ -334,18 +334,6 @@ newtype Loader def m = Loader
   { loadPureDefinitionType :: def -> m (Expression.Expression def ())
   }
 
--- Initial expression for inferred value of a stored entity.
-initialValExpr ::
-  Expression.Expression def () ->
-  State Origin (RefExpression def)
-initialValExpr (Expression.Expression body ()) =
-  toRefExpression $
-  case body of
-  Expression.BodyApply _ -> ExprUtil.pureHole
-  _ -> circumcized body
-  where
-    circumcized = ExprUtil.pureExpression . (ExprUtil.pureHole <$)
-
 -- This is because platform's Either's MonadA instance sucks
 runEither :: EitherT l Identity a -> Either l a
 runEither = runIdentity . runEitherT
@@ -492,8 +480,6 @@ exprIntoContext rootScope (Loaded rootExpr defTypes) = do
                 Expression._BodyLeaf . Expression._GetVariable .
                 Lens.folding (`Map.lookup` scope)
           }
-      initialVal <- liftOriginState . initialValExpr $ ExprUtil.pureExpression body
-      setRefExpr val initialVal
       return $ InferNode typedValue scope
 
 ordNub :: Ord a => [a] -> [a]
