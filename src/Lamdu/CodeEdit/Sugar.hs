@@ -702,17 +702,15 @@ pickResult exprS =
 uninferredHoles ::
   Expression.Expression def (Infer.Inferred def, a) ->
   [Expression.Expression def (Infer.Inferred def, a)]
-uninferredHoles
-  Expression.Expression { Expression._eBody = Expression.BodyApply (Expression.Apply func arg) }
-  | (ExprUtil.isDependentPi . Infer.iType . Lens.view (Expression.ePayload . Lens._1)) func =
-    uninferredHoles func
-  | otherwise = uninferredHoles func ++ uninferredHoles arg
-uninferredHoles e@Expression.Expression { Expression._eBody = Expression.BodyLeaf Expression.Hole } = [e]
-uninferredHoles Expression.Expression
-  { Expression._eBody = Expression.BodyLam (Expression.Lambda _ _ paramType result) } =
+uninferredHoles e =
+  case e ^. Expression.eBody of
+  Expression.BodyLeaf Expression.Hole -> [e]
+  Expression.BodyApply (Expression.Apply func _)
+    | (ExprUtil.isDependentPi . Infer.iType . Lens.view (Expression.ePayload . Lens._1)) func ->
+      uninferredHoles func
+  Expression.BodyLam (Expression.Lambda _ _ paramType result) ->
     uninferredHoles result ++ uninferredHoles paramType
-uninferredHoles Expression.Expression { Expression._eBody = body } =
-  Foldable.concatMap uninferredHoles body
+  body -> Foldable.concatMap uninferredHoles body
 
 holeResultHasHoles :: HoleResult m -> Bool
 holeResultHasHoles =
