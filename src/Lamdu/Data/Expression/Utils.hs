@@ -27,6 +27,7 @@ import Lamdu.Data.Expression
 
 import Control.Applicative (Applicative(..), liftA2, (<$>))
 import Control.Lens (Prism, Prism', (^.), (.~), (^?), (%~), (&))
+import Control.Monad (guard)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (evalState, state)
@@ -146,27 +147,32 @@ matchBody ::
   (Guid -> Guid -> Bool) ->        -- ^ Match ParameterRef's
   Body def a -> Body def b -> Maybe (Body def c)
 matchBody matchLamResult matchOther matchGetPar body0 body1 =
-  case (body0, body1) of
-  (BodyLam (Lambda k0 p0 pt0 r0), BodyLam (Lambda k1 p1 pt1 r1))
-    | k0 == k1 ->
-      Just . BodyLam $
+  case body0 of
+  BodyLam (Lambda k0 p0 pt0 r0) -> do
+    Lambda k1 p1 pt1 r1 <- body1 ^? _BodyLam
+    guard $ k0 == k1
+    return . BodyLam $
       Lambda k0 p0 (matchOther pt0 pt1) $
       matchLamResult p0 p1 r0 r1
-  (BodyApply (Apply f0 a0), BodyApply (Apply f1 a1)) ->
-    Just . BodyApply $ Apply (matchOther f0 f1) (matchOther a0 a1)
-  (BodyRecord (Record k0 fs0), BodyRecord (Record k1 fs1))
-    | k0 == k1 ->
-      BodyRecord . Record k0 <$> AssocList.match matchOther fs0 fs1
-  (BodyGetField (GetField f0 r0), BodyGetField (GetField f1 r1))
-    | f0 == f1 ->
-      Just . BodyGetField . GetField f0 $ matchOther r0 r1
-  (BodyLeaf (GetVariable (ParameterRef p0)),
-   BodyLeaf (GetVariable (ParameterRef p1)))
-    | matchGetPar p0 p1
-      -> Just $ Lens.review bodyParameterRef p0
-  (BodyLeaf x, BodyLeaf y)
-    | x == y -> Just $ BodyLeaf x
-  _ -> Nothing
+  BodyApply (Apply f0 a0) -> do
+    Apply f1 a1 <- body1 ^? _BodyApply
+    return . BodyApply $ Apply (matchOther f0 f1) (matchOther a0 a1)
+  BodyRecord (Record k0 fs0) -> do
+    Record k1 fs1 <- body1 ^? _BodyRecord
+    guard $ k0 == k1
+    BodyRecord . Record k0 <$> AssocList.match matchOther fs0 fs1
+  BodyGetField (GetField f0 r0) -> do
+    GetField f1 r1 <- body1 ^? _BodyGetField
+    guard $ f0 == f1
+    return . BodyGetField . GetField f0 $ matchOther r0 r1
+  BodyLeaf (GetVariable (ParameterRef p0)) -> do
+    p1 <- body1 ^? bodyParameterRef
+    guard $ matchGetPar p0 p1
+    return $ Lens.review bodyParameterRef p0
+  BodyLeaf x -> do
+    y <- body1 ^? _BodyLeaf
+    guard $ x == y
+    return $ BodyLeaf x
 
 -- TODO: Generalize to defa/defb/defc with hof's to handle matching
 -- them?  The returned expression gets the same guids as the left
