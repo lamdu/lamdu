@@ -637,6 +637,9 @@ emptyRecordTest =
     emptyRecordTypeBody =
       Expression.BodyRecord $ Expression.Record Expression.Type mempty
 
+tagType :: Expression def ()
+tagType = ExprUtil.pureExpression $ Expression.BodyLeaf Expression.TagType
+
 recordTest :: HUnit.Test
 recordTest =
   testInfer "f a x:a = {x" lamA $
@@ -645,8 +648,11 @@ recordTest =
   mkInferredNode lamX piX $
   makeNamedLambda "x" (mkInferredGetParam "a" setType) $
   mkInferredNode recVal recType $
-  rec Expression.Val $
-  mkInferredGetParam "x" (pureGetParam "a")
+  Expression.BodyRecord $
+  Expression.Record Expression.Val
+  [( mkInferredLeafSimple fieldTagLeaf tagType
+   , mkInferredGetParam "x" (pureGetParam "a")
+   )]
   where
     lamA =
       pureLambda "a" setType lamX
@@ -656,10 +662,10 @@ recordTest =
       ExprUtil.pureExpression $
       rec Expression.Val $
       pureGetParam "x"
+    fieldTagLeaf = Expression.Tag fieldGuid
     rec k =
-      Expression.BodyRecord .
-      Expression.Record k .
-      (:[]) . (,) (Expression.FieldTag fieldGuid)
+      Expression.BodyRecord . Expression.Record k .
+      (:[]) . (,) (ExprUtil.pureExpression (Expression.BodyLeaf fieldTagLeaf))
     fieldGuid = Guid.fromString "field"
     piA =
       purePi "a" setType piX

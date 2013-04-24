@@ -4,10 +4,9 @@ module Lamdu.Data.Expression
   , Kind(..), _Val, _Type
   , Lambda(..), lambdaKind, lambdaParamId, lambdaParamType, lambdaResult
   , Apply(..), applyFunc, applyArg
-  , FieldTag(..), _FieldTagHole, _FieldTag
   , GetField(..), getFieldTag, getFieldRecord
   , Record(..), recordKind, recordFields
-  , Leaf(..), _GetVariable, _LiteralInteger, _Hole, _Set, _IntegerType
+  , Leaf(..), _GetVariable, _LiteralInteger, _Hole, _Set, _IntegerType, _Tag, _TagType
   , Body(..), _BodyLam, _BodyApply, _BodyLeaf, _BodyRecord, _BodyGetField
   , BodyExpr
   , Expression(..), eBody, ePayload
@@ -58,18 +57,17 @@ data Leaf def
   | Set
   | IntegerType
   | Hole
+  | TagType
+  | Tag Guid
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
-
-data FieldTag = FieldTagHole | FieldTag Guid
-  deriving (Eq, Ord, Show)
 
 data Record expr = Record
   { _recordKind :: Kind
-  , _recordFields :: [(FieldTag, expr)]
+  , _recordFields :: [(expr, expr)]
   } deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
 data GetField expr = GetField
-  { _getFieldTag :: FieldTag
+  { _getFieldTag :: expr
   , _getFieldRecord :: expr
   } deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
@@ -124,12 +122,12 @@ instance (Show a, Show def) => Show (Expression def a) where
         "()" -> ""
         x -> "{" ++ x ++ "}"
 
-fmap concat $ mapM LensTH.makePrisms [''Kind, ''VariableRef, ''Leaf, ''Body, ''FieldTag]
+fmap concat $ mapM LensTH.makePrisms [''Kind, ''VariableRef, ''Leaf, ''Body]
 fmap concat $ mapM LensTH.makeLenses [''Expression, ''Record, ''GetField, ''Lambda, ''Apply]
 
 fmap concat . sequence $
   derive
   <$> [makeBinary, makeNFData]
   <*> [ ''Kind, ''VariableRef, ''Lambda, ''Apply, ''Leaf, ''Body, ''Record, ''GetField
-      , ''Expression, ''FieldTag
+      , ''Expression
       ]

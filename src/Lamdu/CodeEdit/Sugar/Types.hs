@@ -20,8 +20,6 @@ module Lamdu.CodeEdit.Sugar.Types
   , Expression
   , WhereItem(..)
   , ListItem(..), ListActions(..), List(..)
-  , FieldTagActions(..)
-  , FieldTag(..), ftTag, ftMActions, ftGuid
   , RecordField(..), rfMItemActions, rfTag, rfExpr
   , Kind(..), Record(..)
   , GetField(..), gfTag, gfRecord
@@ -205,19 +203,9 @@ data List m expr = List
   , lMActions :: Maybe (ListActions m)
   } deriving (Functor, Foldable, Traversable)
 
-data FieldTagActions m = FieldTagActions
-  { setFieldTag :: Maybe Guid -> T m ()
-  , setNewFieldTag :: T m Guid
-  }
-data FieldTag m = FieldTag
-  { _ftTag :: Maybe Guid -- Hole or tag
-  , _ftMActions :: Maybe (FieldTagActions m)
-  , _ftGuid :: Guid -- Represents this incarnation
-  }
-
 data RecordField m expr = RecordField
   { _rfMItemActions :: Maybe (ListItemActions m)
-  , _rfTag :: FieldTag m
+  , _rfTag :: expr
   , _rfExpr :: expr -- field type or val
   } deriving (Functor, Foldable, Traversable)
 
@@ -227,8 +215,8 @@ data Record m expr = Record
   , rMAddFirstField :: Maybe (T m Guid)
   } deriving (Functor, Foldable, Traversable)
 
-data GetField m expr = GetField
-  { _gfTag :: FieldTag m
+data GetField expr = GetField
+  { _gfTag :: expr
   , _gfRecord :: expr
   } deriving (Functor, Foldable, Traversable)
 
@@ -245,7 +233,8 @@ data ExpressionBody m expr
   | ExpressionAtom     { __eAtom :: String }
   | ExpressionList     { __eList :: List m expr }
   | ExpressionRecord   { __eRecord :: Record m expr }
-  | ExpressionGetField { __eGetField :: GetField m expr }
+  | ExpressionGetField { __eGetField :: GetField expr }
+  | ExpressionTag      { __eTag :: Guid }
   deriving (Functor, Foldable, Traversable)
 LensTH.makePrisms ''ExpressionBody
 
@@ -286,6 +275,7 @@ instance Show expr => Show (ExpressionBody m expr) where
     ]
   show ExpressionRecord { __eRecord = _ } = "Record:TODO"
   show ExpressionGetField { __eGetField = _ } = "GetField:TODO"
+  show ExpressionTag { __eTag = _ } = "Tag:TODO"
 
 data DefinitionNewType m = DefinitionNewType
   { dntNewType :: Expression m
@@ -331,7 +321,6 @@ data Definition m = Definition
 
 LensTH.makeLenses ''Func
 LensTH.makeLenses ''FuncParam
-LensTH.makeLenses ''FieldTag
 LensTH.makeLenses ''RecordField
 LensTH.makeLenses ''GetField
 LensTH.makeLenses ''ExpressionBody

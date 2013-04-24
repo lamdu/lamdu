@@ -15,8 +15,6 @@ module Lamdu.CodeEdit.Sugar
   , Expression
   , WhereItem(..)
   , ListItem(..), ListActions(..), List(..)
-  , FieldTagActions(..)
-  , FieldTag(..), ftTag, ftMActions, ftGuid
   , RecordField(..), rfMItemActions, rfTag, rfExpr
   , Kind(..), Record(..), GetField(..)
   , Func(..)
@@ -742,9 +740,6 @@ convertAtom :: (MonadA m, Typeable1 m) => String -> Convertor m
 convertAtom name exprI =
   mkExpression exprI $ ExpressionAtom name
 
-tagGuidOfExpr :: Guid -> Guid
-tagGuidOfExpr = Guid.augment "FieldOf"
-
 sideChannel ::
   Monad m =>
   Lens.Lens' s a ->
@@ -754,10 +749,10 @@ sideChannel lens f s = (`runStateT` s) . Lens.zoom lens $ StateT f
 writeRecordFields ::
   MonadA m =>
   DataIRef.ExpressionIM m -> result ->
-  ( [(Expression.FieldTag, DataIRef.ExpressionIM m)] ->
+  ( [(DataIRef.ExpressionIM m, DataIRef.ExpressionIM m)] ->
     T m
     ( result
-    , [(Expression.FieldTag, DataIRef.ExpressionIM m)]
+    , [(DataIRef.ExpressionIM m, DataIRef.ExpressionIM m)]
     )
   ) ->
   T m result
@@ -771,9 +766,9 @@ writeRecordFields iref def f = do
       return res
 
 recordFieldActions ::
-  MonadA m => Guid -> Guid -> DataIRef.ExpressionIM m ->
+  MonadA m => Guid -> DataIRef.ExpressionIM m -> DataIRef.ExpressionIM m ->
   ListItemActions m
-recordFieldActions defaultGuid exprGuid iref =
+recordFieldActions defaultGuid exprIRef iref =
   ListItemActions
   { _itemDelete = action delete
   , _itemAddNext = action addNext
@@ -781,70 +776,44 @@ recordFieldActions defaultGuid exprGuid iref =
   where
     action f = writeRecordFields iref defaultGuid $ splitFields f
     addNext (prevFields, field, nextFields) = do
-      hole <- DataOps.newHole
+      tagHole <- DataOps.newHole
+      exprHole <- DataOps.newHole
       return
-        ( tagGuidOfExpr $ DataIRef.exprGuid hole
-        , prevFields ++ field : (Expression.FieldTagHole, hole) : nextFields
+        ( DataIRef.exprGuid tagHole
+        , prevFields ++ field : (tagHole, exprHole) : nextFields
         )
     delete (prevFields, _, nextFields) =
       return
       ( case nextFields ++ reverse prevFields of
         [] -> defaultGuid
-        ((_, nextExpr) : _) -> tagGuidOfExpr $ DataIRef.exprGuid nextExpr
+        ((nextTagExpr, _) : _) -> DataIRef.exprGuid nextTagExpr
       , prevFields ++ nextFields
       )
     splitFields f oldFields =
-      case break ((== exprGuid) . DataIRef.exprGuid . snd) oldFields of
+      case break ((== exprIRef) . fst) oldFields of
       (prevFields, field : nextFields) -> f (prevFields, field, nextFields)
       _ -> return (defaultGuid, oldFields)
-
-makeFieldTagActions ::
-  MonadA m => Anchors.CodeProps m ->
-  (Maybe Guid -> T m ()) -> FieldTagActions m
-makeFieldTagActions cp setTag =
-  FieldTagActions
-  { setFieldTag = setTag
-  , setNewFieldTag = do
-      guid <- DataOps.makeNewFieldTag cp
-      setTag $ Just guid
-      return guid
-  }
 
 convertField ::
   (Typeable1 m, MonadA m) =>
   Kind -> Maybe (DataIRef.ExpressionIM m) -> Guid ->
-  (Expression.FieldTag, DataIRef.ExpressionM m (PayloadMM m)) ->
+  ( DataIRef.ExpressionM m (PayloadMM m)
+  , DataIRef.ExpressionM m (PayloadMM m)
+  ) ->
   SugarM m (RecordField m (Expression m))
-convertField k mIRef defaultGuid (tag, expr) = do
-  cp <- SugarM.scCodeAnchors <$> SugarM.readContext
+convertField k mIRef defaultGuid (tagExpr, expr) = do
+  tagExprS <- convertExpressionI tagExpr
   exprS <- convertExpressionI expr
   return RecordField
     { _rfMItemActions =
-      recordFieldActions defaultGuid exprGuid <$> mIRef
-    , _rfTag =
-      FieldTag
-      { _ftTag = tag ^? Expression._FieldTag
-      , _ftMActions = makeFieldTagActions cp . setTag <$> mIRef
-      , _ftGuid = tagGuidOfExpr exprGuid
-      }
+      recordFieldActions defaultGuid <$> resultMIRef tagExpr <*> mIRef
+    , _rfTag = -- TODO: removeSuccessfulType
+               tagExprS
     , _rfExpr =
         case k of
         Val -> exprS
         Type -> removeSuccessfulType exprS
     }
-  where
-    exprGuid = resultGuid expr
-    setTag iref mFieldGuid =
-      writeRecordFields iref () $ \recordFields ->
-      return
-      ( ()
-      , recordFields &
-        fieldLens . Lens._1 .~
-        maybe Expression.FieldTagHole Expression.FieldTag mFieldGuid
-      )
-      where
-        fieldLens =
-          traverse . Lens.filtered ((== exprGuid) . DataIRef.exprGuid . snd)
 
 resultMIRef ::
   DataIRef.ExpressionM m (PayloadMM m) ->
@@ -872,10 +841,11 @@ convertRecord (Expression.Record k fields) exprI = do
     withNextHoles xs = xs
     addField iref =
       writeRecordFields iref defaultGuid $ \recordFields -> do
-        hole <- DataOps.newHole
+        holeTagExpr <- DataOps.newHole
+        holeExpr <- DataOps.newHole
         return
-          ( tagGuidOfExpr $ DataIRef.exprGuid hole
-          , (Expression.FieldTagHole, hole) : recordFields
+          ( DataIRef.exprGuid holeTagExpr
+          , (holeTagExpr, holeExpr) : recordFields
           )
 
 convertGetField ::
@@ -883,28 +853,14 @@ convertGetField ::
   Expression.GetField (DataIRef.ExpressionM m (PayloadMM m)) ->
   DataIRef.ExpressionM m (PayloadMM m) ->
   SugarM m (Expression m)
-convertGetField (Expression.GetField tag recExpr) exprI = do
-  cp <- SugarM.scCodeAnchors <$> SugarM.readContext
+convertGetField (Expression.GetField tagExpr recExpr) exprI = do
+  tagExprS <- convertExpressionI tagExpr
   recExprS <- convertExpressionI recExpr
   mkExpression exprI $ ExpressionGetField
     GetField
-    { _gfTag =
-        FieldTag
-        { _ftTag = tag ^? Expression._FieldTag
-        , _ftMActions = makeFieldTagActions cp . setTag <$> resultMIRef exprI
-        , _ftGuid = tagGuidOfExpr $ resultGuid exprI
-        }
+    { _gfTag = tagExprS
     , _gfRecord = recExprS
     }
-  where
-    setTag iref mFieldGuid = do
-      oldBody <- DataIRef.readExprBody iref
-      case oldBody of
-        Expression.BodyGetField (Expression.GetField _ recExprIRef) ->
-          DataIRef.writeExprBody iref . Expression.BodyGetField $
-          Expression.GetField (maybe Expression.FieldTagHole Expression.FieldTag mFieldGuid)
-          recExprIRef
-        _ -> return ()
 
 convertExpressionI :: (Typeable1 m, MonadA m) => DataIRef.ExpressionM m (PayloadMM m) -> SugarM m (Expression m)
 convertExpressionI ee =
@@ -923,17 +879,11 @@ convertExpressionI ee =
 
 -- Check no holes
 isCompleteType :: Expression.Expression def () -> Bool
-isCompleteType expr =
-  bodiesWithout (Expression._BodyLeaf . Expression._Hole) &&
-  bodiesWithout
-  (Expression._BodyRecord . Expression.recordFields .
-   traverse . Lens._1 . Expression._FieldTagHole)
-  where
-    bodiesWithout f =
-      Lens.nullOf
-      ( Lens.folding ExprUtil.subExpressions
-      . Expression.eBody . f
-      ) expr
+isCompleteType =
+  Lens.nullOf
+  ( Lens.folding ExprUtil.subExpressions
+  . Expression.eBody . Expression._BodyLeaf . Expression._Hole
+  )
 
 convertExpressionPure ::
   (MonadA m, Typeable1 m, RandomGen g) =>

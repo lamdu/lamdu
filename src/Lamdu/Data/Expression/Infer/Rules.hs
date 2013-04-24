@@ -8,7 +8,8 @@ module Lamdu.Data.Expression.Infer.Rules
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.DeepSeq (NFData(..))
-import Control.Lens ((^.), (^..), (&), (%~), (.~))
+import Control.Lens (LensLike')
+import Control.Lens.Operators
 import Control.Monad (guard)
 import Control.Monad.Trans.State (State)
 import Control.Monad.Trans.Writer (execWriter)
@@ -27,7 +28,7 @@ import qualified Control.Compose as Compose
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.IntSet as IntSet
-import qualified Data.List.Assoc as AssocList
+import qualified Data.List.Utils as ListUtils
 import qualified Data.Monoid as Monoid
 import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Data.Expression as Expression
@@ -50,15 +51,14 @@ type RefExpression3 def = (RefExpression def, RefExpression def, RefExpression d
 data Rule def a
   = LambdaBodyTypeToPiResultType (Guid, ExprRef) a Origin2
   | PiToLambda (Guid, ExprRef, ExprRef) a Origin3
-  | RecordValToType ([Expression.FieldTag], ExprRef) [a] Origin
-  | RecordTypeToFieldTypes [(Expression.FieldTag, ExprRef)] a
+  | RecordValToType ExprRef [(a, a)] Origin
+  | RecordFieldPropagation [(ExprRef, ExprRef)] a
   | RecordTypeToGetFieldType ExprRef (a, a)
   | GetFieldTypeToRecordFieldType ExprRef (a, a, a) Origin2
   | Copy ExprRef a
   | LambdaParentToChildren (Expression.Lambda ExprRef) a
   | LambdaChildrenToParent (Expression.Kind, Guid, ExprRef) (a, a) Origin
-  | RecordParentToChildren (Expression.Record ExprRef) a
-  | RecordChildrenToParent (Expression.Kind, [Expression.FieldTag], ExprRef) [a] Origin
+  | RecordChildrenToParent (Expression.Kind, ExprRef) [(a, a)] Origin
   | SetRule [(ExprRef, RefExpression def)]
   | SimpleType ExprRef a Origin2
   | IntoApplyResult (Expression.Kind, ExprRef, ExprRef) (a, a)
@@ -86,8 +86,8 @@ runRule rule =
     runPiToLambda x e o
   RecordValToType x e o ->
     runRecordValToType x e o
-  RecordTypeToFieldTypes x e ->
-    runRecordTypeToFieldTypes x e
+  RecordFieldPropagation x e ->
+    runRecordFieldPropagation x e
   RecordTypeToGetFieldType x e ->
     runRecordTypeToGetFieldType x e
   GetFieldTypeToRecordFieldType x e o ->
@@ -98,8 +98,6 @@ runRule rule =
     runLambdaParentToChildren x e
   LambdaChildrenToParent x e o ->
     runLambdaChildrenToParent x e o
-  RecordParentToChildren x e ->
-    runRecordParentToChildren x e
   RecordChildrenToParent x e o ->
     runRecordChildrenToParent x e o
   SetRule x ->
@@ -142,8 +140,8 @@ makeForNode (Expression.Expression exprBody typedVal) =
     (++)
     <$> recordKindRules record
     <*> recordStructureRules (tvVal typedVal) (fmap tvVal record)
-  Expression.BodyGetField getField ->
-    getFieldRules typedVal . tvType $ getField ^. Expression.getFieldRecord
+  Expression.BodyGetField (Expression.GetField fieldTag record) ->
+    getFieldRules (tvType typedVal) (tvVal fieldTag) (tvType record)
     -- TODO: GetField Structure rules
   -- Leafs need no additional rules beyond the commonal simpleTypeRule
   Expression.BodyLeaf _ -> pure []
@@ -151,7 +149,7 @@ makeForNode (Expression.Expression exprBody typedVal) =
     recordKindRules (Expression.Record Expression.Type fields) =
       mapM (setRule . tvType . snd) fields
     recordKindRules (Expression.Record Expression.Val fields) =
-      recordValueRules (tvType typedVal) $ fields & Lens.mapped . Lens._2 %~ tvType
+      recordValueRules (tvType typedVal) $ fields & Lens.mapped . Lens._1 %~ tvVal & Lens.mapped . Lens._2 %~ tvType
     lamKindRules (Expression.Lambda Expression.Type _ _ body) =
       fmap (:[]) . setRule $ tvType body
     lamKindRules (Expression.Lambda Expression.Val param _ body) =
@@ -213,74 +211,83 @@ lambdaRules param (TypedValue lambdaValueRef lambdaTypeRef) bodyTypeRef =
   , PiToLambda (param, lambdaValueRef, bodyTypeRef) lambdaTypeRef <$> mkOrigin3
   ]
 
-runRecordValToType :: ([Expression.FieldTag], ExprRef) -> [RefExpression def] -> Origin -> RuleResult def
-runRecordValToType (fields, recordTypeRef) fieldTypeExprs o0 =
+runRecordValToType :: ExprRef -> [RefExpression2 def] -> Origin -> RuleResult def
+runRecordValToType recordTypeRef fields o0 =
   [ ( recordTypeRef
-    , makeRefExpr o0 . Expression.BodyRecord . Expression.Record Expression.Type $
-      zip fields fieldTypeExprs
+    , makeRefExpr o0 . Expression.BodyRecord $
+      Expression.Record Expression.Type fields
     )
   ]
 
-runRecordTypeToFieldTypes :: [(Expression.FieldTag, ExprRef)] -> RefExpression def -> RuleResult def
-runRecordTypeToFieldTypes fieldTypeRefs recordTypeExpr = do
-  Expression.Record _ fieldTypeExprs <-
-    recordTypeExpr ^.. Expression.eBody . Expression._BodyRecord
-  maybe [] (map snd) $ AssocList.match (,) fieldTypeRefs fieldTypeExprs
+runRecordFieldPropagation ::
+  [(ref, ref)] ->
+  Expression.Expression def a ->
+  [(ref, Expression.Expression def a)]
+runRecordFieldPropagation destRefs expr = do
+  Expression.Record _ fields <-
+    expr ^.. Expression.eBody . Expression._BodyRecord
+  maybe [] concat $ ListUtils.match putField destRefs fields
+  where
+    putField
+      (destFieldTagRef, destFieldExprRef)
+      (srcFieldTagExpr, srcFieldExpr) =
+      [ (destFieldTagRef, srcFieldTagExpr)
+      , (destFieldExprRef, srcFieldExpr)
+      ]
 
-getFieldTag :: Lens.Traversal' (Expression.Expression def a) Expression.FieldTag
-getFieldTag = Expression.eBody . Expression._BodyGetField . Expression.getFieldTag
+recordField ::
+  Applicative f => Guid ->
+  LensLike' f (Expression.Expression def a) (Expression.Expression def a, Expression.Expression def a)
+recordField guid =
+  Expression.eBody . Expression._BodyRecord . Expression.recordFields . traverse .
+  Lens.filtered
+  ((== Just guid) . (^? Lens._1 . Expression.eBody . Expression._BodyLeaf . Expression._Tag))
 
 runRecordTypeToGetFieldType :: ExprRef -> RefExpression2 def -> RuleResult def
-runRecordTypeToGetFieldType getFieldTypeRef (recordTypeExpr, getFieldValExpr) = do
-  fieldTag <- getFieldValExpr ^.. getFieldTag
-  case recordTypeExpr ^. Expression.eBody of
-    Expression.BodyRecord (Expression.Record Expression.Type fields)
-      | Just fieldType <- lookup fieldTag fields
-        -> [(getFieldTypeRef, fieldType)]
-    _ -> []
+runRecordTypeToGetFieldType getFieldTypeRef (recordTypeExpr, fieldTag) = do
+  guid <- fieldTag ^.. Expression.eBody . Expression._BodyLeaf . Expression._Tag
+  (_, fieldType) <- recordTypeExpr ^.. recordField guid
+  [(getFieldTypeRef, fieldType)]
 
 runGetFieldTypeToRecordFieldType :: ExprRef -> RefExpression3 def -> Origin2 -> RuleResult def
-runGetFieldTypeToRecordFieldType recordTypeRef (recordTypeExpr, getFieldValExpr, getFieldTypeExpr) (o0, o1) = do
-  fieldTag <- getFieldValExpr ^.. getFieldTag
-  let
+runGetFieldTypeToRecordFieldType recordTypeRef (recordTypeExpr, fieldTag, getFieldTypeExpr) (o0, o1) = do
+  case fieldTag ^. Expression.eBody of
+    Expression.BodyLeaf Expression.Hole -> verifyRecordWithField
+    Expression.BodyLeaf (Expression.Tag guid) -> putTypeIntoRecordField guid
+    _ -> makeError
+  where
     recordTypeExample =
       makeRefExpr o0 . Expression.BodyRecord . Expression.Record Expression.Type $
       [ (fieldTag, makeRefExpr o1 (Expression.BodyLeaf Expression.Hole)) ]
     makeError = [(recordTypeRef, recordTypeExample)]
-  case recordTypeExpr ^. Expression.eBody of
-    Expression.BodyLeaf Expression.Hole -> []
-    Expression.BodyRecord (Expression.Record Expression.Type fields)
-      | Lens.notNullOf Expression._FieldTag fieldTag &&
-        any ((fieldTag ==) . fst) fields ->
-        [ ( recordTypeRef
-          , recordTypeExpr &
-            Expression.eBody . Expression._BodyRecord .
-            Expression.recordFields . AssocList.at fieldTag .~
-            getFieldTypeExpr
-          )]
-      | any (matchFieldTag fieldTag . fst) fields -> []
-    _ -> makeError
+    verifyRecordWithField =
+      case recordTypeExpr ^. Expression.eBody of
+      Expression.BodyLeaf Expression.Hole -> []
+      Expression.BodyRecord (Expression.Record Expression.Type (_:_)) -> []
+      _ -> makeError
+    putTypeIntoRecordField guid =
+      case recordTypeExpr ^. Expression.eBody of
+      Expression.BodyLeaf Expression.Hole -> []
+      _ | Lens.notNullOf (recordField guid) recordTypeExpr ->
+          [ ( recordTypeRef
+            , recordTypeExpr & recordField guid . Lens._2 .~ getFieldTypeExpr
+            )
+          ]
+      _ -> makeError
 
-matchFieldTag :: Expression.FieldTag -> Expression.FieldTag -> Bool
-matchFieldTag Expression.FieldTagHole _ = True
-matchFieldTag _ Expression.FieldTagHole = True
-matchFieldTag (Expression.FieldTag x) (Expression.FieldTag y) = x == y
-
-getFieldRules :: TypedValue -> ExprRef -> State Origin [Rule def ExprRef]
-getFieldRules (TypedValue valRef typeRef) recordTypeRef =
+getFieldRules :: ExprRef -> ExprRef -> ExprRef -> State Origin [Rule def ExprRef]
+getFieldRules getFieldTypeRef tagValRef recordTypeRef =
   sequenceA
-  [ pure $ RecordTypeToGetFieldType typeRef (recordTypeRef, valRef)
-  , GetFieldTypeToRecordFieldType recordTypeRef (recordTypeRef, valRef, typeRef) <$> mkOrigin2
+  [ pure $ RecordTypeToGetFieldType getFieldTypeRef (recordTypeRef, tagValRef)
+  , GetFieldTypeToRecordFieldType recordTypeRef (recordTypeRef, tagValRef, getFieldTypeRef) <$> mkOrigin2
   ]
 
-recordValueRules :: ExprRef -> [(Expression.FieldTag, ExprRef)] -> State Origin [Rule def ExprRef]
+recordValueRules :: ExprRef -> [(ExprRef, ExprRef)] -> State Origin [Rule def ExprRef]
 recordValueRules recTypeRef fieldTypeRefs =
   sequenceA
-  [ RecordValToType (fields, recTypeRef) typeRefs <$> mkOrigin
-  , pure $ RecordTypeToFieldTypes fieldTypeRefs recTypeRef
+  [ RecordValToType recTypeRef fieldTypeRefs <$> mkOrigin
+  , pure $ RecordFieldPropagation fieldTypeRefs recTypeRef
   ]
-  where
-    (fields, typeRefs) = unzip fieldTypeRefs
 
 runCopy :: ExprRef -> RefExpression def -> RuleResult def
 runCopy dest srcExpr = [(dest, srcExpr)]
@@ -314,28 +321,19 @@ lambdaStructureRules lamRef lam@(Expression.Lambda k param paramTypeRef resultRe
     LambdaChildrenToParent (k, param, lamRef) (paramTypeRef, resultRef) <$> mkOrigin
   ]
 
-runRecordParentToChildren :: Expression.Record ExprRef -> RefExpression def -> RuleResult def
-runRecordParentToChildren (Expression.Record _ fieldRefs) expr = do
-  Expression.Record _ fieldExprs <-
-    expr ^.. Expression.eBody . Expression._BodyRecord
-  maybe [] (map snd) $ AssocList.match (,) fieldRefs fieldExprs
-
 runRecordChildrenToParent ::
-  (Expression.Kind, [Expression.FieldTag], ExprRef) -> [RefExpression def] -> Origin -> RuleResult def
-runRecordChildrenToParent (k, fields, recRef) fieldExprs o0 =
+  (Expression.Kind, ExprRef) -> [RefExpression2 def] -> Origin -> RuleResult def
+runRecordChildrenToParent (k, recRef) fieldExprs o0 =
   [( recRef
-   , makeRefExpr o0 . Expression.BodyRecord .
-     Expression.Record k $ zip fields fieldExprs
+   , makeRefExpr o0 . Expression.BodyRecord $ Expression.Record k fieldExprs
    )]
 
 recordStructureRules :: ExprRef -> Expression.Record ExprRef -> State Origin [Rule def ExprRef]
-recordStructureRules recRef rec@(Expression.Record k fields) =
+recordStructureRules recRef (Expression.Record k fields) =
   sequenceA
-  [ pure $ RecordParentToChildren rec recRef
-  , RecordChildrenToParent (k, keys, recRef) valRefs <$> mkOrigin
+  [ pure $ RecordFieldPropagation fields recRef
+  , RecordChildrenToParent (k, recRef) fields <$> mkOrigin
   ]
-  where
-    (keys, valRefs) = unzip fields
 
 runSetRule :: [(ExprRef, RefExpression def)] -> RuleResult def
 runSetRule outputs = outputs

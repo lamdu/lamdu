@@ -7,6 +7,7 @@ module Lamdu.Data.Expression.Utils
   , pureSet
   , bodyParameterRef, bodyDefinitionRef
   , bodyLiteralInteger, pureLiteralInteger
+  , bodyHole
   , pureIntegerType
   , pureExpression
   , randomizeExpr
@@ -39,7 +40,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Foldable as Foldable
-import qualified Data.List.Assoc as AssocList
+import qualified Data.List.Utils as ListUtils
 import qualified Data.Map as Map
 import qualified System.Random as Random
 
@@ -65,6 +66,9 @@ bodyDefinitionRef = _BodyLeaf . _GetVariable . _DefinitionRef
 
 bodyLiteralInteger :: Prism' (Body def expr) Integer
 bodyLiteralInteger = _BodyLeaf . _LiteralInteger
+
+bodyHole :: Prism' (Body def expr) ()
+bodyHole = _BodyLeaf . _Hole
 
 bitraverseBody ::
   Applicative f => (defa -> f defb) -> (expra -> f exprb) ->
@@ -160,11 +164,10 @@ matchBody matchLamResult matchOther matchGetPar body0 body1 =
   BodyRecord (Record k0 fs0) -> do
     Record k1 fs1 <- body1 ^? _BodyRecord
     guard $ k0 == k1
-    BodyRecord . Record k0 <$> AssocList.match matchOther fs0 fs1
+    BodyRecord . Record k0 <$> ListUtils.match matchPair fs0 fs1
   BodyGetField (GetField f0 r0) -> do
     GetField f1 r1 <- body1 ^? _BodyGetField
-    guard $ f0 == f1
-    return . BodyGetField . GetField f0 $ matchOther r0 r1
+    return . BodyGetField $ GetField (matchOther f0 f1) (matchOther r0 r1)
   BodyLeaf (GetVariable (ParameterRef p0)) -> do
     p1 <- body1 ^? bodyParameterRef
     guard $ matchGetPar p0 p1
@@ -173,6 +176,9 @@ matchBody matchLamResult matchOther matchGetPar body0 body1 =
     y <- body1 ^? _BodyLeaf
     guard $ x == y
     return $ BodyLeaf x
+  where
+    matchPair (k0, v0) (k1, v1) =
+      (matchOther k0 k1, matchOther v0 v1)
 
 -- TODO: Generalize to defa/defb/defc with hof's to handle matching
 -- them?  The returned expression gets the same guids as the left

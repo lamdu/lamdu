@@ -9,17 +9,16 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.CodeEdit.ExpressionEdit.FieldEdit as FieldEdit
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 
 make ::
   MonadA m =>
-  Sugar.GetField m (Sugar.Expression m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
-make (Sugar.GetField fieldTag recExpr) =
+  Sugar.GetField (Sugar.Expression m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
+make (Sugar.GetField tagExpr recExpr) =
   ExpressionGui.wrapExpression $ \myId -> do
     recExprEdit <- ExprGuiM.makeSubexpresion recExpr
+    tagEdit <- ExprGuiM.makeSubexpresion tagExpr
     dotLabel <-
       ExpressionGui.fromValueWidget <$>
       (ExprGuiM.widgetEnv . BWidgets.makeLabel "." . Widget.toAnimId) myId
-    fieldTagEdit <- FieldEdit.make fieldTag
-    return $ ExpressionGui.hbox [recExprEdit, dotLabel, fieldTagEdit]
+    return $ ExpressionGui.hbox [recExprEdit, dotLabel, tagEdit]

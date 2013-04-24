@@ -17,7 +17,6 @@ import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.CodeEdit.ExpressionEdit.FieldEdit as FieldEdit
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.WidgetIds as WidgetIds
@@ -54,11 +53,11 @@ makeUnwrapped (Sugar.Record k fields mAddField) myId =
     parensColor Sugar.Type = Config.recordTypeParensColor
     parensColor Sugar.Val = Config.recordValParensColor
     bracketId = Widget.joinId myId ["{"]
-    makeFieldRow (Sugar.RecordField mItemActions tag fieldExpr) = do
+    makeFieldRow (Sugar.RecordField mItemActions tagExpr fieldExpr) = do
       ((fieldRefGui, fieldExprGui), resultPickers) <-
         ExprGuiM.listenResultPickers $
         (,)
-        <$> FieldEdit.make tag
+        <$> ExprGuiM.makeSubexpresion tagExpr
         <*> ExprGuiM.makeSubexpresion fieldExpr
       let
         itemEventMap = maybe mempty (recordItemEventMap resultPickers) mItemActions

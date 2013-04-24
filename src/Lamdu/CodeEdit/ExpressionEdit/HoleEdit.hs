@@ -383,7 +383,7 @@ makeAllResults holeInfo = do
       , mkGroup ["Record Value", "{"] . Expression.BodyRecord $
         Expression.Record Expression.Val mempty
       , mkGroup [".", "Get Field"] . Expression.BodyGetField $
-        Expression.GetField Expression.FieldTagHole ExprUtil.pureHole
+        Expression.GetField ExprUtil.pureHole ExprUtil.pureHole
       ]
     holeExpr = ExprUtil.pureExpression $ Expression.BodyLeaf Expression.Hole
 
