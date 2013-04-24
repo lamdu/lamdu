@@ -49,7 +49,7 @@ instance Applicative Apply where
 data VariableRef def
   = ParameterRef {-# UNPACK #-} !Guid -- of the lambda/pi
   | DefinitionRef def
-  deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
+  deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Typeable)
 
 data Leaf def
   = GetVariable !(VariableRef def)

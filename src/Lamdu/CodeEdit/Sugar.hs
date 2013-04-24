@@ -650,8 +650,7 @@ convertTypeCheckedHoleH
     token = (eGuid, contextHash)
     inferExprType expr = do
       loaded <- lift $ SugarInfer.load Nothing expr
-      -- TODO: scope is ignore here, this is most likely a bug!
-      memoBy (loaded, token, 't') . return $
+      memoBy (loaded, token, scope, 't') . return $
         inferOnTheSide inferState scope loaded
     onScopeElement (param, _typeExpr) = param
     hole =

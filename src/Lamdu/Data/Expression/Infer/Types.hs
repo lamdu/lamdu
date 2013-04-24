@@ -29,7 +29,7 @@ import qualified Control.Monad.Trans.State as State
 import qualified Data.Monoid as Monoid
 import qualified Lamdu.Data.Expression as Expression
 
-newtype ExprRef = ExprRef { unExprRef :: Int } deriving (Eq, Ord)
+newtype ExprRef = ExprRef { unExprRef :: Int } deriving (Eq, Ord, Typeable)
 instance Show ExprRef where
   show = ('E' :) . show . unExprRef
 
