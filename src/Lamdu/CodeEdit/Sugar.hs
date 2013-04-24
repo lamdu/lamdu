@@ -807,8 +807,7 @@ convertField k mIRef defaultGuid (tagExpr, expr) = do
   return RecordField
     { _rfMItemActions =
       recordFieldActions defaultGuid <$> resultMIRef tagExpr <*> mIRef
-    , _rfTag = -- TODO: removeSuccessfulType
-               tagExprS
+    , _rfTag = removeSuccessfulType tagExprS
     , _rfExpr =
         case k of
         Val -> exprS
@@ -860,7 +859,7 @@ convertGetField (Expression.GetField recExpr tagExpr) exprI = do
   mkExpression exprI $ ExpressionGetField
     GetField
     { _gfRecord = recExprS
-    , _gfTag = tagExprS
+    , _gfTag = removeSuccessfulType tagExprS
     }
 
 convertExpressionI :: (Typeable1 m, MonadA m) => DataIRef.ExpressionM m (PayloadMM m) -> SugarM m (Expression m)
