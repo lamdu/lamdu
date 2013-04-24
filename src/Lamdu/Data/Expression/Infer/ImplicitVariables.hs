@@ -96,7 +96,7 @@ addVariablesForExpr loader expr = do
         Infer.iPoint . fst $ Lens.view Expression.ePayload reinferred
       fmap concat . mapM (addVariablesForExpr loader) .
         filter (isUnrestrictedHole . inferredVal) $
-        ExprUtil.subExpressions reinferredLoaded
+        ExprUtil.subExpressionsWithoutTags reinferredLoaded
   where
     inferredVal = Infer.iValue . fst . Lens.view Expression.ePayload
 

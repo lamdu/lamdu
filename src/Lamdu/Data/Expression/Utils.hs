@@ -13,7 +13,7 @@ module Lamdu.Data.Expression.Utils
   , randomizeExpr
   , canonizeParamIds, randomizeParamIds
   , matchBody, matchExpression
-  , subExpressions
+  , subExpressions, subExpressionsWithoutTags
   , isDependentPi
   , funcArguments
   , applyForms, applyDependentPis
@@ -225,6 +225,14 @@ bodyLeaves exprLeaves onLeaves body =
 subExpressions :: Expression def a -> [Expression def a]
 subExpressions x =
   x : Foldable.concatMap subExpressions (x ^. eBody)
+
+subExpressionsWithoutTags :: Expression def a -> [Expression def a]
+subExpressionsWithoutTags x =
+  x :
+  case x ^. eBody of
+  BodyGetField (GetField x _) -> subExpressionsWithoutTags x
+  BodyRecord (Record _ fields) -> concatMap subExpressionsWithoutTags (map snd fields)
+  body -> Foldable.concatMap subExpressionsWithoutTags body
 
 hasGetVar :: Guid -> Expression def a -> Bool
 hasGetVar =
