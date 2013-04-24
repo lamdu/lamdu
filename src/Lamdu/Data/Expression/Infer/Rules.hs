@@ -251,11 +251,14 @@ runRecordValToType recordTypeRef fields o0 =
     )
   ]
 
+recordFields :: Lens.Traversal' (Expression.Expression def a) (Expression.Expression def a, Expression.Expression def a)
+recordFields = Expression.eBody . Expression._BodyRecord . Expression.recordFields . traverse
+
 recordField ::
   Applicative f => Guid ->
   LensLike' f (Expression.Expression def a) (Expression.Expression def a, Expression.Expression def a)
 recordField guid =
-  Expression.eBody . Expression._BodyRecord . Expression.recordFields . traverse .
+  recordFields .
   Lens.filtered
   ((== Just guid) . (^? Lens._1 . Expression.eBody . Expression._BodyLeaf . Expression._Tag))
 
@@ -289,7 +292,8 @@ runGetFieldTypeToRecordFieldType recordTypeRef (recordTypeExpr, fieldTag, getFie
             , recordTypeExpr & recordField guid . Lens._2 .~ getFieldTypeExpr
             )
           ]
-      _ -> makeError
+        | Lens.notNullOf (recordFields . Lens._1 . Expression.eBody . ExprUtil.bodyHole) recordTypeExpr -> []
+        | otherwise -> makeError
 
 getFieldRules :: ExprRef -> Expression.Expression def TypedValue -> ExprRef -> State Origin [Rule def ExprRef]
 getFieldRules getFieldTypeRef tagExpr recordTypeRef =
@@ -365,7 +369,7 @@ mergeToPiResult =
       | otherwise = dest
       where
         substs = dest ^. Expression.ePayload . rplSubstitutedArgs
-    notAHole = Lens.nullOf (Expression.eBody . Expression._BodyLeaf . Expression._Hole)
+    notAHole = Lens.nullOf (Expression.eBody . ExprUtil.bodyHole)
 
 runSimpleType :: ExprRef -> RefExpression def -> Origin2 -> RuleResult def
 runSimpleType typ valExpr (o0, o1) =
