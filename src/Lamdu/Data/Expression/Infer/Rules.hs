@@ -30,7 +30,6 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Foldable as Foldable
 import qualified Data.IntSet as IntSet
-import qualified Data.List.Utils as ListUtils
 import qualified Data.Monoid as Monoid
 import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Data.Expression as Expression
@@ -54,7 +53,6 @@ data Rule def a
   = LambdaBodyTypeToPiResultType (Guid, ExprRef) a Origin2
   | PiToLambda (Guid, ExprRef, ExprRef) a Origin3
   | RecordValToType ExprRef [(a, a)] Origin
-  | RecordFieldPropagation [(ExprRef, ExprRef)] a
   | RecordTypeToGetFieldType ExprRef (a, a)
   | GetFieldTypeToRecordFieldType ExprRef (a, a, a) Origin2
   | Copy ExprRef a
@@ -87,8 +85,6 @@ runRule rule =
     runPiToLambda x e o
   RecordValToType x e o ->
     runRecordValToType x e o
-  RecordFieldPropagation x e ->
-    runRecordFieldPropagation x e
   RecordTypeToGetFieldType x e ->
     runRecordTypeToGetFieldType x e
   GetFieldTypeToRecordFieldType x e o ->
@@ -156,7 +152,10 @@ makeForNode (Expression.Expression exprBody typedVal) =
     recordKindRules (Expression.Record Expression.Type fields) =
       mapM (setRule . tvType . snd) fields
     recordKindRules (Expression.Record Expression.Val fields) =
-      recordValueRules (tvType typedVal) $ fields & Lens.mapped . Lens._1 %~ tvVal & Lens.mapped . Lens._2 %~ tvType
+      recordValueRules (tvType typedVal) $
+      fields
+      & Lens.mapped . Lens._1 %~ tvVal
+      & Lens.mapped . Lens._2 %~ tvType
     lamKindRules (Expression.Lambda Expression.Type _ _ body) =
       fmap (:[]) . setRule $ tvType body
     lamKindRules (Expression.Lambda Expression.Val param _ body) =
@@ -227,22 +226,6 @@ runRecordValToType recordTypeRef fields o0 =
     )
   ]
 
-runRecordFieldPropagation ::
-  [(ref, ref)] ->
-  Expression.Expression def a ->
-  [(ref, Expression.Expression def a)]
-runRecordFieldPropagation destRefs expr = do
-  Expression.Record _ fields <-
-    expr ^.. Expression.eBody . Expression._BodyRecord
-  maybe [] concat $ ListUtils.match putField destRefs fields
-  where
-    putField
-      (destFieldTagRef, destFieldExprRef)
-      (srcFieldTagExpr, srcFieldExpr) =
-      [ (destFieldTagRef, srcFieldTagExpr)
-      , (destFieldExprRef, srcFieldExpr)
-      ]
-
 recordField ::
   Applicative f => Guid ->
   LensLike' f (Expression.Expression def a) (Expression.Expression def a, Expression.Expression def a)
@@ -294,8 +277,7 @@ recordValueRules :: ExprRef -> [(ExprRef, ExprRef)] -> State Origin [Rule def Ex
 recordValueRules recTypeRef fieldTypeRefs =
   sequenceA
   [ RecordValToType recTypeRef fieldTypeRefs <$> mkOrigin
-    -- TODO: This can re-use ParentToChildren
-  , pure $ RecordFieldPropagation fieldTypeRefs recTypeRef
+  , pure $ ParentToChildren (Expression.BodyRecord (Expression.Record Expression.Type fieldTypeRefs)) recTypeRef
   ]
 
 runCopy :: ExprRef -> RefExpression def -> RuleResult def
