@@ -85,7 +85,8 @@ type T = Transaction
 type CT m = StateT Cache (T m)
 
 data HoleInfo m = HoleInfo
-  { hiHoleId :: Widget.Id
+  { hiGuid :: Guid
+  , hiHoleId :: Widget.Id
   , hiState :: Property (T m) (HoleState m)
   , hiHoleActions :: Sugar.HoleActions m
   , hiMNextHole :: Maybe (Sugar.Expression m)
@@ -97,6 +98,12 @@ pickResultAndCleanUp ::
 pickResultAndCleanUp holeInfo holeResult = do
   Property.set (hiState holeInfo) emptyState
   holeResult ^. Sugar.holeResultPick
+
+handlePickResultTargetGuid ::
+  MonadA m => HoleInfo m -> Maybe Guid -> Widget.EventResult
+handlePickResultTargetGuid holeInfo =
+  Widget.eventResultFromCursor . WidgetIds.fromGuid .
+  fromMaybe (hiGuid holeInfo)
 
 resultPickEventMap ::
   MonadA m => HoleInfo m -> Sugar.HoleResult m ->
@@ -115,11 +122,8 @@ resultPickEventMap holeInfo holeResult =
   where
     simplePickRes keys =
       E.keyPresses keys (E.Doc ["Edit", "Result", "Pick"]) .
-      fmap (eventResultFromMaybeCursor . fmap WidgetIds.fromGuid) $
+      fmap (handlePickResultTargetGuid holeInfo) $
       pickResultAndCleanUp holeInfo holeResult
-
-eventResultFromMaybeCursor :: Maybe Widget.Id -> Widget.EventResult
-eventResultFromMaybeCursor = maybe Widget.emptyEventResult Widget.eventResultFromCursor
 
 data ResultsList m = ResultsList
   { rlFirstId :: Widget.Id
@@ -515,10 +519,9 @@ opPickEventMap holeInfo result
   | nonEmptyAll (`elem` Config.operatorChars) searchTerm =
     alphaNumericHandler (E.Doc ["Edit", "Result", "Pick and resume"]) $ \x -> do
       mTarget <- pickResultAndCleanUp holeInfo result
-      maybe
-        (pure (hiHoleId holeInfo))
-        (setHoleStateAndJump (charToHoleState x))
-        mTarget
+      case mTarget of
+        Nothing -> pure . WidgetIds.fromGuid $ hiGuid holeInfo
+        Just targetGuid -> setHoleStateAndJump (charToHoleState x) targetGuid
   | otherwise = mempty
   where
     searchTerm = Property.value (hiState holeInfo) ^. hsSearchTerm
@@ -556,7 +559,7 @@ mkEventMap holeInfo mResult = do
     , maybe mempty
       ( E.keyPresses Config.delKeys
         (E.Doc ["Edit", "Back"])
-      . fmap (eventResultFromMaybeCursor . fmap WidgetIds.fromGuid)
+      . fmap (handlePickResultTargetGuid holeInfo)
       . pickResultAndCleanUp holeInfo
       ) mDeleteOpResult
     , maybe mempty
@@ -631,7 +634,8 @@ makeUnwrapped hole mNextHole guid myId = do
     (Just holeActions, Just _) -> do
       stateProp <- ExprGuiM.transaction $ assocStateRef guid ^. Transaction.mkProperty
       makeActiveHoleEdit HoleInfo
-        { hiHoleId = myId
+        { hiGuid = guid
+        , hiHoleId = myId
         , hiState = stateProp
         , hiHoleActions = holeActions
         , hiMNextHole = mNextHole
