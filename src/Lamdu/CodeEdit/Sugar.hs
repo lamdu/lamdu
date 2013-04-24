@@ -176,7 +176,7 @@ mkExpression exprI expr = do
     { _rGuid = resultGuid exprI
     , _rExpressionBody = expr
     , _rPayload = Payload
-      { _plInferredTypes = onInferredTypes inferredTypes
+      { _plInferredTypes = inferredTypes
       , _plActions =
         mkActions sugarContext <$>
         traverse (SugarInfer.ntraversePayload pure id) exprI
@@ -188,10 +188,6 @@ mkExpression exprI expr = do
       Lens.view SugarInfer.plStored <$> exprI
     }
   where
-    onInferredTypes ts =
-      case (ts, expr) of
-      ([_], ExpressionRecord (Record Val _ _)) -> []
-      _ -> ts
     seeds = RandomUtils.splits . mkGen 0 3 $ resultGuid exprI
     types = maybe [] iwcInferredTypes $ resultInferred exprI
 
@@ -826,7 +822,8 @@ convertRecord ::
   Convertor m
 convertRecord (Expression.Record k fields) exprI = do
   sFields <- mapM (convertField k (resultMIRef exprI) defaultGuid) fields
-  mkExpression exprI $ ExpressionRecord
+  fmap removeSuccessfulType .
+    mkExpression exprI $ ExpressionRecord
     Record
     { rKind = k
     , rFields = withNextHoles sFields
