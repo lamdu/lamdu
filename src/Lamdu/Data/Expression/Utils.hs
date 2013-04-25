@@ -230,7 +230,7 @@ subExpressionsWithoutTags :: Expression def a -> [Expression def a]
 subExpressionsWithoutTags x =
   x :
   case x ^. eBody of
-  BodyGetField (GetField x _) -> subExpressionsWithoutTags x
+  BodyGetField (GetField record _) -> subExpressionsWithoutTags record
   BodyRecord (Record _ fields) -> concatMap subExpressionsWithoutTags (map snd fields)
   body -> Foldable.concatMap subExpressionsWithoutTags body
 
