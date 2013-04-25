@@ -148,14 +148,17 @@ resultsToWidgets
        )
      )
 resultsToWidgets holeInfo results = do
-  cursorOnMainResult <- ExprGuiM.widgetEnv $ WE.isSubCursor myId
+  mainResultWidget <-
+    maybeAddExtraSymbol ((not . null . rlExtra) results) (rlMainId results) =<<
+    makeHoleResultWidget holeInfo (rlMainId results) (rlMain results)
   mExtraResWidget <-
-    if cursorOnMainResult
+    if mainResultWidget ^. Widget.wIsFocused
     then do
       mWidget <- fmap snd <$> makeExtra
       return $ Just (rlMain results, mWidget)
     else do
-      cursorOnExtra <- ExprGuiM.widgetEnv $ WE.isSubCursor extraResultsPrefixId
+      cursorOnExtra <-
+        ExprGuiM.widgetEnv . WE.isSubCursor $ rlExtraResultsPrefixId results
       if cursorOnExtra
         then do
           mExtra <- makeExtra
@@ -164,29 +167,32 @@ resultsToWidgets holeInfo results = do
             result <- mResult
             Just (result, Just widget)
         else return Nothing
-  mainResultWidget <-
-    maybeAddExtraSymbol haveExtraResults myId =<<
-    makeHoleResultWidget holeInfo myId (rlMain results)
   return (mainResultWidget, mExtraResWidget)
   where
-    haveExtraResults = (not . null . rlExtra) results
-    makeExtra
-      | haveExtraResults = Just <$> makeExtraResults (rlExtra results)
-      | otherwise = return Nothing
-    makeExtraResults extraResults = do
-      (mResults, widgets) <- unzip <$> traverse extraResult extraResults
-      return (msum mResults, Box.vboxAlign 0 widgets)
+    makeExtra =
+      makeExtraResultsWidget holeInfo
+      (rlExtraResultsPrefixId results) (rlExtra results)
+
+makeExtraResultsWidget ::
+  MonadA m => HoleInfo m -> Widget.Id -> [Sugar.HoleResult m] ->
+  ExprGuiM m (Maybe (Maybe (Sugar.HoleResult m), WidgetT m))
+makeExtraResultsWidget holeInfo extraPrefixId extraResults
+  | (not . null) extraResults = Just <$> do
+    (mResults, widgets) <-
+      unzip <$> traverse extraResult extraResults
+    return (msum mResults, Box.vboxAlign 0 widgets)
+  | otherwise = return Nothing
+  where
     extraResult holeResult = do
-      widget <- makeHoleResultWidget holeInfo resultId holeResult
+      widget <-
+        makeHoleResultWidget holeInfo resultId holeResult
       mResult <-
         (fmap . fmap . const) holeResult . ExprGuiM.widgetEnv $ WE.subCursor resultId
       return (mResult, widget)
       where
         resultId =
-          mappend extraResultsPrefixId . widgetIdHash . void $
+          mappend extraPrefixId . widgetIdHash . void $
           holeResult ^. Sugar.holeResultInferred
-    extraResultsPrefixId = rlExtraResultsPrefixId results
-    myId = rlMainId results
 
 makeHoleResultWidget ::
   MonadA m => HoleInfo m ->
