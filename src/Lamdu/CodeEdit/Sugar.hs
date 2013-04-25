@@ -887,6 +887,7 @@ convertGetField (Expression.GetField recExpr tagExpr) exprI = do
         }
   case mParam of
     Just param ->
+      fmap removeSuccessfulType .
       mkExpression exprI $ ExpressionGetParam param
     Nothing -> do
       recExprS <- convertExpressionI recExpr

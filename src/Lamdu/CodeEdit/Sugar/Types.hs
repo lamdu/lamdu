@@ -289,6 +289,7 @@ instance Show expr => Show (ExpressionBody m expr) where
   show ExpressionRecord { __eRecord = _ } = "Record:TODO"
   show ExpressionGetField { __eGetField = _ } = "GetField:TODO"
   show ExpressionTag { __eTag = _ } = "Tag:TODO"
+  show ExpressionGetParam {} = "GetParam:TODO"
 
 data DefinitionNewType m = DefinitionNewType
   { dntNewType :: Expression m
