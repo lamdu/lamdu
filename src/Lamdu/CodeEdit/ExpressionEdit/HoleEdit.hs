@@ -166,7 +166,7 @@ resultsToWidgets holeInfo results = do
         else return Nothing
   mainResultWidget <-
     maybeAddExtraSymbol haveExtraResults myId =<<
-    toWidget myId (rlMain results)
+    makeHoleResultWidget holeInfo myId (rlMain results)
   return (mainResultWidget, mExtraResWidget)
   where
     haveExtraResults = (not . null . rlExtra) results
@@ -177,7 +177,7 @@ resultsToWidgets holeInfo results = do
       (mResults, widgets) <- unzip <$> traverse extraResult extraResults
       return (msum mResults, Box.vboxAlign 0 widgets)
     extraResult holeResult = do
-      widget <- toWidget resultId holeResult
+      widget <- makeHoleResultWidget holeInfo resultId holeResult
       mResult <-
         (fmap . fmap . const) holeResult . ExprGuiM.widgetEnv $ WE.subCursor resultId
       return (mResult, widget)
@@ -185,17 +185,21 @@ resultsToWidgets holeInfo results = do
         resultId =
           mappend extraResultsPrefixId . widgetIdHash . void $
           holeResult ^. Sugar.holeResultInferred
-    toWidget resultId holeResult =
-      ExprGuiM.widgetEnv . BWidgets.makeFocusableView resultId .
-      -- TODO: No need for this if we just add a pick result event map
-      -- to the whole hole
-      Widget.scale Config.holeResultScaleFactor .
-      Widget.strongerEvents (resultPickEventMap holeInfo holeResult) .
-      Lens.view ExpressionGui.egWidget =<<
-      ExprGuiM.makeSubexpresion . Sugar.removeTypes =<<
-      ExprGuiM.transaction (holeResult ^. Sugar.holeResultConvert)
     extraResultsPrefixId = rlExtraResultsPrefixId results
     myId = rlMainId results
+
+makeHoleResultWidget ::
+  MonadA m => HoleInfo m ->
+  Widget.Id -> Sugar.HoleResult m -> ExprGuiM m (WidgetT m)
+makeHoleResultWidget holeInfo resultId holeResult =
+  ExprGuiM.widgetEnv . BWidgets.makeFocusableView resultId .
+  -- TODO: No need for this if we just add a pick result event map
+  -- to the whole hole
+  Widget.scale Config.holeResultScaleFactor .
+  Widget.strongerEvents (resultPickEventMap holeInfo holeResult) .
+  Lens.view ExpressionGui.egWidget =<<
+  ExprGuiM.makeSubexpresion . Sugar.removeTypes =<<
+  ExprGuiM.transaction (holeResult ^. Sugar.holeResultConvert)
 
 maybeAddExtraSymbol :: MonadA m => Bool -> Widget.Id -> Widget f -> ExprGuiM m (Widget f)
 maybeAddExtraSymbol haveExtraResults myId w
