@@ -139,12 +139,18 @@ resultsToWidgets
   => HoleInfo m -> ResultsList m
   -> ExprGuiM m
      ( WidgetT m
-     , Maybe (Sugar.HoleResult m, Maybe (WidgetT m))
+       -- On any result?
+     , Maybe
+       -- Which result:
+       ( Sugar.HoleResult m
+         -- Extra results widget?
+       , Maybe (WidgetT m)
+       )
      )
 resultsToWidgets holeInfo results = do
-  cursorOnMain <- ExprGuiM.widgetEnv $ WE.isSubCursor myId
+  cursorOnFirstResult <- ExprGuiM.widgetEnv $ WE.isSubCursor myId
   extra <-
-    if cursorOnMain
+    if cursorOnFirstResult
     then fmap (Just . (,) (rlFirst results) . fmap fst) makeExtra
     else do
       cursorOnExtra <- ExprGuiM.widgetEnv $ WE.isSubCursor moreResultsPrefixId
@@ -156,13 +162,13 @@ resultsToWidgets holeInfo results = do
             result <- mResult
             return (result, Just widget)
         else return Nothing
-  fmap (flip (,) extra) .
-    (if null (rlMore results) then return else addMoreSymbol) =<<
+  fmap (flip (,) extra) . maybeAddMoreSymbol =<<
     toWidget myId (rlFirst results)
   where
+    haveMoreResults = (not . null . rlMore) results
     makeExtra
-      | null (rlMore results) = return Nothing
-      | otherwise = Just <$> makeMoreResults (rlMore results)
+      | haveMoreResults = Just <$> makeMoreResults (rlMore results)
+      | otherwise = return Nothing
     makeMoreResults moreResults = do
       pairs <- traverse moreResult moreResults
       return
@@ -187,12 +193,14 @@ resultsToWidgets holeInfo results = do
       ExprGuiM.makeSubexpresion . Sugar.removeTypes =<<
       ExprGuiM.transaction (holeResult ^. Sugar.holeResultConvert)
     moreResultsPrefixId = rlMoreResultsPrefixId results
-    addMoreSymbol w = do
-      moreSymbolLabel <-
-        fmap (Widget.scale moreSymbolSizeFactor) .
-        ExprGuiM.widgetEnv .
-        BWidgets.makeLabel moreSymbol $ Widget.toAnimId myId
-      return $ BWidgets.hboxCenteredSpaced [w, moreSymbolLabel]
+    maybeAddMoreSymbol w
+      | haveMoreResults = do
+        moreSymbolLabel <-
+          fmap (Widget.scale moreSymbolSizeFactor) .
+          ExprGuiM.widgetEnv .
+          BWidgets.makeLabel moreSymbol $ Widget.toAnimId myId
+        return $ BWidgets.hboxCenteredSpaced [w, moreSymbolLabel]
+      | otherwise = return w
     myId = rlFirstId results
 
 makeNoResults :: MonadA m => AnimId -> ExprGuiM m (WidgetT m)
@@ -359,7 +367,14 @@ makeResultsList holeInfo group =
       (ExprUtil.makeApply . ExprUtil.pureExpression . Expression.BodyLeaf) Expression.Hole
 
 makeAllResults :: MonadA m => HoleInfo m -> ExprGuiM m (ListT (CT m) (ResultType, ResultsList m))
-makeAllResults holeInfo = do
+makeAllResults holeInfo =
+  List.catMaybes .
+  List.mapL (makeResultsList holeInfo) .
+  List.fromList <$>
+  makeAllGroups holeInfo
+
+makeAllGroups :: MonadA m => HoleInfo m -> ExprGuiM m [Group (DefI (Tag m))]
+makeAllGroups holeInfo = do
   paramGroups <-
     traverse (makeVariableGroup . Expression.ParameterRef) $
     hiHoleActions holeInfo ^. Sugar.holeScope
@@ -373,11 +388,7 @@ makeAllResults holeInfo = do
     literalGroups = makeLiteralGroup searchTerm
     getVarGroups = paramGroups ++ globalGroups
     relevantGroups = primitiveGroups ++ literalGroups ++ getVarGroups ++ tagGroups
-  return .
-    List.catMaybes .
-    List.mapL (makeResultsList holeInfo) .
-    List.fromList $
-    holeMatches groupNames searchTerm relevantGroups
+  return $ holeMatches groupNames searchTerm relevantGroups
   where
     primitiveGroups =
       [ mkGroup ["Set", "Type"] $ Expression.BodyLeaf Expression.Set
