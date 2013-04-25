@@ -21,7 +21,9 @@ module Lamdu.CodeEdit.Sugar.Types
   , WhereItem(..)
   , ListItem(..), ListActions(..), List(..)
   , RecordField(..), rfMItemActions, rfTag, rfExpr
-  , Kind(..), Record(..), FieldList(..)
+  , Kind(..)
+  , Record(..), rKind, rFields
+  , FieldList(..), flItems, flMAddFirstItem
   , GetField(..), gfRecord, gfTag
   , Func(..), fDepParams, fParams, fBody
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
@@ -210,13 +212,13 @@ data RecordField m expr = RecordField
   } deriving (Functor, Foldable, Traversable)
 
 data FieldList m expr = FieldList
-  { flItems :: [RecordField m expr]
-  , flMAddFirstItem :: Maybe (T m Guid)
+  { _flItems :: [RecordField m expr]
+  , _flMAddFirstItem :: Maybe (T m Guid)
   } deriving (Functor, Foldable, Traversable)
 
 data Record m expr = Record
-  { rKind :: Kind -- record type or val
-  , rFields :: FieldList m expr
+  { _rKind :: Kind -- record type or val
+  , _rFields :: FieldList m expr
   } deriving (Functor, Foldable, Traversable)
 
 data GetField expr = GetField
@@ -328,6 +330,8 @@ data Definition m = Definition
 LensTH.makeLenses ''Func
 LensTH.makeLenses ''FuncParam
 LensTH.makeLenses ''RecordField
+LensTH.makeLenses ''FieldList
+LensTH.makeLenses ''Record
 LensTH.makeLenses ''GetField
 LensTH.makeLenses ''ExpressionBody
 LensTH.makeLenses ''ListItemActions

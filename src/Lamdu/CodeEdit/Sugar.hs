@@ -831,11 +831,11 @@ convertRecord (Expression.Record k fields) exprI = do
   fmap removeSuccessfulType .
     mkExpression exprI $ ExpressionRecord
     Record
-    { rKind = k
-    , rFields =
+    { _rKind = k
+    , _rFields =
         FieldList
-        { flItems = withNextHoles sFields
-        , flMAddFirstItem = addField <$> resultMIRef exprI
+        { _flItems = withNextHoles sFields
+        , _flMAddFirstItem = addField <$> resultMIRef exprI
         }
     }
   where
@@ -918,7 +918,7 @@ convertDefinitionParams expr =
         (depParams, fieldParams, deepBody) <- convertDefinitionParams body
         return (fp : depParams, fieldParams, deepBody)
       (NonDependent, ExpressionRecord (Record k fields))
-        | k == Type && (not . null . flItems) fields ->
+        | k == Type && (not . null) (fields ^. flItems) ->
           return ([], Just fp, body)
       _ -> return ([], Nothing, expr)
   _ -> return ([], Nothing, expr)
