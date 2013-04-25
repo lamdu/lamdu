@@ -2,10 +2,10 @@
 module Lamdu.CodeEdit.Sugar.Monad
   ( Context(..)
   , scMDefI, scInferState, scMContextHash, scHoleInferState
-  , scCodeAnchors, scSpecialFunctions, scMReinferRoot
+  , scCodeAnchors, scSpecialFunctions, scMReinferRoot, scRecordArgs
   , mkContext
   , SugarM(..), run, runPure
-  , readContext, liftTransaction
+  , readContext, liftTransaction, local
   , codeAnchor
   , getP
   ) where
@@ -15,6 +15,7 @@ import Control.Lens ((^.))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.MonadA (MonadA)
+import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Typeable (Typeable)
 import Lamdu.CodeEdit.Sugar.Infer (InferLoadedResult, ilrInferContext, ilrContext, ilrBaseInferContext)
@@ -35,6 +36,7 @@ data Context m = Context
   , _scCodeAnchors :: Anchors.CodeProps m
   , _scSpecialFunctions :: Anchors.SpecialFunctions (Tag m)
   , _scMReinferRoot :: Maybe (String -> CT m Bool)
+  , _scRecordArgs :: [Guid]
   }
 LensTH.makeLenses ''Context
 
@@ -58,6 +60,7 @@ mkContext cp mDefI mReinferRoot iResult = do
     , _scCodeAnchors = cp
     , _scSpecialFunctions = specialFunctions
     , _scMReinferRoot = mReinferRoot
+    , _scRecordArgs = []
     }
 
 run :: MonadA m => Context m -> SugarM m a -> T m a
@@ -74,10 +77,14 @@ runPure cp act = do
     , _scCodeAnchors = cp
     , _scSpecialFunctions = specialFunctions
     , _scMReinferRoot = Nothing
+    , _scRecordArgs = []
     } act
 
 readContext :: MonadA m => SugarM m (Context m)
 readContext = SugarM Reader.ask
+
+local :: Monad m => (Context m -> Context m) -> SugarM m a -> SugarM m a
+local f (SugarM act) = SugarM $ Reader.local f act
 
 liftTransaction :: MonadA m => T m a -> SugarM m a
 liftTransaction = SugarM . lift

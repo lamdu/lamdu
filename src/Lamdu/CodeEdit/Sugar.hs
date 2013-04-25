@@ -860,13 +860,22 @@ convertGetField ::
   DataIRef.ExpressionM m (PayloadMM m) ->
   SugarM m (Expression m)
 convertGetField (Expression.GetField recExpr tagExpr) exprI = do
-  recExprS <- convertExpressionI recExpr
-  tagExprS <- convertExpressionI tagExpr
-  mkExpression exprI $ ExpressionGetField
-    GetField
-    { _gfRecord = recExprS
-    , _gfTag = removeSuccessfulType tagExprS
-    }
+  recordArgs <- (^. SugarM.scRecordArgs) <$> SugarM.readContext
+  let
+    mParamField = do
+      param <- recExpr ^? Expression.eBody . ExprUtil.bodyParameterRef
+      guard $ elem param recordArgs
+  case mParamField of
+    Nothing -> do
+      recExprS <- convertExpressionI recExpr
+      tagExprS <- convertExpressionI tagExpr
+      mkExpression exprI $ ExpressionGetField
+        GetField
+        { _gfRecord = recExprS
+        , _gfTag = removeSuccessfulType tagExprS
+        }
+    Just () ->
+      mkExpression exprI $ ExpressionAtom "TODO"
 
 convertExpressionI :: (Typeable1 m, MonadA m) => DataIRef.ExpressionM m (PayloadMM m) -> SugarM m (Expression m)
 convertExpressionI ee =
@@ -1015,18 +1024,20 @@ convertDefinitionContent usedTags expr = do
       Lens._Just . fpType .
       rExpressionBody . _ExpressionRecord . rFields . flItems . traverse . rfTag .
       rExpressionBody . _ExpressionTag
-  (whereItems, whereBody) <- convertWhereItems (usedTags ++ defTags) funcBody
-  bodyS <- convertExpressionI whereBody
-  return DefinitionContent
-    { dDepParams = depParams
-    , dParams = params
-    , dBody = bodyS
-    , dWhereItems = whereItems
-    , dAddFirstParam = addStoredParam expr
-    , dAddInnermostWhereItem =
-      fmap fst . DataOps.redexWrap $
-      assertedGetProp "Where must be stored" whereBody
-    }
+    recordArgs = params ^.. Lens._Just . fpGuid
+  SugarM.local (SugarM.scRecordArgs <>~ recordArgs) $ do
+    (whereItems, whereBody) <- convertWhereItems (usedTags ++ defTags) funcBody
+    bodyS <- convertExpressionI whereBody
+    return DefinitionContent
+      { dDepParams = depParams
+      , dParams = params
+      , dBody = bodyS
+      , dWhereItems = whereItems
+      , dAddFirstParam = addStoredParam expr
+      , dAddInnermostWhereItem =
+        fmap fst . DataOps.redexWrap $
+        assertedGetProp "Where must be stored" whereBody
+      }
 
 loadConvertDefI ::
   (MonadA m, Typeable1 m) =>
