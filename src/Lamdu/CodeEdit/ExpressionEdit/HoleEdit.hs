@@ -6,9 +6,9 @@ module Lamdu.CodeEdit.ExpressionEdit.HoleEdit
   , setHoleStateAndJump
   ) where
 
-import Control.Applicative (Applicative(..), (<$>), (<$))
+import Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
 import Control.Lens.Operators
-import Control.Monad ((<=<), filterM, mplus, msum, void, guard, join)
+import Control.Monad ((<=<), filterM, msum, void, guard, join)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.State (StateT)
 import Control.MonadA (MonadA)
@@ -149,37 +149,38 @@ resultsToWidgets
      )
 resultsToWidgets holeInfo results = do
   cursorOnFirstResult <- ExprGuiM.widgetEnv $ WE.isSubCursor myId
-  extra <-
+  mExtraResWidget <-
     if cursorOnFirstResult
-    then fmap (Just . (,) (rlFirst results) . fmap fst) makeExtra
+    then do
+      mWidget <- fmap snd <$> makeExtra
+      return $ Just (rlFirst results, mWidget)
     else do
       cursorOnExtra <- ExprGuiM.widgetEnv $ WE.isSubCursor moreResultsPrefixId
       if cursorOnExtra
         then do
-          extra <- makeExtra
+          mExtra <- makeExtra
           return $ do
-            (widget, mResult) <- extra
+            (mResult, widget) <- mExtra
             result <- mResult
-            return (result, Just widget)
+            Just (result, Just widget)
         else return Nothing
-  fmap (flip (,) extra) . maybeAddMoreSymbol =<<
+  firstResultWidget <-
+    maybeAddMoreSymbol =<<
     toWidget myId (rlFirst results)
+  return (firstResultWidget, mExtraResWidget)
   where
     haveMoreResults = (not . null . rlMore) results
     makeExtra
       | haveMoreResults = Just <$> makeMoreResults (rlMore results)
       | otherwise = return Nothing
     makeMoreResults moreResults = do
-      pairs <- traverse moreResult moreResults
-      return
-        ( Box.vboxAlign 0 $ map fst pairs
-        , msum $ map snd pairs
-        )
+      (mResults, widgets) <- unzip <$> traverse moreResult moreResults
+      return (msum mResults, Box.vboxAlign 0 widgets)
     moreResult holeResult = do
+      widget <- toWidget resultId holeResult
       mResult <-
         (fmap . fmap . const) holeResult . ExprGuiM.widgetEnv $ WE.subCursor resultId
-      widget <- toWidget resultId holeResult
-      return (widget, mResult)
+      return (mResult, widget)
       where
         resultId =
           mappend moreResultsPrefixId . widgetIdHash . void $
@@ -595,46 +596,57 @@ mkEventMap holeInfo mResult = do
     actions = hiHoleActions holeInfo
     searchTerm = Property.value (hiState holeInfo) ^. hsSearchTerm
 
+assignHoleEditCursor ::
+  MonadA m =>
+  HoleInfo m -> [Widget.Id] -> [Widget.Id] -> Widget.Id ->
+  ExprGuiM m a ->
+  ExprGuiM m a
+assignHoleEditCursor holeInfo firstResultsIds allResultIds searchTermId action = do
+  cursor <- ExprGuiM.widgetEnv WE.readCursor
+  let
+    sub = isJust . flip Widget.subId cursor
+    shouldBeOnResult = sub $ resultsPrefixId holeInfo
+    isOnResult = any sub allResultIds
+    assignSource
+      | shouldBeOnResult && not isOnResult = cursor
+      | otherwise = hiHoleId holeInfo
+    destId = head (firstResultsIds ++ [searchTermId])
+  ExprGuiM.assignCursor assignSource destId action
+
 makeActiveHoleEdit :: MonadA m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
 makeActiveHoleEdit holeInfo = do
   markTypeMatchesAsUsed holeInfo
   (firstResults, hasMoreResults) <-
     ExprGuiM.liftMemoT . collectResults =<< makeAllResults holeInfo
-  cursor <- ExprGuiM.widgetEnv WE.readCursor
   let
-    sub = isJust . flip Widget.subId cursor
-    shouldBeOnResult = sub $ resultsPrefixId holeInfo
-    isOnResult = any sub $ [rlFirstId, rlMoreResultsPrefixId] <*> firstResults
-    assignSource
-      | shouldBeOnResult && not isOnResult = cursor
-      | otherwise = hiHoleId holeInfo
-    destId = head (map rlFirstId firstResults ++ [searchTermId])
-  ExprGuiM.assignCursor assignSource destId $ do
-    (mSelectedResult, resultsWidget) <-
-      makeResultsWidget holeInfo firstResults hasMoreResults
-    let
-      mResult =
-        mplus mSelectedResult . (Lens.mapped %~ rlFirst) $
-        listToMaybe firstResults
-      searchTermEventMap = maybe mempty (resultPickEventMap holeInfo) mResult
-    searchTermWidget <-
-      makeSearchTermWidget (searchTermProperty holeInfo) searchTermId
-      -- TODO: Move the result picking events into pickEventMap
-      -- instead of here on the searchTerm and on each result
-      & Lens.mapped . ExpressionGui.egWidget %~ Widget.strongerEvents searchTermEventMap
-    holeEventMap <- mkEventMap holeInfo mResult
-    maybe (return ()) (ExprGuiM.addResultPicker . (^. Sugar.holeResultPickPrefix))
-      mResult
-    let adHocEditor = adHocTextEditEventMap $ searchTermProperty holeInfo
-    return .
-      Lens.over ExpressionGui.egWidget
-      (Widget.strongerEvents holeEventMap .
-       makeBackground (hiHoleId holeInfo)
-       Layers.activeHoleBG Config.holeBackgroundColor) $
-      ExpressionGui.addBelow
-      [ (0.5, Widget.strongerEvents adHocEditor resultsWidget)
-      ]
-      searchTermWidget
+    firstResultsIds = rlFirstId <$> firstResults
+    allResultIds = [rlFirstId, rlMoreResultsPrefixId] <*> firstResults
+  assignHoleEditCursor
+    holeInfo firstResultsIds allResultIds searchTermId $ do
+      (mSelectedResult, resultsWidget) <-
+        makeResultsWidget holeInfo firstResults hasMoreResults
+      let
+        mResult =
+          mSelectedResult <|> rlFirst <$> listToMaybe firstResults
+        searchTermEventMap = maybe mempty (resultPickEventMap holeInfo) mResult
+      searchTermWidget <-
+        makeSearchTermWidget (searchTermProperty holeInfo) searchTermId
+        -- TODO: Move the result picking events into pickEventMap
+        -- instead of here on the searchTerm and on each result
+        & Lens.mapped . ExpressionGui.egWidget %~ Widget.strongerEvents searchTermEventMap
+      holeEventMap <- mkEventMap holeInfo mResult
+      maybe (return ()) (ExprGuiM.addResultPicker . (^. Sugar.holeResultPickPrefix))
+        mResult
+      let adHocEditor = adHocTextEditEventMap $ searchTermProperty holeInfo
+      return .
+        Lens.over ExpressionGui.egWidget
+        (Widget.strongerEvents holeEventMap .
+         makeBackground (hiHoleId holeInfo)
+         Layers.activeHoleBG Config.holeBackgroundColor) $
+        ExpressionGui.addBelow
+        [ (0.5, Widget.strongerEvents adHocEditor resultsWidget)
+        ]
+        searchTermWidget
   where
     searchTermId = WidgetIds.searchTermId $ hiHoleId holeInfo
 
