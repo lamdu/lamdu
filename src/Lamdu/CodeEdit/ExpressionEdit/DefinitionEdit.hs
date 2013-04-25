@@ -122,7 +122,7 @@ makeParts name guid content = do
       | otherwise = id
   (depParamsEdits, paramsEdits, (wheres, bodyEdit)) <-
     FuncEdit.makeNestedParams
-    jumpToRHSViaEquals rhs myId depParams params $
+    jumpToRHSViaEquals rhs myId depParams [] $
     (,)
     <$> makeWheres (Sugar.dWhereItems content) myId
     <*> FuncEdit.makeResultEdit lhs body
@@ -149,10 +149,10 @@ makeParts name guid content = do
     , wheres
     )
   where
-    lhs = myId : map (WidgetIds.fromGuid . Lens.view Sugar.fpGuid) allParams
+    lhs = myId : map (WidgetIds.fromGuid . Lens.view Sugar.fpGuid) depParams
     rhs = ("Def Body", body)
-    allParams = depParams ++ params
-    Sugar.Func depParams params body = Sugar.dFunc content
+    depParams = Sugar.dDepParams content
+    body = Sugar.dBody content
     addFirstParamEventMap =
       Widget.keysEventMapMovesCursor Config.addNextParamKeys (E.Doc ["Edit", "Add parameter"]) .
       toEventMapAction $ Sugar.dAddFirstParam content

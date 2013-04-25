@@ -906,19 +906,19 @@ convertDefinitionParams ::
   DataIRef.ExpressionM m (PayloadMM m) ->
   SugarM m
   ( [FuncParam m (Expression m)]
-  , [FuncParam m (Expression m)]
   , DataIRef.ExpressionM m (PayloadMM m)
   )
 convertDefinitionParams expr =
   case expr ^. Expression.eBody of
   Expression.BodyLam lambda@(Expression.Lambda Expression.Val _ _ body) -> do
     (isDependent, fp) <- convertFuncParam lambda expr
-    (depParams, params, deepBody) <- convertDefinitionParams body
-    return $
-      case isDependent of
-      Dependent -> (fp : depParams, params, deepBody)
-      NonDependent -> ([], fp : depParams ++ params, deepBody)
-  _ -> return ([], [], expr)
+    case isDependent of
+      Dependent -> do
+        (depParams, deepBody) <- convertDefinitionParams body
+        return (fp : depParams, deepBody)
+      NonDependent ->
+        return ([], expr)
+  _ -> return ([], expr)
 
 convertWhereItems ::
   (MonadA m, Typeable1 m) => DataIRef.ExpressionM m (PayloadMM m) ->
@@ -995,11 +995,12 @@ convertDefinitionContent ::
   DataIRef.ExpressionM m (PayloadMM m) ->
   SugarM m (DefinitionContent m)
 convertDefinitionContent expr = do
-  (depParams, params, funcBody) <- convertDefinitionParams expr
+  (depParams, funcBody) <- convertDefinitionParams expr
   (whereItems, whereBody) <- convertWhereItems funcBody
   bodyS <- convertExpressionI whereBody
   return DefinitionContent
-    { dFunc = Func depParams params bodyS
+    { dDepParams = depParams
+    , dBody = bodyS
     , dWhereItems = whereItems
     , dAddFirstParam = addStoredParam expr
     , dAddInnermostWhereItem =
