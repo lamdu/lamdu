@@ -1,14 +1,14 @@
 {-# LANGUAGE ConstraintKinds #-}
 module Data.Cache
   ( Cache, Key
-  , new, peek, touch, lookup, memo, memoS
+  , new, peek, touch, lookup, memo, memoS, unmemoS
   , lookupS
   -- For lower-level memoization
   , KeyBS, bsOfKey
   ) where
 
 import Control.Lens ((&), (%=), (-=), (%~), (+~), (^.))
-import Control.Monad.Trans.State (StateT(..), state, execState)
+import Control.Monad.Trans.State (StateT(..), evalStateT, state, execState)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary)
 import Data.Binary.Utils (decodeS, encodeS)
@@ -119,3 +119,6 @@ memo f key cache =
 
 memoS :: (Key k, Binary v, MonadA m) => (k -> m v) -> k -> StateT Cache m v
 memoS f key = StateT $ memo f key
+
+unmemoS :: MonadA m => StateT Cache m a -> m a
+unmemoS = (`evalStateT` new 0)

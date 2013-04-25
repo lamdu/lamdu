@@ -162,7 +162,7 @@ data HoleActions m = HoleActions
     -- (used by HoleEdit to suggest variations based on type)
     _holeInferExprType :: DataIRef.ExpressionM m () -> CT m (Maybe (DataIRef.ExpressionM m ()))
   , _holeResult ::
-      DataIRef.ExpressionM m (Maybe (StorePoint (Tag m))) ->
+      T m (DataIRef.ExpressionM m (Maybe (StorePoint (Tag m)))) ->
       CT m (Maybe (HoleResult m))
   , _holePaste :: Maybe (T m Guid)
   , -- TODO: holeMDelete is always Nothing, not implemented yet

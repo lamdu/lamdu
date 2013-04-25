@@ -36,6 +36,7 @@ import Lamdu.Data.Expression.IRef (DefI)
 import System.Random.Utils (randFunc)
 import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
+import qualified Data.Cache as Cache
 import qualified Data.Char as Char
 import qualified Data.Foldable as Foldable
 import qualified Data.List.Class as List
@@ -254,7 +255,7 @@ resultComplexityScore =
 toMResultsList ::
   MonadA m =>
   HoleInfo m -> Widget.Id ->
-  [DataIRef.ExpressionM m (Maybe (Sugar.StorePoint (Tag m)))] ->
+  [T m (DataIRef.ExpressionM m (Maybe (Sugar.StorePoint (Tag m))))] ->
   CT m (Maybe (ResultsList m))
 toMResultsList holeInfo baseId options = do
   results <-
@@ -281,7 +282,7 @@ baseExprToResultsList holeInfo baseExpr =
   (hiHoleActions holeInfo ^. Sugar.holeInferExprType) baseExpr
   where
     conclude baseExprType =
-      toMResultsList holeInfo baseId . map (Nothing <$) $
+      toMResultsList holeInfo baseId . map (return . (Nothing <$)) $
       ExprUtil.applyForms baseExprType baseExpr
     baseId = widgetIdHash baseExpr
 
@@ -291,7 +292,7 @@ applyOperatorResultsList ::
   HoleInfo m -> DataIRef.ExpressionM m () ->
   CT m (Maybe (ResultsList m))
 applyOperatorResultsList argument holeInfo baseExpr =
-  toMResultsList holeInfo baseId =<<
+  toMResultsList holeInfo baseId . map return =<<
   case (Nothing <$ baseExpr) ^. Expression.eBody of
   Expression.BodyLam (Expression.Lambda k paramGuid paramType result) ->
     pure $ map genExpr
@@ -407,7 +408,7 @@ addNewDefinitionEventMap cp holeInfo =
     DataOps.newPane cp newDefI
     defRef <-
       fmap (fromMaybe (error "GetDef should always type-check")) .
-      ExprGuiM.unmemo . (hiHoleActions holeInfo ^. Sugar.holeResult) $
+      Cache.unmemoS . (hiHoleActions holeInfo ^. Sugar.holeResult) . return $
       Nothing <$
       ExprUtil.pureExpression (Lens.review ExprUtil.bodyDefinitionRef newDefI)
     mTargetGuid <- pickResultAndCleanUp holeInfo defRef
@@ -547,7 +548,7 @@ markTypeMatchesAsUsed holeInfo =
   where
     checkInfer =
       fmap isJust . ExprGuiM.liftMemoT .
-      (hiHoleActions holeInfo ^. Sugar.holeResult) .
+      (hiHoleActions holeInfo ^. Sugar.holeResult) . return .
       (Nothing <$)
 
 mkEventMap ::
@@ -559,7 +560,7 @@ mkEventMap holeInfo mResult = do
     ExprGuiM.liftMemoT . fmap join . sequenceA $ do
       guard . null $ drop 1 searchTerm
       arg <- Property.value (hiState holeInfo) ^. hsArgument
-      Just $ hiHoleActions holeInfo ^. Sugar.holeResult $ arg
+      Just $ hiHoleActions holeInfo ^. Sugar.holeResult $ return arg
   pure $ mconcat
     [ addNewDefinitionEventMap cp holeInfo
     , maybe mempty (opPickEventMap holeInfo) mResult

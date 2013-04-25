@@ -21,14 +21,13 @@ module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad
   , getDefName, getGuidName
   , memo, memoT
   , liftMemo, liftMemoT
-  , unmemo
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens ((%~), (&))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.RWS (RWST, runRWST)
-import Control.Monad.Trans.State (StateT(..), evalStateT, mapStateT, runState)
+import Control.Monad.Trans.State (StateT(..), mapStateT, runState)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary)
 import Data.Cache (Cache)
@@ -126,9 +125,6 @@ memoT ::
   (Cache.Key k, Binary v, MonadA m) =>
   (k -> T m v) -> k -> ExprGuiM m v
 memoT f = memo (lift . f)
-
-unmemo :: MonadA m => StateT Cache m a -> m a
-unmemo = (`evalStateT` Cache.new 0)
 
 run ::
   MonadA m =>

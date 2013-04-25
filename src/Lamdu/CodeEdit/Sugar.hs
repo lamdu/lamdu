@@ -597,30 +597,51 @@ inferOnTheSide holeInferContext scope loaded =
     (node, sideInferContext) =
       (`runState` holeInferContext) $ Infer.newNodeWithScope scope
 
-mkHoleResult ::
-  (MonadA m, Typeable1 m) => SugarM.Context m ->
-  DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i (Stored m)) ->
-  DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), Maybe (StorePoint (Tag m))) ->
-  HoleResult m
-mkHoleResult sugarContext exprI res =
-  HoleResult
-  { _holeResultInferred = fst <$> res
-  , _holeResultConvert = convertHoleResult
-  , _holeResultPick = pick
-  , _holeResultPickPrefix = void pick
-  }
+makeHoleResult ::
+  (Typeable1 m, MonadA m) => SugarM.Context m ->
+  Infer.Inferred (DefI (Tag m)) ->
+  Expression.Expression (DefI (Tag m))
+  (SugarInfer.Payload (Tag m) inferred (Stored m)) ->
+  T m (DataIRef.ExpressionM m (Maybe (StorePoint (Tag m)))) ->
+  CT m (Maybe (HoleResult m))
+makeHoleResult sugarContext inferred exprI makeExpr =
+  (fmap . fmap) mkHoleResult $
+  mapStateT Transaction.forkScratch makeInferredExpr
   where
-    cp = sugarContext ^. SugarM.scCodeAnchors
-    convertHoleResult =
-      SugarM.runPure cp . convertExpressionI .
+    gen expr =
+      Random.mkStdGen $
+      hashWithSalt 0 (show (void expr), show guid)
+    makeInferredExpr = inferResult =<< lift makeExpr
+    convertHoleResult res =
+      SugarM.runPure (sugarContext ^. SugarM.scCodeAnchors) . convertExpressionI .
       (Lens.mapped . SugarInfer.plInferred %~ Just) .
       (Lens.mapped . SugarInfer.plStored .~ Nothing) .
-      SugarInfer.resultFromInferred gen $ fst <$> res
-    gen =
-      Random.mkStdGen $
-      hashWithSalt 0 (show (void res), show guid)
+      SugarInfer.resultFromInferred (gen res) $ fst <$> res
+    inferResult expr = do
+      loaded <- lift $ SugarInfer.load Nothing expr
+      let point = Infer.iPoint inferred
+      memoBy (loaded, token, point, 'r') . return $
+        SugarInfer.inferMaybe loaded (sugarContext ^. SugarM.scHoleInferState) point
+    pick = do
+      mResReal <- Cache.unmemoS makeInferredExpr
+      case mResReal of
+        Nothing ->
+          fail $
+          "Rerun of hole result maker and infer on its " ++
+          "result failed after first run succeeded. Fishy transaction given!"
+        Just resReal ->
+          pickResult exprI $ ExprUtil.randomizeParamIds (gen resReal) resReal
     guid = resultGuid exprI
-    pick = pickResult exprI $ ExprUtil.randomizeParamIds gen res
+    token = (guid, sugarContext ^. SugarM.scMContextHash)
+    mkHoleResult resFake =
+      HoleResult
+      { _holeResultInferred = fst <$> resFake
+        -- TODO: Is it ok to use the fake result (resFake) not in the
+        -- forked scratch space?
+      , _holeResultConvert = convertHoleResult resFake
+      , _holeResultPick = pick
+      , _holeResultPickPrefix = void pick
+      }
 
 memoBy ::
   (Cache.Key k, Binary v, MonadA m) =>
@@ -635,16 +656,10 @@ convertTypeCheckedHoleH
     chooseHoleType (iwcInferredValues iwc) plainHole inferredHole
   where
     eGuid = resultGuid exprI
-    inferState = sugarContext ^. SugarM.scHoleInferState
+    inferState  = sugarContext ^. SugarM.scHoleInferState
     contextHash = sugarContext ^. SugarM.scMContextHash
     inferred = iwcInferred iwc
     scope = Infer.nScope $ Infer.iPoint inferred
-    inferResult expr = do
-      loaded <- lift $ SugarInfer.load Nothing expr
-      let point = Infer.iPoint inferred
-      memoBy (loaded, token, point, 'r') . return $
-        SugarInfer.inferMaybe loaded inferState point
-
     token = (eGuid, contextHash)
     inferExprType expr = do
       loaded <- lift $ SugarInfer.load Nothing expr
@@ -661,9 +676,7 @@ convertTypeCheckedHoleH
       , _holeMDelete = Nothing
       , _holeScope = map onScopeElement . Map.toList $ Infer.iScope inferred
       , _holeInferExprType = inferExprType
-      , _holeResult =
-        (fmap . fmap) (mkHoleResult sugarContext exprS) .
-        inferResult
+      , _holeResult = makeHoleResult sugarContext inferred exprS
       }
     inferredHole =
       mkExpression exprI .
