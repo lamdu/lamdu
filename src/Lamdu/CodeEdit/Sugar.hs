@@ -906,7 +906,7 @@ convertDefinitionParams ::
   DataIRef.ExpressionM m (PayloadMM m) ->
   SugarM m
   ( [FuncParam m (Expression m)]
-  , FieldList m (Expression m)
+  , Maybe (FuncParam m (Expression m))
   , DataIRef.ExpressionM m (PayloadMM m)
   )
 convertDefinitionParams expr =
@@ -919,11 +919,9 @@ convertDefinitionParams expr =
         return (fp : depParams, fieldParams, deepBody)
       (NonDependent, ExpressionRecord (Record k fields))
         | k == Type && (not . null . flItems) fields ->
-          return ([], fields, body)
-      _ -> return ([], emptyFieldList, expr)
-  _ -> return ([], emptyFieldList, expr)
-  where
-    emptyFieldList = FieldList [] Nothing -- TODO: add first item
+          return ([], Just fp, body)
+      _ -> return ([], Nothing, expr)
+  _ -> return ([], Nothing, expr)
 
 convertWhereItems ::
   (MonadA m, Typeable1 m) => DataIRef.ExpressionM m (PayloadMM m) ->

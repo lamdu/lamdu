@@ -5,6 +5,7 @@ import Control.Applicative ((<$>), (<*>))
 import Control.Lens ((%~), (&), (^.))
 import Control.MonadA (MonadA)
 import Data.List.Utils (nonEmptyAll)
+import Data.Maybe (maybeToList)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
@@ -122,7 +123,7 @@ makeParts name guid content = do
       | otherwise = id
   (depParamsEdits, paramsEdits, (wheres, bodyEdit)) <-
     FuncEdit.makeNestedParams
-    jumpToRHSViaEquals rhs myId depParams [] $
+    jumpToRHSViaEquals rhs myId depParams params $
     (,)
     <$> makeWheres (Sugar.dWhereItems content) myId
     <*> FuncEdit.makeResultEdit lhs body
@@ -149,9 +150,11 @@ makeParts name guid content = do
     , wheres
     )
   where
-    lhs = myId : map (WidgetIds.fromGuid . Lens.view Sugar.fpGuid) depParams
+    lhs = myId : map (WidgetIds.fromGuid . Lens.view Sugar.fpGuid) allParams
     rhs = ("Def Body", body)
+    allParams = depParams ++ params
     depParams = Sugar.dDepParams content
+    params = maybeToList (Sugar.dParams content)
     body = Sugar.dBody content
     addFirstParamEventMap =
       Widget.keysEventMapMovesCursor Config.addNextParamKeys (E.Doc ["Edit", "Add parameter"]) .
