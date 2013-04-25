@@ -42,7 +42,7 @@ module Lamdu.CodeEdit.Sugar
 import Control.Applicative (Applicative(..), (<$>), (<$))
 import Control.Lens (Traversal')
 import Control.Lens.Operators
-import Control.Monad ((<=<), guard, join, mplus, void, zipWithM, MonadPlus)
+import Control.Monad ((<=<), guard, join, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..), runState, mapStateT)
 import Control.MonadA (MonadA)
