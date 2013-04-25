@@ -549,14 +549,17 @@ convertApplyPrefix (Expression.Apply (funcRef, funcI) (argRef, _)) applyI = do
 convertGetVariable :: (MonadA m, Typeable1 m) => Expression.VariableRef (DefI (Tag m)) -> Convertor m
 convertGetVariable varRef exprI = do
   isInfix <- SugarM.liftTransaction $ Infix.isInfixVar varRef
-  getVarExpr <-
-    mkExpression exprI $ ExpressionGetVariable varRef
+  getVarExpr <- removeParamType <$> mkExpression exprI (ExpressionGetVariable varRef)
   if isInfix
     then
       mkExpression exprI .
       ExpressionSection HaveParens $
       Section Nothing (removeInferredTypes getVarExpr) Nothing
     else return getVarExpr
+  where
+    removeParamType
+      | Lens.notNullOf Expression._ParameterRef varRef = removeSuccessfulType
+      | otherwise = id
 
 mkPaste :: MonadA m => Stored m -> SugarM m (Maybe (T m Guid))
 mkPaste exprP = do
