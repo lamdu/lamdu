@@ -360,26 +360,26 @@ makeResultsList holeInfo group =
 
 makeAllResults :: MonadA m => HoleInfo m -> ExprGuiM m (ListT (CT m) (ResultType, ResultsList m))
 makeAllResults holeInfo = do
-  paramResults <-
+  paramGroups <-
     traverse (makeVariableGroup . Expression.ParameterRef) $
     hiHoleActions holeInfo ^. Sugar.holeScope
-  globalResults <-
+  globalGroups <-
     traverse (makeVariableGroup . Expression.DefinitionRef) =<<
     ExprGuiM.getCodeAnchor Anchors.globals
-  tagResults <- traverse makeTagGroup =<< ExprGuiM.getCodeAnchor Anchors.fields
+  tagGroups <- traverse makeTagGroup =<< ExprGuiM.getCodeAnchor Anchors.fields
   let
     state = Property.value $ hiState holeInfo
     searchTerm = state ^. hsSearchTerm
-    literalResults = makeLiteralGroup searchTerm
-    getVarResults = paramResults ++ globalResults
-    relevantResults = primitiveResults ++ literalResults ++ getVarResults ++ tagResults
+    literalGroups = makeLiteralGroup searchTerm
+    getVarGroups = paramGroups ++ globalGroups
+    relevantGroups = primitiveGroups ++ literalGroups ++ getVarGroups ++ tagGroups
   return .
     List.catMaybes .
     List.mapL (makeResultsList holeInfo) .
     List.fromList $
-    holeMatches groupNames searchTerm relevantResults
+    holeMatches groupNames searchTerm relevantGroups
   where
-    primitiveResults =
+    primitiveGroups =
       [ mkGroup ["Set", "Type"] $ Expression.BodyLeaf Expression.Set
       , mkGroup ["Integer", "ℤ", "Z"] $ Expression.BodyLeaf Expression.IntegerType
       , mkGroup ["->", "Pi", "→", "→", "Π", "π"] $
