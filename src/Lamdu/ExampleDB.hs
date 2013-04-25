@@ -198,6 +198,7 @@ initDB db =
         writeCodeAnchor A.preCursor paneWId
         writeCodeAnchor A.postCursor paneWId
         writeCodeAnchor A.fields []
+        sequence_ . replicate 10 $ DataOps.makeNewFieldTag A.codeProps
       -- Prevent undo into the invalid empty revision
       newVer <- Branch.curVersion master
       Version.preventUndo newVer
