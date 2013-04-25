@@ -13,7 +13,7 @@ module Lamdu.CodeEdit.Sugar.Types
     , _ExpressionFunc, _ExpressionGetVariable, _ExpressionHole
     , _ExpressionInferred, _ExpressionPolymorphic
     , _ExpressionLiteralInteger, _ExpressionAtom
-    , _ExpressionList
+    , _ExpressionList, _ExpressionRecord, _ExpressionTag
   , Payload(..), plInferredTypes, plActions, plNextHole
   , ExpressionP(..)
     , rGuid, rExpressionBody, rPayload, rHiddenGuids, rPresugaredExpression

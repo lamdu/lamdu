@@ -903,25 +903,30 @@ convertExpressionPure cp gen =
 
 convertDefinitionParams ::
   (MonadA m, Typeable1 m) =>
+  [Guid] ->
   DataIRef.ExpressionM m (PayloadMM m) ->
   SugarM m
   ( [FuncParam m (Expression m)]
   , Maybe (FuncParam m (Expression m))
   , DataIRef.ExpressionM m (PayloadMM m)
   )
-convertDefinitionParams expr =
+convertDefinitionParams usedTags expr =
   case expr ^. Expression.eBody of
   Expression.BodyLam lambda@(Expression.Lambda Expression.Val _ _ body) -> do
     (isDependent, fp) <- convertFuncParam lambda expr
     case (isDependent, fp ^. fpType . rExpressionBody) of
       (Dependent, _) -> do
-        (depParams, fieldParams, deepBody) <- convertDefinitionParams body
+        (depParams, fieldParams, deepBody) <- convertDefinitionParams usedTags body
         return (fp : depParams, fieldParams, deepBody)
       (NonDependent, ExpressionRecord (Record k fields))
-        | k == Type && (not . null) (fields ^. flItems) ->
+        | k == Type
+        && (not . null) (fields ^. flItems)
+        && Lens.allOf fieldTags (`notElem` usedTags) fields ->
           return ([], Just fp, body)
       _ -> return ([], Nothing, expr)
   _ -> return ([], Nothing, expr)
+  where
+    fieldTags = flItems . traverse . rfTag . rExpressionBody . _ExpressionTag
 
 mExtractWhere ::
   Expression.Expression def a ->
@@ -935,13 +940,15 @@ mExtractWhere expr = do
   return (apply, lambda)
 
 convertWhereItems ::
-  (MonadA m, Typeable1 m) => DataIRef.ExpressionM m (PayloadMM m) ->
+  (MonadA m, Typeable1 m) =>
+  [Guid] ->
+  DataIRef.ExpressionM m (PayloadMM m) ->
   SugarM m ([WhereItem m], DataIRef.ExpressionM m (PayloadMM m))
-convertWhereItems expr =
+convertWhereItems usedTags expr =
   case mExtractWhere expr of
   Nothing -> return ([], expr)
   Just (apply, lambda) -> do
-    value <- convertDefinitionContent $ apply ^. Expression.applyArg
+    value <- convertDefinitionContent usedTags $ apply ^. Expression.applyArg
     let
       mkWIActions topLevelProp bodyStored =
         ListItemActions
@@ -960,7 +967,7 @@ convertWhereItems expr =
           resultStored expr <*>
           traverse (Lens.view SugarInfer.plStored) (lambda ^. Expression.lambdaResult)
         }
-    (nextItems, whereBody) <- convertWhereItems $ lambda ^. Expression.lambdaResult
+    (nextItems, whereBody) <- convertWhereItems usedTags $ lambda ^. Expression.lambdaResult
     return (item : nextItems, whereBody)
 
 addStoredParam ::
@@ -997,11 +1004,18 @@ assertedGetProp msg _ = error msg
 
 convertDefinitionContent ::
   (MonadA m, Typeable1 m) =>
+  [Guid] ->
   DataIRef.ExpressionM m (PayloadMM m) ->
   SugarM m (DefinitionContent m)
-convertDefinitionContent expr = do
-  (depParams, params, funcBody) <- convertDefinitionParams expr
-  (whereItems, whereBody) <- convertWhereItems funcBody
+convertDefinitionContent usedTags expr = do
+  (depParams, params, funcBody) <- convertDefinitionParams usedTags expr
+  let
+    defTags =
+      params ^..
+      Lens._Just . fpType .
+      rExpressionBody . _ExpressionRecord . rFields . flItems . traverse . rfTag .
+      rExpressionBody . _ExpressionTag
+  (whereItems, whereBody) <- convertWhereItems (usedTags ++ defTags) funcBody
   bodyS <- convertExpressionI whereBody
   return DefinitionContent
     { dDepParams = depParams
@@ -1080,7 +1094,7 @@ convertDefIExpression cp exprLoaded defI typeI = do
   context <- lift $ SugarM.mkContext cp (Just defI) (Just reinferRoot) inferredLoadedResult
   lift . SugarM.run context $ do
     content <-
-      convertDefinitionContent .
+      convertDefinitionContent [] .
       (fmap . Lens.over SugarInfer.plInferred) Just $
       inferredLoadedResult ^. SugarInfer.ilrExpr
     mNewType <-
