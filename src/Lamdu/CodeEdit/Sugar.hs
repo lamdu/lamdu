@@ -16,7 +16,7 @@ module Lamdu.CodeEdit.Sugar
   , WhereItem(..)
   , ListItem(..), ListActions(..), List(..)
   , RecordField(..), rfMItemActions, rfTag, rfExpr
-  , Kind(..), Record(..), GetField(..)
+  , Kind(..), Record(..), FieldList(..), GetField(..)
   , Func(..)
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
@@ -832,8 +832,11 @@ convertRecord (Expression.Record k fields) exprI = do
     mkExpression exprI $ ExpressionRecord
     Record
     { rKind = k
-    , rFields = withNextHoles sFields
-    , rMAddFirstField = addField <$> resultMIRef exprI
+    , rFields =
+        FieldList
+        { flItems = withNextHoles sFields
+        , flMAddFirstItem = addField <$> resultMIRef exprI
+        }
     }
   where
     defaultGuid = resultGuid exprI

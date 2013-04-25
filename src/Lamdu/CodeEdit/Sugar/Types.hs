@@ -21,7 +21,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , WhereItem(..)
   , ListItem(..), ListActions(..), List(..)
   , RecordField(..), rfMItemActions, rfTag, rfExpr
-  , Kind(..), Record(..)
+  , Kind(..), Record(..), FieldList(..)
   , GetField(..), gfRecord, gfTag
   , Func(..), fDepParams, fParams, fBody
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
@@ -209,10 +209,14 @@ data RecordField m expr = RecordField
   , _rfExpr :: expr -- field type or val
   } deriving (Functor, Foldable, Traversable)
 
+data FieldList m expr = FieldList
+  { flItems :: [RecordField m expr]
+  , flMAddFirstItem :: Maybe (T m Guid)
+  } deriving (Functor, Foldable, Traversable)
+
 data Record m expr = Record
   { rKind :: Kind -- record type or val
-  , rFields :: [RecordField m expr]
-  , rMAddFirstField :: Maybe (T m Guid)
+  , rFields :: FieldList m expr
   } deriving (Functor, Foldable, Traversable)
 
 data GetField expr = GetField
