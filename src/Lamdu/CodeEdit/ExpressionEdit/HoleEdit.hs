@@ -134,40 +134,46 @@ data ResultsList m = ResultsList
   , rlExtra :: [Sugar.HoleResult m]
   }
 
-resultsToWidgets
+-- We can't simply return a single widget, because the extra results
+-- widget is put on the side and does not bloat the size of the
+-- left-side result widget.
+data ResultCompositeWidget m = ResultCompositeWidget
+  { rcwMainWidget :: WidgetT m
+  , rcwExtraWidget :: Maybe (WidgetT m)
+  }
+
+makeResultCompositeWidget
   :: MonadA m
   => HoleInfo m -> ResultsList m
   -> ExprGuiM m
-     ( WidgetT m
-       -- On any result?
-     , Maybe
-       -- Which result:
-       ( Sugar.HoleResult m
-         -- Extra results widget?
-       , Maybe (WidgetT m)
-       )
-     )
-resultsToWidgets holeInfo results = do
+     (ResultCompositeWidget m, Maybe (Sugar.HoleResult m))
+makeResultCompositeWidget holeInfo results = do
   mainResultWidget <-
     maybeAddExtraSymbol ((not . null . rlExtra) results) (rlMainId results) =<<
     makeHoleResultWidget holeInfo (rlMainId results) (rlMain results)
-  mExtraResWidget <-
+  (mExtraResWidget, mResult) <-
     if mainResultWidget ^. Widget.wIsFocused
     then do
       mWidget <- fmap snd <$> makeExtra
-      return $ Just (rlMain results, mWidget)
+      return (mWidget, Just (rlMain results))
     else do
       cursorOnExtra <-
         ExprGuiM.widgetEnv . WE.isSubCursor $ rlExtraResultsPrefixId results
       if cursorOnExtra
         then do
           mExtra <- makeExtra
-          return $ do
+          return . unzipF $ do
             (mResult, widget) <- mExtra
             result <- mResult
-            Just (result, Just widget)
-        else return Nothing
-  return (mainResultWidget, mExtraResWidget)
+            Just (widget, result)
+        else return (Nothing, Nothing)
+  return
+    ( ResultCompositeWidget
+      { rcwMainWidget = mainResultWidget
+      , rcwExtraWidget = mExtraResWidget
+      }
+    , mResult
+    )
   where
     makeExtra =
       makeExtraResultsWidget holeInfo
@@ -483,23 +489,24 @@ makeResultsWidget ::
   [ResultsList m] -> HaveHiddenResults ->
   ExprGuiM m (Maybe (Sugar.HoleResult m), WidgetT m)
 makeResultsWidget holeInfo shownResults hiddenResults = do
-  (mainResultWidgets, mActiveResults) <-
-    unzip <$> traverse (resultsToWidgets holeInfo) shownResults
+  (widgets, mResults) <-
+    unzip <$> traverse (makeResultCompositeWidget holeInfo) shownResults
   let
-    (mIndex, mResult) = unzipF $ mActiveResults ^@? Lens.itraversed <. Lens._Just
-    (mHoleResult, mExtraResultsWidget) = unzipF mResult & Lens._2 %~ join
+    (mIndex, mResult) = unzipF $ mResults ^@? Lens.itraversed <. Lens._Just
+    extraWidget = msum $ rcwExtraWidget <$> widgets
   shownResultsWidget <-
-    case mainResultWidgets of
+    case widgets of
     [] -> makeNoResults $ Widget.toAnimId myId
     _ ->
-      return . blockDownEvents $
-      vboxMBiasedAlign mIndex 0 mainResultWidgets
+      return . blockDownEvents .
+      vboxMBiasedAlign mIndex 0 $
+      rcwMainWidget <$> widgets
   hiddenResultsWidgets <- maybeToList <$> makeHiddenResultsMWidget hiddenResults myId
   return
-    ( mHoleResult
+    ( mResult
     , BWidgets.hboxCenteredSpaced $
       Box.vboxCentered (shownResultsWidget : hiddenResultsWidgets) :
-      maybeToList mExtraResultsWidget
+      maybeToList extraWidget
     )
   where
     myId = hiHoleId holeInfo
