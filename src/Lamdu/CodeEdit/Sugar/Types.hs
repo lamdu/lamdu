@@ -25,6 +25,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , Record(..), rKind, rFields
   , FieldList(..), flItems, flMAddFirstItem
   , GetField(..), gfRecord, gfTag
+  , GetParam(..)
   , Func(..), fDepParams, fParams, fBody
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
@@ -226,6 +227,11 @@ data GetField expr = GetField
   , _gfTag :: expr
   } deriving (Functor, Foldable, Traversable)
 
+data GetParam = GetParam
+  { gpTag :: Guid
+  , gpJumpTo :: Guid
+  }
+
 data ExpressionBody m expr
   = ExpressionApply   { _eHasParens :: HasParens, __eApply :: Expression.Apply expr }
   | ExpressionSection { _eHasParens :: HasParens, __eSection :: Section expr }
@@ -241,6 +247,7 @@ data ExpressionBody m expr
   | ExpressionRecord   { __eRecord :: Record m expr }
   | ExpressionGetField { __eGetField :: GetField expr }
   | ExpressionTag      { __eTag :: Guid }
+  | ExpressionGetParam { __eGetParam :: GetParam }
   deriving (Functor, Foldable, Traversable)
 LensTH.makePrisms ''ExpressionBody
 

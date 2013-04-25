@@ -16,7 +16,7 @@ module Lamdu.CodeEdit.Sugar
   , WhereItem(..)
   , ListItem(..), ListActions(..), List(..)
   , RecordField(..), rfMItemActions, rfTag, rfExpr
-  , Kind(..), Record(..), FieldList(..), GetField(..)
+  , Kind(..), Record(..), FieldList(..), GetField(..), GetParam(..)
   , Func(..)
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
@@ -873,12 +873,21 @@ convertGetField ::
   DataIRef.ExpressionM m (PayloadMM m) ->
   SugarM m (Expression m)
 convertGetField (Expression.GetField recExpr tagExpr) exprI = do
-  recordArgs <- (^. SugarM.scRecordArgs) <$> SugarM.readContext
+  recordParams <- (^. SugarM.scRecordParams) <$> SugarM.readContext
   let
-    mParamField = do
+    mParam = do
+      tag <- tagExpr ^? Expression.eBody . Expression._BodyLeaf . Expression._Tag
+      paramInfo <- Map.lookup tag recordParams
       param <- recExpr ^? Expression.eBody . ExprUtil.bodyParameterRef
-      guard $ elem param recordArgs
-  case mParamField of
+      guard $ param == SugarM.piFromParameters paramInfo
+      return $
+        GetParam
+        { gpTag = tag
+        , gpJumpTo = SugarM.piJumpTo paramInfo
+        }
+  case mParam of
+    Just param ->
+      mkExpression exprI $ ExpressionGetParam param
     Nothing -> do
       recExprS <- convertExpressionI recExpr
       tagExprS <- convertExpressionI tagExpr
@@ -887,8 +896,6 @@ convertGetField (Expression.GetField recExpr tagExpr) exprI = do
         { _gfRecord = recExprS
         , _gfTag = removeSuccessfulType tagExprS
         }
-    Just () ->
-      mkExpression exprI $ ExpressionAtom "TODO"
 
 convertExpressionI :: (Typeable1 m, MonadA m) => DataIRef.ExpressionM m (PayloadMM m) -> SugarM m (Expression m)
 convertExpressionI ee =
@@ -1032,13 +1039,17 @@ convertDefinitionContent ::
 convertDefinitionContent usedTags expr = do
   (depParams, params, funcBody) <- convertDefinitionParams usedTags expr
   let
-    defTags =
-      params ^..
+    fieldTagsLens =
       Lens._Just . fpType .
-      rExpressionBody . _ExpressionRecord . rFields . flItems . traverse . rfTag .
-      rExpressionBody . _ExpressionTag
-    recordArgs = params ^.. Lens._Just . fpGuid
-  SugarM.local (SugarM.scRecordArgs <>~ recordArgs) $ do
+      rExpressionBody . _ExpressionRecord . rFields . flItems . traverse . rfTag
+    tagExprs = params ^.. fieldTagsLens
+    defTags = tagExprs >>= (^.. rExpressionBody . _ExpressionTag)
+    paramInfos = Map.fromList $ do
+      arg <- params ^.. Lens._Just . fpGuid
+      tagExpr <- tagExprs
+      tag <- tagExpr ^.. rExpressionBody . _ExpressionTag
+      return (tag, SugarM.ParamInfo arg (tagExpr ^. rGuid))
+  SugarM.local (SugarM.scRecordParams <>~ paramInfos) $ do
     (whereItems, whereBody) <- convertWhereItems (usedTags ++ defTags) funcBody
     bodyS <- convertExpressionI whereBody
     return DefinitionContent

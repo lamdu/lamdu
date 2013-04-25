@@ -1,8 +1,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
 module Lamdu.CodeEdit.Sugar.Monad
-  ( Context(..)
+  ( Context(..), ParamInfo(..)
   , scMDefI, scInferState, scMContextHash, scHoleInferState
-  , scCodeAnchors, scSpecialFunctions, scMReinferRoot, scRecordArgs
+  , scCodeAnchors, scSpecialFunctions, scMReinferRoot, scRecordParams
   , mkContext
   , SugarM(..), run, runPure
   , readContext, liftTransaction, local
@@ -15,6 +15,8 @@ import Control.Lens ((^.))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.MonadA (MonadA)
+import Data.Map (Map)
+import Data.Monoid (mempty)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Typeable (Typeable)
@@ -28,6 +30,11 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression.Infer as Infer
 
+data ParamInfo = ParamInfo
+  { piFromParameters :: Guid
+  , piJumpTo :: Guid
+  }
+
 data Context m = Context
   { _scMDefI :: Maybe (DefI (Tag m))
   , _scInferState :: Infer.Context (DefI (Tag m))
@@ -36,7 +43,7 @@ data Context m = Context
   , _scCodeAnchors :: Anchors.CodeProps m
   , _scSpecialFunctions :: Anchors.SpecialFunctions (Tag m)
   , _scMReinferRoot :: Maybe (String -> CT m Bool)
-  , _scRecordArgs :: [Guid]
+  , _scRecordParams :: Map Guid ParamInfo
   }
 LensTH.makeLenses ''Context
 
@@ -60,7 +67,7 @@ mkContext cp mDefI mReinferRoot iResult = do
     , _scCodeAnchors = cp
     , _scSpecialFunctions = specialFunctions
     , _scMReinferRoot = mReinferRoot
-    , _scRecordArgs = []
+    , _scRecordParams = mempty
     }
 
 run :: MonadA m => Context m -> SugarM m a -> T m a
@@ -77,7 +84,7 @@ runPure cp act = do
     , _scCodeAnchors = cp
     , _scSpecialFunctions = specialFunctions
     , _scMReinferRoot = Nothing
-    , _scRecordArgs = []
+    , _scRecordParams = mempty
     } act
 
 readContext :: MonadA m => SugarM m (Context m)
