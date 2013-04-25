@@ -127,11 +127,16 @@ resultPickEventMap holeInfo holeResult =
       fmap (handlePickResultTargetGuid holeInfo) $
       pickResultAndCleanUp holeInfo holeResult
 
+data Result m = Result
+  { rHoleResult :: Sugar.HoleResult m
+  , rMkWidget :: ExprGuiM m (WidgetT m)
+  , rId :: Widget.Id
+  }
+
 data ResultsList m = ResultsList
-  { rlMainId :: Widget.Id
-  , rlExtraResultsPrefixId :: Widget.Id
-  , rlMain :: Sugar.HoleResult m
-  , rlExtra :: [Sugar.HoleResult m]
+  { rlExtraResultsPrefixId :: Widget.Id
+  , rlMain :: Result m
+  , rlExtra :: [Result m]
   }
 
 -- We can't simply return a single widget, because the extra results
@@ -144,18 +149,17 @@ data ResultCompositeWidget m = ResultCompositeWidget
 
 makeResultCompositeWidget
   :: MonadA m
-  => HoleInfo m -> ResultsList m
+  => ResultsList m
   -> ExprGuiM m
      (ResultCompositeWidget m, Maybe (Sugar.HoleResult m))
-makeResultCompositeWidget holeInfo results = do
+makeResultCompositeWidget results = do
   mainResultWidget <-
-    maybeAddExtraSymbol ((not . null . rlExtra) results) (rlMainId results) =<<
-    makeHoleResultWidget holeInfo (rlMainId results) (rlMain results)
+    maybeAddExtraSymbol ((not . null . rlExtra) results) (rId mainResult) =<< rMkWidget mainResult
   (mExtraResWidget, mResult) <-
     if mainResultWidget ^. Widget.wIsFocused
     then do
       mWidget <- fmap snd <$> makeExtra
-      return (mWidget, Just (rlMain results))
+      return (mWidget, Just (rHoleResult (rlMain results)))
     else do
       cursorOnExtra <-
         ExprGuiM.widgetEnv . WE.isSubCursor $ rlExtraResultsPrefixId results
@@ -175,30 +179,25 @@ makeResultCompositeWidget holeInfo results = do
     , mResult
     )
   where
-    makeExtra =
-      makeExtraResultsWidget holeInfo
-      (rlExtraResultsPrefixId results) (rlExtra results)
+    mainResult = rlMain results
+    makeExtra = makeExtraResultsWidget $ rlExtra results
 
 makeExtraResultsWidget ::
-  MonadA m => HoleInfo m -> Widget.Id -> [Sugar.HoleResult m] ->
+  MonadA m => [Result m] ->
   ExprGuiM m (Maybe (Maybe (Sugar.HoleResult m), WidgetT m))
-makeExtraResultsWidget holeInfo extraPrefixId extraResults
+makeExtraResultsWidget extraResults
   | (not . null) extraResults = Just <$> do
     (mResults, widgets) <-
-      unzip <$> traverse extraResult extraResults
+      unzip <$> traverse mkResWidget extraResults
     return (msum mResults, Box.vboxAlign 0 widgets)
   | otherwise = return Nothing
   where
-    extraResult holeResult = do
-      widget <-
-        makeHoleResultWidget holeInfo resultId holeResult
-      mResult <-
-        (fmap . fmap . const) holeResult . ExprGuiM.widgetEnv $ WE.subCursor resultId
-      return (mResult, widget)
+    mkResWidget result = do
+      isOnResult <- ExprGuiM.widgetEnv $ WE.isSubCursor (rId result)
+      widget <- rMkWidget result
+      return (if isOnResult then Just holeResultSugar else Nothing, widget)
       where
-        resultId =
-          mappend extraPrefixId . widgetIdHash . void $
-          holeResult ^. Sugar.holeResultInferred
+        holeResultSugar = rHoleResult result
 
 makeHoleResultWidget ::
   MonadA m => HoleInfo m ->
@@ -290,16 +289,24 @@ toMResultsList holeInfo baseId options = do
     sortOn (resultComplexityScore . Lens.view Sugar.holeResultInferred) .
     catMaybes <$>
     traverse (hiHoleActions holeInfo ^. Sugar.holeResult) options
-  return $
-    case results of
-    [] -> Nothing
-    x : xs ->
-      Just ResultsList
-      { rlMainId = mconcat [resultsPrefixId holeInfo, baseId]
-      , rlExtraResultsPrefixId =
-        mconcat [resultsPrefixId holeInfo, Widget.Id ["extra results"], baseId]
-      , rlMain = x
-      , rlExtra = xs
+  case results of
+    [] -> return Nothing
+    x : xs -> Just <$> do
+      return ResultsList
+        { rlExtraResultsPrefixId = extraResultsPrefixId
+        , rlMain = mkResult (mconcat [resultsPrefixId holeInfo, baseId]) x
+        , rlExtra = map (\res -> mkResult (extraResultId res) res) xs
+        }
+  where
+    extraResultId =
+      mappend extraResultsPrefixId . widgetIdHash . void .
+      (^. Sugar.holeResultInferred)
+    extraResultsPrefixId = mconcat [resultsPrefixId holeInfo, Widget.Id ["extra results"], baseId]
+    mkResult resultId holeResult =
+      Result
+      { rHoleResult = holeResult
+      , rMkWidget = makeHoleResultWidget holeInfo resultId holeResult
+      , rId = resultId
       }
 
 baseExprToResultsList ::
@@ -490,7 +497,7 @@ makeResultsWidget ::
   ExprGuiM m (Maybe (Sugar.HoleResult m), WidgetT m)
 makeResultsWidget holeInfo shownResults hiddenResults = do
   (widgets, mResults) <-
-    unzip <$> traverse (makeResultCompositeWidget holeInfo) shownResults
+    unzip <$> traverse makeResultCompositeWidget shownResults
   let
     (mIndex, mResult) = unzipF $ mResults ^@? Lens.itraversed <. Lens._Just
     extraWidget = msum $ rcwExtraWidget <$> widgets
@@ -638,15 +645,15 @@ makeActiveHoleEdit holeInfo = do
   (shownResults, hasHiddenResults) <-
     ExprGuiM.liftMemoT . collectResults =<< makeAllResults holeInfo
   let
-    shownResultsIds = rlMainId <$> shownResults
-    allResultIds = [rlMainId, rlExtraResultsPrefixId] <*> shownResults
+    shownResultsIds = rId . rlMain <$> shownResults
+    allResultIds = [rId . rlMain, rlExtraResultsPrefixId] <*> shownResults
   assignHoleEditCursor
     holeInfo shownResultsIds allResultIds searchTermId $ do
       (mSelectedResult, resultsWidget) <-
         makeResultsWidget holeInfo shownResults hasHiddenResults
       let
         mResult =
-          mSelectedResult <|> rlMain <$> listToMaybe shownResults
+          mSelectedResult <|> rHoleResult . rlMain <$> listToMaybe shownResults
         searchTermEventMap = maybe mempty (resultPickEventMap holeInfo) mResult
       searchTermWidget <-
         makeSearchTermWidget (searchTermProperty holeInfo) searchTermId
