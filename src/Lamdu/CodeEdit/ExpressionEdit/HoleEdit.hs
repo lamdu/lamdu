@@ -7,7 +7,7 @@ module Lamdu.CodeEdit.ExpressionEdit.HoleEdit
   ) where
 
 import Control.Applicative (Applicative(..), (<$>), (<$))
-import Control.Lens ((^.), (&), (%~), (.~), (^?))
+import Control.Lens.Operators
 import Control.Monad ((<=<), filterM, mplus, msum, void, guard, join)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.State (StateT)
@@ -20,7 +20,7 @@ import Data.Function (on)
 import Data.List (isInfixOf, isPrefixOf)
 import Data.List.Class (List)
 import Data.List.Utils (sortOn, nonEmptyAll)
-import Data.Maybe (isJust, listToMaybe, maybeToList, mapMaybe, fromMaybe, catMaybes)
+import Data.Maybe (isJust, listToMaybe, maybeToList, fromMaybe, catMaybes)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
@@ -188,6 +188,7 @@ resultsToWidgets holeInfo results = do
       ExprGuiM.widgetEnv . BWidgets.makeFocusableView resultId .
       -- TODO: No need for this if we just add a pick result event map
       -- to the whole hole
+      Widget.scale Config.holeResultScaleFactor .
       Widget.strongerEvents (resultPickEventMap holeInfo holeResult) .
       Lens.view ExpressionGui.egWidget =<<
       ExprGuiM.makeSubexpresion . Sugar.removeTypes =<<
@@ -447,47 +448,48 @@ vboxMBiasedAlign mChildIndex align =
 
 data HaveMoreResults = HaveMoreResults | NoMoreResults
 
+makeMoreResultsMWidget :: MonadA m => HaveMoreResults -> Widget.Id -> ExprGuiM m (Maybe (Widget f))
+makeMoreResultsMWidget HaveMoreResults myId =
+  fmap Just . ExprGuiM.widgetEnv . BWidgets.makeLabel "..." $
+  Widget.toAnimId myId
+makeMoreResultsMWidget NoMoreResults _ = return Nothing
+
+unzipF :: Functor f => f (a, b) -> (f a, f b)
+unzipF x = (fst <$> x, snd <$> x)
+
+blockDownEvents :: Monad f => Widget f -> Widget f
+blockDownEvents =
+  Widget.weakerEvents $
+  E.keyPresses
+  [E.ModKey E.noMods E.KeyDown]
+  (E.Doc ["Navigation", "Move", "down (blocked)"]) $
+  return Widget.emptyEventResult
+
 makeResultsWidget ::
   MonadA m => HoleInfo m ->
   [ResultsList m] -> HaveMoreResults ->
   ExprGuiM m (Maybe (Sugar.HoleResult m), WidgetT m)
 makeResultsWidget holeInfo firstResults moreResults = do
-  firstResultsAndWidgets <-
-    traverse (resultsToWidgets holeInfo) firstResults
-  (mResult, firstResultsWidget) <-
-    case firstResultsAndWidgets of
-    [] -> fmap ((,) Nothing) . makeNoResults $ Widget.toAnimId myId
-    xs -> do
-      let
-        mResult =
-          listToMaybe . mapMaybe snd $
-          zipWith (Lens.over (Lens._2 . Lens.mapped) . (,)) [0..] xs
-      return
-        ( mResult
-        , blockDownEvents . vboxMBiasedAlign (fmap fst mResult) 0 $
-          map fst xs
-        )
-  let extraWidgets = maybeToList $ snd . snd =<< mResult
-  moreResultsWidgets <-
-    case moreResults of
-      HaveMoreResults ->
-        ExprGuiM.widgetEnv . fmap (: []) .
-        BWidgets.makeLabel "..." $ Widget.toAnimId myId
-      NoMoreResults -> return []
+  (firstResultWidgets, mActiveResults) <-
+    unzip <$> traverse (resultsToWidgets holeInfo) firstResults
+  let
+    (mIndex, mResult) = unzipF $ mActiveResults ^@? Lens.itraversed <. Lens._Just
+    (mHoleResult, mExtraResultsWidget) = unzipF mResult & Lens._2 %~ join
+  firstResultsWidget <-
+    case firstResultWidgets of
+    [] -> makeNoResults $ Widget.toAnimId myId
+    _ ->
+      return . blockDownEvents $
+      vboxMBiasedAlign mIndex 0 firstResultWidgets
+  moreResultsWidgets <- maybeToList <$> makeMoreResultsMWidget moreResults myId
   return
-    ( fmap (fst . snd) mResult
-    , Widget.scale Config.holeResultScaleFactor .
-      BWidgets.hboxCenteredSpaced $
+    ( mHoleResult
+    , BWidgets.hboxCenteredSpaced $
       Box.vboxCentered (firstResultsWidget : moreResultsWidgets) :
-      extraWidgets
+      maybeToList mExtraResultsWidget
     )
   where
     myId = hiHoleId holeInfo
-    blockDownEvents =
-      Widget.weakerEvents $
-      E.keyPresses
-      [E.ModKey E.noMods E.KeyDown]
-      (E.Doc ["Navigation", "Move", "down (blocked)"]) (return Widget.emptyEventResult)
 
 collectResults ::
   (Applicative (List.ItemM l), List l) =>
