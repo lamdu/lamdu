@@ -165,7 +165,7 @@ resultsToWidgets holeInfo results = do
             Just (result, Just widget)
         else return Nothing
   mainResultWidget <-
-    maybeAddExtraSymbol =<<
+    maybeAddExtraSymbol haveExtraResults myId =<<
     toWidget myId (rlMain results)
   return (mainResultWidget, mExtraResWidget)
   where
@@ -195,15 +195,17 @@ resultsToWidgets holeInfo results = do
       ExprGuiM.makeSubexpresion . Sugar.removeTypes =<<
       ExprGuiM.transaction (holeResult ^. Sugar.holeResultConvert)
     extraResultsPrefixId = rlExtraResultsPrefixId results
-    maybeAddExtraSymbol w
-      | haveExtraResults = do
-        extraSymbolLabel <-
-          fmap (Widget.scale extraSymbolSizeFactor) .
-          ExprGuiM.widgetEnv .
-          BWidgets.makeLabel extraSymbol $ Widget.toAnimId myId
-        return $ BWidgets.hboxCenteredSpaced [w, extraSymbolLabel]
-      | otherwise = return w
     myId = rlMainId results
+
+maybeAddExtraSymbol :: MonadA m => Bool -> Widget.Id -> Widget f -> ExprGuiM m (Widget f)
+maybeAddExtraSymbol haveExtraResults myId w
+  | haveExtraResults = do
+    extraSymbolLabel <-
+      fmap (Widget.scale extraSymbolSizeFactor) .
+      ExprGuiM.widgetEnv .
+      BWidgets.makeLabel extraSymbol $ Widget.toAnimId myId
+    return $ BWidgets.hboxCenteredSpaced [w, extraSymbolLabel]
+  | otherwise = return w
 
 makeNoResults :: MonadA m => AnimId -> ExprGuiM m (WidgetT m)
 makeNoResults myId =
