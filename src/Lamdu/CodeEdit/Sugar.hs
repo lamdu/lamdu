@@ -98,7 +98,7 @@ mkCutter cp expr replaceWithHole = do
 
 checkReinferSuccess :: MonadA m => SugarM.Context m -> String -> T m a -> CT m Bool
 checkReinferSuccess sugarContext key act =
-  case SugarM.scMReinferRoot sugarContext of
+  case sugarContext ^. SugarM.scMReinferRoot of
   Nothing -> pure False
   Just reinferRoot ->
     mapStateT Transaction.forkScratch $ do
@@ -132,7 +132,7 @@ mkActions sugarContext exprS =
   , _callWithNextArg = pure (pure Nothing)
   , _setToHole = doReplace DataOps.setToHole
   , _replaceWithNewHole = doReplace DataOps.replaceWithHole
-  , _cut = mkCutter (SugarM.scCodeAnchors sugarContext) (Property.value stored) $ doReplace DataOps.replaceWithHole
+  , _cut = mkCutter (sugarContext ^. SugarM.scCodeAnchors) (Property.value stored) $ doReplace DataOps.replaceWithHole
   , _giveAsArgToOperator = DataIRef.exprGuid <$> DataOps.giveAsArgToOperator stored
   }
   where
@@ -350,7 +350,7 @@ convertApply ::
   Convertor m
 convertApply app@(Expression.Apply _ argI) exprI = do
   -- if we're an apply of the form (nil T): Return an empty list
-  specialFunctions <- SugarM.scSpecialFunctions <$> SugarM.readContext
+  specialFunctions <- (^. SugarM.scSpecialFunctions) <$> SugarM.readContext
   convertApplyEmptyList app specialFunctions exprI
     `orElse` do
       argS <- convertExpressionI argI
@@ -610,7 +610,7 @@ mkHoleResult sugarContext exprI res =
   , _holeResultPickPrefix = void pick
   }
   where
-    cp = SugarM.scCodeAnchors sugarContext
+    cp = sugarContext ^. SugarM.scCodeAnchors
     convertHoleResult =
       SugarM.runPure cp . convertExpressionI .
       (Lens.mapped . SugarInfer.plInferred %~ Just) .
@@ -635,8 +635,8 @@ convertTypeCheckedHoleH
     chooseHoleType (iwcInferredValues iwc) plainHole inferredHole
   where
     eGuid = resultGuid exprI
-    inferState = SugarM.scHoleInferState sugarContext
-    contextHash = SugarM.scMContextHash sugarContext
+    inferState = sugarContext ^. SugarM.scHoleInferState
+    contextHash = sugarContext ^. SugarM.scMContextHash
     inferred = iwcInferred iwc
     scope = Infer.nScope $ Infer.iPoint inferred
     inferResult expr = do
