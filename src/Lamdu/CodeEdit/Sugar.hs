@@ -42,7 +42,7 @@ module Lamdu.CodeEdit.Sugar
 import Control.Applicative (Applicative(..), (<$>), (<$))
 import Control.Lens (Traversal')
 import Control.Lens.Operators
-import Control.Monad ((<=<), join, mplus, void, zipWithM, MonadPlus)
+import Control.Monad ((<=<), guard, join, mplus, void, zipWithM, MonadPlus)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..), runState, mapStateT)
 import Control.MonadA (MonadA)
@@ -923,43 +923,45 @@ convertDefinitionParams expr =
       _ -> return ([], Nothing, expr)
   _ -> return ([], Nothing, expr)
 
+mExtractWhere ::
+  Expression.Expression def a ->
+  Maybe (Expression.Apply (Expression.Expression def a), Expression.Lambda (Expression.Expression def a))
+mExtractWhere expr = do
+  apply <- expr ^? Expression.eBody . Expression._BodyApply
+  lambda <- apply ^? Expression.applyFunc . Expression.eBody . Expression._BodyLam
+  guard $ (lambda ^. Expression.lambdaKind) == Expression.Val
+  -- paramType has to be Hole for this to be sugarred to Where
+  lambda ^? Expression.lambdaParamType . Expression.eBody . Expression._BodyLeaf . Expression._Hole
+  return (apply, lambda)
+
 convertWhereItems ::
   (MonadA m, Typeable1 m) => DataIRef.ExpressionM m (PayloadMM m) ->
   SugarM m ([WhereItem m], DataIRef.ExpressionM m (PayloadMM m))
-convertWhereItems
-  topLevel@Expression.Expression
-  { Expression._eBody = Expression.BodyApply apply@Expression.Apply
-  { Expression._applyFunc = Expression.Expression
-  { Expression._eBody = Expression.BodyLam lambda@Expression.Lambda
-  { Expression._lambdaKind = Expression.Val
-  , Expression._lambdaParamId = param
-  , Expression._lambdaParamType = Expression.Expression
-  { Expression._eBody = Expression.BodyLeaf Expression.Hole
-  }
-  , Expression._lambdaResult = body
-  }}}} = do
+convertWhereItems expr =
+  case mExtractWhere expr of
+  Nothing -> return ([], expr)
+  Just (apply, lambda) -> do
     value <- convertDefinitionContent $ apply ^. Expression.applyArg
     let
       mkWIActions topLevelProp bodyStored =
         ListItemActions
         { _itemDelete = do
-             deleteParamRef param bodyStored
+             deleteParamRef (lambda ^. Expression.lambdaParamId) bodyStored
              replaceWith topLevelProp $ bodyStored ^. Expression.ePayload
         , _itemAddNext = fmap fst $ DataOps.redexWrap topLevelProp
         }
       item = WhereItem
         { wiValue = value
-        , wiGuid = param
+        , wiGuid = lambda ^. Expression.lambdaParamId
         , wiHiddenGuids =
-            map resultGuid [topLevel, lambda ^. Expression.lambdaParamType]
+            map resultGuid [expr, lambda ^. Expression.lambdaParamType]
         , wiActions =
           mkWIActions <$>
-          resultStored topLevel <*>
-          traverse (Lens.view SugarInfer.plStored) body
+          resultStored expr <*>
+          traverse (Lens.view SugarInfer.plStored) (lambda ^. Expression.lambdaResult)
         }
-    (nextItems, whereBody) <- convertWhereItems body
+    (nextItems, whereBody) <- convertWhereItems $ lambda ^. Expression.lambdaResult
     return (item : nextItems, whereBody)
-convertWhereItems expr = return ([], expr)
 
 addStoredParam ::
   MonadA m =>
