@@ -1,7 +1,7 @@
 module Lamdu.ExampleDB(initDB, createBuiltins) where
 
 import Control.Applicative (liftA2)
-import Control.Monad (join, unless)
+import Control.Monad (join, unless, replicateM_)
 import Control.Monad.Trans.Class (lift)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..))
@@ -198,7 +198,7 @@ initDB db =
         writeCodeAnchor A.preCursor paneWId
         writeCodeAnchor A.postCursor paneWId
         writeCodeAnchor A.fields []
-        sequence_ . replicate 10 $ DataOps.makeNewFieldTag A.codeProps
+        replicateM_ 10 $ DataOps.makeNewTag A.codeProps
       -- Prevent undo into the invalid empty revision
       newVer <- Branch.curVersion master
       Version.preventUndo newVer
