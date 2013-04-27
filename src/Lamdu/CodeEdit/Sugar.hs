@@ -1076,7 +1076,7 @@ loadConvertDefI cp defI =
     convertDefBody (Definition.BodyExpression exprLoaded) =
       convertDefIExpression cp exprLoaded
     convertDefI (Definition.Definition defBody typeLoaded) = do
-      bodyS <- convertDefBody defBody defI typeLoaded
+      bodyS <- convertDefBody defBody defI $ Load.propertyOfClosure <$> typeLoaded
       typeS <-
         lift .
         convertExpressionPure cp (mkGen 2 3 (IRef.guid defI)) $
@@ -1088,24 +1088,24 @@ loadConvertDefI cp defI =
         }
 
 convertDefIBuiltin ::
-  MonadA m =>
-  Definition.Builtin -> DefI (Tag m) ->
-  Load.LoadedClosure (Tag m) -> DefinitionBody m
-convertDefIBuiltin (Definition.Builtin name) defI typeIRef =
+  MonadA m => Definition.Builtin -> DefI (Tag m) ->
+  DataIRef.ExpressionM m (Stored m) -> DefinitionBody m
+convertDefIBuiltin (Definition.Builtin name) defI typeI =
   DefinitionBodyBuiltin DefinitionBuiltin
     { biName = name
     , biMSetName = Just setName
     }
   where
-    typeI = typeIRef ^. Expression.ePayload
+    typeIRef = Property.value $ typeI ^. Expression.ePayload
     setName =
       Transaction.writeIRef defI .
-      (`Definition.Definition` Load.irefOfClosure typeI) .
+      (`Definition.Definition` typeIRef) .
       Definition.BodyBuiltin . Definition.Builtin
 
 convertDefIExpression ::
   (MonadA m, Typeable1 m) => Anchors.CodeProps m ->
-  Load.LoadedClosure (Tag m) -> DefI (Tag m) -> Load.LoadedClosure (Tag m) ->
+  Load.LoadedClosure (Tag m) -> DefI (Tag m) ->
+  DataIRef.ExpressionM m (Stored m) ->
   CT m (DefinitionBody m)
 convertDefIExpression cp exprLoaded defI typeI = do
   inferredLoadedResult <-
@@ -1123,7 +1123,7 @@ convertDefIExpression cp exprLoaded defI typeI = do
       return DefinitionNewType
         { dntNewType = inferredTypeS
         , dntAcceptNewType =
-          (Property.set . Load.propertyOfClosure) (typeI ^. Expression.ePayload) =<<
+          Property.set (typeI ^. Expression.ePayload) =<<
           DataIRef.newExpression inferredTypeP
         }
   context <- lift $ SugarM.mkContext cp (Just defI) (Just reinferRoot) inferredLoadedResult
