@@ -2,7 +2,7 @@
 module Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Results
   ( makeAll, pick, HaveHiddenResults(..)
   , Result(..), ResultsList(..)
-  , prefixId
+  , prefixId, MakeWidgets(..)
   ) where
 
 import Control.Applicative (Applicative(..), (<$>), (<$))
@@ -110,10 +110,14 @@ resultComplexityScore =
 prefixId :: HoleInfo m -> Widget.Id
 prefixId holeInfo = mconcat [hiHoleId holeInfo, Widget.Id ["results"]]
 
-type MakeWidget m = Widget.Id -> Sugar.HoleResult m -> ExprGuiM m (WidgetT m)
+type WidgetMaker m = Widget.Id -> Sugar.HoleResult m -> ExprGuiM m (WidgetT m)
+data MakeWidgets m = MakeWidgets
+  { mkResultWidget :: WidgetMaker m
+  , mkNewTagResultWidget :: WidgetMaker m
+  }
 
 toMResultsList ::
-  MonadA m => HoleInfo m -> MakeWidget m ->
+  MonadA m => HoleInfo m -> WidgetMaker m ->
   Widget.Id ->
   [T m (DataIRef.ExpressionM m (Maybe (Sugar.StorePoint (Tag m))))] ->
   CT m (Maybe (ResultsList m))
@@ -143,7 +147,7 @@ toMResultsList holeInfo makeWidget baseId options = do
       }
 
 baseExprToResultsList ::
-  MonadA m => HoleInfo m -> MakeWidget m -> DataIRef.ExpressionM m () ->
+  MonadA m => HoleInfo m -> WidgetMaker m -> DataIRef.ExpressionM m () ->
   CT m (Maybe (ResultsList m))
 baseExprToResultsList holeInfo makeWidget baseExpr =
   fmap join . traverse conclude =<<
@@ -156,7 +160,7 @@ baseExprToResultsList holeInfo makeWidget baseExpr =
     baseId = WidgetIds.hash baseExpr
 
 applyOperatorResultsList ::
-  MonadA m => HoleInfo m -> MakeWidget m ->
+  MonadA m => HoleInfo m -> WidgetMaker m ->
   DataIRef.ExpressionM m (Maybe (Sugar.StorePoint (Tag m))) ->
   DataIRef.ExpressionM m () ->
   CT m (Maybe (ResultsList m))
@@ -206,7 +210,7 @@ removeHoleWrap expr = do
 data ResultType = GoodResult | BadResult
 
 makeResultsList ::
-  MonadA m => HoleInfo m -> MakeWidget m -> GroupM m ->
+  MonadA m => HoleInfo m -> WidgetMaker m -> GroupM m ->
   CT m (Maybe (ResultType, ResultsList m))
 makeResultsList holeInfo makeWidget group =
   case Property.value (hiState holeInfo) ^. HoleInfo.hsArgument of
@@ -229,7 +233,7 @@ makeResultsList holeInfo makeWidget group =
       (ExprUtil.makeApply . ExprUtil.pureExpression . Expression.BodyLeaf) Expression.Hole
 
 makeNewTagResultList ::
-  MonadA m => HoleInfo m -> MakeWidget m ->
+  MonadA m => HoleInfo m -> WidgetMaker m ->
   Anchors.CodeProps m ->
   ListT (CT m) (Maybe (ResultType, ResultsList m))
 makeNewTagResultList holeInfo makeNewTagResultWidget cp = do
@@ -267,15 +271,14 @@ collectResults =
         %~ (x :)
 
 makeAll ::
-  MonadA m => HoleInfo m ->
-  MakeWidget m -> MakeWidget m ->
+  MonadA m => HoleInfo m -> MakeWidgets m ->
   ExprGuiM m ([ResultsList m], HaveHiddenResults)
-makeAll holeInfo makeNewTagResultWidget makeWidget = do
+makeAll holeInfo makeWidget = do
   cp <- ExprGuiM.readCodeAnchors
   resultList <-
     List.catMaybes .
-    mappend (makeNewTagResultList holeInfo makeNewTagResultWidget cp) .
-    List.mapL (makeResultsList holeInfo makeWidget) .
+    mappend (makeNewTagResultList holeInfo (mkNewTagResultWidget makeWidget) cp) .
+    List.mapL (makeResultsList holeInfo (mkResultWidget makeWidget)) .
     List.fromList <$>
     makeAllGroups holeInfo
   ExprGuiM.liftMemoT $ collectResults resultList

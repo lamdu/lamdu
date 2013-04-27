@@ -22,6 +22,7 @@ import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleState(..), hsArgument, hsSearchTerm)
+import Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Results (MakeWidgets(..))
 import Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Results (ResultsList(..), Result(..), HaveHiddenResults(..))
 import qualified Control.Lens as Lens
 import qualified Data.Cache as Cache
@@ -379,7 +380,10 @@ makeActiveHoleEdit :: MonadA m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
 makeActiveHoleEdit holeInfo = do
   markTypeMatchesAsUsed holeInfo
   (shownResults, hasHiddenResults) <-
-    HoleResults.makeAll holeInfo (makeNewTagResultWidget holeInfo) (makeHoleResultWidget holeInfo)
+    HoleResults.makeAll holeInfo MakeWidgets
+    { mkNewTagResultWidget = makeNewTagResultWidget holeInfo
+    , mkResultWidget = makeHoleResultWidget holeInfo
+    }
   let
     shownResultsIds = rId . rlMain <$> shownResults
     allResultIds = [rId . rlMain, rlExtraResultsPrefixId] <*> shownResults
