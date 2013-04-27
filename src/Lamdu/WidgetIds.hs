@@ -6,8 +6,12 @@ import Data.Monoid(mappend)
 import Data.Store.Guid(Guid, bs)
 import Data.Store.IRef(IRef, guid)
 import Graphics.UI.Bottle.Animation (AnimId)
+import System.Random.Utils (randFunc)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+
+hash :: Show a => a -> Widget.Id
+hash = fromGuid . randFunc . show
 
 backgroundCursorId :: AnimId
 backgroundCursorId = ["background cursor"]

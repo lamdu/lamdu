@@ -138,6 +138,8 @@ Executable lamdu
                        Lamdu.CodeEdit.ExpressionEdit.FieldEdit,
                        Lamdu.CodeEdit.ExpressionEdit.FuncEdit,
                        Lamdu.CodeEdit.ExpressionEdit.HoleEdit,
+                       Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info,
+                       Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Results,
                        Lamdu.CodeEdit.ExpressionEdit.InferredEdit,
                        Lamdu.CodeEdit.ExpressionEdit.ListEdit,
                        Lamdu.CodeEdit.ExpressionEdit.LiteralEdit,
