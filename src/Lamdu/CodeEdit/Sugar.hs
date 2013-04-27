@@ -1076,14 +1076,14 @@ loadConvertDefI cp defI =
     convertDefBody (Definition.BodyExpression exprLoaded) =
       convertDefIExpression cp exprLoaded
     convertDefI (Definition.Definition defBody typeLoaded) = do
-      body <- convertDefBody defBody defI typeLoaded
+      bodyS <- convertDefBody defBody defI typeLoaded
       typeS <-
         lift .
         convertExpressionPure cp (mkGen 2 3 (IRef.guid defI)) $
         void typeLoaded
       return Definition
         { drGuid = IRef.guid defI
-        , drBody = body
+        , drBody = bodyS
         , drType = typeS
         }
 
@@ -1119,8 +1119,7 @@ convertDefIExpression cp exprLoaded defI typeI = do
       on (==) ExprUtil.canonizeParamIds (void typeI) inferredTypeP
     mkNewType = do
       inferredTypeS <-
-        convertExpressionPure cp iTypeGen
-        inferredTypeP
+        convertExpressionPure cp iTypeGen inferredTypeP
       return DefinitionNewType
         { dntNewType = inferredTypeS
         , dntAcceptNewType =
