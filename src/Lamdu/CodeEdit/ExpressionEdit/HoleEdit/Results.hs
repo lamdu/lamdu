@@ -236,10 +236,12 @@ makeNewTagResultList ::
   MonadA m => HoleInfo m -> WidgetMaker m ->
   Anchors.CodeProps m ->
   ListT (CT m) (Maybe (ResultType, ResultsList m))
-makeNewTagResultList holeInfo makeNewTagResultWidget cp = do
-  List.joinM $ List.fromList
-    [fmap ((,) GoodResult) <$>
-     toMResultsList holeInfo makeNewTagResultWidget (Widget.Id ["NewTag"]) [makeNewTag]]
+makeNewTagResultList holeInfo makeNewTagResultWidget cp
+  | null searchTerm = mempty
+  | otherwise = do
+      List.joinM $ List.fromList
+        [fmap ((,) GoodResult) <$>
+         toMResultsList holeInfo makeNewTagResultWidget (Widget.Id ["NewTag"]) [makeNewTag]]
   where
     searchTerm = (Property.value . hiState) holeInfo ^. HoleInfo.hsSearchTerm
     makeNewTag = do
@@ -277,7 +279,7 @@ makeAll holeInfo makeWidget = do
   cp <- ExprGuiM.readCodeAnchors
   resultList <-
     List.catMaybes .
-    mappend (makeNewTagResultList holeInfo (mkNewTagResultWidget makeWidget) cp) .
+    (`mappend` makeNewTagResultList holeInfo (mkNewTagResultWidget makeWidget) cp) .
     List.mapL (makeResultsList holeInfo (mkResultWidget makeWidget)) .
     List.fromList <$>
     makeAllGroups holeInfo
