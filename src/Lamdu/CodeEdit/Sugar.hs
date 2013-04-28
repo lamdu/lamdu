@@ -348,7 +348,7 @@ convertApply ::
   (Typeable1 m, MonadA m) =>
   Expression.Apply (DataIRef.ExpressionM m (PayloadMM m)) ->
   Convertor m
-convertApply app@(Expression.Apply _ argI) exprI = do
+convertApply app@(Expression.Apply funcI argI) exprI = do
   -- if we're an apply of the form (nil T): Return an empty list
   specialFunctions <- (^. SugarM.scSpecialFunctions) <$> SugarM.readContext
   convertApplyEmptyList app specialFunctions exprI
@@ -356,19 +356,17 @@ convertApply app@(Expression.Apply _ argI) exprI = do
       argS <- convertExpressionI argI
       convertApplyList app argS specialFunctions exprI
         `orElse`
-        convertApplyNormal app argS exprI
+        convertApplyNormal funcI argS exprI
 
 convertApplyNormal ::
   (Typeable1 m, MonadA m) =>
-  Expression.Apply (DataIRef.ExpressionM m (PayloadMM m)) ->
-  Expression m -> Convertor m
-convertApplyNormal (Expression.Apply funcI argI) argS exprI = do
+  DataIRef.ExpressionM m (PayloadMM m) -> Expression m -> Convertor m
+convertApplyNormal funcI argS exprI = do
   funcS <- convertExpressionI funcI
-  let apply = Expression.Apply (funcS, funcI) (argS, argI)
   case funcS ^. rExpressionBody of
     ExpressionSection _ section ->
-      applyOnSection section apply exprI
-    _ -> convertApplyPrefix apply exprI
+      applyOnSection section funcS funcI argS exprI
+    _ -> convertApplyPrefix funcS funcI argS exprI
 
 setListGuid :: Guid -> Expression m -> Expression m
 setListGuid consistentGuid e = e
@@ -477,18 +475,18 @@ setNextHole dest =
 
 applyOnSection ::
   (MonadA m, Typeable1 m) => Section (Expression m) ->
-  Expression.Apply (Expression m, DataIRef.ExpressionM m (PayloadMM m)) ->
+  Expression m -> DataIRef.ExpressionM m (PayloadMM m) -> Expression m ->
   Convertor m
-applyOnSection (Section Nothing op Nothing) (Expression.Apply (_, funcI) arg@(argRef, _)) exprI
+applyOnSection (Section Nothing op Nothing) _ funcI argRef exprI
   | isPolymorphicFunc funcI = do
     newOpRef <-
-      convertApplyPrefix (Expression.Apply (op, funcI) arg) exprI
+      convertApplyPrefix op funcI argRef exprI
     mkExpression exprI . ExpressionSection DontHaveParens $
       Section Nothing (removeSuccessfulType newOpRef) Nothing
   | otherwise =
     mkExpression exprI . ExpressionSection DontHaveParens $
     Section (Just (addApplyChildParens argRef)) op Nothing
-applyOnSection (Section (Just left) op Nothing) (Expression.Apply _ (argRef, _)) exprI =
+applyOnSection (Section (Just left) op Nothing) _ _ argRef exprI =
   mkExpression exprI . ExpressionSection DontHaveParens $
   on (Section . Just) (setNextHole right) left op (Just right)
   where
@@ -503,11 +501,13 @@ applyOnSection (Section (Just left) op Nothing) (Expression.Apply _ (argRef, _))
       ExpressionSection _ (Section (Just _) rightOp (Just _))
         | on isSameOp (Lens.view rExpressionBody) op rightOp -> argRef
       _ -> addApplyChildParens argRef
-applyOnSection _ apply exprI = convertApplyPrefix apply exprI
+applyOnSection _ funcRef funcI argRef exprI = convertApplyPrefix funcRef funcI argRef exprI
 
 convertApplyPrefix ::
-  (MonadA m, Typeable1 m) => Expression.Apply (Expression m, DataIRef.ExpressionM m (PayloadMM m)) -> Convertor m
-convertApplyPrefix (Expression.Apply (funcRef, funcI) (argRef, _)) applyI = do
+  (MonadA m, Typeable1 m) =>
+  Expression m -> DataIRef.ExpressionM m (PayloadMM m) -> Expression m ->
+  Convertor m
+convertApplyPrefix funcRef funcI argRef applyI = do
   sugarContext <- SugarM.readContext
   let
     newArgRef = addCallWithNextArg $ addParens argRef
