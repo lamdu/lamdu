@@ -1102,44 +1102,54 @@ convertDefIBuiltin (Definition.Builtin name) defI typeI =
       (`Definition.Definition` typeIRef) .
       Definition.BodyBuiltin . Definition.Builtin
 
-convertDefIExpression ::
-  (MonadA m, Typeable1 m) => Anchors.CodeProps m ->
-  Load.LoadedClosure (Tag m) -> DefI (Tag m) ->
-  DataIRef.ExpressionM m (Stored m) ->
-  CT m (DefinitionBody m)
-convertDefIExpression cp exprLoaded defI typeI = do
-  inferredLoadedResult <-
-    SugarInfer.inferLoadedExpression
-    inferLoadedGen (Just defI) exprLoaded initialInferState
-  let
-    inferredTypeP =
-      void . Infer.iType . iwcInferred . resultInferred $
-      inferredLoadedResult ^. SugarInfer.ilrExpr
-    typesMatch =
-      on (==) ExprUtil.canonizeParamIds (void typeI) inferredTypeP
+makeNewTypeForDefinition ::
+  (Typeable1 m, MonadA m, RandomGen gen) =>
+  Anchors.CodeProps m -> Stored m -> DataIRef.ExpressionM m () -> Bool -> Bool ->
+  gen -> T m (Maybe (DefinitionNewType m))
+makeNewTypeForDefinition cp typeIRef inferredTypeP typesMatch success iTypeGen
+  | success && not typesMatch && isCompleteType inferredTypeP =
+    Just <$> mkNewType
+  | otherwise = return Nothing
+  where
     mkNewType = do
       inferredTypeS <-
         convertExpressionPure cp iTypeGen inferredTypeP
       return DefinitionNewType
         { dntNewType = inferredTypeS
         , dntAcceptNewType =
-          Property.set (typeI ^. Expression.ePayload) =<<
+          Property.set typeIRef =<<
           DataIRef.newExpression inferredTypeP
         }
+
+convertDefIExpression ::
+  (MonadA m, Typeable1 m) => Anchors.CodeProps m ->
+  Load.LoadedClosure (Tag m) -> DefI (Tag m) ->
+  DataIRef.ExpressionM m (Stored m) ->
+  CT m (DefinitionBody m)
+convertDefIExpression cp exprLoaded defI typeI = do
+  inferredLoadedResult@SugarInfer.InferLoadedResult
+    { SugarInfer._ilrExpr = ilrExpr
+    , SugarInfer._ilrSuccess = success
+    } <-
+    SugarInfer.inferLoadedExpression
+    inferLoadedGen (Just defI) exprLoaded initialInferState
+  let
+    inferredTypeP =
+      void . Infer.iType . iwcInferred $ resultInferred ilrExpr
+    typesMatch =
+      on (==) ExprUtil.canonizeParamIds (void typeI) inferredTypeP
+  mNewType <-
+    lift $ makeNewTypeForDefinition cp (typeI ^. Expression.ePayload)
+    inferredTypeP typesMatch success iTypeGen
   context <- lift $ SugarM.mkContext cp (Just defI) (Just reinferRoot) inferredLoadedResult
   lift . SugarM.run context $ do
     content <-
-      convertDefinitionContent [] .
-      (fmap . Lens.over SugarInfer.plInferred) Just $
-      inferredLoadedResult ^. SugarInfer.ilrExpr
-    mNewType <-
-      if inferredLoadedResult ^. SugarInfer.ilrSuccess && not typesMatch && isCompleteType inferredTypeP
-      then fmap Just $ SugarM.liftTransaction mkNewType
-      else return Nothing
+      convertDefinitionContent [] $
+      ilrExpr & Lens.mapped . SugarInfer.plInferred %~ Just
     return $ DefinitionBodyExpression DefinitionExpression
       { deContent = content
       , deMNewType = mNewType
-      , deIsTypeRedundant = inferredLoadedResult ^. SugarInfer.ilrSuccess && typesMatch
+      , deIsTypeRedundant = success && typesMatch
       }
   where
     initialInferState = Infer.initial (Just defI)
