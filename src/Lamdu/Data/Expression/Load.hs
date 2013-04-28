@@ -8,7 +8,6 @@ module Lamdu.Data.Expression.Load
   ) where
 
 import Control.Lens.Operators
-import Control.Lens.Utils (allElementsOf)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
@@ -79,7 +78,7 @@ loadExpressionBody iref =
   onBody =<< DataIRef.readExprBody iref
   where
     onBody body =
-      Lens.itraverseOf (allElementsOf Lens.traverse) (loadElement body) body
+      Lens.itraverseOf (Lens.indexing Lens.traverse) (loadElement body) body
     loadElement body i _ = loadExpressionClosure $ SubexpressionProperty iref body i
 
 loadDefinition :: MonadA m => DefI (Tag m) -> T m (Definition (Loaded m))
