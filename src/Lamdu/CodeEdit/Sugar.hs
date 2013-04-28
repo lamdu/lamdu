@@ -50,7 +50,7 @@ import Data.Binary (Binary)
 import Data.Cache (Cache)
 import Data.Function (on)
 import Data.Hashable (hashWithSalt)
-import Data.Maybe (listToMaybe, isJust)
+import Data.Maybe (fromMaybe, listToMaybe, isJust)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag, Tagged)
 import Data.Traversable (traverse)
@@ -366,7 +366,12 @@ convertApplyNormal funcI argS exprI = do
   case funcS ^. rExpressionBody of
     ExpressionSection _ section ->
       applyOnSection section funcS funcI argS exprI
-    _ -> convertApplyPrefix funcS funcI argS exprI
+    _ -> convertApplyPrefix funcS funcI sugaredArg exprI
+  where
+    sugaredArg =
+      fromMaybe argS $ do
+        [field] <- argS ^? rExpressionBody . _ExpressionRecord . rFields . flItems
+        pure $ field ^. rfExpr
 
 setListGuid :: Guid -> Expression m -> Expression m
 setListGuid consistentGuid e = e
