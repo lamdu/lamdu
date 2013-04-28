@@ -885,7 +885,7 @@ convertGetField (Expression.GetField recExpr tagExpr) exprI = do
       paramInfo <- Map.lookup tag recordParams
       param <- recExpr ^? Expression.eBody . ExprUtil.bodyParameterRef
       guard $ param == SugarM.piFromParameters paramInfo
-      return $
+      return
         GetParam
         { gpTag = tag
         , gpJumpTo = SugarM.piJumpTo paramInfo

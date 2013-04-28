@@ -126,14 +126,15 @@ toMResultsList holeInfo makeWidget baseId options = do
     sortOn (resultComplexityScore . (^. Sugar.holeResultInferred)) .
     catMaybes <$>
     traverse (hiHoleActions holeInfo ^. Sugar.holeResult) options
-  case results of
-    [] -> return Nothing
-    x : xs -> Just <$> do
-      return ResultsList
-        { rlExtraResultsPrefixId = extraResultsPrefixId
-        , rlMain = mkResult (mconcat [prefixId holeInfo, baseId]) x
-        , rlExtra = map (\res -> mkResult (extraResultId res) res) xs
-        }
+  return $ case results of
+    [] -> Nothing
+    x : xs ->
+      Just
+      ResultsList
+      { rlExtraResultsPrefixId = extraResultsPrefixId
+      , rlMain = mkResult (mconcat [prefixId holeInfo, baseId]) x
+      , rlExtra = map (\res -> mkResult (extraResultId res) res) xs
+      }
   where
     extraResultId =
       mappend extraResultsPrefixId . WidgetIds.hash . void .
@@ -238,10 +239,10 @@ makeNewTagResultList ::
   ListT (CT m) (Maybe (ResultType, ResultsList m))
 makeNewTagResultList holeInfo makeNewTagResultWidget cp
   | null searchTerm = mempty
-  | otherwise = do
+  | otherwise =
       List.joinM $ List.fromList
-        [fmap ((,) GoodResult) <$>
-         toMResultsList holeInfo makeNewTagResultWidget (Widget.Id ["NewTag"]) [makeNewTag]]
+      [fmap ((,) GoodResult) <$>
+      toMResultsList holeInfo makeNewTagResultWidget (Widget.Id ["NewTag"]) [makeNewTag]]
   where
     searchTerm = (Property.value . hiState) holeInfo ^. HoleInfo.hsSearchTerm
     makeNewTag = do

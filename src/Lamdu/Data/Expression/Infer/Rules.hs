@@ -22,8 +22,7 @@ import Data.Foldable (Foldable)
 import Data.Functor.Identity (Identity(..))
 import Data.Maybe (maybeToList)
 import Data.Store.Guid (Guid)
-import Data.Traversable (Traversable)
-import Data.Traversable (traverse, sequenceA)
+import Data.Traversable (Traversable, traverse, sequenceA)
 import Lamdu.Data.Expression.Infer.Types
 import qualified Control.Compose as Compose
 import qualified Control.Lens as Lens
@@ -269,11 +268,11 @@ runRecordTypeToGetFieldType getFieldTypeRef (recordTypeExpr, fieldTag) = do
   [(getFieldTypeRef, fieldType)]
 
 runGetFieldTypeToRecordFieldType :: ExprRef -> RefExpression3 def -> Origin2 -> RuleResult def
-runGetFieldTypeToRecordFieldType recordTypeRef (recordTypeExpr, fieldTag, getFieldTypeExpr) (o0, o1) = do
+runGetFieldTypeToRecordFieldType recordTypeRef (recordTypeExpr, fieldTag, getFieldTypeExpr) (o0, o1) =
   case fieldTag ^. Expression.eBody of
-    Expression.BodyLeaf Expression.Hole -> verifyRecordWithField
-    Expression.BodyLeaf (Expression.Tag guid) -> putTypeIntoRecordField guid
-    _ -> makeError
+  Expression.BodyLeaf Expression.Hole -> verifyRecordWithField
+  Expression.BodyLeaf (Expression.Tag guid) -> putTypeIntoRecordField guid
+  _ -> makeError
   where
     recordTypeExample =
       makeRefExpr o0 . Expression.BodyRecord . Expression.Record Expression.Type $
