@@ -183,6 +183,7 @@ data Inferred m expr = Inferred
   , iHole :: Hole m
   } deriving (Functor, Foldable, Traversable)
 
+-- TODO: New name. This is not only for polymorphic but also for eta-reduces etc
 data Polymorphic m expr = Polymorphic
   { pFuncGuid :: Guid
   , pCompact :: GetVar m

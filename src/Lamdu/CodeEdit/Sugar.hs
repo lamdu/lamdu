@@ -285,7 +285,17 @@ convertFunc lambda exprI = do
       case isDependent of
       Dependent -> Lens.over fDepParams (newParam :) innerFunc
       NonDependent -> Func [] (newParam : fAllParams innerFunc) (innerFunc ^. fBody)
-  mkExpression exprI $ ExpressionFunc DontHaveParens newFunc
+    maybeEta = do
+      (_, Expression.Apply func arg) <- sBody ^? rExpressionBody . _ExpressionApply
+      argVar <- arg ^? rExpressionBody . _ExpressionGetVar
+      guard $ gvIdentifier argVar == param ^. fpGuid
+      funcVar <- func ^? rExpressionBody . _ExpressionGetVar
+      pure (func ^. rGuid, funcVar)
+  fullExpr <- mkExpression exprI $ ExpressionFunc DontHaveParens newFunc
+  case maybeEta of
+    Nothing -> pure fullExpr
+    Just (funcGuid, funcVar) ->
+      makePolymorphic exprI funcGuid funcVar fullExpr
   where
     deleteToNextParam nextParam =
       Lens.set
