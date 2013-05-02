@@ -22,7 +22,7 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.GetFieldEdit as GetFieldEdit
-import qualified Lamdu.CodeEdit.ExpressionEdit.GetParamEdit as GetParamEdit
+import qualified Lamdu.CodeEdit.ExpressionEdit.GetVarEdit as GetVarEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.InferredEdit as InferredEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.ListEdit as ListEdit
@@ -31,7 +31,6 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.PiEdit as PiEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.PolymorphicEdit as PolymorphicEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.RecordEdit as RecordEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.SectionEdit as SectionEdit
-import qualified Lamdu.CodeEdit.ExpressionEdit.VarEdit as VarEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.TagEdit as TagEdit
 import qualified Lamdu.CodeEdit.Settings as Settings
 import qualified Lamdu.CodeEdit.Sugar as Sugar
@@ -98,8 +97,6 @@ makeEditor sExpr =
     notAHole $ FuncEdit.make hasParens f
   Sugar.ExpressionPolymorphic poly ->
     notAHole $ PolymorphicEdit.make poly
-  Sugar.ExpressionGetVariable varRef ->
-    notAHole $ VarEdit.make varRef
   Sugar.ExpressionApply hasParens apply ->
     notAHole $ ApplyEdit.make hasParens apply
   Sugar.ExpressionPi hasParens funcType ->
@@ -118,8 +115,8 @@ makeEditor sExpr =
     notAHole $ GetFieldEdit.make getField
   Sugar.ExpressionTag tag ->
     notAHole $ TagEdit.make tag
-  Sugar.ExpressionGetParam gp ->
-    notAHole $ GetParamEdit.make gp
+  Sugar.ExpressionGetVar gv ->
+    notAHole $ GetVarEdit.make gv
   where
     isAHole hole =
       (fmap . fmap)

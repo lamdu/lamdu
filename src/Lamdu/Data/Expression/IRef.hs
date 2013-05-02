@@ -10,6 +10,7 @@ module Lamdu.Data.Expression.IRef
   , newExpression, writeExpression, readExpression
   , writeExpressionWithStoredSubexpressions
   , DefI, DefinitionI
+  , variableRefGuid
   ) where
 
 import Control.Applicative ((<$>), pure)
@@ -132,3 +133,7 @@ newExpressionFromH expr =
       ( ExpressionI exprI
       , expr ^. Expression.ePayload . Lens._2
       )
+
+variableRefGuid :: Expression.VariableRef (DefI t) -> Guid
+variableRefGuid (Expression.ParameterRef i) = i
+variableRefGuid (Expression.DefinitionRef i) = IRef.guid i

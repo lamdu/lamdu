@@ -10,7 +10,7 @@ module Lamdu.CodeEdit.Sugar.Types
     , setToHole, replaceWithNewHole, cut, giveAsArgToOperator
   , ExpressionBody(..), eHasParens
     , _ExpressionPi, _ExpressionApply, _ExpressionSection
-    , _ExpressionFunc, _ExpressionGetVariable, _ExpressionHole
+    , _ExpressionFunc, _ExpressionGetVar, _ExpressionHole
     , _ExpressionInferred, _ExpressionPolymorphic
     , _ExpressionLiteralInteger, _ExpressionAtom
     , _ExpressionList, _ExpressionRecord, _ExpressionTag
@@ -25,7 +25,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , Record(..), rKind, rFields
   , FieldList(..), flItems, flMAddFirstItem
   , GetField(..), gfRecord, gfTag
-  , GetParam(..)
+  , GetVar(..), VarType(..)
   , Func(..), fDepParams, fParams, fBody
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
@@ -59,7 +59,6 @@ import Lamdu.Data.Expression (Kind(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Control.Lens.TH as LensTH
 import qualified Data.List as List
-import qualified Data.Store.IRef as IRef
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
@@ -184,9 +183,9 @@ data Inferred m expr = Inferred
   , iHole :: Hole m
   } deriving (Functor, Foldable, Traversable)
 
-data Polymorphic t expr = Polymorphic
+data Polymorphic m expr = Polymorphic
   { pFuncGuid :: Guid
-  , pCompact :: Expression.VariableRef (DefI t)
+  , pCompact :: GetVar m
   , pFullExpression :: expr
   } deriving (Functor, Foldable, Traversable)
 
@@ -227,9 +226,12 @@ data GetField expr = GetField
   , _gfTag :: expr
   } deriving (Functor, Foldable, Traversable)
 
-data GetParam = GetParam
-  { gpTag :: Guid
-  , gpJumpTo :: Guid
+data VarType = GetParameter | GetDefinition
+
+data GetVar m = GetVar
+  { gvIdentifier :: Guid
+  , gvJumpTo :: T m Guid
+  , gvVarType :: VarType
   }
 
 data ExpressionBody m expr
@@ -237,17 +239,16 @@ data ExpressionBody m expr
   | ExpressionSection { _eHasParens :: HasParens, __eSection :: Section expr }
   | ExpressionFunc    { _eHasParens :: HasParens, __eFunc :: Func m expr }
   | ExpressionPi      { _eHasParens :: HasParens, __ePi :: Pi m expr }
-  | ExpressionGetVariable { __getVariable :: Expression.VariableRef (DefI (Tag m)) }
   | ExpressionHole    { __eHole :: Hole m }
   | ExpressionInferred { __eInferred :: Inferred m expr }
-  | ExpressionPolymorphic { __ePolymorphic :: Polymorphic (Tag m) expr }
+  | ExpressionPolymorphic { __ePolymorphic :: Polymorphic m expr }
   | ExpressionLiteralInteger { __eLit :: LiteralInteger m }
   | ExpressionAtom     { __eAtom :: String }
   | ExpressionList     { __eList :: List m expr }
   | ExpressionRecord   { __eRecord :: Record m expr }
   | ExpressionGetField { __eGetField :: GetField expr }
   | ExpressionTag      { __eTag :: Guid }
-  | ExpressionGetParam { __eGetParam :: GetParam }
+  | ExpressionGetVar   { __eGetParam :: GetVar m }
   deriving (Functor, Foldable, Traversable)
 LensTH.makePrisms ''ExpressionBody
 
@@ -273,8 +274,6 @@ instance Show expr => Show (ExpressionBody m expr) where
       showWords = unwords . map show
   show ExpressionPi      { _eHasParens = hasParens, __ePi = Pi paramType resultType } =
     wrapParens hasParens $ "_:" ++ show paramType ++ " -> " ++ show resultType
-  show ExpressionGetVariable { __getVariable = Expression.ParameterRef guid } = 'P' : show guid
-  show ExpressionGetVariable { __getVariable = Expression.DefinitionRef defI } = 'D' : show (IRef.guid defI)
   show ExpressionHole {} = "Hole"
   show ExpressionInferred {} = "Inferred"
   show ExpressionPolymorphic {} = "Poly"
@@ -289,7 +288,7 @@ instance Show expr => Show (ExpressionBody m expr) where
   show ExpressionRecord { __eRecord = _ } = "Record:TODO"
   show ExpressionGetField { __eGetField = _ } = "GetField:TODO"
   show ExpressionTag { __eTag = _ } = "Tag:TODO"
-  show ExpressionGetParam {} = "GetParam:TODO"
+  show ExpressionGetVar {} = "GetVar:TODO"
 
 data DefinitionNewType m = DefinitionNewType
   { dntNewType :: Expression m

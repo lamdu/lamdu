@@ -2,7 +2,6 @@
 module Lamdu.CodeEdit.ExpressionEdit.PolymorphicEdit(make) where
 
 import Control.MonadA (MonadA)
-import Data.Store.IRef (Tag)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, Collapser(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -10,10 +9,9 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.CodeEdit.ExpressionEdit.VarEdit as VarEdit
+import qualified Lamdu.CodeEdit.ExpressionEdit.GetVarEdit as GetVarEdit
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetIds as WidgetIds
 
@@ -26,7 +24,7 @@ polymorphicFDConfig = FocusDelegator.Config
   }
 
 make ::
-  MonadA m => Sugar.Polymorphic (Tag m) (Sugar.Expression m) ->
+  MonadA m => Sugar.Polymorphic m (Sugar.Expression m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make poly =
   ExpressionGui.makeCollapser polymorphicFDConfig f
@@ -39,17 +37,17 @@ make poly =
          Config.polymorphicExpandedBGColor bgId) .
         ExprGuiM.makeSubexpresion $ Sugar.pFullExpression poly
       , cMakeFocusedCompact =
-        colorize bgId (Sugar.pCompact poly) $
-        VarEdit.makeView (Sugar.pCompact poly) funcId
+        colorize bgId ((Sugar.gvVarType . Sugar.pCompact) poly) $
+        GetVarEdit.makeUncoloredView (Sugar.pCompact poly) funcId
       }
       where
         bgId = Widget.toAnimId myId ++ ["bg"]
-    colorize bgId (Expression.ParameterRef _) =
+    colorize bgId Sugar.GetParameter =
       fmap
       (ExpressionGui.withBgColor
        Layers.polymorphicCompactBG
        Config.polymorphicCompactBGColor bgId) .
       ExprGuiM.withFgColor Config.parameterColor
-    colorize _ (Expression.DefinitionRef _) =
+    colorize _ Sugar.GetDefinition =
       ExprGuiM.withFgColor Config.polymorphicForegroundColor
     funcId = WidgetIds.fromGuid $ Sugar.pFuncGuid poly

@@ -16,7 +16,8 @@ module Lamdu.CodeEdit.Sugar
   , WhereItem(..)
   , ListItem(..), ListActions(..), List(..)
   , RecordField(..), rfMItemActions, rfTag, rfExpr
-  , Kind(..), Record(..), FieldList(..), GetField(..), GetParam(..)
+  , Kind(..), Record(..), FieldList(..), GetField(..)
+  , GetVar(..), VarType(..)
   , Func(..)
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
@@ -497,10 +498,11 @@ applyOnSection (Section (Just left) op Nothing) _ _ argRef exprI =
   where
     -- TODO: Handle left/right-associativity
     isSameOp (ExpressionPolymorphic p0) (ExpressionPolymorphic p1) =
-      on (==) pCompact p0 p1
-    isSameOp (ExpressionGetVariable v0) (ExpressionGetVariable v1) =
-      v0 == v1
+      on isSameVar pCompact p0 p1
+    isSameOp (ExpressionGetVar v0) (ExpressionGetVar v1) =
+      isSameVar v0 v1
     isSameOp _ _ = False
+    isSameVar = on (==) gvIdentifier
     right =
       case argRef ^. rExpressionBody of
       ExpressionSection _ (Section (Just _) rightOp (Just _))
@@ -536,8 +538,8 @@ convertApplyPrefix funcRef funcI argRef applyI = do
       case funcRef ^. rExpressionBody of
       ExpressionPolymorphic (Polymorphic g compact full) ->
         makePolymorphic g compact =<< makeApply full
-      ExpressionGetVariable varRef ->
-        makePolymorphic (resultGuid funcI) varRef =<< makeFullApply
+      ExpressionGetVar var ->
+        makePolymorphic (resultGuid funcI) var =<< makeFullApply
       _ -> makeFullApply
     else
       makeFullApply
@@ -554,7 +556,22 @@ convertApplyPrefix funcRef funcI argRef applyI = do
 convertGetVariable :: (MonadA m, Typeable1 m) => Expression.VariableRef (DefI (Tag m)) -> Convertor m
 convertGetVariable varRef exprI = do
   isInfix <- SugarM.liftTransaction $ Infix.isInfixVar varRef
-  getVarExpr <- removeParamType <$> mkExpression exprI (ExpressionGetVariable varRef)
+  sugarContext <- SugarM.readContext
+  let
+    getVar =
+      GetVar
+      { gvIdentifier = DataIRef.variableRefGuid varRef
+      , gvJumpTo =
+          case varRef of
+          Expression.ParameterRef guid -> pure guid
+          Expression.DefinitionRef defI ->
+            IRef.guid defI <$ DataOps.newPane (sugarContext ^. SugarM.scCodeAnchors) defI
+      , gvVarType =
+          case varRef of
+          Expression.ParameterRef _ -> GetParameter
+          Expression.DefinitionRef _ -> GetDefinition
+      }
+  getVarExpr <- removeParamType <$> mkExpression exprI (ExpressionGetVar getVar)
   if isInfix
     then
       mkExpression exprI .
@@ -880,20 +897,21 @@ convertGetField ::
 convertGetField (Expression.GetField recExpr tagExpr) exprI = do
   recordParams <- (^. SugarM.scRecordParams) <$> SugarM.readContext
   let
-    mParam = do
+    mVar = do
       tag <- tagExpr ^? Expression.eBody . Expression._BodyLeaf . Expression._Tag
       paramInfo <- Map.lookup tag recordParams
       param <- recExpr ^? Expression.eBody . ExprUtil.bodyParameterRef
       guard $ param == SugarM.piFromParameters paramInfo
       return
-        GetParam
-        { gpTag = tag
-        , gpJumpTo = SugarM.piJumpTo paramInfo
+        GetVar
+        { gvIdentifier = tag
+        , gvJumpTo = pure $ SugarM.piJumpTo paramInfo
+        , gvVarType = GetParameter
         }
-  case mParam of
-    Just param ->
+  case mVar of
+    Just var ->
       fmap removeSuccessfulType .
-      mkExpression exprI $ ExpressionGetParam param
+      mkExpression exprI $ ExpressionGetVar var
     Nothing -> do
       recExprS <- convertExpressionI recExpr
       tagExprS <- convertExpressionI tagExpr
