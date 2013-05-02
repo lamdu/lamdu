@@ -537,21 +537,26 @@ convertApplyPrefix funcRef funcI argRef applyI = do
     then
       case funcRef ^. rExpressionBody of
       ExpressionPolymorphic (Polymorphic g compact full) ->
-        makePolymorphic g compact =<< makeApply full
+        makePolymorphic applyI g compact =<< makeApply full
       ExpressionGetVar var ->
-        makePolymorphic (resultGuid funcI) var =<< makeFullApply
+        makePolymorphic applyI (resultGuid funcI) var =<< makeFullApply
       _ -> makeFullApply
     else
       makeFullApply
+
+makePolymorphic ::
+  (MonadA m, Typeable1 m) =>
+  DataIRef.ExpressionM m (PayloadMM m) ->
+  Guid -> GetVar m -> Expression m -> SugarM m (Expression m)
+makePolymorphic exprI g compact fullExpression =
+  mkExpression exprI $ ExpressionPolymorphic Polymorphic
+    { pFuncGuid = g
+    , pCompact = compact
+    , pFullExpression =
+      Lens.set rGuid expandedGuid $ removeInferredTypes fullExpression
+    }
   where
-    expandedGuid = Guid.combine (resultGuid applyI) $ Guid.fromString "polyExpanded"
-    makePolymorphic g compact fullExpression =
-      mkExpression applyI $ ExpressionPolymorphic Polymorphic
-        { pFuncGuid = g
-        , pCompact = compact
-        , pFullExpression =
-          Lens.set rGuid expandedGuid $ removeInferredTypes fullExpression
-        }
+    expandedGuid = Guid.combine (resultGuid exprI) $ Guid.fromString "polyExpanded"
 
 convertGetVariable :: (MonadA m, Typeable1 m) => Expression.VariableRef (DefI (Tag m)) -> Convertor m
 convertGetVariable varRef exprI = do
