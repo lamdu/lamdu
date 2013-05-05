@@ -651,7 +651,8 @@ makeHoleResult sugarContext inferred exprI makeExpr =
       hashWithSalt 0 (show (void expr), show guid)
     makeInferredExpr = inferResult =<< lift makeExpr
     convertHoleResult res =
-      SugarM.runPure (sugarContext ^. SugarM.scCodeAnchors) . convertExpressionI .
+      SugarM.runPure (sugarContext ^. SugarM.scCodeAnchors) (sugarContext ^. SugarM.scRecordParams) .
+      convertExpressionI .
       (Lens.mapped . SugarInfer.plInferred %~ Just) .
       (Lens.mapped . SugarInfer.plStored .~ Nothing) .
       SugarInfer.resultFromInferred (gen res) $ fst <$> res
@@ -976,7 +977,7 @@ convertExpressionPure ::
   Anchors.CodeProps m -> g ->
   DataIRef.ExpressionM m () -> T m (Expression m)
 convertExpressionPure cp gen =
-  SugarM.runPure cp . convertExpressionI . fmap toPayloadMM .
+  SugarM.runPure cp Map.empty . convertExpressionI . fmap toPayloadMM .
   SugarInfer.resultFromPure gen
 
 convertDefinitionParams ::

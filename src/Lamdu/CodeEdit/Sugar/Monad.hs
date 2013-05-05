@@ -73,8 +73,8 @@ mkContext cp mDefI mReinferRoot iResult = do
 run :: MonadA m => Context m -> SugarM m a -> T m a
 run ctx (SugarM action) = runReaderT action ctx
 
-runPure :: MonadA m => Anchors.CodeProps m -> SugarM m a -> T m a
-runPure cp act = do
+runPure :: MonadA m => Anchors.CodeProps m -> Map Guid ParamInfo -> SugarM m a -> T m a
+runPure cp recordParams act = do
   specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
   run Context
     { _scMDefI = Nothing
@@ -84,7 +84,7 @@ runPure cp act = do
     , _scCodeAnchors = cp
     , _scSpecialFunctions = specialFunctions
     , _scMReinferRoot = Nothing
-    , _scRecordParams = mempty
+    , _scRecordParams = recordParams
     } act
 
 readContext :: MonadA m => SugarM m (Context m)
