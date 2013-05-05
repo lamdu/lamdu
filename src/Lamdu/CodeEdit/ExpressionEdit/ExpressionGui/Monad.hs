@@ -233,8 +233,7 @@ withNameFrom varType g useName =
 
 withNameFromParamGuid ::
   MonadA m => Guid -> ((NameSource, String) -> ExprGuiM m a) -> ExprGuiM m a
-withNameFromParamGuid g =
-  withNameFrom Sugar.GetParameter g
+withNameFromParamGuid = withNameFrom Sugar.GetParameter
 
 withNameFromGetVar ::
   MonadA m => Sugar.GetVar f ->
