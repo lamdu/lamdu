@@ -23,6 +23,7 @@ module Lamdu.CodeEdit.Sugar
   , Pi(..)
   , Section(..)
   , Hole(..), holeScope, holeMActions
+  , ScopeItem(..), siParamGuid
   , HoleActions(..)
     , holePaste, holeMDelete, holeResult, holeInferExprType
   , StorePoint
@@ -702,7 +703,16 @@ convertTypeCheckedHoleH
       loaded <- lift $ SugarInfer.load Nothing expr
       memoBy (loaded, token, scope, 't') . return $
         inferOnTheSide inferState scope loaded
-    onScopeElement (param, _typeExpr) = param
+    onScopeElement (param, typeExpr) =
+      ScopeItem
+      { _siParamGuid = param
+      , _siFields =
+          typeExpr ^..
+          Expression.eBody . Expression._BodyRecord .
+          Expression.recordFields . traverse . Lens._1 .
+          Expression.eBody . Expression._BodyLeaf .
+          Expression._Tag
+      }
     hole =
       Hole $
       mkWritableHoleActions <$>

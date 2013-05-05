@@ -79,6 +79,22 @@ data ResultsList m = ResultsList
   , rlExtra :: [Result m]
   }
 
+makeRecordParamGroups ::
+  MonadA m => Sugar.ScopeItem -> ExprGuiM m [GroupM m]
+makeRecordParamGroups (Sugar.ScopeItem groupGuid fieldTags) =
+  mapM mkRes fieldTags
+  where
+    mkRes tag =
+      ExprGuiM.withNameFromParamGuid tag $ \(_, varName) ->
+      pure . mkGroup [varName] $
+      Expression.BodyGetField
+      Expression.GetField
+      { Expression._getFieldRecord =
+          ExprUtil.pureExpression $ Lens.review ExprUtil.bodyParameterRef groupGuid
+      , Expression._getFieldTag =
+          ExprUtil.pureExpression . Expression.BodyLeaf $ Expression.Tag tag
+      }
+
 makeVariableGroup ::
   MonadA m => Expression.VariableRef (DefI (Tag m)) ->
   ExprGuiM m (GroupM m)
@@ -290,14 +306,17 @@ makeAllGroups :: MonadA m => HoleInfo m -> ExprGuiM m [GroupM m]
 makeAllGroups holeInfo = do
   paramGroups <-
     traverse (makeVariableGroup . Expression.ParameterRef) $
-    hiHoleActions holeInfo ^. Sugar.holeScope
+    hiHoleActions holeInfo ^.. Sugar.holeScope . traverse . Sugar.siParamGuid
+  recordParamGroups <-
+    fmap concat . traverse makeRecordParamGroups $
+    hiHoleActions holeInfo ^.. Sugar.holeScope . traverse
   globalGroups <-
     traverse (makeVariableGroup . Expression.DefinitionRef) =<<
     ExprGuiM.getCodeAnchor Anchors.globals
   tagGroups <- traverse makeTagGroup =<< ExprGuiM.getCodeAnchor Anchors.fields
   let
     literalGroups = makeLiteralGroup searchTerm
-    getVarGroups = paramGroups ++ globalGroups
+    getVarGroups = recordParamGroups ++ paramGroups ++ globalGroups
     relevantGroups = primitiveGroups ++ literalGroups ++ getVarGroups ++ tagGroups
   return $ holeMatches groupNames searchTerm relevantGroups
   where

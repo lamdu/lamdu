@@ -17,7 +17,9 @@ module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad
   , AccessedVars, markVariablesAsUsed, listenUsedVariables
   , IsDependent(..)
   , withParamName, NameSource(..)
-  , withNameFromGetVar, withNameFromVarRef
+
+  , withNameFromGetVar, withNameFromVarRef, withNameFromParamGuid
+
   , getDefName, getGuidName
   , memo, memoT
   , liftMemo, liftMemoT
@@ -228,6 +230,11 @@ withNameFrom varType g useName =
   Sugar.GetParameter ->
     withParamName (error "Invalid ParameterRef to undefined name") g useName
   Sugar.GetDefinition -> useName =<< getDefName g
+
+withNameFromParamGuid ::
+  MonadA m => Guid -> ((NameSource, String) -> ExprGuiM m a) -> ExprGuiM m a
+withNameFromParamGuid g =
+  withNameFrom Sugar.GetParameter g
 
 withNameFromGetVar ::
   MonadA m => Sugar.GetVar f ->

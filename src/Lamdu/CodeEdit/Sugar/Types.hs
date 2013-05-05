@@ -31,6 +31,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , Pi(..)
   , Section(..)
   , Hole(..), holeScope, holeMActions
+  , ScopeItem(..), siParamGuid, siFields
   , HoleActions(..)
     , holePaste, holeMDelete, holeResult, holeInferExprType
   , StorePoint(..)
@@ -154,8 +155,13 @@ data HoleResult m = HoleResult
   , _holeResultPickPrefix :: PrefixAction m
   }
 
+data ScopeItem = ScopeItem
+  { _siParamGuid :: Guid
+  , _siFields :: [Guid]
+  }
+
 data HoleActions m = HoleActions
-  { _holeScope :: [Guid]
+  { _holeScope :: [ScopeItem]
   , -- Infer expression "on the side" (not in the hole position),
     -- but with the hole's scope in scope.
     -- If given expression does not type check on its own, returns Nothing.
@@ -346,6 +352,7 @@ LensTH.makeLenses ''ListItemActions
 LensTH.makeLenses ''FuncParamActions
 LensTH.makeLenses ''Payload
 LensTH.makeLenses ''ExpressionP
+LensTH.makeLenses ''ScopeItem
 LensTH.makeLenses ''HoleResult
 LensTH.makeLenses ''HoleActions
 LensTH.makeLenses ''Hole
