@@ -766,8 +766,10 @@ uninferredHoles e =
   Expression.BodyApply (Expression.Apply func _)
     | (ExprUtil.isDependentPi . Infer.iType . Lens.view (Expression.ePayload . Lens._1)) func ->
       uninferredHoles func
-  Expression.BodyLam (Expression.Lambda _ _ paramType result) ->
-    uninferredHoles result ++ uninferredHoles paramType
+  Expression.BodyLam (Expression.Lambda lamKind _ paramType result) ->
+    uninferredHoles result ++ do
+      guard $ lamKind == Expression.Type
+      uninferredHoles paramType
   body -> Foldable.concatMap uninferredHoles body
 
 holeResultHasHoles :: HoleResult m -> Bool
