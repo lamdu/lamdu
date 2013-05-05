@@ -7,7 +7,7 @@ module Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Results
 
 import Control.Applicative (Applicative(..), (<$>), (<$))
 import Control.Lens.Operators
-import Control.Monad ((<=<), void, join)
+import Control.Monad ((<=<), guard, void, join)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.State (StateT)
 import Control.MonadA (MonadA)
@@ -173,8 +173,30 @@ baseExprToResultsList holeInfo makeWidget baseExpr =
     conclude baseExprType =
       toMResultsList holeInfo makeWidget baseId .
       map (return . (Nothing <$)) $
-      ExprUtil.applyForms baseExprType baseExpr
+      applyForms baseExprType
+    applyForms baseExprType =
+      ExprUtil.applyForms baseExprType baseExpr ++ do
+        record <-
+          baseExprType ^..
+          Expression.eBody . Expression._BodyLam . Expression.lambdaParamType .
+          Expression.eBody . Expression._BodyRecord
+        let tags = record ^.. Expression.recordFields . traverse . Lens._1
+        guard $ length tags == 1
+        tag <- tags
+        pure . ExprUtil.pureExpression .
+          ExprUtil.makeLambda paramGuid ExprUtil.pureHole .
+          ExprUtil.pureApply baseExpr . ExprUtil.pureExpression $
+          Expression.BodyRecord
+          Expression.Record
+          { Expression._recordKind = Expression.Val
+          , Expression._recordFields =
+              [ ( tag
+                , ExprUtil.pureExpression $ Lens.review ExprUtil.bodyParameterRef paramGuid
+                )
+              ]
+          }
     baseId = WidgetIds.hash baseExpr
+    paramGuid = Guid.fromString "guidy"
 
 applyOperatorResultsList ::
   MonadA m => HoleInfo m -> WidgetMaker m ->
