@@ -23,11 +23,10 @@ import Lamdu.Data.Expression.IRef (DefI)
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.CodeEdit.FFI as FFI
-import qualified Lamdu.Data.Expression.IRef as DataIRef
 
 data SpecialFunctions t = SpecialFunctions
-  { sfCons :: DataIRef.DefI t
-  , sfNil :: DataIRef.DefI t
+  { sfCons :: DefI t
+  , sfNil :: DefI t
   }
 derive makeBinary ''SpecialFunctions
 
