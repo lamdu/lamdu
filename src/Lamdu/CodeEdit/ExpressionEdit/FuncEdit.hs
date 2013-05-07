@@ -5,15 +5,16 @@ module Lamdu.CodeEdit.ExpressionEdit.FuncEdit
   , makeNestedParams, makeParamsAndResultEdit
   ) where
 
-import Control.Applicative ((<$), (<$>))
+import Control.Applicative ((<$), (<$>), Applicative(..))
 import Control.Lens ((^.))
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
+import Data.Traversable (traverse)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT, IsDependent(..))
+import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -62,18 +63,11 @@ jumpToRHS keys (rhsDoc, rhs) = do
 makeParamEdit ::
   MonadA m =>
   (Sugar.Name -> Widget (T m) -> Widget (T m)) ->
-  (String, Sugar.ExpressionN m) ->
-  Widget.Id -> Sugar.Name ->
+  Widget.Id -> Settings.InfoMode ->
+  Widget.EventHandlers (T m) ->
   Sugar.FuncParam Sugar.Name m (Sugar.ExpressionN m) ->
   ExprGuiM m (ExpressionGui m)
-makeParamEdit atParamWidgets rhs prevId name param = do
-  infoMode <- fmap (Lens.view Settings.sInfoMode) ExprGuiM.readSettings
-  rhsJumper <- jumpToRHS Config.jumpLHStoRHSKeys rhs
-  let
-    onFinalWidget =
-      Widget.weakerEvents
-      (rhsJumper `mappend` paramEventMap) .
-      atParamWidgets name
+makeParamEdit atParamWidgets prevId infoMode rhsJumper param = do
   (fmap . Lens.over ExpressionGui.egWidget) onFinalWidget . assignCursor $ do
     paramTypeEdit <- ExprGuiM.makeSubexpresion $ param ^. Sugar.fpType
     paramNameEdit <- makeParamNameEdit name ident
@@ -91,6 +85,11 @@ makeParamEdit atParamWidgets rhs prevId name param = do
       ExpressionGui.addType ExpressionGui.HorizLine myId [infoWidget] $
       ExpressionGui.fromValueWidget paramNameEdit
   where
+    name = param ^. Sugar.fpName
+    onFinalWidget =
+      Widget.weakerEvents
+      (rhsJumper `mappend` paramEventMap) .
+      atParamWidgets name
     assignCursor =
       case param ^. Sugar.fpHiddenLambdaGuid of
       Nothing -> id
@@ -155,35 +154,14 @@ makeNestedParams ::
  -> [Sugar.FuncParam Sugar.Name m (Sugar.ExpressionN m)]
  -> ExprGuiM m a
  -> ExprGuiM m ([ExpressionGui m], [ExpressionGui m], a)
-makeNestedParams atParamWidgets rhs firstParId depParams params mkResultEdit = do
-  (depParamsEdits, (paramsEdits, resultEdit)) <-
-    mkParams Dependent firstParId depParams $ \nextParId ->
-    mkParams Independent nextParId params $ const mkResultEdit
-  return (depParamsEdits, paramsEdits, resultEdit)
-  where
-    mkParams isDep guid l mkFinal =
-      makeNestedParamNames isDep (Lens.view Sugar.fpGuid)
-      (makeParamEdit atParamWidgets rhs) mkFinal guid l
-
-makeNestedParamNames ::
-  MonadA m =>
-  IsDependent -> (a -> Guid) ->
-  (Widget.Id -> Sugar.Name -> a -> ExprGuiM m item) ->
-  (Widget.Id -> ExprGuiM m final) ->
-  Widget.Id -> [a] ->
-  ExprGuiM m ([item], final)
-makeNestedParamNames isDep itemGuid makeItem mkFinal = go
-  where
-    go wId [] = fmap ((,) []) $ mkFinal wId
-    go oldWId (x:xs) = do
-      let
-        guid = itemGuid x
-        newWId = WidgetIds.fromGuid guid
-      (name, (items, final)) <-
-        ExprGuiM.withParamName isDep guid $ \name ->
-        fmap ((,) name) $ go newWId xs
-      item <- makeItem oldWId name x
-      return (item : items, final)
+makeNestedParams atParamWidgets rhs prevId depParams params mkResultEdit = do
+  infoMode <- fmap (Lens.view Settings.sInfoMode) ExprGuiM.readSettings
+  rhsJumper <- jumpToRHS Config.jumpLHStoRHSKeys rhs
+  let mkParam = makeParamEdit atParamWidgets prevId infoMode rhsJumper
+  (,,)
+    <$> traverse mkParam depParams
+    <*> traverse mkParam params
+    <*> mkResultEdit
 
 make
   :: MonadA m

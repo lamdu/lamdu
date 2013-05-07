@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts, OverloadedStrings, ConstraintKinds, TypeFamilies, Rank2Types #-}
 module Lamdu.CodeEdit.Sugar
-  ( Definition(..), drGuid, drType, drBody
+  ( Definition(..), drName, drGuid, drType, drBody
   , DefinitionBody(..)
   , ListItemActions(..), itemAddNext, itemDelete
   , FuncParamActions(..), fpListItemActions, fpGetExample
@@ -24,7 +24,7 @@ module Lamdu.CodeEdit.Sugar
   , Kind(..), Record(..), FieldList(..), GetField(..)
   , GetVar(..), VarType(..)
   , Func(..)
-  , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
+  , FuncParam(..), fpName, fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
   , Section(..)
   , ScopeItem(..), _ScopeVar, _ScopeTag
@@ -782,7 +782,7 @@ convertTypeCheckedHoleH sugarContext mPaste iwc exprI =
       pure HoleActions
         { _holePaste = mPaste
         , _holeMDelete = Nothing
-        , _holeScope = concat
+        , _holeScope = pure $ concat
           [ (concatMap onScopeElement . Map.toList . Infer.iScope) inferred
           , map getGlobal globals
           , map getField fields
@@ -1115,6 +1115,7 @@ convertWhereItems usedTags expr =
           mkWIActions <$>
           resultStored expr <*>
           traverse (Lens.view SugarInfer.plStored) (lambda ^. Expression.lambdaResult)
+        , wiName = ()
         }
     (nextItems, whereBody) <- convertWhereItems usedTags $ lambda ^. Expression.lambdaResult
     return (item : nextItems, whereBody)
@@ -1188,7 +1189,7 @@ loadConvertDefI ::
   Anchors.CodeProps m -> DefI (Tag m) ->
   CT m (DefinitionN m)
 loadConvertDefI cp defI =
-  lift . AddNames.toDef =<< convertDefI =<< lift (Load.loadDefinitionClosure defI)
+  lift . AddNames.addToDef =<< convertDefI =<< lift (Load.loadDefinitionClosure defI)
   where
     convertDefBody (Definition.BodyBuiltin builtin) =
       fmap return . convertDefIBuiltin builtin
@@ -1202,6 +1203,7 @@ loadConvertDefI cp defI =
         void typeLoaded
       return Definition
         { _drGuid = IRef.guid defI
+        , _drName = ()
         , _drBody = bodyS
         , _drType = typeS
         }

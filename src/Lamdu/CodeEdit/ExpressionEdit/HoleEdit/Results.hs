@@ -80,15 +80,13 @@ data ResultsList m = ResultsList
   }
 
 makeScopeItemGroup ::
-  MonadA m => (Sugar.ScopeItem Sugar.Name m, DataIRef.ExpressionM m ()) -> ExprGuiM m (GroupM m)
+  MonadA m => (Sugar.ScopeItem Sugar.Name m, DataIRef.ExpressionM m ()) -> GroupM m
 makeScopeItemGroup (scopeItem, expr) =
-  ExprGuiM.withNameFromParamGuid guid $
-  \(Sugar.Name _ varName) ->
-  pure $ Group { groupNames = [varName], groupBaseExpr = expr }
+  Group { groupNames = [varName], groupBaseExpr = expr }
   where
-    guid = case scopeItem of
-      Sugar.ScopeVar getVar -> Sugar.gvIdentifier getVar
-      Sugar.ScopeTag tagG -> tagG ^. Sugar.tagGuid
+    Sugar.Name _ varName = case scopeItem of
+      Sugar.ScopeVar getVar -> Sugar.gvName getVar
+      Sugar.ScopeTag tagG -> tagG ^. Sugar.tagName
 
 makeLiteralGroup :: String -> [Group def]
 makeLiteralGroup searchTerm =
@@ -302,19 +300,18 @@ makeAll holeInfo makeWidget = do
     (`mappend` makeNewTagResultList holeInfo (mkNewTagResultWidget makeWidget) cp) .
     List.mapL (makeResultsList holeInfo (mkResultWidget makeWidget)) .
     List.fromList <$>
-    makeAllGroups holeInfo
+    ExprGuiM.transaction (makeAllGroups holeInfo)
   ExprGuiM.liftMemoT $ collectResults resultList
 
-makeAllGroups :: MonadA m => HoleInfo m -> ExprGuiM m [GroupM m]
+makeAllGroups :: MonadA m => HoleInfo m -> T m [GroupM m]
 makeAllGroups holeInfo = do
-  varGroups <-
-    traverse makeScopeItemGroup $
-    hiHoleActions holeInfo ^.. Sugar.holeScope . traverse
+  scope <- hiHoleActions holeInfo ^. Sugar.holeScope
   let
-    literalGroups = makeLiteralGroup searchTerm
     relevantGroups = primitiveGroups ++ literalGroups ++ varGroups
-  return $ holeMatches groupNames searchTerm relevantGroups
+    varGroups = map makeScopeItemGroup scope
+  pure $ holeMatches groupNames searchTerm relevantGroups
   where
+    literalGroups = makeLiteralGroup searchTerm
     state = Property.value $ hiState holeInfo
     searchTerm = state ^. HoleInfo.hsSearchTerm
     primitiveGroups =

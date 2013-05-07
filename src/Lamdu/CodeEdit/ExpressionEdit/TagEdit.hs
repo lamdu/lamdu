@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.CodeEdit.ExpressionEdit.TagEdit(make) where
 
-import Control.Applicative ((<$>))
 import Control.MonadA (MonadA)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
@@ -9,7 +8,6 @@ import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
-import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 
@@ -26,8 +24,7 @@ make
   => Sugar.TagG Sugar.Name
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
-make (Sugar.TagG tag _) =
-  ExpressionGui.wrapDelegated fdConfig FocusDelegator.NotDelegating $ \myId -> do
-    name <- ExprGuiM.transaction $ ExprGuiM.getGuidName tag
-    ExpressionGui.fromValueWidget . Widget.scale Config.fieldScale . Widget.tint Config.fieldTint <$>
-      ExpressionGui.makeNameEdit name tag myId
+make (Sugar.TagG tag name) =
+  ExpressionGui.wrapDelegated fdConfig FocusDelegator.NotDelegating
+  (fmap (ExpressionGui.fromValueWidget . Widget.scale Config.fieldScale . Widget.tint Config.fieldTint) .
+   ExpressionGui.makeNameEdit name tag)

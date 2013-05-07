@@ -5,7 +5,7 @@ import Control.Lens ((^.))
 import Control.MonadA (MonadA)
 import Data.Monoid (mappend)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, IsDependent(..))
+import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.BottleWidgets as BWidgets
@@ -28,14 +28,8 @@ make
 make hasParens (Sugar.Pi param resultType) =
   ExpressionGui.wrapParenify hasParens Parens.addHighlightedTextParens $ \myId ->
   ExprGuiM.assignCursor myId typeId $ do
-    -- We allocate a name in the resultTypeEdit context even if we end
-    -- up non-dependent and don't have a name. This is the only way to
-    -- do it (until 2-pass gui gen), but it is also desirable: when
-    -- holes spring up, we don't get all the names shuffled
-    -- confusingly.
-    (name, (resultTypeEdit, usedVars)) <-
-      ExprGuiM.withParamName Dependent paramGuid $ \name ->
-      fmap ((,) name) . ExprGuiM.listenUsedVariables $
+    (resultTypeEdit, usedVars) <-
+      ExprGuiM.listenUsedVariables $
       FuncEdit.makeResultEdit [paramId] resultType
     let
       paramUsed = paramGuid `elem` usedVars
@@ -76,6 +70,7 @@ make hasParens (Sugar.Pi param resultType) =
           [paramEdit, ExpressionGui.fromValueWidget rightArrowLabel]
       return $ ExpressionGui.hboxSpaced [paramAndArrow, resultTypeEdit]
   where
+    name = param ^. Sugar.fpName
     paramGuid = param ^. Sugar.fpGuid
     paramId = WidgetIds.fromGuid paramGuid
     typeId =

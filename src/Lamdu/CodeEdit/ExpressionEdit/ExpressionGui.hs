@@ -135,17 +135,27 @@ disallowedNameChars =
   , ('9', EventMap.Shifted)
   ]
 
+makeBridge ::
+  MonadA m =>
+  (Widget.Id -> WE.WidgetEnvT m (Widget f)) ->
+  (Widget.Id -> WE.WidgetEnvT m (Widget f)) ->
+  Widget.Id -> WE.WidgetEnvT m (Widget f)
+makeBridge mkFocused mkUnfocused myId = do
+  isFocused <- WE.isSubCursor myId
+  (if isFocused then mkFocused else mkUnfocused) myId
+
 makeNameEdit ::
   MonadA m => Sugar.Name -> Guid -> Widget.Id -> ExprGuiM m (WidgetT m)
 makeNameEdit (Sugar.Name nameSrc name) ident myId =
   fmap (nameSrcTint nameSrc) .
   (ExprGuiM.atEnv . Lens.over WE.envTextStyle)
-  (Lens.set TextEdit.sEmptyUnfocusedString name .
-   Lens.set TextEdit.sEmptyFocusedString (concat ["<", name, ">"])) $
-  ExprGuiM.widgetEnv . flip makeEditor myId =<<
+  (Lens.set TextEdit.sEmptyFocusedString (concat ["<", name, ">"])) $
+  ExprGuiM.widgetEnv . makeEditor =<<
   (ExprGuiM.transaction . Lens.view Transaction.mkProperty . Anchors.assocNameRef) ident
   where
-    makeEditor =
+    makeEditor property =
+      makeBridge (makeWordEdit property) (BWidgets.makeFocusableTextView name) myId
+    makeWordEdit =
       (fmap . fmap . fmap . Lens.over Widget.wEventMap)
       (EventMap.filterSChars (curry (`notElem` disallowedNameChars)))
       BWidgets.makeWordEdit

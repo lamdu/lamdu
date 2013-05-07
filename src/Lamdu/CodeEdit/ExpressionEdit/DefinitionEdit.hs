@@ -179,20 +179,19 @@ makeBuiltinDefinition
   => Sugar.Definition Sugar.Name m
   -> Sugar.DefinitionBuiltin m
   -> ExprGuiM m (WidgetT m)
-makeBuiltinDefinition def builtin = do
-  name <- ExprGuiM.getDefName guid
-  fmap (Box.vboxAlign 0) $ sequenceA
+makeBuiltinDefinition def builtin =
+  Box.vboxAlign 0 <$> sequenceA
     [ fmap BWidgets.hboxCenteredSpaced $ sequenceA
       [ ExprGuiM.withFgColor Config.builtinOriginNameColor $
         makeNameEdit name (Widget.joinId myId ["name"]) guid
       , makeEquals myId
       , BuiltinEdit.make builtin myId
       ]
-    , fmap (defTypeScale . Lens.view ExpressionGui.egWidget) .
-      ExprGuiM.makeSubexpresion $ def ^. Sugar.drType
+    , fmap (defTypeScale . Lens.view ExpressionGui.egWidget) $
+      ExprGuiM.makeSubexpresion typ
     ]
   where
-    guid = def ^. Sugar.drGuid
+    Sugar.Definition guid name typ _ = def
     myId = WidgetIds.fromGuid guid
 
 defTypeScale :: Widget f -> Widget f
@@ -201,7 +200,7 @@ defTypeScale = Widget.scale Config.defTypeBoxSizeFactor
 makeWhereItemEdit :: MonadA m => Sugar.WhereItem Sugar.Name m -> ExprGuiM m (WidgetT m)
 makeWhereItemEdit item =
   fmap (Widget.weakerEvents eventMap) . assignCursor $
-  makeDefContentEdit (Sugar.wiGuid item) (Sugar.wiValue item)
+  makeDefContentEdit (Sugar.wiGuid item) (Sugar.wiName item) (Sugar.wiValue item)
   where
     assignCursor =
       foldr ((.) . (`ExprGuiM.assignCursor` myId) . WidgetIds.fromGuid) id $
@@ -222,9 +221,8 @@ makeWhereItemEdit item =
       | otherwise = mempty
 
 makeDefContentEdit ::
-  MonadA m => Guid -> Sugar.DefinitionContent Sugar.Name m -> ExprGuiM m (WidgetT m)
-makeDefContentEdit guid content = do
-  name <- ExprGuiM.getDefName guid
+  MonadA m => Guid -> Sugar.Name -> Sugar.DefinitionContent Sugar.Name m -> ExprGuiM m (WidgetT m)
+makeDefContentEdit guid name content = do
   (body, wheres) <-
     makeParts name guid content
     & Lens.mapped . Lens._1 %~
@@ -247,7 +245,7 @@ makeExprDefinition def bodyExpr = do
       , mkTypeRow id "Inferred type:" inferredType
       ]
   bodyWidget <-
-    makeDefContentEdit guid $ bodyExpr ^. Sugar.deContent
+    makeDefContentEdit guid name $ bodyExpr ^. Sugar.deContent
   return . Box.vboxAlign 0 $ typeWidgets ++ [bodyWidget]
   where
     addAcceptanceArrow acceptInferredType label = do
@@ -269,8 +267,8 @@ makeExprDefinition def bodyExpr = do
         [ (right, label)
         , (center, (Widget.doesntTakeFocus . Lens.view ExpressionGui.egWidget) typeGui)
         ]
-    mkAcceptedRow onLabel = mkTypeRow onLabel "Type:" $ def ^. Sugar.drType
-    guid = def ^. Sugar.drGuid
+    mkAcceptedRow onLabel = mkTypeRow onLabel "Type:" typ
+    Sugar.Definition guid name typ _ = def
     myId = WidgetIds.fromGuid guid
     labelStyle =
       ExprGuiM.atEnv $ WE.setTextSizeColor Config.defTypeLabelTextSize Config.defTypeLabelColor
