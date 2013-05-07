@@ -34,7 +34,7 @@ module Lamdu.CodeEdit.Sugar
   , holeResultHasHoles
   , LiteralInteger(..)
   , Inferred(..)
-  , Polymorphic(..)
+  , Collapsed(..)
   , HasParens(..)
   , loadConvertDefI
   , removeTypes
@@ -296,7 +296,7 @@ convertFunc lambda exprI = do
   case maybeEta of
     Nothing -> pure fullExpr
     Just (funcGuid, funcVar) ->
-      makePolymorphic exprI funcGuid funcVar fullExpr
+      makeCollapsed exprI funcGuid funcVar fullExpr
   where
     deleteToNextParam nextParam =
       Lens.set
@@ -319,8 +319,8 @@ addParens =
   where
     addParensBody (ExpressionInferred (Inferred val hole)) =
       ExpressionInferred $ Inferred (addParens val) hole
-    addParensBody (ExpressionPolymorphic (Polymorphic g compact full)) =
-      ExpressionPolymorphic . Polymorphic g compact $
+    addParensBody (ExpressionCollapsed (Collapsed g compact full)) =
+      ExpressionCollapsed . Collapsed g compact $
       addParens full
     addParensBody x = Lens.set eHasParens HaveParens x
 
@@ -328,7 +328,7 @@ addApplyChildParens :: Expression m -> Expression m
 addApplyChildParens x =
   case x ^. rExpressionBody of
   ExpressionApply{} -> x
-  ExpressionPolymorphic{} -> x
+  ExpressionCollapsed{} -> x
   _ -> addParens x
 
 isPolymorphicFunc :: DataIRef.ExpressionM m (PayloadMM m) -> Bool
@@ -508,7 +508,7 @@ applyOnSection (Section (Just left) op Nothing) _ _ argRef exprI =
   on (Section . Just) (setNextHole right) left op (Just right)
   where
     -- TODO: Handle left/right-associativity
-    isSameOp (ExpressionPolymorphic p0) (ExpressionPolymorphic p1) =
+    isSameOp (ExpressionCollapsed p0) (ExpressionCollapsed p1) =
       on isSameVar pCompact p0 p1
     isSameOp (ExpressionGetVar v0) (ExpressionGetVar v1) =
       isSameVar v0 v1
@@ -547,20 +547,20 @@ convertApplyPrefix funcRef funcI argRef applyI = do
   if isPolymorphicFunc funcI
     then
       case funcRef ^. rExpressionBody of
-      ExpressionPolymorphic (Polymorphic g compact full) ->
-        makePolymorphic applyI g compact =<< makeApply full
+      ExpressionCollapsed (Collapsed g compact full) ->
+        makeCollapsed applyI g compact =<< makeApply full
       ExpressionGetVar var ->
-        makePolymorphic applyI (resultGuid funcI) var =<< makeFullApply
+        makeCollapsed applyI (resultGuid funcI) var =<< makeFullApply
       _ -> makeFullApply
     else
       makeFullApply
 
-makePolymorphic ::
+makeCollapsed ::
   (MonadA m, Typeable1 m) =>
   DataIRef.ExpressionM m (PayloadMM m) ->
   Guid -> GetVar m -> Expression m -> SugarM m (Expression m)
-makePolymorphic exprI g compact fullExpression =
-  mkExpression exprI $ ExpressionPolymorphic Polymorphic
+makeCollapsed exprI g compact fullExpression =
+  mkExpression exprI $ ExpressionCollapsed Collapsed
     { pFuncGuid = g
     , pCompact = compact
     , pFullExpression =

@@ -28,7 +28,7 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.InferredEdit as InferredEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.ListEdit as ListEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.PiEdit as PiEdit
-import qualified Lamdu.CodeEdit.ExpressionEdit.PolymorphicEdit as PolymorphicEdit
+import qualified Lamdu.CodeEdit.ExpressionEdit.CollapsedEdit as CollapsedEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.RecordEdit as RecordEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.SectionEdit as SectionEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.TagEdit as TagEdit
@@ -95,8 +95,8 @@ makeEditor sExpr =
     isAHole hole . HoleEdit.make hole mNextHole $ sExpr ^. Sugar.rGuid
   Sugar.ExpressionFunc hasParens f ->
     notAHole $ FuncEdit.make hasParens f
-  Sugar.ExpressionPolymorphic poly ->
-    notAHole $ PolymorphicEdit.make poly
+  Sugar.ExpressionCollapsed poly ->
+    notAHole $ CollapsedEdit.make poly
   Sugar.ExpressionApply hasParens apply ->
     notAHole $ ApplyEdit.make hasParens apply
   Sugar.ExpressionPi hasParens funcType ->

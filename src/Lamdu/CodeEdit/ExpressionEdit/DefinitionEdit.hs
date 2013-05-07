@@ -279,5 +279,5 @@ diveToNameEdit =
   -- If we delegate too deep (e.g: No polymorphic params) that's
   -- handled OK. So we may as well assume we're always wrapped by a
   -- polymorphic wrapper:
-  FocusDelegator.delegatingId . -- Polymorphic wrapper
+  FocusDelegator.delegatingId . -- Collapsed wrapper
   FocusDelegator.delegatingId -- Name editor

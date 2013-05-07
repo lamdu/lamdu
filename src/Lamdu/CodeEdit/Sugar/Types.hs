@@ -11,7 +11,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , ExpressionBody(..), eHasParens
     , _ExpressionPi, _ExpressionApply, _ExpressionSection
     , _ExpressionFunc, _ExpressionGetVar, _ExpressionHole
-    , _ExpressionInferred, _ExpressionPolymorphic
+    , _ExpressionInferred, _ExpressionCollapsed
     , _ExpressionLiteralInteger, _ExpressionAtom
     , _ExpressionList, _ExpressionRecord, _ExpressionTag
   , Payload(..), plInferredTypes, plActions, plNextHole
@@ -41,7 +41,7 @@ module Lamdu.CodeEdit.Sugar.Types
     , holeResultPick, holeResultPickPrefix
   , LiteralInteger(..)
   , Inferred(..)
-  , Polymorphic(..)
+  , Collapsed(..)
   , HasParens(..)
   , T, CT
   , PrefixAction, emptyPrefixAction
@@ -190,7 +190,7 @@ data Inferred m expr = Inferred
   } deriving (Functor, Foldable, Traversable)
 
 -- TODO: New name. This is not only for polymorphic but also for eta-reduces etc
-data Polymorphic m expr = Polymorphic
+data Collapsed m expr = Collapsed
   { pFuncGuid :: Guid
   , pCompact :: GetVar m
   , pFullExpression :: expr
@@ -248,7 +248,7 @@ data ExpressionBody m expr
   | ExpressionPi      { _eHasParens :: HasParens, __ePi :: Pi m expr }
   | ExpressionHole    { __eHole :: Hole m }
   | ExpressionInferred { __eInferred :: Inferred m expr }
-  | ExpressionPolymorphic { __ePolymorphic :: Polymorphic m expr }
+  | ExpressionCollapsed { __eCollapsed :: Collapsed m expr }
   | ExpressionLiteralInteger { __eLit :: LiteralInteger m }
   | ExpressionAtom     { __eAtom :: String }
   | ExpressionList     { __eList :: List m expr }
@@ -283,7 +283,7 @@ instance Show expr => Show (ExpressionBody m expr) where
     wrapParens hasParens $ "_:" ++ show paramType ++ " -> " ++ show resultType
   show ExpressionHole {} = "Hole"
   show ExpressionInferred {} = "Inferred"
-  show ExpressionPolymorphic {} = "Poly"
+  show ExpressionCollapsed {} = "Collapsed"
   show ExpressionLiteralInteger { __eLit = LiteralInteger i _ } = show i
   show ExpressionAtom { __eAtom = atom } = atom
   show ExpressionList { __eList = List items _ } =

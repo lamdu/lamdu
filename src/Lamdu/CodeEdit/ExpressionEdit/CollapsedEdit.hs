@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lamdu.CodeEdit.ExpressionEdit.PolymorphicEdit(make) where
+module Lamdu.CodeEdit.ExpressionEdit.CollapsedEdit(make) where
 
 import Control.MonadA (MonadA)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, Collapser(..))
@@ -24,7 +24,7 @@ polymorphicFDConfig = FocusDelegator.Config
   }
 
 make ::
-  MonadA m => Sugar.Polymorphic m (Sugar.Expression m) ->
+  MonadA m => Sugar.Collapsed m (Sugar.Expression m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make poly =
   ExpressionGui.makeCollapser polymorphicFDConfig f
