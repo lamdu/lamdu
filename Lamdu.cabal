@@ -156,6 +156,7 @@ Executable lamdu
                        Lamdu.CodeEdit.Settings,
                        Lamdu.CodeEdit.Sugar.Monad,
                        Lamdu.CodeEdit.Sugar.Types,
+                       Lamdu.CodeEdit.Sugar.AddNames,
                        Lamdu.CodeEdit.Sugar,
                        Lamdu.CodeEdit,
                        Lamdu.Config,

@@ -39,7 +39,7 @@ paramFDConfig = FocusDelegator.Config
 
 makeParamNameEdit
   :: MonadA m
-  => (ExprGuiM.NameSource, String) -> Guid
+  => Sugar.Name -> Guid
   -> ExprGuiM m (WidgetT m)
 makeParamNameEdit name ident =
   ExprGuiM.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
@@ -48,7 +48,7 @@ makeParamNameEdit name ident =
 
 jumpToRHS ::
   (MonadA m, MonadA f) =>
-  [E.ModKey] -> (String, Sugar.Expression m) ->
+  [E.ModKey] -> (String, Sugar.ExpressionN m) ->
   ExprGuiM f (Widget.EventHandlers (T f))
 jumpToRHS keys (rhsDoc, rhs) = do
   savePos <- ExprGuiM.mkPrejumpPosSaver
@@ -61,11 +61,10 @@ jumpToRHS keys (rhsDoc, rhs) = do
 -- exported for use in definition sugaring.
 makeParamEdit ::
   MonadA m =>
-  ((ExprGuiM.NameSource, String) ->
-   Widget (T m) -> Widget (T m)) ->
-  (String, Sugar.Expression m) ->
-  Widget.Id -> (ExprGuiM.NameSource, String) ->
-  Sugar.FuncParam m (Sugar.Expression m) ->
+  (Sugar.Name -> Widget (T m) -> Widget (T m)) ->
+  (String, Sugar.ExpressionN m) ->
+  Widget.Id -> Sugar.Name ->
+  Sugar.FuncParam Sugar.Name m (Sugar.ExpressionN m) ->
   ExprGuiM m (ExpressionGui m)
 makeParamEdit atParamWidgets rhs prevId name param = do
   infoMode <- fmap (Lens.view Settings.sInfoMode) ExprGuiM.readSettings
@@ -121,7 +120,7 @@ makeParamEdit atParamWidgets rhs prevId name param = do
 makeResultEdit
   :: MonadA m
   => [Widget.Id]
-  -> Sugar.Expression m
+  -> Sugar.ExpressionN m
   -> ExprGuiM m (ExpressionGui m)
 makeResultEdit lhs result = do
   savePos <- ExprGuiM.mkPrejumpPosSaver
@@ -138,10 +137,10 @@ makeResultEdit lhs result = do
 
 makeParamsAndResultEdit ::
   MonadA m =>
-  ((ExprGuiM.NameSource, String) -> Widget (T m) -> Widget (T m)) ->
-  [Widget.Id] -> (String, Sugar.Expression m) -> Widget.Id ->
-  [Sugar.FuncParam m (Sugar.Expression m)] ->
-  [Sugar.FuncParam m (Sugar.Expression m)] ->
+  (Sugar.Name -> Widget (T m) -> Widget (T m)) ->
+  [Widget.Id] -> (String, Sugar.ExpressionN m) -> Widget.Id ->
+  [Sugar.FuncParam Sugar.Name m (Sugar.ExpressionN m)] ->
+  [Sugar.FuncParam Sugar.Name m (Sugar.ExpressionN m)] ->
   ExprGuiM m ([ExpressionGui m], [ExpressionGui m], ExpressionGui m)
 makeParamsAndResultEdit atParamWidgets lhs rhs firstParId depParams params =
   makeNestedParams atParamWidgets rhs firstParId depParams params .
@@ -149,12 +148,11 @@ makeParamsAndResultEdit atParamWidgets lhs rhs firstParId depParams params =
 
 makeNestedParams ::
   MonadA m =>
-  ((ExprGuiM.NameSource, String) ->
-   Widget (T m) -> Widget (T m))
- -> (String, Sugar.Expression m)
+  (Sugar.Name -> Widget (T m) -> Widget (T m))
+ -> (String, Sugar.ExpressionN m)
  -> Widget.Id
- -> [Sugar.FuncParam m (Sugar.Expression m)]
- -> [Sugar.FuncParam m (Sugar.Expression m)]
+ -> [Sugar.FuncParam Sugar.Name m (Sugar.ExpressionN m)]
+ -> [Sugar.FuncParam Sugar.Name m (Sugar.ExpressionN m)]
  -> ExprGuiM m a
  -> ExprGuiM m ([ExpressionGui m], [ExpressionGui m], a)
 makeNestedParams atParamWidgets rhs firstParId depParams params mkResultEdit = do
@@ -170,7 +168,7 @@ makeNestedParams atParamWidgets rhs firstParId depParams params mkResultEdit = d
 makeNestedParamNames ::
   MonadA m =>
   IsDependent -> (a -> Guid) ->
-  (Widget.Id -> (ExprGuiM.NameSource, String) -> a -> ExprGuiM m item) ->
+  (Widget.Id -> Sugar.Name -> a -> ExprGuiM m item) ->
   (Widget.Id -> ExprGuiM m final) ->
   Widget.Id -> [a] ->
   ExprGuiM m ([item], final)
@@ -190,7 +188,7 @@ makeNestedParamNames isDep itemGuid makeItem mkFinal = go
 make
   :: MonadA m
   => Sugar.HasParens
-  -> Sugar.Func m (Sugar.Expression m)
+  -> Sugar.Func Sugar.Name m (Sugar.ExpressionN m)
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
 make hasParens (Sugar.Func depParams params body) =

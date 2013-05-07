@@ -27,7 +27,7 @@ fdConfig = FocusDelegator.Config
   }
 
 make
-  :: MonadA m => Sugar.Inferred m (Sugar.Expression m) -> Guid -> Widget.Id
+  :: MonadA m => Sugar.Inferred Sugar.Name m (Sugar.ExpressionN m) -> Guid -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
 make inferred guid =
   ExpressionGui.wrapDelegated fdConfig FocusDelegator.NotDelegating $
@@ -35,7 +35,7 @@ make inferred guid =
 
 makeUnwrapped ::
   MonadA m =>
-  Sugar.Inferred m (Sugar.Expression m) -> Guid -> Widget.Id ->
+  Sugar.Inferred Sugar.Name m (Sugar.ExpressionN m) -> Guid -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 makeUnwrapped inferred guid myId = do
   mInnerCursor <- ExprGuiM.widgetEnv $ WE.subCursor myId

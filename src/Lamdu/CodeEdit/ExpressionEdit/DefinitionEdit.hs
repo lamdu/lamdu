@@ -41,7 +41,7 @@ defFDConfig = FocusDelegator.Config
   }
 
 makeNameEdit ::
-  MonadA m => (ExprGuiM.NameSource, String) ->
+  MonadA m => Sugar.Name ->
   Widget.Id -> Guid -> ExprGuiM m (WidgetT m)
 makeNameEdit name myId ident =
   ExprGuiM.wrapDelegated defFDConfig FocusDelegator.NotDelegating id
@@ -51,8 +51,8 @@ makeNameEdit name myId ident =
 makeEquals :: MonadA m => Widget.Id -> ExprGuiM m (Widget f)
 makeEquals = ExprGuiM.widgetEnv . BWidgets.makeLabel "=" . Widget.toAnimId
 
-nonOperatorName :: (ExprGuiM.NameSource, String) -> Bool
-nonOperatorName (ExprGuiM.StoredName, x) = nonEmptyAll (`notElem` Config.operatorChars) x
+nonOperatorName :: Sugar.Name -> Bool
+nonOperatorName (Sugar.Name Sugar.StoredName x) = nonEmptyAll (`notElem` Config.operatorChars) x
 nonOperatorName _ = False
 
 polyNameFDConfig :: FocusDelegator.Config
@@ -65,7 +65,7 @@ polyNameFDConfig = FocusDelegator.Config
 
 makePolyNameEdit ::
   MonadA m =>
-  (ExprGuiM.NameSource, String) -> Guid -> [ExpressionGui m] -> Widget.Id ->
+  Sugar.Name -> Guid -> [ExpressionGui m] -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 makePolyNameEdit name guid depParamsEdits =
   case depParamsEdits of
@@ -91,7 +91,7 @@ makePolyNameEdit name guid depParamsEdits =
 
 makeWheres ::
   MonadA m =>
-  [Sugar.WhereItem m] -> Widget.Id ->
+  [Sugar.WhereItem Sugar.Name m] -> Widget.Id ->
   ExprGuiM m [Widget (T m)]
 makeWheres [] _ = return []
 makeWheres whereItems myId = do
@@ -108,9 +108,9 @@ makeWheres whereItems myId = do
 
 makeParts
   :: MonadA m
-  => (ExprGuiM.NameSource, String)
+  => Sugar.Name
   -> Guid
-  -> Sugar.DefinitionContent m
+  -> Sugar.DefinitionContent Sugar.Name m
   -> ExprGuiM m ([ExpressionGui m], [Widget (T m)])
 makeParts name guid content = do
   equals <- makeEquals myId
@@ -165,10 +165,10 @@ makeParts name guid content = do
 
 make
   :: MonadA m
-  => Sugar.Definition m
+  => Sugar.Definition Sugar.Name m
   -> ExprGuiM m (WidgetT m)
 make def =
-  case Sugar.drBody def of
+  case def ^. Sugar.drBody of
   Sugar.DefinitionBodyExpression bodyExpr ->
     makeExprDefinition def bodyExpr
   Sugar.DefinitionBodyBuiltin builtin ->
@@ -176,7 +176,7 @@ make def =
 
 makeBuiltinDefinition
   :: MonadA m
-  => Sugar.Definition m
+  => Sugar.Definition Sugar.Name m
   -> Sugar.DefinitionBuiltin m
   -> ExprGuiM m (WidgetT m)
 makeBuiltinDefinition def builtin = do
@@ -189,16 +189,16 @@ makeBuiltinDefinition def builtin = do
       , BuiltinEdit.make builtin myId
       ]
     , fmap (defTypeScale . Lens.view ExpressionGui.egWidget) .
-      ExprGuiM.makeSubexpresion $ Sugar.drType def
+      ExprGuiM.makeSubexpresion $ def ^. Sugar.drType
     ]
   where
-    guid = Sugar.drGuid def
+    guid = def ^. Sugar.drGuid
     myId = WidgetIds.fromGuid guid
 
 defTypeScale :: Widget f -> Widget f
 defTypeScale = Widget.scale Config.defTypeBoxSizeFactor
 
-makeWhereItemEdit :: MonadA m => Sugar.WhereItem m -> ExprGuiM m (WidgetT m)
+makeWhereItemEdit :: MonadA m => Sugar.WhereItem Sugar.Name m -> ExprGuiM m (WidgetT m)
 makeWhereItemEdit item =
   fmap (Widget.weakerEvents eventMap) . assignCursor $
   makeDefContentEdit (Sugar.wiGuid item) (Sugar.wiValue item)
@@ -222,7 +222,7 @@ makeWhereItemEdit item =
       | otherwise = mempty
 
 makeDefContentEdit ::
-  MonadA m => Guid -> Sugar.DefinitionContent m -> ExprGuiM m (WidgetT m)
+  MonadA m => Guid -> Sugar.DefinitionContent Sugar.Name m -> ExprGuiM m (WidgetT m)
 makeDefContentEdit guid content = do
   name <- ExprGuiM.getDefName guid
   (body, wheres) <-
@@ -232,13 +232,14 @@ makeDefContentEdit guid content = do
   return . Box.vboxAlign 0 $ body : wheres
 
 makeExprDefinition ::
-  MonadA m => Sugar.Definition m -> Sugar.DefinitionExpression m ->
+  MonadA m => Sugar.Definition Sugar.Name m ->
+  Sugar.DefinitionExpression Sugar.Name m ->
   ExprGuiM m (WidgetT m)
 makeExprDefinition def bodyExpr = do
   typeWidgets <-
-    case Sugar.deMNewType bodyExpr of
+    case bodyExpr ^. Sugar.deMNewType of
     Nothing
-      | Sugar.deIsTypeRedundant bodyExpr -> return []
+      | bodyExpr ^. Sugar.deIsTypeRedundant -> return []
       | otherwise -> fmap ((:[]) . defTypeScale . BWidgets.hboxSpaced) (mkAcceptedRow id)
     Just (Sugar.DefinitionNewType inferredType acceptInferredType) ->
       fmap ((:[]) . defTypeScale . BWidgets.gridHSpaced) $ sequenceA
@@ -246,7 +247,7 @@ makeExprDefinition def bodyExpr = do
       , mkTypeRow id "Inferred type:" inferredType
       ]
   bodyWidget <-
-    makeDefContentEdit guid $ Sugar.deContent bodyExpr
+    makeDefContentEdit guid $ bodyExpr ^. Sugar.deContent
   return . Box.vboxAlign 0 $ typeWidgets ++ [bodyWidget]
   where
     addAcceptanceArrow acceptInferredType label = do
@@ -268,8 +269,8 @@ makeExprDefinition def bodyExpr = do
         [ (right, label)
         , (center, (Widget.doesntTakeFocus . Lens.view ExpressionGui.egWidget) typeGui)
         ]
-    mkAcceptedRow onLabel = mkTypeRow onLabel "Type:" $ Sugar.drType def
-    guid = Sugar.drGuid def
+    mkAcceptedRow onLabel = mkTypeRow onLabel "Type:" $ def ^. Sugar.drType
+    guid = def ^. Sugar.drGuid
     myId = WidgetIds.fromGuid guid
     labelStyle =
       ExprGuiM.atEnv $ WE.setTextSizeColor Config.defTypeLabelTextSize Config.defTypeLabelColor

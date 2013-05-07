@@ -25,7 +25,7 @@ polymorphicFDConfig = FocusDelegator.Config
   }
 
 make ::
-  MonadA m => Sugar.Collapsed m (Sugar.Expression m) ->
+  MonadA m => Sugar.Collapsed Sugar.Name m (Sugar.ExpressionN m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make poly =
   ExpressionGui.makeCollapser polymorphicFDConfig f

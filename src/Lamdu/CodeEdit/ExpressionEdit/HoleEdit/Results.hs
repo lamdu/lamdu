@@ -62,13 +62,13 @@ mkGroup names body = Group
 
 pick ::
   MonadA m =>
-  HoleInfo m -> Sugar.HoleResult m -> T m (Maybe Guid)
+  HoleInfo m -> Sugar.HoleResult Sugar.Name m -> T m (Maybe Guid)
 pick holeInfo holeResult = do
   Property.set (hiState holeInfo) HoleInfo.emptyState
   holeResult ^. Sugar.holeResultPick
 
 data Result m = Result
-  { rHoleResult :: Sugar.HoleResult m
+  { rHoleResult :: Sugar.HoleResult Sugar.Name m
   , rMkWidget :: ExprGuiM m (WidgetT m)
   , rId :: Widget.Id
   }
@@ -85,7 +85,7 @@ makeRecordParamGroups (Sugar.ScopeItem groupGuid fieldTags) =
   mapM mkRes fieldTags
   where
     mkRes tag =
-      ExprGuiM.withNameFromParamGuid tag $ \(_, varName) ->
+      ExprGuiM.withNameFromParamGuid tag $ \(Sugar.Name _ varName) ->
       pure . mkGroup [varName] $
       Expression.BodyGetField
       Expression.GetField
@@ -99,15 +99,15 @@ makeVariableGroup ::
   MonadA m => Expression.VariableRef (DefI (Tag m)) ->
   ExprGuiM m (GroupM m)
 makeVariableGroup varRef =
-  ExprGuiM.withNameFromVarRef varRef $ \(_, varName) ->
+  ExprGuiM.withNameFromVarRef varRef $ \(Sugar.Name _ varName) ->
   return . mkGroup [varName] . Expression.BodyLeaf $ Expression.GetVariable varRef
 
 makeTagGroup ::
   MonadA m => Guid ->
   ExprGuiM m (GroupM m)
 makeTagGroup tag = do
-  (_, name) <- ExprGuiM.transaction $ ExprGuiM.getGuidName tag
-  return . mkGroup [name] . Expression.BodyLeaf $ Expression.Tag tag
+  sName <- ExprGuiM.transaction $ ExprGuiM.getGuidName tag
+  return . mkGroup [Sugar.nName sName] . Expression.BodyLeaf $ Expression.Tag tag
 
 makeLiteralGroup :: String -> [Group def]
 makeLiteralGroup searchTerm =
@@ -126,7 +126,7 @@ resultComplexityScore =
 prefixId :: HoleInfo m -> Widget.Id
 prefixId holeInfo = mconcat [hiHoleId holeInfo, Widget.Id ["results"]]
 
-type WidgetMaker m = Widget.Id -> Sugar.HoleResult m -> ExprGuiM m (WidgetT m)
+type WidgetMaker m = Widget.Id -> Sugar.HoleResult Sugar.Name m -> ExprGuiM m (WidgetT m)
 data MakeWidgets m = MakeWidgets
   { mkResultWidget :: WidgetMaker m
   , mkNewTagResultWidget :: WidgetMaker m

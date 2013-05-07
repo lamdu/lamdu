@@ -41,7 +41,7 @@ import qualified Lamdu.WidgetIds as WidgetIds
 data IsHole = NotAHole | IsAHole
 
 pasteEventMap ::
-  MonadA m => Sugar.Hole m -> Widget.EventHandlers (Transaction m)
+  MonadA m => Sugar.Hole Sugar.Name m -> Widget.EventHandlers (Transaction m)
 pasteEventMap =
   maybe mempty
   (Widget.keysEventMapMovesCursor
@@ -49,7 +49,7 @@ pasteEventMap =
    fmap WidgetIds.fromGuid) .
   (Lens.view Sugar.holePaste <=< Lens.view Sugar.holeMActions)
 
-make :: MonadA m => Sugar.Expression m -> ExprGuiM m (ExpressionGui m)
+make :: MonadA m => Sugar.ExpressionN m -> ExprGuiM m (ExpressionGui m)
 make sExpr = assignCursor $ do
   ((isHole, widget), resultPickers) <-
     ExprGuiM.listenResultPickers $ makeEditor sExpr exprId
@@ -85,7 +85,7 @@ make sExpr = assignCursor $ do
       (WidgetIds.fromGuid <$> sExpr ^. Sugar.rHiddenGuids)
 
 makeEditor ::
-  MonadA m => Sugar.Expression m -> Widget.Id ->
+  MonadA m => Sugar.ExpressionN m -> Widget.Id ->
   ExprGuiM m (IsHole, ExpressionGui m)
 makeEditor sExpr =
   case sExpr ^. Sugar.rExpressionBody of
@@ -128,7 +128,7 @@ makeEditor sExpr =
 expressionEventMap ::
   MonadA m =>
   IsHole -> [Sugar.PrefixAction m] ->
-  Sugar.Expression m ->
+  Sugar.ExpressionN m ->
   ExprGuiM m (EventHandlers (Transaction m))
 expressionEventMap isHole resultPickers sExpr =
   maybe (return mempty) (actionsEventMap sExpr isHole resultPickers) $
@@ -136,7 +136,7 @@ expressionEventMap isHole resultPickers sExpr =
 
 actionsEventMap ::
   MonadA m =>
-  Sugar.Expression m -> IsHole -> [Sugar.PrefixAction m] ->
+  Sugar.ExpressionN m -> IsHole -> [Sugar.PrefixAction m] ->
   Sugar.Actions m ->
   ExprGuiM m (EventHandlers (Transaction m))
 actionsEventMap sExpr isHole resultPickers actions = do

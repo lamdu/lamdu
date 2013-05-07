@@ -63,7 +63,7 @@ handlePickResultTargetGuid holeInfo =
   fromMaybe (hiGuid holeInfo)
 
 resultPickEventMap ::
-  MonadA m => HoleInfo m -> Sugar.HoleResult m ->
+  MonadA m => HoleInfo m -> Sugar.HoleResult Sugar.Name m ->
   Widget.EventHandlers (T m)
 resultPickEventMap holeInfo holeResult =
   case hiMNextHole holeInfo of
@@ -94,7 +94,7 @@ makeResultCompositeWidget
   :: MonadA m
   => ResultsList m
   -> ExprGuiM m
-     (ResultCompositeWidget m, Maybe (Sugar.HoleResult m))
+     (ResultCompositeWidget m, Maybe (Sugar.HoleResult Sugar.Name m))
 makeResultCompositeWidget results = do
   mainResultWidget <-
     maybeAddExtraSymbol ((not . null . rlExtra) results) (rId mainResult) =<< rMkWidget mainResult
@@ -127,7 +127,7 @@ makeResultCompositeWidget results = do
 
 makeExtraResultsWidget ::
   MonadA m => [Result m] ->
-  ExprGuiM m (Maybe (Maybe (Sugar.HoleResult m), WidgetT m))
+  ExprGuiM m (Maybe (Maybe (Sugar.HoleResult Sugar.Name m), WidgetT m))
 makeExtraResultsWidget extraResults
   | (not . null) extraResults = Just <$> do
     (mResults, widgets) <-
@@ -144,7 +144,7 @@ makeExtraResultsWidget extraResults
 
 makeHoleResultWidget ::
   MonadA m => HoleInfo m ->
-  Widget.Id -> Sugar.HoleResult m -> ExprGuiM m (WidgetT m)
+  Widget.Id -> Sugar.HoleResult Sugar.Name m -> ExprGuiM m (WidgetT m)
 makeHoleResultWidget holeInfo resultId holeResult =
   ExprGuiM.widgetEnv . BWidgets.makeFocusableView resultId .
   -- TODO: No need for this if we just add a pick result event map
@@ -157,7 +157,7 @@ makeHoleResultWidget holeInfo resultId holeResult =
 
 makeNewTagResultWidget ::
   MonadA m => HoleInfo m ->
-  Widget.Id -> Sugar.HoleResult m ->
+  Widget.Id -> Sugar.HoleResult Sugar.Name m ->
   ExprGuiM m (WidgetT m)
 makeNewTagResultWidget holeInfo resultId holeResult = do
   widget <- makeHoleResultWidget holeInfo resultId holeResult
@@ -252,7 +252,7 @@ blockDownEvents =
 makeResultsWidget ::
   MonadA m => HoleInfo m ->
   [ResultsList m] -> HaveHiddenResults ->
-  ExprGuiM m (Maybe (Sugar.HoleResult m), WidgetT m)
+  ExprGuiM m (Maybe (Sugar.HoleResult Sugar.Name m), WidgetT m)
 makeResultsWidget holeInfo shownResults hiddenResults = do
   (widgets, mResults) <-
     unzip <$> traverse makeResultCompositeWidget shownResults
@@ -290,7 +290,7 @@ alphaNumericHandler doc handler =
 
 opPickEventMap ::
   MonadA m =>
-  HoleInfo m -> Sugar.HoleResult m ->
+  HoleInfo m -> Sugar.HoleResult Sugar.Name m ->
   Widget.EventHandlers (T m)
 opPickEventMap holeInfo result
   | nonEmptyAll (`notElem` Config.operatorChars) searchTerm =
@@ -316,7 +316,7 @@ opPickEventMap holeInfo result
       }
 
 mkEventMap ::
-  MonadA m => HoleInfo m -> Maybe (Sugar.HoleResult m) ->
+  MonadA m => HoleInfo m -> Maybe (Sugar.HoleResult Sugar.Name m) ->
   ExprGuiM m (Widget.EventHandlers (T m))
 mkEventMap holeInfo mResult = do
   cp <- ExprGuiM.readCodeAnchors
@@ -416,15 +416,15 @@ makeActiveHoleEdit holeInfo = do
     searchTermId = WidgetIds.searchTermId $ hiHoleId holeInfo
 
 make ::
-  MonadA m => Sugar.Hole m -> Maybe (Sugar.Expression m) -> Guid ->
+  MonadA m => Sugar.Hole Sugar.Name m -> Maybe (Sugar.ExpressionN m) -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make hole mNextHole guid =
   ExpressionGui.wrapDelegated holeFDConfig FocusDelegator.Delegating $
   makeUnwrapped hole mNextHole guid
 
 makeUnwrapped ::
-  MonadA m => Sugar.Hole m ->
-  Maybe (Sugar.Expression m) -> Guid ->
+  MonadA m => Sugar.Hole Sugar.Name m ->
+  Maybe (Sugar.ExpressionN m) -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeUnwrapped hole mNextHole guid myId = do
   cursor <- ExprGuiM.widgetEnv WE.readCursor

@@ -45,7 +45,7 @@ type CT m = StateT Cache (T m)
 
 -- This is not in Sugar because Sugar is for code
 data SugarPane m = SugarPane
-  { spDef :: Sugar.Definition m
+  { spDef :: Sugar.DefinitionN m
   , mDelPane :: Maybe (T m Guid)
   , mMovePaneDown :: Maybe (T m ())
   , mMovePaneUp :: Maybe (T m ())
@@ -94,7 +94,7 @@ makeSugarPanes cp rootGuid = do
   traverse convertPane $ enumerate panes
 
 makeClipboardsEdit ::
-  MonadA m => [Sugar.Definition m] -> ExprGuiM m (WidgetT m)
+  MonadA m => [Sugar.DefinitionN m] -> ExprGuiM m (WidgetT m)
 makeClipboardsEdit clipboards = do
   clipboardsEdits <- traverse makePaneWidget clipboards
   clipboardTitle <-
@@ -103,7 +103,7 @@ makeClipboardsEdit clipboards = do
     else ExprGuiM.widgetEnv $ BWidgets.makeTextView "Clipboards:" ["clipboards title"]
   return . Box.vboxAlign 0 $ clipboardTitle : clipboardsEdits
 
-makeSugarClipboards :: (MonadA m, Typeable1 m) => Anchors.CodeProps m -> CT m [Sugar.Definition m]
+makeSugarClipboards :: (MonadA m, Typeable1 m) => Anchors.CodeProps m -> CT m [Sugar.DefinitionN m]
 makeSugarClipboards cp =
   traverse (Sugar.loadConvertDefI cp) =<<
   (lift . Transaction.getP . Anchors.clipboards) cp
@@ -131,7 +131,7 @@ makePanesEdit panes myId = do
     case panes of
     [] -> ExprGuiM.widgetEnv $ BWidgets.makeFocusableTextView "<No panes>" myId
     (firstPane:_) ->
-      (ExprGuiM.assignCursor myId . WidgetIds.fromGuid . Sugar.drGuid . spDef) firstPane $ do
+      (ExprGuiM.assignCursor myId . WidgetIds.fromGuid . (^. Sugar.drGuid) . spDef) firstPane $ do
         definitionEdits <- traverse makePaneEdit panes
         return . Box.vboxAlign 0 $ intersperse (Spacer.makeWidget 50) definitionEdits
 
@@ -165,7 +165,7 @@ makePanesEdit panes myId = do
          (E.Doc ["View", "Pane", "Move up"])) $ mMovePaneUp pane
       ]
 
-makePaneWidget :: MonadA m => Sugar.Definition m -> ExprGuiM m (Widget (T m))
+makePaneWidget :: MonadA m => Sugar.DefinitionN m -> ExprGuiM m (Widget (T m))
 makePaneWidget =
   fmap onEachPane . DefinitionEdit.make
   where

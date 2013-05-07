@@ -16,7 +16,7 @@ import qualified Lamdu.WidgetIds as WidgetIds
 make
   :: MonadA m
   => Sugar.HasParens
-  -> Sugar.Section (Sugar.Expression m)
+  -> Sugar.Section (Sugar.ExpressionN m)
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
 make hasParens (Sugar.Section mLArg op mRArg) =

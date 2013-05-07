@@ -22,7 +22,7 @@ import qualified Lamdu.WidgetIds as WidgetIds
 make
   :: MonadA m
   => Sugar.HasParens
-  -> Sugar.Pi m (Sugar.Expression m)
+  -> Sugar.Pi Sugar.Name m (Sugar.ExpressionN m)
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
 make hasParens (Sugar.Pi param resultType) =
