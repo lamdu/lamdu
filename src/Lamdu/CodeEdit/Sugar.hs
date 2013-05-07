@@ -29,7 +29,7 @@ module Lamdu.CodeEdit.Sugar
   , StorePoint
   , HoleResult(..)
     , holeResultInferred
-    , holeResultConvert
+    , holeResultConverted
     , holeResultPick, holeResultPickPrefix
   , holeResultHasHoles
   , LiteralInteger(..)
@@ -643,7 +643,7 @@ makeHoleResult ::
   T m (DataIRef.ExpressionM m (Maybe (StorePoint (Tag m)))) ->
   CT m (Maybe (HoleResult m))
 makeHoleResult sugarContext inferred exprI makeExpr =
-  (fmap . fmap) mkHoleResult $
+  lift . traverse mkHoleResult =<<
   mapStateT Transaction.forkScratch makeInferredExpr
   where
     gen expr =
@@ -672,15 +672,16 @@ makeHoleResult sugarContext inferred exprI makeExpr =
           pickResult exprI $ ExprUtil.randomizeParamIds (gen resReal) resReal
     guid = resultGuid exprI
     token = (guid, sugarContext ^. SugarM.scMContextHash)
-    mkHoleResult resFake =
-      HoleResult
-      { _holeResultInferred = fst <$> resFake
-        -- TODO: Is it ok to use the fake result (resFake) not in the
-        -- forked scratch space?
-      , _holeResultConvert = convertHoleResult resFake
-      , _holeResultPick = pick
-      , _holeResultPickPrefix = void pick
-      }
+    mkHoleResult resFake = do
+      converted <- convertHoleResult resFake
+      return HoleResult
+        { _holeResultInferred = fst <$> resFake
+          -- TODO: Is it ok to use the fake result (resFake) not in the
+          -- forked scratch space?
+        , _holeResultConverted = converted
+        , _holeResultPick = pick
+        , _holeResultPickPrefix = void pick
+        }
 
 memoBy ::
   (Cache.Key k, Binary v, MonadA m) =>

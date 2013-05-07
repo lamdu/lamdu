@@ -37,7 +37,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , StorePoint(..)
   , HoleResult(..)
     , holeResultInferred
-    , holeResultConvert
+    , holeResultConverted
     , holeResultPick, holeResultPickPrefix
   , LiteralInteger(..)
   , Inferred(..)
@@ -150,7 +150,7 @@ data Section expr = Section
 
 data HoleResult m = HoleResult
   { _holeResultInferred :: DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))
-  , _holeResultConvert :: T m (Expression m)
+  , _holeResultConverted :: Expression m
   , _holeResultPick :: T m (Maybe Guid)
   , _holeResultPickPrefix :: PrefixAction m
   }
