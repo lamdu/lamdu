@@ -79,28 +79,12 @@ data ResultsList m = ResultsList
   , rlExtra :: [Result m]
   }
 
-makeRecordParamGroups ::
-  MonadA m => Sugar.ScopeItem -> ExprGuiM m [GroupM m]
-makeRecordParamGroups (Sugar.ScopeItem groupGuid fieldTags) =
-  mapM mkRes fieldTags
-  where
-    mkRes tag =
-      ExprGuiM.withNameFromParamGuid tag $ \(Sugar.Name _ varName) ->
-      pure . mkGroup [varName] $
-      Expression.BodyGetField
-      Expression.GetField
-      { Expression._getFieldRecord =
-          ExprUtil.pureExpression $ Lens.review ExprUtil.bodyParameterRef groupGuid
-      , Expression._getFieldTag =
-          ExprUtil.pureExpression . Expression.BodyLeaf $ Expression.Tag tag
-      }
-
-makeVariableGroup ::
-  MonadA m => Expression.VariableRef (DefI (Tag m)) ->
-  ExprGuiM m (GroupM m)
-makeVariableGroup varRef =
-  ExprGuiM.withNameFromVarRef varRef $ \(Sugar.Name _ varName) ->
-  return . mkGroup [varName] . Expression.BodyLeaf $ Expression.GetVariable varRef
+makeGetVarGroup ::
+  MonadA m => (Sugar.GetVar Sugar.Name m, DataIRef.ExpressionM m ()) -> ExprGuiM m (GroupM m)
+makeGetVarGroup (getVar, expr) =
+  ExprGuiM.withNameFromParamGuid (Sugar.gvIdentifier getVar) $
+  \(Sugar.Name _ varName) ->
+  pure $ Group { groupNames = [varName], groupBaseExpr = expr }
 
 makeTagGroup ::
   MonadA m => Guid ->
@@ -326,20 +310,13 @@ makeAll holeInfo makeWidget = do
 
 makeAllGroups :: MonadA m => HoleInfo m -> ExprGuiM m [GroupM m]
 makeAllGroups holeInfo = do
-  paramGroups <-
-    traverse (makeVariableGroup . Expression.ParameterRef) $
-    hiHoleActions holeInfo ^.. Sugar.holeScope . traverse . Sugar.siParamGuid
-  recordParamGroups <-
-    fmap concat . traverse makeRecordParamGroups $
+  varGroups <-
+    traverse makeGetVarGroup $
     hiHoleActions holeInfo ^.. Sugar.holeScope . traverse
-  globalGroups <-
-    traverse (makeVariableGroup . Expression.DefinitionRef) =<<
-    ExprGuiM.getCodeAnchor Anchors.globals
   tagGroups <- traverse makeTagGroup =<< ExprGuiM.getCodeAnchor Anchors.fields
   let
     literalGroups = makeLiteralGroup searchTerm
-    getVarGroups = recordParamGroups ++ paramGroups ++ globalGroups
-    relevantGroups = primitiveGroups ++ literalGroups ++ getVarGroups ++ tagGroups
+    relevantGroups = primitiveGroups ++ literalGroups ++ varGroups ++ tagGroups
   return $ holeMatches groupNames searchTerm relevantGroups
   where
     state = Property.value $ hiState holeInfo

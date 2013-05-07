@@ -368,7 +368,10 @@ markTypeMatchesAsUsed holeInfo =
   ExprGuiM.markVariablesAsUsed =<<
   filterM
   (checkInfer . ExprUtil.pureExpression . Lens.review ExprUtil.bodyParameterRef)
-  (hiHoleActions holeInfo ^.. Sugar.holeScope . traverse . Sugar.siParamGuid)
+  (hiHoleActions holeInfo ^..
+   Sugar.holeScope . traverse . Lens._1 .
+   Lens.filtered ((== Sugar.GetParameter) . Sugar.gvVarType) .
+   Lens.to Sugar.gvIdentifier)
   where
     checkInfer =
       fmap isJust . ExprGuiM.liftMemoT .

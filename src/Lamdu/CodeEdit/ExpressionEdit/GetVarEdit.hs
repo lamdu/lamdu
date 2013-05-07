@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Lamdu.CodeEdit.ExpressionEdit.GetVarEdit
-  ( make, makeUncoloredView
+  ( make, makeUncoloredView, makeView
   ) where
 
 import Control.Applicative ((<$>))

@@ -28,7 +28,6 @@ module Lamdu.CodeEdit.Sugar
   , Pi(..)
   , Section(..)
   , Hole(..), holeScope, holeMActions
-  , ScopeItem(..), siParamGuid
   , HoleActions(..)
     , holePaste, holeMDelete, holeResult, holeInferExprType
   , StorePoint
@@ -50,7 +49,7 @@ module Lamdu.CodeEdit.Sugar
 import Control.Applicative (Applicative(..), (<$>), (<$))
 import Control.Lens (Traversal')
 import Control.Lens.Operators
-import Control.Monad ((<=<), guard, join, mplus, void, zipWithM)
+import Control.Monad (guard, join, mplus, void, zipWithM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..), runState, mapStateT)
 import Control.MonadA (MonadA)
@@ -697,12 +696,57 @@ memoBy ::
   k -> m v -> StateT Cache m v
 memoBy k act = Cache.memoS (const act) k
 
+getGlobal :: DefI (Tag m) -> (GetVar NoName m, DataIRef.ExpressionM m ())
+getGlobal defI =
+  ( GetVar
+    { gvIdentifier = IRef.guid defI
+    , gvName = ()
+    , gvJumpTo = errorJumpTo
+    , gvVarType = GetDefinition
+    }
+  , ExprUtil.pureExpression $ ExprUtil.bodyDefinitionRef # defI
+  )
+  where
+    errorJumpTo = error "Jump to on scope item??"
+
+onScopeElement ::
+  Monad m => (Guid, Expression.Expression def a) ->
+  [(GetVar NoName m, Expression.Expression def ())]
+onScopeElement (param, typeExpr) =
+  ( GetVar
+    { gvIdentifier = param
+    , gvName = ()
+    , gvJumpTo = errorJumpTo
+    , gvVarType = GetParameter
+    }
+  , getParam
+  ) :
+  map onScopeField
+  (typeExpr ^..
+   Expression.eBody . Expression._BodyRecord .
+   Expression.recordFields . traverse . Lens._1 .
+   Expression.eBody . Expression._BodyLeaf .
+   Expression._Tag)
+  where
+    errorJumpTo = error "Jump to on scope item??"
+    exprTag = ExprUtil.pureExpression . Expression.BodyLeaf . Expression.Tag
+    getParam = ExprUtil.pureExpression $ ExprUtil.bodyParameterRef # param
+    onScopeField tGuid =
+      ( GetVar
+        { gvIdentifier = tGuid
+        , gvName = ()
+        , gvJumpTo = errorJumpTo
+        , gvVarType = GetParameter
+        }
+      , ExprUtil.pureExpression . Expression.BodyGetField $
+        Expression.GetField getParam (exprTag tGuid)
+      )
+
 convertTypeCheckedHoleH ::
   (MonadA m, Typeable1 m) => SugarM.Context m -> Maybe (T m Guid) ->
   InferredWC (Tag m) -> Convertor m
-convertTypeCheckedHoleH
-  sugarContext mPaste iwc exprI =
-    chooseHoleType (iwcInferredValues iwc) plainHole inferredHole
+convertTypeCheckedHoleH sugarContext mPaste iwc exprI =
+  chooseHoleType (iwcInferredValues iwc) plainHole inferredHole
   where
     eGuid = resultGuid exprI
     inferState  = sugarContext ^. SugarM.scHoleInferState
@@ -714,35 +758,30 @@ convertTypeCheckedHoleH
       loaded <- lift $ SugarInfer.load Nothing expr
       memoBy (loaded, token, scope, 't') . return $
         inferOnTheSide inferState scope loaded
-    onScopeElement (param, typeExpr) =
-      ScopeItem
-      { _siParamGuid = param
-      , _siFields =
-          typeExpr ^..
-          Expression.eBody . Expression._BodyRecord .
-          Expression.recordFields . traverse . Lens._1 .
-          Expression.eBody . Expression._BodyLeaf .
-          Expression._Tag
-      }
-    hole =
-      Hole $
-      mkWritableHoleActions <$>
+    mkHole =
+      fmap Hole . traverse mkWritableHoleActions $
       traverse (SugarInfer.ntraversePayload pure id) exprI
-    mkWritableHoleActions exprS =
-      HoleActions
-      { _holePaste = mPaste
-      , _holeMDelete = Nothing
-      , _holeScope = map onScopeElement . Map.toList $ Infer.iScope inferred
-      , _holeInferExprType = inferExprType
-      , _holeResult = makeHoleResult sugarContext inferred exprS
-      }
-    inferredHole =
+    mkWritableHoleActions exprS = do
+      globals <-
+        SugarM.liftTransaction . Transaction.getP . Anchors.globals $
+        sugarContext ^. SugarM.scCodeAnchors
+      pure HoleActions
+        { _holePaste = mPaste
+        , _holeMDelete = Nothing
+        , _holeScope =
+          (concatMap onScopeElement . Map.toList . Infer.iScope) inferred ++
+          map getGlobal globals
+        , _holeInferExprType = inferExprType
+        , _holeResult = makeHoleResult sugarContext inferred exprS
+        }
+    inferredHole x = do
+      hole <- mkHole
       mkExpression exprI .
-      ExpressionInferred . (`Inferred` hole) <=<
-      convertExpressionI . fmap toPayloadMM .
-      SugarInfer.resultFromPure (mkGen 2 3 eGuid)
+        ExpressionInferred . (`Inferred` hole) =<<
+        (convertExpressionI . fmap toPayloadMM .
+         SugarInfer.resultFromPure (mkGen 2 3 eGuid)) x
     plainHole =
-      mkExpression exprI (ExpressionHole hole)
+      mkExpression exprI . ExpressionHole =<< mkHole
 
 chooseHoleType ::
   [DataIRef.ExpressionM m f] -> hole -> (DataIRef.ExpressionM m f -> hole) -> hole

@@ -39,15 +39,17 @@ toHoleResult ::
 toHoleResult = holeResultConverted toExpression
 
 toHoleActions ::
-  MonadA m => HoleActions NoName m -> HoleActions Name m
-toHoleActions =
-  holeResult . Lens.mapped %~ (lift . traverse toHoleResult =<<)
+  MonadA m => HoleActions NoName m -> T m (HoleActions Name m)
+toHoleActions ha@HoleActions {..} = do
+  scope <- (traverse . Lens._1) toGetVar _holeScope
+  let result = (lift . traverse toHoleResult =<<) <$> _holeResult
+  pure ha { _holeScope = scope, _holeResult = result }
 
-toHole :: MonadA m => Hole NoName m -> Hole Name m
-toHole = holeMActions . Lens.mapped %~ toHoleActions
+toHole :: MonadA m => Hole NoName m -> T m (Hole Name m)
+toHole = (holeMActions . Lens.traversed) toHoleActions
 
-toInferred :: MonadA m => Inferred NoName m expr -> Inferred Name m expr
-toInferred = iHole %~ toHole
+toInferred :: MonadA m => Inferred NoName m expr -> T m (Inferred Name m expr)
+toInferred = iHole toHole
 
 toCollapsed :: MonadA m => Collapsed NoName m expr -> T m (Collapsed Name m expr)
 toCollapsed = pCompact toGetVar
@@ -74,8 +76,8 @@ toExpressionBody ExpressionGetField {..} = pure ExpressionGetField {..}
 --
 toExpressionBody (ExpressionFunc hp func) = ExpressionFunc hp <$> toFunc func
 toExpressionBody (ExpressionPi hp pi) = ExpressionPi hp <$> toPi pi
-toExpressionBody (ExpressionHole hole) = pure . ExpressionHole $ toHole hole
-toExpressionBody (ExpressionInferred inferred) = pure . ExpressionInferred $ toInferred inferred
+toExpressionBody (ExpressionHole hole) = ExpressionHole <$> toHole hole
+toExpressionBody (ExpressionInferred inferred) = ExpressionInferred <$> toInferred inferred
 toExpressionBody (ExpressionCollapsed collapsed) = ExpressionCollapsed <$> toCollapsed collapsed
 toExpressionBody (ExpressionTag tag) = ExpressionTag <$> toTag tag
 toExpressionBody (ExpressionGetVar getVar) = ExpressionGetVar <$> toGetVar getVar
