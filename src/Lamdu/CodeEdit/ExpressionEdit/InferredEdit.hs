@@ -1,6 +1,7 @@
 {-# LANGUAGE TypeFamilies #-}
 module Lamdu.CodeEdit.ExpressionEdit.InferredEdit(make) where
 
+import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Store.Guid (Guid)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
@@ -45,6 +46,6 @@ makeUnwrapped inferred guid myId = do
       . BWidgets.makeFocusableView myId
       . Widget.tint Config.inferredValueTint
       . Widget.scale Config.inferredValueScaleFactor
-      ) =<< ExprGuiM.makeSubexpresion (Sugar.iValue inferred)
+      ) =<< ExprGuiM.makeSubexpresion (inferred ^. Sugar.iValue)
     Just _ ->
-      HoleEdit.makeUnwrapped (Sugar.iHole inferred) Nothing guid myId
+      HoleEdit.makeUnwrapped (inferred ^. Sugar.iHole) Nothing guid myId

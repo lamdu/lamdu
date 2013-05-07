@@ -33,7 +33,7 @@ module Lamdu.CodeEdit.Sugar
     , holeResultPick, holeResultPickPrefix
   , holeResultHasHoles
   , LiteralInteger(..)
-  , Inferred(..)
+  , Inferred(..), iValue, iHole
   , Collapsed(..)
   , HasParens(..)
   , loadConvertDefI

@@ -90,7 +90,7 @@ makeEditor ::
 makeEditor sExpr =
   case sExpr ^. Sugar.rExpressionBody of
   Sugar.ExpressionInferred i ->
-    isAHole (Sugar.iHole i) . InferredEdit.make i $ sExpr ^. Sugar.rGuid
+    isAHole (i ^. Sugar.iHole) . InferredEdit.make i $ sExpr ^. Sugar.rGuid
   Sugar.ExpressionHole hole ->
     isAHole hole . HoleEdit.make hole mNextHole $ sExpr ^. Sugar.rGuid
   Sugar.ExpressionFunc hasParens f ->

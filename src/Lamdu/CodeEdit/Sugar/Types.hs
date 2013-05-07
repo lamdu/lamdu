@@ -40,7 +40,7 @@ module Lamdu.CodeEdit.Sugar.Types
     , holeResultConverted
     , holeResultPick, holeResultPickPrefix
   , LiteralInteger(..)
-  , Inferred(..)
+  , Inferred(..), iValue, iHole
   , Collapsed(..)
   , HasParens(..)
   , T, CT
@@ -185,8 +185,8 @@ data LiteralInteger m = LiteralInteger
   }
 
 data Inferred m expr = Inferred
-  { iValue :: expr
-  , iHole :: Hole m
+  { _iValue :: expr
+  , _iHole :: Hole m
   } deriving (Functor, Foldable, Traversable)
 
 -- TODO: New name. This is not only for polymorphic but also for eta-reduces etc
@@ -341,6 +341,7 @@ data Definition m = Definition
   , drBody :: DefinitionBody m
   }
 
+LensTH.makeLenses ''Inferred
 LensTH.makeLenses ''Func
 LensTH.makeLenses ''FuncParam
 LensTH.makeLenses ''RecordField
