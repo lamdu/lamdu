@@ -278,14 +278,19 @@ runGetFieldTypeToRecordFieldType recordTypeRef (recordTypeExpr, fieldTag, getFie
       makeRefExpr o0 . Expression.BodyRecord . Expression.Record Expression.Type $
       [ (fieldTag, makeRefExpr o1 (Expression.BodyLeaf Expression.Hole)) ]
     makeError = [(recordTypeRef, recordTypeExample)]
+    recordTypeIsHole =
+      [ ( recordTypeRef
+        , recordTypeExpr & Expression.ePayload . rplRestrictedPoly .~ Monoid.Any True
+        )
+      ]
     verifyRecordWithField =
       case recordTypeExpr ^. Expression.eBody of
-      Expression.BodyLeaf Expression.Hole -> []
+      Expression.BodyLeaf Expression.Hole -> recordTypeIsHole
       Expression.BodyRecord (Expression.Record Expression.Type (_:_)) -> []
       _ -> makeError
     putTypeIntoRecordField guid =
       case recordTypeExpr ^. Expression.eBody of
-      Expression.BodyLeaf Expression.Hole -> []
+      Expression.BodyLeaf Expression.Hole -> recordTypeIsHole
       _ | Lens.notNullOf (recordField guid) recordTypeExpr ->
           [ ( recordTypeRef
             , recordTypeExpr & recordField guid . Lens._2 .~ getFieldTypeExpr
