@@ -27,6 +27,7 @@ module Lamdu.CodeEdit.Sugar
   , FuncParam(..), fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
   , Section(..)
+  , ScopeItem(..), _ScopeVar, _ScopeTag
   , Hole(..), holeScope, holeMActions
   , HoleActions(..)
     , holePaste, holeMDelete, holeResult, holeInferExprType
@@ -696,9 +697,9 @@ memoBy ::
   k -> m v -> StateT Cache m v
 memoBy k act = Cache.memoS (const act) k
 
-getGlobal :: DefI (Tag m) -> (GetVar NoName m, DataIRef.ExpressionM m ())
+getGlobal :: DefI (Tag m) -> (ScopeItem NoName m, DataIRef.ExpressionM m ())
 getGlobal defI =
-  ( GetVar
+  ( ScopeVar GetVar
     { gvIdentifier = IRef.guid defI
     , gvName = ()
     , gvJumpTo = errorJumpTo
@@ -709,11 +710,21 @@ getGlobal defI =
   where
     errorJumpTo = error "Jump to on scope item??"
 
+getField :: Guid -> (ScopeItem NoName m, DataIRef.ExpressionM m ())
+getField guid =
+  ( ScopeTag TagG
+    { _tagGuid = guid
+    , _tagName = ()
+    }
+  , ExprUtil.pureExpression . Expression.BodyLeaf $
+    Expression.Tag guid
+  )
+
 onScopeElement ::
   Monad m => (Guid, Expression.Expression def a) ->
-  [(GetVar NoName m, Expression.Expression def ())]
+  [(ScopeItem NoName m, Expression.Expression def ())]
 onScopeElement (param, typeExpr) =
-  ( GetVar
+  ( ScopeVar GetVar
     { gvIdentifier = param
     , gvName = ()
     , gvJumpTo = errorJumpTo
@@ -732,7 +743,7 @@ onScopeElement (param, typeExpr) =
     exprTag = ExprUtil.pureExpression . Expression.BodyLeaf . Expression.Tag
     getParam = ExprUtil.pureExpression $ ExprUtil.bodyParameterRef # param
     onScopeField tGuid =
-      ( GetVar
+      ( ScopeVar GetVar
         { gvIdentifier = tGuid
         , gvName = ()
         , gvJumpTo = errorJumpTo
@@ -765,12 +776,17 @@ convertTypeCheckedHoleH sugarContext mPaste iwc exprI =
       globals <-
         SugarM.liftTransaction . Transaction.getP . Anchors.globals $
         sugarContext ^. SugarM.scCodeAnchors
+      fields <-
+        SugarM.liftTransaction . Transaction.getP . Anchors.fields $
+        sugarContext ^. SugarM.scCodeAnchors
       pure HoleActions
         { _holePaste = mPaste
         , _holeMDelete = Nothing
-        , _holeScope =
-          (concatMap onScopeElement . Map.toList . Infer.iScope) inferred ++
-          map getGlobal globals
+        , _holeScope = concat
+          [ (concatMap onScopeElement . Map.toList . Infer.iScope) inferred
+          , map getGlobal globals
+          , map getField fields
+          ]
         , _holeInferExprType = inferExprType
         , _holeResult = makeHoleResult sugarContext inferred exprS
         }

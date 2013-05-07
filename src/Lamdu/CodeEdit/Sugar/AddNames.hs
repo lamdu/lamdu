@@ -38,10 +38,15 @@ toHoleResult ::
   MonadA m => HoleResult NoName m -> T m (HoleResult Name m)
 toHoleResult = holeResultConverted toExpression
 
+toScopeItem ::
+  MonadA m => ScopeItem NoName m -> T m (ScopeItem Name m)
+toScopeItem (ScopeVar getVar) = ScopeVar <$> toGetVar getVar
+toScopeItem (ScopeTag tagG) = ScopeTag <$> toTag tagG
+
 toHoleActions ::
   MonadA m => HoleActions NoName m -> T m (HoleActions Name m)
 toHoleActions ha@HoleActions {..} = do
-  scope <- (traverse . Lens._1) toGetVar _holeScope
+  scope <- (traverse . Lens._1) toScopeItem _holeScope
   let result = (lift . traverse toHoleResult =<<) <$> _holeResult
   pure ha { _holeScope = scope, _holeResult = result }
 

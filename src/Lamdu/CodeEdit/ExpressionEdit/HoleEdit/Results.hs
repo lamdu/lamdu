@@ -79,19 +79,16 @@ data ResultsList m = ResultsList
   , rlExtra :: [Result m]
   }
 
-makeGetVarGroup ::
-  MonadA m => (Sugar.GetVar Sugar.Name m, DataIRef.ExpressionM m ()) -> ExprGuiM m (GroupM m)
-makeGetVarGroup (getVar, expr) =
-  ExprGuiM.withNameFromParamGuid (Sugar.gvIdentifier getVar) $
+makeScopeItemGroup ::
+  MonadA m => (Sugar.ScopeItem Sugar.Name m, DataIRef.ExpressionM m ()) -> ExprGuiM m (GroupM m)
+makeScopeItemGroup (scopeItem, expr) =
+  ExprGuiM.withNameFromParamGuid guid $
   \(Sugar.Name _ varName) ->
   pure $ Group { groupNames = [varName], groupBaseExpr = expr }
-
-makeTagGroup ::
-  MonadA m => Guid ->
-  ExprGuiM m (GroupM m)
-makeTagGroup tag = do
-  sName <- ExprGuiM.transaction $ ExprGuiM.getGuidName tag
-  return . mkGroup [Sugar.nName sName] . Expression.BodyLeaf $ Expression.Tag tag
+  where
+    guid = case scopeItem of
+      Sugar.ScopeVar getVar -> Sugar.gvIdentifier getVar
+      Sugar.ScopeTag tagG -> tagG ^. Sugar.tagGuid
 
 makeLiteralGroup :: String -> [Group def]
 makeLiteralGroup searchTerm =
@@ -311,12 +308,11 @@ makeAll holeInfo makeWidget = do
 makeAllGroups :: MonadA m => HoleInfo m -> ExprGuiM m [GroupM m]
 makeAllGroups holeInfo = do
   varGroups <-
-    traverse makeGetVarGroup $
+    traverse makeScopeItemGroup $
     hiHoleActions holeInfo ^.. Sugar.holeScope . traverse
-  tagGroups <- traverse makeTagGroup =<< ExprGuiM.getCodeAnchor Anchors.fields
   let
     literalGroups = makeLiteralGroup searchTerm
-    relevantGroups = primitiveGroups ++ literalGroups ++ varGroups ++ tagGroups
+    relevantGroups = primitiveGroups ++ literalGroups ++ varGroups
   return $ holeMatches groupNames searchTerm relevantGroups
   where
     state = Property.value $ hiState holeInfo

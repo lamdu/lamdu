@@ -37,6 +37,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , TagG(..), tagName, tagGuid
   , Pi(..)
   , Section(..)
+  , ScopeItem(..), _ScopeVar, _ScopeTag
   , Hole(..), holeScope, holeMActions
   , HoleActions(..)
     , holePaste, holeMDelete, holeResult, holeInferExprType
@@ -174,8 +175,12 @@ data HoleResult name m = HoleResult
   , _holeResultPickPrefix :: PrefixAction m
   }
 
+data ScopeItem name m
+  = ScopeVar (GetVar name m)
+  | ScopeTag (TagG name)
+
 data HoleActions name m = HoleActions
-  { _holeScope :: [(GetVar name m, DataIRef.ExpressionM m ())]
+  { _holeScope :: [(ScopeItem name m, DataIRef.ExpressionM m ())]
   , -- Infer expression "on the side" (not in the hole position),
     -- but with the hole's scope in scope.
     -- If given expression does not type check on its own, returns Nothing.
@@ -278,7 +283,6 @@ data ExpressionBody name m expr
   | ExpressionTag      { __eTag :: TagG name }
   | ExpressionGetVar   { __eGetParam :: GetVar name m }
   deriving (Functor, Foldable, Traversable)
-LensTH.makePrisms ''ExpressionBody
 
 wrapParens :: HasParens -> String -> String
 wrapParens HaveParens x = concat ["(", x, ")"]
@@ -365,6 +369,8 @@ data Definition name m = Definition
 type DefinitionN = Definition Name
 type DefinitionU = Definition NoName
 
+LensTH.makePrisms ''ScopeItem
+LensTH.makePrisms ''ExpressionBody
 LensTH.makeLenses ''Definition
 LensTH.makeLenses ''DefinitionExpression
 LensTH.makeLenses ''Inferred
