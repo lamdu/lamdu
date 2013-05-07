@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.CodeEdit.ExpressionEdit.CollapsedEdit(make) where
 
+import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, Collapser(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
@@ -35,10 +36,10 @@ make poly =
         fmap
         (ExpressionGui.withBgColor Layers.polymorphicExpandedBG
          Config.polymorphicExpandedBGColor bgId) .
-        ExprGuiM.makeSubexpresion $ Sugar.pFullExpression poly
+        ExprGuiM.makeSubexpresion $ poly ^. Sugar.pFullExpression
       , cMakeFocusedCompact =
-        colorize bgId ((Sugar.gvVarType . Sugar.pCompact) poly) $
-        GetVarEdit.makeUncoloredView (Sugar.pCompact poly) funcId
+        (colorize bgId . Sugar.gvVarType) (poly ^. Sugar.pCompact) $
+        GetVarEdit.makeUncoloredView (poly ^. Sugar.pCompact) funcId
       }
       where
         bgId = Widget.toAnimId myId ++ ["bg"]
@@ -50,4 +51,4 @@ make poly =
       ExprGuiM.withFgColor Config.parameterColor
     colorize _ Sugar.GetDefinition =
       ExprGuiM.withFgColor Config.polymorphicForegroundColor
-    funcId = WidgetIds.fromGuid $ Sugar.pFuncGuid poly
+    funcId = WidgetIds.fromGuid $ poly ^. Sugar.pFuncGuid

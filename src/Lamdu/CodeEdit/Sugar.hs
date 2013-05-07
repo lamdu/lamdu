@@ -34,7 +34,7 @@ module Lamdu.CodeEdit.Sugar
   , holeResultHasHoles
   , LiteralInteger(..)
   , Inferred(..), iValue, iHole
-  , Collapsed(..)
+  , Collapsed(..), pFuncGuid, pCompact, pFullExpression
   , HasParens(..)
   , loadConvertDefI
   , removeTypes
@@ -509,7 +509,7 @@ applyOnSection (Section (Just left) op Nothing) _ _ argRef exprI =
   where
     -- TODO: Handle left/right-associativity
     isSameOp (ExpressionCollapsed p0) (ExpressionCollapsed p1) =
-      on isSameVar pCompact p0 p1
+      on isSameVar (^. pCompact) p0 p1
     isSameOp (ExpressionGetVar v0) (ExpressionGetVar v1) =
       isSameVar v0 v1
     isSameOp _ _ = False
@@ -561,9 +561,9 @@ makeCollapsed ::
   Guid -> GetVar m -> Expression m -> SugarM m (Expression m)
 makeCollapsed exprI g compact fullExpression =
   mkExpression exprI $ ExpressionCollapsed Collapsed
-    { pFuncGuid = g
-    , pCompact = compact
-    , pFullExpression =
+    { _pFuncGuid = g
+    , _pCompact = compact
+    , _pFullExpression =
       Lens.set rGuid expandedGuid $ removeInferredTypes fullExpression
     }
   where

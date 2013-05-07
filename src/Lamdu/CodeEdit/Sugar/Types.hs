@@ -41,7 +41,7 @@ module Lamdu.CodeEdit.Sugar.Types
     , holeResultPick, holeResultPickPrefix
   , LiteralInteger(..)
   , Inferred(..), iValue, iHole
-  , Collapsed(..)
+  , Collapsed(..), pFuncGuid, pCompact, pFullExpression
   , HasParens(..)
   , T, CT
   , PrefixAction, emptyPrefixAction
@@ -191,9 +191,9 @@ data Inferred m expr = Inferred
 
 -- TODO: New name. This is not only for polymorphic but also for eta-reduces etc
 data Collapsed m expr = Collapsed
-  { pFuncGuid :: Guid
-  , pCompact :: GetVar m
-  , pFullExpression :: expr
+  { _pFuncGuid :: Guid
+  , _pCompact :: GetVar m
+  , _pFullExpression :: expr
   } deriving (Functor, Foldable, Traversable)
 
 -- TODO: Do we want to store/allow-access to the implicit type params (nil's type, each cons type?)
@@ -342,6 +342,7 @@ data Definition m = Definition
   }
 
 LensTH.makeLenses ''Inferred
+LensTH.makeLenses ''Collapsed
 LensTH.makeLenses ''Func
 LensTH.makeLenses ''FuncParam
 LensTH.makeLenses ''RecordField
