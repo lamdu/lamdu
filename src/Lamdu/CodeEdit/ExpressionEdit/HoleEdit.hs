@@ -210,9 +210,9 @@ addNewDefinitionEventMap cp holeInfo =
     DataOps.newPane cp newDefI
     defRef <-
       fmap (fromMaybe (error "GetDef should always type-check")) .
-      Cache.unmemoS . (hiHoleActions holeInfo ^. Sugar.holeResult) . return $
-      Nothing <$
-      ExprUtil.pureExpression (Lens.review ExprUtil.bodyDefinitionRef newDefI)
+      Cache.unmemoS . (hiHoleActions holeInfo ^. Sugar.holeResult) .
+      Sugar.ResultSeedExpression $ Nothing <$
+      ExprUtil._PureExpr . ExprUtil.bodyDefinitionRef # newDefI
     mTargetGuid <- HoleResults.pick holeInfo defRef
     case mTargetGuid of
       Nothing -> return ()
@@ -324,7 +324,8 @@ mkEventMap holeInfo mResult = do
     ExprGuiM.liftMemoT . fmap join . sequenceA $ do
       guard . null $ drop 1 searchTerm
       arg <- Property.value (hiState holeInfo) ^. hsArgument
-      Just $ hiHoleActions holeInfo ^. Sugar.holeResult $ return arg
+      Just $ hiHoleActions holeInfo ^. Sugar.holeResult $
+        Sugar.ResultSeedExpression arg
   pure $ mconcat
     [ addNewDefinitionEventMap cp holeInfo
     , maybe mempty (opPickEventMap holeInfo) mResult

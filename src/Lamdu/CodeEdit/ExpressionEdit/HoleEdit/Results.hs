@@ -31,18 +31,15 @@ import qualified Data.Foldable as Foldable
 import qualified Data.List.Class as List
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.Property as Property
-import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info as HoleInfo
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
-import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.WidgetIds as WidgetIds
 
 type T = Transaction
@@ -113,14 +110,14 @@ data MakeWidgets m = MakeWidgets
 
 toMResultsList ::
   MonadA m => HoleInfo m -> WidgetMaker m ->
-  Widget.Id ->
-  [T m (DataIRef.ExpressionM m (Maybe (Sugar.StorePoint (Tag m))))] ->
+  Widget.Id -> [Sugar.HoleResultSeed m] ->
   CT m (Maybe (ResultsList m))
 toMResultsList holeInfo makeWidget baseId options = do
   results <-
     sortOn (resultComplexityScore . (^. Sugar.holeResultInferred)) .
     catMaybes <$>
-    traverse (hiHoleActions holeInfo ^. Sugar.holeResult) options
+    traverse (hiHoleActions holeInfo ^. Sugar.holeResult)
+    options
   return $ case results of
     [] -> Nothing
     x : xs ->
@@ -151,7 +148,7 @@ baseExprToResultsList holeInfo makeWidget baseExpr =
   where
     conclude baseExprType =
       toMResultsList holeInfo makeWidget baseId .
-      map (return . (Nothing <$)) $
+      map (Sugar.ResultSeedExpression . (Nothing <$)) $
       applyForms baseExprType
     applyForms baseExprType =
       ExprUtil.applyForms baseExprType baseExpr ++ do
@@ -183,7 +180,8 @@ applyOperatorResultsList ::
   DataIRef.ExpressionM m () ->
   CT m (Maybe (ResultsList m))
 applyOperatorResultsList holeInfo makeWidget argument baseExpr =
-  toMResultsList holeInfo makeWidget baseId . map return =<<
+  toMResultsList holeInfo makeWidget baseId .
+  map Sugar.ResultSeedExpression =<<
   case (Nothing <$ baseExpr) ^. Expression.eBody of
   Expression.BodyLam (Expression.Lambda k paramGuid paramType result) ->
     pure $ map genExpr
@@ -252,21 +250,17 @@ makeResultsList holeInfo makeWidget group =
 
 makeNewTagResultList ::
   MonadA m => HoleInfo m -> WidgetMaker m ->
-  Anchors.CodeProps m ->
   ListT (CT m) (Maybe (ResultType, ResultsList m))
-makeNewTagResultList holeInfo makeNewTagResultWidget cp
+makeNewTagResultList holeInfo makeNewTagResultWidget
   | null searchTerm = mempty
   | otherwise =
       List.joinM $ List.fromList
       [fmap ((,) GoodResult) <$>
-      toMResultsList holeInfo makeNewTagResultWidget (Widget.Id ["NewTag"]) [makeNewTag]]
+      toMResultsList holeInfo makeNewTagResultWidget (Widget.Id ["NewTag"])
+      [makeNewTag]]
   where
     searchTerm = (Property.value . hiState) holeInfo ^. HoleInfo.hsSearchTerm
-    makeNewTag = do
-      tag <- DataOps.makeNewTag cp
-      Transaction.setP (Anchors.assocNameRef tag) searchTerm
-      return . (`Expression.Expression` Nothing) . Expression.BodyLeaf $
-        Expression.Tag tag
+    makeNewTag = Sugar.ResultSeedNewTag searchTerm
 
 data HaveHiddenResults = HaveHiddenResults | NoHiddenResults
 
@@ -294,10 +288,9 @@ makeAll ::
   MonadA m => HoleInfo m -> MakeWidgets m ->
   ExprGuiM m ([ResultsList m], HaveHiddenResults)
 makeAll holeInfo makeWidget = do
-  cp <- ExprGuiM.readCodeAnchors
   resultList <-
     List.catMaybes .
-    (`mappend` makeNewTagResultList holeInfo (mkNewTagResultWidget makeWidget) cp) .
+    (`mappend` makeNewTagResultList holeInfo (mkNewTagResultWidget makeWidget)) .
     List.mapL (makeResultsList holeInfo (mkResultWidget makeWidget)) .
     List.fromList <$>
     ExprGuiM.transaction (makeAllGroups holeInfo)

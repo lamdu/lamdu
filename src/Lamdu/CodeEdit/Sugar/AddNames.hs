@@ -4,6 +4,7 @@ module Lamdu.CodeEdit.Sugar.AddNames
   ) where
 
 import Control.Applicative (Applicative(..), (<$>), (<$))
+import Control.Lens.Operators
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (Reader, runReader)
 import Control.Monad.Trans.State (runState, evalState)
@@ -25,6 +26,17 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.CodeEdit.Sugar.NameGen as NameGen
 import qualified Lamdu.Data.Anchors as Anchors
 
+data CPS m a = CPS { runCPS :: forall r. m r -> m (a, r) }
+  deriving (Functor)
+
+instance Functor m => Applicative (CPS m) where
+  pure x = CPS $ fmap ((,) x)
+  CPS cpsf <*> CPS cpsx =
+    CPS (fmap foo . cpsf . cpsx)
+    where
+      foo (f, (x, r)) = (f x, r)
+
+
 class (MonadA (TransM m), MonadA m) => MonadNaming m where
   type TransM m :: * -> *
   type OldName m
@@ -39,6 +51,11 @@ class (MonadA (TransM m), MonadA m) => MonadNaming m where
   opDefName :: Guid -> OldName m -> m (NewName m)
 
   opMakeTagName :: Guid -> OldName m -> m (NewName m)
+
+  -- HACK: For overriding the name of the converted hole result of a
+  -- new tag seed
+  -- TODO: How to clean this up?
+  opFakeStoredName :: m (String -> NewName m)
 
 type StoredName = String
 newtype NameCount = NameCount (Map StoredName Int)
@@ -75,6 +92,7 @@ instance MonadA m => MonadNaming (FirstPassM m) where
   opGetParamName = handleStoredName
   opMakeTagName = handleStoredName
   opDefName = handleStoredName
+  opFakeStoredName = pure . const $ StoredNames Nothing mempty
 
 getStoredName :: MonadA m => Guid -> T m (Maybe StoredName)
 getStoredName guid = do
@@ -149,6 +167,7 @@ instance MonadA m => MonadNaming (SecondPassM m) where
   opMakeTagName = nameByGuid "tag_"
   opWithDefName = newLocalNameByGuid "def_"
   opDefName = nameByGuid "def_"
+  opFakeStoredName = pure $ Name StoredName
 
 makeNameByGuid :: Show guid => String -> guid -> StoredNames -> NameGen Guid -> (Name, NameGen Guid)
 makeNameByGuid prefix guid (StoredNames Nothing _) curNameGen =
@@ -224,11 +243,19 @@ toHoleActions ::
 toHoleActions ha@HoleActions {..} = do
   run0 <- opRun
   run1 <- opRun
+  fakeStoredName <- opFakeStoredName
   let
     toHoleResult = run0 . holeResultConverted toExpression
+    setNameInConverted name =
+      holeResultConverted . rExpressionBody . _ExpressionTag . tagName .~
+      fakeStoredName name
+    onHoleResult (ResultSeedExpression _) = toHoleResult
+    onHoleResult (ResultSeedNewTag name) =
+      fmap (setNameInConverted name) . toHoleResult
     toScopeItem (ScopeVar getVar) = run1 $ ScopeVar <$> toGetVar getVar
     toScopeItem (ScopeTag tagG) = run1 $ ScopeTag <$> toTag tagG
-    result = (lift . traverse toHoleResult =<<) <$> _holeResult
+    onMHoleResult seed = (lift . traverse (onHoleResult seed) =<<)
+    result = Lens.imapped %@~ onMHoleResult $ _holeResult
     scope = (traverse . Lens._1) toScopeItem =<< _holeScope
   pure ha { _holeScope = scope, _holeResult = result }
 
@@ -381,13 +408,3 @@ toDef def@Definition {..} = do
 
 addToDef :: MonadA m => DefinitionU m -> T m (DefinitionN m)
 addToDef = fmap (runSecondPassM NameGen.initial . toDef) . runFirstPassM . toDef
-
-data CPS m a = CPS { runCPS :: forall r. m r -> m (a, r) }
-  deriving (Functor)
-
-instance Functor m => Applicative (CPS m) where
-  pure x = CPS $ fmap ((,) x)
-  CPS cpsf <*> CPS cpsx =
-    CPS (fmap foo . cpsf . cpsx)
-    where
-      foo (f, (x, r)) = (f x, r)

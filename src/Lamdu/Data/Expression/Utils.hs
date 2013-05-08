@@ -9,6 +9,7 @@ module Lamdu.Data.Expression.Utils
   , bodyLiteralInteger, pureLiteralInteger
   , bodyHole
   , pureIntegerType
+  , _PureExpr, _PureTagExpr
   , pureExpression
   , randomizeExpr
   , canonizeParamIds, randomizeParamIds
@@ -97,8 +98,15 @@ bitraverseExpression onDef onPl = f
 expressionDef :: Lens.Traversal (Expression a pl) (Expression b pl) a b
 expressionDef = (`bitraverseExpression` pure)
 
+-- TODO: Deprecate:
 pureExpression :: Body def (Expression def ()) -> Expression def ()
 pureExpression = (`Expression` ())
+
+_PureExpr :: Lens.Iso' (Expression def ()) (Body def (Expression def ()))
+_PureExpr = Lens.iso (^. eBody) (`Expression` ())
+
+_PureTagExpr :: Lens.Prism' (Expression def ()) Guid
+_PureTagExpr = _PureExpr . _BodyLeaf . _Tag
 
 pureIntegerType :: Expression def ()
 pureIntegerType = pureExpression $ BodyLeaf IntegerType

@@ -29,6 +29,7 @@ module Lamdu.CodeEdit.Sugar
   , Section(..)
   , ScopeItem(..), _ScopeVar, _ScopeTag
   , Hole(..), holeScope, holeMActions
+  , HoleResultSeed(..)
   , HoleActions(..)
     , holePaste, holeMDelete, holeResult, holeInferExprType
   , StorePoint
@@ -644,57 +645,73 @@ inferOnTheSide holeInferContext scope loaded =
     (node, sideInferContext) =
       (`runState` holeInferContext) $ Infer.newNodeWithScope scope
 
+seedExpression ::
+  HoleResultSeed m -> DataIRef.ExpressionM m (Maybe (StorePoint (Tag m)))
+seedExpression (ResultSeedExpression expr) = expr
+seedExpression (ResultSeedNewTag _) =
+  Nothing <$ ExprUtil._PureTagExpr # Guid.fromString "FakeNewTag"
+
+convertHoleResult ::
+  (MonadA m, Typeable1 m) => SugarM.Context m -> Random.StdGen ->
+  DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) -> T m (ExpressionU m)
+convertHoleResult sugarContext gen res =
+  SugarM.runPure
+  (sugarContext ^. SugarM.scCodeAnchors)
+  (sugarContext ^. SugarM.scRecordParams) .
+  convertExpressionI .
+  (Lens.mapped . SugarInfer.plInferred %~ Just) .
+  (Lens.mapped . SugarInfer.plStored .~ Nothing) $
+  SugarInfer.resultFromInferred gen res
+
 makeHoleResult ::
   (Typeable1 m, MonadA m) => SugarM.Context m ->
   Infer.Inferred (DefI (Tag m)) ->
   Expression.Expression (DefI (Tag m))
   (SugarInfer.Payload (Tag m) inferred (Stored m)) ->
-  T m (DataIRef.ExpressionM m (Maybe (StorePoint (Tag m)))) ->
-  CT m (Maybe (HoleResult NoName m))
-makeHoleResult sugarContext inferred exprI makeExpr =
-  fmap mkHoleResult <$>
-  mapStateT Transaction.forkScratch
-  (lift . traverse addConverted =<< makeInferredExpr)
+  HoleResultSeed m -> CT m (Maybe (HoleResult NoName m))
+makeHoleResult sugarContext inferred exprI seed =
+  fmap (mkHoleResult <$>) . lift .
+  traverse addConverted =<< inferResult (seedExpression seed)
   where
-    addConverted resFake = do
-      converted <- convertHoleResult resFake
-      pure (converted, resFake)
-    gen expr =
-      Random.mkStdGen $
-      hashWithSalt 0 (show (void expr), show guid)
-    makeInferredExpr = inferResult =<< lift makeExpr
-    convertHoleResult resFake =
-      SugarM.runPure
-      (sugarContext ^. SugarM.scCodeAnchors)
-      (sugarContext ^. SugarM.scRecordParams) .
-      convertExpressionI .
-      (Lens.mapped . SugarInfer.plInferred %~ Just) .
-      (Lens.mapped . SugarInfer.plStored .~ Nothing) .
-      SugarInfer.resultFromInferred (gen resFake) $
-      fst <$> resFake
+    addConverted inferredResult = do
+      converted <-
+        convertHoleResult sugarContext (gen inferredResult) $
+        fst <$> inferredResult
+      pure (converted, inferredResult)
     inferResult expr = do
       loaded <- lift $ SugarInfer.load Nothing expr
       let point = Infer.iPoint inferred
       memoBy (loaded, token, point, 'r') . return $
         SugarInfer.inferMaybe loaded (sugarContext ^. SugarM.scHoleInferState) point
-    pick = do
-      mResReal <- Cache.unmemoS makeInferredExpr
-      case mResReal of
-        Nothing ->
-          fail $
-          "Rerun of hole result maker and infer on its " ++
-          "result failed after first run succeeded. Fishy transaction given!"
-        Just resReal ->
-          pickResult exprI $ ExprUtil.randomizeParamIds (gen resReal) resReal
+    gen res =
+      Random.mkStdGen $
+      hashWithSalt 0 (show (void res), show guid)
     guid = resultGuid exprI
     token = (guid, sugarContext ^. SugarM.scMContextHash)
-    mkHoleResult (converted, resFake) =
+    mkHoleResult (converted, inferredExpr) =
       HoleResult
-      { _holeResultInferred = fst <$> resFake
+      { _holeResultInferred = fst <$> inferredExpr
       , _holeResultConverted = converted
       , _holeResultPick = pick
       , _holeResultPickPrefix = void pick
       }
+      where
+        pick = do
+          finalExpr <-
+            case seed of
+            ResultSeedExpression _ -> pure inferredExpr
+            ResultSeedNewTag name -> do
+              newTagGuid <- DataOps.makeNewTag $ sugarContext ^. SugarM.scCodeAnchors
+              mInferredExpr <- Cache.unmemoS . inferResult . (Nothing <$) $ ExprUtil._PureTagExpr # newTagGuid
+              case mInferredExpr of
+                Nothing ->
+                  fail $ "Arbitrary fake tag successfully inferred as hole result, " ++
+                  "but real new tag failed!"
+                Just finalExpr ->
+                  finalExpr <$ Transaction.setP (Anchors.assocNameRef newTagGuid) name
+          pickResult exprI $
+            ExprUtil.randomizeParamIds (gen finalExpr)
+            finalExpr
 
 memoBy ::
   (Cache.Key k, Binary v, MonadA m) =>
