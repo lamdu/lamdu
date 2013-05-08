@@ -49,13 +49,16 @@ make
   => Sugar.GetVar Sugar.Name m
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
-make getParam myId = do
+make getVar myId = do
+  case Sugar.gvVarType getVar of
+    Sugar.GetParameter -> ExprGuiM.markVariablesAsUsed [Sugar.gvIdentifier getVar]
+    Sugar.GetDefinition -> return ()
   cp <- ExprGuiM.readCodeAnchors
   let
     jumpToDefinitionEventMap =
       Widget.keysEventMapMovesCursor Config.jumpToDefinitionKeys
       (E.Doc ["Navigation", "Jump to definition"]) $ do
         DataOps.savePreJumpPosition cp myId
-        WidgetIds.fromGuid <$> Sugar.gvJumpTo getParam
-  makeView getParam myId &
+        WidgetIds.fromGuid <$> Sugar.gvJumpTo getVar
+  makeView getVar myId &
     Lens.over (Lens.mapped . ExpressionGui.egWidget) (Widget.weakerEvents jumpToDefinitionEventMap)
