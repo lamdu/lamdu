@@ -80,7 +80,7 @@ Library
                        StateVar,
                        TraceUtils,
                        hashable,
-                       lens >= 3.8,
+                       lens >= 3.9,
                        binary >= 0.5,
                        bytestring,
                        containers >= 0.4,
