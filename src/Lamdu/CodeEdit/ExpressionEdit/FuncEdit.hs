@@ -6,7 +6,7 @@ module Lamdu.CodeEdit.ExpressionEdit.FuncEdit
   ) where
 
 import Control.Applicative ((<$), (<$>), Applicative(..))
-import Control.Lens ((^.))
+import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
@@ -67,8 +67,8 @@ makeParamEdit ::
   Widget.EventHandlers (T m) ->
   Sugar.FuncParam Sugar.Name m (Sugar.ExpressionN m) ->
   ExprGuiM m (ExpressionGui m)
-makeParamEdit atParamWidgets prevId infoMode rhsJumper param = do
-  (fmap . Lens.over ExpressionGui.egWidget) onFinalWidget . assignCursor $ do
+makeParamEdit atParamWidgets prevId infoMode rhsJumper param =
+  (Lens.mapped . ExpressionGui.egWidget %~ onFinalWidget) . assignCursor $ do
     paramTypeEdit <- ExprGuiM.makeSubexpresion $ param ^. Sugar.fpType
     paramNameEdit <- makeParamNameEdit name ident
     let typeWidget = paramTypeEdit ^. ExpressionGui.egWidget

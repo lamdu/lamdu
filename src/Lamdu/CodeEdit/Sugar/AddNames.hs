@@ -319,13 +319,12 @@ toExpression expr@Expression{..} = do
 toFuncParamActions ::
   MonadNaming m => FuncParamActions (OldName m) (TransM m) ->
   m (FuncParamActions (NewName m) (TransM m))
-toFuncParamActions fpa@FuncParamActions {..} = do
-  pure fpa
-    { _fpGetExample = error "TODO: examples" }
+toFuncParamActions fpa@FuncParamActions {..} =
+  pure fpa { _fpGetExample = error "TODO: examples" }
 
 withWhereItem ::
   MonadNaming m => WhereItem (OldName m) (TransM m) ->
-  CPS (m) (WhereItem (NewName m) (TransM m))
+  CPS m (WhereItem (NewName m) (TransM m))
 withWhereItem item@WhereItem{..} = CPS $ \k -> do
   (name, (value, res)) <-
     runCPS (opWithWhereItemName wiGuid wiName) $
