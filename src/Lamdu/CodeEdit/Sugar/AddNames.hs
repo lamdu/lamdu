@@ -26,7 +26,7 @@ import qualified Lamdu.CodeEdit.Sugar.NameGen as NameGen
 import qualified Lamdu.Data.Anchors as Anchors
 
 class (MonadA (TransM m), MonadA m) => MonadNaming m where
-  type TransM m
+  type TransM m :: * -> *
   type OldName m
   type NewName m
   opRun :: m (m res -> T (TransM m) res)
