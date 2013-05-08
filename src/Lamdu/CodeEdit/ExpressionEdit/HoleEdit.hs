@@ -8,7 +8,7 @@ module Lamdu.CodeEdit.ExpressionEdit.HoleEdit
 
 import Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
 import Control.Lens.Operators
-import Control.Monad (filterM, msum, guard, join)
+import Control.Monad (msum, guard, join)
 import Control.MonadA (MonadA)
 import Data.List.Utils (nonEmptyAll)
 import Data.Maybe (isJust, listToMaybe, maybeToList, fromMaybe)
@@ -363,24 +363,8 @@ assignHoleEditCursor holeInfo shownResultsIds allResultIds searchTermId action =
     destId = head (shownResultsIds ++ [searchTermId])
   ExprGuiM.assignCursor assignSource destId action
 
-markTypeMatchesAsUsed :: MonadA m => HoleInfo m -> ExprGuiM m ()
-markTypeMatchesAsUsed holeInfo =
-  ExprGuiM.markVariablesAsUsed =<<
-  filterM
-  (checkInfer . ExprUtil.pureExpression . Lens.review ExprUtil.bodyParameterRef)
-  (hiHoleActions holeInfo ^..
-   Sugar.holeScope . traverse . Lens._1 .
-   Lens.filtered ((== Sugar.GetParameter) . Sugar.gvVarType) .
-   Lens.to Sugar.gvIdentifier)
-  where
-    checkInfer =
-      fmap isJust . ExprGuiM.liftMemoT .
-      (hiHoleActions holeInfo ^. Sugar.holeResult) . return .
-      (Nothing <$)
-
 makeActiveHoleEdit :: MonadA m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
 makeActiveHoleEdit holeInfo = do
-  markTypeMatchesAsUsed holeInfo
   (shownResults, hasHiddenResults) <-
     HoleResults.makeAll holeInfo MakeWidgets
     { mkNewTagResultWidget = makeNewTagResultWidget holeInfo
