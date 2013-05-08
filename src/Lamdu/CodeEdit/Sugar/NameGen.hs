@@ -38,9 +38,9 @@ initial =
     appendAll num = map (++ show num)
 
 existingName :: (Ord g, Show g) => g -> State (NameGen g) String
-existingName g = do
-  fromMaybe (error ("existingName used out of newName scope for: " ++ show g))
-  <$> Lens.uses ngUsedNames (Map.lookup g)
+existingName g =
+  fromMaybe ("TodoError:" ++ show g) <$>
+  Lens.uses ngUsedNames (Map.lookup g)
 
 newName :: Ord g => (String -> Bool) -> IsDependent -> g -> State (NameGen g) String
 newName acceptName isDep g = do
