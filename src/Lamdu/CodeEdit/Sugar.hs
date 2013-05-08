@@ -652,19 +652,26 @@ makeHoleResult ::
   T m (DataIRef.ExpressionM m (Maybe (StorePoint (Tag m)))) ->
   CT m (Maybe (HoleResult NoName m))
 makeHoleResult sugarContext inferred exprI makeExpr =
-  lift . traverse mkHoleResult =<<
-  mapStateT Transaction.forkScratch makeInferredExpr
+  fmap mkHoleResult <$>
+  mapStateT Transaction.forkScratch
+  (lift . traverse addConverted =<< makeInferredExpr)
   where
+    addConverted resFake = do
+      converted <- convertHoleResult resFake
+      pure (converted, resFake)
     gen expr =
       Random.mkStdGen $
       hashWithSalt 0 (show (void expr), show guid)
     makeInferredExpr = inferResult =<< lift makeExpr
-    convertHoleResult res =
-      SugarM.runPure (sugarContext ^. SugarM.scCodeAnchors) (sugarContext ^. SugarM.scRecordParams) .
+    convertHoleResult resFake =
+      SugarM.runPure
+      (sugarContext ^. SugarM.scCodeAnchors)
+      (sugarContext ^. SugarM.scRecordParams) .
       convertExpressionI .
       (Lens.mapped . SugarInfer.plInferred %~ Just) .
       (Lens.mapped . SugarInfer.plStored .~ Nothing) .
-      SugarInfer.resultFromInferred (gen res) $ fst <$> res
+      SugarInfer.resultFromInferred (gen resFake) $
+      fst <$> resFake
     inferResult expr = do
       loaded <- lift $ SugarInfer.load Nothing expr
       let point = Infer.iPoint inferred
@@ -681,16 +688,13 @@ makeHoleResult sugarContext inferred exprI makeExpr =
           pickResult exprI $ ExprUtil.randomizeParamIds (gen resReal) resReal
     guid = resultGuid exprI
     token = (guid, sugarContext ^. SugarM.scMContextHash)
-    mkHoleResult resFake = do
-      converted <- convertHoleResult resFake
-      return HoleResult
-        { _holeResultInferred = fst <$> resFake
-          -- TODO: Is it ok to use the fake result (resFake) not in the
-          -- forked scratch space?
-        , _holeResultConverted = converted
-        , _holeResultPick = pick
-        , _holeResultPickPrefix = void pick
-        }
+    mkHoleResult (converted, resFake) =
+      HoleResult
+      { _holeResultInferred = fst <$> resFake
+      , _holeResultConverted = converted
+      , _holeResultPick = pick
+      , _holeResultPickPrefix = void pick
+      }
 
 memoBy ::
   (Cache.Key k, Binary v, MonadA m) =>
