@@ -1,13 +1,15 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.CodeEdit.Sugar.NameGen
   ( NameGen, initial
-  , IsDependent(..), getName, ban
+  , IsDependent(..), existingName, newName, ban
   ) where
 
+import Control.Applicative ((<$>))
 import Control.Arrow ((&&&))
 import Control.Lens.Operators
 import Control.Monad.Trans.State (State, state)
 import Data.Map (Map)
+import Data.Maybe (fromMaybe)
 import Data.Set (Set)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
@@ -35,12 +37,10 @@ initial =
     numberCycle s = (s ++) . concat . zipWith appendAll [0::Int ..] $ repeat s
     appendAll num = map (++ show num)
 
--- TODO: export both getName, newName, getName should crash if name
--- for guid doesn't exist
-getName :: Ord g => (String -> Bool) -> IsDependent -> g -> State (NameGen g) String
-getName acceptName isDep g = do
-  existing <- Lens.uses ngUsedNames $ Map.lookup g
-  maybe (newName acceptName isDep g) return existing
+existingName :: (Ord g, Show g) => g -> State (NameGen g) String
+existingName g = do
+  fromMaybe (error ("existingName used out of newName scope for: " ++ show g))
+  <$> Lens.uses ngUsedNames (Map.lookup g)
 
 newName :: Ord g => (String -> Bool) -> IsDependent -> g -> State (NameGen g) String
 newName acceptName isDep g = do
