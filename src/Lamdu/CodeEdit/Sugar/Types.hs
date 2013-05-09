@@ -20,7 +20,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , Payload(..), plInferredTypes, plActions, plNextHole
   , ExpressionP(..)
     , rGuid, rExpressionBody, rPayload, rHiddenGuids, rPresugaredExpression
-  , NameSource(..), Name(..), NoName
+  , NameSource(..), Name(..), NameHint
   , DefinitionN, DefinitionU
   , Expression, ExpressionN, ExpressionU
   , ExpressionBodyN, ExpressionBodyU
@@ -123,14 +123,14 @@ data Name = Name
   { nNameSource :: NameSource
   , nName :: String
   } deriving (Show)
-type NoName = ()
+type NameHint = Maybe String
 
 type Expression name m = ExpressionP name m (Payload name m)
 type ExpressionN m = Expression Name m
-type ExpressionU m = Expression NoName m
+type ExpressionU m = Expression NameHint m
 
 type ExpressionBodyN m = ExpressionBody Name m (ExpressionN m)
-type ExpressionBodyU m = ExpressionBody NoName m (ExpressionU m)
+type ExpressionBodyU m = ExpressionBody NameHint m (ExpressionU m)
 
 data ListItemActions m = ListItemActions
   { _itemAddNext :: T m Guid
@@ -373,7 +373,7 @@ data Definition name m = Definition
   }
 
 type DefinitionN = Definition Name
-type DefinitionU = Definition NoName
+type DefinitionU = Definition NameHint
 
 LensTH.makePrisms ''ScopeItem
 LensTH.makePrisms ''ExpressionBody

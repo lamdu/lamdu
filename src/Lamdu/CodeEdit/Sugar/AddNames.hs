@@ -4,7 +4,6 @@ module Lamdu.CodeEdit.Sugar.AddNames
   ) where
 
 import Control.Applicative (Applicative(..), (<$>), (<$))
-import Control.Lens.Operators
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (Reader, runReader)
 import Control.Monad.Trans.State (runState, evalState)
@@ -52,11 +51,6 @@ class (MonadA (TransM m), MonadA m) => MonadNaming m where
 
   opMakeTagName :: Guid -> OldName m -> m (NewName m)
 
-  -- HACK: For overriding the name of the converted hole result of a
-  -- new tag seed
-  -- TODO: How to clean this up?
-  opFakeStoredName :: m (String -> NewName m)
-
 type StoredName = String
 newtype NameCount = NameCount (Map StoredName Int)
 instance Monoid NameCount where
@@ -83,7 +77,7 @@ runFirstPassM (FirstPassM act) = evalWriterT act
 
 instance MonadA m => MonadNaming (FirstPassM m) where
   type TransM (FirstPassM m) = m
-  type OldName (FirstPassM m) = NoName
+  type OldName (FirstPassM m) = NameHint
   type NewName (FirstPassM m) = StoredNames
   opRun = pure runFirstPassM
   opWithParamName _ = collectName
@@ -92,10 +86,10 @@ instance MonadA m => MonadNaming (FirstPassM m) where
   opGetParamName = handleStoredName
   opMakeTagName = handleStoredName
   opDefName = handleStoredName
-  opFakeStoredName = pure . const $ StoredNames Nothing mempty
 
-getStoredName :: MonadA m => Guid -> T m (Maybe StoredName)
-getStoredName guid = do
+getStoredName :: MonadA m => Guid -> Maybe StoredName -> T m (Maybe StoredName)
+getStoredName _ (Just nameHint) = return $ Just nameHint
+getStoredName guid Nothing = do
   name <- Transaction.getP $ Anchors.assocNameRef guid
   pure $
     if null name
@@ -113,13 +107,14 @@ firstPassResult storedNameCounts mName =
   where
     myNameCounts = NameCount $ maybe Map.empty (`Map.singleton` 1) mName
 
-handleStoredName :: MonadA m => Guid -> NoName -> FirstPassM m StoredNames
-handleStoredName guid () =
-  firstPassResult mempty =<< fpTransaction (getStoredName guid)
+handleStoredName :: MonadA m => Guid -> NameHint -> FirstPassM m StoredNames
+handleStoredName guid nameHint =
+  firstPassResult mempty =<<
+  fpTransaction (getStoredName guid nameHint)
 
-collectName :: MonadA m => Guid -> NoName -> CPS (FirstPassM m) StoredNames
-collectName guid () = CPS $ \k -> do
-  mName <- fpTransaction $ getStoredName guid
+collectName :: MonadA m => Guid -> NameHint -> CPS (FirstPassM m) StoredNames
+collectName guid nameHint = CPS $ \k -> do
+  mName <- fpTransaction $ getStoredName guid nameHint
   (res, storedNameCounts) <- fpListenStoredNames k
   flip (,) res <$> firstPassResult storedNameCounts mName
 
@@ -167,7 +162,6 @@ instance MonadA m => MonadNaming (SecondPassM m) where
   opMakeTagName = nameByGuid "tag_"
   opWithDefName = newLocalNameByGuid "def_"
   opDefName = nameByGuid "def_"
-  opFakeStoredName = pure $ Name StoredName
 
 makeNameByGuid :: Show guid => String -> guid -> StoredNames -> NameGen Guid -> (Name, NameGen Guid)
 makeNameByGuid prefix guid (StoredNames Nothing _) curNameGen =
@@ -243,19 +237,12 @@ toHoleActions ::
 toHoleActions ha@HoleActions {..} = do
   run0 <- opRun
   run1 <- opRun
-  fakeStoredName <- opFakeStoredName
   let
     toHoleResult = run0 . holeResultConverted toExpression
-    setNameInConverted name =
-      holeResultConverted . rExpressionBody . _ExpressionTag . tagName .~
-      fakeStoredName name
-    onHoleResult (ResultSeedExpression _) = toHoleResult
-    onHoleResult (ResultSeedNewTag name) =
-      fmap (setNameInConverted name) . toHoleResult
     toScopeItem (ScopeVar getVar) = run1 $ ScopeVar <$> toGetVar getVar
     toScopeItem (ScopeTag tagG) = run1 $ ScopeTag <$> toTag tagG
-    onMHoleResult seed = (lift . traverse (onHoleResult seed) =<<)
-    result = Lens.imapped %@~ onMHoleResult $ _holeResult
+    onMHoleResult = (lift . traverse toHoleResult =<<)
+    result = onMHoleResult <$> _holeResult
     scope = (traverse . Lens._1) toScopeItem =<< _holeScope
   pure ha { _holeScope = scope, _holeResult = result }
 
