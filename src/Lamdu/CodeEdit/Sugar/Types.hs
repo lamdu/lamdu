@@ -342,7 +342,7 @@ data WhereItem name m = WhereItem
 -- Common data for definitions and where-items
 data DefinitionContent name m = DefinitionContent
   { dDepParams :: [FuncParam name m (Expression name m)]
-  , dParams :: Maybe (FuncParam name m (Expression name m))
+  , dParams :: [FuncParam name m (Expression name m)]
   , dBody :: Expression name m
   , dWhereItems :: [WhereItem name m]
   , dAddFirstParam :: T m Guid

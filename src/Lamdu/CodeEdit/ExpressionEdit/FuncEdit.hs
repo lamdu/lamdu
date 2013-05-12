@@ -154,14 +154,33 @@ makeNestedParams ::
  -> [Sugar.FuncParam Sugar.Name m (Sugar.ExpressionN m)]
  -> ExprGuiM m a
  -> ExprGuiM m ([ExpressionGui m], [ExpressionGui m], a)
-makeNestedParams atParamWidgets rhs prevId depParams params mkResultEdit = do
+makeNestedParams atParamWidgets rhs firstParId depParams params mkResultEdit = do
   infoMode <- fmap (Lens.view Settings.sInfoMode) ExprGuiM.readSettings
   rhsJumper <- jumpToRHS Config.jumpLHStoRHSKeys rhs
-  let mkParam = makeParamEdit atParamWidgets prevId infoMode rhsJumper
+  let
+    (depParamIds, paramIds) = addPrevIds firstParId depParams params
+    mkParam (prevId, param) =
+      makeParamEdit atParamWidgets prevId infoMode rhsJumper param
   (,,)
-    <$> traverse mkParam depParams
-    <*> traverse mkParam params
+    <$> traverse mkParam depParamIds
+    <*> traverse mkParam paramIds
     <*> mkResultEdit
+
+addPrevIds ::
+  Widget.Id ->
+  [Sugar.FuncParam name m expr] ->
+  [Sugar.FuncParam name m expr] ->
+  ( [(Widget.Id, Sugar.FuncParam name m expr)]
+  , [(Widget.Id, Sugar.FuncParam name m expr)]
+  )
+addPrevIds firstParId depParams params =
+  (depParamIds, paramIds)
+  where
+    (lastDepParamId, depParamIds) = go firstParId depParams
+    (_, paramIds) = go lastDepParamId params
+    fpId param = WidgetIds.fromGuid $ param ^. Sugar.fpGuid
+    go i [] = (i, [])
+    go i (fp:fps) = Lens._2 %~ ((i, fp) :) $ go (fpId fp) fps
 
 make
   :: MonadA m

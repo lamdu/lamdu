@@ -5,7 +5,6 @@ import Control.Applicative ((<$>), (<*>))
 import Control.Lens ((%~), (&), (^.))
 import Control.MonadA (MonadA)
 import Data.List.Utils (nonEmptyAll)
-import Data.Maybe (maybeToList)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
@@ -154,7 +153,7 @@ makeParts name guid content = do
     rhs = ("Def Body", body)
     allParams = depParams ++ params
     depParams = Sugar.dDepParams content
-    params = maybeToList (Sugar.dParams content)
+    params = Sugar.dParams content
     body = Sugar.dBody content
     addFirstParamEventMap =
       Widget.keysEventMapMovesCursor Config.addNextParamKeys (E.Doc ["Edit", "Add parameter"]) .
