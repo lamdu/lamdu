@@ -97,9 +97,8 @@ import qualified System.Random.Utils as RandomUtils
 
 type PayloadMM m =
   SugarInfer.Payload (Tag m) (Maybe (InferredWC (Tag m))) (Maybe (Stored m))
-type Convertor m =
-  DataIRef.ExpressionM m (PayloadMM m) ->
-  SugarM m (ExpressionU m)
+type ExprMM m = DataIRef.ExpressionM m (PayloadMM m)
+type Convertor m = ExprMM m -> SugarM m (ExpressionU m)
 
 mkCutter :: MonadA m => Anchors.CodeProps m -> DataIRef.ExpressionI (Tag m) -> T m Guid -> T m Guid
 mkCutter cp expr replaceWithHole = do
@@ -172,7 +171,7 @@ toPayloadMM =
   Lens.set SugarInfer.plStored Nothing
 
 mkExpression ::
-  (Typeable1 m, MonadA m) => DataIRef.ExpressionM m (PayloadMM m) ->
+  (Typeable1 m, MonadA m) => ExprMM m ->
   ExpressionBodyU m -> SugarM m (ExpressionU m)
 mkExpression exprI expr = do
   sugarContext <- SugarM.readContext
@@ -246,8 +245,8 @@ data IsDependent = Dependent | NonDependent
   deriving (Eq, Ord, Show)
 
 convertFuncParam ::
-  (Typeable1 m, MonadA m) => Expression.Lambda (DataIRef.ExpressionM m (PayloadMM m)) ->
-  DataIRef.ExpressionM m (PayloadMM m) ->
+  (Typeable1 m, MonadA m) => Expression.Lambda (ExprMM m) ->
+  ExprMM m ->
   SugarM m (IsDependent, FuncParam NameHint m (ExpressionU m))
 convertFuncParam lam@(Expression.Lambda _ paramGuid paramType _) expr = do
   paramTypeS <- convertExpressionI paramType
@@ -268,8 +267,8 @@ convertFuncParam lam@(Expression.Lambda _ paramGuid paramType _) expr = do
   return (isDependent, fp)
 
 convertLambda ::
-  (Typeable1 m, MonadA m) => Expression.Lambda (DataIRef.ExpressionM m (PayloadMM m)) ->
-  DataIRef.ExpressionM m (PayloadMM m) ->
+  (Typeable1 m, MonadA m) => Expression.Lambda (ExprMM m) ->
+  ExprMM m ->
   SugarM m ((IsDependent, FuncParam NameHint m (ExpressionU m)), ExpressionU m)
 convertLambda lam expr = do
   param <- convertFuncParam lam expr
@@ -280,7 +279,7 @@ fAllParams :: Func NameHint m expr -> [FuncParam NameHint m expr]
 fAllParams (Func depParams params _) = depParams ++ params
 
 convertFunc ::
-  (MonadA m, Typeable1 m) => Expression.Lambda (DataIRef.ExpressionM m (PayloadMM m)) ->
+  (MonadA m, Typeable1 m) => Expression.Lambda (ExprMM m) ->
   Convertor m
 convertFunc lambda exprI = do
   ((isDependent, param), sBody) <- convertLambda lambda exprI
@@ -313,7 +312,7 @@ convertFunc lambda exprI = do
        itemDelete . Lens.sets fmap) $
       nextParam ^. fpGuid
 
-convertPi :: (MonadA m, Typeable1 m) => Expression.Lambda (DataIRef.ExpressionM m (PayloadMM m)) -> Convertor m
+convertPi :: (MonadA m, Typeable1 m) => Expression.Lambda (ExprMM m) -> Convertor m
 convertPi lambda exprI = do
   ((_, param), sBody) <- convertLambda lambda exprI
   mkExpression exprI $ ExpressionPi DontHaveParens
@@ -340,7 +339,7 @@ addApplyChildParens x =
   ExpressionCollapsed{} -> x
   _ -> addParens x
 
-isPolymorphicFunc :: DataIRef.ExpressionM m (PayloadMM m) -> Bool
+isPolymorphicFunc :: ExprMM m -> Bool
 isPolymorphicFunc funcI =
   maybe False
   (ExprUtil.isDependentPi . Infer.iType . iwcInferred) $
@@ -367,7 +366,7 @@ orElse a b = maybe b return =<< a
 
 convertApply ::
   (Typeable1 m, MonadA m) =>
-  Expression.Apply (DataIRef.ExpressionM m (PayloadMM m)) ->
+  Expression.Apply (ExprMM m) ->
   Convertor m
 convertApply app@(Expression.Apply funcI argI) exprI = do
   -- if we're an apply of the form (nil T): Return an empty list
@@ -381,7 +380,7 @@ convertApply app@(Expression.Apply funcI argI) exprI = do
 
 convertApplyNormal ::
   (Typeable1 m, MonadA m) =>
-  DataIRef.ExpressionM m (PayloadMM m) -> ExpressionU m -> Convertor m
+  ExprMM m -> ExpressionU m -> Convertor m
 convertApplyNormal funcI argS exprI = do
   funcS <- convertExpressionI funcI
   case funcS ^. rExpressionBody of
@@ -406,9 +405,9 @@ mkListAddFirstItem specialFunctions =
 
 convertApplyEmptyList ::
   (Typeable1 m, MonadA m) =>
-  Expression.Apply (DataIRef.ExpressionM m (PayloadMM m)) ->
+  Expression.Apply (ExprMM m) ->
   Anchors.SpecialFunctions (Tag m) ->
-  DataIRef.ExpressionM m (PayloadMM m) ->
+  ExprMM m ->
   SugarM m (Maybe (ExpressionU m))
 convertApplyEmptyList app@(Expression.Apply funcI _) specialFunctions exprI
   | Lens.anyOf
@@ -430,10 +429,10 @@ convertApplyEmptyList app@(Expression.Apply funcI _) specialFunctions exprI
 
 convertApplyList ::
   (Typeable1 m, MonadA m) =>
-  Expression.Apply (DataIRef.ExpressionM m (PayloadMM m)) ->
+  Expression.Apply (ExprMM m) ->
   ExpressionU m ->
   Anchors.SpecialFunctions (Tag m) ->
-  DataIRef.ExpressionM m (PayloadMM m) ->
+  ExprMM m ->
   SugarM m (Maybe (ExpressionU m))
 convertApplyList (Expression.Apply funcI argI) argS specialFunctions exprI =
   case (funcI ^? eApply, argS ^. rExpressionBody) of
@@ -501,7 +500,7 @@ setNextHole dest =
 
 applyOnSection ::
   (MonadA m, Typeable1 m) => Section (ExpressionU m) ->
-  ExpressionU m -> DataIRef.ExpressionM m (PayloadMM m) -> ExpressionU m ->
+  ExpressionU m -> ExprMM m -> ExpressionU m ->
   Convertor m
 applyOnSection (Section Nothing op Nothing) _ funcI argRef exprI
   | isPolymorphicFunc funcI = do
@@ -532,7 +531,7 @@ applyOnSection _ funcRef funcI argRef exprI = convertApplyPrefix funcRef funcI a
 
 convertApplyPrefix ::
   (MonadA m, Typeable1 m) =>
-  ExpressionU m -> DataIRef.ExpressionM m (PayloadMM m) -> ExpressionU m ->
+  ExpressionU m -> ExprMM m -> ExpressionU m ->
   Convertor m
 convertApplyPrefix funcRef funcI argRef applyI = do
   sugarContext <- SugarM.readContext
@@ -566,7 +565,7 @@ convertApplyPrefix funcRef funcI argRef applyI = do
 
 makeCollapsed ::
   (MonadA m, Typeable1 m) =>
-  DataIRef.ExpressionM m (PayloadMM m) ->
+  ExprMM m ->
   Guid -> GetVar NameHint m -> ExpressionU m -> SugarM m (ExpressionU m)
 makeCollapsed exprI g compact fullExpression =
   mkExpression exprI $ ExpressionCollapsed Collapsed
@@ -954,8 +953,8 @@ recordFieldActions defaultGuid exprIRef iref =
 convertField ::
   (Typeable1 m, MonadA m) =>
   Kind -> Maybe (DataIRef.ExpressionIM m) -> Guid ->
-  ( DataIRef.ExpressionM m (PayloadMM m)
-  , DataIRef.ExpressionM m (PayloadMM m)
+  ( ExprMM m
+  , ExprMM m
   ) ->
   SugarM m (RecordField m (ExpressionU m))
 convertField k mIRef defaultGuid (tagExpr, expr) = do
@@ -972,13 +971,13 @@ convertField k mIRef defaultGuid (tagExpr, expr) = do
     }
 
 resultMIRef ::
-  DataIRef.ExpressionM m (PayloadMM m) ->
+  ExprMM m ->
   Maybe (DataIRef.ExpressionIM m)
 resultMIRef = fmap Property.value . resultStored
 
 convertRecord ::
   (Typeable1 m, MonadA m) =>
-  Expression.Record (DataIRef.ExpressionM m (PayloadMM m)) ->
+  Expression.Record (ExprMM m) ->
   Convertor m
 convertRecord (Expression.Record k fields) exprI = do
   sFields <- mapM (convertField k (resultMIRef exprI) defaultGuid) fields
@@ -1010,8 +1009,8 @@ convertRecord (Expression.Record k fields) exprI = do
 
 convertGetField ::
   (MonadA m, Typeable1 m) =>
-  Expression.GetField (DataIRef.ExpressionM m (PayloadMM m)) ->
-  DataIRef.ExpressionM m (PayloadMM m) ->
+  Expression.GetField (ExprMM m) ->
+  ExprMM m ->
   SugarM m (ExpressionU m)
 convertGetField (Expression.GetField recExpr tagExpr) exprI = do
   recordParams <- (^. SugarM.scRecordParams) <$> SugarM.readContext
@@ -1043,7 +1042,7 @@ convertGetField (Expression.GetField recExpr tagExpr) exprI = do
 
 convertExpressionI ::
   (Typeable1 m, MonadA m) =>
-  DataIRef.ExpressionM m (PayloadMM m) -> SugarM m (ExpressionU m)
+  ExprMM m -> SugarM m (ExpressionU m)
 convertExpressionI ee =
   ($ ee) $
   case ee ^. Expression.eBody of
@@ -1079,11 +1078,11 @@ convertExpressionPure cp gen =
 convertDefinitionParams ::
   (MonadA m, Typeable1 m) =>
   [Guid] ->
-  DataIRef.ExpressionM m (PayloadMM m) ->
+  ExprMM m ->
   SugarM m
   ( [FuncParam NameHint m (ExpressionU m)]
   , Maybe (FuncParam NameHint m (ExpressionU m))
-  , DataIRef.ExpressionM m (PayloadMM m)
+  , ExprMM m
   )
 convertDefinitionParams usedTags expr =
   case expr ^. Expression.eBody of
@@ -1117,8 +1116,8 @@ mExtractWhere expr = do
 convertWhereItems ::
   (MonadA m, Typeable1 m) =>
   [Guid] ->
-  DataIRef.ExpressionM m (PayloadMM m) ->
-  SugarM m ([WhereItem NameHint m], DataIRef.ExpressionM m (PayloadMM m))
+  ExprMM m ->
+  SugarM m ([WhereItem NameHint m], ExprMM m)
 convertWhereItems usedTags expr =
   case mExtractWhere expr of
   Nothing -> return ([], expr)
@@ -1181,7 +1180,7 @@ assertedGetProp msg _ = error msg
 convertDefinitionContent ::
   (MonadA m, Typeable1 m) =>
   [Guid] ->
-  DataIRef.ExpressionM m (PayloadMM m) ->
+  ExprMM m ->
   SugarM m (DefinitionContent NameHint m)
 convertDefinitionContent usedTags expr = do
   (depParams, params, funcBody) <- convertDefinitionParams usedTags expr
