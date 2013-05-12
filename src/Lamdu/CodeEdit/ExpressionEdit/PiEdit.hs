@@ -44,7 +44,7 @@ make hasParens (Sugar.Pi param resultType) =
       paramEdit <-
         if paramUsed
         then do
-          paramNameEdit <- FuncEdit.makeParamNameEdit name paramGuid
+          paramNameEdit <- FuncEdit.makeParamNameEdit name paramGuid paramId
           colonLabel <- ExprGuiM.widgetEnv . BWidgets.makeLabel ":" $ Widget.toAnimId paramId
           return $ ExpressionGui.hbox
             [ ExpressionGui.fromValueWidget paramNameEdit
@@ -72,6 +72,6 @@ make hasParens (Sugar.Pi param resultType) =
   where
     name = param ^. Sugar.fpName
     paramGuid = param ^. Sugar.fpGuid
-    paramId = WidgetIds.fromGuid paramGuid
+    paramId = WidgetIds.fromGuid $ param ^. Sugar.fpId
     typeId =
       WidgetIds.fromGuid $ param ^. Sugar.fpType . Sugar.rGuid

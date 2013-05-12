@@ -8,6 +8,7 @@ module Lamdu.Data.Expression.Utils
   , bodyParameterRef, bodyDefinitionRef
   , bodyLiteralInteger, pureLiteralInteger
   , bodyHole
+  , bodyTag, exprBodyTag
   , pureIntegerType
   , _PureExpr, _PureTagExpr
   , pureExpression
@@ -28,7 +29,8 @@ module Lamdu.Data.Expression.Utils
 import Lamdu.Data.Expression
 
 import Control.Applicative (Applicative(..), liftA2, (<$>))
-import Control.Lens (Prism, Prism', (^.), (.~), (^?), (%~), (&))
+import Control.Lens (Prism, Prism', Traversal')
+import Control.Lens.Operators
 import Control.Monad (guard)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -70,6 +72,12 @@ bodyLiteralInteger = _BodyLeaf . _LiteralInteger
 
 bodyHole :: Prism' (Body def expr) ()
 bodyHole = _BodyLeaf . _Hole
+
+exprBodyTag :: Traversal' (Expression def a) Guid
+exprBodyTag = eBody . bodyTag
+
+bodyTag :: Prism' (Body def expr) Guid
+bodyTag = _BodyLeaf . _Tag
 
 bitraverseBody ::
   Applicative f => (defa -> f defb) -> (expra -> f exprb) ->

@@ -24,7 +24,7 @@ module Lamdu.CodeEdit.Sugar
   , Kind(..), Record(..), FieldList(..), GetField(..)
   , GetVar(..), VarType(..)
   , Func(..)
-  , FuncParam(..), fpName, fpGuid, fpHiddenLambdaGuid, fpType, fpMActions
+  , FuncParam(..), fpName, fpGuid, fpId, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
   , Section(..)
   , ScopeItem(..), _ScopeVar, _ScopeTag
@@ -209,21 +209,34 @@ replaceWith parentP replacerP = do
   where
     replacerI = Property.value replacerP
 
+toHoles ::
+  MonadA m =>
+  (Expression.Expression def (DataIRef.ExpressionProperty m) -> Bool) ->
+  Expression.Expression def (DataIRef.ExpressionProperty m) ->
+  T m ()
+toHoles predicate =
+  Lens.mapMOf_ (Lens.folding ExprUtil.subExpressions . Lens.filtered predicate)
+  (DataOps.setToHole . (^. Expression.ePayload))      
+
 deleteParamRef ::
   MonadA m => Guid -> Expression.Expression def (Stored m) -> T m ()
 deleteParamRef param =
-  Lens.mapMOf_ refs
-  (DataOps.setToHole . Lens.view Expression.ePayload)
+  toHoles $ Lens.anyOf (Expression.eBody . ExprUtil.bodyParameterRef) (== param)
+
+deleteFieldParamRef ::
+  MonadA m => Guid -> Guid -> Expression.Expression def (Stored m) -> T m ()
+deleteFieldParamRef param tagG = do
+  toHoles (p . (^? Expression.eBody . Expression._BodyGetField))
   where
-    refs =
-      Lens.folding ExprUtil.subExpressions .
-      Lens.filtered (Lens.anyOf (Expression.eBody . ExprUtil.bodyParameterRef) (== param))
+    p Nothing = False
+    p (Just (Expression.GetField record tag)) =
+      Lens.anyOf ExprUtil.exprBodyTag (== tagG) tag &&
+      Lens.anyOf (Expression.eBody . ExprUtil.bodyParameterRef) (== param) record
 
 mkFuncParamActions ::
-  MonadA m => Stored m ->
-  Expression.Lambda (Expression.Expression def (Stored m)) ->
+  MonadA m => Guid -> Stored m -> Expression.Expression def (Stored m) ->
   FuncParamActions NameHint m
-mkFuncParamActions lambdaProp (Expression.Lambda _ param _paramType body) =
+mkFuncParamActions param lambdaProp body =
   FuncParamActions
   { _fpListItemActions =
     ListItemActions
@@ -247,18 +260,19 @@ convertFuncParam ::
   (Typeable1 m, MonadA m) => Expression.Lambda (ExprMM m) ->
   ExprMM m ->
   SugarM m (FuncParam NameHint m (ExpressionU m))
-convertFuncParam lam@(Expression.Lambda _ paramGuid paramType _) expr = do
+convertFuncParam (Expression.Lambda _k paramGuid paramType body) expr = do
   paramTypeS <- convertExpressionI paramType
   let
     fp = FuncParam
       { _fpName = Nothing
       , _fpGuid = paramGuid
+      , _fpId = paramGuid -- should be unique
       , _fpHiddenLambdaGuid = Just $ resultGuid expr
       , _fpType = removeSuccessfulType paramTypeS
       , _fpMActions =
-        mkFuncParamActions
-        <$> resultStored expr
-        <*> (traverse . traverse) (Lens.view SugarInfer.plStored) lam
+        mkFuncParamActions paramGuid
+        <$> expr ^. plStored
+        <*> traverse (^. SugarInfer.plStored) body
       }
   return fp
 
@@ -305,7 +319,7 @@ convertFunc lambda exprI = do
       Lens.set
       (fpMActions . Lens.mapped . fpListItemActions .
        itemDelete . Lens.sets fmap) $
-      nextParam ^. fpGuid
+      nextParam ^. fpId
 
 convertPi :: (MonadA m, Typeable1 m) => Expression.Lambda (ExprMM m) -> Convertor m
 convertPi lambda exprI = do
@@ -762,9 +776,7 @@ onScopeElement (param, typeExpr) =
   map onScopeField
   (typeExpr ^..
    Expression.eBody . Expression._BodyRecord .
-   Expression.recordFields . traverse . Lens._1 .
-   Expression.eBody . Expression._BodyLeaf .
-   Expression._Tag)
+   Expression.recordFields . traverse . Lens._1 . ExprUtil.exprBodyTag)
   where
     errorJumpTo = error "Jump to on scope item??"
     exprTag = ExprUtil.pureExpression . Expression.BodyLeaf . Expression.Tag
@@ -1018,7 +1030,7 @@ convertGetField (Expression.GetField recExpr tagExpr) exprI = do
   recordParams <- (^. SugarM.scRecordParams) <$> SugarM.readContext
   let
     mVar = do
-      tag <- tagExpr ^? Expression.eBody . Expression._BodyLeaf . Expression._Tag
+      tag <- tagExpr ^? ExprUtil.exprBodyTag
       paramInfo <- Map.lookup tag recordParams
       param <- recExpr ^? Expression.eBody . ExprUtil.bodyParameterRef
       guard $ param == SugarM.piFromParameters paramInfo
@@ -1084,7 +1096,7 @@ data RecordParams m = RecordParams
   }
 
 data FieldParam m = FieldParam
-  { fpTagId :: Guid
+  { fpTagGuid :: Guid
   , fpTagExpr :: ExprMM m
   , fpFieldType :: ExprMM m
   }
@@ -1098,34 +1110,39 @@ emptyRecordParams = RecordParams
 
 mkRecordParams ::
   (MonadA m, Typeable1 m) => Guid -> [FieldParam m] ->
-  Maybe (Stored m) -> Maybe (DataIRef.ExpressionIM m) -> Maybe (DataIRef.ExpressionIM m) ->
+  Maybe (Stored m) -> Maybe (DataIRef.ExpressionIM m) ->
+  Maybe (DataIRef.ExpressionM m (Stored m)) ->
   SugarM m (RecordParams m)
-mkRecordParams paramGuid fieldParams mLambdaP mParamTypeI mBodyI = do
+mkRecordParams paramGuid fieldParams mLambdaP mParamTypeI mBodyStored = do
   params <- traverse mkParam fieldParams
   pure RecordParams
-    { rpTags = fpTagId <$> fieldParams
+    { rpTags = fpTagGuid <$> fieldParams
     , rpParamInfos = mconcat $ mkParamInfo <$> fieldParams
     , rpParams = params
     }
   where
     mkParamInfo fp =
-      Map.singleton (fpTagId fp) . SugarM.ParamInfo paramGuid $
+      Map.singleton (fpTagGuid fp) . SugarM.ParamInfo paramGuid $
       fpTagExpr fp ^. plGuid
     mkParam fp = do
       typeS <- convertExpressionI $ fpFieldType fp
-      let guid = fpTagExpr fp ^. plGuid
+      let tagExprGuid = fpTagExpr fp ^. plGuid
       pure FuncParam
-        { _fpGuid = guid
+        { _fpGuid = fpTagGuid fp
+        , _fpId = tagExprGuid
         , _fpName = Nothing
         , _fpHiddenLambdaGuid = Nothing --TODO: First param to take lambda's guid?
         , _fpType = removeSuccessfulType typeS
-        , _fpMActions = fpActions guid <$> mLambdaP <*> mParamTypeI <*> mBodyI
+        , _fpMActions =
+          fpActions tagExprGuid
+          <$> mLambdaP <*> mParamTypeI <*> mBodyStored
         }
-    fpActions tagExprGuid lambdaP paramTypeI bodyI =
+    fpActions tagExprGuid lambdaP paramTypeI bodyStored =
       FuncParamActions
       { _fpListItemActions = ListItemActions
         { _itemAddNext = addFieldParamAfter tagExprGuid paramTypeI
-        , _itemDelete = delFieldParam tagExprGuid paramTypeI lambdaP bodyI
+        , _itemDelete =
+          delFieldParam tagExprGuid paramTypeI paramGuid lambdaP bodyStored
         }
       , _fpGetExample = fail "TODO: Examples"
       }
@@ -1159,22 +1176,29 @@ addFieldParamAfter tagExprGuid paramTypeI =
   rereadFieldParamTypes tagExprGuid paramTypeI $
   \prevFields theField nextFields -> do
     fieldGuid <- Transaction.newKey
-    tagExprI <- DataIRef.newExprBody $ Expression._BodyLeaf . Expression._Tag # fieldGuid
+    tagExprI <- DataIRef.newExprBody $ ExprUtil.bodyTag # fieldGuid
     holeTypeI <- DataOps.newHole
     rewriteFieldParamTypes paramTypeI $
       prevFields ++ theField : (tagExprI, holeTypeI) : nextFields
     pure $ DataIRef.exprGuid tagExprI
 
-delFieldParam :: MonadA m => Guid -> DataIRef.ExpressionIM m -> Stored m -> DataIRef.ExpressionIM m -> T m Guid
-delFieldParam tagExprGuid paramTypeI lambdaP bodyI =
+delFieldParam ::
+  MonadA m => Guid -> DataIRef.ExpressionIM m -> Guid ->
+  Stored m -> DataIRef.ExpressionM m (Stored m) -> T m Guid
+delFieldParam tagExprGuid paramTypeI paramGuid lambdaP bodyStored =
   rereadFieldParamTypes tagExprGuid paramTypeI $
-  \prevFields _ nextFields ->
+  \prevFields (tagExprI, _) nextFields -> do
+    tagExpr <- DataIRef.readExprBody tagExprI
+    case tagExpr ^? ExprUtil.bodyTag of
+      Just tagG -> deleteFieldParamRef paramGuid tagG bodyStored
+      Nothing -> return ()
     case prevFields ++ nextFields of
       [] -> delLambda
       newFields ->
         dest prevFields nextFields <$
         rewriteFieldParamTypes paramTypeI newFields
   where
+    bodyI = bodyStored ^. Expression.ePayload . Property.pVal
     dest prevFields nextFields =
       DataIRef.exprGuid . head $
       map fst (nextFields ++ reverse prevFields) ++
@@ -1206,18 +1230,19 @@ convertDefinitionParams usedTags expr =
       Expression.BodyRecord (Expression.Record Type fields)
         | (not . null) fields
         , Just fieldParams <- traverse makeFieldParam fields
-        , all ((`notElem` usedTags) . fpTagId) fieldParams -> do
+        , all ((`notElem` usedTags) . fpTagGuid) fieldParams -> do
           recordParams <-
             mkRecordParams paramGuid fieldParams
-            (expr ^. plStored) (paramType ^? plIRef) (body ^? plIRef)
+            (expr ^. plStored) (paramType ^? plIRef)
+            (traverse (^. SugarInfer.plStored) body)
           return ([], recordParams, body)
       _ -> notConventionalParams
   _ -> notConventionalParams
   where
     makeFieldParam (tagExpr, typeExpr) = do
-      fieldTagGuid <- tagExpr ^? Expression.eBody . Expression._BodyLeaf . Expression._Tag
+      fieldTagGuid <- tagExpr ^? ExprUtil.exprBodyTag
       pure FieldParam
-        { fpTagId = fieldTagGuid
+        { fpTagGuid = fieldTagGuid
         , fpTagExpr = tagExpr
         , fpFieldType = typeExpr
         }
@@ -1231,7 +1256,7 @@ mExtractWhere expr = do
   lambda <- apply ^? Expression.applyFunc . Expression.eBody . Expression._BodyLam
   guard $ (lambda ^. Expression.lambdaKind) == Expression.Val
   -- paramType has to be Hole for this to be sugarred to Where
-  lambda ^? Expression.lambdaParamType . Expression.eBody . Expression._BodyLeaf . Expression._Hole
+  lambda ^? Expression.lambdaParamType . Expression.eBody . ExprUtil.bodyHole
   return (apply, lambda)
 
 convertWhereItems ::

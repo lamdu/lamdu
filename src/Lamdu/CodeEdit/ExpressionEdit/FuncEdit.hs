@@ -38,14 +38,14 @@ paramFDConfig = FocusDelegator.Config
   , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Done renaming"]
   }
 
-makeParamNameEdit
-  :: MonadA m
-  => Sugar.Name -> Guid
-  -> ExprGuiM m (WidgetT m)
-makeParamNameEdit name ident =
+makeParamNameEdit ::
+  MonadA m =>
+  Sugar.Name -> Guid -> Widget.Id ->
+  ExprGuiM m (WidgetT m)
+makeParamNameEdit name ident myId =
   ExprGuiM.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
   (ExprGuiM.withFgColor Config.paramOriginColor .
-   ExpressionGui.makeNameEdit name ident) $ WidgetIds.fromGuid ident
+   ExpressionGui.makeNameEdit name ident) myId
 
 jumpToRHS ::
   (MonadA m, MonadA f) =>
@@ -70,7 +70,7 @@ makeParamEdit ::
 makeParamEdit atParamWidgets prevId infoMode rhsJumper param =
   (Lens.mapped . ExpressionGui.egWidget %~ onFinalWidget) . assignCursor $ do
     paramTypeEdit <- ExprGuiM.makeSubexpresion $ param ^. Sugar.fpType
-    paramNameEdit <- makeParamNameEdit name ident
+    paramNameEdit <- makeParamNameEdit name (param ^. Sugar.fpGuid) myId
     let typeWidget = paramTypeEdit ^. ExpressionGui.egWidget
     infoWidget <-
       case (infoMode, mActions) of
@@ -95,8 +95,7 @@ makeParamEdit atParamWidgets prevId infoMode rhsJumper param =
       Nothing -> id
       Just g ->
         ExprGuiM.assignCursor (WidgetIds.fromGuid g) myId
-    myId = WidgetIds.fromGuid ident
-    ident = param ^. Sugar.fpGuid
+    myId = WidgetIds.fromGuid $ param ^. Sugar.fpId
     paramEventMap = mconcat
       [ paramDeleteEventMap Config.delForwardKeys "" id
       , paramDeleteEventMap Config.delBackwardKeys " backwards" (const prevId)
@@ -178,7 +177,7 @@ addPrevIds firstParId depParams params =
   where
     (lastDepParamId, depParamIds) = go firstParId depParams
     (_, paramIds) = go lastDepParamId params
-    fpId param = WidgetIds.fromGuid $ param ^. Sugar.fpGuid
+    fpId param = WidgetIds.fromGuid $ param ^. Sugar.fpId
     go i [] = (i, [])
     go i (fp:fps) = Lens._2 %~ ((i, fp) :) $ go (fpId fp) fps
 
@@ -207,4 +206,4 @@ make hasParens (Sugar.Func depParams params body) =
   where
     allParams = depParams ++ params
     bodyId = WidgetIds.fromGuid $ body ^. Sugar.rGuid
-    lhs = map (WidgetIds.fromGuid . Lens.view Sugar.fpGuid) allParams
+    lhs = map (WidgetIds.fromGuid . Lens.view Sugar.fpId) allParams

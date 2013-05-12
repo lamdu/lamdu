@@ -149,7 +149,7 @@ makeParts name guid content = do
     , wheres
     )
   where
-    lhs = myId : map (WidgetIds.fromGuid . Lens.view Sugar.fpGuid) allParams
+    lhs = myId : map (WidgetIds.fromGuid . Lens.view Sugar.fpId) allParams
     rhs = ("Def Body", body)
     allParams = depParams ++ params
     depParams = Sugar.dDepParams content
