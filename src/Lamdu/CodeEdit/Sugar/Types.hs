@@ -31,8 +31,9 @@ module Lamdu.CodeEdit.Sugar.Types
   , Record(..), rKind, rFields
   , FieldList(..), flItems, flMAddFirstItem
   , GetField(..), gfRecord, gfTag
-  , GetVar(..), gvIdentifier, gvName, gvJumpTo, gvVarType
   , GetVarType(..)
+  , GetVar(..), gvIdentifier, gvName, gvJumpTo, gvVarType
+  , GetParams(..), gpDefGuid, gpDefName, gpJumpTo
   , Func(..), fDepParams, fParams, fBody
   , FuncParamType(..)
   , FuncParam(..), fpName, fpGuid, fpId, fpVarKind, fpHiddenLambdaGuid, fpType, fpMActions
@@ -192,6 +193,7 @@ data HoleResult name m = HoleResult
 data ScopeItem name m
   = ScopeVar (GetVar name m)
   | ScopeTag (TagG name)
+  | ScopeGetParams (GetParams name m)
 
 data HoleResultSeed m
   = ResultSeedExpression (ExprStorePoint m)
@@ -269,14 +271,20 @@ data GetField expr = GetField
   , _gfTag :: expr
   } deriving (Functor, Foldable, Traversable)
 
-data GetVarType name = GetDefinition | GetFieldParameter | GetParameter | GetParametersOfDef (Guid, name)
+data GetVarType = GetDefinition | GetFieldParameter | GetParameter
   deriving (Eq, Ord)
 
 data GetVar name m = GetVar
   { _gvIdentifier :: Guid
   , _gvName :: name
   , _gvJumpTo :: T m Guid
-  , _gvVarType :: GetVarType name
+  , _gvVarType :: GetVarType
+  }
+
+data GetParams name m = GetParams
+  { _gpDefGuid :: Guid
+  , _gpDefName :: name
+  , _gpJumpTo :: T m Guid
   }
 
 data TagG name = TagG
@@ -299,6 +307,7 @@ data ExpressionBody name m expr
   | ExpressionGetField { __eGetField :: GetField expr }
   | ExpressionTag      { __eTag :: TagG name }
   | ExpressionGetVar   { __eGetParam :: GetVar name m }
+  | ExpressionGetParams { __eGetParams :: GetParams name m }
   deriving (Functor, Foldable, Traversable)
 
 wrapParens :: HasParens -> String -> String
@@ -338,6 +347,7 @@ instance Show expr => Show (ExpressionBody name m expr) where
   show ExpressionGetField { __eGetField = _ } = "GetField:TODO"
   show ExpressionTag { __eTag = _ } = "Tag:TODO"
   show ExpressionGetVar {} = "GetVar:TODO"
+  show ExpressionGetParams {} = "GetParams:TODO"
 
 data DefinitionNewType name m = DefinitionNewType
   { dntNewType :: Expression name m
@@ -400,6 +410,7 @@ LensTH.makeLenses ''RecordField
 LensTH.makeLenses ''FieldList
 LensTH.makeLenses ''Record
 LensTH.makeLenses ''GetVar
+LensTH.makeLenses ''GetParams
 LensTH.makeLenses ''GetField
 LensTH.makeLenses ''TagG
 LensTH.makeLenses ''ExpressionBody

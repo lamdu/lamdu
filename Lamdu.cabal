@@ -148,6 +148,7 @@ Executable lamdu
                        Lamdu.CodeEdit.ExpressionEdit.RecordEdit,
                        Lamdu.CodeEdit.ExpressionEdit.GetFieldEdit,
                        Lamdu.CodeEdit.ExpressionEdit.GetVarEdit,
+                       Lamdu.CodeEdit.ExpressionEdit.GetParamsEdit,
                        Lamdu.CodeEdit.ExpressionEdit.SectionEdit,
                        Lamdu.CodeEdit.ExpressionEdit.TagEdit,
                        Lamdu.CodeEdit.FFI,

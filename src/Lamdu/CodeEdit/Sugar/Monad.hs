@@ -35,8 +35,9 @@ data TagParamInfo = TagParamInfo
   , tpiJumpTo :: Guid
   }
 
-newtype RecordParamsInfo = RecordParamsInfo
+data RecordParamsInfo m = RecordParamsInfo
   { rpiFromDefinition :: Guid
+  , rpiJumpTo :: T m Guid
   }
 
 data Context m = Context
@@ -48,7 +49,7 @@ data Context m = Context
   , _scSpecialFunctions :: Anchors.SpecialFunctions (Tag m)
   , _scMReinferRoot :: Maybe (String -> CT m Bool)
   , _scTagParamInfos :: Map Guid TagParamInfo -- tag guids
-  , _scRecordParamsInfos :: Map Guid RecordParamsInfo -- param guids
+  , _scRecordParamsInfos :: Map Guid (RecordParamsInfo m) -- param guids
   }
 LensTH.makeLenses ''Context
 
@@ -82,7 +83,7 @@ run ctx (SugarM action) = runReaderT action ctx
 runPure ::
   MonadA m => Anchors.CodeProps m ->
   Map Guid TagParamInfo ->
-  Map Guid RecordParamsInfo ->
+  Map Guid (RecordParamsInfo m) ->
   SugarM m a -> T m a
 runPure cp tagParamInfos recordParamsInfos act = do
   specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp

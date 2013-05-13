@@ -18,17 +18,18 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.AtomEdit as AtomEdit
+import qualified Lamdu.CodeEdit.ExpressionEdit.CollapsedEdit as CollapsedEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.GetFieldEdit as GetFieldEdit
+import qualified Lamdu.CodeEdit.ExpressionEdit.GetParamsEdit as GetParamsEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.GetVarEdit as GetVarEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.InferredEdit as InferredEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.ListEdit as ListEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.PiEdit as PiEdit
-import qualified Lamdu.CodeEdit.ExpressionEdit.CollapsedEdit as CollapsedEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.RecordEdit as RecordEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.SectionEdit as SectionEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.TagEdit as TagEdit
@@ -117,6 +118,8 @@ makeEditor sExpr =
     notAHole $ TagEdit.make tag
   Sugar.ExpressionGetVar gv ->
     notAHole $ GetVarEdit.make gv
+  Sugar.ExpressionGetParams gp ->
+    notAHole $ GetParamsEdit.make gp
   where
     isAHole hole =
       (fmap . fmap)

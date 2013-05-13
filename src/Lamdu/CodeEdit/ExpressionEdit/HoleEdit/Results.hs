@@ -84,6 +84,7 @@ makeScopeItemGroup (scopeItem, expr) =
     Sugar.Name _ varName = case scopeItem of
       Sugar.ScopeVar getVar -> getVar ^. Sugar.gvName
       Sugar.ScopeTag tagG -> tagG ^. Sugar.tagName
+      Sugar.ScopeGetParams getParams -> getParams ^. Sugar.gpDefName
 
 makeLiteralGroup :: String -> [Group def]
 makeLiteralGroup searchTerm =

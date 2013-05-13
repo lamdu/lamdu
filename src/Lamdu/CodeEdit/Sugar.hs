@@ -22,8 +22,9 @@ module Lamdu.CodeEdit.Sugar
   , ListItem(..), ListActions(..), List(..)
   , RecordField(..), rfMItemActions, rfTag, rfExpr
   , Kind(..), Record(..), FieldList(..), GetField(..)
-  , GetVar(..), gvIdentifier, gvName, gvJumpTo, gvVarType
   , GetVarType(..)
+  , GetVar(..), gvIdentifier, gvName, gvJumpTo, gvVarType
+  , GetParams(..), gpDefGuid, gpDefName, gpJumpTo
   , Func(..)
   , FuncParamType(..)
   , FuncParam(..), fpName, fpGuid, fpId, fpHiddenLambdaGuid, fpType, fpMActions
@@ -607,52 +608,56 @@ makeCollapsed exprI g compact fullExpression =
   where
     expandedGuid = Guid.combine (resultGuid exprI) $ Guid.fromString "polyExpanded"
 
-convertParamGuidHelper ::
-  MonadA m => SugarM.Context m -> Guid ->
-  T m (T m Guid, GetVarType (Maybe String))
-convertParamGuidHelper sugarContext parGuid
-  | Just (SugarM.RecordParamsInfo defGuid) <-
-    Map.lookup parGuid (sugarContext ^. SugarM.scRecordParamsInfos) = do
-      name <- getStoredName defGuid
-      pure (pure defGuid, GetParametersOfDef (defGuid, name))
-  | otherwise =
-    pure (pure parGuid, GetParameter)
+convertParameterRef :: (MonadA m, Typeable1 m) => Guid -> Convertor m
+convertParameterRef parGuid exprI = do
+  recordParamsMap <- (^. SugarM.scRecordParamsInfos) <$> SugarM.readContext
+  case Map.lookup parGuid recordParamsMap of
+    Just (SugarM.RecordParamsInfo defGuid jumpTo) -> do
+      defName <- getStoredNameS defGuid
+      mkExpression exprI $ ExpressionGetParams GetParams
+        { _gpDefGuid = defGuid
+        , _gpDefName = defName
+        , _gpJumpTo = jumpTo
+        }
+    Nothing -> do
+      parName <- getStoredNameS parGuid
+      fmap removeSuccessfulType . mkExpression exprI .
+        ExpressionGetVar $ GetVar
+        { _gvName = parName
+        , _gvIdentifier = parGuid
+        , _gvJumpTo = pure parGuid
+        , _gvVarType = GetParameter
+        }
 
+jumpToDefI ::
+  MonadA m => Anchors.CodeProps m -> DefI (Tag m) -> T m Guid
+jumpToDefI cp defI = IRef.guid defI <$ DataOps.newPane cp defI
 
-convertGetVariable :: (MonadA m, Typeable1 m) => Expression.VariableRef (DefI (Tag m)) -> Convertor m
+convertGetVariable ::
+  (MonadA m, Typeable1 m) =>
+  Expression.VariableRef (DefI (Tag m)) -> Convertor m
 convertGetVariable varRef exprI = do
   isInfix <- SugarM.liftTransaction $ Infix.isInfixVar varRef
-  sugarContext <- SugarM.readContext
-  let guid = DataIRef.variableRefGuid varRef
-  name <- getStoredNameS guid
-  (jumpTo, varType) <-
+  cp <- (^. SugarM.scCodeAnchors) <$> SugarM.readContext
+  getParExpr <-
     case varRef of
-    Expression.ParameterRef parGuid ->
-      SugarM.liftTransaction $ convertParamGuidHelper sugarContext parGuid
-    Expression.DefinitionRef defI ->
-      pure
-      ( IRef.guid defI <$ DataOps.newPane (sugarContext ^. SugarM.scCodeAnchors) defI
-      , GetDefinition
-      )
-  let
-    getVar =
-      GetVar
-      { _gvName = name
-      , _gvIdentifier = guid
-      , _gvJumpTo = jumpTo
-      , _gvVarType = varType
-      }
-  getVarExpr <- removeParamType <$> mkExpression exprI (ExpressionGetVar getVar)
+    Expression.ParameterRef parGuid -> convertParameterRef parGuid exprI
+    Expression.DefinitionRef defI -> do
+      let defGuid = IRef.guid defI
+      defName <- getStoredNameS defGuid
+      mkExpression exprI .
+        ExpressionGetVar $ GetVar
+        { _gvName = defName
+        , _gvIdentifier = defGuid
+        , _gvJumpTo = jumpToDefI cp defI
+        , _gvVarType = GetDefinition
+        }
   if isInfix
     then
       mkExpression exprI .
       ExpressionSection HaveParens $
-      Section Nothing (removeInferredTypes getVarExpr) Nothing
-    else return getVarExpr
-  where
-    removeParamType
-      | Lens.notNullOf Expression._ParameterRef varRef = removeSuccessfulType
-      | otherwise = id
+      Section Nothing (removeInferredTypes getParExpr) Nothing
+    else return getParExpr
 
 mkPaste :: MonadA m => Stored m -> SugarM m (Maybe (T m Guid))
 mkPaste exprP = do
@@ -814,25 +819,35 @@ getTag guid = do
 onScopeElement ::
   MonadA m => SugarM.Context m -> (Guid, Expression.Expression def a) ->
   T m [(ScopeItem MStoredName m, Expression.Expression def ())]
-onScopeElement sugarContext (param, typeExpr) = do
-  (jumpTo, varType) <- convertParamGuidHelper sugarContext param
-  name <- getStoredName param
-  ( ( ScopeVar GetVar
-      { _gvIdentifier = param
-      , _gvName = name
-      , _gvJumpTo = jumpTo
-      , _gvVarType = varType
-      }
-    , getParam
-    ) :)
-    <$> mapM onScopeField
+onScopeElement sugarContext (parGuid, typeExpr) = do
+  scopePar <- mkGetPar
+  ((scopePar, getParam) :) <$>
+    mapM onScopeField
     (typeExpr ^..
      Expression.eBody . Expression._BodyRecord .
      Expression.recordFields . traverse . Lens._1 . ExprUtil.exprBodyTag)
   where
+    mkGetPar =
+      case Map.lookup parGuid recordParamsMap of
+      Just (SugarM.RecordParamsInfo defGuid jumpTo) -> do
+        defName <- getStoredName defGuid
+        pure $ ScopeGetParams GetParams
+          { _gpDefGuid = defGuid
+          , _gpDefName = defName
+          , _gpJumpTo = jumpTo
+          }
+      Nothing -> do
+        parName <- getStoredName parGuid
+        pure $ ScopeVar GetVar
+          { _gvIdentifier = parGuid
+          , _gvName = parName
+          , _gvJumpTo = pure parGuid
+          , _gvVarType = GetParameter
+          }
+    recordParamsMap = sugarContext ^. SugarM.scRecordParamsInfos
     errorJumpTo = error "Jump to on scope item??"
     exprTag = ExprUtil.pureExpression . Expression.BodyLeaf . Expression.Tag
-    getParam = ExprUtil.pureExpression $ ExprUtil.bodyParameterRef # param
+    getParam = ExprUtil.pureExpression $ ExprUtil.bodyParameterRef # parGuid
     onScopeField tGuid = do
       name <- getStoredName tGuid
       pure
@@ -1151,7 +1166,7 @@ convertExpressionPure cp gen =
 data RecordParams m = RecordParams
   { rpTags :: [Guid]
   , rpParamInfos :: Map Guid SugarM.TagParamInfo
-  , rpRecordParamsInfos :: Map Guid SugarM.RecordParamsInfo
+  , rpRecordParamsInfos :: Map Guid (SugarM.RecordParamsInfo m)
   , rpParams :: [FuncParam MStoredName m (ExpressionU m)]
   }
 
@@ -1170,16 +1185,16 @@ emptyRecordParams = RecordParams
   }
 
 mkRecordParams ::
-  (MonadA m, Typeable1 m) => Guid -> Guid -> [FieldParam m] ->
+  (MonadA m, Typeable1 m) => SugarM.RecordParamsInfo m -> Guid -> [FieldParam m] ->
   Maybe (Stored m) -> Maybe (DataIRef.ExpressionIM m) ->
   Maybe (DataIRef.ExpressionM m (Stored m)) ->
   SugarM m (RecordParams m)
-mkRecordParams defGuid paramGuid fieldParams mLambdaP mParamTypeI mBodyStored = do
+mkRecordParams recordParamsInfo paramGuid fieldParams mLambdaP mParamTypeI mBodyStored = do
   params <- traverse mkParam fieldParams
   pure RecordParams
     { rpTags = fpTagGuid <$> fieldParams
     , rpParamInfos = mconcat $ mkParamInfo <$> fieldParams
-    , rpRecordParamsInfos = Map.singleton paramGuid $ SugarM.RecordParamsInfo defGuid
+    , rpRecordParamsInfos = Map.singleton paramGuid recordParamsInfo
     , rpParams = params
     }
   where
@@ -1275,20 +1290,19 @@ delFieldParam tagExprGuid paramTypeI paramGuid lambdaP bodyStored =
 
 convertDefinitionParams ::
   (MonadA m, Typeable1 m) =>
-  Guid -> [Guid] ->
-  ExprMM m ->
+  SugarM.RecordParamsInfo m -> [Guid] -> ExprMM m ->
   SugarM m
   ( [FuncParam MStoredName m (ExpressionU m)]
   , RecordParams m
   , ExprMM m
   )
-convertDefinitionParams defGuid usedTags expr =
+convertDefinitionParams recordParamsInfo usedTags expr =
   case expr ^. Expression.eBody of
   Expression.BodyLam lambda@(Expression.Lambda Val paramGuid paramType body)
     | isPolymorphicFunc expr -> do
       -- Dependent:
       fp <- convertFuncParam lambda expr
-      (depParams, recordParams, deepBody) <- convertDefinitionParams defGuid usedTags body
+      (depParams, recordParams, deepBody) <- convertDefinitionParams recordParamsInfo usedTags body
       return (fp : depParams, recordParams, deepBody)
     | otherwise ->
       -- Independent:
@@ -1298,7 +1312,7 @@ convertDefinitionParams defGuid usedTags expr =
         , Just fieldParams <- traverse makeFieldParam fields
         , all ((`notElem` usedTags) . fpTagGuid) fieldParams -> do
           recordParams <-
-            mkRecordParams defGuid paramGuid fieldParams
+            mkRecordParams recordParamsInfo paramGuid fieldParams
             (expr ^. plStored) (paramType ^? plIRef)
             (traverse (^. SugarInfer.plStored) body)
           return ([], recordParams, body)
@@ -1334,8 +1348,13 @@ convertWhereItems usedTags expr =
   case mExtractWhere expr of
   Nothing -> return ([], expr)
   Just (apply, lambda) -> do
-    let defGuid = lambda ^. Expression.lambdaParamId
-    value <- convertDefinitionContent defGuid usedTags $ apply ^. Expression.applyArg
+    let
+      defGuid = lambda ^. Expression.lambdaParamId
+      recordParamsInfo =
+        SugarM.RecordParamsInfo defGuid $ pure defGuid
+    value <-
+      convertDefinitionContent recordParamsInfo usedTags $
+      apply ^. Expression.applyArg
     let
       mkWIActions topLevelProp bodyStored =
         ListItemActions
@@ -1439,11 +1458,10 @@ assertedGetProp msg _ = error msg
 
 convertDefinitionContent ::
   (MonadA m, Typeable1 m) =>
-  Guid -> [Guid] ->
-  ExprMM m ->
+  SugarM.RecordParamsInfo m -> [Guid] -> ExprMM m ->
   SugarM m (DefinitionContent MStoredName m)
-convertDefinitionContent defGuid usedTags expr = do
-  (depParams, recordParams, funcBody) <- convertDefinitionParams defGuid usedTags expr
+convertDefinitionContent recordParamsInfo usedTags expr = do
+  (depParams, recordParams, funcBody) <- convertDefinitionParams recordParamsInfo usedTags expr
   SugarM.local
     ((SugarM.scTagParamInfos <>~ rpParamInfos recordParams) .
      (SugarM.scRecordParamsInfos <>~ rpRecordParamsInfos recordParams)) $ do
@@ -1544,7 +1562,7 @@ convertDefIExpression cp exprLoaded defI typeI = do
   context <- lift $ SugarM.mkContext cp (Just defI) (Just reinferRoot) inferredLoadedResult
   lift . SugarM.run context $ do
     content <-
-      convertDefinitionContent defGuid [] $
+      convertDefinitionContent recordParamsInfo [] $
       ilrExpr & traverse . SugarInfer.plInferred %~ Just
     return $ DefinitionBodyExpression DefinitionExpression
       { _deContent = content
@@ -1564,6 +1582,7 @@ convertDefIExpression cp exprLoaded defI typeI = do
         return . isJust $ uncurry (SugarInfer.inferMaybe_ loaded)
         initialInferState
 
+    recordParamsInfo = SugarM.RecordParamsInfo defGuid $ jumpToDefI cp defI
     defGuid = IRef.guid defI
     iTypeGen = mkGen 0 3 defGuid
     inferLoadedGen = mkGen 1 3 defGuid
