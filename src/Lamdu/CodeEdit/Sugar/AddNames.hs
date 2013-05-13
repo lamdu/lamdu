@@ -297,22 +297,22 @@ toBody ::
   MonadNaming m =>
   Body (OldName m) (TransM m) (Expression (OldName m) (TransM m)) ->
   m (Body (NewName m) (TransM m) (Expression (NewName m) (TransM m)))
-toBody (ExpressionApply hp x)       = traverseToExpr (ExpressionApply hp) x
-toBody (ExpressionSection hp x)     = traverseToExpr (ExpressionSection hp) x
-toBody (ExpressionList x)           = traverseToExpr ExpressionList x
-toBody (ExpressionRecord x)         = traverseToExpr ExpressionRecord x
-toBody (ExpressionGetField x)       = traverseToExpr ExpressionGetField x
-toBody (ExpressionLiteralInteger x) = pure $ ExpressionLiteralInteger x
-toBody (ExpressionAtom x)           = pure $ ExpressionAtom x
+toBody (BodyApply hp x)       = traverseToExpr (BodyApply hp) x
+toBody (BodySection hp x)     = traverseToExpr (BodySection hp) x
+toBody (BodyList x)           = traverseToExpr BodyList x
+toBody (BodyRecord x)         = traverseToExpr BodyRecord x
+toBody (BodyGetField x)       = traverseToExpr BodyGetField x
+toBody (BodyLiteralInteger x) = pure $ BodyLiteralInteger x
+toBody (BodyAtom x)           = pure $ BodyAtom x
 --
-toBody (ExpressionFunc hp x) = ExpressionFunc hp <$> toFunc x
-toBody (ExpressionPi hp x) = ExpressionPi hp <$> toPi x
-toBody (ExpressionHole x) = ExpressionHole <$> toHole x
-toBody (ExpressionInferred x) = ExpressionInferred <$> toInferred x
-toBody (ExpressionCollapsed x) = ExpressionCollapsed <$> toCollapsed x
-toBody (ExpressionTag x) = ExpressionTag <$> toTag x
-toBody (ExpressionGetVar x) = ExpressionGetVar <$> toGetVar x
-toBody (ExpressionGetParams x) = ExpressionGetParams <$> toGetParams x
+toBody (BodyFunc hp x) = BodyFunc hp <$> toFunc x
+toBody (BodyPi hp x) = BodyPi hp <$> toPi x
+toBody (BodyHole x) = BodyHole <$> toHole x
+toBody (BodyInferred x) = BodyInferred <$> toInferred x
+toBody (BodyCollapsed x) = BodyCollapsed <$> toCollapsed x
+toBody (BodyTag x) = BodyTag <$> toTag x
+toBody (BodyGetVar x) = BodyGetVar <$> toGetVar x
+toBody (BodyGetParams x) = BodyGetParams <$> toGetParams x
 
 toPayload ::
   MonadNaming m => Payload (OldName m) (TransM m) ->

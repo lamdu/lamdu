@@ -90,35 +90,35 @@ makeEditor ::
   ExprGuiM m (IsHole, ExpressionGui m)
 makeEditor sExpr =
   case sExpr ^. Sugar.rBody of
-  Sugar.ExpressionInferred i ->
+  Sugar.BodyInferred i ->
     isAHole (i ^. Sugar.iHole) . InferredEdit.make i $ sExpr ^. Sugar.rGuid
-  Sugar.ExpressionHole hole ->
+  Sugar.BodyHole hole ->
     isAHole hole . HoleEdit.make hole mNextHole $ sExpr ^. Sugar.rGuid
-  Sugar.ExpressionFunc hasParens f ->
+  Sugar.BodyFunc hasParens f ->
     notAHole $ FuncEdit.make hasParens f
-  Sugar.ExpressionCollapsed poly ->
+  Sugar.BodyCollapsed poly ->
     notAHole $ CollapsedEdit.make poly
-  Sugar.ExpressionApply hasParens apply ->
+  Sugar.BodyApply hasParens apply ->
     notAHole $ ApplyEdit.make hasParens apply
-  Sugar.ExpressionPi hasParens funcType ->
+  Sugar.BodyPi hasParens funcType ->
     notAHole $ PiEdit.make hasParens funcType
-  Sugar.ExpressionSection hasParens section ->
+  Sugar.BodySection hasParens section ->
     notAHole $ SectionEdit.make hasParens section
-  Sugar.ExpressionLiteralInteger integer ->
+  Sugar.BodyLiteralInteger integer ->
     notAHole $ LiteralEdit.makeInt integer
-  Sugar.ExpressionAtom atom ->
+  Sugar.BodyAtom atom ->
     notAHole $ AtomEdit.make atom
-  Sugar.ExpressionList list ->
+  Sugar.BodyList list ->
     notAHole $ ListEdit.make list
-  Sugar.ExpressionRecord record ->
+  Sugar.BodyRecord record ->
     notAHole $ RecordEdit.make record
-  Sugar.ExpressionGetField getField ->
+  Sugar.BodyGetField getField ->
     notAHole $ GetFieldEdit.make getField
-  Sugar.ExpressionTag tag ->
+  Sugar.BodyTag tag ->
     notAHole $ TagEdit.make tag
-  Sugar.ExpressionGetVar gv ->
+  Sugar.BodyGetVar gv ->
     notAHole $ GetVarEdit.make gv
-  Sugar.ExpressionGetParams gp ->
+  Sugar.BodyGetParams gp ->
     notAHole $ GetParamsEdit.make gp
   where
     isAHole hole =

@@ -253,7 +253,7 @@ mkFuncParamActions param lambdaProp body =
       return
       Expression
       { _rGuid = Guid.augment "EXAMPLE" param
-      , _rBody = ExpressionAtom "NotImplemented"
+      , _rBody = BodyAtom "NotImplemented"
       , _rPayload = Payload [] Nothing Nothing
       , _rHiddenGuids = []
       , _rPresugaredExpression = Nothing <$ ExprUtil.pureHole
@@ -311,7 +311,7 @@ convertFunc lambda exprI = do
   let
     innerFunc =
       case sBody ^. rBody of
-      ExpressionFunc _ func -> func
+      BodyFunc _ func -> func
       _ -> Func [] [] sBody
     mNextParam = listToMaybe $ fAllParams innerFunc
     newParam = maybe id deleteToNextParam mNextParam param
@@ -319,12 +319,12 @@ convertFunc lambda exprI = do
       | isPolymorphicFunc exprI = innerFunc & fDepParams %~ (newParam :)
       | otherwise = Func [] (newParam : fAllParams innerFunc) $ innerFunc ^. fBody
     maybeEta = do
-      (_, Expression.Apply func arg) <- sBody ^? rBody . _ExpressionApply
-      argVar <- arg ^? rBody . _ExpressionGetVar
+      (_, Expression.Apply func arg) <- sBody ^? rBody . _BodyApply
+      argVar <- arg ^? rBody . _BodyGetVar
       guard $ argVar ^. gvIdentifier == param ^. fpGuid
-      funcVar <- func ^? rBody . _ExpressionGetVar
+      funcVar <- func ^? rBody . _BodyGetVar
       pure (func ^. rGuid, funcVar)
-  fullExpr <- mkExpression exprI $ ExpressionFunc DontHaveParens newFunc
+  fullExpr <- mkExpression exprI $ BodyFunc DontHaveParens newFunc
   case maybeEta of
     Nothing -> pure fullExpr
     Just (funcGuid, funcVar) ->
@@ -339,7 +339,7 @@ convertFunc lambda exprI = do
 convertPi :: (MonadA m, Typeable1 m) => Expression.Lambda (ExprMM m) -> Convertor m
 convertPi lambda exprI = do
   (param, sBody) <- convertLambda lambda exprI
-  mkExpression exprI $ ExpressionPi DontHaveParens
+  mkExpression exprI $ BodyPi DontHaveParens
     Pi
     { pParam = Lens.over fpType addApplyChildParens param
     , pResultType = removeSuccessfulType sBody
@@ -349,18 +349,18 @@ addParens :: ExpressionP name m pl -> ExpressionP name m pl
 addParens =
   Lens.over rBody addParensBody
   where
-    addParensBody (ExpressionInferred (Inferred val hole)) =
-      ExpressionInferred $ Inferred (addParens val) hole
-    addParensBody (ExpressionCollapsed (Collapsed g compact full)) =
-      ExpressionCollapsed . Collapsed g compact $
+    addParensBody (BodyInferred (Inferred val hole)) =
+      BodyInferred $ Inferred (addParens val) hole
+    addParensBody (BodyCollapsed (Collapsed g compact full)) =
+      BodyCollapsed . Collapsed g compact $
       addParens full
     addParensBody x = Lens.set eHasParens HaveParens x
 
 addApplyChildParens :: ExpressionP name m pl -> ExpressionP name m pl
 addApplyChildParens x =
   case x ^. rBody of
-  ExpressionApply{} -> x
-  ExpressionCollapsed{} -> x
+  BodyApply{} -> x
+  BodyCollapsed{} -> x
   _ -> addParens x
 
 isPolymorphicFunc :: ExprMM m -> Bool
@@ -415,13 +415,13 @@ convertApplyNormal ::
 convertApplyNormal funcI argS exprI = do
   funcS <- convertExpressionI funcI
   case funcS ^. rBody of
-    ExpressionSection _ section ->
+    BodySection _ section ->
       applyOnSection section funcS funcI argS exprI
     _ -> convertApplyPrefix funcS funcI sugaredArg exprI
   where
     sugaredArg =
       fromMaybe argS $ do
-        [field] <- argS ^? rBody . _ExpressionRecord . rFields . flItems
+        [field] <- argS ^? rBody . _BodyRecord . rFields . flItems
         pure $ field ^. rfExpr
 
 setListGuid :: Guid -> ExpressionU m -> ExpressionU m
@@ -447,7 +447,7 @@ convertApplyEmptyList app@(Expression.Apply funcI _) specialFunctions exprI
     funcI
   = Just . (rHiddenGuids <>~ (app ^.. Lens.traversed . subExpressionGuids)) .
     setListGuid consistentGuid <$>
-    (mkExpression exprI . ExpressionList)
+    (mkExpression exprI . BodyList)
     (List [] (mkListActions <$> resultStored exprI))
   | otherwise = pure Nothing
   where
@@ -468,7 +468,7 @@ convertApplyList ::
 convertApplyList (Expression.Apply funcI argI) argS specialFunctions exprI =
   case (funcI ^? eApply, argS ^. rBody) of
   ( Just (Expression.Apply funcFuncI funcArgI)
-    , ExpressionList (List innerValues innerListMActions)
+    , BodyList (List innerValues innerListMActions)
     )
     -- exprI@(funcI@(funcFuncI funcArgI) argI)
     | Lens.anyOf
@@ -507,7 +507,7 @@ convertApplyList (Expression.Apply funcI argI) argS specialFunctions exprI =
               , replaceNil = replaceNil innerListActions
               }
         setListGuid (argS ^. rGuid) <$>
-          (mkExpression exprI . ExpressionList)
+          (mkExpression exprI . BodyList)
           (List (listItem : innerValues) mListActions)
   _ -> pure Nothing
 
@@ -527,7 +527,7 @@ setNextHole dest =
   where
     subHoles =
       Lens.folding subExpressions .
-      Lens.filtered (Lens.notNullOf (rBody . _ExpressionHole))
+      Lens.filtered (Lens.notNullOf (rBody . _BodyHole))
 
 applyOnSection ::
   (MonadA m, Typeable1 m) => Section (ExpressionU m) ->
@@ -537,25 +537,25 @@ applyOnSection (Section Nothing op Nothing) _ funcI argRef exprI
   | isPolymorphicFunc funcI = do
     newOpRef <-
       convertApplyPrefix op funcI argRef exprI
-    mkExpression exprI . ExpressionSection DontHaveParens $
+    mkExpression exprI . BodySection DontHaveParens $
       Section Nothing (removeSuccessfulType newOpRef) Nothing
   | otherwise =
-    mkExpression exprI . ExpressionSection DontHaveParens $
+    mkExpression exprI . BodySection DontHaveParens $
     Section (Just (addApplyChildParens argRef)) op Nothing
 applyOnSection (Section (Just left) op Nothing) _ _ argRef exprI =
-  mkExpression exprI . ExpressionSection DontHaveParens $
+  mkExpression exprI . BodySection DontHaveParens $
   on (Section . Just) (setNextHole right) left op (Just right)
   where
     -- TODO: Handle left/right-associativity
-    isSameOp (ExpressionCollapsed p0) (ExpressionCollapsed p1) =
+    isSameOp (BodyCollapsed p0) (BodyCollapsed p1) =
       on isSameVar (^. pCompact) p0 p1
-    isSameOp (ExpressionGetVar v0) (ExpressionGetVar v1) =
+    isSameOp (BodyGetVar v0) (BodyGetVar v1) =
       isSameVar v0 v1
     isSameOp _ _ = False
     isSameVar = on (==) (^. gvIdentifier)
     right =
       case argRef ^. rBody of
-      ExpressionSection _ (Section (Just _) rightOp (Just _))
+      BodySection _ (Section (Just _) rightOp (Just _))
         | on isSameOp (Lens.view rBody) op rightOp -> argRef
       _ -> addApplyChildParens argRef
 applyOnSection _ funcRef funcI argRef exprI = convertApplyPrefix funcRef funcI argRef exprI
@@ -581,14 +581,14 @@ convertApplyPrefix funcRef funcI argRef applyI = do
       funcRef
     makeFullApply = makeApply newFuncRef
     makeApply f =
-      mkExpression applyI . ExpressionApply DontHaveParens $
+      mkExpression applyI . BodyApply DontHaveParens $
       Expression.Apply f newArgRef
   if isPolymorphicFunc funcI
     then
       case funcRef ^. rBody of
-      ExpressionCollapsed (Collapsed g compact full) ->
+      BodyCollapsed (Collapsed g compact full) ->
         makeCollapsed applyI g compact =<< makeApply full
-      ExpressionGetVar var ->
+      BodyGetVar var ->
         makeCollapsed applyI (resultGuid funcI) var =<< makeFullApply
       _ -> makeFullApply
     else
@@ -599,7 +599,7 @@ makeCollapsed ::
   ExprMM m ->
   Guid -> GetVar MStoredName m -> ExpressionU m -> SugarM m (ExpressionU m)
 makeCollapsed exprI g compact fullExpression =
-  mkExpression exprI $ ExpressionCollapsed Collapsed
+  mkExpression exprI $ BodyCollapsed Collapsed
     { _pFuncGuid = g
     , _pCompact = compact
     , _pFullExpression =
@@ -614,7 +614,7 @@ convertParameterRef parGuid exprI = do
   case Map.lookup parGuid recordParamsMap of
     Just (SugarM.RecordParamsInfo defGuid jumpTo) -> do
       defName <- getStoredNameS defGuid
-      mkExpression exprI $ ExpressionGetParams GetParams
+      mkExpression exprI $ BodyGetParams GetParams
         { _gpDefGuid = defGuid
         , _gpDefName = defName
         , _gpJumpTo = jumpTo
@@ -622,7 +622,7 @@ convertParameterRef parGuid exprI = do
     Nothing -> do
       parName <- getStoredNameS parGuid
       fmap removeSuccessfulType . mkExpression exprI .
-        ExpressionGetVar $ GetVar
+        BodyGetVar $ GetVar
         { _gvName = parName
         , _gvIdentifier = parGuid
         , _gvJumpTo = pure parGuid
@@ -646,7 +646,7 @@ convertGetVariable varRef exprI = do
       let defGuid = IRef.guid defI
       defName <- getStoredNameS defGuid
       mkExpression exprI .
-        ExpressionGetVar $ GetVar
+        BodyGetVar $ GetVar
         { _gvName = defName
         , _gvIdentifier = defGuid
         , _gvJumpTo = jumpToDefI cp defI
@@ -655,7 +655,7 @@ convertGetVariable varRef exprI = do
   if isInfix
     then
       mkExpression exprI .
-      ExpressionSection HaveParens $
+      BodySection HaveParens $
       Section Nothing (removeInferredTypes getParExpr) Nothing
     else return getParExpr
 
@@ -903,11 +903,11 @@ convertTypeCheckedHoleH sugarContext mPaste iwc exprI =
     inferredHole x = do
       hole <- mkHole
       mkExpression exprI .
-        ExpressionInferred . (`Inferred` hole) =<<
+        BodyInferred . (`Inferred` hole) =<<
         (convertExpressionI . fmap toPayloadMM .
          SugarInfer.resultFromPure (mkGen 2 3 eGuid)) x
     plainHole =
-      mkExpression exprI . ExpressionHole =<< mkHole
+      mkExpression exprI . BodyHole =<< mkHole
 
 chooseHoleType ::
   [DataIRef.ExpressionM m f] -> hole -> (DataIRef.ExpressionM m f -> hole) -> hole
@@ -960,11 +960,11 @@ convertHole exprI =
       ctx <- SugarM.readContext
       mPaste <- fmap join . traverse mkPaste $ resultStored exprI
       convertTypeCheckedHoleH ctx mPaste inferred exprI
-    convertUntypedHole = mkExpression exprI . ExpressionHole $ Hole Nothing
+    convertUntypedHole = mkExpression exprI . BodyHole $ Hole Nothing
 
 convertLiteralInteger :: (MonadA m, Typeable1 m) => Integer -> Convertor m
 convertLiteralInteger i exprI =
-  mkExpression exprI . ExpressionLiteralInteger $
+  mkExpression exprI . BodyLiteralInteger $
   LiteralInteger
   { liValue = i
   , liSetValue = setValue . Property.value <$> resultStored exprI
@@ -976,11 +976,11 @@ convertLiteralInteger i exprI =
 convertTag :: (MonadA m, Typeable1 m) => Guid -> Convertor m
 convertTag tag exprI = do
   name <- getStoredNameS tag
-  mkExpression exprI . ExpressionTag $ TagG tag name
+  mkExpression exprI . BodyTag $ TagG tag name
 
 convertAtom :: (MonadA m, Typeable1 m) => String -> Convertor m
 convertAtom str exprI =
-  mkExpression exprI $ ExpressionAtom str
+  mkExpression exprI $ BodyAtom str
 
 sideChannel ::
   Monad m =>
@@ -1068,7 +1068,7 @@ convertRecord ::
 convertRecord (Expression.Record k fields) exprI = do
   sFields <- mapM (convertField k (resultMIRef exprI) defaultGuid) fields
   fmap removeSuccessfulType .
-    mkExpression exprI $ ExpressionRecord
+    mkExpression exprI $ BodyRecord
     Record
     { _rKind = k
     , _rFields =
@@ -1118,11 +1118,11 @@ convertGetField (Expression.GetField recExpr tagExpr) exprI = do
   case mVar of
     Just var ->
       fmap removeSuccessfulType .
-      mkExpression exprI $ ExpressionGetVar var
+      mkExpression exprI $ BodyGetVar var
     Nothing -> do
       recExprS <- convertExpressionI recExpr
       tagExprS <- convertExpressionI tagExpr
-      mkExpression exprI $ ExpressionGetField
+      mkExpression exprI $ BodyGetField
         GetField
         { _gfRecord = recExprS
         , _gfTag = removeSuccessfulType tagExprS

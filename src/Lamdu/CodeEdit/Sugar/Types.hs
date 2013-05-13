@@ -12,11 +12,11 @@ module Lamdu.CodeEdit.Sugar.Types
     , giveAsArg, callWithArg, callWithNextArg
     , setToHole, replaceWithNewHole, cut, giveAsArgToOperator
   , Body(..), eHasParens
-    , _ExpressionPi, _ExpressionApply, _ExpressionSection
-    , _ExpressionFunc, _ExpressionGetVar, _ExpressionHole
-    , _ExpressionInferred, _ExpressionCollapsed
-    , _ExpressionLiteralInteger, _ExpressionAtom
-    , _ExpressionList, _ExpressionRecord, _ExpressionTag
+    , _BodyPi, _BodyApply, _BodySection
+    , _BodyFunc, _BodyGetVar, _BodyHole
+    , _BodyInferred, _BodyCollapsed
+    , _BodyLiteralInteger, _BodyAtom
+    , _BodyList, _BodyRecord, _BodyTag
   , Payload(..), plInferredTypes, plActions, plNextHole
   , ExpressionP(..)
     , rGuid, rBody, rPayload, rHiddenGuids, rPresugaredExpression
@@ -293,21 +293,21 @@ data TagG name = TagG
   } deriving (Functor, Foldable, Traversable)
 
 data Body name m expr
-  = ExpressionApply   { _eHasParens :: HasParens, __eApply :: Expression.Apply expr }
-  | ExpressionSection { _eHasParens :: HasParens, __eSection :: Section expr }
-  | ExpressionFunc    { _eHasParens :: HasParens, __eFunc :: Func name m expr }
-  | ExpressionPi      { _eHasParens :: HasParens, __ePi :: Pi name m expr }
-  | ExpressionHole    { __eHole :: Hole name m }
-  | ExpressionInferred { __eInferred :: Inferred name m expr }
-  | ExpressionCollapsed { __eCollapsed :: Collapsed name m expr }
-  | ExpressionLiteralInteger { __eLit :: LiteralInteger m }
-  | ExpressionAtom     { __eAtom :: String }
-  | ExpressionList     { __eList :: List m expr }
-  | ExpressionRecord   { __eRecord :: Record m expr }
-  | ExpressionGetField { __eGetField :: GetField expr }
-  | ExpressionTag      { __eTag :: TagG name }
-  | ExpressionGetVar   { __eGetParam :: GetVar name m }
-  | ExpressionGetParams { __eGetParams :: GetParams name m }
+  = BodyApply   { _eHasParens :: HasParens, __eApply :: Expression.Apply expr }
+  | BodySection { _eHasParens :: HasParens, __eSection :: Section expr }
+  | BodyFunc    { _eHasParens :: HasParens, __eFunc :: Func name m expr }
+  | BodyPi      { _eHasParens :: HasParens, __ePi :: Pi name m expr }
+  | BodyHole    { __eHole :: Hole name m }
+  | BodyInferred { __eInferred :: Inferred name m expr }
+  | BodyCollapsed { __eCollapsed :: Collapsed name m expr }
+  | BodyLiteralInteger { __eLit :: LiteralInteger m }
+  | BodyAtom     { __eAtom :: String }
+  | BodyList     { __eList :: List m expr }
+  | BodyRecord   { __eRecord :: Record m expr }
+  | BodyGetField { __eGetField :: GetField expr }
+  | BodyTag      { __eTag :: TagG name }
+  | BodyGetVar   { __eGetParam :: GetVar name m }
+  | BodyGetParams { __eGetParams :: GetParams name m }
   deriving (Functor, Foldable, Traversable)
 
 wrapParens :: HasParens -> String -> String
@@ -319,35 +319,35 @@ instance Show expr => Show (FuncParam name m expr) where
     concat ["(", show (_fpGuid fp), ":", show (_fpType fp), ")"]
 
 instance Show expr => Show (Body name m expr) where
-  show ExpressionApply   { _eHasParens = hasParens, __eApply = Expression.Apply func arg } =
+  show BodyApply   { _eHasParens = hasParens, __eApply = Expression.Apply func arg } =
     wrapParens hasParens $ show func ++ " " ++ show arg
-  show ExpressionSection { _eHasParens = hasParens, __eSection = Section mleft op mright } =
+  show BodySection { _eHasParens = hasParens, __eSection = Section mleft op mright } =
     wrapParens hasParens $ maybe "" show mleft ++ " " ++ show op ++ maybe "" show mright
-  show ExpressionFunc    { _eHasParens = hasParens, __eFunc = Func depParams params body } =
+  show BodyFunc    { _eHasParens = hasParens, __eFunc = Func depParams params body } =
     wrapParens hasParens $ concat
     ["\\", parenify (showWords depParams), showWords params, " -> ", show body]
     where
       parenify "" = ""
       parenify xs = concat ["{", xs, "}"]
       showWords = unwords . map show
-  show ExpressionPi      { _eHasParens = hasParens, __ePi = Pi paramType resultType } =
+  show BodyPi      { _eHasParens = hasParens, __ePi = Pi paramType resultType } =
     wrapParens hasParens $ "_:" ++ show paramType ++ " -> " ++ show resultType
-  show ExpressionHole {} = "Hole"
-  show ExpressionInferred {} = "Inferred"
-  show ExpressionCollapsed {} = "Collapsed"
-  show ExpressionLiteralInteger { __eLit = LiteralInteger i _ } = show i
-  show ExpressionAtom { __eAtom = atom } = atom
-  show ExpressionList { __eList = List items _ } =
+  show BodyHole {} = "Hole"
+  show BodyInferred {} = "Inferred"
+  show BodyCollapsed {} = "Collapsed"
+  show BodyLiteralInteger { __eLit = LiteralInteger i _ } = show i
+  show BodyAtom { __eAtom = atom } = atom
+  show BodyList { __eList = List items _ } =
     concat
     [ "["
     , List.intercalate ", " $ map (show . liExpr) items
     , "]"
     ]
-  show ExpressionRecord { __eRecord = _ } = "Record:TODO"
-  show ExpressionGetField { __eGetField = _ } = "GetField:TODO"
-  show ExpressionTag { __eTag = _ } = "Tag:TODO"
-  show ExpressionGetVar {} = "GetVar:TODO"
-  show ExpressionGetParams {} = "GetParams:TODO"
+  show BodyRecord { __eRecord = _ } = "Record:TODO"
+  show BodyGetField { __eGetField = _ } = "GetField:TODO"
+  show BodyTag { __eTag = _ } = "Tag:TODO"
+  show BodyGetVar {} = "GetVar:TODO"
+  show BodyGetParams {} = "GetParams:TODO"
 
 data DefinitionNewType name m = DefinitionNewType
   { dntNewType :: Expression name m
