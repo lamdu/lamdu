@@ -1,8 +1,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
 module Lamdu.CodeEdit.Sugar.Monad
-  ( Context(..), TagParamInfo(..)
+  ( Context(..), TagParamInfo(..), RecordParamsInfo(..)
   , scMDefI, scInferState, scMContextHash, scHoleInferState
-  , scCodeAnchors, scSpecialFunctions, scMReinferRoot, scTagParamInfos
+  , scCodeAnchors, scSpecialFunctions, scMReinferRoot, scTagParamInfos, scRecordParamsInfos
   , mkContext
   , SugarM(..), run, runPure
   , readContext, liftTransaction, local
@@ -35,6 +35,10 @@ data TagParamInfo = TagParamInfo
   , tpiJumpTo :: Guid
   }
 
+newtype RecordParamsInfo = RecordParamsInfo
+  { rpiFromDefinition :: Guid
+  }
+
 data Context m = Context
   { _scMDefI :: Maybe (DefI (Tag m))
   , _scInferState :: Infer.Context (DefI (Tag m))
@@ -43,7 +47,8 @@ data Context m = Context
   , _scCodeAnchors :: Anchors.CodeProps m
   , _scSpecialFunctions :: Anchors.SpecialFunctions (Tag m)
   , _scMReinferRoot :: Maybe (String -> CT m Bool)
-  , _scTagParamInfos :: Map Guid TagParamInfo
+  , _scTagParamInfos :: Map Guid TagParamInfo -- tag guids
+  , _scRecordParamsInfos :: Map Guid RecordParamsInfo -- param guids
   }
 LensTH.makeLenses ''Context
 
@@ -68,13 +73,18 @@ mkContext cp mDefI mReinferRoot iResult = do
     , _scSpecialFunctions = specialFunctions
     , _scMReinferRoot = mReinferRoot
     , _scTagParamInfos = mempty
+    , _scRecordParamsInfos = mempty
     }
 
 run :: MonadA m => Context m -> SugarM m a -> T m a
 run ctx (SugarM action) = runReaderT action ctx
 
-runPure :: MonadA m => Anchors.CodeProps m -> Map Guid TagParamInfo -> SugarM m a -> T m a
-runPure cp tagParamInfos act = do
+runPure ::
+  MonadA m => Anchors.CodeProps m ->
+  Map Guid TagParamInfo ->
+  Map Guid RecordParamsInfo ->
+  SugarM m a -> T m a
+runPure cp tagParamInfos recordParamsInfos act = do
   specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
   run Context
     { _scMDefI = Nothing
@@ -85,6 +95,7 @@ runPure cp tagParamInfos act = do
     , _scSpecialFunctions = specialFunctions
     , _scMReinferRoot = Nothing
     , _scTagParamInfos = tagParamInfos
+    , _scRecordParamsInfos = recordParamsInfos
     } act
 
 readContext :: MonadA m => SugarM m (Context m)
