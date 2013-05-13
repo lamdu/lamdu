@@ -97,8 +97,9 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
 
+type PayloadM m = SugarInfer.Payload (Tag m)
 type PayloadMM m =
-  SugarInfer.Payload (Tag m) (Maybe (InferredWC (Tag m))) (Maybe (Stored m))
+  PayloadM m (Maybe (InferredWC (Tag m))) (Maybe (Stored m))
 type ExprMM m = DataIRef.ExpressionM m (PayloadMM m)
 type Convertor m = ExprMM m -> SugarM m (ExpressionU m)
 
@@ -126,7 +127,7 @@ guardReinferSuccess sugarContext key act = do
 
 mkCallWithArg ::
   MonadA m => SugarM.Context m ->
-  DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i (Stored m)) ->
+  DataIRef.ExpressionM m (PayloadM m i (Stored m)) ->
   PrefixAction m -> CT m (Maybe (T m Guid))
 mkCallWithArg sugarContext exprS prefixAction =
   guardReinferSuccess sugarContext "callWithArg" $ do
@@ -135,7 +136,7 @@ mkCallWithArg sugarContext exprS prefixAction =
 
 mkActions ::
   MonadA m => SugarM.Context m ->
-  DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i (Stored m)) -> Actions m
+  DataIRef.ExpressionM m (PayloadM m i (Stored m)) -> Actions m
 mkActions sugarContext exprS =
   Actions
   { _giveAsArg = giveAsArgPrefix
@@ -674,15 +675,15 @@ convertHoleResult sugarContext gen res =
   (sugarContext ^. SugarM.scCodeAnchors)
   (sugarContext ^. SugarM.scRecordParams) .
   convertExpressionI .
-  (Lens.mapped . SugarInfer.plInferred %~ Just) .
-  (Lens.mapped . SugarInfer.plStored .~ Nothing) $
+  (traverse . SugarInfer.plInferred %~ Just) .
+  (traverse . SugarInfer.plStored .~ Nothing) $
   SugarInfer.resultFromInferred gen res
 
 makeHoleResult ::
   (Typeable1 m, MonadA m) => SugarM.Context m ->
   Infer.Inferred (DefI (Tag m)) ->
   Expression.Expression (DefI (Tag m))
-  (SugarInfer.Payload (Tag m) inferred (Stored m)) ->
+  (PayloadM m inferred (Stored m)) ->
   HoleResultSeed m -> CT m (Maybe (HoleResult NameHint m))
 makeHoleResult sugarContext inferred exprI seed =
   fmap (mkHoleResult <$>) . lift .
@@ -848,7 +849,7 @@ chooseHoleType inferredVals plain inferred =
 
 pickResult ::
   MonadA m =>
-  DataIRef.ExpressionM m (SugarInfer.Payload (Tag m) i (Stored m)) ->
+  DataIRef.ExpressionM m (PayloadM m i (Stored m)) ->
   DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), Maybe (StorePoint (Tag m))) ->
   T m (Maybe Guid)
 pickResult exprS =
@@ -872,7 +873,7 @@ uninferredHoles e =
       uninferredHoles func
   Expression.BodyLam (Expression.Lambda lamKind _ paramType result) ->
     uninferredHoles result ++ do
-      guard $ lamKind == Expression.Type
+      guard $ lamKind == Type
       uninferredHoles paramType
   body -> Foldable.concatMap uninferredHoles body
 
@@ -1060,8 +1061,8 @@ convertExpressionI ::
 convertExpressionI ee =
   ($ ee) $
   case ee ^. Expression.eBody of
-  Expression.BodyLam x@(Expression.Lambda Expression.Val _ _ _) -> convertFunc x
-  Expression.BodyLam x@(Expression.Lambda Expression.Type _ _ _) -> convertPi x
+  Expression.BodyLam x@(Expression.Lambda Val _ _ _) -> convertFunc x
+  Expression.BodyLam x@(Expression.Lambda Type _ _ _) -> convertPi x
   Expression.BodyApply x -> convertApply x
   Expression.BodyRecord x -> convertRecord x
   Expression.BodyGetField x -> convertGetField x
@@ -1218,7 +1219,7 @@ convertDefinitionParams ::
   )
 convertDefinitionParams usedTags expr =
   case expr ^. Expression.eBody of
-  Expression.BodyLam lambda@(Expression.Lambda Expression.Val paramGuid paramType body)
+  Expression.BodyLam lambda@(Expression.Lambda Val paramGuid paramType body)
     | isPolymorphicFunc expr -> do
       -- Dependent:
       fp <- convertFuncParam lambda expr
@@ -1254,7 +1255,7 @@ mExtractWhere ::
 mExtractWhere expr = do
   apply <- expr ^? Expression.eBody . Expression._BodyApply
   lambda <- apply ^? Expression.applyFunc . Expression.eBody . Expression._BodyLam
-  guard $ (lambda ^. Expression.lambdaKind) == Expression.Val
+  guard $ (lambda ^. Expression.lambdaKind) == Val
   -- paramType has to be Hole for this to be sugarred to Where
   lambda ^? Expression.lambdaParamType . Expression.eBody . ExprUtil.bodyHole
   return (apply, lambda)
@@ -1291,21 +1292,69 @@ convertWhereItems usedTags expr =
     (nextItems, whereBody) <- convertWhereItems usedTags $ lambda ^. Expression.lambdaResult
     return (item : nextItems, whereBody)
 
+newField ::
+  MonadA m => T m (DataIRef.ExpressionIM m, DataIRef.ExpressionIM m)
+newField = do
+  tag <- Transaction.newKey
+  newTagI <- DataIRef.newExprBody (ExprUtil.bodyTag # tag)
+  holeI <- DataOps.newHole
+  return (newTagI, holeI)
+
+makeFirstRecordParam :: MonadA m => Stored m -> T m Guid
+makeFirstRecordParam prop = do
+  field <- newField
+  recordTypeI <-
+    DataIRef.newExprBody . Expression.BodyRecord $
+    Expression.Record Type [field]
+  (_, newLambdaI) <-
+    DataIRef.newLambda recordTypeI $ Property.value prop
+  Property.set prop newLambdaI
+  return . DataIRef.exprGuid $ fst field
+
+addFirstFieldParam :: MonadA m => DataIRef.ExpressionIM m -> T m Guid
+addFirstFieldParam recordI = do
+  recordBody <- DataIRef.readExprBody recordI
+  DataIRef.exprGuid <$>
+    case recordBody of
+    Expression.BodyRecord Expression.Record
+      { Expression._recordKind = Type
+      , Expression._recordFields = fields
+      } -> do
+        field <- newField
+        DataIRef.writeExprBody recordI $
+          Expression.BodyRecord Expression.Record
+          { Expression._recordKind = Type
+          , Expression._recordFields = field : fields
+          }
+        pure $ fst field
+    _ -> pure recordI
+
 addStoredParam :: MonadA m => ExprMM m -> T m Guid
 addStoredParam
   Expression.Expression
-  { Expression._ePayload =
-    SugarInfer.Payload { SugarInfer._plStored = Just prop } } =
-  fmap fst $ DataOps.lambdaWrap prop
+  { Expression._eBody = body
+  , Expression._ePayload = SugarInfer.Payload { SugarInfer._plStored = Just prop }
+  } =
+    case body of
+    Expression.BodyLam Expression.Lambda
+      { Expression._lambdaKind = Val
+      , Expression._lambdaParamType =
+        Expression.Expression
+        { Expression._eBody =
+          Expression.BodyRecord Expression.Record
+          { Expression._recordKind = Type
+          , Expression._recordFields = fields
+          }
+        , Expression._ePayload =
+          SugarInfer.Payload { SugarInfer._plStored = Just recordProp }
+        }
+      } | (not . null) fields ->
+        addFirstFieldParam $ Property.value recordProp
+    _ -> makeFirstRecordParam prop
 addStoredParam
-  Expression.Expression
-  { Expression._eBody =
-    Expression.BodyLam
-    Expression.Lambda
-    { Expression._lambdaKind = Expression.Val
-    , Expression._lambdaResult = body
-    }
-  } = addStoredParam body
+  (Expression.Expression
+   (Expression.BodyLam
+    (Expression.Lambda Val _ _ body)) _) = addStoredParam body
 addStoredParam _ =
   error $
   "Non-stored can only be lambda added by implicit " ++
@@ -1424,7 +1473,7 @@ convertDefIExpression cp exprLoaded defI typeI = do
   lift . SugarM.run context $ do
     content <-
       convertDefinitionContent [] $
-      ilrExpr & Lens.mapped . SugarInfer.plInferred %~ Just
+      ilrExpr & traverse . SugarInfer.plInferred %~ Just
     return $ DefinitionBodyExpression DefinitionExpression
       { _deContent = content
       , _deMNewType = mNewType
