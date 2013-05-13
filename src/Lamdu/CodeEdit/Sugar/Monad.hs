@@ -2,7 +2,7 @@
 module Lamdu.CodeEdit.Sugar.Monad
   ( Context(..), ParamInfo(..)
   , scMDefI, scInferState, scMContextHash, scHoleInferState
-  , scCodeAnchors, scSpecialFunctions, scMReinferRoot, scRecordParams
+  , scCodeAnchors, scSpecialFunctions, scMReinferRoot, scTagParamInfos
   , mkContext
   , SugarM(..), run, runPure
   , readContext, liftTransaction, local
@@ -43,7 +43,7 @@ data Context m = Context
   , _scCodeAnchors :: Anchors.CodeProps m
   , _scSpecialFunctions :: Anchors.SpecialFunctions (Tag m)
   , _scMReinferRoot :: Maybe (String -> CT m Bool)
-  , _scRecordParams :: Map Guid ParamInfo
+  , _scTagParamInfos :: Map Guid ParamInfo
   }
 LensTH.makeLenses ''Context
 
@@ -67,14 +67,14 @@ mkContext cp mDefI mReinferRoot iResult = do
     , _scCodeAnchors = cp
     , _scSpecialFunctions = specialFunctions
     , _scMReinferRoot = mReinferRoot
-    , _scRecordParams = mempty
+    , _scTagParamInfos = mempty
     }
 
 run :: MonadA m => Context m -> SugarM m a -> T m a
 run ctx (SugarM action) = runReaderT action ctx
 
 runPure :: MonadA m => Anchors.CodeProps m -> Map Guid ParamInfo -> SugarM m a -> T m a
-runPure cp recordParams act = do
+runPure cp tagParamInfos act = do
   specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
   run Context
     { _scMDefI = Nothing
@@ -84,7 +84,7 @@ runPure cp recordParams act = do
     , _scCodeAnchors = cp
     , _scSpecialFunctions = specialFunctions
     , _scMReinferRoot = Nothing
-    , _scRecordParams = recordParams
+    , _scTagParamInfos = tagParamInfos
     } act
 
 readContext :: MonadA m => SugarM m (Context m)

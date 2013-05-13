@@ -705,7 +705,7 @@ convertHoleResult ::
 convertHoleResult sugarContext gen res =
   SugarM.runPure
   (sugarContext ^. SugarM.scCodeAnchors)
-  (sugarContext ^. SugarM.scRecordParams) .
+  (sugarContext ^. SugarM.scTagParamInfos) .
   convertExpressionI .
   (traverse . SugarInfer.plInferred %~ Just) .
   (traverse . SugarInfer.plStored .~ Nothing) $
@@ -1067,7 +1067,7 @@ convertGetField ::
   ExprMM m ->
   SugarM m (ExpressionU m)
 convertGetField (Expression.GetField recExpr tagExpr) exprI = do
-  recordParams <- (^. SugarM.scRecordParams) <$> SugarM.readContext
+  recordParams <- (^. SugarM.scTagParamInfos) <$> SugarM.readContext
   let
     mkGetVar (tag, paramInfo) = do
       name <- getStoredNameS tag
@@ -1424,7 +1424,7 @@ convertDefinitionContent ::
   SugarM m (DefinitionContent MStoredName m)
 convertDefinitionContent usedTags expr = do
   (depParams, recordParams, funcBody) <- convertDefinitionParams usedTags expr
-  SugarM.local (SugarM.scRecordParams <>~ rpParamInfos recordParams) $ do
+  SugarM.local (SugarM.scTagParamInfos <>~ rpParamInfos recordParams) $ do
     (whereItems, whereBody) <-
       convertWhereItems (usedTags ++ rpTags recordParams) funcBody
     bodyS <- convertExpressionI whereBody
