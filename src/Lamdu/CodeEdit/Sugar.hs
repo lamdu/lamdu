@@ -1074,14 +1074,14 @@ convertGetField (Expression.GetField recExpr tagExpr) exprI = do
       pure GetVar
         { _gvName = name
         , _gvIdentifier = tag
-        , _gvJumpTo = pure $ SugarM.piJumpTo paramInfo
+        , _gvJumpTo = pure $ SugarM.tpiJumpTo paramInfo
         , _gvVarType = GetFieldParameter
         }
   mVar <- traverse mkGetVar $ do
     tag <- tagExpr ^? ExprUtil.exprBodyTag
     paramInfo <- Map.lookup tag recordParams
     param <- recExpr ^? Expression.eBody . ExprUtil.bodyParameterRef
-    guard $ param == SugarM.piFromParameters paramInfo
+    guard $ param == SugarM.tpiFromParameters paramInfo
     return (tag, paramInfo)
   case mVar of
     Just var ->
@@ -1133,7 +1133,7 @@ convertExpressionPure cp gen =
 
 data RecordParams m = RecordParams
   { rpTags :: [Guid]
-  , rpParamInfos :: Map Guid SugarM.ParamInfo
+  , rpParamInfos :: Map Guid SugarM.TagParamInfo
   , rpParams :: [FuncParam MStoredName m (ExpressionU m)]
   }
 
@@ -1164,7 +1164,7 @@ mkRecordParams paramGuid fieldParams mLambdaP mParamTypeI mBodyStored = do
     }
   where
     mkParamInfo fp =
-      Map.singleton (fpTagGuid fp) . SugarM.ParamInfo paramGuid $
+      Map.singleton (fpTagGuid fp) . SugarM.TagParamInfo paramGuid $
       fpTagExpr fp ^. plGuid
     mkParam fp = do
       typeS <- convertExpressionI $ fpFieldType fp

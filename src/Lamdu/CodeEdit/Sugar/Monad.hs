@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
 module Lamdu.CodeEdit.Sugar.Monad
-  ( Context(..), ParamInfo(..)
+  ( Context(..), TagParamInfo(..)
   , scMDefI, scInferState, scMContextHash, scHoleInferState
   , scCodeAnchors, scSpecialFunctions, scMReinferRoot, scTagParamInfos
   , mkContext
@@ -30,9 +30,9 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression.Infer as Infer
 
-data ParamInfo = ParamInfo
-  { piFromParameters :: Guid
-  , piJumpTo :: Guid
+data TagParamInfo = TagParamInfo
+  { tpiFromParameters :: Guid
+  , tpiJumpTo :: Guid
   }
 
 data Context m = Context
@@ -43,7 +43,7 @@ data Context m = Context
   , _scCodeAnchors :: Anchors.CodeProps m
   , _scSpecialFunctions :: Anchors.SpecialFunctions (Tag m)
   , _scMReinferRoot :: Maybe (String -> CT m Bool)
-  , _scTagParamInfos :: Map Guid ParamInfo
+  , _scTagParamInfos :: Map Guid TagParamInfo
   }
 LensTH.makeLenses ''Context
 
@@ -73,7 +73,7 @@ mkContext cp mDefI mReinferRoot iResult = do
 run :: MonadA m => Context m -> SugarM m a -> T m a
 run ctx (SugarM action) = runReaderT action ctx
 
-runPure :: MonadA m => Anchors.CodeProps m -> Map Guid ParamInfo -> SugarM m a -> T m a
+runPure :: MonadA m => Anchors.CodeProps m -> Map Guid TagParamInfo -> SugarM m a -> T m a
 runPure cp tagParamInfos act = do
   specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
   run Context
