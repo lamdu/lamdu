@@ -293,26 +293,26 @@ traverseToExpr ::
   m b
 traverseToExpr cons body = cons <$> traverse toExpression body
 
-toExpressionBody ::
+toBody ::
   MonadNaming m =>
-  ExpressionBody (OldName m) (TransM m) (Expression (OldName m) (TransM m)) ->
-  m (ExpressionBody (NewName m) (TransM m) (Expression (NewName m) (TransM m)))
-toExpressionBody (ExpressionApply hp x)       = traverseToExpr (ExpressionApply hp) x
-toExpressionBody (ExpressionSection hp x)     = traverseToExpr (ExpressionSection hp) x
-toExpressionBody (ExpressionList x)           = traverseToExpr ExpressionList x
-toExpressionBody (ExpressionRecord x)         = traverseToExpr ExpressionRecord x
-toExpressionBody (ExpressionGetField x)       = traverseToExpr ExpressionGetField x
-toExpressionBody (ExpressionLiteralInteger x) = pure $ ExpressionLiteralInteger x
-toExpressionBody (ExpressionAtom x)           = pure $ ExpressionAtom x
+  Body (OldName m) (TransM m) (Expression (OldName m) (TransM m)) ->
+  m (Body (NewName m) (TransM m) (Expression (NewName m) (TransM m)))
+toBody (ExpressionApply hp x)       = traverseToExpr (ExpressionApply hp) x
+toBody (ExpressionSection hp x)     = traverseToExpr (ExpressionSection hp) x
+toBody (ExpressionList x)           = traverseToExpr ExpressionList x
+toBody (ExpressionRecord x)         = traverseToExpr ExpressionRecord x
+toBody (ExpressionGetField x)       = traverseToExpr ExpressionGetField x
+toBody (ExpressionLiteralInteger x) = pure $ ExpressionLiteralInteger x
+toBody (ExpressionAtom x)           = pure $ ExpressionAtom x
 --
-toExpressionBody (ExpressionFunc hp x) = ExpressionFunc hp <$> toFunc x
-toExpressionBody (ExpressionPi hp x) = ExpressionPi hp <$> toPi x
-toExpressionBody (ExpressionHole x) = ExpressionHole <$> toHole x
-toExpressionBody (ExpressionInferred x) = ExpressionInferred <$> toInferred x
-toExpressionBody (ExpressionCollapsed x) = ExpressionCollapsed <$> toCollapsed x
-toExpressionBody (ExpressionTag x) = ExpressionTag <$> toTag x
-toExpressionBody (ExpressionGetVar x) = ExpressionGetVar <$> toGetVar x
-toExpressionBody (ExpressionGetParams x) = ExpressionGetParams <$> toGetParams x
+toBody (ExpressionFunc hp x) = ExpressionFunc hp <$> toFunc x
+toBody (ExpressionPi hp x) = ExpressionPi hp <$> toPi x
+toBody (ExpressionHole x) = ExpressionHole <$> toHole x
+toBody (ExpressionInferred x) = ExpressionInferred <$> toInferred x
+toBody (ExpressionCollapsed x) = ExpressionCollapsed <$> toCollapsed x
+toBody (ExpressionTag x) = ExpressionTag <$> toTag x
+toBody (ExpressionGetVar x) = ExpressionGetVar <$> toGetVar x
+toBody (ExpressionGetParams x) = ExpressionGetParams <$> toGetParams x
 
 toPayload ::
   MonadNaming m => Payload (OldName m) (TransM m) ->
@@ -329,9 +329,9 @@ toExpression ::
   MonadNaming m => Expression (OldName m) (TransM m) ->
   m (Expression (NewName m) (TransM m))
 toExpression expr@Expression{..} = do
-  body <- toExpressionBody _rExpressionBody
+  body <- toBody _rBody
   pl <- toPayload _rPayload
-  pure expr { _rExpressionBody = body, _rPayload = pl }
+  pure expr { _rBody = body, _rPayload = pl }
 
 toFuncParamActions ::
   MonadNaming m => FuncParamActions (OldName m) (TransM m) ->

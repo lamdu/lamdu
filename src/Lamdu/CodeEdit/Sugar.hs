@@ -10,14 +10,14 @@ module Lamdu.CodeEdit.Sugar
   , Actions(..)
     , giveAsArg, callWithArg, callWithNextArg
     , setToHole, replaceWithNewHole, cut, giveAsArgToOperator
-  , ExpressionBody(..)
+  , Body(..)
   , Payload(..), plInferredTypes, plActions, plNextHole
   , ExpressionP(..)
-    , rGuid, rExpressionBody, rPayload, rHiddenGuids, rPresugaredExpression
+    , rGuid, rBody, rPayload, rHiddenGuids, rPresugaredExpression
   , NameSource(..), Name(..), MStoredName
   , DefinitionN
   , Expression, ExpressionN
-  , ExpressionBodyN
+  , BodyN
   , WhereItem(..)
   , ListItem(..), ListActions(..), List(..)
   , RecordField(..), rfMItemActions, rfTag, rfExpr
@@ -178,7 +178,7 @@ toPayloadMM =
 
 mkExpression ::
   (Typeable1 m, MonadA m) => ExprMM m ->
-  ExpressionBodyU m -> SugarM m (ExpressionU m)
+  BodyU m -> SugarM m (ExpressionU m)
 mkExpression exprI expr = do
   sugarContext <- SugarM.readContext
   inferredTypes <-
@@ -189,7 +189,7 @@ mkExpression exprI expr = do
   return
     Expression
     { _rGuid = resultGuid exprI
-    , _rExpressionBody = expr
+    , _rBody = expr
     , _rPayload = Payload
       { _plInferredTypes = inferredTypes
       , _plActions =
@@ -253,7 +253,7 @@ mkFuncParamActions param lambdaProp body =
       return
       Expression
       { _rGuid = Guid.augment "EXAMPLE" param
-      , _rExpressionBody = ExpressionAtom "NotImplemented"
+      , _rBody = ExpressionAtom "NotImplemented"
       , _rPayload = Payload [] Nothing Nothing
       , _rHiddenGuids = []
       , _rPresugaredExpression = Nothing <$ ExprUtil.pureHole
@@ -310,7 +310,7 @@ convertFunc lambda exprI = do
   (param, sBody) <- convertLambda lambda exprI
   let
     innerFunc =
-      case sBody ^. rExpressionBody of
+      case sBody ^. rBody of
       ExpressionFunc _ func -> func
       _ -> Func [] [] sBody
     mNextParam = listToMaybe $ fAllParams innerFunc
@@ -319,10 +319,10 @@ convertFunc lambda exprI = do
       | isPolymorphicFunc exprI = innerFunc & fDepParams %~ (newParam :)
       | otherwise = Func [] (newParam : fAllParams innerFunc) $ innerFunc ^. fBody
     maybeEta = do
-      (_, Expression.Apply func arg) <- sBody ^? rExpressionBody . _ExpressionApply
-      argVar <- arg ^? rExpressionBody . _ExpressionGetVar
+      (_, Expression.Apply func arg) <- sBody ^? rBody . _ExpressionApply
+      argVar <- arg ^? rBody . _ExpressionGetVar
       guard $ argVar ^. gvIdentifier == param ^. fpGuid
-      funcVar <- func ^? rExpressionBody . _ExpressionGetVar
+      funcVar <- func ^? rBody . _ExpressionGetVar
       pure (func ^. rGuid, funcVar)
   fullExpr <- mkExpression exprI $ ExpressionFunc DontHaveParens newFunc
   case maybeEta of
@@ -347,7 +347,7 @@ convertPi lambda exprI = do
 
 addParens :: ExpressionP name m pl -> ExpressionP name m pl
 addParens =
-  Lens.over rExpressionBody addParensBody
+  Lens.over rBody addParensBody
   where
     addParensBody (ExpressionInferred (Inferred val hole)) =
       ExpressionInferred $ Inferred (addParens val) hole
@@ -358,7 +358,7 @@ addParens =
 
 addApplyChildParens :: ExpressionP name m pl -> ExpressionP name m pl
 addApplyChildParens x =
-  case x ^. rExpressionBody of
+  case x ^. rBody of
   ExpressionApply{} -> x
   ExpressionCollapsed{} -> x
   _ -> addParens x
@@ -414,14 +414,14 @@ convertApplyNormal ::
   ExprMM m -> ExpressionU m -> Convertor m
 convertApplyNormal funcI argS exprI = do
   funcS <- convertExpressionI funcI
-  case funcS ^. rExpressionBody of
+  case funcS ^. rBody of
     ExpressionSection _ section ->
       applyOnSection section funcS funcI argS exprI
     _ -> convertApplyPrefix funcS funcI sugaredArg exprI
   where
     sugaredArg =
       fromMaybe argS $ do
-        [field] <- argS ^? rExpressionBody . _ExpressionRecord . rFields . flItems
+        [field] <- argS ^? rBody . _ExpressionRecord . rFields . flItems
         pure $ field ^. rfExpr
 
 setListGuid :: Guid -> ExpressionU m -> ExpressionU m
@@ -466,7 +466,7 @@ convertApplyList ::
   ExprMM m ->
   SugarM m (Maybe (ExpressionU m))
 convertApplyList (Expression.Apply funcI argI) argS specialFunctions exprI =
-  case (funcI ^? eApply, argS ^. rExpressionBody) of
+  case (funcI ^? eApply, argS ^. rBody) of
   ( Just (Expression.Apply funcFuncI funcArgI)
     , ExpressionList (List innerValues innerListMActions)
     )
@@ -515,7 +515,7 @@ eApply :: Lens.Traversal' (Expression.Expression def a) (Expression.Apply (Expre
 eApply = Expression.eBody . Expression._BodyApply
 
 subExpressions :: ExpressionU m -> [ExpressionU m]
-subExpressions x = x : x ^.. rExpressionBody . Lens.traversed . Lens.folding subExpressions
+subExpressions x = x : x ^.. rBody . Lens.traversed . Lens.folding subExpressions
 
 setNextHole :: MonadA m => ExpressionU m -> ExpressionU m -> ExpressionU m
 setNextHole dest =
@@ -527,7 +527,7 @@ setNextHole dest =
   where
     subHoles =
       Lens.folding subExpressions .
-      Lens.filtered (Lens.notNullOf (rExpressionBody . _ExpressionHole))
+      Lens.filtered (Lens.notNullOf (rBody . _ExpressionHole))
 
 applyOnSection ::
   (MonadA m, Typeable1 m) => Section (ExpressionU m) ->
@@ -554,9 +554,9 @@ applyOnSection (Section (Just left) op Nothing) _ _ argRef exprI =
     isSameOp _ _ = False
     isSameVar = on (==) (^. gvIdentifier)
     right =
-      case argRef ^. rExpressionBody of
+      case argRef ^. rBody of
       ExpressionSection _ (Section (Just _) rightOp (Just _))
-        | on isSameOp (Lens.view rExpressionBody) op rightOp -> argRef
+        | on isSameOp (Lens.view rBody) op rightOp -> argRef
       _ -> addApplyChildParens argRef
 applyOnSection _ funcRef funcI argRef exprI = convertApplyPrefix funcRef funcI argRef exprI
 
@@ -585,7 +585,7 @@ convertApplyPrefix funcRef funcI argRef applyI = do
       Expression.Apply f newArgRef
   if isPolymorphicFunc funcI
     then
-      case funcRef ^. rExpressionBody of
+      case funcRef ^. rBody of
       ExpressionCollapsed (Collapsed g compact full) ->
         makeCollapsed applyI g compact =<< makeApply full
       ExpressionGetVar var ->

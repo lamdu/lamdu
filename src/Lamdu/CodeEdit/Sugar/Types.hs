@@ -11,7 +11,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , Actions(..)
     , giveAsArg, callWithArg, callWithNextArg
     , setToHole, replaceWithNewHole, cut, giveAsArgToOperator
-  , ExpressionBody(..), eHasParens
+  , Body(..), eHasParens
     , _ExpressionPi, _ExpressionApply, _ExpressionSection
     , _ExpressionFunc, _ExpressionGetVar, _ExpressionHole
     , _ExpressionInferred, _ExpressionCollapsed
@@ -19,11 +19,11 @@ module Lamdu.CodeEdit.Sugar.Types
     , _ExpressionList, _ExpressionRecord, _ExpressionTag
   , Payload(..), plInferredTypes, plActions, plNextHole
   , ExpressionP(..)
-    , rGuid, rExpressionBody, rPayload, rHiddenGuids, rPresugaredExpression
+    , rGuid, rBody, rPayload, rHiddenGuids, rPresugaredExpression
   , NameSource(..), Name(..), MStoredName
   , DefinitionN, DefinitionU
   , Expression, ExpressionN, ExpressionU
-  , ExpressionBodyN, ExpressionBodyU
+  , BodyN, BodyU
   , WhereItem(..)
   , ListItem(..), ListActions(..), List(..)
   , RecordField(..), rfMItemActions, rfTag, rfExpr
@@ -113,7 +113,7 @@ type ExprStorePoint m = DataIRef.ExpressionM m (Maybe (StorePoint (Tag m)))
 
 data ExpressionP name m pl = Expression
   { _rGuid :: Guid
-  , _rExpressionBody :: ExpressionBody name m (ExpressionP name m pl)
+  , _rBody :: Body name m (ExpressionP name m pl)
   , _rPayload :: pl
   , -- Guids from data model expression which were sugared out into
     -- this sugar expression.
@@ -135,8 +135,8 @@ type Expression name m = ExpressionP name m (Payload name m)
 type ExpressionN m = Expression Name m
 type ExpressionU m = Expression MStoredName m
 
-type ExpressionBodyN m = ExpressionBody Name m (ExpressionN m)
-type ExpressionBodyU m = ExpressionBody MStoredName m (ExpressionU m)
+type BodyN m = Body Name m (ExpressionN m)
+type BodyU m = Body MStoredName m (ExpressionU m)
 
 data ListItemActions m = ListItemActions
   { _itemAddNext :: T m Guid
@@ -292,7 +292,7 @@ data TagG name = TagG
   , _tagName :: name
   } deriving (Functor, Foldable, Traversable)
 
-data ExpressionBody name m expr
+data Body name m expr
   = ExpressionApply   { _eHasParens :: HasParens, __eApply :: Expression.Apply expr }
   | ExpressionSection { _eHasParens :: HasParens, __eSection :: Section expr }
   | ExpressionFunc    { _eHasParens :: HasParens, __eFunc :: Func name m expr }
@@ -318,7 +318,7 @@ instance Show expr => Show (FuncParam name m expr) where
   show fp =
     concat ["(", show (_fpGuid fp), ":", show (_fpType fp), ")"]
 
-instance Show expr => Show (ExpressionBody name m expr) where
+instance Show expr => Show (Body name m expr) where
   show ExpressionApply   { _eHasParens = hasParens, __eApply = Expression.Apply func arg } =
     wrapParens hasParens $ show func ++ " " ++ show arg
   show ExpressionSection { _eHasParens = hasParens, __eSection = Section mleft op mright } =
@@ -399,7 +399,7 @@ type DefinitionN = Definition Name
 type DefinitionU = Definition MStoredName
 
 LensTH.makePrisms ''ScopeItem
-LensTH.makePrisms ''ExpressionBody
+LensTH.makePrisms ''Body
 LensTH.makeLenses ''Definition
 LensTH.makeLenses ''DefinitionExpression
 LensTH.makeLenses ''Inferred
@@ -413,7 +413,7 @@ LensTH.makeLenses ''GetVar
 LensTH.makeLenses ''GetParams
 LensTH.makeLenses ''GetField
 LensTH.makeLenses ''TagG
-LensTH.makeLenses ''ExpressionBody
+LensTH.makeLenses ''Body
 LensTH.makeLenses ''ListItemActions
 LensTH.makeLenses ''FuncParamActions
 LensTH.makeLenses ''Payload

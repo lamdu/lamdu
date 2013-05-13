@@ -89,7 +89,7 @@ makeEditor ::
   MonadA m => Sugar.ExpressionN m -> Widget.Id ->
   ExprGuiM m (IsHole, ExpressionGui m)
 makeEditor sExpr =
-  case sExpr ^. Sugar.rExpressionBody of
+  case sExpr ^. Sugar.rBody of
   Sugar.ExpressionInferred i ->
     isAHole (i ^. Sugar.iHole) . InferredEdit.make i $ sExpr ^. Sugar.rGuid
   Sugar.ExpressionHole hole ->
