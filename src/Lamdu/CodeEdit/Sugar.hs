@@ -771,18 +771,17 @@ getGlobal defI = do
     guid = IRef.guid defI
     errorJumpTo = error "Jump to on scope item??"
 
-getField ::
+getTag ::
   MonadA m => Guid ->
   T m (ScopeItem MStoredName m, DataIRef.ExpressionM m ())
-getField guid = do
+getTag guid = do
   name <- getStoredName guid
   pure
     ( ScopeTag TagG
       { _tagGuid = guid
       , _tagName = name
       }
-    , ExprUtil.pureExpression . Expression.BodyLeaf $
-      Expression.Tag guid
+    , ExprUtil._PureTagExpr # guid
     )
 
 onScopeElement ::
@@ -842,8 +841,8 @@ convertTypeCheckedHoleH sugarContext mPaste iwc exprI =
       globals <-
         SugarM.liftTransaction . Transaction.getP . Anchors.globals $
         sugarContext ^. SugarM.scCodeAnchors
-      fields <-
-        SugarM.liftTransaction . Transaction.getP . Anchors.fields $
+      tags <-
+        SugarM.liftTransaction . Transaction.getP . Anchors.tags $
         sugarContext ^. SugarM.scCodeAnchors
       pure HoleActions
         { _holePaste = mPaste
@@ -852,7 +851,7 @@ convertTypeCheckedHoleH sugarContext mPaste iwc exprI =
           concat <$> sequence
           [ (fmap concat . mapM onScopeElement . Map.toList . Infer.iScope) inferred
           , mapM getGlobal globals
-          , mapM getField fields
+          , mapM getTag tags
           ]
         , _holeInferExprType = inferExprType
         , _holeResult = makeHoleResult sugarContext inferred exprS

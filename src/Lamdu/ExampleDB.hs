@@ -197,7 +197,7 @@ initDB db =
         writeCodeAnchor A.preJumps []
         writeCodeAnchor A.preCursor paneWId
         writeCodeAnchor A.postCursor paneWId
-        writeCodeAnchor A.fields []
+        writeCodeAnchor A.tags []
       -- Prevent undo into the invalid empty revision
       newVer <- Branch.curVersion master
       Version.preventUndo newVer

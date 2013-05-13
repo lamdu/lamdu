@@ -41,7 +41,7 @@ data Code f t = Code
   , preJumps :: f [Widget.Id]
   , preCursor :: f Widget.Id
   , postCursor :: f Widget.Id
-  , fields :: f [Guid]
+  , tags :: f [Guid]
   }
 onCode :: Binary t => (forall a. Binary a => f a -> g a) -> Code f t -> Code g t
 onCode f (Code x0 x1 x2 x3 x4 x5 x6 x7 x8) =

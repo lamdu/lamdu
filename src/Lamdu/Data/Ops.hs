@@ -193,5 +193,5 @@ newClipboard codeProps expr = do
 makeNewTag :: MonadA m => Anchors.CodeProps m -> T m Guid
 makeNewTag codeProps = do
   field <- Transaction.newKey
-  modP (Anchors.fields codeProps) (field :)
+  modP (Anchors.tags codeProps) (field :)
   return field
