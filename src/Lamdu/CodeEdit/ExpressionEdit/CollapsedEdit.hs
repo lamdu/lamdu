@@ -38,7 +38,7 @@ make poly =
          Config.polymorphicExpandedBGColor bgId) .
         ExprGuiM.makeSubexpresion $ poly ^. Sugar.pFullExpression
       , cMakeFocusedCompact =
-        (colorize bgId . Sugar.gvVarType) (poly ^. Sugar.pCompact) $
+        colorize bgId (poly ^. Sugar.pCompact . Sugar.gvVarType) $
         GetVarEdit.makeUncoloredView (poly ^. Sugar.pCompact) funcId
       }
       where

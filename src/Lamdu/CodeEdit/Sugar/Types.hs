@@ -31,7 +31,8 @@ module Lamdu.CodeEdit.Sugar.Types
   , Record(..), rKind, rFields
   , FieldList(..), flItems, flMAddFirstItem
   , GetField(..), gfRecord, gfTag
-  , GetVar(..), VarType(..)
+  , GetVar(..), gvIdentifier, gvName, gvJumpTo, gvVarType
+  , VarType(..)
   , Func(..), fDepParams, fParams, fBody
   , FuncParam(..), fpName, fpGuid, fpId, fpHiddenLambdaGuid, fpType, fpMActions
   , TagG(..), tagName, tagGuid
@@ -264,10 +265,10 @@ data VarType = GetParameter | GetDefinition
   deriving (Eq, Ord)
 
 data GetVar name m = GetVar
-  { gvIdentifier :: Guid
-  , gvName :: name
-  , gvJumpTo :: T m Guid
-  , gvVarType :: VarType
+  { _gvIdentifier :: Guid
+  , _gvName :: name
+  , _gvJumpTo :: T m Guid
+  , _gvVarType :: VarType
   }
 
 data TagG name = TagG
@@ -390,6 +391,7 @@ LensTH.makeLenses ''FuncParam
 LensTH.makeLenses ''RecordField
 LensTH.makeLenses ''FieldList
 LensTH.makeLenses ''Record
+LensTH.makeLenses ''GetVar
 LensTH.makeLenses ''GetField
 LensTH.makeLenses ''TagG
 LensTH.makeLenses ''ExpressionBody

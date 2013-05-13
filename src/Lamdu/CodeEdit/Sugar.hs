@@ -22,7 +22,8 @@ module Lamdu.CodeEdit.Sugar
   , ListItem(..), ListActions(..), List(..)
   , RecordField(..), rfMItemActions, rfTag, rfExpr
   , Kind(..), Record(..), FieldList(..), GetField(..)
-  , GetVar(..), VarType(..)
+  , GetVar(..), gvIdentifier, gvName, gvJumpTo, gvVarType
+  , VarType(..)
   , Func(..)
   , FuncParam(..), fpName, fpGuid, fpId, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
@@ -307,7 +308,7 @@ convertFunc lambda exprI = do
     maybeEta = do
       (_, Expression.Apply func arg) <- sBody ^? rExpressionBody . _ExpressionApply
       argVar <- arg ^? rExpressionBody . _ExpressionGetVar
-      guard $ gvIdentifier argVar == param ^. fpGuid
+      guard $ argVar ^. gvIdentifier == param ^. fpGuid
       funcVar <- func ^? rExpressionBody . _ExpressionGetVar
       pure (func ^. rGuid, funcVar)
   fullExpr <- mkExpression exprI $ ExpressionFunc DontHaveParens newFunc
@@ -538,7 +539,7 @@ applyOnSection (Section (Just left) op Nothing) _ _ argRef exprI =
     isSameOp (ExpressionGetVar v0) (ExpressionGetVar v1) =
       isSameVar v0 v1
     isSameOp _ _ = False
-    isSameVar = on (==) gvIdentifier
+    isSameVar = on (==) (^. gvIdentifier)
     right =
       case argRef ^. rExpressionBody of
       ExpressionSection _ (Section (Just _) rightOp (Just _))
@@ -601,14 +602,14 @@ convertGetVariable varRef exprI = do
   let
     getVar =
       GetVar
-      { gvName = Nothing
-      , gvIdentifier = DataIRef.variableRefGuid varRef
-      , gvJumpTo =
+      { _gvName = Nothing
+      , _gvIdentifier = DataIRef.variableRefGuid varRef
+      , _gvJumpTo =
           case varRef of
           Expression.ParameterRef guid -> pure guid
           Expression.DefinitionRef defI ->
             IRef.guid defI <$ DataOps.newPane (sugarContext ^. SugarM.scCodeAnchors) defI
-      , gvVarType =
+      , _gvVarType =
           case varRef of
           Expression.ParameterRef _ -> GetParameter
           Expression.DefinitionRef _ -> GetDefinition
@@ -742,10 +743,10 @@ memoBy k act = Cache.memoS (const act) k
 getGlobal :: DefI (Tag m) -> (ScopeItem NameHint m, DataIRef.ExpressionM m ())
 getGlobal defI =
   ( ScopeVar GetVar
-    { gvIdentifier = IRef.guid defI
-    , gvName = Nothing
-    , gvJumpTo = errorJumpTo
-    , gvVarType = GetDefinition
+    { _gvIdentifier = IRef.guid defI
+    , _gvName = Nothing
+    , _gvJumpTo = errorJumpTo
+    , _gvVarType = GetDefinition
     }
   , ExprUtil.pureExpression $ ExprUtil.bodyDefinitionRef # defI
   )
@@ -767,10 +768,10 @@ onScopeElement ::
   [(ScopeItem NameHint m, Expression.Expression def ())]
 onScopeElement (param, typeExpr) =
   ( ScopeVar GetVar
-    { gvIdentifier = param
-    , gvName = Nothing
-    , gvJumpTo = errorJumpTo
-    , gvVarType = GetParameter
+    { _gvIdentifier = param
+    , _gvName = Nothing
+    , _gvJumpTo = errorJumpTo
+    , _gvVarType = GetParameter
     }
   , getParam
   ) :
@@ -784,10 +785,10 @@ onScopeElement (param, typeExpr) =
     getParam = ExprUtil.pureExpression $ ExprUtil.bodyParameterRef # param
     onScopeField tGuid =
       ( ScopeVar GetVar
-        { gvIdentifier = tGuid
-        , gvName = Nothing
-        , gvJumpTo = errorJumpTo
-        , gvVarType = GetParameter
+        { _gvIdentifier = tGuid
+        , _gvName = Nothing
+        , _gvJumpTo = errorJumpTo
+        , _gvVarType = GetParameter
         }
       , ExprUtil.pureExpression . Expression.BodyGetField $
         Expression.GetField getParam (exprTag tGuid)
@@ -1037,10 +1038,10 @@ convertGetField (Expression.GetField recExpr tagExpr) exprI = do
       guard $ param == SugarM.piFromParameters paramInfo
       return
         GetVar
-        { gvName = Nothing
-        , gvIdentifier = tag
-        , gvJumpTo = pure $ SugarM.piJumpTo paramInfo
-        , gvVarType = GetParameter
+        { _gvName = Nothing
+        , _gvIdentifier = tag
+        , _gvJumpTo = pure $ SugarM.piJumpTo paramInfo
+        , _gvVarType = GetParameter
         }
   case mVar of
     Just var ->

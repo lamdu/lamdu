@@ -278,12 +278,11 @@ toTag (TagG guid oldName) = do
 toGetVar ::
   MonadNaming m => GetVar (OldName m) (TransM m) ->
   m (GetVar (NewName m) (TransM m))
-toGetVar getVar@GetVar{..} = do
-  name <-
-    case gvVarType of
-    GetParameter -> opGetParamName gvIdentifier gvName
-    GetDefinition -> opDefName gvIdentifier gvName
-  pure getVar { gvName = name }
+toGetVar getVar@GetVar{..} =
+  flip gvName getVar $
+  case _gvVarType of
+  GetParameter -> opGetParamName _gvIdentifier
+  GetDefinition -> opDefName _gvIdentifier
 
 traverseToExpr ::
   (MonadNaming m, Traversable t) =>

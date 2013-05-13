@@ -30,7 +30,7 @@ makeUncoloredView getVar myId =
   fmap (ExpressionGui.fromValueWidget . ExpressionGui.nameSrcTint nameSrc) .
   ExprGuiM.widgetEnv $ BWidgets.makeFocusableTextView name myId
   where
-    Sugar.Name nameSrc name = Sugar.gvName getVar
+    Sugar.Name nameSrc name = getVar ^. Sugar.gvName
 
 colorOf :: Sugar.VarType -> Draw.Color
 colorOf Sugar.GetDefinition = Config.definitionColor
@@ -42,7 +42,7 @@ makeView
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
 makeView getParam =
-  (ExprGuiM.withFgColor . colorOf . Sugar.gvVarType) getParam .
+  (ExprGuiM.withFgColor . colorOf) (getParam ^. Sugar.gvVarType) .
   makeUncoloredView getParam
 
 make
@@ -51,8 +51,8 @@ make
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
 make getVar myId = do
-  case Sugar.gvVarType getVar of
-    Sugar.GetParameter -> ExprGuiM.markVariablesAsUsed [Sugar.gvIdentifier getVar]
+  case getVar ^. Sugar.gvVarType of
+    Sugar.GetParameter -> ExprGuiM.markVariablesAsUsed [getVar ^. Sugar.gvIdentifier]
     Sugar.GetDefinition -> return ()
   cp <- ExprGuiM.readCodeAnchors
   let
@@ -60,6 +60,6 @@ make getVar myId = do
       Widget.keysEventMapMovesCursor Config.jumpToDefinitionKeys
       (E.Doc ["Navigation", "Jump to definition"]) $ do
         DataOps.savePreJumpPosition cp myId
-        WidgetIds.fromGuid <$> Sugar.gvJumpTo getVar
+        WidgetIds.fromGuid <$> getVar ^. Sugar.gvJumpTo
   makeView getVar myId &
     Lens.over (Lens.mapped . ExpressionGui.egWidget) (Widget.weakerEvents jumpToDefinitionEventMap)

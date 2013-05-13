@@ -82,7 +82,7 @@ makeScopeItemGroup (scopeItem, expr) =
   Group { groupNames = [varName], groupBaseExpr = expr }
   where
     Sugar.Name _ varName = case scopeItem of
-      Sugar.ScopeVar getVar -> Sugar.gvName getVar
+      Sugar.ScopeVar getVar -> getVar ^. Sugar.gvName
       Sugar.ScopeTag tagG -> tagG ^. Sugar.tagName
 
 makeLiteralGroup :: String -> [Group def]
