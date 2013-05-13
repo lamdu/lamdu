@@ -4,11 +4,11 @@ module Lamdu.CodeEdit.Sugar.AddNames
   ) where
 
 import Control.Applicative (Applicative(..), (<$>), (<$))
-import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (Reader, runReader)
 import Control.Monad.Trans.State (runState, evalState)
-import Control.Monad.Trans.Writer (WriterT(..))
+import Control.Monad.Trans.Writer (Writer, runWriter)
 import Control.MonadA (MonadA)
+import Control.Lens.Operators
 import Data.Map (Map)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
@@ -21,9 +21,7 @@ import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.CodeEdit.Sugar.NameGen as NameGen
-import qualified Lamdu.Data.Anchors as Anchors
 
 data CPS m a = CPS { runCPS :: forall r. m r -> m (a, r) }
   deriving (Functor)
@@ -40,7 +38,7 @@ class (MonadA (TransM m), MonadA m) => MonadNaming m where
   type TransM m :: * -> *
   type OldName m
   type NewName m
-  opRun :: m (m res -> T (TransM m) res)
+  opRun :: m (m res -> res)
 
   opWithParamName :: NameGen.IsDependent -> Guid -> OldName m -> CPS m (NewName m)
   opWithWhereItemName :: Guid -> OldName m -> CPS m (NewName m)
@@ -56,28 +54,26 @@ newtype NameCount = NameCount (Map StoredName Int)
 instance Monoid NameCount where
   mempty = NameCount Map.empty
   NameCount x `mappend` NameCount y = NameCount $ Map.unionWith (+) x y
-evalWriterT :: Functor m => WriterT w m a -> m a
-evalWriterT = fmap fst . runWriterT
+evalWriter :: Writer w a -> a
+evalWriter = fst . runWriter
 
 -- First Pass:
 data StoredNames = StoredNames
   { storedName :: Maybe StoredName
   , storedNamesWithin :: NameCount
   }
-newtype FirstPassM m a = FirstPassM (WriterT NameCount (T m) a)
+newtype FirstPassM (m :: * -> *) a = FirstPassM (Writer NameCount a)
   deriving (Functor, Applicative, Monad)
 fpTellStoredNames :: MonadA m => NameCount -> FirstPassM m ()
 fpTellStoredNames = FirstPassM . Writer.tell
 fpListenStoredNames :: MonadA m => FirstPassM m a -> FirstPassM m (a, NameCount)
 fpListenStoredNames (FirstPassM act) = FirstPassM $ Writer.listen act
-fpTransaction :: MonadA m => T m a -> FirstPassM m a
-fpTransaction = FirstPassM . lift
-runFirstPassM :: MonadA m => FirstPassM m a -> T m a
-runFirstPassM (FirstPassM act) = evalWriterT act
+runFirstPassM :: MonadA m => FirstPassM m a -> a
+runFirstPassM (FirstPassM act) = evalWriter act
 
 instance MonadA m => MonadNaming (FirstPassM m) where
   type TransM (FirstPassM m) = m
-  type OldName (FirstPassM m) = NameHint
+  type OldName (FirstPassM m) = MStoredName
   type NewName (FirstPassM m) = StoredNames
   opRun = pure runFirstPassM
   opWithParamName _ = collectName
@@ -86,15 +82,6 @@ instance MonadA m => MonadNaming (FirstPassM m) where
   opGetParamName = handleStoredName
   opMakeTagName = handleStoredName
   opDefName = handleStoredName
-
-getStoredName :: MonadA m => Guid -> Maybe StoredName -> T m (Maybe StoredName)
-getStoredName _ (Just nameHint) = return $ Just nameHint
-getStoredName guid Nothing = do
-  name <- Transaction.getP $ Anchors.assocNameRef guid
-  pure $
-    if null name
-    then Nothing
-    else Just name
 
 firstPassResult :: MonadA m => NameCount -> Maybe StoredName -> FirstPassM m StoredNames
 firstPassResult storedNameCounts mName =
@@ -107,14 +94,11 @@ firstPassResult storedNameCounts mName =
   where
     myNameCounts = NameCount $ maybe Map.empty (`Map.singleton` 1) mName
 
-handleStoredName :: MonadA m => Guid -> NameHint -> FirstPassM m StoredNames
-handleStoredName guid nameHint =
-  firstPassResult mempty =<<
-  fpTransaction (getStoredName guid nameHint)
+handleStoredName :: MonadA m => Guid -> MStoredName -> FirstPassM m StoredNames
+handleStoredName _ = firstPassResult mempty
 
-collectName :: MonadA m => Guid -> NameHint -> CPS (FirstPassM m) StoredNames
-collectName guid nameHint = CPS $ \k -> do
-  mName <- fpTransaction $ getStoredName guid nameHint
+collectName :: MonadA m => Guid -> MStoredName -> CPS (FirstPassM m) StoredNames
+collectName _ mName = CPS $ \k -> do
   (res, storedNameCounts) <- fpListenStoredNames k
   flip (,) res <$> firstPassResult storedNameCounts mName
 
@@ -151,7 +135,7 @@ instance MonadA m => MonadNaming (SecondPassM m) where
   type NewName (SecondPassM m) = Name
   opRun = do
     nameGen <- spGetNameGen
-    pure (pure . runSecondPassM nameGen)
+    pure $ runSecondPassM nameGen
   opWithParamName = newLocalName
   opWithWhereItemName = newLocalName NameGen.Independent
   opGetParamName _ (StoredNames (Just str) _) = pure $ Name StoredName str
@@ -241,9 +225,9 @@ toHoleActions ha@HoleActions {..} = do
     toHoleResult = run0 . holeResultConverted toExpression
     toScopeItem (ScopeVar getVar) = run1 $ ScopeVar <$> toGetVar getVar
     toScopeItem (ScopeTag tagG) = run1 $ ScopeTag <$> toTag tagG
-    onMHoleResult = (lift . traverse toHoleResult =<<)
+    onMHoleResult = (fmap . fmap) toHoleResult
     result = onMHoleResult <$> _holeResult
-    scope = (traverse . Lens._1) toScopeItem =<< _holeScope
+    scope = _holeScope & (Lens.mapped . traverse . Lens._1) %~ toScopeItem
   pure ha { _holeScope = scope, _holeResult = result }
 
 toHole ::
@@ -392,5 +376,5 @@ toDef def@Definition {..} = do
     (,) <$> toExpression _drType <*> toDefinitionBody _drBody
   pure def { _drName = name, _drType = typ, _drBody = body }
 
-addToDef :: MonadA m => DefinitionU m -> T m (DefinitionN m)
-addToDef = fmap (runSecondPassM NameGen.initial . toDef) . runFirstPassM . toDef
+addToDef :: MonadA m => DefinitionU m -> DefinitionN m
+addToDef = runSecondPassM NameGen.initial . toDef . runFirstPassM . toDef
