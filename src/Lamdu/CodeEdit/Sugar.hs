@@ -1291,10 +1291,7 @@ convertWhereItems usedTags expr =
     (nextItems, whereBody) <- convertWhereItems usedTags $ lambda ^. Expression.lambdaResult
     return (item : nextItems, whereBody)
 
-addStoredParam ::
-  MonadA m =>
-  Expression.Expression def (SugarInfer.Payload t inferred (Maybe (Stored m))) ->
-  T m Guid
+addStoredParam :: MonadA m => ExprMM m -> T m Guid
 addStoredParam
   Expression.Expression
   { Expression._ePayload =
