@@ -23,8 +23,9 @@ module Lamdu.CodeEdit.Sugar
   , RecordField(..), rfMItemActions, rfTag, rfExpr
   , Kind(..), Record(..), FieldList(..), GetField(..)
   , GetVar(..), gvIdentifier, gvName, gvJumpTo, gvVarType
-  , VarType(..)
+  , GetVarType(..)
   , Func(..)
+  , FuncParamType(..)
   , FuncParam(..), fpName, fpGuid, fpId, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
   , Section(..)
@@ -278,6 +279,7 @@ convertFuncParam (Expression.Lambda _k paramGuid paramType body) expr = do
     fp = FuncParam
       { _fpName = name
       , _fpGuid = paramGuid
+      , _fpVarKind = FuncParameter
       , _fpId = paramGuid -- should be unique
       , _fpHiddenLambdaGuid = Just $ resultGuid expr
       , _fpType = removeSuccessfulType paramTypeS
@@ -822,7 +824,7 @@ onScopeElement (param, typeExpr) = do
           { _gvIdentifier = tGuid
           , _gvName = name
           , _gvJumpTo = errorJumpTo
-          , _gvVarType = GetParameter
+          , _gvVarType = GetFieldParameter
           }
         , ExprUtil.pureExpression . Expression.BodyGetField $
           Expression.GetField getParam (exprTag tGuid)
@@ -1073,7 +1075,7 @@ convertGetField (Expression.GetField recExpr tagExpr) exprI = do
         { _gvName = name
         , _gvIdentifier = tag
         , _gvJumpTo = pure $ SugarM.piJumpTo paramInfo
-        , _gvVarType = GetParameter
+        , _gvVarType = GetFieldParameter
         }
   mVar <- traverse mkGetVar $ do
     tag <- tagExpr ^? ExprUtil.exprBodyTag
@@ -1173,6 +1175,7 @@ mkRecordParams paramGuid fieldParams mLambdaP mParamTypeI mBodyStored = do
       pure FuncParam
         { _fpGuid = guid
         , _fpId = tagExprGuid
+        , _fpVarKind = FuncFieldParameter
         , _fpName = name
         , _fpHiddenLambdaGuid = Nothing --TODO: First param to take lambda's guid?
         , _fpType = removeSuccessfulType typeS

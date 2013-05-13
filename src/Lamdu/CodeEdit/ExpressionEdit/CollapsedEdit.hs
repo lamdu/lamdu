@@ -43,12 +43,14 @@ make poly =
       }
       where
         bgId = Widget.toAnimId myId ++ ["bg"]
-    colorize bgId Sugar.GetParameter =
+    funcId = WidgetIds.fromGuid $ poly ^. Sugar.pFuncGuid
+    colorize bgId Sugar.GetParameter = colorizeGetParameter bgId
+    colorize bgId Sugar.GetFieldParameter = colorizeGetParameter bgId
+    colorize _ Sugar.GetDefinition =
+      ExprGuiM.withFgColor Config.polymorphicForegroundColor
+    colorizeGetParameter bgId =
       fmap
       (ExpressionGui.withBgColor
        Layers.polymorphicCompactBG
        Config.polymorphicCompactBGColor bgId) .
       ExprGuiM.withFgColor Config.parameterColor
-    colorize _ Sugar.GetDefinition =
-      ExprGuiM.withFgColor Config.polymorphicForegroundColor
-    funcId = WidgetIds.fromGuid $ poly ^. Sugar.pFuncGuid

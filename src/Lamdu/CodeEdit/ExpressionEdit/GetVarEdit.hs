@@ -32,9 +32,10 @@ makeUncoloredView getVar myId =
   where
     Sugar.Name nameSrc name = getVar ^. Sugar.gvName
 
-colorOf :: Sugar.VarType -> Draw.Color
+colorOf :: Sugar.GetVarType -> Draw.Color
 colorOf Sugar.GetDefinition = Config.definitionColor
 colorOf Sugar.GetParameter = Config.parameterColor
+colorOf Sugar.GetFieldParameter = Config.parameterColor
 
 makeView
   :: MonadA m
@@ -51,9 +52,11 @@ make
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
 make getVar myId = do
-  case getVar ^. Sugar.gvVarType of
-    Sugar.GetParameter -> ExprGuiM.markVariablesAsUsed [getVar ^. Sugar.gvIdentifier]
-    Sugar.GetDefinition -> return ()
+  ExprGuiM.markVariablesAsUsed $
+    case getVar ^. Sugar.gvVarType of
+    Sugar.GetParameter ->  [getVar ^. Sugar.gvIdentifier]
+    Sugar.GetFieldParameter ->  [getVar ^. Sugar.gvIdentifier]
+    Sugar.GetDefinition -> []
   cp <- ExprGuiM.readCodeAnchors
   let
     jumpToDefinitionEventMap =

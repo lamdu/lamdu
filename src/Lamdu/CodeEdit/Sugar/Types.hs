@@ -32,9 +32,10 @@ module Lamdu.CodeEdit.Sugar.Types
   , FieldList(..), flItems, flMAddFirstItem
   , GetField(..), gfRecord, gfTag
   , GetVar(..), gvIdentifier, gvName, gvJumpTo, gvVarType
-  , VarType(..)
+  , GetVarType(..)
   , Func(..), fDepParams, fParams, fBody
-  , FuncParam(..), fpName, fpGuid, fpId, fpHiddenLambdaGuid, fpType, fpMActions
+  , FuncParamType(..)
+  , FuncParam(..), fpName, fpGuid, fpId, fpVarKind, fpHiddenLambdaGuid, fpType, fpMActions
   , TagG(..), tagName, tagGuid
   , Pi(..)
   , Section(..)
@@ -146,12 +147,15 @@ data FuncParamActions name m = FuncParamActions
   , _fpGetExample :: CT m (Expression name m)
   }
 
+data FuncParamType = FuncParameter | FuncFieldParameter
+
 data FuncParam name m expr = FuncParam
   { -- non-unique (e.g: tag guid). Name attached here:
     _fpGuid :: Guid
      -- unique (e.g: tag expr id). WidgetId can be generated from
      -- this:
   , _fpId :: Guid
+  , _fpVarKind :: FuncParamType
   , _fpName :: name
   , _fpHiddenLambdaGuid :: Maybe Guid
   , _fpType :: expr
@@ -265,14 +269,14 @@ data GetField expr = GetField
   , _gfTag :: expr
   } deriving (Functor, Foldable, Traversable)
 
-data VarType = GetParameter | GetDefinition
+data GetVarType = GetDefinition | GetFieldParameter | GetParameter
   deriving (Eq, Ord)
 
 data GetVar name m = GetVar
   { _gvIdentifier :: Guid
   , _gvName :: name
   , _gvJumpTo :: T m Guid
-  , _gvVarType :: VarType
+  , _gvVarType :: GetVarType
   }
 
 data TagG name = TagG

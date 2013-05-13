@@ -182,7 +182,12 @@ withFuncParam ::
 withFuncParam isDep fp@FuncParam{..} = CPS $ \k -> do
   mActions <- traverse toFuncParamActions _fpMActions
   typ <- toExpression _fpType
-  (name, res) <- runCPS (opWithParamName isDep _fpGuid _fpName) k
+  (name, res) <-
+    case _fpVarKind of
+    FuncParameter ->
+      runCPS (opWithParamName isDep _fpGuid _fpName) k
+    FuncFieldParameter ->
+      (,) <$> opMakeTagName _fpGuid _fpName <*> k
   pure
     ( fp
       { _fpName = name
@@ -263,10 +268,13 @@ toGetVar ::
   MonadNaming m => GetVar (OldName m) (TransM m) ->
   m (GetVar (NewName m) (TransM m))
 toGetVar getVar@GetVar{..} =
-  flip gvName getVar $
-  case _gvVarType of
-  GetParameter -> opGetParamName _gvIdentifier
-  GetDefinition -> opDefName _gvIdentifier
+  gvName (f _gvIdentifier) getVar
+  where
+    f =
+      case _gvVarType of
+      GetParameter -> opGetParamName
+      GetFieldParameter -> opMakeTagName
+      GetDefinition -> opDefName
 
 traverseToExpr ::
   (MonadNaming m, Traversable t) =>
