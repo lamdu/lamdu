@@ -57,25 +57,25 @@ instance Monoid NameCount where
 evalWriter :: Writer w a -> a
 evalWriter = fst . runWriter
 
--- First Pass:
+-- Pass 0:
 data StoredNames = StoredNames
   { storedName :: Maybe StoredName
   , storedNamesWithin :: NameCount
   }
-newtype FirstPassM (m :: * -> *) a = FirstPassM (Writer NameCount a)
+newtype Pass0M (m :: * -> *) a = Pass0M (Writer NameCount a)
   deriving (Functor, Applicative, Monad)
-fpTellStoredNames :: MonadA m => NameCount -> FirstPassM m ()
-fpTellStoredNames = FirstPassM . Writer.tell
-fpListenStoredNames :: MonadA m => FirstPassM m a -> FirstPassM m (a, NameCount)
-fpListenStoredNames (FirstPassM act) = FirstPassM $ Writer.listen act
-runFirstPassM :: MonadA m => FirstPassM m a -> a
-runFirstPassM (FirstPassM act) = evalWriter act
+fpTellStoredNames :: MonadA m => NameCount -> Pass0M m ()
+fpTellStoredNames = Pass0M . Writer.tell
+fpListenStoredNames :: MonadA m => Pass0M m a -> Pass0M m (a, NameCount)
+fpListenStoredNames (Pass0M act) = Pass0M $ Writer.listen act
+runPass0M :: MonadA m => Pass0M m a -> a
+runPass0M (Pass0M act) = evalWriter act
 
-instance MonadA m => MonadNaming (FirstPassM m) where
-  type TransM (FirstPassM m) = m
-  type OldName (FirstPassM m) = MStoredName
-  type NewName (FirstPassM m) = StoredNames
-  opRun = pure runFirstPassM
+instance MonadA m => MonadNaming (Pass0M m) where
+  type TransM (Pass0M m) = m
+  type OldName (Pass0M m) = MStoredName
+  type NewName (Pass0M m) = StoredNames
+  opRun = pure runPass0M
   opWithParamName _ = collectName
   opWithWhereItemName = collectName
   opWithDefName = collectName
@@ -83,8 +83,8 @@ instance MonadA m => MonadNaming (FirstPassM m) where
   opMakeTagName = handleStoredName
   opDefName = handleStoredName
 
-firstPassResult :: MonadA m => NameCount -> Maybe StoredName -> FirstPassM m StoredNames
-firstPassResult storedNameCounts mName =
+pass0Result :: MonadA m => NameCount -> Maybe StoredName -> Pass0M m StoredNames
+pass0Result storedNameCounts mName =
   StoredNames
   { storedName = mName
   , storedNamesWithin =
@@ -94,24 +94,24 @@ firstPassResult storedNameCounts mName =
   where
     myNameCounts = NameCount $ maybe Map.empty (`Map.singleton` 1) mName
 
-handleStoredName :: MonadA m => Guid -> MStoredName -> FirstPassM m StoredNames
-handleStoredName _ = firstPassResult mempty
+handleStoredName :: MonadA m => Guid -> MStoredName -> Pass0M m StoredNames
+handleStoredName _ = pass0Result mempty
 
-collectName :: MonadA m => Guid -> MStoredName -> CPS (FirstPassM m) StoredNames
+collectName :: MonadA m => Guid -> MStoredName -> CPS (Pass0M m) StoredNames
 collectName _ mName = CPS $ \k -> do
   (res, storedNameCounts) <- fpListenStoredNames k
-  flip (,) res <$> firstPassResult storedNameCounts mName
+  flip (,) res <$> pass0Result storedNameCounts mName
 
--- Second Pass:
-newtype SecondPassM (m :: * -> *) a = SecondPassM (Reader (NameGen Guid) a)
+-- Pass 1:
+newtype Pass1M (m :: * -> *) a = Pass1M (Reader (NameGen Guid) a)
   deriving (Functor, Applicative, Monad)
-runSecondPassM :: MonadA m => NameGen Guid -> SecondPassM m a -> a
-runSecondPassM initial (SecondPassM act) = runReader act initial
-spGetNameGen :: SecondPassM m (NameGen Guid)
-spGetNameGen = SecondPassM Reader.ask
-spWithNameGen :: NameGen Guid -> SecondPassM m a -> SecondPassM m a
-spWithNameGen newNameGen (SecondPassM act) =
-  SecondPassM $ (Reader.local . const) newNameGen act
+runPass1M :: MonadA m => NameGen Guid -> Pass1M m a -> a
+runPass1M initial (Pass1M act) = runReader act initial
+spGetNameGen :: Pass1M m (NameGen Guid)
+spGetNameGen = Pass1M Reader.ask
+spWithNameGen :: NameGen Guid -> Pass1M m a -> Pass1M m a
+spWithNameGen newNameGen (Pass1M act) =
+  Pass1M $ (Reader.local . const) newNameGen act
 
 makeStoredName :: StoredName -> NameGen Guid -> (Name, NameGen Guid)
 makeStoredName storedName nameGen =
@@ -129,13 +129,13 @@ makeName isDep guid (StoredNames Nothing (NameCount nameCounts)) nameGen =
    NameGen.newName (`Map.notMember` nameCounts) isDep guid)
   nameGen
 
-instance MonadA m => MonadNaming (SecondPassM m) where
-  type TransM (SecondPassM m) = m
-  type OldName (SecondPassM m) = StoredNames
-  type NewName (SecondPassM m) = Name
+instance MonadA m => MonadNaming (Pass1M m) where
+  type TransM (Pass1M m) = m
+  type OldName (Pass1M m) = StoredNames
+  type NewName (Pass1M m) = Name
   opRun = do
     nameGen <- spGetNameGen
-    pure $ runSecondPassM nameGen
+    pure $ runPass1M nameGen
   opWithParamName = newLocalName
   opWithWhereItemName = newLocalName NameGen.Independent
   opGetParamName _ (StoredNames (Just str) _) = pure $ Name StoredName str
@@ -153,7 +153,7 @@ makeNameByGuid prefix guid (StoredNames Nothing _) curNameGen =
 makeNameByGuid _ _ (StoredNames (Just storedName) _) curNameGen =
   makeStoredName storedName curNameGen
 
-newLocalNameHelper :: (NameGen Guid -> (a, NameGen Guid)) -> CPS (SecondPassM m) a
+newLocalNameHelper :: (NameGen Guid -> (a, NameGen Guid)) -> CPS (Pass1M m) a
 newLocalNameHelper nameMaker = CPS $ \k -> do
   curNameGen <- spGetNameGen
   let
@@ -161,10 +161,10 @@ newLocalNameHelper nameMaker = CPS $ \k -> do
   res <- spWithNameGen newNameGen k
   return (name, res)
 
-newLocalNameByGuid :: String -> Guid -> StoredNames -> CPS (SecondPassM m) Name
+newLocalNameByGuid :: String -> Guid -> StoredNames -> CPS (Pass1M m) Name
 newLocalNameByGuid prefix guid storedNames = newLocalNameHelper $ makeNameByGuid prefix guid storedNames
 
-newLocalName :: NameGen.IsDependent -> Guid -> StoredNames -> CPS (SecondPassM m) Name
+newLocalName :: NameGen.IsDependent -> Guid -> StoredNames -> CPS (Pass1M m) Name
 newLocalName isDep guid storedNames = newLocalNameHelper $ makeName isDep guid storedNames
 
 nameByGuid :: (Show guid, Applicative f) => String -> guid -> StoredNames -> f Name
@@ -377,4 +377,4 @@ toDef def@Definition {..} = do
   pure def { _drName = name, _drType = typ, _drBody = body }
 
 addToDef :: MonadA m => DefinitionU m -> DefinitionN m
-addToDef = runSecondPassM NameGen.initial . toDef . runFirstPassM . toDef
+addToDef = runPass1M NameGen.initial . toDef . runPass0M . toDef
