@@ -11,6 +11,7 @@ import Data.Binary.Put (putByteString)
 import Data.Binary.Utils (encodeS)
 import Data.ByteString.NFData ()
 import Data.ByteString.Utils (randomBS, xorBS)
+import Data.Hashable (Hashable)
 import Data.Hashable (hashWithSalt)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (mappend)
@@ -23,7 +24,7 @@ import qualified Data.ByteString.UTF8 as UTF8
 import qualified Data.Char as Char
 
 newtype Guid = Guid { bs :: SBS.ByteString }
-  deriving (Eq, Ord, Read, Typeable, NFData)
+  deriving (Eq, Ord, Read, Typeable, NFData, Hashable)
 
 instance Show Guid where
   show g =
