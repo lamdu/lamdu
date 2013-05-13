@@ -56,7 +56,7 @@ makeNewDefinitionAction = do
   curCursor <- ExprGuiM.widgetEnv WE.readCursor
   cp <- ExprGuiM.readCodeAnchors
   return $ do
-    newDefI <- DataOps.makeDefinition cp
+    newDefI <- DataOps.makeDefinition cp ""
     DataOps.newPane cp newDefI
     DataOps.savePreJumpPosition cp curCursor
     return . DefinitionEdit.diveToNameEdit $ WidgetIds.fromIRef newDefI

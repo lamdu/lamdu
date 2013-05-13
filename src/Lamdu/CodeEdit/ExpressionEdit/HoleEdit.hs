@@ -8,7 +8,7 @@ module Lamdu.CodeEdit.ExpressionEdit.HoleEdit
 
 import Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
 import Control.Lens.Operators
-import Control.Monad (msum, guard, join)
+import Control.Monad (msum, guard, join, when)
 import Control.MonadA (MonadA)
 import Data.List.Utils (nonEmptyAll)
 import Data.Maybe (isJust, listToMaybe, maybeToList, fromMaybe)
@@ -24,8 +24,6 @@ import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleState(..), hsArgument, hsSearchTerm)
 import Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Results (MakeWidgets(..), ResultsList(..), Result(..), HaveHiddenResults(..))
 import qualified Control.Lens as Lens
-import qualified Data.Cache as Cache
-import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.DrawingCombinators as Draw
@@ -42,7 +40,6 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Results as HoleResults
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
@@ -197,33 +194,30 @@ holeResultAnimMappingNoParens holeInfo resultId =
 asNewLabelSizeFactor :: Fractional a => a
 asNewLabelSizeFactor = 0.5
 
-addNewDefinitionEventMap ::
-  MonadA m => Anchors.CodeProps m -> HoleInfo m -> Widget.EventHandlers (T m)
-addNewDefinitionEventMap cp holeInfo =
-  E.keyPresses Config.newDefinitionKeys
-  (E.Doc ["Edit", "Result", "As new Definition"]) $ do
-    newDefI <- DataOps.makeDefinition cp -- TODO: From Sugar
-    let
-      searchTerm = Property.value (hiState holeInfo) ^. hsSearchTerm
-      newName = concat . words $ searchTerm
-    Transaction.setP (Anchors.assocNameRef (IRef.guid newDefI)) newName
-    DataOps.newPane cp newDefI
-    defRef <-
-      fmap (fromMaybe (error "GetDef should always type-check")) .
-      Cache.unmemoS . (hiHoleActions holeInfo ^. Sugar.holeResult) .
-      Sugar.ResultSeedExpression $ Nothing <$
-      ExprUtil._PureExpr . ExprUtil.bodyDefinitionRef # newDefI
-    mTargetGuid <- HoleResults.pick holeInfo defRef
-    case mTargetGuid of
-      Nothing -> return ()
-      Just targetGuid ->
-        DataOps.savePreJumpPosition cp $ WidgetIds.fromGuid targetGuid
-    return Widget.EventResult {
-      Widget._eCursor = Just $ WidgetIds.fromIRef newDefI,
-      Widget._eAnimIdMapping =
-        holeResultAnimMappingNoParens holeInfo searchTermId
-      }
+mkAddNewDefinitionEventMap ::
+  MonadA m => Anchors.CodeProps m -> HoleInfo m -> ExprGuiM m (Widget.EventHandlers (T m))
+mkAddNewDefinitionEventMap cp holeInfo = do
+  cursor <- ExprGuiM.widgetEnv WE.readCursor
+  mDefRef <-
+    ExprGuiM.liftMemoT $
+    hiHoleActions holeInfo ^. Sugar.holeResult $
+    Sugar.ResultSeedNewDefinition newName
+  let
+    f defRef =
+      E.keyPresses Config.newDefinitionKeys
+      (E.Doc ["Edit", "Result", "As new Definition"]) $ do
+        mTargetGuid <- HoleResults.pick holeInfo defRef
+        when (isJust mTargetGuid) $
+          DataOps.savePreJumpPosition cp cursor
+        pure Widget.EventResult
+          { Widget._eCursor = WidgetIds.fromGuid <$> mTargetGuid
+          , Widget._eAnimIdMapping =
+            holeResultAnimMappingNoParens holeInfo searchTermId
+          }
+  pure $ maybe mempty f mDefRef
   where
+    searchTerm = hiState holeInfo ^. Property.pVal . hsSearchTerm
+    newName = concat . words $ searchTerm
     searchTermId = WidgetIds.searchTermId $ hiHoleId holeInfo
 
 vboxMBiasedAlign ::
@@ -326,8 +320,9 @@ mkEventMap holeInfo mResult = do
       arg <- Property.value (hiState holeInfo) ^. hsArgument
       Just $ hiHoleActions holeInfo ^. Sugar.holeResult $
         Sugar.ResultSeedExpression arg
+  addNewDefinitionEventMap <- mkAddNewDefinitionEventMap cp holeInfo
   pure $ mconcat
-    [ addNewDefinitionEventMap cp holeInfo
+    [ addNewDefinitionEventMap
     , maybe mempty (opPickEventMap holeInfo) mResult
     , maybe mempty
       ( E.keyPresses Config.delKeys

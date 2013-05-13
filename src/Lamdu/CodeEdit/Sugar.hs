@@ -675,19 +675,27 @@ inferOnTheSide holeInferContext scope loaded =
       (`runState` holeInferContext) $ Infer.newNodeWithScope scope
 
 seedExprEnv ::
-  MonadA m => HoleResultSeed m ->
-  T m (DataIRef.ExpressionM m (Maybe (StorePoint (Tag m))))
-seedExprEnv (ResultSeedExpression expr) = pure expr
-seedExprEnv (ResultSeedNewTag name) = do
-  tag <- Transaction.newKey
-  Transaction.setP (Anchors.assocNameRef tag) name
-  pure $ Nothing <$ ExprUtil._PureTagExpr # tag
+  MonadA m => Anchors.CodeProps m -> HoleResultSeed m ->
+  T m (DataIRef.ExpressionM m (Maybe (StorePoint (Tag m))), Maybe Guid)
+seedExprEnv _ (ResultSeedExpression expr) = pure (expr, Nothing)
+seedExprEnv cp (ResultSeedNewTag name) = do
+  tag <- DataOps.makeNewPublicTag cp name
+  pure (Nothing <$ ExprUtil._PureTagExpr # tag, Nothing)
+seedExprEnv cp (ResultSeedNewDefinition name) = do
+  defI <- DataOps.makeDefinition cp name
+  DataOps.newPane cp defI
+  let targetGuid = IRef.guid defI
+  pure
+    ( Nothing <$ ExprUtil._PureExpr . ExprUtil.bodyDefinitionRef # defI
+    , Just targetGuid
+    )
 
 seedHashable :: HoleResultSeed m -> String
 seedHashable (ResultSeedExpression expr) = show (void expr)
 -- We want the new tag to have the same anim ids even as the name
 -- changes, thus we ignore the name:
 seedHashable (ResultSeedNewTag _) = "NewTag"
+seedHashable (ResultSeedNewDefinition _) = "NewDefinition"
 
 convertHoleResult ::
   (MonadA m, Typeable1 m) => SugarM.Context m -> Random.StdGen ->
@@ -713,9 +721,10 @@ makeHoleResult ::
 makeHoleResult sugarContext inferred exprI seed =
   fmap mkHoleResult <$>
   mapStateT Transaction.forkScratch
-  (lift . traverse addConverted =<< makeInferredExpr)
+  (lift . traverse addConverted . fst =<< makeInferredExpr)
   where
-    makeInferredExpr = lift (seedExprEnv seed) >>= inferResult
+    cp = sugarContext ^. SugarM.scCodeAnchors
+    makeInferredExpr = lift (seedExprEnv cp seed) >>= Lens._1 inferResult
     addConverted inferredResult = do
       converted <-
         convertHoleResult sugarContext gen $
@@ -737,12 +746,13 @@ makeHoleResult sugarContext inferred exprI seed =
       , _holeResultPickPrefix = void pick
       }
     pick = do
-      finalExpr <-
+      (finalExpr, mTargetGuid) <-
+        Lens.mapped . Lens._1 %~
         unjust
         ("Arbitrary fake tag successfully inferred as hole result, " ++
-         "but real new tag failed!")
-        <$> Cache.unmemoS makeInferredExpr
-      pickResult exprI $
+         "but real new tag failed!") $
+        Cache.unmemoS makeInferredExpr
+      fmap (mplus mTargetGuid) . pickResult exprI $
         ExprUtil.randomizeParamIds gen finalExpr
 
 unjust :: String -> Maybe a -> a

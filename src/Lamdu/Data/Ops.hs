@@ -9,7 +9,7 @@ module Lamdu.Data.Ops
   , savePreJumpPosition, jumpBack
   , newPane
   , newClipboard
-  , makeNewTag
+  , makeNewTag, makeNewPublicTag
   ) where
 
 import Control.Applicative ((<$>), (<*>), (<$))
@@ -33,14 +33,6 @@ import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 type T = Transaction
-
-makeDefinition :: MonadA m => Anchors.CodeProps m -> T m (DefI (Tag m))
-makeDefinition codeProps = do
-  defI <-
-    Transaction.newIRef =<<
-    Definition . Definition.BodyExpression <$> newHole <*> newHole
-  modP (Anchors.globals codeProps) (defI :)
-  return defI
 
 giveAsArg ::
   MonadA m =>
@@ -174,10 +166,19 @@ newBuiltin fullyQualifiedName typeI =
 newDefinition ::
   MonadA m => String ->
   DataIRef.DefinitionI (Tag m) -> T m (DefI (Tag m))
-newDefinition name defI = do
-  res <- Transaction.newIRef defI
+newDefinition name def = do
+  res <- Transaction.newIRef def
   setP (Anchors.assocNameRef (IRef.guid res)) name
   return res
+
+makeDefinition ::
+  MonadA m => Anchors.CodeProps m -> String -> T m (DefI (Tag m))
+makeDefinition codeProps name = do
+  defI <-
+    newDefinition name =<<
+    (Definition . Definition.BodyExpression <$> newHole <*> newHole)
+  modP (Anchors.globals codeProps) (defI :)
+  return defI
 
 newClipboard ::
   MonadA m => Anchors.CodeProps m ->
@@ -190,8 +191,13 @@ newClipboard codeProps expr = do
   modP (Anchors.clipboards codeProps) (defI:)
   return defI
 
-makeNewTag :: MonadA m => Anchors.CodeProps m -> T m Guid
-makeNewTag codeProps = do
-  field <- Transaction.newKey
-  modP (Anchors.tags codeProps) (field :)
-  return field
+makeNewTag :: MonadA m => String -> T m Guid
+makeNewTag name = do
+  tag <- Transaction.newKey
+  tag <$ setP (Anchors.assocNameRef tag) name
+
+makeNewPublicTag :: MonadA m => Anchors.CodeProps m -> String -> T m Guid
+makeNewPublicTag codeProps name = do
+  tag <- makeNewTag name
+  modP (Anchors.tags codeProps) (tag :)
+  return tag
