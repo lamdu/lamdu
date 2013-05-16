@@ -13,6 +13,7 @@ import Data.Map (Map)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable, traverse)
+import Lamdu.CodeEdit.Sugar.AddNames.CPS (CPS(..))
 import Lamdu.CodeEdit.Sugar.NameGen (NameGen)
 import Lamdu.CodeEdit.Sugar.Types
 import Prelude hiding (pi)
@@ -22,22 +23,23 @@ import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Lamdu.CodeEdit.Sugar.NameGen as NameGen
-import Lamdu.CodeEdit.Sugar.AddNames.CPS (CPS(..))
+
+type CPSNameConvertor m = Guid -> OldName m -> CPS m (NewName m)
+type NameConvertor m = Guid -> OldName m -> m (NewName m)
 
 class MonadA m => MonadNaming m where
   type OldName m
   type NewName m
   opRun :: m (m res -> res)
 
-  opWithParamName :: NameGen.IsDependent -> Guid -> OldName m -> CPS m (NewName m)
-  opWithWhereItemName :: Guid -> OldName m -> CPS m (NewName m)
-  opGetParamName :: Guid -> OldName m -> m (NewName m)
-  opGetHiddenParamsName :: Guid -> OldName m -> m (NewName m)
+  opWithParamName :: NameGen.IsDependent -> CPSNameConvertor m
+  opWithWhereItemName :: CPSNameConvertor m
+  opWithDefName :: CPSNameConvertor m
+  opDefName :: NameConvertor m
+  opMakeTagName :: NameConvertor m
 
-  opWithDefName :: Guid -> OldName m -> CPS m (NewName m)
-  opDefName :: Guid -> OldName m -> m (NewName m)
-
-  opMakeTagName :: Guid -> OldName m -> m (NewName m)
+  opGetParamName :: NameConvertor m
+  opGetHiddenParamsName :: NameConvertor m
 
 type StoredName = String
 newtype NameCount = NameCount (Map StoredName Int)
@@ -65,15 +67,15 @@ instance MonadNaming Pass0M where
   type OldName Pass0M = MStoredName
   type NewName Pass0M = StoredNames
   opRun = pure runPass0M
-  opWithParamName _ = collectName
-  opWithWhereItemName = collectName
-  opWithDefName = collectName
-  opGetParamName = handleStoredName
-  opGetHiddenParamsName = handleStoredName
-  opMakeTagName = handleStoredName
-  opDefName = handleStoredName
+  opWithParamName _ = cpsCollectStoredNames
+  opWithWhereItemName = cpsCollectStoredNames
+  opWithDefName = cpsCollectStoredNames
+  opGetParamName = collectStoredNames
+  opGetHiddenParamsName = collectStoredNames
+  opMakeTagName = collectStoredNames
+  opDefName = collectStoredNames
 
-pass0Result :: NameCount -> Maybe StoredName -> Pass0M StoredNames
+pass0Result :: NameCount -> MStoredName -> Pass0M StoredNames
 pass0Result storedNameCounts mName =
   StoredNames
   { storedName = mName
@@ -84,12 +86,12 @@ pass0Result storedNameCounts mName =
   where
     myNameCounts = NameCount $ maybe Map.empty (`Map.singleton` 1) mName
 
-handleStoredName :: Guid -> MStoredName -> Pass0M StoredNames
-handleStoredName _ = pass0Result mempty
+collectStoredNames :: NameConvertor Pass0M
+collectStoredNames _ = pass0Result mempty
 
-collectName :: Guid -> MStoredName -> CPS Pass0M StoredNames
-collectName _ mName = CPS $ \k -> do
-  (res, storedNameCounts) <- fpListenStoredNames k
+cpsCollectStoredNames :: CPSNameConvertor Pass0M
+cpsCollectStoredNames _ mName = CPS $ \k -> do
+  (res, storedNameCounts) <- p0ListenStoredNames k
   flip (,) res <$> pass0Result storedNameCounts mName
 
 -- Pass 1:
