@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies, FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies #-}
 module Lamdu.CodeEdit.Sugar.AddNames
   ( addToDef
   ) where
@@ -24,8 +24,7 @@ import qualified Data.Set as Set
 import qualified Lamdu.CodeEdit.Sugar.NameGen as NameGen
 import Lamdu.CodeEdit.Sugar.AddNames.CPS (CPS(..))
 
-class (MonadA (TransM m), MonadA m) => MonadNaming m where
-  type TransM m :: * -> *
+class MonadA m => MonadNaming m where
   type OldName m
   type NewName m
   opRun :: m (m res -> res)
@@ -53,19 +52,18 @@ data StoredNames = StoredNames
   { storedName :: Maybe StoredName
   , storedNamesWithin :: NameCount
   }
-newtype Pass0M (m :: * -> *) a = Pass0M (Writer NameCount a)
+newtype Pass0M a = Pass0M (Writer NameCount a)
   deriving (Functor, Applicative, Monad)
-fpTellStoredNames :: MonadA m => NameCount -> Pass0M m ()
+fpTellStoredNames :: NameCount -> Pass0M ()
 fpTellStoredNames = Pass0M . Writer.tell
-fpListenStoredNames :: MonadA m => Pass0M m a -> Pass0M m (a, NameCount)
+fpListenStoredNames :: Pass0M a -> Pass0M (a, NameCount)
 fpListenStoredNames (Pass0M act) = Pass0M $ Writer.listen act
-runPass0M :: MonadA m => Pass0M m a -> a
+runPass0M :: Pass0M a -> a
 runPass0M (Pass0M act) = evalWriter act
 
-instance MonadA m => MonadNaming (Pass0M m) where
-  type TransM (Pass0M m) = m
-  type OldName (Pass0M m) = MStoredName
-  type NewName (Pass0M m) = StoredNames
+instance MonadNaming Pass0M where
+  type OldName Pass0M = MStoredName
+  type NewName Pass0M = StoredNames
   opRun = pure runPass0M
   opWithParamName _ = collectName
   opWithWhereItemName = collectName
@@ -75,7 +73,7 @@ instance MonadA m => MonadNaming (Pass0M m) where
   opMakeTagName = handleStoredName
   opDefName = handleStoredName
 
-pass0Result :: MonadA m => NameCount -> Maybe StoredName -> Pass0M m StoredNames
+pass0Result :: NameCount -> Maybe StoredName -> Pass0M StoredNames
 pass0Result storedNameCounts mName =
   StoredNames
   { storedName = mName
@@ -86,22 +84,22 @@ pass0Result storedNameCounts mName =
   where
     myNameCounts = NameCount $ maybe Map.empty (`Map.singleton` 1) mName
 
-handleStoredName :: MonadA m => Guid -> MStoredName -> Pass0M m StoredNames
+handleStoredName :: Guid -> MStoredName -> Pass0M StoredNames
 handleStoredName _ = pass0Result mempty
 
-collectName :: MonadA m => Guid -> MStoredName -> CPS (Pass0M m) StoredNames
+collectName :: Guid -> MStoredName -> CPS Pass0M StoredNames
 collectName _ mName = CPS $ \k -> do
   (res, storedNameCounts) <- fpListenStoredNames k
   flip (,) res <$> pass0Result storedNameCounts mName
 
 -- Pass 1:
-newtype Pass1M (m :: * -> *) a = Pass1M (Reader (NameGen Guid) a)
+newtype Pass1M a = Pass1M (Reader (NameGen Guid) a)
   deriving (Functor, Applicative, Monad)
-runPass1M :: MonadA m => NameGen Guid -> Pass1M m a -> a
+runPass1M :: NameGen Guid -> Pass1M a -> a
 runPass1M initial (Pass1M act) = runReader act initial
-spGetNameGen :: Pass1M m (NameGen Guid)
+spGetNameGen :: Pass1M (NameGen Guid)
 spGetNameGen = Pass1M Reader.ask
-spWithNameGen :: NameGen Guid -> Pass1M m a -> Pass1M m a
+spWithNameGen :: NameGen Guid -> Pass1M a -> Pass1M a
 spWithNameGen newNameGen (Pass1M act) =
   Pass1M $ (Reader.local . const) newNameGen act
 
@@ -121,10 +119,9 @@ makeName isDep guid (StoredNames Nothing (NameCount nameCounts)) nameGen =
    NameGen.newName (`Map.notMember` nameCounts) isDep guid)
   nameGen
 
-instance MonadA m => MonadNaming (Pass1M m) where
-  type TransM (Pass1M m) = m
-  type OldName (Pass1M m) = StoredNames
-  type NewName (Pass1M m) = Name
+instance MonadNaming Pass1M where
+  type OldName Pass1M = StoredNames
+  type NewName Pass1M = Name
   opRun = do
     nameGen <- spGetNameGen
     pure $ runPass1M nameGen
@@ -147,7 +144,7 @@ makeNameByGuid prefix guid (StoredNames Nothing _) curNameGen =
 makeNameByGuid _ _ (StoredNames (Just storedName) _) curNameGen =
   makeStoredName storedName curNameGen
 
-newLocalNameHelper :: (NameGen Guid -> (a, NameGen Guid)) -> CPS (Pass1M m) a
+newLocalNameHelper :: (NameGen Guid -> (a, NameGen Guid)) -> CPS Pass1M a
 newLocalNameHelper nameMaker = CPS $ \k -> do
   curNameGen <- spGetNameGen
   let
@@ -155,10 +152,10 @@ newLocalNameHelper nameMaker = CPS $ \k -> do
   res <- spWithNameGen newNameGen k
   return (name, res)
 
-newLocalNameByGuid :: String -> Guid -> StoredNames -> CPS (Pass1M m) Name
+newLocalNameByGuid :: String -> Guid -> StoredNames -> CPS Pass1M Name
 newLocalNameByGuid prefix guid storedNames = newLocalNameHelper $ makeNameByGuid prefix guid storedNames
 
-newLocalName :: NameGen.IsDependent -> Guid -> StoredNames -> CPS (Pass1M m) Name
+newLocalName :: NameGen.IsDependent -> Guid -> StoredNames -> CPS Pass1M Name
 newLocalName isDep guid storedNames = newLocalNameHelper $ makeName isDep guid storedNames
 
 nameByGuid :: (Show guid, Applicative f) => String -> guid -> StoredNames -> f Name
@@ -169,10 +166,10 @@ makeGuidName :: Show guid => String -> guid -> Name
 makeGuidName prefix guid = Name AutoGeneratedName $ prefix ++ show guid
 
 withFuncParam ::
-  MonadNaming m =>
+  (MonadA tm, MonadNaming m) =>
   NameGen.IsDependent ->
-  FuncParam (OldName m) (TransM m) (Expression (OldName m) (TransM m)) ->
-  CPS m (FuncParam (NewName m) (TransM m) (Expression (NewName m) (TransM m)))
+  FuncParam (OldName m) tm (Expression (OldName m) tm) ->
+  CPS m (FuncParam (NewName m) tm (Expression (NewName m) tm))
 withFuncParam isDep fp@FuncParam{..} = CPS $ \k -> do
   mActions <- traverse toFuncParamActions _fpMActions
   typ <- toExpression _fpType
@@ -192,9 +189,9 @@ withFuncParam isDep fp@FuncParam{..} = CPS $ \k -> do
     )
 
 toFunc ::
-  MonadNaming m =>
-  Func (OldName m) (TransM m) (Expression (OldName m) (TransM m)) ->
-  m (Func (NewName m) (TransM m) (Expression (NewName m) (TransM m)))
+  (MonadA tm, MonadNaming m) =>
+  Func (OldName m) tm (Expression (OldName m) tm) ->
+  m (Func (NewName m) tm (Expression (NewName m) tm))
 toFunc func@Func {..} = do
   (depParams, (params, body)) <-
     runCPS (traverse (withFuncParam NameGen.Dependent) _fDepParams) .
@@ -207,16 +204,16 @@ toFunc func@Func {..} = do
     }
 
 toPi ::
-  MonadNaming m =>
-  Pi (OldName m) (TransM m) (Expression (OldName m) (TransM m)) ->
-  m (Pi (NewName m) (TransM m) (Expression (NewName m) (TransM m)))
+  (MonadA tm, MonadNaming m) =>
+  Pi (OldName m) tm (Expression (OldName m) tm) ->
+  m (Pi (NewName m) tm (Expression (NewName m) tm))
 toPi pi@Pi {..} = do
   (param, resultType) <- runCPS (withFuncParam NameGen.Dependent pParam) $ toExpression pResultType
   pure pi { pParam = param, pResultType = resultType }
 
 toHoleActions ::
-  MonadNaming m => HoleActions (OldName m) (TransM m) ->
-  m (HoleActions (NewName m) (TransM m))
+  (MonadA tm, MonadNaming m) => HoleActions (OldName m) tm ->
+  m (HoleActions (NewName m) tm)
 toHoleActions ha@HoleActions {..} = do
   run0 <- opRun
   run1 <- opRun
@@ -231,22 +228,22 @@ toHoleActions ha@HoleActions {..} = do
   pure ha { _holeScope = scope, _holeResult = result }
 
 toHole ::
-  MonadNaming m => Hole (OldName m) (TransM m) ->
-  m (Hole (NewName m) (TransM m))
+  (MonadA tm, MonadNaming m) => Hole (OldName m) tm ->
+  m (Hole (NewName m) tm)
 toHole = (holeMActions . Lens.traversed) toHoleActions
 
 toInferred ::
-  MonadNaming m => Inferred (OldName m) (TransM m) (Expression (OldName m) (TransM m)) ->
-  m (Inferred (NewName m) (TransM m) (Expression (NewName m) (TransM m)))
+  (MonadA tm, MonadNaming m) => Inferred (OldName m) tm (Expression (OldName m) tm) ->
+  m (Inferred (NewName m) tm (Expression (NewName m) tm))
 toInferred Inferred {..} = do
   value <- toExpression _iValue
   hole <- toHole _iHole
   pure Inferred { _iValue = value, _iHole = hole, .. }
 
 toCollapsed ::
-  MonadNaming m =>
-  Collapsed (OldName m) (TransM m) (Expression (OldName m) (TransM m)) ->
-  m (Collapsed (NewName m) (TransM m) (Expression (NewName m) (TransM m)))
+  (MonadA tm, MonadNaming m) =>
+  Collapsed (OldName m) tm (Expression (OldName m) tm) ->
+  m (Collapsed (NewName m) tm (Expression (NewName m) tm))
 toCollapsed Collapsed {..} = do
   compact <- toGetVar _pCompact
   fullExpression <- toExpression _pFullExpression
@@ -260,8 +257,8 @@ toTag (TagG guid oldName) = do
   pure $ TagG guid name
 
 toGetVar ::
-  MonadNaming m => GetVar (OldName m) (TransM m) ->
-  m (GetVar (NewName m) (TransM m))
+  MonadNaming m => GetVar (OldName m) tm ->
+  m (GetVar (NewName m) tm)
 toGetVar getVar@GetVar{..} =
   gvName (f _gvIdentifier) getVar
   where
@@ -272,21 +269,21 @@ toGetVar getVar@GetVar{..} =
       GetDefinition -> opDefName
 
 toGetParams ::
-  MonadNaming m => GetParams (OldName m) (TransM m) ->
-  m (GetParams (NewName m) (TransM m))
+  MonadNaming m => GetParams (OldName m) tm ->
+  m (GetParams (NewName m) tm)
 toGetParams getParams@GetParams{..} =
   gpDefName (opDefName _gpDefGuid) getParams
 
 traverseToExpr ::
-  (MonadNaming m, Traversable t) =>
-  (t (Expression (NewName m) (TransM m)) -> b) -> t (Expression (OldName m) (TransM m)) ->
+  (MonadA tm, MonadNaming m, Traversable t) =>
+  (t (Expression (NewName m) tm) -> b) -> t (Expression (OldName m) tm) ->
   m b
 traverseToExpr cons body = cons <$> traverse toExpression body
 
 toBody ::
-  MonadNaming m =>
-  Body (OldName m) (TransM m) (Expression (OldName m) (TransM m)) ->
-  m (Body (NewName m) (TransM m) (Expression (NewName m) (TransM m)))
+  (MonadA tm, MonadNaming m) =>
+  Body (OldName m) tm (Expression (OldName m) tm) ->
+  m (Body (NewName m) tm (Expression (NewName m) tm))
 toBody (BodyApply hp x)       = traverseToExpr (BodyApply hp) x
 toBody (BodySection hp x)     = traverseToExpr (BodySection hp) x
 toBody (BodyList x)           = traverseToExpr BodyList x
@@ -305,8 +302,8 @@ toBody (BodyGetVar x) = BodyGetVar <$> toGetVar x
 toBody (BodyGetParams x) = BodyGetParams <$> toGetParams x
 
 toPayload ::
-  MonadNaming m => Payload (OldName m) (TransM m) ->
-  m (Payload (NewName m) (TransM m))
+  (MonadA tm, MonadNaming m) => Payload (OldName m) tm ->
+  m (Payload (NewName m) tm)
 toPayload pl@Payload {..} = do
   inferredTypes <- traverse toExpression _plInferredTypes
   nextHole <- traverse toExpression _plNextHole
@@ -316,22 +313,22 @@ toPayload pl@Payload {..} = do
     }
 
 toExpression ::
-  MonadNaming m => Expression (OldName m) (TransM m) ->
-  m (Expression (NewName m) (TransM m))
+  (MonadA tm, MonadNaming m) => Expression (OldName m) tm ->
+  m (Expression (NewName m) tm)
 toExpression expr@Expression{..} = do
   body <- toBody _rBody
   pl <- toPayload _rPayload
   pure expr { _rBody = body, _rPayload = pl }
 
 toFuncParamActions ::
-  MonadNaming m => FuncParamActions (OldName m) (TransM m) ->
-  m (FuncParamActions (NewName m) (TransM m))
+  MonadNaming m => FuncParamActions (OldName m) tm ->
+  m (FuncParamActions (NewName m) tm)
 toFuncParamActions fpa@FuncParamActions {..} =
   pure fpa { _fpGetExample = error "TODO: examples" }
 
 withWhereItem ::
-  MonadNaming m => WhereItem (OldName m) (TransM m) ->
-  CPS m (WhereItem (NewName m) (TransM m))
+  (MonadA tm, MonadNaming m) => WhereItem (OldName m) tm ->
+  CPS m (WhereItem (NewName m) tm)
 withWhereItem item@WhereItem{..} = CPS $ \k -> do
   (name, (value, res)) <-
     runCPS (opWithWhereItemName wiGuid wiName) $
@@ -339,8 +336,8 @@ withWhereItem item@WhereItem{..} = CPS $ \k -> do
   pure (item { wiValue = value, wiName = name }, res)
 
 toDefinitionContent ::
-  MonadNaming m => DefinitionContent (OldName m) (TransM m) ->
-  m (DefinitionContent (NewName m) (TransM m))
+  (MonadA tm, MonadNaming m) => DefinitionContent (OldName m) tm ->
+  m (DefinitionContent (NewName m) tm)
 toDefinitionContent def@DefinitionContent{..} = do
   (depParams, (params, (whereItems, body))) <-
     runCPS (traverse (withFuncParam NameGen.Dependent) dDepParams) .
@@ -355,15 +352,15 @@ toDefinitionContent def@DefinitionContent{..} = do
     }
 
 toDefinitionNewType ::
-  MonadNaming m => DefinitionNewType (OldName m) (TransM m) ->
-  m (DefinitionNewType (NewName m) (TransM m))
+  (MonadA tm, MonadNaming m) => DefinitionNewType (OldName m) tm ->
+  m (DefinitionNewType (NewName m) tm)
 toDefinitionNewType dnt@DefinitionNewType{..} = do
   newType <- toExpression dntNewType
   pure dnt { dntNewType = newType }
 
 toDefinitionBody ::
-  MonadNaming m => DefinitionBody (OldName m) (TransM m) ->
-  m (DefinitionBody (NewName m) (TransM m))
+  (MonadA tm, MonadNaming m) => DefinitionBody (OldName m) tm ->
+  m (DefinitionBody (NewName m) tm)
 toDefinitionBody (DefinitionBodyBuiltin bi) =
   pure $ DefinitionBodyBuiltin bi
 toDefinitionBody
@@ -378,8 +375,8 @@ toDefinitionBody
         }
 
 toDef ::
-  MonadNaming m => Definition (OldName m) (TransM m) ->
-  m (Definition (NewName m) (TransM m))
+  (MonadA tm, MonadNaming m) => Definition (OldName m) tm ->
+  m (Definition (NewName m) tm)
 toDef def@Definition {..} = do
   (name, (typ, body)) <-
     runCPS (opWithDefName _drGuid _drName) $
