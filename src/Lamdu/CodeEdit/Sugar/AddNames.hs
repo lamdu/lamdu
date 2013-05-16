@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, RecordWildCards, RankNTypes, DeriveFunctor, TypeFamilies, FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies, FlexibleContexts #-}
 module Lamdu.CodeEdit.Sugar.AddNames
   ( addToDef
   ) where
@@ -22,17 +22,7 @@ import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Lamdu.CodeEdit.Sugar.NameGen as NameGen
-
-data CPS m a = CPS { runCPS :: forall r. m r -> m (a, r) }
-  deriving (Functor)
-
-instance Functor m => Applicative (CPS m) where
-  pure x = CPS $ fmap ((,) x)
-  CPS cpsf <*> CPS cpsx =
-    CPS (fmap foo . cpsf . cpsx)
-    where
-      foo (f, (x, r)) = (f x, r)
-
+import Lamdu.CodeEdit.Sugar.AddNames.CPS (CPS(..))
 
 class (MonadA (TransM m), MonadA m) => MonadNaming m where
   type TransM m :: * -> *

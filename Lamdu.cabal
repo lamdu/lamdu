@@ -158,6 +158,7 @@ Executable lamdu
                        Lamdu.CodeEdit.Sugar.NameGen,
                        Lamdu.CodeEdit.Sugar.Types,
                        Lamdu.CodeEdit.Sugar.AddNames,
+                       Lamdu.CodeEdit.Sugar.AddNames.CPS,
                        Lamdu.CodeEdit.Sugar,
                        Lamdu.CodeEdit,
                        Lamdu.Config,
