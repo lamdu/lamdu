@@ -61,11 +61,12 @@ makeUnwrapped (Sugar.Record k (Sugar.FieldList fields mAddField)) myId =
         <*> ExprGuiM.makeSubexpresion fieldExpr
       let
         itemEventMap = maybe mempty (recordItemEventMap resultPickers) mItemActions
-        space = ExpressionGui.fromValueWidget $ Widget.scale Config.fieldScale BWidgets.stdSpaceWidget
+        space = ExpressionGui.fromValueWidget BWidgets.stdSpaceWidget
       return . ExpressionGui.makeRow $
-        [(1, fieldRefGui), (0.5, space), (0, fieldExprGui)]
+        [(1, scaleTag fieldRefGui), (0.5, space), (0, fieldExprGui)]
         & Lens.mapped . Lens._2 . ExpressionGui.egWidget %~
           Widget.weakerEvents itemEventMap
+    scaleTag = ExpressionGui.egWidget %~ Widget.scale Config.fieldTagScale
     mkEventMap f mAction keys doc =
       maybe mempty (Widget.keysEventMapMovesCursor keys doc . f) mAction
     eventMap =

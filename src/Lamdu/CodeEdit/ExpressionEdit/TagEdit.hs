@@ -26,5 +26,5 @@ make
   -> ExprGuiM m (ExpressionGui m)
 make (Sugar.TagG tag name) =
   ExpressionGui.wrapDelegated fdConfig FocusDelegator.NotDelegating
-  (fmap (ExpressionGui.fromValueWidget . Widget.scale Config.fieldScale . Widget.tint Config.fieldTint) .
+  (fmap (ExpressionGui.fromValueWidget . Widget.scale Config.tagScale . Widget.tint Config.fieldTint) .
    ExpressionGui.makeNameEdit name tag)
