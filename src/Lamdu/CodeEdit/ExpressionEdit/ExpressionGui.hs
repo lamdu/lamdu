@@ -272,5 +272,7 @@ makeCollisionSuffixLabels (Sugar.Collision suffix) animId =
   (:[]) . onSuffixWidget <$> BWidgets.makeLabel ('_' : show suffix) animId
   where
     onSuffixWidget =
+      Widget.backgroundColor Layers.nameCollisionBG
+        (animId ++ ["bg"]) Config.collisionSuffixBGColor .
       Widget.tint Config.collisionSuffixTint .
       Widget.scale Config.collisionSuffixScaleFactor

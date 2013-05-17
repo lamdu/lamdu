@@ -8,6 +8,7 @@ inactiveHole = 26
 types = 27
 polymorphicCompactBG = 28
 activeHoleBG = 31
+nameCollisionBG = 32
 parensHighlightBG = 33
 polymorphicExpandedBG = 34
 activePane = 40
