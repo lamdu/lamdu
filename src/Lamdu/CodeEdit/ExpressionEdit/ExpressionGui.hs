@@ -269,7 +269,7 @@ makeCollisionSuffixLabels ::
   MonadA m => Sugar.NameCollision -> AnimId -> WE.WidgetEnvT m [Widget f]
 makeCollisionSuffixLabels Sugar.NoCollision _ = return []
 makeCollisionSuffixLabels (Sugar.Collision suffix) animId =
-  (:[]) . onSuffixWidget <$> BWidgets.makeLabel ('_' : show suffix) animId
+  (:[]) . onSuffixWidget <$> BWidgets.makeLabel (show suffix) animId
   where
     onSuffixWidget =
       Widget.backgroundColor Layers.nameCollisionBG
