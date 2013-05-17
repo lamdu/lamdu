@@ -30,11 +30,11 @@ module Lamdu.CodeEdit.Sugar
   , FuncParam(..), fpName, fpGuid, fpId, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
   , Section(..)
-  , ScopeItem(..), _ScopeVar, _ScopeTag
   , Hole(..), holeScope, holeMActions
   , HoleResultSeed(..)
-  , HoleActions(..)
-    , holePaste, holeMDelete, holeResult, holeInferExprType
+  , ScopeItem
+  , Scope(..), scopeLocals, scopeGlobals, scopeTags, scopeGetParams
+  , HoleActions(..), holePaste, holeMDelete, holeResult, holeInferExprType
   , StorePoint
   , HoleResult(..)
     , holeResultInferred
@@ -64,7 +64,7 @@ import Data.Function (on)
 import Data.Hashable (Hashable, hashWithSalt)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe, listToMaybe, isJust)
-import Data.Monoid (mconcat)
+import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag, Tagged)
 import Data.Traversable (traverse)
@@ -785,43 +785,43 @@ memoBy ::
   k -> m v -> StateT Cache m v
 memoBy k act = Cache.memoS (const act) k
 
-getGlobal ::
-  MonadA m => DefI (Tag m) ->
-  T m (ScopeItem MStoredName m, DataIRef.ExpressionM m ())
+getGlobal :: MonadA m => DefI (Tag m) -> T m (Scope MStoredName m)
 getGlobal defI = do
   name <- getStoredName guid
-  pure
-    ( ScopeVar GetVar
-      { _gvIdentifier = guid
-      , _gvName = name
-      , _gvJumpTo = errorJumpTo
-      , _gvVarType = GetDefinition
-      }
-    , ExprUtil.pureExpression $ ExprUtil.bodyDefinitionRef # defI
-    )
+  pure mempty
+    { _scopeGlobals = [
+      ( GetVar
+        { _gvIdentifier = guid
+        , _gvName = name
+        , _gvJumpTo = errorJumpTo
+        , _gvVarType = GetDefinition
+        }
+      , ExprUtil.pureExpression $ ExprUtil.bodyDefinitionRef # defI
+      )
+      ] }
   where
     guid = IRef.guid defI
     errorJumpTo = error "Jump to on scope item??"
 
-getTag ::
-  MonadA m => Guid ->
-  T m (ScopeItem MStoredName m, DataIRef.ExpressionM m ())
+getTag :: MonadA m => Guid -> T m (Scope MStoredName m)
 getTag guid = do
   name <- getStoredName guid
-  pure
-    ( ScopeTag TagG
-      { _tagGuid = guid
-      , _tagName = name
-      }
-    , ExprUtil._PureTagExpr # guid
-    )
+  pure mempty
+    { _scopeTags = [
+      ( TagG
+        { _tagGuid = guid
+        , _tagName = name
+        }
+      , ExprUtil._PureTagExpr # guid
+      )
+    ] }
 
-onScopeElement ::
-  MonadA m => SugarM.Context m -> (Guid, Expression.Expression def a) ->
-  T m [(ScopeItem MStoredName m, Expression.Expression def ())]
-onScopeElement sugarContext (parGuid, typeExpr) = do
+getScopeElement ::
+  MonadA m => SugarM.Context m ->
+  (Guid, Expression.Expression def a) -> T m (Scope MStoredName m)
+getScopeElement sugarContext (parGuid, typeExpr) = do
   scopePar <- mkGetPar
-  ((scopePar, getParam) :) <$>
+  mconcat . (scopePar :) <$>
     mapM onScopeField
     (typeExpr ^..
      Expression.eBody . Expression._BodyRecord .
@@ -831,35 +831,45 @@ onScopeElement sugarContext (parGuid, typeExpr) = do
       case Map.lookup parGuid recordParamsMap of
       Just (SugarM.RecordParamsInfo defGuid jumpTo) -> do
         defName <- getStoredName defGuid
-        pure $ ScopeGetParams GetParams
-          { _gpDefGuid = defGuid
-          , _gpDefName = defName
-          , _gpJumpTo = jumpTo
-          }
+        pure mempty
+          { _scopeGetParams = [
+            ( GetParams
+              { _gpDefGuid = defGuid
+              , _gpDefName = defName
+              , _gpJumpTo = jumpTo
+              }
+            , getParam )
+          ] }
       Nothing -> do
         parName <- getStoredName parGuid
-        pure $ ScopeVar GetVar
-          { _gvIdentifier = parGuid
-          , _gvName = parName
-          , _gvJumpTo = pure parGuid
-          , _gvVarType = GetParameter
-          }
+        pure mempty
+          { _scopeLocals = [
+            ( GetVar
+              { _gvIdentifier = parGuid
+              , _gvName = parName
+              , _gvJumpTo = pure parGuid
+              , _gvVarType = GetParameter
+              }
+            , getParam )
+          ] }
     recordParamsMap = sugarContext ^. SugarM.scRecordParamsInfos
     errorJumpTo = error "Jump to on scope item??"
     exprTag = ExprUtil.pureExpression . Expression.BodyLeaf . Expression.Tag
     getParam = ExprUtil.pureExpression $ ExprUtil.bodyParameterRef # parGuid
     onScopeField tGuid = do
       name <- getStoredName tGuid
-      pure
-        ( ScopeVar GetVar
-          { _gvIdentifier = tGuid
-          , _gvName = name
-          , _gvJumpTo = errorJumpTo
-          , _gvVarType = GetFieldParameter
-          }
-        , ExprUtil.pureExpression . Expression.BodyGetField $
-          Expression.GetField getParam (exprTag tGuid)
-        )
+      pure mempty
+        { _scopeLocals = [
+          ( GetVar
+            { _gvIdentifier = tGuid
+            , _gvName = name
+            , _gvJumpTo = errorJumpTo
+            , _gvVarType = GetFieldParameter
+            }
+          , ExprUtil.pureExpression . Expression.BodyGetField $
+            Expression.GetField getParam (exprTag tGuid)
+          )
+        ] }
 
 convertTypeCheckedHoleH ::
   (MonadA m, Typeable1 m) => SugarM.Context m -> Maybe (T m Guid) ->
@@ -891,9 +901,9 @@ convertTypeCheckedHoleH sugarContext mPaste iwc exprI =
         { _holePaste = mPaste
         , _holeMDelete = Nothing
         , _holeScope =
-          concat <$> sequence
-          [ (fmap concat . mapM (onScopeElement sugarContext) .
-             Map.toList . Infer.iScope) inferred
+          mconcat . concat <$> sequence
+          [ mapM (getScopeElement sugarContext) . Map.toList $
+            Infer.iScope inferred
           , mapM getGlobal globals
           , mapM getTag tags
           ]

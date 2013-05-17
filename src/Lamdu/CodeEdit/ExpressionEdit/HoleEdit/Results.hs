@@ -23,6 +23,7 @@ import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
+import Lamdu.CodeEdit.Sugar (Scope(..))
 import Lamdu.Data.Expression (Expression(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Control.Lens as Lens
@@ -78,10 +79,20 @@ data ResultsList m = ResultsList
   , rlExtra :: [Result m]
   }
 
-makeScopeItemGroup ::
-  MonadA m => (Sugar.ScopeItem Sugar.Name m, DataIRef.ExpressionM m ()) -> GroupM m
-makeScopeItemGroup (scopeItem, expr) = Group
-  { _groupNames = varName : extraNames ++ collisionStrs
+getVarsToGroup :: (Sugar.GetVar Sugar.Name m, Expression def ()) -> Group def
+getVarsToGroup (getVar, expr) = sugarNameToGroup (getVar ^. Sugar.gvName) expr
+
+tagsToGroup :: (Sugar.TagG Sugar.Name, Expression def ()) -> Group def
+tagsToGroup (tagG, expr) = sugarNameToGroup (tagG ^. Sugar.tagName) expr
+
+getParamsToGroup :: (Sugar.GetParams Sugar.Name m, Expression def ()) -> Group def
+getParamsToGroup (getParams, expr) =
+  sugarNameToGroup (getParams ^. Sugar.gpDefName) expr
+  & groupNames <>~ ["params"]
+
+sugarNameToGroup :: Sugar.Name -> Expression def () -> Group def
+sugarNameToGroup (Sugar.Name _ collision varName) expr = Group
+  { _groupNames = varName : collisionStrs
   , _groupBaseExpr = expr
   }
   where
@@ -89,11 +100,6 @@ makeScopeItemGroup (scopeItem, expr) = Group
       case collision of
       Sugar.NoCollision -> []
       Sugar.Collision suffix -> [show suffix]
-    (Sugar.Name _ collision varName, extraNames) =
-      case scopeItem of
-      Sugar.ScopeVar getVar -> (getVar ^. Sugar.gvName, [])
-      Sugar.ScopeTag tagG -> (tagG ^. Sugar.tagName, [])
-      Sugar.ScopeGetParams getParams -> (getParams ^. Sugar.gpDefName, ["params"])
 
 makeLiteralGroups :: String -> [Group def]
 makeLiteralGroups searchTerm =
@@ -308,10 +314,21 @@ makeAll holeInfo makeWidget = do
 
 makeAllGroups :: MonadA m => HoleInfo m -> T m [GroupM m]
 makeAllGroups holeInfo = do
-  scope <- hiHoleActions holeInfo ^. Sugar.holeScope
+  Scope
+    { _scopeLocals = locals
+    , _scopeGlobals = globals
+    , _scopeTags = tags
+    , _scopeGetParams = getParams
+    } <- hiHoleActions holeInfo ^. Sugar.holeScope
   let
-    relevantGroups = primitiveGroups ++ literalGroups ++ varGroups
-    varGroups = map makeScopeItemGroup scope
+    relevantGroups = concat
+      [ primitiveGroups, literalGroups
+      , localsGroups, globalsGroups, tagsGroups, getParamsGroups
+      ]
+    localsGroups    = map getVarsToGroup locals
+    globalsGroups   = map getVarsToGroup globals
+    tagsGroups      = map tagsToGroup tags
+    getParamsGroups = map getParamsToGroup getParams
   pure $ holeMatches (^. groupNames) searchTerm relevantGroups
   where
     literalGroups = makeLiteralGroups searchTerm

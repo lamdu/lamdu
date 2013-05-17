@@ -232,21 +232,25 @@ toPi pi@Pi {..} = do
   (param, resultType) <- runCPS (withFuncParam NameGen.Dependent pParam) $ toExpression pResultType
   pure pi { pParam = param, pResultType = resultType }
 
+toScope :: MonadNaming m => Scope (OldName m) tm -> m (Scope (NewName m) tm)
+toScope (Scope l g t p) =
+  Scope
+  <$> (traverse . Lens._1) toGetVar l
+  <*> (traverse . Lens._1) toGetVar g
+  <*> (traverse . Lens._1) toTag t
+  <*> (traverse . Lens._1) toGetParams p
+
 toHoleActions ::
   (MonadA tm, MonadNaming m) => HoleActions (OldName m) tm ->
   m (HoleActions (NewName m) tm)
 toHoleActions ha@HoleActions {..} = do
   run0 <- opRun
   run1 <- opRun
-  let
-    toHoleResult = run0 . holeResultConverted toExpression
-    toScopeItem (ScopeVar x) = run1 $ ScopeVar <$> toGetVar x
-    toScopeItem (ScopeTag x) = run1 $ ScopeTag <$> toTag x
-    toScopeItem (ScopeGetParams x) = run1 $ ScopeGetParams <$> toGetParams x
-    onMHoleResult = (fmap . fmap) toHoleResult
-    result = onMHoleResult <$> _holeResult
-    scope = _holeScope & (Lens.mapped . traverse . Lens._1) %~ toScopeItem
-  pure ha { _holeScope = scope, _holeResult = result }
+  let toHoleResult = run0 . holeResultConverted toExpression
+  pure ha
+    { _holeScope = fmap (run1 . toScope) _holeScope
+    , _holeResult = (fmap . fmap . fmap) toHoleResult _holeResult
+    }
 
 toHole ::
   (MonadA tm, MonadNaming m) => Hole (OldName m) tm ->

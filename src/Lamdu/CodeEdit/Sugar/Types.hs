@@ -40,11 +40,11 @@ module Lamdu.CodeEdit.Sugar.Types
   , TagG(..), tagName, tagGuid
   , Pi(..)
   , Section(..)
-  , ScopeItem(..), _ScopeVar, _ScopeTag
-  , Hole(..), holeScope, holeMActions
+  , Hole(..), holeMActions
   , HoleResultSeed(..)
-  , HoleActions(..)
-    , holePaste, holeMDelete, holeResult, holeInferExprType
+  , ScopeItem
+  , Scope(..), scopeLocals, scopeGlobals, scopeTags, scopeGetParams
+  , HoleActions(..), holeScope, holePaste, holeMDelete, holeResult, holeInferExprType
   , StorePoint(..)
   , HoleResult(..)
     , holeResultInferred
@@ -62,7 +62,10 @@ module Lamdu.CodeEdit.Sugar.Types
 import Control.Monad.Trans.State (StateT)
 import Data.Binary (Binary)
 import Data.Cache (Cache)
+import Data.Derive.Monoid (makeMonoid)
+import Data.DeriveTH (derive)
 import Data.Foldable (Foldable)
+import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
@@ -193,18 +196,22 @@ data HoleResult name m = HoleResult
   , _holeResultPickPrefix :: PrefixAction m
   }
 
-data ScopeItem name m
-  = ScopeVar (GetVar name m)
-  | ScopeTag (TagG name)
-  | ScopeGetParams (GetParams name m)
-
 data HoleResultSeed m
   = ResultSeedExpression (ExprStorePoint m)
   | ResultSeedNewTag String
   | ResultSeedNewDefinition String
 
+type ScopeItem m a = (a, DataIRef.ExpressionM m ())
+
+data Scope name m = Scope
+  { _scopeLocals    :: [ScopeItem m (GetVar name m)]
+  , _scopeGlobals   :: [ScopeItem m (GetVar name m)]
+  , _scopeTags      :: [ScopeItem m (TagG name)]
+  , _scopeGetParams :: [ScopeItem m (GetParams name m)]
+  }
+
 data HoleActions name m = HoleActions
-  { _holeScope :: T m [(ScopeItem name m, DataIRef.ExpressionM m ())]
+  { _holeScope :: T m (Scope name m)
   , -- Infer expression "on the side" (not in the hole position),
     -- but with the hole's scope in scope.
     -- If given expression does not type check on its own, returns Nothing.
@@ -401,7 +408,7 @@ data Definition name m = Definition
 type DefinitionN = Definition Name
 type DefinitionU = Definition MStoredName
 
-LensTH.makePrisms ''ScopeItem
+derive makeMonoid ''Scope
 LensTH.makePrisms ''Body
 LensTH.makeLenses ''Definition
 LensTH.makeLenses ''DefinitionExpression
@@ -422,5 +429,6 @@ LensTH.makeLenses ''FuncParamActions
 LensTH.makeLenses ''Payload
 LensTH.makeLenses ''ExpressionP
 LensTH.makeLenses ''HoleResult
+LensTH.makeLenses ''Scope
 LensTH.makeLenses ''HoleActions
 LensTH.makeLenses ''Hole
