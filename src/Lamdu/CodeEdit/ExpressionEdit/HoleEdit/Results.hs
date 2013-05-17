@@ -325,10 +325,11 @@ makeAllGroups holeInfo = do
       [ primitiveGroups, literalGroups
       , localsGroups, globalsGroups, tagsGroups, getParamsGroups
       ]
-    localsGroups    = map getVarsToGroup locals
-    globalsGroups   = map getVarsToGroup globals
-    tagsGroups      = map tagsToGroup tags
-    getParamsGroups = map getParamsToGroup getParams
+    sortedGroups f  = sortOn (^. groupNames) . map f
+    localsGroups    = sortedGroups getVarsToGroup locals
+    globalsGroups   = sortedGroups getVarsToGroup globals
+    tagsGroups      = sortedGroups tagsToGroup tags
+    getParamsGroups = sortedGroups getParamsToGroup getParams
   pure $ holeMatches (^. groupNames) searchTerm relevantGroups
   where
     literalGroups = makeLiteralGroups searchTerm
