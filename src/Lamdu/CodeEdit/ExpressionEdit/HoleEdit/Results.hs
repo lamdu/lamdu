@@ -91,8 +91,8 @@ makeScopeItemGroup (scopeItem, expr) =
       Sugar.ScopeTag tagG -> tagG ^. Sugar.tagName
       Sugar.ScopeGetParams getParams -> getParams ^. Sugar.gpDefName
 
-makeLiteralGroup :: String -> [Group def]
-makeLiteralGroup searchTerm =
+makeLiteralGroups :: String -> [Group def]
+makeLiteralGroups searchTerm =
   [ makeLiteralIntResult (read searchTerm)
   | nonEmptyAll Char.isDigit searchTerm
   ]
@@ -310,7 +310,7 @@ makeAllGroups holeInfo = do
     varGroups = map makeScopeItemGroup scope
   pure $ holeMatches groupNames searchTerm relevantGroups
   where
-    literalGroups = makeLiteralGroup searchTerm
+    literalGroups = makeLiteralGroups searchTerm
     state = Property.value $ hiState holeInfo
     searchTerm = state ^. HoleInfo.hsSearchTerm
     primitiveGroups =
