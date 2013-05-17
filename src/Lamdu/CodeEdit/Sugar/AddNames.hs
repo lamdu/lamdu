@@ -10,6 +10,7 @@ import Control.Monad.Trans.State (runState, evalState)
 import Control.Monad.Trans.Writer (Writer, runWriter)
 import Control.MonadA (MonadA)
 import Data.Map (Map)
+import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable, traverse)
@@ -22,7 +23,6 @@ import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.List as List
 import qualified Data.Map as Map
-import qualified Data.Set as Set
 import qualified Lamdu.CodeEdit.Sugar.NameGen as NameGen
 
 type CPSNameConvertor m = Guid -> OldName m -> CPS m (NewName m)
@@ -42,31 +42,44 @@ class MonadA m => MonadNaming m where
   opGetParamName :: NameConvertor m
   opGetHiddenParamsName :: NameConvertor m
 
-newtype SetList a = SetList [a]
+newtype SetList a = SetList { getSetList :: [a] }
   deriving (Show)
 instance Eq a => Monoid (SetList a) where
   mempty = SetList []
   SetList xs `mappend` SetList ys = SetList $ xs ++ filter (`notElem` xs) ys
 
 type StoredName = String
-newtype NameCount = NameCount (Map StoredName (SetList Guid))
+newtype NameGuidMap =
+  NameGuidMap (Map StoredName (SetList Guid))
   deriving (Show)
-instance Monoid NameCount where
-  mempty = NameCount Map.empty
-  NameCount x `mappend` NameCount y = NameCount $ Map.unionWith mappend x y
+instance Monoid NameGuidMap where
+  mempty = NameGuidMap Map.empty
+  NameGuidMap x `mappend` NameGuidMap y =
+    NameGuidMap $ Map.unionWith mappend x y
+
+nameGuidMap_notMember :: StoredName -> NameGuidMap -> Bool
+nameGuidMap_notMember name (NameGuidMap nameGuidMap) = Map.notMember name nameGuidMap
+
+nameGuidMap_singleton :: StoredName -> Guid -> NameGuidMap
+nameGuidMap_singleton name guid = NameGuidMap . Map.singleton name $ SetList [guid]
+
+nameGuidMap_lookup ::
+  StoredName -> NameGuidMap -> Maybe (SetList Guid)
+nameGuidMap_lookup name (NameGuidMap nameGuidMap) =
+  Map.lookup name nameGuidMap
 
 -- Pass 0:
 data StoredNames = StoredNames
   { storedName :: Maybe StoredName
-  , storedNamesWithin :: NameCount
+  , storedNamesWithin :: NameGuidMap
   }
-newtype Pass0M a = Pass0M (Writer NameCount a)
+newtype Pass0M a = Pass0M (Writer NameGuidMap a)
   deriving (Functor, Applicative, Monad)
-p0TellStoredNames :: NameCount -> Pass0M ()
+p0TellStoredNames :: NameGuidMap -> Pass0M ()
 p0TellStoredNames = Pass0M . Writer.tell
-p0ListenStoredNames :: Pass0M a -> Pass0M (a, NameCount)
+p0ListenStoredNames :: Pass0M a -> Pass0M (a, NameGuidMap)
 p0ListenStoredNames (Pass0M act) = Pass0M $ Writer.listen act
-runPass0M :: Pass0M a -> (a, NameCount)
+runPass0M :: Pass0M a -> (a, NameGuidMap)
 runPass0M (Pass0M act) = runWriter act
 
 instance MonadNaming Pass0M where
@@ -82,15 +95,15 @@ instance MonadNaming Pass0M where
   opGetTagName = p0nameConvertor
   opGetDefName = p0nameConvertor
 
-pass0Result :: Guid -> MStoredName -> Pass0M (NameCount -> StoredNames)
+pass0Result :: Guid -> MStoredName -> Pass0M (NameGuidMap -> StoredNames)
 pass0Result guid mName = do
-  p0TellStoredNames myNameCounts
-  pure $ \storedNameCounts -> StoredNames
+  p0TellStoredNames myNameGuidMap
+  pure $ \storedNameGuidMapBelow -> StoredNames
     { storedName = mName
-    , storedNamesWithin = myNameCounts `mappend` storedNameCounts
+    , storedNamesWithin = myNameGuidMap `mappend` storedNameGuidMapBelow
     }
   where
-    myNameCounts = NameCount $ maybe Map.empty (`Map.singleton` SetList [guid]) mName
+    myNameGuidMap = maybe mempty (`nameGuidMap_singleton` guid) mName
 
 p0nameConvertor :: NameConvertor Pass0M
 p0nameConvertor guid mName = ($ mempty) <$> pass0Result guid mName
@@ -98,13 +111,16 @@ p0nameConvertor guid mName = ($ mempty) <$> pass0Result guid mName
 p0cpsNameConvertor :: CPSNameConvertor Pass0M
 p0cpsNameConvertor guid mName = CPS $ \k -> do
   result <- pass0Result guid mName
-  (res, storedNameCounts) <- p0ListenStoredNames k
-  pure (result storedNameCounts, res)
+  (res, storedNameGuidMapBelow) <- p0ListenStoredNames k
+  pure (result storedNameGuidMapBelow, res)
 
 -- Pass 1:
 data P1Env = P1Env
   { _p1NameGen :: NameGen Guid
-  , _p1Disambiguation :: String -> Guid -> NameCollision
+    -- StoredNamesAbove keeps track of stored names we've already
+    -- used, and their index in the SetList is their official suffix
+    -- (*if* there are conflicts)
+  , _p1StoredNamesAbove :: NameGuidMap
   }
 Lens.makeLenses ''P1Env
 
@@ -125,7 +141,8 @@ instance MonadNaming Pass1M where
   opWithTagName = p1cpsNameConvertorGlobal "tag_"
   opWithParamName = p1cpsNameConvertorLocal
   opWithWhereItemName = p1cpsNameConvertorLocal NameGen.Independent
-  opGetParamName guid (StoredNames (Just str) _) = makeStoredName str guid <$> p1GetEnv
+  opGetParamName guid (StoredNames (Just str) nameGuidMapBelow) =
+    makeStoredName str nameGuidMapBelow guid <$> p1GetEnv
   opGetParamName guid (StoredNames Nothing _) = do
     nameGen <- (^. p1NameGen) <$> p1GetEnv
     pure . Name AutoGeneratedName NoCollision $
@@ -135,31 +152,49 @@ instance MonadNaming Pass1M where
   opGetTagName = p1nameConvertor "tag_"
   opGetDefName = p1nameConvertor "def_"
 
-makeStoredName :: StoredName -> Guid -> P1Env -> Name
-makeStoredName storedName guid env =
-  Name StoredName collision storedName
-  where
-    collision = (env ^. p1Disambiguation) storedName guid
+makeStoredName :: StoredName -> NameGuidMap -> Guid -> P1Env -> Name
+makeStoredName storedName nameGuidMapBelow guid env =
+  fst $ makeStoredNameEnv storedName nameGuidMapBelow guid env
 
-makeStoredNameEnv :: StoredName -> Guid -> P1Env -> (Name, P1Env)
-makeStoredNameEnv storedName guid env =
-  ( makeStoredName storedName guid env
-  , env
-    & p1NameGen %~ NameGen.ban (Set.singleton storedName)
-  )
+listAtLeastTwo :: [a] -> Bool
+listAtLeastTwo (_:_:_) = True
+listAtLeastTwo _ = False
+
+makeStoredNameEnv :: StoredName -> NameGuidMap -> Guid -> P1Env -> (Name, P1Env)
+makeStoredNameEnv storedName storedNamesBelow guid env =
+  (Name StoredName collision storedName, newEnv)
+  where
+    newEnv =
+      env & p1StoredNamesAbove <>~
+      nameGuidMap_singleton storedName guid
+    storedNamesAbove = newEnv ^. p1StoredNamesAbove
+    unsafeLookupStoredName =
+      getSetList .
+      fromMaybe (error "name just added to the newEnv") .
+      nameGuidMap_lookup storedName
+    haveCollision =
+      listAtLeastTwo . unsafeLookupStoredName $
+      storedNamesAbove `mappend` storedNamesBelow
+    collisionSuffix =
+      fromMaybe (error "Guid just added to the newEnv") .
+      List.elemIndex guid $
+      unsafeLookupStoredName storedNamesAbove
+    collision
+      | haveCollision = Collision collisionSuffix
+      | otherwise = NoCollision
 
 p1cpsNameConvertor ::
-  Guid -> StoredNames -> (NameCount -> P1Env -> (Name, P1Env)) -> CPS Pass1M Name
+  Guid -> StoredNames -> (NameGuidMap -> P1Env -> (Name, P1Env)) -> CPS Pass1M Name
 p1cpsNameConvertor guid storedNames nameMaker =
   CPS $ \k -> do
     oldEnv <- p1GetEnv
     let
       (name, newEnv) =
         case storedNames of
-        StoredNames (Just storedName) _ ->
-          makeStoredNameEnv storedName guid oldEnv
-        StoredNames Nothing nameCount ->
-          nameMaker nameCount oldEnv
+        StoredNames (Just storedName) storedNamesBelow ->
+          makeStoredNameEnv storedName storedNamesBelow guid oldEnv
+        StoredNames Nothing storedNamesBelow ->
+          nameMaker storedNamesBelow oldEnv
     res <- p1WithEnv (const newEnv) k
     return (name, res)
 
@@ -171,14 +206,19 @@ p1cpsNameConvertorGlobal prefix guid storedNames =
 p1cpsNameConvertorLocal :: NameGen.IsDependent -> CPSNameConvertor Pass1M
 p1cpsNameConvertorLocal isDep guid storedNames =
   p1cpsNameConvertor guid storedNames $
-  \(NameCount nameCounts) p1env ->
-  (runState . Lens.zoom p1NameGen)
-  (Name AutoGeneratedName NoCollision <$>
-   NameGen.newName (`Map.notMember` nameCounts) isDep guid)
-  p1env
+  \storedNameGuidMapBelow p1env ->
+  (`runState` p1env) . Lens.zoom p1NameGen $
+    let
+      storedNameGuidMap =
+        storedNameGuidMapBelow `mappend` (p1env ^. p1StoredNamesAbove)
+    in
+      Name AutoGeneratedName NoCollision <$>
+      NameGen.newName (`nameGuidMap_notMember` storedNameGuidMap)
+      isDep guid
 
 p1nameConvertor :: String -> NameConvertor Pass1M
-p1nameConvertor _ guid (StoredNames (Just str) _) = makeStoredName str guid <$> p1GetEnv
+p1nameConvertor _ guid (StoredNames (Just str) storedNamesBelow) =
+  makeStoredName str storedNamesBelow guid <$> p1GetEnv
 p1nameConvertor prefix guid (StoredNames Nothing _) = pure $ makeGuidName prefix guid
 
 makeGuidName :: Show guid => String -> guid -> Name
@@ -411,15 +451,9 @@ addToDef :: MonadA m => DefinitionU m -> DefinitionN m
 addToDef =
   pass1 . runPass0M . toDef
   where
-    disambiguate nameCounts name guid =
-      maybe NoCollision (toCollision guid) $ Map.lookup name nameCounts
-    toCollision guid (SetList [definedGuid])
-      | definedGuid == guid = NoCollision
-    toCollision guid (SetList guids) =
-      maybe NoCollision Collision $ List.elemIndex guid guids
-    mkP1Env nameCounts = P1Env
+    emptyP1Env = P1Env
       { _p1NameGen = NameGen.initial
-      , _p1Disambiguation = disambiguate nameCounts
+      , _p1StoredNamesAbove = mempty
       }
-    pass1 (def, NameCount nameCounts) =
-      runPass1M (mkP1Env nameCounts) $ toDef def
+    pass1 (def, _) =
+      runPass1M emptyP1Env $ toDef def
