@@ -79,17 +79,17 @@ data ResultsList m = ResultsList
 makeScopeItemGroup ::
   MonadA m => (Sugar.ScopeItem Sugar.Name m, DataIRef.ExpressionM m ()) -> GroupM m
 makeScopeItemGroup (scopeItem, expr) =
-  Group { groupNames = varName : collisionStrs, groupBaseExpr = expr }
+  Group { groupNames = varName : extraNames ++ collisionStrs, groupBaseExpr = expr }
   where
     collisionStrs =
       case collision of
       Sugar.NoCollision -> []
       Sugar.Collision suffix -> [show suffix]
-    Sugar.Name _ collision varName =
+    (Sugar.Name _ collision varName, extraNames) =
       case scopeItem of
-      Sugar.ScopeVar getVar -> getVar ^. Sugar.gvName
-      Sugar.ScopeTag tagG -> tagG ^. Sugar.tagName
-      Sugar.ScopeGetParams getParams -> getParams ^. Sugar.gpDefName
+      Sugar.ScopeVar getVar -> (getVar ^. Sugar.gvName, [])
+      Sugar.ScopeTag tagG -> (tagG ^. Sugar.tagName, [])
+      Sugar.ScopeGetParams getParams -> (getParams ^. Sugar.gpDefName, ["params"])
 
 makeLiteralGroups :: String -> [Group def]
 makeLiteralGroups searchTerm =
