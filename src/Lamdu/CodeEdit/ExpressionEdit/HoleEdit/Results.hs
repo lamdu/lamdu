@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
 module Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Results
   ( makeAll, pick, HaveHiddenResults(..)
   , Result(..), ResultsList(..)
@@ -46,15 +46,17 @@ type T = Transaction
 type CT m = StateT Cache (T m)
 
 data Group def = Group
-  { groupNames :: [String]
-  , groupBaseExpr :: Expression def ()
+  { _groupNames :: [String]
+  , _groupBaseExpr :: Expression def ()
   }
 type GroupM m = Group (DefI (Tag m))
 
+Lens.makeLenses ''Group
+
 mkGroup :: [String] -> Expression.BodyExpr def () -> Group def
 mkGroup names body = Group
-  { groupNames = names
-  , groupBaseExpr = ExprUtil.pureExpression body
+  { _groupNames = names
+  , _groupBaseExpr = ExprUtil.pureExpression body
   }
 
 pick ::
@@ -78,8 +80,10 @@ data ResultsList m = ResultsList
 
 makeScopeItemGroup ::
   MonadA m => (Sugar.ScopeItem Sugar.Name m, DataIRef.ExpressionM m ()) -> GroupM m
-makeScopeItemGroup (scopeItem, expr) =
-  Group { groupNames = varName : extraNames ++ collisionStrs, groupBaseExpr = expr }
+makeScopeItemGroup (scopeItem, expr) = Group
+  { _groupNames = varName : extraNames ++ collisionStrs
+  , _groupBaseExpr = expr
+  }
   where
     collisionStrs =
       case collision of
@@ -249,7 +253,7 @@ makeResultsList holeInfo makeWidget group =
         holeApply baseExpr
   where
     toResList = baseExprToResultsList holeInfo makeWidget
-    baseExpr = groupBaseExpr group
+    baseExpr = group ^. groupBaseExpr
     holeApply =
       ExprUtil.pureExpression .
       (ExprUtil.makeApply . ExprUtil.pureExpression . Expression.BodyLeaf) Expression.Hole
@@ -308,7 +312,7 @@ makeAllGroups holeInfo = do
   let
     relevantGroups = primitiveGroups ++ literalGroups ++ varGroups
     varGroups = map makeScopeItemGroup scope
-  pure $ holeMatches groupNames searchTerm relevantGroups
+  pure $ holeMatches (^. groupNames) searchTerm relevantGroups
   where
     literalGroups = makeLiteralGroups searchTerm
     state = Property.value $ hiState holeInfo
