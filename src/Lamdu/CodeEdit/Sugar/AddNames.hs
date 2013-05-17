@@ -244,10 +244,11 @@ toHoleActions ::
 toHoleActions ha@HoleActions {..} = do
   run0 <- opRun
   run1 <- opRun
-  let toHoleResult = run0 . holeResultConverted toExpression
   pure ha
-    { _holeScope = fmap (run1 . toScope) _holeScope
-    , _holeResult = (fmap . fmap . fmap) toHoleResult _holeResult
+    { _holeScope =
+      fmap (run1 . toScope) _holeScope
+    , _holeResult =
+      (fmap . fmap . fmap) (run0 . holeResultConverted toExpression) _holeResult
     }
 
 toHole ::
