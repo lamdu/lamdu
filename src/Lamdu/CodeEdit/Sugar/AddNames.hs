@@ -42,20 +42,18 @@ class MonadA m => MonadNaming m where
   opGetParamName :: NameConvertor m
   opGetHiddenParamsName :: NameConvertor m
 
-newtype SetList a = SetList { getSetList :: [a] }
+newtype SetList a = SetList [a]
   deriving (Show)
 instance Eq a => Monoid (SetList a) where
   mempty = SetList []
   SetList xs `mappend` SetList ys = SetList $ xs ++ filter (`notElem` xs) ys
 
 type StoredName = String
-newtype NameCount = NameCount { getNameCount :: Map StoredName (SetList Guid) }
+newtype NameCount = NameCount (Map StoredName (SetList Guid))
   deriving (Show)
 instance Monoid NameCount where
   mempty = NameCount Map.empty
   NameCount x `mappend` NameCount y = NameCount $ Map.unionWith mappend x y
-evalWriter :: Writer w a -> a
-evalWriter = fst . runWriter
 
 -- Pass 0:
 data StoredNames = StoredNames
@@ -68,13 +66,13 @@ p0TellStoredNames :: NameCount -> Pass0M ()
 p0TellStoredNames = Pass0M . Writer.tell
 p0ListenStoredNames :: Pass0M a -> Pass0M (a, NameCount)
 p0ListenStoredNames (Pass0M act) = Pass0M $ Writer.listen act
-runPass0M :: Pass0M a -> a
-runPass0M (Pass0M act) = evalWriter act
+runPass0M :: Pass0M a -> (a, NameCount)
+runPass0M (Pass0M act) = runWriter act
 
 instance MonadNaming Pass0M where
   type OldName Pass0M = MStoredName
   type NewName Pass0M = StoredNames
-  opRun = pure runPass0M
+  opRun = pure (fst . runPass0M)
   opWithParamName _ = p0cpsNameConvertor
   opWithWhereItemName = p0cpsNameConvertor
   opWithDefName = p0cpsNameConvertor
@@ -412,16 +410,15 @@ addToDef :: MonadA m => DefinitionU m -> DefinitionN m
 addToDef =
   pass1 . runPass0M . toDef
   where
-    mkStoredSuffixMap = fmap getSetList . getNameCount . storedNamesWithin
-    disambiguate m name guid =
-      maybe NoCollision (toCollision guid) $ Map.lookup name m
-    toCollision guid [definedGuid]
+    disambiguate nameCounts name guid =
+      maybe NoCollision (toCollision guid) $ Map.lookup name nameCounts
+    toCollision guid (SetList [definedGuid])
       | definedGuid == guid = NoCollision
-    toCollision guid guids =
+    toCollision guid (SetList guids) =
       maybe NoCollision Collision $ List.elemIndex guid guids
-    mkP1Env def = P1Env
+    mkP1Env nameCounts = P1Env
       { _p1NameGen = NameGen.initial
-      , _p1Disambiguation = disambiguate . mkStoredSuffixMap $ def ^. drName
+      , _p1Disambiguation = disambiguate nameCounts
       }
-    pass1 def =
-      runPass1M (mkP1Env def) $ toDef def
+    pass1 (def, NameCount nameCounts) =
+      runPass1M (mkP1Env nameCounts) $ toDef def
