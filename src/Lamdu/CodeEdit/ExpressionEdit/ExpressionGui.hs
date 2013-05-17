@@ -16,9 +16,12 @@ module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui
   , makeLabel, makeColoredLabel
   , makeFocusableView
   , makeRow
+  , makeNameView
   ) where
 
-import Control.Lens (Lens', (^.))
+import Control.Applicative ((<$>))
+import Control.Lens (Lens')
+import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Function (on)
 import Data.Store.Guid (Guid)
@@ -146,13 +149,19 @@ makeBridge mkFocused mkUnfocused myId = do
 
 makeNameEdit ::
   MonadA m => Sugar.Name -> Guid -> Widget.Id -> ExprGuiM m (WidgetT m)
-makeNameEdit (Sugar.Name nameSrc name) ident myId =
-  fmap (nameSrcTint nameSrc) .
-  (ExprGuiM.atEnv . Lens.over WE.envTextStyle)
-  (Lens.set TextEdit.sEmptyFocusedString (concat ["<", name, ">"])) $
-  ExprGuiM.widgetEnv . makeEditor =<<
-  (ExprGuiM.transaction . Lens.view Transaction.mkProperty . Anchors.assocNameRef) ident
+makeNameEdit (Sugar.Name nameSrc nameCollision name) ident myId = do
+  nameProp <- ExprGuiM.transaction . (^. Transaction.mkProperty) $ Anchors.assocNameRef ident
+  collisionSuffixes <-
+    ExprGuiM.widgetEnv . makeCollisionSuffixLabels nameCollision $
+    Widget.toAnimId myId
+  nameEdit <-
+    fmap (nameSrcTint nameSrc) .
+    ExprGuiM.widgetEnv .
+    WE.atEnv (WE.envTextStyle . TextEdit.sEmptyFocusedString .~ bracketedName) $
+    makeEditor nameProp
+  return . Box.hboxCentered $ nameEdit : collisionSuffixes
   where
+    bracketedName = concat ["<", name, ">"]
     makeEditor property =
       makeBridge (makeWordEdit property) (BWidgets.makeFocusableTextView name) myId
     makeWordEdit =
@@ -247,3 +256,21 @@ makeRow =
   where
     item (halign, ExpressionGui widget alignment) =
       (Vector2 halign alignment, widget)
+
+makeNameView :: MonadA m => Sugar.Name -> AnimId -> WE.WidgetEnvT m (Widget f)
+makeNameView (Sugar.Name nameSrc collision name) animId = do
+  label <- BWidgets.makeLabel name animId
+  suffixLabels <- makeCollisionSuffixLabels collision $ animId ++ ["suffix"]
+  return .
+    nameSrcTint nameSrc .
+    Box.hboxCentered $ label : suffixLabels
+
+makeCollisionSuffixLabels ::
+  MonadA m => Sugar.NameCollision -> AnimId -> WE.WidgetEnvT m [Widget f]
+makeCollisionSuffixLabels Sugar.NoCollision _ = return []
+makeCollisionSuffixLabels (Sugar.Collision suffix) animId =
+  (:[]) . onSuffixWidget <$> BWidgets.makeLabel ('_' : show suffix) animId
+  where
+    onSuffixWidget =
+      Widget.tint Config.collisionSuffixTint .
+      Widget.scale Config.collisionSuffixScaleFactor

@@ -14,7 +14,7 @@ module Lamdu.CodeEdit.Sugar
   , Payload(..), plInferredTypes, plActions, plNextHole
   , ExpressionP(..)
     , rGuid, rBody, rPayload, rHiddenGuids, rPresugaredExpression
-  , NameSource(..), Name(..), MStoredName
+  , NameSource(..), NameCollision(..), Name(..), MStoredName
   , DefinitionN
   , Expression, ExpressionN
   , BodyN
@@ -220,7 +220,7 @@ toHoles ::
   T m ()
 toHoles predicate =
   Lens.mapMOf_ (Lens.folding ExprUtil.subExpressions . Lens.filtered predicate)
-  (DataOps.setToHole . (^. Expression.ePayload))      
+  (DataOps.setToHole . (^. Expression.ePayload))
 
 deleteParamRef ::
   MonadA m => Guid -> Expression.Expression def (Stored m) -> T m ()

@@ -36,7 +36,7 @@ make getParams myId = do
   prefixLabel <- label "(of "
   defNameLabel <-
     ExprGuiM.withFgColor Config.definitionColor .
-    ExprGuiM.widgetEnv $ BWidgets.makeTextView defName animId
+    ExprGuiM.widgetEnv $ ExpressionGui.makeNameView defName animId
   suffixLabel <- label ")"
   ExprGuiM.widgetEnv .
     fmap ExpressionGui.fromValueWidget .
@@ -50,4 +50,4 @@ make getParams myId = do
   where
     animId = Widget.toAnimId myId
     label = ExprGuiM.widgetEnv . flip BWidgets.makeLabel animId
-    Sugar.Name _ defName = getParams ^. Sugar.gpDefName
+    defName = getParams ^. Sugar.gpDefName

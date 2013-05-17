@@ -25,11 +25,10 @@ makeUncoloredView
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
 makeUncoloredView getVar myId =
-  ExpressionGui.fromValueWidget .
-  ExpressionGui.nameSrcTint nameSrc <$>
-  ExprGuiM.widgetEnv (BWidgets.makeFocusableTextView name myId)
-  where
-    Sugar.Name nameSrc name = getVar ^. Sugar.gvName
+  ExprGuiM.widgetEnv $
+  fmap ExpressionGui.fromValueWidget .
+  BWidgets.makeFocusableView myId =<<
+  (ExpressionGui.makeNameView (getVar ^. Sugar.gvName) (Widget.toAnimId myId))
 
 colorOf :: Sugar.GetVarType -> Draw.Color
 colorOf Sugar.GetDefinition = Config.definitionColor

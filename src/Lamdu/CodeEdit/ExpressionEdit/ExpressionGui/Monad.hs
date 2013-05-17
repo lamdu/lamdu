@@ -74,6 +74,7 @@ newtype ExprGuiM m a = ExprGuiM
 LensTH.makeLenses ''Askable
 LensTH.makeLenses ''ExprGuiM
 
+-- TODO: To lens
 atEnv :: MonadA m => (WE.Env -> WE.Env) -> ExprGuiM m a -> ExprGuiM m a
 atEnv = Lens.over exprGuiM . RWS.mapRWST . WE.atEnv
 

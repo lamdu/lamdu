@@ -51,7 +51,7 @@ makeEquals :: MonadA m => Widget.Id -> ExprGuiM m (Widget f)
 makeEquals = ExprGuiM.widgetEnv . BWidgets.makeLabel "=" . Widget.toAnimId
 
 nonOperatorName :: Sugar.Name -> Bool
-nonOperatorName (Sugar.Name Sugar.StoredName x) = nonEmptyAll (`notElem` Config.operatorChars) x
+nonOperatorName (Sugar.Name Sugar.StoredName _ x) = nonEmptyAll (`notElem` Config.operatorChars) x
 nonOperatorName _ = False
 
 polyNameFDConfig :: FocusDelegator.Config
