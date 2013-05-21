@@ -1,5 +1,5 @@
 module Lamdu.CodeEdit.Sugar.Convert.Apply
-  ( convert, makeCollapsed
+  ( convert
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))

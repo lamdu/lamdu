@@ -229,17 +229,7 @@ convertFunc lambda lamExprI = do
     newFunc
       | SugarInfer.isPolymorphicFunc lamExprI = innerFunc & fDepParams %~ (newParam :)
       | otherwise = Func [] (newParam : fAllParams innerFunc) $ innerFunc ^. fBody
-    maybeEta = do
-      (_, Expression.Apply func arg) <- sBody ^? rBody . _BodyApply
-      argVar <- arg ^? rBody . _BodyGetVar
-      guard $ argVar ^. gvIdentifier == param ^. fpGuid
-      funcVar <- func ^? rBody . _BodyGetVar
-      pure (func ^. rGuid, funcVar)
-  fullExpr <- SugarExpr.make lamExprI $ BodyFunc DontHaveParens newFunc
-  case maybeEta of
-    Nothing -> pure fullExpr
-    Just (funcGuid, funcVar) ->
-      Apply.makeCollapsed lamExprI funcGuid funcVar fullExpr
+  SugarExpr.make lamExprI $ BodyFunc DontHaveParens newFunc
   where
     deleteToNextParam nextParam =
       Lens.set
