@@ -102,41 +102,57 @@ import qualified System.Random as Random
 
 type Convertor m = SugarInfer.ExprMM m -> SugarM m (ExpressionU m)
 
-toHoles ::
-  MonadA m =>
-  (Expression.Expression def (DataIRef.ExpressionProperty m) -> Bool) ->
-  Expression.Expression def (DataIRef.ExpressionProperty m) ->
-  T m ()
-toHoles predicate =
+onMatchingSubexprs ::
+  MonadA m => (a -> m ()) ->
+  (Expression.Expression def a -> Bool) ->
+  Expression.Expression def a -> m ()
+onMatchingSubexprs action predicate =
   Lens.mapMOf_ (Lens.folding ExprUtil.subExpressions . Lens.filtered predicate)
-  (DataOps.setToHole . (^. Expression.ePayload))
+  (action . (^. Expression.ePayload))
 
-deleteParamRef ::
-  MonadA m => Guid -> Expression.Expression def (Stored m) -> T m ()
-deleteParamRef param =
-  toHoles $ Lens.anyOf (Expression.eBody . ExprUtil.bodyParameterRef) (== param)
+toHole :: MonadA m => Stored m -> T m ()
+toHole = void . DataOps.setToHole
 
-deleteFieldParamRef ::
-  MonadA m => Guid -> Guid -> Expression.Expression def (Stored m) -> T m ()
-deleteFieldParamRef param tagG = do
-  toHoles (p . (^? Expression.eBody . Expression._BodyGetField))
+isGetParamOf :: Guid -> Expression.Expression def a -> Bool
+isGetParamOf =
+  Lens.anyOf (Expression.eBody . ExprUtil.bodyParameterRef) . (==)
+
+isGetFieldParam :: Guid -> Guid -> Expression.Expression def a -> Bool
+isGetFieldParam param tagG =
+  p . (^? Expression.eBody . Expression._BodyGetField)
   where
     p Nothing = False
     p (Just (Expression.GetField record tag)) =
       Lens.anyOf ExprUtil.exprBodyTag (== tagG) tag &&
       Lens.anyOf (Expression.eBody . ExprUtil.bodyParameterRef) (== param) record
 
-mkFuncParamActions ::
+deleteParamRef ::
+  MonadA m => Guid -> Expression.Expression def (Stored m) -> T m ()
+deleteParamRef =
+  onMatchingSubexprs toHole . isGetParamOf
+
+deleteFieldParamRef ::
+  MonadA m => Guid -> Guid -> Expression.Expression def (Stored m) -> T m ()
+deleteFieldParamRef param tagG =
+  onMatchingSubexprs toHole $ isGetFieldParam param tagG
+
+lambdaWrap :: MonadA m => Stored m -> T m Guid
+lambdaWrap stored =
+  f <$> DataOps.lambdaWrap stored
+  where
+    f (newParam, newLamI) = Guid.combine (DataIRef.exprGuid newLamI) newParam
+
+mkPositionalFuncParamActions ::
   MonadA m => Guid -> Stored m -> Expression.Expression def (Stored m) ->
   FuncParamActions MStoredName m
-mkFuncParamActions param lambdaProp body =
+mkPositionalFuncParamActions param lambdaProp body =
   FuncParamActions
   { _fpListItemActions =
     ListItemActions
     { _itemDelete = do
         deleteParamRef param body
         SugarInfer.replaceWith lambdaProp $ body ^. Expression.ePayload
-    , _itemAddNext = fmap fst . DataOps.lambdaWrap $ body ^. Expression.ePayload
+    , _itemAddNext = lambdaWrap $ body ^. Expression.ePayload
     }
   , _fpGetExample =
       return
@@ -165,31 +181,33 @@ addFuncParamName fp = do
   name <- getStoredNameS $ fp ^. fpGuid
   pure fp { _fpName = name }
 
-convertFuncParam ::
+convertPositionalFuncParam ::
   (Typeable1 m, MonadA m) => Expression.Lambda (SugarInfer.ExprMM m) ->
   SugarInfer.ExprMM m ->
   SugarM m (FuncParam MStoredName m (ExpressionU m))
-convertFuncParam (Expression.Lambda _k paramGuid paramType body) expr = do
+convertPositionalFuncParam (Expression.Lambda _k paramGuid paramType body) lamExprI = do
   paramTypeS <- convertExpressionI paramType
   addFuncParamName FuncParam
     { _fpName = Nothing
     , _fpGuid = paramGuid
     , _fpVarKind = FuncParameter
-    , _fpId = paramGuid -- should be unique
-    , _fpHiddenLambdaGuid = Just $ SugarInfer.resultGuid expr
+    , _fpId = Guid.combine lamGuid paramGuid -- should be unique
+    , _fpHiddenLambdaGuid = Just $ SugarInfer.resultGuid lamExprI
     , _fpType = SugarExpr.removeSuccessfulType paramTypeS
     , _fpMActions =
-      mkFuncParamActions paramGuid
-      <$> expr ^. Expression.ePayload . SugarInfer.plStored
+      mkPositionalFuncParamActions paramGuid
+      <$> lamExprI ^. Expression.ePayload . SugarInfer.plStored
       <*> traverse (^. SugarInfer.plStored) body
     }
+  where
+    lamGuid = SugarInfer.resultGuid lamExprI
 
-convertLambda ::
+convertPositionalLambda ::
   (Typeable1 m, MonadA m) => Expression.Lambda (SugarInfer.ExprMM m) ->
   SugarInfer.ExprMM m ->
   SugarM m (FuncParam MStoredName m (ExpressionU m), ExpressionU m)
-convertLambda lam expr = do
-  param <- convertFuncParam lam expr
+convertPositionalLambda lam lamExprI = do
+  param <- convertPositionalFuncParam lam lamExprI
   result <- convertExpressionI (lam ^. Expression.lambdaResult)
   return (param & fpType %~ SugarExpr.setNextHole result, result)
 
@@ -199,8 +217,8 @@ fAllParams (Func depParams params _) = depParams ++ params
 convertFunc ::
   (MonadA m, Typeable1 m) => Expression.Lambda (SugarInfer.ExprMM m) ->
   Convertor m
-convertFunc lambda exprI = do
-  (param, sBody) <- convertLambda lambda exprI
+convertFunc lambda lamExprI = do
+  (param, sBody) <- convertPositionalLambda lambda lamExprI
   let
     innerFunc =
       case sBody ^. rBody of
@@ -209,7 +227,7 @@ convertFunc lambda exprI = do
     mNextParam = listToMaybe $ fAllParams innerFunc
     newParam = maybe id deleteToNextParam mNextParam param
     newFunc
-      | SugarInfer.isPolymorphicFunc exprI = innerFunc & fDepParams %~ (newParam :)
+      | SugarInfer.isPolymorphicFunc lamExprI = innerFunc & fDepParams %~ (newParam :)
       | otherwise = Func [] (newParam : fAllParams innerFunc) $ innerFunc ^. fBody
     maybeEta = do
       (_, Expression.Apply func arg) <- sBody ^? rBody . _BodyApply
@@ -217,11 +235,11 @@ convertFunc lambda exprI = do
       guard $ argVar ^. gvIdentifier == param ^. fpGuid
       funcVar <- func ^? rBody . _BodyGetVar
       pure (func ^. rGuid, funcVar)
-  fullExpr <- SugarExpr.make exprI $ BodyFunc DontHaveParens newFunc
+  fullExpr <- SugarExpr.make lamExprI $ BodyFunc DontHaveParens newFunc
   case maybeEta of
     Nothing -> pure fullExpr
     Just (funcGuid, funcVar) ->
-      Apply.makeCollapsed exprI funcGuid funcVar fullExpr
+      Apply.makeCollapsed lamExprI funcGuid funcVar fullExpr
   where
     deleteToNextParam nextParam =
       Lens.set
@@ -231,7 +249,7 @@ convertFunc lambda exprI = do
 
 convertPi :: (MonadA m, Typeable1 m) => Expression.Lambda (SugarInfer.ExprMM m) -> Convertor m
 convertPi lambda exprI = do
-  (param, sBody) <- convertLambda lambda exprI
+  (param, sBody) <- convertPositionalLambda lambda exprI
   SugarExpr.make exprI $ BodyPi DontHaveParens
     Pi
     { pParam = Lens.over fpType SugarExpr.addApplyChildParens param
@@ -800,11 +818,12 @@ convertExpressionPure cp gen =
   convertExpressionI . fmap SugarInfer.toPayloadMM .
   SugarInfer.resultFromPure gen
 
-data RecordParams m = RecordParams
-  { rpTags :: [Guid]
-  , rpParamInfos :: Map Guid SugarM.TagParamInfo
-  , rpRecordParamsInfos :: Map Guid (SugarM.RecordParamsInfo m)
-  , rpParams :: [FuncParam MStoredName m (ExpressionU m)]
+data ConventionalParams m = ConventionalParams
+  { cpTags :: [Guid]
+  , cpParamInfos :: Map Guid SugarM.TagParamInfo
+  , cpRecordParamsInfos :: Map Guid (SugarM.RecordParamsInfo m)
+  , cpParams :: [FuncParam MStoredName m (ExpressionU m)]
+  , cpAddFirstParam :: T m Guid
   }
 
 data FieldParam m = FieldParam
@@ -813,28 +832,27 @@ data FieldParam m = FieldParam
   , fpFieldType :: SugarInfer.ExprMM m
   }
 
-emptyRecordParams :: RecordParams m
-emptyRecordParams = RecordParams
-  { rpTags = []
-  , rpParamInfos = Map.empty
-  , rpRecordParamsInfos = Map.empty
-  , rpParams = []
-  }
-
 mkRecordParams ::
-  (MonadA m, Typeable1 m) => SugarM.RecordParamsInfo m -> Guid -> [FieldParam m] ->
-  Maybe (Stored m) -> Maybe (DataIRef.ExpressionIM m) ->
+  (MonadA m, Typeable1 m) =>
+  SugarM.RecordParamsInfo m -> Guid -> [FieldParam m] ->
+  SugarInfer.ExprMM m ->
+  Maybe (DataIRef.ExpressionIM m) ->
   Maybe (DataIRef.ExpressionM m (Stored m)) ->
-  SugarM m (RecordParams m)
-mkRecordParams recordParamsInfo paramGuid fieldParams mLambdaP mParamTypeI mBodyStored = do
+  SugarM m (ConventionalParams m)
+mkRecordParams recordParamsInfo paramGuid fieldParams lambdaExprI mParamTypeI mBodyStored = do
   params <- traverse mkParam fieldParams
-  pure RecordParams
-    { rpTags = fpTagGuid <$> fieldParams
-    , rpParamInfos = mconcat $ mkParamInfo <$> fieldParams
-    , rpRecordParamsInfos = Map.singleton paramGuid recordParamsInfo
-    , rpParams = params
+  pure ConventionalParams
+    { cpTags = fpTagGuid <$> fieldParams
+    , cpParamInfos = mconcat $ mkParamInfo <$> fieldParams
+    , cpRecordParamsInfos = Map.singleton paramGuid recordParamsInfo
+    , cpParams = params
+    , cpAddFirstParam =
+      addFirstFieldParam lamGuid $
+      fromMaybe (error "Record param type must be stored!") mParamTypeI
     }
   where
+    lamGuid = SugarInfer.resultGuid lambdaExprI
+    mLambdaP = lambdaExprI ^. Expression.ePayload . SugarInfer.plStored
     mkParamInfo fp =
       Map.singleton (fpTagGuid fp) . SugarM.TagParamInfo paramGuid $
       fpTagExpr fp ^. plGuid
@@ -846,7 +864,7 @@ mkRecordParams recordParamsInfo paramGuid fieldParams mLambdaP mParamTypeI mBody
       addFuncParamName FuncParam
         { _fpName = Nothing
         , _fpGuid = guid
-        , _fpId = tagExprGuid
+        , _fpId = Guid.combine lamGuid guid
         , _fpVarKind = FuncFieldParameter
         , _fpHiddenLambdaGuid = Nothing --TODO: First param to take lambda's guid?
         , _fpType = SugarExpr.removeSuccessfulType typeS
@@ -857,7 +875,7 @@ mkRecordParams recordParamsInfo paramGuid fieldParams mLambdaP mParamTypeI mBody
     fpActions tagExprGuid lambdaP paramTypeI bodyStored =
       FuncParamActions
       { _fpListItemActions = ListItemActions
-        { _itemAddNext = addFieldParamAfter tagExprGuid paramTypeI
+        { _itemAddNext = addFieldParamAfter lamGuid tagExprGuid paramTypeI
         , _itemDelete =
           delFieldParam tagExprGuid paramTypeI paramGuid lambdaP bodyStored
         }
@@ -875,11 +893,12 @@ rereadFieldParamTypes ::
   T m Guid
 rereadFieldParamTypes tagExprGuid paramTypeI f = do
   paramType <- DataIRef.readExprBody paramTypeI
-  case paramType of
-    Expression.BodyRecord (Expression.Record Type fields)
-      | (prevFields, theField : nextFields) <-
-        break ((tagExprGuid ==) . DataIRef.exprGuid . fst) fields ->
-          f prevFields theField nextFields
+  let
+    mBrokenFields =
+      paramType ^? Expression._BodyRecord . ExprUtil.kindedRecordFields Type .
+      (Lens.to . break) ((tagExprGuid ==) . DataIRef.exprGuid . fst)
+  case mBrokenFields of
+    Just (prevFields, theField : nextFields) -> f prevFields theField nextFields
     _ -> return tagExprGuid
 
 rewriteFieldParamTypes ::
@@ -888,8 +907,8 @@ rewriteFieldParamTypes paramTypeI fields =
   DataIRef.writeExprBody paramTypeI . Expression.BodyRecord $
   Expression.Record Type fields
 
-addFieldParamAfter :: MonadA m => Guid -> DataIRef.ExpressionIM m -> T m Guid
-addFieldParamAfter tagExprGuid paramTypeI =
+addFieldParamAfter :: MonadA m => Guid -> Guid -> DataIRef.ExpressionIM m -> T m Guid
+addFieldParamAfter lamGuid tagExprGuid paramTypeI =
   rereadFieldParamTypes tagExprGuid paramTypeI $
   \prevFields theField nextFields -> do
     fieldGuid <- Transaction.newKey
@@ -897,7 +916,7 @@ addFieldParamAfter tagExprGuid paramTypeI =
     holeTypeI <- DataOps.newHole
     rewriteFieldParamTypes paramTypeI $
       prevFields ++ theField : (tagExprI, holeTypeI) : nextFields
-    pure $ DataIRef.exprGuid tagExprI
+    pure $ Guid.combine lamGuid fieldGuid
 
 delFieldParam ::
   MonadA m => Guid -> DataIRef.ExpressionIM m -> Guid ->
@@ -910,26 +929,48 @@ delFieldParam tagExprGuid paramTypeI paramGuid lambdaP bodyStored =
       Just tagG -> deleteFieldParamRef paramGuid tagG bodyStored
       Nothing -> return ()
     case prevFields ++ nextFields of
-      [] -> delLambda
-      newFields ->
-        dest prevFields nextFields <$
+      [] -> error "We were given fewer than 2 field params, which should never happen"
+      [(fieldTagI, fieldTypeI)] -> do
+        fieldTag <- DataIRef.readExprBody fieldTagI
+        let
+          fieldTagGuid =
+            fromMaybe (error "field params always have proper Tag expr") $
+            fieldTag ^? ExprUtil.bodyTag
+        DataIRef.writeExprBody (Property.value lambdaP) $
+          ExprUtil.makeLambda fieldTagGuid fieldTypeI bodyI
+        deleteParamRef paramGuid bodyStored
+        let
+          toGetParam iref =
+            DataIRef.writeExprBody iref $ ExprUtil.bodyParameterRef # fieldTagGuid
+        onMatchingSubexprs (toGetParam . Property.value)
+          (isGetFieldParam paramGuid fieldTagGuid) bodyStored
+        pure $ Guid.combine lamGuid fieldTagGuid
+      newFields -> do
         rewriteFieldParamTypes paramTypeI newFields
+        dest prevFields nextFields
   where
+    lamGuid = DataIRef.exprGuid $ Property.value lambdaP
     bodyI = bodyStored ^. Expression.ePayload . Property.pVal
     dest prevFields nextFields =
-      DataIRef.exprGuid . head $
-      map fst (nextFields ++ reverse prevFields) ++
-      [bodyI]
-    delLambda =
-      DataIRef.exprGuid bodyI <$
-      Property.set lambdaP bodyI
+      fromMaybe (DataIRef.exprGuid bodyI) . listToMaybe <$>
+      traverse (getParamGuidFromTagExprI . fst)
+      (nextFields ++ reverse prevFields)
+    getParamGuidFromTagExprI tagExprI = do
+      tagExpr <- DataIRef.readExprBody tagExprI
+      pure . Guid.combine lamGuid .
+        fromMaybe (error "field param must have tags") $
+        tagExpr ^? ExprUtil.bodyTag
+
+atLeastTwo :: [a] -> Bool
+atLeastTwo (_:_:_) = True
+atLeastTwo _ = False
 
 convertDefinitionParams ::
   (MonadA m, Typeable1 m) =>
   SugarM.RecordParamsInfo m -> [Guid] -> SugarInfer.ExprMM m ->
   SugarM m
   ( [FuncParam MStoredName m (ExpressionU m)]
-  , RecordParams m
+  , ConventionalParams m
   , SugarInfer.ExprMM m
   )
 convertDefinitionParams recordParamsInfo usedTags expr =
@@ -937,24 +978,30 @@ convertDefinitionParams recordParamsInfo usedTags expr =
   Expression.BodyLam lambda@(Expression.Lambda Val paramGuid paramType body)
     | SugarInfer.isPolymorphicFunc expr -> do
       -- Dependent:
-      fp <- convertFuncParam lambda expr
-      (depParams, recordParams, deepBody) <- convertDefinitionParams recordParamsInfo usedTags body
-      return (fp : depParams, recordParams, deepBody)
+      fp <- convertPositionalFuncParam lambda expr
+      (depParams, convParams, deepBody) <- convertDefinitionParams recordParamsInfo usedTags body
+      return (fp : depParams, convParams, deepBody)
     | otherwise ->
       -- Independent:
       case paramType ^. Expression.eBody of
       Expression.BodyRecord (Expression.Record Type fields)
-        | (not . null) fields
+        | atLeastTwo fields
         , Just fieldParams <- traverse makeFieldParam fields
         , all ((`notElem` usedTags) . fpTagGuid) fieldParams -> do
-          recordParams <-
+          convParams <-
             mkRecordParams recordParamsInfo paramGuid fieldParams
-            (expr ^. Expression.ePayload . SugarInfer.plStored) (paramType ^? SugarInfer.plIRef)
+            expr (paramType ^? SugarInfer.plIRef)
             (traverse (^. SugarInfer.plStored) body)
-          return ([], recordParams, body)
-      _ -> notConventionalParams
-  _ -> notConventionalParams
+          return ([], convParams, body)
+      _ -> do
+        param <- convertPositionalFuncParam lambda expr
+        let conventionalParams = singleConventionalParam stored param paramGuid paramType body
+        pure ([], conventionalParams, body)
+  _ -> return ([], emptyConventionalParams stored, expr)
   where
+    stored =
+      fromMaybe (error "Definition body is always stored!") $
+      SugarInfer.resultStored expr
     makeFieldParam (tagExpr, typeExpr) = do
       fieldTagGuid <- tagExpr ^? ExprUtil.exprBodyTag
       pure FieldParam
@@ -962,7 +1009,62 @@ convertDefinitionParams recordParamsInfo usedTags expr =
         , fpTagExpr = tagExpr
         , fpFieldType = typeExpr
         }
-    notConventionalParams = return ([], emptyRecordParams, expr)
+
+singleConventionalParam ::
+  MonadA m =>
+  Stored m -> FuncParam MStoredName m (ExpressionU m) ->
+  Guid -> SugarInfer.ExprMM m -> SugarInfer.ExprMM m -> ConventionalParams m
+singleConventionalParam lamProp existingParam existingParamGuid existingParamType body =
+  ConventionalParams
+  { cpTags = []
+  , cpParamInfos = Map.empty
+  , cpRecordParamsInfos = Map.empty
+  , cpParams =
+    [ existingParam & fpMActions . Lens._Just . fpListItemActions . itemAddNext .~
+      addSecondParam (\old new -> [old, new])
+    ]
+  , cpAddFirstParam = addSecondParam (\old new -> [new, old])
+  }
+  where
+    existingParamTag = ExprUtil.bodyTag # existingParamGuid
+    existingParamTypeIRef =
+      fromMaybe (error "Only stored record param type is converted as record") $
+      SugarInfer.resultMIRef existingParamType
+    bodyWithStored =
+      fromMaybe (error "Definition body should be stored") $
+      traverse (^. SugarInfer.plStored) body
+    addSecondParam mkFields = do
+      existingParamTagI <- DataIRef.newExprBody existingParamTag
+      let existingParamField = (existingParamTagI, existingParamTypeIRef)
+      (newTagGuid, newParamField) <- newField
+      newParamTypeI <-
+        DataIRef.newExprBody . Expression.BodyRecord . Expression.Record Type $
+        mkFields existingParamField newParamField
+      newParamsGuid <- Transaction.newKey
+      DataIRef.writeExprBody (Property.value lamProp) $
+        ExprUtil.makeLambda newParamsGuid newParamTypeI .
+        Property.value $ bodyWithStored ^. Expression.ePayload
+      let
+        toGetField iref = do
+          recordRef <- DataIRef.newExprBody $ ExprUtil.bodyParameterRef # newParamsGuid
+          tagRef <- DataIRef.newExprBody existingParamTag
+          DataIRef.writeExprBody iref $ Expression.BodyGetField Expression.GetField
+            { Expression._getFieldRecord = recordRef
+            , Expression._getFieldTag = tagRef
+            }
+      onMatchingSubexprs (toGetField . Property.value)
+        (isGetParamOf existingParamGuid) bodyWithStored
+      let lamGuid = DataIRef.exprGuid $ Property.value lamProp
+      pure $ Guid.combine lamGuid newTagGuid
+
+emptyConventionalParams :: MonadA m => DataIRef.ExpressionProperty m -> ConventionalParams m
+emptyConventionalParams stored = ConventionalParams
+  { cpTags = []
+  , cpParamInfos = Map.empty
+  , cpRecordParamsInfos = Map.empty
+  , cpParams = []
+  , cpAddFirstParam = lambdaWrap stored
+  }
 
 mExtractWhere ::
   Expression.Expression def a ->
@@ -1016,72 +1118,23 @@ convertWhereItems usedTags expr =
     return (item : nextItems, whereBody)
 
 newField ::
-  MonadA m => T m (DataIRef.ExpressionIM m, DataIRef.ExpressionIM m)
+  MonadA m => T m (Guid, (DataIRef.ExpressionIM m, DataIRef.ExpressionIM m))
 newField = do
   tag <- Transaction.newKey
   newTagI <- DataIRef.newExprBody (ExprUtil.bodyTag # tag)
   holeI <- DataOps.newHole
-  return (newTagI, holeI)
+  return (tag, (newTagI, holeI))
 
-makeFirstRecordParam :: MonadA m => Stored m -> T m Guid
-makeFirstRecordParam prop = do
-  field <- newField
-  recordTypeI <-
-    DataIRef.newExprBody . Expression.BodyRecord $
-    Expression.Record Type [field]
-  (_, newLambdaI) <-
-    DataIRef.newLambda recordTypeI $ Property.value prop
-  Property.set prop newLambdaI
-  return . DataIRef.exprGuid $ fst field
-
-addFirstFieldParam :: MonadA m => DataIRef.ExpressionIM m -> T m Guid
-addFirstFieldParam recordI = do
+addFirstFieldParam :: MonadA m => Guid -> DataIRef.ExpressionIM m -> T m Guid
+addFirstFieldParam lamGuid recordI = do
   recordBody <- DataIRef.readExprBody recordI
-  DataIRef.exprGuid <$>
-    case recordBody of
-    Expression.BodyRecord Expression.Record
-      { Expression._recordKind = Type
-      , Expression._recordFields = fields
-      } -> do
-        field <- newField
-        DataIRef.writeExprBody recordI $
-          Expression.BodyRecord Expression.Record
-          { Expression._recordKind = Type
-          , Expression._recordFields = field : fields
-          }
-        pure $ fst field
-    _ -> pure recordI
-
-addStoredParam :: MonadA m => SugarInfer.ExprMM m -> T m Guid
-addStoredParam
-  Expression.Expression
-  { Expression._eBody = body
-  , Expression._ePayload = SugarInfer.Payload { SugarInfer._plStored = Just prop }
-  } =
-    case body of
-    Expression.BodyLam Expression.Lambda
-      { Expression._lambdaKind = Val
-      , Expression._lambdaParamType =
-        Expression.Expression
-        { Expression._eBody =
-          Expression.BodyRecord Expression.Record
-          { Expression._recordKind = Type
-          , Expression._recordFields = fields
-          }
-        , Expression._ePayload =
-          SugarInfer.Payload { SugarInfer._plStored = Just recordProp }
-        }
-      } | (not . null) fields ->
-        addFirstFieldParam $ Property.value recordProp
-    _ -> makeFirstRecordParam prop
-addStoredParam
-  (Expression.Expression
-   (Expression.BodyLam
-    (Expression.Lambda Val _ _ body)) _) = addStoredParam body
-addStoredParam _ =
-  error $
-  "Non-stored can only be lambda added by implicit " ++
-  "type-variables which must contain a stored in its body"
+  case recordBody ^? Expression._BodyRecord . ExprUtil.kindedRecordFields Type of
+    Just fields -> do
+      (newTagGuid, field) <- newField
+      DataIRef.writeExprBody recordI $
+        Expression.BodyRecord . Expression.Record Type $ field : fields
+      pure $ Guid.combine lamGuid newTagGuid
+    _ -> pure $ DataIRef.exprGuid recordI
 
 assertedGetProp ::
   String ->
@@ -1097,19 +1150,20 @@ convertDefinitionContent ::
   SugarM.RecordParamsInfo m -> [Guid] -> SugarInfer.ExprMM m ->
   SugarM m (DefinitionContent MStoredName m)
 convertDefinitionContent recordParamsInfo usedTags expr = do
-  (depParams, recordParams, funcBody) <- convertDefinitionParams recordParamsInfo usedTags expr
+  (depParams, convParams, funcBody) <-
+    convertDefinitionParams recordParamsInfo usedTags expr
   SugarM.local
-    ((SugarM.scTagParamInfos <>~ rpParamInfos recordParams) .
-     (SugarM.scRecordParamsInfos <>~ rpRecordParamsInfos recordParams)) $ do
+    ((SugarM.scTagParamInfos <>~ cpParamInfos convParams) .
+     (SugarM.scRecordParamsInfos <>~ cpRecordParamsInfos convParams)) $ do
       (whereItems, whereBody) <-
-        convertWhereItems (usedTags ++ rpTags recordParams) funcBody
+        convertWhereItems (usedTags ++ cpTags convParams) funcBody
       bodyS <- convertExpressionI whereBody
       return DefinitionContent
         { dDepParams = depParams
-        , dParams = rpParams recordParams
+        , dParams = cpParams convParams
         , dBody = bodyS
         , dWhereItems = whereItems
-        , dAddFirstParam = addStoredParam expr
+        , dAddFirstParam = cpAddFirstParam convParams
         , dAddInnermostWhereItem =
           fmap fst . DataOps.redexWrap $
           assertedGetProp "Where must be stored" whereBody
@@ -1217,7 +1271,6 @@ convertDefIExpression cp exprLoaded defI typeI = do
       memoBy (key, loaded, initialInferState, "reinfer root" :: String) .
         return . isJust $ uncurry (SugarInfer.inferMaybe_ loaded)
         initialInferState
-
     recordParamsInfo = SugarM.RecordParamsInfo defGuid $ jumpToDefI cp defI
     defGuid = IRef.guid defI
     iTypeGen = SugarExpr.mkGen 0 3 defGuid

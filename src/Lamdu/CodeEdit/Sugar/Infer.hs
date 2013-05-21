@@ -290,7 +290,5 @@ replaceWith parentP replacerP = do
   where
     replacerI = Property.value replacerP
 
-resultMIRef ::
-  ExprMM m ->
-  Maybe (DataIRef.ExpressionIM m)
+resultMIRef :: ExprMM m -> Maybe (DataIRef.ExpressionIM m)
 resultMIRef = fmap Property.value . resultStored

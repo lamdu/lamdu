@@ -24,12 +24,12 @@ module Lamdu.Data.Expression.Utils
   , bitraverseBody
   , expressionBodyDef
   , expressionDef
+  , kindedRecordFields
   ) where
 
 import Lamdu.Data.Expression
 
 import Control.Applicative (Applicative(..), liftA2, (<$>))
-import Control.Lens (Prism, Prism', Traversal')
 import Control.Lens.Operators
 import Control.Monad (guard)
 import Control.Monad.Trans.Class (lift)
@@ -61,22 +61,22 @@ makePi = makeLam Type
 makeLambda :: Guid -> expr -> expr -> Body def expr
 makeLambda = makeLam Val
 
-bodyParameterRef :: Prism' (Body def expr) Guid
+bodyParameterRef :: Lens.Prism' (Body def expr) Guid
 bodyParameterRef = _BodyLeaf . _GetVariable . _ParameterRef
 
-bodyDefinitionRef :: Prism (Body defa expr) (Body defb expr) defa defb
+bodyDefinitionRef :: Lens.Prism (Body defa expr) (Body defb expr) defa defb
 bodyDefinitionRef = _BodyLeaf . _GetVariable . _DefinitionRef
 
-bodyLiteralInteger :: Prism' (Body def expr) Integer
+bodyLiteralInteger :: Lens.Prism' (Body def expr) Integer
 bodyLiteralInteger = _BodyLeaf . _LiteralInteger
 
-bodyHole :: Prism' (Body def expr) ()
+bodyHole :: Lens.Prism' (Body def expr) ()
 bodyHole = _BodyLeaf . _Hole
 
-exprBodyTag :: Traversal' (Expression def a) Guid
+exprBodyTag :: Lens.Traversal' (Expression def a) Guid
 exprBodyTag = eBody . bodyTag
 
-bodyTag :: Prism' (Body def expr) Guid
+bodyTag :: Lens.Prism' (Body def expr) Guid
 bodyTag = _BodyLeaf . _Tag
 
 bitraverseBody ::
@@ -341,3 +341,9 @@ applyForms exprType expr
             pureExpression . BodyRecord . Record Val $
             fields & Lens.mapped . Lens._2 .~ pureHole
           _ -> pureHole
+
+kindedRecordFields ::
+  Applicative f => Kind -> Lens.LensLike' f (Record a) [(a, a)]
+kindedRecordFields k0 f (Record k1 fields)
+  | k0 == k1 = Record k1 <$> f fields
+  | otherwise = pure $ Record k1 fields
