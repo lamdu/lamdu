@@ -6,7 +6,6 @@ import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Function (on)
-import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Traversable (traverse)
@@ -132,12 +131,7 @@ convertNormal funcI argS exprI = do
   case funcS ^. rBody of
     BodySection _ section ->
       applyOnSection section funcS funcI argS exprI
-    _ -> convertPrefix funcS funcI sugaredArg exprI
-  where
-    sugaredArg =
-      fromMaybe argS $ do
-        [field] <- argS ^? rBody . _BodyRecord . rFields . flItems
-        pure $ field ^. rfExpr
+    _ -> convertPrefix funcS funcI argS exprI
 
 setListGuid :: Guid -> ExpressionU m -> ExpressionU m
 setListGuid consistentGuid e = e
