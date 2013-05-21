@@ -158,27 +158,31 @@ getStoredName guid = do
 getStoredNameS :: MonadA m => Guid -> SugarM m (Maybe String)
 getStoredNameS = SugarM.liftTransaction . getStoredName
 
+addFuncParamName ::
+  MonadA m => FuncParam MStoredName f expr ->
+  SugarM m (FuncParam MStoredName f expr)
+addFuncParamName fp = do
+  name <- getStoredNameS $ fp ^. fpGuid
+  pure fp { _fpName = name }
+
 convertFuncParam ::
   (Typeable1 m, MonadA m) => Expression.Lambda (SugarInfer.ExprMM m) ->
   SugarInfer.ExprMM m ->
   SugarM m (FuncParam MStoredName m (ExpressionU m))
 convertFuncParam (Expression.Lambda _k paramGuid paramType body) expr = do
   paramTypeS <- convertExpressionI paramType
-  name <- getStoredNameS paramGuid
-  let
-    fp = FuncParam
-      { _fpName = name
-      , _fpGuid = paramGuid
-      , _fpVarKind = FuncParameter
-      , _fpId = paramGuid -- should be unique
-      , _fpHiddenLambdaGuid = Just $ SugarInfer.resultGuid expr
-      , _fpType = SugarExpr.removeSuccessfulType paramTypeS
-      , _fpMActions =
-        mkFuncParamActions paramGuid
-        <$> expr ^. Expression.ePayload . SugarInfer.plStored
-        <*> traverse (^. SugarInfer.plStored) body
-      }
-  return fp
+  addFuncParamName FuncParam
+    { _fpName = Nothing
+    , _fpGuid = paramGuid
+    , _fpVarKind = FuncParameter
+    , _fpId = paramGuid -- should be unique
+    , _fpHiddenLambdaGuid = Just $ SugarInfer.resultGuid expr
+    , _fpType = SugarExpr.removeSuccessfulType paramTypeS
+    , _fpMActions =
+      mkFuncParamActions paramGuid
+      <$> expr ^. Expression.ePayload . SugarInfer.plStored
+      <*> traverse (^. SugarInfer.plStored) body
+    }
 
 convertLambda ::
   (Typeable1 m, MonadA m) => Expression.Lambda (SugarInfer.ExprMM m) ->
@@ -839,12 +843,11 @@ mkRecordParams recordParamsInfo paramGuid fieldParams mLambdaP mParamTypeI mBody
       let
         guid = fpTagGuid fp
         tagExprGuid = fpTagExpr fp ^. plGuid
-      name <- getStoredNameS guid
-      pure FuncParam
-        { _fpGuid = guid
+      addFuncParamName FuncParam
+        { _fpName = Nothing
+        , _fpGuid = guid
         , _fpId = tagExprGuid
         , _fpVarKind = FuncFieldParameter
-        , _fpName = name
         , _fpHiddenLambdaGuid = Nothing --TODO: First param to take lambda's guid?
         , _fpType = SugarExpr.removeSuccessfulType typeS
         , _fpMActions =
