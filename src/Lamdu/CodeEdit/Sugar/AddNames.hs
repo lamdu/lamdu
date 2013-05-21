@@ -168,11 +168,11 @@ makeStoredNameEnv storedName storedNamesBelow guid env =
       case (mSuffixFromAbove, collidingGuids) of
         (Just suffix, _) -> (Collision suffix, env)
         (Nothing, []) -> (NoCollision, envWithName [])
-        (Nothing, otherGuids) -> (Collision 0, envWithName otherGuids)
+        (Nothing, otherGuids) -> (Collision 0, envWithName (guid:otherGuids))
     envWithName guids = env
       & p1StoredNames %~ Set.insert storedName
       -- This name is first occurence, so we get suffix 0
-      & p1StoredNameSuffixes %~ compose ((Lens.itraversed %@~ flip Map.insert) (guid:guids))
+      & p1StoredNameSuffixes %~ compose ((Lens.itraversed %@~ flip Map.insert) guids)
     mSuffixFromAbove =
       Map.lookup guid $ env ^. p1StoredNameSuffixes
     collidingGuids =
