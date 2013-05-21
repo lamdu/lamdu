@@ -27,7 +27,7 @@ module Lamdu.CodeEdit.Sugar
   , GetParams(..), gpDefGuid, gpDefName, gpJumpTo
   , Func(..)
   , FuncParamType(..)
-  , FuncParam(..), fpName, fpGuid, fpId, fpHiddenLambdaGuid, fpType, fpMActions
+  , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpHiddenLambdaGuid, fpType, fpMActions
   , Pi(..)
   , Section(..)
   , Hole(..), holeScope, holeMActions
@@ -193,7 +193,8 @@ convertPositionalFuncParam (Expression.Lambda _k paramGuid paramType body) lamEx
     { _fpName = Nothing
     , _fpGuid = paramGuid
     , _fpVarKind = FuncParameter
-    , _fpId = Guid.combine lamGuid paramGuid -- should be unique
+    , _fpId = Guid.combine lamGuid paramGuid
+    , _fpAltIds = [paramGuid] -- For easy jumpTo
     , _fpHiddenLambdaGuid = Just $ SugarInfer.resultGuid lamExprI
     , _fpType = SugarExpr.removeSuccessfulType paramTypeS
     , _fpMActions =
@@ -488,7 +489,7 @@ getScopeElement sugarContext (parGuid, typeExpr) = do
             ( GetVar
               { _gvIdentifier = parGuid
               , _gvName = parName
-              , _gvJumpTo = pure parGuid
+              , _gvJumpTo = errorJumpTo
               , _gvVarType = GetParameter
               }
             , getParam )
@@ -745,22 +746,22 @@ convertGetField ::
   SugarInfer.ExprMM m ->
   SugarM m (ExpressionU m)
 convertGetField (Expression.GetField recExpr tagExpr) exprI = do
-  recordParams <- (^. SugarM.scTagParamInfos) <$> SugarM.readContext
+  tagParamInfos <- (^. SugarM.scTagParamInfos) <$> SugarM.readContext
   let
-    mkGetVar (tag, paramInfo) = do
+    mkGetVar (tag, jumpTo) = do
       name <- getStoredNameS tag
       pure GetVar
         { _gvName = name
         , _gvIdentifier = tag
-        , _gvJumpTo = pure $ SugarM.tpiJumpTo paramInfo
+        , _gvJumpTo = pure jumpTo
         , _gvVarType = GetFieldParameter
         }
   mVar <- traverse mkGetVar $ do
     tag <- tagExpr ^? ExprUtil.exprBodyTag
-    paramInfo <- Map.lookup tag recordParams
+    paramInfo <- Map.lookup tag tagParamInfos
     param <- recExpr ^? Expression.eBody . ExprUtil.bodyParameterRef
     guard $ param == SugarM.tpiFromParameters paramInfo
-    return (tag, paramInfo)
+    return (tag, SugarM.tpiJumpTo paramInfo)
   case mVar of
     Just var ->
       fmap SugarExpr.removeSuccessfulType .
@@ -846,8 +847,8 @@ mkRecordParams recordParamsInfo paramGuid fieldParams lambdaExprI mParamTypeI mB
     lamGuid = SugarInfer.resultGuid lambdaExprI
     mLambdaP = lambdaExprI ^. Expression.ePayload . SugarInfer.plStored
     mkParamInfo fp =
-      Map.singleton (fpTagGuid fp) . SugarM.TagParamInfo paramGuid $
-      fpTagExpr fp ^. plGuid
+      Map.singleton (fpTagGuid fp) . SugarM.TagParamInfo paramGuid .
+      Guid.combine lamGuid $ fpTagGuid fp
     mkParam fp = do
       typeS <- SugarM.convertSubexpression $ fpFieldType fp
       let
@@ -857,6 +858,7 @@ mkRecordParams recordParamsInfo paramGuid fieldParams lambdaExprI mParamTypeI mB
         { _fpName = Nothing
         , _fpGuid = guid
         , _fpId = Guid.combine lamGuid guid
+        , _fpAltIds = []
         , _fpVarKind = FuncFieldParameter
         , _fpHiddenLambdaGuid = Nothing --TODO: First param to take lambda's guid?
         , _fpType = SugarExpr.removeSuccessfulType typeS

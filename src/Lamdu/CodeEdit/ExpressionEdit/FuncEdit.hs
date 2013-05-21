@@ -8,6 +8,7 @@ module Lamdu.CodeEdit.ExpressionEdit.FuncEdit
 import Control.Applicative ((<$), (<$>), Applicative(..))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
+import Data.Maybe (maybeToList)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
@@ -59,6 +60,9 @@ jumpToRHS keys (rhsDoc, rhs) = do
   where
     rhsId = WidgetIds.fromGuid $ rhs ^. Sugar.rGuid
 
+compose :: [a -> a] -> a -> a
+compose = foldr (.) id
+
 -- exported for use in definition sugaring.
 makeParamEdit ::
   MonadA m =>
@@ -90,11 +94,9 @@ makeParamEdit atParamWidgets prevId infoMode rhsJumper param =
       Widget.weakerEvents
       (rhsJumper `mappend` paramEventMap) .
       atParamWidgets name
-    assignCursor =
-      case param ^. Sugar.fpHiddenLambdaGuid of
-      Nothing -> id
-      Just g ->
-        ExprGuiM.assignCursor (WidgetIds.fromGuid g) myId
+    assignGuidToMe = (`ExprGuiM.assignCursor` myId) . WidgetIds.fromGuid
+    sourceIds = param ^. Sugar.fpAltIds ++ maybeToList (param ^. Sugar.fpHiddenLambdaGuid)
+    assignCursor = compose $ map assignGuidToMe sourceIds
     myId = WidgetIds.fromGuid $ param ^. Sugar.fpId
     paramEventMap = mconcat
       [ paramDeleteEventMap Config.delForwardKeys "" id

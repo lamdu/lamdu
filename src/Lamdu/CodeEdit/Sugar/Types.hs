@@ -36,7 +36,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , GetParams(..), gpDefGuid, gpDefName, gpJumpTo
   , Func(..), fDepParams, fParams, fBody
   , FuncParamType(..)
-  , FuncParam(..), fpName, fpGuid, fpId, fpVarKind, fpHiddenLambdaGuid, fpType, fpMActions
+  , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpHiddenLambdaGuid, fpType, fpMActions
   , TagG(..), tagName, tagGuid
   , Pi(..)
   , Section(..)
@@ -159,9 +159,8 @@ data FuncParamType = FuncParameter | FuncFieldParameter
 data FuncParam name m expr = FuncParam
   { -- non-unique (e.g: tag guid). Name attached here:
     _fpGuid :: Guid
-     -- unique (e.g: tag expr id). WidgetId can be generated from
-     -- this:
   , _fpId :: Guid
+  , _fpAltIds :: [Guid]
   , _fpVarKind :: FuncParamType
   , _fpName :: name
   , _fpHiddenLambdaGuid :: Maybe Guid
