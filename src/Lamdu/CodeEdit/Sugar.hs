@@ -142,6 +142,16 @@ lambdaWrap stored =
   where
     f (newParam, newLamI) = Guid.combine (DataIRef.exprGuid newLamI) newParam
 
+fakeExample :: Guid -> ExpressionP name0 m (Payload name1 f)
+fakeExample guid =
+  Expression
+  { _rGuid = Guid.augment "EXAMPLE" guid
+  , _rBody = BodyAtom "NotImplemented"
+  , _rPayload = Payload [] Nothing Nothing
+  , _rHiddenGuids = []
+  , _rPresugaredExpression = Nothing <$ ExprUtil.pureHole
+  }
+
 mkPositionalFuncParamActions ::
   MonadA m => Guid -> Stored m -> Expression.Expression def (Stored m) ->
   FuncParamActions MStoredName m
@@ -154,15 +164,7 @@ mkPositionalFuncParamActions param lambdaProp body =
         SugarInfer.replaceWith lambdaProp $ body ^. Expression.ePayload
     , _itemAddNext = lambdaWrap $ body ^. Expression.ePayload
     }
-  , _fpGetExample =
-      return
-      Expression
-      { _rGuid = Guid.augment "EXAMPLE" param
-      , _rBody = BodyAtom "NotImplemented"
-      , _rPayload = Payload [] Nothing Nothing
-      , _rHiddenGuids = []
-      , _rPresugaredExpression = Nothing <$ ExprUtil.pureHole
-      }
+  , _fpGetExample = pure $ fakeExample param
   }
 
 getStoredName :: MonadA m => Guid -> T m (Maybe String)
@@ -869,7 +871,7 @@ mkRecordParams recordParamsInfo paramGuid fieldParams lambdaExprI mParamTypeI mB
         , _itemDelete =
           delFieldParam tagExprGuid paramTypeI paramGuid lambdaP bodyStored
         }
-      , _fpGetExample = fail "TODO: Examples"
+      , _fpGetExample = pure $ fakeExample tagExprGuid
       }
 
 plGuid :: Lens' (Expression.Expression def (SugarInfer.Payload t i s)) Guid

@@ -385,10 +385,12 @@ toExpression expr@Expression{..} = do
   pure expr { _rBody = body, _rPayload = pl }
 
 toFuncParamActions ::
-  MonadNaming m => FuncParamActions (OldName m) tm ->
+  (MonadNaming m, MonadA tm) => FuncParamActions (OldName m) tm ->
   m (FuncParamActions (NewName m) tm)
-toFuncParamActions fpa@FuncParamActions {..} =
-  pure fpa { _fpGetExample = error "TODO: examples" }
+toFuncParamActions fpa = do
+  run <- opRun
+  pure $
+    fpa & fpGetExample . Lens.mapped %~ run . toExpression
 
 withWhereItem ::
   (MonadA tm, MonadNaming m) => WhereItem (OldName m) tm ->
