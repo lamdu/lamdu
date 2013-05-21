@@ -188,7 +188,7 @@ convertPositionalFuncParam ::
   SugarInfer.ExprMM m ->
   SugarM m (FuncParam MStoredName m (ExpressionU m))
 convertPositionalFuncParam (Expression.Lambda _k paramGuid paramType body) lamExprI = do
-  paramTypeS <- convertExpressionI paramType
+  paramTypeS <- SugarM.convertSubexpression paramType
   addFuncParamName FuncParam
     { _fpName = Nothing
     , _fpGuid = paramGuid
@@ -210,7 +210,7 @@ convertPositionalLambda ::
   SugarM m (FuncParam MStoredName m (ExpressionU m), ExpressionU m)
 convertPositionalLambda lam lamExprI = do
   param <- convertPositionalFuncParam lam lamExprI
-  result <- convertExpressionI (lam ^. Expression.lambdaResult)
+  result <- SugarM.convertSubexpression (lam ^. Expression.lambdaResult)
   return (param & fpType %~ SugarExpr.setNextHole result, result)
 
 fAllParams :: Func MStoredName m expr -> [FuncParam MStoredName m expr]
@@ -367,7 +367,7 @@ convertHoleResult sugarContext gen res =
   (sugarContext ^. SugarM.scConvertSubexpression)
   (sugarContext ^. SugarM.scTagParamInfos)
   (sugarContext ^. SugarM.scRecordParamsInfos) .
-  convertExpressionI .
+  SugarM.convertSubexpression .
   (traverse . SugarInfer.plInferred %~ Just) .
   (traverse . SugarInfer.plStored .~ Nothing) $
   SugarInfer.resultFromInferred gen res
@@ -555,7 +555,7 @@ convertTypeCheckedHoleH sugarContext mPaste iwc exprI =
       hole <- mkHole
       SugarExpr.make exprI .
         BodyInferred . (`Inferred` hole) =<<
-        (convertExpressionI . fmap SugarInfer.toPayloadMM .
+        (SugarM.convertSubexpression . fmap SugarInfer.toPayloadMM .
          SugarInfer.resultFromPure (SugarExpr.mkGen 2 3 eGuid)) x
     plainHole =
       SugarExpr.make exprI . BodyHole =<< mkHole
@@ -695,8 +695,8 @@ convertField ::
   ) ->
   SugarM m (RecordField m (ExpressionU m))
 convertField k mIRef defaultGuid (tagExpr, expr) = do
-  tagExprS <- convertExpressionI tagExpr
-  exprS <- convertExpressionI expr
+  tagExprS <- SugarM.convertSubexpression tagExpr
+  exprS <- SugarM.convertSubexpression expr
   return RecordField
     { _rfMItemActions =
       recordFieldActions defaultGuid <$> SugarInfer.resultMIRef tagExpr <*> mIRef
@@ -766,8 +766,8 @@ convertGetField (Expression.GetField recExpr tagExpr) exprI = do
       fmap SugarExpr.removeSuccessfulType .
       SugarExpr.make exprI $ BodyGetVar var
     Nothing -> do
-      recExprS <- convertExpressionI recExpr
-      tagExprS <- convertExpressionI tagExpr
+      recExprS <- SugarM.convertSubexpression recExpr
+      tagExprS <- SugarM.convertSubexpression tagExpr
       SugarExpr.make exprI $ BodyGetField
         GetField
         { _gfRecord = recExprS
@@ -807,7 +807,7 @@ convertExpressionPure ::
   DataIRef.ExpressionM m () -> T m (ExpressionU m)
 convertExpressionPure cp gen =
   SugarM.runPure cp convertExpressionI Map.empty Map.empty .
-  convertExpressionI . fmap SugarInfer.toPayloadMM .
+  SugarM.convertSubexpression . fmap SugarInfer.toPayloadMM .
   SugarInfer.resultFromPure gen
 
 data ConventionalParams m = ConventionalParams
@@ -849,7 +849,7 @@ mkRecordParams recordParamsInfo paramGuid fieldParams lambdaExprI mParamTypeI mB
       Map.singleton (fpTagGuid fp) . SugarM.TagParamInfo paramGuid $
       fpTagExpr fp ^. plGuid
     mkParam fp = do
-      typeS <- convertExpressionI $ fpFieldType fp
+      typeS <- SugarM.convertSubexpression $ fpFieldType fp
       let
         guid = fpTagGuid fp
         tagExprGuid = fpTagExpr fp ^. plGuid
@@ -1149,7 +1149,7 @@ convertDefinitionContent recordParamsInfo usedTags expr = do
      (SugarM.scRecordParamsInfos <>~ cpRecordParamsInfos convParams)) $ do
       (whereItems, whereBody) <-
         convertWhereItems (usedTags ++ cpTags convParams) funcBody
-      bodyS <- convertExpressionI whereBody
+      bodyS <- SugarM.convertSubexpression whereBody
       return DefinitionContent
         { dDepParams = depParams
         , dParams = cpParams convParams
