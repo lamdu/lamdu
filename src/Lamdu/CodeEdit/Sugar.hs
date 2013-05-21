@@ -47,14 +47,14 @@ module Lamdu.CodeEdit.Sugar
   , Collapsed(..), pFuncGuid, pCompact, pFullExpression
   , HasParens(..)
   , loadConvertDefI
-  , removeTypes
+  , SugarExpr.removeTypes
   , PrefixAction, emptyPrefixAction
   ) where
 
 import Control.Applicative (Applicative(..), (<$>), (<$))
 import Control.Lens (LensLike, Lens')
 import Control.Lens.Operators
-import Control.Monad (guard, join, mplus, void, zipWithM)
+import Control.Monad (guard, join, mplus, void)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..), runState, mapStateT)
 import Control.MonadA (MonadA)
@@ -66,18 +66,17 @@ import Data.Map (Map)
 import Data.Maybe (fromMaybe, listToMaybe, isJust)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
-import Data.Store.IRef (Tag, Tagged)
+import Data.Store.IRef (Tag)
 import Data.Traversable (traverse)
 import Data.Tuple (swap)
 import Data.Typeable (Typeable1)
-import Lamdu.CodeEdit.Sugar.Infer (InferredWC, NoInferred(..), Stored, NoStored)
+import Lamdu.CodeEdit.Sugar.Infer (InferredWC, Stored)
 import Lamdu.CodeEdit.Sugar.Monad (SugarM)
 import Lamdu.CodeEdit.Sugar.Types
 import Lamdu.Data.Expression.IRef (DefI)
-import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), iwcInferredTypes, iwcInferredValues)
+import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), iwcInferredValues)
 import System.Random (RandomGen)
 import qualified Control.Lens as Lens
-import qualified Data.Binary.Utils as BinaryUtils
 import qualified Data.Cache as Cache
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
@@ -87,6 +86,8 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.CodeEdit.Infix as Infix
 import qualified Lamdu.CodeEdit.Sugar.AddNames as AddNames
+import qualified Lamdu.CodeEdit.Sugar.Convert.Apply as Apply
+import qualified Lamdu.CodeEdit.Sugar.Expression as SugarExpr
 import qualified Lamdu.CodeEdit.Sugar.Infer as SugarInfer
 import qualified Lamdu.CodeEdit.Sugar.Monad as SugarM
 import qualified Lamdu.Data.Anchors as Anchors
@@ -98,120 +99,8 @@ import qualified Lamdu.Data.Expression.Load as Load
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Ops as DataOps
 import qualified System.Random as Random
-import qualified System.Random.Utils as RandomUtils
 
-type PayloadM m = SugarInfer.Payload (Tag m)
-type PayloadMM m =
-  PayloadM m (Maybe (InferredWC (Tag m))) (Maybe (Stored m))
-type ExprMM m = DataIRef.ExpressionM m (PayloadMM m)
-type Convertor m = ExprMM m -> SugarM m (ExpressionU m)
-
-mkCutter :: MonadA m => Anchors.CodeProps m -> DataIRef.ExpressionI (Tag m) -> T m Guid -> T m Guid
-mkCutter cp expr replaceWithHole = do
-  _ <- DataOps.newClipboard cp expr
-  replaceWithHole
-
-checkReinferSuccess :: MonadA m => SugarM.Context m -> String -> T m a -> CT m Bool
-checkReinferSuccess sugarContext key act =
-  case sugarContext ^. SugarM.scMReinferRoot of
-  Nothing -> pure False
-  Just reinferRoot ->
-    mapStateT Transaction.forkScratch $ do
-      _ <- lift act
-      reinferRoot key
-
-guardReinferSuccess :: MonadA m => SugarM.Context m -> String -> T m a -> CT m (Maybe (T m a))
-guardReinferSuccess sugarContext key act = do
-  success <- checkReinferSuccess sugarContext key act
-  pure $
-    if success
-    then Just act
-    else Nothing
-
-mkCallWithArg ::
-  MonadA m => SugarM.Context m ->
-  DataIRef.ExpressionM m (PayloadM m i (Stored m)) ->
-  PrefixAction m -> CT m (Maybe (T m Guid))
-mkCallWithArg sugarContext exprS prefixAction =
-  guardReinferSuccess sugarContext "callWithArg" $ do
-    prefixAction
-    fmap DataIRef.exprGuid . DataOps.callWithArg $ resultStored exprS
-
-mkActions ::
-  MonadA m => SugarM.Context m ->
-  DataIRef.ExpressionM m (PayloadM m i (Stored m)) -> Actions m
-mkActions sugarContext exprS =
-  Actions
-  { _giveAsArg = giveAsArgPrefix
-  , _callWithArg = mkCallWithArg sugarContext exprS
-  , _callWithNextArg = pure (pure Nothing)
-  , _setToHole = doReplace DataOps.setToHole
-  , _replaceWithNewHole = doReplace DataOps.replaceWithHole
-  , _cut = mkCutter (sugarContext ^. SugarM.scCodeAnchors) (Property.value stored) $ doReplace DataOps.replaceWithHole
-  , _giveAsArgToOperator = DataIRef.exprGuid <$> DataOps.giveAsArgToOperator stored
-  }
-  where
-    giveAsArgPrefix prefix = DataIRef.exprGuid <$> (prefix *> DataOps.giveAsArg stored)
-    stored = resultStored exprS
-    doReplace f = DataIRef.exprGuid <$> f stored
-
-mkGen :: Int -> Int -> Guid -> Random.StdGen
-mkGen select count =
-  Random.mkStdGen . (+select) . (*count) . BinaryUtils.decodeS . Guid.bs
-
-resultGuid ::
-  Expression.Expression def (SugarInfer.Payload t inferred stored) -> Guid
-resultGuid = Lens.view (Expression.ePayload . SugarInfer.plGuid)
-
-resultStored ::
-  Expression.Expression def (SugarInfer.Payload t inferred stored) -> stored
-resultStored = Lens.view plStored
-
-resultInferred ::
-  Expression.Expression def (SugarInfer.Payload t inferred stored) -> inferred
-resultInferred = Lens.view (Expression.ePayload . SugarInfer.plInferred)
-
-toPayloadMM :: SugarInfer.Payload (Tagged (m ())) NoInferred NoStored -> PayloadMM m
-toPayloadMM =
-  Lens.set SugarInfer.plInferred Nothing .
-  Lens.set SugarInfer.plStored Nothing
-
-mkExpression ::
-  (Typeable1 m, MonadA m) => ExprMM m ->
-  BodyU m -> SugarM m (ExpressionU m)
-mkExpression exprI expr = do
-  sugarContext <- SugarM.readContext
-  inferredTypes <-
-    zipWithM
-    ( fmap (convertExpressionI . fmap toPayloadMM)
-    . SugarInfer.resultFromPure
-    ) seeds types
-  return
-    Expression
-    { _rGuid = resultGuid exprI
-    , _rBody = expr
-    , _rPayload = Payload
-      { _plInferredTypes = inferredTypes
-      , _plActions =
-        mkActions sugarContext <$>
-        traverse (SugarInfer.ntraversePayload pure id) exprI
-      , _plNextHole = Nothing
-      }
-    , _rHiddenGuids = []
-    , _rPresugaredExpression =
-      fmap (StorePoint . Property.value) .
-      Lens.view SugarInfer.plStored <$> exprI
-    }
-  where
-    seeds = RandomUtils.splits . mkGen 0 3 $ resultGuid exprI
-    types = maybe [] iwcInferredTypes $ resultInferred exprI
-
-replaceWith :: MonadA m => Stored m -> Stored m -> T m Guid
-replaceWith parentP replacerP = do
-  Property.set parentP replacerI
-  return $ DataIRef.exprGuid replacerI
-  where
-    replacerI = Property.value replacerP
+type Convertor m = SugarInfer.ExprMM m -> SugarM m (ExpressionU m)
 
 toHoles ::
   MonadA m =>
@@ -246,7 +135,7 @@ mkFuncParamActions param lambdaProp body =
     ListItemActions
     { _itemDelete = do
         deleteParamRef param body
-        replaceWith lambdaProp $ body ^. Expression.ePayload
+        SugarInfer.replaceWith lambdaProp $ body ^. Expression.ePayload
     , _itemAddNext = fmap fst . DataOps.lambdaWrap $ body ^. Expression.ePayload
     }
   , _fpGetExample =
@@ -270,8 +159,8 @@ getStoredNameS :: MonadA m => Guid -> SugarM m (Maybe String)
 getStoredNameS = SugarM.liftTransaction . getStoredName
 
 convertFuncParam ::
-  (Typeable1 m, MonadA m) => Expression.Lambda (ExprMM m) ->
-  ExprMM m ->
+  (Typeable1 m, MonadA m) => Expression.Lambda (SugarInfer.ExprMM m) ->
+  SugarInfer.ExprMM m ->
   SugarM m (FuncParam MStoredName m (ExpressionU m))
 convertFuncParam (Expression.Lambda _k paramGuid paramType body) expr = do
   paramTypeS <- convertExpressionI paramType
@@ -282,29 +171,29 @@ convertFuncParam (Expression.Lambda _k paramGuid paramType body) expr = do
       , _fpGuid = paramGuid
       , _fpVarKind = FuncParameter
       , _fpId = paramGuid -- should be unique
-      , _fpHiddenLambdaGuid = Just $ resultGuid expr
-      , _fpType = removeSuccessfulType paramTypeS
+      , _fpHiddenLambdaGuid = Just $ SugarInfer.resultGuid expr
+      , _fpType = SugarExpr.removeSuccessfulType paramTypeS
       , _fpMActions =
         mkFuncParamActions paramGuid
-        <$> expr ^. plStored
+        <$> expr ^. Expression.ePayload . SugarInfer.plStored
         <*> traverse (^. SugarInfer.plStored) body
       }
   return fp
 
 convertLambda ::
-  (Typeable1 m, MonadA m) => Expression.Lambda (ExprMM m) ->
-  ExprMM m ->
+  (Typeable1 m, MonadA m) => Expression.Lambda (SugarInfer.ExprMM m) ->
+  SugarInfer.ExprMM m ->
   SugarM m (FuncParam MStoredName m (ExpressionU m), ExpressionU m)
 convertLambda lam expr = do
   param <- convertFuncParam lam expr
   result <- convertExpressionI (lam ^. Expression.lambdaResult)
-  return (param & fpType %~ setNextHole result, result)
+  return (param & fpType %~ SugarExpr.setNextHole result, result)
 
 fAllParams :: Func MStoredName m expr -> [FuncParam MStoredName m expr]
 fAllParams (Func depParams params _) = depParams ++ params
 
 convertFunc ::
-  (MonadA m, Typeable1 m) => Expression.Lambda (ExprMM m) ->
+  (MonadA m, Typeable1 m) => Expression.Lambda (SugarInfer.ExprMM m) ->
   Convertor m
 convertFunc lambda exprI = do
   (param, sBody) <- convertLambda lambda exprI
@@ -316,7 +205,7 @@ convertFunc lambda exprI = do
     mNextParam = listToMaybe $ fAllParams innerFunc
     newParam = maybe id deleteToNextParam mNextParam param
     newFunc
-      | isPolymorphicFunc exprI = innerFunc & fDepParams %~ (newParam :)
+      | SugarInfer.isPolymorphicFunc exprI = innerFunc & fDepParams %~ (newParam :)
       | otherwise = Func [] (newParam : fAllParams innerFunc) $ innerFunc ^. fBody
     maybeEta = do
       (_, Expression.Apply func arg) <- sBody ^? rBody . _BodyApply
@@ -324,11 +213,11 @@ convertFunc lambda exprI = do
       guard $ argVar ^. gvIdentifier == param ^. fpGuid
       funcVar <- func ^? rBody . _BodyGetVar
       pure (func ^. rGuid, funcVar)
-  fullExpr <- mkExpression exprI $ BodyFunc DontHaveParens newFunc
+  fullExpr <- SugarExpr.make exprI $ BodyFunc DontHaveParens newFunc
   case maybeEta of
     Nothing -> pure fullExpr
     Just (funcGuid, funcVar) ->
-      makeCollapsed exprI funcGuid funcVar fullExpr
+      Apply.makeCollapsed exprI funcGuid funcVar fullExpr
   where
     deleteToNextParam nextParam =
       Lens.set
@@ -336,277 +225,14 @@ convertFunc lambda exprI = do
        itemDelete . Lens.sets fmap) $
       nextParam ^. fpId
 
-convertPi :: (MonadA m, Typeable1 m) => Expression.Lambda (ExprMM m) -> Convertor m
+convertPi :: (MonadA m, Typeable1 m) => Expression.Lambda (SugarInfer.ExprMM m) -> Convertor m
 convertPi lambda exprI = do
   (param, sBody) <- convertLambda lambda exprI
-  mkExpression exprI $ BodyPi DontHaveParens
+  SugarExpr.make exprI $ BodyPi DontHaveParens
     Pi
-    { pParam = Lens.over fpType addApplyChildParens param
-    , pResultType = removeSuccessfulType sBody
+    { pParam = Lens.over fpType SugarExpr.addApplyChildParens param
+    , pResultType = SugarExpr.removeSuccessfulType sBody
     }
-
-addParens :: ExpressionP name m pl -> ExpressionP name m pl
-addParens =
-  Lens.over rBody addParensBody
-  where
-    addParensBody (BodyInferred (Inferred val hole)) =
-      BodyInferred $ Inferred (addParens val) hole
-    addParensBody (BodyCollapsed (Collapsed g compact full)) =
-      BodyCollapsed . Collapsed g compact $
-      addParens full
-    addParensBody x = Lens.set eHasParens HaveParens x
-
-addApplyChildParens :: ExpressionP name m pl -> ExpressionP name m pl
-addApplyChildParens x =
-  case x ^. rBody of
-  BodyApply{} -> x
-  BodyCollapsed{} -> x
-  _ -> addParens x
-
-isPolymorphicFunc :: ExprMM m -> Bool
-isPolymorphicFunc funcI =
-  maybe False
-  (ExprUtil.isDependentPi . Infer.iType . iwcInferred) $
-  resultInferred funcI
-
-plStored ::
-  Lens'
-  (Expression.Expression def (SugarInfer.Payload t i stored))
-  stored
-plStored = Expression.ePayload . SugarInfer.plStored
-
-plIRef ::
-  Lens.Traversal'
-  (Expression.Expression def (SugarInfer.Payload t i (Maybe (Stored m))))
-  (DataIRef.ExpressionI (Tag m))
-plIRef = plStored . traverse . Property.pVal
-
-exprStoredGuid ::
-  Lens.Fold
-  (Expression.Expression def (SugarInfer.Payload t i (Maybe (Stored m)))) Guid
-exprStoredGuid = plIRef . Lens.to DataIRef.exprGuid
-
-subExpressionGuids ::
-  Lens.Fold
-  (Expression.Expression def (SugarInfer.Payload t i (Maybe (Stored m)))) Guid
-subExpressionGuids = Lens.folding ExprUtil.subExpressions . exprStoredGuid
-
-infixr 9 `orElse`
-orElse :: Monad m => m (Maybe a) -> m a -> m a
-orElse a b = maybe b return =<< a
-
-convertApply ::
-  (Typeable1 m, MonadA m) =>
-  Expression.Apply (ExprMM m) ->
-  Convertor m
-convertApply app@(Expression.Apply funcI argI) exprI = do
-  -- if we're an apply of the form (nil T): Return an empty list
-  specialFunctions <- (^. SugarM.scSpecialFunctions) <$> SugarM.readContext
-  convertApplyEmptyList app specialFunctions exprI
-    `orElse` do
-      argS <- convertExpressionI argI
-      convertApplyList app argS specialFunctions exprI
-        `orElse`
-        convertApplyNormal funcI argS exprI
-
-convertApplyNormal ::
-  (Typeable1 m, MonadA m) =>
-  ExprMM m -> ExpressionU m -> Convertor m
-convertApplyNormal funcI argS exprI = do
-  funcS <- convertExpressionI funcI
-  case funcS ^. rBody of
-    BodySection _ section ->
-      applyOnSection section funcS funcI argS exprI
-    _ -> convertApplyPrefix funcS funcI sugaredArg exprI
-  where
-    sugaredArg =
-      fromMaybe argS $ do
-        [field] <- argS ^? rBody . _BodyRecord . rFields . flItems
-        pure $ field ^. rfExpr
-
-setListGuid :: Guid -> ExpressionU m -> ExpressionU m
-setListGuid consistentGuid e = e
-  & rGuid .~ consistentGuid
-  & rHiddenGuids %~ (e ^. rGuid :)
-
-mkListAddFirstItem ::
-  MonadA m => Anchors.SpecialFunctions (Tag m) -> Stored m -> T m Guid
-mkListAddFirstItem specialFunctions =
-  fmap (DataIRef.exprGuid . snd) . DataOps.addListItem specialFunctions
-
-convertApplyEmptyList ::
-  (Typeable1 m, MonadA m) =>
-  Expression.Apply (ExprMM m) ->
-  Anchors.SpecialFunctions (Tag m) ->
-  ExprMM m ->
-  SugarM m (Maybe (ExpressionU m))
-convertApplyEmptyList app@(Expression.Apply funcI _) specialFunctions exprI
-  | Lens.anyOf
-    (Expression.eBody . ExprUtil.bodyDefinitionRef)
-    (== Anchors.sfNil specialFunctions)
-    funcI
-  = Just . (rHiddenGuids <>~ (app ^.. Lens.traversed . subExpressionGuids)) .
-    setListGuid consistentGuid <$>
-    (mkExpression exprI . BodyList)
-    (List [] (mkListActions <$> resultStored exprI))
-  | otherwise = pure Nothing
-  where
-    consistentGuid = Guid.augment "list" (resultGuid exprI)
-    mkListActions exprS =
-      ListActions
-      { addFirstItem = mkListAddFirstItem specialFunctions exprS
-      , replaceNil = DataIRef.exprGuid <$> DataOps.setToHole exprS
-      }
-
-convertApplyList ::
-  (Typeable1 m, MonadA m) =>
-  Expression.Apply (ExprMM m) ->
-  ExpressionU m ->
-  Anchors.SpecialFunctions (Tag m) ->
-  ExprMM m ->
-  SugarM m (Maybe (ExpressionU m))
-convertApplyList (Expression.Apply funcI argI) argS specialFunctions exprI =
-  case (funcI ^? eApply, argS ^. rBody) of
-  ( Just (Expression.Apply funcFuncI funcArgI)
-    , BodyList (List innerValues innerListMActions)
-    )
-    -- exprI@(funcI@(funcFuncI funcArgI) argI)
-    | Lens.anyOf
-      (eApply . Expression.applyFunc . Expression.eBody . ExprUtil.bodyDefinitionRef)
-      (== Anchors.sfCons specialFunctions)
-      funcFuncI
-      -- exprI@(funcI@(funcFuncI@(cons _) funcArgI) argI)
-      -> Just <$> do
-        listItemExpr <- convertExpressionI funcArgI
-        let
-          listItem =
-            ListItem
-            { liExpr =
-              listItemExpr
-              & setNextHole argS
-              & rHiddenGuids <>~
-                concat
-                [ funcFuncI ^.. subExpressionGuids
-                , funcI ^.. exprStoredGuid
-                , argS ^. rHiddenGuids
-                ]
-            , liMActions = do
-                addNext <- addFirstItem <$> innerListMActions
-                exprProp <- resultStored exprI
-                argProp <- resultStored argI
-                return ListItemActions
-                  { _itemAddNext = addNext
-                  , _itemDelete = replaceWith exprProp argProp
-                  }
-            }
-          mListActions = do
-            exprS <- resultStored exprI
-            innerListActions <- innerListMActions
-            pure ListActions
-              { addFirstItem = mkListAddFirstItem specialFunctions exprS
-              , replaceNil = replaceNil innerListActions
-              }
-        setListGuid (argS ^. rGuid) <$>
-          (mkExpression exprI . BodyList)
-          (List (listItem : innerValues) mListActions)
-  _ -> pure Nothing
-
-eApply :: Lens.Traversal' (Expression.Expression def a) (Expression.Apply (Expression.Expression def a))
-eApply = Expression.eBody . Expression._BodyApply
-
-subExpressions :: ExpressionU m -> [ExpressionU m]
-subExpressions x = x : x ^.. rBody . Lens.traversed . Lens.folding subExpressions
-
-setNextHole :: MonadA m => ExpressionU m -> ExpressionU m -> ExpressionU m
-setNextHole dest =
-  case dest ^? subHoles of
-  Just hole ->
-    -- The mplus ignores holes that are already set:
-    Lens.mapped . plNextHole %~ (`mplus` Just hole)
-  Nothing -> id
-  where
-    subHoles =
-      Lens.folding subExpressions .
-      Lens.filtered (Lens.notNullOf (rBody . _BodyHole))
-
-applyOnSection ::
-  (MonadA m, Typeable1 m) => Section (ExpressionU m) ->
-  ExpressionU m -> ExprMM m -> ExpressionU m ->
-  Convertor m
-applyOnSection (Section Nothing op Nothing) _ funcI argRef exprI
-  | isPolymorphicFunc funcI = do
-    newOpRef <-
-      convertApplyPrefix op funcI argRef exprI
-    mkExpression exprI . BodySection DontHaveParens $
-      Section Nothing (removeSuccessfulType newOpRef) Nothing
-  | otherwise =
-    mkExpression exprI . BodySection DontHaveParens $
-    Section (Just (addApplyChildParens argRef)) op Nothing
-applyOnSection (Section (Just left) op Nothing) _ _ argRef exprI =
-  mkExpression exprI . BodySection DontHaveParens $
-  on (Section . Just) (setNextHole right) left op (Just right)
-  where
-    -- TODO: Handle left/right-associativity
-    isSameOp (BodyCollapsed p0) (BodyCollapsed p1) =
-      on isSameVar (^. pCompact) p0 p1
-    isSameOp (BodyGetVar v0) (BodyGetVar v1) =
-      isSameVar v0 v1
-    isSameOp _ _ = False
-    isSameVar = on (==) (^. gvIdentifier)
-    right =
-      case argRef ^. rBody of
-      BodySection _ (Section (Just _) rightOp (Just _))
-        | on isSameOp (Lens.view rBody) op rightOp -> argRef
-      _ -> addApplyChildParens argRef
-applyOnSection _ funcRef funcI argRef exprI = convertApplyPrefix funcRef funcI argRef exprI
-
-convertApplyPrefix ::
-  (MonadA m, Typeable1 m) =>
-  ExpressionU m -> ExprMM m -> ExpressionU m ->
-  Convertor m
-convertApplyPrefix funcRef funcI argRef applyI = do
-  sugarContext <- SugarM.readContext
-  let
-    newArgRef = addCallWithNextArg $ addParens argRef
-    fromMaybeStored = traverse (SugarInfer.ntraversePayload pure id)
-    onStored expr f = maybe id f $ fromMaybeStored expr
-    addCallWithNextArg =
-      onStored applyI $ \applyS ->
-        rPayload . plActions . Lens.mapped . callWithNextArg .~
-        mkCallWithArg sugarContext applyS
-    newFuncRef =
-      setNextHole newArgRef .
-      addApplyChildParens .
-      removeSuccessfulType $
-      funcRef
-    makeFullApply = makeApply newFuncRef
-    makeApply f =
-      mkExpression applyI . BodyApply DontHaveParens $
-      Expression.Apply f newArgRef
-  if isPolymorphicFunc funcI
-    then
-      case funcRef ^. rBody of
-      BodyCollapsed (Collapsed g compact full) ->
-        makeCollapsed applyI g compact =<< makeApply full
-      BodyGetVar var ->
-        makeCollapsed applyI (resultGuid funcI) var =<< makeFullApply
-      _ -> makeFullApply
-    else
-      makeFullApply
-
-makeCollapsed ::
-  (MonadA m, Typeable1 m) =>
-  ExprMM m ->
-  Guid -> GetVar MStoredName m -> ExpressionU m -> SugarM m (ExpressionU m)
-makeCollapsed exprI g compact fullExpression =
-  mkExpression exprI $ BodyCollapsed Collapsed
-    { _pFuncGuid = g
-    , _pCompact = compact
-    , _pFullExpression =
-      Lens.set rGuid expandedGuid $ removeInferredTypes fullExpression
-    }
-  where
-    expandedGuid = Guid.combine (resultGuid exprI) $ Guid.fromString "polyExpanded"
 
 convertParameterRef :: (MonadA m, Typeable1 m) => Guid -> Convertor m
 convertParameterRef parGuid exprI = do
@@ -614,14 +240,14 @@ convertParameterRef parGuid exprI = do
   case Map.lookup parGuid recordParamsMap of
     Just (SugarM.RecordParamsInfo defGuid jumpTo) -> do
       defName <- getStoredNameS defGuid
-      mkExpression exprI $ BodyGetParams GetParams
+      SugarExpr.make exprI $ BodyGetParams GetParams
         { _gpDefGuid = defGuid
         , _gpDefName = defName
         , _gpJumpTo = jumpTo
         }
     Nothing -> do
       parName <- getStoredNameS parGuid
-      fmap removeSuccessfulType . mkExpression exprI .
+      fmap SugarExpr.removeSuccessfulType . SugarExpr.make exprI .
         BodyGetVar $ GetVar
         { _gvName = parName
         , _gvIdentifier = parGuid
@@ -645,7 +271,7 @@ convertGetVariable varRef exprI = do
     Expression.DefinitionRef defI -> do
       let defGuid = IRef.guid defI
       defName <- getStoredNameS defGuid
-      mkExpression exprI .
+      SugarExpr.make exprI .
         BodyGetVar $ GetVar
         { _gvName = defName
         , _gvIdentifier = defGuid
@@ -654,9 +280,9 @@ convertGetVariable varRef exprI = do
         }
   if isInfix
     then
-      mkExpression exprI .
+      SugarExpr.make exprI .
       BodySection HaveParens $
-      Section Nothing (removeInferredTypes getParExpr) Nothing
+      Section Nothing (SugarExpr.removeInferredTypes getParExpr) Nothing
     else return getParExpr
 
 mkPaste :: MonadA m => Stored m -> SugarM m (Maybe (T m Guid))
@@ -724,6 +350,7 @@ convertHoleResult ::
 convertHoleResult sugarContext gen res =
   SugarM.runPure
   (sugarContext ^. SugarM.scCodeAnchors)
+  (sugarContext ^. SugarM.scConvertSubexpression)
   (sugarContext ^. SugarM.scTagParamInfos)
   (sugarContext ^. SugarM.scRecordParamsInfos) .
   convertExpressionI .
@@ -738,7 +365,7 @@ makeHoleResult ::
   (Typeable1 m, MonadA m) => SugarM.Context m ->
   Infer.Inferred (DefI (Tag m)) ->
   Expression.Expression (DefI (Tag m))
-  (PayloadM m inferred (Stored m)) ->
+  (SugarInfer.PayloadM m inferred (Stored m)) ->
   HoleResultSeed m -> CT m (Maybe (HoleResult MStoredName m))
 makeHoleResult sugarContext inferred exprI seed =
   fmap mkHoleResult <$>
@@ -758,7 +385,7 @@ makeHoleResult sugarContext inferred exprI seed =
       memoBy (loaded, token, point, 'r') . return $
         SugarInfer.inferMaybe loaded (sugarContext ^. SugarM.scHoleInferState) point
     gen = genFromHashable (guid, seedHashable seed)
-    guid = resultGuid exprI
+    guid = SugarInfer.resultGuid exprI
     token = (guid, sugarContext ^. SugarM.scMContextHash)
     mkHoleResult (fakeConverted, fakeInferredExpr) =
       HoleResult
@@ -877,7 +504,7 @@ convertTypeCheckedHoleH ::
 convertTypeCheckedHoleH sugarContext mPaste iwc exprI =
   chooseHoleType (iwcInferredValues iwc) plainHole inferredHole
   where
-    eGuid = resultGuid exprI
+    eGuid = SugarInfer.resultGuid exprI
     inferState  = sugarContext ^. SugarM.scHoleInferState
     contextHash = sugarContext ^. SugarM.scMContextHash
     inferred = iwcInferred iwc
@@ -912,12 +539,12 @@ convertTypeCheckedHoleH sugarContext mPaste iwc exprI =
         }
     inferredHole x = do
       hole <- mkHole
-      mkExpression exprI .
+      SugarExpr.make exprI .
         BodyInferred . (`Inferred` hole) =<<
-        (convertExpressionI . fmap toPayloadMM .
-         SugarInfer.resultFromPure (mkGen 2 3 eGuid)) x
+        (convertExpressionI . fmap SugarInfer.toPayloadMM .
+         SugarInfer.resultFromPure (SugarExpr.mkGen 2 3 eGuid)) x
     plainHole =
-      mkExpression exprI . BodyHole =<< mkHole
+      SugarExpr.make exprI . BodyHole =<< mkHole
 
 chooseHoleType ::
   [DataIRef.ExpressionM m f] -> hole -> (DataIRef.ExpressionM m f -> hole) -> hole
@@ -929,7 +556,7 @@ chooseHoleType inferredVals plain inferred =
 
 pickResult ::
   MonadA m =>
-  DataIRef.ExpressionM m (PayloadM m i (Stored m)) ->
+  DataIRef.ExpressionM m (SugarInfer.PayloadM m i (Stored m)) ->
   DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), Maybe (StorePoint (Tag m))) ->
   T m (Maybe Guid)
 pickResult exprS =
@@ -937,7 +564,7 @@ pickResult exprS =
   ( fmap (DataIRef.exprGuid . Lens.view (Expression.ePayload . Lens._2))
   . listToMaybe . uninferredHoles . fmap swap
   ) .
-  (DataIRef.writeExpressionWithStoredSubexpressions . Property.value . resultStored) exprS .
+  (DataIRef.writeExpressionWithStoredSubexpressions . Property.value . SugarInfer.resultStored) exprS .
   fmap (Lens.over (Lens._1 . Lens.mapped) unStorePoint . swap)
 
 -- Also skip param types, those can usually be inferred later, so less
@@ -964,20 +591,20 @@ holeResultHasHoles =
 convertHole :: (MonadA m, Typeable1 m) => Convertor m
 convertHole exprI =
   maybe convertUntypedHole convertTypeCheckedHole $
-  resultInferred exprI
+  SugarInfer.resultInferred exprI
   where
     convertTypeCheckedHole inferred = do
       ctx <- SugarM.readContext
-      mPaste <- fmap join . traverse mkPaste $ resultStored exprI
+      mPaste <- fmap join . traverse mkPaste $ SugarInfer.resultStored exprI
       convertTypeCheckedHoleH ctx mPaste inferred exprI
-    convertUntypedHole = mkExpression exprI . BodyHole $ Hole Nothing
+    convertUntypedHole = SugarExpr.make exprI . BodyHole $ Hole Nothing
 
 convertLiteralInteger :: (MonadA m, Typeable1 m) => Integer -> Convertor m
 convertLiteralInteger i exprI =
-  mkExpression exprI . BodyLiteralInteger $
+  SugarExpr.make exprI . BodyLiteralInteger $
   LiteralInteger
   { liValue = i
-  , liSetValue = setValue . Property.value <$> resultStored exprI
+  , liSetValue = setValue . Property.value <$> SugarInfer.resultStored exprI
   }
   where
     setValue iref =
@@ -986,11 +613,11 @@ convertLiteralInteger i exprI =
 convertTag :: (MonadA m, Typeable1 m) => Guid -> Convertor m
 convertTag tag exprI = do
   name <- getStoredNameS tag
-  mkExpression exprI . BodyTag $ TagG tag name
+  SugarExpr.make exprI . BodyTag $ TagG tag name
 
 convertAtom :: (MonadA m, Typeable1 m) => String -> Convertor m
 convertAtom str exprI =
-  mkExpression exprI $ BodyAtom str
+  SugarExpr.make exprI $ BodyAtom str
 
 sideChannel ::
   Monad m =>
@@ -1049,8 +676,8 @@ recordFieldActions defaultGuid exprIRef iref =
 convertField ::
   (Typeable1 m, MonadA m) =>
   Kind -> Maybe (DataIRef.ExpressionIM m) -> Guid ->
-  ( ExprMM m
-  , ExprMM m
+  ( SugarInfer.ExprMM m
+  , SugarInfer.ExprMM m
   ) ->
   SugarM m (RecordField m (ExpressionU m))
 convertField k mIRef defaultGuid (tagExpr, expr) = do
@@ -1058,40 +685,35 @@ convertField k mIRef defaultGuid (tagExpr, expr) = do
   exprS <- convertExpressionI expr
   return RecordField
     { _rfMItemActions =
-      recordFieldActions defaultGuid <$> resultMIRef tagExpr <*> mIRef
-    , _rfTag = removeSuccessfulType tagExprS
+      recordFieldActions defaultGuid <$> SugarInfer.resultMIRef tagExpr <*> mIRef
+    , _rfTag = SugarExpr.removeSuccessfulType tagExprS
     , _rfExpr =
         case k of
         Val -> exprS
-        Type -> removeSuccessfulType exprS
+        Type -> SugarExpr.removeSuccessfulType exprS
     }
-
-resultMIRef ::
-  ExprMM m ->
-  Maybe (DataIRef.ExpressionIM m)
-resultMIRef = fmap Property.value . resultStored
 
 convertRecord ::
   (Typeable1 m, MonadA m) =>
-  Expression.Record (ExprMM m) ->
+  Expression.Record (SugarInfer.ExprMM m) ->
   Convertor m
 convertRecord (Expression.Record k fields) exprI = do
-  sFields <- mapM (convertField k (resultMIRef exprI) defaultGuid) fields
-  fmap removeSuccessfulType .
-    mkExpression exprI $ BodyRecord
+  sFields <- mapM (convertField k (SugarInfer.resultMIRef exprI) defaultGuid) fields
+  fmap SugarExpr.removeSuccessfulType .
+    SugarExpr.make exprI $ BodyRecord
     Record
     { _rKind = k
     , _rFields =
         FieldList
         { _flItems = withNextHoles sFields
-        , _flMAddFirstItem = addField <$> resultMIRef exprI
+        , _flMAddFirstItem = addField <$> SugarInfer.resultMIRef exprI
         }
     }
   where
-    defaultGuid = resultGuid exprI
+    defaultGuid = SugarInfer.resultGuid exprI
     withNextHoles (field : rest@(nextField:_)) =
       (field
-       & rfExpr %~ setNextHole (nextField ^. rfExpr))
+       & rfExpr %~ SugarExpr.setNextHole (nextField ^. rfExpr))
       : withNextHoles rest
     withNextHoles xs = xs
     addField iref =
@@ -1105,8 +727,8 @@ convertRecord (Expression.Record k fields) exprI = do
 
 convertGetField ::
   (MonadA m, Typeable1 m) =>
-  Expression.GetField (ExprMM m) ->
-  ExprMM m ->
+  Expression.GetField (SugarInfer.ExprMM m) ->
+  SugarInfer.ExprMM m ->
   SugarM m (ExpressionU m)
 convertGetField (Expression.GetField recExpr tagExpr) exprI = do
   recordParams <- (^. SugarM.scTagParamInfos) <$> SugarM.readContext
@@ -1127,26 +749,26 @@ convertGetField (Expression.GetField recExpr tagExpr) exprI = do
     return (tag, paramInfo)
   case mVar of
     Just var ->
-      fmap removeSuccessfulType .
-      mkExpression exprI $ BodyGetVar var
+      fmap SugarExpr.removeSuccessfulType .
+      SugarExpr.make exprI $ BodyGetVar var
     Nothing -> do
       recExprS <- convertExpressionI recExpr
       tagExprS <- convertExpressionI tagExpr
-      mkExpression exprI $ BodyGetField
+      SugarExpr.make exprI $ BodyGetField
         GetField
         { _gfRecord = recExprS
-        , _gfTag = removeSuccessfulType tagExprS
+        , _gfTag = SugarExpr.removeSuccessfulType tagExprS
         }
 
 convertExpressionI ::
   (Typeable1 m, MonadA m) =>
-  ExprMM m -> SugarM m (ExpressionU m)
+  SugarInfer.ExprMM m -> SugarM m (ExpressionU m)
 convertExpressionI ee =
   ($ ee) $
   case ee ^. Expression.eBody of
   Expression.BodyLam x@(Expression.Lambda Val _ _ _) -> convertFunc x
   Expression.BodyLam x@(Expression.Lambda Type _ _ _) -> convertPi x
-  Expression.BodyApply x -> convertApply x
+  Expression.BodyApply x -> Apply.convert x
   Expression.BodyRecord x -> convertRecord x
   Expression.BodyGetField x -> convertGetField x
   Expression.BodyLeaf (Expression.GetVariable x) -> convertGetVariable x
@@ -1170,7 +792,8 @@ convertExpressionPure ::
   Anchors.CodeProps m -> g ->
   DataIRef.ExpressionM m () -> T m (ExpressionU m)
 convertExpressionPure cp gen =
-  SugarM.runPure cp Map.empty Map.empty . convertExpressionI . fmap toPayloadMM .
+  SugarM.runPure cp convertExpressionI Map.empty Map.empty .
+  convertExpressionI . fmap SugarInfer.toPayloadMM .
   SugarInfer.resultFromPure gen
 
 data RecordParams m = RecordParams
@@ -1182,8 +805,8 @@ data RecordParams m = RecordParams
 
 data FieldParam m = FieldParam
   { fpTagGuid :: Guid
-  , fpTagExpr :: ExprMM m
-  , fpFieldType :: ExprMM m
+  , fpTagExpr :: SugarInfer.ExprMM m
+  , fpFieldType :: SugarInfer.ExprMM m
   }
 
 emptyRecordParams :: RecordParams m
@@ -1223,7 +846,7 @@ mkRecordParams recordParamsInfo paramGuid fieldParams mLambdaP mParamTypeI mBody
         , _fpVarKind = FuncFieldParameter
         , _fpName = name
         , _fpHiddenLambdaGuid = Nothing --TODO: First param to take lambda's guid?
-        , _fpType = removeSuccessfulType typeS
+        , _fpType = SugarExpr.removeSuccessfulType typeS
         , _fpMActions =
           fpActions tagExprGuid
           <$> mLambdaP <*> mParamTypeI <*> mBodyStored
@@ -1300,16 +923,16 @@ delFieldParam tagExprGuid paramTypeI paramGuid lambdaP bodyStored =
 
 convertDefinitionParams ::
   (MonadA m, Typeable1 m) =>
-  SugarM.RecordParamsInfo m -> [Guid] -> ExprMM m ->
+  SugarM.RecordParamsInfo m -> [Guid] -> SugarInfer.ExprMM m ->
   SugarM m
   ( [FuncParam MStoredName m (ExpressionU m)]
   , RecordParams m
-  , ExprMM m
+  , SugarInfer.ExprMM m
   )
 convertDefinitionParams recordParamsInfo usedTags expr =
   case expr ^. Expression.eBody of
   Expression.BodyLam lambda@(Expression.Lambda Val paramGuid paramType body)
-    | isPolymorphicFunc expr -> do
+    | SugarInfer.isPolymorphicFunc expr -> do
       -- Dependent:
       fp <- convertFuncParam lambda expr
       (depParams, recordParams, deepBody) <- convertDefinitionParams recordParamsInfo usedTags body
@@ -1323,7 +946,7 @@ convertDefinitionParams recordParamsInfo usedTags expr =
         , all ((`notElem` usedTags) . fpTagGuid) fieldParams -> do
           recordParams <-
             mkRecordParams recordParamsInfo paramGuid fieldParams
-            (expr ^. plStored) (paramType ^? plIRef)
+            (expr ^. Expression.ePayload . SugarInfer.plStored) (paramType ^? SugarInfer.plIRef)
             (traverse (^. SugarInfer.plStored) body)
           return ([], recordParams, body)
       _ -> notConventionalParams
@@ -1352,8 +975,8 @@ mExtractWhere expr = do
 convertWhereItems ::
   (MonadA m, Typeable1 m) =>
   [Guid] ->
-  ExprMM m ->
-  SugarM m ([WhereItem MStoredName m], ExprMM m)
+  SugarInfer.ExprMM m ->
+  SugarM m ([WhereItem MStoredName m], SugarInfer.ExprMM m)
 convertWhereItems usedTags expr =
   case mExtractWhere expr of
   Nothing -> return ([], expr)
@@ -1370,7 +993,7 @@ convertWhereItems usedTags expr =
         ListItemActions
         { _itemDelete = do
              deleteParamRef (lambda ^. Expression.lambdaParamId) bodyStored
-             replaceWith topLevelProp $ bodyStored ^. Expression.ePayload
+             SugarInfer.replaceWith topLevelProp $ bodyStored ^. Expression.ePayload
         , _itemAddNext = fmap fst $ DataOps.redexWrap topLevelProp
         }
     name <- getStoredNameS defGuid
@@ -1379,10 +1002,10 @@ convertWhereItems usedTags expr =
         { wiValue = value
         , wiGuid = defGuid
         , wiHiddenGuids =
-            map resultGuid [expr, lambda ^. Expression.lambdaParamType]
+            map SugarInfer.resultGuid [expr, lambda ^. Expression.lambdaParamType]
         , wiActions =
           mkWIActions <$>
-          resultStored expr <*>
+          SugarInfer.resultStored expr <*>
           traverse (Lens.view SugarInfer.plStored) (lambda ^. Expression.lambdaResult)
         , wiName = name
         }
@@ -1426,7 +1049,7 @@ addFirstFieldParam recordI = do
         pure $ fst field
     _ -> pure recordI
 
-addStoredParam :: MonadA m => ExprMM m -> T m Guid
+addStoredParam :: MonadA m => SugarInfer.ExprMM m -> T m Guid
 addStoredParam
   Expression.Expression
   { Expression._eBody = body
@@ -1468,7 +1091,7 @@ assertedGetProp msg _ = error msg
 
 convertDefinitionContent ::
   (MonadA m, Typeable1 m) =>
-  SugarM.RecordParamsInfo m -> [Guid] -> ExprMM m ->
+  SugarM.RecordParamsInfo m -> [Guid] -> SugarInfer.ExprMM m ->
   SugarM m (DefinitionContent MStoredName m)
 convertDefinitionContent recordParamsInfo usedTags expr = do
   (depParams, recordParams, funcBody) <- convertDefinitionParams recordParamsInfo usedTags expr
@@ -1504,7 +1127,7 @@ loadConvertDefI cp defI =
       bodyS <- convertDefBody defBody defI $ Load.propertyOfClosure <$> typeLoaded
       typeS <-
         lift .
-        convertExpressionPure cp (mkGen 2 3 (IRef.guid defI)) $
+        convertExpressionPure cp (SugarExpr.mkGen 2 3 (IRef.guid defI)) $
         void typeLoaded
       let defGuid = IRef.guid defI
       name <- lift $ getStoredName defGuid
@@ -1563,13 +1186,13 @@ convertDefIExpression cp exprLoaded defI typeI = do
     inferLoadedGen (Just defI) exprLoaded initialInferState
   let
     inferredTypeP =
-      void . Infer.iType . iwcInferred $ resultInferred ilrExpr
+      void . Infer.iType . iwcInferred $ SugarInfer.resultInferred ilrExpr
     typesMatch =
       on (==) ExprUtil.canonizeParamIds (void typeI) inferredTypeP
   mNewType <-
     lift $ makeNewTypeForDefinition cp (typeI ^. Expression.ePayload)
     inferredTypeP typesMatch success iTypeGen
-  context <- lift $ SugarM.mkContext cp (Just defI) (Just reinferRoot) inferredLoadedResult
+  context <- lift $ SugarM.mkContext cp convertExpressionI (Just defI) (Just reinferRoot) inferredLoadedResult
   lift . SugarM.run context $ do
     content <-
       convertDefinitionContent recordParamsInfo [] $
@@ -1594,20 +1217,5 @@ convertDefIExpression cp exprLoaded defI typeI = do
 
     recordParamsInfo = SugarM.RecordParamsInfo defGuid $ jumpToDefI cp defI
     defGuid = IRef.guid defI
-    iTypeGen = mkGen 0 3 defGuid
-    inferLoadedGen = mkGen 1 3 defGuid
-
---------------
-
-removeSuccessfulType :: Expression name m -> Expression name m
-removeSuccessfulType =
-  rPayload . plInferredTypes %~ removeIfNoErrors
-  where
-    removeIfNoErrors [_] = []
-    removeIfNoErrors xs = xs
-
-removeInferredTypes :: Expression name m -> Expression name m
-removeInferredTypes = rPayload . plInferredTypes .~ []
-
-removeTypes :: MonadA m => Expression name m -> Expression name m
-removeTypes = Lens.mapped . plInferredTypes .~ []
+    iTypeGen = SugarExpr.mkGen 0 3 defGuid
+    inferLoadedGen = SugarExpr.mkGen 1 3 defGuid

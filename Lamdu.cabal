@@ -154,6 +154,8 @@ Executable lamdu
                        Lamdu.CodeEdit.FFI,
                        Lamdu.CodeEdit.Infix,
                        Lamdu.CodeEdit.Settings,
+                       Lamdu.CodeEdit.Sugar.Convert.Apply,
+                       Lamdu.CodeEdit.Sugar.Expression,
                        Lamdu.CodeEdit.Sugar.Monad,
                        Lamdu.CodeEdit.Sugar.NameGen,
                        Lamdu.CodeEdit.Sugar.Types,

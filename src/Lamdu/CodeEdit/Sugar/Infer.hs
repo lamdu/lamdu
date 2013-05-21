@@ -4,7 +4,9 @@ module Lamdu.CodeEdit.Sugar.Infer
   , ExpressionSetter
   , NoInferred(..), InferredWC
   , NoStored(..), Stored
+  , PayloadM, PayloadMM, ExprMM
 
+  , isPolymorphicFunc
   , inferLoadedExpression
   , InferLoadedResult(..)
   , ilrSuccess, ilrContext, ilrInferContext
@@ -16,11 +18,21 @@ module Lamdu.CodeEdit.Sugar.Infer
   -- Type-check an expression into an ordinary Inferred Expression,
   -- short-circuit on error:
   , load, inferMaybe, inferMaybe_
+
+  , toPayloadMM
+  , resultInferred
+  , resultStored
+  , resultGuid
+  , exprStoredGuid
+
+  , plIRef
+  , resultMIRef
+  , replaceWith
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Arrow ((&&&))
-import Control.Lens ((&), (%~))
+import Control.Lens.Operators
 import Control.Monad (void, (<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..), evalStateT)
@@ -29,8 +41,9 @@ import Control.MonadA (MonadA)
 import Data.Cache (Cache)
 import Data.Maybe (isJust)
 import Data.Store.Guid (Guid)
-import Data.Store.IRef (Tag)
+import Data.Store.IRef (Tag, Tagged)
 import Data.Store.Transaction (Transaction)
+import Data.Traversable (traverse)
 import Data.Typeable (Typeable)
 import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), inferWithConflicts)
@@ -39,6 +52,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Cache as Cache
+import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expression
@@ -51,6 +65,11 @@ import qualified System.Random.Utils as RandomUtils
 
 type T = Transaction
 type CT m = StateT Cache (T m)
+
+type PayloadM m = Payload (Tag m)
+type PayloadMM m =
+  PayloadM m (Maybe (InferredWC (Tag m))) (Maybe (Stored m))
+type ExprMM m = DataIRef.ExpressionM m (PayloadMM m)
 
 data NoInferred = NoInferred
 type InferredWC t = InferredWithConflicts (DefI t)
@@ -229,3 +248,49 @@ inferLoadedExpression gen mDefI lExpr inferState = do
     mkWVPayload (iwc, ImplicitVariables.Stored propClosure) =
       Lens.over plStored Just $
       mkStoredPayload (iwc, propClosure)
+
+isPolymorphicFunc :: ExprMM m -> Bool
+isPolymorphicFunc funcI =
+  maybe False
+  (ExprUtil.isDependentPi . Infer.iType . iwcInferred) $
+  resultInferred funcI
+
+resultGuid ::
+  Expression.Expression def (Payload t inferred stored) -> Guid
+resultGuid = (^. Expression.ePayload . plGuid)
+
+resultStored ::
+  Expression.Expression def (Payload t inferred stored) -> stored
+resultStored = (^. Expression.ePayload . plStored)
+
+resultInferred ::
+  Expression.Expression def (Payload t inferred stored) -> inferred
+resultInferred = (^. Expression.ePayload . plInferred)
+
+toPayloadMM :: Payload (Tagged (m ())) NoInferred NoStored -> PayloadMM m
+toPayloadMM =
+  Lens.set plInferred Nothing .
+  Lens.set plStored Nothing
+
+plIRef ::
+  Lens.Traversal'
+  (Expression.Expression def (Payload t i (Maybe (Stored m))))
+  (DataIRef.ExpressionI (Tag m))
+plIRef = Expression.ePayload . plStored . traverse . Property.pVal
+
+exprStoredGuid ::
+  Lens.Fold
+  (Expression.Expression def (Payload t i (Maybe (Stored m)))) Guid
+exprStoredGuid = plIRef . Lens.to DataIRef.exprGuid
+
+replaceWith :: MonadA m => Stored m -> Stored m -> T m Guid
+replaceWith parentP replacerP = do
+  Property.set parentP replacerI
+  return $ DataIRef.exprGuid replacerI
+  where
+    replacerI = Property.value replacerP
+
+resultMIRef ::
+  ExprMM m ->
+  Maybe (DataIRef.ExpressionIM m)
+resultMIRef = fmap Property.value . resultStored

@@ -2,12 +2,13 @@
 module Lamdu.CodeEdit.Sugar.Monad
   ( Context(..), TagParamInfo(..), RecordParamsInfo(..)
   , scMDefI, scInferState, scMContextHash, scHoleInferState
-  , scCodeAnchors, scSpecialFunctions, scMReinferRoot, scTagParamInfos, scRecordParamsInfos
+  , scCodeAnchors, scSpecialFunctions, scMReinferRoot, scTagParamInfos, scRecordParamsInfos, scConvertSubexpression
   , mkContext
   , SugarM(..), run, runPure
   , readContext, liftTransaction, local
   , codeAnchor
   , getP
+  , convertSubexpression
   ) where
 
 import Control.Applicative (Applicative, (<$>))
@@ -20,7 +21,7 @@ import Data.Monoid (mempty)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Typeable (Typeable)
-import Lamdu.CodeEdit.Sugar.Infer (InferLoadedResult, ilrInferContext, ilrContext, ilrBaseInferContext)
+import Lamdu.CodeEdit.Sugar.Infer (InferLoadedResult, ilrInferContext, ilrContext, ilrBaseInferContext, ExprMM)
 import Lamdu.CodeEdit.Sugar.Types -- see export list
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Control.Lens.TH as LensTH
@@ -50,20 +51,23 @@ data Context m = Context
   , _scMReinferRoot :: Maybe (String -> CT m Bool)
   , _scTagParamInfos :: Map Guid TagParamInfo -- tag guids
   , _scRecordParamsInfos :: Map Guid (RecordParamsInfo m) -- param guids
+  , _scConvertSubexpression :: ExprMM m -> SugarM m (ExpressionU m)
   }
-LensTH.makeLenses ''Context
 
 newtype SugarM m a = SugarM (ReaderT (Context m) (T m) a)
   deriving (Functor, Applicative, Monad)
 
+LensTH.makeLenses ''Context
+
 mkContext ::
   MonadA m => Typeable (m ()) =>
   Anchors.CodeProps m ->
+  (ExprMM m -> SugarM m (ExpressionU m)) ->
   Maybe (DefI (Tag m)) ->
   Maybe (String -> CT m Bool) ->
   InferLoadedResult m ->
   T m (Context m)
-mkContext cp mDefI mReinferRoot iResult = do
+mkContext cp convert mDefI mReinferRoot iResult = do
   specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
   return Context
     { _scMDefI = mDefI
@@ -75,6 +79,7 @@ mkContext cp mDefI mReinferRoot iResult = do
     , _scMReinferRoot = mReinferRoot
     , _scTagParamInfos = mempty
     , _scRecordParamsInfos = mempty
+    , _scConvertSubexpression = convert
     }
 
 run :: MonadA m => Context m -> SugarM m a -> T m a
@@ -82,10 +87,11 @@ run ctx (SugarM action) = runReaderT action ctx
 
 runPure ::
   MonadA m => Anchors.CodeProps m ->
+  (ExprMM m -> SugarM m (ExpressionU m)) ->
   Map Guid TagParamInfo ->
   Map Guid (RecordParamsInfo m) ->
   SugarM m a -> T m a
-runPure cp tagParamInfos recordParamsInfos act = do
+runPure cp convert tagParamInfos recordParamsInfos act = do
   specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
   run Context
     { _scMDefI = Nothing
@@ -97,6 +103,7 @@ runPure cp tagParamInfos recordParamsInfos act = do
     , _scMReinferRoot = Nothing
     , _scTagParamInfos = tagParamInfos
     , _scRecordParamsInfos = recordParamsInfos
+    , _scConvertSubexpression = convert
     } act
 
 readContext :: MonadA m => SugarM m (Context m)
@@ -113,3 +120,8 @@ codeAnchor f = f . (^. scCodeAnchors) <$> readContext
 
 getP :: MonadA m => Transaction.MkProperty m a -> SugarM m a
 getP = liftTransaction . Transaction.getP
+
+convertSubexpression :: MonadA m => ExprMM m -> SugarM m (ExpressionU m)
+convertSubexpression exprI = do
+  convertSub <- (^. scConvertSubexpression) <$> readContext
+  convertSub exprI
