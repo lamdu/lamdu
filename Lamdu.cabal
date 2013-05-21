@@ -186,7 +186,7 @@ Executable lamdu
                        Lamdu.WidgetEnvT,
                        Lamdu.WidgetIds,
                        Paths_lamdu
-  ghc-options:         -O2 -Wall
+  ghc-options:         -O -Wall
   -- ghc-options is prepended to ghc-prof-options
   ghc-prof-options:    -auto-all -caf-all -rtsopts
   main-is:             Lamdu/Main.hs
