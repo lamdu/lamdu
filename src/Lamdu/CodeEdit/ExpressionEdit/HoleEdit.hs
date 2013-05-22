@@ -391,7 +391,7 @@ makeActiveHoleEdit holeInfo = do
         (Widget.strongerEvents holeEventMap .
          makeBackground (hiHoleId holeInfo)
          Layers.activeHoleBG Config.holeBackgroundColor) $
-        ExpressionGui.addBelow
+        ExpressionGui.addBelow 0.5
         [ (0.5, Widget.strongerEvents adHocEditor resultsWidget)
         ]
         searchTermWidget

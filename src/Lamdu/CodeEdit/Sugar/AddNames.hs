@@ -5,6 +5,7 @@ module Lamdu.CodeEdit.Sugar.AddNames
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
+import Control.Monad ((<=<))
 import Control.Monad.Trans.Reader (Reader, runReader)
 import Control.Monad.Trans.State (runState, evalState)
 import Control.Monad.Trans.Writer (Writer, runWriter)
@@ -335,6 +336,18 @@ toGetParams ::
 toGetParams getParams@GetParams{..} =
   gpDefName (opGetDefName _gpDefGuid) getParams
 
+toLabeledApply ::
+  (MonadNaming m, MonadA tm) =>
+  LabeledApply (OldName m) (Expression (OldName m) tm) ->
+  m (LabeledApply (NewName m) (Expression (NewName m) tm))
+toLabeledApply la@LabeledApply{..} = do
+  func <- toExpression _laFunc
+  args <- traverse (Lens._1 toTag <=< Lens._2 toExpression) _laArgs
+  pure la
+    { _laFunc = func
+    , _laArgs = args
+    }
+
 traverseToExpr ::
   (MonadA tm, MonadNaming m, Traversable t) =>
   (t (Expression (NewName m) tm) -> b) -> t (Expression (OldName m) tm) ->
@@ -355,6 +368,7 @@ toBody (BodyAtom x)           = pure $ BodyAtom x
 --
 toBody (BodyFunc hp x) = BodyFunc hp <$> toFunc x
 toBody (BodyPi hp x) = BodyPi hp <$> toPi x
+toBody (BodyLabeledApply x) = BodyLabeledApply <$> toLabeledApply x
 toBody (BodyHole x) = BodyHole <$> toHole x
 toBody (BodyInferred x) = BodyInferred <$> toInferred x
 toBody (BodyCollapsed x) = BodyCollapsed <$> toCollapsed x

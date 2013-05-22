@@ -78,12 +78,13 @@ fromBox box =
       lookup True $ box ^. Box.boxContent
 
 addBelow ::
+  Widget.R ->
   [(Box.Alignment, WidgetT m)] ->
   ExpressionGui m ->
   ExpressionGui m
-addBelow ws eg =
+addBelow egHAlign ws eg =
   fromBox . Box.makeKeyed Box.vertical $
-  (True, (Vector2 0.5 (eg ^. egAlignment), eg ^. egWidget)) :
+  (True, (Vector2 egHAlign (eg ^. egAlignment), eg ^. egWidget)) :
   map ((,) False) ws
 
 data TypeStyle = HorizLine | Background
@@ -99,7 +100,7 @@ addType ::
   ExpressionGui m
 addType _ _ [] eg = eg
 addType style exprId typeEdits eg =
-  addBelow items eg
+  addBelow 0.5 items eg
   where
     items = middleElement : [(0.5, annotatedTypes)]
     middleElement =

@@ -34,6 +34,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , GetVarType(..)
   , GetVar(..), gvIdentifier, gvName, gvJumpTo, gvVarType
   , GetParams(..), gpDefGuid, gpDefName, gpJumpTo
+  , LabeledApply(..), laFunc, laArgs
   , Func(..), fDepParams, fParams, fBody
   , FuncParamType(..)
   , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpHiddenLambdaGuid, fpType, fpMActions
@@ -301,11 +302,17 @@ data TagG name = TagG
   , _tagName :: name
   } deriving (Functor, Foldable, Traversable)
 
+data LabeledApply name expr = LabeledApply
+  { _laFunc :: expr
+  , _laArgs :: [(TagG name, expr)]
+  } deriving (Functor, Foldable, Traversable)
+
 data Body name m expr
   = BodyApply   { _eHasParens :: HasParens, __eApply :: Expression.Apply expr }
   | BodySection { _eHasParens :: HasParens, __eSection :: Section expr }
   | BodyFunc    { _eHasParens :: HasParens, __eFunc :: Func name m expr }
   | BodyPi      { _eHasParens :: HasParens, __ePi :: Pi name m expr }
+  | BodyLabeledApply { __eApplyNamed :: LabeledApply name expr }
   | BodyHole    { __eHole :: Hole name m }
   | BodyInferred { __eInferred :: Inferred name m expr }
   | BodyCollapsed { __eCollapsed :: Collapsed name m expr }
@@ -352,9 +359,10 @@ instance Show expr => Show (Body name m expr) where
     , List.intercalate ", " $ map (show . liExpr) items
     , "]"
     ]
-  show BodyRecord { __eRecord = _ } = "Record:TODO"
-  show BodyGetField { __eGetField = _ } = "GetField:TODO"
-  show BodyTag { __eTag = _ } = "Tag:TODO"
+  show BodyLabeledApply {} = "LabelledApply:TODO"
+  show BodyRecord {} = "Record:TODO"
+  show BodyGetField {} = "GetField:TODO"
+  show BodyTag {} = "Tag:TODO"
   show BodyGetVar {} = "GetVar:TODO"
   show BodyGetParams {} = "GetParams:TODO"
 
@@ -420,6 +428,7 @@ LensTH.makeLenses ''FieldList
 LensTH.makeLenses ''Record
 LensTH.makeLenses ''GetVar
 LensTH.makeLenses ''GetParams
+LensTH.makeLenses ''LabeledApply
 LensTH.makeLenses ''GetField
 LensTH.makeLenses ''TagG
 LensTH.makeLenses ''Body

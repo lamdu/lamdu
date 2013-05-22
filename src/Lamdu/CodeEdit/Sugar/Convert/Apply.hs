@@ -47,11 +47,42 @@ convert app@(Expression.Apply funcI argI) exprI = do
     justToLeft $ convertList app argS exprI
     funcS <- lift $ SugarM.convertSubexpression funcI
     justToLeft $ expandSection funcS funcI argS exprI
+    justToLeft $ convertLabeled funcS argS exprI
     lift $ convertPrefix funcS funcI argS exprI
 
 maybeToMPlus :: MonadPlus m => Maybe a -> m a
 maybeToMPlus Nothing = mzero
 maybeToMPlus (Just x) = return x
+
+isAtomicBody :: Body name m (ExpressionP name m pl) -> Bool
+isAtomicBody BodyHole {} = True
+isAtomicBody (BodyInferred (Inferred val _)) = isAtomicBody $ val ^. rBody
+isAtomicBody BodyCollapsed {} = True
+isAtomicBody BodyAtom {} = True
+isAtomicBody BodyLiteralInteger {} = True
+isAtomicBody BodyTag {} = True
+isAtomicBody BodyGetVar {} = True
+isAtomicBody BodyGetParams {} = True
+isAtomicBody _ = False
+-- TODO: getField isn't atomic but we might want to allow it as left
+-- side labeled func
+
+convertLabeled ::
+  (MonadA m, Typeable1 m) =>
+  ExpressionU m -> ExpressionU m -> ExprMM m ->
+  MaybeT (SugarM m) (ExpressionU m)
+convertLabeled funcS argS exprI = do
+  Record Val fields <- maybeToMPlus $ argS ^? rBody . _BodyRecord
+  let
+    getArg field = do
+      tagG <- maybeToMPlus $ field ^? rfTag . rBody . _BodyTag
+      pure (tagG, field ^. rfExpr)
+  args <- traverse getArg $ fields ^. flItems
+  guard . isAtomicBody $ funcS ^. rBody
+  lift . SugarExpr.make exprI $ BodyLabeledApply LabeledApply
+    { _laFunc = SugarExpr.removeSuccessfulType funcS
+    , _laArgs = args
+    }
 
 expandSection ::
   (MonadA m, Typeable1 m) =>
