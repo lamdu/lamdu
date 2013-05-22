@@ -119,8 +119,8 @@ polymorphicForegroundColor = Draw.Color 1 0.4 0.3 1
 -- For parameters
 polymorphicCompactBGColor = Draw.Color 0.1 0.2 0.25 1
 polymorphicExpandedBGColor = Draw.Color 0.18 0.14 0.05 1
-polymorphicExpandKey = noMods E.KeyEnter
-polymorphicCollapseKey = noMods E.KeyEsc
+polymorphicExpandKeys = [noMods E.KeyEnter]
+polymorphicCollapseKeys = [noMods E.KeyEsc]
 
 monomorphicDefOriginForegroundColor = paramOriginColor
 polymorphicDefOriginForegroundColor = polymorphicForegroundColor
@@ -185,11 +185,11 @@ collisionSuffixScaleFactor = 0.5
 
 paramDefSuffixScaleFactor = 0.4
 
-enterSubexpressionKey = mk E.shift E.KeyRight
-leaveSubexpressionKey = mk E.shift E.KeyLeft
+enterSubexpressionKeys = [mk E.shift E.KeyRight]
+leaveSubexpressionKeys = [mk E.shift E.KeyLeft]
 
-replaceInferredValueKey = noMods E.KeyEnter
-keepInferredValueKey = noMods E.KeyEsc
+replaceInferredValueKeys = [noMods E.KeyEnter]
+keepInferredValueKeys = [noMods E.KeyEsc]
 
 nextInfoMode = [noMods E.KeyF7]
 

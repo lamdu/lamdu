@@ -18,9 +18,9 @@ import qualified Lamdu.WidgetIds as WidgetIds
 
 polymorphicFDConfig :: FocusDelegator.Config
 polymorphicFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKey = Config.polymorphicExpandKey
+  { FocusDelegator.startDelegatingKeys = Config.polymorphicExpandKeys
   , FocusDelegator.startDelegatingDoc = E.Doc ["View", "Expand polymorphic"]
-  , FocusDelegator.stopDelegatingKey = Config.polymorphicCollapseKey
+  , FocusDelegator.stopDelegatingKeys = Config.polymorphicCollapseKeys
   , FocusDelegator.stopDelegatingDoc = E.Doc ["View", "Collapse polymorphic"]
   }
 

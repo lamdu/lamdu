@@ -17,9 +17,9 @@ import qualified Lamdu.Config as Config
 
 fdConfig :: FocusDelegator.Config
 fdConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyEnter
+  { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.KeyEnter]
   , FocusDelegator.startDelegatingDoc = E.Doc ["Edit", "Rename tag"]
-  , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEsc
+  , FocusDelegator.stopDelegatingKeys = [E.ModKey E.noMods E.KeyEsc]
   , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Stop renaming tag"]
   }
 

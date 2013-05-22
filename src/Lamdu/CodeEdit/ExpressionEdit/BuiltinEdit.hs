@@ -18,9 +18,9 @@ import qualified Lamdu.WidgetIds as WidgetIds
 
 builtinFDConfig :: FocusDelegator.Config
 builtinFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKey = E.ModKey E.noMods E.KeyEnter
+  { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.KeyEnter]
   , FocusDelegator.startDelegatingDoc = E.Doc ["Edit", "Change imported name"]
-  , FocusDelegator.stopDelegatingKey = E.ModKey E.noMods E.KeyEsc
+  , FocusDelegator.stopDelegatingKeys = [E.ModKey E.noMods E.KeyEsc]
   , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Stop changing name"]
   }
 

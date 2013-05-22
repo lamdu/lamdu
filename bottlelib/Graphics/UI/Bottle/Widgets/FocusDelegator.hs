@@ -31,9 +31,9 @@ data Style = Style
   }
 
 data Config = Config
-  { startDelegatingKey :: E.ModKey
+  { startDelegatingKeys :: [E.ModKey]
   , startDelegatingDoc :: E.Doc
-  , stopDelegatingKey :: E.ModKey
+  , stopDelegatingKeys :: [E.ModKey]
   , stopDelegatingDoc :: E.Doc
   }
 
@@ -66,12 +66,12 @@ makeFocused delegating focusSelf env =
       w ^. Widget.wMaybeEnter
 
     startDelegatingEventMap childEnter =
-      E.keyPress (startDelegatingKey ourConfig) (startDelegatingDoc ourConfig) .
+      E.keyPresses (startDelegatingKeys ourConfig) (startDelegatingDoc ourConfig) .
       Lens.view Widget.enterResultEvent $ childEnter Direction.Outside
 
     addStopDelegatingEventMap =
       Widget.weakerEvents .
-      E.keyPress (stopDelegatingKey ourConfig) (stopDelegatingDoc ourConfig) .
+      E.keyPresses (stopDelegatingKeys ourConfig) (stopDelegatingDoc ourConfig) .
       pure $ Widget.eventResultFromCursor focusSelf
 
 -- | Make a focus delegator
