@@ -19,7 +19,7 @@ import Lamdu.CodeEdit.Sugar.Monad (SugarM)
 import Lamdu.CodeEdit.Sugar.Types
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Either as Either
-import qualified Data.List.Utils as ListUtils
+import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
 import qualified Lamdu.CodeEdit.Sugar.Expression as SugarExpr
 import qualified Lamdu.CodeEdit.Sugar.Infer as SugarInfer
@@ -74,12 +74,16 @@ convertLabeled ::
   MaybeT (SugarM m) (ExpressionU m)
 convertLabeled funcS argS exprI = do
   Record Val fields <- maybeToMPlus $ argS ^? rBody . _BodyRecord
-  guard . ListUtils.isLengthAtLeast 2 $ fields ^. flItems
   let
     getArg field = do
       tagG <- maybeToMPlus $ field ^? rfTag . rBody . _BodyTag
       pure (tagG, field ^. rfExpr)
   args <- traverse getArg $ fields ^. flItems
+  let
+    tagGuids = args ^.. Lens.traversed . Lens._1 . tagGuid
+    numTags = length tagGuids
+  guard $ numTags > 1
+  guard $ numTags == Set.size (Set.fromList tagGuids)
   guard . isAtomicBody $ funcS ^. rBody
   lift . SugarExpr.make exprI $ BodyLabeledApply LabeledApply
     { _laFunc = SugarExpr.removeSuccessfulType funcS
