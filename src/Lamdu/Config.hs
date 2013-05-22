@@ -188,8 +188,9 @@ paramDefSuffixScaleFactor = 0.4
 enterSubexpressionKeys = [mk E.shift E.KeyRight]
 leaveSubexpressionKeys = [mk E.shift E.KeyLeft]
 
-replaceInferredValueKeys = [noMods E.KeyEnter]
+replaceInferredValueKeys = delKeys
 keepInferredValueKeys = [noMods E.KeyEsc]
+acceptInferredValueKeys = [noMods E.KeyEnter]
 
 nextInfoMode = [noMods E.KeyF7]
 

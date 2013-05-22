@@ -38,11 +38,10 @@ addParens :: ExpressionP name m pl -> ExpressionP name m pl
 addParens =
   Lens.over rBody addParensBody
   where
-    addParensBody (BodyInferred (Inferred val hole)) =
-      BodyInferred $ Inferred (addParens val) hole
-    addParensBody (BodyCollapsed (Collapsed g compact full)) =
-      BodyCollapsed . Collapsed g compact $
-      addParens full
+    addParensBody (BodyInferred inferred) =
+      BodyInferred $ inferred & iValue %~ addParens
+    addParensBody (BodyCollapsed collapsed) =
+      BodyCollapsed $ collapsed & pFullExpression %~ addParens
     addParensBody x = Lens.set eHasParens HaveParens x
 
 addApplyChildParens :: ExpressionP name m pl -> ExpressionP name m pl

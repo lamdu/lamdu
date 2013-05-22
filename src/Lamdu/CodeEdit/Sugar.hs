@@ -44,7 +44,7 @@ module Lamdu.CodeEdit.Sugar
   , holeResultHasHoles
   , LiteralInteger(..)
   , TagG(..), tagName, tagGuid
-  , Inferred(..), iValue, iHole
+  , Inferred(..), iValue, iMAccept, iHole
   , Collapsed(..), pFuncGuid, pCompact, pFullExpression
   , HasParens(..)
   , loadConvertDefI
@@ -103,12 +103,18 @@ import qualified System.Random as Random
 
 type Convertor m = SugarInfer.ExprMM m -> SugarM m (ExpressionU m)
 
+subExpressionsThat ::
+  (Expression.Expression def a -> Bool) ->
+  Lens.Fold (Expression.Expression def a) (Expression.Expression def a)
+subExpressionsThat predicate =
+  Lens.folding ExprUtil.subExpressions . Lens.filtered predicate
+
 onMatchingSubexprs ::
   MonadA m => (a -> m ()) ->
   (Expression.Expression def a -> Bool) ->
   Expression.Expression def a -> m ()
 onMatchingSubexprs action predicate =
-  Lens.mapMOf_ (Lens.folding ExprUtil.subExpressions . Lens.filtered predicate)
+  Lens.mapMOf_ (subExpressionsThat predicate)
   (action . (^. Expression.ePayload))
 
 toHole :: MonadA m => Stored m -> T m ()
@@ -555,10 +561,24 @@ convertTypeCheckedHoleH sugarContext mPaste iwc exprI =
         }
     inferredHole x = do
       hole <- mkHole
-      SugarExpr.make exprI .
-        BodyInferred . (`Inferred` hole) =<<
-        (SugarM.convertSubexpression .
-         SugarInfer.resultFromPure (SugarExpr.mkGen 2 3 eGuid)) x
+      val <-
+        SugarM.convertSubexpression $
+        SugarInfer.resultFromPure (SugarExpr.mkGen 2 3 eGuid) x
+      SugarExpr.make exprI $ BodyInferred Inferred
+        { _iHole = hole
+        , _iValue = val
+        , _iMAccept =
+          accept x . Property.value <$> SugarInfer.resultStored exprI
+        }
+    accept what iref = do
+      writtenExpr <-
+        fmap fst <$>
+        DataIRef.writeExpression iref what
+      pure . DataIRef.exprGuid .
+        maybe iref (^. Expression.ePayload) $
+        writtenExpr ^?
+        subExpressionsThat
+        (Lens.notNullOf (Expression.eBody . ExprUtil.bodyHole))
     plainHole =
       SugarExpr.make exprI . BodyHole =<< mkHole
 

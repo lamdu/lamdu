@@ -3,6 +3,7 @@ module Lamdu.CodeEdit.ExpressionEdit.InferredEdit(make) where
 
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
+import Data.Monoid (mempty)
 import Data.Store.Guid (Guid)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
@@ -17,21 +18,32 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.WidgetEnvT as WE
+import qualified Lamdu.WidgetIds as WidgetIds
 
 fdConfig :: FocusDelegator.Config
 fdConfig = FocusDelegator.Config
   { FocusDelegator.startDelegatingKeys = Config.replaceInferredValueKeys
-  , FocusDelegator.startDelegatingDoc = E.Doc ["Edit", "Replace inferred value"]
+  , FocusDelegator.startDelegatingDoc = E.Doc ["Edit", "Inferred value", "Replace"]
   , FocusDelegator.stopDelegatingKeys = Config.keepInferredValueKeys
-  , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Keep inferred value"]
+  , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Inferred value", "Back"]
   }
 
 make
   :: MonadA m => Sugar.Inferred Sugar.Name m (Sugar.ExpressionN m) -> Guid -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
 make inferred guid =
+  (fmap . fmap)
+    (ExpressionGui.egWidget %~ Widget.weakerEvents eventMap) .
   ExpressionGui.wrapDelegated fdConfig FocusDelegator.NotDelegating $
   makeUnwrapped inferred guid
+  where
+    eventMap =
+      maybe mempty
+      (Widget.keysEventMapMovesCursor
+       Config.acceptInferredValueKeys
+       (E.Doc ["Edit", "Inferred value", "Accept"]) .
+       fmap WidgetIds.fromGuid) $
+      inferred ^. Sugar.iMAccept
 
 makeUnwrapped ::
   MonadA m =>

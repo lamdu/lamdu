@@ -52,7 +52,7 @@ module Lamdu.CodeEdit.Sugar.Types
     , holeResultConverted
     , holeResultPick, holeResultPickPrefix
   , LiteralInteger(..)
-  , Inferred(..), iValue, iHole
+  , Inferred(..), iValue, iMAccept, iHole
   , Collapsed(..), pFuncGuid, pCompact, pFullExpression
   , HasParens(..)
   , T, CT
@@ -234,6 +234,7 @@ data LiteralInteger m = LiteralInteger
 
 data Inferred name m expr = Inferred
   { _iValue :: expr
+  , _iMAccept :: Maybe (T m Guid)
   , _iHole :: Hole name m
   } deriving (Functor, Foldable, Traversable)
 

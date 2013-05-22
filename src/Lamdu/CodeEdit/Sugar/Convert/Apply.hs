@@ -55,7 +55,8 @@ maybeToMPlus (Just x) = return x
 
 isAtomicBody :: Body name m (ExpressionP name m pl) -> Bool
 isAtomicBody BodyHole {} = True
-isAtomicBody (BodyInferred (Inferred val _)) = isAtomicBody $ val ^. rBody
+isAtomicBody (BodyInferred inferred) =
+  isAtomicBody $ inferred ^. iValue . rBody
 isAtomicBody BodyCollapsed {} = True
 isAtomicBody BodyAtom {} = True
 isAtomicBody BodyLiteralInteger {} = True
