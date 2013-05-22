@@ -39,8 +39,7 @@ convert ::
   (Typeable1 m, MonadA m) =>
   Expression.Apply (ExprMM m) ->
   ExprMM m -> SugarM m (ExpressionU m)
-convert app@(Expression.Apply funcI argI) exprI = do
-  -- if we're an apply of the form (nil T): Return an empty list
+convert app@(Expression.Apply funcI argI) exprI =
   fmap uneither . runEitherT $ do
     justToLeft $ convertEmptyList app exprI
     argS <- lift $ SugarM.convertSubexpression argI

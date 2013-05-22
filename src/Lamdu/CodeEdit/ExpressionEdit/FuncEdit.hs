@@ -43,10 +43,10 @@ makeParamNameEdit ::
   MonadA m =>
   Sugar.Name -> Guid -> Widget.Id ->
   ExprGuiM m (WidgetT m)
-makeParamNameEdit name ident myId =
+makeParamNameEdit name ident =
   ExprGuiM.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
   (ExprGuiM.withFgColor Config.paramOriginColor .
-   ExpressionGui.makeNameEdit name ident) myId
+   ExpressionGui.makeNameEdit name ident)
 
 jumpToRHS ::
   (MonadA m, MonadA f) =>
