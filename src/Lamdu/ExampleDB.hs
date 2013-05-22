@@ -1,7 +1,8 @@
 module Lamdu.ExampleDB(initDB, createBuiltins) where
 
 import Control.Applicative (liftA2)
-import Control.Monad (join, unless)
+import Control.Lens.Operators
+import Control.Monad (join, unless, (<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..))
@@ -11,6 +12,7 @@ import Data.Store.IRef (IRef, Tag)
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Version (Version)
 import Data.Store.Transaction (Transaction, setP)
+import Data.Traversable (traverse)
 import Lamdu.Data.Definition (Definition(..))
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer
@@ -62,7 +64,11 @@ createBuiltins =
       ["&&", "||"]
 
     makeWithType_ "Prelude.if" . forAll "a" $ \a ->
-      mkPi bool . mkPi a $ endo a
+      mkPiRecord
+      [ ("condition", bool)
+      , ("then", a)
+      , ("else", a)
+      ] a
 
     makeWithType_ "Prelude.id" $ forAll "a" endo
 
@@ -81,18 +87,40 @@ createBuiltins =
     makeWithType_ "Prelude.sum" . forAll "a" $ \a ->
       mkPi (listOf a) a
 
-    let filterType = forAll "a" $ \a -> mkPi (mkPi a bool) . endo $ listOf a
+    let
+      filterType =
+        forAll "a" $ \a ->
+        mkPiRecord
+        [ ("predicate", mkPi a bool)
+        , ("list", listOf a)
+        ] $ listOf a
     makeWithType_ "Data.List.filter" filterType
     makeWithType_ "Data.List.takeWhile" filterType
 
     makeWithType_ "Data.List.replicate" . forAll "a" $ \a ->
-      mkPi integer . mkPi a $ listOf a
+      mkPiRecord
+      [ ("item", a)
+      , ("count", integer)
+      ] $ listOf a
 
     makeWithType_ "Data.List.foldl" . forAll "a" $ \a -> forAll "b" $ \b ->
-      mkPi (mkPi a (mkPi b a)) . mkPi a $ mkPi (listOf b) a
+      mkPiRecord
+      [ ( "list", listOf b )
+      , ( "initial", a )
+      , ( "next"
+        , mkPiRecord
+          [ ("accumulator", a)
+          , ("item", b)
+          ] a
+        )
+      ] a
 
     makeWithType_ "Data.List.zipWith" . forAll "a" $ \a -> forAll "b" $ \b -> forAll "c" $ \c ->
-      mkPi (mkPi a (mkPi b c)) . mkPi (listOf a) . mkPi (listOf b) $ listOf c
+      mkPiRecord
+      [ ( "func", mkPiRecord [("x", a), ("y", b)] c)
+      , ( "xs", listOf a )
+      , ( "ys", listOf b )
+      ] $ listOf c
 
     let aToAToA = forAll "a" $ \a -> mkPi a $ endo a
     traverse_ ((`makeWithType_` aToAToA) . ("Prelude." ++))
@@ -108,17 +136,9 @@ createBuiltins =
     newDef ".." ["Prelude"] "enumFromTo" .
       mkPi integer . mkPi integer $ listOf integer
 
-    makeWithType_ "Data.Functor.fmap" .
-      forAll "f" $ \f ->
-      forAll "a" $ \a ->
-      forAll "b" $ \b ->
-      mkPi (mkPi a b) . mkPi (mkApply f a) $ mkApply f b
-
     makeWithType_ "Data.List.iterate" .
-      forAll "a" $ \a -> mkPi (mkPi a a) . mkPi a $ listOf a
-
-    makeWithType_ "Control.Monad.return" .
-      forAll "m" $ \m -> forAll "a" $ \a -> mkPi a $ mkApply m a
+      forAll "a" $ \a ->
+      mkPiRecord [("step", endo a), ("initial", a)] $ listOf a
 
     newDef "." ["Prelude"] "." .
       forAll "a" $ \a -> forAll "b" $ \b -> forAll "c" $ \c ->
@@ -157,6 +177,17 @@ createBuiltins =
     mkPi mkArgType mkResType = fmap snd . join $ liftA2 DataIRef.newPi mkArgType mkResType
     mkApply mkFunc mkArg =
       DataIRef.newExprBody =<< liftA2 ExprUtil.makeApply mkFunc mkArg
+    mkTag name = do
+      tagGuid <- Transaction.newKey
+      setP (A.assocNameRef tagGuid) name
+      DataIRef.newExprBody $ ExprUtil.bodyTag # tagGuid
+    mkRecordType strFields = do
+      tagFields <- traverse (Lens._1 mkTag <=< Lens.sequenceOf Lens._2) strFields
+      DataIRef.newExprBody $ Expression.BodyRecord Expression.Record
+        { Expression._recordKind = Expression.Type
+        , Expression._recordFields = tagFields
+        }
+    mkPiRecord = mkPi . mkRecordType
     mkType f = do
       x <- lift f
       Writer.tell [x]
