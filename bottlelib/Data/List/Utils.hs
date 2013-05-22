@@ -11,6 +11,7 @@ module Data.List.Utils
   , theOne
   , nonEmptyAll
   , match
+  , isLengthAtLeast
   ) where
 
 import Data.Function (on)
@@ -53,6 +54,11 @@ pairList (x, y) = [x, y]
 theOne :: [a] -> Maybe a
 theOne [x] = Just x
 theOne _ = Nothing
+
+isLengthAtLeast :: Int -> [a] -> Bool
+isLengthAtLeast l _ | l <= 0 = True
+isLengthAtLeast _ [] = False
+isLengthAtLeast l (_:xs) = isLengthAtLeast (l-1) xs
 
 nonEmptyAll :: (a -> Bool) -> [a] -> Bool
 nonEmptyAll _ [] = False

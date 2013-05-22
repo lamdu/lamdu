@@ -80,6 +80,7 @@ import System.Random (RandomGen)
 import qualified Control.Lens as Lens
 import qualified Data.Cache as Cache
 import qualified Data.Foldable as Foldable
+import qualified Data.List.Utils as ListUtils
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
@@ -976,10 +977,6 @@ delFieldParam tagExprGuid paramTypeI paramGuid lambdaP bodyStored =
         fromMaybe (error "field param must have tags") $
         tagExpr ^? ExprUtil.bodyTag
 
-atLeastTwo :: [a] -> Bool
-atLeastTwo (_:_:_) = True
-atLeastTwo _ = False
-
 convertDefinitionParams ::
   (MonadA m, Typeable1 m) =>
   SugarM.RecordParamsInfo m -> [Guid] -> SugarInfer.ExprMM m ->
@@ -1000,7 +997,7 @@ convertDefinitionParams recordParamsInfo usedTags expr =
       -- Independent:
       case paramType ^. Expression.eBody of
       Expression.BodyRecord (Expression.Record Type fields)
-        | atLeastTwo fields
+        | ListUtils.isLengthAtLeast 2 fields
         , Just fieldParams <- traverse makeFieldParam fields
         , all ((`notElem` usedTags) . fpTagGuid) fieldParams -> do
           convParams <-
