@@ -70,8 +70,7 @@ make sExpr = assignCursor $ do
          . Widget.scale Config.typeScaleFactor
          . Lens.view ExpressionGui.egWidget
          ) typeEdits)
-      Settings.InfoExamples -> -- TODO:
-        id
+      Settings.InfoExamples -> id
   return .
     Lens.over ExpressionGui.egWidget
     ( maybe onReadOnly (const id) (payload ^. Sugar.plActions)

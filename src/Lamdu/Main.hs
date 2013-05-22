@@ -207,7 +207,7 @@ runDb font db = do
   addHelpWithStyle <-
     EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown Config.overlayDocKeys
   settingsRef <- newIORef Settings
-    { _sInfoMode = Settings.InfoTypes
+    { _sInfoMode = Settings.defaultInfoMode
     }
   cacheRef <- newIORef $ Cache.new 0x100000 -- TODO: Use a real cache size
   wrapFlyNav <- makeFlyNav
@@ -237,7 +237,7 @@ infoStr Settings.InfoExamples = "Examples"
 
 nextInfoMode :: Settings.InfoMode -> Settings.InfoMode
 nextInfoMode Settings.InfoNone = Settings.InfoTypes
-nextInfoMode Settings.InfoTypes = Settings.InfoExamples
+nextInfoMode Settings.InfoTypes = Settings.InfoNone -- Settings.InfoExamples
 nextInfoMode Settings.InfoExamples = Settings.InfoNone
 
 mkGlobalEventMap :: IORef Settings -> IO (Widget.EventHandlers IO)
