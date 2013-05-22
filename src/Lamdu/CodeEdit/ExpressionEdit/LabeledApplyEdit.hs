@@ -4,6 +4,7 @@ module Lamdu.CodeEdit.ExpressionEdit.LabeledApplyEdit(make) where
 import Control.Applicative (pure)
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
+import Data.Monoid (mappend)
 import Data.Traversable (traverse)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
@@ -28,7 +29,11 @@ make (Sugar.LabeledApply func args) =
     funcEdit <- ExprGuiM.makeSubexpresion func
     let
       makeArg (tagG, expr) = do
-        argTagEdit <- TagEdit.makeView tagG $ Widget.toAnimId myId
+        let tagGuid = tagG ^. Sugar.tagGuid
+        argTagEdit <-
+          TagEdit.makeView tagG .
+          Widget.toAnimId . mappend myId $
+          WidgetIds.fromGuid tagGuid
         argValEdit <- ExprGuiM.makeSubexpresion expr
         pure $ ExpressionGui.makeRow
           [ (0, scaleTag argTagEdit)
