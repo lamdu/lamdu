@@ -125,7 +125,7 @@ make exprI expr = do
   sugarContext <- SugarM.readContext
   inferredTypes <-
     zipWithM
-    ( fmap (SugarM.convertSubexpression . fmap SugarInfer.toPayloadMM)
+    ( fmap SugarM.convertSubexpression
     . SugarInfer.resultFromPure
     ) seeds types
   return

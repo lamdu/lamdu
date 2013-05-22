@@ -19,7 +19,6 @@ module Lamdu.CodeEdit.Sugar.Infer
   -- short-circuit on error:
   , load, inferMaybe, inferMaybe_
 
-  , toPayloadMM
   , resultInferred
   , resultStored
   , resultGuid
@@ -108,11 +107,16 @@ randomizeGuids gen f =
     toPayload inferred guid = Payload guid inferred NoStored
     paramGen : exprGen : _ = RandomUtils.splits gen
 
+toPayloadMM :: Payload (Tagged (m ())) NoInferred NoStored -> PayloadMM m
+toPayloadMM =
+  Lens.set plInferred Nothing .
+  Lens.set plStored Nothing
+
 -- Not inferred, not stored
 resultFromPure ::
-  RandomGen g => g -> DataIRef.Expression t () ->
-  DataIRef.Expression t (Payload t NoInferred NoStored)
-resultFromPure = (`randomizeGuids` const NoInferred)
+  RandomGen g => g -> DataIRef.ExpressionM m () -> ExprMM m
+resultFromPure g =
+  fmap toPayloadMM . randomizeGuids g (const NoInferred)
 
 resultFromInferred ::
   RandomGen g => g ->
@@ -266,11 +270,6 @@ resultStored = (^. Expression.ePayload . plStored)
 resultInferred ::
   Expression.Expression def (Payload t inferred stored) -> inferred
 resultInferred = (^. Expression.ePayload . plInferred)
-
-toPayloadMM :: Payload (Tagged (m ())) NoInferred NoStored -> PayloadMM m
-toPayloadMM =
-  Lens.set plInferred Nothing .
-  Lens.set plStored Nothing
 
 plIRef ::
   Lens.Traversal'

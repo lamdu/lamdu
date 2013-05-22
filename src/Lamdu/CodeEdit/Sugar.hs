@@ -557,7 +557,7 @@ convertTypeCheckedHoleH sugarContext mPaste iwc exprI =
       hole <- mkHole
       SugarExpr.make exprI .
         BodyInferred . (`Inferred` hole) =<<
-        (SugarM.convertSubexpression . fmap SugarInfer.toPayloadMM .
+        (SugarM.convertSubexpression .
          SugarInfer.resultFromPure (SugarExpr.mkGen 2 3 eGuid)) x
     plainHole =
       SugarExpr.make exprI . BodyHole =<< mkHole
@@ -809,7 +809,7 @@ convertExpressionPure ::
   DataIRef.ExpressionM m () -> T m (ExpressionU m)
 convertExpressionPure cp gen =
   SugarM.runPure cp convertExpressionI Map.empty Map.empty .
-  SugarM.convertSubexpression . fmap SugarInfer.toPayloadMM .
+  SugarM.convertSubexpression .
   SugarInfer.resultFromPure gen
 
 data ConventionalParams m = ConventionalParams
