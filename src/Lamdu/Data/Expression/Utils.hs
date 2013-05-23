@@ -107,7 +107,7 @@ applyForms exprType expr
       pureExpression . (`makeApply` arg)
       where
         arg =
-          case paramType ^? ExprLens.exprRecordKinded Type of
+          case paramType ^? ExprLens.exprKindedRecordFields Type of
           Just fields ->
             ExprLens.pureExpr . _BodyRecord . ExprLens.kindedRecordFields Val #
             (fields & Lens.mapped . Lens._2 .~ pureHole)
@@ -193,7 +193,7 @@ matchExpression onMatch onMismatch =
       case matchBody matchLamResult matchOther matchGetPar body0 body1 of
       Nothing ->
         onMismatch e0 $
-        (ExprLens.expressionLeaves . ExprLens.parameterRef %~ lookupGuid) e1
+        (ExprLens.exprLeaves . ExprLens.parameterRef %~ lookupGuid) e1
       Just bodyMatched -> Expression <$> sequenceA bodyMatched <*> onMatch pl0 pl1
       where
         matchGetPar p0 p1 = p0 == lookupGuid p1

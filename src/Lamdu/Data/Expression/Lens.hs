@@ -1,27 +1,27 @@
 {-# LANGUAGE RankNTypes, NoMonomorphismRestriction #-}
 module Lamdu.Data.Expression.Lens
   ( pureExpr
+  , parameterRef, definitionRef
+
   , exprLam
   , exprApply
   , exprRecord
   , exprGetField
   , exprLeaf
-  , exprRecordKinded
-  , exprTag
-  , exprParameterRef
-  , bitraverseBody, bitraverseExpression
-  , expressionBodyDef, expressionDef
-  , expressionLeaves, bodyLeaves
-  , parameterRef, definitionRef
-  , bodyParameterRef, bodyDefinitionRef
-  , bodyLiteralInteger
-  , bodyHole
-  , bodyTag
-  , bodySet
-  , bodyIntegerType
-  , kindedRecordFields
-  , kindedLam
-  , lambda, pi
+  , kindedRecordFields, exprKindedRecordFields
+  , kindedLam, exprKindedLam
+
+  , bodyBitraverse, exprBitraverse
+  , bodyDef, exprDef
+  , bodyLeaves, exprLeaves
+  , bodyParameterRef, exprParameterRef
+  , bodyDefinitionRef, exprDefinitionRef
+  , bodyLiteralInteger, exprLiteralInteger
+  , bodyHole, exprHole
+  , bodyTag, exprTag
+  , bodySet, exprSet
+  , bodyIntegerType, exprIntegerType
+  , bodyGetVariable, exprGetVariable
   ) where
 
 import Prelude hiding (pi)
@@ -49,8 +49,14 @@ exprGetField = eBody . _BodyGetField
 exprLeaf :: Lens.Traversal' (Expression def a) (Leaf def)
 exprLeaf = eBody . _BodyLeaf
 
-exprRecordKinded :: Kind -> Lens.Traversal' (Expression def a) [(Expression def a, Expression def a)]
-exprRecordKinded k = exprRecord . kindedRecordFields k
+exprKindedRecordFields :: Kind -> Lens.Traversal' (Expression def a) [(Expression def a, Expression def a)]
+exprKindedRecordFields k = exprRecord . kindedRecordFields k
+
+exprKindedLam ::
+  Kind ->
+  Lens.Traversal' (Expression def a)
+  (Guid, Expression def a, Expression def a)
+exprKindedLam k = eBody . _BodyLam . kindedLam k
 
 exprTag :: Lens.Traversal' (Expression def a) Guid
 exprTag = eBody . bodyTag
@@ -58,11 +64,34 @@ exprTag = eBody . bodyTag
 exprParameterRef :: Lens.Traversal' (Expression def a) Guid
 exprParameterRef = eBody . bodyParameterRef
 
-bitraverseBody ::
+exprGetVariable ::
+  Lens.Traversal' (Expression def a) (VariableRef def)
+exprGetVariable = eBody . bodyGetVariable
+
+exprLiteralInteger :: Lens.Traversal' (Expression def a) Integer
+exprLiteralInteger = eBody . bodyLiteralInteger
+
+exprDefinitionRef :: Lens.Traversal' (Expression def a) def
+exprDefinitionRef = eBody . bodyDefinitionRef
+
+exprHole :: Lens.Traversal' (Expression def a) ()
+exprHole = eBody . bodyHole
+
+exprSet :: Lens.Traversal' (Expression def a) ()
+exprSet = eBody . bodySet
+
+exprIntegerType :: Lens.Traversal' (Expression def a) ()
+exprIntegerType = eBody . bodyIntegerType
+
+exprLeaves ::
+  Lens.Traversal (Expression defa a) (Expression defb a) (Leaf defa) (Leaf defb)
+exprLeaves = eBody . bodyLeaves exprLeaves
+
+bodyBitraverse ::
   Applicative f => (defa -> f defb) -> (expra -> f exprb) ->
   Body defa expra ->
   f (Body defb exprb)
-bitraverseBody onDef onExpr body =
+bodyBitraverse onDef onExpr body =
   case body of
   BodyLam x -> BodyLam <$> traverse onExpr x
   BodyApply x -> BodyApply <$> traverse onExpr x
@@ -70,30 +99,26 @@ bitraverseBody onDef onExpr body =
   BodyGetField x -> BodyGetField <$> traverse onExpr x
   BodyLeaf leaf -> BodyLeaf <$> traverse onDef leaf
 
-expressionBodyDef :: Lens.Traversal (Body a expr) (Body b expr) a b
-expressionBodyDef = (`bitraverseBody` pure)
+bodyDef :: Lens.Traversal (Body a expr) (Body b expr) a b
+bodyDef = (`bodyBitraverse` pure)
 
-bitraverseExpression ::
+exprBitraverse ::
   Applicative f =>
   (defa -> f defb) -> (pla -> f plb) ->
   Expression defa pla -> f (Expression defb plb)
-bitraverseExpression onDef onPl = f
+exprBitraverse onDef onPl = f
   where
     f (Expression body payload) =
-      Expression <$> bitraverseBody onDef f body <*> onPl payload
+      Expression <$> bodyBitraverse onDef f body <*> onPl payload
 
-expressionDef :: Lens.Traversal (Expression a pl) (Expression b pl) a b
-expressionDef = (`bitraverseExpression` pure)
-
-expressionLeaves ::
-  Lens.Traversal (Expression defa a) (Expression defb a) (Leaf defa) (Leaf defb)
-expressionLeaves = eBody . bodyLeaves expressionLeaves
+exprDef :: Lens.Traversal (Expression a pl) (Expression b pl) a b
+exprDef = (`exprBitraverse` pure)
 
 bodyLeaves ::
   Applicative f =>
   Lens.LensLike f expra exprb (Leaf defa) (Leaf defb) ->
   Lens.LensLike f (Body defa expra) (Body defb exprb) (Leaf defa) (Leaf defb)
-bodyLeaves exprLeaves onLeaves body =
+bodyLeaves leaves onLeaves body =
   case body of
   BodyLam x      -> BodyLam      <$> onExprs x
   BodyApply x    -> BodyApply    <$> onExprs x
@@ -101,7 +126,7 @@ bodyLeaves exprLeaves onLeaves body =
   BodyGetField x -> BodyGetField <$> onExprs x
   BodyLeaf l -> BodyLeaf <$> onLeaves l
   where
-    onExprs = traverse (exprLeaves onLeaves)
+    onExprs = traverse (leaves onLeaves)
 
 -- Prisms:
 parameterRef :: Lens.Prism' (Leaf def) Guid
@@ -118,6 +143,11 @@ bodyDefinitionRef = _BodyLeaf . definitionRef
 
 bodyLiteralInteger :: Lens.Prism' (Body def expr) Integer
 bodyLiteralInteger = _BodyLeaf . _LiteralInteger
+
+bodyGetVariable ::
+  Lens.Prism (Body defa expr) (Body defb expr)
+  (VariableRef defa) (VariableRef defb)
+bodyGetVariable = _BodyLeaf . _GetVariable
 
 bodyHole :: Lens.Prism' (Body def expr) ()
 bodyHole = _BodyLeaf . _Hole
@@ -152,10 +182,3 @@ kindedLam k = Lens.prism' toLam fromLam
 -- Pure expressions:
 pureExpr :: Lens.Iso' (Expression def ()) (Body def (Expression def ()))
 pureExpr = Lens.iso (^. eBody) (`Expression` ())
-
--- TODO: Remove the kind-passing wrappers
-lambda :: Lens.Prism' (Lambda expr) (Guid, expr, expr)
-lambda = kindedLam Val
-
-pi :: Lens.Prism' (Lambda expr) (Guid, expr, expr)
-pi = kindedLam Type

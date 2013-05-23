@@ -132,7 +132,7 @@ definitionTypes =
     exampleDBDefs =
       fst . MapStore.runEmpty . Transaction.run MapStore.mapStore $ do
         (_, defIs) <- createBuiltins
-        Lens.mapMOf (Lens.traversed . ExprLens.expressionDef) reIRef
+        Lens.mapMOf (Lens.traversed . ExprLens.exprDef) reIRef
           =<< Map.fromList <$> mapM readDef defIs
 
     reIRef = fmap IRef.unsafeFromGuid . guidNameOf

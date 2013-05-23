@@ -10,7 +10,6 @@ import Data.Maybe (fromMaybe)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.IRef as DataIRef
@@ -30,7 +29,7 @@ class ToExpr a where
 instance FromExpr Integer where
   fromExpr _ e =
     fromMaybe (error "Expecting normalized Integer expression!") $
-    e ^? Expression.eBody . ExprLens.bodyLiteralInteger
+    e ^? ExprLens.exprLiteralInteger
 
 instance ToExpr Integer where
   toExpr _ x [] = ExprUtil.pureLiteralInteger x
@@ -48,7 +47,7 @@ instance ToExpr Bool where
 
 instance FromExpr Bool where
   fromExpr env expr =
-    case expr ^? Expression.eBody . ExprLens.bodyDefinitionRef of
+    case expr ^? ExprLens.exprDefinitionRef of
     Just defRef
       | defRef == trueDef env -> True
       | defRef == falseDef env -> False

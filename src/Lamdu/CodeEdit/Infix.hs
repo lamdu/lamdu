@@ -7,6 +7,7 @@ import Data.Store.Transaction (Transaction, getP)
 import qualified Data.Char as Char
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression as Expression
+import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 
 isInfixName :: String -> Bool
@@ -23,7 +24,8 @@ infixOp
   => DataIRef.ExpressionM m ref
   -> Transaction m (Maybe (Expression.VariableRef (DataIRef.DefI (Tag m))))
 infixOp expr =
-  case expr ^? Expression.eBody . Expression._BodyLeaf . Expression._GetVariable of
+  -- TODO: use Lens.action here?
+  case expr ^? ExprLens.exprGetVariable of
   Just var -> do
     isInfix <- isInfixVar var
     return $ if isInfix then Just var else Nothing

@@ -130,9 +130,9 @@ data ErrorDetails def
 
 instance Functor ErrorDetails where
   fmap f (MismatchIn x y) =
-    on MismatchIn (ExprLens.expressionDef %~ f) x y
+    on MismatchIn (ExprLens.exprDef %~ f) x y
   fmap f (InfiniteExpression x) =
-    InfiniteExpression $ x & ExprLens.expressionDef %~ f
+    InfiniteExpression $ x & ExprLens.exprDef %~ f
 
 data Error def = Error
   { errRef :: ExprRef
@@ -146,7 +146,7 @@ data Error def = Error
 instance Functor Error where
   fmap f (Error ref mis details) =
     Error ref
-    (mis & Lens.both . ExprLens.expressionDef %~ f)
+    (mis & Lens.both . ExprLens.exprDef %~ f)
     (f <$> details)
 
 newtype InferActions def m = InferActions
