@@ -3,7 +3,7 @@
 module Utils where
 
 import Control.Applicative ((<$), (<$>), (<*>))
-import Control.Lens ((^.), (%~))
+import Control.Lens.Operators
 import Control.Monad (void)
 import Control.Monad.Trans.State (State, runState, runStateT)
 import Data.Binary.Utils (encodeS)
@@ -30,6 +30,7 @@ import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
+import Lamdu.Data.Expression.Utils (pureHole)
 
 type PureExpr def = Expr.Expression def ()
 type PureExprDefI t = PureExpr (DefI t)
@@ -54,7 +55,7 @@ namedPi :: String -> expr -> expr -> Expr.Body def expr
 namedPi = ExprUtil.makePi . Guid.fromString
 
 pureApply :: [PureExpr def] -> PureExpr def
-pureApply = foldl1 (fmap ExprUtil.pureExpression . ExprUtil.makeApply)
+pureApply = foldl1 ExprUtil.pureApply
 
 -- 1 dependent param
 pureApplyPoly1 ::
@@ -75,32 +76,36 @@ purePi ::
   PureExpr def
 purePi name x y = ExprUtil.pureExpression $ namedPi name x y
 
-pureHole :: PureExpr def
-pureHole = ExprUtil.pureHole
-
-setType :: PureExpr def
-setType = ExprUtil.pureSet
-
 intType :: PureExpr def
 intType = ExprUtil.pureIntegerType
 
-literalInt :: Integer -> PureExpr def
-literalInt = ExprUtil.pureExpression . Lens.review ExprLens.bodyLiteralInteger
+pureLiteralInt :: Lens.Prism' (PureExpr def) Integer
+pureLiteralInt = ExprLens.pureExpr . ExprLens.bodyLiteralInteger
 
 pureGetDef :: String -> PureExprDefI t
 pureGetDef name =
-  ExprUtil.pureExpression . Lens.review ExprLens.bodyDefinitionRef . IRef.unsafeFromGuid $
-  Guid.fromString name
+  ExprLens.pureExpr . ExprLens.bodyDefinitionRef #
+  IRef.unsafeFromGuid (Guid.fromString name)
 
 pureGetParam :: String -> PureExpr def
 pureGetParam name =
-  ExprUtil.pureExpression . Lens.review ExprLens.bodyParameterRef $
+  ExprLens.pureExpr . ExprLens.bodyParameterRef #
   Guid.fromString name
+
+pureGetRecursiveDefI :: PureExprDefI t
+pureGetRecursiveDefI =
+  ExprLens.pureExpr . ExprLens.bodyDefinitionRef # recursiveDefI
+
+pureParameterRef :: String -> PureExpr def
+pureParameterRef str =
+  ExprLens.pureExpr . ExprLens.bodyParameterRef # Guid.fromString str
 
 ansiRed :: String
 ansiRed = "\ESC[31m"
 ansiReset :: String
 ansiReset = "\ESC[0m"
+ansiRedAround :: String -> String
+ansiRedAround x = ansiRed ++ x ++ ansiReset
 
 showExpressionWithConflicts ::
   Show def => Expr.Expression def (InferredWithConflicts def) -> String
@@ -200,21 +205,17 @@ doInfer_ ::
   (ExprIRef.Expression t (Infer.Inferred (DefI t)), Infer.Context (DefI t))
 doInfer_ = (Lens._1 . Lens.mapped %~ fst) . doInfer
 
-pureGetRecursiveDefI :: PureExprDefI t
-pureGetRecursiveDefI =
-  ExprUtil.pureExpression $ Lens.review ExprLens.bodyDefinitionRef recursiveDefI
-
 factorialExpr :: PureExprDefI t
 factorialExpr =
   pureLambda "x" pureHole $
   pureApplyPoly1 "if"
-  [ pureApplyPoly1 "==" [pureGetParam "x", literalInt 0]
-  , literalInt 1
+  [ pureApplyPoly1 "==" [pureGetParam "x", pureLiteralInt # 0]
+  , pureLiteralInt # 1
   , pureApplyPoly1 "*"
     [ pureGetParam "x"
     , pureApply
       [ pureGetRecursiveDefI
-      , pureApplyPoly1 "-" [pureGetParam "x", literalInt 1]
+      , pureApplyPoly1 "-" [pureGetParam "x", pureLiteralInt # 1]
       ]
     ]
   ]
@@ -227,11 +228,11 @@ euler1Expr =
       pureApply
       [ pureGetDef "||"
       , pureApplyPoly1 "=="
-        [ literalInt 0, pureApplyPoly1 "%" [pureGetParam "x", literalInt 3] ]
+        [ pureLiteralInt # 0, pureApplyPoly1 "%" [pureGetParam "x", pureLiteralInt # 3] ]
       , pureApplyPoly1 "=="
-        [ literalInt 0, pureApplyPoly1 "%" [pureGetParam "x", literalInt 5] ]
+        [ pureLiteralInt # 0, pureApplyPoly1 "%" [pureGetParam "x", pureLiteralInt # 5] ]
       ]
-    , pureApply [pureGetDef "..", literalInt 1, literalInt 1000]
+    , pureApply [pureGetDef "..", pureLiteralInt # 1, pureLiteralInt # 1000]
     ]
   ]
 

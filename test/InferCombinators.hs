@@ -9,6 +9,7 @@ import Data.Store.Guid (Guid)
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expression (Expression(..), Kind(..))
 import Lamdu.Data.Expression.IRef (DefI)
+import Lamdu.Data.Expression.Utils (pureHole, pureSet)
 import Utils
 import qualified Control.Lens as Lens
 import qualified Data.Store.Guid as Guid
@@ -84,13 +85,13 @@ iexpr iVal iType body =
   Expr.Expression body (iVal, iType)
 
 five :: PureExprDefI t
-five = ExprLens.pureExpr . ExprLens.bodyLiteralInteger # 5
+five = pureLiteralInt # 5
 
 inferredHole :: PureExprDefI t -> InferResults t
 inferredHole = leafSimple Expr.Hole
 
 inferredSetType :: InferResults t
-inferredSetType = leafSimple Expr.Set setType
+inferredSetType = leafSimple Expr.Set pureSet
 
 bodyToPureExpr :: Expr.Body def (Expression def a) -> PureExpr def
 bodyToPureExpr exprBody = ExprLens.pureExpr # fmap void exprBody
@@ -118,7 +119,7 @@ record k fields =
   where
     typ = case k of
       Val -> bodyToPureExpr $ recBody Type
-      Type -> setType
+      Type -> pureSet
     recBody k1 = ExprLens.bodyKindedRecordFields k1 # fields
 
 inferredVal :: InferResults t -> InferResults t
