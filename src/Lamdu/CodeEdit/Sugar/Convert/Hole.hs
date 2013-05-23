@@ -349,10 +349,23 @@ pickResult ::
 pickResult exprS =
   fmap
   ( fmap (ExprIRef.exprGuid . Lens.view (Expr.ePayload . Lens._2))
-  . listToMaybe . uninferredHoles . fmap swap
+  . listToMaybe . orderedInnerHoles . fmap swap
   ) .
   (ExprIRef.writeExpressionWithStoredSubexpressions . Property.value . SugarInfer.resultStored) exprS .
   fmap (Lens.over (Lens._1 . Lens.mapped) unStorePoint . swap)
+
+orderedInnerHoles ::
+  Expr.Expression def (Infer.Inferred def, a) ->
+  [Expr.Expression def (Infer.Inferred def, a)]
+orderedInnerHoles e =
+  case e ^. Expr.eBody of
+  Expr.BodyApply (Expr.Apply func arg)
+    | Lens.notNullOf (Expr.eBody . ExprLens.bodyHole) func ->
+      -- This is a "type-error wrapper".
+      -- Skip the conversion hole
+      -- and go to inner holes in the expression first.
+      uninferredHoles arg ++ [func]
+  _ -> uninferredHoles e
 
 -- Also skip param types, those can usually be inferred later, so less
 -- useful to fill immediately
