@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DeriveDataTypeable, NoMonomorphismRestriction #-}
+{-# LANGUAGE TemplateHaskell, DeriveDataTypeable, NoMonomorphismRestriction, RankNTypes #-}
 
 module Lamdu.Data.Expression.Utils
   ( makeApply, pureApply
@@ -25,8 +25,10 @@ module Lamdu.Data.Expression.Utils
   , expressionBodyDef
   , expressionDef
   , kindedRecordFields
+  , lam, lambda, pi
   ) where
 
+import Prelude hiding (pi)
 import Lamdu.Data.Expression
 
 import Control.Applicative (Applicative(..), liftA2, (<$>))
@@ -78,6 +80,21 @@ exprBodyTag = eBody . bodyTag
 
 bodyTag :: Lens.Prism' (Body def expr) Guid
 bodyTag = _BodyLeaf . _Tag
+
+lam :: Kind -> Lens.Prism' (Lambda expr) (Guid, expr, expr)
+lam k = Lens.prism' toLam fromLam
+  where
+    toLam (paramGuid, paramType, result) =
+      Lambda k paramGuid paramType result
+    fromLam (Lambda k0 paramGuid paramType result)
+      | k == k0 = Just (paramGuid, paramType, result)
+      | otherwise = Nothing
+
+lambda :: Lens.Prism' (Lambda expr) (Guid, expr, expr)
+lambda = lam Val
+
+pi :: Lens.Prism' (Lambda expr) (Guid, expr, expr)
+pi = lam Type
 
 bitraverseBody ::
   Applicative f => (defa -> f defb) -> (expra -> f exprb) ->
