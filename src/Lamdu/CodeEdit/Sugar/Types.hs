@@ -78,7 +78,7 @@ import qualified Control.Lens.TH as LensTH
 import qualified Data.List as List
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 
 type T = Transaction
@@ -110,10 +110,10 @@ data Payload name m = Payload
   , _plNextHole :: Maybe (Expression name m)
   }
 
-newtype StorePoint t = StorePoint { unStorePoint :: DataIRef.ExpressionI t }
+newtype StorePoint t = StorePoint { unStorePoint :: ExprIRef.ExpressionI t }
   deriving (Eq, Binary, Typeable)
 
-type ExprStorePoint m = DataIRef.ExpressionM m (Maybe (StorePoint (Tag m)))
+type ExprStorePoint m = ExprIRef.ExpressionM m (Maybe (StorePoint (Tag m)))
 
 data ExpressionP name m pl = Expression
   { _rGuid :: Guid
@@ -190,7 +190,7 @@ data Section expr = Section
   } deriving (Functor, Foldable, Traversable)
 
 data HoleResult name m = HoleResult
-  { _holeResultInferred :: DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))
+  { _holeResultInferred :: ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))
   , _holeResultConverted :: Expression name m
   , _holeResultPick :: T m (Maybe Guid)
   , _holeResultPickPrefix :: PrefixAction m
@@ -201,7 +201,7 @@ data HoleResultSeed m
   | ResultSeedNewTag String
   | ResultSeedNewDefinition String
 
-type ScopeItem m a = (a, DataIRef.ExpressionM m ())
+type ScopeItem m a = (a, ExprIRef.ExpressionM m ())
 
 data Scope name m = Scope
   { _scopeLocals    :: [ScopeItem m (GetVar name m)]
@@ -216,7 +216,7 @@ data HoleActions name m = HoleActions
     -- but with the hole's scope in scope.
     -- If given expression does not type check on its own, returns Nothing.
     -- (used by HoleEdit to suggest variations based on type)
-    _holeInferExprType :: DataIRef.ExpressionM m () -> CT m (Maybe (DataIRef.ExpressionM m ()))
+    _holeInferExprType :: ExprIRef.ExpressionM m () -> CT m (Maybe (ExprIRef.ExpressionM m ()))
   , _holeResult :: HoleResultSeed m -> CT m (Maybe (HoleResult name m))
   , _holePaste :: Maybe (T m Guid)
   , -- TODO: holeMDelete is always Nothing, not implemented yet

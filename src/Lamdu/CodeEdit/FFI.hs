@@ -12,19 +12,19 @@ import qualified Data.Map as Map
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Expression.Lens as ExprLens
-import qualified Lamdu.Data.Expression.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as ExprIRef
 
 data Env t = Env
-  { trueDef :: DataIRef.DefI t
-  , falseDef :: DataIRef.DefI t
+  { trueDef :: ExprIRef.DefI t
+  , falseDef :: ExprIRef.DefI t
   }
 derive makeBinary ''Env
 
 class FromExpr a where
-  fromExpr :: Env t -> DataIRef.Expression t () -> a
+  fromExpr :: Env t -> ExprIRef.Expression t () -> a
 
 class ToExpr a where
-  toExpr :: Env t -> a -> [DataIRef.Expression t ()] -> DataIRef.Expression t ()
+  toExpr :: Env t -> a -> [ExprIRef.Expression t ()] -> ExprIRef.Expression t ()
 
 instance FromExpr Integer where
   fromExpr _ e =
@@ -53,7 +53,7 @@ instance FromExpr Bool where
       | defRef == falseDef env -> False
     _ -> error "Expected a normalized bool expression!"
 
-table :: Env t -> Map Definition.FFIName ([DataIRef.Expression t ()] -> DataIRef.Expression t ())
+table :: Env t -> Map Definition.FFIName ([ExprIRef.Expression t ()] -> ExprIRef.Expression t ())
 table env =
   Map.fromList
   [ prelude "==" ((==) :: Integer -> Integer -> Bool)

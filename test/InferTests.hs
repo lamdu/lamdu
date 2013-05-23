@@ -29,14 +29,14 @@ import qualified Data.List as List
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Test.HUnit as HUnit
 
 type InferResults t =
-  DataIRef.Expression t
+  ExprIRef.Expression t
   ( PureExprDefI t
   , PureExprDefI t
   )
@@ -79,7 +79,7 @@ getParam name = leafSimple gv
   where
     gv = Expr.GetVariable . Expr.ParameterRef $ Guid.fromString name
 
-inferResults :: DataIRef.Expression t (Infer.Inferred (DefI t)) -> InferResults t
+inferResults :: ExprIRef.Expression t (Infer.Inferred (DefI t)) -> InferResults t
 inferResults = fmap (void . Infer.iValue &&& void . Infer.iType)
 
 showExpressionWithInferred :: InferResults t -> String

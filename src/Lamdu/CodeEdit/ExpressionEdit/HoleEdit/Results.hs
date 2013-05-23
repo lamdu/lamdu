@@ -39,7 +39,7 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info as HoleInfo
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
@@ -113,7 +113,7 @@ makeLiteralGroups searchTerm =
     makeLiteralIntResult integer =
       mkGroup [show integer] $ ExprLens.bodyLiteralInteger # integer
 
-resultComplexityScore :: DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) -> Int
+resultComplexityScore :: ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) -> Int
 resultComplexityScore =
   sum . map (subtract 2 . length . Foldable.toList . Infer.iType) .
   Foldable.toList
@@ -180,7 +180,7 @@ toMResultsList holeInfo makeWidget baseId options = do
       }
 
 baseExprToResultsList ::
-  MonadA m => HoleInfo m -> WidgetMaker m -> DataIRef.ExpressionM m () ->
+  MonadA m => HoleInfo m -> WidgetMaker m -> ExprIRef.ExpressionM m () ->
   CT m (Maybe (ResultsList m))
 baseExprToResultsList holeInfo makeWidget baseExpr =
   fmap join . traverse conclude =<<
@@ -216,8 +216,8 @@ baseExprToResultsList holeInfo makeWidget baseExpr =
 
 applyOperatorResultsList ::
   MonadA m => HoleInfo m -> WidgetMaker m ->
-  DataIRef.ExpressionM m (Maybe (Sugar.StorePoint (Tag m))) ->
-  DataIRef.ExpressionM m () ->
+  ExprIRef.ExpressionM m (Maybe (Sugar.StorePoint (Tag m))) ->
+  ExprIRef.ExpressionM m () ->
   CT m (Maybe (ResultsList m))
 applyOperatorResultsList holeInfo makeWidget argument baseExpr =
   toMResultsList holeInfo makeWidget baseId .

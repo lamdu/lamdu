@@ -29,7 +29,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.CodeEdit.Sugar.Infer as SugarInfer
 import qualified Lamdu.CodeEdit.Sugar.Monad as SugarM
 import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Data.Expression.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Ops as DataOps
 import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
@@ -68,7 +68,7 @@ mkGen :: Int -> Int -> Guid -> Random.StdGen
 mkGen select count =
   Random.mkStdGen . (+select) . (*count) . BinaryUtils.decodeS . Guid.bs
 
-mkCutter :: MonadA m => Anchors.CodeProps m -> DataIRef.ExpressionI (Tag m) -> T m Guid -> T m Guid
+mkCutter :: MonadA m => Anchors.CodeProps m -> ExprIRef.ExpressionI (Tag m) -> T m Guid -> T m Guid
 mkCutter cp expr replaceWithHole = do
   _ <- DataOps.newClipboard cp expr
   replaceWithHole
@@ -92,16 +92,16 @@ guardReinferSuccess sugarContext key act = do
 
 mkCallWithArg ::
   MonadA m => SugarM.Context m ->
-  DataIRef.ExpressionM m (SugarInfer.PayloadM m i (Stored m)) ->
+  ExprIRef.ExpressionM m (SugarInfer.PayloadM m i (Stored m)) ->
   PrefixAction m -> CT m (Maybe (T m Guid))
 mkCallWithArg sugarContext exprS prefixAction =
   guardReinferSuccess sugarContext "callWithArg" $ do
     prefixAction
-    fmap DataIRef.exprGuid . DataOps.callWithArg $ SugarInfer.resultStored exprS
+    fmap ExprIRef.exprGuid . DataOps.callWithArg $ SugarInfer.resultStored exprS
 
 mkActions ::
   MonadA m => SugarM.Context m ->
-  DataIRef.ExpressionM m (SugarInfer.PayloadM m i (Stored m)) -> Actions m
+  ExprIRef.ExpressionM m (SugarInfer.PayloadM m i (Stored m)) -> Actions m
 mkActions sugarContext exprS =
   Actions
   { _giveAsArg = giveAsArgPrefix
@@ -110,12 +110,12 @@ mkActions sugarContext exprS =
   , _setToHole = doReplace DataOps.setToHole
   , _replaceWithNewHole = doReplace DataOps.replaceWithHole
   , _cut = mkCutter (sugarContext ^. SugarM.scCodeAnchors) (Property.value stored) $ doReplace DataOps.replaceWithHole
-  , _giveAsArgToOperator = DataIRef.exprGuid <$> DataOps.giveAsArgToOperator stored
+  , _giveAsArgToOperator = ExprIRef.exprGuid <$> DataOps.giveAsArgToOperator stored
   }
   where
-    giveAsArgPrefix prefix = DataIRef.exprGuid <$> (prefix *> DataOps.giveAsArg stored)
+    giveAsArgPrefix prefix = ExprIRef.exprGuid <$> (prefix *> DataOps.giveAsArg stored)
     stored = SugarInfer.resultStored exprS
-    doReplace f = DataIRef.exprGuid <$> f stored
+    doReplace f = ExprIRef.exprGuid <$> f stored
 
 make ::
   (Typeable1 m, MonadA m) => SugarInfer.ExprMM m ->

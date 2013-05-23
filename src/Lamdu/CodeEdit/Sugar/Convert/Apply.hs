@@ -26,7 +26,7 @@ import qualified Lamdu.CodeEdit.Sugar.Infer as SugarInfer
 import qualified Lamdu.CodeEdit.Sugar.Monad as SugarM
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Ops as DataOps
@@ -184,7 +184,7 @@ subExpressionGuids = Lens.folding ExprUtil.subExpressions . SugarInfer.exprStore
 mkListAddFirstItem ::
   MonadA m => Anchors.SpecialFunctions (Tag m) -> SugarInfer.Stored m -> T m Guid
 mkListAddFirstItem specialFunctions =
-  fmap (DataIRef.exprGuid . snd) . DataOps.addListItem specialFunctions
+  fmap (ExprIRef.exprGuid . snd) . DataOps.addListItem specialFunctions
 
 convertEmptyList ::
   (Typeable1 m, MonadA m) =>
@@ -198,7 +198,7 @@ convertEmptyList app@(Expr.Apply funcI _) exprI = do
     mkListActions exprS =
       ListActions
       { addFirstItem = mkListAddFirstItem specialFunctions exprS
-      , replaceNil = DataIRef.exprGuid <$> DataOps.setToHole exprS
+      , replaceNil = ExprIRef.exprGuid <$> DataOps.setToHole exprS
       }
   guard $
     Lens.anyOf ExprLens.exprDefinitionRef
@@ -213,7 +213,7 @@ convertEmptyList app@(Expr.Apply funcI _) exprI = do
 
 isCons ::
   Anchors.SpecialFunctions t ->
-  DataIRef.Expression t a -> Bool
+  ExprIRef.Expression t a -> Bool
 isCons specialFunctions =
   Lens.anyOf
   (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprDefinitionRef)

@@ -26,7 +26,7 @@ import qualified Lamdu.BranchGUI as BranchGUI
 import qualified Lamdu.CodeEdit.FFI as FFI
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Ops as DataOps
@@ -45,7 +45,7 @@ fixIRef createOuter = do
   return x
 
 createBuiltins ::
-  MonadA m => Transaction m ((FFI.Env (Tag m), A.SpecialFunctions (Tag m)), [DataIRef.DefI (Tag m)])
+  MonadA m => Transaction m ((FFI.Env (Tag m), A.SpecialFunctions (Tag m)), [ExprIRef.DefI (Tag m)])
 createBuiltins =
   Writer.runWriterT $ do
     list <- mkType . DataOps.newBuiltin "Data.List.List" =<< lift setToSet
@@ -161,30 +161,30 @@ createBuiltins =
         (`Definition` typeI) . Definition.BodyBuiltin .
         Definition.Builtin $ Definition.FFIName ffiPath ffiName
     endo = join mkPi
-    set = DataIRef.newExprBody $ Expr.BodyLeaf Expr.Set
-    integer = DataIRef.newExprBody $ Expr.BodyLeaf Expr.IntegerType
-    forAll name f = fmap DataIRef.ExpressionI . fixIRef $ \aI -> do
+    set = ExprIRef.newExprBody $ Expr.BodyLeaf Expr.Set
+    integer = ExprIRef.newExprBody $ Expr.BodyLeaf Expr.IntegerType
+    forAll name f = fmap ExprIRef.ExpressionI . fixIRef $ \aI -> do
       let aGuid = IRef.guid aI
       setP (A.assocNameRef aGuid) name
       s <- set
       return . ExprUtil.makePi aGuid s =<<
-        f ((DataIRef.newExprBody . Lens.review ExprLens.bodyParameterRef) aGuid)
+        f ((ExprIRef.newExprBody . Lens.review ExprLens.bodyParameterRef) aGuid)
     setToSet = mkPi set set
     tellift f = do
       x <- lift f
       Writer.tell [x]
       return x
     tellift_ = (fmap . fmap . const) () tellift
-    mkPi mkArgType mkResType = fmap snd . join $ liftA2 DataIRef.newPi mkArgType mkResType
+    mkPi mkArgType mkResType = fmap snd . join $ liftA2 ExprIRef.newPi mkArgType mkResType
     mkApply mkFunc mkArg =
-      DataIRef.newExprBody =<< liftA2 ExprUtil.makeApply mkFunc mkArg
+      ExprIRef.newExprBody =<< liftA2 ExprUtil.makeApply mkFunc mkArg
     mkTag name = do
       tagGuid <- Transaction.newKey
       setP (A.assocNameRef tagGuid) name
-      DataIRef.newExprBody $ ExprLens.bodyTag # tagGuid
+      ExprIRef.newExprBody $ ExprLens.bodyTag # tagGuid
     mkRecordType strFields = do
       tagFields <- traverse (Lens._1 mkTag <=< Lens.sequenceOf Lens._2) strFields
-      DataIRef.newExprBody $ Expr.BodyRecord Expr.Record
+      ExprIRef.newExprBody $ Expr.BodyRecord Expr.Record
         { Expr._recordKind = Expr.Type
         , Expr._recordFields = tagFields
         }
@@ -192,7 +192,7 @@ createBuiltins =
     mkType f = do
       x <- lift f
       Writer.tell [x]
-      return . DataIRef.newExprBody $ Lens.review ExprLens.bodyDefinitionRef x
+      return . ExprIRef.newExprBody $ Lens.review ExprLens.bodyDefinitionRef x
     makeWithType_ = (fmap . fmap . fmap . const) () makeWithType
     makeWithType builtinName typeMaker =
       tellift (DataOps.newBuiltin builtinName =<< typeMaker)

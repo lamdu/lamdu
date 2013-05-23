@@ -8,21 +8,21 @@ import qualified Data.Char as Char
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Lens as ExprLens
-import qualified Lamdu.Data.Expression.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as ExprIRef
 
 isInfixName :: String -> Bool
 isInfixName "" = False
 isInfixName name = all (not . Char.isAlphaNum) name
 
-isInfixVar :: MonadA m => Expr.VariableRef (DataIRef.DefI (Tag m)) -> Transaction m Bool
+isInfixVar :: MonadA m => Expr.VariableRef (ExprIRef.DefI (Tag m)) -> Transaction m Bool
 isInfixVar =
   fmap isInfixName . getP .
-  Anchors.assocNameRef . DataIRef.variableRefGuid
+  Anchors.assocNameRef . ExprIRef.variableRefGuid
 
 infixOp
   :: MonadA m
-  => DataIRef.ExpressionM m ref
-  -> Transaction m (Maybe (Expr.VariableRef (DataIRef.DefI (Tag m))))
+  => ExprIRef.ExpressionM m ref
+  -> Transaction m (Maybe (Expr.VariableRef (ExprIRef.DefI (Tag m))))
 infixOp expr =
   -- TODO: use Lens.action here?
   case expr ^? ExprLens.exprGetVariable of

@@ -14,13 +14,13 @@ import Data.Store.Transaction (Transaction)
 import qualified Control.Lens.TH as LensTH
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.CodeEdit.Sugar as Sugar
-import qualified Lamdu.Data.Expression.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as ExprIRef
 
 type T = Transaction
 
 data HoleState m = HoleState
   { _hsSearchTerm :: String
-  , _hsArgument :: Maybe (DataIRef.ExpressionM m (Maybe (Sugar.StorePoint (Tag m))))
+  , _hsArgument :: Maybe (ExprIRef.ExpressionM m (Maybe (Sugar.StorePoint (Tag m))))
   } deriving Eq
 LensTH.makeLenses ''HoleState
 derive makeBinary ''HoleState

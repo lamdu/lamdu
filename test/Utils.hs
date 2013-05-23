@@ -26,7 +26,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
@@ -142,12 +142,12 @@ definitionTypes =
       (,)
       <$> guidNameOf defI
       <*>
-      (fmap void . DataIRef.readExpression . Lens.view Definition.defType =<<
+      (fmap void . ExprIRef.readExpression . Lens.view Definition.defType =<<
        Transaction.readIRef defI)
 
 doInferM ::
-  Infer.InferNode (DefI t) -> DataIRef.Expression t a ->
-  State (Infer.Context (DefI t)) (DataIRef.Expression t (Infer.Inferred (DefI t), a))
+  Infer.InferNode (DefI t) -> ExprIRef.Expression t a ->
+  State (Infer.Context (DefI t)) (ExprIRef.Expression t (Infer.Inferred (DefI t), a))
 doInferM inferNode expr = do
   (success, exprWC) <-
     inferWithConflicts (doLoad expr) inferNode
@@ -162,11 +162,11 @@ doInferM inferNode expr = do
       ]
 
 doInferM_ ::
-  Infer.InferNode (DefI t) -> DataIRef.Expression t a ->
-  State (Infer.Context (DefI t)) (DataIRef.Expression t (Infer.Inferred (DefI t)))
+  Infer.InferNode (DefI t) -> ExprIRef.Expression t a ->
+  State (Infer.Context (DefI t)) (ExprIRef.Expression t (Infer.Inferred (DefI t)))
 doInferM_ = (fmap . fmap . fmap . fmap) fst doInferM
 
-doLoad :: DataIRef.Expression t a -> Infer.Loaded (DefI t) a
+doLoad :: ExprIRef.Expression t a -> Infer.Loaded (DefI t) a
 doLoad expr =
   case Infer.load loader (Just recursiveDefI) expr of
   Left err -> error err
@@ -185,8 +185,8 @@ recursiveDefI :: DefI t
 recursiveDefI = IRef.unsafeFromGuid $ Guid.fromString "Definition"
 
 doInfer ::
-  DataIRef.Expression t a ->
-  ( DataIRef.Expression t (Infer.Inferred (DefI t), a)
+  ExprIRef.Expression t a ->
+  ( ExprIRef.Expression t (Infer.Inferred (DefI t), a)
   , Infer.Context (DefI t)
   )
 doInfer =
@@ -195,8 +195,8 @@ doInfer =
     (ctx, node) = Infer.initial $ Just recursiveDefI
 
 doInfer_ ::
-  DataIRef.Expression t a ->
-  (DataIRef.Expression t (Infer.Inferred (DefI t)), Infer.Context (DefI t))
+  ExprIRef.Expression t a ->
+  (ExprIRef.Expression t (Infer.Inferred (DefI t)), Infer.Context (DefI t))
 doInfer_ = (Lens._1 . Lens.mapped %~ fst) . doInfer
 
 pureGetRecursiveDefI :: PureExprDefI t
@@ -235,8 +235,8 @@ euler1Expr =
   ]
 
 inferMaybe ::
-  DataIRef.Expression t a ->
-  Maybe (DataIRef.Expression t (Infer.Inferred (DefI t), a), Infer.Context (DefI t))
+  ExprIRef.Expression t a ->
+  Maybe (ExprIRef.Expression t (Infer.Inferred (DefI t), a), Infer.Context (DefI t))
 inferMaybe expr =
   (`runStateT` ctx) $
   Infer.inferLoaded (Infer.InferActions (const Nothing)) loaded node
@@ -245,11 +245,11 @@ inferMaybe expr =
     loaded = doLoad expr
 
 inferMaybe_ ::
-  DataIRef.Expression t b ->
-  Maybe (DataIRef.Expression t (Infer.Inferred (DefI t)), Infer.Context (DefI t))
+  ExprIRef.Expression t b ->
+  Maybe (ExprIRef.Expression t (Infer.Inferred (DefI t)), Infer.Context (DefI t))
 inferMaybe_ = (Lens.mapped . Lens._1 . Lens.mapped %~ fst) . inferMaybe
 
-inferAndEncode :: DataIRef.Expression t a -> Int -> Int
+inferAndEncode :: ExprIRef.Expression t a -> Int -> Int
 inferAndEncode expr par = SBS.length . encodeS $ fst result
   where
     result =

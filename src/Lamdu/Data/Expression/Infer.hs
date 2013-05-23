@@ -57,7 +57,7 @@ import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer.Rules as Rules
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Expression.Lens as ExprLens
@@ -552,11 +552,11 @@ inferLoaded actions loadedExpr node =
   inferLoaded ::
     InferActions (DefI t) Maybe -> Loaded (DefI t) a ->
     InferNode (DefI t) ->
-    StateT (Context (DefI t)) Maybe (DataIRef.Expression t (Inferred (DefI t), a))
+    StateT (Context (DefI t)) Maybe (ExprIRef.Expression t (Inferred (DefI t), a))
   #-}
 {-# SPECIALIZE
   inferLoaded ::
     Monoid w => InferActions (DefI t) (Writer w) -> Loaded (DefI t) a ->
     InferNode (DefI t) ->
-    StateT (Context (DefI t)) (Writer w) (DataIRef.Expression t (Inferred (DefI t), a))
+    StateT (Context (DefI t)) (Writer w) (ExprIRef.Expression t (Inferred (DefI t), a))
   #-}

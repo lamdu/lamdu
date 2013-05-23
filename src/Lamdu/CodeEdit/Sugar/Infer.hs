@@ -55,7 +55,7 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Infer.ImplicitVariables as ImplicitVariables
 import qualified Lamdu.Data.Expression.Load as Load
@@ -68,13 +68,13 @@ type CT m = StateT Cache (T m)
 type PayloadM m = Payload (Tag m)
 type PayloadMM m =
   PayloadM m (Maybe (InferredWC (Tag m))) (Maybe (Stored m))
-type ExprMM m = DataIRef.ExpressionM m (PayloadMM m)
+type ExprMM m = ExprIRef.ExpressionM m (PayloadMM m)
 
 data NoInferred = NoInferred
 type InferredWC t = InferredWithConflicts (DefI t)
 
 data NoStored = NoStored
-type Stored m = DataIRef.ExpressionProperty m
+type Stored m = ExprIRef.ExpressionProperty m
 
 type ExpressionSetter def = Expr.Expression def () -> Expr.Expression def ()
 
@@ -97,8 +97,8 @@ ntraversePayload onInferred onStored (Payload guid inferred stored) =
 
 randomizeGuids ::
   RandomGen g => g -> (a -> inferred) ->
-  DataIRef.Expression t a ->
-  DataIRef.Expression t (Payload t inferred NoStored)
+  ExprIRef.Expression t a ->
+  ExprIRef.Expression t (Payload t inferred NoStored)
 randomizeGuids gen f =
     ExprUtil.randomizeParamIds paramGen
   . ExprUtil.randomizeExpr exprGen
@@ -114,14 +114,14 @@ toPayloadMM =
 
 -- Not inferred, not stored
 resultFromPure ::
-  RandomGen g => g -> DataIRef.ExpressionM m () -> ExprMM m
+  RandomGen g => g -> ExprIRef.ExpressionM m () -> ExprMM m
 resultFromPure g =
   fmap toPayloadMM . randomizeGuids g (const NoInferred)
 
 resultFromInferred ::
   RandomGen g => g ->
-  DataIRef.Expression t (Infer.Inferred (DefI t)) ->
-  DataIRef.Expression t (Payload t (InferredWC t) NoStored)
+  ExprIRef.Expression t (Infer.Inferred (DefI t)) ->
+  ExprIRef.Expression t (Payload t (InferredWC t) NoStored)
 resultFromInferred =
   flip randomizeGuids $ \inferred ->
     InferredWithConflicts
@@ -135,12 +135,12 @@ resultFromInferred =
 loader :: MonadA m => Infer.Loader (DefI (Tag m)) (T m)
 loader =
   Infer.Loader
-  (fmap void . DataIRef.readExpression . Lens.view Definition.defType <=<
+  (fmap void . ExprIRef.readExpression . Lens.view Definition.defType <=<
    Transaction.readIRef)
 
 load ::
   MonadA m => Maybe (DefI (Tag m)) ->
-  DataIRef.ExpressionM m a ->
+  ExprIRef.ExpressionM m a ->
   T m (Infer.Loaded (DefI (Tag m)) a)
 load = Infer.load loader
 
@@ -151,7 +151,7 @@ inferMaybe ::
   Infer.Loaded (DefI (Tag m)) a ->
   Infer.Context (DefI (Tag m)) ->
   Infer.InferNode (DefI (Tag m)) ->
-  Maybe (DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), a))
+  Maybe (ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), a))
 inferMaybe loaded inferContext inferPoint =
   fmap fst . (`runStateT` inferContext) $
   Infer.inferLoaded (Infer.InferActions (const Nothing))
@@ -162,7 +162,7 @@ inferMaybe_ ::
   Infer.Loaded (DefI (Tag m)) a ->
   Infer.Context (DefI (Tag m)) ->
   Infer.InferNode (DefI (Tag m)) ->
-  Maybe (DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))))
+  Maybe (ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))))
 inferMaybe_ loaded inferContext inferPoint =
   (fmap . fmap) fst $ inferMaybe loaded inferContext inferPoint
 -- }}}}}}}}}}}}}}}}}
@@ -172,11 +172,11 @@ inferWithVariables ::
   Infer.Loaded (DefI (Tag m)) a -> Infer.Context (DefI (Tag m)) -> Infer.InferNode (DefI (Tag m)) ->
   T m
   ( ( Infer.Context (DefI (Tag m))
-    , DataIRef.ExpressionM m (InferredWithConflicts (DefI (Tag m)), a)
+    , ExprIRef.ExpressionM m (InferredWithConflicts (DefI (Tag m)), a)
     )
   , Maybe
     ( Infer.Context (DefI (Tag m))
-    , DataIRef.ExpressionM m (InferredWithConflicts (DefI (Tag m)), ImplicitVariables.Payload a)
+    , ExprIRef.ExpressionM m (InferredWithConflicts (DefI (Tag m)), ImplicitVariables.Payload a)
     )
   )
 inferWithVariables gen loaded baseInferContext node =
@@ -210,10 +210,10 @@ data InferLoadedResult m = InferLoadedResult
   { _ilrSuccess :: Bool
   , _ilrContext :: Infer.Loaded (DefI (Tag m)) (Load.PropertyClosure (Tag m))
   , _ilrInferContext :: Infer.Context (DefI (Tag m))
-  , _ilrExpr :: DataIRef.ExpressionM m (Payload (Tag m) (InferredWC (Tag m)) (Maybe (Stored m)))
+  , _ilrExpr :: ExprIRef.ExpressionM m (Payload (Tag m) (InferredWC (Tag m)) (Maybe (Stored m)))
   -- Prior to adding variables
   , _ilrBaseInferContext :: Infer.Context (DefI (Tag m))
-  , _ilrBaseExpr :: DataIRef.ExpressionM m (Payload (Tag m) (InferredWC (Tag m)) (Stored m))
+  , _ilrBaseExpr :: ExprIRef.ExpressionM m (Payload (Tag m) (InferredWC (Tag m)) (Stored m))
   }
 LensTH.makeLenses ''InferLoadedResult
 
@@ -244,7 +244,7 @@ inferLoadedExpression gen mDefI lExpr inferState = do
       inferWithVariables gen loaded inferContext inferNode
 
     mkStoredPayload (iwc, propClosure) =
-      Payload (DataIRef.epGuid prop) iwc prop
+      Payload (ExprIRef.epGuid prop) iwc prop
       where
         prop = Load.propertyOfClosure propClosure
     mkWVPayload (iwc, ImplicitVariables.AutoGen guid) =
@@ -274,20 +274,20 @@ resultInferred = (^. Expr.ePayload . plInferred)
 plIRef ::
   Lens.Traversal'
   (Expr.Expression def (Payload t i (Maybe (Stored m))))
-  (DataIRef.ExpressionI (Tag m))
+  (ExprIRef.ExpressionI (Tag m))
 plIRef = Expr.ePayload . plStored . traverse . Property.pVal
 
 exprStoredGuid ::
   Lens.Fold
   (Expr.Expression def (Payload t i (Maybe (Stored m)))) Guid
-exprStoredGuid = plIRef . Lens.to DataIRef.exprGuid
+exprStoredGuid = plIRef . Lens.to ExprIRef.exprGuid
 
 replaceWith :: MonadA m => Stored m -> Stored m -> T m Guid
 replaceWith parentP replacerP = do
   Property.set parentP replacerI
-  return $ DataIRef.exprGuid replacerI
+  return $ ExprIRef.exprGuid replacerI
   where
     replacerI = Property.value replacerP
 
-resultMIRef :: ExprMM m -> Maybe (DataIRef.ExpressionIM m)
+resultMIRef :: ExprMM m -> Maybe (ExprIRef.ExpressionIM m)
 resultMIRef = fmap Property.value . resultStored

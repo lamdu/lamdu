@@ -27,11 +27,11 @@ import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as ExprIRef
 
 type T = Transaction
 
-type ExprI = DataIRef.ExpressionI
+type ExprI = ExprIRef.ExpressionI
 
 -- | SubexpressionIndex is a Foldable-index into Expr.Body (i.e:
 -- 0 or 1 for BodyApply func/arg)
@@ -44,7 +44,7 @@ data PropertyClosure t
   deriving (Eq, Ord, Show, Typeable)
 derive makeBinary ''PropertyClosure
 
-propertyOfClosure :: MonadA m => PropertyClosure (Tag m) -> DataIRef.ExpressionProperty m
+propertyOfClosure :: MonadA m => PropertyClosure (Tag m) -> ExprIRef.ExpressionProperty m
 propertyOfClosure (DefinitionTypeProperty defI (Definition defBody defType)) =
   Property defType (Transaction.writeIRef defI . Definition defBody)
 propertyOfClosure (DefinitionBodyExpressionProperty defI bodyExpr defType) =
@@ -52,7 +52,7 @@ propertyOfClosure (DefinitionBodyExpressionProperty defI bodyExpr defType) =
   (Transaction.writeIRef defI . (`Definition` defType) . Definition.BodyExpression)
 propertyOfClosure (SubexpressionProperty exprI body index) =
   Property (body ^?! lens)
-  (DataIRef.writeExprBody exprI . flip (Lens.set lens) body)
+  (ExprIRef.writeExprBody exprI . flip (Lens.set lens) body)
   where
     lens :: Traversable t => Lens.IndexedTraversal' Int (t a) a
     lens = Lens.element index
@@ -60,11 +60,11 @@ propertyOfClosure (SubexpressionProperty exprI body index) =
 irefOfClosure :: MonadA m => PropertyClosure (Tag m) -> ExprI (Tag m)
 irefOfClosure = Property.value . propertyOfClosure
 
-type LoadedClosure t = DataIRef.Expression t (PropertyClosure t)
-type Loaded m = DataIRef.ExpressionM m (DataIRef.ExpressionProperty m)
+type LoadedClosure t = ExprIRef.Expression t (PropertyClosure t)
+type Loaded m = ExprIRef.ExpressionM m (ExprIRef.ExpressionProperty m)
 
 loadExpressionProperty ::
-  MonadA m => DataIRef.ExpressionProperty m -> T m (Loaded m)
+  MonadA m => ExprIRef.ExpressionProperty m -> T m (Loaded m)
 loadExpressionProperty prop =
   fmap ((`Expr.Expression` prop) . (fmap . fmap) propertyOfClosure) .
   loadExpressionBody Set.empty $ Property.value prop
@@ -81,9 +81,9 @@ loadExpressionBody ::
   T m (Expr.Body (DefI (Tag m)) (LoadedClosure (Tag m)))
 loadExpressionBody visited iref
   | ourGuid `Set.member` visited = error "Recursive IRef structure"
-  | otherwise = onBody =<< DataIRef.readExprBody iref
+  | otherwise = onBody =<< ExprIRef.readExprBody iref
   where
-    ourGuid = DataIRef.exprGuid iref
+    ourGuid = ExprIRef.exprGuid iref
     newVisited = Set.insert ourGuid visited
     onBody body =
       Lens.itraverseOf (Lens.indexing Lens.traverse) (loadElement body) body

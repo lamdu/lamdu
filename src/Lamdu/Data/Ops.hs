@@ -29,7 +29,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.IRef as DataIRef
+import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
@@ -37,98 +37,98 @@ type T = Transaction
 
 giveAsArg ::
   MonadA m =>
-  DataIRef.ExpressionProperty m ->
-  T m (DataIRef.ExpressionI (Tag m))
+  ExprIRef.ExpressionProperty m ->
+  T m (ExprIRef.ExpressionI (Tag m))
 giveAsArg exprP = do
   newFuncI <- newHole
   Property.set exprP =<<
-    DataIRef.newExprBody
+    ExprIRef.newExprBody
     (ExprUtil.makeApply newFuncI (Property.value exprP))
   return newFuncI
 
 giveAsArgToOperator ::
   MonadA m =>
-  DataIRef.ExpressionProperty m ->
-  T m (DataIRef.ExpressionI (Tag m))
+  ExprIRef.ExpressionProperty m ->
+  T m (ExprIRef.ExpressionI (Tag m))
 giveAsArgToOperator exprP = do
   op <- newHole
-  opApplied <- DataIRef.newExprBody . ExprUtil.makeApply op $ Property.value exprP
-  Property.set exprP =<< DataIRef.newExprBody . ExprUtil.makeApply opApplied =<< newHole
+  opApplied <- ExprIRef.newExprBody . ExprUtil.makeApply op $ Property.value exprP
+  Property.set exprP =<< ExprIRef.newExprBody . ExprUtil.makeApply opApplied =<< newHole
   return op
 
 callWithArg ::
   MonadA m =>
-  DataIRef.ExpressionProperty m ->
-  T m (DataIRef.ExpressionI (Tag m))
+  ExprIRef.ExpressionProperty m ->
+  T m (ExprIRef.ExpressionI (Tag m))
 callWithArg exprP = do
   argI <- newHole
   Property.set exprP =<<
-    DataIRef.newExprBody
+    ExprIRef.newExprBody
     (ExprUtil.makeApply (Property.value exprP) argI)
   return argI
 
-newHole :: MonadA m => T m (DataIRef.ExpressionI (Tag m))
-newHole = DataIRef.newExprBody $ Expr.BodyLeaf Expr.Hole
+newHole :: MonadA m => T m (ExprIRef.ExpressionI (Tag m))
+newHole = ExprIRef.newExprBody $ Expr.BodyLeaf Expr.Hole
 
 replace ::
   MonadA m =>
-  DataIRef.ExpressionProperty m ->
-  DataIRef.ExpressionI (Tag m) ->
-  T m (DataIRef.ExpressionI (Tag m))
+  ExprIRef.ExpressionProperty m ->
+  ExprIRef.ExpressionI (Tag m) ->
+  T m (ExprIRef.ExpressionI (Tag m))
 replace exprP newExprI = do
   Property.set exprP newExprI
   return newExprI
 
-replaceWithHole :: MonadA m => DataIRef.ExpressionProperty m -> T m (DataIRef.ExpressionI (Tag m))
+replaceWithHole :: MonadA m => ExprIRef.ExpressionProperty m -> T m (ExprIRef.ExpressionI (Tag m))
 replaceWithHole exprP = replace exprP =<< newHole
 
-setToHole :: MonadA m => DataIRef.ExpressionProperty m -> T m (DataIRef.ExpressionI (Tag m))
+setToHole :: MonadA m => ExprIRef.ExpressionProperty m -> T m (ExprIRef.ExpressionI (Tag m))
 setToHole exprP =
-  exprI <$ DataIRef.writeExprBody exprI hole
+  exprI <$ ExprIRef.writeExprBody exprI hole
   where
     hole = Expr.BodyLeaf Expr.Hole
     exprI = Property.value exprP
 
 lambdaWrap
   :: MonadA m
-  => DataIRef.ExpressionProperty m
-  -> T m (Guid, DataIRef.ExpressionI (Tag m))
+  => ExprIRef.ExpressionProperty m
+  -> T m (Guid, ExprIRef.ExpressionI (Tag m))
 lambdaWrap exprP = do
   newParamTypeI <- newHole
   (newParam, newExprI) <-
-    DataIRef.newLambda newParamTypeI $ Property.value exprP
+    ExprIRef.newLambda newParamTypeI $ Property.value exprP
   Property.set exprP newExprI
   return (newParam, newExprI)
 
 redexWrap
   :: MonadA m
-  => DataIRef.ExpressionProperty m
-  -> T m (Guid, DataIRef.ExpressionI (Tag m))
+  => ExprIRef.ExpressionProperty m
+  -> T m (Guid, ExprIRef.ExpressionI (Tag m))
 redexWrap exprP = do
   newParamTypeI <- newHole
   (newParam, newLambdaI) <-
-    DataIRef.newLambda newParamTypeI $ Property.value exprP
+    ExprIRef.newLambda newParamTypeI $ Property.value exprP
   newValueI <- newHole
   newApplyI <-
-    DataIRef.newExprBody $ ExprUtil.makeApply newLambdaI newValueI
+    ExprIRef.newExprBody $ ExprUtil.makeApply newLambdaI newValueI
   Property.set exprP newApplyI
   return (newParam, newLambdaI)
 
 addListItem ::
   MonadA m =>
   Anchors.SpecialFunctions (Tag m) ->
-  DataIRef.ExpressionProperty m ->
-  T m (DataIRef.ExpressionI (Tag m), DataIRef.ExpressionI (Tag m))
+  ExprIRef.ExpressionProperty m ->
+  T m (ExprIRef.ExpressionI (Tag m), ExprIRef.ExpressionI (Tag m))
 addListItem specialFunctions exprP = do
   consTempI <-
-    DataIRef.newExprBody . Lens.review ExprLens.bodyDefinitionRef $ Anchors.sfCons specialFunctions
+    ExprIRef.newExprBody . Lens.review ExprLens.bodyDefinitionRef $ Anchors.sfCons specialFunctions
   consI <-
-    DataIRef.newExprBody . ExprUtil.makeApply consTempI =<< newHole
+    ExprIRef.newExprBody . ExprUtil.makeApply consTempI =<< newHole
   newItemI <- newHole
   consSectionI <-
-    DataIRef.newExprBody $ ExprUtil.makeApply consI newItemI
+    ExprIRef.newExprBody $ ExprUtil.makeApply consI newItemI
   newListI <-
-    DataIRef.newExprBody . ExprUtil.makeApply consSectionI $
+    ExprIRef.newExprBody . ExprUtil.makeApply consSectionI $
     Property.value exprP
   Property.set exprP newListI
   return (newListI, newItemI)
@@ -155,7 +155,7 @@ jumpBack codeProps = do
 
 newBuiltin
   :: MonadA m
-  => String -> DataIRef.ExpressionI (Tag m)
+  => String -> ExprIRef.ExpressionI (Tag m)
   -> T m (DefI (Tag m))
 newBuiltin fullyQualifiedName typeI =
   newDefinition name . (`Definition` typeI) . Definition.BodyBuiltin .
@@ -166,7 +166,7 @@ newBuiltin fullyQualifiedName typeI =
 
 newDefinition ::
   MonadA m => String ->
-  DataIRef.DefinitionI (Tag m) -> T m (DefI (Tag m))
+  ExprIRef.DefinitionI (Tag m) -> T m (DefI (Tag m))
 newDefinition name def = do
   res <- Transaction.newIRef def
   setP (Anchors.assocNameRef (IRef.guid res)) name
@@ -183,7 +183,7 @@ makeDefinition codeProps name = do
 
 newClipboard ::
   MonadA m => Anchors.CodeProps m ->
-  DataIRef.ExpressionI (Tag m) ->
+  ExprIRef.ExpressionI (Tag m) ->
   T m (DefI (Tag m))
 newClipboard codeProps expr = do
   len <- length <$> getP (Anchors.clipboards codeProps)
