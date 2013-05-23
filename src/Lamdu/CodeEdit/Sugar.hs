@@ -105,18 +105,12 @@ import qualified System.Random as Random
 
 type Convertor m = SugarInfer.ExprMM m -> SugarM m (ExpressionU m)
 
-subExpressionsThat ::
-  (Expr.Expression def a -> Bool) ->
-  Lens.Fold (Expr.Expression def a) (Expr.Expression def a)
-subExpressionsThat predicate =
-  Lens.folding ExprUtil.subExpressions . Lens.filtered predicate
-
 onMatchingSubexprs ::
   MonadA m => (a -> m ()) ->
   (Expr.Expression def a -> Bool) ->
   Expr.Expression def a -> m ()
 onMatchingSubexprs action predicate =
-  Lens.mapMOf_ (subExpressionsThat predicate)
+  Lens.mapMOf_ (ExprUtil.subExpressionsThat predicate)
   (action . (^. Expr.ePayload))
 
 toHole :: MonadA m => Stored m -> T m ()
@@ -578,7 +572,7 @@ convertTypeCheckedHoleH sugarContext mPaste iwc exprI =
       pure . ExprIRef.exprGuid .
         maybe iref (^. Expr.ePayload) $
         writtenExpr ^?
-        subExpressionsThat
+        ExprUtil.subExpressionsThat
         (Lens.notNullOf ExprLens.exprHole)
     plainHole =
       SugarExpr.make exprI . BodyHole =<< mkHole

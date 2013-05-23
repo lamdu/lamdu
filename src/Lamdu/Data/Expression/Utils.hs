@@ -18,6 +18,7 @@ module Lamdu.Data.Expression.Utils
   , funcArguments
   , applyForms, applyDependentPis
   , alphaEq, subst
+  , subExpressionsThat
   ) where
 
 import Prelude hiding (pi)
@@ -281,3 +282,9 @@ makePi = makeLam Type
 
 makeLambda :: Guid -> expr -> expr -> Body def expr
 makeLambda = makeLam Val
+
+subExpressionsThat ::
+  (Expression def a -> Bool) ->
+  Lens.Fold (Expression def a) (Expression def a)
+subExpressionsThat predicate =
+  Lens.folding subExpressions . Lens.filtered predicate
