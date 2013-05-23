@@ -31,6 +31,7 @@ import qualified Data.Store.IRef as IRef
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
+import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Test.HUnit as HUnit
 
@@ -392,7 +393,7 @@ fOfXIsFOf5 =
   leafSimple (Expression.LiteralInteger 5) intType
 
 five :: PureExprDefI t
-five = ExprUtil.pureExpression $ Lens.review ExprUtil.bodyLiteralInteger 5
+five = ExprUtil.pureExpression $ Lens.review ExprLens.bodyLiteralInteger 5
 
 argTypeGoesToPi :: HUnit.Test
 argTypeGoesToPi =
@@ -548,7 +549,7 @@ funnyLambda g =
 
 getRecursiveDef :: PureExprDefI t
 getRecursiveDef =
-  ExprUtil.pureExpression $ Lens.review ExprUtil.bodyDefinitionRef recursiveDefI
+  ExprUtil.pureExpression $ Lens.review ExprLens.bodyDefinitionRef recursiveDefI
 
 resumptionTests :: [HUnit.Test]
 resumptionTests =
@@ -603,7 +604,7 @@ resumptionTests =
 
 parRef :: String -> PureExpr def
 parRef =
-  ExprUtil.pureExpression . Lens.review ExprUtil.bodyParameterRef . Guid.fromString
+  ExprUtil.pureExpression . Lens.review ExprLens.bodyParameterRef . Guid.fromString
 
 -- f     x    = x _ _
 --   --------

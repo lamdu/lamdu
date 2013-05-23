@@ -1,16 +1,13 @@
-{-# LANGUAGE TemplateHaskell, DeriveDataTypeable, NoMonomorphismRestriction, RankNTypes #-}
+{-# LANGUAGE TemplateHaskell, DeriveDataTypeable, RankNTypes, NoMonomorphismRestriction #-}
 
 module Lamdu.Data.Expression.Utils
-  ( makeApply, pureApply
+  ( makeApply
   , makePi, makeLambda, makeLam
+  , pureApply
   , pureHole
   , pureSet
-  , bodyParameterRef, bodyDefinitionRef
-  , bodyLiteralInteger, pureLiteralInteger
-  , bodyHole
-  , bodyTag, exprBodyTag
+  , pureLiteralInteger
   , pureIntegerType
-  , _PureExpr, _PureTagExpr
   , pureExpression
   , randomizeExpr
   , canonizeParamIds, randomizeParamIds
@@ -20,12 +17,7 @@ module Lamdu.Data.Expression.Utils
   , funcArguments
   , applyForms, applyDependentPis
   -- Traversals
-  , bitraverseExpression
-  , bitraverseBody
-  , expressionBodyDef
-  , expressionDef
-  , kindedRecordFields
-  , kindedLam, lambda, pi, subst
+  , subst
   ) where
 
 import Prelude hiding (pi)
@@ -42,112 +34,84 @@ import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable(..), sequenceA)
 import System.Random (Random, RandomGen, random)
 import qualified Control.Lens as Lens
-import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Foldable as Foldable
 import qualified Data.List.Utils as ListUtils
 import qualified Data.Map as Map
+import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified System.Random as Random
 
-makeApply :: expr -> expr -> Body def expr
-makeApply func arg = BodyApply $ Apply func arg
+data PiWrappers def a = PiWrappers
+  { _dependentPiParams :: [(Guid, Expression def a)]
+  , nonDependentPiParams :: [(Guid, Expression def a)]
+  }
+Lens.makeLenses ''PiWrappers
 
-makeLam :: Kind -> Guid -> expr -> expr -> Body def expr
-makeLam k argId argType resultType =
-  BodyLam $ Lambda k argId argType resultType
+getPiWrappers :: Expression def a -> PiWrappers def a
+getPiWrappers expr =
+  case expr ^? ExprLens.exprLam of
+  Just (Lambda Type param paramType resultType)
+    | isDependentPi expr ->
+      getPiWrappers resultType & dependentPiParams %~ addParam
+    | otherwise ->
+        PiWrappers
+        { _dependentPiParams = []
+        , nonDependentPiParams = addParam (getParams resultType)
+        }
+    where
+      addParam = ((param, paramType) :)
+  _ -> PiWrappers [] []
 
--- TODO: Remove this? Take Type/Val as arg
-makePi :: Guid -> expr -> expr -> Body def expr
-makePi = makeLam Type
+getDependentParams :: Expression def a -> [(Guid, Expression def a)]
+getDependentParams = (^. dependentPiParams) . getPiWrappers
 
-makeLambda :: Guid -> expr -> expr -> Body def expr
-makeLambda = makeLam Val
+compose :: [a -> a] -> a -> a
+compose = foldr (.) id
+{-# INLINE compose #-}
 
-bodyParameterRef :: Lens.Prism' (Body def expr) Guid
-bodyParameterRef = _BodyLeaf . _GetVariable . _ParameterRef
-
-bodyDefinitionRef :: Lens.Prism (Body defa expr) (Body defb expr) defa defb
-bodyDefinitionRef = _BodyLeaf . _GetVariable . _DefinitionRef
-
-bodyLiteralInteger :: Lens.Prism' (Body def expr) Integer
-bodyLiteralInteger = _BodyLeaf . _LiteralInteger
-
-bodyHole :: Lens.Prism' (Body def expr) ()
-bodyHole = _BodyLeaf . _Hole
-
-exprBodyTag :: Lens.Traversal' (Expression def a) Guid
-exprBodyTag = eBody . bodyTag
-
-bodyTag :: Lens.Prism' (Body def expr) Guid
-bodyTag = _BodyLeaf . _Tag
-
-kindedLam :: Kind -> Lens.Prism' (Lambda expr) (Guid, expr, expr)
-kindedLam k = Lens.prism' toLam fromLam
+applyWith :: [Expression def ()] -> Expression def () -> Expression def ()
+applyWith =
+  compose . map addApply
   where
-    toLam (paramGuid, paramType, result) =
-      Lambda k paramGuid paramType result
-    fromLam (Lambda k0 paramGuid paramType result)
-      | k == k0 = Just (paramGuid, paramType, result)
-      | otherwise = Nothing
+    addApply arg = pureExpression . (`makeApply` arg)
 
-lambda :: Lens.Prism' (Lambda expr) (Guid, expr, expr)
-lambda = kindedLam Val
+applyWithHoles :: Int -> Expression def () -> Expression def ()
+applyWithHoles count = applyWith $ replicate count pureHole
 
-pi :: Lens.Prism' (Lambda expr) (Guid, expr, expr)
-pi = kindedLam Type
+applyDependentPis :: Expression def () -> Expression def () -> Expression def ()
+applyDependentPis exprType = applyWithHoles (length (getDependentParams exprType))
 
-bitraverseBody ::
-  Applicative f => (defa -> f defb) -> (expra -> f exprb) ->
-  Body defa expra ->
-  f (Body defb exprb)
-bitraverseBody onDef onExpr body =
-  case body of
-  BodyLam x -> BodyLam <$> traverse onExpr x
-  BodyApply x -> BodyApply <$> traverse onExpr x
-  BodyRecord x -> BodyRecord <$> traverse onExpr x
-  BodyGetField x -> BodyGetField <$> traverse onExpr x
-  BodyLeaf leaf -> BodyLeaf <$> traverse onDef leaf
+-- Useful functions:
+subst ::
+  Guid ->
+  Expression def a ->
+  Expression def a ->
+  Expression def a
+subst from to expr
+  | Lens.anyOf (eBody . ExprLens.bodyParameterRef) (== from) expr = to
+  | otherwise = expr & eBody . traverse %~ subst from to
 
-expressionBodyDef :: Lens.Traversal (Body a expr) (Body b expr) a b
-expressionBodyDef = (`bitraverseBody` pure)
-
-bitraverseExpression ::
-  Applicative f =>
-  (defa -> f defb) -> (pla -> f plb) ->
-  Expression defa pla -> f (Expression defb plb)
-bitraverseExpression onDef onPl = f
+-- Transform expression to expression applied with holes,
+-- with all different sensible levels of currying.
+applyForms :: Expression def () -> Expression def () -> [Expression def ()]
+applyForms exprType expr
+  | Lens.notNullOf (ExprLens.exprLam . lambdaKind . _Val) expr = [expr]
+  | otherwise = reverse $ scanl (flip addApply) withDepPisApplied nonDepParams
   where
-    f (Expression body payload) =
-      Expression <$> bitraverseBody onDef f body <*> onPl payload
-
-expressionDef :: Lens.Traversal (Expression a pl) (Expression b pl) a b
-expressionDef = (`bitraverseExpression` pure)
-
--- TODO: Deprecate:
-pureExpression :: Body def (Expression def ()) -> Expression def ()
-pureExpression = (`Expression` ())
-
-_PureExpr :: Lens.Iso' (Expression def ()) (Body def (Expression def ()))
-_PureExpr = Lens.iso (^. eBody) (`Expression` ())
-
-_PureTagExpr :: Lens.Prism' (Expression def ()) Guid
-_PureTagExpr = _PureExpr . _BodyLeaf . _Tag
-
-pureIntegerType :: Expression def ()
-pureIntegerType = pureExpression $ BodyLeaf IntegerType
-
-pureLiteralInteger :: Integer -> Expression def ()
-pureLiteralInteger = pureExpression . Lens.review bodyLiteralInteger
-
-pureApply :: Expression def () -> Expression def () -> Expression def ()
-pureApply f x = pureExpression $ makeApply f x
-
-pureHole :: Expression def ()
-pureHole = pureExpression $ BodyLeaf Hole
-
-pureSet :: Expression def ()
-pureSet = pureExpression $ BodyLeaf Set
-
+    withDepPisApplied = applyWithHoles (length depParams) expr
+    PiWrappers
+      { _dependentPiParams = depParams
+      , nonDependentPiParams = nonDepParams
+      } = getPiWrappers exprType
+    addApply (_, paramType) =
+      pureExpression . (`makeApply` arg)
+      where
+        arg =
+          case paramType ^? ExprLens.exprRecordKinded Type of
+          Just fields ->
+            ExprLens.pureExpr . _BodyRecord . ExprLens.kindedRecordFields Val #
+            (fields & Lens.mapped . Lens._2 .~ pureHole)
+          _ -> pureHole
 randomizeExpr :: (RandomGen g, Random r) => g -> Expression def (r -> a) -> Expression def a
 randomizeExpr gen = (`evalState` gen) . traverse randomize
   where
@@ -168,7 +132,7 @@ randomizeParamIds gen =
           Reader.local (Map.insert oldParamId newParamId) $ go body
       gv@(BodyLeaf (GetVariable (ParameterRef guid))) ->
         Reader.asks $
-        maybe gv (Lens.review bodyParameterRef) .
+        maybe gv (Lens.review ExprLens.bodyParameterRef) .
         Map.lookup guid
       x@BodyLeaf {}     -> return x
       x@BodyApply {}    -> traverse go x
@@ -202,9 +166,9 @@ matchBody matchLamResult matchOther matchGetPar body0 body1 =
     GetField r1 f1 <- body1 ^? _BodyGetField
     return . BodyGetField $ GetField (matchOther r0 r1) (matchOther f0 f1)
   BodyLeaf (GetVariable (ParameterRef p0)) -> do
-    p1 <- body1 ^? bodyParameterRef
+    p1 <- body1 ^? ExprLens.bodyParameterRef
     guard $ matchGetPar p0 p1
-    return $ Lens.review bodyParameterRef p0
+    return $ Lens.review ExprLens.bodyParameterRef p0
   BodyLeaf x -> do
     y <- body1 ^? _BodyLeaf
     guard $ x == y
@@ -229,31 +193,13 @@ matchExpression onMatch onMismatch =
       case matchBody matchLamResult matchOther matchGetPar body0 body1 of
       Nothing ->
         onMismatch e0 $
-        (expressionLeaves . _GetVariable . _ParameterRef %~ lookupGuid) e1
+        (ExprLens.expressionLeaves . ExprLens.parameterRef %~ lookupGuid) e1
       Just bodyMatched -> Expression <$> sequenceA bodyMatched <*> onMatch pl0 pl1
       where
         matchGetPar p0 p1 = p0 == lookupGuid p1
         matchLamResult p0 p1 = go $ Map.insert p1 p0 scope
         matchOther = go scope
         lookupGuid guid = fromMaybe guid $ Map.lookup guid scope
-
-expressionLeaves ::
-  Lens.Traversal (Expression defa a) (Expression defb a) (Leaf defa) (Leaf defb)
-expressionLeaves = eBody . bodyLeaves expressionLeaves
-
-bodyLeaves ::
-  Applicative f =>
-  Lens.LensLike f expra exprb (Leaf defa) (Leaf defb) ->
-  Lens.LensLike f (Body defa expra) (Body defb exprb) (Leaf defa) (Leaf defb)
-bodyLeaves exprLeaves onLeaves body =
-  case body of
-  BodyLam x      -> BodyLam      <$> onExprs x
-  BodyApply x    -> BodyApply    <$> onExprs x
-  BodyRecord x   -> BodyRecord   <$> onExprs x
-  BodyGetField x -> BodyGetField <$> onExprs x
-  BodyLeaf l -> BodyLeaf <$> onLeaves l
-  where
-    onExprs = traverse (exprLeaves onLeaves)
 
 subExpressions :: Expression def a -> [Expression def a]
 subExpressions x =
@@ -267,109 +213,61 @@ subExpressionsWithoutTags x =
   BodyRecord (Record _ fields) -> concatMap subExpressionsWithoutTags (map snd fields)
   body -> Foldable.concatMap subExpressionsWithoutTags body
 
-hasGetVar :: Guid -> Expression def a -> Bool
-hasGetVar =
-  Lens.anyOf
-  ( Lens.folding subExpressions
-  . eBody . bodyParameterRef
-  ) . (==)
-
 isDependentPi :: Expression def a -> Bool
 isDependentPi =
-  Lens.anyOf (eBody . _BodyLam) f
+  Lens.anyOf ExprLens.exprLam f
   where
     f (Lambda Type g _ resultType) = hasGetVar g resultType
     f _ = False
+    hasGetVar =
+      Lens.anyOf
+      ( Lens.folding subExpressions
+      . ExprLens.exprParameterRef
+      ) . (==)
 
 funcArguments :: Expression def a -> [Expression def a]
 funcArguments =
-  Lens.toListOf (eBody . _BodyLam . Lens.folding f)
+  Lens.toListOf (ExprLens.exprLam . ExprLens.kindedLam Val . Lens.folding f)
   where
-    f (Lambda Val _ paramType body) =
-      paramType : funcArguments body
-    f _ = []
+    f (_, paramType, body) = paramType : funcArguments body
 
 getParams :: Expression def a -> [(Guid, Expression def a)]
 getParams expr =
-  case expr ^? eBody . _BodyLam of
+  case expr ^? ExprLens.exprLam of
   Just (Lambda Type param paramType resultType) ->
     (param, paramType) : getParams resultType
   _ -> []
 
-data PiWrappers def a = PiWrappers
-  { _dependentPiParams :: [(Guid, Expression def a)]
-  , nonDependentPiParams :: [(Guid, Expression def a)]
-  }
-LensTH.makeLenses ''PiWrappers
+-- TODO: To prisms:
+pureIntegerType :: Expression def ()
+pureIntegerType = ExprLens.pureExpr . ExprLens.bodyIntegerType # ()
 
--- TODO: Return a record, not a tuple
-getPiWrappers :: Expression def a -> PiWrappers def a
-getPiWrappers expr =
-  case expr ^? eBody . _BodyLam of
-  Just (Lambda Type param paramType resultType)
-    | isDependentPi expr ->
-      getPiWrappers resultType & dependentPiParams %~ addParam
-    | otherwise ->
-        PiWrappers
-        { _dependentPiParams = []
-        , nonDependentPiParams = addParam (getParams resultType)
-        }
-    where
-      addParam = ((param, paramType) :)
-  _ -> PiWrappers [] []
+pureLiteralInteger :: Integer -> Expression def ()
+pureLiteralInteger = (ExprLens.pureExpr . ExprLens.bodyLiteralInteger #)
 
-getDependentParams :: Expression def a -> [(Guid, Expression def a)]
-getDependentParams = (^. dependentPiParams) . getPiWrappers
+pureApply :: Expression def () -> Expression def () -> Expression def ()
+pureApply f x = ExprLens.pureExpr . _BodyApply # Apply f x
 
-compose :: [a -> a] -> a -> a
-compose = foldr (.) id
-{-# INLINE compose #-}
+pureHole :: Expression def ()
+pureHole = ExprLens.pureExpr . ExprLens.bodyHole # ()
 
-applyWith :: [Expression def ()] -> Expression def () -> Expression def ()
-applyWith =
-  compose . map addApply
-  where
-    addApply arg = pureExpression . (`makeApply` arg)
+pureSet :: Expression def ()
+pureSet = ExprLens.pureExpr . ExprLens.bodySet # ()
 
-applyWithHoles :: Int -> Expression def () -> Expression def ()
-applyWithHoles count = applyWith $ replicate count pureHole
+-- TODO: Deprecate below here:
+pureExpression :: Body def (Expression def ()) -> Expression def ()
+pureExpression = (ExprLens.pureExpr #)
 
-applyDependentPis :: Expression def () -> Expression def () -> Expression def ()
-applyDependentPis exprType = applyWithHoles (length (getDependentParams exprType))
+makeApply :: expr -> expr -> Body def expr
+makeApply func arg = BodyApply $ Apply func arg
 
--- Transform expression to expression applied with holes,
--- with all different sensible levels of currying.
-applyForms :: Expression def () -> Expression def () -> [Expression def ()]
-applyForms exprType expr
-  | Lens.notNullOf (eBody . _BodyLam . lambdaKind . _Val) expr = [expr]
-  | otherwise = reverse $ scanl (flip addApply) withDepPisApplied nonDepParams
-  where
-    withDepPisApplied = applyWithHoles (length depParams) expr
-    PiWrappers
-      { _dependentPiParams = depParams
-      , nonDependentPiParams = nonDepParams
-      } = getPiWrappers exprType
-    addApply (_, paramType) =
-      pureExpression . (`makeApply` arg)
-      where
-        arg =
-          case paramType ^? eBody . _BodyRecord of
-          Just (Record Type fields) ->
-            pureExpression . BodyRecord . Record Val $
-            fields & Lens.mapped . Lens._2 .~ pureHole
-          _ -> pureHole
+makeLam :: Kind -> Guid -> expr -> expr -> Body def expr
+makeLam k argId argType resultType =
+  BodyLam $ Lambda k argId argType resultType
 
-kindedRecordFields ::
-  Applicative f => Kind -> Lens.LensLike' f (Record a) [(a, a)]
-kindedRecordFields k0 f (Record k1 fields)
-  | k0 == k1 = Record k1 <$> f fields
-  | otherwise = pure $ Record k1 fields
+-- TODO: Remove the kind-passing wrappers
+makePi :: Guid -> expr -> expr -> Body def expr
+makePi = makeLam Type
 
-subst ::
-  Guid ->
-  Expression def a ->
-  Expression def a ->
-  Expression def a
-subst from to expr
-  | Lens.anyOf (eBody . bodyParameterRef) (== from) expr = to
-  | otherwise = expr & eBody . traverse %~ subst from to
+makeLambda :: Guid -> expr -> expr -> Body def expr
+makeLambda = makeLam Val

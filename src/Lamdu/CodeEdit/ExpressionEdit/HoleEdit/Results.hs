@@ -41,6 +41,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
+import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.WidgetIds as WidgetIds
 
@@ -110,7 +111,7 @@ makeLiteralGroups searchTerm =
   ]
   where
     makeLiteralIntResult integer =
-      mkGroup [show integer] $ ExprUtil.bodyLiteralInteger # integer
+      mkGroup [show integer] $ ExprLens.bodyLiteralInteger # integer
 
 resultComplexityScore :: DataIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) -> Int
 resultComplexityScore =
@@ -193,8 +194,8 @@ baseExprToResultsList holeInfo makeWidget baseExpr =
       ExprUtil.applyForms baseExprType baseExpr ++ do
         record <-
           baseExprType ^..
-          Expression.eBody . Expression._BodyLam . Expression.lambdaParamType .
-          Expression.eBody . Expression._BodyRecord
+          ExprLens.exprLam . Expression.lambdaParamType .
+          ExprLens.exprRecord
         let tags = record ^.. Expression.recordFields . traverse . Lens._1
         guard $ length tags == 1
         tag <- tags
@@ -206,7 +207,7 @@ baseExprToResultsList holeInfo makeWidget baseExpr =
           { Expression._recordKind = Expression.Val
           , Expression._recordFields =
               [ ( tag
-                , ExprUtil.pureExpression $ Lens.review ExprUtil.bodyParameterRef paramGuid
+                , ExprUtil.pureExpression $ Lens.review ExprLens.bodyParameterRef paramGuid
                 )
               ]
           }
@@ -255,7 +256,7 @@ applyOperatorResultsList holeInfo makeWidget argument baseExpr =
 
 removeHoleWrap :: Expression def a -> Maybe (Expression def a)
 removeHoleWrap expr = do
-  apply <- expr ^? Expression.eBody . Expression._BodyApply
+  apply <- expr ^? ExprLens.exprApply
   void $
     apply ^?
     Expression.applyFunc . Expression.eBody .

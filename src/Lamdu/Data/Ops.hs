@@ -30,6 +30,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
+import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 type T = Transaction
@@ -120,7 +121,7 @@ addListItem ::
   T m (DataIRef.ExpressionI (Tag m), DataIRef.ExpressionI (Tag m))
 addListItem specialFunctions exprP = do
   consTempI <-
-    DataIRef.newExprBody . Lens.review ExprUtil.bodyDefinitionRef $ Anchors.sfCons specialFunctions
+    DataIRef.newExprBody . Lens.review ExprLens.bodyDefinitionRef $ Anchors.sfCons specialFunctions
   consI <-
     DataIRef.newExprBody . ExprUtil.makeApply consTempI =<< newHole
   newItemI <- newHole

@@ -60,6 +60,7 @@ import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Expression.Infer.Rules as Rules
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
+import qualified Lamdu.Data.Expression.Lens as ExprLens
 
 mkOrigin :: State Origin Origin
 mkOrigin = do
@@ -129,9 +130,9 @@ data ErrorDetails def
 
 instance Functor ErrorDetails where
   fmap f (MismatchIn x y) =
-    on MismatchIn (ExprUtil.expressionDef %~ f) x y
+    on MismatchIn (ExprLens.expressionDef %~ f) x y
   fmap f (InfiniteExpression x) =
-    InfiniteExpression $ x & ExprUtil.expressionDef %~ f
+    InfiniteExpression $ x & ExprLens.expressionDef %~ f
 
 data Error def = Error
   { errRef :: ExprRef
@@ -145,7 +146,7 @@ data Error def = Error
 instance Functor Error where
   fmap f (Error ref mis details) =
     Error ref
-    (mis & Lens.both . ExprUtil.expressionDef %~ f)
+    (mis & Lens.both . ExprLens.expressionDef %~ f)
     (f <$> details)
 
 newtype InferActions def m = InferActions
@@ -505,7 +506,7 @@ load loader mRecursiveDef expr =
       traverse loadType . ordNub $
       Lens.toListOf
       ( Lens.folding ExprUtil.subExpressions
-      . Expression.eBody . ExprUtil.bodyDefinitionRef
+      . Expression.eBody . ExprLens.bodyDefinitionRef
       . Lens.filtered ((/= mRecursiveDef) . Just)
       ) expr
     loadType defI = fmap ((,) defI) $ loadPureDefinitionType loader defI

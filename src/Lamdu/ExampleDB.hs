@@ -27,6 +27,7 @@ import qualified Lamdu.CodeEdit.FFI as FFI
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
+import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.WidgetIds as WidgetIds
@@ -167,7 +168,7 @@ createBuiltins =
       setP (A.assocNameRef aGuid) name
       s <- set
       return . ExprUtil.makePi aGuid s =<<
-        f ((DataIRef.newExprBody . Lens.review ExprUtil.bodyParameterRef) aGuid)
+        f ((DataIRef.newExprBody . Lens.review ExprLens.bodyParameterRef) aGuid)
     setToSet = mkPi set set
     tellift f = do
       x <- lift f
@@ -180,7 +181,7 @@ createBuiltins =
     mkTag name = do
       tagGuid <- Transaction.newKey
       setP (A.assocNameRef tagGuid) name
-      DataIRef.newExprBody $ ExprUtil.bodyTag # tagGuid
+      DataIRef.newExprBody $ ExprLens.bodyTag # tagGuid
     mkRecordType strFields = do
       tagFields <- traverse (Lens._1 mkTag <=< Lens.sequenceOf Lens._2) strFields
       DataIRef.newExprBody $ Expression.BodyRecord Expression.Record
@@ -191,7 +192,7 @@ createBuiltins =
     mkType f = do
       x <- lift f
       Writer.tell [x]
-      return . DataIRef.newExprBody $ Lens.review ExprUtil.bodyDefinitionRef x
+      return . DataIRef.newExprBody $ Lens.review ExprLens.bodyDefinitionRef x
     makeWithType_ = (fmap . fmap . fmap . const) () makeWithType
     makeWithType builtinName typeMaker =
       tellift (DataOps.newBuiltin builtinName =<< typeMaker)

@@ -32,6 +32,7 @@ import qualified Data.IntSet as IntSet
 import qualified Data.Monoid as Monoid
 import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Data.Expression as Expression
+import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 type RuleResult def = [(ExprRef, RefExpression def)]
@@ -225,7 +226,7 @@ runPiToLambda (param, lambdaValueRef, bodyTypeRef) piBody (o0, o1, o2) = do
     ( bodyTypeRef
     , ExprUtil.subst piParam
       ( makeRefExpr o0
-        (Lens.review ExprUtil.bodyParameterRef param)
+        (Lens.review ExprLens.bodyParameterRef param)
       )
       resultType
     )
@@ -296,7 +297,7 @@ runGetFieldTypeToRecordFieldType recordTypeRef (recordTypeExpr, fieldTag, getFie
             , recordTypeExpr & recordField guid . Lens._2 .~ getFieldTypeExpr
             )
           ]
-        | Lens.notNullOf (recordFields . Lens._1 . Expression.eBody . ExprUtil.bodyHole) recordTypeExpr -> []
+        | Lens.notNullOf (recordFields . Lens._1 . Expression.eBody . ExprLens.bodyHole) recordTypeExpr -> []
         | otherwise -> makeError
 
 getFieldRules :: ExprRef -> Expression.Expression def TypedValue -> ExprRef -> State Origin [Rule def ExprRef]
@@ -363,7 +364,7 @@ mergeToPiResult =
       | otherwise = dest
       where
         substs = dest ^. Expression.ePayload . rplSubstitutedArgs
-    notAHole = Lens.nullOf (Expression.eBody . ExprUtil.bodyHole)
+    notAHole = Lens.nullOf (Expression.eBody . ExprLens.bodyHole)
 
 runSimpleType :: ExprRef -> RefExpression def -> Origin2 -> RuleResult def
 runSimpleType typ valExpr (o0, o1) =
@@ -469,7 +470,7 @@ mergeToArg param arg =
     onMatch _ _ = unit
     onMismatch expr post
       | Lens.anyOf
-        (Expression.eBody . ExprUtil.bodyParameterRef)
+        (Expression.eBody . ExprLens.bodyParameterRef)
         (== param) expr
       = Compose.O . (fmap . const) Unit $ Writer.tell
         [( arg

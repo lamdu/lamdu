@@ -28,6 +28,7 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
+import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 type PureExpr def = Expression.Expression def ()
@@ -83,16 +84,16 @@ intType :: PureExpr def
 intType = ExprUtil.pureIntegerType
 
 literalInt :: Integer -> PureExpr def
-literalInt = ExprUtil.pureExpression . Lens.review ExprUtil.bodyLiteralInteger
+literalInt = ExprUtil.pureExpression . Lens.review ExprLens.bodyLiteralInteger
 
 pureGetDef :: String -> PureExprDefI t
 pureGetDef name =
-  ExprUtil.pureExpression . Lens.review ExprUtil.bodyDefinitionRef . IRef.unsafeFromGuid $
+  ExprUtil.pureExpression . Lens.review ExprLens.bodyDefinitionRef . IRef.unsafeFromGuid $
   Guid.fromString name
 
 pureGetParam :: String -> PureExpr def
 pureGetParam name =
-  ExprUtil.pureExpression . Lens.review ExprUtil.bodyParameterRef $
+  ExprUtil.pureExpression . Lens.review ExprLens.bodyParameterRef $
   Guid.fromString name
 
 ansiRed :: String
@@ -131,7 +132,7 @@ definitionTypes =
     exampleDBDefs =
       fst . MapStore.runEmpty . Transaction.run MapStore.mapStore $ do
         (_, defIs) <- createBuiltins
-        Lens.mapMOf (Lens.traversed . ExprUtil.expressionDef) reIRef
+        Lens.mapMOf (Lens.traversed . ExprLens.expressionDef) reIRef
           =<< Map.fromList <$> mapM readDef defIs
 
     reIRef = fmap IRef.unsafeFromGuid . guidNameOf
@@ -200,7 +201,7 @@ doInfer_ = (Lens._1 . Lens.mapped %~ fst) . doInfer
 
 pureGetRecursiveDefI :: PureExprDefI t
 pureGetRecursiveDefI =
-  ExprUtil.pureExpression $ Lens.review ExprUtil.bodyDefinitionRef recursiveDefI
+  ExprUtil.pureExpression $ Lens.review ExprLens.bodyDefinitionRef recursiveDefI
 
 factorialExpr :: PureExprDefI t
 factorialExpr =

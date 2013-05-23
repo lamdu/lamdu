@@ -25,6 +25,7 @@ import qualified Control.Monad.Trans.State as State
 import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.Infer as Infer
+import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 data Payload a = Stored a | AutoGen Guid
@@ -53,7 +54,7 @@ addVariableForHole ::
 addVariableForHole holePoint = do
   paramGuid <- state random
   let
-    getVar = ExprUtil.pureExpression $ Lens.review ExprUtil.bodyParameterRef paramGuid
+    getVar = ExprUtil.pureExpression $ Lens.review ExprLens.bodyParameterRef paramGuid
     loaded =
       fromMaybe (error "Should not be loading defs when loading a mere getVar") $
       Infer.load loader Nothing getVar

@@ -28,6 +28,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
+import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Ops as DataOps
 
 uneither :: Either a a -> a
@@ -200,7 +201,7 @@ convertEmptyList app@(Expression.Apply funcI _) exprI = do
       , replaceNil = DataIRef.exprGuid <$> DataOps.setToHole exprS
       }
   guard $
-    Lens.anyOf (Expression.eBody . ExprUtil.bodyDefinitionRef)
+    Lens.anyOf (Expression.eBody . ExprLens.bodyDefinitionRef)
     (== Anchors.sfNil specialFunctions) funcI
   let guids = app ^.. Lens.traversed . subExpressionGuids
   (rHiddenGuids <>~ guids) .
@@ -215,7 +216,7 @@ isCons ::
   DataIRef.Expression t a -> Bool
 isCons specialFunctions =
   Lens.anyOf
-  (Expression.eBody . Expression._BodyApply . Expression.applyFunc . Expression.eBody . ExprUtil.bodyDefinitionRef)
+  (Expression.eBody . Expression._BodyApply . Expression.applyFunc . Expression.eBody . ExprLens.bodyDefinitionRef)
   (== Anchors.sfCons specialFunctions)
 
 convertList ::

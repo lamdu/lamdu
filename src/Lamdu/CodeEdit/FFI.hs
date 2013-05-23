@@ -12,6 +12,7 @@ import qualified Data.Map as Map
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expression
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
+import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 
 data Env t = Env
@@ -29,7 +30,7 @@ class ToExpr a where
 instance FromExpr Integer where
   fromExpr _ e =
     fromMaybe (error "Expecting normalized Integer expression!") $
-    e ^? Expression.eBody . ExprUtil.bodyLiteralInteger
+    e ^? Expression.eBody . ExprLens.bodyLiteralInteger
 
 instance ToExpr Integer where
   toExpr _ x [] = ExprUtil.pureLiteralInteger x
@@ -41,13 +42,13 @@ instance (FromExpr a, ToExpr b) => ToExpr (a -> b) where
 
 instance ToExpr Bool where
   toExpr env b [] =
-    ExprUtil.pureExpression . Lens.review ExprUtil.bodyDefinitionRef $
+    ExprUtil.pureExpression . Lens.review ExprLens.bodyDefinitionRef $
     (if b then trueDef else falseDef) env
   toExpr _ _ _ = error "Bool applied as a function"
 
 instance FromExpr Bool where
   fromExpr env expr =
-    case expr ^? Expression.eBody . ExprUtil.bodyDefinitionRef of
+    case expr ^? Expression.eBody . ExprLens.bodyDefinitionRef of
     Just defRef
       | defRef == trueDef env -> True
       | defRef == falseDef env -> False
