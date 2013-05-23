@@ -28,15 +28,15 @@ type InferResults t =
 
 getDef :: String -> InferResults t
 getDef name =
-  leafSimple
-  (Expr.GetVariable . Expr.DefinitionRef $ IRef.unsafeFromGuid g)
+  simple
+  (ExprLens.bodyDefinitionRef # IRef.unsafeFromGuid g)
   (void (definitionTypes ! g))
   where
     g = Guid.fromString name
 
 leafTag :: Guid -> InferResults t
 leafTag guid =
-  leafSimple (Expr.Tag guid) $
+  simple (ExprLens.bodyTag # guid) $
   ExprLens.pureExpr . ExprLens.bodyTagType # ()
 
 defParamTags :: String -> [Guid]
@@ -58,16 +58,13 @@ innerMostPi =
       _ -> []
 
 getParam :: String -> PureExprDefI t -> InferResults t
-getParam name = leafSimple gv
-  where
-    gv = Expr.GetVariable . Expr.ParameterRef $ Guid.fromString name
+getParam name = simple $ ExprLens.bodyParameterRef # Guid.fromString name
 
 inferResults :: ExprIRef.Expression t (Infer.Inferred (DefI t)) -> InferResults t
 inferResults = fmap (void . Infer.iValue &&& void . Infer.iType)
 
-leafSimple :: Expr.Leaf (DefI t) -> PureExprDefI t -> InferResults t
-leafSimple l typ =
-  iexpr (ExprLens.pureExpr . Expr._BodyLeaf # l) typ $ Expr.BodyLeaf l
+simple :: Expr.Body (DefI t) (InferResults t) -> PureExprDefI t -> InferResults t
+simple body iType = iexpr (bodyToPureExpr body) iType body
 
 iexpr ::
   PureExprDefI t ->
@@ -83,12 +80,12 @@ bodyToPureExpr :: Expr.Body def (Expression def a) -> PureExpr def
 bodyToPureExpr exprBody = ExprLens.pureExpr # fmap void exprBody
 
 inferredHole :: PureExprDefI t -> InferResults t
-inferredHole = leafSimple Expr.Hole
+inferredHole = simple bodyHole
 
 -- New-style:
 
 inferredSetType :: InferResults t
-inferredSetType = leafSimple Expr.Set pureSet
+inferredSetType = simple bodySet pureSet
 
 apply :: [InferResults t] -> InferResults t
 apply = foldl1 step
@@ -109,7 +106,7 @@ apply = foldl1 step
 
 record :: Kind -> [(InferResults t, InferResults t)] -> InferResults t
 record k fields =
-  iexpr (bodyToPureExpr (recBody k)) typ $ recBody k
+  simple (recBody k) typ
   where
     typ = case k of
       Val -> bodyToPureExpr $ recBody Type

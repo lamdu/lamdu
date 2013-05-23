@@ -29,7 +29,7 @@ import qualified Test.HUnit as HUnit
 simpleTests :: [HUnit.Test]
 simpleTests =
   [ testInfer "literal int" $
-    leafSimple (Expr.LiteralInteger 5) pureIntegerType
+    simple (ExprLens.bodyLiteralInteger # 5) pureIntegerType
   , testInfer "simple apply" $
     iexpr pureHole pureHole $
     ExprUtil.makeApply
@@ -83,7 +83,7 @@ inferPart =
             (iexpr pureIntegerType pureSet bodyHole)
           )
         )
-        (leafSimple (Expr.LiteralInteger 5) pureIntegerType)
+        (simple (ExprLens.bodyLiteralInteger # 5) pureIntegerType)
       )
     ) $
   getParam "xs" $ listOf pureIntegerType
@@ -110,8 +110,8 @@ applyOnVar =
     pureIntegerType $
   ExprUtil.makeApply
     (inferredHole (purePi "" pureHole pureIntegerType)) $
-  leafSimple
-    ((Expr.GetVariable . Expr.ParameterRef . Guid.fromString) "lambda")
+  simple
+    (ExprLens.bodyParameterRef # Guid.fromString "lambda")
     pureHole
 
 idTest :: HUnit.Test
@@ -122,7 +122,7 @@ idTest =
     (purePi "" pureIntegerType pureIntegerType) $
   ExprUtil.makeApply
     (getDef "id") $
-    leafSimple Expr.IntegerType pureSet
+    simple bodyIntegerType pureSet
 
 inferFromOneArgToOther :: HUnit.Test
 inferFromOneArgToOther =
@@ -164,7 +164,7 @@ inferFromOneArgToOther =
     ) $
   iexpr ifParams ifParamsType $
   Expr.BodyRecord $ Expr.Record Val
-  [ (leafTag t0, leafSimple Expr.Hole (pureGetDef "Bool"))
+  [ (leafTag t0, simple bodyHole (pureGetDef "Bool"))
   , (leafTag t1, getParam "x" typeOfX)
   , (leafTag t2, getParam "y" typeOfX)
   ]
@@ -228,22 +228,22 @@ monomorphRedex =
       ExprUtil.makeApply
         ( iexpr cToX (purePi "" pureHole (pureGetParam "b")) $
           namedLambda "c"
-            (leafSimple Expr.Hole pureSet) $
+            (simple bodyHole pureSet) $
           getParam "x" $ pureGetParam "b"
         ) $
-      leafSimple Expr.Hole pureHole
+      simple bodyHole pureHole
     ) $
   iexpr (fExpr True) fType $
   namedLambda "fArg"
     ( iexpr (fArgType True) pureSet $
       namedPi "b"
-        (leafSimple Expr.Set pureSet) $
+        (simple bodySet pureSet) $
       iexpr (fArgInnerType True) pureSet $
       namedPi "x"
         (iexpr (pureGetParam "b") pureSet bodyHole) $
       getParam "b" pureSet
     ) $
-  leafSimple Expr.Hole pureHole
+  simple bodyHole pureHole
   where
     inferredExpr = pureApply [fExpr True, fArg True]
     bodyLambda isInferred =
@@ -276,10 +276,10 @@ fOfXIsFOf5 =
     (pureApply [getRecursiveDef, five])
     pureHole $
   ExprUtil.makeApply
-    (leafSimple
-      (Expr.GetVariable (Expr.DefinitionRef recursiveDefI))
+    (simple
+      (ExprLens.bodyDefinitionRef # recursiveDefI)
       (purePi "" pureIntegerType pureHole)) $
-  leafSimple (Expr.LiteralInteger 5) pureIntegerType
+  simple (ExprLens.bodyLiteralInteger # 5) pureIntegerType
 
 argTypeGoesToPi :: HUnit.Test
 argTypeGoesToPi =
@@ -289,7 +289,7 @@ argTypeGoesToPi =
     pureHole $
   ExprUtil.makeApply
     (inferredHole (purePi "" pureIntegerType pureHole)) $
-  leafSimple (Expr.LiteralInteger 5) pureIntegerType
+  simple (ExprLens.bodyLiteralInteger # 5) pureIntegerType
 
 idOnAnInt :: HUnit.Test
 idOnAnInt =
@@ -311,7 +311,7 @@ idOnAnInt =
         ((iexpr pureIntegerType pureSet . Expr.BodyLeaf) Expr.Hole)
       )
     ) $
-  leafSimple (Expr.LiteralInteger 5) pureIntegerType
+  simple (ExprLens.bodyLiteralInteger # 5) pureIntegerType
 
 idOnHole :: HUnit.Test
 idOnHole =
@@ -343,7 +343,7 @@ forceMono =
         (iexpr pureSet pureSet bodyHole)
       )
     ) $
-  leafSimple Expr.Hole pureSet
+  simple bodyHole pureSet
   where
     idSet = pureApply [pureGetDef "id", pureSet]
     idSetHole = pureApply [idSet, pureHole]
@@ -437,7 +437,7 @@ resumptionTests =
       resultR = inferResults exprR
     in
       assertCompareInferred resultR .
-      leafSimple (Expr.GetVariable (Expr.DefinitionRef recursiveDefI)) $
+      simple (ExprLens.bodyDefinitionRef # recursiveDefI) $
       purePi "" pureHole pureHole
   ]
   where
@@ -485,13 +485,13 @@ recordTest :: HUnit.Test
 recordTest =
   testInfer "f a x:a = {x" $
   iexpr lamA piA $
-  namedLambda "a" (leafSimple Expr.Set pureSet) $
+  namedLambda "a" (simple bodySet pureSet) $
   iexpr lamX piX $
   namedLambda "x" (getParam "a" pureSet) $
   iexpr recVal recType $
   Expr.BodyRecord $
   Expr.Record Val
-  [( leafSimple fieldTagLeaf tagType
+  [( simple fieldTagBody tagType
    , getParam "x" (pureGetParam "a")
    )]
   where
@@ -503,10 +503,10 @@ recordTest =
       ExprUtil.pureExpression $
       rec Val $
       pureGetParam "x"
-    fieldTagLeaf = Expr.Tag fieldGuid
+    fieldTagBody = ExprLens.bodyTag # fieldGuid
     rec k =
       Expr.BodyRecord . Expr.Record k .
-      (:[]) . (,) (ExprUtil.pureExpression (Expr.BodyLeaf fieldTagLeaf))
+      (:[]) . (,) (ExprLens.pureExpr # fieldTagBody)
     fieldGuid = Guid.fromString "field"
     piA =
       purePi "a" pureSet piX

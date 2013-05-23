@@ -57,8 +57,14 @@ namedPi = ExprUtil.makePi . Guid.fromString
 pureApply :: [PureExpr def] -> PureExpr def
 pureApply = foldl1 ExprUtil.pureApply
 
+bodySet :: Expr.Body def expr
+bodySet = ExprLens.bodySet # ()
+
 bodyHole :: Expr.Body def expr
 bodyHole = ExprLens.bodyHole # ()
+
+bodyIntegerType :: Expr.Body def expr
+bodyIntegerType = ExprLens.bodyIntegerType # ()
 
 -- 1 dependent param
 pureApplyPoly1 ::
