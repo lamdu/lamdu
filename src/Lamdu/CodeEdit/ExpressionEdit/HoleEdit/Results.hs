@@ -266,14 +266,13 @@ makeResultsList holeInfo makeWidget group =
 
 makeNewTagResultList ::
   MonadA m => HoleInfo m -> WidgetMaker m ->
-  ListT (CT m) (Maybe (ResultType, ResultsList m))
+  CT m (Maybe (ResultType, ResultsList m))
 makeNewTagResultList holeInfo makeNewTagResultWidget
-  | null searchTerm = mempty
+  | null searchTerm = pure Nothing
   | otherwise =
-      List.joinM $ List.fromList
-      [fmap ((,) GoodResult) <$>
+      fmap ((,) GoodResult) <$>
       toMResultsList holeInfo makeNewTagResultWidget (Widget.Id ["NewTag"])
-      [makeNewTag]]
+      [makeNewTag]
   where
     searchTerm = (Property.value . hiState) holeInfo ^. HoleInfo.hsSearchTerm
     makeNewTag = Sugar.ResultSeedNewTag searchTerm
@@ -306,7 +305,7 @@ makeAll ::
 makeAll holeInfo makeWidget = do
   resultList <-
     List.catMaybes .
-    (`mappend` makeNewTagResultList holeInfo (mkNewTagResultWidget makeWidget)) .
+    (`mappend` (List.joinM . List.fromList) [makeNewTagResultList holeInfo (mkNewTagResultWidget makeWidget)]) .
     List.mapL (makeResultsList holeInfo (mkResultWidget makeWidget)) .
     List.fromList <$>
     ExprGuiM.transaction (makeAllGroups holeInfo)
