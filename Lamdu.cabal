@@ -8,7 +8,7 @@ Author:              Eyal Lotem, Yair Chuchem
 Maintainer:          eyal.lotem@gmail.com, yairchu@gmail.com
 Category:            Graphics
 Build-type:          Simple
--- Extra-source-files:
+Extra-source-files:  test/*.hs test/Makefile Makefile
 Cabal-version:       >= 1.8
 Data-files:          fonts/DejaVuSans.ttf
 Library

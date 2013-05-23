@@ -6,6 +6,7 @@ module Lamdu.Data.Expression.Utils
   , pureApply
   , pureHole
   , pureSet
+  , pureRecord
   , pureLiteralInteger
   , pureIntegerType
   , pureExpression
@@ -259,6 +260,9 @@ pureHole = ExprLens.pureExpr . ExprLens.bodyHole # ()
 
 pureSet :: Expression def ()
 pureSet = ExprLens.pureExpr . ExprLens.bodySet # ()
+
+pureRecord :: Kind -> [(Expression def (), Expression def ())] -> Expression def ()
+pureRecord k fields = ExprLens.pureExpr . ExprLens.bodyKindedRecordFields k # fields
 
 -- TODO: Deprecate below here:
 pureExpression :: Body def (Expression def ()) -> Expression def ()
