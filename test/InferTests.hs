@@ -5,12 +5,13 @@ module InferTests (allTests) where
 import Control.Applicative (liftA2)
 import Control.Arrow ((&&&))
 import Control.Exception (evaluate)
-import Control.Lens ((^.), (^?))
+import Control.Lens.Operators
 import Control.Monad (join, void)
 import Control.Monad.Trans.State (runStateT, evalState)
 import Data.Map ((!))
 import Data.Maybe (isJust)
 import Data.Monoid (Monoid(..))
+import Data.Store.Guid (Guid)
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expression (Expression(..))
 import Lamdu.Data.Expression.IRef (DefI)
@@ -46,6 +47,32 @@ mkInferredGetDef name =
   (void (definitionTypes ! g))
   where
     g = Guid.fromString name
+
+mkInferredLeafTag :: Guid -> InferResults (DefI t)
+mkInferredLeafTag guid =
+  mkInferredLeafSimple (Expression.Tag guid) .
+  ExprUtil.pureExpression $ Expression.BodyLeaf Expression.TagType
+
+defParamTags :: String -> [Guid]
+defParamTags defName =
+  innerMostPi (definitionTypes ! g) ^..
+  Expression.eBody . Expression._BodyLam . Expression.lambdaParamType .
+  Expression.eBody . Expression._BodyRecord .
+  Expression.recordFields . Lens.traversed . Lens._1 .
+  Expression.eBody . Expression._BodyLeaf . Expression._Tag
+  where
+    g = Guid.fromString defName
+
+innerMostPi :: Expression def a -> Expression def a
+innerMostPi =
+  last . pis
+  where
+    pis expr =
+      case expr ^? Expression.eBody . Expression._BodyLam of
+      Just lam
+        | lam ^. Expression.lambdaKind == Expression.Type ->
+          expr : pis (lam ^. Expression.lambdaResult)
+      _ -> []
 
 mkInferredGetParam :: String -> Expression.Expression def () -> InferResults def
 mkInferredGetParam name = mkInferredLeafSimple gv
@@ -205,7 +232,7 @@ idTest =
 
 inferFromOneArgToOther :: HUnit.Test
 inferFromOneArgToOther =
-  testInfer "f a b (x:Map _ _) (y:Map a b) = if _ x y"
+  testInfer "f = \\ a b (x:Map _ _) (y:Map a b) -> if {_ x y}"
   (expr False) .
   mkInferredNode (expr True) (purePi "a" setType lamBType) $
   makeNamedLambda "a"
@@ -239,19 +266,17 @@ inferFromOneArgToOther =
   ExprUtil.makeApply
     ( mkInferredNode (body1 True) body1Type $
       ExprUtil.makeApply
-        ( mkInferredNode (body2 True) body2Type $
-          ExprUtil.makeApply
-            ( mkInferredNode (body3 True) body3Type $
-              ExprUtil.makeApply
-                (mkInferredGetDef "if") $
-              mkInferredLeaf Expression.Hole (typeOfX True) setType
-            ) $
-          mkInferredLeafSimple Expression.Hole (pureGetDef "Bool")
-        ) $
-      mkInferredGetParam "x" (typeOfX True)
+        (mkInferredGetDef "if") $
+      mkInferredLeaf Expression.Hole (typeOfX True) setType
     ) $
-  mkInferredGetParam "y" (typeOfX True)
+  mkInferredNode ifParams ifParamsType $
+  Expression.BodyRecord $ Expression.Record Expression.Val
+  [ (mkInferredLeafTag t0, mkInferredLeafSimple Expression.Hole (pureGetDef "Bool"))
+  , (mkInferredLeafTag t1, mkInferredGetParam "x" (typeOfX True))
+  , (mkInferredLeafTag t2, mkInferredGetParam "y" (typeOfX True))
+  ]
   where
+    [t0, t1, t2] = defParamTags "if"
     expr isInferred =
       pureLambda "a" (holeOr setType isInferred) $ lamB isInferred
     lamB isInferred =
@@ -260,14 +285,25 @@ inferFromOneArgToOther =
       pureLambda "x" (typeOfX isInferred) $ lamY isInferred
     lamY isInferred =
       pureLambda "y" (typeOfX True) $ body isInferred
-    body isInferred = pureApply [body1 isInferred, pureGetParam "y"]
-    body1 isInferred = pureApply [body2 isInferred, pureGetParam "x"]
-    body2 isInferred = pureApply [body3 isInferred, hole]
-    body3 isInferred =
+    body isInferred = pureApply [body1 isInferred, ifParams]
+    body1 isInferred =
       pureApply [pureGetDef "if", holeOr (typeOfX True) isInferred]
-    body1Type = purePi "body1" (typeOfX True) (typeOfX True)
-    body2Type = purePi "body2" (typeOfX True) body1Type
-    body3Type = purePi "body3" (pureGetDef "Bool") body2Type
+    ifParams =
+      ExprUtil.pureExpression . Expression.BodyRecord $
+      Expression.Record Expression.Val
+      [ (tag t0, hole)
+      , (tag t1, pureGetParam "x")
+      , (tag t2, pureGetParam "y")
+      ]
+    ifParamsType =
+      ExprUtil.pureExpression . Expression.BodyRecord $
+      Expression.Record Expression.Type
+      [ (tag t0, pureGetDef "Bool")
+      , (tag t1, typeOfX True)
+      , (tag t2, typeOfX True)
+      ]
+    tag = ExprUtil.pureExpression . Expression.BodyLeaf . Expression.Tag
+    body1Type = purePi "body1" ifParamsType (typeOfX True)
     typeOfX isInferred =
       pureApply
       [ typeOfX' isInferred
