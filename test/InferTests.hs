@@ -28,8 +28,7 @@ import qualified Test.HUnit as HUnit
 
 simpleTests :: [HUnit.Test]
 simpleTests =
-  [ testInfer "literal int" $
-    simple (ExprLens.bodyLiteralInteger # 5) pureIntegerType
+  [ testInfer "literal int" $ integer 5
   , testInfer "simple apply" $
     iexpr pureHole pureHole $
     ExprUtil.makeApply
@@ -83,7 +82,7 @@ inferPart =
             (iexpr pureIntegerType pureSet bodyHole)
           )
         )
-        (simple (ExprLens.bodyLiteralInteger # 5) pureIntegerType)
+        (integer 5)
       )
     ) $
   getParam "xs" $ listOf pureIntegerType
@@ -279,7 +278,7 @@ fOfXIsFOf5 =
     (simple
       (ExprLens.bodyDefinitionRef # recursiveDefI)
       (purePi "" pureIntegerType pureHole)) $
-  simple (ExprLens.bodyLiteralInteger # 5) pureIntegerType
+  integer 5
 
 argTypeGoesToPi :: HUnit.Test
 argTypeGoesToPi =
@@ -289,7 +288,7 @@ argTypeGoesToPi =
     pureHole $
   ExprUtil.makeApply
     (holeWithInferredType (purePi "" pureIntegerType pureHole)) $
-  simple (ExprLens.bodyLiteralInteger # 5) pureIntegerType
+  integer 5
 
 idOnAnInt :: HUnit.Test
 idOnAnInt =
@@ -311,7 +310,7 @@ idOnAnInt =
         ((iexpr pureIntegerType pureSet . Expr.BodyLeaf) Expr.Hole)
       )
     ) $
-  simple (ExprLens.bodyLiteralInteger # 5) pureIntegerType
+  integer 5
 
 idOnHole :: HUnit.Test
 idOnHole =

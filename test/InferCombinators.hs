@@ -9,7 +9,7 @@ import Data.Store.Guid (Guid)
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expression (Expression(..), Kind(..))
 import Lamdu.Data.Expression.IRef (DefI)
-import Lamdu.Data.Expression.Utils (pureHole, pureSet)
+import Lamdu.Data.Expression.Utils (pureHole, pureSet, pureIntegerType)
 import Utils
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
@@ -46,6 +46,9 @@ simple :: Expr.Body (DefI t) (InferResults t) -> PureExprDefI t -> InferResults 
 simple body iType = iexpr (bodyToPureExpr body) iType body
 
 -- New-style:
+
+integer :: Integer -> InferResults t
+integer x = simple (ExprLens.bodyLiteralInteger # x) pureIntegerType
 
 holeWithInferredType :: PureExprDefI t -> InferResults t
 holeWithInferredType = simple bodyHole
