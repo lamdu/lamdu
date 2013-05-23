@@ -34,13 +34,13 @@ import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Test.HUnit as HUnit
 
-type InferResults def =
-  Expression.Expression def
-  ( PureExpr def
-  , PureExpr def
+type InferResults t =
+  DataIRef.Expression t
+  ( PureExprDefI t
+  , PureExprDefI t
   )
 
-mkInferredGetDef :: String -> InferResults (DefI t)
+mkInferredGetDef :: String -> InferResults t
 mkInferredGetDef name =
   mkInferredLeafSimple
   (Expression.GetVariable . Expression.DefinitionRef $ IRef.unsafeFromGuid g)
@@ -48,7 +48,7 @@ mkInferredGetDef name =
   where
     g = Guid.fromString name
 
-mkInferredLeafTag :: Guid -> InferResults (DefI t)
+mkInferredLeafTag :: Guid -> InferResults t
 mkInferredLeafTag guid =
   mkInferredLeafSimple (Expression.Tag guid) .
   ExprUtil.pureExpression $ Expression.BodyLeaf Expression.TagType
@@ -74,15 +74,15 @@ innerMostPi =
           expr : pis (lam ^. Expression.lambdaResult)
       _ -> []
 
-mkInferredGetParam :: String -> PureExpr def -> InferResults def
+mkInferredGetParam :: String -> PureExprDefI t -> InferResults t
 mkInferredGetParam name = mkInferredLeafSimple gv
   where
     gv = Expression.GetVariable . Expression.ParameterRef $ Guid.fromString name
 
-inferResults :: DataIRef.Expression t (Infer.Inferred (DefI t)) -> InferResults (DefI t)
+inferResults :: DataIRef.Expression t (Infer.Inferred (DefI t)) -> InferResults t
 inferResults = fmap (void . Infer.iValue &&& void . Infer.iType)
 
-showExpressionWithInferred :: InferResults (DefI t) -> String
+showExpressionWithInferred :: InferResults t -> String
 showExpressionWithInferred =
   List.intercalate "\n" . go
   where
@@ -97,7 +97,7 @@ showExpressionWithInferred =
         expr = inferredExpr ^. Expression.eBody
         (val, typ) = inferredExpr ^. Expression.ePayload
 
-compareInferred :: InferResults (DefI t) -> InferResults (DefI t) -> Bool
+compareInferred :: InferResults t -> InferResults t -> Bool
 compareInferred x y =
   isJust $ ExprUtil.matchExpression f ((const . const) Nothing) x y
   where
@@ -106,20 +106,21 @@ compareInferred x y =
     matchI = ExprUtil.matchExpression nop ((const . const) Nothing)
     nop () () = Just ()
 
-mkInferredLeafSimple :: Expression.Leaf def -> PureExpr def -> InferResults def
+mkInferredLeafSimple :: Expression.Leaf (DefI t) -> PureExprDefI t -> InferResults t
 mkInferredLeafSimple leaf =
   mkInferredLeaf leaf . ExprUtil.pureExpression $ Expression.BodyLeaf leaf
 
 mkInferredLeaf ::
-  Expression.Leaf def -> PureExpr def -> PureExpr def ->
-  InferResults def
+  Expression.Leaf (DefI t) ->
+  PureExprDefI t -> PureExprDefI t ->
+  InferResults t
 mkInferredLeaf leaf val typ =
   mkInferredNode val typ $ Expression.BodyLeaf leaf
 
 mkInferredNode ::
-  PureExpr def ->
-  PureExpr def ->
-  Expression.Body def (InferResults def) -> InferResults def
+  PureExprDefI t ->
+  PureExprDefI t ->
+  Expression.Body (DefI t) (InferResults t) -> InferResults t
 mkInferredNode iVal iType body =
   Expression.Expression body (iVal, iType)
 
@@ -479,10 +480,10 @@ forceMono =
     idSet = pureApply [pureGetDef "id", setType]
     idSetHole = pureApply [idSet, pureHole]
 
-inferredHole :: PureExpr def -> InferResults def
+inferredHole :: PureExprDefI t -> InferResults t
 inferredHole = mkInferredLeafSimple Expression.Hole
 
-inferredSetType :: InferResults def
+inferredSetType :: InferResults t
 inferredSetType = mkInferredLeafSimple Expression.Set setType
 
 -- | depApply (t : Set) (rt : t -> Set) (f : (d : t) -> rt d) (x : t) = f x
@@ -568,7 +569,7 @@ makeFunnyLambda g =
 
 testInfer ::
   String -> PureExprDefI t ->
-  InferResults (DefI t) -> HUnit.Test
+  InferResults t -> HUnit.Test
 testInfer name pureExpr result =
   testCase name .
   assertBool
