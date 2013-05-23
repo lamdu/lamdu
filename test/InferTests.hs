@@ -35,12 +35,7 @@ simpleTests =
       (holeWithInferredType (purePi "" pureHole pureHole))
       (holeWithInferredType pureHole)
   , testInfer "simple pi" $
-    iexpr
-      (purePi "pi" pureHole pureHole)
-      pureSet $
-    namedPi ""
-      (holeWithInferredType pureSet)
-      (holeWithInferredType pureSet)
+    piType "pi" (holeWithInferredType pureSet) (holeWithInferredType pureSet)
   ]
 
 applyIntToBoolFuncWithHole :: HUnit.Test

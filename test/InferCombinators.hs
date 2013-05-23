@@ -50,6 +50,10 @@ simple body iType = iexpr (bodyToPureExpr body) iType body
 integer :: Integer -> InferResults t
 integer x = simple (ExprLens.bodyLiteralInteger # x) pureIntegerType
 
+piType :: String -> InferResults t -> InferResults t -> InferResults t
+piType name src dest =
+  simple (ExprUtil.makePi (Guid.fromString name) src dest) pureSet
+
 holeWithInferredType :: PureExprDefI t -> InferResults t
 holeWithInferredType = simple bodyHole
 
