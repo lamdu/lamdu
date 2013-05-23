@@ -710,6 +710,11 @@ inferredVal expr =
   where
     (val, typ) = expr ^. Expr.ePayload
 
+inferRecordValTest :: HUnit.Test
+inferRecordValTest =
+  testInfer "id ({:Set) <hole> infers { val" $
+  makeApply [getDef "id", record Type [], inferredVal (record Val [])]
+
 hunitTests :: HUnit.Test
 hunitTests =
   HUnit.TestList $
@@ -729,6 +734,7 @@ hunitTests =
   , failResumptionAddsRules
   , emptyRecordTest
   , recordTest
+  , inferRecordValTest
   ]
   ++ resumptionTests
 
