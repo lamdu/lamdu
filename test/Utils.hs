@@ -56,7 +56,7 @@ pureApplyPoly1 ::
   String ->
   [Expression.Expression (DefI t) ()] ->
   Expression.Expression (DefI t) ()
-pureApplyPoly1 name xs = pureApply $ pureGetDef name : hole : xs
+pureApplyPoly1 name xs = pureApply $ pureGetDef name : pureHole : xs
 
 pureLambda ::
   String -> Expression.Expression def () ->
@@ -70,8 +70,8 @@ purePi ::
   Expression.Expression def ()
 purePi name x y = ExprUtil.pureExpression $ makeNamedPi name x y
 
-hole :: Expression.Expression def ()
-hole = ExprUtil.pureHole
+pureHole :: Expression.Expression def ()
+pureHole = ExprUtil.pureHole
 
 setType :: Expression.Expression def ()
 setType = ExprUtil.pureSet
@@ -201,7 +201,7 @@ pureGetRecursiveDefI =
 
 factorialExpr :: DataIRef.Expression t ()
 factorialExpr =
-  pureLambda "x" hole $
+  pureLambda "x" pureHole $
   pureApplyPoly1 "if"
   [ pureApplyPoly1 "==" [pureGetParam "x", literalInt 0]
   , literalInt 1
@@ -218,7 +218,7 @@ euler1Expr :: DataIRef.Expression t ()
 euler1Expr =
   pureApplyPoly1 "sum"
   [ pureApplyPoly1 "filter"
-    [ pureLambda "x" hole $
+    [ pureLambda "x" pureHole $
       pureApply
       [ pureGetDef "||"
       , pureApplyPoly1 "=="
