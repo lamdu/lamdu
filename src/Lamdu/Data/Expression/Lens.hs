@@ -21,6 +21,7 @@ module Lamdu.Data.Expression.Lens
   , bodyTag, exprTag
   , bodySet, exprSet
   , bodyIntegerType, exprIntegerType
+  , bodyTagType, exprTagType
   , bodyGetVariable, exprGetVariable
   ) where
 
@@ -82,6 +83,9 @@ exprSet = eBody . bodySet
 
 exprIntegerType :: Lens.Traversal' (Expression def a) ()
 exprIntegerType = eBody . bodyIntegerType
+
+exprTagType :: Lens.Traversal' (Expression def a) ()
+exprTagType = eBody . bodyTagType
 
 exprLeaves ::
   Lens.Traversal (Expression defa a) (Expression defb a) (Leaf defa) (Leaf defb)
@@ -160,6 +164,9 @@ bodySet = _BodyLeaf . _Set
 
 bodyIntegerType :: Lens.Prism' (Body def expr) ()
 bodyIntegerType = _BodyLeaf . _IntegerType
+
+bodyTagType :: Lens.Prism' (Body def expr) ()
+bodyTagType = _BodyLeaf . _TagType
 
 kindedRecordFields ::
   Kind -> Lens.Prism' (Record a) [(a, a)]

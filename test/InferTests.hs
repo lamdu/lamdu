@@ -57,10 +57,9 @@ leafTag guid =
 defParamTags :: String -> [Guid]
 defParamTags defName =
   innerMostPi (definitionTypes ! g) ^..
-  Expr.eBody . Expr._BodyLam . Expr.lambdaParamType .
-  Expr.eBody . Expr._BodyRecord .
-  Expr.recordFields . Lens.traversed . Lens._1 .
-  Expr.eBody . Expr._BodyLeaf . Expr._Tag
+  ExprLens.exprLam . Expr.lambdaParamType .
+  ExprLens.exprRecord . Expr.recordFields .
+  Lens.traversed . Lens._1 . ExprLens.exprTag
   where
     g = Guid.fromString defName
 
@@ -69,7 +68,7 @@ innerMostPi =
   last . pis
   where
     pis expr =
-      case expr ^? Expr.eBody . Expr._BodyLam of
+      case expr ^? ExprLens.exprLam of
       Just lam
         | lam ^. Expr.lambdaKind == Type ->
           expr : pis (lam ^. Expr.lambdaResult)
@@ -556,7 +555,7 @@ resumptionTests =
   [ testResume "resume with pi"
     (purePi "" pureHole pureHole) pureHole id
   , testResume "resume infer in apply func"
-    (pureGetDef "id") (pureApply [pureHole, pureHole]) (apply . Expr.applyFunc)
+    (pureGetDef "id") (pureApply [pureHole, pureHole]) (ExprLens.exprApply . Expr.applyFunc)
   , testResume "resume infer in lambda body"
     (pureGetDef "id") (pureLambda "" pureHole pureHole) lamBody
   , testResume "resume infer to get param 1 of 2"
@@ -571,7 +570,7 @@ resumptionTests =
       pureLambda "b" setType .
       pureLambda "f" pureHole)
      (pureApply [pureGetParam "f", pureGetParam "a", pureHole]))
-    (lamBody . lamBody . lamBody . apply . Expr.applyArg)
+    (lamBody . lamBody . lamBody . ExprLens.exprApply . Expr.applyArg)
   , testCase "ref to the def on the side" $
     let
       (exprD, inferContext) =
@@ -597,10 +596,8 @@ resumptionTests =
       purePi "" pureHole pureHole
   ]
   where
-    apply :: Lens.Traversal' (Expression def a) (Expr.Apply (Expression def a))
-    apply = Expr.eBody . Expr._BodyApply
     lamBody :: Lens.Traversal' (Expression def a) (Expression def a)
-    lamBody = Expr.eBody . Expr._BodyLam . Expr.lambdaResult
+    lamBody = ExprLens.exprLam . Expr.lambdaResult
 
 parRef :: String -> PureExpr def
 parRef =
@@ -620,11 +617,10 @@ failResumptionAddsRules =
       -- different tests to do that)
       inferWithConflicts (doLoad resumptionValue) resumptionPoint
     resumptionValue = pureGetDef "Bool" -- <- anything but Pi
-    lam = Expr.eBody . Expr._BodyLam
     Just pl =
       origInferred ^?
-      lam . Expr.lambdaParamType .
-      lam . Expr.lambdaResult .
+      ExprLens.exprLam . Expr.lambdaParamType .
+      ExprLens.exprLam . Expr.lambdaResult .
       Expr.ePayload
     resumptionPoint = Infer.iPoint pl
     (origInferred, origInferContext) = doInfer_ origExpr

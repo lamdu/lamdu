@@ -220,8 +220,9 @@ runLambdaBodyTypeToPiResultType (param, lambdaTypeRef) bodyTypeExpr (o0, o1) =
 
 runPiToLambda :: (Guid, ExprRef, ExprRef) -> RefExpression def -> Origin3 -> RuleResult def
 runPiToLambda (param, lambdaValueRef, bodyTypeRef) piBody (o0, o1, o2) = do
+  -- TODO: Use exprKindedLam
   Expr.Lambda Expr.Type piParam paramType resultType <-
-    piBody ^.. Expr.eBody . Expr._BodyLam
+    piBody ^.. ExprLens.exprLam
   [ -- Pi result type -> Body type
     ( bodyTypeRef
     , ExprUtil.subst piParam
@@ -252,7 +253,7 @@ runRecordValToType recordTypeRef fields o0 =
   ]
 
 recordFields :: Lens.Traversal' (Expr.Expression def a) (Expr.Expression def a, Expr.Expression def a)
-recordFields = Expr.eBody . Expr._BodyRecord . Expr.recordFields . traverse
+recordFields = ExprLens.exprRecord . Expr.recordFields . traverse
 
 recordField ::
   Applicative f => Guid ->
@@ -260,11 +261,11 @@ recordField ::
 recordField guid =
   recordFields .
   Lens.filtered
-  ((== Just guid) . (^? Lens._1 . Expr.eBody . Expr._BodyLeaf . Expr._Tag))
+  ((== Just guid) . (^? Lens._1 . ExprLens.exprTag))
 
 runRecordTypeToGetFieldType :: ExprRef -> RefExpression2 def -> RuleResult def
 runRecordTypeToGetFieldType getFieldTypeRef (recordTypeExpr, fieldTag) = do
-  guid <- fieldTag ^.. Expr.eBody . Expr._BodyLeaf . Expr._Tag
+  guid <- fieldTag ^.. ExprLens.exprTag
   (_, fieldType) <- recordTypeExpr ^.. recordField guid
   [(getFieldTypeRef, fieldType)]
 
@@ -297,7 +298,7 @@ runGetFieldTypeToRecordFieldType recordTypeRef (recordTypeExpr, fieldTag, getFie
             , recordTypeExpr & recordField guid . Lens._2 .~ getFieldTypeExpr
             )
           ]
-        | Lens.notNullOf (recordFields . Lens._1 . Expr.eBody . ExprLens.bodyHole) recordTypeExpr -> []
+        | Lens.notNullOf (recordFields . Lens._1 . ExprLens.exprHole) recordTypeExpr -> []
         | otherwise -> makeError
 
 getFieldRules :: ExprRef -> Expr.Expression def TypedValue -> ExprRef -> State Origin [Rule def ExprRef]
@@ -364,7 +365,7 @@ mergeToPiResult =
       | otherwise = dest
       where
         substs = dest ^. Expr.ePayload . rplSubstitutedArgs
-    notAHole = Lens.nullOf (Expr.eBody . ExprLens.bodyHole)
+    notAHole = Lens.nullOf ExprLens.exprHole
 
 runSimpleType :: ExprRef -> RefExpression def -> Origin2 -> RuleResult def
 runSimpleType typ valExpr (o0, o1) =
@@ -402,8 +403,8 @@ ruleSimpleType (TypedValue val typ) = SimpleType typ val <$> mkOrigin2
 
 runIntoApplyResult :: (Expr.Kind, ExprRef, ExprRef) -> RefExpression2 def -> RuleResult def
 runIntoApplyResult (k, applyRef, arg) (funcExpr, argExpr) = do
-  Expr.Lambda bk param _ result <-
-    funcExpr ^.. Expr.eBody . Expr._BodyLam
+  -- TODO: Use exprKindedLam
+  Expr.Lambda bk param _ result <- funcExpr ^.. ExprLens.exprLam
   guard $ k == bk
   return
     ( applyRef
@@ -426,8 +427,8 @@ runIntoArg (k, arg) (applyExpr, funcExpr) = do
   --   When PreSubst part refers to its param:
   --     PostSubst part <=> arg
   -- (apply, func) -> arg
-  Expr.Lambda bk param _ result <-
-    funcExpr ^.. Expr.eBody . Expr._BodyLam
+  -- TODO: Use exprKindedLam
+  Expr.Lambda bk param _ result <- funcExpr ^.. ExprLens.exprLam
   guard $ bk == k
   mergeToArg param arg result applyExpr
 
@@ -469,9 +470,7 @@ mergeToArg param arg =
     unit = Compose.O (pure Unit)
     onMatch _ _ = unit
     onMismatch expr post
-      | Lens.anyOf
-        (Expr.eBody . ExprLens.bodyParameterRef)
-        (== param) expr
+      | Lens.anyOf ExprLens.exprParameterRef (== param) expr
       = Compose.O . (fmap . const) Unit $ Writer.tell
         [( arg
          , post
@@ -494,9 +493,7 @@ argTypeToPiParamTypeRule (Expr.Apply func arg) =
 
 runRigidArgApplyTypeToResultType :: ExprRef -> RefExpression2 def -> Origin3 -> RuleResult def
 runRigidArgApplyTypeToResultType funcTypeRef (applyTypeExpr, argExpr) (o0, o1, o2) = do
-  par <-
-    argExpr ^..
-    Expr.eBody . Expr._BodyLeaf . Expr._GetVariable . Expr._ParameterRef
+  par <- argExpr ^.. ExprLens.exprParameterRef
   return
     ( funcTypeRef
     , makePi o0 (makeHole o1) $
@@ -592,11 +589,10 @@ runApplyToParts refs (applyExpr, funcExpr) = do
   -- If definitely not a redex (func also not a hole)
   -- Apply-Arg => Arg
   -- Apply-Func => Func
-  guard $ Lens.nullOf
-    (Expr.eBody . Expr._BodyLam . Expr.lambdaKind . Expr._Val)
-    funcExpr
-  guard $ Lens.nullOf (Expr.eBody . Expr._BodyLeaf . Expr._Hole) funcExpr
-  Expr.Apply aFunc aArg <- applyExpr ^.. Expr.eBody . Expr._BodyApply
+  -- TODO: Use exprKindedLam
+  guard $ Lens.nullOf (ExprLens.exprLam . Expr.lambdaKind . Expr._Val) funcExpr
+  guard $ Lens.nullOf ExprLens.exprHole funcExpr
+  Expr.Apply aFunc aArg <- applyExpr ^.. ExprLens.exprApply
   [(refs ^. Expr.applyFunc, aFunc), (refs ^. Expr.applyArg, aArg)]
 
 runVerifyTagRule :: ExprRef -> RefExpression def -> Origin -> RuleResult def
@@ -615,7 +611,7 @@ runVerifyTagRule tagRef tagExpr o0 =
 
 runDisallowTagTypeForApply :: ExprRef -> RefExpression def -> Origin3 -> RuleResult def
 runDisallowTagTypeForApply applyValRef applyTypeExpr (o0, o1, o2) = do
-  _ <- applyTypeExpr ^.. Expr.eBody . Expr._BodyLeaf . Expr._TagType
+  _ <- applyTypeExpr ^.. ExprLens.exprTagType
   makeError
   where
     makeError =

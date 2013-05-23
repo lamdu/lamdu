@@ -201,7 +201,7 @@ convertEmptyList app@(Expr.Apply funcI _) exprI = do
       , replaceNil = DataIRef.exprGuid <$> DataOps.setToHole exprS
       }
   guard $
-    Lens.anyOf (Expr.eBody . ExprLens.bodyDefinitionRef)
+    Lens.anyOf ExprLens.exprDefinitionRef
     (== Anchors.sfNil specialFunctions) funcI
   let guids = app ^.. Lens.traversed . subExpressionGuids
   (rHiddenGuids <>~ guids) .
@@ -216,7 +216,7 @@ isCons ::
   DataIRef.Expression t a -> Bool
 isCons specialFunctions =
   Lens.anyOf
-  (Expr.eBody . Expr._BodyApply . Expr.applyFunc . Expr.eBody . ExprLens.bodyDefinitionRef)
+  (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprDefinitionRef)
   (== Anchors.sfCons specialFunctions)
 
 convertList ::
@@ -228,7 +228,7 @@ convertList ::
 convertList (Expr.Apply funcI argI) argS exprI = do
   specialFunctions <- lift $ (^. SugarM.scSpecialFunctions) <$> SugarM.readContext
   Expr.Apply funcFuncI funcArgI <-
-    maybeToMPlus $ funcI ^? Expr.eBody . Expr._BodyApply
+    maybeToMPlus $ funcI ^? ExprLens.exprApply
   List innerValues innerListMActions <-
     maybeToMPlus $ argS ^? rBody . _BodyList
   guard $ isCons specialFunctions funcFuncI

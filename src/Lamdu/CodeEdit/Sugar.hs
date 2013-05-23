@@ -123,17 +123,16 @@ toHole :: MonadA m => Stored m -> T m ()
 toHole = void . DataOps.setToHole
 
 isGetParamOf :: Guid -> Expr.Expression def a -> Bool
-isGetParamOf =
-  Lens.anyOf (Expr.eBody . ExprLens.bodyParameterRef) . (==)
+isGetParamOf = Lens.anyOf ExprLens.exprParameterRef . (==)
 
 isGetFieldParam :: Guid -> Guid -> Expr.Expression def a -> Bool
 isGetFieldParam param tagG =
-  p . (^? Expr.eBody . Expr._BodyGetField)
+  p . (^? ExprLens.exprGetField)
   where
     p Nothing = False
     p (Just (Expr.GetField record tag)) =
       Lens.anyOf ExprLens.exprTag (== tagG) tag &&
-      Lens.anyOf (Expr.eBody . ExprLens.bodyParameterRef) (== param) record
+      Lens.anyOf ExprLens.exprParameterRef (== param) record
 
 deleteParamRef ::
   MonadA m => Guid -> Expr.Expression def (Stored m) -> T m ()
@@ -475,8 +474,8 @@ getScopeElement sugarContext (parGuid, typeExpr) = do
   mconcat . (scopePar :) <$>
     mapM onScopeField
     (typeExpr ^..
-     Expr.eBody . Expr._BodyRecord .
-     Expr.recordFields . traverse . Lens._1 . ExprLens.exprTag)
+     -- TODO: Use exprKindedRecordFields Type!
+     ExprLens.exprRecord . Expr.recordFields . traverse . Lens._1 . ExprLens.exprTag)
   where
     mkGetPar =
       case Map.lookup parGuid recordParamsMap of
@@ -580,7 +579,7 @@ convertTypeCheckedHoleH sugarContext mPaste iwc exprI =
         maybe iref (^. Expr.ePayload) $
         writtenExpr ^?
         subExpressionsThat
-        (Lens.notNullOf (Expr.eBody . ExprLens.bodyHole))
+        (Lens.notNullOf ExprLens.exprHole)
     plainHole =
       SugarExpr.make exprI . BodyHole =<< mkHole
 
@@ -782,7 +781,7 @@ convertGetField (Expr.GetField recExpr tagExpr) exprI = do
   mVar <- traverse mkGetVar $ do
     tag <- tagExpr ^? ExprLens.exprTag
     paramInfo <- Map.lookup tag tagParamInfos
-    param <- recExpr ^? Expr.eBody . ExprLens.bodyParameterRef
+    param <- recExpr ^? ExprLens.exprParameterRef
     guard $ param == SugarM.tpiFromParameters paramInfo
     return (tag, SugarM.tpiJumpTo paramInfo)
   case mVar of
@@ -820,10 +819,7 @@ convertExpressionI ee =
 -- Check no holes
 isCompleteType :: Expr.Expression def () -> Bool
 isCompleteType =
-  Lens.nullOf
-  ( Lens.folding ExprUtil.subExpressions
-  . Expr.eBody . Expr._BodyLeaf . Expr._Hole
-  )
+  Lens.nullOf (Lens.folding ExprUtil.subExpressions . ExprLens.exprHole)
 
 convertExpressionPure ::
   (MonadA m, Typeable1 m, RandomGen g) =>
@@ -1083,11 +1079,12 @@ mExtractWhere ::
   Expr.Expression def a ->
   Maybe (Expr.Apply (Expr.Expression def a), Expr.Lambda (Expr.Expression def a))
 mExtractWhere expr = do
-  apply <- expr ^? Expr.eBody . Expr._BodyApply
-  lambda <- apply ^? Expr.applyFunc . Expr.eBody . Expr._BodyLam
+  apply <- expr ^? ExprLens.exprApply
+  -- TODO: Use exprKindedLam
+  lambda <- apply ^? Expr.applyFunc . ExprLens.exprLam
   guard $ (lambda ^. Expr.lambdaKind) == Val
   -- paramType has to be Hole for this to be sugarred to Where
-  lambda ^? Expr.lambdaParamType . Expr.eBody . ExprLens.bodyHole
+  lambda ^? Expr.lambdaParamType . ExprLens.exprHole
   return (apply, lambda)
 
 convertWhereItems ::

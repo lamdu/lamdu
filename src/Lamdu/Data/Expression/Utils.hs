@@ -88,7 +88,7 @@ subst ::
   Expression def a ->
   Expression def a
 subst from to expr
-  | Lens.anyOf (eBody . ExprLens.bodyParameterRef) (== from) expr = to
+  | Lens.anyOf ExprLens.exprParameterRef (== from) expr = to
   | otherwise = expr & eBody . traverse %~ subst from to
 
 -- Transform expression to expression applied with holes,

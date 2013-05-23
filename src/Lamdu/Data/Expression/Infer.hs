@@ -405,10 +405,7 @@ setRefExpr ref newExpr = do
     Right mergedExpr -> do
       let
         isChange = not $ equiv mergedExpr curExpr
-        isHole =
-          Lens.notNullOf
-          (Expr.eBody . Expr._BodyLeaf . Expr._Hole)
-          mergedExpr
+        isHole = Lens.notNullOf ExprLens.exprHole mergedExpr
       when isChange $ touch ref
       when (isChange || isHole) $
         liftState $ sContext . exprRefsAt ref . rExpression .= mergedExpr
@@ -506,7 +503,7 @@ load loader mRecursiveDef expr =
       traverse loadType . ordNub $
       Lens.toListOf
       ( Lens.folding ExprUtil.subExpressions
-      . Expr.eBody . ExprLens.bodyDefinitionRef
+      . ExprLens.exprDefinitionRef
       . Lens.filtered ((/= mRecursiveDef) . Just)
       ) expr
     loadType defI = fmap ((,) defI) $ loadPureDefinitionType loader defI
