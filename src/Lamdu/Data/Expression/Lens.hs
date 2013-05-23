@@ -2,15 +2,14 @@
 module Lamdu.Data.Expression.Lens
   ( pureExpr
   , parameterRef, definitionRef
-
+  , kindedLam, kindedRecordFields
   , exprLam
   , exprApply
   , exprRecord
   , exprGetField
   , exprLeaf
-  , kindedRecordFields, exprKindedRecordFields
-  , kindedLam, exprKindedLam
-
+  , bodyKindedRecordFields, exprKindedRecordFields
+  , bodyKindedLam, exprKindedLam
   , bodyBitraverse, exprBitraverse
   , bodyDef, exprDef
   , bodyLeaves, exprLeaves
@@ -51,13 +50,13 @@ exprLeaf :: Lens.Traversal' (Expression def a) (Leaf def)
 exprLeaf = eBody . _BodyLeaf
 
 exprKindedRecordFields :: Kind -> Lens.Traversal' (Expression def a) [(Expression def a, Expression def a)]
-exprKindedRecordFields k = exprRecord . kindedRecordFields k
+exprKindedRecordFields k = eBody . bodyKindedRecordFields k
 
 exprKindedLam ::
   Kind ->
   Lens.Traversal' (Expression def a)
   (Guid, Expression def a, Expression def a)
-exprKindedLam k = eBody . _BodyLam . kindedLam k
+exprKindedLam k = eBody . bodyKindedLam k
 
 exprTag :: Lens.Traversal' (Expression def a) Guid
 exprTag = eBody . bodyTag
@@ -185,6 +184,12 @@ kindedLam k = Lens.prism' toLam fromLam
     fromLam (Lambda k0 paramGuid paramType result)
       | k == k0 = Just (paramGuid, paramType, result)
       | otherwise = Nothing
+
+bodyKindedLam :: Kind -> Lens.Prism' (Body def expr) (Guid, expr, expr)
+bodyKindedLam k = _BodyLam . kindedLam k
+
+bodyKindedRecordFields :: Kind -> Lens.Prism' (Body def expr) [(expr, expr)]
+bodyKindedRecordFields k = _BodyRecord . kindedRecordFields k
 
 -- Pure expressions:
 pureExpr :: Lens.Iso' (Expression def ()) (Body def (Expression def ()))
