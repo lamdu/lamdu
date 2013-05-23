@@ -40,17 +40,17 @@ type InferResults t =
   , PureExprDefI t
   )
 
-mkInferredGetDef :: String -> InferResults t
-mkInferredGetDef name =
-  mkInferredLeafSimple
+getDef :: String -> InferResults t
+getDef name =
+  leafSimple
   (Expression.GetVariable . Expression.DefinitionRef $ IRef.unsafeFromGuid g)
   (void (definitionTypes ! g))
   where
     g = Guid.fromString name
 
-mkInferredLeafTag :: Guid -> InferResults t
-mkInferredLeafTag guid =
-  mkInferredLeafSimple (Expression.Tag guid) .
+leafTag :: Guid -> InferResults t
+leafTag guid =
+  leafSimple (Expression.Tag guid) .
   ExprUtil.pureExpression $ Expression.BodyLeaf Expression.TagType
 
 defParamTags :: String -> [Guid]
@@ -74,8 +74,8 @@ innerMostPi =
           expr : pis (lam ^. Expression.lambdaResult)
       _ -> []
 
-mkInferredGetParam :: String -> PureExprDefI t -> InferResults t
-mkInferredGetParam name = mkInferredLeafSimple gv
+getParam :: String -> PureExprDefI t -> InferResults t
+getParam name = leafSimple gv
   where
     gv = Expression.GetVariable . Expression.ParameterRef $ Guid.fromString name
 
@@ -106,41 +106,41 @@ compareInferred x y =
     matchI = ExprUtil.matchExpression nop ((const . const) Nothing)
     nop () () = Just ()
 
-mkInferredLeafSimple :: Expression.Leaf (DefI t) -> PureExprDefI t -> InferResults t
-mkInferredLeafSimple leaf =
-  mkInferredLeaf leaf . ExprUtil.pureExpression $ Expression.BodyLeaf leaf
+leafSimple :: Expression.Leaf (DefI t) -> PureExprDefI t -> InferResults t
+leafSimple l =
+  leaf l . ExprUtil.pureExpression $ Expression.BodyLeaf l
 
-mkInferredLeaf ::
+leaf ::
   Expression.Leaf (DefI t) ->
   PureExprDefI t -> PureExprDefI t ->
   InferResults t
-mkInferredLeaf leaf val typ =
-  mkInferredNode val typ $ Expression.BodyLeaf leaf
+leaf l val typ =
+  iexpr val typ $ Expression.BodyLeaf l
 
-mkInferredNode ::
+iexpr ::
   PureExprDefI t ->
   PureExprDefI t ->
   Expression.Body (DefI t) (InferResults t) -> InferResults t
-mkInferredNode iVal iType body =
+iexpr iVal iType body =
   Expression.Expression body (iVal, iType)
 
 simpleTests :: [HUnit.Test]
 simpleTests =
   [ testInfer "literal int"
     (ExprUtil.pureExpression (Lens.review ExprUtil.bodyLiteralInteger 5)) $
-    mkInferredLeafSimple (Expression.LiteralInteger 5) intType
+    leafSimple (Expression.LiteralInteger 5) intType
   , testInfer "simple apply"
     (pureApply [pureHole, pureHole]) $
-    mkInferredNode pureHole pureHole $
+    iexpr pureHole pureHole $
     ExprUtil.makeApply
       (inferredHole (purePi "" pureHole pureHole))
       (inferredHole pureHole)
   , testInfer "simple pi"
     (purePi "pi" pureHole pureHole) $
-    mkInferredNode
+    iexpr
       (purePi "pi" pureHole pureHole)
       setType $
-    makeNamedPi ""
+    namedPi ""
       (inferredHole setType)
       (inferredHole setType)
   ]
@@ -149,47 +149,47 @@ applyIntToBoolFuncWithHole :: HUnit.Test
 applyIntToBoolFuncWithHole =
   testInfer "apply"
   (pureApply [pureGetDef "IntToBoolFunc", pureHole]) $
-  mkInferredNode
+  iexpr
     (pureApply [pureGetDef "IntToBoolFunc", pureHole])
     (pureGetDef "Bool") $
   ExprUtil.makeApply
-    (mkInferredGetDef "IntToBoolFunc")
+    (getDef "IntToBoolFunc")
     (inferredHole intType)
 
 inferPart :: HUnit.Test
 inferPart =
   testInfer "foo (xs:List ?) = 5 : xs"
   (exprWithHoles pureHole pureHole) $
-  mkInferredNode
+  iexpr
     (exprWithHoles intType intType)
     endoListOfInt $
-  makeNamedLambda "xs"
-    (mkInferredNode (listOf intType) setType
+  namedLambda "xs"
+    (iexpr (listOf intType) setType
       (ExprUtil.makeApply
-        (mkInferredGetDef "List")
-        (mkInferredLeaf Expression.Hole intType setType)
+        (getDef "List")
+        (leaf Expression.Hole intType setType)
       )
     ) $
-  mkInferredNode
+  iexpr
     (applyWithHole intType)
     (listOf intType) $
   ExprUtil.makeApply
-    ( mkInferredNode
+    ( iexpr
         (pureApply [pureGetDef ":", intType, five])
         endoListOfInt
       ( ExprUtil.makeApply
-        ( mkInferredNode
+        ( iexpr
             (pureApply [pureGetDef ":", intType])
             (purePi "" intType endoListOfInt)
           (ExprUtil.makeApply
-            (mkInferredGetDef ":")
-            (mkInferredLeaf Expression.Hole intType setType)
+            (getDef ":")
+            (leaf Expression.Hole intType setType)
           )
         )
-        (mkInferredLeafSimple (Expression.LiteralInteger 5) intType)
+        (leafSimple (Expression.LiteralInteger 5) intType)
       )
     ) $
-  mkInferredGetParam "xs" $ listOf intType
+  getParam "xs" $ listOf intType
   where
     endoListOfInt = join (purePi "pi") $ listOf intType
     listOf x = pureApply [pureGetDef "List", x]
@@ -200,23 +200,23 @@ inferPart =
 applyOnVar :: HUnit.Test
 applyOnVar =
   testInfer "apply on var"
-  (makeFunnyLambda "lambda"
+  (funnyLambda "lambda"
     (pureApply [ pureHole, pureGetParam "lambda" ] )
   ) $
-  mkInferredNode
-    (makeFunnyLambda "" pureHole)
+  iexpr
+    (funnyLambda "" pureHole)
     (purePi "" pureHole (pureGetDef "Bool")) $
-  makeNamedLambda "lambda" (inferredHole setType) $
-  mkInferredNode
+  namedLambda "lambda" (inferredHole setType) $
+  iexpr
     (pureApply [pureGetDef "IntToBoolFunc", pureHole])
     (pureGetDef "Bool") $
-  ExprUtil.makeApply (mkInferredGetDef "IntToBoolFunc") $
-  mkInferredNode
+  ExprUtil.makeApply (getDef "IntToBoolFunc") $
+  iexpr
     pureHole
     intType $
   ExprUtil.makeApply
     (inferredHole (purePi "" pureHole intType)) $
-  mkInferredLeafSimple
+  leafSimple
     ((Expression.GetVariable . Expression.ParameterRef . Guid.fromString) "lambda")
     pureHole
 
@@ -224,57 +224,57 @@ idTest :: HUnit.Test
 idTest =
   testInfer "id test"
   applyIdInt $
-  mkInferredNode
+  iexpr
     applyIdInt
     (purePi "" intType intType) $
   ExprUtil.makeApply
-    (mkInferredGetDef "id") $
-    mkInferredLeafSimple Expression.IntegerType setType
+    (getDef "id") $
+    leafSimple Expression.IntegerType setType
 
 inferFromOneArgToOther :: HUnit.Test
 inferFromOneArgToOther =
   testInfer "f = \\ a b (x:Map _ _) (y:Map a b) -> if {_ x y}"
   (expr False) .
-  mkInferredNode (expr True) (purePi "a" setType lamBType) $
-  makeNamedLambda "a"
-    (mkInferredLeaf Expression.Hole setType setType) $
-  mkInferredNode (lamB True) lamBType $
-  makeNamedLambda "b"
-    (mkInferredLeaf Expression.Hole setType setType) $
-  mkInferredNode (lamX True) lamXType $
-  makeNamedLambda "x"
-    ( mkInferredNode (typeOfX True) setType $
+  iexpr (expr True) (purePi "a" setType lamBType) $
+  namedLambda "a"
+    (leaf Expression.Hole setType setType) $
+  iexpr (lamB True) lamBType $
+  namedLambda "b"
+    (leaf Expression.Hole setType setType) $
+  iexpr (lamX True) lamXType $
+  namedLambda "x"
+    ( iexpr (typeOfX True) setType $
       ExprUtil.makeApply
-        ( mkInferredNode (typeOfX' True) setToSet $
+        ( iexpr (typeOfX' True) setToSet $
           ExprUtil.makeApply
-            (mkInferredGetDef "Map") $
-          mkInferredLeaf Expression.Hole (pureGetParam "a") setType
+            (getDef "Map") $
+          leaf Expression.Hole (pureGetParam "a") setType
         ) $
-      mkInferredLeaf Expression.Hole (pureGetParam "b") setType
+      leaf Expression.Hole (pureGetParam "b") setType
     ) $
-  mkInferredNode (lamY True) lamYType $
-  makeNamedLambda "y"
-    ( mkInferredNode (typeOfX True) setType $
+  iexpr (lamY True) lamYType $
+  namedLambda "y"
+    ( iexpr (typeOfX True) setType $
       ExprUtil.makeApply
-        ( mkInferredNode (typeOfX' True) setToSet $
+        ( iexpr (typeOfX' True) setToSet $
           ExprUtil.makeApply
-            (mkInferredGetDef "Map") $
-          mkInferredGetParam "a" setType
+            (getDef "Map") $
+          getParam "a" setType
         ) $
-      mkInferredGetParam "b" setType
+      getParam "b" setType
     ) $
-  mkInferredNode (body True) (typeOfX True) $
+  iexpr (body True) (typeOfX True) $
   ExprUtil.makeApply
-    ( mkInferredNode (body1 True) body1Type $
+    ( iexpr (body1 True) body1Type $
       ExprUtil.makeApply
-        (mkInferredGetDef "if") $
-      mkInferredLeaf Expression.Hole (typeOfX True) setType
+        (getDef "if") $
+      leaf Expression.Hole (typeOfX True) setType
     ) $
-  mkInferredNode ifParams ifParamsType $
+  iexpr ifParams ifParamsType $
   Expression.BodyRecord $ Expression.Record Expression.Val
-  [ (mkInferredLeafTag t0, mkInferredLeafSimple Expression.Hole (pureGetDef "Bool"))
-  , (mkInferredLeafTag t1, mkInferredGetParam "x" (typeOfX True))
-  , (mkInferredLeafTag t2, mkInferredGetParam "y" (typeOfX True))
+  [ (leafTag t0, leafSimple Expression.Hole (pureGetDef "Bool"))
+  , (leafTag t1, getParam "x" (typeOfX True))
+  , (leafTag t2, getParam "y" (typeOfX True))
   ]
   where
     [t0, t1, t2] = defParamTags "if"
@@ -326,40 +326,40 @@ monomorphRedex :: HUnit.Test
 monomorphRedex =
   testInfer "foo = f (\\~ x -> (\\~ -> x) _) where f ~:(a:Set -> _ -> a) = _"
   expr .
-  mkInferredNode inferredExpr pureHole $
+  iexpr inferredExpr pureHole $
   ExprUtil.makeApply
-    ( mkInferredNode (bodyLambda True) bodyLambdaType $
-      makeNamedLambda "f"
-        (mkInferredLeaf Expression.Hole fType setType) $
-      mkInferredNode (body True) pureHole $
+    ( iexpr (bodyLambda True) bodyLambdaType $
+      namedLambda "f"
+        (leaf Expression.Hole fType setType) $
+      iexpr (body True) pureHole $
       ExprUtil.makeApply
-        (mkInferredGetParam "f" fType) $
-      mkInferredNode (fArg True) (fArgType True) $
-      makeNamedLambda "b"
-        (mkInferredLeaf Expression.Hole setType setType) $
-      mkInferredNode xToX (fArgInnerType True) $
-      makeNamedLambda "x"
-        (mkInferredLeaf Expression.Hole (pureGetParam "b") setType) $
-      mkInferredNode (pureGetParam "x") (pureGetParam "b") $
+        (getParam "f" fType) $
+      iexpr (fArg True) (fArgType True) $
+      namedLambda "b"
+        (leaf Expression.Hole setType setType) $
+      iexpr xToX (fArgInnerType True) $
+      namedLambda "x"
+        (leaf Expression.Hole (pureGetParam "b") setType) $
+      iexpr (pureGetParam "x") (pureGetParam "b") $
       ExprUtil.makeApply
-        ( mkInferredNode cToX (purePi "" pureHole (pureGetParam "b")) $
-          makeNamedLambda "c"
-            (mkInferredLeafSimple Expression.Hole setType) $
-          mkInferredGetParam "x" $ pureGetParam "b"
+        ( iexpr cToX (purePi "" pureHole (pureGetParam "b")) $
+          namedLambda "c"
+            (leafSimple Expression.Hole setType) $
+          getParam "x" $ pureGetParam "b"
         ) $
-      mkInferredLeafSimple Expression.Hole pureHole
+      leafSimple Expression.Hole pureHole
     ) $
-  mkInferredNode (fExpr True) fType $
-  makeNamedLambda "fArg"
-    ( mkInferredNode (fArgType True) setType $
-      makeNamedPi "b"
-        (mkInferredLeafSimple Expression.Set setType) $
-      mkInferredNode (fArgInnerType True) setType $
-      makeNamedPi "x"
-        (mkInferredLeaf Expression.Hole (pureGetParam "b") setType) $
-      mkInferredGetParam "b" setType
+  iexpr (fExpr True) fType $
+  namedLambda "fArg"
+    ( iexpr (fArgType True) setType $
+      namedPi "b"
+        (leafSimple Expression.Set setType) $
+      iexpr (fArgInnerType True) setType $
+      namedPi "x"
+        (leaf Expression.Hole (pureGetParam "b") setType) $
+      getParam "b" setType
     ) $
-  mkInferredLeafSimple Expression.Hole pureHole
+  leafSimple Expression.Hole pureHole
   where
     expr = pureApply [bodyLambda False, fExpr False]
     inferredExpr = pureApply [fExpr True, fArg True]
@@ -385,19 +385,19 @@ fOfXIsFOf5 :: HUnit.Test
 fOfXIsFOf5 =
   testInfer "f x = f 5"
   (pureLambda "x" pureHole (pureApply [getRecursiveDef, five])) $
-  mkInferredNode
+  iexpr
     (pureLambda "" intType (pureApply [getRecursiveDef, five]))
     (purePi "" intType pureHole) $
-  makeNamedLambda "x"
-    (mkInferredLeaf Expression.Hole intType setType) $
-  mkInferredNode
+  namedLambda "x"
+    (leaf Expression.Hole intType setType) $
+  iexpr
     (pureApply [getRecursiveDef, five])
     pureHole $
   ExprUtil.makeApply
-    (mkInferredLeafSimple
+    (leafSimple
       (Expression.GetVariable (Expression.DefinitionRef recursiveDefI))
       (purePi "" intType pureHole)) $
-  mkInferredLeafSimple (Expression.LiteralInteger 5) intType
+  leafSimple (Expression.LiteralInteger 5) intType
 
 five :: PureExprDefI t
 five = ExprUtil.pureExpression $ Lens.review ExprUtil.bodyLiteralInteger 5
@@ -406,12 +406,12 @@ argTypeGoesToPi :: HUnit.Test
 argTypeGoesToPi =
   testInfer "arg type goes to pi"
   (pureApply [pureHole, five]) $
-  mkInferredNode
+  iexpr
     pureHole
     pureHole $
   ExprUtil.makeApply
     (inferredHole (purePi "" intType pureHole)) $
-  mkInferredLeafSimple (Expression.LiteralInteger 5) intType
+  leafSimple (Expression.LiteralInteger 5) intType
 
 idOnAnInt :: HUnit.Test
 idOnAnInt =
@@ -422,7 +422,7 @@ idOnAnInt =
     , five
     ]
   ) $
-  mkInferredNode
+  iexpr
     (pureApply
       [ pureGetDef "id"
       , intType
@@ -431,49 +431,49 @@ idOnAnInt =
     )
     intType $
   ExprUtil.makeApply
-    (mkInferredNode
+    (iexpr
       (pureApply [pureGetDef "id", intType])
       (purePi "" intType intType)
       (ExprUtil.makeApply
-        (mkInferredGetDef "id")
-        ((mkInferredNode intType setType . Expression.BodyLeaf) Expression.Hole)
+        (getDef "id")
+        ((iexpr intType setType . Expression.BodyLeaf) Expression.Hole)
       )
     ) $
-  mkInferredLeafSimple (Expression.LiteralInteger 5) intType
+  leafSimple (Expression.LiteralInteger 5) intType
 
 idOnHole :: HUnit.Test
 idOnHole =
   testInfer "id hole"
   (pureApply [pureGetDef "id", pureHole]) .
-  mkInferredNode
+  iexpr
     (pureApply [pureGetDef "id", pureHole])
     (purePi "" pureHole pureHole) .
   ExprUtil.makeApply
-    (mkInferredGetDef "id") $
+    (getDef "id") $
   inferredHole setType
 
 forceMono :: HUnit.Test
 forceMono =
   testInfer "id (id _ _)"
   (pureApply [pureGetDef "id", idHoleHole]) .
-  mkInferredNode
+  iexpr
     (pureApply [pureGetDef "id", idSetHole])
     (purePi "" idSetHole idSetHole) $
   ExprUtil.makeApply
-    (mkInferredGetDef "id") $
-  mkInferredNode
+    (getDef "id") $
+  iexpr
     idSetHole
     setType $
   ExprUtil.makeApply
-    (mkInferredNode
+    (iexpr
       idSet
       (purePi "" setType setType)
       (ExprUtil.makeApply
-        (mkInferredGetDef "id")
-        (mkInferredLeaf Expression.Hole setType setType)
+        (getDef "id")
+        (leaf Expression.Hole setType setType)
       )
     ) $
-  mkInferredLeafSimple Expression.Hole setType
+  leafSimple Expression.Hole setType
   where
     idHole = pureApply [pureGetDef "id", pureHole]
     idHoleHole = pureApply [idHole, pureHole]
@@ -481,10 +481,10 @@ forceMono =
     idSetHole = pureApply [idSet, pureHole]
 
 inferredHole :: PureExprDefI t -> InferResults t
-inferredHole = mkInferredLeafSimple Expression.Hole
+inferredHole = leafSimple Expression.Hole
 
 inferredSetType :: InferResults t
-inferredSetType = mkInferredLeafSimple Expression.Set setType
+inferredSetType = leafSimple Expression.Set setType
 
 -- | depApply (t : Set) (rt : t -> Set) (f : (d : t) -> rt d) (x : t) = f x
 depApply :: HUnit.Test
@@ -493,34 +493,34 @@ depApply =
   -- expr:
   tLambda .
   -- expected result:
-  mkInferredNode  tLambda  tPi  . makeNamedLambda "t"  inferredSetType .
-  mkInferredNode rtLambda rtPi  . makeNamedLambda "rt" inferredRTType .
-  mkInferredNode  fLambda  fPi  . makeNamedLambda "f"  inferredFParamType .
-  mkInferredNode  xLambda  xPi  . makeNamedLambda "x"  inferredXParamType .
-  mkInferredNode fOfX (rtAppliedTo "x") $ ExprUtil.makeApply inferredF inferredX
+  iexpr  tLambda  tPi  . namedLambda "t"  inferredSetType .
+  iexpr rtLambda rtPi  . namedLambda "rt" inferredRTType .
+  iexpr  fLambda  fPi  . namedLambda "f"  inferredFParamType .
+  iexpr  xLambda  xPi  . namedLambda "x"  inferredXParamType .
+  iexpr fOfX (rtAppliedTo "x") $ ExprUtil.makeApply inferredF inferredX
   where
-    inferredF = mkInferredGetParam "f" fParamType
-    inferredX = mkInferredGetParam "x" xParamType
-    inferredT = mkInferredGetParam "t" setType
-    inferredRT = mkInferredGetParam "rt" rtParamType
+    inferredF = getParam "f" fParamType
+    inferredX = getParam "x" xParamType
+    inferredT = getParam "t" setType
+    inferredRT = getParam "rt" rtParamType
     inferredRTType =
-      mkInferredNode rtParamType setType $
-      makeNamedPi "" inferredT inferredSetType
+      iexpr rtParamType setType $
+      namedPi "" inferredT inferredSetType
     inferredFParamType =
-      mkInferredNode fParamType setType . makeNamedPi "d" inferredT .
-      mkInferredNode (rtAppliedTo "d") setType .
+      iexpr fParamType setType . namedPi "d" inferredT .
+      iexpr (rtAppliedTo "d") setType .
       ExprUtil.makeApply inferredRT .
-      mkInferredGetParam "d" $
+      getParam "d" $
       pureGetParam "t"
     inferredXParamType = inferredT
-    makeLamPi name paramType (body, bodyType) =
+    lamPi name paramType (body, bodyType) =
       ( pureLambda name paramType body
       , purePi name paramType bodyType
       )
-    (tLambda, tPi) = makeLamPi "t" setType rt
-    rt@(rtLambda, rtPi) = makeLamPi "rt" rtParamType f
-    f@(fLambda, fPi) = makeLamPi "f" fParamType x
-    x@(xLambda, xPi) = makeLamPi "x" xParamType (fOfX, rtAppliedTo "x")
+    (tLambda, tPi) = lamPi "t" setType rt
+    rt@(rtLambda, rtPi) = lamPi "rt" rtParamType f
+    f@(fLambda, fPi) = lamPi "f" fParamType x
+    x@(xLambda, xPi) = lamPi "x" xParamType (fOfX, rtAppliedTo "x")
     fOfX = ExprUtil.pureExpression . ExprUtil.makeApply (pureGetParam "f") $ pureGetParam "x"
     rtParamType = purePi "" (pureGetParam "t") setType
     fParamType =
@@ -558,11 +558,11 @@ applyIdInt =
 
 -- {g, x} =>
 -- \(g:hole) -> IntToBoolFunc x
-makeFunnyLambda ::
+funnyLambda ::
   String ->
   PureExprDefI t ->
   PureExprDefI t
-makeFunnyLambda g =
+funnyLambda g =
   pureLambda g pureHole .
   ExprUtil.pureExpression .
   ExprUtil.makeApply (pureGetDef "IntToBoolFunc")
@@ -626,7 +626,7 @@ resumptionTests =
         , showExpressionWithInferred resultR
         ]) .
       compareInferred resultR .
-      mkInferredLeafSimple (Expression.GetVariable (Expression.DefinitionRef recursiveDefI)) $
+      leafSimple (Expression.GetVariable (Expression.DefinitionRef recursiveDefI)) $
       purePi "" pureHole pureHole
   ]
   where
@@ -635,8 +635,8 @@ resumptionTests =
     lamBody :: Lens.Traversal' (Expression def a) (Expression def a)
     lamBody = Expression.eBody . Expression._BodyLam . Expression.lambdaResult
 
-makeParameterRef :: String -> PureExpr def
-makeParameterRef =
+parRef :: String -> PureExpr def
+parRef =
   ExprUtil.pureExpression . Lens.review ExprUtil.bodyParameterRef . Guid.fromString
 
 -- f     x    = x _ _
@@ -663,12 +663,12 @@ failResumptionAddsRules =
     (origInferred, origInferContext) = doInfer_ origExpr
     origExpr =
       pureLambda "x" (purePi "" pureHole pureHole) $
-      pureApply [makeParameterRef "x", pureHole, pureHole]
+      pureApply [parRef "x", pureHole, pureHole]
 
 emptyRecordTest :: HUnit.Test
 emptyRecordTest =
   testInfer "empty record type infer" emptyRecordType $
-  mkInferredNode emptyRecordType setType emptyRecordTypeBody
+  iexpr emptyRecordType setType emptyRecordTypeBody
   where
     emptyRecordType = ExprUtil.pureExpression emptyRecordTypeBody
     emptyRecordTypeBody =
@@ -680,15 +680,15 @@ tagType = ExprUtil.pureExpression $ Expression.BodyLeaf Expression.TagType
 recordTest :: HUnit.Test
 recordTest =
   testInfer "f a x:a = {x" lamA $
-  mkInferredNode lamA piA $
-  makeNamedLambda "a" (mkInferredLeafSimple Expression.Set setType) $
-  mkInferredNode lamX piX $
-  makeNamedLambda "x" (mkInferredGetParam "a" setType) $
-  mkInferredNode recVal recType $
+  iexpr lamA piA $
+  namedLambda "a" (leafSimple Expression.Set setType) $
+  iexpr lamX piX $
+  namedLambda "x" (getParam "a" setType) $
+  iexpr recVal recType $
   Expression.BodyRecord $
   Expression.Record Expression.Val
-  [( mkInferredLeafSimple fieldTagLeaf tagType
-   , mkInferredGetParam "x" (pureGetParam "a")
+  [( leafSimple fieldTagLeaf tagType
+   , getParam "x" (pureGetParam "a")
    )]
   where
     lamA =

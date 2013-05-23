@@ -45,11 +45,11 @@ showStructure = show . (Invisible <$)
 instance Show def => Show (PureExpr def) where
   show (Expression.Expression value ()) = show value
 
-makeNamedLambda :: String -> expr -> expr -> Expression.Body def expr
-makeNamedLambda = ExprUtil.makeLambda . Guid.fromString
+namedLambda :: String -> expr -> expr -> Expression.Body def expr
+namedLambda = ExprUtil.makeLambda . Guid.fromString
 
-makeNamedPi :: String -> expr -> expr -> Expression.Body def expr
-makeNamedPi = ExprUtil.makePi . Guid.fromString
+namedPi :: String -> expr -> expr -> Expression.Body def expr
+namedPi = ExprUtil.makePi . Guid.fromString
 
 pureApply :: [PureExpr def] -> PureExpr def
 pureApply = foldl1 (fmap ExprUtil.pureExpression . ExprUtil.makeApply)
@@ -65,13 +65,13 @@ pureLambda ::
   String -> PureExpr def ->
   PureExpr def ->
   PureExpr def
-pureLambda name x y = ExprUtil.pureExpression $ makeNamedLambda name x y
+pureLambda name x y = ExprUtil.pureExpression $ namedLambda name x y
 
 purePi ::
   String -> PureExpr def ->
   PureExpr def ->
   PureExpr def
-purePi name x y = ExprUtil.pureExpression $ makeNamedPi name x y
+purePi name x y = ExprUtil.pureExpression $ namedPi name x y
 
 pureHole :: PureExpr def
 pureHole = ExprUtil.pureHole
