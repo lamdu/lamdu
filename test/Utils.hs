@@ -30,6 +30,8 @@ import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
+type PureExpr def = Expression.Expression def ()
+
 (==>) :: k -> v -> Map k v
 (==>) = Map.singleton
 
@@ -39,7 +41,7 @@ instance Show Invisible where
 showStructure :: Show def => Expression.Body def a -> String
 showStructure = show . (Invisible <$)
 
-instance Show def => Show (Expression.Expression def ()) where
+instance Show def => Show (PureExpr def) where
   show (Expression.Expression value ()) = show value
 
 makeNamedLambda :: String -> expr -> expr -> Expression.Body def expr
@@ -48,7 +50,7 @@ makeNamedLambda = ExprUtil.makeLambda . Guid.fromString
 makeNamedPi :: String -> expr -> expr -> Expression.Body def expr
 makeNamedPi = ExprUtil.makePi . Guid.fromString
 
-pureApply :: [Expression.Expression def ()] -> Expression.Expression def ()
+pureApply :: [PureExpr def] -> PureExpr def
 pureApply = foldl1 (fmap ExprUtil.pureExpression . ExprUtil.makeApply)
 
 -- 1 dependent param
@@ -59,27 +61,27 @@ pureApplyPoly1 ::
 pureApplyPoly1 name xs = pureApply $ pureGetDef name : pureHole : xs
 
 pureLambda ::
-  String -> Expression.Expression def () ->
-  Expression.Expression def () ->
-  Expression.Expression def ()
+  String -> PureExpr def ->
+  PureExpr def ->
+  PureExpr def
 pureLambda name x y = ExprUtil.pureExpression $ makeNamedLambda name x y
 
 purePi ::
-  String -> Expression.Expression def () ->
-  Expression.Expression def () ->
-  Expression.Expression def ()
+  String -> PureExpr def ->
+  PureExpr def ->
+  PureExpr def
 purePi name x y = ExprUtil.pureExpression $ makeNamedPi name x y
 
-pureHole :: Expression.Expression def ()
+pureHole :: PureExpr def
 pureHole = ExprUtil.pureHole
 
-setType :: Expression.Expression def ()
+setType :: PureExpr def
 setType = ExprUtil.pureSet
 
-intType :: Expression.Expression def ()
+intType :: PureExpr def
 intType = ExprUtil.pureIntegerType
 
-literalInt :: Integer -> Expression.Expression def ()
+literalInt :: Integer -> PureExpr def
 literalInt = ExprUtil.pureExpression . Lens.review ExprUtil.bodyLiteralInteger
 
 pureGetDef :: String -> DataIRef.Expression t ()
@@ -87,7 +89,7 @@ pureGetDef name =
   ExprUtil.pureExpression . Lens.review ExprUtil.bodyDefinitionRef . IRef.unsafeFromGuid $
   Guid.fromString name
 
-pureGetParam :: String -> Expression.Expression def ()
+pureGetParam :: String -> PureExpr def
 pureGetParam name =
   ExprUtil.pureExpression . Lens.review ExprUtil.bodyParameterRef $
   Guid.fromString name

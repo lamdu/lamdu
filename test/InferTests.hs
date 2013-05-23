@@ -36,8 +36,8 @@ import qualified Test.HUnit as HUnit
 
 type InferResults def =
   Expression.Expression def
-  ( Expression.Expression def ()
-  , Expression.Expression def ()
+  ( PureExpr def
+  , PureExpr def
   )
 
 mkInferredGetDef :: String -> InferResults (DefI t)
@@ -74,7 +74,7 @@ innerMostPi =
           expr : pis (lam ^. Expression.lambdaResult)
       _ -> []
 
-mkInferredGetParam :: String -> Expression.Expression def () -> InferResults def
+mkInferredGetParam :: String -> PureExpr def -> InferResults def
 mkInferredGetParam name = mkInferredLeafSimple gv
   where
     gv = Expression.GetVariable . Expression.ParameterRef $ Guid.fromString name
@@ -106,19 +106,19 @@ compareInferred x y =
     matchI = ExprUtil.matchExpression nop ((const . const) Nothing)
     nop () () = Just ()
 
-mkInferredLeafSimple :: Expression.Leaf def -> Expression.Expression def () -> InferResults def
+mkInferredLeafSimple :: Expression.Leaf def -> PureExpr def -> InferResults def
 mkInferredLeafSimple leaf =
   mkInferredLeaf leaf . ExprUtil.pureExpression $ Expression.BodyLeaf leaf
 
 mkInferredLeaf ::
-  Expression.Leaf def -> Expression.Expression def () -> Expression.Expression def () ->
+  Expression.Leaf def -> PureExpr def -> PureExpr def ->
   InferResults def
 mkInferredLeaf leaf val typ =
   mkInferredNode val typ $ Expression.BodyLeaf leaf
 
 mkInferredNode ::
-  Expression.Expression def () ->
-  Expression.Expression def () ->
+  PureExpr def ->
+  PureExpr def ->
   Expression.Body def (InferResults def) -> InferResults def
 mkInferredNode iVal iType body =
   Expression.Expression body (iVal, iType)
@@ -479,7 +479,7 @@ forceMono =
     idSet = pureApply [pureGetDef "id", setType]
     idSetHole = pureApply [idSet, pureHole]
 
-inferredHole :: Expression.Expression def () -> InferResults def
+inferredHole :: PureExpr def -> InferResults def
 inferredHole = mkInferredLeafSimple Expression.Hole
 
 inferredSetType :: InferResults def
@@ -634,7 +634,7 @@ resumptionTests =
     lamBody :: Lens.Traversal' (Expression def a) (Expression def a)
     lamBody = Expression.eBody . Expression._BodyLam . Expression.lambdaResult
 
-makeParameterRef :: String -> Expression.Expression def ()
+makeParameterRef :: String -> PureExpr def
 makeParameterRef =
   ExprUtil.pureExpression . Lens.review ExprUtil.bodyParameterRef . Guid.fromString
 
