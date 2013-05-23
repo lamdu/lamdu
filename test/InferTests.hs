@@ -398,7 +398,7 @@ fOfXIsFOf5 =
       (purePi "" intType pureHole)) $
   mkInferredLeafSimple (Expression.LiteralInteger 5) intType
 
-five :: DataIRef.Expression t ()
+five :: PureExprDefI t
 five = ExprUtil.pureExpression $ Lens.review ExprUtil.bodyLiteralInteger 5
 
 argTypeGoesToPi :: HUnit.Test
@@ -532,8 +532,8 @@ testCase :: String -> HUnit.Assertion -> HUnit.Test
 testCase name = HUnit.TestLabel name . HUnit.TestCase
 
 testResume ::
-  String -> DataIRef.Expression t () ->
-  DataIRef.Expression t () ->
+  String -> PureExprDefI t ->
+  PureExprDefI t ->
   Lens.Traversal'
     (Expression (DefI t) (Infer.Inferred (DefI t)))
     (Expression (DefI t) (Infer.Inferred (DefI t))) ->
@@ -547,7 +547,7 @@ testResume name newExpr testExpr lens =
     void . evaluate . (`runStateT` inferContext) $
     doInferM (Infer.iPoint pl) newExpr
 
-applyIdInt :: DataIRef.Expression t ()
+applyIdInt :: PureExprDefI t
 applyIdInt =
   ExprUtil.pureExpression
   (ExprUtil.makeApply
@@ -559,15 +559,15 @@ applyIdInt =
 -- \(g:hole) -> IntToBoolFunc x
 makeFunnyLambda ::
   String ->
-  DataIRef.Expression t () ->
-  DataIRef.Expression t ()
+  PureExprDefI t ->
+  PureExprDefI t
 makeFunnyLambda g =
   pureLambda g pureHole .
   ExprUtil.pureExpression .
   ExprUtil.makeApply (pureGetDef "IntToBoolFunc")
 
 testInfer ::
-  String -> DataIRef.Expression t () ->
+  String -> PureExprDefI t ->
   InferResults (DefI t) -> HUnit.Test
 testInfer name pureExpr result =
   testCase name .
@@ -579,7 +579,7 @@ testInfer name pureExpr result =
   where
     inferredExpr = inferResults . fst $ doInfer_ pureExpr
 
-getRecursiveDef :: DataIRef.Expression t ()
+getRecursiveDef :: PureExprDefI t
 getRecursiveDef =
   ExprUtil.pureExpression $ Lens.review ExprUtil.bodyDefinitionRef recursiveDefI
 
@@ -734,7 +734,7 @@ hunitTests =
   ]
   ++ resumptionTests
 
-inferPreservesShapeProp :: DataIRef.Expression t () -> Property
+inferPreservesShapeProp :: PureExprDefI t -> Property
 inferPreservesShapeProp expr =
   case inferMaybe expr of
     Nothing -> property rejected

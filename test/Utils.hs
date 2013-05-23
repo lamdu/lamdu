@@ -31,6 +31,7 @@ import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 type PureExpr def = Expression.Expression def ()
+type PureExprDefI t = PureExpr (DefI t)
 
 (==>) :: k -> v -> Map k v
 (==>) = Map.singleton
@@ -84,7 +85,7 @@ intType = ExprUtil.pureIntegerType
 literalInt :: Integer -> PureExpr def
 literalInt = ExprUtil.pureExpression . Lens.review ExprUtil.bodyLiteralInteger
 
-pureGetDef :: String -> DataIRef.Expression t ()
+pureGetDef :: String -> PureExprDefI t
 pureGetDef name =
   ExprUtil.pureExpression . Lens.review ExprUtil.bodyDefinitionRef . IRef.unsafeFromGuid $
   Guid.fromString name
@@ -118,7 +119,7 @@ showExpressionWithConflicts =
         InferredWithConflicts inferred tErrors vErrors =
           inferredExpr ^. Expression.ePayload
 
-definitionTypes :: Map Guid (DataIRef.Expression t ())
+definitionTypes :: Map Guid (PureExprDefI t)
 definitionTypes =
   exampleDBDefs `mappend` extras
   where
@@ -197,11 +198,11 @@ doInfer_ ::
   (DataIRef.Expression t (Infer.Inferred (DefI t)), Infer.Context (DefI t))
 doInfer_ = (Lens._1 . Lens.mapped %~ fst) . doInfer
 
-pureGetRecursiveDefI :: DataIRef.Expression t ()
+pureGetRecursiveDefI :: PureExprDefI t
 pureGetRecursiveDefI =
   ExprUtil.pureExpression $ Lens.review ExprUtil.bodyDefinitionRef recursiveDefI
 
-factorialExpr :: DataIRef.Expression t ()
+factorialExpr :: PureExprDefI t
 factorialExpr =
   pureLambda "x" pureHole $
   pureApplyPoly1 "if"
@@ -216,7 +217,7 @@ factorialExpr =
     ]
   ]
 
-euler1Expr :: DataIRef.Expression t ()
+euler1Expr :: PureExprDefI t
 euler1Expr =
   pureApplyPoly1 "sum"
   [ pureApplyPoly1 "filter"
