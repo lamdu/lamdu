@@ -223,7 +223,7 @@ runPiToLambda (param, lambdaValueRef, bodyTypeRef) piBody (o0, o1, o2) = do
     piBody ^.. Expression.eBody . Expression._BodyLam
   [ -- Pi result type -> Body type
     ( bodyTypeRef
-    , subst piParam
+    , ExprUtil.subst piParam
       ( makeRefExpr o0
         (Lens.review ExprUtil.bodyParameterRef param)
       )
@@ -344,16 +344,6 @@ runChildrenToParent destRef bodyWithExprs o0 = [(destRef, makeRefExpr o0 bodyWit
 runSetRule :: [(ExprRef, RefExpression def)] -> RuleResult def
 runSetRule outputs = outputs
 
-subst ::
-  Guid -> Expression.Expression def a ->
-  Expression.Expression def a -> Expression.Expression def a
-subst from to expr
-  | Lens.anyOf
-    (Expression.eBody . ExprUtil.bodyParameterRef)
-    (== from) expr
-  = to
-  | otherwise = expr & Expression.eBody . Lens.traversed %~ subst from to
-
 mergeToPiResult ::
   Eq def => RefExpression def -> RefExpression def -> RefExpression def
 mergeToPiResult =
@@ -416,7 +406,7 @@ runIntoApplyResult (k, applyRef, arg) (funcExpr, argExpr) = do
   guard $ k == bk
   return
     ( applyRef
-    , subst param
+    , ExprUtil.subst param
       (argExpr & Lens.traversed . rplSubstitutedArgs %~ IntSet.insert (unExprRef arg)) .
       -- TODO: Is this correct?
       Lens.set (Lens.traversed . rplRestrictedPoly) (Monoid.Any False) $
@@ -509,7 +499,7 @@ runRigidArgApplyTypeToResultType funcTypeRef (applyTypeExpr, argExpr) (o0, o1, o
   return
     ( funcTypeRef
     , makePi o0 (makeHole o1) $
-      subst par (makeHole o2) applyTypeExpr
+      ExprUtil.subst par (makeHole o2) applyTypeExpr
     )
 
 rigidArgApplyTypeToResultTypeRule ::

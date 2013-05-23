@@ -25,7 +25,7 @@ module Lamdu.Data.Expression.Utils
   , expressionBodyDef
   , expressionDef
   , kindedRecordFields
-  , lam, lambda, pi
+  , kindedLam, lambda, pi, subst
   ) where
 
 import Prelude hiding (pi)
@@ -81,8 +81,8 @@ exprBodyTag = eBody . bodyTag
 bodyTag :: Lens.Prism' (Body def expr) Guid
 bodyTag = _BodyLeaf . _Tag
 
-lam :: Kind -> Lens.Prism' (Lambda expr) (Guid, expr, expr)
-lam k = Lens.prism' toLam fromLam
+kindedLam :: Kind -> Lens.Prism' (Lambda expr) (Guid, expr, expr)
+kindedLam k = Lens.prism' toLam fromLam
   where
     toLam (paramGuid, paramType, result) =
       Lambda k paramGuid paramType result
@@ -91,10 +91,10 @@ lam k = Lens.prism' toLam fromLam
       | otherwise = Nothing
 
 lambda :: Lens.Prism' (Lambda expr) (Guid, expr, expr)
-lambda = lam Val
+lambda = kindedLam Val
 
 pi :: Lens.Prism' (Lambda expr) (Guid, expr, expr)
-pi = lam Type
+pi = kindedLam Type
 
 bitraverseBody ::
   Applicative f => (defa -> f defb) -> (expra -> f exprb) ->
@@ -364,3 +364,12 @@ kindedRecordFields ::
 kindedRecordFields k0 f (Record k1 fields)
   | k0 == k1 = Record k1 <$> f fields
   | otherwise = pure $ Record k1 fields
+
+subst ::
+  Guid ->
+  Expression def a ->
+  Expression def a ->
+  Expression def a
+subst from to expr
+  | Lens.anyOf (eBody . bodyParameterRef) (== from) expr = to
+  | otherwise = expr & eBody . traverse %~ subst from to
