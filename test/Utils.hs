@@ -13,6 +13,7 @@ import Data.Monoid (mappend, mconcat)
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), inferWithConflicts)
+import Lamdu.Data.Expression.Utils (pureHole, pureIntegerType)
 import Lamdu.ExampleDB (createBuiltins)
 import qualified Control.Lens as Lens
 import qualified Data.ByteString as SBS
@@ -30,7 +31,6 @@ import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
-import Lamdu.Data.Expression.Utils (pureHole)
 
 type PureExpr def = Expr.Expression def ()
 type PureExprDefI t = PureExpr (DefI t)
@@ -57,6 +57,9 @@ namedPi = ExprUtil.makePi . Guid.fromString
 pureApply :: [PureExpr def] -> PureExpr def
 pureApply = foldl1 ExprUtil.pureApply
 
+bodyHole :: Expr.Body def expr
+bodyHole = ExprLens.bodyHole # ()
+
 -- 1 dependent param
 pureApplyPoly1 ::
   String ->
@@ -75,9 +78,6 @@ purePi ::
   PureExpr def ->
   PureExpr def
 purePi name x y = ExprUtil.pureExpression $ namedPi name x y
-
-intType :: PureExpr def
-intType = ExprUtil.pureIntegerType
 
 pureLiteralInt :: Lens.Prism' (PureExpr def) Integer
 pureLiteralInt = ExprLens.pureExpr . ExprLens.bodyLiteralInteger
@@ -133,7 +133,7 @@ definitionTypes =
     g = Guid.fromString
     extras =
       mconcat
-      [ g "IntToBoolFunc" ==> purePi "intToBool" intType (pureGetDef "Bool")
+      [ g "IntToBoolFunc" ==> purePi "intToBool" pureIntegerType (pureGetDef "Bool")
       ]
     exampleDBDefs =
       fst . MapStore.runEmpty . Transaction.run MapStore.mapStore $ do

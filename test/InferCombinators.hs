@@ -36,8 +36,8 @@ getDef name =
 
 leafTag :: Guid -> InferResults t
 leafTag guid =
-  leafSimple (Expr.Tag guid) .
-  ExprUtil.pureExpression $ Expr.BodyLeaf Expr.TagType
+  leafSimple (Expr.Tag guid) $
+  ExprLens.pureExpr . ExprLens.bodyTagType # ()
 
 defParamTags :: String -> [Guid]
 defParamTags defName =
@@ -53,10 +53,8 @@ innerMostPi =
   last . pis
   where
     pis expr =
-      case expr ^? ExprLens.exprLam of
-      Just lam
-        | lam ^. Expr.lambdaKind == Type ->
-          expr : pis (lam ^. Expr.lambdaResult)
+      case expr ^? ExprLens.exprKindedLam Type . Lens._3 of
+      Just resultType -> expr : pis resultType
       _ -> []
 
 getParam :: String -> PureExprDefI t -> InferResults t
@@ -68,14 +66,8 @@ inferResults :: ExprIRef.Expression t (Infer.Inferred (DefI t)) -> InferResults 
 inferResults = fmap (void . Infer.iValue &&& void . Infer.iType)
 
 leafSimple :: Expr.Leaf (DefI t) -> PureExprDefI t -> InferResults t
-leafSimple l =
-  leaf l . ExprUtil.pureExpression $ Expr.BodyLeaf l
-
-leaf ::
-  Expr.Leaf (DefI t) ->
-  PureExprDefI t -> PureExprDefI t ->
-  InferResults t
-leaf l val typ = iexpr val typ $ Expr.BodyLeaf l
+leafSimple l typ =
+  iexpr (ExprLens.pureExpr . Expr._BodyLeaf # l) typ $ Expr.BodyLeaf l
 
 iexpr ::
   PureExprDefI t ->
@@ -87,29 +79,31 @@ iexpr iVal iType body =
 five :: PureExprDefI t
 five = pureLiteralInt # 5
 
+bodyToPureExpr :: Expr.Body def (Expression def a) -> PureExpr def
+bodyToPureExpr exprBody = ExprLens.pureExpr # fmap void exprBody
+
 inferredHole :: PureExprDefI t -> InferResults t
 inferredHole = leafSimple Expr.Hole
+
+-- New-style:
 
 inferredSetType :: InferResults t
 inferredSetType = leafSimple Expr.Set pureSet
 
-bodyToPureExpr :: Expr.Body def (Expression def a) -> PureExpr def
-bodyToPureExpr exprBody = ExprLens.pureExpr # fmap void exprBody
-
-makeApply :: [InferResults t] -> InferResults t
-makeApply = foldl1 step
+apply :: [InferResults t] -> InferResults t
+apply = foldl1 step
   where
     step func@(Expr.Expression _ (funcVal, funcType)) nextArg =
-      iexpr applyVal applyType apply
+      iexpr applyVal applyType application
       where
-        apply = ExprUtil.makeApply func nextArg
+        application = ExprUtil.makeApply func nextArg
         handleLam e k seeHole seeOther =
           case e ^. Expr.eBody of
           Expr.BodyLeaf Expr.Hole -> seeHole
           Expr.BodyLam (Expr.Lambda k1 paramGuid _ result)
             | k == k1 -> ExprUtil.subst paramGuid (void nextArg) result
           _ -> seeOther
-        applyVal = handleLam funcVal Val pureHole $ bodyToPureExpr apply
+        applyVal = handleLam funcVal Val pureHole $ bodyToPureExpr application
         applyType = handleLam funcType Type piErr piErr
         piErr = error "Apply of non-Pi type!"
 

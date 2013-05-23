@@ -10,7 +10,7 @@ import InferCombinators
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expression (Expression(..), Kind(..))
 import Lamdu.Data.Expression.Infer.Conflicts (inferWithConflicts)
-import Lamdu.Data.Expression.Utils (pureHole, pureSet)
+import Lamdu.Data.Expression.Utils (pureHole, pureSet, pureIntegerType)
 import Test.Framework (Test)
 import Test.Framework.Providers.HUnit (hUnitTestToTests)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
@@ -29,7 +29,7 @@ import qualified Test.HUnit as HUnit
 simpleTests :: [HUnit.Test]
 simpleTests =
   [ testInfer "literal int" $
-    leafSimple (Expr.LiteralInteger 5) intType
+    leafSimple (Expr.LiteralInteger 5) pureIntegerType
   , testInfer "simple apply" $
     iexpr pureHole pureHole $
     ExprUtil.makeApply
@@ -52,43 +52,43 @@ applyIntToBoolFuncWithHole =
     (pureGetDef "Bool") $
   ExprUtil.makeApply
     (getDef "IntToBoolFunc")
-    (inferredHole intType)
+    (inferredHole pureIntegerType)
 
 inferPart :: HUnit.Test
 inferPart =
   testInfer "foo (xs:List ?) = 5 : xs" $
   iexpr
-    (exprWithHoles intType intType)
+    (exprWithHoles pureIntegerType pureIntegerType)
     endoListOfInt $
   namedLambda "xs"
-    (iexpr (listOf intType) pureSet
+    (iexpr (listOf pureIntegerType) pureSet
       (ExprUtil.makeApply
         (getDef "List")
-        (leaf Expr.Hole intType pureSet)
+        (iexpr pureIntegerType pureSet bodyHole)
       )
     ) $
   iexpr
-    (applyWithHole intType)
-    (listOf intType) $
+    (applyWithHole pureIntegerType)
+    (listOf pureIntegerType) $
   ExprUtil.makeApply
     ( iexpr
-        (pureApply [pureGetDef ":", intType, five])
+        (pureApply [pureGetDef ":", pureIntegerType, five])
         endoListOfInt
       ( ExprUtil.makeApply
         ( iexpr
-            (pureApply [pureGetDef ":", intType])
-            (purePi "" intType endoListOfInt)
+            (pureApply [pureGetDef ":", pureIntegerType])
+            (purePi "" pureIntegerType endoListOfInt)
           (ExprUtil.makeApply
             (getDef ":")
-            (leaf Expr.Hole intType pureSet)
+            (iexpr pureIntegerType pureSet bodyHole)
           )
         )
-        (leafSimple (Expr.LiteralInteger 5) intType)
+        (leafSimple (Expr.LiteralInteger 5) pureIntegerType)
       )
     ) $
-  getParam "xs" $ listOf intType
+  getParam "xs" $ listOf pureIntegerType
   where
-    endoListOfInt = join (purePi "pi") $ listOf intType
+    endoListOfInt = join (purePi "pi") $ listOf pureIntegerType
     listOf x = pureApply [pureGetDef "List", x]
     applyWithHole h = pureApply [pureGetDef ":", h, five, pureGetParam "xs"]
     exprWithHoles h0 h1 =
@@ -107,9 +107,9 @@ applyOnVar =
   ExprUtil.makeApply (getDef "IntToBoolFunc") $
   iexpr
     pureHole
-    intType $
+    pureIntegerType $
   ExprUtil.makeApply
-    (inferredHole (purePi "" pureHole intType)) $
+    (inferredHole (purePi "" pureHole pureIntegerType)) $
   leafSimple
     ((Expr.GetVariable . Expr.ParameterRef . Guid.fromString) "lambda")
     pureHole
@@ -118,8 +118,8 @@ idTest :: HUnit.Test
 idTest =
   testInfer "id test" $
   iexpr
-    (ExprLens.pureExpr # ExprUtil.makeApply (pureGetDef "id") intType)
-    (purePi "" intType intType) $
+    (ExprLens.pureExpr # ExprUtil.makeApply (pureGetDef "id") pureIntegerType)
+    (purePi "" pureIntegerType pureIntegerType) $
   ExprUtil.makeApply
     (getDef "id") $
     leafSimple Expr.IntegerType pureSet
@@ -129,10 +129,10 @@ inferFromOneArgToOther =
   testInfer "f = \\ a b (x:Map _ _) (y:Map a b) -> if {_ x y}" .
   iexpr expr (purePi "a" pureSet lamBType) $
   namedLambda "a"
-    (leaf Expr.Hole pureSet pureSet) $
+    (iexpr pureSet pureSet bodyHole) $
   iexpr lamB lamBType $
   namedLambda "b"
-    (leaf Expr.Hole pureSet pureSet) $
+    (iexpr pureSet pureSet bodyHole) $
   iexpr lamX lamXType $
   namedLambda "x"
     ( iexpr typeOfX pureSet $
@@ -140,9 +140,9 @@ inferFromOneArgToOther =
         ( iexpr typeOfX' setToSet $
           ExprUtil.makeApply
             (getDef "Map") $
-          leaf Expr.Hole (pureGetParam "a") pureSet
+          iexpr (pureGetParam "a") pureSet bodyHole
         ) $
-      leaf Expr.Hole (pureGetParam "b") pureSet
+      iexpr (pureGetParam "b") pureSet bodyHole
     ) $
   iexpr lamY lamYType $
   namedLambda "y"
@@ -160,7 +160,7 @@ inferFromOneArgToOther =
     ( iexpr body1 body1Type $
       ExprUtil.makeApply
         (getDef "if") $
-      leaf Expr.Hole typeOfX pureSet
+      iexpr typeOfX pureSet bodyHole
     ) $
   iexpr ifParams ifParamsType $
   Expr.BodyRecord $ Expr.Record Val
@@ -179,18 +179,18 @@ inferFromOneArgToOther =
     ifParams =
       ExprUtil.pureExpression . Expr.BodyRecord $
       Expr.Record Val
-      [ (tag t0, pureHole)
-      , (tag t1, pureGetParam "x")
-      , (tag t2, pureGetParam "y")
+      [ (tag # t0, pureHole)
+      , (tag # t1, pureGetParam "x")
+      , (tag # t2, pureGetParam "y")
       ]
     ifParamsType =
       ExprUtil.pureExpression . Expr.BodyRecord $
       Expr.Record Type
-      [ (tag t0, pureGetDef "Bool")
-      , (tag t1, typeOfX)
-      , (tag t2, typeOfX)
+      [ (tag # t0, pureGetDef "Bool")
+      , (tag # t1, typeOfX)
+      , (tag # t2, typeOfX)
       ]
-    tag = ExprUtil.pureExpression . Expr.BodyLeaf . Expr.Tag
+    tag = ExprLens.pureExpr . ExprLens.bodyTag
     body1Type = purePi "body1" ifParamsType typeOfX
     typeOfX =
       pureApply
@@ -214,16 +214,16 @@ monomorphRedex =
   ExprUtil.makeApply
     ( iexpr (bodyLambda True) bodyLambdaType $
       namedLambda "f"
-        (leaf Expr.Hole fType pureSet) $
+        (iexpr fType pureSet bodyHole) $
       iexpr (body True) pureHole $
       ExprUtil.makeApply
         (getParam "f" fType) $
       iexpr (fArg True) (fArgType True) $
       namedLambda "b"
-        (leaf Expr.Hole pureSet pureSet) $
+        (iexpr pureSet pureSet bodyHole) $
       iexpr xToX (fArgInnerType True) $
       namedLambda "x"
-        (leaf Expr.Hole (pureGetParam "b") pureSet) $
+        (iexpr (pureGetParam "b") pureSet bodyHole) $
       iexpr (pureGetParam "x") (pureGetParam "b") $
       ExprUtil.makeApply
         ( iexpr cToX (purePi "" pureHole (pureGetParam "b")) $
@@ -240,7 +240,7 @@ monomorphRedex =
         (leafSimple Expr.Set pureSet) $
       iexpr (fArgInnerType True) pureSet $
       namedPi "x"
-        (leaf Expr.Hole (pureGetParam "b") pureSet) $
+        (iexpr (pureGetParam "b") pureSet bodyHole) $
       getParam "b" pureSet
     ) $
   leafSimple Expr.Hole pureHole
@@ -268,18 +268,18 @@ fOfXIsFOf5 :: HUnit.Test
 fOfXIsFOf5 =
   testInfer "f x = f 5" $
   iexpr
-    (pureLambda "" intType (pureApply [getRecursiveDef, five]))
-    (purePi "" intType pureHole) $
+    (pureLambda "" pureIntegerType (pureApply [getRecursiveDef, five]))
+    (purePi "" pureIntegerType pureHole) $
   namedLambda "x"
-    (leaf Expr.Hole intType pureSet) $
+    (iexpr pureIntegerType pureSet bodyHole) $
   iexpr
     (pureApply [getRecursiveDef, five])
     pureHole $
   ExprUtil.makeApply
     (leafSimple
       (Expr.GetVariable (Expr.DefinitionRef recursiveDefI))
-      (purePi "" intType pureHole)) $
-  leafSimple (Expr.LiteralInteger 5) intType
+      (purePi "" pureIntegerType pureHole)) $
+  leafSimple (Expr.LiteralInteger 5) pureIntegerType
 
 argTypeGoesToPi :: HUnit.Test
 argTypeGoesToPi =
@@ -288,8 +288,8 @@ argTypeGoesToPi =
     pureHole
     pureHole $
   ExprUtil.makeApply
-    (inferredHole (purePi "" intType pureHole)) $
-  leafSimple (Expr.LiteralInteger 5) intType
+    (inferredHole (purePi "" pureIntegerType pureHole)) $
+  leafSimple (Expr.LiteralInteger 5) pureIntegerType
 
 idOnAnInt :: HUnit.Test
 idOnAnInt =
@@ -297,21 +297,21 @@ idOnAnInt =
   iexpr
     (pureApply
       [ pureGetDef "id"
-      , intType
+      , pureIntegerType
       , five
       ]
     )
-    intType $
+    pureIntegerType $
   ExprUtil.makeApply
     (iexpr
-      (pureApply [pureGetDef "id", intType])
-      (purePi "" intType intType)
+      (pureApply [pureGetDef "id", pureIntegerType])
+      (purePi "" pureIntegerType pureIntegerType)
       (ExprUtil.makeApply
         (getDef "id")
-        ((iexpr intType pureSet . Expr.BodyLeaf) Expr.Hole)
+        ((iexpr pureIntegerType pureSet . Expr.BodyLeaf) Expr.Hole)
       )
     ) $
-  leafSimple (Expr.LiteralInteger 5) intType
+  leafSimple (Expr.LiteralInteger 5) pureIntegerType
 
 idOnHole :: HUnit.Test
 idOnHole =
@@ -340,7 +340,7 @@ forceMono =
       (purePi "" pureSet pureSet)
       (ExprUtil.makeApply
         (getDef "id")
-        (leaf Expr.Hole pureSet pureSet)
+        (iexpr pureSet pureSet bodyHole)
       )
     ) $
   leafSimple Expr.Hole pureSet
@@ -520,7 +520,7 @@ recordTest =
 inferRecordValTest :: HUnit.Test
 inferRecordValTest =
   testInfer "id ({:Set) <hole> infers { val" $
-  makeApply [getDef "id", record Type [], inferredVal (record Val [])]
+  apply [getDef "id", record Type [], inferredVal (record Val [])]
 
 hunitTests :: HUnit.Test
 hunitTests =
