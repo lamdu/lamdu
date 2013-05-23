@@ -5,6 +5,7 @@ module Lamdu.CodeEdit.Sugar.Expression
   , addApplyChildParens, addParens
   , setNextHole
   , subExpressions
+  , getStoredName
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
@@ -161,3 +162,9 @@ setNextHole dest =
 
 subExpressions :: ExpressionU m -> [ExpressionU m]
 subExpressions x = x : x ^.. rBody . Lens.traversed . Lens.folding subExpressions
+
+getStoredName :: MonadA m => Guid -> T m (Maybe String)
+getStoredName guid = do
+  name <- Transaction.getP $ Anchors.assocNameRef guid
+  pure $
+    if null name then Nothing else Just name
