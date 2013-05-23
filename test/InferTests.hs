@@ -672,6 +672,44 @@ recordTest =
       rec Type $
       pureGetParam "a"
 
+makeApply :: [InferResults t] -> InferResults t
+makeApply = foldl1 step
+  where
+    step func@(Expr.Expression _ (funcVal, funcType)) nextArg =
+      iexpr applyVal applyType apply
+      where
+        apply = ExprUtil.makeApply func nextArg
+        handleLam e k seeHole seeOther =
+          case e ^. Expr.eBody of
+          Expr.BodyLeaf Expr.Hole -> seeHole
+          Expr.BodyLam (Expr.Lambda k1 paramGuid _ result)
+            | k == k1 -> ExprUtil.subst paramGuid (void nextArg) result
+          _ -> seeOther
+        applyVal = handleLam funcVal Val pureHole $ bodyToPureExpr apply
+        applyType = handleLam funcType Type piErr piErr
+        piErr = error "Apply of non-Pi type!"
+
+bodyToPureExpr :: Expr.Body def (Expression def a) -> PureExpr def
+bodyToPureExpr exprBody = ExprLens.pureExpr # fmap void exprBody
+
+record :: Kind -> [(InferResults t, InferResults t)] -> InferResults t
+record k fields =
+  iexpr (bodyToPureExpr (recBody k)) typ $ recBody k
+  where
+    typ = case k of
+      Val -> bodyToPureExpr $ recBody Type
+      Type -> setType
+    recBody k1 = ExprLens.bodyKindedRecordFields k1 # fields
+
+_pureRecord :: Kind -> [(PureExpr def, PureExpr def)] -> PureExpr def
+_pureRecord k fields = ExprLens.pureExpr . ExprLens.bodyKindedRecordFields k # fields
+
+inferredVal :: InferResults t -> InferResults t
+inferredVal expr =
+  iexpr val typ $ ExprLens.bodyHole # ()
+  where
+    (val, typ) = expr ^. Expr.ePayload
+
 hunitTests :: HUnit.Test
 hunitTests =
   HUnit.TestList $
