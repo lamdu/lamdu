@@ -7,10 +7,12 @@ import Control.Lens.Operators
 import Control.Monad (void)
 import Control.Monad.Trans.State (State, runState, runStateT)
 import Data.Binary.Utils (encodeS)
+import Data.Map ((!))
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (mappend, mconcat)
 import Data.Store.Guid (Guid)
+import Lamdu.Data.Expression (Expression(..), Kind(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), inferWithConflicts)
 import Lamdu.Data.Expression.Utils (pureHole, pureIntegerType)
@@ -270,3 +272,21 @@ factorial = inferAndEncode factorialExpr
 
 euler1 :: Int -> Int
 euler1 = inferAndEncode euler1Expr
+
+innerMostPi :: Expression def a -> Expression def a
+innerMostPi =
+  last . pis
+  where
+    pis expr =
+      case expr ^? ExprLens.exprKindedLam Type . Lens._3 of
+      Just resultType -> expr : pis resultType
+      _ -> []
+
+defParamTags :: String -> [Guid]
+defParamTags defName =
+  innerMostPi (definitionTypes ! g) ^..
+  ExprLens.exprLam . Expr.lambdaParamType .
+  ExprLens.exprRecord . Expr.recordFields .
+  Lens.traversed . Lens._1 . ExprLens.exprTag
+  where
+    g = Guid.fromString defName

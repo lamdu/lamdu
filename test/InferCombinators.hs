@@ -11,7 +11,6 @@ import Lamdu.Data.Expression (Expression(..), Kind(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Utils (pureHole, pureSet)
 import Utils
-import qualified Control.Lens as Lens
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Lamdu.Data.Expression as Expr
@@ -25,35 +24,6 @@ type InferResults t =
   ( PureExprDefI t
   , PureExprDefI t
   )
-
-getDef :: String -> InferResults t
-getDef name =
-  simple
-  (ExprLens.bodyDefinitionRef # IRef.unsafeFromGuid g)
-  (void (definitionTypes ! g))
-  where
-    g = Guid.fromString name
-
-defParamTags :: String -> [Guid]
-defParamTags defName =
-  innerMostPi (definitionTypes ! g) ^..
-  ExprLens.exprLam . Expr.lambdaParamType .
-  ExprLens.exprRecord . Expr.recordFields .
-  Lens.traversed . Lens._1 . ExprLens.exprTag
-  where
-    g = Guid.fromString defName
-
-innerMostPi :: Expression def a -> Expression def a
-innerMostPi =
-  last . pis
-  where
-    pis expr =
-      case expr ^? ExprLens.exprKindedLam Type . Lens._3 of
-      Just resultType -> expr : pis resultType
-      _ -> []
-
-getParam :: String -> PureExprDefI t -> InferResults t
-getParam name = simple $ ExprLens.bodyParameterRef # Guid.fromString name
 
 inferResults :: ExprIRef.Expression t (Infer.Inferred (DefI t)) -> InferResults t
 inferResults = fmap (void . Infer.iValue &&& void . Infer.iType)
@@ -71,14 +41,26 @@ five = pureLiteralInt # 5
 bodyToPureExpr :: Expr.Body def (Expression def a) -> PureExpr def
 bodyToPureExpr exprBody = ExprLens.pureExpr # fmap void exprBody
 
-holeWithInferredType :: PureExprDefI t -> InferResults t
-holeWithInferredType = simple bodyHole
-
 -- inferred-val is simply equal to the expr. Type is given
 simple :: Expr.Body (DefI t) (InferResults t) -> PureExprDefI t -> InferResults t
 simple body iType = iexpr (bodyToPureExpr body) iType body
 
 -- New-style:
+
+holeWithInferredType :: PureExprDefI t -> InferResults t
+holeWithInferredType = simple bodyHole
+
+-- TODO: Get type from scope
+getParam :: String -> PureExprDefI t -> InferResults t
+getParam name = simple $ ExprLens.bodyParameterRef # Guid.fromString name
+
+getDef :: String -> InferResults t
+getDef name =
+  simple
+  (ExprLens.bodyDefinitionRef # IRef.unsafeFromGuid g)
+  (void (definitionTypes ! g))
+  where
+    g = Guid.fromString name
 
 tag :: Guid -> InferResults t
 tag guid =
