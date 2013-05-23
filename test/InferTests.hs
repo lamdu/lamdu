@@ -2,14 +2,13 @@
 {-# OPTIONS -Wall -Werror #-}
 module InferTests (allTests) where
 
-import Control.Applicative (liftA2)
+import Control.Applicative ((<$>), Applicative(..))
 import Control.Arrow ((&&&))
 import Control.Exception (evaluate)
 import Control.Lens.Operators
 import Control.Monad (join, void)
-import Control.Monad.Trans.State (runStateT, evalState)
+import Control.Monad.Trans.State (runStateT, evalState, runState)
 import Data.Map ((!))
-import Data.Maybe (isJust)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
@@ -24,8 +23,10 @@ import Test.QuickCheck (Property)
 import Test.QuickCheck.Property (property, rejected)
 import Utils
 import qualified Control.Lens as Lens
-import qualified Data.Foldable as Foldable
+import qualified Control.Monad.Trans.State as State
+import qualified Data.ByteString.Char8 as BS8
 import qualified Data.List as List
+import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Lamdu.Data.Expression as Expr
@@ -82,30 +83,6 @@ getParam name = leafSimple gv
 inferResults :: ExprIRef.Expression t (Infer.Inferred (DefI t)) -> InferResults t
 inferResults = fmap (void . Infer.iValue &&& void . Infer.iType)
 
-showExpressionWithInferred :: InferResults t -> String
-showExpressionWithInferred =
-  List.intercalate "\n" . go
-  where
-    go inferredExpr =
-      [ "Expr:" ++ showStructure expr
-      , "  IVal:  " ++ show val
-      , "  IType: " ++ show typ
-      ] ++
-      (map ("  " ++) . Foldable.concat .
-       fmap go) expr
-      where
-        expr = inferredExpr ^. Expr.eBody
-        (val, typ) = inferredExpr ^. Expr.ePayload
-
-compareInferred :: InferResults t -> InferResults t -> Bool
-compareInferred x y =
-  isJust $ ExprUtil.matchExpression f ((const . const) Nothing) x y
-  where
-    f (v0, t0) (v1, t1) =
-      liftA2 (,) (matchI v0 v1) (matchI t0 t1)
-    matchI = ExprUtil.matchExpression nop ((const . const) Nothing)
-    nop () () = Just ()
-
 leafSimple :: Expr.Leaf (DefI t) -> PureExprDefI t -> InferResults t
 leafSimple l =
   leaf l . ExprUtil.pureExpression $ Expr.BodyLeaf l
@@ -127,11 +104,35 @@ iexpr iVal iType body =
 assertCompareInferred ::
   InferResults t -> InferResults t -> HUnit.Assertion
 assertCompareInferred result expected =
-  assertBool
-    (unlines
-     [ "result expr:"  , showExpressionWithInferred result
-     , "expected expr:", showExpressionWithInferred expected
-     ]) $ compareInferred result expected
+  assertBool errMsg (Map.null resultErrs)
+  where
+    errMsg =
+      List.intercalate "\n" $ show
+      (resultExpr
+       & ExprLens.exprDef %~ defIStr
+       & Lens.mapped %~ ixsStr) :
+      "Errors:" :
+      (map showErrItem . Map.toList) resultErrs
+    showErrItem (ix, err) = "{" ++ show ix ++ "}:\n" ++ err
+    defIStr = BS8.unpack . BS8.takeWhile (/= '\0') . Guid.bs . IRef.guid
+    ixsStr [] = UnescapedStr ""
+    ixsStr ixs = UnescapedStr . List.intercalate ", " $ map show ixs
+    (resultExpr, resultErrs) =
+      runState (ExprUtil.matchExpression match mismatch result expected) Map.empty
+    addError msg = do
+      ix <- State.gets Map.size
+      State.modify $ Map.insert ix msg
+      pure ix
+    check s x y
+      | ExprUtil.alphaEq x y = pure []
+      | otherwise = fmap (: []) . addError $
+        List.intercalate "\n"
+        [ "  expected " ++ s ++ ":" ++ show y
+        , "  result   " ++ s ++ ":" ++ show x
+        ]
+    match (v0, t0) (v1, t1) =
+      (++) <$> check " type" t0 t1 <*> check "value" v0 v1
+    mismatch _ _ = error "Result must have same expression shape!"
 
 testInfer ::
   String -> InferResults t -> HUnit.Test

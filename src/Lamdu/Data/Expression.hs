@@ -115,11 +115,14 @@ data Expression def a = Expression
 
 instance (Show a, Show def) => Show (Expression def a) where
   show (Expression body payload) =
-    show body ++ showPayload
+    maybeParenify (show body) ++ showPayload
     where
+      maybeParenify | null showPayload = id
+                    | otherwise = parenify
       showPayload =
         case show payload of
-        "()" -> ""
+        "" -> ""
+        "()" -> "" -- TODO: Remove this
         x -> "{" ++ x ++ "}"
 
 fmap concat $ mapM LensTH.makePrisms [''Kind, ''VariableRef, ''Leaf, ''Body]

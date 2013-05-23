@@ -37,11 +37,12 @@ type PureExprDefI t = PureExpr (DefI t)
 (==>) :: k -> v -> Map k v
 (==>) = Map.singleton
 
-data Invisible = Invisible
-instance Show Invisible where
-  show = const ""
+data UnescapedStr = UnescapedStr String
+instance Show UnescapedStr where
+  show (UnescapedStr x) = x
+
 showStructure :: Show def => Expr.Body def a -> String
-showStructure = show . (Invisible <$)
+showStructure = show . (UnescapedStr "" <$)
 
 instance Show def => Show (PureExpr def) where
   show (Expr.Expression value ()) = show value
