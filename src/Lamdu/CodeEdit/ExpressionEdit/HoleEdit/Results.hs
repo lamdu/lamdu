@@ -12,10 +12,11 @@ import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.State (StateT)
 import Control.MonadA (MonadA)
 import Data.Cache (Cache)
+import Data.Either (partitionEithers)
 import Data.Function (on)
 import Data.List (isInfixOf, isPrefixOf)
 import Data.List.Utils (sortOn, nonEmptyAll)
-import Data.Maybe (fromMaybe, catMaybes)
+import Data.Maybe (catMaybes, fromMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
@@ -68,7 +69,8 @@ pick holeInfo holeResult = do
   holeResult ^. Sugar.holeResultPick
 
 data Result m = Result
-  { rHoleResult :: Sugar.HoleResult Sugar.Name m
+  { rType :: ResultType
+  , rHoleResult :: Sugar.HoleResult Sugar.Name m
   , rMkWidget :: ExprGuiM m (WidgetT m)
   , rId :: Widget.Id
   }
@@ -129,11 +131,14 @@ toMResultsList ::
   Widget.Id -> [Sugar.HoleResultSeed m] ->
   CT m (Maybe (ResultsList m))
 toMResultsList holeInfo makeWidget baseId options = do
-  results <-
-    sortOn (resultComplexityScore . (^. Sugar.holeResultInferred)) .
-    catMaybes <$>
-    traverse (hiHoleActions holeInfo ^. Sugar.holeResult)
-    options
+  rs <- catMaybes <$> traverse processOption options
+  let
+    (badResults, goodResults) = partitionEithers rs
+    results =
+      map ((,) GoodResult)
+      (sortOn (resultComplexityScore . (^. Sugar.holeResultInferred))
+       goodResults) ++
+      map ((,) BadResult) badResults
   return $ case results of
     [] -> Nothing
     x : xs ->
@@ -141,16 +146,34 @@ toMResultsList holeInfo makeWidget baseId options = do
       ResultsList
       { rlExtraResultsPrefixId = extraResultsPrefixId
       , rlMain = mkResult (mconcat [prefixId holeInfo, baseId]) x
-      , rlExtra = map (\res -> mkResult (extraResultId res) res) xs
+      , rlExtra = map (\res -> mkResult (extraResultId (snd res)) res) xs
       }
   where
+    processOption seed = do
+      mGood <- hiHoleActions holeInfo ^. Sugar.holeResult $ seed
+      case (mGood, seed) of
+        (Just good, _) -> pure . Just $ Right good
+        (Nothing, Sugar.ResultSeedExpression expr) ->
+          fmap Left <$>
+          ( (hiHoleActions holeInfo ^. Sugar.holeResult)
+          . Sugar.ResultSeedExpression . holeApply
+          ) expr
+        _ -> pure Nothing
+    holeApply expr =
+      Expression
+      ( ExprUtil.makeApply
+        (Expression (Expression.BodyLeaf Expression.Hole) Nothing)
+        expr
+      )
+      Nothing
     extraResultId =
       mappend extraResultsPrefixId . WidgetIds.hash . void .
       (^. Sugar.holeResultInferred)
     extraResultsPrefixId = mconcat [prefixId holeInfo, Widget.Id ["extra results"], baseId]
-    mkResult resultId holeResult =
+    mkResult resultId (typ, holeResult) =
       Result
-      { rHoleResult = holeResult
+      { rType = typ
+      , rHoleResult = holeResult
       , rMkWidget = makeWidget resultId holeResult
       , rId = resultId
       }
@@ -243,34 +266,21 @@ data ResultType = GoodResult | BadResult
 
 makeResultsList ::
   MonadA m => HoleInfo m -> WidgetMaker m -> GroupM m ->
-  CT m (Maybe (ResultType, ResultsList m))
+  CT m (Maybe (ResultsList m))
 makeResultsList holeInfo makeWidget group =
   case Property.value (hiState holeInfo) ^. HoleInfo.hsArgument of
-  Just arg ->
-    fmap ((,) GoodResult) <$> applyOperatorResultsList holeInfo makeWidget arg baseExpr
-  Nothing -> do
-    -- We always want the first (main), and we want to know if there's
-    -- more (extra), so take 2:
-    mRes <- toResList baseExpr
-    case mRes of
-      Just res -> return . Just $ (GoodResult, res)
-      Nothing ->
-        (fmap . fmap) ((,) BadResult) . toResList $
-        holeApply baseExpr
+  Just arg -> applyOperatorResultsList holeInfo makeWidget arg baseExpr
+  Nothing -> toResList baseExpr
   where
     toResList = baseExprToResultsList holeInfo makeWidget
     baseExpr = group ^. groupBaseExpr
-    holeApply =
-      ExprUtil.pureExpression .
-      (ExprUtil.makeApply . ExprUtil.pureExpression . Expression.BodyLeaf) Expression.Hole
 
 makeNewTagResultList ::
   MonadA m => HoleInfo m -> WidgetMaker m ->
-  CT m (Maybe (ResultType, ResultsList m))
+  CT m (Maybe (ResultsList m))
 makeNewTagResultList holeInfo makeNewTagResultWidget
   | null searchTerm = pure Nothing
   | otherwise =
-      fmap ((,) GoodResult) <$>
       toMResultsList holeInfo makeNewTagResultWidget (Widget.Id ["NewTag"])
       [makeNewTag]
   where
@@ -279,7 +289,7 @@ makeNewTagResultList holeInfo makeNewTagResultWidget
 
 data HaveHiddenResults = HaveHiddenResults | NoHiddenResults
 
-collectResults :: MonadA m => ListT m (ResultType, a) -> m ([a], HaveHiddenResults)
+collectResults :: MonadA m => ListT m (ResultsList f) -> m ([ResultsList f], HaveHiddenResults)
 collectResults =
   conclude <=<
   List.splitWhenM (return . (>= Config.holeResultCount) . length . fst) .
@@ -292,9 +302,9 @@ collectResults =
       . uncurry (on (++) reverse) . last . mappend notEnoughResults
       ) <$>
       List.toList (List.take 2 enoughResultsM)
-    step results (tag, x) =
+    step results x =
       results
-      & case tag of
+      & case rType (rlMain x) of
         GoodResult -> Lens._1
         BadResult -> Lens._2
         %~ (x :)
