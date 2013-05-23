@@ -13,7 +13,7 @@ import Data.Maybe (isJust)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
-import Lamdu.Data.Expression (Expression(..))
+import Lamdu.Data.Expression (Expression(..), Kind(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Infer.Conflicts (inferWithConflicts)
 import Test.Framework (Test)
@@ -71,7 +71,7 @@ innerMostPi =
     pis expr =
       case expr ^? Expression.eBody . Expression._BodyLam of
       Just lam
-        | lam ^. Expression.lambdaKind == Expression.Type ->
+        | lam ^. Expression.lambdaKind == Type ->
           expr : pis (lam ^. Expression.lambdaResult)
       _ -> []
 
@@ -274,7 +274,7 @@ inferFromOneArgToOther =
       leaf Expression.Hole typeOfX setType
     ) $
   iexpr ifParams ifParamsType $
-  Expression.BodyRecord $ Expression.Record Expression.Val
+  Expression.BodyRecord $ Expression.Record Val
   [ (leafTag t0, leafSimple Expression.Hole (pureGetDef "Bool"))
   , (leafTag t1, getParam "x" typeOfX)
   , (leafTag t2, getParam "y" typeOfX)
@@ -289,14 +289,14 @@ inferFromOneArgToOther =
     body1 = pureApply [pureGetDef "if", typeOfX]
     ifParams =
       ExprUtil.pureExpression . Expression.BodyRecord $
-      Expression.Record Expression.Val
+      Expression.Record Val
       [ (tag t0, pureHole)
       , (tag t1, pureGetParam "x")
       , (tag t2, pureGetParam "y")
       ]
     ifParamsType =
       ExprUtil.pureExpression . Expression.BodyRecord $
-      Expression.Record Expression.Type
+      Expression.Record Type
       [ (tag t0, pureGetDef "Bool")
       , (tag t1, typeOfX)
       , (tag t2, typeOfX)
@@ -639,7 +639,7 @@ emptyRecordTest =
   where
     emptyRecordType = ExprUtil.pureExpression emptyRecordTypeBody
     emptyRecordTypeBody =
-      Expression.BodyRecord $ Expression.Record Expression.Type mempty
+      Expression.BodyRecord $ Expression.Record Type mempty
 
 tagType :: Expression def ()
 tagType = ExprUtil.pureExpression $ Expression.BodyLeaf Expression.TagType
@@ -653,7 +653,7 @@ recordTest =
   namedLambda "x" (getParam "a" setType) $
   iexpr recVal recType $
   Expression.BodyRecord $
-  Expression.Record Expression.Val
+  Expression.Record Val
   [( leafSimple fieldTagLeaf tagType
    , getParam "x" (pureGetParam "a")
    )]
@@ -664,7 +664,7 @@ recordTest =
       pureLambda "x" (pureGetParam "a") recVal
     recVal =
       ExprUtil.pureExpression $
-      rec Expression.Val $
+      rec Val $
       pureGetParam "x"
     fieldTagLeaf = Expression.Tag fieldGuid
     rec k =
@@ -677,7 +677,7 @@ recordTest =
       purePi "x" (pureGetParam "a") recType
     recType =
       ExprUtil.pureExpression $
-      rec Expression.Type $
+      rec Type $
       pureGetParam "a"
 
 hunitTests :: HUnit.Test
