@@ -30,10 +30,7 @@ simpleTests :: [HUnit.Test]
 simpleTests =
   [ testInfer "literal int" $ integer 5
   , testInfer "simple apply" $
-    iexpr pureHole pureHole $
-    ExprUtil.makeApply
-      (holeWithInferredType (purePi "" pureHole pureHole))
-      (holeWithInferredType pureHole)
+    apply [holeWithInferredType (purePi "" pureHole pureHole), holeWithInferredType pureHole]
   , testInfer "simple pi" $
     piType "pi" (holeWithInferredType pureSet) (holeWithInferredType pureSet)
   ]
