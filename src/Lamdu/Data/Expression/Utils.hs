@@ -16,8 +16,7 @@ module Lamdu.Data.Expression.Utils
   , isDependentPi
   , funcArguments
   , applyForms, applyDependentPis
-  -- Traversals
-  , subst
+  , alphaEq, subst
   ) where
 
 import Prelude hiding (pi)
@@ -29,7 +28,7 @@ import Control.Monad (guard)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (evalState, state)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (isJust, fromMaybe)
 import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable(..), sequenceA)
 import System.Random (Random, RandomGen, random)
@@ -80,6 +79,13 @@ applyWithHoles count = applyWith $ replicate count pureHole
 
 applyDependentPis :: Expression def () -> Expression def () -> Expression def ()
 applyDependentPis exprType = applyWithHoles (length (getDependentParams exprType))
+
+alphaEq :: Eq def => Expression def a -> Expression def a -> Bool
+alphaEq x y =
+  isJust $ matchExpression
+  ((const . const . Just) ())
+  ((const . const) Nothing)
+  x y
 
 -- Useful functions:
 subst ::
