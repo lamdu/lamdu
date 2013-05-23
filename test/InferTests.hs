@@ -33,15 +33,15 @@ simpleTests =
   , testInfer "simple apply" $
     iexpr pureHole pureHole $
     ExprUtil.makeApply
-      (inferredHole (purePi "" pureHole pureHole))
-      (inferredHole pureHole)
+      (holeWithInferredType (purePi "" pureHole pureHole))
+      (holeWithInferredType pureHole)
   , testInfer "simple pi" $
     iexpr
       (purePi "pi" pureHole pureHole)
       pureSet $
     namedPi ""
-      (inferredHole pureSet)
-      (inferredHole pureSet)
+      (holeWithInferredType pureSet)
+      (holeWithInferredType pureSet)
   ]
 
 applyIntToBoolFuncWithHole :: HUnit.Test
@@ -52,7 +52,7 @@ applyIntToBoolFuncWithHole =
     (pureGetDef "Bool") $
   ExprUtil.makeApply
     (getDef "IntToBoolFunc")
-    (inferredHole pureIntegerType)
+    (holeWithInferredType pureIntegerType)
 
 inferPart :: HUnit.Test
 inferPart =
@@ -100,7 +100,7 @@ applyOnVar =
   iexpr
     (funnyLambda "" pureHole)
     (purePi "" pureHole (pureGetDef "Bool")) $
-  namedLambda "lambda" (inferredHole pureSet) $
+  namedLambda "lambda" (holeWithInferredType pureSet) $
   iexpr
     (pureApply [pureGetDef "IntToBoolFunc", pureHole])
     (pureGetDef "Bool") $
@@ -109,7 +109,7 @@ applyOnVar =
     pureHole
     pureIntegerType $
   ExprUtil.makeApply
-    (inferredHole (purePi "" pureHole pureIntegerType)) $
+    (holeWithInferredType (purePi "" pureHole pureIntegerType)) $
   simple
     (ExprLens.bodyParameterRef # Guid.fromString "lambda")
     pureHole
@@ -164,9 +164,9 @@ inferFromOneArgToOther =
     ) $
   iexpr ifParams ifParamsType $
   Expr.BodyRecord $ Expr.Record Val
-  [ (leafTag t0, simple bodyHole (pureGetDef "Bool"))
-  , (leafTag t1, getParam "x" typeOfX)
-  , (leafTag t2, getParam "y" typeOfX)
+  [ (tag t0, simple bodyHole (pureGetDef "Bool"))
+  , (tag t1, getParam "x" typeOfX)
+  , (tag t2, getParam "y" typeOfX)
   ]
   where
     [t0, t1, t2] = defParamTags "if"
@@ -179,18 +179,18 @@ inferFromOneArgToOther =
     ifParams =
       ExprUtil.pureExpression . Expr.BodyRecord $
       Expr.Record Val
-      [ (tag # t0, pureHole)
-      , (tag # t1, pureGetParam "x")
-      , (tag # t2, pureGetParam "y")
+      [ (pureTag # t0, pureHole)
+      , (pureTag # t1, pureGetParam "x")
+      , (pureTag # t2, pureGetParam "y")
       ]
     ifParamsType =
       ExprUtil.pureExpression . Expr.BodyRecord $
       Expr.Record Type
-      [ (tag # t0, pureGetDef "Bool")
-      , (tag # t1, typeOfX)
-      , (tag # t2, typeOfX)
+      [ (pureTag # t0, pureGetDef "Bool")
+      , (pureTag # t1, typeOfX)
+      , (pureTag # t2, typeOfX)
       ]
-    tag = ExprLens.pureExpr . ExprLens.bodyTag
+    pureTag = ExprLens.pureExpr . ExprLens.bodyTag
     body1Type = purePi "body1" ifParamsType typeOfX
     typeOfX =
       pureApply
@@ -288,7 +288,7 @@ argTypeGoesToPi =
     pureHole
     pureHole $
   ExprUtil.makeApply
-    (inferredHole (purePi "" pureIntegerType pureHole)) $
+    (holeWithInferredType (purePi "" pureIntegerType pureHole)) $
   simple (ExprLens.bodyLiteralInteger # 5) pureIntegerType
 
 idOnAnInt :: HUnit.Test
@@ -321,7 +321,7 @@ idOnHole =
     (purePi "" pureHole pureHole) .
   ExprUtil.makeApply
     (getDef "id") $
-  inferredHole pureSet
+  holeWithInferredType pureSet
 
 forceMono :: HUnit.Test
 forceMono =

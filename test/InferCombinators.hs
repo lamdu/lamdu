@@ -34,11 +34,6 @@ getDef name =
   where
     g = Guid.fromString name
 
-leafTag :: Guid -> InferResults t
-leafTag guid =
-  simple (ExprLens.bodyTag # guid) $
-  ExprLens.pureExpr . ExprLens.bodyTagType # ()
-
 defParamTags :: String -> [Guid]
 defParamTags defName =
   innerMostPi (definitionTypes ! g) ^..
@@ -63,9 +58,6 @@ getParam name = simple $ ExprLens.bodyParameterRef # Guid.fromString name
 inferResults :: ExprIRef.Expression t (Infer.Inferred (DefI t)) -> InferResults t
 inferResults = fmap (void . Infer.iValue &&& void . Infer.iType)
 
-simple :: Expr.Body (DefI t) (InferResults t) -> PureExprDefI t -> InferResults t
-simple body iType = iexpr (bodyToPureExpr body) iType body
-
 iexpr ::
   PureExprDefI t ->
   PureExprDefI t ->
@@ -79,10 +71,19 @@ five = pureLiteralInt # 5
 bodyToPureExpr :: Expr.Body def (Expression def a) -> PureExpr def
 bodyToPureExpr exprBody = ExprLens.pureExpr # fmap void exprBody
 
-inferredHole :: PureExprDefI t -> InferResults t
-inferredHole = simple bodyHole
+holeWithInferredType :: PureExprDefI t -> InferResults t
+holeWithInferredType = simple bodyHole
+
+-- inferred-val is simply equal to the expr. Type is given
+simple :: Expr.Body (DefI t) (InferResults t) -> PureExprDefI t -> InferResults t
+simple body iType = iexpr (bodyToPureExpr body) iType body
 
 -- New-style:
+
+tag :: Guid -> InferResults t
+tag guid =
+  simple (ExprLens.bodyTag # guid) $
+  ExprLens.pureExpr . ExprLens.bodyTagType # ()
 
 inferredSetType :: InferResults t
 inferredSetType = simple bodySet pureSet
