@@ -54,7 +54,7 @@ import qualified Data.Cache as Cache
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Data.Expression as Expression
+import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Infer.ImplicitVariables as ImplicitVariables
@@ -76,7 +76,7 @@ type InferredWC t = InferredWithConflicts (DefI t)
 data NoStored = NoStored
 type Stored m = DataIRef.ExpressionProperty m
 
-type ExpressionSetter def = Expression.Expression def () -> Expression.Expression def ()
+type ExpressionSetter def = Expr.Expression def () -> Expr.Expression def ()
 
 data Payload t inferred stored
   = Payload
@@ -260,26 +260,26 @@ isPolymorphicFunc funcI =
   resultInferred funcI
 
 resultGuid ::
-  Expression.Expression def (Payload t inferred stored) -> Guid
-resultGuid = (^. Expression.ePayload . plGuid)
+  Expr.Expression def (Payload t inferred stored) -> Guid
+resultGuid = (^. Expr.ePayload . plGuid)
 
 resultStored ::
-  Expression.Expression def (Payload t inferred stored) -> stored
-resultStored = (^. Expression.ePayload . plStored)
+  Expr.Expression def (Payload t inferred stored) -> stored
+resultStored = (^. Expr.ePayload . plStored)
 
 resultInferred ::
-  Expression.Expression def (Payload t inferred stored) -> inferred
-resultInferred = (^. Expression.ePayload . plInferred)
+  Expr.Expression def (Payload t inferred stored) -> inferred
+resultInferred = (^. Expr.ePayload . plInferred)
 
 plIRef ::
   Lens.Traversal'
-  (Expression.Expression def (Payload t i (Maybe (Stored m))))
+  (Expr.Expression def (Payload t i (Maybe (Stored m))))
   (DataIRef.ExpressionI (Tag m))
-plIRef = Expression.ePayload . plStored . traverse . Property.pVal
+plIRef = Expr.ePayload . plStored . traverse . Property.pVal
 
 exprStoredGuid ::
   Lens.Fold
-  (Expression.Expression def (Payload t i (Maybe (Stored m)))) Guid
+  (Expr.Expression def (Payload t i (Maybe (Stored m)))) Guid
 exprStoredGuid = plIRef . Lens.to DataIRef.exprGuid
 
 replaceWith :: MonadA m => Stored m -> Stored m -> T m Guid

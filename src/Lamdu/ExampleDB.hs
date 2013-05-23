@@ -25,7 +25,7 @@ import qualified Lamdu.Anchors as A
 import qualified Lamdu.BranchGUI as BranchGUI
 import qualified Lamdu.CodeEdit.FFI as FFI
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Data.Expression as Expression
+import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
@@ -161,8 +161,8 @@ createBuiltins =
         (`Definition` typeI) . Definition.BodyBuiltin .
         Definition.Builtin $ Definition.FFIName ffiPath ffiName
     endo = join mkPi
-    set = DataIRef.newExprBody $ Expression.BodyLeaf Expression.Set
-    integer = DataIRef.newExprBody $ Expression.BodyLeaf Expression.IntegerType
+    set = DataIRef.newExprBody $ Expr.BodyLeaf Expr.Set
+    integer = DataIRef.newExprBody $ Expr.BodyLeaf Expr.IntegerType
     forAll name f = fmap DataIRef.ExpressionI . fixIRef $ \aI -> do
       let aGuid = IRef.guid aI
       setP (A.assocNameRef aGuid) name
@@ -184,9 +184,9 @@ createBuiltins =
       DataIRef.newExprBody $ ExprLens.bodyTag # tagGuid
     mkRecordType strFields = do
       tagFields <- traverse (Lens._1 mkTag <=< Lens.sequenceOf Lens._2) strFields
-      DataIRef.newExprBody $ Expression.BodyRecord Expression.Record
-        { Expression._recordKind = Expression.Type
-        , Expression._recordFields = tagFields
+      DataIRef.newExprBody $ Expr.BodyRecord Expr.Record
+        { Expr._recordKind = Expr.Type
+        , Expr._recordFields = tagFields
         }
     mkPiRecord = mkPi . mkRecordType
     mkType f = do

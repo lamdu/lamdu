@@ -28,7 +28,7 @@ import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Data.Expression as Expression
+import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
@@ -68,7 +68,7 @@ callWithArg exprP = do
   return argI
 
 newHole :: MonadA m => T m (DataIRef.ExpressionI (Tag m))
-newHole = DataIRef.newExprBody $ Expression.BodyLeaf Expression.Hole
+newHole = DataIRef.newExprBody $ Expr.BodyLeaf Expr.Hole
 
 replace ::
   MonadA m =>
@@ -86,7 +86,7 @@ setToHole :: MonadA m => DataIRef.ExpressionProperty m -> T m (DataIRef.Expressi
 setToHole exprP =
   exprI <$ DataIRef.writeExprBody exprI hole
   where
-    hole = Expression.BodyLeaf Expression.Hole
+    hole = Expr.BodyLeaf Expr.Hole
     exprI = Property.value exprP
 
 lambdaWrap

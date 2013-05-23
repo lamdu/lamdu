@@ -25,7 +25,7 @@ import qualified Lamdu.CodeEdit.Sugar.Expression as SugarExpr
 import qualified Lamdu.CodeEdit.Sugar.Infer as SugarInfer
 import qualified Lamdu.CodeEdit.Sugar.Monad as SugarM
 import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Data.Expression as Expression
+import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Expression.Lens as ExprLens
@@ -39,9 +39,9 @@ justToLeft = maybe (pure ()) Either.left <=< lift . runMaybeT
 
 convert ::
   (Typeable1 m, MonadA m) =>
-  Expression.Apply (ExprMM m) ->
+  Expr.Apply (ExprMM m) ->
   ExprMM m -> SugarM m (ExpressionU m)
-convert app@(Expression.Apply funcI argI) exprI =
+convert app@(Expr.Apply funcI argI) exprI =
   fmap uneither . runEitherT $ do
     justToLeft $ convertEmptyList app exprI
     argS <- lift $ SugarM.convertSubexpression argI
@@ -159,7 +159,7 @@ convertPrefix funcRef funcI argRef applyI = do
     makeFullApply = makeApply newFuncRef
     makeApply f =
       SugarExpr.make applyI . BodyApply DontHaveParens $
-      Expression.Apply f newArgRef
+      Expr.Apply f newArgRef
   if SugarInfer.isPolymorphicFunc funcI
     then
       case funcRef ^. rBody of
@@ -178,7 +178,7 @@ setListGuid consistentGuid e = e
 
 subExpressionGuids ::
   Lens.Fold
-  (Expression.Expression def (SugarInfer.Payload t i (Maybe (SugarInfer.Stored m)))) Guid
+  (Expr.Expression def (SugarInfer.Payload t i (Maybe (SugarInfer.Stored m)))) Guid
 subExpressionGuids = Lens.folding ExprUtil.subExpressions . SugarInfer.exprStoredGuid
 
 mkListAddFirstItem ::
@@ -188,10 +188,10 @@ mkListAddFirstItem specialFunctions =
 
 convertEmptyList ::
   (Typeable1 m, MonadA m) =>
-  Expression.Apply (ExprMM m) ->
+  Expr.Apply (ExprMM m) ->
   ExprMM m ->
   MaybeT (SugarM m) (ExpressionU m)
-convertEmptyList app@(Expression.Apply funcI _) exprI = do
+convertEmptyList app@(Expr.Apply funcI _) exprI = do
   specialFunctions <-
     lift $ (^. SugarM.scSpecialFunctions) <$> SugarM.readContext
   let
@@ -201,7 +201,7 @@ convertEmptyList app@(Expression.Apply funcI _) exprI = do
       , replaceNil = DataIRef.exprGuid <$> DataOps.setToHole exprS
       }
   guard $
-    Lens.anyOf (Expression.eBody . ExprLens.bodyDefinitionRef)
+    Lens.anyOf (Expr.eBody . ExprLens.bodyDefinitionRef)
     (== Anchors.sfNil specialFunctions) funcI
   let guids = app ^.. Lens.traversed . subExpressionGuids
   (rHiddenGuids <>~ guids) .
@@ -216,19 +216,19 @@ isCons ::
   DataIRef.Expression t a -> Bool
 isCons specialFunctions =
   Lens.anyOf
-  (Expression.eBody . Expression._BodyApply . Expression.applyFunc . Expression.eBody . ExprLens.bodyDefinitionRef)
+  (Expr.eBody . Expr._BodyApply . Expr.applyFunc . Expr.eBody . ExprLens.bodyDefinitionRef)
   (== Anchors.sfCons specialFunctions)
 
 convertList ::
   (Typeable1 m, MonadA m) =>
-  Expression.Apply (ExprMM m) ->
+  Expr.Apply (ExprMM m) ->
   ExpressionU m ->
   ExprMM m ->
   MaybeT (SugarM m) (ExpressionU m)
-convertList (Expression.Apply funcI argI) argS exprI = do
+convertList (Expr.Apply funcI argI) argS exprI = do
   specialFunctions <- lift $ (^. SugarM.scSpecialFunctions) <$> SugarM.readContext
-  Expression.Apply funcFuncI funcArgI <-
-    maybeToMPlus $ funcI ^? Expression.eBody . Expression._BodyApply
+  Expr.Apply funcFuncI funcArgI <-
+    maybeToMPlus $ funcI ^? Expr.eBody . Expr._BodyApply
   List innerValues innerListMActions <-
     maybeToMPlus $ argS ^? rBody . _BodyList
   guard $ isCons specialFunctions funcFuncI

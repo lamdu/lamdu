@@ -77,7 +77,7 @@ import Lamdu.Data.Expression.IRef (DefI)
 import qualified Control.Lens.TH as LensTH
 import qualified Data.List as List
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Data.Expression as Expression
+import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 
@@ -309,7 +309,7 @@ data LabeledApply name expr = LabeledApply
   } deriving (Functor, Foldable, Traversable)
 
 data Body name m expr
-  = BodyApply   { _eHasParens :: HasParens, __eApply :: Expression.Apply expr }
+  = BodyApply   { _eHasParens :: HasParens, __eApply :: Expr.Apply expr }
   | BodySection { _eHasParens :: HasParens, __eSection :: Section expr }
   | BodyFunc    { _eHasParens :: HasParens, __eFunc :: Func name m expr }
   | BodyPi      { _eHasParens :: HasParens, __ePi :: Pi name m expr }
@@ -336,7 +336,7 @@ instance Show expr => Show (FuncParam name m expr) where
     concat ["(", show (_fpGuid fp), ":", show (_fpType fp), ")"]
 
 instance Show expr => Show (Body name m expr) where
-  show BodyApply   { _eHasParens = hasParens, __eApply = Expression.Apply func arg } =
+  show BodyApply   { _eHasParens = hasParens, __eApply = Expr.Apply func arg } =
     wrapParens hasParens $ show func ++ " " ++ show arg
   show BodySection { _eHasParens = hasParens, __eSection = Section mleft op mright } =
     wrapParens hasParens $ maybe "" show mleft ++ " " ++ show op ++ maybe "" show mright

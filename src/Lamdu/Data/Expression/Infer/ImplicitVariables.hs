@@ -23,7 +23,7 @@ import System.Random (RandomGen, random)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Store.Guid as Guid
-import qualified Lamdu.Data.Expression as Expression
+import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
@@ -32,10 +32,10 @@ data Payload a = Stored a | AutoGen Guid
   deriving (Eq, Ord, Show, Functor, Typeable)
 derive makeBinary ''Payload
 
-isUnrestrictedHole :: Expression.Expression def Infer.IsRestrictedPoly -> Bool
+isUnrestrictedHole :: Expr.Expression def Infer.IsRestrictedPoly -> Bool
 isUnrestrictedHole
-  (Expression.Expression
-    (Expression.BodyLeaf Expression.Hole)
+  (Expr.Expression
+    (Expr.BodyLeaf Expr.Hole)
     Infer.UnrestrictedPoly) = True
 isUnrestrictedHole _ = False
 
@@ -64,7 +64,7 @@ addVariableForHole holePoint = do
     let
       paramTypeRef =
         Infer.tvType . Infer.nRefs . Infer.iPoint . fst $
-        inferredGetVar ^. Expression.ePayload
+        inferredGetVar ^. Expr.ePayload
     paramTypeTypeRef <- Infer.createRefExpr
     return
       ( paramGuid
@@ -76,7 +76,7 @@ addVariableForHole holePoint = do
 addVariablesForExpr ::
   (MonadA m, Ord def, RandomGen g) =>
   Infer.Loader def m ->
-  Expression.Expression def (Infer.Inferred def, a) ->
+  Expr.Expression def (Infer.Inferred def, a) ->
   StateT g (StateT (Infer.Context def) m) [(Guid, Infer.InferNode def)]
 addVariablesForExpr loader expr = do
   reinferred <-
@@ -85,7 +85,7 @@ addVariablesForExpr loader expr = do
   if isUnrestrictedHole $ inferredVal reinferred
     then
       fmap (:[]) . mapStateT toStateT . addVariableForHole $
-      Infer.iPoint . fst $ expr ^. Expression.ePayload
+      Infer.iPoint . fst $ expr ^. Expr.ePayload
     else do
       reloaded <-
         lift . lift . Infer.load loader Nothing $ -- <-- TODO: Nothing?
@@ -94,30 +94,30 @@ addVariablesForExpr loader expr = do
         lift . toStateT .
         inferAssertNoConflict "ImplicitVariables.addVariableForExpr"
         reloaded .
-        Infer.iPoint . fst $ Lens.view Expression.ePayload reinferred
+        Infer.iPoint . fst $ Lens.view Expr.ePayload reinferred
       fmap concat . mapM (addVariablesForExpr loader) .
         filter (isUnrestrictedHole . inferredVal) $
         ExprUtil.subExpressionsWithoutTags reinferredLoaded
   where
-    inferredVal = Infer.iValue . fst . Lens.view Expression.ePayload
+    inferredVal = Infer.iValue . fst . Lens.view Expr.ePayload
 
 addParam ::
   Ord def =>
-  Expression.Expression def (Infer.InferNode def, Payload a) ->
+  Expr.Expression def (Infer.InferNode def, Payload a) ->
   (Guid, Infer.InferNode def) ->
   State (Infer.Context def)
-  (Expression.Expression def (Infer.InferNode def, Payload a))
+  (Expr.Expression def (Infer.InferNode def, Payload a))
 addParam body (paramGuid, paramTypeNode) = do
   newRootNode <- Infer.newNodeWithScope mempty
   let
     newRootExpr =
-      Expression.Expression newRootLam (newRootNode, AutoGen (Guid.augment "root" paramGuid))
+      Expr.Expression newRootLam (newRootNode, AutoGen (Guid.augment "root" paramGuid))
   unMaybe $ Infer.addRules actions [fst <$> newRootExpr]
   return newRootExpr
   where
     paramTypeExpr =
-      Expression.Expression
-      (Expression.BodyLeaf Expression.Hole)
+      Expr.Expression
+      (Expr.BodyLeaf Expr.Hole)
       (paramTypeNode, AutoGen (Guid.augment "paramType" paramGuid))
     newRootLam =
       ExprUtil.makeLambda paramGuid paramTypeExpr body
@@ -125,9 +125,9 @@ addParam body (paramGuid, paramTypeNode) = do
 addVariables ::
   (MonadA m, Ord def, RandomGen g) =>
   g -> Infer.Loader def m ->
-  Expression.Expression def (Infer.Inferred def, a) ->
+  Expr.Expression def (Infer.Inferred def, a) ->
   StateT (Infer.Context def) m
-  (Expression.Expression def (Infer.Inferred def, Payload a))
+  (Expr.Expression def (Infer.Inferred def, Payload a))
 addVariables gen loader expr = do
   implicitParams <-
     (`evalStateT` gen) . fmap concat .

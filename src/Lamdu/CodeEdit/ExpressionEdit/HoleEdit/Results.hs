@@ -38,7 +38,7 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info as HoleInfo
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Data.Expression as Expression
+import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
@@ -56,7 +56,7 @@ type GroupM m = Group (DefI (Tag m))
 
 Lens.makeLenses ''Group
 
-mkGroup :: [String] -> Expression.BodyExpr def () -> Group def
+mkGroup :: [String] -> Expr.BodyExpr def () -> Group def
 mkGroup names body = Group
   { _groupNames = names
   , _groupBaseExpr = ExprUtil.pureExpression body
@@ -163,7 +163,7 @@ toMResultsList holeInfo makeWidget baseId options = do
     holeApply expr =
       Expression
       ( ExprUtil.makeApply
-        (Expression (Expression.BodyLeaf Expression.Hole) Nothing)
+        (Expression (Expr.BodyLeaf Expr.Hole) Nothing)
         expr
       )
       Nothing
@@ -194,18 +194,18 @@ baseExprToResultsList holeInfo makeWidget baseExpr =
       ExprUtil.applyForms baseExprType baseExpr ++ do
         record <-
           baseExprType ^..
-          ExprLens.exprLam . Expression.lambdaParamType .
+          ExprLens.exprLam . Expr.lambdaParamType .
           ExprLens.exprRecord
-        let tags = record ^.. Expression.recordFields . traverse . Lens._1
+        let tags = record ^.. Expr.recordFields . traverse . Lens._1
         guard $ length tags == 1
         tag <- tags
         pure . ExprUtil.pureExpression .
           ExprUtil.makeLambda paramGuid ExprUtil.pureHole .
           ExprUtil.pureApply baseExpr . ExprUtil.pureExpression $
-          Expression.BodyRecord
-          Expression.Record
-          { Expression._recordKind = Expression.Val
-          , Expression._recordFields =
+          Expr.BodyRecord
+          Expr.Record
+          { Expr._recordKind = Expr.Val
+          , Expr._recordFields =
               [ ( tag
                 , ExprUtil.pureExpression $ Lens.review ExprLens.bodyParameterRef paramGuid
                 )
@@ -222,16 +222,16 @@ applyOperatorResultsList ::
 applyOperatorResultsList holeInfo makeWidget argument baseExpr =
   toMResultsList holeInfo makeWidget baseId .
   map Sugar.ResultSeedExpression =<<
-  case (Nothing <$ baseExpr) ^. Expression.eBody of
-  Expression.BodyLam (Expression.Lambda k paramGuid paramType result) ->
+  case (Nothing <$ baseExpr) ^. Expr.eBody of
+  Expr.BodyLam (Expr.Lambda k paramGuid paramType result) ->
     pure $ map genExpr
-    [ Expression.BodyLam (Expression.Lambda k paramGuid unwrappedArg result)
-    , Expression.BodyLam (Expression.Lambda k paramGuid paramType unwrappedArg)
+    [ Expr.BodyLam (Expr.Lambda k paramGuid unwrappedArg result)
+    , Expr.BodyLam (Expr.Lambda k paramGuid paramType unwrappedArg)
     ]
-  Expression.BodyGetField (Expression.GetField recExpr fieldTag) ->
+  Expr.BodyGetField (Expr.GetField recExpr fieldTag) ->
     pure $ map genExpr
-    [ Expression.BodyGetField $ Expression.GetField unwrappedArg fieldTag
-    , Expression.BodyGetField $ Expression.GetField recExpr unwrappedArg
+    [ Expr.BodyGetField $ Expr.GetField unwrappedArg fieldTag
+    , Expr.BodyGetField $ Expr.GetField recExpr unwrappedArg
     ]
   _ -> do
     mBaseExprType <- hiHoleActions holeInfo ^. Sugar.holeInferExprType $ baseExpr
@@ -250,7 +250,7 @@ applyOperatorResultsList holeInfo makeWidget argument baseExpr =
           ]
   where
     genExpr = (`Expression` Nothing)
-    hole = genExpr $ Expression.BodyLeaf Expression.Hole
+    hole = genExpr $ Expr.BodyLeaf Expr.Hole
     unwrappedArg = fromMaybe argument $ removeHoleWrap argument
     baseId = WidgetIds.hash baseExpr
 
@@ -259,9 +259,9 @@ removeHoleWrap expr = do
   apply <- expr ^? ExprLens.exprApply
   void $
     apply ^?
-    Expression.applyFunc . Expression.eBody .
-    Expression._BodyLeaf . Expression._Hole
-  pure $ apply ^. Expression.applyArg
+    Expr.applyFunc . Expr.eBody .
+    Expr._BodyLeaf . Expr._Hole
+  pure $ apply ^. Expr.applyArg
 
 data ResultType = GoodResult | BadResult
 
@@ -346,20 +346,20 @@ makeAllGroups holeInfo = do
     state = Property.value $ hiState holeInfo
     searchTerm = state ^. HoleInfo.hsSearchTerm
     primitiveGroups =
-      [ mkGroup ["Set", "Type"] $ Expression.BodyLeaf Expression.Set
-      , mkGroup ["Integer", "ℤ", "Z"] $ Expression.BodyLeaf Expression.IntegerType
+      [ mkGroup ["Set", "Type"] $ Expr.BodyLeaf Expr.Set
+      , mkGroup ["Integer", "ℤ", "Z"] $ Expr.BodyLeaf Expr.IntegerType
       , mkGroup ["->", "Pi", "→", "→", "Π", "π"] $
         ExprUtil.makePi (Guid.fromString "NewPi") holeExpr holeExpr
       , mkGroup ["\\", "Lambda", "Λ", "λ"] $
         ExprUtil.makeLambda (Guid.fromString "NewLambda") holeExpr holeExpr
-      , mkGroup ["Record Type", "{"] . Expression.BodyRecord $
-        Expression.Record Expression.Type mempty
-      , mkGroup ["Record Value", "{"] . Expression.BodyRecord $
-        Expression.Record Expression.Val mempty
-      , mkGroup [".", "Get Field"] . Expression.BodyGetField $
-        Expression.GetField ExprUtil.pureHole ExprUtil.pureHole
+      , mkGroup ["Record Type", "{"] . Expr.BodyRecord $
+        Expr.Record Expr.Type mempty
+      , mkGroup ["Record Value", "{"] . Expr.BodyRecord $
+        Expr.Record Expr.Val mempty
+      , mkGroup [".", "Get Field"] . Expr.BodyGetField $
+        Expr.GetField ExprUtil.pureHole ExprUtil.pureHole
       ]
-    holeExpr = ExprUtil.pureExpression $ Expression.BodyLeaf Expression.Hole
+    holeExpr = ExprUtil.pureExpression $ Expr.BodyLeaf Expr.Hole
 
 groupOrdering :: String -> [String] -> [Bool]
 groupOrdering searchTerm names =

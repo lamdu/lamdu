@@ -26,21 +26,21 @@ import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Data.Expression as Expression
+import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 
 type T = Transaction
 
 type ExprI = DataIRef.ExpressionI
 
--- | SubexpressionIndex is a Foldable-index into Expression.Body (i.e:
+-- | SubexpressionIndex is a Foldable-index into Expr.Body (i.e:
 -- 0 or 1 for BodyApply func/arg)
 type SubexpressionIndex = Int
 
 data PropertyClosure t
   = DefinitionTypeProperty (DefI t) (Definition (ExprI t))
   | DefinitionBodyExpressionProperty (DefI t) (ExprI t) (ExprI t)
-  | SubexpressionProperty (ExprI t) (Expression.Body (DefI t) (ExprI t)) SubexpressionIndex
+  | SubexpressionProperty (ExprI t) (Expr.Body (DefI t) (ExprI t)) SubexpressionIndex
   deriving (Eq, Ord, Show, Typeable)
 derive makeBinary ''PropertyClosure
 
@@ -66,19 +66,19 @@ type Loaded m = DataIRef.ExpressionM m (DataIRef.ExpressionProperty m)
 loadExpressionProperty ::
   MonadA m => DataIRef.ExpressionProperty m -> T m (Loaded m)
 loadExpressionProperty prop =
-  fmap ((`Expression.Expression` prop) . (fmap . fmap) propertyOfClosure) .
+  fmap ((`Expr.Expression` prop) . (fmap . fmap) propertyOfClosure) .
   loadExpressionBody Set.empty $ Property.value prop
 
 loadExpressionClosure ::
   MonadA m => Set Guid ->
   PropertyClosure (Tag m) -> T m (LoadedClosure (Tag m))
 loadExpressionClosure visited closure =
-  fmap (`Expression.Expression` closure) . loadExpressionBody visited $
+  fmap (`Expr.Expression` closure) . loadExpressionBody visited $
   irefOfClosure closure
 
 loadExpressionBody ::
   MonadA m => Set Guid -> ExprI (Tag m) ->
-  T m (Expression.Body (DefI (Tag m)) (LoadedClosure (Tag m)))
+  T m (Expr.Body (DefI (Tag m)) (LoadedClosure (Tag m)))
 loadExpressionBody visited iref
   | ourGuid `Set.member` visited = error "Recursive IRef structure"
   | otherwise = onBody =<< DataIRef.readExprBody iref

@@ -19,7 +19,7 @@ import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Store.Guid as Guid
-import qualified Lamdu.Data.Expression as Expression
+import qualified Lamdu.Data.Expression as Expr
 import qualified Test.QuickCheck.Gen as Gen
 
 data Env def = Env
@@ -36,40 +36,40 @@ liftGen = lift . lift
 next :: GenExpr def Guid
 next = lift $ State.gets head <* State.modify tail
 
-arbitraryLambda :: Arbitrary a => GenExpr def (Expression.Lambda (Expression.Expression def a))
+arbitraryLambda :: Arbitrary a => GenExpr def (Expr.Lambda (Expr.Expression def a))
 arbitraryLambda = do
   guid <- next
-  flip Expression.Lambda guid <$> liftGen arbitrary <*> arbitraryExpr <*>
+  flip Expr.Lambda guid <$> liftGen arbitrary <*> arbitraryExpr <*>
     Reader.local (envScope %~ (guid :)) arbitraryExpr
 
-arbitraryApply :: Arbitrary a => GenExpr def (Expression.Apply (Expression.Expression def a))
-arbitraryApply = Expression.Apply <$> arbitraryExpr <*> arbitraryExpr
+arbitraryApply :: Arbitrary a => GenExpr def (Expr.Apply (Expr.Expression def a))
+arbitraryApply = Expr.Apply <$> arbitraryExpr <*> arbitraryExpr
 
-arbitraryLeaf :: GenExpr def (Expression.Leaf def)
+arbitraryLeaf :: GenExpr def (Expr.Leaf def)
 arbitraryLeaf = do
   Env scope mGenDefI <- Reader.ask
   join . liftGen . Gen.elements $
-    [ Expression.LiteralInteger <$> liftGen arbitrary
-    , pure Expression.Set
-    , pure Expression.IntegerType
-    , pure Expression.Hole
+    [ Expr.LiteralInteger <$> liftGen arbitrary
+    , pure Expr.Set
+    , pure Expr.IntegerType
+    , pure Expr.Hole
     ] ++
-    map (pure . Expression.GetVariable . Expression.ParameterRef) scope ++
-    map (fmap (Expression.GetVariable . Expression.DefinitionRef) . liftGen)
+    map (pure . Expr.GetVariable . Expr.ParameterRef) scope ++
+    map (fmap (Expr.GetVariable . Expr.DefinitionRef) . liftGen)
       (maybeToList mGenDefI)
 
-arbitraryBody :: Arbitrary a => GenExpr def (Expression.BodyExpr def a)
+arbitraryBody :: Arbitrary a => GenExpr def (Expr.BodyExpr def a)
 arbitraryBody =
   join . liftGen . Gen.frequency . (Lens.mapped . Lens._2 %~ pure) $
-  [ weight 2  $ Expression.BodyLam    <$> arbitraryLambda
-  , weight 5  $ Expression.BodyApply  <$> arbitraryApply
-  , weight 10 $ Expression.BodyLeaf   <$> arbitraryLeaf
+  [ weight 2  $ Expr.BodyLam    <$> arbitraryLambda
+  , weight 5  $ Expr.BodyApply  <$> arbitraryApply
+  , weight 10 $ Expr.BodyLeaf   <$> arbitraryLeaf
   ]
   where
     weight = (,)
 
-arbitraryExpr :: Arbitrary a => GenExpr def (Expression.Expression def a)
-arbitraryExpr = Expression.Expression <$> arbitraryBody <*> liftGen arbitrary
+arbitraryExpr :: Arbitrary a => GenExpr def (Expr.Expression def a)
+arbitraryExpr = Expr.Expression <$> arbitraryBody <*> liftGen arbitrary
 
 nameStream :: [Guid]
 nameStream = map Guid.fromString names
@@ -77,7 +77,7 @@ nameStream = map Guid.fromString names
     alphabet = map (:[]) ['a'..'z']
     names = (alphabet ++) $ (++) <$> names <*> alphabet
 
-exprGen :: Arbitrary a => Maybe (Gen def) -> Gen (Expression.Expression def a)
+exprGen :: Arbitrary a => Maybe (Gen def) -> Gen (Expr.Expression def a)
 exprGen makeDefI =
   (`evalStateT` nameStream) .
   (`runReaderT` Env [] makeDefI) $
@@ -86,7 +86,7 @@ exprGen makeDefI =
 -- TODO: This instance doesn't know which Definitions exist in the
 -- world so avoids DefinitionRef and only has valid ParameterRefs to
 -- its own lambdas.
-instance Arbitrary a => Arbitrary (Expression.Expression def a) where
+instance Arbitrary a => Arbitrary (Expr.Expression def a) where
   arbitrary = exprGen Nothing
 
-derive makeArbitrary ''Expression.Kind
+derive makeArbitrary ''Expr.Kind

@@ -25,13 +25,13 @@ import qualified Data.Store.Map as MapStore
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Data.Expression as Expression
+import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as DataIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
-type PureExpr def = Expression.Expression def ()
+type PureExpr def = Expr.Expression def ()
 type PureExprDefI t = PureExpr (DefI t)
 
 (==>) :: k -> v -> Map k v
@@ -40,16 +40,16 @@ type PureExprDefI t = PureExpr (DefI t)
 data Invisible = Invisible
 instance Show Invisible where
   show = const ""
-showStructure :: Show def => Expression.Body def a -> String
+showStructure :: Show def => Expr.Body def a -> String
 showStructure = show . (Invisible <$)
 
 instance Show def => Show (PureExpr def) where
-  show (Expression.Expression value ()) = show value
+  show (Expr.Expression value ()) = show value
 
-namedLambda :: String -> expr -> expr -> Expression.Body def expr
+namedLambda :: String -> expr -> expr -> Expr.Body def expr
 namedLambda = ExprUtil.makeLambda . Guid.fromString
 
-namedPi :: String -> expr -> expr -> Expression.Body def expr
+namedPi :: String -> expr -> expr -> Expr.Body def expr
 namedPi = ExprUtil.makePi . Guid.fromString
 
 pureApply :: [PureExpr def] -> PureExpr def
@@ -58,8 +58,8 @@ pureApply = foldl1 (fmap ExprUtil.pureExpression . ExprUtil.makeApply)
 -- 1 dependent param
 pureApplyPoly1 ::
   String ->
-  [Expression.Expression (DefI t) ()] ->
-  Expression.Expression (DefI t) ()
+  [Expr.Expression (DefI t) ()] ->
+  Expr.Expression (DefI t) ()
 pureApplyPoly1 name xs = pureApply $ pureGetDef name : pureHole : xs
 
 pureLambda ::
@@ -102,7 +102,7 @@ ansiReset :: String
 ansiReset = "\ESC[0m"
 
 showExpressionWithConflicts ::
-  Show def => Expression.Expression def (InferredWithConflicts def) -> String
+  Show def => Expr.Expression def (InferredWithConflicts def) -> String
 showExpressionWithConflicts =
   List.intercalate "\n" . go
   where
@@ -114,11 +114,11 @@ showExpressionWithConflicts =
       ] ++ map ((("    " ++ ansiRed ++ "Conflict: ") ++) . (++ ansiReset) . show) tErrors ++
       (map ("  " ++) . Foldable.concat . fmap go) expr
       where
-        expr = inferredExpr ^. Expression.eBody
+        expr = inferredExpr ^. Expr.eBody
         val = Infer.iValue inferred
         typ = Infer.iType inferred
         InferredWithConflicts inferred tErrors vErrors =
-          inferredExpr ^. Expression.ePayload
+          inferredExpr ^. Expr.ePayload
 
 definitionTypes :: Map Guid (PureExprDefI t)
 definitionTypes =

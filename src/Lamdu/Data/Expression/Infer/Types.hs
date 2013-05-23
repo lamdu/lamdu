@@ -27,7 +27,7 @@ import Data.Typeable (Typeable)
 import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Monoid as Monoid
-import qualified Lamdu.Data.Expression as Expression
+import qualified Lamdu.Data.Expression as Expr
 
 newtype ExprRef = ExprRef { unExprRef :: Int } deriving (Eq, Ord, Typeable)
 instance Show ExprRef where
@@ -54,16 +54,16 @@ data RefExprPayload = RefExprPayload
   } deriving (Show)
 LensTH.makeLenses ''RefExprPayload
 
-type RefExpression def = Expression.Expression def RefExprPayload
+type RefExpression def = Expr.Expression def RefExprPayload
 
-makeRefExpr :: Origin -> Expression.Body def (RefExpression def) -> RefExpression def
-makeRefExpr g expr = Expression.Expression expr $ RefExprPayload mempty (Monoid.Any False) g
+makeRefExpr :: Origin -> Expr.Body def (RefExpression def) -> RefExpression def
+makeRefExpr g expr = Expr.Expression expr $ RefExprPayload mempty (Monoid.Any False) g
 
 -- Map from params to their Param type,
 -- also including the recursive ref to the definition.
 -- (hence not just parameters)
 -- TODO: Convert to list
-type Scope def = Map (Expression.VariableRef def) ExprRef
+type Scope def = Map (Expr.VariableRef def) ExprRef
 
 -- Used to refer to expressions in the inference state and resume inference.
 data InferNode def = InferNode
@@ -82,9 +82,9 @@ data IsRestrictedPoly = UnrestrictedPoly | RestrictedPoly
 
 data Inferred def = Inferred
   { iPoint :: InferNode def
-  , iValue :: Expression.Expression def IsRestrictedPoly
-  , iType  :: Expression.Expression def IsRestrictedPoly
-  , iScope :: Map Guid (Expression.Expression def IsRestrictedPoly)
+  , iValue :: Expr.Expression def IsRestrictedPoly
+  , iType  :: Expr.Expression def IsRestrictedPoly
+  , iScope :: Map Guid (Expr.Expression def IsRestrictedPoly)
   }
 -- Cannot derive Binary instance because binary instance of Scope
 -- requires (Ord def)

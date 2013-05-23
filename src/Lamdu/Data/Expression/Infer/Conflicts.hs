@@ -21,7 +21,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import qualified Lamdu.Data.Expression as Expression
+import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Infer as Infer
 
 data InferredWithConflicts def = InferredWithConflicts
@@ -55,7 +55,7 @@ inferWithConflicts ::
   Ord def => Infer.Loaded def a -> Infer.InferNode def ->
   State (Infer.Context def)
   ( Bool
-  , Expression.Expression def (InferredWithConflicts def, a)
+  , Expr.Expression def (InferredWithConflicts def, a)
   )
 inferWithConflicts loaded node = do
   (exprInferred, conflictsMap) <-
@@ -80,15 +80,15 @@ inferWithConflicts loaded node = do
 
 iwcInferredExprs ::
   Ord def =>
-  (Infer.Inferred def -> Expression.Expression def a) ->
+  (Infer.Inferred def -> Expr.Expression def a) ->
   (InferredWithConflicts def -> [Infer.Error def]) ->
-  InferredWithConflicts def -> [Expression.Expression def ()]
+  InferredWithConflicts def -> [Expr.Expression def ()]
 iwcInferredExprs getVal eeConflicts ee =
   (void . getVal . iwcInferred) ee :
   (Set.toList . Set.fromList . map (snd . Infer.errMismatch) . eeConflicts) ee
 
-iwcInferredTypes :: Ord def => InferredWithConflicts def -> [Expression.Expression def ()]
+iwcInferredTypes :: Ord def => InferredWithConflicts def -> [Expr.Expression def ()]
 iwcInferredTypes = iwcInferredExprs Infer.iType iwcTypeConflicts
 
-iwcInferredValues :: Ord def => InferredWithConflicts def -> [Expression.Expression def ()]
+iwcInferredValues :: Ord def => InferredWithConflicts def -> [Expr.Expression def ()]
 iwcInferredValues = iwcInferredExprs Infer.iValue iwcValueConflicts
