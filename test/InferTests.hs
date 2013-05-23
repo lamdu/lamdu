@@ -124,15 +124,19 @@ iexpr ::
 iexpr iVal iType body =
   Expr.Expression body (iVal, iType)
 
+assertCompareInferred ::
+  InferResults t -> InferResults t -> HUnit.Assertion
+assertCompareInferred result expected =
+  assertBool
+    (unlines
+     [ "result expr:"  , showExpressionWithInferred result
+     , "expected expr:", showExpressionWithInferred expected
+     ]) $ compareInferred result expected
+
 testInfer ::
   String -> InferResults t -> HUnit.Test
 testInfer name expr =
-  testCase name .
-  assertBool
-    (unlines
-     [ "result expr:"  , showExpressionWithInferred inferredExpr
-     , "expected expr:", showExpressionWithInferred expr
-     ]) $ compareInferred inferredExpr expr
+  testCase name $ assertCompareInferred inferredExpr expr
   where
     inferredExpr = inferResults . fst . doInfer_ $ void expr
 
@@ -580,18 +584,9 @@ resumptionTests =
       exprR = (`evalState` inferContext) $ do
         node <- Infer.newNodeWithScope scope
         doInferM_ node getRecursiveDef
-      resultD = inferResults exprD
       resultR = inferResults exprR
     in
-      assertBool (unlines
-        [ "Root expression inferred:"
-        , showExpressionWithInferred resultD
-        , "Scope:"
-        , show scope
-        , ""
-        , showExpressionWithInferred resultR
-        ]) .
-      compareInferred resultR .
+      assertCompareInferred resultR .
       leafSimple (Expr.GetVariable (Expr.DefinitionRef recursiveDefI)) $
       purePi "" pureHole pureHole
   ]
