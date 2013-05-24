@@ -85,7 +85,7 @@ getParam name typ =
   typ ^. iVal
 
 listOf :: InferResults t -> InferResults t
-listOf x = apply [getDef "List", x]
+listOf = (getDef "List" $$)
 
 getDef :: String -> InferResults t
 getDef name =
@@ -106,36 +106,32 @@ setType = simple bodySet pureSet
 integerType :: InferResults t
 integerType = simple bodyIntegerType pureSet
 
--- Convenience wrapper for common case of applying dependent params
--- first:
-applyRecord :: [InferResults t] -> [InferResults t] -> InferResults t
-applyRecord = applyRec . apply
+infixl 4 $$
+infixl 3 $$:
 
-applyRec :: InferResults t -> [InferResults t] -> InferResults t
-applyRec f args =
-  apply [f, record Val (zip tags args)]
+($$:) :: InferResults t -> [InferResults t] -> InferResults t
+($$:) f args =
+  f $$ record Val (zip tags args)
   where
     tags = recType ^.. Lens.traversed . Lens._1 . ExprLens.exprTag . Lens.to tag
     recType =
       fromMaybe (error "applyRec must be applied on a func of record type") $
       f ^? iType . ExprLens.exprKindedLam Type . Lens._2 . ExprLens.exprKindedRecordFields Type
 
-apply :: [InferResults t] -> InferResults t
-apply = foldl1 step
+($$) :: InferResults t -> InferResults t -> InferResults t
+($$) func@(Expr.Expression _ (funcVal, funcType)) nextArg =
+  iexpr applyVal applyType application
   where
-    step func@(Expr.Expression _ (funcVal, funcType)) nextArg =
-      iexpr applyVal applyType application
-      where
-        application = ExprUtil.makeApply func nextArg
-        handleLam e k seeHole seeOther =
-          case e ^. Expr.eBody of
-          Expr.BodyLeaf Expr.Hole -> seeHole
-          Expr.BodyLam (Expr.Lambda k1 paramGuid _ result)
-            | k == k1 -> ExprUtil.subst paramGuid (nextArg ^. iVal) result
-          _ -> seeOther
-        applyVal = handleLam funcVal Val pureHole $ bodyToPureExpr application
-        applyType = handleLam funcType Type piErr piErr
-        piErr = error "Apply of non-Pi type!"
+    application = ExprUtil.makeApply func nextArg
+    handleLam e k seeHole seeOther =
+      case e ^. Expr.eBody of
+      Expr.BodyLeaf Expr.Hole -> seeHole
+      Expr.BodyLam (Expr.Lambda k1 paramGuid _ result)
+        | k == k1 -> ExprUtil.subst paramGuid (nextArg ^. iVal) result
+      _ -> seeOther
+    applyVal = handleLam funcVal Val pureHole $ bodyToPureExpr application
+    applyType = handleLam funcType Type piErr piErr
+    piErr = error "Apply of non-Pi type!"
 
 record :: Kind -> [(InferResults t, InferResults t)] -> InferResults t
 record k fields =

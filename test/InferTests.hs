@@ -30,7 +30,7 @@ simpleTests :: [HUnit.Test]
 simpleTests =
   [ testInfer "literal int" $ integer 5
   , testInfer "simple apply" $
-    apply [holeWithInferredType (hole --> hole), hole]
+    holeWithInferredType (hole --> hole) $$ hole
   , testInfer "simple pi" $
     holeWithInferredType setType -->
     holeWithInferredType setType
@@ -39,39 +39,35 @@ simpleTests =
 applyIntToBoolFuncWithHole :: HUnit.Test
 applyIntToBoolFuncWithHole =
   testInfer "apply" $
-  apply [getDef "IntToBoolFunc", holeWithInferredType integerType]
+  getDef "IntToBoolFunc" $$ holeWithInferredType integerType
 
 inferPart :: HUnit.Test
 inferPart =
   testInfer "foo (xs:List ?) = 5 : xs" $
   lambda "xs" listInts $ \xs ->
-  apply [ getDef ":", inferredVal integerType, integer 5, xs ]
+  getDef ":" $$ inferredVal integerType $$ integer 5 $$ xs
   where
     listInts = listOf (inferredVal integerType)
 
 applyOnVar :: HUnit.Test
 applyOnVar =
   testInfer "apply on var" $
-  lambda "x" (holeWithInferredType setType) $ \x -> apply
-  [ getDef "IntToBoolFunc"
-  , apply
-    [holeWithInferredType (hole --> integerType), x]
-  ]
+  lambda "x" (holeWithInferredType setType) $ \x ->
+  getDef "IntToBoolFunc" $$
+  (holeWithInferredType (hole --> integerType) $$ x)
 
 idTest :: HUnit.Test
-idTest =
-  testInfer "id test" $
-  apply [getDef "id", integerType]
+idTest = testInfer "id test" $ getDef "id" $$ integerType
 
 inferFromOneArgToOther :: HUnit.Test
 inferFromOneArgToOther =
   testInfer "f = \\ a b (x:Map _ _) (y:Map a b) -> if {_ x y}" $
   lambda "a" (inferredVal setType) $ \a ->
   lambda "b" (inferredVal setType) $ \b ->
-  let mkMapType f = apply [getDef "Map", f a, f b] in
+  let mkMapType f = getDef "Map" $$ f a $$ f b in
   lambda "x" (mkMapType inferredVal) $ \x ->
   lambda "y" (mkMapType id) $ \y ->
-  applyRecord [getDef "if", inferredVal (mkMapType id)]
+  getDef "if" $$ inferredVal (mkMapType id) $$:
   [holeWithInferredType (getDef "Bool"), x, y]
 
 monomorphRedex :: HUnit.Test
@@ -376,7 +372,7 @@ recordTest =
 inferRecordValTest :: HUnit.Test
 inferRecordValTest =
   testInfer "id ({:Set) <hole> infers { val" $
-  apply [getDef "id", record Type [], inferredVal (record Val [])]
+  getDef "id" $$ record Type [] $$ inferredVal (record Val [])
 
 hunitTests :: HUnit.Test
 hunitTests =
