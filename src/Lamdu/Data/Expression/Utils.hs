@@ -7,6 +7,7 @@ module Lamdu.Data.Expression.Utils
   , pureHole
   , pureSet
   , pureRecord
+  , pureLam
   , pureLiteralInteger
   , pureIntegerType
   , pureExpression
@@ -246,7 +247,6 @@ getParams expr =
     (param, paramType) : getParams resultType
   _ -> []
 
--- TODO: To prisms:
 pureIntegerType :: Expression def ()
 pureIntegerType = ExprLens.pureExpr . ExprLens.bodyIntegerType # ()
 
@@ -264,6 +264,10 @@ pureSet = ExprLens.pureExpr . ExprLens.bodySet # ()
 
 pureRecord :: Kind -> [(Expression def (), Expression def ())] -> Expression def ()
 pureRecord k fields = ExprLens.pureExpr . ExprLens.bodyKindedRecordFields k # fields
+
+pureLam :: Kind -> Guid -> Expression def () -> Expression def () -> Expression def ()
+pureLam k paramGuid paramType result =
+  ExprLens.pureExpr . ExprLens.bodyKindedLam k # (paramGuid, paramType, result)
 
 -- TODO: Deprecate below here:
 pureExpression :: Body def (Expression def ()) -> Expression def ()
