@@ -72,60 +72,15 @@ inferFromOneArgToOther =
 
 monomorphRedex :: HUnit.Test
 monomorphRedex =
-  testInfer "foo = f (\\~ x -> (\\~ -> x) _) where f ~:(a:Set -> _ -> a) = _" .
-  iexpr inferredExpr pureHole $
-  ExprUtil.makeApply
-    ( iexpr (bodyLambda True) bodyLambdaType $
-      namedLambda "f"
-        (iexpr fType pureSet bodyHole) $
-      iexpr (body True) pureHole $
-      ExprUtil.makeApply
-        (getParamPure "f" fType) $
-      iexpr (fArg True) (fArgType True) $
-      namedLambda "b"
-        (iexpr pureSet pureSet bodyHole) $
-      iexpr xToX (fArgInnerType True) $
-      namedLambda "x"
-        (iexpr (pureGetParam "b") pureSet bodyHole) $
-      iexpr (pureGetParam "x") (pureGetParam "b") $
-      ExprUtil.makeApply
-        ( iexpr cToX (purePi "" pureHole (pureGetParam "b")) $
-          namedLambda "c"
-            (simple bodyHole pureSet) $
-          getParamPure "x" $ pureGetParam "b"
-        ) $
-      simple bodyHole pureHole
-    ) $
-  iexpr (fExpr True) fType $
-  namedLambda "fArg"
-    ( iexpr (fArgType True) pureSet $
-      namedPi "b"
-        (simple bodySet pureSet) $
-      iexpr (fArgInnerType True) pureSet $
-      namedPi "x"
-        (iexpr (pureGetParam "b") pureSet bodyHole) $
-      getParamPure "b" pureSet
-    ) $
-  simple bodyHole pureHole
+  testInfer "foo = f (\\~ x -> (\\~ -> x) _) where f ~:(a:Set -> _ -> a) = _" $
+  whereItem "f" (lambda "" fArgType (const hole)) $ \f ->
+  f $$
+  (lambda "b" (asHole setType) $ \b ->
+   lambda "x" (asHole b) $ \x ->
+   lambda "c" (holeWithInferredType setType) (\_ -> x) $$ hole)
   where
-    inferredExpr = pureApply [fExpr True, fArg True]
-    bodyLambda isInferred =
-      pureLambda "f" (if isInferred then fType else pureHole) $
-      body isInferred
-    fExpr isInferred = pureLambda "" (fArgType isInferred) pureHole
-    fArgType isInferred = purePi "b" pureSet $ fArgInnerType isInferred
-    fArgInnerType False = purePi "" pureHole $ pureGetParam "b"
-    fArgInnerType True = purePi "" (pureGetParam "b") $ pureGetParam "b"
-    body isInferred = pureApply [pureGetParam "f", fArg isInferred]
-    fArg False =
-      pureLambda "b" pureHole .
-      pureLambda "x" pureHole $
-      pureApply [cToX, pureHole]
-    fArg True = pureLambda "b" pureSet xToX
-    cToX = pureLambda "c" pureHole $ pureGetParam "x"
-    xToX = pureLambda "x" (pureGetParam "b") $ pureGetParam "x"
-    bodyLambdaType = purePi "" fType pureHole
-    fType = purePi "" (fArgType True) pureHole
+    -- (a:Set -> _[=a] -> a)
+    fArgType = piType "a" setType $ \a -> asHole a --> a
 
 fOfXIsFOf5 :: HUnit.Test
 fOfXIsFOf5 =
