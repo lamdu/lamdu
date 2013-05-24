@@ -10,7 +10,7 @@ import InferCombinators
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expression (Expression(..), Kind(..))
 import Lamdu.Data.Expression.Infer.Conflicts (inferWithConflicts)
-import Lamdu.Data.Expression.Utils (pureHole, pureSet)
+import Lamdu.Data.Expression.Utils (pureSet)
 import Test.Framework (Test)
 import Test.Framework.Providers.HUnit (hUnitTestToTests)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
@@ -119,22 +119,34 @@ applyFunc :: Lens.Traversal' (Expression def a) (Expression def a)
 applyFunc = ExprLens.exprApply . Expr.applyFunc
 applyArg :: Lens.Traversal' (Expression def a) (Expression def a)
 applyArg = ExprLens.exprApply . Expr.applyArg
+lamParamType :: Lens.Traversal' (Expression def a) (Expression def a)
+lamParamType = ExprLens.exprLam . Expr.lambdaParamType
 lamBody :: Lens.Traversal' (Expression def a) (Expression def a)
 lamBody = ExprLens.exprLam . Expr.lambdaResult
 
-resumptionTests :: [HUnit.Test]
-resumptionTests =
-  [ testResume "resume with pi"
+testGroup :: String -> [HUnit.Test] -> HUnit.Test
+testGroup title = HUnit.TestLabel title . HUnit.TestList
+
+resumptionTests :: HUnit.Test
+resumptionTests = testGroup "type infer resume" $
+  [ testResume "{hole->pi}"
     hole id (hole --> hole)
-  , testResume "resume infer in apply func"
+  , testResume "{hole->id} hole"
     (hole $$ hole) applyFunc (getDef "id")
-  , testResume "resume infer in lambda body"
+  , testResume "\\_:hole -> {hole->id}"
     (lambda "" hole (const hole)) lamBody (getDef "id")
-  , testResume "resume infer to get param 1 of 2"
+  ] ++
+  let
+    lambdaAB = lambda "a" hole . const . lambda "b" hole . const $ hole
+    lambdaABBody :: Lens.Traversal' (Expression def a) (Expression def a)
+    lambdaABBody = lamBody . lamBody
+  in
+  [ testResume "\\a:hole -> \\b:hole -> {hole->a}"
     lambdaAB lambdaABBody (getParam "a" hole)
-  , testResume "resume infer to get param 2 of 2"
+  , testResume "\\a:hole -> \\b:hole -> {hole->b}"
     lambdaAB lambdaABBody (getParam "b" hole)
-  , testResume "bad a b:Set f = f a {b}"
+  ] ++
+  [ testResume "\\a:hole -> \\b:set -> \\f:hole -> f a {hole->b}"
     (lambda "a" hole $ \a ->
      lambda "b" set $ \_ ->
      lambda "f" hole $ \f -> f $$ a $$ hole)
@@ -151,10 +163,6 @@ resumptionTests =
       resultR = inferResults exprR
     in assertCompareInferred resultR $ recurse (hole --> hole)
   ]
-  where
-    lambdaAB = lambda "a" hole . const . lambda "b" hole . const $ hole
-    lambdaABBody :: Lens.Traversal' (Expression def a) (Expression def a)
-    lambdaABBody = lamBody . lamBody
 
 -- f     x    = x _ _
 --   --------
@@ -169,26 +177,19 @@ failResumptionAddsRules =
       -- TODO: Verify iwc has the right kind of conflict (or add
       -- different tests to do that)
       inferWithConflicts (doLoad resumptionValue) resumptionPoint
-    resumptionValue = pureGetDef "Bool" -- <- anything but Pi
-    Just pl =
-      origInferred ^?
-      ExprLens.exprLam . Expr.lambdaParamType .
-      ExprLens.exprLam . Expr.lambdaResult .
-      Expr.ePayload
-    resumptionPoint = Infer.iPoint pl
-    (origInferred, origInferContext) = doInfer_ origExpr
-    origExpr =
-      pureLambda "x" (purePi "" pureHole pureHole) $
-      pureApply [pureParameterRef "x", pureHole, pureHole]
+    resumptionValue = getDef "Bool" -- <- anything but Pi
+    resumptionPoint =
+      origInferred ^?! lamParamType . lamBody . Expr.ePayload . Lens.to Infer.iPoint
+    (origInferred, origInferContext) =
+      doInfer_ . lambda "x" (hole --> hole) $
+      \x -> x $$ hole $$ hole
 
 emptyRecordTest :: HUnit.Test
 emptyRecordTest =
-  testInfer "empty record type infer" $
-  iexpr emptyRecordType pureSet emptyRecordTypeBody
-  where
-    emptyRecordType = ExprUtil.pureExpression emptyRecordTypeBody
-    emptyRecordTypeBody =
-      Expr.BodyRecord $ Expr.Record Type mempty
+  testGroup "empty record"
+  [ testInfer "type infer" $ record Type []
+  , testInfer "val infer" $ record Val []
+  ]
 
 tagType :: Expression def ()
 tagType = ExprUtil.pureExpression $ Expr.BodyLeaf Expr.TagType
@@ -254,8 +255,8 @@ hunitTests =
   , emptyRecordTest
   , recordTest
   , inferRecordValTest
+  , resumptionTests
   ]
-  ++ resumptionTests
 
 inferPreservesShapeProp :: PureExprDefI t -> Property
 inferPreservesShapeProp expr =
