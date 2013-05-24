@@ -62,12 +62,7 @@ applyOnVar =
 idTest :: HUnit.Test
 idTest =
   testInfer "id test" $
-  iexpr
-    (ExprLens.pureExpr # ExprUtil.makeApply (pureGetDef "id") pureIntegerType)
-    (purePi "" pureIntegerType pureIntegerType) $
-  ExprUtil.makeApply
-    (getDef "id") $
-    simple bodyIntegerType pureSet
+  apply [getDef "id", integerType]
 
 inferFromOneArgToOther :: HUnit.Test
 inferFromOneArgToOther =
