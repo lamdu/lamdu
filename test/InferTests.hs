@@ -10,7 +10,6 @@ import InferCombinators
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expression (Expression(..), Kind(..))
 import Lamdu.Data.Expression.Infer.Conflicts (inferWithConflicts)
-import Lamdu.Data.Expression.Utils (pureSet)
 import Test.Framework (Test)
 import Test.Framework.Providers.HUnit (hUnitTestToTests)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
@@ -23,7 +22,6 @@ import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
-import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Test.HUnit as HUnit
 
 simpleTests :: [HUnit.Test]
@@ -191,44 +189,15 @@ emptyRecordTest =
   , testInfer "val infer" $ record Val []
   ]
 
-tagType :: Expression def ()
-tagType = ExprUtil.pureExpression $ Expr.BodyLeaf Expr.TagType
-
 recordTest :: HUnit.Test
 recordTest =
   testInfer "f a x:a = {x" $
-  iexpr lamA piA $
-  namedLambda "a" (simple bodySet pureSet) $
-  iexpr lamX piX $
-  namedLambda "x" (getParamPure "a" pureSet) $
-  iexpr recVal recType $
-  Expr.BodyRecord $
-  Expr.Record Val
-  [( simple fieldTagBody tagType
-   , getParamPure "x" (pureGetParam "a")
-   )]
+  lambda "a" set $ \a ->
+  lambda "x" a $ \x ->
+  record Val
+  [ (tag fieldGuid, x) ]
   where
-    lamA =
-      pureLambda "a" pureSet lamX
-    lamX =
-      pureLambda "x" (pureGetParam "a") recVal
-    recVal =
-      ExprUtil.pureExpression $
-      rec Val $
-      pureGetParam "x"
-    fieldTagBody = ExprLens.bodyTag # fieldGuid
-    rec k =
-      Expr.BodyRecord . Expr.Record k .
-      (:[]) . (,) (ExprLens.pureExpr # fieldTagBody)
     fieldGuid = Guid.fromString "field"
-    piA =
-      purePi "a" pureSet piX
-    piX =
-      purePi "x" (pureGetParam "a") recType
-    recType =
-      ExprUtil.pureExpression $
-      rec Type $
-      pureGetParam "a"
 
 inferRecordValTest :: HUnit.Test
 inferRecordValTest =
