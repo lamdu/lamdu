@@ -95,7 +95,7 @@ testResume name newExpr testExpr lens =
   testCase name $
   let
     (tExpr, inferContext) = doInfer_ testExpr
-    Just pl = tExpr ^? lens . Expr.ePayload
+    Just point = tExpr ^? lens . Expr.ePayload . Lens.to Infer.iPoint
   in
     void . E.evaluate . (`runStateT` inferContext) $
-    doInferM (Infer.iPoint pl) newExpr
+    doInferM point newExpr
