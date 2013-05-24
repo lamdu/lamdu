@@ -109,43 +109,11 @@ forceMono =
 -- | depApply (t : Set) (rt : t -> Set) (f : (d : t) -> rt d) (x : t) = f x
 depApply :: HUnit.Test
 depApply =
-  testInfer "dep apply" .
-  -- expected result:
-  iexpr  tLambda  tPi  . namedLambda "t"  setType .
-  iexpr rtLambda rtPi  . namedLambda "rt" inferredRTType .
-  iexpr  fLambda  fPi  . namedLambda "f"  inferredFParamType .
-  iexpr  xLambda  xPi  . namedLambda "x"  inferredXParamType .
-  iexpr fOfX (rtAppliedTo "x") $ ExprUtil.makeApply inferredF inferredX
-  where
-    inferredF = getParamPure "f" fParamType
-    inferredX = getParamPure "x" xParamType
-    inferredT = getParamPure "t" pureSet
-    inferredRT = getParamPure "rt" rtParamType
-    inferredRTType =
-      iexpr rtParamType pureSet $
-      namedPi "" inferredT setType
-    inferredFParamType =
-      iexpr fParamType pureSet . namedPi "d" inferredT .
-      iexpr (rtAppliedTo "d") pureSet .
-      ExprUtil.makeApply inferredRT .
-      getParamPure "d" $
-      pureGetParam "t"
-    inferredXParamType = inferredT
-    lamPi name paramType (body, bodyType) =
-      ( pureLambda name paramType body
-      , purePi name paramType bodyType
-      )
-    (tLambda, tPi) = lamPi "t" pureSet rt
-    rt@(rtLambda, rtPi) = lamPi "rt" rtParamType f
-    f@(fLambda, fPi) = lamPi "f" fParamType x
-    x@(xLambda, xPi) = lamPi "x" xParamType (fOfX, rtAppliedTo "x")
-    fOfX = ExprUtil.pureExpression . ExprUtil.makeApply (pureGetParam "f") $ pureGetParam "x"
-    rtParamType = purePi "" (pureGetParam "t") pureSet
-    fParamType =
-      purePi "d" (pureGetParam "t") $ rtAppliedTo "d"
-    xParamType = pureGetParam "t"
-    rtAppliedTo name =
-      ExprUtil.pureExpression . ExprUtil.makeApply (pureGetParam "rt") $ pureGetParam name
+  testInfer "dep apply" $
+  lambda "t" setType $ \t ->
+  lambda "rt" (t --> setType) $ \rt ->
+  lambda "f" (piType "d" t (\d -> rt $$ d)) $ \f ->
+  lambda "x" t $ \x -> f $$ x
 
 resumptionTests :: [HUnit.Test]
 resumptionTests =
