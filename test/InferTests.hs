@@ -91,12 +91,7 @@ fOfXIsFOf5 =
 argTypeGoesToPi :: HUnit.Test
 argTypeGoesToPi =
   testInfer "arg type goes to pi" $
-  iexpr
-    pureHole
-    pureHole $
-  ExprUtil.makeApply
-    (holeWithInferredType (integerType --> hole)) $
-  integer 5
+  holeWithInferredType (integerType --> hole) $$ integer 5
 
 idOnAnInt :: HUnit.Test
 idOnAnInt =
