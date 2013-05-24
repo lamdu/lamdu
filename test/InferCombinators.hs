@@ -85,9 +85,10 @@ lambda ::
   (InferResults t -> InferResults t) ->
   InferResults t
 lambda name paramType mkResult =
-  simple (ExprUtil.makeLambda (Guid.fromString name) paramType result) $
-  purePi name (paramType ^. iVal) (result ^. iType)
+  simple (ExprUtil.makeLambda guid paramType result) $
+  ExprUtil.pureLam Type guid (paramType ^. iVal) (result ^. iType)
   where
+    guid = Guid.fromString name
     result = mkResult $ getParam name paramType
 
 whereItem ::
