@@ -10,7 +10,7 @@ import InferCombinators
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expression (Expression(..), Kind(..))
 import Lamdu.Data.Expression.Infer.Conflicts (inferWithConflicts)
-import Lamdu.Data.Expression.Utils (pureHole, pureSet, pureIntegerType)
+import Lamdu.Data.Expression.Utils (pureHole, pureSet)
 import Test.Framework (Test)
 import Test.Framework.Providers.HUnit (hUnitTestToTests)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
@@ -96,59 +96,15 @@ argTypeGoesToPi =
 idOnAnInt :: HUnit.Test
 idOnAnInt =
   testInfer "id on an int" $
-  iexpr
-    (pureApply
-      [ pureGetDef "id"
-      , pureIntegerType
-      , five
-      ]
-    )
-    pureIntegerType $
-  ExprUtil.makeApply
-    (iexpr
-      (pureApply [pureGetDef "id", pureIntegerType])
-      (purePi "" pureIntegerType pureIntegerType)
-      (ExprUtil.makeApply
-        (getDef "id")
-        ((iexpr pureIntegerType pureSet . Expr.BodyLeaf) Expr.Hole)
-      )
-    ) $
-  integer 5
+  getDef "id" $$ asHole integerType $$ integer 5
 
 idOnHole :: HUnit.Test
-idOnHole =
-  testInfer "id hole" .
-  iexpr
-    (pureApply [pureGetDef "id", pureHole])
-    (purePi "" pureHole pureHole) .
-  ExprUtil.makeApply
-    (getDef "id") $
-  holeWithInferredType setType
+idOnHole = testInfer "id hole" $ getDef "id" $$ holeWithInferredType setType
 
 forceMono :: HUnit.Test
 forceMono =
-  testInfer "id (id _ _)" .
-  iexpr
-    (pureApply [pureGetDef "id", idSetHole])
-    (purePi "" idSetHole idSetHole) $
-  ExprUtil.makeApply
-    (getDef "id") $
-  iexpr
-    idSetHole
-    pureSet $
-  ExprUtil.makeApply
-    (iexpr
-      idSet
-      (purePi "" pureSet pureSet)
-      (ExprUtil.makeApply
-        (getDef "id")
-        (iexpr pureSet pureSet bodyHole)
-      )
-    ) $
-  simple bodyHole pureSet
-  where
-    idSet = pureApply [pureGetDef "id", pureSet]
-    idSetHole = pureApply [idSet, pureHole]
+  testInfer "id (id _ _)" $
+  getDef "id" $$ (getDef "id" $$ asHole setType $$ holeWithInferredType setType)
 
 -- | depApply (t : Set) (rt : t -> Set) (f : (d : t) -> rt d) (x : t) = f x
 depApply :: HUnit.Test
