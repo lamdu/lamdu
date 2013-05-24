@@ -62,16 +62,32 @@ getParamPure name = simple $ ExprLens.bodyParameterRef # Guid.fromString name
 integer :: Integer -> InferResults t
 integer x = simple (ExprLens.bodyLiteralInteger # x) pureIntegerType
 
+piType ::
+  String -> InferResults t ->
+  (InferResults t -> InferResults t) -> InferResults t
+piType name paramType mkResultType =
+  simple (ExprUtil.makePi (Guid.fromString name) paramType result) pureSet
+  where
+    result = mkResultType $ getParam name paramType
+
 (-->) :: InferResults t -> InferResults t -> InferResults t
 (-->) src dest =
   simple (ExprUtil.makePi (Guid.fromString "") src dest) pureSet
 
-lambda :: String -> InferResults t -> (InferResults t -> InferResults t) -> InferResults t
+lambda ::
+  String -> InferResults t ->
+  (InferResults t -> InferResults t) ->
+  InferResults t
 lambda name paramType mkResult =
   simple (ExprUtil.makeLambda (Guid.fromString name) paramType result) $
   purePi name (paramType ^. iVal) (result ^. iType)
   where
-    result = mkResult (getParam name paramType)
+    result = mkResult $ getParam name paramType
+
+whereItem ::
+  String -> InferResults t -> (InferResults t -> InferResults t) -> InferResults t
+whereItem name val mkBody =
+  lambda name (iexpr (val ^. iType) pureSet bodyHole) mkBody $$ val
 
 holeWithInferredType :: InferResults t -> InferResults t
 holeWithInferredType = simple bodyHole . (^. iVal)
@@ -143,8 +159,8 @@ record k fields =
         map (void *** (^. iType)) fields
       Type -> pureSet
 
-inferredVal :: InferResults t -> InferResults t
-inferredVal expr =
+asHole :: InferResults t -> InferResults t
+asHole expr =
   iexpr val typ $ ExprLens.bodyHole # ()
   where
     (val, typ) = expr ^. Expr.ePayload

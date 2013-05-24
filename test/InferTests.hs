@@ -45,9 +45,9 @@ inferPart :: HUnit.Test
 inferPart =
   testInfer "foo (xs:List ?) = 5 : xs" $
   lambda "xs" listInts $ \xs ->
-  getDef ":" $$ inferredVal integerType $$ integer 5 $$ xs
+  getDef ":" $$ asHole integerType $$ integer 5 $$ xs
   where
-    listInts = listOf (inferredVal integerType)
+    listInts = listOf (asHole integerType)
 
 applyOnVar :: HUnit.Test
 applyOnVar =
@@ -62,12 +62,12 @@ idTest = testInfer "id test" $ getDef "id" $$ integerType
 inferFromOneArgToOther :: HUnit.Test
 inferFromOneArgToOther =
   testInfer "f = \\ a b (x:Map _ _) (y:Map a b) -> if {_ x y}" $
-  lambda "a" (inferredVal setType) $ \a ->
-  lambda "b" (inferredVal setType) $ \b ->
+  lambda "a" (asHole setType) $ \a ->
+  lambda "b" (asHole setType) $ \b ->
   let mkMapType f = getDef "Map" $$ f a $$ f b in
-  lambda "x" (mkMapType inferredVal) $ \x ->
+  lambda "x" (mkMapType asHole) $ \x ->
   lambda "y" (mkMapType id) $ \y ->
-  getDef "if" $$ inferredVal (mkMapType id) $$:
+  getDef "if" $$ asHole (mkMapType id) $$:
   [holeWithInferredType (getDef "Bool"), x, y]
 
 monomorphRedex :: HUnit.Test
@@ -372,7 +372,7 @@ recordTest =
 inferRecordValTest :: HUnit.Test
 inferRecordValTest =
   testInfer "id ({:Set) <hole> infers { val" $
-  getDef "id" $$ record Type [] $$ inferredVal (record Val [])
+  getDef "id" $$ record Type [] $$ asHole (record Val [])
 
 hunitTests :: HUnit.Test
 hunitTests =
