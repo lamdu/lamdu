@@ -85,19 +85,8 @@ monomorphRedex =
 fOfXIsFOf5 :: HUnit.Test
 fOfXIsFOf5 =
   testInfer "f x = f 5" $
-  iexpr
-    (pureLambda "" pureIntegerType (pureApply [getRecursiveDef, five]))
-    (purePi "" pureIntegerType pureHole) $
-  namedLambda "x"
-    (iexpr pureIntegerType pureSet bodyHole) $
-  iexpr
-    (pureApply [getRecursiveDef, five])
-    pureHole $
-  ExprUtil.makeApply
-    (simple
-      (ExprLens.bodyDefinitionRef # recursiveDefI)
-      (purePi "" pureIntegerType pureHole)) $
-  integer 5
+  lambda "" (asHole integerType) $ \_ ->
+  recurse (integerType --> hole) $$ integer 5
 
 argTypeGoesToPi :: HUnit.Test
 argTypeGoesToPi =
@@ -206,10 +195,6 @@ depApply =
     xParamType = pureGetParam "t"
     rtAppliedTo name =
       ExprUtil.pureExpression . ExprUtil.makeApply (pureGetParam "rt") $ pureGetParam name
-
-getRecursiveDef :: PureExprDefI t
-getRecursiveDef =
-  ExprUtil.pureExpression $ Lens.review ExprLens.bodyDefinitionRef recursiveDefI
 
 resumptionTests :: [HUnit.Test]
 resumptionTests =

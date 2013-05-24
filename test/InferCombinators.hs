@@ -57,7 +57,13 @@ simple body typ = iexpr (bodyToPureExpr body) typ body
 getParamPure :: String -> PureExprDefI t -> InferResults t
 getParamPure name = simple $ ExprLens.bodyParameterRef # Guid.fromString name
 
+getRecursiveDef :: PureExprDefI t
+getRecursiveDef =
+  ExprLens.pureExpr . ExprLens.bodyDefinitionRef # recursiveDefI
+
 -- New-style:
+recurse :: InferResults t -> InferResults t
+recurse typ = simple (ExprLens.bodyDefinitionRef # recursiveDefI) $ typ ^. iVal
 
 integer :: Integer -> InferResults t
 integer x = simple (ExprLens.bodyLiteralInteger # x) pureIntegerType
