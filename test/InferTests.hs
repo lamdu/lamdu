@@ -30,15 +30,15 @@ simpleTests :: [HUnit.Test]
 simpleTests =
   [ testInfer "literal int" $ integer 5
   , testInfer "simple apply" $
-    apply [holeWithInferredType (purePi "" pureHole pureHole), hole]
+    apply [holeWithInferredType (piType "" hole hole), hole]
   , testInfer "simple pi" $
-    piType "pi" (holeWithInferredType pureSet) (holeWithInferredType pureSet)
+    piType "pi" (holeWithInferredType setType) (holeWithInferredType setType)
   ]
 
 applyIntToBoolFuncWithHole :: HUnit.Test
 applyIntToBoolFuncWithHole =
   testInfer "apply" $
-  apply [getDef "IntToBoolFunc", holeWithInferredType pureIntegerType]
+  apply [getDef "IntToBoolFunc", holeWithInferredType integerType]
 
 inferPart :: HUnit.Test
 inferPart =
@@ -51,10 +51,10 @@ inferPart =
 applyOnVar :: HUnit.Test
 applyOnVar =
   testInfer "apply on var" $
-  lambda "x" (holeWithInferredType pureSet) $ apply
+  lambda "x" (holeWithInferredType setType) $ apply
   [ getDef "IntToBoolFunc"
   , apply
-    [ holeWithInferredType (purePi "" pureHole pureIntegerType)
+    [ holeWithInferredType (piType "" hole integerType)
     , getParam "x" hole
     ]
   ]
@@ -228,7 +228,7 @@ argTypeGoesToPi =
     pureHole
     pureHole $
   ExprUtil.makeApply
-    (holeWithInferredType (purePi "" pureIntegerType pureHole)) $
+    (holeWithInferredType (piType "" integerType hole)) $
   integer 5
 
 idOnAnInt :: HUnit.Test
@@ -261,7 +261,7 @@ idOnHole =
     (purePi "" pureHole pureHole) .
   ExprUtil.makeApply
     (getDef "id") $
-  holeWithInferredType pureSet
+  holeWithInferredType setType
 
 forceMono :: HUnit.Test
 forceMono =

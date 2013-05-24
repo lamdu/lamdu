@@ -70,11 +70,11 @@ lambda name paramType result =
   simple (ExprUtil.makeLambda (Guid.fromString name) paramType result) $
   purePi name (paramType ^. iVal) (result ^. iType)
 
-holeWithInferredType :: PureExprDefI t -> InferResults t
-holeWithInferredType = simple bodyHole
+holeWithInferredType :: InferResults t -> InferResults t
+holeWithInferredType = simple bodyHole . (^. iVal)
 
 hole :: InferResults t
-hole = holeWithInferredType pureHole
+hole = simple bodyHole pureHole
 
 -- TODO: Get type from scope
 getParam :: String -> InferResults t -> InferResults t
