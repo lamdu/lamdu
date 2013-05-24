@@ -282,11 +282,12 @@ innerMostPi =
       Just resultType -> expr : pis resultType
       _ -> []
 
+piTags :: Lens.Traversal' (Expression def a) Guid
+piTags =
+  ExprLens.exprKindedLam Type . Lens._2 .
+  ExprLens.exprKindedRecordFields Type .
+  Lens.traversed . Lens._1 . ExprLens.exprTag
+
 defParamTags :: String -> [Guid]
 defParamTags defName =
-  innerMostPi (definitionTypes ! g) ^..
-  ExprLens.exprLam . Expr.lambdaParamType .
-  ExprLens.exprRecord . Expr.recordFields .
-  Lens.traversed . Lens._1 . ExprLens.exprTag
-  where
-    g = Guid.fromString defName
+  innerMostPi (definitionTypes ! Guid.fromString defName) ^.. piTags

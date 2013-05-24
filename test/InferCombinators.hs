@@ -1,11 +1,12 @@
 {-# OPTIONS -Wall -Werror #-}
 module InferCombinators where
 
-import Control.Arrow ((&&&))
+import Control.Arrow ((&&&), (***))
 import Control.Lens (Lens')
 import Control.Lens.Operators
 import Control.Monad (void)
 import Data.Map ((!))
+import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expression (Kind(..))
@@ -76,7 +77,7 @@ holeWithInferredType = simple bodyHole . (^. iVal)
 hole :: InferResults t
 hole = simple bodyHole pureHole
 
--- TODO: Get type from scope
+-- TODO: Get type from scope?
 getParam :: String -> InferResults t -> InferResults t
 getParam name typ =
   simple (ExprLens.bodyParameterRef # Guid.fromString name) $
@@ -104,6 +105,20 @@ setType = simple bodySet pureSet
 integerType :: InferResults t
 integerType = simple bodyIntegerType pureSet
 
+-- Convenience wrapper for common case of applying dependent params
+-- first:
+applyRecord :: [InferResults t] -> [InferResults t] -> InferResults t
+applyRecord = applyRec . apply
+
+applyRec :: InferResults t -> [InferResults t] -> InferResults t
+applyRec f args =
+  apply [f, record Val (zip tags args)]
+  where
+    tags = recType ^.. Lens.traversed . Lens._1 . ExprLens.exprTag . Lens.to tag
+    recType =
+      fromMaybe (error "applyRec must be applied on a func of record type") $
+      f ^? iType . ExprLens.exprKindedLam Type . Lens._2 . ExprLens.exprKindedRecordFields Type
+
 apply :: [InferResults t] -> InferResults t
 apply = foldl1 step
   where
@@ -123,12 +138,13 @@ apply = foldl1 step
 
 record :: Kind -> [(InferResults t, InferResults t)] -> InferResults t
 record k fields =
-  simple (recBody k) typ
+  simple (ExprLens.bodyKindedRecordFields k # fields) typ
   where
     typ = case k of
-      Val -> bodyToPureExpr $ recBody Type
+      Val ->
+        ExprLens.pureExpr . ExprLens.bodyKindedRecordFields Type #
+        map (void *** (^. iType)) fields
       Type -> pureSet
-    recBody k1 = ExprLens.bodyKindedRecordFields k1 # fields
 
 inferredVal :: InferResults t -> InferResults t
 inferredVal expr =
