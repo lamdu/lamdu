@@ -77,9 +77,9 @@ testInferAllowFail name expr =
   \(E.SomeException _) -> errorOccurred
   where
     successOccurred =
-      hPutStrLn stderr . ansiAround ansiYellow $ "NOTE: " ++ name ++ " doesn't fail. Remove AllowFail?"
+      hPutStrLn stderr . ansiAround ansiYellow $ "NOTE: " ++ show name ++ " doesn't fail. Remove AllowFail?"
     errorOccurred =
-      hPutStrLn stderr . ansiAround ansiYellow $ "WARNING: " ++ name ++ " failed. Allowing."
+      hPutStrLn stderr . ansiAround ansiYellow $ "WARNING: " ++ show name ++ " failed. Allowing."
 
 testCase :: String -> HUnit.Assertion -> HUnit.Test
 testCase name = HUnit.TestLabel name . HUnit.TestCase
