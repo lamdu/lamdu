@@ -2,7 +2,7 @@
 module InferTests (allTests) where
 
 import Control.Lens.Operators
-import Control.Monad (join, void)
+import Control.Monad (void)
 import Control.Monad.Trans.State (evalState)
 import Data.Monoid (Monoid(..))
 import InferAssert
@@ -38,52 +38,15 @@ simpleTests =
 applyIntToBoolFuncWithHole :: HUnit.Test
 applyIntToBoolFuncWithHole =
   testInfer "apply" $
-  iexpr
-    (pureApply [pureGetDef "IntToBoolFunc", pureHole])
-    (pureGetDef "Bool") $
-  ExprUtil.makeApply
-    (getDef "IntToBoolFunc")
-    (holeWithInferredType pureIntegerType)
+  apply [getDef "IntToBoolFunc", holeWithInferredType pureIntegerType]
 
 inferPart :: HUnit.Test
 inferPart =
   testInfer "foo (xs:List ?) = 5 : xs" $
-  iexpr
-    (exprWithHoles pureIntegerType pureIntegerType)
-    endoListOfInt $
-  namedLambda "xs"
-    (iexpr (listOf pureIntegerType) pureSet
-      (ExprUtil.makeApply
-        (getDef "List")
-        (iexpr pureIntegerType pureSet bodyHole)
-      )
-    ) $
-  iexpr
-    (applyWithHole pureIntegerType)
-    (listOf pureIntegerType) $
-  ExprUtil.makeApply
-    ( iexpr
-        (pureApply [pureGetDef ":", pureIntegerType, five])
-        endoListOfInt
-      ( ExprUtil.makeApply
-        ( iexpr
-            (pureApply [pureGetDef ":", pureIntegerType])
-            (purePi "" pureIntegerType endoListOfInt)
-          (ExprUtil.makeApply
-            (getDef ":")
-            (iexpr pureIntegerType pureSet bodyHole)
-          )
-        )
-        (integer 5)
-      )
-    ) $
-  getParam "xs" $ listOf pureIntegerType
+  lambda "xs" listInts $
+  apply [ getDef ":", inferredVal integerType, integer 5, getParam "xs" (listOf integerType) ]
   where
-    endoListOfInt = join (purePi "pi") $ listOf pureIntegerType
-    listOf x = pureApply [pureGetDef "List", x]
-    applyWithHole h = pureApply [pureGetDef ":", h, five, pureGetParam "xs"]
-    exprWithHoles h0 h1 =
-      pureLambda "xs" (listOf h0) (applyWithHole h1)
+    listInts = listOf (inferredVal integerType)
 
 applyOnVar :: HUnit.Test
 applyOnVar =
@@ -142,9 +105,9 @@ inferFromOneArgToOther =
         ( iexpr typeOfX' setToSet $
           ExprUtil.makeApply
             (getDef "Map") $
-          getParam "a" pureSet
+          getParamPure "a" pureSet
         ) $
-      getParam "b" pureSet
+      getParamPure "b" pureSet
     ) $
   iexpr body typeOfX $
   ExprUtil.makeApply
@@ -156,8 +119,8 @@ inferFromOneArgToOther =
   iexpr ifParams ifParamsType $
   Expr.BodyRecord $ Expr.Record Val
   [ (tag t0, simple bodyHole (pureGetDef "Bool"))
-  , (tag t1, getParam "x" typeOfX)
-  , (tag t2, getParam "y" typeOfX)
+  , (tag t1, getParamPure "x" typeOfX)
+  , (tag t2, getParamPure "y" typeOfX)
   ]
   where
     [t0, t1, t2] = defParamTags "if"
@@ -208,7 +171,7 @@ monomorphRedex =
         (iexpr fType pureSet bodyHole) $
       iexpr (body True) pureHole $
       ExprUtil.makeApply
-        (getParam "f" fType) $
+        (getParamPure "f" fType) $
       iexpr (fArg True) (fArgType True) $
       namedLambda "b"
         (iexpr pureSet pureSet bodyHole) $
@@ -220,7 +183,7 @@ monomorphRedex =
         ( iexpr cToX (purePi "" pureHole (pureGetParam "b")) $
           namedLambda "c"
             (simple bodyHole pureSet) $
-          getParam "x" $ pureGetParam "b"
+          getParamPure "x" $ pureGetParam "b"
         ) $
       simple bodyHole pureHole
     ) $
@@ -232,7 +195,7 @@ monomorphRedex =
       iexpr (fArgInnerType True) pureSet $
       namedPi "x"
         (iexpr (pureGetParam "b") pureSet bodyHole) $
-      getParam "b" pureSet
+      getParamPure "b" pureSet
     ) $
   simple bodyHole pureHole
   where
@@ -344,24 +307,24 @@ depApply :: HUnit.Test
 depApply =
   testInfer "dep apply" .
   -- expected result:
-  iexpr  tLambda  tPi  . namedLambda "t"  inferredSetType .
+  iexpr  tLambda  tPi  . namedLambda "t"  setType .
   iexpr rtLambda rtPi  . namedLambda "rt" inferredRTType .
   iexpr  fLambda  fPi  . namedLambda "f"  inferredFParamType .
   iexpr  xLambda  xPi  . namedLambda "x"  inferredXParamType .
   iexpr fOfX (rtAppliedTo "x") $ ExprUtil.makeApply inferredF inferredX
   where
-    inferredF = getParam "f" fParamType
-    inferredX = getParam "x" xParamType
-    inferredT = getParam "t" pureSet
-    inferredRT = getParam "rt" rtParamType
+    inferredF = getParamPure "f" fParamType
+    inferredX = getParamPure "x" xParamType
+    inferredT = getParamPure "t" pureSet
+    inferredRT = getParamPure "rt" rtParamType
     inferredRTType =
       iexpr rtParamType pureSet $
-      namedPi "" inferredT inferredSetType
+      namedPi "" inferredT setType
     inferredFParamType =
       iexpr fParamType pureSet . namedPi "d" inferredT .
       iexpr (rtAppliedTo "d") pureSet .
       ExprUtil.makeApply inferredRT .
-      getParam "d" $
+      getParamPure "d" $
       pureGetParam "t"
     inferredXParamType = inferredT
     lamPi name paramType (body, bodyType) =
@@ -478,12 +441,12 @@ recordTest =
   iexpr lamA piA $
   namedLambda "a" (simple bodySet pureSet) $
   iexpr lamX piX $
-  namedLambda "x" (getParam "a" pureSet) $
+  namedLambda "x" (getParamPure "a" pureSet) $
   iexpr recVal recType $
   Expr.BodyRecord $
   Expr.Record Val
   [( simple fieldTagBody tagType
-   , getParam "x" (pureGetParam "a")
+   , getParamPure "x" (pureGetParam "a")
    )]
   where
     lamA =

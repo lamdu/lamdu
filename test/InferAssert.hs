@@ -31,10 +31,11 @@ assertCompareInferred ::
 assertCompareInferred result expected =
   assertBool errMsg (Map.null resultErrs)
   where
+    simplifyDef = ExprLens.exprDef %~ defIStr
     errMsg =
       List.intercalate "\n" $ show
       (resultExpr
-       & ExprLens.exprDef %~ defIStr
+       & simplifyDef
        & Lens.mapped %~ ixsStr) :
       "Errors:" :
       (map showErrItem . Map.toList) resultErrs
@@ -52,8 +53,8 @@ assertCompareInferred result expected =
       | ExprUtil.alphaEq x y = pure []
       | otherwise = fmap (: []) . addError $
         List.intercalate "\n"
-        [ "  expected " ++ s ++ ":" ++ show y
-        , "  result   " ++ s ++ ":" ++ show x
+        [ "  expected " ++ s ++ ":" ++ show (simplifyDef y)
+        , "  result   " ++ s ++ ":" ++ show (simplifyDef x)
         ]
     match (v0, t0) (v1, t1) =
       (++) <$> check " type" t0 t1 <*> check "value" v0 v1
