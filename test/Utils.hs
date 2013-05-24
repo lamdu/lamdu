@@ -110,10 +110,12 @@ pureParameterRef str =
 
 ansiRed :: String
 ansiRed = "\ESC[31m"
+ansiYellow :: String
+ansiYellow = "\ESC[1;33m"
 ansiReset :: String
 ansiReset = "\ESC[0m"
-ansiRedAround :: String -> String
-ansiRedAround x = ansiRed ++ x ++ ansiReset
+ansiAround :: String -> String -> String
+ansiAround prefix x = prefix ++ x ++ ansiReset
 
 showExpressionWithConflicts ::
   Show def => Expr.Expression def (InferredWithConflicts def) -> String

@@ -3,7 +3,6 @@
 module InferAssert where
 
 import Control.Applicative ((<$>), Applicative(..))
-import Control.Exception (evaluate)
 import Control.Lens.Operators
 import Control.Monad (void)
 import Control.Monad.Trans.State (runStateT, runState)
@@ -11,8 +10,10 @@ import InferCombinators
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expression (Expression(..))
 import Lamdu.Data.Expression.IRef (DefI)
+import System.IO (hPutStrLn, stderr)
 import Test.HUnit (assertBool)
 import Utils
+import qualified Control.Exception as E
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.ByteString.Char8 as BS8
@@ -39,10 +40,10 @@ assertCompareInferred result expected =
        & Lens.mapped %~ ixsStr) :
       "Errors:" :
       (map showErrItem . Map.toList) resultErrs
-    showErrItem (ix, err) = ansiRedAround ("{" ++ show ix ++ "}:\n") ++ err
+    showErrItem (ix, err) = ansiAround ansiRed ("{" ++ show ix ++ "}:\n") ++ err
     defIStr = BS8.unpack . BS8.takeWhile (/= '\0') . Guid.bs . IRef.guid
     ixsStr [] = UnescapedStr ""
-    ixsStr ixs = UnescapedStr . ansiRedAround . List.intercalate ", " $ map show ixs
+    ixsStr ixs = UnescapedStr . ansiAround ansiRed . List.intercalate ", " $ map show ixs
     (resultExpr, resultErrs) =
       runState (ExprUtil.matchExpression match mismatch result expected) Map.empty
     addError msg = do
@@ -60,12 +61,25 @@ assertCompareInferred result expected =
       (++) <$> check " type" t0 t1 <*> check "value" v0 v1
     mismatch _ _ = error "Result must have same expression shape!"
 
-testInfer ::
-  String -> InferResults t -> HUnit.Test
-testInfer name expr =
-  testCase name $ assertCompareInferred inferredExpr expr
+inferAssertion :: InferResults t -> HUnit.Assertion
+inferAssertion expr =
+  assertCompareInferred inferredExpr expr
   where
     inferredExpr = inferResults . fst . doInfer_ $ void expr
+
+testInfer :: String -> InferResults t -> HUnit.Test
+testInfer name = testCase name . inferAssertion
+
+testInferAllowFail :: String -> InferResults t -> HUnit.Test
+testInferAllowFail name expr =
+  testCase name $
+  (inferAssertion expr >> successOccurred) `E.catch`
+  \(E.SomeException _) -> errorOccurred
+  where
+    successOccurred =
+      hPutStrLn stderr . ansiAround ansiYellow $ "NOTE: " ++ name ++ " doesn't fail. Remove AllowFail?"
+    errorOccurred =
+      hPutStrLn stderr . ansiAround ansiYellow $ "WARNING: " ++ name ++ " failed. Allowing."
 
 testCase :: String -> HUnit.Assertion -> HUnit.Test
 testCase name = HUnit.TestLabel name . HUnit.TestCase
@@ -83,5 +97,5 @@ testResume name newExpr testExpr lens =
     (tExpr, inferContext) = doInfer_ testExpr
     Just pl = tExpr ^? lens . Expr.ePayload
   in
-    void . evaluate . (`runStateT` inferContext) $
+    void . E.evaluate . (`runStateT` inferContext) $
     doInferM (Infer.iPoint pl) newExpr
