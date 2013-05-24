@@ -62,14 +62,16 @@ getParamPure name = simple $ ExprLens.bodyParameterRef # Guid.fromString name
 integer :: Integer -> InferResults t
 integer x = simple (ExprLens.bodyLiteralInteger # x) pureIntegerType
 
-piType :: String -> InferResults t -> InferResults t -> InferResults t
-piType name src dest =
-  simple (ExprUtil.makePi (Guid.fromString name) src dest) pureSet
+(-->) :: InferResults t -> InferResults t -> InferResults t
+(-->) src dest =
+  simple (ExprUtil.makePi (Guid.fromString "") src dest) pureSet
 
-lambda :: String -> InferResults t -> InferResults t -> InferResults t
-lambda name paramType result =
+lambda :: String -> InferResults t -> (InferResults t -> InferResults t) -> InferResults t
+lambda name paramType mkResult =
   simple (ExprUtil.makeLambda (Guid.fromString name) paramType result) $
   purePi name (paramType ^. iVal) (result ^. iType)
+  where
+    result = mkResult (getParam name paramType)
 
 holeWithInferredType :: InferResults t -> InferResults t
 holeWithInferredType = simple bodyHole . (^. iVal)
@@ -77,7 +79,6 @@ holeWithInferredType = simple bodyHole . (^. iVal)
 hole :: InferResults t
 hole = simple bodyHole pureHole
 
--- TODO: Get type from scope?
 getParam :: String -> InferResults t -> InferResults t
 getParam name typ =
   simple (ExprLens.bodyParameterRef # Guid.fromString name) $

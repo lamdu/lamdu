@@ -30,9 +30,10 @@ simpleTests :: [HUnit.Test]
 simpleTests =
   [ testInfer "literal int" $ integer 5
   , testInfer "simple apply" $
-    apply [holeWithInferredType (piType "" hole hole), hole]
+    apply [holeWithInferredType (hole --> hole), hole]
   , testInfer "simple pi" $
-    piType "pi" (holeWithInferredType setType) (holeWithInferredType setType)
+    holeWithInferredType setType -->
+    holeWithInferredType setType
   ]
 
 applyIntToBoolFuncWithHole :: HUnit.Test
@@ -43,20 +44,18 @@ applyIntToBoolFuncWithHole =
 inferPart :: HUnit.Test
 inferPart =
   testInfer "foo (xs:List ?) = 5 : xs" $
-  lambda "xs" listInts $
-  apply [ getDef ":", inferredVal integerType, integer 5, getParam "xs" (listOf integerType) ]
+  lambda "xs" listInts $ \xs ->
+  apply [ getDef ":", inferredVal integerType, integer 5, xs ]
   where
     listInts = listOf (inferredVal integerType)
 
 applyOnVar :: HUnit.Test
 applyOnVar =
   testInfer "apply on var" $
-  lambda "x" (holeWithInferredType setType) $ apply
+  lambda "x" (holeWithInferredType setType) $ \x -> apply
   [ getDef "IntToBoolFunc"
   , apply
-    [ holeWithInferredType (piType "" hole integerType)
-    , getParam "x" hole
-    ]
+    [holeWithInferredType (hole --> integerType), x]
   ]
 
 idTest :: HUnit.Test
@@ -67,19 +66,13 @@ idTest =
 inferFromOneArgToOther :: HUnit.Test
 inferFromOneArgToOther =
   testInfer "f = \\ a b (x:Map _ _) (y:Map a b) -> if {_ x y}" $
-  lambda "a" (inferredVal setType) $
-  lambda "b" (inferredVal setType) $
-  lambda "x" (mkMapType inferredVal) $
-  lambda "y" (mkMapType id) $
+  lambda "a" (inferredVal setType) $ \a ->
+  lambda "b" (inferredVal setType) $ \b ->
+  let mkMapType f = apply [getDef "Map", f a, f b] in
+  lambda "x" (mkMapType inferredVal) $ \x ->
+  lambda "y" (mkMapType id) $ \y ->
   applyRecord [getDef "if", inferredVal (mkMapType id)]
-  [holeWithInferredType (getDef "Bool"), getMapParam "x", getMapParam "y"]
-  where
-    getMapParam name = getParam name (mkMapType id)
-    mkMapType f = apply
-      [ getDef "Map"
-      , f (getParam "a" setType)
-      , f (getParam "b" setType)
-      ]
+  [holeWithInferredType (getDef "Bool"), x, y]
 
 monomorphRedex :: HUnit.Test
 monomorphRedex =
@@ -162,7 +155,7 @@ argTypeGoesToPi =
     pureHole
     pureHole $
   ExprUtil.makeApply
-    (holeWithInferredType (piType "" integerType hole)) $
+    (holeWithInferredType (integerType --> hole)) $
   integer 5
 
 idOnAnInt :: HUnit.Test
