@@ -65,8 +65,8 @@ getRecursiveDef =
 recurse :: InferResults t -> InferResults t
 recurse typ = simple (ExprLens.bodyDefinitionRef # recursiveDefI) $ typ ^. iVal
 
-integer :: Integer -> InferResults t
-integer x = simple (ExprLens.bodyLiteralInteger # x) pureIntegerType
+literalInteger :: Integer -> InferResults t
+literalInteger x = simple (ExprLens.bodyLiteralInteger # x) pureIntegerType
 
 piType ::
   String -> InferResults t ->
@@ -123,8 +123,8 @@ tag guid =
   simple (ExprLens.bodyTag # guid) $
   ExprLens.pureExpr . ExprLens.bodyTagType # ()
 
-setType :: InferResults t
-setType = simple bodySet pureSet
+set :: InferResults t
+set = simple bodySet pureSet
 
 integerType :: InferResults t
 integerType = simple bodyIntegerType pureSet

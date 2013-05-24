@@ -28,12 +28,12 @@ import qualified Test.HUnit as HUnit
 
 simpleTests :: [HUnit.Test]
 simpleTests =
-  [ testInfer "literal int" $ integer 5
+  [ testInfer "literal int" $ literalInteger 5
   , testInfer "simple apply" $
     holeWithInferredType (hole --> hole) $$ hole
   , testInfer "simple pi" $
-    holeWithInferredType setType -->
-    holeWithInferredType setType
+    holeWithInferredType set -->
+    holeWithInferredType set
   ]
 
 applyIntToBoolFuncWithHole :: HUnit.Test
@@ -45,14 +45,14 @@ inferPart :: HUnit.Test
 inferPart =
   testInfer "foo (xs:List ?) = 5 : xs" $
   lambda "xs" listInts $ \xs ->
-  getDef ":" $$ asHole integerType $$ integer 5 $$ xs
+  getDef ":" $$ asHole integerType $$ literalInteger 5 $$ xs
   where
     listInts = listOf (asHole integerType)
 
 applyOnVar :: HUnit.Test
 applyOnVar =
   testInfer "apply on var" $
-  lambda "x" (holeWithInferredType setType) $ \x ->
+  lambda "x" (holeWithInferredType set) $ \x ->
   getDef "IntToBoolFunc" $$
   (holeWithInferredType (hole --> integerType) $$ x)
 
@@ -62,8 +62,8 @@ idTest = testInfer "id test" $ getDef "id" $$ integerType
 inferFromOneArgToOther :: HUnit.Test
 inferFromOneArgToOther =
   testInfer "f = \\ a b (x:Map _ _) (y:Map a b) -> if {_ x y}" $
-  lambda "a" (asHole setType) $ \a ->
-  lambda "b" (asHole setType) $ \b ->
+  lambda "a" (asHole set) $ \a ->
+  lambda "b" (asHole set) $ \b ->
   let mkMapType f = getDef "Map" $$ f a $$ f b in
   lambda "x" (mkMapType asHole) $ \x ->
   lambda "y" (mkMapType id) $ \y ->
@@ -75,85 +75,86 @@ monomorphRedex =
   testInfer "foo = f (\\~ x -> (\\~ -> x) _) where f ~:(a:Set -> _ -> a) = _" $
   whereItem "f" (lambda "" fArgType (const hole)) $ \f ->
   f $$
-  (lambda "b" (asHole setType) $ \b ->
+  (lambda "b" (asHole set) $ \b ->
    lambda "x" (asHole b) $ \x ->
-   lambda "c" (holeWithInferredType setType) (\_ -> x) $$ hole)
+   lambda "c" (holeWithInferredType set) (\_ -> x) $$ hole)
   where
     -- (a:Set -> _[=a] -> a)
-    fArgType = piType "a" setType $ \a -> asHole a --> a
+    fArgType = piType "a" set $ \a -> asHole a --> a
 
 fOfXIsFOf5 :: HUnit.Test
 fOfXIsFOf5 =
   testInfer "f x = f 5" $
   lambda "" (asHole integerType) $ \_ ->
-  recurse (integerType --> hole) $$ integer 5
+  recurse (integerType --> hole) $$ literalInteger 5
 
 argTypeGoesToPi :: HUnit.Test
 argTypeGoesToPi =
   testInfer "arg type goes to pi" $
-  holeWithInferredType (integerType --> hole) $$ integer 5
+  holeWithInferredType (integerType --> hole) $$ literalInteger 5
 
 idOnAnInt :: HUnit.Test
 idOnAnInt =
   testInfer "id on an int" $
-  getDef "id" $$ asHole integerType $$ integer 5
+  getDef "id" $$ asHole integerType $$ literalInteger 5
 
 idOnHole :: HUnit.Test
-idOnHole = testInfer "id hole" $ getDef "id" $$ holeWithInferredType setType
+idOnHole = testInfer "id hole" $ getDef "id" $$ holeWithInferredType set
 
 forceMono :: HUnit.Test
 forceMono =
   testInfer "id (id _ _)" $
-  getDef "id" $$ (getDef "id" $$ asHole setType $$ holeWithInferredType setType)
+  getDef "id" $$ (getDef "id" $$ asHole set $$ holeWithInferredType set)
 
 -- | depApply (t : Set) (rt : t -> Set) (f : (d : t) -> rt d) (x : t) = f x
 depApply :: HUnit.Test
 depApply =
   testInfer "dep apply" $
-  lambda "t" setType $ \t ->
-  lambda "rt" (t --> setType) $ \rt ->
+  lambda "t" set $ \t ->
+  lambda "rt" (t --> set) $ \rt ->
   lambda "f" (piType "d" t (\d -> rt $$ d)) $ \f ->
   lambda "x" t $ \x -> f $$ x
+
+applyFunc :: Lens.Traversal' (Expression def a) (Expression def a)
+applyFunc = ExprLens.exprApply . Expr.applyFunc
+applyArg :: Lens.Traversal' (Expression def a) (Expression def a)
+applyArg = ExprLens.exprApply . Expr.applyArg
+lamBody :: Lens.Traversal' (Expression def a) (Expression def a)
+lamBody = ExprLens.exprLam . Expr.lambdaResult
 
 resumptionTests :: [HUnit.Test]
 resumptionTests =
   [ testResume "resume with pi"
-    (purePi "" pureHole pureHole) pureHole id
+    hole id (hole --> hole)
   , testResume "resume infer in apply func"
-    (pureGetDef "id") (pureApply [pureHole, pureHole]) (ExprLens.exprApply . Expr.applyFunc)
+    (hole $$ hole) applyFunc (getDef "id")
   , testResume "resume infer in lambda body"
-    (pureGetDef "id") (pureLambda "" pureHole pureHole) lamBody
+    (lambda "" hole (const hole)) lamBody (getDef "id")
   , testResume "resume infer to get param 1 of 2"
-    (pureGetParam "a")
-    ((pureLambda "a" pureHole . pureLambda "b" pureHole) pureHole) (lamBody . lamBody)
+    lambdaAB lambdaABBody (getParam "a" hole)
   , testResume "resume infer to get param 2 of 2"
-    (pureGetParam "b")
-    ((pureLambda "a" pureHole . pureLambda "b" pureHole) pureHole) (lamBody . lamBody)
+    lambdaAB lambdaABBody (getParam "b" hole)
   , testResume "bad a b:Set f = f a {b}"
-    (pureGetParam "b")
-    ((pureLambda "a" pureHole .
-      pureLambda "b" pureSet .
-      pureLambda "f" pureHole)
-     (pureApply [pureGetParam "f", pureGetParam "a", pureHole]))
-    (lamBody . lamBody . lamBody . ExprLens.exprApply . Expr.applyArg)
+    (lambda "a" hole $ \a ->
+     lambda "b" set $ \_ ->
+     lambda "f" hole $ \f -> f $$ a $$ hole)
+    (lamBody . lamBody . lamBody . applyArg)
+    (getParam "b" hole)
   , testCase "ref to the def on the side" $
     let
       (exprD, inferContext) =
-        doInfer_ $ pureLambda "" pureHole pureHole
-      Just body = exprD ^? lamBody
-      scope = Infer.nScope . Infer.iPoint $ body ^. Expr.ePayload
+        doInfer_ $ lambda "" hole (const hole)
+      scope = exprD ^?! lamBody . Expr.ePayload . Lens.to (Infer.nScope . Infer.iPoint)
       exprR = (`evalState` inferContext) $ do
         node <- Infer.newNodeWithScope scope
         doInferM_ node getRecursiveDef
       resultR = inferResults exprR
-    in
-      assertCompareInferred resultR .
-      simple (ExprLens.bodyDefinitionRef # recursiveDefI) $
-      purePi "" pureHole pureHole
+    in assertCompareInferred resultR $ recurse (hole --> hole)
   ]
   where
-    lamBody :: Lens.Traversal' (Expression def a) (Expression def a)
-    lamBody = ExprLens.exprLam . Expr.lambdaResult
+    lambdaAB = lambda "a" hole . const . lambda "b" hole . const $ hole
+    lambdaABBody :: Lens.Traversal' (Expression def a) (Expression def a)
+    lambdaABBody = lamBody . lamBody
 
 -- f     x    = x _ _
 --   --------

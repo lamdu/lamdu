@@ -84,18 +84,18 @@ testInferAllowFail name expr =
 testCase :: String -> HUnit.Assertion -> HUnit.Test
 testCase name = HUnit.TestLabel name . HUnit.TestCase
 
+type InferredExpr t = Expression (DefI t) (Infer.Inferred (DefI t))
 testResume ::
-  String -> PureExprDefI t ->
-  PureExprDefI t ->
-  Lens.Traversal'
-    (Expression (DefI t) (Infer.Inferred (DefI t)))
-    (Expression (DefI t) (Infer.Inferred (DefI t))) ->
+  String ->
+  InferResults t ->
+  Lens.Traversal' (InferredExpr t) (InferredExpr t) ->
+  InferResults t ->
   HUnit.Test
-testResume name newExpr testExpr lens =
+testResume name origExpr position newExpr =
   testCase name $
   let
-    (tExpr, inferContext) = doInfer_ testExpr
-    Just point = tExpr ^? lens . Expr.ePayload . Lens.to Infer.iPoint
+    (tExpr, inferContext) = doInfer_ origExpr
+    Just point = tExpr ^? position . Expr.ePayload . Lens.to Infer.iPoint
   in
     void . E.evaluate . (`runStateT` inferContext) $
     doInferM point newExpr
