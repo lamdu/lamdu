@@ -30,7 +30,7 @@ simpleTests :: [HUnit.Test]
 simpleTests =
   [ testInfer "literal int" $ integer 5
   , testInfer "simple apply" $
-    apply [holeWithInferredType (purePi "" pureHole pureHole), holeWithInferredType pureHole]
+    apply [holeWithInferredType (purePi "" pureHole pureHole), hole]
   , testInfer "simple pi" $
     piType "pi" (holeWithInferredType pureSet) (holeWithInferredType pureSet)
   ]
@@ -51,22 +51,13 @@ inferPart =
 applyOnVar :: HUnit.Test
 applyOnVar =
   testInfer "apply on var" $
-  iexpr
-    (funnyLambda "" pureHole)
-    (purePi "" pureHole (pureGetDef "Bool")) $
-  namedLambda "lambda" (holeWithInferredType pureSet) $
-  iexpr
-    (pureApply [pureGetDef "IntToBoolFunc", pureHole])
-    (pureGetDef "Bool") $
-  ExprUtil.makeApply (getDef "IntToBoolFunc") $
-  iexpr
-    pureHole
-    pureIntegerType $
-  ExprUtil.makeApply
-    (holeWithInferredType (purePi "" pureHole pureIntegerType)) $
-  simple
-    (ExprLens.bodyParameterRef # Guid.fromString "lambda")
-    pureHole
+  lambda "x" (holeWithInferredType pureSet) $ apply
+  [ getDef "IntToBoolFunc"
+  , apply
+    [ holeWithInferredType (purePi "" pureHole pureIntegerType)
+    , getParam "x" hole
+    ]
+  ]
 
 idTest :: HUnit.Test
 idTest =
@@ -342,17 +333,6 @@ depApply =
     xParamType = pureGetParam "t"
     rtAppliedTo name =
       ExprUtil.pureExpression . ExprUtil.makeApply (pureGetParam "rt") $ pureGetParam name
-
--- {g, x} =>
--- \(g:hole) -> IntToBoolFunc x
-funnyLambda ::
-  String ->
-  PureExprDefI t ->
-  PureExprDefI t
-funnyLambda g =
-  pureLambda g pureHole .
-  ExprUtil.pureExpression .
-  ExprUtil.makeApply (pureGetDef "IntToBoolFunc")
 
 getRecursiveDef :: PureExprDefI t
 getRecursiveDef =

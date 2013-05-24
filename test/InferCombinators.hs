@@ -73,6 +73,9 @@ lambda name paramType result =
 holeWithInferredType :: PureExprDefI t -> InferResults t
 holeWithInferredType = simple bodyHole
 
+hole :: InferResults t
+hole = holeWithInferredType pureHole
+
 -- TODO: Get type from scope
 getParam :: String -> InferResults t -> InferResults t
 getParam name typ =
