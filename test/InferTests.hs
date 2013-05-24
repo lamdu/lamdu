@@ -66,86 +66,20 @@ idTest =
 
 inferFromOneArgToOther :: HUnit.Test
 inferFromOneArgToOther =
-  testInfer "f = \\ a b (x:Map _ _) (y:Map a b) -> if {_ x y}" .
-  iexpr expr (purePi "a" pureSet lamBType) $
-  namedLambda "a"
-    (iexpr pureSet pureSet bodyHole) $
-  iexpr lamB lamBType $
-  namedLambda "b"
-    (iexpr pureSet pureSet bodyHole) $
-  iexpr lamX lamXType $
-  namedLambda "x"
-    ( iexpr typeOfX pureSet $
-      ExprUtil.makeApply
-        ( iexpr typeOfX' setToSet $
-          ExprUtil.makeApply
-            (getDef "Map") $
-          iexpr (pureGetParam "a") pureSet bodyHole
-        ) $
-      iexpr (pureGetParam "b") pureSet bodyHole
-    ) $
-  iexpr lamY lamYType $
-  namedLambda "y"
-    ( iexpr typeOfX pureSet $
-      ExprUtil.makeApply
-        ( iexpr typeOfX' setToSet $
-          ExprUtil.makeApply
-            (getDef "Map") $
-          getParamPure "a" pureSet
-        ) $
-      getParamPure "b" pureSet
-    ) $
-  iexpr body typeOfX $
-  ExprUtil.makeApply
-    ( iexpr body1 body1Type $
-      ExprUtil.makeApply
-        (getDef "if") $
-      iexpr typeOfX pureSet bodyHole
-    ) $
-  iexpr ifParams ifParamsType $
-  Expr.BodyRecord $ Expr.Record Val
-  [ (tag t0, simple bodyHole (pureGetDef "Bool"))
-  , (tag t1, getParamPure "x" typeOfX)
-  , (tag t2, getParamPure "y" typeOfX)
-  ]
+  testInfer "f = \\ a b (x:Map _ _) (y:Map a b) -> if {_ x y}" $
+  lambda "a" (inferredVal setType) $
+  lambda "b" (inferredVal setType) $
+  lambda "x" (mkMapType inferredVal) $
+  lambda "y" (mkMapType id) $
+  applyRecord [getDef "if", inferredVal (mkMapType id)]
+  [holeWithInferredType (getDef "Bool"), getMapParam "x", getMapParam "y"]
   where
-    [t0, t1, t2] = defParamTags "if"
-    expr = pureLambda "a" pureSet lamB
-    lamB = pureLambda "b" pureSet lamX
-    lamX = pureLambda "x" typeOfX lamY
-    lamY = pureLambda "y" typeOfX body
-    body = pureApply [body1, ifParams]
-    body1 = pureApply [pureGetDef "if", typeOfX]
-    ifParams =
-      ExprUtil.pureExpression . Expr.BodyRecord $
-      Expr.Record Val
-      [ (pureTag # t0, pureHole)
-      , (pureTag # t1, pureGetParam "x")
-      , (pureTag # t2, pureGetParam "y")
+    getMapParam name = getParam name (mkMapType id)
+    mkMapType f = apply
+      [ getDef "Map"
+      , f (getParam "a" setType)
+      , f (getParam "b" setType)
       ]
-    ifParamsType =
-      ExprUtil.pureExpression . Expr.BodyRecord $
-      Expr.Record Type
-      [ (pureTag # t0, pureGetDef "Bool")
-      , (pureTag # t1, typeOfX)
-      , (pureTag # t2, typeOfX)
-      ]
-    pureTag = ExprLens.pureExpr . ExprLens.bodyTag
-    body1Type = purePi "body1" ifParamsType typeOfX
-    typeOfX =
-      pureApply
-      [ typeOfX'
-      , pureGetParam "b"
-      ]
-    typeOfX' =
-      pureApply
-      [ pureGetDef "Map"
-      , pureGetParam "a"
-      ]
-    setToSet = purePi "setToSet" pureSet pureSet
-    lamBType = purePi "b" pureSet lamXType
-    lamXType = purePi "x" typeOfX lamYType
-    lamYType = purePi "y" typeOfX typeOfX
 
 monomorphRedex :: HUnit.Test
 monomorphRedex =
