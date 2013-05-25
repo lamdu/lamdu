@@ -8,6 +8,7 @@ module Lamdu.Data.Expression.Utils
   , pureSet
   , pureRecord
   , pureLam
+  , pureGetField
   , pureLiteralInteger
   , pureIntegerType
   , pureExpression
@@ -268,6 +269,10 @@ pureRecord k fields = ExprLens.pureExpr . ExprLens.bodyKindedRecordFields k # fi
 pureLam :: Kind -> Guid -> Expression def () -> Expression def () -> Expression def ()
 pureLam k paramGuid paramType result =
   ExprLens.pureExpr . ExprLens.bodyKindedLam k # (paramGuid, paramType, result)
+
+pureGetField :: Expression def () -> Expression def () -> Expression def ()
+pureGetField record field =
+  ExprLens.pureExpr . _BodyGetField # GetField record field
 
 -- TODO: Deprecate below here:
 pureExpression :: Body def (Expression def ()) -> Expression def ()

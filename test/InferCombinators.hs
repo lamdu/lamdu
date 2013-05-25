@@ -76,6 +76,7 @@ piType name paramType mkResultType =
   where
     result = mkResultType $ getParam name paramType
 
+infixr 4 -->
 (-->) :: InferResults t -> InferResults t -> InferResults t
 (-->) src dest =
   simple (ExprUtil.makePi (Guid.fromString "") src dest) pureSet
@@ -90,6 +91,45 @@ lambda name paramType mkResult =
   where
     guid = Guid.fromString name
     result = mkResult $ getParam name paramType
+
+-- Sometimes we have an inferred type that comes outside-in but cannot
+-- be inferred inside-out:
+setInferredType :: InferResults t -> InferResults t -> InferResults t
+setInferredType typ val = val & iType .~ typ ^. iVal
+
+getField :: InferResults t -> InferResults t -> InferResults t
+getField recordVal tagVal
+  | allFieldsMismatch = error "getField on record with only mismatching field tags"
+  | otherwise = simple (Expr._BodyGetField # Expr.GetField recordVal tagVal) pureFieldType
+  where
+    mFields = recordVal ^? iType . ExprLens.exprKindedRecordFields Type
+    allFieldsMismatch =
+      case mFields of
+      Nothing -> False
+      Just fields -> all (tagMismatch . fst) fields
+    tagMismatch fieldTag =
+      Lens.nullOf ExprLens.exprHole fieldTag &&
+      Lens.nullOf ExprLens.exprHole tagVal &&
+      (fieldTag ^?! ExprLens.exprTag /= tagVal ^?! ExprLens.exprTag)
+    mPureFieldType tagGuid =
+      mFields ^?
+      Lens._Just . Lens.traversed .
+      Lens.filtered
+      (Lens.has (Lens._1 . ExprLens.exprTag . Lens.filtered (tagGuid ==))) .
+      Lens._2
+    pureFieldType =
+      fromMaybe pureHole $
+      mPureFieldType =<< tagVal ^? ExprLens.exprTag
+
+lambdaRecord ::
+  String -> [(String, InferResults t)] ->
+  ([InferResults t] -> InferResults t) -> InferResults t
+lambdaRecord paramsName strFields mkResult =
+  lambda paramsName (record Type fields) $ \params ->
+  mkResult $ map (getField params) fieldTags
+  where
+    fields = strFields & Lens.traversed . Lens._1 %~ tagStr
+    fieldTags = map fst fields
 
 whereItem ::
   String -> InferResults t -> (InferResults t -> InferResults t) -> InferResults t
@@ -122,6 +162,9 @@ tag :: Guid -> InferResults t
 tag guid =
   simple (ExprLens.bodyTag # guid) $
   ExprLens.pureExpr . ExprLens.bodyTagType # ()
+
+tagStr :: String -> InferResults t
+tagStr = tag . Guid.fromString
 
 set :: InferResults t
 set = simple bodySet pureSet

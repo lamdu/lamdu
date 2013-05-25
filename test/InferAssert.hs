@@ -27,21 +27,22 @@ import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Test.HUnit as HUnit
 
+simplifyDef :: Expression (DefI t) a -> Expression UnescapedStr a
+simplifyDef =
+  ExprLens.exprDef %~ defIStr
+  where
+    defIStr = UnescapedStr . BS8.unpack . BS8.takeWhile (/= '\0') . Guid.bs . IRef.guid
+
 assertCompareInferred ::
   InferResults t -> InferResults t -> HUnit.Assertion
 assertCompareInferred result expected =
   assertBool errMsg (Map.null resultErrs)
   where
-    simplifyDef = ExprLens.exprDef %~ defIStr
     errMsg =
-      List.intercalate "\n" $ show
-      (resultExpr
-       & simplifyDef
-       & Lens.mapped %~ ixsStr) :
+      List.intercalate "\n" $ (show . simplifyDef) (ixsStr <$> resultExpr) :
       "Errors:" :
       (map showErrItem . Map.toList) resultErrs
     showErrItem (ix, err) = ansiAround ansiRed ("{" ++ show ix ++ "}:\n") ++ err
-    defIStr = BS8.unpack . BS8.takeWhile (/= '\0') . Guid.bs . IRef.guid
     ixsStr [] = UnescapedStr ""
     ixsStr ixs = UnescapedStr . ansiAround ansiRed . List.intercalate ", " $ map show ixs
     (resultExpr, resultErrs) =
