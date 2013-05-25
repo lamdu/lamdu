@@ -503,8 +503,14 @@ runRigidArgApplyTypeToResultType funcTypeRef (applyTypeExpr, argExpr) (o0, o1, o
 rigidArgApplyTypeToResultTypeRule ::
   TypedValue -> Expr.Apply TypedValue -> State Origin (Rule def ExprRef)
 rigidArgApplyTypeToResultTypeRule applyTv (Expr.Apply func arg) =
-  -- If Arg is GetParam
+  -- If Arg is rigid
   -- ApplyT (Susbt Arg with Hole) => ResultT
+  --
+  -- Rationale: When a function f of type FT is applied on a rigid
+  -- parameter p, and we use its result as a certain type T, there's
+  -- no way that FT is dependent on p, because in the context of T,
+  -- any information in p is universally quantified. Parts of FT may
+  -- still be dependent on p, but the part that matches T mustn't be.
   RigidArgApplyTypeToResultType (tvType func) (tvType applyTv, tvVal arg) <$> mkOrigin3
 
 runRedexApplyTypeToResultType :: ExprRef -> RefExpression2 def -> RuleResult def
