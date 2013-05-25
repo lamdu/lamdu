@@ -193,7 +193,7 @@ infixl 3 $$:
       case e ^. Expr.eBody of
       Expr.BodyLeaf Expr.Hole -> seeHole
       Expr.BodyLam (Expr.Lambda k1 paramGuid _ result)
-        | k == k1 -> ExprUtil.subst paramGuid (nextArg ^. iVal) result
+        | k == k1 -> ExprUtil.substGetPar paramGuid (nextArg ^. iVal) result
       _ -> seeOther
     applyVal = handleLam funcVal Val pureHole $ bodyToPureExpr application
     applyType = handleLam funcType Type piErr piErr

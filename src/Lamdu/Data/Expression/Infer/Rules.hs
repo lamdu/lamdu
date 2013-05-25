@@ -225,7 +225,7 @@ runPiToLambda (param, lambdaValueRef, bodyTypeRef) piBody (o0, o1, o2) = do
     piBody ^.. ExprLens.exprLam
   [ -- Pi result type -> Body type
     ( bodyTypeRef
-    , ExprUtil.subst piParam
+    , ExprUtil.substGetPar piParam
       ( makeRefExpr o0
         (Lens.review ExprLens.bodyParameterRef param)
       )
@@ -408,7 +408,7 @@ runIntoApplyResult (k, applyRef, arg) (funcExpr, argExpr) = do
   guard $ k == bk
   return
     ( applyRef
-    , ExprUtil.subst param
+    , ExprUtil.substGetPar param
       (argExpr & Lens.traversed . rplSubstitutedArgs %~ IntSet.insert (unExprRef arg)) .
       -- TODO: Is this correct?
       Lens.set (Lens.traversed . rplRestrictedPoly) (Monoid.Any False) $
@@ -491,13 +491,38 @@ argTypeToPiParamTypeRule (Expr.Apply func arg) =
   -- ArgT => Pi ParamT
   ArgTypeToPiParamType (tvType func) (tvType arg) <$> mkOrigin2
 
-runRigidArgApplyTypeToResultType :: ExprRef -> RefExpression2 def -> Origin3 -> RuleResult def
+-- Rigid value: An expression whose sole information content comes
+-- from a GetVar. IOW: All of its information is universally
+-- quantified.
+rigidValue :: Expr.Expression def a -> Bool
+rigidValue e = case e ^. Expr.eBody of
+  Expr.BodyLeaf (Expr.GetVariable (Expr.ParameterRef _)) -> True
+  Expr.BodyLeaf (Expr.GetVariable (Expr.DefinitionRef _)) -> False
+  -- A lambda is a black box, don't want to break and enter into it to
+  -- figure out whether it has information content
+  Expr.BodyLam (Expr.Lambda Expr.Val _ _ _) -> False
+  -- An apply is of a function, which is a black box (see above).
+  Expr.BodyApply (Expr.Apply _ _) -> False
+  Expr.BodyRecord (Expr.Record Expr.Val fields) -> all (rigidValue . snd) fields
+  Expr.BodyGetField (Expr.GetField record _) -> rigidValue record
+  Expr.BodyLeaf Expr.Hole -> False
+  Expr.BodyLeaf (Expr.LiteralInteger _) -> False
+  -- Can't really use a tag (at least yet...)
+  Expr.BodyLeaf (Expr.Tag _) -> True
+  -- Types have no (runtime) information content
+  Expr.BodyLeaf Expr.Set -> True
+  Expr.BodyLeaf Expr.IntegerType -> True
+  Expr.BodyLeaf Expr.TagType -> True
+  Expr.BodyLam (Expr.Lambda Expr.Type _ _ _) -> True
+  Expr.BodyRecord (Expr.Record Expr.Type _) -> True
+
+runRigidArgApplyTypeToResultType :: Eq def => ExprRef -> RefExpression2 def -> Origin3 -> RuleResult def
 runRigidArgApplyTypeToResultType funcTypeRef (applyTypeExpr, argExpr) (o0, o1, o2) = do
-  par <- argExpr ^.. ExprLens.exprParameterRef
+  guard $ rigidValue argExpr
   return
     ( funcTypeRef
     , makePi o0 (makeHole o1) $
-      ExprUtil.subst par (makeHole o2) applyTypeExpr
+      ExprUtil.subst (Lens.filtered (ExprUtil.alphaEq argExpr)) (makeHole o2) applyTypeExpr
     )
 
 rigidArgApplyTypeToResultTypeRule ::

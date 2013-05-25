@@ -19,7 +19,8 @@ module Lamdu.Data.Expression.Utils
   , isDependentPi
   , funcArguments
   , applyForms, applyDependentPis
-  , alphaEq, subst
+  , alphaEq
+  , subst, substGetPar
   , subExpressionsThat
   ) where
 
@@ -33,6 +34,7 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (evalState, state)
 import Data.Maybe (isJust, fromMaybe)
+import Data.Monoid (Any)
 import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable(..), sequenceA)
 import System.Random (Random, RandomGen, random)
@@ -92,14 +94,22 @@ alphaEq x y =
   x y
 
 -- Useful functions:
-subst ::
+substGetPar ::
   Guid ->
   Expression def a ->
   Expression def a ->
   Expression def a
-subst from to expr
-  | Lens.anyOf ExprLens.exprParameterRef (== from) expr = to
-  | otherwise = expr & eBody . traverse %~ subst from to
+substGetPar from =
+  subst (ExprLens.exprParameterRef . Lens.filtered (== from))
+
+subst ::
+  (Lens.Getting Any (Expression def a) b) ->
+  Expression def a ->
+  Expression def a ->
+  Expression def a
+subst lens to expr
+  | Lens.has lens expr = to
+  | otherwise = expr & eBody . traverse %~ subst lens to
 
 -- Transform expression to expression applied with holes,
 -- with all different sensible levels of currying.

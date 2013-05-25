@@ -181,7 +181,7 @@ recordTest =
     fieldGuid = Guid.fromString "field"
 
 uncurry2Test =
-  testInferAllowFail "uncurry2 a b c {f:a->b->c,x:a,y:b} = f x y" $
+  testInfer "uncurry2 a b c {f:a->b->c,x:a,y:b} = f x y" $
   typeVar "a" $ \a ->
   typeVar "b" $ \b ->
   lambdaRecord "params"
