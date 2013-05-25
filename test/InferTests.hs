@@ -1,4 +1,4 @@
-{-# OPTIONS -Wall -Werror #-}
+{-# OPTIONS -Wall -Werror -fno-warn-missing-signatures #-}
 module InferTests (allTests) where
 
 import Control.Lens.Operators
@@ -10,7 +10,6 @@ import InferCombinators
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expression (Expression(..), Kind(..))
 import Lamdu.Data.Expression.Infer.Conflicts (inferWithConflicts)
-import Test.Framework (Test)
 import Test.Framework.Providers.HUnit (hUnitTestToTests)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.HUnit (assertBool)
@@ -24,7 +23,6 @@ import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Test.HUnit as HUnit
 
-simpleTests :: [HUnit.Test]
 simpleTests =
   [ testInfer "literal int" $ literalInteger 5
   , testInfer "simple apply" $
@@ -34,12 +32,10 @@ simpleTests =
     holeWithInferredType set
   ]
 
-applyIntToBoolFuncWithHole :: HUnit.Test
 applyIntToBoolFuncWithHole =
   testInfer "apply" $
   getDef "IntToBoolFunc" $$ holeWithInferredType integerType
 
-inferPart :: HUnit.Test
 inferPart =
   testInfer "foo (xs:List ?) = 5 : xs" $
   lambda "xs" listInts $ \xs ->
@@ -47,17 +43,14 @@ inferPart =
   where
     listInts = listOf (asHole integerType)
 
-applyOnVar :: HUnit.Test
 applyOnVar =
   testInfer "apply on var" $
   lambda "x" (holeWithInferredType set) $ \x ->
   getDef "IntToBoolFunc" $$
   (holeWithInferredType (hole --> integerType) $$ x)
 
-idTest :: HUnit.Test
 idTest = testInfer "id test" $ getDef "id" $$ integerType
 
-inferFromOneArgToOther :: HUnit.Test
 inferFromOneArgToOther =
   testInfer "f = \\ a b (x:Map _ _) (y:Map a b) -> if {_ x y}" $
   lambda "a" (asHole set) $ \a ->
@@ -68,7 +61,6 @@ inferFromOneArgToOther =
   getDef "if" $$ asHole (mkMapType id) $$:
   [holeWithInferredType (getDef "Bool"), x, y]
 
-monomorphRedex :: HUnit.Test
 monomorphRedex =
   testInfer "foo = f (\\~ x -> (\\~ -> x) _) where f ~:(a:Set -> _ -> a) = _" $
   whereItem "f" (lambda "" fArgType (const hole)) $ \f ->
@@ -80,32 +72,26 @@ monomorphRedex =
     -- (a:Set -> _[=a] -> a)
     fArgType = piType "a" set $ \a -> asHole a --> a
 
-fOfXIsFOf5 :: HUnit.Test
 fOfXIsFOf5 =
   testInfer "f x = f 5" $
   lambda "" (asHole integerType) $ \_ ->
   recurse (integerType --> hole) $$ literalInteger 5
 
-argTypeGoesToPi :: HUnit.Test
 argTypeGoesToPi =
   testInfer "arg type goes to pi" $
   holeWithInferredType (integerType --> hole) $$ literalInteger 5
 
-idOnAnInt :: HUnit.Test
 idOnAnInt =
   testInfer "id on an int" $
   getDef "id" $$ asHole integerType $$ literalInteger 5
 
-idOnHole :: HUnit.Test
 idOnHole = testInfer "id hole" $ getDef "id" $$ holeWithInferredType set
 
-forceMono :: HUnit.Test
 forceMono =
   testInfer "id (id _ _)" $
   getDef "id" $$ (getDef "id" $$ asHole set $$ holeWithInferredType set)
 
 -- | depApply (t : Set) (rt : t -> Set) (f : (d : t) -> rt d) (x : t) = f x
-depApply :: HUnit.Test
 depApply =
   testInfer "dep apply" $
   lambda "t" set $ \t ->
@@ -122,10 +108,8 @@ lamParamType = ExprLens.exprLam . Expr.lambdaParamType
 lamBody :: Lens.Traversal' (Expression def a) (Expression def a)
 lamBody = ExprLens.exprLam . Expr.lambdaResult
 
-testGroup :: String -> [HUnit.Test] -> HUnit.Test
 testGroup title = HUnit.TestLabel title . HUnit.TestList
 
-resumptionTests :: HUnit.Test
 resumptionTests = testGroup "type infer resume" $
   [ testResume "{hole->pi}"
     hole id (hole --> hole)
@@ -166,7 +150,6 @@ resumptionTests = testGroup "type infer resume" $
 --   --------
 --   (_ -> _)
 --         ^ Set Bool here
-failResumptionAddsRules :: HUnit.Test
 failResumptionAddsRules =
   testCase "Resumption that adds rules and fails" .
   assertBool "Resumption should have failed" $ not success
@@ -182,14 +165,12 @@ failResumptionAddsRules =
       doInfer_ . lambda "x" (hole --> hole) $
       \x -> x $$ hole $$ hole
 
-emptyRecordTest :: HUnit.Test
 emptyRecordTest =
   testGroup "empty record"
   [ testInfer "type infer" $ record Type []
   , testInfer "val infer" $ record Val []
   ]
 
-recordTest :: HUnit.Test
 recordTest =
   testInfer "f a x:a = {x" $
   lambda "a" set $ \a ->
@@ -199,7 +180,6 @@ recordTest =
   where
     fieldGuid = Guid.fromString "field"
 
-uncurry2Test :: HUnit.Test
 uncurry2Test =
   testInferAllowFail "uncurry2 a b c {f:a->b->c,x:a,y:b} = f x y" $
   typeVar "a" $ \a ->
@@ -213,12 +193,10 @@ uncurry2Test =
   where
     typeVar name = lambda name (asHole set)
 
-inferRecordValTest :: HUnit.Test
 inferRecordValTest =
   testInferAllowFail "id ({:Set) <hole> infers { val" $
   getDef "id" $$ record Type [] $$ asHole (record Val [])
 
-hunitTests :: HUnit.Test
 hunitTests =
   HUnit.TestList $
   simpleTests ++
@@ -248,8 +226,6 @@ inferPreservesShapeProp expr =
     Nothing -> property rejected
     Just (inferred, _) -> property (void inferred == expr)
 
-qcProps :: [Test]
 qcProps = [testProperty "infer preserves shape" inferPreservesShapeProp]
 
-allTests :: [Test]
 allTests = hUnitTestToTests hunitTests `mappend` qcProps
