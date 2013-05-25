@@ -199,6 +199,20 @@ recordTest =
   where
     fieldGuid = Guid.fromString "field"
 
+uncurry2Test :: HUnit.Test
+uncurry2Test =
+  testInferAllowFail "uncurry2 a b c {f:a->b->c,x:a,y:b} = f x y" $
+  typeVar "a" $ \a ->
+  typeVar "b" $ \b ->
+  lambdaRecord "params"
+  [ ("f", asHole (a --> b --> hole))
+  , ("x", a)
+  , ("y", b)
+  ] $ \[f, x, y] ->
+  f $$ x $$ y
+  where
+    typeVar name = lambda name (asHole set)
+
 inferRecordValTest :: HUnit.Test
 inferRecordValTest =
   testInferAllowFail "id ({:Set) <hole> infers { val" $
@@ -224,6 +238,7 @@ hunitTests =
   , emptyRecordTest
   , recordTest
   , inferRecordValTest
+  , uncurry2Test
   , resumptionTests
   ]
 
