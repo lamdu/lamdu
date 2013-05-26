@@ -22,5 +22,5 @@ inferAssertNoConflict ::
 inferAssertNoConflict msg loaded =
   mapStateT fromEither . inferUntilConflict loaded
   where
-    fromEither (Left err) = error . ((msg ++ ": ") ++) . show $ void err
+    fromEither (Left err) = error . ((msg ++ ":\n") ++) . show $ void err
     fromEither (Right x) = return x

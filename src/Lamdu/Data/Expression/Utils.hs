@@ -17,7 +17,7 @@ module Lamdu.Data.Expression.Utils
   , matchBody, matchExpression
   , subExpressions, subExpressionsWithoutTags
   , isDependentPi
-  , funcArguments
+  , curriedFuncArguments
   , applyForms, applyDependentPis
   , alphaEq
   , subst, substGetPar
@@ -245,18 +245,16 @@ isDependentPi =
       . ExprLens.exprParameterRef
       ) . (==)
 
-funcArguments :: Expression def a -> [Expression def a]
-funcArguments =
-  Lens.toListOf (ExprLens.exprLam . ExprLens.kindedLam Val . Lens.folding f)
+curriedFuncArguments :: Expression def a -> [Expression def a]
+curriedFuncArguments =
+  (^.. ExprLens.exprLam . ExprLens.kindedLam Val . Lens.folding f)
   where
-    f (_, paramType, body) = paramType : funcArguments body
+    f (_, paramType, body) = paramType : curriedFuncArguments body
 
 getParams :: Expression def a -> [(Guid, Expression def a)]
-getParams expr =
-  case expr ^? ExprLens.exprLam of
-  Just (Lambda Type param paramType resultType) ->
-    (param, paramType) : getParams resultType
-  _ -> []
+getParams expr = do
+  (param, paramType, resultType) <- expr ^.. ExprLens.exprKindedLam Type
+  (param, paramType) : getParams resultType
 
 pureIntegerType :: Expression def ()
 pureIntegerType = ExprLens.pureExpr . ExprLens.bodyIntegerType # ()

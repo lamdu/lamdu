@@ -131,7 +131,7 @@ addVariables ::
 addVariables gen loader expr = do
   implicitParams <-
     (`evalStateT` gen) . fmap concat .
-    mapM (addVariablesForExpr loader) $ ExprUtil.funcArguments expr
+    mapM (addVariablesForExpr loader) $ ExprUtil.curriedFuncArguments expr
   newRoot <- toStateT $ foldM addParam baseExpr implicitParams
   State.gets $ Infer.derefExpr newRoot
   where
