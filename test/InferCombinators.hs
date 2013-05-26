@@ -1,7 +1,7 @@
 {-# OPTIONS -Wall -Werror #-}
 module InferCombinators where
 
-import Control.Arrow ((&&&), (***))
+import Control.Arrow ((***))
 import Control.Lens (Lens')
 import Control.Lens.Operators
 import Control.Monad (void)
@@ -18,7 +18,6 @@ import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
-import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
@@ -27,9 +26,6 @@ type InferResults t =
   ( PureExprDefI t
   , PureExprDefI t
   )
-
-inferResults :: ExprIRef.Expression t (Infer.Inferred (DefI t)) -> InferResults t
-inferResults = fmap (void . Infer.iValue &&& void . Infer.iType)
 
 iexpr ::
   PureExprDefI t ->

@@ -181,17 +181,23 @@ recordTest =
     fieldGuid = Guid.fromString "field"
 
 uncurry2Test =
-  testInfer "uncurry2 a b c {f:a->b->c,x:a,y:b} = f x y" $
-  typeVar "a" $ \a ->
-  typeVar "b" $ \b ->
-  lambdaRecord "params"
-  [ ("f", asHole (a --> b --> hole))
-  , ("x", a)
-  , ("y", b)
-  ] $ \[f, x, y] ->
-  f $$ x $$ y
+  testCase "uncurry2: \\params:{?->?->?, x:?, y:?} -> f x y   WV: \\a b c params:{f:?{a->b->c} x:?a y:?b} -> f x y : c" $
+  allowFailAssertion $
+  inferWVAssertion (expr iset iset iset) wvExpr
   where
-    typeVar name = lambda name (asHole set)
+    iset = holeWithInferredType set
+    expr a b c =
+      lambdaRecord "params"
+      [ ("f", asHole (b --> a --> c))
+      , ("x", asHole b)
+      , ("y", asHole a)
+      ] $ \[f, x, y] ->
+      f $$ x $$ y
+    wvExpr =
+      lambda "a" (asHole set) $ \a ->
+      lambda "b" (asHole set) $ \b ->
+      lambda "c" set $ \c ->
+      expr a b c
 
 inferRecordValTest =
   testInferAllowFail "id ({:Set) <hole> infers { val" $

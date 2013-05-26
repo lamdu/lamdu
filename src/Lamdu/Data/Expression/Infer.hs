@@ -59,8 +59,8 @@ import qualified Data.Set as Set
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer.Rules as Rules
-import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Expression.Lens as ExprLens
+import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 mkOrigin :: State Origin Origin
 mkOrigin = do
@@ -126,7 +126,7 @@ data ErrorDetails def
     (Expr.Expression def ())
     (Expr.Expression def ())
   | InfiniteExpression (Expr.Expression def ())
-  deriving (Show, Eq, Ord)
+  deriving (Eq, Ord, Show)
 
 instance Functor ErrorDetails where
   fmap f (MismatchIn x y) =

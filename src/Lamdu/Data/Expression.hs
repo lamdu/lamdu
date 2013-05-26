@@ -25,7 +25,6 @@ import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
 import qualified Control.Lens.TH as LensTH
-import qualified Data.List as List
 
 data Kind = Val | Type
   deriving (Eq, Ord, Show, Typeable)
@@ -36,17 +35,17 @@ data Lambda expr = Lambda
   , _lambdaParamType :: expr
   -- TODO: Rename to _lambdaResult (for Pi it is not a body)
   , _lambdaResult :: expr
-  } deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
+  } deriving (Eq, Ord, Functor, Foldable, Traversable)
 
 data Apply expr = Apply
   { _applyFunc :: expr
   , _applyArg :: expr
-  } deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
+  } deriving (Eq, Ord, Functor, Foldable, Traversable)
 
 data VariableRef def
   = ParameterRef {-# UNPACK #-} !Guid -- of the lambda/pi
   | DefinitionRef def
-  deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Typeable)
+  deriving (Eq, Ord, Functor, Foldable, Traversable, Typeable)
 
 data Leaf def
   = GetVariable !(VariableRef def)
@@ -56,17 +55,29 @@ data Leaf def
   | Hole
   | TagType
   | Tag Guid
-  deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
+  deriving (Eq, Ord, Functor, Foldable, Traversable)
+
+instance Show def => Show (Leaf def) where
+  showsPrec _ leaf =
+    case leaf of
+    GetVariable (ParameterRef paramId) -> shows paramId
+    GetVariable (DefinitionRef defI) -> shows defI
+    LiteralInteger int -> shows int
+    Tag guid -> showString "Tag<" . shows guid . showChar '>'
+    Set -> showString "Set"
+    IntegerType -> showString "Int"
+    Hole -> showString "?"
+    TagType -> showString "Tag"
 
 data Record expr = Record
   { _recordKind :: Kind
   , _recordFields :: [(expr, expr)]
-  } deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
+  } deriving (Eq, Ord, Functor, Foldable, Traversable)
 
 data GetField expr = GetField
   { _getFieldRecord :: expr
   , _getFieldTag :: expr
-  } deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
+  } deriving (Eq, Ord, Functor, Foldable, Traversable)
 
 data Body def expr
   = BodyLam {-# UNPACK #-}!(Lambda expr)
@@ -78,49 +89,11 @@ data Body def expr
 
 type BodyExpr def a = Body def (Expression def a)
 
-instance (Show expr, Show def) => Show (Body def expr) where
-  show (BodyLam (Lambda Val paramId paramType body)) =
-    concat ["\\", show paramId, ":", showP paramType, "==>", showP body]
-  show (BodyLam (Lambda Type paramId paramType body)) =
-    concat ["(", show paramId, ":", showP paramType, ")->", showP body]
-  show (BodyApply (Apply func arg)) = unwords [showP func, showP arg]
-  show (BodyRecord (Record k fields)) =
-    "Rec" ++ show k ++ "{" ++ List.intercalate ", " (map showField fields) ++ "}"
-    where
-      sep Val = "="
-      sep Type = ":"
-      showField (field, typ) =
-        unwords [show field, sep k, show typ]
-  show (BodyGetField (GetField r tag)) =
-    concat ["(", show r, ".", show tag, ")"]
-  show (BodyLeaf (GetVariable (ParameterRef guid))) = "par:" ++ show guid
-  show (BodyLeaf (GetVariable (DefinitionRef defI))) = "def:" ++ show defI
-  show (BodyLeaf (LiteralInteger int)) = show int
-  show (BodyLeaf x) = show x
-
-showP :: Show a => a -> String
-showP = parenify . show
-
-parenify :: String -> String
-parenify x = concat ["(", x, ")"]
-
 -- TODO: Expression = Cofree, do we want to use that?
 data Expression def a = Expression
   { _eBody :: Body def (Expression def a)
   , _ePayload :: a
   } deriving (Functor, Eq, Ord, Foldable, Traversable, Typeable)
-
-instance (Show a, Show def) => Show (Expression def a) where
-  show (Expression body payload) =
-    maybeParenify (show body) ++ showPayload
-    where
-      maybeParenify | null showPayload = id
-                    | otherwise = parenify
-      showPayload =
-        case show payload of
-        "" -> ""
-        "()" -> "" -- TODO: Remove this
-        x -> "{" ++ x ++ "}"
 
 fmap concat $ mapM LensTH.makePrisms [''Kind, ''VariableRef, ''Leaf, ''Body]
 fmap concat $ mapM LensTH.makeLenses [''Expression, ''Record, ''GetField, ''Lambda, ''Apply]

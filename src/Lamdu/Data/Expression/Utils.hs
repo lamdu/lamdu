@@ -1,3 +1,4 @@
+{-# OPTIONS -fno-warn-orphans #-}
 {-# LANGUAGE TemplateHaskell, DeriveDataTypeable, RankNTypes, NoMonomorphismRestriction #-}
 
 module Lamdu.Data.Expression.Utils
@@ -14,6 +15,7 @@ module Lamdu.Data.Expression.Utils
   , pureExpression
   , randomizeExpr
   , canonizeParamIds, randomizeParamIds
+  , randomizeParamIdsG, NameGen(..), randomNameGen, debugNameGen
   , matchBody, matchExpression
   , subExpressions, subExpressionsWithoutTags
   , isDependentPi
@@ -22,6 +24,7 @@ module Lamdu.Data.Expression.Utils
   , alphaEq
   , subst, substGetPar
   , subExpressionsThat
+  , showBodyExpr, showsPrecBodyExpr
   ) where
 
 import Prelude hiding (pi)
@@ -33,6 +36,7 @@ import Control.Monad (guard)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.State (evalState, state)
+import Data.Map (Map)
 import Data.Maybe (isJust, fromMaybe)
 import Data.Monoid (Any)
 import Data.Store.Guid (Guid)
@@ -41,8 +45,10 @@ import System.Random (Random, RandomGen, random)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Foldable as Foldable
+import qualified Data.List as List
 import qualified Data.List.Utils as ListUtils
 import qualified Data.Map as Map
+import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified System.Random as Random
 
@@ -137,27 +143,57 @@ randomizeExpr gen = (`evalState` gen) . traverse randomize
   where
     randomize f = f <$> state random
 
+data NameGen = NameGen
+  { ngSplit :: (NameGen, NameGen)
+  , ngNext :: (Guid, NameGen)
+  }
+
+randomNameGen :: RandomGen g => g -> NameGen
+randomNameGen g = NameGen
+  { ngSplit = Random.split g & Lens.both %~ randomNameGen
+  , ngNext = random g & Lens._2 %~ randomNameGen
+  }
+
+debugNameGen :: NameGen
+debugNameGen = ng names ""
+  where
+    names = (:[]) <$> ['a'..'z']
+    ng [] _ = error "TODO: Infinite list of names"
+    ng st@(l:ls) suffix =
+      NameGen
+      { ngSplit = (ng st "_0", ng st "_1")
+      , ngNext = (Guid.fromString (l++suffix), ng ls suffix)
+      }
+
 canonizeParamIds :: Expression def a -> Expression def a
-canonizeParamIds = randomizeParamIds $ Random.mkStdGen 0
+canonizeParamIds = randomizeParamIds (Random.mkStdGen 0)
 
 randomizeParamIds :: RandomGen g => g -> Expression def a -> Expression def a
-randomizeParamIds gen =
-  (`evalState` gen) . (`runReaderT` Map.empty) . go
+randomizeParamIds gen = randomizeParamIdsG (randomNameGen gen) Map.empty $ \_ _ a -> a
+
+randomizeParamIdsG ::
+  NameGen -> Map Guid Guid ->
+  (NameGen -> Map Guid Guid -> a -> b) ->
+  Expression def a -> Expression def b
+randomizeParamIdsG gen initMap convertPL =
+  (`evalState` gen) . (`runReaderT` initMap) . go
   where
-    go (Expression v s) = fmap (`Expression` s) $
-      case v of
-      BodyLam (Lambda k oldParamId paramType body) -> do
-        newParamId <- lift $ state random
-        fmap BodyLam $ liftA2 (Lambda k newParamId) (go paramType) .
-          Reader.local (Map.insert oldParamId newParamId) $ go body
-      gv@(BodyLeaf (GetVariable (ParameterRef guid))) ->
-        Reader.asks $
-        maybe gv (Lens.review ExprLens.bodyParameterRef) .
-        Map.lookup guid
-      x@BodyLeaf {}     -> return x
-      x@BodyApply {}    -> traverse go x
-      x@BodyGetField {} -> traverse go x
-      x@BodyRecord {}   -> traverse go x
+    go (Expression v s) = do
+      guidMap <- Reader.ask
+      newGen <- lift $ state ngSplit
+      (`Expression` convertPL newGen guidMap s) <$>
+        case v of
+        BodyLam (Lambda k oldParamId paramType body) -> do
+          newParamId <- lift $ state ngNext
+          fmap BodyLam $ liftA2 (Lambda k newParamId) (go paramType) .
+            Reader.local (Map.insert oldParamId newParamId) $ go body
+        BodyLeaf (GetVariable (ParameterRef guid)) ->
+          pure $ ExprLens.bodyParameterRef #
+          fromMaybe guid (Map.lookup guid guidMap)
+        x@BodyLeaf {}     -> traverse go x
+        x@BodyApply {}    -> traverse go x
+        x@BodyGetField {} -> traverse go x
+        x@BodyRecord {}   -> traverse go x
 
 -- Left-biased on parameter guids
 {-# INLINE matchBody #-}
@@ -235,15 +271,15 @@ subExpressionsWithoutTags x =
 
 isDependentPi :: Expression def a -> Bool
 isDependentPi =
-  Lens.anyOf ExprLens.exprLam f
+  Lens.has (ExprLens.exprKindedLam Type . Lens.filtered f)
   where
-    f (Lambda Type g _ resultType) = hasGetVar g resultType
-    f _ = False
-    hasGetVar =
-      Lens.anyOf
-      ( Lens.folding subExpressions
-      . ExprLens.exprParameterRef
-      ) . (==)
+    f (g, _, resultType) = exprHasGetVar g resultType
+
+parameterRefs :: Lens.Fold (Expression def a) Guid
+parameterRefs = Lens.folding subExpressions . ExprLens.exprParameterRef
+
+exprHasGetVar :: Guid -> Expression def a -> Bool
+exprHasGetVar g = Lens.anyOf parameterRefs (== g)
 
 curriedFuncArguments :: Expression def a -> [Expression def a]
 curriedFuncArguments =
@@ -305,3 +341,66 @@ subExpressionsThat ::
   Lens.Fold (Expression def a) (Expression def a)
 subExpressionsThat predicate =
   Lens.folding subExpressions . Lens.filtered predicate
+
+-- Show isntances:
+showsPrecBody ::
+  (Show def, Show expr) => (Guid -> expr -> Bool) ->
+  Int -> Body def expr -> ShowS
+showsPrecBody mayDepend prec body =
+  case body of
+  BodyLam (Lambda Val paramId paramType result) ->
+    paren 0 $
+    showChar '\\' . shows paramId . showChar ':' .
+    showsPrec 11 paramType . showString "==>" .
+    showsPrec 0 result
+  BodyLam (Lambda Type paramId paramType resultType) ->
+    paren 0 $
+    paramStr . showString "->" . showsPrec 0 resultType
+    where
+      paramStr
+        | dependent =
+          showString "(" . shows paramId . showString ":" . showsPrec 11 paramType . showString ")"
+        | otherwise = showsPrec 1 paramType
+      dependent = mayDepend paramId resultType
+  BodyApply (Apply func arg) ->
+    paren 10 $
+    showsPrec 10 func . showChar ' ' . showsPrec 11 arg
+  BodyRecord (Record k fields) ->
+    paren 11 $ showString recStr
+    where
+      recStr =
+        concat ["Rec", recType k, "{", List.intercalate ", " (map showField fields), "}"]
+      showField (field, typ) =
+        unwords [showsPrec 0 field "", sep k, showsPrec 0 typ ""]
+      sep Val = "="
+      sep Type = ":"
+      recType Val = "V"
+      recType Type = "T"
+  BodyGetField (GetField r tag) ->
+    paren 8 $ showsPrec 8 r . showChar '.' . showsPrec 9 tag
+  BodyLeaf leaf -> showsPrec prec leaf
+  where
+    paren innerPrec = showParen (prec > innerPrec)
+
+showsPrecBodyExpr :: (Show def, Show a) => Int -> BodyExpr def a -> ShowS
+showsPrecBodyExpr = showsPrecBody exprHasGetVar
+
+showBodyExpr :: BodyExpr String String -> String
+showBodyExpr = flip (showsPrecBodyExpr 0) ""
+
+instance (Show def, Show expr) => Show (Body def expr) where
+  showsPrec = showsPrecBody mayDepend
+    where
+      -- We are polymorphic on any expr, so we cannot tell...
+      mayDepend _ _ = True
+
+instance (Show def, Show a) => Show (Expression def a) where
+  showsPrec prec (Expression body payload) =
+    showsPrecBodyExpr bodyPrec body .
+    showString showPayload
+    where
+      (bodyPrec, showPayload) =
+        case show payload of
+        "" -> (prec, "")
+        "()" -> (prec, "")
+        str -> (11, "{" ++ str ++ "}")
