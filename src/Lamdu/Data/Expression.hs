@@ -42,9 +42,6 @@ data Apply expr = Apply
   { _applyFunc :: expr
   , _applyArg :: expr
   } deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
-instance Applicative Apply where
-  pure x = Apply x x
-  Apply f0 a0 <*> Apply f1 a1 = Apply (f0 f1) (a0 a1)
 
 data VariableRef def
   = ParameterRef {-# UNPACK #-} !Guid -- of the lambda/pi
