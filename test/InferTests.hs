@@ -221,6 +221,17 @@ inferRecordValTest =
   testInferAllowFail "id ({:Set) <hole> infers { val" $
   getDef "id" $$ record Type [] $$ asHole (record Val [])
 
+inferReplicateOfReplicate =
+  testInfer "replicate <hole> (replicate <hole> 1) 2" $
+  replicat (listOf integerType)
+  (replicat integerType
+   (literalInteger 1)
+   (literalInteger 3))
+  (literalInteger 2)
+  where
+    replicat typ x y =
+      getDef "replicate" $$ asHole typ $$: [ x, y ]
+
 hunitTests =
   HUnit.TestList $
   simpleTests ++
@@ -240,6 +251,7 @@ hunitTests =
   , emptyRecordTest
   , recordTest
   , inferRecordValTest
+  , inferReplicateOfReplicate
   , implicitVarTests
   , resumptionTests
   ]

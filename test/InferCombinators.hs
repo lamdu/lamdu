@@ -177,7 +177,7 @@ infixl 3 $$:
   where
     tags = recType ^.. Lens.traversed . Lens._1 . ExprLens.exprTag . Lens.to tag
     recType =
-      fromMaybe (error "applyRec must be applied on a func of record type") $
+      fromMaybe (error "$$: must be applied on a func of record type") $
       f ^? iType . ExprLens.exprKindedLam Type . Lens._2 . ExprLens.exprKindedRecordFields Type
 
 ($$) :: InferResults t -> InferResults t -> InferResults t
