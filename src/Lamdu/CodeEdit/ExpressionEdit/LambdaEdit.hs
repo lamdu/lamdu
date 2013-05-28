@@ -54,16 +54,16 @@ makeParamEdit ::
 makeParamEdit prevId param =
   (Lens.mapped . ExpressionGui.egWidget %~ Widget.weakerEvents paramEventMap) . assignCursor $ do
     infoMode <- (^. Settings.sInfoMode) <$> ExprGuiM.readSettings
-    paramTypeEdit <- ExprGuiM.makeSubexpresion $ param ^. Sugar.fpType
+    paramTypeEdit <- ExprGuiM.makeSubexpresion 0 $ param ^. Sugar.fpType
     paramNameEdit <- makeParamNameEdit name (param ^. Sugar.fpGuid) myId
     let typeWidget = paramTypeEdit ^. ExpressionGui.egWidget
     infoWidget <-
       case (infoMode, mActions) of
       (Settings.InfoExamples, Just actions) -> do
-        exampleSugar <- ExprGuiM.liftMemoT $ Lens.view Sugar.fpGetExample actions
+        exampleSugar <- ExprGuiM.liftMemoT $ actions ^. Sugar.fpGetExample
         exampleGui <-
-          fmap (Lens.view ExpressionGui.egWidget) $
-          ExprGuiM.makeSubexpresion exampleSugar
+          (^. ExpressionGui.egWidget) <$>
+          ExprGuiM.makeSubexpresion 0 exampleSugar
         return $ Box.vboxCentered [exampleGui, typeWidget]
       _ -> return typeWidget
     return .
@@ -94,21 +94,20 @@ makeParamEdit prevId param =
        Lens.view (Sugar.fpListItemActions . Sugar.itemDelete))
       mActions
 
-make
-  :: MonadA m
-  => Sugar.HasParens
-  -> Sugar.Lam Sugar.Name m (Sugar.ExpressionN m)
-  -> Widget.Id
-  -> ExprGuiM m (ExpressionGui m)
-make hasParens (Sugar.Lam _ param _ body) =
-  ExpressionGui.wrapParenify hasParens Parens.addHighlightedTextParens $ \myId ->
+make ::
+  MonadA m => ExpressionGui.ParentPrecedence ->
+  Sugar.Lam Sugar.Name m (Sugar.ExpressionN m) ->
+  Widget.Id -> ExprGuiM m (ExpressionGui m)
+make parentPrecedence (Sugar.Lam _ param _ body) =
+  ExpressionGui.wrapParenify parentPrecedence (ExpressionGui.MyPrecedence 0)
+  Parens.addHighlightedTextParens $ \myId ->
   ExprGuiM.assignCursor myId bodyId $ do
     lambdaLabel <-
       ExpressionGui.makeColoredLabel Config.lambdaTextSize Config.lambdaColor "λ" myId
     paramEdit <- makeParamEdit bodyId param
     dotLabel <-
       ExpressionGui.makeColoredLabel Config.rightArrowTextSize Config.rightArrowColor ". " myId
-    bodyEdit <- ExprGuiM.makeSubexpresion body
+    bodyEdit <- ExprGuiM.makeSubexpresion 0 body
     return $ ExpressionGui.hbox
       [ ExpressionGui.fromValueWidget lambdaLabel
       , paramEdit

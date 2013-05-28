@@ -41,32 +41,46 @@ funcGuid f =
   case f ^. Sugar.rBody of
   Sugar.BodyGetVar gv -> Just $ gv ^. Sugar.gvIdentifier
   Sugar.BodyCollapsed c -> funcGuid $ c ^. Sugar.pFullExpression
-  Sugar.BodyApply _ a -> funcGuid $ a ^. Expr.applyFunc
+  Sugar.BodyApply a -> funcGuid $ a ^. Expr.applyFunc
   _ -> Nothing
 
-make
-  :: MonadA m
-  => Sugar.HasParens
-  -> Sugar.LabeledApply Sugar.Name (Sugar.ExpressionN m)
-  -> Widget.Id
-  -> ExprGuiM m (ExpressionGui m)
-make hasParens (Sugar.LabeledApply func args) =
-  ExpressionGui.wrapParenify hasParens Parens.addHighlightedTextParens $ \myId ->
+getPresentationMode :: MonadA m => Sugar.ExpressionN m -> ExprGuiM m PresentationMode
+getPresentationMode func =
+  case funcGuid func of
+  Just guid ->
+    ExprGuiM.transaction . Transaction.getP $ assocPresentationMode guid
+  Nothing -> return Verbose
+
+wrap ::
+  MonadA m => ExpressionGui.ParentPrecedence -> Sugar.ExpressionN m ->
+  (PresentationMode -> Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
+  Widget.Id -> ExprGuiM m (ExpressionGui m)
+wrap parentPrecedence func f myId = do
+  presentationMode <- getPresentationMode func
+  let g = f presentationMode
+  case presentationMode of
+    Verbose -> g myId
+    OO ->
+      ExpressionGui.wrapParenify parentPrecedence (ExpressionGui.MyPrecedence 10)
+      Parens.addHighlightedTextParens g myId
+
+make ::
+  MonadA m =>
+  ExpressionGui.ParentPrecedence ->
+  Sugar.LabeledApply Sugar.Name (Sugar.ExpressionN m) ->
+  Widget.Id -> ExprGuiM m (ExpressionGui m)
+make parentPrecedence (Sugar.LabeledApply func args) =
+  wrap parentPrecedence func $ \presentationMode myId ->
   ExprGuiM.assignCursor myId (WidgetIds.fromGuid (func ^. Sugar.rGuid)) $ do
-    funcEdit <- ExprGuiM.makeSubexpresion func
-    presentationMode <-
-      case funcGuid func of
-      Just guid ->
-        ExprGuiM.transaction . Transaction.getP $ assocPresentationMode guid
-      Nothing -> return Verbose
+    funcEdit <- ExprGuiM.makeSubexpresion 10 func
     let
-      makeArg (tagG, expr) = do
+      makeArg (tagG, namedArgExpr) = do
         let tagGuid = tagG ^. Sugar.tagGuid
         argTagEdit <-
           TagEdit.makeView tagG .
           Widget.toAnimId . mappend myId $
           WidgetIds.fromGuid tagGuid
-        argValEdit <- ExprGuiM.makeSubexpresion expr
+        argValEdit <- ExprGuiM.makeSubexpresion 0 namedArgExpr
         pure $ ExpressionGui.makeRow
           [ (0, scaleTag argTagEdit)
           , (0.5, space)
@@ -82,11 +96,12 @@ make hasParens (Sugar.LabeledApply func args) =
     topEdit <-
       case presentationMode of
       Verbose -> return funcEdit
-      OO -> do
-        argEdit <-
-          ExprGuiM.makeSubexpresion . Sugar.addApplyChildParens .
-          snd $ head args
-        return $ ExpressionGui.hboxSpaced [funcEdit, argEdit]
+      OO ->
+        case args of
+        (_, firstArg) : _ -> do
+          firstArgEdit <- ExprGuiM.makeSubexpresion 11 firstArg
+          return $ ExpressionGui.hboxSpaced [funcEdit, firstArgEdit]
+        _ -> error "LabeledApplyEdit must take arg list of at least 2 elements"
     pure $ ExpressionGui.addBelow 0 [(0, argEditsGrid)] topEdit
   where
     space = ExpressionGui.fromValueWidget BWidgets.stdSpaceWidget

@@ -13,24 +13,23 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.Parens as Parens
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.WidgetIds as WidgetIds
 
-make
-  :: MonadA m
-  => Sugar.HasParens
-  -> Sugar.Section (Sugar.ExpressionN m)
-  -> Widget.Id
-  -> ExprGuiM m (ExpressionGui m)
-make hasParens (Sugar.Section mLArg op mRArg) =
+-- TODO: Parenification is wrong but this module will die
+make ::
+  MonadA m => ExpressionGui.ParentPrecedence ->
+  Sugar.Section (Sugar.ExpressionN m) ->
+  Widget.Id -> ExprGuiM m (ExpressionGui m)
+make parentPrecedence (Sugar.Section mLArg op mRArg) =
   wrap $ \myId -> ExprGuiM.assignCursor myId destId $ do
     lArgEdits <- fromMArg mLArg
-    opEdits <- makeExpressionsEdit op
+    opEdits <- makeExpressionsEdit 12 op
     rArgEdits <- fromMArg mRArg
     return . ExpressionGui.hboxSpaced $ lArgEdits ++ opEdits ++ rArgEdits
   where
     wrap = case (mLArg, mRArg) of
       (Nothing, Nothing) ->
-        ExpressionGui.parenify hasParens (Parens.addTextParens . Widget.toAnimId)
+        ExpressionGui.parenify parentPrecedence (ExpressionGui.MyPrecedence 5) (Parens.addTextParens . Widget.toAnimId)
       _ ->
-        ExpressionGui.wrapParenify hasParens Parens.addHighlightedTextParens
+        ExpressionGui.wrapParenify parentPrecedence (ExpressionGui.MyPrecedence 5) Parens.addHighlightedTextParens
     destId = WidgetIds.fromGuid $ fromMaybe op mRArg ^. Sugar.rGuid
-    makeExpressionsEdit = fmap (:[]) . ExprGuiM.makeSubexpresion
-    fromMArg = maybe (return []) makeExpressionsEdit
+    makeExpressionsEdit prec = fmap (:[]) . ExprGuiM.makeSubexpresion prec
+    fromMArg = maybe (return []) (makeExpressionsEdit 6)

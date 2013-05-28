@@ -1,5 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Types (WidgetT, ExpressionGui(..), egWidget, egAlignment) where
+module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Types
+  ( WidgetT, ExpressionGui(..), egWidget, egAlignment
+  , Precedence, MyPrecedence(..), ParentPrecedence(..)
+  ) where
 
 import Data.Store.Transaction (Transaction)
 import Graphics.UI.Bottle.Widget (Widget, R)
@@ -12,3 +15,7 @@ data ExpressionGui m = ExpressionGui
   , _egAlignment :: R
   }
 LensTH.makeLenses ''ExpressionGui
+
+type Precedence = Int
+newtype MyPrecedence = MyPrecedence Precedence
+newtype ParentPrecedence = ParentPrecedence Precedence

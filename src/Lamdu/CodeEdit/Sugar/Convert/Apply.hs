@@ -86,7 +86,7 @@ convertLabeled funcS argS exprI = do
   guard $ numTags > 1
   guard $ numTags == Set.size (Set.fromList tagGuids)
   guard . isAtomicBody $ funcS ^. rBody
-  lift . SugarExpr.make exprI $ BodyLabeledApply DontHaveParens LabeledApply
+  lift . SugarExpr.make exprI $ BodyLabeledApply LabeledApply
     { _laFunc = SugarExpr.removeSuccessfulType funcS
     , _laArgs = args
     }
@@ -96,32 +96,18 @@ expandSection ::
   ExpressionU m -> ExprMM m -> ExpressionU m -> ExprMM m ->
   MaybeT (SugarM m) (ExpressionU m)
 expandSection funcS funcI argRef exprI = do
-  Section mLeft op Nothing <- maybeToMPlus $ funcS ^? rBody . _BodySection . Lens._2
-  let
-    right =
-      case argRef ^. rBody of
-      BodySection _ (Section (Just _) rightOp (Just _))
-        | on isSameOp (^. rBody) op rightOp -> argRef
-      _ -> SugarExpr.addApplyChildParens argRef
+  Section mLeft op Nothing <- maybeToMPlus $ funcS ^? rBody . _BodySection
   lift $
-    SugarExpr.make exprI . BodySection DontHaveParens =<<
+    SugarExpr.make exprI . BodySection =<<
     case mLeft of
     Nothing
       | SugarInfer.isPolymorphicFunc funcI -> do
         newOpRef <- convertPrefix op funcI argRef exprI
         pure $ Section Nothing (SugarExpr.removeSuccessfulType newOpRef) Nothing
       | otherwise ->
-        pure $ Section (Just (SugarExpr.addApplyChildParens argRef)) op Nothing
+        pure $ Section (Just argRef) op Nothing
     Just left ->
-      pure $ on (Section . Just) (SugarExpr.setNextHole right) left op (Just right)
-  where
-    -- TODO: Handle left/right-associativity
-    isSameOp (BodyCollapsed p0) (BodyCollapsed p1) =
-      on isSameVar (^. pCompact) p0 p1
-    isSameOp (BodyGetVar v0) (BodyGetVar v1) =
-      isSameVar v0 v1
-    isSameOp _ _ = False
-    isSameVar = on (==) (^. gvIdentifier)
+      pure $ on (Section . Just) (SugarExpr.setNextHole argRef) left op (Just argRef)
 
 makeCollapsed ::
   (MonadA m, Typeable1 m) =>
@@ -144,7 +130,7 @@ convertPrefix ::
 convertPrefix funcRef funcI argRef applyI = do
   sugarContext <- SugarM.readContext
   let
-    newArgRef = addCallWithNextArg $ SugarExpr.addParens argRef
+    newArgRef = addCallWithNextArg argRef
     fromMaybeStored = traverse (SugarInfer.ntraversePayload pure id)
     onStored expr f = maybe id f $ fromMaybeStored expr
     addCallWithNextArg =
@@ -153,12 +139,11 @@ convertPrefix funcRef funcI argRef applyI = do
         SugarExpr.mkCallWithArg sugarContext applyS
     newFuncRef =
       SugarExpr.setNextHole newArgRef .
-      SugarExpr.addApplyChildParens .
       SugarExpr.removeSuccessfulType $
       funcRef
     makeFullApply = makeApply newFuncRef
     makeApply f =
-      SugarExpr.make applyI . BodyApply DontHaveParens $
+      SugarExpr.make applyI . BodyApply $
       Expr.Apply f newArgRef
   if SugarInfer.isPolymorphicFunc funcI
     then

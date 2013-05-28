@@ -5,9 +5,8 @@ import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (mempty)
 import Data.Store.Guid (Guid)
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ParentPrecedence(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
-import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -28,14 +27,15 @@ fdConfig = FocusDelegator.Config
   , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Inferred value", "Back"]
   }
 
-make
-  :: MonadA m => Sugar.Inferred Sugar.Name m (Sugar.ExpressionN m) -> Guid -> Widget.Id
-  -> ExprGuiM m (ExpressionGui m)
-make inferred guid =
+make ::
+  MonadA m => ParentPrecedence ->
+  Sugar.Inferred Sugar.Name m (Sugar.ExpressionN m) -> Guid -> Widget.Id ->
+  ExprGuiM m (ExpressionGui m)
+make parentPrecedence inferred guid =
   (fmap . fmap)
     (ExpressionGui.egWidget %~ Widget.weakerEvents eventMap) .
   ExpressionGui.wrapDelegated fdConfig FocusDelegator.NotDelegating $
-  makeUnwrapped inferred guid
+  makeUnwrapped parentPrecedence inferred guid
   where
     eventMap =
       maybe mempty
@@ -46,18 +46,18 @@ make inferred guid =
       inferred ^. Sugar.iMAccept
 
 makeUnwrapped ::
-  MonadA m =>
+  MonadA m => ParentPrecedence ->
   Sugar.Inferred Sugar.Name m (Sugar.ExpressionN m) -> Guid -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
-makeUnwrapped inferred guid myId = do
+makeUnwrapped (ParentPrecedence parentPrecedence) inferred guid myId = do
   mInnerCursor <- ExprGuiM.widgetEnv $ WE.subCursor myId
   case mInnerCursor of
     Nothing ->
-      Lens.traverseOf ExpressionGui.egWidget
+      ExpressionGui.egWidget
       ( ExprGuiM.widgetEnv
       . BWidgets.makeFocusableView myId
       . Widget.tint Config.inferredValueTint
       . Widget.scale Config.inferredValueScaleFactor
-      ) =<< ExprGuiM.makeSubexpresion (inferred ^. Sugar.iValue)
+      ) =<< ExprGuiM.makeSubexpresion parentPrecedence (inferred ^. Sugar.iValue)
     Just _ ->
       HoleEdit.makeUnwrapped (inferred ^. Sugar.iHole) Nothing guid myId

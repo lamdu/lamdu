@@ -9,7 +9,7 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Graphics.UI.Bottle.Widget (EventHandlers)
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
+import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ParentPrecedence(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.CodeEdit.ExpressionEdit.HoleEdit (HoleState(..))
 import qualified Control.Lens as Lens
@@ -51,11 +51,13 @@ pasteEventMap =
    fmap WidgetIds.fromGuid) .
   (Lens.view Sugar.holePaste <=< Lens.view Sugar.holeMActions)
 
-make :: MonadA m => Sugar.ExpressionN m -> ExprGuiM m (ExpressionGui m)
-make sExpr = assignCursor $ do
+make ::
+  MonadA m => ParentPrecedence ->
+  Sugar.ExpressionN m -> ExprGuiM m (ExpressionGui m)
+make parentPrecedence sExpr = assignCursor $ do
   ((isHole, widget), resultPickers) <-
-    ExprGuiM.listenResultPickers $ makeEditor sExpr exprId
-  typeEdits <- traverse make $ payload ^. Sugar.plInferredTypes
+    ExprGuiM.listenResultPickers $ makeEditor parentPrecedence sExpr exprId
+  typeEdits <- traverse (make (ParentPrecedence 0)) $ payload ^. Sugar.plInferredTypes
   let onReadOnly = Widget.doesntTakeFocus
   exprEventMap <- expressionEventMap isHole resultPickers sExpr
   settings <- ExprGuiM.readSettings
@@ -86,24 +88,25 @@ make sExpr = assignCursor $ do
       (WidgetIds.fromGuid <$> sExpr ^. Sugar.rHiddenGuids)
 
 makeEditor ::
-  MonadA m => Sugar.ExpressionN m -> Widget.Id ->
+  MonadA m => ParentPrecedence ->
+  Sugar.ExpressionN m -> Widget.Id ->
   ExprGuiM m (IsHole, ExpressionGui m)
-makeEditor sExpr =
+makeEditor parentPrecedence sExpr =
   case sExpr ^. Sugar.rBody of
   Sugar.BodyInferred i ->
-    isAHole (i ^. Sugar.iHole) . InferredEdit.make i $ sExpr ^. Sugar.rGuid
+    isAHole (i ^. Sugar.iHole) . InferredEdit.make parentPrecedence i $ sExpr ^. Sugar.rGuid
   Sugar.BodyHole hole ->
     isAHole hole . HoleEdit.make hole mNextHole $ sExpr ^. Sugar.rGuid
   Sugar.BodyCollapsed poly ->
-    notAHole $ CollapsedEdit.make poly
-  Sugar.BodyApply hasParens apply ->
-    notAHole $ ApplyEdit.make hasParens apply
-  Sugar.BodyLam hasParens lam@(Sugar.Lam Sugar.Type _ _ _) ->
-    notAHole $ PiEdit.make hasParens lam
-  Sugar.BodyLam hasParens lam@(Sugar.Lam Sugar.Val _ _ _) ->
-    notAHole $ LambdaEdit.make hasParens lam
-  Sugar.BodySection hasParens section ->
-    notAHole $ SectionEdit.make hasParens section
+    notAHole $ CollapsedEdit.make parentPrecedence poly
+  Sugar.BodyApply apply ->
+    notAHole $ ApplyEdit.make parentPrecedence apply
+  Sugar.BodyLam lam@(Sugar.Lam Sugar.Type _ _ _) ->
+    notAHole $ PiEdit.make parentPrecedence lam
+  Sugar.BodyLam lam@(Sugar.Lam Sugar.Val _ _ _) ->
+    notAHole $ LambdaEdit.make parentPrecedence lam
+  Sugar.BodySection section ->
+    notAHole $ SectionEdit.make parentPrecedence section
   Sugar.BodyLiteralInteger integer ->
     notAHole $ LiteralEdit.makeInt integer
   Sugar.BodyAtom atom ->
@@ -120,8 +123,8 @@ makeEditor sExpr =
     notAHole $ GetVarEdit.make gv
   Sugar.BodyGetParams gp ->
     notAHole $ GetParamsEdit.make gp
-  Sugar.BodyLabeledApply hasParens la ->
-    notAHole $ LabeledApplyEdit.make hasParens la
+  Sugar.BodyLabeledApply la ->
+    notAHole $ LabeledApplyEdit.make parentPrecedence la
   where
     isAHole hole =
       (fmap . fmap)

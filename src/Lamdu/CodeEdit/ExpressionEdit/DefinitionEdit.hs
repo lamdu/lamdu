@@ -204,11 +204,9 @@ make def =
   Sugar.DefinitionBodyBuiltin builtin ->
     makeBuiltinDefinition def builtin
 
-makeBuiltinDefinition
-  :: MonadA m
-  => Sugar.Definition Sugar.Name m
-  -> Sugar.DefinitionBuiltin m
-  -> ExprGuiM m (WidgetT m)
+makeBuiltinDefinition ::
+  MonadA m => Sugar.Definition Sugar.Name m ->
+  Sugar.DefinitionBuiltin m -> ExprGuiM m (WidgetT m)
 makeBuiltinDefinition def builtin =
   Box.vboxAlign 0 <$> sequenceA
     [ BWidgets.hboxCenteredSpaced <$> sequenceA
@@ -218,7 +216,7 @@ makeBuiltinDefinition def builtin =
       , BuiltinEdit.make builtin myId
       ]
     , defTypeScale . (^. ExpressionGui.egWidget) <$>
-      ExprGuiM.makeSubexpresion typ
+      ExprGuiM.makeSubexpresion 0 typ
     ]
   where
     Sugar.Definition guid name typ _ = def
@@ -281,7 +279,7 @@ makeExprDefinition def bodyExpr = do
       label <-
         onLabel . labelStyle . ExprGuiM.widgetEnv .
         BWidgets.makeLabel labelText $ Widget.toAnimId myId
-      typeGui <- ExprGuiM.makeSubexpresion typeExpr
+      typeGui <- ExprGuiM.makeSubexpresion 0 typeExpr
       return
         [ (right, label)
         , (center, Widget.doesntTakeFocus (typeGui ^. ExpressionGui.egWidget))
@@ -323,7 +321,7 @@ makeResultEdit lhs result = do
     jumpToLhsEventMap =
       Widget.keysEventMapMovesCursor Config.jumpRHStoLHSKeys (E.Doc ["Navigation", "Jump to last param"]) $
         lastParam <$ savePos
-  ExprGuiM.makeSubexpresion result
+  ExprGuiM.makeSubexpresion 0 result
     & Lens.mapped . ExpressionGui.egWidget %~
       Widget.weakerEvents jumpToLhsEventMap
   where

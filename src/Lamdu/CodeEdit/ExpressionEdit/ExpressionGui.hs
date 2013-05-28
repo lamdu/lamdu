@@ -6,7 +6,9 @@ module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui
   , hbox, hboxSpaced, addBelow
   , addType -- TODO: s/type/info
   , TypeStyle(..)
-  , parenify, wrapExpression, wrapParenify, wrapDelegated
+  , MyPrecedence(..), ParentPrecedence(..), Precedence
+  , parenify, wrapParenify
+  , wrapExpression, wrapDelegated
   -- ExprGuiM:
   , makeNameEdit
   , nameSrcTint
@@ -31,7 +33,7 @@ import Graphics.UI.Bottle.Animation (AnimId, Layer)
 import Graphics.UI.Bottle.Widget (Widget)
 import Graphics.UI.Bottle.Widgets.Box (KBox)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Types (WidgetT, ExpressionGui(..), egWidget, egAlignment)
+import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Types (WidgetT, MyPrecedence(..), ParentPrecedence(..), Precedence, ExpressionGui(..), egWidget, egAlignment)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Data.Store.Transaction as Transaction
@@ -207,21 +209,22 @@ makeFocusableView myId gui =
 
 parenify ::
   MonadA m =>
-  Sugar.HasParens ->
+  ParentPrecedence -> MyPrecedence ->
   (Widget.Id -> ExpressionGui f -> ExprGuiM m (ExpressionGui f)) ->
   (Widget.Id -> ExprGuiM m (ExpressionGui f)) ->
   Widget.Id -> ExprGuiM m (ExpressionGui f)
-parenify Sugar.DontHaveParens _ mkWidget myId = mkWidget myId
-parenify Sugar.HaveParens addParens mkWidget myId = addParens myId =<< mkWidget myId
+parenify (ParentPrecedence parent) (MyPrecedence prec) addParens mkWidget myId
+  | parent > prec = addParens myId =<< mkWidget myId
+  | otherwise = mkWidget myId
 
 wrapParenify ::
   (MonadA f, MonadA m) =>
-  Sugar.HasParens ->
+  ParentPrecedence -> MyPrecedence ->
   (Widget.Id -> ExpressionGui f -> ExprGuiM m (ExpressionGui f)) ->
   (Widget.Id -> ExprGuiM m (ExpressionGui f)) ->
   Widget.Id -> ExprGuiM m (ExpressionGui f)
-wrapParenify hasParens addParens =
-  wrapExpression . parenify hasParens addParens
+wrapParenify parentPrec prec addParens =
+  wrapExpression . parenify parentPrec prec addParens
 
 withBgColor :: Layer -> Draw.Color -> AnimId -> ExpressionGui m -> ExpressionGui m
 withBgColor layer color animId =

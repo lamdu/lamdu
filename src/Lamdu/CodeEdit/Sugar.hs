@@ -47,11 +47,9 @@ module Lamdu.CodeEdit.Sugar
   , TagG(..), tagName, tagGuid
   , Inferred(..), iValue, iMAccept, iHole
   , Collapsed(..), pFuncGuid, pCompact, pFullExpression
-  , HasParens(..)
   , loadConvertDefI
   , PrefixAction, emptyPrefixAction
   , SugarExpr.removeTypes
-  , SugarExpr.addApplyChildParens
   , Hole.holeResultHasHoles
   ) where
 
@@ -213,9 +211,9 @@ convertPositionalLambda lam lamExprI = do
 convertLam :: (MonadA m, Typeable1 m) => Expr.Lambda (SugarInfer.ExprMM m) -> Convertor m
 convertLam lambda@(Expr.Lambda k paramGuid _paramType result) exprI = do
   (param, sBody) <- convertPositionalLambda lambda exprI
-  SugarExpr.make exprI $ BodyLam DontHaveParens
+  SugarExpr.make exprI $ BodyLam
     Lam
-    { _lParam = Lens.over fpType SugarExpr.addApplyChildParens param
+    { _lParam = param
     , _lResultType = SugarExpr.removeSuccessfulType sBody
     , _lKind = k
     , _lIsDep = isDep
@@ -273,8 +271,7 @@ convertGetVariable varRef exprI = do
   if isInfix
     then
       SugarExpr.make exprI .
-      BodySection HaveParens $
-      Section Nothing (SugarExpr.removeInferredTypes getParExpr) Nothing
+      BodySection $ Section Nothing (SugarExpr.removeInferredTypes getParExpr) Nothing
     else return getParExpr
 
 memoBy ::

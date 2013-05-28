@@ -11,7 +11,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , Actions(..)
     , giveAsArg, callWithArg, callWithNextArg
     , setToHole, replaceWithNewHole, cut, giveAsArgToOperator
-  , Body(..), eHasParens
+  , Body(..)
     , _BodyLam, _BodyApply, _BodySection, _BodyGetVar, _BodyHole
     , _BodyInferred, _BodyCollapsed, _BodyLiteralInteger
     , _BodyAtom, _BodyList, _BodyRecord, _BodyTag
@@ -51,7 +51,6 @@ module Lamdu.CodeEdit.Sugar.Types
   , LiteralInteger(..)
   , Inferred(..), iValue, iMAccept, iHole
   , Collapsed(..), pFuncGuid, pCompact, pFullExpression
-  , HasParens(..)
   , T, CT
   , PrefixAction, emptyPrefixAction
   , ExprStorePoint
@@ -98,8 +97,6 @@ data Actions m = Actions
   , _cut :: T m Guid
   }
 LensTH.makeLenses ''Actions
-
-data HasParens = HaveParens | DontHaveParens
 
 data Payload name m = Payload
   { _plInferredTypes :: [Expression name m]
@@ -302,52 +299,50 @@ data TagG name = TagG
 
 data LabeledApply name expr = LabeledApply
   { _laFunc :: expr
+    -- TODO: Either use a GADT LenList or a tuple for the guaranteed
+    -- first 2:
   , _laArgs :: [(TagG name, expr)]
   } deriving (Functor, Foldable, Traversable)
 
 data Body name m expr
-  = BodyApply   { _eHasParens :: HasParens, __eApply :: Expr.Apply expr }
-  | BodySection { _eHasParens :: HasParens, __eSection :: Section expr }
-  | BodyLam     { _eHasParens :: HasParens, __eLam :: Lam name m expr }
-  | BodyLabeledApply { _eHasParens :: HasParens, __eApplyNamed :: LabeledApply name expr }
-  | BodyHole    { __eHole :: Hole name m }
-  | BodyInferred { __eInferred :: Inferred name m expr }
-  | BodyCollapsed { __eCollapsed :: Collapsed name m expr }
-  | BodyLiteralInteger { __eLit :: LiteralInteger m }
-  | BodyAtom     { __eAtom :: String }
-  | BodyList     { __eList :: List m expr }
-  | BodyRecord   { __eRecord :: Record m expr }
-  | BodyGetField { __eGetField :: GetField expr }
-  | BodyTag      { __eTag :: TagG name }
-  | BodyGetVar   { __eGetParam :: GetVar name m }
-  | BodyGetParams { __eGetParams :: GetParams name m }
+  = BodyApply (Expr.Apply expr)
+  | BodySection (Section expr)
+  | BodyLam (Lam name m expr)
+  | BodyLabeledApply (LabeledApply name expr)
+  | BodyHole (Hole name m)
+  | BodyInferred (Inferred name m expr)
+  | BodyCollapsed (Collapsed name m expr)
+  | BodyLiteralInteger (LiteralInteger m)
+  | BodyAtom String
+  | BodyList (List m expr)
+  | BodyRecord (Record m expr)
+  | BodyGetField (GetField expr)
+  | BodyTag (TagG name)
+  | BodyGetVar (GetVar name m)
+  | BodyGetParams (GetParams name m)
   deriving (Functor, Foldable, Traversable)
-
-wrapParens :: HasParens -> String -> String
-wrapParens HaveParens x = concat ["(", x, ")"]
-wrapParens DontHaveParens x = x
 
 instance Show expr => Show (FuncParam name m expr) where
   show fp =
     concat ["(", show (_fpGuid fp), ":", show (_fpType fp), ")"]
 
 instance Show expr => Show (Body name m expr) where
-  show BodyApply { _eHasParens = hasParens, __eApply = Expr.Apply func arg } =
-    wrapParens hasParens $ show func ++ " " ++ show arg
-  show BodySection { _eHasParens = hasParens, __eSection = Section mleft op mright } =
-    wrapParens hasParens $ maybe "" show mleft ++ " " ++ show op ++ maybe "" show mright
-  show BodyLam { _eHasParens = _hasParens, __eLam = Lam Val _paramType _isDep _body } = "TODO:Lam"
-  show BodyLam { _eHasParens = hasParens, __eLam = Lam Type paramType isDep resultType } =
-    wrapParens hasParens $ paramName ++ show paramType ++ " -> " ++ show resultType
+  show (BodyApply (Expr.Apply func arg)) =
+    show func ++ " " ++ show arg
+  show (BodySection (Section mleft op mright)) =
+    maybe "" show mleft ++ " " ++ show op ++ maybe "" show mright
+  show (BodyLam (Lam Val _paramType _isDep _body)) = "TODO:Lam"
+  show (BodyLam (Lam Type paramType isDep resultType)) =
+    paramName ++ show paramType ++ " -> " ++ show resultType
     where
       paramName | isDep = "_:"
                 | otherwise = ""
   show BodyHole {} = "Hole"
   show BodyInferred {} = "Inferred"
   show BodyCollapsed {} = "Collapsed"
-  show BodyLiteralInteger { __eLit = LiteralInteger i _ } = show i
-  show BodyAtom { __eAtom = atom } = atom
-  show BodyList { __eList = List items _ } =
+  show (BodyLiteralInteger (LiteralInteger i _)) = show i
+  show (BodyAtom atom) = atom
+  show (BodyList (List items _)) =
     concat
     [ "["
     , List.intercalate ", " $ map (show . liExpr) items

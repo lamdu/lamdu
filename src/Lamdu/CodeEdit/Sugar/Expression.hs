@@ -2,7 +2,6 @@ module Lamdu.CodeEdit.Sugar.Expression
   ( make, mkGen
   , mkCallWithArg
   , removeSuccessfulType, removeInferredTypes, removeTypes
-  , addApplyChildParens, addParens
   , setNextHole
   , subExpressions
   , getStoredName
@@ -34,23 +33,6 @@ import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Ops as DataOps
 import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
-
-addParens :: ExpressionP name m pl -> ExpressionP name m pl
-addParens =
-  Lens.over rBody addParensBody
-  where
-    addParensBody (BodyInferred inferred) =
-      BodyInferred $ inferred & iValue %~ addParens
-    addParensBody (BodyCollapsed collapsed) =
-      BodyCollapsed $ collapsed & pFullExpression %~ addParens
-    addParensBody x = Lens.set eHasParens HaveParens x
-
-addApplyChildParens :: ExpressionP name m pl -> ExpressionP name m pl
-addApplyChildParens x =
-  case x ^. rBody of
-  BodyApply{} -> x
-  BodyCollapsed{} -> x
-  _ -> addParens x
 
 removeSuccessfulType :: Expression name m -> Expression name m
 removeSuccessfulType =

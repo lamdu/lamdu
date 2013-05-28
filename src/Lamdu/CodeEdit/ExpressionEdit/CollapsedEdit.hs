@@ -3,7 +3,7 @@ module Lamdu.CodeEdit.ExpressionEdit.CollapsedEdit(make) where
 
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, Collapser(..))
+import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, Collapser(..), ParentPrecedence(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -25,9 +25,10 @@ polymorphicFDConfig = FocusDelegator.Config
   }
 
 make ::
-  MonadA m => Sugar.Collapsed Sugar.Name m (Sugar.ExpressionN m) ->
+  MonadA m => ParentPrecedence ->
+  Sugar.Collapsed Sugar.Name m (Sugar.ExpressionN m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-make poly =
+make (ParentPrecedence parentPrecedence) poly =
   ExpressionGui.makeCollapser polymorphicFDConfig f
   where
     f myId =
@@ -36,7 +37,7 @@ make poly =
         fmap
         (ExpressionGui.withBgColor Layers.polymorphicExpandedBG
          Config.polymorphicExpandedBGColor bgId) .
-        ExprGuiM.makeSubexpresion $ poly ^. Sugar.pFullExpression
+        ExprGuiM.makeSubexpresion parentPrecedence $ poly ^. Sugar.pFullExpression
       , cMakeFocusedCompact =
         colorize bgId (poly ^. Sugar.pCompact . Sugar.gvVarType) $
         GetVarEdit.makeUncoloredView (poly ^. Sugar.pCompact) funcId

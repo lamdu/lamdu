@@ -75,7 +75,7 @@ makeItem item = do
     ( fmap ExpressionGui.fromValueWidget .
       ExpressionGui.makeColoredLabel Config.listCommaTextSize
       Config.listCommaColor ", " $ Widget.augmentId ',' itemWidgetId
-    , ExprGuiM.makeSubexpresion itemExpr
+    , ExprGuiM.makeSubexpresion 0 itemExpr
     )
   return $ pair
     & Lens._2 . ExpressionGui.egWidget %~

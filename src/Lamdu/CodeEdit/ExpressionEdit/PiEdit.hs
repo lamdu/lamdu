@@ -19,18 +19,17 @@ import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
-make
-  :: MonadA m
-  => Sugar.HasParens
-  -> Sugar.Lam Sugar.Name m (Sugar.ExpressionN m)
-  -> Widget.Id
-  -> ExprGuiM m (ExpressionGui m)
-make hasParens (Sugar.Lam _ param _isDep resultType) =
-  ExpressionGui.wrapParenify hasParens Parens.addHighlightedTextParens $ \myId ->
+make ::
+  MonadA m => ExpressionGui.ParentPrecedence ->
+  Sugar.Lam Sugar.Name m (Sugar.ExpressionN m) ->
+  Widget.Id -> ExprGuiM m (ExpressionGui m)
+make parentPrecedence (Sugar.Lam _ param _isDep resultType) =
+  ExpressionGui.wrapParenify parentPrecedence (ExpressionGui.MyPrecedence 0)
+  Parens.addHighlightedTextParens $ \myId ->
   ExprGuiM.assignCursor myId typeId $ do
     (resultTypeEdit, usedVars) <-
       ExprGuiM.listenUsedVariables $
-      ExprGuiM.makeSubexpresion resultType
+      ExprGuiM.makeSubexpresion 0 resultType
     let
       paramUsed = paramGuid `elem` usedVars
       redirectCursor cursor
@@ -40,7 +39,7 @@ make hasParens (Sugar.Lam _ param _isDep resultType) =
           Nothing -> cursor
           Just _ -> typeId
     ExprGuiM.atEnv (Lens.over WE.envCursor redirectCursor) $ do
-      paramTypeEdit <- ExprGuiM.makeSubexpresion $ param ^. Sugar.fpType
+      paramTypeEdit <- ExprGuiM.makeSubexpresion 1 $ param ^. Sugar.fpType
       paramEdit <-
         if paramUsed
         then do

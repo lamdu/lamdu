@@ -341,16 +341,16 @@ toBody ::
   (MonadA tm, MonadNaming m) =>
   Body (OldName m) tm (Expression (OldName m) tm) ->
   m (Body (NewName m) tm (Expression (NewName m) tm))
-toBody (BodyApply hp x)       = traverseToExpr (BodyApply hp) x
-toBody (BodySection hp x)     = traverseToExpr (BodySection hp) x
+toBody (BodyApply x)       = traverseToExpr BodyApply x
+toBody (BodySection x)     = traverseToExpr BodySection x
 toBody (BodyList x)           = traverseToExpr BodyList x
 toBody (BodyRecord x)         = traverseToExpr BodyRecord x
 toBody (BodyGetField x)       = traverseToExpr BodyGetField x
 toBody (BodyLiteralInteger x) = pure $ BodyLiteralInteger x
 toBody (BodyAtom x)           = pure $ BodyAtom x
 --
-toBody (BodyLam hp x) = BodyLam hp <$> toLam x
-toBody (BodyLabeledApply hp x) = BodyLabeledApply hp <$> toLabeledApply x
+toBody (BodyLam x) = BodyLam <$> toLam x
+toBody (BodyLabeledApply x) = BodyLabeledApply <$> toLabeledApply x
 toBody (BodyHole x) = BodyHole <$> toHole x
 toBody (BodyInferred x) = BodyInferred <$> toInferred x
 toBody (BodyCollapsed x) = BodyCollapsed <$> toCollapsed x

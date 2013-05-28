@@ -34,7 +34,7 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
 import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Types (ExpressionGui, WidgetT)
+import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Types (ExpressionGui, WidgetT, ParentPrecedence(..), Precedence)
 import Lamdu.CodeEdit.Settings (Settings)
 import Lamdu.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
@@ -62,7 +62,7 @@ derive makeMonoid ''Output
 
 data Askable m = Askable
   { _aSettings :: Settings
-  , _aMakeSubexpression :: Sugar.ExpressionN m -> ExprGuiM m (ExpressionGui m)
+  , _aMakeSubexpression :: ParentPrecedence -> Sugar.ExpressionN m -> ExprGuiM m (ExpressionGui m)
   , _aCodeAnchors :: Anchors.CodeProps m
   }
 
@@ -91,10 +91,12 @@ mkPrejumpPosSaver :: MonadA m => ExprGuiM m (T m ())
 mkPrejumpPosSaver =
   DataOps.savePreJumpPosition <$> readCodeAnchors <*> widgetEnv WE.readCursor
 
-makeSubexpresion :: MonadA m => Sugar.ExpressionN m -> ExprGuiM m (ExpressionGui m)
-makeSubexpresion expr = do
+-- TODO: makeSubexpresSion
+makeSubexpresion ::
+  MonadA m => Precedence -> Sugar.ExpressionN m -> ExprGuiM m (ExpressionGui m)
+makeSubexpresion parentPrecedence expr = do
   maker <- ExprGuiM $ Lens.view aMakeSubexpression
-  maker expr
+  maker (ParentPrecedence parentPrecedence) expr
 
 liftMemo :: MonadA m => StateT Cache (WidgetEnvT (T m)) a -> ExprGuiM m a
 liftMemo act = ExprGuiM $ do
@@ -118,7 +120,7 @@ memoT f = memo (lift . f)
 
 run ::
   MonadA m =>
-  (Sugar.ExpressionN m -> ExprGuiM m (ExpressionGui m)) ->
+  (ParentPrecedence -> Sugar.ExpressionN m -> ExprGuiM m (ExpressionGui m)) ->
   Anchors.CodeProps m -> Settings -> ExprGuiM m a ->
   StateT Cache (WidgetEnvT (T m)) a
 run makeSubexpression codeAnchors settings (ExprGuiM action) = StateT $ \cache ->

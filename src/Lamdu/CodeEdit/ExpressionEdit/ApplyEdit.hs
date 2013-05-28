@@ -13,15 +13,15 @@ import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.WidgetIds as WidgetIds
 
-make
-  :: MonadA m
-  => Sugar.HasParens
-  -> Expr.Apply (Sugar.ExpressionN m)
-  -> Widget.Id
-  -> ExprGuiM m (ExpressionGui m)
-make hasParens (Expr.Apply func arg) =
-  ExpressionGui.wrapParenify hasParens Parens.addHighlightedTextParens $ \myId ->
+make ::
+  MonadA m =>
+  ExpressionGui.ParentPrecedence ->
+  Expr.Apply (Sugar.ExpressionN m) ->
+  Widget.Id -> ExprGuiM m (ExpressionGui m)
+make parentPrecedence (Expr.Apply func arg) =
+  ExpressionGui.wrapParenify parentPrecedence (ExpressionGui.MyPrecedence 10)
+  Parens.addHighlightedTextParens $ \myId ->
   (ExprGuiM.assignCursor myId . WidgetIds.fromGuid) (arg ^. Sugar.rGuid) $ do
-    funcEdit <- ExprGuiM.makeSubexpresion func
-    argEdit <- ExprGuiM.makeSubexpresion arg
+    funcEdit <- ExprGuiM.makeSubexpresion 10 func
+    argEdit <- ExprGuiM.makeSubexpresion 11 arg
     return $ ExpressionGui.hboxSpaced [funcEdit, argEdit]
