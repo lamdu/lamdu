@@ -2,12 +2,14 @@
 {-# OPTIONS -Wall -Werror #-}
 module InferAssert where
 
+import AnnotatedExpr
 import Control.Applicative ((<$>), Applicative(..))
 import Control.Arrow ((&&&))
 import Control.Lens.Operators
 import Control.Monad (void)
-import Control.Monad.Trans.State (runStateT, runState)
+import Control.Monad.Trans.State (runStateT)
 import InferCombinators
+import InferWrappers
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expression (Expression(..))
 import Lamdu.Data.Expression.IRef (DefI)
@@ -16,26 +18,15 @@ import Test.HUnit (assertBool)
 import Utils
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Trans.State as State
-import qualified Data.ByteString.Char8 as BS8
 import qualified Data.List as List
 import qualified Data.Map as Map
-import qualified Data.Store.Guid as Guid
-import qualified Data.Store.IRef as IRef
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Infer.ImplicitVariables as ImplicitVariables
-import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified System.Random as Random
 import qualified Test.HUnit as HUnit
-
-simplifyDef :: Expression (DefI t) a -> Expression UnescapedStr a
-simplifyDef =
-  ExprLens.exprDef %~ defIStr
-  where
-    defIStr = UnescapedStr . BS8.unpack . BS8.takeWhile (/= '\0') . Guid.bs . IRef.guid
 
 canonizeInferred ::
   Expression def0 (Expression def1 a, Expression def2 b) ->
@@ -53,26 +44,15 @@ canonizeInferred =
 assertCompareInferred ::
   InferResults t -> InferResults t -> HUnit.Assertion
 assertCompareInferred result expected =
-  assertBool errMsg (Map.null resultErrs)
+  assertBool errorMsg (null resultErrs)
   where
-    errMsg =
-      List.intercalate "\n" $ (show . simplifyDef) (ixsStr <$> resultExpr) :
-      "Errors:" :
-      (map showErrItem . Map.toList) resultErrs
-    showErrItem (ix, err) = ansiAround ansiRed ("{" ++ show ix ++ "}:\n") ++ err
-    ixsStr [] = UnescapedStr ""
-    ixsStr ixs = UnescapedStr . ansiAround ansiRed . List.intercalate ", " $ map show ixs
     resultC = canonizeInferred result
     expectedC = canonizeInferred expected
-    (resultExpr, resultErrs) =
-      runState (ExprUtil.matchExpression match mismatch resultC expectedC) Map.empty
-    addError msg = do
-      ix <- State.gets Map.size
-      State.modify $ Map.insert ix msg
-      pure ix
+    (resultErrs, errorMsg) =
+      errorMessage $ ExprUtil.matchExpression match mismatch resultC expectedC
     check s x y
       | ExprUtil.alphaEq x y = pure []
-      | otherwise = fmap (: []) . addError $
+      | otherwise = fmap (: []) . addAnnotation $
         List.intercalate "\n"
         [ "  expected " ++ s ++ ":" ++ (show . simplifyDef) y
         , "  result   " ++ s ++ ":" ++ (show . simplifyDef) x

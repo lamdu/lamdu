@@ -1,6 +1,6 @@
 import Control.Monad
 import Criterion.Main
-import Utils
+import InferExamples
 
 main :: IO ()
 main = do

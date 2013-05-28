@@ -1,7 +1,7 @@
 import Control.Exception (evaluate)
 import Control.Monad
 import Data.Foldable (traverse_)
-import Utils
+import InferExamples
 
 run :: Int -> String -> (Int -> a) -> IO ()
 run count name f = do

@@ -7,6 +7,7 @@ import Control.Monad.Trans.State (evalState)
 import Data.Monoid (Monoid(..))
 import InferAssert
 import InferCombinators
+import InferWrappers
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expression (Expression(..), Kind(..))
 import Lamdu.Data.Expression.Infer.Conflicts (inferWithConflicts)
