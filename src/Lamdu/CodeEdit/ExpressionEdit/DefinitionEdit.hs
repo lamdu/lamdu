@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings, PatternGuards #-}
 module Lamdu.CodeEdit.ExpressionEdit.DefinitionEdit(make, diveToNameEdit) where
 
-import Control.Applicative ((<$>), (<*>))
+import Control.Applicative ((<$>), (<*>), (<$))
 import Control.Lens ((%~), (&), (^.))
 import Control.MonadA (MonadA)
 import Data.List.Utils (nonEmptyAll)
@@ -113,7 +113,7 @@ makeParts
   -> ExprGuiM m ([ExpressionGui m], [Widget (T m)])
 makeParts name guid content = do
   equals <- makeEquals myId
-  rhsJumperEquals <- LambdaEdit.jumpToRHS [E.ModKey E.noMods (E.charKey '=')] rhs
+  rhsJumperEquals <- jumpToRHS [E.ModKey E.noMods (E.charKey '=')] rhs
   let
     jumpToRHSViaEquals n
       | nonOperatorName n =
@@ -121,12 +121,12 @@ makeParts name guid content = do
         Lens.over Widget.wEventMap (E.filterSChars (curry (/= ('=', E.NotShifted))))
       | otherwise = id
   (depParamsEdits, paramsEdits, (wheres, bodyEdit)) <-
-    LambdaEdit.makeNestedParams
+    makeNestedParams
     jumpToRHSViaEquals rhs myId depParams params $
     (,)
     <$> makeWheres (Sugar.dWhereItems content) myId
-    <*> LambdaEdit.makeResultEdit lhs body
-  rhsJumper <- LambdaEdit.jumpToRHS Config.jumpLHStoRHSKeys rhs
+    <*> makeResultEdit lhs body
+  rhsJumper <- jumpToRHS Config.jumpLHStoRHSKeys rhs
   let nameEditEventMap = mappend addFirstParamEventMap rhsJumper
   polyNameEdit <-
     Lens.over ExpressionGui.egWidget
@@ -279,3 +279,72 @@ diveToNameEdit =
   -- polymorphic wrapper:
   FocusDelegator.delegatingId . -- Collapsed wrapper
   FocusDelegator.delegatingId -- Name editor
+
+jumpToRHS ::
+  (MonadA m, MonadA f) =>
+  [E.ModKey] -> (String, Sugar.ExpressionN m) ->
+  ExprGuiM f (Widget.EventHandlers (T f))
+jumpToRHS keys (rhsDoc, rhs) = do
+  savePos <- ExprGuiM.mkPrejumpPosSaver
+  return $
+    Widget.keysEventMapMovesCursor keys (E.Doc ["Navigation", "Jump to " ++ rhsDoc]) $
+      rhsId <$ savePos
+  where
+    rhsId = WidgetIds.fromGuid $ rhs ^. Sugar.rGuid
+
+makeResultEdit
+  :: MonadA m
+  => [Widget.Id]
+  -> Sugar.ExpressionN m
+  -> ExprGuiM m (ExpressionGui m)
+makeResultEdit lhs result = do
+  savePos <- ExprGuiM.mkPrejumpPosSaver
+  let
+    jumpToLhsEventMap =
+      Widget.keysEventMapMovesCursor Config.jumpRHStoLHSKeys (E.Doc ["Navigation", "Jump to last param"]) $
+        lastParam <$ savePos
+  (Lens.over ExpressionGui.egWidget . Widget.weakerEvents) jumpToLhsEventMap <$>
+    ExprGuiM.makeSubexpresion result
+  where
+    lastParam = case lhs of
+      [] -> error "makeResultEdit given empty LHS"
+      xs -> last xs
+
+addPrevIds ::
+  Widget.Id ->
+  [Sugar.FuncParam name m expr] ->
+  [Sugar.FuncParam name m expr] ->
+  ( [(Widget.Id, Sugar.FuncParam name m expr)]
+  , [(Widget.Id, Sugar.FuncParam name m expr)]
+  )
+addPrevIds firstParId depParams params =
+  (depParamIds, paramIds)
+  where
+    (lastDepParamId, depParamIds) = go firstParId depParams
+    (_, paramIds) = go lastDepParamId params
+    fpId param = WidgetIds.fromGuid $ param ^. Sugar.fpId
+    go i [] = (i, [])
+    go i (fp:fps) = Lens._2 %~ ((i, fp) :) $ go (fpId fp) fps
+
+makeNestedParams ::
+  MonadA m =>
+  (Sugar.Name -> Widget (T m) -> Widget (T m))
+ -> (String, Sugar.ExpressionN m)
+ -> Widget.Id
+ -> [Sugar.FuncParam Sugar.Name m (Sugar.ExpressionN m)]
+ -> [Sugar.FuncParam Sugar.Name m (Sugar.ExpressionN m)]
+ -> ExprGuiM m a
+ -> ExprGuiM m ([ExpressionGui m], [ExpressionGui m], a)
+makeNestedParams atParamWidgets rhs firstParId depParams params mkResultEdit = do
+  rhsJumper <- jumpToRHS Config.jumpLHStoRHSKeys rhs
+  let
+    (depParamIds, paramIds) = addPrevIds firstParId depParams params
+    mkParam (prevId, param) =
+      (ExpressionGui.egWidget %~
+       (atParamWidgets (param ^. Sugar.fpName) .
+        Widget.weakerEvents rhsJumper)) <$>
+      LambdaEdit.makeParamEdit prevId param
+  (,,)
+    <$> traverse mkParam depParamIds
+    <*> traverse mkParam paramIds
+    <*> mkResultEdit

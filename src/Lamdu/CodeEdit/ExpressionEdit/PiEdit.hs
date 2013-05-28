@@ -30,7 +30,7 @@ make hasParens (Sugar.Lam _ param _isDep resultType) =
   ExprGuiM.assignCursor myId typeId $ do
     (resultTypeEdit, usedVars) <-
       ExprGuiM.listenUsedVariables $
-      LambdaEdit.makeResultEdit [paramId] resultType
+      ExprGuiM.makeSubexpresion resultType
     let
       paramUsed = paramGuid `elem` usedVars
       redirectCursor cursor
