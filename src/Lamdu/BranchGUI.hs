@@ -88,9 +88,7 @@ make transaction size actions widget = do
     Edges.makeVertical size widget branchSelector
   where
     eventMap = mconcat
-    -- TODO: Get Quit out of here
-      [ Widget.keysEventMap Config.quitKeys (E.Doc ["Quit"]) (error "Quit")
-      , Widget.keysEventMapMovesCursor Config.makeBranchKeys (E.Doc ["Branches", "New"]) .
+      [ Widget.keysEventMapMovesCursor Config.makeBranchKeys (E.Doc ["Branches", "New"]) .
         fmap
         (FocusDelegator.delegatingId .
          WidgetIds.fromGuid . Branch.guid) $ makeBranch actions

@@ -295,9 +295,13 @@ makeRootWidget settings style dbToIO size cursor = do
       (fmap . Widget.atEvents) (VersionControl.runEvent cursor) .
       (mapStateT . WE.mapWidgetEnvT) VersionControl.runAction $
       CodeEdit.make Anchors.codeProps settings rootGuid
-    (fmap . Widget.atEvents) (dbToIO . (attachCursor =<<)) .
-      lift $ BranchGUI.make id size actions codeEdit
+    branchGui <- lift $ BranchGUI.make id size actions codeEdit
+    return .
+      Widget.atEvents (dbToIO . (attachCursor =<<)) $
+      Widget.strongerEvents quitEventMap branchGui
   where
+    quitEventMap =
+      Widget.keysEventMap Config.quitKeys (EventMap.Doc ["Quit"]) (error "Quit")
     attachCursor eventResult = do
       maybe (return ()) (Transaction.setP (Anchors.cursor Anchors.revisionProps)) $
         eventResult ^. Widget.eCursor
