@@ -80,7 +80,8 @@ make ::
 make transaction size actions widget = do
   branchNameEdits <- traverse makeBranchNameEdit $ branches actions
   branchSelector <-
-    BWidgets.makeChoiceWidget branchNameEdits (currentBranch actions)
+    BWidgets.makeChoiceWidget (setCurrentBranch actions)
+    branchNameEdits (currentBranch actions)
     branchSelectionFocusDelegatorConfig
     Config.selectedBranchColor Box.vertical
     WidgetIds.branchSelection
@@ -99,17 +100,10 @@ make transaction size actions widget = do
         (BWidgets.makeLineEdit nameProp)
         branchEditId
       let
-        setBranch = setCurrentBranch actions branch
         delEventMap
           | ListUtils.isLengthAtLeast 2 (branches actions) =
             Widget.keysEventMapMovesCursor
             Config.delBranchKeys (E.Doc ["Branches", "Delete"])
             (WidgetIds.fromGuid . Branch.guid <$> deleteBranch actions branch)
           | otherwise = mempty
-      return
-        ( branch
-        , branchNameEdit
-          & Widget.wMaybeEnter . Lens.traversed . Lens.mapped .
-            Widget.enterResultEvent %~ (setBranch >>)
-          & Widget.weakerEvents delEventMap
-        )
+      return (branch, branchNameEdit & Widget.weakerEvents delEventMap)

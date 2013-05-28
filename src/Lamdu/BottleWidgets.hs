@@ -9,7 +9,7 @@ module Lamdu.BottleWidgets
   , makeChoiceWidget
   ) where
 
-import Control.Applicative (Applicative(..))
+import Control.Applicative (Applicative(..), (*>))
 import Control.Lens.Operators
 import Control.Monad (when)
 import Control.MonadA (MonadA)
@@ -163,30 +163,38 @@ gridHSpacedCentered = gridHSpaced . (map . map) ((,) 0.5)
 
 makeChoiceWidget ::
   (Eq a, MonadA m, Applicative f) =>
-  [(a, Widget f)] -> a ->
+  (a -> f ()) -> [(a, Widget f)] -> a ->
   FocusDelegator.Config -> Draw.Color -> Box.Orientation ->
   Widget.Id -> WidgetEnvT m (Widget f)
-makeChoiceWidget children curChild fdConfig selectedColor orientation myId = do
+makeChoiceWidget choose children curChild fdConfig selectedColor orientation myId = do
   isFocused <- WE.isSubCursor myId
   let
-    boxWidget =
-      maybe Box.toWidget Box.toWidgetBiased mCurChildIndex box
-    childFocused = any (Lens.view Widget.wIsFocused . snd) children
-    pairs = Lens.mapped . Lens._1 %~ (curChild ==) $ children
     visiblePairs
       | childFocused || isFocused = pairs
-      | otherwise = filter fst pairs
-    mCurChildIndex = findIndex fst visiblePairs
-    box = Box.makeAlign 0 orientation colorizedPairs
+      | otherwise = filter itemIsCurChild pairs
+    mCurChildIndex = findIndex itemIsCurChild visiblePairs
     colorizedPairs
       -- focus shows selection already
       | childFocused = map snd visiblePairs
       -- need to show selection even as focus is elsewhere
       | otherwise = map colorize visiblePairs
-      where
-        colorize (True, w) =
-            Widget.backgroundColor Layers.choiceBG
-            (Widget.toAnimId myId) selectedColor w
-        colorize (False, w) = w
+    box = Box.makeAlign 0 orientation colorizedPairs
+    boxWidget =
+      maybe Box.toWidget Box.toWidgetBiased mCurChildIndex box
   wrapDelegatedOT fdConfig FocusDelegator.NotDelegating id
     ((const . return) boxWidget) myId
+  where
+    itemIsCurChild = (curChild ==) . fst
+    colorize (item, w)
+      | item == curChild =
+        Widget.backgroundColor Layers.choiceBG
+        (Widget.toAnimId myId) selectedColor w
+      | otherwise = w
+    pairs = map mkPair children
+    childFocused = any (^. Lens._2 . Widget.wIsFocused) children
+    mkPair (item, widget) =
+      ( item
+      , widget
+        & Widget.wMaybeEnter . Lens.traversed . Lens.mapped .
+          Widget.enterResultEvent %~ (choose item *>)
+      )
