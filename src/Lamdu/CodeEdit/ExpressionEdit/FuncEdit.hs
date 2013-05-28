@@ -66,12 +66,11 @@ compose = foldr (.) id
 -- exported for use in definition sugaring.
 makeParamEdit ::
   MonadA m =>
-  (Sugar.Name -> Widget (T m) -> Widget (T m)) ->
   Widget.Id -> Settings.InfoMode ->
   Widget.EventHandlers (T m) ->
   Sugar.FuncParam Sugar.Name m (Sugar.ExpressionN m) ->
   ExprGuiM m (ExpressionGui m)
-makeParamEdit atParamWidgets prevId infoMode rhsJumper param =
+makeParamEdit prevId infoMode rhsJumper param =
   (Lens.mapped . ExpressionGui.egWidget %~ onFinalWidget) . assignCursor $ do
     paramTypeEdit <- ExprGuiM.makeSubexpresion $ param ^. Sugar.fpType
     paramNameEdit <- makeParamNameEdit name (param ^. Sugar.fpGuid) myId
@@ -90,10 +89,7 @@ makeParamEdit atParamWidgets prevId infoMode rhsJumper param =
       ExpressionGui.fromValueWidget paramNameEdit
   where
     name = param ^. Sugar.fpName
-    onFinalWidget =
-      Widget.weakerEvents
-      (rhsJumper `mappend` paramEventMap) .
-      atParamWidgets name
+    onFinalWidget = Widget.weakerEvents (rhsJumper `mappend` paramEventMap)
     assignGuidToMe = (`ExprGuiM.assignCursor` myId) . WidgetIds.fromGuid
     sourceIds = param ^. Sugar.fpAltIds ++ maybeToList (param ^. Sugar.fpHiddenLambdaGuid)
     assignCursor = compose $ map assignGuidToMe sourceIds
@@ -161,7 +157,8 @@ makeNestedParams atParamWidgets rhs firstParId depParams params mkResultEdit = d
   let
     (depParamIds, paramIds) = addPrevIds firstParId depParams params
     mkParam (prevId, param) =
-      makeParamEdit atParamWidgets prevId infoMode rhsJumper param
+      (ExpressionGui.egWidget %~ atParamWidgets (param ^. Sugar.fpName)) <$>
+      makeParamEdit prevId infoMode rhsJumper param
   (,,)
     <$> traverse mkParam depParamIds
     <*> traverse mkParam paramIds
