@@ -10,6 +10,7 @@ import Data.Vector.Vector2 (Vector2(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import qualified Control.Lens as Lens
+import qualified Data.ByteString.Char8 as BS8
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -32,27 +33,33 @@ makeUnwrapped ::
   MonadA m =>
   Sugar.Record m (Sugar.ExpressionN m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeUnwrapped (Sugar.Record k (Sugar.FieldList fields mAddField)) myId =
-  ExprGuiM.assignCursor myId bracketId $ do
+  ExprGuiM.assignCursor myId (bracketId "{") $ do
     fieldRows <- mapM makeFieldRow fields
     let fieldsWidget = Grid.toWidget $ Grid.make fieldRows
-    bracketWidget <-
-      ( ExprGuiM.withFgColor (parensColor k)
-      . ExprGuiM.widgetEnv . BWidgets.makeFocusableTextView "{" )
-      bracketId
+    let
+      mkBracketWidget text =
+        ExprGuiM.withFgColor (parensColor k) . ExprGuiM.widgetEnv .
+        BWidgets.makeFocusableTextView text $
+        bracketId $ BS8.pack text
+    openBracketWidget <- mkBracketWidget "{"
+    closeBracketWidget <- mkBracketWidget "}"
     let
       height = Widget.wSize . Lens._2
-      bracketHeight = bracketWidget ^. height
       fieldsHeight = fieldsWidget ^. height
-      resizedBracketWidget
+      resizedBracket widget
         | fieldsHeight > 0 =
-          Widget.scale (Vector2 1 (fieldsHeight / bracketHeight)) bracketWidget
-        | otherwise = bracketWidget
+          Widget.scale (Vector2 1 (fieldsHeight / widget ^. height)) widget
+        | otherwise = widget
     return . ExpressionGui.fromValueWidget . Widget.weakerEvents eventMap $
-      Box.hboxCentered [resizedBracketWidget, fieldsWidget]
+      Box.hboxCentered
+      [ resizedBracket openBracketWidget
+      , fieldsWidget
+      , resizedBracket closeBracketWidget
+      ]
   where
     parensColor Sugar.Type = Config.recordTypeParensColor
     parensColor Sugar.Val = Config.recordValParensColor
-    bracketId = Widget.joinId myId ["{"]
+    bracketId text = Widget.joinId myId [text]
     makeFieldRow (Sugar.RecordField mItemActions tagExpr fieldExpr) = do
       ((fieldRefGui, fieldExprGui), resultPickers) <-
         ExprGuiM.listenResultPickers $
