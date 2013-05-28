@@ -145,8 +145,8 @@ makeDefContentEdit guid name content = do
     jumpToRHSViaEquals n widget
       | nonOperatorName n =
         widget
-        & Widget.weakerEvents rhsJumperEquals
         & Widget.wEventMap %~ E.filterSChars (curry (/= ('=', E.NotShifted)))
+        & Widget.weakerEvents rhsJumperEquals
       | otherwise = widget
   (depParamsEdits, paramsEdits) <-
     makeNestedParams jumpToRHSViaEquals rhs myId depParams params
