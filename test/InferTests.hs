@@ -180,6 +180,17 @@ recordTest =
   where
     fieldGuid = Guid.fromString "field"
 
+-- TODO: Test should verify that ImplicitVariables puts the restricted
+-- form (b->c) in the right place.
+addImplicitCurriedApply2Test =
+  testCase "implicitCurriedApply2: \\f -> f ? ?" $
+  inferWVAssertion (expr hole) wvExpr
+  where
+    expr a =
+      lambda "f" (asHole (a --> hole)) $ \f ->
+      setInferredType (hole --> hole) (f $$ holeWithInferredType a) $$ hole
+    wvExpr = lambda "a" (asHole set) expr
+
 uncurry2Test =
   testCase "uncurry2: \\params:{?->?->?, x:?, y:?} -> f x y   WV: \\a b c params:{f:?{a->b->c} x:?a y:?b} -> f x y : c" $
   allowFailAssertion $
@@ -196,8 +207,14 @@ uncurry2Test =
     wvExpr =
       lambda "a" (asHole set) $ \a ->
       lambda "b" (asHole set) $ \b ->
-      lambda "c" set $ \c ->
-      expr a b c
+      lambda "c" (asHole set) $ \c ->
+      expr b c a
+
+implicitVarTests =
+  testGroup "add implicit variables"
+  [ addImplicitCurriedApply2Test
+  , uncurry2Test
+  ]
 
 inferRecordValTest =
   testInferAllowFail "id ({:Set) <hole> infers { val" $
@@ -222,7 +239,7 @@ hunitTests =
   , emptyRecordTest
   , recordTest
   , inferRecordValTest
-  , uncurry2Test
+  , implicitVarTests
   , resumptionTests
   ]
 
