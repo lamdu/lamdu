@@ -4,7 +4,7 @@ module Lamdu.CodeEdit.ExpressionEdit.DefinitionEdit (make, diveToNameEdit) where
 import Control.Applicative ((<$>), (<*>), (<$))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
-import Data.List.Utils (nonEmptyAll)
+import Data.List.Utils (nonEmptyAll, isLengthAtLeast)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
@@ -14,6 +14,7 @@ import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, Collapser(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import qualified Control.Lens as Lens
+import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -22,6 +23,7 @@ import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.CodeEdit.ExpressionEdit.LabeledApplyEdit as LabeledApplyEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
@@ -105,6 +107,35 @@ makeWheres whereItems myId = do
       ]
     ]
 
+presentationModeChoiceConfig :: BWidgets.ChoiceWidgetConfig
+presentationModeChoiceConfig = BWidgets.ChoiceWidgetConfig
+  { BWidgets.cwcFDConfig = FocusDelegator.Config
+    { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.KeyEnter]
+    , FocusDelegator.startDelegatingDoc = E.Doc ["Presentation Mode", "Select"]
+    , FocusDelegator.stopDelegatingKeys = [E.ModKey E.noMods E.KeyEnter]
+    , FocusDelegator.stopDelegatingDoc = E.Doc ["Presentation Mode", "Choose selected"]
+    }
+  , BWidgets.cwcOrientation = Box.vertical
+  , BWidgets.cwcExpandMode = BWidgets.ExplicitEntry
+  }
+
+mkPresentationEdits :: MonadA m => Guid -> Widget.Id -> ExprGuiM m (Widget (T m))
+mkPresentationEdits guid myId = do
+  cur <- ExprGuiM.transaction $ Transaction.getP mkProp
+  pairs <- traverse mkPair [minBound..maxBound]
+  fmap (Widget.scale Config.presentationChoiceScaleFactor) .
+    ExprGuiM.widgetEnv $
+    BWidgets.makeChoiceWidget (Transaction.setP mkProp) pairs cur
+    presentationModeChoiceConfig myId
+  where
+    mkProp = LabeledApplyEdit.assocPresentationMode guid
+    mkPair presentationMode = do
+      widget <-
+        ExprGuiM.withFgColor Config.presentationChoiceColor .
+        ExprGuiM.widgetEnv $
+        BWidgets.makeFocusableLabel (show presentationMode) myId
+      return (presentationMode, widget)
+
 makeDefContentEdit ::
   MonadA m => Guid -> Sugar.Name -> Sugar.DefinitionContent Sugar.Name m -> ExprGuiM m (WidgetT m)
 makeDefContentEdit guid name content = do
@@ -127,21 +158,28 @@ makeDefContentEdit guid name content = do
     & Lens.mapped . ExpressionGui.egWidget %~
       Widget.weakerEvents nameEditEventMap . jumpToRHSViaEquals name
   savePos <- ExprGuiM.mkPrejumpPosSaver
+  presentationEdits <-
+    if isLengthAtLeast 2 params
+    then (: []) <$> mkPresentationEdits guid presentationChoiceId
+    else return []
   let
     addWhereItemEventMap =
       Widget.keysEventMapMovesCursor Config.addWhereItemKeys (E.Doc ["Edit", "Add where item"]) .
       toEventMapAction $ savePos >> Sugar.dAddInnermostWhereItem content
-    parts =
-      polyNameEdit : paramsEdits ++
+    assignment =
+      ExpressionGui.hboxSpaced $
+      ExpressionGui.addBelow 0 (map ((,) 0) presentationEdits)
+      polyNameEdit :
+      paramsEdits ++
       [ ExpressionGui.fromValueWidget equals
       , bodyEdit
         & ExpressionGui.egWidget %~
           Widget.weakerEvents addWhereItemEventMap
       ]
-    assignment = ExpressionGui.hboxSpaced parts ^. ExpressionGui.egWidget
   wheres <- makeWheres (Sugar.dWhereItems content) myId
-  return . Box.vboxAlign 0 $ assignment : wheres
+  return . Box.vboxAlign 0 $ assignment ^. ExpressionGui.egWidget : wheres
   where
+    presentationChoiceId = Widget.joinId myId ["presentation"]
     lhs = myId : map (WidgetIds.fromGuid . (^. Sugar.fpId)) allParams
     rhs = ("Def Body", body)
     allParams = depParams ++ params

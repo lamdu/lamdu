@@ -1,12 +1,14 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.BottleWidgets
   ( makeTextView, makeLabel
-  , makeFocusableView, makeFocusableTextView
+  , makeFocusableView
+  , makeFocusableTextView, makeFocusableLabel
   , wrapDelegatedWith, wrapDelegatedOT
   , makeTextEdit, makeLineEdit, makeWordEdit
   , stdSpaceWidget
   , hboxSpaced, hboxCenteredSpaced
   , gridHSpaced, gridHSpacedCentered
-  , makeChoiceWidget
+  , makeChoiceWidget, ChoiceWidgetConfig(..), ChoiceWidgetExpandMode(..)
   ) where
 
 import Control.Applicative (Applicative(..), (*>))
@@ -68,6 +70,16 @@ makeFocusableTextView
 makeFocusableTextView text myId = do
   textView <- makeTextView text $ Widget.toAnimId myId
   makeFocusableView myId textView
+
+makeFocusableLabel
+  :: (Applicative f, MonadA m)
+  => String -> Widget.Id
+  -> WidgetEnvT m (Widget f)
+makeFocusableLabel text myIdPrefix = do
+  textView <- makeTextView text $ Widget.toAnimId myId
+  makeFocusableView myId textView
+  where
+    myId = Widget.joinId myIdPrefix [pack text]
 
 fdStyle :: FocusDelegator.Style
 fdStyle = FocusDelegator.Style
@@ -161,16 +173,28 @@ gridHSpaced = Grid.toWidget . Grid.make . map (intersperse (0, stdSpaceWidget))
 gridHSpacedCentered :: [[Widget f]] -> Widget f
 gridHSpacedCentered = gridHSpaced . (map . map) ((,) 0.5)
 
+data ChoiceWidgetExpandMode
+  -- Cursor is on expanded widget, need to show selected choice with a
+  -- color:
+  = AutoExpand Draw.Color
+  | ExplicitEntry
+Lens.makePrisms ''ChoiceWidgetExpandMode
+
+data ChoiceWidgetConfig = ChoiceWidgetConfig
+  { cwcFDConfig :: FocusDelegator.Config
+  , cwcOrientation :: Box.Orientation
+  , cwcExpandMode :: ChoiceWidgetExpandMode
+  }
+
 makeChoiceWidget ::
   (Eq a, MonadA m, Applicative f) =>
   (a -> f ()) -> [(a, Widget f)] -> a ->
-  FocusDelegator.Config -> Draw.Color -> Box.Orientation ->
-  Widget.Id -> WidgetEnvT m (Widget f)
-makeChoiceWidget choose children curChild fdConfig selectedColor orientation myId = do
+  ChoiceWidgetConfig -> Widget.Id -> WidgetEnvT m (Widget f)
+makeChoiceWidget choose children curChild config myId = do
   isFocused <- WE.isSubCursor myId
   let
     visiblePairs
-      | childFocused || isFocused = pairs
+      | childFocused || (autoExpand && isFocused) = pairs
       | otherwise = filter itemIsCurChild pairs
     mCurChildIndex = findIndex itemIsCurChild visiblePairs
     colorizedPairs
@@ -178,18 +202,21 @@ makeChoiceWidget choose children curChild fdConfig selectedColor orientation myI
       | childFocused = map snd visiblePairs
       -- need to show selection even as focus is elsewhere
       | otherwise = map colorize visiblePairs
-    box = Box.makeAlign 0 orientation colorizedPairs
+    box = Box.makeAlign 0 (cwcOrientation config) colorizedPairs
     boxWidget =
       maybe Box.toWidget Box.toWidgetBiased mCurChildIndex box
-  wrapDelegatedOT fdConfig FocusDelegator.NotDelegating id
+  wrapDelegatedOT (cwcFDConfig config) FocusDelegator.NotDelegating id
     ((const . return) boxWidget) myId
   where
+    autoExpand = Lens.has _AutoExpand $ cwcExpandMode config
     itemIsCurChild = (curChild ==) . fst
-    colorize (item, w)
-      | item == curChild =
-        Widget.backgroundColor Layers.choiceBG
-        (Widget.toAnimId myId) selectedColor w
-      | otherwise = w
+    colorize (item, w) =
+      case cwcExpandMode config ^? _AutoExpand of
+      Just color
+        | item == curChild ->
+          Widget.backgroundColor Layers.choiceBG
+          (Widget.toAnimId myId) color w
+      _ -> w
     pairs = map mkPair children
     childFocused = any (^. Lens._2 . Widget.wIsFocused) children
     mkPair (item, widget) =

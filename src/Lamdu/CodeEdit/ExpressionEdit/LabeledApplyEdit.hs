@@ -1,13 +1,22 @@
-{-# LANGUAGE OverloadedStrings #-}
-module Lamdu.CodeEdit.ExpressionEdit.LabeledApplyEdit(make) where
+{-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
+module Lamdu.CodeEdit.ExpressionEdit.LabeledApplyEdit
+  ( make
+  , PresentationMode(..)
+  , assocPresentationMode
+  ) where
 
 import Control.Applicative (pure)
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
+import Data.Binary (Binary(..), getWord8, putWord8)
+import Data.Derive.Binary (makeBinary)
+import Data.DeriveTH (derive)
 import Data.Monoid (mappend)
+import Data.Store.Guid (Guid)
 import Data.Traversable (traverse)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Lamdu.BottleWidgets as BWidgets
@@ -17,6 +26,13 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.TagEdit as TagEdit
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.WidgetIds as WidgetIds
+
+data PresentationMode = OO | Verbose
+  deriving (Eq, Ord, Enum, Bounded, Show)
+
+assocPresentationMode ::
+  MonadA m => Guid -> Transaction.MkProperty m PresentationMode
+assocPresentationMode = Transaction.assocDataRefDef OO "PresentationMode"
 
 make
   :: MonadA m
@@ -47,3 +63,5 @@ make (Sugar.LabeledApply func args) =
   where
     space = ExpressionGui.fromValueWidget BWidgets.stdSpaceWidget
     scaleTag = ExpressionGui.egWidget %~ Widget.scale Config.fieldTagScale
+
+derive makeBinary ''PresentationMode

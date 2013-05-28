@@ -38,14 +38,6 @@ branchNameFDConfig = FocusDelegator.Config
   , FocusDelegator.stopDelegatingDoc = E.Doc ["Branches", "Done renaming"]
   }
 
-branchSelectionFocusDelegatorConfig :: FocusDelegator.Config
-branchSelectionFocusDelegatorConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.KeyEnter]
-  , FocusDelegator.startDelegatingDoc = E.Doc ["Branches", "Select"]
-  , FocusDelegator.stopDelegatingKeys = [E.ModKey E.noMods E.KeyEnter]
-  , FocusDelegator.stopDelegatingDoc = E.Doc ["Branches", "Choose selected"]
-  }
-
 undoEventMap :: Functor m => Maybe (m Widget.Id) -> Widget.EventHandlers m
 undoEventMap =
   maybe mempty (Widget.keysEventMapMovesCursor Config.undoKeys (E.Doc ["Edit", "Undo"]))
@@ -72,6 +64,20 @@ globalEventMap actions = mconcat
   where
     currentBranchWidgetId = WidgetIds.fromGuid . Branch.guid $ currentBranch actions
 
+choiceWidgetConfig :: BWidgets.ChoiceWidgetConfig
+choiceWidgetConfig = BWidgets.ChoiceWidgetConfig
+  { BWidgets.cwcFDConfig =
+    FocusDelegator.Config
+    { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.KeyEnter]
+    , FocusDelegator.startDelegatingDoc = E.Doc ["Branches", "Select"]
+    , FocusDelegator.stopDelegatingKeys = [E.ModKey E.noMods E.KeyEnter]
+    , FocusDelegator.stopDelegatingDoc = E.Doc ["Branches", "Choose selected"]
+    }
+  , BWidgets.cwcExpandMode =
+      BWidgets.AutoExpand Config.selectedBranchColor
+  , BWidgets.cwcOrientation = Box.vertical
+  }
+
 make ::
   (MonadA m, MonadA n) =>
   (forall a. Transaction n a -> m a) ->
@@ -81,9 +87,7 @@ make transaction size actions widget = do
   branchNameEdits <- traverse makeBranchNameEdit $ branches actions
   branchSelector <-
     BWidgets.makeChoiceWidget (setCurrentBranch actions)
-    branchNameEdits (currentBranch actions)
-    branchSelectionFocusDelegatorConfig
-    Config.selectedBranchColor Box.vertical
+    branchNameEdits (currentBranch actions) choiceWidgetConfig
     WidgetIds.branchSelection
   return .
     Widget.strongerEvents (globalEventMap actions) $
