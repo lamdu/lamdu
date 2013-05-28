@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings, PatternGuards #-}
-module Lamdu.CodeEdit.ExpressionEdit.DefinitionEdit(make, diveToNameEdit) where
+module Lamdu.CodeEdit.ExpressionEdit.DefinitionEdit (make, diveToNameEdit) where
 
 import Control.Applicative ((<$>), (<*>), (<$))
-import Control.Lens ((%~), (&), (^.))
+import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.List.Utils (nonEmptyAll)
 import Data.Monoid (Monoid(..))
@@ -105,13 +105,9 @@ makeWheres whereItems myId = do
       ]
     ]
 
-makeParts
-  :: MonadA m
-  => Sugar.Name
-  -> Guid
-  -> Sugar.DefinitionContent Sugar.Name m
-  -> ExprGuiM m ([ExpressionGui m], [Widget (T m)])
-makeParts name guid content = do
+makeDefContentEdit ::
+  MonadA m => Guid -> Sugar.Name -> Sugar.DefinitionContent Sugar.Name m -> ExprGuiM m (WidgetT m)
+makeDefContentEdit guid name content = do
   equals <- makeEquals myId
   rhsJumperEquals <- jumpToRHS [E.ModKey E.noMods (E.charKey '=')] rhs
   let
@@ -122,7 +118,6 @@ makeParts name guid content = do
       | otherwise = id
   (depParamsEdits, paramsEdits) <-
     makeNestedParams jumpToRHSViaEquals rhs myId depParams params
-  wheres <- makeWheres (Sugar.dWhereItems content) myId
   bodyEdit <- makeResultEdit lhs body
   rhsJumper <- jumpToRHS Config.jumpLHStoRHSKeys rhs
   let nameEditEventMap = mappend addFirstParamEventMap rhsJumper
@@ -137,15 +132,16 @@ makeParts name guid content = do
       toEventMapAction $ do
         savePos
         Sugar.dAddInnermostWhereItem content
-  return
-    ( polyNameEdit : paramsEdits ++
+    parts =
+      polyNameEdit : paramsEdits ++
       [ ExpressionGui.fromValueWidget equals
       , Lens.over ExpressionGui.egWidget
         (Widget.weakerEvents addWhereItemEventMap)
         bodyEdit
       ]
-    , wheres
-    )
+    assignment = ExpressionGui.hboxSpaced parts ^. ExpressionGui.egWidget
+  wheres <- makeWheres (Sugar.dWhereItems content) myId
+  return . Box.vboxAlign 0 $ assignment : wheres
   where
     lhs = myId : map (WidgetIds.fromGuid . Lens.view Sugar.fpId) allParams
     rhs = ("Def Body", body)
@@ -216,15 +212,6 @@ makeWhereItemEdit item =
         Lens.view Sugar.itemAddNext wiActions
       ]
       | otherwise = mempty
-
-makeDefContentEdit ::
-  MonadA m => Guid -> Sugar.Name -> Sugar.DefinitionContent Sugar.Name m -> ExprGuiM m (WidgetT m)
-makeDefContentEdit guid name content = do
-  (body, wheres) <-
-    makeParts name guid content
-    & Lens.mapped . Lens._1 %~
-      (^. ExpressionGui.egWidget) . ExpressionGui.hboxSpaced
-  return . Box.vboxAlign 0 $ body : wheres
 
 makeExprDefinition ::
   MonadA m => Sugar.Definition Sugar.Name m ->
