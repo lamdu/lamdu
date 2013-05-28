@@ -6,14 +6,15 @@ module Lamdu.BottleWidgets
   , stdSpaceWidget
   , hboxSpaced, hboxCenteredSpaced
   , gridHSpaced, gridHSpacedCentered
+  , makeChoiceWidget
   ) where
 
 import Control.Applicative (Applicative(..))
-import Control.Lens ((^.))
+import Control.Lens.Operators
 import Control.Monad (when)
 import Control.MonadA (MonadA)
 import Data.ByteString.Char8 (pack)
-import Data.List (intersperse)
+import Data.List (findIndex, intersperse)
 import Data.Maybe (isJust)
 import Data.Monoid (mappend)
 import Data.Store.Property (Property)
@@ -26,6 +27,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
+import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -158,3 +160,33 @@ gridHSpaced = Grid.toWidget . Grid.make . map (intersperse (0, stdSpaceWidget))
 
 gridHSpacedCentered :: [[Widget f]] -> Widget f
 gridHSpacedCentered = gridHSpaced . (map . map) ((,) 0.5)
+
+makeChoiceWidget ::
+  (Eq a, MonadA m, Applicative f) =>
+  [(a, Widget f)] -> a ->
+  FocusDelegator.Config -> Draw.Color -> Box.Orientation ->
+  Widget.Id -> WidgetEnvT m (Widget f)
+makeChoiceWidget children curChild fdConfig selectedColor orientation myId = do
+  isFocused <- WE.isSubCursor myId
+  let
+    boxWidget =
+      maybe Box.toWidget Box.toWidgetBiased mCurChildIndex box
+    childFocused = any (Lens.view Widget.wIsFocused . snd) children
+    pairs = Lens.mapped . Lens._1 %~ (curChild ==) $ children
+    visiblePairs
+      | childFocused || isFocused = pairs
+      | otherwise = filter fst pairs
+    mCurChildIndex = findIndex fst visiblePairs
+    box = Box.makeAlign 0 orientation colorizedPairs
+    colorizedPairs
+      -- focus shows selection already
+      | childFocused = map snd visiblePairs
+      -- need to show selection even as focus is elsewhere
+      | otherwise = map colorize visiblePairs
+      where
+        colorize (True, w) =
+            Widget.backgroundColor Layers.choiceBG
+            (Widget.toAnimId myId) selectedColor w
+        colorize (False, w) = w
+  wrapDelegatedOT fdConfig FocusDelegator.NotDelegating id
+    ((const . return) boxWidget) myId

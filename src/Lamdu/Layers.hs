@@ -13,4 +13,4 @@ parensHighlightBG = 33
 polymorphicExpandedBG = 34
 activePane = 40
 
-branchChoice = 30
+choiceBG = 30

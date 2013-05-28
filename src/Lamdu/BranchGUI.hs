@@ -4,22 +4,20 @@ module Lamdu.BranchGUI
   , branchNameProp
   ) where
 
-import Control.Applicative (pure)
-import Control.Lens ((%~), (^.))
+import Control.Applicative (Applicative, (<$>), pure)
+import Control.Lens.Operators
 import Control.Monad.Trans.Class (lift)
 import Control.MonadA (MonadA)
-import Data.List (findIndex)
-import Data.Maybe (isJust)
-import Data.Monoid(Monoid(..))
+import Data.Monoid (Monoid(..))
 import Data.Store.IRef (Tag)
 import Data.Store.Rev.Branch (Branch)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
-import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.VersionControl.Actions (Actions(..))
 import Lamdu.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
+import qualified Data.List.Utils as ListUtils
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Rev.Branch as Branch
 import qualified Data.Store.Transaction as Transaction
@@ -30,8 +28,6 @@ import qualified Graphics.UI.Bottle.Widgets.Edges as Edges
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Layers as Layers
-import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
 branchNameFDConfig :: FocusDelegator.Config
@@ -68,26 +64,17 @@ make ::
   Widget.Size -> Actions (Tag n) m -> Widget m ->
   WidgetEnvT m (Widget m)
 make transaction size actions widget = do
-  branchSelectorFocused <-
-    fmap isJust $ WE.subCursor WidgetIds.branchSelection
+  branchNameEdits <- traverse makeBranchNameEdit $ branches actions
   branchSelector <-
-    flip
-    (BWidgets.wrapDelegatedOT
-     branchSelectionFocusDelegatorConfig
-     FocusDelegator.NotDelegating id)
-    WidgetIds.branchSelection $ \innerId ->
-    WE.assignCursor innerId currentBranchWidgetId $ do
-      branchNameEdits <- traverse makeBranchNameEdit $ branches actions
-      return .
-        Widget.strongerEvents delBranchEventMap .
-        makeBranchChoice branchSelectorFocused
-        (Widget.toAnimId WidgetIds.branchSelection)
-        Box.vertical branchNameEdits $ currentBranch actions
+    BWidgets.makeChoiceWidget branchNameEdits (currentBranch actions)
+    branchSelectionFocusDelegatorConfig
+    Config.selectedBranchColor Box.vertical
+    WidgetIds.branchSelection
   return .
-    Widget.strongerEvents eventMap $
+    Widget.strongerEvents globalEventMap $
     Edges.makeVertical size widget branchSelector
   where
-    eventMap = mconcat
+    globalEventMap = mconcat
       [ Widget.keysEventMapMovesCursor Config.makeBranchKeys (E.Doc ["Branches", "New"]) .
         fmap
         (FocusDelegator.delegatingId .
@@ -107,45 +94,19 @@ make transaction size actions widget = do
         FocusDelegator.NotDelegating id
         (BWidgets.makeLineEdit nameProp)
         branchEditId
-      let setBranch = setCurrentBranch actions branch
+      let
+        setBranch = setCurrentBranch actions branch
+        delEventMap
+          | ListUtils.isLengthAtLeast 2 (branches actions) =
+            Widget.keysEventMapMovesCursor
+            Config.delBranchKeys (E.Doc ["Branches", "Delete"])
+            (WidgetIds.fromGuid . Branch.guid <$> deleteBranch actions branch)
+          | otherwise = mempty
       return
         ( branch
-        , (Lens.over (Widget.wMaybeEnter . Lens.mapped . Lens.mapped) .
-           Lens.over Widget.enterResultEvent)
-          (setBranch >>) branchNameEdit
+        , branchNameEdit
+          & Widget.wMaybeEnter . Lens.mapped . Lens.mapped .
+            Widget.enterResultEvent %~ (setBranch >>)
+          & Widget.weakerEvents delEventMap
         )
     currentBranchWidgetId = WidgetIds.fromGuid . Branch.guid $ currentBranch actions
-
-    delBranchEventMap
-      | null (drop 1 (branches actions)) = mempty
-      | otherwise =
-        Widget.keysEventMapMovesCursor Config.delBranchKeys (E.Doc ["Branches", "Delete"]) .
-        fmap (WidgetIds.fromGuid . Branch.guid) .
-        deleteBranch actions $ currentBranch actions
-
-makeBranchChoice
-  :: Eq a
-  => Bool -> AnimId
-  -> Box.Orientation
-  -> [(a, Widget f)]
-  -> a
-  -> Widget f
-makeBranchChoice forceExpand selectionAnimId orientation children curChild =
-  maybe Box.toWidget Box.toWidgetBiased mCurChildIndex box
-  where
-    childFocused = any (Lens.view Widget.wIsFocused . snd) children
-    pairs = Lens.mapped . Lens._1 %~ (curChild ==) $ children
-    visiblePairs
-      | childFocused || forceExpand = pairs
-      | otherwise = filter fst pairs
-    mCurChildIndex = findIndex fst visiblePairs
-    box = Box.makeAlign 0 orientation colorizedPairs
-    colorizedPairs
-      -- focus shows selection already
-      | childFocused = map snd visiblePairs
-      -- need to show selection even as focus is elsewhere
-      | otherwise = map colorize visiblePairs
-      where
-        colorize (True, w) = Widget.backgroundColor Layers.branchChoice selectionAnimId selectedColor w
-        colorize (False, w) = w
-        selectedColor = Config.selectedBranchColor
