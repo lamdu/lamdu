@@ -111,39 +111,38 @@ makeDefContentEdit guid name content = do
   equals <- makeEquals myId
   rhsJumperEquals <- jumpToRHS [E.ModKey E.noMods (E.charKey '=')] rhs
   let
-    jumpToRHSViaEquals n
+    jumpToRHSViaEquals n widget
       | nonOperatorName n =
-        Widget.weakerEvents rhsJumperEquals .
-        Lens.over Widget.wEventMap (E.filterSChars (curry (/= ('=', E.NotShifted))))
-      | otherwise = id
+        widget
+        & Widget.weakerEvents rhsJumperEquals
+        & Widget.wEventMap %~ E.filterSChars (curry (/= ('=', E.NotShifted)))
+      | otherwise = widget
   (depParamsEdits, paramsEdits) <-
     makeNestedParams jumpToRHSViaEquals rhs myId depParams params
   bodyEdit <- makeResultEdit lhs body
   rhsJumper <- jumpToRHS Config.jumpLHStoRHSKeys rhs
   let nameEditEventMap = mappend addFirstParamEventMap rhsJumper
   polyNameEdit <-
-    Lens.over ExpressionGui.egWidget
-    (Widget.weakerEvents nameEditEventMap . jumpToRHSViaEquals name) <$>
     makePolyNameEdit name guid depParamsEdits myId
+    & Lens.mapped . ExpressionGui.egWidget %~
+      Widget.weakerEvents nameEditEventMap . jumpToRHSViaEquals name
   savePos <- ExprGuiM.mkPrejumpPosSaver
   let
     addWhereItemEventMap =
       Widget.keysEventMapMovesCursor Config.addWhereItemKeys (E.Doc ["Edit", "Add where item"]) .
-      toEventMapAction $ do
-        savePos
-        Sugar.dAddInnermostWhereItem content
+      toEventMapAction $ savePos >> Sugar.dAddInnermostWhereItem content
     parts =
       polyNameEdit : paramsEdits ++
       [ ExpressionGui.fromValueWidget equals
-      , Lens.over ExpressionGui.egWidget
-        (Widget.weakerEvents addWhereItemEventMap)
-        bodyEdit
+      , bodyEdit
+        & ExpressionGui.egWidget %~
+          Widget.weakerEvents addWhereItemEventMap
       ]
     assignment = ExpressionGui.hboxSpaced parts ^. ExpressionGui.egWidget
   wheres <- makeWheres (Sugar.dWhereItems content) myId
   return . Box.vboxAlign 0 $ assignment : wheres
   where
-    lhs = myId : map (WidgetIds.fromGuid . Lens.view Sugar.fpId) allParams
+    lhs = myId : map (WidgetIds.fromGuid . (^. Sugar.fpId)) allParams
     rhs = ("Def Body", body)
     allParams = depParams ++ params
     depParams = Sugar.dDepParams content
@@ -174,13 +173,13 @@ makeBuiltinDefinition
   -> ExprGuiM m (WidgetT m)
 makeBuiltinDefinition def builtin =
   Box.vboxAlign 0 <$> sequenceA
-    [ fmap BWidgets.hboxCenteredSpaced $ sequenceA
+    [ BWidgets.hboxCenteredSpaced <$> sequenceA
       [ ExprGuiM.withFgColor Config.builtinOriginNameColor $
         makeNameEdit name (Widget.joinId myId ["name"]) guid
       , makeEquals myId
       , BuiltinEdit.make builtin myId
       ]
-    , fmap (defTypeScale . Lens.view ExpressionGui.egWidget) $
+    , defTypeScale . (^. ExpressionGui.egWidget) <$>
       ExprGuiM.makeSubexpresion typ
     ]
   where
@@ -204,12 +203,10 @@ makeWhereItemEdit item =
       mconcat
       [ Widget.keysEventMapMovesCursor Config.delKeys
         (E.Doc ["Edit", "Where item", "Delete"]) .
-        fmap WidgetIds.fromGuid $
-        Lens.view Sugar.itemDelete wiActions
+        fmap WidgetIds.fromGuid $ wiActions ^. Sugar.itemDelete
       , Widget.keysEventMapMovesCursor Config.addWhereItemKeys
         (E.Doc ["Edit", "Where item", "Add"]) .
-        fmap WidgetIds.fromGuid $
-        Lens.view Sugar.itemAddNext wiActions
+        fmap WidgetIds.fromGuid $ wiActions ^. Sugar.itemAddNext
       ]
       | otherwise = mempty
 
@@ -249,7 +246,7 @@ makeExprDefinition def bodyExpr = do
       typeGui <- ExprGuiM.makeSubexpresion typeExpr
       return
         [ (right, label)
-        , (center, (Widget.doesntTakeFocus . Lens.view ExpressionGui.egWidget) typeGui)
+        , (center, Widget.doesntTakeFocus (typeGui ^. ExpressionGui.egWidget))
         ]
     mkAcceptedRow onLabel = mkTypeRow onLabel "Type:" typ
     Sugar.Definition guid name typ _ = def
@@ -288,8 +285,9 @@ makeResultEdit lhs result = do
     jumpToLhsEventMap =
       Widget.keysEventMapMovesCursor Config.jumpRHStoLHSKeys (E.Doc ["Navigation", "Jump to last param"]) $
         lastParam <$ savePos
-  (Lens.over ExpressionGui.egWidget . Widget.weakerEvents) jumpToLhsEventMap <$>
-    ExprGuiM.makeSubexpresion result
+  ExprGuiM.makeSubexpresion result
+    & Lens.mapped . ExpressionGui.egWidget %~
+      Widget.weakerEvents jumpToLhsEventMap
   where
     lastParam = case lhs of
       [] -> error "makeResultEdit given empty LHS"
