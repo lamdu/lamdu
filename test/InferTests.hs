@@ -193,7 +193,6 @@ addImplicitCurriedApply2Test =
 
 uncurry2Test =
   testCase "uncurry2: \\params:{?->?->?, x:?, y:?} -> f x y   WV: \\a b c params:{f:?{a->b->c} x:?a y:?b} -> f x y : c" $
-  allowFailAssertion $
   inferWVAssertion (expr iset iset iset) wvExpr
   where
     iset = holeWithInferredType set

@@ -377,10 +377,14 @@ mergeExprs p0 p1 =
     mappendLens lens src =
       Lens.cloneLens lens <>~ src ^. Lens.cloneLens lens
     onMatch x y = return $ y `mergePayloadInto` x
+    mergePayloads s e =
+      e
+      & Expr.ePayload %~ mappendLens rplRestrictedPoly s
+      & Lens.mapped %~ mappendLens rplSubstitutedArgs s
     onMismatch (Expr.Expression (Expr.BodyLeaf Expr.Hole) s0) e1 =
-      return $ (s0 `mergePayloadInto`) <$> e1
+      return $ mergePayloads s0 e1
     onMismatch e0 (Expr.Expression (Expr.BodyLeaf Expr.Hole) s1) =
-      return $ (s1 `mergePayloadInto`) <$> e0
+      return $ mergePayloads s1 e0
     onMismatch e0 e1 =
       Either.left $ MismatchIn (void e0) (void e1)
 
