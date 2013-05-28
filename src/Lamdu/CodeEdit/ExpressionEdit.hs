@@ -120,8 +120,8 @@ makeEditor sExpr =
     notAHole $ GetVarEdit.make gv
   Sugar.BodyGetParams gp ->
     notAHole $ GetParamsEdit.make gp
-  Sugar.BodyLabeledApply la ->
-    notAHole $ LabeledApplyEdit.make la
+  Sugar.BodyLabeledApply hasParens la ->
+    notAHole $ LabeledApplyEdit.make hasParens la
   where
     isAHole hole =
       (fmap . fmap)

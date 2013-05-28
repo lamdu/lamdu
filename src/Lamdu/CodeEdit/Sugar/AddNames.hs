@@ -350,7 +350,7 @@ toBody (BodyLiteralInteger x) = pure $ BodyLiteralInteger x
 toBody (BodyAtom x)           = pure $ BodyAtom x
 --
 toBody (BodyLam hp x) = BodyLam hp <$> toLam x
-toBody (BodyLabeledApply x) = BodyLabeledApply <$> toLabeledApply x
+toBody (BodyLabeledApply hp x) = BodyLabeledApply hp <$> toLabeledApply x
 toBody (BodyHole x) = BodyHole <$> toHole x
 toBody (BodyInferred x) = BodyInferred <$> toInferred x
 toBody (BodyCollapsed x) = BodyCollapsed <$> toCollapsed x

@@ -86,7 +86,7 @@ convertLabeled funcS argS exprI = do
   guard $ numTags > 1
   guard $ numTags == Set.size (Set.fromList tagGuids)
   guard . isAtomicBody $ funcS ^. rBody
-  lift . SugarExpr.make exprI $ BodyLabeledApply LabeledApply
+  lift . SugarExpr.make exprI $ BodyLabeledApply DontHaveParens LabeledApply
     { _laFunc = SugarExpr.removeSuccessfulType funcS
     , _laArgs = args
     }

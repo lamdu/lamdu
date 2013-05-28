@@ -309,7 +309,7 @@ data Body name m expr
   = BodyApply   { _eHasParens :: HasParens, __eApply :: Expr.Apply expr }
   | BodySection { _eHasParens :: HasParens, __eSection :: Section expr }
   | BodyLam     { _eHasParens :: HasParens, __eLam :: Lam name m expr }
-  | BodyLabeledApply { __eApplyNamed :: LabeledApply name expr }
+  | BodyLabeledApply { _eHasParens :: HasParens, __eApplyNamed :: LabeledApply name expr }
   | BodyHole    { __eHole :: Hole name m }
   | BodyInferred { __eInferred :: Inferred name m expr }
   | BodyCollapsed { __eCollapsed :: Collapsed name m expr }

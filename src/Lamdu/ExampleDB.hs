@@ -92,8 +92,8 @@ createBuiltins =
       filterType =
         forAll "a" $ \a ->
         mkPiRecord
-        [ ("predicate", mkPi a bool)
-        , ("list", listOf a)
+        [ ("list", listOf a)
+        , ("predicate", mkPi a bool)
         ] $ listOf a
     makeWithType_ "Data.List.filter" filterType
     makeWithType_ "Data.List.takeWhile" filterType

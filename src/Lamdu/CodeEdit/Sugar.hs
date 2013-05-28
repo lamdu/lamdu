@@ -11,6 +11,9 @@ module Lamdu.CodeEdit.Sugar
     , giveAsArg, callWithArg, callWithNextArg
     , setToHole, replaceWithNewHole, cut, giveAsArgToOperator
   , Body(..)
+    , _BodyLam, _BodyApply, _BodySection, _BodyGetVar, _BodyHole
+    , _BodyInferred, _BodyCollapsed, _BodyLiteralInteger
+    , _BodyAtom, _BodyList, _BodyRecord, _BodyTag
   , Payload(..), plInferredTypes, plActions, plNextHole
   , ExpressionP(..)
     , rGuid, rBody, rPayload, rHiddenGuids, rPresugaredExpression
@@ -48,6 +51,7 @@ module Lamdu.CodeEdit.Sugar
   , loadConvertDefI
   , PrefixAction, emptyPrefixAction
   , SugarExpr.removeTypes
+  , SugarExpr.addApplyChildParens
   , Hole.holeResultHasHoles
   ) where
 
