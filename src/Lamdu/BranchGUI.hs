@@ -58,6 +58,20 @@ branchNameProp ::
   MonadA m => Branch (Tag m) -> Transaction.MkProperty m String
 branchNameProp = Transaction.assocDataRefDef "" "name" . Branch.guid
 
+globalEventMap :: Applicative f => Actions t f -> Widget.EventHandlers f
+globalEventMap actions = mconcat
+  [ Widget.keysEventMapMovesCursor Config.makeBranchKeys (E.Doc ["Branches", "New"]) .
+    fmap
+    (FocusDelegator.delegatingId .
+     WidgetIds.fromGuid . Branch.guid) $ makeBranch actions
+  , Widget.keysEventMapMovesCursor Config.jumpToBranchesKeys
+    (E.Doc ["Branches", "Select"]) $ pure currentBranchWidgetId
+  , undoEventMap $ mUndo actions
+  , redoEventMap $ mRedo actions
+  ]
+  where
+    currentBranchWidgetId = WidgetIds.fromGuid . Branch.guid $ currentBranch actions
+
 make ::
   (MonadA m, MonadA n) =>
   (forall a. Transaction n a -> m a) ->
@@ -71,19 +85,9 @@ make transaction size actions widget = do
     Config.selectedBranchColor Box.vertical
     WidgetIds.branchSelection
   return .
-    Widget.strongerEvents globalEventMap $
+    Widget.strongerEvents (globalEventMap actions) $
     Edges.makeVertical size widget branchSelector
   where
-    globalEventMap = mconcat
-      [ Widget.keysEventMapMovesCursor Config.makeBranchKeys (E.Doc ["Branches", "New"]) .
-        fmap
-        (FocusDelegator.delegatingId .
-         WidgetIds.fromGuid . Branch.guid) $ makeBranch actions
-      , Widget.keysEventMapMovesCursor Config.jumpToBranchesKeys
-        (E.Doc ["Branches", "Select"]) $ pure currentBranchWidgetId
-      , undoEventMap $ mUndo actions
-      , redoEventMap $ mRedo actions
-      ]
     makeBranchNameEdit branch = do
       let branchEditId = WidgetIds.fromGuid $ Branch.guid branch
       nameProp <-
@@ -105,8 +109,7 @@ make transaction size actions widget = do
       return
         ( branch
         , branchNameEdit
-          & Widget.wMaybeEnter . Lens.mapped . Lens.mapped .
+          & Widget.wMaybeEnter . Lens.traversed . Lens.mapped .
             Widget.enterResultEvent %~ (setBranch >>)
           & Widget.weakerEvents delEventMap
         )
-    currentBranchWidgetId = WidgetIds.fromGuid . Branch.guid $ currentBranch actions
