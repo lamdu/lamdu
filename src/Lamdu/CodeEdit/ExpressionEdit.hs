@@ -124,7 +124,7 @@ makeEditor parentPrecedence sExpr =
   Sugar.BodyGetParams gp ->
     notAHole $ GetParamsEdit.make gp
   Sugar.BodyLabeledApply la ->
-    notAHole $ LabeledApplyEdit.make parentPrecedence la
+    notAHole $ LabeledApplyEdit.make la
   where
     isAHole hole =
       (fmap . fmap)

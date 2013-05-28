@@ -22,11 +22,11 @@ import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.CodeEdit.ExpressionEdit.Parens as Parens
 import qualified Lamdu.CodeEdit.ExpressionEdit.TagEdit as TagEdit
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Expression as Expr
+import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetIds as WidgetIds
 
 data PresentationMode = OO | Verbose
@@ -51,58 +51,48 @@ getPresentationMode func =
     ExprGuiM.transaction . Transaction.getP $ assocPresentationMode guid
   Nothing -> return Verbose
 
-wrap ::
-  MonadA m => ExpressionGui.ParentPrecedence -> Sugar.ExpressionN m ->
-  (PresentationMode -> Widget.Id -> ExprGuiM m (ExpressionGui m)) ->
-  Widget.Id -> ExprGuiM m (ExpressionGui m)
-wrap parentPrecedence func f myId = do
-  presentationMode <- getPresentationMode func
-  let g = f presentationMode
-  case presentationMode of
-    Verbose -> g myId
-    OO ->
-      ExpressionGui.wrapParenify parentPrecedence (ExpressionGui.MyPrecedence 10)
-      Parens.addHighlightedTextParens g myId
-
 make ::
   MonadA m =>
-  ExpressionGui.ParentPrecedence ->
   Sugar.LabeledApply Sugar.Name (Sugar.ExpressionN m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-make parentPrecedence (Sugar.LabeledApply func args) =
-  wrap parentPrecedence func $ \presentationMode myId ->
-  ExprGuiM.assignCursor myId (WidgetIds.fromGuid (func ^. Sugar.rGuid)) $ do
-    funcEdit <- ExprGuiM.makeSubexpresion 10 func
-    let
-      makeArg (tagG, namedArgExpr) = do
-        let tagGuid = tagG ^. Sugar.tagGuid
-        argTagEdit <-
-          TagEdit.makeView tagG .
-          Widget.toAnimId . mappend myId $
-          WidgetIds.fromGuid tagGuid
-        argValEdit <- ExprGuiM.makeSubexpresion 0 namedArgExpr
-        pure $ ExpressionGui.makeRow
-          [ (0, scaleTag argTagEdit)
-          , (0.5, space)
-          , (0, argValEdit)
-          ]
-    argEdits <-
-      traverse makeArg $
-      case presentationMode of
-      Verbose -> args
-      OO -> tail args
-    let
-      argEditsGrid = Grid.toWidget $ Grid.make argEdits
-    topEdit <-
-      case presentationMode of
-      Verbose -> return funcEdit
-      OO ->
-        case args of
-        (_, firstArg) : _ -> do
-          firstArgEdit <- ExprGuiM.makeSubexpresion 11 firstArg
-          return $ ExpressionGui.hboxSpaced [funcEdit, firstArgEdit]
-        _ -> error "LabeledApplyEdit must take arg list of at least 2 elements"
-    pure $ ExpressionGui.addBelow 0 [(0, argEditsGrid)] topEdit
+make (Sugar.LabeledApply func args) =
+  ExpressionGui.wrapExpression $ \myId -> do
+    presentationMode <- getPresentationMode func
+    ExprGuiM.assignCursor myId (WidgetIds.fromGuid (func ^. Sugar.rGuid)) $ do
+      funcEdit <- ExprGuiM.makeSubexpresion 10 func
+      let
+        makeArg (tagG, namedArgExpr) = do
+          let tagGuid = tagG ^. Sugar.tagGuid
+          argTagEdit <-
+            TagEdit.makeView tagG .
+            Widget.toAnimId . mappend myId $
+            WidgetIds.fromGuid tagGuid
+          argValEdit <- ExprGuiM.makeSubexpresion 0 namedArgExpr
+          pure $ ExpressionGui.makeRow
+            [ (0, scaleTag argTagEdit)
+            , (0.5, space)
+            , (0, argValEdit)
+            ]
+      argEdits <-
+        traverse makeArg $
+        case presentationMode of
+        Verbose -> args
+        OO -> tail args
+      let
+        argEditsGrid = Grid.toWidget $ Grid.make argEdits
+      topEdit <-
+        case presentationMode of
+        Verbose -> return funcEdit
+        OO ->
+          case args of
+          (_, firstArg) : _ -> do
+            firstArgEdit <- ExprGuiM.makeSubexpresion 11 firstArg
+            return $ ExpressionGui.hboxSpaced [funcEdit, firstArgEdit]
+          _ -> error "LabeledApplyEdit must take arg list of at least 2 elements"
+      pure .
+        ExpressionGui.withBgColor Layers.labeledApplyBG
+        Config.labeledApplyBGColor (Widget.toAnimId myId ++ ["bg"]) $
+        ExpressionGui.addBelow 0 [(0, argEditsGrid)] topEdit
   where
     space = ExpressionGui.fromValueWidget BWidgets.stdSpaceWidget
     scaleTag = ExpressionGui.egWidget %~ Widget.scale Config.fieldTagScale

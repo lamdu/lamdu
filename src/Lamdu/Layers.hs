@@ -7,10 +7,10 @@ cursorBG = 25
 inactiveHole = 26
 types = 27
 polymorphicCompactBG = 28
+choiceBG = 30
 activeHoleBG = 31
 nameCollisionBG = 32
-parensHighlightBG = 33
-polymorphicExpandedBG = 34
+labeledApplyBG = 33
+parensHighlightBG = 34
+polymorphicExpandedBG = 35
 activePane = 40
-
-choiceBG = 30

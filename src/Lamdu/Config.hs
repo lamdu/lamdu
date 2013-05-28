@@ -3,11 +3,11 @@
 
 module Lamdu.Config where
 
-import qualified Lamdu.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import qualified Lamdu.WidgetIds as WidgetIds
 
 -- TODO: Oops, we don't want to export these:
 mk = E.ModKey
@@ -203,3 +203,5 @@ recordAddFieldKeys = [k 'a', noMods E.KeySpace]
 
 presentationChoiceScaleFactor = 0.4
 presentationChoiceColor = Draw.Color 0.4 0.4 0.4 1
+
+labeledApplyBGColor = Draw.Color 1 1 1 0.07
