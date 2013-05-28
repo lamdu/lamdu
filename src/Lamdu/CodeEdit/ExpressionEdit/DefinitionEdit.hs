@@ -120,12 +120,10 @@ makeParts name guid content = do
         Widget.weakerEvents rhsJumperEquals .
         Lens.over Widget.wEventMap (E.filterSChars (curry (/= ('=', E.NotShifted))))
       | otherwise = id
-  (depParamsEdits, paramsEdits, (wheres, bodyEdit)) <-
-    makeNestedParams
-    jumpToRHSViaEquals rhs myId depParams params $
-    (,)
-    <$> makeWheres (Sugar.dWhereItems content) myId
-    <*> makeResultEdit lhs body
+  (depParamsEdits, paramsEdits) <-
+    makeNestedParams jumpToRHSViaEquals rhs myId depParams params
+  wheres <- makeWheres (Sugar.dWhereItems content) myId
+  bodyEdit <- makeResultEdit lhs body
   rhsJumper <- jumpToRHS Config.jumpLHStoRHSKeys rhs
   let nameEditEventMap = mappend addFirstParamEventMap rhsJumper
   polyNameEdit <-
@@ -333,9 +331,8 @@ makeNestedParams ::
  -> Widget.Id
  -> [Sugar.FuncParam Sugar.Name m (Sugar.ExpressionN m)]
  -> [Sugar.FuncParam Sugar.Name m (Sugar.ExpressionN m)]
- -> ExprGuiM m a
- -> ExprGuiM m ([ExpressionGui m], [ExpressionGui m], a)
-makeNestedParams atParamWidgets rhs firstParId depParams params mkResultEdit = do
+ -> ExprGuiM m ([ExpressionGui m], [ExpressionGui m])
+makeNestedParams atParamWidgets rhs firstParId depParams params = do
   rhsJumper <- jumpToRHS Config.jumpLHStoRHSKeys rhs
   let
     (depParamIds, paramIds) = addPrevIds firstParId depParams params
@@ -344,7 +341,6 @@ makeNestedParams atParamWidgets rhs firstParId depParams params mkResultEdit = d
        (atParamWidgets (param ^. Sugar.fpName) .
         Widget.weakerEvents rhsJumper)) <$>
       LambdaEdit.makeParamEdit prevId param
-  (,,)
+  (,)
     <$> traverse mkParam depParamIds
     <*> traverse mkParam paramIds
-    <*> mkResultEdit
