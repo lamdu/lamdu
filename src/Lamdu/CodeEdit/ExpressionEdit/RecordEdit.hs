@@ -10,7 +10,6 @@ import Data.Vector.Vector2 (Vector2(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import qualified Control.Lens as Lens
-import qualified Data.ByteString.Char8 as BS8
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -33,16 +32,17 @@ makeUnwrapped ::
   MonadA m =>
   Sugar.Record m (Sugar.ExpressionN m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeUnwrapped (Sugar.Record k (Sugar.FieldList fields mAddField)) myId =
-  ExprGuiM.assignCursor myId (bracketId "{") $ do
+  ExprGuiM.assignCursor myId bracketId $ do
     fieldRows <- mapM makeFieldRow fields
     let fieldsWidget = Grid.toWidget $ Grid.make fieldRows
     let
-      mkBracketWidget text =
+      mkBracketView text =
         ExprGuiM.withFgColor (parensColor k) . ExprGuiM.widgetEnv .
-        BWidgets.makeFocusableTextView text $
-        bracketId $ BS8.pack text
-    openBracketWidget <- mkBracketWidget "{"
-    closeBracketWidget <- mkBracketWidget "}"
+        BWidgets.makeLabel text $ Widget.toAnimId myId
+    openBracketWidget <-
+      ExprGuiM.widgetEnv . BWidgets.makeFocusableView bracketId =<<
+      mkBracketView "{"
+    closeBracketWidget <- mkBracketView "}"
     let
       height = Widget.wSize . Lens._2
       fieldsHeight = fieldsWidget ^. height
@@ -59,7 +59,7 @@ makeUnwrapped (Sugar.Record k (Sugar.FieldList fields mAddField)) myId =
   where
     parensColor Sugar.Type = Config.recordTypeParensColor
     parensColor Sugar.Val = Config.recordValParensColor
-    bracketId text = Widget.joinId myId [text]
+    bracketId = Widget.joinId myId ["{"]
     makeFieldRow (Sugar.RecordField mItemActions tagExpr fieldExpr) = do
       ((fieldRefGui, fieldExprGui), resultPickers) <-
         ExprGuiM.listenResultPickers $
