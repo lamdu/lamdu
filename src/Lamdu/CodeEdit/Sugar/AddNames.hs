@@ -238,28 +238,18 @@ withFuncParam isDep fp@FuncParam{..} = CPS $ \k -> do
     , res
     )
 
-toFunc ::
+toLam ::
   (MonadA tm, MonadNaming m) =>
-  Func (OldName m) tm (Expression (OldName m) tm) ->
-  m (Func (NewName m) tm (Expression (NewName m) tm))
-toFunc func@Func {..} = do
-  (depParams, (params, body)) <-
-    runCPS (traverse (withFuncParam NameGen.Dependent) _fDepParams) .
-    runCPS (traverse (withFuncParam NameGen.Independent) _fParams) $
-    toExpression _fBody
-  pure func
-    { _fDepParams = depParams
-    , _fParams = params
-    , _fBody = body
-    }
-
-toPi ::
-  (MonadA tm, MonadNaming m) =>
-  Pi (OldName m) tm (Expression (OldName m) tm) ->
-  m (Pi (NewName m) tm (Expression (NewName m) tm))
-toPi pi@Pi {..} = do
-  (param, resultType) <- runCPS (withFuncParam NameGen.Dependent pParam) $ toExpression pResultType
-  pure pi { pParam = param, pResultType = resultType }
+  Lam (OldName m) tm (Expression (OldName m) tm) ->
+  m (Lam (NewName m) tm (Expression (NewName m) tm))
+toLam lam@Lam {..} = do
+  (param, resultType) <- runCPS (withFuncParam isDep _lParam) $ toExpression _lResultType
+  pure lam { _lParam = param, _lResultType = resultType }
+  where
+    isDep =
+      case _lKind of
+      Val | not _lIsDep -> NameGen.Independent
+      _ -> NameGen.Dependent
 
 toScope :: MonadNaming m => Scope (OldName m) tm -> m (Scope (NewName m) tm)
 toScope (Scope l g t p) =
@@ -359,8 +349,7 @@ toBody (BodyGetField x)       = traverseToExpr BodyGetField x
 toBody (BodyLiteralInteger x) = pure $ BodyLiteralInteger x
 toBody (BodyAtom x)           = pure $ BodyAtom x
 --
-toBody (BodyFunc hp x) = BodyFunc hp <$> toFunc x
-toBody (BodyPi hp x) = BodyPi hp <$> toPi x
+toBody (BodyLam hp x) = BodyLam hp <$> toLam x
 toBody (BodyLabeledApply x) = BodyLabeledApply <$> toLabeledApply x
 toBody (BodyHole x) = BodyHole <$> toHole x
 toBody (BodyInferred x) = BodyInferred <$> toInferred x

@@ -26,10 +26,9 @@ module Lamdu.CodeEdit.Sugar
   , GetVar(..), gvIdentifier, gvName, gvJumpTo, gvVarType
   , GetParams(..), gpDefGuid, gpDefName, gpJumpTo
   , LabeledApply(..), laFunc, laArgs
-  , Func(..)
+  , Lam(..), lKind, lParam, lIsDep, lResultType
   , FuncParamType(..)
   , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpHiddenLambdaGuid, fpType, fpMActions
-  , Pi(..)
   , Section(..)
   , Hole(..), holeScope, holeMActions
   , HoleResultSeed(..)
@@ -207,40 +206,21 @@ convertPositionalLambda lam lamExprI = do
   result <- SugarM.convertSubexpression (lam ^. Expr.lambdaResult)
   return (param & fpType %~ SugarExpr.setNextHole result, result)
 
-fAllParams :: Func MStoredName m expr -> [FuncParam MStoredName m expr]
-fAllParams (Func depParams params _) = depParams ++ params
-
-convertFunc ::
-  (MonadA m, Typeable1 m) => Expr.Lambda (SugarInfer.ExprMM m) ->
-  Convertor m
-convertFunc lambda lamExprI = do
-  (param, sBody) <- convertPositionalLambda lambda lamExprI
-  let
-    innerFunc =
-      case sBody ^. rBody of
-      BodyFunc _ func -> func
-      _ -> Func [] [] sBody
-    mNextParam = listToMaybe $ fAllParams innerFunc
-    newParam = maybe id deleteToNextParam mNextParam param
-    newFunc
-      | SugarInfer.isPolymorphicFunc lamExprI = innerFunc & fDepParams %~ (newParam :)
-      | otherwise = Func [] (newParam : fAllParams innerFunc) $ innerFunc ^. fBody
-  SugarExpr.make lamExprI $ BodyFunc DontHaveParens newFunc
-  where
-    deleteToNextParam nextParam =
-      Lens.set
-      (fpMActions . Lens.mapped . fpListItemActions .
-       itemDelete . Lens.sets fmap) $
-      nextParam ^. fpId
-
-convertPi :: (MonadA m, Typeable1 m) => Expr.Lambda (SugarInfer.ExprMM m) -> Convertor m
-convertPi lambda exprI = do
+convertLam :: (MonadA m, Typeable1 m) => Expr.Lambda (SugarInfer.ExprMM m) -> Convertor m
+convertLam lambda@(Expr.Lambda k paramGuid _paramType result) exprI = do
   (param, sBody) <- convertPositionalLambda lambda exprI
-  SugarExpr.make exprI $ BodyPi DontHaveParens
-    Pi
-    { pParam = Lens.over fpType SugarExpr.addApplyChildParens param
-    , pResultType = SugarExpr.removeSuccessfulType sBody
+  SugarExpr.make exprI $ BodyLam DontHaveParens
+    Lam
+    { _lParam = Lens.over fpType SugarExpr.addApplyChildParens param
+    , _lResultType = SugarExpr.removeSuccessfulType sBody
+    , _lKind = k
+    , _lIsDep = isDep
     }
+  where
+    isDep =
+      case k of
+      Val -> SugarInfer.isPolymorphicFunc exprI
+      Type -> ExprUtil.exprHasGetVar paramGuid result
 
 convertParameterRef :: (MonadA m, Typeable1 m) => Guid -> Convertor m
 convertParameterRef parGuid exprI = do
@@ -465,8 +445,7 @@ convertExpressionI ::
 convertExpressionI ee =
   ($ ee) $
   case ee ^. Expr.eBody of
-  Expr.BodyLam x@(Expr.Lambda Val _ _ _) -> convertFunc x
-  Expr.BodyLam x@(Expr.Lambda Type _ _ _) -> convertPi x
+  Expr.BodyLam x -> convertLam x
   Expr.BodyApply x -> Apply.convert x
   Expr.BodyRecord x -> convertRecord x
   Expr.BodyGetField x -> convertGetField x

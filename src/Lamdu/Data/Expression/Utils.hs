@@ -18,7 +18,7 @@ module Lamdu.Data.Expression.Utils
   , randomizeParamIdsG, NameGen(..), randomNameGen, debugNameGen
   , matchBody, matchExpression
   , subExpressions, subExpressionsWithoutTags
-  , isDependentPi
+  , isDependentPi, exprHasGetVar
   , curriedFuncArguments
   , applyForms, applyDependentPis
   , alphaEq

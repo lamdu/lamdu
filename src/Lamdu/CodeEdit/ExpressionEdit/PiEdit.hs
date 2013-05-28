@@ -11,7 +11,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
+import qualified Lamdu.CodeEdit.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.Parens as Parens
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
@@ -22,15 +22,15 @@ import qualified Lamdu.WidgetIds as WidgetIds
 make
   :: MonadA m
   => Sugar.HasParens
-  -> Sugar.Pi Sugar.Name m (Sugar.ExpressionN m)
+  -> Sugar.Lam Sugar.Name m (Sugar.ExpressionN m)
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
-make hasParens (Sugar.Pi param resultType) =
+make hasParens (Sugar.Lam _ param _isDep resultType) =
   ExpressionGui.wrapParenify hasParens Parens.addHighlightedTextParens $ \myId ->
   ExprGuiM.assignCursor myId typeId $ do
     (resultTypeEdit, usedVars) <-
       ExprGuiM.listenUsedVariables $
-      FuncEdit.makeResultEdit [paramId] resultType
+      LambdaEdit.makeResultEdit [paramId] resultType
     let
       paramUsed = paramGuid `elem` usedVars
       redirectCursor cursor
@@ -44,7 +44,7 @@ make hasParens (Sugar.Pi param resultType) =
       paramEdit <-
         if paramUsed
         then do
-          paramNameEdit <- FuncEdit.makeParamNameEdit name paramGuid paramId
+          paramNameEdit <- LambdaEdit.makeParamNameEdit name paramGuid paramId
           colonLabel <- ExprGuiM.widgetEnv . BWidgets.makeLabel ":" $ Widget.toAnimId paramId
           return $ ExpressionGui.hbox
             [ ExpressionGui.fromValueWidget paramNameEdit

@@ -22,7 +22,7 @@ import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
+import qualified Lamdu.CodeEdit.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Layers as Layers
@@ -113,7 +113,7 @@ makeParts
   -> ExprGuiM m ([ExpressionGui m], [Widget (T m)])
 makeParts name guid content = do
   equals <- makeEquals myId
-  rhsJumperEquals <- FuncEdit.jumpToRHS [E.ModKey E.noMods (E.charKey '=')] rhs
+  rhsJumperEquals <- LambdaEdit.jumpToRHS [E.ModKey E.noMods (E.charKey '=')] rhs
   let
     jumpToRHSViaEquals n
       | nonOperatorName n =
@@ -121,12 +121,12 @@ makeParts name guid content = do
         Lens.over Widget.wEventMap (E.filterSChars (curry (/= ('=', E.NotShifted))))
       | otherwise = id
   (depParamsEdits, paramsEdits, (wheres, bodyEdit)) <-
-    FuncEdit.makeNestedParams
+    LambdaEdit.makeNestedParams
     jumpToRHSViaEquals rhs myId depParams params $
     (,)
     <$> makeWheres (Sugar.dWhereItems content) myId
-    <*> FuncEdit.makeResultEdit lhs body
-  rhsJumper <- FuncEdit.jumpToRHS Config.jumpLHStoRHSKeys rhs
+    <*> LambdaEdit.makeResultEdit lhs body
+  rhsJumper <- LambdaEdit.jumpToRHS Config.jumpLHStoRHSKeys rhs
   let nameEditEventMap = mappend addFirstParamEventMap rhsJumper
   polyNameEdit <-
     Lens.over ExpressionGui.egWidget

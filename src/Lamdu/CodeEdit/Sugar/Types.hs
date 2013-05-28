@@ -12,11 +12,9 @@ module Lamdu.CodeEdit.Sugar.Types
     , giveAsArg, callWithArg, callWithNextArg
     , setToHole, replaceWithNewHole, cut, giveAsArgToOperator
   , Body(..), eHasParens
-    , _BodyPi, _BodyApply, _BodySection
-    , _BodyFunc, _BodyGetVar, _BodyHole
-    , _BodyInferred, _BodyCollapsed
-    , _BodyLiteralInteger, _BodyAtom
-    , _BodyList, _BodyRecord, _BodyTag
+    , _BodyLam, _BodyApply, _BodySection, _BodyGetVar, _BodyHole
+    , _BodyInferred, _BodyCollapsed, _BodyLiteralInteger
+    , _BodyAtom, _BodyList, _BodyRecord, _BodyTag
   , Payload(..), plInferredTypes, plActions, plNextHole
   , ExpressionP(..)
     , rGuid, rBody, rPayload, rHiddenGuids, rPresugaredExpression
@@ -35,11 +33,10 @@ module Lamdu.CodeEdit.Sugar.Types
   , GetVar(..), gvIdentifier, gvName, gvJumpTo, gvVarType
   , GetParams(..), gpDefGuid, gpDefName, gpJumpTo
   , LabeledApply(..), laFunc, laArgs
-  , Func(..), fDepParams, fParams, fBody
+  , Lam(..), lKind, lParam, lIsDep, lResultType
   , FuncParamType(..)
   , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpHiddenLambdaGuid, fpType, fpMActions
   , TagG(..), tagName, tagGuid
-  , Pi(..)
   , Section(..)
   , Hole(..), holeMActions
   , HoleResultSeed(..)
@@ -169,16 +166,11 @@ data FuncParam name m expr = FuncParam
   , _fpMActions :: Maybe (FuncParamActions name m)
   } deriving (Functor, Foldable, Traversable)
 
--- Multi-param Lambda
-data Func name m expr = Func
-  { _fDepParams :: [FuncParam name m expr]
-  , _fParams :: [FuncParam name m expr]
-  , _fBody :: expr
-  } deriving (Functor, Foldable, Traversable)
-
-data Pi name m expr = Pi
-  { pParam :: FuncParam name m expr
-  , pResultType :: expr
+data Lam name m expr = Lam
+  { _lKind :: Kind
+  , _lParam :: FuncParam name m expr
+  , _lIsDep :: Bool
+  , _lResultType :: expr
   } deriving (Functor, Foldable, Traversable)
 
 -- Infix Sections include: (+), (1+), (+1), (1+2). Last is really just
@@ -311,8 +303,7 @@ data LabeledApply name expr = LabeledApply
 data Body name m expr
   = BodyApply   { _eHasParens :: HasParens, __eApply :: Expr.Apply expr }
   | BodySection { _eHasParens :: HasParens, __eSection :: Section expr }
-  | BodyFunc    { _eHasParens :: HasParens, __eFunc :: Func name m expr }
-  | BodyPi      { _eHasParens :: HasParens, __ePi :: Pi name m expr }
+  | BodyLam     { _eHasParens :: HasParens, __eLam :: Lam name m expr }
   | BodyLabeledApply { __eApplyNamed :: LabeledApply name expr }
   | BodyHole    { __eHole :: Hole name m }
   | BodyInferred { __eInferred :: Inferred name m expr }
@@ -336,19 +327,16 @@ instance Show expr => Show (FuncParam name m expr) where
     concat ["(", show (_fpGuid fp), ":", show (_fpType fp), ")"]
 
 instance Show expr => Show (Body name m expr) where
-  show BodyApply   { _eHasParens = hasParens, __eApply = Expr.Apply func arg } =
+  show BodyApply { _eHasParens = hasParens, __eApply = Expr.Apply func arg } =
     wrapParens hasParens $ show func ++ " " ++ show arg
   show BodySection { _eHasParens = hasParens, __eSection = Section mleft op mright } =
     wrapParens hasParens $ maybe "" show mleft ++ " " ++ show op ++ maybe "" show mright
-  show BodyFunc    { _eHasParens = hasParens, __eFunc = Func depParams params body } =
-    wrapParens hasParens $ concat
-    ["\\", parenify (showWords depParams), showWords params, " -> ", show body]
+  show BodyLam { _eHasParens = _hasParens, __eLam = Lam Val _paramType _isDep _body } = "TODO:Lam"
+  show BodyLam { _eHasParens = hasParens, __eLam = Lam Type paramType isDep resultType } =
+    wrapParens hasParens $ paramName ++ show paramType ++ " -> " ++ show resultType
     where
-      parenify "" = ""
-      parenify xs = concat ["{", xs, "}"]
-      showWords = unwords . map show
-  show BodyPi      { _eHasParens = hasParens, __ePi = Pi paramType resultType } =
-    wrapParens hasParens $ "_:" ++ show paramType ++ " -> " ++ show resultType
+      paramName | isDep = "_:"
+                | otherwise = ""
   show BodyHole {} = "Hole"
   show BodyInferred {} = "Inferred"
   show BodyCollapsed {} = "Collapsed"
@@ -422,7 +410,7 @@ LensTH.makeLenses ''Definition
 LensTH.makeLenses ''DefinitionExpression
 LensTH.makeLenses ''Inferred
 LensTH.makeLenses ''Collapsed
-LensTH.makeLenses ''Func
+LensTH.makeLenses ''Lam
 LensTH.makeLenses ''FuncParam
 LensTH.makeLenses ''RecordField
 LensTH.makeLenses ''FieldList

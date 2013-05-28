@@ -21,7 +21,7 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.AtomEdit as AtomEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.CollapsedEdit as CollapsedEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.CodeEdit.ExpressionEdit.FuncEdit as FuncEdit
+import qualified Lamdu.CodeEdit.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.GetFieldEdit as GetFieldEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.GetParamsEdit as GetParamsEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.GetVarEdit as GetVarEdit
@@ -94,14 +94,14 @@ makeEditor sExpr =
     isAHole (i ^. Sugar.iHole) . InferredEdit.make i $ sExpr ^. Sugar.rGuid
   Sugar.BodyHole hole ->
     isAHole hole . HoleEdit.make hole mNextHole $ sExpr ^. Sugar.rGuid
-  Sugar.BodyFunc hasParens f ->
-    notAHole $ FuncEdit.make hasParens f
   Sugar.BodyCollapsed poly ->
     notAHole $ CollapsedEdit.make poly
   Sugar.BodyApply hasParens apply ->
     notAHole $ ApplyEdit.make hasParens apply
-  Sugar.BodyPi hasParens funcType ->
-    notAHole $ PiEdit.make hasParens funcType
+  Sugar.BodyLam hasParens lam@(Sugar.Lam Sugar.Type _ _ _) ->
+    notAHole $ PiEdit.make hasParens lam
+  Sugar.BodyLam hasParens lam@(Sugar.Lam Sugar.Val _ _ _) ->
+    notAHole $ LambdaEdit.make hasParens lam
   Sugar.BodySection hasParens section ->
     notAHole $ SectionEdit.make hasParens section
   Sugar.BodyLiteralInteger integer ->

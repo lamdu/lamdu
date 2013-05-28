@@ -1,8 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Lamdu.CodeEdit.ExpressionEdit.FuncEdit
-  ( make, makeParamNameEdit, jumpToRHS, makeResultEdit
-  , makeNestedParams, makeParamsAndResultEdit
+module Lamdu.CodeEdit.ExpressionEdit.LambdaEdit
+  ( make, makeParamNameEdit
+  -- TODO: Move to DefinitionEdit, rename w/out nested:
+  , makeNestedParams, makeResultEdit, jumpToRHS
   ) where
 
 import Control.Applicative ((<$), (<$>), Applicative(..))
@@ -66,12 +67,12 @@ compose = foldr (.) id
 -- exported for use in definition sugaring.
 makeParamEdit ::
   MonadA m =>
-  Widget.Id -> Settings.InfoMode ->
+  Widget.Id ->
   Sugar.FuncParam Sugar.Name m (Sugar.ExpressionN m) ->
   ExprGuiM m (ExpressionGui m)
-makeParamEdit prevId infoMode param =
-  (Lens.mapped . ExpressionGui.egWidget %~
-   Widget.weakerEvents paramEventMap) . assignCursor $ do
+makeParamEdit prevId param =
+  (Lens.mapped . ExpressionGui.egWidget %~ Widget.weakerEvents paramEventMap) . assignCursor $ do
+    infoMode <- (^. Settings.sInfoMode) <$> ExprGuiM.readSettings
     paramTypeEdit <- ExprGuiM.makeSubexpresion $ param ^. Sugar.fpType
     paramNameEdit <- makeParamNameEdit name (param ^. Sugar.fpGuid) myId
     let typeWidget = paramTypeEdit ^. ExpressionGui.egWidget
@@ -130,17 +131,6 @@ makeResultEdit lhs result = do
       [] -> error "makeResultEdit given empty LHS"
       xs -> last xs
 
-makeParamsAndResultEdit ::
-  MonadA m =>
-  (Sugar.Name -> Widget (T m) -> Widget (T m)) ->
-  [Widget.Id] -> (String, Sugar.ExpressionN m) -> Widget.Id ->
-  [Sugar.FuncParam Sugar.Name m (Sugar.ExpressionN m)] ->
-  [Sugar.FuncParam Sugar.Name m (Sugar.ExpressionN m)] ->
-  ExprGuiM m ([ExpressionGui m], [ExpressionGui m], ExpressionGui m)
-makeParamsAndResultEdit atParamWidgets lhs rhs firstParId depParams params =
-  makeNestedParams atParamWidgets rhs firstParId depParams params .
-  makeResultEdit lhs $ snd rhs
-
 makeNestedParams ::
   MonadA m =>
   (Sugar.Name -> Widget (T m) -> Widget (T m))
@@ -151,7 +141,6 @@ makeNestedParams ::
  -> ExprGuiM m a
  -> ExprGuiM m ([ExpressionGui m], [ExpressionGui m], a)
 makeNestedParams atParamWidgets rhs firstParId depParams params mkResultEdit = do
-  infoMode <- fmap (Lens.view Settings.sInfoMode) ExprGuiM.readSettings
   rhsJumper <- jumpToRHS Config.jumpLHStoRHSKeys rhs
   let
     (depParamIds, paramIds) = addPrevIds firstParId depParams params
@@ -159,7 +148,7 @@ makeNestedParams atParamWidgets rhs firstParId depParams params mkResultEdit = d
       (ExpressionGui.egWidget %~
        (atParamWidgets (param ^. Sugar.fpName) .
         Widget.weakerEvents rhsJumper)) <$>
-      makeParamEdit prevId infoMode param
+      makeParamEdit prevId param
   (,,)
     <$> traverse mkParam depParamIds
     <*> traverse mkParam paramIds
@@ -184,26 +173,23 @@ addPrevIds firstParId depParams params =
 make
   :: MonadA m
   => Sugar.HasParens
-  -> Sugar.Func Sugar.Name m (Sugar.ExpressionN m)
+  -> Sugar.Lam Sugar.Name m (Sugar.ExpressionN m)
   -> Widget.Id
   -> ExprGuiM m (ExpressionGui m)
-make hasParens (Sugar.Func depParams params body) =
+make hasParens (Sugar.Lam _ param _ body) =
   ExpressionGui.wrapParenify hasParens Parens.addHighlightedTextParens $ \myId ->
   ExprGuiM.assignCursor myId bodyId $ do
     lambdaLabel <-
       ExpressionGui.makeColoredLabel Config.lambdaTextSize Config.lambdaColor "λ" myId
-    rightArrowLabel <-
-      ExpressionGui.makeColoredLabel Config.rightArrowTextSize Config.rightArrowColor "→" myId
-    (depParamsEdits, paramsEdits, bodyEdit) <-
-      makeParamsAndResultEdit (const id) lhs ("Func Body", body) myId depParams params
-    return . ExpressionGui.hboxSpaced $
-      concat
-      [ [ExpressionGui.fromValueWidget lambdaLabel]
-      , depParamsEdits
-      , paramsEdits
-      , [ ExpressionGui.fromValueWidget rightArrowLabel, bodyEdit ]
+    paramEdit <- makeParamEdit bodyId param
+    dotLabel <-
+      ExpressionGui.makeColoredLabel Config.rightArrowTextSize Config.rightArrowColor ". " myId
+    bodyEdit <- ExprGuiM.makeSubexpresion body
+    return $ ExpressionGui.hbox
+      [ ExpressionGui.fromValueWidget lambdaLabel
+      , paramEdit
+      , ExpressionGui.fromValueWidget dotLabel
+      , bodyEdit
       ]
   where
-    allParams = depParams ++ params
     bodyId = WidgetIds.fromGuid $ body ^. Sugar.rGuid
-    lhs = map (WidgetIds.fromGuid . Lens.view Sugar.fpId) allParams
