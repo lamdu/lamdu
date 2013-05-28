@@ -40,8 +40,8 @@ simplifyDef =
 canonizeInferred ::
   Expression def0 (Expression def1 a, Expression def2 b) ->
   Expression def0 (Expression def1 a, Expression def2 b)
-canonizeInferred expr =
-  ExprUtil.randomizeParamIdsG ExprUtil.debugNameGen Map.empty canonizePayload expr
+canonizeInferred =
+  ExprUtil.randomizeParamIdsG ExprUtil.debugNameGen Map.empty canonizePayload
   where
     canonizePayload gen guidMap (ival, ityp) =
       ( ExprUtil.randomizeParamIdsG gen1 guidMap (\_ _ x -> x) ival

@@ -171,7 +171,7 @@ kindedRecordFields ::
   Kind -> Lens.Prism' (Record a) [(a, a)]
 kindedRecordFields k0 = Lens.prism' to from
   where
-    to fields = Record k0 fields
+    to = Record k0
     from (Record k1 fields)
       | k0 == k1 = Just fields
       | otherwise = Nothing

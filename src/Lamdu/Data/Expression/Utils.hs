@@ -109,7 +109,7 @@ substGetPar from =
   subst (ExprLens.exprParameterRef . Lens.filtered (== from))
 
 subst ::
-  (Lens.Getting Any (Expression def a) b) ->
+  Lens.Getting Any (Expression def a) b ->
   Expression def a ->
   Expression def a ->
   Expression def a
@@ -296,7 +296,7 @@ pureIntegerType :: Expression def ()
 pureIntegerType = ExprLens.pureExpr . ExprLens.bodyIntegerType # ()
 
 pureLiteralInteger :: Integer -> Expression def ()
-pureLiteralInteger = (ExprLens.pureExpr . ExprLens.bodyLiteralInteger #)
+pureLiteralInteger = (ExprLens.pureExpr . ExprLens.bodyLiteralInteger # )
 
 pureApply :: Expression def () -> Expression def () -> Expression def ()
 pureApply f x = ExprLens.pureExpr . _BodyApply # Apply f x
@@ -320,7 +320,7 @@ pureGetField record field =
 
 -- TODO: Deprecate below here:
 pureExpression :: Body def (Expression def ()) -> Expression def ()
-pureExpression = (ExprLens.pureExpr #)
+pureExpression = (ExprLens.pureExpr # )
 
 makeApply :: expr -> expr -> Body def expr
 makeApply func arg = BodyApply $ Apply func arg
@@ -352,10 +352,10 @@ showsPrecBody mayDepend prec body =
     paren 0 $
     showChar '\\' . shows paramId . showChar ':' .
     showsPrec 11 paramType . showString "==>" .
-    showsPrec 0 result
+    shows result
   BodyLam (Lambda Type paramId paramType resultType) ->
     paren 0 $
-    paramStr . showString "->" . showsPrec 0 resultType
+    paramStr . showString "->" . shows resultType
     where
       paramStr
         | dependent =
@@ -371,7 +371,7 @@ showsPrecBody mayDepend prec body =
       recStr =
         concat ["Rec", recType k, "{", List.intercalate ", " (map showField fields), "}"]
       showField (field, typ) =
-        unwords [showsPrec 0 field "", sep k, showsPrec 0 typ ""]
+        unwords [show field, sep k, show typ]
       sep Val = "="
       sep Type = ":"
       recType Val = "V"

@@ -65,9 +65,10 @@ monomorphRedex =
   testInfer "foo = f (\\~ x -> (\\~ -> x) _) where f ~:(a:Set -> _ -> a) = _" $
   whereItem "f" (lambda "" fArgType (const hole)) $ \f ->
   f $$
-  (lambda "b" (asHole set) $ \b ->
+  lambda "b" (asHole set)
+  (\b ->
    lambda "x" (asHole b) $ \x ->
-   lambda "c" (holeWithInferredType set) (\_ -> x) $$ hole)
+   lambda "c" (holeWithInferredType set) (const x) $$ hole)
   where
     -- (a:Set -> _[=a] -> a)
     fArgType = piType "a" set $ \a -> asHole a --> a
