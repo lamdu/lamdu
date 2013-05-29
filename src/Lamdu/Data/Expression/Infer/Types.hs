@@ -3,10 +3,10 @@
 module Lamdu.Data.Expression.Infer.Types
   ( InferNode(..), Inferred(..)
   , IsRestrictedPoly(..)
-  , Origin, mkOrigin
+  , Origin, Origins, mkOrigin
   , ExprRef(..)
   , RefExpression, makeRefExpr
-  , RefExprPayload(..), rplOrigin, rplSubstitutedArgs, rplRestrictedPoly
+  , RefExprPayload(..), rplOrigins, rplSubstitutedArgs, rplRestrictedPoly
   , Scope, TypedValue(..)
   ) where
 
@@ -43,6 +43,7 @@ instance Show TypedValue where
 -- Not a newtype so that we can easily use IntSet/IntMap/etc.
 -- This is used to detect type cycles (infinite types)
 type Origin = Int
+type Origins = [Int]
 
 mkOrigin :: State Origin Origin
 mkOrigin = State.get <* State.modify (+1)
@@ -50,14 +51,14 @@ mkOrigin = State.get <* State.modify (+1)
 data RefExprPayload = RefExprPayload
   { _rplSubstitutedArgs :: !IntSet
   , _rplRestrictedPoly :: !Monoid.Any
-  , _rplOrigin :: {-# UNPACK #-}!Origin
+  , _rplOrigins :: !Origins
   } deriving (Show)
 LensTH.makeLenses ''RefExprPayload
 
 type RefExpression def = Expr.Expression def RefExprPayload
 
-makeRefExpr :: Origin -> Expr.Body def (RefExpression def) -> RefExpression def
-makeRefExpr g expr = Expr.Expression expr $ RefExprPayload mempty (Monoid.Any False) g
+makeRefExpr :: Expr.Body def (RefExpression def) -> RefExpression def
+makeRefExpr expr = Expr.Expression expr $ RefExprPayload mempty (Monoid.Any False) mempty
 
 -- Map from params to their Param type,
 -- also including the recursive ref to the definition.

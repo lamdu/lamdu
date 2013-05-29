@@ -53,6 +53,8 @@ import qualified Control.Monad.Trans.Either as Either
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Foldable as Foldable
 import qualified Data.IntSet as IntSet
+import qualified Data.List as List
+import qualified Data.List.Utils as ListUtils
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
@@ -174,7 +176,7 @@ fmap concat . sequence $
 toRefExpression :: Expr.Expression def () -> State Origin (RefExpression def)
 toRefExpression =
   traverse . const $
-  RefExprPayload mempty (Monoid.Any False) <$> mkOrigin
+  RefExprPayload mempty (Monoid.Any False) <$> pure []
 
 createRefExpr :: State (Context def) ExprRef
 createRefExpr = do
@@ -339,14 +341,8 @@ guardEither _ True = return ()
 
 originRepeat :: RefExpression def -> Bool
 originRepeat =
-  go Set.empty
-  where
-    go forbidden (Expr.Expression body pl)
-      | Set.member g forbidden = True
-      | otherwise =
-        Foldable.any (go (Set.insert g forbidden)) body
-      where
-        g = Lens.view rplOrigin pl
+  Lens.anyOf (Lens.traversed . rplOrigins)
+  (any (ListUtils.isLengthAtLeast 2) . List.group . List.sort)
 
 -- Merge two expressions:
 -- If they do not match, return Nothing.
