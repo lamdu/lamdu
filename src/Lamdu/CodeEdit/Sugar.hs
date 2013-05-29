@@ -11,7 +11,7 @@ module Lamdu.CodeEdit.Sugar
     , giveAsArg, callWithArg, callWithNextArg
     , setToHole, replaceWithNewHole, cut, giveAsArgToOperator
   , Body(..)
-    , _BodyLam, _BodyApply, _BodySection, _BodyGetVar, _BodyHole
+    , _BodyLam, _BodyApply, _BodyGetVar, _BodyHole
     , _BodyInferred, _BodyCollapsed, _BodyLiteralInteger
     , _BodyAtom, _BodyList, _BodyRecord, _BodyTag
   , Payload(..), plInferredTypes, plActions, plNextHole
@@ -32,7 +32,6 @@ module Lamdu.CodeEdit.Sugar
   , Lam(..), lKind, lParam, lIsDep, lResultType
   , FuncParamType(..)
   , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpHiddenLambdaGuid, fpType, fpMActions
-  , Section(..)
   , Hole(..), holeScope, holeMActions
   , HoleResultSeed(..)
   , ScopeItem
@@ -84,7 +83,6 @@ import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
-import qualified Lamdu.CodeEdit.Infix as Infix
 import qualified Lamdu.CodeEdit.Sugar.AddNames as AddNames
 import qualified Lamdu.CodeEdit.Sugar.Convert.Apply as Apply
 import qualified Lamdu.CodeEdit.Sugar.Convert.Hole as Hole
@@ -253,7 +251,6 @@ convertGetVariable ::
   (MonadA m, Typeable1 m) =>
   Expr.VariableRef (DefI (Tag m)) -> Convertor m
 convertGetVariable varRef exprI = do
-  isInfix <- SugarM.liftTransaction $ Infix.isInfixVar varRef
   cp <- (^. SugarM.scCodeAnchors) <$> SugarM.readContext
   getParExpr <-
     case varRef of
@@ -268,11 +265,7 @@ convertGetVariable varRef exprI = do
         , _gvJumpTo = jumpToDefI cp defI
         , _gvVarType = GetDefinition
         }
-  if isInfix
-    then
-      SugarExpr.make exprI .
-      BodySection $ Section Nothing (SugarExpr.removeInferredTypes getParExpr) Nothing
-    else return getParExpr
+  return getParExpr
 
 memoBy ::
   (Cache.Key k, Binary v, MonadA m) =>

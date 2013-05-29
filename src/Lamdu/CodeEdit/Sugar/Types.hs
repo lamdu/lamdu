@@ -12,7 +12,7 @@ module Lamdu.CodeEdit.Sugar.Types
     , giveAsArg, callWithArg, callWithNextArg
     , setToHole, replaceWithNewHole, cut, giveAsArgToOperator
   , Body(..)
-    , _BodyLam, _BodyApply, _BodySection, _BodyGetVar, _BodyHole
+    , _BodyLam, _BodyApply, _BodyGetVar, _BodyHole
     , _BodyInferred, _BodyCollapsed, _BodyLiteralInteger
     , _BodyAtom, _BodyList, _BodyRecord, _BodyTag
   , Payload(..), plInferredTypes, plActions, plNextHole
@@ -37,7 +37,6 @@ module Lamdu.CodeEdit.Sugar.Types
   , FuncParamType(..)
   , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpHiddenLambdaGuid, fpType, fpMActions
   , TagG(..), tagName, tagGuid
-  , Section(..)
   , Hole(..), holeMActions
   , HoleResultSeed(..)
   , ScopeItem
@@ -175,14 +174,6 @@ data Lam name m expr = Lam
   , _lResultType :: expr
   } deriving (Functor, Foldable, Traversable)
 
--- Infix Sections include: (+), (1+), (+1), (1+2). Last is really just
--- infix application, but considered an infix section too.
-data Section expr = Section
-  { sectionLArg :: Maybe expr
-  , sectionOp :: expr -- TODO: Always a Data.GetVariable, use a more specific type
-  , sectionRArg :: Maybe expr
-  } deriving (Functor, Foldable, Traversable)
-
 data HoleResult name m = HoleResult
   { _holeResultInferred :: ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))
   , _holeResultConverted :: Expression name m
@@ -306,7 +297,6 @@ data LabeledApply name expr = LabeledApply
 
 data Body name m expr
   = BodyApply (Expr.Apply expr)
-  | BodySection (Section expr)
   | BodyLam (Lam name m expr)
   | BodyLabeledApply (LabeledApply name expr)
   | BodyHole (Hole name m)
@@ -329,8 +319,6 @@ instance Show expr => Show (FuncParam name m expr) where
 instance Show expr => Show (Body name m expr) where
   show (BodyApply (Expr.Apply func arg)) =
     show func ++ " " ++ show arg
-  show (BodySection (Section mleft op mright)) =
-    maybe "" show mleft ++ " " ++ show op ++ maybe "" show mright
   show (BodyLam (Lam Val _paramType _isDep _body)) = "TODO:Lam"
   show (BodyLam (Lam Type paramType isDep resultType)) =
     paramName ++ show paramType ++ " -> " ++ show resultType

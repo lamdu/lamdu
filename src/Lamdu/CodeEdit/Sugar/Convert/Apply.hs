@@ -9,7 +9,6 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.MonadA (MonadA)
-import Data.Function (on)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Traversable (traverse)
@@ -47,7 +46,6 @@ convert app@(Expr.Apply funcI argI) exprI =
     argS <- lift $ SugarM.convertSubexpression argI
     justToLeft $ convertList app argS exprI
     funcS <- lift $ SugarM.convertSubexpression funcI
-    justToLeft $ expandSection funcS funcI argS exprI
     justToLeft $ convertLabeled funcS argS exprI
     lift $ convertPrefix funcS funcI argS exprI
 
@@ -90,24 +88,6 @@ convertLabeled funcS argS exprI = do
     { _laFunc = SugarExpr.removeSuccessfulType funcS
     , _laArgs = args
     }
-
-expandSection ::
-  (MonadA m, Typeable1 m) =>
-  ExpressionU m -> ExprMM m -> ExpressionU m -> ExprMM m ->
-  MaybeT (SugarM m) (ExpressionU m)
-expandSection funcS funcI argRef exprI = do
-  Section mLeft op Nothing <- maybeToMPlus $ funcS ^? rBody . _BodySection
-  lift $
-    SugarExpr.make exprI . BodySection =<<
-    case mLeft of
-    Nothing
-      | SugarInfer.isPolymorphicFunc funcI -> do
-        newOpRef <- convertPrefix op funcI argRef exprI
-        pure $ Section Nothing (SugarExpr.removeSuccessfulType newOpRef) Nothing
-      | otherwise ->
-        pure $ Section (Just argRef) op Nothing
-    Just left ->
-      pure $ on (Section . Just) (SugarExpr.setNextHole argRef) left op (Just argRef)
 
 makeCollapsed ::
   (MonadA m, Typeable1 m) =>

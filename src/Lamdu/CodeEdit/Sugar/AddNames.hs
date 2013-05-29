@@ -341,8 +341,7 @@ toBody ::
   (MonadA tm, MonadNaming m) =>
   Body (OldName m) tm (Expression (OldName m) tm) ->
   m (Body (NewName m) tm (Expression (NewName m) tm))
-toBody (BodyApply x)       = traverseToExpr BodyApply x
-toBody (BodySection x)     = traverseToExpr BodySection x
+toBody (BodyApply x)          = traverseToExpr BodyApply x
 toBody (BodyList x)           = traverseToExpr BodyList x
 toBody (BodyRecord x)         = traverseToExpr BodyRecord x
 toBody (BodyGetField x)       = traverseToExpr BodyGetField x

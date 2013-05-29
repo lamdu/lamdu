@@ -32,7 +32,6 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.ListEdit as ListEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.PiEdit as PiEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.RecordEdit as RecordEdit
-import qualified Lamdu.CodeEdit.ExpressionEdit.SectionEdit as SectionEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.TagEdit as TagEdit
 import qualified Lamdu.CodeEdit.Settings as Settings
 import qualified Lamdu.CodeEdit.Sugar as Sugar
@@ -105,8 +104,6 @@ makeEditor parentPrecedence sExpr =
     notAHole $ PiEdit.make parentPrecedence lam
   Sugar.BodyLam lam@(Sugar.Lam Sugar.Val _ _ _) ->
     notAHole $ LambdaEdit.make parentPrecedence lam
-  Sugar.BodySection section ->
-    notAHole $ SectionEdit.make parentPrecedence section
   Sugar.BodyLiteralInteger integer ->
     notAHole $ LiteralEdit.makeInt integer
   Sugar.BodyAtom atom ->
