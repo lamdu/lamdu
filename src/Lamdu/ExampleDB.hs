@@ -1,8 +1,8 @@
 module Lamdu.ExampleDB(initDB, createBuiltins) where
 
-import Control.Applicative (liftA2)
+import Control.Applicative (liftA2, (<$>))
 import Control.Lens.Operators
-import Control.Monad (join, unless, (<=<))
+import Control.Monad (join, unless, void, (<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..))
@@ -48,44 +48,43 @@ createBuiltins ::
   MonadA m => Transaction m ((FFI.Env (Tag m), A.SpecialFunctions (Tag m)), [ExprIRef.DefI (Tag m)])
 createBuiltins =
   Writer.runWriterT $ do
-    list <- mkType . DataOps.newBuiltin "Data.List.List" =<< lift setToSet
+    list <- mkDefinitionRef $ publicBuiltin "Data.List.List" setToSet
     let listOf = mkApply list
-    bool <- mkType . DataOps.newBuiltin "Prelude.Bool" =<< lift set
+    bool <- mkDefinitionRef $ publicBuiltin "Prelude.Bool" set
 
-    _ <- tellift $ DataOps.newBuiltin "Data.Map.Map" =<< mkPi set (endo set)
+    _ <- publicBuiltin "Data.Map.Map" $ mkPi set $ endo set
 
-    cons <- tellift $ DataOps.newBuiltin "Prelude.:" =<<
-      forAll "a" (\a -> mkPi a . endo $ listOf a)
-    nil <- tellift $ DataOps.newBuiltin "Prelude.[]" =<< forAll "a" listOf
+    cons <- publicBuiltin "Prelude.:" $ forAll "a" $ \a -> mkPi a . endo $ listOf a
+    nil <- publicBuiltin "Prelude.[]" $ forAll "a" listOf
 
-    true <- makeWithType "Prelude.True" bool
-    false <- makeWithType "Prelude.False" bool
+    true <- publicBuiltin "Prelude.True" bool
+    false <- publicBuiltin "Prelude.False" bool
 
-    traverse_ ((`makeWithType_` mkPi bool (endo bool)) . ("Prelude."++))
+    traverse_ ((`publicBuiltin_` mkPi bool (endo bool)) . ("Prelude."++))
       ["&&", "||"]
 
-    makeWithType_ "Prelude.if" . forAll "a" $ \a ->
+    publicBuiltin_ "Prelude.if" . forAll "a" $ \a ->
       mkPiRecord
       [ ("condition", bool)
       , ("then", a)
       , ("else", a)
       ] a
 
-    makeWithType_ "Prelude.id" $ forAll "a" endo
+    publicBuiltin_ "Prelude.id" $ forAll "a" endo
 
-    makeWithType_ "Prelude.const" .
+    publicBuiltin_ "Prelude.const" .
       forAll "a" $ \a -> forAll "b" $ \b -> mkPi a $ mkPi b a
 
-    makeWithType_ "Data.List.reverse" $ forAll "a" (endo . listOf)
-    makeWithType_ "Data.List.tail" $ forAll "a" (endo . listOf)
-    makeWithType_ "Data.List.head" . forAll "a" $ join (mkPi . listOf)
+    publicBuiltin_ "Data.List.reverse" $ forAll "a" (endo . listOf)
+    publicBuiltin_ "Data.List.tail" $ forAll "a" (endo . listOf)
+    publicBuiltin_ "Data.List.head" . forAll "a" $ join (mkPi . listOf)
 
-    makeWithType_ "Data.List.length" . forAll "a" $ \a ->
+    publicBuiltin_ "Data.List.length" . forAll "a" $ \a ->
       mkPi (listOf a) integer
 
-    makeWithType_ "Prelude.product" . forAll "a" $ \a ->
+    publicBuiltin_ "Prelude.product" . forAll "a" $ \a ->
       mkPi (listOf a) a
-    makeWithType_ "Prelude.sum" . forAll "a" $ \a ->
+    publicBuiltin_ "Prelude.sum" . forAll "a" $ \a ->
       mkPi (listOf a) a
 
     let
@@ -95,16 +94,16 @@ createBuiltins =
         [ ("list", listOf a)
         , ("predicate", mkPi a bool)
         ] $ listOf a
-    makeWithType_ "Data.List.filter" filterType
-    makeWithType_ "Data.List.takeWhile" filterType
+    publicBuiltin_ "Data.List.filter" filterType
+    publicBuiltin_ "Data.List.takeWhile" filterType
 
-    makeWithType_ "Data.List.replicate" . forAll "a" $ \a ->
+    publicBuiltin_ "Data.List.replicate" . forAll "a" $ \a ->
       mkPiRecord
       [ ("item", a)
       , ("count", integer)
       ] $ listOf a
 
-    makeWithType_ "Data.List.foldl" . forAll "a" $ \a -> forAll "b" $ \b ->
+    publicBuiltin_ "Data.List.foldl" . forAll "a" $ \a -> forAll "b" $ \b ->
       mkPiRecord
       [ ( "list", listOf b )
       , ( "initial", a )
@@ -116,7 +115,7 @@ createBuiltins =
         )
       ] a
 
-    makeWithType_ "Data.List.zipWith" . forAll "a" $ \a -> forAll "b" $ \b -> forAll "c" $ \c ->
+    publicBuiltin_ "Data.List.zipWith" . forAll "a" $ \a -> forAll "b" $ \b -> forAll "c" $ \c ->
       mkPiRecord
       [ ( "func", mkPiRecord [("x", a), ("y", b)] c)
       , ( "xs", listOf a )
@@ -124,20 +123,20 @@ createBuiltins =
       ] $ listOf c
 
     let aToAToA = forAll "a" $ \a -> mkPi a $ endo a
-    traverse_ ((`makeWithType_` aToAToA) . ("Prelude." ++))
+    traverse_ ((`publicBuiltin_` aToAToA) . ("Prelude." ++))
       ["+", "-", "*", "/", "^", "++", "div", "quot", "rem"]
     newDef "%" ["Prelude"] "mod" aToAToA
-    makeWithType_ "Prelude.negate" $ forAll "a" endo
-    makeWithType_ "Prelude.sqrt" $ forAll "a" endo
+    publicBuiltin_ "Prelude.negate" $ forAll "a" endo
+    publicBuiltin_ "Prelude.sqrt" $ forAll "a" endo
 
     let aToAToBool = forAll "a" $ \a -> mkPi a $ mkPi a bool
-    traverse_ ((`makeWithType_` aToAToBool) . ("Prelude." ++))
+    traverse_ ((`publicBuiltin_` aToAToBool) . ("Prelude." ++))
       ["==", "/=", "<=", ">=", "<", ">"]
 
     newDef ".." ["Prelude"] "enumFromTo" .
       mkPi integer . mkPi integer $ listOf integer
 
-    makeWithType_ "Data.List.iterate" .
+    publicBuiltin_ "Data.List.iterate" .
       forAll "a" $ \a ->
       mkPiRecord [("step", endo a), ("initial", a)] $ listOf a
 
@@ -155,7 +154,7 @@ createBuiltins =
         }
     return (ffiEnv, specialFunctions)
   where
-    newDef name ffiPath ffiName mkTypeI = tellift_ $ do
+    newDef name ffiPath ffiName mkTypeI = void . publicize $ do
       typeI <- mkTypeI
       DataOps.newDefinition name .
         (`Definition` typeI) . Definition.BodyBuiltin .
@@ -170,11 +169,6 @@ createBuiltins =
       return . ExprUtil.makePi aGuid s =<<
         f ((ExprIRef.newExprBody . Lens.review ExprLens.bodyParameterRef) aGuid)
     setToSet = mkPi set set
-    tellift f = do
-      x <- lift f
-      Writer.tell [x]
-      return x
-    tellift_ = (fmap . fmap . const) () tellift
     mkPi mkArgType mkResType = fmap snd . join $ liftA2 ExprIRef.newPi mkArgType mkResType
     mkApply mkFunc mkArg =
       ExprIRef.newExprBody =<< liftA2 ExprUtil.makeApply mkFunc mkArg
@@ -188,14 +182,17 @@ createBuiltins =
         { Expr._recordKind = Expr.Type
         , Expr._recordFields = tagFields
         }
-    mkPiRecord = mkPi . mkRecordType
-    mkType f = do
+    publicize f = do
       x <- lift f
       Writer.tell [x]
-      return . ExprIRef.newExprBody $ Lens.review ExprLens.bodyDefinitionRef x
-    makeWithType_ = (fmap . fmap . fmap . const) () makeWithType
-    makeWithType builtinName typeMaker =
-      tellift (DataOps.newBuiltin builtinName =<< typeMaker)
+      return x
+    mkPiRecord = mkPi . mkRecordType
+    mkDefinitionRef f =
+      ExprIRef.newExprBody . (ExprLens.bodyDefinitionRef #) <$> f
+    publicBuiltin builtinName typeMaker =
+      publicize $ DataOps.newBuiltin builtinName =<< typeMaker
+    publicBuiltin_ builtinName typeMaker =
+      void $ publicBuiltin builtinName typeMaker
 
 newBranch :: MonadA m => String -> Version (Tag m) -> Transaction m (Branch (Tag m))
 newBranch name ver = do
