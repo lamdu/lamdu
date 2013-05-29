@@ -62,12 +62,6 @@ import qualified Lamdu.Data.Expression.Infer.Rules as Rules
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
-mkOrigin :: State Origin Origin
-mkOrigin = do
-  r <- State.get
-  State.modify (+1)
-  return r
-
 newtype RuleRef = RuleRef { unRuleRef :: Int }
 
 instance Show RuleRef where
