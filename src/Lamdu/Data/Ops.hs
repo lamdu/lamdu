@@ -153,10 +153,10 @@ jumpBack codeProps = do
       setP (Anchors.preJumps codeProps) js
       return j
 
-newBuiltin
-  :: MonadA m
-  => String -> ExprIRef.ExpressionI (Tag m)
-  -> T m (DefI (Tag m))
+newBuiltin ::
+  MonadA m =>
+  String -> ExprIRef.ExpressionI (Tag m) ->
+  T m (DefI (Tag m))
 newBuiltin fullyQualifiedName typeI =
   newDefinition name . (`Definition` typeI) . Definition.BodyBuiltin .
   Definition.Builtin $ Definition.FFIName (init path) name
