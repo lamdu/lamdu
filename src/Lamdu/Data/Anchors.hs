@@ -5,11 +5,13 @@ module Lamdu.Data.Anchors
   , Pane, makePane
   , CodeProps, RevisionProps
   , assocNameRef
+  , PresentationMode(..)
+  , assocPresentationMode
   , SpecialFunctions(..)
   ) where
 
 import Control.MonadA (MonadA)
-import Data.Binary (Binary(..))
+import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.ByteString.Char8 ()
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
@@ -28,7 +30,6 @@ data SpecialFunctions t = SpecialFunctions
   { sfCons :: DefI t
   , sfNil :: DefI t
   }
-derive makeBinary ''SpecialFunctions
 
 type Pane t = DefI t
 
@@ -66,3 +67,13 @@ makePane = id
 
 assocNameRef :: MonadA m => Guid -> MkProperty m String
 assocNameRef = Transaction.assocDataRefDef "" "Name"
+
+data PresentationMode = OO | Verbose
+  deriving (Eq, Ord, Enum, Bounded, Show)
+
+assocPresentationMode ::
+  MonadA m => Guid -> Transaction.MkProperty m PresentationMode
+assocPresentationMode = Transaction.assocDataRefDef OO "PresentationMode"
+
+derive makeBinary ''SpecialFunctions
+derive makeBinary ''PresentationMode
