@@ -35,21 +35,21 @@ make ::
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make
   (ParentPrecedence parentPrecedence)
-  (Sugar.Apply func specialArgs annotatedArgs) myId = do
+  (Sugar.Apply func specialArgs annotatedArgs) myId =
     case specialArgs of
-      Sugar.NoSpecialArgs ->
-        mk Nothing =<<
-        ExprGuiM.makeSubexpresion (if isBoxed then 0 else parentPrecedence) func
-      Sugar.ObjectArg arg -> do
-        funcEdit <- ExprGuiM.makeSubexpresion (prefixPrecedence+1) func
-        argEdit <- ExprGuiM.makeSubexpresion prefixPrecedence arg
-        mk (Just prefixPrecedence) $ ExpressionGui.hboxSpaced [funcEdit, argEdit]
-      Sugar.InfixArgs l r -> do
-        lEdit <- ExprGuiM.makeSubexpresion (infixPrecedence+1) l
-        -- TODO: What precedence to give when it must be atomic?:
-        opEdit <- ExprGuiM.makeSubexpresion 20 func
-        rEdit <- ExprGuiM.makeSubexpresion (infixPrecedence+1) r
-        mk (Just infixPrecedence) $ ExpressionGui.hboxSpaced [lEdit, opEdit, rEdit]
+    Sugar.NoSpecialArgs ->
+      mk Nothing =<<
+      ExprGuiM.makeSubexpresion (if isBoxed then 0 else parentPrecedence) func
+    Sugar.ObjectArg arg -> do
+      funcEdit <- ExprGuiM.makeSubexpresion (prefixPrecedence+1) func
+      argEdit <- ExprGuiM.makeSubexpresion prefixPrecedence arg
+      mk (Just prefixPrecedence) $ ExpressionGui.hboxSpaced [funcEdit, argEdit]
+    Sugar.InfixArgs l r -> do
+      lEdit <- ExprGuiM.makeSubexpresion (infixPrecedence+1) l
+      -- TODO: What precedence to give when it must be atomic?:
+      opEdit <- ExprGuiM.makeSubexpresion 20 func
+      rEdit <- ExprGuiM.makeSubexpresion (infixPrecedence+1) r
+      mk (Just infixPrecedence) $ ExpressionGui.hboxSpaced [lEdit, opEdit, rEdit]
   where
     isBoxed = not $ null annotatedArgs
     destGuid = func ^. Sugar.rGuid

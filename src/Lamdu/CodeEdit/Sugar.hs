@@ -252,8 +252,7 @@ convertGetVariable ::
   Expr.VariableRef (DefI (Tag m)) -> Convertor m
 convertGetVariable varRef exprI = do
   cp <- (^. SugarM.scCodeAnchors) <$> SugarM.readContext
-  getParExpr <-
-    case varRef of
+  case varRef of
     Expr.ParameterRef parGuid -> convertParameterRef parGuid exprI
     Expr.DefinitionRef defI -> do
       let defGuid = IRef.guid defI
@@ -265,7 +264,6 @@ convertGetVariable varRef exprI = do
         , _gvJumpTo = jumpToDefI cp defI
         , _gvVarType = GetDefinition
         }
-  return getParExpr
 
 memoBy ::
   (Cache.Key k, Binary v, MonadA m) =>

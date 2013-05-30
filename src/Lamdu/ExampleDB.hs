@@ -200,7 +200,7 @@ createBuiltins =
     mkInfixType lType rType =
       mkPi $ mkInfixRecordType lType rType
     mkDefinitionRef f =
-      ExprIRef.newExprBody . (ExprLens.bodyDefinitionRef #) <$> f
+      ExprIRef.newExprBody . (ExprLens.bodyDefinitionRef # ) <$> f
     publicBuiltin builtinName typeMaker =
       publicize $ DataOps.newBuiltin builtinName =<< typeMaker
     publicBuiltin_ builtinName typeMaker =

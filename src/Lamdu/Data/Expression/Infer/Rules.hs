@@ -449,7 +449,7 @@ mergeToArg param arg =
 runArgTypeToPiParamType :: ExprRef -> RefExpression def -> Origin -> RuleResult def
 runArgTypeToPiParamType funcTypeRef argTypeExpr o0 =
   [( funcTypeRef
-   , makePi o0 (argTypeExpr & Lens.traversed . rplOrigins <>~ [o0]) $ holeRefExpr
+   , makePi o0 (argTypeExpr & Lens.traversed . rplOrigins <>~ [o0]) holeRefExpr
    )]
 
 -- Rigid value: An expression whose sole information content comes
