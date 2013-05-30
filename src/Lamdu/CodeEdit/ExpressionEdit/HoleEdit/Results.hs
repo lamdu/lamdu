@@ -7,7 +7,7 @@ module Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Results
 
 import Control.Applicative (Applicative(..), (<$>), (<$))
 import Control.Lens.Operators
-import Control.Monad ((<=<), guard, void, join)
+import Control.Monad ((<=<), void, join)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.State (StateT)
 import Control.MonadA (MonadA)
@@ -161,12 +161,7 @@ toMResultsList holeInfo makeWidget baseId options = do
           ) expr
         _ -> pure Nothing
     holeApply expr =
-      Expression
-      ( ExprUtil.makeApply
-        (Expression (Expr.BodyLeaf Expr.Hole) Nothing)
-        expr
-      )
-      Nothing
+      storePointExpr $ ExprUtil.makeApply storePointHole expr
     extraResultId =
       mappend extraResultsPrefixId . WidgetIds.hash . void .
       (^. Sugar.holeResultInferred)
@@ -191,28 +186,8 @@ baseExprToResultsList holeInfo makeWidget baseExpr =
       map (Sugar.ResultSeedExpression . (Nothing <$)) $
       applyForms baseExprType
     applyForms baseExprType =
-      ExprUtil.applyForms baseExprType baseExpr ++ do
-        record <-
-          baseExprType ^..
-          ExprLens.exprLam . Expr.lambdaParamType .
-          ExprLens.exprRecord
-        let tags = record ^.. Expr.recordFields . traverse . Lens._1
-        guard $ length tags == 1
-        tag <- tags
-        pure . ExprUtil.pureExpression .
-          ExprUtil.makeLambda paramGuid ExprUtil.pureHole .
-          ExprUtil.pureApply baseExpr . ExprUtil.pureExpression $
-          Expr.BodyRecord
-          Expr.Record
-          { Expr._recordKind = Expr.Val
-          , Expr._recordFields =
-              [ ( tag
-                , ExprUtil.pureExpression $ Lens.review ExprLens.bodyParameterRef paramGuid
-                )
-              ]
-          }
+      ExprUtil.applyForms baseExprType baseExpr
     baseId = WidgetIds.hash baseExpr
-    paramGuid = Guid.fromString "guidy"
 
 injectLenses :: [Lens.ALens s t a b] -> b -> s -> [t]
 injectLenses lenses b s = ($ s) . (#~ b) <$> lenses
@@ -223,17 +198,21 @@ injectLam = injectLenses [Expr.lambdaParamType, Expr.lambdaResult]
 injectGetField :: expr -> Expr.GetField expr -> [Expr.GetField expr]
 injectGetField = injectLenses [Expr.getFieldRecord, Expr.getFieldTag]
 
+storePointExpr :: Expr.BodyExpr (DefI (Tag m)) (Maybe (Sugar.StorePoint (Tag m))) -> Sugar.ExprStorePoint m
+storePointExpr = (`Expression` Nothing)
+
+storePointHole :: Sugar.ExprStorePoint m
+storePointHole = storePointExpr $ ExprLens.bodyHole # ()
+
 injectApply ::
   Sugar.ExprStorePoint m ->
   ExprIRef.ExpressionM m () ->
   ExprIRef.ExpressionM m () ->
   [Sugar.ExprStorePoint m]
 injectApply arg baseExpr baseExprType = do
-  [genExpr (ExprUtil.makeApply (Nothing <$ base) arg)]
+  [storePointExpr (ExprUtil.makeApply (Nothing <$ base) arg)]
   where
     base = ExprUtil.applyDependentPis baseExprType baseExpr
-    --hole = genExpr $ ExprLens.bodyHole # ()
-    genExpr = (`Expression` Nothing)
 
 injectArg ::
   MonadA m => HoleInfo m -> WidgetMaker m ->
@@ -244,14 +223,13 @@ injectArg holeInfo makeWidget rawArg baseExpr =
   map Sugar.ResultSeedExpression =<<
   case (Nothing <$ baseExpr) ^. Expr.eBody of
   Expr.BodyLam lam ->
-    pure $ genExpr . Expr.BodyLam <$> injectLam arg lam
+    pure $ storePointExpr . Expr.BodyLam <$> injectLam arg lam
   Expr.BodyGetField getField ->
-    pure $ genExpr . Expr.BodyGetField <$> injectGetField arg getField
+    pure $ storePointExpr . Expr.BodyGetField <$> injectGetField arg getField
   _ ->
     maybe [] (injectApply arg baseExpr) <$>
     (hiHoleActions holeInfo ^. Sugar.holeInferExprType) baseExpr
   where
-    genExpr = (`Expression` Nothing)
     arg = fromMaybe rawArg $ removeHoleWrap rawArg
     baseId = WidgetIds.hash baseExpr
 
