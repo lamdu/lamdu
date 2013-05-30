@@ -165,6 +165,9 @@ tagStr = tag . Guid.fromString
 set :: InferResults t
 set = simple bodySet pureSet
 
+tagType :: InferResults t
+tagType = simple (ExprLens.bodyTagType # ()) pureSet
+
 integerType :: InferResults t
 integerType = simple bodyIntegerType pureSet
 

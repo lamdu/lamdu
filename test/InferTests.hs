@@ -87,6 +87,12 @@ idOnAnInt =
   testInfer "id on an int" $
   getDef "id" $$ asHole integerType $$ literalInteger 5
 
+idOnARecord =
+  testInfer "id ({:Set) <hole> does not infer { val" $
+  getDef "id" $$ rec $$ holeWithInferredType rec
+  where
+    rec = record Type [(holeWithInferredType tagType, integerType)]
+
 idOnHole = testInfer "id hole" $ getDef "id" $$ holeWithInferredType set
 
 forceMono =
@@ -217,12 +223,6 @@ implicitVarTests =
   , uncurry2Test
   ]
 
-inferRecordValTest =
-  testInfer "id ({:Set) <hole> does not infer { val" $
-  getDef "id" $$ rec $$ holeWithInferredType rec
-  where
-    rec = record Type []
-
 inferReplicateOfReplicate =
   testInfer "replicate <hole> (replicate <hole> 1) 2" $
   replicat (listOf integerType)
@@ -242,6 +242,7 @@ hunitTests =
   , idTest
   , argTypeGoesToPi
   , idOnAnInt
+  , idOnARecord
   , idOnHole
   , inferFromOneArgToOther
   , depApply
@@ -252,7 +253,6 @@ hunitTests =
   , failResumptionAddsRules
   , emptyRecordTest
   , recordTest
-  , inferRecordValTest
   , inferReplicateOfReplicate
   , implicitVarTests
   , resumptionTests
