@@ -127,13 +127,10 @@ childrenToParentRules valRef bodyWithRefs =
   [ChildrenToParent valRef bodyWithRefs]
 
 -- Forbid composite apply, tag type
-tagRules :: Expr.Expression def TypedValue -> State Origin [Rule def ExprRef]
+tagRules :: Expr.Expression def TypedValue -> [Rule def ExprRef]
 tagRules tagExpr =
-  fmap concat $
-  sequenceA
-  [ pure [VerifyTagRule tagRef tagRef]
-  , do
-      return [SetRule [(tvType pl, makeRefExpr $ Expr.BodyLeaf Expr.TagType)]]
+  [ VerifyTagRule tagRef tagRef
+  , SetRule [(tvType pl, makeRefExpr $ Expr.BodyLeaf Expr.TagType)]
   ]
   where
     pl = tagExpr ^. Expr.ePayload
@@ -148,15 +145,15 @@ makeForNode (Expr.Expression exprBody typedVal) =
   , pure [ParentToChildren bodyWithValRefs (tvVal typedVal)]
   , case exprBody of
     Expr.BodyLam lambda ->
-      (:) <$> onLambda (pls lambda) <*> lamKindRules (pls lambda)
+      pure $
+      onLambda (pls lambda) : lamKindRules (pls lambda)
     Expr.BodyApply apply -> applyRules typedVal $ pls apply
     Expr.BodyRecord record ->
-      (++)
-      <$> (fmap concat . traverse tagRules)
-          (record ^.. Expr.recordFields . traverse . Lens._1)
-      <*> recordKindRules (pls record)
+      pure $
+      concatMap tagRules (record ^.. Expr.recordFields . traverse . Lens._1) ++
+      recordKindRules (pls record)
     Expr.BodyGetField (Expr.GetField record fieldTag) ->
-      getFieldRules (tvType typedVal) fieldTag (tvType (pl record))
+      pure $ getFieldRules (tvType typedVal) fieldTag (tvType (pl record))
       -- TODO: GetField Structure rules
     -- Leafs need no additional rules beyond the commonal simpleTypeRule
     Expr.BodyLeaf _ -> pure []
@@ -166,18 +163,18 @@ makeForNode (Expr.Expression exprBody typedVal) =
     pls x = pl <$> x
     bodyWithValRefs = tvVal <$> pls exprBody
     recordKindRules (Expr.Record Expr.Type fields) =
-      mapM (setRule . tvType . snd) fields
+      map (setRule . tvType . snd) fields
     recordKindRules (Expr.Record Expr.Val fields) =
-      pure . recordValueRules (tvType typedVal) $
+      recordValueRules (tvType typedVal) $
       fields
       & Lens.mapped . Lens._1 %~ tvVal
       & Lens.mapped . Lens._2 %~ tvType
     lamKindRules (Expr.Lambda Expr.Type _ _ body) =
-      fmap (:[]) . setRule $ tvType body
+      [setRule (tvType body)]
     lamKindRules (Expr.Lambda Expr.Val param _ body) =
-      pure $ lambdaRules param typedVal (tvType body)
+      lambdaRules param typedVal (tvType body)
     onLambda lam = setRule . tvType $ lam ^. Expr.lambdaParamType
-    setRule ref = return $ SetRule [(ref, setExpr)]
+    setRule ref = SetRule [(ref, setExpr)]
 
 makeForAll :: Expr.Expression def TypedValue -> State Origin [Rule def ExprRef]
 makeForAll = fmap concat . traverse makeForNode . ExprUtil.subExpressions
@@ -287,13 +284,11 @@ runGetFieldTypeToRecordFieldType recordTypeRef (recordTypeExpr, fieldTag, getFie
         | Lens.notNullOf (recordFields . Lens._1 . ExprLens.exprHole) recordTypeExpr -> []
         | otherwise -> makeError
 
-getFieldRules :: ExprRef -> Expr.Expression def TypedValue -> ExprRef -> State Origin [Rule def ExprRef]
+getFieldRules :: ExprRef -> Expr.Expression def TypedValue -> ExprRef -> [Rule def ExprRef]
 getFieldRules getFieldTypeRef tagExpr recordTypeRef =
-  fmap concat $ sequenceA
-  [ pure [RecordTypeToGetFieldType getFieldTypeRef (recordTypeRef, tagValRef)]
-  , pure [GetFieldTypeToRecordFieldType recordTypeRef (recordTypeRef, tagValRef, getFieldTypeRef)]
-  , tagRules tagExpr
-  ]
+  [ RecordTypeToGetFieldType getFieldTypeRef (recordTypeRef, tagValRef)
+  , GetFieldTypeToRecordFieldType recordTypeRef (recordTypeRef, tagValRef, getFieldTypeRef)
+  ] ++ tagRules tagExpr
   where
     tagValRef = tvVal $ tagExpr ^. Expr.ePayload
 
