@@ -306,7 +306,7 @@ seedExprEnv cp (ResultSeedNewTag name) = do
   tag <- DataOps.makeNewPublicTag cp name
   pure (Nothing <$ ExprLens.pureExpr . ExprLens.bodyTag # tag, Nothing)
 seedExprEnv cp (ResultSeedNewDefinition name) = do
-  defI <- DataOps.makeDefinition cp name
+  defI <- DataOps.newPublicDefinition cp name
   DataOps.newPane cp defI
   let targetGuid = IRef.guid defI
   pure

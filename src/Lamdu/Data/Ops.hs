@@ -4,7 +4,7 @@ module Lamdu.Data.Ops
   , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap
   , giveAsArgToOperator
   , addListItem
-  , makeDefinition
+  , newPublicDefinition
   , newBuiltin, newDefinition
   , savePreJumpPosition, jumpBack
   , newPane
@@ -172,9 +172,9 @@ newDefinition name def = do
   setP (Anchors.assocNameRef (IRef.guid res)) name
   return res
 
-makeDefinition ::
+newPublicDefinition ::
   MonadA m => Anchors.CodeProps m -> String -> T m (DefI (Tag m))
-makeDefinition codeProps name = do
+newPublicDefinition codeProps name = do
   defI <-
     newDefinition name =<<
     (Definition . Definition.BodyExpression <$> newHole <*> newHole)
