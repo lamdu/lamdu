@@ -214,44 +214,45 @@ baseExprToResultsList holeInfo makeWidget baseExpr =
     baseId = WidgetIds.hash baseExpr
     paramGuid = Guid.fromString "guidy"
 
-applyOperatorResultsList ::
-  MonadA m => HoleInfo m -> WidgetMaker m ->
-  ExprIRef.ExpressionM m (Maybe (Sugar.StorePoint (Tag m))) ->
+injectLenses :: [Lens.ALens s t a b] -> b -> s -> [t]
+injectLenses lenses b s = ($ s) . (#~ b) <$> lenses
+
+injectLam :: expr -> Expr.Lambda expr -> [Expr.Lambda expr]
+injectLam = injectLenses [Expr.lambdaParamType, Expr.lambdaResult]
+
+injectGetField :: expr -> Expr.GetField expr -> [Expr.GetField expr]
+injectGetField = injectLenses [Expr.getFieldRecord, Expr.getFieldTag]
+
+injectApply ::
+  Sugar.ExprStorePoint m ->
   ExprIRef.ExpressionM m () ->
+  ExprIRef.ExpressionM m () ->
+  [Sugar.ExprStorePoint m]
+injectApply arg baseExpr baseExprType = do
+  [genExpr (ExprUtil.makeApply (Nothing <$ base) arg)]
+  where
+    base = ExprUtil.applyDependentPis baseExprType baseExpr
+    --hole = genExpr $ ExprLens.bodyHole # ()
+    genExpr = (`Expression` Nothing)
+
+injectArg ::
+  MonadA m => HoleInfo m -> WidgetMaker m ->
+  Sugar.ExprStorePoint m -> ExprIRef.ExpressionM m () ->
   CT m (Maybe (ResultsList m))
-applyOperatorResultsList holeInfo makeWidget argument baseExpr =
+injectArg holeInfo makeWidget rawArg baseExpr =
   toMResultsList holeInfo makeWidget baseId .
   map Sugar.ResultSeedExpression =<<
   case (Nothing <$ baseExpr) ^. Expr.eBody of
-  Expr.BodyLam (Expr.Lambda k paramGuid paramType result) ->
-    pure $ map genExpr
-    [ Expr.BodyLam (Expr.Lambda k paramGuid unwrappedArg result)
-    , Expr.BodyLam (Expr.Lambda k paramGuid paramType unwrappedArg)
-    ]
-  Expr.BodyGetField (Expr.GetField recExpr fieldTag) ->
-    pure $ map genExpr
-    [ Expr.BodyGetField $ Expr.GetField unwrappedArg fieldTag
-    , Expr.BodyGetField $ Expr.GetField recExpr unwrappedArg
-    ]
-  _ -> do
-    mBaseExprType <- hiHoleActions holeInfo ^. Sugar.holeInferExprType $ baseExpr
-    pure $
-      case mBaseExprType of
-      Nothing -> []
-      Just baseExprType ->
-        let
-          base = Nothing <$ ExprUtil.applyDependentPis baseExprType baseExpr
-          applyBase = genExpr . ExprUtil.makeApply base
-          fullyApplied x = genExpr . ExprUtil.makeApply (applyBase x)
-        in
-          [ fullyApplied unwrappedArg hole
-          , fullyApplied hole unwrappedArg
-          , applyBase unwrappedArg
-          ]
+  Expr.BodyLam lam ->
+    pure $ genExpr . Expr.BodyLam <$> injectLam arg lam
+  Expr.BodyGetField getField ->
+    pure $ genExpr . Expr.BodyGetField <$> injectGetField arg getField
+  _ ->
+    maybe [] (injectApply arg baseExpr) <$>
+    (hiHoleActions holeInfo ^. Sugar.holeInferExprType) baseExpr
   where
     genExpr = (`Expression` Nothing)
-    hole = genExpr $ Expr.BodyLeaf Expr.Hole
-    unwrappedArg = fromMaybe argument $ removeHoleWrap argument
+    arg = fromMaybe rawArg $ removeHoleWrap rawArg
     baseId = WidgetIds.hash baseExpr
 
 removeHoleWrap :: Expression def a -> Maybe (Expression def a)
@@ -270,7 +271,7 @@ makeResultsList ::
   CT m (Maybe (ResultsList m))
 makeResultsList holeInfo makeWidget group =
   case Property.value (hiState holeInfo) ^. HoleInfo.hsArgument of
-  Just arg -> applyOperatorResultsList holeInfo makeWidget arg baseExpr
+  Just arg -> injectArg holeInfo makeWidget arg baseExpr
   Nothing -> toResList baseExpr
   where
     toResList = baseExprToResultsList holeInfo makeWidget
