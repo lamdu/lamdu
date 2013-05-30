@@ -58,6 +58,7 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Infer.ImplicitVariables as ImplicitVariables
+import qualified Lamdu.Data.Expression.Infer.Structure as Structure
 import qualified Lamdu.Data.Expression.Load as Load
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified System.Random.Utils as RandomUtils
@@ -186,8 +187,9 @@ inferWithVariables gen loaded baseInferContext node =
     mWithVariables <- if success
       then do
         wvExpr <-
-          ImplicitVariables.addVariables gen loader $
-          (iwcInferred . fst &&& id) <$> expr
+          Structure.add <$>
+          ImplicitVariables.add gen loader
+          ((iwcInferred . fst &&& id) <$> expr)
         wvContext <- State.get
         return $ Just (wvContext, asIWC <$> wvExpr)
       else

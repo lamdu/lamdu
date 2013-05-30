@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveFunctor, DeriveDataTypeable, TemplateHaskell #-}
 module Lamdu.Data.Expression.Infer.ImplicitVariables
-  ( addVariables, Payload(..)
+  ( add, Payload(..)
   ) where
 
 import Control.Applicative ((<$>))
@@ -122,13 +122,13 @@ addParam body (paramGuid, paramTypeNode) = do
     newRootLam =
       ExprUtil.makeLambda paramGuid paramTypeExpr body
 
-addVariables ::
+add ::
   (MonadA m, Ord def, RandomGen g) =>
   g -> Infer.Loader def m ->
   Expr.Expression def (Infer.Inferred def, a) ->
   StateT (Infer.Context def) m
   (Expr.Expression def (Infer.Inferred def, Payload a))
-addVariables gen loader expr = do
+add gen loader expr = do
   implicitParams <-
     (`evalStateT` gen) . fmap concat .
     mapM (addVariablesForExpr loader) $ ExprUtil.curriedFuncArguments expr

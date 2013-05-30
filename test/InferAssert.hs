@@ -115,7 +115,7 @@ inferWVAssertion expr wvExpr = do
     (wvInferredExprPL, _) =
       either error id $
       (`runStateT` inferContext)
-      (ImplicitVariables.addVariables (Random.mkStdGen 0)
+      (ImplicitVariables.add (Random.mkStdGen 0)
        loader (flip (,) () <$> inferredExpr))
 
 allowFailAssertion :: HUnit.Assertion -> HUnit.Assertion
