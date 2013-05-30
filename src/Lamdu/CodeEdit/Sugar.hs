@@ -51,6 +51,7 @@ module Lamdu.CodeEdit.Sugar
   , PrefixAction, emptyPrefixAction
   , SugarExpr.removeTypes
   , Hole.holeResultHasHoles
+  , ExprStorePoint
   ) where
 
 import Control.Applicative (Applicative(..), (<$>), (<$))

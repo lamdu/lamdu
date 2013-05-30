@@ -300,7 +300,7 @@ makeHoleResult sugarContext inferred exprI seed =
 
 seedExprEnv ::
   MonadA m => Anchors.CodeProps m -> HoleResultSeed m ->
-  T m (ExprIRef.ExpressionM m (Maybe (StorePoint (Tag m))), Maybe Guid)
+  T m (ExprStorePoint m, Maybe Guid)
 seedExprEnv _ (ResultSeedExpression expr) = pure (expr, Nothing)
 seedExprEnv cp (ResultSeedNewTag name) = do
   tag <- DataOps.makeNewPublicTag cp name

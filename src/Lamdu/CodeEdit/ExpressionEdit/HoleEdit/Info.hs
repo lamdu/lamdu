@@ -8,19 +8,17 @@ import Data.Binary (Binary(..))
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
 import Data.Store.Guid (Guid)
-import Data.Store.IRef (Tag)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import qualified Control.Lens.TH as LensTH
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.CodeEdit.Sugar as Sugar
-import qualified Lamdu.Data.Expression.IRef as ExprIRef
 
 type T = Transaction
 
 data HoleState m = HoleState
   { _hsSearchTerm :: String
-  , _hsArgument :: Maybe (ExprIRef.ExpressionM m (Maybe (Sugar.StorePoint (Tag m))))
+  , _hsArgument :: Maybe (Sugar.ExprStorePoint m)
   } deriving Eq
 LensTH.makeLenses ''HoleState
 derive makeBinary ''HoleState
