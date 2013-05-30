@@ -219,7 +219,7 @@ implicitVarTests =
 
 inferRecordValTest =
   testInfer "id ({:Set) <hole> does not infer { val" $
-  getDef "id" $$ rec $$ setInferredType rec hole
+  getDef "id" $$ rec $$ holeWithInferredType rec
   where
     rec = record Type []
 
