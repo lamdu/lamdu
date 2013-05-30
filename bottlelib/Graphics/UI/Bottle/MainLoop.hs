@@ -5,7 +5,6 @@ import Control.Lens ((^.), (%~), (.~), _1, _2)
 import Control.Monad (when)
 import Data.IORef
 import Data.MRUMemo (memoIO)
-import Data.StateVar (($=))
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
 import Data.Traversable (traverse, sequenceA)
 import Data.Vector.Vector2 (Vector2(..))
@@ -14,6 +13,7 @@ import Graphics.DrawingCombinators.Utils (Image)
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget(Widget)
 import Graphics.UI.GLFW.Events (KeyEvent, GLFWEvent(..), eventLoop)
+import Graphics.Rendering.OpenGL.GL (($=))
 import qualified Control.Lens as Lens
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.Rendering.OpenGL.GL as GL
