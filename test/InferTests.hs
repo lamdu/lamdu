@@ -56,7 +56,7 @@ inferFromOneArgToOther =
   testInfer "f = \\ a b (x:Map _ _) (y:Map a b) -> if {_ x y}" $
   lambda "a" (asHole set) $ \a ->
   lambda "b" (asHole set) $ \b ->
-  let mkMapType f = getDef "Map" $$ f a $$ f b in
+  let mkMapType f = getDef "Map" $$: [f a, f b] in
   lambda "x" (mkMapType asHole) $ \x ->
   lambda "y" (mkMapType id) $ \y ->
   getDef "if" $$ asHole (mkMapType id) $$:
@@ -218,8 +218,10 @@ implicitVarTests =
   ]
 
 inferRecordValTest =
-  testInferAllowFail "id ({:Set) <hole> infers { val" $
-  getDef "id" $$ record Type [] $$ asHole (record Val [])
+  testInfer "id ({:Set) <hole> does not infer { val" $
+  getDef "id" $$ rec $$ setInferredType rec hole
+  where
+    rec = record Type []
 
 inferReplicateOfReplicate =
   testInfer "replicate <hole> (replicate <hole> 1) 2" $
