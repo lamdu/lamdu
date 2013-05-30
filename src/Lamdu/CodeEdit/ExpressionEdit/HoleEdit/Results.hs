@@ -12,9 +12,8 @@ import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.State (StateT)
 import Control.MonadA (MonadA)
 import Data.Cache (Cache)
-import Data.Either (partitionEithers)
 import Data.Function (on)
-import Data.List (isInfixOf, isPrefixOf)
+import Data.List (isInfixOf, isPrefixOf, partition)
 import Data.List.Utils (sortOn, nonEmptyAll)
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Monoid (Monoid(..))
@@ -127,41 +126,45 @@ data MakeWidgets m = MakeWidgets
   , mkNewTagResultWidget :: WidgetMaker m
   }
 
-toMResultsList ::
-  MonadA m => HoleInfo m -> WidgetMaker m ->
-  Widget.Id -> [Sugar.HoleResultSeed m] ->
-  CT m (Maybe (ResultsList m))
-toMResultsList holeInfo makeWidget baseId options = do
-  rs <- catMaybes <$> traverse processOption options
-  let
-    (badResults, goodResults) = partitionEithers rs
-    results =
-      map ((,) GoodResult)
-      (sortOn (resultComplexityScore . (^. Sugar.holeResultInferred))
-       goodResults) ++
-      map ((,) BadResult) badResults
-  return $ case results of
-    [] -> Nothing
-    x : xs ->
-      Just
-      ResultsList
-      { rlExtraResultsPrefixId = extraResultsPrefixId
-      , rlMain = mkResult (mconcat [prefixId holeInfo, baseId]) x
-      , rlExtra = map (\res -> mkResult (extraResultId (snd res)) res) xs
-      }
+data ResultType = GoodResult | BadResult
+  deriving (Eq)
+
+typeCheckHoleResult ::
+  MonadA m => HoleInfo m -> Sugar.HoleResultSeed m ->
+  CT m (Maybe (ResultType, Sugar.HoleResult Sugar.Name m))
+typeCheckHoleResult holeInfo seed = do
+  mGood <- hiHoleActions holeInfo ^. Sugar.holeResult $ seed
+  case (mGood, seed) of
+    (Just good, _) -> pure $ Just (GoodResult, good)
+    (Nothing, Sugar.ResultSeedExpression expr) ->
+      fmap ((,) BadResult) <$>
+      ( (hiHoleActions holeInfo ^. Sugar.holeResult)
+      . Sugar.ResultSeedExpression . storePointHoleApply
+      ) expr
+    _ -> pure Nothing
+
+typeCheckResults ::
+  MonadA m => HoleInfo m -> [Sugar.HoleResultSeed m] ->
+  CT m [(ResultType, Sugar.HoleResult Sugar.Name m)]
+typeCheckResults holeInfo options = do
+  rs <- catMaybes <$> traverse (typeCheckHoleResult holeInfo) options
+  let (goodResults, badResults) = partition ((== GoodResult) . fst) rs
+  return $ sortOn (score . snd) goodResults ++ badResults
   where
-    processOption seed = do
-      mGood <- hiHoleActions holeInfo ^. Sugar.holeResult $ seed
-      case (mGood, seed) of
-        (Just good, _) -> pure . Just $ Right good
-        (Nothing, Sugar.ResultSeedExpression expr) ->
-          fmap Left <$>
-          ( (hiHoleActions holeInfo ^. Sugar.holeResult)
-          . Sugar.ResultSeedExpression . holeApply
-          ) expr
-        _ -> pure Nothing
-    holeApply expr =
-      storePointExpr $ ExprUtil.makeApply storePointHole expr
+    score = resultComplexityScore . (^. Sugar.holeResultInferred)
+
+mResultsListOf ::
+  HoleInfo m -> WidgetMaker m -> Widget.Id ->
+  [(ResultType, Sugar.HoleResult Sugar.Name m)] ->
+  Maybe (ResultsList m)
+mResultsListOf _ _ _ [] = Nothing
+mResultsListOf holeInfo makeWidget baseId (x:xs) = Just
+  ResultsList
+  { rlExtraResultsPrefixId = extraResultsPrefixId
+  , rlMain = mkResult (mconcat [prefixId holeInfo, baseId]) x
+  , rlExtra = map (\res -> mkResult (extraResultId (snd res)) res) xs
+  }
+  where
     extraResultId =
       mappend extraResultsPrefixId . WidgetIds.hash . void .
       (^. Sugar.holeResultInferred)
@@ -173,6 +176,14 @@ toMResultsList holeInfo makeWidget baseId options = do
       , rMkWidget = makeWidget resultId holeResult
       , rId = resultId
       }
+
+typeCheckToResultsList ::
+  MonadA m => HoleInfo m -> WidgetMaker m ->
+  Widget.Id -> [Sugar.HoleResultSeed m] ->
+  CT m (Maybe (ResultsList m))
+typeCheckToResultsList holeInfo makeWidget baseId options =
+  mResultsListOf holeInfo makeWidget baseId <$>
+  typeCheckResults holeInfo options
 
 baseExprWithApplyForms ::
   MonadA m => HoleInfo m -> ExprIRef.ExpressionM m () ->
@@ -199,6 +210,10 @@ storePointExpr = (`Expression` Nothing)
 
 storePointHole :: Sugar.ExprStorePoint m
 storePointHole = storePointExpr $ ExprLens.bodyHole # ()
+
+storePointHoleApply :: Sugar.ExprStorePoint m -> Sugar.ExprStorePoint m
+storePointHoleApply expr =
+  storePointExpr $ ExprUtil.makeApply storePointHole expr
 
 injectApply ::
   Sugar.ExprStorePoint m ->
@@ -236,13 +251,11 @@ removeHoleWrap expr = do
     Expr._BodyLeaf . Expr._Hole
   pure $ apply ^. Expr.applyArg
 
-data ResultType = GoodResult | BadResult
-
 makeResultsList ::
   MonadA m => HoleInfo m -> WidgetMaker m -> GroupM m ->
   CT m (Maybe (ResultsList m))
 makeResultsList holeInfo makeWidget group =
-  toMResultsList holeInfo makeWidget baseId =<<
+  typeCheckToResultsList holeInfo makeWidget baseId =<<
   case Property.value (hiState holeInfo) ^. HoleInfo.hsArgument of
   Just arg -> injectArg holeInfo arg baseExpr
   Nothing -> baseExprWithApplyForms holeInfo baseExpr
@@ -256,7 +269,7 @@ makeNewTagResultList ::
 makeNewTagResultList holeInfo makeNewTagResultWidget
   | null searchTerm = pure Nothing
   | otherwise =
-      toMResultsList holeInfo makeNewTagResultWidget (Widget.Id ["NewTag"])
+      typeCheckToResultsList holeInfo makeNewTagResultWidget (Widget.Id ["NewTag"])
       [makeNewTag]
   where
     searchTerm = (Property.value . hiState) holeInfo ^. HoleInfo.hsSearchTerm
@@ -288,13 +301,15 @@ makeAll ::
   MonadA m => HoleInfo m -> MakeWidgets m ->
   ExprGuiM m ([ResultsList m], HaveHiddenResults)
 makeAll holeInfo makeWidget = do
-  resultList <-
-    List.catMaybes .
-    (`mappend` (List.joinM . List.fromList)
-     [makeNewTagResultList holeInfo (mkNewTagResultWidget makeWidget)]) .
-    List.mapL (makeResultsList holeInfo (mkResultWidget makeWidget)) .
-    List.fromList <$>
-    ExprGuiM.transaction (makeAllGroups holeInfo)
+  allGroups <- ExprGuiM.transaction $ makeAllGroups holeInfo
+  let
+    allGroupsList =
+      List.mapL (makeResultsList holeInfo (mkResultWidget makeWidget)) $
+      List.fromList allGroups
+    newTagList =
+      List.joinM . return . makeNewTagResultList holeInfo $
+      mkNewTagResultWidget makeWidget
+    resultList = List.catMaybes $ mappend allGroupsList newTagList
   ExprGuiM.liftMemoT $ collectResults resultList
 
 makeAllGroups :: MonadA m => HoleInfo m -> T m [GroupM m]
