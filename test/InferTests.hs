@@ -255,8 +255,10 @@ wrongRecurseMissingArg =
   loadInferResults (void expr)
   where
     verifyError err =
-      HUnit.assertFailure $
-      "TODO: Need to verify the error here makes sense: " ++ show err
+      case Infer.errDetails err of
+      Infer.InfiniteExpression _ -> return ()
+      _ ->
+        HUnit.assertFailure $ "InfiniteExpression error expected, but got: " ++ show err
     expr = lambda "x" hole . const $ recurse hole
 
 hunitTests =

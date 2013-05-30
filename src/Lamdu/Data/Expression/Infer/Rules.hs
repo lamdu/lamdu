@@ -42,7 +42,7 @@ type RefExpression3 def = (RefExpression def, RefExpression def, RefExpression d
 -- Boilerplate to work around lack of serialization of functions
 -- Represents a serialization of RuleFunction:
 data Rule def a
-  = LambdaBodyTypeToPiResultType (Guid, ExprRef) a
+  = LambdaBodyTypeToPiResultType (Guid, ExprRef) a Origin
   | PiToLambda (Guid, ExprRef, ExprRef) a
   | RecordValToType ExprRef [(a, a)]
   | RecordTypeToGetFieldType ExprRef (a, a)
@@ -73,8 +73,8 @@ derive makeNFData ''Rule
 runRule :: Eq def => Rule def (RefExpression def) -> RuleResult def
 runRule rule =
   case rule of
-  LambdaBodyTypeToPiResultType x e ->
-    runLambdaBodyTypeToPiResultType x e
+  LambdaBodyTypeToPiResultType x e o ->
+    runLambdaBodyTypeToPiResultType x e o
   PiToLambda x e ->
     runPiToLambda x e
   RecordValToType x e ->
@@ -145,8 +145,7 @@ makeForNode (Expr.Expression exprBody typedVal) =
   , pure [ParentToChildren bodyWithValRefs (tvVal typedVal)]
   , case exprBody of
     Expr.BodyLam lambda ->
-      pure $
-      onLambda (pls lambda) : lamKindRules (pls lambda)
+      (onLambda (pls lambda) :) <$> lamKindRules (pls lambda)
     Expr.BodyApply apply -> applyRules typedVal $ pls apply
     Expr.BodyRecord record ->
       pure $
@@ -170,7 +169,7 @@ makeForNode (Expr.Expression exprBody typedVal) =
       & Lens.mapped . Lens._1 %~ tvVal
       & Lens.mapped . Lens._2 %~ tvType
     lamKindRules (Expr.Lambda Expr.Type _ _ body) =
-      [setRule (tvType body)]
+      pure [setRule (tvType body)]
     lamKindRules (Expr.Lambda Expr.Val param _ body) =
       lambdaRules param typedVal (tvType body)
     onLambda lam = setRule . tvType $ lam ^. Expr.lambdaParamType
@@ -198,10 +197,11 @@ makePi :: Origin -> RefExpression def -> RefExpression def -> RefExpression def
 makePi o paramType result =
   makeRefExpr $ ExprUtil.makePi (guidFromOrigin o) paramType result
 
-runLambdaBodyTypeToPiResultType :: (Guid, ExprRef) -> RefExpression def -> RuleResult def
-runLambdaBodyTypeToPiResultType (param, lambdaTypeRef) bodyTypeExpr =
+runLambdaBodyTypeToPiResultType :: (Guid, ExprRef) -> RefExpression def -> Origin -> RuleResult def
+runLambdaBodyTypeToPiResultType (param, lambdaTypeRef) bodyTypeExpr o =
   [( lambdaTypeRef
-   , makeRefExpr $ ExprUtil.makePi param holeRefExpr bodyTypeExpr
+   , makeRefExpr . ExprUtil.makePi param holeRefExpr $
+     bodyTypeExpr & Lens.traversed . rplOrigins <>~ [o]
    )]
 
 runPiToLambda :: (Guid, ExprRef, ExprRef) -> RefExpression def -> RuleResult def
@@ -221,10 +221,11 @@ runPiToLambda (param, lambdaValueRef, bodyTypeRef) piBody = do
       )
     ]
 
-lambdaRules :: Guid -> TypedValue -> ExprRef -> [Rule def ExprRef]
+lambdaRules :: Guid -> TypedValue -> ExprRef -> State Origin [Rule def ExprRef]
 lambdaRules param (TypedValue lambdaValueRef lambdaTypeRef) bodyTypeRef =
-  [ LambdaBodyTypeToPiResultType (param, lambdaTypeRef) bodyTypeRef
-  , PiToLambda (param, lambdaValueRef, bodyTypeRef) lambdaTypeRef
+  sequenceA
+  [ LambdaBodyTypeToPiResultType (param, lambdaTypeRef) bodyTypeRef <$> mkOrigin
+  , pure $ PiToLambda (param, lambdaValueRef, bodyTypeRef) lambdaTypeRef
   ]
 
 runRecordValToType :: ExprRef -> [RefExpression2 def] -> RuleResult def
