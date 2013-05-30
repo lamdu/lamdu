@@ -23,7 +23,6 @@ import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
-import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetIds as WidgetIds
 
@@ -31,8 +30,7 @@ funcGuid :: Sugar.ExpressionP name m pl -> Maybe Guid
 funcGuid f =
   case f ^. Sugar.rBody of
   Sugar.BodyGetVar gv -> Just $ gv ^. Sugar.gvIdentifier
-  Sugar.BodyCollapsed c -> funcGuid $ c ^. Sugar.pFullExpression
-  Sugar.BodyApply a -> funcGuid $ a ^. Expr.applyFunc
+  Sugar.BodyCollapsed c -> Just $ c ^. Sugar.pCompact . Sugar.gvIdentifier
   _ -> Nothing
 
 getPresentationMode :: MonadA m => Sugar.ExpressionN m -> ExprGuiM m PresentationMode
