@@ -7,7 +7,7 @@ module Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Results
 
 import Control.Applicative (Applicative(..), (<$>), (<$))
 import Control.Lens.Operators
-import Control.Monad ((<=<), void, join)
+import Control.Monad ((<=<), void)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.State (StateT)
 import Control.MonadA (MonadA)
@@ -174,20 +174,16 @@ toMResultsList holeInfo makeWidget baseId options = do
       , rId = resultId
       }
 
-baseExprToResultsList ::
-  MonadA m => HoleInfo m -> WidgetMaker m -> ExprIRef.ExpressionM m () ->
-  CT m (Maybe (ResultsList m))
-baseExprToResultsList holeInfo makeWidget baseExpr =
-  fmap join . traverse conclude =<<
+baseExprWithApplyForms ::
+  MonadA m => HoleInfo m -> ExprIRef.ExpressionM m () ->
+  CT m [Sugar.HoleResultSeed m]
+baseExprWithApplyForms holeInfo baseExpr =
+  maybe [] applyForms <$>
   (hiHoleActions holeInfo ^. Sugar.holeInferExprType) baseExpr
   where
-    conclude baseExprType =
-      toMResultsList holeInfo makeWidget baseId .
-      map (Sugar.ResultSeedExpression . (Nothing <$)) $
-      applyForms baseExprType
     applyForms baseExprType =
+      map (Sugar.ResultSeedExpression . (Nothing <$)) $
       ExprUtil.applyForms baseExprType baseExpr
-    baseId = WidgetIds.hash baseExpr
 
 injectLenses :: [Lens.ALens s t a b] -> b -> s -> [t]
 injectLenses lenses b s = ($ s) . (#~ b) <$> lenses
@@ -215,12 +211,11 @@ injectApply arg baseExpr baseExprType = do
     base = ExprUtil.applyDependentPis baseExprType baseExpr
 
 injectArg ::
-  MonadA m => HoleInfo m -> WidgetMaker m ->
+  MonadA m => HoleInfo m ->
   Sugar.ExprStorePoint m -> ExprIRef.ExpressionM m () ->
-  CT m (Maybe (ResultsList m))
-injectArg holeInfo makeWidget rawArg baseExpr =
-  toMResultsList holeInfo makeWidget baseId .
-  map Sugar.ResultSeedExpression =<<
+  CT m [Sugar.HoleResultSeed m]
+injectArg holeInfo rawArg baseExpr =
+  map Sugar.ResultSeedExpression <$>
   case (Nothing <$ baseExpr) ^. Expr.eBody of
   Expr.BodyLam lam ->
     pure $ storePointExpr . Expr.BodyLam <$> injectLam arg lam
@@ -231,7 +226,6 @@ injectArg holeInfo makeWidget rawArg baseExpr =
     (hiHoleActions holeInfo ^. Sugar.holeInferExprType) baseExpr
   where
     arg = fromMaybe rawArg $ removeHoleWrap rawArg
-    baseId = WidgetIds.hash baseExpr
 
 removeHoleWrap :: Expression def a -> Maybe (Expression def a)
 removeHoleWrap expr = do
@@ -248,12 +242,13 @@ makeResultsList ::
   MonadA m => HoleInfo m -> WidgetMaker m -> GroupM m ->
   CT m (Maybe (ResultsList m))
 makeResultsList holeInfo makeWidget group =
+  toMResultsList holeInfo makeWidget baseId =<<
   case Property.value (hiState holeInfo) ^. HoleInfo.hsArgument of
-  Just arg -> injectArg holeInfo makeWidget arg baseExpr
-  Nothing -> toResList baseExpr
+  Just arg -> injectArg holeInfo arg baseExpr
+  Nothing -> baseExprWithApplyForms holeInfo baseExpr
   where
-    toResList = baseExprToResultsList holeInfo makeWidget
     baseExpr = group ^. groupBaseExpr
+    baseId = WidgetIds.hash baseExpr
 
 makeNewTagResultList ::
   MonadA m => HoleInfo m -> WidgetMaker m ->
@@ -295,7 +290,8 @@ makeAll ::
 makeAll holeInfo makeWidget = do
   resultList <-
     List.catMaybes .
-    (`mappend` (List.joinM . List.fromList) [makeNewTagResultList holeInfo (mkNewTagResultWidget makeWidget)]) .
+    (`mappend` (List.joinM . List.fromList)
+     [makeNewTagResultList holeInfo (mkNewTagResultWidget makeWidget)]) .
     List.mapL (makeResultsList holeInfo (mkResultWidget makeWidget)) .
     List.fromList <$>
     ExprGuiM.transaction (makeAllGroups holeInfo)
@@ -310,7 +306,7 @@ makeAllGroups holeInfo = do
     , _scopeGetParams = getParams
     } <- hiHoleActions holeInfo ^. Sugar.holeScope
   let
-    relevantGroups = concat
+    allGroups = concat
       [ primitiveGroups, literalGroups
       , localsGroups, globalsGroups, tagsGroups, getParamsGroups
       ]
@@ -319,25 +315,28 @@ makeAllGroups holeInfo = do
     globalsGroups   = sortedGroups getVarsToGroup globals
     tagsGroups      = sortedGroups tagsToGroup tags
     getParamsGroups = sortedGroups getParamsToGroup getParams
-  pure $ holeMatches (^. groupNames) searchTerm relevantGroups
+  pure $ holeMatches (^. groupNames) searchTerm allGroups
   where
     literalGroups = makeLiteralGroups searchTerm
     state = Property.value $ hiState holeInfo
     searchTerm = state ^. HoleInfo.hsSearchTerm
-    primitiveGroups =
-      [ mkGroup ["Set", "Type"] $ Expr.BodyLeaf Expr.Set
-      , mkGroup ["Integer", "ℤ", "Z"] $ Expr.BodyLeaf Expr.IntegerType
-      , mkGroup ["->", "Pi", "→", "→", "Π", "π"] $
-        ExprUtil.makePi (Guid.fromString "NewPi") holeExpr holeExpr
-      , mkGroup ["\\", "Lambda", "Λ", "λ"] $
-        ExprUtil.makeLambda (Guid.fromString "NewLambda") holeExpr holeExpr
-      , mkGroup ["Record Type", "{"] . Expr.BodyRecord $
-        Expr.Record Expr.Type mempty
-      , mkGroup ["Record Value", "{"] . Expr.BodyRecord $
-        Expr.Record Expr.Val mempty
-      , mkGroup [".", "Get Field"] . Expr.BodyGetField $
-        Expr.GetField ExprUtil.pureHole ExprUtil.pureHole
-      ]
+
+primitiveGroups :: [Group def]
+primitiveGroups =
+  [ mkGroup ["Set", "Type"] $ Expr.BodyLeaf Expr.Set
+  , mkGroup ["Integer", "ℤ", "Z"] $ Expr.BodyLeaf Expr.IntegerType
+  , mkGroup ["->", "Pi", "→", "→", "Π", "π"] $
+    ExprUtil.makePi (Guid.fromString "NewPi") holeExpr holeExpr
+  , mkGroup ["\\", "Lambda", "Λ", "λ"] $
+    ExprUtil.makeLambda (Guid.fromString "NewLambda") holeExpr holeExpr
+  , mkGroup ["Record Type", "{"] . Expr.BodyRecord $
+    Expr.Record Expr.Type mempty
+  , mkGroup ["Record Value", "{"] . Expr.BodyRecord $
+    Expr.Record Expr.Val mempty
+  , mkGroup [".", "Get Field"] . Expr.BodyGetField $
+    Expr.GetField ExprUtil.pureHole ExprUtil.pureHole
+  ]
+  where
     holeExpr = ExprUtil.pureExpression $ Expr.BodyLeaf Expr.Hole
 
 groupOrdering :: String -> [String] -> [Bool]
