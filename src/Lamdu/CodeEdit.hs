@@ -33,6 +33,7 @@ import qualified Lamdu.CodeEdit.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.Sugar as Sugar
+import qualified Lamdu.CodeEdit.Sugar.AddNames as AddNames
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
@@ -45,7 +46,7 @@ type CT m = StateT Cache (T m)
 
 -- This is not in Sugar because Sugar is for code
 data SugarPane m = SugarPane
-  { spDef :: Sugar.DefinitionN m
+  { spDef :: Sugar.DefinitionU m
   , mDelPane :: Maybe (T m Guid)
   , mMovePaneDown :: Maybe (T m ())
   , mMovePaneUp :: Maybe (T m ())
@@ -94,7 +95,7 @@ makeSugarPanes cp rootGuid = do
   traverse convertPane $ enumerate panes
 
 makeClipboardsEdit ::
-  MonadA m => [Sugar.DefinitionN m] -> ExprGuiM m (WidgetT m)
+  MonadA m => [Sugar.DefinitionU m] -> ExprGuiM m (WidgetT m)
 makeClipboardsEdit clipboards = do
   clipboardsEdits <- traverse makePaneWidget clipboards
   clipboardTitle <-
@@ -103,7 +104,7 @@ makeClipboardsEdit clipboards = do
     else ExprGuiM.widgetEnv $ BWidgets.makeTextView "Clipboards:" ["clipboards title"]
   return . Box.vboxAlign 0 $ clipboardTitle : clipboardsEdits
 
-makeSugarClipboards :: (MonadA m, Typeable1 m) => Anchors.CodeProps m -> CT m [Sugar.DefinitionN m]
+makeSugarClipboards :: (MonadA m, Typeable1 m) => Anchors.CodeProps m -> CT m [Sugar.DefinitionU m]
 makeSugarClipboards cp =
   traverse (Sugar.loadConvertDefI cp) =<<
   (lift . Transaction.getP . Anchors.clipboards) cp
@@ -165,9 +166,9 @@ makePanesEdit panes myId = do
          (E.Doc ["View", "Pane", "Move up"])) $ mMovePaneUp pane
       ]
 
-makePaneWidget :: MonadA m => Sugar.DefinitionN m -> ExprGuiM m (Widget (T m))
+makePaneWidget :: MonadA m => Sugar.DefinitionU m -> ExprGuiM m (Widget (T m))
 makePaneWidget =
-  fmap onEachPane . DefinitionEdit.make
+  fmap onEachPane . DefinitionEdit.make . AddNames.addToDef
   where
     onEachPane widget
       | widget ^. Widget.wIsFocused = onActivePane widget

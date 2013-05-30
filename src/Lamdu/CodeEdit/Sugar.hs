@@ -18,7 +18,7 @@ module Lamdu.CodeEdit.Sugar
   , ExpressionP(..)
     , rGuid, rBody, rPayload, rHiddenGuids, rPresugaredExpression
   , NameSource(..), NameCollision(..), Name(..), MStoredName
-  , DefinitionN
+  , DefinitionN, DefinitionU
   , Expression, ExpressionN
   , BodyN
   , WhereItem(..)
@@ -84,7 +84,6 @@ import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
-import qualified Lamdu.CodeEdit.Sugar.AddNames as AddNames
 import qualified Lamdu.CodeEdit.Sugar.Convert.Apply as Apply
 import qualified Lamdu.CodeEdit.Sugar.Convert.Hole as Hole
 import qualified Lamdu.CodeEdit.Sugar.Expression as SugarExpr
@@ -818,9 +817,9 @@ convertDefinitionContent recordParamsInfo usedTags expr = do
 loadConvertDefI ::
   (MonadA m, Typeable1 m) =>
   Anchors.CodeProps m -> DefI (Tag m) ->
-  CT m (DefinitionN m)
+  CT m (DefinitionU m)
 loadConvertDefI cp defI =
-  fmap AddNames.addToDef $ convertDefI =<< lift (Load.loadDefinitionClosure defI)
+  convertDefI =<< lift (Load.loadDefinitionClosure defI)
   where
     convertDefBody (Definition.BodyBuiltin builtin) =
       fmap return . convertDefIBuiltin builtin
