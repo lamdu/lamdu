@@ -10,6 +10,7 @@ module Lamdu.Data.Ops
   , newPane
   , newClipboard
   , makeNewTag, makeNewPublicTag
+  , isInfix
   ) where
 
 import Control.Applicative ((<$>), (<*>), (<$))
@@ -26,6 +27,7 @@ import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expr
@@ -153,9 +155,28 @@ jumpBack codeProps = do
       setP (Anchors.preJumps codeProps) js
       return j
 
+isInfix :: String -> Bool
+isInfix x = not (null x) && all (`elem` Config.operatorChars) x
+
+presentationModeOfName :: String -> Anchors.PresentationMode
+presentationModeOfName x
+  | isInfix x = Anchors.Infix
+  | otherwise = Anchors.OO
+
+newDefinition ::
+  MonadA m => String ->
+  ExprIRef.DefinitionI (Tag m) -> T m (DefI (Tag m))
+newDefinition name def = do
+  res <- Transaction.newIRef def
+  let guid = IRef.guid res
+  setP (Anchors.assocNameRef guid) name
+  setP (Anchors.assocPresentationMode guid) $ presentationModeOfName name
+  return res
+
 newBuiltin ::
   MonadA m =>
-  String -> ExprIRef.ExpressionI (Tag m) ->
+  String ->
+  ExprIRef.ExpressionI (Tag m) ->
   T m (DefI (Tag m))
 newBuiltin fullyQualifiedName typeI =
   newDefinition name . (`Definition` typeI) . Definition.BodyBuiltin .
@@ -163,14 +184,6 @@ newBuiltin fullyQualifiedName typeI =
   where
     name = last path
     path = splitOn "." fullyQualifiedName
-
-newDefinition ::
-  MonadA m => String ->
-  ExprIRef.DefinitionI (Tag m) -> T m (DefI (Tag m))
-newDefinition name def = do
-  res <- Transaction.newIRef def
-  setP (Anchors.assocNameRef (IRef.guid res)) name
-  return res
 
 newPublicDefinition ::
   MonadA m => Anchors.CodeProps m -> String -> T m (DefI (Tag m))

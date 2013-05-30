@@ -1,6 +1,6 @@
 module Lamdu.ExampleDB(initDB, createBuiltins) where
 
-import Control.Applicative (liftA2, (<$>))
+import Control.Applicative (Applicative(..), liftA2, (<$>))
 import Control.Lens.Operators
 import Control.Monad (join, unless, void, (<=<))
 import Control.Monad.Trans.Class (lift)
@@ -16,6 +16,7 @@ import Data.Traversable (traverse)
 import Lamdu.Data.Definition (Definition(..))
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer
+import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Rev.Branch as Branch
 import qualified Data.Store.Rev.Version as Version
@@ -52,7 +53,11 @@ createBuiltins =
     let listOf = mkApply list
     bool <- mkDefinitionRef $ publicBuiltin "Prelude.Bool" set
 
-    _ <- publicBuiltin "Data.Map.Map" $ mkPi set $ endo set
+    _ <-
+      publicBuiltin "Data.Map.Map" $ mkPiRecord
+      [ ("Key", set)
+      , ("Value", set)
+      ] set
 
     cons <- publicBuiltin "Prelude.:" $ forAll "a" $ \a -> mkPi a . endo $ listOf a
     nil <- publicBuiltin "Prelude.[]" $ forAll "a" listOf
@@ -60,7 +65,7 @@ createBuiltins =
     true <- publicBuiltin "Prelude.True" bool
     false <- publicBuiltin "Prelude.False" bool
 
-    traverse_ ((`publicBuiltin_` mkPi bool (endo bool)) . ("Prelude."++))
+    traverse_ ((`publicBuiltin_` mkInfixType bool bool bool) . ("Prelude."++))
       ["&&", "||"]
 
     publicBuiltin_ "Prelude.if" . forAll "a" $ \a ->
@@ -73,7 +78,9 @@ createBuiltins =
     publicBuiltin_ "Prelude.id" $ forAll "a" endo
 
     publicBuiltin_ "Prelude.const" .
-      forAll "a" $ \a -> forAll "b" $ \b -> mkPi a $ mkPi b a
+      forAll "a" $ \a ->
+      forAll "b" $ \b ->
+      mkPi a $ mkPi b a
 
     publicBuiltin_ "Data.List.reverse" $ forAll "a" (endo . listOf)
     publicBuiltin_ "Data.List.tail" $ forAll "a" (endo . listOf)
@@ -122,19 +129,18 @@ createBuiltins =
       , ( "ys", listOf b )
       ] $ listOf c
 
-    let aToAToA = forAll "a" $ \a -> mkPi a $ endo a
+    let aToAToA = forAll "a" $ \a -> mkInfixType a a a
     traverse_ ((`publicBuiltin_` aToAToA) . ("Prelude." ++))
       ["+", "-", "*", "/", "^", "++", "div", "quot", "rem"]
     newDef "%" ["Prelude"] "mod" aToAToA
     publicBuiltin_ "Prelude.negate" $ forAll "a" endo
     publicBuiltin_ "Prelude.sqrt" $ forAll "a" endo
 
-    let aToAToBool = forAll "a" $ \a -> mkPi a $ mkPi a bool
+    let aToAToBool = forAll "a" $ \a -> mkInfixType a a bool
     traverse_ ((`publicBuiltin_` aToAToBool) . ("Prelude." ++))
       ["==", "/=", "<=", ">=", "<", ">"]
 
-    newDef ".." ["Prelude"] "enumFromTo" .
-      mkPi integer . mkPi integer $ listOf integer
+    newDef ".." ["Prelude"] "enumFromTo" $ mkInfixType integer integer integer
 
     publicBuiltin_ "Data.List.iterate" .
       forAll "a" $ \a ->
@@ -142,7 +148,7 @@ createBuiltins =
 
     newDef "." ["Prelude"] "." .
       forAll "a" $ \a -> forAll "b" $ \b -> forAll "c" $ \c ->
-      mkPi (mkPi b c) . mkPi (mkPi a b) $ mkPi a c
+      mkInfixType (mkPi b c) (mkPi a b) (mkPi a c)
     let
       specialFunctions = A.SpecialFunctions
         { A.sfCons = cons
@@ -172,12 +178,12 @@ createBuiltins =
     mkPi mkArgType mkResType = fmap snd . join $ liftA2 ExprIRef.newPi mkArgType mkResType
     mkApply mkFunc mkArg =
       ExprIRef.newExprBody =<< liftA2 ExprUtil.makeApply mkFunc mkArg
-    mkTag name = do
-      tagGuid <- Transaction.newKey
+    newTag name = namedTag name =<< Transaction.newKey
+    namedTag name tagGuid = do
       setP (A.assocNameRef tagGuid) name
       ExprIRef.newExprBody $ ExprLens.bodyTag # tagGuid
-    mkRecordType strFields = do
-      tagFields <- traverse (Lens._1 mkTag <=< Lens.sequenceOf Lens._2) strFields
+    mkRecordType mkTag fields = do
+      tagFields <- traverse (Lens._1 mkTag <=< Lens.sequenceOf Lens._2) fields
       ExprIRef.newExprBody $ Expr.BodyRecord Expr.Record
         { Expr._recordKind = Expr.Type
         , Expr._recordFields = tagFields
@@ -186,7 +192,13 @@ createBuiltins =
       x <- lift f
       Writer.tell [x]
       return x
-    mkPiRecord = mkPi . mkRecordType
+    mkPiRecord = mkPi . mkRecordType newTag
+    mkInfixRecordType lType rType = do
+      l <- namedTag "l" $ Guid.fromString "infixlarg"
+      r <- namedTag "r" $ Guid.fromString "infixrarg"
+      mkRecordType pure [(l, lType), (r, rType)]
+    mkInfixType lType rType =
+      mkPi $ mkInfixRecordType lType rType
     mkDefinitionRef f =
       ExprIRef.newExprBody . (ExprLens.bodyDefinitionRef #) <$> f
     publicBuiltin builtinName typeMaker =

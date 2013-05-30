@@ -68,7 +68,7 @@ makePane = id
 assocNameRef :: MonadA m => Guid -> MkProperty m String
 assocNameRef = Transaction.assocDataRefDef "" "Name"
 
-data PresentationMode = OO | Verbose
+data PresentationMode = OO | Verbose | Infix
   deriving (Eq, Ord, Enum, Bounded, Show)
 
 assocPresentationMode ::
