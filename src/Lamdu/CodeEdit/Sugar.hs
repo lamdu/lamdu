@@ -37,7 +37,7 @@ module Lamdu.CodeEdit.Sugar
   , HoleResultSeed(..)
   , ScopeItem
   , Scope(..), scopeLocals, scopeGlobals, scopeTags, scopeGetParams
-  , HoleActions(..), holePaste, holeMDelete, holeResult, holeInferExprType
+  , HoleActions(..), holePaste, holeMDelete, holeResult, holeInferExprType, holeInferredType
   , StorePoint
   , HoleResult(..)
     , holeResultInferred

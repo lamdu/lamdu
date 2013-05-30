@@ -42,7 +42,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , HoleResultSeed(..)
   , ScopeItem
   , Scope(..), scopeLocals, scopeGlobals, scopeTags, scopeGetParams
-  , HoleActions(..), holeScope, holePaste, holeMDelete, holeResult, holeInferExprType
+  , HoleActions(..), holeScope, holePaste, holeMDelete, holeResult, holeInferExprType, holeInferredType
   , StorePoint(..)
   , HoleResult(..)
     , holeResultInferred
@@ -198,10 +198,11 @@ data Scope name m = Scope
 data HoleActions name m = HoleActions
   { _holeScope :: T m (Scope name m)
   , -- Infer expression "on the side" (not in the hole position),
-    -- but with the hole's scope in scope.
+    -- but with the hole's scope.
     -- If given expression does not type check on its own, returns Nothing.
     -- (used by HoleEdit to suggest variations based on type)
     _holeInferExprType :: ExprIRef.ExpressionM m () -> CT m (Maybe (ExprIRef.ExpressionM m ()))
+  , _holeInferredType :: ExprIRef.ExpressionM m ()
   , _holeResult :: HoleResultSeed m -> CT m (Maybe (HoleResult name m))
   , _holePaste :: Maybe (T m Guid)
   , -- TODO: holeMDelete is always Nothing, not implemented yet

@@ -117,6 +117,7 @@ convertTypeCheckedHoleH sugarContext mPaste iwc exprI =
           , mapM getGlobal globals
           , mapM getTag tags
           ]
+        , _holeInferredType = void $ Infer.iType inferred
         , _holeInferExprType = inferExprType
         , _holeResult = makeHoleResult sugarContext inferred exprS
         }
