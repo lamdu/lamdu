@@ -28,9 +28,7 @@ import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified System.Random as Random
 import qualified Test.HUnit as HUnit
 
-canonizeInferred ::
-  Expression def0 (Expression def1 a, Expression def2 b) ->
-  Expression def0 (Expression def1 a, Expression def2 b)
+canonizeInferred :: InferResults t -> InferResults t
 canonizeInferred =
   ExprUtil.randomizeParamIdsG ExprUtil.debugNameGen Map.empty canonizePayload
   where
@@ -77,26 +75,6 @@ inferAssertion expr =
   assertCompareInferred inferredExpr expr
   where
     inferredExpr = inferResults . fst . doInfer_ $ void expr
-
-canonizeDebug :: Expression def a -> Expression def a
-canonizeDebug = ExprUtil.randomizeParamIdsG ExprUtil.debugNameGen Map.empty (\_ _ -> id)
-
-showInferred :: Expression (DefI t) Infer.IsRestrictedPoly -> String
-showInferred =
-  show . fmap restrictedStr . simplifyDef . canonizeDebug
-  where
-    restrictedStr Infer.UnrestrictedPoly = UnescapedStr ""
-    restrictedStr Infer.RestrictedPoly = UnescapedStr $ ansiAround ansiYellow "R"
-
-showInferredValType :: Expression def (Infer.Inferred (DefI t)) -> String
-showInferredValType expr =
-  unlines
-  [ "Inferred val:  " ++ f Infer.iValue
-  , "Inferred type: " ++ f Infer.iType
-  ]
-  where
-    f t = expr ^. Expr.ePayload . Lens.to (showInferred . t)
-
 
 inferWVAssertion :: InferResults t -> InferResults t -> HUnit.Assertion
 inferWVAssertion expr wvExpr = do

@@ -50,7 +50,7 @@ showExpressionWithConflicts =
     check str iexpr conflicts =
       fmap (: []) . addAnnotation . List.intercalate "\n" $
       [ "Inferred " ++ str
-      , "  " ++ show iexpr
+      , "  " ++ showInferred iexpr
       , "Conflicts:"
       ] ++
       map (("  "++) . show . Infer.errDetails) conflicts

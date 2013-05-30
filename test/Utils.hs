@@ -23,6 +23,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
+import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
@@ -161,3 +162,25 @@ simplifyDef =
   ExprLens.exprDef %~ defIStr
   where
     defIStr = UnescapedStr . BS8.unpack . BS8.takeWhile (/= '\0') . Guid.bs . IRef.guid
+
+showRestricted :: Expr.Expression def Infer.IsRestrictedPoly -> Expr.Expression def UnescapedStr
+showRestricted = fmap restrictedStr
+  where
+    restrictedStr Infer.UnrestrictedPoly = UnescapedStr ""
+    restrictedStr Infer.RestrictedPoly = UnescapedStr $ ansiAround ansiYellow "R"
+
+canonizeDebug :: Expression def a -> Expression def a
+canonizeDebug = ExprUtil.randomizeParamIdsG ExprUtil.debugNameGen Map.empty (\_ _ -> id)
+
+showInferred :: Expression (DefI t) Infer.IsRestrictedPoly -> String
+showInferred =
+  show . showRestricted . simplifyDef . canonizeDebug
+
+showInferredValType :: Expression def (Infer.Inferred (DefI t)) -> String
+showInferredValType expr =
+  unlines
+  [ "Inferred val:  " ++ f Infer.iValue
+  , "Inferred type: " ++ f Infer.iType
+  ]
+  where
+    f t = expr ^. Expr.ePayload . Lens.to (showInferred . t)
