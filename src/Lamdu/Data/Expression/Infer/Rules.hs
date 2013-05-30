@@ -61,7 +61,7 @@ data Rule def a
   | PiParamTypeToArgType ExprRef a
   | LambdaParamTypeToArgType ExprRef a
   | ArgTypeToLambdaParamType ExprRef (a, a)
-  | NonLambdaToApplyValue ExprRef (a, a)
+  | NonLambdaToApplyValue ExprRef (a, a, a)
   | ApplyToParts (Expr.Apply ExprRef) (a, a)
   | VerifyTagRule ExprRef a
   | DisallowTagTypeForApply ExprRef a
@@ -531,8 +531,8 @@ runArgTypeToLambdaParamType funcValRef (funcExpr, argTExpr) = do
       ExprUtil.makeLambda param argTExpr holeRefExpr
     )
 
-runNonLambdaToApplyValue :: ExprRef -> RefExpression2 def -> RuleResult def
-runNonLambdaToApplyValue applyValRef (funcExpr, argExpr) =
+runNonLambdaToApplyValue :: ExprRef -> RefExpression3 def -> RuleResult def
+runNonLambdaToApplyValue applyValRef (funcExpr, argExpr, applyTypExpr) =
   -- If func is surely not a lambda (a hole too could be a lambda).
   --
   -- Applies have a special case in the inferred value handling for
@@ -544,11 +544,12 @@ runNonLambdaToApplyValue applyValRef (funcExpr, argExpr) =
   case funcExpr ^. Expr.eBody of
   Expr.BodyLam (Expr.Lambda Expr.Val _ _ _) -> []
   Expr.BodyLeaf Expr.Hole -> []
-  _ ->
-    [ ( applyValRef
+  _ -> do
+    guard $ ExprUtil.isTypeConstructorType applyTypExpr
+    return
+      ( applyValRef
       , makeRefExpr $ ExprUtil.makeApply funcExpr argExpr
       )
-    ]
 
 runApplyToParts :: Eq def => Expr.Apply ExprRef -> RefExpression2 def -> RuleResult def
 runApplyToParts refs (applyExpr, funcExpr) = do
@@ -596,7 +597,7 @@ applyRules applyTv apply@(Expr.Apply func arg) =
   [ ArgTypeToPiParamType (tvType func) (tvType arg) <$> mkOrigin
   , RigidArgApplyTypeToResultType (tvType func) (tvType applyTv, tvVal arg) <$> mkOrigin
   , pure $ ArgTypeToLambdaParamType (tvVal func) (tvVal func, tvType arg)
-  , pure $ NonLambdaToApplyValue (tvVal applyTv) (tvVal func, tvVal arg)
+  , pure $ NonLambdaToApplyValue (tvVal applyTv) (tvVal func, tvVal arg, tvType applyTv)
   , pure $ DisallowTagTypeForApply (tvVal applyTv) (tvType applyTv)
   ]
   ++ recurseSubstRules Expr.Type (tvType applyTv) (tvType func) (tvVal arg)

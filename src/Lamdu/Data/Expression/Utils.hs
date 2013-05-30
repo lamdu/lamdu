@@ -25,6 +25,7 @@ module Lamdu.Data.Expression.Utils
   , subst, substGetPar
   , subExpressionsThat
   , showBodyExpr, showsPrecBodyExpr
+  , isTypeConstructorType
   ) where
 
 import Prelude hiding (pi)
@@ -341,6 +342,13 @@ subExpressionsThat ::
   Lens.Fold (Expression def a) (Expression def a)
 subExpressionsThat predicate =
   Lens.folding subExpressions . Lens.filtered predicate
+
+isTypeConstructorType :: Expression def a -> Bool
+isTypeConstructorType expr =
+  case expr ^. eBody of
+  BodyLeaf Set -> True
+  BodyLam (Lambda Type _ _ res) -> isTypeConstructorType res
+  _ -> False
 
 -- Show isntances:
 showsPrecBody ::

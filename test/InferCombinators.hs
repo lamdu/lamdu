@@ -191,7 +191,11 @@ infixl 3 $$:
       Expr.BodyLam (Expr.Lambda k1 paramGuid _ result)
         | k == k1 -> ExprUtil.substGetPar paramGuid (nextArg ^. iVal) result
       _ -> seeOther
-    applyVal = handleLam funcVal Val pureHole $ bodyToPureExpr application
+    applyVal =
+      handleLam funcVal Val pureHole $
+      if ExprUtil.isTypeConstructorType applyType
+      then bodyToPureExpr application
+      else pureHole
     applyType = handleLam funcType Type piErr piErr
     piErr = error "Apply of non-Pi type!"
 
