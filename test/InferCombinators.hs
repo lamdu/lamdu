@@ -8,6 +8,7 @@ import Control.Monad (void)
 import Data.Map ((!))
 import Data.Maybe (fromMaybe)
 import Data.Store.Guid (Guid)
+import InferWrappers
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expression (Kind(..))
 import Lamdu.Data.Expression.IRef (DefI)
@@ -17,15 +18,8 @@ import qualified Control.Lens as Lens
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
-
-type InferResults t =
-  ExprIRef.Expression t
-  ( PureExprDefI t
-  , PureExprDefI t
-  )
 
 iexpr ::
   PureExprDefI t ->

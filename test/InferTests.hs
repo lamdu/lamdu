@@ -11,7 +11,8 @@ import InferWrappers
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expression (Expression(..), Kind(..))
 import Lamdu.Data.Expression.Infer.Conflicts (inferWithConflicts)
-import Test.Framework.Providers.HUnit (hUnitTestToTests)
+import Test.Framework (testGroup, plusTestOptions)
+import Test.Framework.Options (TestOptions'(..))
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.HUnit (assertBool)
 import Test.QuickCheck (Property)
@@ -22,6 +23,7 @@ import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
+import qualified Test.Framework.Providers.HUnit as HUnitProvider
 import qualified Test.HUnit as HUnit
 
 simpleTests =
@@ -116,7 +118,9 @@ lamParamType = ExprLens.exprLam . Expr.lambdaParamType
 lamBody :: Lens.Traversal' (Expression def a) (Expression def a)
 lamBody = ExprLens.exprLam . Expr.lambdaResult
 
-testGroup title = HUnit.TestLabel title . HUnit.TestList
+defaultTestOptions = mempty { topt_timeout = Just (Just 100000) }
+
+testCase name = plusTestOptions defaultTestOptions . HUnitProvider.testCase name
 
 resumptionTests = testGroup "type infer resume" $
   [ testResume "{hole->pi}"
@@ -173,7 +177,7 @@ failResumptionAddsRules =
       doInfer_ . lambda "x" (hole --> hole) $
       \x -> x $$ hole $$ hole
 
-emptyRecordTest =
+emptyRecordTests =
   testGroup "empty record"
   [ testInfer "type infer" $ record Type []
   , testInfer "val infer" $ record Val []
@@ -234,8 +238,28 @@ inferReplicateOfReplicate =
     replicat typ x y =
       getDef "replicate" $$ asHole typ $$: [ x, y ]
 
+infiniteTypeTests =
+  testGroup "Infinite types"
+  [ wrongRecurseMissingArg
+  ]
+
+expectLeft :: Show r => String -> (l -> HUnit.Assertion) -> Either l r -> HUnit.Assertion
+expectLeft _ handleLeft (Left x) = handleLeft x
+expectLeft msg _ (Right x) =
+  HUnit.assertFailure $
+  unwords ["Error", msg, "expected.  Unexpected success encountered:", show x]
+
+wrongRecurseMissingArg =
+  testCase "f x = f" $
+  expectLeft "Infinite Type" verifyError $
+  loadInferResults (void expr)
+  where
+    verifyError err =
+      HUnit.assertFailure $
+      "TODO: Need to verify the error here makes sense: " ++ show err
+    expr = lambda "x" hole . const $ recurse hole
+
 hunitTests =
-  HUnit.TestList $
   simpleTests ++
   [ applyIntToBoolFuncWithHole
   , applyOnVar
@@ -251,10 +275,11 @@ hunitTests =
   , monomorphRedex
   , inferPart
   , failResumptionAddsRules
-  , emptyRecordTest
+  , emptyRecordTests
   , recordTest
   , inferReplicateOfReplicate
   , implicitVarTests
+  , infiniteTypeTests
   , resumptionTests
   ]
 
@@ -264,6 +289,8 @@ inferPreservesShapeProp expr =
     Nothing -> property rejected
     Just (inferred, _) -> property (void inferred == expr)
 
-qcProps = [testProperty "infer preserves shape" inferPreservesShapeProp]
+qcProps =
+  [ testProperty "infer preserves shape" inferPreservesShapeProp
+  ]
 
-allTests = hUnitTestToTests hunitTests `mappend` qcProps
+allTests = hunitTests ++ qcProps

@@ -2,10 +2,12 @@ module InferWrappers where
 
 import AnnotatedExpr
 import Control.Applicative (Applicative(..), (<$>))
+import Control.Arrow ((&&&))
 import Control.Lens.Operators
 import Control.Monad (void)
-import Control.Monad.Trans.State (State, runState, runStateT)
+import Control.Monad.Trans.State (State, StateT(..))
 import Data.Binary.Utils (encodeS)
+import Data.Functor.Identity (Identity(..))
 import Data.Maybe (fromMaybe)
 import Data.Traversable (traverse)
 import Lamdu.Data.Expression.IRef (DefI)
@@ -19,6 +21,16 @@ import qualified Data.Store.IRef as IRef
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
+
+
+type InferResults t =
+  ExprIRef.Expression t
+  ( PureExprDefI t
+  , PureExprDefI t
+  )
+
+inferResults :: ExprIRef.Expression t (Infer.Inferred (DefI t)) -> InferResults t
+inferResults = fmap (void . Infer.iValue &&& void . Infer.iType)
 
 doLoad :: ExprIRef.Expression t a -> Infer.Loaded (DefI t) a
 doLoad expr =
@@ -71,6 +83,33 @@ doInferM inferNode expr = do
       , showExpressionWithConflicts $ fst <$> exprWC
       ]
 
+loadInferM ::
+  Infer.InferNode (DefI t) -> ExprIRef.Expression t a ->
+  StateT (Infer.Context (DefI t)) (Either (Infer.Error (DefI t)))
+  (Expr.Expression (DefI t) (Infer.Inferred (DefI t), a))
+loadInferM inferNode expr =
+  Infer.inferLoaded eitherActions (doLoad expr) inferNode
+  where
+    eitherActions = Infer.InferActions Left
+
+loadInfer ::
+  ExprIRef.Expression t a ->
+  Either (Infer.Error (DefI t))
+  (ExprIRef.Expression t (Infer.Inferred (DefI t), a), Infer.Context (DefI t))
+loadInfer expr = fromInitialState $ (`loadInferM` expr)
+
+loadInferResults ::
+  ExprIRef.Expression t () ->
+  Either (Infer.Error (DefI t)) (InferResults t)
+loadInferResults = fmap (inferResults . fmap fst . fst) . loadInfer
+
+fromInitialState ::
+  (Infer.InferNode (DefI t) -> StateT (Infer.Context (DefI t)) m a) -> m (a, Infer.Context (DefI t))
+fromInitialState f =
+  (`runStateT` ctx) $ f node
+  where
+    (ctx, node) = Infer.initial $ Just recursiveDefI
+
 doInferM_ ::
   Infer.InferNode (DefI t) -> ExprIRef.Expression t a ->
   State (Infer.Context (DefI t)) (ExprIRef.Expression t (Infer.Inferred (DefI t)))
@@ -81,10 +120,7 @@ doInfer ::
   ( ExprIRef.Expression t (Infer.Inferred (DefI t), a)
   , Infer.Context (DefI t)
   )
-doInfer =
-  (`runState` ctx) . doInferM node
-  where
-    (ctx, node) = Infer.initial $ Just recursiveDefI
+doInfer expr = runIdentity $ fromInitialState (`doInferM` expr)
 
 doInfer_ ::
   ExprIRef.Expression t a ->
@@ -95,11 +131,9 @@ inferMaybe ::
   ExprIRef.Expression t a ->
   Maybe (ExprIRef.Expression t (Infer.Inferred (DefI t), a), Infer.Context (DefI t))
 inferMaybe expr =
-  (`runStateT` ctx) $
-  Infer.inferLoaded (Infer.InferActions (const Nothing)) loaded node
+  fromInitialState $ Infer.inferLoaded maybeActions (doLoad expr)
   where
-    (ctx, node) = Infer.initial (Just recursiveDefI)
-    loaded = doLoad expr
+    maybeActions = (Infer.InferActions (const Nothing))
 
 inferMaybe_ ::
   ExprIRef.Expression t b ->
@@ -110,6 +144,6 @@ inferAndEncode :: ExprIRef.Expression t a -> Int -> Int
 inferAndEncode expr par = SBS.length . encodeS $ fst result
   where
     result =
-      fromMaybe (error "Conflicts in factorial infer") .
+      fromMaybe (error "Conflicts in infer") .
       inferMaybe_ . void $
       fmap (const par) expr

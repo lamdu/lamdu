@@ -4,16 +4,15 @@ module InferAssert where
 
 import AnnotatedExpr
 import Control.Applicative ((<$>), Applicative(..))
-import Control.Arrow ((&&&))
 import Control.Lens.Operators
 import Control.Monad (void)
 import Control.Monad.Trans.State (runStateT)
-import InferCombinators
 import InferWrappers
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expression (Expression(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import System.IO (hPutStrLn, stderr)
+import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit (assertBool)
 import Utils
 import qualified Control.Exception as E
@@ -21,11 +20,11 @@ import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Lamdu.Data.Expression as Expr
-import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Infer.ImplicitVariables as ImplicitVariables
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified System.Random as Random
+import qualified Test.Framework as TestFramework
 import qualified Test.HUnit as HUnit
 
 canonizeInferred :: InferResults t -> InferResults t
@@ -67,9 +66,6 @@ assertCompareInferred result expected =
       ]
     redShow = ansiAround ansiRed . show . void
 
-inferResults :: ExprIRef.Expression t (Infer.Inferred (DefI t)) -> InferResults t
-inferResults = fmap (void . Infer.iValue &&& void . Infer.iType)
-
 inferAssertion :: InferResults t -> HUnit.Assertion
 inferAssertion expr =
   assertCompareInferred inferredExpr expr
@@ -106,15 +102,12 @@ allowFailAssertion assertion =
     errorOccurred =
       hPutStrLn stderr . ansiAround ansiYellow $ "WARNING: Allowing failure in:"
 
-testInfer :: String -> InferResults t -> HUnit.Test
+testInfer :: String -> InferResults t -> TestFramework.Test
 testInfer name = testCase name . inferAssertion
 
-testInferAllowFail :: String -> InferResults t -> HUnit.Test
+testInferAllowFail :: String -> InferResults t -> TestFramework.Test
 testInferAllowFail name expr =
   testCase name . allowFailAssertion $ inferAssertion expr
-
-testCase :: String -> HUnit.Assertion -> HUnit.Test
-testCase name = HUnit.TestLabel name . HUnit.TestCase
 
 type InferredExpr t = Expression (DefI t) (Infer.Inferred (DefI t))
 testResume ::
@@ -122,7 +115,7 @@ testResume ::
   InferResults t ->
   Lens.Traversal' (InferredExpr t) (InferredExpr t) ->
   InferResults t ->
-  HUnit.Test
+  TestFramework.Test
 testResume name origExpr position newExpr =
   testCase name $
   let
