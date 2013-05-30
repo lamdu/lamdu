@@ -32,7 +32,8 @@ module Lamdu.CodeEdit.Sugar.Types
   , GetVarType(..)
   , GetVar(..), gvIdentifier, gvName, gvJumpTo, gvVarType
   , GetParams(..), gpDefGuid, gpDefName, gpJumpTo
-  , LabeledApply(..), laFunc, laArgs
+  , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
+  , Apply(..), aFunc, aSpecialArgs, aAnnotatedArgs
   , Lam(..), lKind, lParam, lIsDep, lResultType
   , FuncParamType(..)
   , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpHiddenLambdaGuid, fpType, fpMActions
@@ -72,7 +73,6 @@ import Lamdu.Data.Expression.IRef (DefI)
 import qualified Control.Lens.TH as LensTH
 import qualified Data.List as List
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 
@@ -288,17 +288,21 @@ data TagG name = TagG
   , _tagName :: name
   } deriving (Functor, Foldable, Traversable)
 
-data LabeledApply name expr = LabeledApply
-  { _laFunc :: expr
-    -- TODO: Either use a GADT LenList or a tuple for the guaranteed
-    -- first 2:
-  , _laArgs :: [(TagG name, expr)]
+data SpecialArgs expr
+  = NoSpecialArgs
+  | ObjectArg expr
+  | InfixArgs expr expr
+  deriving (Functor, Foldable, Traversable)
+
+data Apply name expr = Apply
+  { _aFunc :: expr
+  , _aSpecialArgs :: SpecialArgs expr
+  , _aAnnotatedArgs :: [(TagG name, expr)]
   } deriving (Functor, Foldable, Traversable)
 
 data Body name m expr
-  = BodyApply (Expr.Apply expr)
-  | BodyLam (Lam name m expr)
-  | BodyLabeledApply (LabeledApply name expr)
+  = BodyLam (Lam name m expr)
+  | BodyApply (Apply name expr)
   | BodyHole (Hole name m)
   | BodyInferred (Inferred name m expr)
   | BodyCollapsed (Collapsed name m expr)
@@ -317,8 +321,6 @@ instance Show expr => Show (FuncParam name m expr) where
     concat ["(", show (_fpGuid fp), ":", show (_fpType fp), ")"]
 
 instance Show expr => Show (Body name m expr) where
-  show (BodyApply (Expr.Apply func arg)) =
-    show func ++ " " ++ show arg
   show (BodyLam (Lam Val _paramType _isDep _body)) = "TODO:Lam"
   show (BodyLam (Lam Type paramType isDep resultType)) =
     paramName ++ show paramType ++ " -> " ++ show resultType
@@ -336,7 +338,7 @@ instance Show expr => Show (Body name m expr) where
     , List.intercalate ", " $ map (show . liExpr) items
     , "]"
     ]
-  show BodyLabeledApply {} = "LabelledApply:TODO"
+  show BodyApply {} = "LabelledApply:TODO"
   show BodyRecord {} = "Record:TODO"
   show BodyGetField {} = "GetField:TODO"
   show BodyTag {} = "Tag:TODO"
@@ -394,6 +396,7 @@ type DefinitionU = Definition MStoredName
 
 derive makeMonoid ''Scope
 LensTH.makePrisms ''Body
+LensTH.makePrisms ''SpecialArgs
 LensTH.makeLenses ''Definition
 LensTH.makeLenses ''DefinitionExpression
 LensTH.makeLenses ''Inferred
@@ -405,7 +408,7 @@ LensTH.makeLenses ''FieldList
 LensTH.makeLenses ''Record
 LensTH.makeLenses ''GetVar
 LensTH.makeLenses ''GetParams
-LensTH.makeLenses ''LabeledApply
+LensTH.makeLenses ''Apply
 LensTH.makeLenses ''GetField
 LensTH.makeLenses ''TagG
 LensTH.makeLenses ''Body

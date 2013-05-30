@@ -28,7 +28,8 @@ module Lamdu.CodeEdit.Sugar
   , GetVarType(..)
   , GetVar(..), gvIdentifier, gvName, gvJumpTo, gvVarType
   , GetParams(..), gpDefGuid, gpDefName, gpJumpTo
-  , LabeledApply(..), laFunc, laArgs
+  , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
+  , Apply(..), aFunc, aSpecialArgs, aAnnotatedArgs
   , Lam(..), lKind, lParam, lIsDep, lResultType
   , FuncParamType(..)
   , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpHiddenLambdaGuid, fpType, fpMActions

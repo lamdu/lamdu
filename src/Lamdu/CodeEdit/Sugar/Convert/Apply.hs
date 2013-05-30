@@ -16,6 +16,7 @@ import Data.Typeable (Typeable1)
 import Lamdu.CodeEdit.Sugar.Infer (ExprMM)
 import Lamdu.CodeEdit.Sugar.Monad (SugarM)
 import Lamdu.CodeEdit.Sugar.Types
+import Lamdu.Data.Anchors (PresentationMode(..))
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Either as Either
 import qualified Data.Set as Set
@@ -26,8 +27,8 @@ import qualified Lamdu.CodeEdit.Sugar.Monad as SugarM
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
-import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Expression.Lens as ExprLens
+import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Ops as DataOps
 
 uneither :: Either a a -> a
@@ -53,19 +54,22 @@ maybeToMPlus :: MonadPlus m => Maybe a -> m a
 maybeToMPlus Nothing = mzero
 maybeToMPlus (Just x) = return x
 
-isAtomicBody :: Body name m (ExpressionP name m pl) -> Bool
-isAtomicBody BodyHole {} = True
-isAtomicBody (BodyInferred inferred) =
-  isAtomicBody $ inferred ^. iValue . rBody
-isAtomicBody BodyCollapsed {} = True
-isAtomicBody BodyAtom {} = True
-isAtomicBody BodyLiteralInteger {} = True
-isAtomicBody BodyTag {} = True
-isAtomicBody BodyGetVar {} = True
-isAtomicBody BodyGetParams {} = True
-isAtomicBody _ = False
--- TODO: getField isn't atomic but we might want to allow it as left
--- side labeled func
+indirectDefinitionGuid :: ExpressionP name m pl -> Maybe Guid
+indirectDefinitionGuid funcS =
+  case funcS ^. rBody of
+  BodyGetVar gv -> Just $ gv ^. gvIdentifier
+  BodyCollapsed c -> Just $ c ^. pCompact . gvIdentifier
+  BodyInferred i -> indirectDefinitionGuid $ i ^. iValue
+  BodyGetField _ -> Nothing -- TODO: <-- do we want to make something up here?
+  _ -> Nothing
+
+indirectDefinitionPresentationMode :: MonadA m => ExpressionP name m pl -> SugarM m (Maybe PresentationMode)
+indirectDefinitionPresentationMode =
+  traverse (SugarM.getP . Anchors.assocPresentationMode) .
+  indirectDefinitionGuid
+
+noRepetitions :: Ord a => [a] -> Bool
+noRepetitions x = length x == Set.size (Set.fromList x)
 
 convertLabeled ::
   (MonadA m, Typeable1 m) =>
@@ -77,16 +81,21 @@ convertLabeled funcS argS exprI = do
     getArg field = do
       tagG <- maybeToMPlus $ field ^? rfTag . rBody . _BodyTag
       pure (tagG, field ^. rfExpr)
-  args <- traverse getArg $ fields ^. flItems
+  args@((_, arg0) : args1toN@((_, arg1) : args2toN)) <-
+    traverse getArg $ fields ^. flItems
+  let tagGuids = args ^.. Lens.traversed . Lens._1 . tagGuid
+  guard $ noRepetitions tagGuids
+  presentationMode <- MaybeT $ indirectDefinitionPresentationMode funcS
   let
-    tagGuids = args ^.. Lens.traversed . Lens._1 . tagGuid
-    numTags = length tagGuids
-  guard $ numTags > 1
-  guard $ numTags == Set.size (Set.fromList tagGuids)
-  guard . isAtomicBody $ funcS ^. rBody
-  lift . SugarExpr.make exprI $ BodyLabeledApply LabeledApply
-    { _laFunc = SugarExpr.removeSuccessfulType funcS
-    , _laArgs = args
+    (specialArgs, annotatedArgs) =
+      case presentationMode of
+      Verbose -> (NoSpecialArgs, args)
+      OO -> (ObjectArg arg0, args1toN)
+      Infix -> (InfixArgs arg0 arg1, args2toN)
+  lift . SugarExpr.make exprI $ BodyApply Apply
+    { _aFunc = SugarExpr.removeSuccessfulType funcS
+    , _aSpecialArgs = specialArgs
+    , _aAnnotatedArgs = annotatedArgs
     }
 
 makeCollapsed ::
@@ -123,8 +132,11 @@ convertPrefix funcRef funcI argRef applyI = do
       funcRef
     makeFullApply = makeApply newFuncRef
     makeApply f =
-      SugarExpr.make applyI . BodyApply $
-      Expr.Apply f newArgRef
+      SugarExpr.make applyI $ BodyApply Apply
+      { _aFunc = f
+      , _aSpecialArgs = ObjectArg newArgRef
+      , _aAnnotatedArgs = []
+      }
   if SugarInfer.isPolymorphicFunc funcI
     then
       case funcRef ^. rBody of

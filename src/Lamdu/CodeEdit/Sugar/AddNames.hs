@@ -319,16 +319,18 @@ toGetParams ::
 toGetParams getParams@GetParams{..} =
   gpDefName (opGetDefName _gpDefGuid) getParams
 
-toLabeledApply ::
+toApply ::
   (MonadNaming m, MonadA tm) =>
-  LabeledApply (OldName m) (Expression (OldName m) tm) ->
-  m (LabeledApply (NewName m) (Expression (NewName m) tm))
-toLabeledApply la@LabeledApply{..} = do
-  func <- toExpression _laFunc
-  args <- traverse (Lens._1 toTag <=< Lens._2 toExpression) _laArgs
+  Apply (OldName m) (Expression (OldName m) tm) ->
+  m (Apply (NewName m) (Expression (NewName m) tm))
+toApply la@Apply{..} = do
+  func <- toExpression _aFunc
+  specialArgs <- traverse toExpression _aSpecialArgs
+  annotatedArgs <- traverse (Lens._1 toTag <=< Lens._2 toExpression) _aAnnotatedArgs
   pure la
-    { _laFunc = func
-    , _laArgs = args
+    { _aFunc = func
+    , _aSpecialArgs = specialArgs
+    , _aAnnotatedArgs = annotatedArgs
     }
 
 traverseToExpr ::
@@ -341,7 +343,6 @@ toBody ::
   (MonadA tm, MonadNaming m) =>
   Body (OldName m) tm (Expression (OldName m) tm) ->
   m (Body (NewName m) tm (Expression (NewName m) tm))
-toBody (BodyApply x)          = traverseToExpr BodyApply x
 toBody (BodyList x)           = traverseToExpr BodyList x
 toBody (BodyRecord x)         = traverseToExpr BodyRecord x
 toBody (BodyGetField x)       = traverseToExpr BodyGetField x
@@ -349,7 +350,7 @@ toBody (BodyLiteralInteger x) = pure $ BodyLiteralInteger x
 toBody (BodyAtom x)           = pure $ BodyAtom x
 --
 toBody (BodyLam x) = BodyLam <$> toLam x
-toBody (BodyLabeledApply x) = BodyLabeledApply <$> toLabeledApply x
+toBody (BodyApply x) = BodyApply <$> toApply x
 toBody (BodyHole x) = BodyHole <$> toHole x
 toBody (BodyInferred x) = BodyInferred <$> toInferred x
 toBody (BodyCollapsed x) = BodyCollapsed <$> toCollapsed x

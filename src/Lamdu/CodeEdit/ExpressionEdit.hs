@@ -27,7 +27,6 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.GetParamsEdit as GetParamsEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.GetVarEdit as GetVarEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.InferredEdit as InferredEdit
-import qualified Lamdu.CodeEdit.ExpressionEdit.LabeledApplyEdit as LabeledApplyEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.ListEdit as ListEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.PiEdit as PiEdit
@@ -120,8 +119,6 @@ makeEditor parentPrecedence sExpr =
     notAHole $ GetVarEdit.make gv
   Sugar.BodyGetParams gp ->
     notAHole $ GetParamsEdit.make gp
-  Sugar.BodyLabeledApply la ->
-    notAHole $ LabeledApplyEdit.make parentPrecedence la
   where
     isAHole hole =
       (fmap . fmap)
