@@ -24,10 +24,10 @@ import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetIds as WidgetIds
 
 infixPrecedence :: ExpressionGui.Precedence
-infixPrecedence = 8
+infixPrecedence = 5
 
 prefixPrecedence :: ExpressionGui.Precedence
-prefixPrecedence = 5
+prefixPrecedence = 10
 
 make ::
   MonadA m => ParentPrecedence ->
@@ -41,14 +41,14 @@ make
         mk Nothing =<<
         ExprGuiM.makeSubexpresion (if isBoxed then 0 else parentPrecedence) func
       Sugar.ObjectArg arg -> do
-        funcEdit <- ExprGuiM.makeSubexpresion prefixPrecedence func
+        funcEdit <- ExprGuiM.makeSubexpresion (prefixPrecedence+1) func
         argEdit <- ExprGuiM.makeSubexpresion prefixPrecedence arg
         mk (Just prefixPrecedence) $ ExpressionGui.hboxSpaced [funcEdit, argEdit]
       Sugar.InfixArgs l r -> do
-        lEdit <- ExprGuiM.makeSubexpresion infixPrecedence l
+        lEdit <- ExprGuiM.makeSubexpresion (infixPrecedence+1) l
         -- TODO: What precedence to give when it must be atomic?:
         opEdit <- ExprGuiM.makeSubexpresion 20 func
-        rEdit <- ExprGuiM.makeSubexpresion infixPrecedence r
+        rEdit <- ExprGuiM.makeSubexpresion (infixPrecedence+1) r
         mk (Just infixPrecedence) $ ExpressionGui.hboxSpaced [lEdit, opEdit, rEdit]
   where
     isBoxed = not $ null annotatedArgs
@@ -56,7 +56,7 @@ make
     mk mPrecedence funcRow
       | isBoxed = mkBoxed destGuid funcRow annotatedArgs myId
       | otherwise =
-        mkParened
+        mkMParened
         (ParentPrecedence parentPrecedence)
         (ExpressionGui.MyPrecedence <$> mPrecedence) destGuid funcRow myId
 
@@ -98,11 +98,11 @@ mkBoxed destGuid funcRow annotatedArgs =
       Config.labeledApplyBGColor (Widget.toAnimId myId ++ ["bg"]) $
       ExpressionGui.addBelow 0 [(0, argEdits)] funcRow
 
-mkParened ::
+mkMParened ::
   MonadA m => ParentPrecedence ->
   Maybe ExpressionGui.MyPrecedence -> Guid ->
   ExpressionGui m -> Widget.Id -> ExprGuiM m (ExpressionGui m)
-mkParened parentPrecedence mPrecedence destGuid funcRow =
+mkMParened parentPrecedence mPrecedence destGuid funcRow =
   ExpressionGui.wrapExpression . parenify $ \myId ->
   assignCursorGuid myId destGuid $ return funcRow
   where
