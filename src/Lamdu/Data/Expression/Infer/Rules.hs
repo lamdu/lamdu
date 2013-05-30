@@ -491,7 +491,7 @@ runRigidArgApplyTypeToResultType funcTypeRef (applyTypeExpr, argExpr) o0 = do
   return
     ( funcTypeRef
     , makePi o0 holeRefExpr
-      (ExprUtil.subst (Lens.filtered (ExprUtil.alphaEq argExpr)) holeRefExpr applyTypeExpr)
+      (ExprUtil.subst (Lens.filtered (ExprUtil.couldEq argExpr)) holeRefExpr applyTypeExpr)
       & Lens.traversed . rplOrigins <>~ [o0]
     )
 

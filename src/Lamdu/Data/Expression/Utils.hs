@@ -21,7 +21,7 @@ module Lamdu.Data.Expression.Utils
   , isDependentPi, exprHasGetVar
   , curriedFuncArguments
   , applyForms, applyDependentPis
-  , alphaEq
+  , alphaEq, couldEq
   , subst, substGetPar
   , subExpressionsThat
   , showBodyExpr, showsPrecBodyExpr
@@ -92,6 +92,14 @@ applyWithHoles count = applyWith $ replicate count pureHole
 
 applyDependentPis :: Expression def () -> Expression def () -> Expression def ()
 applyDependentPis exprType = applyWithHoles (length (getDependentParams exprType))
+
+couldEq :: Eq def => Expression def a -> Expression def a -> Bool
+couldEq x y =
+  isJust $ matchExpression (const . Just) onMismatch x y
+  where
+    onMismatch (Expression (BodyLeaf Hole) _) e = Just e
+    onMismatch e (Expression (BodyLeaf Hole) _) = Just e
+    onMismatch _ _ = Nothing
 
 alphaEq :: Eq def => Expression def a -> Expression def a -> Bool
 alphaEq x y =
