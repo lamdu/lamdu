@@ -20,7 +20,7 @@ module Lamdu.Data.Expression.Utils
   , subExpressions, subExpressionsWithoutTags
   , isDependentPi, exprHasGetVar
   , curriedFuncArguments
-  , ApplyFormAnnotation(..), applyForms
+  , ApplyFormAnnotation(..), applyForms, recordValForm
   , alphaEq, couldEq
   , subst, substGetPar
   , showBodyExpr, showsPrecBodyExpr
@@ -131,14 +131,17 @@ applyForms exprType rawExpr
     addApply ann func (_, paramType) =
       Expression (makeApply func arg) ann
       where
-        arg = ann <$ pureRecordValOfType paramType
-    pureRecordValOfType paramType =
-      case paramType ^? ExprLens.exprKindedRecordFields Type of
-      Nothing -> pureHole
-      Just fields ->
-        ExprLens.pureExpr .
-        _BodyRecord . ExprLens.kindedRecordFields Val #
-        (fields & Lens.mapped . Lens._2 .~ pureHole)
+        arg = ann <$ fromMaybe pureHole (recordValForm paramType)
+
+recordValForm :: Expression def () -> Maybe (Expression def ())
+recordValForm paramType =
+  replaceFieldTypesWithHoles <$>
+  (paramType ^? ExprLens.exprKindedRecordFields Type)
+  where
+    replaceFieldTypesWithHoles fields =
+      ExprLens.pureExpr . _BodyRecord .
+      ExprLens.kindedRecordFields Val #
+      (fields & Lens.traversed . Lens._2 .~ pureHole)
 
 randomizeExpr :: (RandomGen g, Random r) => g -> Expression def (r -> a) -> Expression def a
 randomizeExpr gen = (`evalState` gen) . traverse randomize

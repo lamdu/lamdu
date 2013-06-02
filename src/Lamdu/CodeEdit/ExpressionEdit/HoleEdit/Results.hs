@@ -324,7 +324,7 @@ makeAllGroups holeInfo = do
     } <- hiHoleActions holeInfo ^. Sugar.holeScope
   let
     allGroups = concat
-      [ primitiveGroups, literalGroups
+      [ primitiveGroups holeInfo, literalGroups
       , localsGroups, globalsGroups, tagsGroups, getParamsGroups
       ]
     sortedGroups f  = sortOn (^. groupNames) . map f
@@ -336,22 +336,24 @@ makeAllGroups holeInfo = do
   where
     literalGroups = makeLiteralGroups (hiSearchTerm holeInfo)
 
-primitiveGroups :: [Group def]
-primitiveGroups =
+primitiveGroups :: HoleInfo m -> [GroupM m]
+primitiveGroups holeInfo =
   [ mkGroup ["Set", "Type"] $ Expr.BodyLeaf Expr.Set
   , mkGroup ["Integer", "ℤ", "Z"] $ Expr.BodyLeaf Expr.IntegerType
   , mkGroup ["->", "Pi", "→", "→", "Π", "π"] $
     ExprUtil.makePi (Guid.fromString "NewPi") holeExpr holeExpr
   , mkGroup ["\\", "Lambda", "Λ", "λ"] $
     ExprUtil.makeLambda (Guid.fromString "NewLambda") holeExpr holeExpr
-  , mkGroup ["Record Type", "{"] . Expr.BodyRecord $
-    Expr.Record Expr.Type mempty
-  , mkGroup ["Record Value", "{"] . Expr.BodyRecord $
-    Expr.Record Expr.Val mempty
+  , Group ["Record Type", "{"] $ emptyRecord Expr.Type
+  , Group ["Record Value", "{"] .
+    fromMaybe (emptyRecord Expr.Val) . ExprUtil.recordValForm $
+    hiHoleActions holeInfo ^. Sugar.holeInferredType
   , mkGroup [".", "Get Field"] . Expr.BodyGetField $
     Expr.GetField ExprUtil.pureHole ExprUtil.pureHole
   ]
   where
+    emptyRecord k =
+      ExprUtil.pureExpression . Expr.BodyRecord $ Expr.Record k mempty
     holeExpr = ExprUtil.pureExpression $ Expr.BodyLeaf Expr.Hole
 
 groupOrdering :: String -> [String] -> [Bool]
