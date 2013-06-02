@@ -39,7 +39,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpHiddenLambdaGuid, fpType, fpMActions
   , TagG(..), tagName, tagGuid
   , Hole(..), holeMActions
-  , HoleResultSeed(..)
+  , HoleResultSeed(..), _ResultSeedExpression, _ResultSeedNewTag, _ResultSeedNewDefinition
   , ScopeItem
   , Scope(..), scopeLocals, scopeGlobals, scopeTags, scopeGetParams
   , HoleActions(..), holeScope, holePaste, holeMDelete, holeResult, holeInferExprType, holeInferredType
@@ -398,6 +398,7 @@ type DefinitionU = Definition MStoredName
 derive makeMonoid ''Scope
 LensTH.makePrisms ''Body
 LensTH.makePrisms ''SpecialArgs
+LensTH.makePrisms ''HoleResultSeed
 LensTH.makeLenses ''Definition
 LensTH.makeLenses ''DefinitionExpression
 LensTH.makeLenses ''Inferred

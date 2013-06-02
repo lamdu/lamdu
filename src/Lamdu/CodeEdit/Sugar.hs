@@ -34,7 +34,7 @@ module Lamdu.CodeEdit.Sugar
   , FuncParamType(..)
   , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpHiddenLambdaGuid, fpType, fpMActions
   , Hole(..), holeScope, holeMActions
-  , HoleResultSeed(..)
+  , HoleResultSeed(..), _ResultSeedExpression, _ResultSeedNewTag, _ResultSeedNewDefinition
   , ScopeItem
   , Scope(..), scopeLocals, scopeGlobals, scopeTags, scopeGetParams
   , HoleActions(..), holePaste, holeMDelete, holeResult, holeInferExprType, holeInferredType
