@@ -290,9 +290,9 @@ toCollapsed ::
   Collapsed (OldName m) tm (Expression (OldName m) tm) ->
   m (Collapsed (NewName m) tm (Expression (NewName m) tm))
 toCollapsed Collapsed {..} = do
-  compact <- toGetVar _pCompact
-  fullExpression <- toExpression _pFullExpression
-  pure Collapsed { _pCompact = compact, _pFullExpression = fullExpression, .. }
+  compact <- toGetVar _cCompact
+  fullExpression <- toExpression _cFullExpression
+  pure Collapsed { _cCompact = compact, _cFullExpression = fullExpression, .. }
 
 toTag ::
   MonadNaming m => TagG (OldName m) ->

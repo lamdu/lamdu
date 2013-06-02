@@ -16,12 +16,12 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetIds as WidgetIds
 
-polymorphicFDConfig :: FocusDelegator.Config
-polymorphicFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKeys = Config.polymorphicExpandKeys
-  , FocusDelegator.startDelegatingDoc = E.Doc ["View", "Expand polymorphic"]
-  , FocusDelegator.stopDelegatingKeys = Config.polymorphicCollapseKeys
-  , FocusDelegator.stopDelegatingDoc = E.Doc ["View", "Collapse polymorphic"]
+collapsedFDConfig :: FocusDelegator.Config
+collapsedFDConfig = FocusDelegator.Config
+  { FocusDelegator.startDelegatingKeys = Config.collapsedExpandKeys
+  , FocusDelegator.startDelegatingDoc = E.Doc ["View", "Expand application"]
+  , FocusDelegator.stopDelegatingKeys = Config.collapsedCollapseKeys
+  , FocusDelegator.stopDelegatingDoc = E.Doc ["View", "Collapse application"]
   }
 
 make ::
@@ -29,28 +29,28 @@ make ::
   Sugar.Collapsed Sugar.Name m (Sugar.ExpressionN m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make (ParentPrecedence parentPrecedence) poly =
-  ExpressionGui.makeCollapser polymorphicFDConfig f
+  ExpressionGui.makeCollapser collapsedFDConfig f
   where
     f myId =
       Collapser
       { cMakeExpanded =
         fmap
-        (ExpressionGui.withBgColor Layers.polymorphicExpandedBG
-         Config.polymorphicExpandedBGColor bgId) .
-        ExprGuiM.makeSubexpresion parentPrecedence $ poly ^. Sugar.pFullExpression
+        (ExpressionGui.withBgColor Layers.collapsedExpandedBG
+         Config.collapsedExpandedBGColor bgId) .
+        ExprGuiM.makeSubexpresion parentPrecedence $ poly ^. Sugar.cFullExpression
       , cMakeFocusedCompact =
-        colorize bgId (poly ^. Sugar.pCompact . Sugar.gvVarType) $
-        GetVarEdit.makeUncoloredView (poly ^. Sugar.pCompact) funcId
+        colorize bgId (poly ^. Sugar.cCompact . Sugar.gvVarType) $
+        GetVarEdit.makeUncoloredView (poly ^. Sugar.cCompact) funcId
       }
       where
         bgId = Widget.toAnimId myId ++ ["bg"]
-    funcId = WidgetIds.fromGuid $ poly ^. Sugar.pFuncGuid
+    funcId = WidgetIds.fromGuid $ poly ^. Sugar.cFuncGuid
     colorize _ Sugar.GetDefinition =
-      ExprGuiM.withFgColor Config.polymorphicForegroundColor
+      ExprGuiM.withFgColor Config.collapsedForegroundColor
     colorize bgId _ = colorizeGetParameter bgId
     colorizeGetParameter bgId =
       fmap
       (ExpressionGui.withBgColor
-       Layers.polymorphicCompactBG
-       Config.polymorphicCompactBGColor bgId) .
+       Layers.collapsedCompactBG
+       Config.collapsedCompactBGColor bgId) .
       ExprGuiM.withFgColor Config.parameterColor

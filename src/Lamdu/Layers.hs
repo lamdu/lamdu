@@ -6,11 +6,11 @@ module Lamdu.Layers where
 cursorBG = 25
 inactiveHole = 26
 types = 27
-polymorphicCompactBG = 28
+collapsedCompactBG = 28
 choiceBG = 30
 activeHoleBG = 31
 nameCollisionBG = 32
 labeledApplyBG = 33
 parensHighlightBG = 34
-polymorphicExpandedBG = 35
+collapsedExpandedBG = 35
 activePane = 40

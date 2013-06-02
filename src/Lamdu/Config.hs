@@ -115,15 +115,15 @@ inferredTypeErrorBGColor = Draw.Color 0.5 0.05 0.05 1
 inferredTypeBGColor = Draw.Color 0.05 0.15 0.2 1
 
 -- For definitions
-polymorphicForegroundColor = Draw.Color 1 0.4 0.3 1
+collapsedForegroundColor = Draw.Color 1 0.4 0.3 1
 -- For parameters
-polymorphicCompactBGColor = Draw.Color 0.1 0.2 0.25 1
-polymorphicExpandedBGColor = Draw.Color 0.18 0.14 0.05 1
-polymorphicExpandKeys = [noMods E.KeyEnter]
-polymorphicCollapseKeys = [noMods E.KeyEsc]
+collapsedCompactBGColor = Draw.Color 0.1 0.2 0.25 1
+collapsedExpandedBGColor = Draw.Color 0.18 0.14 0.05 1
+collapsedExpandKeys = [noMods E.KeyEnter]
+collapsedCollapseKeys = [noMods E.KeyEsc]
 
 monomorphicDefOriginForegroundColor = paramOriginColor
-polymorphicDefOriginForegroundColor = polymorphicForegroundColor
+polymorphicDefOriginForegroundColor = collapsedForegroundColor
 
 builtinOriginNameColor = monomorphicDefOriginForegroundColor
 

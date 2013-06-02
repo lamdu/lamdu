@@ -46,7 +46,7 @@ module Lamdu.CodeEdit.Sugar
   , LiteralInteger(..)
   , TagG(..), tagName, tagGuid
   , Inferred(..), iValue, iMAccept, iHole
-  , Collapsed(..), pFuncGuid, pCompact, pFullExpression
+  , Collapsed(..), cFuncGuid, cCompact, cFullExpression
   , loadConvertDefI
   , PrefixAction, emptyPrefixAction
   , SugarExpr.removeTypes

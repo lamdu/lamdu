@@ -59,9 +59,9 @@ make parentPrecedence (Sugar.Lam _ param _isDep resultType) =
           | paramUsed =
               Lens.over ExpressionGui.egWidget $
               Widget.backgroundColor
-              Layers.polymorphicExpandedBG
+              Layers.collapsedExpandedBG
               (mappend (Widget.toAnimId paramId) ["polymorphic bg"])
-              Config.polymorphicExpandedBGColor
+              Config.collapsedExpandedBGColor
           | otherwise = id
         paramAndArrow =
           addBg $

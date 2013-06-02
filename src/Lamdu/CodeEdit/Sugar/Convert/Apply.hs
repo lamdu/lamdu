@@ -58,7 +58,7 @@ indirectDefinitionGuid :: ExpressionP name m pl -> Maybe Guid
 indirectDefinitionGuid funcS =
   case funcS ^. rBody of
   BodyGetVar gv -> Just $ gv ^. gvIdentifier
-  BodyCollapsed c -> Just $ c ^. pCompact . gvIdentifier
+  BodyCollapsed c -> Just $ c ^. cCompact . gvIdentifier
   BodyInferred i -> indirectDefinitionGuid $ i ^. iValue
   BodyGetField _ -> Nothing -- TODO: <-- do we want to make something up here?
   _ -> Nothing
@@ -104,9 +104,9 @@ makeCollapsed ::
   Guid -> GetVar MStoredName m -> ExpressionU m -> SugarM m (ExpressionU m)
 makeCollapsed exprI g compact fullExpression =
   SugarExpr.make exprI $ BodyCollapsed Collapsed
-    { _pFuncGuid = g
-    , _pCompact = compact
-    , _pFullExpression =
+    { _cFuncGuid = g
+    , _cCompact = compact
+    , _cFullExpression =
       Lens.set rGuid expandedGuid $ SugarExpr.removeInferredTypes fullExpression
     }
   where

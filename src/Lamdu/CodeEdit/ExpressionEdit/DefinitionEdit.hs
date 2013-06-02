@@ -58,9 +58,9 @@ nonOperatorName _ = False
 
 polyNameFDConfig :: FocusDelegator.Config
 polyNameFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKeys = Config.polymorphicExpandKeys
+  { FocusDelegator.startDelegatingKeys = Config.collapsedExpandKeys
   , FocusDelegator.startDelegatingDoc = E.Doc ["View", "Expand polymorphic"]
-  , FocusDelegator.stopDelegatingKeys = Config.polymorphicCollapseKeys
+  , FocusDelegator.stopDelegatingKeys = Config.collapsedCollapseKeys
   , FocusDelegator.stopDelegatingDoc = E.Doc ["View", "Collapse polymorphic"]
   }
 
@@ -76,8 +76,8 @@ makePolyNameEdit name guid depParamsEdits =
     f myId =
       Collapser
       { cMakeExpanded =
-        ExpressionGui.withBgColor Layers.polymorphicExpandedBG
-        Config.polymorphicExpandedBGColor bgId .
+        ExpressionGui.withBgColor Layers.collapsedExpandedBG
+        Config.collapsedExpandedBGColor bgId .
         ExpressionGui.hboxSpaced . (: depParamsEdits) <$>
         nameGui Config.monomorphicDefOriginForegroundColor
       , cMakeFocusedCompact =
