@@ -20,7 +20,7 @@ module Lamdu.Data.Expression.Utils
   , subExpressions, subExpressionsWithoutTags
   , isDependentPi, exprHasGetVar
   , curriedFuncArguments
-  , applyForms, applyDependentPis
+  , ApplyFormAnnotation(..), applyForms
   , alphaEq, couldEq
   , subst, substGetPar
   , showBodyExpr, showsPrecBodyExpr
@@ -32,7 +32,7 @@ module Lamdu.Data.Expression.Utils
 import Prelude hiding (pi)
 import Lamdu.Data.Expression
 
-import Control.Applicative (Applicative(..), liftA2, (<$>))
+import Control.Applicative (Applicative(..), liftA2, (<$>), (<$))
 import Control.Arrow ((***))
 import Control.Lens (Context(..))
 import Control.Lens.Operators
@@ -78,25 +78,6 @@ getPiWrappers expr =
       addParam = ((param, paramType) :)
   _ -> PiWrappers [] []
 
-getDependentParams :: Expression def a -> [(Guid, Expression def a)]
-getDependentParams = (^. dependentPiParams) . getPiWrappers
-
-compose :: [a -> a] -> a -> a
-compose = foldr (.) id
-{-# INLINE compose #-}
-
-applyWith :: [Expression def ()] -> Expression def () -> Expression def ()
-applyWith =
-  compose . map addApply
-  where
-    addApply arg = pureExpression . (`makeApply` arg)
-
-applyWithHoles :: Int -> Expression def () -> Expression def ()
-applyWithHoles count = applyWith $ replicate count pureHole
-
-applyDependentPis :: Expression def () -> Expression def () -> Expression def ()
-applyDependentPis exprType = applyWithHoles (length (getDependentParams exprType))
-
 couldEq :: Eq def => Expression def a -> Expression def a -> Bool
 couldEq x y =
   isJust $ matchExpression (const . Just) onMismatch x y
@@ -130,27 +111,35 @@ subst lens to expr
   | Lens.has lens expr = to
   | otherwise = expr & eBody . traverse %~ subst lens to
 
+data ApplyFormAnnotation = Untouched | DependentParamAdded | IndependentParamAdded
+
 -- Transform expression to expression applied with holes,
 -- with all different sensible levels of currying.
-applyForms :: Expression def () -> Expression def () -> [Expression def ()]
-applyForms exprType expr
-  | Lens.notNullOf (ExprLens.exprLam . lambdaKind . _Val) expr = [expr]
-  | otherwise = reverse $ scanl (flip addApply) withDepPisApplied nonDepParams
+applyForms :: Expression def () -> Expression def () -> [Expression def ApplyFormAnnotation]
+applyForms exprType rawExpr
+  | Lens.has (ExprLens.exprLam . lambdaKind . _Val) expr = [expr]
+  | otherwise = reverse withAllAppliesAdded
   where
-    withDepPisApplied = applyWithHoles (length depParams) expr
+    expr = Untouched <$ rawExpr
+    withAllAppliesAdded =
+      flip (scanl (addApply IndependentParamAdded)) nonDepParams $
+      flip (foldl (addApply DependentParamAdded)) depParams expr
     PiWrappers
       { _dependentPiParams = depParams
       , nonDependentPiParams = nonDepParams
       } = getPiWrappers exprType
-    addApply (_, paramType) =
-      pureExpression . (`makeApply` arg)
+    addApply ann func (_, paramType) =
+      Expression (makeApply func arg) ann
       where
-        arg =
-          case paramType ^? ExprLens.exprKindedRecordFields Type of
-          Just fields ->
-            ExprLens.pureExpr . _BodyRecord . ExprLens.kindedRecordFields Val #
-            (fields & Lens.mapped . Lens._2 .~ pureHole)
-          _ -> pureHole
+        arg = ann <$ pureRecordValOfType paramType
+    pureRecordValOfType paramType =
+      case paramType ^? ExprLens.exprKindedRecordFields Type of
+      Nothing -> pureHole
+      Just fields ->
+        ExprLens.pureExpr .
+        _BodyRecord . ExprLens.kindedRecordFields Val #
+        (fields & Lens.mapped . Lens._2 .~ pureHole)
+
 randomizeExpr :: (RandomGen g, Random r) => g -> Expression def (r -> a) -> Expression def a
 randomizeExpr gen = (`evalState` gen) . traverse randomize
   where

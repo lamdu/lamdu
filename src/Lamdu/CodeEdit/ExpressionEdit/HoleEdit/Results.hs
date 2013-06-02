@@ -7,7 +7,8 @@ module Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Results
 
 import Control.Applicative (Applicative(..), (<$>), (<$))
 import Control.Lens.Operators
-import Control.Monad ((<=<), void)
+import Control.Lens.Utils (contextSetter, contextVal)
+import Control.Monad ((<=<), void, filterM)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.State (StateT)
 import Control.MonadA (MonadA)
@@ -15,17 +16,18 @@ import Data.Cache (Cache)
 import Data.Function (on)
 import Data.List (isInfixOf, isPrefixOf, partition)
 import Data.List.Utils (sortOn, nonEmptyAll)
-import Data.Maybe (catMaybes, fromMaybe)
+import Data.Maybe (catMaybes, fromMaybe, isJust)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
-import Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info (HoleInfo(..))
+import Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiArgument)
 import Lamdu.CodeEdit.Sugar (Scope(..))
 import Lamdu.Data.Expression (Expression(..))
 import Lamdu.Data.Expression.IRef (DefI)
+import Lamdu.Data.Expression.Utils (ApplyFormAnnotation(..))
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Foldable as Foldable
@@ -187,23 +189,13 @@ typeCheckToResultsList holeInfo makeWidget baseId options =
 
 baseExprWithApplyForms ::
   MonadA m => HoleInfo m -> ExprIRef.ExpressionM m () ->
-  CT m [Sugar.HoleResultSeed m]
+  CT m [ExprIRef.ExpressionM m ApplyFormAnnotation]
 baseExprWithApplyForms holeInfo baseExpr =
   maybe [] applyForms <$>
   (hiHoleActions holeInfo ^. Sugar.holeInferExprType) baseExpr
   where
     applyForms baseExprType =
-      map (Sugar.ResultSeedExpression . (Nothing <$)) $
       ExprUtil.applyForms baseExprType baseExpr
-
-injectLenses :: [Lens.ALens s t a b] -> b -> s -> [t]
-injectLenses lenses b s = ($ s) . (#~ b) <$> lenses
-
-injectLam :: expr -> Expr.Lambda expr -> [Expr.Lambda expr]
-injectLam = injectLenses [Expr.lambdaParamType, Expr.lambdaResult]
-
-injectGetField :: expr -> Expr.GetField expr -> [Expr.GetField expr]
-injectGetField = injectLenses [Expr.getFieldRecord, Expr.getFieldTag]
 
 storePointExpr :: Expr.BodyExpr (DefI (Tag m)) (Maybe (Sugar.StorePoint (Tag m))) -> Sugar.ExprStorePoint m
 storePointExpr = (`Expression` Nothing)
@@ -215,33 +207,6 @@ storePointHoleApply :: Sugar.ExprStorePoint m -> Sugar.ExprStorePoint m
 storePointHoleApply expr =
   storePointExpr $ ExprUtil.makeApply storePointHole expr
 
-injectApply ::
-  Sugar.ExprStorePoint m ->
-  ExprIRef.ExpressionM m () ->
-  ExprIRef.ExpressionM m () ->
-  [Sugar.ExprStorePoint m]
-injectApply arg baseExpr baseExprType = do
-  [storePointExpr (ExprUtil.makeApply (Nothing <$ base) arg)]
-  where
-    base = ExprUtil.applyDependentPis baseExprType baseExpr
-
-injectArg ::
-  MonadA m => HoleInfo m ->
-  Sugar.ExprStorePoint m -> ExprIRef.ExpressionM m () ->
-  CT m [Sugar.HoleResultSeed m]
-injectArg holeInfo rawArg baseExpr =
-  map Sugar.ResultSeedExpression <$>
-  case (Nothing <$ baseExpr) ^. Expr.eBody of
-  Expr.BodyLam lam ->
-    pure $ storePointExpr . Expr.BodyLam <$> injectLam arg lam
-  Expr.BodyGetField getField ->
-    pure $ storePointExpr . Expr.BodyGetField <$> injectGetField arg getField
-  _ ->
-    maybe [] (injectApply arg baseExpr) <$>
-    (hiHoleActions holeInfo ^. Sugar.holeInferExprType) baseExpr
-  where
-    arg = fromMaybe rawArg $ removeHoleWrap rawArg
-
 removeHoleWrap :: Expression def a -> Maybe (Expression def a)
 removeHoleWrap expr = do
   apply <- expr ^? ExprLens.exprApply
@@ -251,14 +216,54 @@ removeHoleWrap expr = do
     Expr._BodyLeaf . Expr._Hole
   pure $ apply ^. Expr.applyArg
 
+injectIntoHoles ::
+  MonadA m => HoleInfo m ->
+  Sugar.ExprStorePoint m ->
+  ExprIRef.ExpressionM m ApplyFormAnnotation ->
+  CT m [Sugar.ExprStorePoint m]
+injectIntoHoles holeInfo arg =
+  filterM typeCheckOnSide . injectArg .
+  ExprUtil.addExpressionContexts (const Nothing) .
+  Lens.Context id
+  where
+    typeCheckOnSide = fmap isJust . (hiHoleActions holeInfo ^. Sugar.holeInferExprType) . void
+    toOrd IndependentParamAdded = 'a'
+    toOrd DependentParamAdded = 'b'
+    toOrd Untouched = 'c'
+    injectArg =
+      map (^. contextSetter . Lens.to ($ arg)) .
+      sortOn (^. contextVal . Lens.to toOrd) .
+      map (^. Expr.ePayload) . filter (Lens.has ExprLens.exprHole) .
+      ExprUtil.subExpressions
+
+maybeInjectArgumentExpr ::
+  MonadA m => HoleInfo m ->
+  [Expression (DefI (Tag m)) ApplyFormAnnotation] ->
+  CT m [Sugar.ExprStorePoint m]
+maybeInjectArgumentExpr holeInfo =
+  case hiArgument holeInfo of
+  Nothing -> return . map (Nothing <$)
+  Just arg ->
+    fmap concat . traverse (injectIntoHoles holeInfo (removeHoleWrapIfAny arg))
+  where
+    removeHoleWrapIfAny x = fromMaybe x $ removeHoleWrap x
+
+maybeInjectArgumentNewTag :: HoleInfo m -> [Sugar.HoleResultSeed m]
+maybeInjectArgumentNewTag holeInfo =
+  case hiArgument holeInfo of
+  Nothing -> [makeNewTag]
+  Just _ -> []
+  where
+    makeNewTag = Sugar.ResultSeedNewTag $ hiSearchTerm holeInfo
+
 makeResultsList ::
   MonadA m => HoleInfo m -> WidgetMaker m -> GroupM m ->
   CT m (Maybe (ResultsList m))
 makeResultsList holeInfo makeWidget group =
-  typeCheckToResultsList holeInfo makeWidget baseId =<<
-  case Property.value (hiState holeInfo) ^. HoleInfo.hsArgument of
-  Just arg -> injectArg holeInfo arg baseExpr
-  Nothing -> baseExprWithApplyForms holeInfo baseExpr
+  typeCheckToResultsList holeInfo makeWidget baseId .
+  map Sugar.ResultSeedExpression =<<
+  maybeInjectArgumentExpr holeInfo =<<
+  baseExprWithApplyForms holeInfo baseExpr
   where
     baseExpr = group ^. groupBaseExpr
     baseId = WidgetIds.hash baseExpr
@@ -267,13 +272,10 @@ makeNewTagResultList ::
   MonadA m => HoleInfo m -> WidgetMaker m ->
   CT m (Maybe (ResultsList m))
 makeNewTagResultList holeInfo makeNewTagResultWidget
-  | null searchTerm = pure Nothing
+  | null (hiSearchTerm holeInfo) = pure Nothing
   | otherwise =
-      typeCheckToResultsList holeInfo makeNewTagResultWidget (Widget.Id ["NewTag"])
-      [makeNewTag]
-  where
-    searchTerm = (Property.value . hiState) holeInfo ^. HoleInfo.hsSearchTerm
-    makeNewTag = Sugar.ResultSeedNewTag searchTerm
+      typeCheckToResultsList holeInfo makeNewTagResultWidget (Widget.Id ["NewTag"]) $
+      maybeInjectArgumentNewTag holeInfo
 
 data HaveHiddenResults = HaveHiddenResults | NoHiddenResults
 
@@ -330,11 +332,9 @@ makeAllGroups holeInfo = do
     globalsGroups   = sortedGroups getVarsToGroup globals
     tagsGroups      = sortedGroups tagsToGroup tags
     getParamsGroups = sortedGroups getParamsToGroup getParams
-  pure $ holeMatches (^. groupNames) searchTerm allGroups
+  pure $ holeMatches (^. groupNames) (hiSearchTerm holeInfo) allGroups
   where
-    literalGroups = makeLiteralGroups searchTerm
-    state = Property.value $ hiState holeInfo
-    searchTerm = state ^. HoleInfo.hsSearchTerm
+    literalGroups = makeLiteralGroups (hiSearchTerm holeInfo)
 
 primitiveGroups :: [Group def]
 primitiveGroups =
