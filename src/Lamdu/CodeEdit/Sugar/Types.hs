@@ -50,7 +50,7 @@ module Lamdu.CodeEdit.Sugar.Types
     , holeResultPick, holeResultPickPrefix
   , LiteralInteger(..)
   , Inferred(..), iValue, iMAccept, iHole
-  , Collapsed(..), cFuncGuid, cCompact, cFullExpression
+  , Collapsed(..), cFuncGuid, cCompact, cFullExpression, cFullExprHasInfo
   , T, CT
   , PrefixAction, emptyPrefixAction
   , ExprStorePoint
@@ -229,6 +229,7 @@ data Collapsed name m expr = Collapsed
   { _cFuncGuid :: Guid
   , _cCompact :: GetVar name m
   , _cFullExpression :: expr
+  , _cFullExprHasInfo :: Bool
   } deriving (Functor, Foldable, Traversable)
 
 -- TODO: Do we want to store/allow-access to the implicit type params (nil's type, each cons type?)

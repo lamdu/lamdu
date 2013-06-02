@@ -48,7 +48,7 @@ convert app@(Expr.Apply funcI argI) exprI =
     justToLeft $ convertList app argS exprI
     funcS <- lift $ SugarM.convertSubexpression funcI
     justToLeft $ convertLabeled funcS argS exprI
-    lift $ convertPrefix funcS funcI argS exprI
+    lift $ convertPrefix funcS funcI argS argI exprI
 
 maybeToMPlus :: MonadPlus m => Maybe a -> m a
 maybeToMPlus Nothing = mzero
@@ -101,11 +101,13 @@ convertLabeled funcS argS exprI = do
 makeCollapsed ::
   (MonadA m, Typeable1 m) =>
   ExprMM m ->
-  Guid -> GetVar MStoredName m -> ExpressionU m -> SugarM m (ExpressionU m)
-makeCollapsed exprI g compact fullExpression =
+  Guid -> GetVar MStoredName m -> Bool ->
+  ExpressionU m -> SugarM m (ExpressionU m)
+makeCollapsed exprI g compact hasInfo fullExpression =
   SugarExpr.make exprI $ BodyCollapsed Collapsed
     { _cFuncGuid = g
     , _cCompact = compact
+    , _cFullExprHasInfo = hasInfo
     , _cFullExpression =
       Lens.set rGuid expandedGuid $ SugarExpr.removeInferredTypes fullExpression
     }
@@ -115,8 +117,8 @@ makeCollapsed exprI g compact fullExpression =
 convertPrefix ::
   (MonadA m, Typeable1 m) =>
   ExpressionU m -> ExprMM m -> ExpressionU m ->
-  ExprMM m -> SugarM m (ExpressionU m)
-convertPrefix funcRef funcI rawArgS applyI = do
+  ExprMM m -> ExprMM m -> SugarM m (ExpressionU m)
+convertPrefix funcRef funcI rawArgS argI applyI = do
   sugarContext <- SugarM.readContext
   let
     argS = rawArgS
@@ -139,13 +141,15 @@ convertPrefix funcRef funcI rawArgS applyI = do
   if SugarInfer.isPolymorphicFunc funcI
     then
       case funcRef ^. rBody of
-      BodyCollapsed (Collapsed g compact full) ->
-        makeCollapsed applyI g compact =<< makeApply full
+      BodyCollapsed (Collapsed g compact full hadInfo) ->
+        makeCollapsed applyI g compact (hadInfo || haveInfo) =<< makeApply full
       BodyGetVar var ->
-        makeCollapsed applyI (SugarInfer.resultGuid funcI) var =<< makeFullApply
+        makeCollapsed applyI (SugarInfer.resultGuid funcI) var haveInfo =<< makeFullApply
       _ -> makeFullApply
     else
       makeFullApply
+  where
+    haveInfo = Lens.nullOf ExprLens.exprHole argI
 
 setListGuid :: Guid -> ExpressionU m -> ExpressionU m
 setListGuid consistentGuid e = e

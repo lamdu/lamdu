@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.CodeEdit.ExpressionEdit.CollapsedEdit(make) where
 
+import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, Collapser(..), ParentPrecedence(..))
@@ -28,29 +29,30 @@ make ::
   MonadA m => ParentPrecedence ->
   Sugar.Collapsed Sugar.Name m (Sugar.ExpressionN m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-make (ParentPrecedence parentPrecedence) poly =
-  ExpressionGui.makeCollapser collapsedFDConfig f
+make (ParentPrecedence parentPrecedence) collapsed
+  | hasInfo = makeExpanded
+  | otherwise = ExpressionGui.makeCollapser collapsedFDConfig f
   where
+    Sugar.Collapsed funcGuid compact fullExpression hasInfo = collapsed
+    makeExpanded myId =
+      ExpressionGui.withBgColor Layers.collapsedExpandedBG
+      Config.collapsedExpandedBGColor (bgId myId) <$>
+      ExprGuiM.makeSubexpresion parentPrecedence fullExpression
     f myId =
       Collapser
-      { cMakeExpanded =
-        fmap
-        (ExpressionGui.withBgColor Layers.collapsedExpandedBG
-         Config.collapsedExpandedBGColor bgId) .
-        ExprGuiM.makeSubexpresion parentPrecedence $ poly ^. Sugar.cFullExpression
+      { cMakeExpanded = makeExpanded myId
       , cMakeFocusedCompact =
-        colorize bgId (poly ^. Sugar.cCompact . Sugar.gvVarType) $
-        GetVarEdit.makeUncoloredView (poly ^. Sugar.cCompact) funcId
+        colorize myId (compact ^. Sugar.gvVarType) $
+        GetVarEdit.makeUncoloredView compact funcId
       }
-      where
-        bgId = Widget.toAnimId myId ++ ["bg"]
-    funcId = WidgetIds.fromGuid $ poly ^. Sugar.cFuncGuid
+    bgId myId = Widget.toAnimId myId ++ ["bg"]
+    funcId = WidgetIds.fromGuid funcGuid
     colorize _ Sugar.GetDefinition =
       ExprGuiM.withFgColor Config.collapsedForegroundColor
-    colorize bgId _ = colorizeGetParameter bgId
-    colorizeGetParameter bgId =
+    colorize myId _ = colorizeGetParameter myId
+    colorizeGetParameter myId =
       fmap
       (ExpressionGui.withBgColor
        Layers.collapsedCompactBG
-       Config.collapsedCompactBGColor bgId) .
+       Config.collapsedCompactBGColor (bgId myId)) .
       ExprGuiM.withFgColor Config.parameterColor
