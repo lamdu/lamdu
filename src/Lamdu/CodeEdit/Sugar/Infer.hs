@@ -29,7 +29,7 @@ module Lamdu.CodeEdit.Sugar.Infer
   , replaceWith
   ) where
 
-import Control.Applicative (Applicative(..), (<$>))
+import Control.Applicative ((<$>))
 import Control.Arrow ((&&&))
 import Control.Lens.Operators
 import Control.Monad (void, (<=<))
