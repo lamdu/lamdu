@@ -1,10 +1,23 @@
+{-# LANGUAGE RankNTypes #-}
 module Control.Lens.Utils
-  ( _fromJust
+  ( Context'
+  , contextSetter, contextVal
+  , _fromJust
   ) where
 
+import Control.Applicative ((<$>))
+import Control.Lens (Lens)
 import Data.Maybe (fromMaybe)
 import qualified Control.Lens as Lens
 
-_fromJust :: (Lens.Profunctor p, Functor f) => String -> Lens.Overloaded p f (Maybe a) (Maybe b) a b
+_fromJust :: String -> Lens.Iso (Maybe a) (Maybe b) a b
 _fromJust msg = Lens.iso (fromMaybe (error msg)) Just
 {-# INLINE _fromJust #-}
+
+type Context' a t = Lens.Context a a t
+
+contextSetter :: Lens (Lens.Context a b0 t0) (Lens.Context a b1 t1) (b0 -> t0) (b1 -> t1)
+contextSetter f (Lens.Context set val) = (`Lens.Context` val) <$> f set
+
+contextVal :: Lens (Lens.Context a0 b t) (Lens.Context a1 b t) a0 a1
+contextVal f (Lens.Context set val) = Lens.Context set <$> f val
