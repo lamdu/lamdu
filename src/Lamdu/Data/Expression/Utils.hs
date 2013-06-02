@@ -25,13 +25,18 @@ module Lamdu.Data.Expression.Utils
   , subst, substGetPar
   , showBodyExpr, showsPrecBodyExpr
   , isTypeConstructorType
+  , addExpressionContexts
+  , addBodyContexts
   ) where
 
 import Prelude hiding (pi)
 import Lamdu.Data.Expression
 
 import Control.Applicative (Applicative(..), liftA2, (<$>))
+import Control.Arrow ((***))
+import Control.Lens (Context(..))
 import Control.Lens.Operators
+import Control.Lens.Utils (addListContexts, addTuple2Contexts)
 import Control.Monad (guard)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -413,3 +418,51 @@ instance (Show def, Show a) => Show (Expression def a) where
         "" -> (prec, "")
         "()" -> (prec, "")
         str -> (11, "{" ++ str ++ "}")
+
+addBodyContexts ::
+  (a -> b) -> Context (Body def a) (Body def b) container ->
+  Body def (Context a b container)
+addBodyContexts tob (Context intoContainer body) =
+  afterSetter %~ intoContainer $
+  case body of
+  BodyLam (Lambda k paramId func arg) ->
+    Lambda k paramId
+    (Context (flip (Lambda k paramId) (tob arg)) func)
+    (Context (Lambda k paramId (tob func)) arg)
+    & BodyLam
+    & afterSetter %~ BodyLam
+  BodyApply (Apply func arg) ->
+    Apply
+    (Context (`Apply` tob arg) func)
+    (Context (tob func `Apply`) arg)
+    & BodyApply
+    & afterSetter %~ BodyApply
+  BodyRecord (Record k fields) ->
+    (Record k .
+     map (addTuple2Contexts tob) .
+     addListContexts (tob *** tob))
+    (Context (Record k) fields)
+    & BodyRecord
+    & afterSetter %~ BodyRecord
+  BodyGetField (GetField record tag) ->
+    GetField
+    (Context (`GetField` tob tag) record)
+    (Context (tob record `GetField`) tag)
+    & BodyGetField
+    & afterSetter %~ BodyGetField
+  BodyLeaf leaf -> BodyLeaf leaf
+  where
+    afterSetter = Lens.mapped . Lens.mapped
+
+addExpressionContexts ::
+  (a -> b) ->
+  Context (Expression def a) (Expression def b) container ->
+  Expression def (Context a (Expression def b) container)
+addExpressionContexts atob (Context intoContainer (Expression body a)) =
+  Expression newBody (Context intoContainer a)
+  where
+    newBody =
+      addExpressionContexts atob <$>
+      addBodyContexts (fmap atob) bodyPtr
+    bodyPtr =
+      Context (intoContainer . (`Expression` atob a)) body
