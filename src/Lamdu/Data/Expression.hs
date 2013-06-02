@@ -30,7 +30,7 @@ data Kind = Val | Type
   deriving (Eq, Ord, Show, Typeable)
 
 data Lambda expr = Lambda
-  { _lambdaKind :: Kind
+  { _lambdaKind :: !Kind
   , _lambdaParamId :: {-# UNPACK #-}!Guid
   , _lambdaParamType :: expr
   -- TODO: Rename to _lambdaResult (for Pi it is not a body)
@@ -70,7 +70,7 @@ instance Show def => Show (Leaf def) where
     TagType -> showString "Tag"
 
 data Record expr = Record
-  { _recordKind :: Kind
+  { _recordKind :: !Kind
   , _recordFields :: [(expr, expr)]
   } deriving (Eq, Ord, Functor, Foldable, Traversable)
 
