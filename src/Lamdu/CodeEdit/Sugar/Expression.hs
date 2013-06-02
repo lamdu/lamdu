@@ -118,7 +118,7 @@ make exprI expr = do
       { _plInferredTypes = inferredTypes
       , _plActions =
         mkActions sugarContext <$>
-        traverse (SugarInfer.ntraversePayload pure id) exprI
+        traverse (Lens.sequenceOf SugarInfer.plStored) exprI
       , _plNextHole = Nothing
       }
     , _rHiddenGuids = []

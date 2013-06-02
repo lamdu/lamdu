@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor #-}
 module Lamdu.CodeEdit.Sugar.Infer
-  ( Payload(..), ntraversePayload, plGuid, plInferred, plStored
+  ( Payload(..), plGuid, plInferred, plStored
   , ExpressionSetter
   , NoInferred(..), InferredWC
   , NoStored(..), Stored
@@ -86,15 +86,6 @@ data Payload t inferred stored
     , _plStored :: stored
     }
 LensTH.makeLenses ''Payload
-
-ntraversePayload ::
-  Applicative f =>
-  (inferreda -> f inferredb) ->
-  (storeda -> f storedb) ->
-  Payload ta inferreda storeda ->
-  f (Payload tb inferredb storedb)
-ntraversePayload onInferred onStored (Payload guid inferred stored) =
-  Payload guid <$> onInferred inferred <*> onStored stored
 
 randomizeGuids ::
   RandomGen g => g -> (a -> inferred) ->

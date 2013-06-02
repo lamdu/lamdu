@@ -116,25 +116,24 @@ convertPrefix ::
   (MonadA m, Typeable1 m) =>
   ExpressionU m -> ExprMM m -> ExpressionU m ->
   ExprMM m -> SugarM m (ExpressionU m)
-convertPrefix funcRef funcI argRef applyI = do
+convertPrefix funcRef funcI rawArgS applyI = do
   sugarContext <- SugarM.readContext
   let
-    newArgRef = addCallWithNextArg argRef
-    fromMaybeStored = traverse (SugarInfer.ntraversePayload pure id)
-    onStored expr f = maybe id f $ fromMaybeStored expr
-    addCallWithNextArg =
-      onStored applyI $ \applyS ->
-        rPayload . plActions . Lens.mapped . callWithNextArg .~
-        SugarExpr.mkCallWithArg sugarContext applyS
+    argS = rawArgS
+      & case traverse (Lens.sequenceOf SugarInfer.plStored) applyI of
+        Nothing -> id
+        Just storedApply ->
+          rPayload . plActions . Lens.mapped . callWithNextArg .~
+          SugarExpr.mkCallWithArg sugarContext storedApply
     newFuncRef =
-      SugarExpr.setNextHole newArgRef .
+      SugarExpr.setNextHole argS .
       SugarExpr.removeSuccessfulType $
       funcRef
     makeFullApply = makeApply newFuncRef
     makeApply f =
       SugarExpr.make applyI $ BodyApply Apply
       { _aFunc = f
-      , _aSpecialArgs = ObjectArg newArgRef
+      , _aSpecialArgs = ObjectArg argS
       , _aAnnotatedArgs = []
       }
   if SugarInfer.isPolymorphicFunc funcI

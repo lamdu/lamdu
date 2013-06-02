@@ -99,7 +99,7 @@ convertTypeCheckedHoleH sugarContext mPaste iwc exprI =
         inferOnTheSide inferState scope loaded
     mkHole =
       fmap Hole . traverse mkWritableHoleActions $
-      traverse (SugarInfer.ntraversePayload pure id) exprI
+      traverse (Lens.sequenceOf SugarInfer.plStored) exprI
     mkWritableHoleActions exprS = do
       globals <-
         SugarM.liftTransaction . Transaction.getP . Anchors.globals $
