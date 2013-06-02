@@ -121,12 +121,14 @@ convertPrefix ::
 convertPrefix funcRef funcI rawArgS argI applyI = do
   sugarContext <- SugarM.readContext
   let
-    argS = rawArgS
+    argS =
+      rawArgS
       & case traverse (Lens.sequenceOf SugarInfer.plStored) applyI of
         Nothing -> id
         Just storedApply ->
-          rPayload . plActions . Lens.mapped . callWithNextArg .~
-          SugarExpr.mkCallWithArg sugarContext storedApply
+          rPayload . plActions . Lens.traversed %~
+          (callWithNextArg .~ SugarExpr.mkCallWithArg sugarContext storedApply) .
+          (replaceWithNewHole .~ SugarExpr.mkReplaceWithNewHole storedApply)
     newFuncRef =
       SugarExpr.setNextHole argS .
       SugarExpr.removeSuccessfulType $

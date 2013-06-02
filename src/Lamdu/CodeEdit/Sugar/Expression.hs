@@ -1,6 +1,6 @@
 module Lamdu.CodeEdit.Sugar.Expression
   ( make, mkGen
-  , mkCallWithArg
+  , mkCallWithArg, mkReplaceWithNewHole
   , removeSuccessfulType, removeInferredTypes, removeTypes
   , setNextHole
   , subExpressions
@@ -82,6 +82,13 @@ mkCallWithArg sugarContext exprS prefixAction =
     prefixAction
     fmap ExprIRef.exprGuid . DataOps.callWithArg $ SugarInfer.resultStored exprS
 
+mkReplaceWithNewHole ::
+  MonadA m =>
+  ExprIRef.ExpressionM m (SugarInfer.PayloadM m i (Stored m)) ->
+  T m Guid
+mkReplaceWithNewHole =
+  fmap ExprIRef.exprGuid . DataOps.replaceWithHole . SugarInfer.resultStored
+
 mkActions ::
   MonadA m => SugarM.Context m ->
   ExprIRef.ExpressionM m (SugarInfer.PayloadM m i (Stored m)) -> Actions m
@@ -90,15 +97,14 @@ mkActions sugarContext exprS =
   { _giveAsArg = giveAsArgPrefix
   , _callWithArg = mkCallWithArg sugarContext exprS
   , _callWithNextArg = pure (pure Nothing)
-  , _setToHole = doReplace DataOps.setToHole
-  , _replaceWithNewHole = doReplace DataOps.replaceWithHole
-  , _cut = mkCutter (sugarContext ^. SugarM.scCodeAnchors) (Property.value stored) $ doReplace DataOps.replaceWithHole
+  , _setToHole = ExprIRef.exprGuid <$> DataOps.setToHole stored
+  , _replaceWithNewHole = mkReplaceWithNewHole exprS
+  , _cut = mkCutter (sugarContext ^. SugarM.scCodeAnchors) (Property.value stored) $ mkReplaceWithNewHole exprS
   , _giveAsArgToOperator = ExprIRef.exprGuid <$> DataOps.giveAsArgToOperator stored
   }
   where
     giveAsArgPrefix prefix = ExprIRef.exprGuid <$> (prefix *> DataOps.giveAsArg stored)
     stored = SugarInfer.resultStored exprS
-    doReplace f = ExprIRef.exprGuid <$> f stored
 
 make ::
   (Typeable1 m, MonadA m) => SugarInfer.ExprMM m ->
