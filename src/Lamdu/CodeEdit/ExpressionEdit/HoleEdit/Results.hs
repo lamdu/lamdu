@@ -230,10 +230,13 @@ injectIntoHoles holeInfo arg =
     toOrd IndependentParamAdded = 'a'
     toOrd DependentParamAdded = 'b'
     toOrd Untouched = 'c'
+    condition subExpr =
+      Lens.has ExprLens.exprHole subExpr &&
+      DependentParamAdded /= (subExpr ^. Expr.ePayload . contextVal)
     injectArg =
       map (^. contextSetter . Lens.to ($ arg)) .
       sortOn (^. contextVal . Lens.to toOrd) .
-      map (^. Expr.ePayload) . filter (Lens.has ExprLens.exprHole) .
+      map (^. Expr.ePayload) . filter condition .
       ExprUtil.subExpressions
 
 maybeInjectArgumentExpr ::

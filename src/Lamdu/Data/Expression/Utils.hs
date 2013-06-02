@@ -111,7 +111,9 @@ subst lens to expr
   | Lens.has lens expr = to
   | otherwise = expr & eBody . traverse %~ subst lens to
 
-data ApplyFormAnnotation = Untouched | DependentParamAdded | IndependentParamAdded
+data ApplyFormAnnotation =
+  Untouched | DependentParamAdded | IndependentParamAdded
+  deriving Eq
 
 -- Transform expression to expression applied with holes,
 -- with all different sensible levels of currying.
