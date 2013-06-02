@@ -140,7 +140,7 @@ createBuiltins =
     traverse_ ((`publicBuiltin_` aToAToBool) . ("Prelude." ++))
       ["==", "/=", "<=", ">=", "<", ">"]
 
-    newDef ".." ["Prelude"] "enumFromTo" $ mkInfixType integer integer integer
+    newDef ".." ["Prelude"] "enumFromTo" . mkInfixType integer integer $ listOf integer
 
     publicBuiltin_ "Data.List.iterate" .
       forAll "a" $ \a ->
