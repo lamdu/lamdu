@@ -63,6 +63,7 @@ import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
 import Data.Binary (Binary)
 import Data.Cache (Cache)
+import Data.Foldable (traverse_)
 import Data.Function (on)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe, listToMaybe, isJust)
@@ -107,8 +108,8 @@ onMatchingSubexprs ::
   (Expr.Expression def a -> Bool) ->
   Expr.Expression def a -> m ()
 onMatchingSubexprs action predicate =
-  Lens.mapMOf_ (ExprUtil.subExpressionsThat predicate)
-  (action . (^. Expr.ePayload))
+  traverse_ (action . (^. Expr.ePayload)) .
+  filter predicate . ExprUtil.subExpressions
 
 toHole :: MonadA m => Stored m -> T m ()
 toHole = void . DataOps.setToHole

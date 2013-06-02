@@ -139,8 +139,8 @@ convertTypeCheckedHoleH sugarContext mPaste iwc exprI =
       pure . ExprIRef.exprGuid .
         maybe iref (^. Expr.ePayload) $
         writtenExpr ^?
-        ExprUtil.subExpressionsThat
-        (Lens.notNullOf ExprLens.exprHole)
+        Lens.folding ExprUtil.subExpressions .
+        Lens.filtered (Lens.notNullOf ExprLens.exprHole)
     plainHole =
       SugarExpr.make exprI . BodyHole =<< mkHole
 

@@ -23,7 +23,6 @@ module Lamdu.Data.Expression.Utils
   , applyForms, applyDependentPis
   , alphaEq, couldEq
   , subst, substGetPar
-  , subExpressionsThat
   , showBodyExpr, showsPrecBodyExpr
   , isTypeConstructorType
   ) where
@@ -344,12 +343,6 @@ makePi = makeLam Type
 
 makeLambda :: Guid -> expr -> expr -> Body def expr
 makeLambda = makeLam Val
-
-subExpressionsThat ::
-  (Expression def a -> Bool) ->
-  Lens.Fold (Expression def a) (Expression def a)
-subExpressionsThat predicate =
-  Lens.folding subExpressions . Lens.filtered predicate
 
 isTypeConstructorType :: Expression def a -> Bool
 isTypeConstructorType expr =
