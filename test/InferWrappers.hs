@@ -96,7 +96,7 @@ loadInfer ::
   ExprIRef.Expression t a ->
   Either (Infer.Error (DefI t))
   (ExprIRef.Expression t (Infer.Inferred (DefI t), a), Infer.Context (DefI t))
-loadInfer expr = fromInitialState $ (`loadInferM` expr)
+loadInfer expr = fromInitialState (`loadInferM` expr)
 
 loadInferResults ::
   ExprIRef.Expression t () ->
@@ -133,7 +133,7 @@ inferMaybe ::
 inferMaybe expr =
   fromInitialState $ Infer.inferLoaded maybeActions (doLoad expr)
   where
-    maybeActions = (Infer.InferActions (const Nothing))
+    maybeActions = Infer.InferActions $ const Nothing
 
 inferMaybe_ ::
   ExprIRef.Expression t b ->
