@@ -104,6 +104,14 @@ createBuiltins =
     publicBuiltin_ "Data.List.filter" filterType
     publicBuiltin_ "Data.List.takeWhile" filterType
 
+    publicBuiltin_ "Data.List.map" .
+      forAll "a" $ \a ->
+      forAll "b" $ \b ->
+      mkPiRecord
+      [ ("mapping", mkPi a b)
+      , ("over", listOf a)
+      ] $ listOf b
+
     publicBuiltin_ "Data.List.replicate" . forAll "a" $ \a ->
       mkPiRecord
       [ ("item", a)
