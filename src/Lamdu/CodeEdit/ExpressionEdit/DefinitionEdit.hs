@@ -92,7 +92,7 @@ makePolyNameEdit name guid depParamsEdits =
 
 makeWheres ::
   MonadA m =>
-  [Sugar.WhereItem Sugar.Name m] -> Widget.Id ->
+  [Sugar.WhereItem Sugar.Name m (Sugar.ExpressionN m)] -> Widget.Id ->
   ExprGuiM m [Widget (T m)]
 makeWheres [] _ = return []
 makeWheres whereItems myId = do
@@ -137,7 +137,9 @@ mkPresentationEdits guid myId = do
       return (presentationMode, widget)
 
 makeDefContentEdit ::
-  MonadA m => Guid -> Sugar.Name -> Sugar.DefinitionContent Sugar.Name m -> ExprGuiM m (WidgetT m)
+  MonadA m => Guid -> Sugar.Name ->
+  Sugar.DefinitionContent Sugar.Name m (Sugar.ExpressionN m) ->
+  ExprGuiM m (WidgetT m)
 makeDefContentEdit guid name content = do
   equals <- makeEquals myId
   rhsJumperEquals <- jumpToRHS [E.ModKey E.noMods (E.charKey '=')] rhs
@@ -193,10 +195,10 @@ makeDefContentEdit guid name content = do
       fmap (FocusDelegator.delegatingId . WidgetIds.fromGuid)
     myId = WidgetIds.fromGuid guid
 
-make
-  :: MonadA m
-  => Sugar.Definition Sugar.Name m
-  -> ExprGuiM m (WidgetT m)
+make ::
+  MonadA m =>
+  Sugar.Definition Sugar.Name m (Sugar.ExpressionN m) ->
+  ExprGuiM m (WidgetT m)
 make def =
   case def ^. Sugar.drBody of
   Sugar.DefinitionBodyExpression bodyExpr ->
@@ -205,7 +207,7 @@ make def =
     makeBuiltinDefinition def builtin
 
 makeBuiltinDefinition ::
-  MonadA m => Sugar.Definition Sugar.Name m ->
+  MonadA m => Sugar.Definition Sugar.Name m (Sugar.ExpressionN m) ->
   Sugar.DefinitionBuiltin m -> ExprGuiM m (WidgetT m)
 makeBuiltinDefinition def builtin =
   Box.vboxAlign 0 <$> sequenceA
@@ -225,7 +227,10 @@ makeBuiltinDefinition def builtin =
 defTypeScale :: Widget f -> Widget f
 defTypeScale = Widget.scale Config.defTypeBoxSizeFactor
 
-makeWhereItemEdit :: MonadA m => Sugar.WhereItem Sugar.Name m -> ExprGuiM m (WidgetT m)
+makeWhereItemEdit ::
+  MonadA m =>
+  Sugar.WhereItem Sugar.Name m (Sugar.ExpressionN m) ->
+  ExprGuiM m (WidgetT m)
 makeWhereItemEdit item =
   fmap (Widget.weakerEvents eventMap) . assignCursor $
   makeDefContentEdit (Sugar.wiGuid item) (Sugar.wiName item) (Sugar.wiValue item)
@@ -247,8 +252,9 @@ makeWhereItemEdit item =
       | otherwise = mempty
 
 makeExprDefinition ::
-  MonadA m => Sugar.Definition Sugar.Name m ->
-  Sugar.DefinitionExpression Sugar.Name m ->
+  MonadA m =>
+  Sugar.Definition Sugar.Name m (Sugar.ExpressionN m) ->
+  Sugar.DefinitionExpression Sugar.Name m (Sugar.ExpressionN m) ->
   ExprGuiM m (WidgetT m)
 makeExprDefinition def bodyExpr = do
   typeWidgets <-

@@ -386,8 +386,8 @@ toFuncParamActions fpa = do
     fpa & fpGetExample . Lens.mapped %~ run . toExpression
 
 withWhereItem ::
-  (MonadA tm, MonadNaming m) => WhereItem (OldName m) tm ->
-  CPS m (WhereItem (NewName m) tm)
+  (MonadA tm, MonadNaming m) => WhereItem (OldName m) tm (Expression (OldName m) tm) ->
+  CPS m (WhereItem (NewName m) tm (Expression (NewName m) tm))
 withWhereItem item@WhereItem{..} = CPS $ \k -> do
   (name, (value, res)) <-
     runCPS (opWithWhereItemName wiGuid wiName) $
@@ -395,8 +395,8 @@ withWhereItem item@WhereItem{..} = CPS $ \k -> do
   pure (item { wiValue = value, wiName = name }, res)
 
 toDefinitionContent ::
-  (MonadA tm, MonadNaming m) => DefinitionContent (OldName m) tm ->
-  m (DefinitionContent (NewName m) tm)
+  (MonadA tm, MonadNaming m) => DefinitionContent (OldName m) tm (Expression (OldName m) tm) ->
+  m (DefinitionContent (NewName m) tm (Expression (NewName m) tm))
 toDefinitionContent def@DefinitionContent{..} = do
   (depParams, (params, (whereItems, body))) <-
     runCPS (traverse (withFuncParam NameGen.Dependent) dDepParams) .
@@ -411,15 +411,15 @@ toDefinitionContent def@DefinitionContent{..} = do
     }
 
 toDefinitionNewType ::
-  (MonadA tm, MonadNaming m) => DefinitionNewType (OldName m) tm ->
-  m (DefinitionNewType (NewName m) tm)
+  (MonadA tm, MonadNaming m) => DefinitionNewType (OldName m) tm (Expression (OldName m) tm) ->
+  m (DefinitionNewType (NewName m) tm (Expression (NewName m) tm))
 toDefinitionNewType dnt@DefinitionNewType{..} = do
   newType <- toExpression dntNewType
   pure dnt { dntNewType = newType }
 
 toDefinitionBody ::
-  (MonadA tm, MonadNaming m) => DefinitionBody (OldName m) tm ->
-  m (DefinitionBody (NewName m) tm)
+  (MonadA tm, MonadNaming m) => DefinitionBody (OldName m) tm (Expression (OldName m) tm) ->
+  m (DefinitionBody (NewName m) tm (Expression (NewName m) tm))
 toDefinitionBody (DefinitionBodyBuiltin bi) =
   pure $ DefinitionBodyBuiltin bi
 toDefinitionBody
@@ -434,8 +434,8 @@ toDefinitionBody
         }
 
 toDef ::
-  (MonadA tm, MonadNaming m) => Definition (OldName m) tm ->
-  m (Definition (NewName m) tm)
+  (MonadA tm, MonadNaming m) => Definition (OldName m) tm (Expression (OldName m) tm) ->
+  m (Definition (NewName m) tm (Expression (NewName m) tm))
 toDef def@Definition {..} = do
   (name, (typ, body)) <-
     runCPS (opWithDefName _drGuid _drName) $

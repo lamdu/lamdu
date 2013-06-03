@@ -346,34 +346,34 @@ instance Show expr => Show (Body name m expr) where
   show BodyGetVar {} = "GetVar:TODO"
   show BodyGetParams {} = "GetParams:TODO"
 
-data DefinitionNewType name m = DefinitionNewType
-  { dntNewType :: Expression name m
+data DefinitionNewType name m expr = DefinitionNewType
+  { dntNewType :: expr
   , dntAcceptNewType :: T m ()
-  }
+  } deriving (Functor, Foldable, Traversable)
 
-data WhereItem name m = WhereItem
-  { wiValue :: DefinitionContent name m
+data WhereItem name m expr = WhereItem
+  { wiValue :: DefinitionContent name m expr
   , wiGuid :: Guid
   , wiName :: name
   , wiHiddenGuids :: [Guid]
   , wiActions :: Maybe (ListItemActions m)
-  }
+  } deriving (Functor, Foldable, Traversable)
 
 -- Common data for definitions and where-items
-data DefinitionContent name m = DefinitionContent
-  { dDepParams :: [FuncParam name m (Expression name m)]
-  , dParams :: [FuncParam name m (Expression name m)]
-  , dBody :: Expression name m
-  , dWhereItems :: [WhereItem name m]
+data DefinitionContent name m expr = DefinitionContent
+  { dDepParams :: [FuncParam name m expr]
+  , dParams :: [FuncParam name m expr]
+  , dBody :: expr
+  , dWhereItems :: [WhereItem name m expr]
   , dAddFirstParam :: T m Guid
   , dAddInnermostWhereItem :: T m Guid
-  }
+  } deriving (Functor, Foldable, Traversable)
 
-data DefinitionExpression name m = DefinitionExpression
-  { _deContent :: DefinitionContent name m
+data DefinitionExpression name m expr = DefinitionExpression
+  { _deContent :: DefinitionContent name m expr
   , _deIsTypeRedundant :: Bool
-  , _deMNewType :: Maybe (DefinitionNewType name m)
-  }
+  , _deMNewType :: Maybe (DefinitionNewType name m expr)
+  } deriving (Functor, Foldable, Traversable)
 
 data DefinitionBuiltin m = DefinitionBuiltin
   { biName :: Definition.FFIName
@@ -381,19 +381,20 @@ data DefinitionBuiltin m = DefinitionBuiltin
   , biMSetName :: Maybe (Definition.FFIName -> T m ())
   }
 
-data DefinitionBody name m
-  = DefinitionBodyExpression (DefinitionExpression name m)
+data DefinitionBody name m expr
+  = DefinitionBodyExpression (DefinitionExpression name m expr)
   | DefinitionBodyBuiltin (DefinitionBuiltin m)
+  deriving (Functor, Foldable, Traversable)
 
-data Definition name m = Definition
+data Definition name m expr = Definition
   { _drGuid :: Guid
   , _drName :: name
-  , _drType :: Expression name m
-  , _drBody :: DefinitionBody name m
-  }
+  , _drType :: expr
+  , _drBody :: DefinitionBody name m expr
+  } deriving (Functor, Foldable, Traversable)
 
-type DefinitionN = Definition Name
-type DefinitionU = Definition MStoredName
+type DefinitionN m = Definition Name m (Expression Name m)
+type DefinitionU m = Definition MStoredName m (Expression MStoredName m)
 
 derive makeMonoid ''Scope
 Lens.makePrisms ''Body

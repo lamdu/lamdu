@@ -726,7 +726,7 @@ convertWhereItems ::
   (MonadA m, Typeable1 m) =>
   [Guid] ->
   SugarInfer.ExprMM m ->
-  SugarM m ([WhereItem MStoredName m], SugarInfer.ExprMM m)
+  SugarM m ([WhereItem MStoredName m (ExpressionU m)], SugarInfer.ExprMM m)
 convertWhereItems usedTags expr =
   case mExtractWhere expr of
   Nothing -> return ([], expr)
@@ -793,7 +793,7 @@ assertedGetProp msg _ = error msg
 convertDefinitionContent ::
   (MonadA m, Typeable1 m) =>
   SugarM.RecordParamsInfo m -> [Guid] -> SugarInfer.ExprMM m ->
-  SugarM m (DefinitionContent MStoredName m)
+  SugarM m (DefinitionContent MStoredName m (ExpressionU m))
 convertDefinitionContent recordParamsInfo usedTags expr = do
   (depParams, convParams, funcBody) <-
     convertDefinitionParams recordParamsInfo usedTags expr
@@ -842,7 +842,7 @@ loadConvertDefI cp defI =
 
 convertDefIBuiltin ::
   MonadA m => Definition.Builtin -> DefI (Tag m) ->
-  ExprIRef.ExpressionM m (Stored m) -> DefinitionBody MStoredName m
+  ExprIRef.ExpressionM m (Stored m) -> DefinitionBody MStoredName m (ExpressionU m)
 convertDefIBuiltin (Definition.Builtin name) defI typeI =
   DefinitionBodyBuiltin DefinitionBuiltin
     { biName = name
@@ -858,7 +858,7 @@ convertDefIBuiltin (Definition.Builtin name) defI typeI =
 makeNewTypeForDefinition ::
   (Typeable1 m, MonadA m, RandomGen gen) =>
   Anchors.CodeProps m -> Stored m -> ExprIRef.ExpressionM m () -> Bool -> Bool ->
-  gen -> T m (Maybe (DefinitionNewType MStoredName m))
+  gen -> T m (Maybe (DefinitionNewType MStoredName m (ExpressionU m)))
 makeNewTypeForDefinition cp typeIRef inferredTypeP typesMatch success iTypeGen
   | success && not typesMatch && isCompleteType inferredTypeP =
     Just <$> mkNewType
@@ -878,7 +878,7 @@ convertDefIExpression ::
   (MonadA m, Typeable1 m) => Anchors.CodeProps m ->
   Load.LoadedClosure (Tag m) -> DefI (Tag m) ->
   ExprIRef.ExpressionM m (Stored m) ->
-  CT m (DefinitionBody MStoredName m)
+  CT m (DefinitionBody MStoredName m (ExpressionU m))
 convertDefIExpression cp exprLoaded defI typeI = do
   inferredLoadedResult@SugarInfer.InferLoadedResult
     { SugarInfer._ilrExpr = ilrExpr
