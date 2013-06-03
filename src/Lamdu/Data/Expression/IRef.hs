@@ -77,7 +77,8 @@ newLambda = newLambdaCons ExprUtil.makeLambda
 readExprBody :: MonadA m => ExpressionIM m -> T m (ExpressionBody (Tag m))
 readExprBody = Transaction.readIRef . unExpression
 
-writeExprBody :: MonadA m => ExpressionIM m -> ExpressionBody (Tag m) -> T m ()
+writeExprBody ::
+  MonadA m => ExpressionIM m -> ExpressionBody (Tag m) -> T m ()
 writeExprBody = Transaction.writeIRef . unExpression
 
 newExpression :: MonadA m => ExpressionM m () -> T m (ExpressionIM m)
@@ -100,7 +101,8 @@ writeExpressionWithStoredSubexpressions ::
   T m (ExpressionM m (ExpressionIM m, a))
 writeExpressionWithStoredSubexpressions iref expr = do
   exprBodyP <- expressionBodyFrom expr
-  writeExprBody iref $ fmap (fst . Lens.view Expr.ePayload) exprBodyP
+  writeExprBody iref $
+    (^. Expr.ePayload . Lens._1) <$> exprBodyP
   return $ Expr.Expression exprBodyP
     (iref, expr ^. Expr.ePayload . Lens._2)
 

@@ -352,8 +352,9 @@ pickResult exprS =
   ( fmap (ExprIRef.exprGuid . Lens.view (Expr.ePayload . Lens._2))
   . listToMaybe . orderedInnerHoles . fmap swap
   ) .
-  (ExprIRef.writeExpressionWithStoredSubexpressions . Property.value . SugarInfer.resultStored) exprS .
-  fmap (Lens.over (Lens._1 . Lens.mapped) unStorePoint . swap)
+  (ExprIRef.writeExpressionWithStoredSubexpressions .
+   Property.value . SugarInfer.resultStored) exprS .
+  fmap ((Lens._1 . Lens.mapped %~ unStorePoint) . swap)
 
 orderedInnerHoles ::
   Expr.Expression def (Infer.Inferred def, a) ->

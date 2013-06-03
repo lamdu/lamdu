@@ -99,11 +99,15 @@ mkActions sugarContext exprS =
   , _callWithNextArg = pure (pure Nothing)
   , _setToHole = ExprIRef.exprGuid <$> DataOps.setToHole stored
   , _replaceWithNewHole = mkReplaceWithNewHole exprS
-  , _cut = mkCutter (sugarContext ^. SugarM.scCodeAnchors) (Property.value stored) $ mkReplaceWithNewHole exprS
-  , _giveAsArgToOperator = ExprIRef.exprGuid <$> DataOps.giveAsArgToOperator stored
+  , _cut =
+    mkCutter (sugarContext ^. SugarM.scCodeAnchors)
+    (Property.value stored) $ mkReplaceWithNewHole exprS
+  , _giveAsArgToOperator =
+    ExprIRef.exprGuid <$> DataOps.giveAsArgToOperator stored
   }
   where
-    giveAsArgPrefix prefix = ExprIRef.exprGuid <$> (prefix *> DataOps.giveAsArg stored)
+    giveAsArgPrefix prefix =
+      ExprIRef.exprGuid <$> (prefix *> DataOps.giveAsArg stored)
     stored = SugarInfer.resultStored exprS
 
 make ::

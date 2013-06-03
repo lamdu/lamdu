@@ -280,8 +280,9 @@ convertLiteralInteger i exprI =
   , liSetValue = setValue . Property.value <$> SugarInfer.resultStored exprI
   }
   where
-    setValue iref =
-      ExprIRef.writeExprBody iref . Lens.review ExprLens.bodyLiteralInteger
+    setValue iref val =
+      ExprIRef.writeExprBody iref $
+      ExprLens.bodyLiteralInteger # val
 
 convertTag :: (MonadA m, Typeable1 m) => Guid -> Convertor m
 convertTag tag exprI = do
@@ -313,7 +314,8 @@ writeRecordFields iref def f = do
   case oldBody ^? Expr._BodyRecord of
     Nothing -> return def
     Just oldRecord -> do
-      (res, newRecord) <- sideChannel Expr.recordFields f oldRecord
+      (res, newRecord) <-
+        sideChannel Expr.recordFields f oldRecord
       ExprIRef.writeExprBody iref $ Expr.BodyRecord newRecord
       return res
 
@@ -589,7 +591,8 @@ delFieldParam tagExprGuid paramTypeI paramGuid lambdaP bodyStored =
         deleteParamRef paramGuid bodyStored
         let
           toGetParam iref =
-            ExprIRef.writeExprBody iref $ ExprLens.bodyParameterRef # fieldTagGuid
+            ExprIRef.writeExprBody iref $
+            ExprLens.bodyParameterRef # fieldTagGuid
         onMatchingSubexprs (toGetParam . Property.value)
           (isGetFieldParam paramGuid fieldTagGuid) bodyStored
         pure $ Guid.combine lamGuid fieldTagGuid
@@ -692,7 +695,8 @@ singleConventionalParam lamProp existingParam existingParamGuid existingParamTyp
         toGetField iref = do
           recordRef <- ExprIRef.newExprBody $ ExprLens.bodyParameterRef # newParamsGuid
           tagRef <- ExprIRef.newExprBody existingParamTag
-          ExprIRef.writeExprBody iref $ Expr.BodyGetField Expr.GetField
+          ExprIRef.writeExprBody iref $
+            Expr.BodyGetField Expr.GetField
             { Expr._getFieldRecord = recordRef
             , Expr._getFieldTag = tagRef
             }
