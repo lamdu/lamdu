@@ -70,7 +70,7 @@ import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
 import Lamdu.Data.Expression (Kind(..))
 import Lamdu.Data.Expression.IRef (DefI)
-import qualified Control.Lens.TH as LensTH
+import qualified Control.Lens.TH as Lens
 import qualified Data.List as List
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
@@ -95,7 +95,6 @@ data Actions m = Actions
   , _replaceWithNewHole :: T m Guid
   , _cut :: T m Guid
   }
-LensTH.makeLenses ''Actions
 
 data Payload name m = Payload
   { _plInferredTypes :: [Expression name m]
@@ -397,29 +396,30 @@ type DefinitionN = Definition Name
 type DefinitionU = Definition MStoredName
 
 derive makeMonoid ''Scope
-LensTH.makePrisms ''Body
-LensTH.makePrisms ''SpecialArgs
-LensTH.makePrisms ''HoleResultSeed
-LensTH.makeLenses ''Definition
-LensTH.makeLenses ''DefinitionExpression
-LensTH.makeLenses ''Inferred
-LensTH.makeLenses ''Collapsed
-LensTH.makeLenses ''Lam
-LensTH.makeLenses ''FuncParam
-LensTH.makeLenses ''RecordField
-LensTH.makeLenses ''FieldList
-LensTH.makeLenses ''Record
-LensTH.makeLenses ''GetVar
-LensTH.makeLenses ''GetParams
-LensTH.makeLenses ''Apply
-LensTH.makeLenses ''GetField
-LensTH.makeLenses ''TagG
-LensTH.makeLenses ''Body
-LensTH.makeLenses ''ListItemActions
-LensTH.makeLenses ''FuncParamActions
-LensTH.makeLenses ''Payload
-LensTH.makeLenses ''ExpressionP
-LensTH.makeLenses ''HoleResult
-LensTH.makeLenses ''Scope
-LensTH.makeLenses ''HoleActions
-LensTH.makeLenses ''Hole
+Lens.makePrisms ''Body
+Lens.makePrisms ''SpecialArgs
+Lens.makePrisms ''HoleResultSeed
+Lens.makeLenses ''Actions
+Lens.makeLenses ''Definition
+Lens.makeLenses ''DefinitionExpression
+Lens.makeLenses ''Inferred
+Lens.makeLenses ''Collapsed
+Lens.makeLenses ''Lam
+Lens.makeLenses ''FuncParam
+Lens.makeLenses ''RecordField
+Lens.makeLenses ''FieldList
+Lens.makeLenses ''Record
+Lens.makeLenses ''GetVar
+Lens.makeLenses ''GetParams
+Lens.makeLenses ''Apply
+Lens.makeLenses ''GetField
+Lens.makeLenses ''TagG
+Lens.makeLenses ''Body
+Lens.makeLenses ''ListItemActions
+Lens.makeLenses ''FuncParamActions
+Lens.makeLenses ''Payload
+Lens.makeLenses ''ExpressionP
+Lens.makeLenses ''HoleResult
+Lens.makeLenses ''Scope
+Lens.makeLenses ''HoleActions
+Lens.makeLenses ''Hole
