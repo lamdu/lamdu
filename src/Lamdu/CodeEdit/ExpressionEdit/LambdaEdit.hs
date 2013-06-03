@@ -4,7 +4,6 @@ module Lamdu.CodeEdit.ExpressionEdit.LambdaEdit
   ( make, makeParamNameEdit, makeParamEdit
   ) where
 
-import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Maybe (maybeToList)
@@ -15,12 +14,10 @@ import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.ExpressionEdit.Parens as Parens
-import qualified Lamdu.CodeEdit.Settings as Settings
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.WidgetIds as WidgetIds
@@ -53,21 +50,11 @@ makeParamEdit ::
   ExprGuiM m (ExpressionGui m)
 makeParamEdit prevId param =
   (Lens.mapped . ExpressionGui.egWidget %~ Widget.weakerEvents paramEventMap) . assignCursor $ do
-    infoMode <- (^. Settings.sInfoMode) <$> ExprGuiM.readSettings
     paramTypeEdit <- ExprGuiM.makeSubexpresion 0 $ param ^. Sugar.fpType
     paramNameEdit <- makeParamNameEdit name (param ^. Sugar.fpGuid) myId
-    let typeWidget = paramTypeEdit ^. ExpressionGui.egWidget
-    infoWidget <-
-      case (infoMode, mActions) of
-      (Settings.InfoExamples, Just actions) -> do
-        exampleSugar <- ExprGuiM.liftMemoT $ actions ^. Sugar.fpGetExample
-        exampleGui <-
-          (^. ExpressionGui.egWidget) <$>
-          ExprGuiM.makeSubexpresion 0 exampleSugar
-        return $ Box.vboxCentered [exampleGui, typeWidget]
-      _ -> return typeWidget
     return .
-      ExpressionGui.addType ExpressionGui.HorizLine myId [infoWidget] $
+      ExpressionGui.addType ExpressionGui.HorizLine myId
+      [paramTypeEdit ^. ExpressionGui.egWidget] $
       ExpressionGui.fromValueWidget paramNameEdit
   where
     name = param ^. Sugar.fpName

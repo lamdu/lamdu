@@ -230,15 +230,10 @@ runDb font db = do
   where
     dbToIO = Anchors.runDbTransaction db
 
-infoStr :: Settings.InfoMode -> String
-infoStr Settings.InfoNone = "None"
-infoStr Settings.InfoTypes = "Types"
-infoStr Settings.InfoExamples = "Examples"
-
 nextInfoMode :: Settings.InfoMode -> Settings.InfoMode
-nextInfoMode Settings.InfoNone = Settings.InfoTypes
-nextInfoMode Settings.InfoTypes = Settings.InfoNone -- Settings.InfoExamples
-nextInfoMode Settings.InfoExamples = Settings.InfoNone
+nextInfoMode Settings.None = Settings.Types
+nextInfoMode Settings.Types = Settings.None -- Settings.Examples
+nextInfoMode Settings.Examples = Settings.None
 
 mkGlobalEventMap :: IORef Settings -> IO (Widget.EventHandlers IO)
 mkGlobalEventMap settingsRef = do
@@ -246,7 +241,7 @@ mkGlobalEventMap settingsRef = do
   let
     curInfoMode = settings ^. Settings.sInfoMode
     next = nextInfoMode curInfoMode
-    nextDoc = EventMap.Doc ["View", "Subtext", "Show " ++ infoStr next]
+    nextDoc = EventMap.Doc ["View", "Subtext", "Show " ++ show next]
   return .
     Widget.keysEventMap Config.nextInfoMode nextDoc .
     modifyIORef settingsRef $ Lens.set Settings.sInfoMode next

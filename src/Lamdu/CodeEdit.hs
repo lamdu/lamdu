@@ -32,6 +32,7 @@ import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit as ExpressionEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
+import qualified Lamdu.CodeEdit.Settings as Settings
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.CodeEdit.Sugar.AddNames as AddNames
 import qualified Lamdu.Config as Config
@@ -167,8 +168,14 @@ makePanesEdit panes myId = do
       ]
 
 makePaneWidget :: MonadA m => Sugar.DefinitionU m -> ExprGuiM m (Widget (T m))
-makePaneWidget =
-  fmap onEachPane . DefinitionEdit.make . AddNames.addToDef
+makePaneWidget rawDefS = do
+  infoMode <- (^. Settings.sInfoMode) <$> ExprGuiM.readSettings
+  let
+    defS =
+      case infoMode of
+      Settings.Types -> rawDefS
+      _ -> Sugar.removeTypes <$> rawDefS
+  onEachPane <$> DefinitionEdit.make (AddNames.addToDef defS)
   where
     onEachPane widget
       | widget ^. Widget.wIsFocused = onActivePane widget

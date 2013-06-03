@@ -32,7 +32,6 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.PiEdit as PiEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.RecordEdit as RecordEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.TagEdit as TagEdit
-import qualified Lamdu.CodeEdit.Settings as Settings
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.WidgetEnvT as WE
@@ -58,19 +57,12 @@ make parentPrecedence sExpr = assignCursor $ do
   typeEdits <- traverse (make (ParentPrecedence 0)) $ payload ^. Sugar.plInferredTypes
   let onReadOnly = Widget.doesntTakeFocus
   exprEventMap <- expressionEventMap isHole resultPickers sExpr
-  settings <- ExprGuiM.readSettings
   let
     addInferredTypes =
-      case Lens.view Settings.sInfoMode settings of
-      Settings.InfoNone -> id
-      Settings.InfoTypes ->
-        ExpressionGui.addType ExpressionGui.Background exprId
-        (map
-         ( Widget.tint Config.inferredTypeTint
-         . Widget.scale Config.typeScaleFactor
-         . Lens.view ExpressionGui.egWidget
-         ) typeEdits)
-      Settings.InfoExamples -> id
+      ExpressionGui.addType ExpressionGui.Background exprId $
+      Widget.tint Config.inferredTypeTint .
+      Widget.scale Config.typeScaleFactor .
+      Lens.view ExpressionGui.egWidget <$> typeEdits
   return .
     Lens.over ExpressionGui.egWidget
     ( maybe onReadOnly (const id) (payload ^. Sugar.plActions)

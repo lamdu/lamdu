@@ -44,7 +44,7 @@ removeSuccessfulType =
 removeInferredTypes :: Expression name m -> Expression name m
 removeInferredTypes = rPayload . plInferredTypes .~ []
 
-removeTypes :: MonadA m => Expression name m -> Expression name m
+removeTypes :: Expression name m -> Expression name m
 removeTypes = Lens.mapped . plInferredTypes .~ []
 
 mkGen :: Int -> Int -> Guid -> Random.StdGen

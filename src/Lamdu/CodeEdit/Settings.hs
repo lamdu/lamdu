@@ -5,10 +5,11 @@ module Lamdu.CodeEdit.Settings
 
 import qualified Control.Lens.TH as LensTH
 
-data InfoMode = InfoNone | InfoTypes | InfoExamples
+data InfoMode = None | Types | Examples
+  deriving (Show)
 
 defaultInfoMode :: InfoMode
-defaultInfoMode = InfoNone
+defaultInfoMode = None
 
 newtype Settings = Settings
   { _sInfoMode :: InfoMode
