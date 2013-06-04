@@ -14,9 +14,10 @@ module Graphics.UI.Bottle.Widget
   , backgroundColor, tint, liftView
   , strongerEvents, weakerEvents
   , translate, translateBy, scale, scaleDownContent
+  , overlayView
   ) where
 
-import Control.Applicative ((<$>))
+import Control.Applicative ((<$>), liftA2)
 import Control.Lens.Operators
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2)
@@ -24,6 +25,7 @@ import Graphics.UI.Bottle.Animation (AnimId, R, Size)
 import Graphics.UI.Bottle.Direction (Direction)
 import Graphics.UI.Bottle.EventMap (EventMap)
 import Graphics.UI.Bottle.Rect (Rect(..))
+import Graphics.UI.Bottle.View (View)
 import Graphics.UI.Bottle.WidgetId (Id(..), augmentId, toAnimId, joinId, subId)
 import qualified Control.Lens as Lens
 import qualified Graphics.DrawingCombinators as Draw
@@ -167,3 +169,9 @@ scaleDownContent factor align w =
   translate ((w ^. wSize) * align * (1 - factor)) .
   scale factor $
   w
+
+overlayView :: View -> Widget f -> Widget f
+overlayView (size, frame) w =
+  w
+  & wSize %~ liftA2 max size
+  & wFrame %~ mappend frame
