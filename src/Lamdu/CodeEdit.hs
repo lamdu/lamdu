@@ -118,7 +118,7 @@ make cp settings rootGuid = do
   (sugarPanes, sugarClipboards) <-
     mapStateT lift $
     (,) <$> makeSugarPanes cp rootGuid <*> makeSugarClipboards cp
-  ExprGuiM.run ExpressionEdit.make cp settings $ do
+  ExprGuiM.runWidget ExpressionEdit.make cp settings $ do
     panesEdit <- makePanesEdit sugarPanes $ WidgetIds.fromGuid rootGuid
     clipboardsEdit <- makeClipboardsEdit sugarClipboards
     return $

@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, ConstraintKinds, TypeFamilies #-}
 module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad
-  ( ExprGuiM, WidgetT, run
+  ( ExprGuiM, WidgetT, runWidget
   , widgetEnv
 
   , transaction, atEnv, withFgColor
@@ -18,10 +18,11 @@ module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad
 
   , memo, memoT
   , liftMemo, liftMemoT
+  , appendToTopLevelEventMap
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
-import Control.Lens ((%~), (&))
+import Control.Lens.Operators
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.RWS (RWST, runRWST)
 import Control.Monad.Trans.State (StateT(..), mapStateT)
@@ -38,7 +39,6 @@ import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Types (ExpressionGui, WidgetT
 import Lamdu.CodeEdit.Settings (Settings)
 import Lamdu.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
-import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.RWS as RWS
 import qualified Data.Cache as Cache
 import qualified Data.Store.Transaction as Transaction
@@ -57,6 +57,7 @@ type AccessedVars = [Guid]
 data Output m = Output
   { oAccessedVars :: AccessedVars
   , oHolePickers :: [Sugar.PrefixAction m]
+  , oTopLevelEventMap :: Widget.EventHandlers (T m)
   }
 derive makeMonoid ''Output
 
@@ -71,8 +72,8 @@ newtype ExprGuiM m a = ExprGuiM
   }
   deriving (Functor, Applicative, Monad)
 
-LensTH.makeLenses ''Askable
-LensTH.makeLenses ''ExprGuiM
+Lens.makeLenses ''Askable
+Lens.makeLenses ''ExprGuiM
 
 -- TODO: To lens
 atEnv :: MonadA m => (WE.Env -> WE.Env) -> ExprGuiM m a -> ExprGuiM m a
@@ -122,8 +123,9 @@ run ::
   MonadA m =>
   (ParentPrecedence -> Sugar.ExpressionN m -> ExprGuiM m (ExpressionGui m)) ->
   Anchors.CodeProps m -> Settings -> ExprGuiM m a ->
-  StateT Cache (WidgetEnvT (T m)) a
-run makeSubexpression codeAnchors settings (ExprGuiM action) = StateT $ \cache ->
+  StateT Cache (WidgetEnvT (T m)) (Widget.EventHandlers (T m), a)
+run makeSubexpression codeAnchors settings (ExprGuiM action) =
+  StateT $ \cache ->
   fmap f $ runRWST action
   Askable
   { _aSettings = settings
@@ -132,7 +134,15 @@ run makeSubexpression codeAnchors settings (ExprGuiM action) = StateT $ \cache -
   }
   cache
   where
-    f (x, newCache, _) = (x, newCache)
+    f (x, newCache, output) = ((oTopLevelEventMap output, x), newCache)
+
+runWidget ::
+  MonadA m =>
+  (ParentPrecedence -> Sugar.ExpressionN m -> ExprGuiM m (ExpressionGui m)) ->
+  Anchors.CodeProps m -> Settings -> ExprGuiM m (Widget (T m)) ->
+  StateT Cache (WidgetEnvT (T m)) (Widget (T m))
+runWidget makeSubexpression codeAnchors settings action =
+  uncurry Widget.weakerEvents <$> run makeSubexpression codeAnchors settings action
 
 widgetEnv :: MonadA m => WidgetEnvT (T m) a -> ExprGuiM m a
 widgetEnv = ExprGuiM . lift
@@ -181,3 +191,7 @@ markVariablesAsUsed vars = ExprGuiM $ RWS.tell mempty { oAccessedVars = vars }
 
 addResultPicker :: MonadA m => T m () -> ExprGuiM m ()
 addResultPicker picker = ExprGuiM $ RWS.tell mempty { oHolePickers = [picker] }
+
+appendToTopLevelEventMap :: MonadA m => Widget.EventHandlers (T m) -> ExprGuiM m ()
+appendToTopLevelEventMap eventMap =
+  ExprGuiM $ RWS.tell mempty { oTopLevelEventMap = eventMap }
