@@ -42,7 +42,8 @@ applyIntToBoolFuncWithHole =
 inferPart =
   testInfer "foo (xs:List ?) = 5 : xs" $
   lambda "xs" listInts $ \xs ->
-  getDef ":" $$ asHole integerType $$ literalInteger 5 $$ xs
+  getDef ":" $$ asHole integerType $$:
+  [literalInteger 5, xs]
   where
     listInts = listOf (asHole integerType)
 
