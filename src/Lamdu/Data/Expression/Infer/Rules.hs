@@ -190,12 +190,9 @@ intTypeExpr = makeRefExpr $ Expr.BodyLeaf Expr.IntegerType
 tagTypeExpr :: RefExpression def
 tagTypeExpr = makeRefExpr $ Expr.BodyLeaf Expr.TagType
 
-guidFromOrigin :: Origin -> Guid
-guidFromOrigin origin = Guid.fromString $ show origin ++ "(orig)"
-
-makePi :: Origin -> RefExpression def -> RefExpression def -> RefExpression def
-makePi o paramType result =
-  makeRefExpr $ ExprUtil.makePi (guidFromOrigin o) paramType result
+makePi :: RefExpression def -> RefExpression def -> RefExpression def
+makePi paramType result =
+  makeRefExpr $ ExprUtil.makePi (Guid.fromString "dummyGuid") paramType result
 
 runLambdaBodyTypeToPiResultType :: (Guid, ExprRef) -> RefExpression def -> Origin -> RuleResult def
 runLambdaBodyTypeToPiResultType (param, lambdaTypeRef) bodyTypeExpr o =
@@ -450,7 +447,7 @@ mergeToArg param arg =
 runArgTypeToPiParamType :: ExprRef -> RefExpression def -> Origin -> RuleResult def
 runArgTypeToPiParamType funcTypeRef argTypeExpr o0 =
   [( funcTypeRef
-   , makePi o0 (argTypeExpr & Lens.traversed . rplOrigins <>~ [o0]) holeRefExpr
+   , makePi (argTypeExpr & Lens.traversed . rplOrigins <>~ [o0]) holeRefExpr
    )]
 
 -- Rigid value: An expression whose sole information content comes
@@ -491,7 +488,7 @@ runRigidArgApplyTypeToResultType funcTypeRef (applyTypeExpr, argExpr) o0 = do
   guard $ rigidValue argExpr
   return
     ( funcTypeRef
-    , makePi o0 holeRefExpr
+    , makePi holeRefExpr
       (ExprUtil.subst (Lens.filtered (ExprUtil.couldEq argExpr)) holeRefExpr applyTypeExpr)
       & Lens.traversed . rplOrigins <>~ [o0]
     )
