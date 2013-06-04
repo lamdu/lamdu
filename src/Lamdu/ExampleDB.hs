@@ -149,6 +149,7 @@ createBuiltins =
       ["==", "/=", "<=", ">=", "<", ">"]
 
     newDef ".." ["Prelude"] "enumFromTo" . mkInfixType integer integer $ listOf integer
+    newDef "enumFrom" ["Prelude"] "enumFrom" . mkPi integer $ listOf integer
 
     publicBuiltin_ "Data.List.iterate" .
       forAll "a" $ \a ->
