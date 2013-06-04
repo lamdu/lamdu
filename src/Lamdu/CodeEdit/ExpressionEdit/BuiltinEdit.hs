@@ -42,7 +42,7 @@ make (Sugar.DefinitionBuiltin (Definition.FFIName modulePath name) setFFIName) m
       ExprGuiM.withFgColor color .
       ExprGuiM.wrapDelegated builtinFDConfig FocusDelegator.NotDelegating id
       (ExprGuiM.widgetEnv . maybe
-       (BWidgets.makeTextView namePartStr . Widget.toAnimId)
+       (BWidgets.makeTextViewWidget namePartStr . Widget.toAnimId)
        (BWidgets.makeWordEdit . Property namePartStr) mSetter) $
       makeWidgetId myId
     maybeSetter = (`fmap` setFFIName)

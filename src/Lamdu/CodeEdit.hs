@@ -102,7 +102,7 @@ makeClipboardsEdit clipboards = do
   clipboardTitle <-
     if null clipboardsEdits
     then return Spacer.empty
-    else ExprGuiM.widgetEnv $ BWidgets.makeTextView "Clipboards:" ["clipboards title"]
+    else ExprGuiM.widgetEnv $ BWidgets.makeTextViewWidget "Clipboards:" ["clipboards title"]
   return . Box.vboxAlign 0 $ clipboardTitle : clipboardsEdits
 
 makeSugarClipboards :: (MonadA m, Typeable1 m) => Anchors.CodeProps m -> CT m [Sugar.DefinitionU m]

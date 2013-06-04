@@ -177,7 +177,8 @@ maybeAddExtraSymbol haveExtraResults myId w
 makeNoResults :: MonadA m => AnimId -> ExprGuiM m (WidgetT m)
 makeNoResults myId =
   ExprGuiM.widgetEnv .
-  BWidgets.makeTextView "(No results)" $ mappend myId ["no results"]
+  BWidgets.makeTextViewWidget "(No results)" $
+  mappend myId ["no results"]
 
 renamePrefix :: AnimId -> AnimId -> AnimId -> AnimId
 renamePrefix srcPrefix destPrefix animId =

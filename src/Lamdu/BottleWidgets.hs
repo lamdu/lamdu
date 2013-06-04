@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.BottleWidgets
-  ( makeTextView, makeLabel
+  ( makeTextViewWidget, makeLabel
   , makeFocusableView
   , makeFocusableTextView, makeFocusableLabel
   , wrapDelegatedWith, wrapDelegatedOT
@@ -39,15 +39,15 @@ import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 
-makeTextView :: MonadA m => String -> AnimId -> WidgetEnvT m (Widget f)
-makeTextView text myId = do
+makeTextViewWidget :: MonadA m => String -> AnimId -> WidgetEnvT m (Widget f)
+makeTextViewWidget text myId = do
   style <- WE.readTextStyle
   return $
     TextView.makeWidget (style ^. TextEdit.sTextViewStyle) text myId
 
 makeLabel :: MonadA m => String -> AnimId -> WidgetEnvT m (Widget f)
 makeLabel text prefix =
-  makeTextView text $ mappend prefix [pack text]
+  makeTextViewWidget text $ mappend prefix [pack text]
 
 makeFocusableView
   :: (Applicative f, MonadA m)
@@ -68,7 +68,7 @@ makeFocusableTextView
   => String -> Widget.Id
   -> WidgetEnvT m (Widget f)
 makeFocusableTextView text myId = do
-  textView <- makeTextView text $ Widget.toAnimId myId
+  textView <- makeTextViewWidget text $ Widget.toAnimId myId
   makeFocusableView myId textView
 
 makeFocusableLabel
@@ -76,7 +76,7 @@ makeFocusableLabel
   => String -> Widget.Id
   -> WidgetEnvT m (Widget f)
 makeFocusableLabel text myIdPrefix = do
-  textView <- makeTextView text $ Widget.toAnimId myId
+  textView <- makeTextViewWidget text $ Widget.toAnimId myId
   makeFocusableView myId textView
   where
     myId = Widget.joinId myIdPrefix [pack text]

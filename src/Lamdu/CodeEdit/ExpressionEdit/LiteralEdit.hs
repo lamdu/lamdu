@@ -30,7 +30,7 @@ makeIntView
 makeIntView myId integer =
   fmap ExpressionGui.fromValueWidget .
   setColor . ExprGuiM.widgetEnv $
-  BWidgets.makeTextView (show integer) myId
+  BWidgets.makeTextViewWidget (show integer) myId
 
 makeIntEdit
   :: MonadA m
