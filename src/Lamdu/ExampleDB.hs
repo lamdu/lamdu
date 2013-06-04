@@ -59,7 +59,11 @@ createBuiltins =
       , ("Value", set)
       ] set
 
-    cons <- publicBuiltin "Prelude.:" $ forAll "a" $ \a -> mkInfixType a (listOf a) $ listOf a
+    headTag <- lift $ namedTag "head" headTagGuid
+    tailTag <- lift $ namedTag "tail" tailTagGuid
+    cons <-
+      publicBuiltin "Prelude.:" $ forAll "a" $ \a ->
+      mkPi (mkRecordType pure [(headTag, a), (tailTag, listOf a)]) $ listOf a
     nil <- publicBuiltin "Prelude.[]" $ forAll "a" listOf
 
     true <- publicBuiltin "Prelude.True" bool
@@ -160,8 +164,10 @@ createBuiltins =
       mkInfixType (mkPi b c) (mkPi a b) (mkPi a c)
     let
       specialFunctions = A.SpecialFunctions
-        { A.sfCons = cons
-        , A.sfNil = nil
+        { A.sfNil = nil
+        , A.sfCons = cons
+        , A.sfHeadTag = headTagGuid
+        , A.sfTailTag = tailTagGuid
         }
       ffiEnv = FFI.Env
         { FFI.trueDef = true
@@ -214,6 +220,8 @@ createBuiltins =
       publicize $ DataOps.newBuiltin builtinName =<< typeMaker
     publicBuiltin_ builtinName typeMaker =
       void $ publicBuiltin builtinName typeMaker
+    headTagGuid = Guid.fromString "headTag"
+    tailTagGuid = Guid.fromString "tailTag"
 
 newBranch :: MonadA m => String -> Version (Tag m) -> Transaction m (Branch (Tag m))
 newBranch name ver = do

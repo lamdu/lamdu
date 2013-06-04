@@ -209,9 +209,14 @@ convertList ::
   MaybeT (SugarM m) (ExpressionU m)
 convertList (Expr.Apply funcI argI) argS exprI = do
   specialFunctions <- lift $ (^. SugarM.scSpecialFunctions) <$> SugarM.readContext
-  -- TODO: verify field tags?
   Record Val (FieldList [headField, tailField] _) <-
     maybeToMPlus $ argS ^? rBody . _BodyRecord
+  let
+    verifyTag tag field =
+      guard . (== tag specialFunctions) =<<
+      maybeToMPlus (field ^? rfTag . rBody . _BodyTag . tagGuid)
+  verifyTag Anchors.sfHeadTag headField
+  verifyTag Anchors.sfTailTag tailField
   List innerValues innerListMActions <-
     maybeToMPlus $ tailField ^? rfExpr . rBody . _BodyList
   guard $ isCons specialFunctions funcI

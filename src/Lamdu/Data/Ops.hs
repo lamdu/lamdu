@@ -14,6 +14,7 @@ module Lamdu.Data.Ops
   ) where
 
 import Control.Applicative ((<$>), (<*>), (<$))
+import Control.Lens.Operators
 import Control.Monad (when)
 import Control.MonadA (MonadA)
 import Data.List.Split (splitOn)
@@ -22,7 +23,6 @@ import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction, getP, setP, modP)
 import Lamdu.Data.Definition (Definition(..))
 import Lamdu.Data.Expression.IRef (DefI)
-import qualified Control.Lens as Lens
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
@@ -123,15 +123,18 @@ addListItem ::
   T m (ExprIRef.ExpressionI (Tag m), ExprIRef.ExpressionI (Tag m))
 addListItem specialFunctions exprP = do
   consTempI <-
-    ExprIRef.newExprBody . Lens.review ExprLens.bodyDefinitionRef $ Anchors.sfCons specialFunctions
+    ExprIRef.newExprBody $ ExprLens.bodyDefinitionRef # Anchors.sfCons specialFunctions
   consI <-
     ExprIRef.newExprBody . ExprUtil.makeApply consTempI =<< newHole
   newItemI <- newHole
-  consSectionI <-
-    ExprIRef.newExprBody $ ExprUtil.makeApply consI newItemI
-  newListI <-
-    ExprIRef.newExprBody . ExprUtil.makeApply consSectionI $
-    Property.value exprP
+  headTag <- ExprIRef.newExprBody $ ExprLens.bodyTag # Anchors.sfHeadTag specialFunctions
+  tailTag <- ExprIRef.newExprBody $ ExprLens.bodyTag # Anchors.sfTailTag specialFunctions
+  argsI <-
+    ExprIRef.newExprBody $ ExprLens.bodyKindedRecordFields Expr.Val #
+      [ (headTag, newItemI)
+      , (tailTag, Property.value exprP)
+      ]
+  newListI <- ExprIRef.newExprBody $ ExprUtil.makeApply consI argsI
   Property.set exprP newListI
   return (newListI, newItemI)
 

@@ -27,8 +27,10 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.CodeEdit.FFI as FFI
 
 data SpecialFunctions t = SpecialFunctions
-  { sfCons :: DefI t
-  , sfNil :: DefI t
+  { sfNil :: DefI t
+  , sfCons :: DefI t
+  , sfHeadTag :: Guid
+  , sfTailTag :: Guid
   }
 
 type Pane t = DefI t
