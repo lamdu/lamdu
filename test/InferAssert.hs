@@ -6,7 +6,7 @@ import AnnotatedExpr
 import Control.Applicative ((<$>), Applicative(..))
 import Control.Lens.Operators
 import Control.Monad (void)
-import Control.Monad.Trans.State (runStateT)
+import Control.Monad.Trans.State (runStateT, runState)
 import InferWrappers
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
 import Lamdu.Data.Expression (Expression(..))
@@ -15,6 +15,7 @@ import System.IO (hPutStrLn, stderr)
 import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit (assertBool)
 import Utils
+import qualified Control.DeepSeq as DeepSeq
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
 import qualified Data.List as List
@@ -122,5 +123,5 @@ testResume name origExpr position newExpr =
     (tExpr, inferContext) = doInfer_ origExpr
     Just point = tExpr ^? position . Expr.ePayload . Lens.to Infer.iPoint
   in
-    void . E.evaluate . (`runStateT` inferContext) $
+    void . E.evaluate . DeepSeq.force . (`runState` inferContext) $
     doInferM point newExpr
