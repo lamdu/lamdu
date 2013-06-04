@@ -89,6 +89,7 @@ createBuiltins =
     publicBuiltin_ "Data.List.reverse" $ forAll "a" (endo . listOf)
     publicBuiltin_ "Data.List.tail" $ forAll "a" (endo . listOf)
     publicBuiltin_ "Data.List.head" . forAll "a" $ join (mkPi . listOf)
+    publicBuiltin_ "Data.List.last" . forAll "a" $ join (mkPi . listOf)
     publicBuiltin_ "Data.List.null" . forAll "a" $ \a -> mkPi (listOf a) bool
 
     publicBuiltin_ "Data.List.length" . forAll "a" $ \a ->
@@ -97,6 +98,10 @@ createBuiltins =
     publicBuiltin_ "Prelude.product" . forAll "a" $ \a ->
       mkPi (listOf a) a
     publicBuiltin_ "Prelude.sum" . forAll "a" $ \a ->
+      mkPi (listOf a) a
+    publicBuiltin_ "Prelude.maximum" . forAll "a" $ \a ->
+      mkPi (listOf a) a
+    publicBuiltin_ "Prelude.minimum" . forAll "a" $ \a ->
       mkPi (listOf a) a
 
     let
