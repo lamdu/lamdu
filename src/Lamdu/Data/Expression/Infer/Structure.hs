@@ -33,4 +33,7 @@ structureForType expr =
   Expr.BodyRecord (Expr.Record Expr.Type fields) ->
     ExprLens.pureExpr . ExprLens.bodyKindedRecordFields Expr.Val #
     (fields & Lens.traversed . Lens._2 %~ structureForType)
+  Expr.BodyLam (Expr.Lambda Expr.Type paramId paramType resultType) ->
+    ExprLens.pureExpr . ExprLens.bodyKindedLam Expr.Val #
+    (paramId, paramType, structureForType resultType)
   _ -> ExprLens.pureExpr . ExprLens.bodyHole # ()
