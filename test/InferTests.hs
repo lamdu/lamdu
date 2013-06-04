@@ -183,6 +183,14 @@ emptyRecordTests =
   testGroup "empty record"
   [ testInfer "type infer" $ record Type []
   , testInfer "val infer" $ record Val []
+  , testInfer "map id ({}:_)" $
+      getDef "map" $$ hole $$ hole $$:
+      [ getDef "id" $$ hole
+      , getDef ":" $$ hole $$:
+        [ record Val []
+        , hole
+        ]
+      ]
   ]
 
 recordTest =
@@ -258,7 +266,7 @@ getFieldWasntAllowed =
   where
     topLevel =
       getDef "map" $$ asHole recType $$ hole $$:
-      [ lambda "params" (asHole recType) $
+      [ lambda "x" (asHole recType) $
         \_ -> hole
       , getDef ":" $$ asHole recType $$:
         [ record Val []
