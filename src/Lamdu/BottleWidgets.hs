@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.BottleWidgets
-  ( makeTextViewWidget, makeLabel
+  ( makeTextView, makeTextViewWidget, makeLabel
   , makeFocusableView
   , makeFocusableTextView, makeFocusableLabel
   , wrapDelegatedWith, wrapDelegatedOT
@@ -11,7 +11,7 @@ module Lamdu.BottleWidgets
   , makeChoiceWidget, ChoiceWidgetConfig(..), ChoiceWidgetExpandMode(..)
   ) where
 
-import Control.Applicative (Applicative(..), (*>))
+import Control.Applicative (Applicative(..), (*>), (<$>))
 import Control.Lens.Operators
 import Control.Monad (when)
 import Control.MonadA (MonadA)
@@ -20,15 +20,12 @@ import Data.List (findIndex, intersperse)
 import Data.Maybe (isJust)
 import Data.Monoid (mappend)
 import Data.Store.Property (Property)
-import Lamdu.WidgetEnvT (WidgetEnvT)
 import Graphics.UI.Bottle.Animation (AnimId)
+import Graphics.UI.Bottle.View (View)
 import Graphics.UI.Bottle.Widget (Widget)
+import Lamdu.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
 import qualified Data.Store.Property as Property
-import qualified Lamdu.Config as Config
-import qualified Lamdu.Layers as Layers
-import qualified Lamdu.WidgetEnvT as WE
-import qualified Lamdu.WidgetIds as WidgetIds
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as EventMap
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -38,12 +35,21 @@ import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import qualified Lamdu.Config as Config
+import qualified Lamdu.Layers as Layers
+import qualified Lamdu.WidgetEnvT as WE
+import qualified Lamdu.WidgetIds as WidgetIds
 
-makeTextViewWidget :: MonadA m => String -> AnimId -> WidgetEnvT m (Widget f)
-makeTextViewWidget text myId = do
+makeTextView ::
+  MonadA m => String -> AnimId -> WidgetEnvT m View
+makeTextView text myId = do
   style <- WE.readTextStyle
   return $
-    TextView.makeWidget (style ^. TextEdit.sTextViewStyle) text myId
+    TextView.make (style ^. TextEdit.sTextViewStyle) text myId
+
+makeTextViewWidget :: MonadA m => String -> AnimId -> WidgetEnvT m (Widget f)
+makeTextViewWidget text myId =
+  uncurry Widget.liftView <$> makeTextView text myId
 
 makeLabel :: MonadA m => String -> AnimId -> WidgetEnvT m (Widget f)
 makeLabel text prefix =
