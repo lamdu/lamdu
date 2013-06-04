@@ -95,14 +95,14 @@ createBuiltins =
       mkPi (listOf a) a
 
     let
-      filterType =
+      filterType predName =
         forAll "a" $ \a ->
         mkPiRecord
-        [ ("list", listOf a)
-        , ("predicate", mkPi a bool)
+        [ ("from", listOf a)
+        , (predName, mkPi a bool)
         ] $ listOf a
-    publicBuiltin_ "Data.List.filter" filterType
-    publicBuiltin_ "Data.List.takeWhile" filterType
+    publicBuiltin_ "Data.List.filter" $ filterType "predicate"
+    newDef "take" ["Data", "List"] "takeWhile" $ filterType "while"
 
     publicBuiltin_ "Data.List.map" .
       forAll "a" $ \a ->
