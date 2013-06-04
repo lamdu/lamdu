@@ -41,7 +41,7 @@ data RefExprPayload = RefExprPayload
   { _rplSubstitutedArgs :: !IntSet
   , _rplRestrictedPoly :: !Monoid.Any
   , _rplOrigins :: !IntSet
-  } deriving (Show)
+  } deriving (Show, Eq, Ord)
 LensTH.makeLenses ''RefExprPayload
 
 type RefExpression def = Expr.Expression def RefExprPayload

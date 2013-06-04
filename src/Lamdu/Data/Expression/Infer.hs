@@ -40,7 +40,7 @@ import Data.Functor.Identity (Identity(..))
 import Data.IntMap (IntMap)
 import Data.IntSet (IntSet)
 import Data.Map (Map)
-import Data.Maybe (isJust, mapMaybe, fromMaybe)
+import Data.Maybe (isJust, mapMaybe, fromMaybe, fromJust)
 import Data.Monoid (Monoid(..))
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable)
@@ -120,14 +120,14 @@ data ErrorDetails def
   = MismatchIn
     (Expr.Expression def ())
     (Expr.Expression def ())
-  | InfiniteExpression (Expr.Expression def ())
+  | InfiniteExpression (Rule def (Expr.Expression def ()))
   deriving (Eq, Ord, Show)
 
 instance Functor ErrorDetails where
   fmap f (MismatchIn x y) =
     on MismatchIn (ExprLens.exprDef %~ f) x y
-  fmap f (InfiniteExpression x) =
-    InfiniteExpression $ x & ExprLens.exprDef %~ f
+  fmap _ (InfiniteExpression _) =
+    error "TODO: Functor ErrorDetails case of InfiniteExpression"
 
 data Error def = Error
   { errRef :: ExprRef
@@ -288,7 +288,7 @@ executeRules = do
       liftState $ sBfsCurLayer . Lens.contains key .= False
       ruleRefs <- liftState $ Lens.use (sContext . ruleRefsAt (RuleRef key))
       ruleExprs <- traverse getRefExpr ruleRefs
-      traverse_ (uncurry (setRefExpr (IntSet.singleton key))) $ Rules.runRule ruleExprs
+      traverse_ (uncurry (setRefExpr (Just (RuleRef key, ruleExprs)))) $ Rules.runRule ruleExprs
 
 {-# SPECIALIZE executeRules :: InferT (DefI t) Maybe () #-}
 {-# SPECIALIZE executeRules :: Monoid w => InferT (DefI t) (Writer w) () #-}
@@ -341,9 +341,10 @@ guardEither _ True = return ()
 mergeExprs ::
   Eq def =>
   RefExpression def ->
-  IntSet -> RefExpression def ->
+  Maybe (RuleRef, Rule def (RefExpression def)) ->
+  RefExpression def ->
   Either (ErrorDetails def) (RefExpression def)
-mergeExprs oldExp origins newExp =
+mergeExprs oldExp mRule newExp =
   runEither $ ExprUtil.matchExpression onMatch onMismatch oldExp newExp
   where
     mergePayloadInto src =
@@ -361,12 +362,13 @@ mergeExprs oldExp origins newExp =
     onMismatch e0 (Expr.Expression (Expr.BodyLeaf Expr.Hole) s1) =
       return $ mergePayloads s1 e0
     onMismatch (Expr.Expression (Expr.BodyLeaf Expr.Hole) s0) e1 = do
-      guardEither (InfiniteExpression (void oldExp)) .
+      guardEither ((InfiniteExpression . fmap void . snd . fromJust) mRule) .
         IntSet.null . IntSet.intersection origins .
         mconcat $ e1 ^.. Lens.traversed . rplOrigins
       return $ mergePayloads (s0 & rplOrigins <>~ origins) e1
     onMismatch e0 e1 =
       Either.left $ MismatchIn (void e0) (void e1)
+    origins = maybe mempty (IntSet.singleton . unRuleRef . fst) mRule
 
 touch :: MonadA m => ExprRef -> InferT def m ()
 touch ref =
@@ -382,10 +384,14 @@ touch ref =
 {-# SPECIALIZE touch :: ExprRef -> InferT (DefI t) Maybe () #-}
 {-# SPECIALIZE touch :: Monoid w => ExprRef -> InferT (DefI t) (Writer w) () #-}
 
-setRefExpr :: (Eq def, MonadA m) => IntSet -> ExprRef -> RefExpression def -> InferT def m ()
-setRefExpr origins ref newExpr = do
+setRefExpr ::
+  (Eq def, MonadA m) =>
+  Maybe (RuleRef, Rule def (RefExpression def)) ->
+  ExprRef ->
+  RefExpression def -> InferT def m ()
+setRefExpr mRule ref newExpr = do
   curExpr <- liftState $ Lens.use (sContext . exprRefsAt ref . rExpression)
-  case mergeExprs curExpr origins newExpr of
+  case mergeExprs curExpr mRule newExpr of
     Right mergedExpr -> do
       let
         isChange = not $ equiv mergedExpr curExpr
@@ -409,8 +415,8 @@ setRefExpr origins ref newExpr = do
       (x ^. rplSubstitutedArgs) == (y ^. rplSubstitutedArgs) &&
       (x ^. rplRestrictedPoly) == (y ^. rplRestrictedPoly)
 
-{-# SPECIALIZE setRefExpr :: IntSet -> ExprRef -> RefExpression (DefI t) -> InferT (DefI t) Maybe () #-}
-{-# SPECIALIZE setRefExpr :: Monoid w => IntSet -> ExprRef -> RefExpression (DefI t) -> InferT (DefI t) (Writer w) () #-}
+{-# SPECIALIZE setRefExpr :: Maybe (RuleRef, Rule (DefI t) (RefExpression (DefI t))) -> ExprRef -> RefExpression (DefI t) -> InferT (DefI t) Maybe () #-}
+{-# SPECIALIZE setRefExpr :: Monoid w => Maybe (RuleRef, Rule (DefI t) (RefExpression (DefI t))) -> ExprRef -> RefExpression (DefI t) -> InferT (DefI t) (Writer w) () #-}
 
 liftContextState :: MonadA m => State (Context def) a -> InferT def m a
 liftContextState = liftState . Lens.zoom sContext . toStateT
@@ -433,7 +439,7 @@ exprIntoContext rootScope (Loaded rootExpr defTypes) = do
   where
     defTypeIntoContext defType = do
       ref <- liftContextState createRefExpr
-      setRefExpr mempty ref $ toRefExpression defType
+      setRefExpr Nothing ref $ toRefExpression defType
       return ref
     addTypedVal x = fmap ((,) x) createTypedVal
     go scope (Expr.Expression body (s, createdTV)) = do

@@ -64,7 +64,7 @@ data Rule def a
   | ApplyToParts (Expr.Apply ExprRef) (a, a)
   | VerifyTagRule ExprRef a
   | DisallowTagTypeForApply ExprRef a
-  deriving (Functor, Foldable, Traversable)
+  deriving (Functor, Foldable, Traversable, Show, Eq, Ord)
 
 derive makeBinary ''Rule
 derive makeNFData ''Rule

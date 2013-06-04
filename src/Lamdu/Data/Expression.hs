@@ -40,7 +40,7 @@ data Lambda expr = Lambda
 data Apply expr = Apply
   { _applyFunc :: expr
   , _applyArg :: expr
-  } deriving (Eq, Ord, Functor, Foldable, Traversable)
+  } deriving (Eq, Ord, Functor, Foldable, Traversable, Show)
 
 data VariableRef def
   = ParameterRef {-# UNPACK #-} !Guid -- of the lambda/pi
