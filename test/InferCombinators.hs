@@ -132,10 +132,13 @@ holeWithInferredType = simple bodyHole . (^. iVal)
 hole :: InferResults t
 hole = simple bodyHole pureHole
 
-getParam :: String -> InferResults t -> InferResults t
-getParam name typ =
-  simple (ExprLens.bodyParameterRef # Guid.fromString name) $
+getGuidParam :: Guid -> InferResults t -> InferResults t
+getGuidParam guid typ =
+  simple (ExprLens.bodyParameterRef # guid) $
   typ ^. iVal
+
+getParam :: String -> InferResults t -> InferResults t
+getParam = getGuidParam . Guid.fromString
 
 listOf :: InferResults t -> InferResults t
 listOf = (getDef "List" $$)

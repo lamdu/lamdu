@@ -111,6 +111,7 @@ testInferAllowFail name expr =
   testCase name . allowFailAssertion $ inferAssertion expr
 
 type InferredExpr t = Expression (DefI t) (Infer.Inferred (DefI t))
+
 testResume ::
   String ->
   InferResults t ->
@@ -118,10 +119,16 @@ testResume ::
   InferResults t ->
   TestFramework.Test
 testResume name origExpr position newExpr =
-  testCase name $
-  let
+  testCase name $ assertResume origExpr position newExpr
+
+assertResume ::
+  InferResults t ->
+  Lens.Traversal' (InferredExpr t) (InferredExpr t) ->
+  InferResults t ->
+  HUnit.Assertion
+assertResume origExpr position newExpr =
+  void . E.evaluate . DeepSeq.force . (`runState` inferContext) $
+  doInferM point newExpr
+  where
     (tExpr, inferContext) = doInfer_ origExpr
     Just point = tExpr ^? position . Expr.ePayload . Lens.to Infer.iPoint
-  in
-    void . E.evaluate . DeepSeq.force . (`runState` inferContext) $
-    doInferM point newExpr

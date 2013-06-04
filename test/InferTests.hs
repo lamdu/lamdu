@@ -5,6 +5,7 @@ import Control.Lens.Operators
 import Control.Monad (void)
 import Control.Monad.Trans.State (evalState)
 import Data.Monoid (Monoid(..))
+import Data.Store.Guid (Guid)
 import InferAssert
 import InferCombinators
 import InferWrappers
@@ -242,13 +243,37 @@ inferReplicateOfReplicate =
 infiniteTypeTests =
   testGroup "Infinite types"
   [ wrongRecurseMissingArg
-  ]
+  , getFieldWasntAllowed
+  ]  
 
 expectLeft :: Show r => String -> (l -> HUnit.Assertion) -> Either l r -> HUnit.Assertion
 expectLeft _ handleLeft (Left x) = handleLeft x
 expectLeft msg _ (Right x) =
   HUnit.assertFailure $
   unwords ["Error", msg, "expected.  Unexpected success encountered:", show x]
+
+getFieldWasntAllowed =
+  testCase "map (\\x:_. #x#) {}:_" $
+  assertResume topLevel pos $ getGuidParam param integerType
+  where
+    topLevel =
+      getDef "map" $$ asHole recType $$ hole $$:
+      [ lambda "params" (asHole recType) $
+        \_ -> hole
+      , getDef ":" $$ asHole recType $$:
+        [ record Val []
+        , holeWithInferredType $ listOf recType
+        ]
+      ]
+    pos :: Lens.Traversal' (Expression def a) (Expression def a)
+    pos = lambdaPos . Lens._3
+    lambdaPos :: Lens.Traversal' (Expression def a) (Guid, Expression def a, Expression def a)
+    lambdaPos =
+      applyArg .
+      ExprLens.exprKindedRecordFields Val . Lens.ix 0 . Lens._2 .
+      ExprLens.exprKindedLam Val
+    param = topLevel ^?! lambdaPos . Lens._1
+    recType = record Type []
 
 wrongRecurseMissingArg =
   testCase "f x = f" $
