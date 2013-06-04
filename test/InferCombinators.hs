@@ -66,9 +66,9 @@ piType name paramType mkResultType =
   where
     result = mkResultType $ getParam name paramType
 
-infixr 4 -->
-(-->) :: InferResults t -> InferResults t -> InferResults t
-(-->) src dest =
+infixr 4 ~>
+(~>) :: InferResults t -> InferResults t -> InferResults t
+(~>) src dest =
   simple (ExprUtil.makePi (Guid.fromString "") src dest) pureSet
 
 lambda ::

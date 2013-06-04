@@ -29,9 +29,9 @@ import qualified Test.HUnit as HUnit
 simpleTests =
   [ testInfer "literal int" $ literalInteger 5
   , testInfer "simple apply" $
-    holeWithInferredType (hole --> hole) $$ hole
+    holeWithInferredType (hole ~> hole) $$ hole
   , testInfer "simple pi" $
-    holeWithInferredType set -->
+    holeWithInferredType set ~>
     holeWithInferredType set
   ]
 
@@ -51,7 +51,7 @@ applyOnVar =
   testInfer "apply on var" $
   lambda "x" (holeWithInferredType set) $ \x ->
   getDef "IntToBoolFunc" $$
-  (holeWithInferredType (hole --> integerType) $$ x)
+  (holeWithInferredType (hole ~> integerType) $$ x)
 
 idTest = testInfer "id test" $ getDef "id" $$ integerType
 
@@ -75,16 +75,16 @@ monomorphRedex =
    lambda "c" (holeWithInferredType set) (const x) $$ hole)
   where
     -- (a:Set -> _[=a] -> a)
-    fArgType = piType "a" set $ \a -> asHole a --> a
+    fArgType = piType "a" set $ \a -> asHole a ~> a
 
 fOfXIsFOf5 =
   testInfer "f x = f 5" $
   lambda "" (asHole integerType) $ \_ ->
-  recurse (integerType --> hole) $$ literalInteger 5
+  recurse (integerType ~> hole) $$ literalInteger 5
 
 argTypeGoesToPi =
   testInfer "arg type goes to pi" $
-  holeWithInferredType (integerType --> hole) $$ literalInteger 5
+  holeWithInferredType (integerType ~> hole) $$ literalInteger 5
 
 idOnAnInt =
   testInfer "id on an int" $
@@ -106,7 +106,7 @@ forceMono =
 depApply =
   testInfer "dep apply" $
   lambda "t" set $ \t ->
-  lambda "rt" (t --> set) $ \rt ->
+  lambda "rt" (t ~> set) $ \rt ->
   lambda "f" (piType "d" t (\d -> rt $$ d)) $ \f ->
   lambda "x" t $ \x -> f $$ x
 
@@ -125,7 +125,7 @@ testCase name = plusTestOptions defaultTestOptions . HUnitProvider.testCase name
 
 resumptionTests = testGroup "type infer resume" $
   [ testResume "{hole->pi}"
-    hole id (hole --> hole)
+    hole id (hole ~> hole)
   , testResume "{hole->id} hole"
     (hole $$ hole) applyFunc (getDef "id")
   , testResume "\\_:hole -> {hole->id}"
@@ -156,7 +156,7 @@ resumptionTests = testGroup "type infer resume" $
         node <- Infer.newNodeWithScope scope
         doInferM_ node getRecursiveDef
       resultR = inferResults exprR
-    in assertCompareInferred resultR $ recurse (hole --> hole)
+    in assertCompareInferred resultR $ recurse (hole ~> hole)
   ]
 
 -- f     x    = x _ _
@@ -175,7 +175,7 @@ failResumptionAddsRules =
     resumptionPoint =
       origInferred ^?! lamParamType . lamBody . Expr.ePayload . Lens.to Infer.iPoint
     (origInferred, origInferContext) =
-      doInfer_ . lambda "x" (hole --> hole) $
+      doInfer_ . lambda "x" (hole ~> hole) $
       \x -> x $$ hole $$ hole
 
 emptyRecordTests =
@@ -200,8 +200,8 @@ addImplicitCurriedApply2Test =
   inferWVAssertion (expr hole) wvExpr
   where
     expr a =
-      lambda "f" (asHole (a --> hole)) $ \f ->
-      setInferredType (hole --> hole) (f $$ holeWithInferredType a) $$ hole
+      lambda "f" (asHole (a ~> hole)) $ \f ->
+      setInferredType (hole ~> hole) (f $$ holeWithInferredType a) $$ hole
     wvExpr = lambda "a" (asHole set) expr
 
 uncurry2Test =
@@ -211,7 +211,7 @@ uncurry2Test =
     iset = holeWithInferredType set
     expr a b c =
       lambdaRecord "params"
-      [ ("f", asHole (b --> a --> c))
+      [ ("f", asHole (b ~> a ~> c))
       , ("x", asHole b)
       , ("y", asHole a)
       ] $ \[f, x, y] ->
