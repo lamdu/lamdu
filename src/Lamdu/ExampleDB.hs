@@ -89,6 +89,7 @@ createBuiltins =
     publicBuiltin_ "Data.List.reverse" $ forAll "a" (endo . listOf)
     publicBuiltin_ "Data.List.tail" $ forAll "a" (endo . listOf)
     publicBuiltin_ "Data.List.head" . forAll "a" $ join (mkPi . listOf)
+    publicBuiltin_ "Data.List.null" . forAll "a" $ \a -> mkPi (listOf a) bool
 
     publicBuiltin_ "Data.List.length" . forAll "a" $ \a ->
       mkPi (listOf a) integer
