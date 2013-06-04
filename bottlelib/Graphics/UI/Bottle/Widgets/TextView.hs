@@ -18,9 +18,9 @@ import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators((%%))
 import Graphics.UI.Bottle.Animation(AnimId, Size)
 import Graphics.UI.Bottle.Rect (Rect(Rect))
+import Graphics.UI.Bottle.View (View)
 import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Lens as Lens
-import qualified Control.Lens.TH as LensTH
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import qualified Graphics.UI.Bottle.Animation as Anim
@@ -33,8 +33,7 @@ data Style = Style {
   _styleFont :: Draw.Font,
   _styleFontSize :: Int
   }
-
-LensTH.makeLenses ''Style
+Lens.makeLenses ''Style
 
 fontRender :: Style -> String -> (Draw.Image (), Size)
 fontRender (Style color font ptSize) =
@@ -106,7 +105,7 @@ drawTextAsLines style text =
   map (nestedFrame . (Lens._2 %~ fontRender style) . (Lens._1 %~ (,) "Line")) .
   enumerate $ splitWhen (== '\n') text
 
-make :: Style -> String -> AnimId -> (Size, Anim.Frame)
+make :: Style -> String -> AnimId -> View
 make style text animId = (textSize, frame animId)
   where
     (frame, textSize) = drawTextAsLines style text
@@ -114,5 +113,5 @@ make style text animId = (textSize, frame animId)
 makeWidget :: Style -> String -> AnimId -> Widget a
 makeWidget style text = uncurry Widget.liftView . make style text
 
-label :: Style -> AnimId -> String -> (Size, Anim.Frame)
+label :: Style -> AnimId -> String -> View
 label style animId text = make style text $ View.augmentAnimId animId text
