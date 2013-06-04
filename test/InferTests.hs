@@ -183,14 +183,6 @@ emptyRecordTests =
   testGroup "empty record"
   [ testInfer "type infer" $ record Type []
   , testInfer "val infer" $ record Val []
-  , testInfer "map id ({}:_)" $
-      getDef "map" $$ hole $$ hole $$:
-      [ getDef "id" $$ hole
-      , getDef ":" $$ hole $$:
-        [ record Val []
-        , hole
-        ]
-      ]
   ]
 
 recordTest =
@@ -295,9 +287,20 @@ wrongRecurseMissingArg =
         HUnit.assertFailure $ "InfiniteExpression error expected, but got: " ++ show err
     expr = lambda "x" hole . const $ recurse hole
 
+mapIdTest =
+  testInfer "map id (5:_)" $
+  getDef "map" $$ hole $$ hole $$:
+  [ getDef "id" $$ hole
+  , getDef ":" $$ hole $$:
+    [ literalInteger 5
+    , hole
+    ]
+  ]
+
 hunitTests =
   simpleTests ++
-  [ applyIntToBoolFuncWithHole
+  [ mapIdTest
+  , applyIntToBoolFuncWithHole
   , applyOnVar
   , idTest
   , argTypeGoesToPi
