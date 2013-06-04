@@ -3,16 +3,14 @@
 module Lamdu.Data.Expression.Infer.Types
   ( InferNode(..), Inferred(..)
   , IsRestrictedPoly(..)
-  , Origin, Origins, mkOrigin
   , ExprRef(..)
   , RefExpression, makeRefExpr
   , RefExprPayload(..), rplOrigins, rplSubstitutedArgs, rplRestrictedPoly
   , Scope, TypedValue(..)
   ) where
 
-import Control.Applicative (Applicative(..), (<*), (<$>), (<*>))
+import Control.Applicative (Applicative(..), (<$>), (<*>))
 import Control.DeepSeq (NFData(..))
-import Control.Monad.Trans.State (State)
 import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
 import Data.Derive.NFData (makeNFData)
@@ -25,7 +23,6 @@ import Data.Monoid.Instances ()
 import Data.Store.Guid (Guid)
 import Data.Typeable (Typeable)
 import qualified Control.Lens.TH as LensTH
-import qualified Control.Monad.Trans.State as State
 import qualified Data.Monoid as Monoid
 import qualified Lamdu.Data.Expression as Expr
 
@@ -40,18 +37,10 @@ data TypedValue = TypedValue
 instance Show TypedValue where
   show (TypedValue v t) = unwords [show v, ":", show t]
 
--- Not a newtype so that we can easily use IntSet/IntMap/etc.
--- This is used to detect type cycles (infinite types)
-type Origin = Int
-type Origins = [Int]
-
-mkOrigin :: State Origin Origin
-mkOrigin = State.get <* State.modify (+1)
-
 data RefExprPayload = RefExprPayload
   { _rplSubstitutedArgs :: !IntSet
   , _rplRestrictedPoly :: !Monoid.Any
-  , _rplOrigins :: !Origins
+  , _rplOrigins :: !IntSet
   } deriving (Show)
 LensTH.makeLenses ''RefExprPayload
 

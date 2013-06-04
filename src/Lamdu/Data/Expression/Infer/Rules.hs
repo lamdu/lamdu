@@ -11,7 +11,6 @@ import Control.DeepSeq (NFData(..))
 import Control.Lens (LensLike')
 import Control.Lens.Operators
 import Control.Monad (guard)
-import Control.Monad.Trans.State (State)
 import Control.Monad.Trans.Writer (execWriter)
 import Control.Monad.Unit (Unit(..))
 import Data.Binary (Binary(..), getWord8, putWord8)
@@ -22,7 +21,7 @@ import Data.Foldable (Foldable)
 import Data.Functor.Identity (Identity(..))
 import Data.Maybe (maybeToList)
 import Data.Store.Guid (Guid)
-import Data.Traversable (Traversable, traverse, sequenceA)
+import Data.Traversable (Traversable, traverse)
 import Lamdu.Data.Expression.Infer.Types
 import qualified Control.Compose as Compose
 import qualified Control.Lens as Lens
@@ -42,7 +41,7 @@ type RefExpression3 def = (RefExpression def, RefExpression def, RefExpression d
 -- Boilerplate to work around lack of serialization of functions
 -- Represents a serialization of RuleFunction:
 data Rule def a
-  = LambdaBodyTypeToPiResultType (Guid, ExprRef) a Origin
+  = LambdaBodyTypeToPiResultType (Guid, ExprRef) a
   | PiToLambda (Guid, ExprRef, ExprRef) a
   | RecordValToType ExprRef [(a, a)]
   | RecordTypeToGetFieldType ExprRef (a, a)
@@ -52,11 +51,11 @@ data Rule def a
   | ChildrenToParent ExprRef (Expr.Body def a)
   | SetRule [(ExprRef, RefExpression def)]
   | SimpleType ExprRef a
-  | IntoApplyResult (Expr.Kind, ExprRef, ExprRef) (a, a) Origin
+  | IntoApplyResult (Expr.Kind, ExprRef, ExprRef) (a, a)
   | IntoArg (Expr.Kind, ExprRef) (a, a)
   | IntoFuncResultType (Expr.Kind, ExprRef) (a, a)
-  | ArgTypeToPiParamType ExprRef a Origin
-  | RigidArgApplyTypeToResultType ExprRef (a, a) Origin
+  | ArgTypeToPiParamType ExprRef a
+  | RigidArgApplyTypeToResultType ExprRef (a, a)
   | RedexApplyTypeToResultType ExprRef (a, a)
   | PiParamTypeToArgType ExprRef a
   | LambdaParamTypeToArgType ExprRef a
@@ -73,8 +72,8 @@ derive makeNFData ''Rule
 runRule :: Eq def => Rule def (RefExpression def) -> RuleResult def
 runRule rule =
   case rule of
-  LambdaBodyTypeToPiResultType x e o ->
-    runLambdaBodyTypeToPiResultType x e o
+  LambdaBodyTypeToPiResultType x e ->
+    runLambdaBodyTypeToPiResultType x e
   PiToLambda x e ->
     runPiToLambda x e
   RecordValToType x e ->
@@ -93,16 +92,16 @@ runRule rule =
     runSetRule x
   SimpleType x e ->
     runSimpleType x e
-  IntoApplyResult x e o ->
-    runIntoApplyResult x e o
+  IntoApplyResult x e ->
+    runIntoApplyResult x e
   IntoArg x e ->
     runIntoArg x e
   IntoFuncResultType x e ->
     runIntoFuncResultType x e
-  ArgTypeToPiParamType x e o ->
-    runArgTypeToPiParamType x e o
-  RigidArgApplyTypeToResultType x e o ->
-    runRigidArgApplyTypeToResultType x e o
+  ArgTypeToPiParamType x e ->
+    runArgTypeToPiParamType x e
+  RigidArgApplyTypeToResultType x e ->
+    runRigidArgApplyTypeToResultType x e
   RedexApplyTypeToResultType x e ->
     runRedexApplyTypeToResultType x e
   PiParamTypeToArgType x e ->
@@ -136,26 +135,24 @@ tagRules tagExpr =
     pl = tagExpr ^. Expr.ePayload
     tagRef = tvVal pl
 
-makeForNode :: Expr.Expression def TypedValue -> State Origin [Rule def ExprRef]
+makeForNode :: Expr.Expression def TypedValue -> [Rule def ExprRef]
 makeForNode (Expr.Expression exprBody typedVal) =
-  fmap concat $
-  sequenceA
-  [ pure [ruleSimpleType typedVal]
-  , pure $ childrenToParentRules (tvVal typedVal) bodyWithValRefs
-  , pure [ParentToChildren bodyWithValRefs (tvVal typedVal)]
+  concat
+  [ [ruleSimpleType typedVal]
+  , childrenToParentRules (tvVal typedVal) bodyWithValRefs
+  , [ParentToChildren bodyWithValRefs (tvVal typedVal)]
   , case exprBody of
     Expr.BodyLam lambda ->
-      (onLambda (pls lambda) :) <$> lamKindRules (pls lambda)
+      onLambda (pls lambda) : lamKindRules (pls lambda)
     Expr.BodyApply apply -> applyRules typedVal $ pls apply
     Expr.BodyRecord record ->
-      pure $
       concatMap tagRules (record ^.. Expr.recordFields . traverse . Lens._1) ++
       recordKindRules (pls record)
     Expr.BodyGetField (Expr.GetField record fieldTag) ->
-      pure $ getFieldRules (tvType typedVal) fieldTag (tvType (pl record))
+      getFieldRules (tvType typedVal) fieldTag (tvType (pl record))
       -- TODO: GetField Structure rules
     -- Leafs need no additional rules beyond the commonal simpleTypeRule
-    Expr.BodyLeaf _ -> pure []
+    Expr.BodyLeaf _ -> []
   ]
   where
     pl = (^. Expr.ePayload)
@@ -169,14 +166,14 @@ makeForNode (Expr.Expression exprBody typedVal) =
       & Lens.mapped . Lens._1 %~ tvVal
       & Lens.mapped . Lens._2 %~ tvType
     lamKindRules (Expr.Lambda Expr.Type _ _ body) =
-      pure [setRule (tvType body)]
+      [setRule (tvType body)]
     lamKindRules (Expr.Lambda Expr.Val param _ body) =
       lambdaRules param typedVal (tvType body)
     onLambda lam = setRule . tvType $ lam ^. Expr.lambdaParamType
     setRule ref = SetRule [(ref, setExpr)]
 
-makeForAll :: Expr.Expression def TypedValue -> State Origin [Rule def ExprRef]
-makeForAll = fmap concat . traverse makeForNode . ExprUtil.subExpressions
+makeForAll :: Expr.Expression def TypedValue -> [Rule def ExprRef]
+makeForAll = concatMap makeForNode . ExprUtil.subExpressions
 
 holeRefExpr :: RefExpression def
 holeRefExpr = makeRefExpr $ Expr.BodyLeaf Expr.Hole
@@ -194,11 +191,10 @@ makePi :: RefExpression def -> RefExpression def -> RefExpression def
 makePi paramType result =
   makeRefExpr $ ExprUtil.makePi (Guid.fromString "dummyGuid") paramType result
 
-runLambdaBodyTypeToPiResultType :: (Guid, ExprRef) -> RefExpression def -> Origin -> RuleResult def
-runLambdaBodyTypeToPiResultType (param, lambdaTypeRef) bodyTypeExpr o =
+runLambdaBodyTypeToPiResultType :: (Guid, ExprRef) -> RefExpression def -> RuleResult def
+runLambdaBodyTypeToPiResultType (param, lambdaTypeRef) bodyTypeExpr =
   [( lambdaTypeRef
-   , makeRefExpr . ExprUtil.makePi param holeRefExpr $
-     bodyTypeExpr & Lens.traversed . rplOrigins <>~ [o]
+   , makeRefExpr $ ExprUtil.makePi param holeRefExpr bodyTypeExpr
    )]
 
 runPiToLambda :: (Guid, ExprRef, ExprRef) -> RefExpression def -> RuleResult def
@@ -218,11 +214,10 @@ runPiToLambda (param, lambdaValueRef, bodyTypeRef) piBody = do
       )
     ]
 
-lambdaRules :: Guid -> TypedValue -> ExprRef -> State Origin [Rule def ExprRef]
+lambdaRules :: Guid -> TypedValue -> ExprRef -> [Rule def ExprRef]
 lambdaRules param (TypedValue lambdaValueRef lambdaTypeRef) bodyTypeRef =
-  sequenceA
-  [ LambdaBodyTypeToPiResultType (param, lambdaTypeRef) bodyTypeRef <$> mkOrigin
-  , pure $ PiToLambda (param, lambdaValueRef, bodyTypeRef) lambdaTypeRef
+  [ LambdaBodyTypeToPiResultType (param, lambdaTypeRef) bodyTypeRef
+  , PiToLambda (param, lambdaValueRef, bodyTypeRef) lambdaTypeRef
   ]
 
 runRecordValToType :: ExprRef -> [RefExpression2 def] -> RuleResult def
@@ -381,23 +376,19 @@ ruleSimpleType (TypedValue val typ) = SimpleType typ val
 
 -- PreSubst with Subst => PostSubst
 -- (func, arg) -> apply
-runIntoApplyResult :: (Expr.Kind, ExprRef, ExprRef) -> RefExpression2 def -> Origin -> RuleResult def
-runIntoApplyResult (k, applyRef, arg) (funcExpr, argExpr) o0 = do
+runIntoApplyResult :: (Expr.Kind, ExprRef, ExprRef) -> RefExpression2 def -> RuleResult def
+runIntoApplyResult (k, applyRef, arg) (funcExpr, argExpr) = do
   -- TODO: Use exprKindedLam
   Expr.Lambda bk param _ result <- funcExpr ^.. ExprLens.exprLam
   guard $ k == bk
   return
     ( applyRef
     , ExprUtil.substGetPar param
-      ( argExpr & Lens.traversed %~ f) .
+      (argExpr & Lens.traversed . rplSubstitutedArgs %~ IntSet.insert (unExprRef arg)) .
       -- TODO: Is this correct?
       (Lens.traversed . rplRestrictedPoly . Lens.unwrapped .~ False) $
       result
     )
-  where
-    f =
-      (rplSubstitutedArgs %~ IntSet.insert (unExprRef arg)) .
-      (rplOrigins <>~ [o0])
 
 runIntoArg :: Eq def => (Expr.Kind, ExprRef) -> RefExpression2 def -> RuleResult def
 runIntoArg (k, arg) (applyExpr, funcExpr) = do
@@ -444,10 +435,10 @@ mergeToArg param arg =
       | otherwise = unit
 
 -- ArgT => Pi ParamT
-runArgTypeToPiParamType :: ExprRef -> RefExpression def -> Origin -> RuleResult def
-runArgTypeToPiParamType funcTypeRef argTypeExpr o0 =
+runArgTypeToPiParamType :: ExprRef -> RefExpression def -> RuleResult def
+runArgTypeToPiParamType funcTypeRef argTypeExpr =
   [( funcTypeRef
-   , makePi (argTypeExpr & Lens.traversed . rplOrigins <>~ [o0]) holeRefExpr
+   , makePi argTypeExpr holeRefExpr
    )]
 
 -- Rigid value: An expression whose sole information content comes
@@ -483,14 +474,13 @@ rigidValue e = case e ^. Expr.eBody of
 -- no way that FT is dependent on p, because in the context of T,
 -- any information in p is universally quantified. Parts of FT may
 -- still be dependent on p, but the part that matches T mustn't be.
-runRigidArgApplyTypeToResultType :: Eq def => ExprRef -> RefExpression2 def -> Origin -> RuleResult def
-runRigidArgApplyTypeToResultType funcTypeRef (applyTypeExpr, argExpr) o0 = do
+runRigidArgApplyTypeToResultType :: Eq def => ExprRef -> RefExpression2 def -> RuleResult def
+runRigidArgApplyTypeToResultType funcTypeRef (applyTypeExpr, argExpr) = do
   guard $ rigidValue argExpr
   return
     ( funcTypeRef
-    , makePi holeRefExpr
-      (ExprUtil.subst (Lens.filtered (ExprUtil.couldEq argExpr)) holeRefExpr applyTypeExpr)
-      & Lens.traversed . rplOrigins <>~ [o0]
+    , makePi holeRefExpr $
+      ExprUtil.subst (Lens.filtered (ExprUtil.couldEq argExpr)) holeRefExpr applyTypeExpr
     )
 
 runRedexApplyTypeToResultType :: ExprRef -> RefExpression2 def -> RuleResult def
@@ -586,30 +576,25 @@ runDisallowTagTypeForApply applyValRef applyTypeExpr = do
         )
       ]
 
-applyRules :: TypedValue -> Expr.Apply TypedValue -> State Origin [Rule def ExprRef]
+applyRules :: TypedValue -> Expr.Apply TypedValue -> [Rule def ExprRef]
 applyRules applyTv apply@(Expr.Apply func arg) =
   -- TODO: make all of these functions have a standard signature and
   -- just apply them all to the same args?
-  (++ pureRules) <$>
-  sequenceA (
-  [ ArgTypeToPiParamType (tvType func) (tvType arg) <$> mkOrigin
-  , RigidArgApplyTypeToResultType (tvType func) (tvType applyTv, tvVal arg) <$> mkOrigin
-  , pure $ ArgTypeToLambdaParamType (tvVal func) (tvVal func, tvType arg)
-  , pure $ NonLambdaToApplyValue (tvVal applyTv) (tvVal func, tvVal arg, tvType applyTv)
-  , pure $ DisallowTagTypeForApply (tvVal applyTv) (tvType applyTv)
+  [ PiParamTypeToArgType (tvType arg) (tvType func)
+  , RedexApplyTypeToResultType (tvType func) (tvType applyTv, tvVal func)
+  , LambdaParamTypeToArgType (tvType arg) (tvVal func)
+  , ApplyToParts (tvVal <$> apply) (tvVal applyTv, tvVal func)
+  , ArgTypeToPiParamType (tvType func) (tvType arg)
+  , RigidArgApplyTypeToResultType (tvType func) (tvType applyTv, tvVal arg)
+  , ArgTypeToLambdaParamType (tvVal func) (tvVal func, tvType arg)
+  , NonLambdaToApplyValue (tvVal applyTv) (tvVal func, tvVal arg, tvType applyTv)
+  , DisallowTagTypeForApply (tvVal applyTv) (tvType applyTv)
   ]
   ++ recurseSubstRules Expr.Type (tvType applyTv) (tvType func) (tvVal arg)
   ++ recurseSubstRules Expr.Val (tvVal applyTv) (tvVal func) (tvVal arg)
-  )
   where
-    pureRules =
-      [ PiParamTypeToArgType (tvType arg) (tvType func)
-      , RedexApplyTypeToResultType (tvType func) (tvType applyTv, tvVal func)
-      , LambdaParamTypeToArgType (tvType arg) (tvVal func)
-      , ApplyToParts (tvVal <$> apply) (tvVal applyTv, tvVal func)
-      ]
     recurseSubstRules k applyRef funcRef argValRef =
-      [ IntoApplyResult (k, applyRef, argValRef) (funcRef, argValRef) <$> mkOrigin
-      , pure $ IntoArg (k, argValRef) (applyRef, funcRef)
-      , pure $ IntoFuncResultType (k, funcRef) (applyRef, funcRef)
+      [ IntoApplyResult (k, applyRef, argValRef) (funcRef, argValRef)
+      , IntoArg (k, argValRef) (applyRef, funcRef)
+      , IntoFuncResultType (k, funcRef) (applyRef, funcRef)
       ]

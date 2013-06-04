@@ -19,9 +19,10 @@ module Lamdu.Data.Expression.Infer
   , createRefExpr
   ) where
 
-import Control.Applicative (Applicative(..), (<$>))
+import Control.Applicative (Applicative(..), (<$>), (<$))
 import Control.DeepSeq (NFData(..))
-import Control.Lens (LensLike', (%=), (.=), (^.), (^?), (+=), (%~), (&), (<>~))
+import Control.Lens (LensLike')
+import Control.Lens.Operators
 import Control.Monad ((<=<), guard, unless, void, when)
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Either (EitherT(..))
@@ -53,8 +54,6 @@ import qualified Control.Monad.Trans.Either as Either
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Foldable as Foldable
 import qualified Data.IntSet as IntSet
-import qualified Data.List as List
-import qualified Data.List.Utils as ListUtils
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
@@ -153,7 +152,6 @@ newtype InferActions def m = InferActions
 
 data Context def = Context
   { _exprMap :: RefMap (RefData def)
-  , _nextOrigin :: Int
   , _ruleMap :: RefMap (Rule def ExprRef)
   } deriving (Typeable)
 
@@ -173,15 +171,12 @@ fmap concat . sequence $
 
 -- ExprRefMap:
 
-toRefExpression :: Expr.Expression def () -> State Origin (RefExpression def)
-toRefExpression =
-  traverse . const $
-  RefExprPayload mempty (Monoid.Any False) <$> pure []
+toRefExpression :: Expr.Expression def () -> RefExpression def
+toRefExpression = (RefExprPayload mempty mempty mempty <$)
 
 createRefExpr :: State (Context def) ExprRef
 createRefExpr = do
-  holeRefExpr <- Lens.zoom nextOrigin $ toRefExpression ExprUtil.pureHole
-  fmap ExprRef . Lens.zoom exprMap . createRef $ RefData holeRefExpr mempty
+  fmap ExprRef . Lens.zoom exprMap . createRef $ RefData (toRefExpression ExprUtil.pureHole) mempty
 
 {-# INLINE exprRefsAt #-}
 exprRefsAt :: Functor f => ExprRef -> LensLike' f (Context def) (RefData def)
@@ -229,7 +224,6 @@ initial mRecursiveDefI =
     emptyContext =
       Context
       { _exprMap = emptyRefMap
-      , _nextOrigin = 0
       , _ruleMap = emptyRefMap
       }
 
@@ -294,7 +288,7 @@ executeRules = do
       liftState $ sBfsCurLayer . Lens.contains key .= False
       ruleRefs <- liftState $ Lens.use (sContext . ruleRefsAt (RuleRef key))
       ruleExprs <- traverse getRefExpr ruleRefs
-      traverse_ (uncurry setRefExpr) $ Rules.runRule ruleExprs
+      traverse_ (uncurry (setRefExpr (IntSet.singleton key))) $ Rules.runRule ruleExprs
 
 {-# SPECIALIZE executeRules :: InferT (DefI t) Maybe () #-}
 {-# SPECIALIZE executeRules :: Monoid w => InferT (DefI t) (Writer w) () #-}
@@ -339,11 +333,6 @@ guardEither :: l -> Bool -> EitherT l Identity ()
 guardEither err False = Either.left err
 guardEither _ True = return ()
 
-originRepeat :: RefExpression def -> Bool
-originRepeat =
-  Lens.anyOf (Lens.traversed . rplOrigins)
-  (any (ListUtils.isLengthAtLeast 2) . List.group . List.sort)
-
 -- Merge two expressions:
 -- If they do not match, return Nothing.
 -- Holes match with anything, expand to the other expr.
@@ -352,29 +341,30 @@ originRepeat =
 mergeExprs ::
   Eq def =>
   RefExpression def ->
-  RefExpression def ->
+  IntSet -> RefExpression def ->
   Either (ErrorDetails def) (RefExpression def)
-mergeExprs p0 p1 =
-  runEither $ do
-    result <- ExprUtil.matchExpression onMatch onMismatch p0 p1
-    guardEither (InfiniteExpression (void result)) . not $ originRepeat result
-    return result
+mergeExprs oldExp origins newExp =
+  runEither $ ExprUtil.matchExpression onMatch onMismatch oldExp newExp
   where
-    src `mergePayloadInto` dest =
+    mergePayloadInto src =
+      -- TODO: mappend?
       mappendLens rplRestrictedPoly src .
-      mappendLens rplSubstitutedArgs src $
-      dest
+      mappendLens rplSubstitutedArgs src .
+      mappendLens rplOrigins src
     mappendLens lens src =
       Lens.cloneLens lens <>~ src ^. Lens.cloneLens lens
     onMatch x y = return $ y `mergePayloadInto` x
     mergePayloads s e =
       e
-      & Expr.ePayload %~ mappendLens rplRestrictedPoly s
+      & Expr.ePayload %~ (mappendLens rplRestrictedPoly s . mappendLens rplOrigins s)
       & Lens.mapped %~ mappendLens rplSubstitutedArgs s
-    onMismatch (Expr.Expression (Expr.BodyLeaf Expr.Hole) s0) e1 =
-      return $ mergePayloads s0 e1
     onMismatch e0 (Expr.Expression (Expr.BodyLeaf Expr.Hole) s1) =
       return $ mergePayloads s1 e0
+    onMismatch (Expr.Expression (Expr.BodyLeaf Expr.Hole) s0) e1 = do
+      guardEither (InfiniteExpression (void oldExp)) .
+        IntSet.null . IntSet.intersection origins .
+        mconcat $ e1 ^.. Lens.traversed . rplOrigins
+      return $ mergePayloads (s0 & rplOrigins <>~ origins) e1
     onMismatch e0 e1 =
       Either.left $ MismatchIn (void e0) (void e1)
 
@@ -392,10 +382,10 @@ touch ref =
 {-# SPECIALIZE touch :: ExprRef -> InferT (DefI t) Maybe () #-}
 {-# SPECIALIZE touch :: Monoid w => ExprRef -> InferT (DefI t) (Writer w) () #-}
 
-setRefExpr :: (Eq def, MonadA m) => ExprRef -> RefExpression def -> InferT def m ()
-setRefExpr ref newExpr = do
+setRefExpr :: (Eq def, MonadA m) => IntSet -> ExprRef -> RefExpression def -> InferT def m ()
+setRefExpr origins ref newExpr = do
   curExpr <- liftState $ Lens.use (sContext . exprRefsAt ref . rExpression)
-  case mergeExprs curExpr newExpr of
+  case mergeExprs curExpr origins newExpr of
     Right mergedExpr -> do
       let
         isChange = not $ equiv mergedExpr curExpr
@@ -419,11 +409,8 @@ setRefExpr ref newExpr = do
       (x ^. rplSubstitutedArgs) == (y ^. rplSubstitutedArgs) &&
       (x ^. rplRestrictedPoly) == (y ^. rplRestrictedPoly)
 
-{-# SPECIALIZE setRefExpr :: ExprRef -> RefExpression (DefI t) -> InferT (DefI t) Maybe () #-}
-{-# SPECIALIZE setRefExpr :: Monoid w => ExprRef -> RefExpression (DefI t) -> InferT (DefI t) (Writer w) () #-}
-
-liftOriginState :: MonadA m => State Origin a -> InferT def m a
-liftOriginState = liftState . Lens.zoom (sContext . nextOrigin) . toStateT
+{-# SPECIALIZE setRefExpr :: IntSet -> ExprRef -> RefExpression (DefI t) -> InferT (DefI t) Maybe () #-}
+{-# SPECIALIZE setRefExpr :: Monoid w => IntSet -> ExprRef -> RefExpression (DefI t) -> InferT (DefI t) (Writer w) () #-}
 
 liftContextState :: MonadA m => State (Context def) a -> InferT def m a
 liftContextState = liftState . Lens.zoom sContext . toStateT
@@ -446,7 +433,7 @@ exprIntoContext rootScope (Loaded rootExpr defTypes) = do
   where
     defTypeIntoContext defType = do
       ref <- liftContextState createRefExpr
-      setRefExpr ref =<< liftOriginState (toRefExpression defType)
+      setRefExpr mempty ref $ toRefExpression defType
       return ref
     addTypedVal x = fmap ((,) x) createTypedVal
     go scope (Expr.Expression body (s, createdTV)) = do
@@ -516,10 +503,9 @@ addRules ::
   [Expr.Expression def (InferNode def)] ->
   StateT (Context def) m ()
 addRules actions exprs =
-  execInferT actions . liftState . toStateT $
-  traverse_ addRule . concat =<<
-  (Lens.zoom (sContext . nextOrigin) .
-   traverse Rules.makeForNode . (map . fmap) nRefs) exprs
+  execInferT actions . liftState . toStateT .
+  traverse_ addRule . concat .
+  traverse Rules.makeForNode $ (map . fmap) nRefs exprs
 
 inferLoaded ::
   (Ord def, MonadA m) =>
@@ -536,10 +522,7 @@ inferLoaded actions loadedExpr node =
           traverse_ addRule $ on Rules.union (f . nRefs) node . fst $ expr ^. Expr.ePayload
       addUnionRules tvVal
       addUnionRules tvType
-      rules <-
-        Lens.zoom (sContext . nextOrigin) .
-        Rules.makeForAll $ nRefs . fst <$> expr
-      traverse_ addRule rules
+      traverse_ addRule . Rules.makeForAll $ nRefs . fst <$> expr
     return expr
 
 {-# SPECIALIZE
