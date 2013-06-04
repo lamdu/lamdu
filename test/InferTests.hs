@@ -289,11 +289,11 @@ wrongRecurseMissingArg =
 
 mapIdTest =
   testInfer "map id (5:_)" $
-  getDef "map" $$ hole $$ hole $$:
-  [ getDef "id" $$ hole
-  , getDef ":" $$ hole $$:
+  getDef "map" $$ asHole integerType $$ asHole integerType $$:
+  [ getDef "id" $$ asHole integerType
+  , getDef ":" $$ asHole integerType $$:
     [ literalInteger 5
-    , hole
+    , holeWithInferredType $ listOf integerType
     ]
   ]
 
