@@ -24,11 +24,13 @@ import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleState(..), hsArgument, hsSearchTerm)
 import Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Results (MakeWidgets(..), ResultsList(..), Result(..), HaveHiddenResults(..))
 import qualified Control.Lens as Lens
+import qualified Data.Char as Char
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.View as View
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -403,14 +405,23 @@ make ::
   MonadA m => Sugar.Hole Sugar.Name m -> Maybe (Sugar.ExpressionN m) -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make hole mNextHole guid =
-  ExpressionGui.wrapDelegated holeFDConfig FocusDelegator.Delegating $
-  makeUnwrapped hole mNextHole guid
+  ExpressionGui.wrapDelegated holeFDConfig
+  FocusDelegator.Delegating $ \myId -> do
+    inCollapsed <- ExprGuiM.isInCollapsedExpression
+    mHoleNumber <-
+      if isWritable && not inCollapsed
+      then Just <$> ExprGuiM.nextHoleNumber
+      else pure Nothing
+    makeUnwrapped mHoleNumber hole mNextHole guid myId
+  where
+    isWritable = isJust $ hole ^. Sugar.holeMActions
 
 makeUnwrapped ::
-  MonadA m => Sugar.Hole Sugar.Name m ->
+  MonadA m => Maybe ExprGuiM.HoleNumber ->
+  Sugar.Hole Sugar.Name m ->
   Maybe (Sugar.ExpressionN m) -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeUnwrapped hole mNextHole guid myId = do
+makeUnwrapped mHoleNumber hole mNextHole guid myId = do
   cursor <- ExprGuiM.widgetEnv WE.readCursor
   case (hole ^. Sugar.holeMActions, Widget.subId myId cursor) of
     (Just holeActions, Just _) -> do
@@ -422,7 +433,9 @@ makeUnwrapped hole mNextHole guid myId = do
         , hiHoleActions = holeActions
         , hiMNextHole = mNextHole
         }
-    (x, _) -> makeInactive (isJust x) myId
+    _ -> makeInactive mHoleNumber isWritable myId
+  where
+    isWritable = isJust $ hole ^. Sugar.holeMActions
 
 searchTermWidgetId :: Widget.Id -> Widget.Id
 searchTermWidgetId = WidgetIds.searchTermId . FocusDelegator.delegatingId
@@ -493,14 +506,42 @@ makeBackground myId level =
   Widget.backgroundColor level $
   mappend (Widget.toAnimId myId) ["hole background"]
 
-makeInactive ::
-  MonadA m => Bool -> Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeInactive isReadOnly myId =
-  fmap
-  (ExpressionGui.fromValueWidget .
-   makeBackground myId Layers.inactiveHole unfocusedColor) .
-  ExprGuiM.widgetEnv $ BWidgets.makeFocusableTextView "  " myId
+keysOfNum :: Int -> Maybe [E.ModKey]
+keysOfNum n
+  | 0 <= n && n <= 9 =
+    map alt . (E.charKey char :) . (: []) <$> E.specialCharKey char
+  | otherwise = Nothing
   where
+    char = Char.intToDigit n
+    alt = E.ModKey E.alt
+
+makeInactive ::
+  MonadA m => Maybe ExprGuiM.HoleNumber ->
+  Bool -> Widget.Id -> ExprGuiM m (ExpressionGui m)
+makeInactive mHoleNumber isWritable myId =
+  ExpressionGui.fromValueWidget .
+  makeBackground myId Layers.inactiveHole unfocusedColor <$> do
+    space <-
+      ExprGuiM.widgetEnv $
+      BWidgets.makeFocusableTextView "  " myId
+    mHoleNumView <- traverse mkHoleNumView $ mHolePair =<< mHoleNumber
+    pure $ maybe id Widget.overlayView mHoleNumView space
+  where
+    mHolePair holeNumber = do
+      keys <- keysOfNum holeNumber
+      let
+        doc = E.Doc ["Navigation", "Jump to", "Hole " ++ show holeNumber]
+        eventMap =
+          Widget.keysEventMapMovesCursor keys doc $
+          pure myId
+      pure ("Alt-" ++ show holeNumber, eventMap)
+    mkHoleNumView (shownStr, eventMap) = do
+      ExprGuiM.appendToTopLevelEventMap eventMap
+      fmap (^. View.scaled Config.holeNumLabelScaleFactor) .
+        ExprGuiM.withFgColor Config.holeNumLabelColor .
+        ExprGuiM.widgetEnv .
+        BWidgets.makeTextView shownStr $
+        Widget.toAnimId myId ++ ["hole number"]
     unfocusedColor
-      | isReadOnly = Config.holeBackgroundColor
+      | isWritable = Config.holeBackgroundColor
       | otherwise = Config.readOnlyHoleBackgroundColor

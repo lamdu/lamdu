@@ -18,6 +18,11 @@ module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad
 
   , memo, memoT
   , liftMemo, liftMemoT
+
+  , HoleNumber, nextHoleNumber
+  , inCollapsedExpression
+  , isInCollapsedExpression
+
   , appendToTopLevelEventMap
   ) where
 
@@ -65,15 +70,28 @@ data Askable m = Askable
   { _aSettings :: Settings
   , _aMakeSubexpression :: ParentPrecedence -> Sugar.ExpressionN m -> ExprGuiM m (ExpressionGui m)
   , _aCodeAnchors :: Anchors.CodeProps m
+  , _aInCollapsedExpression :: Bool
+  }
+
+type HoleNumber = Int
+
+data GuiState = GuiState
+  { _gsCache :: Cache
+  , _gsNextHoleNumber :: HoleNumber
   }
 
 newtype ExprGuiM m a = ExprGuiM
-  { _exprGuiM :: RWST (Askable m) (Output m) Cache (WidgetEnvT (T m)) a
+  { _exprGuiM :: RWST (Askable m) (Output m) GuiState (WidgetEnvT (T m)) a
   }
   deriving (Functor, Applicative, Monad)
 
 Lens.makeLenses ''Askable
 Lens.makeLenses ''ExprGuiM
+Lens.makeLenses ''GuiState
+
+nextHoleNumber :: MonadA m => ExprGuiM m HoleNumber
+nextHoleNumber = ExprGuiM $
+  Lens.use gsNextHoleNumber <* (gsNextHoleNumber += 1)
 
 -- TODO: To lens
 atEnv :: MonadA m => (WE.Env -> WE.Env) -> ExprGuiM m a -> ExprGuiM m a
@@ -100,7 +118,7 @@ makeSubexpresion parentPrecedence expr = do
   maker (ParentPrecedence parentPrecedence) expr
 
 liftMemo :: MonadA m => StateT Cache (WidgetEnvT (T m)) a -> ExprGuiM m a
-liftMemo act = ExprGuiM $ do
+liftMemo act = ExprGuiM . Lens.zoom gsCache $ do
   cache <- RWS.get
   (val, newCache) <- lift $ runStateT act cache
   RWS.put newCache
@@ -119,6 +137,13 @@ memoT ::
   (k -> T m v) -> k -> ExprGuiM m v
 memoT f = memo (lift . f)
 
+inCollapsedExpression :: MonadA m => ExprGuiM m a -> ExprGuiM m a
+inCollapsedExpression =
+  exprGuiM %~ RWS.local (aInCollapsedExpression .~ True)
+
+isInCollapsedExpression :: MonadA m => ExprGuiM m Bool
+isInCollapsedExpression = ExprGuiM $ Lens.view aInCollapsedExpression
+
 run ::
   MonadA m =>
   (ParentPrecedence -> Sugar.ExpressionN m -> ExprGuiM m (ExpressionGui m)) ->
@@ -131,10 +156,11 @@ run makeSubexpression codeAnchors settings (ExprGuiM action) =
   { _aSettings = settings
   , _aMakeSubexpression = makeSubexpression
   , _aCodeAnchors = codeAnchors
+  , _aInCollapsedExpression = False
   }
-  cache
+  (GuiState cache 1)
   where
-    f (x, newCache, output) = ((oTopLevelEventMap output, x), newCache)
+    f (x, GuiState newCache _, output) = ((oTopLevelEventMap output, x), newCache)
 
 runWidget ::
   MonadA m =>

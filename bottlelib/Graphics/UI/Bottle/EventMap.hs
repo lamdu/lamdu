@@ -15,6 +15,7 @@ module Graphics.UI.Bottle.EventMap
   , anyShiftedChars
   , charKey, eventMapDocs
   , tickHandler
+  , specialCharKey
   ) where
 
 import Control.Applicative ((<$>), (<*>))
@@ -45,6 +46,28 @@ data KeyEvent = KeyEvent Events.IsPress ModKey
 
 anyShiftedChars :: String -> [(Char, IsShifted)]
 anyShiftedChars s = (,) <$> s <*> [Shifted, NotShifted]
+
+specialCharKey :: Char -> Maybe Key
+specialCharKey c =
+  case c of
+  ' ' -> Just KeySpace
+  '0' -> Just KeyPad0
+  '1' -> Just KeyPad1
+  '2' -> Just KeyPad2
+  '3' -> Just KeyPad3
+  '4' -> Just KeyPad4
+  '5' -> Just KeyPad5
+  '6' -> Just KeyPad6
+  '7' -> Just KeyPad7
+  '8' -> Just KeyPad8
+  '9' -> Just KeyPad9
+  '/' -> Just KeyPadDivide
+  '*' -> Just KeyPadMultiply
+  '-' -> Just KeyPadSubtract
+  '+' -> Just KeyPadAdd
+  '.' -> Just KeyPadDecimal
+  '=' -> Just KeyPadEqual
+  _ -> Nothing
 
 charOfKey :: Key -> Maybe Char
 charOfKey key =

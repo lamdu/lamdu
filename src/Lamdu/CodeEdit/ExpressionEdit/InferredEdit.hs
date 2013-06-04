@@ -60,4 +60,4 @@ makeUnwrapped (ParentPrecedence parentPrecedence) inferred guid myId = do
       . Widget.scale Config.inferredValueScaleFactor
       ) =<< ExprGuiM.makeSubexpresion parentPrecedence (inferred ^. Sugar.iValue)
     Just _ ->
-      HoleEdit.makeUnwrapped (inferred ^. Sugar.iHole) Nothing guid myId
+      HoleEdit.makeUnwrapped Nothing (inferred ^. Sugar.iHole) Nothing guid myId

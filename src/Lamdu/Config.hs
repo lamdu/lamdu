@@ -66,6 +66,8 @@ previousCursorKeys = [mk E.alt E.KeyLeft]
 holeResultCount = 8
 holeResultScaleFactor = 0.75
 holeSearchTermScaleFactor = 0.6
+holeNumLabelScaleFactor = 0.3
+holeNumLabelColor = Draw.Color 0.6 0.6 0.6 1
 
 fieldHoleResultCount = 3
 
