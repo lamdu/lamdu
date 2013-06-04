@@ -59,7 +59,7 @@ createBuiltins =
       , ("Value", set)
       ] set
 
-    cons <- publicBuiltin "Prelude.:" $ forAll "a" $ \a -> mkPi a . endo $ listOf a
+    cons <- publicBuiltin "Prelude.:" $ forAll "a" $ \a -> mkInfixType a (listOf a) $ listOf a
     nil <- publicBuiltin "Prelude.[]" $ forAll "a" listOf
 
     true <- publicBuiltin "Prelude.True" bool

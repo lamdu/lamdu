@@ -209,16 +209,16 @@ convertList ::
   MaybeT (SugarM m) (ExpressionU m)
 convertList (Expr.Apply funcI argI) argS exprI = do
   specialFunctions <- lift $ (^. SugarM.scSpecialFunctions) <$> SugarM.readContext
-  Expr.Apply funcFuncI funcArgI <-
-    maybeToMPlus $ funcI ^? ExprLens.exprApply
+  -- TODO: verify field tags?
+  Record Val (FieldList [headField, tailField] _) <-
+    maybeToMPlus $ argS ^? rBody . _BodyRecord
   List innerValues innerListMActions <-
-    maybeToMPlus $ argS ^? rBody . _BodyList
-  guard $ isCons specialFunctions funcFuncI
-  listItemExpr <- lift $ SugarM.convertSubexpression funcArgI
+    maybeToMPlus $ tailField ^? rfExpr . rBody . _BodyList
+  guard $ isCons specialFunctions funcI
   let
-    hiddenGuids = (funcFuncI ^.. subExpressionGuids) ++ (funcI ^.. SugarInfer.exprStoredGuid)
+    hiddenGuids = (funcI ^.. subExpressionGuids) ++ (funcI ^.. SugarInfer.exprStoredGuid)
     listItem =
-      mkListItem listItemExpr argS hiddenGuids exprI argI $
+      mkListItem (headField ^. rfExpr) argS hiddenGuids exprI argI $
       addFirstItem <$> innerListMActions
     mListActions = do
       exprS <- SugarInfer.resultStored exprI
