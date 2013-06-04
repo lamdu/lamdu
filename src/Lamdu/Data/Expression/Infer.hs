@@ -365,7 +365,11 @@ mergeExprs oldExp mRule newExp =
       guardEither ((InfiniteExpression . fmap void . snd . fromJust) mRule) .
         IntSet.null . IntSet.intersection origins .
         mconcat $ e1 ^.. Lens.traversed . rplOrigins
-      return $ mergePayloads (s0 & rplOrigins <>~ origins) e1
+      return .
+        mergePayloads s0 $
+        e1 &
+        Lens.filtered (Lens.has (ExprLens.exprLeaves . Expr._Hole)) .
+        Expr.ePayload . rplOrigins <>~ origins
     onMismatch e0 e1 =
       Either.left $ MismatchIn (void e0) (void e1)
     origins = maybe mempty (IntSet.singleton . unRuleRef . fst) mRule
