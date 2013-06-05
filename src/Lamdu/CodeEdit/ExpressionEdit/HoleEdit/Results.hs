@@ -23,7 +23,7 @@ import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
-import Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiArgument)
+import Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiMArgument)
 import Lamdu.CodeEdit.Sugar (Scope(..))
 import Lamdu.Data.Expression (Expression(..))
 import Lamdu.Data.Expression.IRef (DefI)
@@ -207,15 +207,6 @@ storePointHoleApply :: Sugar.ExprStorePoint m -> Sugar.ExprStorePoint m
 storePointHoleApply expr =
   storePointExpr $ ExprUtil.makeApply storePointHole expr
 
-removeHoleWrap :: Expression def a -> Maybe (Expression def a)
-removeHoleWrap expr = do
-  apply <- expr ^? ExprLens.exprApply
-  void $
-    apply ^?
-    Expr.applyFunc . Expr.eBody .
-    Expr._BodyLeaf . Expr._Hole
-  pure $ apply ^. Expr.applyArg
-
 injectIntoHoles ::
   MonadA m => HoleInfo m ->
   Sugar.ExprStorePoint m ->
@@ -244,16 +235,13 @@ maybeInjectArgumentExpr ::
   [Expression (DefI (Tag m)) ApplyFormAnnotation] ->
   CT m [Sugar.ExprStorePoint m]
 maybeInjectArgumentExpr holeInfo =
-  case hiArgument holeInfo of
+  case hiMArgument holeInfo of
   Nothing -> return . map (Nothing <$)
-  Just arg ->
-    fmap concat . traverse (injectIntoHoles holeInfo (removeHoleWrapIfAny arg))
-  where
-    removeHoleWrapIfAny x = fromMaybe x $ removeHoleWrap x
+  Just arg -> fmap concat . traverse (injectIntoHoles holeInfo (arg ^. Sugar.rPresugaredExpression))
 
 maybeInjectArgumentNewTag :: HoleInfo m -> [Sugar.HoleResultSeed m]
 maybeInjectArgumentNewTag holeInfo =
-  case hiArgument holeInfo of
+  case hiMArgument holeInfo of
   Nothing -> [makeNewTag]
   Just _ -> []
   where

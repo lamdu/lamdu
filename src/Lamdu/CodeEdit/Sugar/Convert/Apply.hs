@@ -21,6 +21,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Either as Either
 import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
+import qualified Lamdu.CodeEdit.Sugar.Convert.Hole as ConvertHole
 import qualified Lamdu.CodeEdit.Sugar.Expression as SugarExpr
 import qualified Lamdu.CodeEdit.Sugar.Infer as SugarInfer
 import qualified Lamdu.CodeEdit.Sugar.Monad as SugarM
@@ -45,6 +46,7 @@ convert app@(Expr.Apply funcI argI) exprI =
   fmap uneither . runEitherT $ do
     justToLeft $ convertEmptyList app exprI
     argS <- lift $ SugarM.convertSubexpression argI
+    justToLeft $ convertAppliedHole funcI argS exprI
     justToLeft $ convertList app argS exprI
     funcS <- lift $ SugarM.convertSubexpression funcI
     justToLeft $ convertLabeled funcS argS exprI
@@ -202,6 +204,16 @@ isCons specialFunctions =
   Lens.anyOf
   (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprDefinitionRef)
   (== Anchors.sfCons specialFunctions)
+
+convertAppliedHole ::
+  (MonadA m, Typeable1 m) => ExprMM m -> ExpressionU m -> ExprMM m ->
+  MaybeT (SugarM m) (ExpressionU m)
+convertAppliedHole funcI argS exprI
+  | Lens.has ExprLens.exprHole funcI =
+    lift $
+    ConvertHole.convertPlain exprI
+    & Lens.mapped . rBody . _BodyHole . holeMArg .~ Just argS
+  | otherwise = mzero
 
 convertList ::
   (Typeable1 m, MonadA m) =>

@@ -42,7 +42,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , FuncParamType(..)
   , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpHiddenLambdaGuid, fpType, fpMActions
   , TagG(..), tagName, tagGuid
-  , Hole(..), holeMActions
+  , Hole(..), holeMActions, holeMArg
   , HoleResultSeed(..), _ResultSeedExpression, _ResultSeedNewTag, _ResultSeedNewDefinition
   , ScopeItem
   , Scope(..), scopeLocals, scopeGlobals, scopeTags, scopeGetParams
@@ -51,7 +51,8 @@ module Lamdu.CodeEdit.Sugar.Types
   , HoleResult(..)
     , holeResultInferred
     , holeResultConverted
-    , holeResultPick, holeResultPickPrefix
+    , holeResultPick, holeResultPickWrapped
+    , holeResultPickPrefix
   , LiteralInteger(..)
   , Inferred(..), iValue, iMAccept, iHole
   , Collapsed(..), cFuncGuid, cCompact, cFullExpression, cFullExprHasInfo
@@ -178,6 +179,7 @@ data HoleResult name m = HoleResult
   { _holeResultInferred :: ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))
   , _holeResultConverted :: Expression name m
   , _holeResultPick :: T m (Maybe Guid)
+  , _holeResultPickWrapped :: T m Guid
   , _holeResultPickPrefix :: PrefixAction m
   }
 
@@ -209,9 +211,10 @@ data HoleActions name m = HoleActions
     _holeMDelete :: Maybe (T m Guid)
   }
 
-newtype Hole name m = Hole
+data Hole name m expr = Hole
   { _holeMActions :: Maybe (HoleActions name m)
-  }
+  , _holeMArg :: Maybe expr
+  } deriving (Functor, Foldable, Traversable)
 
 data LiteralInteger m = LiteralInteger
   { liValue :: Integer
@@ -221,7 +224,7 @@ data LiteralInteger m = LiteralInteger
 data Inferred name m expr = Inferred
   { _iValue :: expr
   , _iMAccept :: Maybe (T m Guid)
-  , _iHole :: Hole name m
+  , _iHole :: Hole name m expr
   } deriving (Functor, Foldable, Traversable)
 
 -- TODO: New name. This is not only for polymorphic but also for eta-reduces etc
@@ -305,7 +308,7 @@ data Apply name expr = Apply
 data Body name m expr
   = BodyLam (Lam name m expr)
   | BodyApply (Apply name expr)
-  | BodyHole (Hole name m)
+  | BodyHole (Hole name m expr)
   | BodyInferred (Inferred name m expr)
   | BodyCollapsed (Collapsed name m expr)
   | BodyLiteralInteger (LiteralInteger m)

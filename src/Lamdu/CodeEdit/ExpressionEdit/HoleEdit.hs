@@ -2,7 +2,7 @@
 module Lamdu.CodeEdit.ExpressionEdit.HoleEdit
   ( make, makeUnwrapped
   , searchTermWidgetId
-  , HoleState(..), hsSearchTerm, hsArgument
+  , HoleState(..), hsSearchTerm
   , setHoleStateAndJump
   ) where
 
@@ -21,7 +21,7 @@ import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
-import Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleState(..), hsArgument, hsSearchTerm)
+import Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleState(..), hsSearchTerm)
 import Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Results (MakeWidgets(..), ResultsList(..), Result(..), HaveHiddenResults(..))
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
@@ -273,8 +273,10 @@ makeResultsWidget holeInfo shownResults hiddenResults = do
   where
     myId = hiHoleId holeInfo
 
-operatorHandler :: E.Doc -> (Char -> a) -> E.EventMap a
+operatorHandler ::
+  Functor f => E.Doc -> (Char -> f Widget.Id) -> Widget.EventHandlers f
 operatorHandler doc handler =
+  (fmap . fmap) Widget.eventResultFromCursor .
   E.charGroup "Operator" doc
   Config.operatorChars . flip $ const handler
 
@@ -291,26 +293,18 @@ opPickEventMap ::
   Widget.EventHandlers (T m)
 opPickEventMap holeInfo result
   | nonEmptyAll (`notElem` Config.operatorChars) searchTerm =
-    operatorHandler (E.Doc ["Edit", "Result", "Apply operator"]) $ \x ->
-    Widget.emptyEventResult <$
-    Property.set (hiState holeInfo)
-    ( charToHoleState x
-      & hsArgument .~ (Just . (Nothing <$)) (result ^. Sugar.holeResultInferred)
-    )
+    operatorHandler (E.Doc ["Edit", "Result", "Apply operator"]) $ \c -> do
+      dest <- result ^. Sugar.holeResultPickWrapped
+      setHoleStateAndJump (HoleState [c]) dest
   | nonEmptyAll (`elem` Config.operatorChars) searchTerm =
-    alphaNumericHandler (E.Doc ["Edit", "Result", "Pick and resume"]) $ \x -> do
+    alphaNumericHandler (E.Doc ["Edit", "Result", "Pick and resume"]) $ \c -> do
       mTarget <- HoleResults.pick holeInfo result
       case mTarget of
         Nothing -> pure . WidgetIds.fromGuid $ hiGuid holeInfo
-        Just targetGuid -> setHoleStateAndJump (charToHoleState x) targetGuid
+        Just targetGuid -> setHoleStateAndJump (HoleState [c]) targetGuid
   | otherwise = mempty
   where
     searchTerm = Property.value (hiState holeInfo) ^. hsSearchTerm
-    charToHoleState x =
-      HoleState
-      { _hsSearchTerm = [x]
-      , _hsArgument = Nothing
-      }
 
 mkEventMap ::
   MonadA m => HoleInfo m -> Maybe (Sugar.HoleResult Sugar.Name m) ->
@@ -320,9 +314,9 @@ mkEventMap holeInfo mResult = do
   mDeleteOpResult <-
     ExprGuiM.liftMemoT . fmap join . sequenceA $ do
       guard . null $ drop 1 searchTerm
-      arg <- Property.value (hiState holeInfo) ^. hsArgument
-      Just $ hiHoleActions holeInfo ^. Sugar.holeResult $
-        Sugar.ResultSeedExpression arg
+      arg <- hiMArgument holeInfo
+      Just . (hiHoleActions holeInfo ^. Sugar.holeResult) .
+        Sugar.ResultSeedExpression $ arg ^. Sugar.rPresugaredExpression
   addNewDefinitionEventMap <- mkAddNewDefinitionEventMap cp holeInfo
   pure $ mconcat
     [ addNewDefinitionEventMap
@@ -402,7 +396,8 @@ makeActiveHoleEdit holeInfo = do
     searchTermId = WidgetIds.searchTermId $ hiHoleId holeInfo
 
 make ::
-  MonadA m => Sugar.Hole Sugar.Name m -> Maybe (Sugar.ExpressionN m) -> Guid ->
+  MonadA m => Sugar.Hole Sugar.Name m (Sugar.ExpressionN m) ->
+  Maybe (Sugar.ExpressionN m) -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make hole mNextHole guid =
   ExpressionGui.wrapDelegated holeFDConfig
@@ -418,7 +413,7 @@ make hole mNextHole guid =
 
 makeUnwrapped ::
   MonadA m => Maybe ExprGuiM.HoleNumber ->
-  Sugar.Hole Sugar.Name m ->
+  Sugar.Hole Sugar.Name m (Sugar.ExpressionN m) ->
   Maybe (Sugar.ExpressionN m) -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeUnwrapped mHoleNumber hole mNextHole guid myId = do
@@ -432,6 +427,7 @@ makeUnwrapped mHoleNumber hole mNextHole guid myId = do
         , hiState = stateProp
         , hiHoleActions = holeActions
         , hiMNextHole = mNextHole
+        , hiMArgument = hole ^. Sugar.holeMArg
         }
     _ -> makeInactive mHoleNumber isWritable myId
   where
@@ -440,12 +436,12 @@ makeUnwrapped mHoleNumber hole mNextHole guid myId = do
 searchTermWidgetId :: Widget.Id -> Widget.Id
 searchTermWidgetId = WidgetIds.searchTermId . FocusDelegator.delegatingId
 
-setHoleStateAndJump :: MonadA m => HoleState m -> Guid -> T m Widget.Id
+setHoleStateAndJump :: MonadA m => HoleState -> Guid -> T m Widget.Id
 setHoleStateAndJump newHoleState newHoleGuid = do
   Transaction.setP (assocStateRef newHoleGuid) newHoleState
   pure . searchTermWidgetId $ WidgetIds.fromGuid newHoleGuid
 
-assocStateRef :: MonadA m => Guid -> MkProperty m (HoleState m)
+assocStateRef :: MonadA m => Guid -> MkProperty m HoleState
 assocStateRef = Transaction.assocDataRefDef HoleInfo.emptyState "searchTerm"
 
 -- TODO: Use this where the hiState is currently used to get the

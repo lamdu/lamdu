@@ -42,10 +42,11 @@ wrap ::
   T m (ExprIRef.ExpressionI (Tag m))
 wrap exprP = do
   newFuncI <- newHole
-  Property.set exprP =<<
-    ExprIRef.newExprBody
-    (ExprUtil.makeApply newFuncI (Property.value exprP))
-  return newFuncI
+  applyI <-
+    ExprIRef.newExprBody .
+    ExprUtil.makeApply newFuncI $ Property.value exprP
+  Property.set exprP applyI
+  return applyI
 
 callWithArg ::
   MonadA m =>

@@ -40,7 +40,9 @@ import qualified Lamdu.WidgetIds as WidgetIds
 data IsHole = NotAHole | IsAHole
 
 pasteEventMap ::
-  MonadA m => Sugar.Hole Sugar.Name m -> Widget.EventHandlers (Transaction m)
+  MonadA m =>
+  Sugar.Hole Sugar.Name m (Sugar.ExpressionN m) ->
+  Widget.EventHandlers (Transaction m)
 pasteEventMap =
   maybe mempty
   (Widget.keysEventMapMovesCursor
@@ -181,13 +183,8 @@ actionsEventMap sExpr isHole resultPickers actions = do
       (fmap . fmap) Widget.eventResultFromCursor .
       E.charGroup "Operator" (E.Doc ["Edit", "Apply operator"])
       Config.operatorChars $ \c _isShifted -> do
-        targetGuid <- actions ^. Sugar.replaceWithNewHole
-        HoleEdit.setHoleStateAndJump
-          HoleState
-          { _hsSearchTerm = [c]
-          , _hsArgument = Just $ sExpr ^. Sugar.rPresugaredExpression
-          }
-          targetGuid
+        targetGuid <- actions ^. Sugar.wrap $ Sugar.emptyPrefixAction
+        HoleEdit.setHoleStateAndJump (HoleState [c]) targetGuid
     cut
       | isHoleBool = mempty
       | otherwise =

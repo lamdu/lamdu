@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info
-  ( HoleInfo(..), hsSearchTerm, hsArgument
-  , HoleState(..), emptyState, hiSearchTerm, hiArgument
+  ( HoleInfo(..), hsSearchTerm
+  , HoleState(..), emptyState, hiSearchTerm
   ) where
 
 import Control.Lens.Operators
@@ -18,30 +18,26 @@ import qualified Lamdu.CodeEdit.Sugar as Sugar
 
 type T = Transaction
 
-data HoleState m = HoleState
+newtype HoleState = HoleState
   { _hsSearchTerm :: String
-  , _hsArgument :: Maybe (Sugar.ExprStorePoint m)
   } deriving Eq
 LensTH.makeLenses ''HoleState
 derive makeBinary ''HoleState
 
-emptyState :: HoleState m
+emptyState :: HoleState
 emptyState =
   HoleState
   { _hsSearchTerm = ""
-  , _hsArgument = Nothing
   }
 
 data HoleInfo m = HoleInfo
   { hiGuid :: Guid
   , hiHoleId :: Widget.Id
-  , hiState :: Property (T m) (HoleState m)
+  , hiState :: Property (T m) HoleState
   , hiHoleActions :: Sugar.HoleActions Sugar.Name m
+  , hiMArgument :: Maybe (Sugar.ExpressionN m)
   , hiMNextHole :: Maybe (Sugar.ExpressionN m)
   }
 
 hiSearchTerm :: HoleInfo m -> String
 hiSearchTerm holeInfo = Property.value (hiState holeInfo) ^. hsSearchTerm
-
-hiArgument :: HoleInfo m -> Maybe (Sugar.ExprStorePoint m)
-hiArgument holeInfo = Property.value (hiState holeInfo) ^. hsArgument

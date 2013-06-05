@@ -38,7 +38,7 @@ module Lamdu.CodeEdit.Sugar
   , Lam(..), lKind, lParam, lIsDep, lResultType
   , FuncParamType(..)
   , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpHiddenLambdaGuid, fpType, fpMActions
-  , Hole(..), holeScope, holeMActions
+  , Hole(..), holeScope, holeMActions, holeMArg
   , HoleResultSeed(..), _ResultSeedExpression, _ResultSeedNewTag, _ResultSeedNewDefinition
   , ScopeItem
   , Scope(..), scopeLocals, scopeGlobals, scopeTags, scopeGetParams
@@ -47,7 +47,8 @@ module Lamdu.CodeEdit.Sugar
   , HoleResult(..)
     , holeResultInferred
     , holeResultConverted
-    , holeResultPick, holeResultPickPrefix
+    , holeResultPick, holeResultPickWrapped
+    , holeResultPickPrefix
   , LiteralInteger(..)
   , TagG(..), tagName, tagGuid
   , Inferred(..), iValue, iMAccept, iHole
