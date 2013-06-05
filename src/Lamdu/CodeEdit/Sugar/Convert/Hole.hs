@@ -129,17 +129,30 @@ convertTypeCheckedHoleH sugarContext mPaste iwc exprI =
         , _iMAccept =
           accept x . Property.value <$> SugarInfer.resultStored exprI
         }
-    accept what iref = do
-      writtenExpr <-
-        fmap fst <$>
-        ExprIRef.writeExpression iref what
-      pure . ExprIRef.exprGuid .
-        maybe iref (^. Expr.ePayload) $
-        writtenExpr ^?
-        Lens.folding ExprUtil.subExpressions .
-        Lens.filtered (Lens.has ExprLens.exprHole)
+    accept expr iref = do
+      loaded <- SugarInfer.load Nothing expr
+      let
+        exprInferred =
+          unjust "The inferred value of a hole must type-check!" $
+          SugarInfer.inferMaybe_ loaded inferState point
+      fmap (fromMaybe eGuid) . pickResult iref $
+        flip (,) Nothing <$> cleanUpInferredVal exprInferred
     plainHole =
       SugarExpr.make exprI . BodyHole =<< mkHole
+
+cleanUpInferredVal ::
+  Expr.Expression defa (Infer.Inferred defb) ->
+  Expr.Expression defa (Infer.Inferred defb)
+cleanUpInferredVal =
+  (ExprLens.exprKindedLam Val . Lens._2 . Expr.eBody .~ bodyHole) .
+  (ExprLens.exprApply . Lens.filtered isDependentApply .
+   Expr.applyArg . Expr.eBody .~ bodyHole) .
+  (Expr.eBody . Lens.traversed %~ cleanUpInferredVal)
+  where
+    isDependentApply =
+      ExprUtil.isDependentPi . Infer.iType .
+      (^. Expr.applyFunc . Expr.ePayload)
+    bodyHole = ExprLens.bodyHole # ()
 
 chooseHoleType ::
   [ExprIRef.ExpressionM m f] -> hole -> (ExprIRef.ExpressionM m f -> hole) -> hole
