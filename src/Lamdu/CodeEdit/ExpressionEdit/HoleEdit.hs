@@ -429,9 +429,7 @@ makeUnwrapped mHoleNumber hole mNextHole guid myId = do
         , hiMNextHole = mNextHole
         , hiMArgument = hole ^. Sugar.holeMArg
         }
-    _ -> makeInactive mHoleNumber isWritable myId
-  where
-    isWritable = isJust $ hole ^. Sugar.holeMActions
+    _ -> makeInactive mHoleNumber hole myId
 
 searchTermWidgetId :: Widget.Id -> Widget.Id
 searchTermWidgetId = WidgetIds.searchTermId . FocusDelegator.delegatingId
@@ -513,16 +511,23 @@ keysOfNum n
 
 makeInactive ::
   MonadA m => Maybe ExprGuiM.HoleNumber ->
-  Bool -> Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeInactive mHoleNumber isWritable myId =
-  ExpressionGui.fromValueWidget .
-  makeBackground myId Layers.inactiveHole unfocusedColor <$> do
-    space <-
-      ExprGuiM.widgetEnv $
-      BWidgets.makeFocusableTextView "  " myId
-    mHoleNumView <- traverse mkHoleNumView $ mHolePair =<< mHoleNumber
-    pure $ maybe id Widget.overlayView mHoleNumView space
+  Sugar.Hole Sugar.Name m (Sugar.ExpressionN m) ->
+  Widget.Id -> ExprGuiM m (ExpressionGui m)
+makeInactive mHoleNumber hole myId =
+  Lens.mapped . ExpressionGui.egWidget %~
+  makeBackground myId Layers.inactiveHole unfocusedColor $
+  case hole ^. Sugar.holeMArg of
+  Just arg ->
+    ExprGuiM.makeSubexpresion 0 arg
+  Nothing ->
+    ExpressionGui.fromValueWidget <$> do
+      space <-
+        ExprGuiM.widgetEnv $
+        BWidgets.makeFocusableTextView "  " myId
+      mHoleNumView <- traverse mkHoleNumView $ mHolePair =<< mHoleNumber
+      pure $ maybe id Widget.overlayView mHoleNumView space
   where
+    isWritable = isJust $ hole ^. Sugar.holeMActions
     mHolePair holeNumber = do
       keys <- keysOfNum holeNumber
       let
