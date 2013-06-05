@@ -142,15 +142,18 @@ make exprI expr = do
 
 setNextHole :: MonadA m => ExpressionU m -> ExpressionU m -> ExpressionU m
 setNextHole dest =
-  case dest ^? subHoles of
+  case dest ^? subHoles0 of
   Just hole ->
     -- The mplus ignores holes that are already set:
     Lens.mapped . plNextHole %~ (`mplus` Just hole)
   Nothing -> id
   where
-    subHoles =
-      Lens.folding subExpressions .
-      Lens.filtered (Lens.notNullOf (rBody . _BodyHole))
+    -- TODO: code reuse
+    subHoles0 = Lens.folding subExpressions . Lens.filtered cond
+    subHoles1 = Lens.folding subExpressions . Lens.filtered cond
+    cond expr =
+      Lens.notNullOf (rBody . _BodyHole) expr ||
+      Lens.notNullOf (rBody . _BodyInferred . iValue . subHoles1) expr
 
 subExpressions :: ExpressionU m -> [ExpressionU m]
 subExpressions x = x : x ^.. rBody . Lens.traversed . Lens.folding subExpressions

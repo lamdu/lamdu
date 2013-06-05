@@ -192,7 +192,7 @@ leaveSubexpressionKeys = [mk E.shift E.KeyLeft]
 
 replaceInferredValueKeys = delKeys
 keepInferredValueKeys = [noMods E.KeyEsc]
-acceptInferredValueKeys = [noMods E.KeyEnter]
+acceptInferredValueKeys = acceptInferredTypeKeys
 
 nextInfoMode = [noMods E.KeyF7]
 
