@@ -349,16 +349,16 @@ pickResult ::
   T m (Maybe Guid)
 pickResult exprS =
   fmap
-  ( fmap (ExprIRef.exprGuid . Lens.view (Expr.ePayload . Lens._2))
-  . listToMaybe . orderedInnerHoles . fmap swap
+  ( fmap (ExprIRef.exprGuid . Lens.view (Expr.ePayload . Lens._1))
+  . listToMaybe . orderedInnerHoles
   ) .
   (ExprIRef.writeExpressionWithStoredSubexpressions .
    Property.value . SugarInfer.resultStored) exprS .
   fmap ((Lens._1 . Lens.mapped %~ unStorePoint) . swap)
 
 orderedInnerHoles ::
-  Expr.Expression def (Infer.Inferred def, a) ->
-  [Expr.Expression def (Infer.Inferred def, a)]
+  Expr.Expression def (a, Infer.Inferred def) ->
+  [Expr.Expression def (a, Infer.Inferred def)]
 orderedInnerHoles e =
   case e ^. Expr.eBody of
   Expr.BodyApply (Expr.Apply func arg)
@@ -372,13 +372,13 @@ orderedInnerHoles e =
 -- Also skip param types, those can usually be inferred later, so less
 -- useful to fill immediately
 uninferredHoles ::
-  Expr.Expression def (Infer.Inferred def, a) ->
-  [Expr.Expression def (Infer.Inferred def, a)]
+  Expr.Expression def (a, Infer.Inferred def) ->
+  [Expr.Expression def (a, Infer.Inferred def)]
 uninferredHoles e =
   case e ^. Expr.eBody of
   Expr.BodyLeaf Expr.Hole -> [e]
   Expr.BodyApply (Expr.Apply func _)
-    | (ExprUtil.isDependentPi . Infer.iType . Lens.view (Expr.ePayload . Lens._1)) func ->
+    | (ExprUtil.isDependentPi . Infer.iType . (^. Expr.ePayload . Lens._2)) func ->
       uninferredHoles func
   Expr.BodyLam (Expr.Lambda lamKind _ paramType result) ->
     uninferredHoles result ++ do
@@ -388,4 +388,4 @@ uninferredHoles e =
 
 holeResultHasHoles :: HoleResult name m -> Bool
 holeResultHasHoles =
-  not . null . uninferredHoles . fmap (flip (,) ()) . Lens.view holeResultInferred
+  not . null . uninferredHoles . fmap ((,) ()) . Lens.view holeResultInferred
