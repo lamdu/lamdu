@@ -201,7 +201,7 @@ alphaNumericChars = ['a'..'z'] ++ ['0'..'9']
 
 recordTypeParensColor = rightArrowColor
 recordValParensColor = Draw.Color 0.2 1 0.2 1
-recordAddFieldKeys = [k 'a']
+recordAddFieldKeys = [k 'a', k ',']
 
 presentationChoiceScaleFactor = 0.4
 presentationChoiceColor = Draw.Color 0.4 0.4 0.4 1
