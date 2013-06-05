@@ -91,12 +91,9 @@ convertTypeCheckedHoleH sugarContext mPaste iwc exprI =
     inferState  = sugarContext ^. SugarM.scHoleInferState
     contextHash = sugarContext ^. SugarM.scMContextHash
     inferred = iwcInferred iwc
-    scope = Infer.nScope $ Infer.iPoint inferred
+    point = Infer.iPoint inferred
     token = (eGuid, contextHash)
-    inferExprType expr = do
-      loaded <- lift $ SugarInfer.load Nothing expr
-      memoBy (loaded, token, scope, 't') . return $
-        inferOnTheSide inferState scope loaded
+    inferExprType = inferOnTheSide (token, 't') inferState $ Infer.nScope point
     mkHole =
       fmap Hole . traverse mkWritableHoleActions $
       traverse (Lens.sequenceOf SugarInfer.plStored) exprI
@@ -158,16 +155,18 @@ memoBy ::
 memoBy k act = Cache.memoS (const act) k
 
 inferOnTheSide ::
-  MonadA m =>
+  (MonadA m, Typeable1 m, Cache.Key t, Cache.Key a) => t ->
   Infer.Context (DefI (Tag m)) ->
   Infer.Scope (DefI (Tag m)) ->
-  Infer.Loaded (DefI (Tag m)) () ->
-  Maybe (ExprIRef.ExpressionM m ())
-inferOnTheSide holeInferContext scope loaded =
-  void . Infer.iType . Lens.view Expr.ePayload <$>
-  SugarInfer.inferMaybe_ loaded sideInferContext node
+  ExprIRef.ExpressionM m a ->
+  CT m (Maybe (ExprIRef.ExpressionM m ()))
+inferOnTheSide token holeInferContext scope expr = do
+  loaded <- lift $ SugarInfer.load Nothing expr
+  memoBy (loaded, token, scope) . return $
+    void . Infer.iType . (^. Expr.ePayload) <$>
+    SugarInfer.inferMaybe_ loaded sideInferContext point
   where
-    (node, sideInferContext) =
+    (point, sideInferContext) =
       (`runState` holeInferContext) $ Infer.newNodeWithScope scope
 
 getScopeElement ::
@@ -292,6 +291,8 @@ makeHoleResult sugarContext inferred exprI seed =
     pick = do
       (finalExpr, mTargetGuid) <-
         Lens.mapped . Lens._1 %~
+        -- TODO: Makes no sense here anymore, move deeper inside
+        -- makeInferredExpr:
         unjust
         ("Arbitrary fake tag successfully inferred as hole result, " ++
          "but real new tag failed!") $

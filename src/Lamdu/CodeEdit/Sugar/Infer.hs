@@ -157,7 +157,6 @@ inferMaybe_ ::
   Maybe (ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))))
 inferMaybe_ loaded inferContext inferPoint =
   (fmap . fmap) fst $ inferMaybe loaded inferContext inferPoint
--- }}}}}}}}}}}}}}}}}
 
 inferWithVariables ::
   (RandomGen g, MonadA m) => g ->
