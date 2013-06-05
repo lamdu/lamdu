@@ -14,7 +14,7 @@ module Lamdu.CodeEdit.Sugar
   , DefinitionBuiltin(..)
   , Actions(..)
     , giveAsArg, callWithArg, callWithNextArg
-    , setToHole, replaceWithNewHole, cut, giveAsArgToOperator
+    , setToHole, replaceWithNewHole, cut
   , Body(..)
     , _BodyLam, _BodyApply, _BodyGetVar, _BodyHole
     , _BodyInferred, _BodyCollapsed, _BodyLiteralInteger

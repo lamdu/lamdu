@@ -102,8 +102,6 @@ mkActions sugarContext exprS =
   , _cut =
     mkCutter (sugarContext ^. SugarM.scCodeAnchors)
     (Property.value stored) $ mkReplaceWithNewHole exprS
-  , _giveAsArgToOperator =
-    ExprIRef.exprGuid <$> DataOps.giveAsArgToOperator stored
   }
   where
     giveAsArgPrefix prefix =

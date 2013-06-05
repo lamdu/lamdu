@@ -14,7 +14,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , DefinitionBuiltin(..)
   , Actions(..)
     , giveAsArg, callWithArg, callWithNextArg
-    , setToHole, replaceWithNewHole, cut, giveAsArgToOperator
+    , setToHole, replaceWithNewHole, cut
   , Body(..)
     , _BodyLam, _BodyApply, _BodyGetVar, _BodyHole
     , _BodyInferred, _BodyCollapsed, _BodyLiteralInteger
@@ -90,9 +90,6 @@ emptyPrefixAction = return ()
 
 data Actions m = Actions
   { _giveAsArg :: PrefixAction m -> T m Guid
-  -- Turn "x" to "x ? _" where "?" is an operator-hole.
-  -- Given string is initial hole search term.
-  , _giveAsArgToOperator :: T m Guid
   , _callWithNextArg :: PrefixAction m -> CT m (Maybe (T m Guid))
   , _callWithArg :: PrefixAction m -> CT m (Maybe (T m Guid))
   , _setToHole :: T m Guid

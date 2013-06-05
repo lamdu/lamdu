@@ -2,7 +2,6 @@
 module Lamdu.Data.Ops
   ( newHole, giveAsArg, callWithArg
   , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap
-  , giveAsArgToOperator
   , addListItem
   , newPublicDefinition
   , newBuiltin, newDefinition
@@ -47,16 +46,6 @@ giveAsArg exprP = do
     ExprIRef.newExprBody
     (ExprUtil.makeApply newFuncI (Property.value exprP))
   return newFuncI
-
-giveAsArgToOperator ::
-  MonadA m =>
-  ExprIRef.ExpressionProperty m ->
-  T m (ExprIRef.ExpressionI (Tag m))
-giveAsArgToOperator exprP = do
-  op <- newHole
-  opApplied <- ExprIRef.newExprBody . ExprUtil.makeApply op $ Property.value exprP
-  Property.set exprP =<< ExprIRef.newExprBody . ExprUtil.makeApply opApplied =<< newHole
-  return op
 
 callWithArg ::
   MonadA m =>
