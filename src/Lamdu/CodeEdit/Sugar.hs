@@ -1,11 +1,16 @@
 {-# LANGUAGE FlexibleContexts, OverloadedStrings, ConstraintKinds, TypeFamilies, Rank2Types, PatternGuards #-}
 module Lamdu.CodeEdit.Sugar
-  ( Definition(..), drName, drGuid, drType, drBody
+  ( Definition(..), drName, drGuid, drBody
   , DefinitionBody(..)
   , ListItemActions(..), itemAddNext, itemDelete
   , FuncParamActions(..), fpListItemActions, fpGetExample
-  , DefinitionExpression(..), deContent, deIsTypeRedundant, deMNewType
-  , DefinitionContent(..), DefinitionNewType(..)
+  , DefinitionExpression(..), deContent, deTypeInfo
+  , ShowIncompleteType(..), AcceptNewType(..)
+  , DefinitionTypeInfo(..)
+    , _DefinitionNoTypeInfo
+    , _DefinitionIncompleteType
+    , _DefinitionNewType
+  , DefinitionContent(..)
   , DefinitionBuiltin(..)
   , Actions(..)
     , giveAsArg, callWithArg, callWithNextArg
@@ -64,7 +69,6 @@ import Control.MonadA (MonadA)
 import Data.Binary (Binary)
 import Data.Cache (Cache)
 import Data.Foldable (traverse_)
-import Data.Function (on)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe, listToMaybe, isJust)
 import Data.Monoid (Monoid(..))
@@ -825,65 +829,80 @@ loadConvertDefI ::
 loadConvertDefI cp defI =
   convertDefI =<< lift (Load.loadDefinitionClosure defI)
   where
+    defGuid = IRef.guid defI
     convertDefBody (Definition.BodyBuiltin builtin) =
-      fmap return . convertDefIBuiltin builtin
+      lift . convertDefIBuiltin cp builtin defI
     convertDefBody (Definition.BodyExpression exprLoaded) =
-      convertDefIExpression cp exprLoaded
+      convertDefIExpression cp exprLoaded defI
     convertDefI (Definition.Definition defBody typeLoaded) = do
-      bodyS <- convertDefBody defBody defI $ Load.propertyOfClosure <$> typeLoaded
-      typeS <-
-        lift .
-        convertExpressionPure cp (SugarExpr.mkGen 2 3 (IRef.guid defI)) $
-        void typeLoaded
-      let defGuid = IRef.guid defI
+      bodyS <- convertDefBody defBody $ Load.propertyOfClosure <$> typeLoaded
       name <- lift $ SugarExpr.getStoredName defGuid
       return Definition
         { _drGuid = defGuid
         , _drName = name
         , _drBody = bodyS
-        , _drType = typeS
         }
 
 convertDefIBuiltin ::
-  MonadA m => Definition.Builtin -> DefI (Tag m) ->
-  ExprIRef.ExpressionM m (Stored m) -> DefinitionBody MStoredName m (ExpressionU m)
-convertDefIBuiltin (Definition.Builtin name) defI typeI =
-  DefinitionBodyBuiltin DefinitionBuiltin
-    { biName = name
-    , biMSetName = Just setName
-    }
+  (Typeable1 m, MonadA m) => Anchors.CodeProps m ->
+  Definition.Builtin -> DefI (Tag m) ->
+  ExprIRef.ExpressionM m (Stored m) ->
+  T m (DefinitionBody MStoredName m (ExpressionU m))
+convertDefIBuiltin cp (Definition.Builtin name) defI defType =
+  DefinitionBodyBuiltin <$> do
+    defTypeS <- convertExpressionPure cp iDefTypeGen (void defType)
+    pure DefinitionBuiltin
+      { biName = name
+      , biMSetName = Just setName
+      , biType = defTypeS
+      }
   where
-    typeIRef = Property.value $ typeI ^. Expr.ePayload
+    defGuid = IRef.guid defI
+    iDefTypeGen = SugarExpr.mkGen 1 3 defGuid
+    typeIRef = Property.value (defType ^. Expr.ePayload)
     setName =
       Transaction.writeIRef defI .
       (`Definition.Definition` typeIRef) .
       Definition.BodyBuiltin . Definition.Builtin
 
-makeNewTypeForDefinition ::
-  (Typeable1 m, MonadA m, RandomGen gen) =>
-  Anchors.CodeProps m -> Stored m -> ExprIRef.ExpressionM m () -> Bool -> Bool ->
-  gen -> T m (Maybe (DefinitionNewType MStoredName m (ExpressionU m)))
-makeNewTypeForDefinition cp typeIRef inferredTypeP typesMatch success iTypeGen
-  | success && not typesMatch && isCompleteType inferredTypeP =
-    Just <$> mkNewType
-  | otherwise = return Nothing
-  where
-    mkNewType = do
-      inferredTypeS <-
-        convertExpressionPure cp iTypeGen inferredTypeP
-      return DefinitionNewType
-        { dntNewType = inferredTypeS
-        , dntAcceptNewType =
-          Property.set typeIRef =<<
-          ExprIRef.newExpression inferredTypeP
+makeTypeInfo ::
+  (Typeable1 m, MonadA m) =>
+  Anchors.CodeProps m -> Guid ->
+  ExprIRef.ExpressionM m (Stored m) ->
+  ExprIRef.ExpressionM m () -> Bool ->
+  T m (DefinitionTypeInfo m (ExpressionU m))
+makeTypeInfo cp defGuid defType inferredType success
+  | not success || not (isCompleteType inferredType) =
+    DefinitionIncompleteType <$> do
+      defTypeS <- convertExpressionPure cp iDefTypeGen $ void defType
+      inferredTypeS <- convertExpressionPure cp iNewTypeGen inferredType
+      pure ShowIncompleteType
+        { sitOldType = defTypeS
+        , sitNewIncompleteType = inferredTypeS
         }
+  | typesMatch = pure DefinitionNoTypeInfo
+  | otherwise =
+    DefinitionNewType <$> do
+      defTypeS <- convertExpressionPure cp iDefTypeGen $ void defType
+      inferredTypeS <- convertExpressionPure cp iNewTypeGen inferredType
+      pure AcceptNewType
+        { antOldType = defTypeS
+        , antNewType = inferredTypeS
+        , antAccept =
+          Property.set (defType ^. Expr.ePayload) =<<
+          ExprIRef.newExpression inferredType
+        }
+  where
+    iDefTypeGen = SugarExpr.mkGen 1 3 defGuid
+    iNewTypeGen = SugarExpr.mkGen 2 3 defGuid
+    typesMatch = void defType `ExprUtil.alphaEq` inferredType
 
 convertDefIExpression ::
   (MonadA m, Typeable1 m) => Anchors.CodeProps m ->
   Load.LoadedClosure (Tag m) -> DefI (Tag m) ->
   ExprIRef.ExpressionM m (Stored m) ->
   CT m (DefinitionBody MStoredName m (ExpressionU m))
-convertDefIExpression cp exprLoaded defI typeI = do
+convertDefIExpression cp exprLoaded defI defType = do
   inferredLoadedResult@SugarInfer.InferLoadedResult
     { SugarInfer._ilrExpr = ilrExpr
     , SugarInfer._ilrSuccess = success
@@ -891,13 +910,10 @@ convertDefIExpression cp exprLoaded defI typeI = do
     SugarInfer.inferLoadedExpression
     inferLoadedGen (Just defI) exprLoaded initialInferState
   let
-    inferredTypeP =
+    inferredType =
       void . Infer.iType . iwcInferred $ SugarInfer.resultInferred ilrExpr
-    typesMatch =
-      on (==) ExprUtil.canonizeParamIds (void typeI) inferredTypeP
-  mNewType <-
-    lift $ makeNewTypeForDefinition cp (typeI ^. Expr.ePayload)
-    inferredTypeP typesMatch success iTypeGen
+  typeInfo <-
+    lift $ makeTypeInfo cp defGuid defType (void inferredType) success
   context <- lift $ SugarM.mkContext cp convertExpressionI (Just defI) (Just reinferRoot) inferredLoadedResult
   lift . SugarM.run context $ do
     content <-
@@ -905,8 +921,7 @@ convertDefIExpression cp exprLoaded defI typeI = do
       ilrExpr & traverse . SugarInfer.plInferred %~ Just
     return $ DefinitionBodyExpression DefinitionExpression
       { _deContent = content
-      , _deMNewType = mNewType
-      , _deIsTypeRedundant = success && typesMatch
+      , _deTypeInfo = typeInfo
       }
   where
     initialInferState = Infer.initial (Just defI)
@@ -920,7 +935,6 @@ convertDefIExpression cp exprLoaded defI typeI = do
       memoBy (key, loaded, initialInferState, "reinfer root" :: String) .
         return . isJust $ uncurry (SugarInfer.inferMaybe_ loaded)
         initialInferState
-    recordParamsInfo = SugarM.RecordParamsInfo defGuid $ jumpToDefI cp defI
     defGuid = IRef.guid defI
-    iTypeGen = SugarExpr.mkGen 0 3 defGuid
-    inferLoadedGen = SugarExpr.mkGen 1 3 defGuid
+    recordParamsInfo = SugarM.RecordParamsInfo defGuid $ jumpToDefI cp defI
+    inferLoadedGen = SugarExpr.mkGen 0 3 defGuid

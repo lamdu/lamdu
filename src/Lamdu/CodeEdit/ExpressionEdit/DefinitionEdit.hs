@@ -207,21 +207,23 @@ make def =
     makeBuiltinDefinition def builtin
 
 makeBuiltinDefinition ::
-  MonadA m => Sugar.Definition Sugar.Name m (Sugar.ExpressionN m) ->
-  Sugar.DefinitionBuiltin m -> ExprGuiM m (WidgetT m)
+  MonadA m =>
+  Sugar.Definition Sugar.Name m (Sugar.ExpressionN m) ->
+  Sugar.DefinitionBuiltin m (Sugar.ExpressionN m) ->
+  ExprGuiM m (WidgetT m)
 makeBuiltinDefinition def builtin =
   Box.vboxAlign 0 <$> sequenceA
-    [ BWidgets.hboxCenteredSpaced <$> sequenceA
+    [ defTypeScale . (^. ExpressionGui.egWidget) <$>
+      ExprGuiM.makeSubexpresion 0 (Sugar.biType builtin)
+    , BWidgets.hboxCenteredSpaced <$> sequenceA
       [ ExprGuiM.withFgColor Config.builtinOriginNameColor $
         makeNameEdit name (Widget.joinId myId ["name"]) guid
       , makeEquals myId
       , BuiltinEdit.make builtin myId
       ]
-    , defTypeScale . (^. ExpressionGui.egWidget) <$>
-      ExprGuiM.makeSubexpresion 0 typ
     ]
   where
-    Sugar.Definition guid name typ _ = def
+    Sugar.Definition guid name _ = def
     myId = WidgetIds.fromGuid guid
 
 defTypeScale :: Widget f -> Widget f
@@ -258,19 +260,24 @@ makeExprDefinition ::
   ExprGuiM m (WidgetT m)
 makeExprDefinition def bodyExpr = do
   typeWidgets <-
-    case bodyExpr ^. Sugar.deMNewType of
-    Nothing
-      | bodyExpr ^. Sugar.deIsTypeRedundant -> return []
-      | otherwise -> fmap ((:[]) . defTypeScale . BWidgets.hboxSpaced) (mkAcceptedRow id)
-    Just (Sugar.DefinitionNewType inferredType acceptInferredType) ->
-      fmap ((:[]) . defTypeScale . BWidgets.gridHSpaced) $ sequenceA
-      [ mkAcceptedRow (>>= addAcceptanceArrow acceptInferredType)
-      , mkTypeRow id "Inferred type:" inferredType
+    case bodyExpr ^. Sugar.deTypeInfo of
+    Sugar.DefinitionNoTypeInfo -> return []
+    Sugar.DefinitionIncompleteType x ->
+      fmap makeGrid $ sequenceA
+      [ mkTypeRow "Type:" id $ Sugar.sitOldType x
+      , mkTypeRow "Inferred type:" id $ Sugar.sitNewIncompleteType x
+      ]
+    Sugar.DefinitionNewType x ->
+      fmap makeGrid $ sequenceA
+      [ mkTypeRow "Type:" (>>= addAcceptanceArrow (Sugar.antAccept x)) $
+        Sugar.antOldType x
+      , mkTypeRow "Inferred type:" id $ Sugar.antNewType x
       ]
   bodyWidget <-
     makeDefContentEdit guid name $ bodyExpr ^. Sugar.deContent
   return . Box.vboxAlign 0 $ typeWidgets ++ [bodyWidget]
   where
+    makeGrid = (:[]) . defTypeScale . BWidgets.gridHSpaced
     addAcceptanceArrow acceptInferredType label = do
       acceptanceLabel <-
         (fmap . Widget.weakerEvents)
@@ -281,7 +288,7 @@ makeExprDefinition def bodyExpr = do
       return $ BWidgets.hboxCenteredSpaced [acceptanceLabel, label]
     right = Vector2 1 0.5
     center = 0.5
-    mkTypeRow onLabel labelText typeExpr = do
+    mkTypeRow labelText onLabel typeExpr = do
       label <-
         onLabel . labelStyle . ExprGuiM.widgetEnv .
         BWidgets.makeLabel labelText $ Widget.toAnimId myId
@@ -290,8 +297,7 @@ makeExprDefinition def bodyExpr = do
         [ (right, label)
         , (center, Widget.doesntTakeFocus (typeGui ^. ExpressionGui.egWidget))
         ]
-    mkAcceptedRow onLabel = mkTypeRow onLabel "Type:" typ
-    Sugar.Definition guid name typ _ = def
+    Sugar.Definition guid name _ = def
     myId = WidgetIds.fromGuid guid
     labelStyle =
       ExprGuiM.atEnv $ WE.setTextSizeColor Config.defTypeLabelTextSize Config.defTypeLabelColor

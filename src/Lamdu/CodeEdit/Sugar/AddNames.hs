@@ -416,7 +416,8 @@ withWhereItem item@WhereItem{..} = CPS $ \k -> do
   pure (item { wiValue = value, wiName = name }, res)
 
 toDefinitionContent ::
-  (MonadA tm, MonadNaming m) => DefinitionContent (OldName m) tm (Expression (OldName m) tm) ->
+  (MonadA tm, MonadNaming m) =>
+  DefinitionContent (OldName m) tm (Expression (OldName m) tm) ->
   m (DefinitionContent (NewName m) tm (Expression (NewName m) tm))
 toDefinitionContent def@DefinitionContent{..} = do
   (depParams, (params, (whereItems, body))) <-
@@ -431,37 +432,26 @@ toDefinitionContent def@DefinitionContent{..} = do
     , dWhereItems = whereItems
     }
 
-toDefinitionNewType ::
-  (MonadA tm, MonadNaming m) => DefinitionNewType (OldName m) tm (Expression (OldName m) tm) ->
-  m (DefinitionNewType (NewName m) tm (Expression (NewName m) tm))
-toDefinitionNewType dnt@DefinitionNewType{..} = do
-  newType <- toExpression dntNewType
-  pure dnt { dntNewType = newType }
-
 toDefinitionBody ::
-  (MonadA tm, MonadNaming m) => DefinitionBody (OldName m) tm (Expression (OldName m) tm) ->
+  (MonadA tm, MonadNaming m) =>
+  DefinitionBody (OldName m) tm (Expression (OldName m) tm) ->
   m (DefinitionBody (NewName m) tm (Expression (NewName m) tm))
 toDefinitionBody (DefinitionBodyBuiltin bi) =
-  pure $ DefinitionBodyBuiltin bi
+  DefinitionBodyBuiltin <$> traverse toExpression bi
 toDefinitionBody
-  (DefinitionBodyExpression
-   def@DefinitionExpression {..}) =
-    DefinitionBodyExpression <$> do
-      content <- toDefinitionContent _deContent
-      mNewType <- traverse toDefinitionNewType _deMNewType
-      pure def
-        { _deContent = content
-        , _deMNewType = mNewType
-        }
+  (DefinitionBodyExpression (DefinitionExpression content typeInfo)) =
+    DefinitionBodyExpression <$>
+    (DefinitionExpression <$>
+     toDefinitionContent content <*>
+     traverse toExpression typeInfo)
 
 toDef ::
   (MonadA tm, MonadNaming m) => Definition (OldName m) tm (Expression (OldName m) tm) ->
   m (Definition (NewName m) tm (Expression (NewName m) tm))
 toDef def@Definition {..} = do
-  (name, (typ, body)) <-
-    runCPS (opWithDefName _drGuid _drName) $
-    (,) <$> toExpression _drType <*> toDefinitionBody _drBody
-  pure def { _drName = name, _drType = typ, _drBody = body }
+  (name, body) <-
+    runCPS (opWithDefName _drGuid _drName) $ toDefinitionBody _drBody
+  pure def { _drName = name, _drBody = body }
 
 addToDef :: MonadA m => DefinitionU m -> DefinitionN m
 addToDef =

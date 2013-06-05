@@ -26,10 +26,10 @@ builtinFDConfig = FocusDelegator.Config
 
 make
   :: MonadA m
-  => Sugar.DefinitionBuiltin m
+  => Sugar.DefinitionBuiltin m (Sugar.ExpressionN m)
   -> Widget.Id
   -> ExprGuiM m (WidgetT m)
-make (Sugar.DefinitionBuiltin (Definition.FFIName modulePath name) setFFIName) myId =
+make (Sugar.DefinitionBuiltin (Definition.FFIName modulePath name) setFFIName _) myId =
   ExprGuiM.assignCursor myId (WidgetIds.builtinFFIName myId) $ do
     moduleName <-
       makeNamePartEditor Config.foreignModuleColor

@@ -1,12 +1,16 @@
 {-# LANGUAGE KindSignatures, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 module Lamdu.CodeEdit.Sugar.Types
-  ( Definition(..), drName, drGuid, drType, drBody
+  ( Definition(..), drName, drGuid, drBody
   , DefinitionBody(..)
   , ListItemActions(..), itemAddNext, itemDelete
   , FuncParamActions(..), fpListItemActions, fpGetExample
-  , DefinitionExpression(..), deContent, deIsTypeRedundant, deMNewType
+  , DefinitionExpression(..), deContent, deTypeInfo
+  , ShowIncompleteType(..), AcceptNewType(..)
+  , DefinitionTypeInfo(..)
+    , _DefinitionNoTypeInfo
+    , _DefinitionIncompleteType
+    , _DefinitionNewType
   , DefinitionContent(..)
-  , DefinitionNewType(..)
   , DefinitionBuiltin(..)
   , Actions(..)
     , giveAsArg, callWithArg, callWithNextArg
@@ -346,11 +350,6 @@ instance Show expr => Show (Body name m expr) where
   show BodyGetVar {} = "GetVar:TODO"
   show BodyGetParams {} = "GetParams:TODO"
 
-data DefinitionNewType name m expr = DefinitionNewType
-  { dntNewType :: expr
-  , dntAcceptNewType :: T m ()
-  } deriving (Functor, Foldable, Traversable)
-
 data WhereItem name m expr = WhereItem
   { wiValue :: DefinitionContent name m expr
   , wiGuid :: Guid
@@ -369,27 +368,43 @@ data DefinitionContent name m expr = DefinitionContent
   , dAddInnermostWhereItem :: T m Guid
   } deriving (Functor, Foldable, Traversable)
 
-data DefinitionExpression name m expr = DefinitionExpression
-  { _deContent :: DefinitionContent name m expr
-  , _deIsTypeRedundant :: Bool
-  , _deMNewType :: Maybe (DefinitionNewType name m expr)
+data AcceptNewType m expr = AcceptNewType
+  { antOldType :: expr
+  , antNewType :: expr
+  , antAccept :: T m ()
   } deriving (Functor, Foldable, Traversable)
 
-data DefinitionBuiltin m = DefinitionBuiltin
+data ShowIncompleteType expr = ShowIncompleteType
+  { sitOldType :: expr
+  , sitNewIncompleteType :: expr
+  } deriving (Functor, Foldable, Traversable)
+
+data DefinitionTypeInfo m expr
+  = DefinitionNoTypeInfo
+  | DefinitionIncompleteType (ShowIncompleteType expr)
+  | DefinitionNewType (AcceptNewType m expr)
+  deriving (Functor, Foldable, Traversable)
+
+data DefinitionExpression name m expr = DefinitionExpression
+  { _deContent :: DefinitionContent name m expr
+  , _deTypeInfo :: DefinitionTypeInfo m expr
+  } deriving (Functor, Foldable, Traversable)
+
+data DefinitionBuiltin m expr = DefinitionBuiltin
   { biName :: Definition.FFIName
   -- Consider removing Maybe'ness here
   , biMSetName :: Maybe (Definition.FFIName -> T m ())
-  }
+  , biType :: expr
+  } deriving (Functor, Foldable, Traversable)
 
 data DefinitionBody name m expr
   = DefinitionBodyExpression (DefinitionExpression name m expr)
-  | DefinitionBodyBuiltin (DefinitionBuiltin m)
+  | DefinitionBodyBuiltin (DefinitionBuiltin m expr)
   deriving (Functor, Foldable, Traversable)
 
 data Definition name m expr = Definition
   { _drGuid :: Guid
   , _drName :: name
-  , _drType :: expr
   , _drBody :: DefinitionBody name m expr
   } deriving (Functor, Foldable, Traversable)
 
@@ -422,5 +437,6 @@ Lens.makeLenses ''RecordField
 Lens.makeLenses ''Scope
 Lens.makeLenses ''TagG
 Lens.makePrisms ''Body
+Lens.makePrisms ''DefinitionTypeInfo
 Lens.makePrisms ''HoleResultSeed
 Lens.makePrisms ''SpecialArgs
