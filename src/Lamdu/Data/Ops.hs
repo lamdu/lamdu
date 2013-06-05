@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveFunctor #-}
 module Lamdu.Data.Ops
-  ( newHole, giveAsArg, callWithArg
+  ( newHole, wrap, callWithArg
   , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap
   , addListItem
   , newPublicDefinition
@@ -36,11 +36,11 @@ import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 type T = Transaction
 
-giveAsArg ::
+wrap ::
   MonadA m =>
   ExprIRef.ExpressionProperty m ->
   T m (ExprIRef.ExpressionI (Tag m))
-giveAsArg exprP = do
+wrap exprP = do
   newFuncI <- newHole
   Property.set exprP =<<
     ExprIRef.newExprBody

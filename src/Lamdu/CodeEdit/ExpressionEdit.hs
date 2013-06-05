@@ -160,7 +160,7 @@ actionsEventMap sExpr isHole resultPickers actions = do
         FocusDelegator.notDelegatingId $ return exprGuid
   return $ mconcat
     [ callWithArgsEventMap
-    , giveAsArg
+    , wrap
     , addOperator
     , replace
     , cut
@@ -172,11 +172,11 @@ actionsEventMap sExpr isHole resultPickers actions = do
       | otherwise = "Pick and "
     prefix = sequence_ resultPickers
     delKeys = Config.replaceKeys ++ Config.delKeys
-    giveAsArg =
+    wrap =
       Widget.keysEventMapMovesCursor
-      Config.giveAsArgumentKeys (E.Doc ["Edit", "Give as argument"]) .
+      Config.wrapKeys (E.Doc ["Edit", "Wrap"]) .
       fmap WidgetIds.fromGuid $
-      (actions ^. Sugar.giveAsArg) Sugar.emptyPrefixAction
+      (actions ^. Sugar.wrap) Sugar.emptyPrefixAction
     addOperator =
       (fmap . fmap) Widget.eventResultFromCursor .
       E.charGroup "Operator" (E.Doc ["Edit", "Apply operator"])

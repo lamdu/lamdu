@@ -13,7 +13,7 @@ module Lamdu.CodeEdit.Sugar
   , DefinitionContent(..)
   , DefinitionBuiltin(..)
   , Actions(..)
-    , giveAsArg, callWithArg, callWithNextArg
+    , wrap, callWithArg, callWithNextArg
     , setToHole, replaceWithNewHole, cut
   , Body(..)
     , _BodyLam, _BodyApply, _BodyGetVar, _BodyHole
