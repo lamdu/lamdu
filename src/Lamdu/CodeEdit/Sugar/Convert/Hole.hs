@@ -280,6 +280,7 @@ makeHoleResult sugarContext inferred exprI seed =
         SugarInfer.inferMaybe loaded (sugarContext ^. SugarM.scHoleInferState) point
     gen = genFromHashable (guid, seedHashable seed)
     guid = SugarInfer.resultGuid exprI
+    iref = Property.value $ SugarInfer.resultStored exprI
     token = (guid, sugarContext ^. SugarM.scMContextHash)
     mkHoleResult (fakeConverted, fakeInferredExpr) =
       HoleResult
@@ -297,7 +298,7 @@ makeHoleResult sugarContext inferred exprI seed =
         ("Arbitrary fake tag successfully inferred as hole result, " ++
          "but real new tag failed!") $
         Cache.unmemoS makeInferredExpr
-      fmap (mplus mTargetGuid) . pickResult exprI $
+      fmap (mplus mTargetGuid) . pickResult iref $
         ExprUtil.randomizeParamIds gen finalExpr
 
 seedExprEnv ::
@@ -345,16 +346,15 @@ unjust = fromMaybe . error
 
 pickResult ::
   MonadA m =>
-  ExprIRef.ExpressionM m (SugarInfer.PayloadM m i (Stored m)) ->
+  ExprIRef.ExpressionIM m ->
   ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), Maybe (StorePoint (Tag m))) ->
   T m (Maybe Guid)
-pickResult exprS =
+pickResult exprIRef =
   fmap
   ( fmap (ExprIRef.exprGuid . Lens.view (Expr.ePayload . Lens._1))
   . listToMaybe . orderedInnerHoles
   ) .
-  (ExprIRef.writeExpressionWithStoredSubexpressions .
-   Property.value . SugarInfer.resultStored) exprS .
+  ExprIRef.writeExpressionWithStoredSubexpressions exprIRef .
   fmap ((Lens._1 . Lens.mapped %~ unStorePoint) . swap)
 
 orderedInnerHoles ::
