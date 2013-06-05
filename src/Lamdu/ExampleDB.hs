@@ -118,8 +118,8 @@ createBuiltins =
       forAll "a" $ \a ->
       forAll "b" $ \b ->
       mkPiRecord
-      [ ("mapping", mkPi a b)
-      , ("over", listOf a)
+      [ ("list", listOf a)
+      , ("mapping", mkPi a b)
       ] $ listOf b
 
     publicBuiltin_ "Data.List.replicate" . forAll "a" $ \a ->

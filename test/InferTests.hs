@@ -258,19 +258,19 @@ getFieldWasntAllowed =
   where
     topLevel =
       getDef "map" $$ asHole recType $$ hole $$:
-      [ lambda "x" (asHole recType) $
-        \_ -> hole
-      , getDef ":" $$ asHole recType $$:
+      [ getDef ":" $$ asHole recType $$:
         [ record Val []
         , holeWithInferredType $ listOf recType
         ]
+      , lambda "x" (asHole recType) $
+        \_ -> hole
       ]
     pos :: Lens.Traversal' (Expression def a) (Expression def a)
     pos = lambdaPos . Lens._3
     lambdaPos :: Lens.Traversal' (Expression def a) (Guid, Expression def a, Expression def a)
     lambdaPos =
       applyArg .
-      ExprLens.exprKindedRecordFields Val . Lens.ix 0 . Lens._2 .
+      ExprLens.exprKindedRecordFields Val . Lens.ix 1 . Lens._2 .
       ExprLens.exprKindedLam Val
     param = topLevel ^?! lambdaPos . Lens._1
     recType = record Type []
@@ -290,11 +290,11 @@ wrongRecurseMissingArg =
 mapIdTest =
   testInfer "map id (5:_)" $
   getDef "map" $$ asHole integerType $$ asHole integerType $$:
-  [ getDef "id" $$ asHole integerType
-  , getDef ":" $$ asHole integerType $$:
+  [ getDef ":" $$ asHole integerType $$:
     [ literalInteger 5
     , holeWithInferredType $ listOf integerType
     ]
+  , getDef "id" $$ asHole integerType
   ]
 
 hunitTests =
