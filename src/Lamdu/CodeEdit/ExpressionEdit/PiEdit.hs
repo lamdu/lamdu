@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.CodeEdit.ExpressionEdit.PiEdit(make) where
 
-import Control.Lens ((^.))
+import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (mappend)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
@@ -57,7 +57,7 @@ make parentPrecedence (Sugar.Lam _ param _isDep resultType) =
       let
         addBg
           | paramUsed =
-              Lens.over ExpressionGui.egWidget $
+              ExpressionGui.egWidget %~
               Widget.backgroundColor
               Layers.collapsedExpandedBG
               (mappend (Widget.toAnimId paramId) ["polymorphic bg"])
