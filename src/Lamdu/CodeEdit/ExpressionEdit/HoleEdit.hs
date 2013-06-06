@@ -149,7 +149,7 @@ makeHoleResultWidget holeInfo resultId holeResult =
   Widget.scale Config.holeResultScaleFactor .
   Widget.strongerEvents (resultPickEventMap holeInfo holeResult) .
   Lens.view ExpressionGui.egWidget =<<
-  (ExprGuiM.makeSubexpresion 0 . Sugar.removeTypes)
+  (ExprGuiM.makeSubexpresion 0 . Sugar.removeHoleResultTypes)
   (holeResult ^. Sugar.holeResultConverted)
 
 makeNewTagResultWidget ::

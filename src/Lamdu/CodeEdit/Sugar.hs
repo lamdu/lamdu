@@ -55,7 +55,7 @@ module Lamdu.CodeEdit.Sugar
   , Collapsed(..), cFuncGuid, cCompact, cFullExpression
   , loadConvertDefI
   , PrefixAction, emptyPrefixAction
-  , SugarExpr.removeNonHoleTypes, SugarExpr.removeTypes
+  , SugarExpr.removeNonHoleTypes, SugarExpr.removeHoleResultTypes
   , Hole.holeResultHasHoles
   , ExprStorePoint
   ) where
@@ -440,7 +440,7 @@ removeRedundantSubExprTypes =
   (rBody %~
     ( Lens.traversed %~ removeRedundantTypes
       & Lens.outside _BodyHole .~
-        BodyHole . (holeMArg . Lens.traversed %~ removeRedundantSubExprTypes)
+        BodyHole . (Lens.traversed %~ removeRedundantSubExprTypes)
     ) .
     (_BodyApply . aFunc %~ remSuc) .
     (_BodyGetField . gfRecord %~ remSuc) .
