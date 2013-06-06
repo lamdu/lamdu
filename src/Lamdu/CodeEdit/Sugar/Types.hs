@@ -19,6 +19,7 @@ module Lamdu.CodeEdit.Sugar.Types
     , _BodyLam, _BodyApply, _BodyGetVar, _BodyHole
     , _BodyInferred, _BodyCollapsed, _BodyLiteralInteger
     , _BodyAtom, _BodyList, _BodyRecord, _BodyTag
+    , _BodyGetField
   , Payload(..), plInferredTypes, plActions, plNextHole
   , ExpressionP(..)
     , rGuid, rBody, rPayload, rHiddenGuids, rPresugaredExpression

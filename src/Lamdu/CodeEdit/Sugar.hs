@@ -219,7 +219,7 @@ convertLam lambda@(Expr.Lambda k paramGuid _paramType result) exprI = do
   SugarExpr.make exprI $ BodyLam
     Lam
     { _lParam = param
-    , _lResultType = SugarExpr.removeSuccessfulType sBody
+    , _lResultType = sBody
     , _lKind = k
     , _lIsDep = isDep
     }
@@ -242,7 +242,7 @@ convertParameterRef parGuid exprI = do
         }
     Nothing -> do
       parName <- getStoredNameS parGuid
-      fmap SugarExpr.removeSuccessfulType . SugarExpr.make exprI .
+      SugarExpr.make exprI .
         BodyGetVar $ GetVar
         { _gvName = parName
         , _gvIdentifier = parGuid
@@ -355,22 +355,19 @@ recordFieldActions defaultGuid exprIRef iref =
 
 convertField ::
   (Typeable1 m, MonadA m) =>
-  Kind -> Maybe (ExprIRef.ExpressionIM m) -> Guid ->
+  Maybe (ExprIRef.ExpressionIM m) -> Guid ->
   ( SugarInfer.ExprMM m
   , SugarInfer.ExprMM m
   ) ->
   SugarM m (RecordField m (ExpressionU m))
-convertField k mIRef defaultGuid (tagExpr, expr) = do
+convertField mIRef defaultGuid (tagExpr, expr) = do
   tagExprS <- SugarM.convertSubexpression tagExpr
   exprS <- SugarM.convertSubexpression expr
   return RecordField
     { _rfMItemActions =
       recordFieldActions defaultGuid <$> SugarInfer.resultMIRef tagExpr <*> mIRef
-    , _rfTag = SugarExpr.removeSuccessfulType tagExprS
-    , _rfExpr =
-        case k of
-        Val -> exprS
-        Type -> SugarExpr.removeSuccessfulType exprS
+    , _rfTag = tagExprS
+    , _rfExpr = exprS
     }
 
 convertRecord ::
@@ -378,9 +375,8 @@ convertRecord ::
   Expr.Record (SugarInfer.ExprMM m) ->
   Convertor m
 convertRecord (Expr.Record k fields) exprI = do
-  sFields <- mapM (convertField k (SugarInfer.resultMIRef exprI) defaultGuid) fields
-  fmap SugarExpr.removeSuccessfulType .
-    SugarExpr.make exprI $ BodyRecord
+  sFields <- mapM (convertField (SugarInfer.resultMIRef exprI) defaultGuid) fields
+  SugarExpr.make exprI $ BodyRecord
     Record
     { _rKind = k
     , _rFields =
@@ -429,7 +425,6 @@ convertGetField (Expr.GetField recExpr tagExpr) exprI = do
     return (tag, SugarM.tpiJumpTo paramInfo)
   case mVar of
     Just var ->
-      fmap SugarExpr.removeSuccessfulType .
       SugarExpr.make exprI $ BodyGetVar var
     Nothing -> do
       recExprS <- SugarM.convertSubexpression recExpr
@@ -437,8 +432,25 @@ convertGetField (Expr.GetField recExpr tagExpr) exprI = do
       SugarExpr.make exprI $ BodyGetField
         GetField
         { _gfRecord = recExprS
-        , _gfTag = SugarExpr.removeSuccessfulType tagExprS
+        , _gfTag = tagExprS
         }
+
+removeRedundantTypes :: Expression n m -> Expression n m
+removeRedundantTypes =
+  (rBody . Lens.traversed %~ removeRedundantTypes) .
+  (Lens.filtered cond %~ remSuc) .
+  (rBody . _BodyGetField . gfRecord %~ remSuc) .
+  (rBody . _BodyLam . lResultType %~ remSuc) .
+  (rBody . _BodyRecord %~
+    (fields . rfTag %~ remSuc) .
+    (Lens.filtered ((== Type) . (^. rKind)) . fields . rfExpr %~ remSuc)
+  )
+  where
+    cond e =
+      Lens.anyOf (rBody . _BodyGetVar) ((/= GetDefinition) . (^. gvVarType)) e ||
+      Lens.has (rBody . _BodyRecord) e
+    fields = rFields . flItems . Lens.traversed
+    remSuc = SugarExpr.removeSuccessfulType
 
 convertExpressionI ::
   (Typeable1 m, MonadA m) =>
@@ -468,6 +480,7 @@ convertExpressionPure ::
   Anchors.CodeProps m -> g ->
   ExprIRef.ExpressionM m () -> T m (ExpressionU m)
 convertExpressionPure cp gen =
+  fmap removeRedundantTypes .
   SugarM.runPure cp convertExpressionI Map.empty Map.empty .
   SugarM.convertSubexpression .
   SugarInfer.resultFromPure gen
@@ -921,7 +934,7 @@ convertDefIExpression cp exprLoaded defI defType = do
       convertDefinitionContent recordParamsInfo [] $
       ilrExpr & traverse . SugarInfer.plInferred %~ Just
     return $ DefinitionBodyExpression DefinitionExpression
-      { _deContent = content
+      { _deContent = removeRedundantTypes <$> content
       , _deTypeInfo = typeInfo
       }
   where
