@@ -8,6 +8,7 @@ module Graphics.UI.Bottle.Widgets.EventMapDoc
 
 import Control.Applicative ((<$>), Applicative(..))
 import Control.Lens.Operators
+import Data.Function (on)
 import Data.IORef (newIORef, readIORef, modifyIORef)
 import Data.Monoid (Monoid(..))
 import Data.Traversable (traverse)
@@ -86,20 +87,18 @@ addHelpBG :: AnimId -> View -> View
 addHelpBG animId =
   View.backgroundColor animId 1 (Draw.Color 0.3 0.2 0.1 0.5)
 
-columns :: AnimId -> R -> [View] -> View
-columns animId height =
-  combine . foldr step (Spacer.make 0, [])
+columns :: R -> (a -> R) -> [a] -> [[a]]
+columns maxHeight itemHeight =
+  combine . foldr step (0, [], [])
   where
-    combine (curColumn, rest) =
-      GridView.horizontalAlign 1 .
-      zipWith bg [(0 :: Int)..] $ curColumn : rest
-    bg i = addHelpBG (View.augmentAnimId animId i)
-
-    step new@(newSize, _) (curColumn@(curColumnSize, _), rest)
-      | (newSize + curColumnSize) ^. Lens._2 > height =
-        (new, curColumn : rest)
+    combine (_, curColumn, doneColumns) = curColumn : doneColumns
+    step new (curColumnHeight, curColumn, doneColumns)
+      | newHeight + curColumnHeight > maxHeight =
+        (newHeight, [new], curColumn : doneColumns)
       | otherwise =
-        (GridView.verticalAlign 0 [new, curColumn], rest)
+        (newHeight + curColumnHeight, new : curColumn, doneColumns)
+      where
+        newHeight = itemHeight new
 
 makeView :: Vector2 R -> EventMap a -> TextView.Style -> AnimId -> View
 makeView size eventMap style animId =
@@ -123,20 +122,25 @@ indent width x =
 
 makeTreeView :: AnimId -> Vector2 R -> [Tree View View] -> View
 makeTreeView animId size =
-  columns animId (size ^. Lens._2) . uncurry (++) . recurse
+  GridView.horizontalAlign 1 . (Lens.traversed %@~ toGrid) .
+  columns (size ^. Lens._2) pairHeight .
+  handleResult . go
   where
-    recurse = mconcat . map fromTree
+    toGrid i =
+      addHelpBG (View.augmentAnimId animId i) .
+      GridView.make . map toRow
+    toRow (titleView, docView) = [(0, titleView), (Vector2 1 0, docView)]
+    pairHeight ((titleSize, _), (docSize, _)) = on max (^. Lens._2) titleSize docSize
+    handleResult (pairs, []) = pairs
+    handleResult _ = error "Leafs at root of tree!"
+    go = mconcat . map fromTree
     fromTree (Leaf inputDocsView) = ([], [inputDocsView])
     fromTree (Branch titleView trees) =
-      ( [ GridView.verticalAlign 0
-          ( GridView.horizontalAlign 0
-            [titleView, Spacer.make 10, GridView.verticalAlign 0 rights]
-          : map (indent 10) belows
-          )
-        ]
+      ( (titleView, GridView.verticalAlign 1 inputDocs) :
+        (Lens.traversed . Lens._1 %~ indent 10) titles
       , [] )
       where
-        (belows, rights) = recurse trees
+        (titles, inputDocs) = go trees
 
 addHelp :: (AnimId -> View) -> Widget.Size -> Widget f -> Widget f
 addHelp f size =
