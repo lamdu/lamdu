@@ -28,6 +28,7 @@ import Lamdu.CodeEdit.Sugar (Scope(..))
 import Lamdu.Data.Expression (Expression(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Utils (ApplyFormAnnotation(..))
+import Lamdu.Data.Expression.Utils (pureHole)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Foldable as Foldable
@@ -332,20 +333,22 @@ primitiveGroups holeInfo =
   [ mkGroup ["Set", "Type"] $ Expr.BodyLeaf Expr.Set
   , mkGroup ["Integer", "ℤ", "Z"] $ Expr.BodyLeaf Expr.IntegerType
   , mkGroup ["->", "Pi", "→", "→", "Π", "π"] $
-    ExprUtil.makePi (Guid.fromString "NewPi") holeExpr holeExpr
+    ExprUtil.makePi (Guid.fromString "NewPi") pureHole pureHole
   , mkGroup ["\\", "Lambda", "Λ", "λ"] $
-    ExprUtil.makeLambda (Guid.fromString "NewLambda") holeExpr holeExpr
-  , Group ["Record Type", "{"] $ emptyRecord Expr.Type
+    ExprUtil.makeLambda (Guid.fromString "NewLambda") pureHole pureHole
+  , Group ["Record Type", "{"] $ record Expr.Type
   , Group ["Record Value", "{"] .
-    fromMaybe (emptyRecord Expr.Val) . ExprUtil.recordValForm $
+    fromMaybe (record Expr.Val) . ExprUtil.recordValForm $
     hiHoleActions holeInfo ^. Sugar.holeInferredType
   , mkGroup [".", "Get Field"] . Expr.BodyGetField $
-    Expr.GetField ExprUtil.pureHole ExprUtil.pureHole
+    Expr.GetField pureHole pureHole
   ]
   where
-    emptyRecord k =
-      ExprUtil.pureExpression . Expr.BodyRecord $ Expr.Record k mempty
-    holeExpr = ExprUtil.pureExpression $ Expr.BodyLeaf Expr.Hole
+    record k =
+      ExprUtil.pureExpression . Expr.BodyRecord . Expr.Record k $
+      case hiMArgument holeInfo of
+      Nothing -> []
+      Just _ -> [(pureHole, pureHole)]
 
 groupOrdering :: String -> [String] -> [Bool]
 groupOrdering searchTerm names =
