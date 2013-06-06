@@ -176,11 +176,20 @@ maybeAddExtraSymbol haveExtraResults myId w
     return $ BWidgets.hboxCenteredSpaced [w, extraSymbolLabel]
   | otherwise = return w
 
-makeNoResults :: MonadA m => AnimId -> ExprGuiM m (WidgetT m)
-makeNoResults myId =
-  ExprGuiM.widgetEnv .
-  BWidgets.makeTextViewWidget "(No results)" $
-  mappend myId ["no results"]
+makeNoResults :: MonadA m => HoleInfo m -> AnimId -> ExprGuiM m (WidgetT m)
+makeNoResults holeInfo myId =
+  case hiMArgument holeInfo of
+  Nothing -> label "(No results)"
+  Just arg ->
+    Box.hboxCentered <$> sequenceA
+    [ label "(No results: "
+    , ExprGuiM.makeSubexpresion 0 arg
+      <&> Widget.doesntTakeFocus . (^. ExpressionGui.egWidget)
+    , label ")"
+    ]
+  where
+    label str =
+      ExprGuiM.widgetEnv $ BWidgets.makeLabel str myId
 
 renamePrefix :: AnimId -> AnimId -> AnimId -> AnimId
 renamePrefix srcPrefix destPrefix animId =
@@ -258,7 +267,7 @@ makeResultsWidget holeInfo shownResults hiddenResults = do
     extraWidget = msum $ rcwExtraWidget <$> widgets
   shownResultsWidget <-
     case widgets of
-    [] -> makeNoResults $ Widget.toAnimId myId
+    [] -> makeNoResults holeInfo $ Widget.toAnimId myId
     _ ->
       return . blockDownEvents .
       vboxMBiasedAlign mIndex 0 $
