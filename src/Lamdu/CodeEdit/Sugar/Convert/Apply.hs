@@ -95,7 +95,7 @@ convertLabeled funcS argS exprI = do
       OO -> (ObjectArg arg0, args1toN)
       Infix -> (InfixArgs arg0 arg1, args2toN)
   (lift . SugarExpr.make exprI . BodyApply) Apply
-    { _aFunc = SugarExpr.removeSuccessfulType funcS
+    { _aFunc = funcS
     , _aSpecialArgs = specialArgs
     , _aAnnotatedArgs = annotatedArgs
     }
@@ -136,11 +136,7 @@ convertPrefix funcRef funcI rawArgS argI applyI = do
           if Lens.has ExprLens.exprHole funcI
           then (replaceWithNewHole .~ SugarExpr.mkReplaceWithNewHole storedApply)
           else id
-    newFuncRef =
-      SugarExpr.setNextHole argS .
-      SugarExpr.removeSuccessfulType $
-      funcRef
-    makeFullApply = makeApply newFuncRef
+    makeFullApply = makeApply $ SugarExpr.setNextHole argS funcRef
     makeApply f =
       SugarExpr.make applyI $ BodyApply Apply
       { _aFunc = f
