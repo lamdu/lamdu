@@ -211,9 +211,12 @@ convertAppliedHole ::
 convertAppliedHole funcI argS exprI
   | Lens.has ExprLens.exprHole funcI =
     lift $
+    (rBody . _BodyHole . holeMArg .~ Just argS) .
+    (rHiddenGuids <>~ funcGuids) <$>
     ConvertHole.convertPlain exprI
-    & Lens.mapped . rBody . _BodyHole . holeMArg .~ Just argS
   | otherwise = mzero
+  where
+    funcGuids = [SugarInfer.resultGuid funcI]
 
 convertList ::
   (Typeable1 m, MonadA m) =>
