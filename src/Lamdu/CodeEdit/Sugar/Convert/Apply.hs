@@ -94,11 +94,14 @@ convertLabeled funcS argS exprI = do
       Verbose -> (NoSpecialArgs, args)
       OO -> (ObjectArg arg0, args1toN)
       Infix -> (InfixArgs arg0 arg1, args2toN)
-  lift . SugarExpr.make exprI $ BodyApply Apply
+  (lift . SugarExpr.make exprI . BodyApply) Apply
     { _aFunc = SugarExpr.removeSuccessfulType funcS
     , _aSpecialArgs = specialArgs
     , _aAnnotatedArgs = annotatedArgs
     }
+    <&> rHiddenGuids <>~
+        (argS ^. rGuid :
+         fields ^.. flItems . Lens.traversed . rfTag . rGuid)
 
 makeCollapsed ::
   (MonadA m, Typeable1 m) =>

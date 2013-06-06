@@ -8,7 +8,7 @@ import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (mappend)
 import Data.Store.Guid (Guid)
-import Data.Traversable (traverse)
+import Data.Traversable (traverse, sequenceA)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ParentPrecedence(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -38,27 +38,29 @@ make
   (Sugar.Apply func specialArgs annotatedArgs) myId =
     case specialArgs of
     Sugar.NoSpecialArgs ->
-      mk Nothing =<<
+      mk Nothing $
       ExprGuiM.makeSubexpresion (if isBoxed then 0 else parentPrecedence) func
-    Sugar.ObjectArg arg -> do
-      funcEdit <- ExprGuiM.makeSubexpresion (prefixPrecedence+1) func
-      argEdit <- ExprGuiM.makeSubexpresion prefixPrecedence arg
-      mk (Just prefixPrecedence) $ ExpressionGui.hboxSpaced [funcEdit, argEdit]
-    Sugar.InfixArgs l r -> do
-      lEdit <- ExprGuiM.makeSubexpresion (infixPrecedence+1) l
-      -- TODO: What precedence to give when it must be atomic?:
-      opEdit <- ExprGuiM.makeSubexpresion 20 func
-      rEdit <- ExprGuiM.makeSubexpresion (infixPrecedence+1) r
-      mk (Just infixPrecedence) $ ExpressionGui.hboxSpaced [lEdit, opEdit, rEdit]
+    Sugar.ObjectArg arg ->
+      mk (Just prefixPrecedence) $ ExpressionGui.hboxSpaced <$> sequenceA
+      [ ExprGuiM.makeSubexpresion (prefixPrecedence+1) func
+      , ExprGuiM.makeSubexpresion prefixPrecedence arg
+      ]
+    Sugar.InfixArgs l r ->
+      mk (Just infixPrecedence) $ ExpressionGui.hboxSpaced <$> sequenceA
+      [ ExprGuiM.makeSubexpresion (infixPrecedence+1) l
+      , -- TODO: What precedence to give when it must be atomic?:
+        ExprGuiM.makeSubexpresion 20 func
+      , ExprGuiM.makeSubexpresion (infixPrecedence+1) r
+      ]
   where
     isBoxed = not $ null annotatedArgs
     destGuid = func ^. Sugar.rGuid
-    mk mPrecedence funcRow
-      | isBoxed = mkBoxed destGuid funcRow annotatedArgs myId
+    mk mPrecedence mkFuncRow
+      | isBoxed = mkBoxed destGuid mkFuncRow annotatedArgs myId
       | otherwise =
         mkMParened
         (ParentPrecedence parentPrecedence)
-        (ExpressionGui.MyPrecedence <$> mPrecedence) destGuid funcRow myId
+        (ExpressionGui.MyPrecedence <$> mPrecedence) destGuid mkFuncRow myId
 
 assignCursorGuid :: MonadA m => Widget.Id -> Guid -> ExprGuiM m a -> ExprGuiM m a
 assignCursorGuid myId = ExprGuiM.assignCursor myId . WidgetIds.fromGuid
@@ -85,26 +87,25 @@ makeArgRow myId (tagG, namedArgExpr) = do
     space = ExpressionGui.fromValueWidget BWidgets.stdSpaceWidget
 
 mkBoxed ::
-  MonadA m => Guid -> ExpressionGui m ->
+  MonadA m => Guid -> ExprGuiM m (ExpressionGui m) ->
   [(Sugar.TagG Sugar.Name, Sugar.ExpressionN m)] ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-mkBoxed destGuid funcRow annotatedArgs =
+mkBoxed destGuid mkFuncRow annotatedArgs =
   ExpressionGui.wrapExpression $ \myId ->
   assignCursorGuid myId destGuid $ do
     argEdits <-
       Grid.toWidget . Grid.make <$> traverse (makeArgRow myId) annotatedArgs
-    pure .
-      ExpressionGui.withBgColor Layers.labeledApplyBG
-      Config.labeledApplyBGColor (Widget.toAnimId myId ++ ["bg"]) $
-      ExpressionGui.addBelow 0 [(0, argEdits)] funcRow
+    ExpressionGui.withBgColor Layers.labeledApplyBG
+      Config.labeledApplyBGColor (Widget.toAnimId myId ++ ["bg"]) .
+      ExpressionGui.addBelow 0 [(0, argEdits)] <$> mkFuncRow
 
 mkMParened ::
   MonadA m => ParentPrecedence ->
   Maybe ExpressionGui.MyPrecedence -> Guid ->
-  ExpressionGui m -> Widget.Id -> ExprGuiM m (ExpressionGui m)
-mkMParened parentPrecedence mPrecedence destGuid funcRow =
+  ExprGuiM m  (ExpressionGui m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
+mkMParened parentPrecedence mPrecedence destGuid mkFuncRow =
   ExpressionGui.wrapExpression . parenify $ \myId ->
-  assignCursorGuid myId destGuid $ return funcRow
+  assignCursorGuid myId destGuid mkFuncRow
   where
     parenify = case mPrecedence of
       Nothing -> id
