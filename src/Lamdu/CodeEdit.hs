@@ -174,7 +174,7 @@ makePaneWidget rawDefS = do
     defS =
       case infoMode of
       Settings.Types -> rawDefS
-      _ -> Sugar.removeTypes <$> rawDefS
+      _ -> Sugar.removeNonHoleTypes <$> rawDefS
   onEachPane <$> DefinitionEdit.make (AddNames.addToDef defS)
   where
     onEachPane widget

@@ -1,7 +1,8 @@
 module Lamdu.CodeEdit.Sugar.Expression
   ( make, mkGen
   , mkCallWithArg, mkReplaceWithNewHole
-  , removeSuccessfulType, removeInferredTypes, removeTypes
+  , removeSuccessfulType, removeInferredTypes
+  , removeTypes, removeNonHoleTypes
   , setNextHole
   , subExpressions
   , getStoredName
@@ -46,6 +47,14 @@ removeInferredTypes = rPayload . plInferredTypes .~ []
 
 removeTypes :: Expression name m -> Expression name m
 removeTypes = fmap payloadRemoveSuccessfulType
+
+removeNonHoleTypes :: Expression name m -> Expression name m
+removeNonHoleTypes =
+  removeSuccessfulType . (innerLayer %~ removeNonHoleTypes)
+  & (Lens.outside . Lens.filtered . Lens.has) (rBody . _BodyHole) .~
+    (innerLayer . innerLayer %~ removeNonHoleTypes)
+  where
+    innerLayer = rBody . Lens.traversed
 
 mkGen :: Int -> Int -> Guid -> Random.StdGen
 mkGen select count =

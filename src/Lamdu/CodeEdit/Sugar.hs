@@ -55,7 +55,7 @@ module Lamdu.CodeEdit.Sugar
   , Collapsed(..), cFuncGuid, cCompact, cFullExpression
   , loadConvertDefI
   , PrefixAction, emptyPrefixAction
-  , SugarExpr.removeTypes
+  , SugarExpr.removeNonHoleTypes, SugarExpr.removeTypes
   , Hole.holeResultHasHoles
   , ExprStorePoint
   ) where
