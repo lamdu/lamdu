@@ -526,7 +526,10 @@ makeInactive mHoleNumber hole myId = do
   ExprGuiM.widgetEnv $
     holeGui
     & ExpressionGui.egWidget %~ makeBackground myId Layers.inactiveHole unfocusedColor
-    & ExpressionGui.egWidget %%~ BWidgets.makeFocusableView myId
+    & ExpressionGui.egWidget %%~
+      if holeGui ^. ExpressionGui.egWidget . Widget.wIsFocused
+      then return
+      else BWidgets.makeFocusableView myId
   where
     isWritable = isJust $ hole ^. Sugar.holeMActions
     unfocusedColor
