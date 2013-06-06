@@ -35,17 +35,17 @@ import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
 
 removeSuccessfulType :: Expression name m -> Expression name m
-removeSuccessfulType =
-  rPayload . plInferredTypes %~ removeIfNoErrors
-  where
-    removeIfNoErrors [_] = []
-    removeIfNoErrors xs = xs
+removeSuccessfulType = rPayload %~ payloadRemoveSuccessfulType
+
+payloadRemoveSuccessfulType :: Payload name m -> Payload name m
+payloadRemoveSuccessfulType =
+  plInferredTypes . Lens.filtered (null . drop 1) .~ []
 
 removeInferredTypes :: Expression name m -> Expression name m
 removeInferredTypes = rPayload . plInferredTypes .~ []
 
 removeTypes :: Expression name m -> Expression name m
-removeTypes = Lens.mapped . plInferredTypes .~ []
+removeTypes = fmap payloadRemoveSuccessfulType
 
 mkGen :: Int -> Int -> Guid -> Random.StdGen
 mkGen select count =
