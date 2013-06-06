@@ -513,21 +513,32 @@ makeInactive ::
   MonadA m => Maybe ExprGuiM.HoleNumber ->
   Sugar.Hole Sugar.Name m (Sugar.ExpressionN m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeInactive mHoleNumber hole myId =
-  Lens.mapped . ExpressionGui.egWidget %~
-  makeBackground myId Layers.inactiveHole unfocusedColor $
-  case hole ^. Sugar.holeMArg of
-  Just arg ->
-    ExprGuiM.makeSubexpresion 0 arg
-  Nothing ->
-    ExpressionGui.fromValueWidget <$> do
-      space <-
-        ExprGuiM.widgetEnv $
-        BWidgets.makeFocusableTextView "  " myId
-      mHoleNumView <- traverse mkHoleNumView $ mHolePair =<< mHoleNumber
-      pure $ maybe id Widget.overlayView mHoleNumView space
+makeInactive mHoleNumber hole myId = do
+  holeGui <-
+    case hole ^. Sugar.holeMArg of
+    Just arg -> ExprGuiM.makeSubexpresion 0 arg
+    Nothing -> makeJumpableSpace mHoleNumber myId
+  ExprGuiM.widgetEnv $
+    holeGui
+    & ExpressionGui.egWidget %~ makeBackground myId Layers.inactiveHole unfocusedColor
+    & ExpressionGui.egWidget %%~ BWidgets.makeFocusableView myId
   where
     isWritable = isJust $ hole ^. Sugar.holeMActions
+    unfocusedColor
+      | isWritable = Config.holeBackgroundColor
+      | otherwise = Config.readOnlyHoleBackgroundColor
+
+makeJumpableSpace ::
+  MonadA m => Maybe ExprGuiM.HoleNumber ->
+  Widget.Id -> ExprGuiM m (ExpressionGui m1)
+makeJumpableSpace mHoleNumber myId = do
+  space <-
+    ExprGuiM.widgetEnv .
+    BWidgets.makeTextViewWidget "  " $ Widget.toAnimId myId
+  mHoleNumView <- traverse mkHoleNumView $ mHolePair =<< mHoleNumber
+  pure . ExpressionGui.fromValueWidget $
+    maybe id Widget.overlayView mHoleNumView space
+  where
     mHolePair holeNumber = do
       keys <- keysOfNum holeNumber
       let
@@ -543,6 +554,3 @@ makeInactive mHoleNumber hole myId =
         ExprGuiM.widgetEnv .
         BWidgets.makeTextView shownStr $
         Widget.toAnimId myId ++ ["hole number"]
-    unfocusedColor
-      | isWritable = Config.holeBackgroundColor
-      | otherwise = Config.readOnlyHoleBackgroundColor
