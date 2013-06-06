@@ -138,10 +138,10 @@ helpConfig font =
     TextView.Style
     { TextView._styleColor = Draw.Color 1 1 1 1
     , TextView._styleFont = font
-    , TextView._styleFontSize = 10
+    , TextView._styleFontSize = 12
     }
-  , EventMapDoc.configInputDocColor = Draw.Color 0.1 0.9 0.9 1
-  , EventMapDoc.configBGColor = Draw.Color 0.3 0.2 0.1 0.5
+  , EventMapDoc.configInputDocColor = Draw.Color 0.1 0.7 0.7 1
+  , EventMapDoc.configBGColor = Draw.Color 0.2 0.15 0.1 0.5
   }
 
 baseStyle font = TextEdit.Style
