@@ -2,7 +2,7 @@
 module Lamdu.CodeEdit.ExpressionEdit(make) where
 
 import Control.Applicative ((<$>))
-import Control.Lens ((^.))
+import Control.Lens.Operators
 import Control.Monad ((<=<))
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
@@ -65,18 +65,16 @@ make parentPrecedence sExpr = assignCursor $ do
       Widget.tint Config.inferredTypeTint .
       Widget.scale Config.typeScaleFactor .
       Lens.view ExpressionGui.egWidget <$> typeEdits
-  return .
-    Lens.over ExpressionGui.egWidget
-    ( maybe onReadOnly (const id) (payload ^. Sugar.plActions)
-    . Widget.weakerEvents exprEventMap
-    ) .
-    addInferredTypes $
-    widget
+  return $
+    addInferredTypes widget
+    & ExpressionGui.egWidget %~
+      maybe onReadOnly (const id) (payload ^. Sugar.plActions) .
+      Widget.weakerEvents exprEventMap
   where
     payload = sExpr ^. Sugar.rPayload
     exprId = WidgetIds.fromGuid $ sExpr ^. Sugar.rGuid
     assignCursor f =
-      foldr (`ExprGuiM.assignCursor` exprId) f
+      foldr (`ExprGuiM.assignCursorPrefix` exprId) f
       (WidgetIds.fromGuid <$> sExpr ^. Sugar.rHiddenGuids)
 
 makeEditor ::
