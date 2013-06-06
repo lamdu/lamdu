@@ -41,8 +41,6 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info as HoleInfo
 import qualified Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Results as HoleResults
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Layers as Layers
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
@@ -207,9 +205,9 @@ asNewLabelSizeFactor :: Fractional a => a
 asNewLabelSizeFactor = 0.5
 
 mkAddNewDefinitionEventMap ::
-  MonadA m => Anchors.CodeProps m -> HoleInfo m -> ExprGuiM m (Widget.EventHandlers (T m))
-mkAddNewDefinitionEventMap cp holeInfo = do
-  cursor <- ExprGuiM.widgetEnv WE.readCursor
+  MonadA m => HoleInfo m -> ExprGuiM m (Widget.EventHandlers (T m))
+mkAddNewDefinitionEventMap holeInfo = do
+  savePosition <- ExprGuiM.mkPrejumpPosSaver
   mDefRef <-
     ExprGuiM.liftMemoT $
     hiHoleActions holeInfo ^. Sugar.holeResult $
@@ -219,8 +217,7 @@ mkAddNewDefinitionEventMap cp holeInfo = do
       E.keyPresses Config.newDefinitionKeys
       (E.Doc ["Edit", "Result", "As new Definition"]) $ do
         mTargetGuid <- HoleResults.pick holeInfo defRef
-        when (isJust mTargetGuid) $
-          DataOps.savePreJumpPosition cp cursor
+        when (isJust mTargetGuid) $ savePosition
         pure Widget.EventResult
           { Widget._eCursor = WidgetIds.fromGuid <$> mTargetGuid
           , Widget._eAnimIdMapping =
@@ -319,14 +316,13 @@ mkEventMap ::
   MonadA m => HoleInfo m -> Maybe (Sugar.HoleResult Sugar.Name m) ->
   ExprGuiM m (Widget.EventHandlers (T m))
 mkEventMap holeInfo mResult = do
-  cp <- ExprGuiM.readCodeAnchors
   mDeleteOpResult <-
     ExprGuiM.liftMemoT . fmap join . sequenceA $ do
       guard . null $ drop 1 searchTerm
       arg <- hiMArgument holeInfo
       Just . (hiHoleActions holeInfo ^. Sugar.holeResult) .
         Sugar.ResultSeedExpression $ arg ^. Sugar.rPresugaredExpression
-  addNewDefinitionEventMap <- mkAddNewDefinitionEventMap cp holeInfo
+  addNewDefinitionEventMap <- mkAddNewDefinitionEventMap holeInfo
   pure $ mconcat
     [ addNewDefinitionEventMap
     , maybe mempty (opPickEventMap holeInfo) mResult
