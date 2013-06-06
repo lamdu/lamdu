@@ -7,7 +7,8 @@ module Graphics.UI.Bottle.Widgets.GridView
   , horizontalAlign, horizontal
   ) where
 
-import Control.Lens ((%~))
+import Control.Arrow ((&&&))
+import Control.Lens.Operators
 import Data.List (transpose)
 import Data.Monoid (Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
@@ -19,7 +20,7 @@ import qualified Graphics.UI.Bottle.Rect as Rect
 
 type Alignment = Vector2 Anim.R -- ^ 0..1
 
-makePlacements :: [[(Anim.Size, Alignment)]] -> (Anim.Size, [[(Alignment, Rect)]])
+makePlacements :: [[(Alignment, Anim.Size)]] -> (Anim.Size, [[(Alignment, Rect)]])
 makePlacements rows =
   (Vector2 width height, zipWith rowResult (zipWith alignPos rowPos rowSizes) posRows)
   where
@@ -42,39 +43,39 @@ makePlacements rows =
         alignmentPos = maxSize fst
         maxSize f = maximum $ map (Lens.view dim . f . snd) group
     posRows = (map . map) calcPos rows
-    calcPos (size, alignment) = (size, (alignment * size, (1 - alignment) * size))
+    calcPos (alignment, size) = (size, (alignment * size, (1 - alignment) * size))
 
 --- Displays:
 
 -- Used by both make and Grid's make.
-makeGeneric :: (Alignment -> Rect -> a -> b) -> [[((Anim.Size, Alignment), a)]] -> (Anim.Size, [[b]])
+makeGeneric :: (Alignment -> Rect -> a -> b) -> [[(Alignment, (Anim.Size, a))]] -> (Anim.Size, [[b]])
 -- Special case to preserve shape to avoid handling it above in
 -- "maximum", "transpose", etc
 makeGeneric translate rows =
   Lens._2 %~ place $ makePlacements szAlignments
   where
-    szAlignments = (map . map) fst rows
-    items = (map . map) snd rows
+    szAlignments = (map . map) (fst &&& fst . snd) rows
+    items = (map . map) (snd . snd) rows
     place aRects = (zipWith . zipWith) (uncurry translate) aRects items
 
-make :: [[((Anim.Size, Alignment), Anim.Frame)]] -> View
-make = (Lens._2 %~ mconcat . concat) . makeGeneric (const (Anim.translate . Lens.view Rect.topLeft))
+make :: [[(Alignment, View)]] -> View
+make = (Lens._2 %~ mconcat . concat) . makeGeneric (const (Anim.translate . (^. Rect.topLeft)))
 
 makeAlign :: Alignment -> [[View]] -> View
 makeAlign alignment =
-  make . (Lens.mapped . Lens.mapped . Lens._1 %~ flip (,) alignment)
+  make . (Lens.traversed . Lens.traversed %~ (,) alignment)
 
 makeCentered :: [[View]] -> View
 makeCentered = makeAlign 0.5
 
-vertical :: [((Anim.Size, Alignment), Anim.Frame)] -> View
+vertical :: [(Alignment, View)] -> View
 vertical = make . map (:[])
 
-horizontal :: [((Anim.Size, Alignment), Anim.Frame)] -> View
+horizontal :: [(Alignment, View)] -> View
 horizontal = make . (:[])
 
 verticalAlign :: Alignment -> [View] -> View
-verticalAlign align = makeAlign align . map (:[])
+verticalAlign align = vertical . map ((,) align)
 
 horizontalAlign :: Alignment -> [View] -> View
-horizontalAlign align = makeAlign align . (:[])
+horizontalAlign align = horizontal . map ((,) align)

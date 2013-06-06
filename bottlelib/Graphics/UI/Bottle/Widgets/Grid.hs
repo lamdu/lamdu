@@ -147,7 +147,7 @@ makeKeyed children = KGrid
       GridView.makeGeneric translate $
       (map . map) mkSizedKeyedContent children
     mkSizedKeyedContent (key, (alignment, widget)) =
-      ((widget ^. Widget.wSize, alignment), (key, widget))
+      (alignment, (widget ^. Widget.wSize, (key, widget)))
     translate align rect =
       Lens._2 %~
       Element align rect . Widget.translate (rect ^. Rect.topLeft)
