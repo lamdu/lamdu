@@ -540,18 +540,20 @@ makeJumpableSpace mHoleNumber myId = do
   space <-
     ExprGuiM.widgetEnv .
     BWidgets.makeTextViewWidget "  " $ Widget.toAnimId myId
-  mHoleNumView <- traverse mkHoleNumView $ mHolePair =<< mHoleNumber
-  pure . ExpressionGui.fromValueWidget $
-    maybe id Widget.overlayView mHoleNumView space
-  where
+  savePosition <- ExprGuiM.mkPrejumpPosSaver
+  let
     mHolePair holeNumber = do
       keys <- keysOfNum holeNumber
       let
         doc = E.Doc ["Navigation", "Jump to", "Hole " ++ show holeNumber]
         eventMap =
           Widget.keysEventMapMovesCursor keys doc $
-          pure myId
+          myId <$ savePosition
       pure ("Alt-" ++ show holeNumber, eventMap)
+  mHoleNumView <- traverse mkHoleNumView $ mHolePair =<< mHoleNumber
+  pure . ExpressionGui.fromValueWidget $
+    maybe id Widget.overlayView mHoleNumView space
+  where
     mkHoleNumView (shownStr, eventMap) = do
       ExprGuiM.appendToTopLevelEventMap eventMap
       fmap (^. View.scaled Config.holeNumLabelScaleFactor) .
