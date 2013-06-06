@@ -521,7 +521,18 @@ makeInactive ::
 makeInactive mHoleNumber hole myId = do
   holeGui <-
     case hole ^. Sugar.holeMArg of
-    Just arg -> ExprGuiM.makeSubexpresion 0 arg
+    Just arg ->
+      ExprGuiM.makeSubexpresion 0 arg
+      -- Override "Leave Expression" of sub expression
+      -- so that we don't get the inner expression wrapped again.
+      -- TODO: Instead replace just the navigation to whole arg.
+      & Lens.mapped . ExpressionGui.egWidget %~
+        Widget.strongerEvents
+        ( Widget.keysEventMapMovesCursor
+          Config.leaveSubexpressionKeys
+          (E.Doc ["Navigation", "Leave to outer hole"])
+          (return myId)
+        )    
     Nothing -> makeJumpableSpace mHoleNumber myId
   ExprGuiM.widgetEnv $
     holeGui
