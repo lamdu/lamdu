@@ -435,10 +435,13 @@ convertGetField (Expr.GetField recExpr tagExpr) exprI = do
         , _gfTag = tagExprS
         }
 
-removeRedundantTypes :: Expression n m -> Expression n m
-removeRedundantTypes =
+removeRedundantSubExprTypes :: Expression n m -> Expression n m
+removeRedundantSubExprTypes =
   (rBody %~
-    (Lens.traversed %~ removeRedundantTypes) .
+    ( Lens.traversed %~ removeRedundantTypes
+      & Lens.outside _BodyHole .~
+        BodyHole . (holeMArg . Lens.traversed %~ removeRedundantSubExprTypes)
+    ) .
     (_BodyApply . aFunc %~ remSuc) .
     (_BodyGetField . gfRecord %~ remSuc) .
     (_BodyLam . lResultType %~ remSuc) .
@@ -446,14 +449,21 @@ removeRedundantTypes =
       (fields . rfTag %~ remSuc) .
       (Lens.filtered ((== Type) . (^. rKind)) . fields . rfExpr %~ remSuc)
     )
-  ) .
-  (Lens.filtered cond %~ remSuc)
+  )
+  where
+    fields = rFields . flItems . Lens.traversed
+    remSuc =
+      Lens.filtered (Lens.nullOf (rBody . _BodyHole)) %~
+      SugarExpr.removeSuccessfulType
+
+removeRedundantTypes :: Expression n m -> Expression n m
+removeRedundantTypes =
+  removeRedundantSubExprTypes .
+  (Lens.filtered cond %~ SugarExpr.removeSuccessfulType)
   where
     cond e =
       Lens.anyOf (rBody . _BodyGetVar) ((/= GetDefinition) . (^. gvVarType)) e ||
       Lens.has (rBody . _BodyRecord) e
-    fields = rFields . flItems . Lens.traversed
-    remSuc = SugarExpr.removeSuccessfulType
 
 convertExpressionI ::
   (Typeable1 m, MonadA m) =>
