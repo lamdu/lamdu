@@ -60,9 +60,14 @@ convertH ::
   (InferredWC (Tag m) -> SugarInfer.ExprMM m -> SugarM m (ExpressionU m)) ->
   SugarInfer.ExprMM m -> SugarM m (ExpressionU m)
 convertH convertTyped exprI =
+  fmap fixWrap .
   maybe convertUntypedHole convertTypeCheckedHole $
   SugarInfer.resultInferred exprI
   where
+    fixWrap expr =
+      expr
+      & rPayload . plActions . Lens.mapped . wrap .~
+        (const . return) (expr ^. rGuid)
     convertTypeCheckedHole inferred = convertTyped inferred exprI
     convertUntypedHole = SugarExpr.make exprI . BodyHole $ Hole Nothing Nothing
 
@@ -372,8 +377,11 @@ makeHoleResult sugarContext inferred exprI seed =
         finalExpr
 
 holeWrap :: Expr.Expression def (Maybe a) -> Expr.Expression def (Maybe a)
-holeWrap expr =
-  Expr.Expression (ExprUtil.makeApply hole expr) Nothing
+holeWrap expr
+  | Lens.has (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprHole) expr =
+    -- Don't rewrap already hole-wrapped results.
+    expr
+  | otherwise = Expr.Expression (ExprUtil.makeApply hole expr) Nothing
   where
     hole = Expr.Expression (ExprLens.bodyHole # ()) Nothing
 
