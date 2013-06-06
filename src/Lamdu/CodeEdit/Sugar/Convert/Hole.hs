@@ -97,37 +97,46 @@ convertTypeCheckedHoleH iwc exprI =
   (convertPlainTyped iwc exprI)
   (convertInferred iwc exprI)
 
+accept ::
+  MonadA m => SugarM.Context m ->
+  Infer.InferNode (DefI (Tag m)) ->
+  ExprIRef.ExpressionM m a ->
+  ExprIRef.ExpressionIM m ->
+  T m (Maybe Guid)
+accept sugarContext point expr iref = do
+  loaded <- SugarInfer.load Nothing expr
+  let
+    exprInferred =
+      unjust "The inferred value of a hole must type-check!" $
+      SugarInfer.inferMaybe_ loaded inferState point
+  pickResult iref $
+    flip (,) Nothing <$> cleanUpInferredVal exprInferred
+  where
+    inferState = sugarContext ^. SugarM.scHoleInferState
+
 convertInferred ::
   (MonadA m, Typeable1 m) =>
   InferredWC (Tag m) -> SugarInfer.ExprMM m ->
   ExprIRef.ExpressionM m () ->
   SugarM m (ExpressionU m)
-convertInferred iwc exprI x = do
+convertInferred iwc exprI inferredVal = do
   sugarContext <- SugarM.readContext
-  let
-    inferState = sugarContext ^. SugarM.scHoleInferState
-    accept expr iref = do
-      loaded <- SugarInfer.load Nothing expr
-      let
-        exprInferred =
-          unjust "The inferred value of a hole must type-check!" $
-          SugarInfer.inferMaybe_ loaded inferState point
-      fmap (fromMaybe eGuid) . pickResult iref $
-        flip (,) Nothing <$> cleanUpInferredVal exprInferred
   hole <- mkHole iwc exprI
   val <-
     SugarM.convertSubexpression $
-    SugarInfer.resultFromPure (SugarExpr.mkGen 2 3 eGuid) x
+    SugarInfer.resultFromPure gen inferredVal
   SugarExpr.make exprI $ BodyInferred Inferred
     { _iHole = hole
     , _iValue = val
     , _iMAccept =
-      accept x . Property.value <$> SugarInfer.resultStored exprI
+      fmap (fromMaybe eGuid) .
+      accept sugarContext (Infer.iPoint (iwcInferred iwc))
+      (ExprUtil.randomizeParamIds gen inferredVal) .
+      Property.value <$> SugarInfer.resultStored exprI
     }
   where
+    gen = genFromHashable (eGuid, show (void inferredVal))
     eGuid = SugarInfer.resultGuid exprI
-    point = Infer.iPoint inferred
-    inferred = iwcInferred iwc
 
 convertPlainTyped ::
   (MonadA m, Typeable1 m) =>
