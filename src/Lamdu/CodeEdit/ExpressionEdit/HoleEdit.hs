@@ -532,7 +532,7 @@ makeInactive mHoleNumber hole myId = do
           Config.leaveSubexpressionKeys
           (E.Doc ["Navigation", "Leave to outer hole"])
           (return myId)
-        )    
+        )
     Nothing -> makeJumpableSpace mHoleNumber myId
   ExprGuiM.widgetEnv $
     holeGui

@@ -7,7 +7,7 @@ module Graphics.UI.Bottle.Widgets.EventMapDoc
   ) where
 
 import Control.Applicative ((<$>), Applicative(..))
-import Control.Lens ((^.))
+import Control.Lens.Operators
 import Data.IORef (newIORef, readIORef, modifyIORef)
 import Data.Monoid (Monoid(..))
 import Data.Traversable (traverse)
@@ -19,7 +19,6 @@ import Graphics.UI.Bottle.Widget (Widget)
 import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Tuple as Tuple
-import qualified Data.Vector.Vector2 as Vector2
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -39,7 +38,7 @@ bitraverseTree onNode onLeaf (Branch n ts) = Branch <$> onNode n <*> traverse (b
 treeNodes :: Lens.Traversal (Tree n0 l) (Tree n1 l) n0 n1
 treeNodes = (`bitraverseTree` pure)
 
-groupTree :: Eq n => [([n], l)] -> [Tree n l]
+groupTree :: Eq node => [([node], leaf)] -> [Tree node leaf]
 groupTree = foldr step []
   where
     step ([], l) rest = Leaf l : rest
@@ -51,7 +50,7 @@ groupTree = foldr step []
 
 -- We also rely on Map.toList returning a sorted list
 groupInputDocs :: [([E.Subtitle], E.InputDoc)] -> [([E.Subtitle], [E.InputDoc])]
-groupInputDocs = Map.toList . Map.fromListWith (++) . (map . Lens.over Lens._2) (:[])
+groupInputDocs = Map.toList . Map.fromListWith (++) . (Lens.traversed . Lens._2 %~) (:[])
 
 addAnimIds :: (Show a, Show b) => AnimId -> Tree a b -> Tree (AnimId, a) (AnimId, b)
 addAnimIds animId (Leaf b) = Leaf (animId ++ ["leaf"], b)
@@ -68,11 +67,10 @@ makeShortcutKeyView ::
 makeShortcutKeyView style (animId, inputDocs) =
   GridView.verticalAlign 0 .
   map
-  ( fgColor shortcutKeyDocColor
-  . TextView.label style animId) $
-  inputDocs
+  ( (images %~ Draw.tint shortcutKeyDocColor)
+  . TextView.label style animId ) $ inputDocs
   where
-    fgColor = Lens.over Lens._2 . Anim.onImages . Draw.tint
+    images = Lens._2 . Lens.sets Anim.onImages
 
 makeTextViews ::
   TextView.Style -> AnimId ->
@@ -80,7 +78,7 @@ makeTextViews ::
   Tree View View
 makeTextViews style =
   fmap
-  ( Lens.over treeNodes (uncurry (TextView.label style))
+  ( (treeNodes %~ uncurry (TextView.label style))
   . fmap (makeShortcutKeyView style)
   ) . addAnimIds
 
@@ -101,13 +99,13 @@ columns animId height =
       | (newSize + curColumnSize) ^. Lens._2 > height =
         (new, curColumn : rest)
       | otherwise =
-        (vertical [new, curColumn], rest)
+        (GridView.verticalAlign 0 [new, curColumn], rest)
 
 makeView :: Vector2 R -> EventMap a -> TextView.Style -> AnimId -> View
 makeView size eventMap style animId =
   makeTreeView animId size .
   map (makeTextViews style animId) . groupTree . groupInputDocs .
-  map (Lens.over Lens._1 E.docStrs . Tuple.swap) $ E.eventMapDocs eventMap
+  map ((Lens._1 %~ E.docStrs) . Tuple.swap) $ E.eventMapDocs eventMap
 
 makeTooltip :: TextView.Style -> [E.ModKey] -> AnimId -> View
 makeTooltip style overlayDocKeys animId =
@@ -123,28 +121,26 @@ indent :: R -> View -> View
 indent width x =
   GridView.horizontalAlign 0 [Spacer.makeHorizontal width, x]
 
-vertical :: [View] -> View
-vertical = GridView.verticalAlign 0
-
 makeTreeView :: AnimId -> Vector2 R -> [Tree View View] -> View
 makeTreeView animId size =
-  columns animId (size ^. Lens._2) . Vector2.uncurry (++) . recurse
+  columns animId (size ^. Lens._2) . uncurry (++) . recurse
   where
     recurse = mconcat . map fromTree
-    fromTree (Leaf inputDocsView) = Vector2 [] [inputDocsView]
+    fromTree (Leaf inputDocsView) = ([], [inputDocsView])
     fromTree (Branch titleView trees) =
-      Vector2
-      [ vertical
-        ( GridView.horizontalAlign 0
-          [titleView, Spacer.make 10, vertical rights]
-        : map (indent 10) belows)
-      ] []
+      ( [ GridView.verticalAlign 0
+          ( GridView.horizontalAlign 0
+            [titleView, Spacer.make 10, GridView.verticalAlign 0 rights]
+          : map (indent 10) belows
+          )
+        ]
+      , [] )
       where
-        Vector2 belows rights = recurse trees
+        (belows, rights) = recurse trees
 
 addHelp :: (AnimId -> View) -> Widget.Size -> Widget f -> Widget f
 addHelp f size =
-  Lens.over Widget.wFrame (mappend docFrame)
+  Widget.wFrame <>~ docFrame
   where
     (eventMapSize, eventMapDoc) = f ["help box"]
     transparency = Draw.Color 1 1 1
