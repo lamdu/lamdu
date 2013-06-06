@@ -7,6 +7,7 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
 import qualified Lamdu.WidgetIds as WidgetIds
 
 -- TODO: Oops, we don't want to export these:
@@ -131,10 +132,16 @@ builtinOriginNameColor = monomorphicDefOriginForegroundColor
 
 cursorBGColor = Draw.Color 0 0 1 0.45
 
-helpStyle font = TextView.Style {
-  TextView._styleColor = Draw.Color 1 1 1 1,
-  TextView._styleFont = font,
-  TextView._styleFontSize = 10
+helpConfig font =
+  EventMapDoc.Config
+  { EventMapDoc.configStyle =
+    TextView.Style
+    { TextView._styleColor = Draw.Color 1 1 1 1
+    , TextView._styleFont = font
+    , TextView._styleFontSize = 10
+    }
+  , EventMapDoc.configInputDocColor = Draw.Color 0.1 0.9 0.9 1
+  , EventMapDoc.configBGColor = Draw.Color 0.3 0.2 0.1 0.5
   }
 
 baseStyle font = TextEdit.Style

@@ -212,7 +212,7 @@ runDb font db = do
   cacheRef <- newIORef $ Cache.new 0x100000 -- TODO: Use a real cache size
   wrapFlyNav <- makeFlyNav
   let
-    addHelp = addHelpWithStyle $ Config.helpStyle font
+    addHelp = addHelpWithStyle $ Config.helpConfig font
     makeWidget size = do
       cursor <- dbToIO . Transaction.getP $ Anchors.cursor Anchors.revisionProps
       sizeFactor <- readIORef sizeFactorRef

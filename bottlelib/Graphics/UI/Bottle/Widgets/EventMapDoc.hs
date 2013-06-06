@@ -4,6 +4,7 @@ module Graphics.UI.Bottle.Widgets.EventMapDoc
   , IsHelpShown(..)
   , addHelp
   , makeToggledHelpAdder
+  , Config(..)
   ) where
 
 import Control.Applicative ((<$>), Applicative(..))
@@ -28,6 +29,12 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.GridView as GridView
 import qualified Graphics.UI.Bottle.Widgets.Spacer as Spacer
 import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
+
+data Config = Config
+  { configStyle :: TextView.Style
+  , configInputDocColor :: Draw.Color
+  , configBGColor :: Draw.Color
+  }
 
 data Tree n l = Leaf l | Branch n [Tree n l]
   deriving (Eq, Ord, Show, Functor)
@@ -60,32 +67,29 @@ addAnimIds animId (Branch a cs) =
   where
     tAnimId = View.augmentAnimId animId a
 
-shortcutKeyDocColor :: Draw.Color
-shortcutKeyDocColor = Draw.Color 0.1 0.9 0.9 1
-
 makeShortcutKeyView ::
-  TextView.Style -> (AnimId, [E.InputDoc]) -> View
-makeShortcutKeyView style (animId, inputDocs) =
+  Config -> (AnimId, [E.InputDoc]) -> View
+makeShortcutKeyView config (animId, inputDocs) =
   GridView.verticalAlign 0 .
   map
-  ( (images %~ Draw.tint shortcutKeyDocColor)
-  . TextView.label style animId ) $ inputDocs
+  ( (images %~ Draw.tint (configInputDocColor config))
+  . TextView.label (configStyle config) animId ) $ inputDocs
   where
     images = Lens._2 . Lens.sets Anim.onImages
 
 makeTextViews ::
-  TextView.Style -> AnimId ->
+  Config -> AnimId ->
   Tree E.Subtitle [E.InputDoc] ->
   Tree View View
-makeTextViews style =
+makeTextViews config =
   fmap
-  ( (treeNodes %~ uncurry (TextView.label style))
-  . fmap (makeShortcutKeyView style)
+  ( (treeNodes %~ uncurry (TextView.label (configStyle config)))
+  . fmap (makeShortcutKeyView config)
   ) . addAnimIds
 
-addHelpBG :: AnimId -> View -> View
-addHelpBG animId =
-  View.backgroundColor animId 1 (Draw.Color 0.3 0.2 0.1 0.5)
+addHelpBG :: Config -> AnimId -> View -> View
+addHelpBG config animId =
+  View.backgroundColor animId 1 $ configBGColor config
 
 columns :: R -> (a -> R) -> [a] -> [[a]]
 columns maxHeight itemHeight =
@@ -100,19 +104,19 @@ columns maxHeight itemHeight =
       where
         newHeight = itemHeight new
 
-makeView :: Vector2 R -> EventMap a -> TextView.Style -> AnimId -> View
-makeView size eventMap style animId =
-  makeTreeView animId size .
-  map (makeTextViews style animId) . groupTree . groupInputDocs .
+makeView :: Vector2 R -> EventMap a -> Config -> AnimId -> View
+makeView size eventMap config animId =
+  makeTreeView config animId size .
+  map (makeTextViews config animId) . groupTree . groupInputDocs .
   map ((Lens._1 %~ E.docStrs) . Tuple.swap) $ E.eventMapDocs eventMap
 
-makeTooltip :: TextView.Style -> [E.ModKey] -> AnimId -> View
-makeTooltip style overlayDocKeys animId =
-  addHelpBG animId $
+makeTooltip :: Config -> [E.ModKey] -> AnimId -> View
+makeTooltip config overlayDocKeys animId =
+  addHelpBG config animId $
   GridView.horizontalAlign 0
-  [ TextView.label style animId "Show help"
+  [ TextView.label (configStyle config) animId "Show help"
   , Spacer.makeHorizontal 10
-  , makeShortcutKeyView style
+  , makeShortcutKeyView config
     (animId ++ ["HelpKeys"], map E.prettyModKey overlayDocKeys)
   ]
 
@@ -120,14 +124,14 @@ indent :: R -> View -> View
 indent width x =
   GridView.horizontalAlign 0 [Spacer.makeHorizontal width, x]
 
-makeTreeView :: AnimId -> Vector2 R -> [Tree View View] -> View
-makeTreeView animId size =
+makeTreeView :: Config -> AnimId -> Vector2 R -> [Tree View View] -> View
+makeTreeView config animId size =
   GridView.horizontalAlign 1 . (Lens.traversed %@~ toGrid) .
   columns (size ^. Lens._2) pairHeight .
   handleResult . go
   where
     toGrid i =
-      addHelpBG (View.augmentAnimId animId i) .
+      addHelpBG config (View.augmentAnimId animId i) .
       GridView.make . map toRow
     toRow (titleView, docView) = [(0, titleView), (Vector2 1 0, docView)]
     pairHeight ((titleSize, _), (docSize, _)) = on max (^. Lens._2) titleSize docSize
@@ -162,18 +166,18 @@ toggle HelpShown = HelpNotShown
 toggle HelpNotShown = HelpShown
 
 makeToggledHelpAdder
-  :: IsHelpShown -> [E.ModKey] -> IO (TextView.Style -> Widget.Size -> Widget IO -> IO (Widget IO))
+  :: IsHelpShown -> [E.ModKey] -> IO (Config -> Widget.Size -> Widget IO -> IO (Widget IO))
 makeToggledHelpAdder startValue overlayDocKeys = do
   showingHelpVar <- newIORef startValue
   let
     toggleEventMap docStr =
       Widget.keysEventMap overlayDocKeys (E.Doc ["Help", "Key Bindings", docStr]) $
       modifyIORef showingHelpVar toggle
-  return $ \style size widget -> do
+  return $ \config size widget -> do
     showingHelp <- readIORef showingHelpVar
     let
       (f, docStr) = case showingHelp of
-        HelpShown -> (makeView size (widget ^. Widget.wEventMap) style, "Hide")
-        HelpNotShown -> (makeTooltip style overlayDocKeys, "Show")
+        HelpShown -> (makeView size (widget ^. Widget.wEventMap) config, "Hide")
+        HelpNotShown -> (makeTooltip config overlayDocKeys, "Show")
     return . addHelp f size $
       Widget.strongerEvents (toggleEventMap docStr) widget
