@@ -7,17 +7,17 @@ module Lamdu.CodeEdit.Sugar.Convert.Hole
 import Control.Applicative (Applicative(..), (<$>), (<$))
 import Control.Lens.Operators
 import Control.Monad (MonadPlus(..), guard, join, void)
-import Control.MonadA (MonadA)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..), runState, mapStateT)
+import Control.MonadA (MonadA)
 import Data.Binary (Binary)
 import Data.Cache (Cache)
 import Data.Hashable (Hashable, hashWithSalt)
 import Data.Maybe (fromMaybe, listToMaybe)
 import Data.Monoid (Monoid(..))
-import Data.Store.IRef (Tag)
 import Data.Store.Guid (Guid)
-import Data.Traversable (traverse)
+import Data.Store.IRef (Tag)
+import Data.Traversable (sequenceA, traverse)
 import Data.Tuple (swap)
 import Data.Typeable (Typeable1)
 import Lamdu.CodeEdit.Sugar.Infer (InferredWC, Stored)
@@ -365,8 +365,9 @@ makeHoleResult sugarContext inferred exprI seed =
       }
     fromStorePoint point = (unStorePoint <$> point, ())
     pick = do
-      (finalExpr, mTargetGuid) <-
+      (finalExpr, mJumpTo) <-
         Cache.unmemoS makeInferredExpr
+      mTargetGuid <- sequenceA mJumpTo
       fmap (mplus mTargetGuid) . pickResult iref .
         ExprUtil.randomizeParamIds gen $
         -- TODO: Makes no sense here anymore, move deeper inside
@@ -387,18 +388,16 @@ holeWrap expr
 
 seedExprEnv ::
   MonadA m => Anchors.CodeProps m -> HoleResultSeed m ->
-  T m (ExprStorePoint m, Maybe Guid)
+  T m (ExprStorePoint m, Maybe (T m Guid))
 seedExprEnv _ (ResultSeedExpression expr) = pure (expr, Nothing)
 seedExprEnv cp (ResultSeedNewTag name) = do
   tag <- DataOps.makeNewPublicTag cp name
   pure (Nothing <$ ExprLens.pureExpr . ExprLens.bodyTag # tag, Nothing)
 seedExprEnv cp (ResultSeedNewDefinition name) = do
   defI <- DataOps.newPublicDefinition cp name
-  DataOps.newPane cp defI
-  let targetGuid = IRef.guid defI
   pure
     ( Nothing <$ ExprLens.pureExpr . ExprLens.bodyDefinitionRef # defI
-    , Just targetGuid
+    , Just $ IRef.guid defI <$ DataOps.newPane cp defI
     )
 
 convertHoleResult ::
