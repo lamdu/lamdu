@@ -2,7 +2,7 @@
              PatternGuards #-}
 module Lamdu.Data.Expression.Infer
   ( Inferred(..), rExpression
-  , Loaded, load
+  , Loaded, load, loadIndependent
   , inferLoaded
   , addRules, derefExpr
   -- TODO: Expose only ref readers for InferNode (instead of .. and TypedValue)
@@ -498,6 +498,14 @@ load loader mRecursiveDef expr =
       . Lens.filtered ((/= mRecursiveDef) . Just)
       ) expr
     loadType defI = fmap ((,) defI) $ loadPureDefinitionType loader defI
+
+-- An Independent expression has no GetDefinition of any expression
+-- except potentially the given recurse def. The given function should
+-- yield a justification for the belief that it has no such
+-- GetDefinitions in it.
+loadIndependent :: Ord def => (def -> String) -> Maybe def -> Expr.Expression def a -> Loaded def a
+loadIndependent errStr mRecursiveDef =
+  either (error . errStr) id . load (Loader Left) mRecursiveDef
 
 addRule :: Rule def ExprRef -> State (InferState def m) ()
 addRule rule = do

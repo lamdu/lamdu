@@ -48,16 +48,14 @@ actions :: Infer.InferActions def Maybe
 actions = Infer.InferActions $ const Nothing
 
 addVariableForHole ::
-  (Ord def, RandomGen g) =>
+  (Show def, Ord def, RandomGen g) =>
   Infer.InferNode def ->
   StateT g (State (Infer.Context def)) (Guid, Infer.InferNode def)
 addVariableForHole holePoint = do
   paramGuid <- state random
   let
     getVar = ExprUtil.pureExpression $ Lens.review ExprLens.bodyParameterRef paramGuid
-    loaded =
-      fromMaybe (error "Should not be loading defs when loading a mere getVar") $
-      Infer.load loader Nothing getVar
+    loaded = Infer.loadIndependent (("Loading a mere getVar: " ++) . show) Nothing getVar
   lift $ do
     inferredGetVar <-
       inferAssertNoConflict "ImplicitVariables.addVariableForHole" loaded holePoint
@@ -70,11 +68,9 @@ addVariableForHole holePoint = do
       ( paramGuid
       , Infer.InferNode (Infer.TypedValue paramTypeRef paramTypeTypeRef) mempty
       )
-  where
-    loader = Infer.Loader $ const Nothing
 
 addVariablesForExpr ::
-  (MonadA m, Ord def, RandomGen g) =>
+  (MonadA m, Show def, Ord def, RandomGen g) =>
   Infer.Loader def m ->
   Expr.Expression def (Infer.Inferred def, a) ->
   StateT g (StateT (Infer.Context def) m) [(Guid, Infer.InferNode def)]
@@ -123,7 +119,7 @@ addParam body (paramGuid, paramTypeNode) = do
       ExprUtil.makeLambda paramGuid paramTypeExpr body
 
 add ::
-  (MonadA m, Ord def, RandomGen g) =>
+  (MonadA m, Ord def, Show def, RandomGen g) =>
   g -> Infer.Loader def m ->
   Expr.Expression def (Infer.Inferred def, a) ->
   StateT (Infer.Context def) m
