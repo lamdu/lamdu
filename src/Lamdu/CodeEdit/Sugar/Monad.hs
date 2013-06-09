@@ -45,7 +45,7 @@ data Context m = Context
   , _scHoleInferState :: Infer.Context (DefI (Tag m))
   , _scCodeAnchors :: Anchors.CodeProps m
   , _scSpecialFunctions :: Anchors.SpecialFunctions (Tag m)
-  , _scMReinferRoot :: Maybe (String -> CT m Bool)
+  , _scMReinferRoot :: Maybe (CT m Bool)
   , _scTagParamInfos :: Map Guid TagParamInfo -- tag guids
   , _scRecordParamsInfos :: Map Guid (RecordParamsInfo m) -- param guids
   , _scConvertSubexpression :: ExprMM m -> SugarM m (ExpressionU m)

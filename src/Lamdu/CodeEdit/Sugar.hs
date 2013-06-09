@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, OverloadedStrings, ConstraintKinds, TypeFamilies, Rank2Types, PatternGuards #-}
+{-# LANGUAGE FlexibleContexts, OverloadedStrings, TypeFamilies, Rank2Types, PatternGuards #-}
 module Lamdu.CodeEdit.Sugar
   ( Definition(..), drName, drGuid, drBody
   , DefinitionBody(..)
@@ -67,8 +67,6 @@ import Control.Monad (guard, void)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
-import Data.Binary (Binary)
-import Data.Cache (Cache)
 import Data.Foldable (traverse_)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe, listToMaybe, isJust)
@@ -271,11 +269,6 @@ convertGetVariable varRef exprI = do
         , _gvJumpTo = jumpToDefI cp defI
         , _gvVarType = GetDefinition
         }
-
-memoBy ::
-  (Cache.Key k, Binary v, MonadA m) =>
-  k -> m v -> StateT Cache m v
-memoBy k act = Cache.memoS (const act) k
 
 convertLiteralInteger :: (MonadA m, Typeable1 m) => Integer -> Convertor m
 convertLiteralInteger i exprI =
@@ -491,7 +484,7 @@ isCompleteType =
 mkContext ::
   (MonadA m, Typeable1 m) =>
   Anchors.Code (Transaction.MkProperty m) (Tag m) ->
-  DefI (Tag m) -> Maybe (String -> CT m Bool) ->
+  DefI (Tag m) -> Maybe (CT m Bool) ->
   Cache.KeyBS ->
   Infer.Context (DefI (Tag m)) ->
   Infer.Context (DefI (Tag m)) ->
@@ -986,15 +979,13 @@ convertDefIExpression cp exprLoaded defI defType = do
       }
   where
     initialInferState = Infer.initial (Just defI)
-    reinferRoot key = do
-      loaded <-
-        lift $ do
-          reloadedRoot <-
-            ExprIRef.readExpression . Load.irefOfClosure $
-            exprLoaded ^. Expr.ePayload
-          SugarInfer.load (Just defI) (void reloadedRoot)
-      memoBy (key, loaded, initialInferState, "reinfer root" :: String) .
-        return . isJust $ uncurry (SugarInfer.inferMaybe_ loaded)
+    reinferRoot = do
+      reloadedRoot <-
+        lift . ExprIRef.readExpression . Load.irefOfClosure $
+        exprLoaded ^. Expr.ePayload
+      isJust <$>
+        SugarInfer.memoLoadInfer (Just defI) (void reloadedRoot)
+        (Cache.bsOfKey initialInferState)
         initialInferState
     defGuid = IRef.guid defI
     recordParamsInfo = SugarM.RecordParamsInfo defGuid $ jumpToDefI cp defI

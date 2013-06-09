@@ -8,10 +8,8 @@ import Control.Applicative (Applicative(..), (<$>), (<$))
 import Control.Lens.Operators
 import Control.Monad (MonadPlus(..), guard, join, void)
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.State (StateT(..), runState, mapStateT)
+import Control.Monad.Trans.State (runState, mapStateT)
 import Control.MonadA (MonadA)
-import Data.Binary (Binary)
-import Data.Cache (Cache)
 import Data.Hashable (Hashable, hashWithSalt)
 import Data.Maybe (fromMaybe, listToMaybe)
 import Data.Monoid (Monoid(..))
@@ -160,7 +158,7 @@ mkHole iwc exprI = do
   let
     inferState = sugarContext ^. SugarM.scHoleInferState
     contextHash = sugarContext ^. SugarM.scContextHash
-    token = (eGuid, contextHash)
+    token = Cache.bsOfKey (eGuid, contextHash)
     mkWritableHoleActions exprS = do
       globals <-
         SugarM.liftTransaction . Transaction.getP . Anchors.globals $
@@ -182,7 +180,7 @@ mkHole iwc exprI = do
         , _holeInferExprType = inferExprType
         , _holeResult = makeHoleResult sugarContext inferred exprS
         }
-    inferExprType = inferOnTheSide (token, 't') inferState $ Infer.nScope point
+    inferExprType = inferOnTheSide token inferState $ Infer.nScope point
   mActions <-
     traverse mkWritableHoleActions $
     traverse (Lens.sequenceOf SugarInfer.plStored) exprI
@@ -217,25 +215,18 @@ chooseHoleType inferredVals plain inferred =
   [inferredVal] -> inferred inferredVal
   _ -> plain
 
-memoBy ::
-  (Cache.Key k, Binary v, MonadA m) =>
-  k -> m v -> StateT Cache m v
-memoBy k act = Cache.memoS (const act) k
-
 inferOnTheSide ::
-  (MonadA m, Typeable1 m, Cache.Key t, Cache.Key a) => t ->
+  (MonadA m, Typeable1 m, Cache.Key t) => t ->
   Infer.Context (DefI (Tag m)) ->
   Infer.Scope (DefI (Tag m)) ->
-  ExprIRef.ExpressionM m a ->
+  ExprIRef.ExpressionM m () ->
   CT m (Maybe (ExprIRef.ExpressionM m ()))
-inferOnTheSide token holeInferContext scope expr = do
-  loaded <- lift $ SugarInfer.load Nothing expr
-  memoBy (loaded, token, scope) . return $
-    void . Infer.iType . (^. Expr.ePayload) <$>
-    SugarInfer.inferMaybe_ loaded sideInferContext point
-  where
-    (point, sideInferContext) =
-      (`runState` holeInferContext) $ Infer.newNodeWithScope scope
+-- token represents the given holeInferContext
+inferOnTheSide token holeInferContext scope expr =
+  (fmap . fmap) (void . Infer.iType . (^. Expr.ePayload . Lens._1)) .
+  SugarInfer.memoLoadInfer Nothing expr
+  (Cache.bsOfKey (token, scope, "newNodeWithScope")) . swap $
+  runState (Infer.newNodeWithScope scope) holeInferContext
 
 getScopeElement ::
   MonadA m => SugarM.Context m ->
@@ -341,15 +332,13 @@ makeHoleResult sugarContext inferred exprI seed =
         convertHoleResult sugarContext gen $
         fst <$> inferredResult
       pure (converted, inferredResult)
-    inferResult expr = do
-      loaded <- lift $ SugarInfer.load Nothing expr
-      let point = Infer.iPoint inferred
-      memoBy (loaded, token, point, 'r') . return $
-        SugarInfer.inferMaybe loaded (sugarContext ^. SugarM.scHoleInferState) point
+    inferResult expr =
+      SugarInfer.memoLoadInfer Nothing expr token
+      (sugarContext ^. SugarM.scHoleInferState, Infer.iPoint inferred)
     gen = genFromHashable (guid, seedHashable seed)
     guid = SugarInfer.resultGuid exprI
     iref = Property.value $ SugarInfer.resultStored exprI
-    token = (guid, sugarContext ^. SugarM.scContextHash)
+    token = Cache.bsOfKey (guid, sugarContext ^. SugarM.scContextHash)
     mkHoleResult (fakeConverted, fakeInferredExpr) =
       HoleResult
       { _holeResultInferred = fst <$> fakeInferredExpr

@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DeriveFunctor #-}
+{-# LANGUAGE TemplateHaskell, DeriveFunctor, ConstraintKinds #-}
 module Lamdu.CodeEdit.Sugar.Infer
   ( Payload(..), plGuid, plInferred, plStored
   , ExpressionSetter
@@ -18,6 +18,7 @@ module Lamdu.CodeEdit.Sugar.Infer
   -- Type-check an expression into an ordinary Inferred Expression,
   -- short-circuit on error:
   , load, inferMaybe, inferMaybe_
+  , memoLoadInfer
 
   , resultInferred
   , resultStored
@@ -37,13 +38,14 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT(..), evalStateT)
 import Control.Monad.Trans.State.Utils (toStateT)
 import Control.MonadA (MonadA)
+import Data.Binary (Binary)
 import Data.Cache (Cache)
 import Data.Maybe (isJust)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag, Tagged)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
-import Data.Typeable (Typeable)
+import Data.Typeable (Typeable, Typeable1)
 import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), inferWithConflicts)
 import System.Random (RandomGen)
@@ -148,6 +150,31 @@ inferMaybe loaded inferContext inferPoint =
   fmap fst . (`runStateT` inferContext) $
   Infer.inferLoaded (Infer.InferActions (const Nothing))
   loaded inferPoint
+
+pureMemoBy ::
+  (Cache.Key k, Binary v, MonadA m) =>
+  k -> v -> StateT Cache m v
+pureMemoBy k val = Cache.memoS (const (return val)) k
+
+-- memoLoadInfer does an infer "load" of the given expression (which
+-- loads dependent expression types), and then memoizes the inference
+-- result of that in a given context. It uses the "loaded" expression
+-- (expr+dependent def types) and a given "inferStateKey" as the
+-- memoization key. This is done because using the "inferState"
+-- directly as a key could potentially be huge and
+-- wasteful. Therefore, the caller is in charge of giving us a unique
+-- identifier for the inferState that is preferably small.
+memoLoadInfer ::
+  (MonadA m, Typeable1 m, Cache.Key a) => Maybe (DefI (Tag m)) ->
+  ExprIRef.ExpressionM m a -> Cache.KeyBS ->
+  ( Infer.Context (DefI (Tag m))
+  , Infer.InferNode (DefI (Tag m))
+  ) ->
+  CT m (Maybe (ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), a)))
+memoLoadInfer mDefI expr inferStateKey inferState = do
+  loaded <- lift $ load mDefI expr
+  pureMemoBy (loaded, inferStateKey) $
+    uncurry (inferMaybe loaded) inferState
 
 inferMaybe_ ::
   MonadA m =>
