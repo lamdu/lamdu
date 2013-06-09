@@ -78,7 +78,7 @@ import Data.Store.IRef (Tag)
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable1)
 import Lamdu.CodeEdit.Sugar.Infer (Stored)
-import Lamdu.CodeEdit.Sugar.Monad (SugarM)
+import Lamdu.CodeEdit.Sugar.Monad (SugarM, Context(..))
 import Lamdu.CodeEdit.Sugar.Types
 import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..))
@@ -488,15 +488,43 @@ isCompleteType :: Expr.Expression def () -> Bool
 isCompleteType =
   Lens.nullOf (Lens.folding ExprUtil.subExpressions . ExprLens.exprHole)
 
+mkContext ::
+  (MonadA m, Typeable1 m) =>
+  Anchors.Code (Transaction.MkProperty m) (Tag m) ->
+  DefI (Tag m) -> Maybe (String -> CT m Bool) ->
+  Cache.KeyBS ->
+  Infer.Context (DefI (Tag m)) ->
+  Infer.Context (DefI (Tag m)) ->
+  T m (Context m)
+mkContext cp defI mReinferRoot contextHash inferState holeInferState = do
+  specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
+  return Context
+    { _scMDefI = Just defI
+    , _scInferState = inferState
+    , _scContextHash = contextHash
+    , _scHoleInferState = holeInferState
+    , _scCodeAnchors = cp
+    , _scSpecialFunctions = specialFunctions
+    , _scMReinferRoot = mReinferRoot
+    , _scTagParamInfos = mempty
+    , _scRecordParamsInfos = mempty
+    , _scConvertSubexpression = convertExpressionI
+    }
+
 convertExpressionPure ::
   (MonadA m, Typeable1 m, RandomGen g) =>
-  Anchors.CodeProps m -> g ->
+  Anchors.CodeProps m -> DefI (Tag m) -> g ->
   ExprIRef.ExpressionM m () -> T m (ExpressionU m)
-convertExpressionPure cp gen =
+convertExpressionPure cp defI gen res = do
+  context <-
+    mkContext cp defI Nothing (err "contextHash")
+    (err "inferState") (err "holeInferState")
   fmap removeRedundantTypes .
-  SugarM.runPure cp convertExpressionI Map.empty Map.empty .
-  SugarM.convertSubexpression .
-  SugarInfer.resultFromPure gen
+    SugarM.run context .
+    SugarM.convertSubexpression $
+    SugarInfer.resultFromPure gen res
+  where
+    err x = error $ "convertExpressionPure: " ++ x
 
 data ConventionalParams m = ConventionalParams
   { cpTags :: [Guid]
@@ -877,7 +905,7 @@ convertDefIBuiltin ::
   T m (DefinitionBody MStoredName m (ExpressionU m))
 convertDefIBuiltin cp (Definition.Builtin name) defI defType =
   DefinitionBodyBuiltin <$> do
-    defTypeS <- convertExpressionPure cp iDefTypeGen (void defType)
+    defTypeS <- convertExpressionPure cp defI iDefTypeGen (void defType)
     pure DefinitionBuiltin
       { biName = name
       , biMSetName = Just setName
@@ -894,15 +922,15 @@ convertDefIBuiltin cp (Definition.Builtin name) defI defType =
 
 makeTypeInfo ::
   (Typeable1 m, MonadA m) =>
-  Anchors.CodeProps m -> Guid ->
+  Anchors.CodeProps m -> DefI (Tag m) ->
   ExprIRef.ExpressionM m (Stored m) ->
   ExprIRef.ExpressionM m () -> Bool ->
   T m (DefinitionTypeInfo m (ExpressionU m))
-makeTypeInfo cp defGuid defType inferredType success
+makeTypeInfo cp defI defType inferredType success
   | not success || not (isCompleteType inferredType) =
     DefinitionIncompleteType <$> do
-      defTypeS <- convertExpressionPure cp iDefTypeGen $ void defType
-      inferredTypeS <- convertExpressionPure cp iNewTypeGen inferredType
+      defTypeS <- conv iDefTypeGen $ void defType
+      inferredTypeS <- conv iNewTypeGen inferredType
       pure ShowIncompleteType
         { sitOldType = defTypeS
         , sitNewIncompleteType = inferredTypeS
@@ -910,8 +938,8 @@ makeTypeInfo cp defGuid defType inferredType success
   | typesMatch = pure DefinitionNoTypeInfo
   | otherwise =
     DefinitionNewType <$> do
-      defTypeS <- convertExpressionPure cp iDefTypeGen $ void defType
-      inferredTypeS <- convertExpressionPure cp iNewTypeGen inferredType
+      defTypeS <- conv iDefTypeGen $ void defType
+      inferredTypeS <- conv iNewTypeGen inferredType
       pure AcceptNewType
         { antOldType = defTypeS
         , antNewType = inferredTypeS
@@ -920,9 +948,11 @@ makeTypeInfo cp defGuid defType inferredType success
           ExprIRef.newExpression inferredType
         }
   where
+    conv = convertExpressionPure cp defI
     iDefTypeGen = SugarExpr.mkGen 1 3 defGuid
     iNewTypeGen = SugarExpr.mkGen 2 3 defGuid
     typesMatch = void defType `ExprUtil.alphaEq` inferredType
+    defGuid = IRef.guid defI
 
 convertDefIExpression ::
   (MonadA m, Typeable1 m) => Anchors.CodeProps m ->
@@ -930,7 +960,7 @@ convertDefIExpression ::
   ExprIRef.ExpressionM m (Stored m) ->
   CT m (DefinitionBody MStoredName m (ExpressionU m))
 convertDefIExpression cp exprLoaded defI defType = do
-  inferredLoadedResult@SugarInfer.InferLoadedResult
+  ilr@SugarInfer.InferLoadedResult
     { SugarInfer._ilrExpr = ilrExpr
     , SugarInfer._ilrSuccess = success
     } <-
@@ -940,8 +970,12 @@ convertDefIExpression cp exprLoaded defI defType = do
     inferredType =
       void . Infer.iType . iwcInferred $ SugarInfer.resultInferred ilrExpr
   typeInfo <-
-    lift $ makeTypeInfo cp defGuid defType (void inferredType) success
-  context <- lift $ SugarM.mkContext cp convertExpressionI (Just defI) (Just reinferRoot) inferredLoadedResult
+    lift $ makeTypeInfo cp defI defType (void inferredType) success
+  let
+    contextHash = Cache.bsOfKey $ ilr ^. SugarInfer.ilrContext
+    inferState = ilr ^. SugarInfer.ilrInferContext
+    holeInferState = ilr ^. SugarInfer.ilrBaseInferContext
+  context <- lift $ mkContext cp defI (Just reinferRoot) contextHash inferState holeInferState
   lift . SugarM.run context $ do
     content <-
       convertDefinitionContent recordParamsInfo [] $

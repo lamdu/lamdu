@@ -1,10 +1,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
 module Lamdu.CodeEdit.Sugar.Monad
   ( Context(..), TagParamInfo(..), RecordParamsInfo(..)
-  , scMDefI, scInferState, scMContextHash, scHoleInferState
+  , scMDefI, scInferState, scContextHash, scHoleInferState
   , scCodeAnchors, scSpecialFunctions, scMReinferRoot, scTagParamInfos, scRecordParamsInfos, scConvertSubexpression
-  , mkContext
-  , SugarM(..), run, runPure
+  , SugarM(..), run
   , readContext, liftTransaction, local
   , codeAnchor
   , getP
@@ -17,11 +16,9 @@ import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.MonadA (MonadA)
 import Data.Map (Map)
-import Data.Monoid (mempty)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
-import Data.Typeable (Typeable)
-import Lamdu.CodeEdit.Sugar.Infer (InferLoadedResult, ilrInferContext, ilrContext, ilrBaseInferContext, ExprMM)
+import Lamdu.CodeEdit.Sugar.Infer (ExprMM)
 import Lamdu.CodeEdit.Sugar.Types -- see export list
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Control.Lens.TH as LensTH
@@ -44,7 +41,7 @@ data RecordParamsInfo m = RecordParamsInfo
 data Context m = Context
   { _scMDefI :: Maybe (DefI (Tag m))
   , _scInferState :: Infer.Context (DefI (Tag m))
-  , _scMContextHash :: Maybe Cache.KeyBS -- Nothing if converting pure expression
+  , _scContextHash :: Cache.KeyBS
   , _scHoleInferState :: Infer.Context (DefI (Tag m))
   , _scCodeAnchors :: Anchors.CodeProps m
   , _scSpecialFunctions :: Anchors.SpecialFunctions (Tag m)
@@ -59,52 +56,8 @@ newtype SugarM m a = SugarM (ReaderT (Context m) (T m) a)
 
 LensTH.makeLenses ''Context
 
-mkContext ::
-  MonadA m => Typeable (m ()) =>
-  Anchors.CodeProps m ->
-  (ExprMM m -> SugarM m (ExpressionU m)) ->
-  Maybe (DefI (Tag m)) ->
-  Maybe (String -> CT m Bool) ->
-  InferLoadedResult m ->
-  T m (Context m)
-mkContext cp convert mDefI mReinferRoot iResult = do
-  specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
-  return Context
-    { _scMDefI = mDefI
-    , _scInferState = iResult ^. ilrInferContext
-    , _scMContextHash = Just . Cache.bsOfKey $ iResult ^. ilrContext
-    , _scHoleInferState = iResult ^. ilrBaseInferContext
-    , _scCodeAnchors = cp
-    , _scSpecialFunctions = specialFunctions
-    , _scMReinferRoot = mReinferRoot
-    , _scTagParamInfos = mempty
-    , _scRecordParamsInfos = mempty
-    , _scConvertSubexpression = convert
-    }
-
 run :: MonadA m => Context m -> SugarM m a -> T m a
 run ctx (SugarM action) = runReaderT action ctx
-
-runPure ::
-  MonadA m => Anchors.CodeProps m ->
-  (ExprMM m -> SugarM m (ExpressionU m)) ->
-  Map Guid TagParamInfo ->
-  Map Guid (RecordParamsInfo m) ->
-  SugarM m a -> T m a
-runPure cp convert tagParamInfos recordParamsInfos act = do
-  specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
-  run Context
-    { _scMDefI = Nothing
-    , _scInferState = error "pure expression doesnt have infer state"
-    , _scHoleInferState = error "pure expression doesnt have hole infer state"
-    , _scMContextHash = Nothing
-    , _scCodeAnchors = cp
-    , _scSpecialFunctions = specialFunctions
-    , _scMReinferRoot = Nothing
-    , _scTagParamInfos = tagParamInfos
-    , _scRecordParamsInfos = recordParamsInfos
-    , _scConvertSubexpression = convert
-    } act
 
 readContext :: MonadA m => SugarM m (Context m)
 readContext = SugarM Reader.ask

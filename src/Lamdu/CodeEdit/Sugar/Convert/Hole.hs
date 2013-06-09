@@ -159,7 +159,7 @@ mkHole iwc exprI = do
   mPaste <- fmap join . traverse mkPaste $ SugarInfer.resultStored exprI
   let
     inferState = sugarContext ^. SugarM.scHoleInferState
-    contextHash = sugarContext ^. SugarM.scMContextHash
+    contextHash = sugarContext ^. SugarM.scContextHash
     token = (eGuid, contextHash)
     mkWritableHoleActions exprS = do
       globals <-
@@ -349,7 +349,7 @@ makeHoleResult sugarContext inferred exprI seed =
     gen = genFromHashable (guid, seedHashable seed)
     guid = SugarInfer.resultGuid exprI
     iref = Property.value $ SugarInfer.resultStored exprI
-    token = (guid, sugarContext ^. SugarM.scMContextHash)
+    token = (guid, sugarContext ^. SugarM.scContextHash)
     mkHoleResult (fakeConverted, fakeInferredExpr) =
       HoleResult
       { _holeResultInferred = fst <$> fakeInferredExpr
@@ -404,11 +404,10 @@ convertHoleResult ::
   (MonadA m, Typeable1 m) => SugarM.Context m -> Random.StdGen ->
   ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) -> T m (ExpressionU m)
 convertHoleResult sugarContext gen res =
-  SugarM.runPure
-  (sugarContext ^. SugarM.scCodeAnchors)
-  (sugarContext ^. SugarM.scConvertSubexpression)
-  (sugarContext ^. SugarM.scTagParamInfos)
-  (sugarContext ^. SugarM.scRecordParamsInfos) .
+  SugarM.run sugarContext
+  { SugarM._scInferState = error "pure expression doesnt have infer state"
+  , SugarM._scHoleInferState = error "pure expression doesnt have hole infer state"
+  } .
   SugarM.convertSubexpression .
   (traverse . SugarInfer.plInferred %~ Just) .
   (traverse . SugarInfer.plStored .~ Nothing) $
