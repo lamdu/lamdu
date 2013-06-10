@@ -374,17 +374,19 @@ convertRecord (Expr.Record k fields) exprI = do
     { _rKind = k
     , _rFields =
         FieldList
-        { _flItems = withNextHoles sFields
+        { _flItems = map setTagNextHole $ withExprNextHoles sFields
         , _flMAddFirstItem = addField <$> SugarInfer.resultMIRef exprI
         }
     }
   where
     defaultGuid = SugarInfer.resultGuid exprI
-    withNextHoles (field : rest@(nextField:_)) =
+    setTagNextHole field =
+      field & rfTag %~ SugarExpr.setNextHole (field ^. rfExpr)
+    withExprNextHoles (field : rest@(nextField:_)) =
       (field
        & rfExpr %~ SugarExpr.setNextHole (nextField ^. rfExpr))
-      : withNextHoles rest
-    withNextHoles xs = xs
+      : withExprNextHoles rest
+    withExprNextHoles xs = xs
     addField iref =
       writeRecordFields iref defaultGuid $ \recordFields -> do
         holeTagExpr <- DataOps.newHole
