@@ -7,7 +7,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , DefinitionExpression(..), deContent, deTypeInfo
   , ShowIncompleteType(..), AcceptNewType(..)
   , DefinitionTypeInfo(..)
-    , _DefinitionNoTypeInfo
+    , _DefinitionExportedTypeInfo
     , _DefinitionIncompleteType
     , _DefinitionNewType
   , DefinitionContent(..)
@@ -381,7 +381,7 @@ data ShowIncompleteType expr = ShowIncompleteType
   } deriving (Functor, Foldable, Traversable)
 
 data DefinitionTypeInfo m expr
-  = DefinitionNoTypeInfo
+  = DefinitionExportedTypeInfo expr
   | DefinitionIncompleteType (ShowIncompleteType expr)
   | DefinitionNewType (AcceptNewType m expr)
   deriving (Functor, Foldable, Traversable)

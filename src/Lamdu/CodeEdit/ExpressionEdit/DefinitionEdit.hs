@@ -261,15 +261,17 @@ makeExprDefinition ::
 makeExprDefinition def bodyExpr = do
   typeWidgets <-
     case bodyExpr ^. Sugar.deTypeInfo of
-    Sugar.DefinitionNoTypeInfo -> return []
+    Sugar.DefinitionExportedTypeInfo x ->
+      makeGrid <$> sequenceA
+      [ mkTypeRow "Exported type:" id x ]
     Sugar.DefinitionIncompleteType x ->
-      fmap makeGrid $ sequenceA
-      [ mkTypeRow "Type:" id $ Sugar.sitOldType x
+      makeGrid <$> sequenceA
+      [ mkTypeRow "Exported type:" id $ Sugar.sitOldType x
       , mkTypeRow "Inferred type:" id $ Sugar.sitNewIncompleteType x
       ]
     Sugar.DefinitionNewType x ->
-      fmap makeGrid $ sequenceA
-      [ mkTypeRow "Type:" (>>= addAcceptanceArrow (Sugar.antAccept x)) $
+      makeGrid <$> sequenceA
+      [ mkTypeRow "Exported type:" (>>= addAcceptanceArrow (Sugar.antAccept x)) $
         Sugar.antOldType x
       , mkTypeRow "Inferred type:" id $ Sugar.antNewType x
       ]

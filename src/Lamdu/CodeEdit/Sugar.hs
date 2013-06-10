@@ -7,7 +7,7 @@ module Lamdu.CodeEdit.Sugar
   , DefinitionExpression(..), deContent, deTypeInfo
   , ShowIncompleteType(..), AcceptNewType(..)
   , DefinitionTypeInfo(..)
-    , _DefinitionNoTypeInfo
+    , _DefinitionExportedTypeInfo
     , _DefinitionIncompleteType
     , _DefinitionNewType
   , DefinitionContent(..)
@@ -919,27 +919,28 @@ makeTypeInfo ::
   ExprIRef.ExpressionM m (Stored m) ->
   ExprIRef.ExpressionM m () -> Bool ->
   T m (DefinitionTypeInfo m (ExpressionU m))
-makeTypeInfo cp defI defType inferredType success
-  | not success || not (isCompleteType inferredType) =
-    DefinitionIncompleteType <$> do
-      defTypeS <- conv iDefTypeGen $ void defType
-      inferredTypeS <- conv iNewTypeGen inferredType
-      pure ShowIncompleteType
-        { sitOldType = defTypeS
-        , sitNewIncompleteType = inferredTypeS
-        }
-  | typesMatch = pure DefinitionNoTypeInfo
-  | otherwise =
-    DefinitionNewType <$> do
-      defTypeS <- conv iDefTypeGen $ void defType
-      inferredTypeS <- conv iNewTypeGen inferredType
-      pure AcceptNewType
-        { antOldType = defTypeS
-        , antNewType = inferredTypeS
-        , antAccept =
-          Property.set (defType ^. Expr.ePayload) =<<
-          ExprIRef.newExpression inferredType
-        }
+makeTypeInfo cp defI defType inferredType success = do
+  defTypeS <- conv iDefTypeGen $ void defType
+  case () of
+    ()
+      | not success || not (isCompleteType inferredType) ->
+        DefinitionIncompleteType <$> do
+          inferredTypeS <- conv iNewTypeGen inferredType
+          pure ShowIncompleteType
+            { sitOldType = defTypeS
+            , sitNewIncompleteType = inferredTypeS
+            }
+      | typesMatch -> pure $ DefinitionExportedTypeInfo defTypeS
+      | otherwise ->
+        DefinitionNewType <$> do
+          inferredTypeS <- conv iNewTypeGen inferredType
+          pure AcceptNewType
+            { antOldType = defTypeS
+            , antNewType = inferredTypeS
+            , antAccept =
+              Property.set (defType ^. Expr.ePayload) =<<
+              ExprIRef.newExpression inferredType
+            }
   where
     conv = convertExpressionPure cp defI
     iDefTypeGen = SugarExpr.mkGen 1 3 defGuid
