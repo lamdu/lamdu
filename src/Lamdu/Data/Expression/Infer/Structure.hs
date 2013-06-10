@@ -7,10 +7,10 @@ import Control.Monad (void)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT)
 import Control.MonadA (MonadA)
-import Lamdu.Data.Expression (Expression(..))
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Lamdu.Data.Expression as Expr
+import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Infer.UntilConflict as InferUntilConflict
 import qualified Lamdu.Data.Expression.Lens as ExprLens
@@ -30,22 +30,9 @@ addToNode ::
 addToNode loader inferred
   | Lens.has ExprLens.exprHole (Infer.iValue inferred) = do
     loaded <-
-      lift . Infer.load loader Nothing . structureForType . void $
+      lift . Infer.load loader Nothing . ExprUtil.structureForType . void $
       Infer.iType inferred
     point <$ InferUntilConflict.inferAssertNoConflict "Structure.addToNode" loaded point
   | otherwise = pure point
   where
     point = Infer.iPoint inferred
-
-structureForType ::
-  Expression def () ->
-  Expression def ()
-structureForType expr =
-  case expr ^. Expr.eBody of
-  Expr.BodyRecord (Expr.Record Expr.Type fields) ->
-    ExprLens.pureExpr . ExprLens.bodyKindedRecordFields Expr.Val #
-    (fields & Lens.traversed . Lens._2 %~ structureForType)
-  Expr.BodyLam (Expr.Lambda Expr.Type paramId paramType resultType) ->
-    ExprLens.pureExpr . ExprLens.bodyKindedLam Expr.Val #
-    (paramId, paramType, structureForType resultType)
-  _ -> ExprLens.pureExpr . ExprLens.bodyHole # ()

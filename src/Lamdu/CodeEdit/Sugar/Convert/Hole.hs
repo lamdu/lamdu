@@ -22,7 +22,7 @@ import Lamdu.CodeEdit.Sugar.Infer (InferredWC, Stored)
 import Lamdu.CodeEdit.Sugar.Monad (SugarM)
 import Lamdu.CodeEdit.Sugar.Types
 import Lamdu.Data.Expression.IRef (DefI)
-import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), iwcInferredValues)
+import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), iwcInferred, iwcInferredValues)
 import qualified Control.Lens as Lens
 import qualified Data.Cache as Cache
 import qualified Data.Foldable as Foldable
@@ -122,23 +122,30 @@ convertInferred ::
   InferredWC (Tag m) -> SugarInfer.ExprMM m ->
   ExprIRef.ExpressionM m () ->
   SugarM m (ExpressionU m)
-convertInferred iwc exprI inferredVal = do
+convertInferred iwc exprI wvInferredVal = do
   sugarContext <- SugarM.readContext
   hole <- mkHole iwc exprI
+  let
+    gen expr = genFromHashable (eGuid, show (void expr))
   val <-
     SugarM.convertSubexpression $
-    SugarInfer.resultFromPure gen inferredVal
+    SugarInfer.resultFromPure (gen wvInferredVal) wvInferredVal
+  -- wvInferredVal uses wvInferContext, but for "accept" purposes, we
+  -- must use the holeInferContext:
+  let
+    inferredVal =
+      ExprUtil.structureForType . void . Infer.iType $
+      iwcInferred iwc
   SugarExpr.make exprI $ BodyInferred Inferred
     { _iHole = hole
     , _iValue = val
     , _iMAccept =
       fmap (fromMaybe eGuid) .
       accept sugarContext (Infer.iPoint (iwcInferred iwc))
-      (ExprUtil.randomizeParamIds gen inferredVal) .
+      (ExprUtil.randomizeParamIds (gen inferredVal) inferredVal) .
       Property.value <$> SugarInfer.resultStored exprI
     }
   where
-    gen = genFromHashable (eGuid, show (void inferredVal))
     eGuid = SugarInfer.resultGuid exprI
 
 convertPlainTyped ::

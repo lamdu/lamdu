@@ -20,7 +20,8 @@ module Lamdu.Data.Expression.Utils
   , subExpressions, subExpressionsWithoutTags
   , isDependentPi, exprHasGetVar
   , curriedFuncArguments
-  , ApplyFormAnnotation(..), applyForms, recordValForm
+  , ApplyFormAnnotation(..), applyForms
+  , recordValForm, structureForType
   , alphaEq, couldEq
   , subst, substGetPar
   , showBodyExpr, showsPrecBodyExpr
@@ -144,6 +145,19 @@ recordValForm paramType =
       ExprLens.pureExpr . _BodyRecord .
       ExprLens.kindedRecordFields Val #
       (fields & Lens.traversed . Lens._2 .~ pureHole)
+
+structureForType ::
+  Expression def () ->
+  Expression def ()
+structureForType expr =
+  case expr ^. eBody of
+  BodyRecord (Record Type fields) ->
+    ExprLens.pureExpr . ExprLens.bodyKindedRecordFields Val #
+    (fields & Lens.traversed . Lens._2 %~ structureForType)
+  BodyLam (Lambda Type paramId paramType resultType) ->
+    ExprLens.pureExpr . ExprLens.bodyKindedLam Val #
+    (paramId, paramType, structureForType resultType)
+  _ -> ExprLens.pureExpr . ExprLens.bodyHole # ()
 
 randomizeExpr :: (RandomGen g, Random r) => g -> Expression def (r -> a) -> Expression def a
 randomizeExpr gen = (`evalState` gen) . traverse randomize

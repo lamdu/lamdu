@@ -3,8 +3,8 @@
 module Lamdu.Data.Expression.Infer
   ( Inferred(..), rExpression
   , Loaded, load, loadIndependent
-  , inferLoaded
-  , addRules, derefExpr
+  , inferLoaded, addRules
+  , derefExpr, derefNode
   -- TODO: Expose only ref readers for InferNode (instead of .. and TypedValue)
   , IsRestrictedPoly(..)
   , InferNode(..), TypedValue(..)
@@ -245,22 +245,16 @@ liftState = InferT
 instance MonadTrans (InferT def) where
   lift = liftState . lift
 
-derefExpr ::
-  Expr.Expression def (InferNode def, a) -> Context def ->
-  Expr.Expression def (Inferred def, a)
-derefExpr expr context =
-  derefNode <$> expr
+derefNode :: Context def -> InferNode def -> Inferred def
+derefNode context inferNode =
+  Inferred
+  { iValue = deref . tvVal $ nRefs inferNode
+  , iType = deref . tvType $ nRefs inferNode
+  , iScope =
+    Map.fromList . mapMaybe onScopeElement . Map.toList $ nScope inferNode
+  , iPoint = inferNode
+  }
   where
-    derefNode (inferNode, s) =
-      ( Inferred
-        { iValue = deref . tvVal $ nRefs inferNode
-        , iType = deref . tvType $ nRefs inferNode
-        , iScope =
-          Map.fromList . mapMaybe onScopeElement . Map.toList $ nScope inferNode
-        , iPoint = inferNode
-        }
-      , s
-      )
     onScopeElement (Expr.ParameterRef guid, ref) = Just (guid, deref ref)
     onScopeElement _ = Nothing
     toIsRestrictedPoly False = UnrestrictedPoly
@@ -268,6 +262,12 @@ derefExpr expr context =
     deref ref =
       toIsRestrictedPoly . Monoid.getAny . Lens.view rplRestrictedPoly <$>
       context ^. exprRefsAt ref . rExpression
+
+derefExpr ::
+  Expr.Expression def (InferNode def, a) -> Context def ->
+  Expr.Expression def (Inferred def, a)
+derefExpr expr context =
+  expr <&> Lens._1 %~ derefNode context
 
 getRefExpr :: MonadA m => ExprRef -> InferT def m (RefExpression def)
 getRefExpr ref = liftState $ Lens.use (sContext . exprRefsAt ref . rExpression)
