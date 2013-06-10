@@ -4,7 +4,7 @@ module Lamdu.Data.Ops
   , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap
   , addListItem
   , newPublicDefinition
-  , newDefinition
+  , newDefinition, presentationModeOfName
   , savePreJumpPosition, jumpBack
   , newPane
   , newClipboard
@@ -19,6 +19,7 @@ import Control.MonadA (MonadA)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction, getP, setP, modP)
+import Lamdu.Data.Anchors (PresentationMode(..))
 import Lamdu.Data.Definition (Definition(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Data.Store.IRef as IRef
@@ -150,26 +151,26 @@ jumpBack codeProps = do
 isInfix :: String -> Bool
 isInfix x = not (null x) && all (`elem` Config.operatorChars) x
 
-presentationModeOfName :: String -> Anchors.PresentationMode
+presentationModeOfName :: String -> PresentationMode
 presentationModeOfName x
-  | isInfix x = Anchors.Infix
-  | otherwise = Anchors.OO
+  | isInfix x = Infix
+  | otherwise = OO
 
 newDefinition ::
-  MonadA m => String ->
+  MonadA m => String -> PresentationMode ->
   ExprIRef.DefinitionI (Tag m) -> T m (DefI (Tag m))
-newDefinition name def = do
+newDefinition name presentationMode def = do
   res <- Transaction.newIRef def
   let guid = IRef.guid res
   setP (Anchors.assocNameRef guid) name
-  setP (Anchors.assocPresentationMode guid) $ presentationModeOfName name
+  setP (Anchors.assocPresentationMode guid) presentationMode
   return res
 
 newPublicDefinition ::
   MonadA m => Anchors.CodeProps m -> String -> T m (DefI (Tag m))
 newPublicDefinition codeProps name = do
   defI <-
-    newDefinition name =<<
+    newDefinition name (presentationModeOfName name) =<<
     (Definition . Definition.BodyExpression <$> newHole <*> newHole)
   modP (Anchors.globals codeProps) (defI :)
   return defI
@@ -181,7 +182,7 @@ newClipboard ::
 newClipboard codeProps expr = do
   len <- length <$> getP (Anchors.clipboards codeProps)
   def <- Definition (Definition.BodyExpression expr) <$> newHole
-  defI <- newDefinition ("clipboard" ++ show len) def
+  defI <- newDefinition ("clipboard" ++ show len) OO def
   modP (Anchors.clipboards codeProps) (defI:)
   return defI
 

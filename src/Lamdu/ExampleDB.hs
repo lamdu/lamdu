@@ -14,6 +14,7 @@ import Data.Store.Rev.Branch (Branch)
 import Data.Store.Rev.Version (Version)
 import Data.Store.Transaction (Transaction, setP)
 import Data.Traversable (traverse)
+import Lamdu.Data.Anchors (PresentationMode(..))
 import Lamdu.Data.Definition (Definition(..))
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer
@@ -112,8 +113,8 @@ createBuiltins =
         [ ("from", listOf a)
         , (predName, mkPi a bool)
         ] $ listOf a
-    publicBuiltin_ "Data.List.filter" $ filterType "predicate"
-    void . publicDef "take" ["Data", "List"] "takeWhile" $ filterType "while"
+    publicDef_ "filter" Verbose ["Data", "List"] "filter" $ filterType "predicate"
+    publicDef_ "take" Verbose ["Data", "List"] "takeWhile" $ filterType "while"
 
     publicBuiltin_ "Data.List.map" .
       forAll "a" $ \a ->
@@ -151,7 +152,7 @@ createBuiltins =
     let aToAToA = forAll "a" $ \a -> mkInfixType a a a
     traverse_ ((`publicBuiltin_` aToAToA) . ("Prelude." ++))
       ["+", "-", "*", "/", "^", "++", "div", "quot", "rem"]
-    void $ publicDef "%" ["Prelude"] "mod" aToAToA
+    publicDef_ "%" Infix ["Prelude"] "mod" aToAToA
     publicBuiltin_ "Prelude.negate" $ forAll "a" endo
     publicBuiltin_ "Prelude.sqrt" $ forAll "a" endo
 
@@ -159,14 +160,14 @@ createBuiltins =
     traverse_ ((`publicBuiltin_` aToAToBool) . ("Prelude." ++))
       ["==", "/=", "<=", ">=", "<", ">"]
 
-    void . publicDef ".." ["Prelude"] "enumFromTo" . mkInfixType integer integer $ listOf integer
+    publicDef_ ".." Infix ["Prelude"] "enumFromTo" . mkInfixType integer integer $ listOf integer
     publicBuiltin_ "Prelude.enumFrom" . mkPi integer $ listOf integer
 
-    publicBuiltin_ "Data.List.iterate" .
+    publicDef_ "iterate" Verbose ["Data", "List"] "iterate" .
       forAll "a" $ \a ->
       mkPiRecord [("step", endo a), ("initial", a)] $ listOf a
 
-    void . publicDef "." ["Prelude"] "." .
+    publicDef_ "." Infix ["Prelude"] "." .
       forAll "a" $ \a -> forAll "b" $ \b -> forAll "c" $ \c ->
       mkInfixType (mkPi b c) (mkPi a b) (mkPi a c)
     let
@@ -182,13 +183,15 @@ createBuiltins =
         }
     return (ffiEnv, specialFunctions)
   where
-    publicDef name ffiPath ffiName mkType = publicize $ do
+    publicDef_ name presentationMode ffiPath ffiName mkType =
+      void $ publicDef name presentationMode ffiPath ffiName mkType
+    publicDef name presentationMode ffiPath ffiName mkType = publicize $ do
       typeI <- mkType
-      DataOps.newDefinition name .
+      DataOps.newDefinition name presentationMode .
         (`Definition` typeI) . Definition.BodyBuiltin .
         Definition.Builtin $ Definition.FFIName ffiPath ffiName
     publicBuiltin fullyQualifiedName mkType =
-      publicDef name path name mkType
+      publicDef name (DataOps.presentationModeOfName name) path name mkType
       where
         name = last path
         path = splitOn "." fullyQualifiedName
