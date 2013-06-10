@@ -143,9 +143,9 @@ translate pos =
   (wFocalArea . Rect.topLeft %~ (+pos)) .
   (wMaybeEnter . Lens.mapped %~
     (Lens.mapped . enterResultRect .
-     Rect.topLeft %~ (+pos)) .
+     Rect.topLeft %~ (+ pos)) .
     (Lens.argument . Direction.coordinates .
-     Rect.topLeft %~ (subtract pos)))
+     Rect.topLeft %~ subtract pos))
 
 translateBy :: (Vector2 R -> Vector2 R) -> Widget f -> Widget f
 translateBy mkPos w =

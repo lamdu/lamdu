@@ -175,8 +175,9 @@ toRefExpression :: Expr.Expression def () -> RefExpression def
 toRefExpression = (RefExprPayload mempty mempty mempty <$)
 
 createRefExpr :: State (Context def) ExprRef
-createRefExpr = do
-  fmap ExprRef . Lens.zoom exprMap . createRef $ RefData (toRefExpression ExprUtil.pureHole) mempty
+createRefExpr =
+  fmap ExprRef . Lens.zoom exprMap . createRef $
+  RefData (toRefExpression ExprUtil.pureHole) mempty
 
 {-# INLINE exprRefsAt #-}
 exprRefsAt :: Functor f => ExprRef -> LensLike' f (Context def) (RefData def)

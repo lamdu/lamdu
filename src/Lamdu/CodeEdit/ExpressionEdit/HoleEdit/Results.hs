@@ -27,8 +27,7 @@ import Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, 
 import Lamdu.CodeEdit.Sugar (Scope(..))
 import Lamdu.Data.Expression (Expression(..))
 import Lamdu.Data.Expression.IRef (DefI)
-import Lamdu.Data.Expression.Utils (ApplyFormAnnotation(..))
-import Lamdu.Data.Expression.Utils (pureHole)
+import Lamdu.Data.Expression.Utils (ApplyFormAnnotation(..), pureHole)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Foldable as Foldable

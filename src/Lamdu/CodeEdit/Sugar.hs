@@ -432,18 +432,17 @@ convertGetField (Expr.GetField recExpr tagExpr) exprI = do
 
 removeRedundantSubExprTypes :: Expression n m -> Expression n m
 removeRedundantSubExprTypes =
-  (rBody %~
-    ( Lens.traversed %~ removeRedundantTypes
-      & Lens.outside _BodyHole .~
-        BodyHole . (Lens.traversed %~ removeRedundantSubExprTypes)
-    ) .
-    (_BodyApply . aFunc %~ remSuc) .
-    (_BodyGetField . gfRecord %~ remSuc) .
-    (_BodyLam . lResultType %~ remSuc) .
-    (_BodyRecord %~
-      (fields . rfTag %~ remSuc) .
-      (Lens.filtered ((== Type) . (^. rKind)) . fields . rfExpr %~ remSuc)
-    )
+  rBody %~
+  ( Lens.traversed %~ removeRedundantTypes
+    & Lens.outside _BodyHole .~
+      BodyHole . (Lens.traversed %~ removeRedundantSubExprTypes)
+  ) .
+  (_BodyApply . aFunc %~ remSuc) .
+  (_BodyGetField . gfRecord %~ remSuc) .
+  (_BodyLam . lResultType %~ remSuc) .
+  (_BodyRecord %~
+    (fields . rfTag %~ remSuc) .
+    (Lens.filtered ((== Type) . (^. rKind)) . fields . rfExpr %~ remSuc)
   )
   where
     fields = rFields . flItems . Lens.traversed

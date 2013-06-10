@@ -263,7 +263,7 @@ getFieldWasntAllowed =
         , holeWithInferredType $ listOf recType
         ]
       , lambda "x" (asHole recType) $
-        \_ -> hole
+        const hole
       ]
     pos :: Lens.Traversal' (Expression def a) (Expression def a)
     pos = lambdaPos . Lens._3

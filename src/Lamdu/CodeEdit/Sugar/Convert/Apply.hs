@@ -134,7 +134,7 @@ convertPrefix funcRef funcI rawArgS argI applyI = do
           rPayload . plActions . Lens.traversed %~
           (callWithNextArg .~ SugarExpr.mkCallWithArg sugarContext storedApply) .
           if Lens.has ExprLens.exprHole funcI
-          then (replaceWithNewHole .~ SugarExpr.mkReplaceWithNewHole storedApply)
+          then replaceWithNewHole .~ SugarExpr.mkReplaceWithNewHole storedApply
           else id
     makeFullApply = makeApply $ SugarExpr.setNextHole argS funcRef
     makeApply f =

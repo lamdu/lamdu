@@ -217,7 +217,7 @@ mkAddNewDefinitionEventMap holeInfo = do
       E.keyPresses Config.newDefinitionKeys
       (E.Doc ["Edit", "Result", "As new Definition"]) $ do
         mTargetGuid <- HoleResults.pick holeInfo defRef
-        when (isJust mTargetGuid) $ savePosition
+        when (isJust mTargetGuid) savePosition
         pure Widget.EventResult
           { Widget._eCursor = WidgetIds.fromGuid <$> mTargetGuid
           , Widget._eAnimIdMapping =
