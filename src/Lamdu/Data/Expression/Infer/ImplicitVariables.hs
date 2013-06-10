@@ -13,18 +13,16 @@ import Control.MonadA (MonadA)
 import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
-import Data.Functor.Identity (Identity(..))
-import Data.Maybe (fromMaybe)
 import Data.Monoid (mempty)
 import Data.Store.Guid (Guid)
 import Data.Typeable (Typeable)
-import Lamdu.Data.Expression.Infer.UntilConflict (inferAssertNoConflict)
 import System.Random (RandomGen, random)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Store.Guid as Guid
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Infer as Infer
+import qualified Lamdu.Data.Expression.Infer.UntilConflict as InferUntilConflict
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
@@ -39,14 +37,6 @@ isUnrestrictedHole
     Infer.UnrestrictedPoly) = True
 isUnrestrictedHole _ = False
 
-unMaybe :: StateT s Maybe b -> StateT s Identity b
-unMaybe =
-  mapStateT (Identity . fromMaybe (error "Infer error when adding implicit vars!"))
-
--- TODO: Infer.Utils
-actions :: Infer.InferActions def Maybe
-actions = Infer.InferActions $ const Nothing
-
 addVariableForHole ::
   (Show def, Ord def, RandomGen g) =>
   Infer.InferNode def ->
@@ -58,7 +48,8 @@ addVariableForHole holePoint = do
     loaded = Infer.loadIndependent (("Loading a mere getVar: " ++) . show) Nothing getVar
   lift $ do
     inferredGetVar <-
-      inferAssertNoConflict "ImplicitVariables.addVariableForHole" loaded holePoint
+      InferUntilConflict.inferAssertNoConflict
+      "ImplicitVariables.addVariableForHole" loaded holePoint
     let
       paramTypeRef =
         Infer.tvType . Infer.nRefs . Infer.iPoint . fst $
@@ -88,8 +79,8 @@ addVariablesForExpr loader expr = do
         inferredVal reinferred
       reinferredLoaded <-
         lift . toStateT .
-        inferAssertNoConflict "ImplicitVariables.addVariableForExpr"
-        reloaded .
+        InferUntilConflict.inferAssertNoConflict
+        "ImplicitVariables.addVariableForExpr" reloaded .
         Infer.iPoint . fst $ Lens.view Expr.ePayload reinferred
       fmap concat . mapM (addVariablesForExpr loader) .
         filter (isUnrestrictedHole . inferredVal) $
@@ -108,7 +99,8 @@ addParam body (paramGuid, paramTypeNode) = do
   let
     newRootExpr =
       Expr.Expression newRootLam (newRootNode, AutoGen (Guid.augment "root" paramGuid))
-  unMaybe $ Infer.addRules actions [fst <$> newRootExpr]
+  InferUntilConflict.assertNoConflict "Infer error when adding implicit vars" $
+    Infer.addRules InferUntilConflict.actions [fst <$> newRootExpr]
   return newRootExpr
   where
     paramTypeExpr =
