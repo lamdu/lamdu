@@ -165,7 +165,7 @@ createBuiltins =
 
     publicDef_ "iterate" Verbose ["Data", "List"] "iterate" .
       forAll "a" $ \a ->
-      mkPiRecord [("step", endo a), ("initial", a)] $ listOf a
+      mkPiRecord [("initial", a), ("step", endo a)] $ listOf a
 
     publicDef_ "." Infix ["Prelude"] "." .
       forAll "a" $ \a -> forAll "b" $ \b -> forAll "c" $ \c ->
