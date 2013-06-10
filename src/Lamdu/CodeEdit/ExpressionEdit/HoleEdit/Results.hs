@@ -116,9 +116,7 @@ makeLiteralGroups searchTerm =
       mkGroup [show integer] $ ExprLens.bodyLiteralInteger # integer
 
 resultComplexityScore :: ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) -> Int
-resultComplexityScore =
-  sum . map (subtract 2 . length . Foldable.toList . Infer.iType) .
-  Foldable.toList
+resultComplexityScore = length . Foldable.toList . Infer.iType . (^. Expr.ePayload)
 
 prefixId :: HoleInfo m -> Widget.Id
 prefixId holeInfo = mconcat [hiHoleId holeInfo, Widget.Id ["results"]]
