@@ -4,7 +4,7 @@ module Lamdu.Data.Ops
   , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap
   , addListItem
   , newPublicDefinition
-  , newBuiltin, newDefinition
+  , newDefinition
   , savePreJumpPosition, jumpBack
   , newPane
   , newClipboard
@@ -16,7 +16,6 @@ import Control.Applicative ((<$>), (<*>), (<$))
 import Control.Lens.Operators
 import Control.Monad (when)
 import Control.MonadA (MonadA)
-import Data.List.Split (splitOn)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction, getP, setP, modP)
@@ -165,18 +164,6 @@ newDefinition name def = do
   setP (Anchors.assocNameRef guid) name
   setP (Anchors.assocPresentationMode guid) $ presentationModeOfName name
   return res
-
-newBuiltin ::
-  MonadA m =>
-  String ->
-  ExprIRef.ExpressionI (Tag m) ->
-  T m (DefI (Tag m))
-newBuiltin fullyQualifiedName typeI =
-  newDefinition name . (`Definition` typeI) . Definition.BodyBuiltin .
-  Definition.Builtin $ Definition.FFIName (init path) name
-  where
-    name = last path
-    path = splitOn "." fullyQualifiedName
 
 newPublicDefinition ::
   MonadA m => Anchors.CodeProps m -> String -> T m (DefI (Tag m))

@@ -7,6 +7,7 @@ import Control.Monad.Trans.Class (lift)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary(..))
 import Data.Foldable (traverse_)
+import Data.List.Split (splitOn)
 import Data.Store.Db (Db)
 import Data.Store.IRef (IRef, Tag)
 import Data.Store.Rev.Branch (Branch)
@@ -112,7 +113,7 @@ createBuiltins =
         , (predName, mkPi a bool)
         ] $ listOf a
     publicBuiltin_ "Data.List.filter" $ filterType "predicate"
-    newDef "take" ["Data", "List"] "takeWhile" $ filterType "while"
+    void . publicDef "take" ["Data", "List"] "takeWhile" $ filterType "while"
 
     publicBuiltin_ "Data.List.map" .
       forAll "a" $ \a ->
@@ -150,7 +151,7 @@ createBuiltins =
     let aToAToA = forAll "a" $ \a -> mkInfixType a a a
     traverse_ ((`publicBuiltin_` aToAToA) . ("Prelude." ++))
       ["+", "-", "*", "/", "^", "++", "div", "quot", "rem"]
-    newDef "%" ["Prelude"] "mod" aToAToA
+    void $ publicDef "%" ["Prelude"] "mod" aToAToA
     publicBuiltin_ "Prelude.negate" $ forAll "a" endo
     publicBuiltin_ "Prelude.sqrt" $ forAll "a" endo
 
@@ -158,14 +159,14 @@ createBuiltins =
     traverse_ ((`publicBuiltin_` aToAToBool) . ("Prelude." ++))
       ["==", "/=", "<=", ">=", "<", ">"]
 
-    newDef ".." ["Prelude"] "enumFromTo" . mkInfixType integer integer $ listOf integer
-    newDef "enumFrom" ["Prelude"] "enumFrom" . mkPi integer $ listOf integer
+    void . publicDef ".." ["Prelude"] "enumFromTo" . mkInfixType integer integer $ listOf integer
+    publicBuiltin_ "Prelude.enumFrom" . mkPi integer $ listOf integer
 
     publicBuiltin_ "Data.List.iterate" .
       forAll "a" $ \a ->
       mkPiRecord [("step", endo a), ("initial", a)] $ listOf a
 
-    newDef "." ["Prelude"] "." .
+    void . publicDef "." ["Prelude"] "." .
       forAll "a" $ \a -> forAll "b" $ \b -> forAll "c" $ \c ->
       mkInfixType (mkPi b c) (mkPi a b) (mkPi a c)
     let
@@ -181,11 +182,18 @@ createBuiltins =
         }
     return (ffiEnv, specialFunctions)
   where
-    newDef name ffiPath ffiName mkTypeI = void . publicize $ do
-      typeI <- mkTypeI
+    publicDef name ffiPath ffiName mkType = publicize $ do
+      typeI <- mkType
       DataOps.newDefinition name .
         (`Definition` typeI) . Definition.BodyBuiltin .
         Definition.Builtin $ Definition.FFIName ffiPath ffiName
+    publicBuiltin fullyQualifiedName mkType =
+      publicDef name path name mkType
+      where
+        name = last path
+        path = splitOn "." fullyQualifiedName
+    publicBuiltin_ builtinName typeMaker =
+      void $ publicBuiltin builtinName typeMaker
     endo = join mkPi
     set = ExprIRef.newExprBody $ Expr.BodyLeaf Expr.Set
     integer = ExprIRef.newExprBody $ Expr.BodyLeaf Expr.IntegerType
@@ -222,10 +230,6 @@ createBuiltins =
       mkPi $ mkInfixRecordType lType rType
     mkDefinitionRef f =
       ExprIRef.newExprBody . (ExprLens.bodyDefinitionRef # ) <$> f
-    publicBuiltin builtinName typeMaker =
-      publicize $ DataOps.newBuiltin builtinName =<< typeMaker
-    publicBuiltin_ builtinName typeMaker =
-      void $ publicBuiltin builtinName typeMaker
     headTagGuid = Guid.fromString "headTag"
     tailTagGuid = Guid.fromString "tailTag"
 
