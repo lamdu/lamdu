@@ -4,7 +4,7 @@ module Lamdu.Data.Expression.Infer.UntilConflict
   ) where
 
 import Control.Monad (void)
-import Control.Monad.Trans.State (StateT, State, mapStateT)
+import Control.Monad.Trans.State (StateT, mapStateT)
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Infer as Infer
 
@@ -26,7 +26,7 @@ assertNoConflict msg =
     fromEither (Right x) = return x
 
 inferAssertNoConflict ::
-  Ord def => String -> Infer.Loaded def a -> Infer.InferNode def ->
-  State (Infer.Context def) (Expr.Expression def (Infer.Inferred def, a))
+  (Monad m, Ord def) => String -> Infer.Loaded def a -> Infer.InferNode def ->
+  StateT (Infer.Context def) m (Expr.Expression def (Infer.Inferred def, a))
 inferAssertNoConflict msg loaded =
   assertNoConflict msg . inferUntilConflict loaded

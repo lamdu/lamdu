@@ -204,7 +204,7 @@ inferWithVariables gen loaded baseInferContext node =
     mWithVariables <- if success
       then do
         wvExpr <-
-          Structure.add <$>
+          Structure.add loader =<<
           ImplicitVariables.add gen loader
           ((iwcInferred . fst &&& id) <$> expr)
         wvContext <- State.get
