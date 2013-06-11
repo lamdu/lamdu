@@ -139,7 +139,7 @@ typeCheckHoleResult holeInfo seed = do
     (Nothing, Sugar.ResultSeedExpression expr) ->
       fmap ((,) BadResult) <$>
       ( (hiHoleActions holeInfo ^. Sugar.holeResult)
-      . Sugar.ResultSeedExpression . storePointHoleApply
+      . Sugar.ResultSeedExpression . storePointHoleWrap
       ) expr
     _ -> pure Nothing
 
@@ -201,8 +201,8 @@ storePointExpr = (`Expression` Nothing)
 storePointHole :: Sugar.ExprStorePoint m
 storePointHole = storePointExpr $ ExprLens.bodyHole # ()
 
-storePointHoleApply :: Sugar.ExprStorePoint m -> Sugar.ExprStorePoint m
-storePointHoleApply expr =
+storePointHoleWrap :: Sugar.ExprStorePoint m -> Sugar.ExprStorePoint m
+storePointHoleWrap expr =
   storePointExpr $ ExprUtil.makeApply storePointHole expr
 
 injectIntoHoles ::
