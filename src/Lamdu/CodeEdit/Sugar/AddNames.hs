@@ -384,13 +384,7 @@ toBody (BodyGetParams x) = BodyGetParams <$> toGetParams x
 toPayload ::
   (MonadA tm, MonadNaming m) => Payload (OldName m) tm ->
   m (Payload (NewName m) tm)
-toPayload pl@Payload {..} = do
-  inferredTypes <- traverse toExpression _plInferredTypes
-  nextHole <- traverse toExpression _plNextHole
-  pure pl
-    { _plInferredTypes = inferredTypes
-    , _plNextHole = nextHole
-    }
+toPayload = (plInferredTypes . traverse) toExpression
 
 toExpression ::
   (MonadA tm, MonadNaming m) => Expression (OldName m) tm ->

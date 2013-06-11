@@ -146,7 +146,7 @@ make exprI expr = do
       , _plActions =
         mkActions sugarContext <$>
         traverse (Lens.sequenceOf SugarInfer.plStored) exprI
-      , _plNextHole = Nothing
+      , _plMNextHoleGuid = Nothing
       }
     , _rHiddenGuids = []
     , _rPresugaredExpression =
@@ -173,7 +173,7 @@ setNextHole dest =
   case dest ^? subHoles of
   Just hole ->
     -- The mplus ignores holes that are already set:
-    Lens.mapped . plNextHole %~ (`mplus` Just hole)
+    Lens.mapped . plMNextHoleGuid %~ (`mplus` Just (hole ^. rGuid))
   Nothing -> id
 
 subExpressions :: ExpressionU m -> [ExpressionU m]

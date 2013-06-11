@@ -86,7 +86,7 @@ makeEditor parentPrecedence sExpr =
   Sugar.BodyInferred i ->
     isAHole (i ^. Sugar.iHole) . InferredEdit.make parentPrecedence i $ sExpr ^. Sugar.rGuid
   Sugar.BodyHole hole ->
-    isAHole hole . HoleEdit.make hole mNextHole $ sExpr ^. Sugar.rGuid
+    isAHole hole . HoleEdit.make hole mNextHoleGuid $ sExpr ^. Sugar.rGuid
   Sugar.BodyCollapsed poly ->
     notAHole $ CollapsedEdit.make parentPrecedence poly
   Sugar.BodyApply apply ->
@@ -117,7 +117,7 @@ makeEditor parentPrecedence sExpr =
       ((,) IsAHole .
        (Lens.over ExpressionGui.egWidget . Widget.weakerEvents) (pasteEventMap hole))
     notAHole = (fmap . fmap) ((,) NotAHole)
-    mNextHole = sExpr ^. Sugar.rPayload . Sugar.plNextHole
+    mNextHoleGuid = sExpr ^. Sugar.rPayload . Sugar.plMNextHoleGuid
 
 expressionEventMap ::
   MonadA m =>

@@ -20,7 +20,7 @@ module Lamdu.CodeEdit.Sugar.Types
     , _BodyInferred, _BodyCollapsed, _BodyLiteralInteger
     , _BodyAtom, _BodyList, _BodyRecord, _BodyTag
     , _BodyGetField
-  , Payload(..), plInferredTypes, plActions, plNextHole
+  , Payload(..), plInferredTypes, plActions, plMNextHoleGuid
   , ExpressionP(..)
     , rGuid, rBody, rPayload, rHiddenGuids, rPresugaredExpression
   , NameSource(..), NameCollision(..), Name(..), MStoredName
@@ -102,7 +102,7 @@ data Actions m = Actions
 data Payload name m = Payload
   { _plInferredTypes :: [Expression name m]
   , _plActions :: Maybe (Actions m)
-  , _plNextHole :: Maybe (Expression name m)
+  , _plMNextHoleGuid :: Maybe Guid
   }
 
 newtype StorePoint t = StorePoint { unStorePoint :: ExprIRef.ExpressionI t }

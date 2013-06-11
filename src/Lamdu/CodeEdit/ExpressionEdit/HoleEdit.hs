@@ -63,15 +63,14 @@ resultPickEventMap ::
   MonadA m => HoleInfo m -> Sugar.HoleResult Sugar.Name m ->
   Widget.EventHandlers (T m)
 resultPickEventMap holeInfo holeResult =
-  case hiMNextHole holeInfo of
-  Just nextHole
+  case hiMNextHoleGuid holeInfo of
+  Just nextHoleGuid
     | not (Sugar.holeResultHasHoles holeResult) ->
       mappend (simplePickRes Config.pickResultKeys) .
       E.keyPresses Config.pickAndMoveToNextHoleKeys
       (E.Doc ["Edit", "Result", "Pick and move to next hole"]) $
         (Widget.eventResultFromCursor . WidgetIds.fromGuid)
-        (nextHole ^. Sugar.rGuid) <$
-        HoleResults.pick holeInfo holeResult
+        nextHoleGuid <$ HoleResults.pick holeInfo holeResult
   _ -> simplePickRes $ Config.pickResultKeys ++ Config.pickAndMoveToNextHoleKeys
   where
     simplePickRes keys =
@@ -402,9 +401,9 @@ makeActiveHoleEdit holeInfo = do
 
 make ::
   MonadA m => Sugar.Hole Sugar.Name m (Sugar.ExpressionN m) ->
-  Maybe (Sugar.ExpressionN m) -> Guid ->
+  Maybe Guid -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-make hole mNextHole guid =
+make hole mNextHoleGuid guid =
   ExpressionGui.wrapDelegated holeFDConfig
   FocusDelegator.Delegating $ \myId -> do
     inCollapsed <- ExprGuiM.isInCollapsedExpression
@@ -412,16 +411,16 @@ make hole mNextHole guid =
       if isWritable && not inCollapsed
       then Just <$> ExprGuiM.nextHoleNumber
       else pure Nothing
-    makeUnwrapped mHoleNumber hole mNextHole guid myId
+    makeUnwrapped mHoleNumber hole mNextHoleGuid guid myId
   where
     isWritable = isJust $ hole ^. Sugar.holeMActions
 
 makeUnwrapped ::
   MonadA m => Maybe ExprGuiM.HoleNumber ->
   Sugar.Hole Sugar.Name m (Sugar.ExpressionN m) ->
-  Maybe (Sugar.ExpressionN m) -> Guid ->
+  Maybe Guid -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeUnwrapped mHoleNumber hole mNextHole guid myId = do
+makeUnwrapped mHoleNumber hole mNextHoleGuid guid myId = do
   cursor <- ExprGuiM.widgetEnv WE.readCursor
   case (hole ^. Sugar.holeMActions, Widget.subId myId cursor) of
     (Just holeActions, Just _) -> do
@@ -431,7 +430,7 @@ makeUnwrapped mHoleNumber hole mNextHole guid myId = do
         , hiHoleId = myId
         , hiState = stateProp
         , hiHoleActions = holeActions
-        , hiMNextHole = mNextHole
+        , hiMNextHoleGuid = mNextHoleGuid
         , hiMArgument = hole ^. Sugar.holeMArg
         }
     _ -> makeInactive mHoleNumber hole myId

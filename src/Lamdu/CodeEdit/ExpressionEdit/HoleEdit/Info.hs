@@ -36,7 +36,7 @@ data HoleInfo m = HoleInfo
   , hiState :: Property (T m) HoleState
   , hiHoleActions :: Sugar.HoleActions Sugar.Name m
   , hiMArgument :: Maybe (Sugar.ExpressionN m)
-  , hiMNextHole :: Maybe (Sugar.ExpressionN m)
+  , hiMNextHoleGuid :: Maybe Guid
   }
 
 hiSearchTerm :: HoleInfo m -> String
