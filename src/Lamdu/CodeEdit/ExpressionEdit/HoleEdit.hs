@@ -94,15 +94,15 @@ makeResultCompositeWidget
      (ResultCompositeWidget m, Maybe (Sugar.HoleResult Sugar.Name m))
 makeResultCompositeWidget results = do
   mainResultWidget <-
-    maybeAddExtraSymbol ((not . null . rlExtra) results) (rId mainResult) =<< rMkWidget mainResult
+    maybeAddExtraSymbol (Lens.has (HoleResults.rlExtra . traverse) results) (rId mainResult) =<< rMkWidget mainResult
   (mExtraResWidget, mResult) <-
     if mainResultWidget ^. Widget.wIsFocused
     then do
       mWidget <- fmap snd <$> makeExtra
-      return (mWidget, Just (rHoleResult (rlMain results)))
+      return (mWidget, Just (rHoleResult (results ^. HoleResults.rlMain)))
     else do
       cursorOnExtra <-
-        ExprGuiM.widgetEnv . WE.isSubCursor $ rlExtraResultsPrefixId results
+        ExprGuiM.widgetEnv . WE.isSubCursor $ results ^. HoleResults.rlExtraResultsPrefixId
       if cursorOnExtra
         then do
           mExtra <- makeExtra
@@ -119,8 +119,8 @@ makeResultCompositeWidget results = do
     , mResult
     )
   where
-    mainResult = rlMain results
-    makeExtra = makeExtraResultsWidget $ rlExtra results
+    mainResult = results ^. HoleResults.rlMain
+    makeExtra = makeExtraResultsWidget $ results ^. HoleResults.rlExtra
 
 makeExtraResultsWidget ::
   MonadA m => [Result m] ->
@@ -369,15 +369,15 @@ makeActiveHoleEdit holeInfo = do
     , mkResultWidget = makeHoleResultWidget holeInfo
     }
   let
-    shownResultsIds = rId . rlMain <$> shownResults
-    allResultIds = [rId . rlMain, rlExtraResultsPrefixId] <*> shownResults
+    shownResultsIds = rId . (^. HoleResults.rlMain) <$> shownResults
+    allResultIds = [rId . (^. HoleResults.rlMain), (^. HoleResults.rlExtraResultsPrefixId)] <*> shownResults
   assignHoleEditCursor
     holeInfo shownResultsIds allResultIds searchTermId $ do
       (mSelectedResult, resultsWidget) <-
         makeResultsWidget holeInfo shownResults hasHiddenResults
       let
         mResult =
-          mSelectedResult <|> rHoleResult . rlMain <$> listToMaybe shownResults
+          mSelectedResult <|> rHoleResult . (^. HoleResults.rlMain) <$> listToMaybe shownResults
         searchTermEventMap = maybe mempty (resultPickEventMap holeInfo) mResult
       searchTermWidget <-
         makeSearchTermWidget (searchTermProperty holeInfo) searchTermId

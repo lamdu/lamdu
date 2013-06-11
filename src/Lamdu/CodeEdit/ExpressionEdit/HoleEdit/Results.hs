@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
 module Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Results
   ( makeAll, pick, HaveHiddenResults(..)
-  , Result(..), ResultsList(..)
+  , Result(..)
+  , ResultsList(..), rlExtraResultsPrefixId, rlMain, rlExtra
   , prefixId, MakeWidgets(..)
   ) where
 
@@ -70,6 +71,9 @@ pick holeInfo holeResult = do
   Property.set (hiState holeInfo) HoleInfo.emptyState
   holeResult ^. Sugar.holeResultPick
 
+data ResultType = GoodResult | BadResult
+  deriving (Eq)
+
 data Result m = Result
   { rType :: ResultType
   , rHoleResult :: Sugar.HoleResult Sugar.Name m
@@ -78,10 +82,11 @@ data Result m = Result
   }
 
 data ResultsList m = ResultsList
-  { rlExtraResultsPrefixId :: Widget.Id
-  , rlMain :: Result m
-  , rlExtra :: [Result m]
+  { _rlExtraResultsPrefixId :: Widget.Id
+  , _rlMain :: Result m
+  , _rlExtra :: [Result m]
   }
+Lens.makeLenses ''ResultsList
 
 getVarsToGroup :: (Sugar.GetVar Sugar.Name m, Expression def ()) -> Group def
 getVarsToGroup (getVar, expr) = sugarNameToGroup (getVar ^. Sugar.gvName) expr
@@ -126,9 +131,6 @@ data MakeWidgets m = MakeWidgets
   , mkNewTagResultWidget :: WidgetMaker m
   }
 
-data ResultType = GoodResult | BadResult
-  deriving (Eq)
-
 typeCheckHoleResult ::
   MonadA m => HoleInfo m -> Sugar.HoleResultSeed m ->
   CT m (Maybe (ResultType, Sugar.HoleResult Sugar.Name m))
@@ -160,9 +162,9 @@ mResultsListOf ::
 mResultsListOf _ _ _ [] = Nothing
 mResultsListOf holeInfo makeWidget baseId (x:xs) = Just
   ResultsList
-  { rlExtraResultsPrefixId = extraResultsPrefixId
-  , rlMain = mkResult (mconcat [prefixId holeInfo, baseId]) x
-  , rlExtra = map (\res -> mkResult (extraResultId (snd res)) res) xs
+  { _rlExtraResultsPrefixId = extraResultsPrefixId
+  , _rlMain = mkResult (mconcat [prefixId holeInfo, baseId]) x
+  , _rlExtra = map (\res -> mkResult (extraResultId (snd res)) res) xs
   }
   where
     extraResultId =
@@ -283,7 +285,7 @@ collectResults =
       List.toList (List.take 2 enoughResultsM)
     step results x =
       results
-      & case rType (rlMain x) of
+      & case rType (x ^. rlMain) of
         GoodResult -> Lens._1
         BadResult -> Lens._2
         %~ (x :)
