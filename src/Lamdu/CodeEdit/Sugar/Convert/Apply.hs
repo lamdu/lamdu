@@ -207,7 +207,7 @@ isCons specialFunctions =
 convertAppliedHole ::
   (MonadA m, Typeable1 m) => ExprMM m -> ExpressionU m -> ExprMM m ->
   MaybeT (SugarM m) (ExpressionU m)
-convertAppliedHole funcI argS exprI
+convertAppliedHole funcI rawArgS exprI
   | Lens.has ExprLens.exprHole funcI =
     lift $
     (rBody . _BodyHole . holeMArg .~ Just argS) .
@@ -215,6 +215,7 @@ convertAppliedHole funcI argS exprI
     ConvertHole.convertPlain exprI
   | otherwise = mzero
   where
+    argS = SugarExpr.setNextHole (SugarInfer.resultGuid exprI) rawArgS
     funcGuids = [SugarInfer.resultGuid funcI]
 
 convertList ::
