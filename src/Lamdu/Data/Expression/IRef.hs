@@ -83,7 +83,7 @@ writeExprBody = Transaction.writeIRef . unExpression
 
 newExpression :: MonadA m => ExpressionM m () -> T m (ExpressionIM m)
 newExpression =
-  fmap (fst . Lens.view Expr.ePayload) .
+  fmap (^. Expr.ePayload . Lens._1) .
   newExpressionFromH . ((,) Nothing <$>)
 
 -- Returns expression with new Guids
@@ -116,7 +116,7 @@ expressionBodyFrom ::
   MonadA m =>
   ExpressionM m (Maybe (ExpressionIM m), a) ->
   T m (Expr.BodyExpr (DefI (Tag m)) (ExpressionIM m, a))
-expressionBodyFrom = traverse newExpressionFromH . Lens.view Expr.eBody
+expressionBodyFrom = traverse newExpressionFromH . (^. Expr.eBody)
 
 newExpressionFromH ::
   MonadA m =>
@@ -129,7 +129,7 @@ newExpressionFromH expr =
   where
     mkPair = do
       body <- expressionBodyFrom expr
-      pure (Lens.view (Expr.ePayload . Lens._1) <$> body, body)
+      pure ((^. Expr.ePayload . Lens._1) <$> body, body)
     f (exprI, body) =
       Expr.Expression body
       ( ExpressionI exprI

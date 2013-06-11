@@ -2,7 +2,7 @@
 module Main(main) where
 
 import Control.Applicative ((<$>), (<*))
-import Control.Lens ((^.), (%~))
+import Control.Lens.Operators
 import Control.Monad (unless, (<=<))
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, runStateT, mapStateT)
@@ -130,15 +130,16 @@ annotationSize :: Vector2 Draw.R
 annotationSize = 5
 
 addAnnotations :: Draw.Font -> Anim.Frame -> Anim.Frame
-addAnnotations font = Lens.over Anim.fSubImages $ Map.mapWithKey annotateItem
+addAnnotations font = Anim.fSubImages %~ Map.mapWithKey annotateItem
   where
     annotateItem animId = Lens.mapped . Lens._2 %~ annotatePosImage animId
     annotatePosImage animId posImage =
-      flip (Lens.over Anim.piImage) posImage . mappend .
-      (Vector2.uncurry Draw.scale antiScale %%) .
-      (Draw.translate (0, -1) %%) $
-      drawAnimId font animId
+      posImage & Anim.piImage %~ mappend annotationImg
       where
+        annotationImg =
+          Vector2.uncurry Draw.scale antiScale %%
+          Draw.translate (0, -1) %%
+          drawAnimId font animId
         -- Cancel out on the scaling done in Anim so
         -- that our annotation is always the same size
         antiScale =
@@ -165,7 +166,7 @@ mainLoopDebugMode font makeWidget addHelp = do
         doc = EventMap.Doc $ "Debug Mode" : if isDebugMode then ["Disable"] else ["Enable"]
         set = writeIORef debugModeRef (not isDebugMode)
       return .
-        whenApply isDebugMode (Lens.over Widget.wFrame (addAnnotations font)) $
+        whenApply isDebugMode (Widget.wFrame %~ addAnnotations font) $
         Widget.strongerEvents
         (Widget.keysEventMap Config.debugModeKeys doc set)
         widget
@@ -244,7 +245,7 @@ mkGlobalEventMap settingsRef = do
     nextDoc = EventMap.Doc ["View", "Subtext", "Show " ++ show next]
   return .
     Widget.keysEventMap Config.nextInfoMode nextDoc .
-    modifyIORef settingsRef $ Lens.set Settings.sInfoMode next
+    modifyIORef settingsRef $ Settings.sInfoMode .~ next
 
 mkWidgetWithFallback
   :: IORef Settings

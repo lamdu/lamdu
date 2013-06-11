@@ -51,7 +51,7 @@ delKeys              = delForwardKeys ++ delBackwardKeys
 wrapKeys             = [noMods E.KeySpace]
 callWithArgumentKeys = [shift '9']
 callWithNextArgumentKeys = [shift '0']
-debugModeKeys = [ctrlAlt 'd']
+debugModeKeys = [ctrlAlt 'd', mk E.ctrl E.KeyF7]
 
 newDefinitionKeys = [alt 'n']
 

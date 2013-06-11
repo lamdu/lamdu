@@ -52,7 +52,7 @@ propertyOfClosure (DefinitionBodyExpressionProperty defI bodyExpr defType) =
   (Transaction.writeIRef defI . (`Definition` defType) . Definition.BodyExpression)
 propertyOfClosure (SubexpressionProperty exprI body index) =
   Property (body ^?! lens)
-  (ExprIRef.writeExprBody exprI . flip (Lens.set lens) body)
+  (ExprIRef.writeExprBody exprI . flip (lens .~) body)
   where
     lens :: Traversable t => Lens.IndexedTraversal' Int (t a) a
     lens = Lens.element index

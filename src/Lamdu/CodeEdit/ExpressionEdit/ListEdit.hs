@@ -48,7 +48,7 @@ makeUnwrapped (Sugar.List items mActions) myId =
   where
     pairToList (x, y) = [x, y]
     closeBracketId = Widget.joinId myId ["close-bracket"]
-    itemId = WidgetIds.fromGuid . Lens.view Sugar.rGuid . Sugar.liExpr
+    itemId = WidgetIds.fromGuid . (^. Sugar.rGuid) . Sugar.liExpr
     actionEventMap keys doc actSelect =
       maybe mempty
       (Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "List", doc]) .

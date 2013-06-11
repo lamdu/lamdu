@@ -1,5 +1,6 @@
 module Lamdu.VersionControl (makeActions, runAction, runEvent) where
 
+import Control.Lens.Operators
 import Control.Monad (unless)
 import Data.List (elemIndex)
 import Data.List.Utils (removeAt)
@@ -10,7 +11,6 @@ import Data.Store.Rev.View (View)
 import Data.Store.Transaction (Transaction, setP, getP, modP)
 import Lamdu.Anchors (DbM)
 import Lamdu.VersionControl.Actions (Actions(Actions))
-import qualified Control.Lens as Lens
 import qualified Data.Store.Rev.Branch as Branch
 import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Rev.View as View
@@ -66,7 +66,7 @@ runEvent preCursor eventHandler = do
     unless isEmpty $ do
       setP (codeProp Anchors.preCursor) preCursor
       setP (codeProp Anchors.postCursor) .
-        fromMaybe preCursor $ Lens.view Widget.eCursor eventResult
+        fromMaybe preCursor $ eventResult ^. Widget.eCursor
     return (eventResult, isEmpty)
   unless isEmpty $ setP (revProp Anchors.redos) []
   return eventResult

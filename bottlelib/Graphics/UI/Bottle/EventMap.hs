@@ -20,7 +20,7 @@ module Graphics.UI.Bottle.EventMap
 
 import Control.Applicative ((<$>), (<*>))
 import Control.Arrow ((***), (&&&))
-import Control.Lens ((%~))
+import Control.Lens.Operators
 import Control.Monad (guard, mplus, msum)
 import Data.Char (toLower, toUpper)
 import Data.List (isPrefixOf)
@@ -33,7 +33,6 @@ import Graphics.UI.GLFW.Events (IsPress(..))
 import Graphics.UI.GLFW.ModState (ModState(..), noMods, shift, ctrl, alt)
 import Prelude hiding (lookup)
 import qualified Control.Lens as Lens
-import qualified Control.Lens.TH as LensTH
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Graphics.UI.GLFW.Events as Events
@@ -133,10 +132,10 @@ data EventMap a = EventMap
   , _emTickHandlers :: [a]
   } deriving (Functor)
 
-LensTH.makeLenses ''DocHandler
-LensTH.makeLenses ''CharGroupHandler
-LensTH.makeLenses ''AllCharsHandler
-LensTH.makeLenses ''EventMap
+Lens.makeLenses ''DocHandler
+Lens.makeLenses ''CharGroupHandler
+Lens.makeLenses ''AllCharsHandler
+Lens.makeLenses ''EventMap
 
 instance Monoid (EventMap a) where
   mempty = EventMap Map.empty [] Set.empty Nothing []
@@ -166,15 +165,15 @@ filterCharGroups ::
   [CharGroupHandler a] ->
   [CharGroupHandler a]
 filterCharGroups f =
-  filter (not . Set.null . Lens.view cgChars) .
+  filter (not . Set.null . (^. cgChars)) .
   (Lens.traversed . cgChars %~ Set.filter (uncurry f))
 
 isCharConflict :: EventMap a -> Char -> IsShifted -> Bool
 isCharConflict eventMap char isShifted =
-  Set.member (char, isShifted) (Lens.view emCharGroupChars eventMap) ||
+  Set.member (char, isShifted) (eventMap ^. emCharGroupChars) ||
   isJust
-  (($ isShifted) . ($ char) . Lens.view (chDocHandler . dhHandler) =<<
-   Lens.view emAllCharsHandler eventMap)
+  (($ isShifted) . ($ char) . (^. chDocHandler . dhHandler) =<<
+   eventMap ^. emAllCharsHandler)
 
 filterSChars
   :: (Char -> IsShifted -> Bool) -> EventMap a -> EventMap a
@@ -222,9 +221,9 @@ mkModKey ms k
 eventMapDocs :: EventMap a -> [(InputDoc, Doc)]
 eventMapDocs (EventMap dict charGroups _ mAllCharsHandler _) =
   concat
-  [ map (Lens.view chInputDoc &&& Lens.view (chDocHandler . dhDoc)) $ maybeToList mAllCharsHandler
-  , map (Lens.view cgInputDoc &&& Lens.view (cgDocHandler . dhDoc)) charGroups
-  , map (prettyKeyEvent *** Lens.view dhDoc) $ Map.toList dict
+  [ map ((^. chInputDoc) &&& (^. chDocHandler . dhDoc)) $ maybeToList mAllCharsHandler
+  , map ((^. cgInputDoc) &&& (^. cgDocHandler . dhDoc)) charGroups
+  , map (prettyKeyEvent *** (^. dhDoc)) $ Map.toList dict
   ]
 
 filterByKey :: Ord k => (k -> Bool) -> Map k v -> Map k v
@@ -236,18 +235,18 @@ deleteKey key = emKeyMap %~ Map.delete key
 lookup :: Events.KeyEvent -> EventMap a -> Maybe a
 lookup (Events.KeyEvent isPress ms mchar k) (EventMap dict charGroups _ mAllCharHandlers _) =
   msum
-  [ fmap (Lens.view dhHandler) $
+  [ (^. dhHandler) <$>
     KeyEvent isPress modKey `Map.lookup` dict
   , listToMaybe $ do
       Press <- return isPress
       char <- maybeToList mchar
       CharGroupHandler _ chars handler <- charGroups
       guard $ Set.member (char, isShifted) chars
-      return $ Lens.view dhHandler handler char isShifted
+      return $ (handler ^. dhHandler) char isShifted
   , do
       Press <- return isPress
       AllCharsHandler _ handler <- mAllCharHandlers
-      flip (Lens.view dhHandler handler) isShifted =<< mchar
+      flip (handler ^. dhHandler) isShifted =<< mchar
   ]
   where
     isShifted = shiftedMods ms

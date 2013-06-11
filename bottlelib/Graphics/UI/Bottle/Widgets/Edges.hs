@@ -27,7 +27,7 @@ choose x y (Direction.Point pt) = chooseRect x y $ Rect pt 0
 
 chooseRect :: Widget.EnterResult f -> Widget.EnterResult f -> Rect -> Widget.EnterResult f
 chooseRect x y rect =
-  minimumOn (Rect.distance rect . Lens.view Widget.enterResultRect) [x, y]
+  minimumOn (Rect.distance rect . (^. Widget.enterResultRect)) [x, y]
   where
     minimumOn = minimumBy . comparing
 
@@ -55,7 +55,7 @@ makeVertical size top unTranslatedBottom = Widget
       (Widget.weakerEvents . mkEventMap me doc (mkKeys ks))
       (_wMaybeEnter other) me
     mkEventMap me doc keys enterOther =
-      EventMap.keyPresses keys doc . Lens.view Widget.enterResultEvent . enterOther .
+      EventMap.keyPresses keys doc . (^. Widget.enterResultEvent) . enterOther .
       Direction.PrevFocalArea $ _wFocalArea me
     bottom = Widget.translate (Vector2 0 (max topHeight bottomsTop)) unTranslatedBottom
     topHeight = _wSize top ^. Lens._2

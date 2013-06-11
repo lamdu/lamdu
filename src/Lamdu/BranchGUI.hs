@@ -96,7 +96,7 @@ make transaction size actions widget = do
     makeBranchNameEdit branch = do
       let branchEditId = WidgetIds.fromGuid $ Branch.guid branch
       nameProp <-
-        lift . transaction . (fmap . Lens.over (Property.pSet . Lens.mapped)) transaction $
+        lift . transaction . (Lens.mapped . Property.pSet . Lens.mapped %~ transaction) $
         branchNameProp branch ^. Transaction.mkProperty
       branchNameEdit <-
         BWidgets.wrapDelegatedOT branchNameFDConfig

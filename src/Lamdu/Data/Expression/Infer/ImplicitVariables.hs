@@ -81,12 +81,12 @@ addVariablesForExpr loader expr = do
         lift . toStateT .
         InferUntilConflict.inferAssertNoConflict
         "ImplicitVariables.addVariableForExpr" reloaded .
-        Infer.iPoint . fst $ Lens.view Expr.ePayload reinferred
+        Infer.iPoint $ reinferred ^. Expr.ePayload . Lens._1
       fmap concat . mapM (addVariablesForExpr loader) .
         filter (isUnrestrictedHole . inferredVal) $
         ExprUtil.subExpressionsWithoutTags reinferredLoaded
   where
-    inferredVal = Infer.iValue . fst . Lens.view Expr.ePayload
+    inferredVal = Infer.iValue . fst . (^. Expr.ePayload)
 
 addParam ::
   Ord def =>

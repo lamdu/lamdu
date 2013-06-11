@@ -22,7 +22,7 @@ import Data.Monoid (Monoid(..))
 import Data.Monoid.Instances ()
 import Data.Store.Guid (Guid)
 import Data.Typeable (Typeable)
-import qualified Control.Lens.TH as LensTH
+import qualified Control.Lens as Lens
 import qualified Data.Monoid as Monoid
 import qualified Lamdu.Data.Expression as Expr
 
@@ -42,7 +42,7 @@ data RefExprPayload = RefExprPayload
   , _rplRestrictedPoly :: !Monoid.Any
   , _rplOrigins :: !IntSet
   } deriving (Show, Eq, Ord)
-LensTH.makeLenses ''RefExprPayload
+Lens.makeLenses ''RefExprPayload
 
 type RefExpression def = Expr.Expression def RefExprPayload
 

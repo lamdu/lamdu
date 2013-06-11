@@ -11,14 +11,14 @@ import Control.Applicative (liftA2)
 import Control.Lens (Traversal', Lens', (^.), _1, _2)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators(R)
-import qualified Control.Lens.TH as LensTH
+import qualified Control.Lens as Lens
 import qualified Data.Vector.Vector2 as Vector2
 
 data Rect = Rect {
   _topLeft :: Vector2 R,
   _size :: Vector2 R
   } deriving Show
-LensTH.makeLenses ''Rect
+Lens.makeLenses ''Rect
 
 topLeftAndSize :: Traversal' Rect (Vector2 R)
 topLeftAndSize f (Rect tl s) = liftA2 Rect (f tl) (f s)

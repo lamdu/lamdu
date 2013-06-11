@@ -428,7 +428,7 @@ pickResult ::
   T m (Maybe Guid)
 pickResult exprIRef =
   fmap
-  ( fmap (ExprIRef.exprGuid . Lens.view (Expr.ePayload . Lens._1))
+  ( fmap (ExprIRef.exprGuid . (^. Expr.ePayload . Lens._1))
   . listToMaybe . orderedInnerHoles
   ) .
   ExprIRef.writeExpressionWithStoredSubexpressions exprIRef .
@@ -466,4 +466,4 @@ uninferredHoles e =
 
 holeResultHasHoles :: HoleResult name m -> Bool
 holeResultHasHoles =
-  not . null . uninferredHoles . fmap ((,) ()) . Lens.view holeResultInferred
+  not . null . uninferredHoles . fmap ((,) ()) . (^. holeResultInferred)

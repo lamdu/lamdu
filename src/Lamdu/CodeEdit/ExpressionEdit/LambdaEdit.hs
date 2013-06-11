@@ -72,13 +72,13 @@ makeParamEdit prevId param =
       maybe mempty
       (Widget.keysEventMapMovesCursor Config.addNextParamKeys (E.Doc ["Edit", "Add next parameter"]) .
        fmap (FocusDelegator.delegatingId . WidgetIds.fromGuid) .
-       Lens.view (Sugar.fpListItemActions . Sugar.itemAddNext))
+       (^. Sugar.fpListItemActions . Sugar.itemAddNext))
       mActions
     paramDeleteEventMap keys docSuffix onId =
       maybe mempty
       (Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "Delete parameter" ++ docSuffix]) .
        fmap (onId . WidgetIds.fromGuid) .
-       Lens.view (Sugar.fpListItemActions . Sugar.itemDelete))
+       (^. Sugar.fpListItemActions . Sugar.itemDelete))
       mActions
 
 make ::

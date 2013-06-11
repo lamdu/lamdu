@@ -50,7 +50,6 @@ import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), inferWithConflicts)
 import System.Random (RandomGen)
 import qualified Control.Lens as Lens
-import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Cache as Cache
 import qualified Data.Store.Property as Property
@@ -87,7 +86,7 @@ data Payload t inferred stored
     , _plInferred :: inferred
     , _plStored :: stored
     }
-LensTH.makeLenses ''Payload
+Lens.makeLenses ''Payload
 
 randomizeGuids ::
   RandomGen g => g -> (a -> inferred) ->
@@ -102,9 +101,7 @@ randomizeGuids gen f =
     paramGen : exprGen : _ = RandomUtils.splits gen
 
 toPayloadMM :: Payload (Tagged (m ())) NoInferred NoStored -> PayloadMM m
-toPayloadMM =
-  Lens.set plInferred Nothing .
-  Lens.set plStored Nothing
+toPayloadMM = (plInferred .~ Nothing) . (plStored .~ Nothing)
 
 -- Not inferred, not stored
 resultFromPure ::
@@ -129,7 +126,7 @@ resultFromInferred =
 loader :: MonadA m => Infer.Loader (DefI (Tag m)) (T m)
 loader =
   Infer.Loader
-  (fmap void . ExprIRef.readExpression . Lens.view Definition.defType <=<
+  (fmap void . ExprIRef.readExpression . (^. Definition.defType) <=<
    Transaction.readIRef)
 
 load ::
@@ -245,7 +242,7 @@ data InferredWithImplicits m = InferredWithImplicits
   , _iwiBaseInferContextKey :: Cache.KeyBS
   , _iwiBaseExpr :: ExprIRef.ExpressionM m (Payload (Tag m) (InferredWC (Tag m)) (Stored m))
   }
-LensTH.makeLenses ''InferredWithImplicits
+Lens.makeLenses ''InferredWithImplicits
 
 inferAddImplicits ::
   (RandomGen g, MonadA m, Typeable (m ())) => g ->
@@ -282,7 +279,7 @@ inferAddImplicits gen mDefI lExpr inferContextKey inferState = do
     mkWVPayload (iwc, ImplicitVariables.AutoGen guid) =
       Payload guid iwc Nothing
     mkWVPayload (iwc, ImplicitVariables.Stored propClosure) =
-      Lens.over plStored Just $
+      plStored %~ Just $
       mkStoredPayload (iwc, propClosure)
 
 isPolymorphicFunc :: ExprMM m -> Bool

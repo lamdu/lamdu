@@ -3,6 +3,7 @@ module Data.Store.Rev.View
     (View, curVersion, branch, setBranch, move, new, store)
 where
 
+import Control.Lens.Operators
 import Control.Monad ((<=<))
 import Control.MonadA (MonadA)
 import Data.Store.IRef (IRef, Tag)
@@ -13,7 +14,6 @@ import Data.Store.Rev.ViewBranchInternal (BranchData, ViewData(..), View(..), Br
 import Data.Store.Transaction (Transaction, Store(..))
 import Data.Traversable (traverse)
 import Prelude hiding (lookup)
-import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Rev.Branch as Branch
@@ -68,7 +68,7 @@ move :: MonadA m => View (Tag m) -> Version (Tag m) -> Transaction m ()
 move view version = (`Branch.move` version) =<< branch view
 
 branch :: MonadA m => View (Tag m) -> Transaction m (Branch (Tag m))
-branch (View iref) = fmap (Lens.view vdBranch) . Transaction.readIRef $ iref
+branch (View iref) = fmap (^. vdBranch) . Transaction.readIRef $ iref
 
 transaction :: MonadA m => View (Tag m) -> [(Change.Key, Maybe Change.Value)] -> Transaction m ()
 transaction _    [] = return ()

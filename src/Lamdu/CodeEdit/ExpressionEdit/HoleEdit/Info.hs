@@ -11,7 +11,7 @@ import Data.DeriveTH (derive)
 import Data.Store.Guid (Guid)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
-import qualified Control.Lens.TH as LensTH
+import qualified Control.Lens as Lens
 import qualified Data.Store.Property as Property
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.CodeEdit.Sugar as Sugar
@@ -21,7 +21,7 @@ type T = Transaction
 newtype HoleState = HoleState
   { _hsSearchTerm :: String
   } deriving Eq
-LensTH.makeLenses ''HoleState
+Lens.makeLenses ''HoleState
 derive makeBinary ''HoleState
 
 emptyState :: HoleState

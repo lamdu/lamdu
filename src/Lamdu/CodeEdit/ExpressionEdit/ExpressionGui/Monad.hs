@@ -95,7 +95,7 @@ nextHoleNumber = ExprGuiM $
 
 -- TODO: To lens
 atEnv :: MonadA m => (WE.Env -> WE.Env) -> ExprGuiM m a -> ExprGuiM m a
-atEnv = Lens.over exprGuiM . RWS.mapRWST . WE.atEnv
+atEnv = (exprGuiM %~) . RWS.mapRWST . WE.atEnv
 
 withFgColor :: MonadA m => Draw.Color -> ExprGuiM m a -> ExprGuiM m a
 withFgColor = atEnv . WE.setTextColor
@@ -197,13 +197,13 @@ wrapDelegated ::
   Widget.Id -> ExprGuiM m b
 wrapDelegated =
   BWidgets.wrapDelegatedWith (widgetEnv WE.readCursor)
-  (atEnv . Lens.over WE.envCursor)
+  (atEnv . (WE.envCursor %~))
 
 -- Used vars:
 
 listener :: MonadA m => (Output m -> b) -> ExprGuiM m a -> ExprGuiM m (a, b)
 listener f =
-  Lens.over exprGuiM RWS.listen
+  exprGuiM %~ RWS.listen
   & Lens.mapped . Lens.mapped . Lens._2 %~ f
 
 listenUsedVariables :: MonadA m => ExprGuiM m a -> ExprGuiM m (a, [Guid])

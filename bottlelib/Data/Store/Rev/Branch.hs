@@ -3,6 +3,7 @@ module Data.Store.Rev.Branch
     (Branch, guid, new, move, curVersion, newVersion)
 where
 
+import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Foldable (traverse_)
 import Data.Store.Guid (Guid)
@@ -11,7 +12,6 @@ import Data.Store.Rev.Change (Change)
 import Data.Store.Rev.Version (Version)
 import Data.Store.Rev.ViewBranchInternal (BranchData(..), Branch(..), moveView, brVersion)
 import Data.Store.Transaction (Transaction)
-import qualified Control.Lens as Lens
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Transaction as Transaction
@@ -28,7 +28,7 @@ move (Branch dataIRef) destVersion = do
     moveToDest srcVersion view = moveView view srcVersion destVersion
 
 curVersion :: MonadA m => Branch (Tag m) -> Transaction m (Version (Tag m))
-curVersion (Branch dataIRef) = Lens.view brVersion `fmap` Transaction.readIRef dataIRef
+curVersion (Branch dataIRef) = (^. brVersion) `fmap` Transaction.readIRef dataIRef
 
 -- | A Branch is a mutable version ptr
 new :: MonadA m => Version (Tag m) -> Transaction m (Branch (Tag m))

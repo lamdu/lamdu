@@ -23,7 +23,7 @@ import Data.Store.IRef (IRef, Tag)
 import Data.Store.Rev.Change (Change)
 import Data.Store.Rev.Version (Version)
 import Data.Store.Transaction (Transaction)
-import qualified Control.Lens.TH as LensTH
+import qualified Control.Lens as Lens
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Rev.Change as Change
@@ -47,8 +47,8 @@ newtype ViewData t = ViewData { _vdBranch :: Branch t }
   deriving (Eq, Ord, Show, Read, Binary)
 
 derive makeBinary ''BranchData
-LensTH.makeLenses ''BranchData
-LensTH.makeLenses ''ViewData
+Lens.makeLenses ''BranchData
+Lens.makeLenses ''ViewData
 
 -- | moveView must be given the correct source of the movement
 -- | or it will result in undefined results!

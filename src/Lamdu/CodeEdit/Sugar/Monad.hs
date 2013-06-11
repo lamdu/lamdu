@@ -21,7 +21,7 @@ import Data.Store.IRef (Tag)
 import Lamdu.CodeEdit.Sugar.Infer (ExprMM)
 import Lamdu.CodeEdit.Sugar.Types -- see export list
 import Lamdu.Data.Expression.IRef (DefI)
-import qualified Control.Lens.TH as LensTH
+import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Cache as Cache
 import qualified Data.Store.Transaction as Transaction
@@ -54,7 +54,7 @@ data Context m = Context
 newtype SugarM m a = SugarM (ReaderT (Context m) (CT m) a)
   deriving (Functor, Applicative, Monad)
 
-LensTH.makeLenses ''Context
+Lens.makeLenses ''Context
 
 run :: MonadA m => Context m -> SugarM m a -> CT m a
 run ctx (SugarM action) = runReaderT action ctx

@@ -1,7 +1,9 @@
 module Graphics.UI.Bottle.MainLoop (mainLoopAnim, mainLoopImage, mainLoopWidget) where
 
+import Control.Applicative ((<$>))
 import Control.Concurrent (threadDelay)
-import Control.Lens ((^.), (%~), (.~), _1, _2)
+import Control.Lens.Operators
+import Control.Lens.Tuple
 import Control.Monad (when)
 import Data.IORef
 import Data.MRUMemo (memoIO)
@@ -10,10 +12,10 @@ import Data.Traversable (traverse, sequenceA)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators ((%%))
 import Graphics.DrawingCombinators.Utils (Image)
+import Graphics.Rendering.OpenGL.GL (($=))
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget(Widget)
 import Graphics.UI.GLFW.Events (KeyEvent, GLFWEvent(..), eventLoop)
-import Graphics.Rendering.OpenGL.GL (($=))
 import qualified Control.Lens as Lens
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.Rendering.OpenGL.GL as GL
@@ -130,15 +132,15 @@ mainLoopWidget mkWidgetUnmemod getAnimationHalfLife = do
         [] -> return Nothing
         _ -> do
           newWidget
-          return . Just . compose . map (Lens.view Widget.eAnimIdMapping) $ tickResults
+          return . Just . compose $ map (^. Widget.eAnimIdMapping) tickResults
     eventHandler size event = do
       widget <- getWidget size
       mAnimIdMapping <-
-        (traverse . fmap) (Lens.view Widget.eAnimIdMapping) .
+        (traverse . fmap) (^. Widget.eAnimIdMapping) .
         E.lookup event $ widget ^. Widget.wEventMap
       case mAnimIdMapping of
         Nothing -> return ()
         Just _ -> newWidget
       return mAnimIdMapping
-    mkFrame size = fmap (Lens.view Widget.wFrame) $ getWidget size
+    mkFrame size = (^. Widget.wFrame) <$> getWidget size
   mainLoopAnim tickHandler eventHandler mkFrame getAnimationHalfLife

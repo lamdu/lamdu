@@ -132,7 +132,7 @@ definitionTypes =
       (,)
       <$> guidNameOf defI
       <*>
-      (fmap void . ExprIRef.readExpression . Lens.view Definition.defType =<<
+      (fmap void . ExprIRef.readExpression . (^. Definition.defType) =<<
        Transaction.readIRef defI)
 
 recursiveDefI :: DefI t

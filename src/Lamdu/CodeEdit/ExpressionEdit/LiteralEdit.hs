@@ -2,23 +2,23 @@
 
 module Lamdu.CodeEdit.ExpressionEdit.LiteralEdit(makeInt, makeIntView) where
 
+import Control.Lens.Operators
+import Control.MonadA(MonadA)
 import Data.Store.Transaction (Transaction)
+import Graphics.UI.Bottle.Animation (AnimId)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
-import Control.MonadA(MonadA)
-import Graphics.UI.Bottle.Animation (AnimId)
-import qualified Control.Lens as Lens
 import qualified Data.Char as Char
+import qualified Graphics.UI.Bottle.EventMap as E
+import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.WidgetEnvT as WE
-import qualified Graphics.UI.Bottle.EventMap as E
-import qualified Graphics.UI.Bottle.Widget as Widget
-import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
-import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
 
 setColor :: MonadA m => ExprGuiM m a -> ExprGuiM m a
 setColor = ExprGuiM.withFgColor Config.literalIntColor
@@ -64,11 +64,13 @@ makeIntEditI integer myId setValue = do
         _ <- setValue $ read newText
         return eventRes
   style <- ExprGuiM.widgetEnv WE.readTextStyle
-  return .
-    ExpressionGui.fromValueWidget .
-    Widget.atEvents setter .
-    Lens.over Widget.wEventMap removeKeys $ TextEdit.make
-    (Lens.set TextEdit.sEmptyFocusedString "<0>" style) textCursor text myId
+  return $
+    TextEdit.make
+    (style & TextEdit.sEmptyFocusedString .~ "<0>")
+    textCursor text myId
+    & Widget.wEventMap %~ removeKeys
+    & Widget.atEvents setter
+    & ExpressionGui.fromValueWidget
   where
     removeKeys =
       (E.filterSChars . flip . const) Char.isDigit .

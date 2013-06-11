@@ -6,7 +6,6 @@ import Control.MonadA (MonadA)
 import Data.Monoid (mappend)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
-import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -38,7 +37,7 @@ make parentPrecedence (Sugar.Lam _ param _isDep resultType) =
           case Widget.subId paramId cursor of
           Nothing -> cursor
           Just _ -> typeId
-    ExprGuiM.atEnv (Lens.over WE.envCursor redirectCursor) $ do
+    ExprGuiM.atEnv (WE.envCursor %~ redirectCursor) $ do
       paramTypeEdit <- ExprGuiM.makeSubexpresion 1 $ param ^. Sugar.fpType
       paramEdit <-
         if paramUsed

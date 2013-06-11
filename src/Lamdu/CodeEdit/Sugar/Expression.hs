@@ -150,7 +150,7 @@ make exprI expr = do
     , _rHiddenGuids = []
     , _rPresugaredExpression =
       fmap (StorePoint . Property.value) .
-      Lens.view SugarInfer.plStored <$> exprI
+      (^. SugarInfer.plStored) <$> exprI
     }
   where
     seeds = RandomUtils.splits . mkGen 0 3 $ SugarInfer.resultGuid exprI

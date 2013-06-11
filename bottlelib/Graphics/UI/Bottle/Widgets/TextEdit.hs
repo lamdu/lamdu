@@ -11,7 +11,8 @@ module Graphics.UI.Bottle.Widgets.TextEdit(
   sTextViewStyle
   ) where
 
-import Control.Lens ((+~), (^.), (%~), _1)
+import Control.Lens.Tuple
+import Control.Lens.Operators
 import Data.Char (isSpace)
 import Data.List (genericLength, minimumBy)
 import Data.List.Split (splitWhen)
@@ -24,7 +25,6 @@ import Graphics.DrawingCombinators.Utils (square, textHeight)
 import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.Widget (Widget(..))
 import qualified Control.Lens as Lens
-import qualified Control.Lens.TH as LensTH
 import qualified Data.Binary.Utils as BinUtils
 import qualified Data.ByteString.Char8 as SBS8
 import qualified Data.Map as Map
@@ -50,7 +50,7 @@ data Style = Style
   , _sEmptyFocusedString :: String
   , _sTextViewStyle :: TextView.Style
   }
-LensTH.makeLenses ''Style
+Lens.makeLenses ''Style
 
 defaultCursorColor :: Draw.Color
 defaultCursorColor = Draw.Color 0 1 0 1
@@ -76,8 +76,9 @@ makeTextEditCursor myId = Widget.joinId myId . (:[]) . BinUtils.encodeS
 
 rightSideOfRect :: Rect -> Rect
 rightSideOfRect rect =
-  Lens.set Rect.left (rect ^. Rect.right) .
-  Lens.set Rect.width 0 $ rect
+  rect
+  & Rect.left .~ rect ^. Rect.right
+  & Rect.width .~ 0
 
 cursorRects :: Style -> String -> [Rect]
 cursorRects style str =
@@ -98,7 +99,7 @@ makeUnfocused :: Style -> String -> Widget.Id -> Widget ((,) String)
 makeUnfocused style str myId =
   makeFocusable style str myId .
   (Widget.wSize . Lens._1 +~ cursorWidth) .
-  Lens.over Widget.wFrame (cursorTranslate style) .
+  (Widget.wFrame %~ cursorTranslate style) .
   TextView.makeWidget (style ^. sTextViewStyle) displayStr $
   Widget.toAnimId myId
   where
@@ -109,7 +110,7 @@ makeFocusable ::
   Style -> String -> Widget.Id ->
   Widget ((,) String) -> Widget ((,) String)
 makeFocusable style str myId =
-  Lens.set Widget.wMaybeEnter $ Just mEnter
+  Widget.wMaybeEnter .~ Just mEnter
   where
     minimumOn = minimumBy . comparing
     rectToCursor fromRect =
@@ -188,7 +189,7 @@ makeFocused cursor style str myId =
 
 textViewDraw ::
   Style -> String -> (Anim.AnimId -> Anim.Frame, Widget.Size)
-textViewDraw = TextView.drawTextAsSingleLetters . Lens.view sTextViewStyle
+textViewDraw = TextView.drawTextAsSingleLetters . (^. sTextViewStyle)
 
 mkCursorRect :: Style -> Int -> String -> Rect
 mkCursorRect style cursor str = Rect cursorPos cursorSize
@@ -198,8 +199,9 @@ mkCursorRect style cursor str = Rect cursorPos cursorSize
     cursorPos = Vector2 cursorPosX cursorPosY
     cursorSize = Vector2 (style ^. sCursorWidth) lineHeight
     cursorPosX =
-      Lens.view (Lens._2 . Lens._1) . textViewDraw style $ last beforeCursorLines
-    cursorPosY = (lineHeight *) . subtract 1 $ genericLength beforeCursorLines
+      textViewDraw style (last beforeCursorLines) ^.
+      Lens._2 . Lens._1
+    cursorPosY = lineHeight * (genericLength beforeCursorLines - 1)
 
 eventMap ::
   Int -> String -> String -> Widget.Id ->

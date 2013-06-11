@@ -2,7 +2,7 @@
 module Lamdu.CodeEdit (make) where
 
 import Control.Applicative ((<$>), (<*>))
-import Control.Lens ((^.))
+import Control.Lens.Operators
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State (StateT, mapStateT)
 import Control.MonadA (MonadA)
@@ -19,7 +19,6 @@ import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (WidgetT, ExprGuiM)
 import Lamdu.CodeEdit.Settings (Settings)
 import Lamdu.WidgetEnvT (WidgetEnvT)
-import qualified Control.Lens as Lens
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.DrawingCombinators as Draw
@@ -183,5 +182,5 @@ makePaneWidget rawDefS = do
     onActivePane =
       Widget.backgroundColor Layers.activePane WidgetIds.activeDefBackground Config.activeDefBGColor
     onInactivePane =
-      (Lens.over Widget.wFrame . Anim.onImages . Draw.tint)
+      ((Widget.wFrame %~) . Anim.onImages . Draw.tint)
       Config.inactiveTintColor

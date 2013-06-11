@@ -5,18 +5,16 @@ module Graphics.UI.Bottle.Widgets.FocusDelegator
   , make
   , wrapEnv
   , delegatingId, notDelegatingId
-  )
-where
+  ) where
 
 import Control.Applicative (Applicative(..))
-import Control.Lens ((^.))
+import Control.Lens.Operators
 import Data.ByteString.Char8() -- IsString instance
 import Data.Maybe (isJust)
 import Data.Monoid (mappend, mempty)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Rect(Rect(..))
 import Graphics.UI.Bottle.Widget(Widget(..))
-import qualified Control.Lens as Lens
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.Direction as Direction
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -57,17 +55,17 @@ makeFocused delegating focusSelf env =
     colorize = Widget.backgroundColor (layer ourStyle) (mappend (cursorBGAnimId ourStyle) (Widget.toAnimId focusSelf)) $ color ourStyle
 
     useStartDelegatingEventMap w =
-      ($ w) .
+      w &
       -- We're not delegating, so replace the child eventmap with an
       -- event map to either delegate to it (if it is enterable) or to
       -- nothing (if it is not):
-      Lens.set Widget.wEventMap .
-      maybe mempty startDelegatingEventMap $
-      w ^. Widget.wMaybeEnter
+      Widget.wEventMap .~
+      maybe mempty startDelegatingEventMap
+      (w ^. Widget.wMaybeEnter)
 
     startDelegatingEventMap childEnter =
-      E.keyPresses (startDelegatingKeys ourConfig) (startDelegatingDoc ourConfig) .
-      Lens.view Widget.enterResultEvent $ childEnter Direction.Outside
+      E.keyPresses (startDelegatingKeys ourConfig) (startDelegatingDoc ourConfig) $
+      childEnter Direction.Outside ^. Widget.enterResultEvent
 
     addStopDelegatingEventMap =
       Widget.weakerEvents .
@@ -83,7 +81,7 @@ make
   -> Env -- ^ FocusDelegator configuration
   -> Widget f -> Widget f
 make isDelegating Nothing focusSelf _ w =
-  Lens.over Widget.wMaybeEnter (mEnter isDelegating (w ^. Widget.wSize)) w
+  w & Widget.wMaybeEnter %~ mEnter isDelegating (w ^. Widget.wSize)
   where
     mEnter NotDelegating wholeSize _ = Just . const $ takeFocus wholeSize
     mEnter _ _ Nothing = Nothing
@@ -114,8 +112,8 @@ wrapEnv env entryState mkResult myId cursor =
   mkResult atWidget innerId newCursor
   where
     atWidget innerWidget =
-      Lens.set Widget.wIsFocused (isJust mIsDelegating) $
       make entryState mIsDelegating delegatorId env innerWidget
+      & Widget.wIsFocused .~ isJust mIsDelegating
       where
         mIsDelegating =
           case Widget.subId delegatorId newCursor of

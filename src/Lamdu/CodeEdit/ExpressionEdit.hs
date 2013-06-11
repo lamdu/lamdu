@@ -3,7 +3,6 @@ module Lamdu.CodeEdit.ExpressionEdit(make) where
 
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
-import Control.Monad ((<=<))
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
@@ -48,7 +47,7 @@ pasteEventMap =
   (Widget.keysEventMapMovesCursor
    Config.pasteKeys (E.Doc ["Edit", "Paste"]) .
    fmap WidgetIds.fromGuid) .
-  (Lens.view Sugar.holePaste <=< Lens.view Sugar.holeMActions)
+  (^? Sugar.holeMActions . Lens._Just . Sugar.holePaste . Lens._Just)
 
 make ::
   MonadA m => ParentPrecedence ->
@@ -64,7 +63,7 @@ make parentPrecedence sExpr = assignCursor $ do
       ExpressionGui.addType ExpressionGui.Background exprId $
       Widget.tint Config.inferredTypeTint .
       Widget.scale Config.typeScaleFactor .
-      Lens.view ExpressionGui.egWidget <$> typeEdits
+      (^. ExpressionGui.egWidget) <$> typeEdits
   return $
     addInferredTypes widget
     & ExpressionGui.egWidget %~
@@ -112,10 +111,12 @@ makeEditor parentPrecedence sExpr =
   Sugar.BodyGetParams gp ->
     notAHole $ GetParamsEdit.make gp
   where
-    isAHole hole =
-      (fmap . fmap)
-      ((,) IsAHole .
-       (Lens.over ExpressionGui.egWidget . Widget.weakerEvents) (pasteEventMap hole))
+    isAHole hole mkWidget = fmap (handleHole hole) . mkWidget
+    handleHole hole widget =
+      ( IsAHole
+      , widget &
+        ExpressionGui.egWidget %~ Widget.weakerEvents (pasteEventMap hole)
+      )
     notAHole = (fmap . fmap) ((,) NotAHole)
     mNextHoleGuid = sExpr ^. Sugar.rPayload . Sugar.plMNextHoleGuid
 

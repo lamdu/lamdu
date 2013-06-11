@@ -9,7 +9,7 @@ module Graphics.UI.Bottle.Widgets.TextView
 
 import Control.Applicative (liftA2)
 import Control.Arrow ((&&&))
-import Control.Lens ((^.), (.~), (%~))
+import Control.Lens.Operators
 import Data.List (foldl')
 import Data.List.Split (splitWhen)
 import Data.List.Utils (enumerate)
@@ -89,7 +89,7 @@ letterRects style text =
   zipWith locateLineHeight (iterate (+ lineHeight) 0) textLines
   where
     textLines = map makeLine $ splitWhen (== '\n') text
-    locateLineHeight y = (map . Lens.over Rect.top) (+y)
+    locateLineHeight y = Lens.mapped . Rect.top +~ y
     (_, Vector2 _ lineHeight) = fontRender style ""
     makeLine textLine =
       zipWith makeLetterRect sizes . scanl (+) 0 .

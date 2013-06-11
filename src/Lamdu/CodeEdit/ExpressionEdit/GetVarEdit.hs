@@ -59,4 +59,5 @@ make getVar myId = do
         DataOps.savePreJumpPosition cp myId
         WidgetIds.fromGuid <$> getVar ^. Sugar.gvJumpTo
   makeView getVar myId &
-    Lens.over (Lens.mapped . ExpressionGui.egWidget) (Widget.weakerEvents jumpToDefinitionEventMap)
+    Lens.mapped . ExpressionGui.egWidget %~
+    Widget.weakerEvents jumpToDefinitionEventMap

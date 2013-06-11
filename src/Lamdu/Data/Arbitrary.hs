@@ -15,7 +15,6 @@ import Data.Store.Guid (Guid)
 import Lamdu.Data.Expression (Kind(..))
 import Test.QuickCheck (Arbitrary(..), Gen, choose)
 import qualified Control.Lens as Lens
-import qualified Control.Lens.TH as LensTH
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Store.Guid as Guid
@@ -26,7 +25,7 @@ data Env def = Env
   { _envScope :: [Guid]
   , __envMakeDef :: Maybe (Gen def)
   }
-LensTH.makeLenses ''Env
+Lens.makeLenses ''Env
 
 type GenExpr def = ReaderT (Env def) (StateT [Guid] Gen)
 

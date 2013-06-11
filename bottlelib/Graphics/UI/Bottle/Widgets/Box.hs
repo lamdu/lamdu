@@ -18,7 +18,6 @@ import Graphics.UI.Bottle.Rect (Rect(..))
 import Graphics.UI.Bottle.Widget (Widget, Size)
 import Graphics.UI.Bottle.Widgets.Grid (KGrid(..))
 import qualified Control.Lens as Lens
-import qualified Control.Lens.TH as LensTH
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 
 type Cursor = Int
@@ -40,7 +39,7 @@ horizontal :: Orientation
 horizontal = Orientation
   { oToGridCursor = (`Vector2` 0)
   , oToGridChildren = (: [])
-  , oFromGridCursor = Lens.view Lens._1
+  , oFromGridCursor = (^. Lens._1)
   , oFromGridChildren = eHead
   }
 
@@ -48,7 +47,7 @@ vertical :: Orientation
 vertical = Orientation
   { oToGridCursor = (0 `Vector2`)
   , oToGridChildren = map (: [])
-  , oFromGridCursor = Lens.view Lens._2
+  , oFromGridCursor = (^. Lens._2)
   , oFromGridChildren = map eHead
   }
 
@@ -66,7 +65,7 @@ data KBox key f = KBox
   , _boxSize :: Size
   , _boxContent :: [(key, Element f)]
   }
-LensTH.makeLenses ''KBox
+Lens.makeLenses ''KBox
 
 type Box = KBox ()
 

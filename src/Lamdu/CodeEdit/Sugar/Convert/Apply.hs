@@ -117,7 +117,9 @@ makeCollapsed exprI g compact hasInfo fullExpression =
     , _cCompact = compact
     , _cFullExprHasInfo = hasInfo
     , _cFullExpression =
-      Lens.set rGuid expandedGuid $ SugarExpr.removeInferredTypes fullExpression
+      fullExpression
+      & SugarExpr.removeInferredTypes
+      & rGuid .~ expandedGuid
     }
   where
     expandedGuid = Guid.combine (SugarInfer.resultGuid exprI) $ Guid.fromString "polyExpanded"

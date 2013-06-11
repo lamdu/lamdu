@@ -3,7 +3,7 @@ module Lamdu.CodeEdit.Settings
   ( Settings(..), sInfoMode, InfoMode(..), defaultInfoMode
   ) where
 
-import qualified Control.Lens.TH as LensTH
+import qualified Control.Lens as Lens
 
 data InfoMode = None | Types | Examples
   deriving (Show)
@@ -14,4 +14,4 @@ defaultInfoMode = None
 newtype Settings = Settings
   { _sInfoMode :: InfoMode
   }
-LensTH.makeLenses ''Settings
+Lens.makeLenses ''Settings

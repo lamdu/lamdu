@@ -6,7 +6,7 @@ module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Types
 
 import Data.Store.Transaction (Transaction)
 import Graphics.UI.Bottle.Widget (Widget, R)
-import qualified Control.Lens.TH as LensTH
+import qualified Control.Lens as Lens
 
 type WidgetT m = Widget (Transaction m)
 
@@ -14,7 +14,7 @@ data ExpressionGui m = ExpressionGui
   { _egWidget :: WidgetT m
   , _egAlignment :: R
   }
-LensTH.makeLenses ''ExpressionGui
+Lens.makeLenses ''ExpressionGui
 
 type Precedence = Int
 newtype MyPrecedence = MyPrecedence Precedence

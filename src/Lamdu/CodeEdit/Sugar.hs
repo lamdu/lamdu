@@ -815,7 +815,7 @@ convertWhereItems usedTags expr =
         , wiActions =
           mkWIActions <$>
           SugarInfer.resultStored expr <*>
-          traverse (Lens.view SugarInfer.plStored) (lambda ^. Expr.lambdaResult)
+          traverse (^. SugarInfer.plStored) (lambda ^. Expr.lambdaResult)
         , wiName = name
         }
     (nextItems, whereBody) <- convertWhereItems usedTags $ lambda ^. Expr.lambdaResult

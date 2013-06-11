@@ -36,7 +36,7 @@ bsOfKey key = SHA1.hash $ encodeS (show (typeOf key), key)
 -- TODO: Convert to Lens.at so you can poke too
 peek :: (Key k, Binary v) => k -> Cache -> Maybe v
 peek key =
-  fmap (decodeS . snd) . Map.lookup (bsOfKey key) . Lens.view cEntries
+  fmap (decodeS . snd) . Map.lookup (bsOfKey key) . (^. cEntries)
 
 touchExisting :: Cache -> KeyBS -> ValEntry -> Cache
 touchExisting cache bsKey (prevPriority, bsVal) =

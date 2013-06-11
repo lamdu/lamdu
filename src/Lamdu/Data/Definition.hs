@@ -14,7 +14,7 @@ import Data.DeriveTH (derive)
 import Data.Foldable (Foldable(..))
 import Data.Traversable (Traversable(..))
 import Data.Typeable (Typeable)
-import qualified Control.Lens.TH as LensTH
+import qualified Control.Lens as Lens
 
 data FFIName = FFIName
   { fModule :: [String]
@@ -40,6 +40,6 @@ data Definition expr = Definition
   , _defType :: expr
   } deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Typeable)
 
-LensTH.makeLenses ''Definition
+Lens.makeLenses ''Definition
 derive makeBinary ''Body
 derive makeBinary ''Definition

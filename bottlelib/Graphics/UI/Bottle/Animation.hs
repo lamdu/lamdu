@@ -14,7 +14,7 @@ module Graphics.UI.Bottle.Animation
   ) where
 
 import Control.Applicative(Applicative(..), liftA2)
-import Control.Lens (Traversal', (^.), (%~))
+import Control.Lens.Operators
 import Control.Monad(void)
 import Data.List(isPrefixOf)
 import Data.List.Utils(groupOn, sortOn)
@@ -25,7 +25,6 @@ import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators(R, (%%))
 import Graphics.UI.Bottle.Rect(Rect(Rect))
 import qualified Control.Lens as Lens
-import qualified Control.Lens.TH as LensTH
 import qualified Data.ByteString as SBS
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -42,12 +41,12 @@ data PositionedImage = PositionedImage {
   _piImage :: Draw.Image (), -- Image always occupies (0,0)..(1,1), the translation/scaling occurs when drawing
   _piRect :: Rect
   }
-LensTH.makeLenses ''PositionedImage
+Lens.makeLenses ''PositionedImage
 
 newtype Frame = Frame {
   _fSubImages :: Map AnimId [(Layer, PositionedImage)]
   }
-LensTH.makeLenses ''Frame
+Lens.makeLenses ''Frame
 
 joinId :: AnimId -> AnimId -> AnimId
 joinId = (++)
@@ -94,7 +93,10 @@ red :: Draw.Color
 red = Draw.Color 1 0 0 1
 
 draw :: Frame -> Draw.Image ()
-draw = mconcat . map (posImages . map snd) . sortOn (fst . head) . Map.elems . Lens.view fSubImages
+draw =
+  mconcat . map (posImages . map snd) .
+  sortOn (fst . head) . Map.elems .
+  (^. fSubImages)
   where
     putXOn (PositionedImage img r) = PositionedImage (mappend (Draw.tint red unitX) img) r
     posImages [x] = posImage x
@@ -162,7 +164,7 @@ isVirtuallySame (Frame a) (Frame b) =
       liftA2 max
         (fmap abs (ra ^. Rect.topLeft - rb ^. Rect.topLeft))
         (fmap abs (ra ^. Rect.bottomRight -  rb ^. Rect.bottomRight))
-    rectMap = Map.map (Lens.view piRect . snd . head)
+    rectMap = Map.map (^?! Lens.traversed . Lens._2 . piRect)
 
 mapIdentities :: (AnimId -> AnimId) -> Frame -> Frame
 mapIdentities f = fSubImages %~ Map.mapKeys f
@@ -215,10 +217,10 @@ backgroundColor animId layer color size =
   flip mappend . onDepth (+layer) . scale size .
   onImages (Draw.tint color) $ unitSquare animId
 
-eachFrame :: Traversal' Frame (Layer, PositionedImage)
+eachFrame :: Lens.Traversal' Frame (Layer, PositionedImage)
 eachFrame = fSubImages . Lens.traversed . Lens.traversed
 
-images :: Traversal' Frame PositionedImage
+images :: Lens.Traversal' Frame PositionedImage
 images = eachFrame . Lens._2
 
 translate :: Vector2 R -> Frame -> Frame

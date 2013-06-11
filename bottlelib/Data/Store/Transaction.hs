@@ -23,7 +23,7 @@ module Data.Store.Transaction
 where
 
 import Control.Applicative (Applicative)
-import Control.Lens ((&), (%~))
+import Control.Lens.Operators
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT, ask)
 import Control.Monad.Trans.State (StateT, runStateT, evalStateT, get, gets, modify)
@@ -39,7 +39,6 @@ import Data.Store.IRef (IRef, Tag)
 import Data.Store.Rev.Change (Key, Value)
 import Prelude hiding (lookup)
 import qualified Control.Lens as Lens
-import qualified Control.Lens.TH as LensTH
 import qualified Data.Map as Map
 import qualified Data.Store.Guid as Guid
 import qualified Data.Store.IRef as IRef
@@ -186,13 +185,13 @@ run store transaction = do
   return res
 
 newtype MkProperty m a = MkProperty { _mkProperty :: Transaction m (Property m a) }
-LensTH.makeLenses ''MkProperty
+Lens.makeLenses ''MkProperty
 
 mkPropertyFromIRef :: (MonadA m, Binary a) => IRef (Tag m) a -> MkProperty m a
 mkPropertyFromIRef = MkProperty . fromIRef
 
 getP :: MonadA m => MkProperty m a -> Transaction m a
-getP = fmap Property.value . Lens.view mkProperty
+getP = fmap Property.value . (^. mkProperty)
 
 setP :: MonadA m => MkProperty m a -> a -> Transaction m ()
 setP (MkProperty mkProp) val = do

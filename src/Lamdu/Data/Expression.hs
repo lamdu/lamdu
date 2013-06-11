@@ -24,7 +24,7 @@ import Data.Foldable (Foldable(..))
 import Data.Store.Guid (Guid)
 import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
-import qualified Control.Lens.TH as LensTH
+import qualified Control.Lens as Lens
 
 data Kind = Val | Type
   deriving (Eq, Ord, Show, Typeable)
@@ -95,8 +95,8 @@ data Expression def a = Expression
   , _ePayload :: a
   } deriving (Functor, Eq, Ord, Foldable, Traversable, Typeable)
 
-fmap concat $ mapM LensTH.makePrisms [''Kind, ''VariableRef, ''Leaf, ''Body]
-fmap concat $ mapM LensTH.makeLenses [''Expression, ''Record, ''GetField, ''Lambda, ''Apply]
+fmap concat $ mapM Lens.makePrisms [''Kind, ''VariableRef, ''Leaf, ''Body]
+fmap concat $ mapM Lens.makeLenses [''Expression, ''Record, ''GetField, ''Lambda, ''Apply]
 
 fmap concat . sequence $
   derive

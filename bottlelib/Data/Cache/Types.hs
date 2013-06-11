@@ -5,7 +5,7 @@ import Data.Binary (Binary)
 import Data.Int (Int64)
 import Data.Map (Map)
 import Data.Typeable (Typeable)
-import qualified Control.Lens.TH as LensTH
+import qualified Control.Lens as Lens
 import qualified Data.ByteString as SBS
 
 type Key a = (Binary a, Typeable a)
@@ -40,4 +40,4 @@ data Cache = Cache
   , cMaxSize :: Int
   }
 
-LensTH.makeLenses ''Cache
+Lens.makeLenses ''Cache

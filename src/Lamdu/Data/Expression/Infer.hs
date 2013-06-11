@@ -48,14 +48,12 @@ import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Infer.Rules (Rule(..))
 import Lamdu.Data.Expression.Infer.Types
 import qualified Control.Lens as Lens
-import qualified Control.Lens.TH as LensTH
 import qualified Control.Lens.Utils as LensUtils
 import qualified Control.Monad.Trans.Either as Either
 import qualified Control.Monad.Trans.State as State
 import qualified Data.Foldable as Foldable
 import qualified Data.IntSet as IntSet
 import qualified Data.Map as Map
-import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
@@ -91,8 +89,8 @@ data RefMap a = RefMap
   { _refs :: IntMap a
   , _nextRef :: Int
   }
-LensTH.makeLenses ''RefData
-LensTH.makeLenses ''RefMap
+Lens.makeLenses ''RefData
+Lens.makeLenses ''RefMap
 
 emptyRefMap :: RefMap a
 emptyRefMap =
@@ -161,8 +159,8 @@ data InferState def m = InferState
   , _sBfsCurLayer :: IntSet
   , _sActions :: InferActions def m
   }
-LensTH.makeLenses ''Context
-LensTH.makeLenses ''InferState
+Lens.makeLenses ''Context
+Lens.makeLenses ''InferState
 
 fmap concat . sequence $
   derive
@@ -261,7 +259,7 @@ derefNode context inferNode =
     toIsRestrictedPoly False = UnrestrictedPoly
     toIsRestrictedPoly True = RestrictedPoly
     deref ref =
-      toIsRestrictedPoly . Monoid.getAny . Lens.view rplRestrictedPoly <$>
+      toIsRestrictedPoly . (^. rplRestrictedPoly . Lens.unwrapped) <$>
       context ^. exprRefsAt ref . rExpression
 
 derefExpr ::

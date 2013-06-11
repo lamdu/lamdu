@@ -149,7 +149,7 @@ translate pos =
 
 translateBy :: (Vector2 R -> Vector2 R) -> Widget f -> Widget f
 translateBy mkPos w =
-  (translate . mkPos . Lens.view wSize) w w
+  (translate . mkPos . (^. wSize)) w w
 
 scale :: Vector2 R -> Widget f -> Widget f
 scale mult =

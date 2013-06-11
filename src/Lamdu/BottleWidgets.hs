@@ -66,7 +66,7 @@ makeFocusableView myId widget = do
       | hasFocus = Widget.backgroundColor Layers.cursorBG WidgetIds.backgroundCursorId Config.cursorBGColor
       | otherwise = id
   return .
-    Lens.set Widget.wIsFocused hasFocus . setBackground $
+    (Widget.wIsFocused .~ hasFocus) . setBackground $
     Widget.takesFocus (const (pure myId)) widget
 
 makeFocusableTextView
@@ -118,7 +118,7 @@ wrapDelegatedOT
   -> ((Widget f -> Widget f) -> a -> b)
   -> (Widget.Id -> WidgetEnvT m a)
   -> Widget.Id -> WidgetEnvT m b
-wrapDelegatedOT = wrapDelegatedWith WE.readCursor (WE.atEnv . Lens.over WE.envCursor)
+wrapDelegatedOT = wrapDelegatedWith WE.readCursor (WE.atEnv . (WE.envCursor %~))
 
 makeTextEdit
   :: (MonadA m, MonadA f)
@@ -142,7 +142,7 @@ removeKey
   -> EventMap.ModKey
   -> a -> b -> m (Widget f)
 removeKey makeEdit key =
-  (fmap . fmap . fmap . Lens.over Widget.wEventMap)
+  (Lens.mapped . Lens.mapped . Lens.mapped . Widget.wEventMap %~)
   (EventMap.deleteKey (EventMap.KeyEvent EventMap.Press key))
   makeEdit
 

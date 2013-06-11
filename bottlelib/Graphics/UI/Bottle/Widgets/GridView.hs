@@ -41,7 +41,7 @@ makePlacements rows =
       (alignmentPos + maxSize snd, alignmentPos)
       where
         alignmentPos = maxSize fst
-        maxSize f = maximum $ map (Lens.view dim . f . snd) group
+        maxSize f = maximum $ map ((^. dim) . f . snd) group
     posRows = (map . map) calcPos rows
     calcPos (alignment, size) = (size, (alignment * size, (1 - alignment) * size))
 
