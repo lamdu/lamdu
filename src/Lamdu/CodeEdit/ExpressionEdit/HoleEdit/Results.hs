@@ -72,7 +72,7 @@ pick holeInfo holeResult = do
   holeResult ^. Sugar.holeResultPick
 
 data ResultType = GoodResult | BadResult
-  deriving (Eq)
+  deriving (Eq, Ord)
 
 data Result m = Result
   { rType :: ResultType
@@ -81,8 +81,12 @@ data Result m = Result
   , rId :: Widget.Id
   }
 
+data IsPreferred = Preferred | NotPreferred
+  deriving (Eq, Ord)
+
 data ResultsList m = ResultsList
-  { _rlExtraResultsPrefixId :: Widget.Id
+  { _rlPreferred :: IsPreferred -- Move to top of result list
+  , _rlExtraResultsPrefixId :: Widget.Id
   , _rlMain :: Result m
   , _rlExtra :: [Result m]
   }
@@ -162,7 +166,8 @@ mResultsListOf ::
 mResultsListOf _ _ _ [] = Nothing
 mResultsListOf holeInfo makeWidget baseId (x:xs) = Just
   ResultsList
-  { _rlExtraResultsPrefixId = extraResultsPrefixId
+  { _rlPreferred = NotPreferred
+  , _rlExtraResultsPrefixId = extraResultsPrefixId
   , _rlMain = mkResult (mconcat [prefixId holeInfo, baseId]) x
   , _rlExtra = map (\res -> mkResult (extraResultId (snd res)) res) xs
   }
@@ -251,11 +256,16 @@ makeResultsList ::
   MonadA m => HoleInfo m -> WidgetMaker m -> GroupM m ->
   CT m (Maybe (ResultsList m))
 makeResultsList holeInfo makeWidget group =
+  (Lens.mapped . Lens.mapped %~ rlPreferred .~ toPreferred) .
   typeCheckToResultsList holeInfo makeWidget baseId .
   map Sugar.ResultSeedExpression =<<
   maybeInjectArgumentExpr holeInfo =<<
   baseExprWithApplyForms holeInfo baseExpr
   where
+    toPreferred
+      | Lens.anyOf (groupNames . traverse) (== searchTerm) group = Preferred
+      | otherwise = NotPreferred
+    searchTerm = hiSearchTerm holeInfo
     baseExpr = group ^. groupBaseExpr
     baseId = WidgetIds.hash baseExpr
 
@@ -278,16 +288,20 @@ collectResults =
   where
     haveHiddenResults [] = NoHiddenResults
     haveHiddenResults _ = HaveHiddenResults
-    conclude (notEnoughResults, enoughResultsM) =
+    conclude (collectedResults, remainingResultsM) =
       ( (Lens._2 %~ haveHiddenResults) . splitAt Config.holeResultCount
-      . uncurry (on (++) reverse) . last . mappend notEnoughResults
+      . uncurry (++)
+      . (Lens._1 %~ sortOn resultsListScore)
+      . (Lens.both %~ reverse)
+      . last . mappend collectedResults
       ) <$>
-      List.toList (List.take 2 enoughResultsM)
+      List.toList (List.take 2 remainingResultsM)
+    resultsListScore x = (x ^. rlPreferred, rType (x ^. rlMain))
     step results x =
       results
-      & case rType (x ^. rlMain) of
-        GoodResult -> Lens._1
-        BadResult -> Lens._2
+      & case resultsListScore x of
+        (NotPreferred, BadResult) -> Lens._2
+        _ -> Lens._1
         %~ (x :)
 
 makeAll ::
