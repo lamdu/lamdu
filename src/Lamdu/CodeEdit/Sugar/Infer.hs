@@ -7,10 +7,10 @@ module Lamdu.CodeEdit.Sugar.Infer
   , PayloadM, PayloadMM, ExprMM
 
   , isPolymorphicFunc
-  , inferLoadedExpression
-  , InferLoadedResult(..)
-  , ilrSuccess, ilrBaseInferContextKey, ilrInferContext
-  , ilrExpr, ilrBaseExpr, ilrBaseInferContext
+  , inferAddImplicits
+  , InferredWithImplicits(..)
+  , iwiSuccess, iwiBaseInferContextKey, iwiInferContext
+  , iwiExpr, iwiBaseExpr, iwiBaseInferContext
 
   , resultFromPure, resultFromInferred
 
@@ -171,10 +171,10 @@ memoLoadInfer ::
   , Infer.InferNode (DefI (Tag m))
   ) ->
   CT m (Maybe (ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), a)))
-memoLoadInfer mDefI expr inferStateKey inferState = do
+memoLoadInfer mDefI expr inferStateKey (inferState, point) = do
   loaded <- lift $ load mDefI expr
-  pureMemoBy (loaded, inferStateKey) $
-    uncurry (inferMaybe loaded) inferState
+  pureMemoBy (loaded, inferStateKey, point) $
+    inferMaybe loaded inferState point
 
 inferMaybe_ ::
   MonadA m =>
@@ -225,38 +225,38 @@ inferWithVariables gen loaded baseInferContext node =
       , ImplicitVariables.AutoGen guid
       )
 
-data InferLoadedResult m = InferLoadedResult
-  { _ilrSuccess :: Bool
-  , _ilrInferContext :: Infer.Context (DefI (Tag m))
-  , _ilrExpr :: ExprIRef.ExpressionM m (Payload (Tag m) (InferredWC (Tag m)) (Maybe (Stored m)))
+data InferredWithImplicits m = InferredWithImplicits
+  { _iwiSuccess :: Bool
+  , _iwiInferContext :: Infer.Context (DefI (Tag m))
+  , _iwiExpr :: ExprIRef.ExpressionM m (Payload (Tag m) (InferredWC (Tag m)) (Maybe (Stored m)))
   -- Prior to adding variables
-  , _ilrBaseInferContext :: Infer.Context (DefI (Tag m))
-  , _ilrBaseInferContextKey :: Cache.KeyBS
-  , _ilrBaseExpr :: ExprIRef.ExpressionM m (Payload (Tag m) (InferredWC (Tag m)) (Stored m))
+  , _iwiBaseInferContext :: Infer.Context (DefI (Tag m))
+  , _iwiBaseInferContextKey :: Cache.KeyBS
+  , _iwiBaseExpr :: ExprIRef.ExpressionM m (Payload (Tag m) (InferredWC (Tag m)) (Stored m))
   }
-LensTH.makeLenses ''InferLoadedResult
+LensTH.makeLenses ''InferredWithImplicits
 
-inferLoadedExpression ::
+inferAddImplicits ::
   (RandomGen g, MonadA m, Typeable (m ())) => g ->
   Maybe (DefI (Tag m)) -> Load.LoadedClosure (Tag m) ->
   Cache.KeyBS ->
   ( Infer.Context (DefI (Tag m))
   , Infer.InferNode (DefI (Tag m))
-  ) -> CT m (InferLoadedResult m)
-inferLoadedExpression gen mDefI lExpr inferContextKey inferState = do
+  ) -> CT m (InferredWithImplicits m)
+inferAddImplicits gen mDefI lExpr inferContextKey inferState = do
   loaded <- lift $ load mDefI lExpr
   ((baseContext, expr), mWithVariables) <-
     Cache.memoS uncurriedInfer (loaded, inferState)
   let baseExpr = mkStoredPayload <$> expr
-  return InferLoadedResult
-    { _ilrSuccess = isJust mWithVariables
-    , _ilrBaseInferContextKey = Cache.bsOfKey (loaded, inferContextKey)
+  return InferredWithImplicits
+    { _iwiSuccess = isJust mWithVariables
+    , _iwiBaseInferContextKey = Cache.bsOfKey (loaded, inferContextKey)
 
-    , _ilrBaseInferContext = baseContext
-    , _ilrBaseExpr = baseExpr
+    , _iwiBaseInferContext = baseContext
+    , _iwiBaseExpr = baseExpr
 
-    , _ilrInferContext = maybe baseContext fst mWithVariables
-    , _ilrExpr =
+    , _iwiInferContext = maybe baseContext fst mWithVariables
+    , _iwiExpr =
       maybe (baseExpr & Lens.mapped . plStored %~ Just)
       (fmap mkWVPayload . snd) mWithVariables
     }

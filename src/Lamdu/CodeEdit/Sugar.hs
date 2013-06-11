@@ -955,42 +955,41 @@ convertDefIExpression ::
   ExprIRef.ExpressionM m (Stored m) ->
   CT m (DefinitionBody MStoredName m (ExpressionU m))
 convertDefIExpression cp exprLoaded defI defType = do
-  ilr@SugarInfer.InferLoadedResult
-    { SugarInfer._ilrExpr = ilrExpr
-    , SugarInfer._ilrSuccess = success
+  ilr@SugarInfer.InferredWithImplicits
+    { SugarInfer._iwiExpr = iwiExpr
+    , SugarInfer._iwiSuccess = success
     } <-
-    SugarInfer.inferLoadedExpression
+    SugarInfer.inferAddImplicits
     -- We can use empty string because we always use
     -- initialInferState, so any key is a unique key
-    inferLoadedGen (Just defI) exprLoaded "" initialInferState
+    inferLoadedGen (Just defI) exprLoaded "" initialInfer
   let
     inferredType =
-      void . Infer.iType . iwcInferred $ SugarInfer.resultInferred ilrExpr
+      void . Infer.iType . iwcInferred $ SugarInfer.resultInferred iwiExpr
   typeInfo <-
     makeTypeInfo cp defI defType (void inferredType) success
   let
-    holeInferStateKey = ilr ^. SugarInfer.ilrBaseInferContextKey
-    inferState = ilr ^. SugarInfer.ilrInferContext
-    holeInferState = ilr ^. SugarInfer.ilrBaseInferContext
+    holeInferStateKey = ilr ^. SugarInfer.iwiBaseInferContextKey
+    inferState = ilr ^. SugarInfer.iwiInferContext
+    holeInferState = ilr ^. SugarInfer.iwiBaseInferContext
   context <- lift $ mkContext cp defI (Just reinferRoot) holeInferStateKey inferState holeInferState
   SugarM.run context $ do
     content <-
       convertDefinitionContent recordParamsInfo [] $
-      ilrExpr & traverse . SugarInfer.plInferred %~ Just
+      iwiExpr & traverse . SugarInfer.plInferred %~ Just
     return $ DefinitionBodyExpression DefinitionExpression
       { _deContent = removeRedundantTypes <$> content
       , _deTypeInfo = typeInfo
       }
   where
-    initialInferState = Infer.initial (Just defI)
+    initialInfer@(initialInferState, _) = Infer.initial (Just defI)
     reinferRoot = do
       reloadedRoot <-
         lift . ExprIRef.readExpression . Load.irefOfClosure $
         exprLoaded ^. Expr.ePayload
       isJust <$>
         SugarInfer.memoLoadInfer (Just defI) (void reloadedRoot)
-        (Cache.bsOfKey initialInferState)
-        initialInferState
+        (Cache.bsOfKey initialInferState) initialInfer
     defGuid = IRef.guid defI
     recordParamsInfo = SugarM.RecordParamsInfo defGuid $ jumpToDefI cp defI
     inferLoadedGen = SugarExpr.mkGen 0 3 defGuid
