@@ -315,9 +315,9 @@ mkEventMap ::
   MonadA m => HoleInfo m -> Maybe (Sugar.HoleResult Sugar.Name m) ->
   ExprGuiM m (Widget.EventHandlers (T m))
 mkEventMap holeInfo mResult = do
-  mDeleteOpResult <-
+  mDeleteWrapper <-
     ExprGuiM.liftMemoT . fmap join . sequenceA $ do
-      guard . null $ drop 1 searchTerm
+      guard $ null searchTerm
       arg <- hiMArgument holeInfo ^? Lens._Just . Sugar.haExpr
       Just . (hiActions holeInfo ^. Sugar.holeResult) .
         Sugar.ResultSeedExpression $ arg ^. Sugar.rPresugaredExpression
@@ -330,7 +330,7 @@ mkEventMap holeInfo mResult = do
         (E.Doc ["Edit", "Back"])
       . fmap (handlePickResultTargetGuid holeInfo)
       . HoleResults.pick holeInfo
-      ) mDeleteOpResult
+      ) mDeleteWrapper
     , maybe mempty
       ( E.keyPresses Config.delKeys
         (E.Doc ["Edit", "Delete"])
