@@ -3,6 +3,7 @@
 module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui
   ( ExpressionGui(..), egWidget
   , fromValueWidget
+  , scaleFromTop
   , hbox, hboxSpaced, addBelow
   , addType -- TODO: s/type/info
   , TypeStyle(..)
@@ -56,6 +57,12 @@ import qualified Lamdu.WidgetIds as WidgetIds
 
 fromValueWidget :: WidgetT m -> ExpressionGui m
 fromValueWidget widget = ExpressionGui widget 0.5
+
+-- | Scale the given ExpressionGui without moving its top alignment
+-- point:
+scaleFromTop :: Vector2 Widget.R -> ExpressionGui m -> ExpressionGui m
+scaleFromTop ratio (ExpressionGui widget alignment) =
+  ExpressionGui (Widget.scale ratio widget) (alignment / (ratio ^. Lens._2))
 
 hbox :: [ExpressionGui m] -> ExpressionGui m
 hbox guis =

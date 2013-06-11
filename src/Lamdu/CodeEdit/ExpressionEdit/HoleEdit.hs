@@ -491,11 +491,10 @@ makeSearchTermWidget ::
   Property (T m) String -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 makeSearchTermWidget searchTermProp searchTermId =
-  ExprGuiM.widgetEnv .
-  fmap
-  (flip ExpressionGui (0.5 / Config.holeSearchTermScaleFactor) .
-   Widget.scale Config.holeSearchTermScaleFactor .
-   Lens.over Widget.wEventMap disallowChars) $
+  ExprGuiM.widgetEnv $
+  (ExpressionGui.scaleFromTop Config.holeSearchTermScaleFactor .
+   ExpressionGui.fromValueWidget .
+   (Widget.wEventMap %~ disallowChars)) <$>
   BWidgets.makeWordEdit searchTermProp searchTermId
 
 holeFDConfig :: FocusDelegator.Config
