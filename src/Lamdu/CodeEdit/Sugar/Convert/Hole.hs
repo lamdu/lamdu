@@ -332,9 +332,14 @@ makeHoleResult sugarContext inferred exprI seed =
   where
     cp = sugarContext ^. SugarM.scCodeAnchors
     makeInferredExpr = lift (seedExprEnv cp seed) >>= Lens._1 inferResult
-    addConverted (inferredResult, _) = do
+    addConverted (inferredResult, ctx) = do
       converted <-
-        convertHoleResult sugarContext gen $
+        convertHoleResult
+        ( sugarContext
+        & SugarM.scHoleInferState .~ ctx
+        & SugarM.scHoleInferStateKey %~ Cache.bsOfKey . (,) (void inferredResult)
+        )
+        gen $
         fst <$> inferredResult
       pure (converted, inferredResult)
     inferResult expr =
