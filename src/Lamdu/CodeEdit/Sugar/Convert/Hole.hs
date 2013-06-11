@@ -330,7 +330,7 @@ makeHoleResult ::
 makeHoleResult sugarContext inferred exprI seed =
   fmap mkHoleResult <$>
   mapStateT Transaction.forkScratch
-  (lift . traverse addConverted . fst =<< makeInferredExpr)
+  (traverse addConverted . fst =<< makeInferredExpr)
   where
     cp = sugarContext ^. SugarM.scCodeAnchors
     makeInferredExpr = lift (seedExprEnv cp seed) >>= Lens._1 inferResult
@@ -398,7 +398,7 @@ seedExprEnv cp (ResultSeedNewDefinition name) = do
 
 convertHoleResult ::
   (MonadA m, Typeable1 m) => SugarM.Context m -> Random.StdGen ->
-  ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) -> T m (ExpressionU m)
+  ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) -> CT m (ExpressionU m)
 convertHoleResult sugarContext gen res =
   SugarM.run sugarContext
   { SugarM._scInferState = error "pure expression doesnt have infer state"

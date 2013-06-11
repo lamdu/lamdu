@@ -4,7 +4,7 @@ module Lamdu.CodeEdit.Sugar.Monad
   , scMDefI, scInferState, scContextHash, scHoleInferState
   , scCodeAnchors, scSpecialFunctions, scMReinferRoot, scTagParamInfos, scRecordParamsInfos, scConvertSubexpression
   , SugarM(..), run
-  , readContext, liftTransaction, local
+  , readContext, liftCTransaction, liftTransaction, local
   , codeAnchor
   , getP
   , convertSubexpression
@@ -51,12 +51,12 @@ data Context m = Context
   , _scConvertSubexpression :: ExprMM m -> SugarM m (ExpressionU m)
   }
 
-newtype SugarM m a = SugarM (ReaderT (Context m) (T m) a)
+newtype SugarM m a = SugarM (ReaderT (Context m) (CT m) a)
   deriving (Functor, Applicative, Monad)
 
 LensTH.makeLenses ''Context
 
-run :: MonadA m => Context m -> SugarM m a -> T m a
+run :: MonadA m => Context m -> SugarM m a -> CT m a
 run ctx (SugarM action) = runReaderT action ctx
 
 readContext :: MonadA m => SugarM m (Context m)
@@ -65,8 +65,11 @@ readContext = SugarM Reader.ask
 local :: Monad m => (Context m -> Context m) -> SugarM m a -> SugarM m a
 local f (SugarM act) = SugarM $ Reader.local f act
 
+liftCTransaction :: MonadA m => CT m a -> SugarM m a
+liftCTransaction = SugarM . lift
+
 liftTransaction :: MonadA m => T m a -> SugarM m a
-liftTransaction = SugarM . lift
+liftTransaction = liftCTransaction . lift
 
 codeAnchor :: MonadA m => (Anchors.CodeProps m -> a) -> SugarM m a
 codeAnchor f = f . (^. scCodeAnchors) <$> readContext

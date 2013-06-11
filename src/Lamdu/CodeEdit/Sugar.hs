@@ -508,10 +508,10 @@ mkContext cp defI mReinferRoot contextHash inferState holeInferState = do
 convertExpressionPure ::
   (MonadA m, Typeable1 m, RandomGen g) =>
   Anchors.CodeProps m -> DefI (Tag m) -> g ->
-  ExprIRef.ExpressionM m () -> T m (ExpressionU m)
+  ExprIRef.ExpressionM m () -> CT m (ExpressionU m)
 convertExpressionPure cp defI gen res = do
   context <-
-    mkContext cp defI Nothing (err "contextHash")
+    lift $ mkContext cp defI Nothing (err "contextHash")
     (err "inferState") (err "holeInferState")
   fmap removeRedundantTypes .
     SugarM.run context .
@@ -880,7 +880,7 @@ loadConvertDefI cp defI =
   where
     defGuid = IRef.guid defI
     convertDefBody (Definition.BodyBuiltin builtin) =
-      lift . convertDefIBuiltin cp builtin defI
+      convertDefIBuiltin cp builtin defI
     convertDefBody (Definition.BodyExpression exprLoaded) =
       convertDefIExpression cp exprLoaded defI
     convertDefI (Definition.Definition defBody typeLoaded) = do
@@ -896,7 +896,7 @@ convertDefIBuiltin ::
   (Typeable1 m, MonadA m) => Anchors.CodeProps m ->
   Definition.Builtin -> DefI (Tag m) ->
   ExprIRef.ExpressionM m (Stored m) ->
-  T m (DefinitionBody MStoredName m (ExpressionU m))
+  CT m (DefinitionBody MStoredName m (ExpressionU m))
 convertDefIBuiltin cp (Definition.Builtin name) defI defType =
   DefinitionBodyBuiltin <$> do
     defTypeS <- convertExpressionPure cp defI iDefTypeGen (void defType)
@@ -919,7 +919,7 @@ makeTypeInfo ::
   Anchors.CodeProps m -> DefI (Tag m) ->
   ExprIRef.ExpressionM m (Stored m) ->
   ExprIRef.ExpressionM m () -> Bool ->
-  T m (DefinitionTypeInfo m (ExpressionU m))
+  CT m (DefinitionTypeInfo m (ExpressionU m))
 makeTypeInfo cp defI defType inferredType success = do
   defTypeS <- conv iDefTypeGen $ void defType
   case () of
@@ -965,13 +965,13 @@ convertDefIExpression cp exprLoaded defI defType = do
     inferredType =
       void . Infer.iType . iwcInferred $ SugarInfer.resultInferred ilrExpr
   typeInfo <-
-    lift $ makeTypeInfo cp defI defType (void inferredType) success
+    makeTypeInfo cp defI defType (void inferredType) success
   let
     contextHash = Cache.bsOfKey $ ilr ^. SugarInfer.ilrContext
     inferState = ilr ^. SugarInfer.ilrInferContext
     holeInferState = ilr ^. SugarInfer.ilrBaseInferContext
   context <- lift $ mkContext cp defI (Just reinferRoot) contextHash inferState holeInferState
-  lift . SugarM.run context $ do
+  SugarM.run context $ do
     content <-
       convertDefinitionContent recordParamsInfo [] $
       ilrExpr & traverse . SugarInfer.plInferred %~ Just
