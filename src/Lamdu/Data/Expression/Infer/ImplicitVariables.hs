@@ -4,7 +4,7 @@ module Lamdu.Data.Expression.Infer.ImplicitVariables
   ) where
 
 import Control.Applicative ((<$>))
-import Control.Lens ((^.), (%~), (&))
+import Control.Lens.Operators
 import Control.Monad (foldM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, State, evalStateT, mapStateT, state)
@@ -44,12 +44,12 @@ addVariableForHole ::
 addVariableForHole holePoint = do
   paramGuid <- state random
   let
-    getVar = ExprUtil.pureExpression $ Lens.review ExprLens.bodyParameterRef paramGuid
-    loaded = Infer.loadIndependent (("Loading a mere getVar: " ++) . show) Nothing getVar
+    getVar = ExprLens.pureExpr . ExprLens.bodyParameterRef # paramGuid
+    getVarLoaded = Infer.loadIndependent (("Loading a mere getVar: " ++) . show) Nothing getVar
   lift $ do
     inferredGetVar <-
       InferUntilConflict.inferAssertNoConflict
-      "ImplicitVariables.addVariableForHole" loaded holePoint
+      "ImplicitVariables.addVariableForHole" getVarLoaded holePoint
     let
       paramTypeRef =
         Infer.tvType . Infer.nRefs . Infer.iPoint . fst $
