@@ -357,7 +357,9 @@ assignHoleEditCursor holeInfo shownResultsIds allResultIds searchTermId action =
     assignSource
       | shouldBeOnResult && not isOnResult = cursor
       | otherwise = hiId holeInfo
-    destId = head (shownResultsIds ++ [searchTermId])
+    destId
+      | null (HoleInfo.hiSearchTerm holeInfo) = searchTermId
+      | otherwise = head (shownResultsIds ++ [searchTermId])
   ExprGuiM.assignCursor assignSource destId action
 
 holeBackgroundColor :: Sugar.HoleArg expr -> Draw.Color
