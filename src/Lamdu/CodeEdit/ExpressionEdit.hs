@@ -11,7 +11,6 @@ import Data.Traversable (traverse)
 import Graphics.UI.Bottle.Widget (EventHandlers)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ParentPrecedence(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
-import Lamdu.CodeEdit.ExpressionEdit.HoleEdit (HoleState(..))
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -21,17 +20,18 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.AtomEdit as AtomEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.CollapsedEdit as CollapsedEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.CodeEdit.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.GetFieldEdit as GetFieldEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.GetParamsEdit as GetParamsEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.GetVarEdit as GetVarEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.InferredEdit as InferredEdit
+import qualified Lamdu.CodeEdit.ExpressionEdit.LambdaEdit as LambdaEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.ListEdit as ListEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.LiteralEdit as LiteralEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.PiEdit as PiEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.RecordEdit as RecordEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.TagEdit as TagEdit
+import qualified Lamdu.CodeEdit.ExpressionEdit.Wrap as Wrap
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.WidgetEnvT as WE
@@ -90,7 +90,7 @@ makeEditor parentPrecedence sExpr =
   Sugar.BodyCollapsed poly ->
     notAHole $ CollapsedEdit.make parentPrecedence poly
   Sugar.BodyApply apply ->
-    notAHole $ ApplyEdit.make parentPrecedence apply
+    notAHole $ ApplyEdit.make parentPrecedence sExpr apply
   Sugar.BodyLam lam@(Sugar.Lam Sugar.Type _ _ _) ->
     notAHole $ PiEdit.make parentPrecedence lam
   Sugar.BodyLam lam@(Sugar.Lam Sugar.Val _ _ _) ->
@@ -160,8 +160,7 @@ actionsEventMap sExpr isHole resultPickers actions = do
         FocusDelegator.notDelegatingId $ return exprGuid
   return $ mconcat
     [ callWithArgsEventMap
-    , wrap
-    , addOperator
+    , Wrap.eventMap actions
     , replace
     , cut
     ]
@@ -172,17 +171,6 @@ actionsEventMap sExpr isHole resultPickers actions = do
       | otherwise = "Pick and "
     prefix = sequence_ resultPickers
     delKeys = Config.replaceKeys ++ Config.delKeys
-    wrap =
-      Widget.keysEventMapMovesCursor
-      Config.wrapKeys (E.Doc ["Edit", "Wrap"]) .
-      fmap WidgetIds.fromGuid $
-      (actions ^. Sugar.wrap) Sugar.emptyPrefixAction
-    addOperator =
-      (fmap . fmap) Widget.eventResultFromCursor .
-      E.charGroup "Operator" (E.Doc ["Edit", "Apply operator"])
-      Config.operatorChars $ \c _isShifted -> do
-        targetGuid <- actions ^. Sugar.wrap $ Sugar.emptyPrefixAction
-        HoleEdit.setHoleStateAndJump (HoleState [c]) targetGuid
     cut
       | isHoleBool = mempty
       | otherwise =

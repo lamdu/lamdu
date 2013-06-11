@@ -6,7 +6,7 @@ module Lamdu.CodeEdit.ExpressionEdit.ApplyEdit
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
-import Data.Monoid (mappend)
+import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Traversable (traverse, sequenceA)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ParentPrecedence(..))
@@ -18,6 +18,7 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.ExpressionEdit.Parens as Parens
 import qualified Lamdu.CodeEdit.ExpressionEdit.TagEdit as TagEdit
+import qualified Lamdu.CodeEdit.ExpressionEdit.Wrap as Wrap
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Layers as Layers
@@ -31,28 +32,35 @@ prefixPrecedence = 10
 
 make ::
   MonadA m => ParentPrecedence ->
+  Sugar.ExpressionN m ->
   Sugar.Apply Sugar.Name (Sugar.ExpressionN m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-make
-  (ParentPrecedence parentPrecedence)
-  (Sugar.Apply func specialArgs annotatedArgs) myId =
-    case specialArgs of
-    Sugar.NoSpecialArgs ->
-      mk Nothing $
-      ExprGuiM.makeSubexpresion (if isBoxed then 0 else parentPrecedence) func
-    Sugar.ObjectArg arg ->
-      mk (Just prefixPrecedence) $ ExpressionGui.hboxSpaced <$> sequenceA
-      [ ExprGuiM.makeSubexpresion (prefixPrecedence+1) func
-      , ExprGuiM.makeSubexpresion prefixPrecedence arg
-      ]
-    Sugar.InfixArgs l r ->
-      mk (Just infixPrecedence) $ ExpressionGui.hboxSpaced <$> sequenceA
-      [ ExprGuiM.makeSubexpresion (infixPrecedence+1) l
-      , -- TODO: What precedence to give when it must be atomic?:
-        ExprGuiM.makeSubexpresion 20 func
-      , ExprGuiM.makeSubexpresion (infixPrecedence+1) r
-      ]
+make (ParentPrecedence parentPrecedence) exprS (Sugar.Apply func specialArgs annotatedArgs) myId =
+  case specialArgs of
+  Sugar.NoSpecialArgs ->
+    mk Nothing $
+    overrideHoleWrap <$> ExprGuiM.makeSubexpresion (if isBoxed then 0 else parentPrecedence) func
+  Sugar.ObjectArg arg ->
+    mk (Just prefixPrecedence) $ ExpressionGui.hboxSpaced <$> sequenceA
+    [ maybeOverrideHoleWrap <$> ExprGuiM.makeSubexpresion (prefixPrecedence+1) func
+    , ExprGuiM.makeSubexpresion prefixPrecedence arg
+    ]
+  Sugar.InfixArgs l r ->
+    mk (Just infixPrecedence) $ ExpressionGui.hboxSpaced <$> sequenceA
+    [ ExprGuiM.makeSubexpresion (infixPrecedence+1) l
+    , -- TODO: What precedence to give when it must be atomic?:
+      overrideHoleWrap <$> ExprGuiM.makeSubexpresion 20 func
+    , ExprGuiM.makeSubexpresion (infixPrecedence+1) r
+    ]
   where
+    maybeOverrideHoleWrap
+      | null annotatedArgs = id
+      | otherwise = overrideHoleWrap
+    overrideHoleWrap =
+      ExpressionGui.egWidget %~ Widget.strongerEvents overrideWrapEventMap
+    overrideWrapEventMap =
+      maybe mempty Wrap.eventMap $
+      exprS ^. Sugar.rPayload . Sugar.plActions
     isBoxed = not $ null annotatedArgs
     destGuid = func ^. Sugar.rGuid
     mk mPrecedence mkFuncRow

@@ -150,6 +150,7 @@ Executable lamdu
                        Lamdu.CodeEdit.ExpressionEdit.PiEdit,
                        Lamdu.CodeEdit.ExpressionEdit.RecordEdit,
                        Lamdu.CodeEdit.ExpressionEdit.TagEdit,
+                       Lamdu.CodeEdit.ExpressionEdit.Wrap,
                        Lamdu.CodeEdit.FFI,
                        Lamdu.CodeEdit.Settings,
                        Lamdu.CodeEdit.Sugar.Convert.Apply,
