@@ -228,7 +228,7 @@ inferOnTheSide ::
   CT m (Maybe (ExprIRef.ExpressionM m ()))
 -- token represents the given holeInferContext
 inferOnTheSide inferStateKey holeInferContext scope expr =
-  (fmap . fmap) (void . Infer.iType . (^. Expr.ePayload . Lens._1) . fst) .
+  (fmap . fmap) (void . Infer.iType . (^. Lens._1 . Expr.ePayload . Lens._1)) .
   SugarInfer.memoLoadInfer Nothing expr
   inferStateKey . swap $
   runState (Infer.newNodeWithScope scope) holeInferContext
