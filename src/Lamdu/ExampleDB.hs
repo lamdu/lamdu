@@ -151,7 +151,7 @@ createBuiltins =
 
     let aToAToA = forAll "a" $ \a -> mkInfixType a a a
     traverse_ ((`publicBuiltin_` aToAToA) . ("Prelude." ++))
-      ["+", "-", "*", "/", "^", "++", "div", "quot", "rem"]
+      ["+", "-", "*", "/", "^", "++", "div"]
     publicDef_ "%" Infix ["Prelude"] "mod" aToAToA
     publicBuiltin_ "Prelude.negate" $ forAll "a" endo
     publicBuiltin_ "Prelude.sqrt" $ forAll "a" endo
