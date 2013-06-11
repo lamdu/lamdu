@@ -164,11 +164,9 @@ baseStyle font = TextEdit.Style
   }
 
 listBracketTextSize = 25
-listBracketColor = Draw.Color 0.2 0.8 0.8 1
-listCommaTextSize = 25
-listCommaColor = Draw.Color 0.2 0.8 0.8 1
-enumFromToDotSize = 25
-enumFromToDotColor = Draw.Color 0.2 0.8 0.8 1
+listBracketColor = Draw.Color 0.8 0.8 0.9 1
+listCommaTextSize = listBracketTextSize
+listCommaColor = listBracketColor
 
 listAddItemKeys = [k ',']
 
