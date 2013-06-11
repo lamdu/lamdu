@@ -3,6 +3,7 @@ module Lamdu.CodeEdit.Sugar.Expression
   , mkCallWithArg, mkReplaceWithNewHole
   , removeSuccessfulType, removeInferredTypes
   , removeTypes, removeNonHoleTypes, removeHoleResultTypes
+  , setNextHoleToFirstSubHole
   , setNextHole
   , subExpressions
   , getStoredName
@@ -168,13 +169,14 @@ subHoles x =
       Lens.notNullOf (rBody . _BodyHole) expr ||
       Lens.notNullOf (rBody . _BodyInferred . iValue . subHoles) expr
 
-setNextHole :: MonadA m => ExpressionU m -> ExpressionU m -> ExpressionU m
-setNextHole dest =
-  case dest ^? subHoles of
-  Just hole ->
-    -- The mplus ignores holes that are already set:
-    Lens.mapped . plMNextHoleGuid %~ (`mplus` Just (hole ^. rGuid))
-  Nothing -> id
+setNextHole :: Guid -> ExpressionU m -> ExpressionU m
+setNextHole destGuid =
+  -- The mplus ignores holes that are already set:
+  Lens.mapped . plMNextHoleGuid %~ (`mplus` Just destGuid)
+
+setNextHoleToFirstSubHole :: MonadA m => ExpressionU m -> ExpressionU m -> ExpressionU m
+setNextHoleToFirstSubHole dest =
+  maybe id (setNextHole . (^. rGuid)) $ dest ^? subHoles
 
 subExpressions :: ExpressionU m -> [ExpressionU m]
 subExpressions x = x : x ^.. rBody . Lens.traversed . Lens.folding subExpressions

@@ -209,7 +209,7 @@ convertPositionalLambda ::
 convertPositionalLambda lam lamExprI = do
   param <- convertPositionalFuncParam lam lamExprI
   result <- SugarM.convertSubexpression (lam ^. Expr.lambdaResult)
-  return (param & fpType %~ SugarExpr.setNextHole result, result)
+  return (param & fpType %~ SugarExpr.setNextHoleToFirstSubHole result, result)
 
 convertLam :: (MonadA m, Typeable1 m) => Expr.Lambda (SugarInfer.ExprMM m) -> Convertor m
 convertLam lambda@(Expr.Lambda k paramGuid _paramType result) exprI = do
@@ -381,10 +381,10 @@ convertRecord (Expr.Record k fields) exprI = do
   where
     defaultGuid = SugarInfer.resultGuid exprI
     setTagNextHole field =
-      field & rfTag %~ SugarExpr.setNextHole (field ^. rfExpr)
+      field & rfTag %~ SugarExpr.setNextHoleToFirstSubHole (field ^. rfExpr)
     withExprNextHoles (field : rest@(nextField:_)) =
       (field
-       & rfExpr %~ SugarExpr.setNextHole (nextField ^. rfExpr))
+       & rfExpr %~ SugarExpr.setNextHoleToFirstSubHole (nextField ^. rfExpr))
       : withExprNextHoles rest
     withExprNextHoles xs = xs
     addField iref =

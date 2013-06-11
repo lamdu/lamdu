@@ -136,7 +136,7 @@ convertPrefix funcRef funcI rawArgS argI applyI = do
           if Lens.has ExprLens.exprHole funcI
           then replaceWithNewHole .~ SugarExpr.mkReplaceWithNewHole storedApply
           else id
-    makeFullApply = makeApply $ SugarExpr.setNextHole argS funcRef
+    makeFullApply = makeApply $ SugarExpr.setNextHoleToFirstSubHole argS funcRef
     makeApply f =
       SugarExpr.make applyI $ BodyApply Apply
       { _aFunc = f
@@ -261,7 +261,7 @@ mkListItem listItemExpr argS hiddenGuids exprI argI mAddNextItem =
   ListItem
   { liExpr =
     listItemExpr
-    & SugarExpr.setNextHole argS
+    & SugarExpr.setNextHoleToFirstSubHole argS
     & rHiddenGuids <>~ hiddenGuids ++ (argS ^. rHiddenGuids)
   , liMActions = do
       addNext <- mAddNextItem
