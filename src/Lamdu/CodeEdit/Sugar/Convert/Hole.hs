@@ -272,7 +272,7 @@ getScopeElement sugarContext (parGuid, typeExpr) = do
     recordParamsMap = sugarContext ^. SugarM.scRecordParamsInfos
     errorJumpTo = error "Jump to on scope item??"
     exprTag = ExprUtil.pureExpression . Expr.BodyLeaf . Expr.Tag
-    getParam = ExprUtil.pureExpression $ ExprLens.bodyParameterRef # parGuid
+    getParam = ExprLens.pureExpr . ExprLens.bodyParameterRef # parGuid
     onScopeField tGuid = do
       name <- SugarExpr.getStoredName tGuid
       pure mempty
@@ -299,7 +299,7 @@ getGlobal defI = do
         , _gvJumpTo = errorJumpTo
         , _gvVarType = GetDefinition
         }
-      , ExprUtil.pureExpression $ ExprLens.bodyDefinitionRef # defI
+      , ExprLens.pureExpr . ExprLens.bodyDefinitionRef # defI
       )
       ] }
   where

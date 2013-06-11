@@ -1,13 +1,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.CodeEdit.FFI (Env(..), table) where
 
-import Control.Lens ((^?))
+import Control.Lens.Operators
 import Data.Binary (Binary(..))
 import Data.Derive.Binary (makeBinary)
 import Data.DeriveTH (derive)
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
-import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
@@ -41,7 +40,7 @@ instance (FromExpr a, ToExpr b) => ToExpr (a -> b) where
 
 instance ToExpr Bool where
   toExpr env b [] =
-    ExprUtil.pureExpression . Lens.review ExprLens.bodyDefinitionRef $
+    ExprLens.pureExpr . ExprLens.bodyDefinitionRef #
     (if b then trueDef else falseDef) env
   toExpr _ _ _ = error "Bool applied as a function"
 
