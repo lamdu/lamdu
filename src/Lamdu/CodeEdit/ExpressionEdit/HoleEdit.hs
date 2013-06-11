@@ -198,7 +198,7 @@ holeResultAnimMappingNoParens holeInfo resultId =
   renamePrefix ("old hole" : Widget.toAnimId resultId) myId .
   renamePrefix myId ("old hole" : myId)
   where
-    myId = Widget.toAnimId $ hiHoleId holeInfo
+    myId = Widget.toAnimId $ hiId holeInfo
 
 asNewLabelSizeFactor :: Fractional a => a
 asNewLabelSizeFactor = 0.5
@@ -209,7 +209,7 @@ mkAddNewDefinitionEventMap holeInfo = do
   savePosition <- ExprGuiM.mkPrejumpPosSaver
   mDefRef <-
     ExprGuiM.liftMemoT $
-    hiHoleActions holeInfo ^. Sugar.holeResult $
+    hiActions holeInfo ^. Sugar.holeResult $
     Sugar.ResultSeedNewDefinition newName
   let
     f defRef =
@@ -226,7 +226,7 @@ mkAddNewDefinitionEventMap holeInfo = do
   where
     searchTerm = hiState holeInfo ^. Property.pVal . hsSearchTerm
     newName = concat . words $ searchTerm
-    searchTermId = WidgetIds.searchTermId $ hiHoleId holeInfo
+    searchTermId = WidgetIds.searchTermId $ hiId holeInfo
 
 vboxMBiasedAlign ::
   Maybe Box.Cursor -> Box.Alignment -> [Widget f] -> Widget f
@@ -276,7 +276,7 @@ makeResultsWidget holeInfo shownResults hiddenResults = do
       maybeToList extraWidget
     )
   where
-    myId = hiHoleId holeInfo
+    myId = hiId holeInfo
 
 operatorHandler ::
   Functor f => E.Doc -> (Char -> f Widget.Id) -> Widget.EventHandlers f
@@ -319,7 +319,7 @@ mkEventMap holeInfo mResult = do
     ExprGuiM.liftMemoT . fmap join . sequenceA $ do
       guard . null $ drop 1 searchTerm
       arg <- hiMArgument holeInfo ^? Lens._Just . Sugar.haExpr
-      Just . (hiHoleActions holeInfo ^. Sugar.holeResult) .
+      Just . (hiActions holeInfo ^. Sugar.holeResult) .
         Sugar.ResultSeedExpression $ arg ^. Sugar.rPresugaredExpression
   addNewDefinitionEventMap <- mkAddNewDefinitionEventMap holeInfo
   pure $ mconcat
@@ -340,7 +340,7 @@ mkEventMap holeInfo mResult = do
         actions ^. Sugar.holeMDelete
     ]
   where
-    actions = hiHoleActions holeInfo
+    actions = hiActions holeInfo
     searchTerm = Property.value (hiState holeInfo) ^. hsSearchTerm
 
 assignHoleEditCursor ::
@@ -356,7 +356,7 @@ assignHoleEditCursor holeInfo shownResultsIds allResultIds searchTermId action =
     isOnResult = any sub allResultIds
     assignSource
       | shouldBeOnResult && not isOnResult = cursor
-      | otherwise = hiHoleId holeInfo
+      | otherwise = hiId holeInfo
     destId = head (shownResultsIds ++ [searchTermId])
   ExprGuiM.assignCursor assignSource destId action
 
@@ -395,14 +395,14 @@ makeActiveHoleEdit holeInfo = do
       return .
         (ExpressionGui.egWidget %~
          Widget.strongerEvents holeEventMap .
-         makeBackground (hiHoleId holeInfo)
+         makeBackground (hiId holeInfo)
          Layers.activeHoleBG Config.activeHoleBackgroundColor) $
         ExpressionGui.addBelow 0.5
         [ (0.5, Widget.strongerEvents adHocEditor resultsWidget)
         ]
         searchTermWidget
   where
-    searchTermId = WidgetIds.searchTermId $ hiHoleId holeInfo
+    searchTermId = WidgetIds.searchTermId $ hiId holeInfo
 
 make ::
   MonadA m => Sugar.Hole Sugar.Name m (Sugar.ExpressionN m) ->
@@ -432,9 +432,9 @@ makeUnwrapped mHoleNumber hole mNextHoleGuid guid myId = do
       stateProp <- ExprGuiM.transaction $ assocStateRef guid ^. Transaction.mkProperty
       makeActiveHoleEdit HoleInfo
         { hiGuid = guid
-        , hiHoleId = myId
+        , hiId = myId
         , hiState = stateProp
-        , hiHoleActions = holeActions
+        , hiActions = holeActions
         , hiMNextHoleGuid = mNextHoleGuid
         , hiMArgument = hole ^. Sugar.holeMArg
         }

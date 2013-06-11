@@ -127,7 +127,7 @@ resultComplexityScore :: ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) 
 resultComplexityScore = length . Foldable.toList . Infer.iType . (^. Expr.ePayload)
 
 prefixId :: HoleInfo m -> Widget.Id
-prefixId holeInfo = mconcat [hiHoleId holeInfo, Widget.Id ["results"]]
+prefixId holeInfo = mconcat [hiId holeInfo, Widget.Id ["results"]]
 
 type WidgetMaker m = Widget.Id -> Sugar.HoleResult Sugar.Name m -> ExprGuiM m (WidgetT m)
 data MakeWidgets m = MakeWidgets
@@ -139,12 +139,12 @@ typeCheckHoleResult ::
   MonadA m => HoleInfo m -> Sugar.HoleResultSeed m ->
   CT m (Maybe (ResultType, Sugar.HoleResult Sugar.Name m))
 typeCheckHoleResult holeInfo seed = do
-  mGood <- hiHoleActions holeInfo ^. Sugar.holeResult $ seed
+  mGood <- hiActions holeInfo ^. Sugar.holeResult $ seed
   case (mGood, seed) of
     (Just good, _) -> pure $ Just (GoodResult, good)
     (Nothing, Sugar.ResultSeedExpression expr) ->
       fmap ((,) BadResult) <$>
-      ( (hiHoleActions holeInfo ^. Sugar.holeResult)
+      ( (hiActions holeInfo ^. Sugar.holeResult)
       . Sugar.ResultSeedExpression . storePointHoleWrap
       ) expr
     _ -> pure Nothing
@@ -197,7 +197,7 @@ baseExprWithApplyForms ::
   CT m [ExprIRef.ExpressionM m ApplyFormAnnotation]
 baseExprWithApplyForms holeInfo baseExpr =
   maybe [] applyForms <$>
-  (hiHoleActions holeInfo ^. Sugar.holeInferExprType) baseExpr
+  (hiActions holeInfo ^. Sugar.holeInferExprType) baseExpr
   where
     applyForms baseExprType =
       ExprUtil.applyForms baseExprType baseExpr
@@ -222,7 +222,7 @@ injectIntoHoles holeInfo arg =
   ExprUtil.addExpressionContexts (const Nothing) .
   Lens.Context id
   where
-    typeCheckOnSide = fmap isJust . (hiHoleActions holeInfo ^. Sugar.holeInferExprType) . void
+    typeCheckOnSide = fmap isJust . (hiActions holeInfo ^. Sugar.holeInferExprType) . void
     toOrd IndependentParamAdded = 'a'
     toOrd DependentParamAdded = 'b'
     toOrd Untouched = 'c'
@@ -326,7 +326,7 @@ makeAllGroups holeInfo = do
     , _scopeGlobals = globals
     , _scopeTags = tags
     , _scopeGetParams = getParams
-    } <- hiHoleActions holeInfo ^. Sugar.holeScope
+    } <- hiActions holeInfo ^. Sugar.holeScope
   let
     allGroups = concat
       [ primitiveGroups holeInfo, literalGroups
@@ -351,7 +351,7 @@ primitiveGroups holeInfo =
     ExprUtil.makeLambda (Guid.fromString "NewLambda") pureHole pureHole
   , Group ["Record Value", "{"] .
     fromMaybe (record Expr.Val) . ExprUtil.recordValForm $
-    hiHoleActions holeInfo ^. Sugar.holeInferredType
+    hiActions holeInfo ^. Sugar.holeInferredType
   , Group ["Record Type", "{"] $ record Expr.Type
   , mkGroup [".", "Get Field"] . Expr.BodyGetField $
     Expr.GetField pureHole pureHole

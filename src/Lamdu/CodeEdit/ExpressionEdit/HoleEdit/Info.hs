@@ -32,9 +32,9 @@ emptyState =
 
 data HoleInfo m = HoleInfo
   { hiGuid :: Guid
-  , hiHoleId :: Widget.Id
+  , hiId :: Widget.Id
   , hiState :: Property (T m) HoleState
-  , hiHoleActions :: Sugar.HoleActions Sugar.Name m
+  , hiActions :: Sugar.HoleActions Sugar.Name m
   , hiMArgument :: Maybe (Sugar.HoleArg (Sugar.ExpressionN m))
   , hiMNextHoleGuid :: Maybe Guid
   }
