@@ -157,20 +157,24 @@ make exprI expr = do
     seeds = RandomUtils.splits . mkGen 0 3 $ SugarInfer.resultGuid exprI
     types = maybe [] iwcInferredTypes $ SugarInfer.resultInferred exprI
 
+subHoles ::
+  (Applicative f, Lens.Contravariant f) =>
+  (ExpressionU m -> f (ExpressionU m)) ->
+  ExpressionU m -> f void
+subHoles x =
+  Lens.folding subExpressions . Lens.filtered cond $ x
+  where
+    cond expr =
+      Lens.notNullOf (rBody . _BodyHole) expr ||
+      Lens.notNullOf (rBody . _BodyInferred . iValue . subHoles) expr
+
 setNextHole :: MonadA m => ExpressionU m -> ExpressionU m -> ExpressionU m
 setNextHole dest =
-  case dest ^? subHoles0 of
+  case dest ^? subHoles of
   Just hole ->
     -- The mplus ignores holes that are already set:
     Lens.mapped . plNextHole %~ (`mplus` Just hole)
   Nothing -> id
-  where
-    -- TODO: code reuse
-    subHoles0 = Lens.folding subExpressions . Lens.filtered cond
-    subHoles1 = Lens.folding subExpressions . Lens.filtered cond
-    cond expr =
-      Lens.notNullOf (rBody . _BodyHole) expr ||
-      Lens.notNullOf (rBody . _BodyInferred . iValue . subHoles1) expr
 
 subExpressions :: ExpressionU m -> [ExpressionU m]
 subExpressions x = x : x ^.. rBody . Lens.traversed . Lens.folding subExpressions
