@@ -3,8 +3,8 @@
 module Lamdu.Layers where
 
 -- FocusDelegator BG is 20
+inactiveHole = 24
 cursorBG = 25
-inactiveHole = 26
 types = 27
 collapsedCompactBG = 28
 collapsedExpandedBG = 29

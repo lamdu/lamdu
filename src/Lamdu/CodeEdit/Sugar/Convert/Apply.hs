@@ -17,6 +17,8 @@ import Lamdu.CodeEdit.Sugar.Infer (ExprMM)
 import Lamdu.CodeEdit.Sugar.Monad (SugarM)
 import Lamdu.CodeEdit.Sugar.Types
 import Lamdu.Data.Anchors (PresentationMode(..))
+import Lamdu.Data.Expression.IRef (DefI)
+import Lamdu.Data.Expression.Infer.Conflicts (iwcInferred)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Either as Either
 import qualified Data.Set as Set
@@ -28,6 +30,7 @@ import qualified Lamdu.CodeEdit.Sugar.Monad as SugarM
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
+import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Ops as DataOps
@@ -204,15 +207,42 @@ isCons specialFunctions =
   (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprDefinitionRef)
   (== Anchors.sfCons specialFunctions)
 
+typeCheckIdentityAt ::
+  (MonadA m, Typeable1 m) =>
+  Infer.InferNode (DefI (Tag m)) -> SugarM m Bool
+typeCheckIdentityAt point = do
+  sugarContext <- SugarM.readContext
+  let
+    inferState = sugarContext ^. SugarM.scHoleInferState
+    inferStateKey = sugarContext ^. SugarM.scHoleInferStateKey
+  SugarM.liftCTransaction .
+    fmap (Lens.has Lens._Just) $
+    SugarInfer.memoLoadInfer Nothing identityFunc
+    inferStateKey (inferState, point)
+  where
+    identityFunc =
+      ExprLens.pureExpr #
+      ExprUtil.makeLambda paramGuid ExprUtil.pureHole getParam
+    getParam = ExprLens.pureExpr . ExprLens.bodyParameterRef # paramGuid
+    paramGuid = Guid.fromString "typeCheckId"
+
 convertAppliedHole ::
   (MonadA m, Typeable1 m) => ExprMM m -> ExpressionU m -> ExprMM m ->
   MaybeT (SugarM m) (ExpressionU m)
 convertAppliedHole funcI rawArgS exprI
-  | Lens.has ExprLens.exprHole funcI =
-    lift $
-    (rBody . _BodyHole . holeMArg .~ Just argS) .
-    (rHiddenGuids <>~ funcGuids) <$>
-    ConvertHole.convertPlain exprI
+  | Lens.has ExprLens.exprHole funcI = lift $ do
+    isTypeMatch <-
+      maybe (return False)
+      (typeCheckIdentityAt . Infer.iPoint . iwcInferred) $
+      SugarInfer.resultInferred funcI
+    let
+      holeArg = HoleArg
+        { _haExpr = argS
+        , _haTypeIsAMatch = isTypeMatch
+        }
+    (rBody . _BodyHole . holeMArg .~ Just holeArg) .
+      (rHiddenGuids <>~ funcGuids) <$>
+      ConvertHole.convertPlain exprI
   | otherwise = mzero
   where
     argS = SugarExpr.setNextHole (SugarInfer.resultGuid exprI) rawArgS

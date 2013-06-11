@@ -398,11 +398,7 @@ convertHoleResult ::
   (MonadA m, Typeable1 m) => SugarM.Context m -> Random.StdGen ->
   ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) -> CT m (ExpressionU m)
 convertHoleResult sugarContext gen res =
-  SugarM.run sugarContext
-  { SugarM._scInferState = error "pure expression doesnt have infer state"
-  , SugarM._scHoleInferState = error "pure expression doesnt have hole infer state"
-  } .
-  SugarM.convertSubexpression .
+  SugarM.run sugarContext . SugarM.convertSubexpression .
   (traverse . SugarInfer.plInferred %~ Just) .
   (traverse . SugarInfer.plStored .~ Nothing) $
   SugarInfer.resultFromInferred gen res

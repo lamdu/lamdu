@@ -43,6 +43,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , FuncParamType(..)
   , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpHiddenLambdaGuid, fpType, fpMActions
   , TagG(..), tagName, tagGuid
+  , HoleArg(..), haExpr, haTypeIsAMatch
   , Hole(..), holeMActions, holeMArg
   , HoleResultSeed(..), _ResultSeedExpression, _ResultSeedNewTag, _ResultSeedNewDefinition
   , ScopeItem
@@ -212,9 +213,14 @@ data HoleActions name m = HoleActions
     _holeMDelete :: Maybe (T m Guid)
   }
 
+data HoleArg expr = HoleArg
+  { _haExpr :: expr
+  , _haTypeIsAMatch :: Bool
+  } deriving (Functor, Foldable, Traversable)
+
 data Hole name m expr = Hole
   { _holeMActions :: Maybe (HoleActions name m)
-  , _holeMArg :: Maybe expr
+  , _holeMArg :: Maybe (HoleArg expr)
   } deriving (Functor, Foldable, Traversable)
 
 data LiteralInteger m = LiteralInteger
@@ -428,6 +434,7 @@ Lens.makeLenses ''GetParams
 Lens.makeLenses ''GetVar
 Lens.makeLenses ''Hole
 Lens.makeLenses ''HoleActions
+Lens.makeLenses ''HoleArg
 Lens.makeLenses ''HoleResult
 Lens.makeLenses ''Inferred
 Lens.makeLenses ''Lam

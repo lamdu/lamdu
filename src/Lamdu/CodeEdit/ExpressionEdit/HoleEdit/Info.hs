@@ -35,7 +35,7 @@ data HoleInfo m = HoleInfo
   , hiHoleId :: Widget.Id
   , hiState :: Property (T m) HoleState
   , hiHoleActions :: Sugar.HoleActions Sugar.Name m
-  , hiMArgument :: Maybe (Sugar.ExpressionN m)
+  , hiMArgument :: Maybe (Sugar.HoleArg (Sugar.ExpressionN m))
   , hiMNextHoleGuid :: Maybe Guid
   }
 

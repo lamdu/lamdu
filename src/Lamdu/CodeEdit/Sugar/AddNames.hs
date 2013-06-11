@@ -297,7 +297,7 @@ toHole ::
   (MonadA tm, MonadNaming m) => Hole (OldName m) tm (Expression (OldName m) tm) ->
   m (Hole (NewName m) tm (Expression (NewName m) tm))
 toHole =
-  (holeMArg . Lens._Just) toExpression <=<
+  (holeMArg . Lens._Just . Lens.traversed) toExpression <=<
   (holeMActions . Lens.traversed) toHoleActions
 
 toInferred ::

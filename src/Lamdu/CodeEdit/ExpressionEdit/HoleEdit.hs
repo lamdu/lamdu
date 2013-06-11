@@ -175,7 +175,7 @@ maybeAddExtraSymbol haveExtraResults myId w
 
 makeNoResults :: MonadA m => HoleInfo m -> AnimId -> ExprGuiM m (WidgetT m)
 makeNoResults holeInfo myId =
-  case hiMArgument holeInfo of
+  case hiMArgument holeInfo ^? Lens._Just . Sugar.haExpr of
   Nothing -> label "(No results)"
   Just arg ->
     Box.hboxCentered <$> sequenceA
@@ -318,7 +318,7 @@ mkEventMap holeInfo mResult = do
   mDeleteOpResult <-
     ExprGuiM.liftMemoT . fmap join . sequenceA $ do
       guard . null $ drop 1 searchTerm
-      arg <- hiMArgument holeInfo
+      arg <- hiMArgument holeInfo ^? Lens._Just . Sugar.haExpr
       Just . (hiHoleActions holeInfo ^. Sugar.holeResult) .
         Sugar.ResultSeedExpression $ arg ^. Sugar.rPresugaredExpression
   addNewDefinitionEventMap <- mkAddNewDefinitionEventMap holeInfo
@@ -360,6 +360,11 @@ assignHoleEditCursor holeInfo shownResultsIds allResultIds searchTermId action =
     destId = head (shownResultsIds ++ [searchTermId])
   ExprGuiM.assignCursor assignSource destId action
 
+holeBackgroundColor :: Sugar.HoleArg expr -> Draw.Color
+holeBackgroundColor holeArg
+  | holeArg ^. Sugar.haTypeIsAMatch = Config.deletableHoleBackgroundColor
+  | otherwise = Config.typeErrorHoleWrapBackgroundColor
+
 makeActiveHoleEdit :: MonadA m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
 makeActiveHoleEdit holeInfo = do
   (shownResults, hasHiddenResults) <-
@@ -388,10 +393,10 @@ makeActiveHoleEdit holeInfo = do
         mResult
       let adHocEditor = adHocTextEditEventMap $ searchTermProperty holeInfo
       return .
-        Lens.over ExpressionGui.egWidget
-        (Widget.strongerEvents holeEventMap .
+        (ExpressionGui.egWidget %~
+         Widget.strongerEvents holeEventMap .
          makeBackground (hiHoleId holeInfo)
-         Layers.activeHoleBG Config.holeBackgroundColor) $
+         Layers.activeHoleBG Config.activeHoleBackgroundColor) $
         ExpressionGui.addBelow 0.5
         [ (0.5, Widget.strongerEvents adHocEditor resultsWidget)
         ]
@@ -519,7 +524,7 @@ makeInactive ::
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeInactive mHoleNumber hole myId = do
   holeGui <-
-    case hole ^. Sugar.holeMArg of
+    case hole ^? Sugar.holeMArg . Lens._Just . Sugar.haExpr of
     Just arg ->
       ExprGuiM.makeSubexpresion 0 arg
       -- Override "Leave Expression" of sub expression
@@ -535,16 +540,15 @@ makeInactive mHoleNumber hole myId = do
     Nothing -> makeJumpableSpace mHoleNumber myId
   ExprGuiM.widgetEnv $
     holeGui
-    & ExpressionGui.egWidget %~ makeBackground myId Layers.inactiveHole unfocusedColor
+    & ExpressionGui.egWidget %~ makeBackground myId Layers.inactiveHole bgColor
     & ExpressionGui.egWidget %%~
       if holeGui ^. ExpressionGui.egWidget . Widget.wIsFocused
       then return
       else BWidgets.makeFocusableView myId
   where
-    isWritable = isJust $ hole ^. Sugar.holeMActions
-    unfocusedColor
-      | isWritable = Config.holeBackgroundColor
-      | otherwise = Config.readOnlyHoleBackgroundColor
+    bgColor =
+      fromMaybe Config.inactiveHoleBackgroundColor $
+      holeBackgroundColor <$> hole ^. Sugar.holeMArg
 
 makeJumpableSpace ::
   MonadA m => Maybe ExprGuiM.HoleNumber ->

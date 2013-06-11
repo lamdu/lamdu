@@ -72,8 +72,11 @@ holeNumLabelColor = Draw.Color 0.6 0.6 0.6 1
 
 fieldHoleResultCount = 3
 
-holeBackgroundColor = Draw.Color 1.0 0 0 0.3
-readOnlyHoleBackgroundColor = Draw.Color 1.0 0.6 0.6 0.2
+typeErrorHoleWrapBackgroundColor = Draw.Color 1.0 0 0 0.3
+deletableHoleBackgroundColor = Draw.Color 0 1.0 0 0.1
+
+activeHoleBackgroundColor   = Draw.Color 0.1 0.1 0.3 1
+inactiveHoleBackgroundColor = Draw.Color 0.2 0.2 0.8 0.5
 
 tagScale = 0.9
 
