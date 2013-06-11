@@ -114,7 +114,7 @@ mkActions ::
   ExprIRef.ExpressionM m (SugarInfer.PayloadM m i (Stored m)) -> Actions m
 mkActions sugarContext exprS =
   Actions
-  { _wrap = ExprIRef.exprGuid <$> DataOps.wrap stored
+  { _wrap = WrapAction $ ExprIRef.exprGuid <$> DataOps.wrap stored
   , _callWithArg = mkCallWithArg sugarContext exprS
   , _callWithNextArg = pure (pure Nothing)
   , _setToHole = ExprIRef.exprGuid <$> DataOps.setToHole stored

@@ -12,6 +12,7 @@ module Lamdu.CodeEdit.Sugar.Types
     , _DefinitionNewType
   , DefinitionContent(..)
   , DefinitionBuiltin(..)
+  , WrapAction(..)
   , Actions(..)
     , wrap, callWithArg, callWithNextArg
     , setToHole, replaceWithNewHole, cut
@@ -91,8 +92,10 @@ type PrefixAction m = T m ()
 emptyPrefixAction :: Monad m => PrefixAction m
 emptyPrefixAction = return ()
 
+data WrapAction m = AlreadyWrapped Guid | WrapAction (T m Guid)
+
 data Actions m = Actions
-  { _wrap :: T m Guid
+  { _wrap :: WrapAction m
   , _callWithNextArg :: PrefixAction m -> CT m (Maybe (T m Guid))
   , _callWithArg :: PrefixAction m -> CT m (Maybe (T m Guid))
   , _setToHole :: T m Guid

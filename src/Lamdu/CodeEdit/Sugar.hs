@@ -12,6 +12,7 @@ module Lamdu.CodeEdit.Sugar
     , _DefinitionNewType
   , DefinitionContent(..)
   , DefinitionBuiltin(..)
+  , WrapAction(..)
   , Actions(..)
     , wrap, callWithArg, callWithNextArg
     , setToHole, replaceWithNewHole, cut

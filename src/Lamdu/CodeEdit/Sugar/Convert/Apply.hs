@@ -245,7 +245,12 @@ convertAppliedHole funcI rawArgS exprI
       ConvertHole.convertPlain exprI
   | otherwise = mzero
   where
-    argS = SugarExpr.setNextHole (SugarInfer.resultGuid exprI) rawArgS
+    guid = SugarInfer.resultGuid exprI
+    argS =
+      SugarExpr.setNextHole guid .
+      (rPayload . plActions . Lens._Just . wrap .~
+       AlreadyWrapped guid) $
+      rawArgS
     funcGuids = [SugarInfer.resultGuid funcI]
 
 convertList ::
