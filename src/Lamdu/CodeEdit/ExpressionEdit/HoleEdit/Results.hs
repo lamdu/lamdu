@@ -313,11 +313,17 @@ makeAll holeInfo makeWidget = do
     allGroupsList =
       List.mapL (makeResultsList holeInfo (mkResultWidget makeWidget)) $
       List.fromList allGroups
-    newTagList =
-      List.joinM . return . makeNewTagResultList holeInfo $
-      mkNewTagResultWidget makeWidget
+    newTagList
+      | isTagType =
+        List.joinM . return . makeNewTagResultList holeInfo $
+        mkNewTagResultWidget makeWidget
+      | otherwise = mempty
     resultList = List.catMaybes $ mappend allGroupsList newTagList
   ExprGuiM.liftMemoT $ collectResults resultList
+  where
+    isTagType =
+      Lens.has (Sugar.holeInferredType . ExprLens.exprTagType) $
+      hiActions holeInfo
 
 makeAllGroups :: MonadA m => HoleInfo m -> T m [GroupM m]
 makeAllGroups holeInfo = do
