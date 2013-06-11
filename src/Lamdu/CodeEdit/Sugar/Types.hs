@@ -92,7 +92,7 @@ emptyPrefixAction :: Monad m => PrefixAction m
 emptyPrefixAction = return ()
 
 data Actions m = Actions
-  { _wrap :: PrefixAction m -> T m Guid
+  { _wrap :: T m Guid
   , _callWithNextArg :: PrefixAction m -> CT m (Maybe (T m Guid))
   , _callWithArg :: PrefixAction m -> CT m (Maybe (T m Guid))
   , _setToHole :: T m Guid

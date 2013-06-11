@@ -21,11 +21,10 @@ eventMap actions =
   mconcat
   [ Widget.keysEventMapMovesCursor
     Config.wrapKeys (E.Doc ["Edit", "Wrap"]) .
-    fmap WidgetIds.fromGuid $
-    (actions ^. Sugar.wrap) Sugar.emptyPrefixAction
+    fmap WidgetIds.fromGuid $ actions ^. Sugar.wrap
   , (fmap . fmap) Widget.eventResultFromCursor .
     E.charGroup "Operator" (E.Doc ["Edit", "Apply operator"])
     Config.operatorChars $ \c _isShifted -> do
-      targetGuid <- actions ^. Sugar.wrap $ Sugar.emptyPrefixAction
+      targetGuid <- actions ^. Sugar.wrap
       HoleEdit.setHoleStateAndJump (HoleState [c]) targetGuid
   ]
