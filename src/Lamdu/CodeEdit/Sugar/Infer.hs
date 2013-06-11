@@ -9,7 +9,7 @@ module Lamdu.CodeEdit.Sugar.Infer
   , isPolymorphicFunc
   , inferLoadedExpression
   , InferLoadedResult(..)
-  , ilrSuccess, ilrContext, ilrInferContext
+  , ilrSuccess, ilrBaseInferContextKey, ilrInferContext
   , ilrExpr, ilrBaseExpr, ilrBaseInferContext
 
   , resultFromPure, resultFromInferred
@@ -227,11 +227,11 @@ inferWithVariables gen loaded baseInferContext node =
 
 data InferLoadedResult m = InferLoadedResult
   { _ilrSuccess :: Bool
-  , _ilrContext :: Infer.Loaded (DefI (Tag m)) (Load.PropertyClosure (Tag m))
   , _ilrInferContext :: Infer.Context (DefI (Tag m))
   , _ilrExpr :: ExprIRef.ExpressionM m (Payload (Tag m) (InferredWC (Tag m)) (Maybe (Stored m)))
   -- Prior to adding variables
   , _ilrBaseInferContext :: Infer.Context (DefI (Tag m))
+  , _ilrBaseInferContextKey :: Cache.KeyBS
   , _ilrBaseExpr :: ExprIRef.ExpressionM m (Payload (Tag m) (InferredWC (Tag m)) (Stored m))
   }
 LensTH.makeLenses ''InferLoadedResult
@@ -239,16 +239,18 @@ LensTH.makeLenses ''InferLoadedResult
 inferLoadedExpression ::
   (RandomGen g, MonadA m, Typeable (m ())) => g ->
   Maybe (DefI (Tag m)) -> Load.LoadedClosure (Tag m) ->
-  (Infer.Context (DefI (Tag m)), Infer.InferNode (DefI (Tag m))) ->
-  CT m (InferLoadedResult m)
-inferLoadedExpression gen mDefI lExpr inferState = do
+  Cache.KeyBS ->
+  ( Infer.Context (DefI (Tag m))
+  , Infer.InferNode (DefI (Tag m))
+  ) -> CT m (InferLoadedResult m)
+inferLoadedExpression gen mDefI lExpr inferContextKey inferState = do
   loaded <- lift $ load mDefI lExpr
   ((baseContext, expr), mWithVariables) <-
     Cache.memoS uncurriedInfer (loaded, inferState)
   let baseExpr = mkStoredPayload <$> expr
   return InferLoadedResult
     { _ilrSuccess = isJust mWithVariables
-    , _ilrContext = loaded
+    , _ilrBaseInferContextKey = Cache.bsOfKey (loaded, inferContextKey)
 
     , _ilrBaseInferContext = baseContext
     , _ilrBaseExpr = baseExpr

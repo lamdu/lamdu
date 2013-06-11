@@ -164,8 +164,8 @@ mkHole iwc exprI = do
   mPaste <- fmap join . traverse mkPaste $ SugarInfer.resultStored exprI
   let
     inferState = sugarContext ^. SugarM.scHoleInferState
-    contextHash = sugarContext ^. SugarM.scContextHash
-    token = Cache.bsOfKey (eGuid, contextHash)
+    inferStateKey = sugarContext ^. SugarM.scHoleInferStateKey
+    token = Cache.bsOfKey (eGuid, inferStateKey)
     mkWritableHoleActions exprS = do
       globals <-
         SugarM.liftTransaction . Transaction.getP . Anchors.globals $
@@ -345,7 +345,7 @@ makeHoleResult sugarContext inferred exprI seed =
     gen = genFromHashable (guid, seedHashable seed)
     guid = SugarInfer.resultGuid exprI
     iref = Property.value $ SugarInfer.resultStored exprI
-    token = Cache.bsOfKey (guid, sugarContext ^. SugarM.scContextHash)
+    token = Cache.bsOfKey (guid, sugarContext ^. SugarM.scHoleInferStateKey)
     mkHoleResult (fakeConverted, fakeInferredExpr) =
       HoleResult
       { _holeResultInferred = fst <$> fakeInferredExpr

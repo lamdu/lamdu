@@ -490,12 +490,12 @@ mkContext ::
   Infer.Context (DefI (Tag m)) ->
   Infer.Context (DefI (Tag m)) ->
   T m (Context m)
-mkContext cp defI mReinferRoot contextHash inferState holeInferState = do
+mkContext cp defI mReinferRoot holeInferStateKey inferState holeInferState = do
   specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
   return Context
     { _scMDefI = Just defI
     , _scInferState = inferState
-    , _scContextHash = contextHash
+    , _scHoleInferStateKey = holeInferStateKey
     , _scHoleInferState = holeInferState
     , _scCodeAnchors = cp
     , _scSpecialFunctions = specialFunctions
@@ -511,7 +511,7 @@ convertExpressionPure ::
   ExprIRef.ExpressionM m () -> CT m (ExpressionU m)
 convertExpressionPure cp defI gen res = do
   context <-
-    lift $ mkContext cp defI Nothing (err "contextHash")
+    lift $ mkContext cp defI Nothing (err "holeInferStateKey")
     (err "inferState") (err "holeInferState")
   fmap removeRedundantTypes .
     SugarM.run context .
@@ -960,17 +960,19 @@ convertDefIExpression cp exprLoaded defI defType = do
     , SugarInfer._ilrSuccess = success
     } <-
     SugarInfer.inferLoadedExpression
-    inferLoadedGen (Just defI) exprLoaded initialInferState
+    -- We can use empty string because we always use
+    -- initialInferState, so any key is a unique key
+    inferLoadedGen (Just defI) exprLoaded "" initialInferState
   let
     inferredType =
       void . Infer.iType . iwcInferred $ SugarInfer.resultInferred ilrExpr
   typeInfo <-
     makeTypeInfo cp defI defType (void inferredType) success
   let
-    contextHash = Cache.bsOfKey $ ilr ^. SugarInfer.ilrContext
+    holeInferStateKey = ilr ^. SugarInfer.ilrBaseInferContextKey
     inferState = ilr ^. SugarInfer.ilrInferContext
     holeInferState = ilr ^. SugarInfer.ilrBaseInferContext
-  context <- lift $ mkContext cp defI (Just reinferRoot) contextHash inferState holeInferState
+  context <- lift $ mkContext cp defI (Just reinferRoot) holeInferStateKey inferState holeInferState
   SugarM.run context $ do
     content <-
       convertDefinitionContent recordParamsInfo [] $
