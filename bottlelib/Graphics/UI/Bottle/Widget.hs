@@ -92,7 +92,7 @@ liftView sz frame =
     }
 
 atWFrameWithSize :: (Size -> Anim.Frame -> Anim.Frame) -> Widget f -> Widget f
-atWFrameWithSize f w = w & wFrame %~ (f (w ^. wSize))
+atWFrameWithSize f w = w & wFrame %~ f (w ^. wSize)
 
 -- TODO: Would be nicer as (Direction -> Id), but then TextEdit's "f" couldn't be ((,) String)..
 takesFocus :: Functor f => (Direction -> f Id) -> Widget f -> Widget f

@@ -190,8 +190,8 @@ createBuiltins =
       DataOps.newDefinition name presentationMode .
         (`Definition` typeI) . Definition.BodyBuiltin .
         Definition.Builtin $ Definition.FFIName ffiPath ffiName
-    publicBuiltin fullyQualifiedName mkType =
-      publicDef name (DataOps.presentationModeOfName name) path name mkType
+    publicBuiltin fullyQualifiedName =
+      publicDef name (DataOps.presentationModeOfName name) path name
       where
         name = last path
         path = splitOn "." fullyQualifiedName

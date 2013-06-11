@@ -124,9 +124,10 @@ applyForms exprType rawExpr
   | otherwise = reverse withAllAppliesAdded
   where
     expr = Untouched <$ rawExpr
+    withDepAppliesAdded =
+      foldl (addApply DependentParamAdded) expr depParams
     withAllAppliesAdded =
-      flip (scanl (addApply IndependentParamAdded)) nonDepParams $
-      flip (foldl (addApply DependentParamAdded)) depParams expr
+      scanl (addApply IndependentParamAdded) withDepAppliesAdded nonDepParams
     PiWrappers
       { _dependentPiParams = depParams
       , nonDependentPiParams = nonDepParams
