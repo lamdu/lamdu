@@ -109,7 +109,7 @@ accept ::
 accept sugarContext point expr iref = do
   loaded <- SugarInfer.load Nothing expr
   let
-    exprInferred =
+    (exprInferred, _) =
       unjust "The inferred value of a hole must type-check!" $
       SugarInfer.inferMaybe_ loaded inferState point
   pickResult iref $
@@ -228,7 +228,7 @@ inferOnTheSide ::
   CT m (Maybe (ExprIRef.ExpressionM m ()))
 -- token represents the given holeInferContext
 inferOnTheSide inferStateKey holeInferContext scope expr =
-  (fmap . fmap) (void . Infer.iType . (^. Expr.ePayload . Lens._1)) .
+  (fmap . fmap) (void . Infer.iType . (^. Expr.ePayload . Lens._1) . fst) .
   SugarInfer.memoLoadInfer Nothing expr
   inferStateKey . swap $
   runState (Infer.newNodeWithScope scope) holeInferContext
@@ -332,7 +332,7 @@ makeHoleResult sugarContext inferred exprI seed =
   where
     cp = sugarContext ^. SugarM.scCodeAnchors
     makeInferredExpr = lift (seedExprEnv cp seed) >>= Lens._1 inferResult
-    addConverted inferredResult = do
+    addConverted (inferredResult, _) = do
       converted <-
         convertHoleResult sugarContext gen $
         fst <$> inferredResult
@@ -363,7 +363,7 @@ makeHoleResult sugarContext inferred exprI seed =
         Cache.unmemoS makeInferredExpr
       mTargetGuid <- sequenceA mJumpTo
       fmap (mplus mTargetGuid) . pickResult iref .
-        ExprUtil.randomizeParamIds gen $
+        ExprUtil.randomizeParamIds gen . fst $
         -- TODO: Makes no sense here anymore, move deeper inside
         -- makeInferredExpr:
         unjust

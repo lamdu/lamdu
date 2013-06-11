@@ -145,9 +145,12 @@ inferMaybe ::
   Infer.Loaded (DefI (Tag m)) a ->
   Infer.Context (DefI (Tag m)) ->
   Infer.InferNode (DefI (Tag m)) ->
-  Maybe (ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), a))
+  Maybe
+  ( ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), a)
+  , Infer.Context (DefI (Tag m))
+  )
 inferMaybe loaded inferContext inferPoint =
-  fmap fst . (`runStateT` inferContext) $
+  (`runStateT` inferContext) $
   Infer.inferLoaded (Infer.InferActions (const Nothing))
   loaded inferPoint
 
@@ -170,7 +173,12 @@ memoLoadInfer ::
   ( Infer.Context (DefI (Tag m))
   , Infer.InferNode (DefI (Tag m))
   ) ->
-  CT m (Maybe (ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), a)))
+  CT m
+  ( Maybe
+    ( ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), a)
+    , Infer.Context (DefI (Tag m))
+    )
+  )
 memoLoadInfer mDefI expr inferStateKey (inferState, point) = do
   loaded <- lift $ load mDefI expr
   pureMemoBy (loaded, inferStateKey, point) $
@@ -181,9 +189,12 @@ inferMaybe_ ::
   Infer.Loaded (DefI (Tag m)) a ->
   Infer.Context (DefI (Tag m)) ->
   Infer.InferNode (DefI (Tag m)) ->
-  Maybe (ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))))
+  Maybe
+  ( ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))
+  , Infer.Context (DefI (Tag m))
+  )
 inferMaybe_ loaded inferContext inferPoint =
-  (fmap . fmap) fst $ inferMaybe loaded inferContext inferPoint
+  (Lens._Just . Lens._1 . Lens.traversed %~ fst) $ inferMaybe loaded inferContext inferPoint
 
 inferWithVariables ::
   (RandomGen g, MonadA m) => g ->
