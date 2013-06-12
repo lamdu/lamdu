@@ -23,7 +23,9 @@ import qualified Lamdu.WidgetIds as WidgetIds
 
 fdConfig :: Config -> FocusDelegator.Config
 fdConfig config = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKeys = Config.replaceInferredValueKeys config
+  { FocusDelegator.startDelegatingKeys =
+    Config.replaceInferredValueKeys config ++
+    Config.delKeys config
   , FocusDelegator.startDelegatingDoc = E.Doc ["Edit", "Inferred value", "Replace"]
   , FocusDelegator.stopDelegatingKeys = Config.keepInferredValueKeys config
   , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Inferred value", "Back"]

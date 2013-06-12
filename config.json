@@ -304,38 +304,6 @@
         0.1,
         1.0
     ],
-    "delKeys": [
-        [
-            {
-                "modShift": false,
-                "modAlt": false,
-                "modCtrl": false
-            },
-            {
-                "KeyDel": []
-            }
-        ],
-        [
-            {
-                "modShift": false,
-                "modAlt": true,
-                "modCtrl": false
-            },
-            {
-                "KeyDel": []
-            }
-        ],
-        [
-            {
-                "modShift": false,
-                "modAlt": false,
-                "modCtrl": false
-            },
-            {
-                "KeyBackspace": []
-            }
-        ]
-    ],
     "holeResultScaleFactor": {
         "_second": 0.75,
         "_first": 0.75
@@ -938,36 +906,6 @@
             },
             {
                 "KeyEnter": []
-            }
-        ],
-        [
-            {
-                "modShift": false,
-                "modAlt": false,
-                "modCtrl": false
-            },
-            {
-                "KeyDel": []
-            }
-        ],
-        [
-            {
-                "modShift": false,
-                "modAlt": true,
-                "modCtrl": false
-            },
-            {
-                "KeyDel": []
-            }
-        ],
-        [
-            {
-                "modShift": false,
-                "modAlt": false,
-                "modCtrl": false
-            },
-            {
-                "KeyBackspace": []
             }
         ]
     ]

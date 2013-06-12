@@ -1,6 +1,6 @@
 {-# OPTIONS -fno-warn-orphans #-}
 {-# LANGUAGE TemplateHaskell #-}
-module Lamdu.Config (Config(..)) where
+module Lamdu.Config (Config(..), delKeys) where
 
 import Data.Aeson (ToJSON(..), FromJSON(..))
 import Data.Aeson.TH (deriveJSON)
@@ -44,7 +44,6 @@ data Config = Config
 
   , delForwardKeys :: [E.ModKey]
   , delBackwardKeys :: [E.ModKey]
-  , delKeys :: [E.ModKey]
   , wrapKeys :: [E.ModKey]
   , callWithArgumentKeys :: [E.ModKey]
   , callWithNextArgumentKeys :: [E.ModKey]
@@ -177,6 +176,9 @@ data Config = Config
 
   , labeledApplyBGColor :: Draw.Color
   } deriving (Eq)
+
+delKeys :: Config -> [E.ModKey]
+delKeys config = delForwardKeys config ++ delBackwardKeys config
 
 deriveJSON id ''Vector2
 deriveJSON id ''Draw.Color
