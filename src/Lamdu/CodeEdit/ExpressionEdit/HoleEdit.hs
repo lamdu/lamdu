@@ -292,15 +292,15 @@ charGroupHandler chars idoc doc handleChar =
 
 opPickEventMap ::
   MonadA m =>
-  HoleInfo m -> Sugar.HoleResult Sugar.Name m ->
+  HoleInfo m -> Bool -> Sugar.HoleResult Sugar.Name m ->
   Widget.EventHandlers (T m)
-opPickEventMap holeInfo result
-  | nonEmptyAll (`notElem` Config.operatorChars) searchTerm =
+opPickEventMap holeInfo isSelectedResult result
+  | ignoreSearchTerm || nonEmptyAll (`notElem` Config.operatorChars) searchTerm =
     charGroupHandler Config.operatorChars "Operator"
-    (E.Doc ["Edit", "Result", "Apply operator"]) $ \c -> do
+    (E.Doc ["Edit", "Result", "Pick and apply operator"]) $ \c -> do
       dest <- result ^. Sugar.holeResultPickWrapped
       setHoleStateAndJump (HoleState [c]) dest
-  | nonEmptyAll (`elem` Config.operatorChars) searchTerm =
+  | ignoreSearchTerm || nonEmptyAll (`elem` Config.operatorChars) searchTerm =
     charGroupHandler Config.alphaNumericChars "Letter/digit"
     (E.Doc ["Edit", "Result", "Pick and resume"]) $ \c -> do
       mTarget <- HoleResults.pick holeInfo result
@@ -309,12 +309,14 @@ opPickEventMap holeInfo result
         Just targetGuid -> setHoleStateAndJump (HoleState [c]) targetGuid
   | otherwise = mempty
   where
+    ignoreSearchTerm = isSelectedResult && null searchTerm
     searchTerm = Property.value (hiState holeInfo) ^. hsSearchTerm
 
 mkEventMap ::
-  MonadA m => HoleInfo m -> Maybe (Sugar.HoleResult Sugar.Name m) ->
+  MonadA m => HoleInfo m -> Bool ->
+  Maybe (Sugar.HoleResult Sugar.Name m) ->
   ExprGuiM m (Widget.EventHandlers (T m))
-mkEventMap holeInfo mResult = do
+mkEventMap holeInfo isSelectedResult mResult = do
   mDeleteWrapper <-
     ExprGuiM.liftMemoT . fmap join . sequenceA $ do
       guard $ null searchTerm
@@ -324,7 +326,7 @@ mkEventMap holeInfo mResult = do
   addNewDefinitionEventMap <- mkAddNewDefinitionEventMap holeInfo
   pure $ mconcat
     [ addNewDefinitionEventMap
-    , maybe mempty (opPickEventMap holeInfo) mResult
+    , maybe mempty (opPickEventMap holeInfo isSelectedResult) mResult
     , maybe mempty
       ( E.keyPresses Config.delKeys
         (E.Doc ["Edit", "Back"])
@@ -382,16 +384,17 @@ makeActiveHoleEdit holeInfo = do
       (mSelectedResult, resultsWidget) <-
         makeResultsWidget holeInfo shownResults hasHiddenResults
       let
-        mResult =
-          mSelectedResult <|> rHoleResult . (^. HoleResults.rlMain) <$> listToMaybe shownResults
+        mFirstResult = rHoleResult . (^. HoleResults.rlMain) <$> listToMaybe shownResults
+        mResult = mSelectedResult <|> mFirstResult
         searchTermEventMap = maybe mempty (resultPickEventMap holeInfo) mResult
       searchTermWidget <- makeSearchTermWidget holeInfo
         -- TODO: Move the result picking events into pickEventMap
         -- instead of here on the searchTerm and on each result
         & Lens.mapped . ExpressionGui.egWidget %~ Widget.strongerEvents searchTermEventMap
-      holeEventMap <- mkEventMap holeInfo mResult
-      maybe (return ()) (ExprGuiM.addResultPicker . (^. Sugar.holeResultPickPrefix))
-        mResult
+      holeEventMap <- mkEventMap holeInfo (isJust mSelectedResult) mResult
+      case mResult of
+        Nothing -> return ()
+        Just res -> ExprGuiM.addResultPicker $ res ^. Sugar.holeResultPickPrefix
       let adHocEditor = adHocTextEditEventMap $ searchTermProperty holeInfo
       return .
         (ExpressionGui.egWidget %~
