@@ -4,7 +4,8 @@ module Lamdu.BottleWidgets
   , makeFocusableView
   , makeFocusableTextView, makeFocusableLabel
   , wrapDelegatedWith, wrapDelegatedOT
-  , makeTextEdit, makeLineEdit, makeWordEdit
+  , makeTextEdit
+  , makeTextEditor, makeLineEdit, makeWordEdit
   , stdSpaceWidget
   , hboxSpaced, hboxCenteredSpaced
   , gridHSpaced, gridHSpacedCentered
@@ -120,49 +121,47 @@ wrapDelegatedOT
   -> Widget.Id -> WidgetEnvT m b
 wrapDelegatedOT = wrapDelegatedWith WE.readCursor (WE.atEnv . (WE.envCursor %~))
 
-makeTextEdit
+makeTextEdit ::
+  MonadA m =>
+  String -> Widget.Id ->
+  WidgetEnvT m (Widget ((,) String))
+makeTextEdit text myId =
+  TextEdit.make <$> WE.readTextStyle <*> WE.readCursor <*> pure text <*> pure myId
+
+makeTextEditor
   :: (MonadA m, MonadA f)
   => Property f String
   -> Widget.Id
   -> WidgetEnvT m (Widget f)
-makeTextEdit textRef myId = do
-  cursor <- WE.readCursor
-  style <- WE.readTextStyle
-  return .
-    Widget.atEvents setter $
-    TextEdit.make style cursor (Property.value textRef) myId
+makeTextEditor textRef myId =
+  Widget.atEvents setter <$>
+  makeTextEdit (Property.value textRef) myId
   where
     setter (newText, eventRes) = do
       when (newText /= Property.value textRef) $ Property.set textRef newText
       return eventRes
 
-removeKey
-  :: (MonadA m)
-  => (a -> b -> m (Widget f))
-  -> EventMap.ModKey
-  -> a -> b -> m (Widget f)
-removeKey makeEdit key =
-  (Lens.mapped . Lens.mapped . Lens.mapped . Widget.wEventMap %~)
-  (EventMap.deleteKey (EventMap.KeyEvent EventMap.Press key))
-  makeEdit
+deleteKeyEventHandler :: EventMap.ModKey -> Widget f -> Widget f
+deleteKeyEventHandler key = Widget.wEventMap %~ EventMap.deleteKey (EventMap.KeyEvent EventMap.Press key)
+
+noMods :: EventMap.Key -> EventMap.ModKey
+noMods = EventMap.ModKey EventMap.noMods
 
 makeLineEdit ::
   (MonadA m, MonadA f) =>
   Property f String ->
   Widget.Id ->
   WidgetEnvT m (Widget f)
-makeLineEdit =
-  removeKey makeTextEdit $
-  EventMap.ModKey EventMap.noMods EventMap.KeyEnter
+makeLineEdit textRef myId =
+  makeTextEditor textRef myId <&> deleteKeyEventHandler (noMods EventMap.KeyEnter)
 
 makeWordEdit ::
   (MonadA m, MonadA f) =>
   Property f String ->
   Widget.Id ->
   WidgetEnvT m (Widget f)
-makeWordEdit =
-  removeKey makeLineEdit $
-  EventMap.ModKey EventMap.noMods EventMap.KeySpace
+makeWordEdit textRef myId =
+  makeLineEdit textRef myId <&> deleteKeyEventHandler (noMods EventMap.KeySpace)
 
 stdSpaceWidget :: Widget f
 stdSpaceWidget = uncurry Widget.liftView $ Spacer.makeHorizontal 20
