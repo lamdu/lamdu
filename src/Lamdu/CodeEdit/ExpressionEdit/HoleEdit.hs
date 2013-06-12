@@ -202,6 +202,9 @@ holeResultAnimMappingNoParens holeInfo resultId =
 asNewLabelSizeFactor :: Fractional a => a
 asNewLabelSizeFactor = 0.5
 
+hiSearchTermId :: HoleInfo m -> Widget.Id
+hiSearchTermId holeInfo = WidgetIds.searchTermId $ hiId holeInfo
+
 mkAddNewDefinitionEventMap ::
   MonadA m => HoleInfo m -> ExprGuiM m (Widget.EventHandlers (T m))
 mkAddNewDefinitionEventMap holeInfo = do
@@ -219,13 +222,12 @@ mkAddNewDefinitionEventMap holeInfo = do
         pure Widget.EventResult
           { Widget._eCursor = WidgetIds.fromGuid <$> mTargetGuid
           , Widget._eAnimIdMapping =
-            holeResultAnimMappingNoParens holeInfo searchTermId
+            holeResultAnimMappingNoParens holeInfo $ hiSearchTermId holeInfo
           }
   pure $ maybe mempty f mDefRef
   where
     searchTerm = hiState holeInfo ^. Property.pVal . hsSearchTerm
     newName = concat . words $ searchTerm
-    searchTermId = WidgetIds.searchTermId $ hiId holeInfo
 
 vboxMBiasedAlign ::
   Maybe Box.Cursor -> Box.Alignment -> [Widget f] -> Widget f
@@ -377,15 +379,14 @@ makeActiveHoleEdit holeInfo = do
     shownResultsIds = rId . (^. HoleResults.rlMain) <$> shownResults
     allResultIds = [rId . (^. HoleResults.rlMain), (^. HoleResults.rlExtraResultsPrefixId)] <*> shownResults
   assignHoleEditCursor
-    holeInfo shownResultsIds allResultIds searchTermId $ do
+    holeInfo shownResultsIds allResultIds (hiSearchTermId holeInfo) $ do
       (mSelectedResult, resultsWidget) <-
         makeResultsWidget holeInfo shownResults hasHiddenResults
       let
         mResult =
           mSelectedResult <|> rHoleResult . (^. HoleResults.rlMain) <$> listToMaybe shownResults
         searchTermEventMap = maybe mempty (resultPickEventMap holeInfo) mResult
-      searchTermWidget <-
-        makeSearchTermWidget (searchTermProperty holeInfo) searchTermId
+      searchTermWidget <- makeSearchTermWidget holeInfo
         -- TODO: Move the result picking events into pickEventMap
         -- instead of here on the searchTerm and on each result
         & Lens.mapped . ExpressionGui.egWidget %~ Widget.strongerEvents searchTermEventMap
@@ -402,8 +403,6 @@ makeActiveHoleEdit holeInfo = do
         [ (0.5, Widget.strongerEvents adHocEditor resultsWidget)
         ]
         searchTermWidget
-  where
-    searchTermId = WidgetIds.searchTermId $ hiId holeInfo
 
 make ::
   MonadA m => Sugar.Hole Sugar.Name m (Sugar.ExpressionN m) ->
@@ -441,13 +440,13 @@ makeUnwrapped mHoleNumber hole mNextHoleGuid guid myId = do
         }
     _ -> makeInactive mHoleNumber hole myId
 
-searchTermWidgetId :: Widget.Id -> Widget.Id
-searchTermWidgetId = WidgetIds.searchTermId . FocusDelegator.delegatingId
+searchTermWIdOfHoleGuid :: Guid -> Widget.Id
+searchTermWIdOfHoleGuid = WidgetIds.searchTermId . FocusDelegator.delegatingId . WidgetIds.fromGuid
 
 setHoleStateAndJump :: MonadA m => HoleState -> Guid -> T m Widget.Id
 setHoleStateAndJump newHoleState newHoleGuid = do
   Transaction.setP (assocStateRef newHoleGuid) newHoleState
-  pure . searchTermWidgetId $ WidgetIds.fromGuid newHoleGuid
+  pure $ searchTermWIdOfHoleGuid newHoleGuid
 
 assocStateRef :: MonadA m => Guid -> MkProperty m HoleState
 assocStateRef = Transaction.assocDataRefDef HoleInfo.emptyState "searchTerm"
@@ -483,18 +482,35 @@ disallowedHoleChars =
   ]
 
 disallowChars :: E.EventMap a -> E.EventMap a
-disallowChars = E.filterSChars $ curry (`notElem` disallowedHoleChars)
+disallowChars =
+  E.filterSChars (curry (`notElem` disallowedHoleChars)) .
+  E.deleteKey (keyPress E.KeySpace) .
+  E.deleteKey (keyPress E.KeyEnter)
+  where
+    keyPress = E.KeyEvent E.Press . E.ModKey E.noMods
 
 makeSearchTermWidget ::
-  MonadA m =>
-  Property (T m) String -> Widget.Id ->
+  MonadA m => HoleInfo m ->
   ExprGuiM m (ExpressionGui m)
-makeSearchTermWidget searchTermProp searchTermId =
+makeSearchTermWidget holeInfo =
   ExprGuiM.widgetEnv $
   (ExpressionGui.scaleFromTop Config.holeSearchTermScaleFactor .
    ExpressionGui.fromValueWidget .
-   (Widget.wEventMap %~ disallowChars)) <$>
-  BWidgets.makeWordEdit searchTermProp searchTermId
+   (Widget.wEventMap %~ disallowChars) .
+   Widget.atEvents setter) <$>
+  BWidgets.makeTextEdit searchTerm (hiSearchTermId holeInfo)
+  where
+    searchTermProp = searchTermProperty holeInfo
+    searchTerm = Property.value searchTermProp
+    setter (newSearchTerm, eventRes) = do
+      when (newSearchTerm /= searchTerm) $ Property.set searchTermProp newSearchTerm
+      return $
+        eventRes &
+        -- When first letter is typed in search term, jump to the
+        -- results, which will go to first result:
+        if null searchTerm && (not . null) newSearchTerm
+        then Widget.eCursor .~ Just (HoleResults.prefixId holeInfo)
+        else id
 
 holeFDConfig :: FocusDelegator.Config
 holeFDConfig = FocusDelegator.Config
