@@ -11,6 +11,7 @@ import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse, sequenceA)
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.UI.Bottle.Widget (Widget)
+import Lamdu.CharClassification (operatorChars)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, Collapser(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.Config.Default (defaultConfig)
@@ -55,7 +56,7 @@ makeEquals = ExprGuiM.widgetEnv . BWidgets.makeLabel "=" . Widget.toAnimId
 
 nonOperatorName :: Sugar.Name -> Bool
 nonOperatorName (Sugar.Name Sugar.StoredName _ x) =
-  nonEmptyAll (`notElem` Config.operatorChars defaultConfig) x
+  nonEmptyAll (`notElem` operatorChars) x
 nonOperatorName _ = False
 
 polyNameFDConfig :: FocusDelegator.Config

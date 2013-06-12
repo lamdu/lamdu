@@ -18,6 +18,7 @@ import Data.Store.Transaction (Transaction, MkProperty)
 import Data.Traversable (traverse, sequenceA)
 import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
+import Lamdu.CharClassification (operatorChars, alphaNumericChars)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleState(..), hsSearchTerm)
@@ -299,13 +300,13 @@ opPickEventMap ::
   HoleInfo m -> Bool -> Sugar.HoleResult Sugar.Name m ->
   Widget.EventHandlers (T m)
 opPickEventMap holeInfo isSelectedResult result
-  | ignoreSearchTerm || nonEmptyAll (`notElem` Config.operatorChars defaultConfig) searchTerm =
-    charGroupHandler (Config.operatorChars defaultConfig) "Operator"
+  | ignoreSearchTerm || nonEmptyAll (`notElem` operatorChars) searchTerm =
+    charGroupHandler operatorChars "Operator"
     (E.Doc ["Edit", "Result", "Pick and apply operator"]) $ \c -> do
       dest <- result ^. Sugar.holeResultPickWrapped
       setHoleStateAndJump (HoleState [c]) dest
-  | ignoreSearchTerm || nonEmptyAll (`elem` Config.operatorChars defaultConfig) searchTerm =
-    charGroupHandler (Config.alphaNumericChars defaultConfig) "Letter/digit"
+  | ignoreSearchTerm || nonEmptyAll (`elem` operatorChars) searchTerm =
+    charGroupHandler alphaNumericChars "Letter/digit"
     (E.Doc ["Edit", "Result", "Pick and resume"]) $ \c -> do
       mTarget <- HoleResults.pick holeInfo result
       case mTarget of

@@ -164,9 +164,6 @@ data Config = Config
 
   , nextInfoModeKeys :: [E.ModKey]
 
-  , operatorChars :: [Char]
-  , alphaNumericChars :: [Char]
-
   , recordTypeParensColor :: Draw.Color
   , recordValParensColor :: Draw.Color
   , recordAddFieldKeys :: [E.ModKey]

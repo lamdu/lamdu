@@ -184,8 +184,6 @@ defaultConfig =
 
   , nextInfoModeKeys = [noMods E.KeyF7]
 
-  , operatorChars = "\\+-*/^=><&|%$:."
-  , alphaNumericChars = ['a'..'z'] ++ ['0'..'9']
 
   , recordTypeParensColor = rightArrowColor defaultConfig
   , recordValParensColor = Draw.Color 0.2 1 0.2 1

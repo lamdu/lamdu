@@ -162,6 +162,7 @@ Executable lamdu
                        Lamdu.CodeEdit.Sugar.AddNames.CPS,
                        Lamdu.CodeEdit.Sugar,
                        Lamdu.CodeEdit,
+                       Lamdu.CharClassification,
                        Lamdu.Config,
                        Lamdu.Config.Default,
                        Lamdu.Data.Anchors,
