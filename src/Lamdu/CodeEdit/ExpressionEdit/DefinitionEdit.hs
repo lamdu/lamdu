@@ -307,7 +307,7 @@ makeExprDefinition def bodyExpr = do
     Sugar.Definition guid name _ = def
     myId = WidgetIds.fromGuid guid
     labelStyle =
-      ExprGuiM.atEnv $ WE.setTextSizeColor
+      ExprGuiM.localEnv $ WE.setTextSizeColor
       (Config.defTypeLabelTextSize defaultConfig)
       (Config.defTypeLabelColor defaultConfig)
 

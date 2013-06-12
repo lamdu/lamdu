@@ -38,7 +38,7 @@ make parentPrecedence (Sugar.Lam _ param _isDep resultType) =
           case Widget.subId paramId cursor of
           Nothing -> cursor
           Just _ -> typeId
-    ExprGuiM.atEnv (WE.envCursor %~ redirectCursor) $ do
+    ExprGuiM.localEnv (WE.envCursor %~ redirectCursor) $ do
       paramTypeEdit <- ExprGuiM.makeSubexpresion 1 $ param ^. Sugar.fpType
       paramEdit <-
         if paramUsed
@@ -52,7 +52,7 @@ make parentPrecedence (Sugar.Lam _ param _isDep resultType) =
             ]
         else return paramTypeEdit
       rightArrowLabel <-
-        ExprGuiM.atEnv
+        ExprGuiM.localEnv
         (WE.setTextSizeColor
          (Config.rightArrowTextSize defaultConfig)
          (Config.rightArrowColor defaultConfig)) .

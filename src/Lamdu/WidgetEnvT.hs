@@ -6,7 +6,7 @@ module Lamdu.WidgetEnvT
 
   , Env(..), envCursor, envTextStyle
 
-  , atEnv
+  , localEnv
   , envAssignCursor, envAssignCursorPrefix
   , assignCursor, assignCursorPrefix
 
@@ -89,10 +89,10 @@ envAssignCursorPrefix srcFolder dest =
       Just _ -> dest
 
 assignCursor :: MonadA m => Widget.Id -> Widget.Id -> WidgetEnvT m a -> WidgetEnvT m a
-assignCursor x y = atEnv $ envAssignCursor x y
+assignCursor x y = localEnv $ envAssignCursor x y
 
 assignCursorPrefix :: MonadA m => Widget.Id -> Widget.Id -> WidgetEnvT m a -> WidgetEnvT m a
-assignCursorPrefix x y = atEnv $ envAssignCursorPrefix x y
+assignCursorPrefix x y = localEnv $ envAssignCursorPrefix x y
 
 setTextSizeColor
   :: Int
@@ -105,8 +105,8 @@ setTextSizeColor textSize textColor env =
     (TextView.styleFontSize .~ textSize) .
     (TextView.styleColor .~ textColor)
 
-atEnv :: MonadA m => (Env -> Env) -> WidgetEnvT m a -> WidgetEnvT m a
-atEnv = (widgetEnvT %~) . Reader.local
+localEnv :: MonadA m => (Env -> Env) -> WidgetEnvT m a -> WidgetEnvT m a
+localEnv = (widgetEnvT %~) . Reader.local
 
 setTextColor :: Draw.Color -> Env -> Env
 setTextColor color =

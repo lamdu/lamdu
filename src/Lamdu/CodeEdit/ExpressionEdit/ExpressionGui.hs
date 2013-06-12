@@ -168,7 +168,7 @@ makeNameEdit (Sugar.Name nameSrc nameCollision name) ident myId = do
   nameEdit <-
     fmap (nameSrcTint nameSrc) .
     ExprGuiM.widgetEnv .
-    WE.atEnv (WE.envTextStyle . TextEdit.sEmptyFocusedString .~ bracketedName) $
+    WE.localEnv (WE.envTextStyle . TextEdit.sEmptyFocusedString .~ bracketedName) $
     makeEditor nameProp
   return . Box.hboxCentered $ nameEdit : collisionSuffixes
   where
@@ -206,7 +206,7 @@ makeLabel text myId = ExprGuiM.widgetEnv . BWidgets.makeLabel text $ Widget.toAn
 makeColoredLabel ::
   MonadA m => Int -> Draw.Color -> String -> Widget.Id -> ExprGuiM m (WidgetT f)
 makeColoredLabel textSize color text myId =
-  ExprGuiM.atEnv (WE.setTextSizeColor textSize color) $
+  ExprGuiM.localEnv (WE.setTextSizeColor textSize color) $
   makeLabel text myId
 
 makeFocusableView ::

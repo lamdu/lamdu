@@ -3,7 +3,7 @@ module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad
   ( ExprGuiM, WidgetT, runWidget
   , widgetEnv
 
-  , transaction, atEnv, withFgColor
+  , transaction, localEnv, withFgColor
   , getP, assignCursor, assignCursorPrefix
   , wrapDelegated
   --
@@ -94,11 +94,11 @@ nextHoleNumber = ExprGuiM $
   Lens.use gsNextHoleNumber <* (gsNextHoleNumber += 1)
 
 -- TODO: To lens
-atEnv :: MonadA m => (WE.Env -> WE.Env) -> ExprGuiM m a -> ExprGuiM m a
-atEnv = (exprGuiM %~) . RWS.mapRWST . WE.atEnv
+localEnv :: MonadA m => (WE.Env -> WE.Env) -> ExprGuiM m a -> ExprGuiM m a
+localEnv = (exprGuiM %~) . RWS.mapRWST . WE.localEnv
 
 withFgColor :: MonadA m => Draw.Color -> ExprGuiM m a -> ExprGuiM m a
-withFgColor = atEnv . WE.setTextColor
+withFgColor = localEnv . WE.setTextColor
 
 readSettings :: MonadA m => ExprGuiM m Settings
 readSettings = ExprGuiM $ Lens.view aSettings
@@ -184,10 +184,10 @@ getCodeAnchor ::
 getCodeAnchor anchor = getP . anchor =<< readCodeAnchors
 
 assignCursor :: MonadA m => Widget.Id -> Widget.Id -> ExprGuiM m a -> ExprGuiM m a
-assignCursor x y = atEnv $ WE.envAssignCursor x y
+assignCursor x y = localEnv $ WE.envAssignCursor x y
 
 assignCursorPrefix :: MonadA m => Widget.Id -> Widget.Id -> ExprGuiM m a -> ExprGuiM m a
-assignCursorPrefix x y = atEnv $ WE.envAssignCursorPrefix x y
+assignCursorPrefix x y = localEnv $ WE.envAssignCursorPrefix x y
 
 wrapDelegated ::
   (MonadA f, MonadA m) =>
@@ -197,7 +197,7 @@ wrapDelegated ::
   Widget.Id -> ExprGuiM m b
 wrapDelegated =
   BWidgets.wrapDelegatedWith (widgetEnv WE.readCursor)
-  (atEnv . (WE.envCursor %~))
+  (localEnv . (WE.envCursor %~))
 
 -- Used vars:
 
