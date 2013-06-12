@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.CodeEdit.ExpressionEdit.HoleEdit
   ( make, makeUnwrapped
-  , searchTermWidgetId
   , HoleState(..), hsSearchTerm
   , setHoleStateAndJump
   ) where
