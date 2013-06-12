@@ -10,6 +10,7 @@ import Data.Traversable (traverse)
 import Graphics.UI.Bottle.Widget (EventHandlers)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ParentPrecedence(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.Config.Default (defaultConfig)
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -45,7 +46,7 @@ pasteEventMap ::
 pasteEventMap =
   maybe mempty
   (Widget.keysEventMapMovesCursor
-   Config.pasteKeys (E.Doc ["Edit", "Paste"]) .
+   (Config.pasteKeys defaultConfig) (E.Doc ["Edit", "Paste"]) .
    fmap WidgetIds.fromGuid) .
   (^? Sugar.holeMActions . Lens._Just . Sugar.holePaste . Lens._Just)
 
@@ -61,8 +62,8 @@ make parentPrecedence sExpr = assignCursor $ do
   let
     addInferredTypes =
       ExpressionGui.addType ExpressionGui.Background exprId $
-      Widget.tint Config.inferredTypeTint .
-      Widget.scale Config.typeScaleFactor .
+      Widget.tint (Config.inferredTypeTint defaultConfig) .
+      Widget.scale (realToFrac <$> Config.typeScaleFactor defaultConfig) .
       (^. ExpressionGui.egWidget) <$> typeEdits
   return $
     addInferredTypes widget
@@ -141,11 +142,13 @@ actionsEventMap sExpr isHole resultPickers actions = do
     then
       mconcat <$> sequence
       [ maybe mempty
-        (mkEventMap Config.callWithArgumentKeys (E.Doc ["Edit", docPrefix ++ "Call with argument"])
+        (mkEventMap (Config.callWithArgumentKeys defaultConfig)
+         (E.Doc ["Edit", docPrefix ++ "Call with argument"])
          FocusDelegator.delegatingId) <$>
         ExprGuiM.liftMemoT ((actions ^. Sugar.callWithArg) prefix)
       , maybe mempty
-        (mkEventMap Config.callWithNextArgumentKeys (E.Doc ["Edit", docPrefix ++ "Add argument"])
+        (mkEventMap (Config.callWithNextArgumentKeys defaultConfig)
+         (E.Doc ["Edit", docPrefix ++ "Add argument"])
          FocusDelegator.delegatingId) <$>
         ExprGuiM.liftMemoT ((actions ^. Sugar.callWithNextArg) prefix)
       ]
@@ -171,11 +174,11 @@ actionsEventMap sExpr isHole resultPickers actions = do
       | null resultPickers = ""
       | otherwise = "Pick and "
     prefix = sequence_ resultPickers
-    delKeys = Config.replaceKeys ++ Config.delKeys
+    delKeys = Config.replaceKeys defaultConfig ++ Config.delKeys defaultConfig
     cut
       | isHoleBool = mempty
       | otherwise =
-        mkEventMap Config.cutKeys (E.Doc ["Edit", "Cut"]) id $
+        mkEventMap (Config.cutKeys defaultConfig) (E.Doc ["Edit", "Cut"]) id $
         actions ^. Sugar.cut
     mkEventMap keys doc f =
       Widget.keysEventMapMovesCursor keys doc .

@@ -8,6 +8,7 @@ import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
+import Lamdu.Config.Default (defaultConfig)
 import Lamdu.WidgetIds (parensPrefix)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -42,7 +43,8 @@ addTextParensI onLParen onRParen parenId widget = do
 
 highlightExpression :: Widget.Widget f -> Widget.Widget f
 highlightExpression =
-  Widget.backgroundColor Layers.parensHighlightBG WidgetIds.parenHighlightId Config.parenHighlightColor
+  Widget.backgroundColor Layers.parensHighlightBG WidgetIds.parenHighlightId $
+  Config.parenHighlightColor defaultConfig
 
 addTextParens
   :: MonadA m

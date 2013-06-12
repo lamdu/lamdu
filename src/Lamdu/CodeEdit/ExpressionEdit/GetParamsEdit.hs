@@ -7,6 +7,7 @@ import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.Config.Default (defaultConfig)
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Box as Box
@@ -27,15 +28,15 @@ make getParams myId = do
   cp <- ExprGuiM.readCodeAnchors
   let
     jumpToDefinitionEventMap =
-      Widget.keysEventMapMovesCursor Config.jumpToDefinitionKeys
+      Widget.keysEventMapMovesCursor (Config.jumpToDefinitionKeys defaultConfig)
       (E.Doc ["Navigation", "Jump to definition"]) $ do
         DataOps.savePreJumpPosition cp myId
         WidgetIds.fromGuid <$> getParams ^. Sugar.gpJumpTo
   paramsLabel <-
-    ExprGuiM.withFgColor Config.parameterColor $ label "params"
+    ExprGuiM.withFgColor (Config.parameterColor defaultConfig) $ label "params"
   prefixLabel <- label "(of "
   defNameLabel <-
-    ExprGuiM.withFgColor Config.definitionColor .
+    ExprGuiM.withFgColor (Config.definitionColor defaultConfig) .
     ExprGuiM.widgetEnv $ ExpressionGui.makeNameView defName animId
   suffixLabel <- label ")"
   ExprGuiM.widgetEnv .
@@ -44,7 +45,7 @@ make getParams myId = do
     Widget.weakerEvents jumpToDefinitionEventMap $
     BWidgets.hboxCenteredSpaced
     [ paramsLabel
-    , Widget.scale Config.paramDefSuffixScaleFactor $
+    , Widget.scale (realToFrac <$> Config.paramDefSuffixScaleFactor defaultConfig) $
       Box.hboxCentered [prefixLabel, defNameLabel, suffixLabel]
     ]
   where

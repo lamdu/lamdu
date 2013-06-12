@@ -1,12 +1,14 @@
 {-# LANGUAGE TypeFamilies #-}
 module Lamdu.CodeEdit.ExpressionEdit.InferredEdit(make) where
 
+import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Data.Monoid (mempty)
 import Data.Store.Guid (Guid)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ParentPrecedence(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.Config.Default (defaultConfig)
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -21,9 +23,9 @@ import qualified Lamdu.WidgetIds as WidgetIds
 
 fdConfig :: FocusDelegator.Config
 fdConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKeys = Config.replaceInferredValueKeys
+  { FocusDelegator.startDelegatingKeys = Config.replaceInferredValueKeys defaultConfig
   , FocusDelegator.startDelegatingDoc = E.Doc ["Edit", "Inferred value", "Replace"]
-  , FocusDelegator.stopDelegatingKeys = Config.keepInferredValueKeys
+  , FocusDelegator.stopDelegatingKeys = Config.keepInferredValueKeys defaultConfig
   , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Inferred value", "Back"]
   }
 
@@ -40,7 +42,7 @@ make parentPrecedence inferred guid =
     eventMap =
       maybe mempty
       (Widget.keysEventMapMovesCursor
-       Config.acceptInferredValueKeys
+       (Config.acceptInferredValueKeys defaultConfig)
        (E.Doc ["Edit", "Inferred value", "Accept"]) .
        fmap WidgetIds.fromGuid) $
       inferred ^. Sugar.iMAccept
@@ -56,8 +58,8 @@ makeUnwrapped (ParentPrecedence parentPrecedence) inferred guid myId = do
       ExpressionGui.egWidget
       ( ExprGuiM.widgetEnv
       . BWidgets.makeFocusableView myId
-      . Widget.tint Config.inferredValueTint
-      . Widget.scale Config.inferredValueScaleFactor
+      . Widget.tint (Config.inferredValueTint defaultConfig)
+      . Widget.scale (realToFrac <$> Config.inferredValueScaleFactor defaultConfig)
       ) =<< ExprGuiM.makeSubexpresion parentPrecedence (inferred ^. Sugar.iValue)
     Just _ ->
       HoleEdit.makeUnwrapped Nothing (inferred ^. Sugar.iHole) Nothing guid myId

@@ -22,6 +22,7 @@ import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Widget(Widget)
 import Lamdu.CodeEdit.Settings (Settings(..))
+import Lamdu.Config.Default (defaultConfig)
 import Lamdu.WidgetEnvT (runWidgetEnvT)
 import Numeric (showHex)
 import Paths_lamdu (getDataFileName)
@@ -44,6 +45,7 @@ import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
 import qualified Graphics.UI.Bottle.Widgets.FlyNav as FlyNav
 import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
+import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Graphics.UI.GLFW.Utils as GLFWUtils
 import qualified Lamdu.Anchors as Anchors
@@ -168,7 +170,7 @@ mainLoopDebugMode font makeWidget addHelp = do
       return .
         whenApply isDebugMode (Widget.wFrame %~ addAnnotations font) $
         Widget.strongerEvents
-        (Widget.keysEventMap Config.debugModeKeys doc set)
+        (Widget.keysEventMap (Config.debugModeKeys defaultConfig) doc set)
         widget
     makeDebugModeWidget size = addHelp size =<< addDebugMode =<< makeWidget size
   mainLoopWidget makeDebugModeWidget getAnimHalfLife
@@ -189,31 +191,63 @@ makeFlyNav = do
     fnState <- readIORef flyNavState
     return $ FlyNav.make WidgetIds.flyNav fnState (writeIORef flyNavState) widget
 
-makeSizeFactor :: IO (IORef (Vector2 Widget.R), Widget.EventHandlers IO)
-makeSizeFactor = do
+makeScaleFactor :: IO (IORef (Vector2 Widget.R), Widget.EventHandlers IO)
+makeScaleFactor = do
   factor <- newIORef 1
   let
     eventMap = mconcat
-      [ Widget.keysEventMap Config.enlargeBaseFontKeys (EventMap.Doc ["View", "Zoom", "Enlarge"]) $
-        modifyIORef factor (* Config.enlargeFactor)
-      , Widget.keysEventMap Config.shrinkBaseFontKeys (EventMap.Doc ["View", "Zoom", "Shrink"]) $
-        modifyIORef factor (/ Config.shrinkFactor)
+      [ Widget.keysEventMap (Config.enlargeBaseFontKeys defaultConfig)
+        (EventMap.Doc ["View", "Zoom", "Enlarge"]) $
+        modifyIORef factor (* realToFrac (Config.enlargeFactor defaultConfig))
+      , Widget.keysEventMap (Config.shrinkBaseFontKeys defaultConfig)
+        (EventMap.Doc ["View", "Zoom", "Shrink"]) $
+        modifyIORef factor (/ realToFrac (Config.shrinkFactor defaultConfig))
       ]
   return (factor, eventMap)
+
+helpConfig :: Draw.Font -> EventMapDoc.Config
+helpConfig font =
+  EventMapDoc.Config
+  { EventMapDoc.configStyle =
+    TextView.Style
+    { TextView._styleColor = Config.helpTextColor defaultConfig
+    , TextView._styleFont = font
+    , TextView._styleFontSize = Config.helpTextSize defaultConfig
+    }
+  , EventMapDoc.configInputDocColor = Config.helpInputDocColor defaultConfig
+  , EventMapDoc.configBGColor = Config.helpBGColor defaultConfig
+  }
+
+baseStyle :: Draw.Font -> TextEdit.Style
+baseStyle font = TextEdit.Style
+ { TextEdit._sTextViewStyle =
+   TextView.Style
+     { TextView._styleColor = Config.baseColor defaultConfig
+     , TextView._styleFont = font
+     , TextView._styleFontSize = Config.baseTextSize defaultConfig
+     }
+  , TextEdit._sCursorColor = TextEdit.defaultCursorColor
+  , TextEdit._sCursorWidth = TextEdit.defaultCursorWidth
+  , TextEdit._sTextCursorId = WidgetIds.textCursorId
+  , TextEdit._sBackgroundCursorId = WidgetIds.backgroundCursorId
+  , TextEdit._sBackgroundColor = Config.cursorBGColor defaultConfig
+  , TextEdit._sEmptyUnfocusedString = ""
+  , TextEdit._sEmptyFocusedString = ""
+  }
 
 runDb :: Draw.Font -> Db -> IO a
 runDb font db = do
   ExampleDB.initDB db
-  (sizeFactorRef, sizeFactorEvents) <- makeSizeFactor
+  (sizeFactorRef, sizeFactorEvents) <- makeScaleFactor
   addHelpWithStyle <-
-    EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown Config.overlayDocKeys
+    EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown $ Config.overlayDocKeys defaultConfig
   settingsRef <- newIORef Settings
     { _sInfoMode = Settings.defaultInfoMode
     }
   cacheRef <- newIORef $ Cache.new 0x100000 -- TODO: Use a real cache size
   wrapFlyNav <- makeFlyNav
   let
-    addHelp = addHelpWithStyle $ Config.helpConfig font
+    addHelp = addHelpWithStyle $ helpConfig font
     makeWidget size = do
       cursor <- dbToIO . Transaction.getP $ Anchors.cursor Anchors.revisionProps
       sizeFactor <- readIORef sizeFactorRef
@@ -222,7 +256,7 @@ runDb font db = do
       prevCache <- readIORef cacheRef
       (widget, newCache) <-
         (`runStateT` prevCache) $
-        mkWidgetWithFallback settingsRef (Config.baseStyle font) dbToIO
+        mkWidgetWithFallback settingsRef (baseStyle font) dbToIO
         (size / sizeFactor, cursor)
       writeIORef cacheRef newCache
       return . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
@@ -244,7 +278,7 @@ mkGlobalEventMap settingsRef = do
     next = nextInfoMode curInfoMode
     nextDoc = EventMap.Doc ["View", "Subtext", "Show " ++ show next]
   return .
-    Widget.keysEventMap Config.nextInfoMode nextDoc .
+    Widget.keysEventMap (Config.nextInfoModeKeys defaultConfig) nextDoc .
     modifyIORef settingsRef $ Settings.sInfoMode .~ next
 
 mkWidgetWithFallback
@@ -297,7 +331,7 @@ makeRootWidget settings style dbToIO size cursor = do
       Widget.strongerEvents quitEventMap branchGui
   where
     quitEventMap =
-      Widget.keysEventMap Config.quitKeys (EventMap.Doc ["Quit"]) (error "Quit")
+      Widget.keysEventMap (Config.quitKeys defaultConfig) (EventMap.Doc ["Quit"]) (error "Quit")
     attachCursor eventResult = do
       maybe (return ()) (Transaction.setP (Anchors.cursor Anchors.revisionProps)) $
         eventResult ^. Widget.eCursor

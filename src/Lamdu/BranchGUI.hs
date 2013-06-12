@@ -14,6 +14,7 @@ import Data.Store.Rev.Branch (Branch)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Graphics.UI.Bottle.Widget (Widget)
+import Lamdu.Config.Default (defaultConfig)
 import Lamdu.VersionControl.Actions (Actions(..))
 import Lamdu.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
@@ -40,11 +41,13 @@ branchNameFDConfig = FocusDelegator.Config
 
 undoEventMap :: Functor m => Maybe (m Widget.Id) -> Widget.EventHandlers m
 undoEventMap =
-  maybe mempty (Widget.keysEventMapMovesCursor Config.undoKeys (E.Doc ["Edit", "Undo"]))
+  maybe mempty .
+  Widget.keysEventMapMovesCursor (Config.undoKeys defaultConfig) $ E.Doc ["Edit", "Undo"]
 
 redoEventMap :: Functor m => Maybe (m Widget.Id) -> Widget.EventHandlers m
 redoEventMap =
-  maybe mempty (Widget.keysEventMapMovesCursor Config.redoKeys (E.Doc ["Edit", "Redo"]))
+  maybe mempty .
+  Widget.keysEventMapMovesCursor (Config.redoKeys defaultConfig) $ E.Doc ["Edit", "Redo"]
 
 branchNameProp ::
   MonadA m => Branch (Tag m) -> Transaction.MkProperty m String
@@ -52,12 +55,13 @@ branchNameProp = Transaction.assocDataRefDef "" "name" . Branch.guid
 
 globalEventMap :: Applicative f => Actions t f -> Widget.EventHandlers f
 globalEventMap actions = mconcat
-  [ Widget.keysEventMapMovesCursor Config.makeBranchKeys (E.Doc ["Branches", "New"]) .
-    fmap
-    (FocusDelegator.delegatingId .
-     WidgetIds.fromGuid . Branch.guid) $ makeBranch actions
-  , Widget.keysEventMapMovesCursor Config.jumpToBranchesKeys
-    (E.Doc ["Branches", "Select"]) $ pure currentBranchWidgetId
+  [ Widget.keysEventMapMovesCursor (Config.makeBranchKeys defaultConfig)
+    (E.Doc ["Branches", "New"]) $
+    FocusDelegator.delegatingId . WidgetIds.fromGuid . Branch.guid <$>
+    makeBranch actions
+  , Widget.keysEventMapMovesCursor (Config.jumpToBranchesKeys defaultConfig)
+    (E.Doc ["Branches", "Select"]) $
+    pure currentBranchWidgetId
   , undoEventMap $ mUndo actions
   , redoEventMap $ mRedo actions
   ]
@@ -74,7 +78,7 @@ choiceWidgetConfig = BWidgets.ChoiceWidgetConfig
     , FocusDelegator.stopDelegatingDoc = E.Doc ["Branches", "Choose selected"]
     }
   , BWidgets.cwcExpandMode =
-      BWidgets.AutoExpand Config.selectedBranchColor
+      BWidgets.AutoExpand $ Config.selectedBranchColor defaultConfig
   , BWidgets.cwcOrientation = Box.vertical
   }
 
@@ -107,7 +111,7 @@ make transaction size actions widget = do
         delEventMap
           | ListUtils.isLengthAtLeast 2 (branches actions) =
             Widget.keysEventMapMovesCursor
-            Config.delBranchKeys (E.Doc ["Branches", "Delete"])
+            (Config.delBranchKeys defaultConfig) (E.Doc ["Branches", "Delete"])
             (WidgetIds.fromGuid . Branch.guid <$> deleteBranch actions branch)
           | otherwise = mempty
       return (branch, branchNameEdit & Widget.weakerEvents delEventMap)

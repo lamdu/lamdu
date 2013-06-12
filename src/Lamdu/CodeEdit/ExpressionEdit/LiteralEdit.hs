@@ -8,6 +8,7 @@ import Data.Store.Transaction (Transaction)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.Config.Default (defaultConfig)
 import qualified Data.Char as Char
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -21,7 +22,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.WidgetEnvT as WE
 
 setColor :: MonadA m => ExprGuiM m a -> ExprGuiM m a
-setColor = ExprGuiM.withFgColor Config.literalIntColor
+setColor = ExprGuiM.withFgColor $ Config.literalIntColor defaultConfig
 
 makeIntView
   :: MonadA m

@@ -9,6 +9,7 @@ import Data.Store.Transaction (Transaction)
 import Data.Vector.Vector2 (Vector2(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.Config.Default (defaultConfig)
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -37,7 +38,7 @@ makeUnwrapped (Sugar.Record k (Sugar.FieldList fields mAddField)) myId =
     let fieldsWidget = Grid.toWidget $ Grid.make fieldRows
     let
       mkBracketView text =
-        ExprGuiM.withFgColor (parensColor k) . ExprGuiM.widgetEnv .
+        ExprGuiM.withFgColor (parensColor k defaultConfig) . ExprGuiM.widgetEnv .
         BWidgets.makeLabel text $ Widget.toAnimId myId
     openBracketWidget <-
       ExprGuiM.widgetEnv . BWidgets.makeFocusableView bracketId =<<
@@ -73,18 +74,21 @@ makeUnwrapped (Sugar.Record k (Sugar.FieldList fields mAddField)) myId =
         [(1, scaleTag fieldRefGui), (0.5, space), (0, fieldExprGui)]
         & Lens.mapped . Lens._2 . ExpressionGui.egWidget %~
           Widget.weakerEvents itemEventMap
-    scaleTag = ExpressionGui.egWidget %~ Widget.scale Config.fieldTagScale
+    scaleTag =
+      ExpressionGui.egWidget %~
+      Widget.scale (realToFrac <$> Config.fieldTagScaleFactor defaultConfig)
     mkEventMap f mAction keys doc =
       maybe mempty (Widget.keysEventMapMovesCursor keys doc . f) mAction
     eventMap =
       mkEventMap (fmap WidgetIds.fromGuid)
-      mAddField Config.recordAddFieldKeys $ E.Doc ["Edit", "Record", "Add First Field"]
+      mAddField (Config.recordAddFieldKeys defaultConfig) $
+      E.Doc ["Edit", "Record", "Add First Field"]
 
 recordItemEventMap :: MonadA m => [T m ()] -> Sugar.ListItemActions m -> Widget.EventHandlers (T m)
 recordItemEventMap resultPickers (Sugar.ListItemActions addNext delete) =
   mconcat
-  [ Widget.keysEventMapMovesCursor Config.recordAddFieldKeys
+  [ Widget.keysEventMapMovesCursor (Config.recordAddFieldKeys defaultConfig)
     (E.Doc ["Edit", "Record", "Add Next Field"]) $ WidgetIds.fromGuid <$> (sequence_ resultPickers *> addNext)
-  , Widget.keysEventMapMovesCursor Config.delKeys
+  , Widget.keysEventMapMovesCursor (Config.delKeys defaultConfig)
     (E.Doc ["Edit", "Record", "Delete Field"]) $ WidgetIds.fromGuid <$> delete
   ]

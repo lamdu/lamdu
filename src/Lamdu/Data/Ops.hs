@@ -19,6 +19,7 @@ import Control.MonadA (MonadA)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction, getP, setP, modP)
+import Lamdu.Config.Default (defaultConfig)
 import Lamdu.Data.Anchors (PresentationMode(..))
 import Lamdu.Data.Definition (Definition(..))
 import Lamdu.Data.Expression.IRef (DefI)
@@ -149,7 +150,7 @@ jumpBack codeProps = do
       return j
 
 isInfix :: String -> Bool
-isInfix x = not (null x) && all (`elem` Config.operatorChars) x
+isInfix x = not (null x) && all (`elem` Config.operatorChars defaultConfig) x
 
 presentationModeOfName :: String -> PresentationMode
 presentationModeOfName x

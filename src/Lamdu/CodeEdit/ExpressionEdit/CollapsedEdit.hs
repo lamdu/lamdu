@@ -6,6 +6,7 @@ import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, Collapser(..), ParentPrecedence(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.Config.Default (defaultConfig)
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -19,9 +20,9 @@ import qualified Lamdu.WidgetIds as WidgetIds
 
 collapsedFDConfig :: FocusDelegator.Config
 collapsedFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKeys = Config.collapsedExpandKeys
+  { FocusDelegator.startDelegatingKeys = Config.collapsedExpandKeys defaultConfig
   , FocusDelegator.startDelegatingDoc = E.Doc ["View", "Expand application"]
-  , FocusDelegator.stopDelegatingKeys = Config.collapsedCollapseKeys
+  , FocusDelegator.stopDelegatingKeys = Config.collapsedCollapseKeys defaultConfig
   , FocusDelegator.stopDelegatingDoc = E.Doc ["View", "Collapse application"]
   }
 
@@ -36,7 +37,7 @@ make (ParentPrecedence parentPrecedence) collapsed
     Sugar.Collapsed funcGuid compact fullExpression hasInfo = collapsed
     makeExpanded myId =
       ExpressionGui.withBgColor Layers.collapsedExpandedBG
-      Config.collapsedExpandedBGColor (bgId myId) <$>
+      (Config.collapsedExpandedBGColor defaultConfig) (bgId myId) <$>
       ExprGuiM.inCollapsedExpression
       (ExprGuiM.makeSubexpresion parentPrecedence fullExpression)
     f myId =
@@ -49,11 +50,11 @@ make (ParentPrecedence parentPrecedence) collapsed
     bgId myId = Widget.toAnimId myId ++ ["bg"]
     funcId = WidgetIds.fromGuid funcGuid
     colorize _ Sugar.GetDefinition =
-      ExprGuiM.withFgColor Config.collapsedForegroundColor
+      ExprGuiM.withFgColor $ Config.collapsedForegroundColor defaultConfig
     colorize myId _ = colorizeGetParameter myId
     colorizeGetParameter myId =
       fmap
       (ExpressionGui.withBgColor
        Layers.collapsedCompactBG
-       Config.collapsedCompactBGColor (bgId myId)) .
-      ExprGuiM.withFgColor Config.parameterColor
+       (Config.collapsedCompactBGColor defaultConfig) (bgId myId)) .
+      ExprGuiM.withFgColor (Config.parameterColor defaultConfig)

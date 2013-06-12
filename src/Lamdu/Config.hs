@@ -1,217 +1,178 @@
-{-# LANGUAGE NoMonomorphismRestriction #-}
-{-# OPTIONS -fno-warn-missing-signatures #-}
+{-# LANGUAGE PatternGuards #-}
+module Lamdu.Config (Config(..)) where
 
-module Lamdu.Config where
-
+import Data.Vector.Vector2 (Vector2(..))
+import Graphics.DrawingCombinators.Utils () -- Read instance for Color
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
-import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
-import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
-import qualified Graphics.UI.Bottle.Widgets.EventMapDoc as EventMapDoc
-import qualified Lamdu.WidgetIds as WidgetIds
 
--- TODO: Oops, we don't want to export these:
-mk = E.ModKey
+data Config = Config
+  { baseColor :: Draw.Color
+  , baseTextSize :: Int
+  , helpTextColor :: Draw.Color
+  , helpTextSize :: Int
+  , helpInputDocColor :: Draw.Color
+  , helpBGColor :: Draw.Color
 
-noMods = mk E.noMods
-ctrl = mk E.ctrl . E.charKey
-alt = mk E.alt . E.charKey
-shift = mk E.shift . E.charKey
-ctrlAlt = mk (E.noMods {E.modCtrl = True, E.modAlt = True}) . E.charKey
--- altShift = mk E.noMods { E.modAlt = True, E.modShift = True } . E.charKey
-k = noMods . E.charKey
+  , quitKeys :: [E.ModKey]
+  , undoKeys :: [E.ModKey]
+  , redoKeys :: [E.ModKey]
+  , makeBranchKeys :: [E.ModKey]
 
-quitKeys          = [ctrl 'q']
-undoKeys          = [ctrl 'z']
-redoKeys          = [ctrl 'y']
-makeBranchKeys    = [ctrl 's']
+  , jumpToBranchesKeys :: [E.ModKey]
 
-jumpToBranchesKeys = [mk E.ctrl E.KeyF10]
+  , overlayDocKeys :: [E.ModKey]
 
-overlayDocKeys    = [noMods E.KeyF1, alt 'h']
+  , addNextParamKeys :: [E.ModKey]
 
-addNextParamKeys  = [noMods E.KeySpace]
+  , delBranchKeys :: [E.ModKey]
 
-delBranchKeys     = [alt 'o']
+  , closePaneKeys :: [E.ModKey]
+  , movePaneDownKeys :: [E.ModKey]
+  , movePaneUpKeys :: [E.ModKey]
 
-closePaneKeys     = [alt 'w']
-movePaneDownKeys  = [mk E.alt E.KeyDown]
-movePaneUpKeys    = [mk E.alt E.KeyUp]
+  , replaceKeys :: [E.ModKey]
 
-replaceKeys       = [alt 'r']
+  , pickResultKeys :: [E.ModKey]
+  , pickAndMoveToNextHoleKeys :: [E.ModKey]
 
-pickResultKeys    = [noMods E.KeyEnter]
-pickAndMoveToNextHoleKeys = [noMods E.KeySpace]
+  , jumpToDefinitionKeys :: [E.ModKey]
 
-jumpToDefinitionKeys = [noMods E.KeyEnter]
+  , delForwardKeys :: [E.ModKey]
+  , delBackwardKeys :: [E.ModKey]
+  , delKeys :: [E.ModKey]
+  , wrapKeys :: [E.ModKey]
+  , callWithArgumentKeys :: [E.ModKey]
+  , callWithNextArgumentKeys :: [E.ModKey]
+  , debugModeKeys :: [E.ModKey]
 
-delForwardKeys       = [noMods E.KeyDel, mk E.alt E.KeyDel]
-delBackwardKeys      = [noMods E.KeyBackspace]
-delKeys              = delForwardKeys ++ delBackwardKeys
-wrapKeys             = [noMods E.KeySpace]
-callWithArgumentKeys = [shift '9']
-callWithNextArgumentKeys = [shift '0']
-debugModeKeys = [ctrlAlt 'd', mk E.ctrl E.KeyF7]
+  , newDefinitionKeys :: [E.ModKey]
 
-newDefinitionKeys = [alt 'n']
+  , definitionColor :: Draw.Color
+  , atomColor :: Draw.Color
+  , parameterColor :: Draw.Color
+  , paramOriginColor :: Draw.Color
 
-definitionColor = Draw.Color 0.8 0.5 1 1
-atomColor = definitionColor
-parameterColor = Draw.Color 0.2 0.8 0.9 1
-paramOriginColor = Draw.Color 1.0 0.8 0.5 1
+  , literalIntColor :: Draw.Color
 
-literalIntColor = Draw.Color 0 1 0 1
+  , previousCursorKeys :: [E.ModKey]
 
-previousCursorKeys = [mk E.alt E.KeyLeft]
+  , holeResultCount :: Int
+  , holeResultScaleFactor :: Vector2 Double
+  , holeSearchTermScaleFactor :: Vector2 Double
+  , holeNumLabelScaleFactor :: Vector2 Double
+  , holeNumLabelColor :: Draw.Color
 
-holeResultCount = 8
-holeResultScaleFactor = 0.75
-holeSearchTermScaleFactor = 0.6
-holeNumLabelScaleFactor = 0.3
-holeNumLabelColor = Draw.Color 0.6 0.6 0.6 1
+  , typeErrorHoleWrapBackgroundColor :: Draw.Color
+  , deletableHoleBackgroundColor :: Draw.Color
 
-fieldHoleResultCount = 3
+  , activeHoleBackgroundColor :: Draw.Color
+  , inactiveHoleBackgroundColor :: Draw.Color
 
-typeErrorHoleWrapBackgroundColor = Draw.Color 1.0 0 0 0.3
-deletableHoleBackgroundColor = Draw.Color 0 1.0 0 0.1
+  , tagScaleFactor :: Vector2 Double
 
-activeHoleBackgroundColor   = Draw.Color 0.1 0.1 0.3 1
-inactiveHoleBackgroundColor = Draw.Color 0.2 0.2 0.8 0.5
+  , fieldTagScaleFactor :: Vector2 Double
+  , fieldTint :: Draw.Color
 
-tagScale = 0.9
+  , inferredValueScaleFactor :: Vector2 Double
+  , inferredValueTint :: Draw.Color
 
-fieldTagScale = 0.8
-fieldTint = Draw.Color 1 1 1 0.6
+  , parenHighlightColor :: Draw.Color
 
-inferredValueScaleFactor = 0.7
-inferredValueTint = Draw.Color 1 1 1 0.6
+  , lambdaWrapKeys :: [E.ModKey]
+  , addWhereItemKeys :: [E.ModKey]
 
-parenHighlightColor = Draw.Color 0.3 0 1 0.25
+  , lambdaColor :: Draw.Color
+  , lambdaTextSize :: Int
 
-lambdaWrapKeys = [k '\\']
-addWhereItemKeys = [k 'w']
+  , rightArrowColor :: Draw.Color
+  , rightArrowTextSize :: Int
 
-lambdaColor = Draw.Color 1 0.2 0.2 1
-lambdaTextSize = 30
+  , whereColor :: Draw.Color
+  , whereScaleFactor :: Vector2 Double
+  , whereLabelScaleFactor :: Vector2 Double
 
-rightArrowColor = Draw.Color 1 0.2 0.2 1
-rightArrowTextSize = 30
+  , typeScaleFactor :: Vector2 Double
+  , squareParensScaleFactor :: Vector2 Double
 
-whereColor = Draw.Color 0.8 0.6 0.1 1
-whereScaleFactor = 0.85
-whereLabelScaleFactor = whereScaleFactor
+  , foreignModuleColor :: Draw.Color
+  , foreignVarColor :: Draw.Color
 
-foldKeys = [k '-']
-unfoldKeys = foldKeys
+  , cutKeys :: [E.ModKey]
+  , pasteKeys :: [E.ModKey]
 
-typeScaleFactor = 0.6
-squareParensScaleFactor = 0.96
+  , inactiveTintColor :: Draw.Color
+  , activeDefBGColor :: Draw.Color
 
-foreignModuleColor = Draw.Color 1 0.3 0.35 1
-foreignVarColor = Draw.Color 1 0.65 0.25 1
-
-cutKeys = [ctrl 'x', k 'x']
-pasteKeys = [ctrl 'v', k 'v']
-
-inactiveTintColor = Draw.Color 1 1 1 0.8
-activeDefBGColor = Draw.Color 0.04 0.04 0.04 1
-
-inferredTypeTint = inferredValueTint
-inferredTypeErrorBGColor = Draw.Color 0.5 0.05 0.05 1
-inferredTypeBGColor = Draw.Color 0.05 0.15 0.2 1
+  , inferredTypeTint :: Draw.Color
+  , inferredTypeErrorBGColor :: Draw.Color
+  , inferredTypeBGColor :: Draw.Color
 
 -- For definitions
-collapsedForegroundColor = Draw.Color 1 0.4 0.3 1
+  , collapsedForegroundColor :: Draw.Color
 -- For parameters
-collapsedCompactBGColor = Draw.Color 0.1 0.2 0.25 1
-collapsedExpandedBGColor = Draw.Color 0.18 0.14 0.05 1
-collapsedExpandKeys = [noMods E.KeyEnter]
-collapsedCollapseKeys = [noMods E.KeyEsc]
+  , collapsedCompactBGColor :: Draw.Color
+  , collapsedExpandedBGColor :: Draw.Color
+  , collapsedExpandKeys :: [E.ModKey]
+  , collapsedCollapseKeys :: [E.ModKey]
 
-monomorphicDefOriginForegroundColor = paramOriginColor
-polymorphicDefOriginForegroundColor = collapsedForegroundColor
+  , monomorphicDefOriginForegroundColor :: Draw.Color
+  , polymorphicDefOriginForegroundColor :: Draw.Color
 
-builtinOriginNameColor = monomorphicDefOriginForegroundColor
+  , builtinOriginNameColor :: Draw.Color
 
-cursorBGColor = Draw.Color 0 0 1 0.45
+  , cursorBGColor :: Draw.Color
 
-helpConfig font =
-  EventMapDoc.Config
-  { EventMapDoc.configStyle =
-    TextView.Style
-    { TextView._styleColor = Draw.Color 1 1 1 1
-    , TextView._styleFont = font
-    , TextView._styleFontSize = 12
-    }
-  , EventMapDoc.configInputDocColor = Draw.Color 0.1 0.7 0.7 1
-  , EventMapDoc.configBGColor = Draw.Color 0.2 0.15 0.1 0.5
+  , listBracketTextSize :: Int
+  , listBracketColor :: Draw.Color
+  , listCommaTextSize :: Int
+  , listCommaColor :: Draw.Color
+
+  , listAddItemKeys :: [E.ModKey]
+
+  , selectedBranchColor :: Draw.Color
+
+  , jumpLHStoRHSKeys :: [E.ModKey]
+  , jumpRHStoLHSKeys :: [E.ModKey]
+
+  , shrinkBaseFontKeys :: [E.ModKey]
+  , enlargeBaseFontKeys :: [E.ModKey]
+
+  , enlargeFactor :: Double
+  , shrinkFactor :: Double
+
+  , defTypeLabelTextSize :: Int
+  , defTypeLabelColor :: Draw.Color
+
+  , defTypeBoxScaleFactor :: Vector2 Double
+
+  , acceptInferredTypeKeys :: [E.ModKey]
+
+  , autoGeneratedNameTint :: Draw.Color
+  , collisionSuffixTint :: Draw.Color
+  , collisionSuffixBGColor :: Draw.Color
+  , collisionSuffixScaleFactor :: Vector2 Double
+
+  , paramDefSuffixScaleFactor :: Vector2 Double
+
+  , enterSubexpressionKeys :: [E.ModKey]
+  , leaveSubexpressionKeys :: [E.ModKey]
+
+  , replaceInferredValueKeys :: [E.ModKey]
+  , keepInferredValueKeys :: [E.ModKey]
+  , acceptInferredValueKeys :: [E.ModKey]
+
+  , nextInfoModeKeys :: [E.ModKey]
+
+  , operatorChars :: [Char]
+  , alphaNumericChars :: [Char]
+
+  , recordTypeParensColor :: Draw.Color
+  , recordValParensColor :: Draw.Color
+  , recordAddFieldKeys :: [E.ModKey]
+
+  , presentationChoiceScaleFactor :: Vector2 Double
+  , presentationChoiceColor :: Draw.Color
+
+  , labeledApplyBGColor :: Draw.Color
   }
-
-baseStyle font = TextEdit.Style
-  { TextEdit._sTextViewStyle =
-    TextView.Style
-      { TextView._styleColor = Draw.Color 1 1 1 1
-      , TextView._styleFont = font
-      , TextView._styleFontSize = 25
-      }
-  , TextEdit._sCursorColor = TextEdit.defaultCursorColor
-  , TextEdit._sCursorWidth = TextEdit.defaultCursorWidth
-  , TextEdit._sTextCursorId = WidgetIds.textCursorId
-  , TextEdit._sBackgroundCursorId = WidgetIds.backgroundCursorId
-  , TextEdit._sBackgroundColor = cursorBGColor
-  , TextEdit._sEmptyUnfocusedString = ""
-  , TextEdit._sEmptyFocusedString = ""
-  }
-
-listBracketTextSize = 25
-listBracketColor = Draw.Color 0.8 0.8 0.9 1
-listCommaTextSize = listBracketTextSize
-listCommaColor = listBracketColor
-
-listAddItemKeys = [k ',']
-
-selectedBranchColor = Draw.Color 0 0.5 0 1
-
-jumpLHStoRHSKeys = [k '`']
-jumpRHStoLHSKeys = [k '`']
-
-shrinkBaseFontKeys = [ctrl '-']
-enlargeBaseFontKeys = [ctrl '=']
-
-enlargeFactor = 1.1
-shrinkFactor = 1.1
-
-defTypeLabelTextSize = 16
-defTypeLabelColor = Draw.Color 0.6 0.7 1 1
-
-defTypeBoxSizeFactor = 0.6
-
-acceptInferredTypeKeys = [noMods E.KeySpace, noMods E.KeyEnter]
-
-autoGeneratedNameTint = Draw.Color 0.9 0.8 0.7 1
-collisionSuffixTint = Draw.Color 1 1 1 1
-collisionSuffixBGColor = Draw.Color 0.7 0 0 1
-collisionSuffixScaleFactor = 0.5
-
-paramDefSuffixScaleFactor = 0.4
-
-enterSubexpressionKeys = [mk E.shift E.KeyRight]
-leaveSubexpressionKeys = [mk E.shift E.KeyLeft]
-
-replaceInferredValueKeys = noMods E.KeyEnter : delKeys
-keepInferredValueKeys = [noMods E.KeyEsc]
-acceptInferredValueKeys = [noMods E.KeySpace]
-
-nextInfoMode = [noMods E.KeyF7]
-
-operatorChars = "\\+-*/^=><&|%$:."
-alphaNumericChars = ['a'..'z'] ++ ['0'..'9']
-
-recordTypeParensColor = rightArrowColor
-recordValParensColor = Draw.Color 0.2 1 0.2 1
-recordAddFieldKeys = [k 'a', k ',']
-
-presentationChoiceScaleFactor = 0.4
-presentationChoiceColor = Draw.Color 0.4 0.4 0.4 1
-
-labeledApplyBGColor = Draw.Color 1 1 1 0.07

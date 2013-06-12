@@ -7,6 +7,7 @@ import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.Config.Default (defaultConfig)
 import qualified Control.Lens as Lens
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -31,9 +32,9 @@ makeUncoloredView getVar myId =
   ExpressionGui.makeNameView (getVar ^. Sugar.gvName) (Widget.toAnimId myId)
 
 colorOf :: Sugar.GetVarType -> Draw.Color
-colorOf Sugar.GetDefinition = Config.definitionColor
-colorOf Sugar.GetParameter = Config.parameterColor
-colorOf Sugar.GetFieldParameter = Config.parameterColor
+colorOf Sugar.GetDefinition = Config.definitionColor defaultConfig
+colorOf Sugar.GetParameter = Config.parameterColor defaultConfig
+colorOf Sugar.GetFieldParameter = Config.parameterColor defaultConfig
 
 makeView
   :: MonadA m
@@ -54,7 +55,7 @@ make getVar myId = do
   cp <- ExprGuiM.readCodeAnchors
   let
     jumpToDefinitionEventMap =
-      Widget.keysEventMapMovesCursor Config.jumpToDefinitionKeys
+      Widget.keysEventMapMovesCursor (Config.jumpToDefinitionKeys defaultConfig)
       (E.Doc ["Navigation", "Jump to definition"]) $ do
         DataOps.savePreJumpPosition cp myId
         WidgetIds.fromGuid <$> getVar ^. Sugar.gvJumpTo

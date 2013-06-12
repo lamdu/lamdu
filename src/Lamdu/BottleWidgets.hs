@@ -24,6 +24,7 @@ import Data.Store.Property (Property)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.View (View)
 import Graphics.UI.Bottle.Widget (Widget)
+import Lamdu.Config.Default (defaultConfig)
 import Lamdu.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
 import qualified Data.Store.Property as Property
@@ -64,7 +65,8 @@ makeFocusableView myId widget = do
   hasFocus <- fmap isJust $ WE.subCursor myId
   let
     setBackground
-      | hasFocus = Widget.backgroundColor Layers.cursorBG WidgetIds.backgroundCursorId Config.cursorBGColor
+      | hasFocus = Widget.backgroundColor Layers.cursorBG WidgetIds.backgroundCursorId $
+                   Config.cursorBGColor defaultConfig
       | otherwise = id
   return .
     (Widget.wIsFocused .~ hasFocus) . setBackground $
@@ -90,7 +92,7 @@ makeFocusableLabel text myIdPrefix = do
 
 fdStyle :: FocusDelegator.Style
 fdStyle = FocusDelegator.Style
-  { FocusDelegator.color = Config.cursorBGColor
+  { FocusDelegator.color = Config.cursorBGColor defaultConfig
   , FocusDelegator.layer = Layers.cursorBG
   , FocusDelegator.cursorBGAnimId = WidgetIds.backgroundCursorId
   }

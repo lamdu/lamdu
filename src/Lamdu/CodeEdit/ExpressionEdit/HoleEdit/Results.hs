@@ -26,6 +26,7 @@ import Data.Traversable (traverse)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiMArgument)
 import Lamdu.CodeEdit.Sugar (Scope(..))
+import Lamdu.Config.Default (defaultConfig)
 import Lamdu.Data.Expression (Expression(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Utils (ApplyFormAnnotation(..), pureHole)
@@ -283,13 +284,13 @@ data HaveHiddenResults = HaveHiddenResults | NoHiddenResults
 collectResults :: MonadA m => ListT m (ResultsList f) -> m ([ResultsList f], HaveHiddenResults)
 collectResults =
   conclude <=<
-  List.splitWhenM (return . (>= Config.holeResultCount) . length . fst) .
+  List.splitWhenM (return . (>= Config.holeResultCount defaultConfig) . length . fst) .
   List.scanl step ([], [])
   where
     haveHiddenResults [] = NoHiddenResults
     haveHiddenResults _ = HaveHiddenResults
     conclude (collectedResults, remainingResultsM) =
-      ( (Lens._2 %~ haveHiddenResults) . splitAt Config.holeResultCount
+      ( (Lens._2 %~ haveHiddenResults) . splitAt (Config.holeResultCount defaultConfig)
       . uncurry (++)
       . (Lens._1 %~ sortOn resultsListScore)
       . (Lens.both %~ reverse)

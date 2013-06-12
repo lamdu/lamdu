@@ -1,12 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lamdu.CodeEdit.ExpressionEdit.TagEdit(make, makeView) where
 
+import Control.Applicative ((<$>))
 import Control.MonadA (MonadA)
 import Data.Store.Transaction (Transaction)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.Config.Default (defaultConfig)
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -24,7 +26,10 @@ fdConfig = FocusDelegator.Config
   }
 
 onTagWidget :: Widget (Transaction m) -> ExpressionGui m
-onTagWidget = ExpressionGui.fromValueWidget . Widget.scale Config.tagScale . Widget.tint Config.fieldTint
+onTagWidget =
+  ExpressionGui.fromValueWidget .
+  Widget.scale (realToFrac <$> Config.tagScaleFactor defaultConfig) .
+  Widget.tint (Config.fieldTint defaultConfig)
 
 make
   :: MonadA m

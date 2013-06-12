@@ -8,6 +8,7 @@ import Data.Maybe (listToMaybe)
 import Data.Monoid (Monoid(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.Config.Default (defaultConfig)
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -25,7 +26,9 @@ make = ExpressionGui.wrapExpression . makeUnwrapped
 makeBracketLabel :: MonadA m => String -> Widget.Id -> ExprGuiM m (ExpressionGui f)
 makeBracketLabel =
   (fmap . fmap) ExpressionGui.fromValueWidget .
-  ExpressionGui.makeColoredLabel Config.listBracketTextSize Config.listBracketColor
+  ExpressionGui.makeColoredLabel
+  (Config.listBracketTextSize defaultConfig)
+  (Config.listBracketColor defaultConfig)
 
 makeUnwrapped ::
   MonadA m => Sugar.List m (Sugar.ExpressionN m) -> Widget.Id ->
@@ -54,9 +57,9 @@ makeUnwrapped (Sugar.List items mActions) myId =
       (Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "List", doc]) .
        fmap WidgetIds.fromGuid . actSelect) mActions
     addFirstElemEventMap =
-      actionEventMap Config.listAddItemKeys "Add First Item" Sugar.addFirstItem
+      actionEventMap (Config.listAddItemKeys defaultConfig) "Add First Item" Sugar.addFirstItem
     nilDeleteEventMap =
-      actionEventMap Config.delKeys "Replace nil with hole" Sugar.replaceNil
+      actionEventMap (Config.delKeys defaultConfig) "Replace nil with hole" Sugar.replaceNil
     firstBracketId = Widget.joinId myId ["first-bracket"]
     onFirstBracket label =
       ExpressionGui.makeFocusableView firstBracketId label
@@ -73,8 +76,8 @@ makeItem item = do
     ExprGuiM.listenResultPickers $
     Lens.sequenceOf Lens.both
     ( fmap ExpressionGui.fromValueWidget .
-      ExpressionGui.makeColoredLabel Config.listCommaTextSize
-      Config.listCommaColor ", " $ Widget.augmentId ',' itemWidgetId
+      ExpressionGui.makeColoredLabel (Config.listCommaTextSize defaultConfig)
+      (Config.listCommaColor defaultConfig) ", " $ Widget.augmentId ',' itemWidgetId
     , ExprGuiM.makeSubexpresion 0 itemExpr
     )
   return $ pair
@@ -90,10 +93,10 @@ makeItem item = do
       } =
       mconcat
       [ Widget.keysEventMapMovesCursor
-        Config.listAddItemKeys (doc resultPickers) $ do
+        (Config.listAddItemKeys defaultConfig) (doc resultPickers) $ do
           sequence_ resultPickers
           WidgetIds.fromGuid <$> addItem
-      , Widget.keysEventMapMovesCursor Config.delKeys
+      , Widget.keysEventMapMovesCursor (Config.delKeys defaultConfig)
         (E.Doc ["Edit", "List", "Delete Item"]) $
         WidgetIds.fromGuid <$> delItem
       ]

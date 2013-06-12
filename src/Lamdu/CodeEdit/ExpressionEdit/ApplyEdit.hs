@@ -11,6 +11,7 @@ import Data.Store.Guid (Guid)
 import Data.Traversable (traverse, sequenceA)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ParentPrecedence(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
+import Lamdu.Config.Default (defaultConfig)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Lamdu.BottleWidgets as BWidgets
@@ -91,7 +92,9 @@ makeArgRow myId (tagG, namedArgExpr) = do
     , (0, argValEdit)
     ]
   where
-    scaleTag = ExpressionGui.egWidget %~ Widget.scale Config.fieldTagScale
+    scaleTag =
+      ExpressionGui.egWidget %~
+      Widget.scale (realToFrac <$> Config.fieldTagScaleFactor defaultConfig)
     space = ExpressionGui.fromValueWidget BWidgets.stdSpaceWidget
 
 mkBoxed ::
@@ -104,7 +107,7 @@ mkBoxed destGuid mkFuncRow annotatedArgs =
     argEdits <-
       Grid.toWidget . Grid.make <$> traverse (makeArgRow myId) annotatedArgs
     ExpressionGui.withBgColor Layers.labeledApplyBG
-      Config.labeledApplyBGColor (Widget.toAnimId myId ++ ["bg"]) .
+      (Config.labeledApplyBGColor defaultConfig) (Widget.toAnimId myId ++ ["bg"]) .
       ExpressionGui.addBelow 0 [(0, argEdits)] <$> mkFuncRow
 
 mkMParened ::
