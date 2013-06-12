@@ -8,7 +8,6 @@ import Data.Maybe (listToMaybe)
 import Data.Monoid (Monoid(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
-import Lamdu.Config.Default (defaultConfig)
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -16,6 +15,7 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
+import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
 make ::
@@ -24,11 +24,13 @@ make ::
 make = ExpressionGui.wrapExpression . makeUnwrapped
 
 makeBracketLabel :: MonadA m => String -> Widget.Id -> ExprGuiM m (ExpressionGui f)
-makeBracketLabel =
-  (fmap . fmap) ExpressionGui.fromValueWidget .
-  ExpressionGui.makeColoredLabel
-  (Config.listBracketTextSize defaultConfig)
-  (Config.listBracketColor defaultConfig)
+makeBracketLabel label myId = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  ExpressionGui.fromValueWidget <$>
+    ExpressionGui.makeColoredLabel
+    (Config.listBracketTextSize config)
+    (Config.listBracketColor config)
+    label myId
 
 makeUnwrapped ::
   MonadA m => Sugar.List m (Sugar.ExpressionN m) -> Widget.Id ->
@@ -38,6 +40,16 @@ makeUnwrapped (Sugar.List items mActions) myId =
   mapM makeItem items >>= \itemEdits -> do
     bracketOpenLabel <- makeBracketLabel "[" myId
     bracketCloseLabel <- makeBracketLabel "]" myId
+    config <- ExprGuiM.widgetEnv WE.readConfig
+    let
+      nilDeleteEventMap =
+        actionEventMap (Config.delKeys config) "Replace nil with hole" Sugar.replaceNil
+      addFirstElemEventMap =
+        actionEventMap (Config.listAddItemKeys config) "Add First Item" Sugar.addFirstItem
+      onFirstBracket label =
+        ExpressionGui.makeFocusableView firstBracketId label
+        & Lens.mapped . ExpressionGui.egWidget %~
+          Widget.weakerEvents addFirstElemEventMap
     case itemEdits of
       [] ->
         onFirstBracket $ ExpressionGui.hbox [bracketOpenLabel, bracketCloseLabel]
@@ -56,15 +68,7 @@ makeUnwrapped (Sugar.List items mActions) myId =
       maybe mempty
       (Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "List", doc]) .
        fmap WidgetIds.fromGuid . actSelect) mActions
-    addFirstElemEventMap =
-      actionEventMap (Config.listAddItemKeys defaultConfig) "Add First Item" Sugar.addFirstItem
-    nilDeleteEventMap =
-      actionEventMap (Config.delKeys defaultConfig) "Replace nil with hole" Sugar.replaceNil
     firstBracketId = Widget.joinId myId ["first-bracket"]
-    onFirstBracket label =
-      ExpressionGui.makeFocusableView firstBracketId label
-      & Lens.mapped . ExpressionGui.egWidget %~
-        Widget.weakerEvents addFirstElemEventMap
     cursorDest = maybe firstBracketId itemId $ listToMaybe items
 
 makeItem ::
@@ -72,12 +76,27 @@ makeItem ::
   Sugar.ListItem m (Sugar.ExpressionN m) ->
   ExprGuiM m (ExpressionGui m, ExpressionGui m)
 makeItem item = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  let
+    mkItemEventMap resultPickers Sugar.ListItemActions
+      { Sugar._itemAddNext = addItem
+      , Sugar._itemDelete = delItem
+      } =
+      mconcat
+      [ Widget.keysEventMapMovesCursor
+        (Config.listAddItemKeys config) (doc resultPickers) $ do
+          sequence_ resultPickers
+          WidgetIds.fromGuid <$> addItem
+      , Widget.keysEventMapMovesCursor (Config.delKeys config)
+        (E.Doc ["Edit", "List", "Delete Item"]) $
+        WidgetIds.fromGuid <$> delItem
+      ]
   (pair, resultPickers) <-
     ExprGuiM.listenResultPickers $
     Lens.sequenceOf Lens.both
     ( fmap ExpressionGui.fromValueWidget .
-      ExpressionGui.makeColoredLabel (Config.listCommaTextSize defaultConfig)
-      (Config.listCommaColor defaultConfig) ", " $ Widget.augmentId ',' itemWidgetId
+      ExpressionGui.makeColoredLabel (Config.listCommaTextSize config)
+      (Config.listCommaColor config) ", " $ Widget.augmentId ',' itemWidgetId
     , ExprGuiM.makeSubexpresion 0 itemExpr
     )
   return $ pair
@@ -87,18 +106,5 @@ makeItem item = do
   where
     itemExpr = Sugar.liExpr item
     itemWidgetId = WidgetIds.fromGuid $ itemExpr ^. Sugar.rGuid
-    mkItemEventMap resultPickers Sugar.ListItemActions
-      { Sugar._itemAddNext = addItem
-      , Sugar._itemDelete = delItem
-      } =
-      mconcat
-      [ Widget.keysEventMapMovesCursor
-        (Config.listAddItemKeys defaultConfig) (doc resultPickers) $ do
-          sequence_ resultPickers
-          WidgetIds.fromGuid <$> addItem
-      , Widget.keysEventMapMovesCursor (Config.delKeys defaultConfig)
-        (E.Doc ["Edit", "List", "Delete Item"]) $
-        WidgetIds.fromGuid <$> delItem
-      ]
     doc [] = E.Doc ["Edit", "List", "Add Next Item"]
     doc _ = E.Doc ["Edit", "List", "Pick Result and Add Next Item"]

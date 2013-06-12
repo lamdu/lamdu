@@ -24,7 +24,7 @@ import Data.Store.Property (Property)
 import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.View (View)
 import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.Config.Default (defaultConfig)
+import Lamdu.Config (Config)
 import Lamdu.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
 import qualified Data.Store.Property as Property
@@ -63,10 +63,11 @@ makeFocusableView
   -> WidgetEnvT m (Widget f)
 makeFocusableView myId widget = do
   hasFocus <- fmap isJust $ WE.subCursor myId
+  config <- WE.readConfig
   let
     setBackground
       | hasFocus = Widget.backgroundColor Layers.cursorBG WidgetIds.backgroundCursorId $
-                   Config.cursorBGColor defaultConfig
+                   Config.cursorBGColor config
       | otherwise = id
   return .
     (Widget.wIsFocused .~ hasFocus) . setBackground $
@@ -90,25 +91,27 @@ makeFocusableLabel text myIdPrefix = do
   where
     myId = Widget.joinId myIdPrefix [pack text]
 
-fdStyle :: FocusDelegator.Style
-fdStyle = FocusDelegator.Style
-  { FocusDelegator.color = Config.cursorBGColor defaultConfig
+fdStyle :: Config -> FocusDelegator.Style
+fdStyle config = FocusDelegator.Style
+  { FocusDelegator.color = Config.cursorBGColor config
   , FocusDelegator.layer = Layers.cursorBG
   , FocusDelegator.cursorBGAnimId = WidgetIds.backgroundCursorId
   }
 
-wrapDelegatedWith
-  :: (Applicative f, MonadA m)
-  => m Widget.Id
-  -> ((Widget.Id -> Widget.Id) -> m a -> m a)
-  -> FocusDelegator.Config
-  -> FocusDelegator.IsDelegating
-  -> ((Widget f -> Widget f) -> a -> b)
-  -> (Widget.Id -> m a)
-  -> Widget.Id -> m b
-wrapDelegatedWith readCursor atCursor config entryState aToB mkA myId = do
+-- TODO: Clean this hell up:
+wrapDelegatedWith ::
+  (Applicative f, MonadA m) =>
+  m Widget.Id -> m Config ->
+  ((Widget.Id -> Widget.Id) -> m a -> m a) ->
+  FocusDelegator.Config ->
+  FocusDelegator.IsDelegating ->
+  ((Widget f -> Widget f) -> a -> b) ->
+  (Widget.Id -> m a) ->
+  Widget.Id -> m b
+wrapDelegatedWith readCursor readConfig atCursor fdConfig entryState aToB mkA myId = do
   cursor <- readCursor
-  FocusDelegator.wrapEnv (FocusDelegator.Env config fdStyle) entryState mk myId cursor
+  config <- readConfig
+  FocusDelegator.wrapEnv (FocusDelegator.Env fdConfig (fdStyle config)) entryState mk myId cursor
   where
     mk f innerId newCursor =
       fmap (aToB f) . (atCursor . const) newCursor $ mkA innerId
@@ -121,7 +124,7 @@ wrapDelegatedOT
   -> ((Widget f -> Widget f) -> a -> b)
   -> (Widget.Id -> WidgetEnvT m a)
   -> Widget.Id -> WidgetEnvT m b
-wrapDelegatedOT = wrapDelegatedWith WE.readCursor (WE.localEnv . (WE.envCursor %~))
+wrapDelegatedOT = wrapDelegatedWith WE.readCursor WE.readConfig (WE.localEnv . (WE.envCursor %~))
 
 makeTextEdit ::
   MonadA m =>

@@ -4,7 +4,6 @@ import Control.MonadA (MonadA)
 import Data.List.Split (splitOn)
 import Data.Store.Property (Property(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (WidgetT, ExprGuiM)
-import Lamdu.Config.Default (defaultConfig)
 import qualified Data.List as List
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -15,6 +14,7 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Definition as Definition
+import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
 builtinFDConfig :: FocusDelegator.Config
@@ -32,11 +32,12 @@ make
   -> ExprGuiM m (WidgetT m)
 make (Sugar.DefinitionBuiltin (Definition.FFIName modulePath name) setFFIName _) myId =
   ExprGuiM.assignCursor myId (WidgetIds.builtinFFIName myId) $ do
+    config <- ExprGuiM.widgetEnv WE.readConfig
     moduleName <-
-      makeNamePartEditor (Config.foreignModuleColor defaultConfig)
+      makeNamePartEditor (Config.foreignModuleColor config)
       modulePathStr modulePathSetter WidgetIds.builtinFFIPath
     varName <-
-      makeNamePartEditor (Config.foreignVarColor defaultConfig) name nameSetter
+      makeNamePartEditor (Config.foreignVarColor config) name nameSetter
       WidgetIds.builtinFFIName
     dot <- ExprGuiM.widgetEnv . BWidgets.makeLabel "." $ Widget.toAnimId myId
     return $ Box.hboxCentered [moduleName, dot, varName]

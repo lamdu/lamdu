@@ -196,7 +196,7 @@ wrapDelegated ::
   (Widget.Id -> ExprGuiM m a) ->
   Widget.Id -> ExprGuiM m b
 wrapDelegated =
-  BWidgets.wrapDelegatedWith (widgetEnv WE.readCursor)
+  BWidgets.wrapDelegatedWith (widgetEnv WE.readCursor) (widgetEnv WE.readConfig)
   (localEnv . (WE.envCursor %~))
 
 -- Used vars:

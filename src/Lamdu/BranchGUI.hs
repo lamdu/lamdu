@@ -14,7 +14,7 @@ import Data.Store.Rev.Branch (Branch)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Graphics.UI.Bottle.Widget (Widget)
-import Lamdu.Config.Default (defaultConfig)
+import Lamdu.Config (Config)
 import Lamdu.VersionControl.Actions (Actions(..))
 import Lamdu.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
@@ -29,6 +29,7 @@ import qualified Graphics.UI.Bottle.Widgets.Edges as Edges
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.Config as Config
+import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
 branchNameFDConfig :: FocusDelegator.Config
@@ -39,37 +40,37 @@ branchNameFDConfig = FocusDelegator.Config
   , FocusDelegator.stopDelegatingDoc = E.Doc ["Branches", "Done renaming"]
   }
 
-undoEventMap :: Functor m => Maybe (m Widget.Id) -> Widget.EventHandlers m
-undoEventMap =
+undoEventMap :: Functor m => Config -> Maybe (m Widget.Id) -> Widget.EventHandlers m
+undoEventMap config =
   maybe mempty .
-  Widget.keysEventMapMovesCursor (Config.undoKeys defaultConfig) $ E.Doc ["Edit", "Undo"]
+  Widget.keysEventMapMovesCursor (Config.undoKeys config) $ E.Doc ["Edit", "Undo"]
 
-redoEventMap :: Functor m => Maybe (m Widget.Id) -> Widget.EventHandlers m
-redoEventMap =
+redoEventMap :: Functor m => Config -> Maybe (m Widget.Id) -> Widget.EventHandlers m
+redoEventMap config =
   maybe mempty .
-  Widget.keysEventMapMovesCursor (Config.redoKeys defaultConfig) $ E.Doc ["Edit", "Redo"]
+  Widget.keysEventMapMovesCursor (Config.redoKeys config) $ E.Doc ["Edit", "Redo"]
 
 branchNameProp ::
   MonadA m => Branch (Tag m) -> Transaction.MkProperty m String
 branchNameProp = Transaction.assocDataRefDef "" "name" . Branch.guid
 
-globalEventMap :: Applicative f => Actions t f -> Widget.EventHandlers f
-globalEventMap actions = mconcat
-  [ Widget.keysEventMapMovesCursor (Config.makeBranchKeys defaultConfig)
+globalEventMap :: Applicative f => Config -> Actions t f -> Widget.EventHandlers f
+globalEventMap config actions = mconcat
+  [ Widget.keysEventMapMovesCursor (Config.makeBranchKeys config)
     (E.Doc ["Branches", "New"]) $
     FocusDelegator.delegatingId . WidgetIds.fromGuid . Branch.guid <$>
     makeBranch actions
-  , Widget.keysEventMapMovesCursor (Config.jumpToBranchesKeys defaultConfig)
+  , Widget.keysEventMapMovesCursor (Config.jumpToBranchesKeys config)
     (E.Doc ["Branches", "Select"]) $
     pure currentBranchWidgetId
-  , undoEventMap $ mUndo actions
-  , redoEventMap $ mRedo actions
+  , undoEventMap config $ mUndo actions
+  , redoEventMap config $ mRedo actions
   ]
   where
     currentBranchWidgetId = WidgetIds.fromGuid . Branch.guid $ currentBranch actions
 
-choiceWidgetConfig :: BWidgets.ChoiceWidgetConfig
-choiceWidgetConfig = BWidgets.ChoiceWidgetConfig
+choiceWidgetConfig :: Config -> BWidgets.ChoiceWidgetConfig
+choiceWidgetConfig config = BWidgets.ChoiceWidgetConfig
   { BWidgets.cwcFDConfig =
     FocusDelegator.Config
     { FocusDelegator.startDelegatingKeys = [E.ModKey E.noMods E.KeyEnter]
@@ -78,7 +79,7 @@ choiceWidgetConfig = BWidgets.ChoiceWidgetConfig
     , FocusDelegator.stopDelegatingDoc = E.Doc ["Branches", "Choose selected"]
     }
   , BWidgets.cwcExpandMode =
-      BWidgets.AutoExpand $ Config.selectedBranchColor defaultConfig
+      BWidgets.AutoExpand $ Config.selectedBranchColor config
   , BWidgets.cwcOrientation = Box.vertical
   }
 
@@ -88,15 +89,8 @@ make ::
   Widget.Size -> Actions (Tag n) m -> Widget m ->
   WidgetEnvT m (Widget m)
 make transaction size actions widget = do
-  branchNameEdits <- traverse makeBranchNameEdit $ branches actions
-  branchSelector <-
-    BWidgets.makeChoiceWidget (setCurrentBranch actions)
-    branchNameEdits (currentBranch actions) choiceWidgetConfig
-    WidgetIds.branchSelection
-  return .
-    Widget.strongerEvents (globalEventMap actions) $
-    Edges.makeVertical size widget branchSelector
-  where
+  config <- WE.readConfig
+  let
     makeBranchNameEdit branch = do
       let branchEditId = WidgetIds.fromGuid $ Branch.guid branch
       nameProp <-
@@ -111,7 +105,15 @@ make transaction size actions widget = do
         delEventMap
           | ListUtils.isLengthAtLeast 2 (branches actions) =
             Widget.keysEventMapMovesCursor
-            (Config.delBranchKeys defaultConfig) (E.Doc ["Branches", "Delete"])
+            (Config.delBranchKeys config) (E.Doc ["Branches", "Delete"])
             (WidgetIds.fromGuid . Branch.guid <$> deleteBranch actions branch)
           | otherwise = mempty
       return (branch, branchNameEdit & Widget.weakerEvents delEventMap)
+  branchNameEdits <- traverse makeBranchNameEdit $ branches actions
+  branchSelector <-
+    BWidgets.makeChoiceWidget (setCurrentBranch actions)
+    branchNameEdits (currentBranch actions) (choiceWidgetConfig config)
+    WidgetIds.branchSelection
+  return .
+    Widget.strongerEvents (globalEventMap config actions) $
+    Edges.makeVertical size widget branchSelector

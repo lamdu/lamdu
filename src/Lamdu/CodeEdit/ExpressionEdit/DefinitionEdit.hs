@@ -14,7 +14,7 @@ import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CharClassification (operatorChars)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, Collapser(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
-import Lamdu.Config.Default (defaultConfig)
+import Lamdu.Config (Config)
 import qualified Control.Lens as Lens
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -59,11 +59,11 @@ nonOperatorName (Sugar.Name Sugar.StoredName _ x) =
   nonEmptyAll (`notElem` operatorChars) x
 nonOperatorName _ = False
 
-polyNameFDConfig :: FocusDelegator.Config
-polyNameFDConfig = FocusDelegator.Config
-  { FocusDelegator.startDelegatingKeys = Config.collapsedExpandKeys defaultConfig
+polyNameFDConfig :: Config -> FocusDelegator.Config
+polyNameFDConfig config = FocusDelegator.Config
+  { FocusDelegator.startDelegatingKeys = Config.collapsedExpandKeys config
   , FocusDelegator.startDelegatingDoc = E.Doc ["View", "Expand polymorphic"]
-  , FocusDelegator.stopDelegatingKeys = Config.collapsedCollapseKeys defaultConfig
+  , FocusDelegator.stopDelegatingKeys = Config.collapsedCollapseKeys config
   , FocusDelegator.stopDelegatingDoc = E.Doc ["View", "Collapse polymorphic"]
   }
 
@@ -71,27 +71,29 @@ makePolyNameEdit ::
   MonadA m =>
   Sugar.Name -> Guid -> [ExpressionGui m] -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
-makePolyNameEdit name guid depParamsEdits =
-  case depParamsEdits of
-  [] -> makeNameGui $ Config.monomorphicDefOriginForegroundColor defaultConfig
-  _ -> ExpressionGui.makeCollapser polyNameFDConfig f
-  where
-    f myId =
+makePolyNameEdit name guid depParamsEdits myId = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  let
+    f wId =
       Collapser
       { cMakeExpanded =
         ExpressionGui.withBgColor Layers.collapsedExpandedBG
-        (Config.collapsedExpandedBGColor defaultConfig) bgId .
+        (Config.collapsedExpandedBGColor config) bgId .
         ExpressionGui.hboxSpaced . (: depParamsEdits) <$>
-        nameGui (Config.monomorphicDefOriginForegroundColor defaultConfig)
+        nameGui (Config.monomorphicDefOriginForegroundColor config)
       , cMakeFocusedCompact =
-        nameGui $ Config.polymorphicDefOriginForegroundColor defaultConfig
+        nameGui $ Config.polymorphicDefOriginForegroundColor config
       }
       where
-        nameGui color = makeNameGui color myId
-        bgId = Widget.toAnimId myId ++ ["bg"]
-    makeNameGui color myId =
+        nameGui color = makeNameGui color wId
+        bgId = Widget.toAnimId wId ++ ["bg"]
+  case depParamsEdits of
+    [] -> makeNameGui (Config.monomorphicDefOriginForegroundColor config) myId
+    _ -> ExpressionGui.makeCollapser (polyNameFDConfig config) f myId
+  where
+    makeNameGui color wId =
       ExprGuiM.withFgColor color $
-      ExpressionGui.fromValueWidget <$> makeNameEdit name myId guid
+      ExpressionGui.fromValueWidget <$> makeNameEdit name wId guid
 
 makeWheres ::
   MonadA m =>
@@ -99,14 +101,15 @@ makeWheres ::
   ExprGuiM m [Widget (T m)]
 makeWheres [] _ = return []
 makeWheres whereItems myId = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
   whereLabel <-
-    (fmap . Widget.scale) (realToFrac <$> Config.whereLabelScaleFactor defaultConfig) .
+    (fmap . Widget.scale) (realToFrac <$> Config.whereLabelScaleFactor config) .
     ExprGuiM.widgetEnv . BWidgets.makeLabel "where" $ Widget.toAnimId myId
   itemEdits <- traverse makeWhereItemEdit $ reverse whereItems
   return
     [ BWidgets.hboxSpaced
       [ (0, whereLabel)
-      , (0, Widget.scale (realToFrac <$> Config.whereScaleFactor defaultConfig) $ Box.vboxAlign 0 itemEdits)
+      , (0, Widget.scale (realToFrac <$> Config.whereScaleFactor config) $ Box.vboxAlign 0 itemEdits)
       ]
     ]
 
@@ -125,19 +128,21 @@ presentationModeChoiceConfig = BWidgets.ChoiceWidgetConfig
 mkPresentationEdits :: MonadA m => Guid -> Widget.Id -> ExprGuiM m (Widget (T m))
 mkPresentationEdits guid myId = do
   cur <- ExprGuiM.transaction $ Transaction.getP mkProp
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  let
+    mkPair presentationMode = do
+      widget <-
+        ExprGuiM.withFgColor (Config.presentationChoiceColor config) .
+        ExprGuiM.widgetEnv $
+        BWidgets.makeFocusableLabel (show presentationMode) myId
+      return (presentationMode, widget)
   pairs <- traverse mkPair [minBound..maxBound]
-  fmap (Widget.scale (realToFrac <$> Config.presentationChoiceScaleFactor defaultConfig)) .
+  fmap (Widget.scale (realToFrac <$> Config.presentationChoiceScaleFactor config)) .
     ExprGuiM.widgetEnv $
     BWidgets.makeChoiceWidget (Transaction.setP mkProp) pairs cur
     presentationModeChoiceConfig myId
   where
     mkProp = Anchors.assocPresentationMode guid
-    mkPair presentationMode = do
-      widget <-
-        ExprGuiM.withFgColor (Config.presentationChoiceColor defaultConfig) .
-        ExprGuiM.widgetEnv $
-        BWidgets.makeFocusableLabel (show presentationMode) myId
-      return (presentationMode, widget)
 
 makeDefContentEdit ::
   MonadA m => Guid -> Sugar.Name ->
@@ -155,9 +160,15 @@ makeDefContentEdit guid name content = do
       | otherwise = widget
   (depParamsEdits, paramsEdits) <-
     makeNestedParams jumpToRHSViaEquals rhs myId depParams params
+  config <- ExprGuiM.widgetEnv WE.readConfig
   bodyEdit <- makeResultEdit lhs body
-  rhsJumper <- jumpToRHS (Config.jumpLHStoRHSKeys defaultConfig) rhs
-  let nameEditEventMap = mappend addFirstParamEventMap rhsJumper
+  rhsJumper <- jumpToRHS (Config.jumpLHStoRHSKeys config) rhs
+  let
+    addFirstParamEventMap =
+      Widget.keysEventMapMovesCursor (Config.addNextParamKeys config)
+      (E.Doc ["Edit", "Add parameter"]) .
+      toEventMapAction $ Sugar.dAddFirstParam content
+    nameEditEventMap = mappend addFirstParamEventMap rhsJumper
   polyNameEdit <-
     makePolyNameEdit name guid depParamsEdits myId
     & Lens.mapped . ExpressionGui.egWidget %~
@@ -169,7 +180,7 @@ makeDefContentEdit guid name content = do
     else return []
   let
     addWhereItemEventMap =
-      Widget.keysEventMapMovesCursor (Config.addWhereItemKeys defaultConfig)
+      Widget.keysEventMapMovesCursor (Config.addWhereItemKeys config)
       (E.Doc ["Edit", "Add where item"]) .
       toEventMapAction $ savePos >> Sugar.dAddInnermostWhereItem content
     assignment =
@@ -192,10 +203,6 @@ makeDefContentEdit guid name content = do
     depParams = Sugar.dDepParams content
     params = Sugar.dParams content
     body = Sugar.dBody content
-    addFirstParamEventMap =
-      Widget.keysEventMapMovesCursor (Config.addNextParamKeys defaultConfig)
-      (E.Doc ["Edit", "Add parameter"]) .
-      toEventMapAction $ Sugar.dAddFirstParam content
     toEventMapAction =
       fmap (FocusDelegator.delegatingId . WidgetIds.fromGuid)
     myId = WidgetIds.fromGuid guid
@@ -216,12 +223,13 @@ makeBuiltinDefinition ::
   Sugar.Definition Sugar.Name m (Sugar.ExpressionN m) ->
   Sugar.DefinitionBuiltin m (Sugar.ExpressionN m) ->
   ExprGuiM m (WidgetT m)
-makeBuiltinDefinition def builtin =
+makeBuiltinDefinition def builtin = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
   Box.vboxAlign 0 <$> sequenceA
-    [ defTypeScale . (^. ExpressionGui.egWidget) <$>
+    [ defTypeScale config . (^. ExpressionGui.egWidget) <$>
       ExprGuiM.makeSubexpresion 0 (Sugar.biType builtin)
     , BWidgets.hboxCenteredSpaced <$> sequenceA
-      [ ExprGuiM.withFgColor (Config.builtinOriginNameColor defaultConfig) $
+      [ ExprGuiM.withFgColor (Config.builtinOriginNameColor config) $
         makeNameEdit name (Widget.joinId myId ["name"]) guid
       , makeEquals myId
       , BuiltinEdit.make builtin myId
@@ -231,32 +239,34 @@ makeBuiltinDefinition def builtin =
     Sugar.Definition guid name _ = def
     myId = WidgetIds.fromGuid guid
 
-defTypeScale :: Widget f -> Widget f
-defTypeScale = Widget.scale $ realToFrac <$> Config.defTypeBoxScaleFactor defaultConfig
+defTypeScale :: Config -> Widget f -> Widget f
+defTypeScale config = Widget.scale $ realToFrac <$> Config.defTypeBoxScaleFactor config
 
 makeWhereItemEdit ::
   MonadA m =>
   Sugar.WhereItem Sugar.Name m (Sugar.ExpressionN m) ->
   ExprGuiM m (WidgetT m)
-makeWhereItemEdit item =
+makeWhereItemEdit item = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  let
+    eventMap
+      | Just wiActions <- Sugar.wiActions item =
+        mconcat
+        [ Widget.keysEventMapMovesCursor (Config.delKeys config)
+          (E.Doc ["Edit", "Where item", "Delete"]) .
+          fmap WidgetIds.fromGuid $ wiActions ^. Sugar.itemDelete
+        , Widget.keysEventMapMovesCursor (Config.addWhereItemKeys config)
+          (E.Doc ["Edit", "Where item", "Add"]) .
+          fmap WidgetIds.fromGuid $ wiActions ^. Sugar.itemAddNext
+        ]
+      | otherwise = mempty
   fmap (Widget.weakerEvents eventMap) . assignCursor $
-  makeDefContentEdit (Sugar.wiGuid item) (Sugar.wiName item) (Sugar.wiValue item)
+    makeDefContentEdit (Sugar.wiGuid item) (Sugar.wiName item) (Sugar.wiValue item)
   where
     assignCursor =
       foldr ((.) . (`ExprGuiM.assignCursor` myId) . WidgetIds.fromGuid) id $
       Sugar.wiHiddenGuids item
     myId = WidgetIds.fromGuid $ Sugar.wiGuid item
-    eventMap
-      | Just wiActions <- Sugar.wiActions item =
-      mconcat
-      [ Widget.keysEventMapMovesCursor (Config.delKeys defaultConfig)
-        (E.Doc ["Edit", "Where item", "Delete"]) .
-        fmap WidgetIds.fromGuid $ wiActions ^. Sugar.itemDelete
-      , Widget.keysEventMapMovesCursor (Config.addWhereItemKeys defaultConfig)
-        (E.Doc ["Edit", "Where item", "Add"]) .
-        fmap WidgetIds.fromGuid $ wiActions ^. Sugar.itemAddNext
-      ]
-      | otherwise = mempty
 
 makeExprDefinition ::
   MonadA m =>
@@ -264,6 +274,30 @@ makeExprDefinition ::
   Sugar.DefinitionExpression Sugar.Name m (Sugar.ExpressionN m) ->
   ExprGuiM m (WidgetT m)
 makeExprDefinition def bodyExpr = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  let
+    makeGrid = (:[]) . defTypeScale config . BWidgets.gridHSpaced
+    addAcceptanceArrow acceptInferredType label = do
+      acceptanceLabel <-
+        (fmap . Widget.weakerEvents)
+        (Widget.keysEventMapMovesCursor (Config.acceptInferredTypeKeys config)
+         (E.Doc ["Edit", "Accept inferred type"]) (acceptInferredType >> return myId)) .
+        ExprGuiM.widgetEnv .
+        BWidgets.makeFocusableTextView "↱" $ Widget.joinId myId ["accept type"]
+      return $ BWidgets.hboxCenteredSpaced [acceptanceLabel, label]
+    labelStyle =
+      ExprGuiM.localEnv $ WE.setTextSizeColor
+      (Config.defTypeLabelTextSize config)
+      (Config.defTypeLabelColor config)
+    mkTypeRow labelText onLabel typeExpr = do
+      label <-
+        onLabel . labelStyle . ExprGuiM.widgetEnv .
+        BWidgets.makeLabel labelText $ Widget.toAnimId myId
+      typeGui <- ExprGuiM.makeSubexpresion 0 typeExpr
+      return
+        [ (right, label)
+        , (center, Widget.doesntTakeFocus (typeGui ^. ExpressionGui.egWidget))
+        ]
   typeWidgets <-
     case bodyExpr ^. Sugar.deTypeInfo of
     Sugar.DefinitionExportedTypeInfo x ->
@@ -284,32 +318,10 @@ makeExprDefinition def bodyExpr = do
     makeDefContentEdit guid name $ bodyExpr ^. Sugar.deContent
   return . Box.vboxAlign 0 $ typeWidgets ++ [bodyWidget]
   where
-    makeGrid = (:[]) . defTypeScale . BWidgets.gridHSpaced
-    addAcceptanceArrow acceptInferredType label = do
-      acceptanceLabel <-
-        (fmap . Widget.weakerEvents)
-        (Widget.keysEventMapMovesCursor (Config.acceptInferredTypeKeys defaultConfig)
-         (E.Doc ["Edit", "Accept inferred type"]) (acceptInferredType >> return myId)) .
-        ExprGuiM.widgetEnv .
-        BWidgets.makeFocusableTextView "↱" $ Widget.joinId myId ["accept type"]
-      return $ BWidgets.hboxCenteredSpaced [acceptanceLabel, label]
     right = Vector2 1 0.5
     center = 0.5
-    mkTypeRow labelText onLabel typeExpr = do
-      label <-
-        onLabel . labelStyle . ExprGuiM.widgetEnv .
-        BWidgets.makeLabel labelText $ Widget.toAnimId myId
-      typeGui <- ExprGuiM.makeSubexpresion 0 typeExpr
-      return
-        [ (right, label)
-        , (center, Widget.doesntTakeFocus (typeGui ^. ExpressionGui.egWidget))
-        ]
     Sugar.Definition guid name _ = def
     myId = WidgetIds.fromGuid guid
-    labelStyle =
-      ExprGuiM.localEnv $ WE.setTextSizeColor
-      (Config.defTypeLabelTextSize defaultConfig)
-      (Config.defTypeLabelColor defaultConfig)
 
 diveToNameEdit :: Widget.Id -> Widget.Id
 diveToNameEdit =
@@ -338,10 +350,11 @@ makeResultEdit
   -> ExprGuiM m (ExpressionGui m)
 makeResultEdit lhs result = do
   savePos <- ExprGuiM.mkPrejumpPosSaver
+  config <- ExprGuiM.widgetEnv WE.readConfig
   let
     jumpToLhsEventMap =
       Widget.keysEventMapMovesCursor
-      (Config.jumpRHStoLHSKeys defaultConfig) (E.Doc ["Navigation", "Jump to last param"]) $
+      (Config.jumpRHStoLHSKeys config) (E.Doc ["Navigation", "Jump to last param"]) $
       lastParam <$ savePos
   ExprGuiM.makeSubexpresion 0 result
     & Lens.mapped . ExpressionGui.egWidget %~
@@ -376,7 +389,8 @@ makeNestedParams ::
  -> [Sugar.FuncParam Sugar.Name m (Sugar.ExpressionN m)]
  -> ExprGuiM m ([ExpressionGui m], [ExpressionGui m])
 makeNestedParams atParamWidgets rhs firstParId depParams params = do
-  rhsJumper <- jumpToRHS (Config.jumpLHStoRHSKeys defaultConfig) rhs
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  rhsJumper <- jumpToRHS (Config.jumpLHStoRHSKeys config) rhs
   let
     (depParamIds, paramIds) = addPrevIds firstParId depParams params
     mkParam (prevId, param) =

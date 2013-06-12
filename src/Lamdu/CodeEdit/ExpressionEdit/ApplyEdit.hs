@@ -11,7 +11,6 @@ import Data.Store.Guid (Guid)
 import Data.Traversable (traverse, sequenceA)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ParentPrecedence(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
-import Lamdu.Config.Default (defaultConfig)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.Grid as Grid
 import qualified Lamdu.BottleWidgets as BWidgets
@@ -23,6 +22,7 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.Wrap as Wrap
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Layers as Layers
+import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
 infixPrecedence :: ExpressionGui.Precedence
@@ -36,32 +36,34 @@ make ::
   Sugar.ExpressionN m ->
   Sugar.Apply Sugar.Name (Sugar.ExpressionN m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-make (ParentPrecedence parentPrecedence) exprS (Sugar.Apply func specialArgs annotatedArgs) myId =
-  case specialArgs of
-  Sugar.NoSpecialArgs ->
-    mk Nothing $
-    overrideHoleWrap <$> ExprGuiM.makeSubexpresion (if isBoxed then 0 else parentPrecedence) func
-  Sugar.ObjectArg arg ->
-    mk (Just prefixPrecedence) $ ExpressionGui.hboxSpaced <$> sequenceA
-    [ maybeOverrideHoleWrap <$> ExprGuiM.makeSubexpresion (prefixPrecedence+1) func
-    , ExprGuiM.makeSubexpresion prefixPrecedence arg
-    ]
-  Sugar.InfixArgs l r ->
-    mk (Just infixPrecedence) $ ExpressionGui.hboxSpaced <$> sequenceA
-    [ ExprGuiM.makeSubexpresion (infixPrecedence+1) l
-    , -- TODO: What precedence to give when it must be atomic?:
-      overrideHoleWrap <$> ExprGuiM.makeSubexpresion 20 func
-    , ExprGuiM.makeSubexpresion (infixPrecedence+1) r
-    ]
-  where
+make (ParentPrecedence parentPrecedence) exprS (Sugar.Apply func specialArgs annotatedArgs) myId = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  let
     maybeOverrideHoleWrap
       | null annotatedArgs = id
       | otherwise = overrideHoleWrap
     overrideHoleWrap =
       ExpressionGui.egWidget %~ Widget.strongerEvents overrideWrapEventMap
     overrideWrapEventMap =
-      maybe mempty Wrap.eventMap $
+      maybe mempty (Wrap.eventMap config) $
       exprS ^. Sugar.rPayload . Sugar.plActions
+  case specialArgs of
+    Sugar.NoSpecialArgs ->
+      mk Nothing $
+      overrideHoleWrap <$> ExprGuiM.makeSubexpresion (if isBoxed then 0 else parentPrecedence) func
+    Sugar.ObjectArg arg ->
+      mk (Just prefixPrecedence) $ ExpressionGui.hboxSpaced <$> sequenceA
+      [ maybeOverrideHoleWrap <$> ExprGuiM.makeSubexpresion (prefixPrecedence+1) func
+      , ExprGuiM.makeSubexpresion prefixPrecedence arg
+      ]
+    Sugar.InfixArgs l r ->
+      mk (Just infixPrecedence) $ ExpressionGui.hboxSpaced <$> sequenceA
+      [ ExprGuiM.makeSubexpresion (infixPrecedence+1) l
+      , -- TODO: What precedence to give when it must be atomic?:
+        overrideHoleWrap <$> ExprGuiM.makeSubexpresion 20 func
+      , ExprGuiM.makeSubexpresion (infixPrecedence+1) r
+      ]
+  where
     isBoxed = not $ null annotatedArgs
     destGuid = func ^. Sugar.rGuid
     mk mPrecedence mkFuncRow
@@ -86,15 +88,17 @@ makeArgRow ::
 makeArgRow myId (tagG, namedArgExpr) = do
   argTagEdit <- makeTagView myId tagG
   argValEdit <- ExprGuiM.makeSubexpresion 0 namedArgExpr
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  let
+    scaleTag =
+      ExpressionGui.egWidget %~
+      Widget.scale (realToFrac <$> Config.fieldTagScaleFactor config)
   pure $ ExpressionGui.makeRow
     [ (0, scaleTag argTagEdit)
     , (0.5, space)
     , (0, argValEdit)
     ]
   where
-    scaleTag =
-      ExpressionGui.egWidget %~
-      Widget.scale (realToFrac <$> Config.fieldTagScaleFactor defaultConfig)
     space = ExpressionGui.fromValueWidget BWidgets.stdSpaceWidget
 
 mkBoxed ::
@@ -104,10 +108,11 @@ mkBoxed ::
 mkBoxed destGuid mkFuncRow annotatedArgs =
   ExpressionGui.wrapExpression $ \myId ->
   assignCursorGuid myId destGuid $ do
+    config <- ExprGuiM.widgetEnv WE.readConfig
     argEdits <-
       Grid.toWidget . Grid.make <$> traverse (makeArgRow myId) annotatedArgs
     ExpressionGui.withBgColor Layers.labeledApplyBG
-      (Config.labeledApplyBGColor defaultConfig) (Widget.toAnimId myId ++ ["bg"]) .
+      (Config.labeledApplyBGColor config) (Widget.toAnimId myId ++ ["bg"]) .
       ExpressionGui.addBelow 0 [(0, argEdits)] <$> mkFuncRow
 
 mkMParened ::

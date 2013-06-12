@@ -18,7 +18,6 @@ import Data.Typeable (Typeable1)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (WidgetT, ExprGuiM)
 import Lamdu.CodeEdit.Settings (Settings)
-import Lamdu.Config.Default (defaultConfig)
 import Lamdu.WidgetEnvT (WidgetEnvT)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Transaction as Transaction
@@ -129,6 +128,22 @@ make cp settings rootGuid = do
 
 makePanesEdit :: MonadA m => [SugarPane m] -> Widget.Id -> ExprGuiM m (WidgetT m)
 makePanesEdit panes myId = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  let
+    paneEventMap pane = mconcat
+      [ maybe mempty
+        (Widget.keysEventMapMovesCursor (Config.closePaneKeys config)
+         (E.Doc ["View", "Pane", "Close"]) . fmap WidgetIds.fromGuid) $ mDelPane pane
+      , maybe mempty
+        (Widget.keysEventMap (Config.movePaneDownKeys config)
+         (E.Doc ["View", "Pane", "Move down"])) $ mMovePaneDown pane
+      , maybe mempty
+        (Widget.keysEventMap (Config.movePaneUpKeys config)
+         (E.Doc ["View", "Pane", "Move up"])) $ mMovePaneUp pane
+      ]
+    makePaneEdit pane =
+      (fmap . Widget.weakerEvents) (paneEventMap pane) .
+      makePaneWidget . spDef $ pane
   panesWidget <-
     case panes of
     [] -> ExprGuiM.widgetEnv $ BWidgets.makeFocusableTextView "<No panes>" myId
@@ -143,46 +158,30 @@ makePanesEdit panes myId = do
   let
     panesEventMap =
       mconcat
-      [ Widget.keysEventMapMovesCursor (Config.newDefinitionKeys defaultConfig)
+      [ Widget.keysEventMapMovesCursor (Config.newDefinitionKeys config)
         (E.Doc ["Edit", "New definition"]) newDefinition
       , maybe mempty
-        (Widget.keysEventMapMovesCursor (Config.previousCursorKeys defaultConfig)
+        (Widget.keysEventMapMovesCursor (Config.previousCursorKeys config)
          (E.Doc ["Navigation", "Go back"])) mJumpBack
       ]
-
   return $ Widget.weakerEvents panesEventMap panesWidget
-  where
-    makePaneEdit pane =
-      (fmap . Widget.weakerEvents) (paneEventMap pane) .
-      makePaneWidget . spDef $ pane
-    paneEventMap pane = mconcat
-      [ maybe mempty
-        (Widget.keysEventMapMovesCursor (Config.closePaneKeys defaultConfig)
-         (E.Doc ["View", "Pane", "Close"]) . fmap WidgetIds.fromGuid) $ mDelPane pane
-      , maybe mempty
-        (Widget.keysEventMap (Config.movePaneDownKeys defaultConfig)
-         (E.Doc ["View", "Pane", "Move down"])) $ mMovePaneDown pane
-      , maybe mempty
-        (Widget.keysEventMap (Config.movePaneUpKeys defaultConfig)
-         (E.Doc ["View", "Pane", "Move up"])) $ mMovePaneUp pane
-      ]
 
 makePaneWidget :: MonadA m => Sugar.DefinitionU m -> ExprGuiM m (Widget (T m))
 makePaneWidget rawDefS = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
   infoMode <- (^. Settings.sInfoMode) <$> ExprGuiM.readSettings
   let
-    defS =
-      case infoMode of
-      Settings.Types -> rawDefS
-      _ -> Sugar.removeNonHoleTypes <$> rawDefS
-  onEachPane <$> DefinitionEdit.make (AddNames.addToDef defS)
-  where
     onEachPane widget
       | widget ^. Widget.wIsFocused = onActivePane widget
       | otherwise = onInactivePane widget
     onActivePane =
       Widget.backgroundColor Layers.activePane WidgetIds.activeDefBackground $
-      Config.activeDefBGColor defaultConfig
+      Config.activeDefBGColor config
     onInactivePane =
       Widget.wFrame %~
-      Anim.onImages (Draw.tint (Config.inactiveTintColor defaultConfig))
+      Anim.onImages (Draw.tint (Config.inactiveTintColor config))
+    defS =
+      case infoMode of
+      Settings.Types -> rawDefS
+      _ -> Sugar.removeNonHoleTypes <$> rawDefS
+  onEachPane <$> DefinitionEdit.make (AddNames.addToDef defS)

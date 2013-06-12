@@ -10,7 +10,7 @@ import Data.Traversable (traverse)
 import Graphics.UI.Bottle.Widget (EventHandlers)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ParentPrecedence(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
-import Lamdu.Config.Default (defaultConfig)
+import Lamdu.Config (Config)
 import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -41,12 +41,12 @@ data IsHole = NotAHole | IsAHole
 
 pasteEventMap ::
   MonadA m =>
-  Sugar.Hole Sugar.Name m (Sugar.ExpressionN m) ->
+  Config -> Sugar.Hole Sugar.Name m (Sugar.ExpressionN m) ->
   Widget.EventHandlers (Transaction m)
-pasteEventMap =
+pasteEventMap config =
   maybe mempty
   (Widget.keysEventMapMovesCursor
-   (Config.pasteKeys defaultConfig) (E.Doc ["Edit", "Paste"]) .
+   (Config.pasteKeys config) (E.Doc ["Edit", "Paste"]) .
    fmap WidgetIds.fromGuid) .
   (^? Sugar.holeMActions . Lens._Just . Sugar.holePaste . Lens._Just)
 
@@ -59,11 +59,12 @@ make parentPrecedence sExpr = assignCursor $ do
   typeEdits <- traverse (make (ParentPrecedence 0)) $ payload ^. Sugar.plInferredTypes
   let onReadOnly = Widget.doesntTakeFocus
   exprEventMap <- expressionEventMap isHole resultPickers sExpr
+  config <- ExprGuiM.widgetEnv WE.readConfig
   let
     addInferredTypes =
-      ExpressionGui.addType ExpressionGui.Background exprId $
-      Widget.tint (Config.inferredTypeTint defaultConfig) .
-      Widget.scale (realToFrac <$> Config.typeScaleFactor defaultConfig) .
+      ExpressionGui.addType config ExpressionGui.Background exprId $
+      Widget.tint (Config.inferredTypeTint config) .
+      Widget.scale (realToFrac <$> Config.typeScaleFactor config) .
       (^. ExpressionGui.egWidget) <$> typeEdits
   return $
     addInferredTypes widget
@@ -81,43 +82,47 @@ makeEditor ::
   MonadA m => ParentPrecedence ->
   Sugar.ExpressionN m -> Widget.Id ->
   ExprGuiM m (IsHole, ExpressionGui m)
-makeEditor parentPrecedence sExpr =
-  case sExpr ^. Sugar.rBody of
-  Sugar.BodyInferred i ->
-    isAHole (i ^. Sugar.iHole) . InferredEdit.make parentPrecedence i $ sExpr ^. Sugar.rGuid
-  Sugar.BodyHole hole ->
-    isAHole hole . HoleEdit.make hole mNextHoleGuid $ sExpr ^. Sugar.rGuid
-  Sugar.BodyCollapsed poly ->
-    notAHole $ CollapsedEdit.make parentPrecedence poly
-  Sugar.BodyApply apply ->
-    notAHole $ ApplyEdit.make parentPrecedence sExpr apply
-  Sugar.BodyLam lam@(Sugar.Lam Sugar.Type _ _ _) ->
-    notAHole $ PiEdit.make parentPrecedence lam
-  Sugar.BodyLam lam@(Sugar.Lam Sugar.Val _ _ _) ->
-    notAHole $ LambdaEdit.make parentPrecedence lam
-  Sugar.BodyLiteralInteger integer ->
-    notAHole $ LiteralEdit.makeInt integer
-  Sugar.BodyAtom atom ->
-    notAHole $ AtomEdit.make atom
-  Sugar.BodyList list ->
-    notAHole $ ListEdit.make list
-  Sugar.BodyRecord record ->
-    notAHole $ RecordEdit.make record
-  Sugar.BodyGetField getField ->
-    notAHole $ GetFieldEdit.make getField
-  Sugar.BodyTag tag ->
-    notAHole $ TagEdit.make tag
-  Sugar.BodyGetVar gv ->
-    notAHole $ GetVarEdit.make gv
-  Sugar.BodyGetParams gp ->
-    notAHole $ GetParamsEdit.make gp
-  where
+makeEditor parentPrecedence sExpr myId = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  let
     isAHole hole mkWidget = fmap (handleHole hole) . mkWidget
     handleHole hole widget =
       ( IsAHole
       , widget &
-        ExpressionGui.egWidget %~ Widget.weakerEvents (pasteEventMap hole)
+        ExpressionGui.egWidget %~ Widget.weakerEvents (pasteEventMap config hole)
       )
+    mkEditor =
+      case sExpr ^. Sugar.rBody of
+      Sugar.BodyInferred i ->
+        isAHole (i ^. Sugar.iHole) . InferredEdit.make parentPrecedence i $ sExpr ^. Sugar.rGuid
+      Sugar.BodyHole hole ->
+        isAHole hole . HoleEdit.make hole mNextHoleGuid $ sExpr ^. Sugar.rGuid
+      Sugar.BodyCollapsed poly ->
+        notAHole $ CollapsedEdit.make parentPrecedence poly
+      Sugar.BodyApply apply ->
+        notAHole $ ApplyEdit.make parentPrecedence sExpr apply
+      Sugar.BodyLam lam@(Sugar.Lam Sugar.Type _ _ _) ->
+        notAHole $ PiEdit.make parentPrecedence lam
+      Sugar.BodyLam lam@(Sugar.Lam Sugar.Val _ _ _) ->
+        notAHole $ LambdaEdit.make parentPrecedence lam
+      Sugar.BodyLiteralInteger integer ->
+        notAHole $ LiteralEdit.makeInt integer
+      Sugar.BodyAtom atom ->
+        notAHole $ AtomEdit.make atom
+      Sugar.BodyList list ->
+        notAHole $ ListEdit.make list
+      Sugar.BodyRecord record ->
+        notAHole $ RecordEdit.make record
+      Sugar.BodyGetField getField ->
+        notAHole $ GetFieldEdit.make getField
+      Sugar.BodyTag tag ->
+        notAHole $ TagEdit.make tag
+      Sugar.BodyGetVar gv ->
+        notAHole $ GetVarEdit.make gv
+      Sugar.BodyGetParams gp ->
+        notAHole $ GetParamsEdit.make gp
+  mkEditor myId
+  where
     notAHole = (fmap . fmap) ((,) NotAHole)
     mNextHoleGuid = sExpr ^. Sugar.rPayload . Sugar.plMNextHoleGuid
 
@@ -137,23 +142,25 @@ actionsEventMap ::
   ExprGuiM m (EventHandlers (Transaction m))
 actionsEventMap sExpr isHole resultPickers actions = do
   isSelected <- ExprGuiM.widgetEnv . WE.isSubCursor $ WidgetIds.fromGuid exprGuid
+  config <- ExprGuiM.widgetEnv WE.readConfig
   callWithArgsEventMap <-
     if isSelected
     then
       mconcat <$> sequence
       [ maybe mempty
-        (mkEventMap (Config.callWithArgumentKeys defaultConfig)
+        (mkEventMap (Config.callWithArgumentKeys config)
          (E.Doc ["Edit", docPrefix ++ "Call with argument"])
          FocusDelegator.delegatingId) <$>
         ExprGuiM.liftMemoT ((actions ^. Sugar.callWithArg) prefix)
       , maybe mempty
-        (mkEventMap (Config.callWithNextArgumentKeys defaultConfig)
+        (mkEventMap (Config.callWithNextArgumentKeys config)
          (E.Doc ["Edit", docPrefix ++ "Add argument"])
          FocusDelegator.delegatingId) <$>
         ExprGuiM.liftMemoT ((actions ^. Sugar.callWithNextArg) prefix)
       ]
     else return mempty
   let
+    delKeys = Config.replaceKeys config ++ Config.delKeys config
     replace
       | isSelected && isHoleBool = mempty
       | isSelected =
@@ -162,9 +169,14 @@ actionsEventMap sExpr isHole resultPickers actions = do
       | otherwise =
         mkEventMap delKeys (E.Doc ["Navigation", "Select parent"])
         FocusDelegator.notDelegatingId $ return exprGuid
+    cut
+      | isHoleBool = mempty
+      | otherwise =
+        mkEventMap (Config.cutKeys config) (E.Doc ["Edit", "Cut"]) id $
+        actions ^. Sugar.cut
   return $ mconcat
     [ callWithArgsEventMap
-    , Wrap.eventMap actions
+    , Wrap.eventMap config actions
     , replace
     , cut
     ]
@@ -174,12 +186,6 @@ actionsEventMap sExpr isHole resultPickers actions = do
       | null resultPickers = ""
       | otherwise = "Pick and "
     prefix = sequence_ resultPickers
-    delKeys = Config.replaceKeys defaultConfig ++ Config.delKeys defaultConfig
-    cut
-      | isHoleBool = mempty
-      | otherwise =
-        mkEventMap (Config.cutKeys defaultConfig) (E.Doc ["Edit", "Cut"]) id $
-        actions ^. Sugar.cut
     mkEventMap keys doc f =
       Widget.keysEventMapMovesCursor keys doc .
       fmap (f . WidgetIds.fromGuid)

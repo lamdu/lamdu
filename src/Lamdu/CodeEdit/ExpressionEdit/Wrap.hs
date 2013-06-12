@@ -10,7 +10,7 @@ import Data.Store.Transaction (Transaction)
 import Graphics.UI.Bottle.Widget (EventHandlers)
 import Lamdu.CharClassification (operatorChars)
 import Lamdu.CodeEdit.ExpressionEdit.HoleEdit (HoleState(..))
-import Lamdu.Config.Default (defaultConfig)
+import Lamdu.Config (Config)
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
@@ -18,14 +18,14 @@ import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.WidgetIds as WidgetIds
 
-eventMap :: MonadA m => Sugar.Actions m -> EventHandlers (Transaction m)
-eventMap actions =
+eventMap :: MonadA m => Config -> Sugar.Actions m -> EventHandlers (Transaction m)
+eventMap config actions =
   mconcat
   [ (fmap . fmap) Widget.eventResultFromCursor .
     E.charGroup "Operator" (E.Doc ["Edit", "Apply operator"]) operatorChars $
     \c _isShifted -> HoleEdit.setHoleStateAndJump (HoleState [c]) =<< wrap
   , Widget.keysEventMapMovesCursor
-    (Config.wrapKeys defaultConfig) (E.Doc ["Edit", doc])
+    (Config.wrapKeys config) (E.Doc ["Edit", doc])
     (WidgetIds.fromGuid <$> wrap)
   ]
   where

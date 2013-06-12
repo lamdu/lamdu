@@ -26,7 +26,7 @@ import Data.Traversable (traverse)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, hiMArgument)
 import Lamdu.CodeEdit.Sugar (Scope(..))
-import Lamdu.Config.Default (defaultConfig)
+import Lamdu.Config (Config)
 import Lamdu.Data.Expression (Expression(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Utils (ApplyFormAnnotation(..), pureHole)
@@ -281,16 +281,16 @@ makeNewTagResultList holeInfo makeNewTagResultWidget
 
 data HaveHiddenResults = HaveHiddenResults | NoHiddenResults
 
-collectResults :: MonadA m => ListT m (ResultsList f) -> m ([ResultsList f], HaveHiddenResults)
-collectResults =
+collectResults :: MonadA m => Config -> ListT m (ResultsList f) -> m ([ResultsList f], HaveHiddenResults)
+collectResults config =
   conclude <=<
-  List.splitWhenM (return . (>= Config.holeResultCount defaultConfig) . length . fst) .
+  List.splitWhenM (return . (>= Config.holeResultCount config) . length . fst) .
   List.scanl step ([], [])
   where
     haveHiddenResults [] = NoHiddenResults
     haveHiddenResults _ = HaveHiddenResults
     conclude (collectedResults, remainingResultsM) =
-      ( (Lens._2 %~ haveHiddenResults) . splitAt (Config.holeResultCount defaultConfig)
+      ( (Lens._2 %~ haveHiddenResults) . splitAt (Config.holeResultCount config)
       . uncurry (++)
       . (Lens._1 %~ sortOn resultsListScore)
       . (Lens.both %~ reverse)
@@ -306,9 +306,9 @@ collectResults =
         %~ (x :)
 
 makeAll ::
-  MonadA m => HoleInfo m -> MakeWidgets m ->
+  MonadA m => Config -> HoleInfo m -> MakeWidgets m ->
   ExprGuiM m ([ResultsList m], HaveHiddenResults)
-makeAll holeInfo makeWidget = do
+makeAll config holeInfo makeWidget = do
   allGroups <- ExprGuiM.transaction $ makeAllGroups holeInfo
   let
     allGroupsList =
@@ -320,7 +320,7 @@ makeAll holeInfo makeWidget = do
         mkNewTagResultWidget makeWidget
       | otherwise = mempty
     resultList = List.catMaybes $ mappend allGroupsList newTagList
-  ExprGuiM.liftMemoT $ collectResults resultList
+  ExprGuiM.liftMemoT $ collectResults config resultList
   where
     isTagType =
       Lens.has (Sugar.holeInferredType . ExprLens.exprTagType) $

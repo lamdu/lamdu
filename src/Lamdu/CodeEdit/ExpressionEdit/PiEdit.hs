@@ -6,7 +6,6 @@ import Control.MonadA (MonadA)
 import Data.Monoid (mappend)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
-import Lamdu.Config.Default (defaultConfig)
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
@@ -51,11 +50,12 @@ make parentPrecedence (Sugar.Lam _ param _isDep resultType) =
             , paramTypeEdit
             ]
         else return paramTypeEdit
+      config <- ExprGuiM.widgetEnv WE.readConfig
       rightArrowLabel <-
         ExprGuiM.localEnv
         (WE.setTextSizeColor
-         (Config.rightArrowTextSize defaultConfig)
-         (Config.rightArrowColor defaultConfig)) .
+         (Config.rightArrowTextSize config)
+         (Config.rightArrowColor config)) .
         ExprGuiM.widgetEnv . BWidgets.makeLabel "→" $ Widget.toAnimId myId
       let
         addBg
@@ -64,7 +64,7 @@ make parentPrecedence (Sugar.Lam _ param _isDep resultType) =
               Widget.backgroundColor
               Layers.collapsedExpandedBG
               (mappend (Widget.toAnimId paramId) ["polymorphic bg"])
-              (Config.collapsedExpandedBGColor defaultConfig)
+              (Config.collapsedExpandedBGColor config)
           | otherwise = id
         paramAndArrow =
           addBg $

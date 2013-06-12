@@ -23,7 +23,7 @@ import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui(..))
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
 import Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info (HoleInfo(..), HoleState(..), hsSearchTerm)
 import Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Results (MakeWidgets(..), ResultsList(..), Result(..), HaveHiddenResults(..))
-import Lamdu.Config.Default (defaultConfig)
+import Lamdu.Config (Config)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Store.Property as Property
@@ -61,21 +61,21 @@ handlePickResultTargetGuid holeInfo =
   fromMaybe (hiGuid holeInfo)
 
 resultPickEventMap ::
-  MonadA m => HoleInfo m -> Sugar.HoleResult Sugar.Name m ->
+  MonadA m => Config -> HoleInfo m -> Sugar.HoleResult Sugar.Name m ->
   Widget.EventHandlers (T m)
-resultPickEventMap holeInfo holeResult =
+resultPickEventMap config holeInfo holeResult =
   case hiMNextHoleGuid holeInfo of
   Just nextHoleGuid
     | not (Sugar.holeResultHasHoles holeResult) ->
-      mappend (simplePickRes (Config.pickResultKeys defaultConfig)) .
-      E.keyPresses (Config.pickAndMoveToNextHoleKeys defaultConfig)
+      mappend (simplePickRes (Config.pickResultKeys config)) .
+      E.keyPresses (Config.pickAndMoveToNextHoleKeys config)
       (E.Doc ["Edit", "Result", "Pick and move to next hole"]) $
         (Widget.eventResultFromCursor . WidgetIds.fromGuid)
         nextHoleGuid <$ HoleResults.pick holeInfo holeResult
   _ ->
     simplePickRes $
-    Config.pickResultKeys defaultConfig ++
-    Config.pickAndMoveToNextHoleKeys defaultConfig
+    Config.pickResultKeys config ++
+    Config.pickAndMoveToNextHoleKeys config
   where
     simplePickRes keys =
       E.keyPresses keys (E.Doc ["Edit", "Result", "Pick"]) .
@@ -145,15 +145,16 @@ makeExtraResultsWidget extraResults
 makeHoleResultWidget ::
   MonadA m => HoleInfo m ->
   Widget.Id -> Sugar.HoleResult Sugar.Name m -> ExprGuiM m (WidgetT m)
-makeHoleResultWidget holeInfo resultId holeResult =
+makeHoleResultWidget holeInfo resultId holeResult = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
   ExprGuiM.widgetEnv . BWidgets.makeFocusableView resultId .
-  -- TODO: No need for this if we just add a pick result event map
-  -- to the whole hole
-  Widget.scale (realToFrac <$> Config.holeResultScaleFactor defaultConfig) .
-  Widget.strongerEvents (resultPickEventMap holeInfo holeResult) .
-  (^. ExpressionGui.egWidget) =<<
-  (ExprGuiM.makeSubexpresion 0 . Sugar.removeHoleResultTypes)
-  (holeResult ^. Sugar.holeResultConverted)
+    -- TODO: No need for this if we just add a pick result event map
+    -- to the whole hole
+    Widget.scale (realToFrac <$> Config.holeResultScaleFactor config) .
+    Widget.strongerEvents (resultPickEventMap config holeInfo holeResult) .
+    (^. ExpressionGui.egWidget) =<<
+    (ExprGuiM.makeSubexpresion 0 . Sugar.removeHoleResultTypes)
+    (holeResult ^. Sugar.holeResultConverted)
 
 asNewLabelScaleFactor :: Fractional a => a
 asNewLabelScaleFactor = 0.5
@@ -218,9 +219,10 @@ mkAddNewDefinitionEventMap holeInfo = do
     ExprGuiM.liftMemoT $
     hiActions holeInfo ^. Sugar.holeResult $
     Sugar.ResultSeedNewDefinition newName
+  config <- ExprGuiM.widgetEnv WE.readConfig
   let
     f defRef =
-      E.keyPresses (Config.newDefinitionKeys defaultConfig)
+      E.keyPresses (Config.newDefinitionKeys config)
       (E.Doc ["Edit", "Result", "As new Definition"]) $ do
         mTargetGuid <- HoleResults.pick holeInfo defRef
         when (isJust mTargetGuid) savePosition
@@ -329,17 +331,18 @@ mkEventMap holeInfo isSelectedResult mResult = do
       Just . (hiActions holeInfo ^. Sugar.holeResult) .
         Sugar.ResultSeedExpression $ arg ^. Sugar.rPresugaredExpression
   addNewDefinitionEventMap <- mkAddNewDefinitionEventMap holeInfo
+  config <- ExprGuiM.widgetEnv WE.readConfig
   pure $ mconcat
     [ addNewDefinitionEventMap
     , maybe mempty (opPickEventMap holeInfo isSelectedResult) mResult
     , maybe mempty
-      ( E.keyPresses (Config.delKeys defaultConfig)
+      ( E.keyPresses (Config.delKeys config)
         (E.Doc ["Edit", "Back"])
       . fmap (handlePickResultTargetGuid holeInfo)
       . HoleResults.pick holeInfo
       ) mDeleteWrapper
     , maybe mempty
-      ( E.keyPresses (Config.delKeys defaultConfig)
+      ( E.keyPresses (Config.delKeys config)
         (E.Doc ["Edit", "Delete"])
       . fmap (Widget.eventResultFromCursor . WidgetIds.fromGuid)
       ) $ do
@@ -369,15 +372,16 @@ assignHoleEditCursor holeInfo shownResultsIds allResultIds searchTermId action =
       | otherwise = head (shownResultsIds ++ [searchTermId])
   ExprGuiM.assignCursor assignSource destId action
 
-holeBackgroundColor :: Sugar.HoleArg expr -> Draw.Color
-holeBackgroundColor holeArg
-  | holeArg ^. Sugar.haTypeIsAMatch = Config.deletableHoleBackgroundColor defaultConfig
-  | otherwise = Config.typeErrorHoleWrapBackgroundColor defaultConfig
+holeBackgroundColor :: Config -> Sugar.HoleArg expr -> Draw.Color
+holeBackgroundColor config holeArg
+  | holeArg ^. Sugar.haTypeIsAMatch = Config.deletableHoleBackgroundColor config
+  | otherwise = Config.typeErrorHoleWrapBackgroundColor config
 
 makeActiveHoleEdit :: MonadA m => HoleInfo m -> ExprGuiM m (ExpressionGui m)
 makeActiveHoleEdit holeInfo = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
   (shownResults, hasHiddenResults) <-
-    HoleResults.makeAll holeInfo MakeWidgets
+    HoleResults.makeAll config holeInfo MakeWidgets
     { mkNewTagResultWidget = makeNewTagResultWidget holeInfo
     , mkResultWidget = makeHoleResultWidget holeInfo
     }
@@ -391,7 +395,7 @@ makeActiveHoleEdit holeInfo = do
       let
         mFirstResult = rHoleResult . (^. HoleResults.rlMain) <$> listToMaybe shownResults
         mResult = mSelectedResult <|> mFirstResult
-        searchTermEventMap = maybe mempty (resultPickEventMap holeInfo) mResult
+        searchTermEventMap = maybe mempty (resultPickEventMap config holeInfo) mResult
       searchTermWidget <- makeSearchTermWidget holeInfo
         -- TODO: Move the result picking events into pickEventMap
         -- instead of here on the searchTerm and on each result
@@ -405,7 +409,7 @@ makeActiveHoleEdit holeInfo = do
         (ExpressionGui.egWidget %~
          Widget.strongerEvents holeEventMap .
          makeBackground (hiId holeInfo)
-         Layers.activeHoleBG (Config.activeHoleBackgroundColor defaultConfig)) $
+         Layers.activeHoleBG (Config.activeHoleBackgroundColor config)) $
         ExpressionGui.addBelow 0.5
         [ (0.5, Widget.strongerEvents adHocEditor resultsWidget)
         ]
@@ -499,13 +503,14 @@ disallowChars =
 makeSearchTermWidget ::
   MonadA m => HoleInfo m ->
   ExprGuiM m (ExpressionGui m)
-makeSearchTermWidget holeInfo =
+makeSearchTermWidget holeInfo = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
   ExprGuiM.widgetEnv $
-  (ExpressionGui.scaleFromTop (realToFrac <$> Config.holeSearchTermScaleFactor defaultConfig) .
-   ExpressionGui.fromValueWidget .
-   (Widget.wEventMap %~ disallowChars) .
-   Widget.atEvents setter) <$>
-  BWidgets.makeTextEdit searchTerm (hiSearchTermId holeInfo)
+    (ExpressionGui.scaleFromTop (realToFrac <$> Config.holeSearchTermScaleFactor config) .
+     ExpressionGui.fromValueWidget .
+     (Widget.wEventMap %~ disallowChars) .
+     Widget.atEvents setter) <$>
+    BWidgets.makeTextEdit searchTerm (hiSearchTermId holeInfo)
   where
     searchTermProp = searchTermProperty holeInfo
     searchTerm = Property.value searchTermProp
@@ -546,6 +551,7 @@ makeInactive ::
   Sugar.Hole Sugar.Name m (Sugar.ExpressionN m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeInactive mHoleNumber hole myId = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
   holeGui <-
     case hole ^? Sugar.holeMArg . Lens._Just . Sugar.haExpr of
     Just arg ->
@@ -556,11 +562,15 @@ makeInactive mHoleNumber hole myId = do
       & Lens.mapped . ExpressionGui.egWidget %~
         Widget.strongerEvents
         ( Widget.keysEventMapMovesCursor
-          (Config.leaveSubexpressionKeys defaultConfig)
+          (Config.leaveSubexpressionKeys config)
           (E.Doc ["Navigation", "Leave to outer hole"])
           (return myId)
         )
     Nothing -> makeJumpableSpace mHoleNumber myId
+  let
+    bgColor =
+      fromMaybe (Config.inactiveHoleBackgroundColor config) $
+      holeBackgroundColor config <$> hole ^. Sugar.holeMArg
   ExprGuiM.widgetEnv $
     holeGui
     & ExpressionGui.egWidget %~ makeBackground myId Layers.inactiveHole bgColor
@@ -568,10 +578,6 @@ makeInactive mHoleNumber hole myId = do
       if holeGui ^. ExpressionGui.egWidget . Widget.wIsFocused
       then return
       else BWidgets.makeFocusableView myId
-  where
-    bgColor =
-      fromMaybe (Config.inactiveHoleBackgroundColor defaultConfig) $
-      holeBackgroundColor <$> hole ^. Sugar.holeMArg
 
 makeJumpableSpace ::
   MonadA m => Maybe ExprGuiM.HoleNumber ->
@@ -581,6 +587,7 @@ makeJumpableSpace mHoleNumber myId = do
     ExprGuiM.widgetEnv .
     BWidgets.makeTextViewWidget "  " $ Widget.toAnimId myId
   savePosition <- ExprGuiM.mkPrejumpPosSaver
+  config <- ExprGuiM.widgetEnv WE.readConfig
   let
     mHolePair holeNumber = do
       keys <- keysOfNum holeNumber
@@ -590,14 +597,13 @@ makeJumpableSpace mHoleNumber myId = do
           Widget.keysEventMapMovesCursor keys doc $
           myId <$ savePosition
       pure ("Alt-" ++ show holeNumber, eventMap)
-  mHoleNumView <- traverse mkHoleNumView $ mHolePair =<< mHoleNumber
-  pure . ExpressionGui.fromValueWidget $
-    maybe id Widget.overlayView mHoleNumView space
-  where
     mkHoleNumView (shownStr, eventMap) = do
       ExprGuiM.appendToTopLevelEventMap eventMap
-      fmap (^. View.scaled (realToFrac <$> Config.holeNumLabelScaleFactor defaultConfig)) .
-        ExprGuiM.withFgColor (Config.holeNumLabelColor defaultConfig) .
+      fmap (^. View.scaled (realToFrac <$> Config.holeNumLabelScaleFactor config)) .
+        ExprGuiM.withFgColor (Config.holeNumLabelColor config) .
         ExprGuiM.widgetEnv .
         BWidgets.makeTextView shownStr $
         Widget.toAnimId myId ++ ["hole number"]
+  mHoleNumView <- traverse mkHoleNumView $ mHolePair =<< mHoleNumber
+  pure . ExpressionGui.fromValueWidget $
+    maybe id Widget.overlayView mHoleNumView space

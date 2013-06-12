@@ -8,7 +8,7 @@ import Graphics.UI.Bottle.Animation (AnimId)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
-import Lamdu.Config.Default (defaultConfig)
+import Lamdu.Config (Config)
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -16,6 +16,7 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui as ExpressionGui
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
+import qualified Lamdu.WidgetEnvT as WE
 
 fdConfig :: FocusDelegator.Config
 fdConfig = FocusDelegator.Config
@@ -25,21 +26,23 @@ fdConfig = FocusDelegator.Config
   , FocusDelegator.stopDelegatingDoc = E.Doc ["Edit", "Stop renaming tag"]
   }
 
-onTagWidget :: Widget (Transaction m) -> ExpressionGui m
-onTagWidget =
+onTagWidget :: Config -> Widget (Transaction m) -> ExpressionGui m
+onTagWidget config =
   ExpressionGui.fromValueWidget .
-  Widget.scale (realToFrac <$> Config.tagScaleFactor defaultConfig) .
-  Widget.tint (Config.fieldTint defaultConfig)
+  Widget.scale (realToFrac <$> Config.tagScaleFactor config) .
+  Widget.tint (Config.fieldTint config)
 
-make
-  :: MonadA m
-  => Sugar.TagG Sugar.Name
-  -> Widget.Id
-  -> ExprGuiM m (ExpressionGui m)
-make (Sugar.TagG tag name) =
+make ::
+  MonadA m =>
+  Sugar.TagG Sugar.Name -> Widget.Id -> ExprGuiM m (ExpressionGui m)
+make (Sugar.TagG tag name) myId = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
   ExpressionGui.wrapDelegated fdConfig FocusDelegator.NotDelegating
-  (fmap onTagWidget . ExpressionGui.makeNameEdit name tag)
+    (fmap (onTagWidget config) . ExpressionGui.makeNameEdit name tag) myId
 
-makeView :: MonadA m => Sugar.TagG Sugar.Name -> AnimId -> ExprGuiM m (ExpressionGui m)
-makeView (Sugar.TagG _ name) =
-  ExprGuiM.widgetEnv . fmap onTagWidget . ExpressionGui.makeNameView name
+makeView ::
+  MonadA m => Sugar.TagG Sugar.Name -> AnimId -> ExprGuiM m (ExpressionGui m)
+makeView (Sugar.TagG _ name) animId = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
+  ExprGuiM.widgetEnv . fmap (onTagWidget config) $
+    ExpressionGui.makeNameView name animId

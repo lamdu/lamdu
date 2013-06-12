@@ -22,6 +22,7 @@ import Graphics.UI.Bottle.Animation(AnimId)
 import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Widget(Widget)
 import Lamdu.CodeEdit.Settings (Settings(..))
+import Lamdu.Config (Config)
 import Lamdu.Config.Default (defaultConfig)
 import Lamdu.WidgetEnvT (runWidgetEnvT)
 import Numeric (showHex)
@@ -90,10 +91,10 @@ main = do
     then do
       putStrLn "Deleting DB..."
       Directory.removeDirectoryRecursive lamduDir
-    else runEditor lamduDir $ poMFontPath opts
+    else runEditor defaultConfig lamduDir $ poMFontPath opts
 
-runEditor :: FilePath -> Maybe FilePath -> IO ()
-runEditor lamduDir mFontPath = do
+runEditor :: Config -> FilePath -> Maybe FilePath -> IO ()
+runEditor config lamduDir mFontPath = do
   Directory.createDirectoryIfMissing False lamduDir
   -- GLFW changes the directory from start directory, at least on macs.
   startDir <- Directory.getCurrentDirectory
@@ -117,7 +118,7 @@ runEditor lamduDir mFontPath = do
         `E.catch` \(E.SomeException _) ->
         getFont $ startDir </> "fonts/DejaVuSans.ttf"
       Just path -> getFont path
-    Db.withDb (lamduDir </> "codeedit.db") $ runDb font
+    Db.withDb (lamduDir </> "codeedit.db") $ runDb config font
 
 rjust :: Int -> a -> [a] -> [a]
 rjust len x xs = replicate (length xs - len) x ++ xs
@@ -152,11 +153,12 @@ whenApply :: Bool -> (a -> a) -> a -> a
 whenApply False _ = id
 whenApply True f = f
 
-mainLoopDebugMode
-  :: Draw.Font
-  -> (Widget.Size -> IO (Widget IO))
-  -> (Widget.Size -> Widget IO -> IO (Widget IO)) -> IO a
-mainLoopDebugMode font makeWidget addHelp = do
+mainLoopDebugMode ::
+  Config ->
+  Draw.Font ->
+  (Widget.Size -> IO (Widget IO)) ->
+  (Widget.Size -> Widget IO -> IO (Widget IO)) -> IO a
+mainLoopDebugMode config font makeWidget addHelp = do
   debugModeRef <- newIORef False
   let
     getAnimHalfLife = do
@@ -170,7 +172,7 @@ mainLoopDebugMode font makeWidget addHelp = do
       return .
         whenApply isDebugMode (Widget.wFrame %~ addAnnotations font) $
         Widget.strongerEvents
-        (Widget.keysEventMap (Config.debugModeKeys defaultConfig) doc set)
+        (Widget.keysEventMap (Config.debugModeKeys config) doc set)
         widget
     makeDebugModeWidget size = addHelp size =<< addDebugMode =<< makeWidget size
   mainLoopWidget makeDebugModeWidget getAnimHalfLife
@@ -191,77 +193,77 @@ makeFlyNav = do
     fnState <- readIORef flyNavState
     return $ FlyNav.make WidgetIds.flyNav fnState (writeIORef flyNavState) widget
 
-makeScaleFactor :: IO (IORef (Vector2 Widget.R), Widget.EventHandlers IO)
-makeScaleFactor = do
+makeScaleFactor :: Config -> IO (IORef (Vector2 Widget.R), Widget.EventHandlers IO)
+makeScaleFactor config = do
   factor <- newIORef 1
   let
     eventMap = mconcat
-      [ Widget.keysEventMap (Config.enlargeBaseFontKeys defaultConfig)
+      [ Widget.keysEventMap (Config.enlargeBaseFontKeys config)
         (EventMap.Doc ["View", "Zoom", "Enlarge"]) $
-        modifyIORef factor (* realToFrac (Config.enlargeFactor defaultConfig))
-      , Widget.keysEventMap (Config.shrinkBaseFontKeys defaultConfig)
+        modifyIORef factor (* realToFrac (Config.enlargeFactor config))
+      , Widget.keysEventMap (Config.shrinkBaseFontKeys config)
         (EventMap.Doc ["View", "Zoom", "Shrink"]) $
-        modifyIORef factor (/ realToFrac (Config.shrinkFactor defaultConfig))
+        modifyIORef factor (/ realToFrac (Config.shrinkFactor config))
       ]
   return (factor, eventMap)
 
-helpConfig :: Draw.Font -> EventMapDoc.Config
-helpConfig font =
+helpConfig :: Config -> Draw.Font -> EventMapDoc.Config
+helpConfig config font =
   EventMapDoc.Config
   { EventMapDoc.configStyle =
     TextView.Style
-    { TextView._styleColor = Config.helpTextColor defaultConfig
+    { TextView._styleColor = Config.helpTextColor config
     , TextView._styleFont = font
-    , TextView._styleFontSize = Config.helpTextSize defaultConfig
+    , TextView._styleFontSize = Config.helpTextSize config
     }
-  , EventMapDoc.configInputDocColor = Config.helpInputDocColor defaultConfig
-  , EventMapDoc.configBGColor = Config.helpBGColor defaultConfig
+  , EventMapDoc.configInputDocColor = Config.helpInputDocColor config
+  , EventMapDoc.configBGColor = Config.helpBGColor config
   }
 
-baseStyle :: Draw.Font -> TextEdit.Style
-baseStyle font = TextEdit.Style
+baseStyle :: Config -> Draw.Font -> TextEdit.Style
+baseStyle config font = TextEdit.Style
  { TextEdit._sTextViewStyle =
    TextView.Style
-     { TextView._styleColor = Config.baseColor defaultConfig
+     { TextView._styleColor = Config.baseColor config
      , TextView._styleFont = font
-     , TextView._styleFontSize = Config.baseTextSize defaultConfig
+     , TextView._styleFontSize = Config.baseTextSize config
      }
   , TextEdit._sCursorColor = TextEdit.defaultCursorColor
   , TextEdit._sCursorWidth = TextEdit.defaultCursorWidth
   , TextEdit._sTextCursorId = WidgetIds.textCursorId
   , TextEdit._sBackgroundCursorId = WidgetIds.backgroundCursorId
-  , TextEdit._sBackgroundColor = Config.cursorBGColor defaultConfig
+  , TextEdit._sBackgroundColor = Config.cursorBGColor config
   , TextEdit._sEmptyUnfocusedString = ""
   , TextEdit._sEmptyFocusedString = ""
   }
 
-runDb :: Draw.Font -> Db -> IO a
-runDb font db = do
+runDb :: Config -> Draw.Font -> Db -> IO a
+runDb config font db = do
   ExampleDB.initDB db
-  (sizeFactorRef, sizeFactorEvents) <- makeScaleFactor
+  (sizeFactorRef, sizeFactorEvents) <- makeScaleFactor config
   addHelpWithStyle <-
-    EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown $ Config.overlayDocKeys defaultConfig
+    EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown $ Config.overlayDocKeys config
   settingsRef <- newIORef Settings
     { _sInfoMode = Settings.defaultInfoMode
     }
   cacheRef <- newIORef $ Cache.new 0x100000 -- TODO: Use a real cache size
   wrapFlyNav <- makeFlyNav
   let
-    addHelp = addHelpWithStyle $ helpConfig font
+    addHelp = addHelpWithStyle $ helpConfig config font
     makeWidget size = do
       cursor <- dbToIO . Transaction.getP $ Anchors.cursor Anchors.revisionProps
       sizeFactor <- readIORef sizeFactorRef
-      globalEventMap <- mkGlobalEventMap settingsRef
+      globalEventMap <- mkGlobalEventMap config settingsRef
       let eventMap = globalEventMap `mappend` sizeFactorEvents
       prevCache <- readIORef cacheRef
       (widget, newCache) <-
         (`runStateT` prevCache) $
-        mkWidgetWithFallback settingsRef (baseStyle font) dbToIO
+        mkWidgetWithFallback config settingsRef (baseStyle config font) dbToIO
         (size / sizeFactor, cursor)
       writeIORef cacheRef newCache
       return . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
   makeWidgetCached <- cacheMakeWidget makeWidget
-  mainLoopDebugMode font (wrapFlyNav <=< makeWidgetCached) addHelp
+  mainLoopDebugMode config font (wrapFlyNav <=< makeWidgetCached) addHelp
   where
     dbToIO = Anchors.runDbTransaction db
 
@@ -270,24 +272,24 @@ nextInfoMode Settings.None = Settings.Types
 nextInfoMode Settings.Types = Settings.None -- Settings.Examples
 nextInfoMode Settings.Examples = Settings.None
 
-mkGlobalEventMap :: IORef Settings -> IO (Widget.EventHandlers IO)
-mkGlobalEventMap settingsRef = do
+mkGlobalEventMap :: Config -> IORef Settings -> IO (Widget.EventHandlers IO)
+mkGlobalEventMap config settingsRef = do
   settings <- readIORef settingsRef
   let
     curInfoMode = settings ^. Settings.sInfoMode
     next = nextInfoMode curInfoMode
     nextDoc = EventMap.Doc ["View", "Subtext", "Show " ++ show next]
   return .
-    Widget.keysEventMap (Config.nextInfoModeKeys defaultConfig) nextDoc .
+    Widget.keysEventMap (Config.nextInfoModeKeys config) nextDoc .
     modifyIORef settingsRef $ Settings.sInfoMode .~ next
 
-mkWidgetWithFallback
-  :: IORef Settings
-  -> TextEdit.Style
-  -> (forall a. Transaction Anchors.DbM a -> IO a)
-  -> (Widget.Size, Widget.Id)
-  -> StateT Cache IO (Widget IO)
-mkWidgetWithFallback settingsRef style dbToIO (size, cursor) = do
+mkWidgetWithFallback ::
+  Config -> IORef Settings ->
+  TextEdit.Style ->
+  (forall a. Transaction Anchors.DbM a -> IO a) ->
+  (Widget.Size, Widget.Id) ->
+  StateT Cache IO (Widget IO)
+mkWidgetWithFallback config settingsRef style dbToIO (size, cursor) = do
   settings <- lift $ readIORef settingsRef
   (isValid, widget) <-
     mapStateT dbToIO $ do
@@ -305,33 +307,32 @@ mkWidgetWithFallback settingsRef style dbToIO (size, cursor) = do
   unless isValid . lift . putStrLn $ "Invalid cursor: " ++ show cursor
   return widget
   where
-    fromCursor settings = makeRootWidget settings style dbToIO size
+    fromCursor settings = makeRootWidget config settings style dbToIO size
     rootCursor = WidgetIds.fromGuid rootGuid
 
 rootGuid :: Guid
 rootGuid = IRef.guid $ Anchors.panes Anchors.codeIRefs
 
-makeRootWidget
-  :: Settings
-  -> TextEdit.Style
-  -> (forall a. Transaction Anchors.DbM a -> IO a)
-  -> Widget.Size
-  -> Widget.Id
-  -> StateT Cache (Transaction Anchors.DbM) (Widget IO)
-makeRootWidget settings style dbToIO size cursor = do
+makeRootWidget ::
+  Config -> Settings -> TextEdit.Style ->
+  (forall a. Transaction Anchors.DbM a -> IO a) ->
+  Widget.Size -> Widget.Id ->
+  StateT Cache (Transaction Anchors.DbM) (Widget IO)
+makeRootWidget config settings style dbToIO size cursor = do
   actions <- lift VersionControl.makeActions
-  mapStateT (runWidgetEnvT cursor style) $ do
+  mapStateT (runWidgetEnvT cursor style config) $ do
     codeEdit <-
       (fmap . Widget.atEvents) (VersionControl.runEvent cursor) .
       (mapStateT . WE.mapWidgetEnvT) VersionControl.runAction $
       CodeEdit.make Anchors.codeProps settings rootGuid
     branchGui <- lift $ BranchGUI.make id size actions codeEdit
+    let
+      quitEventMap =
+        Widget.keysEventMap (Config.quitKeys config) (EventMap.Doc ["Quit"]) (error "Quit")
     return .
       Widget.atEvents (dbToIO . (attachCursor =<<)) $
       Widget.strongerEvents quitEventMap branchGui
   where
-    quitEventMap =
-      Widget.keysEventMap (Config.quitKeys defaultConfig) (EventMap.Doc ["Quit"]) (error "Quit")
     attachCursor eventResult = do
       maybe (return ()) (Transaction.setP (Anchors.cursor Anchors.revisionProps)) $
         eventResult ^. Widget.eCursor

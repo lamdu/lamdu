@@ -11,8 +11,6 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
-import Lamdu.Config.Default (defaultConfig)
-import qualified Control.Lens as Lens
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -21,6 +19,7 @@ import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
 import qualified Lamdu.CodeEdit.ExpressionEdit.Parens as Parens
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
+import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
 paramFDConfig :: FocusDelegator.Config
@@ -35,10 +34,11 @@ makeParamNameEdit ::
   MonadA m =>
   Sugar.Name -> Guid -> Widget.Id ->
   ExprGuiM m (WidgetT m)
-makeParamNameEdit name ident =
+makeParamNameEdit name ident myId = do
+  config <- ExprGuiM.widgetEnv WE.readConfig
   ExprGuiM.wrapDelegated paramFDConfig FocusDelegator.NotDelegating id
-  (ExprGuiM.withFgColor (Config.paramOriginColor defaultConfig) .
-   ExpressionGui.makeNameEdit name ident)
+    (ExprGuiM.withFgColor (Config.paramOriginColor config) .
+     ExpressionGui.makeNameEdit name ident) myId
 
 compose :: [a -> a] -> a -> a
 compose = foldr (.) id
@@ -50,11 +50,26 @@ makeParamEdit ::
   Sugar.FuncParam Sugar.Name m (Sugar.ExpressionN m) ->
   ExprGuiM m (ExpressionGui m)
 makeParamEdit prevId param =
-  (Lens.mapped . ExpressionGui.egWidget %~ Widget.weakerEvents paramEventMap) . assignCursor $ do
+  assignCursor $ do
     paramTypeEdit <- ExprGuiM.makeSubexpresion 0 $ param ^. Sugar.fpType
     paramNameEdit <- makeParamNameEdit name (param ^. Sugar.fpGuid) myId
+    config <- ExprGuiM.widgetEnv WE.readConfig
+    let
+      paramAddNextEventMap =
+        maybe mempty
+        (Widget.keysEventMapMovesCursor (Config.addNextParamKeys config)
+         (E.Doc ["Edit", "Add next parameter"]) .
+         fmap (FocusDelegator.delegatingId . WidgetIds.fromGuid) .
+         (^. Sugar.fpListItemActions . Sugar.itemAddNext))
+        mActions
+      paramEventMap = mconcat
+        [ paramDeleteEventMap (Config.delForwardKeys config) "" id
+        , paramDeleteEventMap (Config.delBackwardKeys config) " backwards" (const prevId)
+        , paramAddNextEventMap
+        ]
     return .
-      ExpressionGui.addType ExpressionGui.HorizLine myId
+      (ExpressionGui.egWidget %~ Widget.weakerEvents paramEventMap) .
+      ExpressionGui.addType config ExpressionGui.HorizLine myId
       [paramTypeEdit ^. ExpressionGui.egWidget] $
       ExpressionGui.fromValueWidget paramNameEdit
   where
@@ -63,19 +78,7 @@ makeParamEdit prevId param =
     sourceIds = param ^. Sugar.fpAltIds ++ maybeToList (param ^. Sugar.fpHiddenLambdaGuid)
     assignCursor = compose $ map assignGuidToMe sourceIds
     myId = WidgetIds.fromGuid $ param ^. Sugar.fpId
-    paramEventMap = mconcat
-      [ paramDeleteEventMap (Config.delForwardKeys defaultConfig) "" id
-      , paramDeleteEventMap (Config.delBackwardKeys defaultConfig) " backwards" (const prevId)
-      , paramAddNextEventMap
-      ]
     mActions = param ^. Sugar.fpMActions
-    paramAddNextEventMap =
-      maybe mempty
-      (Widget.keysEventMapMovesCursor (Config.addNextParamKeys defaultConfig)
-       (E.Doc ["Edit", "Add next parameter"]) .
-       fmap (FocusDelegator.delegatingId . WidgetIds.fromGuid) .
-       (^. Sugar.fpListItemActions . Sugar.itemAddNext))
-      mActions
     paramDeleteEventMap keys docSuffix onId =
       maybe mempty
       (Widget.keysEventMapMovesCursor keys (E.Doc ["Edit", "Delete parameter" ++ docSuffix]) .
@@ -91,15 +94,16 @@ make parentPrecedence (Sugar.Lam _ param _ body) =
   ExpressionGui.wrapParenify parentPrecedence (ExpressionGui.MyPrecedence 0)
   Parens.addHighlightedTextParens $ \myId ->
   ExprGuiM.assignCursor myId bodyId $ do
+    config <- ExprGuiM.widgetEnv WE.readConfig
     lambdaLabel <-
       ExpressionGui.makeColoredLabel
-      (Config.lambdaTextSize defaultConfig)
-      (Config.lambdaColor defaultConfig) "λ" myId
+      (Config.lambdaTextSize config)
+      (Config.lambdaColor config) "λ" myId
     paramEdit <- makeParamEdit bodyId param
     dotLabel <-
       ExpressionGui.makeColoredLabel
-      (Config.rightArrowTextSize defaultConfig)
-      (Config.rightArrowColor defaultConfig) ". " myId
+      (Config.rightArrowTextSize config)
+      (Config.rightArrowColor config) ". " myId
     bodyEdit <- ExprGuiM.makeSubexpresion 0 body
     return $ ExpressionGui.hbox
       [ ExpressionGui.fromValueWidget lambdaLabel

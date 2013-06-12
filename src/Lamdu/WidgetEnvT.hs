@@ -10,7 +10,7 @@ module Lamdu.WidgetEnvT
   , envAssignCursor, envAssignCursorPrefix
   , assignCursor, assignCursorPrefix
 
-  , readTextStyle
+  , readConfig, readTextStyle
   , setTextSizeColor, setTextColor
   , getP
   ) where
@@ -23,6 +23,7 @@ import Control.MonadA (MonadA)
 import Data.Maybe (isJust)
 import Data.Store.Transaction (Transaction)
 import Graphics.UI.Bottle.Animation (AnimId)
+import Lamdu.Config (Config)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Store.Transaction as Transaction
@@ -34,6 +35,7 @@ import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 data Env = Env
   { _envCursor :: Widget.Id
   , _envTextStyle :: TextEdit.Style
+  , _envConfig :: Config
   }
 Lens.makeLenses ''Env
 
@@ -47,8 +49,8 @@ Lens.makeLenses ''WidgetEnvT
 getP :: MonadA m => Transaction.MkProperty m a -> WidgetEnvT (Transaction m) a
 getP = lift . Transaction.getP
 
-runWidgetEnvT :: MonadA m => Widget.Id -> TextEdit.Style -> WidgetEnvT m a -> m a
-runWidgetEnvT cursor style (WidgetEnvT action) = runReaderT action (Env cursor style)
+runWidgetEnvT :: MonadA m => Widget.Id -> TextEdit.Style -> Config -> WidgetEnvT m a -> m a
+runWidgetEnvT cursor style config (WidgetEnvT action) = runReaderT action (Env cursor style config)
 
 mapWidgetEnvT
   :: MonadA m
@@ -66,8 +68,11 @@ subCursor folder = fmap (Widget.subId folder) readCursor
 isSubCursor :: MonadA m => Widget.Id -> WidgetEnvT m Bool
 isSubCursor = fmap isJust . subCursor
 
+readConfig :: MonadA m => WidgetEnvT m Config
+readConfig = WidgetEnvT $ Lens.view envConfig
+
 readTextStyle :: MonadA m => WidgetEnvT m TextEdit.Style
-readTextStyle = WidgetEnvT $ Reader.asks (^. envTextStyle)
+readTextStyle = WidgetEnvT $ Lens.view envTextStyle
 
 envAssignCursor
   :: Widget.Id -> Widget.Id -> Env -> Env

@@ -8,7 +8,7 @@ import Control.Lens.Operators
 import Control.MonadA (MonadA)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
-import Lamdu.Config.Default (defaultConfig)
+import Lamdu.Config (Config)
 import Lamdu.WidgetIds (parensPrefix)
 import qualified Graphics.UI.Bottle.Animation as Anim
 import qualified Graphics.UI.Bottle.Widget as Widget
@@ -41,10 +41,10 @@ addTextParensI onLParen onRParen parenId widget = do
     label str =
       ExprGuiM.widgetEnv . BWidgets.makeLabel str $ parensPrefix parenId
 
-highlightExpression :: Widget.Widget f -> Widget.Widget f
-highlightExpression =
+highlightExpression :: Config -> Widget.Widget f -> Widget.Widget f
+highlightExpression config =
   Widget.backgroundColor Layers.parensHighlightBG WidgetIds.parenHighlightId $
-  Config.parenHighlightColor defaultConfig
+  Config.parenHighlightColor config
 
 addTextParens
   :: MonadA m
@@ -61,11 +61,12 @@ addHighlightedTextParens
 addHighlightedTextParens myId widget = do
   mInsideParenId <- ExprGuiM.widgetEnv $ WE.subCursor rParenId
   widgetWithParens <- addTextParensI id doHighlight (Widget.toAnimId myId) widget
+  config <- ExprGuiM.widgetEnv WE.readConfig
   return $
     widgetWithParens
     & case mInsideParenId of
       Nothing -> id
-      Just _ -> ExpressionGui.egWidget %~ highlightExpression
+      Just _ -> ExpressionGui.egWidget %~ highlightExpression config
   where
     rParenId = Widget.joinId myId [")"]
     doHighlight = (ExprGuiM.widgetEnv . BWidgets.makeFocusableView rParenId =<<)
