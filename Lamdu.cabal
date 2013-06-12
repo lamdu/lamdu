@@ -10,7 +10,7 @@ Category:            Graphics
 Build-type:          Simple
 Extra-source-files:  test/*.hs test/Makefile Makefile
 Cabal-version:       >= 1.8
-Data-files:          fonts/DejaVuSans.ttf
+Data-files:          fonts/DejaVuSans.ttf, config.json
 Library
   -- Modules exported by the library.
   hs-Source-Dirs:      bottlelib
@@ -103,6 +103,7 @@ Library
 Executable lamdu
   hs-Source-Dirs:      src
   Build-Depends:       base >= 4,
+                       aeson >= 0.6,
                        hashable,
                        containers,
                        directory,
@@ -164,7 +165,6 @@ Executable lamdu
                        Lamdu.CodeEdit,
                        Lamdu.CharClassification,
                        Lamdu.Config,
-                       Lamdu.Config.Default,
                        Lamdu.Data.Anchors,
                        Lamdu.Data.Arbitrary,
                        Lamdu.Data.Ops,

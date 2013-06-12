@@ -2,8 +2,10 @@
 module Main(main) where
 
 import Control.Applicative ((<$>), (<*))
+import Control.Concurrent (threadDelay, forkIO, ThreadId)
+import Control.Concurrent.MVar
 import Control.Lens.Operators
-import Control.Monad (unless, (<=<))
+import Control.Monad (unless, void)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, runStateT, mapStateT)
 import Data.ByteString (unpack)
@@ -23,7 +25,6 @@ import Graphics.UI.Bottle.MainLoop(mainLoopWidget)
 import Graphics.UI.Bottle.Widget(Widget)
 import Lamdu.CodeEdit.Settings (Settings(..))
 import Lamdu.Config (Config)
-import Lamdu.Config.Default (defaultConfig)
 import Lamdu.WidgetEnvT (runWidgetEnvT)
 import Numeric (showHex)
 import Paths_lamdu (getDataFileName)
@@ -31,6 +32,8 @@ import System.Environment (getArgs)
 import System.FilePath ((</>))
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
+import qualified Data.Aeson as Aeson
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Cache as Cache
 import qualified Data.Map as Map
 import qualified Data.Store.Db as Db
@@ -91,13 +94,40 @@ main = do
     then do
       putStrLn "Deleting DB..."
       Directory.removeDirectoryRecursive lamduDir
-    else runEditor defaultConfig lamduDir $ poMFontPath opts
+    else runEditor lamduDir $ poMFontPath opts
 
-runEditor :: Config -> FilePath -> Maybe FilePath -> IO ()
-runEditor config lamduDir mFontPath = do
+loadConfig :: FilePath -> IO Config
+loadConfig configPath = do
+  eConfig <- Aeson.eitherDecode' <$> LBS.readFile configPath
+  either (fail . (msg ++)) return eConfig
+  where
+    msg = "Failed to parse config file contents at " ++ show configPath ++ ": "
+
+accessDataFile :: FilePath -> (FilePath -> IO a) -> FilePath -> IO a
+accessDataFile startDir accessor fileName =
+  (accessor =<< getDataFileName fileName)
+  `E.catch` \(E.SomeException _) ->
+  accessor $ startDir </> fileName
+
+sampler :: IO a -> IO (ThreadId, IO a)
+sampler sample = do
+  ref <- newMVar =<< E.evaluate =<< sample
+  let
+    go = do
+      threadDelay 200000
+      (void . swapMVar ref =<< sample) `E.catch` \E.SomeException {} -> return ()
+      go
+  tid <- forkIO go
+  return (tid, readMVar ref)
+
+runEditor :: FilePath -> Maybe FilePath -> IO ()
+runEditor lamduDir mFontPath = do
   Directory.createDirectoryIfMissing False lamduDir
   -- GLFW changes the directory from start directory, at least on macs.
   startDir <- Directory.getCurrentDirectory
+
+  -- Load config as early as possible, before we open any windows/etc
+  (_, getConfig) <- sampler $ accessDataFile startDir loadConfig "config.json"
 
   GLFWUtils.withGLFW $ do
     Vector2 displayWidth displayHeight <- GLFWUtils.getVideoModeSize
@@ -113,12 +143,10 @@ runEditor config lamduDir mFontPath = do
         Draw.openFont path
     font <-
       case mFontPath of
-      Nothing ->
-        (getFont =<< getDataFileName "fonts/DejaVuSans.ttf")
-        `E.catch` \(E.SomeException _) ->
-        getFont $ startDir </> "fonts/DejaVuSans.ttf"
+      Nothing -> accessDataFile startDir getFont "fonts/DejaVuSans.ttf"
       Just path -> getFont path
-    Db.withDb (lamduDir </> "codeedit.db") $ runDb config font
+    Db.withDb (lamduDir </> "codeedit.db") $ runDb getConfig font
+
 
 rjust :: Int -> a -> [a] -> [a]
 rjust len x xs = replicate (length xs - len) x ++ xs
@@ -154,17 +182,19 @@ whenApply False _ = id
 whenApply True f = f
 
 mainLoopDebugMode ::
-  Config ->
-  Draw.Font ->
-  (Widget.Size -> IO (Widget IO)) ->
-  (Widget.Size -> Widget IO -> IO (Widget IO)) -> IO a
-mainLoopDebugMode config font makeWidget addHelp = do
+  IO Config -> Draw.Font ->
+  ( Config -> Widget.Size ->
+    ( IO (Widget IO)
+    , Widget IO -> IO (Widget IO)
+    )
+  ) -> IO a
+mainLoopDebugMode getConfig font iteration = do
   debugModeRef <- newIORef False
   let
     getAnimHalfLife = do
       isDebugMode <- readIORef debugModeRef
       return $ if isDebugMode then 1.0 else 0.05
-    addDebugMode widget = do
+    addDebugMode config widget = do
       isDebugMode <- readIORef debugModeRef
       let
         doc = EventMap.Doc $ "Debug Mode" : if isDebugMode then ["Disable"] else ["Enable"]
@@ -174,7 +204,10 @@ mainLoopDebugMode config font makeWidget addHelp = do
         Widget.strongerEvents
         (Widget.keysEventMap (Config.debugModeKeys config) doc set)
         widget
-    makeDebugModeWidget size = addHelp size =<< addDebugMode =<< makeWidget size
+    makeDebugModeWidget size = do
+      config <- getConfig
+      let (makeWidget, addHelp) = iteration config size
+      addHelp =<< addDebugMode config =<< makeWidget
   mainLoopWidget makeDebugModeWidget getAnimHalfLife
 
 cacheMakeWidget :: Eq a => (a -> IO (Widget IO)) -> IO (a -> IO (Widget IO))
@@ -193,11 +226,11 @@ makeFlyNav = do
     fnState <- readIORef flyNavState
     return $ FlyNav.make WidgetIds.flyNav fnState (writeIORef flyNavState) widget
 
-makeScaleFactor :: Config -> IO (IORef (Vector2 Widget.R), Widget.EventHandlers IO)
-makeScaleFactor config = do
+makeScaleFactor :: IO (IORef (Vector2 Widget.R), Config -> Widget.EventHandlers IO)
+makeScaleFactor = do
   factor <- newIORef 1
   let
-    eventMap = mconcat
+    eventMap config = mconcat
       [ Widget.keysEventMap (Config.enlargeBaseFontKeys config)
         (EventMap.Doc ["View", "Zoom", "Enlarge"]) $
         modifyIORef factor (* realToFrac (Config.enlargeFactor config))
@@ -207,8 +240,8 @@ makeScaleFactor config = do
       ]
   return (factor, eventMap)
 
-helpConfig :: Config -> Draw.Font -> EventMapDoc.Config
-helpConfig config font =
+helpConfig :: Draw.Font -> Config -> EventMapDoc.Config
+helpConfig font config =
   EventMapDoc.Config
   { EventMapDoc.configStyle =
     TextView.Style
@@ -218,6 +251,7 @@ helpConfig config font =
     }
   , EventMapDoc.configInputDocColor = Config.helpInputDocColor config
   , EventMapDoc.configBGColor = Config.helpBGColor config
+  , EventMapDoc.configOverlayDocKeys = Config.overlayDocKeys config
   }
 
 baseStyle :: Config -> Draw.Font -> TextEdit.Style
@@ -237,24 +271,22 @@ baseStyle config font = TextEdit.Style
   , TextEdit._sEmptyFocusedString = ""
   }
 
-runDb :: Config -> Draw.Font -> Db -> IO a
-runDb config font db = do
+runDb :: IO Config -> Draw.Font -> Db -> IO a
+runDb getConfig font db = do
   ExampleDB.initDB db
-  (sizeFactorRef, sizeFactorEvents) <- makeScaleFactor config
-  addHelpWithStyle <-
-    EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown $ Config.overlayDocKeys config
+  (sizeFactorRef, sizeFactorEvents) <- makeScaleFactor
+  addHelpWithStyle <- EventMapDoc.makeToggledHelpAdder EventMapDoc.HelpNotShown
   settingsRef <- newIORef Settings
     { _sInfoMode = Settings.defaultInfoMode
     }
   cacheRef <- newIORef $ Cache.new 0x100000 -- TODO: Use a real cache size
   wrapFlyNav <- makeFlyNav
   let
-    addHelp = addHelpWithStyle $ helpConfig config font
-    makeWidget size = do
+    makeWidget (config, size) = do
       cursor <- dbToIO . Transaction.getP $ Anchors.cursor Anchors.revisionProps
       sizeFactor <- readIORef sizeFactorRef
       globalEventMap <- mkGlobalEventMap config settingsRef
-      let eventMap = globalEventMap `mappend` sizeFactorEvents
+      let eventMap = globalEventMap `mappend` sizeFactorEvents config
       prevCache <- readIORef cacheRef
       (widget, newCache) <-
         (`runStateT` prevCache) $
@@ -263,7 +295,10 @@ runDb config font db = do
       writeIORef cacheRef newCache
       return . Widget.scale sizeFactor $ Widget.weakerEvents eventMap widget
   makeWidgetCached <- cacheMakeWidget makeWidget
-  mainLoopDebugMode config font (wrapFlyNav <=< makeWidgetCached) addHelp
+  mainLoopDebugMode getConfig font $ \config size ->
+    ( wrapFlyNav =<< makeWidgetCached (config, size)
+    , addHelpWithStyle (helpConfig font config) size
+    )
   where
     dbToIO = Anchors.runDbTransaction db
 

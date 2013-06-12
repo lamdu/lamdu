@@ -1,7 +1,11 @@
-{-# LANGUAGE PatternGuards #-}
+{-# OPTIONS -fno-warn-orphans #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Config (Config(..)) where
 
+import Data.Aeson (ToJSON(..), FromJSON(..))
+import Data.Aeson.TH (deriveJSON)
 import Data.Vector.Vector2 (Vector2(..))
+import Foreign.C.Types (CDouble)
 import Graphics.DrawingCombinators.Utils () -- Read instance for Color
 import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.UI.Bottle.EventMap as E
@@ -172,4 +176,17 @@ data Config = Config
   , presentationChoiceColor :: Draw.Color
 
   , labeledApplyBGColor :: Draw.Color
-  }
+  } deriving (Eq)
+
+deriveJSON id ''Vector2
+deriveJSON id ''Draw.Color
+deriveJSON id ''E.ModState
+deriveJSON id ''E.ModKey
+deriveJSON id ''E.Key
+deriveJSON id ''Config
+
+instance FromJSON CDouble where
+  parseJSON = fmap (realToFrac :: Double -> CDouble) . parseJSON
+
+instance ToJSON CDouble where
+  toJSON = toJSON . (realToFrac :: CDouble -> Double)

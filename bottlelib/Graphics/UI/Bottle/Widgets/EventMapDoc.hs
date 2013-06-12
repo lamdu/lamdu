@@ -34,6 +34,7 @@ data Config = Config
   { configStyle :: TextView.Style
   , configInputDocColor :: Draw.Color
   , configBGColor :: Draw.Color
+  , configOverlayDocKeys :: [E.ModKey]
   }
 
 data Tree n l = Leaf l | Branch n [Tree n l]
@@ -166,18 +167,17 @@ toggle HelpShown = HelpNotShown
 toggle HelpNotShown = HelpShown
 
 makeToggledHelpAdder
-  :: IsHelpShown -> [E.ModKey] -> IO (Config -> Widget.Size -> Widget IO -> IO (Widget IO))
-makeToggledHelpAdder startValue overlayDocKeys = do
+  :: IsHelpShown -> IO (Config -> Widget.Size -> Widget IO -> IO (Widget IO))
+makeToggledHelpAdder startValue = do
   showingHelpVar <- newIORef startValue
-  let
-    toggleEventMap docStr =
-      Widget.keysEventMap overlayDocKeys (E.Doc ["Help", "Key Bindings", docStr]) $
-      modifyIORef showingHelpVar toggle
   return $ \config size widget -> do
     showingHelp <- readIORef showingHelpVar
     let
       (f, docStr) = case showingHelp of
         HelpShown -> (makeView size (widget ^. Widget.wEventMap) config, "Hide")
-        HelpNotShown -> (makeTooltip config overlayDocKeys, "Show")
+        HelpNotShown -> (makeTooltip config (configOverlayDocKeys config), "Show")
+      toggleEventMap =
+        Widget.keysEventMap (configOverlayDocKeys config) (E.Doc ["Help", "Key Bindings", docStr]) $
+        modifyIORef showingHelpVar toggle
     return . addHelp f size $
-      Widget.strongerEvents (toggleEventMap docStr) widget
+      Widget.strongerEvents toggleEventMap widget
