@@ -279,19 +279,16 @@ makeResultsWidget holeInfo shownResults hiddenResults = do
   where
     myId = hiId holeInfo
 
-operatorHandler ::
-  Functor f => E.Doc -> (Char -> f Widget.Id) -> Widget.EventHandlers f
-operatorHandler doc handler =
-  (fmap . fmap) Widget.eventResultFromCursor .
-  E.charGroup "Operator" doc
-  Config.operatorChars . flip $ const handler
-
-alphaNumericHandler ::
-  Functor f => E.Doc -> (Char -> f Widget.Id) -> Widget.EventHandlers f
-alphaNumericHandler doc handler =
-  (fmap . fmap) Widget.eventResultFromCursor .
-  E.charGroup "Letter/digit" doc
-  Config.alphaNumericChars . flip $ const handler
+charGroupHandler ::
+  Functor f =>
+  String -> E.InputDoc -> E.Doc ->
+  (Char -> f Widget.Id) ->
+  Widget.EventHandlers f
+charGroupHandler chars idoc doc handleChar =
+  fmap Widget.eventResultFromCursor <$>
+  E.charGroup idoc doc chars handler
+  where
+    handler char _isShifted = handleChar char
 
 opPickEventMap ::
   MonadA m =>
@@ -299,11 +296,13 @@ opPickEventMap ::
   Widget.EventHandlers (T m)
 opPickEventMap holeInfo result
   | nonEmptyAll (`notElem` Config.operatorChars) searchTerm =
-    operatorHandler (E.Doc ["Edit", "Result", "Apply operator"]) $ \c -> do
+    charGroupHandler Config.operatorChars "Operator"
+    (E.Doc ["Edit", "Result", "Apply operator"]) $ \c -> do
       dest <- result ^. Sugar.holeResultPickWrapped
       setHoleStateAndJump (HoleState [c]) dest
   | nonEmptyAll (`elem` Config.operatorChars) searchTerm =
-    alphaNumericHandler (E.Doc ["Edit", "Result", "Pick and resume"]) $ \c -> do
+    charGroupHandler Config.alphaNumericChars "Letter/digit"
+    (E.Doc ["Edit", "Result", "Pick and resume"]) $ \c -> do
       mTarget <- HoleResults.pick holeInfo result
       case mTarget of
         Nothing -> pure . WidgetIds.fromGuid $ hiGuid holeInfo
