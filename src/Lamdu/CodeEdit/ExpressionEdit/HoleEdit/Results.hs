@@ -258,7 +258,9 @@ maybeInjectArgumentExpr ::
 maybeInjectArgumentExpr holeInfo =
   case hiMArgument holeInfo ^? Lens._Just . Sugar.haExpr of
   Nothing -> return . map (Nothing <$)
-  Just arg -> fmap concat . traverse (injectIntoHoles holeInfo (arg ^. Sugar.rPresugaredExpression))
+  Just arg ->
+    fmap concat .
+    traverse (injectIntoHoles holeInfo (arg ^. Sugar.rPayload . Sugar.plPresugaredExpression))
 
 maybeInjectArgumentNewTag :: HoleInfo m -> [Sugar.HoleResultSeed m]
 maybeInjectArgumentNewTag holeInfo =

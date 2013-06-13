@@ -76,4 +76,4 @@ make parentPrecedence (Sugar.Lam _ param _isDep resultType) =
     paramGuid = param ^. Sugar.fpGuid
     paramId = WidgetIds.fromGuid $ param ^. Sugar.fpId
     typeId =
-      WidgetIds.fromGuid $ param ^. Sugar.fpType . Sugar.rGuid
+      WidgetIds.fromGuid $ param ^. Sugar.fpType . Sugar.rPayload . Sugar.plGuid

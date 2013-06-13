@@ -129,28 +129,24 @@ mkActions sugarContext exprS =
 make ::
   (Typeable1 m, MonadA m) => SugarInfer.ExprMM m ->
   BodyU m -> SugarM m (ExpressionU m)
-make exprI expr = do
+make exprI body = do
   sugarContext <- SugarM.readContext
   inferredTypes <-
     zipWithM
     ( fmap SugarM.convertSubexpression
     . SugarInfer.resultFromPure
     ) seeds types
-  return
-    Expression
-    { _rGuid = SugarInfer.resultGuid exprI
-    , _rBody = expr
-    , _rPayload = Payload
-      { _plInferredTypes = inferredTypes
-      , _plActions =
-        mkActions sugarContext <$>
-        traverse (Lens.sequenceOf SugarInfer.plStored) exprI
-      , _plMNextHoleGuid = Nothing
-      }
-    , _rHiddenGuids = []
-    , _rPresugaredExpression =
+  return $ Expression body Payload
+    { _plGuid = SugarInfer.resultGuid exprI
+    , _plInferredTypes = inferredTypes
+    , _plActions =
+      mkActions sugarContext <$>
+      traverse (Lens.sequenceOf SugarInfer.plStored) exprI
+    , _plMNextHoleGuid = Nothing
+    , _plPresugaredExpression =
       fmap (StorePoint . Property.value) .
       (^. SugarInfer.plStored) <$> exprI
+    , _plHiddenGuids = []
     }
   where
     seeds = RandomUtils.splits . mkGen 0 3 $ SugarInfer.resultGuid exprI
@@ -174,7 +170,7 @@ setNextHole destGuid =
 
 setNextHoleToFirstSubHole :: MonadA m => ExpressionU m -> ExpressionU m -> ExpressionU m
 setNextHoleToFirstSubHole dest =
-  maybe id (setNextHole . (^. rGuid)) $ dest ^? subHoles
+  maybe id (setNextHole . (^. rPayload . plGuid)) $ dest ^? subHoles
 
 subExpressions :: ExpressionU m -> [ExpressionU m]
 subExpressions x = x : x ^.. rBody . Lens.traversed . Lens.folding subExpressions

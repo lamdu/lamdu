@@ -73,10 +73,10 @@ make parentPrecedence sExpr = assignCursor $ do
       Widget.weakerEvents exprEventMap
   where
     payload = sExpr ^. Sugar.rPayload
-    exprId = WidgetIds.fromGuid $ sExpr ^. Sugar.rGuid
+    exprId = WidgetIds.fromGuid $ sExpr ^. Sugar.rPayload . Sugar.plGuid
     assignCursor f =
       foldr (`ExprGuiM.assignCursorPrefix` exprId) f
-      (WidgetIds.fromGuid <$> sExpr ^. Sugar.rHiddenGuids)
+      (WidgetIds.fromGuid <$> sExpr ^. Sugar.rPayload . Sugar.plHiddenGuids)
 
 makeEditor ::
   MonadA m => ParentPrecedence ->
@@ -91,12 +91,13 @@ makeEditor parentPrecedence sExpr myId = do
       , widget &
         ExpressionGui.egWidget %~ Widget.weakerEvents (pasteEventMap config hole)
       )
+    exprGuid = sExpr ^. Sugar.rPayload . Sugar.plGuid
     mkEditor =
       case sExpr ^. Sugar.rBody of
       Sugar.BodyInferred i ->
-        isAHole (i ^. Sugar.iHole) . InferredEdit.make parentPrecedence i $ sExpr ^. Sugar.rGuid
+        isAHole (i ^. Sugar.iHole) $ InferredEdit.make parentPrecedence i exprGuid
       Sugar.BodyHole hole ->
-        isAHole hole . HoleEdit.make hole mNextHoleGuid $ sExpr ^. Sugar.rGuid
+        isAHole hole $ HoleEdit.make hole mNextHoleGuid exprGuid
       Sugar.BodyCollapsed poly ->
         notAHole $ CollapsedEdit.make parentPrecedence poly
       Sugar.BodyApply apply ->
@@ -181,7 +182,7 @@ actionsEventMap sExpr isHole resultPickers actions = do
     , cut
     ]
   where
-    exprGuid = sExpr ^. Sugar.rGuid
+    exprGuid = sExpr ^. Sugar.rPayload . Sugar.plGuid
     docPrefix
       | null resultPickers = ""
       | otherwise = "Pick and "

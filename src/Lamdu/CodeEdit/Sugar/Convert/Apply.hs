@@ -99,9 +99,9 @@ convertLabeled funcS argS exprI = do
     , _aSpecialArgs = specialArgs
     , _aAnnotatedArgs = annotatedArgs
     }
-    <&> rHiddenGuids <>~
-        (argS ^. rGuid :
-         fields ^.. flItems . Lens.traversed . rfTag . rGuid)
+    <&> rPayload . plHiddenGuids <>~
+        (argS ^. rPayload . plGuid :
+         fields ^.. flItems . Lens.traversed . rfTag . rPayload . plGuid)
 
 makeCollapsed ::
   (MonadA m, Typeable1 m) =>
@@ -116,7 +116,7 @@ makeCollapsed exprI g compact hasInfo fullExpression =
     , _cFullExpression =
       fullExpression
       & SugarExpr.removeInferredTypes
-      & rGuid .~ expandedGuid
+      & rPayload . plGuid .~ expandedGuid
     }
   where
     expandedGuid = Guid.combine (SugarInfer.resultGuid exprI) $ Guid.fromString "polyExpanded"
@@ -160,8 +160,8 @@ convertPrefix funcRef funcI rawArgS argI applyI = do
 
 setListGuid :: Guid -> ExpressionU m -> ExpressionU m
 setListGuid consistentGuid e = e
-  & rGuid .~ consistentGuid
-  & rHiddenGuids %~ (e ^. rGuid :)
+  & rPayload . plGuid .~ consistentGuid
+  & rPayload . plHiddenGuids %~ (e ^. rPayload . plGuid :)
 
 subExpressionGuids ::
   Lens.Fold
@@ -191,7 +191,7 @@ convertEmptyList app@(Expr.Apply funcI _) exprI = do
     Lens.anyOf ExprLens.exprDefinitionRef
     (== Anchors.sfNil specialFunctions) funcI
   let guids = app ^.. Lens.traversed . subExpressionGuids
-  (rHiddenGuids <>~ guids) .
+  (rPayload . plHiddenGuids <>~ guids) .
     setListGuid consistentGuid <$>
     (lift . SugarExpr.make exprI . BodyList)
     (List [] (mkListActions <$> SugarInfer.resultStored exprI))
@@ -240,7 +240,7 @@ convertAppliedHole funcI rawArgS exprI
         , _haTypeIsAMatch = isTypeMatch
         }
     (rBody . _BodyHole . holeMArg .~ Just holeArg) .
-      (rHiddenGuids <>~ funcGuids) <$>
+      (rPayload . plHiddenGuids <>~ funcGuids) <$>
       ConvertHole.convertPlain exprI
   | otherwise = mzero
   where
@@ -283,7 +283,7 @@ convertList (Expr.Apply funcI argI) argS exprI = do
         { addFirstItem = mkListAddFirstItem specialFunctions exprS
         , replaceNil = replaceNil innerListActions
         }
-  setListGuid (argS ^. rGuid) <$>
+  setListGuid (argS ^. rPayload . plGuid) <$>
     (lift . SugarExpr.make exprI . BodyList)
     (List (listItem : innerValues) mListActions)
 
@@ -297,7 +297,7 @@ mkListItem listItemExpr argS hiddenGuids exprI argI mAddNextItem =
   { liExpr =
     listItemExpr
     & SugarExpr.setNextHoleToFirstSubHole argS
-    & rHiddenGuids <>~ hiddenGuids ++ (argS ^. rHiddenGuids)
+    & rPayload . plHiddenGuids <>~ hiddenGuids ++ (argS ^. rPayload . plHiddenGuids)
   , liMActions = do
       addNext <- mAddNextItem
       exprProp <- SugarInfer.resultStored exprI

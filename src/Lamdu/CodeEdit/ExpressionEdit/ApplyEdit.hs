@@ -65,7 +65,7 @@ make (ParentPrecedence parentPrecedence) exprS (Sugar.Apply func specialArgs ann
       ]
   where
     isBoxed = not $ null annotatedArgs
-    destGuid = func ^. Sugar.rGuid
+    destGuid = func ^. Sugar.rPayload . Sugar.plGuid
     mk mPrecedence mkFuncRow
       | isBoxed = mkBoxed destGuid mkFuncRow annotatedArgs myId
       | otherwise =

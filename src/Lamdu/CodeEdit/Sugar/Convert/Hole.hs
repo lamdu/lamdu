@@ -65,7 +65,7 @@ convertH convertTyped exprI =
     fixWrap expr =
       expr
       & rPayload . plActions . Lens.mapped . wrap .~
-        AlreadyWrapped (expr ^. rGuid)
+        AlreadyWrapped (expr ^. rPayload . plGuid)
     convertTypeCheckedHole inferred = convertTyped inferred exprI
     convertUntypedHole = SugarExpr.make exprI . BodyHole $ Hole Nothing Nothing
 

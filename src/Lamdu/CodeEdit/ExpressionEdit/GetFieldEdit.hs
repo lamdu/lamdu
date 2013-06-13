@@ -26,4 +26,4 @@ make (Sugar.GetField recExpr tagExpr) =
       (ExprGuiM.widgetEnv . BWidgets.makeLabel "." . Widget.toAnimId) myId
     return $ ExpressionGui.hbox [recExprEdit, dotLabel, tagEdit]
   where
-    destId = WidgetIds.fromGuid $ tagExpr ^. Sugar.rGuid
+    destId = WidgetIds.fromGuid $ tagExpr ^. Sugar.rPayload . Sugar.plGuid

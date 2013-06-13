@@ -20,9 +20,10 @@ module Lamdu.CodeEdit.Sugar
     , _BodyLam, _BodyApply, _BodyGetVar, _BodyHole
     , _BodyInferred, _BodyCollapsed, _BodyLiteralInteger
     , _BodyAtom, _BodyList, _BodyRecord, _BodyTag
-  , Payload(..), plInferredTypes, plActions, plMNextHoleGuid
-  , ExpressionP(..)
-    , rGuid, rBody, rPayload, rHiddenGuids, rPresugaredExpression
+  , Payload(..)
+    , plGuid, plInferredTypes, plActions, plMNextHoleGuid
+    , plPresugaredExpression, plHiddenGuids
+  , ExpressionP(..), rBody, rPayload
   , NameSource(..), NameCollision(..), Name(..), MStoredName
   , DefinitionN, DefinitionU
   , Expression, ExpressionN
@@ -149,12 +150,13 @@ lambdaWrap stored =
 
 fakeExample :: Guid -> ExpressionP name0 m (Payload name1 f)
 fakeExample guid =
-  Expression
-  { _rGuid = Guid.augment "EXAMPLE" guid
-  , _rBody = BodyAtom "NotImplemented"
-  , _rPayload = Payload [] Nothing Nothing
-  , _rHiddenGuids = []
-  , _rPresugaredExpression = Nothing <$ ExprUtil.pureHole
+  Expression (BodyAtom "NotImplemented") $ Payload
+  { _plGuid = Guid.augment "EXAMPLE" guid
+  , _plInferredTypes = []
+  , _plActions = Nothing
+  , _plMNextHoleGuid = Nothing
+  , _plPresugaredExpression = Nothing <$ ExprUtil.pureHole
+  , _plHiddenGuids = []
   }
 
 mkPositionalFuncParamActions ::
@@ -564,7 +566,7 @@ mkRecordParams recordParamsInfo paramGuid fieldParams lambdaExprI mParamTypeI mB
       typeS <- SugarM.convertSubexpression $ fpFieldType fp
       let
         guid = fpTagGuid fp
-        tagExprGuid = fpTagExpr fp ^. plGuid
+        tagExprGuid = fpTagExpr fp ^. Expr.ePayload . SugarInfer.plGuid
       addFuncParamName FuncParam
         { _fpName = Nothing
         , _fpGuid = guid
@@ -586,9 +588,6 @@ mkRecordParams recordParamsInfo paramGuid fieldParams lambdaExprI mParamTypeI mB
         }
       , _fpGetExample = pure $ fakeExample tagExprGuid
       }
-
-plGuid :: Lens' (Expr.Expression def (SugarInfer.Payload t i s)) Guid
-plGuid = Expr.ePayload . SugarInfer.plGuid
 
 type ExprField m = (ExprIRef.ExpressionIM m, ExprIRef.ExpressionIM m)
 rereadFieldParamTypes ::

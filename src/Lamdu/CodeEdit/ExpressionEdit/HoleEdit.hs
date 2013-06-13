@@ -329,7 +329,7 @@ mkEventMap holeInfo isSelectedResult mResult = do
       guard $ null searchTerm
       arg <- hiMArgument holeInfo ^? Lens._Just . Sugar.haExpr
       Just . (hiActions holeInfo ^. Sugar.holeResult) .
-        Sugar.ResultSeedExpression $ arg ^. Sugar.rPresugaredExpression
+        Sugar.ResultSeedExpression $ arg ^. Sugar.rPayload . Sugar.plPresugaredExpression
   addNewDefinitionEventMap <- mkAddNewDefinitionEventMap holeInfo
   config <- ExprGuiM.widgetEnv WE.readConfig
   pure $ mconcat
