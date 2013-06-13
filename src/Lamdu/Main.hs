@@ -5,7 +5,7 @@ import Control.Applicative ((<$>), (<*))
 import Control.Concurrent (threadDelay, forkIO, ThreadId)
 import Control.Concurrent.MVar
 import Control.Lens.Operators
-import Control.Monad (unless, void)
+import Control.Monad (unless)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, runStateT, mapStateT)
 import Data.ByteString (unpack)
@@ -109,13 +109,19 @@ accessDataFile startDir accessor fileName =
   `E.catch` \(E.SomeException _) ->
   accessor $ startDir </> fileName
 
-sampler :: IO a -> IO (ThreadId, IO a)
+type Version = Int
+
+sampler :: Eq a => IO a -> IO (ThreadId, IO (Version, a))
 sampler sample = do
-  ref <- newMVar =<< E.evaluate =<< sample
+  ref <- newMVar . (,) 0 =<< E.evaluate =<< sample
   let
+    updateMVar new = modifyMVar_ ref $ \(ver, old) -> do
+      return $ if old == new
+        then (ver, old)
+        else (ver+1, new)
     go = do
       threadDelay 200000
-      (void . swapMVar ref =<< sample) `E.catch` \E.SomeException {} -> return ()
+      (updateMVar =<< sample) `E.catch` \E.SomeException {} -> return ()
       go
   tid <- forkIO go
   return (tid, readMVar ref)
@@ -182,7 +188,7 @@ whenApply False _ = id
 whenApply True f = f
 
 mainLoopDebugMode ::
-  IO Config -> Draw.Font ->
+  IO (Version, Config) -> Draw.Font ->
   ( Config -> Widget.Size ->
     ( IO (Widget IO)
     , Widget IO -> IO (Widget IO)
@@ -190,6 +196,7 @@ mainLoopDebugMode ::
   ) -> IO a
 mainLoopDebugMode getConfig font iteration = do
   debugModeRef <- newIORef False
+  lastVersionNumRef <- newIORef 0
   let
     getAnimHalfLife = do
       isDebugMode <- readIORef debugModeRef
@@ -205,10 +212,14 @@ mainLoopDebugMode getConfig font iteration = do
         (Widget.keysEventMap (Config.debugModeKeys config) doc set)
         widget
     makeDebugModeWidget size = do
-      config <- getConfig
+      (_, config) <- getConfig
       let (makeWidget, addHelp) = iteration config size
       addHelp =<< addDebugMode config =<< makeWidget
-  mainLoopWidget makeDebugModeWidget getAnimHalfLife
+    tickHandler = do
+      (curVersionNum, _) <- getConfig
+      atomicModifyIORef' lastVersionNumRef $ \lastVersionNum ->
+        (curVersionNum, lastVersionNum /= curVersionNum)
+  mainLoopWidget tickHandler makeDebugModeWidget getAnimHalfLife
 
 cacheMakeWidget :: Eq a => (a -> IO (Widget IO)) -> IO (a -> IO (Widget IO))
 cacheMakeWidget mkWidget = do
@@ -271,7 +282,7 @@ baseStyle config font = TextEdit.Style
   , TextEdit._sEmptyFocusedString = ""
   }
 
-runDb :: IO Config -> Draw.Font -> Db -> IO a
+runDb :: IO (Version, Config) -> Draw.Font -> Db -> IO a
 runDb getConfig font db = do
   ExampleDB.initDB db
   (sizeFactorRef, sizeFactorEvents) <- makeScaleFactor

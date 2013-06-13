@@ -118,21 +118,23 @@ mainLoopAnim tickHandler eventHandler makeFrame getAnimationHalfLife = do
 compose :: [a -> a] -> a -> a
 compose = foldr (.) id
 
-mainLoopWidget :: (Widget.Size -> IO (Widget IO)) -> IO Anim.R -> IO a
-mainLoopWidget mkWidgetUnmemod getAnimationHalfLife = do
+mainLoopWidget :: IO Bool -> (Widget.Size -> IO (Widget IO)) -> IO Anim.R -> IO a
+mainLoopWidget widgetTickHandler mkWidgetUnmemod getAnimationHalfLife = do
   mkWidgetRef <- newIORef =<< memoIO mkWidgetUnmemod
   let
     newWidget = writeIORef mkWidgetRef =<< memoIO mkWidgetUnmemod
     getWidget size = ($ size) =<< readIORef mkWidgetRef
     tickHandler size = do
+      anyUpdate <- widgetTickHandler
+      when anyUpdate $ newWidget
       widget <- getWidget size
       tickResults <-
-        sequenceA $ widget ^. Widget.wEventMap . E.emTickHandlers
-      case tickResults of
-        [] -> return Nothing
-        _ -> do
-          newWidget
-          return . Just . compose $ map (^. Widget.eAnimIdMapping) tickResults
+        sequenceA (widget ^. Widget.wEventMap . E.emTickHandlers)
+      when ((not . null) tickResults) newWidget
+      return $
+        case (tickResults, anyUpdate) of
+        ([], False) -> Nothing
+        _ -> Just . compose $ map (^. Widget.eAnimIdMapping) tickResults
     eventHandler size event = do
       widget <- getWidget size
       mAnimIdMapping <-
