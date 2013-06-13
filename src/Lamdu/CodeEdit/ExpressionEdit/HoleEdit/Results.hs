@@ -9,7 +9,7 @@ module Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Results
 import Control.Applicative (Applicative(..), (<$>), (<$))
 import Control.Lens.Operators
 import Control.Lens.Utils (contextSetter, contextVal)
-import Control.Monad ((<=<), void, when)
+import Control.Monad ((<=<), void)
 import Control.Monad.ListT (ListT)
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.Monad.Trans.Either.Utils (leftToJust, justToLeft)
@@ -241,13 +241,10 @@ injectIntoHoles holeInfo arg =
     argWithoutWrappers =
       arg & wrappers %~ (^?! ExprLens.exprApply . Expr.applyArg)
     injectArg setter =
-      runMaybeT . leftToJust $ do
-        when (Lens.has wrappers arg) .
-          justToLeft . MaybeT . typeCheckOnSide . setter $
-            -- TODO: this currently replaces arg with complete new expression.
-            -- We should instead keep existing IRefs
-            Nothing <$ argWithoutWrappers
-        justToLeft . MaybeT . typeCheckOnSide $ setter arg
+      runMaybeT . leftToJust .
+      mapM_ (justToLeft . MaybeT . typeCheckOnSide . setter) $
+      [ argWithoutWrappers | Lens.has wrappers arg ] ++
+      [ arg ]
     injectArgPositions =
       map (^. contextSetter) .
       sortOn (^. contextVal . Lens.to toOrd) .

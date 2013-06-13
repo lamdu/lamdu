@@ -123,17 +123,18 @@ newExpressionFromH ::
   ExpressionM m (Maybe (ExpressionIM m), a) ->
   T m (ExpressionM m (ExpressionIM m, a))
 newExpressionFromH expr =
-  case Lens.sequenceOf (Lens.traverse . Lens._1) expr of
-  Just result -> pure result
+  case mIRef of
+  Just iref -> writeExpressionWithStoredSubexpressions iref expr 
   Nothing -> f <$> Transaction.newIRefWithGuid (const mkPair)
   where
+    (mIRef, payloadExtra) = expr ^. Expr.ePayload
     mkPair = do
       body <- expressionBodyFrom expr
       pure ((^. Expr.ePayload . Lens._1) <$> body, body)
     f (exprI, body) =
       Expr.Expression body
       ( ExpressionI exprI
-      , expr ^. Expr.ePayload . Lens._2
+      , payloadExtra
       )
 
 variableRefGuid :: Expr.VariableRef (DefI t) -> Guid
