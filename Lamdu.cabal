@@ -62,6 +62,7 @@ Library
                        Data.Store.Property,
                        Data.Store.Db,
 
+                       Control.Monad.Trans.Either.Utils,
                        Control.Monad.Trans.State.Utils,
                        Control.MonadA,
                        System.Random.Utils,
@@ -80,6 +81,7 @@ Library
                        StateVar,
                        TraceUtils,
                        hashable,
+                       either,
                        lens >= 3.9,
                        binary >= 0.5,
                        bytestring,

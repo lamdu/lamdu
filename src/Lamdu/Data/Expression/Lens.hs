@@ -22,6 +22,7 @@ module Lamdu.Data.Expression.Lens
   , bodyIntegerType, exprIntegerType
   , bodyTagType, exprTagType
   , bodyGetVariable, exprGetVariable
+  , subTreesThat
   ) where
 
 import Prelude hiding (pi)
@@ -194,3 +195,8 @@ bodyKindedRecordFields k = _BodyRecord . kindedRecordFields k
 -- Pure expressions:
 pureExpr :: Lens.Iso' (Expression def ()) (Body def (Expression def ()))
 pureExpr = Lens.iso (^. eBody) (`Expression` ())
+
+subTreesThat :: (Expression def a -> Bool) -> Lens.Traversal' (Expression def a) (Expression def a)
+subTreesThat cond f expr
+  | cond expr = f expr
+  | otherwise = expr & eBody . Lens.traversed %%~ subTreesThat cond f

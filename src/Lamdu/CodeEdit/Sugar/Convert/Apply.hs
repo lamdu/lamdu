@@ -4,9 +4,10 @@ module Lamdu.CodeEdit.Sugar.Convert.Apply
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
-import Control.Monad (MonadPlus(..), guard, (<=<))
+import Control.Monad (MonadPlus(..), guard)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Either (EitherT(..))
+import Control.Monad.Trans.Either.Utils (justToLeft)
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.MonadA (MonadA)
 import Data.Store.Guid (Guid)
@@ -20,7 +21,6 @@ import Lamdu.Data.Anchors (PresentationMode(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Infer.Conflicts (iwcInferred)
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Trans.Either as Either
 import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
 import qualified Lamdu.CodeEdit.Sugar.Convert.Hole as ConvertHole
@@ -37,9 +37,6 @@ import qualified Lamdu.Data.Ops as DataOps
 
 uneither :: Either a a -> a
 uneither = either id id
-
-justToLeft :: Monad m => MaybeT m a -> EitherT a m ()
-justToLeft = maybe (pure ()) Either.left <=< lift . runMaybeT
 
 convert ::
   (Typeable1 m, MonadA m) =>

@@ -9,15 +9,17 @@ module Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Results
 import Control.Applicative (Applicative(..), (<$>), (<$))
 import Control.Lens.Operators
 import Control.Lens.Utils (contextSetter, contextVal)
-import Control.Monad ((<=<), void, filterM)
+import Control.Monad ((<=<), void, when)
 import Control.Monad.ListT (ListT)
+import Control.Monad.Trans.Maybe (MaybeT(..))
+import Control.Monad.Trans.Either.Utils (leftToJust, justToLeft)
 import Control.Monad.Trans.State (StateT)
 import Control.MonadA (MonadA)
 import Data.Cache (Cache)
 import Data.Function (on)
 import Data.List (isInfixOf, isPrefixOf, partition)
 import Data.List.Utils (sortOn, nonEmptyAll)
-import Data.Maybe (catMaybes, fromMaybe, isJust)
+import Data.Maybe (catMaybes, fromMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
@@ -213,25 +215,41 @@ storePointHoleWrap :: Sugar.ExprStorePoint m -> Sugar.ExprStorePoint m
 storePointHoleWrap expr =
   storePointExpr $ ExprUtil.makeApply storePointHole expr
 
+wrappers :: Lens.Traversal' (Expression def a) (Expression def a)
+wrappers =
+  (ExprLens.subTreesThat . Lens.has)
+  (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprHole)
+
 injectIntoHoles ::
   MonadA m => HoleInfo m ->
   Sugar.ExprStorePoint m ->
   ExprIRef.ExpressionM m ApplyFormAnnotation ->
   CT m [Sugar.ExprStorePoint m]
 injectIntoHoles holeInfo arg =
-  filterM typeCheckOnSide . injectArg .
+  fmap catMaybes . mapM injectArg . injectArgPositions .
   ExprUtil.addExpressionContexts (const Nothing) .
   Lens.Context id
   where
-    typeCheckOnSide = fmap isJust . (hiActions holeInfo ^. Sugar.holeInferExprType) . void
+    typeCheckOnSide expr =
+      (expr <$) <$> (hiActions holeInfo ^. Sugar.holeInferExprType) (void expr)
     toOrd IndependentParamAdded = 'a'
     toOrd DependentParamAdded = 'b'
     toOrd Untouched = 'c'
     condition subExpr =
       Lens.has ExprLens.exprHole subExpr &&
       DependentParamAdded /= (subExpr ^. Expr.ePayload . contextVal)
-    injectArg =
-      map (^. contextSetter . Lens.to ($ arg)) .
+    argWithoutWrappers =
+      arg & wrappers %~ (^?! ExprLens.exprApply . Expr.applyArg)
+    injectArg setter =
+      runMaybeT . leftToJust $ do
+        when (Lens.has wrappers arg) .
+          justToLeft . MaybeT . typeCheckOnSide . setter $
+            -- TODO: this currently replaces arg with complete new expression.
+            -- We should instead keep existing IRefs
+            Nothing <$ argWithoutWrappers
+        justToLeft . MaybeT . typeCheckOnSide $ setter arg
+    injectArgPositions =
+      map (^. contextSetter) .
       sortOn (^. contextVal . Lens.to toOrd) .
       map (^. Expr.ePayload) . filter condition .
       ExprUtil.subExpressions
