@@ -3,7 +3,7 @@ module Data.Store.Rev.View
     (View, curVersion, branch, setBranch, move, new, store)
 where
 
-import Control.Applicative ((<$>))
+import Control.Applicative ((<$>), (<$))
 import Control.Lens.Operators
 import Control.Monad ((<=<), guard, unless)
 import Control.MonadA (MonadA)
@@ -81,9 +81,7 @@ transaction view updates = do
   where
     makeChange (key, value) = do
       prev <- lookupBS view key
-      return $ do
-        guard $ value /= prev
-        return $ Change key prev value
+      return $ Change key prev value <$ guard (value /= prev)
 
 -- You get a store tagged however you like...
 store :: MonadA m => View (Tag m) -> Store (Transaction m)
