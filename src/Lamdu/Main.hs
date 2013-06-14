@@ -5,7 +5,7 @@ import Control.Applicative ((<$>), (<*))
 import Control.Concurrent (threadDelay, forkIO, ThreadId)
 import Control.Concurrent.MVar
 import Control.Lens.Operators
-import Control.Monad (unless)
+import Control.Monad (unless, forever)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, runStateT, mapStateT)
 import Data.ByteString (unpack)
@@ -115,15 +115,15 @@ sampler :: Eq a => IO a -> IO (ThreadId, IO (Version, a))
 sampler sample = do
   ref <- newMVar . (,) 0 =<< E.evaluate =<< sample
   let
-    updateMVar new = modifyMVar_ ref $ \(ver, old) -> do
-      return $ if old == new
-        then (ver, old)
-        else (ver+1, new)
-    go = do
+    updateMVar new =
+      modifyMVar_ ref $ \(ver, old) -> return $
+      if old == new
+      then (ver, old)
+      else (ver+1, new)
+  tid <-
+    forkIO . forever $ do
       threadDelay 200000
       (updateMVar =<< sample) `E.catch` \E.SomeException {} -> return ()
-      go
-  tid <- forkIO go
   return (tid, readMVar ref)
 
 runEditor :: FilePath -> Maybe FilePath -> IO ()
