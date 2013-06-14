@@ -1,8 +1,5 @@
 {-# LANGUAGE TypeOperators, OverloadedStrings, RankNTypes #-}
-module Lamdu.BranchGUI
-  ( make
-  , branchNameProp
-  ) where
+module Lamdu.BranchGUI (make) where
 
 import Control.Applicative (Applicative, (<$>), pure)
 import Control.Lens.Operators
@@ -10,7 +7,6 @@ import Control.Monad.Trans.Class (lift)
 import Control.MonadA (MonadA)
 import Data.Monoid (Monoid(..))
 import Data.Store.IRef (Tag)
-import Data.Store.Rev.Branch (Branch)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Graphics.UI.Bottle.Widget (Widget)
@@ -29,6 +25,7 @@ import qualified Graphics.UI.Bottle.Widgets.Edges as Edges
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.BottleWidgets as BWidgets
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
@@ -49,10 +46,6 @@ redoEventMap :: Functor m => Config -> Maybe (m Widget.Id) -> Widget.EventHandle
 redoEventMap config =
   maybe mempty .
   Widget.keysEventMapMovesCursor (Config.redoKeys config) $ E.Doc ["Edit", "Redo"]
-
-branchNameProp ::
-  MonadA m => Branch (Tag m) -> Transaction.MkProperty m String
-branchNameProp = Transaction.assocDataRefDef "" "name" . Branch.guid
 
 globalEventMap :: Applicative f => Config -> Actions t f -> Widget.EventHandlers f
 globalEventMap config actions = mconcat
@@ -92,10 +85,12 @@ make transaction size actions widget = do
   config <- WE.readConfig
   let
     makeBranchNameEdit branch = do
-      let branchEditId = WidgetIds.fromGuid $ Branch.guid branch
+      let
+        branchGuid = Branch.guid branch
+        branchEditId = WidgetIds.fromGuid branchGuid
       nameProp <-
         lift . transaction . (Lens.mapped . Property.pSet . Lens.mapped %~ transaction) $
-        branchNameProp branch ^. Transaction.mkProperty
+        Anchors.assocNameRef branchGuid ^. Transaction.mkProperty
       branchNameEdit <-
         BWidgets.wrapDelegatedOT branchNameFDConfig
         FocusDelegator.NotDelegating id

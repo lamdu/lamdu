@@ -25,7 +25,6 @@ import qualified Data.Store.Rev.Version as Version
 import qualified Data.Store.Rev.View as View
 import qualified Data.Store.Transaction as Transaction
 import qualified Lamdu.Anchors as A
-import qualified Lamdu.BranchGUI as BranchGUI
 import qualified Lamdu.CodeEdit.FFI as FFI
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expr
@@ -239,7 +238,7 @@ createBuiltins =
 newBranch :: MonadA m => String -> Version (Tag m) -> Transaction m (Branch (Tag m))
 newBranch name ver = do
   branch <- Branch.new ver
-  setP (BranchGUI.branchNameProp branch) name
+  setP (A.assocNameRef (Branch.guid branch)) name
   return branch
 
 initDB :: Db -> IO ()
