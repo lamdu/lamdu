@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies, TemplateHaskell #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, RecordWildCards, TypeFamilies, TemplateHaskell, RankNTypes #-}
 module Lamdu.CodeEdit.Sugar.AddNames
   ( addToDef
   ) where
@@ -32,10 +32,12 @@ import qualified Lamdu.CodeEdit.Sugar.NameGen as NameGen
 type CPSNameConvertor m = Guid -> OldName m -> CPS m (NewName m)
 type NameConvertor m = Guid -> OldName m -> m (NewName m)
 
+newtype RunMonad m = RunMonad (forall a. m a -> a)
+
 class MonadA m => MonadNaming m where
   type OldName m
   type NewName m
-  opRun :: m (m res -> res)
+  opRun :: m (RunMonad m)
 
   opWithParamName :: NameGen.IsDependent -> CPSNameConvertor m
   opWithWhereItemName :: CPSNameConvertor m
@@ -93,7 +95,7 @@ data NameScope = Local | Global
 instance MonadNaming Pass0M where
   type OldName Pass0M = MStoredName
   type NewName Pass0M = StoredNames
-  opRun = pure (fst . runPass0M)
+  opRun = pure $ RunMonad $ fst . runPass0M
   opWithParamName _ = p0cpsNameConvertor Local
   opWithWhereItemName = p0cpsNameConvertor Local
   opWithDefName = p0cpsNameConvertor Local
@@ -151,7 +153,7 @@ p1WithEnv f (Pass1M act) = Pass1M $ Reader.local f act
 instance MonadNaming Pass1M where
   type OldName Pass1M = StoredNames
   type NewName Pass1M = Name
-  opRun = runPass1M <$> p1GetEnv
+  opRun = (\x -> RunMonad (runPass1M x)) <$> p1GetEnv
   opWithDefName = p1cpsNameConvertorGlobal "def_"
   opWithTagName = p1cpsNameConvertorGlobal "tag_"
   opWithParamName = p1cpsNameConvertorLocal
@@ -284,13 +286,12 @@ toHoleActions ::
   (MonadA tm, MonadNaming m) => HoleActions (OldName m) tm ->
   m (HoleActions (NewName m) tm)
 toHoleActions ha@HoleActions {..} = do
-  run0 <- opRun
-  run1 <- opRun
+  RunMonad run <- opRun
   pure ha
     { _holeScope =
-      fmap (run1 . toScope) _holeScope
+      fmap (run . toScope) _holeScope
     , _holeResult =
-      (fmap . fmap . fmap) (run0 . holeResultConverted toExpression) _holeResult
+      (fmap . fmap . fmap) (run . holeResultConverted toExpression) _holeResult
     }
 
 toHole ::
@@ -398,9 +399,8 @@ toFuncParamActions ::
   (MonadNaming m, MonadA tm) => FuncParamActions (OldName m) tm ->
   m (FuncParamActions (NewName m) tm)
 toFuncParamActions fpa = do
-  run <- opRun
-  pure $
-    fpa & fpGetExample . Lens.mapped %~ run . toExpression
+  RunMonad run <- opRun
+  pure $ fpa & fpGetExample . Lens.mapped %~ run . toExpression
 
 withWhereItem ::
   (MonadA tm, MonadNaming m) => WhereItem (OldName m) tm (Expression (OldName m) tm) ->
