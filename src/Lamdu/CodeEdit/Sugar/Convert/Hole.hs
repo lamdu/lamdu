@@ -165,7 +165,7 @@ mkHole iwc exprI = do
   let
     inferState = sugarContext ^. SugarM.scHoleInferState
     inferStateKey = sugarContext ^. SugarM.scHoleInferStateKey
-    mkWritableHoleActions exprS = do
+    mkWritableHoleActions stored = do
       globals <-
         SugarM.liftTransaction . Transaction.getP . Anchors.globals $
         sugarContext ^. SugarM.scCodeAnchors
@@ -184,12 +184,12 @@ mkHole iwc exprI = do
           ]
         , _holeInferredType = void $ Infer.iType inferred
         , _holeInferExprType = inferExprType
-        , _holeResult = makeHoleResult sugarContext inferred exprS
+        , _holeResult =
+          makeHoleResult sugarContext $
+          SugarInfer.Payload (SugarInfer.resultGuid exprI) iwc stored
         }
     inferExprType = inferOnTheSide inferStateKey inferState $ Infer.nScope point
-  mActions <-
-    traverse mkWritableHoleActions $
-    traverse (Lens.sequenceOf SugarInfer.plStored) exprI
+  mActions <- traverse mkWritableHoleActions $ SugarInfer.resultStored exprI
   pure Hole
     { _holeMActions = mActions
     , _holeMArg = Nothing
@@ -321,15 +321,15 @@ getTag guid = do
 
 makeHoleResult ::
   (Typeable1 m, MonadA m) => SugarM.Context m ->
-  Infer.Inferred (DefI (Tag m)) ->
-  ExprIRef.ExpressionM m
-  (SugarInfer.PayloadM m inferred (Stored m)) ->
+  SugarInfer.PayloadM m (InferredWC (Tag m)) (Stored m) ->
   HoleResultSeed m -> CT m (Maybe (HoleResult MStoredName m))
-makeHoleResult sugarContext inferred exprI seed =
+makeHoleResult sugarContext (SugarInfer.Payload guid iwc stored) seed =
   fmap mkHoleResult <$>
   mapStateT Transaction.forkScratch
   (traverse addConverted . fst =<< makeInferredExpr)
   where
+    iref = Property.value stored
+    gen = genFromHashable (guid, seedHashable seed)
     cp = sugarContext ^. SugarM.scCodeAnchors
     makeInferredExpr = lift (seedExprEnv cp seed) >>= Lens._1 inferResult
     addConverted (inferredResult, ctx) = do
@@ -344,10 +344,7 @@ makeHoleResult sugarContext inferred exprI seed =
       pure (converted, inferredResult)
     inferResult expr =
       SugarInfer.memoLoadInfer Nothing expr holeInferStateKey
-      (sugarContext ^. SugarM.scHoleInferState, Infer.iPoint inferred)
-    gen = genFromHashable (guid, seedHashable seed)
-    guid = SugarInfer.resultGuid exprI
-    iref = Property.value $ SugarInfer.resultStored exprI
+      (sugarContext ^. SugarM.scHoleInferState, Infer.iPoint (iwcInferred iwc))
     holeInferStateKey = sugarContext ^. SugarM.scHoleInferStateKey
     mkHoleResult (fakeConverted, fakeInferredExpr) =
       HoleResult
