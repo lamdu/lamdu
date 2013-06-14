@@ -322,7 +322,7 @@ getTag guid = do
 makeHoleResult ::
   (Typeable1 m, MonadA m) => SugarM.Context m ->
   Infer.Inferred (DefI (Tag m)) ->
-  Expr.Expression (DefI (Tag m))
+  ExprIRef.ExpressionM m
   (SugarInfer.PayloadM m inferred (Stored m)) ->
   HoleResultSeed m -> CT m (Maybe (HoleResult MStoredName m))
 makeHoleResult sugarContext inferred exprI seed =

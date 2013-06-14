@@ -3,11 +3,10 @@ module AnnotatedExpr where
 import Control.Applicative (pure, (<$>))
 import Control.Lens.Operators
 import Control.Monad.Trans.State (State, runState)
-import Lamdu.Data.Expression.IRef (DefI)
 import Utils
 import qualified Control.Lens as Lens
 import qualified Data.List as List
-import qualified Lamdu.Data.Expression as Expr
+import qualified Lamdu.Data.Expression.IRef as ExprIRef
 
 type AnnotationIndex = Int
 type AnnotationM = State (AnnotationIndex, [String])
@@ -20,7 +19,7 @@ addAnnotation msg = do
   pure count
 
 errorMessage ::
-  AnnotationM (Expr.Expression (DefI t) [AnnotationIndex]) ->
+  AnnotationM (ExprIRef.Expression t [AnnotationIndex]) ->
   ([String], String)
 errorMessage mkExpr =
   (resultErrs, fullMsg)

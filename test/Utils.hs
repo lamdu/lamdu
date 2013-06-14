@@ -64,8 +64,8 @@ bodyIntegerType = ExprLens.bodyIntegerType # ()
 -- 1 dependent param
 pureApplyPoly1 ::
   String ->
-  [Expr.Expression (DefI t) ()] ->
-  Expr.Expression (DefI t) ()
+  [ExprIRef.Expression t ()] ->
+  ExprIRef.Expression t ()
 pureApplyPoly1 name xs = pureApply $ pureGetDef name : pureHole : xs
 
 pureLambda ::
@@ -157,7 +157,7 @@ defParamTags :: String -> [Guid]
 defParamTags defName =
   innerMostPi (definitionTypes ! Guid.fromString defName) ^.. piTags
 
-simplifyDef :: Expression (DefI t) a -> Expression UnescapedStr a
+simplifyDef :: ExprIRef.Expression t a -> Expression UnescapedStr a
 simplifyDef =
   ExprLens.exprDef %~ defIStr
   where
@@ -172,7 +172,7 @@ showRestricted = fmap restrictedStr
 canonizeDebug :: Expression def a -> Expression def a
 canonizeDebug = ExprUtil.randomizeParamIdsG ExprUtil.debugNameGen Map.empty (\_ _ -> id)
 
-showInferred :: Expression (DefI t) Infer.IsRestrictedPoly -> String
+showInferred :: ExprIRef.Expression t Infer.IsRestrictedPoly -> String
 showInferred =
   show . showRestricted . simplifyDef . canonizeDebug
 

@@ -253,7 +253,7 @@ injectIntoHoles holeInfo arg =
 
 maybeInjectArgumentExpr ::
   MonadA m => HoleInfo m ->
-  [Expression (DefI (Tag m)) ApplyFormAnnotation] ->
+  [ExprIRef.ExpressionM m ApplyFormAnnotation] ->
   CT m [Sugar.ExprStorePoint m]
 maybeInjectArgumentExpr holeInfo =
   case hiMArgument holeInfo ^? Lens._Just . Sugar.haExpr of

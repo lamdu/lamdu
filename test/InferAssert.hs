@@ -9,7 +9,6 @@ import Control.Monad (void)
 import Control.Monad.Trans.State (runStateT, runState)
 import InferWrappers
 import Lamdu.Data.Arbitrary () -- Arbitrary instance
-import Lamdu.Data.Expression (Expression(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import System.IO (hPutStrLn, stderr)
 import Test.Framework.Providers.HUnit (testCase)
@@ -21,6 +20,7 @@ import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Lamdu.Data.Expression as Expr
+import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 import qualified Lamdu.Data.Expression.Infer.ImplicitVariables as ImplicitVariables
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
@@ -110,7 +110,7 @@ testInferAllowFail :: String -> InferResults t -> TestFramework.Test
 testInferAllowFail name expr =
   testCase name . allowFailAssertion $ inferAssertion expr
 
-type InferredExpr t = Expression (DefI t) (Infer.Inferred (DefI t))
+type InferredExpr t = ExprIRef.Expression t (Infer.Inferred (DefI t))
 
 testResume ::
   String ->

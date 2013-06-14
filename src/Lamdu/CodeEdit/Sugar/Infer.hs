@@ -42,7 +42,7 @@ import Data.Binary (Binary)
 import Data.Cache (Cache)
 import Data.Maybe (isJust)
 import Data.Store.Guid (Guid)
-import Data.Store.IRef (Tag, Tagged)
+import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable, Typeable1)
@@ -100,7 +100,7 @@ randomizeGuids gen f =
     toPayload inferred guid = Payload guid inferred NoStored
     paramGen : exprGen : _ = RandomUtils.splits gen
 
-toPayloadMM :: Payload (Tagged (m ())) NoInferred NoStored -> PayloadMM m
+toPayloadMM :: PayloadM m NoInferred NoStored -> PayloadMM m
 toPayloadMM = (plInferred .~ Nothing) . (plStored .~ Nothing)
 
 -- Not inferred, not stored
@@ -236,11 +236,11 @@ inferWithVariables gen loaded baseInferContext node =
 data InferredWithImplicits m = InferredWithImplicits
   { _iwiSuccess :: Bool
   , _iwiInferContext :: Infer.Context (DefI (Tag m))
-  , _iwiExpr :: ExprIRef.ExpressionM m (Payload (Tag m) (InferredWC (Tag m)) (Maybe (Stored m)))
+  , _iwiExpr :: ExprIRef.ExpressionM m (PayloadM m (InferredWC (Tag m)) (Maybe (Stored m)))
   -- Prior to adding variables
   , _iwiBaseInferContext :: Infer.Context (DefI (Tag m))
   , _iwiBaseInferContextKey :: Cache.KeyBS
-  , _iwiBaseExpr :: ExprIRef.ExpressionM m (Payload (Tag m) (InferredWC (Tag m)) (Stored m))
+  , _iwiBaseExpr :: ExprIRef.ExpressionM m (PayloadM m (InferredWC (Tag m)) (Stored m))
   }
 Lens.makeLenses ''InferredWithImplicits
 

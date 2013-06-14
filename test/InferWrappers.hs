@@ -18,7 +18,6 @@ import qualified Data.ByteString as SBS
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Store.IRef as IRef
-import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
 
@@ -48,7 +47,7 @@ loader =
       Just x -> Right x
 
 showExpressionWithConflicts ::
-  Expr.Expression (DefI t) (InferredWithConflicts (DefI t)) -> String
+  ExprIRef.Expression t (InferredWithConflicts (DefI t)) -> String
 showExpressionWithConflicts =
   snd . errorMessage . traverse annotateIWC
   where
@@ -86,7 +85,7 @@ doInferM inferNode expr = do
 loadInferM ::
   Infer.InferNode (DefI t) -> ExprIRef.Expression t a ->
   StateT (Infer.Context (DefI t)) (Either (Infer.Error (DefI t)))
-  (Expr.Expression (DefI t) (Infer.Inferred (DefI t), a))
+  (ExprIRef.Expression t (Infer.Inferred (DefI t), a))
 loadInferM inferNode expr =
   Infer.inferLoaded eitherActions (doLoad expr) inferNode
   where

@@ -32,7 +32,7 @@ import qualified Lamdu.Data.Expression as Expr
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 type Expression t = Expr.Expression (DefI t)
-type ExpressionM m = Expr.Expression (DefI (Tag m))
+type ExpressionM m = Expression (Tag m)
 
 type T = Transaction
 
@@ -124,7 +124,7 @@ newExpressionFromH ::
   T m (ExpressionM m (ExpressionIM m, a))
 newExpressionFromH expr =
   case mIRef of
-  Just iref -> writeExpressionWithStoredSubexpressions iref expr 
+  Just iref -> writeExpressionWithStoredSubexpressions iref expr
   Nothing -> f <$> Transaction.newIRefWithGuid (const mkPair)
   where
     (mIRef, payloadExtra) = expr ^. Expr.ePayload
