@@ -95,7 +95,7 @@ guardReinferSuccess sugarContext act = do
 
 mkCallWithArg ::
   MonadA m => SugarM.Context m ->
-  ExprIRef.ExpressionM m (SugarInfer.PayloadM m i (Stored m)) ->
+  ExprIRef.ExpressionM m (SugarInfer.Payload i (Stored m)) ->
   PrefixAction m -> CT m (Maybe (T m Guid))
 mkCallWithArg sugarContext exprS prefixAction =
   guardReinferSuccess sugarContext $ do
@@ -104,14 +104,14 @@ mkCallWithArg sugarContext exprS prefixAction =
 
 mkReplaceWithNewHole ::
   MonadA m =>
-  ExprIRef.ExpressionM m (SugarInfer.PayloadM m i (Stored m)) ->
+  ExprIRef.ExpressionM m (SugarInfer.Payload i (Stored m)) ->
   T m Guid
 mkReplaceWithNewHole =
   fmap ExprIRef.exprGuid . DataOps.replaceWithHole . SugarInfer.resultStored
 
 mkActions ::
   MonadA m => SugarM.Context m ->
-  ExprIRef.ExpressionM m (SugarInfer.PayloadM m i (Stored m)) -> Actions m
+  ExprIRef.ExpressionM m (SugarInfer.Payload i (Stored m)) -> Actions m
 mkActions sugarContext exprS =
   Actions
   { _wrap = WrapAction $ ExprIRef.exprGuid <$> DataOps.wrap stored

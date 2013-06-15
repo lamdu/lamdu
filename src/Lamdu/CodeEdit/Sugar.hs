@@ -841,7 +841,7 @@ addFirstFieldParam lamGuid recordI = do
 
 assertedGetProp ::
   String ->
-  Expr.Expression def (SugarInfer.Payload t inferred (Maybe stored)) -> stored
+  Expr.Expression def (SugarInfer.Payload inferred (Maybe stored)) -> stored
 assertedGetProp _
   Expr.Expression
   { Expr._ePayload =

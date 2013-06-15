@@ -321,7 +321,7 @@ getTag guid = do
 
 makeHoleResult ::
   (Typeable1 m, MonadA m) => SugarM.Context m ->
-  SugarInfer.PayloadM m (InferredWC (Tag m)) (Stored m) ->
+  SugarInfer.Payload (InferredWC (Tag m)) (Stored m) ->
   HoleResultSeed m -> CT m (Maybe (HoleResult MStoredName m))
 makeHoleResult sugarContext (SugarInfer.Payload guid iwc stored) seed =
   fmap mkHoleResult <$>

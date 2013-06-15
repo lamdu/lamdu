@@ -165,7 +165,7 @@ setListGuid consistentGuid e = e
 
 subExpressionGuids ::
   Lens.Fold
-  (Expr.Expression def (SugarInfer.Payload t i (Maybe (SugarInfer.Stored m)))) Guid
+  (Expr.Expression def (SugarInfer.Payload i (Maybe (SugarInfer.Stored m)))) Guid
 subExpressionGuids = Lens.folding ExprUtil.subExpressions . SugarInfer.exprStoredGuid
 
 mkListAddFirstItem ::

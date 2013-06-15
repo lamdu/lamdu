@@ -4,7 +4,7 @@ module Lamdu.CodeEdit.Sugar.Infer
   , ExpressionSetter
   , NoInferred(..), InferredWC
   , NoStored(..), Stored
-  , PayloadM, PayloadMM, ExprMM
+  , PayloadMM, ExprMM
 
   , isPolymorphicFunc
   , inferAddImplicits
@@ -67,9 +67,8 @@ import qualified System.Random.Utils as RandomUtils
 type T = Transaction
 type CT m = StateT Cache (T m)
 
-type PayloadM m = Payload (Tag m)
 type PayloadMM m =
-  PayloadM m (Maybe (InferredWC (Tag m))) (Maybe (Stored m))
+  Payload (Maybe (InferredWC (Tag m))) (Maybe (Stored m))
 type ExprMM m = ExprIRef.ExpressionM m (PayloadMM m)
 
 data NoInferred = NoInferred
@@ -80,7 +79,7 @@ type Stored m = ExprIRef.ExpressionProperty m
 
 type ExpressionSetter def = Expr.Expression def () -> Expr.Expression def ()
 
-data Payload t inferred stored
+data Payload inferred stored
   = Payload
     { _plGuid :: Guid
     , _plInferred :: inferred
@@ -91,7 +90,7 @@ Lens.makeLenses ''Payload
 randomizeGuids ::
   RandomGen g => g -> (a -> inferred) ->
   ExprIRef.Expression t a ->
-  ExprIRef.Expression t (Payload t inferred NoStored)
+  ExprIRef.Expression t (Payload inferred NoStored)
 randomizeGuids gen f =
     ExprUtil.randomizeParamIds paramGen
   . ExprUtil.randomizeExpr exprGen
@@ -100,7 +99,7 @@ randomizeGuids gen f =
     toPayload inferred guid = Payload guid inferred NoStored
     paramGen : exprGen : _ = RandomUtils.splits gen
 
-toPayloadMM :: PayloadM m NoInferred NoStored -> PayloadMM m
+toPayloadMM :: Payload NoInferred NoStored -> PayloadMM m
 toPayloadMM = (plInferred .~ Nothing) . (plStored .~ Nothing)
 
 -- Not inferred, not stored
@@ -112,7 +111,7 @@ resultFromPure g =
 resultFromInferred ::
   RandomGen g => g ->
   ExprIRef.Expression t (Infer.Inferred (DefI t)) ->
-  ExprIRef.Expression t (Payload t (InferredWC t) NoStored)
+  ExprIRef.Expression t (Payload (InferredWC t) NoStored)
 resultFromInferred =
   flip randomizeGuids $ \inferred ->
     InferredWithConflicts
@@ -236,11 +235,11 @@ inferWithVariables gen loaded baseInferContext node =
 data InferredWithImplicits m = InferredWithImplicits
   { _iwiSuccess :: Bool
   , _iwiInferContext :: Infer.Context (DefI (Tag m))
-  , _iwiExpr :: ExprIRef.ExpressionM m (PayloadM m (InferredWC (Tag m)) (Maybe (Stored m)))
+  , _iwiExpr :: ExprIRef.ExpressionM m (Payload (InferredWC (Tag m)) (Maybe (Stored m)))
   -- Prior to adding variables
   , _iwiBaseInferContext :: Infer.Context (DefI (Tag m))
   , _iwiBaseInferContextKey :: Cache.KeyBS
-  , _iwiBaseExpr :: ExprIRef.ExpressionM m (PayloadM m (InferredWC (Tag m)) (Stored m))
+  , _iwiBaseExpr :: ExprIRef.ExpressionM m (Payload (InferredWC (Tag m)) (Stored m))
   }
 Lens.makeLenses ''InferredWithImplicits
 
@@ -289,26 +288,26 @@ isPolymorphicFunc funcI =
   resultInferred funcI
 
 resultGuid ::
-  Expr.Expression def (Payload t inferred stored) -> Guid
+  Expr.Expression def (Payload inferred stored) -> Guid
 resultGuid = (^. Expr.ePayload . plGuid)
 
 resultStored ::
-  Expr.Expression def (Payload t inferred stored) -> stored
+  Expr.Expression def (Payload inferred stored) -> stored
 resultStored = (^. Expr.ePayload . plStored)
 
 resultInferred ::
-  Expr.Expression def (Payload t inferred stored) -> inferred
+  Expr.Expression def (Payload inferred stored) -> inferred
 resultInferred = (^. Expr.ePayload . plInferred)
 
 plIRef ::
   Lens.Traversal'
-  (Expr.Expression def (Payload t i (Maybe (Stored m))))
+  (Expr.Expression def (Payload i (Maybe (Stored m))))
   (ExprIRef.ExpressionI (Tag m))
 plIRef = Expr.ePayload . plStored . traverse . Property.pVal
 
 exprStoredGuid ::
   Lens.Fold
-  (Expr.Expression def (Payload t i (Maybe (Stored m)))) Guid
+  (Expr.Expression def (Payload i (Maybe (Stored m)))) Guid
 exprStoredGuid = plIRef . Lens.to ExprIRef.exprGuid
 
 replaceWith :: MonadA m => Stored m -> Stored m -> T m Guid
