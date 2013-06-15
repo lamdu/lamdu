@@ -1,2 +1,2 @@
 all:
-	cabal build --ghc-options "-XScopedTypeVariables -Werror"
+	cabal build --ghc-options "-XScopedTypeVariables -Werror -debug"
