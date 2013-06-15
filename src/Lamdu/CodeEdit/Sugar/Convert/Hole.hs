@@ -46,27 +46,26 @@ import qualified System.Random as Random
 convert ::
   (MonadA m, Typeable1 m) =>
   SugarInfer.ExprMM m -> SugarM m (ExpressionU m)
-convert = convertH convertTypeCheckedHoleH
+convert = convertH <*> convertTypeCheckedHoleH
 
 convertPlain ::
   (MonadA m, Typeable1 m) =>
   SugarInfer.ExprMM m -> SugarM m (ExpressionU m)
-convertPlain = convertH convertPlainTyped
+convertPlain = convertH <*> convertPlainTyped
 
 convertH ::
   (MonadA m, Typeable1 m) =>
-  (InferredWC (Tag m) -> SugarInfer.ExprMM m -> SugarM m (ExpressionU m)) ->
-  SugarInfer.ExprMM m -> SugarM m (ExpressionU m)
-convertH convertTyped exprI =
+  SugarInfer.ExprMM m -> (InferredWC (Tag m) -> SugarM m (ExpressionU m)) ->
+  SugarM m (ExpressionU m)
+convertH exprI convertTyped =
   fmap fixWrap .
-  maybe convertUntypedHole convertTypeCheckedHole $
+  maybe convertUntypedHole convertTyped $
   SugarInfer.resultInferred exprI
   where
     fixWrap expr =
       expr
       & rPayload . plActions . Lens.mapped . wrap .~
         AlreadyWrapped (expr ^. rPayload . plGuid)
-    convertTypeCheckedHole inferred = convertTyped inferred exprI
     convertUntypedHole = SugarExpr.make exprI . BodyHole $ Hole Nothing Nothing
 
 mkPaste :: MonadA m => Stored m -> SugarM m (Maybe (T m Guid))
@@ -94,10 +93,10 @@ mkPaste exprP = do
 
 convertTypeCheckedHoleH ::
   (MonadA m, Typeable1 m) =>
-  InferredWC (Tag m) -> SugarInfer.ExprMM m -> SugarM m (ExpressionU m)
-convertTypeCheckedHoleH iwc exprI =
+  SugarInfer.ExprMM m -> InferredWC (Tag m) -> SugarM m (ExpressionU m)
+convertTypeCheckedHoleH exprI iwc =
   chooseHoleType (iwcInferredValues iwc)
-  (convertPlainTyped iwc exprI)
+  (convertPlainTyped exprI iwc)
   (convertInferred iwc exprI)
 
 accept ::
@@ -150,9 +149,9 @@ convertInferred iwc exprI wvInferredVal = do
 
 convertPlainTyped ::
   (MonadA m, Typeable1 m) =>
-  InferredWC (Tag m) -> SugarInfer.ExprMM m ->
+  SugarInfer.ExprMM m -> InferredWC (Tag m) ->
   SugarM m (ExpressionU m)
-convertPlainTyped iwc exprI =
+convertPlainTyped exprI iwc =
   SugarExpr.make exprI . BodyHole =<< mkHole iwc exprI
 
 mkHole ::
