@@ -32,7 +32,7 @@ import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 import qualified Lamdu.Data.Ops as DataOps
-import qualified Lamdu.WidgetIds as WidgetIds
+import qualified Lamdu.WidgetIdIRef as WidgetIdIRef
 
 newTodoIRef :: MonadA m => Transaction m (IRef (Tag m) a)
 newTodoIRef = fmap IRef.unsafeFromGuid Transaction.newKey
@@ -254,7 +254,7 @@ initDB db =
       writeRevAnchor A.branches [master]
       writeRevAnchor A.currentBranch master
       writeRevAnchor A.redos []
-      let paneWId = WidgetIds.fromIRef $ A.panes A.codeIRefs
+      let paneWId = WidgetIdIRef.fromIRef $ A.panes A.codeIRefs
       writeRevAnchor A.cursor paneWId
       A.runViewTransaction view $ do
         ((ffiEnv, specialFunctions), builtins) <- createBuiltins

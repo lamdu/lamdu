@@ -23,7 +23,7 @@ import Data.Store.Rev.View (View)
 import Data.Store.Transaction (MkProperty(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Data.Store.Transaction as Transaction
-import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.CodeEdit.FFI as FFI
 
 data SpecialFunctions t = SpecialFunctions
@@ -41,9 +41,9 @@ data Code f t = Code
   , globals :: f [DefI t]
   , specialFunctions :: f (SpecialFunctions t)
   , ffiEnv :: f (FFI.Env t)
-  , preJumps :: f [Widget.Id]
-  , preCursor :: f Widget.Id
-  , postCursor :: f Widget.Id
+  , preJumps :: f [WidgetId.Id]
+  , preCursor :: f WidgetId.Id
+  , postCursor :: f WidgetId.Id
   , tags :: f [Guid]
   }
 onCode :: Binary t => (forall a. Binary a => f a -> g a) -> Code f t -> Code g t
@@ -53,7 +53,7 @@ onCode f (Code x0 x1 x2 x3 x4 x5 x6 x7 x8) =
 data Revision f t = Revision
   { branches :: f [Branch t]
   , currentBranch :: f (Branch t)
-  , cursor :: f Widget.Id
+  , cursor :: f WidgetId.Id
   , redos :: f [Version t]
   , view :: f (View t)
   }

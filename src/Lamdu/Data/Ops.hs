@@ -26,7 +26,7 @@ import Lamdu.Data.Expression.IRef (DefI)
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
-import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.WidgetId as WidgetId
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression as Expr
@@ -135,10 +135,10 @@ newPane codeProps defI = do
   when (defI `notElem` panes) $
     setP panesProp $ Anchors.makePane defI : panes
 
-savePreJumpPosition :: MonadA m => Anchors.CodeProps m -> Widget.Id -> T m ()
+savePreJumpPosition :: MonadA m => Anchors.CodeProps m -> WidgetId.Id -> T m ()
 savePreJumpPosition codeProps pos = modP (Anchors.preJumps codeProps) $ (pos :) . take 19
 
-jumpBack :: MonadA m => Anchors.CodeProps m -> T m (Maybe (T m Widget.Id))
+jumpBack :: MonadA m => Anchors.CodeProps m -> T m (Maybe (T m WidgetId.Id))
 jumpBack codeProps = do
   preJumps <- getP (Anchors.preJumps codeProps)
   return $

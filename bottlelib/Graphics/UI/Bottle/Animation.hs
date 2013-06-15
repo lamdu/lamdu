@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses #-}
 
 module Graphics.UI.Bottle.Animation
-  ( R, AnimId, Size, Layer
+  ( R, Size, Layer
   , PositionedImage(..), piImage, piRect
   , Frame(..), fSubImages, onImages
   , draw, nextFrame, mapIdentities
@@ -11,6 +11,7 @@ module Graphics.UI.Bottle.Animation
   , simpleFrame, simpleFrameDownscale
   , joinId, subId
   , weaker, stronger
+  , module Graphics.UI.Bottle.Animation.Id
   ) where
 
 import Control.Applicative(Applicative(..), liftA2)
@@ -23,9 +24,9 @@ import Data.Maybe(isJust)
 import Data.Monoid(Monoid(..))
 import Data.Vector.Vector2 (Vector2(..))
 import Graphics.DrawingCombinators(R, (%%))
+import Graphics.UI.Bottle.Animation.Id (AnimId)
 import Graphics.UI.Bottle.Rect(Rect(Rect))
 import qualified Control.Lens as Lens
-import qualified Data.ByteString as SBS
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Vector.Vector2 as Vector2
@@ -33,7 +34,6 @@ import qualified Graphics.DrawingCombinators as Draw
 import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import qualified Graphics.UI.Bottle.Rect as Rect
 
-type AnimId = [SBS.ByteString]
 type Layer = Int
 type Size = Vector2 R
 

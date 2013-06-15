@@ -25,6 +25,7 @@ Library
                        Numeric.Utils,
                        Graphics.DrawingCombinators.Utils,
                        Graphics.UI.Bottle.Animation,
+                       Graphics.UI.Bottle.Animation.Id,
                        Graphics.UI.Bottle.Direction,
                        Graphics.UI.Bottle.EventMap,
                        Graphics.UI.Bottle.MainLoop,

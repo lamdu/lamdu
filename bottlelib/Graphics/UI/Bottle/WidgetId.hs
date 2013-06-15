@@ -5,7 +5,7 @@ import Data.Binary (Binary)
 import Data.ByteString.Char8(pack) -- IsString instance
 import Data.List (isPrefixOf, intercalate)
 import Data.Monoid (Monoid(..))
-import Graphics.UI.Bottle.Animation (AnimId)
+import Graphics.UI.Bottle.Animation.Id (AnimId)
 import Numeric.Utils (encodeHex)
 
 newtype Id = Id {
