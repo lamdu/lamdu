@@ -12,7 +12,7 @@ module Lamdu.CodeEdit.Sugar.Infer
   , iwiSuccess, iwiBaseInferContextKey, iwiInferContext
   , iwiExpr, iwiBaseExpr, iwiBaseInferContext
 
-  , resultFromPure, resultFromInferred
+  , mkExprPure, mkExprInferred
 
   -- TODO: These don't belong here:
   -- Type-check an expression into an ordinary Inferred Expression,
@@ -20,18 +20,19 @@ module Lamdu.CodeEdit.Sugar.Infer
   , load, inferMaybe, inferMaybe_
   , memoLoadInfer
 
-  , resultInferred
-  , resultStored
-  , resultGuid
+  , exprInferred
+  , exprStored
+  , exprGuid
   , exprStoredGuid
 
   , plIRef
-  , resultMIRef
+  , exprMIRef
   , replaceWith
   ) where
 
 import Control.Applicative ((<$>))
 import Control.Arrow ((&&&))
+import Control.Lens (Lens')
 import Control.Lens.Operators
 import Control.Monad (void, (<=<))
 import Control.Monad.Trans.Class (lift)
@@ -44,7 +45,6 @@ import Data.Maybe (isJust)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
-import Data.Traversable (traverse)
 import Data.Typeable (Typeable, Typeable1)
 import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), inferWithConflicts)
@@ -103,16 +103,16 @@ toPayloadMM :: Payload NoInferred NoStored -> PayloadMM m
 toPayloadMM = (plInferred .~ Nothing) . (plStored .~ Nothing)
 
 -- Not inferred, not stored
-resultFromPure ::
+mkExprPure ::
   RandomGen g => g -> ExprIRef.ExpressionM m () -> ExprMM m
-resultFromPure g =
+mkExprPure g =
   fmap toPayloadMM . randomizeGuids g (const NoInferred)
 
-resultFromInferred ::
+mkExprInferred ::
   RandomGen g => g ->
   ExprIRef.Expression t (Infer.Inferred (DefI t)) ->
   ExprIRef.Expression t (Payload (InferredWC t) NoStored)
-resultFromInferred =
+mkExprInferred =
   flip randomizeGuids $ \inferred ->
     InferredWithConflicts
     { iwcInferred = inferred
@@ -285,25 +285,25 @@ isPolymorphicFunc :: ExprMM m -> Bool
 isPolymorphicFunc funcI =
   maybe False
   (ExprUtil.isDependentPi . Infer.iType . iwcInferred) $
-  resultInferred funcI
+  funcI ^. exprInferred
 
-resultGuid ::
-  Expr.Expression def (Payload inferred stored) -> Guid
-resultGuid = (^. Expr.ePayload . plGuid)
+exprGuid ::
+  Lens' (Expr.Expression def (Payload inferred stored)) Guid
+exprGuid = Expr.ePayload . plGuid
 
-resultStored ::
-  Expr.Expression def (Payload inferred stored) -> stored
-resultStored = (^. Expr.ePayload . plStored)
+exprStored ::
+  Lens' (Expr.Expression def (Payload inferred stored)) stored
+exprStored = Expr.ePayload . plStored
 
-resultInferred ::
-  Expr.Expression def (Payload inferred stored) -> inferred
-resultInferred = (^. Expr.ePayload . plInferred)
+exprInferred ::
+  Lens' (Expr.Expression def (Payload inferred stored)) inferred
+exprInferred = Expr.ePayload . plInferred
 
 plIRef ::
   Lens.Traversal'
   (Expr.Expression def (Payload i (Maybe (Stored m))))
   (ExprIRef.ExpressionI (Tag m))
-plIRef = Expr.ePayload . plStored . traverse . Property.pVal
+plIRef = Expr.ePayload . plStored . Lens._Just . Property.pVal
 
 exprStoredGuid ::
   Lens.Fold
@@ -317,5 +317,5 @@ replaceWith parentP replacerP = do
   where
     replacerI = Property.value replacerP
 
-resultMIRef :: ExprMM m -> Maybe (ExprIRef.ExpressionIM m)
-resultMIRef = fmap Property.value . resultStored
+exprMIRef :: Lens.Traversal' (ExprMM m) (ExprIRef.ExpressionIM m)
+exprMIRef = exprStored . Lens._Just . Property.pVal

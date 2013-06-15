@@ -196,7 +196,7 @@ convertPositionalFuncParam (Expr.Lambda _k paramGuid paramType body) lamExprI = 
     , _fpVarKind = FuncParameter
     , _fpId = Guid.combine lamGuid paramGuid
     , _fpAltIds = [paramGuid] -- For easy jumpTo
-    , _fpHiddenLambdaGuid = Just $ SugarInfer.resultGuid lamExprI
+    , _fpHiddenLambdaGuid = Just $ lamExprI ^. SugarInfer.exprGuid
     , _fpType = SugarExpr.removeSuccessfulType paramTypeS
     , _fpMActions =
       mkPositionalFuncParamActions paramGuid
@@ -204,7 +204,7 @@ convertPositionalFuncParam (Expr.Lambda _k paramGuid paramType body) lamExprI = 
       <*> traverse (^. SugarInfer.plStored) body
     }
   where
-    lamGuid = SugarInfer.resultGuid lamExprI
+    lamGuid = lamExprI ^. SugarInfer.exprGuid
 
 convertPositionalLambda ::
   (Typeable1 m, MonadA m) => Expr.Lambda (SugarInfer.ExprMM m) ->
@@ -279,7 +279,7 @@ convertLiteralInteger i exprI =
   SugarExpr.make exprI . BodyLiteralInteger $
   LiteralInteger
   { liValue = i
-  , liSetValue = setValue . Property.value <$> SugarInfer.resultStored exprI
+  , liSetValue = setValue . Property.value <$> exprI ^. SugarInfer.exprStored
   }
   where
     setValue iref val =
@@ -362,7 +362,7 @@ convertField mIRef defaultGuid (tagExpr, expr) = do
   exprS <- SugarM.convertSubexpression expr
   return RecordField
     { _rfMItemActions =
-      recordFieldActions defaultGuid <$> SugarInfer.resultMIRef tagExpr <*> mIRef
+      recordFieldActions defaultGuid <$> tagExpr ^? SugarInfer.exprMIRef <*> mIRef
     , _rfTag = tagExprS
     , _rfExpr = exprS
     }
@@ -372,18 +372,18 @@ convertRecord ::
   Expr.Record (SugarInfer.ExprMM m) ->
   Convertor m
 convertRecord (Expr.Record k fields) exprI = do
-  sFields <- mapM (convertField (SugarInfer.resultMIRef exprI) defaultGuid) fields
+  sFields <- mapM (convertField (exprI ^? SugarInfer.exprMIRef) defaultGuid) fields
   SugarExpr.make exprI $ BodyRecord
     Record
     { _rKind = k
     , _rFields =
         FieldList
         { _flItems = map setTagNextHole $ withExprNextHoles sFields
-        , _flMAddFirstItem = addField <$> SugarInfer.resultMIRef exprI
+        , _flMAddFirstItem = addField <$> exprI ^? SugarInfer.exprMIRef
         }
     }
   where
-    defaultGuid = SugarInfer.resultGuid exprI
+    defaultGuid = exprI ^. SugarInfer.exprGuid
     setTagNextHole field =
       field & rfTag %~ SugarExpr.setNextHoleToFirstSubHole (field ^. rfExpr)
     withExprNextHoles (field : rest@(nextField:_)) =
@@ -520,7 +520,7 @@ convertExpressionPure cp defI gen res = do
   fmap removeRedundantTypes .
     SugarM.run context .
     SugarM.convertSubexpression $
-    SugarInfer.resultFromPure gen res
+    SugarInfer.mkExprPure gen res
   where
     err x = error $ "convertExpressionPure: " ++ x
 
@@ -557,7 +557,7 @@ mkRecordParams recordParamsInfo paramGuid fieldParams lambdaExprI mParamTypeI mB
       fromMaybe (error "Record param type must be stored!") mParamTypeI
     }
   where
-    lamGuid = SugarInfer.resultGuid lambdaExprI
+    lamGuid = lambdaExprI ^. SugarInfer.exprGuid
     mLambdaP = lambdaExprI ^. Expr.ePayload . SugarInfer.plStored
     mkParamInfo fp =
       Map.singleton (fpTagGuid fp) . SugarM.TagParamInfo paramGuid .
@@ -702,7 +702,7 @@ convertDefinitionParams recordParamsInfo usedTags expr =
   where
     stored =
       fromMaybe (error "Definition body is always stored!") $
-      SugarInfer.resultStored expr
+      expr ^. SugarInfer.exprStored
     makeFieldParam (tagExpr, typeExpr) = do
       fieldTagGuid <- tagExpr ^? ExprLens.exprTag
       pure FieldParam
@@ -730,7 +730,7 @@ singleConventionalParam lamProp existingParam existingParamGuid existingParamTyp
     existingParamTag = ExprLens.bodyTag # existingParamGuid
     existingParamTypeIRef =
       fromMaybe (error "Only stored record param type is converted as record") $
-      SugarInfer.resultMIRef existingParamType
+      existingParamType ^? SugarInfer.exprMIRef
     bodyWithStored =
       fromMaybe (error "Definition body should be stored") $
       traverse (^. SugarInfer.plStored) body
@@ -810,10 +810,10 @@ convertWhereItems usedTags expr =
         { wiValue = value
         , wiGuid = defGuid
         , wiHiddenGuids =
-            map SugarInfer.resultGuid [expr, lambda ^. Expr.lambdaParamType]
+            map (^. SugarInfer.exprGuid) [expr, lambda ^. Expr.lambdaParamType]
         , wiActions =
           mkWIActions <$>
-          SugarInfer.resultStored expr <*>
+          expr ^. SugarInfer.exprStored <*>
           traverse (^. SugarInfer.plStored) (lambda ^. Expr.lambdaResult)
         , wiName = name
         }
@@ -966,7 +966,7 @@ convertDefIExpression cp exprLoaded defI defType = do
     inferLoadedGen (Just defI) exprLoaded "" initialInfer
   let
     inferredType =
-      void . Infer.iType . iwcInferred $ SugarInfer.resultInferred iwiExpr
+      void . Infer.iType . iwcInferred $ iwiExpr ^. SugarInfer.exprInferred
   typeInfo <-
     makeTypeInfo cp defI defType (void inferredType) success
   let

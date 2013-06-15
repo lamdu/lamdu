@@ -97,17 +97,17 @@ mkCallWithArg ::
   MonadA m => SugarM.Context m ->
   ExprIRef.ExpressionM m (SugarInfer.Payload i (Stored m)) ->
   PrefixAction m -> CT m (Maybe (T m Guid))
-mkCallWithArg sugarContext exprS prefixAction =
+mkCallWithArg sugarContext exprStored prefixAction =
   guardReinferSuccess sugarContext $ do
     prefixAction
-    fmap ExprIRef.exprGuid . DataOps.callWithArg $ SugarInfer.resultStored exprS
+    fmap ExprIRef.exprGuid . DataOps.callWithArg $ exprStored ^. SugarInfer.exprStored
 
 mkReplaceWithNewHole ::
   MonadA m =>
   ExprIRef.ExpressionM m (SugarInfer.Payload i (Stored m)) ->
   T m Guid
 mkReplaceWithNewHole =
-  fmap ExprIRef.exprGuid . DataOps.replaceWithHole . SugarInfer.resultStored
+  fmap ExprIRef.exprGuid . DataOps.replaceWithHole . (^. SugarInfer.exprStored)
 
 mkActions ::
   MonadA m => SugarM.Context m ->
@@ -124,7 +124,7 @@ mkActions sugarContext exprS =
     (Property.value stored) $ mkReplaceWithNewHole exprS
   }
   where
-    stored = SugarInfer.resultStored exprS
+    stored = exprS ^. SugarInfer.exprStored
 
 make ::
   (Typeable1 m, MonadA m) => SugarInfer.ExprMM m ->
@@ -134,10 +134,10 @@ make exprI body = do
   inferredTypes <-
     zipWithM
     ( fmap SugarM.convertSubexpression
-    . SugarInfer.resultFromPure
+    . SugarInfer.mkExprPure
     ) seeds types
   return $ Expression body Payload
-    { _plGuid = SugarInfer.resultGuid exprI
+    { _plGuid = exprI ^. SugarInfer.exprGuid
     , _plInferredTypes = inferredTypes
     , _plActions =
       mkActions sugarContext <$>
@@ -149,8 +149,8 @@ make exprI body = do
     , _plHiddenGuids = []
     }
   where
-    seeds = RandomUtils.splits . mkGen 0 3 $ SugarInfer.resultGuid exprI
-    types = maybe [] iwcInferredTypes $ SugarInfer.resultInferred exprI
+    seeds = RandomUtils.splits . mkGen 0 3 $ exprI ^. SugarInfer.exprGuid
+    types = maybe [] iwcInferredTypes $ exprI ^. SugarInfer.exprInferred
 
 subHoles ::
   (Applicative f, Lens.Contravariant f) =>

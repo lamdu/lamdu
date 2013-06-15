@@ -119,7 +119,7 @@ makeCollapsed exprI g compact hasInfo fullExpression =
       & rPayload . plGuid .~ expandedGuid
     }
   where
-    expandedGuid = Guid.combine (SugarInfer.resultGuid exprI) $ Guid.fromString "polyExpanded"
+    expandedGuid = Guid.combine (exprI ^. SugarInfer.exprGuid) $ Guid.fromString "polyExpanded"
 
 convertPrefix ::
   (MonadA m, Typeable1 m) =>
@@ -151,7 +151,7 @@ convertPrefix funcRef funcI rawArgS argI applyI = do
       BodyCollapsed (Collapsed g compact full hadInfo) ->
         makeCollapsed applyI g compact (hadInfo || haveInfo) =<< makeApply full
       BodyGetVar var ->
-        makeCollapsed applyI (SugarInfer.resultGuid funcI) var haveInfo =<< makeFullApply
+        makeCollapsed applyI (funcI ^. SugarInfer.exprGuid) var haveInfo =<< makeFullApply
       _ -> makeFullApply
     else
       makeFullApply
@@ -194,9 +194,9 @@ convertEmptyList app@(Expr.Apply funcI _) exprI = do
   (rPayload . plHiddenGuids <>~ guids) .
     setListGuid consistentGuid <$>
     (lift . SugarExpr.make exprI . BodyList)
-    (List [] (mkListActions <$> SugarInfer.resultStored exprI))
+    (List [] (mkListActions <$> exprI ^. SugarInfer.exprStored))
   where
-    consistentGuid = Guid.augment "list" (SugarInfer.resultGuid exprI)
+    consistentGuid = Guid.augment "list" (exprI ^. SugarInfer.exprGuid)
 
 isCons ::
   Anchors.SpecialFunctions t ->
@@ -233,7 +233,7 @@ convertAppliedHole funcI rawArgS exprI
     isTypeMatch <-
       maybe (return False)
       (typeCheckIdentityAt . Infer.iPoint . iwcInferred) $
-      SugarInfer.resultInferred funcI
+      funcI ^. SugarInfer.exprInferred
     let
       holeArg = HoleArg
         { _haExpr = argS
@@ -244,13 +244,13 @@ convertAppliedHole funcI rawArgS exprI
       ConvertHole.convertPlain exprI
   | otherwise = mzero
   where
-    guid = SugarInfer.resultGuid exprI
+    guid = exprI ^. SugarInfer.exprGuid
     argS =
       SugarExpr.setNextHole guid .
       (rPayload . plActions . Lens._Just . wrap .~
        AlreadyWrapped guid) $
       rawArgS
-    funcGuids = [SugarInfer.resultGuid funcI]
+    funcGuids = [funcI ^. SugarInfer.exprGuid]
 
 convertList ::
   (Typeable1 m, MonadA m) =>
@@ -277,7 +277,7 @@ convertList (Expr.Apply funcI argI) argS exprI = do
       mkListItem (headField ^. rfExpr) argS hiddenGuids exprI argI $
       addFirstItem <$> innerListMActions
     mListActions = do
-      exprS <- SugarInfer.resultStored exprI
+      exprS <- exprI ^. SugarInfer.exprStored
       innerListActions <- innerListMActions
       pure ListActions
         { addFirstItem = mkListAddFirstItem specialFunctions exprS
@@ -300,8 +300,8 @@ mkListItem listItemExpr argS hiddenGuids exprI argI mAddNextItem =
     & rPayload . plHiddenGuids <>~ hiddenGuids ++ (argS ^. rPayload . plHiddenGuids)
   , liMActions = do
       addNext <- mAddNextItem
-      exprProp <- SugarInfer.resultStored exprI
-      argProp <- SugarInfer.resultStored argI
+      exprProp <- exprI ^. SugarInfer.exprStored
+      argProp <- argI ^. SugarInfer.exprStored
       return ListItemActions
         { _itemAddNext = addNext
         , _itemDelete = SugarInfer.replaceWith exprProp argProp

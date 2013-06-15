@@ -60,7 +60,7 @@ convertH ::
 convertH exprI convertTyped =
   fmap fixWrap .
   maybe convertUntypedHole convertTyped $
-  SugarInfer.resultInferred exprI
+  exprI ^. SugarInfer.exprInferred
   where
     fixWrap expr =
       expr
@@ -128,7 +128,7 @@ convertInferred iwc exprI wvInferredVal = do
     gen expr = genFromHashable (eGuid, show (void expr))
   val <-
     SugarM.convertSubexpression $
-    SugarInfer.resultFromPure (gen wvInferredVal) wvInferredVal
+    SugarInfer.mkExprPure (gen wvInferredVal) wvInferredVal
   -- wvInferredVal uses wvInferContext, but for "accept" purposes, we
   -- must use the holeInferContext:
   let
@@ -142,10 +142,10 @@ convertInferred iwc exprI wvInferredVal = do
       fmap (fromMaybe eGuid) .
       accept sugarContext (Infer.iPoint (iwcInferred iwc))
       (ExprUtil.randomizeParamIds (gen inferredVal) inferredVal) .
-      Property.value <$> SugarInfer.resultStored exprI
+      Property.value <$> exprI ^. SugarInfer.exprStored
     }
   where
-    eGuid = SugarInfer.resultGuid exprI
+    eGuid = exprI ^. SugarInfer.exprGuid
 
 convertPlainTyped ::
   (MonadA m, Typeable1 m) =>
@@ -160,7 +160,7 @@ mkHole ::
   SugarM m (Hole MStoredName m (ExpressionU m))
 mkHole iwc exprI = do
   sugarContext <- SugarM.readContext
-  mPaste <- fmap join . traverse mkPaste $ SugarInfer.resultStored exprI
+  mPaste <- fmap join . traverse mkPaste $ exprI ^. SugarInfer.exprStored
   let
     inferState = sugarContext ^. SugarM.scHoleInferState
     inferStateKey = sugarContext ^. SugarM.scHoleInferStateKey
@@ -185,10 +185,10 @@ mkHole iwc exprI = do
         , _holeInferExprType = inferExprType
         , _holeResult =
           makeHoleResult sugarContext $
-          SugarInfer.Payload (SugarInfer.resultGuid exprI) iwc stored
+          SugarInfer.Payload (exprI ^. SugarInfer.exprGuid) iwc stored
         }
     inferExprType = inferOnTheSide inferStateKey inferState $ Infer.nScope point
-  mActions <- traverse mkWritableHoleActions $ SugarInfer.resultStored exprI
+  mActions <- traverse mkWritableHoleActions $ exprI ^. SugarInfer.exprStored
   pure Hole
     { _holeMActions = mActions
     , _holeMArg = Nothing
@@ -402,7 +402,7 @@ convertHoleResult sugarContext gen res =
   SugarM.run sugarContext . SugarM.convertSubexpression .
   (traverse . SugarInfer.plInferred %~ Just) .
   (traverse . SugarInfer.plStored .~ Nothing) $
-  SugarInfer.resultFromInferred gen res
+  SugarInfer.mkExprInferred gen res
 
 genFromHashable :: Hashable a => a -> Random.StdGen
 genFromHashable = Random.mkStdGen . hashWithSalt 0
