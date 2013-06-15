@@ -163,10 +163,10 @@ setListGuid consistentGuid e = e
   & rPayload . plGuid .~ consistentGuid
   & rPayload . plHiddenGuids %~ (e ^. rPayload . plGuid :)
 
-subExpressionGuids ::
+storedSubExpressionGuids ::
   Lens.Fold
   (Expr.Expression def (SugarInfer.Payload i (Maybe (SugarInfer.Stored m)))) Guid
-subExpressionGuids = Lens.folding ExprUtil.subExpressions . SugarInfer.exprStoredGuid
+storedSubExpressionGuids = Lens.folding ExprUtil.subExpressions . SugarInfer.exprStoredGuid
 
 mkListAddFirstItem ::
   MonadA m => Anchors.SpecialFunctions (Tag m) -> SugarInfer.Stored m -> T m Guid
@@ -190,7 +190,7 @@ convertEmptyList app@(Expr.Apply funcI _) exprI = do
   guard $
     Lens.anyOf ExprLens.exprDefinitionRef
     (== Anchors.sfNil specialFunctions) funcI
-  let guids = app ^.. Lens.traversed . subExpressionGuids
+  let guids = app ^.. Lens.traversed . storedSubExpressionGuids
   (rPayload . plHiddenGuids <>~ guids) .
     setListGuid consistentGuid <$>
     (lift . SugarExpr.make exprI . BodyList)
@@ -272,7 +272,7 @@ convertList (Expr.Apply funcI argI) argS exprI = do
     maybeToMPlus $ tailField ^? rfExpr . rBody . _BodyList
   guard $ isCons specialFunctions funcI
   let
-    hiddenGuids = (funcI ^.. subExpressionGuids) ++ (funcI ^.. SugarInfer.exprStoredGuid)
+    hiddenGuids = funcI ^.. storedSubExpressionGuids
     listItem =
       mkListItem (headField ^. rfExpr) argS hiddenGuids exprI argI $
       addFirstItem <$> innerListMActions
