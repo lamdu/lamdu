@@ -22,7 +22,7 @@ module Lamdu.CodeEdit.Sugar
     , _BodyAtom, _BodyList, _BodyRecord, _BodyTag
   , Payload(..)
     , plGuid, plInferredTypes, plActions, plMNextHoleGuid
-    , plPresugaredExpression, plHiddenGuids
+    , plHiddenGuids
   , ExpressionP(..), rBody, rPayload
   , NameSource(..), NameCollision(..), Name(..), MStoredName
   , DefinitionN, DefinitionU
@@ -40,7 +40,7 @@ module Lamdu.CodeEdit.Sugar
   , Lam(..), lKind, lParam, lIsDep, lResultType
   , FuncParamType(..)
   , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpHiddenLambdaGuid, fpType, fpMActions
-  , HoleArg(..), haExpr, haTypeIsAMatch
+  , HoleArg(..), haExpr, haExprPresugared, haTypeIsAMatch
   , Hole(..), holeScope, holeMActions, holeMArg
   , HoleResultSeed(..), _ResultSeedExpression, _ResultSeedNewTag, _ResultSeedNewDefinition
   , ScopeItem
@@ -155,7 +155,6 @@ fakeExample guid =
   , _plInferredTypes = []
   , _plActions = Nothing
   , _plMNextHoleGuid = Nothing
-  , _plPresugaredExpression = Nothing <$ ExprUtil.pureHole
   , _plHiddenGuids = []
   }
 

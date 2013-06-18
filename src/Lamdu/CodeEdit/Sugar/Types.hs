@@ -23,7 +23,7 @@ module Lamdu.CodeEdit.Sugar.Types
     , _BodyGetField
   , Payload(..)
     , plInferredTypes, plActions, plMNextHoleGuid, plGuid
-    , plPresugaredExpression, plHiddenGuids
+    , plHiddenGuids
   , ExpressionP(..)
     , rBody, rPayload
   , NameSource(..), NameCollision(..), Name(..), MStoredName
@@ -46,7 +46,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , FuncParamType(..)
   , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpHiddenLambdaGuid, fpType, fpMActions
   , TagG(..), tagName, tagGuid
-  , HoleArg(..), haExpr, haTypeIsAMatch
+  , HoleArg(..), haExpr, haExprPresugared, haTypeIsAMatch
   , Hole(..), holeMActions, holeMArg
   , HoleResultSeed(..), _ResultSeedExpression, _ResultSeedNewTag, _ResultSeedNewDefinition
   , ScopeItem
@@ -110,7 +110,6 @@ data Payload name m = Payload
   , _plActions :: Maybe (Actions m)
   , _plMNextHoleGuid :: Maybe Guid
   , _plGuid :: Guid
-  , _plPresugaredExpression :: ExprStorePoint m
   , -- Guids from data model expression which were sugared out into
     -- this sugar expression.
     -- If the cursor was on them for whatever reason, it should be
@@ -218,14 +217,15 @@ data HoleActions name m = HoleActions
     _holeMDelete :: Maybe (T m Guid)
   }
 
-data HoleArg expr = HoleArg
+data HoleArg m expr = HoleArg
   { _haExpr :: expr
+  , _haExprPresugared :: ExprStorePoint m
   , _haTypeIsAMatch :: Bool
   } deriving (Functor, Foldable, Traversable)
 
 data Hole name m expr = Hole
   { _holeMActions :: Maybe (HoleActions name m)
-  , _holeMArg :: Maybe (HoleArg expr)
+  , _holeMArg :: Maybe (HoleArg m expr)
   } deriving (Functor, Foldable, Traversable)
 
 data LiteralInteger m = LiteralInteger

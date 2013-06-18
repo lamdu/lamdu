@@ -325,11 +325,13 @@ mkEventMap ::
   ExprGuiM m (Widget.EventHandlers (T m))
 mkEventMap holeInfo isSelectedResult mResult = do
   mDeleteWrapper <-
+    -- TODO: DeleteWrapper is actually "unwrap" and should be exposed
+    -- as a Sugar action on wrap-hole
     ExprGuiM.liftMemoT . fmap join . sequenceA $ do
       guard $ null searchTerm
-      arg <- hiMArgument holeInfo ^? Lens._Just . Sugar.haExpr
+      arg <- hiMArgument holeInfo
       Just . (hiActions holeInfo ^. Sugar.holeResult) .
-        Sugar.ResultSeedExpression $ arg ^. Sugar.rPayload . Sugar.plPresugaredExpression
+        Sugar.ResultSeedExpression $ arg ^. Sugar.haExprPresugared
   addNewDefinitionEventMap <- mkAddNewDefinitionEventMap holeInfo
   config <- ExprGuiM.widgetEnv WE.readConfig
   pure $ mconcat
@@ -372,7 +374,7 @@ assignHoleEditCursor holeInfo shownResultsIds allResultIds searchTermId action =
       | otherwise = head (shownResultsIds ++ [searchTermId])
   ExprGuiM.assignCursor assignSource destId action
 
-holeBackgroundColor :: Config -> Sugar.HoleArg expr -> Draw.Color
+holeBackgroundColor :: Config -> Sugar.HoleArg m expr -> Draw.Color
 holeBackgroundColor config holeArg
   | holeArg ^. Sugar.haTypeIsAMatch = Config.deletableHoleBackgroundColor config
   | otherwise = Config.typeErrorHoleWrapBackgroundColor config

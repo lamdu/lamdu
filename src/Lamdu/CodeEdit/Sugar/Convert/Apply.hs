@@ -23,6 +23,7 @@ import Lamdu.Data.Expression.Infer.Conflicts (iwcInferred)
 import qualified Control.Lens as Lens
 import qualified Data.Set as Set
 import qualified Data.Store.Guid as Guid
+import qualified Data.Store.Property as Property
 import qualified Lamdu.CodeEdit.Sugar.Convert.Hole as ConvertHole
 import qualified Lamdu.CodeEdit.Sugar.Expression as SugarExpr
 import qualified Lamdu.CodeEdit.Sugar.Infer as SugarInfer
@@ -46,7 +47,7 @@ convert app@(Expr.Apply funcI argI) exprI =
   fmap uneither . runEitherT $ do
     justToLeft $ convertEmptyList app exprI
     argS <- lift $ SugarM.convertSubexpression argI
-    justToLeft $ convertAppliedHole funcI argS exprI
+    justToLeft $ convertAppliedHole funcI argS argI exprI
     justToLeft $ convertList app argS exprI
     funcS <- lift $ SugarM.convertSubexpression funcI
     justToLeft $ convertLabeled funcS argS exprI
@@ -226,9 +227,9 @@ typeCheckIdentityAt point = do
     paramGuid = Guid.fromString "typeCheckId"
 
 convertAppliedHole ::
-  (MonadA m, Typeable1 m) => ExprMM m -> ExpressionU m -> ExprMM m ->
+  (MonadA m, Typeable1 m) => ExprMM m -> ExpressionU m -> ExprMM m -> ExprMM m ->
   MaybeT (SugarM m) (ExpressionU m)
-convertAppliedHole funcI rawArgS exprI
+convertAppliedHole funcI rawArgS argI exprI
   | Lens.has ExprLens.exprHole funcI = lift $ do
     isTypeMatch <-
       maybe (return False)
@@ -237,6 +238,9 @@ convertAppliedHole funcI rawArgS exprI
     let
       holeArg = HoleArg
         { _haExpr = argS
+        , _haExprPresugared =
+          fmap (StorePoint . Property.value) .
+          (^. SugarInfer.plStored) <$> argI
         , _haTypeIsAMatch = isTypeMatch
         }
     (rBody . _BodyHole . holeMArg .~ Just holeArg) .

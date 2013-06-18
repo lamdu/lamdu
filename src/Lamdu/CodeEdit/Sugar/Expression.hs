@@ -133,9 +133,6 @@ make exprI body = do
     , _plActions =
       mkActions sugarContext <$> exprI ^. SugarInfer.exprStored
     , _plMNextHoleGuid = Nothing
-    , _plPresugaredExpression =
-      fmap (StorePoint . Property.value) .
-      (^. SugarInfer.plStored) <$> exprI
     , _plHiddenGuids = []
     }
   where
