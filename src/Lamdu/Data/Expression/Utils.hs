@@ -13,7 +13,7 @@ module Lamdu.Data.Expression.Utils
   , pureIntegerType
   , pureExpression
   , randomizeExpr
-  , canonizeParamIds, randomizeParamIds
+  , randomizeParamIds
   , randomizeParamIdsG
   , NameGen(..), onNgMakeName
   , randomNameGen, debugNameGen
@@ -210,9 +210,6 @@ debugNameGen = ng names ""
       { ngSplit = (ng st "_0", ng st "_1")
       , ngMakeName = const . const $ (Guid.fromString (l++suffix), ng ls suffix)
       }
-
-canonizeParamIds :: Expression def a -> Expression def a
-canonizeParamIds = randomizeParamIds (Random.mkStdGen 0)
 
 randomizeParamIds :: RandomGen g => g -> Expression def a -> Expression def a
 randomizeParamIds gen = randomizeParamIdsG (randomNameGen gen) Map.empty $ \_ _ a -> a
