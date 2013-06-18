@@ -26,7 +26,7 @@ module Lamdu.CodeEdit.Sugar.Infer
   , exprStoredGuid
 
   , plIRef
-  , exprMIRef
+  , exprIRef
   , replaceWith
   ) where
 
@@ -306,7 +306,7 @@ plIRef = plStored . Lens._Just . Property.pVal
 exprStoredGuid ::
   Lens.Fold
   (Expr.Expression def (Payload i (Maybe (Stored m)))) Guid
-exprStoredGuid = exprMIRef . Lens.to ExprIRef.exprGuid
+exprStoredGuid = exprIRef . Lens.to ExprIRef.exprGuid
 
 replaceWith :: MonadA m => Stored m -> Stored m -> T m Guid
 replaceWith parentP replacerP = do
@@ -315,9 +315,8 @@ replaceWith parentP replacerP = do
   where
     replacerI = Property.value replacerP
 
--- TODO: Rename to exprIRef
-exprMIRef ::
+exprIRef ::
   Lens.Traversal'
   (Expr.Expression def (Payload i (Maybe (Stored m))))
   (ExprIRef.ExpressionIM m)
-exprMIRef = exprStored . Lens._Just . Property.pVal
+exprIRef = exprStored . Lens._Just . Property.pVal

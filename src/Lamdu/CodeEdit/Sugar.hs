@@ -370,7 +370,7 @@ convertField mIRef defaultGuid (tagExpr, expr) = do
   exprS <- SugarM.convertSubexpression expr
   return RecordField
     { _rfMItemActions =
-      recordFieldActions defaultGuid <$> tagExpr ^? SugarInfer.exprMIRef <*> mIRef
+      recordFieldActions defaultGuid <$> tagExpr ^? SugarInfer.exprIRef <*> mIRef
     , _rfTag = tagExprS
     , _rfExpr = exprS
     }
@@ -697,7 +697,7 @@ convertDefinitionParams recordParamsInfo usedTags expr =
         , all ((`notElem` usedTags) . fpTagGuid) fieldParams -> do
           convParams <-
             mkRecordParams recordParamsInfo paramGuid fieldParams
-            expr (paramType ^? SugarInfer.exprMIRef)
+            expr (paramType ^? SugarInfer.exprIRef)
             (traverse (^. SugarInfer.plStored) body)
           return ([], convParams, body)
       _ ->
@@ -738,7 +738,7 @@ singleConventionalParam lamProp existingParam existingParamGuid existingParamTyp
     existingParamTag = ExprLens.bodyTag # existingParamGuid
     existingParamTypeIRef =
       fromMaybe (error "Only stored record param type is converted as record") $
-      existingParamType ^? SugarInfer.exprMIRef
+      existingParamType ^? SugarInfer.exprIRef
     bodyWithStored =
       fromMaybe (error "Definition body should be stored") $
       traverse (^. SugarInfer.plStored) body
