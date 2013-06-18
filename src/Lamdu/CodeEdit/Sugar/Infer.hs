@@ -281,11 +281,11 @@ inferAddImplicits gen mDefI lExpr inferContextKey inferState = do
       plStored %~ Just $
       mkStoredPayload (iwc, propClosure)
 
-isPolymorphicFunc :: ExprMM m -> Bool
-isPolymorphicFunc funcI =
+isPolymorphicFunc :: PayloadMM m -> Bool
+isPolymorphicFunc funcPl =
   maybe False
   (ExprUtil.isDependentPi . Infer.iType . iwcInferred) $
-  funcI ^. exprInferred
+  funcPl ^. plInferred
 
 exprGuid ::
   Lens' (Expr.Expression def (Payload inferred stored)) Guid
@@ -300,15 +300,13 @@ exprInferred ::
 exprInferred = Expr.ePayload . plInferred
 
 plIRef ::
-  Lens.Traversal'
-  (Expr.Expression def (Payload i (Maybe (Stored m))))
-  (ExprIRef.ExpressionI (Tag m))
-plIRef = Expr.ePayload . plStored . Lens._Just . Property.pVal
+  Lens.Traversal' (Payload i (Maybe (Stored m))) (ExprIRef.ExpressionIM m)
+plIRef = plStored . Lens._Just . Property.pVal
 
 exprStoredGuid ::
   Lens.Fold
   (Expr.Expression def (Payload i (Maybe (Stored m)))) Guid
-exprStoredGuid = plIRef . Lens.to ExprIRef.exprGuid
+exprStoredGuid = exprMIRef . Lens.to ExprIRef.exprGuid
 
 replaceWith :: MonadA m => Stored m -> Stored m -> T m Guid
 replaceWith parentP replacerP = do
@@ -317,5 +315,9 @@ replaceWith parentP replacerP = do
   where
     replacerI = Property.value replacerP
 
-exprMIRef :: Lens.Traversal' (ExprMM m) (ExprIRef.ExpressionIM m)
+-- TODO: Rename to exprIRef
+exprMIRef ::
+  Lens.Traversal'
+  (Expr.Expression def (Payload i (Maybe (Stored m))))
+  (ExprIRef.ExpressionIM m)
 exprMIRef = exprStored . Lens._Just . Property.pVal

@@ -118,9 +118,9 @@ mkActions sugarContext stored =
   }
 
 make ::
-  (Typeable1 m, MonadA m) => SugarInfer.ExprMM m ->
+  (Typeable1 m, MonadA m) => SugarInfer.PayloadMM m ->
   BodyU m -> SugarM m (ExpressionU m)
-make exprI body = do
+make exprPl body = do
   sugarContext <- SugarM.readContext
   inferredTypes <-
     zipWithM
@@ -128,16 +128,16 @@ make exprI body = do
     . SugarInfer.mkExprPure
     ) seeds types
   return $ Expression body Payload
-    { _plGuid = exprI ^. SugarInfer.exprGuid
+    { _plGuid = exprPl ^. SugarInfer.plGuid
     , _plInferredTypes = inferredTypes
     , _plActions =
-      mkActions sugarContext <$> exprI ^. SugarInfer.exprStored
+      mkActions sugarContext <$> exprPl ^. SugarInfer.plStored
     , _plMNextHoleGuid = Nothing
     , _plHiddenGuids = []
     }
   where
-    seeds = RandomUtils.splits . mkGen 0 3 $ exprI ^. SugarInfer.exprGuid
-    types = maybe [] iwcInferredTypes $ exprI ^. SugarInfer.exprInferred
+    seeds = RandomUtils.splits . mkGen 0 3 $ exprPl ^. SugarInfer.plGuid
+    types = maybe [] iwcInferredTypes $ exprPl ^. SugarInfer.plInferred
 
 subHoles ::
   (Applicative f, Lens.Contravariant f) =>

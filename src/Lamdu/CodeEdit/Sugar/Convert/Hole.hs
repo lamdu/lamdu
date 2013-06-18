@@ -45,28 +45,29 @@ import qualified System.Random as Random
 
 convert ::
   (MonadA m, Typeable1 m) =>
-  SugarInfer.ExprMM m -> SugarM m (ExpressionU m)
+  SugarInfer.PayloadMM m -> SugarM m (ExpressionU m)
 convert = convertH <*> convertTypeCheckedHoleH
 
 convertPlain ::
   (MonadA m, Typeable1 m) =>
-  SugarInfer.ExprMM m -> SugarM m (ExpressionU m)
+  SugarInfer.PayloadMM m -> SugarM m (ExpressionU m)
 convertPlain = convertH <*> convertPlainTyped
 
 convertH ::
   (MonadA m, Typeable1 m) =>
-  SugarInfer.ExprMM m -> (InferredWC (Tag m) -> SugarM m (ExpressionU m)) ->
+  SugarInfer.PayloadMM m -> (InferredWC (Tag m) -> SugarM m (ExpressionU m)) ->
   SugarM m (ExpressionU m)
-convertH exprI convertTyped =
+convertH exprPl convertTyped =
   fmap fixWrap .
   maybe convertUntypedHole convertTyped $
-  exprI ^. SugarInfer.exprInferred
+  exprPl ^. SugarInfer.plInferred
   where
     fixWrap expr =
       expr
       & rPayload . plActions . Lens.mapped . wrap .~
         AlreadyWrapped (expr ^. rPayload . plGuid)
-    convertUntypedHole = SugarExpr.make exprI . BodyHole $ Hole Nothing Nothing
+    convertUntypedHole =
+      SugarExpr.make exprPl . BodyHole $ Hole Nothing Nothing
 
 mkPaste :: MonadA m => Stored m -> SugarM m (Maybe (T m Guid))
 mkPaste exprP = do
@@ -93,11 +94,11 @@ mkPaste exprP = do
 
 convertTypeCheckedHoleH ::
   (MonadA m, Typeable1 m) =>
-  SugarInfer.ExprMM m -> InferredWC (Tag m) -> SugarM m (ExpressionU m)
-convertTypeCheckedHoleH exprI iwc =
+  SugarInfer.PayloadMM m -> InferredWC (Tag m) -> SugarM m (ExpressionU m)
+convertTypeCheckedHoleH exprPl iwc =
   chooseHoleType (iwcInferredValues iwc)
-  (convertPlainTyped exprI iwc)
-  (convertInferred iwc exprI)
+  (convertPlainTyped exprPl iwc)
+  (convertInferred iwc exprPl)
 
 accept ::
   MonadA m => SugarM.Context m ->
@@ -118,12 +119,12 @@ accept sugarContext point expr iref = do
 
 convertInferred ::
   (MonadA m, Typeable1 m) =>
-  InferredWC (Tag m) -> SugarInfer.ExprMM m ->
+  InferredWC (Tag m) -> SugarInfer.PayloadMM m ->
   ExprIRef.ExpressionM m () ->
   SugarM m (ExpressionU m)
-convertInferred iwc exprI wvInferredVal = do
+convertInferred iwc exprPl wvInferredVal = do
   sugarContext <- SugarM.readContext
-  hole <- mkHole iwc exprI
+  hole <- mkHole iwc exprPl
   let
     gen expr = genFromHashable (eGuid, show (void expr))
   val <-
@@ -135,32 +136,32 @@ convertInferred iwc exprI wvInferredVal = do
     inferredVal =
       ExprUtil.structureForType . void . Infer.iType $
       iwcInferred iwc
-  SugarExpr.make exprI $ BodyInferred Inferred
+  SugarExpr.make exprPl $ BodyInferred Inferred
     { _iHole = hole
     , _iValue = val
     , _iMAccept =
       fmap (fromMaybe eGuid) .
       accept sugarContext (Infer.iPoint (iwcInferred iwc))
       (ExprUtil.randomizeParamIds (gen inferredVal) inferredVal) .
-      Property.value <$> exprI ^. SugarInfer.exprStored
+      Property.value <$> exprPl ^. SugarInfer.plStored
     }
   where
-    eGuid = exprI ^. SugarInfer.exprGuid
+    eGuid = exprPl ^. SugarInfer.plGuid
 
 convertPlainTyped ::
   (MonadA m, Typeable1 m) =>
-  SugarInfer.ExprMM m -> InferredWC (Tag m) ->
+  SugarInfer.PayloadMM m -> InferredWC (Tag m) ->
   SugarM m (ExpressionU m)
-convertPlainTyped exprI iwc =
-  SugarExpr.make exprI . BodyHole =<< mkHole iwc exprI
+convertPlainTyped exprPl iwc =
+  SugarExpr.make exprPl . BodyHole =<< mkHole iwc exprPl
 
 mkHole ::
   (MonadA m, Typeable1 m) =>
-  InferredWC (Tag m) -> SugarInfer.ExprMM m ->
+  InferredWC (Tag m) -> SugarInfer.PayloadMM m ->
   SugarM m (Hole MStoredName m (ExpressionU m))
-mkHole iwc exprI = do
+mkHole iwc exprPl = do
   sugarContext <- SugarM.readContext
-  mPaste <- fmap join . traverse mkPaste $ exprI ^. SugarInfer.exprStored
+  mPaste <- fmap join . traverse mkPaste $ exprPl ^. SugarInfer.plStored
   let
     inferState = sugarContext ^. SugarM.scHoleInferState
     inferStateKey = sugarContext ^. SugarM.scHoleInferStateKey
@@ -185,10 +186,10 @@ mkHole iwc exprI = do
         , _holeInferExprType = inferExprType
         , _holeResult =
           makeHoleResult sugarContext $
-          SugarInfer.Payload (exprI ^. SugarInfer.exprGuid) iwc stored
+          SugarInfer.Payload (exprPl ^. SugarInfer.plGuid) iwc stored
         }
     inferExprType = inferOnTheSide inferStateKey inferState $ Infer.nScope point
-  mActions <- traverse mkWritableHoleActions $ exprI ^. SugarInfer.exprStored
+  mActions <- traverse mkWritableHoleActions $ exprPl ^. SugarInfer.plStored
   pure Hole
     { _holeMActions = mActions
     , _holeMArg = Nothing
