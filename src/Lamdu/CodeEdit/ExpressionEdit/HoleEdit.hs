@@ -421,28 +421,35 @@ make ::
   MonadA m => Sugar.Hole Sugar.Name m (Sugar.ExpressionN m) ->
   Maybe Guid -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-make hole mNextHoleGuid guid =
-  ExpressionGui.wrapDelegated holeFDConfig
-  FocusDelegator.Delegating $ \myId -> do
-    inCollapsed <- ExprGuiM.isInCollapsedExpression
-    mHoleNumber <-
-      if isWritable && not inCollapsed
-      then Just <$> ExprGuiM.nextHoleNumber
-      else pure Nothing
-    makeUnwrapped mHoleNumber hole mNextHoleGuid guid myId
+make hole mNextHoleGuid guid outerId = do
+  stateProp <- ExprGuiM.transaction $ assocStateRef guid ^. Transaction.mkProperty
+  let
+    delegatingMode
+      | Lens.has (Sugar.holeMArg . Lens._Just) hole &&
+        null (Property.value stateProp ^. hsSearchTerm) = FocusDelegator.NotDelegating
+      | otherwise = FocusDelegator.Delegating
+    inner myId = do
+      inCollapsed <- ExprGuiM.isInCollapsedExpression
+      mHoleNumber <-
+        if isWritable && not inCollapsed
+        then Just <$> ExprGuiM.nextHoleNumber
+        else pure Nothing
+      makeUnwrappedH mHoleNumber stateProp hole mNextHoleGuid guid myId
+  ExpressionGui.wrapDelegated holeFDConfig delegatingMode inner outerId
   where
     isWritable = isJust $ hole ^. Sugar.holeMActions
 
-makeUnwrapped ::
-  MonadA m => Maybe ExprGuiM.HoleNumber ->
+makeUnwrappedH ::
+  MonadA m =>
+  Maybe ExprGuiM.HoleNumber ->
+  Property (T m) HoleState ->
   Sugar.Hole Sugar.Name m (Sugar.ExpressionN m) ->
   Maybe Guid -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
-makeUnwrapped mHoleNumber hole mNextHoleGuid guid myId = do
+makeUnwrappedH mHoleNumber stateProp hole mNextHoleGuid guid myId = do
   cursor <- ExprGuiM.widgetEnv WE.readCursor
   case (hole ^. Sugar.holeMActions, Widget.subId myId cursor) of
-    (Just holeActions, Just _) -> do
-      stateProp <- ExprGuiM.transaction $ assocStateRef guid ^. Transaction.mkProperty
+    (Just holeActions, Just _) ->
       makeActiveHoleEdit HoleInfo
         { hiGuid = guid
         , hiId = myId
@@ -452,6 +459,16 @@ makeUnwrapped mHoleNumber hole mNextHoleGuid guid myId = do
         , hiMArgument = hole ^. Sugar.holeMArg
         }
     _ -> makeInactive mHoleNumber hole myId
+
+makeUnwrapped ::
+  MonadA m =>
+  Maybe ExprGuiM.HoleNumber ->
+  Sugar.Hole Sugar.Name m (Sugar.ExpressionN m) ->
+  Maybe Guid -> Guid ->
+  Widget.Id -> ExprGuiM m (ExpressionGui m)
+makeUnwrapped mHoleNumber hole mNextHoleGuid guid myId = do
+  stateProp <- ExprGuiM.transaction $ assocStateRef guid ^. Transaction.mkProperty
+  makeUnwrappedH mHoleNumber stateProp hole mNextHoleGuid guid myId
 
 searchTermWIdOfHoleGuid :: Guid -> Widget.Id
 searchTermWIdOfHoleGuid = WidgetIds.searchTermId . FocusDelegator.delegatingId . WidgetIds.fromGuid
