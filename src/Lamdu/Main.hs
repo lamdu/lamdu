@@ -217,7 +217,7 @@ mainLoopDebugMode getConfig font iteration = do
       addHelp =<< addDebugMode config =<< makeWidget
     tickHandler = do
       (curVersionNum, _) <- getConfig
-      atomicModifyIORef' lastVersionNumRef $ \lastVersionNum ->
+      atomicModifyIORef lastVersionNumRef $ \lastVersionNum ->
         (curVersionNum, lastVersionNum /= curVersionNum)
   mainLoopWidget tickHandler makeDebugModeWidget getAnimHalfLife
 
