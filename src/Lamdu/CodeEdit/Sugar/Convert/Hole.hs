@@ -432,6 +432,18 @@ pickResult exprIRef =
   ) .
   writeExprMStorePoint exprIRef . fmap swap
 
+randomizeNonStoredParamIds ::
+  Random.StdGen ->
+  Expr.Expression def (Maybe (StorePoint t), a) ->
+  Expr.Expression def (Maybe (StorePoint t), a)
+randomizeNonStoredParamIds gen =
+  ExprUtil.randomizeParamIdsG nameGen Map.empty $ \_ _ pl -> pl
+  where
+    nameGen = ExprUtil.onNgMakeName f $ ExprUtil.randomNameGen gen
+    f n prevFunc prevGuid pl@(mStorePoint, _)
+      | Lens.has Lens._Just mStorePoint = (prevGuid, n)
+      | otherwise = prevFunc prevGuid pl
+
 writeExprMStorePoint ::
   MonadA m =>
   ExprIRef.ExpressionIM m ->
@@ -439,10 +451,9 @@ writeExprMStorePoint ::
   T m (ExprIRef.ExpressionM m (ExprIRef.ExpressionIM m, a))
 writeExprMStorePoint exprIRef exprMStorePoint = do
   key <- Transaction.newKey
-  ExprUtil.randomizeParamIds (genFromHashable key) exprMStorePoint
-    <&> Lens._1 . Lens.mapped %~ unStorePoint
+  randomizeNonStoredParamIds (genFromHashable key) exprMStorePoint
+    & Lens.mapped . Lens._1 . Lens._Just %~ unStorePoint
     & ExprIRef.writeExpressionWithStoredSubexpressions exprIRef
-
 
 orderedInnerHoles ::
   Expr.Expression def (a, Infer.Inferred def) ->

@@ -1,6 +1,5 @@
 {-# OPTIONS -fno-warn-orphans #-}
 {-# LANGUAGE TemplateHaskell, DeriveDataTypeable, RankNTypes, NoMonomorphismRestriction #-}
-
 module Lamdu.Data.Expression.Utils
   ( makeApply
   , makePi, makeLambda, makeLam
@@ -15,7 +14,9 @@ module Lamdu.Data.Expression.Utils
   , pureExpression
   , randomizeExpr
   , canonizeParamIds, randomizeParamIds
-  , randomizeParamIdsG, NameGen(..), randomNameGen, debugNameGen
+  , randomizeParamIdsG
+  , NameGen(..), onNgMakeName
+  , randomNameGen, debugNameGen
   , matchBody, matchExpression
   , subExpressions, subExpressionsWithoutTags
   , isDependentPi, exprHasGetVar
@@ -63,6 +64,34 @@ data PiWrappers def a = PiWrappers
   , nonDependentPiParams :: [(Guid, Expression def a)]
   }
 Lens.makeLenses ''PiWrappers
+
+data NameGen pl = NameGen
+  { ngSplit :: (NameGen pl, NameGen pl)
+  , ngMakeName :: Guid -> pl -> (Guid, NameGen pl)
+  }
+
+onNgMakeName ::
+  (NameGen b ->
+   (Guid -> a -> (Guid, NameGen b)) ->
+   Guid -> b -> (Guid, NameGen b)) ->
+  NameGen a -> NameGen b
+onNgMakeName onMakeName =
+  go
+  where
+    go nameGen =
+      result
+      where
+        result =
+          nameGen
+          { ngMakeName =
+            ngMakeName nameGen
+            & Lens.mapped . Lens.mapped . Lens._2 %~ go
+            & onMakeName result
+          , ngSplit =
+            ngSplit nameGen
+            & Lens.both %~ go
+          }
+
 
 getPiWrappers :: Expression def a -> PiWrappers def a
 getPiWrappers expr =
@@ -165,18 +194,13 @@ randomizeExpr gen = (`evalState` gen) . traverse randomize
   where
     randomize f = f <$> state random
 
-data NameGen = NameGen
-  { ngSplit :: (NameGen, NameGen)
-  , ngNext :: (Guid, NameGen)
-  }
-
-randomNameGen :: RandomGen g => g -> NameGen
+randomNameGen :: RandomGen g => g -> NameGen dummy
 randomNameGen g = NameGen
   { ngSplit = Random.split g & Lens.both %~ randomNameGen
-  , ngNext = random g & Lens._2 %~ randomNameGen
+  , ngMakeName = const . const $ random g & Lens._2 %~ randomNameGen
   }
 
-debugNameGen :: NameGen
+debugNameGen :: NameGen dummy
 debugNameGen = ng names ""
   where
     names = (:[]) <$> ['a'..'z']
@@ -184,7 +208,7 @@ debugNameGen = ng names ""
     ng st@(l:ls) suffix =
       NameGen
       { ngSplit = (ng st "_0", ng st "_1")
-      , ngNext = (Guid.fromString (l++suffix), ng ls suffix)
+      , ngMakeName = const . const $ (Guid.fromString (l++suffix), ng ls suffix)
       }
 
 canonizeParamIds :: Expression def a -> Expression def a
@@ -194,8 +218,8 @@ randomizeParamIds :: RandomGen g => g -> Expression def a -> Expression def a
 randomizeParamIds gen = randomizeParamIdsG (randomNameGen gen) Map.empty $ \_ _ a -> a
 
 randomizeParamIdsG ::
-  NameGen -> Map Guid Guid ->
-  (NameGen -> Map Guid Guid -> a -> b) ->
+  NameGen a -> Map Guid Guid ->
+  (NameGen a -> Map Guid Guid -> a -> b) ->
   Expression def a -> Expression def b
 randomizeParamIdsG gen initMap convertPL =
   (`evalState` gen) . (`runReaderT` initMap) . go
@@ -206,7 +230,7 @@ randomizeParamIdsG gen initMap convertPL =
       (`Expression` convertPL newGen guidMap s) <$>
         case v of
         BodyLam (Lambda k oldParamId paramType body) -> do
-          newParamId <- lift $ state ngNext
+          newParamId <- lift . state $ makeName oldParamId s
           fmap BodyLam $ liftA2 (Lambda k newParamId) (go paramType) .
             Reader.local (Map.insert oldParamId newParamId) $ go body
         BodyLeaf (GetVariable (ParameterRef guid)) ->
@@ -216,6 +240,8 @@ randomizeParamIdsG gen initMap convertPL =
         x@BodyApply {}    -> traverse go x
         x@BodyGetField {} -> traverse go x
         x@BodyRecord {}   -> traverse go x
+    makeName oldParamId s nameGen =
+      ngMakeName nameGen oldParamId s
 
 -- Left-biased on parameter guids
 {-# INLINE matchBody #-}

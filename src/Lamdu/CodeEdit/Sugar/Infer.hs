@@ -62,7 +62,6 @@ import qualified Lamdu.Data.Expression.Infer.ImplicitVariables as ImplicitVariab
 import qualified Lamdu.Data.Expression.Infer.Structure as Structure
 import qualified Lamdu.Data.Expression.Load as Load
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
-import qualified System.Random.Utils as RandomUtils
 
 type T = Transaction
 type CT m = StateT Cache (T m)
@@ -92,12 +91,9 @@ randomizeGuids ::
   ExprIRef.Expression t a ->
   ExprIRef.Expression t (Payload inferred NoStored)
 randomizeGuids gen f =
-    ExprUtil.randomizeParamIds paramGen
-  . ExprUtil.randomizeExpr exprGen
-  . fmap (toPayload . f)
+  ExprUtil.randomizeExpr gen . fmap (toPayload . f)
   where
     toPayload inferred guid = Payload guid inferred NoStored
-    paramGen : exprGen : _ = RandomUtils.splits gen
 
 toPayloadMM :: Payload NoInferred NoStored -> PayloadMM m
 toPayloadMM = (plInferred .~ Nothing) . (plStored .~ Nothing)
