@@ -7,7 +7,7 @@ module Lamdu.CodeEdit.ExpressionEdit.HoleEdit
 
 import Control.Applicative (Applicative(..), (<$>), (<$), (<|>))
 import Control.Lens.Operators
-import Control.Monad (msum, guard, join, when)
+import Control.Monad (msum, when)
 import Control.MonadA (MonadA)
 import Data.List.Utils (nonEmptyAll)
 import Data.Maybe (isJust, listToMaybe, maybeToList, fromMaybe)
@@ -324,36 +324,11 @@ mkEventMap ::
   Maybe (Sugar.HoleResult Sugar.Name m) ->
   ExprGuiM m (Widget.EventHandlers (T m))
 mkEventMap holeInfo isSelectedResult mResult = do
-  mDeleteWrapper <-
-    -- TODO: DeleteWrapper is actually "unwrap" and should be exposed
-    -- as a Sugar action on wrap-hole
-    ExprGuiM.liftMemoT . fmap join . sequenceA $ do
-      guard $ null searchTerm
-      arg <- hiMArgument holeInfo
-      Just . (hiActions holeInfo ^. Sugar.holeResult) .
-        Sugar.ResultSeedExpression $ arg ^. Sugar.haExprPresugared
   addNewDefinitionEventMap <- mkAddNewDefinitionEventMap holeInfo
-  config <- ExprGuiM.widgetEnv WE.readConfig
   pure $ mconcat
     [ addNewDefinitionEventMap
     , maybe mempty (opPickEventMap holeInfo isSelectedResult) mResult
-    , maybe mempty
-      ( E.keyPresses (Config.delKeys config)
-        (E.Doc ["Edit", "Back"])
-      . fmap (handlePickResultTargetGuid holeInfo)
-      . HoleResults.pick holeInfo
-      ) mDeleteWrapper
-    , maybe mempty
-      ( E.keyPresses (Config.delKeys config)
-        (E.Doc ["Edit", "Delete"])
-      . fmap (Widget.eventResultFromCursor . WidgetIds.fromGuid)
-      ) $ do
-        guard $ null searchTerm
-        actions ^. Sugar.holeMDelete
     ]
-  where
-    actions = hiActions holeInfo
-    searchTerm = Property.value (hiState holeInfo) ^. hsSearchTerm
 
 assignHoleEditCursor ::
   MonadA m =>
@@ -435,7 +410,19 @@ make hole mNextHoleGuid guid outerId = do
         then Just <$> ExprGuiM.nextHoleNumber
         else pure Nothing
       makeUnwrappedH mHoleNumber stateProp hole mNextHoleGuid guid myId
+  mDelete <-
+    case hole ^. Sugar.holeMActions of
+    Just actions -> ExprGuiM.liftMemoT $ actions ^. Sugar.holeMDelete
+    Nothing -> return Nothing
+  config <- ExprGuiM.widgetEnv WE.readConfig
   ExpressionGui.wrapDelegated holeFDConfig delegatingMode inner outerId
+    & Lens.mapped . ExpressionGui.egWidget %~
+      Widget.weakerEvents
+      (maybe mempty
+        ( E.keyPresses (Config.delKeys config)
+          (E.Doc ["Edit", "Unwrap"])
+        . fmap (Widget.eventResultFromCursor . WidgetIds.fromGuid)
+        ) mDelete)
   where
     isWritable = isJust $ hole ^. Sugar.holeMActions
 

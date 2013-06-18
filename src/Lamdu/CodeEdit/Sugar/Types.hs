@@ -213,8 +213,7 @@ data HoleActions name m = HoleActions
   , _holeInferredType :: ExprIRef.ExpressionM m ()
   , _holeResult :: HoleResultSeed m -> CT m (Maybe (HoleResult name m))
   , _holePaste :: Maybe (T m Guid)
-  , -- TODO: holeMDelete is always Nothing, not implemented yet
-    _holeMDelete :: Maybe (T m Guid)
+  , _holeMDelete :: CT m (Maybe (T m Guid))
   }
 
 data HoleArg m expr = HoleArg

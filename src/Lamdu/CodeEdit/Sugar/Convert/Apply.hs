@@ -235,6 +235,7 @@ convertAppliedHole funcI rawArgS argI exprPl
       maybe (return False)
       (typeCheckIdentityAt . Infer.iPoint . iwcInferred) $
       funcI ^. SugarInfer.exprInferred
+    sugarContext <- SugarM.readContext
     let
       holeArg = HoleArg
         { _haExpr = argS
@@ -243,7 +244,16 @@ convertAppliedHole funcI rawArgS argI exprPl
           (^. SugarInfer.plStored) <$> argI
         , _haTypeIsAMatch = isTypeMatch
         }
-    (rBody . _BodyHole . holeMArg .~ Just holeArg) .
+      mDelete =
+        case (exprPl ^. SugarInfer.plStored, argI ^. SugarInfer.exprStored) of
+        (Just prop, Just argP) ->
+          SugarExpr.guardReinferSuccess sugarContext $
+          ExprIRef.exprGuid <$> DataOps.replace prop (Property.value argP)
+        _ -> return Nothing
+    ( rBody . _BodyHole %~
+      (holeMArg .~ Just holeArg) .
+      (holeMActions . Lens._Just . holeMDelete .~ mDelete)
+      ) .
       (rPayload . plHiddenGuids <>~ funcGuids) <$>
       ConvertHole.convertPlain exprPl
   | otherwise = mzero

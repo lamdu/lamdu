@@ -7,6 +7,7 @@ module Lamdu.CodeEdit.Sugar.Expression
   , setNextHole
   , subExpressions
   , getStoredName
+  , guardReinferSuccess
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
