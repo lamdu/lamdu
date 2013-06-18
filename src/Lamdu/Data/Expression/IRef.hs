@@ -45,6 +45,8 @@ newtype ExpressionI t = ExpressionI {
 
 type ExpressionIM m = ExpressionI (Tag m)
 
+-- TODO: Remove "Expression" prefix from these? We're in a module
+-- called Expression.IRef
 type ExpressionProperty m = Property (T m) (ExpressionIM m)
 type ExpressionBody t = Expr.Body (DefI t) (ExpressionI t)
 type Lambda t = Expr.Lambda (ExpressionI t)
