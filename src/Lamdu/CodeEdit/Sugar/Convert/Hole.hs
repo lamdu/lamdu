@@ -104,7 +104,8 @@ convertTypeCheckedHoleH exprPl =
   (convertInferred exprPl)
 
 accept ::
-  MonadA m => SugarM.Context m ->
+  MonadA m =>
+  SugarM.Context m ->
   Infer.InferNode (DefI (Tag m)) ->
   ExprIRef.ExpressionM m a ->
   ExprIRef.ExpressionIM m ->
@@ -128,11 +129,9 @@ convertInferred ::
 convertInferred exprPl wvInferredVal = do
   sugarContext <- SugarM.readContext
   hole <- mkHole exprPl
-  let
-    gen expr = genFromHashable (eGuid, show (void expr))
   val <-
     SugarM.convertSubexpression $
-    SugarInfer.mkExprPure (gen wvInferredVal) wvInferredVal
+    SugarInfer.mkExprPure wvInferredValGen wvInferredVal
   -- wvInferredVal uses wvInferContext, but for "accept" purposes, we
   -- must use the holeInferContext:
   SugarExpr.make (exprPl & SugarInfer.plInferred %~ Just) $
@@ -141,11 +140,11 @@ convertInferred exprPl wvInferredVal = do
     , _iValue = val
     , _iMAccept =
       fmap (fromMaybe eGuid) .
-      accept sugarContext (Infer.iPoint inferred)
-      (ExprUtil.randomizeParamIds (gen inferredVal) inferredVal) .
+      accept sugarContext (Infer.iPoint inferred) inferredVal .
       Property.value <$> exprPl ^. SugarInfer.plStored
     }
   where
+    wvInferredValGen = genFromHashable (eGuid, show (void wvInferredVal))
     inferredVal =
       ExprUtil.structureForType . void $ Infer.iType inferred
     inferred = iwcInferred $ exprPl ^. SugarInfer.plInferred
@@ -359,17 +358,16 @@ makeHoleResult sugarContext (SugarInfer.Payload guid iwc stored) seed =
       , _holeResultPickWrapped = do
           finalExpr <- fst <$> seedExprEnv cp seed
           written <-
-            ExprIRef.writeExpressionWithStoredSubexpressions iref $
-            fromStorePoint <$> holeWrap finalExpr
+            writeExprMStorePoint iref $
+            flip (,) () <$> holeWrap finalExpr
           pure . ExprIRef.exprGuid $ written ^. Expr.ePayload . Lens._1
       }
-    fromStorePoint point = (unStorePoint <$> point, ())
     pick = do
       (finalExpr, mJumpTo) <-
         Cache.unmemoS makeInferredExpr
       mTargetGuid <- sequenceA mJumpTo
       fmap (mplus mTargetGuid) . pickResult iref .
-        ExprUtil.randomizeParamIds gen . fst $
+        fst $
         -- TODO: Makes no sense here anymore, move deeper inside
         -- makeInferredExpr:
         unjust
@@ -432,8 +430,19 @@ pickResult exprIRef =
   ( fmap (ExprIRef.exprGuid . (^. Expr.ePayload . Lens._1))
   . listToMaybe . orderedInnerHoles
   ) .
-  ExprIRef.writeExpressionWithStoredSubexpressions exprIRef .
-  fmap ((Lens._1 . Lens.mapped %~ unStorePoint) . swap)
+  writeExprMStorePoint exprIRef . fmap swap
+
+writeExprMStorePoint ::
+  MonadA m =>
+  ExprIRef.ExpressionIM m ->
+  Expr.Expression (DefI (Tag m)) (Maybe (StorePoint (Tag m)), a) ->
+  T m (ExprIRef.ExpressionM m (ExprIRef.ExpressionIM m, a))
+writeExprMStorePoint exprIRef exprMStorePoint = do
+  key <- Transaction.newKey
+  ExprUtil.randomizeParamIds (genFromHashable key) exprMStorePoint
+    <&> Lens._1 . Lens.mapped %~ unStorePoint
+    & ExprIRef.writeExpressionWithStoredSubexpressions exprIRef
+
 
 orderedInnerHoles ::
   Expr.Expression def (a, Infer.Inferred def) ->
