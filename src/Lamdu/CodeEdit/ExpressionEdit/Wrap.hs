@@ -13,6 +13,7 @@ import Lamdu.CodeEdit.ExpressionEdit.HoleEdit (HoleState(..))
 import Lamdu.Config (Config)
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
+import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.CodeEdit.ExpressionEdit.HoleEdit as HoleEdit
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
@@ -26,7 +27,7 @@ eventMap config actions =
     \c _isShifted -> HoleEdit.setHoleStateAndJump (HoleState [c]) =<< wrap
   , Widget.keysEventMapMovesCursor
     (Config.wrapKeys config) (E.Doc ["Edit", doc])
-    (WidgetIds.fromGuid <$> wrap)
+    (FocusDelegator.delegatingId . WidgetIds.fromGuid <$> wrap)
   ]
   where
     (doc, wrap) =
