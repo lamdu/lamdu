@@ -17,7 +17,6 @@ import Control.Monad.Trans.State (mapStateT)
 import Control.MonadA (MonadA)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
-import Data.Traversable (traverse)
 import Data.Typeable (Typeable1)
 import Lamdu.CodeEdit.Sugar.Infer (Stored)
 import Lamdu.CodeEdit.Sugar.Monad (SugarM)
@@ -94,37 +93,29 @@ guardReinferSuccess sugarContext act = do
     else Nothing
 
 mkCallWithArg ::
-  MonadA m => SugarM.Context m ->
-  ExprIRef.ExpressionM m (SugarInfer.Payload i (Stored m)) ->
+  MonadA m => SugarM.Context m -> Stored m ->
   PrefixAction m -> CT m (Maybe (T m Guid))
 mkCallWithArg sugarContext exprStored prefixAction =
   guardReinferSuccess sugarContext $ do
     prefixAction
-    fmap ExprIRef.exprGuid . DataOps.callWithArg $ exprStored ^. SugarInfer.exprStored
+    ExprIRef.exprGuid <$> DataOps.callWithArg exprStored
 
-mkReplaceWithNewHole ::
-  MonadA m =>
-  ExprIRef.ExpressionM m (SugarInfer.Payload i (Stored m)) ->
-  T m Guid
-mkReplaceWithNewHole =
-  fmap ExprIRef.exprGuid . DataOps.replaceWithHole . (^. SugarInfer.exprStored)
+mkReplaceWithNewHole :: MonadA m => Stored m -> T m Guid
+mkReplaceWithNewHole stored =
+  ExprIRef.exprGuid <$> DataOps.replaceWithHole stored
 
-mkActions ::
-  MonadA m => SugarM.Context m ->
-  ExprIRef.ExpressionM m (SugarInfer.Payload i (Stored m)) -> Actions m
-mkActions sugarContext exprS =
+mkActions :: MonadA m => SugarM.Context m -> Stored m -> Actions m
+mkActions sugarContext stored =
   Actions
   { _wrap = WrapAction $ ExprIRef.exprGuid <$> DataOps.wrap stored
-  , _callWithArg = mkCallWithArg sugarContext exprS
+  , _callWithArg = mkCallWithArg sugarContext stored
   , _callWithNextArg = pure (pure Nothing)
   , _setToHole = ExprIRef.exprGuid <$> DataOps.setToHole stored
-  , _replaceWithNewHole = mkReplaceWithNewHole exprS
+  , _replaceWithNewHole = mkReplaceWithNewHole stored
   , _cut =
     mkCutter (sugarContext ^. SugarM.scCodeAnchors)
-    (Property.value stored) $ mkReplaceWithNewHole exprS
+    (Property.value stored) $ mkReplaceWithNewHole stored
   }
-  where
-    stored = exprS ^. SugarInfer.exprStored
 
 make ::
   (Typeable1 m, MonadA m) => SugarInfer.ExprMM m ->
@@ -140,8 +131,7 @@ make exprI body = do
     { _plGuid = exprI ^. SugarInfer.exprGuid
     , _plInferredTypes = inferredTypes
     , _plActions =
-      mkActions sugarContext <$>
-      traverse (Lens.sequenceOf SugarInfer.plStored) exprI
+      mkActions sugarContext <$> exprI ^. SugarInfer.exprStored
     , _plMNextHoleGuid = Nothing
     , _plPresugaredExpression =
       fmap (StorePoint . Property.value) .
