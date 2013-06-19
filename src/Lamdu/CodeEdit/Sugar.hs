@@ -776,17 +776,25 @@ emptyConventionalParams stored = ConventionalParams
   , cpAddFirstParam = lambdaWrap stored
   }
 
-mExtractWhere ::
-  Expr.Expression def a ->
-  Maybe (Expr.Apply (Expr.Expression def a), Expr.Lambda (Expr.Expression def a))
+data ExprWhereItem def a = ExprWhereItem
+  { ewiBody :: Expr.Expression def a
+  , ewiParamGuid :: Guid
+  , ewiArg :: Expr.Expression def a
+  , ewiHiddenPayloads :: [a]
+  }
+
+mExtractWhere :: Expr.Expression def a -> Maybe (ExprWhereItem def a)
 mExtractWhere expr = do
-  apply <- expr ^? ExprLens.exprApply
-  -- TODO: Use exprKindedLam
-  lambda <- apply ^? Expr.applyFunc . ExprLens.exprLam
-  guard $ (lambda ^. Expr.lambdaKind) == Val
+  Expr.Apply func arg <- expr ^? ExprLens.exprApply
+  (paramGuid, paramType, body) <- func ^? ExprLens.exprKindedLam Val
   -- paramType has to be Hole for this to be sugarred to Where
-  lambda ^? Expr.lambdaParamType . ExprLens.exprHole
-  return (apply, lambda)
+  paramType ^? ExprLens.exprHole
+  Just ExprWhereItem
+    { ewiBody = body
+    , ewiParamGuid = paramGuid
+    , ewiArg = arg
+    , ewiHiddenPayloads = (^. Expr.ePayload) <$> [expr, func, paramType]
+    }
 
 convertWhereItems ::
   (MonadA m, Typeable1 m) =>
@@ -796,19 +804,19 @@ convertWhereItems ::
 convertWhereItems usedTags expr =
   case mExtractWhere expr of
   Nothing -> return ([], expr)
-  Just (apply, lambda) -> do
+  Just ewi -> do
     let
-      defGuid = lambda ^. Expr.lambdaParamId
+      defGuid = ewiParamGuid ewi
       recordParamsInfo =
         SugarM.RecordParamsInfo defGuid $ pure defGuid
     value <-
       convertDefinitionContent recordParamsInfo usedTags $
-      apply ^. Expr.applyArg
+      ewiArg ewi
     let
       mkWIActions topLevelProp bodyStored =
         ListItemActions
         { _itemDelete = do
-             deleteParamRef (lambda ^. Expr.lambdaParamId) bodyStored
+             deleteParamRef defGuid bodyStored
              SugarInfer.replaceWith topLevelProp $ bodyStored ^. Expr.ePayload
         , _itemAddNext = fmap fst $ DataOps.redexWrap topLevelProp
         }
@@ -817,15 +825,14 @@ convertWhereItems usedTags expr =
       item = WhereItem
         { wiValue = value
         , wiGuid = defGuid
-        , wiHiddenGuids =
-            map (^. SugarInfer.exprGuid) [expr, lambda ^. Expr.lambdaParamType]
+        , wiHiddenGuids = (^. SugarInfer.plGuid) <$> ewiHiddenPayloads ewi
         , wiActions =
           mkWIActions <$>
           expr ^. SugarInfer.exprStored <*>
-          traverse (^. SugarInfer.plStored) (lambda ^. Expr.lambdaResult)
+          traverse (^. SugarInfer.plStored) (ewiBody ewi)
         , wiName = name
         }
-    (nextItems, whereBody) <- convertWhereItems usedTags $ lambda ^. Expr.lambdaResult
+    (nextItems, whereBody) <- convertWhereItems usedTags $ ewiBody ewi
     return (item : nextItems, whereBody)
 
 newField ::

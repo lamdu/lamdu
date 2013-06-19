@@ -264,7 +264,7 @@ makeWhereItemEdit item = do
     makeDefContentEdit (Sugar.wiGuid item) (Sugar.wiName item) (Sugar.wiValue item)
   where
     assignCursor =
-      foldr ((.) . (`ExprGuiM.assignCursor` myId) . WidgetIds.fromGuid) id $
+      foldr ((.) . (`ExprGuiM.assignCursorPrefix` myId) . WidgetIds.fromGuid) id $
       Sugar.wiHiddenGuids item
     myId = WidgetIds.fromGuid $ Sugar.wiGuid item
 
