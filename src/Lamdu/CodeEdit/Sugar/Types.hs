@@ -366,7 +366,6 @@ data WhereItem name m expr = WhereItem
   { wiValue :: DefinitionContent name m expr
   , wiGuid :: Guid
   , wiName :: name
-  , wiHiddenGuids :: [Guid]
   , wiActions :: Maybe (ListItemActions m)
   } deriving (Functor, Foldable, Traversable)
 

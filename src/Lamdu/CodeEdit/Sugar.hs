@@ -823,10 +823,10 @@ convertWhereItems usedTags expr =
         }
     name <- getStoredNameS defGuid
     let
+      hiddenGuids = (^. SugarInfer.plGuid) <$> ewiHiddenPayloads ewi
       item = WhereItem
-        { wiValue = value
+        { wiValue = value & dBody . rPayload . plHiddenGuids %~ (hiddenGuids ++)
         , wiGuid = defGuid
-        , wiHiddenGuids = (^. SugarInfer.plGuid) <$> ewiHiddenPayloads ewi
         , wiActions =
           mkWIActions <$>
           expr ^. SugarInfer.exprStored <*>

@@ -260,13 +260,8 @@ makeWhereItemEdit item = do
           fmap WidgetIds.fromGuid $ wiActions ^. Sugar.itemAddNext
         ]
       | otherwise = mempty
-  fmap (Widget.weakerEvents eventMap) . assignCursor $
+  Widget.weakerEvents eventMap <$>
     makeDefContentEdit (Sugar.wiGuid item) (Sugar.wiName item) (Sugar.wiValue item)
-  where
-    assignCursor =
-      foldr ((.) . (`ExprGuiM.assignCursorPrefix` myId) . WidgetIds.fromGuid) id $
-      Sugar.wiHiddenGuids item
-    myId = WidgetIds.fromGuid $ Sugar.wiGuid item
 
 makeExprDefinition ::
   MonadA m =>
