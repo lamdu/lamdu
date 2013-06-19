@@ -10,6 +10,7 @@ import Control.Monad.Trans.Either (EitherT(..))
 import Control.Monad.Trans.Either.Utils (justToLeft)
 import Control.Monad.Trans.Maybe (MaybeT(..))
 import Control.MonadA (MonadA)
+import Data.Maybe.Utils (maybeToMPlus)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
@@ -55,10 +56,6 @@ convert app@(Expr.Apply funcI argI) exprPl =
     funcS <- lift $ SugarM.convertSubexpression funcI
     justToLeft $ convertLabeled funcS argS exprPl
     lift $ convertPrefix funcS funcI argS argI exprPl
-
-maybeToMPlus :: MonadPlus m => Maybe a -> m a
-maybeToMPlus Nothing = mzero
-maybeToMPlus (Just x) = return x
 
 indirectDefinitionGuid :: ExpressionP name m pl -> Maybe Guid
 indirectDefinitionGuid funcS =
