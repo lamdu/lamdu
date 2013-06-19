@@ -164,7 +164,7 @@ convertPrefix funcRef funcI rawArgS argI applyPl = do
 storedSubExpressionGuids ::
   Lens.Fold
   (Expr.Expression def (SugarInfer.Payload i (Maybe (SugarInfer.Stored m)))) Guid
-storedSubExpressionGuids = Lens.folding ExprUtil.subExpressions . SugarInfer.exprStoredGuid
+storedSubExpressionGuids = Lens.traversed . SugarInfer.plIRef . Lens.to ExprIRef.exprGuid
 
 mkListAddFirstItem ::
   MonadA m => Anchors.SpecialFunctions (Tag m) -> SugarInfer.Stored m -> T m Guid
@@ -188,10 +188,10 @@ convertEmptyList app@(Expr.Apply funcI _) exprPl = do
   guard $
     Lens.anyOf ExprLens.exprDefinitionRef
     (== Anchors.sfNil specialFunctions) funcI
-  let guids = app ^.. Lens.traversed . storedSubExpressionGuids
+  let hiddenGuids = app ^.. Lens.traversed . storedSubExpressionGuids
   (lift . SugarExpr.make exprPl . BodyList)
     (List [] (mkListActions <$> exprPl ^. SugarInfer.plStored))
-    <&> rPayload . plHiddenGuids <>~ guids
+    <&> rPayload . plHiddenGuids <>~ hiddenGuids
 
 isCons ::
   Anchors.SpecialFunctions t ->
