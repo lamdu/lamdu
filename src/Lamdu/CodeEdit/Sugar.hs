@@ -855,7 +855,7 @@ convertDefinitionContent recordParamsInfo usedTags expr = do
 loadConvertDefI ::
   (MonadA m, Typeable1 m) =>
   Anchors.CodeProps m -> DefI (Tag m) ->
-  CT m (DefinitionU m ())
+  CT m (DefinitionU m [Guid])
 loadConvertDefI cp defI =
   convertDefI =<< lift (Load.loadDefinitionClosure defI)
   where
@@ -877,10 +877,12 @@ convertDefIBuiltin ::
   (Typeable1 m, MonadA m) => Anchors.CodeProps m ->
   Definition.Builtin -> DefI (Tag m) ->
   ExprIRef.ExpressionM m (Stored m) ->
-  CT m (DefinitionBody MStoredName m (ExpressionU m ()))
+  CT m (DefinitionBody MStoredName m (ExpressionU m [Guid]))
 convertDefIBuiltin cp (Definition.Builtin name) defI defType =
   DefinitionBodyBuiltin <$> do
-    defTypeS <- convertExpressionPure cp defI iDefTypeGen (void defType)
+    defTypeS <-
+      convertExpressionPure cp defI iDefTypeGen (void defType)
+      <&> Lens.mapped . Lens.mapped .~ mempty
     pure DefinitionBuiltin
       { biName = name
       , biMSetName = Just setName
@@ -934,7 +936,7 @@ convertDefIExpression ::
   (MonadA m, Typeable1 m) => Anchors.CodeProps m ->
   Load.LoadedClosure (Tag m) -> DefI (Tag m) ->
   ExprIRef.ExpressionM m (Stored m) ->
-  CT m (DefinitionBody MStoredName m (ExpressionU m ()))
+  CT m (DefinitionBody MStoredName m (ExpressionU m [Guid]))
 convertDefIExpression cp exprLoaded defI defType = do
   ilr@SugarInfer.InferredWithImplicits
     { SugarInfer._iwiExpr = iwiExpr
@@ -947,8 +949,10 @@ convertDefIExpression cp exprLoaded defI defType = do
   let
     inferredType =
       void . Infer.iType . iwcInferred $ iwiExpr ^. SugarInfer.exprInferred
+    addStoredGuids lens x = (x, x ^.. lens . Lens.to (ExprIRef.exprGuid . Property.value))
+    guidIntoPl (pl, x) = pl & SugarInfer.plData %~ \() -> x
   typeInfo <-
-    makeTypeInfo cp defI (flip (,) () <$> defType) inferredType success
+    makeTypeInfo cp defI (addStoredGuids id <$> defType) (mempty <$ inferredType) success
   let
     holeInferStateKey = ilr ^. SugarInfer.iwiBaseInferContextKey
     inferState = ilr ^. SugarInfer.iwiInferContext
@@ -956,8 +960,10 @@ convertDefIExpression cp exprLoaded defI defType = do
   context <- lift $ mkContext cp defI (Just reinferRoot) holeInferStateKey inferState holeInferState
   SugarM.run context $ do
     content <-
-      convertDefinitionContent recordParamsInfo [] $
-      iwiExpr & traverse . SugarInfer.plInferred %~ Just
+      iwiExpr
+      <&> guidIntoPl . addStoredGuids (SugarInfer.plStored . Lens._Just)
+      & traverse . SugarInfer.plInferred %~ Just
+      & convertDefinitionContent recordParamsInfo []
     return $ DefinitionBodyExpression DefinitionExpression
       { _deContent = removeRedundantTypes <$> content
       , _deTypeInfo = typeInfo

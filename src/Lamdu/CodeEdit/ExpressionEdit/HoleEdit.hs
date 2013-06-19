@@ -61,7 +61,7 @@ handlePickResultTargetGuid holeInfo =
   fromMaybe (hiGuid holeInfo)
 
 resultPickEventMap ::
-  MonadA m => Config -> HoleInfo m -> Sugar.HoleResult Sugar.Name m () ->
+  MonadA m => Config -> HoleInfo m -> Sugar.HoleResult Sugar.Name m ExprGuiM.Payload ->
   Widget.EventHandlers (T m)
 resultPickEventMap config holeInfo holeResult =
   case hiMNextHoleGuid holeInfo of
@@ -94,7 +94,7 @@ makeResultCompositeWidget
   :: MonadA m
   => ResultsList m
   -> ExprGuiM m
-     (ResultCompositeWidget m, Maybe (Sugar.HoleResult Sugar.Name m ()))
+     (ResultCompositeWidget m, Maybe (Sugar.HoleResult Sugar.Name m ExprGuiM.Payload))
 makeResultCompositeWidget results = do
   mainResultWidget <-
     maybeAddExtraSymbol (Lens.has (HoleResults.rlExtra . traverse) results) (rId mainResult) =<< rMkWidget mainResult
@@ -127,7 +127,7 @@ makeResultCompositeWidget results = do
 
 makeExtraResultsWidget ::
   MonadA m => [Result m] ->
-  ExprGuiM m (Maybe (Maybe (Sugar.HoleResult Sugar.Name m ()), WidgetT m))
+  ExprGuiM m (Maybe (Maybe (Sugar.HoleResult Sugar.Name m ExprGuiM.Payload), WidgetT m))
 makeExtraResultsWidget extraResults
   | (not . null) extraResults = Just <$> do
     (mResults, widgets) <-
@@ -144,7 +144,7 @@ makeExtraResultsWidget extraResults
 
 makeHoleResultWidget ::
   MonadA m => HoleInfo m ->
-  Widget.Id -> Sugar.HoleResult Sugar.Name m () -> ExprGuiM m (WidgetT m)
+  Widget.Id -> Sugar.HoleResult Sugar.Name m ExprGuiM.Payload -> ExprGuiM m (WidgetT m)
 makeHoleResultWidget holeInfo resultId holeResult = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   ExprGuiM.widgetEnv . BWidgets.makeFocusableView resultId .
@@ -161,7 +161,7 @@ asNewLabelScaleFactor = 0.5
 
 makeNewTagResultWidget ::
   MonadA m => HoleInfo m ->
-  Widget.Id -> Sugar.HoleResult Sugar.Name m () ->
+  Widget.Id -> Sugar.HoleResult Sugar.Name m ExprGuiM.Payload ->
   ExprGuiM m (WidgetT m)
 makeNewTagResultWidget holeInfo resultId holeResult = do
   widget <- makeHoleResultWidget holeInfo resultId holeResult
@@ -211,8 +211,9 @@ holeResultAnimMappingNoParens holeInfo resultId =
 hiSearchTermId :: HoleInfo m -> Widget.Id
 hiSearchTermId holeInfo = WidgetIds.searchTermId $ hiId holeInfo
 
+-- TODO: No need for this anymore
 newDefinitionSeed ::
-  String -> Sugar.HoleResultSeed m (Sugar.MStorePoint m ())
+  String -> Sugar.HoleResultSeed m (Sugar.MStorePoint m ExprGuiM.Payload)
 newDefinitionSeed = Sugar.ResultSeedNewDefinition
 
 mkAddNewDefinitionEventMap ::
@@ -265,7 +266,7 @@ blockDownEvents =
 makeResultsWidget ::
   MonadA m => HoleInfo m ->
   [ResultsList m] -> HaveHiddenResults ->
-  ExprGuiM m (Maybe (Sugar.HoleResult Sugar.Name m ()), WidgetT m)
+  ExprGuiM m (Maybe (Sugar.HoleResult Sugar.Name m ExprGuiM.Payload), WidgetT m)
 makeResultsWidget holeInfo shownResults hiddenResults = do
   (widgets, mResults) <-
     unzip <$> traverse makeResultCompositeWidget shownResults
@@ -396,7 +397,7 @@ makeActiveHoleEdit holeInfo = do
         searchTermWidget
 
 make ::
-  MonadA m => Sugar.Hole Sugar.Name m (Sugar.ExpressionN m ()) ->
+  MonadA m => Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Maybe Guid -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make hole mNextHoleGuid guid outerId = do
@@ -433,7 +434,7 @@ makeUnwrappedH ::
   MonadA m =>
   Maybe ExprGuiM.HoleNumber ->
   Property (T m) HoleState ->
-  Sugar.Hole Sugar.Name m (Sugar.ExpressionN m ()) ->
+  Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Maybe Guid -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeUnwrappedH mHoleNumber stateProp hole mNextHoleGuid guid myId = do
@@ -453,7 +454,7 @@ makeUnwrappedH mHoleNumber stateProp hole mNextHoleGuid guid myId = do
 makeUnwrapped ::
   MonadA m =>
   Maybe ExprGuiM.HoleNumber ->
-  Sugar.Hole Sugar.Name m (Sugar.ExpressionN m ()) ->
+  Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Maybe Guid -> Guid ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeUnwrapped mHoleNumber hole mNextHoleGuid guid myId = do
@@ -557,7 +558,7 @@ keysOfNum n
 
 makeInactive ::
   MonadA m => Maybe ExprGuiM.HoleNumber ->
-  Sugar.Hole Sugar.Name m (Sugar.ExpressionN m ()) ->
+  Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeInactive mHoleNumber hole myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig

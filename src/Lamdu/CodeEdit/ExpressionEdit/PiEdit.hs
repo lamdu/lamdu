@@ -20,7 +20,7 @@ import qualified Lamdu.WidgetIds as WidgetIds
 
 make ::
   MonadA m => ExpressionGui.ParentPrecedence ->
-  Sugar.Lam Sugar.Name m (Sugar.ExpressionN m ()) ->
+  Sugar.Lam Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make parentPrecedence (Sugar.Lam _ param _isDep resultType) =
   ExpressionGui.wrapParenify parentPrecedence (ExpressionGui.MyPrecedence 0)

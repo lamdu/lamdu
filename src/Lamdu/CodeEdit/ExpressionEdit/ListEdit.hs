@@ -19,7 +19,7 @@ import qualified Lamdu.WidgetEnvT as WE
 import qualified Lamdu.WidgetIds as WidgetIds
 
 make ::
-  MonadA m => Sugar.List m (Sugar.ExpressionN m ()) -> Widget.Id ->
+  MonadA m => Sugar.List m (ExprGuiM.SugarExpr m) -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 make = ExpressionGui.wrapExpression . makeUnwrapped
 
@@ -33,7 +33,7 @@ makeBracketLabel label myId = do
     label myId
 
 makeUnwrapped ::
-  MonadA m => Sugar.List m (Sugar.ExpressionN m ()) -> Widget.Id ->
+  MonadA m => Sugar.List m (ExprGuiM.SugarExpr m) -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 makeUnwrapped (Sugar.List items mActions) myId =
   ExprGuiM.assignCursor myId cursorDest $
@@ -73,7 +73,7 @@ makeUnwrapped (Sugar.List items mActions) myId =
 
 makeItem ::
   MonadA m =>
-  Sugar.ListItem m (Sugar.ExpressionN m ()) ->
+  Sugar.ListItem m (ExprGuiM.SugarExpr m) ->
   ExprGuiM m (ExpressionGui m, ExpressionGui m)
 makeItem item = do
   config <- ExprGuiM.widgetEnv WE.readConfig

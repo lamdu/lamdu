@@ -33,7 +33,7 @@ fdConfig config = FocusDelegator.Config
 
 make ::
   MonadA m => ParentPrecedence ->
-  Sugar.Inferred Sugar.Name m (Sugar.ExpressionN m ()) ->
+  Sugar.Inferred Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Guid -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 make parentPrecedence inferred guid myId = do
@@ -53,7 +53,7 @@ make parentPrecedence inferred guid myId = do
 
 makeUnwrapped ::
   MonadA m => ParentPrecedence ->
-  Sugar.Inferred Sugar.Name m (Sugar.ExpressionN m ()) ->
+  Sugar.Inferred Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Guid -> Widget.Id ->
   ExprGuiM m (ExpressionGui m)
 makeUnwrapped (ParentPrecedence parentPrecedence) inferred guid myId = do

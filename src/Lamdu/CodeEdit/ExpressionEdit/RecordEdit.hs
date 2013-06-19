@@ -27,13 +27,13 @@ type T = Transaction
 
 make ::
   MonadA m =>
-  Sugar.Record m (Sugar.ExpressionN m ()) ->
+  Sugar.Record m (ExprGuiM.SugarExpr m) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make = ExpressionGui.wrapExpression . makeUnwrapped
 
 makeUnwrapped ::
   MonadA m =>
-  Sugar.Record m (Sugar.ExpressionN m ()) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
+  Sugar.Record m (ExprGuiM.SugarExpr m) -> Widget.Id -> ExprGuiM m (ExpressionGui m)
 makeUnwrapped (Sugar.Record k (Sugar.FieldList fields mAddField)) myId =
   ExprGuiM.assignCursor myId bracketId $ do
     config <- ExprGuiM.widgetEnv WE.readConfig

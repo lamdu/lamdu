@@ -498,6 +498,6 @@ uninferredHoles e =
       uninferredHoles paramType
   body -> Foldable.concatMap uninferredHoles body
 
-holeResultHasHoles :: HoleResult name m () -> Bool
+holeResultHasHoles :: HoleResult name m a -> Bool
 holeResultHasHoles =
   not . null . uninferredHoles . fmap ((,) ()) . (^. holeResultInferred)

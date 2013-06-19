@@ -1,7 +1,8 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, ConstraintKinds, TypeFamilies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, ConstraintKinds, TypeFamilies, DeriveDataTypeable #-}
 module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad
   ( ExprGuiM, WidgetT, runWidget
   , widgetEnv
+  , Payload(..), SugarExpr
 
   , transaction, localEnv, withFgColor
   , getP, assignCursor, assignCursorPrefix
@@ -32,13 +33,15 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.RWS (RWST, runRWST)
 import Control.Monad.Trans.State (StateT(..), mapStateT)
 import Control.MonadA (MonadA)
-import Data.Binary (Binary)
+import Data.Binary (Binary(..))
 import Data.Cache (Cache)
+import Data.Derive.Binary (makeBinary)
 import Data.Derive.Monoid (makeMonoid)
 import Data.DeriveTH (derive)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.Transaction (Transaction)
+import Data.Typeable (Typeable)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Types (ExpressionGui, WidgetT, ParentPrecedence(..), Precedence)
 import Lamdu.CodeEdit.Settings (Settings)
@@ -66,9 +69,20 @@ data Output m = Output
   }
 derive makeMonoid ''Output
 
+data Payload = Payload
+  { plGuids :: [Guid]
+  } deriving (Typeable)
+derive makeMonoid ''Payload
+derive makeBinary ''Payload
+
+type SugarExpr m = Sugar.ExpressionN m Payload
+
 data Askable m = Askable
   { _aSettings :: Settings
-  , _aMakeSubexpression :: ParentPrecedence -> Sugar.ExpressionN m () -> ExprGuiM m (ExpressionGui m)
+  , _aMakeSubexpression ::
+    ParentPrecedence ->
+    Sugar.ExpressionN m Payload ->
+    ExprGuiM m (ExpressionGui m)
   , _aCodeAnchors :: Anchors.CodeProps m
   , _aInCollapsedExpression :: Bool
   }
@@ -112,7 +126,7 @@ mkPrejumpPosSaver =
 
 -- TODO: makeSubexpresSion
 makeSubexpresion ::
-  MonadA m => Precedence -> Sugar.ExpressionN m () -> ExprGuiM m (ExpressionGui m)
+  MonadA m => Precedence -> SugarExpr m -> ExprGuiM m (ExpressionGui m)
 makeSubexpresion parentPrecedence expr = do
   maker <- ExprGuiM $ Lens.view aMakeSubexpression
   maker (ParentPrecedence parentPrecedence) expr
@@ -146,7 +160,7 @@ isInCollapsedExpression = ExprGuiM $ Lens.view aInCollapsedExpression
 
 run ::
   MonadA m =>
-  (ParentPrecedence -> Sugar.ExpressionN m () -> ExprGuiM m (ExpressionGui m)) ->
+  (ParentPrecedence -> SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
   Anchors.CodeProps m -> Settings -> ExprGuiM m a ->
   StateT Cache (WidgetEnvT (T m)) (Widget.EventHandlers (T m), a)
 run makeSubexpression codeAnchors settings (ExprGuiM action) =
@@ -164,7 +178,7 @@ run makeSubexpression codeAnchors settings (ExprGuiM action) =
 
 runWidget ::
   MonadA m =>
-  (ParentPrecedence -> Sugar.ExpressionN m () -> ExprGuiM m (ExpressionGui m)) ->
+  (ParentPrecedence -> SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
   Anchors.CodeProps m -> Settings -> ExprGuiM m (Widget (T m)) ->
   StateT Cache (WidgetEnvT (T m)) (Widget (T m))
 runWidget makeSubexpression codeAnchors settings action =

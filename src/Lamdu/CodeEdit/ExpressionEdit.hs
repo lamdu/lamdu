@@ -41,7 +41,7 @@ data IsHole = NotAHole | IsAHole
 
 pasteEventMap ::
   MonadA m =>
-  Config -> Sugar.Hole Sugar.Name m (Sugar.ExpressionN m ()) ->
+  Config -> Sugar.Hole Sugar.Name m (ExprGuiM.SugarExpr m) ->
   Widget.EventHandlers (Transaction m)
 pasteEventMap config =
   maybe mempty
@@ -52,11 +52,14 @@ pasteEventMap config =
 
 make ::
   MonadA m => ParentPrecedence ->
-  Sugar.ExpressionN m () -> ExprGuiM m (ExpressionGui m)
+  ExprGuiM.SugarExpr m -> ExprGuiM m (ExpressionGui m)
 make parentPrecedence sExpr = assignCursor $ do
   ((isHole, widget), _) <-
     ExprGuiM.listenResultPickers $ makeEditor parentPrecedence sExpr exprId
-  typeEdits <- traverse (make (ParentPrecedence 0)) $ payload ^. Sugar.plInferredTypes
+  typeEdits <-
+    payload ^. Sugar.plInferredTypes
+    & Lens.traversed . Lens.mapped . Lens.mapped .~ mempty
+    & traverse (make (ParentPrecedence 0))
   let onReadOnly = Widget.doesntTakeFocus
   exprEventMap <- expressionEventMap isHole sExpr
   config <- ExprGuiM.widgetEnv WE.readConfig
@@ -80,7 +83,7 @@ make parentPrecedence sExpr = assignCursor $ do
 
 makeEditor ::
   MonadA m => ParentPrecedence ->
-  Sugar.ExpressionN m () -> Widget.Id ->
+  ExprGuiM.SugarExpr m -> Widget.Id ->
   ExprGuiM m (IsHole, ExpressionGui m)
 makeEditor parentPrecedence sExpr myId = do
   config <- ExprGuiM.widgetEnv WE.readConfig
@@ -130,7 +133,7 @@ makeEditor parentPrecedence sExpr myId = do
 expressionEventMap ::
   MonadA m =>
   IsHole ->
-  Sugar.ExpressionN m () ->
+  ExprGuiM.SugarExpr m ->
   ExprGuiM m (EventHandlers (Transaction m))
 expressionEventMap isHole sExpr =
   maybe (return mempty) (actionsEventMap sExpr isHole) $
@@ -138,7 +141,7 @@ expressionEventMap isHole sExpr =
 
 actionsEventMap ::
   MonadA m =>
-  Sugar.ExpressionN m () -> IsHole ->
+  ExprGuiM.SugarExpr m -> IsHole ->
   Sugar.Actions m ->
   ExprGuiM m (EventHandlers (Transaction m))
 actionsEventMap sExpr isHole actions = do

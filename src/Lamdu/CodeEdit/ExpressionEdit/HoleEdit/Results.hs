@@ -79,7 +79,7 @@ data ResultType = GoodResult | BadResult
 
 data Result m = Result
   { rType :: ResultType
-  , rHoleResult :: Sugar.HoleResult Sugar.Name m ()
+  , rHoleResult :: Sugar.HoleResult Sugar.Name m ExprGuiM.Payload
   , rMkWidget :: ExprGuiM m (WidgetT m)
   , rId :: Widget.Id
   }
@@ -132,15 +132,18 @@ resultComplexityScore = length . Foldable.toList . Infer.iType . (^. Expr.ePaylo
 prefixId :: HoleInfo m -> Widget.Id
 prefixId holeInfo = mconcat [hiId holeInfo, Widget.Id ["results"]]
 
-type WidgetMaker m = Widget.Id -> Sugar.HoleResult Sugar.Name m () -> ExprGuiM m (WidgetT m)
+type
+  WidgetMaker m =
+    Widget.Id -> Sugar.HoleResult Sugar.Name m ExprGuiM.Payload ->
+    ExprGuiM m (WidgetT m)
 data MakeWidgets m = MakeWidgets
   { mkResultWidget :: WidgetMaker m
   , mkNewTagResultWidget :: WidgetMaker m
   }
 
 typeCheckHoleResult ::
-  MonadA m => HoleInfo m -> Sugar.HoleResultSeed m (Sugar.MStorePoint m ()) ->
-  CT m (Maybe (ResultType, Sugar.HoleResult Sugar.Name m ()))
+  MonadA m => HoleInfo m -> Sugar.HoleResultSeed m (Sugar.MStorePoint m ExprGuiM.Payload) ->
+  CT m (Maybe (ResultType, Sugar.HoleResult Sugar.Name m ExprGuiM.Payload))
 typeCheckHoleResult holeInfo seed = do
   mGood <- mkHoleResult seed
   case (mGood, seed) of
@@ -153,8 +156,8 @@ typeCheckHoleResult holeInfo seed = do
     mkHoleResult = Sugar.holeResult (hiActions holeInfo)
 
 typeCheckResults ::
-  MonadA m => HoleInfo m -> [Sugar.HoleResultSeed m (Sugar.MStorePoint m ())] ->
-  CT m [(ResultType, Sugar.HoleResult Sugar.Name m ())]
+  MonadA m => HoleInfo m -> [Sugar.HoleResultSeed m (Sugar.MStorePoint m ExprGuiM.Payload)] ->
+  CT m [(ResultType, Sugar.HoleResult Sugar.Name m ExprGuiM.Payload)]
 typeCheckResults holeInfo options = do
   rs <- catMaybes <$> traverse (typeCheckHoleResult holeInfo) options
   let (goodResults, badResults) = partition ((== GoodResult) . fst) rs
@@ -164,7 +167,7 @@ typeCheckResults holeInfo options = do
 
 mResultsListOf ::
   HoleInfo m -> WidgetMaker m -> Widget.Id ->
-  [(ResultType, Sugar.HoleResult Sugar.Name m ())] ->
+  [(ResultType, Sugar.HoleResult Sugar.Name m ExprGuiM.Payload)] ->
   Maybe (ResultsList m)
 mResultsListOf _ _ _ [] = Nothing
 mResultsListOf holeInfo makeWidget baseId (x:xs) = Just
@@ -189,7 +192,7 @@ mResultsListOf holeInfo makeWidget baseId (x:xs) = Just
 
 typeCheckToResultsList ::
   MonadA m => HoleInfo m -> WidgetMaker m ->
-  Widget.Id -> [Sugar.HoleResultSeed m (Sugar.MStorePoint m ())] ->
+  Widget.Id -> [Sugar.HoleResultSeed m (Sugar.MStorePoint m ExprGuiM.Payload)] ->
   CT m (Maybe (ResultsList m))
 typeCheckToResultsList holeInfo makeWidget baseId options =
   mResultsListOf holeInfo makeWidget baseId <$>
@@ -257,16 +260,18 @@ injectIntoHoles holeInfo arg =
 maybeInjectArgumentExpr ::
   MonadA m => HoleInfo m ->
   [ExprIRef.ExpressionM m ApplyFormAnnotation] ->
-  CT m [Sugar.ExprStorePoint m ()]
+  CT m [Sugar.ExprStorePoint m ExprGuiM.Payload]
 maybeInjectArgumentExpr holeInfo =
   case hiMArgument holeInfo of
   Nothing -> return . map ((Nothing, mempty) <$)
   Just holeArg ->
     fmap concat .
-    traverse (injectIntoHoles holeInfo (holeArg ^. Sugar.haExprPresugared))
+    traverse (injectIntoHoles holeInfo arg)
+    where
+      arg = holeArg ^. Sugar.haExprPresugared <&> Lens._2 .~ mempty
 
 maybeInjectArgumentNewTag ::
-  HoleInfo m -> [Sugar.HoleResultSeed m (Sugar.MStorePoint m ())]
+  HoleInfo m -> [Sugar.HoleResultSeed m (Sugar.MStorePoint m ExprGuiM.Payload)]
 maybeInjectArgumentNewTag holeInfo =
   case hiMArgument holeInfo of
   Nothing -> [makeNewTag]

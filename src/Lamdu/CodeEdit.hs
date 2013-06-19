@@ -12,13 +12,16 @@ import Data.List.Utils (enumerate, insertAt, removeAt)
 import Data.Maybe (listToMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
+import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable1)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (WidgetT, ExprGuiM)
 import Lamdu.CodeEdit.Settings (Settings)
+import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.WidgetEnvT (WidgetEnvT)
+import qualified Control.Lens as Lens
 import qualified Data.Store.IRef as IRef
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.DrawingCombinators as Draw
@@ -46,7 +49,7 @@ type CT m = StateT Cache (T m)
 
 -- This is not in Sugar because Sugar is for code
 data SugarPane m = SugarPane
-  { spDef :: Sugar.DefinitionU m ()
+  { spDef :: Sugar.DefinitionU m ExprGuiM.Payload
   , mDelPane :: Maybe (T m Guid)
   , mMovePaneDown :: Maybe (T m ())
   , mMovePaneUp :: Maybe (T m ())
@@ -61,6 +64,14 @@ makeNewDefinitionAction = do
     DataOps.newPane cp newDefI
     DataOps.savePreJumpPosition cp curCursor
     return . DefinitionEdit.diveToNameEdit $ WidgetIds.fromIRef newDefI
+
+loadConvertDefI ::
+  (MonadA m, Typeable1 m) =>
+  Anchors.CodeProps m -> DefI (Tag m) ->
+  CT m (Sugar.DefinitionU m ExprGuiM.Payload)
+loadConvertDefI cp defI =
+  Sugar.loadConvertDefI cp defI
+  <&> Lens.mapped . Lens.mapped . Lens.mapped %~ ExprGuiM.Payload
 
 makeSugarPanes :: (MonadA m, Typeable1 m) => Anchors.CodeProps m -> Guid -> CT m [SugarPane m]
 makeSugarPanes cp rootGuid = do
@@ -85,7 +96,7 @@ makeSugarPanes cp rootGuid = do
       | i-1 >= 0 = Just $ movePane i (i-1)
       | otherwise = Nothing
     convertPane (i, defI) = do
-      sDef <- Sugar.loadConvertDefI cp defI
+      sDef <- loadConvertDefI cp defI
       return SugarPane
         { spDef = sDef
         , mDelPane = mkMDelPane i
@@ -95,7 +106,7 @@ makeSugarPanes cp rootGuid = do
   traverse convertPane $ enumerate panes
 
 makeClipboardsEdit ::
-  MonadA m => [Sugar.DefinitionU m ()] -> ExprGuiM m (WidgetT m)
+  MonadA m => [Sugar.DefinitionU m ExprGuiM.Payload] -> ExprGuiM m (WidgetT m)
 makeClipboardsEdit clipboards = do
   clipboardsEdits <- traverse makePaneWidget clipboards
   clipboardTitle <-
@@ -104,9 +115,9 @@ makeClipboardsEdit clipboards = do
     else ExprGuiM.widgetEnv $ BWidgets.makeTextViewWidget "Clipboards:" ["clipboards title"]
   return . Box.vboxAlign 0 $ clipboardTitle : clipboardsEdits
 
-makeSugarClipboards :: (MonadA m, Typeable1 m) => Anchors.CodeProps m -> CT m [Sugar.DefinitionU m ()]
+makeSugarClipboards :: (MonadA m, Typeable1 m) => Anchors.CodeProps m -> CT m [Sugar.DefinitionU m ExprGuiM.Payload]
 makeSugarClipboards cp =
-  traverse (Sugar.loadConvertDefI cp) =<<
+  traverse (loadConvertDefI cp) =<<
   (lift . Transaction.getP . Anchors.clipboards) cp
 
 make ::
@@ -166,7 +177,7 @@ makePanesEdit panes myId = do
       ]
   return $ Widget.weakerEvents panesEventMap panesWidget
 
-makePaneWidget :: MonadA m => Sugar.DefinitionU m () -> ExprGuiM m (Widget (T m))
+makePaneWidget :: MonadA m => Sugar.DefinitionU m ExprGuiM.Payload -> ExprGuiM m (Widget (T m))
 makePaneWidget rawDefS = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   infoMode <- (^. Settings.sInfoMode) <$> ExprGuiM.readSettings
