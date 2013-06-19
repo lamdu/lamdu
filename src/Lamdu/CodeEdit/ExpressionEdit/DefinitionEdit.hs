@@ -167,7 +167,7 @@ makeDefContentEdit guid name content = do
     addFirstParamEventMap =
       Widget.keysEventMapMovesCursor (Config.addNextParamKeys config)
       (E.Doc ["Edit", "Add parameter"]) .
-      toEventMapAction $ Sugar.dAddFirstParam content
+      toEventMapAction $ content ^. Sugar.dAddFirstParam
     nameEditEventMap = mappend addFirstParamEventMap rhsJumper
   polyNameEdit <-
     makePolyNameEdit name guid depParamsEdits myId
@@ -182,7 +182,7 @@ makeDefContentEdit guid name content = do
     addWhereItemEventMap =
       Widget.keysEventMapMovesCursor (Config.addWhereItemKeys config)
       (E.Doc ["Edit", "Add where item"]) .
-      toEventMapAction $ savePos >> Sugar.dAddInnermostWhereItem content
+      toEventMapAction $ savePos >> content ^. Sugar.dAddInnermostWhereItem
     assignment =
       ExpressionGui.hboxSpaced $
       ExpressionGui.addBelow 0 (map ((,) 0) presentationEdits)
@@ -193,16 +193,16 @@ makeDefContentEdit guid name content = do
         & ExpressionGui.egWidget %~
           Widget.weakerEvents addWhereItemEventMap
       ]
-  wheres <- makeWheres (Sugar.dWhereItems content) myId
+  wheres <- makeWheres (content ^. Sugar.dWhereItems) myId
   return . Box.vboxAlign 0 $ assignment ^. ExpressionGui.egWidget : wheres
   where
     presentationChoiceId = Widget.joinId myId ["presentation"]
     lhs = myId : map (WidgetIds.fromGuid . (^. Sugar.fpId)) allParams
     rhs = ("Def Body", body)
     allParams = depParams ++ params
-    depParams = Sugar.dDepParams content
-    params = Sugar.dParams content
-    body = Sugar.dBody content
+    depParams = content ^. Sugar.dDepParams
+    params = content ^. Sugar.dParams
+    body = content ^. Sugar.dBody
     toEventMapAction =
       fmap (FocusDelegator.delegatingId . WidgetIds.fromGuid)
     myId = WidgetIds.fromGuid guid

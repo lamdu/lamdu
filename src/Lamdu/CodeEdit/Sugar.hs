@@ -11,6 +11,7 @@ module Lamdu.CodeEdit.Sugar
     , _DefinitionIncompleteType
     , _DefinitionNewType
   , DefinitionContent(..)
+    , dDepParams, dParams, dBody, dWhereItems, dAddFirstParam, dAddInnermostWhereItem
   , DefinitionBuiltin(..)
   , WrapAction(..)
   , Actions(..)
@@ -877,12 +878,12 @@ convertDefinitionContent recordParamsInfo usedTags expr = do
         convertWhereItems (usedTags ++ cpTags convParams) funcBody
       bodyS <- SugarM.convertSubexpression whereBody
       return DefinitionContent
-        { dDepParams = depParams
-        , dParams = cpParams convParams
-        , dBody = bodyS
-        , dWhereItems = whereItems
-        , dAddFirstParam = cpAddFirstParam convParams
-        , dAddInnermostWhereItem =
+        { _dDepParams = depParams
+        , _dParams = cpParams convParams
+        , _dBody = bodyS
+        , _dWhereItems = whereItems
+        , _dAddFirstParam = cpAddFirstParam convParams
+        , _dAddInnermostWhereItem =
           fmap fst . DataOps.redexWrap $
           assertedGetProp "Where must be stored" whereBody
         }

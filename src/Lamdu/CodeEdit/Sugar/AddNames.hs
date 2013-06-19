@@ -417,15 +417,15 @@ toDefinitionContent ::
   m (DefinitionContent (NewName m) tm (Expression (NewName m) tm))
 toDefinitionContent def@DefinitionContent{..} = do
   (depParams, (params, (whereItems, body))) <-
-    runCPS (traverse (withFuncParam NameGen.Dependent) dDepParams) .
-    runCPS (traverse (withFuncParam NameGen.Independent) dParams) .
-    runCPS (traverse withWhereItem dWhereItems) $
-    toExpression dBody
+    runCPS (traverse (withFuncParam NameGen.Dependent) _dDepParams) .
+    runCPS (traverse (withFuncParam NameGen.Independent) _dParams) .
+    runCPS (traverse withWhereItem _dWhereItems) $
+    toExpression _dBody
   pure def
-    { dDepParams = depParams
-    , dParams = params
-    , dBody = body
-    , dWhereItems = whereItems
+    { _dDepParams = depParams
+    , _dParams = params
+    , _dBody = body
+    , _dWhereItems = whereItems
     }
 
 toDefinitionBody ::

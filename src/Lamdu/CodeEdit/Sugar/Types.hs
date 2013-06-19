@@ -11,6 +11,7 @@ module Lamdu.CodeEdit.Sugar.Types
     , _DefinitionIncompleteType
     , _DefinitionNewType
   , DefinitionContent(..)
+    , dDepParams, dParams, dBody, dWhereItems, dAddFirstParam, dAddInnermostWhereItem
   , DefinitionBuiltin(..)
   , WrapAction(..)
   , Actions(..)
@@ -371,12 +372,12 @@ data WhereItem name m expr = WhereItem
 
 -- Common data for definitions and where-items
 data DefinitionContent name m expr = DefinitionContent
-  { dDepParams :: [FuncParam name m expr]
-  , dParams :: [FuncParam name m expr]
-  , dBody :: expr
-  , dWhereItems :: [WhereItem name m expr]
-  , dAddFirstParam :: T m Guid
-  , dAddInnermostWhereItem :: T m Guid
+  { _dDepParams :: [FuncParam name m expr]
+  , _dParams :: [FuncParam name m expr]
+  , _dBody :: expr
+  , _dWhereItems :: [WhereItem name m expr]
+  , _dAddFirstParam :: T m Guid
+  , _dAddInnermostWhereItem :: T m Guid
   } deriving (Functor, Foldable, Traversable)
 
 data AcceptNewType m expr = AcceptNewType
@@ -428,6 +429,7 @@ Lens.makeLenses ''Apply
 Lens.makeLenses ''Body
 Lens.makeLenses ''Collapsed
 Lens.makeLenses ''Definition
+Lens.makeLenses ''DefinitionContent
 Lens.makeLenses ''DefinitionExpression
 Lens.makeLenses ''ExpressionP
 Lens.makeLenses ''FieldList
