@@ -70,16 +70,21 @@ make parentPrecedence sExpr = assignCursor $ do
       Widget.tint (Config.inferredTypeTint config) .
       Widget.scale (realToFrac <$> Config.typeScaleFactor config) .
       (^. ExpressionGui.egWidget) <$> typeEdits
+    shrink = Widget.scale $ realToFrac <$> Config.holeResultInjectedScaleFactor config
+    maybeShrink
+      | or $ ExprGuiM.plInjected exprData = shrink
+      | otherwise = id
   return $
     addInferredTypes widget
     & ExpressionGui.egWidget %~
+      maybeShrink .
       maybe onReadOnly (const id) (payload ^. Sugar.plActions) .
       Widget.weakerEvents exprEventMap
   where
     payload = sExpr ^. Sugar.rPayload
     exprGuid = sExpr ^. Sugar.rPayload . Sugar.plGuid
-    exprAllGuids = ExprGuiM.plGuids $ sExpr ^. Sugar.rPayload . Sugar.plData
-    exprHiddenGuids = List.delete exprGuid exprAllGuids
+    exprData = sExpr ^. Sugar.rPayload . Sugar.plData
+    exprHiddenGuids = List.delete exprGuid $ ExprGuiM.plGuids exprData
     exprId = WidgetIds.fromGuid exprGuid
     assignCursor f =
       foldr (`ExprGuiM.assignCursorPrefix` exprId) f $
