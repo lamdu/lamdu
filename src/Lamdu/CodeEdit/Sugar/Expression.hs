@@ -38,20 +38,20 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified System.Random as Random
 import qualified System.Random.Utils as RandomUtils
 
-removeSuccessfulType :: Expression name m -> Expression name m
+removeSuccessfulType :: Expression name m a -> Expression name m a
 removeSuccessfulType = rPayload %~ payloadRemoveSuccessfulType
 
-payloadRemoveSuccessfulType :: Payload name m -> Payload name m
+payloadRemoveSuccessfulType :: Payload name m a -> Payload name m a
 payloadRemoveSuccessfulType =
   plInferredTypes . Lens.filtered (null . drop 1) .~ []
 
-removeInferredTypes :: Expression name m -> Expression name m
+removeInferredTypes :: Expression name m a -> Expression name m a
 removeInferredTypes = rPayload . plInferredTypes .~ []
 
-removeTypes :: Expression name m -> Expression name m
+removeTypes :: Expression name m a -> Expression name m a
 removeTypes = fmap payloadRemoveSuccessfulType
 
-removeNonHoleTypes :: Expression name m -> Expression name m
+removeNonHoleTypes :: Expression name m a -> Expression name m a
 removeNonHoleTypes =
   removeSuccessfulType . (innerLayer %~ removeNonHoleTypes)
   & (Lens.outside . Lens.filtered . Lens.has) (rBody . _BodyHole) .~
@@ -59,7 +59,7 @@ removeNonHoleTypes =
   where
     innerLayer = rBody . Lens.traversed
 
-removeHoleResultTypes :: Expression name m -> Expression name m
+removeHoleResultTypes :: Expression name m a -> Expression name m a
 removeHoleResultTypes =
   removeSuccessfulType .
   ( rBody %~
@@ -110,8 +110,8 @@ mkActions sugarContext stored =
   }
 
 make ::
-  (Typeable1 m, MonadA m) => SugarInfer.PayloadMM m ->
-  BodyU m -> SugarM m (ExpressionU m)
+  (Typeable1 m, MonadA m) => SugarInfer.PayloadMM m a ->
+  BodyU m a -> SugarM m (ExpressionU m a)
 make exprPl body = do
   sugarContext <- SugarM.readContext
   inferredTypes <-
@@ -126,6 +126,7 @@ make exprPl body = do
       mkActions sugarContext <$> exprPl ^. SugarInfer.plStored
     , _plMNextHoleGuid = Nothing
     , _plHiddenGuids = []
+    , _plData = exprPl ^. SugarInfer.plData
     }
   where
     seeds = RandomUtils.splits . mkGen 0 3 $ exprPl ^. SugarInfer.plGuid
@@ -133,8 +134,8 @@ make exprPl body = do
 
 subHoles ::
   (Applicative f, Lens.Contravariant f) =>
-  (ExpressionU m -> f (ExpressionU m)) ->
-  ExpressionU m -> f void
+  (ExpressionU m a -> f (ExpressionU m a)) ->
+  ExpressionU m a -> f void
 subHoles x =
   Lens.folding subExpressions . Lens.filtered cond $ x
   where
@@ -142,16 +143,16 @@ subHoles x =
       Lens.notNullOf (rBody . _BodyHole) expr ||
       Lens.notNullOf (rBody . _BodyInferred . iValue . subHoles) expr
 
-setNextHole :: Guid -> ExpressionU m -> ExpressionU m
+setNextHole :: Guid -> ExpressionU m a -> ExpressionU m a
 setNextHole destGuid =
   -- The mplus ignores holes that are already set:
   Lens.mapped . plMNextHoleGuid %~ (`mplus` Just destGuid)
 
-setNextHoleToFirstSubHole :: MonadA m => ExpressionU m -> ExpressionU m -> ExpressionU m
+setNextHoleToFirstSubHole :: MonadA m => ExpressionU m a -> ExpressionU m a -> ExpressionU m a
 setNextHoleToFirstSubHole dest =
   maybe id (setNextHole . (^. rPayload . plGuid)) $ dest ^? subHoles
 
-subExpressions :: ExpressionU m -> [ExpressionU m]
+subExpressions :: ExpressionU m a -> [ExpressionU m a]
 subExpressions x = x : x ^.. rBody . Lens.traversed . Lens.folding subExpressions
 
 getStoredName :: MonadA m => Guid -> T m (Maybe String)

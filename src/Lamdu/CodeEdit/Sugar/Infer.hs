@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, DeriveFunctor, ConstraintKinds #-}
 module Lamdu.CodeEdit.Sugar.Infer
-  ( Payload(..), plGuid, plInferred, plStored
+  ( Payload(..), plGuid, plInferred, plStored, plData
   , ExpressionSetter
   , NoInferred(..), InferredWC
   , NoStored(..), Stored
@@ -66,10 +66,6 @@ import qualified Lamdu.Data.Expression.Utils as ExprUtil
 type T = Transaction
 type CT m = StateT Cache (T m)
 
-type PayloadMM m =
-  Payload (Maybe (InferredWC (Tag m))) (Maybe (Stored m))
-type ExprMM m = ExprIRef.ExpressionM m (PayloadMM m)
-
 data NoInferred = NoInferred
 type InferredWC t = InferredWithConflicts (DefI t)
 
@@ -78,43 +74,45 @@ type Stored m = ExprIRef.ExpressionProperty m
 
 type ExpressionSetter def = Expr.Expression def () -> Expr.Expression def ()
 
-data Payload inferred stored
+data Payload inferred stored a
   = Payload
     { _plGuid :: Guid
     , _plInferred :: inferred
     , _plStored :: stored
+    , _plData :: a
     }
 Lens.makeLenses ''Payload
 
-randomizeGuids ::
-  RandomGen g => g -> (a -> inferred) ->
-  ExprIRef.Expression t a ->
-  ExprIRef.Expression t (Payload inferred NoStored)
-randomizeGuids gen f =
-  ExprUtil.randomizeExpr gen . fmap (toPayload . f)
-  where
-    toPayload inferred guid = Payload guid inferred NoStored
-
-toPayloadMM :: Payload NoInferred NoStored -> PayloadMM m
-toPayloadMM = (plInferred .~ Nothing) . (plStored .~ Nothing)
+type PayloadMM m a =
+  Payload (Maybe (InferredWC (Tag m))) (Maybe (Stored m)) a
+type ExprMM m a = ExprIRef.ExpressionM m (PayloadMM m a)
 
 -- Not inferred, not stored
 mkExprPure ::
-  RandomGen g => g -> ExprIRef.ExpressionM m () -> ExprMM m
+  RandomGen g => g -> ExprIRef.ExpressionM m a -> ExprMM m a
 mkExprPure g =
-  fmap toPayloadMM . randomizeGuids g (const NoInferred)
+  ExprUtil.randomizeExpr g . fmap f
+  where
+    f a guid = Payload guid Nothing Nothing a
 
 mkExprInferred ::
   RandomGen g => g ->
-  ExprIRef.Expression t (Infer.Inferred (DefI t)) ->
-  ExprIRef.Expression t (Payload (InferredWC t) NoStored)
-mkExprInferred =
-  flip randomizeGuids $ \inferred ->
-    InferredWithConflicts
-    { iwcInferred = inferred
-    , iwcTypeConflicts = []
-    , iwcValueConflicts = []
-    }
+  ExprIRef.Expression t (Infer.Inferred (DefI t), a) ->
+  ExprIRef.Expression t (Payload (InferredWC t) NoStored a)
+mkExprInferred g =
+  ExprUtil.randomizeExpr g . fmap f
+  where
+    f (inferred, x) guid = Payload
+      { _plGuid = guid
+      , _plInferred =
+        InferredWithConflicts
+        { iwcInferred = inferred
+        , iwcTypeConflicts = []
+        , iwcValueConflicts = []
+        }
+      , _plStored = NoStored
+      , _plData = x
+      }
 
 -- {{{{{{{{{{{{{{{{{
 -- TODO: These don't belong here
@@ -228,14 +226,14 @@ inferWithVariables gen loaded baseInferContext node =
       , ImplicitVariables.AutoGen guid
       )
 
-data InferredWithImplicits m = InferredWithImplicits
+data InferredWithImplicits m a = InferredWithImplicits
   { _iwiSuccess :: Bool
   , _iwiInferContext :: Infer.Context (DefI (Tag m))
-  , _iwiExpr :: ExprIRef.ExpressionM m (Payload (InferredWC (Tag m)) (Maybe (Stored m)))
+  , _iwiExpr :: ExprIRef.ExpressionM m (Payload (InferredWC (Tag m)) (Maybe (Stored m)) a)
   -- Prior to adding variables
   , _iwiBaseInferContext :: Infer.Context (DefI (Tag m))
   , _iwiBaseInferContextKey :: Cache.KeyBS
-  , _iwiBaseExpr :: ExprIRef.ExpressionM m (Payload (InferredWC (Tag m)) (Stored m))
+  , _iwiBaseExpr :: ExprIRef.ExpressionM m (Payload (InferredWC (Tag m)) (Stored m) a)
   }
 Lens.makeLenses ''InferredWithImplicits
 
@@ -245,7 +243,7 @@ inferAddImplicits ::
   Cache.KeyBS ->
   ( Infer.Context (DefI (Tag m))
   , Infer.InferNode (DefI (Tag m))
-  ) -> CT m (InferredWithImplicits m)
+  ) -> CT m (InferredWithImplicits m ())
 inferAddImplicits gen mDefI lExpr inferContextKey inferState = do
   loaded <- lift $ load mDefI lExpr
   ((baseContext, expr), mWithVariables) <-
@@ -268,40 +266,40 @@ inferAddImplicits gen mDefI lExpr inferContextKey inferState = do
       inferWithVariables gen loaded inferContext inferNode
 
     mkStoredPayload (iwc, propClosure) =
-      Payload (ExprIRef.epGuid prop) iwc prop
+      Payload (ExprIRef.epGuid prop) iwc prop ()
       where
         prop = Load.propertyOfClosure propClosure
     mkWVPayload (iwc, ImplicitVariables.AutoGen guid) =
-      Payload guid iwc Nothing
+      Payload guid iwc Nothing ()
     mkWVPayload (iwc, ImplicitVariables.Stored propClosure) =
-      plStored %~ Just $
       mkStoredPayload (iwc, propClosure)
+      & plStored %~ Just
 
-isPolymorphicFunc :: PayloadMM m -> Bool
+isPolymorphicFunc :: PayloadMM m a -> Bool
 isPolymorphicFunc funcPl =
   maybe False
   (ExprUtil.isDependentPi . Infer.iType . iwcInferred) $
   funcPl ^. plInferred
 
 exprGuid ::
-  Lens' (Expr.Expression def (Payload inferred stored)) Guid
+  Lens' (Expr.Expression def (Payload inferred stored a)) Guid
 exprGuid = Expr.ePayload . plGuid
 
 exprStored ::
-  Lens' (Expr.Expression def (Payload inferred stored)) stored
+  Lens' (Expr.Expression def (Payload inferred stored a)) stored
 exprStored = Expr.ePayload . plStored
 
 exprInferred ::
-  Lens' (Expr.Expression def (Payload inferred stored)) inferred
+  Lens' (Expr.Expression def (Payload inferred stored a)) inferred
 exprInferred = Expr.ePayload . plInferred
 
 plIRef ::
-  Lens.Traversal' (Payload i (Maybe (Stored m))) (ExprIRef.ExpressionIM m)
+  Lens.Traversal' (Payload i (Maybe (Stored m)) a) (ExprIRef.ExpressionIM m)
 plIRef = plStored . Lens._Just . Property.pVal
 
 exprStoredGuid ::
   Lens.Fold
-  (Expr.Expression def (Payload i (Maybe (Stored m)))) Guid
+  (Expr.Expression def (Payload i (Maybe (Stored m)) a)) Guid
 exprStoredGuid = exprIRef . Lens.to ExprIRef.exprGuid
 
 replaceWith :: MonadA m => Stored m -> Stored m -> T m Guid
@@ -313,6 +311,6 @@ replaceWith parentP replacerP = do
 
 exprIRef ::
   Lens.Traversal'
-  (Expr.Expression def (Payload i (Maybe (Stored m))))
+  (Expr.Expression def (Payload i (Maybe (Stored m)) a))
   (ExprIRef.ExpressionIM m)
 exprIRef = exprStored . Lens._Just . Property.pVal

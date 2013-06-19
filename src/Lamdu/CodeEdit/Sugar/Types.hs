@@ -1,4 +1,4 @@
-{-# LANGUAGE KindSignatures, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
+{-# LANGUAGE KindSignatures, TemplateHaskell, DeriveFunctor, DeriveFoldable, DeriveTraversable, GeneralizedNewtypeDeriving, DeriveDataTypeable, RankNTypes #-}
 module Lamdu.CodeEdit.Sugar.Types
   ( Definition(..), drName, drGuid, drBody
   , DefinitionBody(..)
@@ -22,7 +22,7 @@ module Lamdu.CodeEdit.Sugar.Types
     , _BodyAtom, _BodyList, _BodyRecord, _BodyTag
   , Payload(..)
     , plGuid, plInferredTypes, plActions, plMNextHoleGuid
-    , plHiddenGuids
+    , plHiddenGuids, plData
   , ExpressionP(..), rBody, rPayload
   , NameSource(..), NameCollision(..), Name(..), MStoredName
   , DefinitionN, DefinitionU
@@ -45,11 +45,11 @@ module Lamdu.CodeEdit.Sugar.Types
   , FuncParamType(..)
   , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpType, fpMActions
   , HoleArg(..), haExpr, haExprPresugared, haTypeIsAMatch
-  , Hole(..), holeScope, holeMActions, holeMArg
+  , Hole(..), holeMActions, holeMArg
   , HoleResultSeed(..), _ResultSeedExpression, _ResultSeedNewTag, _ResultSeedNewDefinition
   , ScopeItem
   , Scope(..), scopeLocals, scopeGlobals, scopeTags, scopeGetParams
-  , HoleActions(..), holePaste, holeMUnwrap, holeResult, holeInferExprType, holeInferredType
+  , HoleActions(..), holeScope, holePaste, holeMUnwrap, holeInferExprType, holeInferredType
   , HoleResult(..)
     , holeResultInferred
     , holeResultConverted
@@ -60,9 +60,10 @@ module Lamdu.CodeEdit.Sugar.Types
   , Inferred(..), iValue, iMAccept, iHole
   , Collapsed(..), cFuncGuid, cCompact, cFullExpression, cFullExprHasInfo
   , PrefixAction, emptyPrefixAction
-  , ExprStorePoint
+  , MStorePoint, ExprStorePoint
   ) where
 
+import Data.Binary (Binary)
 import Data.Derive.Monoid (makeMonoid)
 import Data.DeriveTH (derive)
 import Data.Foldable (Foldable)
@@ -70,6 +71,7 @@ import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Traversable (Traversable)
+import Data.Typeable (Typeable)
 import Lamdu.CodeEdit.Sugar.Types.Internal (T, CT)
 import Lamdu.Data.Expression (Kind(..))
 import Lamdu.Data.Expression.IRef (DefI)
@@ -94,8 +96,8 @@ data Actions m = Actions
   , _cut :: T m Guid
   }
 
-data Payload name m = Payload
-  { _plInferredTypes :: [Expression name m]
+data Payload name m a = Payload
+  { _plInferredTypes :: [Expression name m ()]
   , _plActions :: Maybe (Actions m)
   , _plMNextHoleGuid :: Maybe Guid
   , _plGuid :: Guid
@@ -104,9 +106,14 @@ data Payload name m = Payload
     -- If the cursor was on them for whatever reason, it should be
     -- mapped into the sugar expression's guid.
     _plHiddenGuids :: [Guid]
-  }
+  , _plData :: a
+  } deriving (Functor, Foldable, Traversable)
 
-type ExprStorePoint m = ExprIRef.ExpressionM m (Maybe (TypesInternal.StorePoint (Tag m)))
+type MStorePoint m a =
+  (Maybe (TypesInternal.StorePoint (Tag m)), a)
+
+type ExprStorePoint m a =
+  ExprIRef.ExpressionM m (MStorePoint m a)
 
 data ExpressionP name m pl = Expression
   { _rBody :: Body name m (ExpressionP name m pl)
@@ -124,10 +131,10 @@ data Name = Name
   } deriving (Show)
 type MStoredName = Maybe String
 
-type Expression name m = ExpressionP name m (Payload name m)
-type ExpressionN m = Expression Name m
+type Expression name m a = ExpressionP name m (Payload name m a)
+type ExpressionN m a = Expression Name m a
 
-type BodyN m = Body Name m (ExpressionN m)
+type BodyN m a = Body Name m (ExpressionN m a)
 
 data ListItemActions m = ListItemActions
   { _itemAddNext :: T m Guid
@@ -136,7 +143,7 @@ data ListItemActions m = ListItemActions
 
 data FuncParamActions name m = FuncParamActions
   { _fpListItemActions :: ListItemActions m
-  , _fpGetExample :: CT m (Expression name m)
+  , _fpGetExample :: CT m (Expression name m ())
   }
 
 data FuncParamType = FuncParameter | FuncFieldParameter
@@ -164,18 +171,19 @@ data Lam name m expr = Lam
   , _lResultType :: expr
   } deriving (Functor, Foldable, Traversable)
 
-data HoleResult name m = HoleResult
+data HoleResult name m a = HoleResult
   { _holeResultInferred :: ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))
-  , _holeResultConverted :: Expression name m
+  , _holeResultConverted :: Expression name m a
   , _holeResultPick :: T m (Maybe Guid)
   , _holeResultPickWrapped :: T m Guid
   , _holeResultPickPrefix :: PrefixAction m
   }
 
-data HoleResultSeed m
-  = ResultSeedExpression (ExprStorePoint m)
+data HoleResultSeed m a
+  = ResultSeedExpression (ExprIRef.ExpressionM m a)
   | ResultSeedNewTag String
   | ResultSeedNewDefinition String
+  deriving (Functor, Foldable, Traversable)
 
 type ScopeItem m a = (a, ExprIRef.ExpressionM m ())
 
@@ -194,14 +202,18 @@ data HoleActions name m = HoleActions
     -- (used by HoleEdit to suggest variations based on type)
     _holeInferExprType :: ExprIRef.ExpressionM m () -> CT m (Maybe (ExprIRef.ExpressionM m ()))
   , _holeInferredType :: ExprIRef.ExpressionM m ()
-  , _holeResult :: HoleResultSeed m -> CT m (Maybe (HoleResult name m))
+  , holeResult ::
+      forall a.
+      (Binary a, Typeable a, Monoid a) =>
+      HoleResultSeed m (Maybe (TypesInternal.StorePoint (Tag m)), a) ->
+      CT m (Maybe (HoleResult name m a))
   , _holePaste :: Maybe (T m Guid)
   , _holeMUnwrap :: CT m (Maybe (T m Guid))
   }
 
 data HoleArg m expr = HoleArg
   { _haExpr :: expr
-  , _haExprPresugared :: ExprStorePoint m
+  , _haExprPresugared :: ExprStorePoint m ()
   , _haTypeIsAMatch :: Bool
   } deriving (Functor, Foldable, Traversable)
 
@@ -403,8 +415,8 @@ data Definition name m expr = Definition
   , _drBody :: DefinitionBody name m expr
   } deriving (Functor, Foldable, Traversable)
 
-type DefinitionN m = Definition Name m (Expression Name m)
-type DefinitionU m = Definition MStoredName m (Expression MStoredName m)
+type DefinitionN m a = Definition Name m (Expression Name m a)
+type DefinitionU m a = Definition MStoredName m (Expression MStoredName m a)
 
 derive makeMonoid ''Scope
 Lens.makeLenses ''Actions

@@ -189,7 +189,7 @@ structureForType expr =
     (paramId, paramType, structureForType resultType)
   _ -> ExprLens.pureExpr . ExprLens.bodyHole # ()
 
-randomizeExpr :: (RandomGen g, Random r) => g -> Expression def (r -> a) -> Expression def a
+randomizeExpr :: (RandomGen gen, Random r) => gen -> Expression def (r -> a) -> Expression def a
 randomizeExpr gen = (`evalState` gen) . traverse randomize
   where
     randomize f = f <$> state random

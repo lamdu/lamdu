@@ -46,7 +46,7 @@ compose = foldr (.) id
 makeParamEdit ::
   MonadA m =>
   Widget.Id ->
-  Sugar.FuncParam Sugar.Name m (Sugar.ExpressionN m) ->
+  Sugar.FuncParam Sugar.Name m (Sugar.ExpressionN m ()) ->
   ExprGuiM m (ExpressionGui m)
 makeParamEdit prevId param =
   assignCursor $ do
@@ -86,7 +86,7 @@ makeParamEdit prevId param =
 
 make ::
   MonadA m => ExpressionGui.ParentPrecedence ->
-  Sugar.Lam Sugar.Name m (Sugar.ExpressionN m) ->
+  Sugar.Lam Sugar.Name m (Sugar.ExpressionN m ()) ->
   Widget.Id -> ExprGuiM m (ExpressionGui m)
 make parentPrecedence (Sugar.Lam _ param _ body) =
   ExpressionGui.wrapParenify parentPrecedence (ExpressionGui.MyPrecedence 0)

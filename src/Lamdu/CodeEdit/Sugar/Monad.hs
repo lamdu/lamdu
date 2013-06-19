@@ -1,8 +1,8 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents #-}
 module Lamdu.CodeEdit.Sugar.Monad
   ( Context(..), TagParamInfo(..), RecordParamsInfo(..)
   , scMDefI, scInferState, scHoleInferStateKey, scHoleInferState
-  , scCodeAnchors, scSpecialFunctions, scMReinferRoot, scTagParamInfos, scRecordParamsInfos, scConvertSubexpression
+  , scCodeAnchors, scSpecialFunctions, scMReinferRoot, scTagParamInfos, scRecordParamsInfos
   , SugarM(..), run
   , readContext, liftCTransaction, liftTransaction, local
   , codeAnchor
@@ -16,6 +16,7 @@ import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.MonadA (MonadA)
 import Data.Map (Map)
+import Data.Monoid (Monoid)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Lamdu.CodeEdit.Sugar.Infer (ExprMM)
@@ -49,7 +50,7 @@ data Context m = Context
   , _scMReinferRoot :: Maybe (CT m Bool)
   , _scTagParamInfos :: Map Guid TagParamInfo -- tag guids
   , _scRecordParamsInfos :: Map Guid (RecordParamsInfo m) -- param guids
-  , _scConvertSubexpression :: ExprMM m -> SugarM m (ExpressionU m)
+  , scConvertSubexpression :: forall a. Monoid a => ExprMM m a -> SugarM m (ExpressionU m a)
   }
 
 newtype SugarM m a = SugarM (ReaderT (Context m) (CT m) a)
@@ -78,7 +79,7 @@ codeAnchor f = f . (^. scCodeAnchors) <$> readContext
 getP :: MonadA m => Transaction.MkProperty m a -> SugarM m a
 getP = liftTransaction . Transaction.getP
 
-convertSubexpression :: MonadA m => ExprMM m -> SugarM m (ExpressionU m)
+convertSubexpression :: (MonadA m, Monoid a) => ExprMM m a -> SugarM m (ExpressionU m a)
 convertSubexpression exprI = do
-  convertSub <- (^. scConvertSubexpression) <$> readContext
+  convertSub <- scConvertSubexpression <$> readContext
   convertSub exprI

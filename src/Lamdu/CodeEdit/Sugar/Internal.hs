@@ -4,5 +4,5 @@ module Lamdu.CodeEdit.Sugar.Internal
 
 import Lamdu.CodeEdit.Sugar.Types
 
-type BodyU m = Body MStoredName m (ExpressionU m)
-type ExpressionU m = Expression MStoredName m
+type BodyU m a = Body MStoredName m (ExpressionU m a)
+type ExpressionU m a = Expression MStoredName m a

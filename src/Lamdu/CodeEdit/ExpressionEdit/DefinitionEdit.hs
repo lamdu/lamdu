@@ -97,7 +97,7 @@ makePolyNameEdit name guid depParamsEdits myId = do
 
 makeWheres ::
   MonadA m =>
-  [Sugar.WhereItem Sugar.Name m (Sugar.ExpressionN m)] -> Widget.Id ->
+  [Sugar.WhereItem Sugar.Name m (Sugar.ExpressionN m ())] -> Widget.Id ->
   ExprGuiM m [Widget (T m)]
 makeWheres [] _ = return []
 makeWheres whereItems myId = do
@@ -146,7 +146,7 @@ mkPresentationEdits guid myId = do
 
 makeDefContentEdit ::
   MonadA m => Guid -> Sugar.Name ->
-  Sugar.DefinitionContent Sugar.Name m (Sugar.ExpressionN m) ->
+  Sugar.DefinitionContent Sugar.Name m (Sugar.ExpressionN m ()) ->
   ExprGuiM m (WidgetT m)
 makeDefContentEdit guid name content = do
   equals <- makeEquals myId
@@ -209,7 +209,7 @@ makeDefContentEdit guid name content = do
 
 make ::
   MonadA m =>
-  Sugar.Definition Sugar.Name m (Sugar.ExpressionN m) ->
+  Sugar.Definition Sugar.Name m (Sugar.ExpressionN m ()) ->
   ExprGuiM m (WidgetT m)
 make def =
   case def ^. Sugar.drBody of
@@ -220,8 +220,8 @@ make def =
 
 makeBuiltinDefinition ::
   MonadA m =>
-  Sugar.Definition Sugar.Name m (Sugar.ExpressionN m) ->
-  Sugar.DefinitionBuiltin m (Sugar.ExpressionN m) ->
+  Sugar.Definition Sugar.Name m (Sugar.ExpressionN m ()) ->
+  Sugar.DefinitionBuiltin m (Sugar.ExpressionN m ()) ->
   ExprGuiM m (WidgetT m)
 makeBuiltinDefinition def builtin = do
   config <- ExprGuiM.widgetEnv WE.readConfig
@@ -244,7 +244,7 @@ defTypeScale config = Widget.scale $ realToFrac <$> Config.defTypeBoxScaleFactor
 
 makeWhereItemEdit ::
   MonadA m =>
-  Sugar.WhereItem Sugar.Name m (Sugar.ExpressionN m) ->
+  Sugar.WhereItem Sugar.Name m (Sugar.ExpressionN m ()) ->
   ExprGuiM m (WidgetT m)
 makeWhereItemEdit item = do
   config <- ExprGuiM.widgetEnv WE.readConfig
@@ -265,8 +265,8 @@ makeWhereItemEdit item = do
 
 makeExprDefinition ::
   MonadA m =>
-  Sugar.Definition Sugar.Name m (Sugar.ExpressionN m) ->
-  Sugar.DefinitionExpression Sugar.Name m (Sugar.ExpressionN m) ->
+  Sugar.Definition Sugar.Name m (Sugar.ExpressionN m ()) ->
+  Sugar.DefinitionExpression Sugar.Name m (Sugar.ExpressionN m ()) ->
   ExprGuiM m (WidgetT m)
 makeExprDefinition def bodyExpr = do
   config <- ExprGuiM.widgetEnv WE.readConfig
@@ -328,7 +328,7 @@ diveToNameEdit =
 
 jumpToRHS ::
   (MonadA m, MonadA f) =>
-  [E.ModKey] -> (String, Sugar.ExpressionN m) ->
+  [E.ModKey] -> (String, Sugar.ExpressionN m ()) ->
   ExprGuiM f (Widget.EventHandlers (T f))
 jumpToRHS keys (rhsDoc, rhs) = do
   savePos <- ExprGuiM.mkPrejumpPosSaver
@@ -341,7 +341,7 @@ jumpToRHS keys (rhsDoc, rhs) = do
 makeResultEdit
   :: MonadA m
   => [Widget.Id]
-  -> Sugar.ExpressionN m
+  -> Sugar.ExpressionN m ()
   -> ExprGuiM m (ExpressionGui m)
 makeResultEdit lhs result = do
   savePos <- ExprGuiM.mkPrejumpPosSaver
@@ -378,10 +378,10 @@ addPrevIds firstParId depParams params =
 makeNestedParams ::
   MonadA m =>
   (Sugar.Name -> Widget (T m) -> Widget (T m))
- -> (String, Sugar.ExpressionN m)
+ -> (String, Sugar.ExpressionN m ())
  -> Widget.Id
- -> [Sugar.FuncParam Sugar.Name m (Sugar.ExpressionN m)]
- -> [Sugar.FuncParam Sugar.Name m (Sugar.ExpressionN m)]
+ -> [Sugar.FuncParam Sugar.Name m (Sugar.ExpressionN m ())]
+ -> [Sugar.FuncParam Sugar.Name m (Sugar.ExpressionN m ())]
  -> ExprGuiM m ([ExpressionGui m], [ExpressionGui m])
 makeNestedParams atParamWidgets rhs firstParId depParams params = do
   config <- ExprGuiM.widgetEnv WE.readConfig
