@@ -104,34 +104,34 @@ convertLabeled funcS argS exprPl = do
     , _aSpecialArgs = specialArgs
     , _aAnnotatedArgs = annotatedArgs
     }
-    <&> rPayload . plHiddenGuids <>~
-        (argS ^. rPayload . plGuid :
-         fields ^.. flItems . Lens.traversed . rfTag . rPayload . plGuid)
     <&> rPayload . plData <>~
         mappend
         (argS ^. rPayload . plData)
         (fields ^. flItems . Lens.traversed . rfTag . rPayload . plData)
 
 makeCollapsed ::
-  (MonadA m, Typeable1 m) =>
+  (MonadA m, Typeable1 m, Monoid a) =>
   PayloadMM m a ->
   Guid -> GetVar MStoredName m -> Bool ->
   ExpressionU m a -> SugarM m (ExpressionU m a)
 makeCollapsed exprPl g compact hasInfo fullExpression =
-  SugarExpr.make exprPl $ BodyCollapsed Collapsed
-    { _cFuncGuid = g
-    , _cCompact = compact
-    , _cFullExprHasInfo = hasInfo
-    , _cFullExpression =
-      fullExpression
-      & SugarExpr.removeInferredTypes
-      & rPayload . plGuid .~ expandedGuid
-    }
+  BodyCollapsed Collapsed
+  { _cFuncGuid = g
+  , _cCompact = compact
+  , _cFullExprHasInfo = hasInfo
+  , _cFullExpression =
+    fullExpression
+    & SugarExpr.removeInferredTypes
+    & rPayload . plGuid .~ expandedGuid
+    & rPayload . plData .~ mempty
+  }
+  & SugarExpr.make exprPl
+  <&> rPayload . plData <>~ fullExpression ^. rPayload . plData
   where
     expandedGuid = Guid.combine (exprPl ^. SugarInfer.plGuid) $ Guid.fromString "polyExpanded"
 
 convertPrefix ::
-  (MonadA m, Typeable1 m) =>
+  (MonadA m, Typeable1 m, Monoid a) =>
   ExpressionU m a -> ExprMM m a -> ExpressionU m a ->
   ExprMM m a -> PayloadMM m a -> SugarM m (ExpressionU m a)
 convertPrefix funcRef funcI argS argI applyPl
@@ -152,11 +152,6 @@ convertPrefix funcRef funcI argS argI applyPl
       , _aSpecialArgs = ObjectArg argS
       , _aAnnotatedArgs = []
       }
-
-storedSubExpressionGuids ::
-  Lens.Fold
-  (Expr.Expression def (SugarInfer.Payload i (Maybe (SugarInfer.Stored m)) a)) Guid
-storedSubExpressionGuids = Lens.traversed . SugarInfer.plIRef . Lens.to ExprIRef.exprGuid
 
 mkListAddFirstItem ::
   MonadA m => Anchors.SpecialFunctions (Tag m) -> SugarInfer.Stored m -> T m Guid
@@ -181,11 +176,9 @@ convertEmptyList app@(Expr.Apply funcI _) exprPl = do
     Lens.anyOf ExprLens.exprDefinitionRef
     (== Anchors.sfNil specialFunctions) funcI
   let
-    hiddenGuids = app ^.. Lens.traversed . storedSubExpressionGuids
     hiddenData = app ^. Lens.traversed . Lens.traversed . SugarInfer.plData
   (lift . SugarExpr.make exprPl . BodyList)
     (List [] (mkListActions <$> exprPl ^. SugarInfer.plStored))
-    <&> rPayload . plHiddenGuids <>~ hiddenGuids
     <&> rPayload . plData <>~ hiddenData
 
 isCons ::
@@ -244,7 +237,6 @@ convertAppliedHole funcI rawArgS argI exprPl
       <&> rBody . _BodyHole %~
           (holeMArg .~ Just holeArg) .
           (holeMActions . Lens._Just . holeMUnwrap .~ mUnwrap)
-      <&> rPayload . plHiddenGuids <>~ funcGuids
       <&> rPayload . plData <>~ funcI ^. Expr.ePayload . SugarInfer.plData
   | otherwise = mzero
   where
@@ -254,7 +246,6 @@ convertAppliedHole funcI rawArgS argI exprPl
       (rPayload . plActions . Lens._Just . wrap .~
        AlreadyWrapped guid) $
       rawArgS
-    funcGuids = [funcI ^. SugarInfer.exprGuid]
 
 convertList ::
   (Typeable1 m, MonadA m, Monoid a) =>
@@ -277,7 +268,6 @@ convertList (Expr.Apply funcI argI) argS exprPl = do
     listItem =
       mkListItem (headField ^. rfExpr) argS exprPl argI
       (addFirstItem <$> innerListMActions)
-      & liExpr . rPayload . plHiddenGuids <>~ funcI ^.. storedSubExpressionGuids
       & liExpr . rPayload . plData <>~ funcI ^. Lens.traversed . SugarInfer.plData
     mListActions = do
       exprS <- exprPl ^. SugarInfer.plStored
@@ -299,7 +289,6 @@ mkListItem listItemExpr recordArgS exprPl argI mAddNextItem =
   { _liExpr =
     listItemExpr
     & SugarExpr.setNextHoleToFirstSubHole recordArgS
-    & rPayload . plHiddenGuids <>~ recordArgS ^. rPayload . plHiddenGuids
     & rPayload . plData <>~ recordArgS ^. rPayload . plData
   , _liMActions = do
       addNext <- mAddNextItem

@@ -12,6 +12,7 @@ import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui, ParentPrecede
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.Config (Config)
 import qualified Control.Lens as Lens
+import qualified Data.List as List
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
@@ -76,10 +77,13 @@ make parentPrecedence sExpr = assignCursor $ do
       Widget.weakerEvents exprEventMap
   where
     payload = sExpr ^. Sugar.rPayload
-    exprId = WidgetIds.fromGuid $ sExpr ^. Sugar.rPayload . Sugar.plGuid
+    exprGuid = sExpr ^. Sugar.rPayload . Sugar.plGuid
+    exprAllGuids = ExprGuiM.plGuids $ sExpr ^. Sugar.rPayload . Sugar.plData
+    exprHiddenGuids = List.delete exprGuid exprAllGuids
+    exprId = WidgetIds.fromGuid exprGuid
     assignCursor f =
-      foldr (`ExprGuiM.assignCursorPrefix` exprId) f
-      (WidgetIds.fromGuid <$> sExpr ^. Sugar.rPayload . Sugar.plHiddenGuids)
+      foldr (`ExprGuiM.assignCursorPrefix` exprId) f $
+      WidgetIds.fromGuid <$> exprHiddenGuids
 
 makeEditor ::
   MonadA m => ParentPrecedence ->

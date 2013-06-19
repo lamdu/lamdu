@@ -125,7 +125,6 @@ make exprPl body = do
     , _plActions =
       mkActions sugarContext <$> exprPl ^. SugarInfer.plStored
     , _plMNextHoleGuid = Nothing
-    , _plHiddenGuids = []
     , _plData = exprPl ^. SugarInfer.plData
     }
   where

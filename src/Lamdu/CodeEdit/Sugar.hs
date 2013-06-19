@@ -99,7 +99,6 @@ fakeExample guid =
   , _plInferredTypes = []
   , _plActions = Nothing
   , _plMNextHoleGuid = Nothing
-  , _plHiddenGuids = []
   , _plData = ()
   }
 
@@ -142,7 +141,6 @@ convertPositionalFuncParam (Expr.Lambda _k paramGuid paramType body) lamExprPl =
     , _fpAltIds = [paramGuid] -- For easy jumpTo
     , _fpType =
       SugarExpr.removeSuccessfulType paramTypeS
-      & rPayload . plHiddenGuids %~ (lamGuid :)
       -- Slightly strange but we mappend the hidden lambda's
       -- annotation into the param type:
       & rPayload . plData <>~ lamData
@@ -778,12 +776,10 @@ convertWhereItems usedTags expr =
         }
     name <- getStoredNameS defGuid
     let
-      hiddenData = mconcat $ (^. SugarInfer.plData) <$> ewiHiddenPayloads ewi
-      hiddenGuids = (^. SugarInfer.plGuid) <$> ewiHiddenPayloads ewi
+      hiddenData = ewiHiddenPayloads ewi ^. Lens.traversed . SugarInfer.plData
       item = WhereItem
         { wiValue =
           value
-          & dBody . rPayload . plHiddenGuids %~ (hiddenGuids ++)
           & dBody . rPayload . plData <>~ hiddenData
         , wiGuid = defGuid
         , wiActions =
@@ -841,8 +837,6 @@ convertDefinitionContent recordParamsInfo usedTags expr = do
         , _dParams = cpParams convParams
         , _dBody =
           bodyS
-          & rPayload . plHiddenGuids %~
-            (((^. SugarInfer.plGuid) <$> cpHiddenPayloads convParams) ++)
           & rPayload . plData <>~
             cpHiddenPayloads convParams ^. Lens.traversed . SugarInfer.plData
         , _dWhereItems = whereItems
@@ -949,7 +943,7 @@ convertDefIExpression cp exprLoaded defI defType = do
   let
     inferredType =
       void . Infer.iType . iwcInferred $ iwiExpr ^. SugarInfer.exprInferred
-    addStoredGuids lens x = (x, x ^.. lens . Lens.to (ExprIRef.exprGuid . Property.value))
+    addStoredGuids lens x = (x, ExprIRef.exprGuid . Property.value <$> x ^.. lens)
     guidIntoPl (pl, x) = pl & SugarInfer.plData %~ \() -> x
   typeInfo <-
     makeTypeInfo cp defI (addStoredGuids id <$> defType) (mempty <$ inferredType) success

@@ -21,8 +21,7 @@ module Lamdu.CodeEdit.Sugar.Types
     , _BodyInferred, _BodyCollapsed, _BodyLiteralInteger
     , _BodyAtom, _BodyList, _BodyRecord, _BodyTag
   , Payload(..)
-    , plGuid, plInferredTypes, plActions, plMNextHoleGuid
-    , plHiddenGuids, plData
+    , plGuid, plInferredTypes, plActions, plMNextHoleGuid, plData
   , ExpressionP(..), rBody, rPayload
   , NameSource(..), NameCollision(..), Name(..), MStoredName
   , DefinitionN, DefinitionU
@@ -101,11 +100,6 @@ data Payload name m a = Payload
   , _plActions :: Maybe (Actions m)
   , _plMNextHoleGuid :: Maybe Guid
   , _plGuid :: Guid
-  , -- Guids from data model expression which were sugared out into
-    -- this sugar expression.
-    -- If the cursor was on them for whatever reason, it should be
-    -- mapped into the sugar expression's guid.
-    _plHiddenGuids :: [Guid]
   , _plData :: a
   } deriving (Functor, Foldable, Traversable)
 
