@@ -166,9 +166,6 @@ createBuiltins =
       forAll "a" $ \a ->
       mkPiRecord [("initial", a), ("step", endo a)] $ listOf a
 
-    publicDef_ "." Infix ["Prelude"] "." .
-      forAll "a" $ \a -> forAll "b" $ \b -> forAll "c" $ \c ->
-      mkInfixType (mkPi b c) (mkPi a b) (mkPi a c)
     let
       specialFunctions = A.SpecialFunctions
         { A.sfNil = nil
