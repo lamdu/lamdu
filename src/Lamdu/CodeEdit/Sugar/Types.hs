@@ -244,6 +244,8 @@ data Collapsed name m expr = Collapsed
   { _cFuncGuid :: Guid
   , _cCompact :: GetVar name m
   , _cFullExpression :: expr
+    -- If the full expr has info (non-hole args) we want to leave it
+    -- expanded:
   , _cFullExprHasInfo :: Bool
   } deriving (Functor, Foldable, Traversable)
 
