@@ -15,8 +15,10 @@ import Data.Store.IRef (Tag)
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable1)
 import Lamdu.CodeEdit.Sugar.Infer (ExprMM, PayloadMM)
+import Lamdu.CodeEdit.Sugar.Internal
 import Lamdu.CodeEdit.Sugar.Monad (SugarM)
 import Lamdu.CodeEdit.Sugar.Types
+import Lamdu.CodeEdit.Sugar.Types.Internal
 import Lamdu.Data.Anchors (PresentationMode(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Infer.Conflicts (iwcInferred)

@@ -19,8 +19,10 @@ import Data.Traversable (sequenceA, traverse)
 import Data.Tuple (swap)
 import Data.Typeable (Typeable1)
 import Lamdu.CodeEdit.Sugar.Infer (InferredWC, Stored)
+import Lamdu.CodeEdit.Sugar.Internal
 import Lamdu.CodeEdit.Sugar.Monad (SugarM)
 import Lamdu.CodeEdit.Sugar.Types
+import Lamdu.CodeEdit.Sugar.Types.Internal
 import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), iwcInferred, iwcInferredValues)
 import qualified Control.Lens as Lens

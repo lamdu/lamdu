@@ -19,7 +19,8 @@ import Data.Map (Map)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Lamdu.CodeEdit.Sugar.Infer (ExprMM)
-import Lamdu.CodeEdit.Sugar.Types -- see export list
+import Lamdu.CodeEdit.Sugar.Internal
+import Lamdu.CodeEdit.Sugar.Types.Internal
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader

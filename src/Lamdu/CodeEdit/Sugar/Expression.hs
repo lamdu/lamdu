@@ -20,8 +20,10 @@ import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Typeable (Typeable1)
 import Lamdu.CodeEdit.Sugar.Infer (Stored)
+import Lamdu.CodeEdit.Sugar.Internal
 import Lamdu.CodeEdit.Sugar.Monad (SugarM)
 import Lamdu.CodeEdit.Sugar.Types
+import Lamdu.CodeEdit.Sugar.Types.Internal
 import Lamdu.Data.Expression.Infer.Conflicts (iwcInferredTypes)
 import qualified Control.Lens as Lens
 import qualified Data.Binary.Utils as BinaryUtils

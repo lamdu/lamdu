@@ -1,67 +1,10 @@
 {-# LANGUAGE FlexibleContexts, OverloadedStrings, TypeFamilies, Rank2Types, PatternGuards #-}
 module Lamdu.CodeEdit.Sugar
-  ( Definition(..), drName, drGuid, drBody
-  , DefinitionBody(..)
-  , ListItemActions(..), itemAddNext, itemDelete
-  , FuncParamActions(..), fpListItemActions, fpGetExample
-  , DefinitionExpression(..), deContent, deTypeInfo
-  , ShowIncompleteType(..), AcceptNewType(..)
-  , DefinitionTypeInfo(..)
-    , _DefinitionExportedTypeInfo
-    , _DefinitionIncompleteType
-    , _DefinitionNewType
-  , DefinitionContent(..)
-    , dDepParams, dParams, dBody, dWhereItems, dAddFirstParam, dAddInnermostWhereItem
-  , DefinitionBuiltin(..)
-  , WrapAction(..)
-  , Actions(..)
-    , wrap, callWithArg, callWithNextArg
-    , setToHole, replaceWithNewHole, cut
-  , Body(..)
-    , _BodyLam, _BodyApply, _BodyGetVar, _BodyHole
-    , _BodyInferred, _BodyCollapsed, _BodyLiteralInteger
-    , _BodyAtom, _BodyList, _BodyRecord, _BodyTag
-  , Payload(..)
-    , plGuid, plInferredTypes, plActions, plMNextHoleGuid
-    , plHiddenGuids
-  , ExpressionP(..), rBody, rPayload
-  , NameSource(..), NameCollision(..), Name(..), MStoredName
-  , DefinitionN, DefinitionU
-  , Expression, ExpressionN
-  , BodyN
-  , WhereItem(..)
-  , ListItem(..), ListActions(..), List(..)
-  , RecordField(..), rfMItemActions, rfTag, rfExpr
-  , Kind(..), Record(..), FieldList(..), GetField(..)
-  , GetVarType(..)
-  , GetVar(..), gvIdentifier, gvName, gvJumpTo, gvVarType
-  , GetParams(..), gpDefGuid, gpDefName, gpJumpTo
-  , SpecialArgs(..), _NoSpecialArgs, _ObjectArg, _InfixArgs
-  , Apply(..), aFunc, aSpecialArgs, aAnnotatedArgs
-  , Lam(..), lKind, lParam, lIsDep, lResultType
-  , FuncParamType(..)
-  , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpHiddenLambdaGuid, fpType, fpMActions
-  , HoleArg(..), haExpr, haExprPresugared, haTypeIsAMatch
-  , Hole(..), holeScope, holeMActions, holeMArg
-  , HoleResultSeed(..), _ResultSeedExpression, _ResultSeedNewTag, _ResultSeedNewDefinition
-  , ScopeItem
-  , Scope(..), scopeLocals, scopeGlobals, scopeTags, scopeGetParams
-  , HoleActions(..), holePaste, holeMDelete, holeResult, holeInferExprType, holeInferredType
-  , StorePoint
-  , HoleResult(..)
-    , holeResultInferred
-    , holeResultConverted
-    , holeResultPick, holeResultPickWrapped
-    , holeResultPickPrefix
-  , LiteralInteger(..)
-  , TagG(..), tagName, tagGuid
-  , Inferred(..), iValue, iMAccept, iHole
-  , Collapsed(..), cFuncGuid, cCompact, cFullExpression
+  ( module Lamdu.CodeEdit.Sugar.Types
   , loadConvertDefI
-  , PrefixAction, emptyPrefixAction
-  , SugarExpr.removeNonHoleTypes, SugarExpr.removeHoleResultTypes
+  , StorePoint
   , Hole.holeResultHasHoles
-  , ExprStorePoint
+  , SugarExpr.removeHoleResultTypes, SugarExpr.removeNonHoleTypes
   ) where
 
 import Control.Applicative (Applicative(..), (<$>), (<$))
@@ -80,8 +23,10 @@ import Data.Store.IRef (Tag)
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable1)
 import Lamdu.CodeEdit.Sugar.Infer (Stored)
+import Lamdu.CodeEdit.Sugar.Internal
 import Lamdu.CodeEdit.Sugar.Monad (SugarM, Context(..))
 import Lamdu.CodeEdit.Sugar.Types
+import Lamdu.CodeEdit.Sugar.Types.Internal
 import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..))
 import System.Random (RandomGen)

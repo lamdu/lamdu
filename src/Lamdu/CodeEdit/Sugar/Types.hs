@@ -18,24 +18,22 @@ module Lamdu.CodeEdit.Sugar.Types
     , wrap, callWithArg, callWithNextArg
     , setToHole, replaceWithNewHole, cut
   , Body(..)
-    , _BodyLam, _BodyApply, _BodyGetVar, _BodyHole
+    , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyHole
     , _BodyInferred, _BodyCollapsed, _BodyLiteralInteger
     , _BodyAtom, _BodyList, _BodyRecord, _BodyTag
-    , _BodyGetField
   , Payload(..)
-    , plInferredTypes, plActions, plMNextHoleGuid, plGuid
+    , plGuid, plInferredTypes, plActions, plMNextHoleGuid
     , plHiddenGuids
-  , ExpressionP(..)
-    , rBody, rPayload
+  , ExpressionP(..), rBody, rPayload
   , NameSource(..), NameCollision(..), Name(..), MStoredName
   , DefinitionN, DefinitionU
-  , Expression, ExpressionN, ExpressionU
-  , BodyN, BodyU
+  , Expression, ExpressionN
+  , BodyN
   , WhereItem(..)
   , ListItem(..), ListActions(..), List(..)
   , RecordField(..), rfMItemActions, rfTag, rfExpr
   , Kind(..)
-  , Record(..), rKind, rFields
+  , Record(..), rFields, rKind
   , FieldList(..), flItems, flMAddFirstItem
   , GetField(..), gfRecord, gfTag
   , GetVarType(..)
@@ -46,49 +44,41 @@ module Lamdu.CodeEdit.Sugar.Types
   , Lam(..), lKind, lParam, lIsDep, lResultType
   , FuncParamType(..)
   , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpHiddenLambdaGuid, fpType, fpMActions
-  , TagG(..), tagName, tagGuid
   , HoleArg(..), haExpr, haExprPresugared, haTypeIsAMatch
-  , Hole(..), holeMActions, holeMArg
+  , Hole(..), holeScope, holeMActions, holeMArg
   , HoleResultSeed(..), _ResultSeedExpression, _ResultSeedNewTag, _ResultSeedNewDefinition
   , ScopeItem
   , Scope(..), scopeLocals, scopeGlobals, scopeTags, scopeGetParams
-  , HoleActions(..), holeScope, holePaste, holeMDelete, holeResult, holeInferExprType, holeInferredType
-  , StorePoint(..)
+  , HoleActions(..), holePaste, holeMDelete, holeResult, holeInferExprType, holeInferredType
   , HoleResult(..)
     , holeResultInferred
     , holeResultConverted
     , holeResultPick, holeResultPickWrapped
     , holeResultPickPrefix
   , LiteralInteger(..)
+  , TagG(..), tagName, tagGuid
   , Inferred(..), iValue, iMAccept, iHole
   , Collapsed(..), cFuncGuid, cCompact, cFullExpression, cFullExprHasInfo
-  , T, CT
   , PrefixAction, emptyPrefixAction
   , ExprStorePoint
   ) where
 
-import Control.Monad.Trans.State (StateT)
-import Data.Binary (Binary)
-import Data.Cache (Cache)
 import Data.Derive.Monoid (makeMonoid)
 import Data.DeriveTH (derive)
 import Data.Foldable (Foldable)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
-import Data.Store.Transaction (Transaction)
 import Data.Traversable (Traversable)
-import Data.Typeable (Typeable)
+import Lamdu.CodeEdit.Sugar.Types.Internal (T, CT)
 import Lamdu.Data.Expression (Kind(..))
 import Lamdu.Data.Expression.IRef (DefI)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
+import qualified Lamdu.CodeEdit.Sugar.Types.Internal as TypesInternal
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Expression.IRef as ExprIRef
 import qualified Lamdu.Data.Expression.Infer as Infer
-
-type T = Transaction
-type CT m = StateT Cache (T m)
 
 type PrefixAction m = T m ()
 
@@ -118,10 +108,7 @@ data Payload name m = Payload
     _plHiddenGuids :: [Guid]
   }
 
-newtype StorePoint t = StorePoint { unStorePoint :: ExprIRef.ExpressionI t }
-  deriving (Eq, Binary, Typeable)
-
-type ExprStorePoint m = ExprIRef.ExpressionM m (Maybe (StorePoint (Tag m)))
+type ExprStorePoint m = ExprIRef.ExpressionM m (Maybe (TypesInternal.StorePoint (Tag m)))
 
 data ExpressionP name m pl = Expression
   { _rBody :: Body name m (ExpressionP name m pl)
@@ -141,10 +128,8 @@ type MStoredName = Maybe String
 
 type Expression name m = ExpressionP name m (Payload name m)
 type ExpressionN m = Expression Name m
-type ExpressionU m = Expression MStoredName m
 
 type BodyN m = Body Name m (ExpressionN m)
-type BodyU m = Body MStoredName m (ExpressionU m)
 
 data ListItemActions m = ListItemActions
   { _itemAddNext :: T m Guid
