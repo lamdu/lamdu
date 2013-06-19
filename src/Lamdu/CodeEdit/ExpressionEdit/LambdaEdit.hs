@@ -6,7 +6,6 @@ module Lamdu.CodeEdit.ExpressionEdit.LambdaEdit
 
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
-import Data.Maybe (maybeToList)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui (ExpressionGui)
@@ -75,8 +74,7 @@ makeParamEdit prevId param =
   where
     name = param ^. Sugar.fpName
     assignGuidToMe = (`ExprGuiM.assignCursor` myId) . WidgetIds.fromGuid
-    sourceIds = param ^. Sugar.fpAltIds ++ maybeToList (param ^. Sugar.fpHiddenLambdaGuid)
-    assignCursor = compose $ map assignGuidToMe sourceIds
+    assignCursor = compose . map assignGuidToMe $ param ^. Sugar.fpAltIds
     myId = WidgetIds.fromGuid $ param ^. Sugar.fpId
     mActions = param ^. Sugar.fpMActions
     paramDeleteEventMap keys docSuffix onId =

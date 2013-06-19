@@ -139,8 +139,9 @@ convertPositionalFuncParam (Expr.Lambda _k paramGuid paramType body) lamExprPl =
     , _fpVarKind = FuncParameter
     , _fpId = Guid.combine lamGuid paramGuid
     , _fpAltIds = [paramGuid] -- For easy jumpTo
-    , _fpHiddenLambdaGuid = Just lamGuid
-    , _fpType = SugarExpr.removeSuccessfulType paramTypeS
+    , _fpType =
+      SugarExpr.removeSuccessfulType paramTypeS
+      & rPayload . plHiddenGuids %~ (lamGuid :)
     , _fpMActions =
       mkPositionalFuncParamActions paramGuid
       <$> lamExprPl ^. SugarInfer.plStored
@@ -483,6 +484,7 @@ data ConventionalParams m = ConventionalParams
   , cpRecordParamsInfos :: Map Guid (SugarM.RecordParamsInfo m)
   , cpParams :: [FuncParam MStoredName m (ExpressionU m)]
   , cpAddFirstParam :: T m Guid
+  , cpHiddenPayloads :: [SugarInfer.PayloadMM m]
   }
 
 data FieldParam m = FieldParam
@@ -508,6 +510,7 @@ mkRecordParams recordParamsInfo paramGuid fieldParams lambdaExprI mParamTypeI mB
     , cpAddFirstParam =
       addFirstFieldParam lamGuid $
       fromMaybe (error "Record param type must be stored!") mParamTypeI
+    , cpHiddenPayloads = [lambdaExprI ^. Expr.ePayload]
     }
   where
     lamGuid = lambdaExprI ^. SugarInfer.exprGuid
@@ -526,7 +529,6 @@ mkRecordParams recordParamsInfo paramGuid fieldParams lambdaExprI mParamTypeI mB
         , _fpId = Guid.combine lamGuid guid
         , _fpAltIds = []
         , _fpVarKind = FuncFieldParameter
-        , _fpHiddenLambdaGuid = Nothing --TODO: First param to take lambda's guid?
         , _fpType = SugarExpr.removeSuccessfulType typeS
         , _fpMActions =
           fpActions tagExprGuid
@@ -679,6 +681,7 @@ singleConventionalParam lamProp existingParam existingParamGuid existingParamTyp
       addSecondParam (\old new -> [old, new])
     ]
   , cpAddFirstParam = addSecondParam (\old new -> [new, old])
+  , cpHiddenPayloads = []
   }
   where
     existingParamTag = ExprLens.bodyTag # existingParamGuid
@@ -720,6 +723,7 @@ emptyConventionalParams stored = ConventionalParams
   , cpRecordParamsInfos = Map.empty
   , cpParams = []
   , cpAddFirstParam = lambdaWrap stored
+  , cpHiddenPayloads = []
   }
 
 data ExprWhereItem def a = ExprWhereItem
@@ -825,7 +829,8 @@ convertDefinitionContent recordParamsInfo usedTags expr = do
       return DefinitionContent
         { _dDepParams = depParams
         , _dParams = cpParams convParams
-        , _dBody = bodyS
+        , _dBody =
+          bodyS & rPayload . plHiddenGuids %~ (((^. SugarInfer.plGuid) <$> cpHiddenPayloads convParams) ++)
         , _dWhereItems = whereItems
         , _dAddFirstParam = cpAddFirstParam convParams
         , _dAddInnermostWhereItem =

@@ -43,7 +43,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , Apply(..), aFunc, aSpecialArgs, aAnnotatedArgs
   , Lam(..), lKind, lParam, lIsDep, lResultType
   , FuncParamType(..)
-  , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpHiddenLambdaGuid, fpType, fpMActions
+  , FuncParam(..), fpName, fpGuid, fpId, fpAltIds, fpVarKind, fpType, fpMActions
   , HoleArg(..), haExpr, haExprPresugared, haTypeIsAMatch
   , Hole(..), holeScope, holeMActions, holeMArg
   , HoleResultSeed(..), _ResultSeedExpression, _ResultSeedNewTag, _ResultSeedNewDefinition
@@ -155,7 +155,6 @@ data FuncParam name m expr = FuncParam
   , _fpAltIds :: [Guid]
   , _fpVarKind :: FuncParamType
   , _fpName :: name
-  , _fpHiddenLambdaGuid :: Maybe Guid
   , _fpType :: expr
   , _fpMActions :: Maybe (FuncParamActions name m)
   } deriving (Functor, Foldable, Traversable)
