@@ -299,11 +299,11 @@ mkListItem ::
   ListItem m (ExpressionU m)
 mkListItem listItemExpr argS hiddenGuids exprPl argI mAddNextItem =
   ListItem
-  { liExpr =
+  { _liExpr =
     listItemExpr
     & SugarExpr.setNextHoleToFirstSubHole argS
     & rPayload . plHiddenGuids <>~ hiddenGuids ++ (argS ^. rPayload . plHiddenGuids)
-  , liMActions = do
+  , _liMActions = do
       addNext <- mAddNextItem
       exprProp <- exprPl ^. SugarInfer.plStored
       argProp <- argI ^. SugarInfer.exprStored

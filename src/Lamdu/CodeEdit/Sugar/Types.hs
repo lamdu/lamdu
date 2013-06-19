@@ -30,7 +30,8 @@ module Lamdu.CodeEdit.Sugar.Types
   , Expression, ExpressionN
   , BodyN
   , WhereItem(..)
-  , ListItem(..), ListActions(..), List(..)
+  , ListItem(..), liMActions, liExpr
+  , ListActions(..), List(..)
   , RecordField(..), rfMItemActions, rfTag, rfExpr
   , Kind(..)
   , Record(..), rFields, rKind
@@ -235,8 +236,8 @@ data Collapsed name m expr = Collapsed
 
 -- TODO: Do we want to store/allow-access to the implicit type params (nil's type, each cons type?)
 data ListItem m expr = ListItem
-  { liMActions :: Maybe (ListItemActions m)
-  , liExpr :: expr
+  { _liMActions :: Maybe (ListItemActions m)
+  , _liExpr :: expr
   } deriving (Functor, Foldable, Traversable)
 
 data ListActions m = ListActions
@@ -338,7 +339,7 @@ instance Show expr => Show (Body name m expr) where
   show (BodyList (List items _)) =
     concat
     [ "["
-    , List.intercalate ", " $ map (show . liExpr) items
+    , List.intercalate ", " $ map (show . _liExpr) items
     , "]"
     ]
   show BodyApply {} = "LabelledApply:TODO"
@@ -429,6 +430,7 @@ Lens.makeLenses ''HoleArg
 Lens.makeLenses ''HoleResult
 Lens.makeLenses ''Inferred
 Lens.makeLenses ''Lam
+Lens.makeLenses ''ListItem
 Lens.makeLenses ''ListItemActions
 Lens.makeLenses ''Payload
 Lens.makeLenses ''Record
