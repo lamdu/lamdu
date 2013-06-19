@@ -50,7 +50,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , HoleResultSeed(..), _ResultSeedExpression, _ResultSeedNewTag, _ResultSeedNewDefinition
   , ScopeItem
   , Scope(..), scopeLocals, scopeGlobals, scopeTags, scopeGetParams
-  , HoleActions(..), holePaste, holeMDelete, holeResult, holeInferExprType, holeInferredType
+  , HoleActions(..), holePaste, holeMUnwrap, holeResult, holeInferExprType, holeInferredType
   , HoleResult(..)
     , holeResultInferred
     , holeResultConverted
@@ -199,7 +199,7 @@ data HoleActions name m = HoleActions
   , _holeInferredType :: ExprIRef.ExpressionM m ()
   , _holeResult :: HoleResultSeed m -> CT m (Maybe (HoleResult name m))
   , _holePaste :: Maybe (T m Guid)
-  , _holeMDelete :: CT m (Maybe (T m Guid))
+  , _holeMUnwrap :: CT m (Maybe (T m Guid))
   }
 
 data HoleArg m expr = HoleArg

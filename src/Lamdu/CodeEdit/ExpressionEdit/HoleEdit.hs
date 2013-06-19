@@ -412,7 +412,7 @@ make hole mNextHoleGuid guid outerId = do
       makeUnwrappedH mHoleNumber stateProp hole mNextHoleGuid guid myId
   mDelete <-
     case hole ^. Sugar.holeMActions of
-    Just actions -> ExprGuiM.liftMemoT $ actions ^. Sugar.holeMDelete
+    Just actions -> ExprGuiM.liftMemoT $ actions ^. Sugar.holeMUnwrap
     Nothing -> return Nothing
   config <- ExprGuiM.widgetEnv WE.readConfig
   ExpressionGui.wrapDelegated holeFDConfig delegatingMode inner outerId

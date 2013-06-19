@@ -238,7 +238,7 @@ convertAppliedHole funcI rawArgS argI exprPl
           (^. SugarInfer.plStored) <$> argI
         , _haTypeIsAMatch = isTypeMatch
         }
-      mDelete =
+      mUnwrap =
         case (exprPl ^. SugarInfer.plStored, argI ^. SugarInfer.exprStored) of
         (Just prop, Just argP) ->
           SugarExpr.guardReinferSuccess sugarContext $
@@ -246,7 +246,7 @@ convertAppliedHole funcI rawArgS argI exprPl
         _ -> return Nothing
     ( rBody . _BodyHole %~
       (holeMArg .~ Just holeArg) .
-      (holeMActions . Lens._Just . holeMDelete .~ mDelete)
+      (holeMActions . Lens._Just . holeMUnwrap .~ mUnwrap)
       ) .
       (rPayload . plHiddenGuids <>~ funcGuids) <$>
       ConvertHole.convertPlain exprPl
