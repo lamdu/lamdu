@@ -20,6 +20,7 @@ import Data.Function (on)
 import Data.List (isInfixOf, isPrefixOf, partition)
 import Data.List.Utils (sortOn, nonEmptyAll)
 import Data.Maybe (catMaybes, fromMaybe)
+import Data.Maybe.Utils (maybeToMPlus)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
@@ -221,10 +222,18 @@ storePointHoleWrap :: Monoid a => Sugar.ExprStorePoint m a -> Sugar.ExprStorePoi
 storePointHoleWrap expr =
   storePointExpr $ ExprUtil.makeApply storePointHole expr
 
-wrappers :: Lens.Traversal' (Expression def a) (Expression def a)
-wrappers =
-  (ExprLens.subTreesThat . Lens.has)
-  (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprHole)
+removeWrappers :: Expression def a -> Maybe (Expression def a)
+removeWrappers expr
+  | Lens.has wrappers expr =
+    expr
+    & wrappers %~ (^?! ExprLens.exprApply . Expr.applyArg)
+    & Just
+  | otherwise = Nothing
+  where
+    wrappers :: Lens.Traversal' (Expression def a) (Expression def a)
+    wrappers =
+      (ExprLens.subTreesThat . Lens.has)
+      (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprHole)
 
 injectIntoHoles ::
   (MonadA m, Monoid a) => HoleInfo m ->
@@ -244,13 +253,10 @@ injectIntoHoles holeInfo arg =
     condition subExpr =
       Lens.has ExprLens.exprHole subExpr &&
       DependentParamAdded /= (subExpr ^. Expr.ePayload . contextVal)
-    argWithoutWrappers =
-      arg & wrappers %~ (^?! ExprLens.exprApply . Expr.applyArg)
     injectArg setter =
       runMaybeT . leftToJust .
       mapM_ (justToLeft . MaybeT . typeCheckOnSide . setter) $
-      [ argWithoutWrappers | Lens.has wrappers arg ] ++
-      [ arg ]
+      maybeToMPlus (removeWrappers arg) ++ [ arg ]
     injectArgPositions =
       map (^. contextSetter) .
       sortOn (^. contextVal . Lens.to toOrd) .
