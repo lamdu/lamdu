@@ -114,7 +114,6 @@ mkActions sugarContext stored =
   , _callWithArg = mkCallWithArg sugarContext stored
   , _callWithNextArg = pure (pure Nothing)
   , _setToHole = ExprIRef.exprGuid <$> DataOps.setToHole stored
-  , _replaceWithNewHole = mkReplaceWithNewHole stored
   , _cut =
     mkCutter (sugarContext ^. SugarM.scCodeAnchors)
     (Property.value stored) $ mkReplaceWithNewHole stored

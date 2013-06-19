@@ -16,7 +16,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , WrapAction(..)
   , Actions(..)
     , wrap, callWithArg, callWithNextArg
-    , setToHole, replaceWithNewHole, cut
+    , setToHole, cut
   , Body(..)
     , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyHole
     , _BodyInferred, _BodyCollapsed, _BodyLiteralInteger
@@ -93,7 +93,6 @@ data Actions m = Actions
   , _callWithNextArg :: PrefixAction m -> CT m (Maybe (T m Guid))
   , _callWithArg :: PrefixAction m -> CT m (Maybe (T m Guid))
   , _setToHole :: T m Guid
-  , _replaceWithNewHole :: T m Guid
   , _cut :: T m Guid
   }
 
