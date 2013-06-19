@@ -61,7 +61,7 @@ import qualified System.Random as Random
 
 data PiWrappers def a = PiWrappers
   { _dependentPiParams :: [(Guid, Expression def a)]
-  , nonDependentPiParams :: [(Guid, Expression def a)]
+  , mNonDependentPiParam :: Maybe (Guid, Expression def a)
   }
 Lens.makeLenses ''PiWrappers
 
@@ -98,15 +98,15 @@ getPiWrappers expr =
   case expr ^? ExprLens.exprLam of
   Just (Lambda Type param paramType resultType)
     | isDependentPi expr ->
-      getPiWrappers resultType & dependentPiParams %~ addParam
+      getPiWrappers resultType & dependentPiParams %~ (p :)
     | otherwise ->
         PiWrappers
         { _dependentPiParams = []
-        , nonDependentPiParams = addParam (getParams resultType)
+        , mNonDependentPiParam = Just p
         }
     where
-      addParam = ((param, paramType) :)
-  _ -> PiWrappers [] []
+      p = (param, paramType)
+  _ -> PiWrappers [] Nothing
 
 couldEq :: Eq def => Expression def a -> Expression def a -> Bool
 couldEq x y =
@@ -156,10 +156,10 @@ applyForms exprType rawExpr
     withDepAppliesAdded =
       foldl (addApply DependentParamAdded) expr depParams
     withAllAppliesAdded =
-      scanl (addApply IndependentParamAdded) withDepAppliesAdded nonDepParams
+      scanl (addApply IndependentParamAdded) withDepAppliesAdded $ mNonDepParam ^.. Lens._Just
     PiWrappers
       { _dependentPiParams = depParams
-      , nonDependentPiParams = nonDepParams
+      , mNonDependentPiParam = mNonDepParam
       } = getPiWrappers exprType
     addApply ann func (_, paramType) =
       Expression (makeApply func arg) ann
@@ -331,11 +331,6 @@ curriedFuncArguments =
   (^.. ExprLens.exprLam . ExprLens.kindedLam Val . Lens.folding f)
   where
     f (_, paramType, body) = paramType : curriedFuncArguments body
-
-getParams :: Expression def a -> [(Guid, Expression def a)]
-getParams expr = do
-  (param, paramType, resultType) <- expr ^.. ExprLens.exprKindedLam Type
-  (param, paramType) : getParams resultType
 
 pureIntegerType :: Expression def ()
 pureIntegerType = ExprLens.pureExpr . ExprLens.bodyIntegerType # ()
