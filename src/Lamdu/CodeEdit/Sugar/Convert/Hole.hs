@@ -48,7 +48,9 @@ import qualified System.Random as Random
 convert ::
   (MonadA m, Typeable1 m) =>
   SugarInfer.PayloadMM m -> SugarM m (ExpressionU m)
-convert = convertH convertTypeCheckedHoleH
+convert =
+  convertH convertTypeCheckedHoleH
+  <&> Lens.mapped . rPayload . plActions . Lens._Just . mSetToHole .~ Nothing
 
 convertPlain ::
   (MonadA m, Typeable1 m) =>
@@ -62,9 +64,8 @@ convertH ::
   SugarInfer.PayloadMM m ->
   SugarM m (ExpressionU m)
 convertH convertTyped exprPl =
-  fmap fixWrap .
-  maybe convertUntypedHole convertTyped $
-  Lens.sequenceOf SugarInfer.plInferred exprPl
+  fixWrap <$>
+  maybe convertUntypedHole convertTyped (Lens.sequenceOf SugarInfer.plInferred exprPl)
   where
     fixWrap expr =
       expr

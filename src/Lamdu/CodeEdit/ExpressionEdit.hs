@@ -163,10 +163,10 @@ actionsEventMap sExpr isHole resultPickers actions = do
   let
     delKeys = Config.replaceKeys config ++ Config.delKeys config
     replace
-      | isSelected && isHoleBool = mempty
       | isSelected =
-        mkEventMap delKeys (E.Doc ["Edit", "Replace expression"])
-        FocusDelegator.delegatingId $ actions ^. Sugar.setToHole
+        maybe mempty
+        (mkEventMap delKeys (E.Doc ["Edit", "Replace expression"]) FocusDelegator.delegatingId) $
+        actions ^. Sugar.mSetToHole
       | otherwise =
         mkEventMap delKeys (E.Doc ["Navigation", "Select parent"])
         FocusDelegator.notDelegatingId $ return exprGuid
