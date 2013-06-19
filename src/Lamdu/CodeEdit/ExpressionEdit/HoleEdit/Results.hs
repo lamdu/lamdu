@@ -272,9 +272,16 @@ maybeInjectArgumentExpr holeInfo =
   Nothing -> return . map ((Nothing, mempty) <$)
   Just holeArg ->
     fmap concat .
-    traverse (injectIntoHoles holeInfo arg . fmap (flip (,) mempty))
+    traverse (injectIntoHoles holeInfo arg . fmap (flip (,) (pl False)))
     where
-      arg = holeArg ^. Sugar.haExprPresugared <&> Lens._2 .~ mempty
+      pl isInjected = ExprGuiM.Payload
+        { ExprGuiM.plGuids = []
+        , ExprGuiM.plInjected = [isInjected]
+        }
+      arg =
+        holeArg ^. Sugar.haExprPresugared
+        <&> Lens._2 .~ pl False
+        & Expr.ePayload . Lens._2 .~ pl True
 
 maybeInjectArgumentNewTag ::
   HoleInfo m -> [Sugar.HoleResultSeed m (Sugar.MStorePoint m ExprGuiM.Payload)]

@@ -71,7 +71,12 @@ loadConvertDefI ::
   CT m (Sugar.DefinitionU m ExprGuiM.Payload)
 loadConvertDefI cp defI =
   Sugar.loadConvertDefI cp defI
-  <&> Lens.mapped . Lens.mapped . Lens.mapped %~ ExprGuiM.Payload
+  <&> Lens.mapped . Lens.mapped . Lens.mapped %~ mkPayload
+  where
+    mkPayload guids = ExprGuiM.Payload
+      { ExprGuiM.plGuids = guids
+      , ExprGuiM.plInjected = [False]
+      }
 
 makeSugarPanes :: (MonadA m, Typeable1 m) => Anchors.CodeProps m -> Guid -> CT m [SugarPane m]
 makeSugarPanes cp rootGuid = do
