@@ -278,10 +278,10 @@ convertList (Expr.Apply funcI argI) argS exprPl = do
     maybeToMPlus $ tailField ^? rfExpr . rBody . _BodyList
   guard $ isCons specialFunctions funcI
   let
-    hiddenGuids = funcI ^.. storedSubExpressionGuids
     listItem =
-      mkListItem (headField ^. rfExpr) argS hiddenGuids exprPl argI $
-      addFirstItem <$> innerListMActions
+      mkListItem (headField ^. rfExpr) argS exprPl argI
+      (addFirstItem <$> innerListMActions)
+      & liExpr . rPayload . plHiddenGuids <>~ (funcI ^.. storedSubExpressionGuids)
     mListActions = do
       exprS <- exprPl ^. SugarInfer.plStored
       innerListActions <- innerListMActions
@@ -294,15 +294,15 @@ convertList (Expr.Apply funcI argI) argS exprPl = do
 
 mkListItem ::
   MonadA m =>
-  ExpressionU m -> ExpressionU m -> [Guid] ->
+  ExpressionU m -> ExpressionU m ->
   PayloadMM m -> ExprMM m -> Maybe (T m Guid) ->
   ListItem m (ExpressionU m)
-mkListItem listItemExpr argS hiddenGuids exprPl argI mAddNextItem =
+mkListItem listItemExpr recordArgS exprPl argI mAddNextItem =
   ListItem
   { _liExpr =
     listItemExpr
-    & SugarExpr.setNextHoleToFirstSubHole argS
-    & rPayload . plHiddenGuids <>~ hiddenGuids ++ (argS ^. rPayload . plHiddenGuids)
+    & SugarExpr.setNextHoleToFirstSubHole recordArgS
+    & rPayload . plHiddenGuids <>~ (recordArgS ^. rPayload . plHiddenGuids)
   , _liMActions = do
       addNext <- mAddNextItem
       exprProp <- exprPl ^. SugarInfer.plStored
