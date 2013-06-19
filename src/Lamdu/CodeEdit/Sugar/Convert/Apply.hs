@@ -161,11 +161,6 @@ convertPrefix funcRef funcI rawArgS argI applyPl = do
   where
     haveInfo = Lens.nullOf ExprLens.exprHole argI
 
-setListGuid :: Guid -> ExpressionU m -> ExpressionU m
-setListGuid consistentGuid e = e
-  & rPayload . plGuid .~ consistentGuid
-  & rPayload . plHiddenGuids %~ (e ^. rPayload . plGuid :)
-
 storedSubExpressionGuids ::
   Lens.Fold
   (Expr.Expression def (SugarInfer.Payload i (Maybe (SugarInfer.Stored m)))) Guid
@@ -194,12 +189,9 @@ convertEmptyList app@(Expr.Apply funcI _) exprPl = do
     Lens.anyOf ExprLens.exprDefinitionRef
     (== Anchors.sfNil specialFunctions) funcI
   let guids = app ^.. Lens.traversed . storedSubExpressionGuids
-  (rPayload . plHiddenGuids <>~ guids) .
-    setListGuid consistentGuid <$>
-    (lift . SugarExpr.make exprPl . BodyList)
+  (lift . SugarExpr.make exprPl . BodyList)
     (List [] (mkListActions <$> exprPl ^. SugarInfer.plStored))
-  where
-    consistentGuid = Guid.augment "list" $ exprPl ^. SugarInfer.plGuid
+    <&> rPayload . plHiddenGuids <>~ guids
 
 isCons ::
   Anchors.SpecialFunctions t ->
@@ -297,9 +289,8 @@ convertList (Expr.Apply funcI argI) argS exprPl = do
         { addFirstItem = mkListAddFirstItem specialFunctions exprS
         , replaceNil = replaceNil innerListActions
         }
-  setListGuid (argS ^. rPayload . plGuid) <$>
-    (lift . SugarExpr.make exprPl . BodyList)
-    (List (listItem : innerValues) mListActions)
+  lift . SugarExpr.make exprPl . BodyList $
+    List (listItem : innerValues) mListActions
 
 mkListItem ::
   MonadA m =>
