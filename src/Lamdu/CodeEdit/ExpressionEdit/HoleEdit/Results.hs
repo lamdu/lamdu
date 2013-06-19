@@ -236,13 +236,13 @@ removeWrappers expr
       (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprHole)
 
 injectIntoHoles ::
-  (MonadA m, Monoid a) => HoleInfo m ->
+  MonadA m => HoleInfo m ->
   Sugar.ExprStorePoint m a ->
-  ExprIRef.ExpressionM m ApplyFormAnnotation ->
+  ExprIRef.ExpressionM m (ApplyFormAnnotation, a) ->
   CT m [Sugar.ExprStorePoint m a]
 injectIntoHoles holeInfo arg =
   fmap catMaybes . mapM injectArg . injectArgPositions .
-  ExprUtil.addExpressionContexts (const (Nothing, mempty)) .
+  ExprUtil.addExpressionContexts (Lens._1 .~ Nothing) .
   Lens.Context id
   where
     typeCheckOnSide expr =
@@ -252,14 +252,14 @@ injectIntoHoles holeInfo arg =
     toOrd Untouched = 'c'
     condition subExpr =
       Lens.has ExprLens.exprHole subExpr &&
-      DependentParamAdded /= (subExpr ^. Expr.ePayload . contextVal)
+      DependentParamAdded /= (subExpr ^. Expr.ePayload . contextVal . Lens._1)
     injectArg setter =
       runMaybeT . leftToJust .
       mapM_ (justToLeft . MaybeT . typeCheckOnSide . setter) $
       maybeToMPlus (removeWrappers arg) ++ [ arg ]
     injectArgPositions =
       map (^. contextSetter) .
-      sortOn (^. contextVal . Lens.to toOrd) .
+      sortOn (^. contextVal . Lens._1 . Lens.to toOrd) .
       map (^. Expr.ePayload) . filter condition .
       ExprUtil.subExpressions
 
@@ -272,7 +272,7 @@ maybeInjectArgumentExpr holeInfo =
   Nothing -> return . map ((Nothing, mempty) <$)
   Just holeArg ->
     fmap concat .
-    traverse (injectIntoHoles holeInfo arg)
+    traverse (injectIntoHoles holeInfo arg . fmap (flip (,) mempty))
     where
       arg = holeArg ^. Sugar.haExprPresugared <&> Lens._2 .~ mempty
 
