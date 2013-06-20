@@ -12,7 +12,7 @@ module Lamdu.CodeEdit.Sugar.Infer
   , iwiSuccess, iwiBaseInferContextKey, iwiInferContext
   , iwiExpr, iwiBaseExpr, iwiBaseInferContext
 
-  , mkExprPure, mkExprInferred
+  , mkExprPure
 
   -- TODO: These don't belong here:
   -- Type-check an expression into an ordinary Inferred Expression,
@@ -94,25 +94,6 @@ mkExprPure g =
   ExprUtil.randomizeExpr g . fmap f
   where
     f a guid = Payload guid Nothing Nothing a
-
-mkExprInferred ::
-  RandomGen g => g ->
-  ExprIRef.Expression t (Infer.Inferred (DefI t), a) ->
-  ExprIRef.Expression t (Payload (InferredWC t) NoStored a)
-mkExprInferred g =
-  ExprUtil.randomizeExpr g . fmap f
-  where
-    f (inferred, x) guid = Payload
-      { _plGuid = guid
-      , _plInferred =
-        InferredWithConflicts
-        { iwcInferred = inferred
-        , iwcTypeConflicts = []
-        , iwcValueConflicts = []
-        }
-      , _plStored = NoStored
-      , _plData = x
-      }
 
 -- {{{{{{{{{{{{{{{{{
 -- TODO: These don't belong here

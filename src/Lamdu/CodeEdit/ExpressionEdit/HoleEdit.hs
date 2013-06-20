@@ -152,6 +152,7 @@ makeHoleResultWidget holeInfo resultId holeResult = do
     -- to the whole hole
     Widget.scale (realToFrac <$> Config.holeResultScaleFactor config) .
     Widget.strongerEvents (resultPickEventMap config holeInfo holeResult) .
+    (Widget.wFrame %~ Anim.mapIdentities (`mappend` Widget.toAnimId resultId)) .
     (^. ExpressionGui.egWidget) =<<
     (ExprGuiM.makeSubexpresion 0 . Sugar.removeHoleResultTypes)
     (holeResult ^. Sugar.holeResultConverted)

@@ -375,8 +375,7 @@ makeHoleResult sugarContext (SugarInfer.Payload guid iwc stored ()) seed =
           & SugarM.scHoleInferState .~ fakeCtx
           & SugarM.scHoleInferStateKey %~ \key -> Cache.bsOfKey (fakeSeedExpr, key)
       fakeConverted <-
-        convertHoleResult newContext gen $
-        (fakeInferredResult <&> Lens._2 %~ snd)
+        convertHoleResult newContext gen fakeInferredResult
       pure HoleResult
         { _holeResultInferred = fst <$> fakeInferredResult
         , _holeResultConverted = fakeConverted
@@ -415,12 +414,25 @@ holeWrap expr
 
 convertHoleResult ::
   (MonadA m, Typeable1 m, Monoid a) => SugarM.Context m -> Random.StdGen ->
-  ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), a) -> CT m (ExpressionU m a)
-convertHoleResult sugarContext gen res =
+  ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), MStorePoint m a) -> CT m (ExpressionU m a)
+convertHoleResult sugarContext gen =
   SugarM.run sugarContext . SugarM.convertSubexpression .
-  (traverse . SugarInfer.plInferred %~ Just) .
-  (traverse . SugarInfer.plStored .~ Nothing) $
-  SugarInfer.mkExprInferred gen res
+  ExprUtil.randomizeExpr gen . fmap f
+  where
+    f (inferred, (mStorePoint, x)) guid = SugarInfer.Payload
+      { SugarInfer._plGuid =
+        case mStorePoint of
+        Just storePoint -> ExprIRef.exprGuid $ unStorePoint storePoint
+        Nothing -> guid
+      , SugarInfer._plInferred =
+        Just InferredWithConflicts
+        { iwcInferred = inferred
+        , iwcTypeConflicts = []
+        , iwcValueConflicts = []
+        }
+      , SugarInfer._plStored = Nothing
+      , SugarInfer._plData = x
+      }
 
 genFromHashable :: Hashable a => a -> Random.StdGen
 genFromHashable = Random.mkStdGen . hashWithSalt 0
