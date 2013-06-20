@@ -54,6 +54,7 @@ module Lamdu.CodeEdit.Sugar.Types
     , holeResultConverted
     , holeResultPick, holeResultPickWrapped
     , holeResultPickPrefix
+  , PickedResult(..), prMJumpTo, prIdTranslation
   , LiteralInteger(..)
   , TagG(..), tagName, tagGuid
   , Inferred(..), iValue, iMAccept, iHole
@@ -165,11 +166,17 @@ data Lam name m expr = Lam
   , _lResultType :: expr
   } deriving (Functor, Foldable, Traversable)
 
+data PickedResult = PickedResult
+  { _prMJumpTo :: Maybe Guid
+  , -- pairs of ids from converted expression and written expression.
+    _prIdTranslation :: [(Guid, Guid)]
+  }
+
 data HoleResult name m a = HoleResult
   { _holeResultInferred :: ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))
   , _holeResultConverted :: Expression name m a
-  , _holeResultPick :: T m (Maybe Guid)
-  , _holeResultPickWrapped :: T m Guid
+  , _holeResultPick :: T m PickedResult
+  , _holeResultPickWrapped :: T m PickedResult
   , _holeResultPickPrefix :: PrefixAction m
   }
 
@@ -436,6 +443,7 @@ Lens.makeLenses ''Lam
 Lens.makeLenses ''ListItem
 Lens.makeLenses ''ListItemActions
 Lens.makeLenses ''Payload
+Lens.makeLenses ''PickedResult
 Lens.makeLenses ''Record
 Lens.makeLenses ''RecordField
 Lens.makeLenses ''Scope

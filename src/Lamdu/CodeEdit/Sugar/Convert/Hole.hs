@@ -386,7 +386,11 @@ makeHoleResult sugarContext (SugarInfer.Payload guid iwc stored ()) seed =
             written <-
               writeExprMStored iref $
               flip (,) () <$> holeWrap (fst <$> seedExpr)
-            pure . ExprIRef.exprGuid $ written ^. Expr.ePayload . Lens._1
+            pure
+              PickedResult
+              { _prMJumpTo = Just . ExprIRef.exprGuid $ written ^. Expr.ePayload . Lens._1
+              , _prIdTranslation = []
+              }
         }
     pick = do
       (_seedExpr, mFinalExprCtx, mJumpTo) <-
@@ -401,7 +405,11 @@ makeHoleResult sugarContext (SugarInfer.Payload guid iwc stored ()) seed =
           mFinalExprCtx
       mPickGuid <- pickResult iref $ (Lens._2 %~ fst) <$> finalExpr
       mJumpGuid <- sequenceA mJumpTo
-      pure $ mJumpGuid `mplus` mPickGuid
+      pure
+        PickedResult
+        { _prMJumpTo = mJumpGuid `mplus` mPickGuid
+        , _prIdTranslation = []
+        }
 
 holeWrap :: Expr.Expression def (Maybe a) -> Expr.Expression def (Maybe a)
 holeWrap expr

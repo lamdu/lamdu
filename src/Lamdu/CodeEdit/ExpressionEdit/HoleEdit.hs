@@ -54,11 +54,26 @@ extraSymbolScaleFactor = 0.5
 
 type T = Transaction
 
-handlePickResultTargetGuid ::
-  MonadA m => HoleInfo m -> Maybe Guid -> Widget.EventResult
-handlePickResultTargetGuid holeInfo =
-  Widget.eventResultFromCursor . WidgetIds.fromGuid .
-  fromMaybe (hiGuid holeInfo)
+pick :: Monad m => HoleInfo m -> Sugar.PickedResult -> T m Widget.EventResult
+pick holeInfo pr = do
+  Property.set (hiState holeInfo) HoleInfo.emptyState
+  return
+    Widget.EventResult
+    { Widget._eCursor =
+        Just . WidgetIds.fromGuid $
+        fromMaybe (hiGuid holeInfo) (pr ^. Sugar.prMJumpTo)
+    , Widget._eAnimIdMapping = id
+    }
+
+pickAndSetNextHoleState ::
+  MonadA m =>
+  HoleInfo m -> String -> Sugar.PickedResult -> T m Widget.EventResult
+pickAndSetNextHoleState holeInfo searchTerm pr =
+  pick holeInfo pr <*
+  case pr ^. Sugar.prMJumpTo of
+    Just newHoleGuid ->
+      Transaction.setP (assocStateRef newHoleGuid) $ HoleState searchTerm
+    Nothing -> return ()
 
 resultPickEventMap ::
   MonadA m => Config -> HoleInfo m -> Sugar.HoleResult Sugar.Name m ExprGuiM.Payload ->
@@ -70,17 +85,16 @@ resultPickEventMap config holeInfo holeResult =
       mappend (simplePickRes (Config.pickResultKeys config)) .
       E.keyPresses (Config.pickAndMoveToNextHoleKeys config)
       (E.Doc ["Edit", "Result", "Pick and move to next hole"]) $
-        (Widget.eventResultFromCursor . WidgetIds.fromGuid)
-        nextHoleGuid <$ HoleResults.pick holeInfo holeResult
+        (Widget.eCursor .~ Just (WidgetIds.fromGuid nextHoleGuid)) <$>
+        (pick holeInfo =<< holeResult ^. Sugar.holeResultPick)
   _ ->
     simplePickRes $
     Config.pickResultKeys config ++
     Config.pickAndMoveToNextHoleKeys config
   where
     simplePickRes keys =
-      E.keyPresses keys (E.Doc ["Edit", "Result", "Pick"]) .
-      fmap (handlePickResultTargetGuid holeInfo) $
-      HoleResults.pick holeInfo holeResult
+      E.keyPresses keys (E.Doc ["Edit", "Result", "Pick"]) $
+      pick holeInfo =<< holeResult ^. Sugar.holeResultPick
 
 -- We can't simply return a single widget, because the extra results
 -- widget is put on the side and does not bloat the size of the
@@ -229,10 +243,12 @@ mkAddNewDefinitionEventMap holeInfo = do
     f defRef =
       E.keyPresses (Config.newDefinitionKeys config)
       (E.Doc ["Edit", "Result", "As new Definition"]) $ do
-        mTargetGuid <- HoleResults.pick holeInfo defRef
-        when (isJust mTargetGuid) savePosition
+        pickedResult <- defRef ^. Sugar.holeResultPick
+        _ <- pick holeInfo pickedResult
+        let mJumpTo = pickedResult ^. Sugar.prMJumpTo
+        when (isJust mJumpTo) savePosition
         pure Widget.EventResult
-          { Widget._eCursor = WidgetIds.fromGuid <$> mTargetGuid
+          { Widget._eCursor = WidgetIds.fromGuid <$> mJumpTo
           , Widget._eAnimIdMapping =
             holeResultAnimMappingNoParens holeInfo $ hiSearchTermId holeInfo
           }
@@ -291,34 +307,21 @@ makeResultsWidget holeInfo shownResults hiddenResults = do
   where
     myId = hiId holeInfo
 
-charGroupHandler ::
-  Functor f =>
-  String -> E.InputDoc -> E.Doc ->
-  (Char -> f Widget.Id) ->
-  Widget.EventHandlers f
-charGroupHandler chars idoc doc handleChar =
-  fmap Widget.eventResultFromCursor <$>
-  E.charGroup idoc doc chars handler
-  where
-    handler char _isShifted = handleChar char
-
 opPickEventMap ::
   MonadA m =>
   HoleInfo m -> Bool -> Sugar.HoleResult Sugar.Name m a ->
   Widget.EventHandlers (T m)
 opPickEventMap holeInfo isSelectedResult result
   | ignoreSearchTerm || nonEmptyAll (`notElem` operatorChars) searchTerm =
-    charGroupHandler operatorChars "Operator"
-    (E.Doc ["Edit", "Result", "Pick and apply operator"]) $ \c -> do
-      dest <- result ^. Sugar.holeResultPickWrapped
-      setHoleStateAndJump (HoleState [c]) dest
+    E.charGroup "Operator"
+    (E.Doc ["Edit", "Result", "Pick and apply operator"])
+    operatorChars $ \c _ -> do
+      pickAndSetNextHoleState holeInfo [c] =<< result ^. Sugar.holeResultPickWrapped
   | ignoreSearchTerm || nonEmptyAll (`elem` operatorChars) searchTerm =
-    charGroupHandler alphaNumericChars "Letter/digit"
-    (E.Doc ["Edit", "Result", "Pick and resume"]) $ \c -> do
-      mTarget <- HoleResults.pick holeInfo result
-      case mTarget of
-        Nothing -> pure . WidgetIds.fromGuid $ hiGuid holeInfo
-        Just targetGuid -> setHoleStateAndJump (HoleState [c]) targetGuid
+    E.charGroup "Letter/digit"
+    (E.Doc ["Edit", "Result", "Pick and resume"])
+    alphaNumericChars $ \c _ -> do
+      pickAndSetNextHoleState holeInfo [c] =<< result ^. Sugar.holeResultPick
   | otherwise = mempty
   where
     ignoreSearchTerm = isSelectedResult && null searchTerm

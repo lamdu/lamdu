@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings, TemplateHaskell #-}
 module Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Results
-  ( makeAll, pick, HaveHiddenResults(..)
+  ( makeAll, HaveHiddenResults(..)
   , Result(..)
   , ResultsList(..), rlExtraResultsPrefixId, rlMain, rlExtra
   , prefixId, MakeWidgets(..)
@@ -22,7 +22,6 @@ import Data.List.Utils (sortOn, nonEmptyAll)
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Maybe.Utils (maybeToMPlus)
 import Data.Monoid (Monoid(..))
-import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
@@ -38,10 +37,8 @@ import qualified Data.Char as Char
 import qualified Data.Foldable as Foldable
 import qualified Data.List.Class as List
 import qualified Data.Store.Guid as Guid
-import qualified Data.Store.Property as Property
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad as ExprGuiM
-import qualified Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info as HoleInfo
 import qualified Lamdu.CodeEdit.Sugar as Sugar
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Expression as Expr
@@ -67,13 +64,6 @@ mkGroup names body = Group
   { _groupNames = names
   , _groupBaseExpr = ExprUtil.pureExpression body
   }
-
-pick ::
-  MonadA m =>
-  HoleInfo m -> Sugar.HoleResult Sugar.Name m a -> T m (Maybe Guid)
-pick holeInfo holeResult = do
-  Property.set (hiState holeInfo) HoleInfo.emptyState
-  holeResult ^. Sugar.holeResultPick
 
 data ResultType = GoodResult | BadResult
   deriving (Eq, Ord)
