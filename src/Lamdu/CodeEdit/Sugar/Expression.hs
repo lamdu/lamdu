@@ -1,6 +1,6 @@
 module Lamdu.CodeEdit.Sugar.Expression
   ( make, mkGen
-  , mkCallWithArg, mkReplaceWithNewHole
+  , mkReplaceWithNewHole
   , removeSuccessfulType, removeInferredTypes
   , removeTypes, removeNonHoleTypes, removeHoleResultTypes
   , setNextHoleToFirstSubHole
@@ -95,14 +95,6 @@ guardReinferSuccess sugarContext act = do
     then Just act
     else Nothing
 
-mkCallWithArg ::
-  MonadA m => SugarM.Context m -> Stored m ->
-  PrefixAction m -> CT m (Maybe (T m Guid))
-mkCallWithArg sugarContext exprStored prefixAction =
-  guardReinferSuccess sugarContext $ do
-    prefixAction
-    ExprIRef.exprGuid <$> DataOps.callWithArg exprStored
-
 mkReplaceWithNewHole :: MonadA m => Stored m -> T m Guid
 mkReplaceWithNewHole stored =
   ExprIRef.exprGuid <$> DataOps.replaceWithHole stored
@@ -111,8 +103,6 @@ mkActions :: MonadA m => SugarM.Context m -> Stored m -> Actions m
 mkActions sugarContext stored =
   Actions
   { _wrap = WrapAction $ ExprIRef.exprGuid <$> DataOps.wrap stored
-  , _callWithArg = mkCallWithArg sugarContext stored
-  , _callWithNextArg = pure (pure Nothing)
   , _mSetToHole = Just $ ExprIRef.exprGuid <$> DataOps.setToHole stored
   , _cut =
     mkCutter (sugarContext ^. SugarM.scCodeAnchors)

@@ -276,10 +276,11 @@ makeResultsList ::
 makeResultsList holeInfo makeWidget group =
   (Lens.mapped . Lens.mapped %~ rlPreferred .~ toPreferred) .
   typeCheckToResultsList holeInfo makeWidget baseId .
-  map Sugar.ResultSeedExpression =<<
+  map Sugar.ResultSeedExpression . filter (not . isHoleWrap) =<<
   maybeInjectArgumentExpr holeInfo =<<
   baseExprWithApplyForms holeInfo baseExpr
   where
+    isHoleWrap = Lens.has (ExprLens.exprApply . Expr.applyFunc . ExprLens.exprHole)
     toPreferred
       | Lens.anyOf (groupNames . traverse) (== searchTerm) group = Preferred
       | otherwise = NotPreferred
@@ -369,6 +370,8 @@ primitiveGroups :: HoleInfo m -> [GroupM m]
 primitiveGroups holeInfo =
   [ mkGroup ["Set", "Type"] $ Expr.BodyLeaf Expr.Set
   , mkGroup ["Integer", "ℤ", "Z"] $ Expr.BodyLeaf Expr.IntegerType
+  , mkGroup ["Apply", "Give argument"] . Expr.BodyApply $
+    Expr.Apply pureHole pureHole
   , mkGroup ["->", "Pi", "→", "→", "Π", "π"] $
     ExprUtil.makePi (Guid.fromString "NewPi") pureHole pureHole
   , mkGroup ["\\", "Lambda", "Λ", "λ"] $

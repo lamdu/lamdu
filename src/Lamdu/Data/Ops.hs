@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveFunctor #-}
 module Lamdu.Data.Ops
-  ( newHole, wrap, callWithArg
+  ( newHole, wrap
   , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap
   , addListItem
   , newPublicDefinition
@@ -47,17 +47,6 @@ wrap exprP = do
     ExprUtil.makeApply newFuncI $ Property.value exprP
   Property.set exprP applyI
   return applyI
-
-callWithArg ::
-  MonadA m =>
-  ExprIRef.ExpressionProperty m ->
-  T m (ExprIRef.ExpressionI (Tag m))
-callWithArg exprP = do
-  argI <- newHole
-  Property.set exprP =<<
-    ExprIRef.newExprBody
-    (ExprUtil.makeApply (Property.value exprP) argI)
-  return argI
 
 newHole :: MonadA m => T m (ExprIRef.ExpressionI (Tag m))
 newHole = ExprIRef.newExprBody $ Expr.BodyLeaf Expr.Hole

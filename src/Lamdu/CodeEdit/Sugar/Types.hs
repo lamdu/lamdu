@@ -15,8 +15,7 @@ module Lamdu.CodeEdit.Sugar.Types
   , DefinitionBuiltin(..)
   , WrapAction(..)
   , Actions(..)
-    , wrap, callWithArg, callWithNextArg
-    , mSetToHole, cut
+    , wrap, mSetToHole, cut
   , Body(..)
     , _BodyLam, _BodyApply, _BodyGetVar, _BodyGetField, _BodyHole
     , _BodyInferred, _BodyCollapsed, _BodyLiteralInteger
@@ -90,8 +89,6 @@ data WrapAction m = AlreadyWrapped Guid | WrapAction (T m Guid)
 
 data Actions m = Actions
   { _wrap :: WrapAction m
-  , _callWithNextArg :: PrefixAction m -> CT m (Maybe (T m Guid))
-  , _callWithArg :: PrefixAction m -> CT m (Maybe (T m Guid))
   , -- mSetToHole not available for holes.
     _mSetToHole :: Maybe (T m Guid)
   , _cut :: T m Guid

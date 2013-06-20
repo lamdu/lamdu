@@ -128,16 +128,17 @@ convertPrefix ::
   (MonadA m, Typeable1 m) =>
   ExpressionU m -> ExprMM m -> ExpressionU m ->
   ExprMM m -> PayloadMM m -> SugarM m (ExpressionU m)
-convertPrefix funcRef funcI rawArgS argI applyPl = do
-  sugarContext <- SugarM.readContext
-  let
-    argS =
-      rawArgS
-      & case applyPl ^. SugarInfer.plStored of
-        Nothing -> id
-        Just stored ->
-          rPayload . plActions . Lens.traversed . callWithNextArg .~
-          SugarExpr.mkCallWithArg sugarContext stored
+convertPrefix funcRef funcI argS argI applyPl
+  | SugarInfer.isPolymorphicFunc $ funcI ^. Expr.ePayload =
+    case funcRef ^. rBody of
+    BodyCollapsed (Collapsed g compact full hadInfo) ->
+      makeCollapsed applyPl g compact (hadInfo || haveInfo) =<< makeApply full
+    BodyGetVar var -> do
+      makeCollapsed applyPl (funcI ^. SugarInfer.exprGuid) var haveInfo =<< makeFullApply
+    _ -> makeFullApply
+  | otherwise = makeFullApply
+  where
+    haveInfo = Lens.nullOf ExprLens.exprHole argI
     makeFullApply = makeApply $ SugarExpr.setNextHoleToFirstSubHole argS funcRef
     makeApply f =
       SugarExpr.make applyPl $ BodyApply Apply
@@ -145,18 +146,6 @@ convertPrefix funcRef funcI rawArgS argI applyPl = do
       , _aSpecialArgs = ObjectArg argS
       , _aAnnotatedArgs = []
       }
-  if SugarInfer.isPolymorphicFunc $ funcI ^. Expr.ePayload
-    then
-      case funcRef ^. rBody of
-      BodyCollapsed (Collapsed g compact full hadInfo) ->
-        makeCollapsed applyPl g compact (hadInfo || haveInfo) =<< makeApply full
-      BodyGetVar var ->
-        makeCollapsed applyPl (funcI ^. SugarInfer.exprGuid) var haveInfo =<< makeFullApply
-      _ -> makeFullApply
-    else
-      makeFullApply
-  where
-    haveInfo = Lens.nullOf ExprLens.exprHole argI
 
 storedSubExpressionGuids ::
   Lens.Fold
