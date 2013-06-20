@@ -13,9 +13,12 @@ import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM)
 import Lamdu.Config (Config)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
+import qualified Graphics.DrawingCombinators.Utils as DrawUtils
 import qualified Graphics.UI.Bottle.EventMap as E
 import qualified Graphics.UI.Bottle.Widget as Widget
 import qualified Graphics.UI.Bottle.Widgets.FocusDelegator as FocusDelegator
+import qualified Graphics.UI.Bottle.Widgets.TextEdit as TextEdit
+import qualified Graphics.UI.Bottle.Widgets.TextView as TextView
 import qualified Lamdu.CodeEdit.ExpressionEdit.ApplyEdit as ApplyEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.AtomEdit as AtomEdit
 import qualified Lamdu.CodeEdit.ExpressionEdit.CollapsedEdit as CollapsedEdit
@@ -51,14 +54,28 @@ pasteEventMap config =
    fmap WidgetIds.fromGuid) .
   (^? Sugar.holeMActions . Lens._Just . Sugar.holePaste . Lens._Just)
 
+shrinkIfHigherThanLine :: MonadA m => ExpressionGui f -> ExprGuiM m (ExpressionGui f)
+shrinkIfHigherThanLine w = do
+  fontSize <-
+    (^. TextEdit.sTextViewStyle . TextView.styleFontSize) <$>
+    ExprGuiM.widgetEnv WE.readTextStyle
+  let
+    textHeight = fromIntegral fontSize * DrawUtils.textHeight
+    ratio = textHeight / w ^. ExpressionGui.egWidget . Widget.wSize . Lens._2
+  return $
+    if ratio < 1
+    then ExpressionGui.scaleFromTop (realToFrac ratio) w
+    else w
+  where
+
 make ::
   MonadA m => ParentPrecedence ->
   ExprGuiM.SugarExpr m -> ExprGuiM m (ExpressionGui m)
 make parentPrecedence sExpr = assignCursor $ do
-  ((isHole, widget), _) <-
+  ((isHole, gui), _) <-
     ExprGuiM.listenResultPickers $ makeEditor parentPrecedence sExpr exprId
   typeEdits <-
-    payload ^. Sugar.plInferredTypes
+    exprITypes
     & Lens.traversed . Lens.mapped . Lens.mapped .~ mempty
     & traverse (make (ParentPrecedence 0))
   let onReadOnly = Widget.doesntTakeFocus
@@ -70,21 +87,21 @@ make parentPrecedence sExpr = assignCursor $ do
       Widget.tint (Config.inferredTypeTint config) .
       Widget.scale (realToFrac <$> Config.typeScaleFactor config) .
       (^. ExpressionGui.egWidget) <$> typeEdits
-    shrink = Widget.scale $ realToFrac <$> Config.holeResultInjectedScaleFactor config
     maybeShrink
-      | or $ ExprGuiM.plInjected exprData = shrink
-      | otherwise = id
-  return $
-    addInferredTypes widget
+      | or isInjecteds = shrinkIfHigherThanLine
+      | otherwise = return
+  gui
+    & addInferredTypes
     & ExpressionGui.egWidget %~
-      maybeShrink .
-      maybe onReadOnly (const id) (payload ^. Sugar.plActions) .
-      Widget.weakerEvents exprEventMap
+      ( maybe onReadOnly (const id) exprActions
+      . Widget.weakerEvents exprEventMap
+      )
+    & maybeShrink
   where
-    payload = sExpr ^. Sugar.rPayload
-    exprGuid = sExpr ^. Sugar.rPayload . Sugar.plGuid
-    exprData = sExpr ^. Sugar.rPayload . Sugar.plData
-    exprHiddenGuids = List.delete exprGuid $ ExprGuiM.plGuids exprData
+    Sugar.Payload exprITypes exprActions _nextHole exprGuid exprData =
+      sExpr ^. Sugar.rPayload
+    ExprGuiM.Payload guids isInjecteds = exprData
+    exprHiddenGuids = List.delete exprGuid guids
     exprId = WidgetIds.fromGuid exprGuid
     assignCursor f =
       foldr (`ExprGuiM.assignCursorPrefix` exprId) f $

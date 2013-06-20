@@ -62,7 +62,6 @@ data Config = Config
 
   , holeResultCount :: Int
   , holeResultScaleFactor :: Vector2 Double
-  , holeResultInjectedScaleFactor :: Vector2 Double
   , holeSearchTermScaleFactor :: Vector2 Double
   , holeNumLabelScaleFactor :: Vector2 Double
   , holeNumLabelColor :: Draw.Color
