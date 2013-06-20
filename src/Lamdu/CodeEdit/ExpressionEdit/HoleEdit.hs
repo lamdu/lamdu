@@ -211,51 +211,8 @@ makeNoResults holeInfo myId =
     label str =
       ExprGuiM.widgetEnv $ BWidgets.makeLabel str myId
 
-renamePrefix :: AnimId -> AnimId -> AnimId -> AnimId
-renamePrefix srcPrefix destPrefix animId =
-  maybe animId (Anim.joinId destPrefix) $
-  Anim.subId srcPrefix animId
-
-holeResultAnimMappingNoParens :: HoleInfo m -> Widget.Id -> AnimId -> AnimId
-holeResultAnimMappingNoParens holeInfo resultId =
-  renamePrefix ("old hole" : Widget.toAnimId resultId) myId .
-  renamePrefix myId ("old hole" : myId)
-  where
-    myId = Widget.toAnimId $ hiId holeInfo
-
 hiSearchTermId :: HoleInfo m -> Widget.Id
 hiSearchTermId holeInfo = WidgetIds.searchTermId $ hiId holeInfo
-
--- TODO: No need for this anymore
-newDefinitionSeed ::
-  String -> Sugar.HoleResultSeed m (Sugar.MStorePoint m ExprGuiM.Payload)
-newDefinitionSeed = Sugar.ResultSeedNewDefinition
-
-mkAddNewDefinitionEventMap ::
-  MonadA m => HoleInfo m -> ExprGuiM m (Widget.EventHandlers (T m))
-mkAddNewDefinitionEventMap holeInfo = do
-  savePosition <- ExprGuiM.mkPrejumpPosSaver
-  mDefRef <-
-    ExprGuiM.liftMemoT . Sugar.holeResult (hiActions holeInfo) $
-    newDefinitionSeed newName
-  config <- ExprGuiM.widgetEnv WE.readConfig
-  let
-    f defRef =
-      E.keyPresses (Config.newDefinitionKeys config)
-      (E.Doc ["Edit", "Result", "As new Definition"]) $ do
-        pickedResult <- defRef ^. Sugar.holeResultPick
-        _ <- pick holeInfo pickedResult
-        let mJumpTo = pickedResult ^. Sugar.prMJumpTo
-        when (isJust mJumpTo) savePosition
-        pure Widget.EventResult
-          { Widget._eCursor = WidgetIds.fromGuid <$> mJumpTo
-          , Widget._eAnimIdMapping =
-            holeResultAnimMappingNoParens holeInfo $ hiSearchTermId holeInfo
-          }
-  pure $ maybe mempty f mDefRef
-  where
-    searchTerm = hiState holeInfo ^. Property.pVal . hsSearchTerm
-    newName = concat . words $ searchTerm
 
 vboxMBiasedAlign ::
   Maybe Box.Cursor -> Box.Alignment -> [Widget f] -> Widget f
@@ -330,13 +287,9 @@ opPickEventMap holeInfo isSelectedResult result
 mkEventMap ::
   MonadA m => HoleInfo m -> Bool ->
   Maybe (Sugar.HoleResult Sugar.Name m a) ->
-  ExprGuiM m (Widget.EventHandlers (T m))
-mkEventMap holeInfo isSelectedResult mResult = do
-  addNewDefinitionEventMap <- mkAddNewDefinitionEventMap holeInfo
-  pure $ mconcat
-    [ addNewDefinitionEventMap
-    , maybe mempty (opPickEventMap holeInfo isSelectedResult) mResult
-    ]
+  Widget.EventHandlers (T m)
+mkEventMap holeInfo isSelectedResult =
+  maybe mempty $ opPickEventMap holeInfo isSelectedResult
 
 assignHoleEditCursor ::
   MonadA m =>
@@ -385,11 +338,12 @@ makeActiveHoleEdit holeInfo = do
         -- TODO: Move the result picking events into pickEventMap
         -- instead of here on the searchTerm and on each result
         & Lens.mapped . ExpressionGui.egWidget %~ Widget.strongerEvents searchTermEventMap
-      holeEventMap <- mkEventMap holeInfo (isJust mSelectedResult) mResult
       case mResult of
         Nothing -> return ()
         Just res -> ExprGuiM.addResultPicker $ res ^. Sugar.holeResultPickPrefix
-      let adHocEditor = adHocTextEditEventMap $ searchTermProperty holeInfo
+      let
+        adHocEditor = adHocTextEditEventMap $ searchTermProperty holeInfo
+        holeEventMap = mkEventMap holeInfo (isJust mSelectedResult) mResult
       return .
         (ExpressionGui.egWidget %~
          Widget.strongerEvents holeEventMap .
