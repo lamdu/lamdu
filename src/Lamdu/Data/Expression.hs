@@ -47,6 +47,10 @@ data VariableRef def
   | DefinitionRef def
   deriving (Eq, Ord, Functor, Foldable, Traversable, Typeable)
 
+instance Show def => Show (VariableRef def) where
+  showsPrec _ (ParameterRef paramId) = shows paramId
+  showsPrec _ (DefinitionRef defI) = shows defI
+
 data Leaf def
   = GetVariable !(VariableRef def)
   | LiteralInteger !Integer
@@ -60,8 +64,7 @@ data Leaf def
 instance Show def => Show (Leaf def) where
   showsPrec _ leaf =
     case leaf of
-    GetVariable (ParameterRef paramId) -> shows paramId
-    GetVariable (DefinitionRef defI) -> shows defI
+    GetVariable varRef -> shows varRef
     LiteralInteger int -> shows int
     Tag guid -> showString "Tag<" . shows guid . showChar '>'
     Set -> showString "Set"
