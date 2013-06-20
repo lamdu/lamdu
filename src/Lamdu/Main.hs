@@ -290,7 +290,7 @@ runDb getConfig font db = do
   settingsRef <- newIORef Settings
     { _sInfoMode = Settings.defaultInfoMode
     }
-  cacheRef <- newIORef $ Cache.new 0x100000 -- TODO: Use a real cache size
+  cacheRef <- newIORef $ Cache.new 0x10000000
   wrapFlyNav <- makeFlyNav
   let
     makeWidget (config, size) = do
