@@ -1,4 +1,4 @@
-{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE ConstraintKinds, DeriveFunctor #-}
 
 module Lamdu.CodeEdit.Sugar.Convert.Hole
   ( convert, convertPlain, holeResultHasHoles
@@ -9,6 +9,7 @@ import Control.Lens.Operators
 import Control.Monad (MonadPlus(..), guard, join, void)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (runState, mapStateT)
+import Control.Monad.Trans.Writer (execWriter)
 import Control.MonadA (MonadA)
 import Data.Hashable (Hashable, hashWithSalt)
 import Data.Maybe (fromMaybe, listToMaybe)
@@ -26,6 +27,7 @@ import Lamdu.CodeEdit.Sugar.Types.Internal
 import Lamdu.Data.Expression.IRef (DefI)
 import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), iwcInferred, iwcInferredValues)
 import qualified Control.Lens as Lens
+import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Cache as Cache
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
@@ -119,7 +121,7 @@ accept sugarContext point expr iref = do
     (exprInferred, _) =
       unjust "The inferred value of a hole must type-check!" $
       SugarInfer.inferMaybe_ loaded inferState point
-  pickResult iref $
+  fmap fst . pickResult iref $
     flip (,) Nothing <$> cleanUpInferredVal exprInferred
   where
     inferState = sugarContext ^. SugarM.scHoleInferState
@@ -344,6 +346,26 @@ seedExprEnv emptyPl cp (ResultSeedNewDefinition name) = do
     , Just jumpToDef
     )
 
+-- TODO: Does this Applicative Transformer already exist?
+-- If not, think of a proper name for it.
+data Blah f a = Blah { runBlah :: f () }
+  deriving Functor
+instance Applicative f => Applicative (Blah f) where
+  Blah x <*> Blah y = Blah $ x <* y
+  pure = const . Blah $ pure ()
+
+idTranslations ::
+  Eq def =>
+  Expr.Expression def Guid ->
+  Expr.Expression def (ExprIRef.ExpressionI t) ->
+  [(Guid, Guid)]
+idTranslations seedExpr writtenExpr =
+  execWriter . runBlah $
+  ExprUtil.matchExpression match ((const . const . Blah . return) ())
+  seedExpr writtenExpr
+  where
+    match src dstI = Blah $ Writer.tell [(src, ExprIRef.exprGuid dstI)]
+
 makeHoleResult ::
   (Typeable1 m, MonadA m, Cache.Key a, Monoid a) =>
   SugarM.Context m ->
@@ -374,13 +396,14 @@ makeHoleResult sugarContext (SugarInfer.Payload guid iwc stored ()) seed =
           sugarContext
           & SugarM.scHoleInferState .~ fakeCtx
           & SugarM.scHoleInferStateKey %~ \key -> Cache.bsOfKey (fakeSeedExpr, key)
-      fakeConverted <-
-        convertHoleResult newContext gen fakeInferredResult
+        expr = prepareExprToSugar gen fakeInferredResult
+        mkTranslations = idTranslations ((^. SugarInfer.plGuid) <$> expr)
+      fakeConverted <- convertHoleResult newContext expr
       pure HoleResult
         { _holeResultInferred = fst <$> fakeInferredResult
         , _holeResultConverted = fakeConverted
-        , _holeResultPick = pick
-        , _holeResultPickPrefix = void pick
+        , _holeResultPick = pick mkTranslations
+        , _holeResultPickPrefix = void $ pick mkTranslations
         , _holeResultPickWrapped = do
             (seedExpr, _mJumpTo) <- mkSeedExprEnv
             written <-
@@ -389,12 +412,11 @@ makeHoleResult sugarContext (SugarInfer.Payload guid iwc stored ()) seed =
             pure
               PickedResult
               { _prMJumpTo = Just . ExprIRef.exprGuid $ written ^. Expr.ePayload . Lens._1
-              , _prIdTranslation = []
+              , _prIdTranslation = mkTranslations $ fst <$> written
               }
         }
-    pick = do
-      (_seedExpr, mFinalExprCtx, mJumpTo) <-
-        Cache.unmemoS makeInferredExpr
+    pick mkTranslations = do
+      (_seedExpr, mFinalExprCtx, mJumpTo) <- Cache.unmemoS makeInferredExpr
       let
         (finalExpr, _ctx) =
           -- TODO: Makes no sense here anymore, move deeper inside
@@ -403,12 +425,12 @@ makeHoleResult sugarContext (SugarInfer.Payload guid iwc stored ()) seed =
           ("Arbitrary fake tag successfully inferred as hole result, " ++
            "but real new tag failed!")
           mFinalExprCtx
-      mPickGuid <- pickResult iref $ (Lens._2 %~ fst) <$> finalExpr
+      (mPickGuid, written) <- pickResult iref $ (Lens._2 %~ fst) <$> finalExpr
       mJumpGuid <- sequenceA mJumpTo
       pure
         PickedResult
         { _prMJumpTo = mJumpGuid `mplus` mPickGuid
-        , _prIdTranslation = []
+        , _prIdTranslation = mkTranslations written
         }
 
 holeWrap :: Expr.Expression def (Maybe a) -> Expr.Expression def (Maybe a)
@@ -421,10 +443,16 @@ holeWrap expr
     hole = Expr.Expression (ExprLens.bodyHole # ()) Nothing
 
 convertHoleResult ::
-  (MonadA m, Typeable1 m, Monoid a) => SugarM.Context m -> Random.StdGen ->
-  ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), MStorePoint m a) -> CT m (ExpressionU m a)
-convertHoleResult sugarContext gen =
-  SugarM.run sugarContext . SugarM.convertSubexpression .
+  (MonadA m, Monoid a) =>
+  SugarM.Context m -> SugarInfer.ExprMM m a -> CT m (ExpressionU m a)
+convertHoleResult sugarContext =
+  SugarM.run sugarContext . SugarM.convertSubexpression
+
+prepareExprToSugar ::
+  Random.StdGen ->
+  Expr.Expression def (Infer.Inferred def, (Maybe (StorePoint t), a)) ->
+  Expr.Expression def (SugarInfer.Payload (Maybe (InferredWithConflicts def)) (Maybe stored) a)
+prepareExprToSugar gen =
   ExprUtil.randomizeExpr gen . fmap f
   where
     f (inferred, (mStorePoint, x)) guid = SugarInfer.Payload
@@ -459,13 +487,14 @@ pickResult ::
   MonadA m =>
   ExprIRef.ExpressionIM m ->
   ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), Maybe (StorePoint (Tag m))) ->
-  T m (Maybe Guid)
-pickResult exprIRef =
-  fmap
-  ( fmap (ExprIRef.exprGuid . (^. Expr.ePayload . Lens._1))
-  . listToMaybe . orderedInnerHoles
-  ) .
-  writeExprMStored exprIRef . fmap swap
+  T m (Maybe Guid, ExprIRef.ExpressionM m (ExprIRef.ExpressionIM m))
+pickResult exprIRef expr = do
+  writtenExpr <- writeExprMStored exprIRef $ swap <$> expr
+  pure
+    ( (ExprIRef.exprGuid . (^. Expr.ePayload . Lens._1)) <$>
+      listToMaybe (orderedInnerHoles writtenExpr)
+    , fst <$> writtenExpr
+    )
 
 randomizeNonStoredParamIds ::
   Random.StdGen -> ExprStorePoint m a -> ExprStorePoint m a

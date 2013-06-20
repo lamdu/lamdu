@@ -26,6 +26,7 @@ import Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Results (MakeWidgets(..), ResultsL
 import Lamdu.Config (Config)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
+import qualified Data.Map as Map
 import qualified Data.Store.Property as Property
 import qualified Data.Store.Transaction as Transaction
 import qualified Graphics.DrawingCombinators as Draw
@@ -62,8 +63,15 @@ pick holeInfo pr = do
     { Widget._eCursor =
         Just . WidgetIds.fromGuid $
         fromMaybe (hiGuid holeInfo) (pr ^. Sugar.prMJumpTo)
-    , Widget._eAnimIdMapping = id
+    , Widget._eAnimIdMapping = mapping
     }
+  where
+    mapping [] = []
+    mapping (x:xs) = fromMaybe x (Map.lookup x idMap) : xs
+    idMap =
+      pr ^. Sugar.prIdTranslation
+      & Lens.traversed . Lens.both %~ head . Widget.toAnimId . WidgetIds.fromGuid
+      & Map.fromList
 
 pickAndSetNextHoleState ::
   MonadA m =>
