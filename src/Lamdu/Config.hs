@@ -45,8 +45,6 @@ data Config = Config
   , delForwardKeys :: [E.ModKey]
   , delBackwardKeys :: [E.ModKey]
   , wrapKeys :: [E.ModKey]
-  , callWithArgumentKeys :: [E.ModKey]
-  , callWithNextArgumentKeys :: [E.ModKey]
   , debugModeKeys :: [E.ModKey]
 
   , newDefinitionKeys :: [E.ModKey]
