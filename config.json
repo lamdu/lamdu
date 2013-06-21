@@ -296,6 +296,7 @@
         "_second": 0.75,
         "_first": 0.75
     },
+    "holeResultInjectedScaleExponent": 0.65,
     "whereLabelScaleFactor": {
         "_second": 0.85,
         "_first": 0.85

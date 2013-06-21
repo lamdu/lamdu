@@ -59,9 +59,12 @@ shrinkIfHigherThanLine w = do
   fontSize <-
     (^. TextEdit.sTextViewStyle . TextView.styleFontSize) <$>
     ExprGuiM.widgetEnv WE.readTextStyle
+  config <- ExprGuiM.widgetEnv WE.readConfig
   let
     textHeight = fromIntegral fontSize * DrawUtils.textHeight
-    ratio = textHeight / w ^. ExpressionGui.egWidget . Widget.wSize . Lens._2
+    ratio =
+      (textHeight / w ^. ExpressionGui.egWidget . Widget.wSize . Lens._2)
+      ** realToFrac (Config.holeResultInjectedScaleExponent config)
   return $
     if ratio < 1
     then ExpressionGui.scaleFromTop (realToFrac ratio) w
