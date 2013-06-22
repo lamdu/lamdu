@@ -115,6 +115,12 @@ createBuiltins =
     publicDef_ "filter" Verbose ["Data", "List"] "filter" $ filterType "predicate"
     publicDef_ "take" Verbose ["Data", "List"] "takeWhile" $ filterType "while"
 
+    publicDef_ "take" Verbose ["Data", "List"] "take" . forAll "a" $ \a ->
+      mkPiRecord
+      [ ("from", listOf a)
+      , ("count", integer)
+      ] $ listOf a
+
     publicBuiltin_ "Data.List.map" .
       forAll "a" $ \a ->
       forAll "b" $ \b ->
