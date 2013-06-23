@@ -33,7 +33,7 @@ instance Show ExprRef where
 data TypedValue = TypedValue
   { tvVal :: {-# UNPACK #-}! ExprRef
   , tvType :: {-# UNPACK #-}! ExprRef
-  }
+  } deriving (Eq, Ord)
 instance Show TypedValue where
   show (TypedValue v t) = unwords [show v, ":", show t]
 
@@ -59,7 +59,7 @@ type Scope def = Map (Expr.VariableRef def) ExprRef
 data InferNode def = InferNode
   { nRefs :: {-# UNPACK #-}!TypedValue
   , nScope :: Scope def
-  } deriving (Typeable)
+  } deriving (Typeable, Eq, Ord)
 
 -- "derive makeBinary ''InferNode" fails because of the Ord constraint
 instance (Ord def, Binary def) => Binary (InferNode def) where

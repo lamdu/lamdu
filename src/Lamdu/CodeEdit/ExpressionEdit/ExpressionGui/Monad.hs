@@ -72,7 +72,7 @@ derive makeMonoid ''Output
 data Payload = Payload
   { plGuids :: [Guid]
   , plInjected :: [Bool]
-  } deriving (Typeable)
+  } deriving (Typeable, Eq, Ord)
 derive makeMonoid ''Payload
 derive makeBinary ''Payload
 

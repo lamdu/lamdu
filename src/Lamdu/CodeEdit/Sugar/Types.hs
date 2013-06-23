@@ -205,7 +205,7 @@ data HoleActions name m = HoleActions
   , _holeInferredType :: ExprIRef.ExpressionM m ()
   , holeResult ::
       forall a.
-      (Binary a, Typeable a, Monoid a) =>
+      (Binary a, Typeable a, Ord a, Monoid a) =>
       HoleResultSeed m (Maybe (TypesInternal.StorePoint (Tag m)), a) ->
       CT m (Maybe (HoleResult name m a))
   , _holePaste :: Maybe (T m Guid)

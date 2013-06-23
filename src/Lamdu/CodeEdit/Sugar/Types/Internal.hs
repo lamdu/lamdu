@@ -14,4 +14,4 @@ type T = Transaction
 type CT m = StateT Cache (T m)
 
 newtype StorePoint t = StorePoint { unStorePoint :: ExprIRef.ExpressionI t }
-  deriving (Eq, Binary, Typeable)
+  deriving (Eq, Ord, Binary, Typeable)

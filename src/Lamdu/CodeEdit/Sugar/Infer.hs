@@ -139,7 +139,7 @@ pureMemoBy k val = Cache.memoS (const (return val)) k
 -- wasteful. Therefore, the caller is in charge of giving us a unique
 -- identifier for the inferState that is preferably small.
 memoLoadInfer ::
-  (MonadA m, Typeable1 m, Cache.Key a) => Maybe (DefI (Tag m)) ->
+  (MonadA m, Typeable1 m, Cache.Key a, Binary a) => Maybe (DefI (Tag m)) ->
   ExprIRef.ExpressionM m a -> Cache.KeyBS ->
   ( Infer.Context (DefI (Tag m))
   , Infer.InferNode (DefI (Tag m))

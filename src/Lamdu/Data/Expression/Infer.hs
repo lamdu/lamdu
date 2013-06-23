@@ -62,6 +62,7 @@ import qualified Lamdu.Data.Expression.Lens as ExprLens
 import qualified Lamdu.Data.Expression.Utils as ExprUtil
 
 newtype RuleRef = RuleRef { unRuleRef :: Int }
+  deriving (Eq, Ord)
 
 instance Show RuleRef where
   show = ('E' :) . show . unRuleRef
@@ -81,14 +82,14 @@ instance Show RuleRef where
 data RefData def = RefData
   { _rExpression :: RefExpression def
   , _rRules :: [RuleRef] -- Rule id
-  }
+  } deriving (Eq, Ord)
 
 --------------
 --- RefMap:
 data RefMap a = RefMap
   { _refs :: IntMap a
   , _nextRef :: Int
-  }
+  } deriving (Eq, Ord)
 Lens.makeLenses ''RefData
 Lens.makeLenses ''RefMap
 
@@ -151,7 +152,7 @@ newtype InferActions def m = InferActions
 data Context def = Context
   { _exprMap :: RefMap (RefData def)
   , _ruleMap :: RefMap (Rule def ExprRef)
-  } deriving (Typeable)
+  } deriving (Typeable, Eq, Ord)
 
 data InferState def m = InferState
   { _sContext :: Context def
@@ -476,7 +477,7 @@ ordNub = Set.toList . Set.fromList
 data Loaded def a = Loaded
   { _lExpr :: Expr.Expression def a
   , _lDefTypes :: Map def (Expr.Expression def ())
-  } deriving (Typeable, Functor)
+  } deriving (Typeable, Functor, Eq, Ord)
 -- Requires Ord instance for def, cannot derive
 instance (Binary a, Binary def, Ord def) => Binary (Loaded def a) where
   get = Loaded <$> get <*> get

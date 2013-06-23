@@ -11,6 +11,7 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (runState, mapStateT)
 import Control.Monad.Trans.Writer (execWriter)
 import Control.MonadA (MonadA)
+import Data.Binary (Binary)
 import Data.Hashable (Hashable, hashWithSalt)
 import Data.Maybe (fromMaybe, listToMaybe)
 import Data.Monoid (Monoid(..))
@@ -367,7 +368,7 @@ idTranslations seedExpr writtenExpr =
     match src dstI = Blah $ Writer.tell [(src, ExprIRef.exprGuid dstI)]
 
 makeHoleResult ::
-  (Typeable1 m, MonadA m, Cache.Key a, Monoid a) =>
+  (Typeable1 m, MonadA m, Cache.Key a, Binary a, Monoid a) =>
   SugarM.Context m ->
   SugarInfer.Payload (InferredWC (Tag m)) (Stored m) () ->
   HoleResultSeed m (MStorePoint m a) ->
