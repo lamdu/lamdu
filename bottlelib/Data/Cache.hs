@@ -1,4 +1,4 @@
-{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE ConstraintKinds, RankNTypes #-}
 module Data.Cache
   ( Cache, Key
   , new, peek, touch, lookup, memo, memoS, unmemoS
@@ -40,12 +40,12 @@ bsOfKey key = SHA1.hash $ encodeS (show (typeOf key), key)
 castUnmaybe :: (Typeable a, Typeable b) => String -> a -> b
 castUnmaybe suffix x = unsafeUnjust ("cast shouldn't fail, we use typeOf maps (" ++ suffix ++ ")") $ cast x
 
-cacheValMap :: Typeable key => key -> Cache -> Maybe ValMap
-cacheValMap key cache = cache ^? cEntries . Lens.ix (typeOf key)
+cacheValMap :: Typeable k => k -> Lens.Traversal' Cache ValMap
+cacheValMap key = cEntries . Lens.ix (typeOf key)
 
 lookupKey :: Typeable k => k -> Cache -> Maybe ValEntry
 lookupKey key cache =
-  findKey =<< cacheValMap key cache
+  findKey =<< cache ^? cacheValMap key
   where
     findKey (ValMap m) = Map.lookup (castUnmaybe "1" key) m
 
@@ -78,7 +78,7 @@ touchExisting key cache (prevPriority, bsVal) =
 
 lookupHelper :: Key k => r -> (Cache -> ValBS -> r) -> k -> Cache -> r
 lookupHelper onMiss onHit key cache =
-  fromMaybe onMiss $ findKey =<< cacheValMap key cache
+  fromMaybe onMiss $ findKey =<< cache ^? cacheValMap key
   where
     findKey (ValMap m) =
       case Map.lookup (castUnmaybe "1" key) m of
