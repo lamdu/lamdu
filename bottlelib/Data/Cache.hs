@@ -15,6 +15,7 @@ import Data.Binary (Binary)
 import Data.Binary.Utils (decodeS, encodeS)
 import Data.Cache.Types
 import Data.Map (Map)
+import Data.Maybe (fromMaybe)
 import Data.Maybe.Utils (unsafeUnjust)
 import Data.Typeable (Typeable, TypeRep, typeOf, cast)
 import Prelude hiding (lookup)
@@ -39,9 +40,12 @@ bsOfKey key = SHA1.hash $ encodeS (show (typeOf key), key)
 castUnmaybe :: (Typeable a, Typeable b) => String -> a -> b
 castUnmaybe suffix x = unsafeUnjust ("cast shouldn't fail, we use typeOf maps (" ++ suffix ++ ")") $ cast x
 
+cacheValMap :: Typeable key => key -> Cache -> Maybe ValMap
+cacheValMap key cache = cache ^? cEntries . Lens.ix (typeOf key)
+
 lookupKey :: Typeable k => k -> Cache -> Maybe ValEntry
 lookupKey key cache =
-  findKey =<< cache ^? cEntries . Lens.ix (typeOf key)
+  findKey =<< cacheValMap key cache
   where
     findKey (ValMap m) = Map.lookup (castUnmaybe "1" key) m
 
@@ -72,22 +76,24 @@ touchExisting key cache (prevPriority, bsVal) =
     newPriority =
       prevPriority { pRecentUse = cache ^. cCounter }
 
-lookupHelper :: Key k => r -> (ValEntry -> r) -> k -> Cache -> r
+lookupHelper :: Key k => r -> (Cache -> ValBS -> r) -> k -> Cache -> r
 lookupHelper onMiss onHit key cache =
-  maybe onMiss onHit $ lookupKey key cache
+  fromMaybe onMiss $ findKey =<< cacheValMap key cache
+  where
+    findKey (ValMap m) =
+      case Map.lookup (castUnmaybe "1" key) m of
+      Nothing -> Nothing
+      Just valEntry@(_, val) -> Just $ onHit (touchExisting key cache valEntry) val
 
 touch :: Key k => k -> Cache -> Cache
 touch key cache =
-  lookupHelper cache (touchExisting key cache) key cache
+  lookupHelper cache (\newCache _val -> newCache) key cache
 
 lookup :: (Key k, Binary v) => k -> Cache -> (Maybe v, Cache)
 lookup key cache =
   lookupHelper (Nothing, cache) onHit key cache
   where
-    onHit entry@(_, bsVal) =
-      ( Just $ decodeS bsVal
-      , touchExisting key cache entry
-      )
+    onHit newCache bsVal = (Just (decodeS bsVal), newCache)
 
 lookupS :: MonadA m => (Key k, Binary v) => k -> StateT Cache m (Maybe v)
 lookupS = state . lookup
@@ -139,8 +145,7 @@ memo f key cache =
     onMiss = do
       val <- f key
       return (val, insertHelper key val cache)
-    onHit entry@(_, bsVal) =
-      return (decodeS bsVal, touchExisting key cache entry)
+    onHit newCache bsVal = return (decodeS bsVal, newCache)
 
 memoS :: (Key k, Binary v, MonadA m) => (k -> m v) -> k -> StateT Cache m v
 memoS f key = StateT $ memo f key
