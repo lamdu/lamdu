@@ -176,7 +176,7 @@ makeHoleResultWidget holeInfo resultId holeResult = do
     Widget.strongerEvents (resultPickEventMap config holeInfo holeResult) .
     (Widget.wFrame %~ Anim.mapIdentities (`mappend` Widget.toAnimId resultId)) .
     (^. ExpressionGui.egWidget) =<<
-    (ExprGuiM.makeSubexpresion 0 . Sugar.removeHoleResultTypes)
+    (ExprGuiM.makeSubexpression 0 . Sugar.removeHoleResultTypes)
     (holeResult ^. Sugar.holeResultConverted)
 
 asNewLabelScaleFactor :: Fractional a => a
@@ -211,7 +211,7 @@ makeNoResults holeInfo myId =
   Just arg ->
     Box.hboxCentered <$> sequenceA
     [ label "(No results: "
-    , ExprGuiM.makeSubexpresion 0 arg
+    , ExprGuiM.makeSubexpression 0 arg
       <&> Widget.doesntTakeFocus . (^. ExpressionGui.egWidget)
     , label ")"
     ]
@@ -531,7 +531,7 @@ makeInactive mHoleNumber hole myId = do
   holeGui <-
     case hole ^? Sugar.holeMArg . Lens._Just . Sugar.haExpr of
     Just arg ->
-      ExprGuiM.makeSubexpresion 0 arg
+      ExprGuiM.makeSubexpression 0 arg
       -- Override "Leave Expression" of sub expression
       -- so that we don't get the inner expression wrapped again.
       -- TODO: Instead replace just the navigation to whole arg.

@@ -66,6 +66,6 @@ makeUnwrapped (ParentPrecedence parentPrecedence) inferred guid myId = do
       . BWidgets.makeFocusableView myId
       . Widget.tint (Config.inferredValueTint config)
       . Widget.scale (realToFrac <$> Config.inferredValueScaleFactor config)
-      ) =<< ExprGuiM.makeSubexpresion parentPrecedence (inferred ^. Sugar.iValue)
+      ) =<< ExprGuiM.makeSubexpression parentPrecedence (inferred ^. Sugar.iValue)
     Just _ ->
       HoleEdit.makeUnwrapped Nothing (inferred ^. Sugar.iHole) Nothing guid myId

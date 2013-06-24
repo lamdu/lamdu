@@ -38,7 +38,7 @@ make (ParentPrecedence parentPrecedence) collapsed myId = do
       ExpressionGui.withBgColor Layers.collapsedExpandedBG
       (Config.collapsedExpandedBGColor config) (bgId wId) <$>
       ExprGuiM.inCollapsedExpression
-      (ExprGuiM.makeSubexpresion parentPrecedence fullExpression)
+      (ExprGuiM.makeSubexpression parentPrecedence fullExpression)
     f wId =
       Collapser
       { cMakeExpanded = makeExpanded wId

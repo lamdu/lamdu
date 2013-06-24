@@ -50,18 +50,18 @@ make (ParentPrecedence parentPrecedence) exprS (Sugar.Apply func specialArgs ann
   case specialArgs of
     Sugar.NoSpecialArgs ->
       mk Nothing $
-      overrideHoleWrap <$> ExprGuiM.makeSubexpresion (if isBoxed then 0 else parentPrecedence) func
+      overrideHoleWrap <$> ExprGuiM.makeSubexpression (if isBoxed then 0 else parentPrecedence) func
     Sugar.ObjectArg arg ->
       mk (Just prefixPrecedence) $ ExpressionGui.hboxSpaced <$> sequenceA
-      [ maybeOverrideHoleWrap <$> ExprGuiM.makeSubexpresion (prefixPrecedence+1) func
-      , ExprGuiM.makeSubexpresion prefixPrecedence arg
+      [ maybeOverrideHoleWrap <$> ExprGuiM.makeSubexpression (prefixPrecedence+1) func
+      , ExprGuiM.makeSubexpression prefixPrecedence arg
       ]
     Sugar.InfixArgs l r ->
       mk (Just infixPrecedence) $ ExpressionGui.hboxSpaced <$> sequenceA
-      [ ExprGuiM.makeSubexpresion (infixPrecedence+1) l
+      [ ExprGuiM.makeSubexpression (infixPrecedence+1) l
       , -- TODO: What precedence to give when it must be atomic?:
-        overrideHoleWrap <$> ExprGuiM.makeSubexpresion 20 func
-      , ExprGuiM.makeSubexpresion (infixPrecedence+1) r
+        overrideHoleWrap <$> ExprGuiM.makeSubexpression 20 func
+      , ExprGuiM.makeSubexpression (infixPrecedence+1) r
       ]
   where
     isBoxed = not $ null annotatedArgs
@@ -87,7 +87,7 @@ makeArgRow ::
   ExprGuiM m [(Grid.Alignment, ExprGuiM.WidgetT m)]
 makeArgRow myId (tagG, namedArgExpr) = do
   argTagEdit <- makeTagView myId tagG
-  argValEdit <- ExprGuiM.makeSubexpresion 0 namedArgExpr
+  argValEdit <- ExprGuiM.makeSubexpression 0 namedArgExpr
   config <- ExprGuiM.widgetEnv WE.readConfig
   let
     scaleTag =

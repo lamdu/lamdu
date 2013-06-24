@@ -19,8 +19,8 @@ make ::
 make (Sugar.GetField recExpr tagExpr) =
   ExpressionGui.wrapExpression $ \myId ->
   ExprGuiM.assignCursor myId destId $ do
-    recExprEdit <- ExprGuiM.makeSubexpresion 11 recExpr
-    tagEdit <- ExprGuiM.makeSubexpresion 12 tagExpr
+    recExprEdit <- ExprGuiM.makeSubexpression 11 recExpr
+    tagEdit <- ExprGuiM.makeSubexpression 12 tagExpr
     dotLabel <-
       ExpressionGui.fromValueWidget <$>
       (ExprGuiM.widgetEnv . BWidgets.makeLabel "." . Widget.toAnimId) myId

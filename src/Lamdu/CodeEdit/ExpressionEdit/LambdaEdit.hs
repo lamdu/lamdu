@@ -50,7 +50,7 @@ makeParamEdit ::
   ExprGuiM m (ExpressionGui m)
 makeParamEdit prevId param =
   assignCursor $ do
-    paramTypeEdit <- ExprGuiM.makeSubexpresion 0 $ param ^. Sugar.fpType
+    paramTypeEdit <- ExprGuiM.makeSubexpression 0 $ param ^. Sugar.fpType
     paramNameEdit <- makeParamNameEdit name (param ^. Sugar.fpGuid) myId
     config <- ExprGuiM.widgetEnv WE.readConfig
     let
@@ -102,7 +102,7 @@ make parentPrecedence (Sugar.Lam _ param _ body) =
       ExpressionGui.makeColoredLabel
       (Config.rightArrowTextSize config)
       (Config.rightArrowColor config) ". " myId
-    bodyEdit <- ExprGuiM.makeSubexpresion 0 body
+    bodyEdit <- ExprGuiM.makeSubexpression 0 body
     return $ ExpressionGui.hbox
       [ ExpressionGui.fromValueWidget lambdaLabel
       , paramEdit

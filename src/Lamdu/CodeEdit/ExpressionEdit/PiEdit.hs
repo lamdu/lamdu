@@ -28,7 +28,7 @@ make parentPrecedence (Sugar.Lam _ param _isDep resultType) =
   ExprGuiM.assignCursor myId typeId $ do
     (resultTypeEdit, usedVars) <-
       ExprGuiM.listenUsedVariables $
-      ExprGuiM.makeSubexpresion 0 resultType
+      ExprGuiM.makeSubexpression 0 resultType
     let
       paramUsed = paramGuid `elem` usedVars
       redirectCursor cursor
@@ -38,7 +38,7 @@ make parentPrecedence (Sugar.Lam _ param _isDep resultType) =
           Nothing -> cursor
           Just _ -> typeId
     ExprGuiM.localEnv (WE.envCursor %~ redirectCursor) $ do
-      paramTypeEdit <- ExprGuiM.makeSubexpresion 1 $ param ^. Sugar.fpType
+      paramTypeEdit <- ExprGuiM.makeSubexpression 1 $ param ^. Sugar.fpType
       paramEdit <-
         if paramUsed
         then do

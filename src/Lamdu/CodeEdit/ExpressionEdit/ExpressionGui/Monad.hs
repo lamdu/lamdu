@@ -8,7 +8,7 @@ module Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad
   , getP, assignCursor, assignCursorPrefix
   , wrapDelegated
   --
-  , makeSubexpresion
+  , makeSubexpression
   --
   , readSettings, readCodeAnchors
   , getCodeAnchor, mkPrejumpPosSaver
@@ -126,9 +126,9 @@ mkPrejumpPosSaver =
   DataOps.savePreJumpPosition <$> readCodeAnchors <*> widgetEnv WE.readCursor
 
 -- TODO: makeSubexpresSion
-makeSubexpresion ::
+makeSubexpression ::
   MonadA m => Precedence -> SugarExpr m -> ExprGuiM m (ExpressionGui m)
-makeSubexpresion parentPrecedence expr = do
+makeSubexpression parentPrecedence expr = do
   maker <- ExprGuiM $ Lens.view aMakeSubexpression
   maker (ParentPrecedence parentPrecedence) expr
 
@@ -164,12 +164,12 @@ run ::
   (ParentPrecedence -> SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
   Anchors.CodeProps m -> Settings -> ExprGuiM m a ->
   StateT Cache (WidgetEnvT (T m)) (Widget.EventHandlers (T m), a)
-run makeSubexpression codeAnchors settings (ExprGuiM action) =
+run makeSubexpr codeAnchors settings (ExprGuiM action) =
   StateT $ \cache ->
   fmap f $ runRWST action
   Askable
   { _aSettings = settings
-  , _aMakeSubexpression = makeSubexpression
+  , _aMakeSubexpression = makeSubexpr
   , _aCodeAnchors = codeAnchors
   , _aInCollapsedExpression = False
   }
@@ -182,8 +182,8 @@ runWidget ::
   (ParentPrecedence -> SugarExpr m -> ExprGuiM m (ExpressionGui m)) ->
   Anchors.CodeProps m -> Settings -> ExprGuiM m (Widget (T m)) ->
   StateT Cache (WidgetEnvT (T m)) (Widget (T m))
-runWidget makeSubexpression codeAnchors settings action =
-  uncurry Widget.weakerEvents <$> run makeSubexpression codeAnchors settings action
+runWidget makeSubexpr codeAnchors settings action =
+  uncurry Widget.weakerEvents <$> run makeSubexpr codeAnchors settings action
 
 widgetEnv :: MonadA m => WidgetEnvT (T m) a -> ExprGuiM m a
 widgetEnv = ExprGuiM . lift

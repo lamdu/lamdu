@@ -42,8 +42,8 @@ makeUnwrapped (Sugar.Record k (Sugar.FieldList fields mAddField)) myId =
         ((fieldRefGui, fieldExprGui), resultPickers) <-
           ExprGuiM.listenResultPickers $
           (,)
-          <$> ExprGuiM.makeSubexpresion 0 tagExpr
-          <*> ExprGuiM.makeSubexpresion 0 fieldExpr
+          <$> ExprGuiM.makeSubexpression 0 tagExpr
+          <*> ExprGuiM.makeSubexpression 0 fieldExpr
         let
           itemEventMap = maybe mempty (recordItemEventMap config resultPickers) mItemActions
           space = ExpressionGui.fromValueWidget BWidgets.stdSpaceWidget

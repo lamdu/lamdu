@@ -227,7 +227,7 @@ makeBuiltinDefinition def builtin = do
   config <- ExprGuiM.widgetEnv WE.readConfig
   Box.vboxAlign 0 <$> sequenceA
     [ defTypeScale config . (^. ExpressionGui.egWidget) <$>
-      ExprGuiM.makeSubexpresion 0 (Sugar.biType builtin)
+      ExprGuiM.makeSubexpression 0 (Sugar.biType builtin)
     , BWidgets.hboxCenteredSpaced <$> sequenceA
       [ ExprGuiM.withFgColor (Config.builtinOriginNameColor config) $
         makeNameEdit name (Widget.joinId myId ["name"]) guid
@@ -288,7 +288,7 @@ makeExprDefinition def bodyExpr = do
       label <-
         onLabel . labelStyle . ExprGuiM.widgetEnv .
         BWidgets.makeLabel labelText $ Widget.toAnimId myId
-      typeGui <- ExprGuiM.makeSubexpresion 0 typeExpr
+      typeGui <- ExprGuiM.makeSubexpression 0 typeExpr
       return
         [ (right, label)
         , (center, Widget.doesntTakeFocus (typeGui ^. ExpressionGui.egWidget))
@@ -351,7 +351,7 @@ makeResultEdit lhs result = do
       Widget.keysEventMapMovesCursor
       (Config.jumpRHStoLHSKeys config) (E.Doc ["Navigation", "Jump to last param"]) $
       lastParam <$ savePos
-  ExprGuiM.makeSubexpresion 0 result
+  ExprGuiM.makeSubexpression 0 result
     & Lens.mapped . ExpressionGui.egWidget %~
       Widget.weakerEvents jumpToLhsEventMap
   where
