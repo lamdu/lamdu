@@ -170,7 +170,7 @@ showRestricted = fmap restrictedStr
     restrictedStr Infer.RestrictedPoly = UnescapedStr $ ansiAround ansiYellow "R"
 
 canonizeDebug :: Expression def a -> Expression def a
-canonizeDebug = ExprUtil.randomizeParamIdsG ExprUtil.debugNameGen Map.empty (\_ _ -> id)
+canonizeDebug = ExprUtil.randomizeParamIdsG id ExprUtil.debugNameGen Map.empty (\_ _ -> id)
 
 showInferred :: ExprIRef.Expression t Infer.IsRestrictedPoly -> String
 showInferred =

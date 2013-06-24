@@ -499,7 +499,7 @@ pickResult exprIRef expr = do
 randomizeNonStoredParamIds ::
   Random.StdGen -> ExprStorePoint m a -> ExprStorePoint m a
 randomizeNonStoredParamIds gen =
-  ExprUtil.randomizeParamIdsG nameGen Map.empty $ \_ _ pl -> pl
+  ExprUtil.randomizeParamIdsG id nameGen Map.empty $ \_ _ pl -> pl
   where
     nameGen = ExprUtil.onNgMakeName f $ ExprUtil.randomNameGen gen
     f n prevFunc prevGuid pl@(mStorePoint, _)

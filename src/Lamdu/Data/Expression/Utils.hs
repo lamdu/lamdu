@@ -212,13 +212,14 @@ debugNameGen = ng names ""
       }
 
 randomizeParamIds :: RandomGen g => g -> Expression def a -> Expression def a
-randomizeParamIds gen = randomizeParamIdsG (randomNameGen gen) Map.empty $ \_ _ a -> a
+randomizeParamIds gen = randomizeParamIdsG id (randomNameGen gen) Map.empty $ \_ _ a -> a
 
 randomizeParamIdsG ::
-  NameGen a -> Map Guid Guid ->
-  (NameGen a -> Map Guid Guid -> a -> b) ->
+  (a -> n) ->
+  NameGen n -> Map Guid Guid ->
+  (NameGen n -> Map Guid Guid -> a -> b) ->
   Expression def a -> Expression def b
-randomizeParamIdsG gen initMap convertPL =
+randomizeParamIdsG preNG gen initMap convertPL =
   (`evalState` gen) . (`runReaderT` initMap) . go
   where
     go (Expression v s) = do
@@ -238,7 +239,7 @@ randomizeParamIdsG gen initMap convertPL =
         x@BodyGetField {} -> traverse go x
         x@BodyRecord {}   -> traverse go x
     makeName oldParamId s nameGen =
-      ngMakeName nameGen oldParamId s
+      ngMakeName nameGen oldParamId $ preNG s
 
 -- Left-biased on parameter guids
 {-# INLINE matchBody #-}

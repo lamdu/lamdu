@@ -30,11 +30,11 @@ import qualified Test.HUnit as HUnit
 
 canonizeInferred :: InferResults t -> InferResults t
 canonizeInferred =
-  ExprUtil.randomizeParamIdsG ExprUtil.debugNameGen Map.empty canonizePayload
+  ExprUtil.randomizeParamIdsG (const ()) ExprUtil.debugNameGen Map.empty canonizePayload
   where
     canonizePayload gen guidMap (ival, ityp) =
-      ( ExprUtil.randomizeParamIdsG gen1 guidMap (\_ _ x -> x) ival
-      , ExprUtil.randomizeParamIdsG gen2 guidMap (\_ _ x -> x) ityp
+      ( ExprUtil.randomizeParamIdsG (const ()) gen1 guidMap (\_ _ x -> x) ival
+      , ExprUtil.randomizeParamIdsG (const ()) gen2 guidMap (\_ _ x -> x) ityp
       )
       where
         (gen1, gen2) = ExprUtil.ngSplit gen
