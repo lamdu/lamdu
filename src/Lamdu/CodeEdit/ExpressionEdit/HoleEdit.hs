@@ -174,7 +174,13 @@ makeHoleResultWidget holeInfo resultId holeResult = do
     -- to the whole hole
     Widget.scale (realToFrac <$> Config.holeResultScaleFactor config) .
     Widget.strongerEvents (resultPickEventMap config holeInfo holeResult) .
-    (Widget.wFrame %~ Anim.mapIdentities (`mappend` Widget.toAnimId resultId)) .
+    (Widget.wFrame %~
+      Anim.mapIdentities (`mappend` Widget.toAnimId resultId) .
+      -- labeled applies inside hole results should have their
+      -- background visible, even though hole's background covers
+      -- labeled applies background outside of it.
+      Anim.onDepth (+ (Layers.activeHoleBG - Layers.maxLayer))
+    ) .
     (^. ExpressionGui.egWidget) =<<
     (ExprGuiM.makeSubexpression 0 . Sugar.removeHoleResultTypes)
     (holeResult ^. Sugar.holeResultConverted)

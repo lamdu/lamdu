@@ -14,3 +14,4 @@ nameCollisionBG = 32
 labeledApplyBG = 33
 parensHighlightBG = 34
 activePane = 40
+maxLayer = 100
