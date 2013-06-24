@@ -126,7 +126,7 @@ inferMaybe loaded inferContext inferPoint =
   loaded inferPoint
 
 pureMemoBy ::
-  (Cache.Key k, Binary v, MonadA m) =>
+  (Cache.Key k, Binary v, Typeable v, MonadA m) =>
   k -> v -> StateT Cache m v
 pureMemoBy k val = Cache.memoS (const (return val)) k
 

@@ -75,7 +75,7 @@ data Inferred def = Inferred
   , iValue :: Expr.Expression def IsRestrictedPoly
   , iType  :: Expr.Expression def IsRestrictedPoly
   , iScope :: Map Guid (Expr.Expression def IsRestrictedPoly)
-  }
+  } deriving (Typeable)
 -- Cannot derive Binary instance because binary instance of Scope
 -- requires (Ord def)
 instance (Ord def, Binary def) => Binary (Inferred def) where

@@ -12,7 +12,7 @@ import Control.Lens.Operators
 import Control.Monad.Trans.State (StateT(..), evalStateT, state, execState)
 import Control.MonadA (MonadA)
 import Data.Binary (Binary)
-import Data.Binary.Utils (decodeS, encodeS)
+import Data.Binary.Utils (encodeS)
 import Data.Cache.Types
 import Data.Map (Map)
 import Data.Maybe (fromMaybe)
@@ -43,59 +43,62 @@ castUnmaybe suffix x = unsafeUnjust ("cast shouldn't fail, we use typeOf maps ("
 cacheValMap :: Typeable k => k -> Lens.Traversal' Cache ValMap
 cacheValMap key = cEntries . Lens.ix (typeOf key)
 
-lookupKey :: Typeable k => k -> Cache -> Maybe ValEntry
+lookupKey :: (Typeable k, Typeable v) => k -> Cache -> Maybe (ValEntry v)
 lookupKey key cache =
   findKey =<< cache ^? cacheValMap key
   where
-    findKey (ValMap m) = Map.lookup (castUnmaybe "1" key) m
+    findKey (ValMap m) =
+      Map.lookup (castUnmaybe "lookupKey:key" key) m
+      <&> (Lens._2 %~ castUnmaybe "lookupKey:val")
 
 -- TODO: Convert to Lens.at so you can poke too
-peek :: (Key k, Binary v) => k -> Cache -> Maybe v
-peek key cache = decodeS . snd <$> lookupKey key cache
+peek :: (Key k, Typeable v) => k -> Cache -> Maybe v
+peek key cache = snd <$> lookupKey key cache
 
 addKey ::
-  Key k => k -> ValEntry ->
+  (Key k, Typeable v) => k -> ValEntry v ->
   Map TypeRep ValMap -> Map TypeRep ValMap
 addKey key entry =
   Map.alter f $ typeOf key
   where
     f Nothing = Just . ValMap $ Map.singleton key entry
     f (Just (ValMap valMap)) =
-      Just . ValMap $ Map.insert (castUnmaybe "2" key) entry valMap
+      Just . ValMap $
+      Map.insert (castUnmaybe "addKey:key" key) (entry & Lens._2 %~ castUnmaybe "addKey:val") valMap
 
-touchExisting :: Key k => k -> Cache -> ValEntry -> Cache
-touchExisting key cache (prevPriority, bsVal) =
-  cache
-  & cEntries %~ addKey key valEntry
-  & cPriorities %~
-    Map.insert newPriority (AnyKey key) .
-    Map.delete prevPriority
-  & cCounter +~ 1
-  where
-    valEntry = (newPriority, bsVal)
-    newPriority =
-      prevPriority { pRecentUse = cache ^. cCounter }
-
-lookupHelper :: Key k => r -> (Cache -> ValBS -> r) -> k -> Cache -> r
+lookupHelper :: Key k => r -> (Cache -> AnyVal -> r) -> k -> Cache -> r
 lookupHelper onMiss onHit key cache =
   fromMaybe onMiss $ findKey =<< cache ^? cacheValMap key
   where
     findKey (ValMap m) =
-      case Map.lookup (castUnmaybe "1" key) m of
+      case Map.lookup ckey m of
       Nothing -> Nothing
-      Just valEntry@(_, val) -> Just $ onHit (touchExisting key cache valEntry) val
+      Just (prevPriority, val) ->
+        Just . onHit newCache $ AnyVal val
+        where
+          newCache =
+            cache
+            & cEntries %~ Map.insert (typeOf key) (ValMap $ Map.insert ckey (newPriority, val) m)
+            & cPriorities %~
+              Map.insert newPriority (AnyKey key) .
+              Map.delete prevPriority
+            & cCounter +~ 1
+          newPriority =
+            prevPriority { pRecentUse = cache ^. cCounter }
+      where
+        ckey = castUnmaybe "lookupHelper:key" key
 
 touch :: Key k => k -> Cache -> Cache
 touch key cache =
   lookupHelper cache (\newCache _val -> newCache) key cache
 
-lookup :: (Key k, Binary v) => k -> Cache -> (Maybe v, Cache)
+lookup :: (Key k, Typeable v) => k -> Cache -> (Maybe v, Cache)
 lookup key cache =
   lookupHelper (Nothing, cache) onHit key cache
   where
-    onHit newCache bsVal = (Just (decodeS bsVal), newCache)
+    onHit newCache (AnyVal val) = (Just (castUnmaybe "lookup:val" val), newCache)
 
-lookupS :: MonadA m => (Key k, Binary v) => k -> StateT Cache m (Maybe v)
+lookupS :: MonadA m => (Key k, Typeable v) => k -> StateT Cache m (Maybe v)
 lookupS = state . lookup
 
 evictLowestScore :: Cache -> Cache
@@ -110,7 +113,7 @@ evictLowestScore =
       where
         deleteKey Nothing = error "Key pointed by cPriorities not found in Cache?!"
         deleteKey (Just (ValMap m)) =
-          case Map.delete (castUnmaybe "3" key) m of
+          case Map.delete (castUnmaybe "lookupHelper:key" key) m of
           res
             | Map.null res -> Nothing
             | otherwise -> Just $ ValMap res
@@ -121,7 +124,7 @@ evict cache
   | otherwise = evict $ evictLowestScore cache
 
 -- Assumes key was not in the cache before.
-insertHelper :: (Key k, Binary v) => k -> v -> Cache -> Cache
+insertHelper :: (Key k, Typeable v, Binary v) => k -> v -> Cache -> Cache
 insertHelper key val cache =
   evict .
   (cSize +~ valLen) .
@@ -130,14 +133,13 @@ insertHelper key val cache =
   (cCounter +~ 1) $
   cache
   where
-    entry = (priority, bsVal)
-    bsVal = encodeS val
-    valLen = SBS.length bsVal
+    entry = (priority, val)
+    valLen = SBS.length $ encodeS val
     priority = PriorityData (cache ^. cCounter) valLen
 
 -- Actually requires only Pointed Functor.
 memo ::
-  (Key k, Binary v, MonadA m) =>
+  (Key k, Binary v, Typeable v, MonadA m) =>
   (k -> m v) -> k -> Cache -> m (v, Cache)
 memo f key cache =
   lookupHelper onMiss onHit key cache
@@ -145,9 +147,9 @@ memo f key cache =
     onMiss = do
       val <- f key
       return (val, insertHelper key val cache)
-    onHit newCache bsVal = return (decodeS bsVal, newCache)
+    onHit newCache (AnyVal val) = return (castUnmaybe "memo:val" val, newCache)
 
-memoS :: (Key k, Binary v, MonadA m) => (k -> m v) -> k -> StateT Cache m v
+memoS :: (Key k, Binary v, Typeable v, MonadA m) => (k -> m v) -> k -> StateT Cache m v
 memoS f key = StateT $ memo f key
 
 unmemoS :: MonadA m => StateT Cache m a -> m a

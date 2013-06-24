@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable, DeriveDataTypeable #-}
 module Lamdu.Data.Expression.Infer.Conflicts
   ( InferredWithConflicts(..)
   , inferWithConflicts
@@ -17,6 +17,7 @@ import Data.Functor.Identity (Identity(..))
 import Data.Map (Map)
 import Data.Monoid (Monoid(..))
 import Data.Set (Set)
+import Data.Typeable (Typeable)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer
 import qualified Data.Map as Map
@@ -28,7 +29,7 @@ data InferredWithConflicts def = InferredWithConflicts
   { iwcInferred :: Infer.Inferred def
   , iwcTypeConflicts :: [Infer.Error def]
   , iwcValueConflicts :: [Infer.Error def]
-  }
+  } deriving (Typeable)
 -- Requires Ord instance for def, cannot derive
 instance (Ord def, Binary def) => Binary (InferredWithConflicts def) where
   get = InferredWithConflicts <$> get <*> get <*> get

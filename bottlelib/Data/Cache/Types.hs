@@ -29,10 +29,11 @@ instance Ord PriorityData where
 
 type KeyBS = SBS.ByteString
 type ValBS = SBS.ByteString
-type ValEntry = (PriorityData, ValBS)
+type ValEntry v = (PriorityData, v)
 
-data ValMap = forall k. Key k => ValMap (Map k ValEntry)
+data ValMap = forall k v. (Key k, Typeable v) => ValMap (Map k (ValEntry v))
 data AnyKey = forall k. Key k => AnyKey k
+data AnyVal = forall v. Typeable v => AnyVal v
 
 data Cache = Cache
   { _cEntries :: Map TypeRep ValMap

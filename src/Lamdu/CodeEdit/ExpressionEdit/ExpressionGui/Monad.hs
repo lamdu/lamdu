@@ -143,12 +143,12 @@ liftMemoT :: MonadA m => StateT Cache (T m) a -> ExprGuiM m a
 liftMemoT = liftMemo . mapStateT lift
 
 memo ::
-  (Cache.Key k, Binary v, MonadA m) =>
+  (Cache.Key k, Binary v, Typeable v, MonadA m) =>
   (k -> WidgetEnvT (T m) v) -> k -> ExprGuiM m v
 memo f key = liftMemo $ Cache.memoS f key
 
 memoT ::
-  (Cache.Key k, Binary v, MonadA m) =>
+  (Cache.Key k, Binary v, Typeable v, MonadA m) =>
   (k -> T m v) -> k -> ExprGuiM m v
 memoT f = memo (lift . f)
 
