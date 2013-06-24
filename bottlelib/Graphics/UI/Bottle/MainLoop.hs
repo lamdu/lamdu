@@ -4,7 +4,7 @@ import Control.Applicative ((<$>))
 import Control.Concurrent (threadDelay)
 import Control.Lens.Operators
 import Control.Lens.Tuple
-import Control.Monad (when)
+import Control.Monad (when, unless)
 import Data.IORef
 import Data.MRUMemo (memoIO)
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
@@ -126,11 +126,11 @@ mainLoopWidget widgetTickHandler mkWidgetUnmemod getAnimationHalfLife = do
     getWidget size = ($ size) =<< readIORef mkWidgetRef
     tickHandler size = do
       anyUpdate <- widgetTickHandler
-      when anyUpdate $ newWidget
+      when anyUpdate newWidget
       widget <- getWidget size
       tickResults <-
         sequenceA (widget ^. Widget.wEventMap . E.emTickHandlers)
-      when ((not . null) tickResults) newWidget
+      unless (null tickResults) newWidget
       return $
         case (tickResults, anyUpdate) of
         ([], False) -> Nothing
