@@ -4,6 +4,7 @@ module Lamdu.CodeEdit.ExpressionEdit(make) where
 import Control.Applicative ((<$>))
 import Control.Lens.Operators
 import Control.MonadA (MonadA)
+import Data.Maybe (fromMaybe, listToMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
@@ -180,9 +181,14 @@ actionsEventMap sExpr isHole actions = do
     delKeys = Config.replaceKeys config ++ Config.delKeys config
     replace
       | isSelected =
-        maybe mempty
-        (mkEventMap delKeys (E.Doc ["Edit", "Replace expression"]) FocusDelegator.delegatingId) $
-        actions ^. Sugar.mSetToHole
+          fromMaybe mempty . listToMaybe $ concat
+          [ actions ^.. Sugar.mSetToInnerExpr . Lens._Just
+            <&> mkEventMap delKeys (E.Doc ["Edit", "Replace with inner expression"])
+                FocusDelegator.delegatingId
+          , actions ^.. Sugar.mSetToHole . Lens._Just
+            <&> mkEventMap delKeys (E.Doc ["Edit", "Replace expression"])
+                FocusDelegator.delegatingId
+          ]
       | otherwise =
         mkEventMap delKeys (E.Doc ["Navigation", "Select parent"])
         FocusDelegator.notDelegatingId $ return exprGuid

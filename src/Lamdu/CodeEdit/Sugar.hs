@@ -18,7 +18,7 @@ import Data.Maybe (fromMaybe, listToMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
-import Data.Traversable (traverse)
+import Data.Traversable (traverse, sequenceA)
 import Data.Typeable (Typeable1)
 import Lamdu.CodeEdit.Sugar.Infer (Stored)
 import Lamdu.CodeEdit.Sugar.Internal
@@ -159,7 +159,7 @@ convertLam ::
 convertLam lam@(Expr.Lambda k paramGuid _paramType result) exprPl = do
   param <- convertPositionalFuncParam lam exprPl
   resultS <- SugarM.convertSubexpression result
-  SugarExpr.make exprPl $ BodyLam
+  BodyLam
     Lam
     { _lParam =
         param
@@ -169,6 +169,14 @@ convertLam lam@(Expr.Lambda k paramGuid _paramType result) exprPl = do
     , _lKind = k
     , _lIsDep = isDep
     }
+    & SugarExpr.make exprPl
+    <&> rPayload . plActions . Lens._Just . mSetToInnerExpr .~ do
+      bodyStored <- sequenceA ((^. SugarInfer.plStored) <$> result)
+      stored <- exprPl ^. SugarInfer.plStored
+      return $ do
+        deleteParamRef paramGuid bodyStored
+        ExprIRef.exprGuid <$>
+          DataOps.setToWrapper (Property.value (bodyStored ^. Expr.ePayload)) stored
   where
     isDep =
       case k of
