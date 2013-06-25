@@ -5,7 +5,6 @@ module Lamdu.Data.Expression.Infer
   , Loaded, load, loadIndependent
   , inferLoaded, addRules
   , derefExpr, derefNode
-  -- TODO: Expose only ref readers for InferNode (instead of .. and TypedValue)
   , IsRestrictedPoly(..)
   , InferNode(..), TypedValue(..)
   , Error(..), ErrorDetails(..)
@@ -193,9 +192,6 @@ ruleRefsAt k = ruleMap . refsAt (unRuleRef k)
 
 -------------
 
--- TODO: createTypeVal should use newNode, not vice versa.
--- For use in loading phase only!
--- We don't create additional Refs afterwards!
 createTypedVal :: State (Context def) TypedValue
 createTypedVal = TypedValue <$> createRefExpr <*> createRefExpr
 
@@ -348,7 +344,6 @@ mergeExprs oldExp mRule newExp =
   runEither $ ExprUtil.matchExpression onMatch onMismatch oldExp newExp
   where
     mergePayloadInto src =
-      -- TODO: mappend?
       mappendLens rplRestrictedPoly src .
       mappendLens rplSubstitutedArgs src .
       mappendLens rplOrigins src
