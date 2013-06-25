@@ -241,6 +241,10 @@ inferOnTheSide ::
 inferOnTheSide inferStateKey holeInferContext scope expr =
   (fmap . fmap) (void . Infer.iType . (^. Lens._1 . Expr.ePayload . Lens._1)) .
   SugarInfer.memoLoadInfer Nothing expr
+  -- We can use the same inferStateKey despite making a new node here,
+  -- because we haven't altered the context in a meaningful way, we've
+  -- added an independent node. This won't collide with inference at
+  -- the hole point because the point is an input to the memo.
   inferStateKey . swap $
   runState (Infer.newNodeWithScope scope) holeInferContext
 
