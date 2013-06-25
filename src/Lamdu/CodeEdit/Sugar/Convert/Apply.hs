@@ -55,7 +55,7 @@ convert app@(Expr.Apply funcI argI) exprPl =
     justToLeft $ convertAppliedHole funcI argS argI exprPl
     justToLeft $ convertList app argS exprPl
     funcS <- lift $ SugarM.convertSubexpression funcI
-    justToLeft $ convertLabeled funcS argS exprPl
+    justToLeft $ convertLabeled funcS argS argI exprPl
     lift $ convertPrefix funcS funcI argS argI exprPl
 
 indirectDefinitionGuid :: ExpressionP name m pl -> Maybe Guid
@@ -78,9 +78,9 @@ noRepetitions x = length x == Set.size (Set.fromList x)
 
 convertLabeled ::
   (MonadA m, Typeable1 m, Monoid a) =>
-  ExpressionU m a -> ExpressionU m a -> PayloadMM m a ->
+  ExpressionU m a -> ExpressionU m a -> ExprMM m a -> PayloadMM m a ->
   MaybeT (SugarM m) (ExpressionU m a)
-convertLabeled funcS argS exprPl = do
+convertLabeled funcS argS argI exprPl = do
   Record Val fields <- maybeToMPlus $ argS ^? rBody . _BodyRecord
   let
     getArg field = do
@@ -102,15 +102,30 @@ convertLabeled funcS argS exprPl = do
       Verbose -> (NoSpecialArgs, args)
       OO -> (ObjectArg (arg0 ^. aaExpr), args1toN)
       Infix -> (InfixArgs (arg0 ^. aaExpr) (arg1 ^. aaExpr), args2toN)
-  (lift . SugarExpr.make exprPl . BodyApply) Apply
+  BodyApply Apply
     { _aFunc = funcS
     , _aSpecialArgs = specialArgs
     , _aAnnotatedArgs = annotatedArgs
     }
-    <&> rPayload . plData <>~
+    & lift . SugarExpr.make exprPl
+    <&> rPayload %~
+      ( plData <>~
         mappend
         (argS ^. rPayload . plData)
         (fields ^. flItems . Lens.traversed . rfTag . rPayload . plData)
+      ) .
+      ( plActions . Lens._Just . mSetToInnerExpr .~ do
+        stored <- exprPl ^. SugarInfer.plStored
+        fieldsI <- argI ^? Expr.eBody . Expr._BodyRecord . Expr.recordFields
+        val <-
+          case filter (Lens.nullOf ExprLens.exprHole) (map snd fieldsI) of
+          [x] -> Just x
+          _ -> Nothing
+        valStored <- traverse (^. SugarInfer.plStored) val
+        return $
+          ExprIRef.exprGuid <$>
+          DataOps.setToWrapper (Property.value (valStored ^. Expr.ePayload)) stored
+      )
 
 makeCollapsed ::
   (MonadA m, Typeable1 m, Monoid a) =>
