@@ -88,27 +88,39 @@ addVariablesForExpr loader expr = do
   where
     inferredVal = Infer.iValue . fst . (^. Expr.ePayload)
 
+lambdaWrap ::
+  Ord def => Guid -> Infer.InferNode def ->
+  Expr.Expression def (Infer.InferNode def, a) ->
+  a -> a ->
+  State (Infer.Context def)
+  (Expr.Expression def (Infer.InferNode def, a))
+lambdaWrap paramGuid paramTypeNode result lamPl paramTypePl = do
+  newNode <- Infer.newNodeWithScope mempty
+  let
+    newExpr =
+      Expr.Expression newLam (newNode, lamPl)
+  InferUntilConflict.assertNoConflict "Infer error when adding implicit vars" $
+    Infer.addRules InferUntilConflict.actions [fst <$> newExpr]
+  return newExpr
+  where
+    newLam =
+      ExprUtil.makeLambda paramGuid paramTypeExpr result
+    paramTypeExpr =
+      Expr.Expression
+      (Expr.BodyLeaf Expr.Hole)
+      (paramTypeNode, paramTypePl)
+
 addParam ::
   Ord def =>
   Expr.Expression def (Infer.InferNode def, Payload a) ->
   (Guid, Infer.InferNode def) ->
   State (Infer.Context def)
   (Expr.Expression def (Infer.InferNode def, Payload a))
-addParam body (paramGuid, paramTypeNode) = do
-  newRootNode <- Infer.newNodeWithScope mempty
-  let
-    newRootExpr =
-      Expr.Expression newRootLam (newRootNode, AutoGen (Guid.augment "root" paramGuid))
-  InferUntilConflict.assertNoConflict "Infer error when adding implicit vars" $
-    Infer.addRules InferUntilConflict.actions [fst <$> newRootExpr]
-  return newRootExpr
+addParam result (paramGuid, paramTypeNode) =
+  lambdaWrap paramGuid paramTypeNode result lamPl paramTypePl
   where
-    paramTypeExpr =
-      Expr.Expression
-      (Expr.BodyLeaf Expr.Hole)
-      (paramTypeNode, AutoGen (Guid.augment "paramType" paramGuid))
-    newRootLam =
-      ExprUtil.makeLambda paramGuid paramTypeExpr body
+    lamPl = AutoGen $ Guid.augment "" paramGuid
+    paramTypePl = AutoGen $ Guid.augment "paramType" paramGuid
 
 add ::
   (MonadA m, Ord def, Show def, RandomGen g) =>

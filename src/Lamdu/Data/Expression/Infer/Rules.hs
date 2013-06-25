@@ -143,11 +143,11 @@ makeForNode (Expr.Expression exprBody typedVal) =
   , [ParentToChildren bodyWithValRefs (tvVal typedVal)]
   , case exprBody of
     Expr.BodyLam lambda ->
-      onLambda (pls lambda) : lamKindRules (pls lambda)
-    Expr.BodyApply apply -> applyRules typedVal $ pls apply
+      onLambda (pl <$> lambda) : lamKindRules (pl <$> lambda)
+    Expr.BodyApply apply -> applyRules typedVal $ pl <$> apply
     Expr.BodyRecord record ->
       concatMap tagRules (record ^.. Expr.recordFields . traverse . Lens._1) ++
-      recordKindRules (pls record)
+      recordKindRules (pl <$> record)
     Expr.BodyGetField (Expr.GetField record fieldTag) ->
       getFieldRules (tvType typedVal) fieldTag (tvType (pl record))
       -- TODO: GetField Structure rules
@@ -156,8 +156,7 @@ makeForNode (Expr.Expression exprBody typedVal) =
   ]
   where
     pl = (^. Expr.ePayload)
-    pls x = pl <$> x
-    bodyWithValRefs = tvVal <$> pls exprBody
+    bodyWithValRefs = tvVal . pl <$> exprBody
     recordKindRules (Expr.Record Expr.Type fields) =
       map (setRule . tvType . snd) fields
     recordKindRules (Expr.Record Expr.Val fields) =
