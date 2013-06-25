@@ -16,7 +16,7 @@ import Control.Monad.Trans.State (StateT(..))
 import Control.MonadA (MonadA)
 import Data.Foldable (traverse_)
 import Data.Map (Map)
-import Data.Maybe (fromMaybe, listToMaybe, isJust)
+import Data.Maybe (fromMaybe, listToMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
@@ -447,12 +447,11 @@ isCompleteType =
 mkContext ::
   (MonadA m, Typeable1 m) =>
   Anchors.Code (Transaction.MkProperty m) (Tag m) ->
-  DefI (Tag m) -> Maybe (CT m Bool) ->
-  Cache.KeyBS ->
+  DefI (Tag m) -> Cache.KeyBS ->
   Infer.Context (DefI (Tag m)) ->
   Infer.Context (DefI (Tag m)) ->
   T m (Context m)
-mkContext cp defI mReinferRoot holeInferStateKey inferState holeInferState = do
+mkContext cp defI holeInferStateKey inferState holeInferState = do
   specialFunctions <- Transaction.getP $ Anchors.specialFunctions cp
   return Context
     { _scMDefI = Just defI
@@ -461,7 +460,6 @@ mkContext cp defI mReinferRoot holeInferStateKey inferState holeInferState = do
     , _scHoleInferState = holeInferState
     , _scCodeAnchors = cp
     , _scSpecialFunctions = specialFunctions
-    , _scMReinferRoot = mReinferRoot
     , _scTagParamInfos = mempty
     , _scRecordParamsInfos = mempty
     , scConvertSubexpression = convertExpressionI
@@ -473,7 +471,7 @@ convertExpressionPure ::
   ExprIRef.ExpressionM m a -> CT m (ExpressionU m a)
 convertExpressionPure cp defI gen res = do
   context <-
-    lift $ mkContext cp defI Nothing (err "holeInferStateKey")
+    lift $ mkContext cp defI (err "holeInferStateKey")
     (err "inferState") (err "holeInferState")
   fmap removeRedundantTypes .
     SugarM.run context .
@@ -951,7 +949,7 @@ convertDefIExpression cp exprLoaded defI defType = do
     holeInferStateKey = ilr ^. SugarInfer.iwiBaseInferContextKey
     inferState = ilr ^. SugarInfer.iwiInferContext
     holeInferState = ilr ^. SugarInfer.iwiBaseInferContext
-  context <- lift $ mkContext cp defI (Just reinferRoot) holeInferStateKey inferState holeInferState
+  context <- lift $ mkContext cp defI holeInferStateKey inferState holeInferState
   SugarM.run context $ do
     content <-
       iwiExpr
@@ -963,14 +961,7 @@ convertDefIExpression cp exprLoaded defI defType = do
       , _deTypeInfo = typeInfo
       }
   where
-    initialInfer@(initialInferState, _) = Infer.initial (Just defI)
-    reinferRoot = do
-      reloadedRoot <-
-        lift . ExprIRef.readExpression . Load.irefOfClosure $
-        exprLoaded ^. Expr.ePayload
-      isJust <$>
-        SugarInfer.memoLoadInfer (Just defI) (void reloadedRoot)
-        (Cache.bsOfKey initialInferState) initialInfer
+    initialInfer = Infer.initial (Just defI)
     defGuid = IRef.guid defI
     recordParamsInfo = SugarM.RecordParamsInfo defGuid $ jumpToDefI cp defI
     inferLoadedGen = SugarExpr.mkGen 0 3 defGuid

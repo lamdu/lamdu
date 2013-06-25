@@ -7,14 +7,11 @@ module Lamdu.CodeEdit.Sugar.Expression
   , setNextHole
   , subExpressions
   , getStoredName
-  , guardReinferSuccess
   ) where
 
 import Control.Applicative (Applicative(..), (<$>))
 import Control.Lens.Operators
 import Control.Monad (zipWithM, mplus)
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.State (mapStateT)
 import Control.MonadA (MonadA)
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
@@ -77,23 +74,6 @@ mkCutter :: MonadA m => Anchors.CodeProps m -> ExprIRef.ExpressionI (Tag m) -> T
 mkCutter cp expr replaceWithHole = do
   _ <- DataOps.newClipboard cp expr
   replaceWithHole
-
-checkReinferSuccess :: MonadA m => SugarM.Context m -> T m a -> CT m Bool
-checkReinferSuccess sugarContext act =
-  case sugarContext ^. SugarM.scMReinferRoot of
-  Nothing -> pure False
-  Just reinferRoot ->
-    mapStateT Transaction.forkScratch $ do
-      _ <- lift act
-      reinferRoot
-
-guardReinferSuccess :: MonadA m => SugarM.Context m -> T m a -> CT m (Maybe (T m a))
-guardReinferSuccess sugarContext act = do
-  success <- checkReinferSuccess sugarContext act
-  pure $
-    if success
-    then Just act
-    else Nothing
 
 mkReplaceWithNewHole :: MonadA m => Stored m -> T m Guid
 mkReplaceWithNewHole stored =

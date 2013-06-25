@@ -2,7 +2,7 @@
 module Lamdu.CodeEdit.Sugar.Monad
   ( Context(..), TagParamInfo(..), RecordParamsInfo(..)
   , scMDefI, scInferState, scHoleInferStateKey, scHoleInferState
-  , scCodeAnchors, scSpecialFunctions, scMReinferRoot, scTagParamInfos, scRecordParamsInfos
+  , scCodeAnchors, scSpecialFunctions, scTagParamInfos, scRecordParamsInfos
   , SugarM(..), run
   , readContext, liftCTransaction, liftTransaction, local
   , codeAnchor
@@ -47,7 +47,6 @@ data Context m = Context
   , _scHoleInferState :: Infer.Context (DefI (Tag m))
   , _scCodeAnchors :: Anchors.CodeProps m
   , _scSpecialFunctions :: Anchors.SpecialFunctions (Tag m)
-  , _scMReinferRoot :: Maybe (CT m Bool)
   , _scTagParamInfos :: Map Guid TagParamInfo -- tag guids
   , _scRecordParamsInfos :: Map Guid (RecordParamsInfo m) -- param guids
   , scConvertSubexpression :: forall a. Monoid a => ExprMM m a -> SugarM m (ExpressionU m a)
