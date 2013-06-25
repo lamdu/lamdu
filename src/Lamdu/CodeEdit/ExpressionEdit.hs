@@ -183,8 +183,7 @@ actionsEventMap sExpr isHole actions = do
       | isSelected =
           fromMaybe mempty . listToMaybe $ concat
           [ actions ^.. Sugar.mSetToInnerExpr . Lens._Just
-            <&> mkEventMap delKeys (E.Doc ["Edit", "Replace with inner expression"])
-                FocusDelegator.delegatingId
+            <&> mkEventMap delKeys (E.Doc ["Edit", "Replace with inner expression"]) id
           , actions ^.. Sugar.mSetToHole . Lens._Just
             <&> mkEventMap delKeys (E.Doc ["Edit", "Replace expression"])
                 FocusDelegator.delegatingId

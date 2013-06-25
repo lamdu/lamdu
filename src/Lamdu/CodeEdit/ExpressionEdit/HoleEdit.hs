@@ -392,7 +392,7 @@ make hole mNextHoleGuid guid outerId = do
     & Lens.mapped . ExpressionGui.egWidget %~
       Widget.weakerEvents
       (maybe mempty
-        ( E.keyPresses (Config.acceptKeys config)
+        ( E.keyPresses (Config.acceptKeys config ++ Config.delKeys config)
           (E.Doc ["Edit", "Unwrap"])
         . fmap (Widget.eventResultFromCursor . WidgetIds.fromGuid)
         ) mUnWrap)
