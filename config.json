@@ -54,7 +54,7 @@
         1.0
     ],
     "defTypeLabelTextSize": 16,
-    "acceptInferredTypeKeys": [
+    "acceptKeys": [
         [
             {
                 "modShift": false,

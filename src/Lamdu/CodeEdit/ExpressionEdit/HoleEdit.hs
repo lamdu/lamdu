@@ -392,12 +392,12 @@ make hole mNextHoleGuid guid outerId = do
     & Lens.mapped . ExpressionGui.egWidget %~
       Widget.weakerEvents
       (maybe mempty
-        ( E.keyPresses (Config.delKeys config)
+        ( E.keyPresses (Config.acceptKeys config)
           (E.Doc ["Edit", "Unwrap"])
         . fmap (Widget.eventResultFromCursor . WidgetIds.fromGuid)
-        ) mDelete)
+        ) mUnWrap)
   where
-    mDelete =
+    mUnWrap =
       hole ^? Sugar.holeMActions . Lens._Just . Sugar.holeMUnwrap . Lens._Just
     isWritable = isJust $ hole ^. Sugar.holeMActions
 

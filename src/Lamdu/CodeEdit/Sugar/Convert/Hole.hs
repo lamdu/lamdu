@@ -1,7 +1,7 @@
 {-# LANGUAGE ConstraintKinds, DeriveFunctor #-}
 
 module Lamdu.CodeEdit.Sugar.Convert.Hole
-  ( convert, convertPlain
+  ( convert, convertPlain, orderedInnerHoles
   ) where
 
 import Control.Applicative (Applicative(..), (<$>), (<$))

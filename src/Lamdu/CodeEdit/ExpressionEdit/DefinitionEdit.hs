@@ -275,7 +275,7 @@ makeExprDefinition def bodyExpr = do
     addAcceptanceArrow acceptInferredType label = do
       acceptanceLabel <-
         (fmap . Widget.weakerEvents)
-        (Widget.keysEventMapMovesCursor (Config.acceptInferredTypeKeys config)
+        (Widget.keysEventMapMovesCursor (Config.acceptKeys config)
          (E.Doc ["Edit", "Accept inferred type"]) (acceptInferredType >> return myId)) .
         ExprGuiM.widgetEnv .
         BWidgets.makeFocusableTextView "↱" $ Widget.joinId myId ["accept type"]

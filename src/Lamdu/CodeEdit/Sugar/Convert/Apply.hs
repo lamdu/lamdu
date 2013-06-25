@@ -211,6 +211,26 @@ typeCheckIdentityAt point = do
     getParam = ExprLens.pureExpr . ExprLens.bodyParameterRef # paramGuid
     paramGuid = Guid.fromString "typeCheckId"
 
+unwrap ::
+  MonadA m =>
+  ExprIRef.ExpressionProperty m ->
+  ExprIRef.ExpressionProperty m ->
+  SugarInfer.ExprMM def stored ->
+  T m Guid
+unwrap outerP argP argExpr = do
+  res <- DataOps.replace outerP (Property.value argP)
+  return $
+    case mOrderedHoles of
+    Just (x:_) -> x ^. Expr.ePayload . Lens._1
+    _ -> ExprIRef.exprGuid res
+  where
+    mArgInferred = Lens.sequenceOf (Lens.traversed . SugarInfer.plInferred) argExpr
+    f x =
+      ( x ^. SugarInfer.plGuid
+      , iwcInferred $ x ^. SugarInfer.plInferred
+      )
+    mOrderedHoles = ConvertHole.orderedInnerHoles . fmap f <$> mArgInferred
+
 convertAppliedHole ::
   (MonadA m, Typeable1 m, Monoid a) =>
   ExprMM m a -> ExpressionU m a -> ExprMM m a -> PayloadMM m a ->
@@ -229,12 +249,11 @@ convertAppliedHole funcI rawArgS argI exprPl
           (^. SugarInfer.plStored) <$> argI
         , _haTypeIsAMatch = isTypeMatch
         }
-      mUnwrap
-        | isTypeMatch =
-          DataOps.replace <$> exprPl ^. SugarInfer.plStored <*>
-          (Property.value <$> argI ^. SugarInfer.exprStored)
-          & Lens._Just . Lens.mapped %~ ExprIRef.exprGuid
-        | otherwise = Nothing
+      mUnwrap = do
+        guard isTypeMatch
+        stored <- exprPl ^. SugarInfer.plStored
+        argP <- argI ^. SugarInfer.exprStored
+        return $ unwrap stored argP argI
     ConvertHole.convertPlain exprPl
       <&> rBody . _BodyHole %~
           (holeMArg .~ Just holeArg) .
