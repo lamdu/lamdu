@@ -13,6 +13,7 @@ import Data.Maybe (listToMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
+import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Data.Typeable (Typeable1)
@@ -80,12 +81,12 @@ loadConvertDefI cp defI =
 
 makeSugarPanes :: (MonadA m, Typeable1 m) => Anchors.CodeProps m -> Guid -> CT m [SugarPane m]
 makeSugarPanes cp rootGuid = do
-  panes <- lift . Transaction.getP $ Anchors.panes cp
+  Property panes setPanes <- lift $ Anchors.panes cp ^. Transaction.mkProperty
   let
     mkMDelPane i
       | not (null panes) = Just $ do
         let newPanes = removeAt i panes
-        Transaction.setP (Anchors.panes cp) newPanes
+        setPanes newPanes
         return . maybe rootGuid IRef.guid . listToMaybe . reverse $
           take (i+1) newPanes
       | otherwise = Nothing
@@ -93,7 +94,7 @@ makeSugarPanes cp rootGuid = do
       let
         (before, item:after) = splitAt oldIndex panes
         newPanes = insertAt newIndex item $ before ++ after
-      Transaction.setP (Anchors.panes cp) newPanes
+      setPanes newPanes
     mkMMovePaneDown i
       | i+1 < length panes = Just $ movePane i (i+1)
       | otherwise = Nothing
