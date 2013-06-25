@@ -209,7 +209,7 @@ data HoleActions name m = HoleActions
       HoleResultSeed m (Maybe (TypesInternal.StorePoint (Tag m)), a) ->
       CT m (Maybe (HoleResult name m a))
   , _holePaste :: Maybe (T m Guid)
-  , _holeMUnwrap :: CT m (Maybe (T m Guid))
+  , _holeMUnwrap :: Maybe (T m Guid)
   }
 
 data HoleArg m expr = HoleArg

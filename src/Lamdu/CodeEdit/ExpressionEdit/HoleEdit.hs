@@ -386,10 +386,6 @@ make hole mNextHoleGuid guid outerId = do
         then Just <$> ExprGuiM.nextHoleNumber
         else pure Nothing
       makeUnwrappedH mHoleNumber stateProp hole mNextHoleGuid guid myId
-  mDelete <-
-    case hole ^. Sugar.holeMActions of
-    Just actions -> ExprGuiM.liftMemoT $ actions ^. Sugar.holeMUnwrap
-    Nothing -> return Nothing
   config <- ExprGuiM.widgetEnv WE.readConfig
   ExpressionGui.wrapDelegated holeFDConfig delegatingMode inner outerId
     & Lens.mapped . ExpressionGui.egWidget %~
@@ -400,6 +396,8 @@ make hole mNextHoleGuid guid outerId = do
         . fmap (Widget.eventResultFromCursor . WidgetIds.fromGuid)
         ) mDelete)
   where
+    mDelete =
+      hole ^? Sugar.holeMActions . Lens._Just . Sugar.holeMUnwrap . Lens._Just
     isWritable = isJust $ hole ^. Sugar.holeMActions
 
 makeUnwrappedH ::
