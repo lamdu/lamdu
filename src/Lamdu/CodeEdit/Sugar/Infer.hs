@@ -220,7 +220,8 @@ Lens.makeLenses ''InferredWithImplicits
 
 inferAddImplicits ::
   (RandomGen g, MonadA m, Typeable (m ())) => g ->
-  Maybe (DefI (Tag m)) -> Load.LoadedClosure (Tag m) ->
+  Maybe (DefI (Tag m)) ->
+  ExprIRef.ExpressionM m (Load.ExprPropertyClosure (Tag m)) ->
   Cache.KeyBS ->
   ( Infer.Context (DefI (Tag m))
   , Infer.InferNode (DefI (Tag m))
@@ -249,7 +250,7 @@ inferAddImplicits gen mDefI lExpr inferContextKey inferState = do
     mkStoredPayload (iwc, propClosure) =
       Payload (ExprIRef.epGuid prop) iwc prop ()
       where
-        prop = Load.propertyOfClosure propClosure
+        prop = Load.exprPropertyOfClosure propClosure
     mkWVPayload (iwc, ImplicitVariables.AutoGen guid) =
       Payload guid iwc Nothing ()
     mkWVPayload (iwc, ImplicitVariables.Stored propClosure) =

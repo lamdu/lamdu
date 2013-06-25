@@ -896,7 +896,8 @@ makeTypeInfo cp defI defType inferredType success = do
 
 convertDefIExpression ::
   (MonadA m, Typeable1 m) => Anchors.CodeProps m ->
-  Load.LoadedClosure (Tag m) -> DefI (Tag m) ->
+  ExprIRef.ExpressionM m (Load.ExprPropertyClosure (Tag m)) ->
+  DefI (Tag m) ->
   ExprIRef.ExpressionM m (Stored m) ->
   CT m (DefinitionBody MStoredName m (ExpressionU m [Guid]))
 convertDefIExpression cp exprLoaded defI defType = do
@@ -938,10 +939,11 @@ convertDefIExpression cp exprLoaded defI defType = do
 convertDefI ::
   (MonadA m, Typeable1 m) =>
   Anchors.CodeProps m -> DefI (Tag m) ->
-  Definition.Definition (Load.LoadedClosure (Tag m)) ->
+  -- TODO: Use DefinitionClosure?
+  Definition.Definition (ExprIRef.ExpressionM m (Load.ExprPropertyClosure (Tag m))) ->
   CT m (Definition (Maybe String) m (ExpressionU m [Guid]))
 convertDefI cp defI (Definition.Definition defBody typeLoaded) = do
-  bodyS <- convertDefBody defBody $ Load.propertyOfClosure <$> typeLoaded
+  bodyS <- convertDefBody defBody $ Load.exprPropertyOfClosure <$> typeLoaded
   name <- lift $ SugarExpr.getStoredName defGuid
   return Definition
     { _drGuid = defGuid
