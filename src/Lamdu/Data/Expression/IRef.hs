@@ -9,7 +9,7 @@ module Lamdu.Data.Expression.IRef
   , newLambda, newPi
   , newExpression, writeExpression, readExpression
   , writeExpressionWithStoredSubexpressions
-  , DefI, DefinitionI
+  , DefI, DefM, DefinitionI
   , variableRefGuid
   ) where
 
@@ -38,6 +38,7 @@ type T = Transaction
 
 type DefinitionI t = Definition (ExpressionI t)
 type DefI t = IRef t (DefinitionI t)
+type DefM m = DefI (Tag m)
 
 newtype ExpressionI t = ExpressionI {
   unExpression :: IRef t (Expr.Body (DefI t) (ExpressionI t))
@@ -117,7 +118,7 @@ readExpression exprI =
 expressionBodyFrom ::
   MonadA m =>
   ExpressionM m (Maybe (ExpressionIM m), a) ->
-  T m (Expr.BodyExpr (DefI (Tag m)) (ExpressionIM m, a))
+  T m (Expr.BodyExpr (DefM m) (ExpressionIM m, a))
 expressionBodyFrom = traverse newExpressionFromH . (^. Expr.eBody)
 
 newExpressionFromH ::

@@ -76,7 +76,7 @@ import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
 import Lamdu.CodeEdit.Sugar.Types.Internal (T, CT)
 import Lamdu.Data.Expression (Kind(..))
-import Lamdu.Data.Expression.IRef (DefI)
+import Lamdu.Data.Expression.IRef (DefM)
 import qualified Control.Lens as Lens
 import qualified Data.List as List
 import qualified Lamdu.CodeEdit.Sugar.Types.Internal as TypesInternal
@@ -176,7 +176,7 @@ data PickedResult = PickedResult
   }
 
 data HoleResult name m a = HoleResult
-  { _holeResultInferred :: ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)))
+  { _holeResultInferred :: ExprIRef.ExpressionM m (Infer.Inferred (DefM m))
   , _holeResultConverted :: Expression name m a
   , _holeResultPick :: T m PickedResult
   , _holeResultPickWrapped :: T m PickedResult

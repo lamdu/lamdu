@@ -12,7 +12,6 @@ import Data.List.Utils (enumerate, insertAt, removeAt)
 import Data.Maybe (listToMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
-import Data.Store.IRef (Tag)
 import Data.Store.Property (Property(..))
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
@@ -20,7 +19,7 @@ import Data.Typeable (Typeable1)
 import Graphics.UI.Bottle.Widget (Widget)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (WidgetT, ExprGuiM)
 import Lamdu.CodeEdit.Settings (Settings)
-import Lamdu.Data.Expression.IRef (DefI)
+import Lamdu.Data.Expression.IRef (DefM)
 import Lamdu.WidgetEnvT (WidgetEnvT)
 import qualified Control.Lens as Lens
 import qualified Data.Store.IRef as IRef
@@ -70,7 +69,7 @@ makeNewDefinitionAction = do
 
 loadConvertDefI ::
   (MonadA m, Typeable1 m) =>
-  Anchors.CodeProps m -> DefI (Tag m) ->
+  Anchors.CodeProps m -> DefM m ->
   CT m (Sugar.DefinitionU m ExprGuiM.Payload)
 loadConvertDefI cp defI =
   lift (Load.loadDefinitionClosure defI) >>=

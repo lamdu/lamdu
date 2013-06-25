@@ -25,7 +25,7 @@ import Data.Typeable (Typeable1)
 import Lamdu.CodeEdit.Sugar.Infer (ExprMM)
 import Lamdu.CodeEdit.Sugar.Internal
 import Lamdu.CodeEdit.Sugar.Types.Internal
-import Lamdu.Data.Expression.IRef (DefI)
+import Lamdu.Data.Expression.IRef (DefM)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Reader as Reader
 import qualified Data.Cache as Cache
@@ -47,7 +47,7 @@ data RecordParamsInfo m = RecordParamsInfo
 
 data Context m = Context
   { _scHoleInferStateKey :: Cache.KeyBS
-  , _scHoleInferState :: Infer.Context (DefI (Tag m))
+  , _scHoleInferState :: Infer.Context (DefM m)
   , _scCodeAnchors :: Anchors.CodeProps m
   , _scSpecialFunctions :: Anchors.SpecialFunctions (Tag m)
   , _scTagParamInfos :: Map Guid TagParamInfo -- tag guids
@@ -90,11 +90,11 @@ memoLoadInferInHoleContext ::
   (MonadA m, Typeable1 m, Cache.Key a, Binary a) =>
   Context m ->
   ExprIRef.ExpressionM m a ->
-  Infer.InferNode (DefI (Tag m)) ->
+  Infer.InferNode (DefM m) ->
   CT m
   ( Maybe
-    ( ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), a)
-    , Infer.Context (DefI (Tag m))
+    ( ExprIRef.ExpressionM m (Infer.Inferred (DefM m), a)
+    , Infer.Context (DefM m)
     )
   )
 memoLoadInferInHoleContext ctx expr point =

@@ -22,7 +22,7 @@ import Lamdu.CodeEdit.Sugar.Monad (SugarM)
 import Lamdu.CodeEdit.Sugar.Types
 import Lamdu.CodeEdit.Sugar.Types.Internal
 import Lamdu.Data.Anchors (PresentationMode(..))
-import Lamdu.Data.Expression.IRef (DefI)
+import Lamdu.Data.Expression.IRef (DefM)
 import Lamdu.Data.Expression.Infer.Conflicts (iwcInferred)
 import qualified Control.Lens as Lens
 import qualified Data.Set as Set
@@ -209,7 +209,7 @@ isCons specialFunctions =
 
 typeCheckIdentityAt ::
   (MonadA m, Typeable1 m) =>
-  Infer.InferNode (DefI (Tag m)) -> SugarM m Bool
+  Infer.InferNode (DefM m) -> SugarM m Bool
 typeCheckIdentityAt point = do
   sugarContext <- SugarM.readContext
   SugarM.liftCTransaction .

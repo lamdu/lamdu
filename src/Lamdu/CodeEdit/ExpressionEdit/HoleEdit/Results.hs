@@ -22,7 +22,6 @@ import Data.List.Utils (sortOn, nonEmptyAll)
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Maybe.Utils (maybeToMPlus)
 import Data.Monoid (Monoid(..))
-import Data.Store.IRef (Tag)
 import Data.Store.Transaction (Transaction)
 import Data.Traversable (traverse)
 import Lamdu.CodeEdit.ExpressionEdit.ExpressionGui.Monad (ExprGuiM, WidgetT)
@@ -30,7 +29,7 @@ import Lamdu.CodeEdit.ExpressionEdit.HoleEdit.Info (HoleInfo(..), hiSearchTerm, 
 import Lamdu.CodeEdit.Sugar.Types (Scope(..))
 import Lamdu.Config (Config)
 import Lamdu.Data.Expression (Expression(..))
-import Lamdu.Data.Expression.IRef (DefI)
+import Lamdu.Data.Expression.IRef (DefM)
 import Lamdu.Data.Expression.Utils (ApplyFormAnnotation(..), pureHole)
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
@@ -55,7 +54,7 @@ data Group def = Group
   { _groupNames :: [String]
   , _groupBaseExpr :: Expression def ()
   }
-type GroupM m = Group (DefI (Tag m))
+type GroupM m = Group (DefM m)
 
 Lens.makeLenses ''Group
 
@@ -117,7 +116,7 @@ makeLiteralGroups searchTerm =
     makeLiteralIntResult integer =
       mkGroup [show integer] $ ExprLens.bodyLiteralInteger # integer
 
-resultComplexityScore :: ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m))) -> Int
+resultComplexityScore :: ExprIRef.ExpressionM m (Infer.Inferred (DefM m)) -> Int
 resultComplexityScore = length . Foldable.toList . Infer.iType . (^. Expr.ePayload)
 
 prefixId :: HoleInfo m -> Widget.Id
@@ -201,7 +200,7 @@ baseExprWithApplyForms holeInfo baseExpr =
 
 storePointExpr ::
   Monoid a =>
-  Expr.BodyExpr (DefI (Tag m)) (Sugar.MStorePoint m a) ->
+  Expr.BodyExpr (DefM m) (Sugar.MStorePoint m a) ->
   Sugar.ExprStorePoint m a
 storePointExpr = (`Expression` (Nothing, mempty))
 

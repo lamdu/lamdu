@@ -17,7 +17,7 @@ import Data.Store.Transaction (Transaction)
 import Data.Traversable (Traversable)
 import Data.Typeable (Typeable)
 import Lamdu.Data.Definition (Definition(..))
-import Lamdu.Data.Expression.IRef (DefI)
+import Lamdu.Data.Expression.IRef (DefI, DefM)
 import qualified Control.Lens as Lens
 import qualified Data.Set as Set
 import qualified Data.Store.Property as Property
@@ -68,7 +68,7 @@ loadExpressionClosure visited closure =
 loadExpressionBody ::
   MonadA m => Set Guid -> ExprI (Tag m) ->
   T m
-  (Expr.BodyExpr (DefI (Tag m)) (ExprPropertyClosure (Tag m)))
+  (Expr.BodyExpr (DefM m) (ExprPropertyClosure (Tag m)))
 loadExpressionBody visited iref
   | ourGuid `Set.member` visited = error "Recursive IRef structure"
   | otherwise = onBody =<< ExprIRef.readExprBody iref
@@ -81,7 +81,7 @@ loadExpressionBody visited iref
 
 -- TODO: Return DefinitionClosure
 loadDefinitionClosure ::
-  MonadA m => DefI (Tag m) ->
+  MonadA m => DefM m ->
   T m (Definition (ExprIRef.ExpressionM m (ExprPropertyClosure (Tag m))))
 loadDefinitionClosure defI = do
   def <- Transaction.readIRef defI

@@ -25,7 +25,7 @@ import Lamdu.CodeEdit.Sugar.Internal
 import Lamdu.CodeEdit.Sugar.Monad (SugarM)
 import Lamdu.CodeEdit.Sugar.Types
 import Lamdu.CodeEdit.Sugar.Types.Internal
-import Lamdu.Data.Expression.IRef (DefI)
+import Lamdu.Data.Expression.IRef (DefM)
 import Lamdu.Data.Expression.Infer.Conflicts (InferredWithConflicts(..), iwcInferred, iwcInferredValues)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.Writer as Writer
@@ -112,7 +112,7 @@ convertTypeCheckedHoleH exprPl =
 accept ::
   (MonadA m, Typeable1 m, Binary a, Cache.Key a) =>
   SugarM.Context m ->
-  Infer.InferNode (DefI (Tag m)) ->
+  Infer.InferNode (DefM m) ->
   ExprIRef.ExpressionM m a ->
   ExprIRef.ExpressionIM m ->
   T m (Maybe Guid)
@@ -229,7 +229,7 @@ chooseHoleType inferredVals plain inferred =
 inferOnTheSide ::
   (MonadA m, Typeable1 m) =>
   SugarM.Context m ->
-  Infer.Scope (DefI (Tag m)) ->
+  Infer.Scope (DefM m) ->
   ExprIRef.ExpressionM m () ->
   CT m (Maybe (ExprIRef.ExpressionM m ()))
 -- token represents the given holeInferContext
@@ -302,7 +302,7 @@ getScopeElement sugarContext (parGuid, typeExpr) = do
           )
         ] }
 
-getGlobal :: MonadA m => DefI (Tag m) -> T m (Scope MStoredName m)
+getGlobal :: MonadA m => DefM m -> T m (Scope MStoredName m)
 getGlobal defI = do
   name <- SugarExpr.getStoredName guid
   pure mempty
@@ -489,7 +489,7 @@ unjust = fromMaybe . error
 pickResult ::
   MonadA m =>
   ExprIRef.ExpressionIM m ->
-  ExprIRef.ExpressionM m (Infer.Inferred (DefI (Tag m)), Maybe (StorePoint (Tag m))) ->
+  ExprIRef.ExpressionM m (Infer.Inferred (DefM m), Maybe (StorePoint (Tag m))) ->
   T m (Maybe Guid, ExprIRef.ExpressionM m (ExprIRef.ExpressionIM m))
 pickResult exprIRef expr = do
   writtenExpr <- writeExprMStored exprIRef $ swap <$> expr
