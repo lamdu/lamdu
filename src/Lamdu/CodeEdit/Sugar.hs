@@ -18,7 +18,7 @@ import Data.Maybe (fromMaybe, listToMaybe)
 import Data.Monoid (Monoid(..))
 import Data.Store.Guid (Guid)
 import Data.Store.IRef (Tag)
-import Data.Traversable (traverse, sequenceA)
+import Data.Traversable (traverse)
 import Data.Typeable (Typeable1)
 import Lamdu.CodeEdit.Sugar.Infer (Stored)
 import Lamdu.CodeEdit.Sugar.Internal
@@ -171,7 +171,7 @@ convertLam lam@(Expr.Lambda k paramGuid _paramType result) exprPl = do
     }
     & SugarExpr.make exprPl
     <&> rPayload . plActions . Lens._Just . mSetToInnerExpr .~ do
-      bodyStored <- sequenceA ((^. SugarInfer.plStored) <$> result)
+      bodyStored <- traverse (^. SugarInfer.plStored) result
       stored <- exprPl ^. SugarInfer.plStored
       return $ do
         deleteParamRef paramGuid bodyStored
