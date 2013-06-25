@@ -90,7 +90,7 @@ loadExpressionBody visited iref
     loadElement body i _ = loadExpressionClosure newVisited $ SubexpressionProperty iref body i
 
 loadDefinition :: MonadA m => DefI (Tag m) -> T m (Definition (Loaded m))
-loadDefinition x = (fmap . fmap . fmap) propertyOfClosure . loadDefinitionClosure $ x
+loadDefinition = (fmap . fmap . fmap) propertyOfClosure . loadDefinitionClosure
 
 loadDefinitionClosure :: MonadA m => DefI (Tag m) -> T m (Definition (LoadedClosure (Tag m)))
 loadDefinitionClosure defI = do
